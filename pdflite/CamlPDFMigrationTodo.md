@@ -70,6 +70,9 @@ Current estimate:
 - [x] ~~Cache standard font aliases, encoding names, font/CID/CMap dictionary
   keys, and ToUnicode writer keys so text read/write hot paths reuse stable
   `PdfName` values.~~
+- [x] ~~Cache Basic Latin glyph names, StandardEncoding control glyph names, and
+  the Standard14 `/space` fallback so common text extraction and width
+  calculations avoid rebuilding stable ASCII `PdfName` values.~~
 - [x] ~~Cache page-tree, page/resource dictionary, direct color-space, and
   resource-renumbering names so page lifecycle hot paths reuse stable
   `PdfName` values.~~
@@ -85,8 +88,8 @@ Current estimate:
   document metadata helpers reuse stable `PdfName` values.~~
 - [ ] Continue zlib byte-output/performance parity work where exact miniz block
   spelling or large-file profiles expose remaining gaps.
-- [ ] Profile and tune large-file hot paths for object streams, filters, and
-  text/image extraction.
+- [ ] Profile and tune remaining large-file hot paths for object streams,
+  filters, image extraction, and non-ASCII text paths.
 - [ ] Revisit all-backend validation after native parity is stable.
 
 ## Big Picture Checklist
@@ -126,6 +129,9 @@ Current estimate:
 - [x] ~~Text/font parsing and writing now share cached standard font,
   encoding, font dictionary, CID, CMap, and ToUnicode names in the main text
   hot paths.~~
+- [x] ~~Basic Latin text extraction and Standard14 explicit-encoding width
+  lookup now share cached glyph `PdfName` values for ASCII letters, digits,
+  punctuation, StandardEncoding control names, and `/space` fallback.~~
 - [x] ~~Page-tree traversal, page dictionaries, resource dictionaries, and
   resource prefix/renumber logic now share cached standard `PdfName` values.~~
 - [x] ~~Annotation, bookmark, destination, optional-content, and
@@ -143,8 +149,8 @@ Current estimate:
 - [ ] Broaden malformed xref-table/xref-stream/object-stream recovery with more
   real-world corpus cases.
 - [ ] Revisit all-backend validation after native feature parity is stable.
-- [ ] Tune performance for large files, object streams, filters, and text/image
-  extraction.
+- [ ] Tune remaining performance for large files, object streams, filters,
+  image extraction, and non-ASCII text paths.
 
 ## P0: Native Main Workflows
 

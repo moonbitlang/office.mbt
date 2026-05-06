@@ -242,7 +242,10 @@ work changes.
    names are cached once for repeated metadata lookups. Standard font aliases,
    encoding names, font/CID/CMap dictionary keys, and ToUnicode writer keys are
    also cached as private `PdfName` values for repeated text read/write
-   lookups, while the large AGL glyph-name tables remain generated on demand.
+   lookups. Basic Latin glyph-name lookups now use package-private
+   `FixedArray[PdfName?]` caches for StandardEncoding-style and plain quote
+   variants, and Standard14 width fallback reuses the cached `/space` glyph
+   name; the large non-ASCII AGL glyph-name tables remain generated on demand.
    Unit coverage also
    preserves direct Type3 `CharProcs`
    streams, parses their `d0`/`d1` glyph programs without allocating new
@@ -550,9 +553,10 @@ and backend breadth, is about 84-89% complete.
   includes bad-startxref reconstruction followed by password read,
   saved-state AESV2 recrypt, compressed write, and password reread.
 - In progress: image/filter corpus parity, remaining exact Flate block-identity
-  and large-file tuning, non-UCS2 text CMap parity, remaining encryption edge
-  cases, remaining malformed-reader recovery, and example-level integration
-  fixtures.
+  and remaining large-file tuning for object streams, filters, image
+  extraction, and non-ASCII text paths, non-UCS2 text CMap parity, remaining
+  encryption edge cases, remaining malformed-reader recovery, and example-level
+  integration fixtures.
 - Deferred: optional JBIG2 external-style decode, optional JPEG pixel decode
   beyond CamlPDF parity, broader non-UCS2 predefined CMap coverage, broader
   CCITT corpus validation, and broad

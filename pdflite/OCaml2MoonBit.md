@@ -559,6 +559,18 @@ smaller and makes native-first validation faster while preserving deterministic
 lookup behavior.
 
 ```sh
+moon run -c $'fn table_entry(i : Int) -> Int? { match i { 65 => Some(1); _ => None } }\nlet table : FixedArray[Int?] = FixedArray::makei(128, i => table_entry(i))\nfn lookup(byte : Int) -> Int? { if byte >= 0 && byte < table.length() { table[byte] } else { None } }\nfn main { println(lookup(65).unwrap()); println(lookup(66) == None) }'
+# 1
+# true
+```
+
+For small dense lookup domains that are hit repeatedly, a private top-level
+`FixedArray[T?]` built with `FixedArray::makei` is a good replacement for
+OCaml code that reconstructs table entries on every lookup. Keep the bounds
+check at the lookup boundary, and use optional entries when only some indexes
+are valid.
+
+```sh
 moon run -c 'fn main { let map : @hashmap.HashMap[Int, Int] = @hashmap.HashMap::new(); map[1] = 10; map[2] = 20; let mut total = 0; for key in map.keys() { total += key }; println(total) }'
 # 3
 ```

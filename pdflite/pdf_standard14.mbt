@@ -61,7 +61,7 @@ fn pdf_standard14_width_of_code(
     _ => {
       let glyphname = match encoding.pdf_text_glyphname_of_charcode(code) {
         Some(name) => name
-        None => pdf_text_name("/space")
+        None => pdf_text_glyph_space_name
       }
       pdf_standard14_width_of_glyphname(data.char_name_widths, glyphname)
     }

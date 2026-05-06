@@ -908,7 +908,10 @@ MoonBit consequences for this project:
    Basic Latin glyph-list-backed fallback is also started for
    StandardEncoding, MacRomanEncoding, WinAnsiEncoding, custom encoding
    differences, effective encoding-table/reverse-table export, and reverse
-   charcode lookup over that subset.
+   charcode lookup over that subset. Common Basic Latin glyph-name lookup now
+   reuses private fixed-array caches for ASCII letters, digits, punctuation,
+   and StandardEncoding quote variants, with cached control glyph names and the
+   Standard14 `/space` width fallback.
    StandardEncoding fallback is started for CamlPDF's annotation-text control
    bytes plus common high-byte punctuation, ligatures, bullets, text marks,
    Adobe Standard accent marks, and common ligature/Latin glyph names.

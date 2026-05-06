@@ -350,13 +350,142 @@ let pdf_text_font_name_key_name : PdfName = pdf_text_static_name("/FontName")
 let pdf_text_length_key_name : PdfName = pdf_text_static_name("/Length")
 
 ///|
+fn pdf_text_static_single_byte_glyph_name(value : Int) -> PdfName {
+  let bytes : FixedArray[Byte] = [47, value.to_byte()]
+  pdf_name_of_bytes(Bytes::from_array(bytes))
+}
+
+///|
+let pdf_text_glyph_space_name : PdfName = pdf_text_static_name("/space")
+
+///|
+fn pdf_text_ascii_basic_latin_glyph_name_for_cache(
+  code : Int,
+  standard_quotes : Bool,
+) -> PdfName? {
+  match code {
+    32 => Some(pdf_text_glyph_space_name)
+    33 => Some(pdf_text_static_name("/exclam"))
+    34 => Some(pdf_text_static_name("/quotedbl"))
+    35 => Some(pdf_text_static_name("/numbersign"))
+    36 => Some(pdf_text_static_name("/dollar"))
+    37 => Some(pdf_text_static_name("/percent"))
+    38 => Some(pdf_text_static_name("/ampersand"))
+    39 if standard_quotes => Some(pdf_text_static_name("/quoteright"))
+    39 => Some(pdf_text_static_name("/quotesingle"))
+    40 => Some(pdf_text_static_name("/parenleft"))
+    41 => Some(pdf_text_static_name("/parenright"))
+    42 => Some(pdf_text_static_name("/asterisk"))
+    43 => Some(pdf_text_static_name("/plus"))
+    44 => Some(pdf_text_static_name("/comma"))
+    45 => Some(pdf_text_static_name("/hyphen"))
+    46 => Some(pdf_text_static_name("/period"))
+    47 => Some(pdf_text_static_name("/slash"))
+    48 => Some(pdf_text_static_name("/zero"))
+    49 => Some(pdf_text_static_name("/one"))
+    50 => Some(pdf_text_static_name("/two"))
+    51 => Some(pdf_text_static_name("/three"))
+    52 => Some(pdf_text_static_name("/four"))
+    53 => Some(pdf_text_static_name("/five"))
+    54 => Some(pdf_text_static_name("/six"))
+    55 => Some(pdf_text_static_name("/seven"))
+    56 => Some(pdf_text_static_name("/eight"))
+    57 => Some(pdf_text_static_name("/nine"))
+    58 => Some(pdf_text_static_name("/colon"))
+    59 => Some(pdf_text_static_name("/semicolon"))
+    60 => Some(pdf_text_static_name("/less"))
+    61 => Some(pdf_text_static_name("/equal"))
+    62 => Some(pdf_text_static_name("/greater"))
+    63 => Some(pdf_text_static_name("/question"))
+    64 => Some(pdf_text_static_name("/at"))
+    code if code >= 65 && code <= 90 =>
+      Some(pdf_text_static_single_byte_glyph_name(code))
+    91 => Some(pdf_text_static_name("/bracketleft"))
+    92 => Some(pdf_text_static_name("/backslash"))
+    93 => Some(pdf_text_static_name("/bracketright"))
+    94 => Some(pdf_text_static_name("/asciicircum"))
+    95 => Some(pdf_text_static_name("/underscore"))
+    96 if standard_quotes => Some(pdf_text_static_name("/quoteleft"))
+    96 => Some(pdf_text_static_name("/grave"))
+    code if code >= 97 && code <= 122 =>
+      Some(pdf_text_static_single_byte_glyph_name(code))
+    123 => Some(pdf_text_static_name("/braceleft"))
+    124 => Some(pdf_text_static_name("/bar"))
+    125 => Some(pdf_text_static_name("/braceright"))
+    126 => Some(pdf_text_static_name("/asciitilde"))
+    _ => None
+  }
+}
+
+///|
+let pdf_text_standard_basic_latin_glyph_names : FixedArray[PdfName?] = FixedArray::makei(
+  127,
+  code => pdf_text_ascii_basic_latin_glyph_name_for_cache(code, true),
+)
+
+///|
+let pdf_text_plain_basic_latin_glyph_names : FixedArray[PdfName?] = FixedArray::makei(
+  127,
+  code => pdf_text_ascii_basic_latin_glyph_name_for_cache(code, false),
+)
+
+///|
+let pdf_text_glyph_control_ht_name : PdfName = pdf_text_static_name(
+  "/controlHT",
+)
+
+///|
+let pdf_text_glyph_control_lf_name : PdfName = pdf_text_static_name(
+  "/controlLF",
+)
+
+///|
+let pdf_text_glyph_control_ff_name : PdfName = pdf_text_static_name(
+  "/controlFF",
+)
+
+///|
+let pdf_text_glyph_control_cr_name : PdfName = pdf_text_static_name(
+  "/controlCR",
+)
+
+///|
+fn pdf_text_cached_basic_latin_glyphname(
+  code : Int,
+  standard_quotes : Bool,
+) -> PdfName? {
+  if code < 0 || code > 126 {
+    None
+  } else if standard_quotes {
+    pdf_text_standard_basic_latin_glyph_names[code]
+  } else {
+    pdf_text_plain_basic_latin_glyph_names[code]
+  }
+}
+
+///|
 fn pdf_text_string_of_name(name : PdfName) -> String {
   @ascii.decode_lossy(name.bytes()[:])
 }
 
 ///|
 pub fn PdfStandardFont::pdf_name(self : PdfStandardFont) -> PdfName {
-  pdf_text_name("/" + self.name())
+  match self {
+    PdfTimesRoman => pdf_text_times_roman_name
+    PdfTimesBold => pdf_text_times_bold_name
+    PdfTimesItalic => pdf_text_times_italic_name
+    PdfTimesBoldItalic => pdf_text_times_bold_italic_name
+    PdfHelvetica => pdf_text_helvetica_name
+    PdfHelveticaBold => pdf_text_helvetica_bold_name
+    PdfHelveticaOblique => pdf_text_helvetica_oblique_name
+    PdfHelveticaBoldOblique => pdf_text_helvetica_bold_oblique_name
+    PdfCourier => pdf_text_courier_name
+    PdfCourierBold => pdf_text_courier_bold_name
+    PdfCourierOblique => pdf_text_courier_oblique_name
+    PdfCourierBoldOblique => pdf_text_courier_bold_oblique_name
+    PdfSymbol => pdf_text_symbol_name
+    PdfZapfDingbats => pdf_text_zapf_dingbats_name
+  }
 }
 
 ///|
@@ -4647,80 +4776,12 @@ fn pdf_text_reverse_lookup_tounicode_charcode(
 }
 
 ///|
-fn pdf_text_single_byte_glyphname(value : Int) -> PdfName {
-  let output : Array[Byte] = [47, value.to_byte()]
-  pdf_name_of_bytes(Bytes::from_array(output))
-}
-
-///|
-fn pdf_text_ascii_digit_glyphname(code : Int) -> PdfName? {
-  match code {
-    48 => Some(pdf_text_name("/zero"))
-    49 => Some(pdf_text_name("/one"))
-    50 => Some(pdf_text_name("/two"))
-    51 => Some(pdf_text_name("/three"))
-    52 => Some(pdf_text_name("/four"))
-    53 => Some(pdf_text_name("/five"))
-    54 => Some(pdf_text_name("/six"))
-    55 => Some(pdf_text_name("/seven"))
-    56 => Some(pdf_text_name("/eight"))
-    57 => Some(pdf_text_name("/nine"))
-    _ => None
-  }
-}
-
-///|
-fn pdf_text_ascii_punctuation_glyphname(
-  code : Int,
-  standard_quotes : Bool,
-) -> PdfName? {
-  match code {
-    32 => Some(pdf_text_name("/space"))
-    33 => Some(pdf_text_name("/exclam"))
-    34 => Some(pdf_text_name("/quotedbl"))
-    35 => Some(pdf_text_name("/numbersign"))
-    36 => Some(pdf_text_name("/dollar"))
-    37 => Some(pdf_text_name("/percent"))
-    38 => Some(pdf_text_name("/ampersand"))
-    39 if standard_quotes => Some(pdf_text_name("/quoteright"))
-    39 => Some(pdf_text_name("/quotesingle"))
-    40 => Some(pdf_text_name("/parenleft"))
-    41 => Some(pdf_text_name("/parenright"))
-    42 => Some(pdf_text_name("/asterisk"))
-    43 => Some(pdf_text_name("/plus"))
-    44 => Some(pdf_text_name("/comma"))
-    45 => Some(pdf_text_name("/hyphen"))
-    46 => Some(pdf_text_name("/period"))
-    47 => Some(pdf_text_name("/slash"))
-    58 => Some(pdf_text_name("/colon"))
-    59 => Some(pdf_text_name("/semicolon"))
-    60 => Some(pdf_text_name("/less"))
-    61 => Some(pdf_text_name("/equal"))
-    62 => Some(pdf_text_name("/greater"))
-    63 => Some(pdf_text_name("/question"))
-    64 => Some(pdf_text_name("/at"))
-    91 => Some(pdf_text_name("/bracketleft"))
-    92 => Some(pdf_text_name("/backslash"))
-    93 => Some(pdf_text_name("/bracketright"))
-    94 => Some(pdf_text_name("/asciicircum"))
-    95 => Some(pdf_text_name("/underscore"))
-    96 if standard_quotes => Some(pdf_text_name("/quoteleft"))
-    96 => Some(pdf_text_name("/grave"))
-    123 => Some(pdf_text_name("/braceleft"))
-    124 => Some(pdf_text_name("/bar"))
-    125 => Some(pdf_text_name("/braceright"))
-    126 => Some(pdf_text_name("/asciitilde"))
-    _ => None
-  }
-}
-
-///|
 fn pdf_text_standard_control_glyphname(code : Int) -> PdfName? {
   match code {
-    9 => Some(pdf_text_name("/controlHT"))
-    10 => Some(pdf_text_name("/controlLF"))
-    12 => Some(pdf_text_name("/controlFF"))
-    13 => Some(pdf_text_name("/controlCR"))
+    9 => Some(pdf_text_glyph_control_ht_name)
+    10 => Some(pdf_text_glyph_control_lf_name)
+    12 => Some(pdf_text_glyph_control_ff_name)
+    13 => Some(pdf_text_glyph_control_cr_name)
     _ => None
   }
 }
@@ -4730,14 +4791,7 @@ fn pdf_text_basic_latin_glyphname(
   code : Int,
   standard_quotes : Bool,
 ) -> PdfName? {
-  if (code >= 65 && code <= 90) || (code >= 97 && code <= 122) {
-    Some(pdf_text_single_byte_glyphname(code))
-  } else {
-    match pdf_text_ascii_digit_glyphname(code) {
-      Some(name) => Some(name)
-      None => pdf_text_ascii_punctuation_glyphname(code, standard_quotes)
-    }
-  }
+  pdf_text_cached_basic_latin_glyphname(code, standard_quotes)
 }
 
 ///|
@@ -4875,7 +4929,7 @@ fn pdf_text_macroman_glyphname(code : Int) -> PdfName? {
         0xC7 => Some(pdf_text_name("/guillemotleft"))
         0xC8 => Some(pdf_text_name("/guillemotright"))
         0xC9 => Some(pdf_text_name("/ellipsis"))
-        0xCA => Some(pdf_text_name("/space"))
+        0xCA => Some(pdf_text_glyph_space_name)
         0xCB => Some(pdf_text_name("/Agrave"))
         0xCC => Some(pdf_text_name("/Atilde"))
         0xCD => Some(pdf_text_name("/Otilde"))
@@ -4965,7 +5019,7 @@ fn pdf_text_winansi_glyphname(code : Int) -> PdfName? {
         0x9C => Some(pdf_text_name("/oe"))
         0x9E => Some(pdf_text_name("/zcaron"))
         0x9F => Some(pdf_text_name("/Ydieresis"))
-        0xA0 => Some(pdf_text_name("/space"))
+        0xA0 => Some(pdf_text_glyph_space_name)
         0xA1 => Some(pdf_text_name("/exclamdown"))
         0xA2 => Some(pdf_text_name("/cent"))
         0xA3 => Some(pdf_text_name("/sterling"))
@@ -5069,7 +5123,7 @@ fn pdf_text_winansi_glyphname(code : Int) -> PdfName? {
 ///|
 fn pdf_text_macexpert_glyphname(code : Int) -> PdfName? {
   match code {
-    0x20 => Some(pdf_text_name("/space"))
+    0x20 => Some(pdf_text_glyph_space_name)
     0x21 => Some(pdf_text_name("/exclamsmall"))
     0x22 => Some(pdf_text_name("/Hungarumlautsmall"))
     0x23 => Some(pdf_text_name("/centoldstyle"))
@@ -5239,7 +5293,7 @@ fn pdf_text_macexpert_glyphname(code : Int) -> PdfName? {
 ///|
 fn pdf_text_symbol_glyphname(code : Int) -> PdfName? {
   match code {
-    0x20 => Some(pdf_text_name("/space"))
+    0x20 => Some(pdf_text_glyph_space_name)
     0x21 => Some(pdf_text_name("/exclam"))
     0x22 => Some(pdf_text_name("/universal"))
     0x23 => Some(pdf_text_name("/numbersign"))
@@ -5435,7 +5489,7 @@ fn pdf_text_symbol_glyphname(code : Int) -> PdfName? {
 ///|
 fn pdf_text_zapfdingbats_glyphname(code : Int) -> PdfName? {
   match code {
-    0x20 => Some(pdf_text_name("/space"))
+    0x20 => Some(pdf_text_glyph_space_name)
     0x21 => Some(pdf_text_name("/a1"))
     0x22 => Some(pdf_text_name("/a2"))
     0x23 => Some(pdf_text_name("/a202"))
