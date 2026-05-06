@@ -1846,6 +1846,73 @@ fn acceptance_korea_cmap_text_document_for_test() -> @pdflite.PdfDocument raise 
 }
 
 ///|
+fn acceptance_gb_euc_text_for_test() -> @pdflite.PdfBytes raise {
+  acceptance_text_bytes_for_test([
+    0x41, 0xC4, 0xE3, 0xBA, 0xC3, 0xA1, 0xA1, 0xA3, 0xC1,
+  ])
+}
+
+///|
+fn acceptance_gbpc_euc_text_for_test() -> @pdflite.PdfBytes raise {
+  acceptance_text_bytes_for_test([
+    0x41, 0x80, 0x83, 0xA0, 0xFD, 0xFE, 0xFF, 0xA1, 0xA1, 0xA1, 0xAB, 0xA8, 0xBF,
+    0xC4, 0xE3, 0xBA, 0xC3,
+  ])
+}
+
+///|
+fn acceptance_gbk_text_for_test() -> @pdflite.PdfBytes raise {
+  acceptance_text_bytes_for_test([
+    0x41, 0x80, 0x81, 0x40, 0xC4, 0xE3, 0xBA, 0xC3, 0xA1, 0xA1, 0xA3, 0xC1, 0xA1,
+    0x40, 0xA8, 0xBC, 0xFE, 0xFE, 0xFF, 0x81, 0x39,
+  ])
+}
+
+///|
+fn acceptance_gb1_cmap_text_document_for_test() -> @pdflite.PdfDocument raise {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  doc.add_object_given_number(
+    108,
+    acceptance_predefined_cmap_descendant_font_for_test(
+      "/GBEUCDescendant", "GB1",
+    ),
+  )
+  doc.add_object_given_number(
+    110,
+    acceptance_predefined_cmap_descendant_font_for_test(
+      "/GBpcEUCDescendant", "GB1",
+    ),
+  )
+  doc.add_object_given_number(
+    112,
+    acceptance_predefined_cmap_descendant_font_for_test("/GBKDescendant", "GB1"),
+  )
+  let gb_euc_page = acceptance_predefined_cmap_page_for_test(
+    "/Fgbeuc",
+    acceptance_predefined_cmap_type0_font_for_test(
+      "/GBEUCTop", "/GB-EUC-H", 108,
+    ),
+    acceptance_gb_euc_text_for_test(),
+  )
+  let gbpc_euc_page = acceptance_predefined_cmap_page_for_test(
+    "/Fgbpc",
+    acceptance_predefined_cmap_type0_font_for_test(
+      "/GBpcEUCTop", "/GBpc-EUC-H", 110,
+    ),
+    acceptance_gbpc_euc_text_for_test(),
+  )
+  let gbk_page = acceptance_predefined_cmap_page_for_test(
+    "/Fgbk",
+    acceptance_predefined_cmap_type0_font_for_test("/GBKTop", "/GBK-EUC-H", 112),
+    acceptance_gbk_text_for_test(),
+  )
+  let page_root = doc.add_pagetree([gb_euc_page, gbpc_euc_page, gbk_page])
+  ignore(doc.add_root(page_root, []))
+  doc
+}
+
+///|
 fn acceptance_font_object_by_name_for_test(
   resources : @pdflite.PdfObject,
   name : @pdflite.PdfName,
@@ -2332,6 +2399,104 @@ fn acceptance_assert_korea_cmap_text_for_test(
     Some(0xB0A1),
   )
   @test.assert_eq(kscpc_euc_extractor.charcode_of_codepoint(0x20DE), None)
+}
+
+///|
+fn acceptance_assert_gb1_cmap_text_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(doc.version(), (1, 5))
+  @test.assert_eq(doc.endpage(), 3)
+  let pages = doc.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 3)
+  let gb_euc_font = acceptance_assert_predefined_cmap_font_shape_for_test(
+    doc,
+    pages[0],
+    "/Fgbeuc",
+    "/GB-EUC-H",
+    "GB1",
+  )
+  @test.assert_eq(
+    acceptance_font_codepoints_of_page_for_test(
+      doc,
+      pages[0],
+      acceptance_name_for_test("/Fgbeuc"),
+    ),
+    [0x41, 0x4F60, 0x597D, 0x3000, 0xFF21],
+  )
+  let gb_euc_extractor = doc.text_extractor_of_font(gb_euc_font)
+  @test.assert_eq(gb_euc_extractor.charcode_of_codepoint(0x41), Some(0x41))
+  @test.assert_eq(gb_euc_extractor.charcode_of_codepoint(0x4F60), Some(0xC4E3))
+  @test.assert_eq(gb_euc_extractor.charcode_of_codepoint(0x597D), Some(0xBAC3))
+  @test.assert_eq(gb_euc_extractor.charcode_of_codepoint(0x3000), Some(0xA1A1))
+  @test.assert_eq(gb_euc_extractor.charcode_of_codepoint(0xFF21), Some(0xA3C1))
+  @test.assert_eq(gb_euc_extractor.charcode_of_codepoint(0x20AC), None)
+  let gbpc_euc_font = acceptance_assert_predefined_cmap_font_shape_for_test(
+    doc,
+    pages[1],
+    "/Fgbpc",
+    "/GBpc-EUC-H",
+    "GB1",
+  )
+  @test.assert_eq(
+    acceptance_font_codepoints_of_page_for_test(
+      doc,
+      pages[1],
+      acceptance_name_for_test("/Fgbpc"),
+    ),
+    [
+      0x41, 0x00FC, 0x83, 0x00A0, 0x00A9, 0x2122, 0x2026, 0x3000, 0x301C, 0x006E,
+      0x0300, 0x4F60, 0x597D,
+    ],
+  )
+  let gbpc_euc_extractor = doc.text_extractor_of_font(gbpc_euc_font)
+  @test.assert_eq(gbpc_euc_extractor.charcode_of_codepoint(0x41), Some(0x41))
+  @test.assert_eq(gbpc_euc_extractor.charcode_of_codepoint(0x00FC), Some(0x80))
+  @test.assert_eq(gbpc_euc_extractor.charcode_of_codepoint(0x00A9), Some(0xFD))
+  @test.assert_eq(gbpc_euc_extractor.charcode_of_codepoint(0x2122), Some(0xFE))
+  @test.assert_eq(gbpc_euc_extractor.charcode_of_codepoint(0x2026), Some(0xFF))
+  @test.assert_eq(
+    gbpc_euc_extractor.charcode_of_codepoint(0x301C),
+    Some(0xA1AB),
+  )
+  @test.assert_eq(
+    gbpc_euc_extractor.charcode_of_codepoint(0x4F60),
+    Some(0xC4E3),
+  )
+  @test.assert_eq(
+    gbpc_euc_extractor.charcode_of_codepoint(0x597D),
+    Some(0xBAC3),
+  )
+  @test.assert_eq(gbpc_euc_extractor.charcode_of_codepoint(0x0300), None)
+  let gbk_font = acceptance_assert_predefined_cmap_font_shape_for_test(
+    doc,
+    pages[2],
+    "/Fgbk",
+    "/GBK-EUC-H",
+    "GB1",
+  )
+  @test.assert_eq(
+    acceptance_font_codepoints_of_page_for_test(
+      doc,
+      pages[2],
+      acceptance_name_for_test("/Fgbk"),
+    ),
+    [
+      0x41, 0x80, 0x4E02, 0x4F60, 0x597D, 0x3000, 0xFF21, 0xE4C6, 0x1E3F, 0xE4C5,
+      0xF8F5, 0x8139,
+    ],
+  )
+  let gbk_extractor = doc.text_extractor_of_font(gbk_font)
+  @test.assert_eq(gbk_extractor.charcode_of_codepoint(0x41), Some(0x41))
+  @test.assert_eq(gbk_extractor.charcode_of_codepoint(0x80), Some(0x80))
+  @test.assert_eq(gbk_extractor.charcode_of_codepoint(0x4E02), Some(0x8140))
+  @test.assert_eq(gbk_extractor.charcode_of_codepoint(0x4F60), Some(0xC4E3))
+  @test.assert_eq(gbk_extractor.charcode_of_codepoint(0x597D), Some(0xBAC3))
+  @test.assert_eq(gbk_extractor.charcode_of_codepoint(0xE4C6), Some(0xA140))
+  @test.assert_eq(gbk_extractor.charcode_of_codepoint(0x1E3F), Some(0xA8BC))
+  @test.assert_eq(gbk_extractor.charcode_of_codepoint(0xE4C5), Some(0xFEFE))
+  @test.assert_eq(gbk_extractor.charcode_of_codepoint(0xF8F5), Some(0xFF))
+  @test.assert_eq(gbk_extractor.charcode_of_codepoint(0x1F600), None)
 }
 
 ///|
@@ -5124,6 +5289,16 @@ test "native acceptance suite extracts Adobe-Korea1 predefined CMap text through
   acceptance_assert_korea_cmap_text_for_test(parsed)
   let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
   acceptance_assert_korea_cmap_text_for_test(reparsed)
+}
+
+///|
+test "native acceptance suite extracts Adobe-GB1 predefined CMap text through reader boundaries" {
+  let parsed = acceptance_compressed_roundtrip_for_test(
+    acceptance_gb1_cmap_text_document_for_test(),
+  )
+  acceptance_assert_gb1_cmap_text_for_test(parsed)
+  let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
+  acceptance_assert_gb1_cmap_text_for_test(reparsed)
 }
 
 ///|
