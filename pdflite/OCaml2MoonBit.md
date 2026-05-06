@@ -266,6 +266,18 @@ and match a specific error variant only when that variant is itself part of the
 compatibility contract or a caller-visible API guarantee.
 
 ```sh
+moon run --target native -c $'#cfg(target="native")\nfn target_name() -> String { "native" }\n#cfg(not(target="native"))\nfn target_name() -> String { "other" }\nfn main { println(target_name()) }'
+# native
+```
+
+Use `#cfg(...)` for target-specific declarations when a port needs a native
+implementation plus a portable fallback. Put the attribute on its own line
+immediately before the declaration; placing `#cfg` and the declaration on the
+same line can leave the attribute unused. This is useful for OCaml ports that
+replace a C stub or Unix-only API on the native target while retaining a pure
+MoonBit implementation for other backends.
+
+```sh
 moon run -c $'fn push_ascii(output : Array[Byte], text : String) -> Unit { for byte in @ascii.encode(text)[:] { output.push(byte) } }\nfn main { let output : Array[Byte] = []; push_ascii(output, "PDF"); output.push(10); let bytes = Bytes::from_array(output); println(bytes.length()); println(bytes[0].to_int()); println(bytes[3].to_int()) }'
 # 4
 # 80

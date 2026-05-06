@@ -1337,7 +1337,7 @@ fn pdf_flate_max_probes_for_level(level : Int) -> Int {
 }
 
 ///|
-pub fn pdf_flate_encode_view_with_level(
+fn pdf_flate_encode_view_with_level_pure(
   data : BytesView,
   level : Int,
 ) -> PdfBytes raise PdfError {
@@ -1360,7 +1360,7 @@ pub fn pdf_flate_encode_view_with_level(
 }
 
 ///|
-pub fn pdf_flate_encode_view(data : BytesView) -> PdfBytes {
+fn pdf_flate_encode_view_pure(data : BytesView) -> PdfBytes {
   pdf_flate_encode_shortest_view_with_header(
     data,
     pdf_flate_default_header()[:],
@@ -1369,20 +1369,117 @@ pub fn pdf_flate_encode_view(data : BytesView) -> PdfBytes {
 }
 
 ///|
+#cfg(target="native")
+#borrow(data)
+extern "C" fn pdf_flate_zlib_encode_ffi(
+  data : PdfBytes,
+  level : Int,
+) -> PdfBytes = "pdflite_zlib_compress"
+
+///|
+#cfg(target="native")
+#borrow(data)
+extern "C" fn pdf_flate_zlib_decode_ffi(data : PdfBytes) -> PdfBytes = "pdflite_zlib_decompress"
+
+///|
+#cfg(target="native")
+#coverage.skip
+fn pdf_flate_native_payload(result : PdfBytes) -> PdfBytes raise PdfError {
+  if result.length() == 0 || result[0] != b'\x01' {
+    raise InvalidFlateData
+  }
+  result[1:].to_owned()
+}
+
+///|
+#cfg(target="native")
+#coverage.skip
+fn pdf_flate_encode_bytes_native(
+  data : PdfBytes,
+  level : Int,
+) -> PdfBytes raise PdfError {
+  let _ = pdf_flate_header_for_level(level)
+  try pdf_flate_native_payload(pdf_flate_zlib_encode_ffi(data, level)) catch {
+    _ => pdf_flate_encode_view_with_level_pure(data[:], level)
+  } noraise {
+    bytes => bytes
+  }
+}
+
+///|
+#cfg(not(target="native"))
+pub fn pdf_flate_encode_view_with_level(
+  data : BytesView,
+  level : Int,
+) -> PdfBytes raise PdfError {
+  pdf_flate_encode_view_with_level_pure(data, level)
+}
+
+///|
+#cfg(target="native")
+#coverage.skip
+pub fn pdf_flate_encode_view_with_level(
+  data : BytesView,
+  level : Int,
+) -> PdfBytes raise PdfError {
+  pdf_flate_encode_bytes_native(data.to_owned(), level)
+}
+
+///|
+#cfg(not(target="native"))
+pub fn pdf_flate_encode_view(data : BytesView) -> PdfBytes {
+  pdf_flate_encode_view_pure(data)
+}
+
+///|
+#cfg(target="native")
+#coverage.skip
+pub fn pdf_flate_encode_view(data : BytesView) -> PdfBytes {
+  try pdf_flate_encode_bytes_native(data.to_owned(), 6) catch {
+    _ => pdf_flate_encode_view_pure(data)
+  } noraise {
+    bytes => bytes
+  }
+}
+
+///|
+#cfg(not(target="native"))
 pub fn pdf_flate_encode_with_level(
   data : PdfBytes,
   level : Int,
 ) -> PdfBytes raise PdfError {
-  pdf_flate_encode_view_with_level(data[:], level)
+  pdf_flate_encode_view_with_level_pure(data[:], level)
 }
 
 ///|
+#cfg(target="native")
+#coverage.skip
+pub fn pdf_flate_encode_with_level(
+  data : PdfBytes,
+  level : Int,
+) -> PdfBytes raise PdfError {
+  pdf_flate_encode_bytes_native(data, level)
+}
+
+///|
+#cfg(not(target="native"))
 pub fn pdf_flate_encode(data : PdfBytes) -> PdfBytes {
-  pdf_flate_encode_view(data[:])
+  pdf_flate_encode_view_pure(data[:])
 }
 
 ///|
-pub fn pdf_flate_decode_view(data : BytesView) -> PdfBytes raise PdfError {
+#cfg(target="native")
+#coverage.skip
+pub fn pdf_flate_encode(data : PdfBytes) -> PdfBytes {
+  try pdf_flate_encode_bytes_native(data, 6) catch {
+    _ => pdf_flate_encode_view_pure(data[:])
+  } noraise {
+    bytes => bytes
+  }
+}
+
+///|
+fn pdf_flate_decode_view_pure(data : BytesView) -> PdfBytes raise PdfError {
   if data.length() == 0 {
     Bytes::new(0)
   } else {
@@ -1397,6 +1494,29 @@ pub fn pdf_flate_decode_view(data : BytesView) -> PdfBytes raise PdfError {
     let decoded = pdf_deflate_decode_raw(data[2:data.length() - 4])
     pdf_flate_check_adler32(data, decoded[:])
     decoded
+  }
+}
+
+///|
+#cfg(not(target="native"))
+pub fn pdf_flate_decode_view(data : BytesView) -> PdfBytes raise PdfError {
+  pdf_flate_decode_view_pure(data)
+}
+
+///|
+#cfg(target="native")
+#coverage.skip
+pub fn pdf_flate_decode_view(data : BytesView) -> PdfBytes raise PdfError {
+  if data.length() == 0 {
+    Bytes::new(0)
+  } else {
+    try
+      pdf_flate_native_payload(pdf_flate_zlib_decode_ffi(data.to_owned()))
+    catch {
+      _ => pdf_flate_decode_view_pure(data)
+    } noraise {
+      bytes => bytes
+    }
   }
 }
 

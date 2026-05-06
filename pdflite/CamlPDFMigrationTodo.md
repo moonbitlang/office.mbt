@@ -7,9 +7,9 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 95%.
+- Native main-feature parity: 96%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
-  breadth: 83-88%.
+  breadth: 84-89%.
 
 ## Tracking Rules
 
@@ -46,8 +46,11 @@ Current estimate:
   charcode lookup.~~
 - [ ] Decide any further rare predefined CMap source-table slices only when
   useful source tables or fixtures are available.
-- [ ] Improve zlib byte-output/performance parity beyond the explicit Flate
-  level API.
+- [x] ~~Route native normal Flate encode/decode through CamlPDF's vendored
+  miniz-compatible C path, while keeping the pure MoonBit codec for non-native
+  targets and prefix decoding.~~
+- [ ] Continue zlib byte-output/performance parity work where exact miniz block
+  spelling or large-file profiles expose remaining gaps.
 - [ ] Profile and tune large-file hot paths for object streams, filters, and
   text/image extraction.
 - [ ] Revisit all-backend validation after native parity is stable.
@@ -79,6 +82,9 @@ Current estimate:
   suitable fixtures are available.
 - [ ] Add licensed real-world DCT/JPEG and CCITT image corpus coverage; keep
   optional JBIG2/JPEG pixel-decoder decisions explicit.
+- [x] ~~Native normal Flate encode/decode now uses the vendored miniz-compatible
+  C path, with pure MoonBit fallback preserved for non-native targets and
+  parser prefix decoding.~~
 - [ ] Improve byte-identical zlib output strategy and broader performance
   parity beyond the explicit Flate level API.
 - [ ] Broaden malformed xref-table/xref-stream/object-stream recovery with more
@@ -302,6 +308,9 @@ Current estimate:
 - [x] ~~Explicit Flate levels now influence match-chain search depth, so fast
   levels use a smaller search budget and high levels can find older repeated
   spans.~~
+- [x] ~~Native normal Flate encode/decode uses a vendored miniz-compatible C
+  path for CamlPDF-style zlib behavior and faster native stream handling, while
+  preserving the pure MoonBit implementation as fallback/non-native code.~~
 - [ ] Byte-identical zlib output strategy and broader performance parity beyond
   explicit Flate level selection.
 - [ ] Broader malformed xref-table/xref-stream/object-stream recovery beyond
@@ -451,6 +460,8 @@ Current estimate:
   dictionary.~~
 - [x] ~~Add a native GBK2K-H predefined-CMap reader-boundary gate for mixed
   1/2/4-byte extraction and reverse lookup.~~
+- [x] ~~Add native miniz-backed normal Flate encode/decode while preserving pure
+  MoonBit fallback behavior.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.

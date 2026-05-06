@@ -19,7 +19,7 @@ import {
 } for "wbtest"
 
 options(
-  "native-stub": [ "pdf_random_native.c" ],
+  "native-stub": [ "pdf_random_native.c", "pdf_zlib_native.c" ],
   targets: {
     "pdf_random_native.mbt": [ "native" ],
     "pdf_random_native_test.mbt": [ "native" ],

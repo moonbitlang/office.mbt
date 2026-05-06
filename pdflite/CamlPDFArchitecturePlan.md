@@ -113,14 +113,18 @@ work changes.
    encoding writes `/DecodeParms` so encoded streams round-trip through
    pdflite's decoder.
    Direct Flate, filter, and stream encoding APIs now accept explicit zlib-style
-   levels 0 through 9, keeping the default compact encoder unchanged while
-   exposing CamlPDF's `flate_level` workflow without global mutable state; fast
-   levels now still fall back to stored blocks for incompressible data, while
-   higher levels search deeper match chains for better compression on older
-   repeated spans.
-   Remaining focus: byte-identical zlib output strategy and broader performance
-   tuning, optional JBIG2 external-tool decode parity, broader CCITT corpus
-   validation, and DCT/JPEG real-world payload coverage.
+   levels 0 through 9, exposing CamlPDF's `flate_level` workflow without global
+   mutable state; fast levels still fall back to stored blocks for
+   incompressible data, while higher levels search deeper match chains for
+   better compression on older repeated spans in the pure MoonBit fallback.
+   On native, normal Flate encode/decode now routes through CamlPDF's vendored
+   miniz-compatible C path, while the pure MoonBit codec remains available for
+   non-native targets and parser prefix decoding where consumed-byte accounting
+   is required.
+   Remaining focus: exact miniz block-spelling gaps only where they matter,
+   broader large-file performance tuning, optional JBIG2 external-tool decode
+   parity, broader CCITT corpus validation, and DCT/JPEG real-world payload
+   coverage.
 
 4. Page and content layer.
    Owner modules: `pdf_content.mbt`, `pdf_page.mbt`, `pdf_dest.mbt`,
@@ -338,9 +342,11 @@ and backend breadth, is about 83-88% complete.
 ### P1: Deepen Format Parity
 
 - Covered: ASCIIHex, ASCII85, RunLength, LZW decode, Flate decode/encode,
-  predictors, filter arrays, stop-at-unknown stream decoding, raw/encoded image
-  extraction basics, color spaces, functions, standard fonts, PDFDocEncoding,
-  UTF-16BE, ToUnicode CMaps, Identity-H/V CID text basics, predefined UCS2
+  including native miniz-compatible normal Flate encode/decode plus the pure
+  MoonBit fallback/prefix decoder, predictors, filter arrays,
+  stop-at-unknown stream decoding, raw/encoded image extraction basics, color
+  spaces, functions, standard fonts, PDFDocEncoding, UTF-16BE, ToUnicode CMaps,
+  Identity-H/V CID text basics, predefined UCS2
   and UTF16 horizontal/vertical extraction plus direct UTF8/UTF16/UTF32
   predefined Unicode CMap segmentation and reverse lookup, mixed-byte predefined CMap
   charcode segmentation for `/ToUnicode` extraction, RKSJ predefined-CMap
@@ -397,9 +403,9 @@ and backend breadth, is about 83-88% complete.
   CamlPDF `logo.pdf` and `introduction_to_camlpdf.pdf` fixtures do not contain
   extractable image entries, so image corpus expansion needs additional
   licensed fixtures.
-- Not covered enough: fuller zlib/Flate byte-identity and tuning parity,
-  broader DCT/JPEG and CCITT corpus validation, and optional external JBIG2
-  decoder integration.
+- Not covered enough: exact zlib/Flate block identity where downstream tooling
+  depends on byte spelling, broader DCT/JPEG and CCITT corpus validation, and
+  optional external JBIG2 decoder integration.
   Actual JPEG pixel decoding is
   optional beyond CamlPDF image-extraction parity, which returns encoded JPEG
   payloads.
@@ -508,9 +514,10 @@ and backend breadth, is about 83-88% complete.
   resolution through write/reread. Encrypted malformed-reader coverage now also
   includes bad-startxref reconstruction followed by password read,
   saved-state AESV2 recrypt, compressed write, and password reread.
-- In progress: image/filter parity, Flate compression tuning, non-UCS2 text
-  CMap parity, remaining encryption edge cases, remaining malformed-reader
-  recovery, and example-level integration fixtures.
+- In progress: image/filter corpus parity, remaining exact Flate block-identity
+  and large-file tuning, non-UCS2 text CMap parity, remaining encryption edge
+  cases, remaining malformed-reader recovery, and example-level integration
+  fixtures.
 - Deferred: optional JBIG2 external-style decode, optional JPEG pixel decode
   beyond CamlPDF parity, broader non-UCS2 predefined CMap coverage, broader
   CCITT corpus validation, and broad
