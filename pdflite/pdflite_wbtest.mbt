@@ -4603,13 +4603,85 @@ test "private text glyph helpers cover fallback and CID ToUnicode branches" {
     standard_font,
   )
   @test.assert_eq(pdf_text_cns1_codepoint_of_cid(-1), None)
+  @test.assert_eq(pdf_text_cns1_codepoint_of_cid(0), None)
   @test.assert_eq(
     pdf_text_cns1_codepoint_of_cid(pdf_text_cns1_unicode_table.length()),
     None,
   )
   @test.assert_eq(pdf_text_gb1_codepoint_of_cid(-1), None)
+  @test.assert_eq(pdf_text_gb1_codepoint_of_cid(0), None)
   @test.assert_eq(
     pdf_text_gb1_codepoint_of_cid(pdf_text_gb1_unicode_table.length()),
+    None,
+  )
+  @test.assert_eq(
+    pdf_text_predefined_cid_range_charcode_of_cid(
+      [(0x81308436, 0x81308436, 1), (0x0000FE51, 0x0000FE51, 1)][:],
+      1,
+    ),
+    Some(0x0000FE51),
+  )
+  @test.assert_eq(
+    pdf_text_lower_optional_packed_charcode(Some(0x0000FE51), Some(0x81308436)),
+    Some(0x0000FE51),
+  )
+  @test.assert_eq(
+    pdf_text_lower_optional_packed_charcode(Some(0x0000FE51), None),
+    Some(0x0000FE51),
+  )
+  @test.assert_eq(
+    pdf_text_predefined_sequence_table_charcode(
+      [(3, [0x21]), (1, [0x20]), (2, [0x20, 0xFE00])][:],
+      [(0x81308436, 0x81308436, 1), (0x0000FE51, 0x0000FE51, 1)][:],
+      0x20,
+    ),
+    Some(0x0000FE51),
+  )
+  @test.assert_eq(
+    pdf_text_predefined_sequence_table_charcode(
+      [(3, [0x21])][:],
+      [(0x0000FE51, 0x0000FE51, 1)][:],
+      0x21,
+    ),
+    None,
+  )
+  @test.assert_eq(
+    pdf_text_predefined_cid_range_charcode_of_cid(
+      [(0x81308436, 0x81308436, 1)][:],
+      2,
+    ),
+    None,
+  )
+  @test.assert_eq(
+    pdf_text_predefined_unicode_table_charcode(
+      [0, 0x20, 0x20][:],
+      [(0x81308436, 0x81308436, 1), (0x0000FE51, 0x0000FE51, 2)][:],
+      0x20,
+    ),
+    Some(0x0000FE51),
+  )
+  @test.assert_eq(
+    pdf_text_predefined_unicode_table_charcode(
+      [0, 0x20][:],
+      [(0x0000FE51, 0x0000FE51, 1)][:],
+      0,
+    ),
+    None,
+  )
+  @test.assert_eq(
+    pdf_text_predefined_codepoint_range_charcode(
+      [(1, 1, 0x20)][:],
+      [(0x81308436, 0x81308436, 1), (0x0000FE51, 0x0000FE51, 1)][:],
+      0x20,
+    ),
+    Some(0x0000FE51),
+  )
+  @test.assert_eq(
+    pdf_text_predefined_codepoint_range_charcode(
+      [(1, 1, 0x20)][:],
+      [(0x0000FE51, 0x0000FE51, 1)][:],
+      0x21,
+    ),
     None,
   )
   @test.assert_eq(

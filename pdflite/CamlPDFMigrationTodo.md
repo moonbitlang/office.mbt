@@ -132,6 +132,10 @@ Current estimate:
   spelling or large-file profiles expose remaining gaps.
 - [ ] Profile and tune remaining large-file hot paths for object streams,
   filters, image extraction, and non-ASCII text paths.
+- [x] ~~Replace generated Adobe-GB1, Adobe-CNS1, and Adobe-Japan1 CID-range
+  CMap reverse lookup nested charcode scans with Unicode/CID-to-charcode
+  helpers, preserving deterministic lowest packed-charcode selection for
+  duplicate mappings and four-byte GBK2K charcodes.~~
 - [x] ~~Run all-target type checking with `moon check --target all --warn-list
   +73`; native remains the test-validation target.~~
 - [x] ~~Close the May 6 native coverage gap for identity filter/predictor
@@ -247,6 +251,9 @@ Current estimate:
 - [ ] Revisit all-backend validation after native feature parity is stable.
 - [ ] Tune remaining performance for large files, object streams, filters,
   image extraction, and non-ASCII text paths.
+- [x] ~~Generated CID-range CMap reverse lookup for Adobe-GB1, Adobe-CNS1, and
+  Adobe-Japan1 now maps Unicode to CID and CID to charcode instead of scanning
+  every character code in every range.~~
 
 ## P0: Native Main Workflows
 
@@ -437,6 +444,9 @@ Current estimate:
 - [ ] Broader built-in non-UCS2 predefined CMap mapping tables beyond the
   current Adobe-GB1, Adobe-CNS1, Adobe-Japan1, and Adobe-Korea1 fallbacks,
   plus more real-world ToUnicode/CMap variation fixtures.
+- [x] ~~Generated Adobe-GB1, Adobe-CNS1, and Adobe-Japan1 CID-range predefined
+  CMap reverse lookup now uses direct Unicode/CID-to-charcode helpers rather
+  than per-charcode range scans.~~
 - [x] ~~Type3 font `/ToUnicode` native text gate with indirect CharProcs,
   custom encoding, metrics, compressed rewrite, and reread.~~
 - [x] ~~Direct Type3 CharProc stream reader coverage for preserved `d0`/`d1`
@@ -653,6 +663,9 @@ Current estimate:
   1/2/4-byte extraction and reverse lookup.~~
 - [x] ~~Add native miniz-backed normal Flate encode/decode while preserving pure
   MoonBit fallback behavior.~~
+- [x] ~~Tune generated CID-range predefined-CMap reverse lookup for
+  Adobe-GB1, Adobe-CNS1, and Adobe-Japan1 without changing public text
+  behavior.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.

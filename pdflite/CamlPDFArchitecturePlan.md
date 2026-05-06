@@ -279,7 +279,11 @@ work changes.
    present. Standard font aliases,
    encoding names, font/CID/CMap dictionary keys, and ToUnicode writer keys are
    also cached as private `PdfName` values for repeated text read/write
-   lookups. Basic Latin glyph-name lookups now use package-private
+   lookups. Generated Adobe-GB1, Adobe-CNS1, and Adobe-Japan1 CID-range
+   reverse lookup now resolves Unicode to CID and then CID to charcode instead
+   of scanning every character code in every range, preserving deterministic
+   lowest packed-charcode behavior for duplicate mappings. Basic Latin
+   glyph-name lookups now use package-private
    `FixedArray[PdfName?]` caches for StandardEncoding-style and plain quote
    variants, and Standard14 width fallback reuses the cached `/space` glyph
    name; the large non-ASCII AGL glyph-name tables remain generated on demand.
@@ -466,7 +470,9 @@ and backend breadth, is about 84-89% complete.
   `d0`/`d1` glyph programs, and round-trip Type3 writer output without dropping
   bbox, matrix, resources, CharProcs, or width metrics. Standard text/font
   dictionary, encoding, CID, CMap, and ToUnicode names are cached for repeated
-  read/write hot paths. Standard color-space family names and PDF function
+  read/write hot paths, and generated CID-range CMap reverse lookup avoids
+  per-charcode range scans for Adobe-GB1, Adobe-CNS1, and Adobe-Japan1.
+  Standard color-space family names and PDF function
   dictionary keys are cached for repeated format-layer read/write hot paths.
   Stream decode now covers CCITT `/K 0` and `/K < 0` with `/DecodeParms`
   defaults and direct indirect params. Typed stream encoding now covers CCITT
@@ -495,7 +501,8 @@ and backend breadth, is about 84-89% complete.
   revision reads through native async file wrappers, and full native test
   coverage. A May 6, 2026 `moon coverage analyze` pass reports all source
   files fully covered after closing the remaining codec, content, image,
-  lexeme, and reconstructed object-stream helper branches.
+  lexeme, reconstructed object-stream, and generated CMap reverse-lookup helper
+  branches.
 - Covered: checked-in CamlPDF logo fixture bad-`startxref` reconstruction
   through native async file wrappers, compressed rewrite, and reread.
 - Covered: checked-in CamlPDF intro fixture compressed-xref incremental update

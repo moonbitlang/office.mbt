@@ -1308,6 +1308,112 @@ fn pdf_text_predefined_cid_range_lookup(
 }
 
 ///|
+fn pdf_text_lower_packed_charcode(current : Int?, candidate : Int) -> Int? {
+  match current {
+    Some(value) =>
+      if candidate.reinterpret_as_uint() < value.reinterpret_as_uint() {
+        Some(candidate)
+      } else {
+        current
+      }
+    None => Some(candidate)
+  }
+}
+
+///|
+fn pdf_text_lower_optional_packed_charcode(
+  current : Int?,
+  candidate : Int?,
+) -> Int? {
+  match candidate {
+    Some(code) => pdf_text_lower_packed_charcode(current, code)
+    None => current
+  }
+}
+
+///|
+fn pdf_text_predefined_cid_range_charcode_of_cid(
+  ranges : ArrayView[(Int, Int, Int)],
+  cid : Int,
+) -> Int? {
+  let mut found : Int? = None
+  for range in ranges {
+    let first_cid = range.2
+    let last_cid = range.2 + range.1 - range.0
+    if cid >= first_cid && cid <= last_cid {
+      found = pdf_text_lower_packed_charcode(found, range.0 + cid - first_cid)
+    }
+  }
+  found
+}
+
+///|
+fn pdf_text_predefined_unicode_table_charcode(
+  unicode_table : ArrayView[Int],
+  charcode_ranges : ArrayView[(Int, Int, Int)],
+  codepoint : Int,
+) -> Int? {
+  guard codepoint != 0 else { return None }
+  let mut found : Int? = None
+  for cid, candidate in unicode_table {
+    if candidate == codepoint {
+      match
+        pdf_text_predefined_cid_range_charcode_of_cid(charcode_ranges, cid) {
+        Some(code) => found = pdf_text_lower_packed_charcode(found, code)
+        None => ()
+      }
+    }
+  }
+  found
+}
+
+///|
+fn pdf_text_predefined_codepoint_range_charcode(
+  codepoint_ranges : ArrayView[(Int, Int, Int)],
+  charcode_ranges : ArrayView[(Int, Int, Int)],
+  codepoint : Int,
+) -> Int? {
+  let mut found : Int? = None
+  for range in codepoint_ranges {
+    let first_codepoint = range.2
+    let last_codepoint = range.2 + range.1 - range.0
+    if codepoint >= first_codepoint && codepoint <= last_codepoint {
+      let cid = range.0 + codepoint - first_codepoint
+      match
+        pdf_text_predefined_cid_range_charcode_of_cid(charcode_ranges, cid) {
+        Some(code) => found = pdf_text_lower_packed_charcode(found, code)
+        None => ()
+      }
+    }
+  }
+  found
+}
+
+///|
+fn pdf_text_predefined_sequence_table_charcode(
+  sequence_table : ArrayView[(Int, Array[Int])],
+  charcode_ranges : ArrayView[(Int, Int, Int)],
+  codepoint : Int,
+) -> Int? {
+  let mut found : Int? = None
+  for entry in sequence_table {
+    match entry.1 {
+      [candidate] if candidate == codepoint =>
+        match
+          pdf_text_predefined_cid_range_charcode_of_cid(
+            charcode_ranges,
+            entry.0,
+          ) {
+          Some(code) => found = pdf_text_lower_packed_charcode(found, code)
+          None => ()
+        }
+      _ => ()
+    }
+  }
+  found
+}
+
+///|
 fn pdf_text_japan1_codepoints_of_cid(cid : Int) -> Array[Int]? {
   match
     pdf_text_predefined_cid_range_lookup(pdf_text_japan1_codepoint_ranges, cid) {
@@ -1335,15 +1441,20 @@ fn pdf_text_predefined_japan1_charcode(
   ranges : Array[(Int, Int, Int)],
   codepoint : Int,
 ) -> Int? {
-  for range in ranges {
-    for code in range.0..<=range.1 {
-      match pdf_text_japan1_codepoints_of_cid(range.2 + code - range.0) {
-        Some([candidate]) if candidate == codepoint => return Some(code)
-        _ => ()
-      }
-    }
-  }
-  None
+  let mut found = pdf_text_predefined_codepoint_range_charcode(
+    pdf_text_japan1_codepoint_ranges[:],
+    ranges[:],
+    codepoint,
+  )
+  found = pdf_text_lower_optional_packed_charcode(
+    found,
+    pdf_text_predefined_sequence_table_charcode(
+      pdf_text_japan1_codepoint_sequence_table[:],
+      ranges[:],
+      codepoint,
+    ),
+  )
+  found
 }
 
 ///|
@@ -1439,15 +1550,11 @@ fn pdf_text_predefined_cns1_charcode(
   ranges : Array[(Int, Int, Int)],
   codepoint : Int,
 ) -> Int? {
-  for range in ranges {
-    for code in range.0..<=range.1 {
-      match pdf_text_cns1_codepoint_of_cid(range.2 + code - range.0) {
-        Some(candidate) if candidate == codepoint => return Some(code)
-        _ => ()
-      }
-    }
-  }
-  None
+  pdf_text_predefined_unicode_table_charcode(
+    pdf_text_cns1_unicode_table[:],
+    ranges[:],
+    codepoint,
+  )
 }
 
 ///|
@@ -1743,23 +1850,11 @@ fn pdf_text_predefined_gb1_charcode(
   ranges : Array[(Int, Int, Int)],
   codepoint : Int,
 ) -> Int? {
-  let mut found : Int? = None
-  for range in ranges {
-    for code in range.0..<=range.1 {
-      match pdf_text_gb1_codepoint_of_cid(range.2 + code - range.0) {
-        Some(candidate) if candidate == codepoint =>
-          match found {
-            Some(current) =>
-              if code.reinterpret_as_uint() < current.reinterpret_as_uint() {
-                found = Some(code)
-              }
-            None => found = Some(code)
-          }
-        _ => ()
-      }
-    }
-  }
-  found
+  pdf_text_predefined_unicode_table_charcode(
+    pdf_text_gb1_unicode_table[:],
+    ranges[:],
+    codepoint,
+  )
 }
 
 ///|
