@@ -2027,6 +2027,114 @@ fn acceptance_cns1_variant_cmap_text_document_for_test() -> @pdflite.PdfDocument
 }
 
 ///|
+fn acceptance_japan1_cmap_cases_for_test() -> Array[
+  (
+    String,
+    String,
+    String,
+    String,
+    Int,
+    Array[Int],
+    Array[Int],
+    Int,
+    Int,
+    Bool,
+    Int,
+  ),
+] {
+  [
+    (
+      "/Frksj",
+      "/RKSJTop",
+      "/90ms-RKSJ-H",
+      "/RKSJDescendant",
+      128,
+      [0x41, 0xA6, 0x81, 0x40, 0x93, 0xF1],
+      [0x41, 0xFF66, 0x3000, 0x4E8C],
+      0x4E8C,
+      0x93F1,
+      false,
+      -1,
+    ),
+    (
+      "/Fpv",
+      "/RKSJ90pvTop",
+      "/90pv-RKSJ-H",
+      "/RKSJ90pvDescendant",
+      130,
+      [0x5C, 0x80, 0xA0, 0x81, 0x7C, 0x85, 0x91],
+      [0x00A5, 0x005C, 0x00A0, 0x2212, 0xF860, 0x0030, 0x002E],
+      0x2212,
+      0x817C,
+      false,
+      0xF860,
+    ),
+    (
+      "/Fjis",
+      "/JISTop",
+      "/H",
+      "/JISDescendant",
+      132,
+      [0x21, 0x21, 0x24, 0x22],
+      [0x3000, 0x3042],
+      0x3042,
+      0x2422,
+      true,
+      -1,
+    ),
+    (
+      "/Feuc",
+      "/JapanEUCTop",
+      "/EUC-H",
+      "/JapanEUCDescendant",
+      134,
+      [0xA1, 0xA1, 0xA4, 0xA2],
+      [0x3000, 0x3042],
+      0x3042,
+      0xA4A2,
+      false,
+      -1,
+    ),
+    (
+      "/Fhojo",
+      "/HojoEUCTop",
+      "/Hojo-EUC-H",
+      "/HojoEUCDescendant",
+      136,
+      [0x8F, 0xB4, 0xAE],
+      [0x4EDD],
+      0x4EDD,
+      0x8FB4AE,
+      false,
+      -1,
+    ),
+  ]
+}
+
+///|
+fn acceptance_japan1_cmap_text_document_for_test() -> @pdflite.PdfDocument raise {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  let pages : Array[@pdflite.PdfPage] = []
+  for case in acceptance_japan1_cmap_cases_for_test() {
+    doc.add_object_given_number(
+      case.4,
+      acceptance_predefined_cmap_descendant_font_for_test(case.3, "Japan1"),
+    )
+    pages.push(
+      acceptance_predefined_cmap_page_for_test(
+        case.0,
+        acceptance_predefined_cmap_type0_font_for_test(case.1, case.2, case.4),
+        acceptance_text_bytes_for_test(case.5[:]),
+      ),
+    )
+  }
+  let page_root = doc.add_pagetree(pages)
+  ignore(doc.add_root(page_root, []))
+  doc
+}
+
+///|
 fn acceptance_font_object_by_name_for_test(
   resources : @pdflite.PdfObject,
   name : @pdflite.PdfName,
@@ -2405,6 +2513,20 @@ fn acceptance_assert_predefined_cmap_font_shape_for_test(
   encoding : String,
   ordering : String,
 ) -> @pdflite.PdfObject raise {
+  acceptance_assert_predefined_cmap_font_shape_with_two_byte_for_test(
+    doc, page, font_name, encoding, ordering, false,
+  )
+}
+
+///|
+fn acceptance_assert_predefined_cmap_font_shape_with_two_byte_for_test(
+  doc : @pdflite.PdfDocument,
+  page : @pdflite.PdfPage,
+  font_name : String,
+  encoding : String,
+  ordering : String,
+  uses_two_byte_codes : Bool,
+) -> @pdflite.PdfObject raise {
   let font = acceptance_font_object_by_name_for_test(
     page.resources,
     acceptance_name_for_test(font_name),
@@ -2412,7 +2534,7 @@ fn acceptance_assert_predefined_cmap_font_shape_for_test(
   let read = doc.read_font(font)
   @test.assert_eq(read.is_identity_h(), false)
   @test.assert_eq(read.is_identity_v(), false)
-  @test.assert_eq(read.uses_two_byte_codes(), false)
+  @test.assert_eq(read.uses_two_byte_codes(), uses_two_byte_codes)
   guard read is PdfFontCIDKeyed(cid_font) else {
     fail("expected CID-keyed predefined CMap font")
   }
@@ -2642,6 +2764,41 @@ fn acceptance_assert_cns1_variant_cmap_text_for_test(
     let extractor = doc.text_extractor_of_font(font)
     @test.assert_eq(extractor.charcode_of_codepoint(case.7), Some(case.8))
     @test.assert_eq(extractor.charcode_of_codepoint(0x1F600), None)
+  }
+}
+
+///|
+fn acceptance_assert_japan1_cmap_text_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(doc.version(), (1, 5))
+  let cases = acceptance_japan1_cmap_cases_for_test()
+  @test.assert_eq(doc.endpage(), cases.length())
+  let pages = doc.pages_of_pagetree()
+  @test.assert_eq(pages.length(), cases.length())
+  for index in 0..<cases.length() {
+    let case = cases[index]
+    let font = acceptance_assert_predefined_cmap_font_shape_with_two_byte_for_test(
+      doc,
+      pages[index],
+      case.0,
+      case.2,
+      "Japan1",
+      case.9,
+    )
+    @test.assert_eq(
+      acceptance_font_codepoints_of_page_for_test(
+        doc,
+        pages[index],
+        acceptance_name_for_test(case.0),
+      ),
+      case.6,
+    )
+    let extractor = doc.text_extractor_of_font(font)
+    @test.assert_eq(extractor.charcode_of_codepoint(case.7), Some(case.8))
+    if case.10 >= 0 {
+      @test.assert_eq(extractor.charcode_of_codepoint(case.10), None)
+    }
   }
 }
 
@@ -5455,6 +5612,16 @@ test "native acceptance suite extracts Adobe-CNS1 variant predefined CMap text t
   acceptance_assert_cns1_variant_cmap_text_for_test(parsed)
   let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
   acceptance_assert_cns1_variant_cmap_text_for_test(reparsed)
+}
+
+///|
+test "native acceptance suite extracts Adobe-Japan1 predefined CMap text through reader boundaries" {
+  let parsed = acceptance_compressed_roundtrip_for_test(
+    acceptance_japan1_cmap_text_document_for_test(),
+  )
+  acceptance_assert_japan1_cmap_text_for_test(parsed)
+  let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
+  acceptance_assert_japan1_cmap_text_for_test(reparsed)
 }
 
 ///|
