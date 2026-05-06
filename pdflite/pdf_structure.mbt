@@ -4,33 +4,55 @@ fn pdf_structure_name(text : String) -> PdfName {
 }
 
 ///|
+let pdf_structure_pg_key_name : PdfName = pdf_structure_name("/Pg")
+
+///|
 fn pdf_structure_pg_key() -> PdfName {
-  pdf_structure_name("/Pg")
+  pdf_structure_pg_key_name
 }
+
+///|
+let pdf_structure_obj_key_name : PdfName = pdf_structure_name("/Obj")
 
 ///|
 fn pdf_structure_obj_key() -> PdfName {
-  pdf_structure_name("/Obj")
+  pdf_structure_obj_key_name
 }
+
+///|
+let pdf_structure_root_key_name : PdfName = pdf_structure_name("/Root")
 
 ///|
 fn pdf_structure_root_key() -> PdfName {
-  pdf_structure_name("/Root")
+  pdf_structure_root_key_name
 }
+
+///|
+let pdf_structure_struct_tree_root_key_name : PdfName = pdf_structure_name(
+  "/StructTreeRoot",
+)
 
 ///|
 fn pdf_structure_struct_tree_root_key() -> PdfName {
-  pdf_structure_name("/StructTreeRoot")
+  pdf_structure_struct_tree_root_key_name
 }
+
+///|
+let pdf_structure_parent_tree_key_name : PdfName = pdf_structure_name(
+  "/ParentTree",
+)
 
 ///|
 fn pdf_structure_parent_tree_key() -> PdfName {
-  pdf_structure_name("/ParentTree")
+  pdf_structure_parent_tree_key_name
 }
 
 ///|
+let pdf_structure_k_key_name : PdfName = pdf_structure_name("/K")
+
+///|
 fn pdf_structure_k_key() -> PdfName {
-  pdf_structure_name("/K")
+  pdf_structure_k_key_name
 }
 
 ///|

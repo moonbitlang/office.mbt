@@ -73,6 +73,9 @@ Current estimate:
 - [x] ~~Cache page-tree, page/resource dictionary, direct color-space, and
   resource-renumbering names so page lifecycle hot paths reuse stable
   `PdfName` values.~~
+- [x] ~~Cache standard annotation, bookmark, destination, optional-content, and
+  structure-tree names so document-feature lifecycle paths reuse stable
+  `PdfName` values.~~
 - [ ] Continue zlib byte-output/performance parity work where exact miniz block
   spelling or large-file profiles expose remaining gaps.
 - [ ] Profile and tune large-file hot paths for object streams, filters, and
@@ -118,6 +121,9 @@ Current estimate:
   hot paths.~~
 - [x] ~~Page-tree traversal, page dictionaries, resource dictionaries, and
   resource prefix/renumber logic now share cached standard `PdfName` values.~~
+- [x] ~~Annotation, bookmark, destination, optional-content, and
+  structure-tree helpers now share cached standard `PdfName` values across
+  document-feature lifecycle paths.~~
 - [ ] Improve byte-identical zlib output strategy and broader performance
   parity beyond the explicit Flate level API.
 - [ ] Broaden malformed xref-table/xref-stream/object-stream recovery with more

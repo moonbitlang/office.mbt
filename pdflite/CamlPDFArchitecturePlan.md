@@ -333,9 +333,9 @@ gates are solid; backend breadth follows after native feature parity.
 
 ## Prioritized Coverage Plan
 
-Current estimate: native main-feature parity is about 94-95% complete. Full
+Current estimate: native main-feature parity is about 96% complete. Full
 CamlPDF parity, including deferred filter families, deeper malformed recovery,
-and backend breadth, is about 83-88% complete.
+and backend breadth, is about 84-89% complete.
 
 ### P0: Finish Native Main Workflows
 
@@ -349,7 +349,9 @@ and backend breadth, is about 83-88% complete.
   optional content, structure-tree merge/pruning basics, page resource
   renumbering/prefixing/content merge/Form XObject processing through native
   acceptance boundaries, cached standard page/resource names for page lifecycle
-  hot paths, resource-heavy page replacement with mixed destination/action
+  hot paths, cached standard annotation, bookmark, destination,
+  optional-content, and structure-tree names for document-feature lifecycle hot
+  paths, resource-heavy page replacement with mixed destination/action
   references, and example workflows for `pdfdecomp.ml`, `pdftest.ml`,
   `pdfdraft.ml`, `pdfencrypt.ml`, and `pdfmergeexample.ml`.
 - Covered: ARC4, AESV2, AESV3/AESV3 ISO authentication, encryption,

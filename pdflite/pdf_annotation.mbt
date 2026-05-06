@@ -4,74 +4,214 @@ fn pdf_annotation_name(text : String) -> PdfName {
 }
 
 ///|
+let pdf_annotation_empty_name : PdfName = pdf_annotation_name("")
+
+///|
+let pdf_annotation_subtype_key_name : PdfName = pdf_annotation_name("/Subtype")
+
+///|
 fn pdf_annotation_subtype_key() -> PdfName {
-  pdf_annotation_name("/Subtype")
+  pdf_annotation_subtype_key_name
 }
+
+///|
+let pdf_annotation_contents_key_name : PdfName = pdf_annotation_name(
+  "/Contents",
+)
 
 ///|
 fn pdf_annotation_contents_key() -> PdfName {
-  pdf_annotation_name("/Contents")
+  pdf_annotation_contents_key_name
 }
+
+///|
+let pdf_annotation_rect_key_name : PdfName = pdf_annotation_name("/Rect")
 
 ///|
 fn pdf_annotation_rect_key() -> PdfName {
-  pdf_annotation_name("/Rect")
+  pdf_annotation_rect_key_name
 }
+
+///|
+let pdf_annotation_border_key_name : PdfName = pdf_annotation_name("/Border")
 
 ///|
 fn pdf_annotation_border_key() -> PdfName {
-  pdf_annotation_name("/Border")
+  pdf_annotation_border_key_name
 }
+
+///|
+let pdf_annotation_bs_key_name : PdfName = pdf_annotation_name("/BS")
 
 ///|
 fn pdf_annotation_bs_key() -> PdfName {
-  pdf_annotation_name("/BS")
+  pdf_annotation_bs_key_name
 }
+
+///|
+let pdf_annotation_subj_key_name : PdfName = pdf_annotation_name("/Subj")
 
 ///|
 fn pdf_annotation_subj_key() -> PdfName {
-  pdf_annotation_name("/Subj")
+  pdf_annotation_subj_key_name
 }
+
+///|
+let pdf_annotation_colour_key_name : PdfName = pdf_annotation_name("/C")
 
 ///|
 fn pdf_annotation_colour_key() -> PdfName {
-  pdf_annotation_name("/C")
+  pdf_annotation_colour_key_name
 }
+
+///|
+let pdf_annotation_parent_key_name : PdfName = pdf_annotation_name("/Parent")
 
 ///|
 fn pdf_annotation_parent_key() -> PdfName {
-  pdf_annotation_name("/Parent")
+  pdf_annotation_parent_key_name
 }
+
+///|
+let pdf_annotation_annots_key_name : PdfName = pdf_annotation_name("/Annots")
 
 ///|
 fn pdf_annotation_annots_key() -> PdfName {
-  pdf_annotation_name("/Annots")
+  pdf_annotation_annots_key_name
 }
+
+///|
+let pdf_annotation_width_key_name : PdfName = pdf_annotation_name("/W")
 
 ///|
 fn pdf_annotation_width_key() -> PdfName {
-  pdf_annotation_name("/W")
+  pdf_annotation_width_key_name
 }
+
+///|
+let pdf_annotation_style_key_name : PdfName = pdf_annotation_name("/S")
 
 ///|
 fn pdf_annotation_style_key() -> PdfName {
-  pdf_annotation_name("/S")
+  pdf_annotation_style_key_name
 }
+
+///|
+let pdf_annotation_dash_key_name : PdfName = pdf_annotation_name("/D")
 
 ///|
 fn pdf_annotation_dash_key() -> PdfName {
-  pdf_annotation_name("/D")
+  pdf_annotation_dash_key_name
 }
+
+///|
+let pdf_annotation_quadpoints_key_name : PdfName = pdf_annotation_name(
+  "/QuadPoints",
+)
 
 ///|
 fn pdf_annotation_quadpoints_key() -> PdfName {
-  pdf_annotation_name("/QuadPoints")
+  pdf_annotation_quadpoints_key_name
 }
 
 ///|
+let pdf_annotation_line_key_name : PdfName = pdf_annotation_name("/L")
+
+///|
 fn pdf_annotation_line_key() -> PdfName {
-  pdf_annotation_name("/L")
+  pdf_annotation_line_key_name
 }
+
+///|
+let pdf_annotation_beveled_name : PdfName = pdf_annotation_name("/B")
+
+///|
+let pdf_annotation_inset_name : PdfName = pdf_annotation_name("/I")
+
+///|
+let pdf_annotation_underline_style_name : PdfName = pdf_annotation_name("/U")
+
+///|
+let pdf_annotation_text_name : PdfName = pdf_annotation_name("/Text")
+
+///|
+let pdf_annotation_link_name : PdfName = pdf_annotation_name("/Link")
+
+///|
+let pdf_annotation_free_text_name : PdfName = pdf_annotation_name("/FreeText")
+
+///|
+let pdf_annotation_line_name : PdfName = pdf_annotation_name("/Line")
+
+///|
+let pdf_annotation_square_name : PdfName = pdf_annotation_name("/Square")
+
+///|
+let pdf_annotation_circle_name : PdfName = pdf_annotation_name("/Circle")
+
+///|
+let pdf_annotation_polygon_name : PdfName = pdf_annotation_name("/Polygon")
+
+///|
+let pdf_annotation_polyline_name : PdfName = pdf_annotation_name("/PolyLine")
+
+///|
+let pdf_annotation_highlight_name : PdfName = pdf_annotation_name("/Highlight")
+
+///|
+let pdf_annotation_underline_name : PdfName = pdf_annotation_name("/Underline")
+
+///|
+let pdf_annotation_squiggly_name : PdfName = pdf_annotation_name("/Squiggly")
+
+///|
+let pdf_annotation_strikeout_name : PdfName = pdf_annotation_name("/StrikeOut")
+
+///|
+let pdf_annotation_stamp_name : PdfName = pdf_annotation_name("/Stamp")
+
+///|
+let pdf_annotation_caret_name : PdfName = pdf_annotation_name("/Caret")
+
+///|
+let pdf_annotation_ink_name : PdfName = pdf_annotation_name("/Ink")
+
+///|
+let pdf_annotation_popup_name : PdfName = pdf_annotation_name("/Popup")
+
+///|
+let pdf_annotation_file_attachment_name : PdfName = pdf_annotation_name(
+  "/FileAttachment",
+)
+
+///|
+let pdf_annotation_sound_name : PdfName = pdf_annotation_name("/Sound")
+
+///|
+let pdf_annotation_movie_name : PdfName = pdf_annotation_name("/Movie")
+
+///|
+let pdf_annotation_widget_name : PdfName = pdf_annotation_name("/Widget")
+
+///|
+let pdf_annotation_screen_name : PdfName = pdf_annotation_name("/Screen")
+
+///|
+let pdf_annotation_printer_mark_name : PdfName = pdf_annotation_name(
+  "/PrinterMark",
+)
+
+///|
+let pdf_annotation_trap_net_name : PdfName = pdf_annotation_name("/TrapNet")
+
+///|
+let pdf_annotation_watermark_name : PdfName = pdf_annotation_name("/Watermark")
+
+///|
+let pdf_annotation_three_dee_name : PdfName = pdf_annotation_name("/3D")
+
+///|
+let pdf_annotation_unknown_name : PdfName = pdf_annotation_name("/Unknown")
 
 ///|
 pub(all) enum PdfAnnotationStyle {
@@ -189,15 +329,15 @@ pub fn pdf_annotation_make(
 
 ///|
 fn pdf_annotation_style_of_name(name : PdfName) -> PdfAnnotationStyle {
-  if name == pdf_annotation_name("/S") {
+  if name == pdf_annotation_style_key() {
     AnnotationSolid
-  } else if name == pdf_annotation_name("/D") {
+  } else if name == pdf_annotation_dash_key() {
     AnnotationDashed
-  } else if name == pdf_annotation_name("/B") {
+  } else if name == pdf_annotation_beveled_name {
     AnnotationBeveled
-  } else if name == pdf_annotation_name("/I") {
+  } else if name == pdf_annotation_inset_name {
     AnnotationInset
-  } else if name == pdf_annotation_name("/U") {
+  } else if name == pdf_annotation_underline_style_name {
     AnnotationUnderlineStyle
   } else {
     AnnotationNoStyle
@@ -207,32 +347,32 @@ fn pdf_annotation_style_of_name(name : PdfName) -> PdfAnnotationStyle {
 ///|
 fn pdf_annotation_subtype_name(subtype : PdfAnnotationSubtype) -> PdfName {
   match subtype {
-    AnnotationText => pdf_annotation_name("/Text")
-    AnnotationLink => pdf_annotation_name("/Link")
-    AnnotationFreeText => pdf_annotation_name("/FreeText")
-    AnnotationLine => pdf_annotation_name("/Line")
-    AnnotationSquare => pdf_annotation_name("/Square")
-    AnnotationCircle => pdf_annotation_name("/Circle")
-    AnnotationPolygon => pdf_annotation_name("/Polygon")
-    AnnotationPolyLine => pdf_annotation_name("/PolyLine")
-    AnnotationHighlight => pdf_annotation_name("/Highlight")
-    AnnotationUnderline => pdf_annotation_name("/Underline")
-    AnnotationSquiggly => pdf_annotation_name("/Squiggly")
-    AnnotationStrikeOut => pdf_annotation_name("/StrikeOut")
-    AnnotationStamp => pdf_annotation_name("/Stamp")
-    AnnotationCaret => pdf_annotation_name("/Caret")
-    AnnotationInk => pdf_annotation_name("/Ink")
-    AnnotationPopup(_) => pdf_annotation_name("/Popup")
-    AnnotationFileAttachment => pdf_annotation_name("/FileAttachment")
-    AnnotationSound => pdf_annotation_name("/Sound")
-    AnnotationMovie => pdf_annotation_name("/Movie")
-    AnnotationWidget => pdf_annotation_name("/Widget")
-    AnnotationScreen => pdf_annotation_name("/Screen")
-    AnnotationPrinterMark => pdf_annotation_name("/PrinterMark")
-    AnnotationTrapNet => pdf_annotation_name("/TrapNet")
-    AnnotationWatermark => pdf_annotation_name("/Watermark")
-    AnnotationThreeDee => pdf_annotation_name("/3D")
-    AnnotationUnknown(_) => pdf_annotation_name("/Unknown")
+    AnnotationText => pdf_annotation_text_name
+    AnnotationLink => pdf_annotation_link_name
+    AnnotationFreeText => pdf_annotation_free_text_name
+    AnnotationLine => pdf_annotation_line_name
+    AnnotationSquare => pdf_annotation_square_name
+    AnnotationCircle => pdf_annotation_circle_name
+    AnnotationPolygon => pdf_annotation_polygon_name
+    AnnotationPolyLine => pdf_annotation_polyline_name
+    AnnotationHighlight => pdf_annotation_highlight_name
+    AnnotationUnderline => pdf_annotation_underline_name
+    AnnotationSquiggly => pdf_annotation_squiggly_name
+    AnnotationStrikeOut => pdf_annotation_strikeout_name
+    AnnotationStamp => pdf_annotation_stamp_name
+    AnnotationCaret => pdf_annotation_caret_name
+    AnnotationInk => pdf_annotation_ink_name
+    AnnotationPopup(_) => pdf_annotation_popup_name
+    AnnotationFileAttachment => pdf_annotation_file_attachment_name
+    AnnotationSound => pdf_annotation_sound_name
+    AnnotationMovie => pdf_annotation_movie_name
+    AnnotationWidget => pdf_annotation_widget_name
+    AnnotationScreen => pdf_annotation_screen_name
+    AnnotationPrinterMark => pdf_annotation_printer_mark_name
+    AnnotationTrapNet => pdf_annotation_trap_net_name
+    AnnotationWatermark => pdf_annotation_watermark_name
+    AnnotationThreeDee => pdf_annotation_three_dee_name
+    AnnotationUnknown(_) => pdf_annotation_unknown_name
   }
 }
 
@@ -243,65 +383,65 @@ fn PdfDocument::pdf_annotation_subtype(
   depth : Int,
 ) -> PdfAnnotationSubtype raise PdfError {
   match self.lookup_direct(pdf_annotation_subtype_key(), annotation) {
-    Some(PdfNameObject(name)) if name == pdf_annotation_name("/Text") =>
+    Some(PdfNameObject(name)) if name == pdf_annotation_text_name =>
       AnnotationText
-    Some(PdfNameObject(name)) if name == pdf_annotation_name("/FreeText") =>
+    Some(PdfNameObject(name)) if name == pdf_annotation_free_text_name =>
       AnnotationFreeText
-    Some(PdfNameObject(name)) if name == pdf_annotation_name("/Popup") =>
+    Some(PdfNameObject(name)) if name == pdf_annotation_popup_name =>
       match
         self.direct(annotation).lookup_immediate(pdf_annotation_parent_key()) {
         Some(PdfIndirect(parent)) if depth < 64 =>
           AnnotationPopup(
             self.pdf_annotation_read_depth(PdfIndirect(parent), depth + 1),
           )
-        _ => AnnotationUnknown(pdf_annotation_name(""))
+        _ => AnnotationUnknown(pdf_annotation_empty_name)
       }
-    Some(PdfNameObject(name)) if name == pdf_annotation_name("/Stamp") =>
+    Some(PdfNameObject(name)) if name == pdf_annotation_stamp_name =>
       AnnotationStamp
-    Some(PdfNameObject(name)) if name == pdf_annotation_name("/Link") =>
+    Some(PdfNameObject(name)) if name == pdf_annotation_link_name =>
       AnnotationLink
-    Some(PdfNameObject(name)) if name == pdf_annotation_name("/Line") =>
+    Some(PdfNameObject(name)) if name == pdf_annotation_line_name =>
       AnnotationLine
-    Some(PdfNameObject(name)) if name == pdf_annotation_name("/Square") =>
+    Some(PdfNameObject(name)) if name == pdf_annotation_square_name =>
       AnnotationSquare
-    Some(PdfNameObject(name)) if name == pdf_annotation_name("/Circle") =>
+    Some(PdfNameObject(name)) if name == pdf_annotation_circle_name =>
       AnnotationCircle
-    Some(PdfNameObject(name)) if name == pdf_annotation_name("/Polygon") =>
+    Some(PdfNameObject(name)) if name == pdf_annotation_polygon_name =>
       AnnotationPolygon
-    Some(PdfNameObject(name)) if name == pdf_annotation_name("/PolyLine") =>
+    Some(PdfNameObject(name)) if name == pdf_annotation_polyline_name =>
       AnnotationPolyLine
-    Some(PdfNameObject(name)) if name == pdf_annotation_name("/Highlight") =>
+    Some(PdfNameObject(name)) if name == pdf_annotation_highlight_name =>
       AnnotationHighlight
-    Some(PdfNameObject(name)) if name == pdf_annotation_name("/Underline") =>
+    Some(PdfNameObject(name)) if name == pdf_annotation_underline_name =>
       AnnotationUnderline
-    Some(PdfNameObject(name)) if name == pdf_annotation_name("/Squiggly") =>
+    Some(PdfNameObject(name)) if name == pdf_annotation_squiggly_name =>
       AnnotationSquiggly
-    Some(PdfNameObject(name)) if name == pdf_annotation_name("/StrikeOut") =>
+    Some(PdfNameObject(name)) if name == pdf_annotation_strikeout_name =>
       AnnotationStrikeOut
-    Some(PdfNameObject(name)) if name == pdf_annotation_name("/Caret") =>
+    Some(PdfNameObject(name)) if name == pdf_annotation_caret_name =>
       AnnotationCaret
-    Some(PdfNameObject(name)) if name == pdf_annotation_name("/Ink") =>
+    Some(PdfNameObject(name)) if name == pdf_annotation_ink_name =>
       AnnotationInk
-    Some(PdfNameObject(name)) if name == pdf_annotation_name("/FileAttachment") =>
+    Some(PdfNameObject(name)) if name == pdf_annotation_file_attachment_name =>
       AnnotationFileAttachment
-    Some(PdfNameObject(name)) if name == pdf_annotation_name("/Sound") =>
+    Some(PdfNameObject(name)) if name == pdf_annotation_sound_name =>
       AnnotationSound
-    Some(PdfNameObject(name)) if name == pdf_annotation_name("/Movie") =>
+    Some(PdfNameObject(name)) if name == pdf_annotation_movie_name =>
       AnnotationMovie
-    Some(PdfNameObject(name)) if name == pdf_annotation_name("/Widget") =>
+    Some(PdfNameObject(name)) if name == pdf_annotation_widget_name =>
       AnnotationWidget
-    Some(PdfNameObject(name)) if name == pdf_annotation_name("/Screen") =>
+    Some(PdfNameObject(name)) if name == pdf_annotation_screen_name =>
       AnnotationScreen
-    Some(PdfNameObject(name)) if name == pdf_annotation_name("/PrinterMark") =>
+    Some(PdfNameObject(name)) if name == pdf_annotation_printer_mark_name =>
       AnnotationPrinterMark
-    Some(PdfNameObject(name)) if name == pdf_annotation_name("/TrapNet") =>
+    Some(PdfNameObject(name)) if name == pdf_annotation_trap_net_name =>
       AnnotationTrapNet
-    Some(PdfNameObject(name)) if name == pdf_annotation_name("/Watermark") =>
+    Some(PdfNameObject(name)) if name == pdf_annotation_watermark_name =>
       AnnotationWatermark
-    Some(PdfNameObject(name)) if name == pdf_annotation_name("/3D") =>
+    Some(PdfNameObject(name)) if name == pdf_annotation_three_dee_name =>
       AnnotationThreeDee
     Some(PdfNameObject(name)) => AnnotationUnknown(name)
-    _ => AnnotationUnknown(pdf_annotation_name(""))
+    _ => AnnotationUnknown(pdf_annotation_empty_name)
   }
 }
 
