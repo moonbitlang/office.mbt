@@ -78,6 +78,9 @@ Current estimate:
   `PdfName` values.~~
 - [x] ~~Cache standard color-space family names and function dictionary keys so
   format-layer read/write paths reuse stable `PdfName` values.~~
+- [x] ~~Cache standard merge catalog, destination, name-dictionary, AcroForm,
+  and structure-tree names so public merge/extraction workflows reuse stable
+  `PdfName` values.~~
 - [ ] Continue zlib byte-output/performance parity work where exact miniz block
   spelling or large-file profiles expose remaining gaps.
 - [ ] Profile and tune large-file hot paths for object streams, filters, and
@@ -128,6 +131,9 @@ Current estimate:
   document-feature lifecycle paths.~~
 - [x] ~~Color-space readers/writers and function dictionary helpers now share
   cached standard `PdfName` values in format-layer hot paths.~~
+- [x] ~~Merge catalog assembly, destination rewriting, name-dictionary merging,
+  AcroForm merging, and structure-tree helpers now share cached standard
+  `PdfName` values.~~
 - [ ] Improve byte-identical zlib output strategy and broader performance
   parity beyond the explicit Flate level API.
 - [ ] Broaden malformed xref-table/xref-stream/object-stream recovery with more

@@ -352,8 +352,10 @@ and backend breadth, is about 84-89% complete.
   hot paths, cached standard annotation, bookmark, destination,
   optional-content, and structure-tree names for document-feature lifecycle hot
   paths, resource-heavy page replacement with mixed destination/action
-  references, and example workflows for `pdfdecomp.ml`, `pdftest.ml`,
-  `pdfdraft.ml`, `pdfencrypt.ml`, and `pdfmergeexample.ml`.
+  references, cached standard merge catalog, destination, name-dictionary,
+  AcroForm, and structure-tree names for public merge/extraction workflows, and
+  example workflows for `pdfdecomp.ml`, `pdftest.ml`, `pdfdraft.ml`,
+  `pdfencrypt.ml`, and `pdfmergeexample.ml`.
 - Covered: ARC4, AESV2, AESV3/AESV3 ISO authentication, encryption,
   decryption, shared env-aware file-ID generation for missing encryption and
   merge IDs, native secure-random writer paths, saved-state recrypt, encrypted

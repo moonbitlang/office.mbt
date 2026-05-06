@@ -24,113 +24,183 @@ fn pdf_merge_name(text : String) -> PdfName {
 }
 
 ///|
+let pdf_merge_root_key_name : PdfName = pdf_merge_name("/Root")
+
+///|
 fn pdf_merge_root_key() -> PdfName {
-  pdf_merge_name("/Root")
+  pdf_merge_root_key_name
 }
+
+///|
+let pdf_merge_acroform_key_name : PdfName = pdf_merge_name("/AcroForm")
 
 ///|
 fn pdf_merge_acroform_key() -> PdfName {
-  pdf_merge_name("/AcroForm")
+  pdf_merge_acroform_key_name
 }
+
+///|
+let pdf_merge_open_action_key_name : PdfName = pdf_merge_name("/OpenAction")
 
 ///|
 fn pdf_merge_open_action_key() -> PdfName {
-  pdf_merge_name("/OpenAction")
+  pdf_merge_open_action_key_name
 }
+
+///|
+let pdf_merge_ocproperties_key_name : PdfName = pdf_merge_name("/OCProperties")
 
 ///|
 fn pdf_merge_ocproperties_key() -> PdfName {
-  pdf_merge_name("/OCProperties")
+  pdf_merge_ocproperties_key_name
 }
+
+///|
+let pdf_merge_outlines_key_name : PdfName = pdf_merge_name("/Outlines")
 
 ///|
 fn pdf_merge_outlines_key() -> PdfName {
-  pdf_merge_name("/Outlines")
+  pdf_merge_outlines_key_name
 }
+
+///|
+let pdf_merge_page_labels_key_name : PdfName = pdf_merge_name("/PageLabels")
 
 ///|
 fn pdf_merge_page_labels_key() -> PdfName {
-  pdf_merge_name("/PageLabels")
+  pdf_merge_page_labels_key_name
 }
+
+///|
+let pdf_merge_pages_key_name : PdfName = pdf_merge_name("/Pages")
 
 ///|
 fn pdf_merge_pages_key() -> PdfName {
-  pdf_merge_name("/Pages")
+  pdf_merge_pages_key_name
 }
+
+///|
+let pdf_merge_struct_tree_root_key_name : PdfName = pdf_merge_name(
+  "/StructTreeRoot",
+)
 
 ///|
 fn pdf_merge_struct_tree_root_key() -> PdfName {
-  pdf_merge_name("/StructTreeRoot")
+  pdf_merge_struct_tree_root_key_name
 }
+
+///|
+let pdf_merge_type_key_name : PdfName = pdf_merge_name("/Type")
 
 ///|
 fn pdf_merge_type_key() -> PdfName {
-  pdf_merge_name("/Type")
+  pdf_merge_type_key_name
 }
+
+///|
+let pdf_merge_dests_key_name : PdfName = pdf_merge_name("/Dests")
 
 ///|
 fn pdf_merge_dests_key() -> PdfName {
-  pdf_merge_name("/Dests")
+  pdf_merge_dests_key_name
 }
+
+///|
+let pdf_merge_dest_key_name : PdfName = pdf_merge_name("/Dest")
 
 ///|
 fn pdf_merge_dest_key() -> PdfName {
-  pdf_merge_name("/Dest")
+  pdf_merge_dest_key_name
 }
+
+///|
+let pdf_merge_fields_key_name : PdfName = pdf_merge_name("/Fields")
 
 ///|
 fn pdf_merge_fields_key() -> PdfName {
-  pdf_merge_name("/Fields")
+  pdf_merge_fields_key_name
 }
+
+///|
+let pdf_merge_af_key_name : PdfName = pdf_merge_name("/AF")
 
 ///|
 fn pdf_merge_af_key() -> PdfName {
-  pdf_merge_name("/AF")
+  pdf_merge_af_key_name
 }
+
+///|
+let pdf_merge_class_map_key_name : PdfName = pdf_merge_name("/ClassMap")
 
 ///|
 fn pdf_merge_class_map_key() -> PdfName {
-  pdf_merge_name("/ClassMap")
+  pdf_merge_class_map_key_name
 }
+
+///|
+let pdf_merge_id_tree_key_name : PdfName = pdf_merge_name("/IDTree")
 
 ///|
 fn pdf_merge_id_tree_key() -> PdfName {
-  pdf_merge_name("/IDTree")
+  pdf_merge_id_tree_key_name
 }
+
+///|
+let pdf_merge_info_key_name : PdfName = pdf_merge_name("/Info")
 
 ///|
 fn pdf_merge_info_key() -> PdfName {
-  pdf_merge_name("/Info")
+  pdf_merge_info_key_name
 }
+
+///|
+let pdf_merge_k_key_name : PdfName = pdf_merge_name("/K")
 
 ///|
 fn pdf_merge_k_key() -> PdfName {
-  pdf_merge_name("/K")
+  pdf_merge_k_key_name
 }
+
+///|
+let pdf_merge_names_key_name : PdfName = pdf_merge_name("/Names")
 
 ///|
 fn pdf_merge_names_key() -> PdfName {
-  pdf_merge_name("/Names")
+  pdf_merge_names_key_name
 }
+
+///|
+let pdf_merge_ns_key_name : PdfName = pdf_merge_name("/NS")
 
 ///|
 fn pdf_merge_ns_key() -> PdfName {
-  pdf_merge_name("/NS")
+  pdf_merge_ns_key_name
 }
+
+///|
+let pdf_merge_parent_key_name : PdfName = pdf_merge_name("/P")
 
 ///|
 fn pdf_merge_parent_key() -> PdfName {
-  pdf_merge_name("/P")
+  pdf_merge_parent_key_name
 }
+
+///|
+let pdf_merge_pronunciation_lexicon_key_name : PdfName = pdf_merge_name(
+  "/PronunciationLexicon",
+)
 
 ///|
 fn pdf_merge_pronunciation_lexicon_key() -> PdfName {
-  pdf_merge_name("/PronunciationLexicon")
+  pdf_merge_pronunciation_lexicon_key_name
 }
 
 ///|
+let pdf_merge_parent_tree_key_name : PdfName = pdf_merge_name("/ParentTree")
+
+///|
 fn pdf_merge_parent_tree_key() -> PdfName {
-  pdf_merge_name("/ParentTree")
+  pdf_merge_parent_tree_key_name
 }
 
 ///|
@@ -141,44 +211,96 @@ fn PdfDocument::pdf_merge_catalog(
 }
 
 ///|
+let pdf_merge_role_map_key_name : PdfName = pdf_merge_name("/RoleMap")
+
+///|
 fn pdf_merge_role_map_key() -> PdfName {
-  pdf_merge_name("/RoleMap")
+  pdf_merge_role_map_key_name
 }
+
+///|
+let pdf_merge_s_key_name : PdfName = pdf_merge_name("/S")
 
 ///|
 fn pdf_merge_s_key() -> PdfName {
-  pdf_merge_name("/S")
+  pdf_merge_s_key_name
 }
+
+///|
+let pdf_merge_namespaces_key_name : PdfName = pdf_merge_name("/Namespaces")
 
 ///|
 fn pdf_merge_namespaces_key() -> PdfName {
-  pdf_merge_name("/Namespaces")
+  pdf_merge_namespaces_key_name
 }
+
+///|
+let pdf_merge_struct_parent_key_name : PdfName = pdf_merge_name("/StructParent")
 
 ///|
 fn pdf_merge_struct_parent_key() -> PdfName {
-  pdf_merge_name("/StructParent")
+  pdf_merge_struct_parent_key_name
 }
+
+///|
+let pdf_merge_struct_parents_key_name : PdfName = pdf_merge_name(
+  "/StructParents",
+)
 
 ///|
 fn pdf_merge_struct_parents_key() -> PdfName {
-  pdf_merge_name("/StructParents")
+  pdf_merge_struct_parents_key_name
 }
 
 ///|
-fn pdf_merge_namedict_tree_keys() -> Array[PdfName] {
-  [
-    pdf_merge_name("/AP"),
-    pdf_merge_name("/JavaScript"),
-    pdf_merge_name("/Pages"),
-    pdf_merge_name("/Templates"),
-    pdf_merge_name("/IDS"),
-    pdf_merge_name("/URLS"),
-    pdf_merge_name("/EmbeddedFiles"),
-    pdf_merge_name("/AlternatePresentations"),
-    pdf_merge_name("/Renditions"),
-  ]
+let pdf_merge_namedict_ap_key_name : PdfName = pdf_merge_name("/AP")
+
+///|
+let pdf_merge_namedict_javascript_key_name : PdfName = pdf_merge_name(
+  "/JavaScript",
+)
+
+///|
+let pdf_merge_namedict_templates_key_name : PdfName = pdf_merge_name(
+  "/Templates",
+)
+
+///|
+let pdf_merge_namedict_ids_key_name : PdfName = pdf_merge_name("/IDS")
+
+///|
+let pdf_merge_namedict_urls_key_name : PdfName = pdf_merge_name("/URLS")
+
+///|
+let pdf_merge_namedict_embedded_files_key_name : PdfName = pdf_merge_name(
+  "/EmbeddedFiles",
+)
+
+///|
+let pdf_merge_namedict_alternate_presentations_key_name : PdfName = pdf_merge_name(
+  "/AlternatePresentations",
+)
+
+///|
+let pdf_merge_namedict_renditions_key_name : PdfName = pdf_merge_name(
+  "/Renditions",
+)
+
+///|
+let pdf_merge_namedict_tree_key_names : Array[PdfName] = [
+  pdf_merge_namedict_ap_key_name, pdf_merge_namedict_javascript_key_name, pdf_merge_pages_key_name,
+  pdf_merge_namedict_templates_key_name, pdf_merge_namedict_ids_key_name, pdf_merge_namedict_urls_key_name,
+  pdf_merge_namedict_embedded_files_key_name, pdf_merge_namedict_alternate_presentations_key_name,
+  pdf_merge_namedict_renditions_key_name,
+]
+
+///|
+fn pdf_merge_namedict_tree_keys() -> ArrayView[PdfName] {
+  pdf_merge_namedict_tree_key_names
 }
+
+///|
+let pdf_merge_document_name : PdfName = pdf_merge_name("/Document")
 
 ///|
 fn PdfDocument::pdf_merge_copy_objects_from(
@@ -628,7 +750,7 @@ fn PdfDocument::pdf_merge_structure_tree_root(
           let top_level_number = self.add_object(
             PdfDictionary([
               (pdf_merge_ns_key(), PdfIndirect(namespace_number)),
-              (pdf_merge_s_key(), PdfNameObject(pdf_merge_name("/Document"))),
+              (pdf_merge_s_key(), PdfNameObject(pdf_merge_document_name)),
               (pdf_merge_parent_key(), PdfIndirect(root_number)),
               (pdf_merge_k_key(), pdf_structure_k_object(kids)),
             ]),
