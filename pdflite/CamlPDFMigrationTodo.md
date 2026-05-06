@@ -592,6 +592,9 @@ Current backend snapshot:
 - [x] ~~Regular text `codepoints_of_text` now flattens charcode glyph results
   directly instead of allocating an intermediate glyph-record array when callers
   only need codepoints.~~
+- [x] ~~Regular text `glyphnames_of_text` now resolves glyph names directly from
+  charcodes instead of allocating full glyph-record/codepoint arrays when callers
+  only need glyph names.~~
 - [x] ~~Generated CID-range CMap reverse lookup for Adobe-GB1, Adobe-CNS1, and
   Adobe-Japan1 now maps Unicode to CID and CID to charcode instead of scanning
   every character code in every range.~~
@@ -922,6 +925,9 @@ Current backend snapshot:
   comparison fixtures after the local Pandoc gates are stable.
 - [ ] Performance tuning for large files, object streams, filters, and text/image
   extraction.
+- [x] ~~Glyph-name extraction now skips the intermediate glyph-record array,
+  reducing allocation on metadata/debug text extraction paths while preserving
+  existing glyph-name semantics.~~
 - [x] ~~Incremental writer changed-object collection now deduplicates object
   numbers with a hash set before sparse xref sorting, improving large repeated
   update event logs without changing writer output.~~

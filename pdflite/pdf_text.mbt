@@ -10372,7 +10372,9 @@ pub fn PdfTextExtractor::glyphnames_of_text(
   text : BytesView,
 ) -> Array[PdfName] raise PdfError {
   [
-    for glyph in self.glyphnames_and_codepoints_of_text(text) => glyph.glyphname
+    for code in self.font.pdf_text_charcodes_of_text(text) => {
+      self.pdf_text_glyph_of_charcode(code).glyphname
+    }
   ]
 }
 
