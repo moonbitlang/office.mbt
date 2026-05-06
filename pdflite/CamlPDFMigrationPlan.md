@@ -1865,10 +1865,13 @@ input quirks should be added only when they unblock one of the native gates.
 All-target type checking now passes with
 `moon check --target all --warn-list +73`. Backend validation is now partly
 widened: WasmGC and JavaScript run the full non-native suites successfully, and
-plain Wasm build-only validation succeeds. Remaining backend work is to reduce
-or split the generated plain-Wasm package test modules so they instantiate
-under the runtime function-size limit, and to revisit LLVM once the installed
-toolchain provides the LLVM stdlib bundle.
+plain Wasm build-only validation succeeds. Plain-Wasm smoke validation now runs
+495 tests after excluding the largest corpus/text regression suites from that
+target while retaining them on wasm-gc, JavaScript, native, and future LLVM.
+Remaining backend work is to reduce or split those largest regression suites so
+the full plain-Wasm package tests instantiate under the runtime function-size
+limit, and to revisit LLVM once the installed toolchain provides the LLVM
+stdlib bundle.
 
 ## Update Discipline
 

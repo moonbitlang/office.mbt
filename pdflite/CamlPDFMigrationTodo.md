@@ -15,8 +15,10 @@ Current backend snapshot:
 
 - Native: full suite passing with complete source coverage.
 - WasmGC and JavaScript: full non-native test suites pass.
-- Wasm: library and tests build, but the generated package-level test module
-  exceeds the runtime's maximum function-size limit.
+- Wasm: backend smoke suite passes after keeping the largest corpus/text
+  regression files on wasm-gc/js/native/llvm; full plain-Wasm suite is still
+  deferred because the generated package-level module exceeds the runtime's
+  maximum function-size limit.
 - LLVM: blocked by the current toolchain's missing LLVM stdlib bundle.
 
 ## Tracking Rules
@@ -672,9 +674,12 @@ Current backend snapshot:
   stabilization, each with 1099 tests.~~
 - [x] ~~Plain Wasm backend build-only validation passes for the package and
   generated tests.~~
-- [ ] Split or otherwise reduce the generated plain-Wasm package-level test
-  modules so the runtime can instantiate them below its maximum function-size
-  limit.
+- [x] ~~Plain Wasm backend smoke validation passes with 495 tests after
+  excluding the largest corpus/text regression files from plain Wasm while
+  retaining them on wasm-gc, JavaScript, native, and future LLVM.~~
+- [ ] Split or otherwise reduce the largest regression suites so full
+  plain-Wasm package-level tests can instantiate under the runtime's maximum
+  function-size limit without target exclusions.
 - [ ] Revisit LLVM backend validation once the installed MoonBit toolchain has
   the LLVM stdlib bundle available.
 - [x] ~~Checked-in CamlPDF fixture PDFs read, multi-page text-extract,
