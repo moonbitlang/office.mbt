@@ -11,6 +11,33 @@ pub(all) enum PdfWriteMode {
 } derive(Debug, Eq, ToJson)
 
 ///|
+pub(all) struct PdfWriteEncryption {
+  encryption_method : PdfEncryptionMethod
+  user_password : PdfBytes
+  owner_password : PdfBytes
+  denied_permissions : Array[PdfPermission]
+} derive(Debug, Eq, ToJson)
+
+///|
+pub fn pdf_write_encryption(
+  encryption_method : PdfEncryptionMethod,
+  user_password : BytesView,
+  owner_password : BytesView,
+  denied_permissions : ArrayView[PdfPermission],
+) -> PdfWriteEncryption {
+  let permissions : Array[PdfPermission] = []
+  for permission in denied_permissions {
+    permissions.push(permission)
+  }
+  {
+    encryption_method,
+    user_password: user_password.to_owned(),
+    owner_password: owner_password.to_owned(),
+    denied_permissions: permissions,
+  }
+}
+
+///|
 fn pdf_writer_push_view(output : Array[Byte], view : BytesView) -> Unit {
   for byte in view {
     output.push(byte)
@@ -1286,6 +1313,125 @@ pub fn pdf_write_document_with_generated_id(
   mode? : PdfWriteMode = PdfWriteClassic,
 ) -> PdfBytes raise PdfError {
   pdf_write_document_with_mode(document.copy_with_current_id(path), mode)
+}
+
+///|
+fn pdf_write_required_aes_iv_provider(
+  provider : ((Int, Int, Int) -> PdfBytes raise PdfError)?,
+) -> ((Int, Int, Int) -> PdfBytes raise PdfError) raise PdfError {
+  match provider {
+    Some(provider) => provider
+    None => raise RandomBytesUnavailable
+  }
+}
+
+///|
+fn pdf_write_required_aesv3_random_provider(
+  provider : ((PdfAesV3RandomField, Int) -> PdfBytes raise PdfError)?,
+) -> ((PdfAesV3RandomField, Int) -> PdfBytes raise PdfError) raise PdfError {
+  match provider {
+    Some(provider) => provider
+    None => raise RandomBytesUnavailable
+  }
+}
+
+///|
+fn pdf_write_apply_options_encryption(
+  document : PdfDocument,
+  encryption : PdfWriteEncryption,
+  file_id : BytesView,
+  aes_iv_provider : ((Int, Int, Int) -> PdfBytes raise PdfError)?,
+  aesv3_random_provider : ((PdfAesV3RandomField, Int) -> PdfBytes raise PdfError)?,
+) -> PdfDocument raise PdfError {
+  match encryption.encryption_method {
+    PdfEncryption40Bit =>
+      document.encrypt_40bit(
+        encryption.user_password[:],
+        encryption.owner_password[:],
+        encryption.denied_permissions[:],
+        file_id~,
+      )
+    PdfEncryption128Bit =>
+      document.encrypt_128bit(
+        encryption.user_password[:],
+        encryption.owner_password[:],
+        encryption.denied_permissions[:],
+        file_id~,
+      )
+    PdfEncryptionAES128(encrypt_metadata) => {
+      let iv_provider = pdf_write_required_aes_iv_provider(aes_iv_provider)
+      document.encrypt_128bit_aesv2_with_iv_provider(
+        encryption.user_password[:],
+        encryption.owner_password[:],
+        encryption.denied_permissions[:],
+        iv_provider,
+        encrypt_metadata~,
+        file_id~,
+      )
+    }
+    PdfEncryptionAES256(encrypt_metadata) => {
+      let random_provider = pdf_write_required_aesv3_random_provider(
+        aesv3_random_provider,
+      )
+      let iv_provider = pdf_write_required_aes_iv_provider(aes_iv_provider)
+      document.encrypt_256bit_aesv3_with_providers(
+        encryption.user_password[:],
+        encryption.owner_password[:],
+        encryption.denied_permissions[:],
+        random_provider,
+        iv_provider,
+        encrypt_metadata~,
+        file_id~,
+      )
+    }
+    PdfEncryptionAES256ISO(encrypt_metadata) => {
+      let random_provider = pdf_write_required_aesv3_random_provider(
+        aesv3_random_provider,
+      )
+      let iv_provider = pdf_write_required_aes_iv_provider(aes_iv_provider)
+      document.encrypt_256bit_aesv3_iso_with_providers(
+        encryption.user_password[:],
+        encryption.owner_password[:],
+        encryption.denied_permissions[:],
+        random_provider,
+        iv_provider,
+        encrypt_metadata~,
+        file_id~,
+      )
+    }
+    PdfEncryptionAlreadyEncrypted => document.copy()
+  }
+}
+
+///|
+pub fn pdf_write_document_options(
+  document : PdfDocument,
+  encryption? : PdfWriteEncryption? = None,
+  update_from? : PdfBytes? = None,
+  make_id? : Bool = true,
+  id_path? : String = "",
+  mode? : PdfWriteMode = PdfWriteClassic,
+  file_id? : BytesView = [],
+  aes_iv_provider? : ((Int, Int, Int) -> PdfBytes raise PdfError)? = None,
+  aesv3_random_provider? : ((PdfAesV3RandomField, Int) -> PdfBytes raise PdfError)? = None,
+) -> PdfBytes raise PdfError {
+  let prepared = match encryption {
+    Some(encryption) =>
+      pdf_write_apply_options_encryption(
+        document, encryption, file_id, aes_iv_provider, aesv3_random_provider,
+      )
+    None =>
+      if make_id {
+        document.copy_with_current_id(id_path)
+      } else {
+        document.copy()
+      }
+  }
+  match update_from {
+    Some(original) =>
+      pdf_write_document_incremental_update_with_mode(original, prepared, mode)
+    None => pdf_write_document_with_mode(prepared, mode)
+  }
 }
 
 ///|

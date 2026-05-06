@@ -7,7 +7,7 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 97.0%.
+- Native main-feature parity: 97.1%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
   breadth: 85-90%.
 
@@ -93,6 +93,10 @@ Current backend snapshot:
   encryption-value parsing, single-stream decrypt, permission-mask decoding,
   ARC4 encrypt/recrypt, explicit-provider AES encrypt/recrypt, and native
   secure-random AES convenience encrypt wrappers.~~
+- [x] ~~Expose a `.repos/pdfwrite.mli`-shaped typed writer options wrapper for
+  one-call byte output with optional ID generation, incremental update,
+  xref-stream mode dispatch, optional encryption, explicit-provider AES
+  workflows, and already-encrypted pass-through.~~
 - [ ] Decide whether to emulate CamlPDF's `charcode_extractor` debug stderr
   output; current wrappers accept the `debug` flag for API shape but keep the
   lookup pure.

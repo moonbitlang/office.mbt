@@ -671,6 +671,8 @@ pub fn pdf_write_document_incremental_update_with_mode(Bytes, PdfDocument, PdfWr
 
 pub fn pdf_write_document_incremental_update_with_xref_stream(Bytes, PdfDocument) -> Bytes raise PdfError
 
+pub fn pdf_write_document_options(PdfDocument, encryption? : PdfWriteEncryption?, update_from? : Bytes?, make_id? : Bool, id_path? : String, mode? : PdfWriteMode, file_id? : BytesView, aes_iv_provider? : ((Int, Int, Int) -> Bytes raise PdfError)?, aesv3_random_provider? : ((PdfAesV3RandomField, Int) -> Bytes raise PdfError)?) -> Bytes raise PdfError
+
 pub fn pdf_write_document_with_compressed_xref_stream(PdfDocument) -> Bytes raise PdfError
 
 pub fn pdf_write_document_with_generated_id(PdfDocument, String, mode? : PdfWriteMode) -> Bytes raise PdfError
@@ -690,6 +692,8 @@ pub fn pdf_write_encrypted_aesv2_document_with_iv_provider(PdfDocument, BytesVie
 pub fn pdf_write_encrypted_aesv3_document_with_providers(PdfDocument, BytesView, BytesView, ArrayView[PdfPermission], (PdfAesV3RandomField, Int) -> Bytes raise PdfError, (Int, Int, Int) -> Bytes raise PdfError, iso? : Bool, encrypt_metadata? : Bool, mode? : PdfWriteMode, file_id? : BytesView) -> Bytes raise PdfError
 
 pub fn pdf_write_encrypted_aesv3_iso_document_with_providers(PdfDocument, BytesView, BytesView, ArrayView[PdfPermission], (PdfAesV3RandomField, Int) -> Bytes raise PdfError, (Int, Int, Int) -> Bytes raise PdfError, encrypt_metadata? : Bool, mode? : PdfWriteMode, file_id? : BytesView) -> Bytes raise PdfError
+
+pub fn pdf_write_encryption(PdfEncryptionMethod, BytesView, BytesView, ArrayView[PdfPermission]) -> PdfWriteEncryption
 
 pub fn pdf_write_font(PdfDocument, PdfFont, objnum? : Int?) -> Int raise PdfError
 
@@ -1973,6 +1977,13 @@ pub(all) enum PdfUnit {
 pub(all) struct PdfVersion {
   major : Int
   minor : Int
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfWriteEncryption {
+  encryption_method : PdfEncryptionMethod
+  user_password : Bytes
+  owner_password : Bytes
+  denied_permissions : Array[PdfPermission]
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) enum PdfWriteMode {

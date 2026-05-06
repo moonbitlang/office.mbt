@@ -507,7 +507,13 @@ MoonBit consequences for this project:
    document writes and incremental-update writes, plus direct encrypted-writer
    wrappers for ARC4, AESV2, AESV3, and AESV3 ISO workflows, matching CamlPDF's
    main encrypt-at-write use case while keeping AES random material explicit
-   through provider callbacks. Native-target AESV2 and AESV3 convenience output
+   through provider callbacks. A typed `PdfWriteEncryption` value plus
+   `pdf_write_document_options` now expose a `.repos/pdfwrite.mli`-shaped
+   one-call byte-output workflow for optional trailer-ID generation,
+   incremental update, xref-stream mode dispatch, optional encryption,
+   explicit-provider AES, and already-encrypted pass-through without adding
+   OCaml channel semantics to the byte-oriented core. Native-target AESV2 and
+   AESV3 convenience output
    is now started with a pdflite-owned OS random-byte FFI boundary
    (`/dev/urandom` on POSIX, `BCryptGenRandom` on Windows), covering AESV2 IVs
    and AESV3 file keys, salts, permissions padding, and object IVs. Saved-state

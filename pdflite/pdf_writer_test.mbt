@@ -964,6 +964,254 @@ test "pdf_write_document_with_generated_id writes copy with trailer ID" {
 }
 
 ///|
+test "pdf_write_document_options covers id generation and incremental update" {
+  let key_id = writer_name_for_test([47, 73, 68])
+  let document = try! @pdflite.pdf_minimum_valid_pdf()
+  let rendered = @pdflite.pdf_write_document_options(
+    document,
+    id_path="writer-options.pdf",
+    mode=PdfWriteCompressedXRefStream,
+  )
+  @test.assert_eq(
+    writer_find_bytes(rendered, writer_ascii_for_test("/FlateDecode")) > 0,
+    true,
+  )
+  let parsed = @pdflite.pdf_read_document_from_bytes(rendered)
+  writer_assert_generated_id_for_test(
+    parsed.trailer_dict().lookup_immediate(key_id),
+  )
+  @test.assert_eq(document.trailer_dict().lookup_immediate(key_id), None)
+
+  let without_id = @pdflite.pdf_write_document_options(document, make_id=false)
+  let without_id_parsed = @pdflite.pdf_read_document_from_bytes(without_id)
+  @test.assert_eq(
+    without_id_parsed.trailer_dict().lookup_immediate(key_id),
+    None,
+  )
+
+  let value_name = writer_name_for_test([47, 86, 97, 108, 117, 101])
+  let original_doc = @pdflite.pdf_document_empty()
+  original_doc.set_root(1)
+  original_doc.add_object_given_number(
+    1,
+    @pdflite.pdf_dictionary([(value_name, PdfInteger(1))]),
+  )
+  let original = @pdflite.pdf_write_document(original_doc)
+  let update_doc = @pdflite.pdf_read_document_from_bytes(original)
+  update_doc.add_object_given_number(
+    1,
+    @pdflite.pdf_dictionary([(value_name, PdfInteger(2))]),
+  )
+  let updated = @pdflite.pdf_write_document_options(
+    update_doc,
+    update_from=Some(original),
+    make_id=false,
+    mode=PdfWriteXRefStream,
+  )
+  @test.assert_eq(@pdflite.pdf_revisions_from_bytes(updated), 2)
+  @test.assert_eq(
+    writer_find_bytes_from(
+      updated,
+      writer_ascii_for_test("/Type /XRef"),
+      original.length(),
+    ) >
+    0,
+    true,
+  )
+  @test.assert_eq(
+    @pdflite.pdf_read_document_from_bytes(updated).lookup_object_or_null(1),
+    @pdflite.pdf_dictionary([(value_name, PdfInteger(2))]),
+  )
+}
+
+///|
+test "pdf_write_document_options dispatches encryption methods" {
+  let denied : Array[@pdflite.PdfPermission] = [PdfNoEdit]
+  let user = writer_ascii_for_test("user")
+  let owner = writer_ascii_for_test("owner")
+  let arc4_40 = @pdflite.pdf_write_document_options(
+    try! writer_secret_document_for_test("options-40"),
+    encryption=Some(
+      @pdflite.pdf_write_encryption(
+        PdfEncryption40Bit,
+        user[:],
+        owner[:],
+        denied,
+      ),
+    ),
+    file_id=writer_ascii_for_test("options-40-id")[:],
+  )
+  writer_assert_encrypted_secret_for_test(
+    arc4_40, "owner", denied, "options-40",
+  )
+
+  let arc4_128 = @pdflite.pdf_write_document_options(
+    try! writer_secret_document_for_test("options-128"),
+    encryption=Some(
+      @pdflite.pdf_write_encryption(
+        PdfEncryption128Bit,
+        user[:],
+        owner[:],
+        denied,
+      ),
+    ),
+    mode=PdfWriteXRefStream,
+    file_id=writer_ascii_for_test("options-128-id")[:],
+  )
+  @test.assert_eq(
+    writer_find_bytes(arc4_128, writer_ascii_for_test("/Type /XRef")) > 0,
+    true,
+  )
+  writer_assert_encrypted_secret_for_test(
+    arc4_128, "owner", denied, "options-128",
+  )
+
+  let aes_iv_provider = @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
+    writer_ascii_for_test("options-aes-iv")[:],
+  )
+  let aesv2 = @pdflite.pdf_write_document_options(
+    try! writer_secret_document_for_test("options-aesv2"),
+    encryption=Some(
+      @pdflite.pdf_write_encryption(
+        PdfEncryptionAES128(false),
+        user[:],
+        owner[:],
+        [PdfNoCopy],
+      ),
+    ),
+    mode=PdfWriteCompressedXRefStream,
+    file_id=writer_ascii_for_test("options-aesv2-id")[:],
+    aes_iv_provider=Some(aes_iv_provider),
+  )
+  @test.assert_eq(
+    writer_find_bytes(aesv2, writer_ascii_for_test("/FlateDecode")) > 0,
+    true,
+  )
+  writer_assert_encrypted_secret_for_test(
+    aesv2,
+    "owner",
+    [PdfNoCopy],
+    "options-aesv2",
+  )
+
+  let aesv3 = @pdflite.pdf_write_document_options(
+    try! writer_secret_document_for_test("options-aesv3"),
+    encryption=Some(
+      @pdflite.pdf_write_encryption(
+        PdfEncryptionAES256(true),
+        user[:],
+        owner[:],
+        [PdfNoExtract],
+      ),
+    ),
+    file_id=writer_ascii_for_test("options-aesv3-id")[:],
+    aes_iv_provider=Some(
+      @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
+        writer_ascii_for_test("options-aesv3-iv")[:],
+      ),
+    ),
+    aesv3_random_provider=Some(
+      @pdflite.pdf_deterministic_aesv3_random_provider_from_seed(
+        writer_ascii_for_test("options-aesv3-random")[:],
+      ),
+    ),
+  )
+  writer_assert_encrypted_secret_for_test(
+    aesv3,
+    "owner",
+    [PdfNoExtract],
+    "options-aesv3",
+  )
+
+  let aesv3_iso = @pdflite.pdf_write_document_options(
+    try! writer_secret_document_for_test("options-aesv3-iso"),
+    encryption=Some(
+      @pdflite.pdf_write_encryption(
+        PdfEncryptionAES256ISO(false),
+        user[:],
+        owner[:],
+        [PdfNoAssemble],
+      ),
+    ),
+    file_id=writer_ascii_for_test("options-aesv3-iso-id")[:],
+    aes_iv_provider=Some(
+      @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
+        writer_ascii_for_test("options-aesv3-iso-iv")[:],
+      ),
+    ),
+    aesv3_random_provider=Some(
+      @pdflite.pdf_deterministic_aesv3_random_provider_from_seed(
+        writer_ascii_for_test("options-aesv3-iso-random")[:],
+      ),
+    ),
+  )
+  writer_assert_encrypted_secret_for_test(
+    aesv3_iso,
+    "owner",
+    [PdfNoAssemble],
+    "options-aesv3-iso",
+  )
+
+  let already_encrypted = @pdflite.pdf_write_document_options(
+    try! writer_secret_document_for_test("options-already"),
+    encryption=Some(
+      @pdflite.pdf_write_encryption(
+        PdfEncryptionAlreadyEncrypted,
+        user[:],
+        owner[:],
+        [],
+      ),
+    ),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_read_document_from_bytes(already_encrypted).lookup_object_or_null(
+      40,
+    ),
+    writer_secret_object_for_test("options-already"),
+  )
+}
+
+///|
+test "pdf_write_document_options reports missing AES providers" {
+  let user = writer_ascii_for_test("user")
+  let owner = writer_ascii_for_test("owner")
+  let aesv2_missing_iv : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_write_document_options(
+    try! writer_secret_document_for_test("options-missing-iv"),
+    encryption=Some(
+      @pdflite.pdf_write_encryption(
+        PdfEncryptionAES128(true),
+        user[:],
+        owner[:],
+        [],
+      ),
+    ),
+  )
+  guard aesv2_missing_iv is Err(_) else {
+    fail("expected missing AES IV provider to raise")
+  }
+
+  let aesv3_missing_random : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_write_document_options(
+    try! writer_secret_document_for_test("options-missing-random"),
+    encryption=Some(
+      @pdflite.pdf_write_encryption(
+        PdfEncryptionAES256(true),
+        user[:],
+        owner[:],
+        [],
+      ),
+    ),
+    aes_iv_provider=Some(
+      @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
+        writer_ascii_for_test("options-missing-random-iv")[:],
+      ),
+    ),
+  )
+  guard aesv3_missing_random is Err(_) else {
+    fail("expected missing AESV3 random provider to raise")
+  }
+}
+
+///|
 test "pdf_write_document_incremental_update_with_generated_id appends trailer ID" {
   let key_id = writer_name_for_test([47, 73, 68])
   let document = try! @pdflite.pdf_minimum_valid_pdf()
