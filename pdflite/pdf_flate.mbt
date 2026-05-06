@@ -1370,25 +1370,32 @@ fn pdf_flate_encode_view_pure(data : BytesView) -> PdfBytes {
 
 ///|
 #cfg(target="native")
-#borrow(data)
+#borrow(data, status)
 extern "C" fn pdf_flate_zlib_encode_ffi(
   data : PdfBytes,
   level : Int,
+  status : Ref[Int],
 ) -> PdfBytes = "pdflite_zlib_compress"
 
 ///|
 #cfg(target="native")
-#borrow(data)
-extern "C" fn pdf_flate_zlib_decode_ffi(data : PdfBytes) -> PdfBytes = "pdflite_zlib_decompress"
+#borrow(data, status)
+extern "C" fn pdf_flate_zlib_decode_ffi(
+  data : PdfBytes,
+  status : Ref[Int],
+) -> PdfBytes = "pdflite_zlib_decompress"
 
 ///|
 #cfg(target="native")
 #coverage.skip
-fn pdf_flate_native_payload(result : PdfBytes) -> PdfBytes raise PdfError {
-  if result.length() == 0 || result[0] != b'\x01' {
+fn pdf_flate_native_payload(
+  result : PdfBytes,
+  status : Ref[Int],
+) -> PdfBytes raise PdfError {
+  if status.val != 1 {
     raise InvalidFlateData
   }
-  result[1:].to_owned()
+  result
 }
 
 ///|
@@ -1399,7 +1406,13 @@ fn pdf_flate_encode_bytes_native(
   level : Int,
 ) -> PdfBytes raise PdfError {
   let _ = pdf_flate_header_for_level(level)
-  try pdf_flate_native_payload(pdf_flate_zlib_encode_ffi(data, level)) catch {
+  let status = Ref::{ val: 0 }
+  try
+    pdf_flate_native_payload(
+      pdf_flate_zlib_encode_ffi(data, level, status),
+      status,
+    )
+  catch {
     _ => pdf_flate_encode_view_with_level_pure(data[:], level)
   } noraise {
     bytes => bytes
@@ -1510,8 +1523,12 @@ pub fn pdf_flate_decode_view(data : BytesView) -> PdfBytes raise PdfError {
   if data.length() == 0 {
     Bytes::new(0)
   } else {
+    let status = Ref::{ val: 0 }
     try
-      pdf_flate_native_payload(pdf_flate_zlib_decode_ffi(data.to_owned()))
+      pdf_flate_native_payload(
+        pdf_flate_zlib_decode_ffi(data.to_owned(), status),
+        status,
+      )
     catch {
       _ => pdf_flate_decode_view_pure(data)
     } noraise {

@@ -535,7 +535,10 @@ MoonBit consequences for this project:
    the MoonBit replacement for CamlPDF's mutable global `flate_level`, while
    preserving the existing default compact encoder for callers that do not pass
    a level; fast explicit levels retain a stored-block fallback for
-   incompressible input. CamlPDF-style typed encoding and predictor choices are
+   incompressible input. Native miniz-backed Flate encode/decode now returns
+   payload bytes directly and reports success through a borrowed FFI
+   `Ref[Int]`, avoiding the previous status-prefix copy while preserving valid
+   empty-payload success. CamlPDF-style typed encoding and predictor choices are
    now exposed as `PdfStreamEncoding` and `PdfStreamPredictor`, with a
    `pdf_encode_stream_with_encoding` wrapper over the existing filter/predictor
    implementation; CCITT names map to `/CCITTFaxDecode`. Native CCITT decode is

@@ -347,6 +347,13 @@ test "pdf_flate_decode expands zlib stored and dynamic blocks" {
 }
 
 ///|
+test "pdf_flate_encode roundtrips an empty payload" {
+  let empty = codec_bytes_for_test([])
+  let encoded = @pdflite.pdf_flate_encode(empty)
+  @test.assert_eq(try! @pdflite.pdf_flate_decode(encoded), empty)
+}
+
+///|
 test "pdf_flate_decode reports malformed zlib data" {
   @test.assert_eq(try! @pdflite.pdf_flate_decode(codec_bytes_for_test([])), [])
   let short_data : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_flate_decode(

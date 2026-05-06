@@ -51,6 +51,9 @@ Current estimate:
   targets and prefix decoding.~~
 - [x] ~~Avoid the extra owned-byte copy on `PdfBytes` Flate filter
   encode/decode dispatch by routing owned byte paths directly to Flate APIs.~~
+- [x] ~~Return native miniz Flate encode/decode payloads directly through a
+  borrowed FFI status `Ref[Int]`, avoiding the extra status-prefix stripping
+  copy while preserving empty-payload success handling.~~
 - [x] ~~Cache standard stream-filter names so encode/decode dispatch no longer
   rebuilds ASCII `PdfName` values for every filter comparison.~~
 - [x] ~~Cache standard stream dictionary keys such as `/Filter`, `/Length`, and
@@ -122,6 +125,9 @@ Current estimate:
 - [x] ~~Native normal Flate encode/decode now uses the vendored miniz-compatible
   C path, with pure MoonBit fallback preserved for non-native targets and
   parser prefix decoding.~~
+- [x] ~~Native miniz Flate output now uses a side-channel status `Ref[Int]`
+  instead of status-prefixed bytes, so successful native payloads no longer need
+  an extra owned-byte copy to strip the prefix.~~
 - [x] ~~Encryption dictionary and crypt-filter lookups/builders now share cached
   `PdfName` values for stable standard keys and name objects.~~
 - [x] ~~Writer trailer/xref-stream keys and inline-image metadata/filter names
@@ -372,6 +378,9 @@ Current estimate:
   preserving the pure MoonBit implementation as fallback/non-native code.~~
 - [x] ~~Owned `PdfBytes` Flate filter dispatch avoids an unnecessary
   `BytesView.to_owned()` copy on encode/decode hot paths.~~
+- [x] ~~Native miniz Flate FFI returns payload bytes directly and reports status
+  through a borrowed `Ref[Int]`, preserving valid empty decode results without a
+  status-byte payload copy.~~
 - [x] ~~Standard stream-filter dispatch names are cached once instead of
   rebuilding ASCII `PdfName` values on every comparison.~~
 - [x] ~~Standard stream dictionary keys are cached once instead of rebuilding
