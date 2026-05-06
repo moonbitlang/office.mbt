@@ -160,6 +160,119 @@ fn markdown_control_text_document_for_test() -> @pdflite.PdfDocument raise {
 }
 
 ///|
+fn markdown_positioned_document_for_test() -> @pdflite.PdfDocument raise {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  let resources = markdown_font_resources_for_test(
+    markdown_standard_font_for_test(),
+  )
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [
+      @pdflite.pdf_content_stream_of_ops([
+        Op_BT,
+        Op_Tf(markdown_name_for_test("/F0"), 12.0),
+        Op_Tm(@pdflite.transform_translate(200.0, 700.0)),
+        Op_Tj(markdown_ascii_for_test("Right")),
+        Op_Tm(@pdflite.transform_translate(50.0, 680.0)),
+        Op_Tj(markdown_ascii_for_test("Lower")),
+        Op_Tm(@pdflite.transform_translate(50.0, 700.0)),
+        Op_Tj(markdown_ascii_for_test("Left")),
+        Op_ET,
+      ]),
+    ],
+    resources,
+  }
+  let page_root = doc.add_pagetree([page])
+  ignore(doc.add_root(page_root, []))
+  doc
+}
+
+///|
+fn markdown_positioned_form_document_for_test() -> @pdflite.PdfDocument raise {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  let resources = markdown_font_resources_for_test(
+    markdown_standard_font_for_test(),
+  )
+  let form = @pdflite.pdf_content_stream_of_ops([
+      Op_BT,
+      Op_Tf(markdown_name_for_test("/F0"), 12.0),
+      Op_Tj(markdown_ascii_for_test("Form")),
+      Op_ET,
+    ])
+    .add_dict_entry(
+      markdown_name_for_test("/Subtype"),
+      PdfNameObject(markdown_name_for_test("/Form")),
+    )
+    .add_dict_entry(markdown_name_for_test("/Resources"), resources)
+  doc.add_object_given_number(80, form)
+  let form_name = markdown_name_for_test("/FmPlaced")
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [
+      @pdflite.pdf_content_stream_of_ops([
+        Op_q,
+        Op_cm(@pdflite.transform_translate(200.0, 700.0)),
+        Op_Do(form_name),
+        Op_Q,
+        Op_q,
+        Op_cm(@pdflite.transform_translate(50.0, 700.0)),
+        Op_Do(form_name),
+        Op_Q,
+      ]),
+    ],
+    resources: @pdflite.pdf_dictionary([
+      (
+        markdown_name_for_test("/XObject"),
+        @pdflite.pdf_dictionary([(form_name, PdfIndirect(80))]),
+      ),
+    ]),
+  }
+  let page_root = doc.add_pagetree([page])
+  ignore(doc.add_root(page_root, []))
+  doc
+}
+
+///|
+fn markdown_positioned_text_state_document_for_test() -> @pdflite.PdfDocument raise {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  let resources = markdown_font_resources_for_test(
+    markdown_standard_font_for_test(),
+  )
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [
+      @pdflite.pdf_content_stream_of_ops([
+        Op_BT,
+        Op_Tf(markdown_name_for_test("/F0"), 12.0),
+        Op_Tm(@pdflite.transform_translate(50.0, 700.0)),
+        Op_TJ(
+          PdfArray([
+            PdfString(markdown_ascii_for_test("A")),
+            PdfInteger(-300),
+            PdfString(markdown_ascii_for_test("B")),
+          ]),
+        ),
+        Op_Td(0.0, -20.0),
+        Op_Tj(markdown_ascii_for_test("C")),
+        Op_TL(20.0),
+        Op_Tstar,
+        Op_Tj(markdown_ascii_for_test("D")),
+        Op_TD(0.0, -20.0),
+        Op_Tj(markdown_ascii_for_test("E")),
+        Op_ET,
+      ]),
+    ],
+    resources,
+  }
+  let page_root = doc.add_pagetree([page])
+  ignore(doc.add_root(page_root, []))
+  doc
+}
+
+///|
 fn markdown_tounicode_font_for_test() -> @pdflite.PdfObject {
   @pdflite.pdf_dictionary([
     (
@@ -433,7 +546,7 @@ fn markdown_password_required_document_for_test() -> @pdflite.PdfDocument raise 
 
 ///|
 test "pdf_document_to_markdown extracts deterministic Latin page text" {
-  let markdown = try! @markdown.pdf_document_to_markdown(
+  let markdown = @markdown.pdf_document_to_markdown(
     markdown_latin_document_for_test(),
   )
   @test.assert_eq(
@@ -446,7 +559,7 @@ test "pdf_bytes_to_markdown reads and extracts deterministic Latin text" {
   let document = markdown_latin_document_for_test()
   let bytes = @pdflite.pdf_write_document(document)
   @test.assert_eq(
-    try! @markdown.pdf_bytes_to_markdown(bytes),
+    @markdown.pdf_bytes_to_markdown(bytes),
     "# Page 1\n\nHello, World! Spaced\nSecond line\n\n# Page 2\n\nAnother page\n",
   )
 }
@@ -498,6 +611,34 @@ test "pdf_document_to_markdown sanitizes non-text controls" {
 }
 
 ///|
+test "pdf_document_to_markdown sorts positioned text by row and column" {
+  @test.assert_eq(
+    @markdown.pdf_document_to_markdown(markdown_positioned_document_for_test()),
+    "# Page 1\n\nLeft Right\nLower\n",
+  )
+}
+
+///|
+test "pdf_document_to_markdown sorts positioned form XObjects" {
+  @test.assert_eq(
+    @markdown.pdf_document_to_markdown(
+      markdown_positioned_form_document_for_test(),
+    ),
+    "# Page 1\n\nForm Form\n",
+  )
+}
+
+///|
+test "pdf_document_to_markdown tracks positioned text-state moves" {
+  @test.assert_eq(
+    @markdown.pdf_document_to_markdown(
+      markdown_positioned_text_state_document_for_test(),
+    ),
+    "# Page 1\n\nA B\nC\nD\nE\n",
+  )
+}
+
+///|
 test "pdf_document_to_markdown decrypts blank user password PDFs" {
   @test.assert_eq(
     @markdown.pdf_document_to_markdown(
@@ -518,7 +659,7 @@ test "pdf_document_to_markdown raises when encrypted PDF needs a password" {
 ///|
 test "pdf_document_to_markdown preserves ToUnicode CJK output" {
   @test.assert_eq(
-    try! @markdown.pdf_document_to_markdown(markdown_cjk_document_for_test()),
+    @markdown.pdf_document_to_markdown(markdown_cjk_document_for_test()),
     "# Page 1\n\n世界!\n",
   )
 }
@@ -526,7 +667,7 @@ test "pdf_document_to_markdown preserves ToUnicode CJK output" {
 ///|
 test "pdf_document_to_markdown skips text without a resolvable font" {
   @test.assert_eq(
-    try! @markdown.pdf_document_to_markdown(
+    @markdown.pdf_document_to_markdown(
       markdown_missing_font_document_for_test(),
     ),
     "# Page 1\n\n\n",
@@ -536,9 +677,7 @@ test "pdf_document_to_markdown skips text without a resolvable font" {
 ///|
 test "pdf_document_to_markdown normalizes explicit line breaks" {
   @test.assert_eq(
-    try! @markdown.pdf_document_to_markdown(
-      markdown_line_break_document_for_test(),
-    ),
+    @markdown.pdf_document_to_markdown(markdown_line_break_document_for_test()),
     "# Page 1\n\nFirst\nSecond\n",
   )
 }

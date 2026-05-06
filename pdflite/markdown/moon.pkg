@@ -11,3 +11,7 @@ import {
   "moonbitlang/core/encoding/ascii",
   "moonbitlang/core/test",
 } for "test"
+
+import {
+  "moonbitlang/core/test",
+} for "wbtest"

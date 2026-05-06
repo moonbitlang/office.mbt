@@ -142,9 +142,13 @@ Current backend snapshot:
   fallback glyph/control codes from real PDFs do not write raw control bytes to
   `.md` output; refreshed external comparison shows no raw controls in the
   Adobe supplement or Unicode CJK chart pdflite outputs.~~
+- [x] ~~Add a first-pass positioned-text ordering path for Markdown pages with
+  meaningful text coordinates, including form-XObject placement through `cm`
+  transforms; the Unicode CJK chart now follows row/column order and extracts
+  1,512,647 characters versus MarkItDown's 1,518,212.~~
 - [ ] Review remaining Unicode CJK chart Markdown quality gaps against
-  MarkItDown and pdftotext, especially layout/reading order, line joining,
-  unresolved glyph placeholders, and any missing chart cells.
+  MarkItDown and pdftotext, especially unresolved glyph placeholders,
+  table-cell polish, line joining, and any missing chart cells.
 - [x] ~~Add Type3 glyph-program/resource coverage where a CharProc consumes
   Type3 `/Resources` through an XObject and named inline-image color space.~~
 - [ ] Add fixture-driven Type3 glyph-program/resource coverage from real PDFs

@@ -25,6 +25,11 @@ let pdf_markdown_resources_key_name : @pdflite.PdfName = pdf_markdown_name(
 )
 
 ///|
+let pdf_markdown_matrix_key_name : @pdflite.PdfName = pdf_markdown_name(
+  "/Matrix",
+)
+
+///|
 fn pdf_markdown_font_key() -> @pdflite.PdfName {
   pdf_markdown_font_key_name
 }
@@ -47,6 +52,11 @@ fn pdf_markdown_form() -> @pdflite.PdfName {
 ///|
 fn pdf_markdown_resources_key() -> @pdflite.PdfName {
   pdf_markdown_resources_key_name
+}
+
+///|
+fn pdf_markdown_matrix_key() -> @pdflite.PdfName {
+  pdf_markdown_matrix_key_name
 }
 
 ///|
@@ -94,6 +104,14 @@ fn pdf_markdown_form_resources(
     Some(resources) => resources
     None => parent_resources
   }
+}
+
+///|
+fn pdf_markdown_form_matrix(
+  document : @pdflite.PdfDocument,
+  xobject : @pdflite.PdfObject,
+) -> @pdflite.TransformMatrix raise {
+  document.parse_matrix(pdf_markdown_matrix_key(), xobject)
 }
 
 ///|
@@ -150,6 +168,71 @@ fn pdf_markdown_push_extracted_text(
 }
 
 ///|
+priv struct PdfMarkdownTextChunk {
+  x : Double
+  y : Double
+  width : Double
+  index : Int
+  codepoints : Array[Int]
+}
+
+///|
+fn pdf_markdown_extracted_codepoints(
+  extractor : @pdflite.PdfTextExtractor?,
+  text : @pdflite.PdfBytes,
+) -> Array[Int] raise {
+  let output : Array[Int] = []
+  match extractor {
+    Some(extractor) =>
+      for codepoint in extractor.codepoints_of_text(text[:]) {
+        output.push(codepoint)
+      }
+    None => ()
+  }
+  output
+}
+
+///|
+fn pdf_markdown_text_matrix_position(
+  ctm : @pdflite.TransformMatrix,
+  text_matrix : @pdflite.TransformMatrix,
+) -> @pdflite.Point2 {
+  @pdflite.transform_matrix_compose(ctm, text_matrix).apply(
+    @pdflite.point2(0.0, 0.0),
+  )
+}
+
+///|
+fn pdf_markdown_estimated_chunk_width(
+  codepoints : ArrayView[Int],
+  font_size : Double,
+) -> Double {
+  codepoints.length().to_double() * font_size * 0.5
+}
+
+///|
+fn pdf_markdown_push_text_chunk(
+  chunks : Array[PdfMarkdownTextChunk],
+  next_index : Ref[Int],
+  ctm : @pdflite.TransformMatrix,
+  text_matrix : @pdflite.TransformMatrix,
+  font_size : Double,
+  codepoints : Array[Int],
+) -> Unit {
+  if codepoints.length() > 0 {
+    let position = pdf_markdown_text_matrix_position(ctm, text_matrix)
+    chunks.push({
+      x: position.x,
+      y: position.y,
+      width: pdf_markdown_estimated_chunk_width(codepoints[:], font_size),
+      index: next_index.val,
+      codepoints,
+    })
+    next_index.val += 1
+  }
+}
+
+///|
 fn pdf_markdown_cached_text_extractor(
   cache : Array[(Int, @pdflite.PdfTextExtractor?)],
   document : @pdflite.PdfDocument,
@@ -178,6 +261,312 @@ fn pdf_markdown_cached_text_extractor(
 
 ///|
 let pdf_markdown_max_form_depth : Int = 32
+
+///|
+let pdf_markdown_line_y_tolerance : Double = 2.0
+
+///|
+let pdf_markdown_inline_x_tolerance : Double = 0.5
+
+///|
+fn pdf_markdown_translate_text_line(
+  text_line_matrix : @pdflite.TransformMatrix,
+  tx : Double,
+  ty : Double,
+) -> @pdflite.TransformMatrix {
+  @pdflite.transform_matrix_compose(
+    text_line_matrix,
+    @pdflite.transform_translate(tx, ty),
+  )
+}
+
+///|
+fn pdf_markdown_append_codepoints(
+  output : Array[Int],
+  codepoints : ArrayView[Int],
+) -> Unit {
+  for codepoint in codepoints {
+    output.push(codepoint)
+  }
+}
+
+///|
+fn pdf_markdown_add_positioned_text_run(
+  chunks : Array[PdfMarkdownTextChunk],
+  next_index : Ref[Int],
+  ctm : @pdflite.TransformMatrix,
+  text_matrix : @pdflite.TransformMatrix,
+  font_size : Double,
+  extractor : @pdflite.PdfTextExtractor?,
+  text : @pdflite.PdfBytes,
+) -> Unit raise {
+  pdf_markdown_push_text_chunk(
+    chunks,
+    next_index,
+    ctm,
+    text_matrix,
+    font_size,
+    pdf_markdown_extracted_codepoints(extractor, text),
+  )
+}
+
+///|
+fn pdf_markdown_add_positioned_text_array(
+  chunks : Array[PdfMarkdownTextChunk],
+  next_index : Ref[Int],
+  ctm : @pdflite.TransformMatrix,
+  text_matrix : @pdflite.TransformMatrix,
+  font_size : Double,
+  extractor : @pdflite.PdfTextExtractor?,
+  items : ArrayView[@pdflite.PdfObject],
+) -> Unit raise {
+  let codepoints : Array[Int] = []
+  for item in items {
+    match item {
+      PdfString(text) =>
+        pdf_markdown_append_codepoints(
+          codepoints,
+          pdf_markdown_extracted_codepoints(extractor, text)[:],
+        )
+      PdfReal(value) if pdf_markdown_tj_adjustment_is_word_space(value) =>
+        codepoints.push(0x20)
+      PdfInteger(value) if pdf_markdown_tj_adjustment_is_word_space(
+          value.to_double(),
+        ) => codepoints.push(0x20)
+      _ => ()
+    }
+  }
+  pdf_markdown_push_text_chunk(
+    chunks, next_index, ctm, text_matrix, font_size, codepoints,
+  )
+}
+
+///|
+fn pdf_markdown_collect_positioned_text_chunks(
+  document : @pdflite.PdfDocument,
+  resources : @pdflite.PdfObject,
+  streams : ArrayView[@pdflite.PdfObject],
+  chunks : Array[PdfMarkdownTextChunk],
+  next_index : Ref[Int],
+  font_cache : Array[(Int, @pdflite.PdfTextExtractor?)],
+  inherited_ctm : @pdflite.TransformMatrix,
+  depth : Int,
+) -> Unit raise {
+  let mut ctm = inherited_ctm
+  let ctm_stack : Array[@pdflite.TransformMatrix] = []
+  let mut text_matrix = @pdflite.transform_identity_matrix
+  let mut text_line_matrix = @pdflite.transform_identity_matrix
+  let mut leading = 0.0
+  let mut font_size = 0.0
+  let mut extractor : @pdflite.PdfTextExtractor? = None
+  for op in document.parse_content_ops_with_resources(resources, streams) {
+    match op {
+      Op_q => ctm_stack.push(ctm)
+      Op_Q => if ctm_stack.length() > 0 { ctm = ctm_stack.pop().unwrap() }
+      Op_cm(matrix) => ctm = @pdflite.transform_matrix_compose(ctm, matrix)
+      Op_BT => {
+        text_matrix = @pdflite.transform_identity_matrix
+        text_line_matrix = @pdflite.transform_identity_matrix
+      }
+      Op_Tf(font_name, size) => {
+        font_size = size
+        extractor = pdf_markdown_cached_text_extractor(
+          font_cache, document, resources, font_name,
+        )
+      }
+      Op_TL(value) => leading = value
+      Op_Tm(matrix) => {
+        text_matrix = matrix
+        text_line_matrix = matrix
+      }
+      Op_Td(tx, ty) => {
+        text_line_matrix = pdf_markdown_translate_text_line(
+          text_line_matrix, tx, ty,
+        )
+        text_matrix = text_line_matrix
+      }
+      Op_TD(tx, ty) => {
+        leading = -ty
+        text_line_matrix = pdf_markdown_translate_text_line(
+          text_line_matrix, tx, ty,
+        )
+        text_matrix = text_line_matrix
+      }
+      Op_Tstar => {
+        text_line_matrix = pdf_markdown_translate_text_line(
+          text_line_matrix,
+          0.0,
+          -leading,
+        )
+        text_matrix = text_line_matrix
+      }
+      Op_Tj(text) =>
+        pdf_markdown_add_positioned_text_run(
+          chunks, next_index, ctm, text_matrix, font_size, extractor, text,
+        )
+      Op_TJ(PdfArray(items)) =>
+        pdf_markdown_add_positioned_text_array(
+          chunks,
+          next_index,
+          ctm,
+          text_matrix,
+          font_size,
+          extractor,
+          items[:],
+        )
+      Op_quote(text) => {
+        text_line_matrix = pdf_markdown_translate_text_line(
+          text_line_matrix,
+          0.0,
+          -leading,
+        )
+        text_matrix = text_line_matrix
+        pdf_markdown_add_positioned_text_run(
+          chunks, next_index, ctm, text_matrix, font_size, extractor, text,
+        )
+      }
+      Op_double_quote(_, _, text) => {
+        text_line_matrix = pdf_markdown_translate_text_line(
+          text_line_matrix,
+          0.0,
+          -leading,
+        )
+        text_matrix = text_line_matrix
+        pdf_markdown_add_positioned_text_run(
+          chunks, next_index, ctm, text_matrix, font_size, extractor, text,
+        )
+      }
+      Op_Do(name) =>
+        if depth < pdf_markdown_max_form_depth {
+          match pdf_markdown_xobject_resource(document, resources, name) {
+            Some(xobject) =>
+              if pdf_markdown_is_form_xobject(document, xobject) {
+                let form_resources = pdf_markdown_form_resources(
+                  document, resources, xobject,
+                )
+                let form_ctm = @pdflite.transform_matrix_compose(
+                  ctm,
+                  pdf_markdown_form_matrix(document, xobject),
+                )
+                pdf_markdown_collect_positioned_text_chunks(
+                  document,
+                  form_resources,
+                  [xobject],
+                  chunks,
+                  next_index,
+                  font_cache,
+                  form_ctm,
+                  depth + 1,
+                )
+              }
+            None => ()
+          }
+        }
+      _ => ()
+    }
+  }
+}
+
+///|
+fn pdf_markdown_positioned_chunk_compare(
+  left : PdfMarkdownTextChunk,
+  right : PdfMarkdownTextChunk,
+) -> Int {
+  let y_delta = left.y - right.y
+  if y_delta.abs() > pdf_markdown_line_y_tolerance {
+    if y_delta > 0.0 {
+      -1
+    } else {
+      1
+    }
+  } else {
+    let x_delta = left.x - right.x
+    if x_delta.abs() > pdf_markdown_inline_x_tolerance {
+      if x_delta < 0.0 {
+        -1
+      } else {
+        1
+      }
+    } else {
+      left.index.compare(right.index)
+    }
+  }
+}
+
+///|
+fn pdf_markdown_chunk_has_meaningful_position(
+  chunk : PdfMarkdownTextChunk,
+) -> Bool {
+  chunk.x.abs() > pdf_markdown_inline_x_tolerance ||
+  chunk.y.abs() > pdf_markdown_inline_x_tolerance
+}
+
+///|
+fn pdf_markdown_chunks_have_positions(
+  chunks : ArrayView[PdfMarkdownTextChunk],
+) -> Bool {
+  for chunk in chunks {
+    if pdf_markdown_chunk_has_meaningful_position(chunk) {
+      break true
+    }
+  } nobreak {
+    false
+  }
+}
+
+///|
+fn pdf_markdown_chunks_to_codepoints(
+  chunks : ArrayView[PdfMarkdownTextChunk],
+) -> Array[Int] {
+  let sorted : Array[PdfMarkdownTextChunk] = []
+  for chunk in chunks {
+    sorted.push(chunk)
+  }
+  sorted.sort_by(pdf_markdown_positioned_chunk_compare)
+  let output : Array[Int] = []
+  let mut current_y : Double? = None
+  let mut current_right = 0.0
+  for chunk in sorted {
+    match current_y {
+      None => current_y = Some(chunk.y)
+      Some(y) =>
+        if (chunk.y - y).abs() > pdf_markdown_line_y_tolerance {
+          pdf_markdown_push_line_break(output)
+          current_y = Some(chunk.y)
+        } else if chunk.x - current_right > pdf_markdown_inline_x_tolerance {
+          pdf_markdown_push_word_space(output)
+        }
+    }
+    pdf_markdown_append_codepoints(output, chunk.codepoints[:])
+    current_right = chunk.x + chunk.width
+  }
+  output
+}
+
+///|
+fn pdf_markdown_positioned_text_codepoints_of_page(
+  document : @pdflite.PdfDocument,
+  page : @pdflite.PdfPage,
+  font_cache : Array[(Int, @pdflite.PdfTextExtractor?)],
+) -> Array[Int]? raise {
+  let chunks : Array[PdfMarkdownTextChunk] = []
+  let next_index : Ref[Int] = { val: 0 }
+  pdf_markdown_collect_positioned_text_chunks(
+    document,
+    page.resources,
+    page.content[:],
+    chunks,
+    next_index,
+    font_cache,
+    @pdflite.transform_identity_matrix,
+    0,
+  )
+  if pdf_markdown_chunks_have_positions(chunks[:]) {
+    Some(pdf_markdown_chunks_to_codepoints(chunks[:]))
+  } else {
+    None
+  }
+}
 
 ///|
 fn pdf_markdown_push_text_codepoints_of_streams(
@@ -247,16 +636,22 @@ fn pdf_markdown_text_codepoints_of_page(
   page : @pdflite.PdfPage,
   font_cache : Array[(Int, @pdflite.PdfTextExtractor?)],
 ) -> Array[Int] raise {
-  let output : Array[Int] = []
-  pdf_markdown_push_text_codepoints_of_streams(
-    document,
-    page.resources,
-    page.content[:],
-    output,
-    font_cache,
-    0,
-  )
-  output
+  match
+    pdf_markdown_positioned_text_codepoints_of_page(document, page, font_cache) {
+    Some(output) => output
+    None => {
+      let output : Array[Int] = []
+      pdf_markdown_push_text_codepoints_of_streams(
+        document,
+        page.resources,
+        page.content[:],
+        output,
+        font_cache,
+        0,
+      )
+      output
+    }
+  }
 }
 
 ///|

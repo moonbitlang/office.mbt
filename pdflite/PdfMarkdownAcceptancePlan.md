@@ -43,6 +43,9 @@ library API.
 - [x] ~~Sanitize non-text control scalars in Markdown output and verify the
   external Adobe supplement and Unicode CJK chart pdflite outputs contain no
   raw C0/C1 controls.~~
+- [x] ~~Add first-pass positioned text ordering for Markdown extraction,
+  including placed form XObjects, and verify the Unicode CJK chart output now
+  follows row/column order.~~
 - [ ] Continue fixing extraction/layout bugs found by the comparison loop.
 
 ## First Converter Contract
