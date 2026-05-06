@@ -171,8 +171,10 @@ work changes.
    at a time for each decodable symbol. Owned `/Crypt` identity filter encode/decode
    now returns the original immutable `Bytes` value instead of copying through a
    borrowed view, and owned predictor encode/decode returns the original bytes
-   for identity predictor `1`. Standard stream-filter names are now cached once
-   for dispatch,
+   for identity predictor `1`. PNG predictor decode now reuses scanline buffers,
+   and fixed PNG predictor encode paths push directly into the output instead of
+   allocating one row array per scanline. Standard stream-filter names are now
+   cached once for dispatch,
    avoiding repeated ASCII `PdfName` rebuilding during filter comparisons, and
    standard stream dictionary keys such as `/Filter`, `/Length`, and
    `/DecodeParms` are cached for repeated stream transformations.

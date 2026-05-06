@@ -886,6 +886,19 @@ test "pdf_decode_predictor covers png paeth and short rows" {
     ),
     codec_bytes_for_test([65, 0, 0]),
   )
+  for row in [(1, [5, 5, 5]), (2, [5, 0, 0]), (3, [5, 2, 1]), (4, [5, 5, 5])] {
+    let (filter, expected) = row
+    @test.assert_eq(
+      try! @pdflite.pdf_decode_predictor(
+        15,
+        1,
+        8,
+        3,
+        codec_bytes_for_test([filter, 5]),
+      ),
+      codec_bytes_for_test(expected),
+    )
+  }
 }
 
 ///|

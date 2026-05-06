@@ -584,7 +584,9 @@ MoonBit consequences for this project:
    `/Crypt` identity filter
    encode/decode now returns the original immutable `Bytes` value directly, and
    owned predictor encode/decode now returns the original immutable `Bytes` for
-   identity predictor `1`.
+   identity predictor `1`. PNG predictor decode now reuses row buffers, while
+   fixed-predictor PNG encode paths append scanlines directly into the output
+   array instead of allocating one temporary row array per scanline.
    CamlPDF-style typed encoding and predictor choices are now exposed as
    `PdfStreamEncoding` and
    `PdfStreamPredictor`, with a `pdf_encode_stream_with_encoding` wrapper over

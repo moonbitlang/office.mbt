@@ -1175,48 +1175,77 @@ fn pdf_encode_tiff_predictor(
 }
 
 ///|
-fn pdf_decode_png_scanline(
+fn pdf_decode_png_current(
+  data : BytesView,
+  row_start : Int,
+  available : Int,
+  index : Int,
+) -> Int {
+  if index < available {
+    data[row_start + index].to_int()
+  } else {
+    0
+  }
+}
+
+///|
+fn pdf_decode_png_push_scanline(
+  output : Array[Byte],
   predictor : Int,
   prior_decoded : ArrayView[Int],
-  current : ArrayView[Int],
+  decoded : Array[Int],
+  data : BytesView,
+  row_start : Int,
+  available : Int,
   bytes_per_pixel : Int,
-) -> Array[Int] raise PdfError {
-  let output : Array[Int] = [ for value in current => value ]
+) -> Unit raise PdfError {
+  let scanline_width = decoded.length()
   match predictor {
-    0 => ()
+    0 =>
+      for i in 0..<scanline_width {
+        decoded[i] = pdf_decode_png_current(data, row_start, available, i)
+        output.push(decoded[i].to_byte())
+      }
     1 =>
-      for i in 0..<output.length() {
-        output[i] = (
-            current[i] + pdf_predictor_get0(output[:], i - bytes_per_pixel)
+      for i in 0..<scanline_width {
+        let current = pdf_decode_png_current(data, row_start, available, i)
+        decoded[i] = (
+            current + pdf_predictor_get0(decoded[:], i - bytes_per_pixel)
           ) %
           256
+        output.push(decoded[i].to_byte())
       }
     2 =>
-      for i in 0..<output.length() {
-        output[i] = (current[i] + pdf_predictor_get0(prior_decoded, i)) % 256
+      for i in 0..<scanline_width {
+        let current = pdf_decode_png_current(data, row_start, available, i)
+        decoded[i] = (current + pdf_predictor_get0(prior_decoded, i)) % 256
+        output.push(decoded[i].to_byte())
       }
     3 =>
-      for i in 0..<output.length() {
-        output[i] = (
-            current[i] +
+      for i in 0..<scanline_width {
+        let current = pdf_decode_png_current(data, row_start, available, i)
+        decoded[i] = (
+            current +
             (
-              pdf_predictor_get0(output[:], i - bytes_per_pixel) +
+              pdf_predictor_get0(decoded[:], i - bytes_per_pixel) +
               pdf_predictor_get0(prior_decoded, i)
             ) /
             2
           ) %
           256
+        output.push(decoded[i].to_byte())
       }
     4 =>
-      for i in 0..<output.length() {
-        let left = pdf_predictor_get0(output[:], i - bytes_per_pixel)
+      for i in 0..<scanline_width {
+        let current = pdf_decode_png_current(data, row_start, available, i)
+        let left = pdf_predictor_get0(decoded[:], i - bytes_per_pixel)
         let up = pdf_predictor_get0(prior_decoded, i)
         let up_left = pdf_predictor_get0(prior_decoded, i - bytes_per_pixel)
-        output[i] = (current[i] + pdf_paeth_predictor(left, up, up_left)) % 256
+        decoded[i] = (current + pdf_paeth_predictor(left, up, up_left)) % 256
+        output.push(decoded[i].to_byte())
       }
     _ => raise PredictorNotSupported(predictor)
   }
-  output
 }
 
 ///|
@@ -1234,30 +1263,31 @@ fn pdf_decode_png_predictor(
   )
   let output : Array[Byte] = []
   let mut prior_decoded : Array[Int] = [ for _ in 0..<scanline_width => 0 ]
+  let mut decoded : Array[Int] = [ for _ in 0..<scanline_width => 0 ]
   let mut index = 0
   while index < data.length() {
     let predictor = data[index].to_int()
     index += 1
-    let current : Array[Int] = [ for _ in 0..<scanline_width => 0 ]
     let available = if index + scanline_width > data.length() {
       data.length() - index
     } else {
       scanline_width
     }
-    for i in 0..<available {
-      current[i] = data[index + i].to_int()
-    }
+    let row_start = index
     index += available
-    let decoded = pdf_decode_png_scanline(
+    pdf_decode_png_push_scanline(
+      output,
       predictor,
       prior_decoded[:],
-      current[:],
+      decoded,
+      data,
+      row_start,
+      available,
       bytes_per_pixel,
     )
-    for value in decoded {
-      output.push(value.to_byte())
-    }
+    let previous = prior_decoded
     prior_decoded = decoded
+    decoded = previous
   }
   Bytes::from_array(output)
 }
@@ -1396,15 +1426,10 @@ fn pdf_encode_png_scanline(
   scanline_width : Int,
   bytes_per_pixel : Int,
 ) -> Array[Byte] raise PdfError {
-  let output : Array[Byte] = [predictor.to_byte()]
-  for i in 0..<scanline_width {
-    let predicted = pdf_encode_png_predictor_value(
-      predictor, data, row_start, i, scanline_width, bytes_per_pixel,
-    )
-    output.push(
-      pdf_predictor_wrapping_byte(data[row_start + i].to_int() - predicted),
-    )
-  }
+  let output : Array[Byte] = []
+  pdf_encode_png_push_scanline(
+    output, predictor, data, row_start, scanline_width, bytes_per_pixel,
+  )
   output
 }
 
@@ -1417,11 +1442,14 @@ fn pdf_encode_png_push_scanline(
   scanline_width : Int,
   bytes_per_pixel : Int,
 ) -> Unit raise PdfError {
-  for
-    byte in pdf_encode_png_scanline(
-      predictor, data, row_start, scanline_width, bytes_per_pixel,
-    ) {
-    output.push(byte)
+  output.push(predictor.to_byte())
+  for i in 0..<scanline_width {
+    let predicted = pdf_encode_png_predictor_value(
+      predictor, data, row_start, i, scanline_width, bytes_per_pixel,
+    )
+    output.push(
+      pdf_predictor_wrapping_byte(data[row_start + i].to_int() - predicted),
+    )
   }
 }
 
