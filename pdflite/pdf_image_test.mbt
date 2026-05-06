@@ -410,6 +410,81 @@ test "PdfDocument get_image_24bpp decodes filter stages before image extraction"
 }
 
 ///|
+test "PdfDocument get_image_24bpp extracts image XObjects after PDF roundtrip" {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  let image_name = image_name_for_test("/Im0")
+  let raw_data = image_bytes_for_test([1, 2, 3, 4, 5, 6])
+  let flate_data = @pdflite.pdf_flate_encode(raw_data)
+  let image_number = doc.add_object(
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (
+          image_name_for_test("/Subtype"),
+          PdfNameObject(image_name_for_test("/Image")),
+        ),
+        (image_name_for_test("/Width"), PdfInteger(2)),
+        (image_name_for_test("/Height"), PdfInteger(1)),
+        (
+          image_name_for_test("/ColorSpace"),
+          PdfNameObject(image_name_for_test("/DeviceRGB")),
+        ),
+        (image_name_for_test("/BitsPerComponent"), PdfInteger(8)),
+        (
+          image_name_for_test("/Filter"),
+          PdfNameObject(image_name_for_test("/FlateDecode")),
+        ),
+      ]),
+      StreamGot(flate_data),
+    ),
+  )
+  let placement = { ..@pdflite.transform_identity_matrix, a: 2.0, d: 1.0 }
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [
+      try! @pdflite.pdf_content_stream_of_ops([
+        Op_q,
+        Op_cm(placement),
+        Op_Do(image_name),
+        Op_Q,
+      ]),
+    ],
+    resources: @pdflite.pdf_dictionary([
+      (
+        image_name_for_test("/XObject"),
+        @pdflite.pdf_dictionary([(image_name, PdfIndirect(image_number))]),
+      ),
+    ]),
+  }
+  let page_root = try! doc.add_pagetree([page])
+  ignore(try! doc.add_root(page_root, []))
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(
+    try! @pdflite.pdf_write_document(doc),
+  )
+  let pages = try! parsed.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  @test.assert_eq(try! parsed.parse_content_ops(pages[0].content), [
+    Op_q,
+    Op_cm(placement),
+    Op_Do(image_name),
+    Op_Q,
+  ])
+  let xobjects = match
+    parsed.lookup_direct(image_name_for_test("/XObject"), pages[0].resources) {
+    Some(value) => value
+    None => fail("expected page XObject resources")
+  }
+  let image = match parsed.lookup_direct(image_name, xobjects) {
+    Some(value) => value
+    None => fail("expected image XObject")
+  }
+  @test.assert_eq(
+    try! parsed.get_image_24bpp(pages[0].resources, image),
+    PdfRawImage(2, 1, PdfBPP24, raw_data),
+  )
+}
+
+///|
 test "PdfDocument get_image_24bpp handles filter arrays and deferred image data" {
   let doc = @pdflite.pdf_document_empty()
   let empty_resources = @pdflite.pdf_dictionary([])

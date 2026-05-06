@@ -7,7 +7,7 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 97.3%.
+- Native main-feature parity: 97.4%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
   breadth: 85-90%.
 
@@ -105,15 +105,20 @@ Current backend snapshot:
   one-call byte output with optional ID generation, incremental update,
   xref-stream mode dispatch, optional encryption, explicit-provider AES
   workflows, and already-encrypted pass-through.~~
-- [ ] Decide whether to emulate CamlPDF's `charcode_extractor` debug stderr
-  output; current wrappers accept the `debug` flag for API shape but keep the
-  lookup pure.
+- [x] ~~Decide whether to emulate CamlPDF's `charcode_extractor` debug stderr
+  output; MoonBit keeps the reverse lookup pure and ignores `debug` because
+  adding async stdio or stdout side effects to this synchronous helper would be
+  worse than preserving CamlPDF's diagnostic-only behavior.~~
 - [ ] Evaluate CamlPDF's repeated-input `names` merge optimization for
   output-size/performance parity if repeated-name merge profiles expose a real
   regression; current wrapper preserves merge semantics and validates arity.
 - [x] ~~Check the currently tracked CamlPDF fixture PDFs for image XObjects
   before expanding image corpus tests; `logo.pdf` and
   `introduction_to_camlpdf.pdf` do not currently provide image entries.~~
+- [x] ~~Add deterministic writer/reader image-XObject fixture coverage for
+  `/XObject` page resources and 24bpp extraction, so image handling is
+  validated across document serialization before the licensed external corpus
+  grows.~~
 - [ ] Add licensed real-world image corpus fixtures, prioritizing CCITT and
   DCT/JPEG encoded payload compatibility before optional pixel decoders.
 - [x] ~~Start the separate PDF-to-Markdown acceptance package described in
