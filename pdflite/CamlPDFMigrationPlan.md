@@ -1613,7 +1613,8 @@ MoonBit consequences for this project:
     ownership boundary. Image coverage now removes `pdf_image.mbt` from the
     uncovered-line report by tightening the staged image decoder to return a
     private raw/JPEG/JPX/JBIG2 stream enum, materializing deferred stream data
-    at the owned-byte boundary, and testing malformed image metadata, decode
+    at the owned-byte boundary, testing `.repos/pdfimage.mli` standalone
+    wrappers, and testing malformed image metadata, decode
     arrays, encoded decode defaults, indexed-table edge cases, unsupported raw
     spaces, JBIG2 globals, and private decode math. Function coverage now
     removes `pdf_fun.mbt` from the uncovered-line report by exercising sampled
@@ -1751,7 +1752,9 @@ reader or writer invariant is narrower than a whole-document workflow:
   helpers, with `BytesView` variants and stream decode round-trip tests;
 - extract images from page resources and parsed content after compressed
   xref-stream write/read boundaries, including Flate-decoded raw `/Indexed`
-  image XObjects, CCITT image XObjects decoded to RGB24, staged Flate-then-DCT
+  image XObjects, `.repos/pdfimage.mli`-style standalone wrappers over
+  colour-space lookup, bits-per-component lookup, and 24bpp extraction, CCITT
+  image XObjects decoded to RGB24, staged Flate-then-DCT
   marker-payload preservation, DCT inline images whose payloads contain `EI`
   bytes before JPEG EOI, direct JPX encoded-image preservation, staged
   Flate-then-JBIG2 encoded-image preservation with `/JBIG2Globals`, and Flate

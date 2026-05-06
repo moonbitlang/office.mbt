@@ -59,6 +59,19 @@ test "PdfDocument image_colour_space resolves direct and resource colour spaces"
     PdfDeviceCMYK,
   )
   @test.assert_eq(
+    try! @pdflite.pdf_image_colspace(
+      doc,
+      @pdflite.pdf_dictionary([
+        (
+          image_name_for_test("/ColorSpace"),
+          PdfNameObject(image_name_for_test("/DeviceCMYK")),
+        ),
+      ]),
+      resources,
+    ),
+    PdfDeviceCMYK,
+  )
+  @test.assert_eq(
     try! doc.image_colour_space(
       @pdflite.pdf_dictionary([
         (image_name_for_test("/CS"), PdfNameObject(image_name_for_test("/CS1"))),
@@ -86,6 +99,10 @@ test "PdfDocument get_image_24bpp returns encoded JPEG images" {
   )
   @test.assert_eq(
     try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), image),
+    PdfJPEG(@ascii.encode("jpg"), Some([0.0, 1.0])),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_get_image_24bpp(doc, @pdflite.pdf_dictionary([]), image),
     PdfJPEG(@ascii.encode("jpg"), Some([0.0, 1.0])),
   )
   let gray_jpeg = @pdflite.pdf_stream(
@@ -1699,6 +1716,13 @@ test "PdfDocument image_bits_per_component reads long and abbreviated keys" {
   )
   @test.assert_eq(
     doc.bpc(
+      @pdflite.pdf_dictionary([(image_name_for_test("/BPC"), PdfInteger(4))]),
+    ),
+    Some(PdfInteger(4)),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_image_bpc(
+      doc,
       @pdflite.pdf_dictionary([(image_name_for_test("/BPC"), PdfInteger(4))]),
     ),
     Some(PdfInteger(4)),

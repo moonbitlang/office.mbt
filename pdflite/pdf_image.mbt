@@ -224,6 +224,15 @@ pub fn PdfDocument::colspace(
 }
 
 ///|
+pub fn pdf_image_colspace(
+  document : PdfDocument,
+  image : PdfObject,
+  resources : PdfObject,
+) -> PdfColourSpace raise PdfError {
+  document.colspace(image, resources)
+}
+
+///|
 pub fn PdfDocument::image_bits_per_component(
   self : PdfDocument,
   image : PdfObject,
@@ -247,6 +256,11 @@ pub fn PdfDocument::image_bits_per_component(
 ///|
 pub fn PdfDocument::bpc(self : PdfDocument, image : PdfObject) -> PdfObject? {
   self.image_bits_per_component(image)
+}
+
+///|
+pub fn pdf_image_bpc(document : PdfDocument, image : PdfObject) -> PdfObject? {
+  document.bpc(image)
 }
 
 ///|
@@ -1359,4 +1373,13 @@ pub fn PdfDocument::get_image_24bpp(
       )
     }
   }
+}
+
+///|
+pub fn pdf_get_image_24bpp(
+  document : PdfDocument,
+  resources : PdfObject,
+  image : PdfObject,
+) -> PdfImage raise PdfError {
+  document.get_image_24bpp(resources, image)
 }

@@ -46,6 +46,9 @@ Current backend snapshot:
 - [x] ~~Expose `.repos/pdfspace.mli` and `.repos/pdfops.mli`-referenced
   standalone colour-space helpers for debug strings, names, read/write, and
   component counts over the existing typed document methods.~~
+- [x] ~~Expose `.repos/pdfimage.mli`-referenced standalone image helpers for
+  colour-space lookup, bits-per-component lookup, and 24bpp image extraction
+  over the existing typed document methods.~~
 - [x] ~~Check the currently tracked CamlPDF fixture PDFs for image XObjects
   before expanding image corpus tests; `logo.pdf` and
   `introduction_to_camlpdf.pdf` do not currently provide image entries.~~
@@ -248,6 +251,8 @@ Current backend snapshot:
   functions, raw/encoded image extraction, and primary font workflows.~~
 - [x] ~~Standalone `.repos/pdfspace.mli`-style colour-space helper surface over
   the typed MoonBit model and document methods.~~
+- [x] ~~Standalone `.repos/pdfimage.mli`-style image helper surface over the
+  typed MoonBit document methods.~~
 - [x] ~~Native real-file gates for the checked-in CamlPDF `logo.pdf` and
   `introduction_to_camlpdf.pdf` fixtures, including compressed rewrites,
   malformed `startxref` recovery, and incremental update recovery.~~
