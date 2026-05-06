@@ -1858,3 +1858,26 @@ pub fn pdf_merge_documents(
   let (merged, _) = merged.with_file_id()
   merged
 }
+
+///|
+pub fn pdf_merge_pdfs(
+  retain_numbering : Bool,
+  remove_duplicate_fonts : Bool,
+  names : ArrayView[String],
+  documents : ArrayView[PdfDocument],
+  ranges : ArrayView[Array[Int]],
+  process_struct_trees? : Bool = true,
+  add_toplevel_document? : Bool = false,
+) -> PdfDocument raise PdfError {
+  if names.length() != documents.length() {
+    raise PageTreeExpected
+  }
+  pdf_merge_documents(
+    documents,
+    ranges,
+    retain_numbering~,
+    retain_structure_tree=process_struct_trees,
+    add_toplevel_document~,
+    remove_duplicate_fonts~,
+  )
+}

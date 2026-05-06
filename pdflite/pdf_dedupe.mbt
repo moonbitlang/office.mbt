@@ -80,3 +80,8 @@ pub fn PdfDocument::remove_duplicate_fonts(self : PdfDocument) -> Unit {
     }
   }
 }
+
+///|
+pub fn pdf_remove_duplicate_fonts(document : PdfDocument) -> Unit {
+  document.remove_duplicate_fonts()
+}

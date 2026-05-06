@@ -531,6 +531,50 @@ test "pdf_merge_documents optionally retains merged page labels" {
 }
 
 ///|
+test "pdf_merge_pdfs exposes CamlPDF-shaped merge wrapper" {
+  let first = try! merge_one_page_doc_for_test(1, 4).write_page_labels([
+    {
+      label_style: PageLabelDecimalArabic,
+      label_prefix: Some(@ascii.encode("A-")),
+      start_page: 1,
+      start_value: 1,
+    },
+  ])
+  let second = try! merge_one_page_doc_for_test(1, 5).write_page_labels([
+    {
+      label_style: PageLabelLowercaseRoman,
+      label_prefix: Some(@ascii.encode("B-")),
+      start_page: 1,
+      start_value: 4,
+    },
+  ])
+  let merged = try! @pdflite.pdf_merge_pdfs(
+    true,
+    false,
+    ["a.pdf", "b.pdf"],
+    [first, second],
+    [[1], [1]],
+    process_struct_trees=false,
+  )
+  @test.assert_eq(try! merged.endpage(), 2)
+  @test.assert_eq(merged.version(), (1, 5))
+  @test.assert_eq(
+    try! merged.read_page_labels(),
+    try! @pdflite.pdf_page_label_merge([first, second], [[1], [1]]),
+  )
+  let bad_names : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_merge_pdfs(
+    false,
+    false,
+    ["a.pdf"],
+    [first, second],
+    [[1], [1]],
+  )
+  guard bad_names is Err(_) else {
+    fail("expected name/document length mismatch to raise")
+  }
+}
+
+///|
 test "pdf_merge_documents retargets retained bookmarks to merged pages" {
   let first = merge_bookmarked_doc_for_test("A")
   let second = merge_bookmarked_doc_for_test("B")
@@ -1552,7 +1596,7 @@ test "PdfDocument remove_duplicate_fonts coalesces identical streams" {
   doc.add_object_given_number(2, stream)
   doc.add_object_given_number(3, PdfArray([PdfIndirect(1), PdfIndirect(2)]))
   doc.set_trailer_dict(PdfDictionary([(key_info, PdfIndirect(2))]))
-  doc.remove_duplicate_fonts()
+  @pdflite.pdf_remove_duplicate_fonts(doc)
   @test.assert_eq(doc.lookup_object_or_null(1), stream)
   @test.assert_eq(doc.lookup_object_or_null(2), PdfNull)
   @test.assert_eq(

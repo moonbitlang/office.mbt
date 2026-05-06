@@ -68,6 +68,12 @@ Current backend snapshot:
   helpers for page-tree read/write/rooting, page counts and target lookup,
   page extraction/replacement, resource renumbering, prefixing, and operator
   insertion over the existing typed document methods.~~
+- [x] ~~Expose `.repos/pdfmerge.mli`-referenced standalone merge helpers for
+  CamlPDF-shaped `merge_pdfs` flags/name/range arguments and duplicate-font
+  removal over the existing typed merge and dedupe core.~~
+- [ ] Evaluate CamlPDF's repeated-input `names` merge optimization for
+  output-size/performance parity if repeated-name merge profiles expose a real
+  regression; current wrapper preserves merge semantics and validates arity.
 - [x] ~~Check the currently tracked CamlPDF fixture PDFs for image XObjects
   before expanding image corpus tests; `logo.pdf` and
   `introduction_to_camlpdf.pdf` do not currently provide image entries.~~

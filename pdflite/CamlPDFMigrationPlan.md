@@ -1421,7 +1421,14 @@ MoonBit consequences for this project:
     `StreamGot`, deferred `StreamToGet`, or already-decrypted stream objects
     are rewritten to the first matching stream after comparing borrowed
     stream-data views, and `pdf_merge_documents` can run this pass behind an
-    explicit option. The duplicate-stream pass now caches each stream's
+    explicit option. Standalone `.repos/pdfmerge.mli`-shaped wrappers now
+    expose `merge_pdfs`-style positional retain/dedupe flags, names/doc/range
+    arity validation, structure-tree and top-level-document options, and direct
+    duplicate-font removal over the existing typed merge/dedupe core. CamlPDF's
+    repeated-input `names` object-reuse optimization remains a performance and
+    output-size parity follow-up; the wrapper preserves merge semantics while
+    the typed core renumbers each included input independently.
+    The duplicate-stream pass now caches each stream's
     dictionary/data comparison candidate once and groups candidates by decoded
     byte length before exact comparison, preserving canonical-first renumbering
     while avoiding repeated deferred stream view materialization. Merged
