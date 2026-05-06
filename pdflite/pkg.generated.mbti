@@ -421,6 +421,8 @@ pub fn pdf_pagenumber_of_target(PdfDocument, PdfDestination) -> Int raise PdfErr
 
 pub fn pdf_pages_of_pagetree(PdfDocument) -> Array[PdfPage] raise PdfError
 
+pub fn pdf_parse_cmap(PdfDocument, PdfObject) -> PdfParsedCMap raise PdfError
+
 pub fn pdf_parse_cmap_data(BytesView) -> PdfParsedCMap
 
 pub fn pdf_parse_content_ops_from_bytes(Bytes) -> Array[PdfContentOp] raise PdfError

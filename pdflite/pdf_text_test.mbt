@@ -2795,7 +2795,7 @@ test "pdf_parse_cmap_data reads CMap header metadata" {
 }
 
 ///|
-test "PdfDocument parse_cmap decodes stream objects" {
+test "pdf_parse_cmap decodes stream objects" {
   let doc = @pdflite.pdf_document_empty()
   let cmap_data = @ascii.encode(
     "/WMode 0 def\n" + "1 beginbfrange\n" + "<30><31><0061>\n" + "endbfrange\n",
@@ -2816,7 +2816,7 @@ test "PdfDocument parse_cmap decodes stream objects" {
     StreamGot(encoded_cmap),
   )
   doc.add_object_given_number(17, stream)
-  @test.assert_eq(try! doc.parse_cmap(PdfIndirect(17)), {
+  @test.assert_eq(@pdflite.pdf_parse_cmap(doc, PdfIndirect(17)), {
     map: [
       (48, text_bytes_for_test([0x00, 0x61])),
       (49, text_bytes_for_test([0x00, 0x62])),
@@ -2830,7 +2830,8 @@ test "PdfDocument parse_cmap decodes stream objects" {
     cmap_type: None,
     cid_system_info: None,
   })
-  let non_stream : Result[@pdflite.PdfParsedCMap, Error] = try? doc.parse_cmap(
+  let non_stream : Result[@pdflite.PdfParsedCMap, Error] = try? @pdflite.pdf_parse_cmap(
+    doc,
     PdfInteger(1),
   )
   guard non_stream is Err(@pdflite.PdfError::CMapEncodingExpected) else {

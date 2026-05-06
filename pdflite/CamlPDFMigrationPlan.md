@@ -1070,9 +1070,11 @@ MoonBit consequences for this project:
    sequential entries before a later multiline array are kept. A small
    public parsed-CMap API is also started: borrowed CMap bytes and direct or
    indirect stream objects can now return a typed map plus `/WMode`, decoding
-   supported stream filters first. `/WMode` parsing now follows PDF whitespace
-   tokenization across physical line boundaries and skips malformed candidate
-   values before accepting a later valid `/WMode`.
+   supported stream filters first. The `.repos/pdfcmap.mli` standalone
+   `pdf_parse_cmap` helper now exposes the document-aware CMap stream parser.
+   `/WMode` parsing now follows PDF whitespace tokenization across physical line
+   boundaries and skips malformed candidate values before accepting a later valid
+   `/WMode`.
    CID text extraction now also segments common mixed-byte predefined CMaps
    such as EUC, RKSJ, Big5, UHC, and GBK families before `/ToUnicode` lookup,
    so ASCII and multibyte charcodes in those encodings can share one extractor.

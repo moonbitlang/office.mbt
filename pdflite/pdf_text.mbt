@@ -4739,6 +4739,14 @@ pub fn PdfDocument::parse_cmap(
 }
 
 ///|
+pub fn pdf_parse_cmap(
+  document : PdfDocument,
+  cmap : PdfObject,
+) -> PdfParsedCMap raise PdfError {
+  document.parse_cmap(cmap)
+}
+
+///|
 fn PdfDocument::pdf_text_tounicode_of_font(
   self : PdfDocument,
   font : PdfObject,
