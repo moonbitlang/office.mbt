@@ -40,7 +40,10 @@ work changes.
    objects containing the word `stream` in comments do not get mistaken for
    stream objects. Writer trailer, stream-length, and xref-stream dictionaries
    now reuse cached standard `PdfName` values while preserving existing public
-   writer APIs.
+   writer APIs. Incremental writer changed-object collection now uses a
+   hash-backed seen set before sorting sparse xref entry numbers, preserving
+   output order while avoiding repeated linear duplicate checks for large edit
+   logs.
    Xref-stream reading now also mirrors CamlPDF's tolerance for missing
    `/Type /XRef` when the stream still carries xref-stream structure such as
    `/W`, while keeping explicit wrong `/Type` values rejected; the malformed

@@ -135,6 +135,9 @@ Current estimate:
 - [x] ~~Group xref-stream type-2 entries by containing object stream before
   embedded object expansion, avoiding a full xref scan per `/ObjStm` while
   preserving first-seen stream order and per-stream entry order.~~
+- [x] ~~Deduplicate incremental-writer changed object numbers with a
+  `HashMap` before sorting sparse xref entries, avoiding quadratic event-log
+  scans for repeatedly edited objects.~~
 - [x] ~~Replace generated Adobe-GB1, Adobe-CNS1, and Adobe-Japan1 CID-range
   CMap reverse lookup nested charcode scans with Unicode/CID-to-charcode
   helpers, preserving deterministic lowest packed-charcode selection for
@@ -260,6 +263,9 @@ Current estimate:
 - [x] ~~Object-stream embedded-object loading now groups compressed xref entries
   by `/ObjStm`, so compressed-object-heavy reads do not rescan the full xref
   table for each object stream.~~
+- [x] ~~Incremental writer changed-object detection now uses a hash-backed
+  seen set before sorting sparse classic/xref-stream entry numbers, so large
+  event logs with repeated edits avoid repeated linear duplicate checks.~~
 - [x] ~~Generated CID-range CMap reverse lookup for Adobe-GB1, Adobe-CNS1, and
   Adobe-Japan1 now maps Unicode to CID and CID to charcode instead of scanning
   every character code in every range.~~
@@ -555,6 +561,9 @@ Current estimate:
 - [ ] Broader real-world PDF corpus testing.
 - [ ] Performance tuning for large files, object streams, filters, and text/image
   extraction.
+- [x] ~~Incremental writer changed-object collection now deduplicates object
+  numbers with a hash set before sparse xref sorting, improving large repeated
+  update event logs without changing writer output.~~
 - [ ] Optional external-tool integration decisions for filter families that
   CamlPDF handled with C stubs or external binaries.
 
@@ -683,6 +692,8 @@ Current estimate:
   binary search while preserving packed-byte ordering.~~
 - [x] ~~Tune object-stream expansion by grouping xref-stream type-2 entries
   before strict, reconstructed, and password-aware embedded-object loading.~~
+- [x] ~~Tune incremental writer changed-object collection with a hash-backed
+  seen set while preserving sorted sparse xref output.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.

@@ -758,9 +758,12 @@ fn pdf_writer_int_array_contains(values : ArrayView[Int], value : Int) -> Bool {
 ///|
 fn pdf_writer_changed_object_numbers(document : PdfDocument) -> Array[Int] {
   let numbers : Array[Int] = [0]
+  let seen : @hashmap.HashMap[Int, Bool] = @hashmap.HashMap::new()
+  seen[0] = true
   for item in document.event_log() {
     let (number, _) = item
-    if number > 0 && !pdf_writer_int_array_contains(numbers[:], number) {
+    if number > 0 && !seen.contains(number) {
+      seen[number] = true
       numbers.push(number)
     }
   }
