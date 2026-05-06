@@ -126,8 +126,17 @@ Current backend snapshot:
   kerning adjustments.~~
 - [x] ~~Add a MarkItDown comparison report/script for selected local Pandoc
   fixtures; use differences to drive core extraction fixes.~~
-- [ ] Extend the MarkItDown comparison loop to downloaded real-world fixtures
-  with documented redistribution terms and expected extraction contracts.
+- [x] ~~Extend the MarkItDown comparison loop to downloaded real-world fixtures
+  with documented redistribution terms and expected extraction contracts.~~
+- [x] ~~Add download-only external Markdown acceptance fixtures for an Adobe
+  PDF-spec supplement and a Unicode CJK chart, with SHA-256 lock metadata and
+  checked-in comparison judgement.~~
+- [x] ~~Decrypt blank/open user-password PDFs at the Markdown boundary before
+  text extraction, fixing `InvalidFlateData` on encrypted external
+  acceptance PDFs.~~
+- [ ] Investigate why `unicode_cjk_unified_ideographs_u4e00.pdf` decrypts but
+  produces only page headings in pdflite while MarkItDown extracts chart text;
+  prioritize embedded font/CMap handling.
 - [x] ~~Add Type3 glyph-program/resource coverage where a CharProc consumes
   Type3 `/Resources` through an XObject and named inline-image color space.~~
 - [ ] Add fixture-driven Type3 glyph-program/resource coverage from real PDFs

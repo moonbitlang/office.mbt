@@ -191,6 +191,26 @@ fn markdown_line_break_document_for_test() -> @pdflite.PdfDocument raise {
 }
 
 ///|
+fn markdown_blank_password_document_for_test() -> @pdflite.PdfDocument raise {
+  markdown_latin_document_for_test().encrypt_40bit(
+    @ascii.encode("")[:],
+    @ascii.encode("owner")[:],
+    [PdfNoCopy],
+    file_id=@ascii.encode("markdown-encrypted-id")[:],
+  )
+}
+
+///|
+fn markdown_password_required_document_for_test() -> @pdflite.PdfDocument raise {
+  markdown_latin_document_for_test().encrypt_40bit(
+    @ascii.encode("user")[:],
+    @ascii.encode("owner")[:],
+    [PdfNoCopy],
+    file_id=@ascii.encode("markdown-password-id")[:],
+  )
+}
+
+///|
 test "pdf_document_to_markdown extracts deterministic Latin page text" {
   let markdown = try! @markdown.pdf_document_to_markdown(
     markdown_latin_document_for_test(),
@@ -208,6 +228,24 @@ test "pdf_bytes_to_markdown reads and extracts deterministic Latin text" {
     try! @markdown.pdf_bytes_to_markdown(bytes),
     "# Page 1\n\nHello, World! Spaced\nSecond line\n\n# Page 2\n\nAnother page\n",
   )
+}
+
+///|
+test "pdf_document_to_markdown decrypts blank user password PDFs" {
+  @test.assert_eq(
+    @markdown.pdf_document_to_markdown(
+      markdown_blank_password_document_for_test(),
+    ),
+    "# Page 1\n\nHello, World! Spaced\nSecond line\n\n# Page 2\n\nAnother page\n",
+  )
+}
+
+///|
+test "pdf_document_to_markdown raises when encrypted PDF needs a password" {
+  let result : Result[String, Error] = try? @markdown.pdf_document_to_markdown(
+    markdown_password_required_document_for_test(),
+  )
+  @test.assert_eq(result is Err(_), true)
 }
 
 ///|

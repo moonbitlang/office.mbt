@@ -26,17 +26,40 @@ class FixtureReport:
     pdflite_markdown: Path
     markitdown_markdown: Path
     diff: Path
-    pdflite_chars: int
-    markitdown_chars: int
+    pdflite_chars: int | None
+    markitdown_chars: int | None
     exact_match: bool
+    pdflite_error: str | None = None
+    markitdown_error: str | None = None
 
 
 def repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
-def run_command(command: list[str], cwd: Path) -> None:
-    subprocess.run(command, cwd=cwd, check=True)
+def run_command(
+    command: list[str],
+    cwd: Path,
+    error_on_output: bool = False,
+) -> str | None:
+    result = subprocess.run(
+        command,
+        cwd=cwd,
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    if result.returncode == 0:
+        if error_on_output:
+            detail = (result.stdout + result.stderr).strip()
+            if detail:
+                return detail
+        return None
+    detail = (result.stdout + result.stderr).strip()
+    if detail:
+        return detail
+    return f"command exited with status {result.returncode}: {' '.join(command)}"
 
 
 def normalize_markdown(text: str) -> str:
@@ -58,8 +81,8 @@ def markitdown_command(user_command: str | None) -> list[str]:
     )
 
 
-def convert_with_pdflite(root: Path, pdf: Path, output: Path) -> None:
-    run_command(
+def convert_with_pdflite(root: Path, pdf: Path, output: Path) -> str | None:
+    return run_command(
         [
             "moon",
             "run",
@@ -70,6 +93,7 @@ def convert_with_pdflite(root: Path, pdf: Path, output: Path) -> None:
             str(output),
         ],
         cwd=root,
+        error_on_output=True,
     )
 
 
@@ -78,8 +102,8 @@ def convert_with_markitdown(
     command: list[str],
     pdf: Path,
     output: Path,
-) -> None:
-    run_command([*command, str(pdf), "-o", str(output)], cwd=root)
+) -> str | None:
+    return run_command([*command, str(pdf), "-o", str(output)], cwd=root)
 
 
 def write_diff(pdflite_text: str, markitdown_text: str, output: Path) -> None:
@@ -90,6 +114,22 @@ def write_diff(pdflite_text: str, markitdown_text: str, output: Path) -> None:
         tofile="markitdown",
     )
     output.write_text("".join(diff), encoding="utf-8")
+
+
+def read_normalized_output(path: Path) -> tuple[str | None, str | None]:
+    if not path.exists():
+        return None, f"expected output was not written: {path}"
+    try:
+        return normalize_markdown(path.read_text(encoding="utf-8")), None
+    except UnicodeError as error:
+        return None, f"could not decode UTF-8 output {path}: {error}"
+
+
+def write_error(path: Path, error: str | None) -> None:
+    if error:
+        path.write_text(error.rstrip() + "\n", encoding="utf-8")
+    elif path.exists():
+        path.unlink()
 
 
 def relative_path(root: Path, path: Path) -> str:
@@ -109,23 +149,43 @@ def compare_fixture(
     pdflite_output = output_dir / f"{stem}.pdflite.md"
     markitdown_output = output_dir / f"{stem}.markitdown.md"
     diff_output = output_dir / f"{stem}.diff"
-    convert_with_pdflite(root, pdf, pdflite_output)
-    convert_with_markitdown(root, markitdown, pdf, markitdown_output)
-    pdflite_text = normalize_markdown(pdflite_output.read_text(encoding="utf-8"))
-    markitdown_text = normalize_markdown(
-        markitdown_output.read_text(encoding="utf-8")
+    pdflite_error = convert_with_pdflite(root, pdf, pdflite_output)
+    markitdown_error = convert_with_markitdown(root, markitdown, pdf, markitdown_output)
+    pdflite_text, pdflite_read_error = read_normalized_output(pdflite_output)
+    markitdown_text, markitdown_read_error = read_normalized_output(
+        markitdown_output
     )
-    pdflite_output.write_text(pdflite_text, encoding="utf-8")
-    markitdown_output.write_text(markitdown_text, encoding="utf-8")
-    write_diff(pdflite_text, markitdown_text, diff_output)
+    pdflite_error = pdflite_error or pdflite_read_error
+    markitdown_error = markitdown_error or markitdown_read_error
+    write_error(output_dir / f"{stem}.pdflite.err", pdflite_error)
+    write_error(output_dir / f"{stem}.markitdown.err", markitdown_error)
+    if pdflite_text is not None:
+        pdflite_output.write_text(pdflite_text, encoding="utf-8")
+    if markitdown_text is not None:
+        markitdown_output.write_text(markitdown_text, encoding="utf-8")
+    if pdflite_text is not None and markitdown_text is not None:
+        write_diff(pdflite_text, markitdown_text, diff_output)
+    else:
+        diff_output.write_text(
+            "comparison incomplete\n"
+            + f"pdflite_error: {pdflite_error or 'none'}\n"
+            + f"markitdown_error: {markitdown_error or 'none'}\n",
+            encoding="utf-8",
+        )
     return FixtureReport(
         pdf=pdf,
         pdflite_markdown=pdflite_output,
         markitdown_markdown=markitdown_output,
         diff=diff_output,
-        pdflite_chars=len(pdflite_text),
-        markitdown_chars=len(markitdown_text),
-        exact_match=pdflite_text == markitdown_text,
+        pdflite_chars=len(pdflite_text) if pdflite_text is not None else None,
+        markitdown_chars=len(markitdown_text)
+        if markitdown_text is not None
+        else None,
+        exact_match=pdflite_text is not None
+        and markitdown_text is not None
+        and pdflite_text == markitdown_text,
+        pdflite_error=pdflite_error,
+        markitdown_error=markitdown_error,
     )
 
 
@@ -140,6 +200,8 @@ def write_json_report(root: Path, output: Path, reports: list[FixtureReport]) ->
                 "pdflite_chars": report.pdflite_chars,
                 "markitdown_chars": report.markitdown_chars,
                 "exact_match": report.exact_match,
+                "pdflite_error": report.pdflite_error,
+                "markitdown_error": report.markitdown_error,
             }
             for report in reports
         ]
@@ -164,8 +226,12 @@ def write_markdown_report(
             + " | ".join(
                 [
                     relative_path(root, report.pdf),
-                    str(report.pdflite_chars),
-                    str(report.markitdown_chars),
+                    str(report.pdflite_chars)
+                    if report.pdflite_chars is not None
+                    else "error",
+                    str(report.markitdown_chars)
+                    if report.markitdown_chars is not None
+                    else "error",
                     "yes" if report.exact_match else "no",
                     relative_path(root, report.diff),
                 ]

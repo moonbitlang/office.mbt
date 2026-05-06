@@ -179,9 +179,24 @@ fn pdf_markdown_page_text(
 }
 
 ///|
+fn pdf_markdown_readable_document(
+  document : @pdflite.PdfDocument,
+) -> @pdflite.PdfDocument raise {
+  if document.is_encrypted() {
+    match document.decrypt_with_passwords() {
+      Some(result) => result.document
+      None => fail("encrypted PDF requires a password")
+    }
+  } else {
+    document
+  }
+}
+
+///|
 pub fn pdf_document_to_markdown(
   document : @pdflite.PdfDocument,
 ) -> String raise {
+  let document = pdf_markdown_readable_document(document)
   let pages = document.pages_of_pagetree()
   let output = @buffer.new()
   for index in 0..<pages.length() {
