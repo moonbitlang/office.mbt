@@ -7,7 +7,7 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 97.7%.
+- Native main-feature parity: 97.8%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
   breadth: 85-90%.
 
@@ -180,6 +180,11 @@ Current backend snapshot:
   comparison report; the Unicode chart now records 52,933 pdflite lines at
   26.4 characters/line versus MarkItDown's 534 lines at 2,842.1
   characters/line, making the remaining layout/line-joining gap explicit.~~
+- [x] ~~Gate external Markdown fixtures in MoonBit tests when downloads are
+  present: the Adobe ISO 32000 supplement must retain title/version markers
+  with no raw controls and the Unicode CJK chart must retain the full 20,963
+  U+4E00-9FFF unique-glyph coverage with no raw controls or replacement
+  characters.~~
 - [ ] Review remaining Unicode CJK chart Markdown quality gaps against
   MarkItDown and pdftotext, especially table-cell polish, line joining, and
   any missing chart cells.
@@ -861,6 +866,9 @@ Current backend snapshot:
 - [x] ~~Checked-in CamlPDF intro fixture recovers the newest compressed-xref
   incremental update after corrupting the final `startxref`, including reused
   object-number payloads, compressed rewrite, reread, and text extraction.~~
+- [x] ~~External Markdown corpus fixtures are now gated by optional native tests
+  when downloads are present, covering Adobe PDF-spec supplement extraction and
+  Unicode CJK chart unique-glyph coverage.~~
 - [ ] Broader real-world PDF corpus testing, including PDF-to-Markdown
   comparison fixtures after the local Pandoc gates are stable.
 - [ ] Performance tuning for large files, object streams, filters, and text/image
