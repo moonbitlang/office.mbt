@@ -586,68 +586,119 @@ fn pdf_reader_name(text : String) -> PdfName {
 }
 
 ///|
+let pdf_reader_type_key_name : PdfName = pdf_reader_name("/Type")
+
+///|
+let pdf_reader_xref_key_name : PdfName = pdf_reader_name("/XRef")
+
+///|
+let pdf_reader_objstm_key_name : PdfName = pdf_reader_name("/ObjStm")
+
+///|
+let pdf_reader_w_key_name : PdfName = pdf_reader_name("/W")
+
+///|
+let pdf_reader_index_key_name : PdfName = pdf_reader_name("/Index")
+
+///|
+let pdf_reader_size_key_name : PdfName = pdf_reader_name("/Size")
+
+///|
+let pdf_reader_n_key_name : PdfName = pdf_reader_name("/N")
+
+///|
+let pdf_reader_first_key_name : PdfName = pdf_reader_name("/First")
+
+///|
+let pdf_reader_linearized_key_name : PdfName = pdf_reader_name("/Linearized")
+
+///|
+let pdf_reader_filter_key_name : PdfName = pdf_reader_name("/Filter")
+
+///|
+let pdf_reader_short_filter_key_name : PdfName = pdf_reader_name("/F")
+
+///|
+let pdf_reader_decodeparms_key_name : PdfName = pdf_reader_name("/DecodeParms")
+
+///|
+let pdf_reader_short_decodeparms_key_name : PdfName = pdf_reader_name("/DP")
+
+///|
+let pdf_reader_root_key_name : PdfName = pdf_reader_name("/Root")
+
+///|
+let pdf_reader_prev_key_name : PdfName = pdf_reader_name("/Prev")
+
+///|
+let pdf_reader_xrefstm_key_name : PdfName = pdf_reader_name("/XRefStm")
+
+///|
+let pdf_length_key_name : PdfName = pdf_reader_name("/Length")
+
+///|
 fn pdf_reader_type_name() -> PdfName {
-  pdf_reader_name("/Type")
+  pdf_reader_type_key_name
 }
 
 ///|
 fn pdf_reader_xref_name() -> PdfName {
-  pdf_reader_name("/XRef")
+  pdf_reader_xref_key_name
 }
 
 ///|
 fn pdf_reader_objstm_name() -> PdfName {
-  pdf_reader_name("/ObjStm")
+  pdf_reader_objstm_key_name
 }
 
 ///|
 fn pdf_reader_w_name() -> PdfName {
-  pdf_reader_name("/W")
+  pdf_reader_w_key_name
 }
 
 ///|
 fn pdf_reader_index_name() -> PdfName {
-  pdf_reader_name("/Index")
+  pdf_reader_index_key_name
 }
 
 ///|
 fn pdf_reader_size_name() -> PdfName {
-  pdf_reader_name("/Size")
+  pdf_reader_size_key_name
 }
 
 ///|
 fn pdf_reader_n_name() -> PdfName {
-  pdf_reader_name("/N")
+  pdf_reader_n_key_name
 }
 
 ///|
 fn pdf_reader_first_name() -> PdfName {
-  pdf_reader_name("/First")
+  pdf_reader_first_key_name
 }
 
 ///|
 fn pdf_reader_linearized_name() -> PdfName {
-  pdf_reader_name("/Linearized")
+  pdf_reader_linearized_key_name
 }
 
 ///|
 fn pdf_reader_filter_name() -> PdfName {
-  pdf_reader_name("/Filter")
+  pdf_reader_filter_key_name
 }
 
 ///|
 fn pdf_reader_short_filter_name() -> PdfName {
-  pdf_reader_name("/F")
+  pdf_reader_short_filter_key_name
 }
 
 ///|
 fn pdf_reader_decodeparms_name() -> PdfName {
-  pdf_reader_name("/DecodeParms")
+  pdf_reader_decodeparms_key_name
 }
 
 ///|
 fn pdf_reader_short_decodeparms_name() -> PdfName {
-  pdf_reader_name("/DP")
+  pdf_reader_short_decodeparms_key_name
 }
 
 ///|
@@ -1215,17 +1266,17 @@ fn ByteCursor::read_first_indirect_object_at_current(
 
 ///|
 fn pdf_reader_root_name() -> PdfName {
-  pdf_name_of_bytes(Bytes::from_array([47, 82, 111, 111, 116]))
+  pdf_reader_root_key_name
 }
 
 ///|
 fn pdf_reader_prev_name() -> PdfName {
-  pdf_name_of_bytes(Bytes::from_array([47, 80, 114, 101, 118]))
+  pdf_reader_prev_key_name
 }
 
 ///|
 fn pdf_reader_xrefstm_name() -> PdfName {
-  pdf_reader_name("/XRefStm")
+  pdf_reader_xrefstm_key_name
 }
 
 ///|
@@ -2192,7 +2243,7 @@ pub fn pdf_read_document_from_bytes_with_passwords(
 
 ///|
 fn pdf_length_name() -> PdfName {
-  pdf_name_of_bytes(Bytes::from_array([47, 76, 101, 110, 103, 116, 104]))
+  pdf_length_key_name
 }
 
 ///|

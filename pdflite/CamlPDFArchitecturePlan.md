@@ -96,7 +96,9 @@ work changes.
    Document object selection now walks parsed object entries directly, matching
    the object iterators and avoiding false matches against parser-private
    deferred placeholders that `lookup_object_or_null` intentionally exposes as
-   `null`.
+   `null`. Standard reader keys used by xref, object-stream, trailer, and stream
+   length handling are cached once, avoiding repeated ASCII `PdfName` rebuilding
+   while loading large object tables.
    Remaining focus: broader malformed xref-table recovery and encrypted
    parser-state edge cases beyond current object-stream coverage.
 

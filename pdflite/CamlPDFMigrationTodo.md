@@ -57,6 +57,8 @@ Current estimate:
   `/DecodeParms` so repeated stream transformations avoid rebuilding them.~~
 - [x] ~~Cache standard image extraction dictionary and encoded-image filter
   names so repeated image inspection avoids rebuilding ASCII `PdfName` values.~~
+- [x] ~~Cache standard reader keys used by xref, object-stream, trailer, and
+  stream-length handling so large object-table loads avoid rebuilding names.~~
 - [ ] Continue zlib byte-output/performance parity work where exact miniz block
   spelling or large-file profiles expose remaining gaps.
 - [ ] Profile and tune large-file hot paths for object streams, filters, and
@@ -327,6 +329,8 @@ Current estimate:
   ASCII `PdfName` values across stream decode/encode stages.~~
 - [x] ~~Standard image extraction keys and encoded-image filter names are cached
   once instead of rebuilt on every image metadata lookup.~~
+- [x] ~~Standard reader/xref/object-stream keys are cached once instead of
+  rebuilt on repeated strict and reconstructed read paths.~~
 - [ ] Byte-identical zlib output strategy and broader performance parity beyond
   explicit Flate level selection.
 - [ ] Broader malformed xref-table/xref-stream/object-stream recovery beyond
