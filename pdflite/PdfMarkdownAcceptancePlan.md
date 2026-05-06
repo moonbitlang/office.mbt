@@ -73,6 +73,9 @@ library API.
 - [x] ~~Use a hash-backed indirect font extractor cache during Markdown
   extraction so large multi-page/form documents do not linearly rescan cached
   fonts for each `Tf` operator.~~
+- [x] ~~Normalize spaced terminal hyphens at extracted line breaks so real
+  documents like the Adobe supplement emit `soft-` instead of `soft -` while
+  preserving the line boundary.~~
 - [ ] Continue fixing extraction/layout bugs found by the comparison loop.
 
 ## First Converter Contract

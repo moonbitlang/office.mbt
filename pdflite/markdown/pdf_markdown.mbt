@@ -141,8 +141,19 @@ fn pdf_markdown_trim_trailing_spaces(output : Array[Int]) -> Unit {
 }
 
 ///|
+fn pdf_markdown_trim_space_before_terminal_hyphen(output : Array[Int]) -> Unit {
+  if output.length() >= 2 &&
+    output[output.length() - 1] == 0x2D &&
+    output[output.length() - 2] == 0x20 {
+    output[output.length() - 2] = 0x2D
+    ignore(output.pop())
+  }
+}
+
+///|
 fn pdf_markdown_push_line_break(output : Array[Int]) -> Unit {
   pdf_markdown_trim_trailing_spaces(output)
+  pdf_markdown_trim_space_before_terminal_hyphen(output)
   match pdf_markdown_last_codepoint(output) {
     None | Some(0x0A) => ()
     Some(_) => output.push(0x0A)

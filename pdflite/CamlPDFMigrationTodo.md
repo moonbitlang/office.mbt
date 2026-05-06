@@ -951,6 +951,9 @@ Current backend snapshot:
 - [x] ~~Markdown extraction now uses a hash-backed indirect font extractor
   cache, avoiding linear cache scans for repeated `Tf` operators across large
   pages and nested form XObjects.~~
+- [x] ~~Markdown normalization now trims the synthetic space before a terminal
+  hyphen at extracted line breaks, matching common PDF text baselines for
+  wrapped words such as `soft-` without joining the physical lines.~~
 - [ ] Broader real-world PDF corpus testing, including PDF-to-Markdown
   comparison fixtures after the local Pandoc gates are stable.
 - [ ] Performance tuning for large files, object streams, filters, and text/image

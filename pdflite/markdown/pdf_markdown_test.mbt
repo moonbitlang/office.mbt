@@ -320,6 +320,33 @@ fn markdown_positioned_text_state_document_for_test() -> @pdflite.PdfDocument ra
 }
 
 ///|
+fn markdown_positioned_hyphenated_line_document_for_test() -> @pdflite.PdfDocument raise {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  let resources = markdown_font_resources_for_test(
+    markdown_standard_font_for_test(),
+  )
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [
+      @pdflite.pdf_content_stream_of_ops([
+        Op_BT,
+        Op_Tf(markdown_name_for_test("/F0"), 12.0),
+        Op_Tm(@pdflite.transform_translate(50.0, 700.0)),
+        Op_Tj(markdown_ascii_for_test("soft -")),
+        Op_Tm(@pdflite.transform_translate(50.0, 680.0)),
+        Op_Tj(markdown_ascii_for_test("ware")),
+        Op_ET,
+      ]),
+    ],
+    resources,
+  }
+  let page_root = doc.add_pagetree([page])
+  ignore(doc.add_root(page_root, []))
+  doc
+}
+
+///|
 fn markdown_positioned_cjk_spacing_document_for_test() -> @pdflite.PdfDocument raise {
   let doc = @pdflite.pdf_document_empty()
   doc.set_version(1, 4)
@@ -599,6 +626,9 @@ fn markdown_line_break_document_for_test() -> @pdflite.PdfDocument raise {
         Op_Tstar,
         Op_double_quote(0.0, 0.0, markdown_ascii_for_test("Second ")),
         Op_Tstar,
+        Op_Tj(markdown_ascii_for_test("soft -")),
+        Op_Tstar,
+        Op_Tj(markdown_ascii_for_test("ware")),
         Op_ET,
       ]),
     ],
@@ -877,6 +907,16 @@ test "pdf_document_to_markdown tracks positioned text-state moves" {
 }
 
 ///|
+test "pdf_document_to_markdown trims space before positioned terminal hyphen" {
+  @test.assert_eq(
+    @markdown.pdf_document_to_markdown(
+      markdown_positioned_hyphenated_line_document_for_test(),
+    ),
+    "# Page 1\n\nsoft-\nware\n",
+  )
+}
+
+///|
 test "pdf_document_to_markdown keeps adjacent positioned CJK glyphs together" {
   @test.assert_eq(
     @markdown.pdf_document_to_markdown(
@@ -946,6 +986,6 @@ test "pdf_document_to_markdown skips text without a resolvable font" {
 test "pdf_document_to_markdown normalizes explicit line breaks" {
   @test.assert_eq(
     @markdown.pdf_document_to_markdown(markdown_line_break_document_for_test()),
-    "# Page 1\n\nFirst\nSecond\n",
+    "# Page 1\n\nFirst\nSecond\nsoft-\nware\n",
   )
 }
