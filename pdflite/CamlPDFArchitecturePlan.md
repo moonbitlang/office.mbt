@@ -12,6 +12,9 @@ work changes.
    `pdf_units.mbt`, `pdf_paper.mbt`.
    Status: mostly complete for in-memory synchronous operation. Keep byte data
    as `Bytes`/`BytesView`, with ownership changes only at explicit boundaries.
+   The transform layer keeps typed `Point2`/`TransformMatrix` methods as the
+   implementation core, with standalone wrappers covering the
+   `.repos/pdftransform.mli` helper shape for later source-guided ports.
 
 2. Core object graph.
    Owner modules: `pdf_object.mbt`, `pdf_document.mbt`, `pdf_writer.mbt`,

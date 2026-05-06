@@ -87,6 +87,11 @@ pub fn transform_string_of_ops(ops : ArrayView[TransformOp]) -> String {
 }
 
 ///|
+pub fn transform_string_of_transform(ops : ArrayView[TransformOp]) -> String {
+  transform_string_of_ops(ops)
+}
+
+///|
 pub fn TransformMatrix::debug_string(self : TransformMatrix) -> String {
   self.a.to_string() +
   ", " +
@@ -119,6 +124,11 @@ pub let transform_identity_matrix : TransformMatrix = {
   d: 1.0,
   e: 0.0,
   f: 0.0,
+}
+
+///|
+pub fn transform_identity() -> Array[TransformOp] {
+  []
 }
 
 ///|
@@ -265,6 +275,14 @@ pub fn TransformMatrix::apply(self : TransformMatrix, point : Point2) -> Point2 
 }
 
 ///|
+pub fn transform_apply_matrix(
+  matrix : TransformMatrix,
+  point : Point2,
+) -> Point2 {
+  matrix.apply(point)
+}
+
+///|
 pub fn transform_matrix_of_op(op : TransformOp) -> TransformMatrix {
   match op {
     Scale(origin, sx, sy) => transform_scale(origin, sx, sy)
@@ -285,11 +303,23 @@ pub fn transform_matrix_of_ops(ops : ArrayView[TransformOp]) -> TransformMatrix 
 }
 
 ///|
+pub fn transform_matrix_of_transform(
+  ops : ArrayView[TransformOp],
+) -> TransformMatrix {
+  transform_matrix_of_ops(ops)
+}
+
+///|
 pub fn transform_apply_ops(
   ops : ArrayView[TransformOp],
   point : Point2,
 ) -> Point2 {
   transform_matrix_of_ops(ops).apply(point)
+}
+
+///|
+pub fn transform_apply(ops : ArrayView[TransformOp], point : Point2) -> Point2 {
+  transform_apply_ops(ops, point)
 }
 
 ///|
@@ -312,6 +342,13 @@ pub fn TransformMatrix::invert(
     e: scale * (self.c * self.f - self.d * self.e),
     f: scale * (self.b * self.e - self.a * self.f),
   }
+}
+
+///|
+pub fn transform_matrix_invert(
+  matrix : TransformMatrix,
+) -> TransformMatrix raise PdfError {
+  matrix.invert()
 }
 
 ///|
@@ -353,6 +390,11 @@ pub fn TransformMatrix::decompose(
 }
 
 ///|
+pub fn transform_decompose(matrix : TransformMatrix) -> TransformDecomposition {
+  matrix.decompose()
+}
+
+///|
 pub fn transform_recompose(parts : TransformDecomposition) -> TransformMatrix {
   let scale_aspect_shear = {
     ..transform_identity_matrix,
@@ -367,4 +409,23 @@ pub fn transform_recompose(parts : TransformDecomposition) -> TransformMatrix {
       scale_aspect_shear,
     ),
   )
+}
+
+///|
+pub fn transform_recompose_components(
+  scale : Double,
+  aspect : Double,
+  rotation : Double,
+  shear : Double,
+  translate_x : Double,
+  translate_y : Double,
+) -> TransformMatrix {
+  transform_recompose({
+    scale,
+    aspect,
+    rotation,
+    shear,
+    translate_x,
+    translate_y,
+  })
 }

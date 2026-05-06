@@ -49,6 +49,10 @@ Current backend snapshot:
 - [x] ~~Expose `.repos/pdfimage.mli`-referenced standalone image helpers for
   colour-space lookup, bits-per-component lookup, and 24bpp image extraction
   over the existing typed document methods.~~
+- [x] ~~Expose `.repos/pdftransform.mli`-referenced standalone transform helpers
+  for identity transforms, transform debug strings, matrix-of-transform,
+  matrix application, inversion, decomposition, and scalar recomposition over
+  the existing typed matrix API.~~
 - [x] ~~Check the currently tracked CamlPDF fixture PDFs for image XObjects
   before expanding image corpus tests; `logo.pdf` and
   `introduction_to_camlpdf.pdf` do not currently provide image entries.~~

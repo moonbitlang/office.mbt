@@ -143,7 +143,10 @@ MoonBit consequences for this project:
    first `Pdftransform` matrix operations: translate, scale, rotate, shear,
    compose, apply, operation-list ordering, `compose`/`append` operation-list
    helpers, operation/matrix debug string helpers, inversion, and
-   CamlPDF-compatible matrix decomposition/recomposition
+   CamlPDF-compatible matrix decomposition/recomposition, plus standalone
+   `.repos/pdftransform.mli`-shaped wrappers for identity transforms, transform
+   debug strings, matrix-of-transform, matrix application, inversion,
+   decomposition, and scalar recomposition
    with abnormal floating results normalized at the API boundary. The MoonBit
    port intentionally preserves CamlPDF's historical conversion constants,
    including the `PdfPoint -> Centimetre` divisor `28.3456`.

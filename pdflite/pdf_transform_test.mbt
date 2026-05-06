@@ -83,12 +83,20 @@ test "TransformMatrix rotates and shears points" {
 
 ///|
 test "Transform operations preserve CamlPDF list ordering" {
+  let point = @pdflite.point2(1.0, 1.0)
+  let identity = @pdflite.transform_identity()
+  @test.assert_eq(identity, [])
+  @test.assert_eq(@pdflite.transform_apply(identity, point), point)
   let ops : FixedArray[@pdflite.TransformOp] = [
     Translate(10.0, 20.0),
     Scale(@pdflite.point2(0.0, 0.0), 2.0, 3.0),
   ]
   @test.assert_eq(
-    @pdflite.transform_apply_ops(ops, @pdflite.point2(1.0, 1.0)),
+    @pdflite.transform_apply_ops(ops, point),
+    @pdflite.point2(12.0, 23.0),
+  )
+  @test.assert_eq(
+    @pdflite.transform_apply(ops, point),
     @pdflite.point2(12.0, 23.0),
   )
 }
@@ -106,6 +114,10 @@ test "Transform debug strings preserve CamlPDF transform ordering" {
   @test.assert_eq(
     @pdflite.transform_string_of_ops(ops),
     "Shear in Y about (1, 2), proportionality constant 0.75\nShear in X about (1, 2), proportionality constant 0.25\nRotate by 0.5 about (1, 2)\nScale about (1, 2) by 3 in x and 4 in y\nTranslate by 10, 20\n",
+  )
+  @test.assert_eq(
+    @pdflite.transform_string_of_transform(ops),
+    @pdflite.transform_string_of_ops(ops),
   )
   @test.assert_eq(
     @pdflite.transform_string_of_op(Translate(10.0, 20.0)),
@@ -195,6 +207,14 @@ test "transform_append preserves CamlPDF transform-list order" {
 
 ///|
 test "transform_matrix_of_op covers direct operation variants" {
+  let ops : FixedArray[@pdflite.TransformOp] = [
+    Translate(10.0, 20.0),
+    Scale(@pdflite.point2(0.0, 0.0), 2.0, 3.0),
+  ]
+  assert_matrix_close_for_transform_test(
+    @pdflite.transform_matrix_of_transform(ops),
+    @pdflite.transform_matrix_of_ops(ops),
+  )
   let quarter_turn = @pdflite.transform_matrix_of_op(
     Rotate(@pdflite.point2(0.0, 0.0), 1.5707963267948966),
   )
@@ -223,10 +243,16 @@ test "TransformMatrix inversion reverses a transform" {
     @pdflite.transform_scale(@pdflite.point2(0.0, 0.0), 2.0, 4.0),
   )
   let inverse = try! matrix.invert()
+  let inverse_from_function = try! @pdflite.transform_matrix_invert(matrix)
   let point = @pdflite.point2(3.0, 5.0)
   assert_point_close_for_transform_test(
     inverse.apply(matrix.apply(point)),
     point,
+  )
+  assert_matrix_close_for_transform_test(inverse_from_function, inverse)
+  assert_point_close_for_transform_test(
+    @pdflite.transform_apply_matrix(matrix, point),
+    matrix.apply(point),
   )
 }
 
@@ -275,6 +301,10 @@ test "TransformMatrix decompose mirrors CamlPDF scalar components" {
       translate_y: 0.0,
     },
   )
+  assert_decomposition_close_for_transform_test(
+    @pdflite.transform_decompose(@pdflite.transform_identity_matrix),
+    @pdflite.transform_identity_matrix.decompose(),
+  )
   let degenerate : @pdflite.TransformMatrix = {
     a: 0.0,
     b: 0.0,
@@ -304,6 +334,10 @@ test "transform_recompose rebuilds decomposed matrix components" {
     translate_y: -4.0,
   }
   let matrix = @pdflite.transform_recompose(parts)
+  let matrix_from_components = @pdflite.transform_recompose_components(
+    2.0, 3.0, 0.25, 0.1, 10.0, -4.0,
+  )
+  assert_matrix_close_for_transform_test(matrix_from_components, matrix)
   assert_decomposition_close_for_transform_test(matrix.decompose(), parts)
   assert_matrix_close_for_transform_test(
     @pdflite.transform_recompose(matrix.decompose()),
