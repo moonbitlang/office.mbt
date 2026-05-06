@@ -134,9 +134,12 @@ Current backend snapshot:
 - [x] ~~Decrypt blank/open user-password PDFs at the Markdown boundary before
   text extraction, fixing `InvalidFlateData` on encrypted external
   acceptance PDFs.~~
-- [ ] Investigate why `unicode_cjk_unified_ideographs_u4e00.pdf` decrypts but
+- [x] ~~Investigate why `unicode_cjk_unified_ideographs_u4e00.pdf` decrypts but
   produces only page headings in pdflite while MarkItDown extracts chart text;
-  prioritize embedded font/CMap handling.
+  fix Markdown form-XObject traversal and cache shared font extractors so the
+  chart extracts at practical speed.~~
+- [ ] Review remaining Unicode CJK chart Markdown quality gaps against
+  MarkItDown, especially layout, line joining, and any missing chart cells.
 - [x] ~~Add Type3 glyph-program/resource coverage where a CharProc consumes
   Type3 `/Resources` through an XObject and named inline-image color space.~~
 - [ ] Add fixture-driven Type3 glyph-program/resource coverage from real PDFs

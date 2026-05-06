@@ -7,19 +7,92 @@ fn pdf_markdown_name(text : String) -> @pdflite.PdfName {
 let pdf_markdown_font_key_name : @pdflite.PdfName = pdf_markdown_name("/Font")
 
 ///|
+let pdf_markdown_xobject_key_name : @pdflite.PdfName = pdf_markdown_name(
+  "/XObject",
+)
+
+///|
+let pdf_markdown_subtype_key_name : @pdflite.PdfName = pdf_markdown_name(
+  "/Subtype",
+)
+
+///|
+let pdf_markdown_form_name : @pdflite.PdfName = pdf_markdown_name("/Form")
+
+///|
+let pdf_markdown_resources_key_name : @pdflite.PdfName = pdf_markdown_name(
+  "/Resources",
+)
+
+///|
 fn pdf_markdown_font_key() -> @pdflite.PdfName {
   pdf_markdown_font_key_name
 }
 
 ///|
-fn pdf_markdown_font_resource(
+fn pdf_markdown_xobject_key() -> @pdflite.PdfName {
+  pdf_markdown_xobject_key_name
+}
+
+///|
+fn pdf_markdown_subtype_key() -> @pdflite.PdfName {
+  pdf_markdown_subtype_key_name
+}
+
+///|
+fn pdf_markdown_form() -> @pdflite.PdfName {
+  pdf_markdown_form_name
+}
+
+///|
+fn pdf_markdown_resources_key() -> @pdflite.PdfName {
+  pdf_markdown_resources_key_name
+}
+
+///|
+fn pdf_markdown_font_resource_entry(
   document : @pdflite.PdfDocument,
   resources : @pdflite.PdfObject,
   font_name : @pdflite.PdfName,
 ) -> @pdflite.PdfObject? {
   match document.lookup_direct(pdf_markdown_font_key(), resources) {
-    Some(fonts) => document.lookup_direct(font_name, fonts)
+    Some(fonts) => fonts.lookup_immediate(font_name)
     None => None
+  }
+}
+
+///|
+fn pdf_markdown_xobject_resource(
+  document : @pdflite.PdfDocument,
+  resources : @pdflite.PdfObject,
+  xobject_name : @pdflite.PdfName,
+) -> @pdflite.PdfObject? {
+  match document.lookup_direct(pdf_markdown_xobject_key(), resources) {
+    Some(xobjects) => document.lookup_direct(xobject_name, xobjects)
+    None => None
+  }
+}
+
+///|
+fn pdf_markdown_is_form_xobject(
+  document : @pdflite.PdfDocument,
+  xobject : @pdflite.PdfObject,
+) -> Bool {
+  match document.lookup_direct(pdf_markdown_subtype_key(), xobject) {
+    Some(PdfNameObject(name)) => name == pdf_markdown_form()
+    _ => false
+  }
+}
+
+///|
+fn pdf_markdown_form_resources(
+  document : @pdflite.PdfDocument,
+  parent_resources : @pdflite.PdfObject,
+  xobject : @pdflite.PdfObject,
+) -> @pdflite.PdfObject {
+  match document.lookup_direct(pdf_markdown_resources_key(), xobject) {
+    Some(resources) => resources
+    None => parent_resources
   }
 }
 
@@ -77,23 +150,51 @@ fn pdf_markdown_push_extracted_text(
 }
 
 ///|
-fn pdf_markdown_text_codepoints_of_page(
+fn pdf_markdown_cached_text_extractor(
+  cache : Array[(Int, @pdflite.PdfTextExtractor?)],
   document : @pdflite.PdfDocument,
-  page : @pdflite.PdfPage,
-) -> Array[Int] raise {
-  let output : Array[Int] = []
+  resources : @pdflite.PdfObject,
+  font_name : @pdflite.PdfName,
+) -> @pdflite.PdfTextExtractor? raise {
+  match pdf_markdown_font_resource_entry(document, resources, font_name) {
+    Some(PdfIndirect(number)) =>
+      for entry in cache {
+        if entry.0 == number {
+          break entry.1
+        }
+      } nobreak {
+        let extractor = Some(
+          document.text_extractor_of_font(
+            document.lookup_object_or_null(number),
+          ),
+        )
+        cache.push((number, extractor))
+        extractor
+      }
+    Some(font) => Some(document.text_extractor_of_font(document.direct(font)))
+    None => None
+  }
+}
+
+///|
+let pdf_markdown_max_form_depth : Int = 32
+
+///|
+fn pdf_markdown_push_text_codepoints_of_streams(
+  document : @pdflite.PdfDocument,
+  resources : @pdflite.PdfObject,
+  streams : ArrayView[@pdflite.PdfObject],
+  output : Array[Int],
+  font_cache : Array[(Int, @pdflite.PdfTextExtractor?)],
+  depth : Int,
+) -> Unit raise {
   let mut extractor : @pdflite.PdfTextExtractor? = None
-  for
-    op in document.parse_content_ops_with_resources(
-      page.resources,
-      page.content,
-    ) {
+  for op in document.parse_content_ops_with_resources(resources, streams) {
     match op {
       Op_Tf(font_name, _) =>
-        match pdf_markdown_font_resource(document, page.resources, font_name) {
-          Some(font) => extractor = Some(document.text_extractor_of_font(font))
-          None => extractor = None
-        }
+        extractor = pdf_markdown_cached_text_extractor(
+          font_cache, document, resources, font_name,
+        )
       Op_Tj(text) => pdf_markdown_push_extracted_text(output, extractor, text)
       Op_TJ(PdfArray(items)) =>
         for item in items {
@@ -115,9 +216,46 @@ fn pdf_markdown_text_codepoints_of_page(
       }
       Op_Tstar | Op_Td(_, _) | Op_TD(_, _) =>
         pdf_markdown_push_line_break(output)
+      Op_Do(name) =>
+        if depth < pdf_markdown_max_form_depth {
+          match pdf_markdown_xobject_resource(document, resources, name) {
+            Some(xobject) =>
+              if pdf_markdown_is_form_xobject(document, xobject) {
+                let form_resources = pdf_markdown_form_resources(
+                  document, resources, xobject,
+                )
+                pdf_markdown_push_text_codepoints_of_streams(
+                  document,
+                  form_resources,
+                  [xobject],
+                  output,
+                  font_cache,
+                  depth + 1,
+                )
+              }
+            None => ()
+          }
+        }
       _ => ()
     }
   }
+}
+
+///|
+fn pdf_markdown_text_codepoints_of_page(
+  document : @pdflite.PdfDocument,
+  page : @pdflite.PdfPage,
+  font_cache : Array[(Int, @pdflite.PdfTextExtractor?)],
+) -> Array[Int] raise {
+  let output : Array[Int] = []
+  pdf_markdown_push_text_codepoints_of_streams(
+    document,
+    page.resources,
+    page.content[:],
+    output,
+    font_cache,
+    0,
+  )
   output
 }
 
@@ -172,9 +310,10 @@ fn pdf_markdown_string_of_codepoints(
 fn pdf_markdown_page_text(
   document : @pdflite.PdfDocument,
   page : @pdflite.PdfPage,
+  font_cache : Array[(Int, @pdflite.PdfTextExtractor?)],
 ) -> String raise {
   pdf_markdown_string_of_codepoints(
-    pdf_markdown_text_codepoints_of_page(document, page)[:],
+    pdf_markdown_text_codepoints_of_page(document, page, font_cache)[:],
   )
 }
 
@@ -199,6 +338,7 @@ pub fn pdf_document_to_markdown(
   let document = pdf_markdown_readable_document(document)
   let pages = document.pages_of_pagetree()
   let output = @buffer.new()
+  let font_cache : Array[(Int, @pdflite.PdfTextExtractor?)] = []
   for index in 0..<pages.length() {
     if index > 0 {
       output.write_string("\n\n")
@@ -206,7 +346,9 @@ pub fn pdf_document_to_markdown(
     output.write_string("# Page ")
     output.write_string((index + 1).to_string())
     output.write_string("\n\n")
-    output.write_string(pdf_markdown_page_text(document, pages[index]))
+    output.write_string(
+      pdf_markdown_page_text(document, pages[index], font_cache),
+    )
   }
   output.write_string("\n")
   output.to_string()

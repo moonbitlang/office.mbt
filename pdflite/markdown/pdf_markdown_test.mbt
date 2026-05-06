@@ -26,6 +26,20 @@ fn markdown_font_resources_for_test(
 }
 
 ///|
+fn markdown_indirect_font_resources_for_test(
+  font_number : Int,
+) -> @pdflite.PdfObject {
+  @pdflite.pdf_dictionary([
+    (
+      markdown_name_for_test("/Font"),
+      @pdflite.pdf_dictionary([
+        (markdown_name_for_test("/F0"), PdfIndirect(font_number)),
+      ]),
+    ),
+  ])
+}
+
+///|
 fn markdown_standard_font_for_test() -> @pdflite.PdfObject raise {
   @pdflite.pdf_make_font(
     markdown_name_for_test("/Helvetica"),
@@ -191,6 +205,149 @@ fn markdown_line_break_document_for_test() -> @pdflite.PdfDocument raise {
 }
 
 ///|
+fn markdown_form_xobject_document_for_test() -> @pdflite.PdfDocument raise {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  doc.add_object_given_number(71, markdown_standard_font_for_test())
+  let form_name = markdown_name_for_test("/Fm0")
+  let form = @pdflite.pdf_content_stream_of_ops([
+      Op_BT,
+      Op_Tf(markdown_name_for_test("/F0"), 12.0),
+      Op_Tj(markdown_ascii_for_test("Form text")),
+      Op_Tf(markdown_name_for_test("/F0"), 10.0),
+      Op_Tj(markdown_ascii_for_test(" again")),
+      Op_ET,
+    ])
+    .add_dict_entry(
+      markdown_name_for_test("/Subtype"),
+      PdfNameObject(markdown_name_for_test("/Form")),
+    )
+    .add_dict_entry(
+      markdown_name_for_test("/Resources"),
+      markdown_indirect_font_resources_for_test(71),
+    )
+  doc.add_object_given_number(70, form)
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [@pdflite.pdf_content_stream_of_ops([Op_Do(form_name)])],
+    resources: @pdflite.pdf_dictionary([
+      (
+        markdown_name_for_test("/XObject"),
+        @pdflite.pdf_dictionary([(form_name, PdfIndirect(70))]),
+      ),
+    ]),
+  }
+  let page_root = doc.add_pagetree([page])
+  ignore(doc.add_root(page_root, []))
+  doc
+}
+
+///|
+fn markdown_inherited_form_xobject_document_for_test() -> @pdflite.PdfDocument raise {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  let form_name = markdown_name_for_test("/FmInherited")
+  let form = @pdflite.pdf_content_stream_of_ops([
+    Op_BT,
+    Op_Tf(markdown_name_for_test("/F0"), 12.0),
+    Op_Tj(markdown_ascii_for_test("Inherited form text")),
+    Op_ET,
+  ]).add_dict_entry(
+    markdown_name_for_test("/Subtype"),
+    PdfNameObject(markdown_name_for_test("/Form")),
+  )
+  doc.add_object_given_number(72, form)
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [@pdflite.pdf_content_stream_of_ops([Op_Do(form_name)])],
+    resources: @pdflite.pdf_dictionary([
+      (
+        markdown_name_for_test("/XObject"),
+        @pdflite.pdf_dictionary([(form_name, PdfIndirect(72))]),
+      ),
+      (
+        markdown_name_for_test("/Font"),
+        @pdflite.pdf_dictionary([
+          (markdown_name_for_test("/F0"), markdown_standard_font_for_test()),
+        ]),
+      ),
+    ]),
+  }
+  let page_root = doc.add_pagetree([page])
+  ignore(doc.add_root(page_root, []))
+  doc
+}
+
+///|
+fn markdown_non_text_xobject_document_for_test() -> @pdflite.PdfDocument raise {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  let image_name = markdown_name_for_test("/Im0")
+  doc.add_object_given_number(
+    73,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (
+          markdown_name_for_test("/Subtype"),
+          PdfNameObject(markdown_name_for_test("/Image")),
+        ),
+        (markdown_name_for_test("/Length"), PdfInteger(0)),
+      ]),
+      StreamGot([]),
+    ),
+  )
+  doc.add_object_given_number(
+    74,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (markdown_name_for_test("/Length"), PdfInteger(0)),
+      ]),
+      StreamGot([]),
+    ),
+  )
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [
+      @pdflite.pdf_content_stream_of_ops([
+        Op_Do(markdown_name_for_test("/Missing")),
+        Op_Do(markdown_name_for_test("/NoSubtype")),
+        Op_Do(image_name),
+      ]),
+    ],
+    resources: @pdflite.pdf_dictionary([
+      (
+        markdown_name_for_test("/XObject"),
+        @pdflite.pdf_dictionary([
+          (markdown_name_for_test("/NoSubtype"), PdfIndirect(74)),
+          (image_name, PdfIndirect(73)),
+        ]),
+      ),
+    ]),
+  }
+  let page_root = doc.add_pagetree([page])
+  ignore(doc.add_root(page_root, []))
+  doc
+}
+
+///|
+fn markdown_missing_xobject_dictionary_document_for_test() -> @pdflite.PdfDocument raise {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [
+      @pdflite.pdf_content_stream_of_ops([
+        Op_Do(markdown_name_for_test("/Missing")),
+      ]),
+    ],
+    resources: @pdflite.pdf_dictionary([]),
+  }
+  let page_root = doc.add_pagetree([page])
+  ignore(doc.add_root(page_root, []))
+  doc
+}
+
+///|
 fn markdown_blank_password_document_for_test() -> @pdflite.PdfDocument raise {
   markdown_latin_document_for_test().encrypt_40bit(
     @ascii.encode("")[:],
@@ -227,6 +384,42 @@ test "pdf_bytes_to_markdown reads and extracts deterministic Latin text" {
   @test.assert_eq(
     try! @markdown.pdf_bytes_to_markdown(bytes),
     "# Page 1\n\nHello, World! Spaced\nSecond line\n\n# Page 2\n\nAnother page\n",
+  )
+}
+
+///|
+test "pdf_document_to_markdown extracts text inside form XObjects" {
+  @test.assert_eq(
+    @markdown.pdf_document_to_markdown(
+      markdown_form_xobject_document_for_test(),
+    ),
+    "# Page 1\n\nForm text again\n",
+  )
+}
+
+///|
+test "pdf_document_to_markdown uses parent resources for form XObjects" {
+  @test.assert_eq(
+    @markdown.pdf_document_to_markdown(
+      markdown_inherited_form_xobject_document_for_test(),
+    ),
+    "# Page 1\n\nInherited form text\n",
+  )
+}
+
+///|
+test "pdf_document_to_markdown skips missing and non-form XObjects" {
+  @test.assert_eq(
+    @markdown.pdf_document_to_markdown(
+      markdown_non_text_xobject_document_for_test(),
+    ),
+    "# Page 1\n\n\n",
+  )
+  @test.assert_eq(
+    @markdown.pdf_document_to_markdown(
+      markdown_missing_xobject_dictionary_document_for_test(),
+    ),
+    "# Page 1\n\n\n",
   )
 }
 

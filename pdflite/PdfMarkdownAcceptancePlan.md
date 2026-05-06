@@ -38,8 +38,9 @@ library API.
   outputs and a JSON/Markdown report outside the test runner.~~
 - [x] ~~Add selected online real-world fixtures, starting with public PDF spec
   and CJK-heavy documents whose redistribution terms are clear.~~
-- [ ] Fix core extraction bugs found by the comparison loop, and record each
-  fixed bug in `CamlPDFMigrationTodo.md`.
+- [x] ~~Fix the first core extraction bugs found by the comparison loop, and
+  record each fixed bug in `CamlPDFMigrationTodo.md`.~~
+- [ ] Continue fixing extraction/layout bugs found by the comparison loop.
 
 ## First Converter Contract
 
