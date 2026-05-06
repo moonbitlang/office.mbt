@@ -1287,13 +1287,17 @@ pub fn pdf_decode_predictor(
   columns : Int,
   data : PdfBytes,
 ) -> PdfBytes raise PdfError {
-  pdf_decode_predictor_view(
-    predictor,
-    colors,
-    bits_per_component,
-    columns,
-    data[:],
-  )
+  if predictor == 1 {
+    data
+  } else {
+    pdf_decode_predictor_view(
+      predictor,
+      colors,
+      bits_per_component,
+      columns,
+      data[:],
+    )
+  }
 }
 
 ///|
@@ -1538,13 +1542,17 @@ pub fn pdf_encode_predictor(
   columns : Int,
   data : PdfBytes,
 ) -> PdfBytes raise PdfError {
-  pdf_encode_predictor_view(
-    predictor,
-    colors,
-    bits_per_component,
-    columns,
-    data[:],
-  )
+  if predictor == 1 {
+    data
+  } else {
+    pdf_encode_predictor_view(
+      predictor,
+      colors,
+      bits_per_component,
+      columns,
+      data[:],
+    )
+  }
 }
 
 ///|

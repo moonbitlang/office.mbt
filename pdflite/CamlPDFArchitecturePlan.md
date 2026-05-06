@@ -153,7 +153,9 @@ work changes.
    consumed-length parsing paths do not rebuild fixed tables for every fixed
    block. Owned `/Crypt` identity filter encode/decode
    now returns the original immutable `Bytes` value instead of copying through a
-   borrowed view. Standard stream-filter names are now cached once for dispatch,
+   borrowed view, and owned predictor encode/decode returns the original bytes
+   for identity predictor `1`. Standard stream-filter names are now cached once
+   for dispatch,
    avoiding repeated ASCII `PdfName` rebuilding during filter comparisons, and
    standard stream dictionary keys such as `/Filter`, `/Length`, and
    `/DecodeParms` are cached for repeated stream transformations.

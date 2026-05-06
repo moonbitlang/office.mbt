@@ -564,7 +564,9 @@ MoonBit consequences for this project:
    prefix-decoded payloads and only advance the cursor over encoded slices,
    avoiding encoded-byte copies plus second stream-filter decodes. Owned
    `/Crypt` identity filter
-   encode/decode now returns the original immutable `Bytes` value directly.
+   encode/decode now returns the original immutable `Bytes` value directly, and
+   owned predictor encode/decode now returns the original immutable `Bytes` for
+   identity predictor `1`.
    CamlPDF-style typed encoding and predictor choices are now exposed as
    `PdfStreamEncoding` and
    `PdfStreamPredictor`, with a `pdf_encode_stream_with_encoding` wrapper over

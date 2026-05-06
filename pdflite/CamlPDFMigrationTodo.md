@@ -68,6 +68,8 @@ Current estimate:
 - [x] ~~Reuse decoded payloads for single-stage ASCIIHex, ASCII85, and
   RunLength inline images without `/DecodeParms`, avoiding encoded-byte copies
   and second stream decodes.~~
+- [x] ~~Return owned predictor encode/decode bytes unchanged for identity
+  predictor `1`, avoiding unnecessary immutable `Bytes` copies.~~
 - [x] ~~Return owned bytes unchanged for `/Crypt` identity filter encode/decode,
   avoiding unnecessary immutable `Bytes` copies on stream filter dispatch.~~
 - [x] ~~Cache standard stream-filter names so encode/decode dispatch no longer
@@ -178,6 +180,9 @@ Current estimate:
   decodes while consuming the encoded boundary when no `/DecodeParms` are
   present, instead of re-owning encoded data and decoding it again through the
   stream-filter path.~~
+- [x] ~~Owned predictor encode/decode now returns the original immutable
+  `Bytes` for identity predictor `1` and is covered by physical-identity
+  assertions.~~
 - [x] ~~Owned `/Crypt` identity filter encode/decode now returns the original
   immutable `Bytes` object and is covered by physical-identity assertions.~~
 - [x] ~~Deferred stream `get_stream` materialization now reuses the cached
@@ -462,6 +467,8 @@ Current estimate:
 - [x] ~~Single-stage ASCIIHex, ASCII85, and RunLength inline images without
   `/DecodeParms` decode at boundary-consumption time and skip the
   encoded-copy/second-decode path.~~
+- [x] ~~Owned predictor encode/decode returns the original immutable `Bytes`
+  for identity predictor `1`.~~
 - [x] ~~Owned `/Crypt` identity filter encode/decode bypasses `BytesView.to_owned()`
   and returns the existing immutable `Bytes`.~~
 - [x] ~~Standard stream-filter dispatch names are cached once instead of

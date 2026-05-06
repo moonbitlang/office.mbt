@@ -919,14 +919,18 @@ test "pdf_decode_predictor reports unsupported predictor" {
 
 ///|
 test "pdf predictors keep identity data and reject bad encode parameters" {
-  @test.assert_eq(
-    try! @pdflite.pdf_decode_predictor(1, 1, 8, 1, codec_ascii_for_test("raw")),
-    codec_ascii_for_test("raw"),
+  let raw_decode = codec_ascii_for_test("raw")
+  let decoded_identity = try! @pdflite.pdf_decode_predictor(
+    1, 1, 8, 1, raw_decode,
   )
-  @test.assert_eq(
-    try! @pdflite.pdf_encode_predictor(1, 1, 8, 1, codec_ascii_for_test("raw")),
-    codec_ascii_for_test("raw"),
+  @test.assert_eq(decoded_identity, raw_decode)
+  @test.assert_eq(physical_equal(raw_decode, decoded_identity), true)
+  let raw_encode = codec_ascii_for_test("raw")
+  let encoded_identity = try! @pdflite.pdf_encode_predictor(
+    1, 1, 8, 1, raw_encode,
   )
+  @test.assert_eq(encoded_identity, raw_encode)
+  @test.assert_eq(physical_equal(raw_encode, encoded_identity), true)
   let unsupported_tiff : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_encode_predictor(
     2,
     1,
