@@ -806,7 +806,9 @@ fn reader_xref_stream_unknown_entry_with_later_physical_update_bad_startxref() -
 }
 
 ///|
-fn reader_xref_stream_pdf_with_ascii_hex_filter() -> @pdflite.PdfBytes {
+fn reader_xref_stream_pdf_with_ascii_hex_filter_startxref(
+  startxref_override : Int?,
+) -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.5\n")
   let catalog_offset = reader_push_indirect_object(
@@ -828,9 +830,23 @@ fn reader_xref_stream_pdf_with_ascii_hex_filter() -> @pdflite.PdfBytes {
     output.push(byte)
   }
   reader_push_ascii(output, "\nendstream\nendobj\nstartxref\n")
-  reader_push_ascii(output, xref_offset.to_string())
+  let startxref = match startxref_override {
+    Some(offset) => offset
+    None => xref_offset
+  }
+  reader_push_ascii(output, startxref.to_string())
   reader_push_ascii(output, "\n%%EOF\n")
   Bytes::from_array(output)
+}
+
+///|
+fn reader_xref_stream_pdf_with_ascii_hex_filter() -> @pdflite.PdfBytes {
+  reader_xref_stream_pdf_with_ascii_hex_filter_startxref(None)
+}
+
+///|
+fn reader_xref_stream_pdf_with_ascii_hex_filter_bad_startxref() -> @pdflite.PdfBytes {
+  reader_xref_stream_pdf_with_ascii_hex_filter_startxref(Some(0))
 }
 
 ///|
@@ -2433,6 +2449,28 @@ test "pdf_read_document_from_bytes decodes filtered xref streams" {
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
     reader_xref_stream_pdf_with_ascii_hex_filter(),
   )
+  @test.assert_eq(parsed.object_numbers(), [1])
+  @test.assert_eq(
+    parsed
+    .trailer_dict()
+    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Filter"))),
+    None,
+  )
+}
+
+///|
+test "pdf_read_document_from_bytes reconstructs filtered xref streams" {
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_xref_stream_pdf_with_ascii_hex_filter_bad_startxref(),
+  )
+  guard strict is Err(@pdflite.PdfError::XRefExpected) else {
+    fail("expected strict XRefExpected")
+  }
+
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(
+    reader_xref_stream_pdf_with_ascii_hex_filter_bad_startxref(),
+  )
+  @test.assert_eq(parsed.first_xref(), 0)
   @test.assert_eq(parsed.object_numbers(), [1])
   @test.assert_eq(
     parsed
