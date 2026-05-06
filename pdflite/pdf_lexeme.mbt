@@ -102,6 +102,32 @@ pub fn pdf_lexeme_debug_name(lexeme : PdfLexeme) -> String {
 }
 
 ///|
+fn pdf_lexeme_debug_bytes_text(bytes : BytesView) -> String {
+  @ascii.decode_lossy(bytes)
+}
+
+///|
+pub fn pdf_string_of_lexeme(lexeme : PdfLexeme) -> String {
+  match lexeme {
+    LexInt(value) => "Int " + value.to_string()
+    LexReal(value) => "Float " + value.to_string()
+    LexString(value) => "String " + pdf_lexeme_debug_bytes_text(value[:])
+    LexName(value) => "Ident " + pdf_lexeme_debug_bytes_text(value.bytes())
+    LexNull => "Nothing"
+    _ => "GenLexNone"
+  }
+}
+
+///|
+pub fn pdf_string_of_lexemes(lexemes : ArrayView[PdfLexeme]) -> String {
+  let mut text = ""
+  for lexeme in lexemes {
+    text = text + "\n " + pdf_string_of_lexeme(lexeme)
+  }
+  text
+}
+
+///|
 fn pdf_hex_value(value : Int) -> Int? {
   if value >= 48 && value <= 57 {
     Some(value - 48)

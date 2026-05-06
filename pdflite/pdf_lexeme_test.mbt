@@ -72,6 +72,24 @@ test "PdfLexeme token shape stores byte-oriented names and strings" {
 }
 
 ///|
+test "pdf_string_of_lexeme mirrors CamlPDF debug token rendering" {
+  let name = @pdflite.pdf_name_of_bytes(lexeme_bytes_for_test([47, 78]))
+  @test.assert_eq(@pdflite.pdf_string_of_lexeme(LexInt(42)), "Int 42")
+  @test.assert_eq(@pdflite.pdf_string_of_lexeme(LexReal(1.5)), "Float 1.5")
+  @test.assert_eq(
+    @pdflite.pdf_string_of_lexeme(LexString(lexeme_bytes_for_test([65, 66]))),
+    "String AB",
+  )
+  @test.assert_eq(@pdflite.pdf_string_of_lexeme(LexName(name)), "Ident /N")
+  @test.assert_eq(@pdflite.pdf_string_of_lexeme(LexNull), "Nothing")
+  @test.assert_eq(@pdflite.pdf_string_of_lexeme(LexBool(true)), "GenLexNone")
+  @test.assert_eq(
+    @pdflite.pdf_string_of_lexemes([LexNull, LexInt(7), LexName(name)]),
+    "\n Nothing\n Int 7\n Ident /N",
+  )
+}
+
+///|
 test "ByteCursor lexes PDF booleans and numbers" {
   let cursor = @pdflite.byte_cursor_of_bytes(
     lexeme_bytes_for_test([

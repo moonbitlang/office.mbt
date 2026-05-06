@@ -53,6 +53,9 @@ Current backend snapshot:
   for identity transforms, transform debug strings, matrix-of-transform,
   matrix application, inversion, decomposition, and scalar recomposition over
   the existing typed matrix API.~~
+- [x] ~~Expose `.repos/pdfgenlex.mli` and `.repos/pdfread.mli`-referenced
+  lexeme debug string helpers over byte-oriented `PdfLexeme` values, using
+  explicit lossy ASCII decoding only for debug text.~~
 - [x] ~~Check the currently tracked CamlPDF fixture PDFs for image XObjects
   before expanding image corpus tests; `logo.pdf` and
   `introduction_to_camlpdf.pdf` do not currently provide image entries.~~

@@ -501,6 +501,10 @@ pub fn pdf_string_of_int_array(ArrayView[Int]) -> Bytes raise PdfError
 
 pub fn pdf_string_of_int_arrays(ArrayView[ArrayView[Int]]) -> Bytes raise PdfError
 
+pub fn pdf_string_of_lexeme(PdfLexeme) -> String
+
+pub fn pdf_string_of_lexemes(ArrayView[PdfLexeme]) -> String
+
 pub fn pdf_string_of_page_label(PdfPageLabel) -> Bytes
 
 pub fn pdf_string_of_pdf(PdfObject) -> Bytes raise PdfError

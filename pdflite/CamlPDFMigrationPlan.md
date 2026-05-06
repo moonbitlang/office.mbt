@@ -230,7 +230,9 @@ MoonBit consequences for this project:
    oversized or non-integer tokens. The primitive scanner can now lex object
    syntax from `Bytes` into token arrays and parse a single object from bytes,
    stopping before `stream`, `startxref`, and inline-image `ID` data until
-   stream-aware reading is implemented.
+   stream-aware reading is implemented. CamlPDF-style debug string rendering
+   for individual lexemes and lexeme arrays is exposed over the byte-oriented
+   token model, with lossy ASCII decoding confined to debug output.
 
 5. Minimal PDF reader.
    Implement header, xref, trailer, indirect object parsing, object streams only
