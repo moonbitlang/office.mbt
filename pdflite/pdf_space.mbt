@@ -4,6 +4,54 @@ fn pdf_space_name(text : String) -> PdfName {
 }
 
 ///|
+let pdf_space_device_gray_name : PdfName = pdf_space_name("/DeviceGray")
+
+///|
+let pdf_space_g_name : PdfName = pdf_space_name("/G")
+
+///|
+let pdf_space_device_rgb_name : PdfName = pdf_space_name("/DeviceRGB")
+
+///|
+let pdf_space_rgb_name : PdfName = pdf_space_name("/RGB")
+
+///|
+let pdf_space_device_cmyk_name : PdfName = pdf_space_name("/DeviceCMYK")
+
+///|
+let pdf_space_cmyk_name : PdfName = pdf_space_name("/CMYK")
+
+///|
+let pdf_space_pattern_name : PdfName = pdf_space_name("/Pattern")
+
+///|
+let pdf_space_calgray_name : PdfName = pdf_space_name("/CalGray")
+
+///|
+let pdf_space_calrgb_name : PdfName = pdf_space_name("/CalRGB")
+
+///|
+let pdf_space_calcmyk_name : PdfName = pdf_space_name("/CalCMYK")
+
+///|
+let pdf_space_lab_name : PdfName = pdf_space_name("/Lab")
+
+///|
+let pdf_space_iccbased_name : PdfName = pdf_space_name("/ICCBased")
+
+///|
+let pdf_space_separation_name : PdfName = pdf_space_name("/Separation")
+
+///|
+let pdf_space_indexed_name : PdfName = pdf_space_name("/Indexed")
+
+///|
+let pdf_space_i_name : PdfName = pdf_space_name("/I")
+
+///|
+let pdf_space_device_n_name : PdfName = pdf_space_name("/DeviceN")
+
+///|
 pub(all) struct PdfTristimulusPoint {
   x : Double
   y : Double
@@ -62,15 +110,13 @@ pub fn PdfColourSpace::name(self : PdfColourSpace) -> PdfName? {
 
 ///|
 pub fn pdf_colour_space_of_device_name(name : PdfName) -> PdfColourSpace? {
-  if name == pdf_space_name("/DeviceGray") || name == pdf_space_name("/G") {
+  if name == pdf_space_device_gray_name || name == pdf_space_g_name {
     Some(PdfDeviceGray)
-  } else if name == pdf_space_name("/DeviceRGB") ||
-    name == pdf_space_name("/RGB") {
+  } else if name == pdf_space_device_rgb_name || name == pdf_space_rgb_name {
     Some(PdfDeviceRGB)
-  } else if name == pdf_space_name("/DeviceCMYK") ||
-    name == pdf_space_name("/CMYK") {
+  } else if name == pdf_space_device_cmyk_name || name == pdf_space_cmyk_name {
     Some(PdfDeviceCMYK)
-  } else if name == pdf_space_name("/Pattern") {
+  } else if name == pdf_space_pattern_name {
     Some(PdfPattern)
   } else {
     None
@@ -81,7 +127,7 @@ pub fn pdf_colour_space_of_device_name(name : PdfName) -> PdfColourSpace? {
 pub fn pdf_colour_space_of_object(object : PdfObject) -> PdfColourSpace? {
   match object {
     PdfNameObject(name) => pdf_colour_space_of_device_name(name)
-    PdfArray([PdfNameObject(name), base]) if name == pdf_space_name("/Pattern") =>
+    PdfArray([PdfNameObject(name), base]) if name == pdf_space_pattern_name =>
       match pdf_colour_space_of_object(base) {
         Some(base) => Some(PdfPatternWithBaseColourSpace(base))
         None => None
@@ -93,48 +139,75 @@ pub fn pdf_colour_space_of_object(object : PdfObject) -> PdfColourSpace? {
 
 ///|
 fn pdf_space_whitepoint_key() -> PdfName {
-  pdf_space_name("/WhitePoint")
+  pdf_space_whitepoint_key_name
 }
+
+///|
+let pdf_space_whitepoint_key_name : PdfName = pdf_space_name("/WhitePoint")
 
 ///|
 fn pdf_space_blackpoint_key() -> PdfName {
-  pdf_space_name("/BlackPoint")
+  pdf_space_blackpoint_key_name
 }
+
+///|
+let pdf_space_blackpoint_key_name : PdfName = pdf_space_name("/BlackPoint")
 
 ///|
 fn pdf_space_gamma_key() -> PdfName {
-  pdf_space_name("/Gamma")
+  pdf_space_gamma_key_name
 }
+
+///|
+let pdf_space_gamma_key_name : PdfName = pdf_space_name("/Gamma")
 
 ///|
 fn pdf_space_matrix_key() -> PdfName {
-  pdf_space_name("/Matrix")
+  pdf_space_matrix_key_name
 }
+
+///|
+let pdf_space_matrix_key_name : PdfName = pdf_space_name("/Matrix")
 
 ///|
 fn pdf_space_range_key() -> PdfName {
-  pdf_space_name("/Range")
+  pdf_space_range_key_name
 }
+
+///|
+let pdf_space_range_key_name : PdfName = pdf_space_name("/Range")
 
 ///|
 fn pdf_space_colorspace_key() -> PdfName {
-  pdf_space_name("/ColorSpace")
+  pdf_space_colorspace_key_name
 }
+
+///|
+let pdf_space_colorspace_key_name : PdfName = pdf_space_name("/ColorSpace")
 
 ///|
 fn pdf_space_n_key() -> PdfName {
-  pdf_space_name("/N")
+  pdf_space_n_key_name
 }
+
+///|
+let pdf_space_n_key_name : PdfName = pdf_space_name("/N")
 
 ///|
 fn pdf_space_alternate_key() -> PdfName {
-  pdf_space_name("/Alternate")
+  pdf_space_alternate_key_name
 }
 
 ///|
+let pdf_space_alternate_key_name : PdfName = pdf_space_name("/Alternate")
+
+///|
 fn pdf_space_metadata_key() -> PdfName {
-  pdf_space_name("/Metadata")
+  pdf_space_metadata_key_name
 }
+
+///|
+let pdf_space_metadata_key_name : PdfName = pdf_space_name("/Metadata")
 
 ///|
 fn pdf_space_empty_point() -> PdfTristimulusPoint {
@@ -234,19 +307,19 @@ fn PdfDocument::pdf_space_named_components(
   resources : PdfObject,
   name : PdfName,
 ) -> Int raise PdfError {
-  if name == pdf_space_name("/CalGray") ||
-    name == pdf_space_name("/DeviceGray") ||
-    name == pdf_space_name("/G") {
+  if name == pdf_space_calgray_name ||
+    name == pdf_space_device_gray_name ||
+    name == pdf_space_g_name {
     1
-  } else if name == pdf_space_name("/CalRGB") ||
-    name == pdf_space_name("/DeviceRGB") ||
-    name == pdf_space_name("/RGB") {
+  } else if name == pdf_space_calrgb_name ||
+    name == pdf_space_device_rgb_name ||
+    name == pdf_space_rgb_name {
     3
-  } else if name == pdf_space_name("/CalCMYK") ||
-    name == pdf_space_name("/DeviceCMYK") ||
-    name == pdf_space_name("/CMYK") {
+  } else if name == pdf_space_calcmyk_name ||
+    name == pdf_space_device_cmyk_name ||
+    name == pdf_space_cmyk_name {
     4
-  } else if name == pdf_space_name("/Pattern") {
+  } else if name == pdf_space_pattern_name {
     raise ColourSpaceExpected
   } else {
     match self.lookup_direct(pdf_space_colorspace_key(), resources) {
@@ -268,28 +341,24 @@ pub fn PdfDocument::colour_space_components(
 ) -> Int raise PdfError {
   match self.direct(object) {
     PdfNameObject(name) => self.pdf_space_named_components(resources, name)
-    PdfArray([PdfNameObject(kind), alternate]) if kind ==
-      pdf_space_name("/Pattern") =>
+    PdfArray([PdfNameObject(kind), alternate]) if kind == pdf_space_pattern_name =>
       self.colour_space_components(resources, alternate)
-    PdfArray([PdfNameObject(kind), _]) if kind == pdf_space_name("/Lab") ||
-      kind == pdf_space_name("/CalRGB") => 3
-    PdfArray([PdfNameObject(kind), _]) if kind == pdf_space_name("/CalCMYK") =>
-      4
-    PdfArray([PdfNameObject(kind), _]) if kind == pdf_space_name("/CalGray") =>
-      1
+    PdfArray([PdfNameObject(kind), _]) if kind == pdf_space_lab_name ||
+      kind == pdf_space_calrgb_name => 3
+    PdfArray([PdfNameObject(kind), _]) if kind == pdf_space_calcmyk_name => 4
+    PdfArray([PdfNameObject(kind), _]) if kind == pdf_space_calgray_name => 1
     PdfArray([PdfNameObject(kind), stream_object]) if kind ==
-      pdf_space_name("/ICCBased") =>
+      pdf_space_iccbased_name =>
       match self.lookup_direct(pdf_space_n_key(), stream_object) {
         Some(PdfInteger(components)) => components
         _ => raise ColourSpaceExpected
       }
     PdfArray([PdfNameObject(kind), _, _, _]) if kind ==
-      pdf_space_name("/Separation") => 1
-    PdfArray([PdfNameObject(kind), _, _, ..]) if kind ==
-      pdf_space_name("/Indexed") ||
-      kind == pdf_space_name("/I") => 1
+      pdf_space_separation_name => 1
+    PdfArray([PdfNameObject(kind), _, _, ..]) if kind == pdf_space_indexed_name ||
+      kind == pdf_space_i_name => 1
     PdfArray([PdfNameObject(kind), PdfArray(names), _, ..]) if kind ==
-      pdf_space_name("/DeviceN") => names.length()
+      pdf_space_device_n_name => names.length()
     PdfArray([single]) => self.colour_space_components(resources, single)
     _ => raise ColourSpaceExpected
   }
@@ -471,13 +540,13 @@ pub fn PdfDocument::read_colour_space(
             None => None
           }
       }
-    PdfArray([PdfNameObject(name), base]) if name == pdf_space_name("/Pattern") =>
+    PdfArray([PdfNameObject(name), base]) if name == pdf_space_pattern_name =>
       match self.read_colour_space(resources, base) {
         Some(base) => Some(PdfPatternWithBaseColourSpace(base))
         None => None
       }
     PdfArray([PdfNameObject(name), dictionary]) if name ==
-      pdf_space_name("/CalGray") =>
+      pdf_space_calgray_name =>
       Some(
         PdfCalGray(
           self.pdf_space_read_point(dictionary, pdf_space_whitepoint_key()),
@@ -485,8 +554,7 @@ pub fn PdfDocument::read_colour_space(
           self.pdf_space_read_number(dictionary, pdf_space_gamma_key(), 1.0),
         ),
       )
-    PdfArray([PdfNameObject(name), dictionary]) if name ==
-      pdf_space_name("/CalRGB") =>
+    PdfArray([PdfNameObject(name), dictionary]) if name == pdf_space_calrgb_name =>
       Some(
         PdfCalRGB(
           self.pdf_space_read_point(dictionary, pdf_space_whitepoint_key()),
@@ -505,8 +573,7 @@ pub fn PdfDocument::read_colour_space(
           ),
         ),
       )
-    PdfArray([PdfNameObject(name), dictionary]) if name ==
-      pdf_space_name("/Lab") =>
+    PdfArray([PdfNameObject(name), dictionary]) if name == pdf_space_lab_name =>
       Some(
         PdfLab(
           self.pdf_space_read_point(dictionary, pdf_space_whitepoint_key()),
@@ -520,24 +587,24 @@ pub fn PdfDocument::read_colour_space(
         ),
       )
     PdfArray([PdfNameObject(name), stream_object]) if name ==
-      pdf_space_name("/ICCBased") =>
+      pdf_space_iccbased_name =>
       self.pdf_space_read_icc_based(resources, stream_object)
     PdfArray([PdfNameObject(name), base, hival, lookup_data]) if name ==
-      pdf_space_name("/Indexed") ||
-      name == pdf_space_name("/I") =>
+      pdf_space_indexed_name ||
+      name == pdf_space_i_name =>
       self.pdf_space_read_indexed(resources, base, hival, lookup_data)
     PdfArray([PdfNameObject(kind), PdfNameObject(name), alternate, tint]) if kind ==
-      pdf_space_name("/Separation") =>
+      pdf_space_separation_name =>
       match self.read_colour_space(resources, alternate) {
         Some(alternate) => Some(PdfSeparation(name, alternate, tint))
         None => None
       }
     PdfArray([PdfNameObject(kind), PdfArray(names), alternate, tint]) if kind ==
-      pdf_space_name("/DeviceN") =>
+      pdf_space_device_n_name =>
       self.pdf_space_read_device_n(resources, names, alternate, tint)
     PdfArray(
       [PdfNameObject(kind), PdfArray(names), alternate, tint, attributes]
-    ) if kind == pdf_space_name("/DeviceN") =>
+    ) if kind == pdf_space_device_n_name =>
       self.pdf_space_read_device_n(
         resources,
         names,
@@ -630,13 +697,13 @@ fn pdf_space_empty_dictionary(object : PdfObject) -> Bool {
 ///|
 pub fn pdf_object_of_colour_space(space : PdfColourSpace) -> PdfObject? {
   match space {
-    PdfDeviceGray => Some(PdfNameObject(pdf_space_name("/DeviceGray")))
-    PdfDeviceRGB => Some(PdfNameObject(pdf_space_name("/DeviceRGB")))
-    PdfDeviceCMYK => Some(PdfNameObject(pdf_space_name("/DeviceCMYK")))
+    PdfDeviceGray => Some(PdfNameObject(pdf_space_device_gray_name))
+    PdfDeviceRGB => Some(PdfNameObject(pdf_space_device_rgb_name))
+    PdfDeviceCMYK => Some(PdfNameObject(pdf_space_device_cmyk_name))
     PdfCalGray(whitepoint, blackpoint, gamma) =>
       Some(
         PdfArray([
-          PdfNameObject(pdf_space_name("/CalGray")),
+          PdfNameObject(pdf_space_calgray_name),
           PdfDictionary([
             (pdf_space_whitepoint_key(), pdf_space_point_object(whitepoint)),
             (pdf_space_blackpoint_key(), pdf_space_point_object(blackpoint)),
@@ -647,7 +714,7 @@ pub fn pdf_object_of_colour_space(space : PdfColourSpace) -> PdfObject? {
     PdfCalRGB(whitepoint, blackpoint, gamma, matrix) =>
       Some(
         PdfArray([
-          PdfNameObject(pdf_space_name("/CalRGB")),
+          PdfNameObject(pdf_space_calrgb_name),
           PdfDictionary([
             (pdf_space_whitepoint_key(), pdf_space_point_object(whitepoint)),
             (pdf_space_blackpoint_key(), pdf_space_point_object(blackpoint)),
@@ -659,7 +726,7 @@ pub fn pdf_object_of_colour_space(space : PdfColourSpace) -> PdfObject? {
     PdfLab(whitepoint, blackpoint, range) =>
       Some(
         PdfArray([
-          PdfNameObject(pdf_space_name("/Lab")),
+          PdfNameObject(pdf_space_lab_name),
           PdfDictionary([
             (pdf_space_whitepoint_key(), pdf_space_point_object(whitepoint)),
             (pdf_space_blackpoint_key(), pdf_space_point_object(blackpoint)),
@@ -668,9 +735,7 @@ pub fn pdf_object_of_colour_space(space : PdfColourSpace) -> PdfObject? {
         ]),
       )
     PdfICCBased(_, _, _, _, stream_object) =>
-      Some(
-        PdfArray([PdfNameObject(pdf_space_name("/ICCBased")), stream_object]),
-      )
+      Some(PdfArray([PdfNameObject(pdf_space_iccbased_name), stream_object]))
     PdfIndexed(base, table) =>
       match
         (
@@ -681,7 +746,7 @@ pub fn pdf_object_of_colour_space(space : PdfColourSpace) -> PdfObject? {
         (Some(_), Some(base_object), Some((hival, lookup))) =>
           Some(
             PdfArray([
-              PdfNameObject(pdf_space_name("/Indexed")),
+              PdfNameObject(pdf_space_indexed_name),
               base_object,
               PdfInteger(hival),
               PdfString(lookup),
@@ -689,13 +754,11 @@ pub fn pdf_object_of_colour_space(space : PdfColourSpace) -> PdfObject? {
           )
         _ => None
       }
-    PdfPattern => Some(PdfNameObject(pdf_space_name("/Pattern")))
+    PdfPattern => Some(PdfNameObject(pdf_space_pattern_name))
     PdfPatternWithBaseColourSpace(base) =>
       match pdf_object_of_colour_space(base) {
         Some(base_object) =>
-          Some(
-            PdfArray([PdfNameObject(pdf_space_name("/Pattern")), base_object]),
-          )
+          Some(PdfArray([PdfNameObject(pdf_space_pattern_name), base_object]))
         None => None
       }
     PdfSeparation(name, alternate, tint) =>
@@ -703,7 +766,7 @@ pub fn pdf_object_of_colour_space(space : PdfColourSpace) -> PdfObject? {
         Some(alternate_object) =>
           Some(
             PdfArray([
-              PdfNameObject(pdf_space_name("/Separation")),
+              PdfNameObject(pdf_space_separation_name),
               PdfNameObject(name),
               alternate_object,
               tint,
@@ -715,7 +778,7 @@ pub fn pdf_object_of_colour_space(space : PdfColourSpace) -> PdfObject? {
       match pdf_object_of_colour_space(alternate) {
         Some(alternate_object) => {
           let values : Array[PdfObject] = [
-            PdfNameObject(pdf_space_name("/DeviceN")),
+            PdfNameObject(pdf_space_device_n_name),
             PdfArray([ for name in names => PdfNameObject(name) ]),
             alternate_object,
             tint,

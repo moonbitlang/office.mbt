@@ -4,68 +4,107 @@ fn pdf_fun_name(text : String) -> PdfName {
 }
 
 ///|
+let pdf_fun_function_type_key_name : PdfName = pdf_fun_name("/FunctionType")
+
+///|
 fn pdf_fun_function_type_key() -> PdfName {
-  pdf_fun_name("/FunctionType")
+  pdf_fun_function_type_key_name
 }
+
+///|
+let pdf_fun_domain_key_name : PdfName = pdf_fun_name("/Domain")
 
 ///|
 fn pdf_fun_domain_key() -> PdfName {
-  pdf_fun_name("/Domain")
+  pdf_fun_domain_key_name
 }
+
+///|
+let pdf_fun_range_key_name : PdfName = pdf_fun_name("/Range")
 
 ///|
 fn pdf_fun_range_key() -> PdfName {
-  pdf_fun_name("/Range")
+  pdf_fun_range_key_name
 }
+
+///|
+let pdf_fun_c0_key_name : PdfName = pdf_fun_name("/C0")
 
 ///|
 fn pdf_fun_c0_key() -> PdfName {
-  pdf_fun_name("/C0")
+  pdf_fun_c0_key_name
 }
+
+///|
+let pdf_fun_c1_key_name : PdfName = pdf_fun_name("/C1")
 
 ///|
 fn pdf_fun_c1_key() -> PdfName {
-  pdf_fun_name("/C1")
+  pdf_fun_c1_key_name
 }
+
+///|
+let pdf_fun_n_key_name : PdfName = pdf_fun_name("/N")
 
 ///|
 fn pdf_fun_n_key() -> PdfName {
-  pdf_fun_name("/N")
+  pdf_fun_n_key_name
 }
+
+///|
+let pdf_fun_size_key_name : PdfName = pdf_fun_name("/Size")
 
 ///|
 fn pdf_fun_size_key() -> PdfName {
-  pdf_fun_name("/Size")
+  pdf_fun_size_key_name
 }
+
+///|
+let pdf_fun_order_key_name : PdfName = pdf_fun_name("/Order")
 
 ///|
 fn pdf_fun_order_key() -> PdfName {
-  pdf_fun_name("/Order")
+  pdf_fun_order_key_name
 }
+
+///|
+let pdf_fun_encode_key_name : PdfName = pdf_fun_name("/Encode")
 
 ///|
 fn pdf_fun_encode_key() -> PdfName {
-  pdf_fun_name("/Encode")
+  pdf_fun_encode_key_name
 }
+
+///|
+let pdf_fun_decode_key_name : PdfName = pdf_fun_name("/Decode")
 
 ///|
 fn pdf_fun_decode_key() -> PdfName {
-  pdf_fun_name("/Decode")
+  pdf_fun_decode_key_name
 }
+
+///|
+let pdf_fun_bits_per_sample_key_name : PdfName = pdf_fun_name("/BitsPerSample")
 
 ///|
 fn pdf_fun_bits_per_sample_key() -> PdfName {
-  pdf_fun_name("/BitsPerSample")
+  pdf_fun_bits_per_sample_key_name
 }
+
+///|
+let pdf_fun_functions_key_name : PdfName = pdf_fun_name("/Functions")
 
 ///|
 fn pdf_fun_functions_key() -> PdfName {
-  pdf_fun_name("/Functions")
+  pdf_fun_functions_key_name
 }
 
 ///|
+let pdf_fun_bounds_key_name : PdfName = pdf_fun_name("/Bounds")
+
+///|
 fn pdf_fun_bounds_key() -> PdfName {
-  pdf_fun_name("/Bounds")
+  pdf_fun_bounds_key_name
 }
 
 ///|

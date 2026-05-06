@@ -423,7 +423,8 @@ and backend breadth, is about 84-89% complete.
   `d0`/`d1` glyph programs, and round-trip Type3 writer output without dropping
   bbox, matrix, resources, CharProcs, or width metrics. Standard text/font
   dictionary, encoding, CID, CMap, and ToUnicode names are cached for repeated
-  read/write hot paths.
+  read/write hot paths. Standard color-space family names and PDF function
+  dictionary keys are cached for repeated format-layer read/write hot paths.
   Stream decode now covers CCITT `/K 0` and `/K < 0` with `/DecodeParms`
   defaults and direct indirect params. Typed stream encoding now covers CCITT
   Group 3 `/K 0` and Group 4 `/K < 0` and round-trips through decode.
