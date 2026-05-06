@@ -1081,7 +1081,10 @@ MoonBit consequences for this project:
    hash-backed set instead of copying a visited array at each hop, preserving
    cycle fallback and multi-hop ToUnicode inheritance. Inherited map, CID, and
    notdef composition now uses hash-backed charcode sets instead of scanning
-   the growing composed arrays for each inherited entry. Other remaining
+   the growing composed arrays for each inherited entry. External CMap text
+   extraction now builds per-run hash lookup maps for CID, notdef, and Unicode
+   entries, preserving explicit-entry precedence and duplicate first-match
+   behavior without scanning parsed maps for each character code. Other remaining
    predefined/general CMap tables remain deferred.
    Standard-14 built-in text extraction is started for implicit encodings:
    non-symbol fonts use the current StandardEncoding subset, while Symbol and
@@ -1580,9 +1583,9 @@ MoonBit consequences for this project:
     and writer coverage keeps hash-backed incremental changed-object
     deduplication plus single-pass xref-stream and classic sparse xref byte
     generation covered. Text coverage also keeps hash-backed multi-hop
-    `/UseCMap` stream inheritance and hash-backed inherited CMap composition
-    covered; `moon coverage analyze` now reports all source files fully
-    covered.
+    `/UseCMap` stream inheritance, hash-backed inherited CMap composition, and
+    per-run external CMap lookup maps covered; `moon coverage analyze` now
+    reports all source files fully covered.
 
 ## Active Native Acceptance Milestone
 

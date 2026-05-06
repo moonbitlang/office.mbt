@@ -4862,6 +4862,53 @@ fn pdf_text_lookup_tounicode_codepoints(
 }
 
 ///|
+priv struct PdfTextExternalCMapLookup {
+  cid_map : @hashmap.HashMap[Int, Int]
+  notdef_map : @hashmap.HashMap[Int, Int]
+  map : @hashmap.HashMap[Int, Array[Int]]
+}
+
+///|
+fn pdf_text_cmap_cid_lookup_map(
+  entries : ArrayView[(Int, Int)],
+) -> @hashmap.HashMap[Int, Int] {
+  let values : @hashmap.HashMap[Int, Int] = @hashmap.HashMap::new()
+  for entry in entries {
+    if !values.contains(entry.0) {
+      values[entry.0] = entry.1
+    }
+  }
+  values
+}
+
+///|
+fn pdf_text_tounicode_codepoints_lookup_map(
+  entries : ArrayView[(Int, PdfBytes)],
+) -> @hashmap.HashMap[Int, Array[Int]] {
+  let values : @hashmap.HashMap[Int, Array[Int]] = @hashmap.HashMap::new()
+  for entry in entries {
+    if !values.contains(entry.0) {
+      values[entry.0] = pdf_text_codepoints_of_tounicode_bytes_or_charcode(
+        entry.1,
+        entry.0,
+      )
+    }
+  }
+  values
+}
+
+///|
+fn pdf_text_external_cmap_lookup(
+  parsed : PdfParsedCMap,
+) -> PdfTextExternalCMapLookup {
+  {
+    cid_map: pdf_text_cmap_cid_lookup_map(parsed.cid_map[:]),
+    notdef_map: pdf_text_cmap_cid_lookup_map(parsed.notdef_map[:]),
+    map: pdf_text_tounicode_codepoints_lookup_map(parsed.map[:]),
+  }
+}
+
+///|
 fn pdf_text_reverse_lookup_tounicode_charcode(
   tounicode : ArrayView[(Int, PdfBytes)],
   codepoint : Int,
@@ -9473,6 +9520,44 @@ fn PdfFont::pdf_text_external_cmap_codepoints(
 }
 
 ///|
+fn pdf_text_external_cmap_codepoints_from_lookup(
+  font : PdfCIDKeyedFont,
+  parsed : PdfParsedCMap,
+  lookup : PdfTextExternalCMapLookup,
+  code : Int,
+) -> Array[Int]? {
+  match lookup.cid_map.get(code) {
+    Some(cid) => Some([cid])
+    None =>
+      match lookup.notdef_map.get(code) {
+        Some(cid) => Some([cid])
+        None =>
+          match lookup.map.get(code) {
+            Some(codepoints) => Some(codepoints)
+            None =>
+              match pdf_text_parsed_cmap_predefined_base(parsed) {
+                Some(name) => {
+                  let base_font : PdfFont = PdfFontCIDKeyed({
+                    ..font,
+                    encoding: PdfPredefinedCMap(name),
+                  })
+                  base_font.pdf_text_predefined_builtin_codepoints(code)
+                }
+                None =>
+                  if pdf_text_parsed_cmap_has_identity_base(parsed) &&
+                    code >= 0 &&
+                    code <= 0xFFFF {
+                    Some([code])
+                  } else {
+                    None
+                  }
+              }
+          }
+      }
+  }
+}
+
+///|
 fn PdfFont::pdf_text_external_cmap_charcode(self : PdfFont, cid : Int) -> Int? {
   match self {
     PdfFontCIDKeyed(font) =>
@@ -10149,7 +10234,29 @@ pub fn PdfTextExtractor::glyphnames_and_codepoints_of_text(
 }
 
 ///|
-pub fn PdfTextExtractor::codepoints_of_text(
+fn PdfTextExtractor::pdf_text_external_cmap_codepoints_of_text(
+  self : PdfTextExtractor,
+  font : PdfCIDKeyedFont,
+  parsed : PdfParsedCMap,
+  text : BytesView,
+) -> Array[Int] raise PdfError {
+  let lookup = pdf_text_external_cmap_lookup(parsed)
+  let output : Array[Int] = []
+  for code in pdf_text_parsed_cmap_charcodes_of_text(parsed, text) {
+    let codepoints = match
+      pdf_text_external_cmap_codepoints_from_lookup(font, parsed, lookup, code) {
+      Some(codepoints) => codepoints
+      None => self.pdf_text_encoded_glyph_of_charcode(code).codepoints
+    }
+    for codepoint in codepoints {
+      output.push(codepoint)
+    }
+  }
+  output
+}
+
+///|
+fn PdfTextExtractor::pdf_text_regular_codepoints_of_text(
   self : PdfTextExtractor,
   text : BytesView,
 ) -> Array[Int] raise PdfError {
@@ -10160,6 +10267,26 @@ pub fn PdfTextExtractor::codepoints_of_text(
     }
   }
   output
+}
+
+///|
+pub fn PdfTextExtractor::codepoints_of_text(
+  self : PdfTextExtractor,
+  text : BytesView,
+) -> Array[Int] raise PdfError {
+  match self.font.pdf_text_tounicode() {
+    Some(_) => self.pdf_text_regular_codepoints_of_text(text)
+    None =>
+      match self.font {
+        PdfFontCIDKeyed(font) =>
+          match font.encoding {
+            PdfExternalCMap(_, parsed) =>
+              self.pdf_text_external_cmap_codepoints_of_text(font, parsed, text)
+            _ => self.pdf_text_regular_codepoints_of_text(text)
+          }
+        _ => self.pdf_text_regular_codepoints_of_text(text)
+      }
+  }
 }
 
 ///|

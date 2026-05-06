@@ -5231,6 +5231,110 @@ test "PdfDocument applies indirect external CMap text segmentation and CID mappi
 }
 
 ///|
+test "PdfTextExtractor keeps external CMap text lookup precedence" {
+  let composite : @pdflite.PdfCompositeCIDFont = {
+    cid_system_info: {
+      registry: text_bytes_for_test([65]),
+      ordering: text_bytes_for_test([73]),
+      supplement: 0,
+    },
+    cid_basefont: text_name_for_test("/Descendant"),
+    cid_fontdescriptor: text_font_descriptor_for_test(),
+    cid_widths: [],
+    cid_widths2: [],
+    cid_default_width: 1000.0,
+    cid_default_width2: [880.0, -1000.0],
+  }
+  let font : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: text_name_for_test("/ExternalCMap"),
+    composite,
+    encoding: PdfExternalCMap(7, {
+      map: [
+        (0x41, text_bytes_for_test([0x00, 0x61])),
+        (0x42, text_bytes_for_test([0x00, 0x62])),
+        (0x43, text_bytes_for_test([0x00, 0x63])),
+        (0x43, text_bytes_for_test([0x00, 0x64])),
+        (0x45, text_bytes_for_test([0xD8, 0x00])),
+      ],
+      cid_map: [(0x41, 99), (0x41, 100)],
+      notdef_map: [(0x42, 77), (0x42, 78)],
+      codespaces: [{ length: 1, first: 0x00, last: 0xFF }],
+      usecmap: None,
+      wmode: None,
+      cmap_name: None,
+      cmap_type: None,
+      cid_system_info: None,
+    }),
+  })
+  let extractor = font.text_extractor()
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(
+      text_bytes_for_test([0x41, 0x42, 0x43, 0x44, 0x45])[:],
+    ),
+    [99, 77, 0x63, 0x44, 0x45],
+  )
+  let notdef = text_name_for_test(".notdef")
+  @test.assert_eq(
+    try! extractor.glyphnames_and_codepoints_of_text(
+      text_bytes_for_test([0x41, 0x42, 0x43, 0x44])[:],
+    ),
+    [
+      { glyphname: notdef, codepoints: [99] },
+      { glyphname: notdef, codepoints: [77] },
+      { glyphname: notdef, codepoints: [0x63] },
+      { glyphname: notdef, codepoints: [0x44] },
+    ],
+  )
+  let identity_font : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: text_name_for_test("/ExternalIdentityCMap"),
+    composite,
+    encoding: PdfExternalCMap(8, {
+      map: [],
+      cid_map: [],
+      notdef_map: [],
+      codespaces: [],
+      usecmap: Some(text_name_for_test("/Identity-H")),
+      wmode: None,
+      cmap_name: None,
+      cmap_type: None,
+      cid_system_info: None,
+    }),
+  })
+  @test.assert_eq(
+    try! identity_font
+    .text_extractor()
+    .glyphnames_and_codepoints_of_text(text_bytes_for_test([0x00, 0x42])[:]),
+    [{ glyphname: notdef, codepoints: [0x42] }],
+  )
+  let predefined_font : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: text_name_for_test("/ExternalGBEUCCMap"),
+    composite,
+    encoding: PdfExternalCMap(9, {
+      map: [],
+      cid_map: [],
+      notdef_map: [],
+      codespaces: [],
+      usecmap: Some(text_name_for_test("/GB-EUC-H")),
+      wmode: None,
+      cmap_name: None,
+      cmap_type: None,
+      cid_system_info: None,
+    }),
+  })
+  @test.assert_eq(
+    try! predefined_font
+    .text_extractor()
+    .glyphnames_and_codepoints_of_text(
+      text_bytes_for_test([0xC4, 0xE3, 0x81, 0x40])[:],
+    ),
+    [
+      { glyphname: notdef, codepoints: [0x4F60] },
+      { glyphname: notdef, codepoints: [0x8140] },
+    ],
+  )
+}
+
+///|
 test "PdfTextExtractor extracts StandardEncoding Basic Latin glyphs" {
   let standard_font : @pdflite.PdfFont = PdfFontStandard(
     text_standard_font_data_for_test(PdfHelvetica, PdfStandardEncoding),

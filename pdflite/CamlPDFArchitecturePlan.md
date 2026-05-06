@@ -257,9 +257,14 @@ work changes.
    derived-entry map/CID/notdef/metadata overrides, and hash-backed recursive
    seen-state for multi-hop stream inheritance. Inherited CMap map, CID, and
    notdef composition now uses hash-backed charcode sets while preserving
-   derived-entry precedence, inherited Identity fallback,
-   named predefined `/UseCMap` fallback for streams without explicit codespaces,
-   and ToUnicode inheritance through text extraction and reverse Unicode lookup,
+   derived-entry precedence. External CMap codepoint extraction now builds
+   per-text-run hash lookup maps for explicit CID, notdef, and Unicode entries
+   before falling through to inherited predefined CMaps, Identity fallback, and
+   encoded glyph fallback, preserving duplicate first-match behavior while
+   avoiding per-character scans of parsed maps. The external-CMap path still
+   covers inherited Identity fallback, named predefined `/UseCMap` fallback for
+   streams without explicit codespaces, and ToUnicode inheritance through text
+   extraction and reverse Unicode lookup,
    CamlPDF-style whitespace-elided ToUnicode CMap section scanning, mixed
    multiline `bfrange` parsing, `/WMode` token parsing across PDF whitespace,
    comment-aware CMap metadata and mapping parsing,
@@ -490,7 +495,8 @@ and backend breadth, is about 84-89% complete.
   stream `/UseCMap` parsing also carries a hash-backed seen set instead of
   copying a visited-array at each base-CMap hop, and inherited CMap map/CID/
   notdef composition uses hash-backed charcode sets instead of repeated output
-  scans.
+  scans. External CMap text extraction now builds per-run lookup maps instead
+  of scanning CID, notdef, and Unicode arrays for each character code.
   Standard color-space family names and PDF function
   dictionary keys are cached for repeated format-layer read/write hot paths.
   Stream decode now covers CCITT `/K 0` and `/K < 0` with `/DecodeParms`

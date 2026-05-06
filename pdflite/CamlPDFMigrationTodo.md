@@ -150,6 +150,9 @@ Current estimate:
 - [x] ~~Compose inherited external/ToUnicode CMap maps with hash-backed
   charcode sets, preserving current-entry precedence while avoiding repeated
   scans of growing map/CID/notdef outputs.~~
+- [x] ~~Extract external CMap text with per-text-run hash lookup maps for
+  CID, notdef, and Unicode entries, preserving CID/notdef/Unicode/predefined/
+  Identity/fallback precedence and first-entry duplicate behavior.~~
 - [x] ~~Replace generated Adobe-GB1, Adobe-CNS1, and Adobe-Japan1 CID-range
   CMap reverse lookup nested charcode scans with Unicode/CID-to-charcode
   helpers, preserving deterministic lowest packed-charcode selection for
@@ -290,6 +293,9 @@ Current estimate:
 - [x] ~~External/ToUnicode CMap inheritance now composes map, CID, and notdef
   entries with hash-backed charcode sets instead of repeatedly scanning the
   growing output arrays.~~
+- [x] ~~External CMap text extraction now builds per-run hash lookup maps for
+  explicit CID, notdef, and Unicode entries instead of scanning parsed maps for
+  every character code.~~
 - [x] ~~Generated CID-range CMap reverse lookup for Adobe-GB1, Adobe-CNS1, and
   Adobe-Japan1 now maps Unicode to CID and CID to charcode instead of scanning
   every character code in every range.~~
@@ -732,6 +738,9 @@ Current estimate:
   while preserving multi-hop ToUnicode inheritance and cycle fallback.~~
 - [x] ~~Tune inherited external/ToUnicode CMap composition with hash-backed
   charcode sets while preserving current-over-inherited precedence.~~
+- [x] ~~Tune external CMap codepoint extraction with per-text-run hash lookup
+  maps, keeping duplicate first-match behavior and malformed UTF-16 fallback
+  covered.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.
