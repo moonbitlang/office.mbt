@@ -90,6 +90,26 @@ fn reader_push_xref_stream_default_in_use_entry(
 }
 
 ///|
+fn reader_png_none_predictor_rows_for_test(
+  data : ArrayView[Byte],
+  columns : Int,
+) -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  for row_start = 0; row_start < data.length(); row_start = row_start + columns {
+    output.push(0)
+    let row_end = if row_start + columns > data.length() {
+      data.length()
+    } else {
+      row_start + columns
+    }
+    for index in row_start..<row_end {
+      output.push(data[index])
+    }
+  }
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_push_xref_entry(
   output : Array[Byte],
   offset : Int,
@@ -928,17 +948,8 @@ fn reader_xref_stream_pdf_with_flate_predictor_startxref(
   reader_push_xref_stream_entry(stream_data, 1, catalog_offset, 0)
   reader_push_xref_stream_entry(stream_data, 1, xref_offset, 0)
   reader_push_xref_stream_entry(stream_data, 1, value_offset, 0)
-  let predicted : Array[Byte] = []
-  let entry_width = 7
-  for row_start = 0
-      row_start < stream_data.length()
-      row_start = row_start + entry_width {
-    predicted.push(0)
-    for index in row_start..<(row_start + entry_width) {
-      predicted.push(stream_data[index])
-    }
-  }
-  let encoded = @pdflite.pdf_flate_encode(Bytes::from_array(predicted))
+  let predicted = reader_png_none_predictor_rows_for_test(stream_data[:], 7)
+  let encoded = @pdflite.pdf_flate_encode(predicted)
   reader_push_ascii(output, "2 0 obj\n")
   reader_push_ascii(output, "<< /Type /XRef /Length ")
   reader_push_ascii(output, encoded.length().to_string())
@@ -1046,17 +1057,8 @@ fn reader_xref_stream_pdf_with_filter_array_predictor_startxref(
   reader_push_xref_stream_entry(stream_data, 1, catalog_offset, 0)
   reader_push_xref_stream_entry(stream_data, 1, xref_offset, 0)
   reader_push_xref_stream_entry(stream_data, 1, value_offset, 0)
-  let predicted : Array[Byte] = []
-  let entry_width = 7
-  for row_start = 0
-      row_start < stream_data.length()
-      row_start = row_start + entry_width {
-    predicted.push(0)
-    for index in row_start..<(row_start + entry_width) {
-      predicted.push(stream_data[index])
-    }
-  }
-  let flate = @pdflite.pdf_flate_encode(Bytes::from_array(predicted))
+  let predicted = reader_png_none_predictor_rows_for_test(stream_data[:], 7)
+  let flate = @pdflite.pdf_flate_encode(predicted)
   let encoded = @pdflite.pdf_ascii_hex_encode(flate)
   reader_push_ascii(output, "2 0 obj\n")
   reader_push_ascii(output, "<< /Type /XRef /Length ")
