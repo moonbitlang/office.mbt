@@ -1099,7 +1099,8 @@ MoonBit consequences for this project:
    fallback with PC single-byte handling, one multi-codepoint expansion, and
    reverse lookup for single-scalar entries. Broader Big5 predefined-CMap
    extraction now has a generated mapping-table fallback with matching reverse
-   lookup. B5pc predefined-CMap extraction now has a generated `B5pc-UCS2`
+   lookup, plus an ETen-B5-H compressed read/write/reread native acceptance
+   gate. B5pc predefined-CMap extraction now has a generated `B5pc-UCS2`
    fallback with PC single-byte handling and matching reverse lookup. UHC
    predefined-CMap extraction now has a
    generated CP949 mapping-table fallback with matching reverse lookup. GBK
@@ -1767,7 +1768,8 @@ reader or writer invariant is narrower than a whole-document workflow:
   multi-codepoint expansion, single-scalar reverse charcode lookup, and
   invalid-pair fallback;
 - decode Big5 no-`/ToUnicode` predefined-CMap text through a generated mapping
-  table, including reverse charcode lookup and invalid-pair fallback;
+  table, including reverse charcode lookup, invalid-pair fallback, and an
+  ETen-B5-H compressed read/write/reread native acceptance gate;
 - decode B5pc no-`/ToUnicode` predefined-CMap text through a generated
   `B5pc-UCS2` mapping table, including PC single-byte behavior, reverse
   charcode lookup, and invalid-pair fallback;

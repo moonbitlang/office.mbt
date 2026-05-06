@@ -1479,6 +1479,67 @@ fn acceptance_gbk2k_text_document_for_test() -> @pdflite.PdfDocument raise {
 }
 
 ///|
+fn acceptance_big5_text_for_test() -> @pdflite.PdfBytes raise {
+  acceptance_text_bytes_for_test([
+    0x41, 0xA7, 0x41, 0xA6, 0x6E, 0xA4, 0x40, 0xA4, 0xA4, 0xA1, 0x40,
+  ])
+}
+
+///|
+fn acceptance_big5_font_for_test() -> @pdflite.PdfObject {
+  @pdflite.pdf_dictionary([
+    (
+      acceptance_name_for_test("/Subtype"),
+      PdfNameObject(acceptance_name_for_test("/Type0")),
+    ),
+    (
+      acceptance_name_for_test("/BaseFont"),
+      PdfNameObject(acceptance_name_for_test("/ETenB5Top")),
+    ),
+    (
+      acceptance_name_for_test("/Encoding"),
+      PdfNameObject(acceptance_name_for_test("/ETen-B5-H")),
+    ),
+    (acceptance_name_for_test("/DescendantFonts"), PdfArray([PdfIndirect(94)])),
+  ])
+}
+
+///|
+fn acceptance_big5_text_document_for_test() -> @pdflite.PdfDocument raise {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  doc.add_object_given_number(
+    94,
+    acceptance_predefined_cmap_descendant_font_for_test(
+      "/ETenB5Descendant", "CNS1",
+    ),
+  )
+  let resources = @pdflite.pdf_dictionary([
+    (
+      acceptance_name_for_test("/Font"),
+      @pdflite.pdf_dictionary([
+        (acceptance_name_for_test("/Fbig5"), acceptance_big5_font_for_test()),
+      ]),
+    ),
+  ])
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [
+      @pdflite.pdf_content_stream_of_ops([
+        Op_BT,
+        Op_Tf(acceptance_name_for_test("/Fbig5"), 14.0),
+        Op_Tj(acceptance_big5_text_for_test()),
+        Op_ET,
+      ]),
+    ],
+    resources,
+  }
+  let page_root = doc.add_pagetree([page])
+  ignore(doc.add_root(page_root, []))
+  doc
+}
+
+///|
 fn acceptance_font_object_by_name_for_test(
   resources : @pdflite.PdfObject,
   name : @pdflite.PdfName,
@@ -1663,6 +1724,50 @@ fn acceptance_assert_gbk2k_text_for_test(
   @test.assert_eq(extractor.charcode_of_codepoint(0x00A5), Some(0x81308436))
   @test.assert_eq(extractor.charcode_of_codepoint(0xA4C6), Some(0x82369435))
   @test.assert_eq(extractor.charcode_of_codepoint(0x1F600), None)
+}
+
+///|
+fn acceptance_assert_big5_text_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(doc.version(), (1, 5))
+  @test.assert_eq(doc.endpage(), 1)
+  let pages = doc.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  let font = acceptance_font_object_by_name_for_test(
+    pages[0].resources,
+    acceptance_name_for_test("/Fbig5"),
+  )
+  let read = doc.read_font(font)
+  @test.assert_eq(read.is_identity_h(), false)
+  @test.assert_eq(read.is_identity_v(), false)
+  @test.assert_eq(read.uses_two_byte_codes(), false)
+  guard read is PdfFontCIDKeyed(cid_font) else {
+    fail("expected CID-keyed Big5 font")
+  }
+  @test.assert_eq(
+    cid_font.encoding,
+    PdfPredefinedCMap(acceptance_name_for_test("/ETen-B5-H")),
+  )
+  @test.assert_eq(
+    cid_font.composite.cid_system_info.ordering,
+    acceptance_ascii_for_test("CNS1"),
+  )
+  @test.assert_eq(
+    acceptance_font_codepoints_of_first_page_for_test(
+      doc,
+      acceptance_name_for_test("/Fbig5"),
+    ),
+    [0x41, 0x4F60, 0x597D, 0x4E00, 0x4E2D, 0x3000],
+  )
+  let extractor = doc.text_extractor_of_font(font)
+  @test.assert_eq(extractor.charcode_of_codepoint(0x41), Some(0x41))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x4F60), Some(0xA741))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x597D), Some(0xA66E))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x4E00), Some(0xA440))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x4E2D), Some(0xA4A4))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x3000), Some(0xA140))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x20AC), None)
 }
 
 ///|
@@ -4415,6 +4520,16 @@ test "native acceptance suite extracts GBK2K predefined CMap text through reader
   acceptance_assert_gbk2k_text_for_test(parsed)
   let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
   acceptance_assert_gbk2k_text_for_test(reparsed)
+}
+
+///|
+test "native acceptance suite extracts Big5 predefined CMap text through reader boundaries" {
+  let parsed = acceptance_compressed_roundtrip_for_test(
+    acceptance_big5_text_document_for_test(),
+  )
+  acceptance_assert_big5_text_for_test(parsed)
+  let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
+  acceptance_assert_big5_text_for_test(reparsed)
 }
 
 ///|

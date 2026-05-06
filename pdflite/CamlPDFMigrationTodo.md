@@ -419,6 +419,9 @@ Current backend snapshot:
 - [x] ~~Native predefined CMap reader-boundary gate for GBK2K-H mixed-byte
   extraction and reverse lookup through compressed read/write/reread
   boundaries.~~
+- [x] ~~Native predefined CMap reader-boundary gate for ETen-B5-H Big5 text,
+  exercising Adobe-CNS1 mapping and reverse lookup through compressed
+  read/write/reread boundaries.~~
 - [ ] Add remaining rare predefined CMap family coverage when useful source
   tables or fixtures are available.
 - [x] ~~Add further real-world Type3 glyph-program coverage; the optional native
@@ -773,6 +776,8 @@ Current backend snapshot:
   than per-charcode range scans.~~
 - [x] ~~CNS-EUC predefined-CMap CID-range lookup now uses unsigned binary
   search for mixed two-byte and four-byte packed charcodes.~~
+- [x] ~~ETen-B5-H predefined-CMap extraction now has a native compressed
+  reader-boundary gate across Adobe-CNS1 Big5 forward and reverse lookup.~~
 - [x] ~~Type3 font `/ToUnicode` native text gate with indirect CharProcs,
   custom encoding, metrics, compressed rewrite, and reread.~~
 - [x] ~~Direct Type3 CharProc stream reader coverage for preserved `d0`/`d1`
@@ -1031,6 +1036,8 @@ Current backend snapshot:
   behavior.~~
 - [x] ~~Tune CNS-EUC predefined-CMap forward CID-range lookup with unsigned
   binary search while preserving packed-byte ordering.~~
+- [x] ~~Add native Big5 predefined-CMap acceptance coverage through compressed
+  write/read/reread boundaries.~~
 - [x] ~~Tune object-stream expansion by grouping xref-stream type-2 entries
   before strict, reconstructed, and password-aware embedded-object loading.~~
 - [x] ~~Tune incremental writer changed-object collection with a hash-backed
