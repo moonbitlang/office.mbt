@@ -9,6 +9,11 @@ test "private merge helpers cover guards and membership branches" {
   let seen_names = pdf_merge_name_set()
   seen_names.add(key)
   @test.assert_eq(seen_names.contains(key), true)
+  let seen_bytes = pdf_merge_bytes_set()
+  let bytes_key = @ascii.encode("shared")
+  @test.assert_eq(seen_bytes.contains(bytes_key), false)
+  seen_bytes.add(bytes_key)
+  @test.assert_eq(seen_bytes.contains(bytes_key), true)
   @test.assert_eq(pdf_merge_object_member([PdfInteger(1)], PdfInteger(1)), true)
   @test.assert_eq(
     pdf_merge_destination_needs_named_retention(DestFit(TargetPageObject(1))),
@@ -43,6 +48,20 @@ test "private merge helpers cover guards and membership branches" {
   @test.assert_eq(try! pdf_merge_catalog_extra_entries([first, second]), [
     (duplicate_key, PdfString(@ascii.encode("first"))),
   ])
+  @test.assert_eq(
+    pdf_merge_destination_name_changes_are_unique([
+      [(bytes_key, bytes_key)],
+      [(@ascii.encode("other"), bytes_key)],
+    ]),
+    false,
+  )
+  @test.assert_eq(
+    pdf_merge_catalog_destination_name_changes_are_unique([
+      [(key, key)],
+      [(duplicate_key, key)],
+    ]),
+    false,
+  )
 }
 
 ///|

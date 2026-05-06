@@ -136,6 +136,9 @@ Current estimate:
 - [x] ~~Track retained merge catalog-extra keys with a hash-backed name set,
   preserving first-seen catalog-entry precedence while avoiding repeated
   duplicate-name scans across merged documents.~~
+- [x] ~~Detect merge destination-name collisions with hash-backed byte/name
+  sets, preserving collision suffix behavior while avoiding repeated scans when
+  merging large name-tree and old-style catalog destination lists.~~
 - [x] ~~Cache name-tree, number-tree, page-label, and document-root names so
   document metadata helpers reuse stable `PdfName` values.~~
 - [ ] Continue zlib byte-output/performance parity work where exact miniz block
@@ -325,6 +328,9 @@ Current estimate:
 - [x] ~~Merge catalog-extra retention now uses a hash-backed name set for
   first-seen safe catalog entries, avoiding repeated duplicate-key scans across
   merged input catalogs.~~
+- [x] ~~Merge destination collision detection now uses hash-backed sets for
+  byte-string and catalog-name destination keys, preserving suffix allocation
+  while avoiding repeated duplicate scans.~~
 - [x] ~~Structure parent-tree renumbering now uses hash-backed old-key to new-key
   maps for recursive structure-object rewrites instead of scanning the change
   list at every integer key.~~

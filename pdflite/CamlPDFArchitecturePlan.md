@@ -404,7 +404,10 @@ work changes.
    name-index builder, preserving first-key order and last-value replacement
    while avoiding repeated linear key scans. Merge catalog-extra retention also
    tracks safe first-seen keys with a hash-backed name set, avoiding repeated
-   duplicate-name scans across input catalogs.
+   duplicate-name scans across input catalogs. Destination-name collision
+   detection for merged name trees and old-style catalog `/Dests` dictionaries
+   now uses hash-backed byte/name sets while preserving existing suffix
+   allocation behavior.
    Remaining focus: more CamlPDF example-level acceptance fixtures and
    compatibility behavior for unusual real-world documents.
 

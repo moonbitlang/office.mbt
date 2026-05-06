@@ -337,6 +337,29 @@ fn PdfMergeNameSet::add(self : PdfMergeNameSet, name : PdfName) -> Unit {
 }
 
 ///|
+priv struct PdfMergeBytesSet {
+  values : @hashmap.HashMap[Bytes, Bool]
+}
+
+///|
+fn pdf_merge_bytes_set() -> PdfMergeBytesSet {
+  { values: @hashmap.HashMap::new() }
+}
+
+///|
+fn PdfMergeBytesSet::contains(
+  self : PdfMergeBytesSet,
+  bytes : PdfBytes,
+) -> Bool {
+  self.values.contains(bytes)
+}
+
+///|
+fn PdfMergeBytesSet::add(self : PdfMergeBytesSet, bytes : PdfBytes) -> Unit {
+  self.values[bytes] = true
+}
+
+///|
 fn pdf_merge_catalog_extra_key(key : PdfName) -> Bool {
   !(key == pdf_merge_type_key() ||
   key == pdf_merge_pages_key() ||
@@ -1063,45 +1086,17 @@ fn pdf_merge_changed_catalog_destination_name_with_fallback(
 }
 
 ///|
-fn pdf_merge_destination_name_seen(
-  names : ArrayView[PdfBytes],
-  name : PdfBytes,
-) -> Bool {
-  for seen in names {
-    if seen == name {
-      break true
-    }
-  } nobreak {
-    false
-  }
-}
-
-///|
-fn pdf_merge_catalog_destination_name_seen(
-  names : ArrayView[PdfName],
-  name : PdfName,
-) -> Bool {
-  for seen in names {
-    if seen == name {
-      break true
-    }
-  } nobreak {
-    false
-  }
-}
-
-///|
 fn pdf_merge_destination_name_changes_are_unique(
   changes_by_document : ArrayView[Array[(PdfBytes, PdfBytes)]],
 ) -> Bool {
-  let seen : Array[PdfBytes] = []
+  let seen = pdf_merge_bytes_set()
   for changes in changes_by_document {
     for change in changes {
       let (_, new_name) = change
-      if pdf_merge_destination_name_seen(seen, new_name) {
+      if seen.contains(new_name) {
         return false
       }
-      seen.push(new_name)
+      seen.add(new_name)
     }
   }
   true
@@ -1111,14 +1106,14 @@ fn pdf_merge_destination_name_changes_are_unique(
 fn pdf_merge_catalog_destination_name_changes_are_unique(
   changes_by_document : ArrayView[Array[(PdfName, PdfName)]],
 ) -> Bool {
-  let seen : Array[PdfName] = []
+  let seen = pdf_merge_name_set()
   for changes in changes_by_document {
     for change in changes {
       let (_, new_name) = change
-      if pdf_merge_catalog_destination_name_seen(seen, new_name) {
+      if seen.contains(new_name) {
         return false
       }
-      seen.push(new_name)
+      seen.add(new_name)
     }
   }
   true

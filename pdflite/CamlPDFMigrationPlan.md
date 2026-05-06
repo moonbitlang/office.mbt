@@ -1400,7 +1400,10 @@ MoonBit consequences for this project:
     builder, preserving first-key order and last-value replacement semantics
     without repeated key scans. Safe catalog-extra retention now tracks
     first-seen keys with a hash-backed name set instead of repeatedly scanning
-    the retained entry list across input documents. Generic
+    the retained entry list across input documents. Destination-name collision
+    checks for merged name trees and old-style catalog `/Dests` dictionaries
+    now use hash-backed byte/name sets while preserving collision suffix
+    allocation. Generic
     name-dictionary merge support now retains non-destination `/Names` name
     trees such as `/EmbeddedFiles` and `/JavaScript`; `/Dests` remains on the
     destination-aware path so page-object targets are retargeted. The merge
