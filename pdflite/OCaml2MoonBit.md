@@ -1048,6 +1048,15 @@ Async entry points and async tests need the `moonbitlang/async` package in the
 relevant `moon.pkg` import set; syntax alone is not enough.
 
 ```sh
+moon run --target native -c $'import {\n  "moonbitlang/async",\n  "moonbitlang/async/fs" @fs,\n}\nasync fn main {\n  let result = try? @fs.read_file("/tmp/definitely-missing-pdflite-fixture.pdf")\n  println(result is Err(_))\n}'
+# true
+```
+
+MBTX import blocks use comma-separated package entries. This matters when a
+quick probe needs both `moonbitlang/async` and a subpackage such as
+`moonbitlang/async/fs`.
+
+```sh
 moon run -c 'struct Item { value : Int; label : String } derive(Debug)
 fn main { let old = Item::{ value: 1, label: "a" }; let next = { ..old, value: 2 }; println(next.value); println(next.label) }'
 # 2

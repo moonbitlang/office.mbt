@@ -7,7 +7,7 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 97.4%.
+- Native main-feature parity: 97.5%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
   breadth: 85-90%.
 
@@ -119,8 +119,11 @@ Current backend snapshot:
   `/XObject` page resources and 24bpp extraction, so image handling is
   validated across document serialization before the licensed external corpus
   grows.~~
-- [ ] Add licensed real-world image corpus fixtures, prioritizing CCITT and
-  DCT/JPEG encoded payload compatibility before optional pixel decoders.
+- [x] ~~Add licensed real-world image corpus fixtures, prioritizing CCITT and
+  DCT/JPEG encoded payload compatibility before optional pixel decoders; the
+  native optional fixture package now gates py-pdf sample-file DCT/JPEG,
+  CCITT/FaxDecode, and indexed-CMYK image XObjects when downloads are
+  present.~~
 - [x] ~~Start the separate PDF-to-Markdown acceptance package described in
   `PdfMarkdownAcceptancePlan.md`, with deterministic in-memory extraction tests
   before generated or downloaded fixtures.~~
