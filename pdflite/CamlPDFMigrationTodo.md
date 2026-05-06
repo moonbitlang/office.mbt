@@ -77,6 +77,8 @@ Current estimate:
 - [x] ~~Cache writer xref-stream/trailer names and inline-image
   dictionary/filter/color names so write and content-parse hot paths reuse
   stable `PdfName` values.~~
+- [x] ~~Keep content-stream operator tokens borrowed as `BytesView` during
+  parsing, allocating only when unknown operators must be preserved.~~
 - [x] ~~Cache standard font aliases, encoding names, font/CID/CMap dictionary
   keys, and ToUnicode writer keys so text read/write hot paths reuse stable
   `PdfName` values.~~
@@ -146,6 +148,8 @@ Current estimate:
   `PdfName` values for stable standard keys and name objects.~~
 - [x] ~~Writer trailer/xref-stream keys and inline-image metadata/filter names
   now share cached `PdfName` values in the remaining large-file hot paths.~~
+- [x] ~~Content-stream parsing now keeps operator tokens borrowed through known
+  operator dispatch and only owns bytes for preserved unknown operations.~~
 - [x] ~~Text/font parsing and writing now share cached standard font,
   encoding, font dictionary, CID, CMap, and ToUnicode names in the main text
   hot paths.~~

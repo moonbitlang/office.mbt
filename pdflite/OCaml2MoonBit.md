@@ -628,6 +628,19 @@ support pattern matching with rest patterns. Prefer passing or returning
 owned `Bytes` value is required. `BytesView::to_owned()` returns the original
 bytes for a whole view but allocates and copies for a partial slice.
 
+```sh
+moon run -c $'fn len_view(view : BytesView) -> Int { view.length() }\nfn main { let bytes = @ascii.encode("ABC"); let view = bytes[:2]; println(len_view(bytes)); println(bytes[:] == bytes); println(view == bytes) }'
+# 3
+# true
+# false
+```
+
+`Bytes` can be passed directly to a `BytesView` parameter, which is useful for
+APIs that should accept either owned byte payloads or borrowed slices without
+forcing callers to allocate. Equality can compare a view against owned bytes
+when the view is the left operand; if the owned `Bytes` is on the left, slice it
+explicitly first so the comparison is typed as `BytesView` equality.
+
 For byte-oriented section parsers, prefer one option-returning helper that both
 finds a marker and returns the remaining `BytesView`. This avoids the common
 porting shape `contains(marker)` followed by a second lookup with an unreachable

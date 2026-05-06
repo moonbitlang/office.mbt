@@ -98,6 +98,11 @@ fn bytes_view_has_ab_for_test(view : BytesView) -> Bool {
 }
 
 ///|
+fn bytes_view_len_for_test(view : BytesView) -> Int {
+  view.length()
+}
+
+///|
 test "BytesView provides read-only byte slices and pattern matching" {
   let bytes : Bytes = [65, 66, 67]
   let view = bytes[:2]
@@ -105,6 +110,9 @@ test "BytesView provides read-only byte slices and pattern matching" {
   @test.assert_eq(view[0].to_int(), 65)
   @test.assert_eq(bytes_view_has_ab_for_test(bytes[:]), true)
   @test.assert_eq(bytes_view_has_ab_for_test(view), true)
+  @test.assert_eq(bytes_view_len_for_test(bytes), 3)
+  @test.assert_eq(bytes[:] == bytes, true)
+  @test.assert_eq(view == bytes, false)
 }
 
 ///|

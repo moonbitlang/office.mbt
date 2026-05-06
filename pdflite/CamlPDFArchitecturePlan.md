@@ -188,8 +188,10 @@ work changes.
    `/MediaBox`, and `/Rotate` references are preserved with selected pages.
    Content parsing also follows CamlPDF's malformed color-operator fallback for
    bad `SC`/`sc`/`SCN`/`scn` operands and filters malformed `TJ` array
-   members. Malformed numeric entries inside `d` dash arrays now raise instead
-   of being preserved as unknown operations.
+   members. Operator tokens remain borrowed as `BytesView` through known
+   operator dispatch, with ownership taken only when unknown operations must be
+   preserved. Malformed numeric entries inside `d` dash arrays now raise
+   instead of being preserved as unknown operations.
    Remaining focus: additional `change_pages` compatibility fixtures for
    unusual inherited page data and real-world destination/action combinations.
 

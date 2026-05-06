@@ -79,7 +79,7 @@ pub(all) enum PdfContentOp {
 ///|
 enum PdfContentLexeme {
   ContentOperand(PdfObject)
-  ContentOperator(PdfBytes)
+  ContentOperator(BytesView)
   ContentComment
   ContentEnd
 } derive(Debug, Eq, ToJson)
@@ -108,6 +108,12 @@ let pdf_content_inline_l_key_name : PdfName = pdf_content_name("/L")
 
 ///|
 let pdf_content_artifact_name : PdfName = pdf_content_name("/Artifact")
+
+///|
+let pdf_content_inline_image_begin_operator : PdfBytes = pdf_content_ascii("BI")
+
+///|
+let pdf_content_inline_image_data_operator : PdfBytes = pdf_content_ascii("ID")
 
 ///|
 fn pdf_content_length_name() -> PdfName {
@@ -148,7 +154,7 @@ fn pdf_content_push_object(
 fn pdf_content_push_section(
   output : Array[Byte],
   operands : ArrayView[PdfObject],
-  operator : PdfBytes,
+  operator : BytesView,
 ) -> Unit raise PdfError {
   for operand in operands {
     if output.length() > 0 {
@@ -159,7 +165,7 @@ fn pdf_content_push_section(
   if output.length() > 0 {
     output.push(32)
   }
-  pdf_content_push_view(output, operator[:])
+  pdf_content_push_view(output, operator)
 }
 
 ///|
@@ -671,7 +677,7 @@ fn pdf_content_operator_or_literal(view : BytesView) -> PdfContentLexeme {
     [116, 114, 117, 101] => ContentOperand(PdfBoolean(true))
     [102, 97, 108, 115, 101] => ContentOperand(PdfBoolean(false))
     [110, 117, 108, 108] => ContentOperand(PdfNull)
-    _ => ContentOperator(view.to_owned())
+    _ => ContentOperator(view)
   }
 }
 
@@ -690,7 +696,7 @@ fn pdf_content_lex_next(cursor : ByteCursor) -> PdfContentLexeme raise PdfError 
       ContentOperand(pdf_content_read_object(cursor))
     116 | 102 | 110 =>
       pdf_content_operator_or_literal(cursor.read_pdf_regular_token_view())
-    _ => ContentOperator(cursor.read_pdf_regular_token_view().to_owned())
+    _ => ContentOperator(cursor.read_pdf_regular_token_view())
   }
 }
 
@@ -1482,8 +1488,8 @@ fn pdf_content_read_inline_image(
   let mut done = false
   while !done {
     match pdf_content_lex_next(cursor) {
-      ContentOperator(operator) if operator == pdf_content_ascii("ID") =>
-        done = true
+      ContentOperator(operator) if operator ==
+        pdf_content_inline_image_data_operator => done = true
       ContentOperand(PdfNameObject(key)) =>
         match pdf_content_lex_next(cursor) {
           ContentOperand(value) =>
@@ -1735,7 +1741,7 @@ fn pdf_content_tj_array_from_operand(object : PdfObject) -> PdfObject? {
 ///|
 fn pdf_content_section_unknown(
   operands : ArrayView[PdfObject],
-  operator : PdfBytes,
+  operator : BytesView,
 ) -> PdfContentOp raise PdfError {
   let output : Array[Byte] = []
   pdf_content_push_section(output, operands, operator)
@@ -1782,9 +1788,9 @@ fn pdf_content_dash_op_from_operands(
 ///|
 fn pdf_content_parse_known_section(
   operands : ArrayView[PdfObject],
-  operator : PdfBytes,
+  operator : BytesView,
 ) -> PdfContentOp? raise PdfError {
-  let text = @ascii.decode(operator[:]) catch { _ => "" }
+  let text = @ascii.decode(operator) catch { _ => "" }
   match text {
     "q" if operands.length() == 0 => Some(Op_q)
     "Q" if operands.length() == 0 => Some(Op_Q)
@@ -2150,7 +2156,7 @@ fn pdf_content_parse_known_section(
 ///|
 fn pdf_content_parse_section(
   operands : ArrayView[PdfObject],
-  operator : PdfBytes,
+  operator : BytesView,
 ) -> PdfContentOp raise PdfError {
   match pdf_content_parse_known_section(operands, operator) {
     Some(op) => op
@@ -2188,7 +2194,8 @@ fn pdf_parse_content_ops_from_view_with_context(
       ContentComment => ()
       ContentOperand(object) => operands.push(object)
       ContentOperator(operator) =>
-        if operator == pdf_content_ascii("BI") && operands.length() == 0 {
+        if operator == pdf_content_inline_image_begin_operator &&
+          operands.length() == 0 {
           ops.push(pdf_content_read_inline_image(cursor, document, resources))
         } else {
           ops.push(pdf_content_parse_section(operands, operator))
