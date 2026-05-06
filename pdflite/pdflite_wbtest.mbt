@@ -1227,6 +1227,27 @@ test "private content helpers cover malformed operand fallbacks" {
     ),
     true,
   )
+  @test.assert_eq(
+    pdf_content_filter_is_single_inline_flate(
+      PdfNameObject(wbtest_content_name("/Fl")),
+    ),
+    true,
+  )
+  @test.assert_eq(
+    pdf_content_filter_is_single_inline_flate(
+      PdfArray([PdfNameObject(wbtest_content_name("/FlateDecode"))]),
+    ),
+    true,
+  )
+  @test.assert_eq(
+    pdf_content_filter_is_single_inline_flate(
+      PdfArray([
+        PdfNameObject(wbtest_content_name("/FlateDecode")),
+        PdfNameObject(wbtest_content_name("/ASCII85Decode")),
+      ]),
+    ),
+    false,
+  )
   @test.assert_eq(pdf_content_filter_is_inline_lzw(PdfInteger(1)), false)
   @test.assert_eq(
     pdf_content_filter_is_inline_lzw(
@@ -1242,6 +1263,17 @@ test "private content helpers cover malformed operand fallbacks" {
       ),
     ),
     flate_inline,
+  )
+  let decoded_flate_cursor = byte_cursor_of_bytes(
+    pdf_bytes_concat_views([flate_inline[:], @ascii.encode(" EI next")[:]]),
+  )
+  @test.assert_eq(
+    try! pdf_content_read_flate_inline_image_decoded(decoded_flate_cursor),
+    @ascii.encode("AB"),
+  )
+  @test.assert_eq(
+    decoded_flate_cursor.remaining_view(),
+    @ascii.encode(" next")[:],
   )
   let lzw_inline = wbtest_lzw_codes([256, 65, 257], 1)
   @test.assert_eq(
