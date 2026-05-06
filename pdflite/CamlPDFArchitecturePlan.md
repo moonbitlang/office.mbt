@@ -153,7 +153,10 @@ work changes.
    stage, and can decode leading supported filters before preserving remaining
    deferred image filters such as DCT or CCITT. Inline-image dictionary, filter,
    and color-space names are cached as private `PdfName` values so parsing and
-   inline-image rewriting reuse stable standard names. Malformed bookmark sets are
+   inline-image rewriting reuse stable standard names. Page-tree, page
+   dictionary, resource dictionary, direct color-space, and resource
+   prefix/renumbering names are also cached so page lifecycle operations reuse
+   stable standard names. Malformed bookmark sets are
    dropped during page extraction and
    merge instead of aborting the
    document operation. Direct annotation dictionaries in `/Annots` arrays now
@@ -345,9 +348,10 @@ and backend breadth, is about 83-88% complete.
   bookmarks, annotations, old-style and name-tree destinations, `/OpenAction`,
   optional content, structure-tree merge/pruning basics, page resource
   renumbering/prefixing/content merge/Form XObject processing through native
-  acceptance boundaries, resource-heavy page replacement with mixed
-  destination/action references, and example workflows for `pdfdecomp.ml`,
-  `pdftest.ml`, `pdfdraft.ml`, `pdfencrypt.ml`, and `pdfmergeexample.ml`.
+  acceptance boundaries, cached standard page/resource names for page lifecycle
+  hot paths, resource-heavy page replacement with mixed destination/action
+  references, and example workflows for `pdfdecomp.ml`, `pdftest.ml`,
+  `pdfdraft.ml`, `pdfencrypt.ml`, and `pdfmergeexample.ml`.
 - Covered: ARC4, AESV2, AESV3/AESV3 ISO authentication, encryption,
   decryption, shared env-aware file-ID generation for missing encryption and
   merge IDs, native secure-random writer paths, saved-state recrypt, encrypted

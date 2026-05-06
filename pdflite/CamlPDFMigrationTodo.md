@@ -70,6 +70,9 @@ Current estimate:
 - [x] ~~Cache standard font aliases, encoding names, font/CID/CMap dictionary
   keys, and ToUnicode writer keys so text read/write hot paths reuse stable
   `PdfName` values.~~
+- [x] ~~Cache page-tree, page/resource dictionary, direct color-space, and
+  resource-renumbering names so page lifecycle hot paths reuse stable
+  `PdfName` values.~~
 - [ ] Continue zlib byte-output/performance parity work where exact miniz block
   spelling or large-file profiles expose remaining gaps.
 - [ ] Profile and tune large-file hot paths for object streams, filters, and
@@ -113,6 +116,8 @@ Current estimate:
 - [x] ~~Text/font parsing and writing now share cached standard font,
   encoding, font dictionary, CID, CMap, and ToUnicode names in the main text
   hot paths.~~
+- [x] ~~Page-tree traversal, page dictionaries, resource dictionaries, and
+  resource prefix/renumber logic now share cached standard `PdfName` values.~~
 - [ ] Improve byte-identical zlib output strategy and broader performance
   parity beyond the explicit Flate level API.
 - [ ] Broaden malformed xref-table/xref-stream/object-stream recovery with more
