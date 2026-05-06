@@ -4622,6 +4622,20 @@ test "private text glyph helpers cover fallback and CID ToUnicode branches" {
     Some(0x0000FE51),
   )
   @test.assert_eq(
+    pdf_text_predefined_cid_range_lookup_unsigned(
+      [(0x20, 0x7E, 10), (0x8EA2EDA1, 0x8EA2EDA2, 20)][:],
+      0x8EA2EDA2,
+    ),
+    Some(21),
+  )
+  @test.assert_eq(
+    pdf_text_predefined_cid_range_lookup_unsigned(
+      [(0x20, 0x7E, 10), (0x8EA2EDA1, 0x8EA2EDA2, 20)][:],
+      0x80,
+    ),
+    None,
+  )
+  @test.assert_eq(
     pdf_text_lower_optional_packed_charcode(Some(0x0000FE51), Some(0x81308436)),
     Some(0x0000FE51),
   )

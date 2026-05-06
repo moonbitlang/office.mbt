@@ -136,6 +136,9 @@ Current estimate:
   CMap reverse lookup nested charcode scans with Unicode/CID-to-charcode
   helpers, preserving deterministic lowest packed-charcode selection for
   duplicate mappings and four-byte GBK2K charcodes.~~
+- [x] ~~Replace CNS-EUC generated CID-range forward lookup linear scans with
+  unsigned binary range lookup, preserving serialized byte-order table
+  semantics for mixed two-byte and high-bit four-byte packed charcodes.~~
 - [x] ~~Run all-target type checking with `moon check --target all --warn-list
   +73`; native remains the test-validation target.~~
 - [x] ~~Close the May 6 native coverage gap for identity filter/predictor
@@ -254,6 +257,8 @@ Current estimate:
 - [x] ~~Generated CID-range CMap reverse lookup for Adobe-GB1, Adobe-CNS1, and
   Adobe-Japan1 now maps Unicode to CID and CID to charcode instead of scanning
   every character code in every range.~~
+- [x] ~~CNS-EUC predefined-CMap forward lookup now uses unsigned binary range
+  search instead of a linear scan over generated CID ranges.~~
 
 ## P0: Native Main Workflows
 
@@ -447,6 +452,8 @@ Current estimate:
 - [x] ~~Generated Adobe-GB1, Adobe-CNS1, and Adobe-Japan1 CID-range predefined
   CMap reverse lookup now uses direct Unicode/CID-to-charcode helpers rather
   than per-charcode range scans.~~
+- [x] ~~CNS-EUC predefined-CMap CID-range lookup now uses unsigned binary
+  search for mixed two-byte and four-byte packed charcodes.~~
 - [x] ~~Type3 font `/ToUnicode` native text gate with indirect CharProcs,
   custom encoding, metrics, compressed rewrite, and reread.~~
 - [x] ~~Direct Type3 CharProc stream reader coverage for preserved `d0`/`d1`
@@ -666,6 +673,8 @@ Current estimate:
 - [x] ~~Tune generated CID-range predefined-CMap reverse lookup for
   Adobe-GB1, Adobe-CNS1, and Adobe-Japan1 without changing public text
   behavior.~~
+- [x] ~~Tune CNS-EUC predefined-CMap forward CID-range lookup with unsigned
+  binary search while preserving packed-byte ordering.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.

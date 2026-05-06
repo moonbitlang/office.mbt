@@ -429,6 +429,19 @@ used by lookup, compare through `UInt`, use `Int64`/`UInt64`, or use a linear
 lookup when source order matters for duplicate precedence.
 
 ```sh
+moon run -c 'fn main { let two = 0x20; let four = 0x8EA2EDA1; println(two < four); println(two.reinterpret_as_uint() < four.reinterpret_as_uint()) }'
+# false
+# true
+```
+
+For binary searches over serialized byte-order tables that mix short positive
+keys and high-bit packed keys, keep the table ordering and lookup comparison in
+the same unsigned domain. Once an unsigned comparison proves that a key is
+inside one packed range, a same-range offset such as `code - range_start` is
+still valid when the range endpoints share the same signed representation
+region.
+
+```sh
 moon run -c 'fn rotr64(value : UInt64, bits : Int) -> UInt64 { (value >> bits) | (value << (64 - bits)) }
 fn main { let value : UInt64 = 0x0123456789abcdef; let full : UInt64 = UInt64::lnot(0); println(rotr64(value, 8).to_string()); println((full + (1 : UInt64)).to_string()); println(((0x80 : UInt64) >> 7).to_string()) }'
 # 17222085231038278605

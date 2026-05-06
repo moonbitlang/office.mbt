@@ -1308,6 +1308,28 @@ fn pdf_text_predefined_cid_range_lookup(
 }
 
 ///|
+fn pdf_text_predefined_cid_range_lookup_unsigned(
+  ranges : ArrayView[(Int, Int, Int)],
+  code : Int,
+) -> Int? {
+  let target = code.reinterpret_as_uint()
+  let mut low = 0
+  let mut high = ranges.length()
+  while low < high {
+    let mid = low + (high - low) / 2
+    let entry = ranges[mid]
+    if target < entry.0.reinterpret_as_uint() {
+      high = mid
+    } else if target > entry.1.reinterpret_as_uint() {
+      low = mid + 1
+    } else {
+      return Some(entry.2 + code - entry.0)
+    }
+  }
+  None
+}
+
+///|
 fn pdf_text_lower_packed_charcode(current : Int?, candidate : Int) -> Int? {
   match current {
     Some(value) =>
@@ -1533,16 +1555,14 @@ fn pdf_text_predefined_cns1_codepoint(
 }
 
 ///|
-fn pdf_text_predefined_cns1_codepoint_linear(
+fn pdf_text_predefined_cns1_codepoint_unsigned(
   ranges : Array[(Int, Int, Int)],
   code : Int,
 ) -> Int? {
-  for range in ranges {
-    if code >= range.0 && code <= range.1 {
-      return pdf_text_cns1_codepoint_of_cid(range.2 + code - range.0)
-    }
+  match pdf_text_predefined_cid_range_lookup_unsigned(ranges[:], code) {
+    Some(cid) => pdf_text_cns1_codepoint_of_cid(cid)
+    None => None
   }
-  None
 }
 
 ///|
@@ -1584,7 +1604,8 @@ fn pdf_text_predefined_cns1_builtin_codepoints(
           } else {
             match pdf_text_predefined_cns_euc_cid_ranges(name) {
               Some(ranges) =>
-                match pdf_text_predefined_cns1_codepoint_linear(ranges, code) {
+                match
+                  pdf_text_predefined_cns1_codepoint_unsigned(ranges, code) {
                   Some(codepoint) => Some([codepoint])
                   None => None
                 }

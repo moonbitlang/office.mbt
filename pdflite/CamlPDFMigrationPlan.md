@@ -1046,7 +1046,10 @@ MoonBit consequences for this project:
    generic Big5. GBK2K now uses generated Adobe-GB1 CID ranges and packs
    four-byte character codes into MoonBit signed `Int` values, matching the
    bit pattern of the PDF byte sequence while keeping reverse lookup
-   deterministic. Reverse lookup for generated Adobe-GB1, Adobe-CNS1, and
+   deterministic. CNS-EUC-H/V generated Adobe-CNS1 CID-range forward lookup now
+   compares packed charcodes in unsigned serialized byte order, replacing the
+   previous linear scan while preserving mixed two-byte and high-bit four-byte
+   table semantics. Reverse lookup for generated Adobe-GB1, Adobe-CNS1, and
    Adobe-Japan1 CID-range CMaps now maps Unicode to CID and then CID to
    charcode instead of scanning every character code in every range, preserving
    deterministic lowest packed-charcode selection for duplicate scalars and
@@ -1555,8 +1558,9 @@ MoonBit consequences for this project:
     empty/sign-only PDF integer lexeme parsing, and reconstructed object-stream
     recovery helper branches. A follow-up text coverage pass keeps
     `pdf_text.mbt` fully covered while replacing generated CID-range CMap
-    reverse lookup scans with Unicode/CID-to-charcode helpers; `moon coverage
-    analyze` now reports all source files fully covered.
+    reverse lookup scans with Unicode/CID-to-charcode helpers and replacing
+    CNS-EUC forward linear scans with unsigned binary range lookup; `moon
+    coverage analyze` now reports all source files fully covered.
 
 ## Active Native Acceptance Milestone
 
