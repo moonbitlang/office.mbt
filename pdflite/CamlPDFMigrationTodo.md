@@ -207,6 +207,9 @@ Current backend snapshot:
 - [x] ~~Add CamlPDF malformed `/ObjStm` member compatibility for a direct
   stream object embedded inside an object stream, including `/Length` repair
   from the `endstream` marker and xref-stream extraction coverage.~~
+- [x] ~~Add malformed xref-stream recovery coverage for unknown entry types:
+  physical objects whose xref-stream kind is outside 0/1/2 are skipped rather
+  than loaded, matching CamlPDF's null-entry treatment.~~
 - [ ] Add more malformed xref-table/xref-stream/object-stream recovery cases
   from real-world PDFs.
 - [x] ~~Add a native reader-boundary gate for the next available predefined CMap
@@ -542,6 +545,9 @@ Current backend snapshot:
 - [x] ~~Malformed object-stream recovery now tolerates a direct stream object
   stored as an `/ObjStm` member, matching CamlPDF's explicit malformed-reader
   compatibility path.~~
+- [x] ~~Malformed xref-stream recovery now covers unknown entry types, leaving
+  physically present objects unloaded when their xref entry is neither free,
+  in-use, nor compressed.~~
 - [ ] Broaden malformed xref-table/xref-stream/object-stream recovery with more
   real-world corpus cases.
 - [ ] Revisit all-backend validation after native feature parity is stable.
@@ -944,6 +950,7 @@ Current backend snapshot:
 - [x] ~~Add a multi-revision malformed xref-stream/object-stream recovery gate.~~
 - [x] ~~Add a real-file malformed compressed-xref incremental update recovery
   gate.~~
+- [x] ~~Add an unknown-entry-type xref-stream recovery gate.~~
 - [x] ~~Add a Type3 `/ToUnicode` native acceptance gate.~~
 - [x] ~~Preserve TrueType descriptor metadata through the embedded TrueType
   native acceptance gate.~~

@@ -1632,7 +1632,9 @@ MoonBit consequences for this project:
    unparseable, negative, short, and long declared `/Length` values that recover
    through `endstream` scanning; the obsolete public `StreamLengthExpected`
    reconstruction arm is removed because strict stream-length failures now
-   convert to malformed-stream scanning.
+   convert to malformed-stream scanning. Malformed xref-stream coverage now
+   also checks CamlPDF-style unknown entry types: a physically present object
+   whose entry kind is neither free, in-use, nor compressed remains unloaded.
     Date, document-copy, renumbering, and writer coverage now remove those
     files from the uncovered-line report by covering private short-date and
     stream materialization guards and by replacing impossible map-key `None`
