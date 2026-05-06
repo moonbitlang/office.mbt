@@ -716,10 +716,10 @@ MoonBit consequences for this project:
    trailer-root catalog and trailer, removes unreachable parsed objects, and
    nullifies references to page objects no longer present in the active page
    tree before pruning. Page extraction, bookmark filtering, duplicate
-   annotation fixup, deleted-page reference nullification, and structure-tree
-   trimming now share a package-local hash-backed `PdfNumberSet` for repeated
-   integer membership checks while preserving existing insertion and
-   canonicalization behavior.
+   annotation fixup, annotation popup-parent filtering, deleted-page reference
+   nullification, and structure-tree trimming now share a package-local
+   hash-backed `PdfNumberSet` for repeated integer membership checks while
+   preserving existing insertion and canonicalization behavior.
    Content stream support is now started with a byte-preserving `PdfContentOp`
    subset, uncompressed content stream construction, indirect stream parsing
    through `PdfDocument`, and parsing for the core path, color, XObject, and

@@ -603,17 +603,6 @@ fn PdfDocument::pdf_annotation_popup_parent(
 }
 
 ///|
-fn pdf_annotation_int_member(numbers : ArrayView[Int], number : Int) -> Bool {
-  for candidate in numbers {
-    if candidate == number {
-      break true
-    }
-  } nobreak {
-    false
-  }
-}
-
-///|
 pub fn PdfDocument::annotations_of_page(
   self : PdfDocument,
   page : PdfPage,
@@ -627,12 +616,11 @@ pub fn PdfDocument::annotations_of_page(
           None => ()
         }
       }
+      let popup_parent_set = pdf_number_set(popup_parents)
       let output : Array[PdfAnnotation] = []
       for annotation in annotations {
         match annotation {
-          PdfIndirect(number) if pdf_annotation_int_member(
-              popup_parents, number,
-            ) => ()
+          PdfIndirect(number) if popup_parent_set.contains(number) => ()
           _ => output.push(self.read_annotation(annotation))
         }
       }

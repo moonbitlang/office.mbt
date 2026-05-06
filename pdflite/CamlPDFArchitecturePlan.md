@@ -224,9 +224,10 @@ work changes.
    Structure-tree trimming now uses hash-backed deleted-page and deletion sets
    for stable `/Pg` removal and ancestor `/K` pruning, avoiding repeated linear
    membership scans on large tagged documents.
-   Page extraction, bookmark filtering, duplicate annotation fixup,
-   deleted-page reference nullification, and structure trimming now share the
-   package-local hash-backed `PdfNumberSet` helper for integer membership.
+   Page extraction, bookmark filtering, duplicate annotation fixup, annotation
+   popup-parent filtering, deleted-page reference nullification, and structure
+   trimming now share the package-local hash-backed `PdfNumberSet` helper for
+   integer membership.
    Content parsing also follows CamlPDF's malformed color-operator fallback for
    bad `SC`/`sc`/`SCN`/`scn` operands and filters malformed `TJ` array
    members. Operator tokens remain borrowed as `BytesView` through known

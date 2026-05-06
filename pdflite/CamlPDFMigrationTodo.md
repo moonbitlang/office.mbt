@@ -173,6 +173,9 @@ Current estimate:
 - [x] ~~Cache destination page-object to page-number lookups during bookmark
   extraction, preserving first page-reference match behavior while avoiding a
   repeated page-tree scan for each bookmark target.~~
+- [x] ~~Use the shared hash-backed `PdfNumberSet` for annotation popup-parent
+  filtering, avoiding repeated linear parent scans when reading pages with
+  many annotations.~~
 - [x] ~~Replace generated Adobe-GB1, Adobe-CNS1, and Adobe-Japan1 CID-range
   CMap reverse lookup nested charcode scans with Unicode/CID-to-charcode
   helpers, preserving deterministic lowest packed-charcode selection for
