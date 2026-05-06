@@ -1523,7 +1523,9 @@ fn reader_xref_stream_pdf_with_indirect_object_stream_filter() -> @pdflite.PdfBy
 }
 
 ///|
-fn reader_xref_stream_pdf_with_indirect_object_stream_bounds() -> @pdflite.PdfBytes {
+fn reader_xref_stream_pdf_with_indirect_object_stream_bounds_startxref(
+  startxref_override : Int?,
+) -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.5\n")
   let catalog_offset = reader_push_indirect_object(
@@ -1568,9 +1570,23 @@ fn reader_xref_stream_pdf_with_indirect_object_stream_bounds() -> @pdflite.PdfBy
     output.push(byte)
   }
   reader_push_ascii(output, "\nendstream\nendobj\nstartxref\n")
-  reader_push_ascii(output, xref_offset.to_string())
+  let startxref = match startxref_override {
+    Some(value) => value
+    None => xref_offset
+  }
+  reader_push_ascii(output, startxref.to_string())
   reader_push_ascii(output, "\n%%EOF\n")
   Bytes::from_array(output)
+}
+
+///|
+fn reader_xref_stream_pdf_with_indirect_object_stream_bounds() -> @pdflite.PdfBytes {
+  reader_xref_stream_pdf_with_indirect_object_stream_bounds_startxref(None)
+}
+
+///|
+fn reader_xref_stream_pdf_with_indirect_object_stream_bounds_bad_startxref() -> @pdflite.PdfBytes {
+  reader_xref_stream_pdf_with_indirect_object_stream_bounds_startxref(Some(0))
 }
 
 ///|
@@ -3097,6 +3113,27 @@ test "pdf_read_document_from_bytes resolves indirect object-stream bounds" {
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
     reader_xref_stream_pdf_with_indirect_object_stream_bounds(),
   )
+  @test.assert_eq(parsed.object_numbers(), [1, 2, 3, 5, 7])
+  @test.assert_eq(
+    parsed.lookup_object_or_null(7),
+    PdfDictionary([
+      (@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Answer")), PdfInteger(42)),
+    ]),
+  )
+}
+
+///|
+test "pdf_read_document_from_bytes reconstructs indirect object-stream bounds" {
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_xref_stream_pdf_with_indirect_object_stream_bounds_bad_startxref(),
+  )
+  guard strict is Err(@pdflite.PdfError::XRefExpected) else {
+    fail("expected strict XRefExpected")
+  }
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(
+    reader_xref_stream_pdf_with_indirect_object_stream_bounds_bad_startxref(),
+  )
+  @test.assert_eq(parsed.first_xref(), 0)
   @test.assert_eq(parsed.object_numbers(), [1, 2, 3, 5, 7])
   @test.assert_eq(
     parsed.lookup_object_or_null(7),

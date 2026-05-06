@@ -7,7 +7,7 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 97.6%.
+- Native main-feature parity: 97.7%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
   breadth: 85-90%.
 
@@ -190,6 +190,9 @@ Current backend snapshot:
   CharProc streams, metrics, custom encoding differences, and page text.~~
 - [ ] Add fixture-driven Type3 `/Resources` coverage from a real PDF when a
   suitable fixture is available.
+- [x] ~~Add malformed xref-stream/object-stream recovery coverage where bad
+  `startxref` reconstruction still resolves indirect `/ObjStm` `/N` and
+  `/First` bounds before expanding embedded entries.~~
 - [ ] Add more malformed xref-table/xref-stream/object-stream recovery cases
   from real-world PDFs.
 - [x] ~~Add a native reader-boundary gate for the next available predefined CMap
@@ -513,6 +516,9 @@ Current backend snapshot:
   repeated integer-membership checks on extraction and cleanup hot paths.~~
 - [ ] Improve byte-identical zlib output strategy and broader performance
   parity beyond the explicit Flate level API.
+- [x] ~~Malformed xref-stream/object-stream recovery now covers bad-final
+  `startxref` reconstruction with indirect `/ObjStm` `/N` and `/First`
+  bounds.~~
 - [ ] Broaden malformed xref-table/xref-stream/object-stream recovery with more
   real-world corpus cases.
 - [ ] Revisit all-backend validation after native feature parity is stable.
@@ -815,6 +821,8 @@ Current backend snapshot:
   per reader pass and reuses the parsed context for all embedded entries.~~
 - [ ] Byte-identical zlib output strategy and broader performance parity beyond
   explicit Flate level selection.
+- [x] ~~Malformed xref-stream/object-stream recovery covers reconstructed
+  indirect object-stream bounds after a bad final `startxref`.~~
 - [ ] Broader malformed xref-table/xref-stream/object-stream recovery beyond
   the current bad-startxref real-corpus, multi-revision, and encrypted
   object-stream gates.
