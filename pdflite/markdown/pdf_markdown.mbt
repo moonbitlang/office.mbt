@@ -258,11 +258,36 @@ fn pdf_markdown_text_matrix_position(
 }
 
 ///|
+fn pdf_markdown_codepoint_is_fullwidth(codepoint : Int) -> Bool {
+  (codepoint >= 0x2E80 && codepoint <= 0xA4CF) ||
+  (codepoint >= 0xAC00 && codepoint <= 0xD7AF) ||
+  (codepoint >= 0xF900 && codepoint <= 0xFAFF) ||
+  (codepoint >= 0xFE10 && codepoint <= 0xFE6F) ||
+  (codepoint >= 0xFF01 && codepoint <= 0xFF60)
+}
+
+///|
+fn pdf_markdown_estimated_codepoint_width(
+  codepoint : Int,
+  font_size : Double,
+) -> Double {
+  if pdf_markdown_codepoint_is_fullwidth(codepoint) {
+    font_size
+  } else {
+    font_size * 0.5
+  }
+}
+
+///|
 fn pdf_markdown_estimated_chunk_width(
   codepoints : ArrayView[Int],
   font_size : Double,
 ) -> Double {
-  codepoints.length().to_double() * font_size * 0.5
+  let mut width = 0.0
+  for codepoint in codepoints {
+    width += pdf_markdown_estimated_codepoint_width(codepoint, font_size)
+  }
+  width
 }
 
 ///|

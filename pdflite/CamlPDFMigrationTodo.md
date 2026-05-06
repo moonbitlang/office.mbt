@@ -149,6 +149,9 @@ Current backend snapshot:
   meaningful text coordinates, including form-XObject placement through `cm`
   transforms; the Unicode CJK chart now follows row/column order and extracts
   1,512,647 characters versus MarkItDown's 1,518,212.~~
+- [x] ~~Add scalar-aware fullwidth chunk-width estimation for positioned
+  Markdown extraction, preserving adjacent CJK glyph chunks without inserted
+  spaces while keeping explicit wider gaps visible.~~
 - [x] ~~Suppress unreliable `.notdef`/non-text-control glyph runs at the
   Markdown boundary, keeping CamlPDF-compatible core text fallback behavior
   while preventing custom no-ToUnicode metadata fonts from producing `u�`-style

@@ -320,6 +320,65 @@ fn markdown_positioned_text_state_document_for_test() -> @pdflite.PdfDocument ra
 }
 
 ///|
+fn markdown_positioned_cjk_spacing_document_for_test() -> @pdflite.PdfDocument raise {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  let cmap = markdown_ascii_for_test(
+    "1 begincodespacerange\n" +
+    "<00><FF>\n" +
+    "endcodespacerange\n" +
+    "1 beginbfchar\n" +
+    "<41><4E16>\n" +
+    "endbfchar\n",
+  )
+  doc.add_object_given_number(
+    81,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (markdown_name_for_test("/Length"), PdfInteger(cmap.length())),
+      ]),
+      StreamGot(cmap),
+    ),
+  )
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [
+      @pdflite.pdf_content_stream_of_ops([
+        Op_BT,
+        Op_Tf(markdown_name_for_test("/F0"), 10.0),
+        Op_Tm(@pdflite.transform_translate(50.0, 700.0)),
+        Op_Tj(markdown_bytes_for_test([65])),
+        Op_Tm(@pdflite.transform_translate(60.0, 700.0)),
+        Op_Tj(markdown_bytes_for_test([65])),
+        Op_Tm(@pdflite.transform_translate(80.0, 700.0)),
+        Op_Tj(markdown_bytes_for_test([65])),
+        Op_ET,
+      ]),
+    ],
+    resources: markdown_font_resources_for_test(
+      @pdflite.pdf_dictionary([
+        (
+          markdown_name_for_test("/Type"),
+          PdfNameObject(markdown_name_for_test("/Font")),
+        ),
+        (
+          markdown_name_for_test("/Subtype"),
+          PdfNameObject(markdown_name_for_test("/Type1")),
+        ),
+        (
+          markdown_name_for_test("/BaseFont"),
+          PdfNameObject(markdown_name_for_test("/Custom")),
+        ),
+        (markdown_name_for_test("/ToUnicode"), PdfIndirect(81)),
+      ]),
+    ),
+  }
+  let page_root = doc.add_pagetree([page])
+  ignore(doc.add_root(page_root, []))
+  doc
+}
+
+///|
 fn markdown_tounicode_font_for_test() -> @pdflite.PdfObject {
   @pdflite.pdf_dictionary([
     (
@@ -692,6 +751,16 @@ test "pdf_document_to_markdown tracks positioned text-state moves" {
       markdown_positioned_text_state_document_for_test(),
     ),
     "# Page 1\n\nA B\nC\nD\nE\n",
+  )
+}
+
+///|
+test "pdf_document_to_markdown keeps adjacent positioned CJK glyphs together" {
+  @test.assert_eq(
+    @markdown.pdf_document_to_markdown(
+      markdown_positioned_cjk_spacing_document_for_test(),
+    ),
+    "# Page 1\n\n世世 世\n",
   )
 }
 
