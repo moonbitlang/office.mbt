@@ -124,8 +124,10 @@ Current backend snapshot:
 - [x] ~~Preserve Pandoc-generated Latin word boundaries by treating large
   negative `TJ` numeric adjustments as word spacing while ignoring small
   kerning adjustments.~~
-- [ ] Add a MarkItDown comparison report/script for selected local and
-  downloaded fixtures; use differences to drive core extraction fixes.
+- [x] ~~Add a MarkItDown comparison report/script for selected local Pandoc
+  fixtures; use differences to drive core extraction fixes.~~
+- [ ] Extend the MarkItDown comparison loop to downloaded real-world fixtures
+  with documented redistribution terms and expected extraction contracts.
 - [x] ~~Add Type3 glyph-program/resource coverage where a CharProc consumes
   Type3 `/Resources` through an XObject and named inline-image color space.~~
 - [ ] Add fixture-driven Type3 glyph-program/resource coverage from real PDFs
