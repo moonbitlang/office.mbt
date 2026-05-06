@@ -120,7 +120,10 @@ work changes.
    per `/ObjStm` while preserving stream and entry order. Newer-first xref entry
    accumulation now tracks seen object numbers with the shared hash-backed
    `PdfNumberSet`, avoiding repeated duplicate scans across revision chains
-   while preserving first-entry precedence. Primitive integer
+   while preserving first-entry precedence. Exact xref-stream object/offset skip
+   checks now use a nested hash-backed lookup during strict and reconstructed
+   plain-object loading, preserving identity semantics without repeated
+   ref-list scans. Primitive integer
    lexing now also parses Int-range PDF number tokens directly from borrowed
    `BytesView` data, using an
    Int64 overflow guard before falling back to the existing real-number parser.

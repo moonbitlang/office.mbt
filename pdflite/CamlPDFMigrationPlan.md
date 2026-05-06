@@ -356,7 +356,9 @@ MoonBit consequences for this project:
    inside an object stream after `startxref` has gone bad. Newer-first classic
    and xref-stream entry accumulation now uses a hash-backed object-number set,
    preserving the newest entry for each object number while avoiding repeated
-   duplicate scans across long revision chains. The native reader
+   duplicate scans across long revision chains. Exact xref-stream object/offset
+   skip checks are also cached with nested hash-backed number sets during
+   strict and reconstructed plain-object loading. The native reader
    now skips xref-stream objects by exact `(object number, offset)` identity
    during reconstructed xref-stream loading, matching the strict reader and
    preserving incremental updates that reuse an older xref-stream object number

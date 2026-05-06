@@ -142,6 +142,9 @@ Current estimate:
 - [x] ~~Accumulate newer-first classic/xref-stream entries with a hash-backed
   object-number set, preserving first-entry precedence while avoiding repeated
   duplicate scans across revision chains.~~
+- [x] ~~Cache exact xref-stream object/offset skip checks with nested
+  hash-backed number sets, avoiding repeated scans when loading strict and
+  reconstructed xref-stream sections.~~
 - [x] ~~Deduplicate incremental-writer changed object numbers with a
   `HashMap` before sorting sparse xref entries, avoiding quadratic event-log
   scans for repeatedly edited objects.~~
@@ -328,6 +331,9 @@ Current estimate:
 - [x] ~~Newer-first xref entry accumulation now tracks seen object numbers with
   `PdfNumberSet`, avoiding repeated duplicate scans while preserving the newest
   entry for each object number.~~
+- [x] ~~Exact xref-stream object/offset skip checks now use a nested
+  hash-backed lookup while loading plain objects, preserving object-number and
+  offset identity semantics without repeated ref-list scans.~~
 - [x] ~~Incremental writer changed-object detection now uses a hash-backed
   seen set before sorting sparse classic/xref-stream entry numbers, so large
   event logs with repeated edits avoid repeated linear duplicate checks.~~

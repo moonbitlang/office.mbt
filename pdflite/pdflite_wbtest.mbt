@@ -914,6 +914,15 @@ test "private reader xref helpers report malformed inputs" {
   ])
   @test.assert_eq([ for xref in xref_target => xref.object_number ], [2, 3])
   @test.assert_eq([ for xref in xref_target => xref.offset ], [20, 30])
+  let xref_stream_ref_set = pdf_reader_xref_stream_ref_set([
+    (5, 100),
+    (5, 200),
+    (7, 100),
+  ])
+  @test.assert_eq(xref_stream_ref_set.contains(5, 100), true)
+  @test.assert_eq(xref_stream_ref_set.contains(5, 300), false)
+  @test.assert_eq(xref_stream_ref_set.contains(7, 100), true)
+  @test.assert_eq(xref_stream_ref_set.contains(8, 100), false)
 
   let no_object = byte_cursor_of_bytes(@ascii.encode("notobject"))
   let no_object_result : Result[PdfParsedIndirectObject, Error] = try? no_object.read_first_indirect_object_at_current(

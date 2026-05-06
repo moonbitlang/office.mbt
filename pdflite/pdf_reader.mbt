@@ -697,18 +697,38 @@ fn pdf_reader_short_decodeparms_name() -> PdfName {
 }
 
 ///|
-fn pdf_reader_xref_stream_refs_contain(
-  values : ArrayView[(Int, Int)],
+priv struct PdfReaderXRefStreamRefSet {
+  values : @hashmap.HashMap[Int, PdfNumberSet]
+}
+
+///|
+fn pdf_reader_xref_stream_ref_set(
+  refs : ArrayView[(Int, Int)],
+) -> PdfReaderXRefStreamRefSet {
+  let values : @hashmap.HashMap[Int, PdfNumberSet] = @hashmap.HashMap::new()
+  for item in refs {
+    let (object_number, offset) = item
+    match values.get(object_number) {
+      Some(offsets) => offsets.add(offset)
+      None => {
+        let offsets = pdf_number_set([])
+        offsets.add(offset)
+        values[object_number] = offsets
+      }
+    }
+  }
+  { values, }
+}
+
+///|
+fn PdfReaderXRefStreamRefSet::contains(
+  self : PdfReaderXRefStreamRefSet,
   object_number : Int,
   offset : Int,
 ) -> Bool {
-  for item in values {
-    let (xref_object_number, xref_offset) = item
-    if xref_object_number == object_number && xref_offset == offset {
-      break true
-    }
-  } nobreak {
-    false
+  match self.values.get(object_number) {
+    Some(offsets) => offsets.contains(offset)
+    None => false
   }
 }
 
@@ -1661,17 +1681,14 @@ fn PdfDocument::load_reconstructed_xref_stream_plain_objects(
 ) -> Unit {
   let cursor = byte_cursor_of_view(data)
   let xref_stream_refs = pdf_reconstructed_xref_stream_refs(sections)
+  let xref_stream_ref_set = pdf_reader_xref_stream_ref_set(xref_stream_refs[:])
   for xref in xrefs {
     match xref.object_stream {
       Some(_) => ()
       None =>
         if xref.in_use &&
           xref.object_number != 0 &&
-          !pdf_reader_xref_stream_refs_contain(
-            xref_stream_refs[:],
-            xref.object_number,
-            xref.offset,
-          ) {
+          !xref_stream_ref_set.contains(xref.object_number, xref.offset) {
           try {
             cursor.seek_pdf_absolute(xref.offset)
             let parsed = cursor.read_first_indirect_object_at_current(xrefs)
@@ -2021,17 +2038,14 @@ fn pdf_read_classic_document_from_view_at_revision(
     None => ()
   }
   document.set_trailer_and_root(trailer)
+  let xref_stream_ref_set = pdf_reader_xref_stream_ref_set(xref_stream_refs[:])
   for xref in xrefs {
     match xref.object_stream {
       Some(_) => ()
       None =>
         if xref.in_use &&
           xref.object_number != 0 &&
-          !pdf_reader_xref_stream_refs_contain(
-            xref_stream_refs[:],
-            xref.object_number,
-            xref.offset,
-          ) {
+          !xref_stream_ref_set.contains(xref.object_number, xref.offset) {
           cursor.seek_pdf_absolute(xref.offset)
           let parsed = cursor.read_first_indirect_object_at_current(xrefs)
           if parsed.number != xref.object_number ||
