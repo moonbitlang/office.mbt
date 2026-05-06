@@ -1212,6 +1212,27 @@ test "private content helpers cover malformed operand fallbacks" {
   guard pdf_content_inline_image_text_filter(PdfDictionary([])) is None else {
     fail("expected no inline image text filter")
   }
+  guard pdf_content_filter_single_inline_text_filter(
+      PdfNameObject(wbtest_content_name("/AHx")),
+    )
+    is Some(PdfContentInlineAsciiHex) else {
+    fail("expected single ASCIIHex text filter")
+  }
+  guard pdf_content_filter_single_inline_text_filter(
+      PdfArray([PdfNameObject(wbtest_content_name("/ASCII85Decode"))]),
+    )
+    is Some(PdfContentInlineAscii85) else {
+    fail("expected single ASCII85 text filter")
+  }
+  guard pdf_content_filter_single_inline_text_filter(
+      PdfArray([
+        PdfNameObject(wbtest_content_name("/ASCII85Decode")),
+        PdfNameObject(wbtest_content_name("/FlateDecode")),
+      ]),
+    )
+    is None else {
+    fail("expected no single text filter for multi-stage array")
+  }
   @test.assert_eq(
     try! pdf_content_read_text_encoded_inline_image_data(
       byte_cursor_of_bytes(@ascii.encode("616263> EI")),
@@ -1219,7 +1240,57 @@ test "private content helpers cover malformed operand fallbacks" {
     ),
     @ascii.encode("616263>"),
   )
+  let decoded_hex_cursor = byte_cursor_of_bytes(
+    @ascii.encode("616263> EI next"),
+  )
+  @test.assert_eq(
+    try! pdf_content_read_text_encoded_inline_image_decoded(
+      decoded_hex_cursor,
+      PdfContentInlineAsciiHex,
+    ),
+    @ascii.encode("abc"),
+  )
+  @test.assert_eq(
+    decoded_hex_cursor.remaining_view(),
+    @ascii.encode(" next")[:],
+  )
+  let ascii85_inline = pdf_ascii85_encode(@ascii.encode("abc"))
+  let decoded_ascii85_cursor = byte_cursor_of_bytes(
+    pdf_bytes_concat_views([ascii85_inline[:], @ascii.encode(" EI next")[:]]),
+  )
+  @test.assert_eq(
+    try! pdf_content_read_text_encoded_inline_image_decoded(
+      decoded_ascii85_cursor,
+      PdfContentInlineAscii85,
+    ),
+    @ascii.encode("abc"),
+  )
+  @test.assert_eq(
+    decoded_ascii85_cursor.remaining_view(),
+    @ascii.encode(" next")[:],
+  )
   @test.assert_eq(pdf_content_filter_is_inline_run_length(PdfInteger(1)), false)
+  @test.assert_eq(
+    pdf_content_filter_is_single_inline_run_length(
+      PdfNameObject(wbtest_content_name("/RL")),
+    ),
+    true,
+  )
+  @test.assert_eq(
+    pdf_content_filter_is_single_inline_run_length(
+      PdfArray([PdfNameObject(wbtest_content_name("/RunLengthDecode"))]),
+    ),
+    true,
+  )
+  @test.assert_eq(
+    pdf_content_filter_is_single_inline_run_length(
+      PdfArray([
+        PdfNameObject(wbtest_content_name("/RunLengthDecode")),
+        PdfNameObject(wbtest_content_name("/ASCII85Decode")),
+      ]),
+    ),
+    false,
+  )
   @test.assert_eq(pdf_content_filter_is_inline_flate(PdfInteger(1)), false)
   @test.assert_eq(
     pdf_content_filter_is_inline_flate(
@@ -1338,6 +1409,26 @@ test "private content helpers cover malformed operand fallbacks" {
     ),
     try! pdf_bytes_of_int_array([253, 90, 128]),
   )
+  let run_length_encoded = try! pdf_bytes_of_int_array([253, 90, 128])
+  let decoded_run_length_cursor = byte_cursor_of_bytes(
+    pdf_bytes_concat_views([run_length_encoded[:], @ascii.encode(" EI next")[:]]),
+  )
+  @test.assert_eq(
+    try! pdf_content_read_run_length_inline_image_decoded(
+      decoded_run_length_cursor,
+    ),
+    @ascii.encode("ZZZZ"),
+  )
+  @test.assert_eq(
+    decoded_run_length_cursor.remaining_view(),
+    @ascii.encode(" next")[:],
+  )
+  let missing_run_length_eod : Result[PdfBytes, Error] = try? pdf_content_read_run_length_inline_image_decoded(
+    byte_cursor_of_bytes(try! pdf_bytes_of_int_array([253, 90])),
+  )
+  guard missing_run_length_eod is Err(PdfError::ParseEndStreamExpected) else {
+    fail("expected ParseEndStreamExpected")
+  }
   let bad_dct_end : Result[PdfBytes, Error] = try? pdf_content_read_dct_inline_image_data(
     byte_cursor_of_bytes(
       try! pdf_bytes_of_int_array([0xFF, 0xD8, 0xFF, 0xD9, 32, 88, 88]),

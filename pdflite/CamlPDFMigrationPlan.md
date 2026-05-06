@@ -559,10 +559,11 @@ MoonBit consequences for this project:
    re-owning compressed data before FFI. The pure Flate prefix decoder now
    caches fixed-Huffman literal and distance tables, reducing setup work for
    inline-image and consumed-length paths that still need MoonBit-side byte
-   accounting instead of native miniz. Single-stage Flate and LZW inline images
-   without `/DecodeParms` now keep prefix-decoded payloads and only advance the
-   cursor over encoded slices, avoiding encoded-byte copies plus second
-   stream-filter decodes. Owned `/Crypt` identity filter
+   accounting instead of native miniz. Single-stage ASCIIHex, ASCII85,
+   RunLength, Flate, and LZW inline images without `/DecodeParms` now keep
+   prefix-decoded payloads and only advance the cursor over encoded slices,
+   avoiding encoded-byte copies plus second stream-filter decodes. Owned
+   `/Crypt` identity filter
    encode/decode now returns the original immutable `Bytes` value directly.
    CamlPDF-style typed encoding and predictor choices are now exposed as
    `PdfStreamEncoding` and

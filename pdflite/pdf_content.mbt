@@ -1100,6 +1100,18 @@ fn pdf_content_filter_inline_text_filter(
 }
 
 ///|
+fn pdf_content_filter_single_inline_text_filter(
+  filter : PdfObject,
+) -> PdfContentInlineTextFilter? {
+  match filter {
+    PdfNameObject(name) => pdf_content_filter_name_inline_text_filter(name)
+    PdfArray([PdfNameObject(name)]) =>
+      pdf_content_filter_name_inline_text_filter(name)
+    _ => None
+  }
+}
+
+///|
 fn pdf_content_filter_name_is_inline_run_length(name : PdfName) -> Bool {
   name == pdf_content_inline_runlengthdecode_name() ||
   name == pdf_content_inline_rl_name()
@@ -1110,6 +1122,16 @@ fn pdf_content_filter_is_inline_run_length(filter : PdfObject) -> Bool {
   match filter {
     PdfNameObject(name) => pdf_content_filter_name_is_inline_run_length(name)
     PdfArray([PdfNameObject(name), ..]) =>
+      pdf_content_filter_name_is_inline_run_length(name)
+    _ => false
+  }
+}
+
+///|
+fn pdf_content_filter_is_single_inline_run_length(filter : PdfObject) -> Bool {
+  match filter {
+    PdfNameObject(name) => pdf_content_filter_name_is_inline_run_length(name)
+    PdfArray([PdfNameObject(name)]) =>
       pdf_content_filter_name_is_inline_run_length(name)
     _ => false
   }
@@ -1186,9 +1208,29 @@ fn pdf_content_inline_image_text_filter(
 }
 
 ///|
+fn pdf_content_inline_image_single_text_filter(
+  dictionary : PdfObject,
+) -> PdfContentInlineTextFilter? {
+  match pdf_content_inline_filter_value(dictionary) {
+    Some(filter) => pdf_content_filter_single_inline_text_filter(filter)
+    None => None
+  }
+}
+
+///|
 fn pdf_content_inline_image_uses_run_length(dictionary : PdfObject) -> Bool {
   match pdf_content_inline_filter_value(dictionary) {
     Some(filter) => pdf_content_filter_is_inline_run_length(filter)
+    None => false
+  }
+}
+
+///|
+fn pdf_content_inline_image_uses_single_run_length(
+  dictionary : PdfObject,
+) -> Bool {
+  match pdf_content_inline_filter_value(dictionary) {
+    Some(filter) => pdf_content_filter_is_single_inline_run_length(filter)
     None => false
   }
 }
@@ -1343,6 +1385,33 @@ fn pdf_content_read_text_encoded_inline_image_data(
 }
 
 ///|
+fn pdf_content_read_text_encoded_inline_image_decoded(
+  cursor : ByteCursor,
+  filter : PdfContentInlineTextFilter,
+) -> PdfBytes raise PdfError {
+  match cursor.peek_byte() {
+    value if pdf_is_whitespace_byte(value) => cursor.nudge()
+    _ => ()
+  }
+  match
+    pdf_content_text_encoded_inline_image_length(
+      cursor.remaining_view(),
+      filter,
+    ) {
+    Some(length) => {
+      let encoded = cursor.read_view(length)
+      let decoded = match filter {
+        PdfContentInlineAsciiHex => pdf_ascii_hex_decode_view(encoded)
+        PdfContentInlineAscii85 => pdf_ascii85_decode_view(encoded)
+      }
+      pdf_content_read_inline_image_end(cursor)
+      decoded
+    }
+    None => raise ParseEndStreamExpected
+  }
+}
+
+///|
 fn pdf_content_read_flate_inline_image_data(
   cursor : ByteCursor,
 ) -> PdfBytes raise PdfError {
@@ -1424,6 +1493,56 @@ fn pdf_content_read_run_length_inline_image_data(
     }
     None => raise ParseEndStreamExpected
   }
+}
+
+///|
+fn pdf_content_run_length_decode_view_prefix(
+  data : BytesView,
+) -> (PdfBytes, Int) raise PdfError {
+  let output : Array[Byte] = []
+  let mut index = 0
+  while index < data.length() {
+    let control = data[index].to_int()
+    index += 1
+    if control < 128 {
+      let wanted = control + 1
+      if index + wanted > data.length() {
+        raise ParseEndStreamExpected
+      }
+      for i in 0..<wanted {
+        output.push(data[index + i])
+      }
+      index += wanted
+    } else if control > 128 {
+      if index >= data.length() {
+        raise ParseEndStreamExpected
+      }
+      let value = data[index]
+      index += 1
+      for _ in 0..<(257 - control) {
+        output.push(value)
+      }
+    } else {
+      return (Bytes::from_array(output), index)
+    }
+  }
+  raise ParseEndStreamExpected
+}
+
+///|
+fn pdf_content_read_run_length_inline_image_decoded(
+  cursor : ByteCursor,
+) -> PdfBytes raise PdfError {
+  match cursor.peek_byte() {
+    value if pdf_is_whitespace_byte(value) => cursor.nudge()
+    _ => ()
+  }
+  let (decoded, length) = pdf_content_run_length_decode_view_prefix(
+    cursor.remaining_view(),
+  )
+  ignore(cursor.read_view(length))
+  pdf_content_read_inline_image_end(cursor)
+  decoded
 }
 
 ///|
@@ -1582,22 +1701,45 @@ fn pdf_content_read_inline_image(
     )
   } else {
     match pdf_content_inline_image_text_filter(dictionary) {
-      Some(filter) => {
-        let encoded = pdf_content_read_text_encoded_inline_image_data(
-          cursor, filter,
-        )
-        let (decoded_dictionary, decoded) = pdf_content_decode_inline_image_data(
-          dictionary, decode_parms, encoded,
-        )
-        Op_InlineImage(decoded_dictionary, None, decoded)
-      }
-      None if pdf_content_inline_image_uses_run_length(dictionary) => {
-        let encoded = pdf_content_read_run_length_inline_image_data(cursor)
-        let (decoded_dictionary, decoded) = pdf_content_decode_inline_image_data(
-          dictionary, decode_parms, encoded,
-        )
-        Op_InlineImage(decoded_dictionary, None, decoded)
-      }
+      Some(filter) =>
+        match
+          (
+            decode_parms,
+            pdf_content_inline_image_single_text_filter(dictionary),
+          ) {
+          (None, Some(single_filter)) =>
+            Op_InlineImage(
+              pdf_content_remove_inline_image_filter_metadata(dictionary),
+              None,
+              pdf_content_read_text_encoded_inline_image_decoded(
+                cursor, single_filter,
+              ),
+            )
+          _ => {
+            let encoded = pdf_content_read_text_encoded_inline_image_data(
+              cursor, filter,
+            )
+            let (decoded_dictionary, decoded) = pdf_content_decode_inline_image_data(
+              dictionary, decode_parms, encoded,
+            )
+            Op_InlineImage(decoded_dictionary, None, decoded)
+          }
+        }
+      None if pdf_content_inline_image_uses_run_length(dictionary) =>
+        if decode_parms is None &&
+          pdf_content_inline_image_uses_single_run_length(dictionary) {
+          Op_InlineImage(
+            pdf_content_remove_inline_image_filter_metadata(dictionary),
+            None,
+            pdf_content_read_run_length_inline_image_decoded(cursor),
+          )
+        } else {
+          let encoded = pdf_content_read_run_length_inline_image_data(cursor)
+          let (decoded_dictionary, decoded) = pdf_content_decode_inline_image_data(
+            dictionary, decode_parms, encoded,
+          )
+          Op_InlineImage(decoded_dictionary, None, decoded)
+        }
       None if pdf_content_inline_image_uses_flate(dictionary) =>
         if decode_parms is None &&
           pdf_content_inline_image_uses_single_flate(dictionary) {

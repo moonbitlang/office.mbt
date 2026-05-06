@@ -178,10 +178,10 @@ work changes.
    stage, and can decode leading supported filters before preserving remaining
    deferred image filters such as DCT or CCITT. Inline-image dictionary, filter,
    and color-space names are cached as private `PdfName` values so parsing and
-   inline-image rewriting reuse stable standard names. Single-stage Flate and
-   LZW inline images without `/DecodeParms` now reuse prefix-decoded payloads
-   instead of copying encoded bytes and decoding them again through
-   stream-filter dispatch.
+   inline-image rewriting reuse stable standard names. Single-stage ASCIIHex,
+   ASCII85, RunLength, Flate, and LZW inline images without `/DecodeParms` now
+   reuse prefix-decoded payloads instead of copying encoded bytes and decoding
+   them again through stream-filter dispatch.
    Page-tree, page
    dictionary, resource dictionary, direct color-space, and resource
    prefix/renumbering names are also cached so page lifecycle operations reuse
