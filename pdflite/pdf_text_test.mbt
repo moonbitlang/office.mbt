@@ -162,6 +162,7 @@ test "PdfStandardFont exposes CamlPDF standard font names" {
   ]
   for entry in fonts {
     @test.assert_eq(entry.0.name(), entry.1)
+    @test.assert_eq(@pdflite.pdf_string_of_standard_font(entry.0), entry.1)
     @test.assert_eq(entry.0.pdf_name(), text_name_for_test("/" + entry.1))
   }
 }
@@ -2594,6 +2595,77 @@ test "PdfDocument write_font writes TrueType ToUnicode CMaps" {
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x42), Some(34))
   @test.assert_eq(extractor.charcode_of_codepoint(0x43), None)
+}
+
+///|
+test "pdftext top-level font and extractor wrappers match methods" {
+  let doc = @pdflite.pdf_document_empty()
+  let font_object = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/Subtype"),
+      PdfNameObject(text_name_for_test("/Type1")),
+    ),
+    (
+      text_name_for_test("/BaseFont"),
+      PdfNameObject(text_name_for_test("/Helvetica")),
+    ),
+    (
+      text_name_for_test("/Encoding"),
+      PdfNameObject(text_name_for_test("/WinAnsiEncoding")),
+    ),
+  ])
+  let font = try! @pdflite.pdf_read_font(doc, font_object)
+  @test.assert_eq(@pdflite.pdf_string_of_font(font), font.debug_name())
+  @test.assert_eq(@pdflite.pdf_string_of_font(font), "StandardFont Helvetica")
+  @test.assert_eq(@pdflite.pdf_is_identity_h(font), false)
+
+  let text = text_bytes_for_test([65, 66])
+  let extractor = try! @pdflite.pdf_text_extractor_of_font(doc, font_object)
+  let real_extractor = @pdflite.pdf_text_extractor_of_font_real(font)
+  @test.assert_eq(try! @pdflite.pdf_codepoints_of_text(extractor, text[:]), [
+    65, 66,
+  ])
+  @test.assert_eq(
+    try! @pdflite.pdf_codepoints_of_text(real_extractor, text[:]),
+    [65, 66],
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_glyphnames_of_text(
+      extractor,
+      text_bytes_for_test([65])[:],
+    ),
+    [text_name_for_test("/A")],
+  )
+  let charcode = try! @pdflite.pdf_charcode_extractor_of_font(doc, font_object)
+  let real_charcode = @pdflite.pdf_charcode_extractor_of_font_real(
+    font,
+    debug=true,
+  )
+  @test.assert_eq(charcode(0x41), Some(65))
+  @test.assert_eq(real_charcode(0x42), Some(66))
+  @test.assert_eq(real_charcode(0x2603), None)
+
+  let output = @pdflite.pdf_document_empty()
+  let written = try! @pdflite.pdf_write_font(output, font, objnum=Some(7))
+  @test.assert_eq(written, 7)
+  @test.assert_eq(
+    output.lookup_object_or_null(7),
+    @pdflite.pdf_dictionary([
+      (text_name_for_test("/Type"), PdfNameObject(text_name_for_test("/Font"))),
+      (
+        text_name_for_test("/Subtype"),
+        PdfNameObject(text_name_for_test("/Type1")),
+      ),
+      (
+        text_name_for_test("/Encoding"),
+        PdfNameObject(text_name_for_test("/WinAnsiEncoding")),
+      ),
+      (
+        text_name_for_test("/BaseFont"),
+        PdfNameObject(text_name_for_test("/Helvetica")),
+      ),
+    ]),
+  )
 }
 
 ///|

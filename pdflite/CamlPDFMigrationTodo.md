@@ -7,7 +7,7 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 96%.
+- Native main-feature parity: 96.5%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
   breadth: 85-90%.
 
@@ -71,6 +71,13 @@ Current backend snapshot:
 - [x] ~~Expose `.repos/pdfmerge.mli`-referenced standalone merge helpers for
   CamlPDF-shaped `merge_pdfs` flags/name/range arguments and duplicate-font
   removal over the existing typed merge and dedupe core.~~
+- [x] ~~Expose `.repos/pdftext.mli`-referenced standalone text/font helpers for
+  standard-font and font debug strings, font read/write, Identity-H detection,
+  text extractors, text-to-codepoint/glyph extraction, and reverse charcode
+  closures over the existing typed text API.~~
+- [ ] Decide whether to emulate CamlPDF's `charcode_extractor` debug stderr
+  output; current wrappers accept the `debug` flag for API shape but keep the
+  lookup pure.
 - [ ] Evaluate CamlPDF's repeated-input `names` merge optimization for
   output-size/performance parity if repeated-name merge profiles expose a real
   regression; current wrapper preserves merge semantics and validates arity.

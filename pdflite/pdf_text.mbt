@@ -37,6 +37,11 @@ pub fn PdfStandardFont::name(self : PdfStandardFont) -> String {
 }
 
 ///|
+pub fn pdf_string_of_standard_font(font : PdfStandardFont) -> String {
+  font.name()
+}
+
+///|
 fn pdf_text_name(text : String) -> PdfName {
   pdf_name_of_bytes(@ascii.encode(text))
 }
@@ -2273,11 +2278,21 @@ pub fn PdfFont::debug_name(self : PdfFont) -> String {
 }
 
 ///|
+pub fn pdf_string_of_font(font : PdfFont) -> String {
+  font.debug_name()
+}
+
+///|
 pub fn PdfFont::is_identity_h(self : PdfFont) -> Bool {
   match self {
     PdfFontCIDKeyed(font) => font.is_identity_h()
     _ => false
   }
+}
+
+///|
+pub fn pdf_is_identity_h(font : PdfFont) -> Bool {
+  font.is_identity_h()
 }
 
 ///|
@@ -2299,6 +2314,23 @@ pub fn PdfFont::uses_two_byte_codes(self : PdfFont) -> Bool {
 ///|
 pub fn PdfFont::text_extractor(self : PdfFont) -> PdfTextExtractor {
   { font: self }
+}
+
+///|
+pub fn pdf_text_extractor_of_font_real(font : PdfFont) -> PdfTextExtractor {
+  font.text_extractor()
+}
+
+///|
+pub fn pdf_charcode_extractor_of_font_real(
+  font : PdfFont,
+  debug? : Bool = false,
+) -> (Int) -> Int? {
+  // CamlPDF reports missing glyphs to stderr when debug is true; this wrapper
+  // keeps the lookup pure while preserving the API shape.
+  ignore(debug)
+  let extractor = font.text_extractor()
+  fn(codepoint) { extractor.charcode_of_codepoint(codepoint) }
 }
 
 ///|
@@ -4797,11 +4829,27 @@ pub fn PdfDocument::read_font(
 }
 
 ///|
+pub fn pdf_read_font(
+  document : PdfDocument,
+  font : PdfObject,
+) -> PdfFont raise PdfError {
+  document.read_font(font)
+}
+
+///|
 pub fn PdfDocument::text_extractor_of_font(
   self : PdfDocument,
   font : PdfObject,
 ) -> PdfTextExtractor raise PdfError {
   self.read_font(font).text_extractor()
+}
+
+///|
+pub fn pdf_text_extractor_of_font(
+  document : PdfDocument,
+  font : PdfObject,
+) -> PdfTextExtractor raise PdfError {
+  document.text_extractor_of_font(font)
 }
 
 ///|
@@ -10300,6 +10348,22 @@ pub fn PdfTextExtractor::glyphnames_of_text(
 }
 
 ///|
+pub fn pdf_codepoints_of_text(
+  extractor : PdfTextExtractor,
+  text : BytesView,
+) -> Array[Int] raise PdfError {
+  extractor.codepoints_of_text(text)
+}
+
+///|
+pub fn pdf_glyphnames_of_text(
+  extractor : PdfTextExtractor,
+  text : BytesView,
+) -> Array[PdfName] raise PdfError {
+  extractor.glyphnames_of_text(text)
+}
+
+///|
 pub fn PdfTextExtractor::charcode_of_codepoint(
   self : PdfTextExtractor,
   codepoint : Int,
@@ -10339,6 +10403,15 @@ pub fn PdfTextExtractor::charcode_of_codepoint(
           }
       }
   }
+}
+
+///|
+pub fn pdf_charcode_extractor_of_font(
+  document : PdfDocument,
+  font : PdfObject,
+  debug? : Bool = false,
+) -> ((Int) -> Int?) raise PdfError {
+  pdf_charcode_extractor_of_font_real(document.read_font(font), debug~)
 }
 
 ///|
@@ -10732,6 +10805,15 @@ pub fn PdfDocument::write_font(
       )
     _ => raise FontWriteUnsupported
   }
+}
+
+///|
+pub fn pdf_write_font(
+  document : PdfDocument,
+  font : PdfFont,
+  objnum? : Int? = None,
+) -> Int raise PdfError {
+  document.write_font(font, objnum~)
 }
 
 ///|

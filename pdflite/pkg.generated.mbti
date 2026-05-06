@@ -163,11 +163,17 @@ pub fn pdf_ccitt_g4_encode_view(Int, Int, BytesView) -> Bytes raise PdfError
 
 pub fn pdf_change_pages(Bool, PdfDocument, ArrayView[PdfPage], matrices? : ArrayView[(Int, TransformMatrix)], changes? : ArrayView[(Int, Int)]) -> PdfDocument raise PdfError
 
+pub fn pdf_charcode_extractor_of_font(PdfDocument, PdfObject, debug? : Bool) -> ((Int) -> Int?) raise PdfError
+
+pub fn pdf_charcode_extractor_of_font_real(PdfFont, debug? : Bool) -> (Int) -> Int?
+
 pub fn pdf_codepoint_of_pdfdocencoding_byte(Int) -> Int raise PdfError
 
 pub fn pdf_codepoints_of_pdfdocencoding(BytesView) -> Array[Int] raise PdfError
 
 pub fn pdf_codepoints_of_pdfdocstring(BytesView) -> Array[Int] raise PdfError
+
+pub fn pdf_codepoints_of_text(PdfTextExtractor, BytesView) -> Array[Int] raise PdfError
 
 pub fn pdf_codepoints_of_utf16be(BytesView) -> Array[Int] raise PdfError
 
@@ -273,6 +279,8 @@ pub fn pdf_get_image_24bpp(PdfDocument, PdfObject, PdfObject) -> PdfImage raise 
 
 pub fn pdf_get_jpeg_data(ByteCursor) -> Bytes raise PdfError
 
+pub fn pdf_glyphnames_of_text(PdfTextExtractor, BytesView) -> Array[PdfName] raise PdfError
+
 pub fn pdf_image_bpc(PdfDocument, PdfObject) -> PdfObject?
 
 pub fn pdf_image_colspace(PdfDocument, PdfObject, PdfObject) -> PdfColourSpace raise PdfError
@@ -280,6 +288,8 @@ pub fn pdf_image_colspace(PdfDocument, PdfObject, PdfObject) -> PdfColourSpace r
 pub fn pdf_int_array_of_bytes(BytesView) -> Array[Int]
 
 pub fn pdf_is_delimiter_byte(Int) -> Bool
+
+pub fn pdf_is_identity_h(PdfFont) -> Bool
 
 pub fn pdf_is_linearized(BytesView) -> Bool
 
@@ -473,6 +483,8 @@ pub fn pdf_read_document_revision_from_view(BytesView, Int) -> PdfDocument raise
 
 pub fn pdf_read_document_revision_from_view_with_passwords(BytesView, Int, user_password? : BytesView?, owner_password? : BytesView?) -> PdfDecryptionResult? raise PdfError
 
+pub fn pdf_read_font(PdfDocument, PdfObject) -> PdfFont raise PdfError
+
 pub fn pdf_read_header_from_bytes(Bytes) -> PdfVersion raise PdfError
 
 pub fn pdf_read_header_from_view(BytesView) -> PdfVersion raise PdfError
@@ -549,6 +561,8 @@ pub fn pdf_string_of_content_ops(ArrayView[PdfContentOp]) -> Bytes raise PdfErro
 
 pub fn pdf_string_of_date(PdfDate) -> String raise PdfError
 
+pub fn pdf_string_of_font(PdfFont) -> String
+
 pub fn pdf_string_of_function(PdfFunction) -> String
 
 pub fn pdf_string_of_int_array(ArrayView[Int]) -> Bytes raise PdfError
@@ -565,9 +579,15 @@ pub fn pdf_string_of_pdf(PdfObject) -> Bytes raise PdfError
 
 pub fn pdf_string_of_pdf_including_data(PdfObject) -> Bytes raise PdfError
 
+pub fn pdf_string_of_standard_font(PdfStandardFont) -> String
+
 pub fn pdf_table_of_encoding(PdfEncoding) -> Array[(Int, PdfName)]
 
 pub fn pdf_target_of_pagenumber(PdfDocument, Int) -> PdfDestination raise PdfError
+
+pub fn pdf_text_extractor_of_font(PdfDocument, PdfObject) -> PdfTextExtractor raise PdfError
+
+pub fn pdf_text_extractor_of_font_real(PdfFont) -> PdfTextExtractor
 
 pub fn pdf_transform_annotations(PdfDocument, TransformMatrix, PdfObject) -> Unit raise PdfError
 
@@ -616,6 +636,8 @@ pub fn pdf_write_encrypted_aesv2_document_with_iv_provider(PdfDocument, BytesVie
 pub fn pdf_write_encrypted_aesv3_document_with_providers(PdfDocument, BytesView, BytesView, ArrayView[PdfPermission], (PdfAesV3RandomField, Int) -> Bytes raise PdfError, (Int, Int, Int) -> Bytes raise PdfError, iso? : Bool, encrypt_metadata? : Bool, mode? : PdfWriteMode, file_id? : BytesView) -> Bytes raise PdfError
 
 pub fn pdf_write_encrypted_aesv3_iso_document_with_providers(PdfDocument, BytesView, BytesView, ArrayView[PdfPermission], (PdfAesV3RandomField, Int) -> Bytes raise PdfError, (Int, Int, Int) -> Bytes raise PdfError, encrypt_metadata? : Bool, mode? : PdfWriteMode, file_id? : BytesView) -> Bytes raise PdfError
+
+pub fn pdf_write_font(PdfDocument, PdfFont, objnum? : Int?) -> Int raise PdfError
 
 pub fn pdf_write_hex_string(BytesView) -> Bytes
 

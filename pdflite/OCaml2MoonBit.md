@@ -167,6 +167,19 @@ source. Annotate helpers such as `fn helper(...) -> T { ... }` instead of
 relying on return inference.
 
 ```sh
+moon run -c 'suberror E
+fn make(flag : Bool) -> ((Int) -> Int?) raise E { if flag { raise E } else { fn(x) { Some(x) } } }
+fn main { println((try! make(false))(3).unwrap()) }'
+# 3
+```
+
+When a MoonBit function can raise and returns another function, parenthesize the
+returned function type before the `raise` clause: use
+`-> ((A) -> B) raise E`, not `-> (A) -> B raise E`. Without the parentheses,
+the `raise` clause belongs to the returned function type, which is not what
+OCaml callback-returning APIs usually mean.
+
+```sh
 moon run -c 'fn main { let empty = Bytes::new(0); let zeros = Bytes::new(2); println(empty.length()); println(zeros.length()); println(zeros[0].to_int()) }'
 # 0
 # 2
