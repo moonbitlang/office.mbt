@@ -265,6 +265,29 @@ fn pdf_markdown_is_space(codepoint : Int) -> Bool {
 }
 
 ///|
+fn pdf_markdown_is_non_text_control(codepoint : Int) -> Bool {
+  (
+    codepoint >= 0 &&
+    codepoint < 0x20 &&
+    !pdf_markdown_is_space(codepoint) &&
+    codepoint != 0x0A &&
+    codepoint != 0x0D
+  ) ||
+  (codepoint >= 0x7F && codepoint <= 0x9F)
+}
+
+///|
+let pdf_markdown_replacement_codepoint : Int = 0xFFFD
+
+///|
+fn pdf_markdown_push_replacement(output : Array[Int]) -> Unit {
+  if pdf_markdown_last_codepoint(output) !=
+    Some(pdf_markdown_replacement_codepoint) {
+    output.push(pdf_markdown_replacement_codepoint)
+  }
+}
+
+///|
 fn pdf_markdown_normalize_codepoints(codepoints : ArrayView[Int]) -> Array[Int] {
   let output : Array[Int] = []
   let mut pending_space = false
@@ -279,6 +302,14 @@ fn pdf_markdown_normalize_codepoints(codepoints : ArrayView[Int]) -> Array[Int] 
           if output.length() > 0 {
             pending_space = true
           }
+        } else if pdf_markdown_is_non_text_control(codepoint) {
+          if pending_space &&
+            output.length() > 0 &&
+            pdf_markdown_last_codepoint(output) != Some(0x0A) {
+            output.push(0x20)
+          }
+          pdf_markdown_push_replacement(output)
+          pending_space = false
         } else {
           if pending_space &&
             output.length() > 0 &&

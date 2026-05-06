@@ -40,6 +40,9 @@ library API.
   and CJK-heavy documents whose redistribution terms are clear.~~
 - [x] ~~Fix the first core extraction bugs found by the comparison loop, and
   record each fixed bug in `CamlPDFMigrationTodo.md`.~~
+- [x] ~~Sanitize non-text control scalars in Markdown output and verify the
+  external Adobe supplement and Unicode CJK chart pdflite outputs contain no
+  raw C0/C1 controls.~~
 - [ ] Continue fixing extraction/layout bugs found by the comparison loop.
 
 ## First Converter Contract

@@ -138,8 +138,13 @@ Current backend snapshot:
   produces only page headings in pdflite while MarkItDown extracts chart text;
   fix Markdown form-XObject traversal and cache shared font extractors so the
   chart extracts at practical speed.~~
+- [x] ~~Sanitize non-text C0/C1 control scalars at the Markdown boundary so
+  fallback glyph/control codes from real PDFs do not write raw control bytes to
+  `.md` output; refreshed external comparison shows no raw controls in the
+  Adobe supplement or Unicode CJK chart pdflite outputs.~~
 - [ ] Review remaining Unicode CJK chart Markdown quality gaps against
-  MarkItDown, especially layout, line joining, and any missing chart cells.
+  MarkItDown and pdftotext, especially layout/reading order, line joining,
+  unresolved glyph placeholders, and any missing chart cells.
 - [x] ~~Add Type3 glyph-program/resource coverage where a CharProc consumes
   Type3 `/Resources` through an XObject and named inline-image color space.~~
 - [ ] Add fixture-driven Type3 glyph-program/resource coverage from real PDFs

@@ -48,6 +48,45 @@ fn markdown_standard_font_for_test() -> @pdflite.PdfObject raise {
 }
 
 ///|
+fn markdown_control_font_for_test() -> @pdflite.PdfObject {
+  @pdflite.pdf_dictionary([
+    (
+      markdown_name_for_test("/Type"),
+      PdfNameObject(markdown_name_for_test("/Font")),
+    ),
+    (
+      markdown_name_for_test("/Subtype"),
+      PdfNameObject(markdown_name_for_test("/Type1")),
+    ),
+    (
+      markdown_name_for_test("/BaseFont"),
+      PdfNameObject(markdown_name_for_test("/Helvetica")),
+    ),
+    (
+      markdown_name_for_test("/Encoding"),
+      @pdflite.pdf_dictionary([
+        (
+          markdown_name_for_test("/BaseEncoding"),
+          PdfNameObject(markdown_name_for_test("/StandardEncoding")),
+        ),
+        (
+          markdown_name_for_test("/Differences"),
+          PdfArray([
+            PdfInteger(1),
+            PdfNameObject(markdown_name_for_test("/controlSTX")),
+            PdfNameObject(markdown_name_for_test("/controlDEL")),
+            PdfNameObject(markdown_name_for_test("/controlHT")),
+            PdfNameObject(markdown_name_for_test("/controlLF")),
+            PdfNameObject(markdown_name_for_test("/controlFF")),
+            PdfNameObject(markdown_name_for_test("/controlCR")),
+          ]),
+        ),
+      ]),
+    ),
+  ])
+}
+
+///|
 fn markdown_latin_document_for_test() -> @pdflite.PdfDocument raise {
   let doc = @pdflite.pdf_document_empty()
   doc.set_version(1, 4)
@@ -91,6 +130,31 @@ fn markdown_latin_document_for_test() -> @pdflite.PdfDocument raise {
     resources,
   }
   let page_root = doc.add_pagetree([page1, page2])
+  ignore(doc.add_root(page_root, []))
+  doc
+}
+
+///|
+fn markdown_control_text_document_for_test() -> @pdflite.PdfDocument raise {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  let resources = markdown_font_resources_for_test(
+    markdown_control_font_for_test(),
+  )
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [
+      @pdflite.pdf_content_stream_of_ops([
+        Op_BT,
+        Op_Tf(markdown_name_for_test("/F0"), 12.0),
+        Op_Tj(markdown_bytes_for_test([65, 3, 1, 2, 3, 66])),
+        Op_Tj(markdown_bytes_for_test([4, 66, 5, 65, 6, 66])),
+        Op_ET,
+      ]),
+    ],
+    resources,
+  }
+  let page_root = doc.add_pagetree([page])
   ignore(doc.add_root(page_root, []))
   doc
 }
@@ -420,6 +484,16 @@ test "pdf_document_to_markdown skips missing and non-form XObjects" {
       markdown_missing_xobject_dictionary_document_for_test(),
     ),
     "# Page 1\n\n\n",
+  )
+}
+
+///|
+test "pdf_document_to_markdown sanitizes non-text controls" {
+  @test.assert_eq(
+    @markdown.pdf_document_to_markdown(
+      markdown_control_text_document_for_test(),
+    ),
+    "# Page 1\n\nA \u{FFFD} B\nB A\nB\n",
   )
 }
 
