@@ -569,6 +569,42 @@ pub fn PdfStreamPredictor::number(self : PdfStreamPredictor) -> Int {
 }
 
 ///|
+pub fn pdf_ccitt_encode_view(
+  columns : Int,
+  rows : Int,
+  data : BytesView,
+) -> PdfBytes raise PdfError {
+  pdf_ccitt_encode_g3_1d_view(data, columns, rows)
+}
+
+///|
+pub fn pdf_ccitt_encode(
+  columns : Int,
+  rows : Int,
+  data : PdfBytes,
+) -> PdfBytes raise PdfError {
+  pdf_ccitt_encode_view(columns, rows, data[:])
+}
+
+///|
+pub fn pdf_ccitt_g4_encode_view(
+  columns : Int,
+  rows : Int,
+  data : BytesView,
+) -> PdfBytes raise PdfError {
+  pdf_ccitt_encode_g4_view(data, columns, rows)
+}
+
+///|
+pub fn pdf_ccitt_g4_encode(
+  columns : Int,
+  rows : Int,
+  data : PdfBytes,
+) -> PdfBytes raise PdfError {
+  pdf_ccitt_g4_encode_view(columns, rows, data[:])
+}
+
+///|
 fn pdf_filter_is_name(filter : PdfName, name : PdfName) -> Bool {
   filter == name
 }

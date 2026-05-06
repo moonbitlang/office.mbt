@@ -147,7 +147,9 @@ work changes.
    CCITT decode honors CamlPDF-compatible `/DecodeParms` defaults, direct
    indirect parameters, and the `/CCF` alias; typed CCITT Group 3 and Group 4
    encoding writes `/DecodeParms` so encoded streams round-trip through
-   pdflite's decoder.
+   pdflite's decoder. The `.repos/pdfcodec.mli` direct byte-helper surface is
+   also represented by public Group 3 and Group 4 CCITT encoders with borrowed
+   `BytesView` variants.
    Direct Flate, filter, and stream encoding APIs now accept explicit zlib-style
    levels 0 through 9, exposing CamlPDF's `flate_level` workflow without global
    mutable state; fast levels still fall back to stored blocks for
@@ -439,7 +441,7 @@ gates are solid; backend breadth follows after native feature parity.
 
 Current estimate: native main-feature parity is about 96% complete. Full
 CamlPDF parity, including deferred filter families, deeper malformed recovery,
-and backend breadth, is about 84-89% complete.
+and backend breadth, is about 85-90% complete.
 
 ### P0: Finish Native Main Workflows
 
@@ -580,8 +582,8 @@ and backend breadth, is about 84-89% complete.
   text extraction.
 - Covered: all-target `moon check --target all --warn-list +73` type-checks
   cleanly after native stabilization. WasmGC and JavaScript test suites now
-  pass with 1099 tests each, and plain-Wasm build-only validation succeeds for
-  the package and generated tests. Plain-Wasm smoke validation now runs 495
+  pass with 1101 tests each, and plain-Wasm build-only validation succeeds for
+  the package and generated tests. Plain-Wasm smoke validation now runs 497
   tests by keeping the largest corpus/text regression suites on wasm-gc,
   JavaScript, native, and future LLVM only.
 - Deferred: full all-backend test stabilization. Full plain-Wasm test execution

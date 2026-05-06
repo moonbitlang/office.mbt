@@ -599,7 +599,10 @@ MoonBit consequences for this project:
    direct indirect decode parameters. Typed CCITT Group 3 `/K 0` and Group 4
    `/K < 0` encoding is also started for `PdfStreamCCITT(columns, rows)` and
    `PdfStreamCCITTG4(columns, rows)`, including generated `/DecodeParms` and
-   decode round-trip coverage. Stream filter
+   decode round-trip coverage. The direct `.repos/pdfcodec.mli`
+   `encode_ccitt` and `encode_ccittg4` byte-helper surface is represented by
+   public Group 3 and Group 4 helpers plus borrowed `BytesView` variants.
+   Stream filter
    encode/decode now materializes `StreamToGet` data only at the owned-byte
    boundary required by codec transforms. A
    document-aware `PdfDocument::pdf_decode_stream` path is now started for
@@ -1738,6 +1741,8 @@ reader or writer invariant is narrower than a whole-document workflow:
 - encode CCITT Group 4 `/K < 0` streams through
   `PdfStreamCCITTG4(columns, rows)` with generated `/DecodeParms` and decode
   round-trip coverage;
+- expose `.repos/pdfcodec.mli`-style direct CCITT Group 3 and Group 4 byte
+  helpers, with `BytesView` variants and stream decode round-trip tests;
 - extract images from page resources and parsed content after compressed
   xref-stream write/read boundaries, including Flate-decoded raw `/Indexed`
   image XObjects, CCITT image XObjects decoded to RGB24, staged Flate-then-DCT
@@ -1866,7 +1871,7 @@ All-target type checking now passes with
 `moon check --target all --warn-list +73`. Backend validation is now partly
 widened: WasmGC and JavaScript run the full non-native suites successfully, and
 plain Wasm build-only validation succeeds. Plain-Wasm smoke validation now runs
-495 tests after excluding the largest corpus/text regression suites from that
+497 tests after excluding the largest corpus/text regression suites from that
 target while retaining them on wasm-gc, JavaScript, native, and future LLVM.
 Remaining backend work is to reduce or split those largest regression suites so
 the full plain-Wasm package tests instantiate under the runtime function-size

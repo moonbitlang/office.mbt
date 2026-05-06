@@ -15,10 +15,10 @@ Current backend snapshot:
 
 - Native: full suite passing with complete source coverage.
 - WasmGC and JavaScript: full non-native test suites pass.
-- Wasm: backend smoke suite passes after keeping the largest corpus/text
-  regression files on wasm-gc/js/native/llvm; full plain-Wasm suite is still
-  deferred because the generated package-level module exceeds the runtime's
-  maximum function-size limit.
+- Wasm: backend smoke suite passes with 497 tests after keeping the largest
+  corpus/text regression files on wasm-gc/js/native/llvm; full plain-Wasm suite
+  is still deferred because the generated package-level module exceeds the
+  runtime's maximum function-size limit.
 - LLVM: blocked by the current toolchain's missing LLVM stdlib bundle.
 
 ## Tracking Rules
@@ -59,6 +59,9 @@ Current backend snapshot:
 - [x] ~~Route native normal Flate encode/decode through CamlPDF's vendored
   miniz-compatible C path, while keeping the pure MoonBit codec for non-native
   targets and prefix decoding.~~
+- [x] ~~Expose `.repos/pdfcodec.mli`-referenced direct CCITT Group 3 and Group
+  4 byte encoder helpers with `BytesView` variants, and validate them through
+  normal `/CCITTFaxDecode` stream decoding.~~
 - [x] ~~Avoid the extra owned-byte copy on `PdfBytes` Flate filter
   encode/decode dispatch by routing owned byte paths directly to Flate APIs.~~
 - [x] ~~Return native miniz Flate encode/decode payloads directly through a
@@ -475,6 +478,8 @@ Current backend snapshot:
   round-trip coverage.~~
 - [x] ~~Typed CCITT Group 4 `/K < 0` stream encoding with `/DecodeParms`
   round-trip coverage.~~
+- [x] ~~Direct `.repos/pdfcodec.mli` CCITT Group 3 and Group 4 byte helpers,
+  including borrowed `BytesView` inputs and decode round-trip tests.~~
 - [x] ~~Real xref-stream/object-stream malformed-startxref recovery through a
   checked-in CamlPDF fixture, multi-page text extraction, compressed rewrite,
   and reread.~~
@@ -671,10 +676,10 @@ Current backend snapshot:
 - [x] ~~All-target type checking passes with `moon check --target all
   --warn-list +73`; full non-native test validation remains deferred.~~
 - [x] ~~WasmGC and JavaScript backend test suites pass after native
-  stabilization, each with 1099 tests.~~
+  stabilization, each with 1101 tests.~~
 - [x] ~~Plain Wasm backend build-only validation passes for the package and
   generated tests.~~
-- [x] ~~Plain Wasm backend smoke validation passes with 495 tests after
+- [x] ~~Plain Wasm backend smoke validation passes with 497 tests after
   excluding the largest corpus/text regression files from plain Wasm while
   retaining them on wasm-gc, JavaScript, native, and future LLVM.~~
 - [ ] Split or otherwise reduce the largest regression suites so full
@@ -725,6 +730,8 @@ Current backend snapshot:
 - [x] ~~Decide and start one CCITT/JPEG decode implementation slice.~~
 - [x] ~~Add CCITT Group 3 encode parity for typed stream encoding.~~
 - [x] ~~Add CCITT Group 4 encode parity for typed stream encoding.~~
+- [x] ~~Expose direct CCITT Group 3 and Group 4 byte encoder parity from
+  `.repos/pdfcodec.mli`.~~
 - [x] ~~Add a CCITT image XObject native acceptance gate.~~
 - [x] ~~Add a checked-in real PDF read/write corpus gate.~~
 - [x] ~~Widen checked-in real PDF text extraction across multiple pages and
