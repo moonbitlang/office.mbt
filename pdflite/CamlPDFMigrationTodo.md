@@ -210,6 +210,9 @@ Current backend snapshot:
 - [x] ~~Add malformed xref-stream recovery coverage for unknown entry types:
   physical objects whose xref-stream kind is outside 0/1/2 are skipped rather
   than loaded, matching CamlPDF's null-entry treatment.~~
+- [x] ~~Add strict and reconstructed xref-stream coverage for `/W [0 ... ...]`
+  omitted type fields, validating PDF-spec default in-use entries through
+  bad-startxref recovery.~~
 - [ ] Add more malformed xref-table/xref-stream/object-stream recovery cases
   from real-world PDFs.
 - [x] ~~Add a native reader-boundary gate for the next available predefined CMap
@@ -924,6 +927,8 @@ Current backend snapshot:
   section.~~
 - [x] ~~Malformed object-stream recovery tolerates direct stream members inside
   `/ObjStm` data and repairs their stream length from `endstream`.~~
+- [x] ~~Xref-stream reads and bad-startxref reconstruction now have explicit
+  coverage for omitted type fields (`/W [0 4 2]`) defaulting to in-use entries.~~
 - [ ] Broader malformed xref-table/xref-stream/object-stream recovery beyond
   the current bad-startxref real-corpus, multi-revision, and encrypted
   object-stream gates.
