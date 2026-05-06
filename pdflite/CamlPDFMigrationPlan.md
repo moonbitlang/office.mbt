@@ -1478,7 +1478,12 @@ MoonBit consequences for this project:
     `/ClassMap`, `/Namespaces`, `/PronunciationLexicon`, and `/AF`. Optional
     top-level `/Document` wrapping is started behind
     `add_toplevel_document=true`, adding the PDF/UA-2 namespace and placing
-    merged `/K` children under that document node.
+    merged `/K` children under that document node. The standalone
+    `pdf_trim_structure_tree` and `pdf_merge_structure_trees` helpers now expose
+    the `.repos/pdfst.mli` workflow directly: the merge helper accepts a
+    part-merged target document plus original documents, reads already-copied
+    structure dictionaries from the target, and returns CamlPDF-shaped root
+    object numbers, including the single-direct-root `0` fallback.
 
 12. Async I/O and command-facing APIs.
     Add async native-target wrappers for reading and writing files after the

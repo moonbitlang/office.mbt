@@ -337,6 +337,8 @@ pub fn pdf_merge_number_trees_no_clash(PdfDocument, ArrayView[PdfObject]) -> Pdf
 
 pub fn pdf_merge_pdfs(Bool, Bool, ArrayView[String], ArrayView[PdfDocument], ArrayView[Array[Int]], process_struct_trees? : Bool, add_toplevel_document? : Bool) -> PdfDocument raise PdfError
 
+pub fn pdf_merge_structure_trees(PdfDocument, ArrayView[PdfDocument], add_toplevel_document? : Bool) -> Int? raise PdfError
+
 pub fn pdf_minimum_valid_pdf() -> PdfDocument raise PdfError
 
 pub fn pdf_name_of_bytes(Bytes) -> PdfName
@@ -604,6 +606,8 @@ pub fn pdf_transform_annotations(PdfDocument, TransformMatrix, PdfObject) -> Uni
 pub fn pdf_transform_bookmark(PdfDocument, TransformMatrix, PdfBookmark) -> PdfBookmark raise PdfError
 
 pub fn pdf_transform_destination(PdfDocument, TransformMatrix, PdfDestination) -> PdfDestination raise PdfError
+
+pub fn pdf_trim_structure_tree(PdfDocument, ArrayView[Int]) -> Unit raise PdfError
 
 pub fn pdf_user_password_from_owner_password(Int, BytesView, BytesView, Int) -> Bytes raise PdfError
 

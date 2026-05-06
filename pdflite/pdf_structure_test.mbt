@@ -47,6 +47,71 @@ fn structure_parent_tree_entries_from_catalog_for_test(
 }
 
 ///|
+fn structure_merge_add_root_and_child_for_test(
+  doc : @pdflite.PdfDocument,
+  root_number : Int,
+  child_number : Int,
+  parent_key : Int,
+  label : String,
+) -> Unit {
+  let key_parent_tree = structure_name_for_test("/ParentTree")
+  let key_k = structure_name_for_test("/K")
+  let key_label = structure_name_for_test("/Label")
+  doc.add_object_given_number(
+    root_number,
+    @pdflite.pdf_dictionary([
+      (key_k, PdfIndirect(child_number)),
+      (
+        key_parent_tree,
+        doc.build_number_tree([(parent_key, PdfIndirect(child_number))]),
+      ),
+    ]),
+  )
+  doc.add_object_given_number(
+    child_number,
+    @pdflite.pdf_dictionary([
+      (key_k, PdfInteger(0)),
+      (key_label, PdfString(@ascii.encode(label))),
+    ]),
+  )
+}
+
+///|
+fn structure_merge_source_doc_for_test(
+  root_number : Int,
+  child_number : Int,
+  parent_key : Int,
+  label : String,
+) -> @pdflite.PdfDocument {
+  let key_struct_tree_root = structure_name_for_test("/StructTreeRoot")
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_root(1)
+  doc.add_object_given_number(
+    1,
+    @pdflite.pdf_dictionary([(key_struct_tree_root, PdfIndirect(root_number))]),
+  )
+  structure_merge_add_root_and_child_for_test(
+    doc, root_number, child_number, parent_key, label,
+  )
+  doc
+}
+
+///|
+fn structure_direct_root_doc_for_test() -> @pdflite.PdfDocument {
+  let key_struct_tree_root = structure_name_for_test("/StructTreeRoot")
+  let key_k = structure_name_for_test("/K")
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_root(1)
+  doc.add_object_given_number(
+    1,
+    @pdflite.pdf_dictionary([
+      (key_struct_tree_root, @pdflite.pdf_dictionary([(key_k, PdfInteger(0))])),
+    ]),
+  )
+  doc
+}
+
+///|
 test "pdf_renumber_parent_trees uses trailer root parent trees" {
   let key_root = structure_name_for_test("/Root")
   let key_struct_tree_root = structure_name_for_test("/StructTreeRoot")
@@ -292,16 +357,134 @@ test "pdf_renumber_parent_trees leaves a single document unchanged" {
 }
 
 ///|
+test "pdf_merge_structure_trees handles no roots and single-root cases" {
+  let empty_target = @pdflite.pdf_document_empty()
+  @test.assert_eq(@pdflite.pdf_merge_structure_trees(empty_target, []), None)
+
+  let target = @pdflite.pdf_document_empty()
+  structure_merge_add_root_and_child_for_test(target, 30, 31, 5, "single")
+  let single = structure_merge_source_doc_for_test(30, 31, 5, "single")
+  @test.assert_eq(
+    @pdflite.pdf_merge_structure_trees(target, [single]),
+    Some(30),
+  )
+  @test.assert_eq(
+    target
+    .lookup_object_or_null(31)
+    .lookup_immediate(structure_name_for_test("/P")),
+    None,
+  )
+
+  let direct = structure_direct_root_doc_for_test()
+  @test.assert_eq(
+    @pdflite.pdf_merge_structure_trees(empty_target, [direct]),
+    Some(0),
+  )
+}
+
+///|
+test "pdf_merge_structure_trees merges structure kids and parent tree entries" {
+  let key_k = structure_name_for_test("/K")
+  let key_p = structure_name_for_test("/P")
+  let key_parent_tree = structure_name_for_test("/ParentTree")
+  let first = structure_merge_source_doc_for_test(30, 31, 5, "first")
+  let second = structure_merge_source_doc_for_test(40, 41, 9, "second")
+  let target = @pdflite.pdf_document_empty()
+  structure_merge_add_root_and_child_for_test(target, 30, 31, 5, "first")
+  structure_merge_add_root_and_child_for_test(target, 40, 41, 9, "second")
+
+  guard @pdflite.pdf_merge_structure_trees(target, [first, second])
+    is Some(root_number) else {
+    fail("expected merged structure tree root")
+  }
+
+  let root = target.lookup_object_or_null(root_number)
+  @test.assert_eq(
+    root.lookup_immediate(key_k),
+    Some(PdfArray([PdfIndirect(31), PdfIndirect(41)])),
+  )
+  @test.assert_eq(
+    target.lookup_object_or_null(31).lookup_immediate(key_p),
+    Some(PdfIndirect(root_number)),
+  )
+  @test.assert_eq(
+    target.lookup_object_or_null(41).lookup_immediate(key_p),
+    Some(PdfIndirect(root_number)),
+  )
+  guard target.lookup_direct(key_parent_tree, PdfIndirect(root_number))
+    is Some(parent_tree) else {
+    fail("expected merged parent tree")
+  }
+  let parent_entries = target.read_number_tree(parent_tree)
+  @test.assert_eq([ for entry in parent_entries => entry.0 ], [5, 9])
+  @test.assert_eq([ for entry in parent_entries => entry.1 ], [
+    PdfIndirect(31),
+    PdfIndirect(41),
+  ])
+}
+
+///|
+test "pdf_merge_structure_trees can add a top-level Document node" {
+  let key_k = structure_name_for_test("/K")
+  let key_ns = structure_name_for_test("/NS")
+  let key_namespaces = structure_name_for_test("/Namespaces")
+  let key_p = structure_name_for_test("/P")
+  let key_s = structure_name_for_test("/S")
+  let first = structure_merge_source_doc_for_test(30, 31, 5, "first")
+  let second = structure_merge_source_doc_for_test(40, 41, 9, "second")
+  let target = @pdflite.pdf_document_empty()
+  structure_merge_add_root_and_child_for_test(target, 30, 31, 5, "first")
+  structure_merge_add_root_and_child_for_test(target, 40, 41, 9, "second")
+
+  guard @pdflite.pdf_merge_structure_trees(
+      target,
+      [first, second],
+      add_toplevel_document=true,
+    )
+    is Some(root_number) else {
+    fail("expected merged structure tree root")
+  }
+
+  let root = target.lookup_object_or_null(root_number)
+  guard root.lookup_immediate(key_k) is Some(PdfIndirect(document_number)) else {
+    fail("expected top-level document node")
+  }
+  let top_level = target.lookup_object_or_null(document_number)
+  @test.assert_eq(
+    top_level.lookup_immediate(key_s),
+    Some(PdfNameObject(structure_name_for_test("/Document"))),
+  )
+  @test.assert_eq(
+    top_level.lookup_immediate(key_p),
+    Some(PdfIndirect(root_number)),
+  )
+  @test.assert_eq(
+    top_level.lookup_immediate(key_k),
+    Some(PdfArray([PdfIndirect(31), PdfIndirect(41)])),
+  )
+  guard root.lookup_immediate(key_namespaces) is Some(PdfArray([ns_entry])) else {
+    fail("expected PDF/UA-2 namespace entry")
+  }
+  guard ns_entry is PdfIndirect(namespace_number) else {
+    fail("expected indirect namespace entry")
+  }
+  @test.assert_eq(
+    target.lookup_object_or_null(namespace_number).lookup_immediate(key_ns),
+    Some(PdfString(@ascii.encode("http://iso.org/pdf2/ssn"))),
+  )
+}
+
+///|
 test "PdfDocument trim_structure_tree removes parents whose kids target deleted objects" {
   let key_k = structure_name_for_test("/K")
   let key_obj = structure_name_for_test("/Obj")
   let doc = @pdflite.pdf_document_empty()
-  let page_root = try! doc.add_pagetree([
+  let page_root = doc.add_pagetree([
     @pdflite.pdf_page_blank(@pdflite.paper_a4),
     @pdflite.pdf_page_blank(@pdflite.paper_a4),
   ])
-  ignore(try! doc.add_root(page_root, []))
-  let page_numbers = try! doc.page_reference_numbers()
+  ignore(doc.add_root(page_root, []))
+  let page_numbers = doc.page_reference_numbers()
   doc.add_object_given_number(
     30,
     @pdflite.pdf_dictionary([(key_k, PdfArray([PdfIndirect(31)]))]),
@@ -313,7 +496,7 @@ test "PdfDocument trim_structure_tree removes parents whose kids target deleted 
       (key_k, PdfInteger(0)),
     ]),
   )
-  try! doc.trim_structure_tree([1])
+  @pdflite.pdf_trim_structure_tree(doc, [1])
   @test.assert_eq(doc.lookup_object_or_null(30), PdfNull)
   @test.assert_eq(
     doc.lookup_object_or_null(31).lookup_immediate(key_obj),
