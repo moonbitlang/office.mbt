@@ -1383,6 +1383,7 @@ fn PdfDocument::pdf_merge_oldstyle_destinations(
   changes : ArrayView[(Int, Int)],
   name_changes : ArrayView[(PdfName, PdfName)],
 ) -> Array[(PdfName, PdfObject)] raise PdfError {
+  let change_map = pdf_page_reference_map(changes)
   match self.pdf_merge_catalog_entry(pdf_merge_dests_key()) {
     Some(PdfDictionary(entries)) => {
       let output : Array[(PdfName, PdfObject)] = []
@@ -1392,12 +1393,12 @@ fn PdfDocument::pdf_merge_oldstyle_destinations(
           key, name_changes,
         )
         let renamed_destination = pdf_object_of_destination(
-          pdf_merge_renumber_destination(
+          pdf_merge_renumber_destination_with_map(
             self.read_destination(destination, shallow=true),
-            changes,
+            change_map,
           ),
         ) catch {
-          _ => pdf_page_renumber_object(destination, changes)
+          _ => pdf_page_renumber_object_with_map(destination, change_map)
         }
         output.push((renamed_key, renamed_destination))
       }
@@ -1413,6 +1414,7 @@ fn PdfDocument::pdf_merge_nametree_destinations(
   changes : ArrayView[(Int, Int)],
   name_changes : ArrayView[(PdfBytes, PdfBytes)],
 ) -> Array[(PdfBytes, PdfObject)] raise PdfError {
+  let change_map = pdf_page_reference_map(changes)
   match self.pdf_merge_catalog_entry(pdf_merge_names_key()) {
     Some(names) =>
       match self.lookup_direct(pdf_merge_dests_key(), names) {
@@ -1424,12 +1426,12 @@ fn PdfDocument::pdf_merge_nametree_destinations(
               key, name_changes,
             )
             let renamed_destination = pdf_object_of_destination(
-              pdf_merge_renumber_destination(
+              pdf_merge_renumber_destination_with_map(
                 self.read_destination(destination, shallow=true),
-                changes,
+                change_map,
               ),
             ) catch {
-              _ => pdf_page_renumber_object(destination, changes)
+              _ => pdf_page_renumber_object_with_map(destination, change_map)
             }
             output.push((renamed_key, renamed_destination))
           }
@@ -1494,59 +1496,66 @@ fn PdfDocument::pdf_merge_add_named_destinations(
 }
 
 ///|
-fn pdf_merge_renumber_target_page(
+fn pdf_merge_renumber_target_page_with_map(
   target : PdfTargetPage,
-  changes : ArrayView[(Int, Int)],
+  changes : PdfPageReferenceMap,
 ) -> PdfTargetPage {
   match target {
     TargetPageObject(number) =>
-      TargetPageObject(pdf_page_changed_reference(changes, number))
+      TargetPageObject(changes.changed_reference(number))
     TargetOtherDocPageNumber(_) => target
   }
 }
 
 ///|
-fn pdf_merge_renumber_destination(
+fn pdf_merge_renumber_destination_with_map(
   destination : PdfDestination,
-  changes : ArrayView[(Int, Int)],
+  changes : PdfPageReferenceMap,
 ) -> PdfDestination {
   match destination {
-    DestAction(action) => DestAction(pdf_page_renumber_object(action, changes))
+    DestAction(action) =>
+      DestAction(pdf_page_renumber_object_with_map(action, changes))
     DestNull => DestNull
     DestNamed(_) => destination
     DestString(_) => destination
     DestXYZ(target, left, top, zoom) =>
-      DestXYZ(pdf_merge_renumber_target_page(target, changes), left, top, zoom)
-    DestFit(target) => DestFit(pdf_merge_renumber_target_page(target, changes))
+      DestXYZ(
+        pdf_merge_renumber_target_page_with_map(target, changes),
+        left,
+        top,
+        zoom,
+      )
+    DestFit(target) =>
+      DestFit(pdf_merge_renumber_target_page_with_map(target, changes))
     DestFitH(target, top) =>
-      DestFitH(pdf_merge_renumber_target_page(target, changes), top)
+      DestFitH(pdf_merge_renumber_target_page_with_map(target, changes), top)
     DestFitV(target, left) =>
-      DestFitV(pdf_merge_renumber_target_page(target, changes), left)
+      DestFitV(pdf_merge_renumber_target_page_with_map(target, changes), left)
     DestFitR(target, left, bottom, right, top) =>
       DestFitR(
-        pdf_merge_renumber_target_page(target, changes),
+        pdf_merge_renumber_target_page_with_map(target, changes),
         left,
         bottom,
         right,
         top,
       )
     DestFitB(target) =>
-      DestFitB(pdf_merge_renumber_target_page(target, changes))
+      DestFitB(pdf_merge_renumber_target_page_with_map(target, changes))
     DestFitBH(target, top) =>
-      DestFitBH(pdf_merge_renumber_target_page(target, changes), top)
+      DestFitBH(pdf_merge_renumber_target_page_with_map(target, changes), top)
     DestFitBV(target, left) =>
-      DestFitBV(pdf_merge_renumber_target_page(target, changes), left)
+      DestFitBV(pdf_merge_renumber_target_page_with_map(target, changes), left)
   }
 }
 
 ///|
-fn pdf_merge_renumber_bookmark(
+fn pdf_merge_renumber_bookmark_with_map(
   bookmark : PdfBookmark,
-  changes : ArrayView[(Int, Int)],
+  changes : PdfPageReferenceMap,
 ) -> PdfBookmark {
   {
     ..bookmark,
-    target: pdf_merge_renumber_destination(bookmark.target, changes),
+    target: pdf_merge_renumber_destination_with_map(bookmark.target, changes),
   }
 }
 
@@ -1702,12 +1711,13 @@ pub fn pdf_merge_documents(
   }
   let new_page_numbers = merged.page_reference_numbers()
   let changes = pdf_page_reference_changes(old_page_numbers, new_page_numbers)
+  let change_map = pdf_page_reference_map(changes)
   merged.pdf_page_renumber_references(changes)
   let merged = match open_action {
     Some(open_action) =>
       merged.pdf_merge_add_catalog_entry(
         pdf_merge_open_action_key(),
-        pdf_page_renumber_object(open_action, changes),
+        pdf_page_renumber_object_with_map(open_action, change_map),
       )
     None => merged
   }
@@ -1767,7 +1777,7 @@ pub fn pdf_merge_documents(
     merged.add_bookmarks(
       [
         for bookmark in bookmarks => {
-          pdf_merge_renumber_bookmark(bookmark, changes)
+          pdf_merge_renumber_bookmark_with_map(bookmark, change_map)
         }
       ],
     )

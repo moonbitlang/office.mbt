@@ -176,6 +176,9 @@ Current estimate:
 - [x] ~~Use the shared hash-backed `PdfNumberSet` for annotation popup-parent
   filtering, avoiding repeated linear parent scans when reading pages with
   many annotations.~~
+- [x] ~~Build a hash-backed page-reference change map once for `change_pages`
+  and object-renumbering passes, preserving first-change precedence while
+  avoiding repeated old-to-new page-reference scans across large object graphs.~~
 - [x] ~~Replace generated Adobe-GB1, Adobe-CNS1, and Adobe-Japan1 CID-range
   CMap reverse lookup nested charcode scans with Unicode/CID-to-charcode
   helpers, preserving deterministic lowest packed-charcode selection for

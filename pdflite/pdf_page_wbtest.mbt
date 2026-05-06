@@ -290,15 +290,21 @@ test "private page root and content helpers cover filtered shapes" {
 
 ///|
 test "private page object entry rewriting covers parser states" {
+  let reference_map = pdf_page_reference_map([(1, 7), (1, 9)])
+  @test.assert_eq(reference_map.changed_reference(1), 7)
+  @test.assert_eq(reference_map.changed_reference(2), 2)
   @test.assert_eq(
-    pdf_page_renumber_entry(
+    pdf_page_renumber_entry_with_map(
       pdf_object_entry(ObjectParsedAlreadyDecrypted(PdfIndirect(1))),
-      [(1, 7)],
+      reference_map,
     ),
     pdf_object_entry(ObjectParsedAlreadyDecrypted(PdfIndirect(7))),
   )
   @test.assert_eq(
-    pdf_page_renumber_entry(pdf_object_entry(ObjectToParse), [(1, 7)]),
+    pdf_page_renumber_entry_with_map(
+      pdf_object_entry(ObjectToParse),
+      reference_map,
+    ),
     pdf_object_entry(ObjectToParse),
   )
   let deleted_pages = pdf_number_set([1])

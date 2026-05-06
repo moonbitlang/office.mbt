@@ -69,9 +69,10 @@ fn PdfDocument::pdf_duplicate_stream_changes(
 pub fn PdfDocument::remove_duplicate_fonts(self : PdfDocument) -> Unit {
   let changes = self.pdf_duplicate_stream_changes()
   if changes.length() > 0 {
+    let change_map = pdf_page_reference_map(changes)
     self.pdf_page_renumber_references(changes)
     self.set_trailer_dict(
-      pdf_page_renumber_object(self.trailer_dict(), changes),
+      pdf_page_renumber_object_with_map(self.trailer_dict(), change_map),
     )
     for change in changes {
       let (duplicate_number, _) = change

@@ -720,6 +720,9 @@ MoonBit consequences for this project:
    nullification, and structure-tree trimming now share a package-local
    hash-backed `PdfNumberSet` for repeated integer membership checks while
    preserving existing insertion and canonicalization behavior.
+   `change_pages` and object renumbering now build a hash-backed page-reference
+   change map once per pass, preserving first-change precedence while avoiding
+   repeated old-to-new reference scans across the traversed object graph.
    Content stream support is now started with a byte-preserving `PdfContentOp`
    subset, uncompressed content stream construction, indirect stream parsing
    through `PdfDocument`, and parsing for the core path, color, XObject, and

@@ -979,32 +979,46 @@ pub fn PdfDocument::postpend_operators(
 }
 
 ///|
-fn pdf_page_changed_reference(
+priv struct PdfPageReferenceMap {
+  values : @hashmap.HashMap[Int, Int]
+}
+
+///|
+fn pdf_page_reference_map(
   changes : ArrayView[(Int, Int)],
-  number : Int,
-) -> Int {
+) -> PdfPageReferenceMap {
+  let values : @hashmap.HashMap[Int, Int] = @hashmap.HashMap::new()
   for change in changes {
     let (old_number, new_number) = change
-    if number == old_number {
-      break new_number
+    if !values.contains(old_number) {
+      values[old_number] = new_number
     }
-  } nobreak {
-    number
+  }
+  { values, }
+}
+
+///|
+fn PdfPageReferenceMap::changed_reference(
+  self : PdfPageReferenceMap,
+  number : Int,
+) -> Int {
+  match self.values.get(number) {
+    Some(new_number) => new_number
+    None => number
   }
 }
 
 ///|
-fn pdf_page_renumber_object(
+fn pdf_page_renumber_object_with_map(
   object : PdfObject,
-  changes : ArrayView[(Int, Int)],
+  changes : PdfPageReferenceMap,
 ) -> PdfObject {
   match object {
-    PdfIndirect(number) =>
-      PdfIndirect(pdf_page_changed_reference(changes, number))
+    PdfIndirect(number) => PdfIndirect(changes.changed_reference(number))
     PdfArray(items) => {
       let output : Array[PdfObject] = []
       for item in items {
-        output.push(pdf_page_renumber_object(item, changes))
+        output.push(pdf_page_renumber_object_with_map(item, changes))
       }
       PdfArray(output)
     }
@@ -1012,13 +1026,16 @@ fn pdf_page_renumber_object(
       let output : Array[(PdfName, PdfObject)] = []
       for entry in entries {
         let (key, value) = entry
-        output.push((key, pdf_page_renumber_object(value, changes)))
+        output.push((key, pdf_page_renumber_object_with_map(value, changes)))
       }
       PdfDictionary(output)
     }
     PdfStreamObject(stream) =>
       PdfStreamObject({
-        dictionary: pdf_page_renumber_object(stream.dictionary, changes),
+        dictionary: pdf_page_renumber_object_with_map(
+          stream.dictionary,
+          changes,
+        ),
         data: stream.data,
       })
     _ => object
@@ -1026,20 +1043,20 @@ fn pdf_page_renumber_object(
 }
 
 ///|
-fn pdf_page_renumber_entry(
+fn pdf_page_renumber_entry_with_map(
   entry : PdfObjectEntry,
-  changes : ArrayView[(Int, Int)],
+  changes : PdfPageReferenceMap,
 ) -> PdfObjectEntry {
   match entry.data {
     ObjectParsed(object) =>
       {
-        data: ObjectParsed(pdf_page_renumber_object(object, changes)),
+        data: ObjectParsed(pdf_page_renumber_object_with_map(object, changes)),
         generation: entry.generation,
       }
     ObjectParsedAlreadyDecrypted(object) =>
       {
         data: ObjectParsedAlreadyDecrypted(
-          pdf_page_renumber_object(object, changes),
+          pdf_page_renumber_object_with_map(object, changes),
         ),
         generation: entry.generation,
       }
@@ -1052,9 +1069,13 @@ fn PdfDocument::pdf_page_renumber_references(
   self : PdfDocument,
   changes : ArrayView[(Int, Int)],
 ) -> Unit {
+  let change_map = pdf_page_reference_map(changes)
   for number in self.object_numbers() {
     let entry = self.objects.get_entry(number).unwrap()
-    self.objects.set_entry(number, pdf_page_renumber_entry(entry, changes))
+    self.objects.set_entry(
+      number,
+      pdf_page_renumber_entry_with_map(entry, change_map),
+    )
   }
 }
 

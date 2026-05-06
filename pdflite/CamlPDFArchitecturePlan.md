@@ -228,6 +228,9 @@ work changes.
    popup-parent filtering, deleted-page reference nullification, and structure
    trimming now share the package-local hash-backed `PdfNumberSet` helper for
    integer membership.
+   `change_pages` and object-renumbering passes also build a hash-backed
+   page-reference change map once before traversing objects, avoiding repeated
+   old-to-new page-reference scans while preserving first-change precedence.
    Content parsing also follows CamlPDF's malformed color-operator fallback for
    bad `SC`/`sc`/`SCN`/`scn` operands and filters malformed `TJ` array
    members. Operator tokens remain borrowed as `BytesView` through known

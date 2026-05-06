@@ -303,69 +303,85 @@ test "private merge catalog and AcroForm helpers cover malformed roots" {
 ///|
 test "private merge destination renumbering covers all target variants" {
   let changes = [(1, 10)]
+  let change_map = pdf_page_reference_map(changes)
   @test.assert_eq(
-    pdf_merge_renumber_target_page(TargetOtherDocPageNumber(3), changes),
+    pdf_merge_renumber_target_page_with_map(
+      TargetOtherDocPageNumber(3),
+      change_map,
+    ),
     TargetOtherDocPageNumber(3),
   )
-  @test.assert_eq(pdf_merge_renumber_destination(DestNull, changes), DestNull)
   @test.assert_eq(
-    pdf_merge_renumber_destination(DestNamed(pdf_merge_name("/Named")), changes),
+    pdf_merge_renumber_destination_with_map(DestNull, change_map),
+    DestNull,
+  )
+  @test.assert_eq(
+    pdf_merge_renumber_destination_with_map(
+      DestNamed(pdf_merge_name("/Named")),
+      change_map,
+    ),
     DestNamed(pdf_merge_name("/Named")),
   )
   @test.assert_eq(
-    pdf_merge_renumber_destination(DestString(@ascii.encode("named")), changes),
+    pdf_merge_renumber_destination_with_map(
+      DestString(@ascii.encode("named")),
+      change_map,
+    ),
     DestString(@ascii.encode("named")),
   )
   @test.assert_eq(
-    pdf_merge_renumber_destination(
+    pdf_merge_renumber_destination_with_map(
       DestAction(PdfDictionary([(pdf_merge_name("/D"), PdfIndirect(1))])),
-      changes,
+      change_map,
     ),
     DestAction(PdfDictionary([(pdf_merge_name("/D"), PdfIndirect(10))])),
   )
   @test.assert_eq(
-    pdf_merge_renumber_destination(
+    pdf_merge_renumber_destination_with_map(
       DestXYZ(TargetPageObject(1), Some(1.0), Some(2.0), Some(3.0)),
-      changes,
+      change_map,
     ),
     DestXYZ(TargetPageObject(10), Some(1.0), Some(2.0), Some(3.0)),
   )
   @test.assert_eq(
-    pdf_merge_renumber_destination(
+    pdf_merge_renumber_destination_with_map(
       DestFitH(TargetPageObject(1), Some(2.0)),
-      changes,
+      change_map,
     ),
     DestFitH(TargetPageObject(10), Some(2.0)),
   )
   @test.assert_eq(
-    pdf_merge_renumber_destination(
+    pdf_merge_renumber_destination_with_map(
       DestFitV(TargetPageObject(1), Some(2.0)),
-      changes,
+      change_map,
     ),
     DestFitV(TargetPageObject(10), Some(2.0)),
   )
   @test.assert_eq(
-    pdf_merge_renumber_destination(
+    pdf_merge_renumber_destination_with_map(
       DestFitR(TargetPageObject(1), 1.0, 2.0, 3.0, 4.0),
-      changes,
+      change_map,
     ),
     DestFitR(TargetPageObject(10), 1.0, 2.0, 3.0, 4.0),
   )
   @test.assert_eq(
-    pdf_merge_renumber_destination(DestFitB(TargetPageObject(1)), changes),
+    pdf_merge_renumber_destination_with_map(
+      DestFitB(TargetPageObject(1)),
+      change_map,
+    ),
     DestFitB(TargetPageObject(10)),
   )
   @test.assert_eq(
-    pdf_merge_renumber_destination(
+    pdf_merge_renumber_destination_with_map(
       DestFitBH(TargetPageObject(1), Some(2.0)),
-      changes,
+      change_map,
     ),
     DestFitBH(TargetPageObject(10), Some(2.0)),
   )
   @test.assert_eq(
-    pdf_merge_renumber_destination(
+    pdf_merge_renumber_destination_with_map(
       DestFitBV(TargetPageObject(1), Some(2.0)),
-      changes,
+      change_map,
     ),
     DestFitBV(TargetPageObject(10), Some(2.0)),
   )
