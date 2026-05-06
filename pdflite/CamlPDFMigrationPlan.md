@@ -293,10 +293,14 @@ MoonBit consequences for this project:
    containing `/ObjStm` once per reader pass and reuse the parsed context for
    all embedded entries from that object stream, avoiding repeated
    decode/decrypt work while preserving the existing strict versus recovered
-   error behavior. Embedded object expansion now also groups type-2 xref-stream
-   entries by containing object stream before loading, preserving first-seen
-   stream order and per-stream xref order while avoiding a full xref scan for
-   every `/ObjStm`.
+   error behavior. CamlPDF's malformed direct stream object inside an
+   `/ObjStm` compatibility path is now covered: object-stream members that stop
+   at `stream` parse as direct stream objects without requiring an enclosing
+   indirect-object `endobj`, and mismatched member `/Length` values are repaired
+   from the `endstream` marker. Embedded object expansion now also groups
+   type-2 xref-stream entries by containing object stream before loading,
+   preserving first-seen stream order and per-stream xref order while avoiding
+   a full xref scan for every `/ObjStm`.
    Password-aware document reads now decrypt encrypted `/ObjStm` streams before
    slicing embedded objects, including the absent-password path that falls back
    to a blank user password, then load the embedded objects as already

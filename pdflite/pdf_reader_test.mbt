@@ -1307,6 +1307,52 @@ fn reader_xref_stream_pdf_with_two_object_stream_entries() -> @pdflite.PdfBytes 
 }
 
 ///|
+fn reader_xref_stream_pdf_with_stream_object_in_object_stream() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.5\n")
+  let catalog_offset = reader_push_indirect_object(
+    output, 1, 0, "<< /Type /Catalog /Payload 2 0 R >>",
+  )
+  let stream_object = reader_pdf_ascii(
+    "<< /Length 99 >>\nstream\nHi\nendstream",
+  )
+  let object_stream_data : Array[Byte] = []
+  reader_push_ascii(object_stream_data, "2 0 ")
+  let first = object_stream_data.length()
+  for byte in stream_object {
+    object_stream_data.push(byte)
+  }
+  let object_stream_offset = output.length()
+  reader_push_ascii(output, "3 0 obj\n<< /Type /ObjStm /N 1 /First ")
+  reader_push_ascii(output, first.to_string())
+  reader_push_ascii(output, " /Length ")
+  reader_push_ascii(output, object_stream_data.length().to_string())
+  reader_push_ascii(output, " >>\nstream\n")
+  for byte in object_stream_data {
+    output.push(byte)
+  }
+  reader_push_ascii(output, "\nendstream\nendobj\n")
+  let xref_offset = output.length()
+  let stream_data : Array[Byte] = []
+  reader_push_xref_stream_entry(stream_data, 0, 0, 65535)
+  reader_push_xref_stream_entry(stream_data, 1, catalog_offset, 0)
+  reader_push_xref_stream_entry(stream_data, 2, 3, 0)
+  reader_push_xref_stream_entry(stream_data, 1, object_stream_offset, 0)
+  reader_push_xref_stream_entry(stream_data, 1, xref_offset, 0)
+  reader_push_ascii(output, "4 0 obj\n")
+  reader_push_ascii(output, "<< /Type /XRef /Length ")
+  reader_push_ascii(output, stream_data.length().to_string())
+  reader_push_ascii(output, " /Size 5 /Root 1 0 R /W [1 4 2] >>\nstream\n")
+  for byte in stream_data {
+    output.push(byte)
+  }
+  reader_push_ascii(output, "\nendstream\nendobj\nstartxref\n")
+  reader_push_ascii(output, xref_offset.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_xref_stream_pdf_with_object_stream_root_bad_startxref() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.5\n")
@@ -3073,6 +3119,24 @@ test "pdf_read_document_from_bytes loads multiple entries from one object stream
     parsed.lookup_object_or_null(5),
     PdfArray([PdfInteger(1), PdfInteger(2), PdfInteger(3)]),
   )
+}
+
+///|
+test "pdf_read_document_from_bytes tolerates stream objects inside object streams" {
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(
+    reader_xref_stream_pdf_with_stream_object_in_object_stream(),
+  )
+  @test.assert_eq(parsed.object_numbers(), [1, 2, 3])
+  guard parsed.lookup_object_or_null(2) is PdfStreamObject(stream) else {
+    fail("expected malformed embedded stream object")
+  }
+  @test.assert_eq(
+    stream.dictionary.lookup_immediate(
+      @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Length")),
+    ),
+    Some(PdfInteger(2)),
+  )
+  @test.assert_eq(reader_stream_bytes_for_test(stream), reader_pdf_ascii("Hi"))
 }
 
 ///|

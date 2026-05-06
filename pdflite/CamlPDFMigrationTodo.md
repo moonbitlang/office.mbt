@@ -204,6 +204,9 @@ Current backend snapshot:
 - [x] ~~Add malformed xref-stream/object-stream recovery coverage where bad
   `startxref` reconstruction still resolves indirect `/ObjStm` `/N` and
   `/First` bounds before expanding embedded entries.~~
+- [x] ~~Add CamlPDF malformed `/ObjStm` member compatibility for a direct
+  stream object embedded inside an object stream, including `/Length` repair
+  from the `endstream` marker and xref-stream extraction coverage.~~
 - [ ] Add more malformed xref-table/xref-stream/object-stream recovery cases
   from real-world PDFs.
 - [x] ~~Add a native reader-boundary gate for the next available predefined CMap
@@ -533,6 +536,9 @@ Current backend snapshot:
 - [x] ~~Malformed xref-stream/object-stream recovery now covers bad-final
   `startxref` reconstruction with indirect `/ObjStm` `/N` and `/First`
   bounds.~~
+- [x] ~~Malformed object-stream recovery now tolerates a direct stream object
+  stored as an `/ObjStm` member, matching CamlPDF's explicit malformed-reader
+  compatibility path.~~
 - [ ] Broaden malformed xref-table/xref-stream/object-stream recovery with more
   real-world corpus cases.
 - [ ] Revisit all-backend validation after native feature parity is stable.
@@ -840,6 +846,8 @@ Current backend snapshot:
   multiple zlib levels.~~
 - [x] ~~Malformed xref-stream/object-stream recovery covers reconstructed
   indirect object-stream bounds after a bad final `startxref`.~~
+- [x] ~~Malformed object-stream recovery tolerates direct stream members inside
+  `/ObjStm` data and repairs their stream length from `endstream`.~~
 - [ ] Broader malformed xref-table/xref-stream/object-stream recovery beyond
   the current bad-startxref real-corpus, multi-revision, and encrypted
   object-stream gates.
