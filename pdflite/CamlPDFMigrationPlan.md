@@ -715,7 +715,11 @@ MoonBit consequences for this project:
    `remove_unreferenced` pass that follows indirect references from the active
    trailer-root catalog and trailer, removes unreachable parsed objects, and
    nullifies references to page objects no longer present in the active page
-   tree before pruning.
+   tree before pruning. Page extraction, bookmark filtering, duplicate
+   annotation fixup, deleted-page reference nullification, and structure-tree
+   trimming now share a package-local hash-backed `PdfNumberSet` for repeated
+   integer membership checks while preserving existing insertion and
+   canonicalization behavior.
    Content stream support is now started with a byte-preserving `PdfContentOp`
    subset, uncompressed content stream construction, indirect stream parsing
    through `PdfDocument`, and parsing for the core path, color, XObject, and
@@ -1498,6 +1502,9 @@ MoonBit consequences for this project:
     construction with child `/Limits`, and private grouping threshold checks.
     Structure parent-tree renumbering coverage now includes first-change
     precedence through the hash-backed parent change map.
+    Shared number-set coverage now includes duplicate membership and unique-push
+    behavior, with page/bookmark/structure focused tests covering extraction and
+    cleanup callers.
     Flate coverage now
     includes empty and short zlib inputs, fixed-Huffman blocks, invalid stored
     block lengths, invalid block types, empty stored-block encoding, and private

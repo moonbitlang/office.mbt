@@ -3,6 +3,21 @@
 // Keep them focused; public behavior belongs in `_test.mbt`.
 
 ///|
+test "private PDF number set deduplicates membership and additions" {
+  let numbers = pdf_number_set([1, 1])
+  @test.assert_eq(numbers.contains(1), true)
+  @test.assert_eq(numbers.contains(2), false)
+  numbers.add(2)
+  numbers.add(2)
+  @test.assert_eq(numbers.contains(2), true)
+  let output : Array[Int] = []
+  pdf_push_unique_number(output, numbers, 2)
+  pdf_push_unique_number(output, numbers, 3)
+  pdf_push_unique_number(output, numbers, 3)
+  @test.assert_eq(output, [3])
+}
+
+///|
 test "pdf duplicate stream candidates reject non-stream objects" {
   @test.assert_eq(
     pdf_duplicate_stream_candidate(1, PdfInteger(1)) is None,
@@ -1089,18 +1104,6 @@ test "private annotation and bookmark guards report malformed roots" {
 }
 
 ///|
-test "private structure number set filters duplicate insertions" {
-  let seen = pdf_structure_number_set([2, 2])
-  @test.assert_eq(seen.contains(2), true)
-  @test.assert_eq(seen.contains(3), false)
-  let output : Array[Int] = []
-  pdf_structure_push_unique_with_seen(output, seen, 2)
-  pdf_structure_push_unique_with_seen(output, seen, 3)
-  pdf_structure_push_unique_with_seen(output, seen, 3)
-  @test.assert_eq(output, [3])
-}
-
-///|
 test "private structure survival helpers cover direct cases" {
   let key_pg = pdf_structure_pg_key()
   let doc = pdf_document_empty()
@@ -1111,7 +1114,7 @@ test "private structure survival helpers cover direct cases" {
       (pdf_structure_k_key(), PdfInteger(0)),
     ]),
   )
-  let deleted_pages = pdf_structure_number_set([2])
+  let deleted_pages = pdf_number_set([2])
   @test.assert_eq(
     doc.pdf_structure_object_has_deleted_page_in_set(
       PdfIndirect(50),

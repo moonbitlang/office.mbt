@@ -1823,12 +1823,12 @@ fn PdfDocument::pdf_page_fixup_duplicate_annots(
       self.pdf_page_annotation_numbers(self.lookup_object_or_null(page_number)),
     )
   }
-  let seen : Array[Int] = []
+  let seen = pdf_number_set([])
   let new_annots : Array[Array[Int]] = []
   for annots in existing_annots {
     let page_annots : Array[Int] = []
     for annotation_number in annots {
-      if pdf_page_number_member(seen, annotation_number) {
+      if seen.contains(annotation_number) {
         page_annots.push(
           self.add_object(self.lookup_object_or_null(annotation_number)),
         )
@@ -1837,10 +1837,10 @@ fn PdfDocument::pdf_page_fixup_duplicate_annots(
       }
     }
     for annotation_number in annots {
-      seen.push(annotation_number)
+      seen.add(annotation_number)
     }
     for annotation_number in page_annots {
-      seen.push(annotation_number)
+      seen.add(annotation_number)
     }
     new_annots.push(page_annots)
   }
@@ -2335,24 +2335,14 @@ pub fn PdfDocument::pdf_of_pages(
 }
 
 ///|
-fn pdf_page_number_member(numbers : ArrayView[Int], number : Int) -> Bool {
-  for candidate in numbers {
-    if candidate == number {
-      break true
-    }
-  } nobreak {
-    false
-  }
-}
-
-///|
 fn pdf_page_deleted_numbers(
   all_page_numbers : ArrayView[Int],
   active_page_numbers : ArrayView[Int],
 ) -> Array[Int] {
+  let active_pages = pdf_number_set(active_page_numbers)
   let deleted : Array[Int] = []
   for number in all_page_numbers {
-    if !pdf_page_number_member(active_page_numbers, number) {
+    if !active_pages.contains(number) {
       deleted.push(number)
     }
   }
@@ -2378,11 +2368,10 @@ fn PdfDocument::pdf_page_object_numbers_in_map(
 ///|
 fn pdf_page_nullify_references(
   object : PdfObject,
-  deleted_pages : ArrayView[Int],
+  deleted_pages : PdfNumberSet,
 ) -> PdfObject {
   match object {
-    PdfIndirect(number) if pdf_page_number_member(deleted_pages, number) =>
-      PdfNull
+    PdfIndirect(number) if deleted_pages.contains(number) => PdfNull
     PdfArray(items) => {
       let output : Array[PdfObject] = []
       for item in items {
@@ -2413,7 +2402,7 @@ fn pdf_page_nullify_references(
 ///|
 fn pdf_page_nullify_entry(
   entry : PdfObjectEntry,
-  deleted_pages : ArrayView[Int],
+  deleted_pages : PdfNumberSet,
 ) -> PdfObjectEntry {
   match entry.data {
     ObjectParsed(object) =>
@@ -2442,11 +2431,12 @@ fn PdfDocument::pdf_page_nullify_deleted_page_references(
     let deleted_pages = pdf_page_deleted_numbers(
       page_numbers, active_page_numbers,
     )
+    let deleted_page_set = pdf_number_set(deleted_pages)
     for number in self.object_numbers() {
       let entry = self.objects.get_entry(number).unwrap()
       self.objects.set_entry(
         number,
-        pdf_page_nullify_entry(entry, deleted_pages),
+        pdf_page_nullify_entry(entry, deleted_page_set),
       )
     }
   }

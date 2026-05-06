@@ -56,40 +56,6 @@ fn pdf_structure_k_key() -> PdfName {
 }
 
 ///|
-priv struct PdfStructureNumberSet {
-  values : @hashmap.HashMap[Int, Bool]
-}
-
-///|
-fn pdf_structure_number_set(numbers : ArrayView[Int]) -> PdfStructureNumberSet {
-  let values : @hashmap.HashMap[Int, Bool] = @hashmap.HashMap::new()
-  for number in numbers {
-    values[number] = true
-  }
-  { values, }
-}
-
-///|
-fn PdfStructureNumberSet::contains(
-  self : PdfStructureNumberSet,
-  number : Int,
-) -> Bool {
-  self.values.contains(number)
-}
-
-///|
-fn pdf_structure_push_unique_with_seen(
-  numbers : Array[Int],
-  seen : PdfStructureNumberSet,
-  number : Int,
-) -> Unit {
-  if !seen.contains(number) {
-    numbers.push(number)
-    seen.values[number] = true
-  }
-}
-
-///|
 fn PdfDocument::pdf_structure_indirect_number(
   self : PdfDocument,
   object_number : Int,
@@ -105,7 +71,7 @@ fn PdfDocument::pdf_structure_indirect_number(
 fn PdfDocument::pdf_structure_object_has_deleted_page_in_set(
   self : PdfDocument,
   object : PdfObject,
-  deleted_pages : PdfStructureNumberSet,
+  deleted_pages : PdfNumberSet,
 ) -> Bool {
   match self.direct(object).lookup_immediate(pdf_structure_pg_key()) {
     Some(PdfIndirect(page_number)) => deleted_pages.contains(page_number)
@@ -117,7 +83,7 @@ fn PdfDocument::pdf_structure_object_has_deleted_page_in_set(
 fn PdfDocument::pdf_structure_indirect_survives_in_set(
   self : PdfDocument,
   object_number : Int,
-  deleted_pages : PdfStructureNumberSet,
+  deleted_pages : PdfNumberSet,
 ) -> Bool {
   if self.lookup_object_or_null(object_number) == PdfNull {
     false
@@ -144,7 +110,7 @@ fn PdfDocument::pdf_structure_indirect_survives_in_set(
 fn PdfDocument::pdf_structure_k_item_survives_in_set(
   self : PdfDocument,
   item : PdfObject,
-  deleted_pages : PdfStructureNumberSet,
+  deleted_pages : PdfNumberSet,
 ) -> Bool {
   match item {
     PdfIndirect(object_number) =>
@@ -157,7 +123,7 @@ fn PdfDocument::pdf_structure_k_item_survives_in_set(
 fn PdfDocument::pdf_structure_filter_k_items_in_set(
   self : PdfDocument,
   items : ArrayView[PdfObject],
-  deleted_pages : PdfStructureNumberSet,
+  deleted_pages : PdfNumberSet,
 ) -> Array[PdfObject]? {
   let output : Array[PdfObject] = []
   let mut changed = false
@@ -179,7 +145,7 @@ fn PdfDocument::pdf_structure_filter_k_items_in_set(
 fn PdfDocument::pdf_structure_filtered_k_value_in_set(
   self : PdfDocument,
   object : PdfObject,
-  deleted_pages : PdfStructureNumberSet,
+  deleted_pages : PdfNumberSet,
 ) -> Array[PdfObject]? {
   match self.direct(object) {
     PdfDictionary(_) as dictionary =>
@@ -340,20 +306,18 @@ fn PdfDocument::pdf_structure_trim_deleted_pages(
   deleted_page_numbers : ArrayView[Int],
 ) -> Unit raise PdfError {
   if deleted_page_numbers.length() > 0 {
-    let deleted_pages = pdf_structure_number_set(deleted_page_numbers)
+    let deleted_pages = pdf_number_set(deleted_page_numbers)
     let mut changed = true
     while changed {
       changed = false
       let deletions : Array[Int] = []
-      let deletion_seen = pdf_structure_number_set([])
+      let deletion_seen = pdf_number_set([])
       for object_number in self.object_numbers() {
         if self.pdf_structure_object_has_deleted_page_in_set(
             self.lookup_object_or_null(object_number),
             deleted_pages,
           ) {
-          pdf_structure_push_unique_with_seen(
-            deletions, deletion_seen, object_number,
-          )
+          pdf_push_unique_number(deletions, deletion_seen, object_number)
         }
       }
       for object_number in deletions {
@@ -368,9 +332,7 @@ fn PdfDocument::pdf_structure_trim_deleted_pages(
         match
           self.pdf_structure_filtered_k_value_in_set(object, deleted_pages) {
           Some([]) =>
-            pdf_structure_push_unique_with_seen(
-              deletions, deletion_seen, object_number,
-            )
+            pdf_push_unique_number(deletions, deletion_seen, object_number)
           Some(filtered) =>
             replacements.push(
               (

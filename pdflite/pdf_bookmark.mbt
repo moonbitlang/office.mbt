@@ -558,20 +558,6 @@ fn PdfDocument::pdf_bookmark_has_outlines(
 }
 
 ///|
-fn pdf_bookmark_page_member(
-  page_numbers : ArrayView[Int],
-  page_number : Int,
-) -> Bool {
-  for selected in page_numbers {
-    if selected == page_number {
-      break true
-    }
-  } nobreak {
-    false
-  }
-}
-
-///|
 fn pdf_bookmark_mark_ancestors(
   bookmarks : ArrayView[PdfBookmark],
   keep : Array[Bool],
@@ -595,13 +581,14 @@ fn PdfDocument::pdf_bookmarks_for_pages(
 ) -> Array[PdfBookmark] raise PdfError {
   let bookmarks = self.read_bookmarks(preserve_actions=true)
   let page_reference_numbers = self.page_reference_numbers()
+  let selected_pages = pdf_number_set(page_numbers)
   let keep = [ for _ in bookmarks => false ]
   for index in 0..<bookmarks.length() {
     let page_number = self.pdf_destination_page_number(
       bookmarks[index].target,
       page_reference_numbers,
     )
-    if pdf_bookmark_page_member(page_numbers, page_number) {
+    if selected_pages.contains(page_number) {
       keep[index] = true
       pdf_bookmark_mark_ancestors(bookmarks, keep, index)
     }

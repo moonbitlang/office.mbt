@@ -166,6 +166,10 @@ Current estimate:
 - [x] ~~Build hash-backed structure parent-tree renumber maps once per document,
   preserving first-change precedence while avoiding repeated scans during
   recursive `/StructParent` and `/StructParents` rewriting.~~
+- [x] ~~Share a package-local hash-backed `PdfNumberSet` for page/bookmark and
+  structure-tree membership checks, avoiding repeated linear scans during
+  extraction bookmark filtering, duplicate annotation repair, deleted-page
+  reference cleanup, and structure trimming.~~
 - [x] ~~Replace generated Adobe-GB1, Adobe-CNS1, and Adobe-Japan1 CID-range
   CMap reverse lookup nested charcode scans with Unicode/CID-to-charcode
   helpers, preserving deterministic lowest packed-charcode selection for
@@ -293,6 +297,8 @@ Current estimate:
 - [x] ~~Structure parent-tree renumbering now uses hash-backed old-key to new-key
   maps for recursive structure-object rewrites instead of scanning the change
   list at every integer key.~~
+- [x] ~~Page, bookmark, and structure helpers now share `PdfNumberSet` for
+  repeated integer-membership checks on extraction and cleanup hot paths.~~
 - [ ] Improve byte-identical zlib output strategy and broader performance
   parity beyond the explicit Flate level API.
 - [ ] Broaden malformed xref-table/xref-stream/object-stream recovery with more
