@@ -2,6 +2,7 @@ import {
   "bobzhang/pdflite" @pdflite,
   "moonbitlang/core/buffer",
   "moonbitlang/core/encoding/ascii",
+  "moonbitlang/core/hashmap",
   "moonbitlang/core/encoding/utf8",
 }
 

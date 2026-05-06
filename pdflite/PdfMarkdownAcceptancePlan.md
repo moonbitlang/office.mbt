@@ -70,6 +70,9 @@ library API.
 - [x] ~~Add a checked-in `.repos/introduction_to_camlpdf.pdf` Markdown
   acceptance gate covering a real multi-page CamlPDF document, core API
   examples, and replacement/raw-control quality counters.~~
+- [x] ~~Use a hash-backed indirect font extractor cache during Markdown
+  extraction so large multi-page/form documents do not linearly rescan cached
+  fonts for each `Tf` operator.~~
 - [ ] Continue fixing extraction/layout bugs found by the comparison loop.
 
 ## First Converter Contract

@@ -315,26 +315,35 @@ fn pdf_markdown_push_text_chunk(
 }
 
 ///|
+priv struct PdfMarkdownFontCache {
+  values : @hashmap.HashMap[Int, @pdflite.PdfTextExtractor?]
+}
+
+///|
+fn pdf_markdown_font_cache() -> PdfMarkdownFontCache {
+  { values: @hashmap.HashMap::new() }
+}
+
+///|
 fn pdf_markdown_cached_text_extractor(
-  cache : Array[(Int, @pdflite.PdfTextExtractor?)],
+  cache : PdfMarkdownFontCache,
   document : @pdflite.PdfDocument,
   resources : @pdflite.PdfObject,
   font_name : @pdflite.PdfName,
 ) -> @pdflite.PdfTextExtractor? raise {
   match pdf_markdown_font_resource_entry(document, resources, font_name) {
     Some(PdfIndirect(number)) =>
-      for entry in cache {
-        if entry.0 == number {
-          break entry.1
+      match cache.values.get(number) {
+        Some(extractor) => extractor
+        None => {
+          let extractor = Some(
+            document.text_extractor_of_font(
+              document.lookup_object_or_null(number),
+            ),
+          )
+          cache.values[number] = extractor
+          extractor
         }
-      } nobreak {
-        let extractor = Some(
-          document.text_extractor_of_font(
-            document.lookup_object_or_null(number),
-          ),
-        )
-        cache.push((number, extractor))
-        extractor
       }
     Some(font) => Some(document.text_extractor_of_font(document.direct(font)))
     None => None
@@ -481,7 +490,7 @@ fn pdf_markdown_collect_positioned_text_chunks(
   streams : ArrayView[@pdflite.PdfObject],
   chunks : Array[PdfMarkdownTextChunk],
   next_index : Ref[Int],
-  font_cache : Array[(Int, @pdflite.PdfTextExtractor?)],
+  font_cache : PdfMarkdownFontCache,
   inherited_ctm : @pdflite.TransformMatrix,
   depth : Int,
 ) -> Unit raise {
@@ -730,7 +739,7 @@ fn pdf_markdown_chunks_to_codepoints(
 fn pdf_markdown_positioned_text_codepoints_of_page(
   document : @pdflite.PdfDocument,
   page : @pdflite.PdfPage,
-  font_cache : Array[(Int, @pdflite.PdfTextExtractor?)],
+  font_cache : PdfMarkdownFontCache,
 ) -> Array[Int]? raise {
   let chunks : Array[PdfMarkdownTextChunk] = []
   let next_index : Ref[Int] = { val: 0 }
@@ -757,7 +766,7 @@ fn pdf_markdown_push_text_codepoints_of_streams(
   resources : @pdflite.PdfObject,
   streams : ArrayView[@pdflite.PdfObject],
   output : Array[Int],
-  font_cache : Array[(Int, @pdflite.PdfTextExtractor?)],
+  font_cache : PdfMarkdownFontCache,
   depth : Int,
 ) -> Unit raise {
   let mut extractor : @pdflite.PdfTextExtractor? = None
@@ -812,7 +821,7 @@ fn pdf_markdown_push_text_codepoints_of_streams(
 fn pdf_markdown_text_codepoints_of_page(
   document : @pdflite.PdfDocument,
   page : @pdflite.PdfPage,
-  font_cache : Array[(Int, @pdflite.PdfTextExtractor?)],
+  font_cache : PdfMarkdownFontCache,
 ) -> Array[Int] raise {
   match
     pdf_markdown_positioned_text_codepoints_of_page(document, page, font_cache) {
@@ -914,7 +923,7 @@ fn pdf_markdown_string_of_codepoints(
 fn pdf_markdown_page_text(
   document : @pdflite.PdfDocument,
   page : @pdflite.PdfPage,
-  font_cache : Array[(Int, @pdflite.PdfTextExtractor?)],
+  font_cache : PdfMarkdownFontCache,
 ) -> String raise {
   pdf_markdown_string_of_codepoints(
     pdf_markdown_text_codepoints_of_page(document, page, font_cache)[:],
@@ -942,7 +951,7 @@ pub fn pdf_document_to_markdown(
   let document = pdf_markdown_readable_document(document)
   let pages = document.pages_of_pagetree()
   let output = @buffer.new()
-  let font_cache : Array[(Int, @pdflite.PdfTextExtractor?)] = []
+  let font_cache = pdf_markdown_font_cache()
   for index in 0..<pages.length() {
     if index > 0 {
       output.write_string("\n\n")

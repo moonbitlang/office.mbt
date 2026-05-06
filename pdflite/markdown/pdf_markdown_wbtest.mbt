@@ -120,3 +120,45 @@ test "private word-space push ignores empty output" {
   pdf_markdown_push_word_space(output)
   @test.assert_eq(output, [])
 }
+
+///|
+fn markdown_wbtest_name(text : String) -> @pdflite.PdfName {
+  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+}
+
+///|
+test "private Markdown font cache stores indirect extractors by object number" {
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(
+    7,
+    try! @pdflite.pdf_make_font(
+      markdown_wbtest_name("/Helvetica"),
+      PdfWinAnsiEncoding,
+    ),
+  )
+  let resources = @pdflite.pdf_dictionary([
+    (
+      markdown_wbtest_name("/Font"),
+      @pdflite.pdf_dictionary([(markdown_wbtest_name("/F0"), PdfIndirect(7))]),
+    ),
+  ])
+  let cache = pdf_markdown_font_cache()
+  let first = try! pdf_markdown_cached_text_extractor(
+    cache,
+    doc,
+    resources,
+    markdown_wbtest_name("/F0"),
+  )
+  guard first is Some(_) else { fail("expected cached extractor") }
+  guard cache.values.get(7) is Some(Some(_)) else {
+    fail("expected stored indirect extractor")
+  }
+  let second = try! pdf_markdown_cached_text_extractor(
+    cache,
+    doc,
+    resources,
+    markdown_wbtest_name("/F0"),
+  )
+  guard second is Some(_) else { fail("expected reused cached extractor") }
+  @test.assert_eq(cache.values.keys().to_array().length(), 1)
+}
