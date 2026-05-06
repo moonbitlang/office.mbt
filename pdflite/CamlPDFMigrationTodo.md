@@ -57,6 +57,8 @@ Current estimate:
 - [x] ~~Route owned `PdfBytes` Flate decode directly through the native miniz
   bytes helper, avoiding the owned-to-view-to-owned copy that remained on the
   public decode path.~~
+- [x] ~~Cache fixed-Huffman DEFLATE literal and distance tables so pure prefix
+  Flate decoding no longer rebuilds them for every fixed block.~~
 - [x] ~~Return owned bytes unchanged for `/Crypt` identity filter encode/decode,
   avoiding unnecessary immutable `Bytes` copies on stream filter dispatch.~~
 - [x] ~~Cache standard stream-filter names so encode/decode dispatch no longer
@@ -154,6 +156,9 @@ Current estimate:
 - [x] ~~Owned public Flate decode now calls the native miniz bytes helper
   directly, so Flate stream filter decoding no longer re-owns already-owned
   compressed bytes before the C boundary.~~
+- [x] ~~Pure Flate prefix decoding now reuses cached fixed-Huffman tables,
+  reducing repeated setup work for inline images and other consumed-length
+  parsing paths that cannot use native miniz.~~
 - [x] ~~Owned `/Crypt` identity filter encode/decode now returns the original
   immutable `Bytes` object and is covered by physical-identity assertions.~~
 - [x] ~~Deferred stream `get_stream` materialization now reuses the cached
@@ -429,6 +434,8 @@ Current estimate:
   status-byte payload copy.~~
 - [x] ~~Owned public Flate decode now bypasses `BytesView.to_owned()` on native
   by calling the native miniz bytes helper directly.~~
+- [x] ~~Pure Flate prefix decoding reuses cached fixed-Huffman tables instead
+  of rebuilding literal/distance tables for each fixed block.~~
 - [x] ~~Owned `/Crypt` identity filter encode/decode bypasses `BytesView.to_owned()`
   and returns the existing immutable `Bytes`.~~
 - [x] ~~Standard stream-filter dispatch names are cached once instead of

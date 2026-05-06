@@ -556,7 +556,10 @@ MoonBit consequences for this project:
    `Ref[Int]`, avoiding the previous status-prefix copy while preserving valid
    empty-payload success. Owned public Flate decode now also calls the native
    bytes helper directly instead of passing through a borrowed view and
-   re-owning compressed data before FFI. Owned `/Crypt` identity filter
+   re-owning compressed data before FFI. The pure Flate prefix decoder now
+   caches fixed-Huffman literal and distance tables, reducing setup work for
+   inline-image and consumed-length paths that still need MoonBit-side byte
+   accounting instead of native miniz. Owned `/Crypt` identity filter
    encode/decode now returns the original immutable `Bytes` value directly.
    CamlPDF-style typed encoding and predictor choices are now exposed as
    `PdfStreamEncoding` and

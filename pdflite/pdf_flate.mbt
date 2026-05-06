@@ -310,7 +310,7 @@ fn pdf_flate_decode_symbol(
 }
 
 ///|
-fn pdf_flate_fixed_literal_table() -> FlateHuffmanTable raise PdfError {
+fn pdf_flate_fixed_literal_lengths() -> Array[Int] {
   let lengths : Array[Int] = []
   for i in 0..<=287 {
     if i <= 143 {
@@ -323,16 +323,36 @@ fn pdf_flate_fixed_literal_table() -> FlateHuffmanTable raise PdfError {
       lengths.push(8)
     }
   }
-  pdf_flate_build_huffman(lengths)
+  lengths
 }
 
 ///|
-fn pdf_flate_fixed_distance_table() -> FlateHuffmanTable raise PdfError {
+fn pdf_flate_fixed_distance_lengths() -> Array[Int] {
   let lengths : Array[Int] = []
   for _ in 0..<=31 {
     lengths.push(5)
   }
-  pdf_flate_build_huffman(lengths)
+  lengths
+}
+
+///|
+let pdf_flate_fixed_literal_table_value : FlateHuffmanTable = try! pdf_flate_build_huffman(
+  pdf_flate_fixed_literal_lengths(),
+)
+
+///|
+let pdf_flate_fixed_distance_table_value : FlateHuffmanTable = try! pdf_flate_build_huffman(
+  pdf_flate_fixed_distance_lengths(),
+)
+
+///|
+fn pdf_flate_fixed_literal_table() -> FlateHuffmanTable {
+  pdf_flate_fixed_literal_table_value
+}
+
+///|
+fn pdf_flate_fixed_distance_table() -> FlateHuffmanTable {
+  pdf_flate_fixed_distance_table_value
 }
 
 ///|

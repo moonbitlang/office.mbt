@@ -148,7 +148,10 @@ work changes.
    empty decoded payloads remain distinguishable from failure. Owned public
    Flate decode also routes directly through the native bytes helper, avoiding
    the remaining owned-to-view-to-owned copy before the C boundary on common
-   stream-filter decode paths. Owned `/Crypt` identity filter encode/decode
+   stream-filter decode paths. The pure Flate prefix decoder now reuses cached
+   fixed-Huffman literal and distance tables, so inline images and other
+   consumed-length parsing paths do not rebuild fixed tables for every fixed
+   block. Owned `/Crypt` identity filter encode/decode
    now returns the original immutable `Bytes` value instead of copying through a
    borrowed view. Standard stream-filter names are now cached once for dispatch,
    avoiding repeated ASCII `PdfName` rebuilding during filter comparisons, and

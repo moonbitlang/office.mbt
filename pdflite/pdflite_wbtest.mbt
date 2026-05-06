@@ -1677,6 +1677,20 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
   let expected_length_code = 192
   @test.assert_eq(length_code, expected_length_code.reinterpret_as_uint())
   @test.assert_eq(length_width, 8)
+  let literal_table_a = pdf_flate_fixed_literal_table()
+  let literal_table_b = pdf_flate_fixed_literal_table()
+  let distance_table_a = pdf_flate_fixed_distance_table()
+  let distance_table_b = pdf_flate_fixed_distance_table()
+  @test.assert_eq(literal_table_a.max_bits, 9)
+  @test.assert_eq(distance_table_a.max_bits, 5)
+  @test.assert_eq(
+    physical_equal(literal_table_a.sym, literal_table_b.sym),
+    true,
+  )
+  @test.assert_eq(
+    physical_equal(distance_table_a.sym, distance_table_b.sym),
+    true,
+  )
   let bad_flate_length : Result[(Int, Int, Int), Error] = try? pdf_flate_length_code(
     259,
   )
