@@ -568,6 +568,9 @@ Current backend snapshot:
 - [x] ~~Exact xref-stream object/offset skip checks now use a nested
   hash-backed lookup while loading plain objects, preserving object-number and
   offset identity semantics without repeated ref-list scans.~~
+- [x] ~~Object-stream contexts now precompute member end offsets once, so
+  loading many embedded objects from one `/ObjStm` no longer scans every header
+  pair for every object reference.~~
 - [x] ~~Incremental writer changed-object detection now uses a hash-backed
   seen set before sorting sparse classic/xref-stream entry numbers, so large
   event logs with repeated edits avoid repeated linear duplicate checks.~~
@@ -925,6 +928,9 @@ Current backend snapshot:
   comparison fixtures after the local Pandoc gates are stable.
 - [ ] Performance tuning for large files, object streams, filters, and text/image
   extraction.
+- [x] ~~Object-stream member slicing now uses precomputed end offsets in each
+  object-stream context, improving large `/ObjStm` expansion without changing
+  recovered object semantics.~~
 - [x] ~~Glyph-name extraction now skips the intermediate glyph-record array,
   reducing allocation on metadata/debug text extraction paths while preserving
   existing glyph-name semantics.~~

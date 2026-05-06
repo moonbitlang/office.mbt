@@ -516,20 +516,13 @@ test "private object stream helpers cover malformed object streams" {
     fail("expected XRefEntryExpected")
   }
 
-  let bad_index : Result[Int, Error] = try? pdf_object_stream_next_offset(
-    [][:],
-    0,
-    0,
-    0,
-  )
-  guard bad_index is Err(PdfError::XRefEntryExpected) else {
-    fail("expected XRefEntryExpected")
-  }
-
   @test.assert_eq(
-    try! pdf_object_stream_next_offset([(2, 0), (3, 4)][:], 0, 12, 8),
-    4,
+    pdf_object_stream_end_offsets([(2, 4), (3, 0), (4, 4), (5, 8)][:], 20, 8),
+    [8, 4, 8, 12],
   )
+  @test.assert_eq(pdf_object_stream_end_offsets([(2, 0), (3, 100)][:], 20, 8), [
+    12, 12,
+  ])
 
   let doc = pdf_document_empty()
   let valid_stream = pdf_stream(
@@ -543,6 +536,7 @@ test "private object stream helpers cover malformed object streams" {
   )
   doc.add_object_given_number(7, valid_stream)
   let context = try! doc.read_object_stream_context(7)
+  @test.assert_eq(context.end_offsets, [4, 9])
   @test.assert_eq(
     try! context.read_reference({ object_stream_number: 7, index: 0 }),
     (2, PdfBoolean(true)),
@@ -551,6 +545,14 @@ test "private object stream helpers cover malformed object streams" {
     try! context.read_reference({ object_stream_number: 7, index: 1 }),
     (3, PdfBoolean(false)),
   )
+  let bad_index : Result[(Int, PdfObject), Error] = try? context.read_reference({
+      object_stream_number: 7,
+      index: 9,
+    },
+  )
+  guard bad_index is Err(PdfError::XRefEntryExpected) else {
+    fail("expected XRefEntryExpected")
+  }
   let recovered_doc = pdf_document_empty()
   recovered_doc.add_object_given_number(7, valid_stream)
   let recovered_xrefs = [

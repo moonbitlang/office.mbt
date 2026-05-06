@@ -948,24 +948,36 @@ fn pdf_object_stream_number_offsets(
 }
 
 ///|
-fn pdf_object_stream_next_offset(
+fn pdf_object_stream_end_offsets(
   pairs : ArrayView[(Int, Int)],
-  index : Int,
   data_length : Int,
   first : Int,
-) -> Int raise PdfError {
-  if index < 0 || index >= pairs.length() {
-    raise XRefEntryExpected
+) -> Array[Int] {
+  let default_end = data_length - first
+  let sorted : Array[(Int, Int)] = []
+  for index = 0; index < pairs.length(); index = index + 1 {
+    sorted.push((pairs[index].1, index))
   }
-  let (_, offset) = pairs[index]
-  let mut next = data_length - first
-  for pair in pairs {
-    let (_, other_offset) = pair
-    if other_offset > offset && other_offset < next {
-      next = other_offset
+  sorted.sort_by(fn(left, right) { left.0.compare(right.0) })
+  let output = [ for _ in pairs => default_end ]
+  let mut start = 0
+  while start < sorted.length() {
+    let offset = sorted[start].0
+    let mut end = start + 1
+    while end < sorted.length() && sorted[end].0 == offset {
+      end += 1
     }
+    let next_offset = if end < sorted.length() && sorted[end].0 < default_end {
+      sorted[end].0
+    } else {
+      default_end
+    }
+    for index in start..<end {
+      output[sorted[index].1] = next_offset
+    }
+    start = end
   }
-  next
+  output
 }
 
 ///|
@@ -973,6 +985,7 @@ priv struct PdfObjectStreamContext {
   data : PdfBytes
   first : Int
   pairs : Array[(Int, Int)]
+  end_offsets : Array[Int]
 }
 
 ///|
@@ -998,7 +1011,12 @@ fn PdfDocument::read_object_stream_context_from_object(
       )
       let data = pdf_stream_data_bytes(decoded_stream.data)
       let pairs = pdf_object_stream_number_offsets(data[:], first, count)
-      { data, first, pairs }
+      let end_offsets = pdf_object_stream_end_offsets(
+        pairs[:],
+        data.length(),
+        first,
+      )
+      { data, first, pairs, end_offsets }
     }
     _ => raise XRefEntryExpected
   }
@@ -1009,12 +1027,10 @@ fn PdfObjectStreamContext::read_reference(
   self : PdfObjectStreamContext,
   reference : ObjectStreamReference,
 ) -> (Int, PdfObject) raise PdfError {
-  let next_offset = pdf_object_stream_next_offset(
-    self.pairs[:],
-    reference.index,
-    self.data.length(),
-    self.first,
-  )
+  if reference.index < 0 || reference.index >= self.pairs.length() {
+    raise XRefEntryExpected
+  }
+  let next_offset = self.end_offsets[reference.index]
   let (object_number, offset) = self.pairs[reference.index]
   let start = self.first + offset
   let end = self.first + next_offset
