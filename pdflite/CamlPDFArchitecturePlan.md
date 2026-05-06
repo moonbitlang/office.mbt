@@ -124,7 +124,8 @@ work changes.
    Flate APIs directly, avoiding an unnecessary `BytesView.to_owned()` copy on
    common filter encode/decode hot paths. Standard stream-filter names are now
    cached once for dispatch, avoiding repeated ASCII `PdfName` rebuilding during
-   filter comparisons.
+   filter comparisons, and standard stream dictionary keys such as `/Filter`,
+   `/Length`, and `/DecodeParms` are cached for repeated stream transformations.
    Remaining focus: exact miniz block-spelling gaps only where they matter,
    broader large-file performance tuning, optional JBIG2 external-tool decode
    parity, broader CCITT corpus validation, and DCT/JPEG real-world payload

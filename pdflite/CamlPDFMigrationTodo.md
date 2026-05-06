@@ -53,6 +53,8 @@ Current estimate:
   encode/decode dispatch by routing owned byte paths directly to Flate APIs.~~
 - [x] ~~Cache standard stream-filter names so encode/decode dispatch no longer
   rebuilds ASCII `PdfName` values for every filter comparison.~~
+- [x] ~~Cache standard stream dictionary keys such as `/Filter`, `/Length`, and
+  `/DecodeParms` so repeated stream transformations avoid rebuilding them.~~
 - [ ] Continue zlib byte-output/performance parity work where exact miniz block
   spelling or large-file profiles expose remaining gaps.
 - [ ] Profile and tune large-file hot paths for object streams, filters, and
@@ -319,6 +321,8 @@ Current estimate:
   `BytesView.to_owned()` copy on encode/decode hot paths.~~
 - [x] ~~Standard stream-filter dispatch names are cached once instead of
   rebuilding ASCII `PdfName` values on every comparison.~~
+- [x] ~~Standard stream dictionary keys are cached once instead of rebuilding
+  ASCII `PdfName` values across stream decode/encode stages.~~
 - [ ] Byte-identical zlib output strategy and broader performance parity beyond
   explicit Flate level selection.
 - [ ] Broader malformed xref-table/xref-stream/object-stream recovery beyond
