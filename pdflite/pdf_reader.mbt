@@ -1612,7 +1612,8 @@ fn pdf_read_reconstructed_trailers(
         Ok(object) => trailers.push(object)
         Err(_) => ()
       }
-    } else if include_xref_streams && pdf_is_digit_byte(data[position].to_int()) {
+    } else if include_xref_streams &&
+      pdf_reader_reconstruction_indirect_header_at(data, position) {
       let trailer : Result[PdfObject, Error] = try? cursor.read_reconstructed_xref_stream_trailer_at(
         position,
       )

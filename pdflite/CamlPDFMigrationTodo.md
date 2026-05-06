@@ -571,6 +571,9 @@ Current backend snapshot:
 - [x] ~~Object-stream contexts now precompute member end offsets once, so
   loading many embedded objects from one `/ObjStm` no longer scans every header
   pair for every object reference.~~
+- [x] ~~Malformed reconstruction trailer scanning now probes xref-stream
+  trailers only at indirect-object headers instead of every digit byte in the
+  file, avoiding repeated failed parses on large damaged inputs.~~
 - [x] ~~Incremental writer changed-object detection now uses a hash-backed
   seen set before sorting sparse classic/xref-stream entry numbers, so large
   event logs with repeated edits avoid repeated linear duplicate checks.~~
@@ -931,6 +934,9 @@ Current backend snapshot:
 - [x] ~~Object-stream member slicing now uses precomputed end offsets in each
   object-stream context, improving large `/ObjStm` expansion without changing
   recovered object semantics.~~
+- [x] ~~Malformed reconstruction now skips xref-stream trailer parse attempts
+  unless the current byte begins an indirect-object header, reducing large-file
+  recovery work without changing accepted damaged xref-stream PDFs.~~
 - [x] ~~Glyph-name extraction now skips the intermediate glyph-record array,
   reducing allocation on metadata/debug text extraction paths while preserving
   existing glyph-name semantics.~~
