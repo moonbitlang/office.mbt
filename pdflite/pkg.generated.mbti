@@ -53,6 +53,12 @@ pub fn pdf_add_annotation(PdfDocument, PdfPage, PdfAnnotation) -> PdfPage raise 
 
 pub fn pdf_add_bookmarks(ArrayView[PdfBookmark], PdfDocument) -> PdfDocument raise PdfError
 
+pub fn pdf_add_pagetree(ArrayView[PdfPage], PdfDocument) -> (PdfDocument, Int) raise PdfError
+
+pub fn pdf_add_prefix(PdfDocument, String) -> Unit raise PdfError
+
+pub fn pdf_add_root(Int, ArrayView[(PdfName, PdfObject)], PdfDocument) -> PdfDocument raise PdfError
+
 pub fn pdf_aes_cbc_decrypt(BytesView, BytesView, remove_padding? : Bool) -> Bytes raise PdfError
 
 pub fn pdf_aes_cbc_encrypt_with_iv(BytesView, BytesView, BytesView) -> Bytes raise PdfError
@@ -155,6 +161,8 @@ pub fn pdf_ccitt_g4_encode(Int, Int, Bytes) -> Bytes raise PdfError
 
 pub fn pdf_ccitt_g4_encode_view(Int, Int, BytesView) -> Bytes raise PdfError
 
+pub fn pdf_change_pages(Bool, PdfDocument, ArrayView[PdfPage], matrices? : ArrayView[(Int, TransformMatrix)], changes? : ArrayView[(Int, Int)]) -> PdfDocument raise PdfError
+
 pub fn pdf_codepoint_of_pdfdocencoding_byte(Int) -> Int raise PdfError
 
 pub fn pdf_codepoints_of_pdfdocencoding(BytesView) -> Array[Int] raise PdfError
@@ -240,6 +248,10 @@ pub fn pdf_encoding_of_name(PdfName) -> PdfEncoding?
 pub fn pdf_encryption_file_key(Bool, BytesView, Int, BytesView, Int, BytesView, Int) -> Bytes
 
 pub fn pdf_encryption_object_key(PdfCryptType, Int, Int, BytesView, Int) -> Bytes
+
+pub fn pdf_endpage(PdfDocument) -> Int raise PdfError
+
+pub fn pdf_endpage_fast(PdfDocument) -> Int raise PdfError
 
 pub fn pdf_flate_decode(Bytes) -> Bytes raise PdfError
 
@@ -335,6 +347,8 @@ pub fn pdf_objects_of_entries(ArrayView[(Int, PdfObjectEntry)]) -> PdfObjects
 
 pub fn pdf_ocg_default_config() -> PdfOcgConfig
 
+pub fn pdf_of_pages(PdfDocument, ArrayView[Int], retain_numbering? : Bool, process_struct_tree? : Bool) -> PdfDocument raise PdfError
+
 pub fn pdf_optional_content_merge(ArrayView[PdfDocument]) -> PdfOptionalContent? raise PdfError
 
 pub fn pdf_p_of_permissions(ArrayView[PdfPermission]) -> Int
@@ -367,13 +381,21 @@ pub fn pdf_page_label_text_of_page_number(Int, ArrayView[PdfPageLabel]) -> Bytes
 
 pub fn pdf_page_label_text_of_single(Int, PdfPageLabel) -> Bytes
 
+pub fn pdf_page_object_number(PdfDocument, Int) -> Int? raise PdfError
+
 pub fn[A, B, C] pdf_page_process_stub((A, B) -> C raise, A, B) -> (C, A, TransformMatrix) raise
 
 pub fn pdf_page_protect(ArrayView[PdfContentOp]) -> Array[PdfContentOp]
 
 pub fn pdf_page_rectangle_of_paper(PaperSize) -> PdfObject
 
+pub fn pdf_page_reference_numbers(PdfDocument) -> Array[Int] raise PdfError
+
 pub fn pdf_page_rotation_of_int(Int) -> PdfPageRotation raise PdfError
+
+pub fn pdf_pagenumber_of_target(PdfDocument, PdfDestination) -> Int raise PdfError
+
+pub fn pdf_pages_of_pagetree(PdfDocument) -> Array[PdfPage] raise PdfError
 
 pub fn pdf_parse_cmap_data(BytesView) -> PdfParsedCMap
 
@@ -412,6 +434,10 @@ pub fn pdf_pdfdocstring_of_codepoints(ArrayView[Int]) -> Bytes raise PdfError
 pub fn pdf_pdfdocstring_of_utf8(BytesView) -> Bytes raise PdfError
 
 pub fn pdf_permissions_of_p(Int) -> Array[PdfPermission]
+
+pub fn pdf_postpend_operators(PdfDocument, ArrayView[PdfContentOp], PdfPage, fast? : Bool) -> PdfPage raise PdfError
+
+pub fn pdf_prepend_operators(PdfDocument, ArrayView[PdfContentOp], PdfPage, fast? : Bool) -> PdfPage raise PdfError
 
 pub fn pdf_read_afm(BytesView) -> PdfAfmData raise PdfError
 
@@ -469,6 +495,8 @@ pub fn pdf_remove_page_labels(PdfDocument) -> PdfDocument raise PdfError
 
 pub fn pdf_renumber_documents(ArrayView[PdfDocument]) -> Array[PdfDocument] raise PdfError
 
+pub fn pdf_renumber_pages(PdfDocument, ArrayView[PdfPage]) -> Array[PdfPage] raise PdfError
+
 pub fn pdf_renumber_parent_trees(ArrayView[PdfDocument]) -> Unit raise PdfError
 
 pub fn pdf_reverse_table_of_encoding(PdfEncoding) -> Array[(PdfName, Int)]
@@ -490,6 +518,8 @@ pub fn pdf_sha256_digest(BytesView) -> Bytes
 pub fn pdf_sha384_digest(BytesView) -> Bytes
 
 pub fn pdf_sha512_digest(BytesView) -> Bytes
+
+pub fn pdf_shortest_unused_prefix(PdfDocument) -> String
 
 pub fn pdf_simplify_utf16be(BytesView) -> Bytes raise PdfError
 
@@ -532,6 +562,8 @@ pub fn pdf_string_of_pdf(PdfObject) -> Bytes raise PdfError
 pub fn pdf_string_of_pdf_including_data(PdfObject) -> Bytes raise PdfError
 
 pub fn pdf_table_of_encoding(PdfEncoding) -> Array[(Int, PdfName)]
+
+pub fn pdf_target_of_pagenumber(PdfDocument, Int) -> PdfDestination raise PdfError
 
 pub fn pdf_transform_annotations(PdfDocument, TransformMatrix, PdfObject) -> Unit raise PdfError
 

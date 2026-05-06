@@ -515,6 +515,16 @@ pub fn PdfDocument::add_pagetree(
 }
 
 ///|
+pub fn pdf_add_pagetree(
+  pages : ArrayView[PdfPage],
+  document : PdfDocument,
+) -> (PdfDocument, Int) raise PdfError {
+  let pdf = document.copy()
+  let page_root_number = pdf.add_pagetree(pages)
+  (pdf, page_root_number)
+}
+
+///|
 fn pdf_page_root_entries_without_catalog_keys(
   object : PdfObject,
 ) -> Array[(PdfName, PdfObject)] raise PdfError {
@@ -566,6 +576,17 @@ pub fn PdfDocument::add_root(
     .add_dict_entry(pdf_page_root_key(), PdfIndirect(root_number)),
   )
   root_number
+}
+
+///|
+pub fn pdf_add_root(
+  page_root_number : Int,
+  extras : ArrayView[(PdfName, PdfObject)],
+  document : PdfDocument,
+) -> PdfDocument raise PdfError {
+  let pdf = document.copy()
+  ignore(pdf.add_root(page_root_number, extras))
+  pdf
 }
 
 ///|
@@ -863,6 +884,13 @@ pub fn PdfDocument::pages_of_pagetree(
 }
 
 ///|
+pub fn pdf_pages_of_pagetree(
+  document : PdfDocument,
+) -> Array[PdfPage] raise PdfError {
+  document.pages_of_pagetree()
+}
+
+///|
 fn pdf_page_concat_ops(
   first : ArrayView[PdfContentOp],
   second : ArrayView[PdfContentOp],
@@ -938,6 +966,16 @@ pub fn PdfDocument::prepend_operators(
 }
 
 ///|
+pub fn pdf_prepend_operators(
+  document : PdfDocument,
+  operators : ArrayView[PdfContentOp],
+  page : PdfPage,
+  fast? : Bool = false,
+) -> PdfPage raise PdfError {
+  document.prepend_operators(page, operators, fast~)
+}
+
+///|
 pub fn PdfDocument::postpend_operators(
   self : PdfDocument,
   page : PdfPage,
@@ -976,6 +1014,16 @@ pub fn PdfDocument::postpend_operators(
       }
     }
   }
+}
+
+///|
+pub fn pdf_postpend_operators(
+  document : PdfDocument,
+  operators : ArrayView[PdfContentOp],
+  page : PdfPage,
+  fast? : Bool = false,
+) -> PdfPage raise PdfError {
+  document.postpend_operators(page, operators, fast~)
 }
 
 ///|
@@ -1712,6 +1760,17 @@ pub fn PdfDocument::change_pages(
 }
 
 ///|
+pub fn pdf_change_pages(
+  change_references : Bool,
+  document : PdfDocument,
+  pages : ArrayView[PdfPage],
+  matrices? : ArrayView[(Int, TransformMatrix)] = [],
+  changes? : ArrayView[(Int, Int)] = [],
+) -> PdfDocument raise PdfError {
+  document.change_pages(pages, change_references~, matrices~, changes~)
+}
+
+///|
 fn pdf_page_select_pages(
   pages : ArrayView[PdfPage],
   page_numbers : ArrayView[Int],
@@ -2350,6 +2409,16 @@ pub fn PdfDocument::pdf_of_pages(
 }
 
 ///|
+pub fn pdf_of_pages(
+  document : PdfDocument,
+  page_numbers : ArrayView[Int],
+  retain_numbering? : Bool = false,
+  process_struct_tree? : Bool = false,
+) -> PdfDocument raise PdfError {
+  document.pdf_of_pages(page_numbers, retain_numbering~, process_struct_tree~)
+}
+
+///|
 fn pdf_page_deleted_numbers(
   all_page_numbers : ArrayView[Int],
   active_page_numbers : ArrayView[Int],
@@ -2777,6 +2846,11 @@ pub fn PdfDocument::shortest_unused_prefix(self : PdfDocument) -> String {
 }
 
 ///|
+pub fn pdf_shortest_unused_prefix(document : PdfDocument) -> String {
+  document.shortest_unused_prefix()
+}
+
+///|
 fn pdf_page_prefixed_name(prefix : String, name : PdfName) -> PdfName {
   let output : Array[Byte] = [47]
   for byte in @ascii.encode(prefix) {
@@ -3189,6 +3263,14 @@ pub fn PdfDocument::renumber_pages(
 }
 
 ///|
+pub fn pdf_renumber_pages(
+  document : PdfDocument,
+  pages : ArrayView[PdfPage],
+) -> Array[PdfPage] raise PdfError {
+  document.renumber_pages(pages)
+}
+
+///|
 fn PdfDocument::pdf_page_prefix_content_streams(
   self : PdfDocument,
   prefix : String,
@@ -3375,6 +3457,14 @@ pub fn PdfDocument::add_prefix(
 }
 
 ///|
+pub fn pdf_add_prefix(
+  document : PdfDocument,
+  prefix : String,
+) -> Unit raise PdfError {
+  document.add_prefix(prefix)
+}
+
+///|
 fn pdf_page_reference_numbers_inner(
   pdf : PdfDocument,
   pages_node : PdfObject,
@@ -3479,6 +3569,13 @@ pub fn PdfDocument::page_reference_numbers(
 }
 
 ///|
+pub fn pdf_page_reference_numbers(
+  document : PdfDocument,
+) -> Array[Int] raise PdfError {
+  document.page_reference_numbers()
+}
+
+///|
 pub fn PdfDocument::pages_of_pagetree_quick(
   self : PdfDocument,
 ) -> Int raise PdfError {
@@ -3499,11 +3596,27 @@ pub fn PdfDocument::page_object_number(
 }
 
 ///|
+pub fn pdf_page_object_number(
+  document : PdfDocument,
+  page_number : Int,
+) -> Int? raise PdfError {
+  document.page_object_number(page_number)
+}
+
+///|
 pub fn PdfDocument::page_number_of_target(
   self : PdfDocument,
   destination : PdfDestination,
 ) -> Int raise PdfError {
   self.pdf_destination_page_number(destination, self.page_reference_numbers())
+}
+
+///|
+pub fn pdf_pagenumber_of_target(
+  document : PdfDocument,
+  destination : PdfDestination,
+) -> Int raise PdfError {
+  document.page_number_of_target(destination)
 }
 
 ///|
@@ -3518,8 +3631,21 @@ pub fn PdfDocument::target_of_page_number(
 }
 
 ///|
+pub fn pdf_target_of_pagenumber(
+  document : PdfDocument,
+  page_number : Int,
+) -> PdfDestination raise PdfError {
+  document.target_of_page_number(page_number)
+}
+
+///|
 pub fn PdfDocument::endpage(self : PdfDocument) -> Int raise PdfError {
   self.pages_of_pagetree_quick()
+}
+
+///|
+pub fn pdf_endpage(document : PdfDocument) -> Int raise PdfError {
+  document.endpage()
 }
 
 ///|
@@ -3529,4 +3655,9 @@ pub fn PdfDocument::endpage_fast(self : PdfDocument) -> Int raise PdfError {
     Some(PdfInteger(count)) => count
     _ => 0
   }
+}
+
+///|
+pub fn pdf_endpage_fast(document : PdfDocument) -> Int raise PdfError {
+  document.endpage_fast()
 }

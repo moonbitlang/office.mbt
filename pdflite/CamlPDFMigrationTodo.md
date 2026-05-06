@@ -64,6 +64,10 @@ Current backend snapshot:
   standalone document-feature helpers for page annotation read/add/transform
   and optional-content read/write/remove over the existing typed document
   methods.~~
+- [x] ~~Expose `.repos/pdfpage.mli`-referenced standalone page lifecycle
+  helpers for page-tree read/write/rooting, page counts and target lookup,
+  page extraction/replacement, resource renumbering, prefixing, and operator
+  insertion over the existing typed document methods.~~
 - [x] ~~Check the currently tracked CamlPDF fixture PDFs for image XObjects
   before expanding image corpus tests; `logo.pdf` and
   `introduction_to_camlpdf.pdf` do not currently provide image entries.~~

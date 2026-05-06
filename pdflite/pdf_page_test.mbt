@@ -583,6 +583,60 @@ test "PdfDocument page_reference_numbers traverses page tree in order" {
 }
 
 ///|
+test "standalone page lifecycle helpers delegate to document methods" {
+  let doc = page_tree_document_for_test()
+  @test.assert_eq(
+    try! @pdflite.pdf_page_reference_numbers(doc),
+    try! doc.page_reference_numbers(),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_pages_of_pagetree(doc),
+    try! doc.pages_of_pagetree(),
+  )
+  @test.assert_eq(try! @pdflite.pdf_endpage(doc), try! doc.endpage())
+  @test.assert_eq(try! @pdflite.pdf_endpage_fast(doc), try! doc.endpage_fast())
+  @test.assert_eq(
+    try! @pdflite.pdf_page_object_number(doc, 2),
+    try! doc.page_object_number(2),
+  )
+  let destination : @pdflite.PdfDestination = DestFit(TargetPageObject(5))
+  @test.assert_eq(
+    try! @pdflite.pdf_pagenumber_of_target(doc, destination),
+    try! doc.page_number_of_target(destination),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_target_of_pagenumber(doc, 2),
+    try! doc.target_of_page_number(2),
+  )
+  let blank = @pdflite.pdf_page_blank(@pdflite.paper_a4)
+  let built = try! @pdflite.pdf_add_pagetree(
+    [blank],
+    @pdflite.pdf_document_empty(),
+  )
+  let rooted = try! @pdflite.pdf_add_root(built.1, [], built.0)
+  @test.assert_eq(try! @pdflite.pdf_endpage(rooted), 1)
+  @test.assert_eq((try! @pdflite.pdf_renumber_pages(doc, [blank])).length(), 1)
+  let changed = try! @pdflite.pdf_change_pages(false, doc, [blank])
+  @test.assert_eq(try! changed.endpage(), 1)
+  let extracted = try! @pdflite.pdf_of_pages(doc, [1])
+  @test.assert_eq(try! extracted.endpage(), 1)
+  let prefixed = try! @pdflite.pdf_minimum_valid_pdf()
+  @test.assert_eq(
+    @pdflite.pdf_shortest_unused_prefix(prefixed),
+    prefixed.shortest_unused_prefix(),
+  )
+  try! @pdflite.pdf_add_prefix(prefixed, "zz")
+  @test.assert_eq(
+    (try! @pdflite.pdf_prepend_operators(doc, [Op_q], blank, fast=true)).content.length(),
+    blank.content.length() + 1,
+  )
+  @test.assert_eq(
+    (try! @pdflite.pdf_postpend_operators(doc, [Op_q], blank, fast=true)).content.length(),
+    blank.content.length() + 1,
+  )
+}
+
+///|
 test "PdfDocument pages_of_pagetree_quick allows direct page dictionaries" {
   let key_type = page_name_for_test("/Type")
   let key_pages = page_name_for_test("/Pages")

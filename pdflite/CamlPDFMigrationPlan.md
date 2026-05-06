@@ -657,6 +657,10 @@ MoonBit consequences for this project:
    including `/Parent`, `/Kids`, and `/Count` checks.
    Page content mutation is started with `protect`, `prepend_operators`, and
    `postpend_operators` helpers over `PdfContentOp` streams.
+   Standalone `.repos/pdfpage.mli`-shaped wrappers now expose page-tree
+   read/write/rooting, page counts, target lookup, page extraction/replacement,
+   resource renumbering, prefixing, and operator insertion over the existing
+   typed document methods.
    Page replacement is now started with a `change_pages` slice that builds a
    replacement page tree in a copied document and can renumber same-count old
    page indirect references to the new page objects. Its optional `changes`
