@@ -139,6 +139,9 @@ Current estimate:
 - [x] ~~Group xref-stream type-2 entries by containing object stream before
   embedded object expansion, avoiding a full xref scan per `/ObjStm` while
   preserving first-seen stream order and per-stream entry order.~~
+- [x] ~~Accumulate newer-first classic/xref-stream entries with a hash-backed
+  object-number set, preserving first-entry precedence while avoiding repeated
+  duplicate scans across revision chains.~~
 - [x] ~~Deduplicate incremental-writer changed object numbers with a
   `HashMap` before sorting sparse xref entries, avoiding quadratic event-log
   scans for repeatedly edited objects.~~
@@ -322,6 +325,9 @@ Current estimate:
 - [x] ~~Object-stream embedded-object loading now groups compressed xref entries
   by `/ObjStm`, so compressed-object-heavy reads do not rescan the full xref
   table for each object stream.~~
+- [x] ~~Newer-first xref entry accumulation now tracks seen object numbers with
+  `PdfNumberSet`, avoiding repeated duplicate scans while preserving the newest
+  entry for each object number.~~
 - [x] ~~Incremental writer changed-object detection now uses a hash-backed
   seen set before sorting sparse classic/xref-stream entry numbers, so large
   event logs with repeated edits avoid repeated linear duplicate checks.~~

@@ -117,7 +117,10 @@ work changes.
    reconstructed xref-stream reads, avoiding repeated stream decode/decrypt work
    on compressed-object-heavy PDFs. Xref-stream type-2 entries are grouped by
    containing object stream before embedded expansion, avoiding a full xref scan
-   per `/ObjStm` while preserving stream and entry order. Primitive integer
+   per `/ObjStm` while preserving stream and entry order. Newer-first xref entry
+   accumulation now tracks seen object numbers with the shared hash-backed
+   `PdfNumberSet`, avoiding repeated duplicate scans across revision chains
+   while preserving first-entry precedence. Primitive integer
    lexing now also parses Int-range PDF number tokens directly from borrowed
    `BytesView` data, using an
    Int64 overflow guard before falling back to the existing real-number parser.

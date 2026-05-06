@@ -500,27 +500,18 @@ fn pdf_classic_xref_lookup(
 }
 
 ///|
-fn pdf_classic_xrefs_contain(
-  xrefs : ArrayView[PdfClassicXRefEntry],
-  object_number : Int,
-) -> Bool {
-  for xref in xrefs {
-    if xref.object_number == object_number {
-      break true
-    }
-  } nobreak {
-    false
-  }
-}
-
-///|
 fn pdf_classic_xrefs_add_newer_first(
   target : Array[PdfClassicXRefEntry],
   entries : ArrayView[PdfClassicXRefEntry],
 ) -> Unit {
+  let seen = pdf_number_set([])
+  for xref in target {
+    seen.add(xref.object_number)
+  }
   for entry in entries {
-    if !pdf_classic_xrefs_contain(target[:], entry.object_number) {
+    if !seen.contains(entry.object_number) {
       target.push(entry)
+      seen.add(entry.object_number)
     }
   }
 }

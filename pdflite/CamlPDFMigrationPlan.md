@@ -353,7 +353,10 @@ MoonBit consequences for this project:
    their entries newer-first, loads ordinary objects by offset, and expands
    type-2 object-stream entries before trailer selection. This lets public reads
    recover modern files whose `/Root` catalog or page tree is only present
-   inside an object stream after `startxref` has gone bad. The native reader
+   inside an object stream after `startxref` has gone bad. Newer-first classic
+   and xref-stream entry accumulation now uses a hash-backed object-number set,
+   preserving the newest entry for each object number while avoiding repeated
+   duplicate scans across long revision chains. The native reader
    now skips xref-stream objects by exact `(object number, offset)` identity
    during reconstructed xref-stream loading, matching the strict reader and
    preserving incremental updates that reuse an older xref-stream object number
