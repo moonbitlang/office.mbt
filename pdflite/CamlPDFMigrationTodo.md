@@ -230,6 +230,10 @@ Current backend snapshot:
   source-table fallbacks, covering GB-EUC-H, GBpc-EUC-H, and GBK-EUC-H
   extraction plus reverse charcode lookup through compressed write/read/reread
   boundaries.~~
+- [x] ~~Add a native reader-boundary gate for remaining Adobe-CNS1 Big5-family
+  predefined CMap variants, covering B5pc-H, ETenms-B5-H, HKdla-B5-H,
+  HKdlb-B5-H, HKgccs-B5-H, HKm314-B5-H, and HKm471-B5-H through compressed
+  write/read/reread boundaries.~~
 - [ ] Decide any further rare predefined CMap source-table slices only when
   useful source tables or fixtures are available.
 - [x] ~~Route native normal Flate encode/decode through CamlPDF's vendored
@@ -1129,6 +1133,9 @@ Current backend snapshot:
   boundaries.~~
 - [x] ~~Add native Adobe-GB1 predefined-CMap acceptance coverage for GB-EUC-H,
   GBpc-EUC-H, and GBK-EUC-H through compressed write/read/reread boundaries.~~
+- [x] ~~Add native Adobe-CNS1 Big5 variant predefined-CMap acceptance coverage
+  for B5pc-H, ETenms-B5-H, HKdla-B5-H, HKdlb-B5-H, HKgccs-B5-H, HKm314-B5-H,
+  and HKm471-B5-H through compressed write/read/reread boundaries.~~
 - [x] ~~Tune object-stream expansion by grouping xref-stream type-2 entries
   before strict, reconstructed, and password-aware embedded-object loading.~~
 - [x] ~~Tune incremental writer changed-object collection with a hash-backed

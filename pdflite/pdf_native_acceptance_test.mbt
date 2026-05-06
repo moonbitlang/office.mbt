@@ -1913,6 +1913,120 @@ fn acceptance_gb1_cmap_text_document_for_test() -> @pdflite.PdfDocument raise {
 }
 
 ///|
+fn acceptance_cns1_variant_cmap_cases_for_test() -> Array[
+  (String, String, String, String, Int, Array[Int], Array[Int], Int, Int),
+] {
+  [
+    (
+      "/Fb5pc",
+      "/B5pcTop",
+      "/B5pc-H",
+      "/B5pcDescendant",
+      114,
+      [
+        0x41, 0x80, 0x83, 0xA0, 0xFD, 0xFE, 0xFF, 0xA1, 0x40, 0xA7, 0x41, 0xA6, 0x6E,
+        0xA1, 0x4B, 0xA1, 0x51,
+      ],
+      [
+        0x41, 0x005C, 0x83, 0x00A0, 0x00A9, 0x2122, 0x2026, 0x3000, 0x4F60, 0x597D,
+        0x22EF, 0xFE54,
+      ],
+      0x22EF,
+      0xA14B,
+    ),
+    (
+      "/Fetenms",
+      "/ETenmsTop",
+      "/ETenms-B5-H",
+      "/ETenmsDescendant",
+      116,
+      [0x41, 0xA1, 0xC2, 0xA2, 0x41, 0xC7, 0xFD, 0x80],
+      [0x41, 0x00AF, 0x2215, 0x0419, 0x80],
+      0x0419,
+      0xC7FD,
+    ),
+    (
+      "/Fhkdla",
+      "/HKdlaTop",
+      "/HKdla-B5-H",
+      "/HKdlaDescendant",
+      118,
+      [0x41, 0xFA, 0x41, 0x80],
+      [0x41, 0x5F0D, 0x80],
+      0x5F0D,
+      0xFA41,
+    ),
+    (
+      "/Fhkdlb",
+      "/HKdlbTop",
+      "/HKdlb-B5-H",
+      "/HKdlbDescendant",
+      120,
+      [0x41, 0x8E, 0x40, 0x80],
+      [0x41, 0x99C4, 0x80],
+      0x99C4,
+      0x8E40,
+    ),
+    (
+      "/Fhkgccs",
+      "/HKgccsTop",
+      "/HKgccs-B5-H",
+      "/HKgccsDescendant",
+      122,
+      [0x41, 0x8A, 0x43, 0x80],
+      [0x41, 0x20C42, 0x80],
+      0x20C42,
+      0x8A43,
+    ),
+    (
+      "/Fhkm314",
+      "/HKm314Top",
+      "/HKm314-B5-H",
+      "/HKm314Descendant",
+      124,
+      [0x41, 0xC7, 0x40, 0x80],
+      [0x41, 0x4E21, 0x80],
+      0x4E21,
+      0xC740,
+    ),
+    (
+      "/Fhkm471",
+      "/HKm471Top",
+      "/HKm471-B5-H",
+      "/HKm471Descendant",
+      126,
+      [0x41, 0xFA, 0x40, 0x80],
+      [0x41, 0x4E21, 0x80],
+      0x4E21,
+      0xFA40,
+    ),
+  ]
+}
+
+///|
+fn acceptance_cns1_variant_cmap_text_document_for_test() -> @pdflite.PdfDocument raise {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  let pages : Array[@pdflite.PdfPage] = []
+  for case in acceptance_cns1_variant_cmap_cases_for_test() {
+    doc.add_object_given_number(
+      case.4,
+      acceptance_predefined_cmap_descendant_font_for_test(case.3, "CNS1"),
+    )
+    pages.push(
+      acceptance_predefined_cmap_page_for_test(
+        case.0,
+        acceptance_predefined_cmap_type0_font_for_test(case.1, case.2, case.4),
+        acceptance_text_bytes_for_test(case.5[:]),
+      ),
+    )
+  }
+  let page_root = doc.add_pagetree(pages)
+  ignore(doc.add_root(page_root, []))
+  doc
+}
+
+///|
 fn acceptance_font_object_by_name_for_test(
   resources : @pdflite.PdfObject,
   name : @pdflite.PdfName,
@@ -2497,6 +2611,38 @@ fn acceptance_assert_gb1_cmap_text_for_test(
   @test.assert_eq(gbk_extractor.charcode_of_codepoint(0xE4C5), Some(0xFEFE))
   @test.assert_eq(gbk_extractor.charcode_of_codepoint(0xF8F5), Some(0xFF))
   @test.assert_eq(gbk_extractor.charcode_of_codepoint(0x1F600), None)
+}
+
+///|
+fn acceptance_assert_cns1_variant_cmap_text_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(doc.version(), (1, 5))
+  let cases = acceptance_cns1_variant_cmap_cases_for_test()
+  @test.assert_eq(doc.endpage(), cases.length())
+  let pages = doc.pages_of_pagetree()
+  @test.assert_eq(pages.length(), cases.length())
+  for index in 0..<cases.length() {
+    let case = cases[index]
+    let font = acceptance_assert_predefined_cmap_font_shape_for_test(
+      doc,
+      pages[index],
+      case.0,
+      case.2,
+      "CNS1",
+    )
+    @test.assert_eq(
+      acceptance_font_codepoints_of_page_for_test(
+        doc,
+        pages[index],
+        acceptance_name_for_test(case.0),
+      ),
+      case.6,
+    )
+    let extractor = doc.text_extractor_of_font(font)
+    @test.assert_eq(extractor.charcode_of_codepoint(case.7), Some(case.8))
+    @test.assert_eq(extractor.charcode_of_codepoint(0x1F600), None)
+  }
 }
 
 ///|
@@ -5299,6 +5445,16 @@ test "native acceptance suite extracts Adobe-GB1 predefined CMap text through re
   acceptance_assert_gb1_cmap_text_for_test(parsed)
   let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
   acceptance_assert_gb1_cmap_text_for_test(reparsed)
+}
+
+///|
+test "native acceptance suite extracts Adobe-CNS1 variant predefined CMap text through reader boundaries" {
+  let parsed = acceptance_compressed_roundtrip_for_test(
+    acceptance_cns1_variant_cmap_text_document_for_test(),
+  )
+  acceptance_assert_cns1_variant_cmap_text_for_test(parsed)
+  let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
+  acceptance_assert_cns1_variant_cmap_text_for_test(reparsed)
 }
 
 ///|
