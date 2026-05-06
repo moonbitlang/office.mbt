@@ -59,6 +59,8 @@ Current estimate:
   names so repeated image inspection avoids rebuilding ASCII `PdfName` values.~~
 - [x] ~~Cache standard reader keys used by xref, object-stream, trailer, and
   stream-length handling so large object-table loads avoid rebuilding names.~~
+- [x] ~~Parse object-stream headers and embedded object slices from borrowed
+  `BytesView` data instead of allocating temporary owned `Bytes`.~~
 - [ ] Continue zlib byte-output/performance parity work where exact miniz block
   spelling or large-file profiles expose remaining gaps.
 - [ ] Profile and tune large-file hot paths for object streams, filters, and
@@ -331,6 +333,8 @@ Current estimate:
   once instead of rebuilt on every image metadata lookup.~~
 - [x] ~~Standard reader/xref/object-stream keys are cached once instead of
   rebuilt on repeated strict and reconstructed read paths.~~
+- [x] ~~Object-stream extraction parses header and embedded object slices from
+  borrowed views instead of temporary owned byte copies.~~
 - [ ] Byte-identical zlib output strategy and broader performance parity beyond
   explicit Flate level selection.
 - [ ] Broader malformed xref-table/xref-stream/object-stream recovery beyond

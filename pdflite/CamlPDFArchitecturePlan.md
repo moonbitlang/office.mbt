@@ -98,7 +98,9 @@ work changes.
    deferred placeholders that `lookup_object_or_null` intentionally exposes as
    `null`. Standard reader keys used by xref, object-stream, trailer, and stream
    length handling are cached once, avoiding repeated ASCII `PdfName` rebuilding
-   while loading large object tables.
+   while loading large object tables. Object-stream extraction parses headers
+   and embedded object slices from borrowed `BytesView` data instead of
+   allocating temporary owned bytes.
    Remaining focus: broader malformed xref-table recovery and encrypted
    parser-state edge cases beyond current object-stream coverage.
 

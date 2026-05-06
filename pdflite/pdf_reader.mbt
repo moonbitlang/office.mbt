@@ -917,8 +917,7 @@ fn pdf_object_stream_number_offsets(
   if first < 0 || first > data.length() || count < 0 {
     raise StreamDataExpected
   }
-  let header = data[0:first].to_owned()
-  let values = pdf_parse_lexemes(pdf_lex_bytes(header))
+  let values = pdf_parse_lexemes(pdf_lex_view(data[0:first]))
   if values.length() < count * 2 {
     raise XRefEntryExpected
   }
@@ -990,7 +989,7 @@ fn PdfDocument::read_object_stream_reference_from_object(
       if start < first || start > end || end > data.length() {
         raise StreamDataExpected
       }
-      (object_number, pdf_parse_object_from_bytes(data[start:end].to_owned()))
+      (object_number, pdf_parse_object_from_view(data[start:end]))
     }
     _ => raise XRefEntryExpected
   }
