@@ -617,6 +617,34 @@ test "pdf filter dispatch view APIs read borrowed slices" {
     ),
     @pdflite.pdf_ascii85_encode(codec_ascii_for_test("Hi ")),
   )
+  let flate = codec_name_for_test("/FlateDecode")
+  let encoded_flate = @pdflite.pdf_flate_encode(codec_ascii_for_test("Hi"))
+  let wrapped_flate = codec_wrap_view_for_test("xx", encoded_flate[:], "yy")
+  @test.assert_eq(
+    @pdflite.pdf_decode_filter_view(
+      flate,
+      wrapped_flate[2:wrapped_flate.length() - 2],
+    ),
+    codec_ascii_for_test("Hi"),
+  )
+  let encoded_flate_view = @pdflite.pdf_encode_filter_view(
+    flate,
+    raw[2:raw.length() - 2],
+  )
+  @test.assert_eq(
+    @pdflite.pdf_flate_decode(encoded_flate_view),
+    codec_ascii_for_test("Hi "),
+  )
+  let encoded_flate_best_view = @pdflite.pdf_encode_filter_view_with_flate_level(
+    flate,
+    raw[2:raw.length() - 2],
+    9,
+  )
+  @test.assert_eq(encoded_flate_best_view[1].to_int(), 218)
+  @test.assert_eq(
+    @pdflite.pdf_flate_decode(encoded_flate_best_view),
+    codec_ascii_for_test("Hi "),
+  )
 }
 
 ///|

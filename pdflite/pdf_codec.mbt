@@ -566,7 +566,11 @@ pub fn pdf_decode_filter_bytes(
   filter : PdfName,
   data : PdfBytes,
 ) -> PdfBytes raise PdfError {
-  pdf_decode_filter_view(filter, data[:])
+  if pdf_filter_is_one_of(filter, "/FlateDecode", "/Fl") {
+    pdf_flate_decode(data)
+  } else {
+    pdf_decode_filter_view(filter, data[:])
+  }
 }
 
 ///|
@@ -619,7 +623,7 @@ pub fn pdf_encode_filter_bytes(
   filter : PdfName,
   data : PdfBytes,
 ) -> PdfBytes raise PdfError {
-  pdf_encode_filter_view(filter, data[:])
+  pdf_encode_filter_bytes_with_optional_flate_level(filter, data, None)
 }
 
 ///|
@@ -628,7 +632,31 @@ pub fn pdf_encode_filter_bytes_with_flate_level(
   data : PdfBytes,
   flate_level : Int,
 ) -> PdfBytes raise PdfError {
-  pdf_encode_filter_view_with_flate_level(filter, data[:], flate_level)
+  pdf_encode_filter_bytes_with_optional_flate_level(
+    filter,
+    data,
+    Some(flate_level),
+  )
+}
+
+///|
+fn pdf_encode_filter_bytes_with_optional_flate_level(
+  filter : PdfName,
+  data : PdfBytes,
+  flate_level : Int?,
+) -> PdfBytes raise PdfError {
+  if pdf_filter_is_one_of(filter, "/FlateDecode", "/Fl") {
+    match flate_level {
+      Some(level) => pdf_flate_encode_with_level(data, level)
+      None => pdf_flate_encode(data)
+    }
+  } else {
+    pdf_encode_filter_view_with_optional_flate_level(
+      filter,
+      data[:],
+      flate_level,
+    )
+  }
 }
 
 ///|

@@ -120,7 +120,9 @@ work changes.
    On native, normal Flate encode/decode now routes through CamlPDF's vendored
    miniz-compatible C path, while the pure MoonBit codec remains available for
    non-native targets and parser prefix decoding where consumed-byte accounting
-   is required.
+   is required. Owned `PdfBytes` Flate filter dispatch now calls the owned
+   Flate APIs directly, avoiding an unnecessary `BytesView.to_owned()` copy on
+   common filter encode/decode hot paths.
    Remaining focus: exact miniz block-spelling gaps only where they matter,
    broader large-file performance tuning, optional JBIG2 external-tool decode
    parity, broader CCITT corpus validation, and DCT/JPEG real-world payload
