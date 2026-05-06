@@ -4,23 +4,35 @@ fn pdf_tree_name(text : String) -> PdfName {
 }
 
 ///|
+let pdf_tree_names_key_name : PdfName = pdf_tree_name("/Names")
+
+///|
 fn pdf_tree_names_key() -> PdfName {
-  pdf_tree_name("/Names")
+  pdf_tree_names_key_name
 }
+
+///|
+let pdf_tree_nums_key_name : PdfName = pdf_tree_name("/Nums")
 
 ///|
 fn pdf_tree_nums_key() -> PdfName {
-  pdf_tree_name("/Nums")
+  pdf_tree_nums_key_name
 }
+
+///|
+let pdf_tree_kids_key_name : PdfName = pdf_tree_name("/Kids")
 
 ///|
 fn pdf_tree_kids_key() -> PdfName {
-  pdf_tree_name("/Kids")
+  pdf_tree_kids_key_name
 }
 
 ///|
+let pdf_tree_limits_key_name : PdfName = pdf_tree_name("/Limits")
+
+///|
 fn pdf_tree_limits_key() -> PdfName {
-  pdf_tree_name("/Limits")
+  pdf_tree_limits_key_name
 }
 
 ///|

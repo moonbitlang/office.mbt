@@ -81,6 +81,8 @@ Current estimate:
 - [x] ~~Cache standard merge catalog, destination, name-dictionary, AcroForm,
   and structure-tree names so public merge/extraction workflows reuse stable
   `PdfName` values.~~
+- [x] ~~Cache name-tree, number-tree, page-label, and document-root names so
+  document metadata helpers reuse stable `PdfName` values.~~
 - [ ] Continue zlib byte-output/performance parity work where exact miniz block
   spelling or large-file profiles expose remaining gaps.
 - [ ] Profile and tune large-file hot paths for object streams, filters, and
@@ -134,6 +136,8 @@ Current estimate:
 - [x] ~~Merge catalog assembly, destination rewriting, name-dictionary merging,
   AcroForm merging, and structure-tree helpers now share cached standard
   `PdfName` values.~~
+- [x] ~~Name-tree/number-tree builders and lookups, page-label helpers, and the
+  document root key now share cached standard `PdfName` values.~~
 - [ ] Improve byte-identical zlib output strategy and broader performance
   parity beyond the explicit Flate level API.
 - [ ] Broaden malformed xref-table/xref-stream/object-stream recovery with more

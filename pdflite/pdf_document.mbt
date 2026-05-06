@@ -56,8 +56,11 @@ fn pdf_document_name(text : String) -> PdfName {
 }
 
 ///|
+let pdf_document_root_key_name : PdfName = pdf_document_name("/Root")
+
+///|
 fn pdf_document_root_key() -> PdfName {
-  pdf_document_name("/Root")
+  pdf_document_root_key_name
 }
 
 ///|
