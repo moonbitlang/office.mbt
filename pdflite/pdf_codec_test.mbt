@@ -616,7 +616,7 @@ test "pdf_decode_filter_bytes dispatches supported filter names" {
 test "pdf filter dispatch view APIs read borrowed slices" {
   let encoded_hex = codec_ascii_for_test("xx4869>yy")
   @test.assert_eq(
-    try! @pdflite.pdf_decode_filter_view(
+    @pdflite.pdf_decode_filter_view(
       codec_name_for_test("/AHx"),
       encoded_hex[2:encoded_hex.length() - 2],
     ),
@@ -624,7 +624,7 @@ test "pdf filter dispatch view APIs read borrowed slices" {
   )
   let raw = codec_ascii_for_test("xxHi yy")
   @test.assert_eq(
-    try! @pdflite.pdf_encode_filter_view(
+    @pdflite.pdf_encode_filter_view(
       codec_name_for_test("/A85"),
       raw[2:raw.length() - 2],
     ),
@@ -657,6 +657,21 @@ test "pdf filter dispatch view APIs read borrowed slices" {
   @test.assert_eq(
     @pdflite.pdf_flate_decode(encoded_flate_best_view),
     codec_ascii_for_test("Hi "),
+  )
+  let crypt_raw = codec_ascii_for_test("xxrawyy")
+  @test.assert_eq(
+    @pdflite.pdf_decode_filter_view(
+      codec_name_for_test("/Crypt"),
+      crypt_raw[2:crypt_raw.length() - 2],
+    ),
+    codec_ascii_for_test("raw"),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_encode_filter_view(
+      codec_name_for_test("/Crypt"),
+      crypt_raw[2:crypt_raw.length() - 2],
+    ),
+    codec_ascii_for_test("raw"),
   )
 }
 
@@ -965,6 +980,27 @@ test "pdf predictors keep identity data and reject bad encode parameters" {
 
 ///|
 test "pdf predictor view APIs read borrowed slices" {
+  let identity_input = codec_ascii_for_test("xxrawyy")
+  @test.assert_eq(
+    @pdflite.pdf_decode_predictor_view(
+      1,
+      1,
+      8,
+      3,
+      identity_input[2:identity_input.length() - 2],
+    ),
+    codec_ascii_for_test("raw"),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_encode_predictor_view(
+      1,
+      1,
+      8,
+      3,
+      identity_input[2:identity_input.length() - 2],
+    ),
+    codec_ascii_for_test("raw"),
+  )
   let decoded_input = codec_bytes_for_test([1, 10, 10, 10])
   let wrapped_decoded_input = codec_wrap_view_for_test(
     "xx",

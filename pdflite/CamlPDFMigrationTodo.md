@@ -134,6 +134,10 @@ Current estimate:
   filters, image extraction, and non-ASCII text paths.
 - [x] ~~Run all-target type checking with `moon check --target all --warn-list
   +73`; native remains the test-validation target.~~
+- [x] ~~Close the May 6 native coverage gap for identity filter/predictor
+  `BytesView` copy boundaries, inline-image encoded/error branches, borrowed
+  raw RGB image helpers, lexeme empty/sign-only integer parsing, and
+  reconstructed object-stream expansion recovery.~~
 - [ ] Revisit all-backend validation after native parity is stable.
 
 ## Big Picture Checklist
@@ -175,6 +179,10 @@ Current estimate:
 - [x] ~~Pure Flate prefix decoding now reuses cached fixed-Huffman tables,
   reducing repeated setup work for inline images and other consumed-length
   parsing paths that cannot use native miniz.~~
+- [x] ~~The refreshed native coverage pass reports all source files fully
+  covered after exercising codec identity view copies, inline-image
+  decode-parameter branches, raw RGB borrowed helpers, lexeme integer
+  boundaries, and reconstructed object-stream recovery helpers.~~
 - [x] ~~Single-stage Flate inline-image parsing now keeps the prefix-decoded
   payload when no `/DecodeParms` are present, instead of re-owning encoded data
   and decoding it again through the stream-filter path.~~

@@ -521,6 +521,61 @@ test "private object stream helpers cover malformed object streams" {
     try! context.read_reference({ object_stream_number: 7, index: 1 }),
     (3, PdfBoolean(false)),
   )
+  let recovered_doc = pdf_document_empty()
+  recovered_doc.add_object_given_number(7, valid_stream)
+  let recovered_xrefs = [
+    {
+      object_number: 2,
+      offset: 0,
+      generation: 0,
+      in_use: true,
+      object_stream: Some({ object_stream_number: 7, index: 0 }),
+    },
+    {
+      object_number: 3,
+      offset: 0,
+      generation: 0,
+      in_use: true,
+      object_stream: Some({ object_stream_number: 7, index: 1 }),
+    },
+  ]
+  recovered_doc.load_reconstructed_xref_stream_embedded_objects(
+    recovered_xrefs[:],
+  )
+  @test.assert_eq(recovered_doc.lookup_object_or_null(2), PdfBoolean(true))
+  @test.assert_eq(recovered_doc.lookup_object_or_null(3), PdfBoolean(false))
+
+  let password_recovered_doc = pdf_document_empty()
+  password_recovered_doc.add_object_given_number(7, valid_stream)
+  password_recovered_doc.load_reconstructed_xref_stream_embedded_objects_with_passwords(
+    recovered_xrefs[:],
+    None,
+    None,
+  )
+  @test.assert_eq(
+    password_recovered_doc.lookup_object_or_null(2),
+    PdfBoolean(true),
+  )
+
+  let bad_embedded_xrefs = [
+    {
+      object_number: 4,
+      offset: 0,
+      generation: 0,
+      in_use: true,
+      object_stream: Some({ object_stream_number: 7, index: 9 }),
+    },
+  ]
+  recovered_doc.load_reconstructed_xref_stream_embedded_objects(
+    bad_embedded_xrefs[:],
+  )
+  @test.assert_eq(recovered_doc.lookup_object_or_null(4), PdfNull)
+  password_recovered_doc.load_reconstructed_xref_stream_embedded_objects_with_passwords(
+    bad_embedded_xrefs[:],
+    None,
+    None,
+  )
+  @test.assert_eq(password_recovered_doc.lookup_object_or_null(4), PdfNull)
 
   let no_type_doc = pdf_document_empty()
   no_type_doc.add_object_given_number(
@@ -736,6 +791,9 @@ test "private reader byte-view helpers cover boundary cases" {
     try! pdf_parse_ascii_int_view(@ascii.encode("2147483647")[:]),
     2147483647,
   )
+  @test.assert_eq(pdf_number_view_int(Bytes::new(0)[:]), None)
+  @test.assert_eq(pdf_number_view_int(@ascii.encode("+")[:]), None)
+  @test.assert_eq(pdf_number_view_int(@ascii.encode("-")[:]), None)
 }
 
 ///|
@@ -1212,6 +1270,9 @@ test "private content helpers cover malformed operand fallbacks" {
   guard pdf_content_inline_image_text_filter(PdfDictionary([])) is None else {
     fail("expected no inline image text filter")
   }
+  guard pdf_content_inline_image_single_text_filter(PdfDictionary([])) is None else {
+    fail("expected no single inline image text filter")
+  }
   guard pdf_content_filter_single_inline_text_filter(
       PdfNameObject(wbtest_content_name("/AHx")),
     )
@@ -1240,6 +1301,13 @@ test "private content helpers cover malformed operand fallbacks" {
     ),
     @ascii.encode("616263>"),
   )
+  let missing_text_encoded_end : Result[PdfBytes, Error] = try? pdf_content_read_text_encoded_inline_image_data(
+    byte_cursor_of_bytes(@ascii.encode("616263 EI")),
+    PdfContentInlineAsciiHex,
+  )
+  guard missing_text_encoded_end is Err(_) else {
+    fail("expected missing text inline image end to raise")
+  }
   let decoded_hex_cursor = byte_cursor_of_bytes(
     @ascii.encode("616263> EI next"),
   )
@@ -1271,6 +1339,10 @@ test "private content helpers cover malformed operand fallbacks" {
   )
   @test.assert_eq(pdf_content_filter_is_inline_run_length(PdfInteger(1)), false)
   @test.assert_eq(
+    pdf_content_inline_image_uses_single_run_length(PdfDictionary([])),
+    false,
+  )
+  @test.assert_eq(
     pdf_content_filter_is_single_inline_run_length(
       PdfNameObject(wbtest_content_name("/RL")),
     ),
@@ -1292,6 +1364,10 @@ test "private content helpers cover malformed operand fallbacks" {
     false,
   )
   @test.assert_eq(pdf_content_filter_is_inline_flate(PdfInteger(1)), false)
+  @test.assert_eq(
+    pdf_content_inline_image_uses_single_flate(PdfDictionary([])),
+    false,
+  )
   @test.assert_eq(
     pdf_content_filter_is_inline_flate(
       PdfArray([PdfNameObject(wbtest_content_name("/FlateDecode"))]),
@@ -1320,6 +1396,10 @@ test "private content helpers cover malformed operand fallbacks" {
     false,
   )
   @test.assert_eq(pdf_content_filter_is_inline_lzw(PdfInteger(1)), false)
+  @test.assert_eq(
+    pdf_content_inline_image_uses_single_lzw(PdfDictionary([])),
+    false,
+  )
   @test.assert_eq(
     pdf_content_filter_is_inline_lzw(
       PdfArray([PdfNameObject(wbtest_content_name("/LZWDecode"))]),
@@ -1356,6 +1436,18 @@ test "private content helpers cover malformed operand fallbacks" {
     ),
     flate_inline,
   )
+  @test.assert_eq(
+    pdf_content_read_flate_inline_image_data(
+      byte_cursor_of_bytes(
+        pdf_bytes_concat_views([
+          @ascii.encode(" ")[:],
+          flate_inline[:],
+          @ascii.encode(" EI")[:],
+        ]),
+      ),
+    ),
+    flate_inline,
+  )
   let decoded_flate_cursor = byte_cursor_of_bytes(
     pdf_bytes_concat_views([flate_inline[:], @ascii.encode(" EI next")[:]]),
   )
@@ -1372,6 +1464,20 @@ test "private content helpers cover malformed operand fallbacks" {
     try! pdf_content_read_lzw_inline_image_data(
       byte_cursor_of_bytes(
         pdf_bytes_concat_views([lzw_inline[:], @ascii.encode(" EI")[:]]),
+      ),
+      PdfDictionary([]),
+      None,
+    ),
+    lzw_inline,
+  )
+  @test.assert_eq(
+    pdf_content_read_lzw_inline_image_data(
+      byte_cursor_of_bytes(
+        pdf_bytes_concat_views([
+          @ascii.encode(" ")[:],
+          lzw_inline[:],
+          @ascii.encode(" EI")[:],
+        ]),
       ),
       PdfDictionary([]),
       None,
@@ -1429,6 +1535,68 @@ test "private content helpers cover malformed operand fallbacks" {
   guard missing_run_length_eod is Err(PdfError::ParseEndStreamExpected) else {
     fail("expected ParseEndStreamExpected")
   }
+  let missing_encoded_run_length_eod : Result[PdfBytes, Error] = try? pdf_content_read_run_length_inline_image_data(
+    byte_cursor_of_bytes(try! pdf_bytes_of_int_array([253, 90])),
+  )
+  guard missing_encoded_run_length_eod is Err(_) else {
+    fail("expected missing encoded run length EOD to raise")
+  }
+  let short_run_length_prefix : Result[(PdfBytes, Int), Error] = try? pdf_content_run_length_decode_view_prefix(
+    (try! pdf_bytes_of_int_array([253]))[:],
+  )
+  guard short_run_length_prefix is Err(_) else {
+    fail("expected short run length prefix to raise")
+  }
+  let flate_with_decode_parms = byte_cursor_of_bytes(
+    pdf_bytes_concat_views([
+      @ascii.encode("/W 1 /H 2 /CS /G /BPC 8 /F /Fl /DP << /Predictor 1 >> ID ")[:],
+      flate_inline[:],
+      @ascii.encode(" EI")[:],
+    ]),
+  )
+  @test.assert_eq(
+    pdf_content_read_inline_image(
+      flate_with_decode_parms,
+      None,
+      PdfDictionary([]),
+    ),
+    Op_InlineImage(
+      PdfDictionary([
+        (wbtest_content_name("/W"), PdfInteger(1)),
+        (wbtest_content_name("/H"), PdfInteger(2)),
+        (wbtest_content_name("/CS"), PdfNameObject(wbtest_content_name("/G"))),
+        (wbtest_content_name("/BPC"), PdfInteger(8)),
+      ]),
+      None,
+      @ascii.encode("AB"),
+    ),
+  )
+  let lzw_with_decode_parms = byte_cursor_of_bytes(
+    pdf_bytes_concat_views([
+      @ascii.encode(
+        "/W 1 /H 1 /CS /G /BPC 8 /F /LZW /DP << /EarlyChange 1 >> ID ",
+      )[:],
+      lzw_inline[:],
+      @ascii.encode(" EI")[:],
+    ]),
+  )
+  @test.assert_eq(
+    pdf_content_read_inline_image(
+      lzw_with_decode_parms,
+      None,
+      PdfDictionary([]),
+    ),
+    Op_InlineImage(
+      PdfDictionary([
+        (wbtest_content_name("/W"), PdfInteger(1)),
+        (wbtest_content_name("/H"), PdfInteger(1)),
+        (wbtest_content_name("/CS"), PdfNameObject(wbtest_content_name("/G"))),
+        (wbtest_content_name("/BPC"), PdfInteger(8)),
+      ]),
+      None,
+      @ascii.encode("A"),
+    ),
+  )
   let bad_dct_end : Result[PdfBytes, Error] = try? pdf_content_read_dct_inline_image_data(
     byte_cursor_of_bytes(
       try! pdf_bytes_of_int_array([0xFF, 0xD8, 0xFF, 0xD9, 32, 88, 88]),
@@ -2193,6 +2361,17 @@ test "private image decode helpers cover scalar edge behavior" {
   }
 
   let doc = pdf_document_empty()
+  let rgb_wrapped = try! pdf_bytes_of_int_array([9, 1, 2, 3, 4, 5, 6, 9])
+  @test.assert_eq(
+    doc.pdf_image_raw_colour_space_as_rgb24(
+      2,
+      1,
+      PdfDeviceRGB,
+      Some(8),
+      rgb_wrapped[1:7],
+    ),
+    try! pdf_bytes_of_int_array([1, 2, 3, 4, 5, 6]),
+  )
   let unsupported_indexed = PdfIndexed(PdfDeviceGray, [(0, [7])])
   let unsupported8 : Result[PdfBytes, Error] = try? doc.pdf_image_raw_colour_space_as_rgb24(
     1,

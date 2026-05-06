@@ -1544,8 +1544,12 @@ MoonBit consequences for this project:
     negative-length raise, provider-failure raise paths, AESV2/AESV3 decrypting
     writer output, and AESV3 saved-state recrypt without asserting incidental
     error constructors. The unused template `cmd/main` executable was removed
-    rather than testing placeholder `Hello` output. A refreshed coverage
-    pass reports no uncovered lines.
+    rather than testing placeholder `Hello` output. A May 6, 2026 refreshed
+    coverage pass closes the remaining uncovered codec identity `BytesView`
+    branches, inline-image encoded/error paths, borrowed raw RGB image helper,
+    empty/sign-only PDF integer lexeme parsing, and reconstructed object-stream
+    recovery helper branches; `moon coverage analyze` now reports all source
+    files fully covered.
 
 ## Active Native Acceptance Milestone
 

@@ -493,7 +493,9 @@ and backend breadth, is about 84-89% complete.
   checked-in CamlPDF fixture PDF read/multi-page text-extract/write/stream
   decompression/reread plus compressed incremental update/newest-versus-older
   revision reads through native async file wrappers, and full native test
-  coverage.
+  coverage. A May 6, 2026 `moon coverage analyze` pass reports all source
+  files fully covered after closing the remaining codec, content, image,
+  lexeme, and reconstructed object-stream helper branches.
 - Covered: checked-in CamlPDF logo fixture bad-`startxref` reconstruction
   through native async file wrappers, compressed rewrite, and reread.
 - Covered: checked-in CamlPDF intro fixture compressed-xref incremental update
