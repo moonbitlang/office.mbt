@@ -222,6 +222,9 @@ Current backend snapshot:
 - [x] ~~Add bad-`startxref` reconstruction coverage for sparse xref-stream
   `/Index` ranges, preserving non-contiguous object entries while sanitizing
   stream-only trailer keys.~~
+- [x] ~~Add strict and bad-`startxref` reconstruction coverage for Flate
+  xref streams with PNG predictor `/DecodeParms`, preserving common compressed
+  xref-stream rows while sanitizing stream-only trailer keys.~~
 - [x] ~~Add strict and reconstructed staged-filter xref-stream coverage for
   direct `/Filter [/ASCIIHexDecode /RunLengthDecode]` arrays through
   bad-startxref recovery.~~
@@ -948,6 +951,9 @@ Current backend snapshot:
 - [x] ~~Sparse xref-stream `/Index` ranges now have explicit bad-startxref
   reconstruction coverage, preserving non-contiguous object entries while
   sanitizing trailer metadata.~~
+- [x] ~~Flate xref streams with PNG predictor `/DecodeParms` now have strict
+  and bad-startxref reconstruction coverage, preserving common compressed
+  xref-stream rows while sanitizing trailer metadata.~~
 - [x] ~~Staged-filter xref streams now have strict and reconstructed coverage
   for direct ASCIIHex-plus-RunLength filter arrays.~~
 - [ ] Broader malformed xref-table/xref-stream/object-stream recovery beyond
