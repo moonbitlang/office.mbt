@@ -218,6 +218,10 @@ Current backend snapshot:
 - [x] ~~Add a native reader-boundary gate for the HKSCS Adobe-CNS1 source-table
   slice, including supplementary scalars, single-byte `0x80`, and reverse
   charcode lookup through compressed write/read/reread boundaries.~~
+- [x] ~~Add a native reader-boundary gate for CNS-EUC-H/V Adobe-CNS1
+  source-table fallback, including one/two/four-byte segmentation, vertical
+  override, and reverse charcode lookup through compressed write/read/reread
+  boundaries.~~
 - [ ] Decide any further rare predefined CMap source-table slices only when
   useful source tables or fixtures are available.
 - [x] ~~Route native normal Flate encode/decode through CamlPDF's vendored
@@ -1110,6 +1114,8 @@ Current backend snapshot:
   write/read/reread boundaries.~~
 - [x] ~~Add native HKSCS predefined-CMap acceptance coverage through compressed
   write/read/reread boundaries.~~
+- [x] ~~Add native CNS-EUC-H/V predefined-CMap acceptance coverage through
+  compressed write/read/reread boundaries.~~
 - [x] ~~Tune object-stream expansion by grouping xref-stream type-2 entries
   before strict, reconstructed, and password-aware embedded-object loading.~~
 - [x] ~~Tune incremental writer changed-object collection with a hash-backed

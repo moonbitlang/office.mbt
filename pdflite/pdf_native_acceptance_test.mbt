@@ -1602,6 +1602,128 @@ fn acceptance_hkscs_text_document_for_test() -> @pdflite.PdfDocument raise {
 }
 
 ///|
+fn acceptance_cns_euc_text_for_test() -> @pdflite.PdfBytes raise {
+  acceptance_text_bytes_for_test([
+    0x20, 0x80, 0xA1, 0xA1, 0xA1, 0xAC, 0x8E, 0xA2, 0xA1, 0xA1,
+  ])
+}
+
+///|
+fn acceptance_cns_euc_vertical_text_for_test() -> @pdflite.PdfBytes raise {
+  acceptance_text_bytes_for_test([0xA1, 0xAC, 0x8E, 0xA1, 0xA1, 0xAC])
+}
+
+///|
+fn acceptance_cns_euc_font_for_test() -> @pdflite.PdfObject {
+  @pdflite.pdf_dictionary([
+    (
+      acceptance_name_for_test("/Subtype"),
+      PdfNameObject(acceptance_name_for_test("/Type0")),
+    ),
+    (
+      acceptance_name_for_test("/BaseFont"),
+      PdfNameObject(acceptance_name_for_test("/CNSEUCTop")),
+    ),
+    (
+      acceptance_name_for_test("/Encoding"),
+      PdfNameObject(acceptance_name_for_test("/CNS-EUC-H")),
+    ),
+    (acceptance_name_for_test("/DescendantFonts"), PdfArray([PdfIndirect(98)])),
+  ])
+}
+
+///|
+fn acceptance_cns_euc_vertical_font_for_test() -> @pdflite.PdfObject {
+  @pdflite.pdf_dictionary([
+    (
+      acceptance_name_for_test("/Subtype"),
+      PdfNameObject(acceptance_name_for_test("/Type0")),
+    ),
+    (
+      acceptance_name_for_test("/BaseFont"),
+      PdfNameObject(acceptance_name_for_test("/CNSEUCVerticalTop")),
+    ),
+    (
+      acceptance_name_for_test("/Encoding"),
+      PdfNameObject(acceptance_name_for_test("/CNS-EUC-V")),
+    ),
+    (acceptance_name_for_test("/DescendantFonts"), PdfArray([PdfIndirect(100)])),
+  ])
+}
+
+///|
+fn acceptance_cns_euc_resources_for_test() -> @pdflite.PdfObject {
+  @pdflite.pdf_dictionary([
+    (
+      acceptance_name_for_test("/Font"),
+      @pdflite.pdf_dictionary([
+        (acceptance_name_for_test("/Fcns"), acceptance_cns_euc_font_for_test()),
+      ]),
+    ),
+  ])
+}
+
+///|
+fn acceptance_cns_euc_vertical_resources_for_test() -> @pdflite.PdfObject {
+  @pdflite.pdf_dictionary([
+    (
+      acceptance_name_for_test("/Font"),
+      @pdflite.pdf_dictionary([
+        (
+          acceptance_name_for_test("/FcnsV"),
+          acceptance_cns_euc_vertical_font_for_test(),
+        ),
+      ]),
+    ),
+  ])
+}
+
+///|
+fn acceptance_cns_euc_text_document_for_test() -> @pdflite.PdfDocument raise {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  doc.add_object_given_number(
+    98,
+    acceptance_predefined_cmap_descendant_font_for_test(
+      "/CNSEUCDescendant", "CNS1",
+    ),
+  )
+  doc.add_object_given_number(
+    100,
+    acceptance_predefined_cmap_descendant_font_for_test(
+      "/CNSEUCVerticalDescendant", "CNS1",
+    ),
+  )
+  let horizontal_page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [
+      @pdflite.pdf_content_stream_of_ops([
+        Op_BT,
+        Op_Tf(acceptance_name_for_test("/Fcns"), 14.0),
+        Op_Tj(acceptance_cns_euc_text_for_test()),
+        Op_ET,
+      ]),
+    ],
+    resources: acceptance_cns_euc_resources_for_test(),
+  }
+  let vertical_page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [
+      @pdflite.pdf_content_stream_of_ops([
+        Op_BT,
+        Op_Tf(acceptance_name_for_test("/FcnsV"), 14.0),
+        Op_Tj(acceptance_cns_euc_vertical_text_for_test()),
+        Op_ET,
+      ]),
+    ],
+    resources: acceptance_cns_euc_vertical_resources_for_test(),
+  }
+  let page_root = doc.add_pagetree([horizontal_page, vertical_page])
+  ignore(doc.add_root(page_root, []))
+  doc
+}
+
+///|
 fn acceptance_font_object_by_name_for_test(
   resources : @pdflite.PdfObject,
   name : @pdflite.PdfName,
@@ -1633,13 +1755,19 @@ fn acceptance_font_codepoints_of_first_page_for_test(
   font_name : @pdflite.PdfName,
 ) -> Array[Int] raise {
   let pages = doc.pages_of_pagetree()
-  let font = acceptance_font_object_by_name_for_test(
-    pages[0].resources,
-    font_name,
-  )
+  acceptance_font_codepoints_of_page_for_test(doc, pages[0], font_name)
+}
+
+///|
+fn acceptance_font_codepoints_of_page_for_test(
+  doc : @pdflite.PdfDocument,
+  page : @pdflite.PdfPage,
+  font_name : @pdflite.PdfName,
+) -> Array[Int] raise {
+  let font = acceptance_font_object_by_name_for_test(page.resources, font_name)
   let extractor = doc.text_extractor_of_font(font)
   let output : Array[Int] = []
-  for op in doc.parse_content_ops(pages[0].content) {
+  for op in doc.parse_content_ops(page.content) {
     match op {
       Op_Tj(text) =>
         acceptance_push_text_codepoints_for_test(output, extractor, text)
@@ -1879,6 +2007,91 @@ fn acceptance_assert_hkscs_text_for_test(
   @test.assert_eq(extractor.charcode_of_codepoint(0xFF3B), Some(0xC6E4))
   @test.assert_eq(extractor.charcode_of_codepoint(0x79D4), Some(0xFEFE))
   @test.assert_eq(extractor.charcode_of_codepoint(0x1F600), None)
+}
+
+///|
+fn acceptance_assert_cns_euc_text_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(doc.version(), (1, 5))
+  @test.assert_eq(doc.endpage(), 2)
+  let pages = doc.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 2)
+  let horizontal_font = acceptance_font_object_by_name_for_test(
+    pages[0].resources,
+    acceptance_name_for_test("/Fcns"),
+  )
+  let horizontal_read = doc.read_font(horizontal_font)
+  @test.assert_eq(horizontal_read.is_identity_h(), false)
+  @test.assert_eq(horizontal_read.is_identity_v(), false)
+  @test.assert_eq(horizontal_read.uses_two_byte_codes(), false)
+  guard horizontal_read is PdfFontCIDKeyed(horizontal_cid_font) else {
+    fail("expected CID-keyed CNS-EUC font")
+  }
+  @test.assert_eq(
+    horizontal_cid_font.encoding,
+    PdfPredefinedCMap(acceptance_name_for_test("/CNS-EUC-H")),
+  )
+  @test.assert_eq(
+    horizontal_cid_font.composite.cid_system_info.ordering,
+    acceptance_ascii_for_test("CNS1"),
+  )
+  @test.assert_eq(
+    acceptance_font_codepoints_of_page_for_test(
+      doc,
+      pages[0],
+      acceptance_name_for_test("/Fcns"),
+    ),
+    [0x20, 0x80, 0x3000, 0x2026, 0x4E42],
+  )
+  let horizontal_extractor = doc.text_extractor_of_font(horizontal_font)
+  @test.assert_eq(horizontal_extractor.charcode_of_codepoint(0x20), Some(0x20))
+  @test.assert_eq(
+    horizontal_extractor.charcode_of_codepoint(0x3000),
+    Some(0xA1A1),
+  )
+  @test.assert_eq(
+    horizontal_extractor.charcode_of_codepoint(0x2026),
+    Some(0xA1AC),
+  )
+  @test.assert_eq(
+    horizontal_extractor.charcode_of_codepoint(0x4E42),
+    Some(0x8EA2A1A1),
+  )
+  @test.assert_eq(horizontal_extractor.charcode_of_codepoint(0x1F600), None)
+  let vertical_font = acceptance_font_object_by_name_for_test(
+    pages[1].resources,
+    acceptance_name_for_test("/FcnsV"),
+  )
+  let vertical_read = doc.read_font(vertical_font)
+  @test.assert_eq(vertical_read.is_identity_h(), false)
+  @test.assert_eq(vertical_read.is_identity_v(), false)
+  @test.assert_eq(vertical_read.uses_two_byte_codes(), false)
+  guard vertical_read is PdfFontCIDKeyed(vertical_cid_font) else {
+    fail("expected CID-keyed CNS-EUC vertical font")
+  }
+  @test.assert_eq(
+    vertical_cid_font.encoding,
+    PdfPredefinedCMap(acceptance_name_for_test("/CNS-EUC-V")),
+  )
+  @test.assert_eq(
+    vertical_cid_font.composite.cid_system_info.ordering,
+    acceptance_ascii_for_test("CNS1"),
+  )
+  @test.assert_eq(
+    acceptance_font_codepoints_of_page_for_test(
+      doc,
+      pages[1],
+      acceptance_name_for_test("/FcnsV"),
+    ),
+    [0xFE19, 0xFE19],
+  )
+  let vertical_extractor = doc.text_extractor_of_font(vertical_font)
+  @test.assert_eq(
+    vertical_extractor.charcode_of_codepoint(0xFE19),
+    Some(0xA1AC),
+  )
+  @test.assert_eq(vertical_extractor.charcode_of_codepoint(0x1F600), None)
 }
 
 ///|
@@ -4651,6 +4864,16 @@ test "native acceptance suite extracts HKSCS predefined CMap text through reader
   acceptance_assert_hkscs_text_for_test(parsed)
   let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
   acceptance_assert_hkscs_text_for_test(reparsed)
+}
+
+///|
+test "native acceptance suite extracts CNS-EUC predefined CMap text through reader boundaries" {
+  let parsed = acceptance_compressed_roundtrip_for_test(
+    acceptance_cns_euc_text_document_for_test(),
+  )
+  acceptance_assert_cns_euc_text_for_test(parsed)
+  let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
+  acceptance_assert_cns_euc_text_for_test(reparsed)
 }
 
 ///|
