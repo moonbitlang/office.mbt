@@ -222,6 +222,10 @@ Current backend snapshot:
   source-table fallback, including one/two/four-byte segmentation, vertical
   override, and reverse charcode lookup through compressed write/read/reread
   boundaries.~~
+- [x] ~~Add a native reader-boundary gate for Adobe-Korea1 predefined CMap
+  source-table fallbacks, covering KSCms-UHC-H, KSC-EUC-H, and KSCpc-EUC-H
+  extraction plus reverse charcode lookup through compressed write/read/reread
+  boundaries.~~
 - [ ] Decide any further rare predefined CMap source-table slices only when
   useful source tables or fixtures are available.
 - [x] ~~Route native normal Flate encode/decode through CamlPDF's vendored
@@ -1116,6 +1120,9 @@ Current backend snapshot:
   write/read/reread boundaries.~~
 - [x] ~~Add native CNS-EUC-H/V predefined-CMap acceptance coverage through
   compressed write/read/reread boundaries.~~
+- [x] ~~Add native Adobe-Korea1 predefined-CMap acceptance coverage for
+  KSCms-UHC-H, KSC-EUC-H, and KSCpc-EUC-H through compressed write/read/reread
+  boundaries.~~
 - [x] ~~Tune object-stream expansion by grouping xref-stream type-2 entries
   before strict, reconstructed, and password-aware embedded-object loading.~~
 - [x] ~~Tune incremental writer changed-object collection with a hash-backed
