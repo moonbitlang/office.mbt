@@ -147,7 +147,7 @@ test "pdf_string_of_bookmark renders CamlPDF debug line as bytes" {
 ///|
 test "PdfDocument read_bookmarks traverses outline trees" {
   let doc = bookmark_document_for_test()
-  @test.assert_eq(try! doc.read_bookmarks(), [
+  let expected : Array[@pdflite.PdfBookmark] = [
     {
       level: 0,
       text: bookmark_bytes_for_test("Top"),
@@ -172,7 +172,9 @@ test "PdfDocument read_bookmarks traverses outline trees" {
       colour: @pdflite.pdf_bookmark_black,
       flags: 0,
     },
-  ])
+  ]
+  @test.assert_eq(try! doc.read_bookmarks(), expected)
+  @test.assert_eq(try! @pdflite.pdf_read_bookmarks(doc), expected)
 }
 
 ///|
@@ -352,8 +354,10 @@ test "PdfDocument remove_bookmarks installs a catalog without outlines" {
   let key_root = bookmark_name_for_test("/Root")
   let doc = bookmark_document_for_test()
   let stripped = try! doc.remove_bookmarks()
+  let stripped_from_function = try! @pdflite.pdf_remove_bookmarks(doc)
   @test.assert_eq((try! doc.read_bookmarks()).length(), 3)
   @test.assert_eq(try! stripped.read_bookmarks(), [])
+  @test.assert_eq(try! stripped_from_function.read_bookmarks(), [])
   @test.assert_eq(stripped.root(), 6)
   @test.assert_eq(
     stripped.trailer_dict().lookup_immediate(key_root),
@@ -473,8 +477,16 @@ test "PdfDocument add_bookmarks builds linked outline objects" {
     },
   ]
   let updated = try! doc.add_bookmarks(bookmarks)
+  let updated_from_function = try! @pdflite.pdf_add_bookmarks(bookmarks, doc)
   @test.assert_eq(try! doc.read_bookmarks(), [])
   @test.assert_eq(try! updated.read_bookmarks(preserve_actions=true), bookmarks)
+  @test.assert_eq(
+    try! @pdflite.pdf_read_bookmarks(
+      updated_from_function,
+      preserve_actions=true,
+    ),
+    bookmarks,
+  )
   @test.assert_eq(updated.root(), 7)
   let catalog = updated.lookup_object_or_null(updated.root())
   @test.assert_eq(catalog.lookup_immediate(key_outlines), Some(PdfIndirect(6)))
@@ -592,6 +604,14 @@ test "PdfDocument transform_bookmark transforms bookmark target" {
   }
   @test.assert_eq(
     try! doc.transform_bookmark(
+      @pdflite.transform_translate(10.0, 20.0),
+      bookmark,
+    ),
+    { ..bookmark, target: DestFitH(TargetPageObject(7), Some(25.0)) },
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_transform_bookmark(
+      doc,
       @pdflite.transform_translate(10.0, 20.0),
       bookmark,
     ),

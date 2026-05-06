@@ -56,6 +56,10 @@ Current backend snapshot:
 - [x] ~~Expose `.repos/pdfgenlex.mli` and `.repos/pdfread.mli`-referenced
   lexeme debug string helpers over byte-oriented `PdfLexeme` values, using
   explicit lossy ASCII decoding only for debug text.~~
+- [x] ~~Expose `.repos/pdfdest.mli`, `.repos/pdfmarks.mli`, and
+  `.repos/pdfpagelabels.mli`-referenced standalone document-feature helpers
+  for destination read/transform, bookmark read/add/remove/transform, and page
+  label read/write/remove over the existing typed document methods.~~
 - [x] ~~Check the currently tracked CamlPDF fixture PDFs for image XObjects
   before expanding image corpus tests; `logo.pdf` and
   `introduction_to_camlpdf.pdf` do not currently provide image entries.~~

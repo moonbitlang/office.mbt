@@ -878,7 +878,9 @@ MoonBit consequences for this project:
    catalog or destination name tree contains the target. Destination
    page-object resolution now also has a package-local hash-backed lookup that
    preserves the first page-reference match while avoiding repeated page-tree
-   scans when bookmark extraction resolves many targets.
+   scans when bookmark extraction resolves many targets. Standalone
+   `.repos/pdfdest.mli`-shaped wrappers now expose destination reading and
+   matrix transformation over the existing typed document methods.
 
    Bookmark support is started with typed `PdfBookmarkColour` and
    `PdfBookmark` records, `/Root/Outlines` traversal, level reconstruction,
@@ -896,6 +898,8 @@ MoonBit consequences for this project:
    byte-preserving. Bookmark read/remove/add now resolve the active catalog
    through trailer `/Root`, matching CamlPDF for real parsed documents while
    retaining a document-root fallback for synthetic in-memory test fixtures.
+   Standalone `.repos/pdfmarks.mli`-shaped wrappers now expose bookmark
+   read/add/remove/transform over the existing typed document methods.
    `change_pages` matrix integration is started for
    transformed page destinations, including named destination definitions
    retained in the catalog or destination name tree.
@@ -1337,7 +1341,9 @@ MoonBit consequences for this project:
     with odd trailing `/Nums` entries ignored like CamlPDF, malformed empty
     `/PageLabels` trees rejected, and active-catalog page-label
     read/write/remove through trailer `/Root` with document-root fallback for
-    synthetic fixtures. Annotation support is
+    synthetic fixtures. Standalone `.repos/pdfpagelabels.mli`-shaped wrappers
+    now expose page-label read/write/remove over the existing typed document
+    methods. Annotation support is
     started with typed subtypes, borders, colours, byte-preserving
     contents/subjects, page annotation reading with popup-parent filtering,
     page-record annotation insertion, CamlPDF-compatible `/Unknown`

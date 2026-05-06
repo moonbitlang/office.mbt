@@ -138,8 +138,13 @@ test "PdfDocument write_page_labels builds a readable page label tree" {
     },
   ]
   let updated = try! doc.write_page_labels(labels)
+  let updated_from_function = try! @pdflite.pdf_write_page_labels(doc, labels)
   @test.assert_eq(try! doc.read_page_labels(), [])
   @test.assert_eq(try! updated.read_page_labels(), labels)
+  @test.assert_eq(
+    try! @pdflite.pdf_read_page_labels(updated_from_function),
+    labels,
+  )
   @test.assert_eq(updated.root(), 2)
   let catalog = updated.lookup_object_or_null(updated.root())
   guard catalog.lookup_immediate(key_page_labels) is Some(label_tree) else {
@@ -355,9 +360,11 @@ test "PdfDocument remove_page_labels and empty write drop labels" {
   let doc = page_label_catalog_document_for_test()
   let labelled = try! doc.write_page_labels(labels)
   let removed = try! labelled.remove_page_labels()
+  let removed_from_function = try! @pdflite.pdf_remove_page_labels(labelled)
   let empty_written = try! labelled.write_page_labels([])
   @test.assert_eq(try! labelled.read_page_labels(), labels)
   @test.assert_eq(try! removed.read_page_labels(), [])
+  @test.assert_eq(try! removed_from_function.read_page_labels(), [])
   @test.assert_eq(try! empty_written.read_page_labels(), [])
 }
 

@@ -550,6 +550,14 @@ pub fn PdfDocument::read_bookmarks(
 }
 
 ///|
+pub fn pdf_read_bookmarks(
+  document : PdfDocument,
+  preserve_actions? : Bool = false,
+) -> Array[PdfBookmark] raise PdfError {
+  document.read_bookmarks(preserve_actions~)
+}
+
+///|
 fn PdfDocument::pdf_bookmark_has_outlines(
   self : PdfDocument,
 ) -> Bool raise PdfError {
@@ -623,6 +631,13 @@ pub fn PdfDocument::remove_bookmarks(
 }
 
 ///|
+pub fn pdf_remove_bookmarks(
+  document : PdfDocument,
+) -> PdfDocument raise PdfError {
+  document.remove_bookmarks()
+}
+
+///|
 pub fn PdfDocument::add_bookmarks(
   self : PdfDocument,
   bookmarks : ArrayView[PdfBookmark],
@@ -670,10 +685,27 @@ pub fn PdfDocument::add_bookmarks(
 }
 
 ///|
+pub fn pdf_add_bookmarks(
+  bookmarks : ArrayView[PdfBookmark],
+  document : PdfDocument,
+) -> PdfDocument raise PdfError {
+  document.add_bookmarks(bookmarks)
+}
+
+///|
 pub fn PdfDocument::transform_bookmark(
   self : PdfDocument,
   matrix : TransformMatrix,
   bookmark : PdfBookmark,
 ) -> PdfBookmark raise PdfError {
   { ..bookmark, target: self.transform_destination(matrix, bookmark.target) }
+}
+
+///|
+pub fn pdf_transform_bookmark(
+  document : PdfDocument,
+  matrix : TransformMatrix,
+  bookmark : PdfBookmark,
+) -> PdfBookmark raise PdfError {
+  document.transform_bookmark(matrix, bookmark)
 }

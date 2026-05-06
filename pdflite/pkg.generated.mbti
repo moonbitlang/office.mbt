@@ -49,6 +49,8 @@ pub let paper_uslegal : PaperSize
 
 pub let paper_usletter : PaperSize
 
+pub fn pdf_add_bookmarks(ArrayView[PdfBookmark], PdfDocument) -> PdfDocument raise PdfError
+
 pub fn pdf_aes_cbc_decrypt(BytesView, BytesView, remove_padding? : Bool) -> Bytes raise PdfError
 
 pub fn pdf_aes_cbc_encrypt_with_iv(BytesView, BytesView, BytesView) -> Bytes raise PdfError
@@ -409,6 +411,8 @@ pub fn pdf_permissions_of_p(Int) -> Array[PdfPermission]
 
 pub fn pdf_read_afm(BytesView) -> PdfAfmData raise PdfError
 
+pub fn pdf_read_bookmarks(PdfDocument, preserve_actions? : Bool) -> Array[PdfBookmark] raise PdfError
+
 pub fn pdf_read_classic_document_from_bytes(Bytes) -> PdfDocument raise PdfError
 
 pub fn pdf_read_classic_document_from_view(BytesView) -> PdfDocument raise PdfError
@@ -418,6 +422,8 @@ pub fn pdf_read_classic_document_revision_from_bytes(Bytes, Int) -> PdfDocument 
 pub fn pdf_read_classic_document_revision_from_view(BytesView, Int) -> PdfDocument raise PdfError
 
 pub fn pdf_read_colour_space(PdfDocument, PdfObject, PdfObject) -> PdfColourSpace? raise PdfError
+
+pub fn pdf_read_destination(PdfDocument, PdfObject, shallow? : Bool) -> PdfDestination raise PdfError
 
 pub fn pdf_read_document_from_bytes(Bytes) -> PdfDocument raise PdfError
 
@@ -439,6 +445,8 @@ pub fn pdf_read_header_from_bytes(Bytes) -> PdfVersion raise PdfError
 
 pub fn pdf_read_header_from_view(BytesView) -> PdfVersion raise PdfError
 
+pub fn pdf_read_page_labels(PdfDocument) -> Array[PdfPageLabel] raise PdfError
+
 pub fn pdf_read_primitive_document_from_bytes(Bytes) -> PdfDocument raise PdfError
 
 pub fn pdf_read_primitive_document_from_view(BytesView) -> PdfDocument raise PdfError
@@ -446,6 +454,10 @@ pub fn pdf_read_primitive_document_from_view(BytesView) -> PdfDocument raise Pdf
 pub fn pdf_recurse_array((PdfObject) -> PdfObject, ArrayView[PdfObject]) -> PdfObject
 
 pub fn pdf_recurse_dict((PdfObject) -> PdfObject, ArrayView[(PdfName, PdfObject)], preserve_order? : Bool) -> PdfObject
+
+pub fn pdf_remove_bookmarks(PdfDocument) -> PdfDocument raise PdfError
+
+pub fn pdf_remove_page_labels(PdfDocument) -> PdfDocument raise PdfError
 
 pub fn pdf_renumber_documents(ArrayView[PdfDocument]) -> Array[PdfDocument] raise PdfError
 
@@ -513,6 +525,10 @@ pub fn pdf_string_of_pdf_including_data(PdfObject) -> Bytes raise PdfError
 
 pub fn pdf_table_of_encoding(PdfEncoding) -> Array[(Int, PdfName)]
 
+pub fn pdf_transform_bookmark(PdfDocument, TransformMatrix, PdfBookmark) -> PdfBookmark raise PdfError
+
+pub fn pdf_transform_destination(PdfDocument, TransformMatrix, PdfDestination) -> PdfDestination raise PdfError
+
 pub fn pdf_user_password_from_owner_password(Int, BytesView, BytesView, Int) -> Bytes raise PdfError
 
 pub fn pdf_utf16be_of_codepoints(ArrayView[Int]) -> Bytes raise PdfError
@@ -564,6 +580,8 @@ pub fn pdf_write_literal_string(BytesView) -> Bytes
 pub fn pdf_write_name(PdfName) -> Bytes
 
 pub fn pdf_write_object(PdfObject) -> Bytes raise PdfError
+
+pub fn pdf_write_page_labels(PdfDocument, ArrayView[PdfPageLabel]) -> PdfDocument raise PdfError
 
 pub fn pdf_write_real(Double) -> Bytes raise PdfError
 

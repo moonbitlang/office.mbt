@@ -114,6 +114,37 @@ test "PdfDocument read_destination parses direct destination arrays" {
 }
 
 ///|
+test "standalone destination helpers delegate to document methods" {
+  let doc = @pdflite.pdf_document_empty()
+  let destination_object : @pdflite.PdfObject = PdfArray([
+    PdfIndirect(7),
+    PdfNameObject(dest_name_for_test("/XYZ")),
+    PdfReal(10.0),
+    PdfNull,
+    PdfInteger(2),
+  ])
+  @test.assert_eq(
+    try! @pdflite.pdf_read_destination(doc, destination_object),
+    try! doc.read_destination(destination_object),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_read_destination(doc, destination_object, shallow=true),
+    try! doc.read_destination(destination_object, shallow=true),
+  )
+  let matrix = @pdflite.transform_translate(10.0, 20.0)
+  let destination : @pdflite.PdfDestination = DestXYZ(
+    TargetPageObject(7),
+    Some(1.0),
+    Some(2.0),
+    None,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_transform_destination(doc, matrix, destination),
+    try! doc.transform_destination(matrix, destination),
+  )
+}
+
+///|
 test "PdfDocument read_destination rejects malformed destination targets" {
   let doc = @pdflite.pdf_document_empty()
   @test.assert_eq(

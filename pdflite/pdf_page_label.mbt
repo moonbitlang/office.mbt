@@ -589,6 +589,13 @@ pub fn PdfDocument::read_page_labels(
 }
 
 ///|
+pub fn pdf_read_page_labels(
+  document : PdfDocument,
+) -> Array[PdfPageLabel] raise PdfError {
+  document.read_page_labels()
+}
+
+///|
 fn PdfDocument::pdf_page_label_has_labels(
   self : PdfDocument,
 ) -> Bool raise PdfError {
@@ -613,6 +620,13 @@ pub fn PdfDocument::remove_page_labels(
     .add_dict_entry(pdf_page_label_root_key(), PdfIndirect(new_root)),
   )
   pdf
+}
+
+///|
+pub fn pdf_remove_page_labels(
+  document : PdfDocument,
+) -> PdfDocument raise PdfError {
+  document.remove_page_labels()
 }
 
 ///|
@@ -643,4 +657,12 @@ pub fn PdfDocument::write_page_labels(
     )
     pdf
   }
+}
+
+///|
+pub fn pdf_write_page_labels(
+  document : PdfDocument,
+  labels : ArrayView[PdfPageLabel],
+) -> PdfDocument raise PdfError {
+  document.write_page_labels(labels)
 }

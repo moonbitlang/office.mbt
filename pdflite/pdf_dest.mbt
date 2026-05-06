@@ -308,6 +308,15 @@ pub fn PdfDocument::read_destination(
 }
 
 ///|
+pub fn pdf_read_destination(
+  document : PdfDocument,
+  object : PdfObject,
+  shallow? : Bool = false,
+) -> PdfDestination raise PdfError {
+  document.read_destination(object, shallow~)
+}
+
+///|
 fn pdf_object_of_target_page(target : PdfTargetPage) -> PdfObject {
   match target {
     TargetPageObject(number) => PdfIndirect(number)
@@ -565,4 +574,13 @@ pub fn PdfDocument::transform_destination(
       }
     _ => destination
   }
+}
+
+///|
+pub fn pdf_transform_destination(
+  document : PdfDocument,
+  matrix : TransformMatrix,
+  destination : PdfDestination,
+) -> PdfDestination raise PdfError {
+  document.transform_destination(matrix, destination)
 }
