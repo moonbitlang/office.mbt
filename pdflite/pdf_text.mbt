@@ -10337,8 +10337,8 @@ fn PdfTextExtractor::pdf_text_regular_codepoints_of_text(
   text : BytesView,
 ) -> Array[Int] raise PdfError {
   let output : Array[Int] = []
-  for glyph in self.glyphnames_and_codepoints_of_text(text) {
-    for codepoint in glyph.codepoints {
+  for code in self.font.pdf_text_charcodes_of_text(text) {
+    for codepoint in self.pdf_text_glyph_of_charcode(code).codepoints {
       output.push(codepoint)
     }
   }

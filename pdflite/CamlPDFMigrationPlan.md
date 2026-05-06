@@ -1010,6 +1010,9 @@ MoonBit consequences for this project:
    codepoints. Plain `/ToUnicode` codepoint extraction now builds a per-run
    hash lookup map, preserving duplicate first-entry decoding and malformed
    UTF-16 fallback while avoiding a table scan for every character code.
+   Regular fallback `codepoints_of_text` now also flattens glyph codepoints
+   directly without allocating an intermediate glyph-record array when callers
+   do not ask for glyph names.
    Standalone `.repos/pdftext.mli`-shaped wrappers now expose font
    debug strings, font read/write, Identity-H detection, text extractors,
    codepoint and glyph-name extraction, and reverse charcode closures over the

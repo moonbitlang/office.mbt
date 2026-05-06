@@ -589,6 +589,9 @@ Current backend snapshot:
 - [x] ~~Plain `/ToUnicode` codepoint extraction now builds a per-run hash lookup
   map instead of scanning the ToUnicode table for every character code, while
   preserving duplicate first-entry decoding and malformed UTF-16 fallback.~~
+- [x] ~~Regular text `codepoints_of_text` now flattens charcode glyph results
+  directly instead of allocating an intermediate glyph-record array when callers
+  only need codepoints.~~
 - [x] ~~Generated CID-range CMap reverse lookup for Adobe-GB1, Adobe-CNS1, and
   Adobe-Japan1 now maps Unicode to CID and CID to charcode instead of scanning
   every character code in every range.~~
@@ -1080,6 +1083,8 @@ Current backend snapshot:
 - [x] ~~Tune plain `/ToUnicode` codepoint extraction with a per-run hash lookup
   map, keeping duplicate first-match behavior and malformed UTF-16 fallback
   covered.~~
+- [x] ~~Tune regular text codepoint extraction by skipping the intermediate
+  glyph-record array when callers only request codepoints.~~
 - [x] ~~Tune pure Flate Huffman symbol decoding with bounded lookup-table
   lookahead and cached bit masks while preserving prefix consumed-length
   behavior.~~
