@@ -590,6 +590,12 @@ test "pdf_decode_filter_bytes dispatches supported filter names" {
     ),
     codec_ascii_for_test("raw"),
   )
+  let raw_crypt = codec_ascii_for_test("raw")
+  let decoded_crypt = try! @pdflite.pdf_decode_filter_bytes(
+    codec_name_for_test("/Crypt"),
+    raw_crypt,
+  )
+  @test.assert_eq(physical_equal(raw_crypt, decoded_crypt), true)
   @test.assert_eq(
     try! @pdflite.pdf_decode_filter_bytes(
       codec_name_for_test("/LZW"),
@@ -656,13 +662,13 @@ test "pdf filter dispatch view APIs read borrowed slices" {
 
 ///|
 test "pdf_encode_filter_bytes dispatches supported filter names" {
-  @test.assert_eq(
-    try! @pdflite.pdf_encode_filter_bytes(
-      codec_name_for_test("/Crypt"),
-      codec_ascii_for_test("raw"),
-    ),
-    codec_ascii_for_test("raw"),
+  let raw_crypt = codec_ascii_for_test("raw")
+  let encoded_crypt = try! @pdflite.pdf_encode_filter_bytes(
+    codec_name_for_test("/Crypt"),
+    raw_crypt,
   )
+  @test.assert_eq(encoded_crypt, codec_ascii_for_test("raw"))
+  @test.assert_eq(physical_equal(raw_crypt, encoded_crypt), true)
   @test.assert_eq(
     try! @pdflite.pdf_encode_filter_bytes(
       codec_name_for_test("/ASCIIHexDecode"),

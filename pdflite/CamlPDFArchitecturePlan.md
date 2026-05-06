@@ -134,10 +134,12 @@ work changes.
    empty decoded payloads remain distinguishable from failure. Owned public
    Flate decode also routes directly through the native bytes helper, avoiding
    the remaining owned-to-view-to-owned copy before the C boundary on common
-   stream-filter decode paths. Standard stream-filter names are now cached once
-   for dispatch, avoiding repeated ASCII `PdfName` rebuilding during filter
-   comparisons, and standard stream dictionary keys such as `/Filter`,
-   `/Length`, and `/DecodeParms` are cached for repeated stream transformations.
+   stream-filter decode paths. Owned `/Crypt` identity filter encode/decode
+   now returns the original immutable `Bytes` value instead of copying through a
+   borrowed view. Standard stream-filter names are now cached once for dispatch,
+   avoiding repeated ASCII `PdfName` rebuilding during filter comparisons, and
+   standard stream dictionary keys such as `/Filter`, `/Length`, and
+   `/DecodeParms` are cached for repeated stream transformations.
    Remaining focus: exact miniz block-spelling gaps only where they matter,
    broader large-file performance tuning, optional JBIG2 external-tool decode
    parity, broader CCITT corpus validation, and DCT/JPEG real-world payload

@@ -623,7 +623,9 @@ pub fn pdf_decode_filter_bytes(
   filter : PdfName,
   data : PdfBytes,
 ) -> PdfBytes raise PdfError {
-  if pdf_filter_is_one_of(
+  if pdf_filter_is_name(filter, pdf_filter_crypt_name) {
+    data
+  } else if pdf_filter_is_one_of(
       filter, pdf_filter_flate_decode_name, pdf_filter_flate_short_name,
     ) {
     pdf_flate_decode(data)
@@ -712,7 +714,9 @@ fn pdf_encode_filter_bytes_with_optional_flate_level(
   data : PdfBytes,
   flate_level : Int?,
 ) -> PdfBytes raise PdfError {
-  if pdf_filter_is_one_of(
+  if pdf_filter_is_name(filter, pdf_filter_crypt_name) {
+    data
+  } else if pdf_filter_is_one_of(
       filter, pdf_filter_flate_decode_name, pdf_filter_flate_short_name,
     ) {
     match flate_level {

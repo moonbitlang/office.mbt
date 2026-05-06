@@ -540,8 +540,10 @@ MoonBit consequences for this project:
    `Ref[Int]`, avoiding the previous status-prefix copy while preserving valid
    empty-payload success. Owned public Flate decode now also calls the native
    bytes helper directly instead of passing through a borrowed view and
-   re-owning compressed data before FFI. CamlPDF-style typed encoding and
-   predictor choices are now exposed as `PdfStreamEncoding` and
+   re-owning compressed data before FFI. Owned `/Crypt` identity filter
+   encode/decode now returns the original immutable `Bytes` value directly.
+   CamlPDF-style typed encoding and predictor choices are now exposed as
+   `PdfStreamEncoding` and
    `PdfStreamPredictor`, with a `pdf_encode_stream_with_encoding` wrapper over
    the existing filter/predictor
    implementation; CCITT names map to `/CCITTFaxDecode`. Native CCITT decode is

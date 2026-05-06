@@ -57,6 +57,8 @@ Current estimate:
 - [x] ~~Route owned `PdfBytes` Flate decode directly through the native miniz
   bytes helper, avoiding the owned-to-view-to-owned copy that remained on the
   public decode path.~~
+- [x] ~~Return owned bytes unchanged for `/Crypt` identity filter encode/decode,
+  avoiding unnecessary immutable `Bytes` copies on stream filter dispatch.~~
 - [x] ~~Cache standard stream-filter names so encode/decode dispatch no longer
   rebuilds ASCII `PdfName` values for every filter comparison.~~
 - [x] ~~Cache standard stream dictionary keys such as `/Filter`, `/Length`, and
@@ -134,6 +136,8 @@ Current estimate:
 - [x] ~~Owned public Flate decode now calls the native miniz bytes helper
   directly, so Flate stream filter decoding no longer re-owns already-owned
   compressed bytes before the C boundary.~~
+- [x] ~~Owned `/Crypt` identity filter encode/decode now returns the original
+  immutable `Bytes` object and is covered by physical-identity assertions.~~
 - [x] ~~Encryption dictionary and crypt-filter lookups/builders now share cached
   `PdfName` values for stable standard keys and name objects.~~
 - [x] ~~Writer trailer/xref-stream keys and inline-image metadata/filter names
@@ -389,6 +393,8 @@ Current estimate:
   status-byte payload copy.~~
 - [x] ~~Owned public Flate decode now bypasses `BytesView.to_owned()` on native
   by calling the native miniz bytes helper directly.~~
+- [x] ~~Owned `/Crypt` identity filter encode/decode bypasses `BytesView.to_owned()`
+  and returns the existing immutable `Bytes`.~~
 - [x] ~~Standard stream-filter dispatch names are cached once instead of
   rebuilding ASCII `PdfName` values on every comparison.~~
 - [x] ~~Standard stream dictionary keys are cached once instead of rebuilding
