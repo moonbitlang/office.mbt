@@ -802,18 +802,22 @@ fn pdf_writer_push_classic_xref_entry(
   output : Array[Byte],
   xrefs : ArrayView[(Int, Int, Int)],
   number : Int,
+  xref_index : Ref[Int],
 ) -> Unit {
   if number == 0 {
     pdf_writer_push_ascii(output, "0000000000 65535 f \n")
   } else {
-    match pdf_writer_xref_tuple_for_number(xrefs, number) {
-      Some((offset, generation)) => {
-        pdf_writer_push_padded_decimal(output, offset, 10)
-        pdf_writer_push_byte(output, 32)
-        pdf_writer_push_padded_decimal(output, generation, 5)
-        pdf_writer_push_ascii(output, " n \n")
-      }
-      None => pdf_writer_push_ascii(output, "0000000000 65535 f \n")
+    while xref_index.val < xrefs.length() && xrefs[xref_index.val].0 < number {
+      xref_index.val += 1
+    }
+    if xref_index.val < xrefs.length() && xrefs[xref_index.val].0 == number {
+      let (_, offset, generation) = xrefs[xref_index.val]
+      pdf_writer_push_padded_decimal(output, offset, 10)
+      pdf_writer_push_byte(output, 32)
+      pdf_writer_push_padded_decimal(output, generation, 5)
+      pdf_writer_push_ascii(output, " n \n")
+    } else {
+      pdf_writer_push_ascii(output, "0000000000 65535 f \n")
     }
   }
 }
@@ -824,13 +828,14 @@ fn pdf_writer_push_classic_xref_subsection(
   xrefs : ArrayView[(Int, Int, Int)],
   start : Int,
   length : Int,
+  xref_index : Ref[Int],
 ) -> Unit {
   pdf_writer_push_ascii(output, start.to_string())
   pdf_writer_push_byte(output, 32)
   pdf_writer_push_ascii(output, length.to_string())
   pdf_writer_push_byte(output, 10)
   for number in start..<(start + length) {
-    pdf_writer_push_classic_xref_entry(output, xrefs, number)
+    pdf_writer_push_classic_xref_entry(output, xrefs, number, xref_index)
   }
 }
 
@@ -844,6 +849,7 @@ fn pdf_writer_push_classic_sparse_xref_and_trailer(
   previous_xref : Int,
 ) -> Unit raise PdfError {
   pdf_writer_push_ascii(output, "xref\n")
+  let xref_index : Ref[Int] = { val: 0 }
   let mut run_start = -1
   let mut run_length = 0
   for number in entry_numbers {
@@ -854,7 +860,7 @@ fn pdf_writer_push_classic_sparse_xref_and_trailer(
       run_length += 1
     } else {
       pdf_writer_push_classic_xref_subsection(
-        output, xrefs, run_start, run_length,
+        output, xrefs, run_start, run_length, xref_index,
       )
       run_start = number
       run_length = 1
@@ -862,7 +868,7 @@ fn pdf_writer_push_classic_sparse_xref_and_trailer(
   }
   if run_length > 0 {
     pdf_writer_push_classic_xref_subsection(
-      output, xrefs, run_start, run_length,
+      output, xrefs, run_start, run_length, xref_index,
     )
   }
   pdf_writer_push_ascii(output, "trailer\n")
@@ -919,20 +925,6 @@ pub fn pdf_write_document_incremental_update(
     previous_xref,
   )
   Bytes::from_array(output)
-}
-
-///|
-fn pdf_writer_xref_tuple_for_number(
-  xrefs : ArrayView[(Int, Int, Int)],
-  number : Int,
-) -> (Int, Int)? {
-  for xref in xrefs {
-    if xref.0 == number {
-      break Some((xref.1, xref.2))
-    }
-  } nobreak {
-    None
-  }
 }
 
 ///|

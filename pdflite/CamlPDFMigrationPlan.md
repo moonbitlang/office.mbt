@@ -475,8 +475,10 @@ MoonBit consequences for this project:
    checks when a document has many edits to the same object. Full and sparse
    xref-stream data generation now walks sorted xref tuples once while
    preserving exact emitted entry bytes, instead of searching the tuple list for
-   every object number. Xref-stream incremental updates now use the same
-   changed object detection and emit sparse `/Index` ranges for
+   every object number. Classic sparse incremental xref subsections now carry a
+   sorted xref cursor across rows and subsection runs, preserving exact xref row
+   bytes while avoiding repeated tuple scans. Xref-stream incremental updates
+   now use the same changed object detection and emit sparse `/Index` ranges for
    changed/deleted objects plus the xref stream object. ARC4 encrypted output
    is now covered for full
    writes and incremental updates through the classic writer plus the
@@ -1571,8 +1573,9 @@ MoonBit consequences for this project:
     CNS-EUC forward linear scans with unsigned binary range lookup. Reader
     coverage now also keeps grouped object-stream xref expansion fully covered,
     and writer coverage keeps hash-backed incremental changed-object
-    deduplication plus single-pass xref-stream byte generation covered;
-    `moon coverage analyze` now reports all source files fully covered.
+    deduplication plus single-pass xref-stream and classic sparse xref byte
+    generation covered; `moon coverage analyze` now reports all source files
+    fully covered.
 
 ## Active Native Acceptance Milestone
 

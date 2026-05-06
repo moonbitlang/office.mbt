@@ -24,6 +24,21 @@ test "pdf_writer_int_array_contains handles present and missing values" {
 }
 
 ///|
+test "pdf_writer_push_classic_xref_subsection scans sorted xrefs in order" {
+  let output : Array[Byte] = []
+  let xrefs : Array[(Int, Int, Int)] = [(2, 33, 1), (4, 44, 2)]
+  let xref_index : Ref[Int] = { val: 0 }
+  pdf_writer_push_classic_xref_subsection(output, xrefs[:], 0, 3, xref_index)
+  pdf_writer_push_classic_xref_subsection(output, xrefs[:], 4, 1, xref_index)
+  @test.assert_eq(
+    Bytes::from_array(output),
+    @ascii.encode(
+      "0 3\n0000000000 65535 f \n0000000000 65535 f \n0000000033 00001 n \n4 1\n0000000044 00002 n \n",
+    ),
+  )
+}
+
+///|
 test "pdf_writer_xref_stream_data emits full table in object order" {
   let xrefs : Array[(Int, Int, Int)] = [(1, 20, 0), (3, 300, 2)]
   @test.assert_eq(

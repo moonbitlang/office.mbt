@@ -45,7 +45,9 @@ work changes.
    output order while avoiding repeated linear duplicate checks for large edit
    logs. Full and sparse xref-stream byte generation now consumes sorted xref
    tuples in one pass, preserving the writer's emitted bytes while avoiding
-   repeated tuple scans over large object tables.
+   repeated tuple scans over large object tables. Classic sparse incremental
+   xref row generation carries the same sorted-cursor strategy across
+   subsection runs.
    Xref-stream reading now also mirrors CamlPDF's tolerance for missing
    `/Type /XRef` when the stream still carries xref-stream structure such as
    `/W`, while keeping explicit wrong `/Type` values rejected; the malformed

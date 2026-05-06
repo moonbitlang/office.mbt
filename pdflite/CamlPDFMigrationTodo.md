@@ -141,6 +141,9 @@ Current estimate:
 - [x] ~~Emit full and sparse xref-stream data with a single pass over sorted
   xref tuples, avoiding repeated tuple scans across large object-number
   ranges.~~
+- [x] ~~Emit classic sparse incremental xref rows with a carried sorted xref
+  index across subsections, avoiding repeated tuple scans for changed/deleted
+  object ranges.~~
 - [x] ~~Replace generated Adobe-GB1, Adobe-CNS1, and Adobe-Japan1 CID-range
   CMap reverse lookup nested charcode scans with Unicode/CID-to-charcode
   helpers, preserving deterministic lowest packed-charcode selection for
@@ -272,6 +275,9 @@ Current estimate:
 - [x] ~~Full and sparse xref-stream byte generation now walks sorted xref
   tuples once, preserving emitted bytes while removing repeated lookup scans
   for large object tables and sparse incremental updates.~~
+- [x] ~~Classic sparse incremental xref output now carries one sorted xref
+  cursor across contiguous subsections, preserving row bytes while removing
+  repeated tuple scans.~~
 - [x] ~~Generated CID-range CMap reverse lookup for Adobe-GB1, Adobe-CNS1, and
   Adobe-Japan1 now maps Unicode to CID and CID to charcode instead of scanning
   every character code in every range.~~
@@ -573,6 +579,9 @@ Current estimate:
 - [x] ~~Xref-stream byte generation now uses sorted single-pass xref scans for
   full and sparse writer paths, improving large object-table writes without
   changing output bytes.~~
+- [x] ~~Classic sparse incremental xref rows now use a carried sorted xref cursor
+  across subsections, improving changed-object update writes without changing
+  output bytes.~~
 - [ ] Optional external-tool integration decisions for filter families that
   CamlPDF handled with C stubs or external binaries.
 
@@ -705,6 +714,8 @@ Current estimate:
   seen set while preserving sorted sparse xref output.~~
 - [x] ~~Tune full and sparse xref-stream data generation with sorted single-pass
   xref scans while preserving exact xref-entry bytes.~~
+- [x] ~~Tune classic sparse incremental xref subsection output with a carried
+  sorted xref cursor while preserving exact xref-row bytes.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.
