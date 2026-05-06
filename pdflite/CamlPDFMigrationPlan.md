@@ -1398,7 +1398,9 @@ MoonBit consequences for this project:
     while avoiding repeated deferred stream view materialization. Merged
     structure and AcroForm dictionary assembly now uses a hash-backed name-index
     builder, preserving first-key order and last-value replacement semantics
-    without repeated key scans. Generic
+    without repeated key scans. Safe catalog-extra retention now tracks
+    first-seen keys with a hash-backed name set instead of repeatedly scanning
+    the retained entry list across input documents. Generic
     name-dictionary merge support now retains non-destination `/Names` name
     trees such as `/EmbeddedFiles` and `/JavaScript`; `/Dests` remains on the
     destination-aware path so page-object targets are retargeted. The merge

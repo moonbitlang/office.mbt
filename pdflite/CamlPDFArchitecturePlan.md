@@ -402,7 +402,9 @@ work changes.
    document and reuses it during recursive structure-object rewrites. Merged
    structure dictionaries and AcroForm dictionaries now use a hash-backed
    name-index builder, preserving first-key order and last-value replacement
-   while avoiding repeated linear key scans.
+   while avoiding repeated linear key scans. Merge catalog-extra retention also
+   tracks safe first-seen keys with a hash-backed name set, avoiding repeated
+   duplicate-name scans across input catalogs.
    Remaining focus: more CamlPDF example-level acceptance fixtures and
    compatibility behavior for unusual real-world documents.
 

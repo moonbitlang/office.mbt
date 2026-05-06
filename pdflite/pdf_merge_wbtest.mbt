@@ -6,7 +6,9 @@ test "private merge helpers cover guards and membership branches" {
   }
 
   let key = pdf_merge_name("/ViewerPreferences")
-  @test.assert_eq(pdf_merge_name_member([key], key), true)
+  let seen_names = pdf_merge_name_set()
+  seen_names.add(key)
+  @test.assert_eq(seen_names.contains(key), true)
   @test.assert_eq(pdf_merge_object_member([PdfInteger(1)], PdfInteger(1)), true)
   @test.assert_eq(
     pdf_merge_destination_needs_named_retention(DestFit(TargetPageObject(1))),
@@ -25,6 +27,22 @@ test "private merge helpers cover guards and membership branches" {
   doc.add_object_given_number(1, PdfInteger(1))
   doc.set_root(1)
   @test.assert_eq(try! pdf_merge_catalog_extra_entries([doc]), [])
+  let duplicate_key = pdf_merge_name("/Lang")
+  let first = pdf_document_empty()
+  first.add_object_given_number(
+    1,
+    PdfDictionary([(duplicate_key, PdfString(@ascii.encode("first")))]),
+  )
+  first.set_root(1)
+  let second = pdf_document_empty()
+  second.add_object_given_number(
+    1,
+    PdfDictionary([(duplicate_key, PdfString(@ascii.encode("second")))]),
+  )
+  second.set_root(1)
+  @test.assert_eq(try! pdf_merge_catalog_extra_entries([first, second]), [
+    (duplicate_key, PdfString(@ascii.encode("first"))),
+  ])
 }
 
 ///|

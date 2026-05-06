@@ -317,14 +317,23 @@ fn PdfDocument::pdf_merge_copy_objects_from(
 }
 
 ///|
-fn pdf_merge_name_member(names : ArrayView[PdfName], name : PdfName) -> Bool {
-  for existing in names {
-    if existing == name {
-      break true
-    }
-  } nobreak {
-    false
-  }
+priv struct PdfMergeNameSet {
+  values : @hashmap.HashMap[Bytes, Bool]
+}
+
+///|
+fn pdf_merge_name_set() -> PdfMergeNameSet {
+  { values: @hashmap.HashMap::new() }
+}
+
+///|
+fn PdfMergeNameSet::contains(self : PdfMergeNameSet, name : PdfName) -> Bool {
+  self.values.contains(name.bytes())
+}
+
+///|
+fn PdfMergeNameSet::add(self : PdfMergeNameSet, name : PdfName) -> Unit {
+  self.values[name.bytes()] = true
 }
 
 ///|
@@ -346,16 +355,15 @@ fn pdf_merge_catalog_extra_entries(
   documents : ArrayView[PdfDocument],
 ) -> Array[(PdfName, PdfObject)] raise PdfError {
   let entries : Array[(PdfName, PdfObject)] = []
-  let seen : Array[PdfName] = []
+  let seen = pdf_merge_name_set()
   for document in documents {
     match document.pdf_merge_catalog() {
       PdfDictionary(root_entries) =>
         for entry in root_entries {
           let (key, _) = entry
-          if pdf_merge_catalog_extra_key(key) &&
-            !pdf_merge_name_member(seen, key) {
+          if pdf_merge_catalog_extra_key(key) && !seen.contains(key) {
             entries.push(entry)
-            seen.push(key)
+            seen.add(key)
           }
         }
       _ => ()

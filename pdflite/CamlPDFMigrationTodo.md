@@ -133,6 +133,9 @@ Current estimate:
 - [x] ~~Use a hash-backed dictionary builder for merged structure and AcroForm
   dictionaries, preserving first-key order and last-value replacement while
   avoiding repeated key scans.~~
+- [x] ~~Track retained merge catalog-extra keys with a hash-backed name set,
+  preserving first-seen catalog-entry precedence while avoiding repeated
+  duplicate-name scans across merged documents.~~
 - [x] ~~Cache name-tree, number-tree, page-label, and document-root names so
   document metadata helpers reuse stable `PdfName` values.~~
 - [ ] Continue zlib byte-output/performance parity work where exact miniz block
@@ -319,6 +322,9 @@ Current estimate:
 - [x] ~~Merged structure and AcroForm dictionaries now use a hash-backed
   name-index builder, preserving existing order/replacement semantics while
   avoiding repeated linear dictionary-key replacement scans.~~
+- [x] ~~Merge catalog-extra retention now uses a hash-backed name set for
+  first-seen safe catalog entries, avoiding repeated duplicate-key scans across
+  merged input catalogs.~~
 - [x] ~~Structure parent-tree renumbering now uses hash-backed old-key to new-key
   maps for recursive structure-object rewrites instead of scanning the change
   list at every integer key.~~
