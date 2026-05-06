@@ -61,6 +61,9 @@ Current estimate:
   stream-length handling so large object-table loads avoid rebuilding names.~~
 - [x] ~~Parse object-stream headers and embedded object slices from borrowed
   `BytesView` data instead of allocating temporary owned `Bytes`.~~
+- [x] ~~Cache standard encryption dictionary, crypt-filter, stream-policy, and
+  AESV3 random-field names so encrypted reads/writes avoid rebuilding stable
+  ASCII `PdfName` values.~~
 - [ ] Continue zlib byte-output/performance parity work where exact miniz block
   spelling or large-file profiles expose remaining gaps.
 - [ ] Profile and tune large-file hot paths for object streams, filters, and
@@ -97,6 +100,8 @@ Current estimate:
 - [x] ~~Native normal Flate encode/decode now uses the vendored miniz-compatible
   C path, with pure MoonBit fallback preserved for non-native targets and
   parser prefix decoding.~~
+- [x] ~~Encryption dictionary and crypt-filter lookups/builders now share cached
+  `PdfName` values for stable standard keys and name objects.~~
 - [ ] Improve byte-identical zlib output strategy and broader performance
   parity beyond the explicit Flate level API.
 - [ ] Broaden malformed xref-table/xref-stream/object-stream recovery with more

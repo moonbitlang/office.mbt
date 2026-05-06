@@ -281,7 +281,10 @@ work changes.
    encrypted object streams. Encrypted malformed-reader acceptance now covers
    bad-startxref reconstruction followed by saved-state recrypt and compressed
    write/reread, plus classic malformed xref-entry marker reconstruction before
-   password decryption.
+   password decryption. Standard encryption dictionary, crypt-filter,
+   stream-policy, and AESV3 random-field names are cached as private `PdfName`
+   values so encrypted reads/writes reuse stable byte-level names instead of
+   rebuilding them at each lookup or dictionary construction.
    Remaining focus: broader real-world encrypted malformed-reader compatibility.
 
 7. Document-level features.
@@ -341,10 +344,11 @@ and backend breadth, is about 83-88% complete.
   decryption, shared env-aware file-ID generation for missing encryption and
   merge IDs, native secure-random writer paths, saved-state recrypt, encrypted
   object streams, lazy encrypted stream forcing, non-stream object-stream
-  payload recrypt, bad-startxref encrypted reconstruction with recrypt,
-  feature-rich classic malformed-xref reconstruction through labels,
-  annotations, destinations, name-tree destinations, catalog actions,
-  `change_pages`, and compressed rewrite/reread, and `/EncryptMetadata false`.
+  payload recrypt, cached standard encryption dictionary and crypt-filter
+  names, bad-startxref encrypted reconstruction with recrypt, feature-rich
+  classic malformed-xref reconstruction through labels, annotations,
+  destinations, name-tree destinations, catalog actions, `change_pages`, and
+  compressed rewrite/reread, and `/EncryptMetadata false`.
 - Not covered enough: remaining `change_pages` compatibility fixtures involving
   unusual inherited page data and broader real-world destination/action
   combinations.

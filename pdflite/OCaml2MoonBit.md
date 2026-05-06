@@ -199,7 +199,7 @@ then append binary payloads as `Bytes`/`BytesView`. Do not build binary file
 formats through `String` concatenation.
 
 ```sh
-moon run -c $'fn ascii_bytes(text : String) -> Bytes { @ascii.encode(text) }\nlet cached_filter : Bytes = ascii_bytes("/Filter")\nfn main { println(cached_filter.length()); println(cached_filter[0].to_int()) }'
+moon run -c $'import { "moonbitlang/core/encoding/ascii" }\nfn ascii_bytes(text : String) -> Bytes { @ascii.encode(text) }\nlet cached_filter : Bytes = ascii_bytes("/Filter")\nfn main { println(cached_filter.length()); println(cached_filter[0].to_int()) }'
 # 7
 # 47
 ```
@@ -207,6 +207,9 @@ moon run -c $'fn ascii_bytes(text : String) -> Bytes { @ascii.encode(text) }\nle
 For frequently reused ASCII grammar tokens, a private top-level `let` can cache
 the encoded `Bytes` value once. This is a useful replacement for OCaml code
 that repeatedly compares byte-oriented string constants in hot paths.
+Give cached top-level values explicit type annotations; command snippets and
+package-level declarations otherwise may not have enough expected type context
+for inference.
 
 ```sh
 moon run -c "fn make() -> BytesView { let b = Bytes::from_array([b'a']); b[:] }\nfn main { println(make().length()) }" --target native
