@@ -1395,7 +1395,10 @@ MoonBit consequences for this project:
     explicit option. The duplicate-stream pass now caches each stream's
     dictionary/data comparison candidate once and groups candidates by decoded
     byte length before exact comparison, preserving canonical-first renumbering
-    while avoiding repeated deferred stream view materialization. Generic
+    while avoiding repeated deferred stream view materialization. Merged
+    structure and AcroForm dictionary assembly now uses a hash-backed name-index
+    builder, preserving first-key order and last-value replacement semantics
+    without repeated key scans. Generic
     name-dictionary merge support now retains non-destination `/Names` name
     trees such as `/EmbeddedFiles` and `/JavaScript`; `/Dests` remains on the
     destination-aware path so page-object targets are retargeted. The merge

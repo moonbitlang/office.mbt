@@ -130,6 +130,9 @@ Current estimate:
 - [x] ~~Cache standard merge catalog, destination, name-dictionary, AcroForm,
   and structure-tree names so public merge/extraction workflows reuse stable
   `PdfName` values.~~
+- [x] ~~Use a hash-backed dictionary builder for merged structure and AcroForm
+  dictionaries, preserving first-key order and last-value replacement while
+  avoiding repeated key scans.~~
 - [x] ~~Cache name-tree, number-tree, page-label, and document-root names so
   document metadata helpers reuse stable `PdfName` values.~~
 - [ ] Continue zlib byte-output/performance parity work where exact miniz block
@@ -313,6 +316,9 @@ Current estimate:
 - [x] ~~Duplicate stream/font removal now caches stream comparison candidates and
   groups them by byte length before exact comparison, avoiding repeated stream
   view materialization during merge deduplication.~~
+- [x] ~~Merged structure and AcroForm dictionaries now use a hash-backed
+  name-index builder, preserving existing order/replacement semantics while
+  avoiding repeated linear dictionary-key replacement scans.~~
 - [x] ~~Structure parent-tree renumbering now uses hash-backed old-key to new-key
   maps for recursive structure-object rewrites instead of scanning the change
   list at every integer key.~~

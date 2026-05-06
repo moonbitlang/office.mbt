@@ -399,7 +399,10 @@ work changes.
    groups them by byte length before exact dictionary/data comparison, avoiding
    repeated deferred stream view materialization in large merge dedupe passes.
    Structure parent-tree renumbering now builds one hash-backed change map per
-   document and reuses it during recursive structure-object rewrites.
+   document and reuses it during recursive structure-object rewrites. Merged
+   structure dictionaries and AcroForm dictionaries now use a hash-backed
+   name-index builder, preserving first-key order and last-value replacement
+   while avoiding repeated linear key scans.
    Remaining focus: more CamlPDF example-level acceptance fixtures and
    compatibility behavior for unusual real-world documents.
 

@@ -424,19 +424,29 @@ fn PdfDocument::pdf_merge_structure_name_tree_entries(
 }
 
 ///|
-fn pdf_merge_add_dictionary_entry(
-  entries : Array[(PdfName, PdfObject)],
+priv struct PdfMergeDictionaryBuilder {
+  entries : Array[(PdfName, PdfObject)]
+  indexes : @hashmap.HashMap[Bytes, Int]
+}
+
+///|
+fn pdf_merge_dictionary_builder() -> PdfMergeDictionaryBuilder {
+  { entries: [], indexes: @hashmap.HashMap::new() }
+}
+
+///|
+fn PdfMergeDictionaryBuilder::add_entry(
+  self : PdfMergeDictionaryBuilder,
   key : PdfName,
   value : PdfObject,
 ) -> Unit {
-  for i in 0..<entries.length() {
-    let (existing_key, _) = entries[i]
-    if existing_key == key {
-      entries[i] = (key, value)
-      break ()
+  let index_key = key.bytes()
+  match self.indexes.get(index_key) {
+    Some(index) => self.entries[index] = (key, value)
+    None => {
+      self.indexes[index_key] = self.entries.length()
+      self.entries.push((key, value))
     }
-  } nobreak {
-    entries.push((key, value))
   }
 }
 
@@ -446,19 +456,19 @@ fn PdfDocument::pdf_merge_structure_dictionary(
   structure_tree_roots : ArrayView[PdfObject],
   key : PdfName,
 ) -> PdfObject? {
-  let entries : Array[(PdfName, PdfObject)] = []
+  let builder = pdf_merge_dictionary_builder()
   for root in structure_tree_roots {
     match self.lookup_direct(key, root) {
       Some(PdfDictionary(root_entries)) =>
         for entry in root_entries {
           let (entry_key, value) = entry
-          pdf_merge_add_dictionary_entry(entries, entry_key, value)
+          builder.add_entry(entry_key, value)
         }
       _ => ()
     }
   }
-  if entries.length() > 0 {
-    Some(PdfDictionary(entries))
+  if builder.entries.length() > 0 {
+    Some(PdfDictionary(builder.entries))
   } else {
     None
   }
@@ -797,7 +807,7 @@ fn pdf_merge_acroforms(
     None
   } else {
     let fields : Array[PdfObject] = []
-    let entries : Array[(PdfName, PdfObject)] = []
+    let builder = pdf_merge_dictionary_builder()
     for form_entries in forms {
       for entry in form_entries {
         let (key, value) = entry
@@ -810,12 +820,12 @@ fn pdf_merge_acroforms(
             _ => ()
           }
         } else {
-          pdf_merge_add_dictionary_entry(entries, key, value)
+          builder.add_entry(key, value)
         }
       }
     }
     Some(
-      PdfDictionary(entries).add_dict_entry(
+      PdfDictionary(builder.entries).add_dict_entry(
         pdf_merge_fields_key(),
         PdfArray(fields),
       ),

@@ -16,9 +16,10 @@ test "private merge helpers cover guards and membership branches" {
   @test.assert_eq(pdf_merge_changed_parent_tree_key(parent_changes, 1), Some(2))
   @test.assert_eq(pdf_merge_changed_parent_tree_key(parent_changes, 3), None)
 
-  let entries = [(key, PdfInteger(1))]
-  pdf_merge_add_dictionary_entry(entries, key, PdfInteger(2))
-  @test.assert_eq(entries, [(key, PdfInteger(2))])
+  let builder = pdf_merge_dictionary_builder()
+  builder.add_entry(key, PdfInteger(1))
+  builder.add_entry(key, PdfInteger(2))
+  @test.assert_eq(builder.entries, [(key, PdfInteger(2))])
 
   let doc = pdf_document_empty()
   doc.add_object_given_number(1, PdfInteger(1))
