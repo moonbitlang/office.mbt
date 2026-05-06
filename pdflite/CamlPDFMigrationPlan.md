@@ -386,7 +386,9 @@ MoonBit consequences for this project:
    recovered streams can resolve plain indirect `/Length n 0 R` entries. Public
    reconstruction can now also recover stream objects with missing or unreadable
    `/Length` values by scanning through the following `endstream` marker and
-   correcting `/Length`, and reconstructed object tokenization now skips raw
+   correcting `/Length`; the xref reconstruction scan now reuses a single
+   `ByteCursor` across candidate offsets instead of allocating one per
+   digit-looking byte. Reconstructed object tokenization now skips raw
    `endobj` byte sequences inside literal strings by retrying the next candidate
    terminator. The reconstruction offset scan now also advances past complete
    indirect objects and recovered streams, avoiding false top-level objects from

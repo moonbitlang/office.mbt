@@ -1418,10 +1418,10 @@ fn pdf_read_reconstructed_xrefs(
   data : BytesView,
 ) -> Array[PdfClassicXRefEntry] raise PdfError {
   let xrefs : Array[PdfClassicXRefEntry] = []
+  let cursor = byte_cursor_of_view(data)
   let mut position = 0
   while position < data.length() {
     if pdf_is_digit_byte(data[position].to_int()) {
-      let cursor = byte_cursor_of_view(data)
       cursor.seek_pdf_absolute(position)
       let parsed : Result[(PdfParsedIndirectObject, Int?), Error] = try? cursor.read_reconstructed_indirect_scan_candidate_at_current(
         xrefs[:],
