@@ -82,6 +82,22 @@ test "ByteCursor lexes PDF booleans and numbers" {
   @test.assert_eq(cursor.lex_pdf_number(), LexInt(-42))
   @test.assert_eq(cursor.lex_pdf_number(), LexReal(0.5))
   @test.assert_eq(cursor.lex_pdf_number(), LexInt(-2))
+  @test.assert_eq(
+    @pdflite.byte_cursor_of_bytes(lexeme_bytes_for_test([43, 49, 55])).lex_pdf_number(),
+    LexInt(17),
+  )
+  @test.assert_eq(
+    @pdflite.byte_cursor_of_bytes(
+      lexeme_bytes_for_test([45, 50, 49, 52, 55, 52, 56, 51, 54, 52, 56]),
+    ).lex_pdf_number(),
+    LexInt(-2147483648),
+  )
+  @test.assert_eq(
+    @pdflite.byte_cursor_of_bytes(
+      lexeme_bytes_for_test([50, 49, 52, 55, 52, 56, 51, 54, 52, 55]),
+    ).lex_pdf_number(),
+    LexInt(2147483647),
+  )
   let false_cursor = @pdflite.byte_cursor_of_bytes(
     lexeme_bytes_for_test([102, 97, 108, 115, 101]),
   )

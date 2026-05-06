@@ -221,10 +221,13 @@ MoonBit consequences for this project:
    parser now covers comments, scalar objects, indirect references, arrays,
    dictionaries, and CamlPDF-style empty-dictionary recovery for malformed
    dictionary contents. Borrowed `BytesView` parse entry points are exposed for
-   direct and indirect primitive objects. The primitive scanner can now lex
-   object syntax from `Bytes` into token arrays and parse a single object from
-   bytes, stopping before `stream`, `startxref`, and inline-image `ID` data
-   until stream-aware reading is implemented.
+   direct and indirect primitive objects. Integer number tokens now stay on the
+   borrowed byte path and parse directly to Int-range values with an Int64
+   overflow guard, preserving the existing fallback to real-number parsing for
+   oversized or non-integer tokens. The primitive scanner can now lex object
+   syntax from `Bytes` into token arrays and parse a single object from bytes,
+   stopping before `stream`, `startxref`, and inline-image `ID` data until
+   stream-aware reading is implemented.
 
 5. Minimal PDF reader.
    Implement header, xref, trailer, indirect object parsing, object streams only

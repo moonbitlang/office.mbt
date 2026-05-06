@@ -81,6 +81,9 @@ Current estimate:
   parsing, allocating only when unknown operators must be preserved.~~
 - [x] ~~Dispatch known content-stream operators by direct `BytesView` byte
   patterns instead of decoding operator tokens to MoonBit `String`.~~
+- [x] ~~Parse common integer PDF lexemes directly from borrowed `BytesView`
+  data, with Int64 overflow guards and existing real-number fallback
+  behavior.~~
 - [x] ~~Cache standard font aliases, encoding names, font/CID/CMap dictionary
   keys, and ToUnicode writer keys so text read/write hot paths reuse stable
   `PdfName` values.~~
@@ -154,6 +157,9 @@ Current estimate:
   operator dispatch and only owns bytes for preserved unknown operations.~~
 - [x] ~~Known content-stream operator dispatch now pattern matches borrowed
   operator bytes directly and avoids per-operator ASCII string decoding.~~
+- [x] ~~PDF integer lexing now parses Int-range tokens directly from borrowed
+  `BytesView` data, preserving oversized-token fallback to real-number
+  parsing.~~
 - [x] ~~Text/font parsing and writing now share cached standard font,
   encoding, font dictionary, CID, CMap, and ToUnicode names in the main text
   hot paths.~~
