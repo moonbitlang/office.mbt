@@ -1090,6 +1090,18 @@ test "private annotation and bookmark guards report malformed roots" {
 }
 
 ///|
+test "private structure number set filters duplicate insertions" {
+  let seen = pdf_structure_number_set([2, 2])
+  @test.assert_eq(seen.contains(2), true)
+  @test.assert_eq(seen.contains(3), false)
+  let output : Array[Int] = []
+  pdf_structure_push_unique_with_seen(output, seen, 2)
+  pdf_structure_push_unique_with_seen(output, seen, 3)
+  pdf_structure_push_unique_with_seen(output, seen, 3)
+  @test.assert_eq(output, [3])
+}
+
+///|
 test "private structure survival helpers cover direct cases" {
   let key_pg = pdf_structure_pg_key()
   let doc = pdf_document_empty()
@@ -1100,9 +1112,26 @@ test "private structure survival helpers cover direct cases" {
       (pdf_structure_k_key(), PdfInteger(0)),
     ]),
   )
-  @test.assert_eq(doc.pdf_structure_indirect_survives(50, [2]), false)
-  @test.assert_eq(doc.pdf_structure_k_item_survives(PdfInteger(1), [2]), true)
-  @test.assert_eq(doc.pdf_structure_filtered_k_value(PdfInteger(1), [2]), None)
+  let deleted_pages = pdf_structure_number_set([2])
+  @test.assert_eq(
+    doc.pdf_structure_object_has_deleted_page_in_set(
+      PdfIndirect(50),
+      deleted_pages,
+    ),
+    true,
+  )
+  @test.assert_eq(
+    doc.pdf_structure_indirect_survives_in_set(50, deleted_pages),
+    false,
+  )
+  @test.assert_eq(
+    doc.pdf_structure_k_item_survives_in_set(PdfInteger(1), deleted_pages),
+    true,
+  )
+  @test.assert_eq(
+    doc.pdf_structure_filtered_k_value_in_set(PdfInteger(1), deleted_pages),
+    None,
+  )
 }
 
 ///|

@@ -706,8 +706,10 @@ MoonBit consequences for this project:
    as absent instead of aborting extraction. Structure
    tree trimming is started behind `process_struct_tree=true`: structure nodes
    whose `/Pg` points to removed pages are deleted and ancestor `/K` child
-   lists are pruned until stable. Broader retained-numbering behavior remains
-   deferred.
+   lists are pruned until stable. The trim pass now builds hash-backed
+   deleted-page and per-pass deletion sets, preserving the same pruning result
+   while avoiding repeated membership scans on large tagged documents. Broader
+   retained-numbering behavior remains deferred.
    `minimum_valid_pdf` is also ported as a writable one-page A4 document
    constructor. Unreferenced-object pruning is started with a
    `remove_unreferenced` pass that follows indirect references from the active
@@ -1476,8 +1478,9 @@ MoonBit consequences for this project:
     annotation transforms, private annotation rest validation, and the private
     bookmark outline root guard. Structure trimming coverage now includes
     `/Obj`-based child pruning that removes now-empty parent `/K` arrays, plus
-    private survival-helper checks for `/Pg`, direct non-indirect `/K` items,
-    and non-dictionary structure values. Codec coverage now includes malformed
+    hash-backed deleted-page/deletion set duplicate handling, private
+    survival-helper checks for `/Pg`, direct non-indirect `/K` items, and
+    non-dictionary structure values. Codec coverage now includes malformed
     decode-parameter dispatch during stream decode, document-aware indirect
     filter/decode-parameter resolution, stop-at-unknown stream decode behavior,
     plus private filter-entry, decode-parameter, predictor-byte-width, and LZW

@@ -56,20 +56,36 @@ fn pdf_structure_k_key() -> PdfName {
 }
 
 ///|
-fn pdf_structure_number_member(numbers : ArrayView[Int], number : Int) -> Bool {
-  for candidate in numbers {
-    if candidate == number {
-      break true
-    }
-  } nobreak {
-    false
-  }
+priv struct PdfStructureNumberSet {
+  values : @hashmap.HashMap[Int, Bool]
 }
 
 ///|
-fn pdf_structure_push_unique(numbers : Array[Int], number : Int) -> Unit {
-  if !pdf_structure_number_member(numbers, number) {
+fn pdf_structure_number_set(numbers : ArrayView[Int]) -> PdfStructureNumberSet {
+  let values : @hashmap.HashMap[Int, Bool] = @hashmap.HashMap::new()
+  for number in numbers {
+    values[number] = true
+  }
+  { values, }
+}
+
+///|
+fn PdfStructureNumberSet::contains(
+  self : PdfStructureNumberSet,
+  number : Int,
+) -> Bool {
+  self.values.contains(number)
+}
+
+///|
+fn pdf_structure_push_unique_with_seen(
+  numbers : Array[Int],
+  seen : PdfStructureNumberSet,
+  number : Int,
+) -> Unit {
+  if !seen.contains(number) {
     numbers.push(number)
+    seen.values[number] = true
   }
 }
 
@@ -86,23 +102,22 @@ fn PdfDocument::pdf_structure_indirect_number(
 }
 
 ///|
-fn PdfDocument::pdf_structure_object_has_deleted_page(
+fn PdfDocument::pdf_structure_object_has_deleted_page_in_set(
   self : PdfDocument,
   object : PdfObject,
-  deleted_page_numbers : ArrayView[Int],
+  deleted_pages : PdfStructureNumberSet,
 ) -> Bool {
   match self.direct(object).lookup_immediate(pdf_structure_pg_key()) {
-    Some(PdfIndirect(page_number)) =>
-      pdf_structure_number_member(deleted_page_numbers, page_number)
+    Some(PdfIndirect(page_number)) => deleted_pages.contains(page_number)
     _ => false
   }
 }
 
 ///|
-fn PdfDocument::pdf_structure_indirect_survives(
+fn PdfDocument::pdf_structure_indirect_survives_in_set(
   self : PdfDocument,
   object_number : Int,
-  deleted_page_numbers : ArrayView[Int],
+  deleted_pages : PdfStructureNumberSet,
 ) -> Bool {
   if self.lookup_object_or_null(object_number) == PdfNull {
     false
@@ -118,40 +133,36 @@ fn PdfDocument::pdf_structure_indirect_survives(
           pdf_structure_obj_key(),
         ),
       ) {
-      (Some(page_number), _) if pdf_structure_number_member(
-          deleted_page_numbers, page_number,
-        ) => false
-      (_, Some(page_number)) if pdf_structure_number_member(
-          deleted_page_numbers, page_number,
-        ) => false
+      (Some(page_number), _) if deleted_pages.contains(page_number) => false
+      (_, Some(page_number)) if deleted_pages.contains(page_number) => false
       _ => true
     }
   }
 }
 
 ///|
-fn PdfDocument::pdf_structure_k_item_survives(
+fn PdfDocument::pdf_structure_k_item_survives_in_set(
   self : PdfDocument,
   item : PdfObject,
-  deleted_page_numbers : ArrayView[Int],
+  deleted_pages : PdfStructureNumberSet,
 ) -> Bool {
   match item {
     PdfIndirect(object_number) =>
-      self.pdf_structure_indirect_survives(object_number, deleted_page_numbers)
+      self.pdf_structure_indirect_survives_in_set(object_number, deleted_pages)
     _ => true
   }
 }
 
 ///|
-fn PdfDocument::pdf_structure_filter_k_items(
+fn PdfDocument::pdf_structure_filter_k_items_in_set(
   self : PdfDocument,
   items : ArrayView[PdfObject],
-  deleted_page_numbers : ArrayView[Int],
+  deleted_pages : PdfStructureNumberSet,
 ) -> Array[PdfObject]? {
   let output : Array[PdfObject] = []
   let mut changed = false
   for item in items {
-    if self.pdf_structure_k_item_survives(item, deleted_page_numbers) {
+    if self.pdf_structure_k_item_survives_in_set(item, deleted_pages) {
       output.push(item)
     } else {
       changed = true
@@ -165,19 +176,19 @@ fn PdfDocument::pdf_structure_filter_k_items(
 }
 
 ///|
-fn PdfDocument::pdf_structure_filtered_k_value(
+fn PdfDocument::pdf_structure_filtered_k_value_in_set(
   self : PdfDocument,
   object : PdfObject,
-  deleted_page_numbers : ArrayView[Int],
+  deleted_pages : PdfStructureNumberSet,
 ) -> Array[PdfObject]? {
   match self.direct(object) {
     PdfDictionary(_) as dictionary =>
       match dictionary.lookup_immediate(pdf_structure_k_key()) {
         Some(PdfInteger(_)) => None
         Some(PdfIndirect(_) as child) =>
-          self.pdf_structure_filter_k_items([child], deleted_page_numbers)
+          self.pdf_structure_filter_k_items_in_set([child], deleted_pages)
         Some(PdfArray(children)) =>
-          self.pdf_structure_filter_k_items(children, deleted_page_numbers)
+          self.pdf_structure_filter_k_items_in_set(children, deleted_pages)
         _ => None
       }
     _ => None
@@ -335,16 +346,20 @@ fn PdfDocument::pdf_structure_trim_deleted_pages(
   deleted_page_numbers : ArrayView[Int],
 ) -> Unit raise PdfError {
   if deleted_page_numbers.length() > 0 {
+    let deleted_pages = pdf_structure_number_set(deleted_page_numbers)
     let mut changed = true
     while changed {
       changed = false
       let deletions : Array[Int] = []
+      let deletion_seen = pdf_structure_number_set([])
       for object_number in self.object_numbers() {
-        if self.pdf_structure_object_has_deleted_page(
+        if self.pdf_structure_object_has_deleted_page_in_set(
             self.lookup_object_or_null(object_number),
-            deleted_page_numbers,
+            deleted_pages,
           ) {
-          pdf_structure_push_unique(deletions, object_number)
+          pdf_structure_push_unique_with_seen(
+            deletions, deletion_seen, object_number,
+          )
         }
       }
       for object_number in deletions {
@@ -357,8 +372,11 @@ fn PdfDocument::pdf_structure_trim_deleted_pages(
       for object_number in self.object_numbers() {
         let object = self.lookup_object_or_null(object_number)
         match
-          self.pdf_structure_filtered_k_value(object, deleted_page_numbers) {
-          Some([]) => pdf_structure_push_unique(deletions, object_number)
+          self.pdf_structure_filtered_k_value_in_set(object, deleted_pages) {
+          Some([]) =>
+            pdf_structure_push_unique_with_seen(
+              deletions, deletion_seen, object_number,
+            )
           Some(filtered) =>
             replacements.push(
               (

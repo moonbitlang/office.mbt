@@ -218,6 +218,9 @@ work changes.
    `pdf_of_pages` now materializes inherited page attributes before extraction
    so inherited `/CropBox` values and inherited indirect `/Resources`,
    `/MediaBox`, and `/Rotate` references are preserved with selected pages.
+   Structure-tree trimming now uses hash-backed deleted-page and deletion sets
+   for stable `/Pg` removal and ancestor `/K` pruning, avoiding repeated linear
+   membership scans on large tagged documents.
    Content parsing also follows CamlPDF's malformed color-operator fallback for
    bad `SC`/`sc`/`SCN`/`scn` operands and filters malformed `TJ` array
    members. Operator tokens remain borrowed as `BytesView` through known

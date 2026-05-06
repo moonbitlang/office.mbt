@@ -157,6 +157,9 @@ Current estimate:
 - [x] ~~Extract external CMap text with per-text-run hash lookup maps for
   CID, notdef, and Unicode entries, preserving CID/notdef/Unicode/predefined/
   Identity/fallback precedence and first-entry duplicate behavior.~~
+- [x] ~~Trim structure trees with hash-backed deleted-page and deletion sets,
+  preserving CamlPDF-style stable `/Pg` removal and `/K` pruning while avoiding
+  repeated membership scans on large tagged documents.~~
 - [x] ~~Replace generated Adobe-GB1, Adobe-CNS1, and Adobe-Japan1 CID-range
   CMap reverse lookup nested charcode scans with Unicode/CID-to-charcode
   helpers, preserving deterministic lowest packed-charcode selection for
@@ -275,6 +278,9 @@ Current estimate:
   `PdfName` values.~~
 - [x] ~~Name-tree/number-tree builders and lookups, page-label helpers, and the
   document root key now share cached standard `PdfName` values.~~
+- [x] ~~Structure-tree trimming now builds hash-backed deleted-page and deletion
+  sets once per trim pass, avoiding repeated linear membership scans while
+  preserving stable pruning behavior.~~
 - [ ] Improve byte-identical zlib output strategy and broader performance
   parity beyond the explicit Flate level API.
 - [ ] Broaden malformed xref-table/xref-stream/object-stream recovery with more
