@@ -1374,7 +1374,10 @@ MoonBit consequences for this project:
     `StreamGot`, deferred `StreamToGet`, or already-decrypted stream objects
     are rewritten to the first matching stream after comparing borrowed
     stream-data views, and `pdf_merge_documents` can run this pass behind an
-    explicit option. Generic
+    explicit option. The duplicate-stream pass now caches each stream's
+    dictionary/data comparison candidate once and groups candidates by decoded
+    byte length before exact comparison, preserving canonical-first renumbering
+    while avoiding repeated deferred stream view materialization. Generic
     name-dictionary merge support now retains non-destination `/Names` name
     trees such as `/EmbeddedFiles` and `/JavaScript`; `/Dests` remains on the
     destination-aware path so page-object targets are retargeted. The merge
@@ -1485,9 +1488,12 @@ MoonBit consequences for this project:
     filter/decode-parameter resolution, stop-at-unknown stream decode behavior,
     plus private filter-entry, decode-parameter, predictor-byte-width, and LZW
     table-validation guards.
-    Name/number tree coverage now includes malformed key-type rejection,
-    duplicate number-key replacement, large nested tree construction with child
-    `/Limits`, and private grouping threshold checks. Flate coverage now
+    Duplicate-stream coverage now includes length-grouped candidate comparison
+    and canonical-first change selection across mixed stream lengths and
+    dictionary mismatches. Name/number tree coverage now includes malformed
+    key-type rejection, duplicate number-key replacement, large nested tree
+    construction with child `/Limits`, and private grouping threshold checks.
+    Flate coverage now
     includes empty and short zlib inputs, fixed-Huffman blocks, invalid stored
     block lengths, invalid block types, empty stored-block encoding, and private
     bit-reader/Huffman-table guards. Lexeme coverage now includes all debug-name

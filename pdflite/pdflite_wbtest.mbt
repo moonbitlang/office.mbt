@@ -3,18 +3,17 @@
 // Keep them focused; public behavior belongs in `_test.mbt`.
 
 ///|
-test "pdf_duplicate_stream_equal rejects non-stream objects" {
+test "pdf duplicate stream candidates reject non-stream objects" {
   @test.assert_eq(
-    pdf_duplicate_stream_equal(PdfInteger(1), PdfInteger(1)),
-    false,
+    pdf_duplicate_stream_candidate(1, PdfInteger(1)) is None,
+    true,
   )
-  @test.assert_eq(
-    pdf_duplicate_stream_equal(
-      pdf_stream(PdfDictionary([]), StreamGot(@ascii.encode("a"))),
-      PdfInteger(1),
-    ),
-    false,
-  )
+  let stream = pdf_stream(PdfDictionary([]), StreamGot(@ascii.encode("a")))
+  guard pdf_duplicate_stream_candidate(2, stream) is Some(candidate) else {
+    fail("expected stream candidate")
+  }
+  @test.assert_eq(candidate.number, 2)
+  @test.assert_eq(candidate.equals(candidate), true)
 }
 
 ///|

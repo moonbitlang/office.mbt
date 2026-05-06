@@ -1,42 +1,65 @@
 ///|
-fn pdf_duplicate_stream_equal(left : PdfObject, right : PdfObject) -> Bool {
-  match (left, right) {
-    (
-      PdfStreamObject({ dictionary: left_dictionary, data: left_data }),
-      PdfStreamObject({ dictionary: right_dictionary, data: right_data }),
-    ) => {
-      let left_view = try! pdf_stream_data_view(left_data)
-      let right_view = try! pdf_stream_data_view(right_data)
-      left_dictionary == right_dictionary && left_view == right_view
-    }
-    _ => false
+priv struct PdfDuplicateStreamCandidate {
+  number : Int
+  dictionary : PdfObject
+  data : BytesView
+}
+
+///|
+fn pdf_duplicate_stream_candidate(
+  number : Int,
+  object : PdfObject,
+) -> PdfDuplicateStreamCandidate? {
+  match object {
+    PdfStreamObject({ dictionary, data }) =>
+      Some({ number, dictionary, data: try! pdf_stream_data_view(data) })
+    _ => None
   }
+}
+
+///|
+fn PdfDuplicateStreamCandidate::equals(
+  self : PdfDuplicateStreamCandidate,
+  other : PdfDuplicateStreamCandidate,
+) -> Bool {
+  self.dictionary == other.dictionary && self.data == other.data
 }
 
 ///|
 fn PdfDocument::pdf_duplicate_stream_changes(
   self : PdfDocument,
 ) -> Array[(Int, Int)] {
-  let unique_streams : Array[(Int, PdfObject)] = []
+  let unique_streams_by_length : @hashmap.HashMap[
+    Int,
+    Array[PdfDuplicateStreamCandidate],
+  ] = @hashmap.HashMap::new()
   let changes : Array[(Int, Int)] = []
   for number in self.object_numbers() {
     let object = self.lookup_object_or_null(number)
-    match object {
-      PdfStreamObject(_) => {
-        let is_duplicate = for entry in unique_streams {
-          let (canonical_number, canonical_object) = entry
-          if pdf_duplicate_stream_equal(canonical_object, object) {
-            changes.push((number, canonical_number))
+    match pdf_duplicate_stream_candidate(number, object) {
+      Some(candidate) => {
+        let length = candidate.data.length()
+        let unique_streams = match unique_streams_by_length.get(length) {
+          Some(streams) => streams
+          None => {
+            let streams : Array[PdfDuplicateStreamCandidate] = []
+            unique_streams_by_length[length] = streams
+            streams
+          }
+        }
+        let is_duplicate = for canonical in unique_streams {
+          if canonical.equals(candidate) {
+            changes.push((number, canonical.number))
             break true
           }
         } nobreak {
           false
         }
         if !is_duplicate {
-          unique_streams.push((number, object))
+          unique_streams.push(candidate)
         }
       }
-      _ => ()
+      None => ()
     }
   }
   changes

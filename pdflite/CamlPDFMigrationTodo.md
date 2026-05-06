@@ -160,6 +160,9 @@ Current estimate:
 - [x] ~~Trim structure trees with hash-backed deleted-page and deletion sets,
   preserving CamlPDF-style stable `/Pg` removal and `/K` pruning while avoiding
   repeated membership scans on large tagged documents.~~
+- [x] ~~Cache duplicate-stream comparison candidates during font deduplication
+  and group them by byte length before exact dictionary/data comparison,
+  preserving canonical-first renumbering while reducing merge hot-path scans.~~
 - [x] ~~Replace generated Adobe-GB1, Adobe-CNS1, and Adobe-Japan1 CID-range
   CMap reverse lookup nested charcode scans with Unicode/CID-to-charcode
   helpers, preserving deterministic lowest packed-charcode selection for
@@ -281,6 +284,9 @@ Current estimate:
 - [x] ~~Structure-tree trimming now builds hash-backed deleted-page and deletion
   sets once per trim pass, avoiding repeated linear membership scans while
   preserving stable pruning behavior.~~
+- [x] ~~Duplicate stream/font removal now caches stream comparison candidates and
+  groups them by byte length before exact comparison, avoiding repeated stream
+  view materialization during merge deduplication.~~
 - [ ] Improve byte-identical zlib output strategy and broader performance
   parity beyond the explicit Flate level API.
 - [ ] Broaden malformed xref-table/xref-stream/object-stream recovery with more

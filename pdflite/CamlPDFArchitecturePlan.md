@@ -376,6 +376,9 @@ work changes.
    reads now preserve CamlPDF's tolerant range
    handling for malformed keys and odd trailing `/Nums` entries while rejecting
    empty malformed label trees.
+   Duplicate stream/font removal now caches stream comparison candidates and
+   groups them by byte length before exact dictionary/data comparison, avoiding
+   repeated deferred stream view materialization in large merge dedupe passes.
    Remaining focus: more CamlPDF example-level acceptance fixtures and
    compatibility behavior for unusual real-world documents.
 
