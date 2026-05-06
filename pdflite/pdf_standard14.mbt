@@ -9,6 +9,21 @@ pub fn pdf_standard14_afm_data(font : PdfStandardFont) -> PdfAfmData {
 }
 
 ///|
+pub fn pdf_standard14_baseline_adjustment(font : PdfStandardFont) -> Int {
+  font.baseline_adjustment()
+}
+
+///|
+pub fn pdf_standard14_stemv_of_standard_font(font : PdfStandardFont) -> Int {
+  font.stemv()
+}
+
+///|
+pub fn pdf_standard14_flags_of_standard_font(font : PdfStandardFont) -> Int {
+  font.flags()
+}
+
+///|
 fn pdf_standard14_width_of_charcode(
   widths : ArrayView[(Int, Int)],
   code : Int,
@@ -101,6 +116,16 @@ pub fn pdf_standard14_text_width(
     }
   }
   width
+}
+
+///|
+pub fn pdf_standard14_textwidth(
+  kern : Bool,
+  encoding : PdfEncoding,
+  font : PdfStandardFont,
+  text : BytesView,
+) -> Int {
+  pdf_standard14_text_width(font, encoding, text, kern~)
 }
 
 ///|

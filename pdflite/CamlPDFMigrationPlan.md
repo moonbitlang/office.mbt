@@ -994,7 +994,10 @@ MoonBit consequences for this project:
    the vendored CamlPDF AFM data, plus CamlPDF-compatible byte-oriented
    `text_width` helpers that use character-code widths for implicit encodings,
    glyph-name widths for explicit encodings, `/space` fallback for undefined
-   encoded bytes, and optional byte-pair kerning.
+   encoded bytes, and optional byte-pair kerning. The `.repos/pdfstandard14.mli`
+   standalone helper surface is also covered through CamlPDF-ordered
+   `pdf_standard14_textwidth` plus baseline, StemV, and flags wrappers over the
+   typed standard-font methods.
    A first `PdfTextExtractor` API is started for ToUnicode-backed byte strings,
    `/Identity-H`/`/Identity-V` CID text, and predefined UCS2 horizontal/vertical
    plus UTF16 horizontal/vertical CMaps, including decoded glyph records,

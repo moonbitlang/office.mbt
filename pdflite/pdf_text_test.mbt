@@ -425,8 +425,20 @@ test "PdfStandardFont exposes standard14 baseline stem and flags" {
   ]
   for entry in metrics {
     @test.assert_eq(entry.0.baseline_adjustment(), entry.1)
+    @test.assert_eq(
+      @pdflite.pdf_standard14_baseline_adjustment(entry.0),
+      entry.1,
+    )
     @test.assert_eq(entry.0.stemv(), entry.2)
+    @test.assert_eq(
+      @pdflite.pdf_standard14_stemv_of_standard_font(entry.0),
+      entry.2,
+    )
     @test.assert_eq(entry.0.flags(), entry.3)
+    @test.assert_eq(
+      @pdflite.pdf_standard14_flags_of_standard_font(entry.0),
+      entry.3,
+    )
   }
 }
 
@@ -472,9 +484,27 @@ test "PdfStandardFont text_width mirrors CamlPDF widths and kerning" {
     @pdflite.PdfHelvetica.text_width(PdfWinAnsiEncoding, av[:], kern=true),
     1264,
   )
+  @test.assert_eq(
+    @pdflite.pdf_standard14_textwidth(
+      true,
+      PdfWinAnsiEncoding,
+      PdfHelvetica,
+      av[:],
+    ),
+    1264,
+  )
   let to = text_bytes_for_test([84, 111])
   @test.assert_eq(
     @pdflite.pdf_standard14_text_width(PdfTimesRoman, PdfWinAnsiEncoding, to[:]),
+    1111,
+  )
+  @test.assert_eq(
+    @pdflite.pdf_standard14_textwidth(
+      false,
+      PdfWinAnsiEncoding,
+      PdfTimesRoman,
+      to[:],
+    ),
     1111,
   )
   @test.assert_eq(

@@ -7,7 +7,7 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 97.1%.
+- Native main-feature parity: 97.2%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
   breadth: 85-90%.
 
@@ -75,6 +75,9 @@ Current backend snapshot:
   standard-font and font debug strings, font read/write, Identity-H detection,
   text extractors, text-to-codepoint/glyph extraction, and reverse charcode
   closures over the existing typed text API.~~
+- [x] ~~Expose `.repos/pdfstandard14.mli`-referenced standalone standard-14
+  helpers for CamlPDF-ordered text width, baseline adjustment, StemV, and
+  flags over the existing standard-font methods.~~
 - [x] ~~Expose `.repos/pdftree.mli`-referenced standalone name/number tree
   helpers for byte-key name-tree reads, decimal-byte number-tree reads,
   bool-selected tree building, and no-clash merges over the existing typed
