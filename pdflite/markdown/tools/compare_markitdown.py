@@ -28,6 +28,10 @@ class FixtureReport:
     diff: Path
     pdflite_chars: int | None
     markitdown_chars: int | None
+    pdflite_lines: int | None
+    markitdown_lines: int | None
+    pdflite_average_line_length: float | None
+    markitdown_average_line_length: float | None
     pdflite_replacement_chars: int | None
     markitdown_replacement_chars: int | None
     pdflite_raw_controls: int | None
@@ -88,6 +92,13 @@ def raw_control_count(text: str) -> int:
 
 def replacement_char_count(text: str) -> int:
     return text.count("\uFFFD")
+
+
+def line_metrics(text: str) -> tuple[int, float]:
+    lines = text.splitlines()
+    if not lines:
+        return 0, 0.0
+    return len(lines), sum(len(line) for line in lines) / len(lines)
 
 
 def cjk_unified_ideograph_count(text: str) -> int:
@@ -197,6 +208,14 @@ def compare_fixture(
             + f"markitdown_error: {markitdown_error or 'none'}\n",
             encoding="utf-8",
         )
+    pdflite_lines, pdflite_average_line_length = (
+        line_metrics(pdflite_text) if pdflite_text is not None else (None, None)
+    )
+    markitdown_lines, markitdown_average_line_length = (
+        line_metrics(markitdown_text)
+        if markitdown_text is not None
+        else (None, None)
+    )
     return FixtureReport(
         pdf=pdf,
         pdflite_markdown=pdflite_output,
@@ -206,6 +225,10 @@ def compare_fixture(
         markitdown_chars=len(markitdown_text)
         if markitdown_text is not None
         else None,
+        pdflite_lines=pdflite_lines,
+        markitdown_lines=markitdown_lines,
+        pdflite_average_line_length=pdflite_average_line_length,
+        markitdown_average_line_length=markitdown_average_line_length,
         pdflite_replacement_chars=replacement_char_count(pdflite_text)
         if pdflite_text is not None
         else None,
@@ -244,6 +267,14 @@ def write_json_report(root: Path, output: Path, reports: list[FixtureReport]) ->
                 "diff": relative_path(root, report.diff),
                 "pdflite_chars": report.pdflite_chars,
                 "markitdown_chars": report.markitdown_chars,
+                "pdflite_lines": report.pdflite_lines,
+                "markitdown_lines": report.markitdown_lines,
+                "pdflite_average_line_length": (
+                    report.pdflite_average_line_length
+                ),
+                "markitdown_average_line_length": (
+                    report.markitdown_average_line_length
+                ),
                 "pdflite_replacement_chars": report.pdflite_replacement_chars,
                 "markitdown_replacement_chars": report.markitdown_replacement_chars,
                 "pdflite_raw_controls": report.pdflite_raw_controls,
@@ -272,8 +303,8 @@ def write_markdown_report(
     lines = [
         "# MarkItDown Comparison",
         "",
-        "| Fixture | pdflite chars | MarkItDown chars | pdflite repl/raw | MarkItDown repl/raw | CJK glyphs | Exact match | Diff |",
-        "| --- | ---: | ---: | ---: | ---: | ---: | --- | --- |",
+        "| Fixture | pdflite chars | MarkItDown chars | Line shape | pdflite repl/raw | MarkItDown repl/raw | CJK glyphs | Exact match | Diff |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |",
     ]
     for report in reports:
         pdflite_quality = (
@@ -296,6 +327,16 @@ def write_markdown_report(
             and report.markitdown_cjk_unified_ideographs is not None
             else "error"
         )
+        line_shape = (
+            f"{report.pdflite_lines}/{report.markitdown_lines} lines, "
+            f"{report.pdflite_average_line_length:.1f}/"
+            f"{report.markitdown_average_line_length:.1f} avg"
+            if report.pdflite_lines is not None
+            and report.markitdown_lines is not None
+            and report.pdflite_average_line_length is not None
+            and report.markitdown_average_line_length is not None
+            else "error"
+        )
         lines.append(
             "| "
             + " | ".join(
@@ -307,6 +348,7 @@ def write_markdown_report(
                     str(report.markitdown_chars)
                     if report.markitdown_chars is not None
                     else "error",
+                    line_shape,
                     pdflite_quality,
                     markitdown_quality,
                     cjk_glyphs,

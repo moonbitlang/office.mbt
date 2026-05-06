@@ -61,6 +61,9 @@ library API.
 - [x] ~~Track unique U+4E00-9FFF glyph coverage in the MarkItDown comparison
   script so Unicode chart comparisons separate text coverage from layout
   policy.~~
+- [x] ~~Track line count and average line length in the MarkItDown comparison
+  script so Unicode chart layout and line-joining changes are measurable
+  separately from text coverage.~~
 - [ ] Continue fixing extraction/layout bugs found by the comparison loop.
 
 ## First Converter Contract

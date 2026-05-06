@@ -173,6 +173,10 @@ Current backend snapshot:
   report; the Unicode chart records 20,963/20,963 pdflite/MarkItDown glyph
   coverage, matching a `pdftotext -layout` spot-check, so the remaining gap is
   layout/line joining rather than broad glyph loss.~~
+- [x] ~~Add line-count and average-line-length metrics to the MarkItDown
+  comparison report; the Unicode chart now records 52,933 pdflite lines at
+  26.4 characters/line versus MarkItDown's 534 lines at 2,842.1
+  characters/line, making the remaining layout/line-joining gap explicit.~~
 - [ ] Review remaining Unicode CJK chart Markdown quality gaps against
   MarkItDown and pdftotext, especially table-cell polish, line joining, and
   any missing chart cells.
