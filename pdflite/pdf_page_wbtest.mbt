@@ -344,52 +344,47 @@ test "private page destination transforms cover unchanged branches" {
   let doc = page_wb_document_with_pages([pdf_page_blank(paper_a4)])
   let page_numbers = try! doc.page_reference_numbers()
   let destination = page_wb_fit_destination(page_numbers[0])
-  @test.assert_eq(
-    pdf_page_matrix_for_page_number([(2, transform_translate(10.0, 20.0))], 1),
-    None,
-  )
-  @test.assert_eq(
-    try! doc.pdf_page_matrix_for_destination(
-      DestNull,
-      [(1, transform_translate(10.0, 20.0))],
-      page_numbers,
-    ),
-    None,
-  )
   let translation = transform_translate(10.0, 20.0)
+  let identity_lookup = pdf_page_matrix_lookup([], page_numbers)
+  let translation_lookup = pdf_page_matrix_lookup(
+    [(1, translation)],
+    page_numbers,
+  )
+  let missing_lookup = pdf_page_matrix_lookup([(2, translation)], page_numbers)
+  @test.assert_eq(missing_lookup.matrix_for_page_number(1), None)
   @test.assert_eq(
-    try! doc.pdf_page_matrix_for_destination(
-      DestNamed(pdf_name_of_bytes(page_wb_text("/Missing"))),
-      [(1, translation)],
-      page_numbers,
+    try! doc.pdf_page_matrix_for_destination_with_lookup(
+      DestNull,
+      translation_lookup,
     ),
     None,
   )
   @test.assert_eq(
-    pdf_page_matrix_page_number_of_target(
-      page_numbers,
-      TargetOtherDocPageNumber(0),
+    try! doc.pdf_page_matrix_for_destination_with_lookup(
+      DestNamed(pdf_name_of_bytes(page_wb_text("/Missing"))),
+      translation_lookup,
     ),
+    None,
+  )
+  @test.assert_eq(
+    missing_lookup.page_number_of_target(TargetOtherDocPageNumber(0)),
     0,
   )
   @test.assert_eq(
-    try! doc.pdf_page_matrix_for_destination(
+    try! doc.pdf_page_matrix_for_destination_with_lookup(
       DestXYZ(TargetOtherDocPageNumber(0), Some(1.0), Some(2.0), None),
-      [(1, translation)],
-      page_numbers,
+      translation_lookup,
     ),
     None,
   )
   @test.assert_eq(
-    try! doc.pdf_page_transform_destination_object(
-      destination,
-      [],
-      page_numbers,
+    try! doc.pdf_page_transform_destination_object_with_lookup(
+      destination, identity_lookup,
     ),
     None,
   )
   @test.assert_eq(
-    try! doc.pdf_page_transform_destination_object(
+    try! doc.pdf_page_transform_destination_object_with_lookup(
       PdfArray([
         PdfInteger(0),
         PdfNameObject(pdf_dest_type_xyz()),
@@ -397,27 +392,23 @@ test "private page destination transforms cover unchanged branches" {
         PdfInteger(2),
         PdfNull,
       ]),
-      [(1, translation)],
-      page_numbers,
+      translation_lookup,
     ),
     None,
   )
   @test.assert_eq(
-    try! doc.pdf_page_transform_destination_object(
-      destination,
-      [(1, transform_translate(10.0, 20.0))],
-      page_numbers,
+    try! doc.pdf_page_transform_destination_object_with_lookup(
+      destination, translation_lookup,
     ),
     None,
   )
   @test.assert_eq(
-    try! doc.pdf_page_transform_destination_object(
+    try! doc.pdf_page_transform_destination_object_with_lookup(
       PdfArray([
         PdfIndirect(page_numbers[0]),
         PdfNameObject(pdf_dest_type_fitb()),
       ]),
-      [(1, transform_translate(10.0, 20.0))],
-      page_numbers,
+      translation_lookup,
     ),
     None,
   )
@@ -430,38 +421,35 @@ test "private page destination transforms cover unchanged branches" {
     (pdf_dest_d_key(), page_wb_xyz_destination(page_numbers[0], 1, 2)),
   ])
   @test.assert_eq(
-    try! doc.pdf_page_matrix_for_destination(
+    try! doc.pdf_page_matrix_for_destination_with_lookup(
       DestAction(coordinate_action),
-      [(1, translation)],
-      page_numbers,
+      translation_lookup,
     ),
     Some(translation),
   )
   @test.assert_eq(
-    try! doc.pdf_page_matrix_for_destination(
+    try! doc.pdf_page_matrix_for_destination_with_lookup(
       DestAction(PdfDictionary([])),
-      [(1, translation)],
-      page_numbers,
+      translation_lookup,
     ),
     None,
   )
   @test.assert_eq(
-    try! doc.pdf_page_transform_action_object(action, [], page_numbers),
-    None,
-  )
-  @test.assert_eq(
-    try! doc.pdf_page_transform_action_object(
-      action,
-      [(1, transform_translate(10.0, 20.0))],
-      page_numbers,
+    try! doc.pdf_page_transform_action_object_with_lookup(
+      action, identity_lookup,
     ),
     None,
   )
   @test.assert_eq(
-    try! doc.pdf_page_transform_action_object(
+    try! doc.pdf_page_transform_action_object_with_lookup(
+      action, translation_lookup,
+    ),
+    None,
+  )
+  @test.assert_eq(
+    try! doc.pdf_page_transform_action_object_with_lookup(
       PdfDictionary([]),
-      [],
-      page_numbers,
+      identity_lookup,
     ),
     None,
   )

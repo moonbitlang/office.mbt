@@ -1115,60 +1115,70 @@ fn pdf_page_reference_changes_from_serials(
 }
 
 ///|
-fn pdf_page_matrix_for_page_number(
+priv struct PdfPageMatrixLookup {
+  page_numbers : PdfPageNumberLookup
+  matrices : @hashmap.HashMap[Int, TransformMatrix]
+}
+
+///|
+fn pdf_page_matrix_lookup(
   matrices : ArrayView[(Int, TransformMatrix)],
-  page_number : Int,
-) -> TransformMatrix? {
+  page_reference_numbers : ArrayView[Int],
+) -> PdfPageMatrixLookup {
+  let values : @hashmap.HashMap[Int, TransformMatrix] = @hashmap.HashMap::new()
   for entry in matrices {
     let (matrix_page_number, matrix) = entry
-    if matrix_page_number == page_number {
-      break Some(matrix)
+    if !values.contains(matrix_page_number) {
+      values[matrix_page_number] = matrix
     }
-  } nobreak {
-    None
+  }
+  {
+    page_numbers: pdf_page_number_lookup(page_reference_numbers),
+    matrices: values,
   }
 }
 
 ///|
-fn pdf_page_matrix_page_number_of_target(
-  page_reference_numbers : ArrayView[Int],
+fn PdfPageMatrixLookup::matrix_for_page_number(
+  self : PdfPageMatrixLookup,
+  page_number : Int,
+) -> TransformMatrix? {
+  self.matrices.get(page_number)
+}
+
+///|
+fn PdfPageMatrixLookup::page_number_of_target(
+  self : PdfPageMatrixLookup,
   target : PdfTargetPage,
 ) -> Int {
   match target {
     TargetPageObject(object_number) =>
-      for index in 0..<page_reference_numbers.length() {
-        if page_reference_numbers[index] == object_number {
-          break index + 1
-        }
-      } nobreak {
-        0
-      }
+      self.page_numbers.page_number(object_number)
     TargetOtherDocPageNumber(_) => 0
   }
 }
 
 ///|
-fn PdfDocument::pdf_page_matrix_for_destination(
+fn PdfDocument::pdf_page_matrix_for_destination_with_lookup(
   self : PdfDocument,
   destination : PdfDestination,
-  matrices : ArrayView[(Int, TransformMatrix)],
-  page_reference_numbers : ArrayView[Int],
+  lookup : PdfPageMatrixLookup,
 ) -> TransformMatrix? raise PdfError {
-  let page_number = self.pdf_page_matrix_page_number_for_destination(
-    destination, page_reference_numbers,
+  let page_number = self.pdf_page_matrix_page_number_for_destination_with_lookup(
+    destination, lookup,
   )
   if page_number == 0 {
     None
   } else {
-    pdf_page_matrix_for_page_number(matrices, page_number)
+    lookup.matrix_for_page_number(page_number)
   }
 }
 
 ///|
-fn PdfDocument::pdf_page_matrix_page_number_for_destination(
+fn PdfDocument::pdf_page_matrix_page_number_for_destination_with_lookup(
   self : PdfDocument,
   destination : PdfDestination,
-  page_reference_numbers : ArrayView[Int],
+  lookup : PdfPageMatrixLookup,
 ) -> Int raise PdfError {
   match destination {
     DestNamed(_) | DestString(_) => {
@@ -1178,8 +1188,8 @@ fn PdfDocument::pdf_page_matrix_page_number_for_destination(
       if resolved == destination {
         0
       } else {
-        self.pdf_page_matrix_page_number_for_destination(
-          resolved, page_reference_numbers,
+        self.pdf_page_matrix_page_number_for_destination_with_lookup(
+          resolved, lookup,
         )
       }
     }
@@ -1191,9 +1201,9 @@ fn PdfDocument::pdf_page_matrix_page_number_for_destination(
         ) {
         (Some(PdfNameObject(name)), Some(raw_destination)) if name ==
           pdf_dest_goto_name() =>
-          self.pdf_page_matrix_page_number_for_destination(
+          self.pdf_page_matrix_page_number_for_destination_with_lookup(
             self.read_destination(raw_destination),
-            page_reference_numbers,
+            lookup,
           )
         _ => 0
       }
@@ -1202,22 +1212,20 @@ fn PdfDocument::pdf_page_matrix_page_number_for_destination(
     | DestFitV(target, _)
     | DestFitR(target, _, _, _, _)
     | DestFitBH(target, _)
-    | DestFitBV(target, _) =>
-      pdf_page_matrix_page_number_of_target(page_reference_numbers, target)
+    | DestFitBV(target, _) => lookup.page_number_of_target(target)
     _ => 0
   }
 }
 
 ///|
-fn PdfDocument::pdf_page_transform_destination_object(
+fn PdfDocument::pdf_page_transform_destination_object_with_lookup(
   self : PdfDocument,
   raw_destination : PdfObject,
-  matrices : ArrayView[(Int, TransformMatrix)],
-  page_reference_numbers : ArrayView[Int],
+  lookup : PdfPageMatrixLookup,
 ) -> PdfObject? raise PdfError {
   match
-    self.pdf_page_transform_destination_object_with_shallow(
-      raw_destination, matrices, page_reference_numbers, false,
+    self.pdf_page_transform_destination_object_with_shallow_lookup(
+      raw_destination, lookup, false,
     ) {
     Some(destination) => Some(PdfIndirect(self.add_object(destination)))
     None => None
@@ -1225,18 +1233,14 @@ fn PdfDocument::pdf_page_transform_destination_object(
 }
 
 ///|
-fn PdfDocument::pdf_page_transform_destination_object_with_shallow(
+fn PdfDocument::pdf_page_transform_destination_object_with_shallow_lookup(
   self : PdfDocument,
   raw_destination : PdfObject,
-  matrices : ArrayView[(Int, TransformMatrix)],
-  page_reference_numbers : ArrayView[Int],
+  lookup : PdfPageMatrixLookup,
   shallow : Bool,
 ) -> PdfObject? raise PdfError {
   let destination = self.read_destination(raw_destination, shallow~)
-  match
-    self.pdf_page_matrix_for_destination(
-      destination, matrices, page_reference_numbers,
-    ) {
+  match self.pdf_page_matrix_for_destination_with_lookup(destination, lookup) {
     Some(matrix) if matrix != transform_identity_matrix =>
       Some(
         pdf_object_of_destination(
@@ -1254,6 +1258,7 @@ fn PdfDocument::pdf_page_transform_catalog_destinations_object(
   matrices : ArrayView[(Int, TransformMatrix)],
   page_reference_numbers : ArrayView[Int],
 ) -> PdfObject? {
+  let lookup = pdf_page_matrix_lookup(matrices, page_reference_numbers)
   match dests {
     PdfDictionary(entries) => {
       let output : Array[(PdfName, PdfObject)] = []
@@ -1262,8 +1267,8 @@ fn PdfDocument::pdf_page_transform_catalog_destinations_object(
         let (key, destination) = entry
         try {
           match
-            self.pdf_page_transform_destination_object_with_shallow(
-              destination, matrices, page_reference_numbers, true,
+            self.pdf_page_transform_destination_object_with_shallow_lookup(
+              destination, lookup, true,
             ) {
             Some(transformed) => {
               output.push((key, transformed))
@@ -1362,14 +1367,15 @@ fn PdfDocument::pdf_page_transform_name_tree_destination_entries(
   matrices : ArrayView[(Int, TransformMatrix)],
   page_reference_numbers : ArrayView[Int],
 ) -> Array[(PdfBytes, PdfObject)]? {
+  let lookup = pdf_page_matrix_lookup(matrices, page_reference_numbers)
   let output : Array[(PdfBytes, PdfObject)] = []
   let mut changed = false
   for entry in self.read_name_tree(dests_tree) {
     let (key, destination) = entry
     try {
       match
-        self.pdf_page_transform_destination_object_with_shallow(
-          destination, matrices, page_reference_numbers, true,
+        self.pdf_page_transform_destination_object_with_shallow_lookup(
+          destination, lookup, true,
         ) {
         Some(transformed) => {
           output.push((key, transformed))
@@ -1446,11 +1452,10 @@ fn PdfDocument::pdf_page_transform_destination_name_tree_for_matrices(
 }
 
 ///|
-fn PdfDocument::pdf_page_transform_action_object(
+fn PdfDocument::pdf_page_transform_action_object_with_lookup(
   self : PdfDocument,
   raw_action : PdfObject,
-  matrices : ArrayView[(Int, TransformMatrix)],
-  page_reference_numbers : ArrayView[Int],
+  lookup : PdfPageMatrixLookup,
 ) -> PdfObject? raise PdfError {
   let action = self.direct(raw_action)
   match
@@ -1461,8 +1466,8 @@ fn PdfDocument::pdf_page_transform_action_object(
     (Some(PdfNameObject(name)), Some(raw_destination)) if name ==
       pdf_dest_goto_name() =>
       match
-        self.pdf_page_transform_destination_object(
-          raw_destination, matrices, page_reference_numbers,
+        self.pdf_page_transform_destination_object_with_lookup(
+          raw_destination, lookup,
         ) {
         Some(destination) =>
           Some(action.add_dict_entry(pdf_dest_d_key(), destination))
@@ -1479,15 +1484,12 @@ fn PdfDocument::pdf_page_transform_bookmarks_for_matrices(
   page_reference_numbers : ArrayView[Int],
 ) -> PdfDocument raise PdfError {
   let bookmarks = self.read_bookmarks(preserve_actions=true)
+  let lookup = pdf_page_matrix_lookup(matrices, page_reference_numbers)
   let output : Array[PdfBookmark] = []
   let mut changed = false
   for bookmark in bookmarks {
     let target = match
-      self.pdf_page_matrix_for_destination(
-        bookmark.target,
-        matrices,
-        page_reference_numbers,
-      ) {
+      self.pdf_page_matrix_for_destination_with_lookup(bookmark.target, lookup) {
       Some(matrix) if matrix != transform_identity_matrix => {
         changed = true
         self.transform_destination(matrix, bookmark.target)
@@ -1504,36 +1506,18 @@ fn PdfDocument::pdf_page_transform_bookmarks_for_matrices(
 }
 
 ///|
-fn PdfDocument::pdf_page_transform_link_annotation_for_matrices(
-  self : PdfDocument,
-  annotation_number : Int,
-  matrices : ArrayView[(Int, TransformMatrix)],
-  page_reference_numbers : ArrayView[Int],
-) -> Unit raise PdfError {
-  let annotation = self.lookup_object_or_null(annotation_number)
-  match
-    self.pdf_page_transform_link_annotation_object_for_matrices(
-      annotation, matrices, page_reference_numbers,
-    ) {
-    Some(updated) => self.add_object_given_number(annotation_number, updated)
-    None => ()
-  }
-}
-
-///|
-fn PdfDocument::pdf_page_transform_link_annotation_object_for_matrices(
+fn PdfDocument::pdf_page_transform_link_annotation_object_with_lookup(
   self : PdfDocument,
   annotation : PdfObject,
-  matrices : ArrayView[(Int, TransformMatrix)],
-  page_reference_numbers : ArrayView[Int],
+  lookup : PdfPageMatrixLookup,
 ) -> PdfObject? raise PdfError {
   match self.lookup_direct(pdf_page_subtype_key(), annotation) {
     Some(PdfNameObject(kind)) if kind == pdf_page_type_link() =>
       match annotation.lookup_immediate(pdf_page_dest_key()) {
         Some(raw_destination) =>
           match
-            self.pdf_page_transform_destination_object(
-              raw_destination, matrices, page_reference_numbers,
+            self.pdf_page_transform_destination_object_with_lookup(
+              raw_destination, lookup,
             ) {
             Some(destination) =>
               Some(annotation.add_dict_entry(pdf_page_dest_key(), destination))
@@ -1543,8 +1527,8 @@ fn PdfDocument::pdf_page_transform_link_annotation_object_for_matrices(
           match annotation.lookup_immediate(pdf_page_action_key()) {
             Some(raw_action) =>
               match
-                self.pdf_page_transform_action_object(
-                  raw_action, matrices, page_reference_numbers,
+                self.pdf_page_transform_action_object_with_lookup(
+                  raw_action, lookup,
                 ) {
                 Some(action) =>
                   Some(annotation.add_dict_entry(pdf_page_action_key(), action))
@@ -1563,6 +1547,7 @@ fn PdfDocument::pdf_page_transform_link_annotations_for_matrices(
   matrices : ArrayView[(Int, TransformMatrix)],
   page_reference_numbers : ArrayView[Int],
 ) -> Unit raise PdfError {
+  let lookup = pdf_page_matrix_lookup(matrices, page_reference_numbers)
   for page_number in self.page_reference_numbers() {
     let page_object = self.lookup_object_or_null(page_number)
     match self.lookup_direct(pdf_page_annots_key(), page_object) {
@@ -1570,16 +1555,24 @@ fn PdfDocument::pdf_page_transform_link_annotations_for_matrices(
         for index in 0..<annotations.length() {
           match annotations[index] {
             PdfIndirect(annotation_number) =>
-              self.pdf_page_transform_link_annotation_for_matrices(
-                annotation_number, matrices, page_reference_numbers,
-              ) catch {
+              try {
+                let annotation = self.lookup_object_or_null(annotation_number)
+                match
+                  self.pdf_page_transform_link_annotation_object_with_lookup(
+                    annotation, lookup,
+                  ) {
+                  Some(updated) =>
+                    self.add_object_given_number(annotation_number, updated)
+                  None => ()
+                }
+              } catch {
                 _ => ()
               }
             PdfDictionary(_) as annotation =>
               try {
                 match
-                  self.pdf_page_transform_link_annotation_object_for_matrices(
-                    annotation, matrices, page_reference_numbers,
+                  self.pdf_page_transform_link_annotation_object_with_lookup(
+                    annotation, lookup,
                   ) {
                   Some(updated) => annotations[index] = updated
                   None => ()
@@ -1601,6 +1594,7 @@ fn PdfDocument::pdf_page_transform_open_action_for_matrices(
   matrices : ArrayView[(Int, TransformMatrix)],
   page_reference_numbers : ArrayView[Int],
 ) -> Unit {
+  let lookup = pdf_page_matrix_lookup(matrices, page_reference_numbers)
   match self.pdf_page_active_catalog() {
     Some((root_object, uses_trailer_root)) =>
       match root_object.lookup_immediate(pdf_page_open_action_key()) {
@@ -1609,8 +1603,8 @@ fn PdfDocument::pdf_page_transform_open_action_for_matrices(
             PdfArray(_) as raw_destination =>
               try {
                 match
-                  self.pdf_page_transform_destination_object(
-                    raw_destination, matrices, page_reference_numbers,
+                  self.pdf_page_transform_destination_object_with_lookup(
+                    raw_destination, lookup,
                   ) {
                   Some(destination) =>
                     self.pdf_page_replace_active_catalog_entry(
@@ -1627,8 +1621,8 @@ fn PdfDocument::pdf_page_transform_open_action_for_matrices(
             PdfDictionary(_) as raw_action =>
               try {
                 match
-                  self.pdf_page_transform_action_object(
-                    raw_action, matrices, page_reference_numbers,
+                  self.pdf_page_transform_action_object_with_lookup(
+                    raw_action, lookup,
                   ) {
                   Some(action) =>
                     self.pdf_page_replace_active_catalog_entry(

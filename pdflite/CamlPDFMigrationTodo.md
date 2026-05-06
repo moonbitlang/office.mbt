@@ -179,6 +179,10 @@ Current estimate:
 - [x] ~~Build a hash-backed page-reference change map once for `change_pages`
   and object-renumbering passes, preserving first-change precedence while
   avoiding repeated old-to-new page-reference scans across large object graphs.~~
+- [x] ~~Cache page-number and matrix lookups during `change_pages` destination
+  transformations, preserving first matrix/page-reference precedence while
+  avoiding repeated scans across bookmarks, annotations, open actions, and
+  named destination trees.~~
 - [x] ~~Replace generated Adobe-GB1, Adobe-CNS1, and Adobe-Japan1 CID-range
   CMap reverse lookup nested charcode scans with Unicode/CID-to-charcode
   helpers, preserving deterministic lowest packed-charcode selection for

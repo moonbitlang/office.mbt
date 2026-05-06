@@ -231,6 +231,9 @@ work changes.
    `change_pages` and object-renumbering passes also build a hash-backed
    page-reference change map once before traversing objects, avoiding repeated
    old-to-new page-reference scans while preserving first-change precedence.
+   Matrix-aware destination rewrites cache page-object/page-number and
+   page-number/matrix lookups per pass across bookmarks, annotations,
+   `/OpenAction`, and named destination trees.
    Content parsing also follows CamlPDF's malformed color-operator fallback for
    bad `SC`/`sc`/`SCN`/`scn` operands and filters malformed `TJ` array
    members. Operator tokens remain borrowed as `BytesView` through known

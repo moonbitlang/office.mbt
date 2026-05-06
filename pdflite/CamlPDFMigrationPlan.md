@@ -723,6 +723,9 @@ MoonBit consequences for this project:
    `change_pages` and object renumbering now build a hash-backed page-reference
    change map once per pass, preserving first-change precedence while avoiding
    repeated old-to-new reference scans across the traversed object graph.
+   Matrix destination rewrites now also cache page-object to page-number and
+   page-number to matrix lookups while processing bookmarks, annotations,
+   `/OpenAction`, old-style catalog destinations, and name-tree destinations.
    Content stream support is now started with a byte-preserving `PdfContentOp`
    subset, uncompressed content stream construction, indirect stream parsing
    through `PdfDocument`, and parsing for the core path, color, XObject, and
