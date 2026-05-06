@@ -64,6 +64,9 @@ library API.
 - [x] ~~Track line count and average line length in the MarkItDown comparison
   script so Unicode chart layout and line-joining changes are measurable
   separately from text coverage.~~
+- [x] ~~Add optional `pdftotext -layout` metrics to the comparison script so
+  MarkItDown's page-level line collapsing is judged against a physical-layout
+  baseline before treating CJK chart line counts as extraction bugs.~~
 - [ ] Continue fixing extraction/layout bugs found by the comparison loop.
 
 ## First Converter Contract

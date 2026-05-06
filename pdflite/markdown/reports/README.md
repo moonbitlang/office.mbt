@@ -10,5 +10,7 @@ Run the local MarkItDown comparison with:
 ./markdown/tools/compare_markitdown.py
 ```
 
-The script writes pdflite output, MarkItDown output, unified diffs, and summary
-files under `markdown/reports/markitdown_local/`.
+The script writes pdflite output, MarkItDown output, unified diffs, optional
+`pdftotext -layout` output, and summary files under
+`markdown/reports/markitdown_local/`. Pass `--skip-pdftotext` when the
+physical-layout baseline is not needed.

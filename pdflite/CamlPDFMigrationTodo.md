@@ -185,9 +185,11 @@ Current backend snapshot:
   with no raw controls and the Unicode CJK chart must retain the full 20,963
   U+4E00-9FFF unique-glyph coverage with no raw controls or replacement
   characters.~~
-- [ ] Review remaining Unicode CJK chart Markdown quality gaps against
-  MarkItDown and pdftotext, especially table-cell polish, line joining, and
-  any missing chart cells.
+- [x] ~~Review remaining Unicode CJK chart Markdown quality gaps against
+  MarkItDown and pdftotext; optional `pdftotext -layout` metrics now run in
+  the comparison script, all three extractors see 20,963 U+4E00-9FFF glyphs,
+  and the remaining gap is table/layout-space reconstruction rather than
+  missing chart cells.~~
 - [x] ~~Add Type3 glyph-program/resource coverage where a CharProc consumes
   Type3 `/Resources` through an XObject and named inline-image color space.~~
 - [x] ~~Add fixture-driven Type3 glyph-program coverage from a real PDF; the
