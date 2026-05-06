@@ -138,6 +138,9 @@ Current estimate:
 - [x] ~~Deduplicate incremental-writer changed object numbers with a
   `HashMap` before sorting sparse xref entries, avoiding quadratic event-log
   scans for repeatedly edited objects.~~
+- [x] ~~Emit full and sparse xref-stream data with a single pass over sorted
+  xref tuples, avoiding repeated tuple scans across large object-number
+  ranges.~~
 - [x] ~~Replace generated Adobe-GB1, Adobe-CNS1, and Adobe-Japan1 CID-range
   CMap reverse lookup nested charcode scans with Unicode/CID-to-charcode
   helpers, preserving deterministic lowest packed-charcode selection for
@@ -266,6 +269,9 @@ Current estimate:
 - [x] ~~Incremental writer changed-object detection now uses a hash-backed
   seen set before sorting sparse classic/xref-stream entry numbers, so large
   event logs with repeated edits avoid repeated linear duplicate checks.~~
+- [x] ~~Full and sparse xref-stream byte generation now walks sorted xref
+  tuples once, preserving emitted bytes while removing repeated lookup scans
+  for large object tables and sparse incremental updates.~~
 - [x] ~~Generated CID-range CMap reverse lookup for Adobe-GB1, Adobe-CNS1, and
   Adobe-Japan1 now maps Unicode to CID and CID to charcode instead of scanning
   every character code in every range.~~
@@ -564,6 +570,9 @@ Current estimate:
 - [x] ~~Incremental writer changed-object collection now deduplicates object
   numbers with a hash set before sparse xref sorting, improving large repeated
   update event logs without changing writer output.~~
+- [x] ~~Xref-stream byte generation now uses sorted single-pass xref scans for
+  full and sparse writer paths, improving large object-table writes without
+  changing output bytes.~~
 - [ ] Optional external-tool integration decisions for filter families that
   CamlPDF handled with C stubs or external binaries.
 
@@ -694,6 +703,8 @@ Current estimate:
   before strict, reconstructed, and password-aware embedded-object loading.~~
 - [x] ~~Tune incremental writer changed-object collection with a hash-backed
   seen set while preserving sorted sparse xref output.~~
+- [x] ~~Tune full and sparse xref-stream data generation with sorted single-pass
+  xref scans while preserving exact xref-entry bytes.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.

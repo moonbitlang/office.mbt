@@ -974,16 +974,21 @@ fn pdf_writer_xref_stream_data(
   xref_stream_offset : Int,
 ) -> PdfBytes {
   let output : Array[Byte] = []
+  let mut xref_index = 0
   for number in 0..<size {
     if number == 0 {
       pdf_writer_push_xref_stream_entry(output, 0, 0, 65535)
     } else if number == xref_stream_number {
       pdf_writer_push_xref_stream_entry(output, 1, xref_stream_offset, 0)
     } else {
-      match pdf_writer_xref_tuple_for_number(xrefs, number) {
-        Some((offset, generation)) =>
-          pdf_writer_push_xref_stream_entry(output, 1, offset, generation)
-        None => pdf_writer_push_xref_stream_entry(output, 0, 0, 65535)
+      while xref_index < xrefs.length() && xrefs[xref_index].0 < number {
+        xref_index += 1
+      }
+      if xref_index < xrefs.length() && xrefs[xref_index].0 == number {
+        let (_, offset, generation) = xrefs[xref_index]
+        pdf_writer_push_xref_stream_entry(output, 1, offset, generation)
+      } else {
+        pdf_writer_push_xref_stream_entry(output, 0, 0, 65535)
       }
     }
   }
@@ -1011,16 +1016,21 @@ fn pdf_writer_xref_stream_data_for_numbers(
   xref_stream_offset : Int,
 ) -> PdfBytes {
   let output : Array[Byte] = []
+  let mut xref_index = 0
   for number in entry_numbers {
     if number == 0 {
       pdf_writer_push_xref_stream_entry(output, 0, 0, 65535)
     } else if number == xref_stream_number {
       pdf_writer_push_xref_stream_entry(output, 1, xref_stream_offset, 0)
     } else {
-      match pdf_writer_xref_tuple_for_number(xrefs, number) {
-        Some((offset, generation)) =>
-          pdf_writer_push_xref_stream_entry(output, 1, offset, generation)
-        None => pdf_writer_push_xref_stream_entry(output, 0, 0, 65535)
+      while xref_index < xrefs.length() && xrefs[xref_index].0 < number {
+        xref_index += 1
+      }
+      if xref_index < xrefs.length() && xrefs[xref_index].0 == number {
+        let (_, offset, generation) = xrefs[xref_index]
+        pdf_writer_push_xref_stream_entry(output, 1, offset, generation)
+      } else {
+        pdf_writer_push_xref_stream_entry(output, 0, 0, 65535)
       }
     }
   }

@@ -43,7 +43,9 @@ work changes.
    writer APIs. Incremental writer changed-object collection now uses a
    hash-backed seen set before sorting sparse xref entry numbers, preserving
    output order while avoiding repeated linear duplicate checks for large edit
-   logs.
+   logs. Full and sparse xref-stream byte generation now consumes sorted xref
+   tuples in one pass, preserving the writer's emitted bytes while avoiding
+   repeated tuple scans over large object tables.
    Xref-stream reading now also mirrors CamlPDF's tolerance for missing
    `/Type /XRef` when the stream still carries xref-stream structure such as
    `/W`, while keeping explicit wrong `/Type` values rejected; the malformed

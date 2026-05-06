@@ -472,10 +472,13 @@ MoonBit consequences for this project:
    through `/Prev`; reader materialization no longer records loaded objects as
    user mutations. The changed-object accumulator now uses a hash-backed seen
    set before sorting sparse xref numbers, avoiding repeated linear duplicate
-   checks when a document has many edits to the same object. Xref-stream
-   incremental updates now use the same changed object detection and emit
-   sparse `/Index` ranges for changed/deleted objects plus the xref stream
-   object. ARC4 encrypted output is now covered for full
+   checks when a document has many edits to the same object. Full and sparse
+   xref-stream data generation now walks sorted xref tuples once while
+   preserving exact emitted entry bytes, instead of searching the tuple list for
+   every object number. Xref-stream incremental updates now use the same
+   changed object detection and emit sparse `/Index` ranges for
+   changed/deleted objects plus the xref stream object. ARC4 encrypted output
+   is now covered for full
    writes and incremental updates through the classic writer plus the
    uncompressed and Flate-compressed xref-stream writer paths. AESV2 encrypted
    full-document output is started behind an explicit IV-provider API and now
@@ -1568,8 +1571,8 @@ MoonBit consequences for this project:
     CNS-EUC forward linear scans with unsigned binary range lookup. Reader
     coverage now also keeps grouped object-stream xref expansion fully covered,
     and writer coverage keeps hash-backed incremental changed-object
-    deduplication covered; `moon coverage analyze` now reports all source files
-    fully covered.
+    deduplication plus single-pass xref-stream byte generation covered;
+    `moon coverage analyze` now reports all source files fully covered.
 
 ## Active Native Acceptance Milestone
 
