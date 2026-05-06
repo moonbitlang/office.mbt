@@ -1458,10 +1458,12 @@ MoonBit consequences for this project:
     explicit option. Standalone `.repos/pdfmerge.mli`-shaped wrappers now
     expose `merge_pdfs`-style positional retain/dedupe flags, names/doc/range
     arity validation, structure-tree and top-level-document options, and direct
-    duplicate-font removal over the existing typed merge/dedupe core. CamlPDF's
-    repeated-input `names` object-reuse optimization remains a performance and
-    output-size parity follow-up; the wrapper preserves merge semantics while
-    the typed core renumbers each included input independently.
+    duplicate-font removal over the existing typed merge/dedupe core.
+    Repeated `merge_pdfs` names are intentionally semantic-first in the
+    MoonBit wrapper: a repeated-name gate now verifies each inclusion keeps its
+    own renamed destination and page target, while CamlPDF's object-reuse
+    optimization stays a performance-only follow-up if repeated-input profiles
+    later show a real output-size regression.
     The duplicate-stream pass now caches each stream's
     dictionary/data comparison candidate once and groups candidates by decoded
     byte length before exact comparison, preserving canonical-first renumbering

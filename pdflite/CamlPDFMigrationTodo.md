@@ -109,9 +109,11 @@ Current backend snapshot:
   output; MoonBit keeps the reverse lookup pure and ignores `debug` because
   adding async stdio or stdout side effects to this synchronous helper would be
   worse than preserving CamlPDF's diagnostic-only behavior.~~
-- [ ] Evaluate CamlPDF's repeated-input `names` merge optimization for
-  output-size/performance parity if repeated-name merge profiles expose a real
-  regression; current wrapper preserves merge semantics and validates arity.
+- [x] ~~Evaluate CamlPDF's repeated-input `names` merge optimization; the
+  wrapper now has a repeated-name destination gate documenting the current
+  MoonBit choice to preserve per-inclusion destinations, while CamlPDF's
+  object-reuse path remains performance-only unless repeated-name profiles show
+  a real output-size regression.~~
 - [x] ~~Check the currently tracked CamlPDF fixture PDFs for image XObjects
   before expanding image corpus tests; `logo.pdf` and
   `introduction_to_camlpdf.pdf` do not currently provide image entries.~~

@@ -575,6 +575,48 @@ test "pdf_merge_pdfs exposes CamlPDF-shaped merge wrapper" {
 }
 
 ///|
+test "pdf_merge_pdfs repeated names preserve per-inclusion destinations" {
+  let source = merge_nametree_dest_callsite_doc_for_test("shared", "Same")
+  let merged = try! @pdflite.pdf_merge_pdfs(
+    false,
+    false,
+    ["same.pdf", "same.pdf"],
+    [source, source],
+    [[1], [1]],
+    process_struct_trees=false,
+  )
+  let first_name = @ascii.encode("shared-f0")
+  let second_name = @ascii.encode("shared-f1")
+  @test.assert_eq(try! merged.endpage(), 2)
+  @test.assert_eq(
+    [
+      for entry in merge_destination_name_entries_for_test(merged) => entry.0
+    ],
+    [first_name, second_name],
+  )
+  @test.assert_eq(
+    merge_first_annotation_dest_for_test(merged, 0),
+    Some(PdfString(first_name)),
+  )
+  @test.assert_eq(
+    merge_first_annotation_dest_for_test(merged, 1),
+    Some(PdfString(second_name)),
+  )
+  @test.assert_eq(
+    try! merged.page_number_of_target(
+      try! merged.read_destination(PdfString(first_name)),
+    ),
+    1,
+  )
+  @test.assert_eq(
+    try! merged.page_number_of_target(
+      try! merged.read_destination(PdfString(second_name)),
+    ),
+    2,
+  )
+}
+
+///|
 test "pdf_merge_documents retargets retained bookmarks to merged pages" {
   let first = merge_bookmarked_doc_for_test("A")
   let second = merge_bookmarked_doc_for_test("B")
