@@ -1419,21 +1419,6 @@ fn pdf_encode_png_predictor_value(
 }
 
 ///|
-fn pdf_encode_png_scanline(
-  predictor : Int,
-  data : BytesView,
-  row_start : Int,
-  scanline_width : Int,
-  bytes_per_pixel : Int,
-) -> Array[Byte] raise PdfError {
-  let output : Array[Byte] = []
-  pdf_encode_png_push_scanline(
-    output, predictor, data, row_start, scanline_width, bytes_per_pixel,
-  )
-  output
-}
-
-///|
 fn pdf_encode_png_push_scanline(
   output : Array[Byte],
   predictor : Int,
@@ -1451,6 +1436,27 @@ fn pdf_encode_png_push_scanline(
       pdf_predictor_wrapping_byte(data[row_start + i].to_int() - predicted),
     )
   }
+}
+
+///|
+fn pdf_encode_png_predictor_score(
+  predictor : Int,
+  data : BytesView,
+  row_start : Int,
+  scanline_width : Int,
+  bytes_per_pixel : Int,
+) -> Int raise PdfError {
+  let mut score = 0
+  for i in 0..<scanline_width {
+    let predicted = pdf_encode_png_predictor_value(
+      predictor, data, row_start, i, scanline_width, bytes_per_pixel,
+    )
+    let value = pdf_predictor_wrapping_byte(
+      data[row_start + i].to_int() - predicted,
+    ).to_int()
+    score += if value > 127 { 256 - value } else { value }
+  }
+  score
 }
 
 ///|
@@ -1482,16 +1488,6 @@ fn pdf_encode_png_tagged_predictor(
 }
 
 ///|
-fn pdf_encode_png_score_scanline(encoded : ArrayView[Byte]) -> Int {
-  let mut score = 0
-  for i in 1..<encoded.length() {
-    let value = encoded[i].to_int()
-    score += if value > 127 { 256 - value } else { value }
-  }
-  score
-}
-
-///|
 fn pdf_encode_png_optimum_predictor(
   colors : Int,
   bits_per_component : Int,
@@ -1507,23 +1503,22 @@ fn pdf_encode_png_optimum_predictor(
   let output : Array[Byte] = []
   for row in 0..<(data.length() / scanline_width) {
     let row_start = row * scanline_width
-    let mut best = pdf_encode_png_scanline(
+    let mut best_predictor = 0
+    let mut best_score = pdf_encode_png_predictor_score(
       0, data, row_start, scanline_width, bytes_per_pixel,
     )
-    let mut best_score = pdf_encode_png_score_scanline(best[:])
     for predictor in 1..<=4 {
-      let candidate = pdf_encode_png_scanline(
+      let score = pdf_encode_png_predictor_score(
         predictor, data, row_start, scanline_width, bytes_per_pixel,
       )
-      let score = pdf_encode_png_score_scanline(candidate[:])
       if score < best_score {
-        best = candidate
+        best_predictor = predictor
         best_score = score
       }
     }
-    for byte in best {
-      output.push(byte)
-    }
+    pdf_encode_png_push_scanline(
+      output, best_predictor, data, row_start, scanline_width, bytes_per_pixel,
+    )
   }
   Bytes::from_array(output)
 }

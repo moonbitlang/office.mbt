@@ -74,9 +74,10 @@ Current estimate:
   and second stream decodes.~~
 - [x] ~~Return owned predictor encode/decode bytes unchanged for identity
   predictor `1`, avoiding unnecessary immutable `Bytes` copies.~~
-- [x] ~~Reuse PNG predictor decode row buffers and push fixed-predictor encode
-  rows directly into the output, avoiding per-row scratch array allocation on
-  common predictor filter paths while preserving exact bytes.~~
+- [x] ~~Reuse PNG predictor decode row buffers, push fixed-predictor encode rows
+  directly, and score Optimum predictor candidates without row arrays, avoiding
+  per-row scratch allocation on common predictor filter paths while preserving
+  exact bytes.~~
 - [x] ~~Return owned bytes unchanged for `/Crypt` identity filter encode/decode,
   avoiding unnecessary immutable `Bytes` copies on stream filter dispatch.~~
 - [x] ~~Cache standard stream-filter names so encode/decode dispatch no longer
@@ -280,9 +281,9 @@ Current estimate:
 - [x] ~~Owned predictor encode/decode now returns the original immutable
   `Bytes` for identity predictor `1` and is covered by physical-identity
   assertions.~~
-- [x] ~~PNG predictor decode now reuses two row buffers, and fixed-predictor
-  encode paths now append directly to the output array instead of allocating an
-  intermediate row array for every scanline.~~
+- [x] ~~PNG predictor decode now reuses two row buffers; fixed-predictor encode
+  paths append directly to the output array; and Optimum predictor scoring no
+  longer allocates candidate row arrays for every scanline.~~
 - [x] ~~Owned `/Crypt` identity filter encode/decode now returns the original
   immutable `Bytes` object and is covered by physical-identity assertions.~~
 - [x] ~~Deferred stream `get_stream` materialization now reuses the cached

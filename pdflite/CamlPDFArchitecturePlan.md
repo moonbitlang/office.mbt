@@ -172,9 +172,9 @@ work changes.
    now returns the original immutable `Bytes` value instead of copying through a
    borrowed view, and owned predictor encode/decode returns the original bytes
    for identity predictor `1`. PNG predictor decode now reuses scanline buffers,
-   and fixed PNG predictor encode paths push directly into the output instead of
-   allocating one row array per scanline. Standard stream-filter names are now
-   cached once for dispatch,
+   fixed PNG predictor encode paths push directly into the output, and Optimum
+   predictor scoring avoids candidate row arrays while preserving first-minimum
+   filter selection. Standard stream-filter names are now cached once for dispatch,
    avoiding repeated ASCII `PdfName` rebuilding during filter comparisons, and
    standard stream dictionary keys such as `/Filter`, `/Length`, and
    `/DecodeParms` are cached for repeated stream transformations.
