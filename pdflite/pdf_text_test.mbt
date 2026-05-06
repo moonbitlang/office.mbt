@@ -3362,6 +3362,54 @@ test "PdfDocument applies ToUnicode UseCMap stream composition" {
 }
 
 ///|
+test "PdfDocument composes multi-hop ToUnicode UseCMap stream bases" {
+  let doc = @pdflite.pdf_document_empty()
+  let base_data = @ascii.encode(
+    "1 beginbfchar\n" + "<21><0041>\n" + "endbfchar\n",
+  )
+  doc.add_object_given_number(
+    31,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (text_name_for_test("/Length"), PdfInteger(base_data.length())),
+      ]),
+      StreamGot(base_data),
+    ),
+  )
+  let middle_data = @ascii.encode(
+    "1 beginbfchar\n" + "<22><0042>\n" + "endbfchar\n",
+  )
+  doc.add_object_given_number(
+    32,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (text_name_for_test("/Length"), PdfInteger(middle_data.length())),
+        (text_name_for_test("/UseCMap"), PdfIndirect(31)),
+      ]),
+      StreamGot(middle_data),
+    ),
+  )
+  let derived_data = @ascii.encode(
+    "1 beginbfchar\n" + "<23><0043>\n" + "endbfchar\n",
+  )
+  doc.add_object_given_number(
+    33,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (text_name_for_test("/Length"), PdfInteger(derived_data.length())),
+        (text_name_for_test("/UseCMap"), PdfIndirect(32)),
+      ]),
+      StreamGot(derived_data),
+    ),
+  )
+  @test.assert_eq((try! doc.parse_cmap(PdfIndirect(33))).map, [
+    (0x23, text_bytes_for_test([0x00, 0x43])),
+    (0x22, text_bytes_for_test([0x00, 0x42])),
+    (0x21, text_bytes_for_test([0x00, 0x41])),
+  ])
+}
+
+///|
 test "PdfDocument reads bfchar and sequential bfrange ToUnicode CMaps" {
   let doc = @pdflite.pdf_document_empty()
   let tounicode = @pdflite.pdf_stream(

@@ -144,6 +144,9 @@ Current estimate:
 - [x] ~~Emit classic sparse incremental xref rows with a carried sorted xref
   index across subsections, avoiding repeated tuple scans for changed/deleted
   object ranges.~~
+- [x] ~~Track recursive external/ToUnicode stream `/UseCMap` cycle protection
+  with a hash-backed seen set, avoiding per-hop seen-array copies and linear
+  membership scans on multi-hop CMap inheritance chains.~~
 - [x] ~~Replace generated Adobe-GB1, Adobe-CNS1, and Adobe-Japan1 CID-range
   CMap reverse lookup nested charcode scans with Unicode/CID-to-charcode
   helpers, preserving deterministic lowest packed-charcode selection for
@@ -278,6 +281,9 @@ Current estimate:
 - [x] ~~Classic sparse incremental xref output now carries one sorted xref
   cursor across contiguous subsections, preserving row bytes while removing
   repeated tuple scans.~~
+- [x] ~~Recursive stream `/UseCMap` parsing now uses a hash-backed seen set
+  instead of copying an array at each base-CMap hop, preserving cycle handling
+  and inherited ToUnicode composition.~~
 - [x] ~~Generated CID-range CMap reverse lookup for Adobe-GB1, Adobe-CNS1, and
   Adobe-Japan1 now maps Unicode to CID and CID to charcode instead of scanning
   every character code in every range.~~
@@ -716,6 +722,8 @@ Current estimate:
   xref scans while preserving exact xref-entry bytes.~~
 - [x] ~~Tune classic sparse incremental xref subsection output with a carried
   sorted xref cursor while preserving exact xref-row bytes.~~
+- [x] ~~Tune recursive stream `/UseCMap` parsing with a hash-backed seen set
+  while preserving multi-hop ToUnicode inheritance and cycle fallback.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.

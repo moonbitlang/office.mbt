@@ -4443,17 +4443,6 @@ pub fn pdf_parse_cmap_data(data : BytesView) -> PdfParsedCMap {
 }
 
 ///|
-fn pdf_text_cmap_seen_contains(seen : ArrayView[Int], number : Int) -> Bool {
-  for seen_number in seen {
-    if seen_number == number {
-      break true
-    }
-  } nobreak {
-    false
-  }
-}
-
-///|
 fn pdf_text_tounicode_has_charcode(
   entries : ArrayView[(Int, PdfBytes)],
   code : Int,
@@ -4672,18 +4661,14 @@ fn PdfDocument::pdf_text_decoded_cmap_stream_data_direct(
 fn PdfDocument::parse_cmap_with_seen(
   self : PdfDocument,
   cmap : PdfObject,
-  seen : ArrayView[Int],
+  seen : @hashmap.HashMap[Int, Bool],
 ) -> PdfParsedCMap raise PdfError {
-  let next_seen = match cmap {
+  match cmap {
     PdfIndirect(number) => {
-      guard !pdf_text_cmap_seen_contains(seen, number) else {
-        raise CMapEncodingExpected
-      }
-      let output = seen.to_owned()
-      output.push(number)
-      output
+      guard !seen.contains(number) else { raise CMapEncodingExpected }
+      seen[number] = true
     }
-    _ => seen.to_owned()
+    _ => ()
   }
   let bytes = self.pdf_text_decoded_cmap_stream_data_direct(cmap)
   let stream_object = self.direct(cmap)
@@ -4696,7 +4681,7 @@ fn PdfDocument::parse_cmap_with_seen(
     (None, Some(base)) =>
       match base {
         PdfIndirect(_) | PdfStreamObject(_) =>
-          try self.parse_cmap_with_seen(base, next_seen[:]) catch {
+          try self.parse_cmap_with_seen(base, seen) catch {
             _ => parsed
           } noraise {
             inherited => pdf_text_compose_parsed_cmap(parsed, inherited)
@@ -4712,7 +4697,7 @@ pub fn PdfDocument::parse_cmap(
   self : PdfDocument,
   cmap : PdfObject,
 ) -> PdfParsedCMap raise PdfError {
-  self.parse_cmap_with_seen(cmap, [])
+  self.parse_cmap_with_seen(cmap, @hashmap.HashMap::new())
 }
 
 ///|

@@ -1076,7 +1076,10 @@ MoonBit consequences for this project:
    `/Encoding` CMap streams now parse `begincodespacerange`, `begincidchar`,
    and `begincidrange`, preserve parsed data on the font encoding, segment
    variable-length text through the parsed codespaces, and use CID mappings as
-   the no-`/ToUnicode` fallback with reverse CID lookup. Other remaining
+   the no-`/ToUnicode` fallback with reverse CID lookup. Recursive stream
+   `/UseCMap` composition now tracks seen indirect CMap streams in a
+   hash-backed set instead of copying a visited array at each hop, preserving
+   cycle fallback and multi-hop ToUnicode inheritance. Other remaining
    predefined/general CMap tables remain deferred.
    Standard-14 built-in text extraction is started for implicit encodings:
    non-symbol fonts use the current StandardEncoding subset, while Symbol and
@@ -1574,8 +1577,9 @@ MoonBit consequences for this project:
     coverage now also keeps grouped object-stream xref expansion fully covered,
     and writer coverage keeps hash-backed incremental changed-object
     deduplication plus single-pass xref-stream and classic sparse xref byte
-    generation covered; `moon coverage analyze` now reports all source files
-    fully covered.
+    generation covered. Text coverage also keeps hash-backed multi-hop
+    `/UseCMap` stream inheritance covered; `moon coverage analyze` now reports
+    all source files fully covered.
 
 ## Active Native Acceptance Milestone
 

@@ -254,10 +254,10 @@ work changes.
    plus `/UseCMap` name parsing from CMap programs and stream dictionaries
    with Identity-H/V inherited segmentation and CID fallback, plus recursive
    stream `/UseCMap` composition with cycle protection, inherited codespaces,
-   derived-entry map/CID/notdef/metadata overrides, inherited Identity
-   fallback, named predefined `/UseCMap` fallback for streams without explicit
-   codespaces, and ToUnicode inheritance through text extraction and reverse
-   Unicode lookup,
+   derived-entry map/CID/notdef/metadata overrides, and hash-backed recursive
+   seen-state for multi-hop stream inheritance, inherited Identity fallback,
+   named predefined `/UseCMap` fallback for streams without explicit codespaces,
+   and ToUnicode inheritance through text extraction and reverse Unicode lookup,
    CamlPDF-style whitespace-elided ToUnicode CMap section scanning, mixed
    multiline `bfrange` parsing, `/WMode` token parsing across PDF whitespace,
    comment-aware CMap metadata and mapping parsing,
@@ -484,7 +484,9 @@ and backend breadth, is about 84-89% complete.
   dictionary, encoding, CID, CMap, and ToUnicode names are cached for repeated
   read/write hot paths, and generated CID-range CMap reverse lookup avoids
   per-charcode range scans for Adobe-GB1, Adobe-CNS1, and Adobe-Japan1, while
-  CNS-EUC forward CID lookup uses unsigned binary range search.
+  CNS-EUC forward CID lookup uses unsigned binary range search. Recursive
+  stream `/UseCMap` parsing also carries a hash-backed seen set instead of
+  copying a visited-array at each base-CMap hop.
   Standard color-space family names and PDF function
   dictionary keys are cached for repeated format-layer read/write hot paths.
   Stream decode now covers CCITT `/K 0` and `/K < 0` with `/DecodeParms`
