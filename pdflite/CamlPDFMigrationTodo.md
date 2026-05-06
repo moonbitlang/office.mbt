@@ -9,7 +9,15 @@ Current estimate:
 
 - Native main-feature parity: 96%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
-  breadth: 84-89%.
+  breadth: 85-90%.
+
+Current backend snapshot:
+
+- Native: full suite passing with complete source coverage.
+- WasmGC and JavaScript: full non-native test suites pass.
+- Wasm: library and tests build, but the generated package-level test module
+  exceeds the runtime's maximum function-size limit.
+- LLVM: blocked by the current toolchain's missing LLVM stdlib bundle.
 
 ## Tracking Rules
 
@@ -660,7 +668,15 @@ Current estimate:
   AES helpers and `async_io`.~~
 - [x] ~~All-target type checking passes with `moon check --target all
   --warn-list +73`; full non-native test validation remains deferred.~~
-- [ ] All-backend validation after native parity is stable.
+- [x] ~~WasmGC and JavaScript backend test suites pass after native
+  stabilization, each with 1099 tests.~~
+- [x] ~~Plain Wasm backend build-only validation passes for the package and
+  generated tests.~~
+- [ ] Split or otherwise reduce the generated plain-Wasm package-level test
+  modules so the runtime can instantiate them below its maximum function-size
+  limit.
+- [ ] Revisit LLVM backend validation once the installed MoonBit toolchain has
+  the LLVM stdlib bundle available.
 - [x] ~~Checked-in CamlPDF fixture PDFs read, multi-page text-extract,
   compressed-write, document-wide stream-decompress, and reread through native
   async file wrappers.~~

@@ -1863,8 +1863,12 @@ Near-term work should extend this suite with the next visible public workflow
 gate, then fix the reader/parser/encryption gap it exposes. Isolated malformed
 input quirks should be added only when they unblock one of the native gates.
 All-target type checking now passes with
-`moon check --target all --warn-list +73`. Broader backend test validation
-remains deferred until native feature parity is stable.
+`moon check --target all --warn-list +73`. Backend validation is now partly
+widened: WasmGC and JavaScript run the full non-native suites successfully, and
+plain Wasm build-only validation succeeds. Remaining backend work is to reduce
+or split the generated plain-Wasm package test modules so they instantiate
+under the runtime function-size limit, and to revisit LLVM once the installed
+toolchain provides the LLVM stdlib bundle.
 
 ## Update Discipline
 

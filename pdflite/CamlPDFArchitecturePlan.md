@@ -579,10 +579,14 @@ and backend breadth, is about 84-89% complete.
   object-number payload recovery, compressed rewrite/reread, and multi-page
   text extraction.
 - Covered: all-target `moon check --target all --warn-list +73` type-checks
-  cleanly after native stabilization.
-- Deferred: full all-backend test stabilization. Native-only
-  secure-random/encrypted writer APIs and `async_io` intentionally diverge from
-  WasmGC today.
+  cleanly after native stabilization. WasmGC and JavaScript test suites now
+  pass with 1099 tests each, and plain-Wasm build-only validation succeeds for
+  the package and generated tests.
+- Deferred: full all-backend test stabilization. Plain Wasm test execution is
+  blocked by the generated package-level test module exceeding the runtime's
+  maximum function-size limit, and LLVM validation is blocked by the current
+  toolchain's missing LLVM stdlib bundle. Native-only secure-random/encrypted
+  writer APIs and `async_io` intentionally diverge from WasmGC today.
 - Deferred: larger real-world corpus testing, performance tuning, and optional
   external tool integration for filters that CamlPDF handled through C stubs or
   external binaries.
