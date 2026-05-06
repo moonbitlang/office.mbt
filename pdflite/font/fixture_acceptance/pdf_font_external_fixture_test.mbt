@@ -12,6 +12,29 @@ fn font_external_name_for_test(text : String) -> @pdflite.PdfName {
 }
 
 ///|
+fn font_external_ascii_for_test(text : String) -> @pdflite.PdfBytes {
+  @ascii.encode(text)
+}
+
+///|
+fn font_external_inline_image_op_for_test(
+  width : Int,
+  height : Int,
+  data_length : Int,
+) -> @pdflite.PdfContentOp {
+  Op_InlineImage(
+    @pdflite.pdf_dictionary([
+      (font_external_name_for_test("/W"), PdfInteger(width)),
+      (font_external_name_for_test("/H"), PdfInteger(height)),
+      (font_external_name_for_test("/BPC"), PdfInteger(1)),
+      (font_external_name_for_test("/IM"), PdfBoolean(true)),
+    ]),
+    None,
+    font_external_ascii_for_test("x".repeat(data_length)),
+  )
+}
+
+///|
 async fn font_external_fixture_document_for_test(
   path : String,
 ) -> @pdflite.PdfDocument? {
@@ -21,6 +44,85 @@ async fn font_external_fixture_document_for_test(
   match read_result {
     Ok(data) => Some(@pdflite.pdf_read_document_from_bytes(data.binary()))
     Err(_) => None
+  }
+}
+
+///|
+async test "external Type3 resource fixture reads resources and glyph inline images" {
+  match
+    font_external_fixture_document_for_test(
+      "font/external_fixtures/downloads/pdfium_bug_1591.pdf",
+    ) {
+    None => ()
+    Some(document) => {
+      let font_object = font_external_first_page_font_for_test(document, "/F1")
+      let font = document.read_font(font_object)
+      guard font is PdfFontSimple(simple) else {
+        fail("expected simple Type3 font")
+      }
+      guard simple.fonttype is PdfType3(type3_data) else {
+        fail("expected Type3 font data")
+      }
+      guard simple.fontmetrics is Some(metrics) else {
+        fail("expected Type3 font metrics")
+      }
+      @test.assert_eq(metrics.length(), 256)
+      @test.assert_eq(metrics[49], 8.0)
+      @test.assert_eq(metrics[50], 10.0)
+      @test.assert_eq(type3_data.fontbbox, {
+        min_x: -1.0,
+        min_y: -8.0,
+        max_x: 28.0,
+        max_y: 27.0,
+      })
+      @test.assert_eq(type3_data.fontmatrix, {
+        a: 0.001,
+        b: 0.0,
+        c: 0.0,
+        d: 0.001,
+        e: 0.0,
+        f: 0.0,
+      })
+      @test.assert_eq(
+        type3_data.resources,
+        @pdflite.pdf_dictionary([
+          (
+            font_external_name_for_test("/ProcSet"),
+            PdfArray([
+              PdfNameObject(font_external_name_for_test("/PDF")),
+              PdfNameObject(font_external_name_for_test("/ImageB")),
+            ]),
+          ),
+        ]),
+      )
+      @test.assert_eq(type3_data.charprocs, [
+        (font_external_name_for_test("/uniE022"), PdfIndirect(8)),
+        (font_external_name_for_test("/uniE023"), PdfIndirect(9)),
+      ])
+      let extractor = font.text_extractor()
+      let texts = font_external_tj_texts_for_test(document)
+      @test.assert_eq(texts.length(), 3)
+      @test.assert_eq(extractor.codepoints_of_text(texts[0][:]), [0xE022])
+      @test.assert_eq(extractor.codepoints_of_text(texts[1][:]), [0xE023])
+      @test.assert_eq(extractor.codepoints_of_text(texts[2][:]), [0xE022])
+      @test.assert_eq(
+        document.parse_content_ops_with_resources(type3_data.resources, [
+          document.direct(type3_data.charprocs[0].1),
+        ]),
+        [
+          Op_q,
+          Op_cm({ a: 6.0, b: 0.0, c: 0.0, d: 48.0, e: 6.0, f: 0.0 }),
+          font_external_inline_image_op_for_test(6, 48, 48),
+          Op_Q,
+        ],
+      )
+      @test.assert_eq(
+        document.parse_content_ops_with_resources(type3_data.resources, [
+          document.direct(type3_data.charprocs[1].1),
+        ]),
+        [Op_q, font_external_inline_image_op_for_test(4, 4, 4), Op_Q],
+      )
+    }
   }
 }
 

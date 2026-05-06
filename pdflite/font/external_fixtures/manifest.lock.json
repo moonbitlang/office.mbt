@@ -5,5 +5,13 @@
     "id": "itext_type3_logo",
     "sha256": "5551b0710b9cb1f2ff47dc314cf67fac935be7ebd64af61da409f65a663980cd",
     "url": "https://raw.githubusercontent.com/itext/i5js-sandbox/master/cmpfiles/fonts/cmp_itext_logo.pdf"
+  },
+  {
+    "bytes": 1378,
+    "encoding": "base64",
+    "filename": "pdfium_bug_1591.pdf",
+    "id": "pdfium_type3_resource_inline_image",
+    "sha256": "4058f653feb0512fdf65a47d4ffba6670abbefc3e3ad5cfc7cb9aac59bb8b8c9",
+    "url": "https://pdfium.googlesource.com/pdfium/+/refs/heads/main/testing/resources/bug_1591.pdf?format=TEXT"
   }
 ]

@@ -7,7 +7,7 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 97.9%.
+- Native main-feature parity: 98.0%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
   breadth: 85-90%.
 
@@ -193,8 +193,10 @@ Current backend snapshot:
 - [x] ~~Add fixture-driven Type3 glyph-program coverage from a real PDF; the
   optional native font fixture now reads the iText Type3 logo sample, indirect
   CharProc streams, metrics, custom encoding differences, and page text.~~
-- [ ] Add fixture-driven Type3 `/Resources` coverage from a real PDF when a
-  suitable fixture is available.
+- [x] ~~Add fixture-driven Type3 `/Resources` coverage from a real PDF; the
+  optional native font fixture now gates the PDFium Type3 inline-image sample,
+  preserves `/Resources`, and parses glyph inline-image programs with those
+  resources.~~
 - [x] ~~Add malformed xref-stream/object-stream recovery coverage where bad
   `startxref` reconstruction still resolves indirect `/ObjStm` `/N` and
   `/First` bounds before expanding embedded entries.~~
@@ -414,8 +416,8 @@ Current backend snapshot:
   tables or fixtures are available.
 - [x] ~~Add further real-world Type3 glyph-program coverage; the optional native
   font fixture gates the iText Type3 logo sample.~~
-- [ ] Add further real-world Type3 `/Resources` coverage when a suitable
-  fixture is available.
+- [x] ~~Add further real-world Type3 `/Resources` coverage; the optional native
+  font fixture gates the PDFium Type3 inline-image sample.~~
 - [x] ~~Add licensed real-world DCT/JPEG and CCITT image corpus coverage; the
   optional native image fixture package gates py-pdf sample-file JPEG,
   CCITT/FaxDecode, and indexed-CMYK image XObjects while keeping optional
@@ -773,8 +775,8 @@ Current backend snapshot:
   through native compressed read/write/reread boundaries.~~
 - [x] ~~Further real-world Type3 glyph-program coverage using the download-only
   iText Type3 logo fixture.~~
-- [ ] Further real-world Type3 `/Resources` coverage when a suitable fixture is
-  available.
+- [x] ~~Further real-world Type3 `/Resources` coverage using the download-only
+  PDFium Type3 inline-image fixture.~~
 - [x] ~~TrueType descriptor metadata survives read_font_descriptor and embedded
   TrueType native read/write/reread gates.~~
 - [x] ~~Structured DCT/JPEG marker payload native gate for Flate-to-DCT image
