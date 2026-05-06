@@ -1100,7 +1100,9 @@ MoonBit consequences for this project:
    reverse lookup for single-scalar entries. Broader Big5 predefined-CMap
    extraction now has a generated mapping-table fallback with matching reverse
    lookup, plus an ETen-B5-H compressed read/write/reread native acceptance
-   gate. B5pc predefined-CMap extraction now has a generated `B5pc-UCS2`
+   gate. HKSCS now also has an HKscs-B5-H compressed read/write/reread native
+   acceptance gate covering supplementary scalars, single-byte `0x80`, and
+   reverse lookup. B5pc predefined-CMap extraction now has a generated `B5pc-UCS2`
    fallback with PC single-byte handling and matching reverse lookup. UHC
    predefined-CMap extraction now has a
    generated CP949 mapping-table fallback with matching reverse lookup. GBK

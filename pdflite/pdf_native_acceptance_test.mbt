@@ -1540,6 +1540,68 @@ fn acceptance_big5_text_document_for_test() -> @pdflite.PdfDocument raise {
 }
 
 ///|
+fn acceptance_hkscs_text_for_test() -> @pdflite.PdfBytes raise {
+  acceptance_text_bytes_for_test([
+    0x41, 0x87, 0x40, 0x87, 0x45, 0x89, 0x43, 0xA1, 0x40, 0xA7, 0x41, 0xA6, 0x6E,
+    0xC6, 0xE4, 0xFE, 0xFE, 0x80,
+  ])
+}
+
+///|
+fn acceptance_hkscs_font_for_test() -> @pdflite.PdfObject {
+  @pdflite.pdf_dictionary([
+    (
+      acceptance_name_for_test("/Subtype"),
+      PdfNameObject(acceptance_name_for_test("/Type0")),
+    ),
+    (
+      acceptance_name_for_test("/BaseFont"),
+      PdfNameObject(acceptance_name_for_test("/HKscsB5Top")),
+    ),
+    (
+      acceptance_name_for_test("/Encoding"),
+      PdfNameObject(acceptance_name_for_test("/HKscs-B5-H")),
+    ),
+    (acceptance_name_for_test("/DescendantFonts"), PdfArray([PdfIndirect(96)])),
+  ])
+}
+
+///|
+fn acceptance_hkscs_text_document_for_test() -> @pdflite.PdfDocument raise {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  doc.add_object_given_number(
+    96,
+    acceptance_predefined_cmap_descendant_font_for_test(
+      "/HKscsB5Descendant", "CNS1",
+    ),
+  )
+  let resources = @pdflite.pdf_dictionary([
+    (
+      acceptance_name_for_test("/Font"),
+      @pdflite.pdf_dictionary([
+        (acceptance_name_for_test("/Fhkscs"), acceptance_hkscs_font_for_test()),
+      ]),
+    ),
+  ])
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [
+      @pdflite.pdf_content_stream_of_ops([
+        Op_BT,
+        Op_Tf(acceptance_name_for_test("/Fhkscs"), 14.0),
+        Op_Tj(acceptance_hkscs_text_for_test()),
+        Op_ET,
+      ]),
+    ],
+    resources,
+  }
+  let page_root = doc.add_pagetree([page])
+  ignore(doc.add_root(page_root, []))
+  doc
+}
+
+///|
 fn acceptance_font_object_by_name_for_test(
   resources : @pdflite.PdfObject,
   name : @pdflite.PdfName,
@@ -1768,6 +1830,55 @@ fn acceptance_assert_big5_text_for_test(
   @test.assert_eq(extractor.charcode_of_codepoint(0x4E2D), Some(0xA4A4))
   @test.assert_eq(extractor.charcode_of_codepoint(0x3000), Some(0xA140))
   @test.assert_eq(extractor.charcode_of_codepoint(0x20AC), None)
+}
+
+///|
+fn acceptance_assert_hkscs_text_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(doc.version(), (1, 5))
+  @test.assert_eq(doc.endpage(), 1)
+  let pages = doc.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  let font = acceptance_font_object_by_name_for_test(
+    pages[0].resources,
+    acceptance_name_for_test("/Fhkscs"),
+  )
+  let read = doc.read_font(font)
+  @test.assert_eq(read.is_identity_h(), false)
+  @test.assert_eq(read.is_identity_v(), false)
+  @test.assert_eq(read.uses_two_byte_codes(), false)
+  guard read is PdfFontCIDKeyed(cid_font) else {
+    fail("expected CID-keyed HKSCS font")
+  }
+  @test.assert_eq(
+    cid_font.encoding,
+    PdfPredefinedCMap(acceptance_name_for_test("/HKscs-B5-H")),
+  )
+  @test.assert_eq(
+    cid_font.composite.cid_system_info.ordering,
+    acceptance_ascii_for_test("CNS1"),
+  )
+  @test.assert_eq(
+    acceptance_font_codepoints_of_first_page_for_test(
+      doc,
+      acceptance_name_for_test("/Fhkscs"),
+    ),
+    [
+      0x41, 0x43F0, 0x27267, 0x650A, 0x3000, 0x4F60, 0x597D, 0xFF3B, 0x79D4, 0x80,
+    ],
+  )
+  let extractor = doc.text_extractor_of_font(font)
+  @test.assert_eq(extractor.charcode_of_codepoint(0x41), Some(0x41))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x43F0), Some(0x8740))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x27267), Some(0x8745))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x650A), Some(0x8943))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x3000), Some(0xA140))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x4F60), Some(0xA741))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x597D), Some(0xA66E))
+  @test.assert_eq(extractor.charcode_of_codepoint(0xFF3B), Some(0xC6E4))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x79D4), Some(0xFEFE))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x1F600), None)
 }
 
 ///|
@@ -4530,6 +4641,16 @@ test "native acceptance suite extracts Big5 predefined CMap text through reader 
   acceptance_assert_big5_text_for_test(parsed)
   let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
   acceptance_assert_big5_text_for_test(reparsed)
+}
+
+///|
+test "native acceptance suite extracts HKSCS predefined CMap text through reader boundaries" {
+  let parsed = acceptance_compressed_roundtrip_for_test(
+    acceptance_hkscs_text_document_for_test(),
+  )
+  acceptance_assert_hkscs_text_for_test(parsed)
+  let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
+  acceptance_assert_hkscs_text_for_test(reparsed)
 }
 
 ///|

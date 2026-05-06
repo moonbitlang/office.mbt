@@ -215,6 +215,9 @@ Current backend snapshot:
 - [x] ~~Add a native reader-boundary gate for the next available predefined CMap
   source-table slice: GBK2K-H mixed 1/2/4-byte text extraction and reverse
   charcode lookup.~~
+- [x] ~~Add a native reader-boundary gate for the HKSCS Adobe-CNS1 source-table
+  slice, including supplementary scalars, single-byte `0x80`, and reverse
+  charcode lookup through compressed write/read/reread boundaries.~~
 - [ ] Decide any further rare predefined CMap source-table slices only when
   useful source tables or fixtures are available.
 - [x] ~~Route native normal Flate encode/decode through CamlPDF's vendored
@@ -425,6 +428,9 @@ Current backend snapshot:
 - [x] ~~Native predefined CMap reader-boundary gate for ETen-B5-H Big5 text,
   exercising Adobe-CNS1 mapping and reverse lookup through compressed
   read/write/reread boundaries.~~
+- [x] ~~Native predefined CMap reader-boundary gate for HKscs-B5-H HKSCS text,
+  exercising Adobe-CNS1 supplementary scalars, single-byte `0x80`, and reverse
+  lookup through compressed read/write/reread boundaries.~~
 - [ ] Add remaining rare predefined CMap family coverage when useful source
   tables or fixtures are available.
 - [x] ~~Add further real-world Type3 glyph-program coverage; the optional native
@@ -1047,6 +1053,8 @@ Current backend snapshot:
 - [x] ~~Tune CNS-EUC predefined-CMap forward CID-range lookup with unsigned
   binary search while preserving packed-byte ordering.~~
 - [x] ~~Add native Big5 predefined-CMap acceptance coverage through compressed
+  write/read/reread boundaries.~~
+- [x] ~~Add native HKSCS predefined-CMap acceptance coverage through compressed
   write/read/reread boundaries.~~
 - [x] ~~Tune object-stream expansion by grouping xref-stream type-2 entries
   before strict, reconstructed, and password-aware embedded-object loading.~~
