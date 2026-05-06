@@ -557,6 +557,9 @@ Current backend snapshot:
 - [x] ~~Malformed classic-xref recovery now scans valid classic xref sections
   after a bad final `startxref`, loads verified in-use objects, and keeps their
   free entries from resurrecting deleted physical objects.~~
+- [x] ~~Malformed classic-xref free-entry coverage is offset-aware, so a free
+  row hides older objects but does not hide a later physical incremental object
+  for the same object number.~~
 - [ ] Broaden malformed xref-table/xref-stream/object-stream recovery with more
   real-world corpus cases.
 - [ ] Revisit all-backend validation after native feature parity is stable.
@@ -896,6 +899,9 @@ Current backend snapshot:
 - [x] ~~Malformed classic-xref recovery covers valid classic xref sections after
   a bad final `startxref`, preserving verified in-use entries and deleted/free
   entry semantics instead of relying only on physical object scanning.~~
+- [x] ~~Malformed classic-xref recovery covers the offset boundary for free
+  entries, preserving later physical incremental objects after a recovered xref
+  section.~~
 - [x] ~~Malformed object-stream recovery tolerates direct stream members inside
   `/ObjStm` data and repairs their stream length from `endstream`.~~
 - [ ] Broader malformed xref-table/xref-stream/object-stream recovery beyond
