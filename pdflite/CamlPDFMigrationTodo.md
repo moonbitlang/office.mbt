@@ -231,6 +231,9 @@ Current backend snapshot:
 - [x] ~~Add strict and reconstructed staged-filter xref-stream coverage for
   direct `/Filter [/ASCIIHexDecode /RunLengthDecode]` arrays through
   bad-startxref recovery.~~
+- [x] ~~Add strict and bad-`startxref` reconstruction coverage for xref-stream
+  filter arrays with aligned `/DecodeParms` arrays, preserving predictor
+  parameters on the Flate stage while sanitizing stream metadata.~~
 - [ ] Add more malformed xref-table/xref-stream/object-stream recovery cases
   from real-world PDFs.
 - [x] ~~Add a native reader-boundary gate for the next available predefined CMap
@@ -962,6 +965,9 @@ Current backend snapshot:
   metadata out of reconstructed trailers.~~
 - [x] ~~Staged-filter xref streams now have strict and reconstructed coverage
   for direct ASCIIHex-plus-RunLength filter arrays.~~
+- [x] ~~Xref-stream filter arrays with aligned `/DecodeParms` arrays now have
+  strict and bad-startxref reconstruction coverage, preserving predictor
+  parameters on the Flate stage while sanitizing stream metadata.~~
 - [ ] Broader malformed xref-table/xref-stream/object-stream recovery beyond
   the current bad-startxref real-corpus, multi-revision, and encrypted
   object-stream gates.
