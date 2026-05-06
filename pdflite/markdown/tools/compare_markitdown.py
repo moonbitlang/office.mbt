@@ -32,6 +32,8 @@ class FixtureReport:
     markitdown_replacement_chars: int | None
     pdflite_raw_controls: int | None
     markitdown_raw_controls: int | None
+    pdflite_cjk_unified_ideographs: int | None
+    markitdown_cjk_unified_ideographs: int | None
     exact_match: bool
     pdflite_error: str | None = None
     markitdown_error: str | None = None
@@ -86,6 +88,10 @@ def raw_control_count(text: str) -> int:
 
 def replacement_char_count(text: str) -> int:
     return text.count("\uFFFD")
+
+
+def cjk_unified_ideograph_count(text: str) -> int:
+    return len({char for char in text if "\u4E00" <= char <= "\u9FFF"})
 
 
 def markitdown_command(user_command: str | None) -> list[str]:
@@ -212,6 +218,14 @@ def compare_fixture(
         markitdown_raw_controls=raw_control_count(markitdown_text)
         if markitdown_text is not None
         else None,
+        pdflite_cjk_unified_ideographs=cjk_unified_ideograph_count(pdflite_text)
+        if pdflite_text is not None
+        else None,
+        markitdown_cjk_unified_ideographs=cjk_unified_ideograph_count(
+            markitdown_text
+        )
+        if markitdown_text is not None
+        else None,
         exact_match=pdflite_text is not None
         and markitdown_text is not None
         and pdflite_text == markitdown_text,
@@ -234,6 +248,12 @@ def write_json_report(root: Path, output: Path, reports: list[FixtureReport]) ->
                 "markitdown_replacement_chars": report.markitdown_replacement_chars,
                 "pdflite_raw_controls": report.pdflite_raw_controls,
                 "markitdown_raw_controls": report.markitdown_raw_controls,
+                "pdflite_cjk_unified_ideographs": (
+                    report.pdflite_cjk_unified_ideographs
+                ),
+                "markitdown_cjk_unified_ideographs": (
+                    report.markitdown_cjk_unified_ideographs
+                ),
                 "exact_match": report.exact_match,
                 "pdflite_error": report.pdflite_error,
                 "markitdown_error": report.markitdown_error,
@@ -252,8 +272,8 @@ def write_markdown_report(
     lines = [
         "# MarkItDown Comparison",
         "",
-        "| Fixture | pdflite chars | MarkItDown chars | pdflite repl/raw | MarkItDown repl/raw | Exact match | Diff |",
-        "| --- | ---: | ---: | ---: | ---: | --- | --- |",
+        "| Fixture | pdflite chars | MarkItDown chars | pdflite repl/raw | MarkItDown repl/raw | CJK glyphs | Exact match | Diff |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | --- | --- |",
     ]
     for report in reports:
         pdflite_quality = (
@@ -269,6 +289,13 @@ def write_markdown_report(
             and report.markitdown_raw_controls is not None
             else "error"
         )
+        cjk_glyphs = (
+            f"{report.pdflite_cjk_unified_ideographs}/"
+            f"{report.markitdown_cjk_unified_ideographs}"
+            if report.pdflite_cjk_unified_ideographs is not None
+            and report.markitdown_cjk_unified_ideographs is not None
+            else "error"
+        )
         lines.append(
             "| "
             + " | ".join(
@@ -282,6 +309,7 @@ def write_markdown_report(
                     else "error",
                     pdflite_quality,
                     markitdown_quality,
+                    cjk_glyphs,
                     "yes" if report.exact_match else "no",
                     relative_path(root, report.diff),
                 ]

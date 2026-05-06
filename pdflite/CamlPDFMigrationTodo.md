@@ -164,6 +164,10 @@ Current backend snapshot:
   remains at 1,451,941 characters with no raw controls or replacement
   characters, indicating its visible CJK spaces are table/content layout rather
   than this `TJ` adjustment case.~~
+- [x] ~~Add U+4E00-9FFF unique-glyph coverage to the MarkItDown comparison
+  report; the Unicode chart records 20,963/20,963 pdflite/MarkItDown glyph
+  coverage, matching a `pdftotext -layout` spot-check, so the remaining gap is
+  layout/line joining rather than broad glyph loss.~~
 - [ ] Review remaining Unicode CJK chart Markdown quality gaps against
   MarkItDown and pdftotext, especially table-cell polish, line joining, and
   any missing chart cells.

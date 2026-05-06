@@ -58,6 +58,9 @@ library API.
 - [x] ~~Make `TJ` array spacing context-aware so Latin and Hangul word gaps
   remain visible but Han/kana-style ToUnicode glyph pairs are not forced apart
   by synthetic word-space adjustments.~~
+- [x] ~~Track unique U+4E00-9FFF glyph coverage in the MarkItDown comparison
+  script so Unicode chart comparisons separate text coverage from layout
+  policy.~~
 - [ ] Continue fixing extraction/layout bugs found by the comparison loop.
 
 ## First Converter Contract
