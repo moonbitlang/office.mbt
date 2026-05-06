@@ -375,7 +375,11 @@ MoonBit consequences for this project:
    CamlPDF-style fixed-width xref rows whose separator columns are malformed
    independently while the offset, generation, and `n`/`f` columns remain
    parseable, and classic trailers whose dictionary starts immediately after
-   the `trailer` keyword without intervening whitespace.
+   the `trailer` keyword without intervening whitespace. Shared reader
+   ASCII-integer parsing now uses an Int64 overflow guard before converting to
+   MoonBit `Int`, so overflowing xref offsets and `startxref` pointers do not
+   wrap into parser state and can enter the existing malformed-reader recovery
+   path.
    Broader malformed xref-table and encrypted parser-state recovery beyond the
    current xref-stream/object-stream gates remains deferred. The reconstruction
    scan now builds a temporary offset table before materializing objects, so

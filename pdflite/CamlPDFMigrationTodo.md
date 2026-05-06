@@ -84,6 +84,9 @@ Current estimate:
 - [x] ~~Parse common integer PDF lexemes directly from borrowed `BytesView`
   data, with Int64 overflow guards and existing real-number fallback
   behavior.~~
+- [x] ~~Guard shared reader ASCII integer parsing with Int64 bounds before
+  converting to `Int`, so overflowing xref offsets and `startxref` pointers
+  enter malformed-reader recovery instead of wrapping.~~
 - [x] ~~Cache standard font aliases, encoding names, font/CID/CMap dictionary
   keys, and ToUnicode writer keys so text read/write hot paths reuse stable
   `PdfName` values.~~
@@ -160,6 +163,9 @@ Current estimate:
 - [x] ~~PDF integer lexing now parses Int-range tokens directly from borrowed
   `BytesView` data, preserving oversized-token fallback to real-number
   parsing.~~
+- [x] ~~Reader ASCII integer parsing now rejects values outside MoonBit `Int`
+  range with an Int64 guard, including public recovery coverage for an
+  overflowing `startxref` pointer.~~
 - [x] ~~Text/font parsing and writing now share cached standard font,
   encoding, font dictionary, CID, CMap, and ToUnicode names in the main text
   hot paths.~~

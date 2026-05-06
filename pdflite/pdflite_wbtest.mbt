@@ -726,6 +726,16 @@ test "private reader byte-view helpers cover boundary cases" {
   guard bad_number is Err(PdfError::NumberExpected) else {
     fail("expected NumberExpected")
   }
+  let overflow_number : Result[Int, Error] = try? pdf_parse_ascii_int_view(
+    @ascii.encode("2147483648")[:],
+  )
+  guard overflow_number is Err(PdfError::NumberExpected) else {
+    fail("expected NumberExpected")
+  }
+  @test.assert_eq(
+    try! pdf_parse_ascii_int_view(@ascii.encode("2147483647")[:]),
+    2147483647,
+  )
 }
 
 ///|

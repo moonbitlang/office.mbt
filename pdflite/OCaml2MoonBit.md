@@ -390,6 +390,19 @@ means overflow needs explicit tests when the source relied on arbitrary-size or
 64-bit integer behavior.
 
 ```sh
+moon run -c $'fn main { let parsed : Result[Int, Error] = try? @strconv.from_str("2147483648"); println(parsed is Err(_)); let mut value = 0; for digit in [50,49,52,55,52,56,51,54,52,56] { value = value * 10 + digit - 48 }; println(value); let mut wide = 0L; for digit in [50,49,52,55,52,56,51,54,52,56] { wide = wide * 10L + (digit - 48).to_int64() }; println(wide.to_string()) }'
+# true
+# -2147483648
+# 2147483648
+```
+
+`@strconv.from_str<Int>` rejects a decimal outside the signed 32-bit range,
+but handwritten digit accumulation in `Int` wraps. When porting OCaml parsers
+for file offsets, lengths, object numbers, or other serialized integer fields,
+accumulate in `Int64`/`UInt64`, check the target range explicitly, and convert
+to `Int` only after the bounds check.
+
+```sh
 moon run -c 'fn main { let x = 0x81308130; println(x); println(x.reinterpret_as_uint()); println((0x80000000).reinterpret_as_uint()) }'
 # -2127527632
 # 2167439664

@@ -932,6 +932,16 @@ fn reader_malformed_pdf_with_malformed_startxref_number() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn reader_malformed_pdf_with_overflow_startxref_number() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  ignore(reader_push_indirect_object(output, 1, 0, "<< /Type /Catalog >>"))
+  reader_push_ascii(output, "trailer\n<< /Root 1 0 R /Size 2 >>\n")
+  reader_push_ascii(output, "startxref\n2147483648\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_malformed_pdf_with_out_of_range_startxref() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
@@ -2439,6 +2449,19 @@ test "pdf_read_document_from_bytes reconstructs malformed startxref numbers" {
   @test.assert_eq(parsed.first_xref(), 0)
   @test.assert_eq(parsed.root(), 1)
   @test.assert_eq(parsed.object_numbers(), [1])
+
+  let strict_overflow : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_malformed_pdf_with_overflow_startxref_number(),
+  )
+  guard strict_overflow is Err(@pdflite.PdfError::NumberExpected) else {
+    fail("expected strict NumberExpected")
+  }
+  let overflow = try! @pdflite.pdf_read_document_from_bytes(
+    reader_malformed_pdf_with_overflow_startxref_number(),
+  )
+  @test.assert_eq(overflow.first_xref(), 0)
+  @test.assert_eq(overflow.root(), 1)
+  @test.assert_eq(overflow.object_numbers(), [1])
 }
 
 ///|

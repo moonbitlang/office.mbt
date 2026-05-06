@@ -107,6 +107,9 @@ work changes.
    allocating temporary owned bytes. Primitive integer lexing now also parses
    Int-range PDF number tokens directly from borrowed `BytesView` data, using an
    Int64 overflow guard before falling back to the existing real-number parser.
+   Shared reader ASCII integer parsing also accumulates through Int64 and
+   rejects values outside MoonBit `Int` range before they become xref offsets,
+   subsection counts, or `startxref` pointers.
    Remaining focus: broader malformed xref-table recovery and encrypted
    parser-state edge cases beyond current object-stream coverage.
 

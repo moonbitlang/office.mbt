@@ -363,15 +363,19 @@ fn pdf_parse_ascii_int_view(view : BytesView) -> Int raise PdfError {
   if view.length() == 0 {
     raise NumberExpected
   }
-  let mut value = 0
+  let limit = 2147483647L
+  let mut value = 0L
   for byte in view {
     let digit = byte.to_int()
     if !pdf_is_digit_byte(digit) {
       raise NumberExpected
     }
-    value = value * 10 + digit - 48
+    value = value * 10L + (digit - 48).to_int64()
+    if value > limit {
+      raise NumberExpected
+    }
   }
-  value
+  value.to_int()
 }
 
 ///|
