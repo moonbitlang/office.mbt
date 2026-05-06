@@ -146,9 +146,14 @@ Current backend snapshot:
   meaningful text coordinates, including form-XObject placement through `cm`
   transforms; the Unicode CJK chart now follows row/column order and extracts
   1,512,647 characters versus MarkItDown's 1,518,212.~~
+- [x] ~~Suppress unreliable `.notdef`/non-text-control glyph runs at the
+  Markdown boundary, keeping CamlPDF-compatible core text fallback behavior
+  while preventing custom no-ToUnicode metadata fonts from producing `u�`-style
+  placeholder text; the Unicode CJK chart now extracts 1,451,941 characters
+  with no raw controls or replacement characters.~~
 - [ ] Review remaining Unicode CJK chart Markdown quality gaps against
-  MarkItDown and pdftotext, especially unresolved glyph placeholders,
-  table-cell polish, line joining, and any missing chart cells.
+  MarkItDown and pdftotext, especially table-cell polish, line joining, and
+  any missing chart cells.
 - [x] ~~Add Type3 glyph-program/resource coverage where a CharProc consumes
   Type3 `/Resources` through an XObject and named inline-image color space.~~
 - [ ] Add fixture-driven Type3 glyph-program/resource coverage from real PDFs

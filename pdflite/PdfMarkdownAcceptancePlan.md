@@ -46,6 +46,9 @@ library API.
 - [x] ~~Add first-pass positioned text ordering for Markdown extraction,
   including placed form XObjects, and verify the Unicode CJK chart output now
   follows row/column order.~~
+- [x] ~~Suppress unreliable `.notdef`/non-text-control glyph runs in Markdown
+  extraction so the Unicode CJK chart no longer emits replacement characters
+  for custom no-ToUnicode metadata glyphs.~~
 - [ ] Continue fixing extraction/layout bugs found by the comparison loop.
 
 ## First Converter Contract

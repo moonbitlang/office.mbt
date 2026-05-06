@@ -46,3 +46,15 @@ test "private positioned text array treats large integer adjustment as space" {
   @test.assert_eq(chunks[0].codepoints.length(), 1)
   @test.assert_eq(chunks[0].codepoints[0], 0x20)
 }
+
+///|
+test "private Markdown glyph filter keeps notdef non-control fallbacks" {
+  let glyph : @pdflite.PdfTextGlyph = {
+    glyphname: pdf_markdown_notdef_name(),
+    codepoints: [0x41],
+  }
+  @test.assert_eq(
+    pdf_markdown_glyph_has_unreliable_notdef_control(glyph),
+    false,
+  )
+}

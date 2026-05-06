@@ -87,6 +87,28 @@ fn markdown_control_font_for_test() -> @pdflite.PdfObject {
 }
 
 ///|
+fn markdown_no_tounicode_truetype_font_for_test() -> @pdflite.PdfObject {
+  @pdflite.pdf_dictionary([
+    (
+      markdown_name_for_test("/Type"),
+      PdfNameObject(markdown_name_for_test("/Font")),
+    ),
+    (
+      markdown_name_for_test("/Subtype"),
+      PdfNameObject(markdown_name_for_test("/TrueType")),
+    ),
+    (
+      markdown_name_for_test("/BaseFont"),
+      PdfNameObject(markdown_name_for_test("/GNLPNB+UnihanInfo")),
+    ),
+    (
+      markdown_name_for_test("/Encoding"),
+      PdfNameObject(markdown_name_for_test("/WinAnsiEncoding")),
+    ),
+  ])
+}
+
+///|
 fn markdown_latin_document_for_test() -> @pdflite.PdfDocument raise {
   let doc = @pdflite.pdf_document_empty()
   doc.set_version(1, 4)
@@ -130,6 +152,31 @@ fn markdown_latin_document_for_test() -> @pdflite.PdfDocument raise {
     resources,
   }
   let page_root = doc.add_pagetree([page1, page2])
+  ignore(doc.add_root(page_root, []))
+  doc
+}
+
+///|
+fn markdown_unreliable_notdef_control_document_for_test() -> @pdflite.PdfDocument raise {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  let resources = markdown_font_resources_for_test(
+    markdown_no_tounicode_truetype_font_for_test(),
+  )
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [
+      @pdflite.pdf_content_stream_of_ops([
+        Op_BT,
+        Op_Tf(markdown_name_for_test("/F0"), 12.0),
+        Op_Tj(markdown_bytes_for_test([117, 1])),
+        Op_Tj(markdown_ascii_for_test("1.0")),
+        Op_ET,
+      ]),
+    ],
+    resources,
+  }
+  let page_root = doc.add_pagetree([page])
   ignore(doc.add_root(page_root, []))
   doc
 }
@@ -607,6 +654,16 @@ test "pdf_document_to_markdown sanitizes non-text controls" {
       markdown_control_text_document_for_test(),
     ),
     "# Page 1\n\nA \u{FFFD} B\nB A\nB\n",
+  )
+}
+
+///|
+test "pdf_document_to_markdown skips unreliable notdef-control glyph runs" {
+  @test.assert_eq(
+    @markdown.pdf_document_to_markdown(
+      markdown_unreliable_notdef_control_document_for_test(),
+    ),
+    "# Page 1\n\n1.0\n",
   )
 }
 

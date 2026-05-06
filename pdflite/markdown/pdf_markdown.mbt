@@ -30,6 +30,11 @@ let pdf_markdown_matrix_key_name : @pdflite.PdfName = pdf_markdown_name(
 )
 
 ///|
+let pdf_markdown_notdef_name_value : @pdflite.PdfName = pdf_markdown_name(
+  ".notdef",
+)
+
+///|
 fn pdf_markdown_font_key() -> @pdflite.PdfName {
   pdf_markdown_font_key_name
 }
@@ -57,6 +62,11 @@ fn pdf_markdown_resources_key() -> @pdflite.PdfName {
 ///|
 fn pdf_markdown_matrix_key() -> @pdflite.PdfName {
   pdf_markdown_matrix_key_name
+}
+
+///|
+fn pdf_markdown_notdef_name() -> @pdflite.PdfName {
+  pdf_markdown_notdef_name_value
 }
 
 ///|
@@ -153,27 +163,48 @@ fn pdf_markdown_tj_adjustment_is_word_space(value : Double) -> Bool {
 }
 
 ///|
-fn pdf_markdown_push_extracted_text(
-  output : Array[Int],
-  extractor : @pdflite.PdfTextExtractor?,
-  text : @pdflite.PdfBytes,
-) -> Unit raise {
-  match extractor {
-    Some(extractor) =>
-      for codepoint in extractor.codepoints_of_text(text[:]) {
-        output.push(codepoint)
+fn pdf_markdown_glyph_has_unreliable_notdef_control(
+  glyph : @pdflite.PdfTextGlyph,
+) -> Bool {
+  if glyph.glyphname == pdf_markdown_notdef_name() {
+    for codepoint in glyph.codepoints {
+      if pdf_markdown_is_non_text_control(codepoint) {
+        break true
       }
-    None => ()
+    } nobreak {
+      false
+    }
+  } else {
+    false
   }
 }
 
 ///|
-priv struct PdfMarkdownTextChunk {
-  x : Double
-  y : Double
-  width : Double
-  index : Int
-  codepoints : Array[Int]
+fn pdf_markdown_glyph_run_has_unreliable_notdef_control(
+  glyphs : ArrayView[@pdflite.PdfTextGlyph],
+) -> Bool {
+  for glyph in glyphs {
+    if pdf_markdown_glyph_has_unreliable_notdef_control(glyph) {
+      break true
+    }
+  } nobreak {
+    false
+  }
+}
+
+///|
+fn pdf_markdown_codepoints_of_glyphs(
+  glyphs : ArrayView[@pdflite.PdfTextGlyph],
+) -> Array[Int] {
+  let output : Array[Int] = []
+  if !pdf_markdown_glyph_run_has_unreliable_notdef_control(glyphs) {
+    for glyph in glyphs {
+      for codepoint in glyph.codepoints {
+        output.push(codepoint)
+      }
+    }
+  }
+  output
 }
 
 ///|
@@ -184,12 +215,36 @@ fn pdf_markdown_extracted_codepoints(
   let output : Array[Int] = []
   match extractor {
     Some(extractor) =>
-      for codepoint in extractor.codepoints_of_text(text[:]) {
+      for
+        codepoint in pdf_markdown_codepoints_of_glyphs(
+          extractor.glyphnames_and_codepoints_of_text(text[:])[:],
+        ) {
         output.push(codepoint)
       }
     None => ()
   }
   output
+}
+
+///|
+fn pdf_markdown_push_extracted_text(
+  output : Array[Int],
+  extractor : @pdflite.PdfTextExtractor?,
+  text : @pdflite.PdfBytes,
+) -> Unit raise {
+  pdf_markdown_append_codepoints(
+    output,
+    pdf_markdown_extracted_codepoints(extractor, text)[:],
+  )
+}
+
+///|
+priv struct PdfMarkdownTextChunk {
+  x : Double
+  y : Double
+  width : Double
+  index : Int
+  codepoints : Array[Int]
 }
 
 ///|
