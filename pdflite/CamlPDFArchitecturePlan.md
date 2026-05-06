@@ -159,9 +159,10 @@ work changes.
    Flate decode also routes directly through the native bytes helper, avoiding
    the remaining owned-to-view-to-owned copy before the C boundary on common
    stream-filter decode paths. The pure Flate prefix decoder now reuses cached
-   fixed-Huffman literal and distance tables, so inline images and other
-   consumed-length parsing paths do not rebuild fixed tables for every fixed
-   block. Owned `/Crypt` identity filter encode/decode
+   fixed-Huffman literal and distance tables and uses bounded Huffman-symbol
+   table lookahead with exact-bit fallback, so inline images and other
+   consumed-length parsing paths do not rebuild fixed tables or walk bits one
+   at a time for each decodable symbol. Owned `/Crypt` identity filter encode/decode
    now returns the original immutable `Bytes` value instead of copying through a
    borrowed view, and owned predictor encode/decode returns the original bytes
    for identity predictor `1`. Standard stream-filter names are now cached once
@@ -499,6 +500,8 @@ and backend breadth, is about 84-89% complete.
   of scanning CID, notdef, and Unicode arrays for each character code.
   Standard color-space family names and PDF function
   dictionary keys are cached for repeated format-layer read/write hot paths.
+  Pure Flate prefix decoding now uses bounded Huffman-symbol table lookahead,
+  with fallback to exact bit reads at short raw DEFLATE tails.
   Stream decode now covers CCITT `/K 0` and `/K < 0` with `/DecodeParms`
   defaults and direct indirect params. Typed stream encoding now covers CCITT
   Group 3 `/K 0` and Group 4 `/K < 0` and round-trips through decode.

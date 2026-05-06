@@ -44,6 +44,26 @@ fn FlateBitReader::read_bits(
 }
 
 ///|
+fn FlateBitReader::peek_bits(self : FlateBitReader, count : Int) -> UInt? {
+  if count < 0 {
+    return None
+  }
+  let mut bit_buf = self.bit_buf
+  let mut bit_count = self.bit_count
+  let mut byte_pos = self.byte_pos
+  while bit_count < count {
+    if byte_pos >= self.bytes.length() || byte_pos < 0 {
+      return None
+    }
+    let byte = self.bytes[byte_pos].to_uint()
+    bit_buf = bit_buf | (byte << bit_count)
+    bit_count += 8
+    byte_pos += 1
+  }
+  Some(bit_buf & pdf_flate_bit_mask(count))
+}
+
+///|
 fn FlateBitReader::drop_bits(
   self : FlateBitReader,
   count : Int,
@@ -67,12 +87,21 @@ fn FlateBitReader::read_byte(self : FlateBitReader) -> Byte raise PdfError {
 }
 
 ///|
+let pdf_flate_bit_mask_table : Array[UInt] = [
+  0, 1, 3, 7, 15, 31, 63, 127, 255, 511, 1023, 2047, 4095, 8191, 16383, 32767, 65535,
+]
+
+///|
 fn pdf_flate_bit_mask(count : Int) -> UInt {
-  let mut mask : UInt = 0
-  for _ in 0..<count {
-    mask = (mask << 1) | 1
+  if count >= 0 && count < pdf_flate_bit_mask_table.length() {
+    pdf_flate_bit_mask_table[count]
+  } else {
+    let mut mask : UInt = 0
+    for _ in 0..<count {
+      mask = (mask << 1) | 1
+    }
+    mask
   }
-  mask
 }
 
 ///|
@@ -297,6 +326,17 @@ fn pdf_flate_decode_symbol(
   reader : FlateBitReader,
   table : FlateHuffmanTable,
 ) -> Int raise PdfError {
+  match reader.peek_bits(table.max_bits) {
+    Some(bits) => {
+      let index = bits.reinterpret_as_int()
+      let length = table.len[index]
+      if length > 0 {
+        reader.drop_bits(length)
+        return table.sym[index]
+      }
+    }
+    None => ()
+  }
   let mut code : UInt = 0
   for length in 1..<=table.max_bits {
     let bit = reader.read_bits(1)

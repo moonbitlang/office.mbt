@@ -59,6 +59,10 @@ Current estimate:
   public decode path.~~
 - [x] ~~Cache fixed-Huffman DEFLATE literal and distance tables so pure prefix
   Flate decoding no longer rebuilds them for every fixed block.~~
+- [x] ~~Decode pure MoonBit DEFLATE Huffman symbols through bounded lookup-table
+  lookahead with exact-bit fallback, reducing per-symbol bit reads for inline
+  image prefix decoding and non-native Flate fallback while preserving consumed
+  byte accounting.~~
 - [x] ~~Reuse prefix-decoded payloads for single-stage Flate inline images
   without `/DecodeParms`, avoiding an encoded-byte copy and a second stream
   decode.~~
@@ -207,6 +211,9 @@ Current estimate:
 - [x] ~~Pure Flate prefix decoding now reuses cached fixed-Huffman tables,
   reducing repeated setup work for inline images and other consumed-length
   parsing paths that cannot use native miniz.~~
+- [x] ~~Pure Flate prefix decoding now uses bounded Huffman-symbol lookahead
+  over the existing decode tables, with bit-by-bit fallback when a short raw
+  DEFLATE tail cannot satisfy the full table width.~~
 - [x] ~~The refreshed native coverage pass reports all source files fully
   covered after exercising codec identity view copies, inline-image
   decode-parameter branches, raw RGB borrowed helpers, lexeme integer
@@ -741,6 +748,9 @@ Current estimate:
 - [x] ~~Tune external CMap codepoint extraction with per-text-run hash lookup
   maps, keeping duplicate first-match behavior and malformed UTF-16 fallback
   covered.~~
+- [x] ~~Tune pure Flate Huffman symbol decoding with bounded lookup-table
+  lookahead and cached bit masks while preserving prefix consumed-length
+  behavior.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.

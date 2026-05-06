@@ -2008,6 +2008,16 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
   guard negative_bits is Err(PdfError::InvalidFlateData) else {
     fail("expected InvalidFlateData")
   }
+  let peek_reader = FlateBitReader::new(
+    try! pdf_bytes_of_int_array([0xAC, 0x03])[:],
+  )
+  @test.assert_eq(peek_reader.peek_bits(-1), None)
+  @test.assert_eq(peek_reader.peek_bits(4), Some(12))
+  @test.assert_eq(peek_reader.peek_bits(12), Some(0x03AC))
+  @test.assert_eq(peek_reader.peek_bits(20), None)
+  @test.assert_eq(try! peek_reader.read_bits(4), 12)
+  @test.assert_eq(pdf_flate_bit_mask(16), 65535)
+  @test.assert_eq(pdf_flate_bit_mask(17), 131071)
   let exhausted = FlateBitReader::new(Bytes::new(0)[:])
   let missing_byte : Result[UInt, Error] = try? exhausted.read_bits(1)
   guard missing_byte is Err(PdfError::InvalidFlateData) else {

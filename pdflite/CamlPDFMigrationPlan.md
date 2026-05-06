@@ -568,9 +568,11 @@ MoonBit consequences for this project:
    empty-payload success. Owned public Flate decode now also calls the native
    bytes helper directly instead of passing through a borrowed view and
    re-owning compressed data before FFI. The pure Flate prefix decoder now
-   caches fixed-Huffman literal and distance tables, reducing setup work for
-   inline-image and consumed-length paths that still need MoonBit-side byte
-   accounting instead of native miniz. Single-stage ASCIIHex, ASCII85,
+   caches fixed-Huffman literal and distance tables and decodes Huffman symbols
+   through bounded table lookahead with exact-bit fallback, reducing setup work
+   and per-symbol bit reads for inline-image and consumed-length paths that
+   still need MoonBit-side byte accounting instead of native miniz.
+   Single-stage ASCIIHex, ASCII85,
    RunLength, Flate, and LZW inline images without `/DecodeParms` now keep
    prefix-decoded payloads and only advance the cursor over encoded slices,
    avoiding encoded-byte copies plus second stream-filter decodes. Owned
@@ -1583,9 +1585,9 @@ MoonBit consequences for this project:
     and writer coverage keeps hash-backed incremental changed-object
     deduplication plus single-pass xref-stream and classic sparse xref byte
     generation covered. Text coverage also keeps hash-backed multi-hop
-    `/UseCMap` stream inheritance, hash-backed inherited CMap composition, and
-    per-run external CMap lookup maps covered; `moon coverage analyze` now
-    reports all source files fully covered.
+    `/UseCMap` stream inheritance, hash-backed inherited CMap composition,
+    per-run external CMap lookup maps, and pure Flate Huffman lookahead covered;
+    `moon coverage analyze` now reports all source files fully covered.
 
 ## Active Native Acceptance Milestone
 
