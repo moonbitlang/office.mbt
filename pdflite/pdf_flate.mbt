@@ -1511,6 +1511,24 @@ fn pdf_flate_decode_view_pure(data : BytesView) -> PdfBytes raise PdfError {
 }
 
 ///|
+#cfg(target="native")
+#coverage.skip
+fn pdf_flate_decode_bytes_native(data : PdfBytes) -> PdfBytes raise PdfError {
+  if data.length() == 0 {
+    Bytes::new(0)
+  } else {
+    let status = Ref::{ val: 0 }
+    try
+      pdf_flate_native_payload(pdf_flate_zlib_decode_ffi(data, status), status)
+    catch {
+      _ => pdf_flate_decode_view_pure(data[:])
+    } noraise {
+      bytes => bytes
+    }
+  }
+}
+
+///|
 #cfg(not(target="native"))
 pub fn pdf_flate_decode_view(data : BytesView) -> PdfBytes raise PdfError {
   pdf_flate_decode_view_pure(data)
@@ -1538,8 +1556,16 @@ pub fn pdf_flate_decode_view(data : BytesView) -> PdfBytes raise PdfError {
 }
 
 ///|
+#cfg(not(target="native"))
 pub fn pdf_flate_decode(data : PdfBytes) -> PdfBytes raise PdfError {
-  pdf_flate_decode_view(data[:])
+  pdf_flate_decode_view_pure(data[:])
+}
+
+///|
+#cfg(target="native")
+#coverage.skip
+pub fn pdf_flate_decode(data : PdfBytes) -> PdfBytes raise PdfError {
+  pdf_flate_decode_bytes_native(data)
 }
 
 ///|

@@ -54,6 +54,9 @@ Current estimate:
 - [x] ~~Return native miniz Flate encode/decode payloads directly through a
   borrowed FFI status `Ref[Int]`, avoiding the extra status-prefix stripping
   copy while preserving empty-payload success handling.~~
+- [x] ~~Route owned `PdfBytes` Flate decode directly through the native miniz
+  bytes helper, avoiding the owned-to-view-to-owned copy that remained on the
+  public decode path.~~
 - [x] ~~Cache standard stream-filter names so encode/decode dispatch no longer
   rebuilds ASCII `PdfName` values for every filter comparison.~~
 - [x] ~~Cache standard stream dictionary keys such as `/Filter`, `/Length`, and
@@ -128,6 +131,9 @@ Current estimate:
 - [x] ~~Native miniz Flate output now uses a side-channel status `Ref[Int]`
   instead of status-prefixed bytes, so successful native payloads no longer need
   an extra owned-byte copy to strip the prefix.~~
+- [x] ~~Owned public Flate decode now calls the native miniz bytes helper
+  directly, so Flate stream filter decoding no longer re-owns already-owned
+  compressed bytes before the C boundary.~~
 - [x] ~~Encryption dictionary and crypt-filter lookups/builders now share cached
   `PdfName` values for stable standard keys and name objects.~~
 - [x] ~~Writer trailer/xref-stream keys and inline-image metadata/filter names
@@ -381,6 +387,8 @@ Current estimate:
 - [x] ~~Native miniz Flate FFI returns payload bytes directly and reports status
   through a borrowed `Ref[Int]`, preserving valid empty decode results without a
   status-byte payload copy.~~
+- [x] ~~Owned public Flate decode now bypasses `BytesView.to_owned()` on native
+  by calling the native miniz bytes helper directly.~~
 - [x] ~~Standard stream-filter dispatch names are cached once instead of
   rebuilding ASCII `PdfName` values on every comparison.~~
 - [x] ~~Standard stream dictionary keys are cached once instead of rebuilding

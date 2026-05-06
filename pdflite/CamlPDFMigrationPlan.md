@@ -538,9 +538,12 @@ MoonBit consequences for this project:
    incompressible input. Native miniz-backed Flate encode/decode now returns
    payload bytes directly and reports success through a borrowed FFI
    `Ref[Int]`, avoiding the previous status-prefix copy while preserving valid
-   empty-payload success. CamlPDF-style typed encoding and predictor choices are
-   now exposed as `PdfStreamEncoding` and `PdfStreamPredictor`, with a
-   `pdf_encode_stream_with_encoding` wrapper over the existing filter/predictor
+   empty-payload success. Owned public Flate decode now also calls the native
+   bytes helper directly instead of passing through a borrowed view and
+   re-owning compressed data before FFI. CamlPDF-style typed encoding and
+   predictor choices are now exposed as `PdfStreamEncoding` and
+   `PdfStreamPredictor`, with a `pdf_encode_stream_with_encoding` wrapper over
+   the existing filter/predictor
    implementation; CCITT names map to `/CCITTFaxDecode`. Native CCITT decode is
    now started for
    `/CCITTFaxDecode` and `/CCF`, covering Group 3 one-dimensional `/K 0`, Group
