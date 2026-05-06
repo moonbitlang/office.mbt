@@ -4462,11 +4462,14 @@ fn pdf_text_compose_tounicode_entries(
   inherited : ArrayView[(Int, PdfBytes)],
 ) -> Array[(Int, PdfBytes)] {
   let output : Array[(Int, PdfBytes)] = []
+  let seen : @hashmap.HashMap[Int, Bool] = @hashmap.HashMap::new()
   for entry in current {
     output.push(entry)
+    seen[entry.0] = true
   }
   for entry in inherited {
-    if !pdf_text_tounicode_has_charcode(output[:], entry.0) {
+    if !seen.contains(entry.0) {
+      seen[entry.0] = true
       output.push(entry)
     }
   }
@@ -4479,11 +4482,14 @@ fn pdf_text_compose_cid_entries(
   inherited : ArrayView[(Int, Int)],
 ) -> Array[(Int, Int)] {
   let output : Array[(Int, Int)] = []
+  let seen : @hashmap.HashMap[Int, Bool] = @hashmap.HashMap::new()
   for entry in current {
     output.push(entry)
+    seen[entry.0] = true
   }
   for entry in inherited {
-    if !pdf_text_cmap_has_charcode(output[:], entry.0) {
+    if !seen.contains(entry.0) {
+      seen[entry.0] = true
       output.push(entry)
     }
   }

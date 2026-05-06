@@ -2958,9 +2958,10 @@ test "private external CMap helpers cover malformed and compact sections" {
       map: [
         (1, wbtest_text_bytes([0x00, 0x42])),
         (2, wbtest_text_bytes([0x00, 0x43])),
+        (2, wbtest_text_bytes([0x00, 0x44])),
       ],
-      cid_map: [(1, 11), (2, 12)],
-      notdef_map: [(1, 21), (2, 22)],
+      cid_map: [(1, 11), (2, 12), (2, 13)],
+      notdef_map: [(1, 21), (2, 22), (2, 23)],
       codespaces: [{ length: 2, first: 0, last: 0xFFFF }],
       usecmap: Some(wbtest_text_name("/Identity-H")),
       wmode: Some(0),

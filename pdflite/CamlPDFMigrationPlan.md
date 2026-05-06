@@ -1079,7 +1079,9 @@ MoonBit consequences for this project:
    the no-`/ToUnicode` fallback with reverse CID lookup. Recursive stream
    `/UseCMap` composition now tracks seen indirect CMap streams in a
    hash-backed set instead of copying a visited array at each hop, preserving
-   cycle fallback and multi-hop ToUnicode inheritance. Other remaining
+   cycle fallback and multi-hop ToUnicode inheritance. Inherited map, CID, and
+   notdef composition now uses hash-backed charcode sets instead of scanning
+   the growing composed arrays for each inherited entry. Other remaining
    predefined/general CMap tables remain deferred.
    Standard-14 built-in text extraction is started for implicit encodings:
    non-symbol fonts use the current StandardEncoding subset, while Symbol and
@@ -1578,8 +1580,9 @@ MoonBit consequences for this project:
     and writer coverage keeps hash-backed incremental changed-object
     deduplication plus single-pass xref-stream and classic sparse xref byte
     generation covered. Text coverage also keeps hash-backed multi-hop
-    `/UseCMap` stream inheritance covered; `moon coverage analyze` now reports
-    all source files fully covered.
+    `/UseCMap` stream inheritance and hash-backed inherited CMap composition
+    covered; `moon coverage analyze` now reports all source files fully
+    covered.
 
 ## Active Native Acceptance Milestone
 
