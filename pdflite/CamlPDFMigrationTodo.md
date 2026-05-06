@@ -580,6 +580,9 @@ Current backend snapshot:
 - [x] ~~Unknown xref-stream entry types are retained internally as non-loadable
   markers, so malformed reconstruction does not resurrect physically present
   objects that a recovered xref stream marks with an unsupported entry kind.~~
+- [x] ~~Recovered xref-stream skip markers are offset-aware, so they hide older
+  physical objects covered by the stream without hiding later physical
+  incremental objects for the same object number.~~
 - [x] ~~Incremental writer changed-object detection now uses a hash-backed
   seen set before sorting sparse classic/xref-stream entry numbers, so large
   event logs with repeated edits avoid repeated linear duplicate checks.~~

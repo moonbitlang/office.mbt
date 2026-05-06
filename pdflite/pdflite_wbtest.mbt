@@ -1009,11 +1009,28 @@ test "private reader xref helpers report malformed inputs" {
     pdf_reader_reconstruction_skip_malformed_object(no_endobj[:], 0),
     Some(no_endobj.length()),
   )
-  let objects_with_bad_resolved_length = try! pdf_read_reconstructed_objects(
-    @ascii.encode(
-      "1 0 obj\n<< /Length 2 0 R >>\nstream\nHi\nendstream\nendobj\n2 0 obj\n999999\nendobj\n",
-    )[:],
+  let bad_resolved_length = @ascii.encode(
+    "1 0 obj\n<< /Length 2 0 R >>\nstream\nHi\nendstream\nendobj\n2 0 obj\n999999\nendobj\n",
   )
+  let bad_resolved_length_xrefs = try! pdf_read_reconstructed_xrefs(
+    bad_resolved_length[:],
+  )
+  let bad_resolved_length_cursor = byte_cursor_of_view(bad_resolved_length[:])
+  let objects_with_bad_resolved_length : Array[PdfParsedIndirectObject] = []
+  for xref in bad_resolved_length_xrefs {
+    let parsed : Result[PdfParsedIndirectObject, Error] = try? bad_resolved_length_cursor.read_reconstructed_object_at(
+      xref.offset,
+      bad_resolved_length_xrefs[:],
+    )
+    match parsed {
+      Ok(object) =>
+        if object.number == xref.object_number &&
+          object.generation == xref.generation {
+          objects_with_bad_resolved_length.push(object)
+        }
+      Err(_) => ()
+    }
+  }
   @test.assert_eq(objects_with_bad_resolved_length.length(), 1)
   @test.assert_eq(objects_with_bad_resolved_length[0].number, 2)
 

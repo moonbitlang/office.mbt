@@ -1553,30 +1553,6 @@ fn pdf_read_reconstructed_xrefs(
 }
 
 ///|
-fn pdf_read_reconstructed_objects(
-  data : BytesView,
-) -> Array[PdfParsedIndirectObject] raise PdfError {
-  let objects : Array[PdfParsedIndirectObject] = []
-  let xrefs = pdf_read_reconstructed_xrefs(data)
-  let cursor = byte_cursor_of_view(data)
-  for xref in xrefs {
-    let parsed : Result[PdfParsedIndirectObject, Error] = try? cursor.read_reconstructed_object_at(
-      xref.offset,
-      xrefs[:],
-    )
-    match parsed {
-      Ok(object) =>
-        if object.number == xref.object_number &&
-          object.generation == xref.generation {
-          objects.push(object)
-        }
-      Err(_) => ()
-    }
-  }
-  objects
-}
-
-///|
 fn ByteCursor::read_reconstructed_trailer_at(
   self : ByteCursor,
   position : Int,
@@ -1820,18 +1796,46 @@ fn PdfDocument::load_reconstructed_xref_stream_objects(
 }
 
 ///|
-fn pdf_reconstructed_xref_stream_object_numbers(
+priv struct PdfReconstructedXRefStreamCoverage {
+  sections : Array[(Int, PdfNumberSet)]
+}
+
+///|
+fn pdf_reconstructed_xref_stream_coverage(
   sections : ArrayView[PdfXRefSection],
-) -> PdfNumberSet {
-  let numbers = pdf_number_set([])
+) -> PdfReconstructedXRefStreamCoverage {
+  let covered : Array[(Int, PdfNumberSet)] = []
   for section in sections {
-    for xref in section.entries {
-      if xref.object_number > 0 {
-        numbers.add(xref.object_number)
+    match section.stream_object_offset {
+      Some(offset) => {
+        let numbers = pdf_number_set([])
+        for xref in section.entries {
+          if xref.object_number > 0 {
+            numbers.add(xref.object_number)
+          }
+        }
+        covered.push((offset, numbers))
       }
+      None => ()
     }
   }
-  numbers
+  { sections: covered }
+}
+
+///|
+fn PdfReconstructedXRefStreamCoverage::contains(
+  self : PdfReconstructedXRefStreamCoverage,
+  object_number : Int,
+  object_offset : Int,
+) -> Bool {
+  for section in self.sections {
+    let (section_offset, object_numbers) = section
+    if object_offset <= section_offset && object_numbers.contains(object_number) {
+      break true
+    }
+  } nobreak {
+    false
+  }
 }
 
 ///|
@@ -1884,18 +1888,29 @@ fn pdf_read_reconstructed_document_from_view(
   } else {
     []
   }
-  let xref_stream_object_numbers = pdf_reconstructed_xref_stream_object_numbers(
+  let xref_stream_coverage = pdf_reconstructed_xref_stream_coverage(
     xref_stream_sections[:],
   )
-  for parsed in pdf_read_reconstructed_objects(data) {
-    if parsed.number > 0 &&
-      !xref_stream_object_numbers.contains(parsed.number) &&
-      !pdf_reader_object_is_xref_stream(parsed.object) {
-      document.load_object_given_number(
-        parsed.number,
-        parsed.object,
-        generation=parsed.generation,
-      )
+  let reconstructed_xrefs = pdf_read_reconstructed_xrefs(data)
+  for xref in reconstructed_xrefs {
+    let parsed_result : Result[PdfParsedIndirectObject, Error] = try? cursor.read_reconstructed_object_at(
+      xref.offset,
+      reconstructed_xrefs[:],
+    )
+    match parsed_result {
+      Ok(parsed) =>
+        if parsed.number > 0 &&
+          parsed.number == xref.object_number &&
+          parsed.generation == xref.generation &&
+          !xref_stream_coverage.contains(parsed.number, xref.offset) &&
+          !pdf_reader_object_is_xref_stream(parsed.object) {
+          document.load_object_given_number(
+            parsed.number,
+            parsed.object,
+            generation=parsed.generation,
+          )
+        }
+      Err(_) => ()
     }
   }
   if include_xref_stream_trailers {

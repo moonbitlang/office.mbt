@@ -725,6 +725,33 @@ fn reader_xref_stream_pdf_with_unknown_entry_type_bad_startxref() -> @pdflite.Pd
 }
 
 ///|
+fn reader_xref_stream_unknown_entry_with_later_physical_update_bad_startxref() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.5\n")
+  let catalog_offset = reader_push_indirect_object(
+    output, 1, 0, "<< /Type /Catalog /Payload 2 0 R >>",
+  )
+  let old_value_offset = reader_push_indirect_object(output, 2, 0, "13")
+  let xref_offset = output.length()
+  let stream_data : Array[Byte] = []
+  reader_push_xref_stream_entry(stream_data, 0, 0, 65535)
+  reader_push_xref_stream_entry(stream_data, 1, catalog_offset, 0)
+  reader_push_xref_stream_entry(stream_data, 9, old_value_offset, 0)
+  reader_push_xref_stream_entry(stream_data, 1, xref_offset, 0)
+  reader_push_ascii(output, "3 0 obj\n")
+  reader_push_ascii(output, "<< /Type /XRef /Length ")
+  reader_push_ascii(output, stream_data.length().to_string())
+  reader_push_ascii(output, " /Size 4 /Root 1 0 R /W [1 4 2] >>\nstream\n")
+  for byte in stream_data {
+    output.push(byte)
+  }
+  reader_push_ascii(output, "\nendstream\nendobj\n")
+  ignore(reader_push_indirect_object(output, 2, 0, "99"))
+  reader_push_ascii(output, "startxref\n0\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_xref_stream_pdf_with_ascii_hex_filter() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.5\n")
@@ -2270,6 +2297,16 @@ test "pdf_read_document_from_bytes reconstructs unknown xref stream entry types"
   @test.assert_eq(parsed.object_numbers(), [1, 3])
   @test.assert_eq(parsed.lookup_object_or_null(2), PdfNull)
   @test.assert_eq(parsed.lookup_object_or_null(3), PdfInteger(7))
+}
+
+///|
+test "pdf_read_document_from_bytes keeps later physical objects after unknown xref entries" {
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(
+    reader_xref_stream_unknown_entry_with_later_physical_update_bad_startxref(),
+  )
+  @test.assert_eq(parsed.first_xref(), 0)
+  @test.assert_eq(parsed.object_numbers(), [1, 2])
+  @test.assert_eq(parsed.lookup_object_or_null(2), PdfInteger(99))
 }
 
 ///|
