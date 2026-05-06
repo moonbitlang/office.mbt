@@ -1399,7 +1399,10 @@ MoonBit consequences for this project:
     pre-merge parent-tree renumbering pass for document arrays, including
     trailer-rooted `/StructTreeRoot`/`/ParentTree` lookup and replacement for
     parsed PDFs while preserving the document-root fallback used by synthetic
-    tests without a trailer `/Root`.
+    tests without a trailer `/Root`. Recursive structure parent-key rewriting
+    now builds one hash-backed old-key to new-key map per document and reuses it
+    for object and parent-tree value rewrites, preserving first-change
+    precedence while avoiding repeated scans of the change list.
     Multi-root structure metadata merging now covers `/IDTree`, `/RoleMap`,
     `/ClassMap`, `/Namespaces`, `/PronunciationLexicon`, and `/AF`. Optional
     top-level `/Document` wrapping is started behind
@@ -1493,6 +1496,8 @@ MoonBit consequences for this project:
     dictionary mismatches. Name/number tree coverage now includes malformed
     key-type rejection, duplicate number-key replacement, large nested tree
     construction with child `/Limits`, and private grouping threshold checks.
+    Structure parent-tree renumbering coverage now includes first-change
+    precedence through the hash-backed parent change map.
     Flate coverage now
     includes empty and short zlib inputs, fixed-Huffman blocks, invalid stored
     block lengths, invalid block types, empty stored-block encoding, and private

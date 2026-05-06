@@ -233,17 +233,10 @@ fn PdfDocument::pdf_structure_root_parent_tree_entries(
 
 ///|
 fn pdf_structure_changed_parent_tree_key(
-  changes : ArrayView[(Int, Int)],
+  changes : @hashmap.HashMap[Int, Int],
   old_key : Int,
 ) -> Int? {
-  for change in changes {
-    let (old_key_candidate, new_key) = change
-    if old_key_candidate == old_key {
-      break Some(new_key)
-    }
-  } nobreak {
-    None
-  }
+  changes.get(old_key)
 }
 
 ///|
@@ -251,13 +244,14 @@ fn pdf_structure_apply_parent_tree_changes(
   entries : ArrayView[(Int, PdfObject)],
   changes : ArrayView[(Int, Int)],
 ) -> Array[(Int, PdfObject)] {
+  let change_map = pdf_merge_parent_tree_change_map(changes)
   let output : Array[(Int, PdfObject)] = []
   for entry in entries {
     let (old_key, value) = entry
-    match pdf_structure_changed_parent_tree_key(changes, old_key) {
+    match pdf_structure_changed_parent_tree_key(change_map, old_key) {
       Some(new_key) =>
         output.push(
-          (new_key, pdf_merge_renumber_struct_parent_object(value, changes)),
+          (new_key, pdf_merge_renumber_struct_parent_object(value, change_map)),
         )
       None => ()
     }

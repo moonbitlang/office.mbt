@@ -12,7 +12,9 @@ test "private merge helpers cover guards and membership branches" {
     pdf_merge_destination_needs_named_retention(DestFit(TargetPageObject(1))),
     false,
   )
-  @test.assert_eq(pdf_merge_changed_parent_tree_key([(1, 2)], 3), None)
+  let parent_changes = pdf_merge_parent_tree_change_map([(1, 2), (1, 3)])
+  @test.assert_eq(pdf_merge_changed_parent_tree_key(parent_changes, 1), Some(2))
+  @test.assert_eq(pdf_merge_changed_parent_tree_key(parent_changes, 3), None)
 
   let entries = [(key, PdfInteger(1))]
   pdf_merge_add_dictionary_entry(entries, key, PdfInteger(2))
@@ -112,17 +114,19 @@ test "private merge structure helpers cover direct variants" {
     (struct_parent, PdfInteger(9)),
     (struct_parents, PdfNameObject(pdf_merge_name("/Bad"))),
   ])
+  let no_parent_changes = pdf_merge_parent_tree_change_map([])
   @test.assert_eq(
-    pdf_merge_renumber_struct_parent_object(original, []),
+    pdf_merge_renumber_struct_parent_object(original, no_parent_changes),
     original,
   )
+  let parent_changes = pdf_merge_parent_tree_change_map([(1, 7)])
 
   let stream = pdf_stream(
     PdfDictionary([(struct_parent, PdfInteger(1))]),
     StreamGot(@ascii.encode("x")),
   )
   @test.assert_eq(
-    pdf_merge_renumber_struct_parent_object(stream, [(1, 7)]),
+    pdf_merge_renumber_struct_parent_object(stream, parent_changes),
     pdf_stream(
       PdfDictionary([(struct_parent, PdfInteger(7))]),
       StreamGot(@ascii.encode("x")),
@@ -136,7 +140,7 @@ test "private merge structure helpers cover direct variants" {
           PdfDictionary([(struct_parent, PdfInteger(1))]),
         ),
       ),
-      [(1, 7)],
+      parent_changes,
     ),
     pdf_object_entry(
       ObjectParsedAlreadyDecrypted(
@@ -145,9 +149,10 @@ test "private merge structure helpers cover direct variants" {
     ),
   )
   @test.assert_eq(
-    pdf_merge_renumber_struct_parent_entry(pdf_object_entry(ObjectToParse), [
-      (1, 7),
-    ]),
+    pdf_merge_renumber_struct_parent_entry(
+      pdf_object_entry(ObjectToParse),
+      parent_changes,
+    ),
     pdf_object_entry(ObjectToParse),
   )
 

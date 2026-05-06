@@ -46,7 +46,8 @@ test "structure parent tree helpers cover absent roots and direct roots" {
 
 ///|
 test "structure parent tree change helpers ignore unmatched keys" {
-  @test.assert_eq(pdf_structure_changed_parent_tree_key([(1, 0)], 2), None)
+  let changes = pdf_merge_parent_tree_change_map([(1, 0)])
+  @test.assert_eq(pdf_structure_changed_parent_tree_key(changes, 2), None)
   @test.assert_eq(
     pdf_structure_apply_parent_tree_changes([(2, PdfInteger(9))], [(1, 0)]),
     [],

@@ -500,24 +500,31 @@ fn PdfDocument::pdf_merge_structure_array(
 }
 
 ///|
-fn pdf_merge_changed_parent_tree_key(
+fn pdf_merge_parent_tree_change_map(
   changes : ArrayView[(Int, Int)],
-  old_key : Int,
-) -> Int? {
+) -> @hashmap.HashMap[Int, Int] {
+  let values : @hashmap.HashMap[Int, Int] = @hashmap.HashMap::new()
   for change in changes {
     let (old, replacement) = change
-    if old == old_key {
-      break Some(replacement)
+    if !values.contains(old) {
+      values[old] = replacement
     }
-  } nobreak {
-    None
   }
+  values
+}
+
+///|
+fn pdf_merge_changed_parent_tree_key(
+  changes : @hashmap.HashMap[Int, Int],
+  old_key : Int,
+) -> Int? {
+  changes.get(old_key)
 }
 
 ///|
 fn pdf_merge_renumber_struct_parent_object(
   object : PdfObject,
-  changes : ArrayView[(Int, Int)],
+  changes : @hashmap.HashMap[Int, Int],
 ) -> PdfObject {
   match object {
     PdfDictionary(entries) => {
@@ -568,7 +575,7 @@ fn pdf_merge_renumber_struct_parent_object(
 ///|
 fn pdf_merge_renumber_struct_parent_entry(
   entry : PdfObjectEntry,
-  changes : ArrayView[(Int, Int)],
+  changes : @hashmap.HashMap[Int, Int],
 ) -> PdfObjectEntry {
   match entry.data {
     ObjectParsed(object) =>
@@ -595,11 +602,12 @@ fn PdfDocument::pdf_merge_renumber_struct_parent_entries(
   changes : ArrayView[(Int, Int)],
 ) -> Unit {
   if changes.length() > 0 {
+    let change_map = pdf_merge_parent_tree_change_map(changes)
     for number in self.object_numbers() {
       let entry = self.objects.get_entry(number).unwrap()
       self.objects.set_entry(
         number,
-        pdf_merge_renumber_struct_parent_entry(entry, changes),
+        pdf_merge_renumber_struct_parent_entry(entry, change_map),
       )
     }
   }

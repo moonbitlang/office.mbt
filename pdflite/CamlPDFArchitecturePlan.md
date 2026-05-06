@@ -379,6 +379,8 @@ work changes.
    Duplicate stream/font removal now caches stream comparison candidates and
    groups them by byte length before exact dictionary/data comparison, avoiding
    repeated deferred stream view materialization in large merge dedupe passes.
+   Structure parent-tree renumbering now builds one hash-backed change map per
+   document and reuses it during recursive structure-object rewrites.
    Remaining focus: more CamlPDF example-level acceptance fixtures and
    compatibility behavior for unusual real-world documents.
 
