@@ -463,7 +463,7 @@ test "private xref stream helpers cover malformed and deferred entries" {
     (1, 1, 1),
     [(3, 2)][:],
   )
-  @test.assert_eq(deferred_entries.length(), 1)
+  @test.assert_eq(deferred_entries.length(), 2)
   @test.assert_eq(deferred_entries[0].object_number, 3)
   @test.assert_eq(deferred_entries[0].offset, 7)
   @test.assert_eq(deferred_entries[0].generation, 0)
@@ -472,6 +472,11 @@ test "private xref stream helpers cover malformed and deferred entries" {
     deferred_entries[0].object_stream,
     Some({ object_stream_number: 7, index: 0 }),
   )
+  @test.assert_eq(deferred_entries[1].object_number, 4)
+  @test.assert_eq(deferred_entries[1].offset, 0)
+  @test.assert_eq(deferred_entries[1].generation, 0)
+  @test.assert_eq(deferred_entries[1].in_use, false)
+  @test.assert_eq(deferred_entries[1].object_stream, None)
 }
 
 ///|

@@ -574,6 +574,12 @@ Current backend snapshot:
 - [x] ~~Malformed reconstruction trailer scanning now probes xref-stream
   trailers only at indirect-object headers instead of every digit byte in the
   file, avoiding repeated failed parses on large damaged inputs.~~
+- [x] ~~Bad-startxref xref-stream reconstruction now has explicit coverage for
+  unknown entry types, preserving the skip semantics already used by strict
+  xref-stream reads.~~
+- [x] ~~Unknown xref-stream entry types are retained internally as non-loadable
+  markers, so malformed reconstruction does not resurrect physically present
+  objects that a recovered xref stream marks with an unsupported entry kind.~~
 - [x] ~~Incremental writer changed-object detection now uses a hash-backed
   seen set before sorting sparse classic/xref-stream entry numbers, so large
   event logs with repeated edits avoid repeated linear duplicate checks.~~
@@ -878,6 +884,9 @@ Current backend snapshot:
   multiple zlib levels.~~
 - [x] ~~Malformed xref-stream/object-stream recovery covers reconstructed
   indirect object-stream bounds after a bad final `startxref`.~~
+- [x] ~~Malformed xref-stream recovery covers unknown entry types after a bad
+  final `startxref`, verifying reconstruction skips non-free/non-in-use/non-
+  compressed entries just like strict xref-stream parsing.~~
 - [x] ~~Malformed object-stream recovery tolerates direct stream members inside
   `/ObjStm` data and repairs their stream length from `endstream`.~~
 - [ ] Broader malformed xref-table/xref-stream/object-stream recovery beyond

@@ -904,7 +904,16 @@ fn pdf_xref_stream_entries(
             in_use: true,
             object_stream: Some({ object_stream_number: field2, index: field3 }),
           })
-        _ => ()
+        // Unknown entry types are retained as non-loadable markers so a newer
+        // xref stream can still hide older or physically reconstructed objects.
+        _ =>
+          entries.push({
+            object_number,
+            offset: field2,
+            generation: field3,
+            in_use: false,
+            object_stream: None,
+          })
       }
     }
   }
@@ -1811,6 +1820,21 @@ fn PdfDocument::load_reconstructed_xref_stream_objects(
 }
 
 ///|
+fn pdf_reconstructed_xref_stream_object_numbers(
+  sections : ArrayView[PdfXRefSection],
+) -> PdfNumberSet {
+  let numbers = pdf_number_set([])
+  for section in sections {
+    for xref in section.entries {
+      if xref.object_number > 0 {
+        numbers.add(xref.object_number)
+      }
+    }
+  }
+  numbers
+}
+
+///|
 fn PdfDocument::select_reconstructed_trailer(
   self : PdfDocument,
   trailers : ArrayView[PdfObject],
@@ -1860,8 +1884,13 @@ fn pdf_read_reconstructed_document_from_view(
   } else {
     []
   }
+  let xref_stream_object_numbers = pdf_reconstructed_xref_stream_object_numbers(
+    xref_stream_sections[:],
+  )
   for parsed in pdf_read_reconstructed_objects(data) {
-    if parsed.number > 0 && !pdf_reader_object_is_xref_stream(parsed.object) {
+    if parsed.number > 0 &&
+      !xref_stream_object_numbers.contains(parsed.number) &&
+      !pdf_reader_object_is_xref_stream(parsed.object) {
       document.load_object_given_number(
         parsed.number,
         parsed.object,
