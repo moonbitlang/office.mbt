@@ -28,6 +28,10 @@ class FixtureReport:
     diff: Path
     pdflite_chars: int | None
     markitdown_chars: int | None
+    pdflite_replacement_chars: int | None
+    markitdown_replacement_chars: int | None
+    pdflite_raw_controls: int | None
+    markitdown_raw_controls: int | None
     exact_match: bool
     pdflite_error: str | None = None
     markitdown_error: str | None = None
@@ -67,6 +71,21 @@ def normalize_markdown(text: str) -> str:
     while lines and lines[-1] == "":
         lines.pop()
     return "\n".join(lines) + "\n"
+
+
+def raw_control_count(text: str) -> int:
+    return sum(
+        1
+        for char in text
+        if (
+            ord(char) < 0x20
+            and char not in "\n\t\f"
+        ) or 0x7F <= ord(char) <= 0x9F
+    )
+
+
+def replacement_char_count(text: str) -> int:
+    return text.count("\uFFFD")
 
 
 def markitdown_command(user_command: str | None) -> list[str]:
@@ -181,6 +200,18 @@ def compare_fixture(
         markitdown_chars=len(markitdown_text)
         if markitdown_text is not None
         else None,
+        pdflite_replacement_chars=replacement_char_count(pdflite_text)
+        if pdflite_text is not None
+        else None,
+        markitdown_replacement_chars=replacement_char_count(markitdown_text)
+        if markitdown_text is not None
+        else None,
+        pdflite_raw_controls=raw_control_count(pdflite_text)
+        if pdflite_text is not None
+        else None,
+        markitdown_raw_controls=raw_control_count(markitdown_text)
+        if markitdown_text is not None
+        else None,
         exact_match=pdflite_text is not None
         and markitdown_text is not None
         and pdflite_text == markitdown_text,
@@ -199,6 +230,10 @@ def write_json_report(root: Path, output: Path, reports: list[FixtureReport]) ->
                 "diff": relative_path(root, report.diff),
                 "pdflite_chars": report.pdflite_chars,
                 "markitdown_chars": report.markitdown_chars,
+                "pdflite_replacement_chars": report.pdflite_replacement_chars,
+                "markitdown_replacement_chars": report.markitdown_replacement_chars,
+                "pdflite_raw_controls": report.pdflite_raw_controls,
+                "markitdown_raw_controls": report.markitdown_raw_controls,
                 "exact_match": report.exact_match,
                 "pdflite_error": report.pdflite_error,
                 "markitdown_error": report.markitdown_error,
@@ -217,10 +252,23 @@ def write_markdown_report(
     lines = [
         "# MarkItDown Comparison",
         "",
-        "| Fixture | pdflite chars | MarkItDown chars | Exact match | Diff |",
-        "| --- | ---: | ---: | --- | --- |",
+        "| Fixture | pdflite chars | MarkItDown chars | pdflite repl/raw | MarkItDown repl/raw | Exact match | Diff |",
+        "| --- | ---: | ---: | ---: | ---: | --- | --- |",
     ]
     for report in reports:
+        pdflite_quality = (
+            f"{report.pdflite_replacement_chars}/{report.pdflite_raw_controls}"
+            if report.pdflite_replacement_chars is not None
+            and report.pdflite_raw_controls is not None
+            else "error"
+        )
+        markitdown_quality = (
+            f"{report.markitdown_replacement_chars}/"
+            f"{report.markitdown_raw_controls}"
+            if report.markitdown_replacement_chars is not None
+            and report.markitdown_raw_controls is not None
+            else "error"
+        )
         lines.append(
             "| "
             + " | ".join(
@@ -232,6 +280,8 @@ def write_markdown_report(
                     str(report.markitdown_chars)
                     if report.markitdown_chars is not None
                     else "error",
+                    pdflite_quality,
+                    markitdown_quality,
                     "yes" if report.exact_match else "no",
                     relative_path(root, report.diff),
                 ]

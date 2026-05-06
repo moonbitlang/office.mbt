@@ -36,6 +36,9 @@ library API.
 - [x] ~~Add native fixture tests for Pandoc-generated Latin and CJK PDFs.~~
 - [x] ~~Add a MarkItDown comparison script that writes normalized side-by-side
   outputs and a JSON/Markdown report outside the test runner.~~
+- [x] ~~Extend the MarkItDown comparison report with replacement-character and
+  raw-control counters so text-quality regressions are visible without ad hoc
+  scans.~~
 - [x] ~~Add selected online real-world fixtures, starting with public PDF spec
   and CJK-heavy documents whose redistribution terms are clear.~~
 - [x] ~~Fix the first core extraction bugs found by the comparison loop, and

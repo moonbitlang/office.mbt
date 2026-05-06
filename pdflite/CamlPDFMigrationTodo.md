@@ -126,6 +126,9 @@ Current backend snapshot:
   kerning adjustments.~~
 - [x] ~~Add a MarkItDown comparison report/script for selected local Pandoc
   fixtures; use differences to drive core extraction fixes.~~
+- [x] ~~Add replacement-character and raw-control counters to the MarkItDown
+  comparison summary so Markdown quality regressions are tracked directly in
+  generated reports.~~
 - [x] ~~Extend the MarkItDown comparison loop to downloaded real-world fixtures
   with documented redistribution terms and expected extraction contracts.~~
 - [x] ~~Add download-only external Markdown acceptance fixtures for an Adobe
