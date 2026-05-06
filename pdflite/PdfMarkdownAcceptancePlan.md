@@ -67,6 +67,9 @@ library API.
 - [x] ~~Add optional `pdftotext -layout` metrics to the comparison script so
   MarkItDown's page-level line collapsing is judged against a physical-layout
   baseline before treating CJK chart line counts as extraction bugs.~~
+- [x] ~~Add a checked-in `.repos/introduction_to_camlpdf.pdf` Markdown
+  acceptance gate covering a real multi-page CamlPDF document, core API
+  examples, and replacement/raw-control quality counters.~~
 - [ ] Continue fixing extraction/layout bugs found by the comparison loop.
 
 ## First Converter Contract

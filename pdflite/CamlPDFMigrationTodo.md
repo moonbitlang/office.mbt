@@ -900,6 +900,9 @@ Current backend snapshot:
 - [x] ~~External Markdown corpus fixtures are now gated by optional native tests
   when downloads are present, covering Adobe PDF-spec supplement extraction and
   Unicode CJK chart unique-glyph coverage.~~
+- [x] ~~Checked-in CamlPDF introduction PDF now has a Markdown acceptance gate
+  over the separate Markdown package, covering real multi-page text extraction,
+  core API examples, and raw-control/replacement-character quality counters.~~
 - [ ] Broader real-world PDF corpus testing, including PDF-to-Markdown
   comparison fixtures after the local Pandoc gates are stable.
 - [ ] Performance tuning for large files, object streams, filters, and text/image
