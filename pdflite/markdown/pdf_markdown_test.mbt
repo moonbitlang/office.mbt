@@ -348,9 +348,9 @@ fn markdown_positioned_cjk_spacing_document_for_test() -> @pdflite.PdfDocument r
         Op_Tf(markdown_name_for_test("/F0"), 10.0),
         Op_Tm(@pdflite.transform_translate(50.0, 700.0)),
         Op_Tj(markdown_bytes_for_test([65])),
-        Op_Tm(@pdflite.transform_translate(60.0, 700.0)),
+        Op_Tm(@pdflite.transform_translate(66.0, 700.0)),
         Op_Tj(markdown_bytes_for_test([65])),
-        Op_Tm(@pdflite.transform_translate(80.0, 700.0)),
+        Op_Tm(@pdflite.transform_translate(88.0, 700.0)),
         Op_Tj(markdown_bytes_for_test([65])),
         Op_ET,
       ]),
@@ -432,6 +432,128 @@ fn markdown_cjk_document_for_test() -> @pdflite.PdfDocument raise {
     ],
     resources: markdown_font_resources_for_test(
       markdown_tounicode_font_for_test(),
+    ),
+  }
+  let page_root = doc.add_pagetree([page])
+  ignore(doc.add_root(page_root, []))
+  doc
+}
+
+///|
+fn markdown_cjk_tj_spacing_document_for_test() -> @pdflite.PdfDocument raise {
+  let cmap = markdown_ascii_for_test(
+    "1 begincodespacerange\n" +
+    "<00><FF>\n" +
+    "endcodespacerange\n" +
+    "2 beginbfchar\n" +
+    "<41><4E16>\n" +
+    "<42><754C>\n" +
+    "endbfchar\n",
+  )
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  doc.add_object_given_number(
+    82,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (markdown_name_for_test("/Length"), PdfInteger(cmap.length())),
+      ]),
+      StreamGot(cmap),
+    ),
+  )
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [
+      @pdflite.pdf_content_stream_of_ops([
+        Op_BT,
+        Op_Tf(markdown_name_for_test("/F0"), 12.0),
+        Op_TJ(
+          PdfArray([
+            PdfString(markdown_bytes_for_test([65])),
+            PdfReal(-300.0),
+            PdfString(markdown_bytes_for_test([66])),
+          ]),
+        ),
+        Op_ET,
+      ]),
+    ],
+    resources: markdown_font_resources_for_test(
+      @pdflite.pdf_dictionary([
+        (
+          markdown_name_for_test("/Type"),
+          PdfNameObject(markdown_name_for_test("/Font")),
+        ),
+        (
+          markdown_name_for_test("/Subtype"),
+          PdfNameObject(markdown_name_for_test("/Type1")),
+        ),
+        (
+          markdown_name_for_test("/BaseFont"),
+          PdfNameObject(markdown_name_for_test("/Custom")),
+        ),
+        (markdown_name_for_test("/ToUnicode"), PdfIndirect(82)),
+      ]),
+    ),
+  }
+  let page_root = doc.add_pagetree([page])
+  ignore(doc.add_root(page_root, []))
+  doc
+}
+
+///|
+fn markdown_hangul_tj_spacing_document_for_test() -> @pdflite.PdfDocument raise {
+  let cmap = markdown_ascii_for_test(
+    "1 begincodespacerange\n" +
+    "<00><FF>\n" +
+    "endcodespacerange\n" +
+    "2 beginbfchar\n" +
+    "<41><D55C>\n" +
+    "<42><AE00>\n" +
+    "endbfchar\n",
+  )
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  doc.add_object_given_number(
+    83,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (markdown_name_for_test("/Length"), PdfInteger(cmap.length())),
+      ]),
+      StreamGot(cmap),
+    ),
+  )
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [
+      @pdflite.pdf_content_stream_of_ops([
+        Op_BT,
+        Op_Tf(markdown_name_for_test("/F0"), 12.0),
+        Op_TJ(
+          PdfArray([
+            PdfString(markdown_bytes_for_test([65])),
+            PdfReal(-300.0),
+            PdfString(markdown_bytes_for_test([66])),
+          ]),
+        ),
+        Op_ET,
+      ]),
+    ],
+    resources: markdown_font_resources_for_test(
+      @pdflite.pdf_dictionary([
+        (
+          markdown_name_for_test("/Type"),
+          PdfNameObject(markdown_name_for_test("/Font")),
+        ),
+        (
+          markdown_name_for_test("/Subtype"),
+          PdfNameObject(markdown_name_for_test("/Type1")),
+        ),
+        (
+          markdown_name_for_test("/BaseFont"),
+          PdfNameObject(markdown_name_for_test("/Custom")),
+        ),
+        (markdown_name_for_test("/ToUnicode"), PdfIndirect(83)),
+      ]),
     ),
   }
   let page_root = doc.add_pagetree([page])
@@ -787,6 +909,26 @@ test "pdf_document_to_markdown preserves ToUnicode CJK output" {
   @test.assert_eq(
     @markdown.pdf_document_to_markdown(markdown_cjk_document_for_test()),
     "# Page 1\n\n世界!\n",
+  )
+}
+
+///|
+test "pdf_document_to_markdown suppresses TJ spaces between CJK glyphs" {
+  @test.assert_eq(
+    @markdown.pdf_document_to_markdown(
+      markdown_cjk_tj_spacing_document_for_test(),
+    ),
+    "# Page 1\n\n世界\n",
+  )
+}
+
+///|
+test "pdf_document_to_markdown preserves TJ spaces between Hangul words" {
+  @test.assert_eq(
+    @markdown.pdf_document_to_markdown(
+      markdown_hangul_tj_spacing_document_for_test(),
+    ),
+    "# Page 1\n\n한 글\n",
   )
 }
 

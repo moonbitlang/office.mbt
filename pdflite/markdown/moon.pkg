@@ -13,5 +13,6 @@ import {
 } for "test"
 
 import {
+  "moonbitlang/core/encoding/ascii",
   "moonbitlang/core/test",
 } for "wbtest"

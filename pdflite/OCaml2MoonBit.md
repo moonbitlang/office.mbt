@@ -113,6 +113,18 @@ Parentheses can work in a one-off snippet, but `moon fmt` may remove them in
 source files and reintroduce parser/name-resolution ambiguity.
 
 ```sh
+moon run -c 'enum E { A(Int); B(Int) } derive(Debug)
+fn main { let xs : Array[E] = [E::A(1), E::B(2)]; println(xs.length()) }'
+# 2
+```
+
+When ported code crosses package boundaries or builds heterogeneous-looking
+enum arrays, prefer explicit `Type::Constructor` forms or a concrete element
+type annotation over relying on late constructor inference. This keeps
+warning-enabled checks such as `moon check --warn-list +73` useful: remove
+package annotations only when the compiler says they are truly unnecessary.
+
+```sh
 moon run -c 'priv enum Section { NoneSection; ActiveSection }
 fn choose(flag : Bool) -> Section { if flag { ActiveSection } else { NoneSection } }
 fn main { match choose(true) { ActiveSection => println("active"); NoneSection => println("none") } }'

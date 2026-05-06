@@ -243,6 +243,7 @@ priv struct PdfMarkdownTextChunk {
   x : Double
   y : Double
   width : Double
+  font_size : Double
   index : Int
   codepoints : Array[Int]
 }
@@ -305,6 +306,7 @@ fn pdf_markdown_push_text_chunk(
       x: position.x,
       y: position.y,
       width: pdf_markdown_estimated_chunk_width(codepoints[:], font_size),
+      font_size,
       index: next_index.val,
       codepoints,
     })
@@ -371,6 +373,68 @@ fn pdf_markdown_append_codepoints(
 }
 
 ///|
+fn pdf_markdown_codepoint_prefers_tj_join(codepoint : Int) -> Bool {
+  (codepoint >= 0x3000 && codepoint <= 0x30FF) ||
+  (codepoint >= 0x31C0 && codepoint <= 0x31FF) ||
+  (codepoint >= 0x3400 && codepoint <= 0x9FFF) ||
+  (codepoint >= 0xF900 && codepoint <= 0xFAFF)
+}
+
+///|
+fn pdf_markdown_codepoints_start_tj_joinable(
+  codepoints : ArrayView[Int],
+) -> Bool {
+  codepoints.length() > 0 &&
+  pdf_markdown_codepoint_prefers_tj_join(codepoints[0])
+}
+
+///|
+fn pdf_markdown_codepoints_end_tj_joinable(codepoints : ArrayView[Int]) -> Bool {
+  codepoints.length() > 0 &&
+  pdf_markdown_codepoint_prefers_tj_join(codepoints[codepoints.length() - 1])
+}
+
+///|
+fn pdf_markdown_tj_word_space_needed(
+  left : ArrayView[Int],
+  right : ArrayView[Int],
+) -> Bool {
+  !(pdf_markdown_codepoints_end_tj_joinable(left) &&
+  pdf_markdown_codepoints_start_tj_joinable(right))
+}
+
+///|
+fn pdf_markdown_extracted_codepoints_of_text_array(
+  extractor : @pdflite.PdfTextExtractor?,
+  items : ArrayView[@pdflite.PdfObject],
+) -> Array[Int] raise {
+  let codepoints : Array[Int] = []
+  let mut pending_word_space = false
+  for item in items {
+    match item {
+      PdfString(text) => {
+        let extracted = pdf_markdown_extracted_codepoints(extractor, text)
+        if extracted.length() > 0 {
+          if pending_word_space &&
+            pdf_markdown_tj_word_space_needed(codepoints[:], extracted[:]) {
+            codepoints.push(0x20)
+          }
+          pdf_markdown_append_codepoints(codepoints, extracted[:])
+          pending_word_space = false
+        }
+      }
+      PdfReal(value) if pdf_markdown_tj_adjustment_is_word_space(value) =>
+        pending_word_space = true
+      PdfInteger(value) if pdf_markdown_tj_adjustment_is_word_space(
+          value.to_double(),
+        ) => pending_word_space = true
+      _ => ()
+    }
+  }
+  codepoints
+}
+
+///|
 fn pdf_markdown_add_positioned_text_run(
   chunks : Array[PdfMarkdownTextChunk],
   next_index : Ref[Int],
@@ -400,24 +464,13 @@ fn pdf_markdown_add_positioned_text_array(
   extractor : @pdflite.PdfTextExtractor?,
   items : ArrayView[@pdflite.PdfObject],
 ) -> Unit raise {
-  let codepoints : Array[Int] = []
-  for item in items {
-    match item {
-      PdfString(text) =>
-        pdf_markdown_append_codepoints(
-          codepoints,
-          pdf_markdown_extracted_codepoints(extractor, text)[:],
-        )
-      PdfReal(value) if pdf_markdown_tj_adjustment_is_word_space(value) =>
-        codepoints.push(0x20)
-      PdfInteger(value) if pdf_markdown_tj_adjustment_is_word_space(
-          value.to_double(),
-        ) => codepoints.push(0x20)
-      _ => ()
-    }
-  }
   pdf_markdown_push_text_chunk(
-    chunks, next_index, ctm, text_matrix, font_size, codepoints,
+    chunks,
+    next_index,
+    ctm,
+    text_matrix,
+    font_size,
+    pdf_markdown_extracted_codepoints_of_text_array(extractor, items),
   )
 }
 
@@ -595,6 +648,48 @@ fn pdf_markdown_chunks_have_positions(
 }
 
 ///|
+fn pdf_markdown_chunk_starts_fullwidth(chunk : PdfMarkdownTextChunk) -> Bool {
+  chunk.codepoints.length() > 0 &&
+  pdf_markdown_codepoint_is_fullwidth(chunk.codepoints[0])
+}
+
+///|
+fn pdf_markdown_chunk_ends_fullwidth(chunk : PdfMarkdownTextChunk) -> Bool {
+  chunk.codepoints.length() > 0 &&
+  pdf_markdown_codepoint_is_fullwidth(
+    chunk.codepoints[chunk.codepoints.length() - 1],
+  )
+}
+
+///|
+fn pdf_markdown_fullwidth_inline_gap_tolerance(
+  left : PdfMarkdownTextChunk,
+  right : PdfMarkdownTextChunk,
+) -> Double {
+  let font_size = if left.font_size > right.font_size {
+    left.font_size
+  } else {
+    right.font_size
+  }
+  font_size * 0.8
+}
+
+///|
+fn pdf_markdown_suppress_fullwidth_inline_gap(
+  left : PdfMarkdownTextChunk?,
+  right : PdfMarkdownTextChunk,
+  gap : Double,
+) -> Bool {
+  match left {
+    Some(left) =>
+      pdf_markdown_chunk_ends_fullwidth(left) &&
+      pdf_markdown_chunk_starts_fullwidth(right) &&
+      gap <= pdf_markdown_fullwidth_inline_gap_tolerance(left, right)
+    None => false
+  }
+}
+
+///|
 fn pdf_markdown_chunks_to_codepoints(
   chunks : ArrayView[PdfMarkdownTextChunk],
 ) -> Array[Int] {
@@ -606,6 +701,7 @@ fn pdf_markdown_chunks_to_codepoints(
   let output : Array[Int] = []
   let mut current_y : Double? = None
   let mut current_right = 0.0
+  let mut previous_chunk : PdfMarkdownTextChunk? = None
   for chunk in sorted {
     match current_y {
       None => current_y = Some(chunk.y)
@@ -613,12 +709,19 @@ fn pdf_markdown_chunks_to_codepoints(
         if (chunk.y - y).abs() > pdf_markdown_line_y_tolerance {
           pdf_markdown_push_line_break(output)
           current_y = Some(chunk.y)
-        } else if chunk.x - current_right > pdf_markdown_inline_x_tolerance {
+          previous_chunk = None
+        } else if chunk.x - current_right > pdf_markdown_inline_x_tolerance &&
+          !pdf_markdown_suppress_fullwidth_inline_gap(
+            previous_chunk,
+            chunk,
+            chunk.x - current_right,
+          ) {
           pdf_markdown_push_word_space(output)
         }
     }
     pdf_markdown_append_codepoints(output, chunk.codepoints[:])
     current_right = chunk.x + chunk.width
+    previous_chunk = Some(chunk)
   }
   output
 }
@@ -666,15 +769,10 @@ fn pdf_markdown_push_text_codepoints_of_streams(
         )
       Op_Tj(text) => pdf_markdown_push_extracted_text(output, extractor, text)
       Op_TJ(PdfArray(items)) =>
-        for item in items {
-          match item {
-            PdfString(text) =>
-              pdf_markdown_push_extracted_text(output, extractor, text)
-            PdfReal(value) if pdf_markdown_tj_adjustment_is_word_space(value) =>
-              pdf_markdown_push_word_space(output)
-            _ => ()
-          }
-        }
+        pdf_markdown_append_codepoints(
+          output,
+          pdf_markdown_extracted_codepoints_of_text_array(extractor, items[:])[:],
+        )
       Op_quote(text) => {
         pdf_markdown_push_line_break(output)
         pdf_markdown_push_extracted_text(output, extractor, text)

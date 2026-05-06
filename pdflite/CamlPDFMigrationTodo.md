@@ -157,6 +157,13 @@ Current backend snapshot:
   while preventing custom no-ToUnicode metadata fonts from producing `u�`-style
   placeholder text; the Unicode CJK chart now extracts 1,451,941 characters
   with no raw controls or replacement characters.~~
+- [x] ~~Make Markdown `TJ` word-spacing context-aware so large negative
+  adjustments still preserve Latin and Hangul word boundaries, while synthetic
+  separators are suppressed between Han/kana-style ToUnicode glyphs; the
+  synthetic CJK and Hangul regressions are covered and the Unicode chart
+  remains at 1,451,941 characters with no raw controls or replacement
+  characters, indicating its visible CJK spaces are table/content layout rather
+  than this `TJ` adjustment case.~~
 - [ ] Review remaining Unicode CJK chart Markdown quality gaps against
   MarkItDown and pdftotext, especially table-cell polish, line joining, and
   any missing chart cells.
