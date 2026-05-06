@@ -87,8 +87,9 @@ Current estimate:
 - [x] ~~Guard shared reader ASCII integer parsing with Int64 bounds before
   converting to `Int`, so overflowing xref offsets and `startxref` pointers
   enter malformed-reader recovery instead of wrapping.~~
-- [x] ~~Reuse a single `ByteCursor` during malformed reconstruction xref
-  scanning, avoiding per-candidate cursor allocation on large recovered files.~~
+- [x] ~~Reuse `ByteCursor` instances across malformed reconstruction xref,
+  object, trailer, and xref-stream scans, avoiding per-candidate cursor
+  allocation on large recovered files.~~
 - [x] ~~Cache standard font aliases, encoding names, font/CID/CMap dictionary
   keys, and ToUnicode writer keys so text read/write hot paths reuse stable
   `PdfName` values.~~
@@ -168,9 +169,9 @@ Current estimate:
 - [x] ~~Reader ASCII integer parsing now rejects values outside MoonBit `Int`
   range with an Int64 guard, including public recovery coverage for an
   overflowing `startxref` pointer.~~
-- [x] ~~Malformed reconstruction xref scanning now reuses one `ByteCursor`
-  across candidate offsets instead of allocating a cursor for every
-  digit-looking byte.~~
+- [x] ~~Malformed reconstruction now reuses scan-local `ByteCursor` instances
+  across candidate offsets for xref, object, trailer, and xref-stream
+  discovery instead of allocating a cursor for every candidate byte.~~
 - [x] ~~Text/font parsing and writing now share cached standard font,
   encoding, font dictionary, CID, CMap, and ToUnicode names in the main text
   hot paths.~~

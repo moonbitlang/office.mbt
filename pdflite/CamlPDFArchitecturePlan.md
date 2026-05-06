@@ -109,10 +109,10 @@ work changes.
    Int64 overflow guard before falling back to the existing real-number parser.
    Shared reader ASCII integer parsing also accumulates through Int64 and
    rejects values outside MoonBit `Int` range before they become xref offsets,
-   subsection counts, or `startxref` pointers. Malformed reconstruction xref
-   scanning reuses one `ByteCursor` across candidate offsets instead of
-   allocating a fresh cursor for every digit-looking byte in large recovered
-   files.
+   subsection counts, or `startxref` pointers. Malformed reconstruction now
+   reuses scan-local `ByteCursor` instances across candidate offsets for xref,
+   object, trailer, and xref-stream discovery instead of allocating a fresh
+   cursor for every candidate byte in large recovered files.
    Remaining focus: broader malformed xref-table recovery and encrypted
    parser-state edge cases beyond current object-stream coverage.
 

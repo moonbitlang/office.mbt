@@ -1317,14 +1317,13 @@ fn pdf_reader_sanitize_trailer(
 }
 
 ///|
-fn pdf_read_reconstructed_object_at(
-  data : BytesView,
+fn ByteCursor::read_reconstructed_object_at(
+  self : ByteCursor,
   position : Int,
   xrefs : ArrayView[PdfClassicXRefEntry],
 ) -> PdfParsedIndirectObject raise PdfError {
-  let cursor = byte_cursor_of_view(data)
-  cursor.seek_pdf_absolute(position)
-  cursor.read_reconstructed_indirect_object_at_current(xrefs)
+  self.seek_pdf_absolute(position)
+  self.read_reconstructed_indirect_object_at_current(xrefs)
 }
 
 ///|
@@ -1462,9 +1461,9 @@ fn pdf_read_reconstructed_objects(
 ) -> Array[PdfParsedIndirectObject] raise PdfError {
   let objects : Array[PdfParsedIndirectObject] = []
   let xrefs = pdf_read_reconstructed_xrefs(data)
+  let cursor = byte_cursor_of_view(data)
   for xref in xrefs {
-    let parsed : Result[PdfParsedIndirectObject, Error] = try? pdf_read_reconstructed_object_at(
-      data,
+    let parsed : Result[PdfParsedIndirectObject, Error] = try? cursor.read_reconstructed_object_at(
       xref.offset,
       xrefs[:],
     )
@@ -1481,23 +1480,21 @@ fn pdf_read_reconstructed_objects(
 }
 
 ///|
-fn pdf_read_reconstructed_trailer_at(
-  data : BytesView,
+fn ByteCursor::read_reconstructed_trailer_at(
+  self : ByteCursor,
   position : Int,
 ) -> PdfObject raise PdfError {
-  let cursor = byte_cursor_of_view(data)
-  cursor.seek_pdf_absolute(position)
-  cursor.read_pdf_trailer_dictionary()
+  self.seek_pdf_absolute(position)
+  self.read_pdf_trailer_dictionary()
 }
 
 ///|
-fn pdf_reconstructed_xref_stream_trailer_at(
-  data : BytesView,
+fn ByteCursor::read_reconstructed_xref_stream_trailer_at(
+  self : ByteCursor,
   position : Int,
 ) -> PdfObject raise PdfError {
-  let cursor = byte_cursor_of_view(data)
-  cursor.seek_pdf_absolute(position)
-  let parsed = cursor.read_reconstructed_indirect_prefix_at_current()
+  self.seek_pdf_absolute(position)
+  let parsed = self.read_reconstructed_indirect_prefix_at_current()
   match parsed.object {
     PdfDictionary(_) as dictionary =>
       if pdf_reader_xref_stream_type_ok(dictionary) {
@@ -1515,20 +1512,21 @@ fn pdf_read_reconstructed_trailers(
   include_xref_streams? : Bool = true,
 ) -> Array[PdfObject] {
   let trailers : Array[PdfObject] = []
+  let cursor = byte_cursor_of_view(data)
   for position = 0; position < data.length(); position = position + 1 {
     if pdf_view_matches_ascii_at(data, position, [
         116, 114, 97, 105, 108, 101, 114,
       ]) {
-      let trailer : Result[PdfObject, Error] = try? pdf_read_reconstructed_trailer_at(
-        data, position,
+      let trailer : Result[PdfObject, Error] = try? cursor.read_reconstructed_trailer_at(
+        position,
       )
       match trailer {
         Ok(object) => trailers.push(object)
         Err(_) => ()
       }
     } else if include_xref_streams && pdf_is_digit_byte(data[position].to_int()) {
-      let trailer : Result[PdfObject, Error] = try? pdf_reconstructed_xref_stream_trailer_at(
-        data, position,
+      let trailer : Result[PdfObject, Error] = try? cursor.read_reconstructed_xref_stream_trailer_at(
+        position,
       )
       match trailer {
         Ok(object) => trailers.push(object)
@@ -1540,14 +1538,13 @@ fn pdf_read_reconstructed_trailers(
 }
 
 ///|
-fn pdf_reconstructed_xref_stream_section_at(
-  data : BytesView,
+fn ByteCursor::read_reconstructed_xref_stream_section_at(
+  self : ByteCursor,
   position : Int,
 ) -> (PdfXRefSection, Int) raise PdfError {
-  let cursor = byte_cursor_of_view(data)
-  cursor.seek_pdf_absolute(position)
-  let section = cursor.read_pdf_xref_stream_section()
-  (section, cursor.absolute_position())
+  self.seek_pdf_absolute(position)
+  let section = self.read_pdf_xref_stream_section()
+  (section, self.absolute_position())
 }
 
 ///|
@@ -1555,11 +1552,12 @@ fn pdf_read_reconstructed_xref_stream_sections(
   data : BytesView,
 ) -> Array[PdfXRefSection] {
   let sections : Array[PdfXRefSection] = []
+  let cursor = byte_cursor_of_view(data)
   let mut position = 0
   while position < data.length() {
     if pdf_reader_reconstruction_indirect_header_at(data, position) {
-      let parsed : Result[(PdfXRefSection, Int), Error] = try? pdf_reconstructed_xref_stream_section_at(
-        data, position,
+      let parsed : Result[(PdfXRefSection, Int), Error] = try? cursor.read_reconstructed_xref_stream_section_at(
+        position,
       )
       match parsed {
         Ok((section, next_position)) => {
