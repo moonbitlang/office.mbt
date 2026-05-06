@@ -65,20 +65,73 @@ test "private merge helpers cover guards and membership branches" {
 }
 
 ///|
+test "private merge destination-name lookup preserves local and global precedence" {
+  let old_name = @ascii.encode("shared")
+  let local_name = @ascii.encode("shared-f0")
+  let global_name = @ascii.encode("shared-f1")
+  @test.assert_eq(
+    pdf_merge_destination_name_lookup([(old_name, local_name)], [
+      (old_name, global_name),
+    ]).changed(old_name),
+    local_name,
+  )
+  @test.assert_eq(
+    pdf_merge_destination_name_lookup([], [(old_name, global_name)]).changed(
+      old_name,
+    ),
+    global_name,
+  )
+  @test.assert_eq(
+    pdf_merge_destination_name_lookup(
+      [(old_name, local_name), (old_name, global_name)],
+      [],
+    ).changed(old_name),
+    local_name,
+  )
+  let old_catalog_name = pdf_merge_name("/Shared")
+  let local_catalog_name = pdf_merge_name("/Shared-f0")
+  let global_catalog_name = pdf_merge_name("/Shared-f1")
+  @test.assert_eq(
+    pdf_merge_catalog_destination_name_lookup(
+      [(old_catalog_name, local_catalog_name)],
+      [(old_catalog_name, global_catalog_name)],
+    ).changed(old_catalog_name),
+    local_catalog_name,
+  )
+  @test.assert_eq(
+    pdf_merge_catalog_destination_name_lookup([], [
+      (old_catalog_name, global_catalog_name),
+    ]).changed(old_catalog_name),
+    global_catalog_name,
+  )
+  @test.assert_eq(
+    pdf_merge_catalog_destination_name_lookup(
+      [
+        (old_catalog_name, local_catalog_name),
+        (old_catalog_name, global_catalog_name),
+      ],
+      [],
+    ).changed(old_catalog_name),
+    local_catalog_name,
+  )
+}
+
+///|
 test "private merge destination-name rewrite covers action and stream callsites" {
   let old_name = @ascii.encode("shared")
   let new_name = @ascii.encode("shared-f0")
   let changes = [(old_name, new_name)]
+  let name_lookup = pdf_merge_destination_name_lookup(changes, changes)
+  let empty_name_lookup = pdf_merge_destination_name_lookup([], [])
+  let empty_catalog_lookup = pdf_merge_catalog_destination_name_lookup([], [])
   @test.assert_eq(
     try! pdf_merge_rewrite_destination_callsite_object(
       PdfDictionary([
         (pdf_merge_s_key(), PdfNameObject(pdf_dest_goto_name())),
         (pdf_dest_d_key(), PdfString(old_name)),
       ]),
-      changes,
-      changes,
-      [],
-      [],
+      name_lookup,
+      empty_catalog_lookup,
     ),
     PdfDictionary([
       (pdf_merge_s_key(), PdfNameObject(pdf_dest_goto_name())),
@@ -91,10 +144,8 @@ test "private merge destination-name rewrite covers action and stream callsites"
         PdfDictionary([(pdf_merge_dest_key(), PdfString(old_name))]),
         StreamGot(@ascii.encode("data")),
       ),
-      changes,
-      changes,
-      [],
-      [],
+      name_lookup,
+      empty_catalog_lookup,
     ),
     pdf_stream(
       PdfDictionary([(pdf_merge_dest_key(), PdfString(new_name))]),
@@ -104,16 +155,17 @@ test "private merge destination-name rewrite covers action and stream callsites"
   let old_catalog_name = pdf_merge_name("/Shared")
   let new_catalog_name = pdf_merge_name("/Shared-f0")
   let catalog_changes = [(old_catalog_name, new_catalog_name)]
+  let catalog_lookup = pdf_merge_catalog_destination_name_lookup(
+    catalog_changes, catalog_changes,
+  )
   @test.assert_eq(
     try! pdf_merge_rewrite_destination_callsite_object(
       PdfDictionary([
         (pdf_merge_s_key(), PdfNameObject(pdf_dest_goto_name())),
         (pdf_dest_d_key(), PdfNameObject(old_catalog_name)),
       ]),
-      [],
-      [],
-      catalog_changes,
-      catalog_changes,
+      empty_name_lookup,
+      catalog_lookup,
     ),
     PdfDictionary([
       (pdf_merge_s_key(), PdfNameObject(pdf_dest_goto_name())),
@@ -123,10 +175,8 @@ test "private merge destination-name rewrite covers action and stream callsites"
   @test.assert_eq(
     try! pdf_merge_rewrite_destination_callsite_object(
       PdfDictionary([(pdf_merge_dest_key(), PdfNameObject(old_catalog_name))]),
-      [],
-      [],
-      catalog_changes,
-      catalog_changes,
+      empty_name_lookup,
+      catalog_lookup,
     ),
     PdfDictionary([(pdf_merge_dest_key(), PdfNameObject(new_catalog_name))]),
   )

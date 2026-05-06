@@ -407,7 +407,10 @@ work changes.
    duplicate-name scans across input catalogs. Destination-name collision
    detection for merged name trees and old-style catalog `/Dests` dictionaries
    now uses hash-backed byte/name sets while preserving existing suffix
-   allocation behavior.
+   allocation behavior. Destination callsite rewriting now builds hash-backed
+   local/global lookup maps once per document rewrite pass, preserving
+   document-local precedence and global fallback without repeated change-list
+   scans.
    Remaining focus: more CamlPDF example-level acceptance fixtures and
    compatibility behavior for unusual real-world documents.
 

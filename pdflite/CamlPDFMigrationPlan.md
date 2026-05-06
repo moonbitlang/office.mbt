@@ -1403,7 +1403,10 @@ MoonBit consequences for this project:
     the retained entry list across input documents. Destination-name collision
     checks for merged name trees and old-style catalog `/Dests` dictionaries
     now use hash-backed byte/name sets while preserving collision suffix
-    allocation. Generic
+    allocation. Destination callsite rewriting now uses hash-backed local/global
+    lookup maps for byte-string and catalog-name destinations, preserving
+    document-local precedence and global fallback without rescanning change
+    lists during object graph traversal. Generic
     name-dictionary merge support now retains non-destination `/Names` name
     trees such as `/EmbeddedFiles` and `/JavaScript`; `/Dests` remains on the
     destination-aware path so page-object targets are retargeted. The merge
