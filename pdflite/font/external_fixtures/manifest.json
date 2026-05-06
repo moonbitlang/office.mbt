@@ -1,0 +1,11 @@
+[
+  {
+    "id": "itext_type3_logo",
+    "filename": "cmp_itext_logo.pdf",
+    "url": "https://raw.githubusercontent.com/itext/i5js-sandbox/master/cmpfiles/fonts/cmp_itext_logo.pdf",
+    "source": "https://github.com/itext/i5js-sandbox",
+    "license": "AGPL-version per PDF producer metadata",
+    "redistribution": "download-only; do not vendor the PDF in this repository",
+    "acceptance_focus": "real Type3 custom-encoding font with indirect CharProc streams"
+  }
+]

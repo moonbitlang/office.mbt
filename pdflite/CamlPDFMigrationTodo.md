@@ -7,7 +7,7 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 97.5%.
+- Native main-feature parity: 97.6%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
   breadth: 85-90%.
 
@@ -185,8 +185,11 @@ Current backend snapshot:
   any missing chart cells.
 - [x] ~~Add Type3 glyph-program/resource coverage where a CharProc consumes
   Type3 `/Resources` through an XObject and named inline-image color space.~~
-- [ ] Add fixture-driven Type3 glyph-program/resource coverage from real PDFs
-  when suitable fixtures are available.
+- [x] ~~Add fixture-driven Type3 glyph-program coverage from a real PDF; the
+  optional native font fixture now reads the iText Type3 logo sample, indirect
+  CharProc streams, metrics, custom encoding differences, and page text.~~
+- [ ] Add fixture-driven Type3 `/Resources` coverage from a real PDF when a
+  suitable fixture is available.
 - [ ] Add more malformed xref-table/xref-stream/object-stream recovery cases
   from real-world PDFs.
 - [x] ~~Add a native reader-boundary gate for the next available predefined CMap
@@ -398,10 +401,14 @@ Current backend snapshot:
   boundaries.~~
 - [ ] Add remaining rare predefined CMap family coverage when useful source
   tables or fixtures are available.
-- [ ] Add further real-world Type3 glyph-program/resource coverage when
-  suitable fixtures are available.
-- [ ] Add licensed real-world DCT/JPEG and CCITT image corpus coverage; keep
-  optional JBIG2/JPEG pixel-decoder decisions explicit.
+- [x] ~~Add further real-world Type3 glyph-program coverage; the optional native
+  font fixture gates the iText Type3 logo sample.~~
+- [ ] Add further real-world Type3 `/Resources` coverage when a suitable
+  fixture is available.
+- [x] ~~Add licensed real-world DCT/JPEG and CCITT image corpus coverage; the
+  optional native image fixture package gates py-pdf sample-file JPEG,
+  CCITT/FaxDecode, and indexed-CMYK image XObjects while keeping optional
+  JBIG2/JPEG pixel-decoder decisions explicit.~~
 - [x] ~~Native normal Flate encode/decode now uses the vendored miniz-compatible
   C path, with pure MoonBit fallback preserved for non-native targets and
   parser prefix decoding.~~
@@ -750,13 +757,16 @@ Current backend snapshot:
 - [x] ~~Type3 no-`/ToUnicode` custom-encoding fallback through AGL glyph names,
   StandardEncoding fill-in, reverse lookup, and preserved CharProc streams
   through native compressed read/write/reread boundaries.~~
-- [ ] Further real-world Type3 glyph-program/resource coverage when suitable
-  fixtures are available.
+- [x] ~~Further real-world Type3 glyph-program coverage using the download-only
+  iText Type3 logo fixture.~~
+- [ ] Further real-world Type3 `/Resources` coverage when a suitable fixture is
+  available.
 - [x] ~~TrueType descriptor metadata survives read_font_descriptor and embedded
   TrueType native read/write/reread gates.~~
 - [x] ~~Structured DCT/JPEG marker payload native gate for Flate-to-DCT image
   XObjects and DCT inline images with embedded `EI` bytes before EOI.~~
-- [ ] Additional real-world DCT/JPEG encoded-payload corpus coverage.
+- [x] ~~Additional real-world DCT/JPEG encoded-payload corpus coverage through
+  the download-only py-pdf pdflatex image fixture.~~
 - [ ] Optional external JBIG2 decoder integration and broader CCITT corpus
   validation.
 - [x] ~~Explicit zlib-style Flate level API across direct Flate, filter, and
@@ -888,7 +898,8 @@ Current backend snapshot:
   gate.~~
 - [x] ~~Add explicit Flate compression-level encoding APIs.~~
 - [x] ~~Improve fast Flate-level behavior for incompressible streams.~~
-- [ ] Add real-world CCITT image corpus coverage.
+- [x] ~~Add real-world CCITT image corpus coverage through the download-only
+  py-pdf ImageMagick CCITTFaxDecode fixture.~~
 - [x] ~~Add a multi-revision malformed xref-stream/object-stream recovery gate.~~
 - [x] ~~Add a real-file malformed compressed-xref incremental update recovery
   gate.~~
