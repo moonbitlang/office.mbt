@@ -1768,8 +1768,9 @@ reader or writer invariant is narrower than a whole-document workflow:
 Near-term work should extend this suite with the next visible public workflow
 gate, then fix the reader/parser/encryption gap it exposes. Isolated malformed
 input quirks should be added only when they unblock one of the native gates.
-Broader backend validation remains deferred until native feature parity is
-stable.
+All-target type checking now passes with
+`moon check --target all --warn-list +73`. Broader backend test validation
+remains deferred until native feature parity is stable.
 
 ## Update Discipline
 

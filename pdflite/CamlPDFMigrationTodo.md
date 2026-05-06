@@ -129,6 +129,8 @@ Current estimate:
   spelling or large-file profiles expose remaining gaps.
 - [ ] Profile and tune remaining large-file hot paths for object streams,
   filters, image extraction, and non-ASCII text paths.
+- [x] ~~Run all-target type checking with `moon check --target all --warn-list
+  +73`; native remains the test-validation target.~~
 - [ ] Revisit all-backend validation after native parity is stable.
 
 ## Big Picture Checklist
@@ -495,6 +497,8 @@ Current estimate:
 - [x] ~~Full native test suite is passing with coverage currently complete.~~
 - [x] ~~Known native-only interface divergence is documented for secure-random
   AES helpers and `async_io`.~~
+- [x] ~~All-target type checking passes with `moon check --target all
+  --warn-list +73`; full non-native test validation remains deferred.~~
 - [ ] All-backend validation after native parity is stable.
 - [x] ~~Checked-in CamlPDF fixture PDFs read, multi-page text-extract,
   compressed-write, document-wide stream-decompress, and reread through native

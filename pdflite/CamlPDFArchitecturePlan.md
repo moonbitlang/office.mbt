@@ -497,8 +497,11 @@ and backend breadth, is about 84-89% complete.
   recovery after corrupting the final `startxref`, including reused
   object-number payload recovery, compressed rewrite/reread, and multi-page
   text extraction.
-- Deferred: all-backend stabilization. Native-only secure-random/encrypted
-  writer APIs and `async_io` intentionally diverge from WasmGC today.
+- Covered: all-target `moon check --target all --warn-list +73` type-checks
+  cleanly after native stabilization.
+- Deferred: full all-backend test stabilization. Native-only
+  secure-random/encrypted writer APIs and `async_io` intentionally diverge from
+  WasmGC today.
 - Deferred: larger real-world corpus testing, performance tuning, and optional
   external tool integration for filters that CamlPDF handled through C stubs or
   external binaries.
