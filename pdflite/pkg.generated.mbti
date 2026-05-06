@@ -123,6 +123,8 @@ pub fn pdf_authenticate_user_password(Bool, BytesView, Int, BytesView, BytesView
 
 pub fn pdf_authenticate_user_password_aesv3(Bool, BytesView, BytesView) -> Bool raise PdfError
 
+pub fn pdf_banlist_of_p(Int) -> Array[PdfPermission]
+
 pub let pdf_bookmark_black : PdfBookmarkColour
 
 pub fn pdf_build_name_tree(Bool, PdfDocument, ArrayView[(Bytes, PdfObject)]) -> PdfObject raise PdfError
@@ -221,6 +223,12 @@ pub fn pdf_decode_stream(PdfObject) -> PdfObject raise PdfError
 
 pub fn pdf_decode_stream_onestage(PdfObject) -> PdfObject raise PdfError
 
+pub fn pdf_decrypt_pdf(PdfDocument, BytesView, owner_password? : BytesView?, no_encrypt_metadata? : Bool) -> (PdfDocument?, Array[PdfPermission]) raise PdfError
+
+pub fn pdf_decrypt_pdf_owner(PdfDocument, BytesView, no_encrypt_metadata? : Bool) -> PdfDocument? raise PdfError
+
+pub fn pdf_decrypt_single_stream(PdfDocument, Int, Int, PdfObject, user_password? : BytesView?, owner_password? : BytesView?, no_encrypt_metadata? : Bool) -> PdfObject? raise PdfError
+
 pub let pdf_default_version : PdfVersion
 
 pub fn pdf_deterministic_aes_iv_provider_from_seed(BytesView) -> (Int, Int, Int) -> Bytes raise PdfError
@@ -253,6 +261,16 @@ pub fn pdf_encode_stream_with_filter_and_predictor(PdfName, Int, Int, Int, Int, 
 
 pub fn pdf_encoding_of_name(PdfName) -> PdfEncoding?
 
+pub fn pdf_encrypt_pdf_128bit(PdfDocument, BytesView, BytesView, ArrayView[PdfPermission], file_id? : BytesView) -> PdfDocument raise PdfError
+
+pub fn pdf_encrypt_pdf_40bit(PdfDocument, BytesView, BytesView, ArrayView[PdfPermission], file_id? : BytesView) -> PdfDocument raise PdfError
+
+pub fn pdf_encrypt_pdf_AES256ISO_with_providers(PdfDocument, Bool, BytesView, BytesView, ArrayView[PdfPermission], (PdfAesV3RandomField, Int) -> Bytes raise PdfError, (Int, Int, Int) -> Bytes raise PdfError, file_id? : BytesView) -> PdfDocument raise PdfError
+
+pub fn pdf_encrypt_pdf_AES256_with_providers(PdfDocument, Bool, BytesView, BytesView, ArrayView[PdfPermission], (PdfAesV3RandomField, Int) -> Bytes raise PdfError, (Int, Int, Int) -> Bytes raise PdfError, file_id? : BytesView) -> PdfDocument raise PdfError
+
+pub fn pdf_encrypt_pdf_AES_with_iv_provider(PdfDocument, Bool, BytesView, BytesView, ArrayView[PdfPermission], (Int, Int, Int) -> Bytes raise PdfError, file_id? : BytesView) -> PdfDocument raise PdfError
+
 pub fn pdf_encryption_file_key(Bool, BytesView, Int, BytesView, Int, BytesView, Int) -> Bytes
 
 pub fn pdf_encryption_object_key(PdfCryptType, Int, Int, BytesView, Int) -> Bytes
@@ -279,6 +297,8 @@ pub fn pdf_format_real(Double) -> Bytes raise PdfError
 
 pub fn pdf_generate_id(String, () -> Double) -> PdfObject
 
+pub fn pdf_get_encryption_values(PdfDocument) -> PdfEncryptionValues raise PdfError
+
 pub fn pdf_get_image_24bpp(PdfDocument, PdfObject, PdfObject) -> PdfImage raise PdfError
 
 pub fn pdf_get_jpeg_data(ByteCursor) -> Bytes raise PdfError
@@ -292,6 +312,8 @@ pub fn pdf_image_colspace(PdfDocument, PdfObject, PdfObject) -> PdfColourSpace r
 pub fn pdf_int_array_of_bytes(BytesView) -> Array[Int]
 
 pub fn pdf_is_delimiter_byte(Int) -> Bool
+
+pub fn pdf_is_encrypted(PdfDocument) -> Bool
 
 pub fn pdf_is_identity_h(PdfFont) -> Bool
 
@@ -461,6 +483,8 @@ pub fn pdf_pdfdocstring_of_codepoints(ArrayView[Int]) -> Bytes raise PdfError
 
 pub fn pdf_pdfdocstring_of_utf8(BytesView) -> Bytes raise PdfError
 
+pub fn pdf_permissions(PdfDocument) -> Array[PdfPermission] raise PdfError
+
 pub fn pdf_permissions_of_p(Int) -> Array[PdfPermission]
 
 pub fn pdf_postpend_operators(PdfDocument, ArrayView[PdfContentOp], PdfPage, fast? : Bool) -> PdfPage raise PdfError
@@ -518,6 +542,10 @@ pub fn pdf_read_page_labels(PdfDocument) -> Array[PdfPageLabel] raise PdfError
 pub fn pdf_read_primitive_document_from_bytes(Bytes) -> PdfDocument raise PdfError
 
 pub fn pdf_read_primitive_document_from_view(BytesView) -> PdfDocument raise PdfError
+
+pub fn pdf_recrypt_pdf(PdfDocument, BytesView, renumber? : Bool) -> PdfDocument raise PdfError
+
+pub fn pdf_recrypt_pdf_with_iv_provider(PdfDocument, BytesView, (Int, Int, Int) -> Bytes raise PdfError, renumber? : Bool) -> PdfDocument raise PdfError
 
 pub fn pdf_recurse_array((PdfObject) -> PdfObject, ArrayView[PdfObject]) -> PdfObject
 
@@ -626,6 +654,8 @@ pub fn pdf_utf16be_of_codepoints(ArrayView[Int]) -> Bytes raise PdfError
 pub fn pdf_utf8_of_codepoints(ArrayView[Int]) -> Bytes raise PdfError
 
 pub fn pdf_utf8_of_pdfdocstring(BytesView) -> Bytes raise PdfError
+
+pub fn pdf_what_encryption(PdfDocument) -> PdfEncryptionMethod? raise PdfError
 
 pub fn pdf_write_colour_space(PdfDocument, PdfColourSpace) -> PdfObject
 

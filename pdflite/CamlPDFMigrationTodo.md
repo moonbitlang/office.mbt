@@ -7,7 +7,7 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 96.9%.
+- Native main-feature parity: 97.0%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
   breadth: 85-90%.
 
@@ -88,6 +88,11 @@ Current backend snapshot:
   typed function core.~~
 - [x] ~~Expose `.repos/pdfcmap.mli`-referenced standalone CMap parse helper over
   the existing document-aware CMap stream parser.~~
+- [x] ~~Expose `.repos/pdfcrypt.mli`-referenced standalone encryption helpers
+  for document decrypt, owner decrypt, encrypted-state introspection,
+  encryption-value parsing, single-stream decrypt, permission-mask decoding,
+  ARC4 encrypt/recrypt, explicit-provider AES encrypt/recrypt, and native
+  secure-random AES convenience encrypt wrappers.~~
 - [ ] Decide whether to emulate CamlPDF's `charcode_extractor` debug stderr
   output; current wrappers accept the `debug` flag for API shape but keep the
   lookup pure.

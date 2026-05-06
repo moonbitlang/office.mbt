@@ -1668,6 +1668,218 @@ pub fn PdfDocument::decrypt_with_owner_password(
 }
 
 ///|
+pub fn pdf_decrypt_pdf(
+  document : PdfDocument,
+  user_password : BytesView,
+  owner_password? : BytesView? = None,
+  no_encrypt_metadata? : Bool = false,
+) -> (PdfDocument?, Array[PdfPermission]) raise PdfError {
+  match
+    document.decrypt_with_passwords(
+      user_password=Some(user_password),
+      owner_password~,
+      no_encrypt_metadata~,
+    ) {
+    Some(result) => (Some(result.document), result.denied_permissions)
+    None => (None, document.permissions())
+  }
+}
+
+///|
+pub fn pdf_decrypt_pdf_owner(
+  document : PdfDocument,
+  owner_password : BytesView,
+  no_encrypt_metadata? : Bool = false,
+) -> PdfDocument? raise PdfError {
+  match
+    document.decrypt_with_owner_password(owner_password, no_encrypt_metadata~) {
+    Some(result) => Some(result.document)
+    None => None
+  }
+}
+
+///|
+pub fn pdf_is_encrypted(document : PdfDocument) -> Bool {
+  document.is_encrypted()
+}
+
+///|
+pub fn pdf_what_encryption(
+  document : PdfDocument,
+) -> PdfEncryptionMethod? raise PdfError {
+  document.what_encryption()
+}
+
+///|
+pub fn pdf_permissions(
+  document : PdfDocument,
+) -> Array[PdfPermission] raise PdfError {
+  document.permissions()
+}
+
+///|
+pub fn pdf_get_encryption_values(
+  document : PdfDocument,
+) -> PdfEncryptionValues raise PdfError {
+  document.encryption_values()
+}
+
+///|
+pub fn pdf_decrypt_single_stream(
+  document : PdfDocument,
+  object_number : Int,
+  generation : Int,
+  stream : PdfObject,
+  user_password? : BytesView? = None,
+  owner_password? : BytesView? = None,
+  no_encrypt_metadata? : Bool = false,
+) -> PdfObject? raise PdfError {
+  document.decrypt_single_stream(
+    object_number,
+    generation,
+    stream,
+    user_password~,
+    owner_password~,
+    no_encrypt_metadata~,
+  )
+}
+
+///|
+pub fn pdf_encrypt_pdf_40bit(
+  document : PdfDocument,
+  user_password : BytesView,
+  owner_password : BytesView,
+  denied_permissions : ArrayView[PdfPermission],
+  file_id? : BytesView = [],
+) -> PdfDocument raise PdfError {
+  document.encrypt_40bit(
+    user_password,
+    owner_password,
+    denied_permissions,
+    file_id~,
+  )
+}
+
+///|
+pub fn pdf_encrypt_pdf_128bit(
+  document : PdfDocument,
+  user_password : BytesView,
+  owner_password : BytesView,
+  denied_permissions : ArrayView[PdfPermission],
+  file_id? : BytesView = [],
+) -> PdfDocument raise PdfError {
+  document.encrypt_128bit(
+    user_password,
+    owner_password,
+    denied_permissions,
+    file_id~,
+  )
+}
+
+///|
+pub fn pdf_encrypt_pdf_AES_with_iv_provider(
+  document : PdfDocument,
+  encrypt_metadata : Bool,
+  user_password : BytesView,
+  owner_password : BytesView,
+  denied_permissions : ArrayView[PdfPermission],
+  iv_provider : (Int, Int, Int) -> PdfBytes raise PdfError,
+  file_id? : BytesView = [],
+) -> PdfDocument raise PdfError {
+  document.encrypt_128bit_aesv2_with_iv_provider(
+    user_password,
+    owner_password,
+    denied_permissions,
+    iv_provider,
+    encrypt_metadata~,
+    file_id~,
+  )
+}
+
+///|
+pub fn pdf_encrypt_pdf_AES256_with_providers(
+  document : PdfDocument,
+  encrypt_metadata : Bool,
+  user_password : BytesView,
+  owner_password : BytesView,
+  denied_permissions : ArrayView[PdfPermission],
+  random_provider : (PdfAesV3RandomField, Int) -> PdfBytes raise PdfError,
+  iv_provider : (Int, Int, Int) -> PdfBytes raise PdfError,
+  file_id? : BytesView = [],
+) -> PdfDocument raise PdfError {
+  document.encrypt_256bit_aesv3_with_providers(
+    user_password,
+    owner_password,
+    denied_permissions,
+    random_provider,
+    iv_provider,
+    encrypt_metadata~,
+    file_id~,
+  )
+}
+
+///|
+pub fn pdf_encrypt_pdf_AES256ISO_with_providers(
+  document : PdfDocument,
+  encrypt_metadata : Bool,
+  user_password : BytesView,
+  owner_password : BytesView,
+  denied_permissions : ArrayView[PdfPermission],
+  random_provider : (PdfAesV3RandomField, Int) -> PdfBytes raise PdfError,
+  iv_provider : (Int, Int, Int) -> PdfBytes raise PdfError,
+  file_id? : BytesView = [],
+) -> PdfDocument raise PdfError {
+  document.encrypt_256bit_aesv3_iso_with_providers(
+    user_password,
+    owner_password,
+    denied_permissions,
+    random_provider,
+    iv_provider,
+    encrypt_metadata~,
+    file_id~,
+  )
+}
+
+///|
+pub fn pdf_recrypt_pdf_with_iv_provider(
+  document : PdfDocument,
+  password : BytesView,
+  iv_provider : (Int, Int, Int) -> PdfBytes raise PdfError,
+  renumber? : Bool = true,
+) -> PdfDocument raise PdfError {
+  let input = if renumber {
+    document.renumber_objects_compact()
+  } else {
+    document.copy()
+  }
+  let saved = match input.saved_encryption() {
+    Some(saved) => saved
+    None => raise EncryptionSavedStateExpected
+  }
+  match saved.values.crypt_type {
+    PdfCryptAESV2 =>
+      input.recrypt_with_password_aesv2_with_iv_provider(password, iv_provider)
+    PdfCryptAESV3(_) =>
+      input.recrypt_with_password_aesv3_with_iv_provider(password, iv_provider)
+    PdfCryptARC4(_, _) => input.recrypt_with_password(password)
+  }
+}
+
+///|
+pub fn pdf_recrypt_pdf(
+  document : PdfDocument,
+  password : BytesView,
+  renumber? : Bool = true,
+) -> PdfDocument raise PdfError {
+  let input = if renumber {
+    document.renumber_objects_compact()
+  } else {
+    document.copy()
+  }
+  input.recrypt_with_password(password)
+}
+
+///|
 fn pdf_password_padding_fixed() -> FixedArray[Byte] {
   [
     0x28, 0xbf, 0x4e, 0x5e, 0x4e, 0x75, 0x8a, 0x41, 0x64, 0x00, 0x4e, 0x56, 0xff,
@@ -3042,4 +3254,9 @@ pub fn pdf_permissions_of_p(mask : Int) -> Array[PdfPermission] {
     permissions.push(PdfNoPrint)
   }
   permissions
+}
+
+///|
+pub fn pdf_banlist_of_p(mask : Int) -> Array[PdfPermission] {
+  pdf_permissions_of_p(mask)
 }

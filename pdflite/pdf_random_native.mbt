@@ -118,6 +118,60 @@ pub fn PdfDocument::encrypt_256bit_aesv3_iso(
 }
 
 ///|
+pub fn pdf_encrypt_pdf_AES(
+  document : PdfDocument,
+  encrypt_metadata : Bool,
+  user_password : BytesView,
+  owner_password : BytesView,
+  denied_permissions : ArrayView[PdfPermission],
+  file_id? : BytesView = [],
+) -> PdfDocument raise PdfError {
+  document.encrypt_128bit_aesv2(
+    user_password,
+    owner_password,
+    denied_permissions,
+    encrypt_metadata~,
+    file_id~,
+  )
+}
+
+///|
+pub fn pdf_encrypt_pdf_AES256(
+  document : PdfDocument,
+  encrypt_metadata : Bool,
+  user_password : BytesView,
+  owner_password : BytesView,
+  denied_permissions : ArrayView[PdfPermission],
+  file_id? : BytesView = [],
+) -> PdfDocument raise PdfError {
+  document.encrypt_256bit_aesv3(
+    user_password,
+    owner_password,
+    denied_permissions,
+    encrypt_metadata~,
+    file_id~,
+  )
+}
+
+///|
+pub fn pdf_encrypt_pdf_AES256ISO(
+  document : PdfDocument,
+  encrypt_metadata : Bool,
+  user_password : BytesView,
+  owner_password : BytesView,
+  denied_permissions : ArrayView[PdfPermission],
+  file_id? : BytesView = [],
+) -> PdfDocument raise PdfError {
+  document.encrypt_256bit_aesv3_iso(
+    user_password,
+    owner_password,
+    denied_permissions,
+    encrypt_metadata~,
+    file_id~,
+  )
+}
+
+///|
 pub fn PdfDocument::recrypt_with_password_aesv3(
   self : PdfDocument,
   password : BytesView,

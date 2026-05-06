@@ -157,3 +157,55 @@ test "native secure random AESV3 writers decrypt and recrypt" {
     random_native_secret_for_test("native random aesv3 iso"),
   )
 }
+
+///|
+test "native CamlPDF-shaped AES encrypt wrappers use secure random" {
+  let user_password = random_native_ascii_for_test("user")
+  let owner_password = random_native_ascii_for_test("owner")
+  let denied : Array[@pdflite.PdfPermission] = [PdfNoForms]
+  let aesv2 = @pdflite.pdf_encrypt_pdf_AES(
+    random_native_document_for_test("native wrapper aesv2"),
+    false,
+    user_password[:],
+    owner_password[:],
+    denied,
+    file_id=random_native_ascii_for_test("native-wrapper-aesv2-id")[:],
+  )
+  @test.assert_eq(
+    @pdflite.pdf_what_encryption(aesv2),
+    Some(PdfEncryptionAES128(false)),
+  )
+  let aesv2_decrypted = random_native_unwrap_decryption_for_test(
+    aesv2.decrypt_with_owner_password(owner_password[:]),
+  )
+  @test.assert_eq(aesv2_decrypted.denied_permissions, denied)
+  @test.assert_eq(
+    aesv2_decrypted.document.lookup_object_or_null(50),
+    random_native_secret_for_test("native wrapper aesv2"),
+  )
+
+  let aesv3 = @pdflite.pdf_encrypt_pdf_AES256(
+    random_native_document_for_test("native wrapper aesv3"),
+    true,
+    user_password[:],
+    owner_password[:],
+    [],
+    file_id=random_native_ascii_for_test("native-wrapper-aesv3-id")[:],
+  )
+  @test.assert_eq(
+    @pdflite.pdf_what_encryption(aesv3),
+    Some(PdfEncryptionAES256(true)),
+  )
+  let aesv3_iso = @pdflite.pdf_encrypt_pdf_AES256ISO(
+    random_native_document_for_test("native wrapper aesv3 iso"),
+    false,
+    user_password[:],
+    owner_password[:],
+    [],
+    file_id=random_native_ascii_for_test("native-wrapper-aesv3-iso-id")[:],
+  )
+  @test.assert_eq(
+    @pdflite.pdf_what_encryption(aesv3_iso),
+    Some(PdfEncryptionAES256ISO(false)),
+  )
+}

@@ -1335,7 +1335,14 @@ MoonBit consequences for this project:
     The document-level decryption entry points for parsed ARC4, AESV2, and AESV3
     documents remove `/Encrypt` from the copied trailer, skip the indirect
     encryption dictionary object, preserve deferred parsed stream decryption for
-    file-backed streams, and return CamlPDF-style denied permissions. Remaining
+    file-backed streams, and return CamlPDF-style denied permissions.
+    `.repos/pdfcrypt.mli`-style standalone wrappers now sit over those typed
+    document methods for user/owner decryption, encrypted-state introspection,
+    encryption-value parsing, single-stream decrypt, permission-mask decoding,
+    ARC4 encrypt/recrypt, and provider-backed AES encrypt/recrypt. Native-only
+    AES convenience wrappers use the existing OS secure-random boundary, while
+    cross-target AES wrappers keep random material explicit through fallible
+    providers. Remaining
     encrypted malformed-reader compatibility now has a native bad-startxref
     reconstruction gate that password-reads, mutates, saved-state recrypts,
     compressed-writes, and password-rereads a direct encrypted-object document.
