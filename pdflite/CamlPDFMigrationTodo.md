@@ -62,6 +62,9 @@ Current estimate:
 - [x] ~~Reuse prefix-decoded payloads for single-stage Flate inline images
   without `/DecodeParms`, avoiding an encoded-byte copy and a second stream
   decode.~~
+- [x] ~~Reuse prefix-decoded payloads for single-stage LZW inline images
+  without `/DecodeParms`, avoiding an encoded-byte copy and a second stream
+  decode.~~
 - [x] ~~Return owned bytes unchanged for `/Crypt` identity filter encode/decode,
   avoiding unnecessary immutable `Bytes` copies on stream filter dispatch.~~
 - [x] ~~Cache standard stream-filter names so encode/decode dispatch no longer
@@ -163,6 +166,9 @@ Current estimate:
   reducing repeated setup work for inline images and other consumed-length
   parsing paths that cannot use native miniz.~~
 - [x] ~~Single-stage Flate inline-image parsing now keeps the prefix-decoded
+  payload when no `/DecodeParms` are present, instead of re-owning encoded data
+  and decoding it again through the stream-filter path.~~
+- [x] ~~Single-stage LZW inline-image parsing now keeps the prefix-decoded
   payload when no `/DecodeParms` are present, instead of re-owning encoded data
   and decoding it again through the stream-filter path.~~
 - [x] ~~Owned `/Crypt` identity filter encode/decode now returns the original
@@ -443,6 +449,8 @@ Current estimate:
 - [x] ~~Pure Flate prefix decoding reuses cached fixed-Huffman tables instead
   of rebuilding literal/distance tables for each fixed block.~~
 - [x] ~~Single-stage Flate inline images without `/DecodeParms` reuse the
+  prefix-decoded bytes and skip the encoded-copy/second-decode path.~~
+- [x] ~~Single-stage LZW inline images without `/DecodeParms` reuse the
   prefix-decoded bytes and skip the encoded-copy/second-decode path.~~
 - [x] ~~Owned `/Crypt` identity filter encode/decode bypasses `BytesView.to_owned()`
   and returns the existing immutable `Bytes`.~~

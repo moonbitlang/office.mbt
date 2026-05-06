@@ -1158,6 +1158,16 @@ fn pdf_content_filter_is_inline_lzw(filter : PdfObject) -> Bool {
 }
 
 ///|
+fn pdf_content_filter_is_single_inline_lzw(filter : PdfObject) -> Bool {
+  match filter {
+    PdfNameObject(name) => pdf_content_filter_name_is_inline_lzw(name)
+    PdfArray([PdfNameObject(name)]) =>
+      pdf_content_filter_name_is_inline_lzw(name)
+    _ => false
+  }
+}
+
+///|
 fn pdf_content_inline_image_uses_dct(dictionary : PdfObject) -> Bool {
   match pdf_content_inline_filter_value(dictionary) {
     Some(filter) => pdf_content_filter_is_inline_dct(filter)
@@ -1203,6 +1213,14 @@ fn pdf_content_inline_image_uses_single_flate(dictionary : PdfObject) -> Bool {
 fn pdf_content_inline_image_uses_lzw(dictionary : PdfObject) -> Bool {
   match pdf_content_inline_filter_value(dictionary) {
     Some(filter) => pdf_content_filter_is_inline_lzw(filter)
+    None => false
+  }
+}
+
+///|
+fn pdf_content_inline_image_uses_single_lzw(dictionary : PdfObject) -> Bool {
+  match pdf_content_inline_filter_value(dictionary) {
+    Some(filter) => pdf_content_filter_is_single_inline_lzw(filter)
     None => false
   }
 }
@@ -1374,6 +1392,20 @@ fn pdf_content_read_lzw_inline_image_data(
   let data = cursor.read_view(length).to_owned()
   pdf_content_read_inline_image_end(cursor)
   data
+}
+
+///|
+fn pdf_content_read_lzw_inline_image_decoded(
+  cursor : ByteCursor,
+) -> PdfBytes raise PdfError {
+  match cursor.peek_byte() {
+    value if pdf_is_whitespace_byte(value) => cursor.nudge()
+    _ => ()
+  }
+  let (decoded, length) = pdf_lzw_decode_view_prefix(cursor.remaining_view())
+  ignore(cursor.read_view(length))
+  pdf_content_read_inline_image_end(cursor)
+  decoded
 }
 
 ///|
@@ -1581,15 +1613,23 @@ fn pdf_content_read_inline_image(
           )
           Op_InlineImage(decoded_dictionary, None, decoded)
         }
-      None if pdf_content_inline_image_uses_lzw(dictionary) => {
-        let encoded = pdf_content_read_lzw_inline_image_data(
-          cursor, dictionary, decode_parms,
-        )
-        let (decoded_dictionary, decoded) = pdf_content_decode_inline_image_data(
-          dictionary, decode_parms, encoded,
-        )
-        Op_InlineImage(decoded_dictionary, None, decoded)
-      }
+      None if pdf_content_inline_image_uses_lzw(dictionary) =>
+        if decode_parms is None &&
+          pdf_content_inline_image_uses_single_lzw(dictionary) {
+          Op_InlineImage(
+            pdf_content_remove_inline_image_filter_metadata(dictionary),
+            None,
+            pdf_content_read_lzw_inline_image_decoded(cursor),
+          )
+        } else {
+          let encoded = pdf_content_read_lzw_inline_image_data(
+            cursor, dictionary, decode_parms,
+          )
+          let (decoded_dictionary, decoded) = pdf_content_decode_inline_image_data(
+            dictionary, decode_parms, encoded,
+          )
+          Op_InlineImage(decoded_dictionary, None, decoded)
+        }
       None =>
         Op_InlineImage(
           dictionary,
