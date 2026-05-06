@@ -1349,7 +1349,10 @@ MoonBit consequences for this project:
     page-record annotation insertion, CamlPDF-compatible `/Unknown`
     serialization for unknown subtypes, and geometry transforms for `/Rect`,
     `/QuadPoints`, and `/L` on both indirect annotation objects and direct
-    annotation dictionaries inside `/Annots` arrays. Date support is started
+    annotation dictionaries inside `/Annots` arrays. Standalone
+    `.repos/pdfannot.mli`-shaped wrappers now expose annotation read/add and
+    geometry transformation over the existing typed document methods. Date
+    support is started
     with typed PDF dates,
     CamlPDF-compatible default fields, Distiller Y2K recovery, checked ranges,
     borrowed `BytesView`/owned `Bytes` parsing, local-time delimiter quirks,
@@ -1360,7 +1363,9 @@ MoonBit consequences for this project:
     PDF strings, and explicit `PdfName` fields for PDF name values. OCG
     read/write/remove now resolve the active catalog through trailer `/Root`,
     matching CamlPDF for parsed documents while preserving the document-root
-    fallback for synthetic fixtures. OCG merge preparation is
+    fallback for synthetic fixtures. Standalone `.repos/pdfocg.mli`-shaped
+    wrappers now expose optional-content read/write/remove over the existing
+    typed document methods. OCG merge preparation is
     started with a typed helper for combining already-renumbered optional
     content metadata across documents. Merge support code is started with
     returned-copy object renumbering by positive offset, including root,

@@ -73,6 +73,7 @@ test "PdfDocument annotations_of_page reads popup annotations" {
     ]),
   }
   let annotations = try! doc.annotations_of_page(page)
+  @test.assert_eq(try! @pdflite.pdf_annotations_of_page(doc, page), annotations)
   @test.assert_eq(annotations.length(), 1)
   guard annotations[0].subtype is AnnotationPopup(parent) else {
     fail("expected popup annotation")
@@ -129,6 +130,12 @@ test "PdfDocument add_annotation writes annotation objects into page rest" {
     @pdflite.pdf_page_blank(@pdflite.paper_a4),
     annotation,
   )
+  let page_from_function = try! @pdflite.pdf_add_annotation(
+    doc,
+    @pdflite.pdf_page_blank(@pdflite.paper_a4),
+    annotation,
+  )
+  @test.assert_eq(page_from_function.rest, page.rest)
   match page.rest.lookup_immediate(key_annots) {
     Some(PdfArray([PdfDictionary(_) as object])) => {
       @test.assert_eq(
@@ -505,7 +512,11 @@ test "PdfDocument transform_annotations updates annotation geometry" {
       ]),
     ),
   ])
-  try! doc.transform_annotations(@pdflite.transform_translate(1.0, 2.0), rest)
+  try! @pdflite.pdf_transform_annotations(
+    doc,
+    @pdflite.transform_translate(1.0, 2.0),
+    rest,
+  )
   let annotation = doc.lookup_object_or_null(10)
   @test.assert_eq(
     annotation.lookup_immediate(key_rect),

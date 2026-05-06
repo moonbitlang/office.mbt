@@ -803,6 +803,13 @@ pub fn PdfDocument::read_optional_content_groups(
 }
 
 ///|
+pub fn pdf_read_ocg(
+  document : PdfDocument,
+) -> PdfOptionalContent? raise PdfError {
+  document.read_optional_content_groups()
+}
+
+///|
 fn pdf_ocg_copy_usage(usage : PdfOcgUsage) -> PdfOcgUsage {
   {
     creator_info: usage.creator_info,
@@ -1303,6 +1310,11 @@ pub fn PdfDocument::remove_optional_content_groups(
 }
 
 ///|
+pub fn pdf_remove_ocg(document : PdfDocument) -> PdfDocument raise PdfError {
+  document.remove_optional_content_groups()
+}
+
+///|
 pub fn PdfDocument::write_optional_content_groups(
   self : PdfDocument,
   optional_content : PdfOptionalContent,
@@ -1345,4 +1357,12 @@ pub fn PdfDocument::write_optional_content_groups(
     pdf.trailer_dict().add_dict_entry(pdf_ocg_root_key(), PdfIndirect(new_root)),
   )
   pdf
+}
+
+///|
+pub fn pdf_write_ocg(
+  document : PdfDocument,
+  optional_content : PdfOptionalContent,
+) -> PdfDocument raise PdfError {
+  document.write_optional_content_groups(optional_content)
 }

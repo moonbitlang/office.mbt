@@ -60,6 +60,10 @@ Current backend snapshot:
   `.repos/pdfpagelabels.mli`-referenced standalone document-feature helpers
   for destination read/transform, bookmark read/add/remove/transform, and page
   label read/write/remove over the existing typed document methods.~~
+- [x] ~~Expose `.repos/pdfannot.mli` and `.repos/pdfocg.mli`-referenced
+  standalone document-feature helpers for page annotation read/add/transform
+  and optional-content read/write/remove over the existing typed document
+  methods.~~
 - [x] ~~Check the currently tracked CamlPDF fixture PDFs for image XObjects
   before expanding image corpus tests; `logo.pdf` and
   `introduction_to_camlpdf.pdf` do not currently provide image entries.~~

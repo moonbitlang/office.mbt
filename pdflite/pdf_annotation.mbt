@@ -631,6 +631,14 @@ pub fn PdfDocument::annotations_of_page(
 }
 
 ///|
+pub fn pdf_annotations_of_page(
+  document : PdfDocument,
+  page : PdfPage,
+) -> Array[PdfAnnotation] raise PdfError {
+  document.annotations_of_page(page)
+}
+
+///|
 fn pdf_annotation_rectangle_object(rectangle : PdfRectangle) -> PdfObject {
   PdfArray([
     PdfReal(rectangle.min_x),
@@ -737,6 +745,15 @@ pub fn PdfDocument::add_annotation(
 }
 
 ///|
+pub fn pdf_add_annotation(
+  document : PdfDocument,
+  page : PdfPage,
+  annotation : PdfAnnotation,
+) -> PdfPage raise PdfError {
+  document.add_annotation(page, annotation)
+}
+
+///|
 fn PdfDocument::pdf_annotation_transform_one(
   self : PdfDocument,
   matrix : TransformMatrix,
@@ -808,4 +825,13 @@ pub fn PdfDocument::transform_annotations(
       }
     _ => ()
   }
+}
+
+///|
+pub fn pdf_transform_annotations(
+  document : PdfDocument,
+  matrix : TransformMatrix,
+  rest : PdfObject,
+) -> Unit raise PdfError {
+  document.transform_annotations(matrix, rest)
 }

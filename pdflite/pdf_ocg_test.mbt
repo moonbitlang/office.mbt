@@ -247,6 +247,7 @@ test "PdfDocument read_optional_content_groups decodes OCG dictionaries" {
   guard (try! doc.read_optional_content_groups()) is Some(content) else {
     fail("expected optional content")
   }
+  @test.assert_eq(try! @pdflite.pdf_read_ocg(doc), Some(content))
   @test.assert_eq(content.ocgs.length(), 1)
   let (number, ocg) = content.ocgs[0]
   @test.assert_eq(number, 10)
@@ -387,11 +388,16 @@ test "PdfDocument write_optional_content_groups builds readable OCG data" {
     configs: [extra_config],
   }
   let updated = try! doc.write_optional_content_groups(content)
+  let updated_from_function = try! @pdflite.pdf_write_ocg(doc, content)
   @test.assert_eq(try! doc.read_optional_content_groups(), None)
   guard (try! updated.read_optional_content_groups()) is Some(read_back) else {
     fail("expected written optional content")
   }
   @test.assert_eq(read_back, content)
+  @test.assert_eq(
+    try! @pdflite.pdf_read_ocg(updated_from_function),
+    Some(content),
+  )
 }
 
 ///|
@@ -463,8 +469,10 @@ test "PdfDocument remove_optional_content_groups removes catalog entry" {
   let doc = ocg_document_with_content_for_test()
   let key_ocproperties = ocg_name_for_test("/OCProperties")
   let updated = try! doc.remove_optional_content_groups()
+  let updated_from_function = try! @pdflite.pdf_remove_ocg(doc)
   @test.assert_eq(try! (doc.read_optional_content_groups() is Some(_)), true)
   @test.assert_eq(try! updated.read_optional_content_groups(), None)
+  @test.assert_eq(try! @pdflite.pdf_read_ocg(updated_from_function), None)
   @test.assert_eq(
     updated
     .lookup_object_or_null(updated.root())
