@@ -261,6 +261,8 @@ pub fn pdf_endpage(PdfDocument) -> Int raise PdfError
 
 pub fn pdf_endpage_fast(PdfDocument) -> Int raise PdfError
 
+pub fn pdf_eval_function(PdfFunction, ArrayView[Double]) -> Array[Double] raise PdfError
+
 pub fn pdf_flate_decode(Bytes) -> Bytes raise PdfError
 
 pub fn pdf_flate_decode_view(BytesView) -> Bytes raise PdfError
@@ -359,6 +361,8 @@ pub fn pdf_object_of_date(PdfDate) -> PdfObject raise PdfError
 
 pub fn pdf_object_of_destination(PdfDestination) -> PdfObject
 
+pub fn pdf_object_of_function(PdfDocument, PdfFunction) -> PdfObject
+
 pub fn pdf_object_of_matrix(TransformMatrix) -> PdfObject
 
 pub fn pdf_objects_empty() -> PdfObjects
@@ -423,6 +427,8 @@ pub fn pdf_parse_content_ops_from_bytes(Bytes) -> Array[PdfContentOp] raise PdfE
 
 pub fn pdf_parse_content_ops_from_view(BytesView) -> Array[PdfContentOp] raise PdfError
 
+pub fn pdf_parse_function(PdfDocument, PdfObject) -> PdfFunction raise PdfError
+
 pub fn pdf_parse_indirect_object_from_bytes(Bytes) -> PdfParsedIndirectObject raise PdfError
 
 pub fn pdf_parse_indirect_object_from_view(BytesView) -> PdfParsedIndirectObject raise PdfError
@@ -458,6 +464,8 @@ pub fn pdf_permissions_of_p(Int) -> Array[PdfPermission]
 pub fn pdf_postpend_operators(PdfDocument, ArrayView[PdfContentOp], PdfPage, fast? : Bool) -> PdfPage raise PdfError
 
 pub fn pdf_prepend_operators(PdfDocument, ArrayView[PdfContentOp], PdfPage, fast? : Bool) -> PdfPage raise PdfError
+
+pub fn pdf_print_function(PdfFunction) -> Unit
 
 pub fn pdf_read_afm(BytesView) -> PdfAfmData raise PdfError
 

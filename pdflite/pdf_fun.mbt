@@ -953,6 +953,14 @@ pub fn PdfDocument::parse_function(
 }
 
 ///|
+pub fn pdf_parse_function(
+  document : PdfDocument,
+  function_object : PdfObject,
+) -> PdfFunction raise PdfError {
+  document.parse_function(function_object)
+}
+
+///|
 fn pdf_fun_number_array_object(values : ArrayView[Double]) -> PdfObject {
   PdfArray([ for value in values => PdfReal(value) ])
 }
@@ -1012,6 +1020,14 @@ pub fn PdfDocument::pdf_object_of_function(
     PdfFunctionSampled(_) | PdfFunctionCalculator(_) => ()
   }
   PdfDictionary(entries)
+}
+
+///|
+pub fn pdf_object_of_function(
+  document : PdfDocument,
+  function : PdfFunction,
+) -> PdfObject {
+  document.pdf_object_of_function(function)
 }
 
 ///|
@@ -1707,4 +1723,17 @@ pub fn PdfFunction::eval(
     Some(range) => pdf_fun_clamp_values(output, range)
     None => output
   }
+}
+
+///|
+pub fn pdf_eval_function(
+  function : PdfFunction,
+  inputs : ArrayView[Double],
+) -> Array[Double] raise PdfError {
+  function.eval(inputs)
+}
+
+///|
+pub fn pdf_print_function(function : PdfFunction) -> Unit {
+  println(function.debug_string())
 }

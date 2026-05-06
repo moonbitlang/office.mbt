@@ -7,7 +7,7 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 96.7%.
+- Native main-feature parity: 96.8%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
   breadth: 85-90%.
 
@@ -83,6 +83,9 @@ Current backend snapshot:
   for trim, parent-tree renumbering, structure-tree merge/root creation, and
   optional top-level `/Document` wrapping over the existing structure/merge
   core.~~
+- [x] ~~Expose `.repos/pdffun.mli`-referenced standalone function helpers for
+  parse, eval, PDF-object serialization, and debug printing over the existing
+  typed function core.~~
 - [ ] Decide whether to emulate CamlPDF's `charcode_extractor` debug stderr
   output; current wrappers accept the `debug` flag for API shape but keep the
   lookup pure.

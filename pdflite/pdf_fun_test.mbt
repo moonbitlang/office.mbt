@@ -133,6 +133,37 @@ test "PdfFunction debug strings cover all CamlPDF function kinds" {
 }
 
 ///|
+test "standalone pdffun helpers parse evaluate serialize and print functions" {
+  let doc = @pdflite.pdf_document_empty()
+  let function_object = @pdflite.pdf_dictionary([
+    (fun_name_for_test("/FunctionType"), PdfInteger(2)),
+    (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
+    (fun_name_for_test("/Range"), PdfArray([PdfInteger(0), PdfInteger(2)])),
+    (fun_name_for_test("/C0"), PdfArray([PdfInteger(0)])),
+    (fun_name_for_test("/C1"), PdfArray([PdfInteger(2)])),
+    (fun_name_for_test("/N"), PdfInteger(1)),
+  ])
+  let function = @pdflite.pdf_parse_function(doc, function_object)
+  @test.assert_eq(@pdflite.pdf_eval_function(function, [0.25]), [0.5])
+  @test.assert_eq(
+    @pdflite.pdf_object_of_function(doc, function),
+    @pdflite.pdf_dictionary([
+      (fun_name_for_test("/FunctionType"), PdfInteger(2)),
+      (fun_name_for_test("/Domain"), PdfArray([PdfReal(0.0), PdfReal(1.0)])),
+      (fun_name_for_test("/Range"), PdfArray([PdfReal(0.0), PdfReal(2.0)])),
+      (fun_name_for_test("/C0"), PdfArray([PdfReal(0.0)])),
+      (fun_name_for_test("/C1"), PdfArray([PdfReal(2.0)])),
+      (fun_name_for_test("/N"), PdfReal(1.0)),
+    ]),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_string_of_function(function),
+    "Domain...\n0 1\n0 2\nInterpolation\nC0:\n0\nC1:\n2\nn = 1",
+  )
+  @pdflite.pdf_print_function(function)
+}
+
+///|
 test "PdfDocument parse_function reads and evaluates Type 0 sampled functions" {
   let doc = @pdflite.pdf_document_empty()
   let samples = fun_bytes_for_test([0x0F])

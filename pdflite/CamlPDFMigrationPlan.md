@@ -1157,17 +1157,21 @@ MoonBit consequences for this project:
    stitching, and Type 4 calculator function parsing/evaluation for
    numeric and boolean literals, named numeric/comparison/logic operators,
    nested `if`/`ifelse` procedures, comments, doubled-minus malformed numbers,
-  stack operators, CamlPDF-style calculator debug string rendering, and
-  deterministic whole-function debug string rendering in place of CamlPDF's
-  stdout-only `print_function`, with stream decoding for sampled/calculator
-  functions, domain clamping, and range clamping. Type 4 calculator integer and float
-   stack values now stay distinct, preserving CamlPDF-style integer-only
-   operator checks and 32-bit wrapping arithmetic for integer add/sub/mul.
+   stack operators, CamlPDF-style calculator debug string rendering, and
+   deterministic whole-function debug string rendering in place of CamlPDF's
+   stdout-only `print_function`, with stream decoding for sampled/calculator
+   functions, domain clamping, and range clamping. Type 4 calculator integer
+   and float stack values now stay distinct, preserving CamlPDF-style
+   integer-only operator checks and 32-bit wrapping arithmetic for integer
+   add/sub/mul.
    CamlPDF's `pdfobject_of_function` helper is started as
    `PdfDocument::pdf_object_of_function`, writing Type 2 interpolation
    dictionaries and Type 3 stitching dictionaries with child functions placed
    into the document object map. As in CamlPDF, sampled and calculator function
-   serialization currently emits only the common dictionary entries.
+   serialization currently emits only the common dictionary entries. The
+   `.repos/pdffun.mli` standalone helper surface is now exposed as
+   `pdf_parse_function`, `pdf_eval_function`, `pdf_object_of_function`, and
+   `pdf_print_function` wrappers over the typed core.
    `pdfjpeg` is started with byte-cursor and function-style
    helpers that extract JPEG data through the `FF D9` EOI marker while leaving
    following bytes unread, and content inline image parsing now uses that path
