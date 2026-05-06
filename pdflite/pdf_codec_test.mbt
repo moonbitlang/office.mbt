@@ -544,6 +544,42 @@ test "pdf_flate_encode uses native miniz default level on native target" {
 }
 
 ///|
+#cfg(target="native")
+test "pdf_flate_encode_with_level matches native miniz byte output" {
+  let small = codec_ascii_for_test("Hi")
+  let small_cases : Array[(Int, Array[Int])] = [
+    (0, [120, 1, 1, 2, 0, 253, 255, 72, 105, 0, 251, 0, 178]),
+    (4, [120, 94, 1, 2, 0, 253, 255, 72, 105, 0, 251, 0, 178]),
+    (6, [120, 156, 1, 2, 0, 253, 255, 72, 105, 0, 251, 0, 178]),
+    (9, [120, 218, 1, 2, 0, 253, 255, 72, 105, 0, 251, 0, 178]),
+  ]
+  for case in small_cases {
+    let (level, expected) = case
+    @test.assert_eq(
+      @pdflite.pdf_flate_encode_with_level(small, level),
+      codec_bytes_for_test(expected),
+    )
+  }
+  let repeated = codec_ascii_for_test("ABC".repeat(80))
+  let compressed_body = [
+    229, 194, 1, 13, 0, 0, 0, 130, 176, 108, 104, 255, 78, 4, 97, 59, 59, 37, 2,
+    33, 243, 61, 225,
+  ]
+  let compressed_cases : Array[(Int, Array[Int])] = [
+    (1, [120, 1] + compressed_body),
+    (6, [120, 156] + compressed_body),
+    (9, [120, 218] + compressed_body),
+  ]
+  for case in compressed_cases {
+    let (level, expected) = case
+    @test.assert_eq(
+      @pdflite.pdf_flate_encode_with_level(repeated, level),
+      codec_bytes_for_test(expected),
+    )
+  }
+}
+
+///|
 test "pdf_flate view codecs read borrowed slices" {
   let plain = codec_ascii_for_test("Hi")
   let wrapped_plain = codec_wrap_view_for_test("xx", plain[:], "yy")

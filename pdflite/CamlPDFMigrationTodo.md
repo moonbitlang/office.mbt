@@ -7,7 +7,7 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 97.8%.
+- Native main-feature parity: 97.9%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
   breadth: 85-90%.
 
@@ -219,6 +219,9 @@ Current backend snapshot:
 - [x] ~~Route owned `PdfBytes` Flate decode directly through the native miniz
   bytes helper, avoiding the owned-to-view-to-owned copy that remained on the
   public decode path.~~
+- [x] ~~Gate native Flate byte-output parity against CamlPDF's vendored miniz
+  spelling for small stored streams and compressed repeated streams across
+  representative zlib levels.~~
 - [x] ~~Cache fixed-Huffman DEFLATE literal and distance tables so pure prefix
   Flate decoding no longer rebuilds them for every fixed block.~~
 - [x] ~~Decode pure MoonBit DEFLATE Huffman symbols through bounded lookup-table
@@ -826,6 +829,9 @@ Current backend snapshot:
   per reader pass and reuses the parsed context for all embedded entries.~~
 - [ ] Byte-identical zlib output strategy and broader performance parity beyond
   explicit Flate level selection.
+- [x] ~~Native miniz byte-output parity now has exact fixture coverage for
+  representative small stored streams and compressed repeated streams at
+  multiple zlib levels.~~
 - [x] ~~Malformed xref-stream/object-stream recovery covers reconstructed
   indirect object-stream bounds after a bad final `startxref`.~~
 - [ ] Broader malformed xref-table/xref-stream/object-stream recovery beyond
