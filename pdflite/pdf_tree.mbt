@@ -278,6 +278,45 @@ fn pdf_tree_dedup_number_entries(
 }
 
 ///|
+fn pdf_tree_number_key_bytes(number : Int) -> PdfBytes {
+  @ascii.encode(number.to_string())
+}
+
+///|
+fn pdf_tree_number_key_of_bytes(key : BytesView) -> Int raise PdfError {
+  if key.length() == 0 {
+    raise NumberExpected
+  }
+  let mut index = 0
+  let mut negative = false
+  match key[0].to_int() {
+    43 => index = 1
+    45 => {
+      negative = true
+      index = 1
+    }
+    _ => ()
+  }
+  if index >= key.length() {
+    raise NumberExpected
+  }
+  let limit : Int64 = if negative { 2147483648L } else { 2147483647L }
+  let mut value : Int64 = 0L
+  while index < key.length() {
+    let byte = key[index].to_int()
+    guard byte >= 48 && byte <= 57 else { raise NumberExpected }
+    value = value * 10L + (byte - 48).to_int64()
+    guard value <= limit else { raise NumberExpected }
+    index += 1
+  }
+  if negative {
+    (-value).to_int()
+  } else {
+    value.to_int()
+  }
+}
+
+///|
 pub fn PdfDocument::read_name_tree(
   self : PdfDocument,
   tree : PdfObject,
@@ -298,6 +337,14 @@ pub fn PdfDocument::read_name_tree(
 }
 
 ///|
+pub fn pdf_read_name_tree(
+  document : PdfDocument,
+  tree : PdfObject,
+) -> Array[(PdfBytes, PdfObject)] {
+  document.read_name_tree(tree)
+}
+
+///|
 pub fn PdfDocument::read_number_tree(
   self : PdfDocument,
   tree : PdfObject,
@@ -315,6 +362,18 @@ pub fn PdfDocument::read_number_tree(
   } else {
     pdf_tree_dedup_number_entries(pdf_tree_sort_number_entries(parsed))
   }
+}
+
+///|
+pub fn pdf_read_number_tree(
+  document : PdfDocument,
+  tree : PdfObject,
+) -> Array[(PdfBytes, PdfObject)] {
+  [
+    for entry in document.read_number_tree(tree) => {
+      (pdf_tree_number_key_bytes(entry.0), entry.1)
+    }
+  ]
 }
 
 ///|
@@ -391,6 +450,23 @@ pub fn PdfDocument::build_name_tree(
   } else {
     let sorted = pdf_tree_sort_name_entries(entries)
     self.pdf_tree_build_name_tree_range(sorted, 0, sorted.length(), true)
+  }
+}
+
+///|
+pub fn pdf_build_name_tree(
+  is_number : Bool,
+  document : PdfDocument,
+  entries : ArrayView[(PdfBytes, PdfObject)],
+) -> PdfObject raise PdfError {
+  if is_number {
+    let number_entries : Array[(Int, PdfObject)] = []
+    for entry in entries {
+      number_entries.push((pdf_tree_number_key_of_bytes(entry.0[:]), entry.1))
+    }
+    document.build_number_tree(number_entries)
+  } else {
+    document.build_name_tree(entries)
   }
 }
 
@@ -481,6 +557,14 @@ pub fn PdfDocument::merge_name_trees_no_clash(
 }
 
 ///|
+pub fn pdf_merge_name_trees_no_clash(
+  document : PdfDocument,
+  trees : ArrayView[PdfObject],
+) -> PdfObject {
+  document.merge_name_trees_no_clash(trees)
+}
+
+///|
 pub fn PdfDocument::merge_number_trees_no_clash(
   self : PdfDocument,
   trees : ArrayView[PdfObject],
@@ -492,4 +576,12 @@ pub fn PdfDocument::merge_number_trees_no_clash(
     }
   }
   self.build_number_tree(entries)
+}
+
+///|
+pub fn pdf_merge_number_trees_no_clash(
+  document : PdfDocument,
+  trees : ArrayView[PdfObject],
+) -> PdfObject {
+  document.merge_number_trees_no_clash(trees)
 }

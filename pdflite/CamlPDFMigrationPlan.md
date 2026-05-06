@@ -204,7 +204,10 @@ MoonBit consequences for this project:
    sorted/deduplicated readers and builders that emit child tree nodes through
    the document object map for larger trees. CamlPDF's no-clash name-tree and
    number-tree merge helpers are also started by flattening readable inputs and
-   rebuilding sorted trees.
+   rebuilding sorted trees. Standalone `.repos/pdftree.mli`-shaped wrappers
+   now expose byte-key name-tree reads, decimal-byte number-tree reads,
+   bool-selected tree building, and no-clash merge helpers over the typed
+   tree core.
 
 4. Lexer and primitive parser.
    Port `.repos/pdfgenlex` and the lexical subset of `.repos/pdfread`:

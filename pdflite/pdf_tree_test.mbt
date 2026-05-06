@@ -363,3 +363,75 @@ test "PdfDocument merges no-clash number trees" {
     (4, PdfString(tree_bytes_for_test("four"))),
   ])
 }
+
+///|
+test "pdftree top-level wrappers expose CamlPDF tree API shape" {
+  let doc = @pdflite.pdf_document_empty()
+  let name_tree = try! @pdflite.pdf_build_name_tree(false, doc, [
+    (tree_bytes_for_test("b"), PdfInteger(2)),
+    (tree_bytes_for_test("a"), PdfInteger(1)),
+  ])
+  @test.assert_eq(@pdflite.pdf_read_name_tree(doc, name_tree), [
+    (tree_bytes_for_test("a"), PdfInteger(1)),
+    (tree_bytes_for_test("b"), PdfInteger(2)),
+  ])
+
+  let number_tree = try! @pdflite.pdf_build_name_tree(true, doc, [
+    (tree_bytes_for_test("10"), PdfString(tree_bytes_for_test("ten"))),
+    (tree_bytes_for_test("-2"), PdfString(tree_bytes_for_test("minus-two"))),
+  ])
+  @test.assert_eq(@pdflite.pdf_read_number_tree(doc, number_tree), [
+    (tree_bytes_for_test("-2"), PdfString(tree_bytes_for_test("minus-two"))),
+    (tree_bytes_for_test("10"), PdfString(tree_bytes_for_test("ten"))),
+  ])
+  @test.assert_eq(doc.read_number_tree(number_tree), [
+    (-2, PdfString(tree_bytes_for_test("minus-two"))),
+    (10, PdfString(tree_bytes_for_test("ten"))),
+  ])
+  let plus_number_tree = try! @pdflite.pdf_build_name_tree(true, doc, [
+    (tree_bytes_for_test("+4"), PdfInteger(4)),
+  ])
+  @test.assert_eq(doc.read_number_tree(plus_number_tree), [(4, PdfInteger(4))])
+
+  let bad_number_keys : Array[String] = ["", "+", "2147483648", "not-number"]
+  for key in bad_number_keys {
+    let malformed_number_key = try? @pdflite.pdf_build_name_tree(true, doc, [
+      (tree_bytes_for_test(key), PdfNull),
+    ])
+    guard malformed_number_key is Err(_) else {
+      fail("expected malformed number-tree key to raise")
+    }
+  }
+}
+
+///|
+test "pdftree top-level wrappers merge no-clash trees" {
+  let doc = @pdflite.pdf_document_empty()
+  let left_name = try! @pdflite.pdf_build_name_tree(false, doc, [
+    (tree_bytes_for_test("a"), PdfInteger(1)),
+  ])
+  let right_name = try! @pdflite.pdf_build_name_tree(false, doc, [
+    (tree_bytes_for_test("b"), PdfInteger(2)),
+  ])
+  let merged_name = @pdflite.pdf_merge_name_trees_no_clash(doc, [
+    left_name, right_name,
+  ])
+  @test.assert_eq(@pdflite.pdf_read_name_tree(doc, merged_name), [
+    (tree_bytes_for_test("a"), PdfInteger(1)),
+    (tree_bytes_for_test("b"), PdfInteger(2)),
+  ])
+
+  let left_number = try! @pdflite.pdf_build_name_tree(true, doc, [
+    (tree_bytes_for_test("1"), PdfString(tree_bytes_for_test("one"))),
+  ])
+  let right_number = try! @pdflite.pdf_build_name_tree(true, doc, [
+    (tree_bytes_for_test("2"), PdfString(tree_bytes_for_test("two"))),
+  ])
+  let merged_number = @pdflite.pdf_merge_number_trees_no_clash(doc, [
+    left_number, right_number,
+  ])
+  @test.assert_eq(@pdflite.pdf_read_number_tree(doc, merged_number), [
+    (tree_bytes_for_test("1"), PdfString(tree_bytes_for_test("one"))),
+    (tree_bytes_for_test("2"), PdfString(tree_bytes_for_test("two"))),
+  ])
+}

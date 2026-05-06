@@ -75,6 +75,10 @@ Current backend snapshot:
   standard-font and font debug strings, font read/write, Identity-H detection,
   text extractors, text-to-codepoint/glyph extraction, and reverse charcode
   closures over the existing typed text API.~~
+- [x] ~~Expose `.repos/pdftree.mli`-referenced standalone name/number tree
+  helpers for byte-key name-tree reads, decimal-byte number-tree reads,
+  bool-selected tree building, and no-clash merges over the existing typed
+  tree API.~~
 - [ ] Decide whether to emulate CamlPDF's `charcode_extractor` debug stderr
   output; current wrappers accept the `debug` flag for API shape but keep the
   lookup pure.

@@ -125,6 +125,8 @@ pub fn pdf_authenticate_user_password_aesv3(Bool, BytesView, BytesView) -> Bool 
 
 pub let pdf_bookmark_black : PdfBookmarkColour
 
+pub fn pdf_build_name_tree(Bool, PdfDocument, ArrayView[(Bytes, PdfObject)]) -> PdfObject raise PdfError
+
 pub fn pdf_byte_of_int(Int) -> Byte raise PdfError
 
 pub fn pdf_bytes_concat_views(ArrayView[BytesView]) -> Bytes
@@ -329,6 +331,10 @@ pub fn pdf_md5_digest(BytesView) -> Bytes
 
 pub fn pdf_merge_documents(ArrayView[PdfDocument], ArrayView[Array[Int]], retain_numbering? : Bool, retain_bookmarks? : Bool, retain_optional_content? : Bool, retain_acroforms? : Bool, retain_named_destinations? : Bool, retain_name_dictionary? : Bool, retain_structure_tree? : Bool, add_toplevel_document? : Bool, retain_info? : Bool, retain_catalog_entries? : Bool, remove_duplicate_fonts? : Bool) -> PdfDocument raise PdfError
 
+pub fn pdf_merge_name_trees_no_clash(PdfDocument, ArrayView[PdfObject]) -> PdfObject
+
+pub fn pdf_merge_number_trees_no_clash(PdfDocument, ArrayView[PdfObject]) -> PdfObject
+
 pub fn pdf_merge_pdfs(Bool, Bool, ArrayView[String], ArrayView[PdfDocument], ArrayView[Array[Int]], process_struct_trees? : Bool, add_toplevel_document? : Bool) -> PdfDocument raise PdfError
 
 pub fn pdf_minimum_valid_pdf() -> PdfDocument raise PdfError
@@ -488,6 +494,10 @@ pub fn pdf_read_font(PdfDocument, PdfObject) -> PdfFont raise PdfError
 pub fn pdf_read_header_from_bytes(Bytes) -> PdfVersion raise PdfError
 
 pub fn pdf_read_header_from_view(BytesView) -> PdfVersion raise PdfError
+
+pub fn pdf_read_name_tree(PdfDocument, PdfObject) -> Array[(Bytes, PdfObject)]
+
+pub fn pdf_read_number_tree(PdfDocument, PdfObject) -> Array[(Bytes, PdfObject)]
 
 pub fn pdf_read_ocg(PdfDocument) -> PdfOptionalContent? raise PdfError
 
