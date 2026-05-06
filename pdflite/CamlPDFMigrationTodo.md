@@ -64,6 +64,9 @@ Current estimate:
 - [x] ~~Cache standard encryption dictionary, crypt-filter, stream-policy, and
   AESV3 random-field names so encrypted reads/writes avoid rebuilding stable
   ASCII `PdfName` values.~~
+- [x] ~~Cache writer xref-stream/trailer names and inline-image
+  dictionary/filter/color names so write and content-parse hot paths reuse
+  stable `PdfName` values.~~
 - [ ] Continue zlib byte-output/performance parity work where exact miniz block
   spelling or large-file profiles expose remaining gaps.
 - [ ] Profile and tune large-file hot paths for object streams, filters, and
@@ -102,6 +105,8 @@ Current estimate:
   parser prefix decoding.~~
 - [x] ~~Encryption dictionary and crypt-filter lookups/builders now share cached
   `PdfName` values for stable standard keys and name objects.~~
+- [x] ~~Writer trailer/xref-stream keys and inline-image metadata/filter names
+  now share cached `PdfName` values in the remaining large-file hot paths.~~
 - [ ] Improve byte-identical zlib output strategy and broader performance
   parity beyond the explicit Flate level API.
 - [ ] Broaden malformed xref-table/xref-stream/object-stream recovery with more

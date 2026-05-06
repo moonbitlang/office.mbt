@@ -36,7 +36,9 @@ work changes.
    boundaries come from a repair scan. Indirect stream-length providers are now
    classified by parsing the referenced object segment, so ordinary length
    objects containing the word `stream` in comments do not get mistaken for
-   stream objects.
+   stream objects. Writer trailer, stream-length, and xref-stream dictionaries
+   now reuse cached standard `PdfName` values while preserving existing public
+   writer APIs.
    Xref-stream reading now also mirrors CamlPDF's tolerance for missing
    `/Type /XRef` when the stream still carries xref-stream structure such as
    `/W`, while keeping explicit wrong `/Type` values rejected; the malformed
@@ -149,7 +151,9 @@ work changes.
    parsing now
    consumes known encoded payload boundaries, treats DCT as a deferred JPEG
    stage, and can decode leading supported filters before preserving remaining
-   deferred image filters such as DCT or CCITT. Malformed bookmark sets are
+   deferred image filters such as DCT or CCITT. Inline-image dictionary, filter,
+   and color-space names are cached as private `PdfName` values so parsing and
+   inline-image rewriting reuse stable standard names. Malformed bookmark sets are
    dropped during page extraction and
    merge instead of aborting the
    document operation. Direct annotation dictionaries in `/Annots` arrays now

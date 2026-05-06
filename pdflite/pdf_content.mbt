@@ -96,18 +96,32 @@ fn pdf_content_ascii(text : String) -> PdfBytes {
 }
 
 ///|
+fn pdf_content_name(text : String) -> PdfName {
+  pdf_name_of_bytes(pdf_content_ascii(text))
+}
+
+///|
+let pdf_content_length_key_name : PdfName = pdf_content_name("/Length")
+
+///|
+let pdf_content_inline_l_key_name : PdfName = pdf_content_name("/L")
+
+///|
+let pdf_content_artifact_name : PdfName = pdf_content_name("/Artifact")
+
+///|
 fn pdf_content_length_name() -> PdfName {
-  pdf_name_of_bytes(pdf_content_ascii("/Length"))
+  pdf_content_length_key_name
 }
 
 ///|
 fn pdf_content_inline_l_name() -> PdfName {
-  pdf_name_of_bytes(pdf_content_ascii("/L"))
+  pdf_content_inline_l_key_name
 }
 
 ///|
 pub fn pdf_content_begin_artifact() -> PdfContentOp {
-  Op_BMC(pdf_name_of_bytes(pdf_content_ascii("/Artifact")))
+  Op_BMC(pdf_content_artifact_name)
 }
 
 ///|
@@ -463,7 +477,7 @@ fn pdf_content_push_inline_image(
     Some(value) =>
       pdf_content_push_inline_image_entry(
         output,
-        pdf_name_of_bytes(pdf_content_ascii("/DP")),
+        pdf_content_inline_dp_name(),
         value,
       )
     None => ()
@@ -681,83 +695,205 @@ fn pdf_content_lex_next(cursor : ByteCursor) -> PdfContentLexeme raise PdfError 
 }
 
 ///|
+let pdf_content_inline_decode_parms_key_name : PdfName = pdf_content_name(
+  "/DecodeParms",
+)
+
+///|
+let pdf_content_inline_dp_key_name : PdfName = pdf_content_name("/DP")
+
+///|
+let pdf_content_inline_filter_key_name : PdfName = pdf_content_name("/Filter")
+
+///|
+let pdf_content_inline_f_key_name : PdfName = pdf_content_name("/F")
+
+///|
+let pdf_content_inline_dctdecode_name_value : PdfName = pdf_content_name(
+  "/DCTDecode",
+)
+
+///|
+let pdf_content_inline_dct_name_value : PdfName = pdf_content_name("/DCT")
+
+///|
+let pdf_content_inline_ascii_hexdecode_name_value : PdfName = pdf_content_name(
+  "/ASCIIHexDecode",
+)
+
+///|
+let pdf_content_inline_ahx_name_value : PdfName = pdf_content_name("/AHx")
+
+///|
+let pdf_content_inline_ascii85decode_name_value : PdfName = pdf_content_name(
+  "/ASCII85Decode",
+)
+
+///|
+let pdf_content_inline_a85_name_value : PdfName = pdf_content_name("/A85")
+
+///|
+let pdf_content_inline_runlengthdecode_name_value : PdfName = pdf_content_name(
+  "/RunLengthDecode",
+)
+
+///|
+let pdf_content_inline_rl_name_value : PdfName = pdf_content_name("/RL")
+
+///|
+let pdf_content_inline_flatedecode_name_value : PdfName = pdf_content_name(
+  "/FlateDecode",
+)
+
+///|
+let pdf_content_inline_fl_name_value : PdfName = pdf_content_name("/Fl")
+
+///|
+let pdf_content_inline_lzwdecode_name_value : PdfName = pdf_content_name(
+  "/LZWDecode",
+)
+
+///|
+let pdf_content_inline_lzw_name_value : PdfName = pdf_content_name("/LZW")
+
+///|
+let pdf_content_inline_im_key_name : PdfName = pdf_content_name("/IM")
+
+///|
+let pdf_content_inline_image_mask_key_name : PdfName = pdf_content_name(
+  "/ImageMask",
+)
+
+///|
+let pdf_content_inline_cs_key_name : PdfName = pdf_content_name("/CS")
+
+///|
+let pdf_content_inline_colorspace_key_name : PdfName = pdf_content_name(
+  "/ColorSpace",
+)
+
+///|
+let pdf_content_inline_g_name : PdfName = pdf_content_name("/G")
+
+///|
+let pdf_content_inline_device_gray_name : PdfName = pdf_content_name(
+  "/DeviceGray",
+)
+
+///|
+let pdf_content_inline_rgb_name : PdfName = pdf_content_name("/RGB")
+
+///|
+let pdf_content_inline_device_rgb_name : PdfName = pdf_content_name(
+  "/DeviceRGB",
+)
+
+///|
+let pdf_content_inline_cmyk_name : PdfName = pdf_content_name("/CMYK")
+
+///|
+let pdf_content_inline_device_cmyk_name : PdfName = pdf_content_name(
+  "/DeviceCMYK",
+)
+
+///|
+let pdf_content_inline_bpc_key_name : PdfName = pdf_content_name("/BPC")
+
+///|
+let pdf_content_inline_bits_per_component_key_name : PdfName = pdf_content_name(
+  "/BitsPerComponent",
+)
+
+///|
+let pdf_content_inline_w_key_name : PdfName = pdf_content_name("/W")
+
+///|
+let pdf_content_inline_width_key_name : PdfName = pdf_content_name("/Width")
+
+///|
+let pdf_content_inline_h_key_name : PdfName = pdf_content_name("/H")
+
+///|
+let pdf_content_inline_height_key_name : PdfName = pdf_content_name("/Height")
+
+///|
 fn pdf_content_inline_decode_parms_name() -> PdfName {
-  pdf_name_of_bytes(pdf_content_ascii("/DecodeParms"))
+  pdf_content_inline_decode_parms_key_name
 }
 
 ///|
 fn pdf_content_inline_dp_name() -> PdfName {
-  pdf_name_of_bytes(pdf_content_ascii("/DP"))
+  pdf_content_inline_dp_key_name
 }
 
 ///|
 fn pdf_content_inline_filter_name() -> PdfName {
-  pdf_name_of_bytes(pdf_content_ascii("/Filter"))
+  pdf_content_inline_filter_key_name
 }
 
 ///|
 fn pdf_content_inline_f_name() -> PdfName {
-  pdf_name_of_bytes(pdf_content_ascii("/F"))
+  pdf_content_inline_f_key_name
 }
 
 ///|
 fn pdf_content_inline_dctdecode_name() -> PdfName {
-  pdf_name_of_bytes(pdf_content_ascii("/DCTDecode"))
+  pdf_content_inline_dctdecode_name_value
 }
 
 ///|
 fn pdf_content_inline_dct_name() -> PdfName {
-  pdf_name_of_bytes(pdf_content_ascii("/DCT"))
+  pdf_content_inline_dct_name_value
 }
 
 ///|
 fn pdf_content_inline_ascii_hexdecode_name() -> PdfName {
-  pdf_name_of_bytes(pdf_content_ascii("/ASCIIHexDecode"))
+  pdf_content_inline_ascii_hexdecode_name_value
 }
 
 ///|
 fn pdf_content_inline_ahx_name() -> PdfName {
-  pdf_name_of_bytes(pdf_content_ascii("/AHx"))
+  pdf_content_inline_ahx_name_value
 }
 
 ///|
 fn pdf_content_inline_ascii85decode_name() -> PdfName {
-  pdf_name_of_bytes(pdf_content_ascii("/ASCII85Decode"))
+  pdf_content_inline_ascii85decode_name_value
 }
 
 ///|
 fn pdf_content_inline_a85_name() -> PdfName {
-  pdf_name_of_bytes(pdf_content_ascii("/A85"))
+  pdf_content_inline_a85_name_value
 }
 
 ///|
 fn pdf_content_inline_runlengthdecode_name() -> PdfName {
-  pdf_name_of_bytes(pdf_content_ascii("/RunLengthDecode"))
+  pdf_content_inline_runlengthdecode_name_value
 }
 
 ///|
 fn pdf_content_inline_rl_name() -> PdfName {
-  pdf_name_of_bytes(pdf_content_ascii("/RL"))
+  pdf_content_inline_rl_name_value
 }
 
 ///|
 fn pdf_content_inline_flatedecode_name() -> PdfName {
-  pdf_name_of_bytes(pdf_content_ascii("/FlateDecode"))
+  pdf_content_inline_flatedecode_name_value
 }
 
 ///|
 fn pdf_content_inline_fl_name() -> PdfName {
-  pdf_name_of_bytes(pdf_content_ascii("/Fl"))
+  pdf_content_inline_fl_name_value
 }
 
 ///|
 fn pdf_content_inline_lzwdecode_name() -> PdfName {
-  pdf_name_of_bytes(pdf_content_ascii("/LZWDecode"))
+  pdf_content_inline_lzwdecode_name_value
 }
 
 ///|
 fn pdf_content_inline_lzw_name() -> PdfName {
-  pdf_name_of_bytes(pdf_content_ascii("/LZW"))
+  pdf_content_inline_lzw_name_value
 }
 
 ///|
@@ -766,11 +902,6 @@ fn pdf_content_inline_filter_value(dictionary : PdfObject) -> PdfObject? {
     Some(value) => Some(value)
     None => dictionary.lookup_immediate(pdf_content_inline_filter_name())
   }
-}
-
-///|
-fn pdf_content_inline_name(text : String) -> PdfName {
-  pdf_name_of_bytes(pdf_content_ascii(text))
 }
 
 ///|
@@ -801,9 +932,7 @@ fn pdf_content_inline_int_orelse(
 fn pdf_content_inline_image_mask(dictionary : PdfObject) -> Bool {
   match
     pdf_content_inline_lookup_orelse(
-      dictionary,
-      pdf_content_inline_name("/IM"),
-      pdf_content_inline_name("/ImageMask"),
+      dictionary, pdf_content_inline_im_key_name, pdf_content_inline_image_mask_key_name,
     ) {
     Some(PdfBoolean(true)) => true
     _ => false
@@ -818,19 +947,17 @@ fn pdf_content_inline_components(
 ) -> Int? raise PdfError {
   match
     pdf_content_inline_lookup_orelse(
-      dictionary,
-      pdf_content_inline_name("/CS"),
-      pdf_content_inline_name("/ColorSpace"),
+      dictionary, pdf_content_inline_cs_key_name, pdf_content_inline_colorspace_key_name,
     ) {
     Some(PdfNameObject(name)) =>
-      if name == pdf_content_inline_name("/G") ||
-        name == pdf_content_inline_name("/DeviceGray") {
+      if name == pdf_content_inline_g_name ||
+        name == pdf_content_inline_device_gray_name {
         Some(1)
-      } else if name == pdf_content_inline_name("/RGB") ||
-        name == pdf_content_inline_name("/DeviceRGB") {
+      } else if name == pdf_content_inline_rgb_name ||
+        name == pdf_content_inline_device_rgb_name {
         Some(3)
-      } else if name == pdf_content_inline_name("/CMYK") ||
-        name == pdf_content_inline_name("/DeviceCMYK") {
+      } else if name == pdf_content_inline_cmyk_name ||
+        name == pdf_content_inline_device_cmyk_name {
         Some(4)
       } else {
         match document {
@@ -856,9 +983,7 @@ fn pdf_content_inline_components(
 fn pdf_content_inline_bits_per_component(dictionary : PdfObject) -> Int? {
   match
     pdf_content_inline_int_orelse(
-      dictionary,
-      pdf_content_inline_name("/BPC"),
-      pdf_content_inline_name("/BitsPerComponent"),
+      dictionary, pdf_content_inline_bpc_key_name, pdf_content_inline_bits_per_component_key_name,
     ) {
     Some(value) if value > 0 => Some(value)
     None if pdf_content_inline_image_mask(dictionary) => Some(1)
@@ -869,9 +994,7 @@ fn pdf_content_inline_bits_per_component(dictionary : PdfObject) -> Int? {
 ///|
 fn pdf_content_inline_declared_data_length(dictionary : PdfObject) -> Int? {
   pdf_content_inline_int_orelse(
-    dictionary,
-    pdf_content_inline_name("/L"),
-    pdf_content_inline_name("/Length"),
+    dictionary, pdf_content_inline_l_key_name, pdf_content_length_key_name,
   )
 }
 
@@ -897,14 +1020,10 @@ fn pdf_content_inline_image_data_length(
       match
         (
           pdf_content_inline_int_orelse(
-            dictionary,
-            pdf_content_inline_name("/W"),
-            pdf_content_inline_name("/Width"),
+            dictionary, pdf_content_inline_w_key_name, pdf_content_inline_width_key_name,
           ),
           pdf_content_inline_int_orelse(
-            dictionary,
-            pdf_content_inline_name("/H"),
-            pdf_content_inline_name("/Height"),
+            dictionary, pdf_content_inline_h_key_name, pdf_content_inline_height_key_name,
           ),
           pdf_content_inline_bits_per_component(dictionary),
           pdf_content_inline_components(document, resources, dictionary),

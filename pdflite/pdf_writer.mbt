@@ -56,8 +56,13 @@ fn pdf_writer_push_octal_escape(output : Array[Byte], value : Int) -> Unit {
 }
 
 ///|
+let pdf_writer_length_key_name : PdfName = pdf_name_of_bytes(
+  Bytes::from_array([47, 76, 101, 110, 103, 116, 104]),
+)
+
+///|
 fn pdf_writer_length_name() -> PdfName {
-  pdf_name_of_bytes(Bytes::from_array([47, 76, 101, 110, 103, 116, 104]))
+  pdf_writer_length_key_name
 }
 
 ///|
@@ -609,45 +614,83 @@ fn pdf_writer_write_document_objects(
 }
 
 ///|
+let pdf_writer_root_key_name : PdfName = pdf_name_of_bytes(
+  Bytes::from_array([47, 82, 111, 111, 116]),
+)
+
+///|
 fn pdf_writer_root_name() -> PdfName {
-  pdf_name_of_bytes(Bytes::from_array([47, 82, 111, 111, 116]))
+  pdf_writer_root_key_name
 }
+
+///|
+let pdf_writer_size_key_name : PdfName = pdf_name_of_bytes(
+  Bytes::from_array([47, 83, 105, 122, 101]),
+)
 
 ///|
 fn pdf_writer_size_name() -> PdfName {
-  pdf_name_of_bytes(Bytes::from_array([47, 83, 105, 122, 101]))
+  pdf_writer_size_key_name
 }
+
+///|
+let pdf_writer_type_key_name : PdfName = pdf_name_of_bytes(
+  Bytes::from_array([47, 84, 121, 112, 101]),
+)
 
 ///|
 fn pdf_writer_type_name() -> PdfName {
-  pdf_name_of_bytes(Bytes::from_array([47, 84, 121, 112, 101]))
+  pdf_writer_type_key_name
 }
+
+///|
+let pdf_writer_xref_key_name : PdfName = pdf_name_of_bytes(
+  Bytes::from_array([47, 88, 82, 101, 102]),
+)
 
 ///|
 fn pdf_writer_xref_name() -> PdfName {
-  pdf_name_of_bytes(Bytes::from_array([47, 88, 82, 101, 102]))
+  pdf_writer_xref_key_name
 }
+
+///|
+let pdf_writer_w_key_name : PdfName = pdf_name_of_bytes(
+  Bytes::from_array([47, 87]),
+)
 
 ///|
 fn pdf_writer_w_name() -> PdfName {
-  pdf_name_of_bytes(Bytes::from_array([47, 87]))
+  pdf_writer_w_key_name
 }
+
+///|
+let pdf_writer_index_key_name : PdfName = pdf_name_of_bytes(
+  Bytes::from_array([47, 73, 110, 100, 101, 120]),
+)
 
 ///|
 fn pdf_writer_index_name() -> PdfName {
-  pdf_name_of_bytes(Bytes::from_array([47, 73, 110, 100, 101, 120]))
+  pdf_writer_index_key_name
 }
+
+///|
+let pdf_writer_prev_key_name : PdfName = pdf_name_of_bytes(
+  Bytes::from_array([47, 80, 114, 101, 118]),
+)
 
 ///|
 fn pdf_writer_prev_name() -> PdfName {
-  pdf_name_of_bytes(Bytes::from_array([47, 80, 114, 101, 118]))
+  pdf_writer_prev_key_name
 }
 
 ///|
+let pdf_writer_flate_decode_name_value : PdfName = pdf_name_of_bytes(
+  Bytes::from_array([47, 70, 108, 97, 116, 101, 68, 101, 99, 111, 100, 101]),
+)
+
+///|
 fn pdf_writer_flate_decode_name() -> PdfName {
-  pdf_name_of_bytes(
-    Bytes::from_array([47, 70, 108, 97, 116, 101, 68, 101, 99, 111, 100, 101]),
-  )
+  pdf_writer_flate_decode_name_value
 }
 
 ///|
