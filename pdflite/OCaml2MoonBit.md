@@ -1207,6 +1207,13 @@ Migration rule:
   rather than importing async packages into the core package. MoonBit imports
   are package-level, while `targets`/`supported_targets` control backend
   inclusion.
+- If native-only tests need extra imports such as `moonbitlang/async/fs`,
+  prefer placing them in a small native-only package with
+  `supported_targets = "+native"`. A single test file can be target-gated with
+  `options(targets: { "file_test.mbt": [ "native" ] })`, but imports are still
+  package-level and may become unused on non-native checks. Verified in this
+  project with `moon check --target all --warn-list +73` plus
+  `moon check markdown/fixture_acceptance --target native --warn-list +73`.
 
 ## MoonBit Testing Model
 

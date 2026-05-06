@@ -49,9 +49,13 @@ fn markdown_latin_document_for_test() -> @pdflite.PdfDocument raise {
         Op_Tj(markdown_ascii_for_test("Hello, ")),
         Op_TJ(
           PdfArray([
+            PdfReal(-300.0),
             PdfString(markdown_ascii_for_test("World")),
             PdfInteger(-20),
             PdfString(markdown_ascii_for_test("!")),
+            PdfInteger(-300),
+            PdfReal(-300.0),
+            PdfString(markdown_ascii_for_test("Spaced")),
           ]),
         ),
         Op_quote(markdown_ascii_for_test("Second line")),
@@ -192,7 +196,7 @@ test "pdf_document_to_markdown extracts deterministic Latin page text" {
     markdown_latin_document_for_test(),
   )
   @test.assert_eq(
-    markdown, "# Page 1\n\nHello, World!\nSecond line\n\n# Page 2\n\nAnother page\n",
+    markdown, "# Page 1\n\nHello, World! Spaced\nSecond line\n\n# Page 2\n\nAnother page\n",
   )
 }
 
@@ -202,7 +206,7 @@ test "pdf_bytes_to_markdown reads and extracts deterministic Latin text" {
   let bytes = @pdflite.pdf_write_document(document)
   @test.assert_eq(
     try! @markdown.pdf_bytes_to_markdown(bytes),
-    "# Page 1\n\nHello, World!\nSecond line\n\n# Page 2\n\nAnother page\n",
+    "# Page 1\n\nHello, World! Spaced\nSecond line\n\n# Page 2\n\nAnother page\n",
   )
 }
 

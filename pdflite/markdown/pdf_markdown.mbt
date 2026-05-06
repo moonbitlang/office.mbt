@@ -49,6 +49,19 @@ fn pdf_markdown_push_line_break(output : Array[Int]) -> Unit {
 }
 
 ///|
+fn pdf_markdown_push_word_space(output : Array[Int]) -> Unit {
+  match pdf_markdown_last_codepoint(output) {
+    None | Some(0x0A) | Some(0x20) => ()
+    Some(_) => output.push(0x20)
+  }
+}
+
+///|
+fn pdf_markdown_tj_adjustment_is_word_space(value : Double) -> Bool {
+  value <= -200.0
+}
+
+///|
 fn pdf_markdown_push_extracted_text(
   output : Array[Int],
   extractor : @pdflite.PdfTextExtractor?,
@@ -87,6 +100,8 @@ fn pdf_markdown_text_codepoints_of_page(
           match item {
             PdfString(text) =>
               pdf_markdown_push_extracted_text(output, extractor, text)
+            PdfReal(value) if pdf_markdown_tj_adjustment_is_word_space(value) =>
+              pdf_markdown_push_word_space(output)
             _ => ()
           }
         }

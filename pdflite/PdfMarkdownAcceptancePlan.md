@@ -30,9 +30,10 @@ library API.
 - [x] ~~Add `pdf_document_to_markdown` and `pdf_bytes_to_markdown` public APIs.~~
 - [x] ~~Add deterministic in-memory tests for simple Latin text extraction.~~
 - [x] ~~Add deterministic in-memory tests for CJK/Unicode text extraction.~~
-- [ ] Add a Pandoc fixture generator under a script or fixtures directory.
-- [ ] Check in generated small fixtures with source Markdown and license notes.
-- [ ] Add native fixture tests for Pandoc-generated Latin and CJK PDFs.
+- [x] ~~Add a Pandoc fixture generator under a script or fixtures directory.~~
+- [x] ~~Check in generated small fixtures with source Markdown and license
+  notes.~~
+- [x] ~~Add native fixture tests for Pandoc-generated Latin and CJK PDFs.~~
 - [ ] Add a MarkItDown comparison script that writes normalized side-by-side
   outputs and a JSON/Markdown report outside the test runner.
 - [ ] Add selected online real-world fixtures, starting with public PDF spec

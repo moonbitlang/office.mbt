@@ -119,8 +119,11 @@ Current backend snapshot:
 - [x] ~~Start the separate PDF-to-Markdown acceptance package described in
   `PdfMarkdownAcceptancePlan.md`, with deterministic in-memory extraction tests
   before generated or downloaded fixtures.~~
-- [ ] Add Pandoc-generated Latin and CJK PDF fixtures for the Markdown converter
-  once the in-memory converter API is stable.
+- [x] ~~Add Pandoc-generated Latin and CJK PDF fixtures for the Markdown
+  converter once the in-memory converter API is stable.~~
+- [x] ~~Preserve Pandoc-generated Latin word boundaries by treating large
+  negative `TJ` numeric adjustments as word spacing while ignoring small
+  kerning adjustments.~~
 - [ ] Add a MarkItDown comparison report/script for selected local and
   downloaded fixtures; use differences to drive core extraction fixes.
 - [x] ~~Add Type3 glyph-program/resource coverage where a CharProc consumes
