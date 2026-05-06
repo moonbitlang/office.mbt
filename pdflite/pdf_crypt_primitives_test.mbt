@@ -254,6 +254,14 @@ test "pdf_aes_ecb_decrypt handles padding and checked errors" {
     try! @pdflite.pdf_aes_ecb_decrypt(key[:], Bytes::new(0)[:]),
     Bytes::new(0),
   )
+  @test.assert_eq(
+    try! @pdflite.pdf_aes_ecb_encrypt(key[:], plaintext[:]),
+    ciphertext,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_aes_ecb_encrypt(key[:], Bytes::new(0)[:]),
+    Bytes::new(0),
+  )
 
   let mismatched_padding_cipher = crypt_bytes_for_test([
     0x49, 0xd6, 0x87, 0x53, 0x99, 0x9b, 0xa6, 0x8c, 0xe3, 0x89, 0x7a, 0x68, 0x60,
@@ -298,6 +306,14 @@ test "pdf_aes_ecb_decrypt handles padding and checked errors" {
   guard bad_ecb is Err(@pdflite.PdfError::InvalidCryptoDataLength(3)) else {
     fail("expected InvalidCryptoDataLength for ECB")
   }
+
+  let bad_ecb_encrypt : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_aes_ecb_encrypt(
+    key[:],
+    crypt_bytes_for_test([1, 2, 3])[:],
+  )
+  guard bad_ecb_encrypt is Err(@pdflite.PdfError::InvalidCryptoDataLength(3)) else {
+    fail("expected InvalidCryptoDataLength for ECB encrypt")
+  }
 }
 
 ///|
@@ -337,6 +353,186 @@ test "pdf_encryption_object_key matches CamlPDF Algorithm 3.1" {
       0x41, 0x14, 0x61,
     ]),
   )
+}
+
+///|
+test "pdf_cryptprimitives compatibility wrappers mirror CamlPDF primitives" {
+  @test.assert_eq(
+    try! @pdflite.pdf_cryptprimitives_crypt(
+      [75, 101, 121],
+      @ascii.encode("Plaintext")[:],
+    ),
+    crypt_bytes_for_test([0xBB, 0xF3, 0x16, 0xE8, 0xD9, 0x40, 0xAF, 0x0A, 0xD3]),
+  )
+
+  let ecb_key_values = [
+    0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09,
+    0xcf, 0x4f, 0x3c,
+  ]
+  let ecb_plain = crypt_bytes_for_test([
+    0x6b, 0xc1, 0xbe, 0xe2, 0x2e, 0x40, 0x9f, 0x96, 0xe9, 0x3d, 0x7e, 0x11, 0x73,
+    0x93, 0x17, 0x2a, 0xae, 0x2d, 0x8a, 0x57, 0x1e, 0x03, 0xac, 0x9c, 0x9e, 0xb7,
+    0x6f, 0xac, 0x45, 0xaf, 0x8e, 0x51,
+  ])
+  let ecb_cipher = crypt_bytes_for_test([
+    0x3a, 0xd7, 0x7b, 0xb4, 0x0d, 0x7a, 0x36, 0x60, 0xa8, 0x9e, 0xca, 0xf3, 0x24,
+    0x66, 0xef, 0x97, 0xf5, 0xd3, 0xd5, 0x85, 0x03, 0xb9, 0x69, 0x9d, 0xe7, 0x85,
+    0x89, 0x5a, 0x96, 0xfd, 0xba, 0xaf,
+  ])
+  @test.assert_eq(
+    try! @pdflite.pdf_cryptprimitives_aes_encrypt_data_ecb(
+      4,
+      ecb_key_values,
+      ecb_plain[:],
+    ),
+    ecb_cipher,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_cryptprimitives_aes_decrypt_data_ecb(
+      4,
+      ecb_key_values,
+      ecb_cipher[:],
+      remove_padding=false,
+    ),
+    ecb_plain,
+  )
+
+  let cbc_key_values = [
+    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c,
+    0x0d, 0x0e, 0x0f,
+  ]
+  let iv = crypt_bytes_for_test([
+    0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c,
+    0x1d, 0x1e, 0x1f,
+  ])
+  let cbc_encrypted = try! @pdflite.pdf_cryptprimitives_aes_encrypt_data_with_firstblock(
+    4,
+    cbc_key_values,
+    @ascii.encode("hello")[:],
+    iv[:],
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_cryptprimitives_aes_decrypt_data(
+      4,
+      cbc_key_values,
+      cbc_encrypted[:],
+    ),
+    @ascii.encode("hello"),
+  )
+
+  let key128_values = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+  @test.assert_eq(
+    try! @pdflite.pdf_cryptprimitives_find_hash(
+      PdfCryptAESV2,
+      65537,
+      2,
+      key128_values,
+      128,
+    ),
+    @pdflite.pdf_int_array_of_bytes(
+      @pdflite.pdf_encryption_object_key(
+        PdfCryptAESV2,
+        65537,
+        2,
+        crypt_bytes_for_test(key128_values)[:],
+        128,
+      )[:],
+    ),
+  )
+
+  let stream_encrypted = try! @pdflite.pdf_cryptprimitives_decrypt_stream_data(
+    PdfCryptARC4(40, 2),
+    true,
+    None,
+    12,
+    0,
+    [1, 2, 3, 4, 5],
+    40,
+    4,
+    @ascii.encode("hello")[:],
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_cryptprimitives_decrypt_stream_data(
+      PdfCryptARC4(40, 2),
+      false,
+      None,
+      12,
+      0,
+      [1, 2, 3, 4, 5],
+      40,
+      4,
+      stream_encrypted[:],
+    ),
+    @ascii.encode("hello"),
+  )
+
+  let aesv3_file_key = crypt_bytes_for_test([ for value in 0..<32 => value ])
+  let empty_key : Array[Int] = []
+  let aesv3_encrypted = try! @pdflite.pdf_cryptprimitives_decrypt_stream_data(
+    PdfCryptAESV3(false),
+    true,
+    Some(aesv3_file_key[:]),
+    0,
+    0,
+    empty_key,
+    256,
+    5,
+    @ascii.encode("moon")[:],
+    firstblock=Some(iv[:]),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_cryptprimitives_decrypt_stream_data(
+      PdfCryptAESV3(false),
+      false,
+      Some(aesv3_file_key[:]),
+      0,
+      0,
+      empty_key,
+      256,
+      5,
+      aesv3_encrypted[:],
+    ),
+    @ascii.encode("moon"),
+  )
+
+  let missing_iv : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_cryptprimitives_decrypt_stream_data(
+    PdfCryptAESV2,
+    true,
+    None,
+    12,
+    0,
+    key128_values,
+    128,
+    4,
+    @ascii.encode("hello")[:],
+  )
+  guard missing_iv is Err(@pdflite.PdfError::RandomBytesUnavailable) else {
+    fail("expected explicit firstblock requirement for AES encryption")
+  }
+
+  let missing_file_key : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_cryptprimitives_decrypt_stream_data(
+    PdfCryptAESV3(false),
+    false,
+    None,
+    0,
+    0,
+    empty_key,
+    256,
+    5,
+    aesv3_encrypted[:],
+  )
+  guard missing_file_key is Err(@pdflite.PdfError::CryptoKeyExpected) else {
+    fail("expected AESV3 revision 5 stream crypt to require a file key")
+  }
+
+  let bad_nk : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_cryptprimitives_aes_encrypt_data_ecb(
+    8,
+    key128_values,
+    ecb_plain[:],
+  )
+  guard bad_nk is Err(_) else {
+    fail("expected invalid nk/key length to raise")
+  }
 }
 
 ///|

@@ -433,6 +433,99 @@ pub fn pdf_aes_ecb_decrypt(
 }
 
 ///|
+pub fn pdf_aes_ecb_encrypt(
+  key : BytesView,
+  data : BytesView,
+) -> PdfBytes raise PdfError {
+  guard data.length() % 16 == 0 else {
+    raise InvalidCryptoDataLength(data.length())
+  }
+  guard data.length() > 0 else { return Bytes::new(0) }
+  let cooked_key = pdf_aes_encrypt_key(key)
+  let output : Array[Byte] = []
+  let mut position = 0
+  while position < data.length() {
+    let plaintext = pdf_aes_block(data[position:position + 16])
+    let ciphertext = FixedArray::make(16, b'\x00')
+    @rijndael.camlpdf_caml_aes_encrypt(
+      cooked_key, 0, plaintext, 0, ciphertext, 0,
+    )
+    pdf_aes_append_block(output, ciphertext)
+    position += 16
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_cryptprimitives_key_from_ints(
+  nk : Int,
+  key : ArrayView[Int],
+) -> PdfBytes raise PdfError {
+  let bytes = pdf_bytes_of_int_array(key)
+  guard nk > 0 && bytes.length() == nk * 4 else { raise CryptoKeyExpected }
+  bytes
+}
+
+///|
+pub fn pdf_cryptprimitives_crypt(
+  key : ArrayView[Int],
+  data : BytesView,
+) -> PdfBytes raise PdfError {
+  pdf_arc4_crypt(pdf_bytes_of_int_array(key)[:], data)
+}
+
+///|
+pub fn pdf_cryptprimitives_aes_decrypt_data(
+  nk : Int,
+  key : ArrayView[Int],
+  data : BytesView,
+  remove_padding? : Bool = true,
+) -> PdfBytes raise PdfError {
+  pdf_aes_cbc_decrypt(
+    pdf_cryptprimitives_key_from_ints(nk, key)[:],
+    data,
+    remove_padding~,
+  )
+}
+
+///|
+pub fn pdf_cryptprimitives_aes_decrypt_data_ecb(
+  nk : Int,
+  key : ArrayView[Int],
+  data : BytesView,
+  remove_padding? : Bool = true,
+) -> PdfBytes raise PdfError {
+  pdf_aes_ecb_decrypt(
+    pdf_cryptprimitives_key_from_ints(nk, key)[:],
+    data,
+    remove_padding~,
+  )
+}
+
+///|
+pub fn pdf_cryptprimitives_aes_encrypt_data_with_firstblock(
+  nk : Int,
+  key : ArrayView[Int],
+  data : BytesView,
+  firstblock : BytesView,
+) -> PdfBytes raise PdfError {
+  pdf_aes_cbc_encrypt_with_iv(
+    pdf_cryptprimitives_key_from_ints(nk, key)[:],
+    firstblock,
+    data,
+  )
+}
+
+///|
+pub fn pdf_cryptprimitives_aes_encrypt_data_ecb(
+  nk : Int,
+  key : ArrayView[Int],
+  data : BytesView,
+) -> PdfBytes raise PdfError {
+  pdf_aes_ecb_encrypt(pdf_cryptprimitives_key_from_ints(nk, key)[:], data)
+}
+
+///|
 pub fn pdf_encryption_object_key(
   crypt_type : PdfCryptType,
   object_number : Int,
@@ -465,6 +558,82 @@ pub fn pdf_encryption_object_key(
     output.push(digest[index])
   }
   Bytes::from_array(output)
+}
+
+///|
+pub fn pdf_cryptprimitives_find_hash(
+  crypt_type : PdfCryptType,
+  object_number : Int,
+  generation : Int,
+  key : ArrayView[Int],
+  key_length_bits : Int,
+) -> Array[Int] raise PdfError {
+  pdf_int_array_of_bytes(
+    pdf_encryption_object_key(
+      crypt_type,
+      object_number,
+      generation,
+      pdf_bytes_of_int_array(key)[:],
+      key_length_bits,
+    )[:],
+  )
+}
+
+///|
+fn pdf_cryptprimitives_stream_key(
+  crypt_type : PdfCryptType,
+  file_encryption_key : BytesView?,
+  object_number : Int,
+  generation : Int,
+  key : ArrayView[Int],
+  key_length_bits : Int,
+  revision : Int,
+) -> BytesView raise PdfError {
+  if revision == 5 || revision == 6 {
+    match file_encryption_key {
+      Some(file_key) => file_key
+      None => raise CryptoKeyExpected
+    }
+  } else {
+    pdf_encryption_object_key(
+      crypt_type,
+      object_number,
+      generation,
+      pdf_bytes_of_int_array(key)[:],
+      key_length_bits,
+    )[:]
+  }
+}
+
+///|
+pub fn pdf_cryptprimitives_decrypt_stream_data(
+  crypt_type : PdfCryptType,
+  encrypt : Bool,
+  file_encryption_key : BytesView?,
+  object_number : Int,
+  generation : Int,
+  key : ArrayView[Int],
+  key_length_bits : Int,
+  revision : Int,
+  data : BytesView,
+  firstblock? : BytesView? = None,
+) -> PdfBytes raise PdfError {
+  let stream_key = pdf_cryptprimitives_stream_key(
+    crypt_type, file_encryption_key, object_number, generation, key, key_length_bits,
+    revision,
+  )
+  match crypt_type {
+    PdfCryptARC4(_, _) => pdf_arc4_crypt(stream_key, data)
+    PdfCryptAESV2 | PdfCryptAESV3(_) =>
+      if encrypt {
+        match firstblock {
+          Some(iv) => pdf_aes_cbc_encrypt_with_iv(stream_key, iv, data)
+          None => raise RandomBytesUnavailable
+        }
+      } else {
+        pdf_aes_cbc_decrypt(stream_key, data)
+      }
+  }
 }
 
 ///|

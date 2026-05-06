@@ -1251,8 +1251,14 @@ MoonBit consequences for this project:
     and owner-password authentication are also started. AES block,
     IV-prefixed CBC, and ECB primitives are started through the portable
     `illusory0x0/rijndael` MoonBit package, with CamlPDF-compatible PKCS#7
-    padding handling. ARC4 object data encryption/decryption using derived
-    object keys is started for the legacy string/stream path. AESV2 object data
+    padding handling. The `.repos/pdfcryptprimitives.mli` helper surface is now
+    exposed over the byte-oriented primitive core for ARC4, AES-CBC decrypt,
+    explicit-first-block AES-CBC encrypt, AES-ECB encrypt/decrypt, Algorithm
+    3.1 object-key hashing, and CamlPDF-shaped stream-data crypt dispatch; the
+    pure cross-target AES encryption wrapper requires the caller to provide the
+    first block rather than silently manufacturing random bytes. ARC4 object
+    data encryption/decryption using derived object keys is started for the
+    legacy string/stream path. AESV2 object data
     encryption/decryption is also started for IV-prefixed strings and stream
     payloads using derived AES object keys. AESV3 object data
     encryption/decryption is started with the unwrapped 32-byte file key.

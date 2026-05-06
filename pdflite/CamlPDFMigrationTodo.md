@@ -7,7 +7,7 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 97.2%.
+- Native main-feature parity: 97.3%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
   breadth: 85-90%.
 
@@ -91,6 +91,10 @@ Current backend snapshot:
   typed function core.~~
 - [x] ~~Expose `.repos/pdfcmap.mli`-referenced standalone CMap parse helper over
   the existing document-aware CMap stream parser.~~
+- [x] ~~Expose `.repos/pdfcryptprimitives.mli`-referenced compatibility helpers
+  for ARC4, AES-CBC decrypt/encrypt with explicit first block, AES-ECB
+  encrypt/decrypt, object-key hashing, and stream-data crypt dispatch over the
+  existing byte-oriented primitive core.~~
 - [x] ~~Expose `.repos/pdfcrypt.mli`-referenced standalone encryption helpers
   for document decrypt, owner decrypt, encrypted-state introspection,
   encryption-value parsing, single-stream decrypt, permission-mask decoding,
