@@ -236,7 +236,11 @@ work changes.
    boundaries, Type3 no-`/ToUnicode` custom-encoding fallback through AGL glyph
    names and StandardEncoding fill-in, and Flate inline-image content parsing
    are also covered. Standard image dictionary keys and encoded-image filter
-   names are cached once for repeated metadata lookups. Unit coverage also
+   names are cached once for repeated metadata lookups. Standard font aliases,
+   encoding names, font/CID/CMap dictionary keys, and ToUnicode writer keys are
+   also cached as private `PdfName` values for repeated text read/write
+   lookups, while the large AGL glyph-name tables remain generated on demand.
+   Unit coverage also
    preserves direct Type3 `CharProcs`
    streams, parses their `d0`/`d1` glyph programs without allocating new
    indirect objects, and round-trips Type3 writer output for `/FontBBox`,
@@ -411,7 +415,9 @@ and backend breadth, is about 83-88% complete.
   TrueType `FontFile2` with generated `/ToUnicode` text extraction, while
   focused font tests preserve direct Type3 `CharProcs` streams, parse
   `d0`/`d1` glyph programs, and round-trip Type3 writer output without dropping
-  bbox, matrix, resources, CharProcs, or width metrics.
+  bbox, matrix, resources, CharProcs, or width metrics. Standard text/font
+  dictionary, encoding, CID, CMap, and ToUnicode names are cached for repeated
+  read/write hot paths.
   Stream decode now covers CCITT `/K 0` and `/K < 0` with `/DecodeParms`
   defaults and direct indirect params. Typed stream encoding now covers CCITT
   Group 3 `/K 0` and Group 4 `/K < 0` and round-trips through decode.

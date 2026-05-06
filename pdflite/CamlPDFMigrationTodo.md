@@ -67,6 +67,9 @@ Current estimate:
 - [x] ~~Cache writer xref-stream/trailer names and inline-image
   dictionary/filter/color names so write and content-parse hot paths reuse
   stable `PdfName` values.~~
+- [x] ~~Cache standard font aliases, encoding names, font/CID/CMap dictionary
+  keys, and ToUnicode writer keys so text read/write hot paths reuse stable
+  `PdfName` values.~~
 - [ ] Continue zlib byte-output/performance parity work where exact miniz block
   spelling or large-file profiles expose remaining gaps.
 - [ ] Profile and tune large-file hot paths for object streams, filters, and
@@ -107,6 +110,9 @@ Current estimate:
   `PdfName` values for stable standard keys and name objects.~~
 - [x] ~~Writer trailer/xref-stream keys and inline-image metadata/filter names
   now share cached `PdfName` values in the remaining large-file hot paths.~~
+- [x] ~~Text/font parsing and writing now share cached standard font,
+  encoding, font dictionary, CID, CMap, and ToUnicode names in the main text
+  hot paths.~~
 - [ ] Improve byte-identical zlib output strategy and broader performance
   parity beyond the explicit Flate level API.
 - [ ] Broaden malformed xref-table/xref-stream/object-stream recovery with more

@@ -42,6 +42,314 @@ fn pdf_text_name(text : String) -> PdfName {
 }
 
 ///|
+fn pdf_text_static_name(text : String) -> PdfName {
+  pdf_name_of_bytes(@ascii.encode(text))
+}
+
+///|
+let pdf_text_slash_name : PdfName = pdf_text_static_name("/")
+
+///|
+let pdf_text_times_roman_name : PdfName = pdf_text_static_name("/Times-Roman")
+
+///|
+let pdf_text_times_new_roman_name : PdfName = pdf_text_static_name(
+  "/TimesNewRoman",
+)
+
+///|
+let pdf_text_times_bold_name : PdfName = pdf_text_static_name("/Times-Bold")
+
+///|
+let pdf_text_times_new_roman_bold_name : PdfName = pdf_text_static_name(
+  "/TimesNewRoman,Bold",
+)
+
+///|
+let pdf_text_times_italic_name : PdfName = pdf_text_static_name("/Times-Italic")
+
+///|
+let pdf_text_times_new_roman_italic_name : PdfName = pdf_text_static_name(
+  "/TimesNewRoman,Italic",
+)
+
+///|
+let pdf_text_times_bold_italic_name : PdfName = pdf_text_static_name(
+  "/Times-BoldItalic",
+)
+
+///|
+let pdf_text_times_new_roman_bold_italic_name : PdfName = pdf_text_static_name(
+  "/TimesNewRoman,BoldItalic",
+)
+
+///|
+let pdf_text_helvetica_name : PdfName = pdf_text_static_name("/Helvetica")
+
+///|
+let pdf_text_arial_name : PdfName = pdf_text_static_name("/Arial")
+
+///|
+let pdf_text_helvetica_bold_name : PdfName = pdf_text_static_name(
+  "/Helvetica-Bold",
+)
+
+///|
+let pdf_text_arial_bold_name : PdfName = pdf_text_static_name("/Arial,Bold")
+
+///|
+let pdf_text_helvetica_oblique_name : PdfName = pdf_text_static_name(
+  "/Helvetica-Oblique",
+)
+
+///|
+let pdf_text_arial_italic_name : PdfName = pdf_text_static_name("/Arial,Italic")
+
+///|
+let pdf_text_helvetica_bold_oblique_name : PdfName = pdf_text_static_name(
+  "/Helvetica-BoldOblique",
+)
+
+///|
+let pdf_text_arial_bold_italic_name : PdfName = pdf_text_static_name(
+  "/Arial,BoldItalic",
+)
+
+///|
+let pdf_text_courier_name : PdfName = pdf_text_static_name("/Courier")
+
+///|
+let pdf_text_courier_new_name : PdfName = pdf_text_static_name("/CourierNew")
+
+///|
+let pdf_text_courier_bold_name : PdfName = pdf_text_static_name("/Courier-Bold")
+
+///|
+let pdf_text_courier_new_bold_name : PdfName = pdf_text_static_name(
+  "/CourierNew,Bold",
+)
+
+///|
+let pdf_text_courier_oblique_name : PdfName = pdf_text_static_name(
+  "/Courier-Oblique",
+)
+
+///|
+let pdf_text_courier_new_italic_name : PdfName = pdf_text_static_name(
+  "/CourierNew,Italic",
+)
+
+///|
+let pdf_text_courier_bold_oblique_name : PdfName = pdf_text_static_name(
+  "/Courier-BoldOblique",
+)
+
+///|
+let pdf_text_courier_new_bold_italic_name : PdfName = pdf_text_static_name(
+  "/CourierNew,BoldItalic",
+)
+
+///|
+let pdf_text_symbol_name : PdfName = pdf_text_static_name("/Symbol")
+
+///|
+let pdf_text_zapf_dingbats_name : PdfName = pdf_text_static_name(
+  "/ZapfDingbats",
+)
+
+///|
+let pdf_text_identity_h_name : PdfName = pdf_text_static_name("/Identity-H")
+
+///|
+let pdf_text_identity_v_name : PdfName = pdf_text_static_name("/Identity-V")
+
+///|
+let pdf_text_standard_encoding_name : PdfName = pdf_text_static_name(
+  "/StandardEncoding",
+)
+
+///|
+let pdf_text_mac_roman_encoding_name : PdfName = pdf_text_static_name(
+  "/MacRomanEncoding",
+)
+
+///|
+let pdf_text_win_ansi_encoding_name : PdfName = pdf_text_static_name(
+  "/WinAnsiEncoding",
+)
+
+///|
+let pdf_text_mac_expert_encoding_name : PdfName = pdf_text_static_name(
+  "/MacExpertEncoding",
+)
+
+///|
+let pdf_text_font_file_key_name : PdfName = pdf_text_static_name("/FontFile")
+
+///|
+let pdf_text_font_file2_key_name : PdfName = pdf_text_static_name("/FontFile2")
+
+///|
+let pdf_text_font_file3_key_name : PdfName = pdf_text_static_name("/FontFile3")
+
+///|
+let pdf_text_charset_key_name : PdfName = pdf_text_static_name("/CharSet")
+
+///|
+let pdf_text_font_descriptor_key_name : PdfName = pdf_text_static_name(
+  "/FontDescriptor",
+)
+
+///|
+let pdf_text_font_bbox_key_name : PdfName = pdf_text_static_name("/FontBBox")
+
+///|
+let pdf_text_ascent_key_name : PdfName = pdf_text_static_name("/Ascent")
+
+///|
+let pdf_text_descent_key_name : PdfName = pdf_text_static_name("/Descent")
+
+///|
+let pdf_text_avg_width_key_name : PdfName = pdf_text_static_name("/AvgWidth")
+
+///|
+let pdf_text_max_width_key_name : PdfName = pdf_text_static_name("/MaxWidth")
+
+///|
+let pdf_text_flags_key_name : PdfName = pdf_text_static_name("/Flags")
+
+///|
+let pdf_text_italic_angle_key_name : PdfName = pdf_text_static_name(
+  "/ItalicAngle",
+)
+
+///|
+let pdf_text_cap_height_key_name : PdfName = pdf_text_static_name("/CapHeight")
+
+///|
+let pdf_text_xheight_key_name : PdfName = pdf_text_static_name("/XHeight")
+
+///|
+let pdf_text_stemv_key_name : PdfName = pdf_text_static_name("/StemV")
+
+///|
+let pdf_text_subtype_key_name : PdfName = pdf_text_static_name("/Subtype")
+
+///|
+let pdf_text_type3_name : PdfName = pdf_text_static_name("/Type3")
+
+///|
+let pdf_text_missing_width_key_name : PdfName = pdf_text_static_name(
+  "/MissingWidth",
+)
+
+///|
+let pdf_text_widths_key_name : PdfName = pdf_text_static_name("/Widths")
+
+///|
+let pdf_text_first_char_key_name : PdfName = pdf_text_static_name("/FirstChar")
+
+///|
+let pdf_text_last_char_key_name : PdfName = pdf_text_static_name("/LastChar")
+
+///|
+let pdf_text_charprocs_key_name : PdfName = pdf_text_static_name("/CharProcs")
+
+///|
+let pdf_text_resources_key_name : PdfName = pdf_text_static_name("/Resources")
+
+///|
+let pdf_text_font_matrix_key_name : PdfName = pdf_text_static_name(
+  "/FontMatrix",
+)
+
+///|
+let pdf_text_type1_name : PdfName = pdf_text_static_name("/Type1")
+
+///|
+let pdf_text_mmtype1_name : PdfName = pdf_text_static_name("/MMType1")
+
+///|
+let pdf_text_true_type_name_value : PdfName = pdf_text_static_name("/TrueType")
+
+///|
+let pdf_text_base_font_key_name : PdfName = pdf_text_static_name("/BaseFont")
+
+///|
+let pdf_text_font_name : PdfName = pdf_text_static_name("/Font")
+
+///|
+let pdf_text_encoding_key_name : PdfName = pdf_text_static_name("/Encoding")
+
+///|
+let pdf_text_base_encoding_key_name : PdfName = pdf_text_static_name(
+  "/BaseEncoding",
+)
+
+///|
+let pdf_text_differences_key_name : PdfName = pdf_text_static_name(
+  "/Differences",
+)
+
+///|
+let pdf_text_type0_name : PdfName = pdf_text_static_name("/Type0")
+
+///|
+let pdf_text_registry_key_name : PdfName = pdf_text_static_name("/Registry")
+
+///|
+let pdf_text_ordering_key_name : PdfName = pdf_text_static_name("/Ordering")
+
+///|
+let pdf_text_supplement_key_name : PdfName = pdf_text_static_name("/Supplement")
+
+///|
+let pdf_text_w_key_name : PdfName = pdf_text_static_name("/W")
+
+///|
+let pdf_text_w2_key_name : PdfName = pdf_text_static_name("/W2")
+
+///|
+let pdf_text_dw_key_name : PdfName = pdf_text_static_name("/DW")
+
+///|
+let pdf_text_dw2_key_name : PdfName = pdf_text_static_name("/DW2")
+
+///|
+let pdf_text_cid_system_info_key_name : PdfName = pdf_text_static_name(
+  "/CIDSystemInfo",
+)
+
+///|
+let pdf_text_descendant_fonts_key_name : PdfName = pdf_text_static_name(
+  "/DescendantFonts",
+)
+
+///|
+let pdf_text_wmode_key_name : PdfName = pdf_text_static_name("/WMode")
+
+///|
+let pdf_text_cmap_name_key_name : PdfName = pdf_text_static_name("/CMapName")
+
+///|
+let pdf_text_cmap_type_key_name : PdfName = pdf_text_static_name("/CMapType")
+
+///|
+let pdf_text_usecmap_key_name : PdfName = pdf_text_static_name("/UseCMap")
+
+///|
+let pdf_text_tounicode_key_name : PdfName = pdf_text_static_name("/ToUnicode")
+
+///|
+let pdf_text_type_key_name : PdfName = pdf_text_static_name("/Type")
+
+///|
+let pdf_text_font_name_key_name : PdfName = pdf_text_static_name("/FontName")
+
+///|
+let pdf_text_length_key_name : PdfName = pdf_text_static_name("/Length")
+
+///|
 fn pdf_text_string_of_name(name : PdfName) -> String {
   @ascii.decode_lossy(name.bytes()[:])
 }
@@ -78,35 +386,34 @@ pub fn pdf_standard_font_of_name(name : String) -> PdfStandardFont? {
 ///|
 pub fn pdf_standard_font_of_pdf_name(name : PdfName) -> PdfStandardFont? {
   match name {
-    name if name == pdf_text_name("/Times-Roman") ||
-      name == pdf_text_name("/TimesNewRoman") => Some(PdfTimesRoman)
-    name if name == pdf_text_name("/Times-Bold") ||
-      name == pdf_text_name("/TimesNewRoman,Bold") => Some(PdfTimesBold)
-    name if name == pdf_text_name("/Times-Italic") ||
-      name == pdf_text_name("/TimesNewRoman,Italic") => Some(PdfTimesItalic)
-    name if name == pdf_text_name("/Times-BoldItalic") ||
-      name == pdf_text_name("/TimesNewRoman,BoldItalic") =>
+    name if name == pdf_text_times_roman_name ||
+      name == pdf_text_times_new_roman_name => Some(PdfTimesRoman)
+    name if name == pdf_text_times_bold_name ||
+      name == pdf_text_times_new_roman_bold_name => Some(PdfTimesBold)
+    name if name == pdf_text_times_italic_name ||
+      name == pdf_text_times_new_roman_italic_name => Some(PdfTimesItalic)
+    name if name == pdf_text_times_bold_italic_name ||
+      name == pdf_text_times_new_roman_bold_italic_name =>
       Some(PdfTimesBoldItalic)
-    name if name == pdf_text_name("/Helvetica") ||
-      name == pdf_text_name("/Arial") => Some(PdfHelvetica)
-    name if name == pdf_text_name("/Helvetica-Bold") ||
-      name == pdf_text_name("/Arial,Bold") => Some(PdfHelveticaBold)
-    name if name == pdf_text_name("/Helvetica-Oblique") ||
-      name == pdf_text_name("/Arial,Italic") => Some(PdfHelveticaOblique)
-    name if name == pdf_text_name("/Helvetica-BoldOblique") ||
-      name == pdf_text_name("/Arial,BoldItalic") =>
-      Some(PdfHelveticaBoldOblique)
-    name if name == pdf_text_name("/Courier") ||
-      name == pdf_text_name("/CourierNew") => Some(PdfCourier)
-    name if name == pdf_text_name("/Courier-Bold") ||
-      name == pdf_text_name("/CourierNew,Bold") => Some(PdfCourierBold)
-    name if name == pdf_text_name("/Courier-Oblique") ||
-      name == pdf_text_name("/CourierNew,Italic") => Some(PdfCourierOblique)
-    name if name == pdf_text_name("/Courier-BoldOblique") ||
-      name == pdf_text_name("/CourierNew,BoldItalic") =>
+    name if name == pdf_text_helvetica_name || name == pdf_text_arial_name =>
+      Some(PdfHelvetica)
+    name if name == pdf_text_helvetica_bold_name ||
+      name == pdf_text_arial_bold_name => Some(PdfHelveticaBold)
+    name if name == pdf_text_helvetica_oblique_name ||
+      name == pdf_text_arial_italic_name => Some(PdfHelveticaOblique)
+    name if name == pdf_text_helvetica_bold_oblique_name ||
+      name == pdf_text_arial_bold_italic_name => Some(PdfHelveticaBoldOblique)
+    name if name == pdf_text_courier_name || name == pdf_text_courier_new_name =>
+      Some(PdfCourier)
+    name if name == pdf_text_courier_bold_name ||
+      name == pdf_text_courier_new_bold_name => Some(PdfCourierBold)
+    name if name == pdf_text_courier_oblique_name ||
+      name == pdf_text_courier_new_italic_name => Some(PdfCourierOblique)
+    name if name == pdf_text_courier_bold_oblique_name ||
+      name == pdf_text_courier_new_bold_italic_name =>
       Some(PdfCourierBoldOblique)
-    name if name == pdf_text_name("/Symbol") => Some(PdfSymbol)
-    name if name == pdf_text_name("/ZapfDingbats") => Some(PdfZapfDingbats)
+    name if name == pdf_text_symbol_name => Some(PdfSymbol)
+    name if name == pdf_text_zapf_dingbats_name => Some(PdfZapfDingbats)
     _ => None
   }
 }
@@ -290,7 +597,7 @@ pub fn PdfCIDKeyedFont::debug_name(self : PdfCIDKeyedFont) -> String {
 ///|
 pub fn PdfCMapEncoding::is_identity_h(self : PdfCMapEncoding) -> Bool {
   match self {
-    PdfPredefinedCMap(name) => name == pdf_text_name("/Identity-H")
+    PdfPredefinedCMap(name) => name == pdf_text_identity_h_name
     _ => false
   }
 }
@@ -298,7 +605,7 @@ pub fn PdfCMapEncoding::is_identity_h(self : PdfCMapEncoding) -> Bool {
 ///|
 pub fn PdfCMapEncoding::is_identity_v(self : PdfCMapEncoding) -> Bool {
   match self {
-    PdfPredefinedCMap(name) => name == pdf_text_name("/Identity-V")
+    PdfPredefinedCMap(name) => name == pdf_text_identity_v_name
     _ => false
   }
 }
@@ -1493,8 +1800,8 @@ pub fn PdfCMapEncoding::uses_two_byte_codes(self : PdfCMapEncoding) -> Bool {
       if parsed.codespaces.length() == 0 {
         match parsed.usecmap {
           Some(name) =>
-            name == pdf_text_name("/Identity-H") ||
-            name == pdf_text_name("/Identity-V") ||
+            name == pdf_text_identity_h_name ||
+            name == pdf_text_identity_v_name ||
             pdf_text_predefined_cmap_uses_two_byte_charcodes(name)
           None => false
         }
@@ -1778,10 +2085,10 @@ pub fn PdfEncoding::debug_name(self : PdfEncoding) -> String {
 ///|
 pub fn PdfEncoding::pdf_name(self : PdfEncoding) -> PdfName? {
   match self {
-    PdfStandardEncoding => Some(pdf_text_name("/StandardEncoding"))
-    PdfMacRomanEncoding => Some(pdf_text_name("/MacRomanEncoding"))
-    PdfWinAnsiEncoding => Some(pdf_text_name("/WinAnsiEncoding"))
-    PdfMacExpertEncoding => Some(pdf_text_name("/MacExpertEncoding"))
+    PdfStandardEncoding => Some(pdf_text_standard_encoding_name)
+    PdfMacRomanEncoding => Some(pdf_text_mac_roman_encoding_name)
+    PdfWinAnsiEncoding => Some(pdf_text_win_ansi_encoding_name)
+    PdfMacExpertEncoding => Some(pdf_text_mac_expert_encoding_name)
     _ => None
   }
 }
@@ -1789,13 +2096,11 @@ pub fn PdfEncoding::pdf_name(self : PdfEncoding) -> PdfName? {
 ///|
 pub fn pdf_encoding_of_name(name : PdfName) -> PdfEncoding? {
   match name {
-    name if name == pdf_text_name("/StandardEncoding") =>
-      Some(PdfStandardEncoding)
-    name if name == pdf_text_name("/MacRomanEncoding") =>
+    name if name == pdf_text_standard_encoding_name => Some(PdfStandardEncoding)
+    name if name == pdf_text_mac_roman_encoding_name =>
       Some(PdfMacRomanEncoding)
-    name if name == pdf_text_name("/WinAnsiEncoding") =>
-      Some(PdfWinAnsiEncoding)
-    name if name == pdf_text_name("/MacExpertEncoding") =>
+    name if name == pdf_text_win_ansi_encoding_name => Some(PdfWinAnsiEncoding)
+    name if name == pdf_text_mac_expert_encoding_name =>
       Some(PdfMacExpertEncoding)
     _ => None
   }
@@ -1839,20 +2144,18 @@ fn pdf_text_find_immediate_indirect(object : PdfObject, key : PdfName) -> Int? {
 ///|
 fn pdf_text_fontfile_of_descriptor(descriptor : PdfObject) -> PdfFontFile? {
   match
-    pdf_text_find_immediate_indirect(descriptor, pdf_text_name("/FontFile")) {
+    pdf_text_find_immediate_indirect(descriptor, pdf_text_font_file_key_name) {
     Some(number) => Some(PdfFontFile(number))
     None =>
       match
         pdf_text_find_immediate_indirect(
-          descriptor,
-          pdf_text_name("/FontFile2"),
+          descriptor, pdf_text_font_file2_key_name,
         ) {
         Some(number) => Some(PdfFontFile2(number))
         None =>
           match
             pdf_text_find_immediate_indirect(
-              descriptor,
-              pdf_text_name("/FontFile3"),
+              descriptor, pdf_text_font_file3_key_name,
             ) {
             Some(number) => Some(PdfFontFile3(number))
             None => None
@@ -1918,7 +2221,7 @@ fn pdf_text_parse_charset(bytes : BytesView) -> Array[PdfName] raise PdfError {
     cursor.drop_pdf_whitespace()
     match cursor.lex_pdf_name() {
       LexName(name) =>
-        if name == pdf_text_name("/") {
+        if name == pdf_text_slash_name {
           done = true
         } else {
           names.push(name)
@@ -1934,7 +2237,7 @@ fn PdfDocument::pdf_text_font_charset(
   self : PdfDocument,
   descriptor : PdfObject,
 ) -> Array[PdfName]? raise PdfError {
-  match self.lookup_direct(pdf_text_name("/CharSet"), descriptor) {
+  match self.lookup_direct(pdf_text_charset_key_name, descriptor) {
     Some(PdfString(bytes)) => Some(pdf_text_parse_charset(bytes[:]))
     _ => None
   }
@@ -1945,52 +2248,43 @@ pub fn PdfDocument::read_font_descriptor(
   self : PdfDocument,
   font : PdfObject,
 ) -> PdfFontDescriptor? raise PdfError {
-  match self.lookup_direct(pdf_text_name("/FontDescriptor"), font) {
+  match self.lookup_direct(pdf_text_font_descriptor_key_name, font) {
     None => None
     Some(descriptor) => {
       let fontbbox = match
-        self.lookup_direct(pdf_text_name("/FontBBox"), descriptor) {
+        self.lookup_direct(pdf_text_font_bbox_key_name, descriptor) {
         Some(value) => self.parse_rectangle(value)
         None => pdf_text_zero_rectangle()
       }
       Some({
         ..pdf_text_empty_font_descriptor(),
         ascent: self.pdf_text_optional_number(
-          pdf_text_name("/Ascent"),
-          descriptor,
+          pdf_text_ascent_key_name, descriptor,
         ),
         descent: self.pdf_text_optional_number(
-          pdf_text_name("/Descent"),
-          descriptor,
+          pdf_text_descent_key_name, descriptor,
         ),
         avgwidth: self.pdf_text_optional_number(
-          pdf_text_name("/AvgWidth"),
-          descriptor,
+          pdf_text_avg_width_key_name, descriptor,
         ),
         maxwidth: self.pdf_text_optional_number(
-          pdf_text_name("/MaxWidth"),
-          descriptor,
+          pdf_text_max_width_key_name, descriptor,
         ),
         fontbbox,
         flags: self.pdf_text_optional_integer(
-          pdf_text_name("/Flags"),
-          descriptor,
+          pdf_text_flags_key_name, descriptor,
         ),
         italicangle: self.pdf_text_optional_number(
-          pdf_text_name("/ItalicAngle"),
-          descriptor,
+          pdf_text_italic_angle_key_name, descriptor,
         ),
         capheight: self.pdf_text_optional_number(
-          pdf_text_name("/CapHeight"),
-          descriptor,
+          pdf_text_cap_height_key_name, descriptor,
         ),
         xheight: self.pdf_text_optional_number(
-          pdf_text_name("/XHeight"),
-          descriptor,
+          pdf_text_xheight_key_name, descriptor,
         ),
         stemv: self.pdf_text_optional_number(
-          pdf_text_name("/StemV"),
-          descriptor,
+          pdf_text_stemv_key_name, descriptor,
         ),
         fontfile: pdf_text_fontfile_of_descriptor(descriptor),
         charset: self.pdf_text_font_charset(descriptor),
@@ -2004,10 +2298,9 @@ fn PdfDocument::pdf_text_font_metrics_descriptor(
   self : PdfDocument,
   font : PdfObject,
 ) -> PdfObject? {
-  match self.lookup_direct(pdf_text_name("/Subtype"), font) {
-    Some(PdfNameObject(subtype)) if subtype == pdf_text_name("/Type3") =>
-      Some(font)
-    _ => self.lookup_direct(pdf_text_name("/FontDescriptor"), font)
+  match self.lookup_direct(pdf_text_subtype_key_name, font) {
+    Some(PdfNameObject(subtype)) if subtype == pdf_text_type3_name => Some(font)
+    _ => self.lookup_direct(pdf_text_font_descriptor_key_name, font)
   }
 }
 
@@ -2029,7 +2322,7 @@ fn PdfDocument::pdf_text_font_missing_width(
   self : PdfDocument,
   descriptor : PdfObject,
 ) -> Double raise PdfError {
-  match self.lookup_direct(pdf_text_name("/MissingWidth"), descriptor) {
+  match self.lookup_direct(pdf_text_missing_width_key_name, descriptor) {
     Some(value) => self.get_number(value)
     None => 0.0
   }
@@ -2040,7 +2333,7 @@ fn PdfDocument::pdf_text_font_widths_array(
   self : PdfDocument,
   font : PdfObject,
 ) -> Array[PdfObject] raise PdfError {
-  match self.lookup_direct(pdf_text_name("/Widths"), font) {
+  match self.lookup_direct(pdf_text_widths_key_name, font) {
     Some(PdfArray(values)) => values
     _ => raise FontWidthsExpected
   }
@@ -2056,12 +2349,12 @@ pub fn PdfDocument::read_font_metrics(
     Some(descriptor) => {
       let firstchar = self.pdf_text_font_char_bound(
         font,
-        pdf_text_name("/FirstChar"),
+        pdf_text_first_char_key_name,
         FontFirstCharExpected,
       )
       let lastchar = self.pdf_text_font_char_bound(
         font,
-        pdf_text_name("/LastChar"),
+        pdf_text_last_char_key_name,
         FontLastCharExpected,
       )
       guard lastchar >= firstchar else { raise FontWidthsExpected }
@@ -2094,24 +2387,24 @@ fn PdfDocument::pdf_text_read_type3_glyphs(
   self : PdfDocument,
   font : PdfObject,
 ) -> PdfType3Glyphs raise PdfError {
-  let fontbbox = match self.lookup_direct(pdf_text_name("/FontBBox"), font) {
+  let fontbbox = match self.lookup_direct(pdf_text_font_bbox_key_name, font) {
     Some(value) =>
       self.parse_rectangle(value) catch {
         _ => pdf_text_zero_rectangle()
       }
     None => pdf_text_zero_rectangle()
   }
-  let charprocs = match self.lookup_direct(pdf_text_name("/CharProcs"), font) {
+  let charprocs = match self.lookup_direct(pdf_text_charprocs_key_name, font) {
     Some(PdfDictionary(entries)) => entries
     _ => raise FontCharProcsExpected
   }
-  let resources = match self.lookup_direct(pdf_text_name("/Resources"), font) {
+  let resources = match self.lookup_direct(pdf_text_resources_key_name, font) {
     Some(value) => value
     None => PdfDictionary([])
   }
   {
     fontbbox,
-    fontmatrix: self.parse_matrix(pdf_text_name("/FontMatrix"), font),
+    fontmatrix: self.parse_matrix(pdf_text_font_matrix_key_name, font),
     charprocs,
     resources,
   }
@@ -2123,13 +2416,13 @@ fn PdfDocument::pdf_text_simple_font_type_of_name(
   font : PdfObject,
   subtype : PdfName,
 ) -> PdfSimpleFontType? raise PdfError {
-  if subtype == pdf_text_name("/Type1") {
+  if subtype == pdf_text_type1_name {
     Some(PdfType1)
-  } else if subtype == pdf_text_name("/MMType1") {
+  } else if subtype == pdf_text_mmtype1_name {
     Some(PdfMMType1)
-  } else if subtype == pdf_text_name("/Type3") {
+  } else if subtype == pdf_text_type3_name {
     Some(PdfType3(self.pdf_text_read_type3_glyphs(font)))
-  } else if subtype == pdf_text_name("/TrueType") {
+  } else if subtype == pdf_text_true_type_name_value {
     Some(PdfTrueType)
   } else {
     None
@@ -2141,7 +2434,7 @@ fn PdfDocument::pdf_text_read_basefont(
   self : PdfDocument,
   font : PdfObject,
 ) -> PdfName? {
-  match self.lookup_direct(pdf_text_name("/BaseFont"), font) {
+  match self.lookup_direct(pdf_text_base_font_key_name, font) {
     Some(PdfNameObject(name)) => Some(name)
     _ => None
   }
@@ -2152,7 +2445,7 @@ pub fn PdfDocument::read_simple_font(
   self : PdfDocument,
   font : PdfObject,
 ) -> PdfSimpleFont raise PdfError {
-  match self.lookup_direct(pdf_text_name("/Subtype"), font) {
+  match self.lookup_direct(pdf_text_subtype_key_name, font) {
     Some(PdfNameObject(subtype)) =>
       match self.pdf_text_simple_font_type_of_name(font, subtype) {
         Some(fonttype) =>
@@ -2177,11 +2470,11 @@ fn PdfDocument::pdf_text_font_is_embedded(
   self : PdfDocument,
   font : PdfObject,
 ) -> Bool {
-  match self.lookup_direct(pdf_text_name("/FontDescriptor"), font) {
+  match self.lookup_direct(pdf_text_font_descriptor_key_name, font) {
     Some(descriptor) =>
-      pdf_text_dictionary_has_key(descriptor, pdf_text_name("/FontFile")) ||
-      pdf_text_dictionary_has_key(descriptor, pdf_text_name("/FontFile2")) ||
-      pdf_text_dictionary_has_key(descriptor, pdf_text_name("/FontFile3"))
+      pdf_text_dictionary_has_key(descriptor, pdf_text_font_file_key_name) ||
+      pdf_text_dictionary_has_key(descriptor, pdf_text_font_file2_key_name) ||
+      pdf_text_dictionary_has_key(descriptor, pdf_text_font_file3_key_name)
     None => false
   }
 }
@@ -2191,9 +2484,9 @@ fn PdfDocument::pdf_text_font_is_symbolic(
   self : PdfDocument,
   font : PdfObject,
 ) -> Bool raise PdfError {
-  match self.lookup_direct(pdf_text_name("/FontDescriptor"), font) {
+  match self.lookup_direct(pdf_text_font_descriptor_key_name, font) {
     Some(descriptor) =>
-      match self.lookup_direct(pdf_text_name("/Flags"), descriptor) {
+      match self.lookup_direct(pdf_text_flags_key_name, descriptor) {
         Some(PdfInteger(flags)) => (flags & (1 << 3)) > 0
         _ => raise FontFlagsExpected
       }
@@ -2221,7 +2514,7 @@ fn PdfDocument::read_encoding_base(
   font : PdfObject,
 ) -> PdfEncoding raise PdfError {
   match
-    self.lookup_direct(pdf_text_name("/BaseEncoding"), encoding_dictionary) {
+    self.lookup_direct(pdf_text_base_encoding_key_name, encoding_dictionary) {
     Some(PdfNameObject(name)) =>
       match pdf_encoding_of_name(name) {
         Some(encoding) => encoding
@@ -2263,20 +2556,20 @@ fn PdfDocument::read_encoding_differences(
 
 ///|
 fn pdf_text_is_true_type_name(name : PdfName) -> Bool {
-  name == pdf_text_name("/TrueType")
+  name == pdf_text_true_type_name_value
 }
 
 ///|
 fn pdf_text_is_simple_font_subtype_name(name : PdfName) -> Bool {
-  name == pdf_text_name("/Type1") ||
-  name == pdf_text_name("/MMType1") ||
-  name == pdf_text_name("/Type3") ||
-  name == pdf_text_name("/TrueType")
+  name == pdf_text_type1_name ||
+  name == pdf_text_mmtype1_name ||
+  name == pdf_text_type3_name ||
+  name == pdf_text_true_type_name_value
 }
 
 ///|
 fn pdf_text_is_standard14_subtype_name(name : PdfName) -> Bool {
-  name == pdf_text_name("/Type1") || name == pdf_text_name("/TrueType")
+  name == pdf_text_type1_name || name == pdf_text_true_type_name_value
 }
 
 ///|
@@ -2284,22 +2577,21 @@ pub fn PdfDocument::read_encoding(
   self : PdfDocument,
   font : PdfObject,
 ) -> PdfEncoding raise PdfError {
-  match self.lookup_direct(pdf_text_name("/Encoding"), font) {
+  match self.lookup_direct(pdf_text_encoding_key_name, font) {
     Some(PdfNameObject(name)) =>
       match pdf_encoding_of_name(name) {
         Some(encoding) => encoding
         None => PdfImplicitInFontFile
       }
     Some(PdfDictionary(_) as encoding_dictionary) =>
-      match self.lookup_direct(pdf_text_name("/Subtype"), font) {
+      match self.lookup_direct(pdf_text_subtype_key_name, font) {
         Some(PdfNameObject(subtype)) if pdf_text_is_simple_font_subtype_name(
             subtype,
           ) => {
           let base = self.read_encoding_base(encoding_dictionary, font)
           let encoding = match
             self.lookup_direct(
-              pdf_text_name("/Differences"),
-              encoding_dictionary,
+              pdf_text_differences_key_name, encoding_dictionary,
             ) {
             Some(differences) =>
               PdfCustomEncoding(
@@ -2326,12 +2618,12 @@ pub fn PdfDocument::is_standard14_font(
   self : PdfDocument,
   font : PdfObject,
 ) -> Bool {
-  match self.lookup_direct(pdf_text_name("/Subtype"), font) {
+  match self.lookup_direct(pdf_text_subtype_key_name, font) {
     Some(PdfNameObject(subtype)) if pdf_text_is_standard14_subtype_name(subtype) =>
-      match self.lookup_direct(pdf_text_name("/BaseFont"), font) {
+      match self.lookup_direct(pdf_text_base_font_key_name, font) {
         Some(PdfNameObject(base_font)) =>
           pdf_standard_font_of_pdf_name(base_font) != None &&
-          self.lookup_direct(pdf_text_name("/Widths"), font) == None
+          self.lookup_direct(pdf_text_widths_key_name, font) == None
         _ => false
       }
     _ => false
@@ -2343,7 +2635,7 @@ pub fn PdfDocument::is_simple_font(
   self : PdfDocument,
   font : PdfObject,
 ) -> Bool {
-  match self.lookup_direct(pdf_text_name("/Subtype"), font) {
+  match self.lookup_direct(pdf_text_subtype_key_name, font) {
     Some(PdfNameObject(subtype)) =>
       pdf_text_is_simple_font_subtype_name(subtype)
     _ => false
@@ -2355,8 +2647,8 @@ pub fn PdfDocument::is_cidkeyed_font(
   self : PdfDocument,
   font : PdfObject,
 ) -> Bool {
-  match self.lookup_direct(pdf_text_name("/Subtype"), font) {
-    Some(PdfNameObject(subtype)) => subtype == pdf_text_name("/Type0")
+  match self.lookup_direct(pdf_text_subtype_key_name, font) {
+    Some(PdfNameObject(subtype)) => subtype == pdf_text_type0_name
     _ => false
   }
 }
@@ -2382,16 +2674,16 @@ pub fn PdfDocument::read_cid_system_info(
   {
     registry: self.pdf_text_cid_string_entry(
       dictionary,
-      pdf_text_name("/Registry"),
+      pdf_text_registry_key_name,
       CIDRegistryExpected,
     ),
     ordering: self.pdf_text_cid_string_entry(
       dictionary,
-      pdf_text_name("/Ordering"),
+      pdf_text_ordering_key_name,
       CIDOrderingExpected,
     ),
     supplement: match
-      self.lookup_direct(pdf_text_name("/Supplement"), dictionary) {
+      self.lookup_direct(pdf_text_supplement_key_name, dictionary) {
       Some(PdfInteger(value)) => value
       _ => raise CIDSupplementExpected
     },
@@ -2532,7 +2824,7 @@ fn PdfDocument::pdf_text_cid_widths(
   self : PdfDocument,
   dictionary : PdfObject,
 ) -> Array[(Int, Double)] raise PdfError {
-  match self.lookup_direct(pdf_text_name("/W"), dictionary) {
+  match self.lookup_direct(pdf_text_w_key_name, dictionary) {
     Some(PdfArray(values)) => self.pdf_text_read_cid_widths(values)
     _ => []
   }
@@ -2543,7 +2835,7 @@ fn PdfDocument::pdf_text_cid_widths2(
   self : PdfDocument,
   dictionary : PdfObject,
 ) -> Array[(Int, PdfCIDVerticalWidth)] raise PdfError {
-  match self.lookup_direct(pdf_text_name("/W2"), dictionary) {
+  match self.lookup_direct(pdf_text_w2_key_name, dictionary) {
     Some(PdfArray(values)) => self.pdf_text_read_cid_widths2(values)
     _ => []
   }
@@ -2554,7 +2846,7 @@ fn PdfDocument::pdf_text_cid_default_width(
   self : PdfDocument,
   dictionary : PdfObject,
 ) -> Double raise PdfError {
-  match self.lookup_direct(pdf_text_name("/DW"), dictionary) {
+  match self.lookup_direct(pdf_text_dw_key_name, dictionary) {
     Some(value) => self.pdf_text_cid_number(value, CIDWidthsExpected)
     None => 1000.0
   }
@@ -2565,7 +2857,7 @@ fn PdfDocument::pdf_text_cid_default_width2(
   self : PdfDocument,
   dictionary : PdfObject,
 ) -> Array[Double] raise PdfError {
-  match self.lookup_direct(pdf_text_name("/DW2"), dictionary) {
+  match self.lookup_direct(pdf_text_dw2_key_name, dictionary) {
     Some(PdfArray(values)) => {
       let output : Array[Double] = []
       for value in values {
@@ -2583,12 +2875,12 @@ fn PdfDocument::pdf_text_read_descendant(
   dictionary : PdfObject,
 ) -> PdfCompositeCIDFont raise PdfError {
   let cid_system_info = match
-    self.lookup_direct(pdf_text_name("/CIDSystemInfo"), dictionary) {
+    self.lookup_direct(pdf_text_cid_system_info_key_name, dictionary) {
     Some(system_info) => self.read_cid_system_info(system_info)
     None => raise CIDSystemInfoExpected
   }
   let cid_basefont = match
-    self.lookup_direct(pdf_text_name("/BaseFont"), dictionary) {
+    self.lookup_direct(pdf_text_base_font_key_name, dictionary) {
     Some(PdfNameObject(name)) => name
     _ => raise CIDBaseFontExpected
   }
@@ -2612,10 +2904,10 @@ fn PdfDocument::pdf_text_read_cmap_encoding(
   self : PdfDocument,
   font : PdfObject,
 ) -> PdfCMapEncoding raise PdfError {
-  match self.lookup_direct(pdf_text_name("/Encoding"), font) {
+  match self.lookup_direct(pdf_text_encoding_key_name, font) {
     Some(PdfNameObject(name)) => PdfPredefinedCMap(name)
     Some(PdfStreamObject(_)) =>
-      match pdf_text_find_immediate_indirect(font, pdf_text_name("/Encoding")) {
+      match pdf_text_find_immediate_indirect(font, pdf_text_encoding_key_name) {
         Some(number) =>
           try self.parse_cmap(PdfIndirect(number)) catch {
             _ => PdfCMap(number)
@@ -2633,12 +2925,12 @@ pub fn PdfDocument::read_cidkeyed_font(
   self : PdfDocument,
   font : PdfObject,
 ) -> PdfCIDKeyedFont raise PdfError {
-  let basefont = match self.lookup_direct(pdf_text_name("/BaseFont"), font) {
+  let basefont = match self.lookup_direct(pdf_text_base_font_key_name, font) {
     Some(PdfNameObject(name)) => name
     _ => raise BaseFontExpected
   }
   let composite = match
-    self.lookup_direct(pdf_text_name("/DescendantFonts"), font) {
+    self.lookup_direct(pdf_text_descendant_fonts_key_name, font) {
     Some(PdfArray([descendant])) =>
       self.pdf_text_read_descendant(self.direct(descendant))
     _ => raise DescendantFontExpected
@@ -4026,7 +4318,7 @@ fn PdfDocument::pdf_text_cmap_stream_dictionary_wmode(
   self : PdfDocument,
   stream_object : PdfObject,
 ) -> Int? {
-  match self.lookup_direct(pdf_text_name("/WMode"), stream_object) {
+  match self.lookup_direct(pdf_text_wmode_key_name, stream_object) {
     Some(PdfInteger(value)) => Some(value)
     _ => None
   }
@@ -4037,7 +4329,7 @@ fn PdfDocument::pdf_text_cmap_stream_dictionary_cmap_name(
   self : PdfDocument,
   stream_object : PdfObject,
 ) -> PdfName? {
-  match self.lookup_direct(pdf_text_name("/CMapName"), stream_object) {
+  match self.lookup_direct(pdf_text_cmap_name_key_name, stream_object) {
     Some(PdfNameObject(name)) => Some(name)
     _ => None
   }
@@ -4048,7 +4340,7 @@ fn PdfDocument::pdf_text_cmap_stream_dictionary_cmap_type(
   self : PdfDocument,
   stream_object : PdfObject,
 ) -> Int? {
-  match self.lookup_direct(pdf_text_name("/CMapType"), stream_object) {
+  match self.lookup_direct(pdf_text_cmap_type_key_name, stream_object) {
     Some(PdfInteger(value)) => Some(value)
     _ => None
   }
@@ -4059,7 +4351,7 @@ fn PdfDocument::pdf_text_cmap_stream_dictionary_usecmap_name(
   self : PdfDocument,
   stream_object : PdfObject,
 ) -> PdfName? {
-  match self.lookup_direct(pdf_text_name("/UseCMap"), stream_object) {
+  match self.lookup_direct(pdf_text_usecmap_key_name, stream_object) {
     Some(PdfNameObject(name)) => Some(name)
     _ => None
   }
@@ -4070,7 +4362,7 @@ fn PdfDocument::pdf_text_cmap_stream_dictionary_cid_system_info(
   self : PdfDocument,
   stream_object : PdfObject,
 ) -> PdfCIDSystemInfo? {
-  match self.lookup_direct(pdf_text_name("/CIDSystemInfo"), stream_object) {
+  match self.lookup_direct(pdf_text_cid_system_info_key_name, stream_object) {
     Some(value) =>
       try self.read_cid_system_info(value) catch {
         _ => None
@@ -4155,7 +4447,7 @@ fn PdfDocument::parse_cmap_with_seen(
     pdf_parse_cmap_data(bytes[:]),
   )
   match
-    (parsed.usecmap, stream_object.lookup_immediate(pdf_text_name("/UseCMap"))) {
+    (parsed.usecmap, stream_object.lookup_immediate(pdf_text_usecmap_key_name)) {
     (None, Some(base)) =>
       match base {
         PdfIndirect(_) | PdfStreamObject(_) =>
@@ -4183,7 +4475,7 @@ fn PdfDocument::pdf_text_tounicode_of_font(
   self : PdfDocument,
   font : PdfObject,
 ) -> Array[(Int, PdfBytes)]? {
-  match self.lookup_direct(pdf_text_name("/ToUnicode"), font) {
+  match self.lookup_direct(pdf_text_tounicode_key_name, font) {
     Some(PdfStreamObject(_) as stream) =>
       try self.parse_cmap(stream) catch {
         _ => None
@@ -4240,7 +4532,7 @@ pub fn PdfDocument::read_standard14_font(
   self : PdfDocument,
   font : PdfObject,
 ) -> PdfStandardFontData raise PdfError {
-  match self.lookup_direct(pdf_text_name("/BaseFont"), font) {
+  match self.lookup_direct(pdf_text_base_font_key_name, font) {
     Some(PdfNameObject(base_font)) =>
       match pdf_standard_font_of_pdf_name(base_font) {
         Some(standard_font) =>
@@ -9628,8 +9920,8 @@ fn pdf_text_predefined_cmap_charcodes_of_text(
     pdf_text_predefined_mixed_byte_charcodes(name, text)
   } else {
     let output : Array[Int] = []
-    if name == pdf_text_name("/Identity-H") ||
-      name == pdf_text_name("/Identity-V") ||
+    if name == pdf_text_identity_h_name ||
+      name == pdf_text_identity_v_name ||
       pdf_text_predefined_cmap_uses_two_byte_charcodes(name) {
       guard text.length() % 2 == 0 else { raise BadText }
       let mut index = 0
@@ -9775,8 +10067,8 @@ pub fn PdfDocument::write_encoding(
       }
       self.add_object(
         PdfDictionary([
-          (pdf_text_name("/Type"), PdfNameObject(pdf_text_name("/Encoding"))),
-          (pdf_text_name("/Differences"), PdfArray(values)),
+          (pdf_text_type_key_name, PdfNameObject(pdf_text_encoding_key_name)),
+          (pdf_text_differences_key_name, PdfArray(values)),
         ]),
       )
     }
@@ -9792,10 +10084,10 @@ pub fn pdf_make_font(
   match encoding.pdf_name() {
     Some(encoding_name) =>
       PdfDictionary([
-        (pdf_text_name("/Type"), PdfNameObject(pdf_text_name("/Font"))),
-        (pdf_text_name("/Subtype"), PdfNameObject(pdf_text_name("/Type1"))),
-        (pdf_text_name("/Encoding"), PdfNameObject(encoding_name)),
-        (pdf_text_name("/BaseFont"), PdfNameObject(fontname)),
+        (pdf_text_type_key_name, PdfNameObject(pdf_text_font_name)),
+        (pdf_text_subtype_key_name, PdfNameObject(pdf_text_type1_name)),
+        (pdf_text_encoding_key_name, PdfNameObject(encoding_name)),
+        (pdf_text_base_font_key_name, PdfNameObject(fontname)),
       ])
     None => raise EncodingWriteUnsupported
   }
@@ -9824,7 +10116,7 @@ fn pdf_text_type3_resources_entries(
 ) -> Array[(PdfName, PdfObject)] {
   match resources {
     PdfDictionary(entries) if entries.length() == 0 => []
-    _ => [(pdf_text_name("/Resources"), resources)]
+    _ => [(pdf_text_resources_key_name, resources)]
   }
 }
 
@@ -9836,16 +10128,16 @@ fn pdf_text_type3_metrics_entries(
 ) -> Array[(PdfName, PdfObject)] {
   if widths.length() == 0 {
     [
-      (pdf_text_name("/FirstChar"), PdfInteger(0)),
-      (pdf_text_name("/LastChar"), PdfInteger(0)),
-      (pdf_text_name("/Widths"), PdfArray([PdfReal(0.0)])),
+      (pdf_text_first_char_key_name, PdfInteger(0)),
+      (pdf_text_last_char_key_name, PdfInteger(0)),
+      (pdf_text_widths_key_name, PdfArray([PdfReal(0.0)])),
     ]
   } else {
     [
-      (pdf_text_name("/FirstChar"), PdfInteger(firstchar)),
-      (pdf_text_name("/LastChar"), PdfInteger(lastchar)),
+      (pdf_text_first_char_key_name, PdfInteger(firstchar)),
+      (pdf_text_last_char_key_name, PdfInteger(lastchar)),
       (
-        pdf_text_name("/Widths"),
+        pdf_text_widths_key_name,
         PdfArray([ for width in widths => PdfInteger(width) ]),
       ),
     ]
@@ -9860,7 +10152,7 @@ fn PdfDocument::pdf_text_type3_encoding_entries(
   match encoding {
     PdfImplicitInFontFile => []
     _ =>
-      [(pdf_text_name("/Encoding"), PdfIndirect(self.write_encoding(encoding)))]
+      [(pdf_text_encoding_key_name, PdfIndirect(self.write_encoding(encoding)))]
   }
 }
 
@@ -9875,12 +10167,12 @@ fn PdfDocument::pdf_text_make_type3_font(
 ) -> PdfObject raise PdfError {
   PdfDictionary(
     [
-      (pdf_text_name("/Type"), PdfNameObject(pdf_text_name("/Font"))),
-      (pdf_text_name("/Subtype"), PdfNameObject(pdf_text_name("/Type3"))),
-      (pdf_text_name("/FontBBox"), pdf_text_rectangle_object(data.fontbbox)),
-      (pdf_text_name("/FontMatrix"), pdf_object_of_matrix(data.fontmatrix)),
+      (pdf_text_type_key_name, PdfNameObject(pdf_text_font_name)),
+      (pdf_text_subtype_key_name, PdfNameObject(pdf_text_type3_name)),
+      (pdf_text_font_bbox_key_name, pdf_text_rectangle_object(data.fontbbox)),
+      (pdf_text_font_matrix_key_name, pdf_object_of_matrix(data.fontmatrix)),
       (
-        pdf_text_name("/CharProcs"),
+        pdf_text_charprocs_key_name,
         pdf_text_type3_charprocs_object(data.charprocs),
       ),
       ..pdf_text_type3_resources_entries(data.resources),
@@ -10000,7 +10292,7 @@ fn PdfDocument::pdf_text_write_tounicode(
   let bytes = Bytes::from_array(output)
   self.add_object(
     pdf_stream(
-      PdfDictionary([(pdf_text_name("/Length"), PdfInteger(bytes.length()))]),
+      PdfDictionary([(pdf_text_length_key_name, PdfInteger(bytes.length()))]),
       StreamGot(bytes),
     ),
   )
@@ -10021,41 +10313,41 @@ fn PdfDocument::pdf_text_make_true_type_font(
     None => raise FontWriteUnsupported
   }
   let fontdescriptor = PdfDictionary([
-    (pdf_text_name("/Type"), PdfNameObject(pdf_text_name("/FontDescriptor"))),
-    (pdf_text_name("/FontName"), PdfNameObject(basefont)),
-    (pdf_text_name("/Flags"), PdfInteger(descriptor.flags)),
+    (pdf_text_type_key_name, PdfNameObject(pdf_text_font_descriptor_key_name)),
+    (pdf_text_font_name_key_name, PdfNameObject(basefont)),
+    (pdf_text_flags_key_name, PdfInteger(descriptor.flags)),
     (
-      pdf_text_name("/FontBBox"),
+      pdf_text_font_bbox_key_name,
       pdf_text_font_descriptor_bbox_object(descriptor.fontbbox),
     ),
     (
-      pdf_text_name("/ItalicAngle"),
+      pdf_text_italic_angle_key_name,
       pdf_text_integer_of_double(descriptor.italicangle),
     ),
-    (pdf_text_name("/Ascent"), pdf_text_integer_of_double(descriptor.ascent)),
-    (pdf_text_name("/Descent"), pdf_text_integer_of_double(descriptor.descent)),
+    (pdf_text_ascent_key_name, pdf_text_integer_of_double(descriptor.ascent)),
+    (pdf_text_descent_key_name, pdf_text_integer_of_double(descriptor.descent)),
     (
-      pdf_text_name("/CapHeight"),
+      pdf_text_cap_height_key_name,
       pdf_text_integer_of_double(descriptor.capheight),
     ),
-    (pdf_text_name("/StemV"), pdf_text_integer_of_double(descriptor.stemv)),
-    (pdf_text_name("/XHeight"), pdf_text_integer_of_double(descriptor.xheight)),
+    (pdf_text_stemv_key_name, pdf_text_integer_of_double(descriptor.stemv)),
+    (pdf_text_xheight_key_name, pdf_text_integer_of_double(descriptor.xheight)),
     (
-      pdf_text_name("/AvgWidth"),
+      pdf_text_avg_width_key_name,
       pdf_text_integer_of_double(descriptor.avgwidth),
     ),
     (
-      pdf_text_name("/MaxWidth"),
+      pdf_text_max_width_key_name,
       pdf_text_integer_of_double(descriptor.maxwidth),
     ),
-    (pdf_text_name("/FontFile2"), PdfIndirect(ttf)),
+    (pdf_text_font_file2_key_name, PdfIndirect(ttf)),
   ])
   let fontdescriptor_number = self.add_object(fontdescriptor)
   let tounicode_entry = match descriptor.tounicode {
     Some(tounicode) =>
       [
         (
-          pdf_text_name("/ToUnicode"),
+          pdf_text_tounicode_key_name,
           PdfIndirect(self.pdf_text_write_tounicode(tounicode)),
         ),
       ]
@@ -10064,19 +10356,19 @@ fn PdfDocument::pdf_text_make_true_type_font(
         Some(name) => name
         None => raise EncodingWriteUnsupported
       }
-      [(pdf_text_name("/Encoding"), PdfNameObject(encoding_name))]
+      [(pdf_text_encoding_key_name, PdfNameObject(encoding_name))]
     }
   }
   PdfDictionary(
     [
-      (pdf_text_name("/Type"), PdfNameObject(pdf_text_name("/Font"))),
-      (pdf_text_name("/Subtype"), PdfNameObject(pdf_text_name("/TrueType"))),
-      (pdf_text_name("/BaseFont"), PdfNameObject(basefont)),
-      (pdf_text_name("/FontDescriptor"), PdfIndirect(fontdescriptor_number)),
-      (pdf_text_name("/FirstChar"), PdfInteger(firstchar)),
-      (pdf_text_name("/LastChar"), PdfInteger(lastchar)),
+      (pdf_text_type_key_name, PdfNameObject(pdf_text_font_name)),
+      (pdf_text_subtype_key_name, PdfNameObject(pdf_text_true_type_name_value)),
+      (pdf_text_base_font_key_name, PdfNameObject(basefont)),
+      (pdf_text_font_descriptor_key_name, PdfIndirect(fontdescriptor_number)),
+      (pdf_text_first_char_key_name, PdfInteger(firstchar)),
+      (pdf_text_last_char_key_name, PdfInteger(lastchar)),
       (
-        pdf_text_name("/Widths"),
+        pdf_text_widths_key_name,
         PdfArray([ for width in widths => PdfInteger(width) ]),
       ),
       ..tounicode_entry,
