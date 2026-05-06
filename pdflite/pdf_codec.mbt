@@ -478,6 +478,51 @@ fn pdf_filter_name(text : String) -> PdfName {
 }
 
 ///|
+let pdf_filter_crypt_name : PdfName = pdf_filter_name("/Crypt")
+
+///|
+let pdf_filter_ascii_hex_decode_name : PdfName = pdf_filter_name(
+  "/ASCIIHexDecode",
+)
+
+///|
+let pdf_filter_ascii_hex_short_name : PdfName = pdf_filter_name("/AHx")
+
+///|
+let pdf_filter_ascii85_decode_name : PdfName = pdf_filter_name("/ASCII85Decode")
+
+///|
+let pdf_filter_ascii85_short_name : PdfName = pdf_filter_name("/A85")
+
+///|
+let pdf_filter_run_length_decode_name : PdfName = pdf_filter_name(
+  "/RunLengthDecode",
+)
+
+///|
+let pdf_filter_run_length_short_name : PdfName = pdf_filter_name("/RL")
+
+///|
+let pdf_filter_flate_decode_name : PdfName = pdf_filter_name("/FlateDecode")
+
+///|
+let pdf_filter_flate_short_name : PdfName = pdf_filter_name("/Fl")
+
+///|
+let pdf_filter_lzw_decode_name : PdfName = pdf_filter_name("/LZWDecode")
+
+///|
+let pdf_filter_lzw_short_name : PdfName = pdf_filter_name("/LZW")
+
+///|
+let pdf_filter_ccitt_fax_decode_name : PdfName = pdf_filter_name(
+  "/CCITTFaxDecode",
+)
+
+///|
+let pdf_filter_ccitt_fax_short_name : PdfName = pdf_filter_name("/CCF")
+
+///|
 pub(all) enum PdfStreamEncoding {
   PdfStreamASCIIHex
   PdfStreamASCII85
@@ -501,12 +546,12 @@ pub(all) enum PdfStreamPredictor {
 ///|
 pub fn PdfStreamEncoding::filter_name(self : PdfStreamEncoding) -> PdfName {
   match self {
-    PdfStreamASCIIHex => pdf_filter_name("/ASCIIHexDecode")
-    PdfStreamASCII85 => pdf_filter_name("/ASCII85Decode")
-    PdfStreamRunLength => pdf_filter_name("/RunLengthDecode")
-    PdfStreamFlate => pdf_filter_name("/FlateDecode")
+    PdfStreamASCIIHex => pdf_filter_ascii_hex_decode_name
+    PdfStreamASCII85 => pdf_filter_ascii85_decode_name
+    PdfStreamRunLength => pdf_filter_run_length_decode_name
+    PdfStreamFlate => pdf_filter_flate_decode_name
     PdfStreamCCITT(_, _) | PdfStreamCCITTG4(_, _) =>
-      pdf_filter_name("/CCITTFaxDecode")
+      pdf_filter_ccitt_fax_decode_name
   }
 }
 
@@ -524,15 +569,15 @@ pub fn PdfStreamPredictor::number(self : PdfStreamPredictor) -> Int {
 }
 
 ///|
-fn pdf_filter_is_name(filter : PdfName, text : String) -> Bool {
-  filter == pdf_filter_name(text)
+fn pdf_filter_is_name(filter : PdfName, name : PdfName) -> Bool {
+  filter == name
 }
 
 ///|
 fn pdf_filter_is_one_of(
   filter : PdfName,
-  first : String,
-  second : String,
+  first : PdfName,
+  second : PdfName,
 ) -> Bool {
   pdf_filter_is_name(filter, first) || pdf_filter_is_name(filter, second)
 }
@@ -542,19 +587,31 @@ pub fn pdf_decode_filter_view(
   filter : PdfName,
   data : BytesView,
 ) -> PdfBytes raise PdfError {
-  if pdf_filter_is_name(filter, "/Crypt") {
+  if pdf_filter_is_name(filter, pdf_filter_crypt_name) {
     data.to_owned()
-  } else if pdf_filter_is_one_of(filter, "/ASCIIHexDecode", "/AHx") {
+  } else if pdf_filter_is_one_of(
+      filter, pdf_filter_ascii_hex_decode_name, pdf_filter_ascii_hex_short_name,
+    ) {
     pdf_ascii_hex_decode_view(data)
-  } else if pdf_filter_is_one_of(filter, "/ASCII85Decode", "/A85") {
+  } else if pdf_filter_is_one_of(
+      filter, pdf_filter_ascii85_decode_name, pdf_filter_ascii85_short_name,
+    ) {
     pdf_ascii85_decode_view(data)
-  } else if pdf_filter_is_one_of(filter, "/RunLengthDecode", "/RL") {
+  } else if pdf_filter_is_one_of(
+      filter, pdf_filter_run_length_decode_name, pdf_filter_run_length_short_name,
+    ) {
     pdf_run_length_decode_view(data)
-  } else if pdf_filter_is_one_of(filter, "/FlateDecode", "/Fl") {
+  } else if pdf_filter_is_one_of(
+      filter, pdf_filter_flate_decode_name, pdf_filter_flate_short_name,
+    ) {
     pdf_flate_decode_view(data)
-  } else if pdf_filter_is_one_of(filter, "/LZWDecode", "/LZW") {
+  } else if pdf_filter_is_one_of(
+      filter, pdf_filter_lzw_decode_name, pdf_filter_lzw_short_name,
+    ) {
     pdf_lzw_decode_view(data)
-  } else if pdf_filter_is_one_of(filter, "/CCITTFaxDecode", "/CCF") {
+  } else if pdf_filter_is_one_of(
+      filter, pdf_filter_ccitt_fax_decode_name, pdf_filter_ccitt_fax_short_name,
+    ) {
     pdf_ccitt_decode_view(data, pdf_ccitt_default_params())
   } else {
     raise FilterNotSupported(filter)
@@ -566,7 +623,9 @@ pub fn pdf_decode_filter_bytes(
   filter : PdfName,
   data : PdfBytes,
 ) -> PdfBytes raise PdfError {
-  if pdf_filter_is_one_of(filter, "/FlateDecode", "/Fl") {
+  if pdf_filter_is_one_of(
+      filter, pdf_filter_flate_decode_name, pdf_filter_flate_short_name,
+    ) {
     pdf_flate_decode(data)
   } else {
     pdf_decode_filter_view(filter, data[:])
@@ -600,15 +659,23 @@ fn pdf_encode_filter_view_with_optional_flate_level(
   data : BytesView,
   flate_level : Int?,
 ) -> PdfBytes raise PdfError {
-  if pdf_filter_is_name(filter, "/Crypt") {
+  if pdf_filter_is_name(filter, pdf_filter_crypt_name) {
     data.to_owned()
-  } else if pdf_filter_is_one_of(filter, "/ASCIIHexDecode", "/AHx") {
+  } else if pdf_filter_is_one_of(
+      filter, pdf_filter_ascii_hex_decode_name, pdf_filter_ascii_hex_short_name,
+    ) {
     pdf_ascii_hex_encode_view(data)
-  } else if pdf_filter_is_one_of(filter, "/ASCII85Decode", "/A85") {
+  } else if pdf_filter_is_one_of(
+      filter, pdf_filter_ascii85_decode_name, pdf_filter_ascii85_short_name,
+    ) {
     pdf_ascii85_encode_view(data)
-  } else if pdf_filter_is_one_of(filter, "/RunLengthDecode", "/RL") {
+  } else if pdf_filter_is_one_of(
+      filter, pdf_filter_run_length_decode_name, pdf_filter_run_length_short_name,
+    ) {
     pdf_run_length_encode_view(data)
-  } else if pdf_filter_is_one_of(filter, "/FlateDecode", "/Fl") {
+  } else if pdf_filter_is_one_of(
+      filter, pdf_filter_flate_decode_name, pdf_filter_flate_short_name,
+    ) {
     match flate_level {
       Some(level) => pdf_flate_encode_view_with_level(data, level)
       None => pdf_flate_encode_view(data)
@@ -645,7 +712,9 @@ fn pdf_encode_filter_bytes_with_optional_flate_level(
   data : PdfBytes,
   flate_level : Int?,
 ) -> PdfBytes raise PdfError {
-  if pdf_filter_is_one_of(filter, "/FlateDecode", "/Fl") {
+  if pdf_filter_is_one_of(
+      filter, pdf_filter_flate_decode_name, pdf_filter_flate_short_name,
+    ) {
     match flate_level {
       Some(level) => pdf_flate_encode_with_level(data, level)
       None => pdf_flate_encode(data)
@@ -1777,9 +1846,13 @@ fn pdf_decode_stream_filter_bytes(
   dictionary : PdfObject,
   data : PdfBytes,
 ) -> PdfBytes raise PdfError {
-  if pdf_filter_is_one_of(filter, "/LZWDecode", "/LZW") {
+  if pdf_filter_is_one_of(
+      filter, pdf_filter_lzw_decode_name, pdf_filter_lzw_short_name,
+    ) {
     pdf_lzw_decode(data, early_change=pdf_lzw_early_change(dictionary))
-  } else if pdf_filter_is_one_of(filter, "/CCITTFaxDecode", "/CCF") {
+  } else if pdf_filter_is_one_of(
+      filter, pdf_filter_ccitt_fax_decode_name, pdf_filter_ccitt_fax_short_name,
+    ) {
     pdf_ccitt_decode_view(data[:], pdf_ccitt_params(dictionary))
   } else {
     pdf_decode_filter_bytes(filter, data)
@@ -1793,12 +1866,16 @@ fn PdfDocument::pdf_decode_stream_filter_bytes_direct(
   dictionary : PdfObject,
   data : PdfBytes,
 ) -> PdfBytes raise PdfError {
-  if pdf_filter_is_one_of(filter, "/LZWDecode", "/LZW") {
+  if pdf_filter_is_one_of(
+      filter, pdf_filter_lzw_decode_name, pdf_filter_lzw_short_name,
+    ) {
     pdf_lzw_decode(
       data,
       early_change=self.pdf_lzw_early_change_direct(dictionary),
     )
-  } else if pdf_filter_is_one_of(filter, "/CCITTFaxDecode", "/CCF") {
+  } else if pdf_filter_is_one_of(
+      filter, pdf_filter_ccitt_fax_decode_name, pdf_filter_ccitt_fax_short_name,
+    ) {
     pdf_ccitt_decode_view(data[:], self.pdf_ccitt_params_direct(dictionary))
   } else {
     pdf_decode_filter_bytes(filter, data)

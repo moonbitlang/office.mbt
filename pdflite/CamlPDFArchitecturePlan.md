@@ -122,7 +122,9 @@ work changes.
    non-native targets and parser prefix decoding where consumed-byte accounting
    is required. Owned `PdfBytes` Flate filter dispatch now calls the owned
    Flate APIs directly, avoiding an unnecessary `BytesView.to_owned()` copy on
-   common filter encode/decode hot paths.
+   common filter encode/decode hot paths. Standard stream-filter names are now
+   cached once for dispatch, avoiding repeated ASCII `PdfName` rebuilding during
+   filter comparisons.
    Remaining focus: exact miniz block-spelling gaps only where they matter,
    broader large-file performance tuning, optional JBIG2 external-tool decode
    parity, broader CCITT corpus validation, and DCT/JPEG real-world payload

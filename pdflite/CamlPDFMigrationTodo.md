@@ -51,6 +51,8 @@ Current estimate:
   targets and prefix decoding.~~
 - [x] ~~Avoid the extra owned-byte copy on `PdfBytes` Flate filter
   encode/decode dispatch by routing owned byte paths directly to Flate APIs.~~
+- [x] ~~Cache standard stream-filter names so encode/decode dispatch no longer
+  rebuilds ASCII `PdfName` values for every filter comparison.~~
 - [ ] Continue zlib byte-output/performance parity work where exact miniz block
   spelling or large-file profiles expose remaining gaps.
 - [ ] Profile and tune large-file hot paths for object streams, filters, and
@@ -315,6 +317,8 @@ Current estimate:
   preserving the pure MoonBit implementation as fallback/non-native code.~~
 - [x] ~~Owned `PdfBytes` Flate filter dispatch avoids an unnecessary
   `BytesView.to_owned()` copy on encode/decode hot paths.~~
+- [x] ~~Standard stream-filter dispatch names are cached once instead of
+  rebuilding ASCII `PdfName` values on every comparison.~~
 - [ ] Byte-identical zlib output strategy and broader performance parity beyond
   explicit Flate level selection.
 - [ ] Broader malformed xref-table/xref-stream/object-stream recovery beyond
