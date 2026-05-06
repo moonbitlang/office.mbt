@@ -227,7 +227,9 @@ work changes.
    `/FontDescriptor` metadata preservation through native read/write/reread
    boundaries, Type3 no-`/ToUnicode` custom-encoding fallback through AGL glyph
    names and StandardEncoding fill-in, and Flate inline-image content parsing
-   are also covered. Unit coverage also preserves direct Type3 `CharProcs`
+   are also covered. Standard image dictionary keys and encoded-image filter
+   names are cached once for repeated metadata lookups. Unit coverage also
+   preserves direct Type3 `CharProcs`
    streams, parses their `d0`/`d1` glyph programs without allocating new
    indirect objects, and round-trips Type3 writer output for `/FontBBox`,
    `/FontMatrix`, `CharProcs`, `/Resources`, and width metrics. Stream decode
