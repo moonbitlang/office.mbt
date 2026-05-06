@@ -616,8 +616,9 @@ and backend breadth, is about 85-90% complete.
   encrypt-at-write workflows for ARC4, AESV2, AESV3, and AESV3 ISO while
   keeping AES randomness provider-driven. Native async file wrappers cover
   read/write, mode-dispatched full and incremental writes, encrypted writer
-  file output, password reads, revision counting, revision reads, and
-  incremental writes. A native black-box acceptance suite now covers
+  file output, password reads, revision counting, revision reads, header reads,
+  linearized-file probes, and incremental writes. A native black-box acceptance
+  suite now covers
   classic/xref-stream/compressed-xref one-page read-write-reread, classic and
   xref-stream incremental revision reads, omitted page-tree xref reconstruction,
   object-stream page-tree normalization through the writer, partial stream

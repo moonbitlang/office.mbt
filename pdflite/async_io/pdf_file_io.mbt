@@ -22,6 +22,18 @@ pub async fn pdf_revisions_from_file(path : StringView) -> Int {
 }
 
 ///|
+pub async fn pdf_read_header_from_file(
+  path : StringView,
+) -> @pdflite.PdfVersion {
+  @pdflite.pdf_read_header_from_bytes(@fs.read_file(path).binary())
+}
+
+///|
+pub async fn pdf_is_linearized_file(path : StringView) -> Bool {
+  @pdflite.pdf_is_linearized(@fs.read_file(path).binary()[:])
+}
+
+///|
 pub async fn pdf_read_document_from_file_with_passwords(
   path : StringView,
   user_password? : BytesView? = None,

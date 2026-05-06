@@ -327,7 +327,9 @@ MoonBit consequences for this project:
    free entries hiding older objects. The reader now mirrors CamlPDF's
    non-fatal first-object `/Linearized` probe and records the result in
    `PdfDocument::was_linearized`; the byte-level probe is exposed as
-   `pdf_is_linearized`. Final trailer cleanup now mirrors CamlPDF's removal of
+   `pdf_is_linearized`, and the native async I/O boundary exposes
+   `.repos/pdfread.mli`-style file helpers for header reads and linearization
+   probes. Final trailer cleanup now mirrors CamlPDF's removal of
    xref machinery keys such as `/Prev`, `/XRefStm`, `/W`, `/Index`, `/Type`,
    `/Filter`, and `/DecodeParms`, while deriving `/Size` from the loaded
    document object map. A first malformed-file reconstruction path is
@@ -1753,6 +1755,8 @@ reader or writer invariant is narrower than a whole-document workflow:
 - preserve a partially decoded stream-filter workflow through read/write/reread;
 - append and read classic and compressed-xref-stream incremental revisions,
   including newest-versus-older revision checks;
+- read PDF headers and linearization status through native async file wrappers,
+  including the checked-in `.repos/logo.pdf` fixture's linearized state;
 - append a compressed-xref-stream incremental revision to the checked-in
   CamlPDF introduction fixture through native async file wrappers, then read
   newest and older revisions while preserving multi-page tutorial text;

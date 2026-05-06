@@ -40,6 +40,9 @@ Current backend snapshot:
   async file writes without mutating the source document.~~
 - [x] ~~Add CamlPDF-style generated trailer `/ID` incremental-update output for
   byte and async file writes without mutating the source document.~~
+- [x] ~~Expose `.repos/pdfread.mli`-referenced native async file helpers for
+  `read_header` and `is_linearized`, with generated and checked-in fixture
+  coverage.~~
 - [x] ~~Check the currently tracked CamlPDF fixture PDFs for image XObjects
   before expanding image corpus tests; `logo.pdf` and
   `introduction_to_camlpdf.pdf` do not currently provide image entries.~~
@@ -411,8 +414,8 @@ Current backend snapshot:
   revision-specific, and major reconstructed read paths.~~
 - [x] ~~Full and incremental writer modes, including public `PdfWriteMode`
   dispatch.~~
-- [x] ~~Native async file read/write wrappers for core, encrypted, and
-  incremental workflows.~~
+- [x] ~~Native async file read/write wrappers for core, encrypted, incremental,
+  header-read, and linearized-file-probe workflows.~~
 - [x] ~~Page tree read/write, `pages_of_pagetree`, `add_pagetree`, `add_root`,
   `endpage`, inherited page attributes, extraction, and cleanup.~~
 - [x] ~~Public merge and extraction workflows through compressed
@@ -688,8 +691,8 @@ Current backend snapshot:
 - [ ] Revisit LLVM backend validation once the installed MoonBit toolchain has
   the LLVM stdlib bundle available.
 - [x] ~~Checked-in CamlPDF fixture PDFs read, multi-page text-extract,
-  compressed-write, document-wide stream-decompress, and reread through native
-  async file wrappers.~~
+  header-probe, linearized-probe, compressed-write, document-wide
+  stream-decompress, and reread through native async file wrappers.~~
 - [x] ~~Checked-in CamlPDF logo fixture reconstructs from a bad `startxref`
   pointer through native async file wrappers, compressed rewrite, and reread.~~
 - [x] ~~Checked-in CamlPDF intro fixture reconstructs from a bad `startxref`

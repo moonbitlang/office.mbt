@@ -380,6 +380,8 @@ async test "async file wrappers write and read PDF documents" {
   let original = try! @pdflite.pdf_minimum_valid_pdf()
   pdf_write_document_to_file(original, path)
   let loaded = pdf_read_document_from_file(path)
+  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 0 })
+  @test.assert_eq(pdf_is_linearized_file(path), false)
   pdf_async_io_remove_if_exists_for_test(path)
   @test.assert_eq(try! loaded.endpage(), 1)
   @test.assert_eq(loaded.version(), original.version())
@@ -452,6 +454,8 @@ async test "async file wrappers read checked-in CamlPDF fixture PDFs" {
   pdf_async_io_remove_if_exists_for_test(intro_decompressed_roundtrip)
 
   let logo = pdf_read_document_from_file(logo_path)
+  @test.assert_eq(pdf_read_header_from_file(logo_path), { major: 1, minor: 4 })
+  @test.assert_eq(pdf_is_linearized_file(logo_path), true)
   @test.assert_eq(logo.version(), (1, 4))
   @test.assert_eq(try! logo.endpage(), 1)
   pdf_write_document_to_file_with_compressed_xref_stream(logo, logo_roundtrip)
@@ -459,6 +463,7 @@ async test "async file wrappers read checked-in CamlPDF fixture PDFs" {
   @test.assert_eq(try! logo_reparsed.endpage(), 1)
 
   let intro = pdf_read_document_from_file(intro_path)
+  @test.assert_eq(pdf_read_header_from_file(intro_path), { major: 1, minor: 5 })
   @test.assert_eq(intro.version(), (1, 5))
   pdf_async_io_assert_intro_fixture_text_for_test(intro)
   pdf_write_document_to_file_with_compressed_xref_stream(intro, intro_roundtrip)
