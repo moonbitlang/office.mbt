@@ -109,6 +109,16 @@ pub fn PdfColourSpace::name(self : PdfColourSpace) -> PdfName? {
 }
 
 ///|
+pub fn pdf_string_of_colour_space(space : PdfColourSpace) -> String {
+  space.debug_name()
+}
+
+///|
+pub fn pdf_name_of_colour_space(space : PdfColourSpace) -> PdfName? {
+  space.name()
+}
+
+///|
 pub fn pdf_colour_space_of_device_name(name : PdfName) -> PdfColourSpace? {
   if name == pdf_space_device_gray_name || name == pdf_space_g_name {
     Some(PdfDeviceGray)
@@ -365,6 +375,15 @@ pub fn PdfDocument::colour_space_components(
 }
 
 ///|
+pub fn pdf_colour_space_components(
+  document : PdfDocument,
+  resources : PdfObject,
+  object : PdfObject,
+) -> Int raise PdfError {
+  document.colour_space_components(resources, object)
+}
+
+///|
 fn pdf_space_read_indexed_table(
   data : BytesView,
   hival : Int,
@@ -618,6 +637,15 @@ pub fn PdfDocument::read_colour_space(
 }
 
 ///|
+pub fn pdf_read_colour_space(
+  document : PdfDocument,
+  resources : PdfObject,
+  object : PdfObject,
+) -> PdfColourSpace? raise PdfError {
+  document.read_colour_space(resources, object)
+}
+
+///|
 fn pdf_space_number_array_object(values : ArrayView[Double]) -> PdfObject {
   PdfArray([ for value in values => PdfReal(value) ])
 }
@@ -802,4 +830,12 @@ pub fn PdfDocument::write_colour_space(
     Some(object) => object
     None => PdfNull
   }
+}
+
+///|
+pub fn pdf_write_colour_space(
+  document : PdfDocument,
+  space : PdfColourSpace,
+) -> PdfObject {
+  document.write_colour_space(space)
 }

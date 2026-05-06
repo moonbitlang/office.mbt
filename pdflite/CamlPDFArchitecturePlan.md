@@ -611,7 +611,10 @@ and backend breadth, is about 85-90% complete.
   content parser/writer, standard filters, predictors, many encryption flows,
   text extraction basics, color spaces, functions, bookmarks, annotations,
   page labels, OCG, merge, strict revision-specific reads, and image extraction
-  basics. Public writer mode dispatch now covers full writes and incremental
+  basics. The color-space layer exposes both typed document methods and
+  standalone `.repos/pdfspace.mli`-style helpers for debug names, separation
+  names, reading, writing, and component counts. Public writer mode dispatch now
+  covers full writes and incremental
   update writes, and encrypted-writer wrappers cover CamlPDF-style
   encrypt-at-write workflows for ARC4, AESV2, AESV3, and AESV3 ISO while
   keeping AES randomness provider-driven. Native async file wrappers cover

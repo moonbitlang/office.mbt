@@ -902,9 +902,10 @@ MoonBit consequences for this project:
    becomes `String` only through named encoding helpers.
    Status: started with a `pdf_space` foundation for typed colour spaces,
    CamlPDF-compatible debug names, separation colourant names, direct device
-   colour-space alias parsing, pattern-with-base parsing, and object rendering
-   for device, calibrated, ICCBased, Indexed, Pattern, Separation, and DeviceN
-   colour spaces, returning `PdfNull` through the document-level writer when a
+   colour-space alias parsing, pattern-with-base parsing, standalone
+   `.repos/pdfspace.mli` helper wrappers, and object rendering for device,
+   calibrated, ICCBased, Indexed, Pattern, Separation, and DeviceN colour
+   spaces, returning `PdfNull` through the document-level writer when a
    constructed colour-space table cannot be represented safely. A document-aware
    `read_colour_space` entry point now resolves `/ColorSpace` resources and
    nested single-item arrays, and parses CalGray, CalRGB, and Lab dictionaries
@@ -1593,7 +1594,10 @@ MoonBit consequences for this project:
     debug-name variants, document resource fallbacks, calibrated defaults,
     ICCBased defaults and malformed dictionaries, Indexed table parsing and
     malformed table bounds, and Separation/DeviceN parsing fallbacks.
-    Function coverage now directly exercises Type 4 trig, angle, conversion,
+    Standalone colour-space wrapper coverage now exercises
+    `.repos/pdfspace.mli` debug-name, name, read, and write helpers plus the
+    `.repos/pdfops.mli` component-count helper over the same typed document
+    methods. Function coverage now directly exercises Type 4 trig, angle, conversion,
     integer division, remainder, log, bitshift direction, logical right shift,
     masked shift counts, integer wrapping, float rejection for integer
     operators, comment, and malformed-number paths. Writer and core stream-data

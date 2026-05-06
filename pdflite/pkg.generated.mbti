@@ -159,6 +159,8 @@ pub fn pdf_codepoints_of_utf16be(BytesView) -> Array[Int] raise PdfError
 
 pub fn pdf_codepoints_of_utf8(BytesView) -> Array[Int] raise PdfError
 
+pub fn pdf_colour_space_components(PdfDocument, PdfObject, PdfObject) -> Int raise PdfError
+
 pub fn pdf_colour_space_of_device_name(PdfName) -> PdfColourSpace?
 
 pub fn pdf_colour_space_of_object(PdfObject) -> PdfColourSpace?
@@ -297,6 +299,8 @@ pub fn pdf_minimum_valid_pdf() -> PdfDocument raise PdfError
 
 pub fn pdf_name_of_bytes(Bytes) -> PdfName
 
+pub fn pdf_name_of_colour_space(PdfColourSpace) -> PdfName?
+
 pub fn pdf_name_of_view(BytesView) -> PdfName
 
 pub let pdf_no_more : Int
@@ -407,6 +411,8 @@ pub fn pdf_read_classic_document_revision_from_bytes(Bytes, Int) -> PdfDocument 
 
 pub fn pdf_read_classic_document_revision_from_view(BytesView, Int) -> PdfDocument raise PdfError
 
+pub fn pdf_read_colour_space(PdfDocument, PdfObject, PdfObject) -> PdfColourSpace? raise PdfError
+
 pub fn pdf_read_document_from_bytes(Bytes) -> PdfDocument raise PdfError
 
 pub fn pdf_read_document_from_bytes_with_passwords(Bytes, user_password? : BytesView?, owner_password? : BytesView?) -> PdfDecryptionResult? raise PdfError
@@ -475,6 +481,8 @@ pub fn pdf_string_of_bookmark(PdfBookmark) -> Bytes raise PdfError
 
 pub fn pdf_string_of_calculator(ArrayView[PdfCalculatorOp]) -> String
 
+pub fn pdf_string_of_colour_space(PdfColourSpace) -> String
+
 pub fn pdf_string_of_content_op(PdfContentOp) -> Bytes raise PdfError
 
 pub fn pdf_string_of_content_ops(ArrayView[PdfContentOp]) -> Bytes raise PdfError
@@ -502,6 +510,8 @@ pub fn pdf_utf16be_of_codepoints(ArrayView[Int]) -> Bytes raise PdfError
 pub fn pdf_utf8_of_codepoints(ArrayView[Int]) -> Bytes raise PdfError
 
 pub fn pdf_utf8_of_pdfdocstring(BytesView) -> Bytes raise PdfError
+
+pub fn pdf_write_colour_space(PdfDocument, PdfColourSpace) -> PdfObject
 
 pub fn pdf_write_document(PdfDocument) -> Bytes raise PdfError
 

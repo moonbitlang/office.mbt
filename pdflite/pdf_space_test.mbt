@@ -11,6 +11,10 @@ fn space_bytes_for_test(values : ArrayView[Byte]) -> Bytes {
 ///|
 test "PdfColourSpace debug names preserve CamlPDF forms" {
   @test.assert_eq(@pdflite.PdfDeviceGray.debug_name(), "/DeviceGray")
+  @test.assert_eq(
+    @pdflite.pdf_string_of_colour_space(PdfDeviceGray),
+    "/DeviceGray",
+  )
   @test.assert_eq(@pdflite.PdfDeviceRGB.debug_name(), "/DeviceRGB")
   @test.assert_eq(@pdflite.PdfDeviceCMYK.debug_name(), "/DeviceCMYK")
   @test.assert_eq(
@@ -67,8 +71,15 @@ test "PdfColourSpace debug names preserve CamlPDF forms" {
 ///|
 test "PdfColourSpace name only reports separation colourants" {
   @test.assert_eq(@pdflite.PdfDeviceRGB.name(), None)
+  @test.assert_eq(@pdflite.pdf_name_of_colour_space(PdfDeviceRGB), None)
   @test.assert_eq(
     @pdflite.PdfSeparation(space_name_for_test("/Spot"), PdfDeviceGray, PdfNull).name(),
+    Some(space_name_for_test("/Spot")),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_name_of_colour_space(
+      PdfSeparation(space_name_for_test("/Spot"), PdfDeviceGray, PdfNull),
+    ),
     Some(space_name_for_test("/Spot")),
   )
 }
@@ -154,6 +165,14 @@ test "PdfDocument read_colour_space resolves resources and nested arrays" {
     Some(PdfDeviceRGB),
   )
   @test.assert_eq(
+    try! @pdflite.pdf_read_colour_space(
+      doc,
+      resources,
+      PdfNameObject(space_name_for_test("/CS1")),
+    ),
+    Some(PdfDeviceRGB),
+  )
+  @test.assert_eq(
     try! doc.read_colour_space(
       resources,
       PdfArray([PdfNameObject(space_name_for_test("/CS1"))]),
@@ -210,6 +229,14 @@ test "PdfDocument colour_space_components counts direct and resource spaces" {
   ])
   @test.assert_eq(
     try! doc.colour_space_components(
+      resources,
+      PdfNameObject(space_name_for_test("/DeviceGray")),
+    ),
+    1,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_colour_space_components(
+      doc,
       resources,
       PdfNameObject(space_name_for_test("/DeviceGray")),
     ),
@@ -1107,6 +1134,10 @@ test "pdf_object_of_colour_space writes supported colour spaces" {
   )
   @test.assert_eq(
     @pdflite.pdf_document_empty().write_colour_space(PdfDeviceRGB),
+    PdfNameObject(space_name_for_test("/DeviceRGB")),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_write_colour_space(@pdflite.pdf_document_empty(), PdfDeviceRGB),
     PdfNameObject(space_name_for_test("/DeviceRGB")),
   )
   let tint : @pdflite.PdfObject = PdfDictionary([
