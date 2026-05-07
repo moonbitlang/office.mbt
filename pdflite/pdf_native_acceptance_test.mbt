@@ -5709,6 +5709,43 @@ test "native acceptance suite reads classic and xref-stream incremental revision
 }
 
 ///|
+test "native acceptance suite reconstructs compressed xref incremental revisions with bad startxref" {
+  let xref_original = @pdflite.pdf_write_document_with_xref_stream(
+    acceptance_one_page_document_for_test(),
+  )
+  let xref_original_parsed = @pdflite.pdf_read_document_from_bytes(
+    xref_original,
+  )
+  let xref_updated = acceptance_add_revision_marker_for_test(
+    xref_original_parsed, 93, "xref-bad-startxref-update",
+  )
+  let xref_update = @pdflite.pdf_write_document_incremental_update_with_compressed_xref_stream(
+    xref_original, xref_updated,
+  )
+  let corrupted = acceptance_corrupt_startxref_pointer_for_test(xref_update)
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    corrupted,
+  )
+  guard strict is Err(_) else {
+    fail("expected bad startxref to require malformed reconstruction")
+  }
+  let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
+  @test.assert_eq(recovered.first_xref(), 0)
+  acceptance_assert_one_page_invariants_for_test(recovered, (1, 5))
+  acceptance_assert_revision_marker_for_test(
+    recovered, 93, "xref-bad-startxref-update",
+  )
+  let rewritten = @pdflite.pdf_write_document_with_compressed_xref_stream(
+    recovered,
+  )
+  let reparsed = @pdflite.pdf_read_document_from_bytes(rewritten)
+  acceptance_assert_one_page_invariants_for_test(reparsed, (1, 5))
+  acceptance_assert_revision_marker_for_test(
+    reparsed, 93, "xref-bad-startxref-update",
+  )
+}
+
+///|
 test "native acceptance suite updates documents through public writer modes" {
   let original = @pdflite.pdf_write_document_with_mode(
     acceptance_one_page_document_for_test(),

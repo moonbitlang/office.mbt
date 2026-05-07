@@ -980,6 +980,9 @@ Current backend snapshot:
 - [x] ~~Compressed hybrid `/XRefStm` reads now have coverage where a classic
   trailer points to a Flate predictor xref stream, including strict hybrid
   reads and bad-final-startxref reconstruction.~~
+- [x] ~~Writer-generated compressed xref-stream incremental updates now have a
+  public native bad-startxref acceptance gate, preserving revision markers
+  through recovery, compressed rewrite, and reread.~~
 - [ ] Broader malformed xref-table/xref-stream/object-stream recovery beyond
   the current bad-startxref real-corpus, multi-revision, and encrypted
   object-stream gates.
