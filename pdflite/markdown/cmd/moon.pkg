@@ -6,6 +6,14 @@ import {
   "moonbitlang/core/env",
 }
 
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/env",
+  "moonbitlang/core/test",
+} for "wbtest"
+
 supported_targets = "+native"
 
 options(

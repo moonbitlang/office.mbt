@@ -7,8 +7,14 @@ fn markdown_cmd_usage() -> Unit raise {
 async fn main {
   let args = @env.args()
   guard args.length() == 3 else { markdown_cmd_usage() }
-  let input_path = args[1]
-  let output_path = args[2]
+  markdown_cmd_convert_file(args[1], args[2])
+}
+
+///|
+async fn markdown_cmd_convert_file(
+  input_path : String,
+  output_path : String,
+) -> Unit {
   let markdown = @markdown.pdf_bytes_to_markdown(
     @fs.read_file(input_path).binary(),
   )

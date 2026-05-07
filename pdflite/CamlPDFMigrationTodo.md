@@ -150,6 +150,9 @@ Current backend snapshot:
 - [x] ~~Add download-only external Markdown acceptance fixtures for an Adobe
   PDF-spec supplement and a Unicode CJK chart, with SHA-256 lock metadata and
   checked-in comparison judgement.~~
+- [x] ~~Add a native command-package Markdown conversion gate, writing a
+  generated PDF fixture to a UTF-8 `.md` file through the executable helper and
+  checking stable markers in the file output.~~
 - [x] ~~Decrypt blank/open user-password PDFs at the Markdown boundary before
   text extraction, fixing `InvalidFlateData` on encrypted external
   acceptance PDFs.~~
@@ -1054,6 +1057,9 @@ Current backend snapshot:
 - [x] ~~Markdown normalization now trims the synthetic space before a terminal
   hyphen at extracted line breaks, matching common PDF text baselines for
   wrapped words such as `soft-` without joining the physical lines.~~
+- [x] ~~The Markdown executable package now has a native file I/O gate over a
+  generated PDF fixture, verifying the command helper writes UTF-8 Markdown
+  output with stable page/text markers.~~
 - [ ] Broader real-world PDF corpus testing, including PDF-to-Markdown
   comparison fixtures after the local Pandoc gates are stable.
 - [ ] Performance tuning for large files, object streams, filters, and text/image
