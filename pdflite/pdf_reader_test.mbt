@@ -1627,6 +1627,63 @@ fn reader_xref_stream_pdf_with_prev_deleted_object() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn reader_xref_stream_pdf_with_compressed_prev_update_startxref(
+  startxref_override : Int?,
+) -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.5\n")
+  let original_offset = reader_push_indirect_object(output, 1, 0, "1")
+  let catalog_offset = reader_push_indirect_object(
+    output, 2, 0, "<< /Type /Catalog /Payload 1 0 R >>",
+  )
+  let base_xref = output.length()
+  reader_push_ascii(output, "xref\n0 3\n0000000000 65535 f \n")
+  reader_push_xref_entry(output, original_offset, 0)
+  reader_push_xref_entry(output, catalog_offset, 0)
+  reader_push_ascii(output, "trailer\n<< /Root 2 0 R /Size 3 >>\nstartxref\n")
+  reader_push_ascii(output, base_xref.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+  let updated_offset = reader_push_indirect_object(output, 1, 0, "2")
+  let xref_stream_offset = output.length()
+  let stream_data : Array[Byte] = []
+  reader_push_xref_stream_entry(stream_data, 0, 0, 65535)
+  reader_push_xref_stream_entry(stream_data, 1, updated_offset, 0)
+  reader_push_xref_stream_entry(stream_data, 1, catalog_offset, 0)
+  reader_push_xref_stream_entry(stream_data, 1, xref_stream_offset, 0)
+  let predicted = reader_png_none_predictor_rows_for_test(stream_data[:], 7)
+  let encoded = @pdflite.pdf_flate_encode(predicted)
+  reader_push_ascii(output, "3 0 obj\n")
+  reader_push_ascii(output, "<< /Type /XRef /Length ")
+  reader_push_ascii(output, encoded.length().to_string())
+  reader_push_ascii(output, " /Size 4 /Root 2 0 R /Prev ")
+  reader_push_ascii(output, base_xref.to_string())
+  reader_push_ascii(
+    output, " /W [1 4 2] /Filter /FlateDecode /DecodeParms << /Predictor 12 /Columns 7 >> >>\nstream\n",
+  )
+  for byte in encoded {
+    output.push(byte)
+  }
+  reader_push_ascii(output, "\nendstream\nendobj\nstartxref\n")
+  let startxref = match startxref_override {
+    Some(offset) => offset
+    None => xref_stream_offset
+  }
+  reader_push_ascii(output, startxref.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
+fn reader_xref_stream_pdf_with_compressed_prev_update() -> @pdflite.PdfBytes {
+  reader_xref_stream_pdf_with_compressed_prev_update_startxref(None)
+}
+
+///|
+fn reader_xref_stream_pdf_with_compressed_prev_update_bad_startxref() -> @pdflite.PdfBytes {
+  reader_xref_stream_pdf_with_compressed_prev_update_startxref(Some(0))
+}
+
+///|
 fn reader_xref_stream_pdf_with_object_stream_number(
   stored_object_number : Int,
 ) -> @pdflite.PdfBytes {
@@ -3819,6 +3876,54 @@ test "pdf_read_document_from_bytes follows xref stream Prev chains" {
 }
 
 ///|
+test "pdf_read_document_from_bytes follows compressed xref stream Prev chains" {
+  let updated = try! @pdflite.pdf_read_document_from_bytes(
+    reader_xref_stream_pdf_with_compressed_prev_update(),
+  )
+  @test.assert_eq(updated.root(), 2)
+  @test.assert_eq(updated.object_numbers(), [1, 2])
+  @test.assert_eq(updated.lookup_object_or_null(1), PdfInteger(2))
+  @test.assert_eq(
+    updated
+    .trailer_dict()
+    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Prev"))),
+    None,
+  )
+  @test.assert_eq(
+    updated
+    .trailer_dict()
+    .lookup_immediate(
+      @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/DecodeParms")),
+    ),
+    None,
+  )
+}
+
+///|
+test "pdf_read_document_from_bytes reconstructs compressed xref stream Prev chains" {
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_xref_stream_pdf_with_compressed_prev_update_bad_startxref(),
+  )
+  guard strict is Err(@pdflite.PdfError::XRefExpected) else {
+    fail("expected strict XRefExpected")
+  }
+
+  let updated = try! @pdflite.pdf_read_document_from_bytes(
+    reader_xref_stream_pdf_with_compressed_prev_update_bad_startxref(),
+  )
+  @test.assert_eq(updated.first_xref(), 0)
+  @test.assert_eq(updated.root(), 2)
+  @test.assert_eq(updated.object_numbers(), [1, 2])
+  @test.assert_eq(updated.lookup_object_or_null(1), PdfInteger(2))
+  @test.assert_eq(
+    updated
+    .trailer_dict()
+    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Prev"))),
+    None,
+  )
+}
+
+///|
 test "pdf_read_document_revision_from_bytes reads xref stream older Prev revision" {
   let updated = try! @pdflite.pdf_read_document_revision_from_bytes(
     reader_xref_stream_pdf_with_prev_update(),
@@ -3835,6 +3940,18 @@ test "pdf_read_document_revision_from_bytes reads xref stream older Prev revisio
   @test.assert_eq(deleted.revision_read(), 2)
   @test.assert_eq(deleted.object_numbers(), [1])
   @test.assert_eq(deleted.lookup_object_or_null(1), PdfInteger(1))
+}
+
+///|
+test "pdf_read_document_revision_from_bytes reads compressed xref stream older Prev revision" {
+  let updated = try! @pdflite.pdf_read_document_revision_from_bytes(
+    reader_xref_stream_pdf_with_compressed_prev_update(),
+    2,
+  )
+  @test.assert_eq(updated.revision_read(), 2)
+  @test.assert_eq(updated.root(), 2)
+  @test.assert_eq(updated.object_numbers(), [1, 2])
+  @test.assert_eq(updated.lookup_object_or_null(1), PdfInteger(1))
 }
 
 ///|
