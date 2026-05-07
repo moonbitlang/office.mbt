@@ -7,6 +7,13 @@
     "url": "https://www.adobe.com/content/dam/cc1/en/devnet/pdf/pdfs/adobe_supplement_iso32000_1.pdf"
   },
   {
+    "bytes": 22491828,
+    "filename": "pdf_reference_iso32000_1_2008.pdf",
+    "id": "adobe_pdf_reference_iso32000_1_2008",
+    "sha256": "9de0ca9e8570d6209e8bd48a355be8eb6ec376acfc3fc3ae97cd8730351417ff",
+    "url": "https://opensource.adobe.com/dc-acrobat-sdk-docs/pdfstandards/PDF32000_2008.pdf"
+  },
+  {
     "bytes": 42670798,
     "filename": "unicode_cjk_unified_ideographs_u4e00.pdf",
     "id": "unicode_cjk_unified_ideographs_u4e00",

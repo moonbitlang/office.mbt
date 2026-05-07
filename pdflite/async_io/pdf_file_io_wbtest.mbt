@@ -440,9 +440,9 @@ async test "async file wrappers can incrementally write generated trailer IDs" {
 
 ///|
 async test "async file wrappers read checked-in CamlPDF fixture PDFs" {
-  let logo_path = pdf_async_io_repo_path_for_test(".repos/logo.pdf")
+  let logo_path = pdf_async_io_repo_path_for_test("fixtures/camlpdf/logo.pdf")
   let intro_path = pdf_async_io_repo_path_for_test(
-    ".repos/introduction_to_camlpdf.pdf",
+    "fixtures/camlpdf/introduction_to_camlpdf.pdf",
   )
   let logo_roundtrip = pdf_async_io_test_path_for_test("logo_fixture")
   let intro_roundtrip = pdf_async_io_test_path_for_test("intro_fixture")
@@ -488,7 +488,7 @@ async test "async file wrappers read checked-in CamlPDF fixture PDFs" {
 ///|
 async test "async file wrappers incrementally update checked-in CamlPDF intro fixture" {
   let intro_path = pdf_async_io_repo_path_for_test(
-    ".repos/introduction_to_camlpdf.pdf",
+    "fixtures/camlpdf/introduction_to_camlpdf.pdf",
   )
   let updated_path = pdf_async_io_test_path_for_test(
     "intro_fixture_incremental",
@@ -521,7 +521,7 @@ async test "async file wrappers incrementally update checked-in CamlPDF intro fi
 ///|
 async test "async file wrappers reconstruct malformed incremental CamlPDF intro fixture" {
   let intro_path = pdf_async_io_repo_path_for_test(
-    ".repos/introduction_to_camlpdf.pdf",
+    "fixtures/camlpdf/introduction_to_camlpdf.pdf",
   )
   let updated_path = pdf_async_io_test_path_for_test(
     "intro_incremental_bad_startxref_source",
@@ -606,7 +606,7 @@ async test "async file wrappers reconstruct malformed incremental CamlPDF intro 
 
 ///|
 async test "async file wrappers reconstruct checked-in CamlPDF logo fixture with bad startxref" {
-  let logo_path = pdf_async_io_repo_path_for_test(".repos/logo.pdf")
+  let logo_path = pdf_async_io_repo_path_for_test("fixtures/camlpdf/logo.pdf")
   let corrupted_path = pdf_async_io_test_path_for_test(
     "logo_bad_startxref_fixture",
   )
@@ -639,7 +639,7 @@ async test "async file wrappers reconstruct checked-in CamlPDF logo fixture with
 ///|
 async test "async file wrappers reconstruct checked-in CamlPDF intro fixture with bad startxref" {
   let intro_path = pdf_async_io_repo_path_for_test(
-    ".repos/introduction_to_camlpdf.pdf",
+    "fixtures/camlpdf/introduction_to_camlpdf.pdf",
   )
   let corrupted_path = pdf_async_io_test_path_for_test(
     "intro_bad_startxref_fixture",

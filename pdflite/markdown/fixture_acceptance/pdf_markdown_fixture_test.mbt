@@ -185,7 +185,7 @@ async test "pdf_bytes_to_markdown extracts Pandoc CJK fixture" {
 ///|
 async test "pdf_bytes_to_markdown extracts checked-in CamlPDF introduction fixture" {
   let markdown = markdown_fixture_markdown_for_test(
-    ".repos/introduction_to_camlpdf.pdf",
+    "fixtures/camlpdf/introduction_to_camlpdf.pdf",
   )
   markdown_fixture_assert_contains_for_test(markdown, "# Page 1")
   markdown_fixture_assert_contains_for_test(
@@ -202,7 +202,9 @@ async test "pdf_bytes_to_markdown extracts checked-in CamlPDF introduction fixtu
 ///|
 async test "pdf_bytes_to_markdown reconstructs checked-in CamlPDF introduction fixture with bad startxref" {
   let bytes = @fs.read_file(
-    markdown_fixture_path_for_test(".repos/introduction_to_camlpdf.pdf"),
+    markdown_fixture_path_for_test(
+      "fixtures/camlpdf/introduction_to_camlpdf.pdf",
+    ),
   ).binary()
   let markdown = @markdown.pdf_bytes_to_markdown(
     markdown_fixture_corrupt_startxref_pointer_for_test(bytes),
@@ -218,7 +220,7 @@ async test "pdf_bytes_to_markdown reconstructs checked-in CamlPDF introduction f
 
 ///|
 async test "pdf_bytes_to_markdown tolerates checked-in CamlPDF logo fixture" {
-  let markdown = markdown_fixture_markdown_for_test(".repos/logo.pdf")
+  let markdown = markdown_fixture_markdown_for_test("fixtures/camlpdf/logo.pdf")
   @test.assert_eq(markdown, "# Page 1\n\n\n")
   @test.assert_eq(markdown_fixture_raw_control_count_for_test(markdown), 0)
   @test.assert_eq(markdown_fixture_replacement_count_for_test(markdown), 0)
@@ -262,6 +264,33 @@ async test "pdf_bytes_to_markdown reconstructs external Adobe supplement fixture
       markdown_fixture_assert_contains_for_test(markdown, "ExtensionLevel: 5")
       @test.assert_eq(markdown_fixture_raw_control_count_for_test(markdown), 0)
       @test.assert_eq(markdown_fixture_replacement_count_for_test(markdown), 6)
+    }
+  }
+}
+
+///|
+async test "pdf_bytes_to_markdown extracts external full PDF reference fixture" {
+  match
+    markdown_optional_fixture_markdown_for_test(
+      "markdown/external_fixtures/downloads/pdf_reference_iso32000_1_2008.pdf",
+    ) {
+    None => ()
+    Some(markdown) => {
+      markdown_fixture_assert_contains_for_test(markdown, "PDF 32000-1:2008")
+      markdown_fixture_assert_contains_for_test(markdown, "Document management")
+      markdown_fixture_assert_contains_for_test(
+        markdown, "Portable document format",
+      )
+      markdown_fixture_assert_contains_for_test(markdown, "ISO 32000-1")
+      markdown_fixture_assert_contains_for_test(markdown, "7 Syntax")
+      markdown_fixture_assert_contains_for_test(markdown, "8 Graphics")
+      markdown_fixture_assert_contains_for_test(markdown, "9 Text")
+      markdown_fixture_assert_contains_for_test(
+        markdown, "12 Interactive Features",
+      )
+      @test.assert_eq(markdown.length() > 2000000, true)
+      @test.assert_eq(markdown_fixture_raw_control_count_for_test(markdown), 0)
+      @test.assert_eq(markdown_fixture_replacement_count_for_test(markdown), 0)
     }
   }
 }

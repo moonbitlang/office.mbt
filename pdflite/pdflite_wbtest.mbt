@@ -948,6 +948,18 @@ test "private reader xref helpers report malformed inputs" {
     try! byte_cursor_of_bytes(@ascii.encode("2 0 obj\n42\n")).read_plain_indirect_object_at_current(),
     { number: 2, generation: 0, object: PdfInteger(42) },
   )
+  let adjacent_source = @ascii.encode(
+    "2 0 obj\n42\nendobj\n3 0 obj\n99\nendobj\n",
+  )
+  let adjacent = byte_cursor_of_bytes(adjacent_source)
+  @test.assert_eq(
+    try! adjacent.read_first_indirect_object_at_current(empty_xrefs[:]),
+    { number: 2, generation: 0, object: PdfInteger(42) },
+  )
+  @test.assert_eq(
+    adjacent.absolute_position(),
+    @ascii.encode("2 0 obj\n42\nendobj").length(),
+  )
 
   let empty_prefix = byte_cursor_of_bytes(Bytes::new(0))
   let empty_prefix_result : Result[PdfParsedIndirectObject, Error] = try? empty_prefix.read_reconstructed_indirect_prefix_at_current()

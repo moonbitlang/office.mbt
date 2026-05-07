@@ -8,6 +8,14 @@
     "acceptance_focus": "multi-page PDF-spec prose, tables, symbols, and page labels"
   },
   {
+    "id": "adobe_pdf_reference_iso32000_1_2008",
+    "filename": "pdf_reference_iso32000_1_2008.pdf",
+    "url": "https://opensource.adobe.com/dc-acrobat-sdk-docs/pdfstandards/PDF32000_2008.pdf",
+    "category": "pdf-spec",
+    "redistribution": "download-only; do not vendor the PDF in this repository",
+    "acceptance_focus": "large full PDF 1.7 specification with long prose, tables, syntax examples, and cross-reference-heavy text"
+  },
+  {
     "id": "unicode_cjk_unified_ideographs_u4e00",
     "filename": "unicode_cjk_unified_ideographs_u4e00.pdf",
     "url": "https://www.unicode.org/charts/PDF/U4E00.pdf",

@@ -17,8 +17,8 @@ from pathlib import Path
 DEFAULT_FIXTURES = (
     "markdown/fixtures/pandoc_latin.pdf",
     "markdown/fixtures/pandoc_cjk.pdf",
-    ".repos/introduction_to_camlpdf.pdf",
-    ".repos/logo.pdf",
+    "fixtures/camlpdf/introduction_to_camlpdf.pdf",
+    "fixtures/camlpdf/logo.pdf",
 )
 
 
@@ -393,29 +393,47 @@ def write_markdown_report(
             and report.pdftotext_raw_controls is not None
             else "n/a"
         )
-        cjk_glyphs = (
-            f"{report.pdflite_cjk_unified_ideographs}/"
-            f"{report.markitdown_cjk_unified_ideographs}/"
-            f"{report.pdftotext_cjk_unified_ideographs}"
-            if report.pdflite_cjk_unified_ideographs is not None
+        if (
+            report.pdflite_cjk_unified_ideographs is not None
             and report.markitdown_cjk_unified_ideographs is not None
-            and report.pdftotext_cjk_unified_ideographs is not None
-            else "error/n/a"
-        )
-        line_shape = (
-            f"{report.pdflite_lines}/{report.markitdown_lines}/"
-            f"{report.pdftotext_lines} lines, "
-            f"{report.pdflite_average_line_length:.1f}/"
-            f"{report.markitdown_average_line_length:.1f}/"
-            f"{report.pdftotext_average_line_length:.1f} avg"
-            if report.pdflite_lines is not None
+        ):
+            pdftotext_cjk = (
+                str(report.pdftotext_cjk_unified_ideographs)
+                if report.pdftotext_cjk_unified_ideographs is not None
+                else "n/a"
+            )
+            cjk_glyphs = (
+                f"{report.pdflite_cjk_unified_ideographs}/"
+                f"{report.markitdown_cjk_unified_ideographs}/"
+                f"{pdftotext_cjk}"
+            )
+        else:
+            cjk_glyphs = "error/n/a"
+        if (
+            report.pdflite_lines is not None
             and report.markitdown_lines is not None
-            and report.pdftotext_lines is not None
             and report.pdflite_average_line_length is not None
             and report.markitdown_average_line_length is not None
-            and report.pdftotext_average_line_length is not None
-            else "error/n/a"
-        )
+        ):
+            pdftotext_lines = (
+                str(report.pdftotext_lines)
+                if report.pdftotext_lines is not None
+                else "n/a"
+            )
+            pdftotext_average = (
+                f"{report.pdftotext_average_line_length:.1f}"
+                if report.pdftotext_average_line_length is not None
+                else "n/a"
+            )
+            line_shape = (
+                f"{report.pdflite_lines}/{report.markitdown_lines}/"
+                f"{pdftotext_lines} lines, "
+                f"{report.pdflite_average_line_length:.1f}/"
+                f"{report.markitdown_average_line_length:.1f}/"
+                f"{pdftotext_average} avg"
+            )
+        else:
+            line_shape = "error/n/a"
         quality = (
             f"{pdflite_quality}/{markitdown_quality}/{pdftotext_quality}"
         )

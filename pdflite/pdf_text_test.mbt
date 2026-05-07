@@ -560,6 +560,58 @@ test "PdfStandardFont text_width uses glyph-name widths for explicit encodings" 
 }
 
 ///|
+test "PdfTextExtractor text_width uses font metrics" {
+  let av = text_bytes_for_test([65, 86])
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(PdfHelvetica, PdfWinAnsiEncoding),
+  )
+  @test.assert_eq(try! standard_font.text_extractor().text_width(av[:]), 1334.0)
+  let metrics : Array[Double] = [ for _ in 0..<256 => 250.0 ]
+  metrics[65] = 500.0
+  metrics[66] = 700.0
+  let simple_font : @pdflite.PdfFont = PdfFontSimple({
+    fonttype: PdfType1,
+    basefont: Some(text_name_for_test("/CustomFont")),
+    firstchar: 0,
+    lastchar: 255,
+    widths: [],
+    fontdescriptor: None,
+    fontmetrics: Some(metrics),
+    encoding: PdfWinAnsiEncoding,
+  })
+  @test.assert_eq(
+    try! simple_font
+    .text_extractor()
+    .text_width(text_bytes_for_test([65, 66, 67])[:]),
+    1450.0,
+  )
+  let composite : @pdflite.PdfCompositeCIDFont = {
+    cid_system_info: {
+      registry: text_bytes_for_test([65]),
+      ordering: text_bytes_for_test([73]),
+      supplement: 0,
+    },
+    cid_basefont: text_name_for_test("/Descendant"),
+    cid_fontdescriptor: text_font_descriptor_for_test(),
+    cid_widths: [(0x41, 600.0), (0x20AC, 900.0)],
+    cid_widths2: [],
+    cid_default_width: 1000.0,
+    cid_default_width2: [880.0, -1000.0],
+  }
+  let cid_font : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: text_name_for_test("/Top"),
+    composite,
+    encoding: PdfPredefinedCMap(text_name_for_test("/Identity-H")),
+  })
+  @test.assert_eq(
+    try! cid_font
+    .text_extractor()
+    .text_width(text_bytes_for_test([0x00, 0x41, 0x20, 0xAC, 0x00, 0x42])[:]),
+    2500.0,
+  )
+}
+
+///|
 test "PdfEncoding debug names preserve CamlPDF forms" {
   @test.assert_eq(
     @pdflite.PdfImplicitInFontFile.debug_name(),

@@ -22,6 +22,42 @@ fn markdown_fullwidth_chunk_for_wbtest(
 }
 
 ///|
+fn markdown_text_chunk_for_wbtest(
+  x : Double,
+  y : Double,
+  width : Double,
+  index : Int,
+  codepoints : Array[Int],
+) -> PdfMarkdownTextChunk {
+  { x, y, width, font_size: 10.0, index, codepoints }
+}
+
+///|
+fn markdown_codepoints_for_wbtest(text : String) -> Array[Int] {
+  let output : Array[Int] = []
+  for byte in @ascii.encode(text) {
+    output.push(byte.to_int())
+  }
+  output
+}
+
+///|
+fn markdown_text_cell_for_wbtest(
+  x : Double,
+  y : Double,
+  index : Int,
+  text : String,
+) -> PdfMarkdownTextChunk {
+  markdown_text_chunk_for_wbtest(
+    x,
+    y,
+    1.0,
+    index,
+    markdown_codepoints_for_wbtest(text),
+  )
+}
+
+///|
 test "private positioned chunk compare orders columns left to right" {
   @test.assert_eq(
     pdf_markdown_positioned_chunk_compare(
@@ -65,6 +101,130 @@ test "private positioned text array treats large integer adjustment as space" {
   )
   @test.assert_eq(chunks.length(), 1)
   @test.assert_eq(chunks[0].codepoints, [0x41, 0x20, 0x42])
+}
+
+///|
+test "private ASCII width estimate leaves room for inferred word gaps" {
+  @test.assert_eq(pdf_markdown_estimated_codepoint_width(0x41, 10.0), 3.5)
+}
+
+///|
+test "private positioned chunks do not add inferred spaces before punctuation" {
+  @test.assert_eq(
+    pdf_markdown_chunks_to_codepoints(
+      [
+        markdown_text_chunk_for_wbtest(0.0, 100.0, 1.0, 0, [0x41]),
+        markdown_text_chunk_for_wbtest(3.0, 100.0, 1.0, 1, [0x2C]),
+        markdown_text_chunk_for_wbtest(5.0, 100.0, 1.0, 2, [0x42]),
+      ][:],
+    ),
+    [0x41, 0x2C, 0x20, 0x42],
+  )
+}
+
+///|
+test "private positioned chunks emit aligned table runs as Markdown tables" {
+  let codepoints = pdf_markdown_chunks_to_codepoints(
+    [
+      markdown_text_cell_for_wbtest(0.0, 100.0, 0, "Product"),
+      markdown_text_cell_for_wbtest(50.0, 100.0, 1, "Expected"),
+      markdown_text_cell_for_wbtest(100.0, 100.0, 2, "Actual"),
+      markdown_text_cell_for_wbtest(0.0, 90.0, 3, "SKU-1"),
+      markdown_text_cell_for_wbtest(50.0, 90.0, 4, "10"),
+      markdown_text_cell_for_wbtest(100.0, 90.0, 5, "9"),
+    ][:],
+  )
+  @test.assert_eq(
+    try! pdf_markdown_string_of_codepoints(codepoints[:]),
+    "| Product | Expected | Actual |\n| --- | --- | --- |\n| SKU-1 | 10 | 9 |",
+  )
+}
+
+///|
+test "private table detector keeps numbered prose out of Markdown tables" {
+  let codepoints = pdf_markdown_chunks_to_codepoints(
+    [
+      markdown_text_cell_for_wbtest(
+        0.0, 100.0, 0, "2 Conversation programming.",
+      ),
+      markdown_text_cell_for_wbtest(150.0, 100.0, 1, "AutoGen"),
+      markdown_text_cell_for_wbtest(220.0, 100.0, 2, "adopts"),
+      markdown_text_cell_for_wbtest(
+        0.0, 90.0, 3, "plex LLM application workflows",
+      ),
+      markdown_text_cell_for_wbtest(180.0, 90.0, 4, "as"),
+      markdown_text_cell_for_wbtest(220.0, 90.0, 5, "conversations"),
+    ][:],
+  )
+  let text = try! pdf_markdown_string_of_codepoints(codepoints[:])
+  @test.assert_eq(text.contains("|"), false)
+}
+
+///|
+test "private table detector keeps prose-sized chunks out of Markdown tables" {
+  let codepoints = pdf_markdown_chunks_to_codepoints(
+    [
+      markdown_text_cell_for_wbtest(
+        0.0, 100.0, 0, "This document has been derived directly",
+      ),
+      markdown_text_cell_for_wbtest(190.0, 100.0, 1, "from the"),
+      markdown_text_cell_for_wbtest(240.0, 100.0, 2, "copyright standard"),
+      markdown_text_cell_for_wbtest(0.0, 90.0, 3, "the ISO web site at"),
+      markdown_text_cell_for_wbtest(150.0, 90.0, 4, "http://example.com"),
+      markdown_text_cell_for_wbtest(260.0, 90.0, 5, "for details"),
+    ][:],
+  )
+  let text = try! pdf_markdown_string_of_codepoints(codepoints[:])
+  @test.assert_eq(text.contains("|"), false)
+}
+
+///|
+test "private table detector keeps dot leaders out of Markdown tables" {
+  let codepoints = pdf_markdown_chunks_to_codepoints(
+    [
+      markdown_text_cell_for_wbtest(
+        0.0, 100.0, 0, "Foreword . . . . . . . . . .",
+      ),
+      markdown_text_cell_for_wbtest(220.0, 100.0, 1, "vi"),
+      markdown_text_cell_for_wbtest(
+        0.0, 90.0, 2, "Introduction . . . . . . . .",
+      ),
+      markdown_text_cell_for_wbtest(220.0, 90.0, 3, "vii"),
+    ][:],
+  )
+  let text = try! pdf_markdown_string_of_codepoints(codepoints[:])
+  @test.assert_eq(text.contains("|"), false)
+}
+
+///|
+test "private table detector keeps sentence punctuation out of Markdown tables" {
+  let codepoints = pdf_markdown_chunks_to_codepoints(
+    [
+      markdown_text_cell_for_wbtest(0.0, 100.0, 0, "PDF files may be created"),
+      markdown_text_cell_for_wbtest(150.0, 100.0, 1, "natively in PDF form,"),
+      markdown_text_cell_for_wbtest(280.0, 100.0, 2, "converted from other"),
+      markdown_text_cell_for_wbtest(0.0, 90.0, 3, "microform or hard copy"),
+      markdown_text_cell_for_wbtest(150.0, 90.0, 4, "archives and other"),
+      markdown_text_cell_for_wbtest(280.0, 90.0, 5, "institutions"),
+    ][:],
+  )
+  let text = try! pdf_markdown_string_of_codepoints(codepoints[:])
+  @test.assert_eq(text.contains("|"), false)
+}
+
+///|
+test "private table detector rejects numeric-dominated total rows" {
+  let codepoints = pdf_markdown_chunks_to_codepoints(
+    [
+      markdown_text_cell_for_wbtest(0.0, 100.0, 0, "Sales Tax"),
+      markdown_text_cell_for_wbtest(80.0, 100.0, 1, "10.20%"),
+      markdown_text_cell_for_wbtest(140.0, 100.0, 2, "278.46"),
+      markdown_text_cell_for_wbtest(0.0, 90.0, 3, "GRAND TOTAL"),
+      markdown_text_cell_for_wbtest(140.0, 90.0, 4, "5,738"),
+    ][:],
+  )
+  let text = try! pdf_markdown_string_of_codepoints(codepoints[:])
+  @test.assert_eq(text.contains("|"), false)
 }
 
 ///|

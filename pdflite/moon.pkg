@@ -26,8 +26,10 @@ options(
     "pdf_image_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
     "pdf_native_acceptance_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
     "pdf_page_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
+    "pdf_random_native.mbt": [ "native" ],
+    "pdf_random_native_test.mbt": [ "native" ],
+    "pdf_random_native_wbtest.mbt": [ "native" ],
     "pdf_reader_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
-    "pdf_text_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
     "pdf_text_agl_arabic_presentation_test.mbt": [
       "wasm-gc",
       "js",
@@ -121,9 +123,7 @@ options(
     ],
     "pdf_text_agl_sequence_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
     "pdf_text_agl_sequence_wbtest.mbt": [ "wasm-gc", "js", "native", "llvm" ],
+    "pdf_text_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
     "pdflite_wbtest.mbt": [ "wasm-gc", "js", "native", "llvm" ],
-    "pdf_random_native.mbt": [ "native" ],
-    "pdf_random_native_test.mbt": [ "native" ],
-    "pdf_random_native_wbtest.mbt": [ "native" ],
   },
 )

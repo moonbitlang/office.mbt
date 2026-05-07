@@ -1972,6 +1972,7 @@ pub fn PdfTextExtractor::charcode_of_codepoint(Self, Int) -> Int?
 pub fn PdfTextExtractor::codepoints_of_text(Self, BytesView) -> Array[Int] raise PdfError
 pub fn PdfTextExtractor::glyphnames_and_codepoints_of_text(Self, BytesView) -> Array[PdfTextGlyph] raise PdfError
 pub fn PdfTextExtractor::glyphnames_of_text(Self, BytesView) -> Array[PdfName] raise PdfError
+pub fn PdfTextExtractor::text_width(Self, BytesView) -> Double raise PdfError
 
 pub(all) struct PdfTextGlyph {
   glyphname : PdfName

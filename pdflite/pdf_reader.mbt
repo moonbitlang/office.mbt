@@ -500,6 +500,32 @@ fn pdf_classic_xref_lookup(
 }
 
 ///|
+priv struct PdfClassicXRefIndex {
+  entries : @hashmap.HashMap[Int, PdfClassicXRefEntry]
+}
+
+///|
+fn pdf_classic_xref_index(
+  xrefs : ArrayView[PdfClassicXRefEntry],
+) -> PdfClassicXRefIndex {
+  let entries : @hashmap.HashMap[Int, PdfClassicXRefEntry] = @hashmap.HashMap::new()
+  for xref in xrefs {
+    if xref.in_use && !entries.contains(xref.object_number) {
+      entries[xref.object_number] = xref
+    }
+  }
+  { entries, }
+}
+
+///|
+fn PdfClassicXRefIndex::lookup(
+  self : PdfClassicXRefIndex,
+  object_number : Int,
+) -> PdfClassicXRefEntry? {
+  self.entries.get(object_number)
+}
+
+///|
 fn pdf_classic_xrefs_add_newer_first(
   target : Array[PdfClassicXRefEntry],
   entries : ArrayView[PdfClassicXRefEntry],
@@ -1200,11 +1226,30 @@ fn ByteCursor::read_pdf_trailer_dictionary(
 }
 
 ///|
+fn ByteCursor::lex_first_pdf_indirect_object_tokens(
+  self : ByteCursor,
+) -> Array[PdfLexeme] raise PdfError {
+  let tokens : Array[PdfLexeme] = []
+  let mut done = false
+  while !done {
+    match self.lex_pdf_token() {
+      StopLexing | LexNone => done = true
+      LexEndObj as token => {
+        tokens.push(token)
+        done = true
+      }
+      token => tokens.push(token)
+    }
+  }
+  tokens
+}
+
+///|
 fn ByteCursor::read_plain_indirect_object_at_current(
   self : ByteCursor,
 ) -> PdfParsedIndirectObject raise PdfError {
   let (objects, prefix) = pdf_parse_indirect_object_segments(
-    self.lex_pdf_tokens(),
+    self.lex_first_pdf_indirect_object_tokens(),
   )
   if objects.length() > 0 {
     objects[0]
@@ -1235,7 +1280,7 @@ fn ByteCursor::read_first_indirect_object_segment_at_current(
   self : ByteCursor,
 ) -> (PdfParsedIndirectObject, Bool) raise PdfError {
   let (object, _, complete) = pdf_parse_indirect_object_segment_at(
-    self.lex_pdf_tokens(),
+    self.lex_first_pdf_indirect_object_tokens(),
     0,
   )
   (object, complete)
@@ -1303,11 +1348,16 @@ fn ByteCursor::resolve_classic_stream_length(
   self : ByteCursor,
   object : PdfObject,
   xrefs : ArrayView[PdfClassicXRefEntry],
+  xref_index? : PdfClassicXRefIndex? = None,
 ) -> Int raise PdfError {
   match object.lookup_immediate(pdf_length_name()) {
     Some(PdfInteger(length)) if length >= 0 => length
-    Some(PdfIndirect(number)) =>
-      match pdf_classic_xref_lookup(xrefs, number) {
+    Some(PdfIndirect(number)) => {
+      let xref = match xref_index {
+        Some(index) => index.lookup(number)
+        None => pdf_classic_xref_lookup(xrefs, number)
+      }
+      match xref {
         Some(xref) => {
           let saved_position = self.absolute_position()
           self.seek_pdf_absolute(xref.offset)
@@ -1330,6 +1380,7 @@ fn ByteCursor::resolve_classic_stream_length(
         }
         None => raise StreamLengthExpected
       }
+    }
     _ => raise StreamLengthExpected
   }
 }
@@ -1338,9 +1389,10 @@ fn ByteCursor::resolve_classic_stream_length(
 fn ByteCursor::read_first_indirect_object_at_current(
   self : ByteCursor,
   xrefs : ArrayView[PdfClassicXRefEntry],
+  xref_index? : PdfClassicXRefIndex? = None,
 ) -> PdfParsedIndirectObject raise PdfError {
   let (object, _, complete) = pdf_parse_indirect_object_segment_at(
-    self.lex_pdf_tokens(),
+    self.lex_first_pdf_indirect_object_tokens(),
     0,
   )
   if complete {
@@ -1351,6 +1403,7 @@ fn ByteCursor::read_first_indirect_object_at_current(
     let length_result : Result[Int, Error] = try? self.resolve_classic_stream_length(
       object.object,
       xrefs,
+      xref_index~,
     )
     match length_result {
       Ok(length) =>
@@ -1471,6 +1524,7 @@ fn ByteCursor::read_reconstructed_indirect_prefix_at_current(
 fn ByteCursor::read_reconstructed_indirect_scan_candidate_at_current(
   self : ByteCursor,
   xrefs : ArrayView[PdfClassicXRefEntry],
+  xref_index? : PdfClassicXRefIndex? = None,
 ) -> (PdfParsedIndirectObject, Int?) raise PdfError {
   let (object, _, complete) = pdf_parse_indirect_object_segment_at(
     self.lex_reconstructed_indirect_object_tokens_at_current(),
@@ -1482,6 +1536,7 @@ fn ByteCursor::read_reconstructed_indirect_scan_candidate_at_current(
     let length_result : Result[Int, Error] = try? self.resolve_classic_stream_length(
       object.object,
       xrefs,
+      xref_index~,
     )
     let stream = match length_result {
       Ok(length) =>
@@ -1502,9 +1557,11 @@ fn ByteCursor::read_reconstructed_indirect_scan_candidate_at_current(
 fn ByteCursor::read_reconstructed_indirect_object_at_current(
   self : ByteCursor,
   xrefs : ArrayView[PdfClassicXRefEntry],
+  xref_index? : PdfClassicXRefIndex? = None,
 ) -> PdfParsedIndirectObject raise PdfError {
   let (object, _) = self.read_reconstructed_indirect_scan_candidate_at_current(
     xrefs,
+    xref_index~,
   )
   object
 }
@@ -1515,23 +1572,29 @@ fn pdf_read_reconstructed_xrefs(
 ) -> Array[PdfClassicXRefEntry] raise PdfError {
   let xrefs : Array[PdfClassicXRefEntry] = []
   let cursor = byte_cursor_of_view(data)
+  let xref_index = pdf_classic_xref_index(xrefs)
   let mut position = 0
   while position < data.length() {
     if pdf_reader_reconstruction_indirect_header_at(data, position) {
       cursor.seek_pdf_absolute(position)
       let parsed : Result[(PdfParsedIndirectObject, Int?), Error] = try? cursor.read_reconstructed_indirect_scan_candidate_at_current(
         xrefs[:],
+        xref_index=Some(xref_index),
       )
       match parsed {
         Ok((object, next_position)) => {
           if object.number > 0 {
-            xrefs.push({
+            let xref = {
               object_number: object.number,
               offset: position,
               generation: object.generation,
               in_use: true,
               object_stream: None,
-            })
+            }
+            xrefs.push(xref)
+            if !xref_index.entries.contains(xref.object_number) {
+              xref_index.entries[xref.object_number] = xref
+            }
           }
           match next_position {
             Some(next) if next > position => position = next
@@ -1735,6 +1798,7 @@ fn PdfDocument::load_reconstructed_xref_stream_plain_objects(
   let cursor = byte_cursor_of_view(data)
   let xref_stream_refs = pdf_reconstructed_xref_stream_refs(sections)
   let xref_stream_ref_set = pdf_reader_xref_stream_ref_set(xref_stream_refs[:])
+  let xref_index = pdf_classic_xref_index(xrefs)
   for xref in xrefs {
     match xref.object_stream {
       Some(_) => ()
@@ -1744,7 +1808,10 @@ fn PdfDocument::load_reconstructed_xref_stream_plain_objects(
           !xref_stream_ref_set.contains(xref.object_number, xref.offset) {
           try {
             cursor.seek_pdf_absolute(xref.offset)
-            let parsed = cursor.read_first_indirect_object_at_current(xrefs)
+            let parsed = cursor.read_first_indirect_object_at_current(
+              xrefs,
+              xref_index=Some(xref_index),
+            )
             if parsed.number == xref.object_number &&
               parsed.generation == xref.generation {
               self.load_object_given_number(
@@ -1768,11 +1835,15 @@ fn PdfDocument::load_reconstructed_classic_xref_plain_objects(
   xrefs : ArrayView[PdfClassicXRefEntry],
 ) -> Unit {
   let cursor = byte_cursor_of_view(data)
+  let xref_index = pdf_classic_xref_index(xrefs)
   for xref in xrefs {
     if xref.in_use && xref.object_number != 0 {
       try {
         cursor.seek_pdf_absolute(xref.offset)
-        let parsed = cursor.read_first_indirect_object_at_current(xrefs)
+        let parsed = cursor.read_first_indirect_object_at_current(
+          xrefs,
+          xref_index=Some(xref_index),
+        )
         if parsed.number == xref.object_number &&
           parsed.generation == xref.generation {
           self.load_object_given_number(
@@ -1879,6 +1950,7 @@ priv struct PdfReconstructedXRefCoverage {
 fn pdf_reconstructed_classic_xref_entry_is_verified(
   data : BytesView,
   entries : ArrayView[PdfClassicXRefEntry],
+  xref_index : PdfClassicXRefIndex,
   xref : PdfClassicXRefEntry,
 ) -> Bool {
   if !xref.in_use {
@@ -1887,7 +1959,10 @@ fn pdf_reconstructed_classic_xref_entry_is_verified(
     let cursor = byte_cursor_of_view(data)
     try {
       cursor.seek_pdf_absolute(xref.offset)
-      let parsed = cursor.read_first_indirect_object_at_current(entries)
+      let parsed = cursor.read_first_indirect_object_at_current(
+        entries,
+        xref_index=Some(xref_index),
+      )
       parsed.number == xref.object_number &&
       parsed.generation == xref.generation
     } catch {
@@ -1906,11 +1981,13 @@ fn pdf_reconstructed_xref_coverage(
   for item in classic_sections {
     let (offset, section) = item
     let numbers = pdf_number_set([])
+    let xref_index = pdf_classic_xref_index(section.entries)
     for xref in section.entries {
       if xref.object_number > 0 &&
         pdf_reconstructed_classic_xref_entry_is_verified(
           data,
           section.entries,
+          xref_index,
           xref,
         ) {
         numbers.add(xref.object_number)
@@ -2223,6 +2300,7 @@ fn pdf_read_classic_document_from_view_at_revision(
   }
   document.set_trailer_and_root(trailer)
   let xref_stream_ref_set = pdf_reader_xref_stream_ref_set(xref_stream_refs[:])
+  let xref_index = pdf_classic_xref_index(xrefs[:])
   for xref in xrefs {
     match xref.object_stream {
       Some(_) => ()
@@ -2231,7 +2309,10 @@ fn pdf_read_classic_document_from_view_at_revision(
           xref.object_number != 0 &&
           !xref_stream_ref_set.contains(xref.object_number, xref.offset) {
           cursor.seek_pdf_absolute(xref.offset)
-          let parsed = cursor.read_first_indirect_object_at_current(xrefs)
+          let parsed = cursor.read_first_indirect_object_at_current(
+            xrefs,
+            xref_index=Some(xref_index),
+          )
           if parsed.number != xref.object_number ||
             parsed.generation != xref.generation {
             raise XRefEntryExpected

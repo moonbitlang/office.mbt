@@ -20,5 +20,14 @@ downloaded files with:
   markdown/external_fixtures/downloads/unicode_cjk_unified_ideographs_u4e00.pdf
 ```
 
+The full PDF 1.7 reference fixture is intentionally run as a separate large
+comparison:
+
+```sh
+./markdown/tools/compare_markitdown.py \
+  --output-dir markdown/reports/markitdown_pdf_spec \
+  markdown/external_fixtures/downloads/pdf_reference_iso32000_1_2008.pdf
+```
+
 Keep MoonBit tests network-free; these fixtures are for manual and scripted
 acceptance runs outside the test runner.
