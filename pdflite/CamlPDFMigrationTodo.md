@@ -271,6 +271,10 @@ Current backend snapshot:
   PDFium resource fixture, requiring strict-reader failure, malformed-reader
   reconstruction, Type3 resource/CharProc parsing, text extraction, and
   compressed rewrite/reread preservation.~~
+- [x] ~~Add a real-world Type3 glyph-program malformed-startxref gate for the
+  optional iText logo fixture, requiring strict-reader failure,
+  malformed-reader reconstruction, Type3 metrics/CharProc text extraction, and
+  compressed rewrite/reread preservation.~~
 - [ ] Add more malformed xref-table/xref-stream/object-stream recovery cases
   from real-world PDFs.
 - [x] ~~Add a native reader-boundary gate for the next available predefined CMap
@@ -669,6 +673,10 @@ Current backend snapshot:
   malformed-startxref recovery path, checking that strict reads fail, public
   reconstruction succeeds, Type3 resource/CharProc parsing survives, and a
   compressed rewrite rereads with the same text and glyph-program behavior.~~
+- [x] ~~The optional iText Type3 logo fixture now gates a real-world
+  malformed-startxref recovery path, checking that strict reads fail, public
+  reconstruction succeeds, Type3 metrics/CharProc text extraction survives,
+  and a compressed rewrite rereads with the same logo glyph behavior.~~
 - [x] ~~Bad-startxref xref-stream reconstruction now has explicit coverage for
   unknown entry types, preserving the skip semantics already used by strict
   xref-stream reads.~~
@@ -921,6 +929,9 @@ Current backend snapshot:
   through native compressed read/write/reread boundaries.~~
 - [x] ~~Further real-world Type3 glyph-program coverage using the download-only
   iText Type3 logo fixture.~~
+- [x] ~~The download-only iText Type3 logo fixture now also covers real-world
+  malformed-startxref reconstruction through Type3 metrics, custom encoding,
+  CharProc text extraction, and compressed rewrite/reread boundaries.~~
 - [x] ~~Further real-world Type3 `/Resources` coverage using the download-only
   PDFium Type3 inline-image fixture.~~
 - [x] ~~The download-only PDFium Type3 resource fixture now also covers
