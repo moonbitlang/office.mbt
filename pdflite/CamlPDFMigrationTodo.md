@@ -267,6 +267,10 @@ Current backend snapshot:
   optional py-pdf DCT/JPEG fixture, requiring strict-reader failure,
   malformed-reader reconstruction, JPEG extraction, and compressed
   rewrite/reread preservation.~~
+- [x] ~~Add a real-world Type3 font malformed-startxref gate for the optional
+  PDFium resource fixture, requiring strict-reader failure, malformed-reader
+  reconstruction, Type3 resource/CharProc parsing, text extraction, and
+  compressed rewrite/reread preservation.~~
 - [ ] Add more malformed xref-table/xref-stream/object-stream recovery cases
   from real-world PDFs.
 - [x] ~~Add a native reader-boundary gate for the next available predefined CMap
@@ -661,6 +665,10 @@ Current backend snapshot:
   xref-stream malformed-startxref recovery path, checking that strict reads
   fail, public reconstruction succeeds, JPEG extraction survives, and a
   compressed rewrite rereads with the same encoded image payload.~~
+- [x] ~~The optional PDFium Type3 resource fixture now gates a real-world
+  malformed-startxref recovery path, checking that strict reads fail, public
+  reconstruction succeeds, Type3 resource/CharProc parsing survives, and a
+  compressed rewrite rereads with the same text and glyph-program behavior.~~
 - [x] ~~Bad-startxref xref-stream reconstruction now has explicit coverage for
   unknown entry types, preserving the skip semantics already used by strict
   xref-stream reads.~~
@@ -915,6 +923,9 @@ Current backend snapshot:
   iText Type3 logo fixture.~~
 - [x] ~~Further real-world Type3 `/Resources` coverage using the download-only
   PDFium Type3 inline-image fixture.~~
+- [x] ~~The download-only PDFium Type3 resource fixture now also covers
+  real-world malformed-startxref reconstruction through Type3 resource,
+  CharProc, text extraction, and compressed rewrite/reread boundaries.~~
 - [x] ~~TrueType descriptor metadata survives read_font_descriptor and embedded
   TrueType native read/write/reread gates.~~
 - [x] ~~Structured DCT/JPEG marker payload native gate for Flate-to-DCT image
