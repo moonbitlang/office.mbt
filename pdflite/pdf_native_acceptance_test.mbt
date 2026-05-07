@@ -72,6 +72,28 @@ fn acceptance_find_bytes_for_test(
 }
 
 ///|
+fn acceptance_find_last_bytes_for_test(
+  haystack : BytesView,
+  needle : BytesView,
+) -> Int {
+  if needle.length() == 0 {
+    haystack.length()
+  } else if haystack.length() < needle.length() {
+    -1
+  } else {
+    for start = haystack.length() - needle.length()
+        start >= 0
+        start = start - 1 {
+      if acceptance_bytes_start_with_at_for_test(haystack, needle, start) {
+        break start
+      }
+    } nobreak {
+      -1
+    }
+  }
+}
+
+///|
 fn acceptance_corrupt_first_in_use_xref_offset_for_test(
   bytes : @pdflite.PdfBytes,
 ) -> @pdflite.PdfBytes raise {
@@ -121,7 +143,7 @@ fn acceptance_corrupt_startxref_pointer_for_test(
   bytes : @pdflite.PdfBytes,
 ) -> @pdflite.PdfBytes raise {
   let marker = acceptance_ascii_for_test("startxref\n")
-  let marker_position = acceptance_find_bytes_for_test(bytes[:], marker[:])
+  let marker_position = acceptance_find_last_bytes_for_test(bytes[:], marker[:])
   if marker_position < 0 {
     fail("expected startxref marker")
   }

@@ -986,6 +986,9 @@ Current backend snapshot:
 - [x] ~~Writer-generated compressed xref-stream incremental updates now have a
   public native bad-startxref acceptance gate, preserving revision markers
   through recovery, compressed rewrite, and reread.~~
+- [x] ~~Bad-startxref acceptance helpers now corrupt the final `startxref`
+  marker, so multi-revision and incremental fixtures exercise the intended
+  newest-revision malformed-reader path.~~
 - [ ] Broader malformed xref-table/xref-stream/object-stream recovery beyond
   the current bad-startxref real-corpus, multi-revision, and encrypted
   object-stream gates.

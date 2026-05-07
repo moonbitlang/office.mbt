@@ -23,18 +23,18 @@ async fn markdown_optional_fixture_markdown_for_test(path : String) -> String? {
 }
 
 ///|
-fn markdown_fixture_find_bytes_for_test(
+fn markdown_fixture_find_last_bytes_for_test(
   haystack : BytesView,
   needle : BytesView,
 ) -> Int {
   if needle.length() == 0 {
-    0
+    haystack.length()
   } else if haystack.length() < needle.length() {
     -1
   } else {
-    for start = 0
-        start <= haystack.length() - needle.length()
-        start = start + 1 {
+    for start = haystack.length() - needle.length()
+        start >= 0
+        start = start - 1 {
       let mut matched = true
       for offset in 0..<needle.length() {
         if haystack[start + offset] != needle[offset] {
@@ -65,7 +65,7 @@ fn markdown_fixture_corrupt_startxref_pointer_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
   let marker = @ascii.encode("startxref\n")
-  let marker_position = markdown_fixture_find_bytes_for_test(
+  let marker_position = markdown_fixture_find_last_bytes_for_test(
     bytes[:],
     marker[:],
   )
