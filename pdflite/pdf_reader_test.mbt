@@ -1138,6 +1138,58 @@ fn reader_hybrid_xref_stream_pdf_with_bad_startxref() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn reader_hybrid_compressed_xref_stream_pdf_with_startxref_override(
+  startxref_override : Int?,
+) -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.5\n")
+  let catalog_offset = reader_push_indirect_object(
+    output, 1, 0, "<< /Type /Catalog >>",
+  )
+  let value_offset = reader_push_indirect_object(output, 2, 0, "7")
+  let xref_stream_offset = output.length()
+  let stream_data : Array[Byte] = []
+  reader_push_xref_stream_entry(stream_data, 0, 0, 65535)
+  reader_push_xref_stream_entry(stream_data, 1, value_offset, 0)
+  reader_push_xref_stream_entry(stream_data, 1, xref_stream_offset, 0)
+  let predicted = reader_png_none_predictor_rows_for_test(stream_data[:], 7)
+  let encoded = @pdflite.pdf_flate_encode(predicted)
+  reader_push_ascii(output, "3 0 obj\n")
+  reader_push_ascii(output, "<< /Type /XRef /Length ")
+  reader_push_ascii(output, encoded.length().to_string())
+  reader_push_ascii(
+    output, " /Size 4 /W [1 4 2] /Index [0 1 2 2] /Filter /FlateDecode /DecodeParms << /Predictor 12 /Columns 7 >> >>\nstream\n",
+  )
+  for byte in encoded {
+    output.push(byte)
+  }
+  reader_push_ascii(output, "\nendstream\nendobj\n")
+  let classic_xref_offset = output.length()
+  reader_push_ascii(output, "xref\n0 2\n0000000000 65535 f \n")
+  reader_push_xref_entry(output, catalog_offset, 0)
+  reader_push_ascii(output, "trailer\n<< /Root 1 0 R /Size 4 /XRefStm ")
+  reader_push_ascii(output, xref_stream_offset.to_string())
+  reader_push_ascii(output, " >>\nstartxref\n")
+  let startxref = match startxref_override {
+    Some(offset) => offset
+    None => classic_xref_offset
+  }
+  reader_push_ascii(output, startxref.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
+fn reader_hybrid_compressed_xref_stream_pdf() -> @pdflite.PdfBytes {
+  reader_hybrid_compressed_xref_stream_pdf_with_startxref_override(None)
+}
+
+///|
+fn reader_hybrid_compressed_xref_stream_pdf_with_bad_startxref() -> @pdflite.PdfBytes {
+  reader_hybrid_compressed_xref_stream_pdf_with_startxref_override(Some(0))
+}
+
+///|
 fn reader_linearized_classic_pdf(value : String) -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.5\n")
@@ -3046,6 +3098,53 @@ test "pdf_read_document_from_bytes reconstructs hybrid XRefStm with bad startxre
     .trailer_dict()
     .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Size"))),
     Some(PdfInteger(3)),
+  )
+}
+
+///|
+test "pdf_read_document_from_bytes follows compressed classic trailer XRefStm" {
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(
+    reader_hybrid_compressed_xref_stream_pdf(),
+  )
+  @test.assert_eq(parsed.object_numbers(), [1, 2])
+  @test.assert_eq(parsed.lookup_object_or_null(2), PdfInteger(7))
+  @test.assert_eq(
+    parsed
+    .trailer_dict()
+    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/XRefStm"))),
+    None,
+  )
+  @test.assert_eq(
+    parsed
+    .trailer_dict()
+    .lookup_immediate(
+      @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/DecodeParms")),
+    ),
+    None,
+  )
+}
+
+///|
+test "pdf_read_document_from_bytes reconstructs compressed hybrid XRefStm with bad startxref" {
+  let payload = reader_hybrid_compressed_xref_stream_pdf_with_bad_startxref()
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    payload,
+  )
+  guard strict is Err(_) else {
+    fail("expected strict compressed hybrid bad-startxref read to fail")
+  }
+
+  let parsed = @pdflite.pdf_read_document_from_bytes(payload)
+  @test.assert_eq(parsed.version(), (1, 5))
+  @test.assert_eq(parsed.first_xref(), 0)
+  @test.assert_eq(parsed.root(), 1)
+  @test.assert_eq(parsed.object_numbers(), [1, 2])
+  @test.assert_eq(parsed.lookup_object_or_null(2), PdfInteger(7))
+  @test.assert_eq(
+    parsed
+    .trailer_dict()
+    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/XRefStm"))),
+    None,
   )
 }
 

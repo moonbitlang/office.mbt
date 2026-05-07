@@ -237,6 +237,9 @@ Current backend snapshot:
 - [x] ~~Add compressed xref-stream `/Prev` chain coverage where the newest
   Flate predictor xref stream points back to a classic xref section, including
   normal revision reads and bad-final-`startxref` reconstruction.~~
+- [x] ~~Add compressed hybrid `/XRefStm` coverage where a classic trailer
+  points to a Flate predictor xref stream, including strict hybrid reads and
+  bad-final-`startxref` reconstruction.~~
 - [ ] Add more malformed xref-table/xref-stream/object-stream recovery cases
   from real-world PDFs.
 - [x] ~~Add a native reader-boundary gate for the next available predefined CMap
@@ -974,6 +977,9 @@ Current backend snapshot:
 - [x] ~~Compressed xref-stream `/Prev` chains now have coverage where the newest
   Flate predictor xref stream points back to a classic xref section, including
   normal revision reads and bad-final-startxref reconstruction.~~
+- [x] ~~Compressed hybrid `/XRefStm` reads now have coverage where a classic
+  trailer points to a Flate predictor xref stream, including strict hybrid
+  reads and bad-final-startxref reconstruction.~~
 - [ ] Broader malformed xref-table/xref-stream/object-stream recovery beyond
   the current bad-startxref real-corpus, multi-revision, and encrypted
   object-stream gates.
