@@ -153,6 +153,9 @@ Current backend snapshot:
 - [x] ~~Add a native command-package Markdown conversion gate, writing a
   generated PDF fixture to a UTF-8 `.md` file through the executable helper and
   checking stable markers in the file output.~~
+- [x] ~~Extend the Markdown command-package gate to an optional downloaded
+  Adobe PDF-spec supplement fixture, checking real-world file output markers
+  and raw-control hygiene when the fixture is present.~~
 - [x] ~~Decrypt blank/open user-password PDFs at the Markdown boundary before
   text extraction, fixing `InvalidFlateData` on encrypted external
   acceptance PDFs.~~
@@ -1060,6 +1063,9 @@ Current backend snapshot:
 - [x] ~~The Markdown executable package now has a native file I/O gate over a
   generated PDF fixture, verifying the command helper writes UTF-8 Markdown
   output with stable page/text markers.~~
+- [x] ~~The Markdown executable package now also gates an optional downloaded
+  Adobe PDF-spec supplement through file output when present, covering
+  real-world CLI-style Markdown conversion and raw-control hygiene.~~
 - [ ] Broader real-world PDF corpus testing, including PDF-to-Markdown
   comparison fixtures after the local Pandoc gates are stable.
 - [ ] Performance tuning for large files, object streams, filters, and text/image
