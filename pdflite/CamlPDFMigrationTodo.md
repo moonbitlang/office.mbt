@@ -126,6 +126,9 @@ Current backend snapshot:
   native optional fixture package now gates py-pdf sample-file DCT/JPEG,
   CCITT/FaxDecode, and indexed-CMYK image XObjects when downloads are
   present.~~
+- [x] ~~Gate the downloaded DCT/JPEG, CCITT/FaxDecode, and indexed-CMYK image
+  fixtures through compressed writer/read boundaries, so real image extraction
+  is checked both before and after serialization.~~
 - [x] ~~Start the separate PDF-to-Markdown acceptance package described in
   `PdfMarkdownAcceptancePlan.md`, with deterministic in-memory extraction tests
   before generated or downloaded fixtures.~~

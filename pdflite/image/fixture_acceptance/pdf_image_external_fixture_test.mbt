@@ -52,21 +52,73 @@ async fn image_external_images_from_fixture_for_test(
 }
 
 ///|
+fn image_external_reparse_compressed_for_test(
+  document : @pdflite.PdfDocument,
+) -> @pdflite.PdfDocument raise {
+  @pdflite.pdf_read_document_from_bytes(
+    @pdflite.pdf_write_document_with_compressed_xref_stream(document),
+  )
+}
+
+///|
+fn image_external_assert_jpeg_for_test(
+  images : Array[@pdflite.PdfImage],
+) -> Unit raise {
+  @test.assert_eq(images.length(), 1)
+  match images[0] {
+    PdfJPEG(data, decode) => {
+      @test.assert_eq(data.length() > 40000, true)
+      @test.assert_eq(decode, Some([0.0, 1.0, 0.0, 1.0, 0.0, 1.0]))
+    }
+    _ => fail("expected JPEG image payload")
+  }
+}
+
+///|
+fn image_external_assert_raw_rgb_for_test(
+  images : Array[@pdflite.PdfImage],
+  width : Int,
+  height : Int,
+  message : String,
+) -> Unit raise {
+  @test.assert_eq(images.length(), 1)
+  match images[0] {
+    PdfRawImage(actual_width, actual_height, layout, data) => {
+      @test.assert_eq(actual_width, width)
+      @test.assert_eq(actual_height, height)
+      @test.assert_eq(layout, PdfBPP24)
+      @test.assert_eq(data.length(), width * height * 3)
+    }
+    _ => fail(message)
+  }
+}
+
+///|
 async test "external DCT image fixture extracts encoded JPEG XObject" {
   match
     image_external_images_from_fixture_for_test(
       "image/external_fixtures/downloads/pdflatex-image.pdf",
     ) {
     None => ()
-    Some(images) => {
-      @test.assert_eq(images.length(), 1)
-      match images[0] {
-        PdfJPEG(data, decode) => {
-          @test.assert_eq(data.length() > 40000, true)
-          @test.assert_eq(decode, Some([0.0, 1.0, 0.0, 1.0, 0.0, 1.0]))
-        }
-        _ => fail("expected JPEG image payload")
-      }
+    Some(images) => image_external_assert_jpeg_for_test(images)
+  }
+}
+
+///|
+async test "external DCT image fixture survives compressed rewrite" {
+  match
+    image_external_fixture_document_for_test(
+      "image/external_fixtures/downloads/pdflatex-image.pdf",
+    ) {
+    None => ()
+    Some(document) => {
+      image_external_assert_jpeg_for_test(
+        image_external_images_for_test(document),
+      )
+      let reparsed = image_external_reparse_compressed_for_test(document)
+      image_external_assert_jpeg_for_test(
+        image_external_images_for_test(reparsed),
+      )
     }
   }
 }
@@ -78,17 +130,34 @@ async test "external CCITT image fixture decodes to RGB24" {
       "image/external_fixtures/downloads/imagemagick-CCITTFaxDecode.pdf",
     ) {
     None => ()
-    Some(images) => {
-      @test.assert_eq(images.length(), 1)
-      match images[0] {
-        PdfRawImage(width, height, layout, data) => {
-          @test.assert_eq(width, 16)
-          @test.assert_eq(height, 16)
-          @test.assert_eq(layout, PdfBPP24)
-          @test.assert_eq(data.length(), 16 * 16 * 3)
-        }
-        _ => fail("expected raw RGB24 image payload")
-      }
+    Some(images) =>
+      image_external_assert_raw_rgb_for_test(
+        images, 16, 16, "expected raw RGB24 image payload",
+      )
+  }
+}
+
+///|
+async test "external CCITT image fixture survives compressed rewrite" {
+  match
+    image_external_fixture_document_for_test(
+      "image/external_fixtures/downloads/imagemagick-CCITTFaxDecode.pdf",
+    ) {
+    None => ()
+    Some(document) => {
+      image_external_assert_raw_rgb_for_test(
+        image_external_images_for_test(document),
+        16,
+        16,
+        "expected raw RGB24 image payload",
+      )
+      let reparsed = image_external_reparse_compressed_for_test(document)
+      image_external_assert_raw_rgb_for_test(
+        image_external_images_for_test(reparsed),
+        16,
+        16,
+        "expected raw RGB24 image payload after rewrite",
+      )
     }
   }
 }
@@ -100,17 +169,34 @@ async test "external indexed CMYK image fixture decodes to RGB24" {
       "image/external_fixtures/downloads/cmyk-image.pdf",
     ) {
     None => ()
-    Some(images) => {
-      @test.assert_eq(images.length(), 1)
-      match images[0] {
-        PdfRawImage(width, height, layout, data) => {
-          @test.assert_eq(width, 756)
-          @test.assert_eq(height, 1008)
-          @test.assert_eq(layout, PdfBPP24)
-          @test.assert_eq(data.length(), 756 * 1008 * 3)
-        }
-        _ => fail("expected indexed CMYK image as raw RGB24 payload")
-      }
+    Some(images) =>
+      image_external_assert_raw_rgb_for_test(
+        images, 756, 1008, "expected indexed CMYK image as raw RGB24 payload",
+      )
+  }
+}
+
+///|
+async test "external indexed CMYK image fixture survives compressed rewrite" {
+  match
+    image_external_fixture_document_for_test(
+      "image/external_fixtures/downloads/cmyk-image.pdf",
+    ) {
+    None => ()
+    Some(document) => {
+      image_external_assert_raw_rgb_for_test(
+        image_external_images_for_test(document),
+        756,
+        1008,
+        "expected indexed CMYK image as raw RGB24 payload",
+      )
+      let reparsed = image_external_reparse_compressed_for_test(document)
+      image_external_assert_raw_rgb_for_test(
+        image_external_images_for_test(reparsed),
+        756,
+        1008,
+        "expected indexed CMYK image as raw RGB24 payload after rewrite",
+      )
     }
   }
 }
