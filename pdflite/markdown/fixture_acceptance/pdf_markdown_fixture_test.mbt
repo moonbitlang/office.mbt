@@ -23,6 +23,15 @@ async fn markdown_optional_fixture_markdown_for_test(path : String) -> String? {
 }
 
 ///|
+async fn markdown_optional_fixture_bytes_for_test(path : String) -> Bytes? {
+  let read_result = try? @fs.read_file(markdown_fixture_path_for_test(path))
+  match read_result {
+    Ok(data) => Some(data.binary())
+    Err(_) => None
+  }
+}
+
+///|
 fn markdown_fixture_find_last_bytes_for_test(
   haystack : BytesView,
   needle : BytesView,
@@ -228,6 +237,28 @@ async test "pdf_bytes_to_markdown extracts external Adobe supplement fixture" {
       )
       markdown_fixture_assert_contains_for_test(markdown, "ISO 32000-1")
       markdown_fixture_assert_contains_for_test(markdown, "BaseVersion: 1.7")
+      markdown_fixture_assert_contains_for_test(markdown, "ExtensionLevel: 5")
+      @test.assert_eq(markdown_fixture_raw_control_count_for_test(markdown), 0)
+      @test.assert_eq(markdown_fixture_replacement_count_for_test(markdown), 6)
+    }
+  }
+}
+
+///|
+async test "pdf_bytes_to_markdown reconstructs external Adobe supplement fixture with bad startxref" {
+  match
+    markdown_optional_fixture_bytes_for_test(
+      "markdown/external_fixtures/downloads/adobe_supplement_iso32000_1.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let markdown = @markdown.pdf_bytes_to_markdown(
+        markdown_fixture_corrupt_startxref_pointer_for_test(bytes),
+      )
+      markdown_fixture_assert_contains_for_test(
+        markdown, "Adobe® Supplement to",
+      )
+      markdown_fixture_assert_contains_for_test(markdown, "ISO 32000-1")
       markdown_fixture_assert_contains_for_test(markdown, "ExtensionLevel: 5")
       @test.assert_eq(markdown_fixture_raw_control_count_for_test(markdown), 0)
       @test.assert_eq(markdown_fixture_replacement_count_for_test(markdown), 6)

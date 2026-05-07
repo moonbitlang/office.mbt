@@ -150,6 +150,10 @@ Current backend snapshot:
 - [x] ~~Add download-only external Markdown acceptance fixtures for an Adobe
   PDF-spec supplement and a Unicode CJK chart, with SHA-256 lock metadata and
   checked-in comparison judgement.~~
+- [x] ~~Add a malformed-reader Markdown acceptance gate for the optional
+  downloaded Adobe PDF-spec supplement, corrupting the final `startxref` before
+  extraction and preserving real-world output markers plus raw-control and
+  replacement-character quality counters.~~
 - [x] ~~Add a native command-package Markdown conversion gate, writing a
   generated PDF fixture to a UTF-8 `.md` file through the executable helper and
   checking stable markers in the file output.~~
@@ -1055,6 +1059,9 @@ Current backend snapshot:
 - [x] ~~Checked-in CamlPDF introduction PDF now has a malformed-reader Markdown
   acceptance gate, corrupting `startxref` before extraction and preserving
   tutorial text with no raw controls or replacement characters.~~
+- [x] ~~The optional downloaded Adobe PDF-spec supplement now has a
+  malformed-reader Markdown acceptance gate, corrupting the final `startxref`
+  and preserving key output markers plus raw-control/replacement counters.~~
 - [x] ~~Checked-in CamlPDF logo PDF now has a Markdown acceptance gate over the
   separate Markdown package, covering a real image-heavy fixture that emits
   stable page structure with no raw controls or replacement characters.~~
