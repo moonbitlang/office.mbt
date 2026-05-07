@@ -2045,7 +2045,9 @@ fn reader_xref_stream_pdf_with_object_stream_bad_first() -> @pdflite.PdfBytes {
 }
 
 ///|
-fn reader_xref_stream_pdf_with_indirect_object_stream_filter() -> @pdflite.PdfBytes {
+fn reader_xref_stream_pdf_with_indirect_object_stream_filter_startxref(
+  startxref_override : Int?,
+) -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.5\n")
   let catalog_offset = reader_push_indirect_object(
@@ -2087,9 +2089,23 @@ fn reader_xref_stream_pdf_with_indirect_object_stream_filter() -> @pdflite.PdfBy
     output.push(byte)
   }
   reader_push_ascii(output, "\nendstream\nendobj\nstartxref\n")
-  reader_push_ascii(output, xref_offset.to_string())
+  let startxref = match startxref_override {
+    Some(value) => value
+    None => xref_offset
+  }
+  reader_push_ascii(output, startxref.to_string())
   reader_push_ascii(output, "\n%%EOF\n")
   Bytes::from_array(output)
+}
+
+///|
+fn reader_xref_stream_pdf_with_indirect_object_stream_filter() -> @pdflite.PdfBytes {
+  reader_xref_stream_pdf_with_indirect_object_stream_filter_startxref(None)
+}
+
+///|
+fn reader_xref_stream_pdf_with_indirect_object_stream_filter_bad_startxref() -> @pdflite.PdfBytes {
+  reader_xref_stream_pdf_with_indirect_object_stream_filter_startxref(Some(0))
 }
 
 ///|
@@ -4117,6 +4133,37 @@ test "pdf_read_document_from_bytes decodes object streams with indirect filters"
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
     reader_xref_stream_pdf_with_indirect_object_stream_filter(),
   )
+  @test.assert_eq(parsed.object_numbers(), [1, 2, 3, 5])
+  @test.assert_eq(
+    parsed.lookup_object_or_null(5),
+    PdfDictionary([
+      (@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Answer")), PdfInteger(42)),
+    ]),
+  )
+  guard parsed.lookup_object_or_null(3) is PdfStreamObject(object_stream) else {
+    fail("expected object stream")
+  }
+  @test.assert_eq(
+    object_stream.dictionary.lookup_immediate(
+      @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Filter")),
+    ),
+    Some(PdfIndirect(2)),
+  )
+}
+
+///|
+test "pdf_read_document_from_bytes reconstructs object streams with indirect filters" {
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_xref_stream_pdf_with_indirect_object_stream_filter_bad_startxref(),
+  )
+  guard strict is Err(@pdflite.PdfError::XRefExpected) else {
+    fail("expected strict XRefExpected")
+  }
+
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(
+    reader_xref_stream_pdf_with_indirect_object_stream_filter_bad_startxref(),
+  )
+  @test.assert_eq(parsed.first_xref(), 0)
   @test.assert_eq(parsed.object_numbers(), [1, 2, 3, 5])
   @test.assert_eq(
     parsed.lookup_object_or_null(5),
