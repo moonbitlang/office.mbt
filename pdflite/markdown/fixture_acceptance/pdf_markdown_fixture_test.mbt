@@ -23,6 +23,75 @@ async fn markdown_optional_fixture_markdown_for_test(path : String) -> String? {
 }
 
 ///|
+fn markdown_fixture_find_bytes_for_test(
+  haystack : BytesView,
+  needle : BytesView,
+) -> Int {
+  if needle.length() == 0 {
+    0
+  } else if haystack.length() < needle.length() {
+    -1
+  } else {
+    for start = 0
+        start <= haystack.length() - needle.length()
+        start = start + 1 {
+      let mut matched = true
+      for offset in 0..<needle.length() {
+        if haystack[start + offset] != needle[offset] {
+          matched = false
+        }
+      }
+      if matched {
+        break start
+      }
+    } nobreak {
+      -1
+    }
+  }
+}
+
+///|
+fn markdown_fixture_push_ascii_for_test(
+  output : Array[Byte],
+  text : String,
+) -> Unit {
+  for byte in @ascii.encode(text) {
+    output.push(byte)
+  }
+}
+
+///|
+fn markdown_fixture_corrupt_startxref_pointer_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  let marker = @ascii.encode("startxref\n")
+  let marker_position = markdown_fixture_find_bytes_for_test(
+    bytes[:],
+    marker[:],
+  )
+  if marker_position < 0 {
+    fail("expected startxref marker")
+  }
+  let number_start = marker_position + marker.length()
+  let mut number_end = number_start
+  while number_end < bytes.length() && bytes[number_end] != b'\n' {
+    number_end += 1
+  }
+  let output : Array[Byte] = []
+  for index in 0..<number_start {
+    output.push(bytes[index])
+  }
+  markdown_fixture_push_ascii_for_test(
+    output,
+    (bytes.length() + 4096).to_string(),
+  )
+  for index in number_end..<bytes.length() {
+    output.push(bytes[index])
+  }
+  Bytes::from_array(output)
+}
+
+///|
 fn markdown_fixture_assert_contains_for_test(
   text : String,
   fragment : String,
@@ -116,6 +185,23 @@ async test "pdf_bytes_to_markdown extracts checked-in CamlPDF introduction fixtu
   markdown_fixture_assert_contains_for_test(markdown, "A First Program")
   markdown_fixture_assert_contains_for_test(markdown, "Pdfread.pdf_of_file")
   markdown_fixture_assert_contains_for_test(markdown, "Pdfwrite.pdf_to_file")
+  markdown_fixture_assert_contains_for_test(markdown, "PDF is a directed graph")
+  @test.assert_eq(markdown_fixture_raw_control_count_for_test(markdown), 0)
+  @test.assert_eq(markdown_fixture_replacement_count_for_test(markdown), 0)
+}
+
+///|
+async test "pdf_bytes_to_markdown reconstructs checked-in CamlPDF introduction fixture with bad startxref" {
+  let bytes = @fs.read_file(
+    markdown_fixture_path_for_test(".repos/introduction_to_camlpdf.pdf"),
+  ).binary()
+  let markdown = @markdown.pdf_bytes_to_markdown(
+    markdown_fixture_corrupt_startxref_pointer_for_test(bytes),
+  )
+  markdown_fixture_assert_contains_for_test(
+    markdown, "An Introduction to PDF with CamlPDF",
+  )
+  markdown_fixture_assert_contains_for_test(markdown, "Pdfread.pdf_of_file")
   markdown_fixture_assert_contains_for_test(markdown, "PDF is a directed graph")
   @test.assert_eq(markdown_fixture_raw_control_count_for_test(markdown), 0)
   @test.assert_eq(markdown_fixture_replacement_count_for_test(markdown), 0)

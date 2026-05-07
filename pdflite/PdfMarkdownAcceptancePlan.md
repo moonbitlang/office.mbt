@@ -73,6 +73,9 @@ library API.
 - [x] ~~Add a checked-in `.repos/introduction_to_camlpdf.pdf` Markdown
   acceptance gate covering a real multi-page CamlPDF document, core API
   examples, and replacement/raw-control quality counters.~~
+- [x] ~~Add a checked-in `.repos/introduction_to_camlpdf.pdf` malformed-reader
+  Markdown gate, corrupting `startxref` before extraction and verifying
+  tutorial text remains clean at the Markdown boundary.~~
 - [x] ~~Add a checked-in `.repos/logo.pdf` Markdown acceptance gate covering a
   real image-heavy CamlPDF fixture that should emit only stable page structure
   without replacement characters or raw controls.~~

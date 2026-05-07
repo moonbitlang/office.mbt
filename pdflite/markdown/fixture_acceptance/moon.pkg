@@ -2,6 +2,7 @@ import {
   "bobzhang/pdflite/markdown" @markdown,
   "moonbitlang/async",
   "moonbitlang/async/fs",
+  "moonbitlang/core/encoding/ascii",
   "moonbitlang/core/env",
   "moonbitlang/core/test",
 } for "test"

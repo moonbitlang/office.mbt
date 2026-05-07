@@ -1030,6 +1030,9 @@ Current backend snapshot:
 - [x] ~~Checked-in CamlPDF introduction PDF now has a Markdown acceptance gate
   over the separate Markdown package, covering real multi-page text extraction,
   core API examples, and raw-control/replacement-character quality counters.~~
+- [x] ~~Checked-in CamlPDF introduction PDF now has a malformed-reader Markdown
+  acceptance gate, corrupting `startxref` before extraction and preserving
+  tutorial text with no raw controls or replacement characters.~~
 - [x] ~~Checked-in CamlPDF logo PDF now has a Markdown acceptance gate over the
   separate Markdown package, covering a real image-heavy fixture that emits
   stable page structure with no raw controls or replacement characters.~~
