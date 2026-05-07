@@ -54,6 +54,36 @@ fn markdown_cmd_raw_control_count_for_test(text : String) -> Int {
 }
 
 ///|
+fn markdown_cmd_replacement_count_for_test(text : String) -> Int {
+  let mut count = 0
+  for char in text {
+    if char.to_int() == 0xFFFD {
+      count += 1
+    }
+  }
+  count
+}
+
+///|
+fn markdown_cmd_unique_cjk_unified_count_for_test(text : String) -> Int {
+  let lower = 0x4E00
+  let upper = 0x9FFF
+  let seen = Array::make(upper - lower + 1, false)
+  let mut count = 0
+  for char in text {
+    let codepoint = char.to_int()
+    if codepoint >= lower && codepoint <= upper {
+      let index = codepoint - lower
+      if !seen[index] {
+        seen[index] = true
+        count += 1
+      }
+    }
+  }
+  count
+}
+
+///|
 async test "markdown command converts generated Latin fixture to UTF-8 file" {
   let input_path = markdown_cmd_repo_path_for_test(
     "markdown/fixtures/pandoc_latin.pdf",
@@ -84,6 +114,31 @@ async test "markdown command converts optional external Adobe supplement fixture
     markdown_cmd_assert_contains_for_test(output, "ISO 32000-1")
     markdown_cmd_assert_contains_for_test(output, "ExtensionLevel: 5")
     @test.assert_eq(markdown_cmd_raw_control_count_for_test(output), 0)
+    markdown_cmd_remove_if_exists_for_test(output_path)
+  }
+}
+
+///|
+async test "markdown command converts optional external Unicode CJK chart fixture" {
+  let input_path = markdown_cmd_repo_path_for_test(
+    "markdown/external_fixtures/downloads/unicode_cjk_unified_ideographs_u4e00.pdf",
+  )
+  if @fs.exists(input_path) {
+    let output_path = markdown_cmd_output_path_for_test("unicode_cjk_chart")
+    markdown_cmd_remove_if_exists_for_test(output_path)
+    markdown_cmd_convert_file(input_path, output_path)
+    let output = @utf8.decode_lossy(@fs.read_file(output_path).binary()[:])
+    markdown_cmd_assert_contains_for_test(output, "CJK Unified Ideographs")
+    markdown_cmd_assert_contains_for_test(output, "Range: 4E00")
+    markdown_cmd_assert_contains_for_test(output, "9FFF")
+    markdown_cmd_assert_contains_for_test(output, "一")
+    markdown_cmd_assert_contains_for_test(output, "鿿")
+    @test.assert_eq(markdown_cmd_raw_control_count_for_test(output), 0)
+    @test.assert_eq(markdown_cmd_replacement_count_for_test(output), 0)
+    @test.assert_eq(
+      markdown_cmd_unique_cjk_unified_count_for_test(output),
+      20963,
+    )
     markdown_cmd_remove_if_exists_for_test(output_path)
   }
 }

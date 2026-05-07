@@ -156,6 +156,10 @@ Current backend snapshot:
 - [x] ~~Extend the Markdown command-package gate to an optional downloaded
   Adobe PDF-spec supplement fixture, checking real-world file output markers
   and raw-control hygiene when the fixture is present.~~
+- [x] ~~Extend the Markdown command-package gate to the optional downloaded
+  Unicode CJK chart fixture, checking real-world file output markers, raw
+  control/replacement hygiene, and full U+4E00-9FFF unique-glyph coverage when
+  present.~~
 - [x] ~~Decrypt blank/open user-password PDFs at the Markdown boundary before
   text extraction, fixing `InvalidFlateData` on encrypted external
   acceptance PDFs.~~
@@ -1066,6 +1070,10 @@ Current backend snapshot:
 - [x] ~~The Markdown executable package now also gates an optional downloaded
   Adobe PDF-spec supplement through file output when present, covering
   real-world CLI-style Markdown conversion and raw-control hygiene.~~
+- [x] ~~The Markdown executable package now also gates the optional downloaded
+  Unicode CJK chart through file output when present, preserving full
+  U+4E00-9FFF unique-glyph coverage with no raw controls or replacement
+  characters.~~
 - [ ] Broader real-world PDF corpus testing, including PDF-to-Markdown
   comparison fixtures after the local Pandoc gates are stable.
 - [ ] Performance tuning for large files, object streams, filters, and text/image
