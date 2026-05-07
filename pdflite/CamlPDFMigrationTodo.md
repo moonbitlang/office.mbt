@@ -1043,6 +1043,9 @@ Current backend snapshot:
 - [x] ~~Malformed reconstruction now skips xref-stream trailer parse attempts
   unless the current byte begins an indirect-object header, reducing large-file
   recovery work without changing accepted damaged xref-stream PDFs.~~
+- [x] ~~Malformed reconstruction now prefilters physical object scans with the
+  same indirect-object header recognizer, avoiding parser attempts at unrelated
+  digit runs while preserving recovered object semantics.~~
 - [x] ~~Glyph-name extraction now skips the intermediate glyph-record array,
   reducing allocation on metadata/debug text extraction paths while preserving
   existing glyph-name semantics.~~

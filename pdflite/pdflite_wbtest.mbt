@@ -969,6 +969,24 @@ test "private reader xref helpers report malformed inputs" {
   )
   @test.assert_eq(incomplete_xrefs.length(), 1)
   @test.assert_eq(incomplete_xrefs[0].object_number, 3)
+  let noisy_digits = @ascii.encode(
+    "12345 67 notobj\n90 0 nope\nabc 4 0 obj\n42\nendobj\n",
+  )
+  let valid_header = pdf_find_ascii_from(noisy_digits[:], 0, [
+    52, 32, 48, 32, 111, 98, 106,
+  ])
+  @test.assert_eq(
+    pdf_reader_reconstruction_indirect_header_at(noisy_digits[:], 0),
+    false,
+  )
+  @test.assert_eq(
+    pdf_reader_reconstruction_indirect_header_at(noisy_digits[:], valid_header),
+    true,
+  )
+  let noisy_xrefs = try! pdf_read_reconstructed_xrefs(noisy_digits[:])
+  @test.assert_eq(noisy_xrefs.length(), 1)
+  @test.assert_eq(noisy_xrefs[0].object_number, 4)
+  @test.assert_eq(noisy_xrefs[0].offset, valid_header)
   let nested_bad_object = @ascii.encode(
     "1 0 obj\n]\n2 0 obj\n<< /Type /Catalog >>\nendobj\n3 0 obj\n42\nendobj\n",
   )
