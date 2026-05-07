@@ -122,6 +122,14 @@ async test "pdf_bytes_to_markdown extracts checked-in CamlPDF introduction fixtu
 }
 
 ///|
+async test "pdf_bytes_to_markdown tolerates checked-in CamlPDF logo fixture" {
+  let markdown = markdown_fixture_markdown_for_test(".repos/logo.pdf")
+  @test.assert_eq(markdown, "# Page 1\n\n\n")
+  @test.assert_eq(markdown_fixture_raw_control_count_for_test(markdown), 0)
+  @test.assert_eq(markdown_fixture_replacement_count_for_test(markdown), 0)
+}
+
+///|
 async test "pdf_bytes_to_markdown extracts external Adobe supplement fixture" {
   match
     markdown_optional_fixture_markdown_for_test(

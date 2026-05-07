@@ -1027,6 +1027,9 @@ Current backend snapshot:
 - [x] ~~Checked-in CamlPDF introduction PDF now has a Markdown acceptance gate
   over the separate Markdown package, covering real multi-page text extraction,
   core API examples, and raw-control/replacement-character quality counters.~~
+- [x] ~~Checked-in CamlPDF logo PDF now has a Markdown acceptance gate over the
+  separate Markdown package, covering a real image-heavy fixture that emits
+  stable page structure with no raw controls or replacement characters.~~
 - [x] ~~Markdown extraction now uses a hash-backed indirect font extractor
   cache, avoiding linear cache scans for repeated `Tf` operators across large
   pages and nested form XObjects.~~
