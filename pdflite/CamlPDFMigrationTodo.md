@@ -263,6 +263,10 @@ Current backend snapshot:
 - [x] ~~Malformed object-stream recovery now covers reconstructed xref-stream
   documents whose `/ObjStm` uses an indirect `/Filter`, preserving embedded
   object expansion after bad-final-`startxref` recovery.~~
+- [x] ~~Add a real-world image xref-stream malformed-startxref gate for the
+  optional py-pdf DCT/JPEG fixture, requiring strict-reader failure,
+  malformed-reader reconstruction, JPEG extraction, and compressed
+  rewrite/reread preservation.~~
 - [ ] Add more malformed xref-table/xref-stream/object-stream recovery cases
   from real-world PDFs.
 - [x] ~~Add a native reader-boundary gate for the next available predefined CMap
@@ -653,6 +657,10 @@ Current backend snapshot:
 - [x] ~~Malformed reconstruction trailer scanning now probes xref-stream
   trailers only at indirect-object headers instead of every digit byte in the
   file, avoiding repeated failed parses on large damaged inputs.~~
+- [x] ~~The optional py-pdf DCT/JPEG image fixture now gates a real-world
+  xref-stream malformed-startxref recovery path, checking that strict reads
+  fail, public reconstruction succeeds, JPEG extraction survives, and a
+  compressed rewrite rereads with the same encoded image payload.~~
 - [x] ~~Bad-startxref xref-stream reconstruction now has explicit coverage for
   unknown entry types, preserving the skip semantics already used by strict
   xref-stream reads.~~
@@ -913,6 +921,9 @@ Current backend snapshot:
   XObjects and DCT inline images with embedded `EI` bytes before EOI.~~
 - [x] ~~Additional real-world DCT/JPEG encoded-payload corpus coverage through
   the download-only py-pdf pdflatex image fixture.~~
+- [x] ~~The download-only py-pdf DCT/JPEG image fixture now also covers
+  real-world xref-stream malformed-startxref reconstruction through image
+  extraction and compressed rewrite/reread boundaries.~~
 - [ ] Optional external JBIG2 decoder integration and broader CCITT corpus
   validation.
 - [x] ~~Explicit zlib-style Flate level API across direct Flate, filter, and

@@ -25,6 +25,99 @@ async fn image_external_fixture_document_for_test(
 }
 
 ///|
+async fn image_external_fixture_bytes_for_test(path : String) -> Bytes? {
+  let read_result = try? @fs.read_file(
+    image_external_fixture_path_for_test(path),
+  )
+  match read_result {
+    Ok(data) => Some(data.binary())
+    Err(_) => None
+  }
+}
+
+///|
+fn image_external_bytes_start_with_at_for_test(
+  haystack : BytesView,
+  needle : BytesView,
+  start : Int,
+) -> Bool {
+  if start < 0 || start + needle.length() > haystack.length() {
+    false
+  } else {
+    for index in 0..<needle.length() {
+      if haystack[start + index] != needle[index] {
+        break false
+      }
+    } nobreak {
+      true
+    }
+  }
+}
+
+///|
+fn image_external_find_last_bytes_for_test(
+  haystack : BytesView,
+  needle : BytesView,
+) -> Int {
+  if needle.length() == 0 {
+    haystack.length()
+  } else if haystack.length() < needle.length() {
+    -1
+  } else {
+    for start = haystack.length() - needle.length()
+        start >= 0
+        start = start - 1 {
+      if image_external_bytes_start_with_at_for_test(haystack, needle, start) {
+        break start
+      }
+    } nobreak {
+      -1
+    }
+  }
+}
+
+///|
+fn image_external_push_ascii_for_test(
+  output : Array[Byte],
+  text : String,
+) -> Unit {
+  for byte in @ascii.encode(text) {
+    output.push(byte)
+  }
+}
+
+///|
+fn image_external_corrupt_startxref_pointer_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  let marker = @ascii.encode("startxref\n")
+  let marker_position = image_external_find_last_bytes_for_test(
+    bytes[:],
+    marker[:],
+  )
+  if marker_position < 0 {
+    fail("expected startxref marker")
+  }
+  let number_start = marker_position + marker.length()
+  let mut number_end = number_start
+  while number_end < bytes.length() && bytes[number_end] != b'\n' {
+    number_end += 1
+  }
+  let output : Array[Byte] = []
+  for index in 0..<number_start {
+    output.push(bytes[index])
+  }
+  image_external_push_ascii_for_test(
+    output,
+    (bytes.length() + 4096).to_string(),
+  )
+  for index in number_end..<bytes.length() {
+    output.push(bytes[index])
+  }
+  Bytes::from_array(output)
+}
+
+///|
 fn image_external_images_for_test(
   document : @pdflite.PdfDocument,
 ) -> Array[@pdflite.PdfImage] raise {
@@ -112,6 +205,34 @@ async test "external DCT image fixture survives compressed rewrite" {
     ) {
     None => ()
     Some(document) => {
+      image_external_assert_jpeg_for_test(
+        image_external_images_for_test(document),
+      )
+      let reparsed = image_external_reparse_compressed_for_test(document)
+      image_external_assert_jpeg_for_test(
+        image_external_images_for_test(reparsed),
+      )
+    }
+  }
+}
+
+///|
+async test "external DCT image fixture reconstructs xref stream with bad startxref" {
+  match
+    image_external_fixture_bytes_for_test(
+      "image/external_fixtures/downloads/pdflatex-image.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let corrupted = image_external_corrupt_startxref_pointer_for_test(bytes)
+      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+        corrupted,
+      )
+      guard strict is Err(_) else {
+        fail("expected bad startxref to require malformed reconstruction")
+      }
+      let document = @pdflite.pdf_read_document_from_bytes(corrupted)
+      @test.assert_eq(document.first_xref(), 0)
       image_external_assert_jpeg_for_test(
         image_external_images_for_test(document),
       )
