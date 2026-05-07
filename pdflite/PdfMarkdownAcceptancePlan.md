@@ -36,6 +36,9 @@ library API.
 - [x] ~~Add native fixture tests for Pandoc-generated Latin and CJK PDFs.~~
 - [x] ~~Add a MarkItDown comparison script that writes normalized side-by-side
   outputs and a JSON/Markdown report outside the test runner.~~
+- [x] ~~Include checked-in CamlPDF real PDFs in the default local MarkItDown
+  comparison loop, covering the tutorial text fixture and image-heavy logo
+  fixture alongside the generated Pandoc fixtures.~~
 - [x] ~~Extend the MarkItDown comparison report with replacement-character and
   raw-control counters so text-quality regressions are visible without ad hoc
   scans.~~

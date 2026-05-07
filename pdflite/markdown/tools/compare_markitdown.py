@@ -17,6 +17,8 @@ from pathlib import Path
 DEFAULT_FIXTURES = (
     "markdown/fixtures/pandoc_latin.pdf",
     "markdown/fixtures/pandoc_cjk.pdf",
+    ".repos/introduction_to_camlpdf.pdf",
+    ".repos/logo.pdf",
 )
 
 

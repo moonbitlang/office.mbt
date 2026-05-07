@@ -136,6 +136,9 @@ Current backend snapshot:
   kerning adjustments.~~
 - [x] ~~Add a MarkItDown comparison report/script for selected local Pandoc
   fixtures; use differences to drive core extraction fixes.~~
+- [x] ~~Extend the default local MarkItDown comparison loop to checked-in
+  CamlPDF real PDFs, covering the tutorial text fixture and image-heavy logo
+  fixture with quality metrics.~~
 - [x] ~~Add replacement-character and raw-control counters to the MarkItDown
   comparison summary so Markdown quality regressions are tracked directly in
   generated reports.~~
