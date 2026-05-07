@@ -284,6 +284,41 @@ async test "external CCITT image fixture survives compressed rewrite" {
 }
 
 ///|
+async test "external CCITT image fixture reconstructs malformed startxref" {
+  match
+    image_external_fixture_bytes_for_test(
+      "image/external_fixtures/downloads/imagemagick-CCITTFaxDecode.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let corrupted = image_external_corrupt_startxref_pointer_for_test(bytes)
+      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+        corrupted,
+      )
+      guard strict is Err(_) else {
+        fail("expected bad startxref to require malformed reconstruction")
+      }
+      let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
+      @test.assert_eq(recovered.first_xref(), 0)
+      image_external_assert_raw_rgb_for_test(
+        image_external_images_for_test(recovered),
+        16,
+        16,
+        "expected raw RGB24 image payload after reconstruction",
+      )
+      image_external_assert_raw_rgb_for_test(
+        image_external_images_for_test(
+          image_external_reparse_compressed_for_test(recovered),
+        ),
+        16,
+        16,
+        "expected raw RGB24 image payload after reconstructed rewrite",
+      )
+    }
+  }
+}
+
+///|
 async test "external indexed CMYK image fixture decodes to RGB24" {
   match
     image_external_images_from_fixture_for_test(

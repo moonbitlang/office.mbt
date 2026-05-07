@@ -275,6 +275,10 @@ Current backend snapshot:
   optional iText logo fixture, requiring strict-reader failure,
   malformed-reader reconstruction, Type3 metrics/CharProc text extraction, and
   compressed rewrite/reread preservation.~~
+- [x] ~~Add a real-world CCITT image malformed-startxref gate for the optional
+  py-pdf ImageMagick fixture, requiring strict-reader failure,
+  malformed-reader reconstruction, CCITT-to-RGB24 extraction, and compressed
+  rewrite/reread preservation.~~
 - [ ] Add more malformed xref-table/xref-stream/object-stream recovery cases
   from real-world PDFs.
 - [x] ~~Add a native reader-boundary gate for the next available predefined CMap
@@ -677,6 +681,10 @@ Current backend snapshot:
   malformed-startxref recovery path, checking that strict reads fail, public
   reconstruction succeeds, Type3 metrics/CharProc text extraction survives,
   and a compressed rewrite rereads with the same logo glyph behavior.~~
+- [x] ~~The optional py-pdf ImageMagick CCITT fixture now gates a real-world
+  malformed-startxref recovery path, checking that strict reads fail, public
+  reconstruction succeeds, CCITT image decoding survives, and a compressed
+  rewrite rereads with the same RGB24 payload shape.~~
 - [x] ~~Bad-startxref xref-stream reconstruction now has explicit coverage for
   unknown entry types, preserving the skip semantics already used by strict
   xref-stream reads.~~
@@ -946,6 +954,9 @@ Current backend snapshot:
 - [x] ~~The download-only py-pdf DCT/JPEG image fixture now also covers
   real-world xref-stream malformed-startxref reconstruction through image
   extraction and compressed rewrite/reread boundaries.~~
+- [x] ~~The download-only py-pdf ImageMagick CCITT image fixture now also
+  covers real-world malformed-startxref reconstruction through CCITT decoding
+  and compressed rewrite/reread boundaries.~~
 - [ ] Optional external JBIG2 decoder integration and broader CCITT corpus
   validation.
 - [x] ~~Explicit zlib-style Flate level API across direct Flate, filter, and
