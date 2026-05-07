@@ -1,13 +1,13 @@
 {
   "name": "bobzhang/pdflite",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "deps": {
     "moonbitlang/async": "0.17.0",
     "moonbitlang/x": "0.4.43",
     "illusory0x0/rijndael": "0.1.0"
   },
   "readme": "README.mbt.md",
-  "repository": "",
+  "repository": "https://github.com/bobzhang/pdflite",
   "license": "Apache-2.0",
   "keywords": [],
   "description": ""
