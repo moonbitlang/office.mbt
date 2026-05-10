@@ -96,6 +96,10 @@ fn pdf_page_label_style_lower_letters_name() -> PdfName {
 }
 
 ///|
+/// Numbering style used for a page-label range.
+///
+/// `PageLabelNoLabelPrefixOnly` means no numeric suffix is generated; only the
+/// optional prefix contributes to the visible label.
 pub(all) enum PdfPageLabelStyle {
   PageLabelDecimalArabic
   PageLabelUppercaseRoman
@@ -106,6 +110,10 @@ pub(all) enum PdfPageLabelStyle {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// One page-label range.
+///
+/// `start_page` is 1-based. `start_value` is the numeric value shown on that
+/// page before style formatting, and `label_prefix` is stored as PDF bytes.
 pub(all) struct PdfPageLabel {
   label_style : PdfPageLabelStyle
   label_prefix : PdfBytes?
@@ -114,6 +122,7 @@ pub(all) struct PdfPageLabel {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Return a stable debug name for a page-label style.
 pub fn PdfPageLabelStyle::debug_name(self : PdfPageLabelStyle) -> String {
   match self {
     PageLabelDecimalArabic => "DecimalArabic"
@@ -126,6 +135,9 @@ pub fn PdfPageLabelStyle::debug_name(self : PdfPageLabelStyle) -> String {
 }
 
 ///|
+/// Parse a debug-style page-label style name.
+///
+/// Unknown names raise `PageLabelStyleExpected`.
 pub fn pdf_page_label_style_of_string(
   text : String,
 ) -> PdfPageLabelStyle raise PdfError {
@@ -141,6 +153,7 @@ pub fn pdf_page_label_style_of_string(
 }
 
 ///|
+/// Format a page-label range as a diagnostic byte string.
 pub fn pdf_string_of_page_label(label : PdfPageLabel) -> PdfBytes {
   let output : Array[Byte] = []
   pdf_writer_push_ascii(output, "labelstyle: ")
@@ -162,6 +175,7 @@ pub fn pdf_string_of_page_label(label : PdfPageLabel) -> PdfBytes {
 }
 
 ///|
+/// Default decimal page-label range starting at page 1 with value 1.
 pub let pdf_page_label_basic : PdfPageLabel = {
   label_style: PageLabelDecimalArabic,
   label_prefix: None,
@@ -170,6 +184,9 @@ pub let pdf_page_label_basic : PdfPageLabel = {
 }
 
 ///|
+/// Ensure a label list has an initial range covering page 1.
+///
+/// Empty lists or lists that start after page 1 receive `pdf_page_label_basic`.
 pub fn pdf_page_label_complete(
   labels : ArrayView[PdfPageLabel],
 ) -> Array[PdfPageLabel] {
@@ -206,6 +223,10 @@ fn pdf_page_label_continuation(
 }
 
 ///|
+/// Insert or replace a label range over a page interval.
+///
+/// Existing ranges after `range_end_page` are preserved, and a continuation
+/// range is inserted when needed so later labels keep their previous numbering.
 pub fn pdf_page_label_add_label(
   end_page : Int,
   labels : ArrayView[PdfPageLabel],
@@ -350,6 +371,11 @@ fn pdf_page_label_number_bytes(
 }
 
 ///|
+/// Render the visible label text for one page within a label range.
+///
+/// The optional prefix bytes are copied first. The numeric suffix is calculated
+/// from the range's 1-based `start_page` and `start_value`, then formatted with
+/// the range style.
 pub fn pdf_page_label_text_of_single(
   page_number : Int,
   label : PdfPageLabel,
@@ -368,6 +394,10 @@ pub fn pdf_page_label_text_of_single(
 }
 
 ///|
+/// Return the effective page-label range for one concrete page.
+///
+/// The returned range keeps the style and prefix, but normalizes `start_page`
+/// and `start_value` to the numeric value displayed on `page_number`.
 pub fn pdf_page_label_of_single(
   page_number : Int,
   label : PdfPageLabel,
@@ -377,6 +407,10 @@ pub fn pdf_page_label_of_single(
 }
 
 ///|
+/// Find the active page-label range for a 1-based page number.
+///
+/// The input ranges are expected in document order. Returns `None` when the
+/// document has no page-label ranges.
 pub fn pdf_page_label_of_page_number(
   page_number : Int,
   labels : ArrayView[PdfPageLabel],
@@ -397,6 +431,10 @@ pub fn pdf_page_label_of_page_number(
 }
 
 ///|
+/// Render the visible label text for a 1-based page number.
+///
+/// Returns `None` when there are no label ranges. Label prefixes are returned as
+/// raw PDF bytes, preserving the encoding stored in the PDF string.
 pub fn pdf_page_label_text_of_page_number(
   page_number : Int,
   labels : ArrayView[PdfPageLabel],
@@ -417,6 +455,11 @@ pub fn pdf_page_label_text_of_page_number(
 }
 
 ///|
+/// Collapse adjacent page-label ranges that produce the same numbering stream.
+///
+/// Ranges are merged only when their style, prefix, and `start_page -
+/// start_value` offset are identical, so visible labels for every page remain
+/// unchanged.
 pub fn pdf_page_label_coalesce(
   labels : ArrayView[PdfPageLabel],
 ) -> Array[PdfPageLabel] {
@@ -438,6 +481,14 @@ pub fn pdf_page_label_coalesce(
 }
 
 ///|
+/// Merge page labels for selected pages from several source documents.
+///
+/// `ranges` contains 1-based source page numbers for each document. The merged
+/// result preserves the visible labels from those source pages at their new
+/// concatenated positions and coalesces adjacent equivalent ranges.
+///
+/// Raises if the document and range arrays have different lengths, or if a
+/// source document's page-label tree cannot be read.
 pub fn pdf_page_label_merge(
   pdfs : ArrayView[PdfDocument],
   ranges : ArrayView[Array[Int]],
@@ -573,6 +624,11 @@ fn PdfDocument::pdf_page_label_catalog(
 }
 
 ///|
+/// Read the document catalog `/PageLabels` number tree.
+///
+/// The returned `start_page` values are converted from PDF's zero-based page
+/// indexes to the public 1-based page numbering used by this module. Documents
+/// without page labels return an empty array.
 pub fn PdfDocument::read_page_labels(
   self : PdfDocument,
 ) -> Array[PdfPageLabel] raise PdfError {
@@ -589,6 +645,7 @@ pub fn PdfDocument::read_page_labels(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::read_page_labels`.
 pub fn pdf_read_page_labels(
   document : PdfDocument,
 ) -> Array[PdfPageLabel] raise PdfError {
@@ -604,6 +661,10 @@ fn PdfDocument::pdf_page_label_has_labels(
 }
 
 ///|
+/// Return a copy of the document with catalog `/PageLabels` removed.
+///
+/// The original document is not mutated; the returned document has a new root
+/// object and trailer root reference.
 pub fn PdfDocument::remove_page_labels(
   self : PdfDocument,
 ) -> PdfDocument raise PdfError {
@@ -623,6 +684,7 @@ pub fn PdfDocument::remove_page_labels(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::remove_page_labels`.
 pub fn pdf_remove_page_labels(
   document : PdfDocument,
 ) -> PdfDocument raise PdfError {
@@ -630,6 +692,10 @@ pub fn pdf_remove_page_labels(
 }
 
 ///|
+/// Return a copy of the document with catalog `/PageLabels` replaced.
+///
+/// Public `start_page` values are written as zero-based PDF number-tree keys.
+/// Passing an empty label list removes any existing page-label tree.
 pub fn PdfDocument::write_page_labels(
   self : PdfDocument,
   labels : ArrayView[PdfPageLabel],
@@ -660,6 +726,7 @@ pub fn PdfDocument::write_page_labels(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::write_page_labels`.
 pub fn pdf_write_page_labels(
   document : PdfDocument,
   labels : ArrayView[PdfPageLabel],
