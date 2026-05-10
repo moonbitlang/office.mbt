@@ -1,4 +1,10 @@
 ///|
+/// Permission that may be denied by a PDF standard security handler.
+///
+/// These values are expressed as a "ban list" in the public API: passing
+/// `PdfNoPrint` means printing is denied. They are converted to and from the
+/// PDF `/P` permission bit mask by `pdf_p_of_permissions` and
+/// `pdf_permissions_of_p`.
 pub(all) enum PdfPermission {
   PdfNoEdit
   PdfNoPrint
@@ -11,6 +17,11 @@ pub(all) enum PdfPermission {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Encryption method detected from or requested for a document.
+///
+/// AES entries carry the effective `EncryptMetadata` flag. The
+/// `PdfEncryptionAlreadyEncrypted` value is used by writer paths that preserve
+/// existing encrypted object data rather than decrypting and re-encrypting it.
 pub(all) enum PdfEncryptionMethod {
   PdfEncryption40Bit
   PdfEncryption128Bit
@@ -21,6 +32,11 @@ pub(all) enum PdfEncryptionMethod {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Random material requested while constructing PDF 2.0 AESV3 encryption data.
+///
+/// Provider callbacks receive this field tag and a byte length, allowing tests
+/// and reproducible builds to supply deterministic file keys, salts, and
+/// permissions padding.
 pub(all) enum PdfAesV3RandomField {
   PdfAesV3FileKey
   PdfAesV3UserValidationSalt
@@ -31,6 +47,11 @@ pub(all) enum PdfAesV3RandomField {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Parsed standard-security-handler values from an encryption dictionary.
+///
+/// Password entries, permission masks, file IDs, and optional AESV3 wrapping
+/// entries are stored as PDF bytes. `crypt_type` describes the actual object
+/// encryption algorithm used for strings and streams.
 pub(all) struct PdfEncryptionValues {
   crypt_type : PdfCryptType
   user_entry : PdfBytes
@@ -44,11 +65,20 @@ pub(all) struct PdfEncryptionValues {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Saved encryption state retained on a decrypted document.
+///
+/// Recrypt helpers use this to put a previously encrypted document back into
+/// its original security-handler shape after edits.
 pub(all) struct PdfSavedEncryption {
   values : PdfEncryptionValues
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Result of successfully decrypting a document.
+///
+/// `document` is a decrypted copy with encryption removed from the trailer and
+/// saved encryption state attached. `denied_permissions` is decoded from the
+/// original `/P` permission mask.
 pub(all) struct PdfDecryptionResult {
   document : PdfDocument
   denied_permissions : Array[PdfPermission]
@@ -324,6 +354,12 @@ fn pdf_crypt_type_from_encrypt_dictionary(
 }
 
 ///|
+/// Parse the document trailer's `/Encrypt` dictionary.
+///
+/// The returned value contains the normalized security-handler parameters
+/// needed for authentication and object crypt. Missing encryption dictionaries,
+/// unsupported handlers, malformed `/O` or `/U` entries, and missing trailer
+/// `/ID` values raise `PdfError`.
 pub fn PdfDocument::encryption_values(
   self : PdfDocument,
 ) -> PdfEncryptionValues raise PdfError {
@@ -387,11 +423,16 @@ pub fn PdfDocument::encryption_values(
 }
 
 ///|
+/// Return true when the trailer contains an `/Encrypt` entry.
 pub fn PdfDocument::is_encrypted(self : PdfDocument) -> Bool {
   self.lookup_direct(pdf_crypt_encrypt_name, self.trailer_dict()) != None
 }
 
 ///|
+/// Return the document encryption method, or `None` for unencrypted documents.
+///
+/// Unknown or unsupported encryption dictionaries may also return `None` after
+/// the dictionary has been parsed.
 pub fn PdfDocument::what_encryption(
   self : PdfDocument,
 ) -> PdfEncryptionMethod? raise PdfError {
@@ -412,6 +453,10 @@ pub fn PdfDocument::what_encryption(
 }
 
 ///|
+/// Decode the denied permissions from the document encryption dictionary.
+///
+/// Unencrypted documents return an empty array. Encrypted documents parse
+/// `/Encrypt` and may raise if the encryption dictionary is malformed.
 pub fn PdfDocument::permissions(
   self : PdfDocument,
 ) -> Array[PdfPermission] raise PdfError {
@@ -443,6 +488,11 @@ fn PdfEncryptionValues::password_settings(
 }
 
 ///|
+/// Authenticate a user password against parsed encryption values.
+///
+/// `password` is the raw PDF password byte sequence. AESV3 and earlier
+/// revisions use their respective standard-security algorithms. The optional
+/// metadata flag can force the revision-4 no-metadata key derivation path.
 pub fn PdfEncryptionValues::authenticate_user_password(
   self : PdfEncryptionValues,
   password : BytesView,
@@ -471,6 +521,10 @@ pub fn PdfEncryptionValues::authenticate_user_password(
 }
 
 ///|
+/// Return the file key for a valid user password.
+///
+/// A wrong password returns `None`; malformed encryption values or corrupt
+/// AESV3 permission entries raise `PdfError`.
 pub fn PdfEncryptionValues::file_key_for_user_password(
   self : PdfEncryptionValues,
   password : BytesView,
@@ -525,6 +579,10 @@ pub fn PdfEncryptionValues::file_key_for_user_password(
 }
 
 ///|
+/// Authenticate an owner password against parsed encryption values.
+///
+/// For pre-AESV3 handlers this first recovers the padded user password from
+/// the owner entry, then authenticates it as a user password.
 pub fn PdfEncryptionValues::authenticate_owner_password(
   self : PdfEncryptionValues,
   password : BytesView,
@@ -558,6 +616,10 @@ pub fn PdfEncryptionValues::authenticate_owner_password(
 }
 
 ///|
+/// Return the file key for a valid owner password.
+///
+/// A wrong password returns `None`; malformed encryption values or corrupt
+/// AESV3 permission entries raise `PdfError`.
 pub fn PdfEncryptionValues::file_key_for_owner_password(
   self : PdfEncryptionValues,
   password : BytesView,
@@ -706,6 +768,12 @@ fn pdf_deterministic_aes_iv_for_seed(
 }
 
 ///|
+/// Build a deterministic AES IV provider from a seed.
+///
+/// The returned callback derives 16-byte IVs from the seed, object number,
+/// generation, and per-object IV index. It is intended for reproducible tests
+/// and fixtures; production encryption should use a cryptographically secure
+/// random provider.
 pub fn pdf_deterministic_aes_iv_provider_from_seed(
   seed : BytesView,
 ) -> (Int, Int, Int) -> PdfBytes raise PdfError {
@@ -732,6 +800,11 @@ fn pdf_deterministic_aesv3_random_for_seed(
 }
 
 ///|
+/// Build a deterministic AESV3 random-field provider from a seed.
+///
+/// The provider derives field-specific bytes for file keys, salts, and
+/// permissions padding. It is useful for stable test fixtures, not for
+/// production encryption.
 pub fn pdf_deterministic_aesv3_random_provider_from_seed(
   seed : BytesView,
 ) -> (PdfAesV3RandomField, Int) -> PdfBytes raise PdfError {
@@ -868,6 +941,11 @@ fn PdfEncryptionValues::decrypt_single_stream_with_file_key(
 }
 
 ///|
+/// Decrypt one encrypted stream object with available passwords.
+///
+/// Unencrypted documents return `stream` unchanged. Encrypted documents return
+/// `None` when no supplied password authenticates. The caller supplies the
+/// stream object's number and generation because object keys depend on them.
 pub fn PdfDocument::decrypt_single_stream(
   self : PdfDocument,
   object_number : Int,
@@ -903,6 +981,11 @@ pub fn PdfDocument::decrypt_single_stream(
 }
 
 ///|
+/// Decrypt this document using optional user and owner passwords.
+///
+/// If the document is not encrypted, a copied document and empty permissions
+/// list are returned. If it is encrypted and no password works, the result is
+/// `None`; malformed encryption data still raises `PdfError`.
 pub fn PdfDocument::decrypt_with_passwords(
   self : PdfDocument,
   user_password? : BytesView? = None,
@@ -927,6 +1010,11 @@ pub fn PdfDocument::decrypt_with_passwords(
 }
 
 ///|
+/// Encrypt a copy of the document with the revision-2 40-bit ARC4 handler.
+///
+/// `denied_permissions` is converted to the PDF `/P` mask. `file_id` can be
+/// supplied for deterministic output; when omitted, the document gets a
+/// CamlPDF-style generated file ID.
 pub fn PdfDocument::encrypt_40bit(
   self : PdfDocument,
   user_password : BytesView,
@@ -947,6 +1035,11 @@ pub fn PdfDocument::encrypt_40bit(
 }
 
 ///|
+/// Encrypt a copy of the document with the revision-3 128-bit ARC4 handler.
+///
+/// `denied_permissions` is converted to the PDF `/P` mask. `file_id` can be
+/// supplied for deterministic output; when omitted, a generated file ID is
+/// added as needed.
 pub fn PdfDocument::encrypt_128bit(
   self : PdfDocument,
   user_password : BytesView,
@@ -967,6 +1060,10 @@ pub fn PdfDocument::encrypt_128bit(
 }
 
 ///|
+/// Encrypt a copy of the document with revision-4 128-bit ARC4.
+///
+/// This writes a crypt-filter dictionary using `/V2`. `encrypt_metadata=false`
+/// follows the revision-4 no-metadata key derivation and stream policy.
 pub fn PdfDocument::encrypt_128bit_r4(
   self : PdfDocument,
   user_password : BytesView,
@@ -1028,6 +1125,11 @@ pub fn PdfDocument::encrypt_128bit_r4(
 }
 
 ///|
+/// Encrypt a copy of the document with revision-4 AESV2.
+///
+/// `iv_provider` supplies per-object 16-byte CBC IVs by object number,
+/// generation, and IV index. This makes tests reproducible while allowing
+/// production callers to provide secure random IVs.
 pub fn PdfDocument::encrypt_128bit_aesv2_with_iv_provider(
   self : PdfDocument,
   user_password : BytesView,
@@ -1091,6 +1193,11 @@ pub fn PdfDocument::encrypt_128bit_aesv2_with_iv_provider(
 }
 
 ///|
+/// Encrypt a copy of the document with AESV3/AES-256 security.
+///
+/// `random_provider` supplies the file key, salts, and permissions padding;
+/// `iv_provider` supplies CBC IVs for encrypted strings and streams. `iso=true`
+/// selects the ISO/PDF 2.0 hash variant.
 pub fn PdfDocument::encrypt_256bit_aesv3_with_providers(
   self : PdfDocument,
   user_password : BytesView,
@@ -1180,6 +1287,10 @@ pub fn PdfDocument::encrypt_256bit_aesv3_with_providers(
 }
 
 ///|
+/// Encrypt a copy of the document with the ISO AESV3/AES-256 variant.
+///
+/// This is a convenience wrapper around
+/// `encrypt_256bit_aesv3_with_providers` with `iso=true`.
 pub fn PdfDocument::encrypt_256bit_aesv3_iso_with_providers(
   self : PdfDocument,
   user_password : BytesView,
@@ -1510,6 +1621,11 @@ fn PdfDocument::recrypt_aesv3_with_file_key(
 }
 
 ///|
+/// Re-encrypt a previously decrypted document using its saved ARC4 settings.
+///
+/// The document must have saved encryption state from a successful decrypt.
+/// The supplied password is authenticated against that state before the
+/// original encryption dictionary shape is restored.
 pub fn PdfDocument::recrypt_with_password(
   self : PdfDocument,
   password : BytesView,
@@ -1534,6 +1650,10 @@ pub fn PdfDocument::recrypt_with_password(
 }
 
 ///|
+/// Re-encrypt a decrypted AESV2 document using its saved encryption settings.
+///
+/// `iv_provider` supplies fresh IVs for encrypted object data. The saved
+/// encryption state determines passwords, permissions, and crypt-filter shape.
 pub fn PdfDocument::recrypt_with_password_aesv2_with_iv_provider(
   self : PdfDocument,
   password : BytesView,
@@ -1554,6 +1674,11 @@ pub fn PdfDocument::recrypt_with_password_aesv2_with_iv_provider(
 }
 
 ///|
+/// Re-encrypt a decrypted AESV3 document using its saved encryption settings.
+///
+/// `iv_provider` supplies fresh IVs for encrypted object data. The saved
+/// encryption state supplies the existing AESV3 password entries and file key
+/// wrapping metadata.
 pub fn PdfDocument::recrypt_with_password_aesv3_with_iv_provider(
   self : PdfDocument,
   password : BytesView,
@@ -1574,6 +1699,11 @@ pub fn PdfDocument::recrypt_with_password_aesv3_with_iv_provider(
 }
 
 ///|
+/// Decrypt with a user password only.
+///
+/// Unencrypted documents return a copied document and empty denied permissions.
+/// Encrypted documents return `None` when the user password does not
+/// authenticate.
 pub fn PdfDocument::decrypt_with_user_password(
   self : PdfDocument,
   password : BytesView,
@@ -1594,6 +1724,11 @@ pub fn PdfDocument::decrypt_with_user_password(
 }
 
 ///|
+/// Decrypt with an owner password only.
+///
+/// Unencrypted documents return a copied document and empty denied permissions.
+/// Encrypted documents return `None` when the owner password does not
+/// authenticate.
 pub fn PdfDocument::decrypt_with_owner_password(
   self : PdfDocument,
   password : BytesView,
@@ -1614,6 +1749,10 @@ pub fn PdfDocument::decrypt_with_owner_password(
 }
 
 ///|
+/// CamlPDF-shaped decrypt helper returning document and denied permissions.
+///
+/// A failed authentication returns `(None, current_permissions)`, while
+/// malformed encryption dictionaries raise `PdfError`.
 pub fn pdf_decrypt_pdf(
   document : PdfDocument,
   user_password : BytesView,
@@ -1632,6 +1771,7 @@ pub fn pdf_decrypt_pdf(
 }
 
 ///|
+/// CamlPDF-shaped owner-password decrypt helper.
 pub fn pdf_decrypt_pdf_owner(
   document : PdfDocument,
   owner_password : BytesView,
@@ -1645,11 +1785,13 @@ pub fn pdf_decrypt_pdf_owner(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::is_encrypted`.
 pub fn pdf_is_encrypted(document : PdfDocument) -> Bool {
   document.is_encrypted()
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::what_encryption`.
 pub fn pdf_what_encryption(
   document : PdfDocument,
 ) -> PdfEncryptionMethod? raise PdfError {
@@ -1657,6 +1799,7 @@ pub fn pdf_what_encryption(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::permissions`.
 pub fn pdf_permissions(
   document : PdfDocument,
 ) -> Array[PdfPermission] raise PdfError {
@@ -1664,6 +1807,7 @@ pub fn pdf_permissions(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::encryption_values`.
 pub fn pdf_get_encryption_values(
   document : PdfDocument,
 ) -> PdfEncryptionValues raise PdfError {
@@ -1671,6 +1815,7 @@ pub fn pdf_get_encryption_values(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::decrypt_single_stream`.
 pub fn pdf_decrypt_single_stream(
   document : PdfDocument,
   object_number : Int,
@@ -1691,6 +1836,7 @@ pub fn pdf_decrypt_single_stream(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::encrypt_40bit`.
 pub fn pdf_encrypt_pdf_40bit(
   document : PdfDocument,
   user_password : BytesView,
@@ -1707,6 +1853,7 @@ pub fn pdf_encrypt_pdf_40bit(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::encrypt_128bit`.
 pub fn pdf_encrypt_pdf_128bit(
   document : PdfDocument,
   user_password : BytesView,
@@ -1723,6 +1870,7 @@ pub fn pdf_encrypt_pdf_128bit(
 }
 
 ///|
+/// Compatibility wrapper for AESV2 encryption with caller-supplied IVs.
 pub fn pdf_encrypt_pdf_AES_with_iv_provider(
   document : PdfDocument,
   encrypt_metadata : Bool,
@@ -1743,6 +1891,7 @@ pub fn pdf_encrypt_pdf_AES_with_iv_provider(
 }
 
 ///|
+/// Compatibility wrapper for AESV3 encryption with caller-supplied providers.
 pub fn pdf_encrypt_pdf_AES256_with_providers(
   document : PdfDocument,
   encrypt_metadata : Bool,
@@ -1765,6 +1914,7 @@ pub fn pdf_encrypt_pdf_AES256_with_providers(
 }
 
 ///|
+/// Compatibility wrapper for ISO AESV3 encryption with caller-supplied providers.
 pub fn pdf_encrypt_pdf_AES256ISO_with_providers(
   document : PdfDocument,
   encrypt_metadata : Bool,
@@ -1787,6 +1937,10 @@ pub fn pdf_encrypt_pdf_AES256ISO_with_providers(
 }
 
 ///|
+/// Re-encrypt a decrypted document, optionally compact-renumbering first.
+///
+/// AES documents use `iv_provider`; ARC4 documents ignore it. The input must
+/// carry saved encryption state from a previous decrypt.
 pub fn pdf_recrypt_pdf_with_iv_provider(
   document : PdfDocument,
   password : BytesView,
@@ -1812,6 +1966,10 @@ pub fn pdf_recrypt_pdf_with_iv_provider(
 }
 
 ///|
+/// Re-encrypt a decrypted ARC4 document, optionally compact-renumbering first.
+///
+/// AES documents require `pdf_recrypt_pdf_with_iv_provider` so fresh IVs can be
+/// supplied.
 pub fn pdf_recrypt_pdf(
   document : PdfDocument,
   password : BytesView,
@@ -1835,11 +1993,16 @@ fn pdf_password_padding_fixed() -> FixedArray[Byte] {
 }
 
 ///|
+/// Return the standard 32-byte PDF password padding sequence.
 pub fn pdf_password_padding() -> PdfBytes {
   Bytes::from_array(pdf_password_padding_fixed())
 }
 
 ///|
+/// Pad or truncate a raw PDF password to 32 bytes.
+///
+/// Passwords are byte sequences. Inputs longer than 32 bytes are truncated;
+/// shorter inputs are filled with the standard PDF padding sequence.
 pub fn pdf_pad_password(password : BytesView) -> PdfBytes {
   let padding = pdf_password_padding_fixed()
   let output : Array[Byte] = []
@@ -2061,6 +2224,10 @@ fn pdf_aesv3_permissions_entry(
 }
 
 ///|
+/// Authenticate an AESV3 user password entry.
+///
+/// `iso` selects the ISO/PDF 2.0 hash variant. Short `/U` entries raise
+/// `EncryptionDictionaryEntryTooShort`.
 pub fn pdf_authenticate_user_password_aesv3(
   iso : Bool,
   password : BytesView,
@@ -2074,6 +2241,10 @@ pub fn pdf_authenticate_user_password_aesv3(
 }
 
 ///|
+/// Authenticate an AESV3 owner password entry.
+///
+/// Owner authentication incorporates the 48-byte user entry as required by the
+/// AESV3 security algorithm. Short `/O` or `/U` entries raise `PdfError`.
 pub fn pdf_authenticate_owner_password_aesv3(
   iso : Bool,
   password : BytesView,
@@ -2210,6 +2381,10 @@ fn pdf_crypt_low_byte(value : Int, shift : Int) -> Byte {
 }
 
 ///|
+/// Derive the standard-security file key from a user password.
+///
+/// This implements revisions 2-4 key derivation. AESV3 uses wrapped file keys
+/// instead and should go through the `PdfEncryptionValues` helpers.
 pub fn pdf_encryption_file_key(
   no_encrypt_metadata : Bool,
   password : BytesView,
@@ -2253,6 +2428,10 @@ fn pdf_key_xor_iteration(key : BytesView, iteration : Int) -> PdfBytes {
 }
 
 ///|
+/// Build the `/U` user-password entry for revisions 2-4.
+///
+/// The entry is derived from the user password, owner entry, permission mask,
+/// file ID, key length, and metadata-encryption flag.
 pub fn pdf_make_user_password_entry(
   no_encrypt_metadata : Bool,
   user_password : BytesView,
@@ -2305,6 +2484,7 @@ fn pdf_bytes_prefix_equal(
 }
 
 ///|
+/// Authenticate a revision 2-4 user password against a `/U` entry.
 pub fn pdf_authenticate_user_password(
   no_encrypt_metadata : Bool,
   user_password : BytesView,
@@ -2344,6 +2524,10 @@ fn pdf_owner_password_key(
 }
 
 ///|
+/// Build the `/O` owner-password entry for revisions 2-4.
+///
+/// A blank owner password follows PDF behavior by using the user password as
+/// the owner-password source.
 pub fn pdf_make_owner_password_entry(
   revision : Int,
   owner_password : BytesView,
@@ -2370,6 +2554,10 @@ pub fn pdf_make_owner_password_entry(
 }
 
 ///|
+/// Recover the padded user-password bytes from a revision 2-4 owner password.
+///
+/// The returned bytes are the padded/truncated internal password form, not a
+/// decoded MoonBit string.
 pub fn pdf_user_password_from_owner_password(
   revision : Int,
   owner_password : BytesView,
@@ -2392,6 +2580,10 @@ pub fn pdf_user_password_from_owner_password(
 }
 
 ///|
+/// Authenticate a revision 2-4 owner password.
+///
+/// This decrypts the owner entry to recover the padded user password and then
+/// validates that recovered password against the user entry.
 pub fn pdf_authenticate_owner_password(
   no_encrypt_metadata : Bool,
   owner_password : BytesView,
@@ -2579,6 +2771,11 @@ fn pdf_arc4_crypt_pdf_object_with_stream_policy(
 }
 
 ///|
+/// Apply ARC4 object encryption or decryption to a PDF object.
+///
+/// ARC4 is symmetric. The object key is derived from object number,
+/// generation, file key, and key length. Streams using identity crypt filters,
+/// and metadata streams when `no_encrypt_metadata=true`, are left unchanged.
 pub fn pdf_arc4_crypt_pdf_object(
   object_number : Int,
   generation : Int,
@@ -2594,6 +2791,10 @@ pub fn pdf_arc4_crypt_pdf_object(
 }
 
 ///|
+/// Decrypt AESV2 object data bytes with the derived object key.
+///
+/// `data` must include the leading CBC IV as stored in encrypted PDF strings
+/// and streams.
 pub fn pdf_aesv2_decrypt_object_data(
   object_number : Int,
   generation : Int,
@@ -2612,6 +2813,10 @@ pub fn pdf_aesv2_decrypt_object_data(
 }
 
 ///|
+/// Encrypt bytes as AESV2 object data with an explicit CBC IV.
+///
+/// The returned bytes include the IV prefix expected by PDF AESV2 strings and
+/// streams.
 pub fn pdf_aesv2_encrypt_object_data(
   object_number : Int,
   generation : Int,
@@ -2631,6 +2836,9 @@ pub fn pdf_aesv2_encrypt_object_data(
 }
 
 ///|
+/// Decrypt AESV3 object data bytes with the document file key.
+///
+/// `data` must include the leading CBC IV.
 pub fn pdf_aesv3_decrypt_object_data(
   file_key : BytesView,
   data : BytesView,
@@ -2639,6 +2847,10 @@ pub fn pdf_aesv3_decrypt_object_data(
 }
 
 ///|
+/// Encrypt bytes as AESV3 object data with an explicit CBC IV.
+///
+/// The returned bytes include the IV prefix expected by PDF AES strings and
+/// streams.
 pub fn pdf_aesv3_encrypt_object_data(
   file_key : BytesView,
   data : BytesView,
@@ -2731,6 +2943,10 @@ fn pdf_aes_encrypt_pdf_object_with_key(
 }
 
 ///|
+/// Encrypt a PDF object using AESV2 with per-object derived keys.
+///
+/// The IV provider is called with a zero-based index for each encrypted string
+/// or stream inside the object. Identity crypt-filter streams are preserved.
 pub fn pdf_aesv2_encrypt_pdf_object_with_iv_provider(
   object_number : Int,
   generation : Int,
@@ -2758,6 +2974,10 @@ pub fn pdf_aesv2_encrypt_pdf_object_with_iv_provider(
 }
 
 ///|
+/// Encrypt a PDF object using AESV3 with the file key directly.
+///
+/// The IV provider is called with a zero-based index for each encrypted string
+/// or stream inside the object. Identity crypt-filter streams are preserved.
 pub fn pdf_aesv3_encrypt_pdf_object_with_iv_provider(
   file_key : BytesView,
   object : PdfObject,
@@ -2855,6 +3075,10 @@ fn pdf_aes_decrypt_pdf_object_with_key(
 }
 
 ///|
+/// Decrypt a PDF object using AESV2 with per-object derived keys.
+///
+/// Deferred stream data is annotated with AESV2 crypt state so it can be
+/// decrypted lazily when the stream bytes are loaded.
 pub fn pdf_aesv2_decrypt_pdf_object(
   object_number : Int,
   generation : Int,
@@ -2884,6 +3108,10 @@ pub fn pdf_aesv2_decrypt_pdf_object(
 }
 
 ///|
+/// Decrypt a PDF object using AESV3 with the file key directly.
+///
+/// Deferred stream data is annotated with AESV3 crypt state so it can be
+/// decrypted lazily when the stream bytes are loaded.
 pub fn pdf_aesv3_decrypt_pdf_object(
   file_key : BytesView,
   object : PdfObject,
@@ -2898,6 +3126,10 @@ pub fn pdf_aesv3_decrypt_pdf_object(
 }
 
 ///|
+/// Apply ARC4 crypt to all parsed objects in a copied document.
+///
+/// `skip_object_number` is used to leave the encryption dictionary itself
+/// unencrypted. Deferred and object-stream placeholders are left untouched.
 pub fn PdfDocument::arc4_crypt_parsed_objects(
   self : PdfDocument,
   file_key : BytesView,
@@ -2935,6 +3167,10 @@ pub fn PdfDocument::arc4_crypt_parsed_objects(
 }
 
 ///|
+/// AESV2-encrypt all parsed objects in a copied document.
+///
+/// The IV provider receives object number, generation, and per-object IV index.
+/// `skip_object_number` leaves the encryption dictionary unencrypted.
 pub fn PdfDocument::aesv2_encrypt_parsed_objects_with_iv_provider(
   self : PdfDocument,
   file_key : BytesView,
@@ -2975,6 +3211,11 @@ pub fn PdfDocument::aesv2_encrypt_parsed_objects_with_iv_provider(
 }
 
 ///|
+/// AESV2-decrypt all parsed objects in a copied document.
+///
+/// Parsed streams may retain deferred crypt metadata so stream bytes can be
+/// decrypted lazily. `skip_object_number` leaves the encryption dictionary
+/// untouched.
 pub fn PdfDocument::aesv2_decrypt_parsed_objects(
   self : PdfDocument,
   file_key : BytesView,
@@ -3011,6 +3252,10 @@ pub fn PdfDocument::aesv2_decrypt_parsed_objects(
 }
 
 ///|
+/// AESV3-encrypt all parsed objects in a copied document.
+///
+/// The IV provider receives object number, generation, and per-object IV index.
+/// `skip_object_number` leaves the encryption dictionary unencrypted.
 pub fn PdfDocument::aesv3_encrypt_parsed_objects_with_iv_provider(
   self : PdfDocument,
   file_key : BytesView,
@@ -3047,6 +3292,11 @@ pub fn PdfDocument::aesv3_encrypt_parsed_objects_with_iv_provider(
 }
 
 ///|
+/// AESV3-decrypt all parsed objects in a copied document.
+///
+/// Parsed streams may retain deferred crypt metadata so stream bytes can be
+/// decrypted lazily. `skip_object_number` leaves the encryption dictionary
+/// untouched.
 pub fn PdfDocument::aesv3_decrypt_parsed_objects(
   self : PdfDocument,
   file_key : BytesView,
@@ -3102,6 +3352,10 @@ fn pdf_permission_set_bit(mask : Int, bit : Int, value : Bool) -> Int {
 }
 
 ///|
+/// Convert denied permissions to a PDF `/P` permission mask.
+///
+/// The input is a ban list. Required reserved bits are set according to the
+/// PDF standard-security-handler convention.
 pub fn pdf_p_of_permissions(permissions : ArrayView[PdfPermission]) -> Int {
   let mut mask = 0
   mask = pdf_permission_set_bit(
@@ -3158,6 +3412,10 @@ fn pdf_permission_bit_denied(mask : Int, bit : Int) -> Bool {
 }
 
 ///|
+/// Decode a PDF `/P` permission mask to denied permissions.
+///
+/// The returned array is a ban list ordered from later permission bits down to
+/// basic print/edit/copy permissions.
 pub fn pdf_permissions_of_p(mask : Int) -> Array[PdfPermission] {
   let permissions : Array[PdfPermission] = []
   if pdf_permission_bit_denied(mask, 12) {
@@ -3188,6 +3446,7 @@ pub fn pdf_permissions_of_p(mask : Int) -> Array[PdfPermission] {
 }
 
 ///|
+/// Compatibility alias for `pdf_permissions_of_p`.
 pub fn pdf_banlist_of_p(mask : Int) -> Array[PdfPermission] {
   pdf_permissions_of_p(mask)
 }
