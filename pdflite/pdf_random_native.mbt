@@ -21,6 +21,11 @@ fn pdf_secure_random_bytes_with_provider(
 }
 
 ///|
+/// Return cryptographically secure random bytes on the native target.
+///
+/// The native stub uses the platform RNG (`BCryptGenRandom` on Windows and
+/// `/dev/urandom` on Unix-like systems). Negative lengths raise
+/// `InvalidReadLength`; RNG failures raise `RandomBytesUnavailable`.
 pub fn pdf_secure_random_bytes(length : Int) -> PdfBytes raise PdfError {
   pdf_secure_random_bytes_with_provider(length, pdf_secure_random_bytes_ffi)
 }
@@ -43,6 +48,11 @@ fn pdf_secure_aesv3_random_provider(
 }
 
 ///|
+/// Encrypt a copy of the document with revision-4 AESV2 using native randomness.
+///
+/// Fresh random IVs are generated for encrypted strings and streams. When
+/// `file_id` is empty, a random 16-byte first trailer ID is generated before
+/// deriving the encryption key.
 pub fn PdfDocument::encrypt_128bit_aesv2(
   self : PdfDocument,
   user_password : BytesView,
@@ -67,6 +77,10 @@ pub fn PdfDocument::encrypt_128bit_aesv2(
 }
 
 ///|
+/// Re-encrypt a decrypted AESV2 document using native random IVs.
+///
+/// The document must carry saved encryption state from a previous decrypt
+/// operation; `password` is used to recover the file key for re-encryption.
 pub fn PdfDocument::recrypt_with_password_aesv2(
   self : PdfDocument,
   password : BytesView,
@@ -77,6 +91,10 @@ pub fn PdfDocument::recrypt_with_password_aesv2(
 }
 
 ///|
+/// Encrypt a copy of the document with AESV3/AES-256 using native randomness.
+///
+/// Native random bytes supply the file key, salts, permissions padding, and
+/// per-object IVs. Set `iso=true` for the ISO/PDF 2.0 AESV3 hash variant.
 pub fn PdfDocument::encrypt_256bit_aesv3(
   self : PdfDocument,
   user_password : BytesView,
@@ -99,6 +117,10 @@ pub fn PdfDocument::encrypt_256bit_aesv3(
 }
 
 ///|
+/// Encrypt a copy of the document with the ISO AESV3/AES-256 variant.
+///
+/// This is the native-random convenience wrapper for
+/// `encrypt_256bit_aesv3` with `iso=true`.
 pub fn PdfDocument::encrypt_256bit_aesv3_iso(
   self : PdfDocument,
   user_password : BytesView,
@@ -118,6 +140,7 @@ pub fn PdfDocument::encrypt_256bit_aesv3_iso(
 }
 
 ///|
+/// CamlPDF-compatible AESV2 encryption wrapper using native randomness.
 pub fn pdf_encrypt_pdf_AES(
   document : PdfDocument,
   encrypt_metadata : Bool,
@@ -136,6 +159,7 @@ pub fn pdf_encrypt_pdf_AES(
 }
 
 ///|
+/// CamlPDF-compatible AESV3/AES-256 encryption wrapper using native randomness.
 pub fn pdf_encrypt_pdf_AES256(
   document : PdfDocument,
   encrypt_metadata : Bool,
@@ -154,6 +178,7 @@ pub fn pdf_encrypt_pdf_AES256(
 }
 
 ///|
+/// CamlPDF-compatible ISO AESV3/AES-256 encryption wrapper using native randomness.
 pub fn pdf_encrypt_pdf_AES256ISO(
   document : PdfDocument,
   encrypt_metadata : Bool,
@@ -172,6 +197,10 @@ pub fn pdf_encrypt_pdf_AES256ISO(
 }
 
 ///|
+/// Re-encrypt a decrypted AESV3 document using native random IVs.
+///
+/// The document must carry saved encryption state from a previous decrypt
+/// operation; `password` is used to recover the file key for re-encryption.
 pub fn PdfDocument::recrypt_with_password_aesv3(
   self : PdfDocument,
   password : BytesView,
@@ -182,6 +211,10 @@ pub fn PdfDocument::recrypt_with_password_aesv3(
 }
 
 ///|
+/// Encrypt and serialize a document with AESV2 using native randomness.
+///
+/// The encrypted document is written with the requested write mode. Supplying a
+/// `file_id` controls the trailer ID used for key derivation; IVs remain random.
 pub fn pdf_write_encrypted_aesv2_document(
   document : PdfDocument,
   user_password : BytesView,
@@ -204,6 +237,10 @@ pub fn pdf_write_encrypted_aesv2_document(
 }
 
 ///|
+/// Encrypt and serialize a document with AESV3/AES-256 using native randomness.
+///
+/// Set `iso=true` for the ISO/PDF 2.0 hash variant. The requested write mode is
+/// applied after encryption.
 pub fn pdf_write_encrypted_aesv3_document(
   document : PdfDocument,
   user_password : BytesView,
@@ -228,6 +265,7 @@ pub fn pdf_write_encrypted_aesv3_document(
 }
 
 ///|
+/// Encrypt and serialize a document with the ISO AESV3/AES-256 variant.
 pub fn pdf_write_encrypted_aesv3_iso_document(
   document : PdfDocument,
   user_password : BytesView,
