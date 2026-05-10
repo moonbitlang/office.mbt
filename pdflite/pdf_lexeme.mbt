@@ -1,4 +1,10 @@
 ///|
+/// Token produced by the low-level PDF lexer.
+///
+/// String, name, and comment payloads are byte-oriented PDF data. `StopLexing`
+/// is an internal stop marker used when object lexing reaches stream/xref
+/// boundaries, and `LexNone` means no token matched at the current cursor
+/// position.
 pub(all) enum PdfLexeme {
   LexNull
   LexBool(Bool)
@@ -21,6 +27,10 @@ pub(all) enum PdfLexeme {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Return whether a byte is PDF white space.
+///
+/// Recognized values are NUL, horizontal tab, line feed, form feed, carriage
+/// return, and space.
 pub fn pdf_is_whitespace_byte(value : Int) -> Bool {
   match value {
     0 | 9 | 10 | 12 | 13 | 32 => true
@@ -29,16 +39,22 @@ pub fn pdf_is_whitespace_byte(value : Int) -> Bool {
 }
 
 ///|
+/// Return whether a byte is a PDF line break byte.
 pub fn pdf_is_newline_byte(value : Int) -> Bool {
   value == 10 || value == 13
 }
 
 ///|
+/// Return whether a byte is not PDF white space.
 pub fn pdf_is_not_whitespace_byte(value : Int) -> Bool {
   !pdf_is_whitespace_byte(value)
 }
 
 ///|
+/// Return whether a byte is a PDF token delimiter.
+///
+/// Delimiters are parentheses, slash, angle brackets, square brackets, braces,
+/// and percent.
 pub fn pdf_is_delimiter_byte(value : Int) -> Bool {
   match value {
     40 | 41 | 47 | 60 | 62 | 91 | 93 | 123 | 125 | 37 => true
@@ -47,11 +63,15 @@ pub fn pdf_is_delimiter_byte(value : Int) -> Bool {
 }
 
 ///|
+/// Return whether a byte terminates a regular PDF token.
 pub fn pdf_is_whitespace_or_delimiter_byte(value : Int) -> Bool {
   pdf_is_whitespace_byte(value) || pdf_is_delimiter_byte(value)
 }
 
 ///|
+/// Advance the cursor past PDF white space.
+///
+/// The first non-whitespace byte, delimiter, or end of input is left unread.
 pub fn ByteCursor::drop_pdf_whitespace(self : ByteCursor) -> Unit {
   let mut done = false
   while !done {
@@ -65,6 +85,10 @@ pub fn ByteCursor::drop_pdf_whitespace(self : ByteCursor) -> Unit {
 }
 
 ///|
+/// Read a borrowed view up to PDF white space or a delimiter.
+///
+/// The terminating byte is left unread so higher-level lexers can dispatch on
+/// delimiters after reading a regular token.
 pub fn ByteCursor::read_until_pdf_whitespace_or_delimiter(
   self : ByteCursor,
 ) -> BytesView {
@@ -72,12 +96,14 @@ pub fn ByteCursor::read_until_pdf_whitespace_or_delimiter(
 }
 
 ///|
+/// Skip PDF white space and read a regular token as a borrowed byte view.
 pub fn ByteCursor::read_pdf_regular_token_view(self : ByteCursor) -> BytesView {
   self.drop_pdf_whitespace()
   self.read_until_pdf_whitespace_or_delimiter()
 }
 
 ///|
+/// Return the constructor name of a lexeme for diagnostics and snapshots.
 pub fn pdf_lexeme_debug_name(lexeme : PdfLexeme) -> String {
   match lexeme {
     LexNull => "LexNull"
@@ -107,6 +133,10 @@ fn pdf_lexeme_debug_bytes_text(bytes : BytesView) -> String {
 }
 
 ///|
+/// Return CamlPDF-style debug text for a single lexeme.
+///
+/// Only numbers, strings, names, and null get value-specific rendering; other
+/// token kinds are rendered as `GenLexNone`.
 pub fn pdf_string_of_lexeme(lexeme : PdfLexeme) -> String {
   match lexeme {
     LexInt(value) => "Int " + value.to_string()
@@ -119,6 +149,9 @@ pub fn pdf_string_of_lexeme(lexeme : PdfLexeme) -> String {
 }
 
 ///|
+/// Return CamlPDF-style debug text for a sequence of lexemes.
+///
+/// Each lexeme is placed on its own line with a leading space.
 pub fn pdf_string_of_lexemes(lexemes : ArrayView[PdfLexeme]) -> String {
   let mut text = ""
   for lexeme in lexemes {
@@ -226,6 +259,10 @@ fn pdf_number_view_real(view : BytesView) -> PdfLexeme {
 }
 
 ///|
+/// Lex `true` or `false` at the current cursor position.
+///
+/// The cursor first reads one regular token. Non-boolean tokens produce
+/// `LexNone`.
 pub fn ByteCursor::lex_pdf_bool(self : ByteCursor) -> PdfLexeme {
   let view = self.read_pdf_regular_token_view()
   match view {
@@ -236,6 +273,11 @@ pub fn ByteCursor::lex_pdf_bool(self : ByteCursor) -> PdfLexeme {
 }
 
 ///|
+/// Lex a PDF integer or real number.
+///
+/// Integers are limited to MoonBit `Int` range; oversized integer-looking
+/// tokens fall back to real-number parsing. A leading doubled minus is accepted
+/// compatibly by dropping one minus sign.
 pub fn ByteCursor::lex_pdf_number(self : ByteCursor) -> PdfLexeme {
   let view = pdf_number_view_without_double_minus(
     self.read_pdf_regular_token_view(),
@@ -253,6 +295,11 @@ pub fn ByteCursor::lex_pdf_number(self : ByteCursor) -> PdfLexeme {
 }
 
 ///|
+/// Lex a PDF name object.
+///
+/// Names start with `/` and keep the slash in the stored bytes. `#xx` hex
+/// escapes are decoded into raw bytes. Invalid escapes raise `InvalidHexEscape`;
+/// non-name input returns `LexNone` without consuming it.
 pub fn ByteCursor::lex_pdf_name(self : ByteCursor) -> PdfLexeme raise PdfError {
   if self.peek_byte() != 47 {
     LexNone
@@ -283,6 +330,11 @@ pub fn ByteCursor::lex_pdf_name(self : ByteCursor) -> PdfLexeme raise PdfError {
 }
 
 ///|
+/// Lex and skip a PDF comment.
+///
+/// A comment starts with `%` and runs up to but not including the next newline.
+/// The comment text is intentionally not retained; this returns an empty
+/// `LexComment` payload. Non-comment input returns `LexNone`.
 pub fn ByteCursor::lex_pdf_comment(self : ByteCursor) -> PdfLexeme {
   if self.peek_byte() != 37 {
     LexNone
@@ -349,6 +401,12 @@ fn ByteCursor::read_pdf_string_escape_into(
 }
 
 ///|
+/// Lex a PDF literal string.
+///
+/// Literal strings are enclosed in parentheses, may contain balanced nested
+/// parentheses, and support the PDF backslash escapes for control characters,
+/// octal bytes, escaped parentheses, and line continuation. Unterminated strings
+/// raise `EndOfInput`.
 pub fn ByteCursor::lex_pdf_literal_string(
   self : ByteCursor,
 ) -> PdfLexeme raise PdfError {
@@ -395,6 +453,11 @@ fn ByteCursor::input_next_pdf_hex_byte(self : ByteCursor) -> Int {
 }
 
 ///|
+/// Lex a PDF hexadecimal string.
+///
+/// The opening `<` must not be a dictionary delimiter `<<`. White space inside
+/// the hex string is ignored, odd trailing nibbles are padded in the PDF way,
+/// and invalid hex digits raise `InvalidHexEscape`.
 pub fn ByteCursor::lex_pdf_hex_string(
   self : ByteCursor,
 ) -> PdfLexeme raise PdfError {
@@ -468,6 +531,11 @@ fn ByteCursor::matches_pdf_ascii_at(
 }
 
 ///|
+/// Lex PDF structural keywords.
+///
+/// Recognized keywords include `obj`, `endobj`, `R`, `null`, and `endstream`.
+/// If a token begins with `endobj` followed by extra bytes, only `endobj` is
+/// consumed so the suffix can be lexed by later calls.
 pub fn ByteCursor::lex_pdf_keyword(
   self : ByteCursor,
 ) -> PdfLexeme raise PdfError {
@@ -499,6 +567,10 @@ fn pdf_is_lowercase_keyword_start_byte(value : Int) -> Bool {
 }
 
 ///|
+/// Lex one PDF delimiter token.
+///
+/// Recognizes `[`, `]`, `<<`, and `>>`. A single `<` or `>` is left unread and
+/// returns `LexNone`.
 pub fn ByteCursor::lex_pdf_delimiter(self : ByteCursor) -> PdfLexeme {
   self.drop_pdf_whitespace()
   let position = self.absolute_position()
@@ -530,6 +602,12 @@ pub fn ByteCursor::lex_pdf_delimiter(self : ByteCursor) -> PdfLexeme {
 }
 
 ///|
+/// Lex one token from the current cursor position.
+///
+/// This dispatcher skips white space, recognizes comments, primitives,
+/// delimiters, names, literal and hex strings, and selected keywords. It returns
+/// `StopLexing` at end of input and at markers that terminate object scanning,
+/// such as `startxref` or inline image data boundaries.
 pub fn ByteCursor::lex_pdf_token(self : ByteCursor) -> PdfLexeme raise PdfError {
   self.drop_pdf_whitespace()
   let position = self.absolute_position()
@@ -565,6 +643,10 @@ pub fn ByteCursor::lex_pdf_token(self : ByteCursor) -> PdfLexeme raise PdfError 
 }
 
 ///|
+/// Lex tokens until a stop marker or unmatched input is reached.
+///
+/// `StopLexing` and `LexNone` terminate scanning and are not included in the
+/// returned token array.
 pub fn ByteCursor::lex_pdf_tokens(
   self : ByteCursor,
 ) -> Array[PdfLexeme] raise PdfError {
@@ -580,16 +662,19 @@ pub fn ByteCursor::lex_pdf_tokens(
 }
 
 ///|
+/// Lex a single token from a borrowed byte view.
 pub fn pdf_lex_single_view(data : BytesView) -> PdfLexeme raise PdfError {
   byte_cursor_of_view(data).lex_pdf_token()
 }
 
 ///|
+/// Lex all tokens from a borrowed byte view.
 pub fn pdf_lex_view(data : BytesView) -> Array[PdfLexeme] raise PdfError {
   byte_cursor_of_view(data).lex_pdf_tokens()
 }
 
 ///|
+/// Lex all tokens from owned PDF bytes.
 pub fn pdf_lex_bytes(data : PdfBytes) -> Array[PdfLexeme] raise PdfError {
   pdf_lex_view(data)
 }
