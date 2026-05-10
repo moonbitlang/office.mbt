@@ -1,10 +1,15 @@
 ///|
+/// A two-dimensional point in PDF user-space coordinates.
 pub(all) struct Point2 {
   x : Double
   y : Double
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// A high-level affine transform operation.
+///
+/// Operation lists preserve CamlPDF's transform model; they can be rendered for
+/// diagnostics or lowered to `TransformMatrix` for application to points.
 pub(all) enum TransformOp {
   Scale(Point2, Double, Double)
   Rotate(Point2, Double)
@@ -14,6 +19,11 @@ pub(all) enum TransformOp {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// A PDF affine transform matrix.
+///
+/// The fields correspond to PDF's six-operand matrix `[a b c d e f]`, where a
+/// point is transformed as `x' = a*x + c*y + e` and
+/// `y' = b*x + d*y + f`.
 pub(all) struct TransformMatrix {
   a : Double
   b : Double
@@ -24,6 +34,10 @@ pub(all) struct TransformMatrix {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// The decomposed components of an affine transform matrix.
+///
+/// Values are expressed as scale, aspect ratio, rotation, shear, and
+/// translation components suitable for recomposition.
 pub(all) struct TransformDecomposition {
   scale : Double
   aspect : Double
@@ -39,6 +53,7 @@ fn transform_point_debug_string(point : Point2) -> String {
 }
 
 ///|
+/// Formats one transform operation in CamlPDF-compatible debug text.
 pub fn TransformOp::debug_string(self : TransformOp) -> String {
   match self {
     Scale(origin, sx, sy) =>
@@ -73,11 +88,16 @@ pub fn TransformOp::debug_string(self : TransformOp) -> String {
 }
 
 ///|
+/// Formats one transform operation in CamlPDF-compatible debug text.
 pub fn transform_string_of_op(op : TransformOp) -> String {
   op.debug_string()
 }
 
 ///|
+/// Formats a transform operation list in display order.
+///
+/// CamlPDF prints the most recently composed operation first, so this walks the
+/// input list in reverse.
 pub fn transform_string_of_ops(ops : ArrayView[TransformOp]) -> String {
   let mut text = ""
   for index in 0..<ops.length() {
@@ -87,11 +107,13 @@ pub fn transform_string_of_ops(ops : ArrayView[TransformOp]) -> String {
 }
 
 ///|
+/// Compatibility alias for formatting a transform operation list.
 pub fn transform_string_of_transform(ops : ArrayView[TransformOp]) -> String {
   transform_string_of_ops(ops)
 }
 
 ///|
+/// Formats a matrix as its six comma-separated operands.
 pub fn TransformMatrix::debug_string(self : TransformMatrix) -> String {
   self.a.to_string() +
   ", " +
@@ -107,16 +129,19 @@ pub fn TransformMatrix::debug_string(self : TransformMatrix) -> String {
 }
 
 ///|
+/// Formats a matrix as its six comma-separated operands.
 pub fn transform_string_of_matrix(matrix : TransformMatrix) -> String {
   matrix.debug_string()
 }
 
 ///|
+/// Creates a two-dimensional point.
 pub fn point2(x : Double, y : Double) -> Point2 {
   { x, y }
 }
 
 ///|
+/// The identity affine transform matrix.
 pub let transform_identity_matrix : TransformMatrix = {
   a: 1.0,
   b: 0.0,
@@ -127,16 +152,19 @@ pub let transform_identity_matrix : TransformMatrix = {
 }
 
 ///|
+/// Returns an empty transform operation list, representing identity.
 pub fn transform_identity() -> Array[TransformOp] {
   []
 }
 
 ///|
+/// Creates a translation matrix.
 pub fn transform_translate(tx : Double, ty : Double) -> TransformMatrix {
   { ..transform_identity_matrix, e: tx, f: ty }
 }
 
 ///|
+/// Composes two matrices so `before` is applied first and `after` second.
 pub fn transform_matrix_compose(
   after : TransformMatrix,
   before : TransformMatrix,
@@ -152,6 +180,7 @@ pub fn transform_matrix_compose(
 }
 
 ///|
+/// Creates a scale matrix around `origin`.
 pub fn transform_scale(
   origin : Point2,
   sx : Double,
@@ -169,6 +198,9 @@ pub fn transform_scale(
 }
 
 ///|
+/// Creates a rotation matrix around `origin`.
+///
+/// `angle` is measured in radians.
 pub fn transform_rotate(origin : Point2, angle : Double) -> TransformMatrix {
   let translate = transform_translate(-origin.x, -origin.y)
   let translate_back = transform_translate(origin.x, origin.y)
@@ -188,6 +220,7 @@ pub fn transform_rotate(origin : Point2, angle : Double) -> TransformMatrix {
 }
 
 ///|
+/// Creates an X-shear matrix around `origin`.
 pub fn transform_shear_x(origin : Point2, factor : Double) -> TransformMatrix {
   let translate = transform_translate(-origin.x, -origin.y)
   let translate_back = transform_translate(origin.x, origin.y)
@@ -201,6 +234,7 @@ pub fn transform_shear_x(origin : Point2, factor : Double) -> TransformMatrix {
 }
 
 ///|
+/// Creates a Y-shear matrix around `origin`.
 pub fn transform_shear_y(origin : Point2, factor : Double) -> TransformMatrix {
   let translate = transform_translate(-origin.x, -origin.y)
   let translate_back = transform_translate(origin.x, origin.y)
@@ -226,6 +260,12 @@ fn transform_ops_with_head(
 }
 
 ///|
+/// Adds one operation to the front of an operation list, merging with the first
+/// operation when the two adjacent operations are compatible.
+///
+/// Compatible adjacent translations, scales about the same origin, rotations
+/// about the same origin, and shears about the same origin are combined to keep
+/// operation lists compact.
 pub fn transform_compose_op(
   op : TransformOp,
   ops : ArrayView[TransformOp],
@@ -252,6 +292,10 @@ pub fn transform_compose_op(
 }
 
 ///|
+/// Concatenates two transform operation lists.
+///
+/// The `after` operations are placed before the `before` operations to preserve
+/// the same ordering used by CamlPDF transform lists.
 pub fn transform_append(
   after : ArrayView[TransformOp],
   before : ArrayView[TransformOp],
@@ -267,6 +311,7 @@ pub fn transform_append(
 }
 
 ///|
+/// Applies this matrix to a point.
 pub fn TransformMatrix::apply(self : TransformMatrix, point : Point2) -> Point2 {
   {
     x: point.x * self.a + point.y * self.c + self.e,
@@ -275,6 +320,7 @@ pub fn TransformMatrix::apply(self : TransformMatrix, point : Point2) -> Point2 
 }
 
 ///|
+/// Applies a matrix to a point.
 pub fn transform_apply_matrix(
   matrix : TransformMatrix,
   point : Point2,
@@ -283,6 +329,7 @@ pub fn transform_apply_matrix(
 }
 
 ///|
+/// Lowers one high-level transform operation to a matrix.
 pub fn transform_matrix_of_op(op : TransformOp) -> TransformMatrix {
   match op {
     Scale(origin, sx, sy) => transform_scale(origin, sx, sy)
@@ -294,6 +341,7 @@ pub fn transform_matrix_of_op(op : TransformOp) -> TransformMatrix {
 }
 
 ///|
+/// Lowers an operation list to one composed matrix.
 pub fn transform_matrix_of_ops(ops : ArrayView[TransformOp]) -> TransformMatrix {
   let mut matrix = transform_identity_matrix
   for op in ops {
@@ -303,6 +351,7 @@ pub fn transform_matrix_of_ops(ops : ArrayView[TransformOp]) -> TransformMatrix 
 }
 
 ///|
+/// Compatibility alias for lowering a transform operation list to a matrix.
 pub fn transform_matrix_of_transform(
   ops : ArrayView[TransformOp],
 ) -> TransformMatrix {
@@ -310,6 +359,7 @@ pub fn transform_matrix_of_transform(
 }
 
 ///|
+/// Applies a transform operation list to a point.
 pub fn transform_apply_ops(
   ops : ArrayView[TransformOp],
   point : Point2,
@@ -318,11 +368,16 @@ pub fn transform_apply_ops(
 }
 
 ///|
+/// Compatibility alias for applying a transform operation list to a point.
 pub fn transform_apply(ops : ArrayView[TransformOp], point : Point2) -> Point2 {
   transform_apply_ops(ops, point)
 }
 
 ///|
+/// Returns the inverse of this matrix.
+///
+/// Raises `PdfError::MatrixNotInvertable` when the matrix determinant is zero
+/// or too small to produce a finite inverse.
 pub fn TransformMatrix::invert(
   self : TransformMatrix,
 ) -> TransformMatrix raise PdfError {
@@ -345,6 +400,9 @@ pub fn TransformMatrix::invert(
 }
 
 ///|
+/// Returns the inverse of a matrix.
+///
+/// Raises `PdfError::MatrixNotInvertable` when the matrix cannot be inverted.
 pub fn transform_matrix_invert(
   matrix : TransformMatrix,
 ) -> TransformMatrix raise PdfError {
@@ -364,6 +422,11 @@ fn transform_safe_float(value : Double) -> Double {
 }
 
 ///|
+/// Decomposes this matrix into scale, aspect, rotation, shear, and translation
+/// components.
+///
+/// Non-finite and underflowed intermediate values are normalized to zero so the
+/// result is stable for malformed or degenerate matrices.
 pub fn TransformMatrix::decompose(
   self : TransformMatrix,
 ) -> TransformDecomposition {
@@ -390,11 +453,13 @@ pub fn TransformMatrix::decompose(
 }
 
 ///|
+/// Decomposes a matrix into scale, aspect, rotation, shear, and translation.
 pub fn transform_decompose(matrix : TransformMatrix) -> TransformDecomposition {
   matrix.decompose()
 }
 
 ///|
+/// Recomposes a matrix from decomposed transform components.
 pub fn transform_recompose(parts : TransformDecomposition) -> TransformMatrix {
   let scale_aspect_shear = {
     ..transform_identity_matrix,
@@ -412,6 +477,7 @@ pub fn transform_recompose(parts : TransformDecomposition) -> TransformMatrix {
 }
 
 ///|
+/// Recomposes a matrix from individual decomposition fields.
 pub fn transform_recompose_components(
   scale : Double,
   aspect : Double,
