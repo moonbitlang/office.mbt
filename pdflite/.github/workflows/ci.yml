@@ -10,19 +10,30 @@ on:
 permissions:
   contents: read
 
+env:
+  MOON_WARN_LIST: "+a-31-32-38-39"
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   format:
-    name: Format
+    name: Format (${{ matrix.moonbit-version }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        moonbit-version:
+          - latest
+          - nightly
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
 
       - name: Set up MoonBit
+        env:
+          MOONBIT_INSTALL_VERSION: ${{ matrix.moonbit-version }}
         run: |
           curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
@@ -36,13 +47,21 @@ jobs:
         run: moon fmt --check
 
   native:
-    name: Native Test
+    name: Native Test (${{ matrix.moonbit-version }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        moonbit-version:
+          - latest
+          - nightly
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
 
       - name: Set up MoonBit
+        env:
+          MOONBIT_INSTALL_VERSION: ${{ matrix.moonbit-version }}
         run: |
           curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
@@ -53,19 +72,27 @@ jobs:
           moon update
 
       - name: Check native target
-        run: moon check --target native --warn-list +73
+        run: moon check --target native --warn-list "$MOON_WARN_LIST"
 
       - name: Test native target
         run: moon test --target native
 
   backend-check:
-    name: Backend Check
+    name: Backend Check (${{ matrix.moonbit-version }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        moonbit-version:
+          - latest
+          - nightly
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
 
       - name: Set up MoonBit
+        env:
+          MOONBIT_INSTALL_VERSION: ${{ matrix.moonbit-version }}
         run: |
           curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
@@ -76,4 +103,4 @@ jobs:
           moon update
 
       - name: Check all supported targets
-        run: moon check --target all --warn-list +73
+        run: moon check --target all --warn-list "$MOON_WARN_LIST"
