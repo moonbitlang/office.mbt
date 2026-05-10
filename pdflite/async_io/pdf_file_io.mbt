@@ -1,4 +1,7 @@
 ///|
+/// Read and parse a PDF document from a file.
+///
+/// File bytes are loaded asynchronously and then passed to the byte reader.
 pub async fn pdf_read_document_from_file(
   path : StringView,
 ) -> @pdflite.PdfDocument {
@@ -6,6 +9,10 @@ pub async fn pdf_read_document_from_file(
 }
 
 ///|
+/// Read a specific PDF revision from a file.
+///
+/// Revision numbering follows the core reader: revision `1` is the newest
+/// revision and larger numbers walk backward through `/Prev`.
 pub async fn pdf_read_document_revision_from_file(
   path : StringView,
   revision : Int,
@@ -17,11 +24,15 @@ pub async fn pdf_read_document_revision_from_file(
 }
 
 ///|
+/// Count revisions in a PDF file.
 pub async fn pdf_revisions_from_file(path : StringView) -> Int {
   @pdflite.pdf_revisions_from_bytes(@fs.read_file(path).binary())
 }
 
 ///|
+/// Read only the PDF header version from a file.
+///
+/// The same header-probe rules as `pdf_read_header_from_bytes` apply.
 pub async fn pdf_read_header_from_file(
   path : StringView,
 ) -> @pdflite.PdfVersion {
@@ -29,11 +40,17 @@ pub async fn pdf_read_header_from_file(
 }
 
 ///|
+/// Return true if a file appears to be linearized.
 pub async fn pdf_is_linearized_file(path : StringView) -> Bool {
   @pdflite.pdf_is_linearized(@fs.read_file(path).binary())
 }
 
 ///|
+/// Read a file and decrypt it with optional user and owner passwords.
+///
+/// Returns `None` when the file is encrypted and no supplied password
+/// authenticates. Unencrypted files return a successful decryption result with
+/// empty denied permissions.
 pub async fn pdf_read_document_from_file_with_passwords(
   path : StringView,
   user_password? : BytesView? = None,
@@ -47,6 +64,10 @@ pub async fn pdf_read_document_from_file_with_passwords(
 }
 
 ///|
+/// Read a specific revision from a file and decrypt it with optional passwords.
+///
+/// Returns `None` when the revision is encrypted and no supplied password
+/// authenticates.
 pub async fn pdf_read_document_revision_from_file_with_passwords(
   path : StringView,
   revision : Int,
@@ -62,6 +83,9 @@ pub async fn pdf_read_document_revision_from_file_with_passwords(
 }
 
 ///|
+/// Serialize a document with a classic xref table and write it to a file.
+///
+/// `permission` is passed as the creation mode when the file is created.
 pub async fn pdf_write_document_to_file(
   document : @pdflite.PdfDocument,
   path : StringView,
@@ -71,6 +95,7 @@ pub async fn pdf_write_document_to_file(
 }
 
 ///|
+/// Serialize a document with an uncompressed xref stream and write it to a file.
 pub async fn pdf_write_document_to_file_with_xref_stream(
   document : @pdflite.PdfDocument,
   path : StringView,
@@ -84,6 +109,7 @@ pub async fn pdf_write_document_to_file_with_xref_stream(
 }
 
 ///|
+/// Serialize a document with a Flate-compressed xref stream and write it to a file.
 pub async fn pdf_write_document_to_file_with_compressed_xref_stream(
   document : @pdflite.PdfDocument,
   path : StringView,
@@ -97,6 +123,7 @@ pub async fn pdf_write_document_to_file_with_compressed_xref_stream(
 }
 
 ///|
+/// Serialize a document using the selected write mode and write it to a file.
 pub async fn pdf_write_document_to_file_with_mode(
   document : @pdflite.PdfDocument,
   path : StringView,
@@ -111,6 +138,9 @@ pub async fn pdf_write_document_to_file_with_mode(
 }
 
 ///|
+/// Generate a current trailer ID, serialize, and write the document to a file.
+///
+/// The output path is used as the ID-generation path input.
 pub async fn pdf_write_document_to_file_with_generated_id(
   document : @pdflite.PdfDocument,
   path : StringView,
@@ -129,6 +159,7 @@ pub async fn pdf_write_document_to_file_with_generated_id(
 }
 
 ///|
+/// Encrypt with 40-bit ARC4, serialize, and write to a file.
 pub async fn pdf_write_encrypted_40bit_document_to_file(
   document : @pdflite.PdfDocument,
   path : StringView,
@@ -154,6 +185,7 @@ pub async fn pdf_write_encrypted_40bit_document_to_file(
 }
 
 ///|
+/// Encrypt with 128-bit ARC4 revision 3, serialize, and write to a file.
 pub async fn pdf_write_encrypted_128bit_document_to_file(
   document : @pdflite.PdfDocument,
   path : StringView,
@@ -179,6 +211,9 @@ pub async fn pdf_write_encrypted_128bit_document_to_file(
 }
 
 ///|
+/// Encrypt with revision-4 ARC4 crypt filters, serialize, and write to a file.
+///
+/// `encrypt_metadata=false` preserves the PDF no-metadata encryption behavior.
 pub async fn pdf_write_encrypted_128bit_r4_document_to_file(
   document : @pdflite.PdfDocument,
   path : StringView,
@@ -206,6 +241,7 @@ pub async fn pdf_write_encrypted_128bit_r4_document_to_file(
 }
 
 ///|
+/// Encrypt with AESV2 using caller-supplied IVs, serialize, and write to a file.
 pub async fn pdf_write_encrypted_aesv2_document_to_file_with_iv_provider(
   document : @pdflite.PdfDocument,
   path : StringView,
@@ -235,6 +271,9 @@ pub async fn pdf_write_encrypted_aesv2_document_to_file_with_iv_provider(
 }
 
 ///|
+/// Encrypt with AESV2 using the native random IV provider and write to a file.
+///
+/// This convenience helper is intended for the native async target.
 pub async fn pdf_write_encrypted_aesv2_document_to_file(
   document : @pdflite.PdfDocument,
   path : StringView,
@@ -262,6 +301,10 @@ pub async fn pdf_write_encrypted_aesv2_document_to_file(
 }
 
 ///|
+/// Encrypt with AESV3/AES-256 using caller-supplied providers and write to a file.
+///
+/// `random_provider` supplies file key and salts; `iv_provider` supplies object
+/// IVs. `iso=true` selects the ISO/PDF 2.0 hash variant.
 pub async fn pdf_write_encrypted_aesv3_document_to_file_with_providers(
   document : @pdflite.PdfDocument,
   path : StringView,
@@ -295,6 +338,9 @@ pub async fn pdf_write_encrypted_aesv3_document_to_file_with_providers(
 }
 
 ///|
+/// Encrypt with AESV3/AES-256 using native random providers and write to a file.
+///
+/// `iso=true` selects the ISO/PDF 2.0 hash variant.
 pub async fn pdf_write_encrypted_aesv3_document_to_file(
   document : @pdflite.PdfDocument,
   path : StringView,
@@ -324,6 +370,7 @@ pub async fn pdf_write_encrypted_aesv3_document_to_file(
 }
 
 ///|
+/// Encrypt with the ISO AESV3/AES-256 variant using supplied providers.
 pub async fn pdf_write_encrypted_aesv3_iso_document_to_file_with_providers(
   document : @pdflite.PdfDocument,
   path : StringView,
@@ -355,6 +402,7 @@ pub async fn pdf_write_encrypted_aesv3_iso_document_to_file_with_providers(
 }
 
 ///|
+/// Encrypt with the ISO AESV3/AES-256 variant using native random providers.
 pub async fn pdf_write_encrypted_aesv3_iso_document_to_file(
   document : @pdflite.PdfDocument,
   path : StringView,
@@ -382,6 +430,7 @@ pub async fn pdf_write_encrypted_aesv3_iso_document_to_file(
 }
 
 ///|
+/// Append a classic incremental update to `original_path` and write `path`.
 pub async fn pdf_write_document_incremental_update_to_file(
   original_path : StringView,
   document : @pdflite.PdfDocument,
@@ -399,6 +448,7 @@ pub async fn pdf_write_document_incremental_update_to_file(
 }
 
 ///|
+/// Append an incremental update with an uncompressed xref stream.
 pub async fn pdf_write_document_incremental_update_with_xref_stream_to_file(
   original_path : StringView,
   document : @pdflite.PdfDocument,
@@ -416,6 +466,7 @@ pub async fn pdf_write_document_incremental_update_with_xref_stream_to_file(
 }
 
 ///|
+/// Append an incremental update with a Flate-compressed xref stream.
 pub async fn pdf_write_document_incremental_update_with_compressed_xref_stream_to_file(
   original_path : StringView,
   document : @pdflite.PdfDocument,
@@ -433,6 +484,7 @@ pub async fn pdf_write_document_incremental_update_with_compressed_xref_stream_t
 }
 
 ///|
+/// Append an incremental update using the selected write mode.
 pub async fn pdf_write_document_incremental_update_to_file_with_mode(
   original_path : StringView,
   document : @pdflite.PdfDocument,
@@ -452,6 +504,9 @@ pub async fn pdf_write_document_incremental_update_to_file_with_mode(
 }
 
 ///|
+/// Generate a current trailer ID and append an incremental update to a file.
+///
+/// The output path is used as the ID-generation path input.
 pub async fn pdf_write_document_incremental_update_to_file_with_generated_id(
   original_path : StringView,
   document : @pdflite.PdfDocument,
