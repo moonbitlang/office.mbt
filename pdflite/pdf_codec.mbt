@@ -18,6 +18,10 @@ fn pdf_ascii_hex_value(value : Int) -> Int? {
 }
 
 ///|
+/// Encode bytes using PDF ASCIIHexDecode syntax.
+///
+/// The returned bytes are uppercase hexadecimal pairs followed by the `>`
+/// end-of-data marker.
 pub fn pdf_ascii_hex_encode_view(data : BytesView) -> PdfBytes {
   let output : Array[Byte] = []
   for byte in data {
@@ -30,11 +34,16 @@ pub fn pdf_ascii_hex_encode_view(data : BytesView) -> PdfBytes {
 }
 
 ///|
+/// Owned-byte wrapper for `pdf_ascii_hex_encode_view`.
 pub fn pdf_ascii_hex_encode(data : PdfBytes) -> PdfBytes {
   pdf_ascii_hex_encode_view(data)
 }
 
 ///|
+/// Decode PDF ASCIIHexDecode data.
+///
+/// Whitespace is ignored and a trailing odd nibble is padded with zero when the
+/// `>` marker is reached. Invalid hex digits raise `InvalidHexEscape`.
 pub fn pdf_ascii_hex_decode_view(data : BytesView) -> PdfBytes raise PdfError {
   let output : Array[Byte] = []
   let mut high : Int? = None
@@ -69,6 +78,7 @@ pub fn pdf_ascii_hex_decode_view(data : BytesView) -> PdfBytes raise PdfError {
 }
 
 ///|
+/// Owned-byte wrapper for `pdf_ascii_hex_decode_view`.
 pub fn pdf_ascii_hex_decode(data : PdfBytes) -> PdfBytes raise PdfError {
   pdf_ascii_hex_decode_view(data)
 }
@@ -119,6 +129,10 @@ fn pdf_ascii85_word_from_view(
 }
 
 ///|
+/// Encode bytes using PDF ASCII85Decode syntax.
+///
+/// Four zero bytes are compressed as `z`, partial final groups are shortened,
+/// and the result ends with `~>`.
 pub fn pdf_ascii85_encode_view(data : BytesView) -> PdfBytes {
   let output : Array[Byte] = []
   let mut index = 0
@@ -135,6 +149,7 @@ pub fn pdf_ascii85_encode_view(data : BytesView) -> PdfBytes {
 }
 
 ///|
+/// Owned-byte wrapper for `pdf_ascii85_encode_view`.
 pub fn pdf_ascii85_encode(data : PdfBytes) -> PdfBytes {
   pdf_ascii85_encode_view(data)
 }
@@ -183,6 +198,10 @@ fn pdf_ascii85_finish_partial(
 }
 
 ///|
+/// Decode PDF ASCII85Decode data.
+///
+/// Whitespace is ignored. Missing terminators, malformed partial groups,
+/// invalid `z` placement, and overflowing groups raise `InvalidASCII85Data`.
 pub fn pdf_ascii85_decode_view(data : BytesView) -> PdfBytes raise PdfError {
   let output : Array[Byte] = []
   let mut digits : Array[Int] = []
@@ -222,6 +241,7 @@ pub fn pdf_ascii85_decode_view(data : BytesView) -> PdfBytes raise PdfError {
 }
 
 ///|
+/// Owned-byte wrapper for `pdf_ascii85_decode_view`.
 pub fn pdf_ascii85_decode(data : PdfBytes) -> PdfBytes raise PdfError {
   pdf_ascii85_decode_view(data)
 }
@@ -392,6 +412,10 @@ fn pdf_lzw_decode_view_prefix(
 }
 
 ///|
+/// Decode PDF LZW data from a byte view.
+///
+/// `early_change` controls when code width grows; PDF streams default to `1`.
+/// Malformed codes or bitstream errors raise `InvalidLZWData`.
 pub fn pdf_lzw_decode_view(
   data : BytesView,
   early_change? : Int = 1,
@@ -465,6 +489,7 @@ pub fn pdf_lzw_decode_view(
 }
 
 ///|
+/// Owned-byte wrapper for `pdf_lzw_decode_view`.
 pub fn pdf_lzw_decode(
   data : PdfBytes,
   early_change? : Int = 1,
@@ -523,6 +548,10 @@ let pdf_filter_ccitt_fax_decode_name : PdfName = pdf_filter_name(
 let pdf_filter_ccitt_fax_short_name : PdfName = pdf_filter_name("/CCF")
 
 ///|
+/// Stream encoding requested by high-level stream encode helpers.
+///
+/// CCITT variants carry image columns and rows because those values are needed
+/// in `/DecodeParms` when writing fax-compressed image streams.
 pub(all) enum PdfStreamEncoding {
   PdfStreamASCIIHex
   PdfStreamASCII85
@@ -533,6 +562,9 @@ pub(all) enum PdfStreamEncoding {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// PNG/TIFF predictor requested when encoding stream data.
+///
+/// Predictor values correspond to PDF `/Predictor` numbers.
 pub(all) enum PdfStreamPredictor {
   PdfStreamPredictorTIFF2
   PdfStreamPredictorPNGNone
@@ -544,6 +576,7 @@ pub(all) enum PdfStreamPredictor {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Return the PDF filter name for this stream encoding.
 pub fn PdfStreamEncoding::filter_name(self : PdfStreamEncoding) -> PdfName {
   match self {
     PdfStreamASCIIHex => pdf_filter_ascii_hex_decode_name
@@ -556,6 +589,7 @@ pub fn PdfStreamEncoding::filter_name(self : PdfStreamEncoding) -> PdfName {
 }
 
 ///|
+/// Return the PDF `/Predictor` number for this predictor.
 pub fn PdfStreamPredictor::number(self : PdfStreamPredictor) -> Int {
   match self {
     PdfStreamPredictorTIFF2 => 2
@@ -569,6 +603,7 @@ pub fn PdfStreamPredictor::number(self : PdfStreamPredictor) -> Int {
 }
 
 ///|
+/// Encode 1-bit image data as CCITT Group 3 one-dimensional fax data.
 pub fn pdf_ccitt_encode_view(
   columns : Int,
   rows : Int,
@@ -578,6 +613,7 @@ pub fn pdf_ccitt_encode_view(
 }
 
 ///|
+/// Owned-byte wrapper for `pdf_ccitt_encode_view`.
 pub fn pdf_ccitt_encode(
   columns : Int,
   rows : Int,
@@ -587,6 +623,7 @@ pub fn pdf_ccitt_encode(
 }
 
 ///|
+/// Encode 1-bit image data as CCITT Group 4 fax data.
 pub fn pdf_ccitt_g4_encode_view(
   columns : Int,
   rows : Int,
@@ -596,6 +633,7 @@ pub fn pdf_ccitt_g4_encode_view(
 }
 
 ///|
+/// Owned-byte wrapper for `pdf_ccitt_g4_encode_view`.
 pub fn pdf_ccitt_g4_encode(
   columns : Int,
   rows : Int,
@@ -619,6 +657,11 @@ fn pdf_filter_is_one_of(
 }
 
 ///|
+/// Decode bytes with a single PDF filter name.
+///
+/// Recognizes long and abbreviated filter names. `/Crypt` is treated as an
+/// identity filter at this byte-dispatch layer; unsupported filters raise
+/// `FilterNotSupported`.
 pub fn pdf_decode_filter_view(
   filter : PdfName,
   data : BytesView,
@@ -655,6 +698,9 @@ pub fn pdf_decode_filter_view(
 }
 
 ///|
+/// Decode owned bytes with a single PDF filter name.
+///
+/// Identity and Flate paths avoid an extra copy where possible.
 pub fn pdf_decode_filter_bytes(
   filter : PdfName,
   data : PdfBytes,
@@ -671,6 +717,7 @@ pub fn pdf_decode_filter_bytes(
 }
 
 ///|
+/// Encode bytes with a single PDF filter name.
 pub fn pdf_encode_filter_view(
   filter : PdfName,
   data : BytesView,
@@ -679,6 +726,9 @@ pub fn pdf_encode_filter_view(
 }
 
 ///|
+/// Encode bytes with a single PDF filter name and explicit Flate level.
+///
+/// `flate_level` follows the zlib range accepted by the Flate encoder.
 pub fn pdf_encode_filter_view_with_flate_level(
   filter : PdfName,
   data : BytesView,
@@ -724,6 +774,7 @@ fn pdf_encode_filter_view_with_optional_flate_level(
 }
 
 ///|
+/// Encode owned bytes with a single PDF filter name.
 pub fn pdf_encode_filter_bytes(
   filter : PdfName,
   data : PdfBytes,
@@ -732,6 +783,7 @@ pub fn pdf_encode_filter_bytes(
 }
 
 ///|
+/// Encode owned bytes with a single PDF filter name and explicit Flate level.
 pub fn pdf_encode_filter_bytes_with_flate_level(
   filter : PdfName,
   data : PdfBytes,
@@ -1318,6 +1370,11 @@ fn pdf_decode_png_predictor(
 }
 
 ///|
+/// Decode data after applying a PDF predictor.
+///
+/// Predictor `1` is identity, `2` is TIFF horizontal differencing, and
+/// `10..15` are PNG predictors. Invalid image geometry or unsupported
+/// predictors raise `PdfError`.
 pub fn pdf_decode_predictor_view(
   predictor : Int,
   colors : Int,
@@ -1335,6 +1392,9 @@ pub fn pdf_decode_predictor_view(
 }
 
 ///|
+/// Owned-byte wrapper for `pdf_decode_predictor_view`.
+///
+/// Predictor `1` returns the original owned bytes unchanged.
 pub fn pdf_decode_predictor(
   predictor : Int,
   colors : Int,
@@ -1545,6 +1605,11 @@ fn pdf_encode_png_optimum_predictor(
 }
 
 ///|
+/// Encode data with a PDF predictor.
+///
+/// Predictor `1` is identity, `2` is TIFF horizontal differencing, `10..14`
+/// use fixed PNG row filters, and `15` chooses the lowest-scoring PNG filter
+/// per row.
 pub fn pdf_encode_predictor_view(
   predictor : Int,
   colors : Int,
@@ -1579,6 +1644,9 @@ pub fn pdf_encode_predictor_view(
 }
 
 ///|
+/// Owned-byte wrapper for `pdf_encode_predictor_view`.
+///
+/// Predictor `1` returns the original owned bytes unchanged.
 pub fn pdf_encode_predictor(
   predictor : Int,
   colors : Int,
@@ -2071,6 +2139,11 @@ fn PdfDocument::pdf_decode_stream_onestage_value_direct(
 }
 
 ///|
+/// Decode exactly one filter stage from a stream object.
+///
+/// The first filter and matching decode parameters are removed from the stream
+/// dictionary, and `/Length` is refreshed. Non-stream objects raise
+/// `ParseStreamExpected`.
 pub fn pdf_decode_stream_onestage(
   object : PdfObject,
 ) -> PdfObject raise PdfError {
@@ -2107,6 +2180,10 @@ fn PdfDocument::pdf_decode_stream_value_direct(
 }
 
 ///|
+/// Decode all supported filter stages from a stream object in this document.
+///
+/// Indirect filter and decode-parameter objects are resolved through the
+/// document. Unsupported filters raise `FilterNotSupported`.
 pub fn PdfDocument::pdf_decode_stream(
   self : PdfDocument,
   object : PdfObject,
@@ -2148,6 +2225,10 @@ fn PdfDocument::pdf_decode_stream_until_unknown_value_direct(
 }
 
 ///|
+/// Decode supported filter stages until the first unsupported filter.
+///
+/// The unsupported filter and remaining filters stay in the stream dictionary;
+/// malformed supported filters still raise.
 pub fn PdfDocument::pdf_decode_stream_until_unknown(
   self : PdfDocument,
   object : PdfObject,
@@ -2167,6 +2248,10 @@ fn pdf_decode_stream_until_unknown_value(
 }
 
 ///|
+/// Decode supported filter stages on every parsed stream in the document.
+///
+/// Streams already marked as decrypted stay in that state. Objects are updated
+/// in place and logged as altered when their stream data changes.
 pub fn PdfDocument::pdf_decode_streams_until_unknown(
   self : PdfDocument,
 ) -> Unit raise PdfError {
@@ -2214,6 +2299,7 @@ fn pdf_decode_stream_value(stream : PdfStream) -> PdfStream raise PdfError {
 }
 
 ///|
+/// Decode all supported filter stages from a direct stream object.
 pub fn pdf_decode_stream(object : PdfObject) -> PdfObject raise PdfError {
   match object {
     PdfStreamObject(stream) => PdfStreamObject(pdf_decode_stream_value(stream))
@@ -2244,6 +2330,11 @@ fn pdf_add_filter_to_dictionary(
 }
 
 ///|
+/// Encode a stream object with one filter.
+///
+/// The new filter is prepended to existing filters and `/Length` is refreshed.
+/// When `only_if_smaller` is true, the original stream is returned if encoded
+/// data is not smaller than the original stream data.
 pub fn pdf_encode_stream_with_filter(
   filter : PdfName,
   object : PdfObject,
@@ -2363,6 +2454,11 @@ fn pdf_encode_stream_with_ccitt(
 }
 
 ///|
+/// Encode a stream after first applying predictor encoding.
+///
+/// `/DecodeParms` are added for the predictor, the filter is prepended, and
+/// `/Length` is refreshed. `only_if_smaller` compares encoded data against the
+/// original stream data.
 pub fn pdf_encode_stream_with_filter_and_predictor(
   filter : PdfName,
   predictor : Int,
@@ -2407,6 +2503,10 @@ pub fn pdf_encode_stream_with_filter_and_predictor(
 }
 
 ///|
+/// Encode a stream using a typed encoding description.
+///
+/// CCITT encodings write fax `/DecodeParms`; other encodings may optionally
+/// apply a predictor before the filter. CCITT does not accept predictors.
 pub fn pdf_encode_stream_with_encoding(
   encoding : PdfStreamEncoding,
   object : PdfObject,
@@ -2471,6 +2571,10 @@ fn pdf_run_length_flush_literal(
 }
 
 ///|
+/// Encode bytes with PDF RunLengthDecode syntax.
+///
+/// Literal runs and repeated-byte runs are emitted with the standard `128`
+/// end-of-data marker.
 pub fn pdf_run_length_encode_view(data : BytesView) -> PdfBytes {
   let output : Array[Byte] = []
   let mut literal : Array[Byte] = []
@@ -2506,11 +2610,17 @@ pub fn pdf_run_length_encode_view(data : BytesView) -> PdfBytes {
 }
 
 ///|
+/// Owned-byte wrapper for `pdf_run_length_encode_view`.
 pub fn pdf_run_length_encode(data : PdfBytes) -> PdfBytes {
   pdf_run_length_encode_view(data)
 }
 
 ///|
+/// Decode PDF RunLengthDecode data.
+///
+/// Decoding stops at the `128` end marker or end of input. Truncated trailing
+/// runs are decoded as far as bytes are available, matching the tolerant reader
+/// behavior used by CamlPDF.
 pub fn pdf_run_length_decode_view(data : BytesView) -> PdfBytes {
   let output : Array[Byte] = []
   let mut index = 0
@@ -2547,6 +2657,7 @@ pub fn pdf_run_length_decode_view(data : BytesView) -> PdfBytes {
 }
 
 ///|
+/// Owned-byte wrapper for `pdf_run_length_decode_view`.
 pub fn pdf_run_length_decode(data : PdfBytes) -> PdfBytes {
   pdf_run_length_decode_view(data)
 }
