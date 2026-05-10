@@ -10,6 +10,10 @@ Current estimate:
 - Native main-feature parity: 98.0%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
   breadth: 85-90%.
+- Warning 74 public documentation cleanup: 460 native diagnostics remain after
+  documenting the byte, object, document, reader, lexeme, lookup/tree,
+  colour-space, transform, destination, merge-helper, standard-font, and Flate
+  public APIs.
 
 Current backend snapshot:
 
@@ -34,6 +38,23 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [ ] Finish warning 74 public API documentation with useful API-level
+  behavior, ownership, error, target, and compatibility notes rather than
+  placeholder warning fixes.
+  - [x] ~~Document byte foundations, byte cursors, byte output, PDF byte
+    primitives, bitstreams, units, dates, transforms, helper entry points,
+    destinations, standard-font helpers, lookup/tree helpers, colour spaces,
+    core object/document models, lexemes, readers, and Flate compression.~~
+  - [ ] Document text/font extraction APIs, including encoding fallback,
+    CMap/ToUnicode behavior, glyph/codepoint differences, and reverse lookup.
+  - [ ] Document cryptography APIs, including ownership/password flow,
+    permission semantics, object-key derivation, stream crypt dispatch, and
+    secure-random target limits.
+  - [ ] Document page/writer/file I/O APIs, including page-tree lifecycle,
+    write modes, incremental update behavior, trailer IDs, and native async
+    boundaries.
+  - [ ] Document codec/function/content/image/annotation/bookmark/page-label,
+    optional-content, structure, renumbering, random, and Markdown helper APIs.
 - [x] ~~Stabilize native-first core architecture and main workflows.~~
 - [x] ~~Share CamlPDF-style trailer `/ID` generation across `change_id`,
   encryption, and merge.~~
