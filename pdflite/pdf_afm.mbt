@@ -1,4 +1,9 @@
 ///|
+/// Parsed Adobe Font Metrics data used by standard-font helpers.
+///
+/// Headers preserve raw key/value bytes. Character metrics store character
+/// codes and widths, kerns store pair adjustments, and `char_name_widths`
+/// preserves name-based widths for encodings that refer to glyph names.
 pub(all) struct PdfAfmData {
   headers : Array[(PdfBytes, PdfBytes)]
   char_metrics : Array[(Int, Int)]
@@ -176,6 +181,11 @@ fn pdf_afm_kern(
 }
 
 ///|
+/// Parses Adobe Font Metrics data from bytes.
+///
+/// The parser extracts top-level headers, character widths, name-width pairs,
+/// and kerning pairs. Raises `PdfError::AfmExpected` or
+/// `PdfError::NumberExpected` for malformed metric sections.
 pub fn pdf_read_afm(data : BytesView) -> PdfAfmData raise PdfError {
   let lines = byte_cursor_of_view(data).read_line_views()
   let headers : Array[(PdfBytes, PdfBytes)] = []

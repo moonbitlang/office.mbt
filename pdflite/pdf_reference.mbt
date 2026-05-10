@@ -99,6 +99,11 @@ fn PdfDocument::collect_referenced_object_numbers(
 }
 
 ///|
+/// Returns sorted object numbers reachable from `object`.
+///
+/// Indirect references are followed through the document. Dictionary keys in
+/// `no_follow_entries` are skipped, and dictionaries containing any
+/// `no_follow_contains` marker entry are not traversed.
 pub fn PdfDocument::referenced_object_numbers(
   self : PdfDocument,
   object : PdfObject,

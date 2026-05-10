@@ -60,6 +60,12 @@ fn pdf_generate_current_id(path : String) -> PdfObject {
 }
 
 ///|
+/// Generates a PDF trailer `/ID` array from a path and caller-supplied time
+/// source.
+///
+/// The digest construction follows CamlPDF's path-plus-time behavior. When
+/// `CAMLPDF_REPRODUCIBLE_IDS=true`, the seed is fixed so tests and
+/// reproducible builds can produce stable IDs.
 pub fn pdf_generate_id(path : String, get_time : () -> Double) -> PdfObject {
   let digest = pdf_generate_id_bytes_from_text(path, fn() {
     pdf_id_ocaml_string_of_float(get_time())
@@ -68,6 +74,9 @@ pub fn pdf_generate_id(path : String, get_time : () -> Double) -> PdfObject {
 }
 
 ///|
+/// Replaces this document's trailer `/ID` entry.
+///
+/// Raises `PdfError::DictionaryExpected` if the trailer is not a dictionary.
 pub fn PdfDocument::change_id(
   self : PdfDocument,
   path : String,

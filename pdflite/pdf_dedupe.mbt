@@ -66,6 +66,11 @@ fn PdfDocument::pdf_duplicate_stream_changes(
 }
 
 ///|
+/// Removes duplicate embedded font streams from this document.
+///
+/// Streams are considered duplicates when both their dictionaries and decoded
+/// byte payloads match. References to duplicate streams are rewired to the
+/// first matching stream and duplicate objects are removed.
 pub fn PdfDocument::remove_duplicate_fonts(self : PdfDocument) -> Unit {
   let changes = self.pdf_duplicate_stream_changes()
   if changes.length() > 0 {
@@ -82,6 +87,9 @@ pub fn PdfDocument::remove_duplicate_fonts(self : PdfDocument) -> Unit {
 }
 
 ///|
+/// Removes duplicate embedded font streams from a document.
+///
+/// This is the standalone form of `PdfDocument::remove_duplicate_fonts`.
 pub fn pdf_remove_duplicate_fonts(document : PdfDocument) -> Unit {
   document.remove_duplicate_fonts()
 }
