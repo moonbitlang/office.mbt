@@ -123,6 +123,9 @@ fn PdfDocument::pdf_bookmark_catalog(
 }
 
 ///|
+/// Bookmark display colour from the PDF outline `/C` entry.
+///
+/// PDF stores these as RGB real numbers, normally in the range 0.0 to 1.0.
 pub(all) struct PdfBookmarkColour {
   red : Double
   green : Double
@@ -130,6 +133,11 @@ pub(all) struct PdfBookmarkColour {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// One bookmark in the flattened outline representation.
+///
+/// Bookmarks are ordered in preorder. `level` is zero-based nesting depth,
+/// `text` is the raw PDF title string bytes, and `target` is the parsed
+/// destination or preserved action.
 pub(all) struct PdfBookmark {
   level : Int
   text : PdfBytes
@@ -148,6 +156,7 @@ struct PdfBookmarkNode {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Default black bookmark colour.
 pub let pdf_bookmark_black : PdfBookmarkColour = {
   red: 0.0,
   green: 0.0,
@@ -155,6 +164,10 @@ pub let pdf_bookmark_black : PdfBookmarkColour = {
 }
 
 ///|
+/// Format a bookmark as a diagnostic byte string.
+///
+/// The output includes level, title bytes, destination object, and open state;
+/// it is intended for debugging rather than PDF serialization.
 pub fn pdf_string_of_bookmark(
   bookmark : PdfBookmark,
 ) -> PdfBytes raise PdfError {
@@ -533,6 +546,11 @@ fn PdfDocument::pdf_bookmark_traverse_children(
 }
 
 ///|
+/// Read the document outline tree as flattened bookmarks.
+///
+/// When `preserve_actions` is false, actions with destinations are resolved to
+/// destinations where possible. When it is true, action dictionaries and named
+/// destinations are preserved more shallowly for round-tripping.
 pub fn PdfDocument::read_bookmarks(
   self : PdfDocument,
   preserve_actions? : Bool = false,
@@ -550,6 +568,7 @@ pub fn PdfDocument::read_bookmarks(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::read_bookmarks`.
 pub fn pdf_read_bookmarks(
   document : PdfDocument,
   preserve_actions? : Bool = false,
@@ -612,6 +631,10 @@ fn PdfDocument::pdf_bookmarks_for_pages(
 }
 
 ///|
+/// Return a copy of the document with catalog `/Outlines` removed.
+///
+/// The original document is not mutated; the returned document has a new root
+/// object and trailer root reference.
 pub fn PdfDocument::remove_bookmarks(
   self : PdfDocument,
 ) -> PdfDocument raise PdfError {
@@ -631,6 +654,7 @@ pub fn PdfDocument::remove_bookmarks(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::remove_bookmarks`.
 pub fn pdf_remove_bookmarks(
   document : PdfDocument,
 ) -> PdfDocument raise PdfError {
@@ -638,6 +662,11 @@ pub fn pdf_remove_bookmarks(
 }
 
 ///|
+/// Return a copy of the document with its outline tree replaced.
+///
+/// The input must be in preorder using zero-based `level` values. Empty input
+/// removes existing bookmarks. New outline objects are allocated after the
+/// current maximum object number.
 pub fn PdfDocument::add_bookmarks(
   self : PdfDocument,
   bookmarks : ArrayView[PdfBookmark],
@@ -685,6 +714,7 @@ pub fn PdfDocument::add_bookmarks(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::add_bookmarks`.
 pub fn pdf_add_bookmarks(
   bookmarks : ArrayView[PdfBookmark],
   document : PdfDocument,
@@ -693,6 +723,10 @@ pub fn pdf_add_bookmarks(
 }
 
 ///|
+/// Transform a bookmark destination by a matrix.
+///
+/// Only the destination is changed; level, text, open state, colour, and flags
+/// are preserved.
 pub fn PdfDocument::transform_bookmark(
   self : PdfDocument,
   matrix : TransformMatrix,
@@ -702,6 +736,7 @@ pub fn PdfDocument::transform_bookmark(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::transform_bookmark`.
 pub fn pdf_transform_bookmark(
   document : PdfDocument,
   matrix : TransformMatrix,
