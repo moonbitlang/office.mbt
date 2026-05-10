@@ -1,10 +1,14 @@
 ///|
+/// Parsed PDF header version.
+///
+/// The fields correspond to the digits in a `%PDF-major.minor` header.
 pub(all) struct PdfVersion {
   major : Int
   minor : Int
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Fallback version used when a PDF header cannot be found.
 pub let pdf_default_version : PdfVersion = { major: 2, minor: 0 }
 
 ///|
@@ -35,6 +39,11 @@ fn ByteCursor::pdf_header_at(self : ByteCursor, position : Int) -> PdfVersion? {
 }
 
 ///|
+/// Read the PDF header from the current cursor buffer.
+///
+/// The reader probes the first 1024 bytes for `%PDF-x.y`. When found, the cursor
+/// offset is set to the header position and the cursor advances past the header.
+/// If no header is found, `pdf_default_version` is returned.
 pub fn ByteCursor::read_pdf_header(
   self : ByteCursor,
 ) -> PdfVersion raise PdfError {
@@ -58,16 +67,23 @@ pub fn ByteCursor::read_pdf_header(
 }
 
 ///|
+/// Read a PDF header version from a borrowed byte view.
 pub fn pdf_read_header_from_view(data : BytesView) -> PdfVersion raise PdfError {
   byte_cursor_of_view(data).read_pdf_header()
 }
 
 ///|
+/// Read a PDF header version from owned PDF bytes.
 pub fn pdf_read_header_from_bytes(data : PdfBytes) -> PdfVersion raise PdfError {
   pdf_read_header_from_view(data)
 }
 
 ///|
+/// Build a document from already parsed indirect objects.
+///
+/// Objects are loaded at their existing object numbers and generations without
+/// recording mutation events. The document version defaults to
+/// `pdf_default_version`.
 pub fn pdf_document_of_parsed_indirect_objects(
   objects : ArrayView[PdfParsedIndirectObject],
   version? : PdfVersion = pdf_default_version,
@@ -85,6 +101,11 @@ pub fn pdf_document_of_parsed_indirect_objects(
 }
 
 ///|
+/// Parse indirect objects by scanning the byte stream without xref tables.
+///
+/// This primitive reader is useful for fixtures and damaged files. It reads the
+/// header, then scans indirect object syntax and stream bodies in sequence; it
+/// does not interpret trailer/xref metadata or decrypt the document.
 pub fn pdf_read_primitive_document_from_view(
   data : BytesView,
 ) -> PdfDocument raise PdfError {
@@ -128,6 +149,7 @@ pub fn pdf_read_primitive_document_from_view(
 }
 
 ///|
+/// Parse a primitive document from owned PDF bytes.
 pub fn pdf_read_primitive_document_from_bytes(
   data : PdfBytes,
 ) -> PdfDocument raise PdfError {
@@ -1308,11 +1330,20 @@ fn pdf_read_was_linearized(data : BytesView) -> Bool {
 }
 
 ///|
+/// Return whether the input appears to be a linearized PDF.
+///
+/// The check reads the first indirect object after the header and looks for a
+/// numeric `/Linearized` entry. Parse failures are treated as `false`.
 pub fn pdf_is_linearized(data : BytesView) -> Bool {
   pdf_read_was_linearized(data)
 }
 
 ///|
+/// Count document revisions by following xref `/Prev` links.
+///
+/// Revision `1` is the newest revision referenced by `startxref`; larger numbers
+/// walk backward through older revisions. Linearized hint-table revisions are
+/// excluded from the returned count.
 pub fn pdf_revisions_from_view(data : BytesView) -> Int raise PdfError {
   let cursor = byte_cursor_of_view(data)
   ignore(cursor.read_pdf_header())
@@ -1339,6 +1370,7 @@ pub fn pdf_revisions_from_view(data : BytesView) -> Int raise PdfError {
 }
 
 ///|
+/// Count document revisions from owned PDF bytes.
 pub fn pdf_revisions_from_bytes(data : PdfBytes) -> Int raise PdfError {
   pdf_revisions_from_view(data)
 }
@@ -2342,6 +2374,11 @@ fn pdf_read_classic_document_from_view_at_revision(
 }
 
 ///|
+/// Read a PDF using classic xref metadata.
+///
+/// This strict reader follows `startxref`, xref tables/streams, and trailer
+/// `/Prev` links, loads referenced objects, resolves object streams, and records
+/// document metadata. It does not use reconstruction fallback.
 pub fn pdf_read_classic_document_from_view(
   data : BytesView,
 ) -> PdfDocument raise PdfError {
@@ -2349,6 +2386,7 @@ pub fn pdf_read_classic_document_from_view(
 }
 
 ///|
+/// Read a classic-xref PDF from owned bytes.
 pub fn pdf_read_classic_document_from_bytes(
   data : PdfBytes,
 ) -> PdfDocument raise PdfError {
@@ -2356,6 +2394,11 @@ pub fn pdf_read_classic_document_from_bytes(
 }
 
 ///|
+/// Read one classic-xref document revision.
+///
+/// Revision `1` is the newest revision; larger revision numbers select older
+/// revisions by following trailer `/Prev` links. Invalid or unavailable
+/// revisions raise `BadRevision`.
 pub fn pdf_read_classic_document_revision_from_view(
   data : BytesView,
   revision : Int,
@@ -2364,6 +2407,7 @@ pub fn pdf_read_classic_document_revision_from_view(
 }
 
 ///|
+/// Read one classic-xref document revision from owned bytes.
 pub fn pdf_read_classic_document_revision_from_bytes(
   data : PdfBytes,
   revision : Int,
@@ -2372,6 +2416,11 @@ pub fn pdf_read_classic_document_revision_from_bytes(
 }
 
 ///|
+/// Read a PDF document from a borrowed byte view.
+///
+/// This is the high-level non-password reader. It first tries the strict classic
+/// xref reader and probes the page tree; for selected structural errors it falls
+/// back to reconstruction by scanning indirect objects.
 pub fn pdf_read_document_from_view(
   data : BytesView,
 ) -> PdfDocument raise PdfError {
@@ -2414,6 +2463,10 @@ pub fn pdf_read_document_from_view(
 }
 
 ///|
+/// Read one document revision from a borrowed byte view.
+///
+/// Revision selection uses strict classic-xref parsing and does not use the
+/// reconstruction fallback used by `pdf_read_document_from_view`.
 pub fn pdf_read_document_revision_from_view(
   data : BytesView,
   revision : Int,
@@ -2422,6 +2475,7 @@ pub fn pdf_read_document_revision_from_view(
 }
 
 ///|
+/// Read one document revision from owned PDF bytes.
 pub fn pdf_read_document_revision_from_bytes(
   data : PdfBytes,
   revision : Int,
@@ -2430,6 +2484,7 @@ pub fn pdf_read_document_revision_from_bytes(
 }
 
 ///|
+/// Read a PDF document from owned PDF bytes.
 pub fn pdf_read_document_from_bytes(
   data : PdfBytes,
 ) -> PdfDocument raise PdfError {
@@ -2499,6 +2554,11 @@ fn pdf_reader_password_error_allows_reconstruction(
 }
 
 ///|
+/// Read and decrypt one PDF revision using optional passwords.
+///
+/// Revision `1` is the newest revision. The returned value is `None` when the
+/// document is encrypted and neither supplied password can decrypt it; otherwise
+/// it contains the decrypted document and permission information.
 pub fn pdf_read_document_revision_from_view_with_passwords(
   data : BytesView,
   revision : Int,
@@ -2515,6 +2575,7 @@ pub fn pdf_read_document_revision_from_view_with_passwords(
 }
 
 ///|
+/// Read and decrypt one PDF revision from owned bytes.
 pub fn pdf_read_document_revision_from_bytes_with_passwords(
   data : PdfBytes,
   revision : Int,
@@ -2530,6 +2591,12 @@ pub fn pdf_read_document_revision_from_bytes_with_passwords(
 }
 
 ///|
+/// Read and decrypt a PDF document using optional passwords.
+///
+/// This is the high-level password-aware reader. It uses the same reconstruction
+/// fallback policy as `pdf_read_document_from_view` before attempting
+/// decryption. Unencrypted documents return a copied document inside
+/// `Some(...)`.
 pub fn pdf_read_document_from_view_with_passwords(
   data : BytesView,
   user_password? : BytesView? = None,
@@ -2559,6 +2626,7 @@ pub fn pdf_read_document_from_view_with_passwords(
 }
 
 ///|
+/// Read and decrypt a PDF document from owned PDF bytes.
 pub fn pdf_read_document_from_bytes_with_passwords(
   data : PdfBytes,
   user_password? : BytesView? = None,
@@ -2855,6 +2923,10 @@ fn pdf_parse_object_stream_member_from_view(
 }
 
 ///|
+/// Parse a single indirect stream object from owned bytes.
+///
+/// The input should contain one indirect-object header, a stream dictionary,
+/// stream data, `endstream`, and `endobj`.
 pub fn pdf_parse_stream_object_from_bytes(
   data : PdfBytes,
 ) -> PdfParsedIndirectObject raise PdfError {
@@ -2862,6 +2934,10 @@ pub fn pdf_parse_stream_object_from_bytes(
 }
 
 ///|
+/// Parse a single indirect stream object from a borrowed byte view.
+///
+/// Malformed `/Length` values are recovered by scanning to `endstream` when
+/// possible, matching the stream recovery used by the primitive reader.
 pub fn pdf_parse_stream_object_from_view(
   data : BytesView,
 ) -> PdfParsedIndirectObject raise PdfError {
