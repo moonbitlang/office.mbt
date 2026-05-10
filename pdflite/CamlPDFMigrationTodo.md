@@ -10,10 +10,10 @@ Current estimate:
 - Native main-feature parity: 98.0%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
   breadth: 85-90%.
-- Warning 74 public documentation cleanup: 460 native diagnostics remain after
+- Warning 74 public documentation cleanup: 364 native diagnostics remain after
   documenting the byte, object, document, reader, lexeme, lookup/tree,
-  colour-space, transform, destination, merge-helper, standard-font, and Flate
-  public APIs.
+  colour-space, transform, destination, merge-helper, standard-font, Flate, and
+  text/font extraction public APIs.
 
 Current backend snapshot:
 
@@ -45,8 +45,8 @@ Current backend snapshot:
     primitives, bitstreams, units, dates, transforms, helper entry points,
     destinations, standard-font helpers, lookup/tree helpers, colour spaces,
     core object/document models, lexemes, readers, and Flate compression.~~
-  - [ ] Document text/font extraction APIs, including encoding fallback,
-    CMap/ToUnicode behavior, glyph/codepoint differences, and reverse lookup.
+  - [x] ~~Document text/font extraction APIs, including encoding fallback,
+    CMap/ToUnicode behavior, glyph/codepoint differences, and reverse lookup.~~
   - [ ] Document cryptography APIs, including ownership/password flow,
     permission semantics, object-key derivation, stream crypt dispatch, and
     secure-random target limits.

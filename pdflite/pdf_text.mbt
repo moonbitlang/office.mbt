@@ -1,4 +1,9 @@
 ///|
+/// The built-in PDF standard 14 font faces.
+///
+/// These values name the base fonts that a conforming PDF reader is expected
+/// to know without an embedded font program. The variants match the canonical
+/// PDF names used in `/BaseFont` entries.
 pub(all) enum PdfStandardFont {
   PdfTimesRoman
   PdfTimesBold
@@ -17,6 +22,7 @@ pub(all) enum PdfStandardFont {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Return the canonical standard-font name without the leading PDF slash.
 pub fn PdfStandardFont::name(self : PdfStandardFont) -> String {
   match self {
     PdfTimesRoman => "Times-Roman"
@@ -37,6 +43,7 @@ pub fn PdfStandardFont::name(self : PdfStandardFont) -> String {
 }
 
 ///|
+/// Compatibility wrapper for `PdfStandardFont::name`.
 pub fn pdf_string_of_standard_font(font : PdfStandardFont) -> String {
   font.name()
 }
@@ -474,6 +481,10 @@ fn pdf_text_string_of_name(name : PdfName) -> String {
 }
 
 ///|
+/// Return the canonical PDF name object for this standard font.
+///
+/// The returned name includes the leading slash in the underlying `PdfName`
+/// bytes and is suitable for `/BaseFont` dictionary entries.
 pub fn PdfStandardFont::pdf_name(self : PdfStandardFont) -> PdfName {
   match self {
     PdfTimesRoman => pdf_text_times_roman_name
@@ -494,6 +505,11 @@ pub fn PdfStandardFont::pdf_name(self : PdfStandardFont) -> PdfName {
 }
 
 ///|
+/// Recognize a standard 14 font from an ASCII PDF font name.
+///
+/// `name` is expected to include the leading slash, for example
+/// `"/Helvetica"`. Common Microsoft aliases such as `/Arial` and
+/// `/TimesNewRoman` are accepted for CamlPDF compatibility.
 pub fn pdf_standard_font_of_name(name : String) -> PdfStandardFont? {
   match name {
     "/Times-Roman" | "/TimesNewRoman" => Some(PdfTimesRoman)
@@ -518,6 +534,11 @@ pub fn pdf_standard_font_of_name(name : String) -> PdfStandardFont? {
 }
 
 ///|
+/// Recognize a standard 14 font from a byte-oriented PDF name.
+///
+/// This is the allocation-light variant used while parsing font dictionaries.
+/// It accepts the canonical PDF names and the same common aliases as
+/// `pdf_standard_font_of_name`.
 pub fn pdf_standard_font_of_pdf_name(name : PdfName) -> PdfStandardFont? {
   match name {
     name if name == pdf_text_times_roman_name ||
@@ -553,6 +574,10 @@ pub fn pdf_standard_font_of_pdf_name(name : PdfName) -> PdfStandardFont? {
 }
 
 ///|
+/// Return a synthetic baseline adjustment for simple standard-font placement.
+///
+/// The value is derived from the font ascent-like metrics used by the original
+/// CamlPDF helpers and is expressed in glyph-space units.
 pub fn PdfStandardFont::baseline_adjustment(self : PdfStandardFont) -> Int {
   match self {
     PdfTimesRoman => 662 / 2
@@ -571,6 +596,7 @@ pub fn PdfStandardFont::baseline_adjustment(self : PdfStandardFont) -> Int {
 }
 
 ///|
+/// Return the standard-font `StemV` descriptor value used when writing fonts.
 pub fn PdfStandardFont::stemv(self : PdfStandardFont) -> Int {
   match self {
     PdfTimesRoman => 116
@@ -591,6 +617,10 @@ pub fn PdfStandardFont::stemv(self : PdfStandardFont) -> Int {
 }
 
 ///|
+/// Return PDF font descriptor flags for this standard font.
+///
+/// The flags distinguish symbolic fonts, fixed-pitch Courier faces, and the
+/// nonsymbolic roman faces according to the PDF font descriptor bit layout.
 pub fn PdfStandardFont::flags(self : PdfStandardFont) -> Int {
   match self {
     PdfSymbol => 65541
@@ -602,17 +632,26 @@ pub fn PdfStandardFont::flags(self : PdfStandardFont) -> Int {
 }
 
 ///|
+/// Parsed standard-font data with its active character encoding.
+///
+/// Standard 14 fonts do not carry embedded metrics in normal PDF files, so
+/// extraction combines the font identity with the chosen simple-font encoding.
 pub(all) struct PdfStandardFontData {
   font : PdfStandardFont
   encoding : PdfEncoding
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Return a compact debug label for this standard font data.
 pub fn PdfStandardFontData::debug_name(self : PdfStandardFontData) -> String {
   "StandardFont " + self.font.name()
 }
 
 ///|
+/// Reference to an embedded font program stream in a font descriptor.
+///
+/// The integer is the object number for `/FontFile`, `/FontFile2`, or
+/// `/FontFile3`; the constructor records which descriptor key supplied it.
 pub(all) enum PdfFontFile {
   PdfFontFile(Int)
   PdfFontFile2(Int)
@@ -620,6 +659,11 @@ pub(all) enum PdfFontFile {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Parsed PDF font descriptor metrics and optional embedded font metadata.
+///
+/// Numeric fields use PDF glyph-space units. `tounicode` stores decoded
+/// `/ToUnicode` mappings when the surrounding font dictionary provides them,
+/// so text extraction can prefer explicit Unicode mappings over glyph names.
 pub(all) struct PdfFontDescriptor {
   ascent : Double
   descent : Double
@@ -637,6 +681,11 @@ pub(all) struct PdfFontDescriptor {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Type 3 font glyph-program data.
+///
+/// `charprocs` keeps glyph names paired with their drawing streams and
+/// `resources` is the Type 3 resource dictionary used when interpreting those
+/// glyph programs.
 pub(all) struct PdfType3Glyphs {
   fontbbox : PdfRectangle
   fontmatrix : TransformMatrix
@@ -645,6 +694,10 @@ pub(all) struct PdfType3Glyphs {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Simple-font subtype recognized by the PDF text layer.
+///
+/// Type 1, MMType1, Type 3, and TrueType fonts all use one-byte character
+/// codes after their encoding differences have been applied.
 pub(all) enum PdfSimpleFontType {
   PdfType1
   PdfMMType1
@@ -653,6 +706,10 @@ pub(all) enum PdfSimpleFontType {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Parsed simple-font dictionary.
+///
+/// The record preserves declared widths and descriptors when present. Missing
+/// metrics are resolved from standard-font fallback data where possible.
 pub(all) struct PdfSimpleFont {
   fonttype : PdfSimpleFontType
   basefont : PdfName?
@@ -665,6 +722,10 @@ pub(all) struct PdfSimpleFont {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// CID-system identity from a CIDFont or CMap dictionary.
+///
+/// `registry` and `ordering` are stored as PDF bytes because PDF strings are
+/// byte sequences, not MoonBit `String` values.
 pub(all) struct PdfCIDSystemInfo {
   registry : PdfBytes
   ordering : PdfBytes
@@ -672,6 +733,10 @@ pub(all) struct PdfCIDSystemInfo {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Vertical metrics for a CID in a composite font.
+///
+/// The fields correspond to the PDF `/W2` tuple: vertical width and horizontal
+/// displacement vector components.
 pub(all) struct PdfCIDVerticalWidth {
   width : Double
   vx : Double
@@ -679,6 +744,10 @@ pub(all) struct PdfCIDVerticalWidth {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Parsed descendant CIDFont data for a Type 0 composite font.
+///
+/// Width arrays are normalized into explicit CID-to-width entries while
+/// preserving the PDF default horizontal and vertical widths.
 pub(all) struct PdfCompositeCIDFont {
   cid_system_info : PdfCIDSystemInfo
   cid_basefont : PdfName
@@ -690,6 +759,10 @@ pub(all) struct PdfCompositeCIDFont {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// CMap source used by a Type 0 font.
+///
+/// A CMap may be predefined by name, referenced as an external stream object,
+/// or parsed from that external stream together with its mapping tables.
 pub(all) enum PdfCMapEncoding {
   PdfPredefinedCMap(PdfName)
   PdfCMap(Int)
@@ -697,6 +770,10 @@ pub(all) enum PdfCMapEncoding {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// One parsed CMap code-space range.
+///
+/// `length` is the character-code byte length, and `first`/`last` are the
+/// inclusive packed-byte bounds accepted by that range.
 pub(all) struct PdfCMapCodeSpace {
   length : Int
   first : Int
@@ -704,6 +781,12 @@ pub(all) struct PdfCMapCodeSpace {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Parsed CMap or ToUnicode stream data.
+///
+/// `map` stores character-code to UTF-16BE bytes from `bfchar`/`bfrange`,
+/// `cid_map` stores character-code to CID mappings, and `notdef_map` stores
+/// notdef fallback CIDs. Optional metadata is taken from the stream body or
+/// stream dictionary when available.
 pub(all) struct PdfParsedCMap {
   map : Array[(Int, PdfBytes)]
   cid_map : Array[(Int, Int)]
@@ -717,6 +800,7 @@ pub(all) struct PdfParsedCMap {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Parsed Type 0 font with descendant CIDFont and CMap encoding.
 pub(all) struct PdfCIDKeyedFont {
   basefont : PdfName
   composite : PdfCompositeCIDFont
@@ -724,11 +808,13 @@ pub(all) struct PdfCIDKeyedFont {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Return a compact debug label containing the Type 0 base font name.
 pub fn PdfCIDKeyedFont::debug_name(self : PdfCIDKeyedFont) -> String {
   "CIDKeyedFont " + pdf_text_string_of_name(self.basefont)
 }
 
 ///|
+/// Test whether this CMap encoding is the predefined `/Identity-H` map.
 pub fn PdfCMapEncoding::is_identity_h(self : PdfCMapEncoding) -> Bool {
   match self {
     PdfPredefinedCMap(name) => name == pdf_text_identity_h_name
@@ -737,6 +823,7 @@ pub fn PdfCMapEncoding::is_identity_h(self : PdfCMapEncoding) -> Bool {
 }
 
 ///|
+/// Test whether this CMap encoding is the predefined `/Identity-V` map.
 pub fn PdfCMapEncoding::is_identity_v(self : PdfCMapEncoding) -> Bool {
   match self {
     PdfPredefinedCMap(name) => name == pdf_text_identity_v_name
@@ -2032,6 +2119,11 @@ fn pdf_text_predefined_gbk_charcode(codepoint : Int) -> Int? {
 }
 
 ///|
+/// Return true when this CMap consumes text as fixed two-byte character codes.
+///
+/// Identity CMaps and common UCS2/UTF16 predefined maps are treated as
+/// two-byte. Parsed external CMaps are two-byte only when all code spaces have
+/// length 2, or when they inherit an identity base with no explicit spaces.
 pub fn PdfCMapEncoding::uses_two_byte_codes(self : PdfCMapEncoding) -> Bool {
   match self {
     PdfPredefinedCMap(name) =>
@@ -2179,21 +2271,28 @@ fn pdf_text_parsed_cmap_charcodes_of_text(
 }
 
 ///|
+/// Test whether this Type 0 font uses `/Identity-H`.
 pub fn PdfCIDKeyedFont::is_identity_h(self : PdfCIDKeyedFont) -> Bool {
   self.encoding.is_identity_h()
 }
 
 ///|
+/// Test whether this Type 0 font uses `/Identity-V`.
 pub fn PdfCIDKeyedFont::is_identity_v(self : PdfCIDKeyedFont) -> Bool {
   self.encoding.is_identity_v()
 }
 
 ///|
+/// Return true when this Type 0 font uses fixed two-byte character codes.
 pub fn PdfCIDKeyedFont::uses_two_byte_codes(self : PdfCIDKeyedFont) -> Bool {
   self.encoding.uses_two_byte_codes()
 }
 
 ///|
+/// Return a human-readable simple-font subtype label.
+///
+/// Type 3 labels include the declared CharProc names to make debugging parsed
+/// glyph programs easier.
 pub fn PdfSimpleFontType::debug_name(self : PdfSimpleFontType) -> String {
   match self {
     PdfType1 => "Type 1"
@@ -2211,6 +2310,7 @@ pub fn PdfSimpleFontType::debug_name(self : PdfSimpleFontType) -> String {
 }
 
 ///|
+/// Return a multi-line debug summary for this simple font.
 pub fn PdfSimpleFont::debug_name(self : PdfSimpleFont) -> String {
   let basefont = match self.basefont {
     Some(name) => pdf_text_string_of_name(name)
@@ -2226,12 +2326,20 @@ pub fn PdfSimpleFont::debug_name(self : PdfSimpleFont) -> String {
 }
 
 ///|
+/// One `/Differences` entry in a simple-font encoding dictionary.
+///
+/// `code` is the one-byte character code that maps to `name`.
 pub(all) struct PdfEncodingDifference {
   name : PdfName
   code : Int
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Simple-font character encoding.
+///
+/// `PdfCustomEncoding` layers `/Differences` over a base encoding.
+/// `PdfFillUndefinedWithStandard` models TrueType behavior where undefined
+/// entries fall back to StandardEncoding.
 pub(all) enum PdfEncoding {
   PdfImplicitInFontFile
   PdfStandardEncoding
@@ -2243,6 +2351,7 @@ pub(all) enum PdfEncoding {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Parsed font model used by text extraction and font writing.
 pub(all) enum PdfFont {
   PdfFontStandard(PdfStandardFontData)
   PdfFontSimple(PdfSimpleFont)
@@ -2250,17 +2359,26 @@ pub(all) enum PdfFont {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Text extractor bound to a parsed font.
+///
+/// The extractor converts PDF text-string bytes to character codes, glyph
+/// names, and Unicode codepoints according to the font's encoding data.
 pub(all) struct PdfTextExtractor {
   font : PdfFont
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Extracted glyph result for one character code.
+///
+/// `glyphname` is the resolved PDF glyph name and `codepoints` is the Unicode
+/// scalar sequence inferred from ToUnicode, CMap, or Adobe glyph-list data.
 pub(all) struct PdfTextGlyph {
   glyphname : PdfName
   codepoints : Array[Int]
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Return a human-readable label for a parsed font.
 pub fn PdfFont::debug_name(self : PdfFont) -> String {
   match self {
     PdfFontStandard(font) => font.debug_name()
@@ -2270,11 +2388,13 @@ pub fn PdfFont::debug_name(self : PdfFont) -> String {
 }
 
 ///|
+/// Compatibility wrapper for `PdfFont::debug_name`.
 pub fn pdf_string_of_font(font : PdfFont) -> String {
   font.debug_name()
 }
 
 ///|
+/// Test whether this font is a Type 0 font using `/Identity-H`.
 pub fn PdfFont::is_identity_h(self : PdfFont) -> Bool {
   match self {
     PdfFontCIDKeyed(font) => font.is_identity_h()
@@ -2283,11 +2403,13 @@ pub fn PdfFont::is_identity_h(self : PdfFont) -> Bool {
 }
 
 ///|
+/// Compatibility wrapper for `PdfFont::is_identity_h`.
 pub fn pdf_is_identity_h(font : PdfFont) -> Bool {
   font.is_identity_h()
 }
 
 ///|
+/// Test whether this font is a Type 0 font using `/Identity-V`.
 pub fn PdfFont::is_identity_v(self : PdfFont) -> Bool {
   match self {
     PdfFontCIDKeyed(font) => font.is_identity_v()
@@ -2296,6 +2418,7 @@ pub fn PdfFont::is_identity_v(self : PdfFont) -> Bool {
 }
 
 ///|
+/// Return true when this font consumes fixed two-byte text character codes.
 pub fn PdfFont::uses_two_byte_codes(self : PdfFont) -> Bool {
   match self {
     PdfFontCIDKeyed(font) => font.uses_two_byte_codes()
@@ -2304,16 +2427,23 @@ pub fn PdfFont::uses_two_byte_codes(self : PdfFont) -> Bool {
 }
 
 ///|
+/// Build a text extractor for an already parsed font.
 pub fn PdfFont::text_extractor(self : PdfFont) -> PdfTextExtractor {
   { font: self }
 }
 
 ///|
+/// Compatibility wrapper for `PdfFont::text_extractor`.
 pub fn pdf_text_extractor_of_font_real(font : PdfFont) -> PdfTextExtractor {
   font.text_extractor()
 }
 
 ///|
+/// Build a pure reverse lookup closure for an already parsed font.
+///
+/// The returned closure maps one Unicode codepoint to the first matching PDF
+/// character code when the font can represent it. `debug` is accepted for
+/// CamlPDF API compatibility; this implementation does not write diagnostics.
 pub fn pdf_charcode_extractor_of_font_real(
   font : PdfFont,
   debug? : Bool = false,
@@ -2383,6 +2513,10 @@ fn pdf_text_cid_font_charcode_width(
 }
 
 ///|
+/// Measure PDF text bytes in glyph-space units for this extractor's font.
+///
+/// Text bytes are segmented according to the font encoding. Malformed byte
+/// sequences raise `PdfError`, and missing metrics contribute width `0`.
 pub fn PdfTextExtractor::text_width(
   self : PdfTextExtractor,
   text : BytesView,
@@ -2407,6 +2541,7 @@ pub fn PdfTextExtractor::text_width(
 }
 
 ///|
+/// Return a human-readable encoding label.
 pub fn PdfEncoding::debug_name(self : PdfEncoding) -> String {
   match self {
     PdfImplicitInFontFile => "ImplicitInFontFile"
@@ -2433,6 +2568,10 @@ pub fn PdfEncoding::debug_name(self : PdfEncoding) -> String {
 }
 
 ///|
+/// Return the PDF name for a built-in simple-font encoding.
+///
+/// Custom, implicit, and fallback encodings do not have a direct PDF name and
+/// return `None`.
 pub fn PdfEncoding::pdf_name(self : PdfEncoding) -> PdfName? {
   match self {
     PdfStandardEncoding => Some(pdf_text_standard_encoding_name)
@@ -2444,6 +2583,7 @@ pub fn PdfEncoding::pdf_name(self : PdfEncoding) -> PdfName? {
 }
 
 ///|
+/// Recognize a built-in simple-font encoding name.
 pub fn pdf_encoding_of_name(name : PdfName) -> PdfEncoding? {
   match name {
     name if name == pdf_text_standard_encoding_name => Some(PdfStandardEncoding)
@@ -2594,6 +2734,12 @@ fn PdfDocument::pdf_text_font_charset(
 }
 
 ///|
+/// Read the `/FontDescriptor` dictionary attached to a font.
+///
+/// Missing descriptors return `None`. Present descriptors are parsed
+/// tolerantly for optional numeric fields, while malformed required shapes
+/// such as an invalid `/FontBBox` still raise through the underlying object
+/// readers.
 pub fn PdfDocument::read_font_descriptor(
   self : PdfDocument,
   font : PdfObject,
@@ -2690,6 +2836,11 @@ fn PdfDocument::pdf_text_font_widths_array(
 }
 
 ///|
+/// Read normalized one-byte font metrics for a simple or Type 3 font.
+///
+/// The result contains 256 entries when `/Widths`, `/FirstChar`, and
+/// `/LastChar` are present and well formed. Missing metrics return `None`;
+/// malformed bounds or width arrays raise the corresponding font error.
 pub fn PdfDocument::read_font_metrics(
   self : PdfDocument,
   font : PdfObject,
@@ -2791,6 +2942,11 @@ fn PdfDocument::pdf_text_read_basefont(
 }
 
 ///|
+/// Parse a simple-font dictionary.
+///
+/// Supported subtypes are Type1, MMType1, Type3, and TrueType. The returned
+/// value includes optional descriptors, metrics, Type 3 CharProc data, and the
+/// resolved simple-font encoding.
 pub fn PdfDocument::read_simple_font(
   self : PdfDocument,
   font : PdfObject,
@@ -2923,6 +3079,12 @@ fn pdf_text_is_standard14_subtype_name(name : PdfName) -> Bool {
 }
 
 ///|
+/// Read the simple-font encoding from a font dictionary.
+///
+/// Name encodings are recognized directly. Encoding dictionaries combine
+/// `/BaseEncoding` and `/Differences`; TrueType encodings additionally fall
+/// back to StandardEncoding for undefined entries. Missing or unrecognized
+/// encodings use `PdfImplicitInFontFile`.
 pub fn PdfDocument::read_encoding(
   self : PdfDocument,
   font : PdfObject,
@@ -2964,6 +3126,10 @@ pub fn PdfDocument::read_encoding(
 }
 
 ///|
+/// Return true if a font dictionary is an unembedded standard 14 font.
+///
+/// A matching Type1 or TrueType `/BaseFont` without explicit `/Widths` is
+/// treated as a standard-font dictionary.
 pub fn PdfDocument::is_standard14_font(
   self : PdfDocument,
   font : PdfObject,
@@ -2981,6 +3147,7 @@ pub fn PdfDocument::is_standard14_font(
 }
 
 ///|
+/// Return true if a font dictionary has a simple-font subtype.
 pub fn PdfDocument::is_simple_font(
   self : PdfDocument,
   font : PdfObject,
@@ -2993,6 +3160,7 @@ pub fn PdfDocument::is_simple_font(
 }
 
 ///|
+/// Return true if a font dictionary is a Type 0 CID-keyed font.
 pub fn PdfDocument::is_cidkeyed_font(
   self : PdfDocument,
   font : PdfObject,
@@ -3017,6 +3185,10 @@ fn PdfDocument::pdf_text_cid_string_entry(
 }
 
 ///|
+/// Read a CID-system-info dictionary.
+///
+/// Registry and ordering are returned as byte strings, matching PDF string
+/// semantics. Missing or malformed required fields raise `PdfError`.
 pub fn PdfDocument::read_cid_system_info(
   self : PdfDocument,
   dictionary : PdfObject,
@@ -3271,6 +3443,11 @@ fn PdfDocument::pdf_text_read_cmap_encoding(
 }
 
 ///|
+/// Parse a Type 0 font dictionary into a CID-keyed font.
+///
+/// This reads the descendant CIDFont, width data, descriptor, base font, and
+/// CMap encoding. External CMap streams are parsed when possible while still
+/// preserving the referenced stream object number.
 pub fn PdfDocument::read_cidkeyed_font(
   self : PdfDocument,
   font : PdfObject,
@@ -4512,6 +4689,12 @@ fn pdf_text_parse_tounicode(data : BytesView) -> Array[(Int, PdfBytes)]? {
 }
 
 ///|
+/// Parse raw CMap or ToUnicode bytes into mapping tables and metadata.
+///
+/// The parser accepts common CMap sections such as code-space ranges,
+/// `bfchar`/`bfrange`, CID ranges, notdef ranges, `/UseCMap`, `/WMode`, and
+/// CID-system metadata. Unrecognized or malformed sections are skipped rather
+/// than causing a document-level failure.
 pub fn pdf_parse_cmap_data(data : BytesView) -> PdfParsedCMap {
   {
     map: match pdf_text_parse_tounicode(data) {
@@ -4792,6 +4975,11 @@ fn PdfDocument::parse_cmap_with_seen(
 }
 
 ///|
+/// Decode and parse a CMap stream object in this document.
+///
+/// The stream is decoded through its first filter, stream-dictionary metadata
+/// is merged with parsed metadata, and indirect `/UseCMap` bases are composed
+/// with cycle protection. Malformed or non-stream inputs raise `PdfError`.
 pub fn PdfDocument::parse_cmap(
   self : PdfDocument,
   cmap : PdfObject,
@@ -4800,6 +4988,7 @@ pub fn PdfDocument::parse_cmap(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::parse_cmap`.
 pub fn pdf_parse_cmap(
   document : PdfDocument,
   cmap : PdfObject,
@@ -4865,6 +5054,10 @@ fn PdfFont::pdf_text_with_tounicode(
 }
 
 ///|
+/// Read a standard 14 font dictionary.
+///
+/// The dictionary must contain a recognized `/BaseFont`; its encoding is read
+/// with `read_encoding` so custom differences are preserved.
 pub fn PdfDocument::read_standard14_font(
   self : PdfDocument,
   font : PdfObject,
@@ -4881,6 +5074,11 @@ pub fn PdfDocument::read_standard14_font(
 }
 
 ///|
+/// Read any supported PDF font dictionary.
+///
+/// The result is classified as standard 14, simple, or CID-keyed. A
+/// `/ToUnicode` stream, when present and parseable, is attached to the parsed
+/// font so extractors prefer explicit Unicode mappings.
 pub fn PdfDocument::read_font(
   self : PdfDocument,
   font : PdfObject,
@@ -4898,6 +5096,7 @@ pub fn PdfDocument::read_font(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::read_font`.
 pub fn pdf_read_font(
   document : PdfDocument,
   font : PdfObject,
@@ -4906,6 +5105,7 @@ pub fn pdf_read_font(
 }
 
 ///|
+/// Read a font dictionary and return a text extractor for it.
 pub fn PdfDocument::text_extractor_of_font(
   self : PdfDocument,
   font : PdfObject,
@@ -4914,6 +5114,7 @@ pub fn PdfDocument::text_extractor_of_font(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::text_extractor_of_font`.
 pub fn pdf_text_extractor_of_font(
   document : PdfDocument,
   font : PdfObject,
@@ -5991,6 +6192,10 @@ fn PdfEncoding::pdf_text_glyphname_of_charcode(
 }
 
 ///|
+/// Expand this encoding to a table of defined character-code to glyph-name entries.
+///
+/// Only codes with a known glyph name are emitted. The table is ordered by
+/// increasing one-byte character code.
 pub fn PdfEncoding::table(self : PdfEncoding) -> Array[(Int, PdfName)] {
   let output : Array[(Int, PdfName)] = []
   for code in 0..<256 {
@@ -6003,6 +6208,10 @@ pub fn PdfEncoding::table(self : PdfEncoding) -> Array[(Int, PdfName)] {
 }
 
 ///|
+/// Expand this encoding to glyph-name to character-code entries.
+///
+/// The order follows `table`; duplicate glyph names are preserved rather than
+/// collapsed.
 pub fn PdfEncoding::reverse_table(self : PdfEncoding) -> Array[(PdfName, Int)] {
   [
     for entry in self.table() => (entry.1, entry.0)
@@ -6010,11 +6219,13 @@ pub fn PdfEncoding::reverse_table(self : PdfEncoding) -> Array[(PdfName, Int)] {
 }
 
 ///|
+/// Compatibility wrapper for `PdfEncoding::table`.
 pub fn pdf_table_of_encoding(encoding : PdfEncoding) -> Array[(Int, PdfName)] {
   encoding.table()
 }
 
 ///|
+/// Compatibility wrapper for `PdfEncoding::reverse_table`.
 pub fn pdf_reverse_table_of_encoding(
   encoding : PdfEncoding,
 ) -> Array[(PdfName, Int)] {
@@ -10333,6 +10544,11 @@ fn PdfFont::pdf_text_fixed_or_single_byte_charcodes_of_text(
 }
 
 ///|
+/// Resolve glyph names and Unicode codepoints for each character code in text.
+///
+/// This lower-level extractor exposes both sides of the mapping. The input is
+/// a PDF text byte sequence, not a MoonBit `String`, and malformed byte
+/// segmentation raises `PdfError`.
 pub fn PdfTextExtractor::glyphnames_and_codepoints_of_text(
   self : PdfTextExtractor,
   text : BytesView,
@@ -10401,6 +10617,12 @@ fn PdfTextExtractor::pdf_text_regular_codepoints_of_text(
 }
 
 ///|
+/// Extract Unicode codepoints from PDF text bytes.
+///
+/// `/ToUnicode` mappings take precedence. External CMaps, predefined CMaps,
+/// glyph names, and font-specific fallbacks are used when no explicit
+/// ToUnicode mapping exists. Multi-codepoint glyph names are flattened into
+/// the returned array.
 pub fn PdfTextExtractor::codepoints_of_text(
   self : PdfTextExtractor,
   text : BytesView,
@@ -10422,6 +10644,10 @@ pub fn PdfTextExtractor::codepoints_of_text(
 }
 
 ///|
+/// Resolve only glyph names from PDF text bytes.
+///
+/// This bypasses Unicode conversion and is useful for callers that need the
+/// encoded glyph identity rather than extracted text.
 pub fn PdfTextExtractor::glyphnames_of_text(
   self : PdfTextExtractor,
   text : BytesView,
@@ -10434,6 +10660,7 @@ pub fn PdfTextExtractor::glyphnames_of_text(
 }
 
 ///|
+/// Compatibility wrapper for `PdfTextExtractor::codepoints_of_text`.
 pub fn pdf_codepoints_of_text(
   extractor : PdfTextExtractor,
   text : BytesView,
@@ -10442,6 +10669,7 @@ pub fn pdf_codepoints_of_text(
 }
 
 ///|
+/// Compatibility wrapper for `PdfTextExtractor::glyphnames_of_text`.
 pub fn pdf_glyphnames_of_text(
   extractor : PdfTextExtractor,
   text : BytesView,
@@ -10450,6 +10678,11 @@ pub fn pdf_glyphnames_of_text(
 }
 
 ///|
+/// Return a PDF character code that can encode one Unicode codepoint.
+///
+/// The lookup prefers explicit ToUnicode reverse mappings, then predefined or
+/// external CMap reverse lookup, then simple-font glyph names. `None` means
+/// the current font has no known single-codepoint representation.
 pub fn PdfTextExtractor::charcode_of_codepoint(
   self : PdfTextExtractor,
   codepoint : Int,
@@ -10492,6 +10725,10 @@ pub fn PdfTextExtractor::charcode_of_codepoint(
 }
 
 ///|
+/// Read a font dictionary and build a pure Unicode-to-charcode closure.
+///
+/// `debug` is accepted for CamlPDF API compatibility; this implementation
+/// preserves pure lookup behavior and does not write missing-glyph diagnostics.
 pub fn pdf_charcode_extractor_of_font(
   document : PdfDocument,
   font : PdfObject,
@@ -10501,6 +10738,11 @@ pub fn pdf_charcode_extractor_of_font(
 }
 
 ///|
+/// Write a custom encoding dictionary and return its object number.
+///
+/// Currently this supports `/Differences` over an implicit base encoding, which
+/// is the form needed by the font writer. Unsupported encodings raise
+/// `EncodingWriteUnsupported`.
 pub fn PdfDocument::write_encoding(
   self : PdfDocument,
   encoding : PdfEncoding,
@@ -10524,6 +10766,10 @@ pub fn PdfDocument::write_encoding(
 }
 
 ///|
+/// Build a simple Type 1 font dictionary for a base font and named encoding.
+///
+/// Only encodings with a direct PDF name can be written this way; custom or
+/// implicit encodings raise `EncodingWriteUnsupported`.
 pub fn pdf_make_font(
   fontname : PdfName,
   encoding : PdfEncoding,
@@ -10839,6 +11085,11 @@ fn PdfDocument::pdf_text_add_font_object(
 }
 
 ///|
+/// Write a parsed font into the document and return its object number.
+///
+/// Standard fonts, Type 3 fonts with descriptors, and TrueType fonts with
+/// descriptors are supported. `objnum` can force the destination object number
+/// for rewrite workflows. Unsupported font shapes raise `FontWriteUnsupported`.
 pub fn PdfDocument::write_font(
   self : PdfDocument,
   font : PdfFont,
@@ -10894,6 +11145,7 @@ pub fn PdfDocument::write_font(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::write_font`.
 pub fn pdf_write_font(
   document : PdfDocument,
   font : PdfFont,
@@ -10903,6 +11155,10 @@ pub fn pdf_write_font(
 }
 
 ///|
+/// Test whether a PDF string starts with the UTF-16BE byte-order mark.
+///
+/// PDF "Unicode strings" are byte strings beginning with `FE FF`; the input is
+/// intentionally a `BytesView` rather than a MoonBit `String`.
 pub fn pdf_is_unicode_string(bytes : BytesView) -> Bool {
   bytes.length() >= 2 && bytes[0].to_int() == 0xFE && bytes[1].to_int() == 0xFF
 }
@@ -10936,6 +11192,10 @@ fn pdf_text_push_utf16be_codepoint(
 }
 
 ///|
+/// Encode Unicode scalar values as a PDF UTF-16BE string with BOM.
+///
+/// Invalid scalar values, including surrogate codepoints, raise
+/// `InvalidUnicodeCodepoint`.
 pub fn pdf_utf16be_of_codepoints(
   codepoints : ArrayView[Int],
 ) -> PdfBytes raise PdfError {
@@ -10955,6 +11215,11 @@ fn pdf_text_utf16be_unit(bytes : BytesView, index : Int) -> Int raise PdfError {
 }
 
 ///|
+/// Decode UTF-16BE bytes into Unicode scalar values.
+///
+/// The input should not include the leading `FE FF` BOM; callers that receive a
+/// PDF Unicode string normally pass `bytes[2:]`. Odd lengths, lone surrogates,
+/// and malformed pairs raise `InvalidUTF16BE`.
 pub fn pdf_codepoints_of_utf16be(
   bytes : BytesView,
 ) -> Array[Int] raise PdfError {
@@ -10987,6 +11252,10 @@ fn pdf_text_check_unicode_codepoint(codepoint : Int) -> Unit raise PdfError {
 }
 
 ///|
+/// Encode Unicode scalar values as UTF-8 bytes.
+///
+/// Invalid scalar values, including surrogate codepoints, raise
+/// `InvalidUnicodeCodepoint`.
 pub fn pdf_utf8_of_codepoints(
   codepoints : ArrayView[Int],
 ) -> PdfBytes raise PdfError {
@@ -11029,6 +11298,11 @@ fn pdf_text_push_utf8_codepoint(
 }
 
 ///|
+/// Decode UTF-8 bytes into Unicode scalar values.
+///
+/// Overlong encodings, invalid continuation bytes, truncated sequences, and
+/// surrogate or out-of-range scalar values raise `InvalidUTF8` or
+/// `InvalidUnicodeCodepoint`.
 pub fn pdf_codepoints_of_utf8(bytes : BytesView) -> Array[Int] raise PdfError {
   let output : Array[Int] = []
   let mut index = 0
@@ -11141,6 +11415,9 @@ fn pdf_codepoint_of_pdfdocencoding_byte_option(value : Int) -> Int? {
 }
 
 ///|
+/// Decode one PDFDocEncoding byte to a Unicode codepoint.
+///
+/// Undefined byte values raise `InvalidPDFDocEncoding`.
 pub fn pdf_codepoint_of_pdfdocencoding_byte(value : Int) -> Int raise PdfError {
   match pdf_codepoint_of_pdfdocencoding_byte_option(value) {
     Some(codepoint) => codepoint
@@ -11149,6 +11426,7 @@ pub fn pdf_codepoint_of_pdfdocencoding_byte(value : Int) -> Int raise PdfError {
 }
 
 ///|
+/// Decode a PDFDocEncoding byte string to Unicode codepoints.
 pub fn pdf_codepoints_of_pdfdocencoding(
   bytes : BytesView,
 ) -> Array[Int] raise PdfError {
@@ -11160,6 +11438,10 @@ pub fn pdf_codepoints_of_pdfdocencoding(
 }
 
 ///|
+/// Return the PDFDocEncoding byte for a Unicode codepoint, if representable.
+///
+/// The lookup preserves CamlPDF compatibility for the `fi` ligature by mapping
+/// U+FB01 to byte `0x93`.
 pub fn pdf_pdfdocencoding_byte_of_codepoint(codepoint : Int) -> Byte? {
   if codepoint == 0xFB01 {
     Some(0x93)
@@ -11176,6 +11458,10 @@ pub fn pdf_pdfdocencoding_byte_of_codepoint(codepoint : Int) -> Byte? {
 }
 
 ///|
+/// Encode codepoints as PDFDocEncoding when every scalar is representable.
+///
+/// Returns `None` instead of falling back to UTF-16BE; use
+/// `pdf_pdfdocstring_of_codepoints` for the PDF string policy fallback.
 pub fn pdf_pdfdocencoding_of_codepoints(
   codepoints : ArrayView[Int],
 ) -> PdfBytes? {
@@ -11191,6 +11477,10 @@ pub fn pdf_pdfdocencoding_of_codepoints(
 }
 
 ///|
+/// Encode codepoints as a PDF string.
+///
+/// PDFDocEncoding is used when all codepoints are representable; otherwise the
+/// result is a BOM-prefixed UTF-16BE string.
 pub fn pdf_pdfdocstring_of_codepoints(
   codepoints : ArrayView[Int],
 ) -> PdfBytes raise PdfError {
@@ -11201,6 +11491,10 @@ pub fn pdf_pdfdocstring_of_codepoints(
 }
 
 ///|
+/// Decode a PDF string to Unicode codepoints.
+///
+/// BOM-prefixed strings are treated as UTF-16BE. Other byte strings are
+/// decoded as PDFDocEncoding.
 pub fn pdf_codepoints_of_pdfdocstring(
   bytes : BytesView,
 ) -> Array[Int] raise PdfError {
@@ -11212,16 +11506,24 @@ pub fn pdf_codepoints_of_pdfdocstring(
 }
 
 ///|
+/// Convert a PDF string byte sequence to UTF-8 bytes.
 pub fn pdf_utf8_of_pdfdocstring(bytes : BytesView) -> PdfBytes raise PdfError {
   pdf_utf8_of_codepoints(pdf_codepoints_of_pdfdocstring(bytes))
 }
 
 ///|
+/// Convert UTF-8 bytes to the compact PDF string representation.
+///
+/// The result uses PDFDocEncoding when possible and UTF-16BE otherwise.
 pub fn pdf_pdfdocstring_of_utf8(bytes : BytesView) -> PdfBytes raise PdfError {
   pdf_pdfdocstring_of_codepoints(pdf_codepoints_of_utf8(bytes))
 }
 
 ///|
+/// Re-encode a UTF-16BE PDF string using PDFDocEncoding when possible.
+///
+/// Non-Unicode input is returned as an owned copy. Malformed UTF-16BE raises
+/// `InvalidUTF16BE`.
 pub fn pdf_simplify_utf16be(bytes : BytesView) -> PdfBytes raise PdfError {
   if pdf_is_unicode_string(bytes) {
     pdf_pdfdocstring_of_codepoints(pdf_codepoints_of_pdfdocstring(bytes))
