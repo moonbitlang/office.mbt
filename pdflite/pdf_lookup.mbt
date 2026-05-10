@@ -1,4 +1,9 @@
 ///|
+/// A normalized rectangle in PDF user-space coordinates.
+///
+/// `min_x` and `min_y` are always the lower bounds, and `max_x` and
+/// `max_y` are always the upper bounds. Parsers normalize PDF rectangle arrays
+/// whose coordinates are written in the opposite order.
 pub(all) struct PdfRectangle {
   min_x : Double
   min_y : Double
@@ -48,11 +53,21 @@ fn PdfDocument::direct_depth(
 }
 
 ///|
+/// Resolve an object through the document object table.
+///
+/// Direct objects are returned unchanged. Indirect references are followed
+/// recursively through parsed entries in `self.objects`; missing, unparsed, or
+/// excessively deep references resolve to `PdfNull` rather than raising.
 pub fn PdfDocument::direct(self : PdfDocument, object : PdfObject) -> PdfObject {
   self.direct_depth(object, 0)
 }
 
 ///|
+/// Look up `key` in a dictionary or stream dictionary and resolve the value.
+///
+/// The containing object is first passed through `direct`. If the object is not
+/// dictionary-like, the key is absent, or the resolved value is `PdfNull`, this
+/// returns `None`.
 pub fn PdfDocument::lookup_direct(
   self : PdfDocument,
   key : PdfName,
@@ -74,6 +89,11 @@ pub fn PdfDocument::lookup_direct(
 }
 
 ///|
+/// Look up a required dictionary entry and resolve the value.
+///
+/// This is the raising counterpart to `lookup_direct`: it raises the caller
+/// supplied `error` when the containing object is not dictionary-like, when the
+/// key is absent, or when the resolved value is `PdfNull`.
 pub fn PdfDocument::lookup_required(
   self : PdfDocument,
   key : PdfName,
@@ -95,6 +115,10 @@ pub fn PdfDocument::lookup_required(
 }
 
 ///|
+/// Look up either of two alternative dictionary keys.
+///
+/// `first_key` is preferred. `second_key` is checked only when the first lookup
+/// is absent or resolves to `PdfNull`.
 pub fn PdfDocument::lookup_direct_or_else(
   self : PdfDocument,
   first_key : PdfName,
@@ -131,6 +155,11 @@ fn pdf_lookup_array_index_name(name : PdfName) -> Int? {
 }
 
 ///|
+/// Look up a dictionary entry, or address an array by a pseudo-key.
+///
+/// Names that begin with `/[` followed by decimal digits are treated as array
+/// indexes when `object` is a `PdfArray`; other names are resolved with
+/// `lookup_direct`. The returned value is resolved through `direct`.
 pub fn PdfDocument::lookup_direct_or_array(
   self : PdfDocument,
   name : PdfName,
@@ -151,6 +180,11 @@ pub fn PdfDocument::lookup_direct_or_array(
 }
 
 ///|
+/// Return the indirect object number stored under a dictionary key.
+///
+/// The containing object is resolved before lookup, but the entry itself is
+/// inspected before dereferencing. This returns `Some(number)` only when the
+/// immediate entry value is `PdfIndirect(number)`.
 pub fn PdfDocument::indirect_number(
   self : PdfDocument,
   key : PdfName,
@@ -279,6 +313,13 @@ fn PdfDocument::replace_chain_in_object(
 }
 
 ///|
+/// Replace a value along a path rooted at the document trailer dictionary.
+///
+/// Each name in `chain` selects a dictionary entry. Names of the form `/[n]`
+/// select array entries. Missing intermediate dictionary entries are created as
+/// nested dictionaries, and indirect intermediate objects are updated in the
+/// document object table. Raises when the chain is empty or when a non-container
+/// or invalid array position is encountered.
 pub fn PdfDocument::replace_chain(
   self : PdfDocument,
   chain : ArrayView[PdfName],
@@ -382,6 +423,12 @@ fn PdfDocument::remove_chain_from_object(
 }
 
 ///|
+/// Remove a nested value along a path rooted at the trailer dictionary.
+///
+/// Returns `true` when an entry was removed and `false` when the path is
+/// absent. Empty chains raise `DictionaryExpected`. A single-key chain is
+/// treated as an invalid request when the key exists, preserving the trailer
+/// root rather than removing one of its direct entries.
 pub fn PdfDocument::remove_chain(
   self : PdfDocument,
   chain : ArrayView[PdfName],
@@ -407,6 +454,11 @@ pub fn PdfDocument::remove_chain(
 }
 
 ///|
+/// Follow a sequence of dictionary keys and array pseudo-keys.
+///
+/// Lookup starts from `start`; every successful step resolves indirect objects.
+/// An empty key sequence returns `Some(start)`. If any step cannot be resolved,
+/// the result is `None`.
 pub fn PdfDocument::lookup_chain(
   self : PdfDocument,
   start : PdfObject,
@@ -424,6 +476,10 @@ pub fn PdfDocument::lookup_chain(
 }
 
 ///|
+/// Read a PDF numeric object as a `Double`.
+///
+/// The object is resolved first. PDF real numbers are returned directly and PDF
+/// integers are widened to `Double`; any other object raises `NumberExpected`.
 pub fn PdfDocument::get_number(
   self : PdfDocument,
   object : PdfObject,
@@ -436,6 +492,12 @@ pub fn PdfDocument::get_number(
 }
 
 ///|
+/// Parse and normalize a PDF rectangle array.
+///
+/// The input must resolve to an array of four numeric objects. Coordinates are
+/// normalized so the result always has lower bounds in `min_x`/`min_y` and
+/// upper bounds in `max_x`/`max_y`. Non-array inputs raise `RectangleExpected`;
+/// malformed numeric entries raise `BadRectangle`.
 pub fn PdfDocument::parse_rectangle(
   self : PdfDocument,
   object : PdfObject,
@@ -462,6 +524,10 @@ pub fn PdfDocument::parse_rectangle(
 }
 
 ///|
+/// Transform a rectangle and return the bounding PDF rectangle array.
+///
+/// All four corners are transformed with `matrix`, then the axis-aligned bounds
+/// of those transformed points are written as `[minX minY maxX maxY]`.
 pub fn PdfDocument::transform_rect(
   self : PdfDocument,
   matrix : TransformMatrix,
@@ -525,6 +591,12 @@ fn PdfDocument::pdf_transform_quadpoint_chunk(
 }
 
 ///|
+/// Transform PDF annotation quadpoints in groups of eight coordinates.
+///
+/// Each complete group is interpreted as four `(x, y)` pairs and transformed by
+/// `matrix`. A complete group containing a non-numeric value is preserved
+/// unchanged, as is any trailing partial group. Non-array inputs are returned
+/// unchanged.
 pub fn PdfDocument::transform_quadpoints(
   self : PdfDocument,
   matrix : TransformMatrix,
@@ -553,6 +625,11 @@ pub fn PdfDocument::transform_quadpoints(
 }
 
 ///|
+/// Read a transformation matrix from a dictionary entry.
+///
+/// If `key` is absent, the identity matrix is returned. Present values must be
+/// arrays of six numbers in PDF matrix order `[a b c d e f]`; malformed arrays
+/// raise `MatrixMalformed`, and non-numeric entries raise `NumberExpected`.
 pub fn PdfDocument::parse_matrix(
   self : PdfDocument,
   key : PdfName,
@@ -574,6 +651,7 @@ pub fn PdfDocument::parse_matrix(
 }
 
 ///|
+/// Convert a transformation matrix into its six-number PDF array form.
 pub fn pdf_object_of_matrix(matrix : TransformMatrix) -> PdfObject {
   PdfArray([
     PdfReal(matrix.a),

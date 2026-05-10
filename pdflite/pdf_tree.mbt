@@ -159,6 +159,12 @@ fn PdfDocument::pdf_tree_lookup_kids(
 }
 
 ///|
+/// Return the immediate key-value pairs contained in a name or number tree.
+///
+/// The tree may store entries directly in `/Names` or `/Nums`, or indirectly in
+/// child nodes under `/Kids`. Entries are returned as raw `PdfObject` pairs, so
+/// callers that need typed name or number keys should use `read_name_tree` or
+/// `read_number_tree`.
 pub fn PdfDocument::contents_of_name_tree(
   self : PdfDocument,
   tree : PdfObject,
@@ -183,6 +189,11 @@ pub fn PdfDocument::contents_of_name_tree(
 }
 
 ///|
+/// Look up a raw key object in a PDF name tree or number tree.
+///
+/// `/Limits` entries are used to skip child nodes when they are comparable with
+/// `key`. The lookup accepts both direct leaf arrays and nested `/Kids` nodes,
+/// returning `None` for malformed nodes or missing keys.
 pub fn PdfDocument::name_tree_lookup_object(
   self : PdfDocument,
   key : PdfObject,
@@ -211,6 +222,11 @@ pub fn PdfDocument::name_tree_lookup_object(
 }
 
 ///|
+/// Look up a byte-string key in a PDF name tree.
+///
+/// The `BytesView` key is copied into an owned `PdfString` because PDF objects
+/// own their byte storage. Prefer this method when the key is already available
+/// as PDF-encoded bytes.
 pub fn PdfDocument::name_tree_lookup(
   self : PdfDocument,
   key : BytesView,
@@ -220,6 +236,7 @@ pub fn PdfDocument::name_tree_lookup(
 }
 
 ///|
+/// Look up an integer key in a PDF number tree.
 pub fn PdfDocument::number_tree_lookup(
   self : PdfDocument,
   key : Int,
@@ -317,6 +334,11 @@ fn pdf_tree_number_key_of_bytes(key : BytesView) -> Int raise PdfError {
 }
 
 ///|
+/// Read all entries from a PDF name tree as sorted byte-string keys.
+///
+/// Malformed trees whose keys are not `PdfString` values return an empty array.
+/// Well-formed entries are sorted by byte order and duplicate keys are collapsed
+/// by the deduplication pass.
 pub fn PdfDocument::read_name_tree(
   self : PdfDocument,
   tree : PdfObject,
@@ -337,6 +359,7 @@ pub fn PdfDocument::read_name_tree(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::read_name_tree`.
 pub fn pdf_read_name_tree(
   document : PdfDocument,
   tree : PdfObject,
@@ -345,6 +368,11 @@ pub fn pdf_read_name_tree(
 }
 
 ///|
+/// Read all entries from a PDF number tree as sorted integer keys.
+///
+/// Malformed trees whose keys are not `PdfInteger` values return an empty
+/// array. Well-formed entries are sorted numerically and duplicate keys are
+/// collapsed by the deduplication pass.
 pub fn PdfDocument::read_number_tree(
   self : PdfDocument,
   tree : PdfObject,
@@ -365,6 +393,10 @@ pub fn PdfDocument::read_number_tree(
 }
 
 ///|
+/// Compatibility wrapper that returns number-tree keys as decimal ASCII bytes.
+///
+/// This mirrors APIs that represent both name and number tree keys as
+/// `PdfBytes`; each integer key is encoded with `Int::to_string`.
 pub fn pdf_read_number_tree(
   document : PdfDocument,
   tree : PdfObject,
@@ -441,6 +473,11 @@ fn PdfDocument::pdf_tree_build_name_tree_range(
 }
 
 ///|
+/// Build a PDF name tree from byte-string keys and object values.
+///
+/// Entries are sorted by byte order. Empty input produces a leaf tree with an
+/// empty `/Names` array; larger inputs are split into child nodes with `/Limits`
+/// entries, allocating child objects in `self` as needed.
 pub fn PdfDocument::build_name_tree(
   self : PdfDocument,
   entries : ArrayView[(PdfBytes, PdfObject)],
@@ -454,6 +491,11 @@ pub fn PdfDocument::build_name_tree(
 }
 
 ///|
+/// Build either a name tree or a number tree from byte-keyed entries.
+///
+/// When `is_number` is `false`, this delegates to `build_name_tree`. When it is
+/// `true`, keys must be signed 32-bit decimal ASCII and are converted to
+/// integers before building a number tree; invalid keys raise `NumberExpected`.
 pub fn pdf_build_name_tree(
   is_number : Bool,
   document : PdfDocument,
@@ -530,6 +572,11 @@ fn PdfDocument::pdf_tree_build_number_tree_range(
 }
 
 ///|
+/// Build a PDF number tree from integer keys and object values.
+///
+/// Entries are sorted numerically. Empty input produces a leaf tree with an
+/// empty `/Nums` array; larger inputs are split into child nodes with `/Limits`
+/// entries, allocating child objects in `self` as needed.
 pub fn PdfDocument::build_number_tree(
   self : PdfDocument,
   entries : ArrayView[(Int, PdfObject)],
@@ -543,6 +590,11 @@ pub fn PdfDocument::build_number_tree(
 }
 
 ///|
+/// Merge several name trees when the caller guarantees there are no clashes.
+///
+/// Entries are read from every input tree and rebuilt into a single sorted name
+/// tree. This function does not report duplicate keys; callers that require
+/// conflict handling should check the inputs before calling it.
 pub fn PdfDocument::merge_name_trees_no_clash(
   self : PdfDocument,
   trees : ArrayView[PdfObject],
@@ -557,6 +609,7 @@ pub fn PdfDocument::merge_name_trees_no_clash(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::merge_name_trees_no_clash`.
 pub fn pdf_merge_name_trees_no_clash(
   document : PdfDocument,
   trees : ArrayView[PdfObject],
@@ -565,6 +618,11 @@ pub fn pdf_merge_name_trees_no_clash(
 }
 
 ///|
+/// Merge several number trees when the caller guarantees there are no clashes.
+///
+/// Entries are read from every input tree and rebuilt into a single sorted
+/// number tree. Duplicate-key handling follows the read/build helpers and is
+/// not reported as an error.
 pub fn PdfDocument::merge_number_trees_no_clash(
   self : PdfDocument,
   trees : ArrayView[PdfObject],
@@ -579,6 +637,7 @@ pub fn PdfDocument::merge_number_trees_no_clash(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::merge_number_trees_no_clash`.
 pub fn pdf_merge_number_trees_no_clash(
   document : PdfDocument,
   trees : ArrayView[PdfObject],

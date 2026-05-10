@@ -52,6 +52,10 @@ let pdf_space_i_name : PdfName = pdf_space_name("/I")
 let pdf_space_device_n_name : PdfName = pdf_space_name("/DeviceN")
 
 ///|
+/// A CIE tristimulus point used by calibrated PDF colour spaces.
+///
+/// The fields represent the `X`, `Y`, and `Z` components used for white point
+/// and black point entries in `/CalGray`, `/CalRGB`, and `/Lab` dictionaries.
 pub(all) struct PdfTristimulusPoint {
   x : Double
   y : Double
@@ -59,6 +63,12 @@ pub(all) struct PdfTristimulusPoint {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Parsed representation of the PDF colour spaces supported by this package.
+///
+/// Device spaces represent the PDF built-ins. Calibrated and ICC-based spaces
+/// preserve their calibration data, indexed spaces hold an expanded lookup
+/// table, and separation or DeviceN spaces retain their tint transform objects
+/// for round-tripping.
 pub(all) enum PdfColourSpace {
   PdfDeviceGray
   PdfDeviceRGB
@@ -80,6 +90,11 @@ pub(all) enum PdfColourSpace {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Return a diagnostic name for a colour space.
+///
+/// Built-in spaces use their PDF names. Composite spaces include the diagnostic
+/// name of their alternate or base space, making the result useful for logs,
+/// snapshots, and error messages rather than for serialization.
 pub fn PdfColourSpace::debug_name(self : PdfColourSpace) -> String {
   match self {
     PdfDeviceGray => "/DeviceGray"
@@ -101,6 +116,10 @@ pub fn PdfColourSpace::debug_name(self : PdfColourSpace) -> String {
 }
 
 ///|
+/// Return the PDF colourant name carried by a separation space.
+///
+/// Only `PdfSeparation` has a single associated colourant name in this API.
+/// Other colour spaces, including `PdfDeviceN`, return `None`.
 pub fn PdfColourSpace::name(self : PdfColourSpace) -> PdfName? {
   match self {
     PdfSeparation(name, _, _) => Some(name)
@@ -109,16 +128,23 @@ pub fn PdfColourSpace::name(self : PdfColourSpace) -> PdfName? {
 }
 
 ///|
+/// Compatibility wrapper for `PdfColourSpace::debug_name`.
 pub fn pdf_string_of_colour_space(space : PdfColourSpace) -> String {
   space.debug_name()
 }
 
 ///|
+/// Compatibility wrapper for `PdfColourSpace::name`.
 pub fn pdf_name_of_colour_space(space : PdfColourSpace) -> PdfName? {
   space.name()
 }
 
 ///|
+/// Parse a built-in PDF device colour-space name.
+///
+/// Accepts the standard names `/DeviceGray`, `/DeviceRGB`, `/DeviceCMYK`, and
+/// `/Pattern`, together with the abbreviated resource names `/G`, `/RGB`, and
+/// `/CMYK`.
 pub fn pdf_colour_space_of_device_name(name : PdfName) -> PdfColourSpace? {
   if name == pdf_space_device_gray_name || name == pdf_space_g_name {
     Some(PdfDeviceGray)
@@ -134,6 +160,11 @@ pub fn pdf_colour_space_of_device_name(name : PdfName) -> PdfColourSpace? {
 }
 
 ///|
+/// Parse a simple colour-space object without consulting resources.
+///
+/// This recognizes device colour-space names, singleton arrays, and
+/// pattern-with-base arrays. Use `PdfDocument::read_colour_space` when resource
+/// lookup, calibrated spaces, ICC profiles, or indexed spaces are needed.
 pub fn pdf_colour_space_of_object(object : PdfObject) -> PdfColourSpace? {
   match object {
     PdfNameObject(name) => pdf_colour_space_of_device_name(name)
@@ -344,6 +375,11 @@ fn PdfDocument::pdf_space_named_components(
 }
 
 ///|
+/// Return the number of components required by a colour-space object.
+///
+/// Resource names are resolved through the supplied `resources` dictionary.
+/// Pattern spaces without a base colour space are rejected because their paint
+/// operators do not consume ordinary colour components.
 pub fn PdfDocument::colour_space_components(
   self : PdfDocument,
   resources : PdfObject,
@@ -375,6 +411,7 @@ pub fn PdfDocument::colour_space_components(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::colour_space_components`.
 pub fn pdf_colour_space_components(
   document : PdfDocument,
   resources : PdfObject,
@@ -540,6 +577,13 @@ fn PdfDocument::pdf_space_read_device_n(
 }
 
 ///|
+/// Parse a colour-space object using the document and resource dictionary.
+///
+/// The parser resolves resource colour-space names and supports device spaces,
+/// pattern spaces with a base space, calibrated Gray/RGB/Lab spaces, ICCBased
+/// spaces, Indexed spaces, Separation spaces, and DeviceN spaces. Unsupported
+/// or malformed colour spaces return `None`; malformed numeric fields may raise
+/// `PdfError`.
 pub fn PdfDocument::read_colour_space(
   self : PdfDocument,
   resources : PdfObject,
@@ -637,6 +681,7 @@ pub fn PdfDocument::read_colour_space(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::read_colour_space`.
 pub fn pdf_read_colour_space(
   document : PdfDocument,
   resources : PdfObject,
@@ -723,6 +768,11 @@ fn pdf_space_empty_dictionary(object : PdfObject) -> Bool {
 }
 
 ///|
+/// Convert a parsed colour space back into a PDF object.
+///
+/// Returns `None` when the colour space cannot be serialized losslessly, such
+/// as an indexed table with invalid component values or a base colour space that
+/// itself cannot be represented.
 pub fn pdf_object_of_colour_space(space : PdfColourSpace) -> PdfObject? {
   match space {
     PdfDeviceGray => Some(PdfNameObject(pdf_space_device_gray_name))
@@ -822,6 +872,10 @@ pub fn pdf_object_of_colour_space(space : PdfColourSpace) -> PdfObject? {
 }
 
 ///|
+/// Serialize a colour space for writing into a PDF object graph.
+///
+/// This delegates to `pdf_object_of_colour_space` and returns `PdfNull` when
+/// the parsed colour space is not representable as a valid PDF object.
 pub fn PdfDocument::write_colour_space(
   _self : PdfDocument,
   space : PdfColourSpace,
@@ -833,6 +887,7 @@ pub fn PdfDocument::write_colour_space(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::write_colour_space`.
 pub fn pdf_write_colour_space(
   document : PdfDocument,
   space : PdfColourSpace,
