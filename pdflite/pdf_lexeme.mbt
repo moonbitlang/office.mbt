@@ -111,7 +111,7 @@ pub fn pdf_string_of_lexeme(lexeme : PdfLexeme) -> String {
   match lexeme {
     LexInt(value) => "Int " + value.to_string()
     LexReal(value) => "Float " + value.to_string()
-    LexString(value) => "String " + pdf_lexeme_debug_bytes_text(value[:])
+    LexString(value) => "String " + pdf_lexeme_debug_bytes_text(value)
     LexName(value) => "Ident " + pdf_lexeme_debug_bytes_text(value.bytes())
     LexNull => "Nothing"
     _ => "GenLexNone"
@@ -591,5 +591,5 @@ pub fn pdf_lex_view(data : BytesView) -> Array[PdfLexeme] raise PdfError {
 
 ///|
 pub fn pdf_lex_bytes(data : PdfBytes) -> Array[PdfLexeme] raise PdfError {
-  pdf_lex_view(data[:])
+  pdf_lex_view(data)
 }

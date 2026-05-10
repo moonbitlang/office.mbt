@@ -138,7 +138,7 @@ test "PdfDocument ARC4 crypt preserves parser-private object states" {
       ObjectToParseFromObjectStream({ object_stream_number: 7, index: 0 }),
     ),
   )
-  let encrypted = try! doc.arc4_crypt_parsed_objects(key[:], 40)
+  let encrypted = try! doc.arc4_crypt_parsed_objects(key, 40)
   @test.assert_eq(encrypted.objects.get_entry(1), doc.objects.get_entry(1))
   @test.assert_eq(encrypted.objects.get_entry(2), doc.objects.get_entry(2))
   @test.assert_eq(encrypted.objects.get_entry(3), doc.objects.get_entry(3))
@@ -162,27 +162,21 @@ test "PdfDocument select_object_numbers ignores deferred parser states" {
 
 ///|
 test "writer parses signed integer fragments for scientific reals" {
+  @test.assert_eq(try! pdf_writer_parse_signed_int(@ascii.encode("+12"), 0), 12)
   @test.assert_eq(
-    try! pdf_writer_parse_signed_int(@ascii.encode("+12")[:], 0),
-    12,
-  )
-  @test.assert_eq(
-    try! pdf_writer_parse_signed_int(@ascii.encode("-12")[:], 0),
+    try! pdf_writer_parse_signed_int(@ascii.encode("-12"), 0),
     -12,
   )
-  @test.assert_eq(
-    try! pdf_writer_parse_signed_int(@ascii.encode("12")[:], 0),
-    12,
-  )
+  @test.assert_eq(try! pdf_writer_parse_signed_int(@ascii.encode("12"), 0), 12)
   let missing : Result[Int, Error] = try? pdf_writer_parse_signed_int(
-    @ascii.encode("+")[:],
+    @ascii.encode("+"),
     0,
   )
   guard missing is Err(PdfError::NumberExpected) else {
     fail("expected NumberExpected")
   }
   let malformed : Result[Int, Error] = try? pdf_writer_parse_signed_int(
-    @ascii.encode("12a")[:],
+    @ascii.encode("12a"),
     0,
   )
   guard malformed is Err(PdfError::NumberExpected) else {
@@ -192,36 +186,28 @@ test "writer parses signed integer fragments for scientific reals" {
 
 ///|
 test "writer expands scientific real edge forms" {
-  @test.assert_eq(pdf_writer_exponent_marker(@ascii.encode("1E2")[:]), 1)
+  @test.assert_eq(pdf_writer_exponent_marker(@ascii.encode("1E2")), 1)
 
   let plus_output : Array[Byte] = []
-  try! pdf_writer_push_scientific_real(
-    plus_output,
-    @ascii.encode("+1.25e2")[:],
-    5,
-  )
+  try! pdf_writer_push_scientific_real(plus_output, @ascii.encode("+1.25e2"), 5)
   @test.assert_eq(Bytes::from_array(plus_output), @ascii.encode("125"))
 
   let negative_output : Array[Byte] = []
   try! pdf_writer_push_scientific_real(
     negative_output,
-    @ascii.encode("-1.25e2")[:],
+    @ascii.encode("-1.25e2"),
     5,
   )
   @test.assert_eq(Bytes::from_array(negative_output), @ascii.encode("-125"))
 
   let padded_output : Array[Byte] = []
-  try! pdf_writer_push_scientific_real(
-    padded_output,
-    @ascii.encode("1.2e3")[:],
-    3,
-  )
+  try! pdf_writer_push_scientific_real(padded_output, @ascii.encode("1.2e3"), 3)
   @test.assert_eq(Bytes::from_array(padded_output), @ascii.encode("1200"))
 
   let middle_output : Array[Byte] = []
   try! pdf_writer_push_scientific_real(
     middle_output,
-    @ascii.encode("1.25e1")[:],
+    @ascii.encode("1.25e1"),
     4,
   )
   @test.assert_eq(Bytes::from_array(middle_output), @ascii.encode("12.5"))
@@ -229,7 +215,7 @@ test "writer expands scientific real edge forms" {
   let negative_exponent_output : Array[Byte] = []
   try! pdf_writer_push_scientific_real(
     negative_exponent_output,
-    @ascii.encode("1.25e-3")[:],
+    @ascii.encode("1.25e-3"),
     4,
   )
   @test.assert_eq(
@@ -240,7 +226,7 @@ test "writer expands scientific real edge forms" {
   let rounded_exponent_output : Array[Byte] = []
   try! pdf_writer_push_scientific_real(
     rounded_exponent_output,
-    @ascii.encode("1.23456789012345e21")[:],
+    @ascii.encode("1.23456789012345e21"),
     16,
   )
   @test.assert_eq(
@@ -251,7 +237,7 @@ test "writer expands scientific real edge forms" {
   let carry_exponent_output : Array[Byte] = []
   try! pdf_writer_push_scientific_real(
     carry_exponent_output,
-    @ascii.encode("9.999999999999e21")[:],
+    @ascii.encode("9.999999999999e21"),
     14,
   )
   @test.assert_eq(
@@ -262,7 +248,7 @@ test "writer expands scientific real edge forms" {
   let rounded_no_carry_output : Array[Byte] = []
   try! pdf_writer_push_scientific_real(
     rounded_no_carry_output,
-    @ascii.encode("1.234567890125e21")[:],
+    @ascii.encode("1.234567890125e21"),
     14,
   )
   @test.assert_eq(
@@ -273,7 +259,7 @@ test "writer expands scientific real edge forms" {
   let trimmed_fraction_output : Array[Byte] = []
   try! pdf_writer_push_scientific_real(
     trimmed_fraction_output,
-    @ascii.encode("1.230000000001e-1")[:],
+    @ascii.encode("1.230000000001e-1"),
     14,
   )
   @test.assert_eq(
@@ -284,19 +270,19 @@ test "writer expands scientific real edge forms" {
   let zero_digits_output : Array[Byte] = []
   try! pdf_writer_push_scientific_real(
     zero_digits_output,
-    @ascii.encode("0.000e10")[:],
+    @ascii.encode("0.000e10"),
     5,
   )
   @test.assert_eq(Bytes::from_array(zero_digits_output), @ascii.encode("0"))
 
   let zero_output : Array[Byte] = []
-  try! pdf_writer_push_scientific_real(zero_output, @ascii.encode(".e1")[:], 1)
+  try! pdf_writer_push_scientific_real(zero_output, @ascii.encode(".e1"), 1)
   @test.assert_eq(Bytes::from_array(zero_output), @ascii.encode("0"))
 
   let malformed_output : Array[Byte] = []
   let malformed : Result[Unit, Error] = try? pdf_writer_push_scientific_real(
     malformed_output,
-    @ascii.encode("1Ae1")[:],
+    @ascii.encode("1Ae1"),
     2,
   )
   guard malformed is Err(PdfError::NumberExpected) else {
@@ -309,7 +295,7 @@ test "writer rounds plain significant real helper edge forms" {
   let plus_output : Array[Byte] = []
   try! pdf_writer_push_plain_significant_real(
     plus_output,
-    @ascii.encode("+1.23456789012345")[:],
+    @ascii.encode("+1.23456789012345"),
   )
   @test.assert_eq(
     Bytes::from_array(plus_output),
@@ -319,7 +305,7 @@ test "writer rounds plain significant real helper edge forms" {
   let negative_output : Array[Byte] = []
   try! pdf_writer_push_plain_significant_real(
     negative_output,
-    @ascii.encode("-1.23456789012345")[:],
+    @ascii.encode("-1.23456789012345"),
   )
   @test.assert_eq(
     Bytes::from_array(negative_output),
@@ -329,7 +315,7 @@ test "writer rounds plain significant real helper edge forms" {
   let leading_decimal_output : Array[Byte] = []
   try! pdf_writer_push_plain_significant_real(
     leading_decimal_output,
-    @ascii.encode(".000123456789012345")[:],
+    @ascii.encode(".000123456789012345"),
   )
   @test.assert_eq(
     Bytes::from_array(leading_decimal_output),
@@ -337,15 +323,12 @@ test "writer rounds plain significant real helper edge forms" {
   )
 
   let zero_output : Array[Byte] = []
-  try! pdf_writer_push_plain_significant_real(
-    zero_output,
-    @ascii.encode("0.0")[:],
-  )
+  try! pdf_writer_push_plain_significant_real(zero_output, @ascii.encode("0.0"))
   @test.assert_eq(Bytes::from_array(zero_output), @ascii.encode("0"))
 
   let double_dot : Result[Unit, Error] = try? pdf_writer_push_plain_significant_real(
     [],
-    @ascii.encode("1.2.3")[:],
+    @ascii.encode("1.2.3"),
   )
   guard double_dot is Err(PdfError::NumberExpected) else {
     fail("expected NumberExpected")
@@ -353,7 +336,7 @@ test "writer rounds plain significant real helper edge forms" {
 
   let bad_digit : Result[Unit, Error] = try? pdf_writer_push_plain_significant_real(
     [],
-    @ascii.encode("1a")[:],
+    @ascii.encode("1a"),
   )
   guard bad_digit is Err(PdfError::NumberExpected) else {
     fail("expected NumberExpected")
@@ -435,11 +418,11 @@ test "private xref stream helpers cover malformed and deferred entries" {
   }
 
   @test.assert_eq(
-    try! pdf_xref_stream_read_field(@ascii.encode("ab")[:], 0, 0),
+    try! pdf_xref_stream_read_field(@ascii.encode("ab"), 0, 0),
     (0, 0),
   )
   let short_field : Result[(Int, Int), Error] = try? pdf_xref_stream_read_field(
-    @ascii.encode("a")[:],
+    @ascii.encode("a"),
     0,
     2,
   )
@@ -448,9 +431,9 @@ test "private xref stream helpers cover malformed and deferred entries" {
   }
 
   let default_kind_entries = try! pdf_xref_stream_entries(
-    Bytes::from_array([9, 0, 8, 1])[:],
+    Bytes::from_array([9, 0, 8, 1]),
     (0, 1, 1),
-    [(5, 2)][:],
+    [(5, 2)],
   )
   @test.assert_eq(default_kind_entries.length(), 2)
   @test.assert_eq(default_kind_entries[0].object_number, 5)
@@ -459,9 +442,9 @@ test "private xref stream helpers cover malformed and deferred entries" {
   @test.assert_eq(default_kind_entries[0].in_use, true)
 
   let deferred_entries = try! pdf_xref_stream_entries(
-    Bytes::from_array([2, 7, 0, 9, 0, 0])[:],
+    Bytes::from_array([2, 7, 0, 9, 0, 0]),
     (1, 1, 1),
-    [(3, 2)][:],
+    [(3, 2)],
   )
   @test.assert_eq(deferred_entries.length(), 2)
   @test.assert_eq(deferred_entries[0].object_number, 3)
@@ -495,7 +478,7 @@ test "private object stream helpers cover malformed object streams" {
   }
 
   let bad_first : Result[Array[(Int, Int)], Error] = try? pdf_object_stream_number_offsets(
-    @ascii.encode("1 0")[:],
+    @ascii.encode("1 0"),
     4,
     1,
   )
@@ -504,7 +487,7 @@ test "private object stream helpers cover malformed object streams" {
   }
 
   let short_header : Result[Array[(Int, Int)], Error] = try? pdf_object_stream_number_offsets(
-    @ascii.encode("2 ")[:],
+    @ascii.encode("2 "),
     2,
     1,
   )
@@ -513,7 +496,7 @@ test "private object stream helpers cover malformed object streams" {
   }
 
   let malformed_pair : Result[Array[(Int, Int)], Error] = try? pdf_object_stream_number_offsets(
-    @ascii.encode("/Name 0 ")[:],
+    @ascii.encode("/Name 0 "),
     8,
     1,
   )
@@ -522,10 +505,10 @@ test "private object stream helpers cover malformed object streams" {
   }
 
   @test.assert_eq(
-    pdf_object_stream_end_offsets([(2, 4), (3, 0), (4, 4), (5, 8)][:], 20, 8),
+    pdf_object_stream_end_offsets([(2, 4), (3, 0), (4, 4), (5, 8)], 20, 8),
     [8, 4, 8, 12],
   )
-  @test.assert_eq(pdf_object_stream_end_offsets([(2, 0), (3, 100)][:], 20, 8), [
+  @test.assert_eq(pdf_object_stream_end_offsets([(2, 0), (3, 100)], 20, 8), [
     12, 12,
   ])
 
@@ -576,40 +559,38 @@ test "private object stream helpers cover malformed object streams" {
       object_stream: Some({ object_stream_number: 7, index: 1 }),
     },
   ]
-  let grouped_xrefs = pdf_reader_object_stream_groups(
-    [
-      {
-        object_number: 0,
-        offset: 0,
-        generation: 0,
-        in_use: true,
-        object_stream: Some({ object_stream_number: 7, index: 0 }),
-      },
-      recovered_xrefs[0],
-      {
-        object_number: 4,
-        offset: 0,
-        generation: 0,
-        in_use: false,
-        object_stream: Some({ object_stream_number: 9, index: 0 }),
-      },
-      recovered_xrefs[1],
-      {
-        object_number: 5,
-        offset: 0,
-        generation: 0,
-        in_use: true,
-        object_stream: Some({ object_stream_number: 9, index: 0 }),
-      },
-      {
-        object_number: 6,
-        offset: 0,
-        generation: 0,
-        in_use: true,
-        object_stream: None,
-      },
-    ][:],
-  )
+  let grouped_xrefs = pdf_reader_object_stream_groups([
+    {
+      object_number: 0,
+      offset: 0,
+      generation: 0,
+      in_use: true,
+      object_stream: Some({ object_stream_number: 7, index: 0 }),
+    },
+    recovered_xrefs[0],
+    {
+      object_number: 4,
+      offset: 0,
+      generation: 0,
+      in_use: false,
+      object_stream: Some({ object_stream_number: 9, index: 0 }),
+    },
+    recovered_xrefs[1],
+    {
+      object_number: 5,
+      offset: 0,
+      generation: 0,
+      in_use: true,
+      object_stream: Some({ object_stream_number: 9, index: 0 }),
+    },
+    {
+      object_number: 6,
+      offset: 0,
+      generation: 0,
+      in_use: true,
+      object_stream: None,
+    },
+  ])
   @test.assert_eq(grouped_xrefs.length(), 2)
   @test.assert_eq(grouped_xrefs[0].0, 7)
   @test.assert_eq(grouped_xrefs[0].1.length(), 2)
@@ -620,16 +601,14 @@ test "private object stream helpers cover malformed object streams" {
   @test.assert_eq(grouped_xrefs[1].0, 9)
   @test.assert_eq(grouped_xrefs[1].1.length(), 1)
   @test.assert_eq(grouped_xrefs[1].1[0].0.object_number, 5)
-  recovered_doc.load_reconstructed_xref_stream_embedded_objects(
-    recovered_xrefs[:],
-  )
+  recovered_doc.load_reconstructed_xref_stream_embedded_objects(recovered_xrefs)
   @test.assert_eq(recovered_doc.lookup_object_or_null(2), PdfBoolean(true))
   @test.assert_eq(recovered_doc.lookup_object_or_null(3), PdfBoolean(false))
 
   let password_recovered_doc = pdf_document_empty()
   password_recovered_doc.add_object_given_number(7, valid_stream)
   password_recovered_doc.load_reconstructed_xref_stream_embedded_objects_with_passwords(
-    recovered_xrefs[:],
+    recovered_xrefs,
     None,
     None,
   )
@@ -648,11 +627,11 @@ test "private object stream helpers cover malformed object streams" {
     },
   ]
   recovered_doc.load_reconstructed_xref_stream_embedded_objects(
-    bad_embedded_xrefs[:],
+    bad_embedded_xrefs,
   )
   @test.assert_eq(recovered_doc.lookup_object_or_null(4), PdfNull)
   password_recovered_doc.load_reconstructed_xref_stream_embedded_objects_with_passwords(
-    bad_embedded_xrefs[:],
+    bad_embedded_xrefs,
     None,
     None,
   )
@@ -705,7 +684,7 @@ test "private object stream helpers cover malformed object streams" {
 
   let missing_encrypted_stream : Result[(PdfObjectStreamContext, Bool), Error] = try? doc.read_object_stream_context_with_passwords(
     99,
-    Some(@ascii.encode("user")[:]),
+    Some(@ascii.encode("user")),
     None,
   )
   guard missing_encrypted_stream is Err(PdfError::XRefEntryExpected) else {
@@ -764,7 +743,7 @@ test "private stream data materialization reports invalid deferred slices" {
 ///|
 test "private stream data no-crypt decrypt returns bytes" {
   let source = @ascii.encode("abc")
-  let copied = PdfStreamDataNoCrypt.decrypt(source[:])
+  let copied = PdfStreamDataNoCrypt.decrypt(source)
   @test.assert_eq(copied, source)
 }
 
@@ -851,49 +830,49 @@ test "private reader byte-view helpers cover boundary cases" {
   @test.assert_eq(pdf_find_last_ascii(view, [120]), -1)
 
   let empty_number : Result[Int, Error] = try? pdf_parse_ascii_int_view(
-    Bytes::new(0)[:],
+    Bytes::new(0),
   )
   guard empty_number is Err(PdfError::NumberExpected) else {
     fail("expected NumberExpected")
   }
   let bad_number : Result[Int, Error] = try? pdf_parse_ascii_int_view(
-    @ascii.encode("12a")[:],
+    @ascii.encode("12a"),
   )
   guard bad_number is Err(PdfError::NumberExpected) else {
     fail("expected NumberExpected")
   }
   let overflow_number : Result[Int, Error] = try? pdf_parse_ascii_int_view(
-    @ascii.encode("2147483648")[:],
+    @ascii.encode("2147483648"),
   )
   guard overflow_number is Err(PdfError::NumberExpected) else {
     fail("expected NumberExpected")
   }
   @test.assert_eq(
-    try! pdf_parse_ascii_int_view(@ascii.encode("2147483647")[:]),
+    try! pdf_parse_ascii_int_view(@ascii.encode("2147483647")),
     2147483647,
   )
-  @test.assert_eq(pdf_number_view_int(Bytes::new(0)[:]), None)
-  @test.assert_eq(pdf_number_view_int(@ascii.encode("+")[:]), None)
-  @test.assert_eq(pdf_number_view_int(@ascii.encode("-")[:]), None)
+  @test.assert_eq(pdf_number_view_int(Bytes::new(0)), None)
+  @test.assert_eq(pdf_number_view_int(@ascii.encode("+")), None)
+  @test.assert_eq(pdf_number_view_int(@ascii.encode("-")), None)
 }
 
 ///|
 test "private reader xref helpers report malformed inputs" {
   let empty_token : Result[Bool, Error] = try? pdf_xref_token_in_use(
-    Bytes::new(0)[:],
+    Bytes::new(0),
   )
   guard empty_token is Err(PdfError::XRefEntryExpected) else {
     fail("expected XRefEntryExpected")
   }
   let bad_token : Result[Bool, Error] = try? pdf_xref_token_in_use(
-    @ascii.encode("q")[:],
+    @ascii.encode("q"),
   )
   guard bad_token is Err(PdfError::XRefEntryExpected) else {
     fail("expected XRefEntryExpected")
   }
 
   let empty_xrefs : Array[PdfClassicXRefEntry] = []
-  @test.assert_eq(pdf_classic_xref_lookup(empty_xrefs[:], 1), None)
+  @test.assert_eq(pdf_classic_xref_lookup(empty_xrefs, 1), None)
   let xref_target : Array[PdfClassicXRefEntry] = [
     {
       object_number: 2,
@@ -933,7 +912,7 @@ test "private reader xref helpers report malformed inputs" {
 
   let no_object = byte_cursor_of_bytes(@ascii.encode("notobject"))
   let no_object_result : Result[PdfParsedIndirectObject, Error] = try? no_object.read_first_indirect_object_at_current(
-    empty_xrefs[:],
+    empty_xrefs,
   )
   guard no_object_result is Err(PdfError::ParseIndirectObjectExpected) else {
     fail("expected ParseIndirectObjectExpected")
@@ -953,7 +932,7 @@ test "private reader xref helpers report malformed inputs" {
   )
   let adjacent = byte_cursor_of_bytes(adjacent_source)
   @test.assert_eq(
-    try! adjacent.read_first_indirect_object_at_current(empty_xrefs[:]),
+    try! adjacent.read_first_indirect_object_at_current(empty_xrefs),
     { number: 2, generation: 0, object: PdfInteger(42) },
   )
   @test.assert_eq(
@@ -968,7 +947,7 @@ test "private reader xref helpers report malformed inputs" {
   }
   let incomplete_scan = byte_cursor_of_bytes(@ascii.encode("3 0 obj\n42\n"))
   let (incomplete_candidate, incomplete_next) = try! incomplete_scan.read_reconstructed_indirect_scan_candidate_at_current(
-    empty_xrefs[:],
+    empty_xrefs,
   )
   @test.assert_eq(incomplete_candidate, {
     number: 3,
@@ -977,25 +956,25 @@ test "private reader xref helpers report malformed inputs" {
   })
   @test.assert_eq(incomplete_next, None)
   let incomplete_xrefs = try! pdf_read_reconstructed_xrefs(
-    @ascii.encode("3 0 obj\n42\n")[:],
+    @ascii.encode("3 0 obj\n42\n"),
   )
   @test.assert_eq(incomplete_xrefs.length(), 1)
   @test.assert_eq(incomplete_xrefs[0].object_number, 3)
   let noisy_digits = @ascii.encode(
     "12345 67 notobj\n90 0 nope\nabc 4 0 obj\n42\nendobj\n",
   )
-  let valid_header = pdf_find_ascii_from(noisy_digits[:], 0, [
+  let valid_header = pdf_find_ascii_from(noisy_digits, 0, [
     52, 32, 48, 32, 111, 98, 106,
   ])
   @test.assert_eq(
-    pdf_reader_reconstruction_indirect_header_at(noisy_digits[:], 0),
+    pdf_reader_reconstruction_indirect_header_at(noisy_digits, 0),
     false,
   )
   @test.assert_eq(
-    pdf_reader_reconstruction_indirect_header_at(noisy_digits[:], valid_header),
+    pdf_reader_reconstruction_indirect_header_at(noisy_digits, valid_header),
     true,
   )
-  let noisy_xrefs = try! pdf_read_reconstructed_xrefs(noisy_digits[:])
+  let noisy_xrefs = try! pdf_read_reconstructed_xrefs(noisy_digits)
   @test.assert_eq(noisy_xrefs.length(), 1)
   @test.assert_eq(noisy_xrefs[0].object_number, 4)
   @test.assert_eq(noisy_xrefs[0].offset, valid_header)
@@ -1003,54 +982,51 @@ test "private reader xref helpers report malformed inputs" {
     "1 0 obj\n]\n2 0 obj\n<< /Type /Catalog >>\nendobj\n3 0 obj\n42\nendobj\n",
   )
   let endobj = [101, 110, 100, 111, 98, 106]
-  let nested_endobj = pdf_find_ascii_from(nested_bad_object[:], 0, endobj)
+  let nested_endobj = pdf_find_ascii_from(nested_bad_object, 0, endobj)
   @test.assert_eq(
-    pdf_reader_reconstruction_indirect_header_at(nested_bad_object[:], 0),
+    pdf_reader_reconstruction_indirect_header_at(nested_bad_object, 0),
     true,
   )
   @test.assert_eq(
-    pdf_reader_reconstruction_indirect_header_at(
-      @ascii.encode("1 0 object")[:],
-      0,
-    ),
+    pdf_reader_reconstruction_indirect_header_at(@ascii.encode("1 0 object"), 0),
     false,
   )
   @test.assert_eq(
-    pdf_reader_reconstruction_skip_malformed_object(nested_bad_object[:], 0),
+    pdf_reader_reconstruction_skip_malformed_object(nested_bad_object, 0),
     Some(nested_endobj + 7),
   )
   @test.assert_eq(
-    pdf_reader_reconstruction_skip_malformed_object(nested_bad_object[:], 1),
+    pdf_reader_reconstruction_skip_malformed_object(nested_bad_object, 1),
     None,
   )
   let line_ending_endobj = @ascii.encode("1 0 obj\n]\nabcendobj\r\n4 0 obj\n")
-  let trailing_endobj = pdf_find_ascii_from(line_ending_endobj[:], 0, endobj)
+  let trailing_endobj = pdf_find_ascii_from(line_ending_endobj, 0, endobj)
   @test.assert_eq(
-    pdf_reader_reconstruction_skip_malformed_object(line_ending_endobj[:], 0),
+    pdf_reader_reconstruction_skip_malformed_object(line_ending_endobj, 0),
     Some(trailing_endobj + 8),
   )
   let leading_trim_endobj = @ascii.encode("1 0 obj\n]\n  endobj\n")
   @test.assert_eq(
-    pdf_reader_reconstruction_skip_malformed_object(leading_trim_endobj[:], 0),
+    pdf_reader_reconstruction_skip_malformed_object(leading_trim_endobj, 0),
     Some(leading_trim_endobj.length()),
   )
   let no_endobj = @ascii.encode("1 0 obj\n]")
   @test.assert_eq(
-    pdf_reader_reconstruction_skip_malformed_object(no_endobj[:], 0),
+    pdf_reader_reconstruction_skip_malformed_object(no_endobj, 0),
     Some(no_endobj.length()),
   )
   let bad_resolved_length = @ascii.encode(
     "1 0 obj\n<< /Length 2 0 R >>\nstream\nHi\nendstream\nendobj\n2 0 obj\n999999\nendobj\n",
   )
   let bad_resolved_length_xrefs = try! pdf_read_reconstructed_xrefs(
-    bad_resolved_length[:],
+    bad_resolved_length,
   )
-  let bad_resolved_length_cursor = byte_cursor_of_view(bad_resolved_length[:])
+  let bad_resolved_length_cursor = byte_cursor_of_view(bad_resolved_length)
   let objects_with_bad_resolved_length : Array[PdfParsedIndirectObject] = []
   for xref in bad_resolved_length_xrefs {
     let parsed : Result[PdfParsedIndirectObject, Error] = try? bad_resolved_length_cursor.read_reconstructed_object_at(
       xref.offset,
-      bad_resolved_length_xrefs[:],
+      bad_resolved_length_xrefs,
     )
     match parsed {
       Ok(object) =>
@@ -1065,21 +1041,15 @@ test "private reader xref helpers report malformed inputs" {
   @test.assert_eq(objects_with_bad_resolved_length[0].number, 2)
 
   @test.assert_eq(
-    pdf_reader_stream_data_end_before_marker(
-      @ascii.encode("A\r\nendstream")[:],
-      3,
-    ),
+    pdf_reader_stream_data_end_before_marker(@ascii.encode("A\r\nendstream"), 3),
     1,
   )
   @test.assert_eq(
-    pdf_reader_stream_data_end_before_marker(
-      @ascii.encode("A\rendstream")[:],
-      2,
-    ),
+    pdf_reader_stream_data_end_before_marker(@ascii.encode("A\rendstream"), 2),
     1,
   )
   @test.assert_eq(
-    pdf_reader_stream_data_end_before_marker(@ascii.encode("Aendstream")[:], 1),
+    pdf_reader_stream_data_end_before_marker(@ascii.encode("Aendstream"), 1),
     1,
   )
   let malformed_stream = byte_cursor_of_bytes(@ascii.encode("stream\nabc"))
@@ -1153,10 +1123,10 @@ fn wbtest_hybrid_xrefstm_pdf() -> PdfBytes {
 ///|
 test "private password reconstruction xref metadata probe covers repair boundaries" {
   let hybrid = wbtest_hybrid_xrefstm_pdf()
-  pdf_reader_validate_xref_metadata_for_reconstruction(hybrid[:])
+  pdf_reader_validate_xref_metadata_for_reconstruction(hybrid)
 
   let cyclic = try? pdf_reader_validate_xref_metadata_for_reconstruction(
-    wbtest_cyclic_prev_xref_pdf()[:],
+    wbtest_cyclic_prev_xref_pdf(),
   )
   guard cyclic is Err(XRefExpected) else { fail("expected cyclic Prev guard") }
 }
@@ -1499,13 +1469,10 @@ test "private content helpers cover malformed operand fallbacks" {
     ),
     @ascii.encode("abc"),
   )
-  @test.assert_eq(
-    decoded_hex_cursor.remaining_view(),
-    @ascii.encode(" next")[:],
-  )
+  @test.assert_eq(decoded_hex_cursor.remaining_view(), @ascii.encode(" next"))
   let ascii85_inline = pdf_ascii85_encode(@ascii.encode("abc"))
   let decoded_ascii85_cursor = byte_cursor_of_bytes(
-    pdf_bytes_concat_views([ascii85_inline[:], @ascii.encode(" EI next")[:]]),
+    pdf_bytes_concat_views([ascii85_inline, @ascii.encode(" EI next")]),
   )
   @test.assert_eq(
     try! pdf_content_read_text_encoded_inline_image_decoded(
@@ -1516,7 +1483,7 @@ test "private content helpers cover malformed operand fallbacks" {
   )
   @test.assert_eq(
     decoded_ascii85_cursor.remaining_view(),
-    @ascii.encode(" next")[:],
+    @ascii.encode(" next"),
   )
   @test.assert_eq(pdf_content_filter_is_inline_run_length(PdfInteger(1)), false)
   @test.assert_eq(
@@ -1612,7 +1579,7 @@ test "private content helpers cover malformed operand fallbacks" {
   @test.assert_eq(
     try! pdf_content_read_flate_inline_image_data(
       byte_cursor_of_bytes(
-        pdf_bytes_concat_views([flate_inline[:], @ascii.encode(" EI")[:]]),
+        pdf_bytes_concat_views([flate_inline, @ascii.encode(" EI")]),
       ),
     ),
     flate_inline,
@@ -1621,30 +1588,27 @@ test "private content helpers cover malformed operand fallbacks" {
     pdf_content_read_flate_inline_image_data(
       byte_cursor_of_bytes(
         pdf_bytes_concat_views([
-          @ascii.encode(" ")[:],
-          flate_inline[:],
-          @ascii.encode(" EI")[:],
+          @ascii.encode(" "),
+          flate_inline,
+          @ascii.encode(" EI"),
         ]),
       ),
     ),
     flate_inline,
   )
   let decoded_flate_cursor = byte_cursor_of_bytes(
-    pdf_bytes_concat_views([flate_inline[:], @ascii.encode(" EI next")[:]]),
+    pdf_bytes_concat_views([flate_inline, @ascii.encode(" EI next")]),
   )
   @test.assert_eq(
     try! pdf_content_read_flate_inline_image_decoded(decoded_flate_cursor),
     @ascii.encode("AB"),
   )
-  @test.assert_eq(
-    decoded_flate_cursor.remaining_view(),
-    @ascii.encode(" next")[:],
-  )
+  @test.assert_eq(decoded_flate_cursor.remaining_view(), @ascii.encode(" next"))
   let lzw_inline = wbtest_lzw_codes([256, 65, 257], 1)
   @test.assert_eq(
     try! pdf_content_read_lzw_inline_image_data(
       byte_cursor_of_bytes(
-        pdf_bytes_concat_views([lzw_inline[:], @ascii.encode(" EI")[:]]),
+        pdf_bytes_concat_views([lzw_inline, @ascii.encode(" EI")]),
       ),
       PdfDictionary([]),
       None,
@@ -1655,9 +1619,9 @@ test "private content helpers cover malformed operand fallbacks" {
     pdf_content_read_lzw_inline_image_data(
       byte_cursor_of_bytes(
         pdf_bytes_concat_views([
-          @ascii.encode(" ")[:],
-          lzw_inline[:],
-          @ascii.encode(" EI")[:],
+          @ascii.encode(" "),
+          lzw_inline,
+          @ascii.encode(" EI"),
         ]),
       ),
       PdfDictionary([]),
@@ -1666,20 +1630,17 @@ test "private content helpers cover malformed operand fallbacks" {
     lzw_inline,
   )
   let decoded_lzw_cursor = byte_cursor_of_bytes(
-    pdf_bytes_concat_views([lzw_inline[:], @ascii.encode(" EI next")[:]]),
+    pdf_bytes_concat_views([lzw_inline, @ascii.encode(" EI next")]),
   )
   @test.assert_eq(
     try! pdf_content_read_lzw_inline_image_decoded(decoded_lzw_cursor),
     @ascii.encode("A"),
   )
-  @test.assert_eq(
-    decoded_lzw_cursor.remaining_view(),
-    @ascii.encode(" next")[:],
-  )
+  @test.assert_eq(decoded_lzw_cursor.remaining_view(), @ascii.encode(" next"))
   @test.assert_eq(
     try! pdf_content_read_lzw_inline_image_data(
       byte_cursor_of_bytes(
-        pdf_bytes_concat_views([lzw_inline[:], @ascii.encode(" EI")[:]]),
+        pdf_bytes_concat_views([lzw_inline, @ascii.encode(" EI")]),
       ),
       PdfDictionary([]),
       Some(
@@ -1698,7 +1659,7 @@ test "private content helpers cover malformed operand fallbacks" {
   )
   let run_length_encoded = try! pdf_bytes_of_int_array([253, 90, 128])
   let decoded_run_length_cursor = byte_cursor_of_bytes(
-    pdf_bytes_concat_views([run_length_encoded[:], @ascii.encode(" EI next")[:]]),
+    pdf_bytes_concat_views([run_length_encoded, @ascii.encode(" EI next")]),
   )
   @test.assert_eq(
     try! pdf_content_read_run_length_inline_image_decoded(
@@ -1708,7 +1669,7 @@ test "private content helpers cover malformed operand fallbacks" {
   )
   @test.assert_eq(
     decoded_run_length_cursor.remaining_view(),
-    @ascii.encode(" next")[:],
+    @ascii.encode(" next"),
   )
   let missing_run_length_eod : Result[PdfBytes, Error] = try? pdf_content_read_run_length_inline_image_decoded(
     byte_cursor_of_bytes(try! pdf_bytes_of_int_array([253, 90])),
@@ -1723,16 +1684,16 @@ test "private content helpers cover malformed operand fallbacks" {
     fail("expected missing encoded run length EOD to raise")
   }
   let short_run_length_prefix : Result[(PdfBytes, Int), Error] = try? pdf_content_run_length_decode_view_prefix(
-    (try! pdf_bytes_of_int_array([253]))[:],
+    try! pdf_bytes_of_int_array([253]),
   )
   guard short_run_length_prefix is Err(_) else {
     fail("expected short run length prefix to raise")
   }
   let flate_with_decode_parms = byte_cursor_of_bytes(
     pdf_bytes_concat_views([
-      @ascii.encode("/W 1 /H 2 /CS /G /BPC 8 /F /Fl /DP << /Predictor 1 >> ID ")[:],
-      flate_inline[:],
-      @ascii.encode(" EI")[:],
+      @ascii.encode("/W 1 /H 2 /CS /G /BPC 8 /F /Fl /DP << /Predictor 1 >> ID "),
+      flate_inline,
+      @ascii.encode(" EI"),
     ]),
   )
   @test.assert_eq(
@@ -1756,9 +1717,9 @@ test "private content helpers cover malformed operand fallbacks" {
     pdf_bytes_concat_views([
       @ascii.encode(
         "/W 1 /H 1 /CS /G /BPC 8 /F /LZW /DP << /EarlyChange 1 >> ID ",
-      )[:],
-      lzw_inline[:],
-      @ascii.encode(" EI")[:],
+      ),
+      lzw_inline,
+      @ascii.encode(" EI"),
     ]),
   )
   @test.assert_eq(
@@ -1983,7 +1944,7 @@ test "private codec dictionary and predictor guards report malformed inputs" {
   }
   let bad_png_predictor : Result[Int, Error] = try? pdf_encode_png_predictor_value(
     5,
-    @ascii.encode("x")[:],
+    @ascii.encode("x"),
     0,
     0,
     1,
@@ -2035,17 +1996,17 @@ test "private LZW code expansion rejects malformed tables" {
 
   let prefix_encoded = wbtest_lzw_codes([65, 257], 1)
   @test.assert_eq(
-    try! pdf_lzw_decode_view_prefix(prefix_encoded[:]),
+    try! pdf_lzw_decode_view_prefix(prefix_encoded),
     (@ascii.encode("A"), prefix_encoded.length()),
   )
   let eod_encoded = wbtest_lzw_codes([257], 1)
   @test.assert_eq(
-    try! pdf_lzw_decode_view_prefix(eod_encoded[:]),
+    try! pdf_lzw_decode_view_prefix(eod_encoded),
     (Bytes::new(0), eod_encoded.length()),
   )
   let clear_eod_encoded = wbtest_lzw_codes([256, 257], 1)
   @test.assert_eq(
-    try! pdf_lzw_decode_view_prefix(clear_eod_encoded[:]),
+    try! pdf_lzw_decode_view_prefix(clear_eod_encoded),
     (Bytes::new(0), clear_eod_encoded.length()),
   )
   let exact_byte_encoded = wbtest_lzw_codes(
@@ -2053,28 +2014,28 @@ test "private LZW code expansion rejects malformed tables" {
     1,
   )
   @test.assert_eq(
-    try! pdf_lzw_decode_view_prefix(exact_byte_encoded[:]),
+    try! pdf_lzw_decode_view_prefix(exact_byte_encoded),
     (@ascii.encode("ABCDEFG"), exact_byte_encoded.length()),
   )
   let clear_restart_encoded = wbtest_lzw_codes([65, 256, 66, 257], 1)
   @test.assert_eq(
-    try! pdf_lzw_decode_view_prefix(clear_restart_encoded[:]),
+    try! pdf_lzw_decode_view_prefix(clear_restart_encoded),
     (@ascii.encode("AB"), clear_restart_encoded.length()),
   )
   let clear_then_eod_encoded = wbtest_lzw_codes([65, 256, 257], 1)
   @test.assert_eq(
-    try! pdf_lzw_decode_view_prefix(clear_then_eod_encoded[:]),
+    try! pdf_lzw_decode_view_prefix(clear_then_eod_encoded),
     (@ascii.encode("A"), clear_then_eod_encoded.length()),
   )
   let clear_then_eof : Result[(PdfBytes, Int), Error] = try? pdf_lzw_decode_view_prefix(
-    wbtest_lzw_codes([65, 256], 1)[:],
+    wbtest_lzw_codes([65, 256], 1),
   )
   guard clear_then_eof is Err(PdfError::InvalidLZWData) else {
     fail("expected InvalidLZWData")
   }
   let repeated_previous_encoded = wbtest_lzw_codes([65, 258, 257], 1)
   @test.assert_eq(
-    try! pdf_lzw_decode_view_prefix(repeated_previous_encoded[:]),
+    try! pdf_lzw_decode_view_prefix(repeated_previous_encoded),
     (@ascii.encode("AAA"), repeated_previous_encoded.length()),
   )
   let bump_codes : Array[Int] = [256]
@@ -2082,27 +2043,27 @@ test "private LZW code expansion rejects malformed tables" {
     bump_codes.push(65)
   }
   bump_codes.push(257)
-  let bump_encoded = wbtest_lzw_codes(bump_codes[:], 0)
+  let bump_encoded = wbtest_lzw_codes(bump_codes, 0)
   let bump_result : Result[(PdfBytes, Int), Error] = try? pdf_lzw_decode_view_prefix(
-    bump_encoded[:],
+    bump_encoded,
   )
   guard bump_result is Err(PdfError::InvalidLZWData) else {
     fail("expected InvalidLZWData")
   }
   let bad_forward_code : Result[(PdfBytes, Int), Error] = try? pdf_lzw_decode_view_prefix(
-    wbtest_lzw_codes([65, 300], 1)[:],
+    wbtest_lzw_codes([65, 300], 1),
   )
   guard bad_forward_code is Err(PdfError::InvalidLZWData) else {
     fail("expected InvalidLZWData")
   }
   let missing_eod : Result[(PdfBytes, Int), Error] = try? pdf_lzw_decode_view_prefix(
-    wbtest_lzw_codes([65], 1)[:],
+    wbtest_lzw_codes([65], 1),
   )
   guard missing_eod is Err(PdfError::InvalidLZWData) else {
     fail("expected InvalidLZWData")
   }
   let empty_prefix : Result[(PdfBytes, Int), Error] = try? pdf_lzw_decode_view_prefix(
-    Bytes::new(0)[:],
+    Bytes::new(0),
   )
   guard empty_prefix is Err(PdfError::InvalidLZWData) else {
     fail("expected InvalidLZWData")
@@ -2140,7 +2101,7 @@ fn wbtest_flate_bits(bits : ArrayView[Int]) -> Bytes {
 
 ///|
 test "private flate bit reader and huffman guards reject malformed inputs" {
-  let reader = FlateBitReader::new(Bytes::new(0)[:])
+  let reader = FlateBitReader::new(Bytes::new(0))
   let negative_bits : Result[UInt, Error] = try? reader.read_bits(-1)
   guard negative_bits is Err(PdfError::InvalidFlateData) else {
     fail("expected InvalidFlateData")
@@ -2155,7 +2116,7 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
   @test.assert_eq(try! peek_reader.read_bits(4), 12)
   @test.assert_eq(pdf_flate_bit_mask(16), 65535)
   @test.assert_eq(pdf_flate_bit_mask(17), 131071)
-  let exhausted = FlateBitReader::new(Bytes::new(0)[:])
+  let exhausted = FlateBitReader::new(Bytes::new(0))
   let missing_byte : Result[UInt, Error] = try? exhausted.read_bits(1)
   guard missing_byte is Err(PdfError::InvalidFlateData) else {
     fail("expected InvalidFlateData")
@@ -2225,18 +2186,11 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
   )
   for index in 0..<14 {
     pdf_flate_remember_match_prefix(
-      last_by_prefix,
-      previous_by_position,
-      shadowed_match[:],
-      index,
+      last_by_prefix, previous_by_position, shadowed_match, index,
     )
   }
   let (shadowed_length, shadowed_distance) = pdf_flate_best_previous_match(
-    shadowed_match[:],
-    last_by_prefix[:],
-    previous_by_position[:],
-    14,
-    64,
+    shadowed_match, last_by_prefix, previous_by_position, 14, 64,
   )
   @test.assert_eq(shadowed_length, 10)
   @test.assert_eq(shadowed_distance, 14)
@@ -2262,24 +2216,15 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
   )
   for index in 0..<deep_match_position {
     pdf_flate_remember_match_prefix(
-      deep_last_by_prefix,
-      deep_previous_by_position,
-      deep_match_bytes[:],
-      index,
+      deep_last_by_prefix, deep_previous_by_position, deep_match_bytes, index,
     )
   }
   let (shallow_length, _) = pdf_flate_best_previous_match(
-    deep_match_bytes[:],
-    deep_last_by_prefix[:],
-    deep_previous_by_position[:],
-    deep_match_position,
+    deep_match_bytes, deep_last_by_prefix, deep_previous_by_position, deep_match_position,
     8,
   )
   let (deep_length, deep_distance) = pdf_flate_best_previous_match(
-    deep_match_bytes[:],
-    deep_last_by_prefix[:],
-    deep_previous_by_position[:],
-    deep_match_position,
+    deep_match_bytes, deep_last_by_prefix, deep_previous_by_position, deep_match_position,
     64,
   )
   @test.assert_eq(shallow_length < 3, true)
@@ -2291,7 +2236,7 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
   @test.assert_eq(pdf_flate_max_probes_for_level(8), 128)
   @test.assert_eq(pdf_flate_max_probes_for_level(9), 256)
   @test.assert_eq(
-    try! pdf_flate_decode_view_prefix(Bytes::new(0)[:]),
+    try! pdf_flate_decode_view_prefix(Bytes::new(0)),
     (Bytes::new(0), 0),
   )
   let short_prefix : Result[(PdfBytes, Int), Error] = try? pdf_flate_decode_view_prefix(
@@ -2327,7 +2272,7 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
          0, 0, 0, // code-length code 18
          0, 0, 0, // code-length code 0
          0, // first decoded length symbol is 16
-      ])[:],
+      ]),
     ),
   )
   guard dynamic_repeat_without_previous is Err(PdfError::InvalidFlateData) else {
@@ -2343,7 +2288,7 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
   )
   let invalid_length_output : Array[Byte] = []
   let invalid_length : Result[Unit, Error] = try? pdf_flate_decode_huffman_block(
-    FlateBitReader::new(wbtest_flate_bits([0])[:]),
+    FlateBitReader::new(wbtest_flate_bits([0])),
     invalid_length_table,
     distance_table,
     invalid_length_output,
@@ -2362,7 +2307,7 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
   )
   let invalid_distance_output : Array[Byte] = [65]
   let invalid_distance : Result[Unit, Error] = try? pdf_flate_decode_huffman_block(
-    FlateBitReader::new(wbtest_flate_bits([0, 0])[:]),
+    FlateBitReader::new(wbtest_flate_bits([0, 0])),
     copy_table,
     invalid_distance_table,
     invalid_distance_output,
@@ -2373,7 +2318,7 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
 
   let past_output_output : Array[Byte] = []
   let past_output : Result[Unit, Error] = try? pdf_flate_decode_huffman_block(
-    FlateBitReader::new(wbtest_flate_bits([0, 0])[:]),
+    FlateBitReader::new(wbtest_flate_bits([0, 0])),
     copy_table,
     distance_table,
     past_output_output,
@@ -2413,7 +2358,7 @@ test "private flate dynamic encoder helpers cover RLE and guards" {
   @test.assert_eq(pdf_flate_trim_length_count([0, 0, 2, 0], 2), 3)
   @test.assert_eq(pdf_flate_trim_length_count([0, 0], 4), 4)
 
-  let zero_tokens = pdf_flate_code_length_tokens(Array::make(150, 0)[:])
+  let zero_tokens = pdf_flate_code_length_tokens(Array::make(150, 0))
   @test.assert_eq(zero_tokens.length(), 2)
   @test.assert_eq(zero_tokens[0].symbol, 18)
   @test.assert_eq(zero_tokens[0].extra, 127)
@@ -2426,29 +2371,29 @@ test "private flate dynamic encoder helpers cover RLE and guards" {
   @test.assert_eq(repeat_tokens[1].symbol, 16)
   @test.assert_eq(repeat_tokens[1].extra, 3)
   @test.assert_eq(repeat_tokens[2].symbol, 5)
-  @test.assert_eq(pdf_flate_code_length_frequencies(repeat_tokens[:])[16], 1)
+  @test.assert_eq(pdf_flate_code_length_frequencies(repeat_tokens)[16], 1)
   let order = pdf_flate_code_length_order()
   @test.assert_eq(order[0], 16)
-  @test.assert_eq(pdf_flate_code_length_order_count(Array::make(19, 0)[:]), 4)
+  @test.assert_eq(pdf_flate_code_length_order_count(Array::make(19, 0)), 4)
   let order_lengths = Array::make(19, 0)
   order_lengths[15] = 1
-  @test.assert_eq(pdf_flate_code_length_order_count(order_lengths[:]), 19)
+  @test.assert_eq(pdf_flate_code_length_order_count(order_lengths), 19)
 
   let literal_tokens : Array[PdfFlateToken] = [PdfFlateLiteral(65)]
   let (literal_frequencies, distance_frequencies) = try! pdf_flate_count_dynamic_frequencies(
-    literal_tokens[:],
+    literal_tokens,
   )
   @test.assert_eq(literal_frequencies[65], 1)
   @test.assert_eq(literal_frequencies[256], 1)
   @test.assert_eq(distance_frequencies[0], 1)
   let match_tokens : Array[PdfFlateToken] = [PdfFlateLengthDistance(3, 1)]
   let (match_frequencies, match_distance_frequencies) = try! pdf_flate_count_dynamic_frequencies(
-    match_tokens[:],
+    match_tokens,
   )
   @test.assert_eq(match_frequencies[257], 1)
   @test.assert_eq(match_distance_frequencies[0], 1)
   let data = @ascii.encode("ABCDABCDABCD")
-  let tokens = pdf_flate_match_tokens(data[:], 64)
+  let tokens = pdf_flate_match_tokens(data, 64)
   guard tokens[4] is PdfFlateLengthDistance(length, distance) else {
     fail("expected a length-distance token")
   }
@@ -2468,7 +2413,7 @@ test "private flate dynamic encoder helpers cover RLE and guards" {
   }
   let empty_dynamic : Result[Unit, Error] = try? pdf_flate_push_dynamic_match_block(
     [],
-    Bytes::new(0)[:],
+    Bytes::new(0),
     true,
     64,
   )
@@ -2569,7 +2514,7 @@ test "private image decode helpers cover scalar edge behavior" {
     1,
     unsupported_indexed,
     Some(8),
-    sample[:],
+    sample,
   )
   guard unsupported8 is Err(PdfError::FilterExpected) else {
     fail("expected unsupported indexed 8bpp base")
@@ -2579,7 +2524,7 @@ test "private image decode helpers cover scalar edge behavior" {
     1,
     unsupported_indexed,
     Some(4),
-    sample[:],
+    sample,
   )
   guard unsupported4 is Err(PdfError::FilterExpected) else {
     fail("expected unsupported indexed 4bpp base")
@@ -2589,7 +2534,7 @@ test "private image decode helpers cover scalar edge behavior" {
     1,
     unsupported_indexed,
     Some(2),
-    sample[:],
+    sample,
   )
   guard unsupported2 is Err(PdfError::FilterExpected) else {
     fail("expected unsupported indexed 2bpp base")
@@ -2599,7 +2544,7 @@ test "private image decode helpers cover scalar edge behavior" {
     1,
     unsupported_indexed,
     Some(1),
-    sample[:],
+    sample,
   )
   guard unsupported1 is Err(PdfError::FilterExpected) else {
     fail("expected unsupported indexed 1bpp base")
@@ -2845,43 +2790,31 @@ fn wbtest_text_simple_font(
 
 ///|
 test "private text ToUnicode CMap helpers reject malformed ranges" {
-  @test.assert_eq(pdf_text_parse_hex_bytes(@ascii.encode("0g")[:], 0, 2), None)
+  @test.assert_eq(pdf_text_parse_hex_bytes(@ascii.encode("0g"), 0, 2), None)
+  @test.assert_eq(pdf_text_after_ascii(@ascii.encode("abc"), "missing"), None)
+  @test.assert_eq(pdf_text_parse_cmap_hex_groups(@ascii.encode("<0g>")), None)
   @test.assert_eq(
-    pdf_text_after_ascii(@ascii.encode("abc")[:], "missing"),
+    pdf_text_parse_cmap_hex_group_at(@ascii.encode("<0g>"), 0),
     None,
   )
   @test.assert_eq(
-    pdf_text_parse_cmap_hex_groups(@ascii.encode("<0g>")[:]),
+    pdf_text_tounicode_bfrange_inline_entries(@ascii.encode("<01><02>[<0041>]")),
     None,
   )
   @test.assert_eq(
-    pdf_text_parse_cmap_hex_group_at(@ascii.encode("<0g>")[:], 0),
+    pdf_text_tounicode_bfrange_inline_entries(@ascii.encode("<01><01>[<0g>]")),
     None,
   )
   @test.assert_eq(
-    pdf_text_tounicode_bfrange_inline_entries(
-      @ascii.encode("<01><02>[<0041>]")[:],
-    ),
+    pdf_text_tounicode_bfrange_inline_entries(@ascii.encode("<00><01><ff>")),
     None,
   )
   @test.assert_eq(
-    pdf_text_tounicode_bfrange_inline_entries(
-      @ascii.encode("<01><01>[<0g>]")[:],
-    ),
+    pdf_text_tounicode_bfrange_inline_entries(@ascii.encode("<02><01><0041>")),
     None,
   )
   @test.assert_eq(
-    pdf_text_tounicode_bfrange_inline_entries(@ascii.encode("<00><01><ff>")[:]),
-    None,
-  )
-  @test.assert_eq(
-    pdf_text_tounicode_bfrange_inline_entries(
-      @ascii.encode("<02><01><0041>")[:],
-    ),
-    None,
-  )
-  @test.assert_eq(
-    pdf_text_tounicode_bfrange_inline_entries(@ascii.encode("<01>")[:]),
+    pdf_text_tounicode_bfrange_inline_entries(@ascii.encode("<01>")),
     None,
   )
   @test.assert_eq(
@@ -2903,28 +2836,28 @@ test "private text ToUnicode CMap helpers reject malformed ranges" {
   let invalid_bfrange_entries : Array[(Int, PdfBytes)] = []
   guard pdf_text_append_tounicode_bfrange_line(
       invalid_bfrange_entries,
-      @ascii.encode("<02><01>[")[:],
+      @ascii.encode("<02><01>["),
     )
     is None else {
     fail("expected invalid bfrange line")
   }
   guard pdf_text_append_tounicode_bfrange_line(
       invalid_bfrange_entries,
-      @ascii.encode("<01>[")[:],
+      @ascii.encode("<01>["),
     )
     is None else {
     fail("expected incomplete bfrange line")
   }
   guard pdf_text_append_tounicode_bfrange_line(
       invalid_bfrange_entries,
-      @ascii.encode("<01><02><FF>")[:],
+      @ascii.encode("<01><02><FF>"),
     )
     is None else {
     fail("expected overflow bfrange line")
   }
   guard pdf_text_append_tounicode_bfrange_line(
       invalid_bfrange_entries,
-      @ascii.encode("<01><02>plain")[:],
+      @ascii.encode("<01><02>plain"),
     )
     is None else {
     fail("expected missing unicode bfrange line")
@@ -2935,17 +2868,17 @@ test "private text ToUnicode CMap helpers reject malformed ranges" {
   let append_result = pdf_text_append_pending_bfrange_array(
     pending_entries,
     pending,
-    @ascii.encode("<0041>]")[:],
+    @ascii.encode("<0041>]"),
   )
   guard append_result is PdfTextCMapBFRangeArrayClosed(rest) else {
     fail("expected closed bfrange array")
   }
   @test.assert_eq(rest.length(), 0)
   @test.assert_eq(pending_entries, [])
-  @test.assert_eq(pdf_text_parse_tounicode(@ascii.encode("plain")[:]), None)
+  @test.assert_eq(pdf_text_parse_tounicode(@ascii.encode("plain")), None)
   @test.assert_eq(
     pdf_text_parse_tounicode(
-      @ascii.encode("1 beginbfrange <01><02>[<0041>] endbfrange\n")[:],
+      @ascii.encode("1 beginbfrange <01><02>[<0041>] endbfrange\n"),
     ),
     None,
   )
@@ -2968,7 +2901,7 @@ test "private external CMap helpers cover malformed and compact sections" {
   @test.assert_eq(
     pdf_text_parsed_cmap_charcodes_of_text(
       empty_parsed,
-      wbtest_text_bytes([1, 2])[:],
+      wbtest_text_bytes([1, 2]),
     ),
     [1, 2],
   )
@@ -3005,13 +2938,13 @@ test "private external CMap helpers cover malformed and compact sections" {
   @test.assert_eq(
     pdf_text_parsed_cmap_charcodes_of_text(
       ucs2_base_parsed,
-      wbtest_text_bytes([0x12, 0x34])[:],
+      wbtest_text_bytes([0x12, 0x34]),
     ),
     [0x1234],
   )
   let truncated_ucs2 : Result[Array[Int], Error] = try? pdf_text_parsed_cmap_charcodes_of_text(
     ucs2_base_parsed,
-    wbtest_text_bytes([0x12])[:],
+    wbtest_text_bytes([0x12]),
   )
   guard truncated_ucs2 is Err(_) else {
     fail("expected truncated external UCS2 UseCMap text to raise")
@@ -3019,13 +2952,13 @@ test "private external CMap helpers cover malformed and compact sections" {
   @test.assert_eq(
     pdf_text_parsed_cmap_charcodes_of_text(
       identity_base_parsed,
-      wbtest_text_bytes([1, 2])[:],
+      wbtest_text_bytes([1, 2]),
     ),
     [0x0102],
   )
   let odd_identity : Result[Array[Int], Error] = try? pdf_text_parsed_cmap_charcodes_of_text(
     identity_base_parsed,
-    wbtest_text_bytes([1])[:],
+    wbtest_text_bytes([1]),
   )
   guard odd_identity is Err(_) else {
     fail("expected odd identity CMap text to raise")
@@ -3044,7 +2977,7 @@ test "private external CMap helpers cover malformed and compact sections" {
   @test.assert_eq(
     pdf_text_parsed_cmap_charcodes_of_text(
       mixed_identity_base_parsed,
-      wbtest_text_bytes([0x00, 0x41])[:],
+      wbtest_text_bytes([0x00, 0x41]),
     ),
     [0x0041],
   )
@@ -3081,7 +3014,7 @@ test "private external CMap helpers cover malformed and compact sections" {
   @test.assert_eq(
     pdf_text_parsed_cmap_charcodes_of_text(
       mixed_parsed,
-      wbtest_text_bytes([0x41, 0x00])[:],
+      wbtest_text_bytes([0x41, 0x00]),
     ),
     [0x4100],
   )
@@ -3177,58 +3110,49 @@ test "private external CMap helpers cover malformed and compact sections" {
     }),
   )
   @test.assert_eq(
-    pdf_text_parse_cmap_ascii_int_at(@ascii.encode(" 7x")[:], 0),
+    pdf_text_parse_cmap_ascii_int_at(@ascii.encode(" 7x"), 0),
     Some((7, 2)),
   )
   @test.assert_eq(
-    pdf_text_parse_cmap_ascii_int_at(@ascii.encode(" +7x")[:], 0),
+    pdf_text_parse_cmap_ascii_int_at(@ascii.encode(" +7x"), 0),
     None,
   )
   @test.assert_eq(
-    pdf_text_parse_cmap_ascii_int_at(@ascii.encode(" +x")[:], 0),
+    pdf_text_parse_cmap_ascii_int_at(@ascii.encode(" +x"), 0),
     None,
   )
   let cidchar_entries : Array[(Int, Int)] = []
   pdf_text_push_cmap_cidchar_entries(
     cidchar_entries,
-    @ascii.encode("<> 1 <41> 7 <42> +")[:],
+    @ascii.encode("<> 1 <41> 7 <42> +"),
   )
   @test.assert_eq(cidchar_entries, [(0x41, 7)])
-  pdf_text_push_cmap_cidchar_entries(
-    cidchar_entries,
-    @ascii.encode("<43> +7")[:],
-  )
+  pdf_text_push_cmap_cidchar_entries(cidchar_entries, @ascii.encode("<43> +7"))
   @test.assert_eq(cidchar_entries, [(0x41, 7)])
 
   let cidrange_entries : Array[(Int, Int)] = []
   pdf_text_push_cmap_cidrange_entries(
     cidrange_entries,
-    @ascii.encode("<02><01> 5")[:],
+    @ascii.encode("<02><01> 5"),
   )
   @test.assert_eq(cidrange_entries, [])
   pdf_text_push_cmap_cidrange_entries(
     cidrange_entries,
-    @ascii.encode("<10><11>")[:],
+    @ascii.encode("<10><11>"),
   )
   @test.assert_eq(cidrange_entries, [])
-  pdf_text_push_cmap_cidrange_entries(
-    cidrange_entries,
-    @ascii.encode("<12> 8")[:],
-  )
+  pdf_text_push_cmap_cidrange_entries(cidrange_entries, @ascii.encode("<12> 8"))
   @test.assert_eq(cidrange_entries, [])
 
   let codespaces : Array[PdfCMapCodeSpace] = []
-  pdf_text_push_cmap_codespace_entries(
-    codespaces,
-    @ascii.encode("<00><FFFF>")[:],
-  )
+  pdf_text_push_cmap_codespace_entries(codespaces, @ascii.encode("<00><FFFF>"))
   @test.assert_eq(codespaces, [])
-  pdf_text_push_cmap_codespace_entries(codespaces, @ascii.encode("<00>")[:])
+  pdf_text_push_cmap_codespace_entries(codespaces, @ascii.encode("<00>"))
   @test.assert_eq(codespaces, [])
 
   @test.assert_eq(
     pdf_text_parse_cmap_cids(
-      @ascii.encode("1 begin\n" + "cidchar\n" + "<41> 7\n" + "endcidchar\n")[:],
+      @ascii.encode("1 begin\n" + "cidchar\n" + "<41> 7\n" + "endcidchar\n"),
     ),
     Some([(0x41, 7)]),
   )
@@ -3240,7 +3164,7 @@ test "private external CMap helpers cover malformed and compact sections" {
         "cidchar\n" +
         "<42> 8\n" +
         "endcidchar\n",
-      )[:],
+      ),
     ),
     Some([(0x41, 7), (0x42, 8)]),
   )
@@ -3252,7 +3176,7 @@ test "private external CMap helpers cover malformed and compact sections" {
         "notdefrange\n" +
         "<30><31> 5\n" +
         "endnotdefrange\n",
-      )[:],
+      ),
     ),
     Some([(0x20, 0), (0x30, 5), (0x31, 6)]),
   )
@@ -3260,7 +3184,7 @@ test "private external CMap helpers cover malformed and compact sections" {
     pdf_text_parse_cmap_notdefs(
       @ascii.encode(
         "1 begin\n" + "notdefchar\n" + "<20> 0\n" + "endnotdefchar\n",
-      )[:],
+      ),
     ),
     Some([(0x20, 0)]),
   )
@@ -3268,7 +3192,7 @@ test "private external CMap helpers cover malformed and compact sections" {
     pdf_text_parse_cmap_codespaces(
       @ascii.encode(
         "1 begin\n" + "codespacerange\n" + "<00><7F>\n" + "endcodespacerange\n",
-      )[:],
+      ),
     ),
     Some([{ length: 1, first: 0x00, last: 0x7F }]),
   )
@@ -3280,7 +3204,7 @@ test "private external CMap helpers cover malformed and compact sections" {
         "codespacerange\n" +
         "<8100><81FF>\n" +
         "endcodespacerange\n",
-      )[:],
+      ),
     ),
     Some([
       { length: 1, first: 0x00, last: 0x7F },
@@ -3331,7 +3255,7 @@ test "private direct Unicode predefined CMap helpers cover malformed scalars" {
   @test.assert_eq(
     pdf_text_predefined_cmap_charcodes_of_text(
       utf8_name,
-      wbtest_text_bytes([0xC2, 0xA2])[:],
+      wbtest_text_bytes([0xC2, 0xA2]),
     ),
     [0xC2A2],
   )
@@ -3340,21 +3264,21 @@ test "private direct Unicode predefined CMap helpers cover malformed scalars" {
   @test.assert_eq(pdf_text_predefined_utf8_charcode(0xD800), None)
   let truncated_utf8 : Result[Array[Int], Error] = try? pdf_text_predefined_cmap_charcodes_of_text(
     utf8_name,
-    wbtest_text_bytes([0xC2])[:],
+    wbtest_text_bytes([0xC2]),
   )
   guard truncated_utf8 is Err(_) else {
     fail("expected truncated UTF8 predefined CMap text to raise")
   }
   let invalid_lead_utf8 : Result[Array[Int], Error] = try? pdf_text_predefined_cmap_charcodes_of_text(
     utf8_name,
-    wbtest_text_bytes([0xFF])[:],
+    wbtest_text_bytes([0xFF]),
   )
   guard invalid_lead_utf8 is Err(_) else {
     fail("expected invalid leading UTF8 predefined CMap text to raise")
   }
   let invalid_continuation_utf8 : Result[Array[Int], Error] = try? pdf_text_predefined_cmap_charcodes_of_text(
     utf8_name,
-    wbtest_text_bytes([0xC2, 0x41])[:],
+    wbtest_text_bytes([0xC2, 0x41]),
   )
   guard invalid_continuation_utf8 is Err(_) else {
     fail("expected invalid UTF8 predefined CMap text to raise")
@@ -3370,7 +3294,7 @@ test "private direct Unicode predefined CMap helpers cover malformed scalars" {
   @test.assert_eq(pdf_text_predefined_utf16_codepoints(0x123456), None)
   let low_surrogate_utf16 : Result[Array[Int], Error] = try? pdf_text_predefined_cmap_charcodes_of_text(
     wbtest_text_name("/UniJIS-UTF16-H"),
-    wbtest_text_bytes([0xDC, 0x00])[:],
+    wbtest_text_bytes([0xDC, 0x00]),
   )
   guard low_surrogate_utf16 is Err(_) else {
     fail("expected low-surrogate UTF16 predefined CMap text to raise")
@@ -3406,12 +3330,12 @@ test "private direct Unicode predefined CMap helpers cover malformed scalars" {
   })
   @test.assert_eq(
     two_byte_font.pdf_text_fixed_or_single_byte_charcodes_of_text(
-      wbtest_text_bytes([0x00, 0x41])[:],
+      wbtest_text_bytes([0x00, 0x41]),
     ),
     [0x41],
   )
   let odd_fixed : Result[Array[Int], Error] = try? two_byte_font.pdf_text_fixed_or_single_byte_charcodes_of_text(
-    wbtest_text_bytes([0])[:],
+    wbtest_text_bytes([0]),
   )
   guard odd_fixed is Err(_) else {
     fail("expected odd fixed-width CID text to raise")
@@ -4723,11 +4647,11 @@ test "private text glyph helpers cover fallback and CID ToUnicode branches" {
     Some(0x0192),
   )
   @test.assert_eq(
-    pdf_text_parse_hex_codepoint(@ascii.encode("D800")[:], 0, 4),
+    pdf_text_parse_hex_codepoint(@ascii.encode("D800"), 0, 4),
     None,
   )
   @test.assert_eq(
-    pdf_text_uni_glyphname_codepoints(@ascii.encode("/uniD800")[:]),
+    pdf_text_uni_glyphname_codepoints(@ascii.encode("/uniD800")),
     None,
   )
   @test.assert_eq(
@@ -4761,7 +4685,7 @@ test "private text glyph helpers cover fallback and CID ToUnicode branches" {
   )
   let invalid_extractor = invalid_font.text_extractor()
   @test.assert_eq(
-    try! invalid_extractor.codepoints_of_text(wbtest_text_bytes([65])[:]),
+    try! invalid_extractor.codepoints_of_text(wbtest_text_bytes([65])),
     [65],
   )
   @test.assert_eq(invalid_extractor.charcode_of_codepoint(65), None)
@@ -4808,21 +4732,21 @@ test "private text glyph helpers cover fallback and CID ToUnicode branches" {
   )
   @test.assert_eq(
     pdf_text_predefined_cid_range_charcode_of_cid(
-      [(0x81308436, 0x81308436, 1), (0x0000FE51, 0x0000FE51, 1)][:],
+      [(0x81308436, 0x81308436, 1), (0x0000FE51, 0x0000FE51, 1)],
       1,
     ),
     Some(0x0000FE51),
   )
   @test.assert_eq(
     pdf_text_predefined_cid_range_lookup_unsigned(
-      [(0x20, 0x7E, 10), (0x8EA2EDA1, 0x8EA2EDA2, 20)][:],
+      [(0x20, 0x7E, 10), (0x8EA2EDA1, 0x8EA2EDA2, 20)],
       0x8EA2EDA2,
     ),
     Some(21),
   )
   @test.assert_eq(
     pdf_text_predefined_cid_range_lookup_unsigned(
-      [(0x20, 0x7E, 10), (0x8EA2EDA1, 0x8EA2EDA2, 20)][:],
+      [(0x20, 0x7E, 10), (0x8EA2EDA1, 0x8EA2EDA2, 20)],
       0x80,
     ),
     None,
@@ -4837,55 +4761,55 @@ test "private text glyph helpers cover fallback and CID ToUnicode branches" {
   )
   @test.assert_eq(
     pdf_text_predefined_sequence_table_charcode(
-      [(3, [0x21]), (1, [0x20]), (2, [0x20, 0xFE00])][:],
-      [(0x81308436, 0x81308436, 1), (0x0000FE51, 0x0000FE51, 1)][:],
+      [(3, [0x21]), (1, [0x20]), (2, [0x20, 0xFE00])],
+      [(0x81308436, 0x81308436, 1), (0x0000FE51, 0x0000FE51, 1)],
       0x20,
     ),
     Some(0x0000FE51),
   )
   @test.assert_eq(
     pdf_text_predefined_sequence_table_charcode(
-      [(3, [0x21])][:],
-      [(0x0000FE51, 0x0000FE51, 1)][:],
+      [(3, [0x21])],
+      [(0x0000FE51, 0x0000FE51, 1)],
       0x21,
     ),
     None,
   )
   @test.assert_eq(
     pdf_text_predefined_cid_range_charcode_of_cid(
-      [(0x81308436, 0x81308436, 1)][:],
+      [(0x81308436, 0x81308436, 1)],
       2,
     ),
     None,
   )
   @test.assert_eq(
     pdf_text_predefined_unicode_table_charcode(
-      [0, 0x20, 0x20][:],
-      [(0x81308436, 0x81308436, 1), (0x0000FE51, 0x0000FE51, 2)][:],
+      [0, 0x20, 0x20],
+      [(0x81308436, 0x81308436, 1), (0x0000FE51, 0x0000FE51, 2)],
       0x20,
     ),
     Some(0x0000FE51),
   )
   @test.assert_eq(
     pdf_text_predefined_unicode_table_charcode(
-      [0, 0x20][:],
-      [(0x0000FE51, 0x0000FE51, 1)][:],
+      [0, 0x20],
+      [(0x0000FE51, 0x0000FE51, 1)],
       0,
     ),
     None,
   )
   @test.assert_eq(
     pdf_text_predefined_codepoint_range_charcode(
-      [(1, 1, 0x20)][:],
-      [(0x81308436, 0x81308436, 1), (0x0000FE51, 0x0000FE51, 1)][:],
+      [(1, 1, 0x20)],
+      [(0x81308436, 0x81308436, 1), (0x0000FE51, 0x0000FE51, 1)],
       0x20,
     ),
     Some(0x0000FE51),
   )
   @test.assert_eq(
     pdf_text_predefined_codepoint_range_charcode(
-      [(1, 1, 0x20)][:],
-      [(0x0000FE51, 0x0000FE51, 1)][:],
+      [(1, 1, 0x20)],
+      [(0x0000FE51, 0x0000FE51, 1)],
       0x21,
     ),
     None,
@@ -5070,7 +4994,7 @@ test "private text glyph helpers cover fallback and CID ToUnicode branches" {
   let unknown_rksj_extractor = unknown_rksj_font.text_extractor()
   @test.assert_eq(
     unknown_rksj_extractor.codepoints_of_text(
-      wbtest_text_bytes([0x41, 0xA6, 0x81, 0x40])[:],
+      wbtest_text_bytes([0x41, 0xA6, 0x81, 0x40]),
     ),
     [0x41, 0xFF66, 0x8140],
   )

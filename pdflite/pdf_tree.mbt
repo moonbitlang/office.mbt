@@ -165,7 +165,7 @@ pub fn PdfDocument::contents_of_name_tree(
 ) -> Array[(PdfObject, PdfObject)] {
   match
     self.lookup_direct_or_else(pdf_tree_names_key(), pdf_tree_nums_key(), tree) {
-    Some(PdfArray(items)) => pdf_tree_array_pairs(items[:])
+    Some(PdfArray(items)) => pdf_tree_array_pairs(items)
     _ =>
       match self.lookup_direct(pdf_tree_kids_key(), tree) {
         Some(PdfArray(kids)) => {
@@ -189,13 +189,13 @@ pub fn PdfDocument::name_tree_lookup_object(
   tree : PdfObject,
 ) -> PdfObject? {
   match self.lookup_direct(pdf_tree_limits_key(), tree) {
-    Some(PdfArray(limits)) if !pdf_tree_limits_contain(key, limits[:]) =>
+    Some(PdfArray(limits)) if !pdf_tree_limits_contain(key, limits) =>
       return None
     Some(PdfArray(_)) | None => ()
     Some(_) => return None
   }
   match self.lookup_direct(pdf_tree_kids_key(), tree) {
-    Some(PdfArray(kids)) => self.pdf_tree_lookup_kids(key, kids[:])
+    Some(PdfArray(kids)) => self.pdf_tree_lookup_kids(key, kids)
     Some(_) => None
     None =>
       match
@@ -204,7 +204,7 @@ pub fn PdfDocument::name_tree_lookup_object(
           pdf_tree_nums_key(),
           tree,
         ) {
-        Some(PdfArray(items)) => self.pdf_tree_lookup_array(key, items[:])
+        Some(PdfArray(items)) => self.pdf_tree_lookup_array(key, items)
         _ => None
       }
   }
@@ -462,7 +462,7 @@ pub fn pdf_build_name_tree(
   if is_number {
     let number_entries : Array[(Int, PdfObject)] = []
     for entry in entries {
-      number_entries.push((pdf_tree_number_key_of_bytes(entry.0[:]), entry.1))
+      number_entries.push((pdf_tree_number_key_of_bytes(entry.0), entry.1))
     }
     document.build_number_tree(number_entries)
   } else {

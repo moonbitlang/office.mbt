@@ -46,7 +46,7 @@ fn pdf_writer_push_view(output : Array[Byte], view : BytesView) -> Unit {
 
 ///|
 fn pdf_writer_push_ascii(output : Array[Byte], text : String) -> Unit {
-  pdf_writer_push_view(output, @ascii.encode(text)[:])
+  pdf_writer_push_view(output, @ascii.encode(text))
 }
 
 ///|
@@ -446,13 +446,13 @@ fn pdf_writer_push_plain_significant_real(
       }
       if decimal_position <= 0 {
         pdf_writer_push_ascii(output, "0.")
-        pdf_writer_push_int_digits(output, rounded[:], 0, end)
+        pdf_writer_push_int_digits(output, rounded, 0, end)
       } else if decimal_position >= end {
-        pdf_writer_push_int_digits(output, rounded[:], 0, end)
+        pdf_writer_push_int_digits(output, rounded, 0, end)
       } else {
-        pdf_writer_push_int_digits(output, rounded[:], 0, decimal_position)
+        pdf_writer_push_int_digits(output, rounded, 0, decimal_position)
         pdf_writer_push_byte(output, 46)
-        pdf_writer_push_int_digits(output, rounded[:], decimal_position, end)
+        pdf_writer_push_int_digits(output, rounded, decimal_position, end)
       }
     }
   }
@@ -482,10 +482,9 @@ fn pdf_writer_push_real(
     pdf_writer_push_fixed_six_real(output, value)
   } else {
     let text = @ascii.encode(value.to_string())
-    match pdf_writer_exponent_marker(text[:]) {
-      -1 => pdf_writer_push_plain_significant_real(output, text[:])
-      exponent_at =>
-        pdf_writer_push_scientific_real(output, text[:], exponent_at)
+    match pdf_writer_exponent_marker(text) {
+      -1 => pdf_writer_push_plain_significant_real(output, text)
+      exponent_at => pdf_writer_push_scientific_real(output, text, exponent_at)
     }
   }
 }
@@ -631,7 +630,7 @@ fn pdf_writer_write_document_objects(
         xrefs.push((number, output.length(), generation))
         pdf_writer_push_view(
           output,
-          pdf_write_indirect_object({ number, generation, object })[:],
+          pdf_write_indirect_object({ number, generation, object }),
         )
       }
       _ => raise ParsedObjectExpected
@@ -765,7 +764,7 @@ fn pdf_writer_push_classic_xref_and_trailer(
   }
   pdf_writer_push_ascii(output, "trailer\n")
   let trailer = pdf_writer_trailer_dictionary(document)
-  pdf_writer_push_view(output, pdf_write_object(trailer)[:])
+  pdf_writer_push_view(output, pdf_write_object(trailer))
   pdf_writer_push_ascii(output, "\nstartxref\n")
   pdf_writer_push_ascii(output, xref_start.to_string())
   pdf_writer_push_ascii(output, "\n%%EOF\n")
@@ -813,7 +812,7 @@ fn pdf_writer_write_document_objects_for_numbers(
           xrefs.push((number, output.length(), generation))
           pdf_writer_push_view(
             output,
-            pdf_write_indirect_object({ number, generation, object })[:],
+            pdf_write_indirect_object({ number, generation, object }),
           )
         }
         Some(_) => raise ParsedObjectExpected
@@ -903,7 +902,7 @@ fn pdf_writer_push_classic_sparse_xref_and_trailer(
     pdf_writer_prev_name(),
     PdfInteger(previous_xref),
   )
-  pdf_writer_push_view(output, pdf_write_object(trailer)[:])
+  pdf_writer_push_view(output, pdf_write_object(trailer))
   pdf_writer_push_ascii(output, "\nstartxref\n")
   pdf_writer_push_ascii(output, xref_start.to_string())
   pdf_writer_push_ascii(output, "\n%%EOF\n")
@@ -916,12 +915,7 @@ pub fn pdf_write_document(document : PdfDocument) -> PdfBytes raise PdfError {
   pdf_writer_push_header(output, major, minor)
   let xrefs = pdf_writer_write_document_objects(output, document)
   let xref_start = output.length()
-  pdf_writer_push_classic_xref_and_trailer(
-    output,
-    document,
-    xrefs[:],
-    xref_start,
-  )
+  pdf_writer_push_classic_xref_and_trailer(output, document, xrefs, xref_start)
   Bytes::from_array(output)
 }
 
@@ -930,7 +924,7 @@ pub fn pdf_write_document_incremental_update(
   original : PdfBytes,
   document : PdfDocument,
 ) -> PdfBytes raise PdfError {
-  let previous_xref = pdf_read_startxref_position(original[:])
+  let previous_xref = pdf_read_startxref_position(original)
   let output : Array[Byte] = []
   for byte in original {
     output.push(byte)
@@ -938,18 +932,11 @@ pub fn pdf_write_document_incremental_update(
   pdf_writer_push_byte(output, 10)
   let changed_numbers = pdf_writer_changed_object_numbers(document)
   let xrefs = pdf_writer_write_document_objects_for_numbers(
-    output,
-    document,
-    changed_numbers[:],
+    output, document, changed_numbers,
   )
   let xref_start = output.length()
   pdf_writer_push_classic_sparse_xref_and_trailer(
-    output,
-    document,
-    xrefs[:],
-    changed_numbers[:],
-    xref_start,
-    previous_xref,
+    output, document, xrefs, changed_numbers, xref_start, previous_xref,
   )
   Bytes::from_array(output)
 }
@@ -1020,7 +1007,7 @@ fn pdf_writer_xref_stream_entry_numbers(
   xref_stream_number : Int,
 ) -> Array[Int] {
   let numbers = pdf_writer_changed_object_numbers(document)
-  if !pdf_writer_int_array_contains(numbers[:], xref_stream_number) {
+  if !pdf_writer_int_array_contains(numbers, xref_stream_number) {
     numbers.push(xref_stream_number)
   }
   numbers.sort()
@@ -1134,10 +1121,7 @@ fn pdf_write_document_with_xref_stream_filter(
   let xref_stream_number = document.objects.max_object_number() + 1
   let size = xref_stream_number + 1
   let xref_data = pdf_writer_xref_stream_data(
-    xrefs[:],
-    size,
-    xref_stream_number,
-    xref_stream_offset,
+    xrefs, size, xref_stream_number, xref_stream_offset,
   )
   let stream = pdf_stream(
     pdf_writer_xref_stream_trailer(document, size, None).add_dict_entry(
@@ -1156,7 +1140,7 @@ fn pdf_write_document_with_xref_stream_filter(
       number: xref_stream_number,
       generation: 0,
       object: xref_object,
-    })[:],
+    }),
   )
   pdf_writer_push_ascii(output, "startxref\n")
   pdf_writer_push_ascii(output, xref_stream_offset.to_string())
@@ -1177,7 +1161,7 @@ fn pdf_write_document_incremental_update_with_xref_stream_filter(
   document : PdfDocument,
   filter : PdfName?,
 ) -> PdfBytes raise PdfError {
-  let previous_xref = pdf_read_startxref_position(original[:])
+  let previous_xref = pdf_read_startxref_position(original)
   let output : Array[Byte] = []
   for byte in original {
     output.push(byte)
@@ -1188,24 +1172,19 @@ fn pdf_write_document_incremental_update_with_xref_stream_filter(
     document, xref_stream_number,
   )
   let xrefs = pdf_writer_write_document_objects_for_numbers(
-    output,
-    document,
-    entry_numbers[:],
+    output, document, entry_numbers,
   )
   let xref_stream_offset = output.length()
   let size = xref_stream_number + 1
   let xref_data = pdf_writer_xref_stream_data_for_numbers(
-    xrefs[:],
-    entry_numbers[:],
-    xref_stream_number,
-    xref_stream_offset,
+    xrefs, entry_numbers, xref_stream_number, xref_stream_offset,
   )
-  let index_pairs = pdf_writer_xref_stream_index_pairs(entry_numbers[:])
+  let index_pairs = pdf_writer_xref_stream_index_pairs(entry_numbers)
   let stream = pdf_stream(
     pdf_writer_xref_stream_trailer(document, size, Some(previous_xref))
     .add_dict_entry(
       pdf_writer_index_name(),
-      pdf_writer_xref_stream_index_object(index_pairs[:]),
+      pdf_writer_xref_stream_index_object(index_pairs),
     )
     .add_dict_entry(pdf_writer_length_name(), PdfInteger(xref_data.length())),
     StreamGot(xref_data),
@@ -1220,7 +1199,7 @@ fn pdf_write_document_incremental_update_with_xref_stream_filter(
       number: xref_stream_number,
       generation: 0,
       object: xref_object,
-    })[:],
+    }),
   )
   pdf_writer_push_ascii(output, "startxref\n")
   pdf_writer_push_ascii(output, xref_stream_offset.to_string())
@@ -1346,24 +1325,24 @@ fn pdf_write_apply_options_encryption(
   match encryption.encryption_method {
     PdfEncryption40Bit =>
       document.encrypt_40bit(
-        encryption.user_password[:],
-        encryption.owner_password[:],
-        encryption.denied_permissions[:],
+        encryption.user_password,
+        encryption.owner_password,
+        encryption.denied_permissions,
         file_id~,
       )
     PdfEncryption128Bit =>
       document.encrypt_128bit(
-        encryption.user_password[:],
-        encryption.owner_password[:],
-        encryption.denied_permissions[:],
+        encryption.user_password,
+        encryption.owner_password,
+        encryption.denied_permissions,
         file_id~,
       )
     PdfEncryptionAES128(encrypt_metadata) => {
       let iv_provider = pdf_write_required_aes_iv_provider(aes_iv_provider)
       document.encrypt_128bit_aesv2_with_iv_provider(
-        encryption.user_password[:],
-        encryption.owner_password[:],
-        encryption.denied_permissions[:],
+        encryption.user_password,
+        encryption.owner_password,
+        encryption.denied_permissions,
         iv_provider,
         encrypt_metadata~,
         file_id~,
@@ -1375,9 +1354,9 @@ fn pdf_write_apply_options_encryption(
       )
       let iv_provider = pdf_write_required_aes_iv_provider(aes_iv_provider)
       document.encrypt_256bit_aesv3_with_providers(
-        encryption.user_password[:],
-        encryption.owner_password[:],
-        encryption.denied_permissions[:],
+        encryption.user_password,
+        encryption.owner_password,
+        encryption.denied_permissions,
         random_provider,
         iv_provider,
         encrypt_metadata~,
@@ -1390,9 +1369,9 @@ fn pdf_write_apply_options_encryption(
       )
       let iv_provider = pdf_write_required_aes_iv_provider(aes_iv_provider)
       document.encrypt_256bit_aesv3_iso_with_providers(
-        encryption.user_password[:],
-        encryption.owner_password[:],
-        encryption.denied_permissions[:],
+        encryption.user_password,
+        encryption.owner_password,
+        encryption.denied_permissions,
         random_provider,
         iv_provider,
         encrypt_metadata~,

@@ -172,7 +172,7 @@ test "PdfTextExtractor decodes Arabic presentation-form AGL glyph names" {
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)),
     expected_codepoints,
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0xFECA), Some(1))

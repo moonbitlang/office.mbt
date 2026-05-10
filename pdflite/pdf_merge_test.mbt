@@ -1085,7 +1085,7 @@ test "pdf_merge_documents installs trailer file id" {
   @env.set_env_var("CAMLPDF_REPRODUCIBLE_IDS", "true")
   let merged = try! @pdflite.pdf_merge_documents([first, second], [[1], [1]])
   merge_restore_env_for_test(previous)
-  let expected = @pdflite.pdf_md5_digest(@ascii.encode("camlpdf")[:])
+  let expected = @pdflite.pdf_md5_digest(@ascii.encode("camlpdf"))
   @test.assert_eq(
     merged.trailer_dict().lookup_immediate(key_id),
     Some(PdfArray([PdfString(expected), PdfString(expected)])),

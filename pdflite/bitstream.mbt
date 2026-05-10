@@ -24,7 +24,7 @@ pub fn bitstream_of_bytes(
   data : PdfBytes,
   source? : String = "bytes",
 ) -> BitStream {
-  bitstream_of_view(data[:], source~)
+  bitstream_of_view(data, source~)
 }
 
 ///|

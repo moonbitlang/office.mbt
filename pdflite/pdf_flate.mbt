@@ -858,11 +858,7 @@ fn pdf_flate_match_tokens(
   let mut index = 0
   while index < data.length() {
     let (match_length, match_distance) = pdf_flate_best_previous_match(
-      data,
-      last_by_prefix[:],
-      previous_by_position[:],
-      index,
-      max_probes,
+      data, last_by_prefix, previous_by_position, index, max_probes,
     )
     if match_length >= 3 {
       tokens.push(PdfFlateLengthDistance(match_length, match_distance))
@@ -899,11 +895,7 @@ fn pdf_flate_push_fixed_match_block(
   let mut index = 0
   while index < data.length() {
     let (match_length, match_distance) = pdf_flate_best_previous_match(
-      data,
-      last_by_prefix[:],
-      previous_by_position[:],
-      index,
-      max_probes,
+      data, last_by_prefix, previous_by_position, index, max_probes,
     )
     if match_length >= 3 {
       pdf_flate_write_fixed_length_distance(
@@ -1145,18 +1137,14 @@ fn pdf_flate_push_dynamic_match_block(
   guard data.length() > 0 else { raise InvalidFlateData }
   let tokens = pdf_flate_match_tokens(data, max_probes)
   let (literal_frequencies, distance_frequencies) = pdf_flate_count_dynamic_frequencies(
-    tokens[:],
+    tokens,
   )
-  let literal_lengths = pdf_flate_huffman_code_lengths(
-    literal_frequencies[:],
-    15,
-  )
+  let literal_lengths = pdf_flate_huffman_code_lengths(literal_frequencies, 15)
   let distance_lengths = pdf_flate_huffman_code_lengths(
-    distance_frequencies[:],
-    15,
+    distance_frequencies, 15,
   )
-  let literal_count = pdf_flate_trim_length_count(literal_lengths[:], 257)
-  let distance_count = pdf_flate_trim_length_count(distance_lengths[:], 1)
+  let literal_count = pdf_flate_trim_length_count(literal_lengths, 257)
+  let distance_count = pdf_flate_trim_length_count(distance_lengths, 1)
   let header_lengths : Array[Int] = []
   for length in literal_lengths[:literal_count] {
     header_lengths.push(length)
@@ -1164,25 +1152,22 @@ fn pdf_flate_push_dynamic_match_block(
   for length in distance_lengths[:distance_count] {
     header_lengths.push(length)
   }
-  let code_length_tokens = pdf_flate_code_length_tokens(header_lengths[:])
+  let code_length_tokens = pdf_flate_code_length_tokens(header_lengths)
   let code_length_frequencies = pdf_flate_code_length_frequencies(
-    code_length_tokens[:],
+    code_length_tokens,
   )
   let code_length_lengths = pdf_flate_huffman_code_lengths(
-    code_length_frequencies[:],
-    7,
+    code_length_frequencies, 7,
   )
-  let code_length_codes = pdf_flate_canonical_codes(code_length_lengths[:])
-  let literal_codes = pdf_flate_canonical_codes(literal_lengths[:])
-  let distance_codes = pdf_flate_canonical_codes(distance_lengths[:])
+  let code_length_codes = pdf_flate_canonical_codes(code_length_lengths)
+  let literal_codes = pdf_flate_canonical_codes(literal_lengths)
+  let distance_codes = pdf_flate_canonical_codes(distance_lengths)
   let writer = FlateBitWriter::new(output)
   writer.write_bits(if final_block { 1 } else { 0 }, 1)
   writer.write_bits(2, 2)
   writer.write_bits((literal_count - 257).reinterpret_as_uint(), 5)
   writer.write_bits((distance_count - 1).reinterpret_as_uint(), 5)
-  let code_length_count = pdf_flate_code_length_order_count(
-    code_length_lengths[:],
-  )
+  let code_length_count = pdf_flate_code_length_order_count(code_length_lengths)
   writer.write_bits((code_length_count - 4).reinterpret_as_uint(), 4)
   let order = pdf_flate_code_length_order()
   for index in 0..<code_length_count {
@@ -1192,18 +1177,10 @@ fn pdf_flate_push_dynamic_match_block(
     )
   }
   pdf_flate_write_code_length_tokens(
-    writer,
-    code_length_tokens[:],
-    code_length_codes[:],
-    code_length_lengths[:],
+    writer, code_length_tokens, code_length_codes, code_length_lengths,
   )
   pdf_flate_write_dynamic_tokens(
-    writer,
-    tokens[:],
-    literal_codes[:],
-    literal_lengths[:],
-    distance_codes[:],
-    distance_lengths[:],
+    writer, tokens, literal_codes, literal_lengths, distance_codes, distance_lengths,
   )
   writer.finish()
 }
@@ -1403,17 +1380,17 @@ fn pdf_flate_encode_view_with_level_pure(
 ) -> PdfBytes raise PdfError {
   let header = pdf_flate_header_for_level(level)
   if level == 0 {
-    pdf_flate_encode_stored_view_with_header(data, header[:])
+    pdf_flate_encode_stored_view_with_header(data, header)
   } else if level <= 3 {
     pdf_flate_encode_fast_view_with_header(
       data,
-      header[:],
+      header,
       pdf_flate_max_probes_for_level(level),
     )
   } else {
     pdf_flate_encode_shortest_view_with_header(
       data,
-      header[:],
+      header,
       pdf_flate_max_probes_for_level(level),
     )
   }
@@ -1423,7 +1400,7 @@ fn pdf_flate_encode_view_with_level_pure(
 fn pdf_flate_encode_view_pure(data : BytesView) -> PdfBytes {
   pdf_flate_encode_shortest_view_with_header(
     data,
-    pdf_flate_default_header()[:],
+    pdf_flate_default_header(),
     64,
   )
 }
@@ -1521,7 +1498,7 @@ pub fn pdf_flate_encode_with_level(
   data : PdfBytes,
   level : Int,
 ) -> PdfBytes raise PdfError {
-  pdf_flate_encode_view_with_level_pure(data[:], level)
+  pdf_flate_encode_view_with_level_pure(data, level)
 }
 
 ///|
@@ -1537,7 +1514,7 @@ pub fn pdf_flate_encode_with_level(
 ///|
 #cfg(not(target="native"))
 pub fn pdf_flate_encode(data : PdfBytes) -> PdfBytes {
-  pdf_flate_encode_view_pure(data[:])
+  pdf_flate_encode_view_pure(data)
 }
 
 ///|
@@ -1565,7 +1542,7 @@ fn pdf_flate_decode_view_pure(data : BytesView) -> PdfBytes raise PdfError {
       raise InvalidFlateData
     }
     let decoded = pdf_deflate_decode_raw(data[2:data.length() - 4])
-    pdf_flate_check_adler32(data, decoded[:])
+    pdf_flate_check_adler32(data, decoded)
     decoded
   }
 }
@@ -1618,7 +1595,7 @@ pub fn pdf_flate_decode_view(data : BytesView) -> PdfBytes raise PdfError {
 ///|
 #cfg(not(target="native"))
 pub fn pdf_flate_decode(data : PdfBytes) -> PdfBytes raise PdfError {
-  pdf_flate_decode_view_pure(data[:])
+  pdf_flate_decode_view_pure(data)
 }
 
 ///|
@@ -1648,7 +1625,7 @@ fn pdf_flate_decode_view_prefix(
     if encoded_length > data.length() {
       raise InvalidFlateData
     }
-    pdf_flate_check_adler32(data[:encoded_length], decoded[:])
+    pdf_flate_check_adler32(data[:encoded_length], decoded)
     (decoded, encoded_length)
   }
 }

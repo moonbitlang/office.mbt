@@ -44,7 +44,7 @@ fn pdf_standard14_glyph_width_name(name : PdfName) -> BytesView {
   if bytes.length() > 0 && bytes[0].to_int() == 0x2F {
     bytes[1:]
   } else {
-    bytes[:]
+    bytes
   }
 }
 
@@ -56,7 +56,7 @@ fn pdf_standard14_width_of_glyphname(
   let requested = pdf_standard14_glyph_width_name(name)
   for entry in widths {
     let (candidate, width) = entry
-    if pdf_afm_view_equals(candidate[:], requested) {
+    if pdf_afm_view_equals(candidate, requested) {
       break width
     }
   } nobreak {

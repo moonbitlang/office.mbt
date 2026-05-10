@@ -240,7 +240,7 @@ pub fn PdfName::bytes(self : PdfName) -> PdfBytes {
 
 ///|
 pub fn PdfName::view(self : PdfName) -> BytesView {
-  self.0[:]
+  self.0
 }
 
 ///|

@@ -14,7 +14,7 @@ pub fn byte_cursor_of_bytes(
   data : PdfBytes,
   source? : String = "bytes",
 ) -> ByteCursor {
-  byte_cursor_of_view(data[:], source~)
+  byte_cursor_of_view(data, source~)
 }
 
 ///|

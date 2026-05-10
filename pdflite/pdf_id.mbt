@@ -41,7 +41,7 @@ fn pdf_generate_id_bytes_from_text(
   time_text : () -> String,
 ) -> PdfBytes {
   let seed = pdf_id_seed(path, time_text)
-  pdf_md5_digest(@ascii.encode(seed)[:])
+  pdf_md5_digest(@ascii.encode(seed))
 }
 
 ///|

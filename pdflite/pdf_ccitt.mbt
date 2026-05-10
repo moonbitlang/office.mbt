@@ -319,7 +319,7 @@ fn pdf_ccitt_read_run(input : BitStream, white : Bool) -> Int raise PdfError {
   let table = if white {
     pdf_ccitt_white_codes[:]
   } else {
-    pdf_ccitt_black_codes[:]
+    pdf_ccitt_black_codes
   }
   let mut total = 0
   while true {
@@ -367,7 +367,7 @@ fn pdf_ccitt_write_code(
 
 ///|
 fn pdf_ccitt_write_eol(output : BitWriter) -> Unit raise PdfError {
-  pdf_ccitt_write_code(output, pdf_ccitt_white_codes[:], -1, false)
+  pdf_ccitt_write_code(output, pdf_ccitt_white_codes, -1, false)
 }
 
 ///|
@@ -403,7 +403,7 @@ fn pdf_ccitt_write_run(
   let table = if white {
     pdf_ccitt_white_codes[:]
   } else {
-    pdf_ccitt_black_codes[:]
+    pdf_ccitt_black_codes
   }
   let mut remaining = length
   while remaining >= 64 {
@@ -519,22 +519,10 @@ fn pdf_ccitt_encode_g4_view(
     let mut column = 0
     let mut white = true
     while column < columns {
-      let a1 = pdf_ccitt_find_b1(line[:], column, white, whiteval, blackval)
-      let a2 = pdf_ccitt_find_b2(line[:], column, white, whiteval, blackval)
-      let b1 = pdf_ccitt_find_b1(
-        reference[:],
-        column,
-        white,
-        whiteval,
-        blackval,
-      )
-      let b2 = pdf_ccitt_find_b2(
-        reference[:],
-        column,
-        white,
-        whiteval,
-        blackval,
-      )
+      let a1 = pdf_ccitt_find_b1(line, column, white, whiteval, blackval)
+      let a2 = pdf_ccitt_find_b2(line, column, white, whiteval, blackval)
+      let b1 = pdf_ccitt_find_b1(reference, column, white, whiteval, blackval)
+      let b2 = pdf_ccitt_find_b2(reference, column, white, whiteval, blackval)
       if b2 < a1 {
         pdf_ccitt_write_mode(output, CCITTPass)
         column = b2
@@ -659,7 +647,7 @@ fn pdf_ccitt_decode_g3_1d(
         finished = true
       }
       if !finished && column >= params.columns {
-        pdf_ccitt_output_line(output, line[:])
+        pdf_ccitt_output_line(output, line)
         row += 1
         column = 0
         line = pdf_ccitt_blank_line(params.columns, whiteval)
@@ -721,7 +709,7 @@ fn pdf_ccitt_decode_g4(
         finished = true
       }
       if !finished && column >= params.columns {
-        pdf_ccitt_output_line(output, line[:])
+        pdf_ccitt_output_line(output, line)
         reference = line.copy()
         line = pdf_ccitt_blank_line(params.columns, whiteval)
         row += 1
@@ -736,7 +724,7 @@ fn pdf_ccitt_decode_g4(
             column = pdf_ccitt_output_span(
               line,
               column,
-              pdf_ccitt_find_b2(reference[:], column, white, whiteval, blackval) -
+              pdf_ccitt_find_b2(reference, column, white, whiteval, blackval) -
               column,
               if white {
                 whiteval
@@ -776,7 +764,7 @@ fn pdf_ccitt_decode_g4(
             column = pdf_ccitt_output_span(
               line,
               column,
-              pdf_ccitt_find_b1(reference[:], column, white, whiteval, blackval) -
+              pdf_ccitt_find_b1(reference, column, white, whiteval, blackval) -
               column -
               delta,
               if white {

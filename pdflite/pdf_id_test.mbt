@@ -13,7 +13,7 @@ fn id_restore_env_for_test(previous : String?) -> Unit {
 
 ///|
 fn id_expected_for_test(seed : String) -> @pdflite.PdfObject {
-  let digest = @pdflite.pdf_md5_digest(@ascii.encode(seed)[:])
+  let digest = @pdflite.pdf_md5_digest(@ascii.encode(seed))
   PdfArray([PdfString(digest), PdfString(digest)])
 }
 

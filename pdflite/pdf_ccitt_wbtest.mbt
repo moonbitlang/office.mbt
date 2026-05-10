@@ -41,14 +41,14 @@ test "CCITT private helpers handle EOL spans and reference lookups" {
     fail("expected invalid CCITT span")
   }
 
-  @test.assert_eq(pdf_ccitt_find_value([1, 1][:], 3, 0), 2)
-  @test.assert_eq(pdf_ccitt_find_b1([1, 1, 0, 0][:], 1, false, 1, 0), 4)
-  @test.assert_eq(pdf_ccitt_find_b2([1, 1, 0, 0][:], 1, false, 1, 0), 4)
+  @test.assert_eq(pdf_ccitt_find_value([1, 1], 3, 0), 2)
+  @test.assert_eq(pdf_ccitt_find_b1([1, 1, 0, 0], 1, false, 1, 0), 4)
+  @test.assert_eq(pdf_ccitt_find_b2([1, 1, 0, 0], 1, false, 1, 0), 4)
 }
 
 ///|
 test "CCITT Group 3 covers alignment EOL padding EOF and invalid params" {
-  let aligned = pdf_ccitt_decode_view(ccitt_wb_bytes([0xB0, 0xB0])[:], {
+  let aligned = pdf_ccitt_decode_view(ccitt_wb_bytes([0xB0, 0xB0]), {
     ..pdf_ccitt_default_params(),
     columns: 4,
     rows: 2,
@@ -56,21 +56,21 @@ test "CCITT Group 3 covers alignment EOL padding EOF and invalid params" {
   })
   @test.assert_eq(aligned, ccitt_wb_bytes([0xF0, 0xF0]))
 
-  let padded = pdf_ccitt_decode_view(ccitt_wb_bytes([0x70, 0x01])[:], {
+  let padded = pdf_ccitt_decode_view(ccitt_wb_bytes([0x70, 0x01]), {
     ..pdf_ccitt_default_params(),
     columns: 4,
     rows: 1,
   })
   @test.assert_eq(padded, ccitt_wb_bytes([0xF0]))
 
-  let eof = pdf_ccitt_decode_view(ccitt_wb_bytes([])[:], {
+  let eof = pdf_ccitt_decode_view(ccitt_wb_bytes([]), {
     ..pdf_ccitt_default_params(),
     columns: 4,
   })
   @test.assert_eq(eof, ccitt_wb_bytes([]))
 
   let invalid : Result[PdfBytes, Error] = try? pdf_ccitt_decode_view(
-    ccitt_wb_bytes([])[:],
+    ccitt_wb_bytes([]),
     { ..pdf_ccitt_default_params(), columns: 0 },
   )
   guard invalid is Err(PdfError::InvalidCCITTData) else {
@@ -78,7 +78,7 @@ test "CCITT Group 3 covers alignment EOL padding EOF and invalid params" {
   }
 
   let bad_run : Result[PdfBytes, Error] = try? pdf_ccitt_decode_view(
-    ccitt_wb_bits([1, 1, 0, 0])[:],
+    ccitt_wb_bits([1, 1, 0, 0]),
     { ..pdf_ccitt_default_params(), columns: 4, rows: 1 },
   )
   guard bad_run is Err(PdfError::InvalidCCITTData) else {
@@ -99,14 +99,10 @@ test "CCITT Group 3 covers alignment EOL padding EOF and invalid params" {
 
 ///|
 test "CCITT Group 3 encoder covers white black long runs and malformed input" {
-  let encoded = pdf_ccitt_encode_g3_1d_view(
-    ccitt_wb_bytes([0xF0, 0x00])[:],
-    8,
-    2,
-  )
+  let encoded = pdf_ccitt_encode_g3_1d_view(ccitt_wb_bytes([0xF0, 0x00]), 8, 2)
   @test.assert_eq(encoded, ccitt_wb_bytes([0xB6, 0x6A, 0x28, 0x00, 0x80, 0x08]))
   @test.assert_eq(
-    pdf_ccitt_decode_view(encoded[:], {
+    pdf_ccitt_decode_view(encoded, {
       ..pdf_ccitt_default_params(),
       columns: 8,
       rows: 2,
@@ -115,12 +111,12 @@ test "CCITT Group 3 encoder covers white black long runs and malformed input" {
   )
 
   let long = pdf_ccitt_encode_g3_1d_view(
-    ccitt_wb_bytes([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF])[:],
+    ccitt_wb_bytes([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]),
     80,
     1,
   )
   @test.assert_eq(
-    pdf_ccitt_decode_view(long[:], {
+    pdf_ccitt_decode_view(long, {
       ..pdf_ccitt_default_params(),
       columns: 80,
       rows: 1,
@@ -128,18 +124,18 @@ test "CCITT Group 3 encoder covers white black long runs and malformed input" {
     ccitt_wb_bytes([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]),
   )
 
-  let empty = pdf_ccitt_encode_g3_1d_view(ccitt_wb_bytes([])[:], 8, 0)
+  let empty = pdf_ccitt_encode_g3_1d_view(ccitt_wb_bytes([]), 8, 0)
   @test.assert_eq(empty, ccitt_wb_bytes([0x00, 0x10, 0x01]))
 
   let short : Result[PdfBytes, Error] = try? pdf_ccitt_encode_g3_1d_view(
-    ccitt_wb_bytes([])[:],
+    ccitt_wb_bytes([]),
     8,
     1,
   )
   guard short is Err(_) else { fail("expected not enough CCITT source data") }
 
   let invalid : Result[PdfBytes, Error] = try? pdf_ccitt_encode_g3_1d_view(
-    ccitt_wb_bytes([])[:],
+    ccitt_wb_bytes([]),
     0,
     1,
   )
@@ -165,7 +161,7 @@ test "CCITT Group 3 encoder covers white black long runs and malformed input" {
 
 ///|
 test "CCITT Group 4 covers pass vertical horizontal black EOFB and unsupported modes" {
-  let pass = pdf_ccitt_decode_view(ccitt_wb_bits([0, 0, 0, 1])[:], {
+  let pass = pdf_ccitt_decode_view(ccitt_wb_bits([0, 0, 0, 1]), {
     ..pdf_ccitt_default_params(),
     k: -1,
     columns: 4,
@@ -173,7 +169,7 @@ test "CCITT Group 4 covers pass vertical horizontal black EOFB and unsupported m
   })
   @test.assert_eq(pass, ccitt_wb_bytes([0xF0]))
 
-  let vertical = pdf_ccitt_decode_view(ccitt_wb_bits([1])[:], {
+  let vertical = pdf_ccitt_decode_view(ccitt_wb_bits([1]), {
     ..pdf_ccitt_default_params(),
     k: -1,
     columns: 4,
@@ -181,7 +177,7 @@ test "CCITT Group 4 covers pass vertical horizontal black EOFB and unsupported m
   })
   @test.assert_eq(vertical, ccitt_wb_bytes([0xF0]))
 
-  let aligned = pdf_ccitt_decode_view(ccitt_wb_bytes([0x10, 0x10])[:], {
+  let aligned = pdf_ccitt_decode_view(ccitt_wb_bytes([0x10, 0x10]), {
     ..pdf_ccitt_default_params(),
     k: -1,
     columns: 4,
@@ -196,7 +192,7 @@ test "CCITT Group 4 covers pass vertical horizontal black EOFB and unsupported m
       0, 0, 1, 0, 1, 1, 1, 1, 1,
       // row 2: vertical left one, then horizontal while current color is black
        0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1,
-    ])[:],
+    ]),
     { ..pdf_ccitt_default_params(), k: -1, columns: 4, rows: 2 },
   )
   @test.assert_eq(mixed, ccitt_wb_bytes([0xC0, 0xB0]))
@@ -207,7 +203,7 @@ test "CCITT Group 4 covers pass vertical horizontal black EOFB and unsupported m
       0, 0, 1, 0, 1, 1, 1, 1, 1,
       // row 2: vertical left one, then pass while current color is black
        0, 1, 0, 0, 0, 0, 1,
-    ])[:],
+    ]),
     { ..pdf_ccitt_default_params(), k: -1, columns: 4, rows: 2 },
   )
   @test.assert_eq(pass_black, ccitt_wb_bytes([0xC0, 0x80]))
@@ -218,19 +214,19 @@ test "CCITT Group 4 covers pass vertical horizontal black EOFB and unsupported m
       0, 0, 1, 0, 1, 1, 1, 1, 1,
       // row 2: vertical left one, vertical left one while black, vertical zero
        0, 1, 0, 0, 1, 0, 1,
-    ])[:],
+    ]),
     { ..pdf_ccitt_default_params(), k: -1, columns: 4, rows: 2 },
   )
   @test.assert_eq(vertical_black, ccitt_wb_bytes([0xC0, 0x90]))
 
-  let eofb = pdf_ccitt_decode_view(ccitt_wb_bytes([0x00, 0x10, 0x01])[:], {
+  let eofb = pdf_ccitt_decode_view(ccitt_wb_bytes([0x00, 0x10, 0x01]), {
     ..pdf_ccitt_default_params(),
     k: -1,
     columns: 4,
   })
   @test.assert_eq(eofb, ccitt_wb_bytes([]))
 
-  let eof = pdf_ccitt_decode_view(ccitt_wb_bytes([])[:], {
+  let eof = pdf_ccitt_decode_view(ccitt_wb_bytes([]), {
     ..pdf_ccitt_default_params(),
     k: -1,
     columns: 4,
@@ -238,7 +234,7 @@ test "CCITT Group 4 covers pass vertical horizontal black EOFB and unsupported m
   @test.assert_eq(eof, ccitt_wb_bytes([]))
 
   let unsupported : Result[PdfBytes, Error] = try? pdf_ccitt_decode_view(
-    ccitt_wb_bytes([0x00, 0xF0])[:],
+    ccitt_wb_bytes([0x00, 0xF0]),
     { ..pdf_ccitt_default_params(), k: -1, columns: 4 },
   )
   guard unsupported is Err(PdfError::CCITTNotSupported(_)) else {
@@ -246,7 +242,7 @@ test "CCITT Group 4 covers pass vertical horizontal black EOFB and unsupported m
   }
 
   let invalid : Result[PdfBytes, Error] = try? pdf_ccitt_decode_view(
-    ccitt_wb_bits([0, 1, 1])[:],
+    ccitt_wb_bits([0, 1, 1]),
     { ..pdf_ccitt_default_params(), k: -1, columns: 4, rows: 1 },
   )
   guard invalid is Err(PdfError::InvalidCCITTData) else {
@@ -268,9 +264,9 @@ test "CCITT Group 4 covers pass vertical horizontal black EOFB and unsupported m
 ///|
 test "CCITT Group 4 encoder roundtrips mixed rows and malformed input" {
   let raw = ccitt_wb_bytes([0xC0, 0xB0, 0x80])
-  let encoded = pdf_ccitt_encode_g4_view(raw[:], 4, 3)
+  let encoded = pdf_ccitt_encode_g4_view(raw, 4, 3)
   @test.assert_eq(
-    pdf_ccitt_decode_view(encoded[:], {
+    pdf_ccitt_decode_view(encoded, {
       ..pdf_ccitt_default_params(),
       k: -1,
       columns: 4,
@@ -281,7 +277,7 @@ test "CCITT Group 4 encoder roundtrips mixed rows and malformed input" {
 
   let horizontal = ccitt_wb_bytes([0x00])
   @test.assert_eq(
-    pdf_ccitt_decode_view(pdf_ccitt_encode_g4_view(horizontal[:], 4, 1)[:], {
+    pdf_ccitt_decode_view(pdf_ccitt_encode_g4_view(horizontal, 4, 1), {
       ..pdf_ccitt_default_params(),
       k: -1,
       columns: 4,
@@ -292,7 +288,7 @@ test "CCITT Group 4 encoder roundtrips mixed rows and malformed input" {
 
   let pass = ccitt_wb_bytes([0x9F, 0xF0])
   @test.assert_eq(
-    pdf_ccitt_decode_view(pdf_ccitt_encode_g4_view(pass[:], 8, 2)[:], {
+    pdf_ccitt_decode_view(pdf_ccitt_encode_g4_view(pass, 8, 2), {
       ..pdf_ccitt_default_params(),
       k: -1,
       columns: 8,
@@ -301,9 +297,9 @@ test "CCITT Group 4 encoder roundtrips mixed rows and malformed input" {
     pass,
   )
 
-  let empty = pdf_ccitt_encode_g4_view(ccitt_wb_bytes([])[:], 4, 0)
+  let empty = pdf_ccitt_encode_g4_view(ccitt_wb_bytes([]), 4, 0)
   @test.assert_eq(
-    pdf_ccitt_decode_view(empty[:], {
+    pdf_ccitt_decode_view(empty, {
       ..pdf_ccitt_default_params(),
       k: -1,
       columns: 4,
@@ -313,7 +309,7 @@ test "CCITT Group 4 encoder roundtrips mixed rows and malformed input" {
   )
 
   let short : Result[PdfBytes, Error] = try? pdf_ccitt_encode_g4_view(
-    ccitt_wb_bytes([])[:],
+    ccitt_wb_bytes([]),
     4,
     1,
   )
@@ -322,7 +318,7 @@ test "CCITT Group 4 encoder roundtrips mixed rows and malformed input" {
   }
 
   let invalid : Result[PdfBytes, Error] = try? pdf_ccitt_encode_g4_view(
-    ccitt_wb_bytes([])[:],
+    ccitt_wb_bytes([]),
     0,
     1,
   )
@@ -357,7 +353,7 @@ test "CCITT Group 4 encoder roundtrips mixed rows and malformed input" {
   }
 
   let missing_row : Result[Array[Int], Error] = try? pdf_ccitt_line_from_data(
-    ccitt_wb_bytes([])[:],
+    ccitt_wb_bytes([]),
     4,
     0,
   )

@@ -242,7 +242,7 @@ fn pdf_crypt_chop_string(
   value : PdfBytes,
   need : Int,
 ) -> PdfBytes raise PdfError {
-  pdf_crypt_chop_view(key, value[:], need)
+  pdf_crypt_chop_view(key, value, need)
 }
 
 ///|
@@ -453,17 +453,17 @@ pub fn PdfEncryptionValues::authenticate_user_password(
   )
   match self.crypt_type {
     PdfCryptAESV3(iso) =>
-      pdf_authenticate_user_password_aesv3(iso, password, self.user_entry[:])
+      pdf_authenticate_user_password_aesv3(iso, password, self.user_entry)
     _ => {
       let (revision, key_length_bits) = self.password_settings()
       pdf_authenticate_user_password(
         no_encrypt_metadata,
         password,
         revision,
-        self.user_entry[:],
-        self.owner_entry[:],
+        self.user_entry,
+        self.owner_entry,
         self.permissions,
-        self.file_id[:],
+        self.file_id,
         key_length_bits,
       )
     }
@@ -485,11 +485,11 @@ pub fn PdfEncryptionValues::file_key_for_user_password(
         pdf_file_key_for_user_password_aesv3(
           iso,
           password,
-          self.user_entry[:],
+          self.user_entry,
           self.user_encryption_key,
         ) {
         Some(key) => {
-          self.validate_aesv3_permissions(key[:])
+          self.validate_aesv3_permissions(key)
           Some(key)
         }
         None => None
@@ -500,10 +500,10 @@ pub fn PdfEncryptionValues::file_key_for_user_password(
           no_encrypt_metadata,
           password,
           revision,
-          self.user_entry[:],
-          self.owner_entry[:],
+          self.user_entry,
+          self.owner_entry,
           self.permissions,
-          self.file_id[:],
+          self.file_id,
           key_length_bits,
         ) {
         Some(
@@ -511,9 +511,9 @@ pub fn PdfEncryptionValues::file_key_for_user_password(
             no_encrypt_metadata,
             password,
             revision,
-            self.owner_entry[:],
+            self.owner_entry,
             self.permissions,
-            self.file_id[:],
+            self.file_id,
             key_length_bits,
           ),
         )
@@ -538,8 +538,8 @@ pub fn PdfEncryptionValues::authenticate_owner_password(
       pdf_authenticate_owner_password_aesv3(
         iso,
         password,
-        self.user_entry[:],
-        self.owner_entry[:],
+        self.user_entry,
+        self.owner_entry,
       )
     _ => {
       let (revision, key_length_bits) = self.password_settings()
@@ -547,10 +547,10 @@ pub fn PdfEncryptionValues::authenticate_owner_password(
         no_encrypt_metadata,
         password,
         revision,
-        self.user_entry[:],
-        self.owner_entry[:],
+        self.user_entry,
+        self.owner_entry,
         self.permissions,
-        self.file_id[:],
+        self.file_id,
         key_length_bits,
       )
     }
@@ -572,12 +572,12 @@ pub fn PdfEncryptionValues::file_key_for_owner_password(
         pdf_file_key_for_owner_password_aesv3(
           iso,
           password,
-          self.user_entry[:],
-          self.owner_entry[:],
+          self.user_entry,
+          self.owner_entry,
           self.owner_encryption_key,
         ) {
         Some(key) => {
-          self.validate_aesv3_permissions(key[:])
+          self.validate_aesv3_permissions(key)
           Some(key)
         }
         None => None
@@ -587,27 +587,27 @@ pub fn PdfEncryptionValues::file_key_for_owner_password(
       let user_password = pdf_user_password_from_owner_password(
         revision,
         password,
-        self.owner_entry[:],
+        self.owner_entry,
         key_length_bits,
       )
       if pdf_authenticate_user_password(
           no_encrypt_metadata,
-          user_password[:],
+          user_password,
           revision,
-          self.user_entry[:],
-          self.owner_entry[:],
+          self.user_entry,
+          self.owner_entry,
           self.permissions,
-          self.file_id[:],
+          self.file_id,
           key_length_bits,
         ) {
         Some(
           pdf_encryption_file_key(
             no_encrypt_metadata,
-            user_password[:],
+            user_password,
             revision,
-            self.owner_entry[:],
+            self.owner_entry,
             self.permissions,
-            self.file_id[:],
+            self.file_id,
             key_length_bits,
           ),
         )
@@ -649,7 +649,7 @@ fn PdfDocument::with_file_id(
       output.set_trailer_dict(
         output
         .trailer_dict()
-        .add_dict_entry(pdf_crypt_id_name, pdf_crypt_file_id_object(id[:])),
+        .add_dict_entry(pdf_crypt_id_name, pdf_crypt_file_id_object(id)),
       )
       (output, id)
     }
@@ -663,7 +663,7 @@ fn pdf_crypt_deterministic_seed32(
 ) -> PdfBytes {
   pdf_sha256_digest(
     pdf_crypt_concat_bytes([
-      @ascii.encode("pdflite-deterministic-aes-provider")[:],
+      @ascii.encode("pdflite-deterministic-aes-provider"),
       seed,
       purpose,
     ]),
@@ -702,7 +702,7 @@ fn pdf_deterministic_aes_iv_for_seed(
     ":" +
     index.to_string(),
   )
-  pdf_crypt_deterministic_bytes(seed, purpose[:], 16)
+  pdf_crypt_deterministic_bytes(seed, purpose, 16)
 }
 
 ///|
@@ -712,10 +712,7 @@ pub fn pdf_deterministic_aes_iv_provider_from_seed(
   let owned_seed = seed.to_owned()
   fn(object_number, generation, index) raise PdfError {
     pdf_deterministic_aes_iv_for_seed(
-      owned_seed[:],
-      object_number,
-      generation,
-      index,
+      owned_seed, object_number, generation, index,
     )
   }
 }
@@ -740,7 +737,7 @@ pub fn pdf_deterministic_aesv3_random_provider_from_seed(
 ) -> (PdfAesV3RandomField, Int) -> PdfBytes raise PdfError {
   let owned_seed = seed.to_owned()
   fn(field, length) raise PdfError {
-    pdf_deterministic_aesv3_random_for_seed(owned_seed[:], field, length)
+    pdf_deterministic_aesv3_random_for_seed(owned_seed, field, length)
   }
 }
 
@@ -768,7 +765,7 @@ fn PdfDocument::decrypt_with_file_key(
   match values.crypt_type {
     PdfCryptARC4(key_length_bits, _) => {
       let output = self.arc4_crypt_parsed_objects(
-        file_key[:],
+        file_key,
         key_length_bits,
         no_encrypt_metadata~,
         skip_object_number=self.encryption_object_number(),
@@ -781,7 +778,7 @@ fn PdfDocument::decrypt_with_file_key(
     }
     PdfCryptAESV2 => {
       let output = self.aesv2_decrypt_parsed_objects(
-        file_key[:],
+        file_key,
         128,
         no_encrypt_metadata~,
         skip_object_number=self.encryption_object_number(),
@@ -794,7 +791,7 @@ fn PdfDocument::decrypt_with_file_key(
     }
     PdfCryptAESV3(_) => {
       let output = self.aesv3_decrypt_parsed_objects(
-        file_key[:],
+        file_key,
         no_encrypt_metadata~,
         skip_object_number=self.encryption_object_number(),
       )
@@ -896,7 +893,7 @@ pub fn PdfDocument::decrypt_single_stream(
             object_number,
             generation,
             stream,
-            file_key[:],
+            file_key,
             no_encrypt_metadata~,
           ),
         )
@@ -985,25 +982,13 @@ pub fn PdfDocument::encrypt_128bit_r4(
     4, owner_password, user_password, 128,
   )
   let user_entry = pdf_make_user_password_entry(
-    no_encrypt_metadata,
-    user_password,
-    4,
-    owner_entry[:],
-    permissions,
-    id[:],
-    128,
+    no_encrypt_metadata, user_password, 4, owner_entry, permissions, id, 128,
   )
   let file_key = pdf_encryption_file_key(
-    no_encrypt_metadata,
-    user_password,
-    4,
-    owner_entry[:],
-    permissions,
-    id[:],
-    128,
+    no_encrypt_metadata, user_password, 4, owner_entry, permissions, id, 128,
   )
   let encrypted = document.arc4_crypt_parsed_objects(
-    file_key[:],
+    file_key,
     128,
     no_encrypt_metadata~,
   )
@@ -1059,25 +1044,13 @@ pub fn PdfDocument::encrypt_128bit_aesv2_with_iv_provider(
     4, owner_password, user_password, 128,
   )
   let user_entry = pdf_make_user_password_entry(
-    no_encrypt_metadata,
-    user_password,
-    4,
-    owner_entry[:],
-    permissions,
-    id[:],
-    128,
+    no_encrypt_metadata, user_password, 4, owner_entry, permissions, id, 128,
   )
   let file_key = pdf_encryption_file_key(
-    no_encrypt_metadata,
-    user_password,
-    4,
-    owner_entry[:],
-    permissions,
-    id[:],
-    128,
+    no_encrypt_metadata, user_password, 4, owner_entry, permissions, id, 128,
   )
   let encrypted = document.aesv2_encrypt_parsed_objects_with_iv_provider(
-    file_key[:],
+    file_key,
     128,
     iv_provider,
     no_encrypt_metadata~,
@@ -1159,39 +1132,30 @@ pub fn PdfDocument::encrypt_256bit_aesv3_with_providers(
     4,
   )
   let user_entry = pdf_aesv3_entry(
-    iso,
-    user_password,
-    user_validation_salt[:],
-    user_key_salt[:],
+    iso, user_password, user_validation_salt, user_key_salt,
   )
   let owner_entry = pdf_aesv3_entry(
     iso,
     owner_password,
-    owner_validation_salt[:],
-    owner_key_salt[:],
-    user_entry=user_entry[:],
+    owner_validation_salt,
+    owner_key_salt,
+    user_entry~,
   )
   let user_encryption_key = pdf_aesv3_wrap_file_key(
-    iso,
-    user_password,
-    user_key_salt[:],
-    file_key[:],
+    iso, user_password, user_key_salt, file_key,
   )
   let owner_encryption_key = pdf_aesv3_wrap_file_key(
     iso,
     owner_password,
-    owner_key_salt[:],
-    file_key[:],
-    user_entry=user_entry[:],
+    owner_key_salt,
+    file_key,
+    user_entry~,
   )
   let permissions_entry = pdf_aesv3_permissions_entry(
-    file_key[:],
-    permissions,
-    encrypt_metadata,
-    permissions_padding[:],
+    file_key, permissions, encrypt_metadata, permissions_padding,
   )
   let encrypted = document.aesv3_encrypt_parsed_objects_with_iv_provider(
-    file_key[:],
+    file_key,
     iv_provider,
     no_encrypt_metadata~,
   )
@@ -1256,27 +1220,12 @@ fn PdfDocument::encrypt_arc4_standard(
     revision, owner_password, user_password, key_length_bits,
   )
   let user_entry = pdf_make_user_password_entry(
-    false,
-    user_password,
-    revision,
-    owner_entry[:],
-    permissions,
-    id[:],
-    key_length_bits,
+    false, user_password, revision, owner_entry, permissions, id, key_length_bits,
   )
   let file_key = pdf_encryption_file_key(
-    false,
-    user_password,
-    revision,
-    owner_entry[:],
-    permissions,
-    id[:],
-    key_length_bits,
+    false, user_password, revision, owner_entry, permissions, id, key_length_bits,
   )
-  let encrypted = document.arc4_crypt_parsed_objects(
-    file_key[:],
-    key_length_bits,
-  )
+  let encrypted = document.arc4_crypt_parsed_objects(file_key, key_length_bits)
   let entries : Array[(PdfName, PdfObject)] = [
     (pdf_crypt_filter_name, PdfNameObject(pdf_crypt_standard_name)),
     (pdf_crypt_v_name, PdfInteger(version)),
@@ -1486,7 +1435,7 @@ fn PdfDocument::recrypt_arc4_with_file_key(
   key_length_bits : Int,
   revision : Int,
 ) -> PdfDocument raise PdfError {
-  let (document, _) = self.with_file_id(file_id=values.file_id[:])
+  let (document, _) = self.with_file_id(file_id=values.file_id)
   document.pdf_crypt_prepare_plaintext_for_recrypt()
   document.set_saved_encryption(None)
   let encrypted = document.arc4_crypt_parsed_objects(
@@ -1514,7 +1463,7 @@ fn PdfDocument::recrypt_aesv2_with_file_key(
   file_key : BytesView,
   iv_provider : (Int, Int, Int) -> PdfBytes raise PdfError,
 ) -> PdfDocument raise PdfError {
-  let (document, _) = self.with_file_id(file_id=values.file_id[:])
+  let (document, _) = self.with_file_id(file_id=values.file_id)
   document.pdf_crypt_prepare_plaintext_for_recrypt()
   document.set_saved_encryption(None)
   let encrypted = document.aesv2_encrypt_parsed_objects_with_iv_provider(
@@ -1541,7 +1490,7 @@ fn PdfDocument::recrypt_aesv3_with_file_key(
   file_key : BytesView,
   iv_provider : (Int, Int, Int) -> PdfBytes raise PdfError,
 ) -> PdfDocument raise PdfError {
-  let (document, _) = self.with_file_id(file_id=values.file_id[:])
+  let (document, _) = self.with_file_id(file_id=values.file_id)
   document.pdf_crypt_prepare_plaintext_for_recrypt()
   document.set_saved_encryption(None)
   let encrypted = document.aesv3_encrypt_parsed_objects_with_iv_provider(
@@ -1577,10 +1526,7 @@ pub fn PdfDocument::recrypt_with_password(
       (revision == 2 || revision == 3 || revision == 4) => {
       let file_key = values.file_key_for_recrypt_password(password)
       self.recrypt_arc4_with_file_key(
-        values,
-        file_key[:],
-        key_length_bits,
-        revision,
+        values, file_key, key_length_bits, revision,
       )
     }
     _ => raise EncryptionRecryptUnsupported(values.crypt_type)
@@ -1601,7 +1547,7 @@ pub fn PdfDocument::recrypt_with_password_aesv2_with_iv_provider(
   match values.crypt_type {
     PdfCryptAESV2 => {
       let file_key = values.file_key_for_recrypt_password(password)
-      self.recrypt_aesv2_with_file_key(values, file_key[:], iv_provider)
+      self.recrypt_aesv2_with_file_key(values, file_key, iv_provider)
     }
     _ => raise EncryptionRecryptUnsupported(values.crypt_type)
   }
@@ -1621,7 +1567,7 @@ pub fn PdfDocument::recrypt_with_password_aesv3_with_iv_provider(
   match values.crypt_type {
     PdfCryptAESV3(_) => {
       let file_key = values.file_key_for_recrypt_password(password)
-      self.recrypt_aesv3_with_file_key(values, file_key[:], iv_provider)
+      self.recrypt_aesv3_with_file_key(values, file_key, iv_provider)
     }
     _ => raise EncryptionRecryptUnsupported(values.crypt_type)
   }
@@ -1937,7 +1883,7 @@ fn pdf_aesv3_cbc_encrypt_no_padding_with_iv(
         (data[position + index].to_int() ^ previous[index].to_int()).to_byte(),
       )
     }
-    previous = pdf_aes_encrypt_block(key, Bytes::from_array(block)[:])
+    previous = pdf_aes_encrypt_block(key, Bytes::from_array(block))
     for byte in previous {
       output.push(byte)
     }
@@ -1990,15 +1936,15 @@ fn pdf_aesv3_shamix(
   let mut last_encrypted_byte = 0
   while !(round >= 64 && last_encrypted_byte <= round - 32) {
     round += 1
-    let repeated_input = pdf_crypt_concat_bytes([password, digest[:], user_data])
-    let repeated = pdf_aesv3_shamix_repeat(repeated_input[:], 64)
+    let repeated_input = pdf_crypt_concat_bytes([password, digest, user_data])
+    let repeated = pdf_aesv3_shamix_repeat(repeated_input, 64)
     let encrypted = pdf_aesv3_cbc_encrypt_no_padding_with_iv(
       digest[:16],
       digest[16:32],
-      repeated[:],
+      repeated,
     )
     last_encrypted_byte = encrypted[encrypted.length() - 1].to_int()
-    digest = pdf_aesv3_shamix_next_hash(encrypted[:])
+    digest = pdf_aesv3_shamix_next_hash(encrypted)
   }
   digest[:32].to_owned()
 }
@@ -2017,9 +1963,9 @@ fn pdf_aesv3_password_hash(
     } else {
       Some(user_entry)
     }
-    pdf_aesv3_shamix(password, user_data, input[:])
+    pdf_aesv3_shamix(password, user_data, input)
   } else {
-    pdf_sha256_digest(input[:])
+    pdf_sha256_digest(input)
   }
 }
 
@@ -2070,7 +2016,7 @@ fn pdf_aesv3_cbc_encrypt_no_padding(
   key : BytesView,
   data : BytesView,
 ) -> PdfBytes raise PdfError {
-  pdf_aesv3_cbc_encrypt_no_padding_with_iv(key, Bytes::new(16)[:], data)
+  pdf_aesv3_cbc_encrypt_no_padding_with_iv(key, Bytes::new(16), data)
 }
 
 ///|
@@ -2082,7 +2028,7 @@ fn pdf_aesv3_wrap_file_key(
   user_entry? : BytesView = [],
 ) -> PdfBytes raise PdfError {
   let digest = pdf_aesv3_password_hash(iso, password, key_salt, user_entry~)
-  pdf_aesv3_cbc_encrypt_no_padding(digest[:], file_key)
+  pdf_aesv3_cbc_encrypt_no_padding(digest, file_key)
 }
 
 ///|
@@ -2111,7 +2057,7 @@ fn pdf_aesv3_permissions_entry(
     ) {
     block.push(byte)
   }
-  pdf_aes_encrypt_block(file_key, Bytes::from_array(block)[:])
+  pdf_aes_encrypt_block(file_key, Bytes::from_array(block))
 }
 
 ///|
@@ -2124,7 +2070,7 @@ pub fn pdf_authenticate_user_password_aesv3(
     raise EncryptionDictionaryEntryTooShort(pdf_crypt_u_name)
   }
   let expected = pdf_aesv3_password_hash(iso, password, user_entry[32:40])
-  pdf_bytes_prefix_equal(user_entry, expected[:], 32)
+  pdf_bytes_prefix_equal(user_entry, expected, 32)
 }
 
 ///|
@@ -2146,7 +2092,7 @@ pub fn pdf_authenticate_owner_password_aesv3(
     owner_entry[32:40],
     user_entry=user_entry[:48],
   )
-  pdf_bytes_prefix_equal(owner_entry, expected[:], 32)
+  pdf_bytes_prefix_equal(owner_entry, expected, 32)
 }
 
 ///|
@@ -2166,8 +2112,8 @@ fn pdf_aesv3_unwrap_file_key(
   encrypted_key : PdfBytes,
 ) -> PdfBytes raise PdfError {
   let zero_iv = Bytes::new(16)
-  let data = pdf_crypt_concat_bytes([zero_iv[:], encrypted_key[:]])
-  pdf_aes_cbc_decrypt(digest[:], data[:], remove_padding=false)
+  let data = pdf_crypt_concat_bytes([zero_iv, encrypted_key])
+  pdf_aes_cbc_decrypt(digest, data, remove_padding=false)
 }
 
 ///|
@@ -2207,8 +2153,7 @@ fn PdfEncryptionValues::validate_aesv3_permissions(
     None => raise EncryptionDictionaryEntryExpected(pdf_aesv3_permissions_key())
   }
   let permissions = pdf_aesv3_permissions_from_entry(
-    file_key,
-    permissions_entry[:],
+    file_key, permissions_entry,
   )
   if permissions != self.permissions {
     raise EncryptionPermissionsMismatch(permissions, self.permissions)
@@ -2322,16 +2267,16 @@ pub fn pdf_make_user_password_entry(
     key_length_bits,
   )
   if revision == 2 {
-    pdf_arc4_crypt(key[:], pdf_password_padding()[:])
+    pdf_arc4_crypt(key, pdf_password_padding())
   } else {
     let md5 = @crypto.MD5::new()
     md5.update(pdf_password_padding()[:])
     md5.update(file_id)
     let digest = Bytes::from_array(md5.finalize())
-    let mut encrypted = pdf_arc4_crypt(key[:], digest[:])
+    let mut encrypted = pdf_arc4_crypt(key, digest)
     for iteration in 1..<20 {
-      let iteration_key = pdf_key_xor_iteration(key[:], iteration)
-      encrypted = pdf_arc4_crypt(iteration_key[:], encrypted[:])
+      let iteration_key = pdf_key_xor_iteration(key, iteration)
+      encrypted = pdf_arc4_crypt(iteration_key, encrypted)
     }
     let output : Array[Byte] = [ for byte in encrypted => byte ]
     for _ in 0..<16 {
@@ -2375,9 +2320,9 @@ pub fn pdf_authenticate_user_password(
     key_length_bits,
   )
   if revision >= 3 {
-    pdf_bytes_prefix_equal(user_entry, expected[:], 16)
+    pdf_bytes_prefix_equal(user_entry, expected, 16)
   } else {
-    pdf_bytes_prefix_equal(user_entry, expected[:], expected.length()) &&
+    pdf_bytes_prefix_equal(user_entry, expected, expected.length()) &&
     user_entry.length() == expected.length()
   }
 }
@@ -2389,10 +2334,10 @@ fn pdf_owner_password_key(
   key_length_bits : Int,
 ) -> PdfBytes {
   let padded_owner = pdf_pad_password(owner_password)
-  let mut digest = pdf_md5_digest(padded_owner[:])
+  let mut digest = pdf_md5_digest(padded_owner)
   if revision >= 3 {
     for _ in 0..<50 {
-      digest = pdf_md5_digest(digest[:])
+      digest = pdf_md5_digest(digest)
     }
   }
   digest[:key_length_bits / 8].to_owned()
@@ -2413,12 +2358,12 @@ pub fn pdf_make_owner_password_entry(
   let key = pdf_owner_password_key(source_password, revision, key_length_bits)
   let padded_user = pdf_pad_password(user_password)
   if revision == 2 {
-    pdf_arc4_crypt(key[:], padded_user[:])
+    pdf_arc4_crypt(key, padded_user)
   } else {
-    let mut encrypted = pdf_arc4_crypt(key[:], padded_user[:])
+    let mut encrypted = pdf_arc4_crypt(key, padded_user)
     for iteration in 1..<20 {
-      let iteration_key = pdf_key_xor_iteration(key[:], iteration)
-      encrypted = pdf_arc4_crypt(iteration_key[:], encrypted[:])
+      let iteration_key = pdf_key_xor_iteration(key, iteration)
+      encrypted = pdf_arc4_crypt(iteration_key, encrypted)
     }
     encrypted
   }
@@ -2433,13 +2378,13 @@ pub fn pdf_user_password_from_owner_password(
 ) -> PdfBytes raise PdfError {
   let key = pdf_owner_password_key(owner_password, revision, key_length_bits)
   if revision == 2 {
-    pdf_arc4_crypt(key[:], owner_entry)
+    pdf_arc4_crypt(key, owner_entry)
   } else {
     let mut decrypted = owner_entry.to_owned()
     let mut iteration = 19
     while iteration >= 0 {
-      let iteration_key = pdf_key_xor_iteration(key[:], iteration)
-      decrypted = pdf_arc4_crypt(iteration_key[:], decrypted[:])
+      let iteration_key = pdf_key_xor_iteration(key, iteration)
+      decrypted = pdf_arc4_crypt(iteration_key, decrypted)
       iteration -= 1
     }
     decrypted
@@ -2461,14 +2406,8 @@ pub fn pdf_authenticate_owner_password(
     revision, owner_password, owner_entry, key_length_bits,
   )
   pdf_authenticate_user_password(
-    no_encrypt_metadata,
-    user_password[:],
-    revision,
-    user_entry,
-    owner_entry,
-    permissions,
-    file_id,
-    key_length_bits,
+    no_encrypt_metadata, user_password, revision, user_entry, owner_entry, permissions,
+    file_id, key_length_bits,
   )
 }
 
@@ -2559,11 +2498,7 @@ fn pdf_arc4_crypt_pdf_object_with_stream_policy(
     PdfString(bytes) =>
       PdfString(
         pdf_arc4_crypt_object(
-          object_number,
-          generation,
-          file_key,
-          key_length_bits,
-          bytes[:],
+          object_number, generation, file_key, key_length_bits, bytes,
         ),
       )
     PdfArray(values) => {
@@ -2627,11 +2562,7 @@ fn pdf_arc4_crypt_pdf_object_with_stream_policy(
           _ => {
             let data = pdf_stream_data_bytes(stream.data)
             let encrypted_data = pdf_arc4_crypt_object(
-              object_number,
-              generation,
-              file_key,
-              key_length_bits,
-              data[:],
+              object_number, generation, file_key, key_length_bits, data,
             )
             PdfStreamObject({
               dictionary: dictionary.add_dict_entry(
@@ -2677,7 +2608,7 @@ pub fn pdf_aesv2_decrypt_object_data(
     file_key,
     key_length_bits,
   )
-  pdf_aes_cbc_decrypt(object_key[:], data)
+  pdf_aes_cbc_decrypt(object_key, data)
 }
 
 ///|
@@ -2696,7 +2627,7 @@ pub fn pdf_aesv2_encrypt_object_data(
     file_key,
     key_length_bits,
   )
-  pdf_aes_cbc_encrypt_with_iv(object_key[:], iv, data)
+  pdf_aes_cbc_encrypt_with_iv(object_key, iv, data)
 }
 
 ///|
@@ -2737,7 +2668,7 @@ fn pdf_aes_encrypt_pdf_object_with_key(
   match object {
     PdfString(bytes) => {
       let iv = pdf_aes_next_iv(iv_provider, iv_index)
-      PdfString(pdf_aes_cbc_encrypt_with_iv(key, iv[:], bytes[:]))
+      PdfString(pdf_aes_cbc_encrypt_with_iv(key, iv, bytes))
     }
     PdfArray(values) => {
       let output : Array[PdfObject] = []
@@ -2786,7 +2717,7 @@ fn pdf_aes_encrypt_pdf_object_with_key(
         )
         let data = pdf_stream_data_bytes(stream.data)
         let iv = pdf_aes_next_iv(iv_provider, iv_index)
-        let encrypted_data = pdf_aes_cbc_encrypt_with_iv(key, iv[:], data[:])
+        let encrypted_data = pdf_aes_cbc_encrypt_with_iv(key, iv, data)
         PdfStreamObject({
           dictionary: dictionary.add_dict_entry(
             pdf_crypt_stream_length_key(),
@@ -2818,7 +2749,7 @@ pub fn pdf_aesv2_encrypt_pdf_object_with_iv_provider(
   )
   let iv_index : Ref[Int] = { val: 0 }
   pdf_aes_encrypt_pdf_object_with_key(
-    object_key[:],
+    object_key,
     object,
     iv_provider,
     iv_index,
@@ -2851,7 +2782,7 @@ fn pdf_aes_decrypt_pdf_object_with_key(
   deferred_stream_crypt? : PdfStreamDataCrypt = PdfStreamDataNoCrypt,
 ) -> PdfObject raise PdfError {
   match object {
-    PdfString(bytes) => PdfString(pdf_aes_cbc_decrypt(key, bytes[:]))
+    PdfString(bytes) => PdfString(pdf_aes_cbc_decrypt(key, bytes))
     PdfArray(values) => {
       let output : Array[PdfObject] = []
       for value in values {
@@ -2908,7 +2839,7 @@ fn pdf_aes_decrypt_pdf_object_with_key(
             })
           _ => {
             let data = pdf_stream_data_bytes(stream.data)
-            let decrypted_data = pdf_aes_cbc_decrypt(key, data[:])
+            let decrypted_data = pdf_aes_cbc_decrypt(key, data)
             PdfStreamObject({
               dictionary: dictionary.add_dict_entry(
                 pdf_crypt_stream_length_key(),
@@ -2940,7 +2871,7 @@ pub fn pdf_aesv2_decrypt_pdf_object(
     key_length_bits,
   )
   pdf_aes_decrypt_pdf_object_with_key(
-    object_key[:],
+    object_key,
     object,
     no_encrypt_metadata~,
     deferred_stream_crypt=PdfStreamDataAesV2Decrypt(

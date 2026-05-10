@@ -948,7 +948,7 @@ fn reader_xref_stream_pdf_with_flate_predictor_startxref(
   reader_push_xref_stream_entry(stream_data, 1, catalog_offset, 0)
   reader_push_xref_stream_entry(stream_data, 1, xref_offset, 0)
   reader_push_xref_stream_entry(stream_data, 1, value_offset, 0)
-  let predicted = reader_png_none_predictor_rows_for_test(stream_data[:], 7)
+  let predicted = reader_png_none_predictor_rows_for_test(stream_data, 7)
   let encoded = @pdflite.pdf_flate_encode(predicted)
   reader_push_ascii(output, "2 0 obj\n")
   reader_push_ascii(output, "<< /Type /XRef /Length ")
@@ -1057,7 +1057,7 @@ fn reader_xref_stream_pdf_with_filter_array_predictor_startxref(
   reader_push_xref_stream_entry(stream_data, 1, catalog_offset, 0)
   reader_push_xref_stream_entry(stream_data, 1, xref_offset, 0)
   reader_push_xref_stream_entry(stream_data, 1, value_offset, 0)
-  let predicted = reader_png_none_predictor_rows_for_test(stream_data[:], 7)
+  let predicted = reader_png_none_predictor_rows_for_test(stream_data, 7)
   let flate = @pdflite.pdf_flate_encode(predicted)
   let encoded = @pdflite.pdf_ascii_hex_encode(flate)
   reader_push_ascii(output, "2 0 obj\n")
@@ -1152,7 +1152,7 @@ fn reader_hybrid_compressed_xref_stream_pdf_with_startxref_override(
   reader_push_xref_stream_entry(stream_data, 0, 0, 65535)
   reader_push_xref_stream_entry(stream_data, 1, value_offset, 0)
   reader_push_xref_stream_entry(stream_data, 1, xref_stream_offset, 0)
-  let predicted = reader_png_none_predictor_rows_for_test(stream_data[:], 7)
+  let predicted = reader_png_none_predictor_rows_for_test(stream_data, 7)
   let encoded = @pdflite.pdf_flate_encode(predicted)
   reader_push_ascii(output, "3 0 obj\n")
   reader_push_ascii(output, "<< /Type /XRef /Length ")
@@ -1702,7 +1702,7 @@ fn reader_xref_stream_pdf_with_compressed_prev_update_startxref(
   reader_push_xref_stream_entry(stream_data, 1, updated_offset, 0)
   reader_push_xref_stream_entry(stream_data, 1, catalog_offset, 0)
   reader_push_xref_stream_entry(stream_data, 1, xref_stream_offset, 0)
-  let predicted = reader_png_none_predictor_rows_for_test(stream_data[:], 7)
+  let predicted = reader_png_none_predictor_rows_for_test(stream_data, 7)
   let encoded = @pdflite.pdf_flate_encode(predicted)
   reader_push_ascii(output, "3 0 obj\n")
   reader_push_ascii(output, "<< /Type /XRef /Length ")
@@ -2360,7 +2360,7 @@ test "pdf_parse_indirect_object_from_bytes accepts missing endobj" {
 ///|
 test "pdf_read_primitive_document_from_view loads borrowed slices" {
   let payload = reader_pdf_ascii("%PDF-1.4\n1 0 obj\n[1 2]\nendobj\nxref")
-  let wrapped = reader_wrap_view_for_test("abc", payload[:], "xyz")
+  let wrapped = reader_wrap_view_for_test("abc", payload, "xyz")
   let document = try! @pdflite.pdf_read_primitive_document_from_view(
     wrapped[3:wrapped.length() - 3],
   )
@@ -2641,7 +2641,7 @@ test "pdf_read_classic_document_from_view reads borrowed slices" {
   document.set_root(1)
   document.add_object_given_number(1, PdfInteger(42))
   let rendered = try! @pdflite.pdf_write_document(document)
-  let wrapped = reader_wrap_view_for_test("abc", rendered[:], "xyz")
+  let wrapped = reader_wrap_view_for_test("abc", rendered, "xyz")
   let parsed = try! @pdflite.pdf_read_classic_document_from_view(
     wrapped[3:wrapped.length() - 3],
   )
@@ -3191,19 +3191,19 @@ test "pdf_read_document_from_bytes records linearized first-object marker" {
 ///|
 test "pdf_is_linearized probes byte input without full parsing" {
   @test.assert_eq(
-    @pdflite.pdf_is_linearized(reader_linearized_classic_pdf("1")[:]),
+    @pdflite.pdf_is_linearized(reader_linearized_classic_pdf("1")),
     true,
   )
   @test.assert_eq(
-    @pdflite.pdf_is_linearized(reader_linearized_classic_pdf("/Name")[:]),
+    @pdflite.pdf_is_linearized(reader_linearized_classic_pdf("/Name")),
     false,
   )
   @test.assert_eq(
-    @pdflite.pdf_is_linearized(reader_classic_pdf_with_leading_junk()[:]),
+    @pdflite.pdf_is_linearized(reader_classic_pdf_with_leading_junk()),
     false,
   )
   @test.assert_eq(
-    @pdflite.pdf_is_linearized(reader_pdf_ascii("not a pdf")[:]),
+    @pdflite.pdf_is_linearized(reader_pdf_ascii("not a pdf")),
     false,
   )
 }
@@ -3277,7 +3277,7 @@ test "pdf_revisions_from_bytes accepts inline startxref pointers" {
 ///|
 test "pdf_revisions_from_view reads borrowed revision metadata slices" {
   let payload = reader_classic_pdf_with_prev_xref()
-  let wrapped = reader_wrap_view_for_test("abc", payload[:], "xyz")
+  let wrapped = reader_wrap_view_for_test("abc", payload, "xyz")
   @test.assert_eq(
     try! @pdflite.pdf_revisions_from_view(wrapped[3:wrapped.length() - 3]),
     2,
@@ -3345,7 +3345,7 @@ test "pdf_read_document_from_bytes reconstructs missing startxref PDFs" {
 ///|
 test "pdf_read_document_from_view reconstructs borrowed malformed slices" {
   let payload = reader_malformed_pdf_without_startxref()
-  let wrapped = reader_wrap_view_for_test("abc", payload[:], "xyz")
+  let wrapped = reader_wrap_view_for_test("abc", payload, "xyz")
   let parsed = try! @pdflite.pdf_read_document_from_view(
     wrapped[3:wrapped.length() - 3],
   )
@@ -4379,7 +4379,7 @@ test "pdf_read_classic_document_revision_from_bytes reads older Prev revision" {
 ///|
 test "pdf_read_document_revision_from_view reads borrowed older revision" {
   let payload = reader_classic_pdf_with_prev_xref()
-  let wrapped = reader_wrap_view_for_test("abc", payload[:], "xyz")
+  let wrapped = reader_wrap_view_for_test("abc", payload, "xyz")
   let parsed = try! @pdflite.pdf_read_document_revision_from_view(
     wrapped[3:wrapped.length() - 3],
     2,
@@ -4404,11 +4404,11 @@ test "pdf_read_document_revision_with_passwords reads older revisions" {
   @test.assert_eq(bytes_result.denied_permissions, [])
 
   let payload = reader_classic_pdf_with_prev_xref()
-  let wrapped = reader_wrap_view_for_test("abc", payload[:], "xyz")
+  let wrapped = reader_wrap_view_for_test("abc", payload, "xyz")
   let view_result_option = try! @pdflite.pdf_read_document_revision_from_view_with_passwords(
     wrapped[3:wrapped.length() - 3],
     2,
-    owner_password=Some(@ascii.encode("unused")[:]),
+    owner_password=Some(@ascii.encode("unused")),
   )
   guard view_result_option is Some(view_result) else {
     fail("expected borrowed-view decryption result")

@@ -148,7 +148,7 @@ pub fn pdf_string_of_page_label(label : PdfPageLabel) -> PdfBytes {
   pdf_writer_push_byte(output, 10)
   pdf_writer_push_ascii(output, "labelprefix: ")
   match label.label_prefix {
-    Some(prefix) => pdf_writer_push_view(output, prefix[:])
+    Some(prefix) => pdf_writer_push_view(output, prefix)
     None => pdf_writer_push_ascii(output, "None")
   }
   pdf_writer_push_byte(output, 10)

@@ -470,7 +470,7 @@ fn pdf_text_cached_basic_latin_glyphname(
 
 ///|
 fn pdf_text_string_of_name(name : PdfName) -> String {
-  @ascii.decode_lossy(name.bytes()[:])
+  @ascii.decode_lossy(name.bytes())
 }
 
 ///|
@@ -1469,16 +1469,12 @@ fn pdf_text_predefined_japan1_charcode(
   codepoint : Int,
 ) -> Int? {
   let mut found = pdf_text_predefined_codepoint_range_charcode(
-    pdf_text_japan1_codepoint_ranges[:],
-    ranges[:],
-    codepoint,
+    pdf_text_japan1_codepoint_ranges, ranges, codepoint,
   )
   found = pdf_text_lower_optional_packed_charcode(
     found,
     pdf_text_predefined_sequence_table_charcode(
-      pdf_text_japan1_codepoint_sequence_table[:],
-      ranges[:],
-      codepoint,
+      pdf_text_japan1_codepoint_sequence_table, ranges, codepoint,
     ),
   )
   found
@@ -1564,7 +1560,7 @@ fn pdf_text_predefined_cns1_codepoint_unsigned(
   ranges : Array[(Int, Int, Int)],
   code : Int,
 ) -> Int? {
-  match pdf_text_predefined_cid_range_lookup_unsigned(ranges[:], code) {
+  match pdf_text_predefined_cid_range_lookup_unsigned(ranges, code) {
     Some(cid) => pdf_text_cns1_codepoint_of_cid(cid)
     None => None
   }
@@ -1576,9 +1572,7 @@ fn pdf_text_predefined_cns1_charcode(
   codepoint : Int,
 ) -> Int? {
   pdf_text_predefined_unicode_table_charcode(
-    pdf_text_cns1_unicode_table[:],
-    ranges[:],
-    codepoint,
+    pdf_text_cns1_unicode_table, ranges, codepoint,
   )
 }
 
@@ -1726,7 +1720,7 @@ fn pdf_text_predefined_utf8_codepoints(code : Int) -> Array[Int]? {
     code,
     pdf_text_packed_charcode_length(code),
   )
-  try pdf_codepoints_of_utf8(bytes[:]) catch {
+  try pdf_codepoints_of_utf8(bytes) catch {
     _ => None
   } noraise {
     codepoints => Some(codepoints)
@@ -1754,7 +1748,7 @@ fn pdf_text_predefined_utf8_charcode(codepoint : Int) -> Int? {
             1 => (0x80 | ((codepoint >> 6) & 0x3F)).to_byte()
             _ => (0x80 | (codepoint & 0x3F)).to_byte()
           }
-        })[:],
+        }),
       ),
     )
   } else {
@@ -1779,7 +1773,7 @@ fn pdf_text_predefined_utf16_codepoints(code : Int) -> Array[Int]? {
     }
   } else if pdf_text_packed_charcode_length(code) == 4 {
     let bytes = pdf_text_packed_charcode_bytes(code, 4)
-    try pdf_codepoints_of_utf16be(bytes[:]) catch {
+    try pdf_codepoints_of_utf16be(bytes) catch {
       _ => None
     } noraise {
       codepoints => Some(codepoints)
@@ -1877,9 +1871,7 @@ fn pdf_text_predefined_gb1_charcode(
   codepoint : Int,
 ) -> Int? {
   pdf_text_predefined_unicode_table_charcode(
-    pdf_text_gb1_unicode_table[:],
-    ranges[:],
-    codepoint,
+    pdf_text_gb1_unicode_table, ranges, codepoint,
   )
 }
 
@@ -2341,7 +2333,7 @@ fn pdf_text_width_of_standard_charcode(
 ) -> Double {
   if code >= 0 && code <= 255 {
     let bytes : FixedArray[Byte] = [code.to_byte()]
-    font.text_width(encoding, Bytes::from_array(bytes)[:]).to_double()
+    font.text_width(encoding, Bytes::from_array(bytes)).to_double()
   } else {
     0.0
   }
@@ -2596,7 +2588,7 @@ fn PdfDocument::pdf_text_font_charset(
   descriptor : PdfObject,
 ) -> Array[PdfName]? raise PdfError {
   match self.lookup_direct(pdf_text_charset_key_name, descriptor) {
-    Some(PdfString(bytes)) => Some(pdf_text_parse_charset(bytes[:]))
+    Some(PdfString(bytes)) => Some(pdf_text_parse_charset(bytes))
     _ => None
   }
 }
@@ -3424,7 +3416,7 @@ fn pdf_text_parse_cmap_int_after_token(data : BytesView, key : String) -> Int? {
   let mut expect_value = false
   for line in cursor.read_line_views() {
     let uncommented = pdf_text_cmap_line_without_comment(line)
-    let tokens = pdf_split_whitespace_tokens(uncommented[:])
+    let tokens = pdf_split_whitespace_tokens(uncommented)
     for token in tokens {
       if expect_value {
         expect_value = false
@@ -3489,7 +3481,7 @@ fn pdf_text_parse_cmap_name_after_token(
   let mut expect_value = false
   for line in cursor.read_line_views() {
     let uncommented = pdf_text_cmap_line_without_comment(line)
-    let tokens = pdf_split_whitespace_tokens(uncommented[:])
+    let tokens = pdf_split_whitespace_tokens(uncommented)
     for token in tokens {
       if expect_value {
         expect_value = false
@@ -3552,7 +3544,7 @@ fn pdf_text_parse_cmap_cid_system_info(data : BytesView) -> PdfCIDSystemInfo? {
   let mut expect_value : PdfTextCMapCIDSystemInfoKey? = None
   for line in cursor.read_line_views() {
     let uncommented = pdf_text_cmap_line_without_comment(line)
-    let tokens = pdf_split_whitespace_tokens(uncommented[:])
+    let tokens = pdf_split_whitespace_tokens(uncommented)
     for token in tokens {
       if !seen_cid_system_info {
         if pdf_text_view_equals_ascii(token, "/CIDSystemInfo") {
@@ -3597,7 +3589,7 @@ fn pdf_text_parse_cmap_usecmap(data : BytesView) -> PdfName? {
   let mut previous_name : PdfName? = None
   for line in cursor.read_line_views() {
     let uncommented = pdf_text_cmap_line_without_comment(line)
-    let tokens = pdf_split_whitespace_tokens(uncommented[:])
+    let tokens = pdf_split_whitespace_tokens(uncommented)
     for token in tokens {
       if pdf_text_view_equals_ascii(token, "usecmap") {
         match previous_name {
@@ -3803,8 +3795,7 @@ fn pdf_text_tounicode_bfrange_inline_entries(
       Some((source, after_source)) =>
         match pdf_text_parse_cmap_hex_group_at(line, after_source) {
           Some((stop, after_stop)) =>
-            match
-              (pdf_text_bytes_to_int(source[:]), pdf_text_bytes_to_int(stop[:])) {
+            match (pdf_text_bytes_to_int(source), pdf_text_bytes_to_int(stop)) {
               (Some(first), Some(last)) if first <= last => {
                 index = pdf_text_skip_cmap_whitespace(line, after_stop)
                 if index < line.length() && line[index].to_int() == 91 {
@@ -3815,9 +3806,7 @@ fn pdf_text_tounicode_bfrange_inline_entries(
                         Some(unicodes) =>
                           match
                             pdf_text_tounicode_bfrange_array_entries(
-                              first,
-                              last,
-                              unicodes[:],
+                              first, last, unicodes,
                             ) {
                             Some(line_entries) =>
                               for entry in line_entries {
@@ -3908,7 +3897,7 @@ fn pdf_text_push_tounicode_bfchar_entry(
   source : PdfBytes,
   unicode : PdfBytes,
 ) -> Unit {
-  match pdf_text_bytes_to_int(source[:]) {
+  match pdf_text_bytes_to_int(source) {
     Some(code) => entries.push((code, unicode))
     None => ()
   }
@@ -4016,10 +4005,10 @@ fn pdf_text_append_pending_bfrange_array(
         pdf_text_tounicode_bfrange_array_entries(
           pending.first,
           pending.last,
-          pending.unicodes[:],
+          pending.unicodes,
         ) {
         Some(line_entries) =>
-          pdf_text_push_tounicode_bfrange_entries(entries, line_entries[:])
+          pdf_text_push_tounicode_bfrange_entries(entries, line_entries)
         None => ()
       }
       PdfTextCMapBFRangeArrayClosed(content[close + 1:])
@@ -4047,8 +4036,7 @@ fn pdf_text_append_tounicode_bfrange_entry(
     Some((source, after_source)) =>
       match pdf_text_parse_cmap_hex_group_at(line, after_source) {
         Some((stop, after_stop)) =>
-          match
-            (pdf_text_bytes_to_int(source[:]), pdf_text_bytes_to_int(stop[:])) {
+          match (pdf_text_bytes_to_int(source), pdf_text_bytes_to_int(stop)) {
             (Some(first), Some(last)) if first <= last => {
               let value_start = pdf_text_skip_cmap_whitespace(line, after_stop)
               let pending : PdfTextCMapBFRangeArray = {
@@ -4082,8 +4070,7 @@ fn pdf_text_append_tounicode_bfrange_entry(
                       }
                     }
                     pdf_text_push_tounicode_bfrange_entries(
-                      entries,
-                      line_entries[:],
+                      entries, line_entries,
                     )
                     PdfTextCMapBFRangeLineContinue(line[after_unicode:])
                   }
@@ -4106,7 +4093,7 @@ fn pdf_text_append_tounicode_bfrange_line(
 ) -> PdfTextCMapBFRangeArray? {
   match pdf_text_tounicode_bfrange_entries_of_line(line) {
     Some(line_entries) => {
-      pdf_text_push_tounicode_bfrange_entries(entries, line_entries[:])
+      pdf_text_push_tounicode_bfrange_entries(entries, line_entries)
       return None
     }
     None => ()
@@ -4172,7 +4159,7 @@ fn pdf_text_parse_tounicode_sections(
   let mut pending_bfrange_array : PdfTextCMapBFRangeArray? = None
   for raw_line in cursor.read_line_views() {
     let uncommented = pdf_text_cmap_line_without_comment(raw_line)
-    for raw_segment in pdf_text_cmap_section_line_views(uncommented[:]) {
+    for raw_segment in pdf_text_cmap_section_line_views(uncommented) {
       let mut line = raw_segment
       match pdf_text_after_ascii(raw_segment, "beginbfchar") {
         Some(rest) => {
@@ -4240,7 +4227,7 @@ fn pdf_text_push_cmap_cidchar_entries(
       Some((source, after_source)) =>
         match pdf_text_parse_cmap_ascii_int_at(line, after_source) {
           Some((cid, after_cid)) => {
-            match pdf_text_bytes_to_int(source[:]) {
+            match pdf_text_bytes_to_int(source) {
               Some(code) => entries.push((code, cid))
               None => ()
             }
@@ -4267,10 +4254,7 @@ fn pdf_text_push_cmap_cidrange_entries(
             match pdf_text_parse_cmap_ascii_int_at(line, after_stop) {
               Some((cid, after_cid)) => {
                 match
-                  (
-                    pdf_text_bytes_to_int(source[:]),
-                    pdf_text_bytes_to_int(stop[:]),
-                  ) {
+                  (pdf_text_bytes_to_int(source), pdf_text_bytes_to_int(stop)) {
                   (Some(first), Some(last)) if first <= last =>
                     for code in first..<=last {
                       entries.push((code, cid + code - first))
@@ -4299,8 +4283,7 @@ fn pdf_text_push_cmap_codespace_entries(
       Some((source, after_source)) =>
         match pdf_text_parse_cmap_hex_group_at(line, after_source) {
           Some((stop, after_stop)) => {
-            match
-              (pdf_text_bytes_to_int(source[:]), pdf_text_bytes_to_int(stop[:])) {
+            match (pdf_text_bytes_to_int(source), pdf_text_bytes_to_int(stop)) {
               (Some(first), Some(last)) if first <= last &&
                 source.length() == stop.length() =>
                 entries.push({ length: source.length(), first, last })
@@ -4322,7 +4305,7 @@ fn pdf_text_parse_cmap_cid_sections(data : BytesView) -> Array[(Int, Int)]? {
   let mut section = PdfTextCMapNone
   for raw_line in cursor.read_line_views() {
     let uncommented = pdf_text_cmap_line_without_comment(raw_line)
-    for raw_segment in pdf_text_cmap_section_line_views(uncommented[:]) {
+    for raw_segment in pdf_text_cmap_section_line_views(uncommented) {
       let mut line = raw_segment
       match pdf_text_after_ascii(raw_segment, "begincidchar") {
         Some(rest) => {
@@ -4368,7 +4351,7 @@ fn pdf_text_parse_cmap_notdef_sections(data : BytesView) -> Array[(Int, Int)]? {
   let mut section = PdfTextCMapNone
   for raw_line in cursor.read_line_views() {
     let uncommented = pdf_text_cmap_line_without_comment(raw_line)
-    for raw_segment in pdf_text_cmap_section_line_views(uncommented[:]) {
+    for raw_segment in pdf_text_cmap_section_line_views(uncommented) {
       let mut line = raw_segment
       match pdf_text_after_ascii(raw_segment, "beginnotdefchar") {
         Some(rest) => {
@@ -4417,7 +4400,7 @@ fn pdf_text_parse_cmap_codespace_sections(
   let mut section = PdfTextCMapNone
   for raw_line in cursor.read_line_views() {
     let uncommented = pdf_text_cmap_line_without_comment(raw_line)
-    for raw_segment in pdf_text_cmap_section_line_views(uncommented[:]) {
+    for raw_segment in pdf_text_cmap_section_line_views(uncommented) {
       let mut line = raw_segment
       match pdf_text_after_ascii(raw_segment, "begincodespacerange") {
         Some(rest) => {
@@ -4449,7 +4432,7 @@ fn pdf_text_parse_cmap_cids(data : BytesView) -> Array[(Int, Int)]? {
   if pdf_text_cmap_contains_whitespace(data) {
     let parsed = pdf_text_parse_cmap_cid_sections(data)
     let compact = pdf_text_cmap_without_whitespace(data)
-    let compact_parsed = pdf_text_parse_cmap_cid_sections(compact[:])
+    let compact_parsed = pdf_text_parse_cmap_cid_sections(compact)
     match (parsed, compact_parsed) {
       (Some(original_entries), Some(compact_entries)) =>
         if compact_entries.length() > original_entries.length() {
@@ -4470,7 +4453,7 @@ fn pdf_text_parse_cmap_notdefs(data : BytesView) -> Array[(Int, Int)]? {
   if pdf_text_cmap_contains_whitespace(data) {
     let parsed = pdf_text_parse_cmap_notdef_sections(data)
     let compact = pdf_text_cmap_without_whitespace(data)
-    let compact_parsed = pdf_text_parse_cmap_notdef_sections(compact[:])
+    let compact_parsed = pdf_text_parse_cmap_notdef_sections(compact)
     match (parsed, compact_parsed) {
       (Some(original_entries), Some(compact_entries)) =>
         if compact_entries.length() > original_entries.length() {
@@ -4491,7 +4474,7 @@ fn pdf_text_parse_cmap_codespaces(data : BytesView) -> Array[PdfCMapCodeSpace]? 
   if pdf_text_cmap_contains_whitespace(data) {
     let parsed = pdf_text_parse_cmap_codespace_sections(data)
     let compact = pdf_text_cmap_without_whitespace(data)
-    let compact_parsed = pdf_text_parse_cmap_codespace_sections(compact[:])
+    let compact_parsed = pdf_text_parse_cmap_codespace_sections(compact)
     match (parsed, compact_parsed) {
       (Some(original_entries), Some(compact_entries)) =>
         if compact_entries.length() > original_entries.length() {
@@ -4512,7 +4495,7 @@ fn pdf_text_parse_tounicode(data : BytesView) -> Array[(Int, PdfBytes)]? {
   if pdf_text_cmap_contains_whitespace(data) {
     let parsed = pdf_text_parse_tounicode_sections(data)
     let compact = pdf_text_cmap_without_whitespace(data)
-    let compact_parsed = pdf_text_parse_tounicode_sections(compact[:])
+    let compact_parsed = pdf_text_parse_tounicode_sections(compact)
     match (parsed, compact_parsed) {
       (Some(original_entries), Some(compact_entries)) =>
         if compact_entries.length() > original_entries.length() {
@@ -4630,18 +4613,15 @@ fn pdf_text_compose_parsed_cmap(
   inherited : PdfParsedCMap,
 ) -> PdfParsedCMap {
   {
-    map: pdf_text_compose_tounicode_entries(current.map[:], inherited.map[:]),
-    cid_map: pdf_text_compose_cid_entries(
-      current.cid_map[:],
-      inherited.cid_map[:],
-    ),
+    map: pdf_text_compose_tounicode_entries(current.map, inherited.map),
+    cid_map: pdf_text_compose_cid_entries(current.cid_map, inherited.cid_map),
     notdef_map: pdf_text_compose_cid_entries(
-      current.notdef_map[:],
-      inherited.notdef_map[:],
+      current.notdef_map,
+      inherited.notdef_map,
     ),
     codespaces: pdf_text_compose_codespaces(
-      current.codespaces[:],
-      inherited.codespaces[:],
+      current.codespaces,
+      inherited.codespaces,
     ),
     usecmap: match current.usecmap {
       Some(_) => current.usecmap
@@ -4793,7 +4773,7 @@ fn PdfDocument::parse_cmap_with_seen(
   let stream_object = self.direct(cmap)
   let parsed = self.pdf_text_apply_cmap_stream_dictionary_metadata(
     stream_object,
-    pdf_parse_cmap_data(bytes[:]),
+    pdf_parse_cmap_data(bytes),
   )
   match
     (parsed.usecmap, stream_object.lookup_immediate(pdf_text_usecmap_key_name)) {
@@ -4979,7 +4959,7 @@ fn pdf_text_codepoints_of_tounicode_bytes_or_charcode(
   bytes : PdfBytes,
   code : Int,
 ) -> Array[Int] {
-  try pdf_codepoints_of_utf16be(bytes[:]) catch {
+  try pdf_codepoints_of_utf16be(bytes) catch {
     _ => [code]
   } noraise {
     codepoints => codepoints
@@ -5039,9 +5019,9 @@ fn pdf_text_external_cmap_lookup(
   parsed : PdfParsedCMap,
 ) -> PdfTextExternalCMapLookup {
   {
-    cid_map: pdf_text_cmap_cid_lookup_map(parsed.cid_map[:]),
-    notdef_map: pdf_text_cmap_cid_lookup_map(parsed.notdef_map[:]),
-    map: pdf_text_tounicode_codepoints_lookup_map(parsed.map[:]),
+    cid_map: pdf_text_cmap_cid_lookup_map(parsed.cid_map),
+    notdef_map: pdf_text_cmap_cid_lookup_map(parsed.notdef_map),
+    map: pdf_text_tounicode_codepoints_lookup_map(parsed.map),
   }
 }
 
@@ -5053,7 +5033,7 @@ fn pdf_text_reverse_lookup_tounicode_charcode(
   shadow_second : ArrayView[(Int, Int)],
 ) -> Int? {
   for entry in tounicode {
-    try pdf_codepoints_of_utf16be(entry.1[:]) catch {
+    try pdf_codepoints_of_utf16be(entry.1) catch {
       _ => ()
     } noraise {
       [single] if single == codepoint &&
@@ -9597,12 +9577,8 @@ fn pdf_text_parsed_cmap_has_explicit_charcode(
   parsed : PdfParsedCMap,
   code : Int,
 ) -> Bool {
-  pdf_text_tounicode_has_charcode(parsed.map[:], code) ||
-  pdf_text_cmap_has_charcode_in_any(
-    parsed.cid_map[:],
-    parsed.notdef_map[:],
-    code,
-  )
+  pdf_text_tounicode_has_charcode(parsed.map, code) ||
+  pdf_text_cmap_has_charcode_in_any(parsed.cid_map, parsed.notdef_map, code)
 }
 
 ///|
@@ -9614,14 +9590,13 @@ fn PdfFont::pdf_text_external_cmap_codepoints(
     PdfFontCIDKeyed(font) =>
       match font.encoding {
         PdfExternalCMap(_, parsed) =>
-          match pdf_text_lookup_cmap_cid(parsed.cid_map[:], code) {
+          match pdf_text_lookup_cmap_cid(parsed.cid_map, code) {
             Some(cid) => Some([cid])
             None =>
-              match pdf_text_lookup_cmap_cid(parsed.notdef_map[:], code) {
+              match pdf_text_lookup_cmap_cid(parsed.notdef_map, code) {
                 Some(cid) => Some([cid])
                 None =>
-                  match
-                    pdf_text_lookup_tounicode_codepoints(parsed.map[:], code) {
+                  match pdf_text_lookup_tounicode_codepoints(parsed.map, code) {
                     Some(codepoints) => Some(codepoints)
                     None =>
                       match pdf_text_parsed_cmap_predefined_base(parsed) {
@@ -9700,13 +9675,12 @@ fn PdfFont::pdf_text_external_cmap_charcode(self : PdfFont, cid : Int) -> Int? {
     PdfFontCIDKeyed(font) =>
       match font.encoding {
         PdfExternalCMap(_, parsed) =>
-          match pdf_text_reverse_lookup_cmap_cid(parsed.cid_map[:], cid) {
+          match pdf_text_reverse_lookup_cmap_cid(parsed.cid_map, cid) {
             Some(code) => Some(code)
             None =>
-              match
-                pdf_text_reverse_lookup_cmap_cid(parsed.notdef_map[:], cid) {
+              match pdf_text_reverse_lookup_cmap_cid(parsed.notdef_map, cid) {
                 Some(code) =>
-                  if pdf_text_cmap_has_charcode(parsed.cid_map[:], code) {
+                  if pdf_text_cmap_has_charcode(parsed.cid_map, code) {
                     None
                   } else {
                     Some(code)
@@ -9714,10 +9688,10 @@ fn PdfFont::pdf_text_external_cmap_charcode(self : PdfFont, cid : Int) -> Int? {
                 None =>
                   match
                     pdf_text_reverse_lookup_tounicode_charcode(
-                      parsed.map[:],
+                      parsed.map,
                       cid,
-                      parsed.cid_map[:],
-                      parsed.notdef_map[:],
+                      parsed.cid_map,
+                      parsed.notdef_map,
                     ) {
                     Some(code) => Some(code)
                     None =>
@@ -10035,7 +10009,7 @@ fn PdfTextExtractor::pdf_text_glyph_of_charcode(
     Some(tounicode) =>
       match pdf_text_lookup_tounicode(tounicode, code) {
         Some(bytes) =>
-          try pdf_codepoints_of_utf16be(bytes[:]) catch {
+          try pdf_codepoints_of_utf16be(bytes) catch {
             _ => { glyphname: pdf_text_notdef_name(), codepoints: [code] }
           } noraise {
             codepoints =>
@@ -10433,7 +10407,7 @@ pub fn PdfTextExtractor::codepoints_of_text(
 ) -> Array[Int] raise PdfError {
   match self.font.pdf_text_tounicode() {
     Some(tounicode) =>
-      self.pdf_text_tounicode_codepoints_of_text(tounicode[:], text)
+      self.pdf_text_tounicode_codepoints_of_text(tounicode, text)
     None =>
       match self.font {
         PdfFontCIDKeyed(font) =>
@@ -10483,7 +10457,7 @@ pub fn PdfTextExtractor::charcode_of_codepoint(
   match self.font.pdf_text_tounicode() {
     Some(tounicode) =>
       for entry in tounicode {
-        try pdf_codepoints_of_utf16be(entry.1[:]) catch {
+        try pdf_codepoints_of_utf16be(entry.1) catch {
           _ => ()
         } noraise {
           [single] if single == codepoint => break Some(entry.0)
@@ -10757,7 +10731,7 @@ fn PdfDocument::pdf_text_write_tounicode(
     pdf_writer_push_ascii(output, "><")
     pdf_writer_push_ascii(output, pdf_text_hex_int_min2(charcode))
     pdf_writer_push_ascii(output, "><")
-    pdf_text_push_hex_bytes(output, entry.1[:])
+    pdf_text_push_hex_bytes(output, entry.1)
     pdf_writer_push_ascii(output, ">\n")
     charcode += 1
   }

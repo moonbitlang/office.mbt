@@ -215,7 +215,7 @@ pub fn pdf_parse_object_from_view(data : BytesView) -> PdfObject raise PdfError 
 
 ///|
 pub fn pdf_parse_object_from_bytes(data : PdfBytes) -> PdfObject raise PdfError {
-  pdf_parse_object_from_view(data[:])
+  pdf_parse_object_from_view(data)
 }
 
 ///|
@@ -301,7 +301,7 @@ pub fn pdf_parse_indirect_object_lexemes(
 pub fn pdf_parse_indirect_object_from_bytes(
   data : PdfBytes,
 ) -> PdfParsedIndirectObject raise PdfError {
-  pdf_parse_indirect_object_from_view(data[:])
+  pdf_parse_indirect_object_from_view(data)
 }
 
 ///|

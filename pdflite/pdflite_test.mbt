@@ -23,7 +23,7 @@ test "PdfBytes preserve byte-oriented PDF data" {
 test "PdfBytes concatenate read-only byte views at ownership boundary" {
   let first = try! @pdflite.pdf_bytes_of_int_array([0x25, 0x50])
   let second = try! @pdflite.pdf_bytes_of_int_array([0x44, 0x46, 0xFF])
-  let parts : Array[BytesView] = [first[:], second[1:]]
+  let parts : Array[BytesView] = [first, second[1:]]
   let combined = @pdflite.pdf_bytes_concat_views(parts)
   @test.assert_eq(
     @pdflite.pdf_bytes_to_array(combined).map(byte => byte.to_int()),
@@ -59,11 +59,11 @@ test "PdfBytes make immutable filled byte data" {
 ///|
 test "PdfBytes explicit copy preserves value but not physical identity" {
   let source = try! @pdflite.pdf_bytes_of_int_array([65, 66, 67])
-  let copied = @pdflite.pdf_bytes_copy(source[:])
+  let copied = @pdflite.pdf_bytes_copy(source)
   @test.assert_eq(copied, source)
   @test.assert_eq(physical_equal(copied, source), false)
   @test.assert_eq(
-    @pdflite.pdf_int_array_of_bytes(@pdflite.pdf_bytes_copy(source[1:])[:]),
+    @pdflite.pdf_int_array_of_bytes(@pdflite.pdf_bytes_copy(source[1:])),
     [66, 67],
   )
 }
@@ -73,9 +73,7 @@ test "PdfBytes expose CamlPDF int-array compatibility conversions" {
   let first : FixedArray[Int] = [65, 0xFF]
   let second : Array[Int] = [0, 66]
   let combined = try! @pdflite.pdf_bytes_of_int_arrays([first, second])
-  @test.assert_eq(@pdflite.pdf_int_array_of_bytes(combined[:]), [
-    65, 0xFF, 0, 66,
-  ])
+  @test.assert_eq(@pdflite.pdf_int_array_of_bytes(combined), [65, 0xFF, 0, 66])
   @test.assert_eq(@pdflite.pdf_int_array_of_bytes(combined[1:3]), [0xFF, 0])
   @test.assert_eq(
     try! @pdflite.pdf_string_of_int_array(first),
@@ -98,8 +96,8 @@ test "PdfBytes expose CamlPDF int-array compatibility conversions" {
 test "PdfBytes map byte values without mutating the source" {
   let source = try! @pdflite.pdf_bytes_of_int_array([0, 1, 255, 7])
   let mapped = try! @pdflite.pdf_bytes_map_int(source[1:3], value => 255 - value)
-  @test.assert_eq(@pdflite.pdf_int_array_of_bytes(mapped[:]), [254, 0])
-  @test.assert_eq(@pdflite.pdf_int_array_of_bytes(source[:]), [0, 1, 255, 7])
+  @test.assert_eq(@pdflite.pdf_int_array_of_bytes(mapped), [254, 0])
+  @test.assert_eq(@pdflite.pdf_int_array_of_bytes(source), [0, 1, 255, 7])
   let invalid : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_bytes_map_int(
     source[2:3],
     value => value + 1,

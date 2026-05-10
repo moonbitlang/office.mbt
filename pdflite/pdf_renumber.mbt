@@ -19,7 +19,7 @@ fn pdf_renumber_document_with_changes(
       (new_number, pdf_page_renumber_entry_with_map(entry, change_map)),
     )
   }
-  let objects = pdf_objects_of_entries(entries[:])
+  let objects = pdf_objects_of_entries(entries)
   for number in output.objects.object_stream_ids.keys() {
     if output.objects.object_map.contains(number) {
       let new_number = change_map.changed_reference(number)
@@ -56,7 +56,7 @@ pub fn PdfDocument::renumber_objects_compact(
   for index, number in numbers {
     changes.push((number, index + 1))
   }
-  pdf_renumber_document_with_changes(self, changes[:])
+  pdf_renumber_document_with_changes(self, changes)
 }
 
 ///|
@@ -74,7 +74,7 @@ pub fn PdfDocument::renumber_objects_by_offset(
     let changes : Array[(Int, Int)] = [
       for number in old_numbers => (number, number + offset)
     ]
-    pdf_renumber_document_with_changes(self, changes[:])
+    pdf_renumber_document_with_changes(self, changes)
   }
 }
 
@@ -91,7 +91,7 @@ pub fn pdf_renumber_documents(
       changes.push((number, base + index))
     }
     base += numbers.length()
-    output.push(pdf_renumber_document_with_changes(document, changes[:]))
+    output.push(pdf_renumber_document_with_changes(document, changes))
   }
   output
 }

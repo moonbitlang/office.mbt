@@ -2588,7 +2588,7 @@ fn pdf_page_name_text_without_slash(name : PdfName) -> String {
   let view = if bytes.length() > 0 && bytes[0].to_int() == 47 {
     bytes[1:]
   } else {
-    bytes[:]
+    bytes
   }
   @ascii.decode(view) catch {
     _ => ""
@@ -2623,7 +2623,7 @@ fn pdf_page_next_prefix(prefix : String) -> String {
     } else {
       let output = bytes.to_array()
       output[0] = (output[0].to_int() + 1).to_byte()
-      try! @ascii.decode(Bytes::from_array(output)[:])
+      try! @ascii.decode(Bytes::from_array(output))
     }
   }
 }

@@ -94,7 +94,7 @@ test "PdfTextExtractor decodes Gurmukhi AGL glyph names" {
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)),
     expected_codepoints,
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x0A06), Some(1))

@@ -176,7 +176,7 @@ test "pdf_utf16be_of_codepoints writes PDF Unicode strings as bytes" {
       0xFE, 0xFF, 0x00, 0x41, 0x20, 0xAC, 0xD8, 0x34, 0xDD, 0x1E,
     ]),
   )
-  @test.assert_eq(@pdflite.pdf_is_unicode_string(encoded[:]), true)
+  @test.assert_eq(@pdflite.pdf_is_unicode_string(encoded), true)
   @test.assert_eq(try! @pdflite.pdf_codepoints_of_utf16be(encoded[2:]), [
     0x41, 0x20AC, 0x1D11E,
   ])
@@ -184,20 +184,18 @@ test "pdf_utf16be_of_codepoints writes PDF Unicode strings as bytes" {
 
 ///|
 test "pdf_codepoints_of_utf16be rejects malformed UTF16BE bytes" {
-  let odd = try? @pdflite.pdf_codepoints_of_utf16be(
-    text_bytes_for_test([0x00])[:],
-  )
+  let odd = try? @pdflite.pdf_codepoints_of_utf16be(text_bytes_for_test([0x00]))
   guard odd is Err(InvalidUTF16BE) else {
     fail("expected InvalidUTF16BE for odd byte length")
   }
   let unpaired_high = try? @pdflite.pdf_codepoints_of_utf16be(
-    text_bytes_for_test([0xD8, 0x34, 0x00, 0x41])[:],
+    text_bytes_for_test([0xD8, 0x34, 0x00, 0x41]),
   )
   guard unpaired_high is Err(InvalidUTF16BE) else {
     fail("expected InvalidUTF16BE for unpaired high surrogate")
   }
   let isolated_low = try? @pdflite.pdf_codepoints_of_utf16be(
-    text_bytes_for_test([0xDD, 0x1E])[:],
+    text_bytes_for_test([0xDD, 0x1E]),
   )
   guard isolated_low is Err(InvalidUTF16BE) else {
     fail("expected InvalidUTF16BE for isolated low surrogate")
@@ -227,7 +225,7 @@ test "pdf_utf8_of_codepoints writes UTF8 bytes and roundtrips" {
       0x41, 0xC2, 0xA2, 0xE2, 0x82, 0xAC, 0xF0, 0x9D, 0x84, 0x9E,
     ]),
   )
-  @test.assert_eq(try! @pdflite.pdf_codepoints_of_utf8(encoded[:]), [
+  @test.assert_eq(try! @pdflite.pdf_codepoints_of_utf8(encoded), [
     0x41, 0xA2, 0x20AC, 0x1D11E,
   ])
 }
@@ -235,37 +233,37 @@ test "pdf_utf8_of_codepoints writes UTF8 bytes and roundtrips" {
 ///|
 test "pdf_codepoints_of_utf8 rejects malformed UTF8 bytes" {
   let truncated = try? @pdflite.pdf_codepoints_of_utf8(
-    text_bytes_for_test([0xE2, 0x82])[:],
+    text_bytes_for_test([0xE2, 0x82]),
   )
   guard truncated is Err(InvalidUTF8) else {
     fail("expected InvalidUTF8 for truncated sequence")
   }
   let bad_continuation = try? @pdflite.pdf_codepoints_of_utf8(
-    text_bytes_for_test([0xE2, 0x28, 0xAC])[:],
+    text_bytes_for_test([0xE2, 0x28, 0xAC]),
   )
   guard bad_continuation is Err(InvalidUTF8) else {
     fail("expected InvalidUTF8 for bad continuation")
   }
   let overlong = try? @pdflite.pdf_codepoints_of_utf8(
-    text_bytes_for_test([0xC0, 0x80])[:],
+    text_bytes_for_test([0xC0, 0x80]),
   )
   guard overlong is Err(InvalidUTF8) else {
     fail("expected InvalidUTF8 for overlong sequence")
   }
   let surrogate = try? @pdflite.pdf_codepoints_of_utf8(
-    text_bytes_for_test([0xED, 0xA0, 0x80])[:],
+    text_bytes_for_test([0xED, 0xA0, 0x80]),
   )
   guard surrogate is Err(InvalidUnicodeCodepoint(0xD800)) else {
     fail("expected InvalidUnicodeCodepoint for decoded surrogate")
   }
   let bad_four_byte_continuation = try? @pdflite.pdf_codepoints_of_utf8(
-    text_bytes_for_test([0xF0, 0x9D, 0x28, 0x9E])[:],
+    text_bytes_for_test([0xF0, 0x9D, 0x28, 0x9E]),
   )
   guard bad_four_byte_continuation is Err(InvalidUTF8) else {
     fail("expected InvalidUTF8 for bad four-byte continuation")
   }
   let invalid_leading_byte = try? @pdflite.pdf_codepoints_of_utf8(
-    text_bytes_for_test([0xFF])[:],
+    text_bytes_for_test([0xFF]),
   )
   guard invalid_leading_byte is Err(InvalidUTF8) else {
     fail("expected InvalidUTF8 for invalid leading byte")
@@ -298,7 +296,7 @@ test "PDFDocEncoding decodes CamlPDF byte mappings" {
   }
   @test.assert_eq(
     try! @pdflite.pdf_codepoints_of_pdfdocencoding(
-      text_bytes_for_test([0x41, 0xA0, 0x93])[:],
+      text_bytes_for_test([0x41, 0xA0, 0x93]),
     ),
     [0x41, 0x20AC, 0xFB02],
   )
@@ -329,34 +327,34 @@ test "PDFDocEncoding encodes codepoints and falls back to UTF16BE" {
 test "PDF document string helpers bridge PDFDoc UTF16BE and UTF8 bytes" {
   @test.assert_eq(
     try! @pdflite.pdf_codepoints_of_pdfdocstring(
-      text_bytes_for_test([0x41, 0xA0])[:],
+      text_bytes_for_test([0x41, 0xA0]),
     ),
     [0x41, 0x20AC],
   )
   @test.assert_eq(
     try! @pdflite.pdf_codepoints_of_pdfdocstring(
-      text_bytes_for_test([0xFE, 0xFF, 0x00, 0x41, 0x20, 0xAC])[:],
+      text_bytes_for_test([0xFE, 0xFF, 0x00, 0x41, 0x20, 0xAC]),
     ),
     [0x41, 0x20AC],
   )
   @test.assert_eq(
-    try! @pdflite.pdf_utf8_of_pdfdocstring(text_bytes_for_test([0x41, 0xA0])[:]),
+    try! @pdflite.pdf_utf8_of_pdfdocstring(text_bytes_for_test([0x41, 0xA0])),
     text_bytes_for_test([0x41, 0xE2, 0x82, 0xAC]),
   )
   @test.assert_eq(
     try! @pdflite.pdf_pdfdocstring_of_utf8(
-      text_bytes_for_test([0x41, 0xE2, 0x82, 0xAC])[:],
+      text_bytes_for_test([0x41, 0xE2, 0x82, 0xAC]),
     ),
     text_bytes_for_test([0x41, 0xA0]),
   )
   @test.assert_eq(
     try! @pdflite.pdf_simplify_utf16be(
-      text_bytes_for_test([0xFE, 0xFF, 0x00, 0x41, 0x20, 0xAC])[:],
+      text_bytes_for_test([0xFE, 0xFF, 0x00, 0x41, 0x20, 0xAC]),
     ),
     text_bytes_for_test([0x41, 0xA0]),
   )
   @test.assert_eq(
-    try! @pdflite.pdf_simplify_utf16be(text_bytes_for_test([0x41])[:]),
+    try! @pdflite.pdf_simplify_utf16be(text_bytes_for_test([0x41])),
     text_bytes_for_test([0x41]),
   )
 }
@@ -477,11 +475,11 @@ test "PdfStandardFont exposes Standard14 AFM data tables" {
 test "PdfStandardFont text_width mirrors CamlPDF widths and kerning" {
   let av = text_bytes_for_test([65, 86])
   @test.assert_eq(
-    @pdflite.PdfHelvetica.text_width(PdfWinAnsiEncoding, av[:]),
+    @pdflite.PdfHelvetica.text_width(PdfWinAnsiEncoding, av),
     1334,
   )
   @test.assert_eq(
-    @pdflite.PdfHelvetica.text_width(PdfWinAnsiEncoding, av[:], kern=true),
+    @pdflite.PdfHelvetica.text_width(PdfWinAnsiEncoding, av, kern=true),
     1264,
   )
   @test.assert_eq(
@@ -489,13 +487,13 @@ test "PdfStandardFont text_width mirrors CamlPDF widths and kerning" {
       true,
       PdfWinAnsiEncoding,
       PdfHelvetica,
-      av[:],
+      av,
     ),
     1264,
   )
   let to = text_bytes_for_test([84, 111])
   @test.assert_eq(
-    @pdflite.pdf_standard14_text_width(PdfTimesRoman, PdfWinAnsiEncoding, to[:]),
+    @pdflite.pdf_standard14_text_width(PdfTimesRoman, PdfWinAnsiEncoding, to),
     1111,
   )
   @test.assert_eq(
@@ -503,7 +501,7 @@ test "PdfStandardFont text_width mirrors CamlPDF widths and kerning" {
       false,
       PdfWinAnsiEncoding,
       PdfTimesRoman,
-      to[:],
+      to,
     ),
     1111,
   )
@@ -511,23 +509,23 @@ test "PdfStandardFont text_width mirrors CamlPDF widths and kerning" {
     @pdflite.pdf_standard14_text_width(
       PdfTimesRoman,
       PdfWinAnsiEncoding,
-      to[:],
+      to,
       kern=true,
     ),
     1031,
   )
   let courier = text_bytes_for_test([65, 66, 67])
   @test.assert_eq(
-    @pdflite.PdfCourier.text_width(PdfImplicitInFontFile, courier[:]),
+    @pdflite.PdfCourier.text_width(PdfImplicitInFontFile, courier),
     1800,
   )
   @test.assert_eq(
-    @pdflite.PdfCourier.text_width(PdfImplicitInFontFile, courier[:], kern=true),
+    @pdflite.PdfCourier.text_width(PdfImplicitInFontFile, courier, kern=true),
     1800,
   )
   let missing_code = text_bytes_for_test([1])
   @test.assert_eq(
-    @pdflite.PdfCourier.text_width(PdfImplicitInFontFile, missing_code[:]),
+    @pdflite.PdfCourier.text_width(PdfImplicitInFontFile, missing_code),
     0,
   )
 }
@@ -538,25 +536,25 @@ test "PdfStandardFont text_width uses glyph-name widths for explicit encodings" 
     text_difference_for_test("/AE", 65),
   ])
   let text = text_bytes_for_test([65, 66, 0])
-  @test.assert_eq(@pdflite.PdfHelvetica.text_width(custom, text[:]), 1945)
+  @test.assert_eq(@pdflite.PdfHelvetica.text_width(custom, text), 1945)
   let standard_font = text_standard_font_data_for_test(PdfHelvetica, custom)
-  @test.assert_eq(standard_font.text_width(text[:]), 1945)
+  @test.assert_eq(standard_font.text_width(text), 1945)
   let symbol_text = text_bytes_for_test([65])
   @test.assert_eq(
-    @pdflite.PdfSymbol.text_width(PdfImplicitInFontFile, symbol_text[:]),
+    @pdflite.PdfSymbol.text_width(PdfImplicitInFontFile, symbol_text),
     722,
   )
   let slashless : @pdflite.PdfEncoding = PdfCustomEncoding(PdfWinAnsiEncoding, [
     { name: text_name_for_test("AE"), code: 65 },
   ])
   @test.assert_eq(
-    @pdflite.PdfHelvetica.text_width(slashless, symbol_text[:]),
+    @pdflite.PdfHelvetica.text_width(slashless, symbol_text),
     1000,
   )
   let unknown : @pdflite.PdfEncoding = PdfCustomEncoding(PdfWinAnsiEncoding, [
     text_difference_for_test("/MissingGlyph", 65),
   ])
-  @test.assert_eq(@pdflite.PdfHelvetica.text_width(unknown, symbol_text[:]), 0)
+  @test.assert_eq(@pdflite.PdfHelvetica.text_width(unknown, symbol_text), 0)
 }
 
 ///|
@@ -565,7 +563,7 @@ test "PdfTextExtractor text_width uses font metrics" {
   let standard_font : @pdflite.PdfFont = PdfFontStandard(
     text_standard_font_data_for_test(PdfHelvetica, PdfWinAnsiEncoding),
   )
-  @test.assert_eq(try! standard_font.text_extractor().text_width(av[:]), 1334.0)
+  @test.assert_eq(try! standard_font.text_extractor().text_width(av), 1334.0)
   let metrics : Array[Double] = [ for _ in 0..<256 => 250.0 ]
   metrics[65] = 500.0
   metrics[66] = 700.0
@@ -582,7 +580,7 @@ test "PdfTextExtractor text_width uses font metrics" {
   @test.assert_eq(
     try! simple_font
     .text_extractor()
-    .text_width(text_bytes_for_test([65, 66, 67])[:]),
+    .text_width(text_bytes_for_test([65, 66, 67])),
     1450.0,
   )
   let composite : @pdflite.PdfCompositeCIDFont = {
@@ -606,7 +604,7 @@ test "PdfTextExtractor text_width uses font metrics" {
   @test.assert_eq(
     try! cid_font
     .text_extractor()
-    .text_width(text_bytes_for_test([0x00, 0x41, 0x20, 0xAC, 0x00, 0x42])[:]),
+    .text_width(text_bytes_for_test([0x00, 0x41, 0x20, 0xAC, 0x00, 0x42])),
     2500.0,
   )
 }
@@ -2604,7 +2602,7 @@ test "PdfDocument write_font writes TrueType ToUnicode CMaps" {
     Some(PdfInteger(bytes.length())),
   )
   @test.assert_eq(
-    try! @ascii.decode(bytes[:]),
+    try! @ascii.decode(bytes),
     "/CIDInit /ProcSet findresource begin\n" +
     "12 dict begin\n" +
     "begincmap\n" +
@@ -2645,12 +2643,12 @@ test "PdfDocument write_font writes TrueType ToUnicode CMaps" {
     doc.lookup_object_or_null(number),
   )
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test([33, 34, 35])[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test([33, 34, 35])),
     [0x41, 0x42, 35],
   )
   @test.assert_eq(
     try! extractor.glyphnames_and_codepoints_of_text(
-      text_bytes_for_test([33, 34, 35])[:],
+      text_bytes_for_test([33, 34, 35]),
     ),
     [
       {
@@ -2669,7 +2667,7 @@ test "PdfDocument write_font writes TrueType ToUnicode CMaps" {
     ],
   )
   @test.assert_eq(
-    try! extractor.glyphnames_of_text(text_bytes_for_test([33, 35])[:]),
+    try! extractor.glyphnames_of_text(text_bytes_for_test([33, 35])),
     [
       @pdflite.pdf_name_of_bytes(text_bytes_for_test([47, 0x00, 0x41])),
       text_name_for_test(".notdef"),
@@ -2704,18 +2702,14 @@ test "pdftext top-level font and extractor wrappers match methods" {
   let text = text_bytes_for_test([65, 66])
   let extractor = try! @pdflite.pdf_text_extractor_of_font(doc, font_object)
   let real_extractor = @pdflite.pdf_text_extractor_of_font_real(font)
-  @test.assert_eq(try! @pdflite.pdf_codepoints_of_text(extractor, text[:]), [
+  @test.assert_eq(try! @pdflite.pdf_codepoints_of_text(extractor, text), [
+    65, 66,
+  ])
+  @test.assert_eq(try! @pdflite.pdf_codepoints_of_text(real_extractor, text), [
     65, 66,
   ])
   @test.assert_eq(
-    try! @pdflite.pdf_codepoints_of_text(real_extractor, text[:]),
-    [65, 66],
-  )
-  @test.assert_eq(
-    try! @pdflite.pdf_glyphnames_of_text(
-      extractor,
-      text_bytes_for_test([65])[:],
-    ),
+    try! @pdflite.pdf_glyphnames_of_text(extractor, text_bytes_for_test([65])),
     [text_name_for_test("/A")],
   )
   let charcode = try! @pdflite.pdf_charcode_extractor_of_font(doc, font_object)
@@ -2772,7 +2766,7 @@ test "PdfTextExtractor codepoints_of_text keeps ToUnicode first match and fallba
     }),
   )
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test([65, 66, 67])[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test([65, 66, 67])),
     [0x41, 66, 67],
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x41), Some(65))
@@ -2790,7 +2784,7 @@ test "pdf_parse_cmap_data returns ToUnicode map and WMode" {
       "<21><0041>\n" +
       "<22><0042>\n" +
       "endbfchar\n",
-    )[:],
+    ),
   )
   @test.assert_eq(parsed.wmode, Some(1))
   @test.assert_eq(parsed.map, [
@@ -2799,12 +2793,12 @@ test "pdf_parse_cmap_data returns ToUnicode map and WMode" {
   ])
   @test.assert_eq(parsed.usecmap, Some(text_name_for_test("/Identity-H")))
   let malformed_wmode = @pdflite.pdf_parse_cmap_data(
-    @ascii.encode("/WMode invalid\n")[:],
+    @ascii.encode("/WMode invalid\n"),
   )
   @test.assert_eq(malformed_wmode.wmode, None)
   @test.assert_eq(malformed_wmode.map, [])
   @test.assert_eq(
-    @pdflite.pdf_parse_cmap_data(@ascii.encode("/XMode 1\n")[:]).wmode,
+    @pdflite.pdf_parse_cmap_data(@ascii.encode("/XMode 1\n")).wmode,
     None,
   )
 }
@@ -2818,14 +2812,12 @@ test "pdf_parse_cmap_data reads WMode across PDF whitespace" {
       "1 beginbfchar\n" +
       "<21><0041>\n" +
       "endbfchar\n",
-    )[:],
+    ),
   )
   @test.assert_eq(parsed.wmode, Some(1))
   @test.assert_eq(parsed.map, [(33, text_bytes_for_test([0x00, 0x41]))])
   @test.assert_eq(
-    @pdflite.pdf_parse_cmap_data(
-      @ascii.encode("/WMode\nbad\n/WMode\t0 def\n")[:],
-    ).wmode,
+    @pdflite.pdf_parse_cmap_data(@ascii.encode("/WMode\nbad\n/WMode\t0 def\n")).wmode,
     Some(0),
   )
 }
@@ -2833,19 +2825,19 @@ test "pdf_parse_cmap_data reads WMode across PDF whitespace" {
 ///|
 test "pdf_parse_cmap_data reads UseCMap names across PDF whitespace" {
   let parsed = @pdflite.pdf_parse_cmap_data(
-    @ascii.encode("/Identity-V\r\nusecmap\n")[:],
+    @ascii.encode("/Identity-V\r\nusecmap\n"),
   )
   @test.assert_eq(parsed.usecmap, Some(text_name_for_test("/Identity-V")))
   @test.assert_eq(
-    @pdflite.pdf_parse_cmap_data(@ascii.encode("usecmap\n")[:]).usecmap,
+    @pdflite.pdf_parse_cmap_data(@ascii.encode("usecmap\n")).usecmap,
     None,
   )
   @test.assert_eq(
-    @pdflite.pdf_parse_cmap_data(@ascii.encode("/Bad#2dName usecmap\n")[:]).usecmap,
+    @pdflite.pdf_parse_cmap_data(@ascii.encode("/Bad#2dName usecmap\n")).usecmap,
     Some(text_name_for_test("/Bad-Name")),
   )
   @test.assert_eq(
-    @pdflite.pdf_parse_cmap_data(@ascii.encode("/Bad#xxName usecmap\n")[:]).usecmap,
+    @pdflite.pdf_parse_cmap_data(@ascii.encode("/Bad#xxName usecmap\n")).usecmap,
     None,
   )
 }
@@ -2861,7 +2853,7 @@ test "pdf_parse_cmap_data reads CMap header metadata" {
       ">> def\n" +
       "/CMapName /Adobe-Identity-UCS def\n" +
       "/CMapType 2 def\n",
-    )[:],
+    ),
   )
   @test.assert_eq(
     parsed.cmap_name,
@@ -2883,7 +2875,7 @@ test "pdf_parse_cmap_data reads CMap header metadata" {
       "/Ordering (Japan1) def\n" +
       "/Supplement 6 def\n" +
       "end def\n",
-    )[:],
+    ),
   )
   @test.assert_eq(
     dict_style.cid_system_info,
@@ -2898,7 +2890,7 @@ test "pdf_parse_cmap_data reads CMap header metadata" {
       "/CIDSystemInfo << /Registry /Adobe /Ordering (UCS) /Supplement bad >>\n" +
       "/CMapName Adobe-Identity-UCS def\n" +
       "/CMapType bad def\n",
-    )[:],
+    ),
   )
   @test.assert_eq(malformed.cmap_name, None)
   @test.assert_eq(malformed.cmap_type, None)
@@ -3144,7 +3136,7 @@ test "pdf_parse_cmap_data reads external CID mappings and codespaces" {
       "1 beginnotdefrange\n" +
       "<30><31> 5\n" +
       "endnotdefrange\n",
-    )[:],
+    ),
   )
   @test.assert_eq(parsed.codespaces, [
     { length: 1, first: 0x00, last: 0x7F },
@@ -3196,9 +3188,7 @@ test "PdfDocument applies external CMap Identity UseCMap fallback" {
   @test.assert_eq(parsed.usecmap, Some(text_name_for_test("/Identity-H")))
   let extractor = try! doc.text_extractor_of_font(font)
   @test.assert_eq(
-    extractor.codepoints_of_text(
-      text_bytes_for_test([0x00, 0x41, 0x00, 0x42])[:],
-    ),
+    extractor.codepoints_of_text(text_bytes_for_test([0x00, 0x41, 0x00, 0x42])),
     [99, 0x42],
   )
   @test.assert_eq(extractor.charcode_of_codepoint(99), Some(0x0041))
@@ -3260,7 +3250,7 @@ test "PdfDocument applies external CMap Unicode maps before inherited fallback" 
       text_bytes_for_test([
         0x00, 0x41, 0x00, 0x42, 0x00, 0x43, 0x00, 0x44, 0x00, 0x45, 0x00, 0x46, 0x00,
         0x47,
-      ])[:],
+      ]),
     ),
     [0x61, 66, 0x43, 0x61, 0x62, 0x63, 0x64, 0x47],
   )
@@ -3298,12 +3288,12 @@ test "PdfDocument applies external CMap predefined UseCMap fallback" {
   let extractor = try! doc.text_extractor_of_font(font)
   @test.assert_eq(
     extractor.codepoints_of_text(
-      text_bytes_for_test([0x41, 0xA1, 0xA1, 0xC4, 0xE3])[:],
+      text_bytes_for_test([0x41, 0xA1, 0xA1, 0xC4, 0xE3]),
     ),
     [0x41, 99, 0x4F60],
   )
   @test.assert_eq(
-    extractor.codepoints_of_text(text_bytes_for_test([0x81, 0x40])[:]),
+    extractor.codepoints_of_text(text_bytes_for_test([0x81, 0x40])),
     [0x8140],
   )
   @test.assert_eq(extractor.charcode_of_codepoint(99), Some(0xA1A1))
@@ -3332,7 +3322,7 @@ test "PdfDocument applies external CMap predefined UseCMap fallback" {
   ])
   @test.assert_eq(
     (try! doc.text_extractor_of_font(one_byte_font)).codepoints_of_text(
-      text_bytes_for_test([0x41])[:],
+      text_bytes_for_test([0x41]),
     ),
     [0x41],
   )
@@ -3426,13 +3416,13 @@ test "PdfDocument composes external CMap UseCMap stream bases" {
   let extractor = try! doc.text_extractor_of_font(font)
   @test.assert_eq(
     extractor.codepoints_of_text(
-      text_bytes_for_test([0x00, 0x40, 0x00, 0x41, 0x00, 0x42])[:],
+      text_bytes_for_test([0x00, 0x40, 0x00, 0x41, 0x00, 0x42]),
     ),
     [500, 99, 502],
   )
   @test.assert_eq(
     extractor.codepoints_of_text(
-      text_bytes_for_test([0x00, 0x50, 0x00, 0x51, 0x00, 0x52])[:],
+      text_bytes_for_test([0x00, 0x50, 0x00, 0x51, 0x00, 0x52]),
     ),
     [77, 701, 0x52],
   )
@@ -3537,7 +3527,7 @@ test "PdfDocument applies ToUnicode UseCMap stream composition" {
   )
   let extractor = try! doc.text_extractor_of_font(font)
   @test.assert_eq(
-    extractor.codepoints_of_text(text_bytes_for_test([0x21, 0x22, 0x23])[:]),
+    extractor.codepoints_of_text(text_bytes_for_test([0x21, 0x22, 0x23])),
     [0x41, 0x5A, 0x23],
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x41), Some(0x21))
@@ -3671,7 +3661,7 @@ test "PdfDocument reads bfchar and sequential bfrange ToUnicode CMaps" {
       text_bytes_for_test([
         33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 81,
         82, 83, 51,
-      ])[:],
+      ]),
     ),
     [
       0x41, 0x42, 0x43, 0x44, 0x20AC, 0x58, 0x59, 0x5A, 0x61, 0x62, 0x63, 0x64, 0x65,
@@ -3735,7 +3725,7 @@ test "PdfDocument reads split bfchar ToUnicode CMaps" {
   )
   let extractor = try! doc.text_extractor_of_font(font)
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test([65, 66, 67, 68])[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test([65, 66, 67, 68])),
     [0x41, 0x42, 0x43, 68],
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x43), Some(67))
@@ -3801,7 +3791,7 @@ test "PdfDocument reads multiline bfrange array ToUnicode CMaps" {
   let extractor = try! doc.text_extractor_of_font(font)
   @test.assert_eq(
     try! extractor.codepoints_of_text(
-      text_bytes_for_test([48, 49, 50, 51, 52, 53, 54, 55, 56, 57])[:],
+      text_bytes_for_test([48, 49, 50, 51, 52, 53, 54, 55, 56, 57]),
     ),
     [0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6A],
   )
@@ -3820,7 +3810,7 @@ test "pdf_parse_cmap_data keeps bfrange entries after multiline array close" {
       "<0062>] <32><33><0063>\n" +
       "<34><35> [<0065><0066>] <36><37>[<0067><0068>]\n" +
       "endbfrange\n",
-    )[:],
+    ),
   )
   @test.assert_eq(parsed.map, [
     (48, text_bytes_for_test([0x00, 0x61])),
@@ -3844,7 +3834,7 @@ test "pdf_parse_cmap_data keeps bfrange entries before multiline array" {
       "<0064>]\n" +
       "<34><35><0065>\n" +
       "endbfrange\n",
-    )[:],
+    ),
   )
   @test.assert_eq(parsed.map, [
     (48, text_bytes_for_test([0x00, 0x61])),
@@ -3904,7 +3894,7 @@ test "PdfDocument reads repeated inline bfrange arrays" {
   let extractor = try! doc.text_extractor_of_font(font)
   @test.assert_eq(
     try! extractor.codepoints_of_text(
-      text_bytes_for_test([64, 65, 66, 67, 68, 69, 70, 71, 72, 73])[:],
+      text_bytes_for_test([64, 65, 66, 67, 68, 69, 70, 71, 72, 73]),
     ),
     [0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6A],
   )
@@ -3956,9 +3946,7 @@ test "PdfDocument reads ToUnicode hex strings with whitespace and odd nibbles" {
   )
   let extractor = try! doc.text_extractor_of_font(font)
   @test.assert_eq(
-    try! extractor.codepoints_of_text(
-      text_bytes_for_test([65, 0x40, 67, 68])[:],
-    ),
+    try! extractor.codepoints_of_text(text_bytes_for_test([65, 0x40, 67, 68])),
     [0x5A, 0x60, 0x1D11E, 68],
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x1D11E), Some(67))
@@ -4017,9 +4005,7 @@ test "PdfDocument reads ToUnicode CMaps with PDF whitespace separators" {
   )
   let extractor = try! doc.text_extractor_of_font(font)
   @test.assert_eq(
-    try! extractor.codepoints_of_text(
-      text_bytes_for_test([65, 66, 67, 68, 69])[:],
-    ),
+    try! extractor.codepoints_of_text(text_bytes_for_test([65, 66, 67, 68, 69])),
     [0x41, 0x42, 0x43, 0x44, 69],
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x44), Some(68))
@@ -4038,7 +4024,7 @@ test "pdf_parse_cmap_data reads whitespace-split CMap markers" {
     text_bytes_for_test([32]),
     @ascii.encode("bfrange\n"),
   ])
-  let parsed = @pdflite.pdf_parse_cmap_data(cmap[:])
+  let parsed = @pdflite.pdf_parse_cmap_data(cmap)
   @test.assert_eq(parsed.wmode, Some(1))
   @test.assert_eq(parsed.map, [
     (65, text_bytes_for_test([0x00, 0x41])),
@@ -4056,7 +4042,7 @@ test "pdf_parse_cmap_data augments partial CMap marker parsing" {
     text_bytes_for_test([10]),
     @ascii.encode("bfchar\n"),
   ])
-  @test.assert_eq(@pdflite.pdf_parse_cmap_data(cmap[:]).map, [
+  @test.assert_eq(@pdflite.pdf_parse_cmap_data(cmap).map, [
     (64, text_bytes_for_test([0x00, 0x40])),
     (65, text_bytes_for_test([0x00, 0x41])),
   ])
@@ -4090,7 +4076,7 @@ test "pdf_parse_cmap_data ignores PDF comments in CMap programs" {
       "1 beginnotdefrange\n" +
       "<47><48> 200 % <49><4A> 300\n" +
       "endnotdefrange\n",
-    )[:],
+    ),
   )
   @test.assert_eq(parsed.usecmap, Some(text_name_for_test("/Identity-V")))
   @test.assert_eq(parsed.wmode, Some(1))
@@ -4116,7 +4102,7 @@ test "pdf_parse_cmap_data ignores PDF comments in CMap programs" {
   let escaped_literal = @pdflite.pdf_parse_cmap_data(
     @ascii.encode(
       "/CIDSystemInfo << /Registry (Ad\\%o(be)) /Ordering (UCS) /Supplement 1 >> def % /Supplement 9\n",
-    )[:],
+    ),
   )
   @test.assert_eq(
     escaped_literal.cid_system_info,
@@ -4157,7 +4143,7 @@ test "PdfDocument decodes filtered ToUnicode CMap streams" {
   ])
   let extractor = try! doc.text_extractor_of_font(font)
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test([65, 66])[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test([65, 66])),
     [0x5A, 66],
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x5A), Some(65))
@@ -4186,7 +4172,7 @@ test "PdfDocument decodes filtered ToUnicode CMap streams" {
   ])
   let extractor = try! doc.text_extractor_of_font(font)
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test([65, 66])[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test([65, 66])),
     [0x5A, 66],
   )
 }
@@ -4214,17 +4200,17 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   let extractor = cid_font_h.text_extractor()
   @test.assert_eq(
     try! extractor.codepoints_of_text(
-      text_bytes_for_test([0x00, 0x41, 0x20, 0xAC])[:],
+      text_bytes_for_test([0x00, 0x41, 0x20, 0xAC]),
     ),
     [0x41, 0x20AC],
   )
   @test.assert_eq(
-    try! extractor.glyphnames_of_text(text_bytes_for_test([0x00, 0x41])[:]),
+    try! extractor.glyphnames_of_text(text_bytes_for_test([0x00, 0x41])),
     [text_name_for_test(".notdef")],
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x41), None)
   @test.assert_eq(extractor.charcode_of_codepoint(0xF6E6), None)
-  let odd = try? extractor.codepoints_of_text(text_bytes_for_test([0x00])[:])
+  let odd = try? extractor.codepoints_of_text(text_bytes_for_test([0x00]))
   guard odd is Err(BadText) else { fail("expected BadText") }
   let cid_font_v_data : @pdflite.PdfCIDKeyedFont = {
     basefont: text_name_for_test("/TopVertical"),
@@ -4240,18 +4226,18 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   let vertical_extractor = cid_font_v.text_extractor()
   @test.assert_eq(
     try! vertical_extractor.codepoints_of_text(
-      text_bytes_for_test([0x00, 0x42, 0x4E, 0x00])[:],
+      text_bytes_for_test([0x00, 0x42, 0x4E, 0x00]),
     ),
     [0x42, 0x4E00],
   )
   @test.assert_eq(
     try! vertical_extractor.glyphnames_of_text(
-      text_bytes_for_test([0x4E, 0x00])[:],
+      text_bytes_for_test([0x4E, 0x00]),
     ),
     [text_name_for_test(".notdef")],
   )
   let vertical_odd = try? vertical_extractor.codepoints_of_text(
-    text_bytes_for_test([0x4E])[:],
+    text_bytes_for_test([0x4E]),
   )
   guard vertical_odd is Err(BadText) else { fail("expected BadText") }
   let ucs2_cmap_font_h : @pdflite.PdfFont = PdfFontCIDKeyed({
@@ -4265,13 +4251,13 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   let ucs2_h_extractor = ucs2_cmap_font_h.text_extractor()
   @test.assert_eq(
     try! ucs2_h_extractor.codepoints_of_text(
-      text_bytes_for_test([0x00, 0x41, 0x4E, 0x00])[:],
+      text_bytes_for_test([0x00, 0x41, 0x4E, 0x00]),
     ),
     [0x41, 0x4E00],
   )
   @test.assert_eq(ucs2_h_extractor.charcode_of_codepoint(0x4E00), Some(0x4E00))
   let ucs2_odd = try? ucs2_h_extractor.codepoints_of_text(
-    text_bytes_for_test([0x00, 0x41, 0x4E])[:],
+    text_bytes_for_test([0x00, 0x41, 0x4E]),
   )
   guard ucs2_odd is Err(_) else { fail("expected malformed UCS2 text error") }
   let ucs2_cmap_font_v : @pdflite.PdfFont = PdfFontCIDKeyed({
@@ -4283,7 +4269,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   @test.assert_eq(
     try! ucs2_cmap_font_v
     .text_extractor()
-    .codepoints_of_text(text_bytes_for_test([0x00, 0x42, 0x4E, 0x8C])[:]),
+    .codepoints_of_text(text_bytes_for_test([0x00, 0x42, 0x4E, 0x8C])),
     [0x42, 0x4E8C],
   )
   let utf16_cmap_font_h : @pdflite.PdfFont = PdfFontCIDKeyed({
@@ -4295,13 +4281,13 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   @test.assert_eq(
     utf16_cmap_font_h
     .text_extractor()
-    .codepoints_of_text(text_bytes_for_test([0x30, 0x42, 0x30, 0xA2])[:]),
+    .codepoints_of_text(text_bytes_for_test([0x30, 0x42, 0x30, 0xA2])),
     [0x3042, 0x30A2],
   )
   @test.assert_eq(
     utf16_cmap_font_h
     .text_extractor()
-    .codepoints_of_text(text_bytes_for_test([0xD8, 0x34, 0xDD, 0x1E])[:]),
+    .codepoints_of_text(text_bytes_for_test([0xD8, 0x34, 0xDD, 0x1E])),
     [0x1D11E],
   )
   @test.assert_eq(
@@ -4314,7 +4300,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   )
   let utf16_unpaired = try? utf16_cmap_font_h
     .text_extractor()
-    .codepoints_of_text(text_bytes_for_test([0xD8, 0x34, 0x30, 0x42])[:])
+    .codepoints_of_text(text_bytes_for_test([0xD8, 0x34, 0x30, 0x42]))
   guard utf16_unpaired is Err(_) else {
     fail("expected malformed UTF16 predefined CMap text error")
   }
@@ -4327,7 +4313,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   @test.assert_eq(
     utf16_cmap_font_v
     .text_extractor()
-    .codepoints_of_text(text_bytes_for_test([0x4E, 0x00, 0x4E, 0x8C])[:]),
+    .codepoints_of_text(text_bytes_for_test([0x4E, 0x00, 0x4E, 0x8C])),
     [0x4E00, 0x4E8C],
   )
   let utf8_cmap_font_h : @pdflite.PdfFont = PdfFontCIDKeyed({
@@ -4340,7 +4326,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     utf8_cmap_font_h
     .text_extractor()
     .codepoints_of_text(
-      text_bytes_for_test([0x41, 0xE3, 0x81, 0x82, 0xF0, 0x9D, 0x84, 0x9E])[:],
+      text_bytes_for_test([0x41, 0xE3, 0x81, 0x82, 0xF0, 0x9D, 0x84, 0x9E]),
     ),
     [0x41, 0x3042, 0x1D11E],
   )
@@ -4354,7 +4340,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   )
   let utf8_bad = try? utf8_cmap_font_h
     .text_extractor()
-    .codepoints_of_text(text_bytes_for_test([0xE3, 0x81])[:])
+    .codepoints_of_text(text_bytes_for_test([0xE3, 0x81]))
   guard utf8_bad is Err(_) else {
     fail("expected malformed UTF8 predefined CMap text error")
   }
@@ -4373,7 +4359,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   let utf8_tounicode_extractor = utf8_tounicode_font.text_extractor()
   @test.assert_eq(
     utf8_tounicode_extractor.codepoints_of_text(
-      text_bytes_for_test([0xE3, 0x81, 0x82, 0xF0, 0x9D, 0x84, 0x9E])[:],
+      text_bytes_for_test([0xE3, 0x81, 0x82, 0xF0, 0x9D, 0x84, 0x9E]),
     ),
     [0x2603, 0x03A9],
   )
@@ -4395,7 +4381,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     utf32_cmap_font_v
     .text_extractor()
     .codepoints_of_text(
-      text_bytes_for_test([0x00, 0x00, 0x00, 0x41, 0x00, 0x01, 0xD1, 0x1E])[:],
+      text_bytes_for_test([0x00, 0x00, 0x00, 0x41, 0x00, 0x01, 0xD1, 0x1E]),
     ),
     [0x41, 0x1D11E],
   )
@@ -4405,7 +4391,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   )
   let utf32_bad = try? utf32_cmap_font_v
     .text_extractor()
-    .codepoints_of_text(text_bytes_for_test([0x00, 0x00, 0xD8, 0x00])[:])
+    .codepoints_of_text(text_bytes_for_test([0x00, 0x00, 0xD8, 0x00]))
   guard utf32_bad is Err(_) else {
     fail("expected malformed UTF32 predefined CMap text error")
   }
@@ -4418,7 +4404,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   @test.assert_eq(
     try! non_ucs2_predefined_font
     .text_extractor()
-    .codepoints_of_text(text_bytes_for_test([0x41, 0x81, 0x40])[:]),
+    .codepoints_of_text(text_bytes_for_test([0x41, 0x81, 0x40])),
     [0x41, 0x8140],
   )
   let gb_euc_tounicode_descriptor : @pdflite.PdfFontDescriptor = {
@@ -4436,12 +4422,12 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   @test.assert_eq(
     try! gb_euc_tounicode_font
     .text_extractor()
-    .codepoints_of_text(text_bytes_for_test([0x41, 0x81, 0x40])[:]),
+    .codepoints_of_text(text_bytes_for_test([0x41, 0x81, 0x40])),
     [0x41, 0x4E00],
   )
   let gb_euc_truncated = try? gb_euc_tounicode_font
     .text_extractor()
-    .codepoints_of_text(text_bytes_for_test([0x81])[:])
+    .codepoints_of_text(text_bytes_for_test([0x81]))
   guard gb_euc_truncated is Err(BadText) else {
     fail("expected BadText for truncated GB-EUC charcode")
   }
@@ -4453,7 +4439,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   let gb_euc_builtin_extractor = gb_euc_builtin_font.text_extractor()
   @test.assert_eq(
     gb_euc_builtin_extractor.codepoints_of_text(
-      text_bytes_for_test([0x41, 0xC4, 0xE3, 0xBA, 0xC3, 0xA1, 0xA1, 0xA3, 0xC1])[:],
+      text_bytes_for_test([0x41, 0xC4, 0xE3, 0xBA, 0xC3, 0xA1, 0xA1, 0xA3, 0xC1]),
     ),
     [0x41, 0x4F60, 0x597D, 0x3000, 0xFF21],
   )
@@ -4489,7 +4475,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
       text_bytes_for_test([
         0x41, 0x80, 0x83, 0xA0, 0xFD, 0xFE, 0xFF, 0xA1, 0xA1, 0xA1, 0xAB, 0xA8, 0xBF,
         0xC4, 0xE3, 0xBA, 0xC3,
-      ])[:],
+      ]),
     ),
     [
       0x41, 0x00FC, 0x83, 0x00A0, 0x00A9, 0x2122, 0x2026, 0x3000, 0x301C, 0x006E,
@@ -4498,7 +4484,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   )
   @test.assert_eq(
     gbpc_euc_builtin_extractor.codepoints_of_text(
-      text_bytes_for_test([0x81, 0x40])[:],
+      text_bytes_for_test([0x81, 0x40]),
     ),
     [0x8140],
   )
@@ -4539,7 +4525,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     None,
   )
   let gbpc_euc_truncated = try? gbpc_euc_builtin_extractor.codepoints_of_text(
-    text_bytes_for_test([0xA1])[:],
+    text_bytes_for_test([0xA1]),
   )
   guard gbpc_euc_truncated is Err(BadText) else {
     fail("expected BadText for truncated GBpc-EUC charcode")
@@ -4554,14 +4540,12 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     big5_builtin_extractor.codepoints_of_text(
       text_bytes_for_test([
         0x41, 0xA7, 0x41, 0xA6, 0x6E, 0xA4, 0x40, 0xA4, 0xA4, 0xA1, 0x40,
-      ])[:],
+      ]),
     ),
     [0x41, 0x4F60, 0x597D, 0x4E00, 0x4E2D, 0x3000],
   )
   @test.assert_eq(
-    big5_builtin_extractor.codepoints_of_text(
-      text_bytes_for_test([0x81, 0x40])[:],
-    ),
+    big5_builtin_extractor.codepoints_of_text(text_bytes_for_test([0x81, 0x40])),
     [0x8140],
   )
   @test.assert_eq(
@@ -4582,7 +4566,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   )
   @test.assert_eq(big5_builtin_extractor.charcode_of_codepoint(0x20AC), None)
   let big5_truncated = try? big5_builtin_extractor.codepoints_of_text(
-    text_bytes_for_test([0xA7])[:],
+    text_bytes_for_test([0xA7]),
   )
   guard big5_truncated is Err(BadText) else {
     fail("expected BadText for truncated Big5 charcode")
@@ -4598,7 +4582,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
       text_bytes_for_test([
         0x41, 0x80, 0x83, 0xA0, 0xFD, 0xFE, 0xFF, 0xA1, 0x40, 0xA7, 0x41, 0xA6, 0x6E,
         0xA1, 0x4B, 0xA1, 0x51,
-      ])[:],
+      ]),
     ),
     [
       0x41, 0x005C, 0x83, 0x00A0, 0x00A9, 0x2122, 0x2026, 0x3000, 0x4F60, 0x597D,
@@ -4606,9 +4590,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     ],
   )
   @test.assert_eq(
-    b5pc_builtin_extractor.codepoints_of_text(
-      text_bytes_for_test([0x81, 0x40])[:],
-    ),
+    b5pc_builtin_extractor.codepoints_of_text(text_bytes_for_test([0x81, 0x40])),
     [0x8140],
   )
   @test.assert_eq(
@@ -4645,7 +4627,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   )
   @test.assert_eq(b5pc_builtin_extractor.charcode_of_codepoint(0x20AC), None)
   let b5pc_truncated = try? b5pc_builtin_extractor.codepoints_of_text(
-    text_bytes_for_test([0xA1])[:],
+    text_bytes_for_test([0xA1]),
   )
   guard b5pc_truncated is Err(BadText) else {
     fail("expected BadText for truncated B5pc charcode")
@@ -4661,7 +4643,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
       text_bytes_for_test([
         0x41, 0x87, 0x40, 0x87, 0x45, 0x89, 0x43, 0xA1, 0x40, 0xA7, 0x41, 0xA6, 0x6E,
         0xC6, 0xE4, 0xFE, 0xFE, 0x80,
-      ])[:],
+      ]),
     ),
     [
       0x41, 0x43F0, 0x27267, 0x650A, 0x3000, 0x4F60, 0x597D, 0xFF3B, 0x79D4, 0x80,
@@ -4669,7 +4651,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   )
   @test.assert_eq(
     hkscs_builtin_extractor.codepoints_of_text(
-      text_bytes_for_test([0x81, 0x40])[:],
+      text_bytes_for_test([0x81, 0x40]),
     ),
     [0x8140],
   )
@@ -4711,7 +4693,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   )
   @test.assert_eq(hkscs_builtin_extractor.charcode_of_codepoint(0x1F600), None)
   let hkscs_truncated = try? hkscs_builtin_extractor.codepoints_of_text(
-    text_bytes_for_test([0x87])[:],
+    text_bytes_for_test([0x87]),
   )
   guard hkscs_truncated is Err(BadText) else {
     fail("expected BadText for truncated HKSCS charcode")
@@ -4724,13 +4706,13 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   let etenms_b5_builtin_extractor = etenms_b5_builtin_font.text_extractor()
   @test.assert_eq(
     etenms_b5_builtin_extractor.codepoints_of_text(
-      text_bytes_for_test([0x41, 0xA1, 0xC2, 0xA2, 0x41, 0xC7, 0xFD, 0x80])[:],
+      text_bytes_for_test([0x41, 0xA1, 0xC2, 0xA2, 0x41, 0xC7, 0xFD, 0x80]),
     ),
     [0x41, 0x00AF, 0x2215, 0x0419, 0x80],
   )
   @test.assert_eq(
     etenms_b5_builtin_extractor.codepoints_of_text(
-      text_bytes_for_test([0x81, 0x40])[:],
+      text_bytes_for_test([0x81, 0x40]),
     ),
     [0x8140],
   )
@@ -4751,7 +4733,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     None,
   )
   let etenms_b5_truncated = try? etenms_b5_builtin_extractor.codepoints_of_text(
-    text_bytes_for_test([0xA1])[:],
+    text_bytes_for_test([0xA1]),
   )
   guard etenms_b5_truncated is Err(BadText) else {
     fail("expected BadText for truncated ETenms-B5 charcode")
@@ -4801,7 +4783,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     })
     let hk_b5_extractor = hk_b5_font.text_extractor()
     @test.assert_eq(
-      hk_b5_extractor.codepoints_of_text(text_bytes_for_test(case.1[:])[:]),
+      hk_b5_extractor.codepoints_of_text(text_bytes_for_test(case.1)),
       case.2,
     )
     @test.assert_eq(hk_b5_extractor.charcode_of_codepoint(case.3), Some(case.4))
@@ -4814,7 +4796,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   let hkgccs_b5_builtin_extractor = hkgccs_b5_builtin_font.text_extractor()
   @test.assert_eq(
     hkgccs_b5_builtin_extractor.codepoints_of_text(
-      text_bytes_for_test([0x81, 0x40])[:],
+      text_bytes_for_test([0x81, 0x40]),
     ),
     [0x8140],
   )
@@ -4823,7 +4805,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     None,
   )
   let hkgccs_b5_truncated = try? hkgccs_b5_builtin_extractor.codepoints_of_text(
-    text_bytes_for_test([0x8A])[:],
+    text_bytes_for_test([0x8A]),
   )
   guard hkgccs_b5_truncated is Err(BadText) else {
     fail("expected BadText for truncated HKgccs-B5 charcode")
@@ -4838,7 +4820,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     cns_euc_builtin_extractor.codepoints_of_text(
       text_bytes_for_test([
         0x20, 0x80, 0xA1, 0xA1, 0xA1, 0xAC, 0x8E, 0xA2, 0xA1, 0xA1,
-      ])[:],
+      ]),
     ),
     [0x20, 0x80, 0x3000, 0x2026, 0x4E42],
   )
@@ -4870,7 +4852,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   let cns_euc_vertical_extractor = cns_euc_vertical_font.text_extractor()
   @test.assert_eq(
     cns_euc_vertical_extractor.codepoints_of_text(
-      text_bytes_for_test([0xA1, 0xAC, 0x8E, 0xA1, 0xA1, 0xAC])[:],
+      text_bytes_for_test([0xA1, 0xAC, 0x8E, 0xA1, 0xA1, 0xAC]),
     ),
     [0xFE19, 0xFE19],
   )
@@ -4879,7 +4861,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     Some(0xA1AC),
   )
   let cns_euc_truncated = try? cns_euc_builtin_extractor.codepoints_of_text(
-    text_bytes_for_test([0x8E, 0xA1, 0xA1])[:],
+    text_bytes_for_test([0x8E, 0xA1, 0xA1]),
   )
   guard cns_euc_truncated is Err(BadText) else {
     fail("expected BadText for truncated CNS-EUC charcode")
@@ -4894,14 +4876,12 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     uhc_builtin_extractor.codepoints_of_text(
       text_bytes_for_test([
         0x41, 0xB0, 0xA1, 0xC7, 0xD1, 0xB1, 0xDB, 0x81, 0x41, 0xA4, 0xD4,
-      ])[:],
+      ]),
     ),
     [0x41, 0xAC00, 0xD55C, 0xAE00, 0xAC02, 0x3164],
   )
   @test.assert_eq(
-    uhc_builtin_extractor.codepoints_of_text(
-      text_bytes_for_test([0x81, 0x40])[:],
-    ),
+    uhc_builtin_extractor.codepoints_of_text(text_bytes_for_test([0x81, 0x40])),
     [0x8140],
   )
   @test.assert_eq(uhc_builtin_extractor.charcode_of_codepoint(0x41), Some(0x41))
@@ -4923,7 +4903,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   )
   @test.assert_eq(uhc_builtin_extractor.charcode_of_codepoint(0x1F600), None)
   let uhc_truncated = try? uhc_builtin_extractor.codepoints_of_text(
-    text_bytes_for_test([0x81])[:],
+    text_bytes_for_test([0x81]),
   )
   guard uhc_truncated is Err(BadText) else {
     fail("expected BadText for truncated UHC charcode")
@@ -4939,7 +4919,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
       text_bytes_for_test([
         0x41, 0x80, 0x81, 0x40, 0xC4, 0xE3, 0xBA, 0xC3, 0xA1, 0xA1, 0xA3, 0xC1, 0xA1,
         0x40, 0xA8, 0xBC, 0xFE, 0xFE, 0xFF,
-      ])[:],
+      ]),
     ),
     [
       0x41, 0x80, 0x4E02, 0x4F60, 0x597D, 0x3000, 0xFF21, 0xE4C6, 0x1E3F, 0xE4C5,
@@ -4947,9 +4927,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     ],
   )
   @test.assert_eq(
-    gbk_builtin_extractor.codepoints_of_text(
-      text_bytes_for_test([0x81, 0x39])[:],
-    ),
+    gbk_builtin_extractor.codepoints_of_text(text_bytes_for_test([0x81, 0x39])),
     [0x8139],
   )
   @test.assert_eq(gbk_builtin_extractor.charcode_of_codepoint(0x41), Some(0x41))
@@ -4984,7 +4962,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   )
   @test.assert_eq(gbk_builtin_extractor.charcode_of_codepoint(0x1F600), None)
   let gbk_truncated = try? gbk_builtin_extractor.codepoints_of_text(
-    text_bytes_for_test([0x81])[:],
+    text_bytes_for_test([0x81]),
   )
   guard gbk_truncated is Err(BadText) else {
     fail("expected BadText for truncated GBK charcode")
@@ -5000,19 +4978,19 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
       text_bytes_for_test([
         0x41, 0x81, 0x40, 0xC4, 0xE3, 0xBA, 0xC3, 0xFE, 0x51, 0x81, 0x30, 0x84, 0x36,
         0x82, 0x36, 0x94, 0x35,
-      ])[:],
+      ]),
     ),
     [0x41, 0x4E02, 0x4F60, 0x597D, 0x20087, 0x00A5, 0xA4C6],
   )
   @test.assert_eq(
     gbk2k_builtin_extractor.codepoints_of_text(
-      text_bytes_for_test([0x81, 0x30, 0x81, 0x30])[:],
+      text_bytes_for_test([0x81, 0x30, 0x81, 0x30]),
     ),
     [0x81308130],
   )
   @test.assert_eq(
     gbk2k_builtin_extractor.codepoints_of_text(
-      text_bytes_for_test([0x80, 0x40])[:],
+      text_bytes_for_test([0x80, 0x40]),
     ),
     [0x8040],
   )
@@ -5046,7 +5024,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   )
   @test.assert_eq(gbk2k_builtin_extractor.charcode_of_codepoint(0x1F600), None)
   let gbk2k_truncated = try? gbk2k_builtin_extractor.codepoints_of_text(
-    text_bytes_for_test([0x81, 0x30, 0x81])[:],
+    text_bytes_for_test([0x81, 0x30, 0x81]),
   )
   guard gbk2k_truncated is Err(BadText) else {
     fail("expected BadText for truncated GBK2K charcode")
@@ -5059,13 +5037,13 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   let ksc_euc_builtin_extractor = ksc_euc_builtin_font.text_extractor()
   @test.assert_eq(
     ksc_euc_builtin_extractor.codepoints_of_text(
-      text_bytes_for_test([0x41, 0x7E, 0xA1, 0xA1, 0xB0, 0xA1, 0xC7, 0xD1, 0x80])[:],
+      text_bytes_for_test([0x41, 0x7E, 0xA1, 0xA1, 0xB0, 0xA1, 0xC7, 0xD1, 0x80]),
     ),
     [0x41, 0x203E, 0x3000, 0xAC00, 0xD55C, 0x80],
   )
   @test.assert_eq(
     ksc_euc_builtin_extractor.codepoints_of_text(
-      text_bytes_for_test([0xA4, 0xD4])[:],
+      text_bytes_for_test([0xA4, 0xD4]),
     ),
     [0xA4D4],
   )
@@ -5095,7 +5073,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   )
   @test.assert_eq(ksc_euc_builtin_extractor.charcode_of_codepoint(0x3164), None)
   let ksc_euc_truncated = try? ksc_euc_builtin_extractor.codepoints_of_text(
-    text_bytes_for_test([0xA1])[:],
+    text_bytes_for_test([0xA1]),
   )
   guard ksc_euc_truncated is Err(BadText) else {
     fail("expected BadText for truncated KSC-EUC charcode")
@@ -5111,7 +5089,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
       text_bytes_for_test([
         0x41, 0x80, 0x81, 0x84, 0x9F, 0xFE, 0xFF, 0xA1, 0x41, 0xA1, 0x51, 0xA2, 0xE6,
         0xA2, 0xEF, 0xB0, 0xA1, 0xC7, 0xD1,
-      ])[:],
+      ]),
     ),
     [
       0x41, 0x00A0, 0x20A9, 0xFF3F, 0x9F, 0x2122, 0x22EF, 0x300C, 0x28, 0x28, 0x31,
@@ -5120,7 +5098,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   )
   @test.assert_eq(
     kscpc_euc_builtin_extractor.codepoints_of_text(
-      text_bytes_for_test([0xA1, 0x40])[:],
+      text_bytes_for_test([0xA1, 0x40]),
     ),
     [0xA140],
   )
@@ -5157,7 +5135,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     None,
   )
   let kscpc_euc_truncated = try? kscpc_euc_builtin_extractor.codepoints_of_text(
-    text_bytes_for_test([0xA1])[:],
+    text_bytes_for_test([0xA1]),
   )
   guard kscpc_euc_truncated is Err(BadText) else {
     fail("expected BadText for truncated KSCpc-EUC charcode")
@@ -5190,9 +5168,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     })
     let vertical_builtin_extractor = vertical_builtin_font.text_extractor()
     @test.assert_eq(
-      vertical_builtin_extractor.codepoints_of_text(
-        text_bytes_for_test(case.1[:])[:],
-      ),
+      vertical_builtin_extractor.codepoints_of_text(text_bytes_for_test(case.1)),
       case.2,
     )
     @test.assert_eq(
@@ -5215,7 +5191,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   @test.assert_eq(
     try! rksj_tounicode_font
     .text_extractor()
-    .codepoints_of_text(text_bytes_for_test([0x81, 0x40, 0xA6])[:]),
+    .codepoints_of_text(text_bytes_for_test([0x81, 0x40, 0xA6])),
     [0x4E8C, 0xFF66],
   )
   let rksj_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
@@ -5226,7 +5202,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   let rksj_builtin_extractor = rksj_builtin_font.text_extractor()
   @test.assert_eq(
     rksj_builtin_extractor.codepoints_of_text(
-      text_bytes_for_test([0x41, 0xA6, 0x81, 0x40])[:],
+      text_bytes_for_test([0x41, 0xA6, 0x81, 0x40]),
     ),
     [0x41, 0xFF66, 0x3000],
   )
@@ -5251,7 +5227,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     Some(0x93F1),
   )
   let rksj_truncated = try? rksj_builtin_extractor.codepoints_of_text(
-    text_bytes_for_test([0x81])[:],
+    text_bytes_for_test([0x81]),
   )
   guard rksj_truncated is Err(_) else {
     fail("expected malformed RKSJ charcode")
@@ -5264,7 +5240,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   let pv_rksj_builtin_extractor = pv_rksj_builtin_font.text_extractor()
   @test.assert_eq(
     pv_rksj_builtin_extractor.codepoints_of_text(
-      text_bytes_for_test([0x5C, 0x80, 0xA0, 0x81, 0x7C, 0x85, 0x91])[:],
+      text_bytes_for_test([0x5C, 0x80, 0xA0, 0x81, 0x7C, 0x85, 0x91]),
     ),
     [0x00A5, 0x005C, 0x00A0, 0x2212, 0xF860, 0x0030, 0x002E],
   )
@@ -5290,7 +5266,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   let jis_builtin_extractor = jis_builtin_font.text_extractor()
   @test.assert_eq(
     jis_builtin_extractor.codepoints_of_text(
-      text_bytes_for_test([0x21, 0x21, 0x24, 0x22])[:],
+      text_bytes_for_test([0x21, 0x21, 0x24, 0x22]),
     ),
     [0x3000, 0x3042],
   )
@@ -5299,7 +5275,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     Some(0x2422),
   )
   let jis_truncated = try? jis_builtin_extractor.codepoints_of_text(
-    text_bytes_for_test([0x21])[:],
+    text_bytes_for_test([0x21]),
   )
   guard jis_truncated is Err(BadText) else {
     fail("expected BadText for truncated JIS charcode")
@@ -5312,7 +5288,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   let japan_euc_builtin_extractor = japan_euc_builtin_font.text_extractor()
   @test.assert_eq(
     japan_euc_builtin_extractor.codepoints_of_text(
-      text_bytes_for_test([0xA1, 0xA1, 0xA4, 0xA2])[:],
+      text_bytes_for_test([0xA1, 0xA1, 0xA4, 0xA2]),
     ),
     [0x3000, 0x3042],
   )
@@ -5328,7 +5304,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   let hojo_euc_builtin_extractor = hojo_euc_builtin_font.text_extractor()
   @test.assert_eq(
     hojo_euc_builtin_extractor.codepoints_of_text(
-      text_bytes_for_test([0x8F, 0xB4, 0xAE])[:],
+      text_bytes_for_test([0x8F, 0xB4, 0xAE]),
     ),
     [0x4EDD],
   )
@@ -5337,7 +5313,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     Some(0x8FB4AE),
   )
   let hojo_euc_truncated = try? hojo_euc_builtin_extractor.codepoints_of_text(
-    text_bytes_for_test([0x8F, 0xB4])[:],
+    text_bytes_for_test([0x8F, 0xB4]),
   )
   guard hojo_euc_truncated is Err(BadText) else {
     fail("expected BadText for truncated Hojo-EUC charcode")
@@ -5350,7 +5326,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   let external_extractor = external_cmap_font.text_extractor()
   @test.assert_eq(
     try! external_extractor.codepoints_of_text(
-      text_bytes_for_test([0x00, 0x42])[:],
+      text_bytes_for_test([0x00, 0x42]),
     ),
     [0x00, 0x42],
   )
@@ -5400,14 +5376,14 @@ test "PdfDocument applies indirect external CMap text segmentation and CID mappi
   let extractor = try! doc.text_extractor_of_font(font)
   @test.assert_eq(
     extractor.codepoints_of_text(
-      text_bytes_for_test([0x41, 0x81, 0x40, 0x81, 0x42, 0x30])[:],
+      text_bytes_for_test([0x41, 0x81, 0x40, 0x81, 0x42, 0x30]),
     ),
     [100, 200, 202, 0x30],
   )
   @test.assert_eq(extractor.charcode_of_codepoint(202), Some(0x8142))
   @test.assert_eq(extractor.charcode_of_codepoint(0x30), None)
   let truncated : Result[Array[Int], Error] = try? extractor.codepoints_of_text(
-    text_bytes_for_test([0x81])[:],
+    text_bytes_for_test([0x81]),
   )
   guard truncated is Err(_) else {
     fail("expected malformed external CMap code")
@@ -5453,14 +5429,14 @@ test "PdfTextExtractor keeps external CMap text lookup precedence" {
   let extractor = font.text_extractor()
   @test.assert_eq(
     try! extractor.codepoints_of_text(
-      text_bytes_for_test([0x41, 0x42, 0x43, 0x44, 0x45])[:],
+      text_bytes_for_test([0x41, 0x42, 0x43, 0x44, 0x45]),
     ),
     [99, 77, 0x63, 0x44, 0x45],
   )
   let notdef = text_name_for_test(".notdef")
   @test.assert_eq(
     try! extractor.glyphnames_and_codepoints_of_text(
-      text_bytes_for_test([0x41, 0x42, 0x43, 0x44])[:],
+      text_bytes_for_test([0x41, 0x42, 0x43, 0x44]),
     ),
     [
       { glyphname: notdef, codepoints: [99] },
@@ -5487,7 +5463,7 @@ test "PdfTextExtractor keeps external CMap text lookup precedence" {
   @test.assert_eq(
     try! identity_font
     .text_extractor()
-    .glyphnames_and_codepoints_of_text(text_bytes_for_test([0x00, 0x42])[:]),
+    .glyphnames_and_codepoints_of_text(text_bytes_for_test([0x00, 0x42])),
     [{ glyphname: notdef, codepoints: [0x42] }],
   )
   let predefined_font : @pdflite.PdfFont = PdfFontCIDKeyed({
@@ -5509,7 +5485,7 @@ test "PdfTextExtractor keeps external CMap text lookup precedence" {
     try! predefined_font
     .text_extractor()
     .glyphnames_and_codepoints_of_text(
-      text_bytes_for_test([0xC4, 0xE3, 0x81, 0x40])[:],
+      text_bytes_for_test([0xC4, 0xE3, 0x81, 0x40]),
     ),
     [
       { glyphname: notdef, codepoints: [0x4F60] },
@@ -5525,11 +5501,11 @@ test "PdfTextExtractor extracts StandardEncoding Basic Latin glyphs" {
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test([65, 39, 96])[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test([65, 39, 96])),
     [65, 0x2019, 0x2018],
   )
   @test.assert_eq(
-    try! extractor.glyphnames_of_text(text_bytes_for_test([65, 39, 96])[:]),
+    try! extractor.glyphnames_of_text(text_bytes_for_test([65, 39, 96])),
     [
       text_name_for_test("/A"),
       text_name_for_test("/quoteright"),
@@ -5537,11 +5513,11 @@ test "PdfTextExtractor extracts StandardEncoding Basic Latin glyphs" {
     ],
   )
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test([9, 10, 12, 13])[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test([9, 10, 12, 13])),
     [9, 10, 12, 13],
   )
   @test.assert_eq(
-    try! extractor.glyphnames_of_text(text_bytes_for_test([9, 10, 12, 13])[:]),
+    try! extractor.glyphnames_of_text(text_bytes_for_test([9, 10, 12, 13])),
     [
       text_name_for_test("/controlHT"),
       text_name_for_test("/controlLF"),
@@ -5559,13 +5535,13 @@ test "PdfTextExtractor extracts StandardEncoding Basic Latin glyphs" {
   @test.assert_eq(extractor.charcode_of_codepoint(39), Some(0xA9))
   @test.assert_eq(
     try! extractor.codepoints_of_text(
-      text_bytes_for_test([0xA9, 0xAE, 0xAF, 0xB1, 0xB7, 0xBC])[:],
+      text_bytes_for_test([0xA9, 0xAE, 0xAF, 0xB1, 0xB7, 0xBC]),
     ),
     [39, 0xFB01, 0xFB02, 0x2013, 0x2022, 0x2026],
   )
   @test.assert_eq(
     try! extractor.glyphnames_of_text(
-      text_bytes_for_test([0xA9, 0xAE, 0xAF, 0xB1, 0xB7, 0xBC])[:],
+      text_bytes_for_test([0xA9, 0xAE, 0xAF, 0xB1, 0xB7, 0xBC]),
     ),
     [
       text_name_for_test("/quotesingle"),
@@ -5585,7 +5561,7 @@ test "PdfTextExtractor extracts StandardEncoding Basic Latin glyphs" {
       text_bytes_for_test([
         0xC1, 0xC2, 0xC6, 0xC7, 0xCA, 0xCD, 0xCF, 0xD0, 0xE1, 0xE8, 0xEA, 0xF1, 0xF5,
         0xF8, 0xFA, 0xFB,
-      ])[:],
+      ]),
     ),
     [
       96, 0x00B4, 0x02D8, 0x02D9, 0x02DA, 0x02DD, 0x02C7, 0x2014, 0x00C6, 0x0141,
@@ -5597,7 +5573,7 @@ test "PdfTextExtractor extracts StandardEncoding Basic Latin glyphs" {
       text_bytes_for_test([
         0xC1, 0xC2, 0xC6, 0xC7, 0xCA, 0xCD, 0xCF, 0xD0, 0xE1, 0xE8, 0xEA, 0xF1, 0xF5,
         0xF8, 0xFA, 0xFB,
-      ])[:],
+      ]),
     ),
     [
       text_name_for_test("/grave"),
@@ -5634,13 +5610,13 @@ test "PdfTextExtractor extracts MacRoman accented glyphs" {
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
     try! extractor.codepoints_of_text(
-      text_bytes_for_test([0x80, 0x81, 0x82, 0x83, 0x87, 0x8E])[:],
+      text_bytes_for_test([0x80, 0x81, 0x82, 0x83, 0x87, 0x8E]),
     ),
     [0x00C4, 0x00C5, 0x00C7, 0x00C9, 0x00E1, 0x00E9],
   )
   @test.assert_eq(
     try! extractor.glyphnames_of_text(
-      text_bytes_for_test([0x80, 0x81, 0x82, 0x83, 0x87, 0x8E])[:],
+      text_bytes_for_test([0x80, 0x81, 0x82, 0x83, 0x87, 0x8E]),
     ),
     [
       text_name_for_test("/Adieresis"),
@@ -5660,7 +5636,7 @@ test "PdfTextExtractor extracts MacRoman accented glyphs" {
       text_bytes_for_test([
         0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99, 0x9A, 0x9B, 0x9C, 0x9D, 0x9E,
         0x9F,
-      ])[:],
+      ]),
     ),
     [
       0x00ED, 0x00EC, 0x00EE, 0x00EF, 0x00F1, 0x00F3, 0x00F2, 0x00F4, 0x00F6, 0x00F5,
@@ -5672,7 +5648,7 @@ test "PdfTextExtractor extracts MacRoman accented glyphs" {
       text_bytes_for_test([
         0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99, 0x9A, 0x9B, 0x9C, 0x9D, 0x9E,
         0x9F,
-      ])[:],
+      ]),
     ),
     [
       text_name_for_test("/iacute"),
@@ -5708,11 +5684,11 @@ test "PdfTextExtractor extracts MacRoman punctuation symbols" {
     0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, 0xA9, 0xAA, 0xAB, 0xAC,
     0xAE, 0xAF,
   ])
-  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+  @test.assert_eq(try! extractor.codepoints_of_text(text), [
     0x2020, 0x00B0, 0x00A2, 0x00A3, 0x00A7, 0x2022, 0x00B6, 0x00DF, 0x00AE, 0x00A9,
     0x2122, 0x00B4, 0x00A8, 0x00C6, 0x00D8,
   ])
-  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+  @test.assert_eq(try! extractor.glyphnames_of_text(text), [
     text_name_for_test("/dagger"),
     text_name_for_test("/degree"),
     text_name_for_test("/cent"),
@@ -5743,10 +5719,10 @@ test "PdfTextExtractor extracts MacRoman sparse B-range glyphs" {
   )
   let extractor = standard_font.text_extractor()
   let text = text_bytes_for_test([0xB1, 0xB4, 0xB5, 0xBB, 0xBC, 0xBE, 0xBF])
-  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+  @test.assert_eq(try! extractor.codepoints_of_text(text), [
     0x00B1, 0x00A5, 0x00B5, 0x00AA, 0x00BA, 0x00E6, 0x00F8,
   ])
-  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+  @test.assert_eq(try! extractor.glyphnames_of_text(text), [
     text_name_for_test("/plusminus"),
     text_name_for_test("/yen"),
     text_name_for_test("/mu"),
@@ -5772,11 +5748,11 @@ test "PdfTextExtractor extracts MacRoman C-range glyphs" {
   let text = text_bytes_for_test([
     0xC0, 0xC1, 0xC2, 0xC4, 0xC7, 0xC8, 0xC9, 0xCA, 0xCB, 0xCC, 0xCD, 0xCE, 0xCF,
   ])
-  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+  @test.assert_eq(try! extractor.codepoints_of_text(text), [
     0x00BF, 0x00A1, 0x00AC, 0x0192, 0x00AB, 0x00BB, 0x2026, 0x20, 0x00C0, 0x00C3,
     0x00D5, 0x0152, 0x0153,
   ])
-  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+  @test.assert_eq(try! extractor.glyphnames_of_text(text), [
     text_name_for_test("/questiondown"),
     text_name_for_test("/exclamdown"),
     text_name_for_test("/logicalnot"),
@@ -5808,11 +5784,11 @@ test "PdfTextExtractor extracts MacRoman D-range glyphs" {
     0xD0, 0xD1, 0xD2, 0xD3, 0xD4, 0xD5, 0xD6, 0xD8, 0xD9, 0xDA, 0xDB, 0xDC, 0xDD,
     0xDE, 0xDF,
   ])
-  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+  @test.assert_eq(try! extractor.codepoints_of_text(text), [
     0x2013, 0x2014, 0x201C, 0x201D, 0x2018, 0x2019, 0x00F7, 0x00FF, 0x0178, 0x2044,
     0x00A4, 0x2039, 0x203A, 0xFB01, 0xFB02,
   ])
-  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+  @test.assert_eq(try! extractor.glyphnames_of_text(text), [
     text_name_for_test("/endash"),
     text_name_for_test("/emdash"),
     text_name_for_test("/quotedblleft"),
@@ -5847,13 +5823,13 @@ test "PdfTextExtractor extracts MacRoman EF-range glyphs" {
     0xED, 0xEE, 0xEF, 0xF1, 0xF2, 0xF3, 0xF4, 0xF5, 0xF6, 0xF7, 0xF8, 0xF9, 0xFA,
     0xFB, 0xFC, 0xFD, 0xFE, 0xFF,
   ])
-  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+  @test.assert_eq(try! extractor.codepoints_of_text(text), [
     0x2021, 0x00B7, 0x201A, 0x201E, 0x2030, 0x00C2, 0x00CA, 0x00C1, 0x00CB, 0x00C8,
     0x00CD, 0x00CE, 0x00CF, 0x00CC, 0x00D3, 0x00D4, 0x00D2, 0x00DA, 0x00DB, 0x00D9,
     0x0131, 0x02C6, 0x02DC, 0x00AF, 0x02D8, 0x02D9, 0x02DA, 0x00B8, 0x02DD, 0x02DB,
     0x02C7,
   ])
-  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+  @test.assert_eq(try! extractor.glyphnames_of_text(text), [
     text_name_for_test("/daggerdbl"),
     text_name_for_test("/periodcentered"),
     text_name_for_test("/quotesinglbase"),
@@ -5902,13 +5878,13 @@ test "PdfTextExtractor extracts WinAnsi glyphs" {
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
     try! extractor.codepoints_of_text(
-      text_bytes_for_test([39, 96, 0x80, 0x91, 0x92, 0x96, 0x97, 0xA9, 0xE9])[:],
+      text_bytes_for_test([39, 96, 0x80, 0x91, 0x92, 0x96, 0x97, 0xA9, 0xE9]),
     ),
     [39, 96, 0x20AC, 0x2018, 0x2019, 0x2013, 0x2014, 0x00A9, 0x00E9],
   )
   @test.assert_eq(
     try! extractor.glyphnames_of_text(
-      text_bytes_for_test([39, 96, 0x80, 0x91, 0x92, 0x96, 0x97, 0xA9, 0xE9])[:],
+      text_bytes_for_test([39, 96, 0x80, 0x91, 0x92, 0x96, 0x97, 0xA9, 0xE9]),
     ),
     [
       text_name_for_test("/quotesingle"),
@@ -5936,7 +5912,7 @@ test "PdfTextExtractor extracts WinAnsi glyphs" {
       text_bytes_for_test([
         0xA0, 0xA1, 0xA6, 0xAC, 0xAD, 0xAE, 0xB0, 0xB1, 0xB5, 0xBC, 0xC0, 0xC6, 0xD0,
         0xD8, 0xDE, 0xE6, 0xF0, 0xF8, 0xFE, 0xFF,
-      ])[:],
+      ]),
     ),
     [
       0x20, 0x00A1, 0x00A6, 0x00AC, 0x2D, 0x00AE, 0x00B0, 0x00B1, 0x00B5, 0x00BC,
@@ -5948,7 +5924,7 @@ test "PdfTextExtractor extracts WinAnsi glyphs" {
       text_bytes_for_test([
         0xA0, 0xA1, 0xA6, 0xAC, 0xAD, 0xAE, 0xB0, 0xB1, 0xB5, 0xBC, 0xC0, 0xC6, 0xD0,
         0xD8, 0xDE, 0xE6, 0xF0, 0xF8, 0xFE, 0xFF,
-      ])[:],
+      ]),
     ),
     [
       text_name_for_test("/space"),
@@ -5994,13 +5970,13 @@ test "PdfTextExtractor extracts MacExpert ligatures" {
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
     try! extractor.codepoints_of_text(
-      text_bytes_for_test([0x56, 0x57, 0x58, 0x59, 0x5A])[:],
+      text_bytes_for_test([0x56, 0x57, 0x58, 0x59, 0x5A]),
     ),
     [0xFB00, 0xFB01, 0xFB02, 0xFB03, 0xFB04],
   )
   @test.assert_eq(
     try! extractor.glyphnames_of_text(
-      text_bytes_for_test([0x56, 0x57, 0x58, 0x59, 0x5A])[:],
+      text_bytes_for_test([0x56, 0x57, 0x58, 0x59, 0x5A]),
     ),
     [
       text_name_for_test("/ff"),
@@ -6026,10 +6002,10 @@ test "PdfTextExtractor extracts MacExpert oldstyle digits" {
   let text = text_bytes_for_test([
     0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39,
   ])
-  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+  @test.assert_eq(try! extractor.codepoints_of_text(text), [
     0xF730, 0xF731, 0xF732, 0xF733, 0xF734, 0xF735, 0xF736, 0xF737, 0xF738, 0xF739,
   ])
-  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+  @test.assert_eq(try! extractor.glyphnames_of_text(text), [
     text_name_for_test("/zerooldstyle"),
     text_name_for_test("/oneoldstyle"),
     text_name_for_test("/twooldstyle"),
@@ -6055,10 +6031,10 @@ test "PdfTextExtractor extracts MacExpert superior and inferior digits" {
   let inferior = text_bytes_for_test([
     0xBC, 0xC1, 0xAA, 0xA3, 0xA2, 0xB0, 0xA4, 0xA6, 0xA5, 0xBB,
   ])
-  @test.assert_eq(try! extractor.codepoints_of_text(inferior[:]), [
+  @test.assert_eq(try! extractor.codepoints_of_text(inferior), [
     0x2080, 0x2081, 0x2082, 0x2083, 0x2084, 0x2085, 0x2086, 0x2087, 0x2088, 0x2089,
   ])
-  @test.assert_eq(try! extractor.glyphnames_of_text(inferior[:]), [
+  @test.assert_eq(try! extractor.glyphnames_of_text(inferior), [
     text_name_for_test("/zeroinferior"),
     text_name_for_test("/oneinferior"),
     text_name_for_test("/twoinferior"),
@@ -6073,10 +6049,10 @@ test "PdfTextExtractor extracts MacExpert superior and inferior digits" {
   let superior = text_bytes_for_test([
     0xE2, 0xDA, 0xDB, 0xDC, 0xDD, 0xDE, 0xDF, 0xE0, 0xA1, 0xE1,
   ])
-  @test.assert_eq(try! extractor.codepoints_of_text(superior[:]), [
+  @test.assert_eq(try! extractor.codepoints_of_text(superior), [
     0x2070, 0x00B9, 0x00B2, 0x00B3, 0x2074, 0x2075, 0x2076, 0x2077, 0x2078, 0x2079,
   ])
-  @test.assert_eq(try! extractor.glyphnames_of_text(superior[:]), [
+  @test.assert_eq(try! extractor.glyphnames_of_text(superior), [
     text_name_for_test("/zerosuperior"),
     text_name_for_test("/onesuperior"),
     text_name_for_test("/twosuperior"),
@@ -6105,11 +6081,11 @@ test "PdfTextExtractor extracts MacExpert fractions" {
   let text = text_bytes_for_test([
     0x2F, 0x47, 0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F, 0x3D,
   ])
-  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+  @test.assert_eq(try! extractor.codepoints_of_text(text), [
     0x2044, 0x00BC, 0x00BD, 0x00BE, 0x215B, 0x215C, 0x215D, 0x215E, 0x2153, 0x2154,
     0xF6DE,
   ])
-  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+  @test.assert_eq(try! extractor.glyphnames_of_text(text), [
     text_name_for_test("/fraction"),
     text_name_for_test("/onequarter"),
     text_name_for_test("/onehalf"),
@@ -6138,12 +6114,12 @@ test "PdfTextExtractor extracts MacExpert small capitals" {
     0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6A, 0x6B, 0x6C, 0x6D,
     0x6E, 0x6F, 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7A,
   ])
-  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+  @test.assert_eq(try! extractor.codepoints_of_text(text), [
     0xF761, 0xF762, 0xF763, 0xF764, 0xF765, 0xF766, 0xF767, 0xF768, 0xF769, 0xF76A,
     0xF76B, 0xF76C, 0xF76D, 0xF76E, 0xF76F, 0xF770, 0xF771, 0xF772, 0xF773, 0xF774,
     0xF775, 0xF776, 0xF777, 0xF778, 0xF779, 0xF77A,
   ])
-  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+  @test.assert_eq(try! extractor.glyphnames_of_text(text), [
     text_name_for_test("/Asmall"),
     text_name_for_test("/Bsmall"),
     text_name_for_test("/Csmall"),
@@ -6187,13 +6163,13 @@ test "PdfTextExtractor extracts MacExpert accented small capitals" {
     0x92, 0x94, 0x95, 0x93, 0xC2, 0x96, 0xCF, 0x97, 0x99, 0x9A, 0x98, 0xBF, 0x9B,
     0xA7, 0xB9, 0x9C, 0x9E, 0x9F, 0x9D, 0xB4, 0xD8, 0xBD,
   ])
-  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+  @test.assert_eq(try! extractor.codepoints_of_text(text), [
     0xF7E6, 0xF7E1, 0xF7E2, 0xF7E4, 0xF7E0, 0xF7E5, 0xF7E3, 0xF7E7, 0xF7E9, 0xF7EA,
     0xF7EB, 0xF7E8, 0xF7F0, 0xF7ED, 0xF7EE, 0xF7EF, 0xF7EC, 0xF6F9, 0xF7F1, 0xF6FA,
     0xF7F3, 0xF7F4, 0xF7F6, 0xF7F2, 0xF7F8, 0xF7F5, 0xF6FD, 0xF7FE, 0xF7FA, 0xF7FB,
     0xF7FC, 0xF7F9, 0xF7FD, 0xF7FF, 0xF6FF,
   ])
-  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+  @test.assert_eq(try! extractor.glyphnames_of_text(text), [
     text_name_for_test("/AEsmall"),
     text_name_for_test("/Aacutesmall"),
     text_name_for_test("/Acircumflexsmall"),
@@ -6244,11 +6220,11 @@ test "PdfTextExtractor extracts MacExpert small accent marks" {
   let text = text_bytes_for_test([
     0x27, 0xF3, 0xAE, 0xC9, 0x5E, 0xAC, 0xFA, 0x60, 0x22, 0xF4, 0xF2, 0xFB, 0x7E,
   ])
-  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+  @test.assert_eq(try! extractor.codepoints_of_text(text), [
     0xF7B4, 0xF6F4, 0xF6F5, 0xF7B8, 0xF6F6, 0xF7A8, 0xF6F7, 0xF760, 0xF6F8, 0xF7AF,
     0xF6FB, 0xF6FC, 0xF6FE,
   ])
-  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+  @test.assert_eq(try! extractor.glyphnames_of_text(text), [
     text_name_for_test("/Acutesmall"),
     text_name_for_test("/Brevesmall"),
     text_name_for_test("/Caronsmall"),
@@ -6278,11 +6254,11 @@ test "PdfTextExtractor extracts MacExpert small punctuation and currency" {
     0x20, 0x21, 0x23, 0x24, 0x26, 0x2A, 0x2B, 0x2C, 0x2D, 0x2E, 0x3A, 0x3B, 0x3F,
     0x7B, 0x7C, 0x7D, 0xC0, 0xD0, 0xD6,
   ])
-  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+  @test.assert_eq(try! extractor.codepoints_of_text(text), [
     0x20, 0xF721, 0xF7A2, 0xF724, 0xF726, 0x2025, 0x2024, 0x2C, 0x2D, 0x2E, 0x3A,
     0x3B, 0xF73F, 0x20A1, 0xF6DC, 0xF6DD, 0xF7BF, 0x2012, 0xF7A1,
   ])
-  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+  @test.assert_eq(try! extractor.glyphnames_of_text(text), [
     text_name_for_test("/space"),
     text_name_for_test("/exclamsmall"),
     text_name_for_test("/centoldstyle"),
@@ -6319,12 +6295,12 @@ test "PdfTextExtractor extracts MacExpert superior and inferior punctuation and 
     0x28, 0x29, 0x5B, 0x5D, 0x5F, 0x81, 0x82, 0xA9, 0xAF, 0xB2, 0xB3, 0xB6, 0xE4,
     0xE5, 0xE6, 0xE9, 0xEA, 0xEB, 0xF1, 0xF5, 0xF6, 0xF7, 0xF8, 0xF9,
   ])
-  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+  @test.assert_eq(try! extractor.codepoints_of_text(text), [
     0x207D, 0x207E, 0x208D, 0x208E, 0xF6E5, 0xF6E9, 0xF6E0, 0xF6DF, 0xF6F0, 0xF6E1,
     0xF6E7, 0xF6E3, 0xF6EC, 0xF6F1, 0xF6F3, 0xF6ED, 0xF6F2, 0xF6EB, 0xF6EE, 0xF6EA,
     0x207F, 0xF6EF, 0xF6E2, 0xF6E8,
   ])
-  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+  @test.assert_eq(try! extractor.glyphnames_of_text(text), [
     text_name_for_test("/parenleftsuperior"),
     text_name_for_test("/parenrightsuperior"),
     text_name_for_test("/parenleftinferior"),
@@ -6364,7 +6340,7 @@ test "PdfTextExtractor decodes MacExpert hyphensuperior glyph names" {
   )
   let base_extractor = base_font.text_extractor()
   @test.assert_eq(
-    try! base_extractor.codepoints_of_text(text_bytes_for_test([0x5F])[:]),
+    try! base_extractor.codepoints_of_text(text_bytes_for_test([0x5F])),
     [0xF6E5],
   )
   @test.assert_eq(base_extractor.charcode_of_codepoint(0xF6E6), Some(0x5F))
@@ -6419,11 +6395,11 @@ test "PdfTextExtractor decodes MacExpert hyphensuperior glyph names" {
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test([0x41, 0x5F])[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test([0x41, 0x5F])),
     [0xF6E6, 0xF6E5],
   )
   @test.assert_eq(
-    try! extractor.glyphnames_of_text(text_bytes_for_test([0x41, 0x5F])[:]),
+    try! extractor.glyphnames_of_text(text_bytes_for_test([0x41, 0x5F])),
     [
       text_name_for_test("/hyphensuperior"),
       text_name_for_test("/hypheninferior"),
@@ -6440,13 +6416,13 @@ test "PdfTextExtractor uses built-in Standard14 encodings when implicit" {
   let helvetica_extractor = helvetica.text_extractor()
   @test.assert_eq(
     try! helvetica_extractor.codepoints_of_text(
-      text_bytes_for_test([65, 39, 96, 0xAE])[:],
+      text_bytes_for_test([65, 39, 96, 0xAE]),
     ),
     [65, 0x2019, 0x2018, 0xFB01],
   )
   @test.assert_eq(
     try! helvetica_extractor.glyphnames_of_text(
-      text_bytes_for_test([65, 39, 96, 0xAE])[:],
+      text_bytes_for_test([65, 39, 96, 0xAE]),
     ),
     [
       text_name_for_test("/A"),
@@ -6467,13 +6443,13 @@ test "PdfTextExtractor extracts implicit Symbol glyphs" {
   let extractor = symbol_font.text_extractor()
   @test.assert_eq(
     try! extractor.codepoints_of_text(
-      text_bytes_for_test([0x41, 0x44, 0x57, 0x61, 0x6D, 0xA5, 0xAE, 0xB3, 0xD6])[:],
+      text_bytes_for_test([0x41, 0x44, 0x57, 0x61, 0x6D, 0xA5, 0xAE, 0xB3, 0xD6]),
     ),
     [0x0391, 0x0394, 0x03A9, 0x03B1, 0x03BC, 0x221E, 0x2192, 0x2265, 0x221A],
   )
   @test.assert_eq(
     try! extractor.glyphnames_of_text(
-      text_bytes_for_test([0x41, 0x44, 0x57, 0x61, 0x6D, 0xA5, 0xAE, 0xB3, 0xD6])[:],
+      text_bytes_for_test([0x41, 0x44, 0x57, 0x61, 0x6D, 0xA5, 0xAE, 0xB3, 0xD6]),
     ),
     [
       text_name_for_test("/Alpha"),
@@ -6511,12 +6487,12 @@ test "PdfTextExtractor extracts implicit Symbol set and logic glyphs" {
     0x40, 0x5C, 0x5E, 0x7E, 0xC0, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xCE, 0xCF, 0xD0,
     0xD1, 0xD5, 0xD8, 0xD9, 0xDA, 0xDB, 0xDC, 0xDE, 0xDF, 0xE5,
   ])
-  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+  @test.assert_eq(try! extractor.codepoints_of_text(text), [
     0x2245, 0x2234, 0x22A5, 0x223C, 0x2135, 0x2297, 0x2295, 0x2205, 0x2229, 0x222A,
     0x2208, 0x2209, 0x2220, 0x2207, 0x220F, 0x00AC, 0x2227, 0x2228, 0x21D4, 0x21D0,
     0x21D2, 0x21D3, 0x2211,
   ])
-  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+  @test.assert_eq(try! extractor.glyphnames_of_text(text), [
     text_name_for_test("/congruent"),
     text_name_for_test("/therefore"),
     text_name_for_test("/perpendicular"),
@@ -6558,11 +6534,11 @@ test "PdfTextExtractor extracts implicit Symbol punctuation and variant glyphs" 
     0x3A, 0x3B, 0x3C, 0x3E, 0x3F, 0x4A, 0x56, 0x5B, 0x5D, 0x5F, 0x60, 0x6A, 0x76,
     0x7B, 0x7C, 0x7D, 0xA1,
   ])
-  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+  @test.assert_eq(try! extractor.codepoints_of_text(text), [
     58, 59, 60, 62, 63, 0x03D1, 0x03C2, 91, 93, 95, 0xF8E5, 0x03D5, 0x03D6, 123,
     124, 125, 0x03D2,
   ])
-  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+  @test.assert_eq(try! extractor.glyphnames_of_text(text), [
     text_name_for_test("/colon"),
     text_name_for_test("/semicolon"),
     text_name_for_test("/less"),
@@ -6599,11 +6575,11 @@ test "PdfTextExtractor extracts implicit Symbol special glyphs" {
     0xA2, 0xA4, 0xA6, 0xAF, 0xBD, 0xBE, 0xBF, 0xD2, 0xD3, 0xD4, 0xDD, 0xE1, 0xE2,
     0xE3, 0xE4, 0xF1,
   ])
-  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+  @test.assert_eq(try! extractor.codepoints_of_text(text), [
     0x2032, 0x2044, 0x0192, 0x2193, 0xF8E6, 0xF8E7, 0x21B5, 0xF6DA, 0xF6D9, 0xF6DB,
     0x21D1, 0x2329, 0xF8E8, 0xF8E9, 0xF8EA, 0x232A,
   ])
-  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+  @test.assert_eq(try! extractor.glyphnames_of_text(text), [
     text_name_for_test("/minute"),
     text_name_for_test("/fraction"),
     text_name_for_test("/florin"),
@@ -6638,12 +6614,12 @@ test "PdfTextExtractor extracts implicit Symbol assembly glyphs" {
     0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, 0xEC, 0xED, 0xEE, 0xEF, 0xF2, 0xF3, 0xF4,
     0xF5, 0xF6, 0xF7, 0xF8, 0xF9, 0xFA, 0xFB, 0xFC, 0xFD, 0xFE,
   ])
-  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+  @test.assert_eq(try! extractor.codepoints_of_text(text), [
     0xF8EB, 0xF8EC, 0xF8ED, 0xF8EE, 0xF8EF, 0xF8F0, 0xF8F1, 0xF8F2, 0xF8F3, 0xF8F4,
     0x222B, 0x2320, 0xF8F5, 0x2321, 0xF8F6, 0xF8F7, 0xF8F8, 0xF8F9, 0xF8FA, 0xF8FB,
     0xF8FC, 0xF8FD, 0xF8FE,
   ])
-  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+  @test.assert_eq(try! extractor.glyphnames_of_text(text), [
     text_name_for_test("/parenlefttp"),
     text_name_for_test("/parenleftex"),
     text_name_for_test("/parenleftbt"),
@@ -6682,13 +6658,13 @@ test "PdfTextExtractor extracts implicit ZapfDingbats glyphs" {
   let extractor = dingbat_font.text_extractor()
   @test.assert_eq(
     try! extractor.codepoints_of_text(
-      text_bytes_for_test([0x21, 0x22, 0x23, 0x48, 0xA1])[:],
+      text_bytes_for_test([0x21, 0x22, 0x23, 0x48, 0xA1]),
     ),
     [0x2701, 0x2702, 0x2703, 0x2605, 0x2761],
   )
   @test.assert_eq(
     try! extractor.glyphnames_of_text(
-      text_bytes_for_test([0x21, 0x22, 0x23, 0x48, 0xA1])[:],
+      text_bytes_for_test([0x21, 0x22, 0x23, 0x48, 0xA1]),
     ),
     [
       text_name_for_test("/a1"),
@@ -6715,11 +6691,11 @@ test "PdfTextExtractor extracts implicit ZapfDingbats cross and star glyphs" {
     0x3A, 0x3B, 0x3C, 0x3D, 0x3E, 0x3F, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46,
     0x47,
   ])
-  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+  @test.assert_eq(try! extractor.codepoints_of_text(text), [
     0x271A, 0x271B, 0x271C, 0x271D, 0x271E, 0x271F, 0x2720, 0x2721, 0x2722, 0x2723,
     0x2724, 0x2725, 0x2726, 0x2727,
   ])
-  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+  @test.assert_eq(try! extractor.glyphnames_of_text(text), [
     text_name_for_test("/a26"),
     text_name_for_test("/a27"),
     text_name_for_test("/a28"),
@@ -6751,11 +6727,11 @@ test "PdfTextExtractor extracts implicit ZapfDingbats starburst glyphs" {
     0x4D, 0x4E, 0x4F, 0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59,
     0x5A,
   ])
-  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+  @test.assert_eq(try! extractor.codepoints_of_text(text), [
     0x272D, 0x272E, 0x272F, 0x2730, 0x2731, 0x2732, 0x2733, 0x2734, 0x2735, 0x2736,
     0x2737, 0x2738, 0x2739, 0x273A,
   ])
-  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+  @test.assert_eq(try! extractor.glyphnames_of_text(text), [
     text_name_for_test("/a40"),
     text_name_for_test("/a41"),
     text_name_for_test("/a42"),
@@ -6787,11 +6763,11 @@ test "PdfTextExtractor extracts implicit ZapfDingbats sparkle glyphs" {
     0x5B, 0x5C, 0x5D, 0x5E, 0x5F, 0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67,
     0x68, 0x69, 0x6A, 0x6B,
   ])
-  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+  @test.assert_eq(try! extractor.codepoints_of_text(text), [
     0x273B, 0x273C, 0x273D, 0x273E, 0x273F, 0x2740, 0x2741, 0x2742, 0x2743, 0x2744,
     0x2745, 0x2746, 0x2747, 0x2748, 0x2749, 0x274A, 0x274B,
   ])
-  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+  @test.assert_eq(try! extractor.glyphnames_of_text(text), [
     text_name_for_test("/a54"),
     text_name_for_test("/a55"),
     text_name_for_test("/a56"),
@@ -6825,11 +6801,11 @@ test "PdfTextExtractor extracts implicit ZapfDingbats geometric glyphs" {
     0x6C, 0x6D, 0x6E, 0x6F, 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78,
     0x79, 0x7A, 0x7B, 0x7C, 0x7D, 0x7E,
   ])
-  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+  @test.assert_eq(try! extractor.codepoints_of_text(text), [
     0x25CF, 0x274D, 0x25A0, 0x274F, 0x2750, 0x2751, 0x2752, 0x25B2, 0x25BC, 0x25C6,
     0x2756, 0x25D7, 0x2758, 0x2759, 0x275A, 0x275B, 0x275C, 0x275D, 0x275E,
   ])
-  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+  @test.assert_eq(try! extractor.glyphnames_of_text(text), [
     text_name_for_test("/a71"),
     text_name_for_test("/a72"),
     text_name_for_test("/a73"),
@@ -6862,10 +6838,10 @@ test "PdfTextExtractor extracts implicit ZapfDingbats card suit glyphs" {
   )
   let extractor = dingbat_font.text_extractor()
   let text = text_bytes_for_test([0xA6, 0xA7, 0xA8, 0xA9, 0xAA, 0xAB])
-  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+  @test.assert_eq(try! extractor.codepoints_of_text(text), [
     0x2766, 0x2767, 0x2663, 0x2666, 0x2665, 0x2660,
   ])
-  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+  @test.assert_eq(try! extractor.glyphnames_of_text(text), [
     text_name_for_test("/a107"),
     text_name_for_test("/a108"),
     text_name_for_test("/a112"),
@@ -6887,10 +6863,10 @@ test "PdfTextExtractor extracts implicit ZapfDingbats circled digits" {
   let text = text_bytes_for_test([
     0xAC, 0xAD, 0xAE, 0xAF, 0xB0, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5,
   ])
-  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+  @test.assert_eq(try! extractor.codepoints_of_text(text), [
     0x2460, 0x2461, 0x2462, 0x2463, 0x2464, 0x2465, 0x2466, 0x2467, 0x2468, 0x2469,
   ])
-  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+  @test.assert_eq(try! extractor.glyphnames_of_text(text), [
     text_name_for_test("/a120"),
     text_name_for_test("/a121"),
     text_name_for_test("/a122"),
@@ -6916,10 +6892,10 @@ test "PdfTextExtractor extracts implicit ZapfDingbats filled circled digits" {
   let text = text_bytes_for_test([
     0xB6, 0xB7, 0xB8, 0xB9, 0xBA, 0xBB, 0xBC, 0xBD, 0xBE, 0xBF,
   ])
-  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+  @test.assert_eq(try! extractor.codepoints_of_text(text), [
     0x2776, 0x2777, 0x2778, 0x2779, 0x277A, 0x277B, 0x277C, 0x277D, 0x277E, 0x277F,
   ])
-  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+  @test.assert_eq(try! extractor.glyphnames_of_text(text), [
     text_name_for_test("/a130"),
     text_name_for_test("/a131"),
     text_name_for_test("/a132"),
@@ -6945,10 +6921,10 @@ test "PdfTextExtractor extracts implicit ZapfDingbats circled sans-serif digits"
   let text = text_bytes_for_test([
     0xC0, 0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xC9,
   ])
-  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+  @test.assert_eq(try! extractor.codepoints_of_text(text), [
     0x2780, 0x2781, 0x2782, 0x2783, 0x2784, 0x2785, 0x2786, 0x2787, 0x2788, 0x2789,
   ])
-  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+  @test.assert_eq(try! extractor.glyphnames_of_text(text), [
     text_name_for_test("/a140"),
     text_name_for_test("/a141"),
     text_name_for_test("/a142"),
@@ -6974,10 +6950,10 @@ test "PdfTextExtractor extracts implicit ZapfDingbats negative circled sans-seri
   let text = text_bytes_for_test([
     0xCA, 0xCB, 0xCC, 0xCD, 0xCE, 0xCF, 0xD0, 0xD1, 0xD2, 0xD3,
   ])
-  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+  @test.assert_eq(try! extractor.codepoints_of_text(text), [
     0x278A, 0x278B, 0x278C, 0x278D, 0x278E, 0x278F, 0x2790, 0x2791, 0x2792, 0x2793,
   ])
-  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+  @test.assert_eq(try! extractor.glyphnames_of_text(text), [
     text_name_for_test("/a150"),
     text_name_for_test("/a151"),
     text_name_for_test("/a152"),
@@ -7003,11 +6979,11 @@ test "PdfTextExtractor extracts implicit ZapfDingbats high-byte arrow glyphs" {
   let text = text_bytes_for_test([
     0xD4, 0xD5, 0xD6, 0xD7, 0xD8, 0xD9, 0xDA, 0xDB, 0xDC, 0xDD, 0xDE, 0xDF,
   ])
-  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+  @test.assert_eq(try! extractor.codepoints_of_text(text), [
     0x2794, 0x2192, 0x2194, 0x2195, 0x2798, 0x2799, 0x279A, 0x279B, 0x279C, 0x279D,
     0x279E, 0x279F,
   ])
-  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+  @test.assert_eq(try! extractor.glyphnames_of_text(text), [
     text_name_for_test("/a160"),
     text_name_for_test("/a161"),
     text_name_for_test("/a163"),
@@ -7036,11 +7012,11 @@ test "PdfTextExtractor extracts implicit ZapfDingbats extended arrow glyphs" {
     0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, 0xEC,
     0xED, 0xEE, 0xEF,
   ])
-  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+  @test.assert_eq(try! extractor.codepoints_of_text(text), [
     0x27A0, 0x27A1, 0x27A2, 0x27A3, 0x27A4, 0x27A5, 0x27A6, 0x27A7, 0x27A8, 0x27A9,
     0x27AA, 0x27AB, 0x27AC, 0x27AD, 0x27AE, 0x27AF,
   ])
-  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+  @test.assert_eq(try! extractor.glyphnames_of_text(text), [
     text_name_for_test("/a171"),
     text_name_for_test("/a172"),
     text_name_for_test("/a173"),
@@ -7073,11 +7049,11 @@ test "PdfTextExtractor extracts implicit ZapfDingbats final arrow glyphs" {
     0xF1, 0xF2, 0xF3, 0xF4, 0xF5, 0xF6, 0xF7, 0xF8, 0xF9, 0xFA, 0xFB, 0xFC, 0xFD,
     0xFE,
   ])
-  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+  @test.assert_eq(try! extractor.codepoints_of_text(text), [
     0x27B1, 0x27B2, 0x27B3, 0x27B4, 0x27B5, 0x27B6, 0x27B7, 0x27B8, 0x27B9, 0x27BA,
     0x27BB, 0x27BC, 0x27BD, 0x27BE,
   ])
-  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+  @test.assert_eq(try! extractor.glyphnames_of_text(text), [
     text_name_for_test("/a201"),
     text_name_for_test("/a183"),
     text_name_for_test("/a184"),
@@ -7094,7 +7070,7 @@ test "PdfTextExtractor extracts implicit ZapfDingbats final arrow glyphs" {
     text_name_for_test("/a191"),
   ])
   @test.assert_eq(
-    try! extractor.glyphnames_of_text(text_bytes_for_test([0xF0])[:]),
+    try! extractor.glyphnames_of_text(text_bytes_for_test([0xF0])),
     [text_name_for_test(".notdef")],
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x27B0), None)
@@ -7130,11 +7106,11 @@ test "PdfTextExtractor extracts custom ZapfDingbats bracket glyph names" {
   let text = text_bytes_for_test([
     65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78,
   ])
-  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+  @test.assert_eq(try! extractor.codepoints_of_text(text), [
     0x2768, 0x2769, 0x276A, 0x276B, 0x276C, 0x276D, 0x276E, 0x276F, 0x2770, 0x2771,
     0x2772, 0x2773, 0x2774, 0x2775,
   ])
-  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+  @test.assert_eq(try! extractor.glyphnames_of_text(text), [
     text_name_for_test("/a89"),
     text_name_for_test("/a90"),
     text_name_for_test("/a93"),
@@ -7174,13 +7150,13 @@ test "PdfTextExtractor uses custom encoding differences before base encoding" {
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
     try! extractor.codepoints_of_text(
-      text_bytes_for_test([65, 66, 67, 68, 69, 70, 71, 72])[:],
+      text_bytes_for_test([65, 66, 67, 68, 69, 70, 71, 72]),
     ),
     [0x20AC, 65, 0x20AC, 0x00A9, 65, 66, 70, 0x2206, 0x2126],
   )
   @test.assert_eq(
     try! extractor.glyphnames_of_text(
-      text_bytes_for_test([65, 66, 67, 68, 69, 70, 71, 72])[:],
+      text_bytes_for_test([65, 66, 67, 68, 69, 70, 71, 72]),
     ),
     [
       text_name_for_test("/Euro"),
@@ -7308,7 +7284,7 @@ test "PdfTextExtractor decodes Basic Latin AGL glyph names" {
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)),
     expected_codepoints,
   )
   @test.assert_eq(extractor.charcode_of_codepoint(65), Some(1))
@@ -7366,7 +7342,7 @@ test "PdfTextExtractor decodes general punctuation AGL glyph names" {
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)),
     expected_codepoints,
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x2015), Some(1))
@@ -7407,7 +7383,7 @@ test "PdfTextExtractor decodes Latin-1 spacing AGL aliases" {
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)),
     expected_codepoints,
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x2423), Some(1))
@@ -7518,7 +7494,7 @@ test "PdfTextExtractor decodes IPA extension AGL glyph names" {
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)),
     expected_codepoints,
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x029B), Some(1))
@@ -7600,7 +7576,7 @@ test "PdfTextExtractor decodes spacing modifier AGL glyph names" {
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)),
     expected_codepoints,
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x02B0), Some(24))
@@ -7709,7 +7685,7 @@ test "PdfTextExtractor decodes combining mark AGL glyph names" {
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)),
     expected_codepoints,
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x0301), Some(2))
@@ -7768,7 +7744,7 @@ test "PdfTextExtractor decodes currency and letterlike AGL glyph names" {
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)),
     expected_codepoints,
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x20A4), Some(1))
@@ -7832,7 +7808,7 @@ test "PdfTextExtractor decodes arrow AGL glyph names" {
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)),
     expected_codepoints,
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x21D0), Some(8))
@@ -7924,7 +7900,7 @@ test "PdfTextExtractor decodes Greek AGL glyph names" {
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)),
     expected_codepoints,
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x0394), Some(3))
@@ -8042,7 +8018,7 @@ test "PdfTextExtractor decodes Armenian AGL glyph names" {
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)),
     expected_codepoints,
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x0531), Some(1))
@@ -8178,7 +8154,7 @@ test "PdfTextExtractor decodes Devanagari AGL glyph names" {
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)),
     expected_codepoints,
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x0906), Some(1))
@@ -8297,7 +8273,7 @@ test "PdfTextExtractor decodes Thai AGL glyph names" {
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)),
     expected_codepoints,
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x0E5A), Some(1))
@@ -8395,7 +8371,7 @@ test "PdfTextExtractor decodes math operator AGL glyph names" {
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)),
     expected_codepoints,
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x2206), Some(24))
@@ -8451,7 +8427,7 @@ test "PdfTextExtractor decodes Roman numeral AGL glyph names" {
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)),
     expected_codepoints,
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x2160), Some(1))
@@ -8495,7 +8471,7 @@ test "PdfTextExtractor decodes technical AGL glyph names" {
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)),
     expected_codepoints,
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x2302), Some(6))
@@ -8664,7 +8640,7 @@ test "PdfTextExtractor decodes enclosed alphanumeric AGL glyph names" {
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)),
     expected_codepoints,
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x24B6), Some(1))
@@ -8739,7 +8715,7 @@ test "PdfTextExtractor decodes CJK symbol AGL glyph names" {
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)),
     expected_codepoints,
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x3008), Some(1))
@@ -8858,7 +8834,7 @@ test "PdfTextExtractor decodes Hiragana AGL glyph names" {
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)),
     expected_codepoints,
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x3042), Some(1))
@@ -8983,7 +8959,7 @@ test "PdfTextExtractor decodes Katakana AGL glyph names" {
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)),
     expected_codepoints,
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x30A2), Some(1))
@@ -9051,7 +9027,7 @@ test "PdfTextExtractor decodes Bopomofo AGL glyph names" {
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)),
     expected_codepoints,
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x311A), Some(1))
@@ -9176,7 +9152,7 @@ test "PdfTextExtractor decodes Hangul compatibility jamo AGL glyph names" {
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)),
     expected_codepoints,
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x3150), Some(1))
@@ -9320,7 +9296,7 @@ test "PdfTextExtractor decodes Enclosed CJK AGL glyph names" {
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)),
     expected_codepoints,
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x3277), Some(1))
@@ -9391,7 +9367,7 @@ test "PdfTextExtractor decodes box drawing AGL glyph names" {
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)),
     expected_codepoints,
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x250C), Some(1))
@@ -9434,7 +9410,7 @@ test "PdfTextExtractor decodes block element AGL glyph names" {
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)),
     expected_codepoints,
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x2593), Some(2))
@@ -9524,7 +9500,7 @@ test "PdfTextExtractor decodes geometric shape AGL glyph names" {
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)),
     expected_codepoints,
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x25CF), Some(1))
@@ -9569,7 +9545,7 @@ test "PdfTextExtractor decodes dingbat AGL alias glyph names" {
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)),
     expected_codepoints,
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x279E), Some(1))
@@ -9635,7 +9611,7 @@ test "PdfTextExtractor decodes miscellaneous symbol AGL glyph names" {
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)),
     expected_codepoints,
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x263B), Some(2))
@@ -9827,7 +9803,7 @@ test "PdfTextExtractor decodes Latin Extended-A AGL glyph names" {
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)),
     expected_codepoints,
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x0102), Some(1))
@@ -10010,7 +9986,7 @@ test "PdfTextExtractor decodes Latin Extended-B AGL glyph names" {
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)),
     expected_codepoints,
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x01FC), Some(1))
@@ -10090,7 +10066,7 @@ test "PdfTextExtractor decodes private-use AGL glyph names" {
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)),
     expected_codepoints,
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0xF6C9), Some(1))
@@ -10283,7 +10259,7 @@ test "PdfTextExtractor decodes Halfwidth and Fullwidth AGL glyph names" {
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)),
     expected_codepoints,
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0xFF21), Some(1))
@@ -10314,13 +10290,13 @@ test "PdfTextExtractor decodes TrueType Gxx glyph names" {
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
     try! extractor.codepoints_of_text(
-      text_bytes_for_test([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])[:],
+      text_bytes_for_test([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),
     ),
     [0x201A, 0x0160, 0x008A, 0x002D, 0x00F0, 6, 7, 8, 0x00B6, 0x00A6],
   )
   @test.assert_eq(
     try! extractor.glyphnames_of_text(
-      text_bytes_for_test([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])[:],
+      text_bytes_for_test([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),
     ),
     [
       text_name_for_test("/G82"),
@@ -10358,11 +10334,11 @@ test "PdfTextExtractor decodes control glyph names" {
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test([1, 2, 3, 4])[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test([1, 2, 3, 4])),
     [13, 10, 9, 12],
   )
   @test.assert_eq(
-    try! extractor.glyphnames_of_text(text_bytes_for_test([1, 2, 3, 4])[:]),
+    try! extractor.glyphnames_of_text(text_bytes_for_test([1, 2, 3, 4])),
     [
       text_name_for_test("/controlCR"),
       text_name_for_test("/controlLF"),

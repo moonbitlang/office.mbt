@@ -65,7 +65,7 @@ test "public CCITT Group 3 encoder matches CamlPDF byte helper semantics" {
     encoded,
     ccitt_public_bytes_for_test([0xB6, 0x6A, 0x28, 0x00, 0x80, 0x08]),
   )
-  let wrapped = ccitt_public_wrap_view_for_test([0xAA], raw[:], [0x55])
+  let wrapped = ccitt_public_wrap_view_for_test([0xAA], raw, [0x55])
   @test.assert_eq(
     @pdflite.pdf_ccitt_encode_view(8, 2, wrapped[1:wrapped.length() - 1]),
     encoded,
@@ -83,7 +83,7 @@ test "public CCITT Group 3 encoder matches CamlPDF byte helper semantics" {
 test "public CCITT Group 4 encoder matches CamlPDF byte helper semantics" {
   let raw = ccitt_public_bytes_for_test([0xC0, 0xB0, 0x80])
   let encoded = @pdflite.pdf_ccitt_g4_encode(4, 3, raw)
-  let wrapped = ccitt_public_wrap_view_for_test([0xAA, 0xBB], raw[:], [0x55])
+  let wrapped = ccitt_public_wrap_view_for_test([0xAA, 0xBB], raw, [0x55])
   @test.assert_eq(
     @pdflite.pdf_ccitt_g4_encode_view(4, 3, wrapped[2:wrapped.length() - 1]),
     encoded,

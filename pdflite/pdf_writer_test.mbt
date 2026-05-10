@@ -56,7 +56,7 @@ fn writer_assert_encrypted_secret_for_test(
   let decrypted = writer_unwrap_decryption_for_test(
     try! @pdflite.pdf_read_document_from_bytes_with_passwords(
       rendered,
-      owner_password=Some(writer_ascii_for_test(owner_password)[:]),
+      owner_password=Some(writer_ascii_for_test(owner_password)),
     ),
   )
   @test.assert_eq(try! decrypted.document.endpage(), 1)
@@ -185,19 +185,17 @@ test "pdf_write_name renders PDF names with escapes" {
 ///|
 test "pdf_write_hex_string renders byte strings as PDF hex strings" {
   @test.assert_eq(
-    @pdflite.pdf_write_hex_string(
-      writer_bytes_for_test([0, 10, 15, 16, 255])[:],
-    ),
+    @pdflite.pdf_write_hex_string(writer_bytes_for_test([0, 10, 15, 16, 255])),
     writer_ascii_for_test("<000a0f10ff>"),
   )
   @test.assert_eq(
     @pdflite.pdf_make_hex_pdf_string(
-      writer_bytes_for_test([0, 10, 15, 16, 255])[:],
+      writer_bytes_for_test([0, 10, 15, 16, 255]),
     ),
     writer_ascii_for_test("<000a0f10ff>"),
   )
   @test.assert_eq(
-    @pdflite.pdf_write_hex_string(Bytes::new(0)[:]),
+    @pdflite.pdf_write_hex_string(Bytes::new(0)),
     writer_ascii_for_test("<>"),
   )
 }
@@ -206,19 +204,19 @@ test "pdf_write_hex_string renders byte strings as PDF hex strings" {
 test "pdf_write_literal_string renders byte strings as PDF literal strings" {
   let string = writer_bytes_for_test([65, 10, 40, 41, 92, 0, 255])
   @test.assert_eq(
-    @pdflite.pdf_write_literal_string(string[:]),
+    @pdflite.pdf_write_literal_string(string),
     writer_bytes_for_test([
       40, 65, 92, 110, 92, 40, 92, 41, 92, 92, 92, 48, 48, 48, 92, 51, 55, 55, 41,
     ]),
   )
   @test.assert_eq(
-    @pdflite.pdf_make_pdf_string(string[:]),
+    @pdflite.pdf_make_pdf_string(string),
     writer_bytes_for_test([
       40, 65, 92, 110, 92, 40, 92, 41, 92, 92, 92, 48, 48, 48, 92, 51, 55, 55, 41,
     ]),
   )
   @test.assert_eq(
-    @pdflite.pdf_write_literal_string(Bytes::new(0)[:]),
+    @pdflite.pdf_write_literal_string(Bytes::new(0)),
     writer_ascii_for_test("()"),
   )
 }
@@ -1032,14 +1030,9 @@ test "pdf_write_document_options dispatches encryption methods" {
   let arc4_40 = @pdflite.pdf_write_document_options(
     try! writer_secret_document_for_test("options-40"),
     encryption=Some(
-      @pdflite.pdf_write_encryption(
-        PdfEncryption40Bit,
-        user[:],
-        owner[:],
-        denied,
-      ),
+      @pdflite.pdf_write_encryption(PdfEncryption40Bit, user, owner, denied),
     ),
-    file_id=writer_ascii_for_test("options-40-id")[:],
+    file_id=writer_ascii_for_test("options-40-id"),
   )
   writer_assert_encrypted_secret_for_test(
     arc4_40, "owner", denied, "options-40",
@@ -1048,15 +1041,10 @@ test "pdf_write_document_options dispatches encryption methods" {
   let arc4_128 = @pdflite.pdf_write_document_options(
     try! writer_secret_document_for_test("options-128"),
     encryption=Some(
-      @pdflite.pdf_write_encryption(
-        PdfEncryption128Bit,
-        user[:],
-        owner[:],
-        denied,
-      ),
+      @pdflite.pdf_write_encryption(PdfEncryption128Bit, user, owner, denied),
     ),
     mode=PdfWriteXRefStream,
-    file_id=writer_ascii_for_test("options-128-id")[:],
+    file_id=writer_ascii_for_test("options-128-id"),
   )
   @test.assert_eq(
     writer_find_bytes(arc4_128, writer_ascii_for_test("/Type /XRef")) > 0,
@@ -1067,20 +1055,17 @@ test "pdf_write_document_options dispatches encryption methods" {
   )
 
   let aes_iv_provider = @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
-    writer_ascii_for_test("options-aes-iv")[:],
+    writer_ascii_for_test("options-aes-iv"),
   )
   let aesv2 = @pdflite.pdf_write_document_options(
     try! writer_secret_document_for_test("options-aesv2"),
     encryption=Some(
-      @pdflite.pdf_write_encryption(
-        PdfEncryptionAES128(false),
-        user[:],
-        owner[:],
-        [PdfNoCopy],
-      ),
+      @pdflite.pdf_write_encryption(PdfEncryptionAES128(false), user, owner, [
+        PdfNoCopy,
+      ]),
     ),
     mode=PdfWriteCompressedXRefStream,
-    file_id=writer_ascii_for_test("options-aesv2-id")[:],
+    file_id=writer_ascii_for_test("options-aesv2-id"),
     aes_iv_provider=Some(aes_iv_provider),
   )
   @test.assert_eq(
@@ -1097,22 +1082,19 @@ test "pdf_write_document_options dispatches encryption methods" {
   let aesv3 = @pdflite.pdf_write_document_options(
     try! writer_secret_document_for_test("options-aesv3"),
     encryption=Some(
-      @pdflite.pdf_write_encryption(
-        PdfEncryptionAES256(true),
-        user[:],
-        owner[:],
-        [PdfNoExtract],
-      ),
+      @pdflite.pdf_write_encryption(PdfEncryptionAES256(true), user, owner, [
+        PdfNoExtract,
+      ]),
     ),
-    file_id=writer_ascii_for_test("options-aesv3-id")[:],
+    file_id=writer_ascii_for_test("options-aesv3-id"),
     aes_iv_provider=Some(
       @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
-        writer_ascii_for_test("options-aesv3-iv")[:],
+        writer_ascii_for_test("options-aesv3-iv"),
       ),
     ),
     aesv3_random_provider=Some(
       @pdflite.pdf_deterministic_aesv3_random_provider_from_seed(
-        writer_ascii_for_test("options-aesv3-random")[:],
+        writer_ascii_for_test("options-aesv3-random"),
       ),
     ),
   )
@@ -1128,20 +1110,20 @@ test "pdf_write_document_options dispatches encryption methods" {
     encryption=Some(
       @pdflite.pdf_write_encryption(
         PdfEncryptionAES256ISO(false),
-        user[:],
-        owner[:],
+        user,
+        owner,
         [PdfNoAssemble],
       ),
     ),
-    file_id=writer_ascii_for_test("options-aesv3-iso-id")[:],
+    file_id=writer_ascii_for_test("options-aesv3-iso-id"),
     aes_iv_provider=Some(
       @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
-        writer_ascii_for_test("options-aesv3-iso-iv")[:],
+        writer_ascii_for_test("options-aesv3-iso-iv"),
       ),
     ),
     aesv3_random_provider=Some(
       @pdflite.pdf_deterministic_aesv3_random_provider_from_seed(
-        writer_ascii_for_test("options-aesv3-iso-random")[:],
+        writer_ascii_for_test("options-aesv3-iso-random"),
       ),
     ),
   )
@@ -1157,8 +1139,8 @@ test "pdf_write_document_options dispatches encryption methods" {
     encryption=Some(
       @pdflite.pdf_write_encryption(
         PdfEncryptionAlreadyEncrypted,
-        user[:],
-        owner[:],
+        user,
+        owner,
         [],
       ),
     ),
@@ -1178,12 +1160,7 @@ test "pdf_write_document_options reports missing AES providers" {
   let aesv2_missing_iv : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_write_document_options(
     try! writer_secret_document_for_test("options-missing-iv"),
     encryption=Some(
-      @pdflite.pdf_write_encryption(
-        PdfEncryptionAES128(true),
-        user[:],
-        owner[:],
-        [],
-      ),
+      @pdflite.pdf_write_encryption(PdfEncryptionAES128(true), user, owner, []),
     ),
   )
   guard aesv2_missing_iv is Err(_) else {
@@ -1193,16 +1170,11 @@ test "pdf_write_document_options reports missing AES providers" {
   let aesv3_missing_random : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_write_document_options(
     try! writer_secret_document_for_test("options-missing-random"),
     encryption=Some(
-      @pdflite.pdf_write_encryption(
-        PdfEncryptionAES256(true),
-        user[:],
-        owner[:],
-        [],
-      ),
+      @pdflite.pdf_write_encryption(PdfEncryptionAES256(true), user, owner, []),
     ),
     aes_iv_provider=Some(
       @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
-        writer_ascii_for_test("options-missing-random-iv")[:],
+        writer_ascii_for_test("options-missing-random-iv"),
       ),
     ),
   )
@@ -1238,20 +1210,20 @@ test "encrypted writer wrappers cover CamlPDF-style write workflows" {
   let owner = writer_ascii_for_test("owner")
   let arc4_40 = try! @pdflite.pdf_write_encrypted_40bit_document(
     try! writer_secret_document_for_test("writer-40"),
-    user[:],
-    owner[:],
+    user,
+    owner,
     denied,
-    file_id=writer_ascii_for_test("writer-40-id")[:],
+    file_id=writer_ascii_for_test("writer-40-id"),
   )
   writer_assert_encrypted_secret_for_test(arc4_40, "owner", denied, "writer-40")
 
   let arc4_128 = try! @pdflite.pdf_write_encrypted_128bit_document(
     try! writer_secret_document_for_test("writer-128"),
-    user[:],
-    owner[:],
+    user,
+    owner,
     denied,
     mode=PdfWriteXRefStream,
-    file_id=writer_ascii_for_test("writer-128-id")[:],
+    file_id=writer_ascii_for_test("writer-128-id"),
   )
   @test.assert_eq(
     writer_find_bytes(arc4_128, writer_ascii_for_test("/Type /XRef")) > 0,
@@ -1263,12 +1235,12 @@ test "encrypted writer wrappers cover CamlPDF-style write workflows" {
 
   let arc4_r4 = try! @pdflite.pdf_write_encrypted_128bit_r4_document(
     try! writer_secret_document_for_test("writer-r4"),
-    user[:],
-    owner[:],
+    user,
+    owner,
     denied,
     encrypt_metadata=false,
     mode=PdfWriteCompressedXRefStream,
-    file_id=writer_ascii_for_test("writer-r4-id")[:],
+    file_id=writer_ascii_for_test("writer-r4-id"),
   )
   @test.assert_eq(
     writer_find_bytes(arc4_r4, writer_ascii_for_test("/FlateDecode")) > 0,
@@ -1277,17 +1249,17 @@ test "encrypted writer wrappers cover CamlPDF-style write workflows" {
   writer_assert_encrypted_secret_for_test(arc4_r4, "owner", denied, "writer-r4")
 
   let aes_iv_provider = @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
-    writer_ascii_for_test("writer-aes-iv")[:],
+    writer_ascii_for_test("writer-aes-iv"),
   )
   let aesv2 = try! @pdflite.pdf_write_encrypted_aesv2_document_with_iv_provider(
     try! writer_secret_document_for_test("writer-aesv2"),
-    user[:],
-    owner[:],
+    user,
+    owner,
     [PdfNoCopy],
     aes_iv_provider,
     encrypt_metadata=false,
     mode=PdfWriteCompressedXRefStream,
-    file_id=writer_ascii_for_test("writer-aesv2-id")[:],
+    file_id=writer_ascii_for_test("writer-aesv2-id"),
   )
   @test.assert_eq(
     writer_find_bytes(aesv2, writer_ascii_for_test("/FlateDecode")) > 0,
@@ -1301,19 +1273,19 @@ test "encrypted writer wrappers cover CamlPDF-style write workflows" {
   )
 
   let aesv3_random_provider = @pdflite.pdf_deterministic_aesv3_random_provider_from_seed(
-    writer_ascii_for_test("writer-aesv3-random")[:],
+    writer_ascii_for_test("writer-aesv3-random"),
   )
   let aesv3 = try! @pdflite.pdf_write_encrypted_aesv3_document_with_providers(
     try! writer_secret_document_for_test("writer-aesv3"),
-    user[:],
-    owner[:],
+    user,
+    owner,
     [PdfNoExtract],
     aesv3_random_provider,
     @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
-      writer_ascii_for_test("writer-aesv3-iv")[:],
+      writer_ascii_for_test("writer-aesv3-iv"),
     ),
     mode=PdfWriteXRefStream,
-    file_id=writer_ascii_for_test("writer-aesv3-id")[:],
+    file_id=writer_ascii_for_test("writer-aesv3-id"),
   )
   @test.assert_eq(
     writer_find_bytes(aesv3, writer_ascii_for_test("/Type /XRef")) > 0,
@@ -1328,17 +1300,17 @@ test "encrypted writer wrappers cover CamlPDF-style write workflows" {
 
   let aesv3_iso = try! @pdflite.pdf_write_encrypted_aesv3_iso_document_with_providers(
     try! writer_secret_document_for_test("writer-aesv3-iso"),
-    user[:],
-    owner[:],
+    user,
+    owner,
     [PdfNoAssemble],
     @pdflite.pdf_deterministic_aesv3_random_provider_from_seed(
-      writer_ascii_for_test("writer-aesv3-iso-random")[:],
+      writer_ascii_for_test("writer-aesv3-iso-random"),
     ),
     @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
-      writer_ascii_for_test("writer-aesv3-iso-iv")[:],
+      writer_ascii_for_test("writer-aesv3-iso-iv"),
     ),
     encrypt_metadata=false,
-    file_id=writer_ascii_for_test("writer-aesv3-iso-id")[:],
+    file_id=writer_ascii_for_test("writer-aesv3-iso-id"),
   )
   writer_assert_encrypted_secret_for_test(
     aesv3_iso,

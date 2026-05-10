@@ -147,7 +147,7 @@ pub fn ByteOutput::write_ascii(
   self : ByteOutput,
   text : String,
 ) -> Unit raise PdfError {
-  self.write_view(@ascii.encode(text)[:])
+  self.write_view(@ascii.encode(text))
 }
 
 ///|

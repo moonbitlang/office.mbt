@@ -98,7 +98,7 @@ fn acceptance_corrupt_first_in_use_xref_offset_for_test(
   bytes : @pdflite.PdfBytes,
 ) -> @pdflite.PdfBytes raise {
   let free_row = acceptance_ascii_for_test("0000000000 65535 f \n")
-  let free_row_position = acceptance_find_bytes_for_test(bytes[:], free_row[:])
+  let free_row_position = acceptance_find_bytes_for_test(bytes, free_row)
   if free_row_position < 0 {
     fail("expected classic xref free row")
   }
@@ -121,7 +121,7 @@ fn acceptance_corrupt_first_in_use_xref_marker_for_test(
   bytes : @pdflite.PdfBytes,
 ) -> @pdflite.PdfBytes raise {
   let free_row = acceptance_ascii_for_test("0000000000 65535 f \n")
-  let free_row_position = acceptance_find_bytes_for_test(bytes[:], free_row[:])
+  let free_row_position = acceptance_find_bytes_for_test(bytes, free_row)
   if free_row_position < 0 {
     fail("expected classic xref free row")
   }
@@ -143,7 +143,7 @@ fn acceptance_corrupt_startxref_pointer_for_test(
   bytes : @pdflite.PdfBytes,
 ) -> @pdflite.PdfBytes raise {
   let marker = acceptance_ascii_for_test("startxref\n")
-  let marker_position = acceptance_find_last_bytes_for_test(bytes[:], marker[:])
+  let marker_position = acceptance_find_last_bytes_for_test(bytes, marker)
   if marker_position < 0 {
     fail("expected startxref marker")
   }
@@ -425,7 +425,7 @@ fn acceptance_assert_one_page_invariants_for_test(
   )
   let extractor = doc.text_extractor_of_font(font_object)
   @test.assert_eq(
-    extractor.codepoints_of_text(acceptance_ascii_for_test("Hello, World!")[:]),
+    extractor.codepoints_of_text(acceptance_ascii_for_test("Hello, World!")),
     [72, 101, 108, 108, 111, 44, 32, 87, 111, 114, 108, 100, 33],
   )
 }
@@ -521,7 +521,7 @@ fn acceptance_push_text_codepoints_for_test(
   extractor : @pdflite.PdfTextExtractor,
   text : @pdflite.PdfBytes,
 ) -> Unit raise {
-  for codepoint in extractor.codepoints_of_text(text[:]) {
+  for codepoint in extractor.codepoints_of_text(text) {
     output.push(codepoint)
   }
 }
@@ -1062,7 +1062,7 @@ fn acceptance_assert_type3_encoded_text_for_test(
   let extractor = doc.text_extractor_of_font(font)
   @test.assert_eq(
     try! extractor.glyphnames_of_text(
-      acceptance_text_bytes_for_test([65, 66, 67, 65])[:],
+      acceptance_text_bytes_for_test([65, 66, 67, 65]),
     ),
     [
       acceptance_name_for_test("/A"),
@@ -2039,7 +2039,7 @@ fn acceptance_cns1_variant_cmap_text_document_for_test() -> @pdflite.PdfDocument
       acceptance_predefined_cmap_page_for_test(
         case.0,
         acceptance_predefined_cmap_type0_font_for_test(case.1, case.2, case.4),
-        acceptance_text_bytes_for_test(case.5[:]),
+        acceptance_text_bytes_for_test(case.5),
       ),
     )
   }
@@ -2147,7 +2147,7 @@ fn acceptance_japan1_cmap_text_document_for_test() -> @pdflite.PdfDocument raise
       acceptance_predefined_cmap_page_for_test(
         case.0,
         acceptance_predefined_cmap_type0_font_for_test(case.1, case.2, case.4),
-        acceptance_text_bytes_for_test(case.5[:]),
+        acceptance_text_bytes_for_test(case.5),
       ),
     )
   }
@@ -3655,7 +3655,7 @@ fn acceptance_encrypted_object_stream_pdf_with_passwords_for_test(
   let first = object_stream_data.length()
   acceptance_push_view_for_test(
     object_stream_data,
-    @pdflite.pdf_write_object(secret)[:],
+    @pdflite.pdf_write_object(secret),
   )
   let object_stream = @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
@@ -3687,14 +3687,14 @@ fn acceptance_encrypted_object_stream_pdf_with_passwords_for_test(
   )
   doc.add_object_given_number(3, object_stream)
   let encrypted = try! doc.encrypt_128bit_aesv2_with_iv_provider(
-    user_password[:],
-    owner_password[:],
+    user_password,
+    owner_password,
     denied_permissions,
     @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
-      acceptance_ascii_for_test("object-stream-reader")[:],
+      acceptance_ascii_for_test("object-stream-reader"),
     ),
     encrypt_metadata=false,
-    file_id=acceptance_ascii_for_test("object-stream-reader-id")[:],
+    file_id=acceptance_ascii_for_test("object-stream-reader-id"),
   )
   let encrypt_number = match
     encrypted
@@ -3719,7 +3719,7 @@ fn acceptance_encrypted_object_stream_pdf_with_passwords_for_test(
       number: 1,
       generation: 0,
       object: encrypted.lookup_object_or_null(1),
-    })[:],
+    }),
   )
   acceptance_push_byte_for_test(output, 10)
   let object_stream_offset = output.length()
@@ -3729,7 +3729,7 @@ fn acceptance_encrypted_object_stream_pdf_with_passwords_for_test(
       number: 3,
       generation: 0,
       object: encrypted.lookup_object_or_null(3),
-    })[:],
+    }),
   )
   acceptance_push_byte_for_test(output, 10)
   let encrypt_offset = output.length()
@@ -3739,7 +3739,7 @@ fn acceptance_encrypted_object_stream_pdf_with_passwords_for_test(
       number: encrypt_number,
       generation: 0,
       object: encrypted.lookup_object_or_null(encrypt_number),
-    })[:],
+    }),
   )
   acceptance_push_byte_for_test(output, 10)
 
@@ -3778,7 +3778,7 @@ fn acceptance_encrypted_object_stream_pdf_with_passwords_for_test(
       number: xref_stream_number,
       generation: 0,
       object: xref_stream,
-    })[:],
+    }),
   )
   acceptance_push_ascii_for_test(output, "\nstartxref\n")
   acceptance_push_ascii_for_test(output, xref_offset.to_string())
@@ -5787,8 +5787,8 @@ test "native acceptance suite updates documents through public writer modes" {
   @test.assert_eq(@pdflite.pdf_revisions_from_bytes(rendered), 2)
   @test.assert_eq(
     acceptance_find_bytes_for_test(
-      rendered[:],
-      acceptance_ascii_for_test("/FlateDecode")[:],
+      rendered,
+      acceptance_ascii_for_test("/FlateDecode"),
     ) >
     original.length(),
     true,
@@ -5825,7 +5825,7 @@ test "native acceptance suite decrypts object streams during password reads" {
   }
   let bad_password : Result[@pdflite.PdfDecryptionResult?, Error] = try? @pdflite.pdf_read_document_from_bytes_with_passwords(
     bytes,
-    owner_password=Some(acceptance_ascii_for_test("bad-owner")[:]),
+    owner_password=Some(acceptance_ascii_for_test("bad-owner")),
   )
   guard bad_password is Err(_) else {
     fail("expected bad password to fail encrypted object-stream expansion")
@@ -5833,7 +5833,7 @@ test "native acceptance suite decrypts object streams during password reads" {
   let decrypted = acceptance_unwrap_decryption_for_test(
     try! @pdflite.pdf_read_document_from_bytes_with_passwords(
       bytes,
-      owner_password=Some(acceptance_ascii_for_test("owner")[:]),
+      owner_password=Some(acceptance_ascii_for_test("owner")),
     ),
   )
   acceptance_assert_decrypted_object_stream_payload_for_test(decrypted, [
@@ -5858,7 +5858,7 @@ test "native acceptance suite reconstructs encrypted object streams with bad sta
   let decrypted = acceptance_unwrap_decryption_for_test(
     @pdflite.pdf_read_document_from_bytes_with_passwords(
       bytes,
-      owner_password=Some(acceptance_ascii_for_test("owner")[:]),
+      owner_password=Some(acceptance_ascii_for_test("owner")),
     ),
   )
   @test.assert_eq(decrypted.document.first_xref(), 0)
@@ -5884,7 +5884,7 @@ test "native acceptance suite decrypts object streams with blank user password" 
   let owner_decrypted = acceptance_unwrap_decryption_for_test(
     @pdflite.pdf_read_document_from_bytes_with_passwords(
       bytes,
-      owner_password=Some(acceptance_ascii_for_test("owner")[:]),
+      owner_password=Some(acceptance_ascii_for_test("owner")),
     ),
   )
   acceptance_assert_decrypted_object_stream_payload_for_test(owner_decrypted, [
@@ -5900,7 +5900,7 @@ test "native acceptance suite recrypts non-stream encrypted object-stream payloa
   let decrypted = acceptance_unwrap_decryption_for_test(
     @pdflite.pdf_read_document_from_bytes_with_passwords(
       bytes,
-      owner_password=Some(owner_password[:]),
+      owner_password=Some(owner_password),
     ),
   )
   acceptance_assert_decrypted_object_stream_payload_for_test(decrypted, [
@@ -5911,7 +5911,7 @@ test "native acceptance suite recrypts non-stream encrypted object-stream payloa
   )
   decrypted.document.add_object_given_number(6, added_object)
   let recrypted = decrypted.document.recrypt_with_password_aesv2_with_iv_provider(
-    owner_password[:],
+    owner_password,
     fn(object_number, generation, index) {
       acceptance_aes_iv_for_test(object_number, generation, index + 16)
     },
@@ -5921,8 +5921,8 @@ test "native acceptance suite recrypts non-stream encrypted object-stream payloa
   )
   @test.assert_eq(
     acceptance_find_bytes_for_test(
-      rendered[:],
-      acceptance_ascii_for_test("encrypted object stream")[:],
+      rendered,
+      acceptance_ascii_for_test("encrypted object stream"),
     ) <
     0,
     true,
@@ -5930,7 +5930,7 @@ test "native acceptance suite recrypts non-stream encrypted object-stream payloa
   let roundtrip = acceptance_unwrap_decryption_for_test(
     @pdflite.pdf_read_document_from_bytes_with_passwords(
       rendered,
-      user_password=Some(user_password[:]),
+      user_password=Some(user_password),
     ),
   )
   acceptance_assert_decrypted_object_stream_payload_for_test(roundtrip, [
@@ -6312,20 +6312,20 @@ test "native acceptance suite reads encrypted AES128 documents through public wr
   doc.add_object_given_number(60, secret)
   let denied : Array[@pdflite.PdfPermission] = [PdfNoEdit, PdfNoPrint]
   let encrypted = try! doc.encrypt_128bit_aesv2_with_iv_provider(
-    acceptance_ascii_for_test("user")[:],
-    acceptance_ascii_for_test("owner")[:],
+    acceptance_ascii_for_test("user"),
+    acceptance_ascii_for_test("owner"),
     denied,
     fn(object_number, generation, index) {
       acceptance_aes_iv_for_test(object_number, generation, index)
     },
     encrypt_metadata=false,
-    file_id=acceptance_ascii_for_test("native-acceptance-id")[:],
+    file_id=acceptance_ascii_for_test("native-acceptance-id"),
   )
   let rendered = try! @pdflite.pdf_write_document(encrypted)
   let user_decrypted = acceptance_unwrap_decryption_for_test(
     try! @pdflite.pdf_read_document_from_bytes_with_passwords(
       rendered,
-      user_password=Some(acceptance_ascii_for_test("user")[:]),
+      user_password=Some(acceptance_ascii_for_test("user")),
     ),
   )
   @test.assert_eq(user_decrypted.denied_permissions, denied)
@@ -6337,7 +6337,7 @@ test "native acceptance suite reads encrypted AES128 documents through public wr
   let owner_decrypted = acceptance_unwrap_decryption_for_test(
     try! @pdflite.pdf_read_document_from_bytes_with_passwords(
       rendered,
-      owner_password=Some(acceptance_ascii_for_test("owner")[:]),
+      owner_password=Some(acceptance_ascii_for_test("owner")),
     ),
   )
   @test.assert_eq(owner_decrypted.denied_permissions, denied)
@@ -6358,24 +6358,21 @@ test "native acceptance suite preserves unencrypted metadata through AES recrypt
   let denied : Array[@pdflite.PdfPermission] = [PdfNoExtract, PdfNoCopy]
   let rendered = @pdflite.pdf_write_encrypted_aesv2_document_with_iv_provider(
     input,
-    user_password[:],
-    owner_password[:],
+    user_password,
+    owner_password,
     denied,
     fn(object_number, generation, index) {
       acceptance_aes_iv_for_test(object_number, generation, index + 8)
     },
     encrypt_metadata=false,
     mode=PdfWriteCompressedXRefStream,
-    file_id=acceptance_ascii_for_test("native-metadata-encryption-id")[:],
+    file_id=acceptance_ascii_for_test("native-metadata-encryption-id"),
   )
-  @test.assert_eq(
-    acceptance_find_bytes_for_test(rendered[:], metadata[:]) >= 0,
-    true,
-  )
+  @test.assert_eq(acceptance_find_bytes_for_test(rendered, metadata) >= 0, true)
   @test.assert_eq(
     acceptance_find_bytes_for_test(
-      rendered[:],
-      acceptance_ascii_for_test("metadata-encrypted-secret")[:],
+      rendered,
+      acceptance_ascii_for_test("metadata-encrypted-secret"),
     ) <
     0,
     true,
@@ -6383,7 +6380,7 @@ test "native acceptance suite preserves unencrypted metadata through AES recrypt
   let decrypted = acceptance_unwrap_decryption_for_test(
     @pdflite.pdf_read_document_from_bytes_with_passwords(
       rendered,
-      user_password=Some(user_password[:]),
+      user_password=Some(user_password),
     ),
   )
   @test.assert_eq(decrypted.denied_permissions, denied)
@@ -6397,7 +6394,7 @@ test "native acceptance suite preserves unencrypted metadata through AES recrypt
   )
   decrypted.document.add_object_given_number(64, added_object)
   let recrypted = decrypted.document.recrypt_with_password_aesv2_with_iv_provider(
-    owner_password[:],
+    owner_password,
     fn(object_number, generation, index) {
       acceptance_aes_iv_for_test(object_number, generation, index + 12)
     },
@@ -6406,13 +6403,13 @@ test "native acceptance suite preserves unencrypted metadata through AES recrypt
     recrypted,
   )
   @test.assert_eq(
-    acceptance_find_bytes_for_test(rerendered[:], metadata[:]) >= 0,
+    acceptance_find_bytes_for_test(rerendered, metadata) >= 0,
     true,
   )
   let roundtrip = acceptance_unwrap_decryption_for_test(
     @pdflite.pdf_read_document_from_bytes_with_passwords(
       rerendered,
-      owner_password=Some(owner_password[:]),
+      owner_password=Some(owner_password),
     ),
   )
   @test.assert_eq(roundtrip.denied_permissions, denied)
@@ -6432,15 +6429,15 @@ test "native acceptance suite runs pdfencrypt owner-password workflow" {
   let denied : Array[@pdflite.PdfPermission] = [PdfNoEdit, PdfNoPrint]
   let encrypted = @pdflite.pdf_write_encrypted_aesv2_document_with_iv_provider(
     input,
-    user_password[:],
-    owner_password[:],
+    user_password,
+    owner_password,
     denied,
     fn(object_number, generation, index) {
       acceptance_aes_iv_for_test(object_number, generation, index)
     },
     encrypt_metadata=false,
     mode=PdfWriteClassic,
-    file_id=acceptance_ascii_for_test("native-acceptance-pdfencrypt-id")[:],
+    file_id=acceptance_ascii_for_test("native-acceptance-pdfencrypt-id"),
   )
   let default_decrypted = acceptance_unwrap_decryption_for_test(
     @pdflite.pdf_read_document_from_bytes_with_passwords(encrypted),
@@ -6453,7 +6450,7 @@ test "native acceptance suite runs pdfencrypt owner-password workflow" {
   let user_decrypted = acceptance_unwrap_decryption_for_test(
     @pdflite.pdf_read_document_from_bytes_with_passwords(
       encrypted,
-      user_password=Some(user_password[:]),
+      user_password=Some(user_password),
     ),
   )
   @test.assert_eq(user_decrypted.denied_permissions, denied)
@@ -6464,7 +6461,7 @@ test "native acceptance suite runs pdfencrypt owner-password workflow" {
   let owner_decrypted = acceptance_unwrap_decryption_for_test(
     @pdflite.pdf_read_document_from_bytes_with_passwords(
       encrypted,
-      owner_password=Some(owner_password[:]),
+      owner_password=Some(owner_password),
     ),
   )
   @test.assert_eq(owner_decrypted.denied_permissions, denied)
@@ -6483,14 +6480,14 @@ test "native acceptance suite decrypts reconstructed malformed xref documents" {
   doc.add_object_given_number(60, secret)
   let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
   let encrypted = try! doc.encrypt_128bit_aesv2_with_iv_provider(
-    acceptance_ascii_for_test("user")[:],
-    acceptance_ascii_for_test("owner")[:],
+    acceptance_ascii_for_test("user"),
+    acceptance_ascii_for_test("owner"),
     denied,
     fn(object_number, generation, index) {
       acceptance_aes_iv_for_test(object_number, generation, index + 3)
     },
     encrypt_metadata=false,
-    file_id=acceptance_ascii_for_test("native-acceptance-malformed-id")[:],
+    file_id=acceptance_ascii_for_test("native-acceptance-malformed-id"),
   )
   let rendered = try! @pdflite.pdf_write_document(encrypted)
   let corrupted = try! acceptance_corrupt_first_in_use_xref_offset_for_test(
@@ -6505,7 +6502,7 @@ test "native acceptance suite decrypts reconstructed malformed xref documents" {
   let decrypted = acceptance_unwrap_decryption_for_test(
     try! @pdflite.pdf_read_document_from_bytes_with_passwords(
       corrupted,
-      user_password=Some(acceptance_ascii_for_test("user")[:]),
+      user_password=Some(acceptance_ascii_for_test("user")),
     ),
   )
   @test.assert_eq(decrypted.document.first_xref(), 0)
@@ -6524,14 +6521,14 @@ test "native acceptance suite decrypts reconstructed encrypted malformed xref ma
   let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
   let user_password = acceptance_ascii_for_test("user")
   let encrypted = doc.encrypt_128bit_aesv2_with_iv_provider(
-    user_password[:],
-    acceptance_ascii_for_test("owner")[:],
+    user_password,
+    acceptance_ascii_for_test("owner"),
     denied,
     fn(object_number, generation, index) {
       acceptance_aes_iv_for_test(object_number, generation, index + 11)
     },
     encrypt_metadata=false,
-    file_id=acceptance_ascii_for_test("native-acceptance-xref-marker-id")[:],
+    file_id=acceptance_ascii_for_test("native-acceptance-xref-marker-id"),
   )
   let rendered = @pdflite.pdf_write_document(encrypted)
   let corrupted = acceptance_corrupt_first_in_use_xref_marker_for_test(rendered)
@@ -6544,7 +6541,7 @@ test "native acceptance suite decrypts reconstructed encrypted malformed xref ma
   let decrypted = acceptance_unwrap_decryption_for_test(
     @pdflite.pdf_read_document_from_bytes_with_passwords(
       corrupted,
-      user_password=Some(user_password[:]),
+      user_password=Some(user_password),
     ),
   )
   @test.assert_eq(decrypted.document.first_xref(), 0)
@@ -6564,14 +6561,14 @@ test "native acceptance suite recrypts reconstructed bad-startxref encrypted doc
   let owner_password = acceptance_ascii_for_test("owner")
   let denied : Array[@pdflite.PdfPermission] = [PdfNoPrint]
   let encrypted = doc.encrypt_128bit_aesv2_with_iv_provider(
-    user_password[:],
-    owner_password[:],
+    user_password,
+    owner_password,
     denied,
     fn(object_number, generation, index) {
       acceptance_aes_iv_for_test(object_number, generation, index + 20)
     },
     encrypt_metadata=false,
-    file_id=acceptance_ascii_for_test("native-acceptance-bad-startxref-id")[:],
+    file_id=acceptance_ascii_for_test("native-acceptance-bad-startxref-id"),
   )
   let rendered = @pdflite.pdf_write_document(encrypted)
   let corrupted = acceptance_corrupt_startxref_pointer_for_test(rendered)
@@ -6584,7 +6581,7 @@ test "native acceptance suite recrypts reconstructed bad-startxref encrypted doc
   let decrypted = acceptance_unwrap_decryption_for_test(
     @pdflite.pdf_read_document_from_bytes_with_passwords(
       corrupted,
-      owner_password=Some(owner_password[:]),
+      owner_password=Some(owner_password),
     ),
   )
   @test.assert_eq(decrypted.document.first_xref(), 0)
@@ -6596,7 +6593,7 @@ test "native acceptance suite recrypts reconstructed bad-startxref encrypted doc
   )
   decrypted.document.add_object_given_number(61, added_object)
   let recrypted = decrypted.document.recrypt_with_password_aesv2_with_iv_provider(
-    owner_password[:],
+    owner_password,
     fn(object_number, generation, index) {
       acceptance_aes_iv_for_test(object_number, generation, index + 24)
     },
@@ -6606,8 +6603,8 @@ test "native acceptance suite recrypts reconstructed bad-startxref encrypted doc
   )
   @test.assert_eq(
     acceptance_find_bytes_for_test(
-      rerendered[:],
-      acceptance_ascii_for_test("native-acceptance-bad-startxref-secret")[:],
+      rerendered,
+      acceptance_ascii_for_test("native-acceptance-bad-startxref-secret"),
     ) <
     0,
     true,
@@ -6615,7 +6612,7 @@ test "native acceptance suite recrypts reconstructed bad-startxref encrypted doc
   let roundtrip = acceptance_unwrap_decryption_for_test(
     @pdflite.pdf_read_document_from_bytes_with_passwords(
       rerendered,
-      user_password=Some(user_password[:]),
+      user_password=Some(user_password),
     ),
   )
   @test.assert_eq(roundtrip.denied_permissions, denied)
@@ -6636,25 +6633,25 @@ test "native acceptance suite recrypts encrypted incremental revisions" {
   doc.add_object_given_number(60, original_secret)
   let denied : Array[@pdflite.PdfPermission] = [PdfNoEdit, PdfNoPrint]
   let encrypted = try! doc.encrypt_128bit_aesv2_with_iv_provider(
-    acceptance_ascii_for_test("user")[:],
-    acceptance_ascii_for_test("owner")[:],
+    acceptance_ascii_for_test("user"),
+    acceptance_ascii_for_test("owner"),
     denied,
     fn(object_number, generation, index) {
       acceptance_aes_iv_for_test(object_number, generation, index + 1)
     },
     encrypt_metadata=false,
-    file_id=acceptance_ascii_for_test("native-acceptance-recrypt-id")[:],
+    file_id=acceptance_ascii_for_test("native-acceptance-recrypt-id"),
   )
   let original = try! @pdflite.pdf_write_document(encrypted)
   let decrypted = acceptance_unwrap_decryption_for_test(
     try! @pdflite.pdf_read_document_from_bytes_with_passwords(
       original,
-      user_password=Some(acceptance_ascii_for_test("user")[:]),
+      user_password=Some(acceptance_ascii_for_test("user")),
     ),
   )
   decrypted.document.add_object_given_number(60, updated_secret)
   let recrypted = try! decrypted.document.recrypt_with_password_aesv2_with_iv_provider(
-    acceptance_ascii_for_test("owner")[:],
+    acceptance_ascii_for_test("owner"),
     fn(object_number, generation, index) {
       acceptance_aes_iv_for_test(object_number, generation, index + 2)
     },
@@ -6667,7 +6664,7 @@ test "native acceptance suite recrypts encrypted incremental revisions" {
     try! @pdflite.pdf_read_document_revision_from_bytes_with_passwords(
       updated,
       1,
-      owner_password=Some(acceptance_ascii_for_test("owner")[:]),
+      owner_password=Some(acceptance_ascii_for_test("owner")),
     ),
   )
   @test.assert_eq(newest.denied_permissions, denied)
@@ -6677,7 +6674,7 @@ test "native acceptance suite recrypts encrypted incremental revisions" {
     try! @pdflite.pdf_read_document_revision_from_bytes_with_passwords(
       updated,
       2,
-      owner_password=Some(acceptance_ascii_for_test("owner")[:]),
+      owner_password=Some(acceptance_ascii_for_test("owner")),
     ),
   )
   @test.assert_eq(older.denied_permissions, denied)

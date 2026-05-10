@@ -24,7 +24,7 @@ fn pdf_afm_view_equals(left : BytesView, right : BytesView) -> Bool {
 ///|
 fn pdf_afm_view_equals_ascii(view : BytesView, text : String) -> Bool {
   let bytes = @ascii.encode(text)
-  pdf_afm_view_equals(view, bytes[:])
+  pdf_afm_view_equals(view, bytes)
 }
 
 ///|
@@ -33,7 +33,7 @@ fn pdf_afm_line_starts_with_ascii(line : BytesView, text : String) -> Bool {
   if line.length() < prefix.length() {
     false
   } else {
-    pdf_afm_view_equals(line[:prefix.length()], prefix[:])
+    pdf_afm_view_equals(line[:prefix.length()], prefix)
   }
 }
 
@@ -147,7 +147,7 @@ fn pdf_afm_lookup_char_number(
 ) -> Int raise PdfError {
   for metric in metrics {
     let (candidate, char_number, _) = metric
-    if pdf_afm_view_equals(candidate[:], name) {
+    if pdf_afm_view_equals(candidate, name) {
       break char_number
     }
   } nobreak {

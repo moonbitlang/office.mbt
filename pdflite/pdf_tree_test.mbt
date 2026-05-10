@@ -132,15 +132,15 @@ test "PdfDocument name_tree_lookup finds nested name entries by limits" {
   ]
   let tree = doc.build_name_tree(entries)
   @test.assert_eq(
-    doc.name_tree_lookup(tree_bytes_for_test("k0")[:], tree),
+    doc.name_tree_lookup(tree_bytes_for_test("k0"), tree),
     Some(PdfInteger(0)),
   )
   @test.assert_eq(
-    doc.name_tree_lookup(tree_bytes_for_test("k11")[:], tree),
+    doc.name_tree_lookup(tree_bytes_for_test("k11"), tree),
     Some(PdfInteger(11)),
   )
   @test.assert_eq(
-    doc.name_tree_lookup(tree_bytes_for_test("missing")[:], tree),
+    doc.name_tree_lookup(tree_bytes_for_test("missing"), tree),
     None,
   )
   @test.assert_eq(
@@ -158,7 +158,7 @@ test "PdfDocument name_tree_lookup handles leaf misses and malformed trees" {
       PdfArray([PdfString(tree_bytes_for_test("a")), PdfInteger(1)]),
     ),
   ])
-  @test.assert_eq(doc.name_tree_lookup(tree_bytes_for_test("z")[:], leaf), None)
+  @test.assert_eq(doc.name_tree_lookup(tree_bytes_for_test("z"), leaf), None)
   let mismatched_limits : @pdflite.PdfObject = PdfDictionary([
     (
       tree_name_for_test("/Limits"),

@@ -52,7 +52,7 @@ test "PdfDocument AESV2 encrypt preserves parser-private object states" {
     ),
   )
   let encrypted = try! doc.aesv2_encrypt_parsed_objects_with_iv_provider(
-    key[:],
+    key,
     128,
     fn(_, _, index) { crypt_wb_iv_for_test(index) },
   )
@@ -78,7 +78,7 @@ test "PdfDocument AESV2 decrypt preserves parser-private object states" {
       ObjectToParseFromObjectStream({ object_stream_number: 7, index: 0 }),
     ),
   )
-  let decrypted = try! doc.aesv2_decrypt_parsed_objects(key[:], 128)
+  let decrypted = try! doc.aesv2_decrypt_parsed_objects(key, 128)
   @test.assert_eq(decrypted.objects.get_entry(1), doc.objects.get_entry(1))
   @test.assert_eq(decrypted.objects.get_entry(2), doc.objects.get_entry(2))
   @test.assert_eq(decrypted.objects.get_entry(3), doc.objects.get_entry(3))
@@ -102,15 +102,15 @@ test "PdfDocument AESV3 encrypt recurses and preserves parser-private object sta
       ObjectToParseFromObjectStream({ object_stream_number: 7, index: 0 }),
     ),
   )
-  let encrypted = try! doc.aesv3_encrypt_parsed_objects_with_iv_provider(
-    key[:],
-    fn(_, _, index) { crypt_wb_iv_for_test(index) },
-  )
+  let encrypted = try! doc.aesv3_encrypt_parsed_objects_with_iv_provider(key, fn(
+    _,
+    _,
+    index,
+  ) {
+    crypt_wb_iv_for_test(index)
+  })
   @test.assert_eq(
-    try! pdf_aesv3_decrypt_pdf_object(
-      key[:],
-      encrypted.lookup_object_or_null(1),
-    ),
+    try! pdf_aesv3_decrypt_pdf_object(key, encrypted.lookup_object_or_null(1)),
     PdfString(@ascii.encode("secret")),
   )
   @test.assert_eq(encrypted.objects.get_entry(2), doc.objects.get_entry(2))
@@ -135,7 +135,7 @@ test "PdfDocument AESV3 decrypt preserves parser-private object states" {
       ObjectToParseFromObjectStream({ object_stream_number: 7, index: 0 }),
     ),
   )
-  let decrypted = try! doc.aesv3_decrypt_parsed_objects(key[:])
+  let decrypted = try! doc.aesv3_decrypt_parsed_objects(key)
   @test.assert_eq(decrypted.objects.get_entry(1), doc.objects.get_entry(1))
   @test.assert_eq(decrypted.objects.get_entry(2), doc.objects.get_entry(2))
   @test.assert_eq(decrypted.objects.get_entry(3), doc.objects.get_entry(3))
@@ -168,8 +168,8 @@ test "private AESV3 saved dictionary requires permissions entry" {
 test "private AESV3 CBC no-padding encryption rejects partial blocks" {
   let key = crypt_wb_bytes_for_test([ for value in 0..<32 => value ])
   let result : Result[PdfBytes, Error] = try? pdf_aesv3_cbc_encrypt_no_padding(
-    key[:],
-    @ascii.encode("x")[:],
+    key,
+    @ascii.encode("x"),
   )
   guard result is Err(PdfError::InvalidCryptoDataLength(1)) else {
     fail("expected invalid AESV3 CBC data length")
@@ -193,7 +193,7 @@ test "private document decrypt supports ISO AESV3 object crypt with a file key" 
   let doc = pdf_document_empty()
   let secret : PdfObject = PdfString(@ascii.encode("revision 6 secret"))
   let encrypted = try! pdf_aesv3_encrypt_pdf_object_with_iv_provider(
-    file_key[:],
+    file_key,
     secret,
     fn(index) { crypt_wb_iv_for_test(index) },
   )

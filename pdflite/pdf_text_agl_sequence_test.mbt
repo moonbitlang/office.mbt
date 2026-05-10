@@ -103,7 +103,7 @@ test "PdfTextExtractor decodes multi-codepoint AGL glyph names" {
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)),
     expected_codepoints,
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x05D3), None)
@@ -120,7 +120,7 @@ test "PdfTextExtractor decodes multi-codepoint AGL glyph names" {
   @test.assert_eq(
     try! suffixed_font
     .text_extractor()
-    .codepoints_of_text(text_bytes_for_test([1])[:]),
+    .codepoints_of_text(text_bytes_for_test([1])),
     [0x05DC, 0x05B9, 0x05BC],
   )
 }

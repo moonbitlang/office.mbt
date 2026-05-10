@@ -415,7 +415,7 @@ fn PdfDocument::pdf_space_indexed_lookup_data(
   lookup_data : PdfObject,
 ) -> BytesView? raise PdfError {
   match self.direct(lookup_data) {
-    PdfString(data) => Some(data[:])
+    PdfString(data) => Some(data)
     PdfStreamObject(stream) =>
       Some(
         pdf_stream_data_view(self.pdf_decode_stream_value_direct(stream).data),

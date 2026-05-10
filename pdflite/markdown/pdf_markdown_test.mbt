@@ -785,20 +785,20 @@ fn markdown_missing_xobject_dictionary_document_for_test() -> @pdflite.PdfDocume
 ///|
 fn markdown_blank_password_document_for_test() -> @pdflite.PdfDocument raise {
   markdown_latin_document_for_test().encrypt_40bit(
-    @ascii.encode("")[:],
-    @ascii.encode("owner")[:],
+    @ascii.encode(""),
+    @ascii.encode("owner"),
     [PdfNoCopy],
-    file_id=@ascii.encode("markdown-encrypted-id")[:],
+    file_id=@ascii.encode("markdown-encrypted-id"),
   )
 }
 
 ///|
 fn markdown_password_required_document_for_test() -> @pdflite.PdfDocument raise {
   markdown_latin_document_for_test().encrypt_40bit(
-    @ascii.encode("user")[:],
-    @ascii.encode("owner")[:],
+    @ascii.encode("user"),
+    @ascii.encode("owner"),
     [PdfNoCopy],
-    file_id=@ascii.encode("markdown-password-id")[:],
+    file_id=@ascii.encode("markdown-password-id"),
   )
 }
 

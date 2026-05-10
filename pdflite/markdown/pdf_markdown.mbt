@@ -228,7 +228,7 @@ fn pdf_markdown_extracted_codepoints(
     Some(extractor) =>
       for
         codepoint in pdf_markdown_codepoints_of_glyphs(
-          extractor.glyphnames_and_codepoints_of_text(text[:])[:],
+          extractor.glyphnames_and_codepoints_of_text(text),
         ) {
         output.push(codepoint)
       }
@@ -245,7 +245,7 @@ fn pdf_markdown_push_extracted_text(
 ) -> Unit raise {
   pdf_markdown_append_codepoints(
     output,
-    pdf_markdown_extracted_codepoints(extractor, text)[:],
+    pdf_markdown_extracted_codepoints(extractor, text),
   )
 }
 
@@ -322,7 +322,7 @@ fn pdf_markdown_push_text_chunk(
     chunks.push({
       x: position.x,
       y: position.y,
-      width: pdf_markdown_estimated_chunk_width(codepoints[:], font_size),
+      width: pdf_markdown_estimated_chunk_width(codepoints, font_size),
       font_size,
       index: next_index.val,
       codepoints,
@@ -442,10 +442,10 @@ fn pdf_markdown_extracted_codepoints_of_text_array(
         let extracted = pdf_markdown_extracted_codepoints(extractor, text)
         if extracted.length() > 0 {
           if pending_word_space &&
-            pdf_markdown_tj_word_space_needed(codepoints[:], extracted[:]) {
+            pdf_markdown_tj_word_space_needed(codepoints, extracted) {
             codepoints.push(0x20)
           }
-          pdf_markdown_append_codepoints(codepoints, extracted[:])
+          pdf_markdown_append_codepoints(codepoints, extracted)
           pending_word_space = false
         }
       }
@@ -565,13 +565,7 @@ fn pdf_markdown_collect_positioned_text_chunks(
         )
       Op_TJ(PdfArray(items)) =>
         pdf_markdown_add_positioned_text_array(
-          chunks,
-          next_index,
-          ctm,
-          text_matrix,
-          font_size,
-          extractor,
-          items[:],
+          chunks, next_index, ctm, text_matrix, font_size, extractor, items,
         )
       Op_quote(text) => {
         text_line_matrix = pdf_markdown_translate_text_line(
@@ -781,7 +775,7 @@ fn pdf_markdown_push_text_line_chunks(
       ) {
       pdf_markdown_push_word_space(output)
     }
-    pdf_markdown_append_codepoints(output, chunk.codepoints[:])
+    pdf_markdown_append_codepoints(output, chunk.codepoints)
     current_right = chunk.x + chunk.width
     previous_chunk = Some(chunk)
   }
@@ -835,7 +829,7 @@ fn pdf_markdown_codepoints_are_numeric_table_value(
 fn pdf_markdown_line_is_numeric_dominated(line : PdfMarkdownTextLine) -> Bool {
   let mut numeric = 0
   for chunk in line.chunks {
-    if pdf_markdown_codepoints_are_numeric_table_value(chunk.codepoints[:]) {
+    if pdf_markdown_codepoints_are_numeric_table_value(chunk.codepoints) {
       numeric += 1
     }
   }
@@ -880,8 +874,8 @@ fn pdf_markdown_line_has_prose_sized_table_header_cell(
   line : PdfMarkdownTextLine,
 ) -> Bool {
   for chunk in line.chunks {
-    if pdf_markdown_codepoints_nonspace_count(chunk.codepoints[:]) > 28 ||
-      pdf_markdown_codepoints_space_count(chunk.codepoints[:]) > 4 {
+    if pdf_markdown_codepoints_nonspace_count(chunk.codepoints) > 28 ||
+      pdf_markdown_codepoints_space_count(chunk.codepoints) > 4 {
       return true
     }
   }
@@ -892,7 +886,7 @@ fn pdf_markdown_line_has_prose_sized_table_header_cell(
 fn pdf_markdown_line_has_dot_leaders(line : PdfMarkdownTextLine) -> Bool {
   let mut periods = 0
   for chunk in line.chunks {
-    periods += pdf_markdown_codepoints_period_count(chunk.codepoints[:])
+    periods += pdf_markdown_codepoints_period_count(chunk.codepoints)
   }
   periods >= 8
 }
@@ -940,7 +934,7 @@ fn pdf_markdown_line_has_sentence_punctuation_phrase(
 ) -> Bool {
   for chunk in line.chunks {
     if pdf_markdown_codepoints_have_sentence_punctuation_phrase(
-        chunk.codepoints[:],
+        chunk.codepoints,
       ) {
       return true
     }
@@ -1081,7 +1075,7 @@ fn pdf_markdown_table_cells_of_line(
     if cells[column].length() > 0 {
       cells[column].push(0x20)
     }
-    pdf_markdown_append_codepoints(cells[column], chunk.codepoints[:])
+    pdf_markdown_append_codepoints(cells[column], chunk.codepoints)
   }
   cells
 }
@@ -1107,7 +1101,7 @@ fn pdf_markdown_push_table_row(
   output.push(0x7C)
   for cell in cells {
     output.push(0x20)
-    pdf_markdown_push_table_cell(output, cell[:])
+    pdf_markdown_push_table_cell(output, cell)
     output.push(0x20)
     output.push(0x7C)
   }
@@ -1121,7 +1115,7 @@ fn pdf_markdown_push_table_separator(
 ) -> Unit {
   output.push(0x7C)
   for _ in 0..<columns {
-    pdf_markdown_append_codepoints(output, [0x20, 0x2D, 0x2D, 0x2D, 0x20][:])
+    pdf_markdown_append_codepoints(output, [0x20, 0x2D, 0x2D, 0x2D, 0x20])
     output.push(0x7C)
   }
   pdf_markdown_push_line_break(output)
@@ -1138,7 +1132,7 @@ fn pdf_markdown_push_markdown_table(
   for index in start..<end {
     pdf_markdown_push_table_row(
       output,
-      pdf_markdown_table_cells_of_line(lines[index], columns)[:],
+      pdf_markdown_table_cells_of_line(lines[index], columns),
     )
     if index == start {
       pdf_markdown_push_table_separator(output, columns.length())
@@ -1166,7 +1160,7 @@ fn pdf_markdown_chunks_to_codepoints(
   chunks : ArrayView[PdfMarkdownTextChunk],
 ) -> Array[Int] {
   let sorted = pdf_markdown_sorted_chunks(chunks)
-  let lines = pdf_markdown_lines_of_sorted_chunks(sorted[:])
+  let lines = pdf_markdown_lines_of_sorted_chunks(sorted)
   let output : Array[Int] = []
   let mut index = 0
   while index < lines.length() {
@@ -1177,20 +1171,14 @@ fn pdf_markdown_chunks_to_codepoints(
             pdf_markdown_line_is_table_body_candidate(lines[index]) {
         index += 1
       }
-      let columns = pdf_markdown_table_columns_of_lines(lines[:], start, index)
-      if pdf_markdown_table_run_is_table(lines[:], start, index, columns[:]) {
+      let columns = pdf_markdown_table_columns_of_lines(lines, start, index)
+      if pdf_markdown_table_run_is_table(lines, start, index, columns) {
         if output.length() > 0 {
           pdf_markdown_push_line_break(output)
         }
-        pdf_markdown_push_markdown_table(
-          output,
-          lines[:],
-          start,
-          index,
-          columns[:],
-        )
+        pdf_markdown_push_markdown_table(output, lines, start, index, columns)
       } else {
-        pdf_markdown_push_regular_lines(output, lines[:], start, index)
+        pdf_markdown_push_regular_lines(output, lines, start, index)
       }
     } else {
       if output.length() > 0 {
@@ -1214,15 +1202,15 @@ fn pdf_markdown_positioned_text_codepoints_of_page(
   pdf_markdown_collect_positioned_text_chunks(
     document,
     page.resources,
-    page.content[:],
+    page.content,
     chunks,
     next_index,
     font_cache,
     @pdflite.transform_identity_matrix,
     0,
   )
-  if pdf_markdown_chunks_have_positions(chunks[:]) {
-    Some(pdf_markdown_chunks_to_codepoints(chunks[:]))
+  if pdf_markdown_chunks_have_positions(chunks) {
+    Some(pdf_markdown_chunks_to_codepoints(chunks))
   } else {
     None
   }
@@ -1248,7 +1236,7 @@ fn pdf_markdown_push_text_codepoints_of_streams(
       Op_TJ(PdfArray(items)) =>
         pdf_markdown_append_codepoints(
           output,
-          pdf_markdown_extracted_codepoints_of_text_array(extractor, items[:])[:],
+          pdf_markdown_extracted_codepoints_of_text_array(extractor, items),
         )
       Op_quote(text) => {
         pdf_markdown_push_line_break(output)
@@ -1299,7 +1287,7 @@ fn pdf_markdown_text_codepoints_of_page(
       pdf_markdown_push_text_codepoints_of_streams(
         document,
         page.resources,
-        page.content[:],
+        page.content,
         output,
         font_cache,
         0,
@@ -1384,7 +1372,7 @@ fn pdf_markdown_string_of_codepoints(
 ) -> String raise {
   let normalized = pdf_markdown_normalize_codepoints(codepoints)
   let bytes = @pdflite.pdf_utf8_of_codepoints(normalized)
-  @utf8.decode_lossy(bytes[:])
+  @utf8.decode_lossy(bytes)
 }
 
 ///|
@@ -1394,7 +1382,7 @@ fn pdf_markdown_page_text(
   font_cache : PdfMarkdownFontCache,
 ) -> String raise {
   pdf_markdown_string_of_codepoints(
-    pdf_markdown_text_codepoints_of_page(document, page, font_cache)[:],
+    pdf_markdown_text_codepoints_of_page(document, page, font_cache),
   )
 }
 

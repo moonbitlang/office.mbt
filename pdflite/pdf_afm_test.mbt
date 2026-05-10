@@ -38,7 +38,7 @@ test "pdf_read_afm parses headers widths names and kerning" {
     "EndKernPairs\r\n" +
     "EndFontMetrics\r\n",
   )
-  let parsed = try! @pdflite.pdf_read_afm(afm[:])
+  let parsed = try! @pdflite.pdf_read_afm(afm)
   @test.assert_eq(parsed.headers.length(), 3)
   @test.assert_eq(
     parsed.headers[0],
@@ -69,7 +69,7 @@ test "pdf_read_afm preserves non UTF-8 glyph names as bytes" {
     glyph,
     afm_ascii_for_test(" ; B 0 0 0 0 ;\nEndCharMetrics\n"),
   ])
-  let parsed = try! @pdflite.pdf_read_afm(afm[:])
+  let parsed = try! @pdflite.pdf_read_afm(afm)
   @test.assert_eq(parsed.char_metrics, [(66, 610)])
   @test.assert_eq(parsed.char_name_widths, [(glyph, 610)])
 }
@@ -80,7 +80,7 @@ test "pdf_read_afm rejects malformed metric and kern rows" {
     "StartCharMetrics 1\nC 65 ; BAD 600 ; N A ;\nEndCharMetrics\n",
   )
   let metric_result : Result[@pdflite.PdfAfmData, Error] = try? @pdflite.pdf_read_afm(
-    bad_metric[:],
+    bad_metric,
   )
   guard metric_result is Err(@pdflite.PdfError::AfmExpected) else {
     fail("expected AfmExpected for bad metric row")
@@ -89,7 +89,7 @@ test "pdf_read_afm rejects malformed metric and kern rows" {
     "StartCharMetrics 1\nC 65 ; WX 600 ; N\nEndCharMetrics\n",
   )
   let missing_name_result : Result[@pdflite.PdfAfmData, Error] = try? @pdflite.pdf_read_afm(
-    missing_name[:],
+    missing_name,
   )
   guard missing_name_result is Err(@pdflite.PdfError::AfmExpected) else {
     fail("expected AfmExpected for incomplete metric row")
@@ -104,7 +104,7 @@ test "pdf_read_afm rejects malformed metric and kern rows" {
     "EndKernPairs\n",
   )
   let kern_result : Result[@pdflite.PdfAfmData, Error] = try? @pdflite.pdf_read_afm(
-    bad_kern[:],
+    bad_kern,
   )
   guard kern_result is Err(@pdflite.PdfError::AfmExpected) else {
     fail("expected AfmExpected for bad kern row")
@@ -119,7 +119,7 @@ test "pdf_read_afm rejects malformed metric and kern rows" {
     "EndKernPairs\n",
   )
   let kern_operator_result : Result[@pdflite.PdfAfmData, Error] = try? @pdflite.pdf_read_afm(
-    bad_kern_operator[:],
+    bad_kern_operator,
   )
   guard kern_operator_result is Err(@pdflite.PdfError::AfmExpected) else {
     fail("expected AfmExpected for bad kern operator")

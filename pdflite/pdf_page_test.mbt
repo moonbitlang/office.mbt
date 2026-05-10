@@ -884,7 +884,7 @@ test "pdfhello-style standard font document roundtrips" {
 
   let hello = @ascii.encode("Hello, World!")
   let extractor = try! parsed.text_extractor_of_font(font_object)
-  @test.assert_eq(try! extractor.codepoints_of_text(hello[:]), [
+  @test.assert_eq(try! extractor.codepoints_of_text(hello), [
     72, 101, 108, 108, 111, 44, 32, 87, 111, 114, 108, 100, 33,
   ])
 }

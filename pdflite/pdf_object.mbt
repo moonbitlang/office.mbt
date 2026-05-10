@@ -195,11 +195,7 @@ fn PdfStreamDataCrypt::decrypt(
       key_length_bits
     ) =>
       pdf_arc4_crypt_object(
-        object_number,
-        generation,
-        file_key[:],
-        key_length_bits,
-        data,
+        object_number, generation, file_key, key_length_bits, data,
       )
     PdfStreamDataAesV2Decrypt(
       object_number,
@@ -208,14 +204,10 @@ fn PdfStreamDataCrypt::decrypt(
       key_length_bits
     ) =>
       pdf_aesv2_decrypt_object_data(
-        object_number,
-        generation,
-        file_key[:],
-        key_length_bits,
-        data,
+        object_number, generation, file_key, key_length_bits, data,
       )
     PdfStreamDataAesV3Decrypt(file_key) =>
-      pdf_aesv3_decrypt_object_data(file_key[:], data)
+      pdf_aesv3_decrypt_object_data(file_key, data)
   }
 }
 
@@ -240,13 +232,13 @@ fn pdf_stream_to_get_raw_view(to_get : ToGet) -> BytesView raise PdfError {
 ///|
 fn pdf_stream_data_view(data : PdfStreamData) -> BytesView raise PdfError {
   match data {
-    StreamGot(bytes) => bytes[:]
+    StreamGot(bytes) => bytes
     StreamToGet(to_get) => {
       let raw = pdf_stream_to_get_raw_view(to_get)
       if to_get.crypt().is_identity() {
         raw
       } else {
-        to_get.crypt().decrypt(raw)[:]
+        to_get.crypt().decrypt(raw)
       }
     }
   }
@@ -323,10 +315,10 @@ pub fn PdfObject::dictionary_view(
   self : PdfObject,
 ) -> ArrayView[(PdfName, PdfObject)]? {
   match self {
-    PdfDictionary(entries) => Some(entries[:])
+    PdfDictionary(entries) => Some(entries)
     PdfStreamObject(stream) =>
       match stream.dictionary {
-        PdfDictionary(entries) => Some(entries[:])
+        PdfDictionary(entries) => Some(entries)
         _ => None
       }
     _ => None

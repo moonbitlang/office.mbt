@@ -247,7 +247,7 @@ fn PdfDocument::replace_chain_in_object(
       match pdf_lookup_array_index_name(key) {
         Some(index) =>
           if final_key {
-            pdf_lookup_replace_array_entry(values[:], index, value, key)
+            pdf_lookup_replace_array_entry(values, index, value, key)
           } else {
             match values.get(index) {
               Some(PdfIndirect(number)) => {
@@ -267,7 +267,7 @@ fn PdfDocument::replace_chain_in_object(
                   chain_index + 1,
                   value,
                 )
-                pdf_lookup_replace_array_entry(values[:], index, updated, key)
+                pdf_lookup_replace_array_entry(values, index, updated, key)
               }
               None => raise DictionaryKeyNotFound(key)
             }
@@ -365,12 +365,7 @@ fn PdfDocument::remove_chain_from_object(
                 )
                 if removed {
                   (
-                    pdf_lookup_replace_array_entry(
-                      values[:],
-                      index,
-                      updated,
-                      key,
-                    ),
+                    pdf_lookup_replace_array_entry(values, index, updated, key),
                     true,
                   )
                 } else {

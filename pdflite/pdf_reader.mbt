@@ -64,7 +64,7 @@ pub fn pdf_read_header_from_view(data : BytesView) -> PdfVersion raise PdfError 
 
 ///|
 pub fn pdf_read_header_from_bytes(data : PdfBytes) -> PdfVersion raise PdfError {
-  pdf_read_header_from_view(data[:])
+  pdf_read_header_from_view(data)
 }
 
 ///|
@@ -131,7 +131,7 @@ pub fn pdf_read_primitive_document_from_view(
 pub fn pdf_read_primitive_document_from_bytes(
   data : PdfBytes,
 ) -> PdfDocument raise PdfError {
-  pdf_read_primitive_document_from_view(data[:])
+  pdf_read_primitive_document_from_view(data)
 }
 
 ///|
@@ -1045,9 +1045,9 @@ fn PdfDocument::read_object_stream_context_from_object(
         pdf_reader_first_name(),
       )
       let data = pdf_stream_data_bytes(decoded_stream.data)
-      let pairs = pdf_object_stream_number_offsets(data[:], first, count)
+      let pairs = pdf_object_stream_number_offsets(data, first, count)
       let end_offsets = pdf_object_stream_end_offsets(
-        pairs[:],
+        pairs,
         data.length(),
         first,
       )
@@ -1188,7 +1188,7 @@ fn ByteCursor::read_pdf_xref_stream_section(
   let index_pairs = pdf_xref_stream_index_pairs(decoded_stream.dictionary)
   let data = pdf_stream_data_bytes(decoded_stream.data)
   {
-    entries: pdf_xref_stream_entries(data[:], widths, index_pairs[:]),
+    entries: pdf_xref_stream_entries(data, widths, index_pairs),
     trailer: pdf_reader_stream_dictionary_without_xref_keys(
       decoded_stream.dictionary,
     ),
@@ -1340,7 +1340,7 @@ pub fn pdf_revisions_from_view(data : BytesView) -> Int raise PdfError {
 
 ///|
 pub fn pdf_revisions_from_bytes(data : PdfBytes) -> Int raise PdfError {
-  pdf_revisions_from_view(data[:])
+  pdf_revisions_from_view(data)
 }
 
 ///|
@@ -1578,7 +1578,7 @@ fn pdf_read_reconstructed_xrefs(
     if pdf_reader_reconstruction_indirect_header_at(data, position) {
       cursor.seek_pdf_absolute(position)
       let parsed : Result[(PdfParsedIndirectObject, Int?), Error] = try? cursor.read_reconstructed_indirect_scan_candidate_at_current(
-        xrefs[:],
+        xrefs,
         xref_index=Some(xref_index),
       )
       match parsed {
@@ -1756,7 +1756,7 @@ fn pdf_reconstructed_xref_stream_entries(
 ) -> Array[PdfClassicXRefEntry] {
   let xrefs : Array[PdfClassicXRefEntry] = []
   for index = sections.length() - 1; index >= 0; index = index - 1 {
-    pdf_classic_xrefs_add_newer_first(xrefs, sections[index].entries[:])
+    pdf_classic_xrefs_add_newer_first(xrefs, sections[index].entries)
   }
   xrefs
 }
@@ -1767,7 +1767,7 @@ fn pdf_reconstructed_classic_xref_entries(
 ) -> Array[PdfClassicXRefEntry] {
   let xrefs : Array[PdfClassicXRefEntry] = []
   for index = sections.length() - 1; index >= 0; index = index - 1 {
-    pdf_classic_xrefs_add_newer_first(xrefs, sections[index].1.entries[:])
+    pdf_classic_xrefs_add_newer_first(xrefs, sections[index].1.entries)
   }
   xrefs
 }
@@ -1797,7 +1797,7 @@ fn PdfDocument::load_reconstructed_xref_stream_plain_objects(
 ) -> Unit {
   let cursor = byte_cursor_of_view(data)
   let xref_stream_refs = pdf_reconstructed_xref_stream_refs(sections)
-  let xref_stream_ref_set = pdf_reader_xref_stream_ref_set(xref_stream_refs[:])
+  let xref_stream_ref_set = pdf_reader_xref_stream_ref_set(xref_stream_refs)
   let xref_index = pdf_classic_xref_index(xrefs)
   for xref in xrefs {
     match xref.object_stream {
@@ -1937,8 +1937,8 @@ fn PdfDocument::load_reconstructed_xref_stream_objects(
   sections : ArrayView[PdfXRefSection],
 ) -> Unit {
   let xrefs = pdf_reconstructed_xref_stream_entries(sections)
-  self.load_reconstructed_xref_stream_plain_objects(data, sections, xrefs[:])
-  self.load_reconstructed_xref_stream_embedded_objects(xrefs[:])
+  self.load_reconstructed_xref_stream_plain_objects(data, sections, xrefs)
+  self.load_reconstructed_xref_stream_embedded_objects(xrefs)
 }
 
 ///|
@@ -2080,19 +2080,17 @@ fn pdf_read_reconstructed_document_from_view(
     []
   }
   let xref_coverage = pdf_reconstructed_xref_coverage(
-    data,
-    classic_xref_sections[:],
-    xref_stream_sections[:],
+    data, classic_xref_sections, xref_stream_sections,
   )
   let classic_xrefs = pdf_reconstructed_classic_xref_entries(
-    classic_xref_sections[:],
+    classic_xref_sections,
   )
-  document.load_reconstructed_classic_xref_plain_objects(data, classic_xrefs[:])
+  document.load_reconstructed_classic_xref_plain_objects(data, classic_xrefs)
   let reconstructed_xrefs = pdf_read_reconstructed_xrefs(data)
   for xref in reconstructed_xrefs {
     let parsed_result : Result[PdfParsedIndirectObject, Error] = try? cursor.read_reconstructed_object_at(
       xref.offset,
-      reconstructed_xrefs[:],
+      reconstructed_xrefs,
     )
     match parsed_result {
       Ok(parsed) =>
@@ -2111,22 +2109,19 @@ fn pdf_read_reconstructed_document_from_view(
     }
   }
   if include_xref_stream_trailers {
-    document.load_reconstructed_xref_stream_objects(
-      data,
-      xref_stream_sections[:],
-    )
+    document.load_reconstructed_xref_stream_objects(data, xref_stream_sections)
   }
   document.set_trailer_and_root(
     document.select_reconstructed_trailer(
       pdf_read_reconstructed_trailers(
         data,
         include_xref_streams=include_xref_stream_trailers,
-      )[:],
+      ),
     ),
   )
   if include_xref_stream_trailers && document.is_encrypted() {
     document.load_reconstructed_xref_stream_embedded_objects_with_passwords(
-      pdf_reconstructed_xref_stream_entries(xref_stream_sections[:])[:],
+      pdf_reconstructed_xref_stream_entries(xref_stream_sections),
       user_password,
       owner_password,
     )
@@ -2299,8 +2294,8 @@ fn pdf_read_classic_document_from_view_at_revision(
     None => ()
   }
   document.set_trailer_and_root(trailer)
-  let xref_stream_ref_set = pdf_reader_xref_stream_ref_set(xref_stream_refs[:])
-  let xref_index = pdf_classic_xref_index(xrefs[:])
+  let xref_stream_ref_set = pdf_reader_xref_stream_ref_set(xref_stream_refs)
+  let xref_index = pdf_classic_xref_index(xrefs)
   for xref in xrefs {
     match xref.object_stream {
       Some(_) => ()
@@ -2325,13 +2320,13 @@ fn pdf_read_classic_document_from_view_at_revision(
         }
     }
   }
-  for group in pdf_reader_object_stream_groups(xrefs[:]) {
+  for group in pdf_reader_object_stream_groups(xrefs) {
     let object_stream_number = group.0
     let (context, already_decrypted) = document.read_object_stream_context_with_passwords(
       object_stream_number, user_password, owner_password,
     )
     document.load_embedded_objects_from_context(
-      group.1[:],
+      group.1,
       object_stream_number,
       context,
       already_decrypted,
@@ -2357,7 +2352,7 @@ pub fn pdf_read_classic_document_from_view(
 pub fn pdf_read_classic_document_from_bytes(
   data : PdfBytes,
 ) -> PdfDocument raise PdfError {
-  pdf_read_classic_document_from_view(data[:])
+  pdf_read_classic_document_from_view(data)
 }
 
 ///|
@@ -2373,7 +2368,7 @@ pub fn pdf_read_classic_document_revision_from_bytes(
   data : PdfBytes,
   revision : Int,
 ) -> PdfDocument raise PdfError {
-  pdf_read_classic_document_revision_from_view(data[:], revision)
+  pdf_read_classic_document_revision_from_view(data, revision)
 }
 
 ///|
@@ -2431,14 +2426,14 @@ pub fn pdf_read_document_revision_from_bytes(
   data : PdfBytes,
   revision : Int,
 ) -> PdfDocument raise PdfError {
-  pdf_read_document_revision_from_view(data[:], revision)
+  pdf_read_document_revision_from_view(data, revision)
 }
 
 ///|
 pub fn pdf_read_document_from_bytes(
   data : PdfBytes,
 ) -> PdfDocument raise PdfError {
-  pdf_read_document_from_view(data[:])
+  pdf_read_document_from_view(data)
 }
 
 ///|
@@ -2527,7 +2522,7 @@ pub fn pdf_read_document_revision_from_bytes_with_passwords(
   owner_password? : BytesView? = None,
 ) -> PdfDecryptionResult? raise PdfError {
   pdf_read_document_revision_from_view_with_passwords(
-    data[:],
+    data,
     revision,
     user_password~,
     owner_password~,
@@ -2570,7 +2565,7 @@ pub fn pdf_read_document_from_bytes_with_passwords(
   owner_password? : BytesView? = None,
 ) -> PdfDecryptionResult? raise PdfError {
   pdf_read_document_from_view_with_passwords(
-    data[:],
+    data,
     user_password~,
     owner_password~,
   )
@@ -2863,7 +2858,7 @@ fn pdf_parse_object_stream_member_from_view(
 pub fn pdf_parse_stream_object_from_bytes(
   data : PdfBytes,
 ) -> PdfParsedIndirectObject raise PdfError {
-  pdf_parse_stream_object_from_view(data[:])
+  pdf_parse_stream_object_from_view(data)
 }
 
 ///|

@@ -147,7 +147,7 @@ fn pdf_content_push_object(
   output : Array[Byte],
   object : PdfObject,
 ) -> Unit raise PdfError {
-  pdf_content_push_view(output, pdf_write_object(object)[:])
+  pdf_content_push_view(output, pdf_write_object(object))
 }
 
 ///|
@@ -456,7 +456,7 @@ fn pdf_content_push_inline_image(
   if output.length() > 0 {
     output.push(32)
   }
-  pdf_content_push_view(output, pdf_content_ascii("BI")[:])
+  pdf_content_push_view(output, pdf_content_ascii("BI"))
   match dictionary {
     PdfDictionary(entries) =>
       for entry in entries {
@@ -488,9 +488,9 @@ fn pdf_content_push_inline_image(
       )
     None => ()
   }
-  pdf_content_push_view(output, pdf_content_ascii(" ID ")[:])
-  pdf_content_push_view(output, render_data[:])
-  pdf_content_push_view(output, pdf_content_ascii(" EI")[:])
+  pdf_content_push_view(output, pdf_content_ascii(" ID "))
+  pdf_content_push_view(output, render_data)
+  pdf_content_push_view(output, pdf_content_ascii(" EI"))
 }
 
 ///|
@@ -506,7 +506,7 @@ pub fn pdf_content_bytes_of_ops(
         if output.length() > 0 {
           output.push(32)
         }
-        pdf_content_push_view(output, bytes[:])
+        pdf_content_push_view(output, bytes)
       }
       _ => {
         let (operands, operator) = pdf_content_op_section(op)
@@ -566,7 +566,7 @@ pub fn pdf_content_concat_streams(streams : ArrayView[PdfBytes]) -> PdfBytes {
     if output.length() > 0 {
       output.push(32)
     }
-    pdf_content_push_view(output, stream[:])
+    pdf_content_push_view(output, stream)
   }
   Bytes::from_array(output)
 }
@@ -577,7 +577,7 @@ pub fn PdfDocument::parse_content_ops(
   streams : ArrayView[PdfObject],
 ) -> Array[PdfContentOp] raise PdfError {
   let raw_streams = self.pdf_content_raw_streams(streams)
-  pdf_parse_content_ops_from_view(pdf_content_concat_streams(raw_streams)[:])
+  pdf_parse_content_ops_from_view(pdf_content_concat_streams(raw_streams))
 }
 
 ///|
@@ -588,7 +588,7 @@ pub fn PdfDocument::parse_content_ops_with_resources(
 ) -> Array[PdfContentOp] raise PdfError {
   let raw_streams = self.pdf_content_raw_streams(streams)
   pdf_parse_content_ops_from_view_with_context(
-    pdf_content_concat_streams(raw_streams)[:],
+    pdf_content_concat_streams(raw_streams),
     Some(self),
     resources,
   )
@@ -600,7 +600,7 @@ pub fn PdfDocument::parse_content_bytes_with_resources(
   resources : PdfObject,
   data : PdfBytes,
 ) -> Array[PdfContentOp] raise PdfError {
-  self.parse_content_view_with_resources(resources, data[:])
+  self.parse_content_view_with_resources(resources, data)
 }
 
 ///|
@@ -2393,7 +2393,7 @@ fn pdf_content_parse_section(
 pub fn pdf_parse_content_ops_from_bytes(
   data : PdfBytes,
 ) -> Array[PdfContentOp] raise PdfError {
-  pdf_parse_content_ops_from_view(data[:])
+  pdf_parse_content_ops_from_view(data)
 }
 
 ///|

@@ -31,7 +31,7 @@ pub fn pdf_ascii_hex_encode_view(data : BytesView) -> PdfBytes {
 
 ///|
 pub fn pdf_ascii_hex_encode(data : PdfBytes) -> PdfBytes {
-  pdf_ascii_hex_encode_view(data[:])
+  pdf_ascii_hex_encode_view(data)
 }
 
 ///|
@@ -70,7 +70,7 @@ pub fn pdf_ascii_hex_decode_view(data : BytesView) -> PdfBytes raise PdfError {
 
 ///|
 pub fn pdf_ascii_hex_decode(data : PdfBytes) -> PdfBytes raise PdfError {
-  pdf_ascii_hex_decode_view(data[:])
+  pdf_ascii_hex_decode_view(data)
 }
 
 ///|
@@ -136,7 +136,7 @@ pub fn pdf_ascii85_encode_view(data : BytesView) -> PdfBytes {
 
 ///|
 pub fn pdf_ascii85_encode(data : PdfBytes) -> PdfBytes {
-  pdf_ascii85_encode_view(data[:])
+  pdf_ascii85_encode_view(data)
 }
 
 ///|
@@ -178,7 +178,7 @@ fn pdf_ascii85_finish_partial(
     while digits.length() < 5 {
       digits.push(84)
     }
-    pdf_ascii85_decode_group(digits[:], output, output_length)
+    pdf_ascii85_decode_group(digits, output, output_length)
   }
 }
 
@@ -207,7 +207,7 @@ pub fn pdf_ascii85_decode_view(data : BytesView) -> PdfBytes raise PdfError {
       } else if value >= 33 && value <= 117 {
         digits.push(value - 33)
         if digits.length() == 5 {
-          pdf_ascii85_decode_group(digits[:], output, 4)
+          pdf_ascii85_decode_group(digits, output, 4)
           digits = []
         }
       } else {
@@ -223,7 +223,7 @@ pub fn pdf_ascii85_decode_view(data : BytesView) -> PdfBytes raise PdfError {
 
 ///|
 pub fn pdf_ascii85_decode(data : PdfBytes) -> PdfBytes raise PdfError {
-  pdf_ascii85_decode_view(data[:])
+  pdf_ascii85_decode_view(data)
 }
 
 ///|
@@ -469,7 +469,7 @@ pub fn pdf_lzw_decode(
   data : PdfBytes,
   early_change? : Int = 1,
 ) -> PdfBytes raise PdfError {
-  pdf_lzw_decode_view(data[:], early_change~)
+  pdf_lzw_decode_view(data, early_change~)
 }
 
 ///|
@@ -583,7 +583,7 @@ pub fn pdf_ccitt_encode(
   rows : Int,
   data : PdfBytes,
 ) -> PdfBytes raise PdfError {
-  pdf_ccitt_encode_view(columns, rows, data[:])
+  pdf_ccitt_encode_view(columns, rows, data)
 }
 
 ///|
@@ -601,7 +601,7 @@ pub fn pdf_ccitt_g4_encode(
   rows : Int,
   data : PdfBytes,
 ) -> PdfBytes raise PdfError {
-  pdf_ccitt_g4_encode_view(columns, rows, data[:])
+  pdf_ccitt_g4_encode_view(columns, rows, data)
 }
 
 ///|
@@ -666,7 +666,7 @@ pub fn pdf_decode_filter_bytes(
     ) {
     pdf_flate_decode(data)
   } else {
-    pdf_decode_filter_view(filter, data[:])
+    pdf_decode_filter_view(filter, data)
   }
 }
 
@@ -760,11 +760,7 @@ fn pdf_encode_filter_bytes_with_optional_flate_level(
       None => pdf_flate_encode(data)
     }
   } else {
-    pdf_encode_filter_view_with_optional_flate_level(
-      filter,
-      data[:],
-      flate_level,
-    )
+    pdf_encode_filter_view_with_optional_flate_level(filter, data, flate_level)
   }
 }
 
@@ -1246,7 +1242,7 @@ fn pdf_decode_png_push_scanline(
       for i in 0..<scanline_width {
         let current = pdf_decode_png_current(data, row_start, available, i)
         decoded[i] = (
-            current + pdf_predictor_get0(decoded[:], i - bytes_per_pixel)
+            current + pdf_predictor_get0(decoded, i - bytes_per_pixel)
           ) %
           256
         output.push(decoded[i].to_byte())
@@ -1263,7 +1259,7 @@ fn pdf_decode_png_push_scanline(
         decoded[i] = (
             current +
             (
-              pdf_predictor_get0(decoded[:], i - bytes_per_pixel) +
+              pdf_predictor_get0(decoded, i - bytes_per_pixel) +
               pdf_predictor_get0(prior_decoded, i)
             ) /
             2
@@ -1274,7 +1270,7 @@ fn pdf_decode_png_push_scanline(
     4 =>
       for i in 0..<scanline_width {
         let current = pdf_decode_png_current(data, row_start, available, i)
-        let left = pdf_predictor_get0(decoded[:], i - bytes_per_pixel)
+        let left = pdf_predictor_get0(decoded, i - bytes_per_pixel)
         let up = pdf_predictor_get0(prior_decoded, i)
         let up_left = pdf_predictor_get0(prior_decoded, i - bytes_per_pixel)
         decoded[i] = (current + pdf_paeth_predictor(left, up, up_left)) % 256
@@ -1312,14 +1308,7 @@ fn pdf_decode_png_predictor(
     let row_start = index
     index += available
     pdf_decode_png_push_scanline(
-      output,
-      predictor,
-      prior_decoded[:],
-      decoded,
-      data,
-      row_start,
-      available,
-      bytes_per_pixel,
+      output, predictor, prior_decoded, decoded, data, row_start, available, bytes_per_pixel,
     )
     let previous = prior_decoded
     prior_decoded = decoded
@@ -1357,11 +1346,7 @@ pub fn pdf_decode_predictor(
     data
   } else {
     pdf_decode_predictor_view(
-      predictor,
-      colors,
-      bits_per_component,
-      columns,
-      data[:],
+      predictor, colors, bits_per_component, columns, data,
     )
   }
 }
@@ -1605,11 +1590,7 @@ pub fn pdf_encode_predictor(
     data
   } else {
     pdf_encode_predictor_view(
-      predictor,
-      colors,
-      bits_per_component,
-      columns,
-      data[:],
+      predictor, colors, bits_per_component, columns, data,
     )
   }
 }
@@ -1981,7 +1962,7 @@ fn pdf_decode_stream_filter_bytes(
   } else if pdf_filter_is_one_of(
       filter, pdf_filter_ccitt_fax_decode_name, pdf_filter_ccitt_fax_short_name,
     ) {
-    pdf_ccitt_decode_view(data[:], pdf_ccitt_params(dictionary))
+    pdf_ccitt_decode_view(data, pdf_ccitt_params(dictionary))
   } else {
     pdf_decode_filter_bytes(filter, data)
   }
@@ -2004,7 +1985,7 @@ fn PdfDocument::pdf_decode_stream_filter_bytes_direct(
   } else if pdf_filter_is_one_of(
       filter, pdf_filter_ccitt_fax_decode_name, pdf_filter_ccitt_fax_short_name,
     ) {
-    pdf_ccitt_decode_view(data[:], self.pdf_ccitt_params_direct(dictionary))
+    pdf_ccitt_decode_view(data, self.pdf_ccitt_params_direct(dictionary))
   } else {
     pdf_decode_filter_bytes(filter, data)
   }
@@ -2357,9 +2338,9 @@ fn pdf_encode_stream_with_ccitt(
     PdfStreamObject(stream) => {
       let data = pdf_stream_data_bytes(stream.data)
       let encoded = if k < 0 {
-        pdf_ccitt_encode_g4_view(data[:], columns, rows)
+        pdf_ccitt_encode_g4_view(data, columns, rows)
       } else {
-        pdf_ccitt_encode_g3_1d_view(data[:], columns, rows)
+        pdf_ccitt_encode_g3_1d_view(data, columns, rows)
       }
       if only_if_smaller && !pdf_encoded_stream_is_smaller(encoded, data) {
         object
@@ -2503,14 +2484,14 @@ pub fn pdf_run_length_encode_view(data : BytesView) -> PdfBytes {
       run_length += 1
     }
     if run_length >= 3 {
-      pdf_run_length_flush_literal(output, literal[:])
+      pdf_run_length_flush_literal(output, literal)
       literal = []
       output.push((257 - run_length).to_byte())
       output.push(value)
       index += run_length
     } else {
       if literal.length() + run_length > 128 {
-        pdf_run_length_flush_literal(output, literal[:])
+        pdf_run_length_flush_literal(output, literal)
         literal = []
       }
       for _ in 0..<run_length {
@@ -2519,14 +2500,14 @@ pub fn pdf_run_length_encode_view(data : BytesView) -> PdfBytes {
       index += run_length
     }
   }
-  pdf_run_length_flush_literal(output, literal[:])
+  pdf_run_length_flush_literal(output, literal)
   output.push(128)
   Bytes::from_array(output)
 }
 
 ///|
 pub fn pdf_run_length_encode(data : PdfBytes) -> PdfBytes {
-  pdf_run_length_encode_view(data[:])
+  pdf_run_length_encode_view(data)
 }
 
 ///|
@@ -2567,5 +2548,5 @@ pub fn pdf_run_length_decode_view(data : BytesView) -> PdfBytes {
 
 ///|
 pub fn pdf_run_length_decode(data : PdfBytes) -> PdfBytes {
-  pdf_run_length_decode_view(data[:])
+  pdf_run_length_decode_view(data)
 }

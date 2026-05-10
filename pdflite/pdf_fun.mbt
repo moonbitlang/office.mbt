@@ -699,7 +699,7 @@ fn pdf_fun_calculator_text_token(
   token : ArrayView[Byte],
 ) -> PdfCalculatorToken? raise PdfError {
   if token.length() > 0 {
-    let text = @ascii.decode(Bytes::from_array(token)[:]) catch {
+    let text = @ascii.decode(Bytes::from_array(token)) catch {
       _ => raise FunctionExpected
     }
     Some(PdfCalculatorTokenText(text))

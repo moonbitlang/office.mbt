@@ -55,8 +55,7 @@ fn PdfDocument::collect_referenced_object_numbers(
         match resolved {
           PdfDictionary(entries) =>
             if pdf_reference_should_follow_dictionary(
-                entries[:],
-                no_follow_contains,
+                entries, no_follow_contains,
               ) {
               found[number] = true
               self.collect_referenced_object_numbers(

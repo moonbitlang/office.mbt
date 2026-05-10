@@ -260,13 +260,13 @@ pub fn pdf_date_of_view(bytes : BytesView) -> PdfDate raise PdfError {
 
 ///|
 pub fn pdf_date_of_bytes(bytes : PdfBytes) -> PdfDate raise PdfError {
-  pdf_date_of_view(bytes[:])
+  pdf_date_of_view(bytes)
 }
 
 ///|
 pub fn pdf_date_of_string(text : String) -> PdfDate raise PdfError {
   let bytes = @ascii.encode(text)
-  pdf_date_of_view(bytes[:])
+  pdf_date_of_view(bytes)
 }
 
 ///|
@@ -278,7 +278,7 @@ pub fn pdf_bytes_of_date(date : PdfDate) -> PdfBytes raise PdfError {
 ///|
 pub fn pdf_date_of_object(object : PdfObject) -> PdfDate raise PdfError {
   match object {
-    PdfString(bytes) => pdf_date_of_view(bytes[:])
+    PdfString(bytes) => pdf_date_of_view(bytes)
     _ => raise BadDate
   }
 }

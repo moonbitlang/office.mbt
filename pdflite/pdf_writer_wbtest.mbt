@@ -19,8 +19,8 @@ test "pdf_writer_changed_object_numbers deduplicates changed event log" {
 ///|
 test "pdf_writer_int_array_contains handles present and missing values" {
   let values : Array[Int] = [0, 2, 4]
-  @test.assert_eq(pdf_writer_int_array_contains(values[:], 2), true)
-  @test.assert_eq(pdf_writer_int_array_contains(values[:], 3), false)
+  @test.assert_eq(pdf_writer_int_array_contains(values, 2), true)
+  @test.assert_eq(pdf_writer_int_array_contains(values, 3), false)
 }
 
 ///|
@@ -28,8 +28,8 @@ test "pdf_writer_push_classic_xref_subsection scans sorted xrefs in order" {
   let output : Array[Byte] = []
   let xrefs : Array[(Int, Int, Int)] = [(2, 33, 1), (4, 44, 2)]
   let xref_index : Ref[Int] = { val: 0 }
-  pdf_writer_push_classic_xref_subsection(output, xrefs[:], 0, 3, xref_index)
-  pdf_writer_push_classic_xref_subsection(output, xrefs[:], 4, 1, xref_index)
+  pdf_writer_push_classic_xref_subsection(output, xrefs, 0, 3, xref_index)
+  pdf_writer_push_classic_xref_subsection(output, xrefs, 4, 1, xref_index)
   @test.assert_eq(
     Bytes::from_array(output),
     @ascii.encode(
@@ -42,7 +42,7 @@ test "pdf_writer_push_classic_xref_subsection scans sorted xrefs in order" {
 test "pdf_writer_xref_stream_data emits full table in object order" {
   let xrefs : Array[(Int, Int, Int)] = [(1, 20, 0), (3, 300, 2)]
   @test.assert_eq(
-    pdf_writer_xref_stream_data(xrefs[:], 5, 4, 400),
+    pdf_writer_xref_stream_data(xrefs, 5, 4, 400),
     writer_wb_bytes_for_test([
       0, 0, 0, 0, 0, 255, 255, 1, 0, 0, 0, 20, 0, 0, 0, 0, 0, 0, 0, 255, 255, 1,
       0, 0, 1, 44, 0, 2, 1, 0, 0, 1, 144, 0, 0,
@@ -55,7 +55,7 @@ test "pdf_writer_xref_stream_data_for_numbers emits sparse entries in order" {
   let xrefs : Array[(Int, Int, Int)] = [(2, 33, 1), (4, 44, 2)]
   let numbers : Array[Int] = [0, 2, 4, 5]
   @test.assert_eq(
-    pdf_writer_xref_stream_data_for_numbers(xrefs[:], numbers[:], 5, 55),
+    pdf_writer_xref_stream_data_for_numbers(xrefs, numbers, 5, 55),
     writer_wb_bytes_for_test([
       0, 0, 0, 0, 0, 255, 255, 1, 0, 0, 0, 33, 0, 1, 1, 0, 0, 0, 44, 0, 2, 1, 0,
       0, 0, 55, 0, 0,

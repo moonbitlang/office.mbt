@@ -118,7 +118,7 @@ test "pdf_ascii_hex_decode ignores whitespace and accepts lowercase" {
 ///|
 test "pdf_ascii_hex view codecs read borrowed slices" {
   let plain = codec_ascii_for_test("abc")
-  let wrapped_plain = codec_wrap_view_for_test("xx", plain[:], "yy")
+  let wrapped_plain = codec_wrap_view_for_test("xx", plain, "yy")
   @test.assert_eq(
     @pdflite.pdf_ascii_hex_encode_view(
       wrapped_plain[2:wrapped_plain.length() - 2],
@@ -193,7 +193,7 @@ test "pdf_ascii85_decode skips whitespace" {
 ///|
 test "pdf_ascii85 view codecs read borrowed slices" {
   let plain = codec_bytes_for_test([77, 97, 110])
-  let wrapped_plain = codec_wrap_view_for_test("xx", plain[:], "yy")
+  let wrapped_plain = codec_wrap_view_for_test("xx", plain, "yy")
   @test.assert_eq(
     @pdflite.pdf_ascii85_encode_view(
       wrapped_plain[2:wrapped_plain.length() - 2],
@@ -294,7 +294,7 @@ test "pdf_lzw_decode handles the repeated previous-code case" {
 ///|
 test "pdf_lzw_decode_view reads borrowed compressed slices" {
   let encoded = codec_bytes_for_test([128, 16, 96, 32])
-  let wrapped = codec_wrap_view_for_test("xx", encoded[:], "yy")
+  let wrapped = codec_wrap_view_for_test("xx", encoded, "yy")
   @test.assert_eq(
     try! @pdflite.pdf_lzw_decode_view(wrapped[2:wrapped.length() - 2]),
     codec_ascii_for_test("A"),
@@ -510,7 +510,7 @@ test "pdf_flate_encode_with_level exposes zlib level choices" {
   @test.assert_eq(balanced[1].to_int(), 94)
   @test.assert_eq(@pdflite.pdf_flate_decode(balanced), repeated)
 
-  let best = @pdflite.pdf_flate_encode_view_with_level(repeated[:], 9)
+  let best = @pdflite.pdf_flate_encode_view_with_level(repeated, 9)
   @test.assert_eq(best[1].to_int(), 218)
   @test.assert_eq(@pdflite.pdf_flate_decode(best), repeated)
 
@@ -582,12 +582,12 @@ test "pdf_flate_encode_with_level matches native miniz byte output" {
 ///|
 test "pdf_flate view codecs read borrowed slices" {
   let plain = codec_ascii_for_test("Hi")
-  let wrapped_plain = codec_wrap_view_for_test("xx", plain[:], "yy")
+  let wrapped_plain = codec_wrap_view_for_test("xx", plain, "yy")
   let encoded = @pdflite.pdf_flate_encode_view(
     wrapped_plain[2:wrapped_plain.length() - 2],
   )
   @test.assert_eq(encoded[0].to_int(), 120)
-  let wrapped_encoded = codec_wrap_view_for_test("xx", encoded[:], "yy")
+  let wrapped_encoded = codec_wrap_view_for_test("xx", encoded, "yy")
   @test.assert_eq(
     try! @pdflite.pdf_flate_decode_view(
       wrapped_encoded[2:wrapped_encoded.length() - 2],
@@ -668,7 +668,7 @@ test "pdf filter dispatch view APIs read borrowed slices" {
   )
   let flate = codec_name_for_test("/FlateDecode")
   let encoded_flate = @pdflite.pdf_flate_encode(codec_ascii_for_test("Hi"))
-  let wrapped_flate = codec_wrap_view_for_test("xx", encoded_flate[:], "yy")
+  let wrapped_flate = codec_wrap_view_for_test("xx", encoded_flate, "yy")
   @test.assert_eq(
     @pdflite.pdf_decode_filter_view(
       flate,
@@ -1052,9 +1052,7 @@ test "pdf predictor view APIs read borrowed slices" {
   )
   let decoded_input = codec_bytes_for_test([1, 10, 10, 10])
   let wrapped_decoded_input = codec_wrap_view_for_test(
-    "xx",
-    decoded_input[:],
-    "yy",
+    "xx", decoded_input, "yy",
   )
   @test.assert_eq(
     try! @pdflite.pdf_decode_predictor_view(
@@ -1067,7 +1065,7 @@ test "pdf predictor view APIs read borrowed slices" {
     codec_bytes_for_test([10, 20, 30]),
   )
   let plain = codec_bytes_for_test([10, 20, 30])
-  let wrapped_plain = codec_wrap_view_for_test("xx", plain[:], "yy")
+  let wrapped_plain = codec_wrap_view_for_test("xx", plain, "yy")
   @test.assert_eq(
     try! @pdflite.pdf_encode_predictor_view(
       11,
@@ -1388,7 +1386,7 @@ test "PdfDocument pdf_decode_stream applies indirect lzw EarlyChange" {
     codes.push(65)
   }
   codes.push(257)
-  let encoded = codec_lzw_codes_for_test(codes[:], 0)
+  let encoded = codec_lzw_codes_for_test(codes, 0)
   let stream = @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
       (length, PdfInteger(encoded.length())),
@@ -2015,7 +2013,7 @@ test "pdf_decode_stream_onestage applies lzw EarlyChange DecodeParms" {
     codes.push(65)
   }
   codes.push(257)
-  let encoded = codec_lzw_codes_for_test(codes[:], 0)
+  let encoded = codec_lzw_codes_for_test(codes, 0)
   let stream = @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
       (length, PdfInteger(encoded.length())),
@@ -2901,7 +2899,7 @@ test "pdf_run_length_encode emits literal repeat and eod chunks" {
 ///|
 test "pdf_run_length view codecs read borrowed slices" {
   let plain = codec_ascii_for_test("ABCZZZZ")
-  let wrapped_plain = codec_wrap_view_for_test("xx", plain[:], "yy")
+  let wrapped_plain = codec_wrap_view_for_test("xx", plain, "yy")
   @test.assert_eq(
     @pdflite.pdf_run_length_encode_view(
       wrapped_plain[2:wrapped_plain.length() - 2],
@@ -2909,7 +2907,7 @@ test "pdf_run_length view codecs read borrowed slices" {
     codec_bytes_for_test([2, 65, 66, 67, 253, 90, 128]),
   )
   let encoded = codec_bytes_for_test([2, 65, 66, 67, 253, 90, 128])
-  let wrapped_encoded = codec_wrap_view_for_test("xx", encoded[:], "yy")
+  let wrapped_encoded = codec_wrap_view_for_test("xx", encoded, "yy")
   @test.assert_eq(
     @pdflite.pdf_run_length_decode_view(
       wrapped_encoded[2:wrapped_encoded.length() - 2],

@@ -350,7 +350,7 @@ pub fn pdf_aes_cbc_decrypt(
   }
   let decrypted = Bytes::from_array(output)
   if remove_padding {
-    pdf_aes_remove_padding(decrypted[:])
+    pdf_aes_remove_padding(decrypted)
   } else {
     decrypted
   }
@@ -426,7 +426,7 @@ pub fn pdf_aes_ecb_decrypt(
   }
   let decrypted = Bytes::from_array(output)
   if remove_padding {
-    pdf_aes_remove_padding(decrypted[:])
+    pdf_aes_remove_padding(decrypted)
   } else {
     decrypted
   }
@@ -471,7 +471,7 @@ pub fn pdf_cryptprimitives_crypt(
   key : ArrayView[Int],
   data : BytesView,
 ) -> PdfBytes raise PdfError {
-  pdf_arc4_crypt(pdf_bytes_of_int_array(key)[:], data)
+  pdf_arc4_crypt(pdf_bytes_of_int_array(key), data)
 }
 
 ///|
@@ -482,7 +482,7 @@ pub fn pdf_cryptprimitives_aes_decrypt_data(
   remove_padding? : Bool = true,
 ) -> PdfBytes raise PdfError {
   pdf_aes_cbc_decrypt(
-    pdf_cryptprimitives_key_from_ints(nk, key)[:],
+    pdf_cryptprimitives_key_from_ints(nk, key),
     data,
     remove_padding~,
   )
@@ -496,7 +496,7 @@ pub fn pdf_cryptprimitives_aes_decrypt_data_ecb(
   remove_padding? : Bool = true,
 ) -> PdfBytes raise PdfError {
   pdf_aes_ecb_decrypt(
-    pdf_cryptprimitives_key_from_ints(nk, key)[:],
+    pdf_cryptprimitives_key_from_ints(nk, key),
     data,
     remove_padding~,
   )
@@ -510,7 +510,7 @@ pub fn pdf_cryptprimitives_aes_encrypt_data_with_firstblock(
   firstblock : BytesView,
 ) -> PdfBytes raise PdfError {
   pdf_aes_cbc_encrypt_with_iv(
-    pdf_cryptprimitives_key_from_ints(nk, key)[:],
+    pdf_cryptprimitives_key_from_ints(nk, key),
     firstblock,
     data,
   )
@@ -522,7 +522,7 @@ pub fn pdf_cryptprimitives_aes_encrypt_data_ecb(
   key : ArrayView[Int],
   data : BytesView,
 ) -> PdfBytes raise PdfError {
-  pdf_aes_ecb_encrypt(pdf_cryptprimitives_key_from_ints(nk, key)[:], data)
+  pdf_aes_ecb_encrypt(pdf_cryptprimitives_key_from_ints(nk, key), data)
 }
 
 ///|
@@ -573,9 +573,9 @@ pub fn pdf_cryptprimitives_find_hash(
       crypt_type,
       object_number,
       generation,
-      pdf_bytes_of_int_array(key)[:],
+      pdf_bytes_of_int_array(key),
       key_length_bits,
-    )[:],
+    ),
   )
 }
 
@@ -599,9 +599,9 @@ fn pdf_cryptprimitives_stream_key(
       crypt_type,
       object_number,
       generation,
-      pdf_bytes_of_int_array(key)[:],
+      pdf_bytes_of_int_array(key),
       key_length_bits,
-    )[:]
+    )
   }
 }
 
@@ -651,5 +651,5 @@ pub fn pdf_arc4_crypt_object(
     file_key,
     key_length_bits,
   )
-  pdf_arc4_crypt(object_key[:], data)
+  pdf_arc4_crypt(object_key, data)
 }
