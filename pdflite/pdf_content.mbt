@@ -1,4 +1,9 @@
 ///|
+/// Flat representation of PDF content stream operators.
+///
+/// Text strings and unknown operators are stored as raw PDF bytes. Inline images
+/// carry their image dictionary, optional decode parameters, and image data; the
+/// parser decodes supported inline-image filters when it can do so safely.
 pub(all) enum PdfContentOp {
   Op_w(Double)
   Op_J(Int)
@@ -126,11 +131,13 @@ fn pdf_content_inline_l_name() -> PdfName {
 }
 
 ///|
+/// Return the marked-content operation that begins a PDF/UA artifact.
 pub fn pdf_content_begin_artifact() -> PdfContentOp {
   Op_BMC(pdf_content_artifact_name)
 }
 
 ///|
+/// Return the marked-content operation that ends the current PDF/UA artifact.
 pub fn pdf_content_end_artifact() -> PdfContentOp {
   Op_EMC
 }
@@ -494,6 +501,12 @@ fn pdf_content_push_inline_image(
 }
 
 ///|
+/// Serialize content operators to PDF content-stream bytes.
+///
+/// Operators are separated with whitespace. `Op_Unknown` bytes are emitted as
+/// captured. Inline images with no filter are Flate-encoded and written with
+/// inline `/F /Fl` and `/L` metadata; inline images with existing filters keep
+/// their supplied encoded data and decode parameters.
 pub fn pdf_content_bytes_of_ops(
   ops : ArrayView[PdfContentOp],
 ) -> PdfBytes raise PdfError {
@@ -518,11 +531,16 @@ pub fn pdf_content_bytes_of_ops(
 }
 
 ///|
+/// Serialize one content operator to PDF content-stream bytes.
 pub fn pdf_content_bytes_of_op(op : PdfContentOp) -> PdfBytes raise PdfError {
   pdf_content_bytes_of_ops([op])
 }
 
 ///|
+/// Compatibility wrapper for `pdf_content_bytes_of_ops`.
+///
+/// The name follows CamlPDF, where strings were byte sequences; this function
+/// returns `PdfBytes`.
 pub fn pdf_string_of_content_ops(
   ops : ArrayView[PdfContentOp],
 ) -> PdfBytes raise PdfError {
@@ -530,11 +548,19 @@ pub fn pdf_string_of_content_ops(
 }
 
 ///|
+/// Compatibility wrapper for `pdf_content_bytes_of_op`.
+///
+/// The name follows CamlPDF, where strings were byte sequences; this function
+/// returns `PdfBytes`.
 pub fn pdf_string_of_content_op(op : PdfContentOp) -> PdfBytes raise PdfError {
   pdf_content_bytes_of_op(op)
 }
 
 ///|
+/// Build an uncompressed PDF stream object from content operators.
+///
+/// The returned stream dictionary contains `/Length` for the serialized byte
+/// length and no outer stream filter.
 pub fn pdf_content_stream_of_ops(
   ops : ArrayView[PdfContentOp],
 ) -> PdfObject raise PdfError {
@@ -546,6 +572,7 @@ pub fn pdf_content_stream_of_ops(
 }
 
 ///|
+/// Concatenate already-decoded content stream views with a single space between them.
 pub fn pdf_content_concat_stream_views(
   streams : ArrayView[BytesView],
 ) -> PdfBytes {
@@ -560,6 +587,7 @@ pub fn pdf_content_concat_stream_views(
 }
 
 ///|
+/// Concatenate already-decoded content streams with a single space between them.
 pub fn pdf_content_concat_streams(streams : ArrayView[PdfBytes]) -> PdfBytes {
   let output : Array[Byte] = []
   for stream in streams {
@@ -572,6 +600,12 @@ pub fn pdf_content_concat_streams(streams : ArrayView[PdfBytes]) -> PdfBytes {
 }
 
 ///|
+/// Decode and parse a list of content stream objects from this document.
+///
+/// Each input must resolve to a stream object. Stream filters are decoded before
+/// parsing, then the decoded streams are concatenated with whitespace. Use
+/// `parse_content_ops_with_resources` when inline-image length inference needs
+/// page resources.
 pub fn PdfDocument::parse_content_ops(
   self : PdfDocument,
   streams : ArrayView[PdfObject],
@@ -581,6 +615,10 @@ pub fn PdfDocument::parse_content_ops(
 }
 
 ///|
+/// Decode and parse content stream objects with page resources.
+///
+/// The resource dictionary is used for inline-image color-space component
+/// lookup when an unfiltered inline image has no reliable declared length.
 pub fn PdfDocument::parse_content_ops_with_resources(
   self : PdfDocument,
   resources : PdfObject,
@@ -595,6 +633,9 @@ pub fn PdfDocument::parse_content_ops_with_resources(
 }
 
 ///|
+/// Parse content bytes with page resources.
+///
+/// This is the owned-byte wrapper for `parse_content_view_with_resources`.
 pub fn PdfDocument::parse_content_bytes_with_resources(
   self : PdfDocument,
   resources : PdfObject,
@@ -604,6 +645,10 @@ pub fn PdfDocument::parse_content_bytes_with_resources(
 }
 
 ///|
+/// Parse a content byte view with page resources.
+///
+/// The input view is read directly; returned operators own any byte data they
+/// need to keep, such as text strings and inline-image data.
 pub fn PdfDocument::parse_content_view_with_resources(
   self : PdfDocument,
   resources : PdfObject,
@@ -2390,6 +2435,11 @@ fn pdf_content_parse_section(
 }
 
 ///|
+/// Parse standalone content bytes without document or resource context.
+///
+/// This is suitable for ordinary operators and inline images that can be read
+/// from explicit length or filter markers. Use the document methods when stream
+/// decoding or resource-based inline-image sizing is required.
 pub fn pdf_parse_content_ops_from_bytes(
   data : PdfBytes,
 ) -> Array[PdfContentOp] raise PdfError {
@@ -2397,6 +2447,7 @@ pub fn pdf_parse_content_ops_from_bytes(
 }
 
 ///|
+/// Parse a standalone content byte view without document or resource context.
 pub fn pdf_parse_content_ops_from_view(
   data : BytesView,
 ) -> Array[PdfContentOp] raise PdfError {
