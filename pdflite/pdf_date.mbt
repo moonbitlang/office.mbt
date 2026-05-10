@@ -1,4 +1,8 @@
 ///|
+/// A PDF date with local time-zone offset components.
+///
+/// The fields mirror PDF's `D:YYYYMMDDHHmmSSOHH'mm'` representation. Month and
+/// day default to `1` when omitted during parsing; time fields default to zero.
 pub(all) struct PdfDate {
   year : Int
   month : Int
@@ -64,6 +68,10 @@ fn pdf_date_pad4(value : Int) -> String {
 }
 
 ///|
+/// Formats a PDF date as an ASCII string in PDF date syntax.
+///
+/// Raises `PdfError::BadDate` if any field is outside the representable PDF
+/// date ranges.
 pub fn pdf_string_of_date(date : PdfDate) -> String raise PdfError {
   pdf_date_check(date)
   let offset = if date.hour_offset < 0 {
@@ -203,6 +211,11 @@ fn pdf_date_has_distiller_y2k_bug(bytes : BytesView, index : Int) -> Bool {
 }
 
 ///|
+/// Parses a PDF date from a byte view.
+///
+/// Both strings with and without the `D:` prefix are accepted. Missing optional
+/// date fields use the PDF defaults described on `PdfDate`. Raises
+/// `PdfError::BadDate` for malformed or out-of-range dates.
 pub fn pdf_date_of_view(bytes : BytesView) -> PdfDate raise PdfError {
   let mut index = if bytes.length() >= 2 &&
     bytes[0].to_int() == 68 &&
@@ -259,23 +272,35 @@ pub fn pdf_date_of_view(bytes : BytesView) -> PdfDate raise PdfError {
 }
 
 ///|
+/// Parses a PDF date from owned PDF bytes.
 pub fn pdf_date_of_bytes(bytes : PdfBytes) -> PdfDate raise PdfError {
   pdf_date_of_view(bytes)
 }
 
 ///|
+/// Parses a PDF date from an ASCII string.
+///
+/// Raises `PdfError::BadDate` for malformed or out-of-range dates.
 pub fn pdf_date_of_string(text : String) -> PdfDate raise PdfError {
   let bytes = @ascii.encode(text)
   pdf_date_of_view(bytes)
 }
 
 ///|
+/// Formats a PDF date as an owned PDF byte string.
+///
+/// Raises `PdfError::BadDate` if any field is outside the representable PDF
+/// date ranges.
 pub fn pdf_bytes_of_date(date : PdfDate) -> PdfBytes raise PdfError {
   let text = pdf_string_of_date(date)
   @ascii.encode(text)
 }
 
 ///|
+/// Extracts and parses a PDF date from a `PdfString` object.
+///
+/// Raises `PdfError::BadDate` if the object is not a string or if the date
+/// payload is malformed.
 pub fn pdf_date_of_object(object : PdfObject) -> PdfDate raise PdfError {
   match object {
     PdfString(bytes) => pdf_date_of_view(bytes)
@@ -284,6 +309,10 @@ pub fn pdf_date_of_object(object : PdfObject) -> PdfDate raise PdfError {
 }
 
 ///|
+/// Formats a PDF date as a `PdfString` object.
+///
+/// Raises `PdfError::BadDate` if any field is outside the representable PDF
+/// date ranges.
 pub fn pdf_object_of_date(date : PdfDate) -> PdfObject raise PdfError {
   PdfString(pdf_bytes_of_date(date))
 }

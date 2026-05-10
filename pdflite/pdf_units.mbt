@@ -1,4 +1,8 @@
 ///|
+/// Units accepted by page and geometry helpers.
+///
+/// PDF coordinates are ultimately expressed in points, but the public API keeps
+/// common paper and layout units explicit at call sites.
 pub(all) enum PdfUnit {
   PdfPoint
   Inch
@@ -7,6 +11,7 @@ pub(all) enum PdfUnit {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Converts a value from `unit` to PDF points.
 pub fn unit_points(value : Double, unit : PdfUnit) -> Double {
   match unit {
     PdfPoint => value
@@ -17,6 +22,7 @@ pub fn unit_points(value : Double, unit : PdfUnit) -> Double {
 }
 
 ///|
+/// Converts a value from `unit` to inches.
 pub fn unit_inches(value : Double, unit : PdfUnit) -> Double {
   match unit {
     Inch => value
@@ -27,6 +33,10 @@ pub fn unit_inches(value : Double, unit : PdfUnit) -> Double {
 }
 
 ///|
+/// Converts a value from `unit` to centimetres.
+///
+/// The `PdfPoint` path preserves CamlPDF's historical conversion constant for
+/// compatibility with existing output.
 pub fn unit_centimetres(value : Double, unit : PdfUnit) -> Double {
   match unit {
     Centimetre => value
@@ -38,6 +48,7 @@ pub fn unit_centimetres(value : Double, unit : PdfUnit) -> Double {
 }
 
 ///|
+/// Converts a value from `unit` to millimetres.
 pub fn unit_millimetres(value : Double, unit : PdfUnit) -> Double {
   unit_centimetres(value, unit) * 10.0
 }
