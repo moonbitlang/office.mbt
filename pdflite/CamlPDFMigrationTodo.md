@@ -10,7 +10,7 @@ Current estimate:
 - Native main-feature parity: 98.0%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
   breadth: 85-90%.
-- Warning 74 public documentation cleanup: 20 native diagnostics remain after
+- Warning 74 public documentation cleanup: 10 native diagnostics remain after
   documenting the byte, object, document, reader, lexeme, lookup/tree,
   colour-space, transform, destination, merge-helper, standard-font, Flate, and
   text/font extraction, cryptography and primitive crypto, page-tree, writer,
@@ -76,7 +76,10 @@ Current backend snapshot:
   - [x] ~~Document bookmark APIs, including flattened preorder levels, raw title
     bytes, action-preservation mode, copy-on-write outline replacement, and
     destination transforms.~~
-  - [ ] Document image, structure, renumbering, and Markdown helper APIs.
+  - [x] ~~Document image APIs, including encoded-versus-raw extraction,
+    image-mask defaults, colour-space/resource lookup, BPC preservation, decode
+    application, and 24bpp RGB output layout.~~
+  - [ ] Document structure, renumbering, and Markdown helper APIs.
 - [x] ~~Stabilize native-first core architecture and main workflows.~~
 - [x] ~~Share CamlPDF-style trailer `/ID` generation across `change_id`,
   encryption, and merge.~~

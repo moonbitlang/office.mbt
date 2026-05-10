@@ -158,6 +158,7 @@ fn pdf_image_jpxdecode_name() -> PdfName {
 }
 
 ///|
+/// Pixel layout for extracted raw image data.
 pub(all) enum PdfPixelLayout {
   PdfBPP1
   PdfBPP8
@@ -166,6 +167,11 @@ pub(all) enum PdfPixelLayout {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Extracted PDF image data.
+///
+/// JPEG, JPEG2000, and JBIG2 variants keep their encoded bytes and optional
+/// decode array. `PdfJBIG2` also carries the optional `/JBIG2Globals` object
+/// number. `PdfRawImage` stores width, height, layout, and decoded pixel bytes.
 pub(all) enum PdfImage {
   PdfJPEG(PdfBytes, Array[Double]?)
   PdfJPEG2000(PdfBytes, Array[Double]?)
@@ -190,6 +196,10 @@ fn PdfDocument::pdf_image_is_mask(
 }
 
 ///|
+/// Read an image XObject colour space.
+///
+/// `/ImageMask true` images are treated as `PdfDeviceGray`. Otherwise this
+/// reads `/ColorSpace` or `/CS`, resolving named spaces through `resources`.
 pub fn PdfDocument::image_colour_space(
   self : PdfDocument,
   image : PdfObject,
@@ -215,6 +225,7 @@ pub fn PdfDocument::image_colour_space(
 }
 
 ///|
+/// Compatibility alias for `PdfDocument::image_colour_space`.
 pub fn PdfDocument::colspace(
   self : PdfDocument,
   image : PdfObject,
@@ -224,6 +235,7 @@ pub fn PdfDocument::colspace(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::colspace`.
 pub fn pdf_image_colspace(
   document : PdfDocument,
   image : PdfObject,
@@ -233,6 +245,10 @@ pub fn pdf_image_colspace(
 }
 
 ///|
+/// Return an image's `/BitsPerComponent` or abbreviated `/BPC` entry.
+///
+/// Image masks default to `1` when no explicit value is present. The raw object
+/// is returned to preserve the PDF representation.
 pub fn PdfDocument::image_bits_per_component(
   self : PdfDocument,
   image : PdfObject,
@@ -254,11 +270,13 @@ pub fn PdfDocument::image_bits_per_component(
 }
 
 ///|
+/// Compatibility alias for `PdfDocument::image_bits_per_component`.
 pub fn PdfDocument::bpc(self : PdfDocument, image : PdfObject) -> PdfObject? {
   self.image_bits_per_component(image)
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::bpc`.
 pub fn pdf_image_bpc(document : PdfDocument, image : PdfObject) -> PdfObject? {
   document.bpc(image)
 }
@@ -1297,6 +1315,12 @@ fn PdfDocument::pdf_image_raw_8bpp_as_rgb24_owned(
 }
 
 ///|
+/// Extract an image as either encoded image bytes or 24bpp RGB data.
+///
+/// DCT/JPEG, JPX/JPEG2000, and JBIG2 streams are returned still encoded.
+/// Other supported image streams are decoded, have supported `/Decode` arrays
+/// applied, and are converted to `PdfRawImage(width, height, PdfBPP24, data)`
+/// where `data` is RGBRGB byte order.
 pub fn PdfDocument::get_image_24bpp(
   self : PdfDocument,
   resources : PdfObject,
@@ -1372,6 +1396,7 @@ pub fn PdfDocument::get_image_24bpp(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::get_image_24bpp`.
 pub fn pdf_get_image_24bpp(
   document : PdfDocument,
   resources : PdfObject,
