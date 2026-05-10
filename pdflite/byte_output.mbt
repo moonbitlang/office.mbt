@@ -1,4 +1,9 @@
 ///|
+/// A growable byte sink with seekable overwrite support.
+///
+/// `ByteOutput` tracks the current write position separately from the highest
+/// position written, so callers may seek backward to patch bytes and then
+/// obtain only the initialized prefix with `to_bytes`.
 pub struct ByteOutput {
   data : Array[Byte]
   mut position : Int
@@ -6,6 +11,10 @@ pub struct ByteOutput {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Creates an empty output buffer.
+///
+/// `initial_size` preallocates zero-filled capacity but does not count as
+/// written output. Raises `PdfError::InvalidReadLength` for negative sizes.
 pub fn byte_output_new(initial_size? : Int = 0) -> ByteOutput raise PdfError {
   if initial_size < 0 {
     raise InvalidReadLength(initial_size)
@@ -15,16 +24,25 @@ pub fn byte_output_new(initial_size? : Int = 0) -> ByteOutput raise PdfError {
 }
 
 ///|
+/// Returns the current write position.
 pub fn ByteOutput::position(self : ByteOutput) -> Int {
   self.position
 }
 
 ///|
+/// Returns the highest written byte position.
+///
+/// This is the length of the byte sequence returned by `to_bytes`.
 pub fn ByteOutput::length(self : ByteOutput) -> Int {
   self.written_length
 }
 
 ///|
+/// Moves the write position.
+///
+/// Seeking beyond the current length is allowed; unwritten gaps are filled with
+/// zero when data is later written. Negative positions raise
+/// `PdfError::InvalidCursorPosition`.
 pub fn ByteOutput::seek(
   self : ByteOutput,
   position : Int,
@@ -43,6 +61,10 @@ fn ByteOutput::ensure_capacity(self : ByteOutput, length : Int) -> Unit {
 }
 
 ///|
+/// Writes one byte at the current position and advances by one.
+///
+/// Raises `PdfError::InvalidByte` if `value` is outside the byte range
+/// `0..=255`.
 pub fn ByteOutput::write_byte(
   self : ByteOutput,
   value : Int,
@@ -57,6 +79,9 @@ pub fn ByteOutput::write_byte(
 }
 
 ///|
+/// Seeks to `position`, writes one byte, and advances by one.
+///
+/// Raises the same errors as `seek` and `write_byte`.
 pub fn ByteOutput::write_byte_at(
   self : ByteOutput,
   position : Int,
@@ -67,6 +92,9 @@ pub fn ByteOutput::write_byte_at(
 }
 
 ///|
+/// Writes a byte view at the current position and advances past it.
+///
+/// Raises `PdfError::InvalidReadLength` if the computed end position overflows.
 pub fn ByteOutput::write_view(
   self : ByteOutput,
   bytes : BytesView,
@@ -86,6 +114,9 @@ pub fn ByteOutput::write_view(
 }
 
 ///|
+/// Seeks to `position`, writes a byte view, and advances past it.
+///
+/// Raises the same errors as `seek` and `write_view`.
 pub fn ByteOutput::write_view_at(
   self : ByteOutput,
   position : Int,
@@ -96,6 +127,11 @@ pub fn ByteOutput::write_view_at(
 }
 
 ///|
+/// Writes a slice of a byte view at the current position.
+///
+/// Raises `PdfError::InvalidCursorPosition` for a negative offset,
+/// `PdfError::InvalidReadLength` for a negative or overflowing length, and
+/// `PdfError::EndOfInput` if the requested slice exceeds the input view.
 pub fn ByteOutput::write_view_slice(
   self : ByteOutput,
   bytes : BytesView,
@@ -119,6 +155,10 @@ pub fn ByteOutput::write_view_slice(
 }
 
 ///|
+/// Writes `length` copies of `value` and advances past them.
+///
+/// The default value is zero. Raises `PdfError::InvalidReadLength` for invalid
+/// lengths and `PdfError::InvalidByte` for values outside `0..=255`.
 pub fn ByteOutput::write_repeated_byte(
   self : ByteOutput,
   length : Int,
@@ -143,6 +183,10 @@ pub fn ByteOutput::write_repeated_byte(
 }
 
 ///|
+/// Encodes an ASCII string and writes the resulting bytes.
+///
+/// The underlying `@ascii.encode` function is used intentionally; callers
+/// should pass bytes directly for non-ASCII PDF payloads.
 pub fn ByteOutput::write_ascii(
   self : ByteOutput,
   text : String,
@@ -151,6 +195,9 @@ pub fn ByteOutput::write_ascii(
 }
 
 ///|
+/// Returns the written prefix as owned PDF bytes.
+///
+/// Bytes beyond `length` that were only preallocated are not included.
 pub fn ByteOutput::to_bytes(self : ByteOutput) -> PdfBytes {
   Bytes::from_array(self.data[:self.written_length])
 }
