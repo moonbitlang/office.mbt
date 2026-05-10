@@ -108,6 +108,10 @@ fn pdf_fun_bounds_key() -> PdfName {
 }
 
 ///|
+/// PDF function type 2, exponential interpolation.
+///
+/// `c0` and `c1` are the output vectors at the low and high ends of the input
+/// domain, and `n` is the exponent used to shape interpolation between them.
 pub(all) struct PdfInterpolationFunction {
   c0 : Array[Double]
   c1 : Array[Double]
@@ -115,6 +119,12 @@ pub(all) struct PdfInterpolationFunction {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// PDF function type 0, sampled from a packed sample table.
+///
+/// `size` gives the sample count for each input dimension. `encode` maps
+/// clamped domain inputs to sample coordinates, `decode` maps sample values to
+/// output values, and `samples` stores decoded integer samples with the first
+/// input dimension varying fastest.
 pub(all) struct PdfSampledFunction {
   size : Array[Int]
   order : Int
@@ -125,6 +135,10 @@ pub(all) struct PdfSampledFunction {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// PDF function type 3, stitching several child functions over one input.
+///
+/// `bounds` partitions the parent domain, and `stitch_encode` maps each chosen
+/// segment into the selected child function's input domain.
 pub(all) struct PdfStitchingFunction {
   functions : Array[PdfFunction]
   bounds : Array[Double]
@@ -132,6 +146,11 @@ pub(all) struct PdfStitchingFunction {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Operation in a PDF type 4 PostScript calculator function.
+///
+/// Literals push values onto the calculator stack. `PdfCalculatorIf` and
+/// `PdfCalculatorIfElse` store nested procedure bodies; the remaining variants
+/// correspond to PDF calculator-language operators.
 pub(all) enum PdfCalculatorOp {
   PdfCalculatorInt(Int)
   PdfCalculatorFloat(Double)
@@ -179,11 +198,16 @@ pub(all) enum PdfCalculatorOp {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// PDF function type 4, represented as parsed calculator operations.
+///
+/// Evaluation starts with the function inputs on the stack and returns the
+/// numeric values left on the stack after all operations have run.
 pub(all) struct PdfCalculatorFunction {
   operations : Array[PdfCalculatorOp]
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Discriminated PDF function body for supported `/FunctionType` values.
 pub(all) enum PdfFunctionKind {
   PdfFunctionSampled(PdfSampledFunction)
   PdfFunctionInterpolation(PdfInterpolationFunction)
@@ -192,6 +216,11 @@ pub(all) enum PdfFunctionKind {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Parsed PDF function with common domain and optional output range.
+///
+/// `domain` is stored as low/high pairs, one pair per input. `range`, when
+/// present, is stored as output low/high pairs and is used to clamp evaluation
+/// results.
 pub(all) struct PdfFunction {
   func : PdfFunctionKind
   domain : Array[Double]
@@ -214,6 +243,10 @@ fn pdf_fun_join_strings(
 }
 
 ///|
+/// Return the calculator-language spelling for one operation.
+///
+/// Procedure operations are formatted recursively in the same brace-delimited
+/// form accepted by the type 4 parser.
 pub fn PdfCalculatorOp::debug_name(self : PdfCalculatorOp) -> String {
   match self {
     PdfCalculatorIf(ops) => pdf_string_of_calculator(ops) + " if"
@@ -268,6 +301,7 @@ pub fn PdfCalculatorOp::debug_name(self : PdfCalculatorOp) -> String {
 }
 
 ///|
+/// Format calculator operations as a brace-delimited diagnostic program.
 pub fn pdf_string_of_calculator(ops : ArrayView[PdfCalculatorOp]) -> String {
   "{" + pdf_fun_join_strings([ for op in ops => op.debug_name() ], " ") + "}"
 }
@@ -283,6 +317,10 @@ fn pdf_fun_debug_ints(values : ArrayView[Int]) -> String {
 }
 
 ///|
+/// Format a parsed function as multi-line diagnostic text.
+///
+/// The output follows CamlPDF's debug printer shape and is intended for
+/// inspection, not for writing a PDF function object.
 pub fn PdfFunction::debug_string(self : PdfFunction) -> String {
   let range_text = match self.range {
     Some(values) => pdf_fun_debug_doubles(values)
@@ -337,6 +375,7 @@ pub fn PdfFunction::debug_string(self : PdfFunction) -> String {
 }
 
 ///|
+/// Compatibility wrapper for `PdfFunction::debug_string`.
 pub fn pdf_string_of_function(function : PdfFunction) -> String {
   function.debug_string()
 }
@@ -876,6 +915,12 @@ fn pdf_fun_parse_calculator(
 }
 
 ///|
+/// Parse a PDF function object from this document.
+///
+/// Supports PDF function types 0, 2, 3, and 4. Sampled and calculator functions
+/// are read from decoded stream data; interpolation and stitching functions are
+/// read from dictionaries. Raises for malformed dictionaries, invalid arities,
+/// stream decoding failures, or unsupported function types.
 pub fn PdfDocument::parse_function(
   self : PdfDocument,
   function_object : PdfObject,
@@ -953,6 +998,7 @@ pub fn PdfDocument::parse_function(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::parse_function`.
 pub fn pdf_parse_function(
   document : PdfDocument,
   function_object : PdfObject,
@@ -976,6 +1022,12 @@ fn PdfFunction::pdf_fun_function_type(self : PdfFunction) -> Int {
 }
 
 ///|
+/// Build a PDF object for a parsed function.
+///
+/// Interpolation functions are written as dictionaries. Stitching functions add
+/// child function objects to this document and reference them from the returned
+/// dictionary. Sampled and calculator variants currently write only the common
+/// function dictionary fields and do not recreate their stream data.
 pub fn PdfDocument::pdf_object_of_function(
   self : PdfDocument,
   function : PdfFunction,
@@ -1023,6 +1075,7 @@ pub fn PdfDocument::pdf_object_of_function(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::pdf_object_of_function`.
 pub fn pdf_object_of_function(
   document : PdfDocument,
   function : PdfFunction,
@@ -1697,6 +1750,12 @@ fn PdfFunction::clamped_inputs(
 }
 
 ///|
+/// Evaluate a PDF function for the supplied inputs.
+///
+/// Inputs are clamped to `domain` before dispatch. The evaluated output is
+/// clamped to `range` when one is present. Raises `BadFunctionEvaluation` when
+/// arities, sampled-table indexes, calculator stack types, or child stitching
+/// bounds are invalid.
 pub fn PdfFunction::eval(
   self : PdfFunction,
   inputs : ArrayView[Double],
@@ -1726,6 +1785,7 @@ pub fn PdfFunction::eval(
 }
 
 ///|
+/// Compatibility wrapper for `PdfFunction::eval`.
 pub fn pdf_eval_function(
   function : PdfFunction,
   inputs : ArrayView[Double],
@@ -1734,6 +1794,7 @@ pub fn pdf_eval_function(
 }
 
 ///|
+/// Print the function's diagnostic representation to standard output.
 pub fn pdf_print_function(function : PdfFunction) -> Unit {
   println(function.debug_string())
 }
