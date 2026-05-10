@@ -1623,6 +1623,14 @@ fn pdf_merge_renumber_bookmark_with_map(
 }
 
 ///|
+/// Merges selected page ranges from multiple documents into one document.
+///
+/// Each entry in `ranges` belongs to the document at the same index and uses
+/// one-based page numbers. The retain flags control whether numbering,
+/// bookmarks, optional-content data, AcroForms, named destinations, name
+/// dictionary entries, structure trees, info dictionaries, and catalog entries
+/// are copied into the output. Raises `PdfError::PageTreeExpected` when the
+/// document and range lists do not align.
 pub fn pdf_merge_documents(
   documents : ArrayView[PdfDocument],
   ranges : ArrayView[Array[Int]],
@@ -1860,6 +1868,12 @@ pub fn pdf_merge_documents(
 }
 
 ///|
+/// CamlPDF-shaped convenience wrapper for merging PDFs.
+///
+/// `names` must have the same length as `documents`; it is retained for API
+/// compatibility with CamlPDF's merge entry point. Structure-tree processing
+/// and optional top-level `/Document` wrapping are controlled by the optional
+/// flags.
 pub fn pdf_merge_pdfs(
   retain_numbering : Bool,
   remove_duplicate_fonts : Bool,
