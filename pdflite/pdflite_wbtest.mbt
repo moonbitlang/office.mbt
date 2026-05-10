@@ -543,7 +543,7 @@ test "private object stream helpers cover malformed object streams" {
   }
   let recovered_doc = pdf_document_empty()
   recovered_doc.add_object_given_number(7, valid_stream)
-  let recovered_xrefs = [
+  let recovered_xrefs : ReadOnlyArray[PdfClassicXRefEntry] = [
     {
       object_number: 2,
       offset: 0,
@@ -617,7 +617,7 @@ test "private object stream helpers cover malformed object streams" {
     PdfBoolean(true),
   )
 
-  let bad_embedded_xrefs = [
+  let bad_embedded_xrefs : ReadOnlyArray[PdfClassicXRefEntry] = [
     {
       object_number: 4,
       offset: 0,
@@ -981,7 +981,7 @@ test "private reader xref helpers report malformed inputs" {
   let nested_bad_object = @ascii.encode(
     "1 0 obj\n]\n2 0 obj\n<< /Type /Catalog >>\nendobj\n3 0 obj\n42\nendobj\n",
   )
-  let endobj = [101, 110, 100, 111, 98, 106]
+  let endobj : ReadOnlyArray[Int] = [101, 110, 100, 111, 98, 106]
   let nested_endobj = pdf_find_ascii_from(nested_bad_object, 0, endobj)
   @test.assert_eq(
     pdf_reader_reconstruction_indirect_header_at(nested_bad_object, 0),
@@ -1781,8 +1781,8 @@ test "private content helpers cover malformed operand fallbacks" {
   )
   @test.assert_eq(pdf_content_matrix_from_operands([PdfInteger(1)]), None)
 
-  let bad_number = [PdfNameObject(name)]
-  let bad_name = [PdfInteger(1)]
+  let bad_number : ReadOnlyArray[PdfObject] = [PdfNameObject(name)]
+  let bad_name : ReadOnlyArray[PdfObject] = [PdfInteger(1)]
   wbtest_assert_known_content_none("j", bad_number)
   wbtest_assert_known_content_none("M", bad_number)
   wbtest_assert_known_content_none("d", [PdfInteger(0)])
@@ -2279,7 +2279,7 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
     fail("expected InvalidFlateData")
   }
 
-  let distance_lengths = [1]
+  let distance_lengths : ReadOnlyArray[Int] = [1]
   let distance_table = try! pdf_flate_build_huffman(distance_lengths)
   let invalid_length_lengths = Array::make(287, 0)
   invalid_length_lengths[286] = 1

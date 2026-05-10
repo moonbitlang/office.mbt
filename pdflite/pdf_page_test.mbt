@@ -961,7 +961,7 @@ test "PdfDocument shortest_unused_prefix scans page resource names" {
 
 ///|
 test "PdfDocument shortest_unused_prefix preserves CamlPDF prefix sequence" {
-  let names = [
+  let names : ReadOnlyArray[String] = [
     "/a", "/b", "/c", "/d", "/e", "/f", "/g", "/h", "/i", "/j", "/k", "/l", "/m",
     "/n", "/o", "/p", "/q", "/r", "/s", "/t", "/u", "/v", "/w", "/x", "/y", "/z",
   ]

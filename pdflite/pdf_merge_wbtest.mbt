@@ -120,7 +120,7 @@ test "private merge destination-name lookup preserves local and global precedenc
 test "private merge destination-name rewrite covers action and stream callsites" {
   let old_name = @ascii.encode("shared")
   let new_name = @ascii.encode("shared-f0")
-  let changes = [(old_name, new_name)]
+  let changes : ReadOnlyArray[(PdfBytes, PdfBytes)] = [(old_name, new_name)]
   let name_lookup = pdf_merge_destination_name_lookup(changes, changes)
   let empty_name_lookup = pdf_merge_destination_name_lookup([], [])
   let empty_catalog_lookup = pdf_merge_catalog_destination_name_lookup([], [])
@@ -154,7 +154,9 @@ test "private merge destination-name rewrite covers action and stream callsites"
   )
   let old_catalog_name = pdf_merge_name("/Shared")
   let new_catalog_name = pdf_merge_name("/Shared-f0")
-  let catalog_changes = [(old_catalog_name, new_catalog_name)]
+  let catalog_changes : ReadOnlyArray[(PdfName, PdfName)] = [
+    (old_catalog_name, new_catalog_name),
+  ]
   let catalog_lookup = pdf_merge_catalog_destination_name_lookup(
     catalog_changes, catalog_changes,
   )
@@ -390,7 +392,7 @@ test "private merge catalog and AcroForm helpers cover malformed roots" {
 
 ///|
 test "private merge destination renumbering covers all target variants" {
-  let changes = [(1, 10)]
+  let changes : ReadOnlyArray[(Int, Int)] = [(1, 10)]
   let change_map = pdf_page_reference_map(changes)
   @test.assert_eq(
     pdf_merge_renumber_target_page_with_map(

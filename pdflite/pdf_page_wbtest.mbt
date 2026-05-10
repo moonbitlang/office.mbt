@@ -1362,7 +1362,7 @@ test "private materialized page inheritance keeps partial attributes" {
 test "private page resource renumber helpers cover optional misses" {
   let color_space = pdf_page_name("/ColorSpace")
   let properties = pdf_page_name("/Properties")
-  let changes = [
+  let changes : ReadOnlyArray[(PdfName, Int, PdfName, PdfName)] = [
     (color_space, 1, pdf_page_name("/CS1"), pdf_page_name("/r1")),
     (properties, 1, pdf_page_name("/Prop1"), pdf_page_name("/r2")),
   ]
