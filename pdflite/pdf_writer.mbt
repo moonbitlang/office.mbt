@@ -4,6 +4,11 @@ fn pdf_writer_push_byte(output : Array[Byte], value : Int) -> Unit {
 }
 
 ///|
+/// Cross-reference format used when serializing a document.
+///
+/// Classic writes a traditional xref table and trailer. XRefStream writes an
+/// uncompressed xref stream, and CompressedXRefStream wraps that stream in
+/// Flate compression.
 pub(all) enum PdfWriteMode {
   PdfWriteClassic
   PdfWriteXRefStream
@@ -11,6 +16,10 @@ pub(all) enum PdfWriteMode {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Encryption options for `pdf_write_document_options`.
+///
+/// Passwords are stored as owned PDF bytes so callers can pass borrowed
+/// `BytesView` values safely.
 pub(all) struct PdfWriteEncryption {
   encryption_method : PdfEncryptionMethod
   user_password : PdfBytes
@@ -19,6 +28,7 @@ pub(all) struct PdfWriteEncryption {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Build owned encryption options for the writer options API.
 pub fn pdf_write_encryption(
   encryption_method : PdfEncryptionMethod,
   user_password : BytesView,
@@ -119,6 +129,9 @@ fn pdf_write_name_to(output : Array[Byte], name : PdfName) -> Unit {
 }
 
 ///|
+/// Serialize a PDF name object with required delimiter and hex escaping.
+///
+/// The returned bytes include the leading slash.
 pub fn pdf_write_name(name : PdfName) -> PdfBytes {
   let output : Array[Byte] = []
   pdf_write_name_to(output, name)
@@ -147,6 +160,10 @@ fn pdf_write_string_to(output : Array[Byte], bytes : BytesView) -> Unit {
 }
 
 ///|
+/// Serialize bytes as a PDF literal string.
+///
+/// Delimiters, backslashes, common controls, and non-printable bytes are
+/// escaped according to PDF literal-string syntax.
 pub fn pdf_write_literal_string(bytes : BytesView) -> PdfBytes {
   let output : Array[Byte] = []
   pdf_write_string_to(output, bytes)
@@ -154,6 +171,7 @@ pub fn pdf_write_literal_string(bytes : BytesView) -> PdfBytes {
 }
 
 ///|
+/// Compatibility alias for `pdf_write_literal_string`.
 pub fn pdf_make_pdf_string(bytes : BytesView) -> PdfBytes {
   pdf_write_literal_string(bytes)
 }
@@ -170,6 +188,7 @@ fn pdf_write_hex_string_to(output : Array[Byte], bytes : BytesView) -> Unit {
 }
 
 ///|
+/// Serialize bytes as a lowercase hexadecimal PDF string.
 pub fn pdf_write_hex_string(bytes : BytesView) -> PdfBytes {
   let output : Array[Byte] = []
   pdf_write_hex_string_to(output, bytes)
@@ -177,6 +196,7 @@ pub fn pdf_write_hex_string(bytes : BytesView) -> PdfBytes {
 }
 
 ///|
+/// Compatibility alias for `pdf_write_hex_string`.
 pub fn pdf_make_hex_pdf_string(bytes : BytesView) -> PdfBytes {
   pdf_write_hex_string(bytes)
 }
@@ -490,6 +510,10 @@ fn pdf_writer_push_real(
 }
 
 ///|
+/// Format a PDF real number as bytes.
+///
+/// Scientific notation is expanded to PDF-compatible decimal form where
+/// possible. Non-finite or unparsable numeric text raises `PdfError`.
 pub fn pdf_write_real(value : Double) -> PdfBytes raise PdfError {
   let output : Array[Byte] = []
   pdf_writer_push_real(output, value)
@@ -497,6 +521,7 @@ pub fn pdf_write_real(value : Double) -> PdfBytes raise PdfError {
 }
 
 ///|
+/// Compatibility alias for `pdf_write_real`.
 pub fn pdf_format_real(value : Double) -> PdfBytes raise PdfError {
   pdf_write_real(value)
 }
@@ -553,6 +578,9 @@ fn pdf_write_object_to(
 }
 
 ///|
+/// Serialize a direct PDF object.
+///
+/// Stream lengths are refreshed from the current stream data while writing.
 pub fn pdf_write_object(object : PdfObject) -> PdfBytes raise PdfError {
   let output : Array[Byte] = []
   pdf_write_object_to(output, object)
@@ -560,11 +588,16 @@ pub fn pdf_write_object(object : PdfObject) -> PdfBytes raise PdfError {
 }
 
 ///|
+/// Compatibility alias for `pdf_write_object`.
 pub fn pdf_string_of_pdf(object : PdfObject) -> PdfBytes raise PdfError {
   pdf_write_object(object)
 }
 
 ///|
+/// Compatibility alias for `pdf_write_object`.
+///
+/// Stream data is included because `PdfStreamObject` serialization writes the
+/// stream dictionary, `stream` marker, bytes, and `endstream` marker.
 pub fn pdf_string_of_pdf_including_data(
   object : PdfObject,
 ) -> PdfBytes raise PdfError {
@@ -572,6 +605,7 @@ pub fn pdf_string_of_pdf_including_data(
 }
 
 ///|
+/// Serialize one indirect object including `obj` and `endobj` wrappers.
 pub fn pdf_write_indirect_object(
   object : PdfParsedIndirectObject,
 ) -> PdfBytes raise PdfError {
@@ -909,6 +943,7 @@ fn pdf_writer_push_classic_sparse_xref_and_trailer(
 }
 
 ///|
+/// Serialize a complete document with a classic xref table.
 pub fn pdf_write_document(document : PdfDocument) -> PdfBytes raise PdfError {
   let output : Array[Byte] = []
   let (major, minor) = document.version()
@@ -920,6 +955,10 @@ pub fn pdf_write_document(document : PdfDocument) -> PdfBytes raise PdfError {
 }
 
 ///|
+/// Append a classic incremental update to original PDF bytes.
+///
+/// Only objects marked as changed in `document` are written. The previous
+/// `startxref` position is read from `original` and emitted as `/Prev`.
 pub fn pdf_write_document_incremental_update(
   original : PdfBytes,
   document : PdfDocument,
@@ -1149,6 +1188,10 @@ fn pdf_write_document_with_xref_stream_filter(
 }
 
 ///|
+/// Serialize a complete document with an uncompressed xref stream.
+///
+/// The output header is at least PDF 1.5, because xref streams require that
+/// version.
 pub fn pdf_write_document_with_xref_stream(
   document : PdfDocument,
 ) -> PdfBytes raise PdfError {
@@ -1208,6 +1251,7 @@ fn pdf_write_document_incremental_update_with_xref_stream_filter(
 }
 
 ///|
+/// Append an incremental update using an uncompressed xref stream.
 pub fn pdf_write_document_incremental_update_with_xref_stream(
   original : PdfBytes,
   document : PdfDocument,
@@ -1220,6 +1264,7 @@ pub fn pdf_write_document_incremental_update_with_xref_stream(
 }
 
 ///|
+/// Serialize a complete document with a Flate-compressed xref stream.
 pub fn pdf_write_document_with_compressed_xref_stream(
   document : PdfDocument,
 ) -> PdfBytes raise PdfError {
@@ -1230,6 +1275,7 @@ pub fn pdf_write_document_with_compressed_xref_stream(
 }
 
 ///|
+/// Append an incremental update using a Flate-compressed xref stream.
 pub fn pdf_write_document_incremental_update_with_compressed_xref_stream(
   original : PdfBytes,
   document : PdfDocument,
@@ -1242,6 +1288,7 @@ pub fn pdf_write_document_incremental_update_with_compressed_xref_stream(
 }
 
 ///|
+/// Append an incremental update using the selected xref representation.
 pub fn pdf_write_document_incremental_update_with_mode(
   original : PdfBytes,
   document : PdfDocument,
@@ -1259,6 +1306,10 @@ pub fn pdf_write_document_incremental_update_with_mode(
 }
 
 ///|
+/// Append an incremental update after generating a current trailer ID.
+///
+/// The generated ID is based on `path` and current document state and is
+/// applied to a copy of the document before writing.
 pub fn pdf_write_document_incremental_update_with_generated_id(
   original : PdfBytes,
   document : PdfDocument,
@@ -1273,6 +1324,7 @@ pub fn pdf_write_document_incremental_update_with_generated_id(
 }
 
 ///|
+/// Serialize a complete document using the selected xref representation.
 pub fn pdf_write_document_with_mode(
   document : PdfDocument,
   mode : PdfWriteMode,
@@ -1286,6 +1338,9 @@ pub fn pdf_write_document_with_mode(
 }
 
 ///|
+/// Serialize a complete document after generating a current trailer ID.
+///
+/// The source document is copied before its ID is generated.
 pub fn pdf_write_document_with_generated_id(
   document : PdfDocument,
   path : String,
@@ -1383,6 +1438,13 @@ fn pdf_write_apply_options_encryption(
 }
 
 ///|
+/// One-call writer with optional encryption, IDs, incremental update, and mode.
+///
+/// The input document is copied before IDs or encryption are applied.
+/// `update_from` selects incremental output. `make_id` controls generated
+/// trailer IDs for unencrypted writes; encrypted writes always use the provided
+/// `file_id` or generate one through the encryption helper. AES modes require
+/// the corresponding IV and random providers.
 pub fn pdf_write_document_options(
   document : PdfDocument,
   encryption? : PdfWriteEncryption? = None,
@@ -1414,6 +1476,7 @@ pub fn pdf_write_document_options(
 }
 
 ///|
+/// Encrypt with 40-bit ARC4 and serialize in the selected write mode.
 pub fn pdf_write_encrypted_40bit_document(
   document : PdfDocument,
   user_password : BytesView,
@@ -1434,6 +1497,7 @@ pub fn pdf_write_encrypted_40bit_document(
 }
 
 ///|
+/// Encrypt with 128-bit ARC4 revision 3 and serialize in the selected mode.
 pub fn pdf_write_encrypted_128bit_document(
   document : PdfDocument,
   user_password : BytesView,
@@ -1454,6 +1518,9 @@ pub fn pdf_write_encrypted_128bit_document(
 }
 
 ///|
+/// Encrypt with revision-4 ARC4 crypt filters and serialize.
+///
+/// `encrypt_metadata=false` follows the PDF revision-4 no-metadata behavior.
 pub fn pdf_write_encrypted_128bit_r4_document(
   document : PdfDocument,
   user_password : BytesView,
@@ -1476,6 +1543,10 @@ pub fn pdf_write_encrypted_128bit_r4_document(
 }
 
 ///|
+/// Encrypt with AESV2 and serialize.
+///
+/// `iv_provider` supplies IVs by object number, generation, and per-object
+/// index. This allows deterministic fixtures or secure caller-provided IVs.
 pub fn pdf_write_encrypted_aesv2_document_with_iv_provider(
   document : PdfDocument,
   user_password : BytesView,
@@ -1500,6 +1571,11 @@ pub fn pdf_write_encrypted_aesv2_document_with_iv_provider(
 }
 
 ///|
+/// Encrypt with AESV3/AES-256 and serialize.
+///
+/// `random_provider` supplies file keys, salts, and permissions padding;
+/// `iv_provider` supplies object-data IVs. `iso=true` selects the ISO/PDF 2.0
+/// AESV3 hash variant.
 pub fn pdf_write_encrypted_aesv3_document_with_providers(
   document : PdfDocument,
   user_password : BytesView,
@@ -1528,6 +1604,7 @@ pub fn pdf_write_encrypted_aesv3_document_with_providers(
 }
 
 ///|
+/// Encrypt with the ISO AESV3/AES-256 variant and serialize.
 pub fn pdf_write_encrypted_aesv3_iso_document_with_providers(
   document : PdfDocument,
   user_password : BytesView,
