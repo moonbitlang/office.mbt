@@ -1,4 +1,8 @@
 ///|
+/// Object encryption algorithm used by the PDF security handlers.
+///
+/// ARC4 carries key length in bits and security-handler revision. AESV3 carries
+/// whether the ISO/PDF 2.0 hash variant is in use.
 pub(all) enum PdfCryptType {
   PdfCryptARC4(Int, Int)
   PdfCryptAESV2
@@ -18,6 +22,10 @@ fn pdf_arc4_swap(state : Array[Int], left : Int, right : Int) -> Unit {
 }
 
 ///|
+/// Apply ARC4 to `data` with `key`.
+///
+/// ARC4 is symmetric, so the same function encrypts and decrypts. Empty keys
+/// raise `CryptoKeyExpected`.
 pub fn pdf_arc4_crypt(
   key : BytesView,
   data : BytesView,
@@ -46,11 +54,13 @@ pub fn pdf_arc4_crypt(
 }
 
 ///|
+/// Return the MD5 digest of `data`.
 pub fn pdf_md5_digest(data : BytesView) -> PdfBytes {
   Bytes::from_array(@crypto.md5(data))
 }
 
 ///|
+/// Return the SHA-256 digest of `data`.
 pub fn pdf_sha256_digest(data : BytesView) -> PdfBytes {
   Bytes::from_array(@crypto.sha256(data))
 }
@@ -211,6 +221,7 @@ fn pdf_sha512_digest_with_state(
 }
 
 ///|
+/// Return the SHA-384 digest of `data`.
 pub fn pdf_sha384_digest(data : BytesView) -> PdfBytes {
   pdf_sha512_digest_with_state(
     data,
@@ -223,6 +234,7 @@ pub fn pdf_sha384_digest(data : BytesView) -> PdfBytes {
 }
 
 ///|
+/// Return the SHA-512 digest of `data`.
 pub fn pdf_sha512_digest(data : BytesView) -> PdfBytes {
   pdf_sha512_digest_with_state(
     data,
@@ -276,6 +288,7 @@ fn pdf_aes_decrypt_key(key : BytesView) -> FixedArray[Byte] raise PdfError {
 }
 
 ///|
+/// Encrypt one 16-byte AES block with a 128-, 192-, or 256-bit key.
 pub fn pdf_aes_encrypt_block(
   key : BytesView,
   block : BytesView,
@@ -288,6 +301,7 @@ pub fn pdf_aes_encrypt_block(
 }
 
 ///|
+/// Decrypt one 16-byte AES block with a 128-, 192-, or 256-bit key.
 pub fn pdf_aes_decrypt_block(
   key : BytesView,
   block : BytesView,
@@ -321,6 +335,10 @@ fn pdf_aes_append_block(output : Array[Byte], block : FixedArray[Byte]) -> Unit 
 }
 
 ///|
+/// Decrypt AES-CBC data whose first block is the IV.
+///
+/// Data shorter than or equal to one block decrypts to empty bytes. Block
+/// lengths that are not multiples of 16 raise `InvalidCryptoDataLength`.
 pub fn pdf_aes_cbc_decrypt(
   key : BytesView,
   data : BytesView,
@@ -377,6 +395,10 @@ fn pdf_aes_padded_blocks(data : BytesView) -> Array[FixedArray[Byte]] {
 }
 
 ///|
+/// Encrypt bytes with AES-CBC and an explicit IV.
+///
+/// PKCS-style padding is added and the returned bytes include the IV as the
+/// first block, matching PDF AES string and stream data layout.
 pub fn pdf_aes_cbc_encrypt_with_iv(
   key : BytesView,
   iv : BytesView,
@@ -403,6 +425,10 @@ pub fn pdf_aes_cbc_encrypt_with_iv(
 }
 
 ///|
+/// Decrypt AES-ECB data.
+///
+/// The input length must be a non-zero multiple of 16 unless it is empty.
+/// Padding is removed by default.
 pub fn pdf_aes_ecb_decrypt(
   key : BytesView,
   data : BytesView,
@@ -433,6 +459,9 @@ pub fn pdf_aes_ecb_decrypt(
 }
 
 ///|
+/// Encrypt AES-ECB data without adding padding.
+///
+/// The input length must be a non-zero multiple of 16 unless it is empty.
 pub fn pdf_aes_ecb_encrypt(
   key : BytesView,
   data : BytesView,
@@ -467,6 +496,10 @@ fn pdf_cryptprimitives_key_from_ints(
 }
 
 ///|
+/// CamlPDF-compatible ARC4 helper with integer-array keys.
+///
+/// The key array is interpreted as big-endian bytes through
+/// `pdf_bytes_of_int_array`.
 pub fn pdf_cryptprimitives_crypt(
   key : ArrayView[Int],
   data : BytesView,
@@ -475,6 +508,9 @@ pub fn pdf_cryptprimitives_crypt(
 }
 
 ///|
+/// CamlPDF-compatible AES-CBC decrypt helper with integer-array keys.
+///
+/// `nk` is the number of 32-bit key words and must match the supplied key.
 pub fn pdf_cryptprimitives_aes_decrypt_data(
   nk : Int,
   key : ArrayView[Int],
@@ -489,6 +525,7 @@ pub fn pdf_cryptprimitives_aes_decrypt_data(
 }
 
 ///|
+/// CamlPDF-compatible AES-ECB decrypt helper with integer-array keys.
 pub fn pdf_cryptprimitives_aes_decrypt_data_ecb(
   nk : Int,
   key : ArrayView[Int],
@@ -503,6 +540,9 @@ pub fn pdf_cryptprimitives_aes_decrypt_data_ecb(
 }
 
 ///|
+/// CamlPDF-compatible AES-CBC encrypt helper with explicit first block.
+///
+/// `firstblock` is the IV that will be prefixed to the returned encrypted data.
 pub fn pdf_cryptprimitives_aes_encrypt_data_with_firstblock(
   nk : Int,
   key : ArrayView[Int],
@@ -517,6 +557,7 @@ pub fn pdf_cryptprimitives_aes_encrypt_data_with_firstblock(
 }
 
 ///|
+/// CamlPDF-compatible AES-ECB encrypt helper with integer-array keys.
 pub fn pdf_cryptprimitives_aes_encrypt_data_ecb(
   nk : Int,
   key : ArrayView[Int],
@@ -526,6 +567,10 @@ pub fn pdf_cryptprimitives_aes_encrypt_data_ecb(
 }
 
 ///|
+/// Derive the per-object encryption key for a PDF object.
+///
+/// The object number, generation, file key, key length, and AESV2 salt are
+/// hashed according to the PDF standard-security object-key algorithm.
 pub fn pdf_encryption_object_key(
   crypt_type : PdfCryptType,
   object_number : Int,
@@ -561,6 +606,7 @@ pub fn pdf_encryption_object_key(
 }
 
 ///|
+/// CamlPDF-compatible wrapper returning the object key as an integer array.
 pub fn pdf_cryptprimitives_find_hash(
   crypt_type : PdfCryptType,
   object_number : Int,
@@ -606,6 +652,11 @@ fn pdf_cryptprimitives_stream_key(
 }
 
 ///|
+/// Encrypt or decrypt stream bytes using the selected crypt type.
+///
+/// For revisions 5 and 6 the supplied `file_encryption_key` is used directly.
+/// For earlier revisions an object key is derived from `key`. AES encryption
+/// requires `firstblock` as the IV; missing IVs raise `RandomBytesUnavailable`.
 pub fn pdf_cryptprimitives_decrypt_stream_data(
   crypt_type : PdfCryptType,
   encrypt : Bool,
@@ -637,6 +688,10 @@ pub fn pdf_cryptprimitives_decrypt_stream_data(
 }
 
 ///|
+/// ARC4-encrypt or decrypt data for one object using a file key.
+///
+/// The per-object key is derived from object number and generation before ARC4
+/// is applied.
 pub fn pdf_arc4_crypt_object(
   object_number : Int,
   generation : Int,
