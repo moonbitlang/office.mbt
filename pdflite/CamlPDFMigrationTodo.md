@@ -10,10 +10,10 @@ Current estimate:
 - Native main-feature parity: 98.0%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
   breadth: 85-90%.
-- Warning 74 public documentation cleanup: 294 native diagnostics remain after
+- Warning 74 public documentation cleanup: 246 native diagnostics remain after
   documenting the byte, object, document, reader, lexeme, lookup/tree,
   colour-space, transform, destination, merge-helper, standard-font, Flate, and
-  text/font extraction, and cryptography public APIs.
+  text/font extraction, cryptography, and page-tree public APIs.
 
 Current backend snapshot:
 

@@ -273,6 +273,7 @@ fn pdf_page_resource_keys() -> Array[PdfName] {
 }
 
 ///|
+/// Page rotation normalized to the four rotations allowed by PDF page dictionaries.
 pub(all) enum PdfPageRotation {
   Rotate0
   Rotate90
@@ -281,6 +282,11 @@ pub(all) enum PdfPageRotation {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// In-memory page description used by page-tree read and write helpers.
+///
+/// `content` stores stream objects or indirect stream references. `mediabox`,
+/// `resources`, and `rest` preserve PDF objects so byte-oriented dictionary
+/// data is not forced through MoonBit strings.
 pub(all) struct PdfPage {
   content : Array[PdfObject]
   mediabox : PdfObject
@@ -290,6 +296,7 @@ pub(all) struct PdfPage {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Convert a normalized page rotation to the integer stored in `/Rotate`.
 pub fn pdf_page_int_of_rotation(rotation : PdfPageRotation) -> Int {
   match rotation {
     Rotate0 => 0
@@ -300,6 +307,10 @@ pub fn pdf_page_int_of_rotation(rotation : PdfPageRotation) -> Int {
 }
 
 ///|
+/// Convert a PDF `/Rotate` integer to a normalized rotation.
+///
+/// Multiples equivalent to 0, 90, 180, and 270 degrees are accepted. Other
+/// values raise `PageRotationExpected`.
 pub fn pdf_page_rotation_of_int(value : Int) -> PdfPageRotation raise PdfError {
   match value % 360 {
     0 => Rotate0
@@ -311,6 +322,9 @@ pub fn pdf_page_rotation_of_int(value : Int) -> PdfPageRotation raise PdfError {
 }
 
 ///|
+/// Build a PDF rectangle object for a named paper size.
+///
+/// The rectangle is `[0 0 width height]` in points.
 pub fn pdf_page_rectangle_of_paper(paper : PaperSize) -> PdfObject {
   PdfArray([
     PdfReal(0.0),
@@ -321,6 +335,7 @@ pub fn pdf_page_rectangle_of_paper(paper : PaperSize) -> PdfObject {
 }
 
 ///|
+/// Build a blank page using an explicit PDF rectangle object as `/MediaBox`.
 pub fn pdf_page_custom(rectangle : PdfObject) -> PdfPage {
   {
     content: [],
@@ -332,6 +347,7 @@ pub fn pdf_page_custom(rectangle : PdfObject) -> PdfPage {
 }
 
 ///|
+/// Build a blank page for a named paper size.
 pub fn pdf_page_blank(paper : PaperSize) -> PdfPage {
   pdf_page_custom(pdf_page_rectangle_of_paper(paper))
 }
@@ -505,6 +521,10 @@ fn PdfDocument::pdf_page_add_pagetree_node(
 }
 
 ///|
+/// Add a balanced page tree for `pages` and return its root object number.
+///
+/// Page content objects that are not already indirect are inserted into the
+/// document. The document is mutated in place.
 pub fn PdfDocument::add_pagetree(
   self : PdfDocument,
   pages : ArrayView[PdfPage],
@@ -515,6 +535,7 @@ pub fn PdfDocument::add_pagetree(
 }
 
 ///|
+/// Copy a document, add a page tree, and return the copy with the tree root.
 pub fn pdf_add_pagetree(
   pages : ArrayView[PdfPage],
   document : PdfDocument,
@@ -545,6 +566,11 @@ fn pdf_page_root_entries_without_catalog_keys(
 }
 
 ///|
+/// Add or replace the catalog root pointing at a page-tree root.
+///
+/// Existing catalog entries are preserved except `/Type` and `/Pages`; `extras`
+/// can add or replace other catalog entries. The document trailer `/Root` is
+/// updated and the document is mutated in place.
 pub fn PdfDocument::add_root(
   self : PdfDocument,
   page_root_number : Int,
@@ -579,6 +605,7 @@ pub fn PdfDocument::add_root(
 }
 
 ///|
+/// Copy a document, add a catalog root, and return the copy.
 pub fn pdf_add_root(
   page_root_number : Int,
   extras : ArrayView[(PdfName, PdfObject)],
@@ -590,6 +617,7 @@ pub fn pdf_add_root(
 }
 
 ///|
+/// Build the smallest useful PDF document: one blank A4 page and a catalog.
 pub fn pdf_minimum_valid_pdf() -> PdfDocument raise PdfError {
   let document = pdf_document_empty()
   let page_root_number = document.add_pagetree([pdf_page_blank(paper_a4)])
@@ -722,6 +750,11 @@ fn PdfDocument::pdf_page_replace_inherited_key(
 }
 
 ///|
+/// Materialize inherited page attributes onto page dictionaries.
+///
+/// For each object number, inherited `/MediaBox`, `/CropBox`, `/Rotate`, and
+/// `/Resources` values are copied onto the page object when available. This is
+/// useful before page extraction or object-level rewriting.
 pub fn PdfDocument::replace_inherit(
   self : PdfDocument,
   object_numbers : ArrayView[Int],
@@ -869,6 +902,10 @@ fn PdfDocument::pdf_pages_of_node(
 }
 
 ///|
+/// Read the document page tree into `PdfPage` records.
+///
+/// Inherited resources, media boxes, crop boxes, and rotation are resolved
+/// while walking the tree. Malformed page-tree structure raises `PdfError`.
 pub fn PdfDocument::pages_of_pagetree(
   self : PdfDocument,
 ) -> Array[PdfPage] raise PdfError {
@@ -884,6 +921,7 @@ pub fn PdfDocument::pages_of_pagetree(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::pages_of_pagetree`.
 pub fn pdf_pages_of_pagetree(
   document : PdfDocument,
 ) -> Array[PdfPage] raise PdfError {
@@ -915,6 +953,10 @@ fn pdf_page_concat3_ops(
 }
 
 ///|
+/// Return balancing graphics-state operators for an existing operator list.
+///
+/// If the list contains more `q` saves than `Q` restores, matching restores are
+/// returned. Otherwise the result is empty.
 pub fn pdf_page_protect(ops : ArrayView[PdfContentOp]) -> Array[PdfContentOp] {
   let mut saves = 0
   let mut restores = 0
@@ -948,6 +990,11 @@ fn PdfDocument::pdf_page_parse_content_ops(
 }
 
 ///|
+/// Prepend content operators to a page.
+///
+/// In normal mode existing content is parsed and merged into a single stream
+/// after `ops`. In `fast` mode a new stream is inserted before existing content
+/// without parsing the old streams.
 pub fn PdfDocument::prepend_operators(
   self : PdfDocument,
   page : PdfPage,
@@ -966,6 +1013,7 @@ pub fn PdfDocument::prepend_operators(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::prepend_operators`.
 pub fn pdf_prepend_operators(
   document : PdfDocument,
   operators : ArrayView[PdfContentOp],
@@ -976,6 +1024,11 @@ pub fn pdf_prepend_operators(
 }
 
 ///|
+/// Append content operators to a page.
+///
+/// Normal mode parses existing content and wraps it with graphics-state
+/// protection before appending `ops`. `fast` mode appends a protected new
+/// stream without parsing existing content.
 pub fn PdfDocument::postpend_operators(
   self : PdfDocument,
   page : PdfPage,
@@ -1017,6 +1070,7 @@ pub fn PdfDocument::postpend_operators(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::postpend_operators`.
 pub fn pdf_postpend_operators(
   document : PdfDocument,
   operators : ArrayView[PdfContentOp],
@@ -1722,6 +1776,13 @@ fn PdfDocument::pdf_page_transform_matrix_destinations(
 }
 
 ///|
+/// Replace the document page tree with `pages`.
+///
+/// When `change_references` is true, page-object references in destinations,
+/// actions, annotations, and bookmarks are rewritten from the old page set to
+/// the new one. `matrices` can transform destination coordinates for pages
+/// whose geometry changed, and `changes` can map old page serials to new
+/// serials when page counts differ.
 pub fn PdfDocument::change_pages(
   self : PdfDocument,
   pages : ArrayView[PdfPage],
@@ -1760,6 +1821,7 @@ pub fn PdfDocument::change_pages(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::change_pages`.
 pub fn pdf_change_pages(
   change_references : Bool,
   document : PdfDocument,
@@ -2339,6 +2401,12 @@ fn PdfDocument::pdf_page_preserve_materialized_inherited_entries(
 }
 
 ///|
+/// Extract selected pages into a new document.
+///
+/// `page_numbers` are 1-based. Bookmarks, destinations, annotations, and page
+/// labels are repaired for the retained pages where possible. `retain_numbering`
+/// preserves original page-label numbering; `process_struct_tree` trims tagged
+/// structure references to deleted pages.
 pub fn PdfDocument::pdf_of_pages(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
@@ -2409,6 +2477,7 @@ pub fn PdfDocument::pdf_of_pages(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::pdf_of_pages`.
 pub fn pdf_of_pages(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
@@ -2557,6 +2626,10 @@ fn PdfDocument::pdf_referenced_from_object(
 }
 
 ///|
+/// Remove objects that are no longer reachable from the trailer or root.
+///
+/// References to deleted pages are first nulled from destinations and actions.
+/// The document is mutated in place.
 pub fn PdfDocument::remove_unreferenced(
   self : PdfDocument,
 ) -> Unit raise PdfError {
@@ -2703,6 +2776,11 @@ fn PdfDocument::pdf_page_resource_entries(
 }
 
 ///|
+/// Merge two page resource dictionaries.
+///
+/// Known resource categories such as `/Font`, `/XObject`, and `/ColorSpace`
+/// are concatenated; unknown top-level entries from both dictionaries are
+/// preserved. Later duplicate resource names are not renamed here.
 pub fn PdfDocument::combine_pdf_resources(
   self : PdfDocument,
   first : PdfObject,
@@ -2795,6 +2873,10 @@ fn PdfDocument::pdf_page_process_form_xobject(
 }
 
 ///|
+/// Adapter for callbacks that process page-like values and return identity geometry.
+///
+/// This preserves the CamlPDF callback shape by returning the callback result,
+/// original number, and identity transform matrix.
 pub fn[A, B, C] pdf_page_process_stub(
   process : (A, B) -> C raise,
   number : A,
@@ -2804,6 +2886,11 @@ pub fn[A, B, C] pdf_page_process_stub(
 }
 
 ///|
+/// Process Form XObjects referenced by a page resource dictionary.
+///
+/// For each indirect `/XObject` with subtype `/Form`, `process` receives the
+/// document, page resources, and the form stream. It must return exactly one
+/// processed stream, which replaces the original form stream data.
 pub fn PdfDocument::process_xobjects(
   self : PdfDocument,
   page : PdfPage,
@@ -2824,6 +2911,10 @@ pub fn PdfDocument::process_xobjects(
 }
 
 ///|
+/// Return the shortest ASCII prefix unused by page resource names.
+///
+/// The prefix is suitable for `add_prefix` when merging pages from independent
+/// documents with potentially colliding resource names.
 pub fn PdfDocument::shortest_unused_prefix(self : PdfDocument) -> String {
   let names : Array[String] = []
   for number in self.object_numbers() {
@@ -2846,6 +2937,7 @@ pub fn PdfDocument::shortest_unused_prefix(self : PdfDocument) -> String {
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::shortest_unused_prefix`.
 pub fn pdf_shortest_unused_prefix(document : PdfDocument) -> String {
   document.shortest_unused_prefix()
 }
@@ -3232,6 +3324,11 @@ fn PdfDocument::pdf_page_renumber_resource_dictionary(
 }
 
 ///|
+/// Rename page resources so every page has independent resource names.
+///
+/// Content streams and inline-image dictionaries are rewritten to use the new
+/// names, and each page resource dictionary is updated. This returns new page
+/// records; the source document object table is not rewritten.
 pub fn PdfDocument::renumber_pages(
   self : PdfDocument,
   pages : ArrayView[PdfPage],
@@ -3263,6 +3360,7 @@ pub fn PdfDocument::renumber_pages(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::renumber_pages`.
 pub fn pdf_renumber_pages(
   document : PdfDocument,
   pages : ArrayView[PdfPage],
@@ -3359,6 +3457,10 @@ fn PdfDocument::pdf_page_merge_content_object(
 }
 
 ///|
+/// Merge multi-stream page contents into single decoded streams.
+///
+/// Only page-like objects with `/Resources` are considered. The document is
+/// mutated in place and stream filters are decoded before concatenation.
 pub fn PdfDocument::merge_content_streams(
   self : PdfDocument,
 ) -> Unit raise PdfError {
@@ -3446,6 +3548,11 @@ fn PdfDocument::pdf_page_add_prefix(
 }
 
 ///|
+/// Prefix all page resource names and corresponding content references.
+///
+/// If split content streams cannot be parsed independently, content streams are
+/// merged first. This mutates the document in place and is useful before
+/// combining pages from multiple documents.
 pub fn PdfDocument::add_prefix(
   self : PdfDocument,
   prefix : String,
@@ -3457,6 +3564,7 @@ pub fn PdfDocument::add_prefix(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::add_prefix`.
 pub fn pdf_add_prefix(
   document : PdfDocument,
   prefix : String,
@@ -3562,6 +3670,7 @@ fn pdf_page_root_pages_node(pdf : PdfDocument) -> PdfObject raise PdfError {
 }
 
 ///|
+/// Return page object numbers in page-tree order.
 pub fn PdfDocument::page_reference_numbers(
   self : PdfDocument,
 ) -> Array[Int] raise PdfError {
@@ -3569,6 +3678,7 @@ pub fn PdfDocument::page_reference_numbers(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::page_reference_numbers`.
 pub fn pdf_page_reference_numbers(
   document : PdfDocument,
 ) -> Array[Int] raise PdfError {
@@ -3576,6 +3686,7 @@ pub fn pdf_page_reference_numbers(
 }
 
 ///|
+/// Count pages by walking the page tree without materializing `PdfPage` records.
 pub fn PdfDocument::pages_of_pagetree_quick(
   self : PdfDocument,
 ) -> Int raise PdfError {
@@ -3583,6 +3694,9 @@ pub fn PdfDocument::pages_of_pagetree_quick(
 }
 
 ///|
+/// Return the object number for a 1-based page number.
+///
+/// Out-of-range page numbers return `None`.
 pub fn PdfDocument::page_object_number(
   self : PdfDocument,
   page_number : Int,
@@ -3596,6 +3710,7 @@ pub fn PdfDocument::page_object_number(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::page_object_number`.
 pub fn pdf_page_object_number(
   document : PdfDocument,
   page_number : Int,
@@ -3604,6 +3719,7 @@ pub fn pdf_page_object_number(
 }
 
 ///|
+/// Resolve a destination target to a 1-based page number.
 pub fn PdfDocument::page_number_of_target(
   self : PdfDocument,
   destination : PdfDestination,
@@ -3612,6 +3728,7 @@ pub fn PdfDocument::page_number_of_target(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::page_number_of_target`.
 pub fn pdf_pagenumber_of_target(
   document : PdfDocument,
   destination : PdfDestination,
@@ -3620,6 +3737,9 @@ pub fn pdf_pagenumber_of_target(
 }
 
 ///|
+/// Build a fit destination for a 1-based page number.
+///
+/// Out-of-range page numbers return `DestNull`.
 pub fn PdfDocument::target_of_page_number(
   self : PdfDocument,
   page_number : Int,
@@ -3631,6 +3751,7 @@ pub fn PdfDocument::target_of_page_number(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::target_of_page_number`.
 pub fn pdf_target_of_pagenumber(
   document : PdfDocument,
   page_number : Int,
@@ -3639,16 +3760,21 @@ pub fn pdf_target_of_pagenumber(
 }
 
 ///|
+/// Return the number of pages by walking the page tree.
 pub fn PdfDocument::endpage(self : PdfDocument) -> Int raise PdfError {
   self.pages_of_pagetree_quick()
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::endpage`.
 pub fn pdf_endpage(document : PdfDocument) -> Int raise PdfError {
   document.endpage()
 }
 
 ///|
+/// Return the root page-tree `/Count` value without validating child pages.
+///
+/// Missing or malformed counts return `0`.
 pub fn PdfDocument::endpage_fast(self : PdfDocument) -> Int raise PdfError {
   match
     self.lookup_direct(pdf_page_count_key(), pdf_page_root_pages_node(self)) {
@@ -3658,6 +3784,7 @@ pub fn PdfDocument::endpage_fast(self : PdfDocument) -> Int raise PdfError {
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::endpage_fast`.
 pub fn pdf_endpage_fast(document : PdfDocument) -> Int raise PdfError {
   document.endpage_fast()
 }
