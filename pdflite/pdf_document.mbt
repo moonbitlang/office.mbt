@@ -1,10 +1,20 @@
 ///|
+/// Location of an object stored inside a PDF object stream.
+///
+/// `object_stream_number` is the containing object stream number, and `index`
+/// is the zero-based entry index inside that stream.
 pub(all) struct ObjectStreamReference {
   object_stream_number : Int
   index : Int
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Loading state for one entry in the document object table.
+///
+/// Parsed variants hold objects that are ready to use. `ObjectToParse` marks an
+/// object that is known from an xref table but has not been read yet.
+/// `ObjectToParseFromObjectStream` records the object-stream location needed to
+/// load compressed objects lazily.
 pub(all) enum PdfObjectData {
   ObjectParsed(PdfObject)
   ObjectParsedAlreadyDecrypted(PdfObject)
@@ -13,23 +23,37 @@ pub(all) enum PdfObjectData {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// One object-table entry together with its generation number.
+///
+/// The `data` field is mutable so parsers can replace deferred states with
+/// parsed objects after lazy loading.
 pub(all) struct PdfObjectEntry {
   mut data : PdfObjectData
   generation : Int
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Mutation event recorded for incremental-write style bookkeeping.
 pub(all) enum PdfObjectEvent {
   ObjectAltered
   ObjectDeleted
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Sparse map from object number to object-table entry.
+///
+/// This is a thin wrapper around a hash map. It does not track maximum object
+/// number or mutation events; use `PdfObjects` for document-level bookkeeping.
 pub struct PdfObjectMap {
   entries : @hashmap.HashMap[Int, PdfObjectEntry]
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Document object table with allocation, object-stream, and mutation metadata.
+///
+/// `PdfObjects` owns the sparse object map, tracks the highest object number
+/// allocated so far, records object-stream identifiers, and stores an alteration
+/// log used by writers and tests.
 pub struct PdfObjects {
   mut max_object_number : Int
   object_map : PdfObjectMap
@@ -38,6 +62,11 @@ pub struct PdfObjects {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// In-memory representation of one PDF document.
+///
+/// A document stores the PDF version, catalog root number, object table,
+/// trailer dictionary, linearization flag, saved encryption metadata, first xref
+/// offset, and the revision count read from the input.
 pub struct PdfDocument {
   mut major : Int
   mut minor : Int
@@ -64,6 +93,9 @@ fn pdf_document_root_key() -> PdfName {
 }
 
 ///|
+/// Construct an object-table entry.
+///
+/// The generation defaults to `0`, matching newly created PDF objects.
 pub fn pdf_object_entry(
   data : PdfObjectData,
   generation? : Int = 0,
@@ -72,21 +104,25 @@ pub fn pdf_object_entry(
 }
 
 ///|
+/// Construct an empty object-number map.
 pub fn pdf_object_map_empty() -> PdfObjectMap {
   { entries: HashMap([]) }
 }
 
 ///|
+/// Return the number of entries in the object map.
 pub fn PdfObjectMap::length(self : PdfObjectMap) -> Int {
   self.entries.length()
 }
 
 ///|
+/// Return whether `number` has an entry in the object map.
 pub fn PdfObjectMap::contains(self : PdfObjectMap, number : Int) -> Bool {
   self.entries.contains(number)
 }
 
 ///|
+/// Return the object-table entry for `number`, if present.
 pub fn PdfObjectMap::get_entry(
   self : PdfObjectMap,
   number : Int,
@@ -95,6 +131,9 @@ pub fn PdfObjectMap::get_entry(
 }
 
 ///|
+/// Set or replace the entry for an object number.
+///
+/// This low-level map operation does not update any mutation log.
 pub fn PdfObjectMap::set_entry(
   self : PdfObjectMap,
   number : Int,
@@ -104,11 +143,15 @@ pub fn PdfObjectMap::set_entry(
 }
 
 ///|
+/// Remove an object-number entry from the map.
+///
+/// Missing numbers are ignored.
 pub fn PdfObjectMap::remove(self : PdfObjectMap, number : Int) -> Unit {
   self.entries.remove(number)
 }
 
 ///|
+/// Return all object numbers in ascending order.
 pub fn PdfObjectMap::object_numbers(self : PdfObjectMap) -> Array[Int] {
   let numbers = self.entries.keys().to_array()
   numbers.sort()
@@ -134,6 +177,10 @@ fn PdfObjectMap::copy(self : PdfObjectMap) -> PdfObjectMap {
 }
 
 ///|
+/// Return a parsed object or `PdfNull` for missing/deferred entries.
+///
+/// Both normal parsed objects and already-decrypted parsed objects are returned.
+/// Deferred states such as `ObjectToParse` are treated as absent by this helper.
 pub fn PdfObjectMap::lookup_parsed_or_null(
   self : PdfObjectMap,
   number : Int,
@@ -146,6 +193,9 @@ pub fn PdfObjectMap::lookup_parsed_or_null(
 }
 
 ///|
+/// Construct an empty document object table.
+///
+/// The next allocated object number will be `1`; the mutation log starts empty.
 pub fn pdf_objects_empty() -> PdfObjects {
   {
     max_object_number: 0,
@@ -156,6 +206,10 @@ pub fn pdf_objects_empty() -> PdfObjects {
 }
 
 ///|
+/// Build a document object table from explicit numbered entries.
+///
+/// Entries are installed without recording alteration events. The maximum
+/// object number is derived from the supplied numbers.
 pub fn pdf_objects_of_entries(
   entries : ArrayView[(Int, PdfObjectEntry)],
 ) -> PdfObjects {
@@ -167,16 +221,22 @@ pub fn pdf_objects_of_entries(
 }
 
 ///|
+/// Return the number of object entries currently stored.
 pub fn PdfObjects::length(self : PdfObjects) -> Int {
   self.object_map.length()
 }
 
 ///|
+/// Return stored object numbers in ascending order.
 pub fn PdfObjects::object_numbers(self : PdfObjects) -> Array[Int] {
   self.object_map.object_numbers()
 }
 
 ///|
+/// Transform every parsed object in place.
+///
+/// Parsed and already-decrypted entries keep their state tags after the object
+/// value is transformed. Deferred entries are left unchanged.
 pub fn PdfObjects::map_objects_in_place(
   self : PdfObjects,
   transform : (PdfObject) -> PdfObject,
@@ -194,6 +254,9 @@ pub fn PdfObjects::map_objects_in_place(
 }
 
 ///|
+/// Return parsed object entries as `(number, generation, object)` triples.
+///
+/// Results are sorted by object number and exclude deferred entries.
 pub fn PdfObjects::parsed_entries(
   self : PdfObjects,
 ) -> Array[(Int, Int, PdfObject)] {
@@ -211,6 +274,10 @@ pub fn PdfObjects::parsed_entries(
 }
 
 ///|
+/// Return parsed stream objects as `(number, generation, stream)` triples.
+///
+/// Results are sorted by object number and exclude non-stream or deferred
+/// entries.
 pub fn PdfObjects::stream_entries(
   self : PdfObjects,
 ) -> Array[(Int, Int, PdfStream)] {
@@ -239,16 +306,19 @@ fn PdfObjects::copy(self : PdfObjects) -> PdfObjects {
 }
 
 ///|
+/// Return the highest object number allocated or loaded so far.
 pub fn PdfObjects::max_object_number(self : PdfObjects) -> Int {
   self.max_object_number
 }
 
 ///|
+/// Return a copy of the object mutation log.
 pub fn PdfObjects::log(self : PdfObjects) -> Array[(Int, PdfObjectEvent)] {
   self.log.copy()
 }
 
 ///|
+/// Return the object-table entry for `number`, if present.
 pub fn PdfObjects::get_entry(
   self : PdfObjects,
   number : Int,
@@ -257,6 +327,10 @@ pub fn PdfObjects::get_entry(
 }
 
 ///|
+/// Set or replace an object-table entry without logging an alteration.
+///
+/// The tracked maximum object number is raised when `number` exceeds the
+/// previous maximum.
 pub fn PdfObjects::set_entry(
   self : PdfObjects,
   number : Int,
@@ -269,6 +343,10 @@ pub fn PdfObjects::set_entry(
 }
 
 ///|
+/// Add or replace a parsed object at an explicit object number.
+///
+/// This updates the maximum object number, stores an `ObjectParsed` entry, and
+/// appends `ObjectAltered` to the mutation log.
 pub fn PdfObjects::add_object_given_number(
   self : PdfObjects,
   number : Int,
@@ -303,6 +381,9 @@ fn PdfObjects::load_object_given_number_already_decrypted(
 }
 
 ///|
+/// Add a parsed object using the next available object number.
+///
+/// Returns the allocated object number and records an `ObjectAltered` event.
 pub fn PdfObjects::add_object(
   self : PdfObjects,
   object : PdfObject,
@@ -314,12 +395,16 @@ pub fn PdfObjects::add_object(
 }
 
 ///|
+/// Remove an object entry and record a deletion event.
+///
+/// The deletion is logged even if the object number was not present.
 pub fn PdfObjects::remove_object(self : PdfObjects, number : Int) -> Unit {
   self.object_map.remove(number)
   self.log.push((number, ObjectDeleted))
 }
 
 ///|
+/// Return a parsed object by number, or `PdfNull` if it is absent or deferred.
 pub fn PdfObjects::lookup_object_or_null(
   self : PdfObjects,
   number : Int,
@@ -328,6 +413,10 @@ pub fn PdfObjects::lookup_object_or_null(
 }
 
 ///|
+/// Construct an empty PDF document with CamlPDF-compatible defaults.
+///
+/// The default version is `1.0`, the root object number is `0`, the trailer is
+/// an empty dictionary, and `revision_read` starts at `1`.
 pub fn pdf_document_empty() -> PdfDocument {
   {
     major: 1,
@@ -343,6 +432,10 @@ pub fn pdf_document_empty() -> PdfDocument {
 }
 
 ///|
+/// Deep-copy the document object table and trailer.
+///
+/// Parsed object containers and stream data are copied so mutations to the copy
+/// do not alter the original document's object graph.
 pub fn PdfDocument::copy(self : PdfDocument) -> PdfDocument {
   {
     major: self.major,
@@ -358,11 +451,13 @@ pub fn PdfDocument::copy(self : PdfDocument) -> PdfDocument {
 }
 
 ///|
+/// Return the PDF version as `(major, minor)`.
 pub fn PdfDocument::version(self : PdfDocument) -> (Int, Int) {
   (self.major, self.minor)
 }
 
 ///|
+/// Set the PDF version stored on the document.
 pub fn PdfDocument::set_version(
   self : PdfDocument,
   major : Int,
@@ -373,11 +468,17 @@ pub fn PdfDocument::set_version(
 }
 
 ///|
+/// Return the catalog root object number tracked on the document.
 pub fn PdfDocument::root(self : PdfDocument) -> Int {
   self.root
 }
 
 ///|
+/// Return the resolved document catalog object.
+///
+/// A `/Root` entry in the trailer dictionary is preferred over the stored root
+/// number. The selected reference is resolved through `direct`; if it resolves
+/// to `PdfNull`, this raises `RootExpected`.
 pub fn PdfDocument::catalog(self : PdfDocument) -> PdfObject raise PdfError {
   let object = match
     self.trailer_dict.lookup_immediate(pdf_document_root_key()) {
@@ -391,16 +492,21 @@ pub fn PdfDocument::catalog(self : PdfDocument) -> PdfObject raise PdfError {
 }
 
 ///|
+/// Set the catalog root object number.
 pub fn PdfDocument::set_root(self : PdfDocument, root : Int) -> Unit {
   self.root = root
 }
 
 ///|
+/// Return the current trailer dictionary object.
+///
+/// The returned object may share mutable container state with the document.
 pub fn PdfDocument::trailer_dict(self : PdfDocument) -> PdfObject {
   self.trailer_dict
 }
 
 ///|
+/// Replace the document trailer dictionary object.
 pub fn PdfDocument::set_trailer_dict(
   self : PdfDocument,
   trailer_dict : PdfObject,
@@ -409,16 +515,22 @@ pub fn PdfDocument::set_trailer_dict(
 }
 
 ///|
+/// Return the number of entries in the document object table.
 pub fn PdfDocument::object_count(self : PdfDocument) -> Int {
   self.objects.length()
 }
 
 ///|
+/// Return document object numbers in ascending order.
 pub fn PdfDocument::object_numbers(self : PdfDocument) -> Array[Int] {
   self.objects.object_numbers()
 }
 
 ///|
+/// Return parsed object numbers whose objects satisfy `predicate`.
+///
+/// Deferred objects are not loaded by this helper. Results follow ascending
+/// object-number order.
 pub fn PdfDocument::select_object_numbers(
   self : PdfDocument,
   predicate : (PdfObject) -> Bool,
@@ -433,6 +545,9 @@ pub fn PdfDocument::select_object_numbers(
 }
 
 ///|
+/// Transform every parsed document object in place.
+///
+/// Deferred entries remain deferred and are not passed to `transform`.
 pub fn PdfDocument::map_objects_in_place(
   self : PdfDocument,
   transform : (PdfObject) -> PdfObject,
@@ -441,6 +556,7 @@ pub fn PdfDocument::map_objects_in_place(
 }
 
 ///|
+/// Return parsed document objects as sorted `(number, generation, object)` triples.
 pub fn PdfDocument::parsed_object_entries(
   self : PdfDocument,
 ) -> Array[(Int, Int, PdfObject)] {
@@ -448,6 +564,10 @@ pub fn PdfDocument::parsed_object_entries(
 }
 
 ///|
+/// Iterate over parsed objects in object-number order.
+///
+/// The callback receives `(number, object)`. Errors raised by the callback
+/// propagate to the caller.
 pub fn PdfDocument::iter_objects(
   self : PdfDocument,
   callback : (Int, PdfObject) -> Unit raise,
@@ -456,6 +576,9 @@ pub fn PdfDocument::iter_objects(
 }
 
 ///|
+/// Iterate over parsed objects in object-number order.
+///
+/// This is the explicit-order variant used by `iter_objects`.
 pub fn PdfDocument::iter_objects_in_order(
   self : PdfDocument,
   callback : (Int, PdfObject) -> Unit raise,
@@ -466,6 +589,10 @@ pub fn PdfDocument::iter_objects_in_order(
 }
 
 ///|
+/// Iterate over parsed objects with their generation numbers.
+///
+/// The callback receives `(number, generation, object)` in object-number order,
+/// and any callback error is propagated.
 pub fn PdfDocument::iter_objects_with_generation(
   self : PdfDocument,
   callback : (Int, Int, PdfObject) -> Unit raise,
@@ -476,6 +603,7 @@ pub fn PdfDocument::iter_objects_with_generation(
 }
 
 ///|
+/// Return parsed stream-object entries in object-number order.
 pub fn PdfDocument::stream_object_entries(
   self : PdfDocument,
 ) -> Array[(Int, Int, PdfStream)] {
@@ -483,6 +611,10 @@ pub fn PdfDocument::stream_object_entries(
 }
 
 ///|
+/// Iterate over parsed stream objects in object-number order.
+///
+/// The callback receives the stream as a `PdfObject` so callers can use the same
+/// object-level helpers as for values read from arrays or dictionaries.
 pub fn PdfDocument::iter_stream(
   self : PdfDocument,
   callback : (PdfObject) -> Unit raise,
@@ -496,6 +628,9 @@ pub fn PdfDocument::iter_stream(
 }
 
 ///|
+/// Add a parsed object using the next available object number.
+///
+/// Returns the allocated object number and records an object-altered event.
 pub fn PdfDocument::add_object(
   self : PdfDocument,
   object : PdfObject,
@@ -505,6 +640,10 @@ pub fn PdfDocument::add_object(
 }
 
 ///|
+/// Add or replace a parsed object at an explicit object number.
+///
+/// This records an object-altered event and updates the maximum object number if
+/// needed.
 pub fn PdfDocument::add_object_given_number(
   self : PdfDocument,
   number : Int,
@@ -539,11 +678,13 @@ fn PdfDocument::load_object_given_number_already_decrypted(
 }
 
 ///|
+/// Remove an object from the document and record a deletion event.
 pub fn PdfDocument::remove_object(self : PdfDocument, number : Int) -> Unit {
   self.objects.remove_object(number)
 }
 
 ///|
+/// Return a parsed object by number, or `PdfNull` if it is absent or deferred.
 pub fn PdfDocument::lookup_object_or_null(
   self : PdfDocument,
   number : Int,
@@ -552,6 +693,7 @@ pub fn PdfDocument::lookup_object_or_null(
 }
 
 ///|
+/// Return a copy of the document object mutation log.
 pub fn PdfDocument::event_log(
   self : PdfDocument,
 ) -> Array[(Int, PdfObjectEvent)] {
@@ -559,11 +701,13 @@ pub fn PdfDocument::event_log(
 }
 
 ///|
+/// Return whether the source PDF was marked as linearized.
 pub fn PdfDocument::was_linearized(self : PdfDocument) -> Bool {
   self.was_linearized
 }
 
 ///|
+/// Set whether the source PDF was marked as linearized.
 pub fn PdfDocument::set_was_linearized(
   self : PdfDocument,
   was_linearized : Bool,
@@ -572,11 +716,13 @@ pub fn PdfDocument::set_was_linearized(
 }
 
 ///|
+/// Return saved encryption metadata, if the document is encrypted.
 pub fn PdfDocument::saved_encryption(self : PdfDocument) -> PdfSavedEncryption? {
   self.saved_encryption
 }
 
 ///|
+/// Set saved encryption metadata for the document.
 pub fn PdfDocument::set_saved_encryption(
   self : PdfDocument,
   saved_encryption : PdfSavedEncryption?,
@@ -585,11 +731,13 @@ pub fn PdfDocument::set_saved_encryption(
 }
 
 ///|
+/// Return the byte offset of the first xref section read from the input.
 pub fn PdfDocument::first_xref(self : PdfDocument) -> Int {
   self.first_xref
 }
 
 ///|
+/// Set the byte offset of the first xref section read from the input.
 pub fn PdfDocument::set_first_xref(
   self : PdfDocument,
   first_xref : Int,
@@ -598,11 +746,13 @@ pub fn PdfDocument::set_first_xref(
 }
 
 ///|
+/// Return the number of document revisions read from the input.
 pub fn PdfDocument::revision_read(self : PdfDocument) -> Int {
   self.revision_read
 }
 
 ///|
+/// Set the number of document revisions read from the input.
 pub fn PdfDocument::set_revision_read(
   self : PdfDocument,
   revision_read : Int,
