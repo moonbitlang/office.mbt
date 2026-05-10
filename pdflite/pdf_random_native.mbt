@@ -62,7 +62,7 @@ pub fn PdfDocument::encrypt_128bit_aesv2(
     denied_permissions,
     pdf_secure_aes_iv_provider,
     encrypt_metadata~,
-    file_id=resolved_file_id[:],
+    file_id=resolved_file_id,
   )
 }
 

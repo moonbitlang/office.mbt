@@ -91,10 +91,7 @@ fn image_external_corrupt_startxref_pointer_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
   let marker = @ascii.encode("startxref\n")
-  let marker_position = image_external_find_last_bytes_for_test(
-    bytes[:],
-    marker[:],
-  )
+  let marker_position = image_external_find_last_bytes_for_test(bytes, marker)
   if marker_position < 0 {
     fail("expected startxref marker")
   }

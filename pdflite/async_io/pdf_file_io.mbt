@@ -30,7 +30,7 @@ pub async fn pdf_read_header_from_file(
 
 ///|
 pub async fn pdf_is_linearized_file(path : StringView) -> Bool {
-  @pdflite.pdf_is_linearized(@fs.read_file(path).binary()[:])
+  @pdflite.pdf_is_linearized(@fs.read_file(path).binary())
 }
 
 ///|

@@ -1452,7 +1452,7 @@ fn pdf_flate_encode_bytes_native(
       status,
     )
   catch {
-    _ => pdf_flate_encode_view_with_level_pure(data[:], level)
+    _ => pdf_flate_encode_view_with_level_pure(data, level)
   } noraise {
     bytes => bytes
   }
@@ -1524,7 +1524,7 @@ pub fn pdf_flate_encode(data : PdfBytes) -> PdfBytes {
 #coverage.skip
 pub fn pdf_flate_encode(data : PdfBytes) -> PdfBytes {
   try pdf_flate_encode_bytes_native(data, 6) catch {
-    _ => pdf_flate_encode_view_pure(data[:])
+    _ => pdf_flate_encode_view_pure(data)
   } noraise {
     bytes => bytes
   }
@@ -1560,7 +1560,7 @@ fn pdf_flate_decode_bytes_native(data : PdfBytes) -> PdfBytes raise PdfError {
     try
       pdf_flate_native_payload(pdf_flate_zlib_decode_ffi(data, status), status)
     catch {
-      _ => pdf_flate_decode_view_pure(data[:])
+      _ => pdf_flate_decode_view_pure(data)
     } noraise {
       bytes => bytes
     }

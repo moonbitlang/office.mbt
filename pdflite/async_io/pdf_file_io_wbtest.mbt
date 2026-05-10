@@ -147,7 +147,7 @@ fn pdf_async_io_corrupt_startxref_pointer_for_test(
   let marker = @ascii.encode("startxref")
   pdf_async_io_corrupt_startxref_pointer_at_for_test(
     bytes,
-    pdf_async_io_find_bytes_for_test(bytes[:], marker[:]),
+    pdf_async_io_find_bytes_for_test(bytes, marker),
   )
 }
 
@@ -158,7 +158,7 @@ fn pdf_async_io_corrupt_final_startxref_pointer_for_test(
   let marker = @ascii.encode("startxref")
   pdf_async_io_corrupt_startxref_pointer_at_for_test(
     bytes,
-    pdf_async_io_find_last_bytes_for_test(bytes[:], marker[:]),
+    pdf_async_io_find_last_bytes_for_test(bytes, marker),
   )
 }
 
@@ -218,7 +218,7 @@ fn pdf_async_io_push_text_codepoints_for_test(
   extractor : @pdflite.PdfTextExtractor,
   text : @pdflite.PdfBytes,
 ) -> Unit raise {
-  for codepoint in extractor.codepoints_of_text(text[:]) {
+  for codepoint in extractor.codepoints_of_text(text) {
     output.push(codepoint)
   }
 }
@@ -290,8 +290,8 @@ fn pdf_async_io_assert_page_text_contains_for_test(
   let text = pdf_async_io_page_text_codepoints_for_test(doc, page_index)
   for fragment in fragments {
     let matched = pdf_async_io_codepoints_contain_for_test(
-      text[:],
-      pdf_async_io_ascii_codepoints_for_test(fragment)[:],
+      text,
+      pdf_async_io_ascii_codepoints_for_test(fragment),
     )
     @test.assert_eq(
       matched,
@@ -362,7 +362,7 @@ async fn pdf_async_io_assert_encrypted_file_secret_for_test(
   let decrypted = pdf_async_io_decryption_result_for_test(
     pdf_read_document_from_file_with_passwords(
       path,
-      owner_password=Some(@ascii.encode(owner_password)[:]),
+      owner_password=Some(@ascii.encode(owner_password)),
     ),
   )
   @test.assert_eq(try! decrypted.document.endpage(), 1)
@@ -683,19 +683,19 @@ async test "async file wrappers write xref streams and read encrypted documents"
   @test.assert_eq(try! loaded.endpage(), 1)
 
   let encrypted = try! original.encrypt_128bit_r4(
-    @ascii.encode("user")[:],
-    @ascii.encode("owner")[:],
+    @ascii.encode("user"),
+    @ascii.encode("owner"),
     [PdfNoPrint],
     encrypt_metadata=true,
-    file_id=@ascii.encode("async-doc-id")[:],
+    file_id=@ascii.encode("async-doc-id"),
   )
   pdf_write_document_to_file_with_compressed_xref_stream(
     encrypted, encrypted_path,
   )
   guard pdf_read_document_from_file_with_passwords(
       encrypted_path,
-      user_password=Some(@ascii.encode("bad")[:]),
-      owner_password=Some(@ascii.encode("owner")[:]),
+      user_password=Some(@ascii.encode("bad")),
+      owner_password=Some(@ascii.encode("owner")),
     )
     is Some(decrypted) else {
     fail("expected decrypted async file")
@@ -746,10 +746,10 @@ async test "async file wrappers write mode-dispatched encrypted documents" {
   pdf_write_encrypted_40bit_document_to_file(
     try! pdf_async_io_secret_document_for_test("async-40"),
     arc4_40_path,
-    user[:],
-    owner[:],
+    user,
+    owner,
     denied,
-    file_id=@ascii.encode("async-40-id")[:],
+    file_id=@ascii.encode("async-40-id"),
   )
   pdf_async_io_assert_encrypted_file_secret_for_test(
     arc4_40_path, "owner", denied, "async-40",
@@ -757,11 +757,11 @@ async test "async file wrappers write mode-dispatched encrypted documents" {
   pdf_write_encrypted_128bit_document_to_file(
     try! pdf_async_io_secret_document_for_test("async-128"),
     arc4_128_path,
-    user[:],
-    owner[:],
+    user,
+    owner,
     denied,
     mode=PdfWriteXRefStream,
-    file_id=@ascii.encode("async-128-id")[:],
+    file_id=@ascii.encode("async-128-id"),
   )
   pdf_async_io_assert_encrypted_file_secret_for_test(
     arc4_128_path, "owner", denied, "async-128",
@@ -769,12 +769,12 @@ async test "async file wrappers write mode-dispatched encrypted documents" {
   pdf_write_encrypted_128bit_r4_document_to_file(
     try! pdf_async_io_secret_document_for_test("async-r4"),
     arc4_r4_path,
-    user[:],
-    owner[:],
+    user,
+    owner,
     denied,
     encrypt_metadata=false,
     mode=PdfWriteCompressedXRefStream,
-    file_id=@ascii.encode("async-r4-id")[:],
+    file_id=@ascii.encode("async-r4-id"),
   )
   pdf_async_io_assert_encrypted_file_secret_for_test(
     arc4_r4_path, "owner", denied, "async-r4",
@@ -782,15 +782,15 @@ async test "async file wrappers write mode-dispatched encrypted documents" {
   pdf_write_encrypted_aesv2_document_to_file_with_iv_provider(
     try! pdf_async_io_secret_document_for_test("async-aesv2"),
     aesv2_path,
-    user[:],
-    owner[:],
+    user,
+    owner,
     [PdfNoCopy],
     @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
-      @ascii.encode("async-aesv2-iv")[:],
+      @ascii.encode("async-aesv2-iv"),
     ),
     encrypt_metadata=false,
     mode=PdfWriteCompressedXRefStream,
-    file_id=@ascii.encode("async-aesv2-id")[:],
+    file_id=@ascii.encode("async-aesv2-id"),
   )
   pdf_async_io_assert_encrypted_file_secret_for_test(
     aesv2_path,
@@ -801,12 +801,12 @@ async test "async file wrappers write mode-dispatched encrypted documents" {
   pdf_write_encrypted_aesv2_document_to_file(
     try! pdf_async_io_secret_document_for_test("async-aesv2-default"),
     aesv2_default_path,
-    user[:],
-    owner[:],
+    user,
+    owner,
     [PdfNoPrint],
     encrypt_metadata=false,
     mode=PdfWriteCompressedXRefStream,
-    file_id=@ascii.encode("async-aesv2-default-id")[:],
+    file_id=@ascii.encode("async-aesv2-default-id"),
   )
   pdf_async_io_assert_encrypted_file_secret_for_test(
     aesv2_default_path,
@@ -817,17 +817,17 @@ async test "async file wrappers write mode-dispatched encrypted documents" {
   pdf_write_encrypted_aesv3_document_to_file_with_providers(
     try! pdf_async_io_secret_document_for_test("async-aesv3"),
     aesv3_path,
-    user[:],
-    owner[:],
+    user,
+    owner,
     [PdfNoExtract],
     @pdflite.pdf_deterministic_aesv3_random_provider_from_seed(
-      @ascii.encode("async-aesv3-random")[:],
+      @ascii.encode("async-aesv3-random"),
     ),
     @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
-      @ascii.encode("async-aesv3-iv")[:],
+      @ascii.encode("async-aesv3-iv"),
     ),
     mode=PdfWriteXRefStream,
-    file_id=@ascii.encode("async-aesv3-id")[:],
+    file_id=@ascii.encode("async-aesv3-id"),
   )
   pdf_async_io_assert_encrypted_file_secret_for_test(
     aesv3_path,
@@ -838,12 +838,12 @@ async test "async file wrappers write mode-dispatched encrypted documents" {
   pdf_write_encrypted_aesv3_document_to_file(
     try! pdf_async_io_secret_document_for_test("async-aesv3-default"),
     aesv3_default_path,
-    user[:],
-    owner[:],
+    user,
+    owner,
     [PdfNoExtract],
     encrypt_metadata=false,
     mode=PdfWriteCompressedXRefStream,
-    file_id=@ascii.encode("async-aesv3-default-id")[:],
+    file_id=@ascii.encode("async-aesv3-default-id"),
   )
   pdf_async_io_assert_encrypted_file_secret_for_test(
     aesv3_default_path,
@@ -854,17 +854,17 @@ async test "async file wrappers write mode-dispatched encrypted documents" {
   pdf_write_encrypted_aesv3_iso_document_to_file_with_providers(
     try! pdf_async_io_secret_document_for_test("async-aesv3-iso"),
     aesv3_iso_path,
-    user[:],
-    owner[:],
+    user,
+    owner,
     [PdfNoAssemble],
     @pdflite.pdf_deterministic_aesv3_random_provider_from_seed(
-      @ascii.encode("async-aesv3-iso-random")[:],
+      @ascii.encode("async-aesv3-iso-random"),
     ),
     @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
-      @ascii.encode("async-aesv3-iso-iv")[:],
+      @ascii.encode("async-aesv3-iso-iv"),
     ),
     encrypt_metadata=false,
-    file_id=@ascii.encode("async-aesv3-iso-id")[:],
+    file_id=@ascii.encode("async-aesv3-iso-id"),
   )
   pdf_async_io_assert_encrypted_file_secret_for_test(
     aesv3_iso_path,
@@ -875,11 +875,11 @@ async test "async file wrappers write mode-dispatched encrypted documents" {
   pdf_write_encrypted_aesv3_iso_document_to_file(
     try! pdf_async_io_secret_document_for_test("async-aesv3-iso-default"),
     aesv3_iso_default_path,
-    user[:],
-    owner[:],
+    user,
+    owner,
     [PdfNoAssemble],
     encrypt_metadata=false,
-    file_id=@ascii.encode("async-aesv3-iso-default-id")[:],
+    file_id=@ascii.encode("async-aesv3-iso-default-id"),
   )
   pdf_async_io_assert_encrypted_file_secret_for_test(
     aesv3_iso_default_path,
@@ -1023,27 +1023,27 @@ async test "async file wrappers read encrypted incremental revisions" {
   doc.add_object_given_number(30, original_secret)
   let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
   let encrypted = try! doc.encrypt_128bit_aesv2_with_iv_provider(
-    @ascii.encode("user")[:],
-    @ascii.encode("owner")[:],
+    @ascii.encode("user"),
+    @ascii.encode("owner"),
     denied,
     @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
-      @ascii.encode("async encrypted revision iv")[:],
+      @ascii.encode("async encrypted revision iv"),
     ),
     encrypt_metadata=false,
-    file_id=@ascii.encode("async-encrypted-revision-id")[:],
+    file_id=@ascii.encode("async-encrypted-revision-id"),
   )
   pdf_write_document_to_file(encrypted, original_path)
   let decrypted = pdf_async_io_decryption_result_for_test(
     pdf_read_document_from_file_with_passwords(
       original_path,
-      user_password=Some(@ascii.encode("user")[:]),
+      user_password=Some(@ascii.encode("user")),
     ),
   )
   decrypted.document.add_object_given_number(30, updated_secret)
   let recrypted = try! decrypted.document.recrypt_with_password_aesv2_with_iv_provider(
-    @ascii.encode("owner")[:],
+    @ascii.encode("owner"),
     @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
-      @ascii.encode("async encrypted revision recrypt iv")[:],
+      @ascii.encode("async encrypted revision recrypt iv"),
     ),
   )
   pdf_write_document_incremental_update_with_compressed_xref_stream_to_file(
@@ -1054,14 +1054,14 @@ async test "async file wrappers read encrypted incremental revisions" {
     pdf_read_document_revision_from_file_with_passwords(
       updated_path,
       1,
-      owner_password=Some(@ascii.encode("owner")[:]),
+      owner_password=Some(@ascii.encode("owner")),
     ),
   )
   let older = pdf_async_io_decryption_result_for_test(
     pdf_read_document_revision_from_file_with_passwords(
       updated_path,
       2,
-      owner_password=Some(@ascii.encode("owner")[:]),
+      owner_password=Some(@ascii.encode("owner")),
     ),
   )
   pdf_async_io_remove_if_exists_for_test(original_path)
