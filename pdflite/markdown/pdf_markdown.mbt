@@ -1401,6 +1401,12 @@ fn pdf_markdown_readable_document(
 }
 
 ///|
+/// Convert a parsed PDF document to a best-effort Markdown text dump.
+///
+/// The output contains one `# Page N` section per page. Text is extracted from
+/// page content streams and nested form XObjects using the document's font
+/// encodings. Encrypted documents are decrypted only when they can be opened
+/// without an explicit password.
 pub fn pdf_document_to_markdown(
   document : @pdflite.PdfDocument,
 ) -> String raise {
@@ -1424,6 +1430,7 @@ pub fn pdf_document_to_markdown(
 }
 
 ///|
+/// Read PDF bytes and convert the resulting document with `pdf_document_to_markdown`.
 pub fn pdf_bytes_to_markdown(data : Bytes) -> String raise {
   pdf_document_to_markdown(@pdflite.pdf_read_document_from_bytes(data))
 }

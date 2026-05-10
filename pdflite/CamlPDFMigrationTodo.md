@@ -10,12 +10,13 @@ Current estimate:
 - Native main-feature parity: 98.0%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
   breadth: 85-90%.
-- Warning 74 public documentation cleanup: 10 native diagnostics remain after
-  documenting the byte, object, document, reader, lexeme, lookup/tree,
+- Warning 74 public documentation cleanup: complete; 0 native diagnostics
+  remain. Covered the byte, object, document, reader, lexeme, lookup/tree,
   colour-space, transform, destination, merge-helper, standard-font, Flate, and
   text/font extraction, cryptography and primitive crypto, page-tree, writer,
   native async file I/O, codec, page-label, function, optional-content, and
-  content-stream, annotation, native secure-random, and bookmark public APIs.
+  content-stream, annotation, native secure-random, bookmark, image, structure,
+  renumbering, and Markdown helper public APIs.
 
 Current backend snapshot:
 
@@ -40,9 +41,9 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
-- [ ] Finish warning 74 public API documentation with useful API-level
+- [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
-  placeholder warning fixes.
+  placeholder warning fixes.~~
   - [x] ~~Document byte foundations, byte cursors, byte output, PDF byte
     primitives, bitstreams, units, dates, transforms, helper entry points,
     destinations, standard-font helpers, lookup/tree helpers, colour spaces,
@@ -79,7 +80,9 @@ Current backend snapshot:
   - [x] ~~Document image APIs, including encoded-versus-raw extraction,
     image-mask defaults, colour-space/resource lookup, BPC preservation, decode
     application, and 24bpp RGB output layout.~~
-  - [ ] Document structure, renumbering, and Markdown helper APIs.
+  - [x] ~~Document structure, renumbering, and Markdown helper APIs, including
+    parent-tree mutation, selected-page trimming, object-number copy semantics,
+    non-overlapping merge renumbering, and best-effort Markdown extraction.~~
 - [x] ~~Stabilize native-first core architecture and main workflows.~~
 - [x] ~~Share CamlPDF-style trailer `/ID` generation across `change_id`,
   encryption, and merge.~~

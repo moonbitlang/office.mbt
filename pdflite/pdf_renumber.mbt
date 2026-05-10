@@ -40,6 +40,12 @@ fn pdf_renumber_document_with_changes(
 }
 
 ///|
+/// Return a copy of the document with object numbers remapped.
+///
+/// `changes` maps old object numbers to new object numbers; omitted objects keep
+/// their original number. All indirect references, the root reference, trailer
+/// dictionary, and object-stream metadata are updated. Duplicate or nonpositive
+/// target numbers raise `InvalidObjectNumber`.
 pub fn PdfDocument::renumber_objects(
   self : PdfDocument,
   changes : ArrayView[(Int, Int)],
@@ -48,6 +54,7 @@ pub fn PdfDocument::renumber_objects(
 }
 
 ///|
+/// Return a copy whose objects are numbered compactly from 1 in object order.
 pub fn PdfDocument::renumber_objects_compact(
   self : PdfDocument,
 ) -> PdfDocument raise PdfError {
@@ -60,6 +67,10 @@ pub fn PdfDocument::renumber_objects_compact(
 }
 
 ///|
+/// Return a copy with every object number increased by `offset`.
+///
+/// `offset == 0` returns a plain copy. Negative offsets raise
+/// `InvalidObjectNumber`.
 pub fn PdfDocument::renumber_objects_by_offset(
   self : PdfDocument,
   offset : Int,
@@ -79,6 +90,11 @@ pub fn PdfDocument::renumber_objects_by_offset(
 }
 
 ///|
+/// Return copies of documents renumbered into one non-overlapping sequence.
+///
+/// The first document starts at object number 1; each following document starts
+/// after the previous document's object count. This is primarily used before
+/// merging documents that may have colliding object numbers.
 pub fn pdf_renumber_documents(
   documents : ArrayView[PdfDocument],
 ) -> Array[PdfDocument] raise PdfError {

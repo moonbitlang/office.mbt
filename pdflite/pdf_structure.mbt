@@ -267,6 +267,11 @@ fn PdfDocument::pdf_structure_replace_parent_tree(
 }
 
 ///|
+/// Renumber structure parent-tree keys across documents before merging.
+///
+/// The documents are mutated in place. Parent-tree keys are reassigned to a
+/// single increasing sequence, and structure parent references inside each
+/// document are updated to match the rebuilt number trees.
 pub fn pdf_renumber_parent_trees(
   documents : ArrayView[PdfDocument],
 ) -> Unit raise PdfError {
@@ -364,6 +369,11 @@ fn PdfDocument::pdf_structure_trim_deleted_pages(
 }
 
 ///|
+/// Trim structure-tree entries that point to pages outside the selected pages.
+///
+/// `page_numbers` uses the same page-selection numbering as the page helpers.
+/// The document is mutated in place by deleting structure objects tied to
+/// removed pages and pruning `/K` arrays that reference them.
 pub fn PdfDocument::trim_structure_tree(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
@@ -378,6 +388,7 @@ pub fn PdfDocument::trim_structure_tree(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::trim_structure_tree`.
 pub fn pdf_trim_structure_tree(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
@@ -408,6 +419,12 @@ fn pdf_structure_tree_root_object_number(root : PdfObject) -> Int {
 }
 
 ///|
+/// Merge structure tree roots from source documents into a target document.
+///
+/// Returns the resulting structure-tree root object number, or `None` when no
+/// source document has a structure tree. When multiple roots are merged, parent
+/// trees and root metadata are combined in `document`; `add_toplevel_document`
+/// wraps merged children in a PDF 2.0 top-level `/Document` structure element.
 pub fn pdf_merge_structure_trees(
   document : PdfDocument,
   documents : ArrayView[PdfDocument],
