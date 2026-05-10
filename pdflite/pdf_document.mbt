@@ -73,7 +73,7 @@ pub fn pdf_object_entry(
 
 ///|
 pub fn pdf_object_map_empty() -> PdfObjectMap {
-  { entries: @hashmap.HashMap::new() }
+  { entries: @hashmap.HashMap([]) }
 }
 
 ///|
@@ -150,7 +150,7 @@ pub fn pdf_objects_empty() -> PdfObjects {
   {
     max_object_number: 0,
     object_map: pdf_object_map_empty(),
-    object_stream_ids: @hashmap.HashMap::new(),
+    object_stream_ids: @hashmap.HashMap([]),
     log: [],
   }
 }
@@ -226,7 +226,7 @@ pub fn PdfObjects::stream_entries(
 
 ///|
 fn PdfObjects::copy(self : PdfObjects) -> PdfObjects {
-  let object_stream_ids : @hashmap.HashMap[Int, Int] = @hashmap.HashMap::new()
+  let object_stream_ids : @hashmap.HashMap[Int, Int] = @hashmap.HashMap([])
   for number in self.object_stream_ids.keys() {
     object_stream_ids[number] = self.object_stream_ids.get(number).unwrap()
   }

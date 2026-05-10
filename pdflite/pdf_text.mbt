@@ -4558,7 +4558,7 @@ fn pdf_text_compose_tounicode_entries(
   inherited : ArrayView[(Int, PdfBytes)],
 ) -> Array[(Int, PdfBytes)] {
   let output : Array[(Int, PdfBytes)] = []
-  let seen : @hashmap.HashMap[Int, Bool] = @hashmap.HashMap::new()
+  let seen : @hashmap.HashMap[Int, Bool] = @hashmap.HashMap([])
   for entry in current {
     output.push(entry)
     seen[entry.0] = true
@@ -4578,7 +4578,7 @@ fn pdf_text_compose_cid_entries(
   inherited : ArrayView[(Int, Int)],
 ) -> Array[(Int, Int)] {
   let output : Array[(Int, Int)] = []
-  let seen : @hashmap.HashMap[Int, Bool] = @hashmap.HashMap::new()
+  let seen : @hashmap.HashMap[Int, Bool] = @hashmap.HashMap([])
   for entry in current {
     output.push(entry)
     seen[entry.0] = true
@@ -4796,7 +4796,7 @@ pub fn PdfDocument::parse_cmap(
   self : PdfDocument,
   cmap : PdfObject,
 ) -> PdfParsedCMap raise PdfError {
-  self.parse_cmap_with_seen(cmap, @hashmap.HashMap::new())
+  self.parse_cmap_with_seen(cmap, @hashmap.HashMap([]))
 }
 
 ///|
@@ -4989,7 +4989,7 @@ priv struct PdfTextExternalCMapLookup {
 fn pdf_text_cmap_cid_lookup_map(
   entries : ArrayView[(Int, Int)],
 ) -> @hashmap.HashMap[Int, Int] {
-  let values : @hashmap.HashMap[Int, Int] = @hashmap.HashMap::new()
+  let values : @hashmap.HashMap[Int, Int] = @hashmap.HashMap([])
   for entry in entries {
     if !values.contains(entry.0) {
       values[entry.0] = entry.1
@@ -5002,7 +5002,7 @@ fn pdf_text_cmap_cid_lookup_map(
 fn pdf_text_tounicode_codepoints_lookup_map(
   entries : ArrayView[(Int, PdfBytes)],
 ) -> @hashmap.HashMap[Int, Array[Int]] {
-  let values : @hashmap.HashMap[Int, Array[Int]] = @hashmap.HashMap::new()
+  let values : @hashmap.HashMap[Int, Array[Int]] = @hashmap.HashMap([])
   for entry in entries {
     if !values.contains(entry.0) {
       values[entry.0] = pdf_text_codepoints_of_tounicode_bytes_or_charcode(

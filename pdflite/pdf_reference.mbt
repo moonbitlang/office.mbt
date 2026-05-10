@@ -105,7 +105,7 @@ pub fn PdfDocument::referenced_object_numbers(
   no_follow_entries? : ArrayView[PdfName] = [],
   no_follow_contains? : ArrayView[(PdfName, PdfObject)] = [],
 ) -> Array[Int] {
-  let found : @hashmap.HashMap[Int, Bool] = @hashmap.HashMap::new()
+  let found : @hashmap.HashMap[Int, Bool] = @hashmap.HashMap([])
   self.collect_referenced_object_numbers(
     found, object, no_follow_entries, no_follow_contains,
   )

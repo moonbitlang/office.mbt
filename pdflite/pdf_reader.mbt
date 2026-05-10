@@ -508,7 +508,7 @@ priv struct PdfClassicXRefIndex {
 fn pdf_classic_xref_index(
   xrefs : ArrayView[PdfClassicXRefEntry],
 ) -> PdfClassicXRefIndex {
-  let entries : @hashmap.HashMap[Int, PdfClassicXRefEntry] = @hashmap.HashMap::new()
+  let entries : @hashmap.HashMap[Int, PdfClassicXRefEntry] = @hashmap.HashMap([])
   for xref in xrefs {
     if xref.in_use && !entries.contains(xref.object_number) {
       entries[xref.object_number] = xref
@@ -731,7 +731,7 @@ priv struct PdfReaderXRefStreamRefSet {
 fn pdf_reader_xref_stream_ref_set(
   refs : ArrayView[(Int, Int)],
 ) -> PdfReaderXRefStreamRefSet {
-  let values : @hashmap.HashMap[Int, PdfNumberSet] = @hashmap.HashMap::new()
+  let values : @hashmap.HashMap[Int, PdfNumberSet] = @hashmap.HashMap([])
   for item in refs {
     let (object_number, offset) = item
     match values.get(object_number) {
@@ -1123,7 +1123,7 @@ fn pdf_reader_object_stream_groups(
   xrefs : ArrayView[PdfClassicXRefEntry],
 ) -> Array[(Int, Array[(PdfClassicXRefEntry, ObjectStreamReference)])] {
   let groups : Array[(Int, Array[(PdfClassicXRefEntry, ObjectStreamReference)])] = []
-  let indexes : @hashmap.HashMap[Int, Int] = @hashmap.HashMap::new()
+  let indexes : @hashmap.HashMap[Int, Int] = @hashmap.HashMap([])
   for xref in xrefs {
     match xref.object_stream {
       Some(reference) =>
