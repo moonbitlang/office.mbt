@@ -1,24 +1,29 @@
 ///|
+/// Returns the Adobe Font Metrics data for this standard font.
 pub fn PdfStandardFont::afm_data(self : PdfStandardFont) -> PdfAfmData {
   pdf_standard14_afm_data_of_font(self)
 }
 
 ///|
+/// Returns the Adobe Font Metrics data for a standard font.
 pub fn pdf_standard14_afm_data(font : PdfStandardFont) -> PdfAfmData {
   font.afm_data()
 }
 
 ///|
+/// Returns the baseline adjustment used by CamlPDF for this standard font.
 pub fn pdf_standard14_baseline_adjustment(font : PdfStandardFont) -> Int {
   font.baseline_adjustment()
 }
 
 ///|
+/// Returns the `/StemV` value used when writing this standard font.
 pub fn pdf_standard14_stemv_of_standard_font(font : PdfStandardFont) -> Int {
   font.stemv()
 }
 
 ///|
+/// Returns the PDF font descriptor flags for this standard font.
 pub fn pdf_standard14_flags_of_standard_font(font : PdfStandardFont) -> Int {
   font.flags()
 }
@@ -100,6 +105,10 @@ fn pdf_standard14_kern(
 }
 
 ///|
+/// Computes the width of byte-encoded text in standard-font glyph units.
+///
+/// When `kern` is true, AFM kerning pairs are included between adjacent
+/// character codes.
 pub fn pdf_standard14_text_width(
   font : PdfStandardFont,
   encoding : PdfEncoding,
@@ -119,6 +128,7 @@ pub fn pdf_standard14_text_width(
 }
 
 ///|
+/// CamlPDF-shaped wrapper for standard-14 text width calculation.
 pub fn pdf_standard14_textwidth(
   kern : Bool,
   encoding : PdfEncoding,
@@ -129,6 +139,7 @@ pub fn pdf_standard14_textwidth(
 }
 
 ///|
+/// Computes the width of byte-encoded text for this standard font.
 pub fn PdfStandardFont::text_width(
   self : PdfStandardFont,
   encoding : PdfEncoding,
@@ -139,6 +150,8 @@ pub fn PdfStandardFont::text_width(
 }
 
 ///|
+/// Computes the width of byte-encoded text using this standard-font data and
+/// its encoding.
 pub fn PdfStandardFontData::text_width(
   self : PdfStandardFontData,
   text : BytesView,

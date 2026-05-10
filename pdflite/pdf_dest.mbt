@@ -108,12 +108,20 @@ fn pdf_dest_type_fitbv() -> PdfName {
 }
 
 ///|
+/// A destination target page reference.
+///
+/// PDF destination arrays may refer either to a page object or to a page number
+/// in another document.
 pub(all) enum PdfTargetPage {
   TargetPageObject(Int)
   TargetOtherDocPageNumber(Int)
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// A normalized PDF destination.
+///
+/// The variants cover action dictionaries, named/string destinations, null
+/// destinations, and all standard page-view destination array forms.
 pub(all) enum PdfDestination {
   DestAction(PdfObject)
   DestNull
@@ -196,6 +204,11 @@ fn PdfDocument::pdf_dest_lookup_string_destination(
 }
 
 ///|
+/// Reads and normalizes a PDF destination object.
+///
+/// When `shallow` is false, named and string destinations are resolved through
+/// the document catalog when possible. Unknown or malformed destination shapes
+/// are represented as `DestNull`.
 pub fn PdfDocument::read_destination(
   self : PdfDocument,
   object : PdfObject,
@@ -308,6 +321,9 @@ pub fn PdfDocument::read_destination(
 }
 
 ///|
+/// Reads and normalizes a PDF destination object.
+///
+/// This is the standalone form of `PdfDocument::read_destination`.
 pub fn pdf_read_destination(
   document : PdfDocument,
   object : PdfObject,
@@ -333,6 +349,7 @@ fn pdf_dest_optional_object(value : Double?) -> PdfObject {
 }
 
 ///|
+/// Converts a normalized destination back to a PDF object.
 pub fn pdf_object_of_destination(destination : PdfDestination) -> PdfObject {
   match destination {
     DestAction(action) => action
@@ -512,6 +529,11 @@ fn pdf_dest_transform_point(
 }
 
 ///|
+/// Applies a page transform matrix to destination coordinates.
+///
+/// Only destinations tied to page objects are transformed. Named destinations,
+/// string destinations, non-page-number actions, and already page-number-based
+/// targets are preserved.
 pub fn PdfDocument::transform_destination(
   self : PdfDocument,
   matrix : TransformMatrix,
@@ -577,6 +599,9 @@ pub fn PdfDocument::transform_destination(
 }
 
 ///|
+/// Applies a page transform matrix to destination coordinates.
+///
+/// This is the standalone form of `PdfDocument::transform_destination`.
 pub fn pdf_transform_destination(
   document : PdfDocument,
   matrix : TransformMatrix,
