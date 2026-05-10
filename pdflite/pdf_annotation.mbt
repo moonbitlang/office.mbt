@@ -214,6 +214,7 @@ let pdf_annotation_three_dee_name : PdfName = pdf_annotation_name("/3D")
 let pdf_annotation_unknown_name : PdfName = pdf_annotation_name("/Unknown")
 
 ///|
+/// Border style used by an annotation border dictionary.
 pub(all) enum PdfAnnotationStyle {
   AnnotationNoStyle
   AnnotationSolid
@@ -224,6 +225,11 @@ pub(all) enum PdfAnnotationStyle {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Parsed annotation border information.
+///
+/// `vertical_radius` and `horizontal_radius` come from the legacy `/Border`
+/// array form. `style` and `dash_array` represent `/BS` dictionary entries when
+/// present.
 pub(all) struct PdfAnnotationBorder {
   width : Double
   vertical_radius : Double
@@ -233,6 +239,9 @@ pub(all) struct PdfAnnotationBorder {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// RGB annotation colour from the `/C` entry.
+///
+/// Components are stored as integer channel values after parsing PDF numbers.
 pub(all) struct PdfAnnotationColour {
   red : Int
   green : Int
@@ -240,6 +249,10 @@ pub(all) struct PdfAnnotationColour {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Supported annotation subtype.
+///
+/// Popup annotations embed their resolved parent annotation when available.
+/// Unknown subtype names are preserved as `AnnotationUnknown`.
 pub(all) enum PdfAnnotationSubtype {
   AnnotationText
   AnnotationLink
@@ -270,6 +283,11 @@ pub(all) enum PdfAnnotationSubtype {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Parsed PDF annotation dictionary.
+///
+/// `contents` and `subject` are raw PDF string bytes. `rectangle` is required
+/// when reading from a PDF. `rest` preserves dictionary entries not modeled by
+/// the typed fields so they can be written back.
 pub(all) struct PdfAnnotation {
   subtype : PdfAnnotationSubtype
   contents : PdfBytes?
@@ -297,6 +315,7 @@ fn pdf_annotation_zero_rectangle() -> PdfRectangle {
 }
 
 ///|
+/// Build an annotation border, copying the supplied dash array.
 pub fn pdf_annotation_make_border(
   width : Double,
   vertical_radius? : Double = 0.0,
@@ -316,6 +335,10 @@ pub fn pdf_annotation_make_border(
 }
 
 ///|
+/// Build an annotation value with CamlPDF-compatible defaults.
+///
+/// Defaults are no contents, no subject, a zero rectangle, default border, no
+/// colour, and no preserved extra dictionary entries.
 pub fn pdf_annotation_make(
   subtype : PdfAnnotationSubtype,
   contents? : PdfBytes? = None,
@@ -584,6 +607,10 @@ fn PdfDocument::pdf_annotation_read_depth(
 }
 
 ///|
+/// Read one annotation dictionary from this document.
+///
+/// The annotation object may be direct or indirect. `/Rect` is required. Popup
+/// parents are resolved recursively up to a bounded depth to avoid cycles.
 pub fn PdfDocument::read_annotation(
   self : PdfDocument,
   annotation : PdfObject,
@@ -603,6 +630,11 @@ fn PdfDocument::pdf_annotation_popup_parent(
 }
 
 ///|
+/// Read annotations from a page's `/Annots` array.
+///
+/// Missing or malformed `/Annots` entries are treated as no annotations. When a
+/// popup annotation and its parent both appear in the page array, the parent is
+/// skipped and represented through `AnnotationPopup`.
 pub fn PdfDocument::annotations_of_page(
   self : PdfDocument,
   page : PdfPage,
@@ -631,6 +663,7 @@ pub fn PdfDocument::annotations_of_page(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::annotations_of_page`.
 pub fn pdf_annotations_of_page(
   document : PdfDocument,
   page : PdfPage,
@@ -723,6 +756,10 @@ fn pdf_object_of_annotation(
 }
 
 ///|
+/// Return a page value with an annotation prepended to `/Annots`.
+///
+/// The annotation is written as a direct dictionary. Existing annotation arrays
+/// are preserved after the new entry; a non-array `/Annots` value raises.
 pub fn PdfDocument::add_annotation(
   self : PdfDocument,
   page : PdfPage,
@@ -745,6 +782,7 @@ pub fn PdfDocument::add_annotation(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::add_annotation`.
 pub fn pdf_add_annotation(
   document : PdfDocument,
   page : PdfPage,
@@ -801,6 +839,11 @@ fn PdfDocument::pdf_annotation_transform_object(
 }
 
 ///|
+/// Transform annotation geometry referenced by a page dictionary.
+///
+/// Applies `matrix` to `/Rect`, `/QuadPoints`, and `/L` entries. Indirect
+/// annotations are updated in this document; direct annotation dictionaries in
+/// the page's `/Annots` array are updated in place.
 pub fn PdfDocument::transform_annotations(
   self : PdfDocument,
   matrix : TransformMatrix,
@@ -828,6 +871,7 @@ pub fn PdfDocument::transform_annotations(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDocument::transform_annotations`.
 pub fn pdf_transform_annotations(
   document : PdfDocument,
   matrix : TransformMatrix,
