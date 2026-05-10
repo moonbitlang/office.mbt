@@ -7,7 +7,7 @@ fn pdf_renumber_document_with_changes(
   let old_numbers = output.object_numbers()
   let change_map = pdf_page_reference_map(changes)
   let entries : Array[(Int, PdfObjectEntry)] = []
-  let seen : @hashmap.HashMap[Int, Bool] = @hashmap.HashMap([])
+  let seen : @hashmap.HashMap[Int, Bool] = HashMap([])
   for number in old_numbers {
     let new_number = change_map.changed_reference(number)
     if new_number < 1 || seen.contains(new_number) {

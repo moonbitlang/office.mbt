@@ -94,7 +94,7 @@ test "private positioned text array treats large integer adjustment as space" {
     12.0,
     Some(extractor),
     [
-      @pdflite.PdfString(@ascii.encode("A")),
+      PdfString(@ascii.encode("A")),
       PdfInteger(-300),
       PdfString(@ascii.encode("B")),
     ],

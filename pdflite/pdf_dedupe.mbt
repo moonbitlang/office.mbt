@@ -32,7 +32,7 @@ fn PdfDocument::pdf_duplicate_stream_changes(
   let unique_streams_by_length : @hashmap.HashMap[
     Int,
     Array[PdfDuplicateStreamCandidate],
-  ] = @hashmap.HashMap([])
+  ] = HashMap([])
   let changes : Array[(Int, Int)] = []
   for number in self.object_numbers() {
     let object = self.lookup_object_or_null(number)

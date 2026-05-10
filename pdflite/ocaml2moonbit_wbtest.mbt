@@ -79,7 +79,7 @@ test "ArrayView to_owned makes an explicit mutable sorting boundary" {
 
 ///|
 test "MoonBit iterates iterable key views without array conversion" {
-  let values : @hashmap.HashMap[Int, Int] = @hashmap.HashMap([])
+  let values : @hashmap.HashMap[Int, Int] = HashMap([])
   values[1] = 10
   values[2] = 20
   let mut total = 0
@@ -173,7 +173,7 @@ test "Raising callback parameters use raising function types" {
 
 ///|
 test "Imported packages are used through package aliases" {
-  let objects : @hashmap.HashMap[Int, String] = @hashmap.HashMap([])
+  let objects : @hashmap.HashMap[Int, String] = HashMap([])
   objects[7] = "seven"
   @test.assert_eq(objects.get(7), Some("seven"))
 }

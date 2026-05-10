@@ -402,7 +402,7 @@ priv struct PdfPageNumberLookup {
 fn pdf_page_number_lookup(
   page_reference_numbers : ArrayView[Int],
 ) -> PdfPageNumberLookup {
-  let values : @hashmap.HashMap[Int, Int] = @hashmap.HashMap([])
+  let values : @hashmap.HashMap[Int, Int] = HashMap([])
   for index in 0..<page_reference_numbers.length() {
     let object_number = page_reference_numbers[index]
     if !values.contains(object_number) {

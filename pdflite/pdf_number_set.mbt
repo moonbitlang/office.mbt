@@ -5,7 +5,7 @@ priv struct PdfNumberSet {
 
 ///|
 fn pdf_number_set(numbers : ArrayView[Int]) -> PdfNumberSet {
-  let values : @hashmap.HashMap[Int, Bool] = @hashmap.HashMap([])
+  let values : @hashmap.HashMap[Int, Bool] = HashMap([])
   for number in numbers {
     values[number] = true
   }

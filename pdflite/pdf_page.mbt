@@ -1035,7 +1035,7 @@ priv struct PdfPageReferenceMap {
 fn pdf_page_reference_map(
   changes : ArrayView[(Int, Int)],
 ) -> PdfPageReferenceMap {
-  let values : @hashmap.HashMap[Int, Int] = @hashmap.HashMap([])
+  let values : @hashmap.HashMap[Int, Int] = HashMap([])
   for change in changes {
     let (old_number, new_number) = change
     if !values.contains(old_number) {
@@ -1173,7 +1173,7 @@ fn pdf_page_matrix_lookup(
   matrices : ArrayView[(Int, TransformMatrix)],
   page_reference_numbers : ArrayView[Int],
 ) -> PdfPageMatrixLookup {
-  let values : @hashmap.HashMap[Int, TransformMatrix] = @hashmap.HashMap([])
+  let values : @hashmap.HashMap[Int, TransformMatrix] = HashMap([])
   for entry in matrices {
     let (matrix_page_number, matrix) = entry
     if !values.contains(matrix_page_number) {
@@ -2561,7 +2561,7 @@ pub fn PdfDocument::remove_unreferenced(
   self : PdfDocument,
 ) -> Unit raise PdfError {
   self.pdf_page_nullify_deleted_page_references()
-  let found : @hashmap.HashMap[Int, Bool] = @hashmap.HashMap([])
+  let found : @hashmap.HashMap[Int, Bool] = HashMap([])
   if self.trailer_dict().lookup_immediate(pdf_page_root_key()) is None &&
     self.root() > 0 {
     found[self.root()] = true
@@ -3432,7 +3432,7 @@ fn PdfDocument::pdf_page_add_prefix(
   self : PdfDocument,
   prefix : String,
 ) -> Unit raise PdfError {
-  let fixed_streams : @hashmap.HashMap[Int, Bool] = @hashmap.HashMap([])
+  let fixed_streams : @hashmap.HashMap[Int, Bool] = HashMap([])
   for number in self.object_numbers() {
     let object = self.lookup_object_or_null(number)
     if self.pdf_page_object_uses_page_resources(object) {

@@ -323,7 +323,7 @@ priv struct PdfMergeNameSet {
 
 ///|
 fn pdf_merge_name_set() -> PdfMergeNameSet {
-  { values: @hashmap.HashMap([]) }
+  { values: HashMap([]) }
 }
 
 ///|
@@ -343,7 +343,7 @@ priv struct PdfMergeBytesSet {
 
 ///|
 fn pdf_merge_bytes_set() -> PdfMergeBytesSet {
-  { values: @hashmap.HashMap([]) }
+  { values: HashMap([]) }
 }
 
 ///|
@@ -462,7 +462,7 @@ priv struct PdfMergeDictionaryBuilder {
 
 ///|
 fn pdf_merge_dictionary_builder() -> PdfMergeDictionaryBuilder {
-  { entries: [], indexes: @hashmap.HashMap([]) }
+  { entries: [], indexes: HashMap([]) }
 }
 
 ///|
@@ -544,7 +544,7 @@ fn PdfDocument::pdf_merge_structure_array(
 fn pdf_merge_parent_tree_change_map(
   changes : ArrayView[(Int, Int)],
 ) -> @hashmap.HashMap[Int, Int] {
-  let values : @hashmap.HashMap[Int, Int] = @hashmap.HashMap([])
+  let values : @hashmap.HashMap[Int, Int] = HashMap([])
   for change in changes {
     let (old, replacement) = change
     if !values.contains(old) {
@@ -1041,7 +1041,7 @@ priv struct PdfMergeDestinationNameMap {
 fn pdf_merge_destination_name_map(
   changes : ArrayView[(PdfBytes, PdfBytes)],
 ) -> PdfMergeDestinationNameMap {
-  let values : @hashmap.HashMap[Bytes, PdfBytes] = @hashmap.HashMap([])
+  let values : @hashmap.HashMap[Bytes, PdfBytes] = HashMap([])
   for change in changes {
     let (old_name, new_name) = change
     if !values.contains(old_name) {
@@ -1101,7 +1101,7 @@ priv struct PdfMergeCatalogDestinationNameMap {
 fn pdf_merge_catalog_destination_name_map(
   changes : ArrayView[(PdfName, PdfName)],
 ) -> PdfMergeCatalogDestinationNameMap {
-  let values : @hashmap.HashMap[Bytes, PdfName] = @hashmap.HashMap([])
+  let values : @hashmap.HashMap[Bytes, PdfName] = HashMap([])
   for change in changes {
     let (old_name, new_name) = change
     let key = old_name.bytes()
