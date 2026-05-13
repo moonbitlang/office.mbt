@@ -201,6 +201,11 @@ Current backend snapshot:
   have a strict `NumberExpected` gate, password-aware reconstruction back to
   decrypted physical objects, and AESV2 re-encrypted compressed-xref round-trip
   coverage. `moon test --target native` now reports 1290/1290 tests passing.~~
+- [x] ~~Add the fifth pre-refactor correctness sentinel: the native async file
+  wrappers now cover the encrypted malformed classic xref subsection path end to
+  end, including strict `NumberExpected`, owner-password reconstruction, no
+  plaintext leak in repaired output, and user-password round-trip. `moon test
+  --target native` now reports 1291/1291 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~
