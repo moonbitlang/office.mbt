@@ -1917,6 +1917,11 @@ Current backend snapshot:
 - [x] ~~Tune pure Flate Huffman symbol decoding with bounded lookup-table
   lookahead and cached bit masks while preserving prefix consumed-length
   behavior.~~
+- [x] ~~Add the fifty-ninth pre-refactor correctness sentinel: native async
+  file fixtures now preserve direct stream line-break and CamlPDF padding
+  tolerance from disk, covering CR, CRLF, padded line breaks, and inline padding
+  across strict and public file reads. `moon test --target native` now reports
+  1345/1345 tests passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.
