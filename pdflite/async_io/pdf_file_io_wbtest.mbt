@@ -1126,6 +1126,19 @@ fn pdf_async_io_classic_pdf_with_inline_startxref_for_test() -> @pdflite.PdfByte
 }
 
 ///|
+fn pdf_async_io_classic_pdf_with_missing_endobj_catalog_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  let catalog_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "1 0 obj\n<< /Type /Catalog >>\n")
+  let xref_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref\n0 2\n0000000000 65535 f \n")
+  pdf_async_io_push_classic_xref_entry_for_test(output, catalog_offset, 0)
+  pdf_async_io_push_classic_trailer_for_test(output, xref_offset, 2)
+  Bytes::from_array(output)
+}
+
+///|
 fn pdf_async_io_malformed_pdf_with_out_of_range_startxref_for_test() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
@@ -4037,6 +4050,31 @@ async test "async file wrappers accept classic xref layout variants" {
     @test.assert_eq(parsed.first_xref() > 0, true)
     @test.assert_eq(parsed.root(), 1)
     @test.assert_eq(parsed.object_numbers(), [])
+  }
+}
+
+///|
+async test "async file wrappers accept missing plain endobj" {
+  let path = pdf_async_io_test_path_for_test("classic_missing_plain_endobj")
+  pdf_async_io_remove_if_exists_for_test(path)
+  @fs.write_file(
+    path,
+    pdf_async_io_classic_pdf_with_missing_endobj_catalog_for_test(),
+    create=0o644,
+  )
+  let strict = try! @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(path).binary(),
+  )
+  let parsed = pdf_read_document_from_file(path)
+  pdf_async_io_remove_if_exists_for_test(path)
+  for document in [strict, parsed] {
+    @test.assert_eq(document.first_xref() > 0, true)
+    @test.assert_eq(document.root(), 1)
+    @test.assert_eq(document.object_numbers(), [1])
+    @test.assert_eq(
+      document.lookup_object_or_null(1),
+      pdf_async_io_classic_catalog_object_for_test(),
+    )
   }
 }
 

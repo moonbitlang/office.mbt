@@ -458,6 +458,11 @@ Current backend snapshot:
   disk for negative and non-numeric values, while public reads still reconstruct
   the physical catalog. `moon test --target native` now reports 1341/1341 tests
   passing.~~
+- [x] ~~Add the fifty-sixth pre-refactor correctness sentinel: native async file
+  fixtures now preserve the strict classic reader's missing-plain-`endobj`
+  tolerance from disk, proving both strict and public file reads keep the
+  catalog object intact. `moon test --target native` now reports 1342/1342
+  tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~
