@@ -1432,6 +1432,19 @@ fn reader_malformed_pdf_with_bad_xref_entry() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn reader_malformed_pdf_with_bad_xref_subsection_count() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  ignore(reader_push_indirect_object(output, 1, 0, "<< /Type /Catalog >>"))
+  let xref_offset = output.length()
+  reader_push_ascii(output, "xref\n0 /Bad\n0000000000 65535 f \n")
+  reader_push_ascii(output, "trailer\n<< /Root 1 0 R /Size 2 >>\nstartxref\n")
+  reader_push_ascii(output, xref_offset.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_malformed_pdf_with_bad_trailer_object() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
@@ -3867,6 +3880,23 @@ test "pdf_read_document_from_bytes reconstructs bad xref rows" {
 
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
     reader_malformed_pdf_with_bad_xref_entry(),
+  )
+  @test.assert_eq(parsed.first_xref(), 0)
+  @test.assert_eq(parsed.root(), 1)
+  @test.assert_eq(parsed.object_numbers(), [1])
+}
+
+///|
+test "pdf_read_document_from_bytes reconstructs bad xref subsection metadata" {
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_malformed_pdf_with_bad_xref_subsection_count(),
+  )
+  guard strict is Err(@pdflite.PdfError::NumberExpected) else {
+    fail("expected strict NumberExpected")
+  }
+
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(
+    reader_malformed_pdf_with_bad_xref_subsection_count(),
   )
   @test.assert_eq(parsed.first_xref(), 0)
   @test.assert_eq(parsed.root(), 1)

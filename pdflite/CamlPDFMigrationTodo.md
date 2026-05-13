@@ -183,6 +183,10 @@ Current backend snapshot:
   unrecoverable object-stream error, cover the same path at the native async
   file boundary, and round-trip the repaired document through compressed xref
   output. `moon test --target native` now reports 1286/1286 tests passing.~~
+- [x] ~~Add the first pre-refactor correctness sentinel: a valid `startxref`
+  pointing at malformed classic xref subsection metadata now has a strict
+  `NumberExpected` gate plus public reconstruction back to the physically
+  scanned catalog.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~
