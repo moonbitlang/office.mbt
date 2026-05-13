@@ -2040,6 +2040,65 @@ async test "async file wrappers report bad revision numbers" {
 }
 
 ///|
+async test "async file wrappers accept classic xref row variants" {
+  let blank_path = pdf_async_io_test_path_for_test("classic_xref_blank_rows")
+  let zero_offset_path = pdf_async_io_test_path_for_test(
+    "classic_xref_zero_offset",
+  )
+  let marker_suffix_path = pdf_async_io_test_path_for_test(
+    "classic_xref_zero_offset_suffix",
+  )
+  let repeated_marker_path = pdf_async_io_test_path_for_test(
+    "classic_xref_repeated_markers",
+  )
+  pdf_async_io_remove_if_exists_for_test(blank_path)
+  pdf_async_io_remove_if_exists_for_test(zero_offset_path)
+  pdf_async_io_remove_if_exists_for_test(marker_suffix_path)
+  pdf_async_io_remove_if_exists_for_test(repeated_marker_path)
+  @fs.write_file(
+    blank_path,
+    pdf_async_io_classic_pdf_with_xref_body_for_test(
+      "0 1\n\n0000000000 65535 f \n", "<< /Root 1 0 R /Size 1 >>",
+    ),
+    create=0o644,
+  )
+  @fs.write_file(
+    zero_offset_path,
+    pdf_async_io_classic_pdf_with_xref_body_for_test(
+      "0 1\n0000000000 abcde n \n", "<< /Root 1 0 R /Size 1 >>",
+    ),
+    create=0o644,
+  )
+  @fs.write_file(
+    marker_suffix_path,
+    pdf_async_io_classic_pdf_with_xref_body_for_test(
+      "0 1\n0000000000 abcde nJunk\n", "<< /Root 1 0 R /Size 1 >>",
+    ),
+    create=0o644,
+  )
+  @fs.write_file(
+    repeated_marker_path,
+    pdf_async_io_classic_pdf_with_xref_body_for_test(
+      "xref\nxref 0 1\n0000000000 65535 f \n", "<< /Root 1 0 R /Size 1 >>",
+    ),
+    create=0o644,
+  )
+  let blank = pdf_read_document_from_file(blank_path)
+  let zero_offset = pdf_read_document_from_file(zero_offset_path)
+  let marker_suffix = pdf_read_document_from_file(marker_suffix_path)
+  let repeated_marker = pdf_read_document_from_file(repeated_marker_path)
+  pdf_async_io_remove_if_exists_for_test(blank_path)
+  pdf_async_io_remove_if_exists_for_test(zero_offset_path)
+  pdf_async_io_remove_if_exists_for_test(marker_suffix_path)
+  pdf_async_io_remove_if_exists_for_test(repeated_marker_path)
+  for parsed in [blank, zero_offset, marker_suffix, repeated_marker] {
+    @test.assert_eq(parsed.first_xref() > 0, true)
+    @test.assert_eq(parsed.root(), 1)
+    @test.assert_eq(parsed.object_numbers(), [])
+  }
+}
+
+///|
 async test "async file wrappers reconstruct indirect object-stream bounds" {
   let path = pdf_async_io_test_path_for_test("indirect_objstm_bounds")
   let repaired_path = pdf_async_io_test_path_for_test(

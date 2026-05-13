@@ -310,6 +310,11 @@ Current backend snapshot:
   revisions beyond a hand-built classic `/Prev` chain, including the password
   wrapper path. `moon test --target native` now reports 1311/1311 tests
   passing.~~
+- [x] ~~Add the twenty-sixth pre-refactor correctness sentinel: native async
+  file wrappers now gate strict classic xref-row tolerance for blank xref lines,
+  malformed zero-offset rows, marker suffixes, and repeated xref section
+  markers without falling back to reconstruction. `moon test --target native`
+  now reports 1312/1312 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~
