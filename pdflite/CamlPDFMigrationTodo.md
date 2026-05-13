@@ -2008,6 +2008,13 @@ Current backend snapshot:
   including strict-reader failure, object-stream expansion, compressed
   xref-stream rewrite, decoded payload checks, and reread stability. `moon test
   --target native` now reports 1360/1360 tests passing.~~
+- [x] ~~Add the seventy-fifth pre-refactor correctness sentinel: native
+  malformed final `startxref` recovery now follows xref-stream `/Prev` chains
+  whose newest revision replaces the catalog and page tree from an object
+  stream, including older-revision sanitization, expanded page traversal,
+  compressed xref-stream rewrite, retained object-stream payload checks, and
+  reread stability. `moon test --target native` now reports 1361/1361 tests
+  passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.
