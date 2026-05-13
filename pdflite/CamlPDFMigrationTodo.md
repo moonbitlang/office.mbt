@@ -399,6 +399,10 @@ Current backend snapshot:
   wrappers now reconstruct literal string values containing `endobj` text from
   disk without splitting the catalog object during physical scanning. `moon test
   --target native` now reports 1329/1329 tests passing.~~
+- [x] ~~Add the forty-fourth pre-refactor correctness sentinel: native async file
+  wrappers now reconstruct in-range but non-xref classic `startxref` pointers
+  from disk after preserving strict `XRefExpected`. `moon test --target native`
+  now reports 1330/1330 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~

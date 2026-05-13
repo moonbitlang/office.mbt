@@ -949,6 +949,18 @@ fn pdf_async_io_malformed_pdf_with_out_of_range_startxref_for_test() -> @pdflite
 }
 
 ///|
+fn pdf_async_io_malformed_pdf_with_bad_startxref_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  ignore(pdf_async_io_write_catalog_object_for_test(output))
+  pdf_async_io_push_ascii_for_test(
+    output, "trailer\n<< /Root 1 0 R /Size 2 >>\n",
+  )
+  pdf_async_io_push_ascii_for_test(output, "startxref\n9\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn pdf_async_io_malformed_pdf_with_startxref_number_for_test(
   number : String,
 ) -> @pdflite.PdfBytes {
@@ -3561,6 +3573,33 @@ async test "async file wrappers reconstruct out-of-range startxref PDFs" {
   )
   guard strict is Err(@pdflite.PdfError::InvalidCursorPosition(999999)) else {
     fail("expected strict out-of-range startxref failure")
+  }
+  let recovered = pdf_read_document_from_file(path)
+  pdf_async_io_remove_if_exists_for_test(path)
+  @test.assert_eq(recovered.first_xref(), 0)
+  @test.assert_eq(recovered.root(), 1)
+  @test.assert_eq(recovered.object_numbers(), [1])
+  @test.assert_eq(
+    recovered.lookup_object_or_null(1),
+    pdf_async_io_classic_catalog_object_for_test(),
+  )
+}
+
+///|
+async test "async file wrappers reconstruct in-range bad startxref PDFs" {
+  let path = pdf_async_io_test_path_for_test("bad_startxref")
+  pdf_async_io_remove_if_exists_for_test(path)
+  @fs.write_file(
+    path,
+    pdf_async_io_malformed_pdf_with_bad_startxref_for_test(),
+    create=0o644,
+  )
+  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 4 })
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(path).binary(),
+  )
+  guard strict is Err(@pdflite.PdfError::XRefExpected) else {
+    fail("expected strict in-range bad-startxref failure")
   }
   let recovered = pdf_read_document_from_file(path)
   pdf_async_io_remove_if_exists_for_test(path)
