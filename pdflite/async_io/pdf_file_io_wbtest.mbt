@@ -1305,6 +1305,26 @@ fn pdf_async_io_malformed_pdf_with_missing_root_trailer_for_test() -> @pdflite.P
 }
 
 ///|
+fn pdf_async_io_malformed_pdf_with_bad_prev_trailer_for_test(
+  prev : String,
+) -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  let catalog_offset = pdf_async_io_write_catalog_object_for_test(output)
+  let xref_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref\n0 2\n0000000000 65535 f \n")
+  pdf_async_io_push_classic_xref_entry_for_test(output, catalog_offset, 0)
+  pdf_async_io_push_ascii_for_test(
+    output, "trailer\n<< /Root 1 0 R /Size 2 /Prev ",
+  )
+  pdf_async_io_push_ascii_for_test(output, prev)
+  pdf_async_io_push_ascii_for_test(output, " >>\nstartxref\n")
+  pdf_async_io_push_ascii_for_test(output, xref_offset.to_string())
+  pdf_async_io_push_ascii_for_test(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn pdf_async_io_malformed_pdf_with_bad_object_offset_for_test() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
@@ -4332,6 +4352,49 @@ async test "async file wrappers reconstruct malformed classic xref metadata" {
     fail("expected strict bad-object-offset failure")
   }
   for parsed in [bad_entry, bad_count, bad_trailer, missing_root, bad_offset] {
+    @test.assert_eq(parsed.first_xref(), 0)
+    @test.assert_eq(parsed.root(), 1)
+    @test.assert_eq(parsed.object_numbers(), [1])
+    @test.assert_eq(
+      parsed.lookup_object_or_null(1),
+      pdf_async_io_classic_catalog_object_for_test(),
+    )
+  }
+}
+
+///|
+async test "async file wrappers preserve strict malformed Prev trailer errors" {
+  let negative_path = pdf_async_io_test_path_for_test("classic_prev_negative")
+  let named_path = pdf_async_io_test_path_for_test("classic_prev_named")
+  pdf_async_io_remove_if_exists_for_test(negative_path)
+  pdf_async_io_remove_if_exists_for_test(named_path)
+  @fs.write_file(
+    negative_path,
+    pdf_async_io_malformed_pdf_with_bad_prev_trailer_for_test("-1"),
+    create=0o644,
+  )
+  @fs.write_file(
+    named_path,
+    pdf_async_io_malformed_pdf_with_bad_prev_trailer_for_test("/Bad"),
+    create=0o644,
+  )
+  let negative_strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(negative_path).binary(),
+  )
+  let named_strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(named_path).binary(),
+  )
+  let negative = pdf_read_document_from_file(negative_path)
+  let named = pdf_read_document_from_file(named_path)
+  pdf_async_io_remove_if_exists_for_test(negative_path)
+  pdf_async_io_remove_if_exists_for_test(named_path)
+  guard negative_strict is Err(@pdflite.PdfError::TrailerExpected) else {
+    fail("expected strict negative Prev trailer failure")
+  }
+  guard named_strict is Err(@pdflite.PdfError::TrailerExpected) else {
+    fail("expected strict named Prev trailer failure")
+  }
+  for parsed in [negative, named] {
     @test.assert_eq(parsed.first_xref(), 0)
     @test.assert_eq(parsed.root(), 1)
     @test.assert_eq(parsed.object_numbers(), [1])

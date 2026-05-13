@@ -453,6 +453,11 @@ Current backend snapshot:
   disk, including short rows, bad row markers, and fixed-width digit/marker
   corruption, while public reads still reconstruct the physical catalog.
   `moon test --target native` now reports 1340/1340 tests passing.~~
+- [x] ~~Add the fifty-fifth pre-refactor correctness sentinel: native async file
+  fixtures now preserve strict malformed classic `/Prev` trailer failures from
+  disk for negative and non-numeric values, while public reads still reconstruct
+  the physical catalog. `moon test --target native` now reports 1341/1341 tests
+  passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~
