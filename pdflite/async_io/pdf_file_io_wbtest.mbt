@@ -1248,6 +1248,24 @@ fn pdf_async_io_malformed_pdf_with_bad_xref_entry_for_test() -> @pdflite.PdfByte
 }
 
 ///|
+fn pdf_async_io_classic_pdf_with_malformed_xref_row_for_test(
+  xref_body : String,
+) -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  ignore(pdf_async_io_write_catalog_object_for_test(output))
+  let xref_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref\n")
+  pdf_async_io_push_ascii_for_test(output, xref_body)
+  pdf_async_io_push_ascii_for_test(
+    output, "trailer\n<< /Root 1 0 R /Size 2 >>\nstartxref\n",
+  )
+  pdf_async_io_push_ascii_for_test(output, xref_offset.to_string())
+  pdf_async_io_push_ascii_for_test(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn pdf_async_io_malformed_pdf_with_bad_xref_count_for_test() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
@@ -4314,6 +4332,94 @@ async test "async file wrappers reconstruct malformed classic xref metadata" {
     fail("expected strict bad-object-offset failure")
   }
   for parsed in [bad_entry, bad_count, bad_trailer, missing_root, bad_offset] {
+    @test.assert_eq(parsed.first_xref(), 0)
+    @test.assert_eq(parsed.root(), 1)
+    @test.assert_eq(parsed.object_numbers(), [1])
+    @test.assert_eq(
+      parsed.lookup_object_or_null(1),
+      pdf_async_io_classic_catalog_object_for_test(),
+    )
+  }
+}
+
+///|
+async test "async file wrappers preserve strict malformed xref row variants" {
+  let bad_token_path = pdf_async_io_test_path_for_test(
+    "classic_xref_bad_row_token",
+  )
+  let short_row_path = pdf_async_io_test_path_for_test("classic_xref_short_row")
+  let bad_digit_path = pdf_async_io_test_path_for_test(
+    "classic_xref_bad_fixed_digit",
+  )
+  let bad_marker_path = pdf_async_io_test_path_for_test(
+    "classic_xref_bad_fixed_marker",
+  )
+  pdf_async_io_remove_if_exists_for_test(bad_token_path)
+  pdf_async_io_remove_if_exists_for_test(short_row_path)
+  pdf_async_io_remove_if_exists_for_test(bad_digit_path)
+  pdf_async_io_remove_if_exists_for_test(bad_marker_path)
+  @fs.write_file(
+    bad_token_path,
+    pdf_async_io_classic_pdf_with_malformed_xref_row_for_test(
+      "0 1\n0000000000 00000 q \n",
+    ),
+    create=0o644,
+  )
+  @fs.write_file(
+    short_row_path,
+    pdf_async_io_classic_pdf_with_malformed_xref_row_for_test("0\n"),
+    create=0o644,
+  )
+  @fs.write_file(
+    bad_digit_path,
+    pdf_async_io_classic_pdf_with_malformed_xref_row_for_test(
+      "0 1\n0000000000_65x35_f \n",
+    ),
+    create=0o644,
+  )
+  @fs.write_file(
+    bad_marker_path,
+    pdf_async_io_classic_pdf_with_malformed_xref_row_for_test(
+      "0 1\n0000000000_65535_q \n",
+    ),
+    create=0o644,
+  )
+  let bad_token : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(bad_token_path).binary(),
+  )
+  let short_row : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(short_row_path).binary(),
+  )
+  let bad_digit : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(bad_digit_path).binary(),
+  )
+  let bad_marker : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(bad_marker_path).binary(),
+  )
+  let recovered_bad_token = pdf_read_document_from_file(bad_token_path)
+  let recovered_short_row = pdf_read_document_from_file(short_row_path)
+  let recovered_bad_digit = pdf_read_document_from_file(bad_digit_path)
+  let recovered_bad_marker = pdf_read_document_from_file(bad_marker_path)
+  pdf_async_io_remove_if_exists_for_test(bad_token_path)
+  pdf_async_io_remove_if_exists_for_test(short_row_path)
+  pdf_async_io_remove_if_exists_for_test(bad_digit_path)
+  pdf_async_io_remove_if_exists_for_test(bad_marker_path)
+  guard bad_token is Err(@pdflite.PdfError::XRefEntryExpected) else {
+    fail("expected malformed xref row-token failure")
+  }
+  guard short_row is Err(@pdflite.PdfError::XRefEntryExpected) else {
+    fail("expected malformed xref short-row failure")
+  }
+  guard bad_digit is Err(@pdflite.PdfError::XRefEntryExpected) else {
+    fail("expected malformed xref fixed-digit failure")
+  }
+  guard bad_marker is Err(@pdflite.PdfError::XRefEntryExpected) else {
+    fail("expected malformed xref fixed-marker failure")
+  }
+  for
+    parsed in [
+      recovered_bad_token, recovered_short_row, recovered_bad_digit, recovered_bad_marker,
+    ] {
     @test.assert_eq(parsed.first_xref(), 0)
     @test.assert_eq(parsed.root(), 1)
     @test.assert_eq(parsed.object_numbers(), [1])

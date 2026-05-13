@@ -448,6 +448,11 @@ Current backend snapshot:
   from disk, distinguishing missing xref markers (`XRefExpected`) from xref
   sections with no trailer (`TrailerExpected`). `moon test --target native` now
   reports 1339/1339 tests passing.~~
+- [x] ~~Add the fifty-fourth pre-refactor correctness sentinel: native async
+  file fixtures now preserve strict malformed classic xref-row failures from
+  disk, including short rows, bad row markers, and fixed-width digit/marker
+  corruption, while public reads still reconstruct the physical catalog.
+  `moon test --target native` now reports 1340/1340 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~
