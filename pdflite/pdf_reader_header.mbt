@@ -1,0 +1,157 @@
+///|
+/// Parsed PDF header version.
+///
+/// The fields correspond to the digits in a `%PDF-major.minor` header.
+pub(all) struct PdfVersion {
+  major : Int
+  minor : Int
+} derive(Debug, Eq, ToJson)
+
+///|
+/// Fallback version used when a PDF header cannot be found.
+pub let pdf_default_version : PdfVersion = { major: 2, minor: 0 }
+
+///|
+fn pdf_is_digit_byte(value : Int) -> Bool {
+  value >= 48 && value <= 57
+}
+
+///|
+fn ByteCursor::pdf_header_at(self : ByteCursor, position : Int) -> PdfVersion? {
+  if position < 0 || position + 7 >= self.data.length() {
+    None
+  } else if self.data[position].to_int() == 37 &&
+    self.data[position + 1].to_int() == 80 &&
+    self.data[position + 2].to_int() == 68 &&
+    self.data[position + 3].to_int() == 70 &&
+    self.data[position + 4].to_int() == 45 &&
+    self.data[position + 6].to_int() == 46 {
+    let major = self.data[position + 5].to_int()
+    let minor = self.data[position + 7].to_int()
+    if pdf_is_digit_byte(major) && pdf_is_digit_byte(minor) {
+      Some({ major: major - 48, minor: minor - 48 })
+    } else {
+      None
+    }
+  } else {
+    None
+  }
+}
+
+///|
+/// Read the PDF header from the current cursor buffer.
+///
+/// The reader probes the first 1024 bytes for `%PDF-x.y`. When found, the cursor
+/// offset is set to the header position and the cursor advances past the header.
+/// If no header is found, `pdf_default_version` is returned.
+pub fn ByteCursor::read_pdf_header(
+  self : ByteCursor,
+) -> PdfVersion raise PdfError {
+  let max_probe = if self.data.length() < 1024 {
+    self.data.length()
+  } else {
+    1024
+  }
+  for position = 0; position <= max_probe; position = position + 1 {
+    match self.pdf_header_at(position) {
+      Some(version) => {
+        self.set_offset(position)
+        self.position = position + 8
+        break version
+      }
+      None => ()
+    }
+  } nobreak {
+    pdf_default_version
+  }
+}
+
+///|
+/// Read a PDF header version from a borrowed byte view.
+pub fn pdf_read_header_from_view(data : BytesView) -> PdfVersion raise PdfError {
+  byte_cursor_of_view(data).read_pdf_header()
+}
+
+///|
+/// Read a PDF header version from owned PDF bytes.
+pub fn pdf_read_header_from_bytes(data : PdfBytes) -> PdfVersion raise PdfError {
+  pdf_read_header_from_view(data)
+}
+
+///|
+/// Build a document from already parsed indirect objects.
+///
+/// Objects are loaded at their existing object numbers and generations without
+/// recording mutation events. The document version defaults to
+/// `pdf_default_version`.
+pub fn pdf_document_of_parsed_indirect_objects(
+  objects : ArrayView[PdfParsedIndirectObject],
+  version? : PdfVersion = pdf_default_version,
+) -> PdfDocument {
+  let document = pdf_document_empty()
+  document.set_version(version.major, version.minor)
+  for parsed in objects {
+    document.load_object_given_number(
+      parsed.number,
+      parsed.object,
+      generation=parsed.generation,
+    )
+  }
+  document
+}
+
+///|
+/// Parse indirect objects by scanning the byte stream without xref tables.
+///
+/// This primitive reader is useful for fixtures and damaged files. It reads the
+/// header, then scans indirect object syntax and stream bodies in sequence; it
+/// does not interpret trailer/xref metadata or decrypt the document.
+pub fn pdf_read_primitive_document_from_view(
+  data : BytesView,
+) -> PdfDocument raise PdfError {
+  let cursor = byte_cursor_of_view(data)
+  let version = cursor.read_pdf_header()
+  let document = pdf_document_empty()
+  document.set_version(version.major, version.minor)
+  let mut done = false
+  while !done {
+    let (objects, prefix) = pdf_parse_indirect_object_segments(
+      cursor.lex_pdf_tokens(),
+    )
+    for parsed in objects {
+      document.load_object_given_number(
+        parsed.number,
+        parsed.object,
+        generation=parsed.generation,
+      )
+    }
+    match prefix {
+      Some(prefix) =>
+        if cursor.stopped_at_pdf_stream_candidate() {
+          let stream = cursor.finish_pdf_stream_object(prefix)
+          document.load_object_given_number(
+            stream.number,
+            stream.object,
+            generation=stream.generation,
+          )
+        } else {
+          document.load_object_given_number(
+            prefix.number,
+            prefix.object,
+            generation=prefix.generation,
+          )
+          done = true
+        }
+      None => done = true
+    }
+  }
+  document
+}
+
+///|
+/// Parse a primitive document from owned PDF bytes.
+pub fn pdf_read_primitive_document_from_bytes(
+  data : PdfBytes,
+) -> PdfDocument raise PdfError {
+  pdf_read_primitive_document_from_view(data)
+}
