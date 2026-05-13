@@ -169,6 +169,76 @@ fn acceptance_mark_classic_xref_entry_free_for_test(
 }
 
 ///|
+fn acceptance_parse_positive_decimal_for_test(
+  bytes : BytesView,
+  start : Int,
+  end : Int,
+) -> Int raise {
+  if start >= end {
+    fail("expected decimal digits")
+  }
+  let mut value = 0
+  for index in start..<end {
+    let byte = bytes[index].to_int()
+    if byte < 48 || byte > 57 {
+      fail("expected decimal digit")
+    }
+    value = value * 10 + byte - 48
+  }
+  value
+}
+
+///|
+fn acceptance_keep_catalog_and_encrypt_xref_entries_for_test(
+  bytes : @pdflite.PdfBytes,
+  encrypt_object_number : Int,
+) -> @pdflite.PdfBytes raise {
+  let header = acceptance_ascii_for_test("xref\n0 ")
+  let header_position = acceptance_find_bytes_for_test(bytes, header)
+  if header_position < 0 {
+    fail("expected first classic xref subsection header")
+  }
+  if encrypt_object_number <= 1 {
+    fail("expected encryption object after catalog")
+  }
+  let count_start = header_position + header.length()
+  let mut count_end = count_start
+  while count_end < bytes.length() && bytes[count_end] != b'\n' {
+    count_end += 1
+  }
+  let original_count = acceptance_parse_positive_decimal_for_test(
+    bytes, count_start, count_end,
+  )
+  if encrypt_object_number >= original_count {
+    fail("expected encryption object xref row")
+  }
+  let rows_start = count_end + 1
+  let rows_end = rows_start + original_count * 20
+  let encrypt_row_start = rows_start + encrypt_object_number * 20
+  let encrypt_row_end = encrypt_row_start + 20
+  if rows_end > bytes.length() || encrypt_row_end > rows_end {
+    fail("expected complete classic xref rows")
+  }
+  let output : Array[Byte] = []
+  for index in 0..<(header_position + 5) {
+    output.push(bytes[index])
+  }
+  acceptance_push_ascii_for_test(output, "0 2\n")
+  for index in rows_start..<(rows_start + 40) {
+    output.push(bytes[index])
+  }
+  acceptance_push_ascii_for_test(output, encrypt_object_number.to_string())
+  acceptance_push_ascii_for_test(output, " 1\n")
+  for index in encrypt_row_start..<encrypt_row_end {
+    output.push(bytes[index])
+  }
+  for index in rows_end..<bytes.length() {
+    output.push(bytes[index])
+  }
+  Bytes::from_array(output)
+}
+
+///|
 fn acceptance_corrupt_first_xref_subsection_count_for_test(
   bytes : @pdflite.PdfBytes,
 ) -> @pdflite.PdfBytes raise {
@@ -7167,6 +7237,142 @@ test "native acceptance suite decrypts reconstructed encrypted catalogs missing 
   )
   @test.assert_eq(roundtrip.denied_permissions, denied)
   acceptance_assert_one_page_invariants_for_test(roundtrip.document, (1, 5))
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(60), secret)
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(61), added_object)
+}
+
+///|
+test "native acceptance suite decrypts reconstructed encrypted page trees missing from xref" {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  doc.set_root(1)
+  doc.set_trailer_dict(
+    @pdflite.pdf_dictionary([
+      (acceptance_name_for_test("/Root"), PdfIndirect(1)),
+    ]),
+  )
+  doc.add_object_given_number(
+    1,
+    @pdflite.pdf_dictionary([
+      (
+        acceptance_name_for_test("/Type"),
+        PdfNameObject(acceptance_name_for_test("/Catalog")),
+      ),
+      (acceptance_name_for_test("/Pages"), PdfIndirect(2)),
+    ]),
+  )
+  doc.add_object_given_number(
+    2,
+    @pdflite.pdf_dictionary([
+      (
+        acceptance_name_for_test("/Type"),
+        PdfNameObject(acceptance_name_for_test("/Pages")),
+      ),
+      (acceptance_name_for_test("/Kids"), PdfArray([PdfIndirect(3)])),
+      (acceptance_name_for_test("/Count"), PdfInteger(1)),
+    ]),
+  )
+  doc.add_object_given_number(
+    3,
+    @pdflite.pdf_dictionary([
+      (
+        acceptance_name_for_test("/Type"),
+        PdfNameObject(acceptance_name_for_test("/Page")),
+      ),
+      (acceptance_name_for_test("/Parent"), PdfIndirect(2)),
+      (
+        acceptance_name_for_test("/MediaBox"),
+        PdfArray([PdfInteger(0), PdfInteger(0), PdfInteger(10), PdfInteger(10)]),
+      ),
+    ]),
+  )
+  let secret = acceptance_secret_object_for_test(
+    "native-acceptance-page-tree-missing-xref-secret",
+  )
+  doc.add_object_given_number(60, secret)
+  let user_password = acceptance_ascii_for_test("user")
+  let owner_password = acceptance_ascii_for_test("owner")
+  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let encrypted = doc.encrypt_128bit_aesv2_with_iv_provider(
+    user_password,
+    owner_password,
+    denied,
+    fn(object_number, generation, index) {
+      acceptance_aes_iv_for_test(object_number, generation, index + 27)
+    },
+    encrypt_metadata=false,
+    file_id=acceptance_ascii_for_test(
+      "native-acceptance-page-tree-missing-xref-id",
+    ),
+  )
+  let encrypt_object_number = match
+    encrypted
+    .trailer_dict()
+    .lookup_immediate(acceptance_name_for_test("/Encrypt")) {
+    Some(PdfIndirect(number)) => number
+    _ => fail("expected encryption object reference")
+  }
+  let rendered = @pdflite.pdf_write_document(encrypted)
+  let malformed = acceptance_keep_catalog_and_encrypt_xref_entries_for_test(
+    rendered, encrypt_object_number,
+  )
+  let strict = @pdflite.pdf_read_classic_document_from_bytes(malformed)
+  @test.assert_eq(strict.root(), 1)
+  @test.assert_eq(strict.object_numbers(), [1, encrypt_object_number])
+  let strict_pages : Result[Int, Error] = try? strict.endpage()
+  guard strict_pages is Err(@pdflite.PdfError::PageTreeExpected) else {
+    fail("expected missing page tree to require reconstruction")
+  }
+  @test.assert_eq(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      malformed,
+      user_password=Some(acceptance_ascii_for_test("bad-user")),
+    ),
+    None,
+  )
+  let decrypted = acceptance_unwrap_decryption_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      malformed,
+      owner_password=Some(owner_password),
+    ),
+  )
+  @test.assert_eq(decrypted.document.first_xref(), 0)
+  @test.assert_eq(decrypted.denied_permissions, denied)
+  @test.assert_eq(decrypted.document.root(), 1)
+  @test.assert_eq(try! decrypted.document.endpage(), 1)
+  @test.assert_eq(decrypted.document.lookup_object_or_null(60), secret)
+  let added_object : @pdflite.PdfObject = PdfString(
+    acceptance_ascii_for_test("page-tree-missing-xref-recrypt-added"),
+  )
+  decrypted.document.add_object_given_number(61, added_object)
+  let recrypted = decrypted.document.recrypt_with_password_aesv2_with_iv_provider(
+    owner_password,
+    fn(object_number, generation, index) {
+      acceptance_aes_iv_for_test(object_number, generation, index + 28)
+    },
+  )
+  let rerendered = @pdflite.pdf_write_document_with_compressed_xref_stream(
+    recrypted,
+  )
+  @test.assert_eq(
+    acceptance_find_bytes_for_test(
+      rerendered,
+      acceptance_ascii_for_test(
+        "native-acceptance-page-tree-missing-xref-secret",
+      ),
+    ) <
+    0,
+    true,
+  )
+  let roundtrip = acceptance_unwrap_decryption_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      rerendered,
+      user_password=Some(user_password),
+    ),
+  )
+  @test.assert_eq(roundtrip.denied_permissions, denied)
+  @test.assert_eq(roundtrip.document.root(), 1)
+  @test.assert_eq(try! roundtrip.document.endpage(), 1)
   @test.assert_eq(roundtrip.document.lookup_object_or_null(60), secret)
   @test.assert_eq(roundtrip.document.lookup_object_or_null(61), added_object)
 }

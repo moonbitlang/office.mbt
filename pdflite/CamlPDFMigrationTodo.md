@@ -244,6 +244,12 @@ Current backend snapshot:
   owner-password reconstruction, no plaintext leak in repaired output, and
   user-password round-trip. `moon test --target native` now reports 1298/1298
   tests passing.~~
+- [x] ~~Add the thirteenth pre-refactor correctness sentinel: encrypted classic
+  documents whose catalog is reachable but page-tree objects are physically
+  present and omitted from a valid xref table now reconstruct through the
+  password-aware page-tree probe path, preserve bad-password fallback,
+  decrypted physical objects, and AESV2 compressed-xref re-encryption. `moon
+  test --target native` now reports 1299/1299 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~
