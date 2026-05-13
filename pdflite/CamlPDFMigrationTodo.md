@@ -226,6 +226,11 @@ Current backend snapshot:
   later physical trailer, decrypted objects, and AESV2 compressed-xref
   re-encryption. `moon test --target native` now reports 1295/1295 tests
   passing.~~
+- [x] ~~Add the tenth pre-refactor correctness sentinel: native async file
+  wrappers now cover encrypted missing-root classic trailers end to end,
+  including strict `RootExpected`, owner-password reconstruction, no plaintext
+  leak in repaired output, and user-password round-trip. `moon test --target
+  native` now reports 1296/1296 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~
