@@ -467,6 +467,10 @@ Current backend snapshot:
   file fixtures now preserve missing-plain-`endobj` continuation from disk,
   proving strict and public file reads still separate the following indirect
   object. `moon test --target native` now reports 1343/1343 tests passing.~~
+- [x] ~~Add the fifty-eighth pre-refactor correctness sentinel: native async
+  file fixtures now preserve direct-length stream object boundaries from disk,
+  proving strict and public file reads keep the following indirect object
+  separate. `moon test --target native` now reports 1344/1344 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~

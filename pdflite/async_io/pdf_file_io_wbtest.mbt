@@ -1157,6 +1157,28 @@ fn pdf_async_io_classic_pdf_with_missing_endobj_before_object_for_test() -> @pdf
 }
 
 ///|
+fn pdf_async_io_classic_pdf_with_direct_stream_before_object_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  let catalog_offset = pdf_async_io_push_raw_indirect_object_for_test(
+    output, 1, 0, "<< /Type /Catalog /Payload 2 0 R >>",
+  )
+  let stream_offset = pdf_async_io_push_raw_indirect_object_for_test(
+    output, 2, 0, "<< /Length 5 >>\nstream\nHello\nendstream",
+  )
+  let null_offset = pdf_async_io_push_raw_indirect_object_for_test(
+    output, 3, 0, "null",
+  )
+  let xref_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref\n0 4\n0000000000 65535 f \n")
+  pdf_async_io_push_classic_xref_entry_for_test(output, catalog_offset, 0)
+  pdf_async_io_push_classic_xref_entry_for_test(output, stream_offset, 0)
+  pdf_async_io_push_classic_xref_entry_for_test(output, null_offset, 0)
+  pdf_async_io_push_classic_trailer_for_test(output, xref_offset, 4)
+  Bytes::from_array(output)
+}
+
+///|
 fn pdf_async_io_malformed_pdf_with_out_of_range_startxref_for_test() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
@@ -4121,6 +4143,45 @@ async test "async file wrappers continue after missing plain endobj" {
       pdf_async_io_catalog_with_payload_for_test(2),
     )
     @test.assert_eq(document.lookup_object_or_null(2), PdfInteger(43))
+  }
+}
+
+///|
+async test "async file wrappers keep direct streams from swallowing following objects" {
+  let path = pdf_async_io_test_path_for_test(
+    "classic_direct_stream_before_object",
+  )
+  pdf_async_io_remove_if_exists_for_test(path)
+  @fs.write_file(
+    path,
+    pdf_async_io_classic_pdf_with_direct_stream_before_object_for_test(),
+    create=0o644,
+  )
+  let strict = try! @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(path).binary(),
+  )
+  let parsed = pdf_read_document_from_file(path)
+  pdf_async_io_remove_if_exists_for_test(path)
+  for document in [strict, parsed] {
+    @test.assert_eq(document.first_xref() > 0, true)
+    @test.assert_eq(document.root(), 1)
+    @test.assert_eq(document.object_numbers(), [1, 2, 3])
+    @test.assert_eq(
+      document.lookup_object_or_null(1),
+      pdf_async_io_catalog_with_payload_for_test(2),
+    )
+    guard document.lookup_object_or_null(2) is PdfStreamObject(stream) else {
+      fail("expected direct stream object")
+    }
+    @test.assert_eq(
+      stream.dictionary.lookup_immediate(pdf_async_io_name_for_test("/Length")),
+      Some(PdfInteger(5)),
+    )
+    @test.assert_eq(
+      try! @pdflite.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
+      @ascii.encode("Hello"),
+    )
+    @test.assert_eq(document.lookup_object_or_null(3), PdfNull)
   }
 }
 
