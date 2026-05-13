@@ -1542,6 +1542,149 @@ fn pdf_async_io_mismatched_object_stream_root_physical_catalog_for_test() -> @pd
 }
 
 ///|
+fn pdf_async_io_xref_stream_pdf_with_two_object_stream_entries_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
+  let catalog_offset = output.length()
+  pdf_async_io_write_indirect_object_for_test(
+    output,
+    1,
+    @pdflite.pdf_dictionary([
+      (
+        pdf_async_io_name_for_test("/Type"),
+        PdfNameObject(pdf_async_io_name_for_test("/Catalog")),
+      ),
+      (pdf_async_io_name_for_test("/Payload"), PdfIndirect(2)),
+      (pdf_async_io_name_for_test("/Other"), PdfIndirect(5)),
+    ]),
+  )
+  let first_object = @ascii.encode("<< /Answer 42 >>")
+  let second_object = @ascii.encode("[1 2 3]")
+  let object_stream_data : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(object_stream_data, "2 0 5 ")
+  pdf_async_io_push_ascii_for_test(
+    object_stream_data,
+    first_object.length().to_string(),
+  )
+  object_stream_data.push(b' ')
+  let first = object_stream_data.length()
+  for byte in first_object {
+    object_stream_data.push(byte)
+  }
+  for byte in second_object {
+    object_stream_data.push(byte)
+  }
+  let object_stream_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "3 0 obj\n")
+  pdf_async_io_push_ascii_for_test(output, "<< /Type /ObjStm /N 2 /First ")
+  pdf_async_io_push_ascii_for_test(output, first.to_string())
+  pdf_async_io_push_ascii_for_test(output, " /Length ")
+  pdf_async_io_push_ascii_for_test(
+    output,
+    object_stream_data.length().to_string(),
+  )
+  pdf_async_io_push_ascii_for_test(output, " >>\nstream\n")
+  for byte in object_stream_data {
+    output.push(byte)
+  }
+  pdf_async_io_push_ascii_for_test(output, "\nendstream\nendobj\n")
+  let xref_offset = output.length()
+  let xref_data : Array[Byte] = []
+  pdf_async_io_push_xref_stream_entry_for_test(xref_data, 0, 0, 65535)
+  pdf_async_io_push_xref_stream_entry_for_test(xref_data, 1, catalog_offset, 0)
+  pdf_async_io_push_xref_stream_entry_for_test(xref_data, 2, 3, 0)
+  pdf_async_io_push_xref_stream_entry_for_test(
+    xref_data, 1, object_stream_offset, 0,
+  )
+  pdf_async_io_push_xref_stream_entry_for_test(xref_data, 1, xref_offset, 0)
+  pdf_async_io_push_xref_stream_entry_for_test(xref_data, 2, 3, 1)
+  let xref_stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (
+        pdf_async_io_name_for_test("/Type"),
+        PdfNameObject(pdf_async_io_name_for_test("/XRef")),
+      ),
+      (pdf_async_io_name_for_test("/Size"), PdfInteger(6)),
+      (pdf_async_io_name_for_test("/Root"), PdfIndirect(1)),
+      (
+        pdf_async_io_name_for_test("/W"),
+        PdfArray([PdfInteger(1), PdfInteger(4), PdfInteger(2)]),
+      ),
+      (pdf_async_io_name_for_test("/Length"), PdfInteger(xref_data.length())),
+    ]),
+    StreamGot(Bytes::from_array(xref_data)),
+  )
+  pdf_async_io_write_indirect_object_for_test(output, 4, xref_stream)
+  pdf_async_io_push_ascii_for_test(output, "startxref\n")
+  pdf_async_io_push_ascii_for_test(output, xref_offset.to_string())
+  pdf_async_io_push_ascii_for_test(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_async_io_xref_stream_pdf_with_stream_object_in_object_stream_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
+  let catalog_offset = output.length()
+  pdf_async_io_write_indirect_object_for_test(
+    output,
+    1,
+    pdf_async_io_catalog_with_payload_for_test(2),
+  )
+  let stream_object = @ascii.encode("<< /Length 99 >>\nstream\nHi\nendstream")
+  let object_stream_data : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(object_stream_data, "2 0 ")
+  let first = object_stream_data.length()
+  for byte in stream_object {
+    object_stream_data.push(byte)
+  }
+  let object_stream_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "3 0 obj\n")
+  pdf_async_io_push_ascii_for_test(output, "<< /Type /ObjStm /N 1 /First ")
+  pdf_async_io_push_ascii_for_test(output, first.to_string())
+  pdf_async_io_push_ascii_for_test(output, " /Length ")
+  pdf_async_io_push_ascii_for_test(
+    output,
+    object_stream_data.length().to_string(),
+  )
+  pdf_async_io_push_ascii_for_test(output, " >>\nstream\n")
+  for byte in object_stream_data {
+    output.push(byte)
+  }
+  pdf_async_io_push_ascii_for_test(output, "\nendstream\nendobj\n")
+  let xref_offset = output.length()
+  let xref_data : Array[Byte] = []
+  pdf_async_io_push_xref_stream_entry_for_test(xref_data, 0, 0, 65535)
+  pdf_async_io_push_xref_stream_entry_for_test(xref_data, 1, catalog_offset, 0)
+  pdf_async_io_push_xref_stream_entry_for_test(xref_data, 2, 3, 0)
+  pdf_async_io_push_xref_stream_entry_for_test(
+    xref_data, 1, object_stream_offset, 0,
+  )
+  pdf_async_io_push_xref_stream_entry_for_test(xref_data, 1, xref_offset, 0)
+  let xref_stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (
+        pdf_async_io_name_for_test("/Type"),
+        PdfNameObject(pdf_async_io_name_for_test("/XRef")),
+      ),
+      (pdf_async_io_name_for_test("/Size"), PdfInteger(5)),
+      (pdf_async_io_name_for_test("/Root"), PdfIndirect(1)),
+      (
+        pdf_async_io_name_for_test("/W"),
+        PdfArray([PdfInteger(1), PdfInteger(4), PdfInteger(2)]),
+      ),
+      (pdf_async_io_name_for_test("/Length"), PdfInteger(xref_data.length())),
+    ]),
+    StreamGot(Bytes::from_array(xref_data)),
+  )
+  pdf_async_io_write_indirect_object_for_test(output, 4, xref_stream)
+  pdf_async_io_push_ascii_for_test(output, "startxref\n")
+  pdf_async_io_push_ascii_for_test(output, xref_offset.to_string())
+  pdf_async_io_push_ascii_for_test(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn pdf_async_io_bad_first_object_stream_payload_for_test() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
@@ -3340,6 +3483,118 @@ async test "async file wrappers reconstruct malformed objects" {
       pdf_async_io_catalog_with_payload_for_test(2),
     )
   }
+}
+
+///|
+async test "async file wrappers load object-stream entries from disk" {
+  let entries_path = pdf_async_io_test_path_for_test("objstm_entries")
+  let entries_roundtrip_path = pdf_async_io_test_path_for_test(
+    "objstm_entries_roundtrip",
+  )
+  let stream_path = pdf_async_io_test_path_for_test("objstm_stream_object")
+  let stream_roundtrip_path = pdf_async_io_test_path_for_test(
+    "objstm_stream_object_roundtrip",
+  )
+  pdf_async_io_remove_if_exists_for_test(entries_path)
+  pdf_async_io_remove_if_exists_for_test(entries_roundtrip_path)
+  pdf_async_io_remove_if_exists_for_test(stream_path)
+  pdf_async_io_remove_if_exists_for_test(stream_roundtrip_path)
+  @fs.write_file(
+    entries_path,
+    pdf_async_io_xref_stream_pdf_with_two_object_stream_entries_for_test(),
+    create=0o644,
+  )
+  @fs.write_file(
+    stream_path,
+    pdf_async_io_xref_stream_pdf_with_stream_object_in_object_stream_for_test(),
+    create=0o644,
+  )
+  @test.assert_eq(pdf_read_header_from_file(entries_path), {
+    major: 1,
+    minor: 5,
+  })
+  @test.assert_eq(pdf_read_header_from_file(stream_path), { major: 1, minor: 5 })
+  let entries = pdf_read_document_from_file(entries_path)
+  let embedded_stream_doc = pdf_read_document_from_file(stream_path)
+  pdf_write_document_to_file_with_compressed_xref_stream(
+    entries, entries_roundtrip_path,
+  )
+  pdf_write_document_to_file_with_compressed_xref_stream(
+    embedded_stream_doc, stream_roundtrip_path,
+  )
+  let entries_reparsed = pdf_read_document_from_file(entries_roundtrip_path)
+  let embedded_stream_reparsed = pdf_read_document_from_file(
+    stream_roundtrip_path,
+  )
+  guard embedded_stream_doc.lookup_object_or_null(2)
+    is PdfStreamObject(embedded_stream) else {
+    fail("expected embedded stream object")
+  }
+  let embedded_stream_length = embedded_stream.dictionary.lookup_immediate(
+    pdf_async_io_name_for_test("/Length"),
+  )
+  let embedded_stream_bytes = try! @pdflite.pdf_stream(
+    embedded_stream.dictionary,
+    embedded_stream.data,
+  ).stream_bytes()
+  guard embedded_stream_reparsed.lookup_object_or_null(2)
+    is PdfStreamObject(reparsed_stream) else {
+    fail("expected reparsed embedded stream object")
+  }
+  let reparsed_stream_length = reparsed_stream.dictionary.lookup_immediate(
+    pdf_async_io_name_for_test("/Length"),
+  )
+  let reparsed_stream_bytes = try! @pdflite.pdf_stream(
+    reparsed_stream.dictionary,
+    reparsed_stream.data,
+  ).stream_bytes()
+  pdf_async_io_remove_if_exists_for_test(entries_path)
+  pdf_async_io_remove_if_exists_for_test(entries_roundtrip_path)
+  pdf_async_io_remove_if_exists_for_test(stream_path)
+  pdf_async_io_remove_if_exists_for_test(stream_roundtrip_path)
+
+  @test.assert_eq(entries.first_xref() > 0, true)
+  @test.assert_eq(entries.root(), 1)
+  @test.assert_eq(entries.object_numbers(), [1, 2, 3, 5])
+  @test.assert_eq(
+    entries.lookup_object_or_null(2),
+    PdfDictionary([(pdf_async_io_name_for_test("/Answer"), PdfInteger(42))]),
+  )
+  @test.assert_eq(
+    entries.lookup_object_or_null(5),
+    PdfArray([PdfInteger(1), PdfInteger(2), PdfInteger(3)]),
+  )
+  guard entries.lookup_object_or_null(3) is PdfStreamObject(object_stream) else {
+    fail("expected retained object stream")
+  }
+  @test.assert_eq(
+    object_stream.dictionary.lookup_immediate(
+      pdf_async_io_name_for_test("/Type"),
+    ),
+    Some(PdfNameObject(pdf_async_io_name_for_test("/ObjStm"))),
+  )
+  @test.assert_eq(entries_reparsed.first_xref() > 0, true)
+  @test.assert_eq(
+    entries_reparsed.lookup_object_or_null(2),
+    PdfDictionary([(pdf_async_io_name_for_test("/Answer"), PdfInteger(42))]),
+  )
+  @test.assert_eq(
+    entries_reparsed.lookup_object_or_null(5),
+    PdfArray([PdfInteger(1), PdfInteger(2), PdfInteger(3)]),
+  )
+  @test.assert_eq(embedded_stream_doc.object_numbers(), [1, 2, 3])
+  @test.assert_eq(
+    embedded_stream_doc.lookup_object_or_null(1),
+    pdf_async_io_catalog_with_payload_for_test(2),
+  )
+  @test.assert_eq(embedded_stream_length, Some(PdfInteger(2)))
+  @test.assert_eq(embedded_stream_bytes, @ascii.encode("Hi"))
+  @test.assert_eq(
+    embedded_stream_reparsed.lookup_object_or_null(1),
+    pdf_async_io_catalog_with_payload_for_test(2),
+  )
+  @test.assert_eq(reparsed_stream_length, Some(PdfInteger(2)))
+  @test.assert_eq(reparsed_stream_bytes, @ascii.encode("Hi"))
 }
 
 ///|

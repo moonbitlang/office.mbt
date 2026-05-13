@@ -360,6 +360,11 @@ Current backend snapshot:
   revision handling, including full disk reads, older revision reads, sanitized
   trailers, and bad-final-`startxref` reconstruction. `moon test --target
   native` now reports 1320/1320 tests passing.~~
+- [x] ~~Add the thirty-fifth pre-refactor correctness sentinel: native async
+  file wrappers now gate direct `/ObjStm` extraction from disk for multiple
+  compressed entries and embedded stream-object members, including compressed
+  xref-stream write/reread preservation. `moon test --target native` now
+  reports 1321/1321 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~
