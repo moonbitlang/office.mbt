@@ -267,6 +267,11 @@ Current backend snapshot:
   catalog when the valid xref-stream root entry points to the wrong embedded
   object number. `moon test --target native` now reports 1302/1302 tests
   passing.~~
+- [x] ~~Add the seventeenth pre-refactor correctness sentinel: native async file
+  wrappers now preserve the byte-reader's unrecoverable `StreamDataExpected`
+  path for valid xref streams whose compressed object entry points into an
+  object stream with an invalid `/First` data slice. `moon test --target
+  native` now reports 1303/1303 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~

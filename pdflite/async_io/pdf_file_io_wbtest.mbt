@@ -737,6 +737,72 @@ fn pdf_async_io_mismatched_object_stream_root_physical_catalog_for_test() -> @pd
 }
 
 ///|
+fn pdf_async_io_bad_first_object_stream_payload_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
+  let catalog_offset = output.length()
+  pdf_async_io_write_indirect_object_for_test(
+    output,
+    1,
+    @pdflite.pdf_dictionary([
+      (
+        pdf_async_io_name_for_test("/Type"),
+        PdfNameObject(pdf_async_io_name_for_test("/Catalog")),
+      ),
+      (pdf_async_io_name_for_test("/Payload"), PdfIndirect(2)),
+    ]),
+  )
+  let object_stream_data : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(object_stream_data, "2 0 ")
+  let bad_first = object_stream_data.length() + 32
+  pdf_async_io_push_ascii_for_test(object_stream_data, "<< /Answer 42 >>")
+  let object_stream_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "3 0 obj\n")
+  pdf_async_io_push_ascii_for_test(output, "<< /Type /ObjStm /N 1 /First ")
+  pdf_async_io_push_ascii_for_test(output, bad_first.to_string())
+  pdf_async_io_push_ascii_for_test(output, " /Length ")
+  pdf_async_io_push_ascii_for_test(
+    output,
+    object_stream_data.length().to_string(),
+  )
+  pdf_async_io_push_ascii_for_test(output, " >>\nstream\n")
+  for byte in object_stream_data {
+    output.push(byte)
+  }
+  pdf_async_io_push_ascii_for_test(output, "\nendstream\nendobj\n")
+  let xref_offset = output.length()
+  let xref_data : Array[Byte] = []
+  pdf_async_io_push_xref_stream_entry_for_test(xref_data, 0, 0, 65535)
+  pdf_async_io_push_xref_stream_entry_for_test(xref_data, 1, catalog_offset, 0)
+  pdf_async_io_push_xref_stream_entry_for_test(xref_data, 2, 3, 0)
+  pdf_async_io_push_xref_stream_entry_for_test(
+    xref_data, 1, object_stream_offset, 0,
+  )
+  pdf_async_io_push_xref_stream_entry_for_test(xref_data, 1, xref_offset, 0)
+  let xref_stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (
+        pdf_async_io_name_for_test("/Type"),
+        PdfNameObject(pdf_async_io_name_for_test("/XRef")),
+      ),
+      (pdf_async_io_name_for_test("/Size"), PdfInteger(5)),
+      (pdf_async_io_name_for_test("/Root"), PdfIndirect(1)),
+      (
+        pdf_async_io_name_for_test("/W"),
+        PdfArray([PdfInteger(1), PdfInteger(4), PdfInteger(2)]),
+      ),
+      (pdf_async_io_name_for_test("/Length"), PdfInteger(xref_data.length())),
+    ]),
+    StreamGot(Bytes::from_array(xref_data)),
+  )
+  pdf_async_io_write_indirect_object_for_test(output, 4, xref_stream)
+  pdf_async_io_push_ascii_for_test(output, "startxref\n")
+  pdf_async_io_push_ascii_for_test(output, xref_offset.to_string())
+  pdf_async_io_push_ascii_for_test(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn pdf_async_io_encrypted_object_stream_pdf_for_test(
   user_password : BytesView,
   owner_password : BytesView,
@@ -1348,6 +1414,25 @@ async test "async file wrappers do not reconstruct mismatched object-stream root
   pdf_async_io_remove_if_exists_for_test(path)
   guard public is Err(@pdflite.PdfError::XRefEntryExpected) else {
     fail("expected object-stream mismatch to remain unrecoverable")
+  }
+}
+
+///|
+async test "async file wrappers reject invalid object-stream data slices" {
+  let path = pdf_async_io_test_path_for_test("bad_objstm_first_payload")
+  pdf_async_io_remove_if_exists_for_test(path)
+  @fs.write_file(
+    path,
+    pdf_async_io_bad_first_object_stream_payload_for_test(),
+    create=0o644,
+  )
+  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 5 })
+  let result : Result[@pdflite.PdfDocument, Error] = try? pdf_read_document_from_file(
+    path,
+  )
+  pdf_async_io_remove_if_exists_for_test(path)
+  guard result is Err(@pdflite.PdfError::StreamDataExpected) else {
+    fail("expected invalid object-stream slice to remain unrecoverable")
   }
 }
 
