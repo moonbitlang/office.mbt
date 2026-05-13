@@ -1301,6 +1301,22 @@ fn pdf_async_io_malformed_pdf_with_bad_object_offset_for_test() -> @pdflite.PdfB
 }
 
 ///|
+fn pdf_async_io_classic_pdf_without_trailer_after_xref_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  pdf_async_io_push_ascii_for_test(output, "startxref\n")
+  let xref_digits_position = output.length()
+  pdf_async_io_push_ascii_for_test(output, "0000000000\n%%EOF\n")
+  let xref_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref\n0 1\n0000000000 65535 f \n")
+  let digits = @ascii.encode(xref_offset.to_string())
+  for i = 0; i < digits.length(); i = i + 1 {
+    output[xref_digits_position + 10 - digits.length() + i] = digits[i]
+  }
+  Bytes::from_array(output)
+}
+
+///|
 fn pdf_async_io_classic_pdf_with_missing_indirect_stream_length_for_test() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
@@ -4341,6 +4357,42 @@ async test "async file wrappers preserve strict xref object mismatch errors" {
   }
   guard unparseable is Err(@pdflite.PdfError::ParseIndirectObjectExpected) else {
     fail("expected strict unparseable xref object failure")
+  }
+}
+
+///|
+async test "async file wrappers preserve strict missing xref and trailer errors" {
+  let missing_xref_path = pdf_async_io_test_path_for_test(
+    "classic_missing_xref_marker",
+  )
+  let trailerless_path = pdf_async_io_test_path_for_test(
+    "classic_trailerless_xref",
+  )
+  pdf_async_io_remove_if_exists_for_test(missing_xref_path)
+  pdf_async_io_remove_if_exists_for_test(trailerless_path)
+  @fs.write_file(
+    missing_xref_path,
+    @ascii.encode("%PDF-1.4\nstartxref\n9\n%%EOF\n"),
+    create=0o644,
+  )
+  @fs.write_file(
+    trailerless_path,
+    pdf_async_io_classic_pdf_without_trailer_after_xref_for_test(),
+    create=0o644,
+  )
+  let missing_xref : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(missing_xref_path).binary(),
+  )
+  let trailerless : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(trailerless_path).binary(),
+  )
+  pdf_async_io_remove_if_exists_for_test(missing_xref_path)
+  pdf_async_io_remove_if_exists_for_test(trailerless_path)
+  guard missing_xref is Err(@pdflite.PdfError::XRefExpected) else {
+    fail("expected strict missing xref marker failure")
+  }
+  guard trailerless is Err(@pdflite.PdfError::TrailerExpected) else {
+    fail("expected strict trailerless xref failure")
   }
 }
 

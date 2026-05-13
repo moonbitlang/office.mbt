@@ -443,6 +443,11 @@ Current backend snapshot:
   distinguishing wrong object numbers (`XRefEntryExpected`) from unparseable
   xref targets (`ParseIndirectObjectExpected`). `moon test --target native` now
   reports 1338/1338 tests passing.~~
+- [x] ~~Add the fifty-third pre-refactor correctness sentinel: native async file
+  fixtures now preserve strict classic missing-xref/trailerless-xref failures
+  from disk, distinguishing missing xref markers (`XRefExpected`) from xref
+  sections with no trailer (`TrailerExpected`). `moon test --target native` now
+  reports 1339/1339 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~
