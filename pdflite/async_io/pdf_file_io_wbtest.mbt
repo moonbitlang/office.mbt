@@ -600,6 +600,23 @@ fn pdf_async_io_write_indirect_object_for_test(
 }
 
 ///|
+fn pdf_async_io_push_raw_indirect_object_for_test(
+  output : Array[Byte],
+  number : Int,
+  generation : Int,
+  body : String,
+) -> Int {
+  let offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, number.to_string())
+  output.push(b' ')
+  pdf_async_io_push_ascii_for_test(output, generation.to_string())
+  pdf_async_io_push_ascii_for_test(output, " obj\n")
+  pdf_async_io_push_ascii_for_test(output, body)
+  pdf_async_io_push_ascii_for_test(output, "\nendobj\n")
+  offset
+}
+
+///|
 fn pdf_async_io_classic_catalog_object_for_test() -> @pdflite.PdfObject {
   @pdflite.pdf_dictionary([
     (
@@ -919,6 +936,110 @@ fn pdf_async_io_malformed_pdf_with_bad_object_offset_for_test() -> @pdflite.PdfB
   pdf_async_io_push_classic_xref_entry_for_test(output, junk_offset, 0)
   pdf_async_io_push_classic_trailer_for_test(output, xref_offset, 2)
   Bytes::from_array(output)
+}
+
+///|
+fn pdf_async_io_classic_pdf_with_missing_indirect_stream_length_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  let stream_offset = pdf_async_io_push_raw_indirect_object_for_test(
+    output, 1, 0, "<< /Length 9 0 R >>\nstream\nHello\nendstream",
+  )
+  let xref_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref\n0 2\n0000000000 65535 f \n")
+  pdf_async_io_push_classic_xref_entry_for_test(output, stream_offset, 0)
+  pdf_async_io_push_classic_trailer_for_test(output, xref_offset, 2)
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_async_io_classic_pdf_with_non_integer_stream_length_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  let stream_offset = pdf_async_io_push_raw_indirect_object_for_test(
+    output, 1, 0, "<< /Length 2 0 R >>\nstream\nHello\nendstream",
+  )
+  let length_offset = pdf_async_io_push_raw_indirect_object_for_test(
+    output, 2, 0, "/Name",
+  )
+  let xref_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref\n0 3\n0000000000 65535 f \n")
+  pdf_async_io_push_classic_xref_entry_for_test(output, stream_offset, 0)
+  pdf_async_io_push_classic_xref_entry_for_test(output, length_offset, 0)
+  pdf_async_io_push_classic_trailer_for_test(output, xref_offset, 3)
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_async_io_classic_pdf_with_stream_length_object_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  let stream_offset = pdf_async_io_push_raw_indirect_object_for_test(
+    output, 1, 0, "<< /Length 2 0 R >>\nstream\nHello\nendstream",
+  )
+  let length_offset = pdf_async_io_push_raw_indirect_object_for_test(
+    output, 2, 0, "<< /Length 1 >>\nstream\nA\nendstream",
+  )
+  let xref_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref\n0 3\n0000000000 65535 f \n")
+  pdf_async_io_push_classic_xref_entry_for_test(output, stream_offset, 0)
+  pdf_async_io_push_classic_xref_entry_for_test(output, length_offset, 0)
+  pdf_async_io_push_classic_trailer_for_test(output, xref_offset, 3)
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_async_io_classic_pdf_with_negative_stream_length_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  let stream_offset = pdf_async_io_push_raw_indirect_object_for_test(
+    output, 1, 0, "<< /Length -1 >>\nstream\nHello\nendstream",
+  )
+  let xref_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref\n0 2\n0000000000 65535 f \n")
+  pdf_async_io_push_classic_xref_entry_for_test(output, stream_offset, 0)
+  pdf_async_io_push_classic_trailer_for_test(output, xref_offset, 2)
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_async_io_classic_pdf_with_unparseable_stream_length_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  let stream_offset = pdf_async_io_push_raw_indirect_object_for_test(
+    output, 1, 0, "<< /Length 2 0 R >>\nstream\nHello\nendstream",
+  )
+  let length_offset = pdf_async_io_push_raw_indirect_object_for_test(
+    output, 2, 0, "]",
+  )
+  let catalog_offset = pdf_async_io_push_raw_indirect_object_for_test(
+    output, 3, 0, "<< /Type /Catalog /Payload 1 0 R >>",
+  )
+  let xref_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref\n0 4\n0000000000 65535 f \n")
+  pdf_async_io_push_classic_xref_entry_for_test(output, stream_offset, 0)
+  pdf_async_io_push_classic_xref_entry_for_test(output, length_offset, 0)
+  pdf_async_io_push_classic_xref_entry_for_test(output, catalog_offset, 0)
+  pdf_async_io_push_ascii_for_test(
+    output, "trailer\n<< /Root 3 0 R /Size 4 >>\nstartxref\n",
+  )
+  pdf_async_io_push_ascii_for_test(output, xref_offset.to_string())
+  pdf_async_io_push_ascii_for_test(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_async_io_assert_recovered_hello_stream_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  guard document.lookup_object_or_null(1) is PdfStreamObject(stream) else {
+    fail("expected recovered stream")
+  }
+  @test.assert_eq(
+    stream.dictionary.lookup_immediate(pdf_async_io_name_for_test("/Length")),
+    Some(PdfInteger(5)),
+  )
+  @test.assert_eq(stream.data, StreamGot(@ascii.encode("Hello")))
 }
 
 ///|
@@ -2572,6 +2693,82 @@ async test "async file wrappers reconstruct malformed classic xref metadata" {
       pdf_async_io_classic_catalog_object_for_test(),
     )
   }
+}
+
+///|
+async test "async file wrappers recover unreadable stream lengths" {
+  let missing_path = pdf_async_io_test_path_for_test(
+    "stream_length_missing_indirect",
+  )
+  let non_integer_path = pdf_async_io_test_path_for_test(
+    "stream_length_non_integer",
+  )
+  let stream_object_path = pdf_async_io_test_path_for_test(
+    "stream_length_stream_object",
+  )
+  let negative_path = pdf_async_io_test_path_for_test("stream_length_negative")
+  let unparseable_path = pdf_async_io_test_path_for_test(
+    "stream_length_unparseable",
+  )
+  pdf_async_io_remove_if_exists_for_test(missing_path)
+  pdf_async_io_remove_if_exists_for_test(non_integer_path)
+  pdf_async_io_remove_if_exists_for_test(stream_object_path)
+  pdf_async_io_remove_if_exists_for_test(negative_path)
+  pdf_async_io_remove_if_exists_for_test(unparseable_path)
+  @fs.write_file(
+    missing_path,
+    pdf_async_io_classic_pdf_with_missing_indirect_stream_length_for_test(),
+    create=0o644,
+  )
+  @fs.write_file(
+    non_integer_path,
+    pdf_async_io_classic_pdf_with_non_integer_stream_length_for_test(),
+    create=0o644,
+  )
+  @fs.write_file(
+    stream_object_path,
+    pdf_async_io_classic_pdf_with_stream_length_object_for_test(),
+    create=0o644,
+  )
+  @fs.write_file(
+    negative_path,
+    pdf_async_io_classic_pdf_with_negative_stream_length_for_test(),
+    create=0o644,
+  )
+  @fs.write_file(
+    unparseable_path,
+    pdf_async_io_classic_pdf_with_unparseable_stream_length_for_test(),
+    create=0o644,
+  )
+  let missing = pdf_read_document_from_file(missing_path)
+  let non_integer = pdf_read_document_from_file(non_integer_path)
+  let stream_object = pdf_read_document_from_file(stream_object_path)
+  let negative = pdf_read_document_from_file(negative_path)
+  let unparseable = pdf_read_document_from_file(unparseable_path)
+  pdf_async_io_remove_if_exists_for_test(missing_path)
+  pdf_async_io_remove_if_exists_for_test(non_integer_path)
+  pdf_async_io_remove_if_exists_for_test(stream_object_path)
+  pdf_async_io_remove_if_exists_for_test(negative_path)
+  pdf_async_io_remove_if_exists_for_test(unparseable_path)
+  for parsed in [missing, non_integer, stream_object, negative] {
+    @test.assert_eq(parsed.first_xref() > 0, true)
+    @test.assert_eq(parsed.root(), 1)
+    pdf_async_io_assert_recovered_hello_stream_for_test(parsed)
+  }
+  @test.assert_eq(unparseable.first_xref(), 0)
+  @test.assert_eq(unparseable.root(), 3)
+  @test.assert_eq(unparseable.object_numbers(), [1, 3])
+  @test.assert_eq(
+    unparseable.lookup_object_or_null(3),
+    @pdflite.pdf_dictionary([
+      (
+        pdf_async_io_name_for_test("/Type"),
+        PdfNameObject(pdf_async_io_name_for_test("/Catalog")),
+      ),
+      (pdf_async_io_name_for_test("/Payload"), PdfIndirect(1)),
+    ]),
+  )
+  pdf_async_io_assert_recovered_hello_stream_for_test(unparseable)
 }
 
 ///|

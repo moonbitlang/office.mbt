@@ -332,6 +332,12 @@ Current backend snapshot:
   bad object offsets, checking the strict parse failures before public
   reconstruction. `moon test --target native` now reports 1315/1315 tests
   passing.~~
+- [x] ~~Add the thirtieth pre-refactor correctness sentinel: native async file
+  wrappers now gate unreadable stream-length recovery for missing indirect
+  length objects, non-integer length objects, stream length objects, negative
+  direct lengths, and unparseable indirect lengths, preserving strict xref reads
+  where possible and reconstructing only the unparseable case. `moon test
+  --target native` now reports 1316/1316 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~
