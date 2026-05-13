@@ -292,6 +292,10 @@ Current backend snapshot:
   objects and selecting the sane trailer, then rewrite/reread the recovered
   document through compressed xref output. `moon test --target native` now
   reports 1307/1307 tests passing.~~
+- [x] ~~Add the twenty-second pre-refactor correctness sentinel: native async
+  file wrappers now preserve `pdf_revisions_from_file` malformed metadata
+  failures for missing `startxref`, malformed `/Prev`, and cyclic `/Prev`
+  chains. `moon test --target native` now reports 1308/1308 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~

@@ -653,6 +653,40 @@ fn pdf_async_io_malformed_pdf_without_startxref_for_test() -> @pdflite.PdfBytes 
 }
 
 ///|
+fn pdf_async_io_classic_pdf_with_xref_body_for_test(
+  xref_body : String,
+  trailer_body : String,
+) -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  let xref_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref\n")
+  pdf_async_io_push_ascii_for_test(output, xref_body)
+  pdf_async_io_push_ascii_for_test(output, "trailer\n")
+  pdf_async_io_push_ascii_for_test(output, trailer_body)
+  pdf_async_io_push_ascii_for_test(output, "\nstartxref\n")
+  pdf_async_io_push_ascii_for_test(output, xref_offset.to_string())
+  pdf_async_io_push_ascii_for_test(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_async_io_classic_pdf_with_self_prev_xref_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  let xref_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref\n0 1\n0000000000 65535 f \n")
+  pdf_async_io_push_ascii_for_test(
+    output, "trailer\n<< /Root 1 0 R /Size 1 /Prev ",
+  )
+  pdf_async_io_push_ascii_for_test(output, xref_offset.to_string())
+  pdf_async_io_push_ascii_for_test(output, " >>\nstartxref\n")
+  pdf_async_io_push_ascii_for_test(output, xref_offset.to_string())
+  pdf_async_io_push_ascii_for_test(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn pdf_async_io_bad_first_object_stream_physical_page_tree_pdf_for_test() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
@@ -1785,6 +1819,63 @@ async test "async file wrappers reconstruct missing startxref PDFs" {
   @test.assert_eq(reparsed.first_xref() > 0, true)
   @test.assert_eq(reparsed.root(), 1)
   @test.assert_eq(reparsed.object_numbers(), [1, 2])
+}
+
+///|
+async test "async file wrappers report malformed revision metadata" {
+  let missing_startxref_path = pdf_async_io_test_path_for_test(
+    "revisions_missing_startxref",
+  )
+  let malformed_prev_path = pdf_async_io_test_path_for_test(
+    "revisions_malformed_prev",
+  )
+  let cyclic_prev_path = pdf_async_io_test_path_for_test(
+    "revisions_cyclic_prev",
+  )
+  pdf_async_io_remove_if_exists_for_test(missing_startxref_path)
+  pdf_async_io_remove_if_exists_for_test(malformed_prev_path)
+  pdf_async_io_remove_if_exists_for_test(cyclic_prev_path)
+
+  @fs.write_file(
+    missing_startxref_path,
+    @ascii.encode("%PDF-1.4\nxref\n0 1\n0000000000 65535 f \n%%EOF\n"),
+    create=0o644,
+  )
+  @fs.write_file(
+    malformed_prev_path,
+    pdf_async_io_classic_pdf_with_xref_body_for_test(
+      "0 1\n0000000000 65535 f \n", "<< /Root 1 0 R /Size 1 /Prev /Bad >>",
+    ),
+    create=0o644,
+  )
+  @fs.write_file(
+    cyclic_prev_path,
+    pdf_async_io_classic_pdf_with_self_prev_xref_for_test(),
+    create=0o644,
+  )
+
+  let missing_startxref : Result[Int, Error] = try? pdf_revisions_from_file(
+    missing_startxref_path,
+  )
+  let malformed_prev : Result[Int, Error] = try? pdf_revisions_from_file(
+    malformed_prev_path,
+  )
+  let cyclic_prev : Result[Int, Error] = try? pdf_revisions_from_file(
+    cyclic_prev_path,
+  )
+  pdf_async_io_remove_if_exists_for_test(missing_startxref_path)
+  pdf_async_io_remove_if_exists_for_test(malformed_prev_path)
+  pdf_async_io_remove_if_exists_for_test(cyclic_prev_path)
+
+  guard missing_startxref is Err(@pdflite.PdfError::StartXRefExpected) else {
+    fail("expected missing-startxref revision metadata failure")
+  }
+  guard malformed_prev is Err(@pdflite.PdfError::TrailerExpected) else {
+    fail("expected malformed Prev revision metadata failure")
+  }
+  guard cyclic_prev is Err(@pdflite.PdfError::XRefExpected) else {
+    fail("expected cyclic Prev revision metadata failure")
+  }
 }
 
 ///|
