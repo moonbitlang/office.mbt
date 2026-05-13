@@ -379,6 +379,10 @@ Current backend snapshot:
   file wrappers now reject truncated xref-stream entry data from disk with
   `XRefEntryExpected`, preserving the byte-reader's unrecoverable short-stream
   path. `moon test --target native` now reports 1324/1324 tests passing.~~
+- [x] ~~Add the thirty-ninth pre-refactor correctness sentinel: native async
+  file wrappers now reconstruct out-of-range classic `startxref` pointers from
+  disk after preserving strict `InvalidCursorPosition(999999)`. `moon test
+  --target native` now reports 1325/1325 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~
