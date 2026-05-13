@@ -194,7 +194,8 @@ Current backend snapshot:
 - [x] ~~Add the third pre-refactor correctness sentinel: the Markdown command
   helper now converts the checked-in CamlPDF introduction fixture through the
   native file-output boundary, preserving key text markers and raw-control
-  hygiene.~~
+  hygiene. The pre-refactor native correctness gate now reports `moon test
+  --target native` at 1289/1289 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~
