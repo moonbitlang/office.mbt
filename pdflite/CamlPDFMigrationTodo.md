@@ -326,6 +326,12 @@ Current backend snapshot:
   junk after EOF, non-digit prefixes before the numeric pointer, and inline
   numeric pointers across both document reads and revision metadata reads.
   `moon test --target native` now reports 1314/1314 tests passing.~~
+- [x] ~~Add the twenty-ninth pre-refactor correctness sentinel: native async
+  file wrappers now gate malformed classic xref reconstruction for bad xref
+  rows, bad subsection counts, malformed trailers, missing trailer roots, and
+  bad object offsets, checking the strict parse failures before public
+  reconstruction. `moon test --target native` now reports 1315/1315 tests
+  passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~

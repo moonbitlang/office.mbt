@@ -856,6 +856,72 @@ fn pdf_async_io_classic_pdf_with_inline_startxref_for_test() -> @pdflite.PdfByte
 }
 
 ///|
+fn pdf_async_io_malformed_pdf_with_bad_xref_entry_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  ignore(pdf_async_io_write_catalog_object_for_test(output))
+  let xref_offset = output.length()
+  pdf_async_io_push_ascii_for_test(
+    output, "xref\n0 2\n0000000000 65535 f \nnot-a-row\n",
+  )
+  pdf_async_io_push_classic_trailer_for_test(output, xref_offset, 2)
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_async_io_malformed_pdf_with_bad_xref_count_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  ignore(pdf_async_io_write_catalog_object_for_test(output))
+  let xref_offset = output.length()
+  pdf_async_io_push_ascii_for_test(
+    output, "xref\n0 /Bad\n0000000000 65535 f \n",
+  )
+  pdf_async_io_push_classic_trailer_for_test(output, xref_offset, 2)
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_async_io_malformed_pdf_with_bad_trailer_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  let catalog_offset = pdf_async_io_write_catalog_object_for_test(output)
+  let xref_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref\n0 2\n0000000000 65535 f \n")
+  pdf_async_io_push_classic_xref_entry_for_test(output, catalog_offset, 0)
+  pdf_async_io_push_ascii_for_test(output, "trailer\n1\n")
+  pdf_async_io_push_classic_trailer_for_test(output, xref_offset, 2)
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_async_io_malformed_pdf_with_missing_root_trailer_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  let catalog_offset = pdf_async_io_write_catalog_object_for_test(output)
+  let xref_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref\n0 2\n0000000000 65535 f \n")
+  pdf_async_io_push_classic_xref_entry_for_test(output, catalog_offset, 0)
+  pdf_async_io_push_ascii_for_test(output, "trailer\n<< /Size 2 >>\n")
+  pdf_async_io_push_classic_trailer_for_test(output, xref_offset, 2)
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_async_io_malformed_pdf_with_bad_object_offset_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  let junk_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "notobject\n")
+  ignore(pdf_async_io_write_catalog_object_for_test(output))
+  let xref_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref\n0 2\n0000000000 65535 f \n")
+  pdf_async_io_push_classic_xref_entry_for_test(output, junk_offset, 0)
+  pdf_async_io_push_classic_trailer_for_test(output, xref_offset, 2)
+  Bytes::from_array(output)
+}
+
+///|
 fn pdf_async_io_classic_pdf_with_self_prev_xref_for_test() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
@@ -2401,6 +2467,104 @@ async test "async file wrappers accept classic startxref pointer variants" {
   @test.assert_eq(inline_revisions, 1)
   for parsed in [trailing, prefixed, inline] {
     @test.assert_eq(parsed.first_xref() > 0, true)
+    @test.assert_eq(parsed.root(), 1)
+    @test.assert_eq(parsed.object_numbers(), [1])
+    @test.assert_eq(
+      parsed.lookup_object_or_null(1),
+      pdf_async_io_classic_catalog_object_for_test(),
+    )
+  }
+}
+
+///|
+async test "async file wrappers reconstruct malformed classic xref metadata" {
+  let bad_entry_path = pdf_async_io_test_path_for_test(
+    "malformed_classic_bad_xref_entry",
+  )
+  let bad_count_path = pdf_async_io_test_path_for_test(
+    "malformed_classic_bad_xref_count",
+  )
+  let bad_trailer_path = pdf_async_io_test_path_for_test(
+    "malformed_classic_bad_trailer",
+  )
+  let missing_root_path = pdf_async_io_test_path_for_test(
+    "malformed_classic_missing_root",
+  )
+  let bad_offset_path = pdf_async_io_test_path_for_test(
+    "malformed_classic_bad_offset",
+  )
+  pdf_async_io_remove_if_exists_for_test(bad_entry_path)
+  pdf_async_io_remove_if_exists_for_test(bad_count_path)
+  pdf_async_io_remove_if_exists_for_test(bad_trailer_path)
+  pdf_async_io_remove_if_exists_for_test(missing_root_path)
+  pdf_async_io_remove_if_exists_for_test(bad_offset_path)
+  @fs.write_file(
+    bad_entry_path,
+    pdf_async_io_malformed_pdf_with_bad_xref_entry_for_test(),
+    create=0o644,
+  )
+  @fs.write_file(
+    bad_count_path,
+    pdf_async_io_malformed_pdf_with_bad_xref_count_for_test(),
+    create=0o644,
+  )
+  @fs.write_file(
+    bad_trailer_path,
+    pdf_async_io_malformed_pdf_with_bad_trailer_for_test(),
+    create=0o644,
+  )
+  @fs.write_file(
+    missing_root_path,
+    pdf_async_io_malformed_pdf_with_missing_root_trailer_for_test(),
+    create=0o644,
+  )
+  @fs.write_file(
+    bad_offset_path,
+    pdf_async_io_malformed_pdf_with_bad_object_offset_for_test(),
+    create=0o644,
+  )
+  let strict_bad_entry : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(bad_entry_path).binary(),
+  )
+  let strict_bad_count : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(bad_count_path).binary(),
+  )
+  let strict_bad_trailer : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(bad_trailer_path).binary(),
+  )
+  let strict_missing_root : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(missing_root_path).binary(),
+  )
+  let strict_bad_offset : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(bad_offset_path).binary(),
+  )
+  let bad_entry = pdf_read_document_from_file(bad_entry_path)
+  let bad_count = pdf_read_document_from_file(bad_count_path)
+  let bad_trailer = pdf_read_document_from_file(bad_trailer_path)
+  let missing_root = pdf_read_document_from_file(missing_root_path)
+  let bad_offset = pdf_read_document_from_file(bad_offset_path)
+  pdf_async_io_remove_if_exists_for_test(bad_entry_path)
+  pdf_async_io_remove_if_exists_for_test(bad_count_path)
+  pdf_async_io_remove_if_exists_for_test(bad_trailer_path)
+  pdf_async_io_remove_if_exists_for_test(missing_root_path)
+  pdf_async_io_remove_if_exists_for_test(bad_offset_path)
+  guard strict_bad_entry is Err(@pdflite.PdfError::XRefEntryExpected) else {
+    fail("expected strict malformed xref-entry failure")
+  }
+  guard strict_bad_count is Err(@pdflite.PdfError::NumberExpected) else {
+    fail("expected strict malformed xref-count failure")
+  }
+  guard strict_bad_trailer is Err(@pdflite.PdfError::TrailerExpected) else {
+    fail("expected strict malformed trailer failure")
+  }
+  guard strict_missing_root is Err(@pdflite.PdfError::RootExpected) else {
+    fail("expected strict missing-root trailer failure")
+  }
+  guard strict_bad_offset is Err(@pdflite.PdfError::ParseIndirectObjectExpected) else {
+    fail("expected strict bad-object-offset failure")
+  }
+  for parsed in [bad_entry, bad_count, bad_trailer, missing_root, bad_offset] {
+    @test.assert_eq(parsed.first_xref(), 0)
     @test.assert_eq(parsed.root(), 1)
     @test.assert_eq(parsed.object_numbers(), [1])
     @test.assert_eq(
