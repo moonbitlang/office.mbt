@@ -654,6 +654,7 @@ fn PdfDocument::pdf_pages_of_branch(
   node : PdfObject,
   inherited_resources : PdfObject?,
   inherited_mediabox : PdfObject?,
+  inherited_cropbox : PdfObject?,
   inherited_rotate : PdfPageRotation,
   last_mediabox : Ref[PdfObject],
   depth : Int,
@@ -666,6 +667,10 @@ fn PdfDocument::pdf_pages_of_branch(
     self.lookup_direct(pdf_page_mediabox_key(), node),
     inherited_mediabox,
   )
+  let cropbox = pdf_page_inherited_object(
+    self.lookup_direct(pdf_page_cropbox_key(), node),
+    inherited_cropbox,
+  )
   let rotate = self.pdf_page_inherited_rotation(node, inherited_rotate)
   match self.lookup_direct(pdf_page_kids_key(), node) {
     Some(PdfArray(kids)) => {
@@ -676,6 +681,7 @@ fn PdfDocument::pdf_pages_of_branch(
             self.pdf_page_direct_child(kid),
             resources,
             mediabox,
+            cropbox,
             rotate,
             last_mediabox,
             depth + 1,
@@ -826,6 +832,7 @@ fn PdfDocument::pdf_page_leaf(
   page_node : PdfObject,
   inherited_resources : PdfObject?,
   inherited_mediabox : PdfObject?,
+  inherited_cropbox : PdfObject?,
   inherited_rotate : PdfPageRotation,
   last_mediabox : Ref[PdfObject],
 ) -> PdfPage raise PdfError {
@@ -850,12 +857,24 @@ fn PdfDocument::pdf_page_leaf(
     None => last_mediabox.val
   }
   let rotate = self.pdf_page_inherited_rotation(page, inherited_rotate)
+  let rest = match
+    pdf_page_inherited_object(
+      self.lookup_direct(pdf_page_cropbox_key(), page),
+      inherited_cropbox,
+    ) {
+    Some(cropbox) =>
+      pdf_page_rest_object_from_page(page).add_dict_entry(
+        pdf_page_cropbox_key(),
+        cropbox,
+      )
+    None => pdf_page_rest_object_from_page(page)
+  }
   {
     content: self.pdf_page_content_list(self.pdf_page_content_object(page)),
     mediabox,
     resources,
     rotate,
-    rest: pdf_page_rest_object_from_page(page),
+    rest,
   }
 }
 
@@ -865,6 +884,7 @@ fn PdfDocument::pdf_pages_of_node(
   node : PdfObject,
   inherited_resources : PdfObject?,
   inherited_mediabox : PdfObject?,
+  inherited_cropbox : PdfObject?,
   inherited_rotate : PdfPageRotation,
   last_mediabox : Ref[PdfObject],
   depth : Int,
@@ -875,26 +895,28 @@ fn PdfDocument::pdf_pages_of_node(
   match self.lookup_direct(pdf_page_type_key(), node) {
     Some(PdfNameObject(name)) if name == pdf_page_type_pages() =>
       self.pdf_pages_of_branch(
-        node, inherited_resources, inherited_mediabox, inherited_rotate, last_mediabox,
-        depth,
+        node, inherited_resources, inherited_mediabox, inherited_cropbox, inherited_rotate,
+        last_mediabox, depth,
       )
     None =>
       match self.lookup_direct(pdf_page_kids_key(), node) {
         Some(PdfArray(_)) =>
           self.pdf_pages_of_branch(
-            node, inherited_resources, inherited_mediabox, inherited_rotate, last_mediabox,
-            depth,
+            node, inherited_resources, inherited_mediabox, inherited_cropbox, inherited_rotate,
+            last_mediabox, depth,
           )
         _ => {
           let page = self.pdf_page_leaf(
-            node, inherited_resources, inherited_mediabox, inherited_rotate, last_mediabox,
+            node, inherited_resources, inherited_mediabox, inherited_cropbox, inherited_rotate,
+            last_mediabox,
           )
           [page]
         }
       }
     _ => {
       let page = self.pdf_page_leaf(
-        node, inherited_resources, inherited_mediabox, inherited_rotate, last_mediabox,
+        node, inherited_resources, inherited_mediabox, inherited_cropbox, inherited_rotate,
+        last_mediabox,
       )
       [page]
     }
@@ -912,6 +934,7 @@ pub fn PdfDocument::pages_of_pagetree(
   let last_mediabox : Ref[PdfObject] = { val: pdf_page_default_mediabox() }
   self.pdf_pages_of_node(
     pdf_page_root_pages_node(self),
+    None,
     None,
     None,
     Rotate0,

@@ -164,6 +164,27 @@ fn acceptance_corrupt_startxref_pointer_for_test(
 }
 
 ///|
+fn acceptance_insert_ascii_before_last_marker_for_test(
+  bytes : @pdflite.PdfBytes,
+  marker : BytesView,
+  insertion : String,
+) -> @pdflite.PdfBytes raise {
+  let marker_position = acceptance_find_last_bytes_for_test(bytes, marker)
+  if marker_position < 0 {
+    fail("expected insertion marker")
+  }
+  let output : Array[Byte] = []
+  for index in 0..<marker_position {
+    output.push(bytes[index])
+  }
+  acceptance_push_ascii_for_test(output, insertion)
+  for index in marker_position..<bytes.length() {
+    output.push(bytes[index])
+  }
+  Bytes::from_array(output)
+}
+
+///|
 fn acceptance_push_big_endian_for_test(
   output : Array[Byte],
   value : Int,
@@ -3854,6 +3875,67 @@ fn acceptance_object_stream_pdf_for_test() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn acceptance_bad_first_object_stream_physical_page_tree_pdf_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  acceptance_push_ascii_for_test(output, "%PDF-1.5\n")
+  let pages_offset = acceptance_push_indirect_object_for_test(
+    output, 2, 0, "<< /Type /Pages /Kids [5 0 R] /Count 1 >>",
+  )
+  let page_offset = acceptance_push_indirect_object_for_test(
+    output, 5, 0, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 10 10] /Resources << >> >>",
+  )
+  let object_stream_data : Array[Byte] = []
+  acceptance_push_ascii_for_test(object_stream_data, "1 0 ")
+  acceptance_push_ascii_for_test(
+    object_stream_data, "<< /Type /Catalog /Pages 2 0 R >>",
+  )
+  let bad_first = object_stream_data.length() + 4
+  let object_stream_offset = output.length()
+  acceptance_push_ascii_for_test(output, "3 0 obj\n")
+  acceptance_push_ascii_for_test(output, "<< /Type /ObjStm /N 1 /First ")
+  acceptance_push_ascii_for_test(output, bad_first.to_string())
+  acceptance_push_ascii_for_test(output, " /Length ")
+  acceptance_push_ascii_for_test(
+    output,
+    object_stream_data.length().to_string(),
+  )
+  acceptance_push_ascii_for_test(output, " >>\nstream\n")
+  for byte in object_stream_data {
+    output.push(byte)
+  }
+  acceptance_push_ascii_for_test(output, "\nendstream\nendobj\n")
+  let xref_offset = output.length()
+  let stream_data : Array[Byte] = []
+  acceptance_push_xref_stream_entry_for_test(stream_data, 0, 0, 65535)
+  acceptance_push_xref_stream_entry_for_test(stream_data, 2, 3, 0)
+  acceptance_push_xref_stream_entry_for_test(stream_data, 1, pages_offset, 0)
+  acceptance_push_xref_stream_entry_for_test(
+    stream_data, 1, object_stream_offset, 0,
+  )
+  acceptance_push_xref_stream_entry_for_test(stream_data, 1, xref_offset, 0)
+  acceptance_push_xref_stream_entry_for_test(stream_data, 1, page_offset, 0)
+  acceptance_push_ascii_for_test(output, "4 0 obj\n")
+  acceptance_push_ascii_for_test(output, "<< /Type /XRef /Length ")
+  acceptance_push_ascii_for_test(output, stream_data.length().to_string())
+  acceptance_push_ascii_for_test(
+    output, " /Size 6 /Root 1 0 R /W [1 4 2] >>\nstream\n",
+  )
+  for byte in stream_data {
+    output.push(byte)
+  }
+  acceptance_push_ascii_for_test(output, "\nendstream\nendobj\n")
+  ignore(
+    acceptance_push_indirect_object_for_test(
+      output, 1, 0, "<< /Type /Catalog /Pages 2 0 R >>",
+    ),
+  )
+  acceptance_push_ascii_for_test(output, "startxref\n")
+  acceptance_push_ascii_for_test(output, xref_offset.to_string())
+  acceptance_push_ascii_for_test(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn acceptance_assert_object_stream_document_for_test(
   doc : @pdflite.PdfDocument,
 ) -> Unit raise {
@@ -5120,6 +5202,283 @@ fn acceptance_assert_resource_heavy_change_pages_for_test(
 }
 
 ///|
+fn acceptance_inherited_change_pages_mediabox_for_test() -> @pdflite.PdfObject {
+  PdfArray([PdfInteger(0), PdfInteger(0), PdfInteger(500), PdfInteger(700)])
+}
+
+///|
+fn acceptance_inherited_change_pages_cropbox_for_test() -> @pdflite.PdfObject {
+  PdfArray([PdfInteger(10), PdfInteger(20), PdfInteger(490), PdfInteger(680)])
+}
+
+///|
+fn acceptance_inherited_change_pages_document_for_test() -> @pdflite.PdfDocument raise {
+  let key_type = acceptance_name_for_test("/Type")
+  let key_parent = acceptance_name_for_test("/Parent")
+  let key_kids = acceptance_name_for_test("/Kids")
+  let key_count = acceptance_name_for_test("/Count")
+  let key_resources = acceptance_name_for_test("/Resources")
+  let key_mediabox = acceptance_name_for_test("/MediaBox")
+  let key_cropbox = acceptance_name_for_test("/CropBox")
+  let key_rotate = acceptance_name_for_test("/Rotate")
+  let key_contents = acceptance_name_for_test("/Contents")
+  let key_annots = acceptance_name_for_test("/Annots")
+  let key_subtype = acceptance_name_for_test("/Subtype")
+  let key_rect = acceptance_name_for_test("/Rect")
+  let key_action = acceptance_name_for_test("/A")
+  let key_open_action = acceptance_name_for_test("/OpenAction")
+  let key_dests = acceptance_name_for_test("/Dests")
+  let key_names = acceptance_name_for_test("/Names")
+  let type_pages = acceptance_name_for_test("/Pages")
+  let type_page = acceptance_name_for_test("/Page")
+  let type_link = acceptance_name_for_test("/Link")
+  let named_destination = acceptance_name_for_test("/InheritedChapter")
+  let string_destination = acceptance_ascii_for_test("inherited-chapter")
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 6)
+  doc.add_object_given_number(70, acceptance_change_pages_form_for_test())
+  doc.add_object_given_number(
+    71,
+    acceptance_resource_lifecycle_resources_for_test(
+      acceptance_name_for_test("/F0"),
+      acceptance_name_for_test("/Fm1"),
+      70,
+    ),
+  )
+  doc.add_object_given_number(
+    72,
+    @pdflite.pdf_content_stream_of_ops(
+      acceptance_change_pages_resource_ops_for_test("InheritedBefore"),
+    ),
+  )
+  doc.add_object_given_number(
+    2,
+    @pdflite.pdf_dictionary([
+      (key_type, PdfNameObject(type_pages)),
+      (key_kids, PdfArray([PdfIndirect(3)])),
+      (key_count, PdfInteger(1)),
+      (key_resources, PdfIndirect(71)),
+      (key_mediabox, acceptance_inherited_change_pages_mediabox_for_test()),
+      (key_cropbox, acceptance_inherited_change_pages_cropbox_for_test()),
+      (key_rotate, PdfInteger(90)),
+    ]),
+  )
+  doc.add_object_given_number(
+    3,
+    @pdflite.pdf_dictionary([
+      (key_type, PdfNameObject(type_page)),
+      (key_parent, PdfIndirect(2)),
+      (key_contents, PdfIndirect(72)),
+    ]),
+  )
+  ignore(doc.add_root(2, []))
+  let page_number = doc.page_reference_numbers()[0]
+  doc.add_object_given_number(
+    81,
+    acceptance_change_pages_goto_for_test(
+      acceptance_change_pages_xyz_for_test(page_number, 1, 2),
+    ),
+  )
+  doc.add_object_given_number(
+    80,
+    @pdflite.pdf_dictionary([
+      (key_subtype, PdfNameObject(type_link)),
+      (
+        key_rect,
+        PdfArray([PdfInteger(0), PdfInteger(0), PdfInteger(10), PdfInteger(10)]),
+      ),
+      (key_action, PdfIndirect(81)),
+    ]),
+  )
+  let uri_action = @pdflite.pdf_dictionary([
+    (
+      acceptance_name_for_test("/S"),
+      PdfNameObject(acceptance_name_for_test("/URI")),
+    ),
+    (
+      acceptance_name_for_test("/URI"),
+      PdfString(acceptance_ascii_for_test("https://example.test")),
+    ),
+  ])
+  let uri_annotation = @pdflite.pdf_dictionary([
+    (key_subtype, PdfNameObject(type_link)),
+    (
+      key_rect,
+      PdfArray([PdfInteger(10), PdfInteger(10), PdfInteger(20), PdfInteger(20)]),
+    ),
+    (key_action, uri_action),
+  ])
+  doc.add_object_given_number(
+    page_number,
+    doc
+    .lookup_object_or_null(page_number)
+    .add_dict_entry(key_annots, PdfArray([PdfIndirect(80), uri_annotation])),
+  )
+  doc.add_object_given_number(
+    90,
+    acceptance_change_pages_goto_for_test(
+      acceptance_change_pages_xyz_for_test(page_number, 3, 4),
+    ),
+  )
+  doc.add_object_given_number(
+    91,
+    PdfDictionary([
+      (
+        named_destination,
+        PdfArray([
+          PdfIndirect(page_number),
+          PdfNameObject(acceptance_name_for_test("/FitV")),
+          PdfInteger(5),
+        ]),
+      ),
+    ]),
+  )
+  doc.add_object_given_number(
+    92,
+    PdfDictionary([
+      (
+        key_dests,
+        doc.build_name_tree([
+          (
+            string_destination,
+            acceptance_change_pages_goto_for_test(
+              acceptance_change_pages_xyz_for_test(page_number, 6, 7),
+            ),
+          ),
+        ]),
+      ),
+    ]),
+  )
+  acceptance_add_catalog_entry_for_test(doc, key_open_action, PdfIndirect(90))
+  acceptance_add_catalog_entry_for_test(doc, key_dests, PdfIndirect(91))
+  acceptance_add_catalog_entry_for_test(doc, key_names, PdfIndirect(92))
+  doc.add_bookmarks([
+    {
+      level: 0,
+      text: acceptance_ascii_for_test("Inherited"),
+      target: DestString(string_destination),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+  ])
+}
+
+///|
+fn acceptance_assert_inherited_change_pages_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  let key_annots = acceptance_name_for_test("/Annots")
+  let key_action = acceptance_name_for_test("/A")
+  let key_cropbox = acceptance_name_for_test("/CropBox")
+  let key_open_action = acceptance_name_for_test("/OpenAction")
+  let key_s = acceptance_name_for_test("/S")
+  let key_uri = acceptance_name_for_test("/URI")
+  let page_numbers = doc.page_reference_numbers()
+  let pages = doc.pages_of_pagetree()
+  @test.assert_eq(doc.version(), (1, 6))
+  @test.assert_eq(pages.length(), 1)
+  @test.assert_eq(
+    pages[0].mediabox,
+    acceptance_inherited_change_pages_mediabox_for_test(),
+  )
+  @test.assert_eq(
+    pages[0].rest.lookup_immediate(key_cropbox),
+    Some(acceptance_inherited_change_pages_cropbox_for_test()),
+  )
+  @test.assert_eq(pages[0].rotate, Rotate90)
+  @test.assert_eq(
+    doc.parse_content_ops(pages[0].content),
+    acceptance_change_pages_resource_ops_for_test("InheritedAfter"),
+  )
+  ignore(
+    acceptance_page_resource_for_test(
+      doc,
+      pages[0],
+      acceptance_name_for_test("/Font"),
+      acceptance_name_for_test("/F0"),
+    ),
+  )
+  ignore(
+    acceptance_page_resource_for_test(
+      doc,
+      pages[0],
+      acceptance_name_for_test("/XObject"),
+      acceptance_name_for_test("/Fm1"),
+    ),
+  )
+  match pages[0].rest.lookup_immediate(key_annots) {
+    Some(PdfArray([PdfIndirect(indirect_annotation), PdfDictionary(_) as uri])) => {
+      match
+        doc
+        .lookup_object_or_null(indirect_annotation)
+        .lookup_immediate(key_action) {
+        Some(action) =>
+          @test.assert_eq(
+            doc.read_destination(action),
+            DestXYZ(
+              TargetPageObject(page_numbers[0]),
+              Some(11.0),
+              Some(22.0),
+              None,
+            ),
+          )
+        _ => fail("expected transformed indirect action annotation")
+      }
+      match uri.lookup_immediate(key_action) {
+        Some(action) => {
+          @test.assert_eq(
+            action.lookup_immediate(key_s),
+            Some(PdfNameObject(acceptance_name_for_test("/URI"))),
+          )
+          @test.assert_eq(
+            action.lookup_immediate(key_uri),
+            Some(PdfString(acceptance_ascii_for_test("https://example.test"))),
+          )
+        }
+        _ => fail("expected preserved URI action annotation")
+      }
+    }
+    _ => fail("expected inherited-page annotations")
+  }
+  match doc.catalog().lookup_immediate(key_open_action) {
+    Some(action) =>
+      @test.assert_eq(
+        doc.read_destination(action),
+        DestXYZ(TargetPageObject(page_numbers[0]), Some(13.0), Some(24.0), None),
+      )
+    _ => fail("expected transformed indirect OpenAction")
+  }
+  @test.assert_eq(
+    doc.read_destination(
+      PdfNameObject(acceptance_name_for_test("/InheritedChapter")),
+    ),
+    DestFitV(TargetPageObject(page_numbers[0]), Some(15.0)),
+  )
+  @test.assert_eq(
+    doc.read_destination(
+      PdfString(acceptance_ascii_for_test("inherited-chapter")),
+    ),
+    DestXYZ(TargetPageObject(page_numbers[0]), Some(16.0), Some(27.0), None),
+  )
+  @test.assert_eq(doc.read_bookmarks(), [
+    {
+      level: 0,
+      text: acceptance_ascii_for_test("Inherited"),
+      target: DestXYZ(
+        TargetPageObject(page_numbers[0]),
+        Some(16.0),
+        Some(27.0),
+        None,
+      ),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+  ])
+}
+
+///|
 fn acceptance_assert_catalog_merge_lifecycle_for_test(
   doc : @pdflite.PdfDocument,
 ) -> Unit raise {
@@ -5815,6 +6174,29 @@ test "native acceptance suite normalizes object-stream pages through writer" {
 }
 
 ///|
+test "native acceptance suite reconstructs physical page trees when object-stream bounds are malformed" {
+  let bytes = acceptance_bad_first_object_stream_physical_page_tree_pdf_for_test()
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    bytes,
+  )
+  guard strict is Err(@pdflite.PdfError::StreamDataExpected) else {
+    fail("expected malformed object-stream bounds to require reconstruction")
+  }
+  let recovered = @pdflite.pdf_read_document_from_bytes(bytes)
+  @test.assert_eq(recovered.first_xref(), 0)
+  @test.assert_eq(recovered.version(), (1, 5))
+  @test.assert_eq(recovered.object_numbers(), [1, 2, 3, 5])
+  @test.assert_eq(try! recovered.endpage(), 1)
+  @test.assert_eq(try! recovered.page_reference_numbers(), [5])
+  let rewritten = @pdflite.pdf_write_document_with_compressed_xref_stream(
+    recovered,
+  )
+  let reparsed = @pdflite.pdf_read_document_from_bytes(rewritten)
+  @test.assert_eq(try! reparsed.endpage(), 1)
+  @test.assert_eq(try! reparsed.page_reference_numbers(), [5])
+}
+
+///|
 test "native acceptance suite decrypts object streams during password reads" {
   let bytes = try! acceptance_encrypted_object_stream_pdf_for_test()
   let no_password : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_document_from_bytes(
@@ -6157,6 +6539,31 @@ test "native acceptance suite changes resource-heavy pages with mixed references
   )
   let reparsed = acceptance_compressed_roundtrip_for_test(changed)
   acceptance_assert_resource_heavy_change_pages_for_test(reparsed)
+}
+
+///|
+test "native acceptance suite changes inherited pages with indirect actions" {
+  let parsed = acceptance_compressed_roundtrip_for_test(
+    acceptance_inherited_change_pages_document_for_test(),
+  )
+  let pages = parsed.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  let changed = parsed.change_pages(
+    [
+      {
+        ..pages[0],
+        content: [
+          @pdflite.pdf_content_stream_of_ops(
+            acceptance_change_pages_resource_ops_for_test("InheritedAfter"),
+          ),
+        ],
+      },
+    ],
+    change_references=true,
+    matrices=[(1, @pdflite.transform_translate(10.0, 20.0))],
+  )
+  let reparsed = acceptance_compressed_roundtrip_for_test(changed)
+  acceptance_assert_inherited_change_pages_for_test(reparsed)
 }
 
 ///|
@@ -6551,6 +6958,577 @@ test "native acceptance suite decrypts reconstructed encrypted malformed xref ma
 }
 
 ///|
+test "native acceptance suite decrypts reconstructed encrypted malformed xref-stream metadata" {
+  let doc = acceptance_one_page_document_for_test()
+  let secret = acceptance_secret_object_for_test(
+    "native-acceptance-xref-stream-index-secret",
+  )
+  doc.add_object_given_number(60, secret)
+  let user_password = acceptance_ascii_for_test("user")
+  let owner_password = acceptance_ascii_for_test("owner")
+  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let encrypted = doc.encrypt_128bit_aesv2_with_iv_provider(
+    user_password,
+    owner_password,
+    denied,
+    fn(object_number, generation, index) {
+      acceptance_aes_iv_for_test(object_number, generation, index + 14)
+    },
+    encrypt_metadata=false,
+    file_id=acceptance_ascii_for_test("native-acceptance-bad-xref-stream-id"),
+  )
+  let rendered = @pdflite.pdf_write_document_with_compressed_xref_stream(
+    encrypted,
+  )
+  let malformed = acceptance_insert_ascii_before_last_marker_for_test(
+    rendered,
+    acceptance_ascii_for_test("/W ["),
+    "/Index [0] ",
+  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    malformed,
+  )
+  guard strict is Err(@pdflite.PdfError::XRefEntryExpected) else {
+    fail("expected malformed xref stream metadata to require reconstruction")
+  }
+  let decrypted = acceptance_unwrap_decryption_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      malformed,
+      owner_password=Some(owner_password),
+    ),
+  )
+  @test.assert_eq(decrypted.document.first_xref(), 0)
+  @test.assert_eq(decrypted.denied_permissions, denied)
+  acceptance_assert_one_page_invariants_for_test(decrypted.document, (1, 5))
+  @test.assert_eq(decrypted.document.lookup_object_or_null(60), secret)
+  let added_object : @pdflite.PdfObject = PdfString(
+    acceptance_ascii_for_test("malformed-xref-stream-recrypt-added"),
+  )
+  decrypted.document.add_object_given_number(61, added_object)
+  let recrypted = decrypted.document.recrypt_with_password_aesv2_with_iv_provider(
+    owner_password,
+    fn(object_number, generation, index) {
+      acceptance_aes_iv_for_test(object_number, generation, index + 15)
+    },
+  )
+  let rerendered = @pdflite.pdf_write_document_with_compressed_xref_stream(
+    recrypted,
+  )
+  @test.assert_eq(
+    acceptance_find_bytes_for_test(
+      rerendered,
+      acceptance_ascii_for_test("native-acceptance-xref-stream-index-secret"),
+    ) <
+    0,
+    true,
+  )
+  let roundtrip = acceptance_unwrap_decryption_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      rerendered,
+      user_password=Some(user_password),
+    ),
+  )
+  @test.assert_eq(roundtrip.denied_permissions, denied)
+  acceptance_assert_one_page_invariants_for_test(roundtrip.document, (1, 5))
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(60), secret)
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(61), added_object)
+}
+
+///|
+test "native acceptance suite decrypts reconstructed encrypted malformed xref-stream widths" {
+  let doc = acceptance_one_page_document_for_test()
+  let secret = acceptance_secret_object_for_test(
+    "native-acceptance-xref-stream-width-secret",
+  )
+  doc.add_object_given_number(60, secret)
+  let user_password = acceptance_ascii_for_test("user")
+  let owner_password = acceptance_ascii_for_test("owner")
+  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let encrypted = doc.encrypt_128bit_aesv2_with_iv_provider(
+    user_password,
+    owner_password,
+    denied,
+    fn(object_number, generation, index) {
+      acceptance_aes_iv_for_test(object_number, generation, index + 16)
+    },
+    encrypt_metadata=false,
+    file_id=acceptance_ascii_for_test(
+      "native-acceptance-bad-xref-stream-width-id",
+    ),
+  )
+  let rendered = @pdflite.pdf_write_document_with_compressed_xref_stream(
+    encrypted,
+  )
+  let malformed = acceptance_insert_ascii_before_last_marker_for_test(
+    rendered,
+    acceptance_ascii_for_test("/W ["),
+    "/W [1 4] ",
+  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    malformed,
+  )
+  guard strict is Err(@pdflite.PdfError::XRefEntryExpected) else {
+    fail("expected malformed xref stream widths to require reconstruction")
+  }
+  let decrypted = acceptance_unwrap_decryption_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      malformed,
+      owner_password=Some(owner_password),
+    ),
+  )
+  @test.assert_eq(decrypted.document.first_xref(), 0)
+  @test.assert_eq(decrypted.denied_permissions, denied)
+  acceptance_assert_one_page_invariants_for_test(decrypted.document, (1, 5))
+  @test.assert_eq(decrypted.document.lookup_object_or_null(60), secret)
+  let added_object : @pdflite.PdfObject = PdfString(
+    acceptance_ascii_for_test("malformed-xref-stream-width-recrypt-added"),
+  )
+  decrypted.document.add_object_given_number(61, added_object)
+  let recrypted = decrypted.document.recrypt_with_password_aesv2_with_iv_provider(
+    owner_password,
+    fn(object_number, generation, index) {
+      acceptance_aes_iv_for_test(object_number, generation, index + 17)
+    },
+  )
+  let rerendered = @pdflite.pdf_write_document_with_compressed_xref_stream(
+    recrypted,
+  )
+  @test.assert_eq(
+    acceptance_find_bytes_for_test(
+      rerendered,
+      acceptance_ascii_for_test("native-acceptance-xref-stream-width-secret"),
+    ) <
+    0,
+    true,
+  )
+  let roundtrip = acceptance_unwrap_decryption_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      rerendered,
+      user_password=Some(user_password),
+    ),
+  )
+  @test.assert_eq(roundtrip.denied_permissions, denied)
+  acceptance_assert_one_page_invariants_for_test(roundtrip.document, (1, 5))
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(60), secret)
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(61), added_object)
+}
+
+///|
+test "native acceptance suite decrypts reconstructed encrypted malformed xref-stream size" {
+  let doc = acceptance_one_page_document_for_test()
+  let secret = acceptance_secret_object_for_test(
+    "native-acceptance-xref-stream-size-secret",
+  )
+  doc.add_object_given_number(60, secret)
+  let user_password = acceptance_ascii_for_test("user")
+  let owner_password = acceptance_ascii_for_test("owner")
+  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let encrypted = doc.encrypt_128bit_aesv2_with_iv_provider(
+    user_password,
+    owner_password,
+    denied,
+    fn(object_number, generation, index) {
+      acceptance_aes_iv_for_test(object_number, generation, index + 18)
+    },
+    encrypt_metadata=false,
+    file_id=acceptance_ascii_for_test(
+      "native-acceptance-bad-xref-stream-size-id",
+    ),
+  )
+  let rendered = @pdflite.pdf_write_document_with_compressed_xref_stream(
+    encrypted,
+  )
+  let malformed = acceptance_insert_ascii_before_last_marker_for_test(
+    rendered,
+    acceptance_ascii_for_test("/Size "),
+    "/Size /Bad ",
+  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    malformed,
+  )
+  guard strict is Err(@pdflite.PdfError::XRefEntryExpected) else {
+    fail("expected malformed xref stream size to require reconstruction")
+  }
+  let decrypted = acceptance_unwrap_decryption_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      malformed,
+      owner_password=Some(owner_password),
+    ),
+  )
+  @test.assert_eq(decrypted.document.first_xref(), 0)
+  @test.assert_eq(decrypted.denied_permissions, denied)
+  acceptance_assert_one_page_invariants_for_test(decrypted.document, (1, 5))
+  @test.assert_eq(decrypted.document.lookup_object_or_null(60), secret)
+  let added_object : @pdflite.PdfObject = PdfString(
+    acceptance_ascii_for_test("malformed-xref-stream-size-recrypt-added"),
+  )
+  decrypted.document.add_object_given_number(61, added_object)
+  let recrypted = decrypted.document.recrypt_with_password_aesv2_with_iv_provider(
+    owner_password,
+    fn(object_number, generation, index) {
+      acceptance_aes_iv_for_test(object_number, generation, index + 19)
+    },
+  )
+  let rerendered = @pdflite.pdf_write_document_with_compressed_xref_stream(
+    recrypted,
+  )
+  @test.assert_eq(
+    acceptance_find_bytes_for_test(
+      rerendered,
+      acceptance_ascii_for_test("native-acceptance-xref-stream-size-secret"),
+    ) <
+    0,
+    true,
+  )
+  let roundtrip = acceptance_unwrap_decryption_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      rerendered,
+      user_password=Some(user_password),
+    ),
+  )
+  @test.assert_eq(roundtrip.denied_permissions, denied)
+  acceptance_assert_one_page_invariants_for_test(roundtrip.document, (1, 5))
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(60), secret)
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(61), added_object)
+}
+
+///|
+test "native acceptance suite reconstructs malformed xref-stream filters" {
+  let doc = acceptance_one_page_document_for_test()
+  let secret = acceptance_secret_object_for_test(
+    "native-acceptance-xref-stream-filter-secret",
+  )
+  doc.add_object_given_number(60, secret)
+  let rendered = @pdflite.pdf_write_document_with_compressed_xref_stream(doc)
+  let malformed = acceptance_insert_ascii_before_last_marker_for_test(
+    rendered,
+    acceptance_ascii_for_test("/Filter "),
+    "/Filter /BadXRefFilter ",
+  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    malformed,
+  )
+  guard strict is Err(@pdflite.PdfError::FilterNotSupported(filter)) else {
+    fail("expected malformed xref stream filter to require reconstruction")
+  }
+  @test.assert_eq(filter, acceptance_name_for_test("/BadXRefFilter"))
+  let recovered = @pdflite.pdf_read_document_from_bytes(malformed)
+  @test.assert_eq(recovered.first_xref(), 0)
+  acceptance_assert_one_page_invariants_for_test(recovered, (1, 5))
+  @test.assert_eq(recovered.lookup_object_or_null(60), secret)
+  let rewritten = @pdflite.pdf_write_document_with_compressed_xref_stream(
+    recovered,
+  )
+  let roundtrip = @pdflite.pdf_read_document_from_bytes(rewritten)
+  acceptance_assert_one_page_invariants_for_test(roundtrip, (1, 5))
+  @test.assert_eq(roundtrip.lookup_object_or_null(60), secret)
+}
+
+///|
+test "native acceptance suite decrypts reconstructed encrypted malformed xref-stream filters" {
+  let doc = acceptance_one_page_document_for_test()
+  let secret = acceptance_secret_object_for_test(
+    "native-acceptance-xref-stream-filter-encrypted-secret",
+  )
+  doc.add_object_given_number(60, secret)
+  let user_password = acceptance_ascii_for_test("user")
+  let owner_password = acceptance_ascii_for_test("owner")
+  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let encrypted = doc.encrypt_128bit_aesv2_with_iv_provider(
+    user_password,
+    owner_password,
+    denied,
+    fn(object_number, generation, index) {
+      acceptance_aes_iv_for_test(object_number, generation, index + 20)
+    },
+    encrypt_metadata=false,
+    file_id=acceptance_ascii_for_test(
+      "native-acceptance-bad-xref-stream-filter-id",
+    ),
+  )
+  let rendered = @pdflite.pdf_write_document_with_compressed_xref_stream(
+    encrypted,
+  )
+  let malformed = acceptance_insert_ascii_before_last_marker_for_test(
+    rendered,
+    acceptance_ascii_for_test("/Filter "),
+    "/Filter /BadXRefFilter ",
+  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    malformed,
+  )
+  guard strict is Err(@pdflite.PdfError::FilterNotSupported(filter)) else {
+    fail("expected malformed xref stream filter to require reconstruction")
+  }
+  @test.assert_eq(filter, acceptance_name_for_test("/BadXRefFilter"))
+  let decrypted = acceptance_unwrap_decryption_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      malformed,
+      owner_password=Some(owner_password),
+    ),
+  )
+  @test.assert_eq(decrypted.document.first_xref(), 0)
+  @test.assert_eq(decrypted.denied_permissions, denied)
+  acceptance_assert_one_page_invariants_for_test(decrypted.document, (1, 5))
+  @test.assert_eq(decrypted.document.lookup_object_or_null(60), secret)
+  let added_object : @pdflite.PdfObject = PdfString(
+    acceptance_ascii_for_test("malformed-xref-stream-filter-recrypt-added"),
+  )
+  decrypted.document.add_object_given_number(61, added_object)
+  let recrypted = decrypted.document.recrypt_with_password_aesv2_with_iv_provider(
+    owner_password,
+    fn(object_number, generation, index) {
+      acceptance_aes_iv_for_test(object_number, generation, index + 21)
+    },
+  )
+  let rerendered = @pdflite.pdf_write_document_with_compressed_xref_stream(
+    recrypted,
+  )
+  @test.assert_eq(
+    acceptance_find_bytes_for_test(
+      rerendered,
+      acceptance_ascii_for_test(
+        "native-acceptance-xref-stream-filter-encrypted-secret",
+      ),
+    ) <
+    0,
+    true,
+  )
+  let roundtrip = acceptance_unwrap_decryption_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      rerendered,
+      user_password=Some(user_password),
+    ),
+  )
+  @test.assert_eq(roundtrip.denied_permissions, denied)
+  acceptance_assert_one_page_invariants_for_test(roundtrip.document, (1, 5))
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(60), secret)
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(61), added_object)
+}
+
+///|
+test "native acceptance suite reconstructs malformed xref-stream decodeparms" {
+  let doc = acceptance_one_page_document_for_test()
+  let secret = acceptance_secret_object_for_test(
+    "native-acceptance-xref-stream-decodeparms-secret",
+  )
+  doc.add_object_given_number(60, secret)
+  let rendered = @pdflite.pdf_write_document_with_compressed_xref_stream(doc)
+  let malformed = acceptance_insert_ascii_before_last_marker_for_test(
+    rendered,
+    acceptance_ascii_for_test("/Filter "),
+    "/DecodeParms /Bad ",
+  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    malformed,
+  )
+  guard strict is Err(@pdflite.PdfError::PredictorExpected) else {
+    fail("expected malformed xref stream DecodeParms to require reconstruction")
+  }
+  let recovered = @pdflite.pdf_read_document_from_bytes(malformed)
+  @test.assert_eq(recovered.first_xref(), 0)
+  acceptance_assert_one_page_invariants_for_test(recovered, (1, 5))
+  @test.assert_eq(recovered.lookup_object_or_null(60), secret)
+  let rewritten = @pdflite.pdf_write_document_with_compressed_xref_stream(
+    recovered,
+  )
+  let roundtrip = @pdflite.pdf_read_document_from_bytes(rewritten)
+  acceptance_assert_one_page_invariants_for_test(roundtrip, (1, 5))
+  @test.assert_eq(roundtrip.lookup_object_or_null(60), secret)
+}
+
+///|
+test "native acceptance suite reconstructs xref-stream unsupported predictor decodeparms" {
+  let doc = acceptance_one_page_document_for_test()
+  let secret = acceptance_secret_object_for_test(
+    "native-acceptance-xref-stream-unsupported-predictor-secret",
+  )
+  doc.add_object_given_number(60, secret)
+  let rendered = @pdflite.pdf_write_document_with_compressed_xref_stream(doc)
+  let malformed = acceptance_insert_ascii_before_last_marker_for_test(
+    rendered,
+    acceptance_ascii_for_test("/Filter "),
+    "/DecodeParms << /Predictor 9 >> ",
+  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    malformed,
+  )
+  guard strict is Err(@pdflite.PdfError::PredictorNotSupported(predictor)) else {
+    fail("expected unsupported xref stream DecodeParms predictor")
+  }
+  @test.assert_eq(predictor, 9)
+  let recovered = @pdflite.pdf_read_document_from_bytes(malformed)
+  @test.assert_eq(recovered.first_xref(), 0)
+  acceptance_assert_one_page_invariants_for_test(recovered, (1, 5))
+  @test.assert_eq(recovered.lookup_object_or_null(60), secret)
+  let rewritten = @pdflite.pdf_write_document_with_compressed_xref_stream(
+    recovered,
+  )
+  let roundtrip = @pdflite.pdf_read_document_from_bytes(rewritten)
+  acceptance_assert_one_page_invariants_for_test(roundtrip, (1, 5))
+  @test.assert_eq(roundtrip.lookup_object_or_null(60), secret)
+}
+
+///|
+test "native acceptance suite decrypts reconstructed encrypted malformed xref-stream decodeparms" {
+  let doc = acceptance_one_page_document_for_test()
+  let secret = acceptance_secret_object_for_test(
+    "native-acceptance-xref-stream-decodeparms-encrypted-secret",
+  )
+  doc.add_object_given_number(60, secret)
+  let user_password = acceptance_ascii_for_test("user")
+  let owner_password = acceptance_ascii_for_test("owner")
+  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let encrypted = doc.encrypt_128bit_aesv2_with_iv_provider(
+    user_password,
+    owner_password,
+    denied,
+    fn(object_number, generation, index) {
+      acceptance_aes_iv_for_test(object_number, generation, index + 22)
+    },
+    encrypt_metadata=false,
+    file_id=acceptance_ascii_for_test("native-bad-xref-decodeparms-id"),
+  )
+  let rendered = @pdflite.pdf_write_document_with_compressed_xref_stream(
+    encrypted,
+  )
+  let malformed = acceptance_insert_ascii_before_last_marker_for_test(
+    rendered,
+    acceptance_ascii_for_test("/Filter "),
+    "/DecodeParms /Bad ",
+  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    malformed,
+  )
+  guard strict is Err(@pdflite.PdfError::PredictorExpected) else {
+    fail("expected malformed xref stream DecodeParms to require reconstruction")
+  }
+  let decrypted = acceptance_unwrap_decryption_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      malformed,
+      owner_password=Some(owner_password),
+    ),
+  )
+  @test.assert_eq(decrypted.document.first_xref(), 0)
+  @test.assert_eq(decrypted.denied_permissions, denied)
+  acceptance_assert_one_page_invariants_for_test(decrypted.document, (1, 5))
+  @test.assert_eq(decrypted.document.lookup_object_or_null(60), secret)
+  let added_object : @pdflite.PdfObject = PdfString(
+    acceptance_ascii_for_test("malformed-xref-stream-decodeparms-recrypt-added"),
+  )
+  decrypted.document.add_object_given_number(61, added_object)
+  let recrypted = decrypted.document.recrypt_with_password_aesv2_with_iv_provider(
+    owner_password,
+    fn(object_number, generation, index) {
+      acceptance_aes_iv_for_test(object_number, generation, index + 23)
+    },
+  )
+  let rerendered = @pdflite.pdf_write_document_with_compressed_xref_stream(
+    recrypted,
+  )
+  @test.assert_eq(
+    acceptance_find_bytes_for_test(
+      rerendered,
+      acceptance_ascii_for_test(
+        "native-acceptance-xref-stream-decodeparms-encrypted-secret",
+      ),
+    ) <
+    0,
+    true,
+  )
+  let roundtrip = acceptance_unwrap_decryption_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      rerendered,
+      user_password=Some(user_password),
+    ),
+  )
+  @test.assert_eq(roundtrip.denied_permissions, denied)
+  acceptance_assert_one_page_invariants_for_test(roundtrip.document, (1, 5))
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(60), secret)
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(61), added_object)
+}
+
+///|
+test "native acceptance suite decrypts reconstructed encrypted xref-stream unsupported predictor" {
+  let doc = acceptance_one_page_document_for_test()
+  let secret = acceptance_secret_object_for_test(
+    "native-acceptance-xref-stream-unsupported-predictor-encrypted-secret",
+  )
+  doc.add_object_given_number(60, secret)
+  let user_password = acceptance_ascii_for_test("user")
+  let owner_password = acceptance_ascii_for_test("owner")
+  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let encrypted = doc.encrypt_128bit_aesv2_with_iv_provider(
+    user_password,
+    owner_password,
+    denied,
+    fn(object_number, generation, index) {
+      acceptance_aes_iv_for_test(object_number, generation, index + 24)
+    },
+    encrypt_metadata=false,
+    file_id=acceptance_ascii_for_test("native-bad-xref-predictor-id"),
+  )
+  let rendered = @pdflite.pdf_write_document_with_compressed_xref_stream(
+    encrypted,
+  )
+  let malformed = acceptance_insert_ascii_before_last_marker_for_test(
+    rendered,
+    acceptance_ascii_for_test("/Filter "),
+    "/DecodeParms << /Predictor 9 >> ",
+  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    malformed,
+  )
+  guard strict is Err(@pdflite.PdfError::PredictorNotSupported(predictor)) else {
+    fail("expected unsupported encrypted xref stream DecodeParms predictor")
+  }
+  @test.assert_eq(predictor, 9)
+  let decrypted = acceptance_unwrap_decryption_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      malformed,
+      owner_password=Some(owner_password),
+    ),
+  )
+  @test.assert_eq(decrypted.document.first_xref(), 0)
+  @test.assert_eq(decrypted.denied_permissions, denied)
+  acceptance_assert_one_page_invariants_for_test(decrypted.document, (1, 5))
+  @test.assert_eq(decrypted.document.lookup_object_or_null(60), secret)
+  let added_object : @pdflite.PdfObject = PdfString(
+    acceptance_ascii_for_test("xref-stream-unsupported-predictor-recrypt-added"),
+  )
+  decrypted.document.add_object_given_number(62, added_object)
+  let recrypted = decrypted.document.recrypt_with_password_aesv2_with_iv_provider(
+    owner_password,
+    fn(object_number, generation, index) {
+      acceptance_aes_iv_for_test(object_number, generation, index + 25)
+    },
+  )
+  let rerendered = @pdflite.pdf_write_document_with_compressed_xref_stream(
+    recrypted,
+  )
+  @test.assert_eq(
+    acceptance_find_bytes_for_test(
+      rerendered,
+      acceptance_ascii_for_test(
+        "native-acceptance-xref-stream-unsupported-predictor-encrypted-secret",
+      ),
+    ) <
+    0,
+    true,
+  )
+  let roundtrip = acceptance_unwrap_decryption_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      rerendered,
+      user_password=Some(user_password),
+    ),
+  )
+  @test.assert_eq(roundtrip.denied_permissions, denied)
+  acceptance_assert_one_page_invariants_for_test(roundtrip.document, (1, 5))
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(60), secret)
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(62), added_object)
+}
+
+///|
 test "native acceptance suite recrypts reconstructed bad-startxref encrypted documents" {
   let doc = acceptance_one_page_document_for_test()
   let secret = acceptance_secret_object_for_test(
@@ -6622,6 +7600,89 @@ test "native acceptance suite recrypts reconstructed bad-startxref encrypted doc
 }
 
 ///|
+test "native acceptance suite reconstructs compressed encrypted documents with bad startxref" {
+  let doc = acceptance_one_page_document_for_test()
+  let secret = acceptance_secret_object_for_test(
+    "native-acceptance-compressed-encrypted-secret",
+  )
+  doc.add_object_given_number(60, secret)
+  let user_password = acceptance_ascii_for_test("user")
+  let owner_password = acceptance_ascii_for_test("owner")
+  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy, PdfNoPrint]
+  let rendered = @pdflite.pdf_write_encrypted_aesv2_document_with_iv_provider(
+    doc,
+    user_password,
+    owner_password,
+    denied,
+    fn(object_number, generation, index) {
+      acceptance_aes_iv_for_test(object_number, generation, index + 28)
+    },
+    encrypt_metadata=false,
+    mode=PdfWriteCompressedXRefStream,
+    file_id=acceptance_ascii_for_test(
+      "native-acceptance-compressed-encrypted-id",
+    ),
+  )
+  @test.assert_eq(
+    acceptance_find_bytes_for_test(
+      rendered,
+      acceptance_ascii_for_test("native-acceptance-compressed-encrypted-secret"),
+    ) <
+    0,
+    true,
+  )
+  let corrupted = acceptance_corrupt_startxref_pointer_for_test(rendered)
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    corrupted,
+  )
+  guard strict is Err(_) else {
+    fail("expected bad compressed xref startxref to require reconstruction")
+  }
+  let decrypted = acceptance_unwrap_decryption_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      corrupted,
+      owner_password=Some(owner_password),
+    ),
+  )
+  @test.assert_eq(decrypted.document.first_xref(), 0)
+  @test.assert_eq(decrypted.denied_permissions, denied)
+  acceptance_assert_one_page_invariants_for_test(decrypted.document, (1, 5))
+  @test.assert_eq(decrypted.document.lookup_object_or_null(60), secret)
+
+  let added_object : @pdflite.PdfObject = PdfString(
+    acceptance_ascii_for_test("compressed-encrypted-recrypt-added"),
+  )
+  decrypted.document.add_object_given_number(61, added_object)
+  let recrypted = decrypted.document.recrypt_with_password_aesv2_with_iv_provider(
+    owner_password,
+    fn(object_number, generation, index) {
+      acceptance_aes_iv_for_test(object_number, generation, index + 29)
+    },
+  )
+  let rerendered = @pdflite.pdf_write_document_with_compressed_xref_stream(
+    recrypted,
+  )
+  @test.assert_eq(
+    acceptance_find_bytes_for_test(
+      rerendered,
+      acceptance_ascii_for_test("native-acceptance-compressed-encrypted-secret"),
+    ) <
+    0,
+    true,
+  )
+  let roundtrip = acceptance_unwrap_decryption_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      rerendered,
+      user_password=Some(user_password),
+    ),
+  )
+  @test.assert_eq(roundtrip.denied_permissions, denied)
+  acceptance_assert_one_page_invariants_for_test(roundtrip.document, (1, 5))
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(60), secret)
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(61), added_object)
+}
+
+///|
 test "native acceptance suite recrypts encrypted incremental revisions" {
   let original_secret = acceptance_secret_object_for_test(
     "native-acceptance-original",
@@ -6680,4 +7741,95 @@ test "native acceptance suite recrypts encrypted incremental revisions" {
   @test.assert_eq(older.denied_permissions, denied)
   acceptance_assert_one_page_invariants_for_test(older.document, (1, 4))
   @test.assert_eq(older.document.lookup_object_or_null(60), original_secret)
+}
+
+///|
+test "native acceptance suite reconstructs encrypted incremental revisions with bad startxref" {
+  let original_secret = acceptance_secret_object_for_test(
+    "native-acceptance-malformed-original",
+  )
+  let updated_secret = acceptance_secret_object_for_test(
+    "native-acceptance-malformed-updated",
+  )
+  let user_password = acceptance_ascii_for_test("user")
+  let owner_password = acceptance_ascii_for_test("owner")
+  let doc = acceptance_one_page_document_for_test()
+  doc.add_object_given_number(60, original_secret)
+  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy, PdfNoEdit]
+  let encrypted = doc.encrypt_128bit_aesv2_with_iv_provider(
+    user_password,
+    owner_password,
+    denied,
+    fn(object_number, generation, index) {
+      acceptance_aes_iv_for_test(object_number, generation, index + 30)
+    },
+    encrypt_metadata=false,
+    file_id=acceptance_ascii_for_test("native-acceptance-bad-incremental-id"),
+  )
+  let original = @pdflite.pdf_write_document(encrypted)
+  let decrypted = acceptance_unwrap_decryption_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      original,
+      user_password=Some(user_password),
+    ),
+  )
+  decrypted.document.add_object_given_number(60, updated_secret)
+  let recrypted = decrypted.document.recrypt_with_password_aesv2_with_iv_provider(
+    owner_password,
+    fn(object_number, generation, index) {
+      acceptance_aes_iv_for_test(object_number, generation, index + 31)
+    },
+  )
+  let updated = @pdflite.pdf_write_document_incremental_update(
+    original, recrypted,
+  )
+  let corrupted = acceptance_corrupt_startxref_pointer_for_test(updated)
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    corrupted,
+  )
+  guard strict is Err(_) else {
+    fail("expected bad startxref to require malformed reconstruction")
+  }
+  let recovered = acceptance_unwrap_decryption_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      corrupted,
+      owner_password=Some(owner_password),
+    ),
+  )
+  @test.assert_eq(recovered.document.first_xref(), 0)
+  @test.assert_eq(recovered.denied_permissions, denied)
+  acceptance_assert_one_page_invariants_for_test(recovered.document, (1, 4))
+  @test.assert_eq(recovered.document.lookup_object_or_null(60), updated_secret)
+
+  let added_object : @pdflite.PdfObject = PdfString(
+    acceptance_ascii_for_test("malformed-incremental-recrypt-added"),
+  )
+  recovered.document.add_object_given_number(61, added_object)
+  let recovered_recrypted = recovered.document.recrypt_with_password_aesv2_with_iv_provider(
+    owner_password,
+    fn(object_number, generation, index) {
+      acceptance_aes_iv_for_test(object_number, generation, index + 32)
+    },
+  )
+  let rendered = @pdflite.pdf_write_document_with_compressed_xref_stream(
+    recovered_recrypted,
+  )
+  @test.assert_eq(
+    acceptance_find_bytes_for_test(
+      rendered,
+      acceptance_ascii_for_test("native-acceptance-malformed-updated"),
+    ) <
+    0,
+    true,
+  )
+  let roundtrip = acceptance_unwrap_decryption_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      rendered,
+      user_password=Some(user_password),
+    ),
+  )
+  @test.assert_eq(roundtrip.denied_permissions, denied)
+  acceptance_assert_one_page_invariants_for_test(roundtrip.document, (1, 5))
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(60), updated_secret)
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(61), added_object)
 }

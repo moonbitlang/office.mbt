@@ -92,7 +92,17 @@ work changes.
    Password-aware reconstruction now retries xref-stream object-stream
    expansion after trailer selection, when `/Encrypt` and file IDs are
    available, so encrypted `/ObjStm` payloads can be materialized during
-   malformed-startxref reads.
+   malformed-startxref reads. Native acceptance now also covers encrypted
+   xref-stream metadata corruption with a valid `startxref`, where malformed
+   `/Index`, `/W`, `/Size`, `/Filter`, and `/DecodeParms` metadata fail strict
+   reads but password-aware reconstruction still decrypts physically scanned
+   objects before saved-state AESV2 recrypt; those paths are gated through
+   native async file wrappers with compressed file write, plaintext-leak check,
+   and password reread. Valid-`startxref` object-stream bounds corruption is
+   now also covered: if strict expansion raises `StreamDataExpected` because an
+   `/ObjStm` has an out-of-range `/First`, public reconstruction can still
+   recover a physically scanned page tree, while unrecoverable object-stream
+   slices keep raising their original error.
    Password-aware public read wrappers now also have revision-aware variants,
    and the public revision counter follows the same owned `Bytes` versus
    borrowed `BytesView` split as the rest of the reader surface.
@@ -106,7 +116,7 @@ work changes.
    plaintext materialization and `/Length` correction.
    Password-aware public reads now also route malformed classic xref-entry
    errors through reconstruction, matching the non-password reader path for
-   corrupted xref row markers before decryption.
+   corrupted xref row offsets and markers before decryption.
    Document object selection now walks parsed object entries directly, matching
    the object iterators and avoiding false matches against parser-private
    deferred placeholders that `lookup_object_or_null` intentionally exposes as
@@ -169,9 +179,11 @@ work changes.
    empty decoded payloads remain distinguishable from failure. Owned public
    Flate decode also routes directly through the native bytes helper, avoiding
    the remaining owned-to-view-to-owned copy before the C boundary on common
-   stream-filter decode paths. The pure Flate prefix decoder now reuses cached
-   fixed-Huffman literal and distance tables and uses bounded Huffman-symbol
-   table lookahead with exact-bit fallback, so inline images and other
+   stream-filter decode paths. Native exact-byte parity fixtures now cover tiny
+   stored streams, larger mixed stored-block payloads, and repeated compressed
+   payloads across representative zlib levels. The pure Flate prefix decoder now
+   reuses cached fixed-Huffman literal and distance tables and uses bounded
+   Huffman-symbol table lookahead with exact-bit fallback, so inline images and other
    consumed-length parsing paths do not rebuild fixed tables or walk bits one
    at a time for each decodable symbol. Owned `/Crypt` identity filter encode/decode
    now returns the original immutable `Bytes` value instead of copying through a
@@ -228,9 +240,11 @@ work changes.
    matrix guard, while replacement preserves document metadata, trailer extras,
    and object-stream bookkeeping. Form XObject processing materializes deferred
    stream data before callbacks, matching CamlPDF's `Pdf.getstream` path.
-   `pdf_of_pages` now materializes inherited page attributes before extraction
-   so inherited `/CropBox` values and inherited indirect `/Resources`,
-   `/MediaBox`, and `/Rotate` references are preserved with selected pages.
+   `pages_of_pagetree` now materializes inherited `/CropBox` entries into
+   `PdfPage.rest`, and `pdf_of_pages` materializes inherited page attributes
+   before extraction so inherited `/CropBox` values and inherited indirect
+   `/Resources`, `/MediaBox`, and `/Rotate` references are preserved with
+   selected pages.
    Bookmark extraction now builds the page-object to page-number map once and
    reuses it while filtering targets, preserving CamlPDF's first-match
    resolution behavior without repeated page-reference scans.
@@ -384,11 +398,19 @@ work changes.
    AESV2 recrypt, and recrypting non-stream payload objects extracted from
    encrypted object streams. Encrypted malformed-reader acceptance now covers
    bad-startxref reconstruction followed by saved-state recrypt and compressed
-   write/reread, plus classic malformed xref-entry marker reconstruction before
-   password decryption. Standard encryption dictionary, crypt-filter,
-   stream-policy, and AESV3 random-field names are cached as private `PdfName`
-   values so encrypted reads/writes reuse stable byte-level names instead of
-   rebuilding them at each lookup or dictionary construction.
+   write/reread; encrypted incremental bad-final-startxref reconstruction that
+   preserves the newest encrypted revision before saved-state AESV2 recrypt and
+   compressed write/reread; writer-generated compressed encrypted xref-stream
+   bad-final-startxref reconstruction before saved-state AESV2 recrypt and
+   compressed write/reread; the same encrypted incremental and compressed
+   encrypted-writer bad-final-startxref flows through native async file
+   wrappers for ARC4 40-bit, ARC4 128-bit, ARC4/R4, AESV2, AESV3, and AESV3
+   ISO; plus classic malformed xref-entry marker reconstruction before
+   password decryption, now also through native async file wrappers with
+   saved-state AESV2 recrypt and password reread. Standard encryption dictionary,
+   crypt-filter, stream-policy, and AESV3 random-field names are cached as
+   private `PdfName` values so encrypted reads/writes reuse stable byte-level
+   names instead of rebuilding them at each lookup or dictionary construction.
    Remaining focus: broader real-world encrypted malformed-reader compatibility.
 
 7. Document-level features.
@@ -572,11 +594,10 @@ and backend breadth, is about 85-90% complete.
   checked-in CamlPDF fixture PDF read/multi-page text-extract/write/stream
   decompression/reread plus compressed incremental update/newest-versus-older
   revision reads through native async file wrappers, and full native test
-  coverage. A May 6, 2026 `moon coverage analyze` pass reports all source
-  files fully covered after closing the remaining codec, content, image,
-  lexeme, reconstructed object-stream, and generated CMap reverse-lookup helper
-  branches plus the CNS-EUC unsigned range lookup and grouped object-stream
-  expansion helper.
+  coverage. A May 13, 2026 `moon coverage analyze` pass reports all source
+  files fully covered after closing the remaining Markdown table/layout,
+  simple-font width, malformed ToUnicode fallback, object-stream member,
+  reconstructed-reader, and inherited page-data `change_pages` edge branches.
 - Covered: checked-in CamlPDF logo fixture bad-`startxref` reconstruction
   through native async file wrappers, compressed rewrite, and reread.
 - Covered: checked-in CamlPDF intro fixture compressed-xref incremental update
@@ -644,12 +665,17 @@ and backend breadth, is about 85-90% complete.
   decompression, `pdftest.ml`-style split-content parse/rewrite, and
   `pdfdraft.ml`-style image-replacement workflows through compressed
   xref-stream write/read. Native async file wrappers cover encrypted
-  incremental revision reads from disk and native secure-random AESV2/AESV3 file
+  incremental revision reads from disk, bad-final-startxref file reconstruction
+  with saved-state AESV2 recrypt/write/reread, compressed ARC4 40-bit, ARC4
+  128-bit, ARC4/R4, and AESV2/AESV3/AESV3 ISO encrypted-writer
+  bad-final-startxref file recovery, and native secure-random AESV2/AESV3 file
   writes. Password-aware native reads now include
   encrypted object-stream fixtures for explicit passwords and the implicit blank
-  user password, saved-state recrypt of non-stream payloads extracted from
-  encrypted object streams, and password-aware parsed ARC4/AESV2/AESV3 stream
-  reads now keep deferred decryption until forcing materializes plaintext and
+  user password through byte and native async file wrappers, bad-final-startxref
+  encrypted-object-stream file recovery, saved-state recrypt of non-stream
+  payloads extracted from encrypted object streams through byte and native
+  async file wrappers, and password-aware parsed ARC4/AESV2/AESV3 stream reads
+  now keep deferred decryption until forcing materializes plaintext and
   corrects `/Length`. Native acceptance also covers
   `change_pages` bookmark-reference and matrix rewriting after a compressed
   xref-stream read boundary; a document-feature lifecycle gate for page labels,
@@ -671,7 +697,8 @@ and backend breadth, is about 85-90% complete.
   CamlPDF-tolerated malformed classic xref rows; feature-rich classic malformed
   xref reconstruction through `change_pages` and compressed rewrite/reread; and
   password decryption after malformed-xref reconstruction of direct encrypted
-  objects.
+  objects, now also through native async file wrappers with saved-state AESV2
+  recrypt and password reread for malformed row offsets and markers.
   Count-changing `change_pages` is covered through compressed reader and writer
   boundaries with explicit serial reference mapping, bookmark retargeting,
   transformed catalog `/OpenAction`, trailer `/ID`, and root metadata
@@ -686,7 +713,10 @@ and backend breadth, is about 85-90% complete.
   `/OpenAction`, old-style `/Dests`, name-tree destinations, and bookmark
   resolution through write/reread. Encrypted malformed-reader coverage now also
   includes bad-startxref reconstruction followed by password read,
-  saved-state AESV2 recrypt, compressed write, and password reread.
+  saved-state AESV2 recrypt, compressed write, and password reread, plus
+  encrypted incremental bad-final-startxref reconstruction that keeps the newest
+  revision before recrypting and compressed-rereading, and writer-generated
+  compressed encrypted xref-stream bad-final-startxref recovery.
 - In progress: image/filter corpus parity, remaining exact Flate block-identity
   and remaining large-file tuning for object streams, filters, image
   extraction, and non-ASCII text paths, non-UCS2 text CMap parity, remaining

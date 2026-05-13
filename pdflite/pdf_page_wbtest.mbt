@@ -126,6 +126,7 @@ test "private page tree readers cover guard branches" {
     PdfDictionary([]),
     None,
     None,
+    None,
     Rotate0,
     { val: pdf_page_default_mediabox() },
     0,
@@ -135,6 +136,7 @@ test "private page tree readers cover guard branches" {
   }
   let too_deep : Result[Array[PdfPage], Error] = try? doc.pdf_pages_of_node(
     PdfDictionary([]),
+    None,
     None,
     None,
     Rotate0,
@@ -180,6 +182,7 @@ test "private page tree readers cover guard branches" {
     PdfDictionary([(pdf_page_kids_key(), PdfArray([PdfDictionary([])]))]),
     None,
     None,
+    None,
     Rotate0,
     last_mediabox,
     0,
@@ -187,6 +190,7 @@ test "private page tree readers cover guard branches" {
   @test.assert_eq(branch_pages.length(), 1)
   let leaf_pages = try! doc.pdf_pages_of_node(
     PdfDictionary([]),
+    None,
     None,
     None,
     Rotate0,

@@ -41,6 +41,148 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Pre-refactor native hardening restored complete source coverage with
+  focused white-box gates for Markdown table/layout edge cases, private
+  simple-font text-width and malformed ToUnicode fallbacks, object-stream member
+  parsing/repair, and reconstructed-reader edge paths. `moon test --target
+  native` now reports 1252/1252 tests passing, and `moon coverage analyze`
+  reports all source files fully covered.~~
+- [x] ~~Continue native pre-refactor hardening by completing inherited
+  `/CropBox` materialization in `pages_of_pagetree` and adding a compressed
+  native `change_pages` gate for inherited page attributes, indirect GoTo
+  actions, preserved URI actions, indirect old-style `/Dests`, indirect
+  name-tree destinations, and bookmark resolution. `moon test --target native`
+  now reports 1253/1253 tests passing, and `moon coverage analyze` reports all
+  source files fully covered.~~
+- [x] ~~Continue native pre-refactor hardening with encrypted incremental
+  malformed-reader coverage: corrupt the final `startxref`, recover through the
+  password-aware reconstruction path, prove the newest encrypted revision wins,
+  saved-state AESV2 recrypt, compressed xref-stream write, and password reread.
+  `moon test --target native` now reports 1254/1254 tests passing, and
+  `moon coverage analyze` reports all source files fully covered.~~
+- [x] ~~Continue native pre-refactor hardening with writer-generated compressed
+  encrypted xref-stream recovery: corrupt the final `startxref` after public
+  AESV2 compressed encrypted output, recover through password-aware
+  reconstruction, saved-state recrypt, compressed write, and password reread.
+  `moon test --target native` now reports 1255/1255 tests passing, and
+  `moon coverage analyze` reports all source files fully covered.~~
+- [x] ~~Continue native pre-refactor hardening with broader exact native miniz
+  byte-output coverage: the native-only Flate parity gate now pins a 64-byte
+  mixed stored-block payload at levels 1, 6, and 9 in addition to tiny stored
+  streams and repeated compressed streams. `moon test --target native` remains
+  1255/1255 passing, and `moon coverage analyze` reports all source files fully
+  covered.~~
+- [x] ~~Continue native pre-refactor hardening across the native async file
+  boundary: encrypted incremental updates now corrupt the final `startxref`
+  after compressed xref-stream file output, recover through password-aware file
+  reads, preserve the newest encrypted revision, saved-state AESV2 recrypt, and
+  compressed file reread. `moon test --target native` now reports 1256/1256
+  tests passing.~~
+- [x] ~~Continue native pre-refactor hardening for native async encrypted writer
+  output: compressed AESV2 file output now corrupts the final `startxref`,
+  recovers through password-aware file reads, preserves encrypted direct
+  objects, saved-state AESV2 recrypts, and compressed-rereads from disk. `moon
+  test --target native` now reports 1257/1257 tests passing.~~
+- [x] ~~Continue native pre-refactor hardening for AESV3 at the native async
+  file boundary: compressed AESV3 file output now corrupts the final
+  `startxref`, recovers through password-aware file reads, preserves encrypted
+  direct objects, saved-state AESV3 recrypts, and compressed-rereads from disk.
+  `moon test --target native` now reports 1258/1258 tests passing.~~
+- [x] ~~Continue native pre-refactor hardening for AESV3 ISO at the native async
+  file boundary: compressed AESV3 ISO file output now corrupts the final
+  `startxref`, recovers through password-aware file reads, preserves encrypted
+  direct objects, saved-state AESV3 ISO recrypts, compressed-rereads from disk,
+  and verifies the repaired output remains ISO AES-256. `moon test --target
+  native` now reports 1259/1259 tests passing.~~
+- [x] ~~Continue native pre-refactor hardening for ARC4/R4 at the native async
+  file boundary: compressed ARC4 file output now corrupts the final
+  `startxref`, recovers through password-aware file reads, preserves encrypted
+  direct objects, saved-state ARC4 recrypts, compressed-rereads from disk, and
+  verifies the repaired output remains 128-bit ARC4. `moon test --target native`
+  now reports 1260/1260 tests passing.~~
+- [x] ~~Continue native pre-refactor hardening for legacy ARC4 at the native
+  async file boundary: compressed 40-bit and 128-bit non-R4 ARC4 file output now
+  corrupts the final `startxref`, recovers through password-aware file reads,
+  preserves encrypted direct objects, saved-state ARC4 recrypts, compressed-
+  rereads from disk, and verifies the repaired outputs remain 40-bit and
+  128-bit ARC4 respectively. `moon test --target native` now reports 1261/1261
+  tests passing.~~
+- [x] ~~Continue native pre-refactor hardening for encrypted object streams at
+  the native async file boundary: file reads now gate AESV2 encrypted `/ObjStm`
+  expansion for explicit owner passwords, bad-final-`startxref`
+  password-aware reconstruction, and implicit blank-user password fallback.
+  `moon test --target native` now reports 1262/1262 tests passing.~~
+- [x] ~~Continue native pre-refactor hardening for encrypted object-stream
+  recrypt at the native async file boundary: file reads now decrypt AESV2
+  `/ObjStm` payloads, recrypt already-materialized non-stream objects, write a
+  compressed xref stream back to disk, verify plaintext does not leak, and
+  reread with the user password. `moon test --target native` now reports
+  1263/1263 tests passing.~~
+- [x] ~~Continue native pre-refactor hardening for malformed encrypted
+  xref-stream metadata: a valid `startxref` now has acceptance coverage where a
+  malformed `/Index` makes strict xref-stream parsing fail, password-aware
+  reconstruction decrypts the physically scanned objects, saved-state AESV2
+  recrypt writes a compressed xref stream, and the user password rereads the
+  output. `moon test --target native` now reports 1264/1264 tests passing.~~
+- [x] ~~Continue native pre-refactor hardening for malformed encrypted
+  xref-stream metadata at the native async file boundary: compressed AESV2 file
+  output now keeps the `startxref` valid, corrupts `/Index`, confirms strict
+  xref-stream parsing fails, recovers through password-aware file reads,
+  saved-state AESV2 recrypts, verifies plaintext does not leak, and rereads the
+  repaired file with the user password. `moon test --target native` now
+  reports 1265/1265 tests passing.~~
+- [x] ~~Continue native pre-refactor hardening for malformed encrypted classic
+  xref markers at the native async file boundary: classic AESV2 file output now
+  keeps the `startxref` valid, corrupts the first in-use xref-row marker,
+  confirms strict table parsing fails, recovers through password-aware file
+  reads, saved-state AESV2 recrypts, verifies plaintext does not leak, and
+  rereads the repaired compressed-xref file with the user password. `moon test
+  --target native` now reports 1266/1266 tests passing.~~
+- [x] ~~Continue native pre-refactor hardening for malformed encrypted classic
+  xref offsets at the native async file boundary: classic AESV2 file output now
+  keeps the `startxref` valid, corrupts the first in-use xref-row offset,
+  confirms strict table parsing fails, recovers through password-aware file
+  reads, saved-state AESV2 recrypts, verifies plaintext does not leak, and
+  rereads the repaired compressed-xref file with the user password. `moon test
+  --target native` now reports 1267/1267 tests passing.~~
+- [x] ~~Continue native pre-refactor hardening for malformed encrypted
+  xref-stream widths: compressed AESV2 output now keeps the `startxref` valid,
+  injects a malformed `/W [1 4]` before the real xref-stream widths, confirms
+  strict parsing fails, recovers through password-aware reads, saved-state
+  AESV2 recrypts, verifies plaintext does not leak, and covers the same path at
+  the native async file boundary. `moon test --target native` now reports
+  1269/1269 tests passing.~~
+- [x] ~~Continue native pre-refactor hardening for malformed encrypted
+  xref-stream size metadata: compressed AESV2 output now keeps the `startxref`
+  valid, injects a malformed `/Size /Bad` before the real xref-stream size,
+  confirms strict default-range parsing fails, recovers through password-aware
+  reads, saved-state AESV2 recrypts, verifies plaintext does not leak, and
+  covers the same path at the native async file boundary. `moon test --target
+  native` now reports 1271/1271 tests passing.~~
+- [x] ~~Continue native pre-refactor hardening for malformed xref-stream filter
+  metadata: strict reads now route xref-stream-only `FilterNotSupported`
+  failures through reconstruction, compressed AESV2 output keeps the
+  `startxref` valid while injecting `/Filter /BadXRefFilter`, password-aware
+  recovery decrypts physically scanned objects, saved-state AESV2 recrypts,
+  plaintext does not leak, the same path is covered at the native async file
+  boundary, and unsupported object-stream filters still raise normally. `moon
+  test --target native` now reports 1275/1275 tests passing.~~
+- [x] ~~Continue native pre-refactor hardening for malformed xref-stream
+  decode parameters: strict reads now route xref-stream-only
+  `PredictorExpected`/`PredictorNotSupported` failures through reconstruction,
+  compressed AESV2 output keeps the `startxref` valid while injecting
+  `/DecodeParms /Bad`, password-aware recovery decrypts physically scanned
+  objects, saved-state AESV2 recrypts, plaintext does not leak, the same path
+  is covered at the native async file boundary, and malformed object-stream
+  decode parameters still raise normally. `moon test --target native` now
+  reports 1282/1282 tests passing.~~
+- [x] ~~Continue native pre-refactor hardening for malformed object-stream
+  bounds: valid-`startxref` reads now route `StreamDataExpected` through
+  reconstruction, recover a physical page tree when the xref stream points the
+  root at an object stream with an out-of-range `/First`, preserve the existing
+  unrecoverable object-stream error, cover the same path at the native async
+  file boundary, and round-trip the repaired document through compressed xref
+  output. `moon test --target native` now reports 1286/1286 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~
@@ -743,6 +885,59 @@ Current backend snapshot:
 - [x] ~~Recovered xref-stream skip markers are offset-aware, so they hide older
   physical objects covered by the stream without hiding later physical
   incremental objects for the same object number.~~
+- [x] ~~Password-aware malformed-reader reconstruction now has a native
+  encrypted xref-stream metadata gate where a malformed `/Index` triggers
+  strict `XRefEntryExpected`, reconstruction recovers from physically scanned
+  encrypted objects, and saved-state AESV2 recrypt/reread stays encrypted.~~
+- [x] ~~Password-aware malformed-reader reconstruction now also has a native
+  encrypted xref-stream width gate where a malformed `/W` triggers strict
+  `XRefEntryExpected`, reconstruction recovers from physically scanned
+  encrypted objects, and saved-state AESV2 recrypt/reread stays encrypted.~~
+- [x] ~~Password-aware malformed-reader reconstruction now also has a native
+  encrypted xref-stream size gate where a malformed `/Size` triggers strict
+  `XRefEntryExpected`, reconstruction recovers from physically scanned
+  encrypted objects, and saved-state AESV2 recrypt/reread stays encrypted.~~
+- [x] ~~Malformed-reader reconstruction now has native xref-stream filter gates
+  where a malformed `/Filter` triggers strict `FilterNotSupported`,
+  reconstruction recovers from physically scanned objects, and encrypted
+  saved-state AESV2 recrypt/reread stays encrypted.~~
+- [x] ~~Malformed-reader reconstruction now has native xref-stream
+  decode-parameter gates where malformed `/DecodeParms` triggers strict
+  `PredictorExpected`, reconstruction recovers from physically scanned objects,
+  encrypted saved-state AESV2 recrypt/reread stays encrypted, and malformed
+  object-stream `/DecodeParms` still raises normally.~~
+- [x] ~~Malformed-reader reconstruction now has native object-stream bounds
+  gates where a valid xref stream points the root at an object stream with an
+  out-of-range `/First`, strict parsing raises `StreamDataExpected`,
+  reconstruction recovers the physically scanned page tree, and unrecoverable
+  object-stream slice errors still raise normally.~~
+- [x] ~~Native async file wrappers now gate the same malformed encrypted
+  xref-stream metadata path from disk, including strict failure,
+  password-aware recovery, saved-state AESV2 recrypt, plaintext-leak check, and
+  user-password reread.~~
+- [x] ~~Native async file wrappers now gate the same malformed encrypted
+  xref-stream `/W` path from disk, including strict failure, password-aware
+  recovery, saved-state AESV2 recrypt, plaintext-leak check, and user-password
+  reread.~~
+- [x] ~~Native async file wrappers now gate the same malformed encrypted
+  xref-stream `/Size` path from disk, including strict failure, password-aware
+  recovery, saved-state AESV2 recrypt, plaintext-leak check, and user-password
+  reread.~~
+- [x] ~~Native async file wrappers now gate the same malformed encrypted
+  xref-stream `/Filter` path from disk, including strict `FilterNotSupported`,
+  password-aware recovery, saved-state AESV2 recrypt, plaintext-leak check, and
+  user-password reread.~~
+- [x] ~~Native async file wrappers now gate the same malformed encrypted
+  xref-stream `/DecodeParms` path from disk, including strict
+  `PredictorExpected`, password-aware recovery, saved-state AESV2 recrypt,
+  plaintext-leak check, and user-password reread.~~
+- [x] ~~Native async file wrappers now gate malformed encrypted classic xref-row
+  marker recovery from disk, including strict `XRefEntryExpected`,
+  password-aware recovery, saved-state AESV2 recrypt, plaintext-leak check, and
+  user-password reread.~~
+- [x] ~~Native async file wrappers now gate malformed encrypted classic xref-row
+  offset recovery from disk, including strict failure, password-aware recovery,
+  saved-state AESV2 recrypt, plaintext-leak check, and user-password reread.~~
 - [x] ~~Incremental writer changed-object detection now uses a hash-backed
   seen set before sorting sparse classic/xref-stream entry numbers, so large
   event logs with repeated edits avoid repeated linear duplicate checks.~~
@@ -1055,8 +1250,8 @@ Current backend snapshot:
 - [ ] Byte-identical zlib output strategy and broader performance parity beyond
   explicit Flate level selection.
 - [x] ~~Native miniz byte-output parity now has exact fixture coverage for
-  representative small stored streams and compressed repeated streams at
-  multiple zlib levels.~~
+  representative small stored streams, mixed larger stored-block payloads, and
+  compressed repeated streams at multiple zlib levels.~~
 - [x] ~~Malformed xref-stream/object-stream recovery covers reconstructed
   indirect object-stream bounds after a bad final `startxref`.~~
 - [x] ~~Malformed xref-stream recovery covers unknown entry types after a bad
@@ -1099,12 +1294,77 @@ Current backend snapshot:
 - [x] ~~Writer-generated compressed xref-stream incremental updates now have a
   public native bad-startxref acceptance gate, preserving revision markers
   through recovery, compressed rewrite, and reread.~~
+- [x] ~~Encrypted incremental updates now have a public native bad-final
+  `startxref` acceptance gate, preserving the newest encrypted revision through
+  password-aware reconstruction, saved-state AESV2 recrypt, compressed
+  xref-stream write, and password reread.~~
+- [x] ~~Native async file wrappers now gate encrypted incremental bad-final
+  `startxref` recovery through compressed xref-stream file output,
+  password-aware file reconstruction, saved-state AESV2 recrypt, compressed file
+  write, and password reread.~~
+- [x] ~~Writer-generated compressed encrypted xref-stream output now has a
+  public native bad-final `startxref` acceptance gate, preserving encrypted
+  direct objects through password-aware reconstruction, saved-state AESV2
+  recrypt, compressed xref-stream write, and password reread.~~
+- [x] ~~Native async file wrappers now gate writer-generated compressed AESV2
+  encrypted output with bad-final `startxref` recovery, saved-state recrypt,
+  compressed file write, and password reread.~~
+- [x] ~~Native async file wrappers now gate writer-generated compressed AESV3
+  encrypted output with bad-final `startxref` recovery, saved-state recrypt,
+  compressed file write, and password reread.~~
+- [x] ~~Native async file wrappers now gate writer-generated compressed AESV3 ISO
+  encrypted output with bad-final `startxref` recovery, saved-state recrypt,
+  compressed file write, and password reread.~~
+- [x] ~~Native async file wrappers now gate writer-generated compressed ARC4/R4
+  encrypted output with bad-final `startxref` recovery, saved-state recrypt,
+  compressed file write, and password reread.~~
+- [x] ~~Native async file wrappers now gate writer-generated compressed legacy
+  ARC4 40-bit and 128-bit encrypted output with bad-final `startxref` recovery,
+  saved-state recrypt, compressed file write, and password reread.~~
+- [x] ~~Native async file wrappers now gate encrypted `/ObjStm` reads for
+  explicit passwords, bad-final `startxref` reconstruction, and implicit blank
+  user password fallback.~~
+- [x] ~~Native async file wrappers now gate saved-state recrypt for non-stream
+  payloads extracted from encrypted `/ObjStm` storage, including compressed
+  xref-stream file write and password reread.~~
 - [x] ~~Bad-startxref acceptance helpers now corrupt the final `startxref`
   marker, so multi-revision and incremental fixtures exercise the intended
   newest-revision malformed-reader path.~~
 - [x] ~~Reconstructed object-stream expansion now has a regression gate for
   indirect `/Filter` metadata on `/ObjStm`, matching the already-covered strict
   read path after a bad final `startxref`.~~
+- [x] ~~Native async file wrappers now gate malformed encrypted xref-stream
+  metadata recovery with a valid `startxref`, including strict failure,
+  password-aware file recovery, saved-state AESV2 recrypt, compressed file
+  write, plaintext-leak check, and user-password reread.~~
+- [x] ~~Native async file wrappers now gate malformed encrypted xref-stream
+  width recovery with a valid `startxref`, including strict failure,
+  password-aware file recovery, saved-state AESV2 recrypt, compressed file
+  write, plaintext-leak check, and user-password reread.~~
+- [x] ~~Native async file wrappers now gate malformed encrypted xref-stream
+  size recovery with a valid `startxref`, including strict failure,
+  password-aware file recovery, saved-state AESV2 recrypt, compressed file
+  write, plaintext-leak check, and user-password reread.~~
+- [x] ~~Native async file wrappers now gate malformed encrypted xref-stream
+  filter recovery with a valid `startxref`, including strict
+  `FilterNotSupported`, password-aware file recovery, saved-state AESV2
+  recrypt, compressed file write, plaintext-leak check, and user-password
+  reread.~~
+- [x] ~~Native async file wrappers now gate malformed encrypted xref-stream
+  decode-parameter recovery with a valid `startxref`, including strict
+  `PredictorExpected`, password-aware file recovery, saved-state AESV2 recrypt,
+  compressed file write, plaintext-leak check, and user-password reread.~~
+- [x] ~~Native async file wrappers now gate malformed object-stream bounds
+  recovery with a valid `startxref`, including strict `StreamDataExpected`,
+  physical page-tree reconstruction, and page-reference verification from disk.~~
+- [x] ~~Native async file wrappers now gate malformed encrypted classic xref-row
+  marker recovery with a valid `startxref`, including strict failure,
+  password-aware file recovery, saved-state AESV2 recrypt, compressed file
+  write, plaintext-leak check, and user-password reread.~~
+- [x] ~~Native async file wrappers now gate malformed encrypted classic xref-row
+  offset recovery with a valid `startxref`, including strict failure,
+  password-aware file recovery, saved-state AESV2 recrypt, compressed file
+  write, plaintext-leak check, and user-password reread.~~
 - [ ] Broader malformed xref-table/xref-stream/object-stream recovery beyond
   the current bad-startxref real-corpus, multi-revision, and encrypted
   object-stream gates.

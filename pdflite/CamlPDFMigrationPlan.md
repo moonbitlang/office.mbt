@@ -390,7 +390,24 @@ MoonBit consequences for this project:
    object-stream expansion after trailer selection, using the supplied
    passwords once `/Encrypt` and `/ID` are available. This closes the native
    acceptance path for AESV2 encrypted object streams behind a bad
-   `startxref` pointer.
+   `startxref` pointer. Native acceptance now also covers a valid `startxref`
+   pointing at encrypted xref-stream metadata with a malformed `/Index`, `/W`,
+   `/Size`, `/Filter`, or `/DecodeParms`, so strict parsing/decode raises
+   `XRefEntryExpected`, `FilterNotSupported`, or `PredictorExpected`,
+   password-aware reconstruction decrypts physically scanned objects, and
+   saved-state AESV2 recrypt still writes/rereads encrypted compressed
+   xref-stream output. The same malformed encrypted metadata paths are also
+   gated through native async file wrappers, including compressed file output,
+   strict failure, password-aware recovery, plaintext-leak checking, and
+   user-password reread. Native acceptance now also covers valid-`startxref`
+   object-stream bounds corruption where strict expansion raises
+   `StreamDataExpected` for an out-of-range `/First`, reconstruction recovers a
+   physically scanned page tree, unrecoverable object-stream slices keep
+   raising, and the async file wrappers gate the same recovery from disk.
+   Native async file wrappers now also gate valid-`startxref` encrypted classic
+   xref-row offset and marker corruption with strict failure, password-aware
+   recovery, saved-state AESV2 recrypt, plaintext-leak checking, and
+   user-password reread.
    Startxref discovery now mirrors CamlPDF's EOF-centered lookup by ignoring
    trailing junk after the final `%%EOF` marker.
    The strict classic xref reader now also mirrors CamlPDF's malformed-row
@@ -592,11 +609,14 @@ MoonBit consequences for this project:
    `Ref[Int]`, avoiding the previous status-prefix copy while preserving valid
    empty-payload success. Owned public Flate decode now also calls the native
    bytes helper directly instead of passing through a borrowed view and
-   re-owning compressed data before FFI. The pure Flate prefix decoder now
-   caches fixed-Huffman literal and distance tables and decodes Huffman symbols
-   through bounded table lookahead with exact-bit fallback, reducing setup work
-   and per-symbol bit reads for inline-image and consumed-length paths that
-   still need MoonBit-side byte accounting instead of native miniz.
+   re-owning compressed data before FFI. Exact native miniz fixture coverage now
+   includes tiny stored streams, mixed larger stored-block payloads, and repeated
+   compressed streams across representative levels. The pure Flate prefix
+   decoder now caches fixed-Huffman literal and distance tables and decodes
+   Huffman symbols through bounded table lookahead with exact-bit fallback,
+   reducing setup work and per-symbol bit reads for inline-image and
+   consumed-length paths that still need MoonBit-side byte accounting instead of
+   native miniz.
    Single-stage ASCIIHex, ASCII85,
    RunLength, Flate, and LZW inline images without `/DecodeParms` now keep
    prefix-decoded payloads and only advance the cursor over encoded slices,
@@ -656,7 +676,8 @@ MoonBit consequences for this project:
    page-tree construction, root installation, active-catalog `/Pages`
    resolution through trailer `/Root`, and
    `pages_of_pagetree` extraction with inherited `/Resources`, `/MediaBox`,
-   `/Rotate`, indirect content preservation, and last-seen mediabox fallback.
+   `/CropBox`, `/Rotate`, indirect content preservation, and last-seen mediabox
+   fallback.
    Root installation now matches CamlPDF's catalog-entry precedence: the new
    `/Type` and `/Pages` entries are authoritative, existing catalog extras are
    preserved from the active trailer-root catalog, and explicit extras replace
@@ -714,7 +735,11 @@ MoonBit consequences for this project:
    boundary, preserving page resources while transforming mixed direct and
    indirect link destinations, GoTo action annotations, catalog `/OpenAction`,
    old-style `/Dests`, name-tree action destinations, and bookmark resolution
-   through write/reread. A minimal `pdf_of_pages`
+   through write/reread. A follow-up compressed native gate covers inherited
+   page resources, media box, crop box, and rotation through `change_pages`,
+   plus indirect GoTo actions, preserved URI actions, indirect old-style
+   `/Dests`, indirect name-tree destinations, and bookmark resolution through
+   write/reread. A minimal `pdf_of_pages`
    is started for 1-based page extraction and reordering by composing
    `pages_of_pagetree`, `change_pages`, and
    `remove_unreferenced`; references to selected old page objects are rewritten
@@ -1371,11 +1396,13 @@ MoonBit consequences for this project:
     AES convenience wrappers use the existing OS secure-random boundary, while
     cross-target AES wrappers keep random material explicit through fallible
     providers. Remaining
-    encrypted malformed-reader compatibility now has a native bad-startxref
-    reconstruction gate that password-reads, mutates, saved-state recrypts,
-    compressed-writes, and password-rereads a direct encrypted-object document.
-    Broader real-world encrypted malformed-reader compatibility remains
-    deferred.
+    encrypted malformed-reader compatibility now has native bad-startxref gates
+    that password-read, mutate, saved-state recrypt, compressed-write, and
+    password-reread direct encrypted-object documents, including an encrypted
+    incremental update whose final `startxref` is corrupted before recovery and
+    writer-generated compressed encrypted xref-stream output recovered through
+    the same path. Broader real-world encrypted malformed-reader compatibility
+    remains deferred.
 
 11. Higher-level document features.
     Continue bookmarks/marks, page labels, annotations, optional content
@@ -1729,7 +1756,11 @@ MoonBit consequences for this project:
     generation covered. Text coverage also keeps hash-backed multi-hop
     `/UseCMap` stream inheritance, hash-backed inherited CMap composition,
     per-run external CMap lookup maps, and pure Flate Huffman lookahead covered;
-    `moon coverage analyze` now reports all source files fully covered.
+    a May 13, 2026 pre-refactor native hardening pass adds focused white-box
+    coverage for Markdown table/layout classification, simple-font width and
+    malformed ToUnicode fallbacks, object-stream member parsing/repair, and
+    reconstructed-reader edge paths. `moon coverage analyze` now reports all
+    source files fully covered.
 
 ## Active Native Acceptance Milestone
 
@@ -1878,6 +1909,36 @@ reader or writer invariant is narrower than a whole-document workflow:
 - decrypt AES-128 output through the public wrapper, mutate the decrypted
   document, recrypt with the saved encryption state, append an incremental
   update, and read both newest and older encrypted revisions.
+- corrupt the final `startxref` of an AES-128 encrypted incremental update,
+  recover it through password-aware reconstruction, prove the newest revision is
+  selected, saved-state recrypt it, compressed-write it, and password-reread it.
+- run the same encrypted incremental bad-final-`startxref` workflow through the
+  native async file wrappers, including compressed xref-stream update output,
+  password-aware file reconstruction, saved-state recrypt, compressed file
+  write, and password reread.
+- corrupt the final `startxref` of public compressed AESV2 encrypted output,
+  recover it through password-aware reconstruction, saved-state recrypt it,
+  compressed-write it, and password-reread it.
+- run the same compressed AESV2 encrypted writer bad-final-`startxref` recovery
+  through native async file wrappers, including password-aware file
+  reconstruction, saved-state recrypt, compressed file write, and password
+  reread.
+- run the compressed ARC4/R4 encrypted writer bad-final-`startxref` recovery
+  through native async file wrappers, including password-aware file
+  reconstruction, saved-state ARC4 recrypt, compressed file write, password
+  reread, and 128-bit ARC4 preservation.
+- run compressed legacy ARC4 40-bit and 128-bit encrypted writer
+  bad-final-`startxref` recovery through native async file wrappers, including
+  password-aware file reconstruction, saved-state ARC4 recrypt, compressed file
+  write, password reread, and matching encryption-method preservation.
+- run the compressed AESV3 encrypted writer bad-final-`startxref` recovery
+  through native async file wrappers, including password-aware file
+  reconstruction, saved-state AESV3 recrypt, compressed file write, and password
+  reread.
+- run the compressed AESV3 ISO encrypted writer bad-final-`startxref` recovery
+  through native async file wrappers, including password-aware file
+  reconstruction, saved-state AESV3 ISO recrypt, compressed file write,
+  password reread, and ISO AES-256 preservation.
 - preserve `/EncryptMetadata false` through compressed AESV2 encrypted output,
   public password reads, plaintext metadata inspection in encrypted bytes,
   saved-state recrypt, compressed rewrite, and owner-password reread.
@@ -1930,8 +1991,27 @@ reader or writer invariant is narrower than a whole-document workflow:
   targets.
 - exercise native async file wrappers for encrypted incremental updates:
   encrypted write to disk, password read, decrypt/mutate/recrypt, compressed
-  xref-stream incremental write, revision count, and newest/older encrypted
-  revision reads.
+  xref-stream incremental write, revision count, newest/older encrypted
+  revision reads, bad-final-`startxref` password-aware reconstruction,
+  saved-state recrypt, compressed file write, and password reread.
+- exercise native async file wrappers for compressed AESV2 encrypted writer
+  output with a corrupted final `startxref`, password-aware file recovery,
+  saved-state recrypt, compressed file write, and password reread.
+- exercise native async file wrappers for compressed ARC4/R4 encrypted writer
+  output with a corrupted final `startxref`, password-aware file recovery,
+  saved-state recrypt, compressed file write, password reread, and 128-bit ARC4
+  preservation.
+- exercise native async file wrappers for compressed legacy ARC4 40-bit and
+  128-bit encrypted writer output with a corrupted final `startxref`,
+  password-aware file recovery, saved-state recrypt, compressed file write,
+  password reread, and matching encryption-method preservation.
+- exercise native async file wrappers for compressed AESV3 encrypted writer
+  output with a corrupted final `startxref`, password-aware file recovery,
+  saved-state recrypt, compressed file write, and password reread.
+- exercise native async file wrappers for compressed AESV3 ISO encrypted writer
+  output with a corrupted final `startxref`, password-aware file recovery,
+  saved-state recrypt, compressed file write, password reread, and ISO AES-256
+  preservation.
 - read the checked-in CamlPDF fixture PDFs from `.repos`, then compressed-write,
   document-wide stream-decompress, multi-page text-extract, and reread them
   through native async file wrappers while preserving page counts and tutorial
@@ -1942,10 +2022,13 @@ reader or writer invariant is narrower than a whole-document workflow:
 - read AES-128 encrypted xref-stream documents whose referenced object lives
   inside an encrypted `/ObjStm`, proving password-aware object-stream expansion
   for explicit passwords and implicit blank user passwords while avoiding double
-  decryption of the embedded object.
+  decryption of the embedded object; the same path is gated through native async
+  file wrappers, including bad-final-`startxref` password-aware reconstruction.
 - recrypt a decrypted AESV2 document whose non-stream payload came from an
   encrypted `/ObjStm`, proving saved-state recrypt encrypts
-  `ObjectParsedAlreadyDecrypted` plaintext before compressed write/read.
+  `ObjectParsedAlreadyDecrypted` plaintext before compressed write/read; the
+  same path is gated through native async file wrappers with compressed file
+  output and user-password reread.
 - read a minimal page tree through a CamlPDF-tolerated malformed classic xref
   table, then normalize it through the writer and reread it.
 - recover a feature-rich classic document after corrupting its xref offsets,

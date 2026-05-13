@@ -195,6 +195,93 @@ test "private table detector keeps sentence punctuation out of Markdown tables" 
 }
 
 ///|
+test "private table detector rejects body prose with punctuation phrases" {
+  @test.assert_eq(
+    pdf_markdown_codepoints_have_sentence_punctuation_phrase(
+      markdown_codepoints_for_wbtest("Hello, world"),
+    ),
+    true,
+  )
+  @test.assert_eq(
+    pdf_markdown_line_has_sentence_punctuation_phrase({
+      y: 100.0,
+      chunks: [markdown_text_cell_for_wbtest(0.0, 100.0, 0, "Hello, world")],
+    }),
+    true,
+  )
+  @test.assert_eq(
+    pdf_markdown_line_is_table_body_candidate({
+      y: 100.0,
+      chunks: [markdown_text_cell_for_wbtest(0.0, 100.0, 0, "Hello, world")],
+    }),
+    false,
+  )
+}
+
+///|
+test "private table detector rejects title dash headings" {
+  @test.assert_eq(
+    pdf_markdown_line_is_table_header_candidate({
+      y: 100.0,
+      chunks: [
+        markdown_text_chunk_for_wbtest(0.0, 100.0, 1.0, 0, [0x2014]),
+        markdown_text_cell_for_wbtest(50.0, 100.0, 1, "Expected"),
+        markdown_text_cell_for_wbtest(100.0, 100.0, 2, "Actual"),
+      ],
+    }),
+    false,
+  )
+}
+
+///|
+test "private table detector rejects empty header candidates" {
+  @test.assert_eq(
+    pdf_markdown_line_is_table_header_candidate({
+      y: 100.0,
+      chunks: [
+        markdown_chunk_for_wbtest(0.0, 100.0, 0),
+        markdown_chunk_for_wbtest(50.0, 100.0, 1),
+        markdown_chunk_for_wbtest(100.0, 100.0, 2),
+      ],
+    }),
+    false,
+  )
+}
+
+///|
+test "private positioned chunks escape table pipes and merge repeated cells" {
+  let codepoints = pdf_markdown_chunks_to_codepoints([
+    markdown_text_cell_for_wbtest(0.0, 120.0, 0, "Intro"),
+    markdown_text_cell_for_wbtest(0.0, 100.0, 1, "A"),
+    markdown_text_cell_for_wbtest(0.0, 100.0, 2, "|B"),
+    markdown_text_cell_for_wbtest(50.0, 100.0, 3, "Qty"),
+    markdown_text_cell_for_wbtest(100.0, 100.0, 4, "Notes"),
+    markdown_text_cell_for_wbtest(0.0, 90.0, 5, "Row"),
+    markdown_text_cell_for_wbtest(0.0, 90.0, 6, "one"),
+    markdown_text_cell_for_wbtest(50.0, 90.0, 7, "2"),
+    markdown_text_cell_for_wbtest(100.0, 90.0, 8, "ok"),
+  ])
+  @test.assert_eq(
+    try! pdf_markdown_string_of_codepoints(codepoints),
+    "Intro\n| A \\|B | Qty | Notes |\n| --- | --- | --- |\n| Row one | 2 | ok |",
+  )
+}
+
+///|
+test "private positioned chunks keep lone header-shaped lines regular" {
+  let codepoints = pdf_markdown_chunks_to_codepoints([
+    markdown_text_cell_for_wbtest(0.0, 120.0, 0, "Intro"),
+    markdown_text_cell_for_wbtest(0.0, 100.0, 1, "Name"),
+    markdown_text_cell_for_wbtest(50.0, 100.0, 2, "Value"),
+    markdown_text_cell_for_wbtest(100.0, 100.0, 3, "Status"),
+  ])
+  @test.assert_eq(
+    try! pdf_markdown_string_of_codepoints(codepoints),
+    "Intro\nName Value Status",
+  )
+}
+
+///|
 test "private table detector rejects numeric-dominated total rows" {
   let codepoints = pdf_markdown_chunks_to_codepoints([
     markdown_text_cell_for_wbtest(0.0, 100.0, 0, "Sales Tax"),

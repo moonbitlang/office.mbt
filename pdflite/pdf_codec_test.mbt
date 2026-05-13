@@ -53,6 +53,16 @@ fn codec_deep_flate_match_data_for_test() -> @pdflite.PdfBytes {
 }
 
 ///|
+#cfg(target="native")
+fn codec_miniz_mixed_stored_data_for_test() -> @pdflite.PdfBytes {
+  try! @pdflite.pdf_bytes_of_int_array(
+    [
+      for index in 0..<64 => (index * 37 + 11) % 256
+    ],
+  )
+}
+
+///|
 fn codec_lzw_codes_for_test(
   codes : ArrayView[Int],
   early_change : Int,
@@ -576,6 +586,26 @@ test "pdf_flate_encode_with_level matches native miniz byte output" {
       @pdflite.pdf_flate_encode_with_level(repeated, level),
       codec_bytes_for_test(expected),
     )
+  }
+
+  let mixed_stored = codec_miniz_mixed_stored_data_for_test()
+  let mixed_stored_body = [
+    1, 64, 0, 191, 255, 11, 48, 85, 122, 159, 196, 233, 14, 51, 88, 125, 162, 199,
+    236, 17, 54, 91, 128, 165, 202, 239, 20, 57, 94, 131, 168, 205, 242, 23, 60,
+    97, 134, 171, 208, 245, 26, 63, 100, 137, 174, 211, 248, 29, 66, 103, 140, 177,
+    214, 251, 32, 69, 106, 143, 180, 217, 254, 35, 72, 109, 146, 183, 220, 1, 38,
+    247, 237, 32, 33,
+  ]
+  let mixed_stored_cases : Array[(Int, Array[Int])] = [
+    (1, [120, 1] + mixed_stored_body),
+    (6, [120, 156] + mixed_stored_body),
+    (9, [120, 218] + mixed_stored_body),
+  ]
+  for case in mixed_stored_cases {
+    let (level, expected) = case
+    let encoded = @pdflite.pdf_flate_encode_with_level(mixed_stored, level)
+    @test.assert_eq(encoded, codec_bytes_for_test(expected))
+    @test.assert_eq(@pdflite.pdf_flate_decode(encoded), mixed_stored)
   }
 }
 

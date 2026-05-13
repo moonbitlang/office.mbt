@@ -1634,11 +1634,9 @@ fn pdf_read_reconstructed_xrefs(
           }
         }
         Err(_) =>
-          match
-            pdf_reader_reconstruction_skip_malformed_object(data, position) {
-            Some(next) if next > position => position = next
-            _ => position += 1
-          }
+          position = pdf_reader_reconstruction_skip_malformed_object(
+            data, position,
+          ).unwrap()
       }
     } else {
       position += 1
@@ -2452,12 +2450,61 @@ pub fn pdf_read_document_from_view(
     ParseObjectExpected =>
       pdf_read_reconstructed_or_raise(data, ParseObjectExpected)
     InvalidHexEscape => pdf_read_reconstructed_or_raise(data, InvalidHexEscape)
+    StreamDataExpected =>
+      if pdf_reader_root_object_stream_error_allows_reconstruction(data) {
+        pdf_read_reconstructed_or_raise(
+          data,
+          StreamDataExpected,
+          include_xref_stream_trailers=true,
+        )
+      } else {
+        raise StreamDataExpected
+      }
     InvalidCursorPosition(position) =>
       pdf_read_reconstructed_or_raise(
         data,
         InvalidCursorPosition(position),
         include_xref_stream_trailers=true,
       )
+    FilterNotSupported(filter) =>
+      if pdf_reader_xref_metadata_error_allows_reconstruction(
+          data,
+          FilterNotSupported(filter),
+        ) {
+        pdf_read_reconstructed_or_raise(
+          data,
+          FilterNotSupported(filter),
+          include_xref_stream_trailers=true,
+        )
+      } else {
+        raise FilterNotSupported(filter)
+      }
+    PredictorExpected =>
+      if pdf_reader_xref_metadata_error_allows_reconstruction(
+          data,
+          PredictorExpected,
+        ) {
+        pdf_read_reconstructed_or_raise(
+          data,
+          PredictorExpected,
+          include_xref_stream_trailers=true,
+        )
+      } else {
+        raise PredictorExpected
+      }
+    PredictorNotSupported(predictor) =>
+      if pdf_reader_xref_metadata_error_allows_reconstruction(
+          data,
+          PredictorNotSupported(predictor),
+        ) {
+        pdf_read_reconstructed_or_raise(
+          data,
+          PredictorNotSupported(predictor),
+          include_xref_stream_trailers=true,
+        )
+      } else {
+        raise PredictorNotSupported(predictor)
+      }
     error => raise error
   }
 }
@@ -2523,10 +2570,54 @@ fn pdf_reader_validate_xref_metadata_for_reconstruction(
 
 ///|
 fn pdf_reader_xref_entry_error_from_metadata(data : BytesView) -> Bool {
+  pdf_reader_xref_metadata_error_allows_reconstruction(data, XRefEntryExpected)
+}
+
+///|
+fn pdf_reader_root_object_stream_error_allows_reconstruction(
+  data : BytesView,
+) -> Bool raise PdfError {
+  let cursor = byte_cursor_of_view(data)
+  ignore(cursor.read_pdf_header())
+  cursor.seek_pdf_absolute(pdf_read_startxref_position(cursor.data))
+  let section = cursor.read_pdf_xref_section()
+  let root = match section.trailer.lookup_immediate(pdf_reader_root_name()) {
+    Some(PdfIndirect(root)) => root
+    _ => -1
+  }
+  for entry in section.entries {
+    if entry.object_number == root && entry.in_use {
+      match entry.object_stream {
+        Some(_) => break true
+        None => ()
+      }
+    }
+  } nobreak {
+    false
+  }
+}
+
+///|
+fn pdf_reader_xref_metadata_error_allows_reconstruction(
+  data : BytesView,
+  error : PdfError,
+) -> Bool {
   let result : Result[Unit, Error] = try? pdf_reader_validate_xref_metadata_for_reconstruction(
     data,
   )
-  result is Err(PdfError::XRefEntryExpected)
+  match (result, error) {
+    (Err(PdfError::XRefEntryExpected), XRefEntryExpected) => true
+    (
+      Err(PdfError::FilterNotSupported(metadata_filter)),
+      FilterNotSupported(filter),
+    ) => metadata_filter == filter
+    (Err(PdfError::PredictorExpected), PredictorExpected) => true
+    (
+      Err(PdfError::PredictorNotSupported(metadata_predictor)),
+      PredictorNotSupported(predictor),
+    ) => metadata_predictor == predictor
+    _ => false
+  }
 }
 
 ///|
@@ -2549,6 +2640,12 @@ fn pdf_reader_password_error_allows_reconstruction(
     | InvalidHexEscape
     | InvalidCursorPosition(_) => true
     XRefEntryExpected => pdf_reader_xref_entry_error_from_metadata(data)
+    FilterNotSupported(_) =>
+      pdf_reader_xref_metadata_error_allows_reconstruction(data, error)
+    PredictorExpected =>
+      pdf_reader_xref_metadata_error_allows_reconstruction(data, error)
+    PredictorNotSupported(_) =>
+      pdf_reader_xref_metadata_error_allows_reconstruction(data, error)
     _ => false
   }
 }
