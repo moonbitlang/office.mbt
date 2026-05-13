@@ -934,6 +934,21 @@ fn pdf_async_io_malformed_pdf_with_out_of_range_startxref_for_test() -> @pdflite
 }
 
 ///|
+fn pdf_async_io_malformed_pdf_with_startxref_number_for_test(
+  number : String,
+) -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  ignore(pdf_async_io_write_catalog_object_for_test(output))
+  pdf_async_io_push_ascii_for_test(
+    output, "trailer\n<< /Root 1 0 R /Size 2 >>\nstartxref\n",
+  )
+  pdf_async_io_push_ascii_for_test(output, number)
+  pdf_async_io_push_ascii_for_test(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn pdf_async_io_malformed_pdf_with_bad_xref_entry_for_test() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
@@ -3442,6 +3457,53 @@ async test "async file wrappers reconstruct out-of-range startxref PDFs" {
     recovered.lookup_object_or_null(1),
     pdf_async_io_classic_catalog_object_for_test(),
   )
+}
+
+///|
+async test "async file wrappers reconstruct malformed startxref numbers" {
+  let malformed_path = pdf_async_io_test_path_for_test(
+    "malformed_startxref_number",
+  )
+  let overflow_path = pdf_async_io_test_path_for_test(
+    "overflow_startxref_number",
+  )
+  pdf_async_io_remove_if_exists_for_test(malformed_path)
+  pdf_async_io_remove_if_exists_for_test(overflow_path)
+  @fs.write_file(
+    malformed_path,
+    pdf_async_io_malformed_pdf_with_startxref_number_for_test("abc"),
+    create=0o644,
+  )
+  @fs.write_file(
+    overflow_path,
+    pdf_async_io_malformed_pdf_with_startxref_number_for_test("2147483648"),
+    create=0o644,
+  )
+  let strict_malformed : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(malformed_path).binary(),
+  )
+  let strict_overflow : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(overflow_path).binary(),
+  )
+  guard strict_malformed is Err(@pdflite.PdfError::NumberExpected) else {
+    fail("expected malformed startxref number failure")
+  }
+  guard strict_overflow is Err(@pdflite.PdfError::NumberExpected) else {
+    fail("expected overflow startxref number failure")
+  }
+  let malformed = pdf_read_document_from_file(malformed_path)
+  let overflow = pdf_read_document_from_file(overflow_path)
+  pdf_async_io_remove_if_exists_for_test(malformed_path)
+  pdf_async_io_remove_if_exists_for_test(overflow_path)
+  for recovered in [malformed, overflow] {
+    @test.assert_eq(recovered.first_xref(), 0)
+    @test.assert_eq(recovered.root(), 1)
+    @test.assert_eq(recovered.object_numbers(), [1])
+    @test.assert_eq(
+      recovered.lookup_object_or_null(1),
+      pdf_async_io_classic_catalog_object_for_test(),
+    )
+  }
 }
 
 ///|

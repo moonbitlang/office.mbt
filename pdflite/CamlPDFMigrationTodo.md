@@ -383,6 +383,10 @@ Current backend snapshot:
   file wrappers now reconstruct out-of-range classic `startxref` pointers from
   disk after preserving strict `InvalidCursorPosition(999999)`. `moon test
   --target native` now reports 1325/1325 tests passing.~~
+- [x] ~~Add the fortieth pre-refactor correctness sentinel: native async file
+  wrappers now reconstruct malformed and overflowing classic `startxref`
+  numbers from disk after preserving strict `NumberExpected`. `moon test
+  --target native` now reports 1326/1326 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~
