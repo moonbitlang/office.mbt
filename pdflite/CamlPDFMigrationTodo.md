@@ -403,6 +403,11 @@ Current backend snapshot:
   wrappers now reconstruct in-range but non-xref classic `startxref` pointers
   from disk after preserving strict `XRefExpected`. `moon test --target native`
   now reports 1330/1330 tests passing.~~
+- [x] ~~Add the forty-fifth pre-refactor correctness sentinel: native async file
+  wrappers now reconstruct glued malformed trailer markers from disk, including
+  `trailer <<` and `trailer<<` forms, after preserving strict
+  `StartXRefExpected`. `moon test --target native` now reports 1331/1331 tests
+  passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~

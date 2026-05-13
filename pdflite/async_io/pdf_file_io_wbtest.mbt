@@ -782,6 +782,16 @@ fn pdf_async_io_malformed_pdf_with_endobj_text_in_string_for_test() -> @pdflite.
 }
 
 ///|
+fn pdf_async_io_malformed_pdf_with_glued_reconstruction_trailers_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  ignore(pdf_async_io_write_catalog_object_for_test(output))
+  pdf_async_io_push_ascii_for_test(output, "trailer << /Size 2 >>\n")
+  pdf_async_io_push_ascii_for_test(output, "trailer<< /Root 1 0 R /Size 2 >>\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn pdf_async_io_classic_pdf_with_xref_body_for_test(
   xref_body : String,
   trailer_body : String,
@@ -3078,6 +3088,32 @@ async test "async file wrappers reconstruct literal endobj text in strings" {
     .lookup_object_or_null(1)
     .lookup_immediate(pdf_async_io_name_for_test("/Title")),
     Some(PdfString(@ascii.encode("literal endobj marker"))),
+  )
+}
+
+///|
+async test "async file wrappers reconstruct glued trailer markers" {
+  let path = pdf_async_io_test_path_for_test("glued_reconstruction_trailers")
+  pdf_async_io_remove_if_exists_for_test(path)
+  @fs.write_file(
+    path,
+    pdf_async_io_malformed_pdf_with_glued_reconstruction_trailers_for_test(),
+    create=0o644,
+  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(path).binary(),
+  )
+  guard strict is Err(@pdflite.PdfError::StartXRefExpected) else {
+    fail("expected strict glued-trailer missing-startxref failure")
+  }
+  let recovered = pdf_read_document_from_file(path)
+  pdf_async_io_remove_if_exists_for_test(path)
+  @test.assert_eq(recovered.first_xref(), 0)
+  @test.assert_eq(recovered.root(), 1)
+  @test.assert_eq(recovered.object_numbers(), [1])
+  @test.assert_eq(
+    recovered.lookup_object_or_null(1),
+    pdf_async_io_classic_catalog_object_for_test(),
   )
 }
 
