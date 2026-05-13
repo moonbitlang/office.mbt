@@ -2021,6 +2021,12 @@ Current backend snapshot:
   failure, public-reader failure, and protection against accepting a later
   physical fallback object when xref metadata is available. `moon test --target
   native` now reports 1362/1362 tests passing.~~
+- [x] ~~Add the seventy-seventh pre-refactor correctness sentinel: native
+  object-stream root recovery now rejects unusable object-stream filter
+  metadata instead of reconstructing through it, including unsupported filters,
+  malformed `/DecodeParms`, unsupported predictors, and exact propagated
+  filter/predictor errors. `moon test --target native` now reports 1363/1363
+  tests passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.

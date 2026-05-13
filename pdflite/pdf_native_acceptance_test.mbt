@@ -7633,6 +7633,58 @@ fn acceptance_mismatched_object_stream_root_pdf_for_test() -> @pdflite.PdfBytes 
 }
 
 ///|
+fn acceptance_filtered_object_stream_root_pdf_for_test(
+  filter_entries : String,
+  flate_encoded : Bool,
+) -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  acceptance_push_ascii_for_test(output, "%PDF-1.5\n")
+  let object_stream_data : Array[Byte] = []
+  acceptance_push_ascii_for_test(object_stream_data, "1 0 ")
+  let first = object_stream_data.length()
+  acceptance_push_ascii_for_test(object_stream_data, "<< /Type /Catalog >>")
+  let payload = if flate_encoded {
+    @pdflite.pdf_flate_encode(Bytes::from_array(object_stream_data))
+  } else {
+    Bytes::from_array(object_stream_data)
+  }
+  let object_stream_offset = output.length()
+  acceptance_push_ascii_for_test(output, "3 0 obj\n")
+  acceptance_push_ascii_for_test(output, "<< /Type /ObjStm /N 1 /First ")
+  acceptance_push_ascii_for_test(output, first.to_string())
+  acceptance_push_ascii_for_test(output, " /Length ")
+  acceptance_push_ascii_for_test(output, payload.length().to_string())
+  acceptance_push_ascii_for_test(output, filter_entries)
+  acceptance_push_ascii_for_test(output, " >>\nstream\n")
+  for byte in payload {
+    output.push(byte)
+  }
+  acceptance_push_ascii_for_test(output, "\nendstream\nendobj\n")
+  let xref_offset = output.length()
+  let stream_data : Array[Byte] = []
+  acceptance_push_xref_stream_entry_for_test(stream_data, 0, 0, 65535)
+  acceptance_push_xref_stream_entry_for_test(stream_data, 2, 3, 0)
+  acceptance_push_xref_stream_entry_for_test(stream_data, 0, 0, 65535)
+  acceptance_push_xref_stream_entry_for_test(
+    stream_data, 1, object_stream_offset, 0,
+  )
+  acceptance_push_xref_stream_entry_for_test(stream_data, 1, xref_offset, 0)
+  acceptance_push_ascii_for_test(output, "4 0 obj\n")
+  acceptance_push_ascii_for_test(output, "<< /Type /XRef /Length ")
+  acceptance_push_ascii_for_test(output, stream_data.length().to_string())
+  acceptance_push_ascii_for_test(
+    output, " /Size 5 /Root 1 0 R /W [1 4 2] >>\nstream\n",
+  )
+  for byte in stream_data {
+    output.push(byte)
+  }
+  acceptance_push_ascii_for_test(output, "\nendstream\nendobj\nstartxref\n")
+  acceptance_push_ascii_for_test(output, xref_offset.to_string())
+  acceptance_push_ascii_for_test(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn acceptance_assert_object_stream_document_for_test(
   doc : @pdflite.PdfDocument,
 ) -> Unit raise {
@@ -10264,6 +10316,41 @@ test "native acceptance suite rejects mismatched object-stream root recovery" {
   guard public is Err(@pdflite.PdfError::XRefEntryExpected) else {
     fail("expected public reader to reject physical fallback after mismatch")
   }
+}
+
+///|
+test "native acceptance suite rejects unsupported object-stream filters" {
+  let bad_filter : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_document_from_bytes(
+    acceptance_filtered_object_stream_root_pdf_for_test(
+      " /Filter /BadObjectStreamFilter", false,
+    ),
+  )
+  let filter = match bad_filter {
+    Err(@pdflite.PdfError::FilterNotSupported(filter)) => filter
+    Err(_) => fail("expected unsupported object-stream filter")
+    Ok(_) => fail("expected unsupported object-stream filter failure")
+  }
+  @test.assert_eq(filter, acceptance_name_for_test("/BadObjectStreamFilter"))
+
+  let bad_decodeparms : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_document_from_bytes(
+    acceptance_filtered_object_stream_root_pdf_for_test(
+      " /Filter /FlateDecode /DecodeParms /Bad", true,
+    ),
+  )
+  guard bad_decodeparms is Err(@pdflite.PdfError::PredictorExpected) else {
+    fail("expected malformed object-stream DecodeParms failure")
+  }
+
+  let bad_predictor : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_document_from_bytes(
+    acceptance_filtered_object_stream_root_pdf_for_test(
+      " /Filter /FlateDecode /DecodeParms << /Predictor 9 >>", true,
+    ),
+  )
+  guard bad_predictor
+    is Err(@pdflite.PdfError::PredictorNotSupported(predictor)) else {
+    fail("expected unsupported object-stream predictor failure")
+  }
+  @test.assert_eq(predictor, 9)
 }
 
 ///|
