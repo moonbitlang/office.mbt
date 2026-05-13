@@ -296,6 +296,10 @@ Current backend snapshot:
   file wrappers now preserve `pdf_revisions_from_file` malformed metadata
   failures for missing `startxref`, malformed `/Prev`, and cyclic `/Prev`
   chains. `moon test --target native` now reports 1308/1308 tests passing.~~
+- [x] ~~Add the twenty-third pre-refactor correctness sentinel: native async
+  file wrappers now preserve `XRefExpected` for full document reads with cyclic
+  classic `/Prev` chains. `moon test --target native` now reports 1309/1309
+  tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~

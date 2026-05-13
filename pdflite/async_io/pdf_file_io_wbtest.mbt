@@ -1879,6 +1879,25 @@ async test "async file wrappers report malformed revision metadata" {
 }
 
 ///|
+async test "async file wrappers stop cyclic Prev chains" {
+  let path = pdf_async_io_test_path_for_test("cyclic_prev")
+  pdf_async_io_remove_if_exists_for_test(path)
+  @fs.write_file(
+    path,
+    pdf_async_io_classic_pdf_with_self_prev_xref_for_test(),
+    create=0o644,
+  )
+  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 4 })
+  let result : Result[@pdflite.PdfDocument, Error] = try? pdf_read_document_from_file(
+    path,
+  )
+  pdf_async_io_remove_if_exists_for_test(path)
+  guard result is Err(@pdflite.PdfError::XRefExpected) else {
+    fail("expected cyclic Prev document read failure")
+  }
+}
+
+///|
 async test "async file wrappers reconstruct indirect object-stream bounds" {
   let path = pdf_async_io_test_path_for_test("indirect_objstm_bounds")
   let repaired_path = pdf_async_io_test_path_for_test(
