@@ -365,6 +365,11 @@ Current backend snapshot:
   compressed entries and embedded stream-object members, including compressed
   xref-stream write/reread preservation. `moon test --target native` now
   reports 1321/1321 tests passing.~~
+- [x] ~~Add the thirty-sixth pre-refactor correctness sentinel: native async
+  file wrappers now reconstruct bad-final-`startxref` multi-revision xref-stream
+  documents whose newest `/Root` lives inside an `/ObjStm`, sanitize `/Prev`,
+  and preserve the reconstructed root through compressed xref write/reread.
+  `moon test --target native` now reports 1322/1322 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~

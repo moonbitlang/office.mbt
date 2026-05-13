@@ -1685,6 +1685,111 @@ fn pdf_async_io_xref_stream_pdf_with_stream_object_in_object_stream_for_test() -
 }
 
 ///|
+fn pdf_async_io_xref_stream_prev_update_with_object_stream_root_bad_startxref_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
+  let old_catalog_offset = output.length()
+  pdf_async_io_write_indirect_object_for_test(
+    output,
+    1,
+    @pdflite.pdf_dictionary([
+      (
+        pdf_async_io_name_for_test("/Type"),
+        PdfNameObject(pdf_async_io_name_for_test("/Catalog")),
+      ),
+      (pdf_async_io_name_for_test("/Old"), PdfBoolean(true)),
+    ]),
+  )
+  let first_xref_offset = output.length()
+  let first_xref_data : Array[Byte] = []
+  pdf_async_io_push_xref_stream_entry_for_test(first_xref_data, 0, 0, 65535)
+  pdf_async_io_push_xref_stream_entry_for_test(
+    first_xref_data, 1, old_catalog_offset, 0,
+  )
+  pdf_async_io_push_xref_stream_entry_for_test(
+    first_xref_data, 1, first_xref_offset, 0,
+  )
+  let first_xref_stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (
+        pdf_async_io_name_for_test("/Type"),
+        PdfNameObject(pdf_async_io_name_for_test("/XRef")),
+      ),
+      (pdf_async_io_name_for_test("/Size"), PdfInteger(3)),
+      (pdf_async_io_name_for_test("/Root"), PdfIndirect(1)),
+      (
+        pdf_async_io_name_for_test("/W"),
+        PdfArray([PdfInteger(1), PdfInteger(4), PdfInteger(2)]),
+      ),
+      (
+        pdf_async_io_name_for_test("/Length"),
+        PdfInteger(first_xref_data.length()),
+      ),
+    ]),
+    StreamGot(Bytes::from_array(first_xref_data)),
+  )
+  pdf_async_io_write_indirect_object_for_test(output, 2, first_xref_stream)
+  pdf_async_io_push_ascii_for_test(output, "startxref\n")
+  pdf_async_io_push_ascii_for_test(output, first_xref_offset.to_string())
+  pdf_async_io_push_ascii_for_test(output, "\n%%EOF\n")
+
+  let object_stream_data : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(object_stream_data, "1 0 ")
+  let first = object_stream_data.length()
+  pdf_async_io_push_ascii_for_test(
+    object_stream_data, "<< /Type /Catalog /New true >>",
+  )
+  let object_stream_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "3 0 obj\n")
+  pdf_async_io_push_ascii_for_test(output, "<< /Type /ObjStm /N 1 /First ")
+  pdf_async_io_push_ascii_for_test(output, first.to_string())
+  pdf_async_io_push_ascii_for_test(output, " /Length ")
+  pdf_async_io_push_ascii_for_test(
+    output,
+    object_stream_data.length().to_string(),
+  )
+  pdf_async_io_push_ascii_for_test(output, " >>\nstream\n")
+  for byte in object_stream_data {
+    output.push(byte)
+  }
+  pdf_async_io_push_ascii_for_test(output, "\nendstream\nendobj\n")
+  let second_xref_offset = output.length()
+  let second_xref_data : Array[Byte] = []
+  pdf_async_io_push_xref_stream_entry_for_test(second_xref_data, 0, 0, 65535)
+  pdf_async_io_push_xref_stream_entry_for_test(second_xref_data, 2, 3, 0)
+  pdf_async_io_push_xref_stream_entry_for_test(second_xref_data, 0, 0, 0)
+  pdf_async_io_push_xref_stream_entry_for_test(
+    second_xref_data, 1, object_stream_offset, 0,
+  )
+  pdf_async_io_push_xref_stream_entry_for_test(
+    second_xref_data, 1, second_xref_offset, 0,
+  )
+  let second_xref_stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (
+        pdf_async_io_name_for_test("/Type"),
+        PdfNameObject(pdf_async_io_name_for_test("/XRef")),
+      ),
+      (pdf_async_io_name_for_test("/Size"), PdfInteger(5)),
+      (pdf_async_io_name_for_test("/Root"), PdfIndirect(1)),
+      (pdf_async_io_name_for_test("/Prev"), PdfInteger(first_xref_offset)),
+      (
+        pdf_async_io_name_for_test("/W"),
+        PdfArray([PdfInteger(1), PdfInteger(4), PdfInteger(2)]),
+      ),
+      (
+        pdf_async_io_name_for_test("/Length"),
+        PdfInteger(second_xref_data.length()),
+      ),
+    ]),
+    StreamGot(Bytes::from_array(second_xref_data)),
+  )
+  pdf_async_io_write_indirect_object_for_test(output, 4, second_xref_stream)
+  pdf_async_io_push_ascii_for_test(output, "startxref\n0\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn pdf_async_io_bad_first_object_stream_payload_for_test() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
@@ -3595,6 +3700,79 @@ async test "async file wrappers load object-stream entries from disk" {
   )
   @test.assert_eq(reparsed_stream_length, Some(PdfInteger(2)))
   @test.assert_eq(reparsed_stream_bytes, @ascii.encode("Hi"))
+}
+
+///|
+async test "async file wrappers reconstruct multi-revision object-stream roots" {
+  let path = pdf_async_io_test_path_for_test("objstm_root_prev_bad_startxref")
+  let repaired_path = pdf_async_io_test_path_for_test(
+    "objstm_root_prev_bad_startxref_repaired",
+  )
+  pdf_async_io_remove_if_exists_for_test(path)
+  pdf_async_io_remove_if_exists_for_test(repaired_path)
+  @fs.write_file(
+    path,
+    pdf_async_io_xref_stream_prev_update_with_object_stream_root_bad_startxref_for_test(),
+    create=0o644,
+  )
+  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 5 })
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(path).binary(),
+  )
+  guard strict is Err(@pdflite.PdfError::XRefExpected) else {
+    fail("expected strict object-stream root reconstruction failure")
+  }
+  let recovered = pdf_read_document_from_file(path)
+  pdf_write_document_to_file_with_compressed_xref_stream(
+    recovered, repaired_path,
+  )
+  let reparsed = pdf_read_document_from_file(repaired_path)
+  pdf_async_io_remove_if_exists_for_test(path)
+  pdf_async_io_remove_if_exists_for_test(repaired_path)
+
+  @test.assert_eq(recovered.first_xref(), 0)
+  @test.assert_eq(recovered.root(), 1)
+  @test.assert_eq(recovered.object_numbers(), [1, 3])
+  @test.assert_eq(
+    recovered
+    .trailer_dict()
+    .lookup_immediate(pdf_async_io_name_for_test("/Prev")),
+    None,
+  )
+  @test.assert_eq(
+    recovered
+    .lookup_object_or_null(1)
+    .lookup_immediate(pdf_async_io_name_for_test("/New")),
+    Some(PdfBoolean(true)),
+  )
+  @test.assert_eq(
+    recovered
+    .lookup_object_or_null(1)
+    .lookup_immediate(pdf_async_io_name_for_test("/Old")),
+    None,
+  )
+  guard recovered.lookup_object_or_null(3) is PdfStreamObject(object_stream) else {
+    fail("expected retained object stream")
+  }
+  @test.assert_eq(
+    object_stream.dictionary.lookup_immediate(
+      pdf_async_io_name_for_test("/Type"),
+    ),
+    Some(PdfNameObject(pdf_async_io_name_for_test("/ObjStm"))),
+  )
+  @test.assert_eq(reparsed.first_xref() > 0, true)
+  @test.assert_eq(
+    reparsed
+    .lookup_object_or_null(1)
+    .lookup_immediate(pdf_async_io_name_for_test("/New")),
+    Some(PdfBoolean(true)),
+  )
+  @test.assert_eq(
+    reparsed
+    .lookup_object_or_null(1)
+    .lookup_immediate(pdf_async_io_name_for_test("/Old")),
+    None,
+  )
 }
 
 ///|
