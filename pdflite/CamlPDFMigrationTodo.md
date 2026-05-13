@@ -1988,6 +1988,13 @@ Current backend snapshot:
   kana mappings, three-byte Hojo EUC extraction, reverse lookup misses, and
   reread stability. `moon test --target native` now reports 1357/1357 tests
   passing.~~
+- [x] ~~Add the seventy-second pre-refactor correctness sentinel: native
+  compressed reader boundaries now preserve Type0 `/ToUnicode` sequence CMaps
+  shaped like real generated PDFs, including ligature expansion, decomposed
+  accents, ideographic variation selectors, bfrange carry across `00FF` to
+  `0100`, emoji surrogate pairs, ZWJ emoji sequences, unmapped CID fallback,
+  single-codepoint reverse lookup, and reread stability. `moon test --target
+  native` now reports 1358/1358 tests passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.

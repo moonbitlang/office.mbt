@@ -967,6 +967,162 @@ fn acceptance_assert_tounicode_parser_corner_text_for_test(
 }
 
 ///|
+fn acceptance_tounicode_sequence_cmap_for_test() -> @pdflite.PdfObject {
+  let cmap = acceptance_ascii_for_test(
+    "/CIDInit /ProcSet findresource begin\n" +
+    "12 dict begin\n" +
+    "begincmap\n" +
+    "/CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> def\n" +
+    "/CMapName /Adobe-Identity-UCS def\n" +
+    "/CMapType 2 def\n" +
+    "2 begincodespacerange\n" +
+    "<0000><00FF>\n" +
+    "<0100><01FF>\n" +
+    "endcodespacerange\n" +
+    "4 beginbfchar\n" +
+    "<0020><0020>\n" +
+    "<0021><00660069>\n" +
+    "<0022><00650301>\n" +
+    "<0023><4E00FE00>\n" +
+    "endbfchar\n" +
+    "2 beginbfrange\n" +
+    "<00FE><0101><0061>\n" +
+    "<0102><0104>[<D83DDE00><D83DDC69><D83DDC69 200D D83DDCBB>]\n" +
+    "endbfrange\n" +
+    "endcmap\n" +
+    "CMapName currentdict /CMap defineresource pop\n" +
+    "end\n" +
+    "end\n",
+  )
+  let encoded = @pdflite.pdf_flate_encode(cmap)
+  @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (acceptance_name_for_test("/Length"), PdfInteger(encoded.length())),
+      (
+        acceptance_name_for_test("/Filter"),
+        PdfNameObject(acceptance_name_for_test("/FlateDecode")),
+      ),
+    ]),
+    StreamGot(encoded),
+  )
+}
+
+///|
+fn acceptance_tounicode_sequence_document_for_test() -> @pdflite.PdfDocument raise {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  doc.add_object_given_number(
+    72,
+    acceptance_identity_h_descendant_font_for_test(),
+  )
+  doc.add_object_given_number(74, acceptance_tounicode_sequence_cmap_for_test())
+  let resources = @pdflite.pdf_dictionary([
+    (
+      acceptance_name_for_test("/Font"),
+      @pdflite.pdf_dictionary([
+        (
+          acceptance_name_for_test("/Fseq"),
+          acceptance_identity_h_font_for_test().add_dict_entry(
+            acceptance_name_for_test("/ToUnicode"),
+            PdfIndirect(74),
+          ),
+        ),
+      ]),
+    ),
+  ])
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [
+      @pdflite.pdf_content_stream_of_ops([
+        Op_BT,
+        Op_Tf(acceptance_name_for_test("/Fseq"), 14.0),
+        Op_Tj(
+          acceptance_text_bytes_for_test([
+            0x00, 0x20, 0x00, 0x21, 0x00, 0x22, 0x00, 0x23,
+          ]),
+        ),
+        Op_TJ(
+          PdfArray([
+            PdfString(acceptance_text_bytes_for_test([0x00, 0xFE, 0x00, 0xFF])),
+            PdfInteger(-30),
+            PdfString(
+              acceptance_text_bytes_for_test([
+                0x01, 0x00, 0x01, 0x01, 0x01, 0x02, 0x01, 0x03, 0x01, 0x04, 0x01,
+                0x05,
+              ]),
+            ),
+          ]),
+        ),
+        Op_ET,
+      ]),
+    ],
+    resources,
+  }
+  let page_root = doc.add_pagetree([page])
+  ignore(doc.add_root(page_root, []))
+  doc
+}
+
+///|
+fn acceptance_assert_tounicode_sequence_text_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(doc.version(), (1, 5))
+  @test.assert_eq(doc.endpage(), 1)
+  @test.assert_eq(
+    acceptance_font_codepoints_of_first_page_for_test(
+      doc,
+      acceptance_name_for_test("/Fseq"),
+    ),
+    [
+      0x20, 0x66, 0x69, 0x65, 0x0301, 0x4E00, 0xFE00, 0x61, 0x62, 0x63, 0x64, 0x1F600,
+      0x1F469, 0x1F469, 0x200D, 0x1F4BB, 0x0105,
+    ],
+  )
+  let pages = doc.pages_of_pagetree()
+  let font = acceptance_font_object_by_name_for_test(
+    pages[0].resources,
+    acceptance_name_for_test("/Fseq"),
+  )
+  let read = doc.read_font(font)
+  @test.assert_eq(read.is_identity_h(), true)
+  @test.assert_eq(read.uses_two_byte_codes(), true)
+  guard read is PdfFontCIDKeyed(cid_font) else {
+    fail("expected CID-keyed font with ToUnicode sequences")
+  }
+  @test.assert_eq(
+    cid_font.composite.cid_fontdescriptor.tounicode,
+    Some([
+      (0x0020, acceptance_text_bytes_for_test([0x00, 0x20])),
+      (0x0021, acceptance_text_bytes_for_test([0x00, 0x66, 0x00, 0x69])),
+      (0x0022, acceptance_text_bytes_for_test([0x00, 0x65, 0x03, 0x01])),
+      (0x0023, acceptance_text_bytes_for_test([0x4E, 0x00, 0xFE, 0x00])),
+      (0x00FE, acceptance_text_bytes_for_test([0x00, 0x61])),
+      (0x00FF, acceptance_text_bytes_for_test([0x00, 0x62])),
+      (0x0100, acceptance_text_bytes_for_test([0x00, 0x63])),
+      (0x0101, acceptance_text_bytes_for_test([0x00, 0x64])),
+      (0x0102, acceptance_text_bytes_for_test([0xD8, 0x3D, 0xDE, 0x00])),
+      (0x0103, acceptance_text_bytes_for_test([0xD8, 0x3D, 0xDC, 0x69])),
+      (
+        0x0104,
+        acceptance_text_bytes_for_test([
+          0xD8, 0x3D, 0xDC, 0x69, 0x20, 0x0D, 0xD8, 0x3D, 0xDC, 0xBB,
+        ]),
+      ),
+    ]),
+  )
+  let extractor = doc.text_extractor_of_font(font)
+  @test.assert_eq(extractor.charcode_of_codepoint(0x20), Some(0x0020))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x61), Some(0x00FE))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x64), Some(0x0101))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x1F600), Some(0x0102))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x1F469), Some(0x0103))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x66), None)
+  @test.assert_eq(extractor.charcode_of_codepoint(0xFE00), None)
+  @test.assert_eq(extractor.charcode_of_codepoint(0x0105), None)
+}
+
+///|
 fn acceptance_type3_tounicode_stream_for_test() -> @pdflite.PdfObject {
   let cmap = acceptance_ascii_for_test(
     "1 begincodespacerange\n" +
@@ -8859,6 +9015,16 @@ test "native acceptance suite extracts ToUnicode parser corner cases through rea
   acceptance_assert_tounicode_parser_corner_text_for_test(parsed)
   let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
   acceptance_assert_tounicode_parser_corner_text_for_test(reparsed)
+}
+
+///|
+test "native acceptance suite extracts ToUnicode sequence text through reader boundaries" {
+  let parsed = acceptance_compressed_roundtrip_for_test(
+    acceptance_tounicode_sequence_document_for_test(),
+  )
+  acceptance_assert_tounicode_sequence_text_for_test(parsed)
+  let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
+  acceptance_assert_tounicode_sequence_text_for_test(reparsed)
 }
 
 ///|
