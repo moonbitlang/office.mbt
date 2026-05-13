@@ -191,6 +191,10 @@ Current backend snapshot:
   whose trailer root points into an object stream with a mismatched embedded
   object number now keeps raising `XRefEntryExpected`, even when a physical
   catalog and fallback trailer are present.~~
+- [x] ~~Add the third pre-refactor correctness sentinel: the Markdown command
+  helper now converts the checked-in CamlPDF introduction fixture through the
+  native file-output boundary, preserving key text markers and raw-control
+  hygiene.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~

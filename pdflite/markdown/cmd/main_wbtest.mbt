@@ -101,6 +101,25 @@ async test "markdown command converts generated Latin fixture to UTF-8 file" {
 }
 
 ///|
+async test "markdown command converts checked-in CamlPDF introduction fixture" {
+  let input_path = markdown_cmd_repo_path_for_test(
+    "fixtures/camlpdf/introduction_to_camlpdf.pdf",
+  )
+  let output_path = markdown_cmd_output_path_for_test("camlpdf_introduction")
+  markdown_cmd_remove_if_exists_for_test(output_path)
+  markdown_cmd_convert_file(input_path, output_path)
+  let output = @utf8.decode_lossy(@fs.read_file(output_path).binary())
+  markdown_cmd_assert_contains_for_test(
+    output, "An Introduction to PDF with CamlPDF",
+  )
+  markdown_cmd_assert_contains_for_test(output, "Pdfread.pdf_of_file")
+  markdown_cmd_assert_contains_for_test(output, "PDF is a directed graph")
+  @test.assert_eq(markdown_cmd_raw_control_count_for_test(output), 0)
+  @test.assert_eq(markdown_cmd_replacement_count_for_test(output), 0)
+  markdown_cmd_remove_if_exists_for_test(output_path)
+}
+
+///|
 async test "markdown command converts optional external Adobe supplement fixture" {
   let input_path = markdown_cmd_repo_path_for_test(
     "markdown/external_fixtures/downloads/adobe_supplement_iso32000_1.pdf",
