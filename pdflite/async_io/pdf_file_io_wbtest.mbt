@@ -767,6 +767,21 @@ fn pdf_async_io_malformed_pdf_without_startxref_for_test() -> @pdflite.PdfBytes 
 }
 
 ///|
+fn pdf_async_io_malformed_pdf_with_endobj_text_in_string_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  ignore(
+    pdf_async_io_push_raw_indirect_object_for_test(
+      output, 1, 0, "<< /Type /Catalog /Title (literal endobj marker) >>",
+    ),
+  )
+  pdf_async_io_push_ascii_for_test(
+    output, "trailer\n<< /Root 1 0 R /Size 2 >>\n",
+  )
+  Bytes::from_array(output)
+}
+
+///|
 fn pdf_async_io_classic_pdf_with_xref_body_for_test(
   xref_body : String,
   trailer_body : String,
@@ -3023,6 +3038,35 @@ async test "async file wrappers reconstruct missing startxref PDFs" {
   @test.assert_eq(reparsed.first_xref() > 0, true)
   @test.assert_eq(reparsed.root(), 1)
   @test.assert_eq(reparsed.object_numbers(), [1, 2])
+}
+
+///|
+async test "async file wrappers reconstruct literal endobj text in strings" {
+  let path = pdf_async_io_test_path_for_test("literal_endobj_text")
+  pdf_async_io_remove_if_exists_for_test(path)
+  @fs.write_file(
+    path,
+    pdf_async_io_malformed_pdf_with_endobj_text_in_string_for_test(),
+    create=0o644,
+  )
+  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 4 })
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(path).binary(),
+  )
+  guard strict is Err(@pdflite.PdfError::StartXRefExpected) else {
+    fail("expected strict literal-endobj missing-startxref failure")
+  }
+  let recovered = pdf_read_document_from_file(path)
+  pdf_async_io_remove_if_exists_for_test(path)
+  @test.assert_eq(recovered.first_xref(), 0)
+  @test.assert_eq(recovered.root(), 1)
+  @test.assert_eq(recovered.object_numbers(), [1])
+  @test.assert_eq(
+    recovered
+    .lookup_object_or_null(1)
+    .lookup_immediate(pdf_async_io_name_for_test("/Title")),
+    Some(PdfString(@ascii.encode("literal endobj marker"))),
+  )
 }
 
 ///|

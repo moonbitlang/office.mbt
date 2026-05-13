@@ -395,6 +395,10 @@ Current backend snapshot:
   file wrappers now reconstruct classic `/Prev` chains with a bad final
   `startxref`, preserving the newest revision and sanitizing `/Prev`.
   `moon test --target native` now reports 1328/1328 tests passing.~~
+- [x] ~~Add the forty-third pre-refactor correctness sentinel: native async file
+  wrappers now reconstruct literal string values containing `endobj` text from
+  disk without splitting the catalog object during physical scanning. `moon test
+  --target native` now reports 1329/1329 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~
