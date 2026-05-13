@@ -2003,6 +2003,43 @@ async test "async file wrappers read classic Prev revisions" {
 }
 
 ///|
+async test "async file wrappers report bad revision numbers" {
+  let path = pdf_async_io_test_path_for_test("classic_prev_bad_revisions")
+  pdf_async_io_remove_if_exists_for_test(path)
+  @fs.write_file(
+    path,
+    pdf_async_io_classic_pdf_with_prev_xref_for_test(),
+    create=0o644,
+  )
+  @test.assert_eq(pdf_revisions_from_file(path), 2)
+  let invalid : Result[@pdflite.PdfDocument, Error] = try? pdf_read_document_revision_from_file(
+    path, 0,
+  )
+  let missing : Result[@pdflite.PdfDocument, Error] = try? pdf_read_document_revision_from_file(
+    path, 3,
+  )
+  let invalid_password : Result[@pdflite.PdfDecryptionResult?, Error] = try? pdf_read_document_revision_from_file_with_passwords(
+    path, 0,
+  )
+  let missing_password : Result[@pdflite.PdfDecryptionResult?, Error] = try? pdf_read_document_revision_from_file_with_passwords(
+    path, 3,
+  )
+  pdf_async_io_remove_if_exists_for_test(path)
+  guard invalid is Err(@pdflite.PdfError::BadRevision) else {
+    fail("expected invalid revision failure")
+  }
+  guard missing is Err(@pdflite.PdfError::BadRevision) else {
+    fail("expected missing revision failure")
+  }
+  guard invalid_password is Err(@pdflite.PdfError::BadRevision) else {
+    fail("expected invalid password-wrapper revision failure")
+  }
+  guard missing_password is Err(@pdflite.PdfError::BadRevision) else {
+    fail("expected missing password-wrapper revision failure")
+  }
+}
+
+///|
 async test "async file wrappers reconstruct indirect object-stream bounds" {
   let path = pdf_async_io_test_path_for_test("indirect_objstm_bounds")
   let repaired_path = pdf_async_io_test_path_for_test(
