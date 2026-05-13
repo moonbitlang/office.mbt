@@ -1101,6 +1101,67 @@ fn pdf_async_io_classic_pdf_with_truncated_stream_for_test() -> @pdflite.PdfByte
 }
 
 ///|
+fn pdf_async_io_malformed_pdf_with_object_header_inside_stream_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  ignore(
+    pdf_async_io_push_raw_indirect_object_for_test(
+      output, 1, 0, "<< /Type /Catalog /Payload 2 0 R >>",
+    ),
+  )
+  pdf_async_io_push_ascii_for_test(
+    output, "2 0 obj\n<< /Length 35 >>\nstream\n",
+  )
+  pdf_async_io_push_ascii_for_test(
+    output, "9 0 obj\n<< /Type /Catalog >>\nendobj",
+  )
+  pdf_async_io_push_ascii_for_test(output, "\nendstream\nendobj\n")
+  pdf_async_io_push_ascii_for_test(
+    output, "trailer\n<< /Root 1 0 R /Size 3 >>\n",
+  )
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_async_io_malformed_pdf_with_nested_object_header_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  pdf_async_io_push_ascii_for_test(output, "1 0 obj\n]\n")
+  pdf_async_io_push_ascii_for_test(
+    output, "2 0 obj\n<< /Type /Catalog >>\nendobj\n",
+  )
+  pdf_async_io_push_ascii_for_test(
+    output, "3 0 obj\n<< /Type /Catalog >>\nendobj\n",
+  )
+  pdf_async_io_push_ascii_for_test(
+    output, "trailer\n<< /Root 3 0 R /Size 4 >>\n",
+  )
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_async_io_classic_pdf_with_malformed_object_for_test(
+  bad_body : String,
+) -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  let catalog_offset = pdf_async_io_push_raw_indirect_object_for_test(
+    output, 1, 0, "<< /Type /Catalog /Payload 2 0 R >>",
+  )
+  let bad_offset = pdf_async_io_push_raw_indirect_object_for_test(
+    output, 2, 0, bad_body,
+  )
+  let xref_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref\n0 1\n0000000000 65535 f \n")
+  pdf_async_io_push_ascii_for_test(output, "2 1\n")
+  pdf_async_io_push_classic_xref_entry_for_test(output, bad_offset, 0)
+  pdf_async_io_push_ascii_for_test(output, "1 1\n")
+  pdf_async_io_push_classic_xref_entry_for_test(output, catalog_offset, 0)
+  pdf_async_io_push_classic_trailer_for_test(output, xref_offset, 3)
+  Bytes::from_array(output)
+}
+
+///|
 fn pdf_async_io_classic_pdf_with_self_prev_xref_for_test() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
@@ -2917,6 +2978,95 @@ async test "async file wrappers reconstruct malformed stream markers" {
     truncated.lookup_object_or_null(1),
     pdf_async_io_catalog_with_payload_for_test(2),
   )
+}
+
+///|
+async test "async file wrappers reconstruct malformed objects" {
+  let object_in_stream_path = pdf_async_io_test_path_for_test(
+    "object_header_inside_stream",
+  )
+  let nested_object_path = pdf_async_io_test_path_for_test(
+    "nested_object_header",
+  )
+  let bad_object_path = pdf_async_io_test_path_for_test("malformed_object_body")
+  let bad_name_path = pdf_async_io_test_path_for_test("malformed_object_name")
+  pdf_async_io_remove_if_exists_for_test(object_in_stream_path)
+  pdf_async_io_remove_if_exists_for_test(nested_object_path)
+  pdf_async_io_remove_if_exists_for_test(bad_object_path)
+  pdf_async_io_remove_if_exists_for_test(bad_name_path)
+  @fs.write_file(
+    object_in_stream_path,
+    pdf_async_io_malformed_pdf_with_object_header_inside_stream_for_test(),
+    create=0o644,
+  )
+  @fs.write_file(
+    nested_object_path,
+    pdf_async_io_malformed_pdf_with_nested_object_header_for_test(),
+    create=0o644,
+  )
+  @fs.write_file(
+    bad_object_path,
+    pdf_async_io_classic_pdf_with_malformed_object_for_test("]"),
+    create=0o644,
+  )
+  @fs.write_file(
+    bad_name_path,
+    pdf_async_io_classic_pdf_with_malformed_object_for_test("/Bad#zz"),
+    create=0o644,
+  )
+  let strict_bad_object : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(bad_object_path).binary(),
+  )
+  let strict_bad_name : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(bad_name_path).binary(),
+  )
+  let object_in_stream = pdf_read_document_from_file(object_in_stream_path)
+  let nested_object = pdf_read_document_from_file(nested_object_path)
+  let bad_object = pdf_read_document_from_file(bad_object_path)
+  let bad_name = pdf_read_document_from_file(bad_name_path)
+  pdf_async_io_remove_if_exists_for_test(object_in_stream_path)
+  pdf_async_io_remove_if_exists_for_test(nested_object_path)
+  pdf_async_io_remove_if_exists_for_test(bad_object_path)
+  pdf_async_io_remove_if_exists_for_test(bad_name_path)
+  guard strict_bad_object is Err(@pdflite.PdfError::ParseObjectExpected) else {
+    fail("expected strict malformed object failure")
+  }
+  guard strict_bad_name is Err(@pdflite.PdfError::InvalidHexEscape) else {
+    fail("expected strict malformed name failure")
+  }
+  @test.assert_eq(object_in_stream.first_xref(), 0)
+  @test.assert_eq(object_in_stream.root(), 1)
+  @test.assert_eq(object_in_stream.object_numbers(), [1, 2])
+  @test.assert_eq(
+    object_in_stream.lookup_object_or_null(1),
+    pdf_async_io_catalog_with_payload_for_test(2),
+  )
+  guard object_in_stream.lookup_object_or_null(2) is PdfStreamObject(stream) else {
+    fail("expected recovered stream object")
+  }
+  guard stream.data is StreamToGet(_) else {
+    fail("expected deferred recovered stream object")
+  }
+  @test.assert_eq(
+    try! @pdflite.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
+    @ascii.encode("9 0 obj\n<< /Type /Catalog >>\nendobj"),
+  )
+  @test.assert_eq(nested_object.first_xref(), 0)
+  @test.assert_eq(nested_object.root(), 3)
+  @test.assert_eq(nested_object.object_numbers(), [3])
+  @test.assert_eq(
+    nested_object.lookup_object_or_null(3),
+    pdf_async_io_classic_catalog_object_for_test(),
+  )
+  for parsed in [bad_object, bad_name] {
+    @test.assert_eq(parsed.first_xref(), 0)
+    @test.assert_eq(parsed.root(), 1)
+    @test.assert_eq(parsed.object_numbers(), [1])
+    @test.assert_eq(
+      parsed.lookup_object_or_null(1),
+      pdf_async_io_catalog_with_payload_for_test(2),
+    )
+  }
 }
 
 ///|

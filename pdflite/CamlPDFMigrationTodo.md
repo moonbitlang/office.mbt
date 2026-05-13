@@ -344,6 +344,12 @@ Current backend snapshot:
   truncated stream data, checking strict failures before public reconstruction
   drops the malformed stream and preserves the catalog. `moon test --target
   native` now reports 1317/1317 tests passing.~~
+- [x] ~~Add the thirty-second pre-refactor correctness sentinel: native async
+  file wrappers now gate malformed object reconstruction for bad object bodies,
+  malformed name hex escapes, nested object headers inside malformed objects,
+  and object-looking bytes inside stream data, preserving deferred file-backed
+  stream reads while avoiding false physical objects. `moon test --target
+  native` now reports 1318/1318 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~
