@@ -1969,6 +1969,11 @@ Current backend snapshot:
   ICCBased gray profiles, Separation Type 2 CMYK tint functions, DeviceN
   indexed palettes, indexed Lab palettes, stream decompression, and reread
   stability. `moon test --target native` now reports 1354/1354 tests passing.~~
+- [x] ~~Add the sixty-ninth pre-refactor correctness sentinel: native compressed
+  reader boundaries now preserve rare Adobe-Japan1 `/90msp-RKSJ-H` and
+  `/90msp-RKSJ-V` predefined CMap extraction, proportional ASCII yen mapping,
+  vertical kana charcode lookup, malformed reverse lookup misses, and reread
+  stability. `moon test --target native` now reports 1355/1355 tests passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.
