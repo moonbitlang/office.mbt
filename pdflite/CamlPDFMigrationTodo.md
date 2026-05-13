@@ -1932,6 +1932,11 @@ Current backend snapshot:
   reverse lookup for GB1, CNS1, and Korea1 variants including GBK2K, Big5,
   HKSCS, CNS1 Big5 variants, KSC-EUC, KSCpc-EUC, and KSCms-UHC. `moon test
   --target native` now reports 1347/1347 tests passing.~~
+- [x] ~~Add the sixty-second pre-refactor correctness sentinel: native
+  compressed reader boundaries now preserve Type3 CharProc resource chains
+  through nested Form XObjects, including form-local image resources, indexed
+  image decode, glyph-name extraction, and reread stability. `moon test
+  --target native` now reports 1348/1348 tests passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.

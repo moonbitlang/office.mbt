@@ -1177,6 +1177,226 @@ fn acceptance_assert_type3_text_for_test(
 }
 
 ///|
+fn acceptance_type3_form_charproc_ops_for_test() -> Array[@pdflite.PdfContentOp] {
+  [Op_d0(500.0, 0.0), Op_Do(acceptance_name_for_test("/GlyphForm"))]
+}
+
+///|
+fn acceptance_type3_form_xobject_ops_for_test() -> Array[@pdflite.PdfContentOp] {
+  [Op_Do(acceptance_name_for_test("/NestedImage"))]
+}
+
+///|
+fn acceptance_type3_form_xobject_resources_for_test() -> @pdflite.PdfObject {
+  @pdflite.pdf_dictionary([
+    (
+      acceptance_name_for_test("/XObject"),
+      @pdflite.pdf_dictionary([
+        (acceptance_name_for_test("/NestedImage"), PdfIndirect(178)),
+      ]),
+    ),
+  ])
+}
+
+///|
+fn acceptance_type3_form_xobject_for_test() -> @pdflite.PdfObject raise {
+  let data = @pdflite.pdf_content_bytes_of_ops(
+    acceptance_type3_form_xobject_ops_for_test(),
+  )
+  @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (
+        acceptance_name_for_test("/Type"),
+        PdfNameObject(acceptance_name_for_test("/XObject")),
+      ),
+      (
+        acceptance_name_for_test("/Subtype"),
+        PdfNameObject(acceptance_name_for_test("/Form")),
+      ),
+      (
+        acceptance_name_for_test("/BBox"),
+        PdfArray([PdfInteger(0), PdfInteger(0), PdfInteger(4), PdfInteger(1)]),
+      ),
+      (
+        acceptance_name_for_test("/Resources"),
+        acceptance_type3_form_xobject_resources_for_test(),
+      ),
+      (acceptance_name_for_test("/Length"), PdfInteger(data.length())),
+    ]),
+    StreamGot(data),
+  )
+}
+
+///|
+fn acceptance_type3_form_font_for_test() -> @pdflite.PdfObject {
+  @pdflite.pdf_dictionary([
+    (
+      acceptance_name_for_test("/Subtype"),
+      PdfNameObject(acceptance_name_for_test("/Type3")),
+    ),
+    (
+      acceptance_name_for_test("/FontBBox"),
+      PdfArray([PdfInteger(0), PdfInteger(0), PdfInteger(500), PdfInteger(500)]),
+    ),
+    (
+      acceptance_name_for_test("/FontMatrix"),
+      PdfArray([
+        PdfReal(0.001),
+        PdfInteger(0),
+        PdfInteger(0),
+        PdfReal(0.001),
+        PdfInteger(0),
+        PdfInteger(0),
+      ]),
+    ),
+    (
+      acceptance_name_for_test("/CharProcs"),
+      @pdflite.pdf_dictionary([
+        (acceptance_name_for_test("/GlyphNested"), PdfIndirect(176)),
+      ]),
+    ),
+    (
+      acceptance_name_for_test("/Resources"),
+      @pdflite.pdf_dictionary([
+        (
+          acceptance_name_for_test("/ProcSet"),
+          PdfArray([
+            PdfNameObject(acceptance_name_for_test("/PDF")),
+            PdfNameObject(acceptance_name_for_test("/ImageC")),
+          ]),
+        ),
+        (
+          acceptance_name_for_test("/XObject"),
+          @pdflite.pdf_dictionary([
+            (acceptance_name_for_test("/GlyphForm"), PdfIndirect(177)),
+          ]),
+        ),
+      ]),
+    ),
+    (acceptance_name_for_test("/FirstChar"), PdfInteger(65)),
+    (acceptance_name_for_test("/LastChar"), PdfInteger(65)),
+    (acceptance_name_for_test("/Widths"), PdfArray([PdfInteger(500)])),
+    (
+      acceptance_name_for_test("/Encoding"),
+      @pdflite.pdf_dictionary([
+        (
+          acceptance_name_for_test("/Differences"),
+          PdfArray([
+            PdfInteger(65),
+            PdfNameObject(acceptance_name_for_test("/GlyphNested")),
+          ]),
+        ),
+      ]),
+    ),
+  ])
+}
+
+///|
+fn acceptance_type3_form_resource_document_for_test() -> @pdflite.PdfDocument raise {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  doc.add_object_given_number(
+    176,
+    acceptance_type3_charproc_stream_for_test(
+      acceptance_type3_form_charproc_ops_for_test(),
+    ),
+  )
+  doc.add_object_given_number(177, acceptance_type3_form_xobject_for_test())
+  doc.add_object_given_number(178, acceptance_image_indexed_xobject_for_test())
+  let resources = @pdflite.pdf_dictionary([
+    (
+      acceptance_name_for_test("/Font"),
+      @pdflite.pdf_dictionary([
+        (
+          acceptance_name_for_test("/Ft3Form"),
+          acceptance_type3_form_font_for_test(),
+        ),
+      ]),
+    ),
+  ])
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [
+      @pdflite.pdf_content_stream_of_ops([
+        Op_BT,
+        Op_Tf(acceptance_name_for_test("/Ft3Form"), 12.0),
+        Op_Tj(acceptance_text_bytes_for_test([65])),
+        Op_ET,
+      ]),
+    ],
+    resources,
+  }
+  let page_root = doc.add_pagetree([page])
+  ignore(doc.add_root(page_root, []))
+  doc
+}
+
+///|
+fn acceptance_assert_type3_form_resource_text_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(doc.version(), (1, 5))
+  @test.assert_eq(doc.endpage(), 1)
+  let pages = doc.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  let font = acceptance_font_object_by_name_for_test(
+    pages[0].resources,
+    acceptance_name_for_test("/Ft3Form"),
+  )
+  guard doc.read_font(font) is PdfFontSimple(simple) else {
+    fail("expected simple Type3 form-resource font")
+  }
+  guard simple.fonttype is PdfType3(type3_data) else {
+    fail("expected Type3 form-resource data")
+  }
+  @test.assert_eq(type3_data.charprocs, [
+    (acceptance_name_for_test("/GlyphNested"), PdfIndirect(176)),
+  ])
+  @test.assert_eq(
+    doc.parse_content_ops_with_resources(type3_data.resources, [
+      doc.direct(PdfIndirect(176)),
+    ]),
+    acceptance_type3_form_charproc_ops_for_test(),
+  )
+  let glyph_form = acceptance_image_xobject_for_test(
+    doc,
+    type3_data.resources,
+    acceptance_name_for_test("/GlyphForm"),
+  )
+  guard glyph_form is PdfStreamObject(form_stream) else {
+    fail("expected nested Type3 form XObject")
+  }
+  guard doc.lookup_direct(acceptance_name_for_test("/Resources"), glyph_form)
+    is Some(form_resources) else {
+    fail("expected nested Type3 form resources")
+  }
+  @test.assert_eq(
+    doc.parse_content_ops_with_resources(form_resources, [glyph_form]),
+    acceptance_type3_form_xobject_ops_for_test(),
+  )
+  let nested_image = acceptance_image_xobject_for_test(
+    doc,
+    form_resources,
+    acceptance_name_for_test("/NestedImage"),
+  )
+  @test.assert_eq(
+    doc.get_image_24bpp(form_resources, nested_image),
+    PdfRawImage(4, 1, PdfBPP24, acceptance_expected_indexed_rgb24_for_test()),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_stream(form_stream.dictionary, form_stream.data).stream_bytes(),
+    @pdflite.pdf_content_bytes_of_ops(
+      acceptance_type3_form_xobject_ops_for_test(),
+    ),
+  )
+  let extractor = doc.text_extractor_of_font(font)
+  @test.assert_eq(
+    try! extractor.glyphnames_of_text(acceptance_text_bytes_for_test([65])),
+    [acceptance_name_for_test("/GlyphNested")],
+  )
+}
+
+///|
 fn acceptance_type3_encoded_font_for_test() -> @pdflite.PdfObject {
   @pdflite.pdf_dictionary([
     (
@@ -6438,6 +6658,16 @@ test "native acceptance suite extracts Type3 ToUnicode text through reader bound
   acceptance_assert_type3_text_for_test(parsed)
   let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
   acceptance_assert_type3_text_for_test(reparsed)
+}
+
+///|
+test "native acceptance suite resolves Type3 nested form resources through reader boundaries" {
+  let parsed = acceptance_compressed_roundtrip_for_test(
+    acceptance_type3_form_resource_document_for_test(),
+  )
+  acceptance_assert_type3_form_resource_text_for_test(parsed)
+  let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
+  acceptance_assert_type3_form_resource_text_for_test(reparsed)
 }
 
 ///|
