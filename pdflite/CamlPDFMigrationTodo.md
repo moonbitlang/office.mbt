@@ -1981,6 +1981,13 @@ Current backend snapshot:
   `/90pv-RKSJ-V`, and generic `/RKSJ-H`/`/RKSJ-V` extraction and reverse
   lookup through reread stability. `moon test --target native` now reports
   1356/1356 tests passing.~~
+- [x] ~~Add the seventy-first pre-refactor correctness sentinel: native
+  compressed reader boundaries now preserve supplemental Adobe-Japan1
+  predefined CMaps for `/78-EUC-H`/`-V`, `/EUC-V`, Add, Ext, Hojo,
+  Hojo-EUC-V, and NWP variants, including extension-row extraction, vertical
+  kana mappings, three-byte Hojo EUC extraction, reverse lookup misses, and
+  reread stability. `moon test --target native` now reports 1357/1357 tests
+  passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.

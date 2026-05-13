@@ -3726,6 +3726,257 @@ fn acceptance_japan1_legacy_cmap_text_document_for_test() -> @pdflite.PdfDocumen
 }
 
 ///|
+fn acceptance_japan1_supplemental_cmap_cases_for_test() -> Array[
+  (
+    String,
+    String,
+    String,
+    String,
+    Int,
+    Array[Int],
+    Array[Int],
+    Int,
+    Int,
+    Bool,
+    Int,
+  ),
+] {
+  [
+    (
+      "/F78EUCH",
+      "/Legacy78EUCTop",
+      "/78-EUC-H",
+      "/Legacy78EUCDescendant",
+      164,
+      [0xA1, 0xA1, 0xA4, 0xA2],
+      [0x3000, 0x3042],
+      0x3042,
+      0xA4A2,
+      false,
+      0x1F600,
+    ),
+    (
+      "/F78EUCV",
+      "/Legacy78EUCVerticalTop",
+      "/78-EUC-V",
+      "/Legacy78EUCVerticalDescendant",
+      166,
+      [0xA1, 0xA1, 0xA4, 0xA1],
+      [0x3000, 0x3041],
+      0x3041,
+      0xA4A1,
+      false,
+      0x1F600,
+    ),
+    (
+      "/FEUCV",
+      "/JapanEUCVerticalTop",
+      "/EUC-V",
+      "/JapanEUCVerticalDescendant",
+      168,
+      [0xA1, 0xA1, 0xA4, 0xA1],
+      [0x3000, 0x3041],
+      0x3041,
+      0xA4A1,
+      false,
+      0x1F600,
+    ),
+    (
+      "/FAddH",
+      "/AddTop",
+      "/Add-H",
+      "/AddDescendant",
+      170,
+      [0x28, 0x21, 0x24, 0x22],
+      [0x2500, 0x3042],
+      0x2500,
+      0x2821,
+      true,
+      0x1F600,
+    ),
+    (
+      "/FAddV",
+      "/AddVerticalTop",
+      "/Add-V",
+      "/AddVerticalDescendant",
+      172,
+      [0x28, 0x21, 0x24, 0x21],
+      [0x2500, 0x3041],
+      0x3041,
+      0x2421,
+      true,
+      0x1F600,
+    ),
+    (
+      "/FAddRKSJH",
+      "/AddRKSJTop",
+      "/Add-RKSJ-H",
+      "/AddRKSJDescendant",
+      174,
+      [0x84, 0x9F, 0x82, 0xA0],
+      [0x2500, 0x3042],
+      0x2500,
+      0x849F,
+      false,
+      0x1F600,
+    ),
+    (
+      "/FAddRKSJV",
+      "/AddRKSJVerticalTop",
+      "/Add-RKSJ-V",
+      "/AddRKSJVerticalDescendant",
+      176,
+      [0x84, 0x9F, 0x82, 0x9F],
+      [0x2500, 0x3041],
+      0x3041,
+      0x829F,
+      false,
+      0x1F600,
+    ),
+    (
+      "/FExtH",
+      "/ExtTop",
+      "/Ext-H",
+      "/ExtDescendant",
+      178,
+      [0x2C, 0x24, 0x24, 0x22],
+      [0x2500, 0x3042],
+      0x3042,
+      0x2422,
+      true,
+      0x1F600,
+    ),
+    (
+      "/FExtV",
+      "/ExtVerticalTop",
+      "/Ext-V",
+      "/ExtVerticalDescendant",
+      180,
+      [0x2C, 0x24, 0x24, 0x21],
+      [0x2500, 0x3041],
+      0x3041,
+      0x2421,
+      true,
+      0x1F600,
+    ),
+    (
+      "/FExtRKSJH",
+      "/ExtRKSJTop",
+      "/Ext-RKSJ-H",
+      "/ExtRKSJDescendant",
+      182,
+      [0x86, 0xA2, 0x82, 0xA0],
+      [0x2500, 0x3042],
+      0x3042,
+      0x82A0,
+      false,
+      0x1F600,
+    ),
+    (
+      "/FExtRKSJV",
+      "/ExtRKSJVerticalTop",
+      "/Ext-RKSJ-V",
+      "/ExtRKSJVerticalDescendant",
+      184,
+      [0x86, 0xA2, 0x82, 0x9F],
+      [0x2500, 0x3041],
+      0x3041,
+      0x829F,
+      false,
+      0x1F600,
+    ),
+    (
+      "/FHojoH",
+      "/HojoTop",
+      "/Hojo-H",
+      "/HojoDescendant",
+      186,
+      [0x34, 0x2E],
+      [0x4EDD],
+      0x4EDD,
+      0x342E,
+      true,
+      0x1F600,
+    ),
+    (
+      "/FHojoV",
+      "/HojoVerticalTop",
+      "/Hojo-V",
+      "/HojoVerticalDescendant",
+      188,
+      [0x34, 0x2E],
+      [0x4EDD],
+      0x4EDD,
+      0x342E,
+      true,
+      0x1F600,
+    ),
+    (
+      "/FHojoEUCV",
+      "/HojoEUCVerticalTop",
+      "/Hojo-EUC-V",
+      "/HojoEUCVerticalDescendant",
+      190,
+      [0x8F, 0xB4, 0xAE],
+      [0x4EDD],
+      0x4EDD,
+      0x8FB4AE,
+      false,
+      0x1F600,
+    ),
+    (
+      "/FNWPH",
+      "/NWPTop",
+      "/NWP-H",
+      "/NWPDescendant",
+      192,
+      [0x2E, 0x21, 0x2C, 0x24, 0x24, 0x22],
+      [0xFF01, 0x2500, 0x3042],
+      0x3042,
+      0x2422,
+      true,
+      0x1F600,
+    ),
+    (
+      "/FNWPV",
+      "/NWPVerticalTop",
+      "/NWP-V",
+      "/NWPVerticalDescendant",
+      194,
+      [0x2E, 0x21, 0x24, 0x21],
+      [0xFF01, 0x3041],
+      0x3041,
+      0x2421,
+      true,
+      0x1F600,
+    ),
+  ]
+}
+
+///|
+fn acceptance_japan1_supplemental_cmap_text_document_for_test() -> @pdflite.PdfDocument raise {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  let pages : Array[@pdflite.PdfPage] = []
+  for case in acceptance_japan1_supplemental_cmap_cases_for_test() {
+    doc.add_object_given_number(
+      case.4,
+      acceptance_predefined_cmap_descendant_font_for_test(case.3, "Japan1"),
+    )
+    pages.push(
+      acceptance_predefined_cmap_page_for_test(
+        case.0,
+        acceptance_predefined_cmap_type0_font_for_test(case.1, case.2, case.4),
+        acceptance_text_bytes_for_test(case.5),
+      ),
+    )
+  }
+  let page_root = doc.add_pagetree(pages)
+  ignore(doc.add_root(page_root, []))
+  doc
+}
+
+///|
 fn acceptance_font_object_by_name_for_test(
   resources : @pdflite.PdfObject,
   name : @pdflite.PdfName,
@@ -4603,6 +4854,39 @@ fn acceptance_assert_japan1_legacy_cmap_text_for_test(
 ) -> Unit raise {
   @test.assert_eq(doc.version(), (1, 5))
   let cases = acceptance_japan1_legacy_cmap_cases_for_test()
+  @test.assert_eq(doc.endpage(), cases.length())
+  let pages = doc.pages_of_pagetree()
+  @test.assert_eq(pages.length(), cases.length())
+  for index in 0..<cases.length() {
+    let case = cases[index]
+    let font = acceptance_assert_predefined_cmap_font_shape_with_two_byte_for_test(
+      doc,
+      pages[index],
+      case.0,
+      case.2,
+      "Japan1",
+      case.9,
+    )
+    @test.assert_eq(
+      acceptance_font_codepoints_of_page_for_test(
+        doc,
+        pages[index],
+        acceptance_name_for_test(case.0),
+      ),
+      case.6,
+    )
+    let extractor = doc.text_extractor_of_font(font)
+    @test.assert_eq(extractor.charcode_of_codepoint(case.7), Some(case.8))
+    @test.assert_eq(extractor.charcode_of_codepoint(case.10), None)
+  }
+}
+
+///|
+fn acceptance_assert_japan1_supplemental_cmap_text_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(doc.version(), (1, 5))
+  let cases = acceptance_japan1_supplemental_cmap_cases_for_test()
   @test.assert_eq(doc.endpage(), cases.length())
   let pages = doc.pages_of_pagetree()
   @test.assert_eq(pages.length(), cases.length())
@@ -8755,6 +9039,16 @@ test "native acceptance suite extracts Adobe-Japan1 legacy predefined CMap text 
   acceptance_assert_japan1_legacy_cmap_text_for_test(parsed)
   let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
   acceptance_assert_japan1_legacy_cmap_text_for_test(reparsed)
+}
+
+///|
+test "native acceptance suite extracts Adobe-Japan1 supplemental predefined CMap text through reader boundaries" {
+  let parsed = acceptance_compressed_roundtrip_for_test(
+    acceptance_japan1_supplemental_cmap_text_document_for_test(),
+  )
+  acceptance_assert_japan1_supplemental_cmap_text_for_test(parsed)
+  let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
+  acceptance_assert_japan1_supplemental_cmap_text_for_test(reparsed)
 }
 
 ///|
