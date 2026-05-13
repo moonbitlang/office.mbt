@@ -3540,6 +3540,192 @@ fn acceptance_japan1_90msp_cmap_text_document_for_test() -> @pdflite.PdfDocument
 }
 
 ///|
+fn acceptance_japan1_legacy_cmap_cases_for_test() -> Array[
+  (
+    String,
+    String,
+    String,
+    String,
+    Int,
+    Array[Int],
+    Array[Int],
+    Int,
+    Int,
+    Bool,
+    Int,
+  ),
+] {
+  [
+    (
+      "/F78H",
+      "/Legacy78Top",
+      "/78-H",
+      "/Legacy78Descendant",
+      142,
+      [0x21, 0x21, 0x24, 0x22],
+      [0x3000, 0x3042],
+      0x3042,
+      0x2422,
+      true,
+      0x1F600,
+    ),
+    (
+      "/F78V",
+      "/Legacy78VerticalTop",
+      "/78-V",
+      "/Legacy78VerticalDescendant",
+      144,
+      [0x21, 0x21, 0x24, 0x21],
+      [0x3000, 0x3041],
+      0x3041,
+      0x2421,
+      true,
+      0x1F600,
+    ),
+    (
+      "/F78RKSJH",
+      "/Legacy78RKSJTop",
+      "/78-RKSJ-H",
+      "/Legacy78RKSJDescendant",
+      146,
+      [0x81, 0x40, 0x82, 0xA0],
+      [0x3000, 0x3042],
+      0x3042,
+      0x82A0,
+      false,
+      0x1F600,
+    ),
+    (
+      "/F78RKSJV",
+      "/Legacy78RKSJVerticalTop",
+      "/78-RKSJ-V",
+      "/Legacy78RKSJVerticalDescendant",
+      148,
+      [0x81, 0x40, 0x82, 0x9F],
+      [0x3000, 0x3041],
+      0x3041,
+      0x829F,
+      false,
+      0x1F600,
+    ),
+    (
+      "/F78msRKSJH",
+      "/Legacy78msRKSJTop",
+      "/78ms-RKSJ-H",
+      "/Legacy78msRKSJDescendant",
+      150,
+      [0x81, 0x40, 0x82, 0xA0],
+      [0x3000, 0x3042],
+      0x3042,
+      0x82A0,
+      false,
+      0x1F600,
+    ),
+    (
+      "/F78msRKSJV",
+      "/Legacy78msRKSJVerticalTop",
+      "/78ms-RKSJ-V",
+      "/Legacy78msRKSJVerticalDescendant",
+      152,
+      [0x81, 0x40, 0x82, 0x9F],
+      [0x3000, 0x3041],
+      0x3041,
+      0x829F,
+      false,
+      0x1F600,
+    ),
+    (
+      "/F83pvRKSJH",
+      "/Legacy83pvRKSJTop",
+      "/83pv-RKSJ-H",
+      "/Legacy83pvRKSJDescendant",
+      154,
+      [0x80, 0x81, 0x40, 0x82, 0xA0],
+      [0x005C, 0x3000, 0x3042],
+      0x005C,
+      0x80,
+      false,
+      0x1F600,
+    ),
+    (
+      "/F90msRKSJV",
+      "/Legacy90msRKSJVerticalTop",
+      "/90ms-RKSJ-V",
+      "/Legacy90msRKSJVerticalDescendant",
+      156,
+      [0x81, 0x40, 0x82, 0x9F],
+      [0x3000, 0x3041],
+      0x3041,
+      0x829F,
+      false,
+      0x1F600,
+    ),
+    (
+      "/F90pvRKSJV",
+      "/Legacy90pvRKSJVerticalTop",
+      "/90pv-RKSJ-V",
+      "/Legacy90pvRKSJVerticalDescendant",
+      158,
+      [0x80, 0x81, 0x40, 0x82, 0x9F],
+      [0x005C, 0x3000, 0x3041],
+      0x005C,
+      0x80,
+      false,
+      0x1F600,
+    ),
+    (
+      "/FRKSJH",
+      "/GenericRKSJTop",
+      "/RKSJ-H",
+      "/GenericRKSJDescendant",
+      160,
+      [0x81, 0x40, 0x82, 0xA0],
+      [0x3000, 0x3042],
+      0x3042,
+      0x82A0,
+      false,
+      0x1F600,
+    ),
+    (
+      "/FRKSJV",
+      "/GenericRKSJVerticalTop",
+      "/RKSJ-V",
+      "/GenericRKSJVerticalDescendant",
+      162,
+      [0x81, 0x40, 0x82, 0x9F],
+      [0x3000, 0x3041],
+      0x3041,
+      0x829F,
+      false,
+      0x1F600,
+    ),
+  ]
+}
+
+///|
+fn acceptance_japan1_legacy_cmap_text_document_for_test() -> @pdflite.PdfDocument raise {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  let pages : Array[@pdflite.PdfPage] = []
+  for case in acceptance_japan1_legacy_cmap_cases_for_test() {
+    doc.add_object_given_number(
+      case.4,
+      acceptance_predefined_cmap_descendant_font_for_test(case.3, "Japan1"),
+    )
+    pages.push(
+      acceptance_predefined_cmap_page_for_test(
+        case.0,
+        acceptance_predefined_cmap_type0_font_for_test(case.1, case.2, case.4),
+        acceptance_text_bytes_for_test(case.5),
+      ),
+    )
+  }
+  let page_root = doc.add_pagetree(pages)
+  ignore(doc.add_root(page_root, []))
+  doc
+}
+
+///|
 fn acceptance_font_object_by_name_for_test(
   resources : @pdflite.PdfObject,
   name : @pdflite.PdfName,
@@ -4384,6 +4570,39 @@ fn acceptance_assert_japan1_90msp_cmap_text_for_test(
 ) -> Unit raise {
   @test.assert_eq(doc.version(), (1, 5))
   let cases = acceptance_japan1_90msp_cmap_cases_for_test()
+  @test.assert_eq(doc.endpage(), cases.length())
+  let pages = doc.pages_of_pagetree()
+  @test.assert_eq(pages.length(), cases.length())
+  for index in 0..<cases.length() {
+    let case = cases[index]
+    let font = acceptance_assert_predefined_cmap_font_shape_with_two_byte_for_test(
+      doc,
+      pages[index],
+      case.0,
+      case.2,
+      "Japan1",
+      case.9,
+    )
+    @test.assert_eq(
+      acceptance_font_codepoints_of_page_for_test(
+        doc,
+        pages[index],
+        acceptance_name_for_test(case.0),
+      ),
+      case.6,
+    )
+    let extractor = doc.text_extractor_of_font(font)
+    @test.assert_eq(extractor.charcode_of_codepoint(case.7), Some(case.8))
+    @test.assert_eq(extractor.charcode_of_codepoint(case.10), None)
+  }
+}
+
+///|
+fn acceptance_assert_japan1_legacy_cmap_text_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(doc.version(), (1, 5))
+  let cases = acceptance_japan1_legacy_cmap_cases_for_test()
   @test.assert_eq(doc.endpage(), cases.length())
   let pages = doc.pages_of_pagetree()
   @test.assert_eq(pages.length(), cases.length())
@@ -8526,6 +8745,16 @@ test "native acceptance suite extracts Adobe-Japan1 90msp predefined CMap text t
   acceptance_assert_japan1_90msp_cmap_text_for_test(parsed)
   let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
   acceptance_assert_japan1_90msp_cmap_text_for_test(reparsed)
+}
+
+///|
+test "native acceptance suite extracts Adobe-Japan1 legacy predefined CMap text through reader boundaries" {
+  let parsed = acceptance_compressed_roundtrip_for_test(
+    acceptance_japan1_legacy_cmap_text_document_for_test(),
+  )
+  acceptance_assert_japan1_legacy_cmap_text_for_test(parsed)
+  let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
+  acceptance_assert_japan1_legacy_cmap_text_for_test(reparsed)
 }
 
 ///|

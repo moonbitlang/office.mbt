@@ -1974,6 +1974,13 @@ Current backend snapshot:
   `/90msp-RKSJ-V` predefined CMap extraction, proportional ASCII yen mapping,
   vertical kana charcode lookup, malformed reverse lookup misses, and reread
   stability. `moon test --target native` now reports 1355/1355 tests passing.~~
+- [x] ~~Add the seventieth pre-refactor correctness sentinel: native compressed
+  reader boundaries now preserve legacy Adobe-Japan1 predefined CMaps for
+  `/78-H`, `/78-V`, `/78-RKSJ-H`, `/78-RKSJ-V`, `/78ms-RKSJ-H`,
+  `/78ms-RKSJ-V`, `/83pv-RKSJ-H`, vertical `/90ms-RKSJ-V`,
+  `/90pv-RKSJ-V`, and generic `/RKSJ-H`/`/RKSJ-V` extraction and reverse
+  lookup through reread stability. `moon test --target native` now reports
+  1356/1356 tests passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.
