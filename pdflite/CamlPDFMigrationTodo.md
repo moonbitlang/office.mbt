@@ -1964,6 +1964,11 @@ Current backend snapshot:
   `/CS` resources, explicit CMYK `/Decode` arrays, indexed DeviceCMYK palettes,
   stream decompression, and reread stability. `moon test --target native` now
   reports 1353/1353 tests passing.~~
+- [x] ~~Add the sixty-eighth pre-refactor correctness sentinel: native
+  compressed reader boundaries now preserve alternate image color spaces for
+  ICCBased gray profiles, Separation Type 2 CMYK tint functions, DeviceN
+  indexed palettes, indexed Lab palettes, stream decompression, and reread
+  stability. `moon test --target native` now reports 1354/1354 tests passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.

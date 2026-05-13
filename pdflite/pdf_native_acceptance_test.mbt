@@ -5201,6 +5201,295 @@ fn acceptance_cmyk_image_document_for_test() -> @pdflite.PdfDocument raise {
 }
 
 ///|
+fn acceptance_alt_image_icc_profile_for_test() -> @pdflite.PdfObject {
+  let data = acceptance_ascii_for_test("icc")
+  @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (acceptance_name_for_test("/N"), PdfInteger(1)),
+      (acceptance_name_for_test("/Length"), PdfInteger(data.length())),
+    ]),
+    StreamGot(data),
+  )
+}
+
+///|
+fn acceptance_alt_image_icc_gray_sample_for_test() -> @pdflite.PdfBytes raise {
+  acceptance_text_bytes_for_test([9, 10])
+}
+
+///|
+fn acceptance_alt_image_icc_gray_xobject_for_test() -> @pdflite.PdfObject raise {
+  let encoded = @pdflite.pdf_flate_encode(
+    acceptance_alt_image_icc_gray_sample_for_test(),
+  )
+  @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (
+        acceptance_name_for_test("/Type"),
+        PdfNameObject(acceptance_name_for_test("/XObject")),
+      ),
+      (
+        acceptance_name_for_test("/Subtype"),
+        PdfNameObject(acceptance_name_for_test("/Image")),
+      ),
+      (acceptance_name_for_test("/Width"), PdfInteger(2)),
+      (acceptance_name_for_test("/Height"), PdfInteger(1)),
+      (
+        acceptance_name_for_test("/ColorSpace"),
+        PdfNameObject(acceptance_name_for_test("/NamedICCGray")),
+      ),
+      (acceptance_name_for_test("/BitsPerComponent"), PdfInteger(8)),
+      (
+        acceptance_name_for_test("/Filter"),
+        PdfNameObject(acceptance_name_for_test("/FlateDecode")),
+      ),
+      (acceptance_name_for_test("/Length"), PdfInteger(encoded.length())),
+    ]),
+    StreamGot(encoded),
+  )
+}
+
+///|
+fn acceptance_alt_image_separation_tint_for_test() -> @pdflite.PdfObject {
+  @pdflite.pdf_dictionary([
+    (acceptance_name_for_test("/FunctionType"), PdfInteger(2)),
+    (
+      acceptance_name_for_test("/Domain"),
+      PdfArray([PdfInteger(0), PdfInteger(1)]),
+    ),
+    (
+      acceptance_name_for_test("/C0"),
+      PdfArray([PdfInteger(0), PdfInteger(0), PdfInteger(0), PdfInteger(0)]),
+    ),
+    (
+      acceptance_name_for_test("/C1"),
+      PdfArray([PdfInteger(0), PdfInteger(1), PdfInteger(0), PdfInteger(0)]),
+    ),
+    (acceptance_name_for_test("/N"), PdfInteger(1)),
+  ])
+}
+
+///|
+fn acceptance_alt_image_separation_xobject_for_test() -> @pdflite.PdfObject raise {
+  let encoded = @pdflite.pdf_flate_encode(acceptance_text_bytes_for_test([255]))
+  @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (
+        acceptance_name_for_test("/Type"),
+        PdfNameObject(acceptance_name_for_test("/XObject")),
+      ),
+      (
+        acceptance_name_for_test("/Subtype"),
+        PdfNameObject(acceptance_name_for_test("/Image")),
+      ),
+      (acceptance_name_for_test("/Width"), PdfInteger(1)),
+      (acceptance_name_for_test("/Height"), PdfInteger(1)),
+      (
+        acceptance_name_for_test("/ColorSpace"),
+        PdfNameObject(acceptance_name_for_test("/NamedSpot")),
+      ),
+      (acceptance_name_for_test("/BitsPerComponent"), PdfInteger(8)),
+      (
+        acceptance_name_for_test("/Filter"),
+        PdfNameObject(acceptance_name_for_test("/FlateDecode")),
+      ),
+      (acceptance_name_for_test("/Length"), PdfInteger(encoded.length())),
+    ]),
+    StreamGot(encoded),
+  )
+}
+
+///|
+fn acceptance_alt_image_device_n_palette_for_test() -> @pdflite.PdfBytes raise {
+  acceptance_text_bytes_for_test([0, 0, 0, 0, 0, 255, 255, 0])
+}
+
+///|
+fn acceptance_alt_image_device_n_xobject_for_test() -> @pdflite.PdfObject raise {
+  let encoded = @pdflite.pdf_flate_encode(
+    acceptance_text_bytes_for_test([0, 1]),
+  )
+  @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (
+        acceptance_name_for_test("/Type"),
+        PdfNameObject(acceptance_name_for_test("/XObject")),
+      ),
+      (
+        acceptance_name_for_test("/Subtype"),
+        PdfNameObject(acceptance_name_for_test("/Image")),
+      ),
+      (acceptance_name_for_test("/Width"), PdfInteger(2)),
+      (acceptance_name_for_test("/Height"), PdfInteger(1)),
+      (
+        acceptance_name_for_test("/ColorSpace"),
+        PdfNameObject(acceptance_name_for_test("/NamedIndexedDeviceN")),
+      ),
+      (acceptance_name_for_test("/BitsPerComponent"), PdfInteger(8)),
+      (
+        acceptance_name_for_test("/Filter"),
+        PdfNameObject(acceptance_name_for_test("/FlateDecode")),
+      ),
+      (acceptance_name_for_test("/Length"), PdfInteger(encoded.length())),
+    ]),
+    StreamGot(encoded),
+  )
+}
+
+///|
+fn acceptance_alt_image_lab_palette_for_test() -> @pdflite.PdfBytes raise {
+  acceptance_text_bytes_for_test([
+    127, 127, 127, 255, 127, 127, 255, 255, 255, 255, 0, 0,
+  ])
+}
+
+///|
+fn acceptance_alt_image_lab_xobject_for_test() -> @pdflite.PdfObject raise {
+  let encoded = @pdflite.pdf_flate_encode(
+    acceptance_text_bytes_for_test([0, 1, 2, 3]),
+  )
+  @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (
+        acceptance_name_for_test("/Type"),
+        PdfNameObject(acceptance_name_for_test("/XObject")),
+      ),
+      (
+        acceptance_name_for_test("/Subtype"),
+        PdfNameObject(acceptance_name_for_test("/Image")),
+      ),
+      (acceptance_name_for_test("/Width"), PdfInteger(4)),
+      (acceptance_name_for_test("/Height"), PdfInteger(1)),
+      (
+        acceptance_name_for_test("/ColorSpace"),
+        PdfNameObject(acceptance_name_for_test("/NamedIndexedLab")),
+      ),
+      (acceptance_name_for_test("/BitsPerComponent"), PdfInteger(8)),
+      (
+        acceptance_name_for_test("/Filter"),
+        PdfNameObject(acceptance_name_for_test("/FlateDecode")),
+      ),
+      (acceptance_name_for_test("/Length"), PdfInteger(encoded.length())),
+    ]),
+    StreamGot(encoded),
+  )
+}
+
+///|
+fn acceptance_alt_image_content_ops_for_test() -> Array[@pdflite.PdfContentOp] {
+  [
+    Op_Do(acceptance_name_for_test("/ImICCGray")),
+    Op_Do(acceptance_name_for_test("/ImSpot")),
+    Op_Do(acceptance_name_for_test("/ImDeviceN")),
+    Op_Do(acceptance_name_for_test("/ImLab")),
+  ]
+}
+
+///|
+fn acceptance_alt_image_resources_for_test() -> @pdflite.PdfObject raise {
+  @pdflite.pdf_dictionary([
+    (
+      acceptance_name_for_test("/ColorSpace"),
+      @pdflite.pdf_dictionary([
+        (
+          acceptance_name_for_test("/NamedICCGray"),
+          PdfArray([
+            PdfNameObject(acceptance_name_for_test("/ICCBased")),
+            PdfIndirect(91),
+          ]),
+        ),
+        (
+          acceptance_name_for_test("/NamedSpot"),
+          PdfArray([
+            PdfNameObject(acceptance_name_for_test("/Separation")),
+            PdfNameObject(acceptance_name_for_test("/Spot")),
+            PdfNameObject(acceptance_name_for_test("/DeviceCMYK")),
+            acceptance_alt_image_separation_tint_for_test(),
+          ]),
+        ),
+        (
+          acceptance_name_for_test("/NamedIndexedDeviceN"),
+          PdfArray([
+            PdfNameObject(acceptance_name_for_test("/Indexed")),
+            PdfArray([
+              PdfNameObject(acceptance_name_for_test("/DeviceN")),
+              PdfArray([PdfNameObject(acceptance_name_for_test("/Spot"))]),
+              PdfNameObject(acceptance_name_for_test("/DeviceCMYK")),
+              PdfNull,
+            ]),
+            PdfInteger(1),
+            PdfString(acceptance_alt_image_device_n_palette_for_test()),
+          ]),
+        ),
+        (
+          acceptance_name_for_test("/NamedIndexedLab"),
+          PdfArray([
+            PdfNameObject(acceptance_name_for_test("/Indexed")),
+            PdfArray([
+              PdfNameObject(acceptance_name_for_test("/Lab")),
+              @pdflite.pdf_dictionary([
+                (
+                  acceptance_name_for_test("/WhitePoint"),
+                  PdfArray([
+                    PdfInteger(1000),
+                    PdfInteger(1000),
+                    PdfInteger(1000),
+                  ]),
+                ),
+              ]),
+            ]),
+            PdfInteger(3),
+            PdfString(acceptance_alt_image_lab_palette_for_test()),
+          ]),
+        ),
+      ]),
+    ),
+    (
+      acceptance_name_for_test("/XObject"),
+      @pdflite.pdf_dictionary([
+        (acceptance_name_for_test("/ImICCGray"), PdfIndirect(92)),
+        (acceptance_name_for_test("/ImSpot"), PdfIndirect(93)),
+        (acceptance_name_for_test("/ImDeviceN"), PdfIndirect(94)),
+        (acceptance_name_for_test("/ImLab"), PdfIndirect(95)),
+      ]),
+    ),
+  ])
+}
+
+///|
+fn acceptance_alt_image_document_for_test() -> @pdflite.PdfDocument raise {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  doc.add_object_given_number(91, acceptance_alt_image_icc_profile_for_test())
+  doc.add_object_given_number(
+    92,
+    acceptance_alt_image_icc_gray_xobject_for_test(),
+  )
+  doc.add_object_given_number(
+    93,
+    acceptance_alt_image_separation_xobject_for_test(),
+  )
+  doc.add_object_given_number(
+    94,
+    acceptance_alt_image_device_n_xobject_for_test(),
+  )
+  doc.add_object_given_number(95, acceptance_alt_image_lab_xobject_for_test())
+  let resources = acceptance_alt_image_resources_for_test()
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [
+      @pdflite.pdf_content_stream_of_ops(
+        acceptance_alt_image_content_ops_for_test(),
+      ),
+    ],
+    resources,
+  }
+  let page_root = doc.add_pagetree([page])
+  ignore(doc.add_root(page_root, []))
+  doc
+}
+
+///|
 fn acceptance_image_xobject_for_test(
   doc : @pdflite.PdfDocument,
   resources : @pdflite.PdfObject,
@@ -5381,6 +5670,73 @@ fn acceptance_assert_cmyk_images_for_test(
   @test.assert_eq(
     doc.get_image_24bpp(pages[0].resources, indexed_cmyk),
     PdfRawImage(4, 1, PdfBPP24, acceptance_expected_cmyk_rgb24_for_test()),
+  )
+}
+
+///|
+fn acceptance_assert_alt_images_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(doc.version(), (1, 5))
+  @test.assert_eq(doc.endpage(), 1)
+  let pages = doc.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  @test.assert_eq(
+    doc.parse_content_ops_with_resources(pages[0].resources, pages[0].content),
+    acceptance_alt_image_content_ops_for_test(),
+  )
+  let icc_gray = acceptance_image_xobject_for_test(
+    doc,
+    pages[0].resources,
+    acceptance_name_for_test("/ImICCGray"),
+  )
+  @test.assert_eq(
+    doc.get_image_24bpp(pages[0].resources, icc_gray),
+    PdfRawImage(
+      2,
+      1,
+      PdfBPP24,
+      acceptance_text_bytes_for_test([9, 9, 9, 10, 10, 10]),
+    ),
+  )
+  let spot = acceptance_image_xobject_for_test(
+    doc,
+    pages[0].resources,
+    acceptance_name_for_test("/ImSpot"),
+  )
+  @test.assert_eq(
+    doc.get_image_24bpp(pages[0].resources, spot),
+    PdfRawImage(1, 1, PdfBPP24, acceptance_text_bytes_for_test([255, 255, 0])),
+  )
+  let device_n = acceptance_image_xobject_for_test(
+    doc,
+    pages[0].resources,
+    acceptance_name_for_test("/ImDeviceN"),
+  )
+  @test.assert_eq(
+    doc.get_image_24bpp(pages[0].resources, device_n),
+    PdfRawImage(
+      2,
+      1,
+      PdfBPP24,
+      acceptance_text_bytes_for_test([255, 255, 255, 255, 0, 0]),
+    ),
+  )
+  let lab = acceptance_image_xobject_for_test(
+    doc,
+    pages[0].resources,
+    acceptance_name_for_test("/ImLab"),
+  )
+  @test.assert_eq(
+    doc.get_image_24bpp(pages[0].resources, lab),
+    PdfRawImage(
+      4,
+      1,
+      PdfBPP24,
+      acceptance_text_bytes_for_test([
+        0, 0, 0, 141, 141, 141, 255, 104, 47, 25, 178, 235,
+      ]),
+    ),
   )
 }
 
@@ -8117,6 +8473,19 @@ test "native acceptance suite decodes CMYK images through reader boundaries" {
   acceptance_assert_cmyk_images_for_test(decompressed)
   let reparsed = acceptance_compressed_roundtrip_for_test(decompressed)
   acceptance_assert_cmyk_images_for_test(reparsed)
+}
+
+///|
+test "native acceptance suite decodes alternate image colour spaces through reader boundaries" {
+  let parsed = acceptance_compressed_roundtrip_for_test(
+    acceptance_alt_image_document_for_test(),
+  )
+  acceptance_assert_alt_images_for_test(parsed)
+  let decompressed = parsed.copy()
+  decompressed.pdf_decode_streams_until_unknown()
+  acceptance_assert_alt_images_for_test(decompressed)
+  let reparsed = acceptance_compressed_roundtrip_for_test(decompressed)
+  acceptance_assert_alt_images_for_test(reparsed)
 }
 
 ///|
