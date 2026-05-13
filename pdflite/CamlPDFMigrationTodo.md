@@ -1995,6 +1995,13 @@ Current backend snapshot:
   `0100`, emoji surrogate pairs, ZWJ emoji sequences, unmapped CID fallback,
   single-codepoint reverse lookup, and reread stability. `moon test --target
   native` now reports 1358/1358 tests passing.~~
+- [x] ~~Add the seventy-third pre-refactor correctness sentinel: native
+  compressed reader boundaries now preserve encoded image XObject aliases from
+  real-world PDFs, including short `/F` filters, short `/W`/`/H` dimensions, Lab
+  DCT decode defaults through named resources, JPX explicit decode arrays,
+  JBIG2 short `/DP` globals, document-wide stream-decode passes, and reread
+  stability. `moon test --target native` now reports 1359/1359 tests
+  passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.

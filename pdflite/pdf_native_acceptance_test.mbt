@@ -5537,6 +5537,219 @@ fn acceptance_image_lifecycle_document_for_test() -> @pdflite.PdfDocument raise 
 }
 
 ///|
+fn acceptance_encoded_image_alias_lab_space_for_test() -> @pdflite.PdfObject {
+  PdfArray([
+    PdfNameObject(acceptance_name_for_test("/Lab")),
+    @pdflite.pdf_dictionary([
+      (
+        acceptance_name_for_test("/WhitePoint"),
+        PdfArray([PdfInteger(1), PdfInteger(1), PdfInteger(1)]),
+      ),
+      (
+        acceptance_name_for_test("/Range"),
+        PdfArray([
+          PdfInteger(-80),
+          PdfInteger(90),
+          PdfInteger(-70),
+          PdfInteger(85),
+        ]),
+      ),
+    ]),
+  ])
+}
+
+///|
+fn acceptance_encoded_image_alias_jpeg_payload_for_test() -> @pdflite.PdfBytes {
+  acceptance_ascii_for_test("alias-lab-jpeg")
+}
+
+///|
+fn acceptance_encoded_image_alias_jpeg_xobject_for_test() -> @pdflite.PdfObject {
+  let data = acceptance_encoded_image_alias_jpeg_payload_for_test()
+  @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (
+        acceptance_name_for_test("/Type"),
+        PdfNameObject(acceptance_name_for_test("/XObject")),
+      ),
+      (
+        acceptance_name_for_test("/Subtype"),
+        PdfNameObject(acceptance_name_for_test("/Image")),
+      ),
+      (acceptance_name_for_test("/W"), PdfInteger(1)),
+      (acceptance_name_for_test("/H"), PdfInteger(1)),
+      (
+        acceptance_name_for_test("/ColorSpace"),
+        PdfNameObject(acceptance_name_for_test("/NamedLabJpeg")),
+      ),
+      (
+        acceptance_name_for_test("/F"),
+        PdfNameObject(acceptance_name_for_test("/DCT")),
+      ),
+      (acceptance_name_for_test("/Length"), PdfInteger(data.length())),
+    ]),
+    StreamGot(data),
+  )
+}
+
+///|
+fn acceptance_encoded_image_alias_jpx_payload_for_test() -> @pdflite.PdfBytes {
+  acceptance_ascii_for_test("alias-jpx")
+}
+
+///|
+fn acceptance_encoded_image_alias_jpx_xobject_for_test() -> @pdflite.PdfObject {
+  let data = acceptance_encoded_image_alias_jpx_payload_for_test()
+  @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (
+        acceptance_name_for_test("/Type"),
+        PdfNameObject(acceptance_name_for_test("/XObject")),
+      ),
+      (
+        acceptance_name_for_test("/Subtype"),
+        PdfNameObject(acceptance_name_for_test("/Image")),
+      ),
+      (acceptance_name_for_test("/W"), PdfInteger(1)),
+      (acceptance_name_for_test("/H"), PdfInteger(1)),
+      (
+        acceptance_name_for_test("/F"),
+        PdfNameObject(acceptance_name_for_test("/JPXDecode")),
+      ),
+      (
+        acceptance_name_for_test("/Decode"),
+        PdfArray([
+          PdfInteger(0),
+          PdfInteger(1),
+          PdfInteger(1),
+          PdfInteger(0),
+          PdfInteger(0),
+          PdfInteger(1),
+        ]),
+      ),
+      (acceptance_name_for_test("/Length"), PdfInteger(data.length())),
+    ]),
+    StreamGot(data),
+  )
+}
+
+///|
+fn acceptance_encoded_image_alias_jbig2_globals_for_test() -> @pdflite.PdfObject {
+  let data = acceptance_ascii_for_test("alias-jbig2-globals")
+  @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (acceptance_name_for_test("/Length"), PdfInteger(data.length())),
+    ]),
+    StreamGot(data),
+  )
+}
+
+///|
+fn acceptance_encoded_image_alias_jbig2_payload_for_test() -> @pdflite.PdfBytes {
+  acceptance_ascii_for_test("alias-jbig2")
+}
+
+///|
+fn acceptance_encoded_image_alias_jbig2_xobject_for_test() -> @pdflite.PdfObject {
+  let data = acceptance_encoded_image_alias_jbig2_payload_for_test()
+  @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (
+        acceptance_name_for_test("/Type"),
+        PdfNameObject(acceptance_name_for_test("/XObject")),
+      ),
+      (
+        acceptance_name_for_test("/Subtype"),
+        PdfNameObject(acceptance_name_for_test("/Image")),
+      ),
+      (acceptance_name_for_test("/W"), PdfInteger(1)),
+      (acceptance_name_for_test("/H"), PdfInteger(1)),
+      (
+        acceptance_name_for_test("/Filter"),
+        PdfNameObject(acceptance_name_for_test("/JBIG2Decode")),
+      ),
+      (
+        acceptance_name_for_test("/DP"),
+        @pdflite.pdf_dictionary([
+          (acceptance_name_for_test("/JBIG2Globals"), PdfIndirect(198)),
+        ]),
+      ),
+      (acceptance_name_for_test("/Length"), PdfInteger(data.length())),
+    ]),
+    StreamGot(data),
+  )
+}
+
+///|
+fn acceptance_encoded_image_alias_content_ops_for_test() -> Array[
+  @pdflite.PdfContentOp,
+] {
+  [
+    Op_Do(acceptance_name_for_test("/ImAliasJpeg")),
+    Op_Do(acceptance_name_for_test("/ImAliasJpx")),
+    Op_Do(acceptance_name_for_test("/ImAliasJbig2")),
+  ]
+}
+
+///|
+fn acceptance_encoded_image_alias_resources_for_test() -> @pdflite.PdfObject {
+  @pdflite.pdf_dictionary([
+    (
+      acceptance_name_for_test("/ColorSpace"),
+      @pdflite.pdf_dictionary([
+        (
+          acceptance_name_for_test("/NamedLabJpeg"),
+          acceptance_encoded_image_alias_lab_space_for_test(),
+        ),
+      ]),
+    ),
+    (
+      acceptance_name_for_test("/XObject"),
+      @pdflite.pdf_dictionary([
+        (acceptance_name_for_test("/ImAliasJpeg"), PdfIndirect(196)),
+        (acceptance_name_for_test("/ImAliasJpx"), PdfIndirect(197)),
+        (acceptance_name_for_test("/ImAliasJbig2"), PdfIndirect(199)),
+      ]),
+    ),
+  ])
+}
+
+///|
+fn acceptance_encoded_image_alias_document_for_test() -> @pdflite.PdfDocument raise {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  doc.add_object_given_number(
+    196,
+    acceptance_encoded_image_alias_jpeg_xobject_for_test(),
+  )
+  doc.add_object_given_number(
+    197,
+    acceptance_encoded_image_alias_jpx_xobject_for_test(),
+  )
+  doc.add_object_given_number(
+    198,
+    acceptance_encoded_image_alias_jbig2_globals_for_test(),
+  )
+  doc.add_object_given_number(
+    199,
+    acceptance_encoded_image_alias_jbig2_xobject_for_test(),
+  )
+  let resources = acceptance_encoded_image_alias_resources_for_test()
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [
+      @pdflite.pdf_content_stream_of_ops(
+        acceptance_encoded_image_alias_content_ops_for_test(),
+      ),
+    ],
+    resources,
+  }
+  let page_root = doc.add_pagetree([page])
+  ignore(doc.add_root(page_root, []))
+  doc
+}
+
+///|
 fn acceptance_named_image_rgb_sample_for_test() -> @pdflite.PdfBytes raise {
   acceptance_text_bytes_for_test([9, 40, 80, 200, 210, 220])
 }
@@ -6325,6 +6538,97 @@ fn acceptance_assert_image_lifecycle_for_test(
   @test.assert_eq(
     doc.get_image_24bpp(pages[0].resources, jbig2_image),
     PdfJBIG2(acceptance_ascii_for_test("jbig2-data"), None, Some(73)),
+  )
+}
+
+///|
+fn acceptance_assert_encoded_image_aliases_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(doc.version(), (1, 5))
+  @test.assert_eq(doc.endpage(), 1)
+  let pages = doc.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  @test.assert_eq(
+    doc.parse_content_ops_with_resources(pages[0].resources, pages[0].content),
+    acceptance_encoded_image_alias_content_ops_for_test(),
+  )
+  let jpeg = acceptance_image_xobject_for_test(
+    doc,
+    pages[0].resources,
+    acceptance_name_for_test("/ImAliasJpeg"),
+  )
+  guard jpeg is PdfStreamObject(jpeg_stream) else {
+    fail("expected alias JPEG stream")
+  }
+  @test.assert_eq(
+    jpeg_stream.dictionary.lookup_immediate(acceptance_name_for_test("/W")),
+    Some(PdfInteger(1)),
+  )
+  @test.assert_eq(
+    jpeg_stream.dictionary.lookup_immediate(acceptance_name_for_test("/H")),
+    Some(PdfInteger(1)),
+  )
+  @test.assert_eq(
+    jpeg_stream.dictionary.lookup_immediate(acceptance_name_for_test("/F")),
+    Some(PdfNameObject(acceptance_name_for_test("/DCT"))),
+  )
+  @test.assert_eq(
+    doc.get_image_24bpp(pages[0].resources, jpeg),
+    PdfJPEG(
+      acceptance_encoded_image_alias_jpeg_payload_for_test(),
+      Some([0.0, 1.0, -80.0, 90.0, -70.0, 85.0]),
+    ),
+  )
+  let jpx = acceptance_image_xobject_for_test(
+    doc,
+    pages[0].resources,
+    acceptance_name_for_test("/ImAliasJpx"),
+  )
+  guard jpx is PdfStreamObject(jpx_stream) else {
+    fail("expected alias JPX stream")
+  }
+  @test.assert_eq(
+    jpx_stream.dictionary.lookup_immediate(acceptance_name_for_test("/F")),
+    Some(PdfNameObject(acceptance_name_for_test("/JPXDecode"))),
+  )
+  @test.assert_eq(
+    doc.get_image_24bpp(pages[0].resources, jpx),
+    PdfJPEG2000(
+      acceptance_encoded_image_alias_jpx_payload_for_test(),
+      Some([0.0, 1.0, 1.0, 0.0, 0.0, 1.0]),
+    ),
+  )
+  let jbig2 = acceptance_image_xobject_for_test(
+    doc,
+    pages[0].resources,
+    acceptance_name_for_test("/ImAliasJbig2"),
+  )
+  guard jbig2 is PdfStreamObject(jbig2_stream) else {
+    fail("expected alias JBIG2 stream")
+  }
+  @test.assert_eq(
+    jbig2_stream.dictionary.lookup_immediate(acceptance_name_for_test("/DP")),
+    Some(
+      @pdflite.pdf_dictionary([
+        (acceptance_name_for_test("/JBIG2Globals"), PdfIndirect(198)),
+      ]),
+    ),
+  )
+  @test.assert_eq(
+    doc.get_image_24bpp(pages[0].resources, jbig2),
+    PdfJBIG2(
+      acceptance_encoded_image_alias_jbig2_payload_for_test(),
+      None,
+      Some(198),
+    ),
+  )
+  guard doc.lookup_object_or_null(198) is PdfStreamObject(globals) else {
+    fail("expected JBIG2 globals stream")
+  }
+  @test.assert_eq(
+    @pdflite.pdf_stream(globals.dictionary, globals.data).stream_bytes(),
+    acceptance_ascii_for_test("alias-jbig2-globals"),
   )
 }
 
@@ -9248,6 +9552,19 @@ test "native acceptance suite extracts images through reader boundaries" {
   acceptance_assert_image_lifecycle_for_test(decompressed)
   let reparsed = acceptance_compressed_roundtrip_for_test(decompressed)
   acceptance_assert_image_lifecycle_for_test(reparsed)
+}
+
+///|
+test "native acceptance suite preserves encoded image aliases through reader boundaries" {
+  let parsed = acceptance_compressed_roundtrip_for_test(
+    acceptance_encoded_image_alias_document_for_test(),
+  )
+  acceptance_assert_encoded_image_aliases_for_test(parsed)
+  let decompressed = parsed.copy()
+  decompressed.pdf_decode_streams_until_unknown()
+  acceptance_assert_encoded_image_aliases_for_test(decompressed)
+  let reparsed = acceptance_compressed_roundtrip_for_test(decompressed)
+  acceptance_assert_encoded_image_aliases_for_test(reparsed)
 }
 
 ///|
