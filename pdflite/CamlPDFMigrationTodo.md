@@ -1947,6 +1947,12 @@ Current backend snapshot:
   for UCS2, UTF16, UTF8, UTF32, vertical variants, malformed text rejection, and
   multibyte UTF8 `/ToUnicode` overrides. `moon test --target native` now reports
   1350/1350 tests passing.~~
+- [x] ~~Add the sixty-fifth pre-refactor correctness sentinel: native
+  compressed reader boundaries now preserve ToUnicode parser corner cases for
+  split bfchar entries, multiline bfrange arrays, PDF comments, whitespace and
+  odd-nibble hex strings, supplementary-plane mappings, multi-codepoint entries,
+  and unmapped fallback bytes. `moon test --target native` now reports 1351/1351
+  tests passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.

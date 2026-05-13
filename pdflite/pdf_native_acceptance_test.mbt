@@ -836,6 +836,137 @@ fn acceptance_assert_tounicode_variation_text_for_test(
 }
 
 ///|
+fn acceptance_tounicode_parser_corner_cmap_for_test() -> @pdflite.PdfObject {
+  let cmap = acceptance_ascii_for_test(
+    "% /Identity-H usecmap\n" +
+    "/WMode 1 def % /WMode 0 def\n" +
+    "2 beginbfchar\n" +
+    "<41>\n" +
+    "<00 5A>\n" +
+    "<4><006> % odd nibbles are padded\n" +
+    "endbfchar\n" +
+    "3 beginbfrange\n" +
+    "<43><45>[\n" +
+    "<0061>\n" +
+    "<00620063> % multi-codepoint mapping\n" +
+    "<D834 DD1E>\n" +
+    "]\n" +
+    "<46><47><0064>\n" +
+    "<48><49>[<0066> % <9999>\n" +
+    "<0067>]\n" +
+    "endbfrange\n" +
+    "1 beginbfchar <4A><03A9> endbfchar\n",
+  )
+  let encoded = @pdflite.pdf_flate_encode(cmap)
+  @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (acceptance_name_for_test("/Length"), PdfInteger(encoded.length())),
+      (
+        acceptance_name_for_test("/Filter"),
+        PdfNameObject(acceptance_name_for_test("/FlateDecode")),
+      ),
+    ]),
+    StreamGot(encoded),
+  )
+}
+
+///|
+fn acceptance_tounicode_parser_corner_document_for_test() -> @pdflite.PdfDocument raise {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  doc.add_object_given_number(
+    64,
+    acceptance_tounicode_parser_corner_cmap_for_test(),
+  )
+  let font = @pdflite.pdf_dictionary([
+    (
+      acceptance_name_for_test("/Subtype"),
+      PdfNameObject(acceptance_name_for_test("/Type1")),
+    ),
+    (
+      acceptance_name_for_test("/BaseFont"),
+      PdfNameObject(acceptance_name_for_test("/ParserCornerFont")),
+    ),
+    (acceptance_name_for_test("/ToUnicode"), PdfIndirect(64)),
+  ])
+  let resources = @pdflite.pdf_dictionary([
+    (
+      acceptance_name_for_test("/Font"),
+      @pdflite.pdf_dictionary([(acceptance_name_for_test("/FCorner"), font)]),
+    ),
+  ])
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [
+      @pdflite.pdf_content_stream_of_ops([
+        Op_BT,
+        Op_Tf(acceptance_name_for_test("/FCorner"), 12.0),
+        Op_Tj(
+          acceptance_text_bytes_for_test([
+            0x41, 0x40, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4A, 0x4B,
+          ]),
+        ),
+        Op_ET,
+      ]),
+    ],
+    resources,
+  }
+  let page_root = doc.add_pagetree([page])
+  ignore(doc.add_root(page_root, []))
+  doc
+}
+
+///|
+fn acceptance_assert_tounicode_parser_corner_text_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(doc.version(), (1, 5))
+  @test.assert_eq(doc.endpage(), 1)
+  @test.assert_eq(
+    acceptance_font_codepoints_of_first_page_for_test(
+      doc,
+      acceptance_name_for_test("/FCorner"),
+    ),
+    [
+      0x5A, 0x60, 0x61, 0x62, 0x63, 0x1D11E, 0x64, 0x65, 0x66, 0x67, 0x03A9, 0x4B,
+    ],
+  )
+  let pages = doc.pages_of_pagetree()
+  let font = acceptance_font_object_by_name_for_test(
+    pages[0].resources,
+    acceptance_name_for_test("/FCorner"),
+  )
+  guard doc.read_font(font) is PdfFontSimple(simple) else {
+    fail("expected simple font with parser-corner ToUnicode")
+  }
+  guard simple.fontdescriptor is Some(descriptor) else {
+    fail("expected descriptor carrying parser-corner ToUnicode")
+  }
+  @test.assert_eq(
+    descriptor.tounicode,
+    Some([
+      (0x41, acceptance_text_bytes_for_test([0x00, 0x5A])),
+      (0x40, acceptance_text_bytes_for_test([0x00, 0x60])),
+      (0x43, acceptance_text_bytes_for_test([0x00, 0x61])),
+      (0x44, acceptance_text_bytes_for_test([0x00, 0x62, 0x00, 0x63])),
+      (0x45, acceptance_text_bytes_for_test([0xD8, 0x34, 0xDD, 0x1E])),
+      (0x46, acceptance_text_bytes_for_test([0x00, 0x64])),
+      (0x47, acceptance_text_bytes_for_test([0x00, 0x65])),
+      (0x48, acceptance_text_bytes_for_test([0x00, 0x66])),
+      (0x49, acceptance_text_bytes_for_test([0x00, 0x67])),
+      (0x4A, acceptance_text_bytes_for_test([0x03, 0xA9])),
+    ]),
+  )
+  let extractor = doc.text_extractor_of_font(font)
+  @test.assert_eq(extractor.charcode_of_codepoint(0x5A), Some(0x41))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x60), Some(0x40))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x1D11E), Some(0x45))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x67), Some(0x49))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x03A9), Some(0x4A))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x62), None)
+}
+
+///|
 fn acceptance_type3_tounicode_stream_for_test() -> @pdflite.PdfObject {
   let cmap = acceptance_ascii_for_test(
     "1 begincodespacerange\n" +
@@ -7221,6 +7352,16 @@ test "native acceptance suite extracts ToUnicode variation text through reader b
   acceptance_assert_tounicode_variation_text_for_test(parsed)
   let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
   acceptance_assert_tounicode_variation_text_for_test(reparsed)
+}
+
+///|
+test "native acceptance suite extracts ToUnicode parser corner cases through reader boundaries" {
+  let parsed = acceptance_compressed_roundtrip_for_test(
+    acceptance_tounicode_parser_corner_document_for_test(),
+  )
+  acceptance_assert_tounicode_parser_corner_text_for_test(parsed)
+  let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
+  acceptance_assert_tounicode_parser_corner_text_for_test(reparsed)
 }
 
 ///|
