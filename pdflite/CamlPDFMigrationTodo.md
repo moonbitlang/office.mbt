@@ -2037,6 +2037,11 @@ Current backend snapshot:
   objects, streams without `/Type /XRef`, xref streams with an explicit wrong
   type, and xref streams with non-name `/Type` values. `moon test --target
   native` now reports 1365/1365 tests passing.~~
+- [x] ~~Add the eightieth pre-refactor correctness sentinel: native classic
+  xref parsing now preserves tokenized/unpadded xref rows and CR-only line
+  endings through strict reads, public reads, normalized writes, and reread
+  stability. `moon test --target native` now reports 1366/1366 tests
+  passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.

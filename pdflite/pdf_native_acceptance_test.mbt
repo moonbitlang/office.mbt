@@ -6962,6 +6962,46 @@ fn acceptance_pdf_with_tolerated_malformed_xref_for_test() -> @pdflite.PdfBytes 
 }
 
 ///|
+fn acceptance_cr_line_endings_for_test(
+  bytes : @pdflite.PdfBytes,
+) -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  for byte in bytes {
+    output.push(if byte.to_int() == 10 { (13).to_byte() } else { byte })
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn acceptance_pdf_with_tokenized_xref_rows_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  acceptance_push_ascii_for_test(output, "%PDF-1.4\n")
+  let catalog_offset = acceptance_push_indirect_object_for_test(
+    output, 1, 0, "<< /Type /Catalog /Pages 2 0 R >>",
+  )
+  let pages_offset = acceptance_push_indirect_object_for_test(
+    output, 2, 0, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+  )
+  let page_offset = acceptance_push_indirect_object_for_test(
+    output, 3, 0, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 10 10] /Resources << >> >>",
+  )
+  let xref_offset = output.length()
+  acceptance_push_ascii_for_test(output, "xref\n1 3\n")
+  acceptance_push_ascii_for_test(output, catalog_offset.to_string())
+  acceptance_push_ascii_for_test(output, " 0 n\n")
+  acceptance_push_ascii_for_test(output, pages_offset.to_string())
+  acceptance_push_ascii_for_test(output, " 0 n\n")
+  acceptance_push_ascii_for_test(output, page_offset.to_string())
+  acceptance_push_ascii_for_test(output, " 0 n\n")
+  acceptance_push_ascii_for_test(
+    output, "trailer\n<< /Root 1 0 R /Size 4 >>\nstartxref\n",
+  )
+  acceptance_push_ascii_for_test(output, xref_offset.to_string())
+  acceptance_push_ascii_for_test(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn acceptance_assert_minimal_page_tree_for_test(
   doc : @pdflite.PdfDocument,
 ) -> Unit raise {
@@ -10645,6 +10685,31 @@ test "native acceptance suite normalizes tolerated malformed classic xrefs" {
   acceptance_assert_minimal_page_tree_for_test(parsed)
   let normalized = try! @pdflite.pdf_write_document(parsed)
   let reparsed = try! @pdflite.pdf_read_document_from_bytes(normalized)
+  acceptance_assert_minimal_page_tree_for_test(reparsed)
+}
+
+///|
+test "native acceptance suite normalizes tokenized and CR-only classic xrefs" {
+  let tokenized = acceptance_pdf_with_tokenized_xref_rows_for_test()
+  let strict_tokenized = @pdflite.pdf_read_classic_document_from_bytes(
+    tokenized,
+  )
+  @test.assert_eq(strict_tokenized.first_xref() > 0, true)
+  acceptance_assert_minimal_page_tree_for_test(strict_tokenized)
+  let public_tokenized = @pdflite.pdf_read_document_from_bytes(tokenized)
+  @test.assert_eq(public_tokenized.first_xref() > 0, true)
+  acceptance_assert_minimal_page_tree_for_test(public_tokenized)
+
+  let cr_only = acceptance_cr_line_endings_for_test(tokenized)
+  let strict_cr = @pdflite.pdf_read_classic_document_from_bytes(cr_only)
+  @test.assert_eq(strict_cr.first_xref() > 0, true)
+  acceptance_assert_minimal_page_tree_for_test(strict_cr)
+  let public_cr = @pdflite.pdf_read_document_from_bytes(cr_only)
+  @test.assert_eq(public_cr.first_xref() > 0, true)
+  acceptance_assert_minimal_page_tree_for_test(public_cr)
+
+  let normalized = @pdflite.pdf_write_document(public_cr)
+  let reparsed = @pdflite.pdf_read_document_from_bytes(normalized)
   acceptance_assert_minimal_page_tree_for_test(reparsed)
 }
 
