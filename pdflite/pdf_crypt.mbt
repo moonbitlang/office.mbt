@@ -2381,6 +2381,13 @@ fn pdf_crypt_low_byte(value : Int, shift : Int) -> Byte {
 }
 
 ///|
+fn pdf_crypt_push_view(output : Array[Byte], data : BytesView) -> Unit {
+  for byte in data {
+    output.push(byte)
+  }
+}
+
+///|
 /// Derive the standard-security file key from a user password.
 ///
 /// This implements revisions 2-4 key derivation. AESV3 uses wrapped file keys
@@ -2394,24 +2401,28 @@ pub fn pdf_encryption_file_key(
   file_id : BytesView,
   key_length_bits : Int,
 ) -> PdfBytes {
-  let md5 = @crypto.MD5::new()
   let padded_password = pdf_pad_password(password)
-  md5.update(padded_password[:])
-  md5.update(owner_entry)
+  let digest_input : Array[Byte] = []
+  pdf_crypt_push_view(digest_input, padded_password)
+  pdf_crypt_push_view(digest_input, owner_entry)
   let permissions_bytes : FixedArray[Byte] = [
     pdf_crypt_low_byte(permissions, 0),
     pdf_crypt_low_byte(permissions, 8),
     pdf_crypt_low_byte(permissions, 16),
     pdf_crypt_low_byte(permissions, 24),
   ]
-  md5.update(permissions_bytes)
-  md5.update(file_id)
+  for byte in permissions_bytes {
+    digest_input.push(byte)
+  }
+  pdf_crypt_push_view(digest_input, file_id)
   if revision >= 4 && no_encrypt_metadata {
     let no_metadata_marker : FixedArray[Byte] = [0xff, 0xff, 0xff, 0xff]
-    md5.update(no_metadata_marker)
+    for byte in no_metadata_marker {
+      digest_input.push(byte)
+    }
   }
   let key_length = key_length_bits / 8
-  let mut hashed = Bytes::from_array(md5.finalize())
+  let mut hashed = pdf_md5_digest(Bytes::from_array(digest_input))
   if revision >= 3 {
     for _ in 0..<50 {
       hashed = pdf_md5_digest(hashed[:key_length])
@@ -2448,10 +2459,10 @@ pub fn pdf_make_user_password_entry(
   if revision == 2 {
     pdf_arc4_crypt(key, pdf_password_padding())
   } else {
-    let md5 = @crypto.MD5::new()
-    md5.update(pdf_password_padding()[:])
-    md5.update(file_id)
-    let digest = Bytes::from_array(md5.finalize())
+    let digest_input : Array[Byte] = []
+    pdf_crypt_push_view(digest_input, pdf_password_padding())
+    pdf_crypt_push_view(digest_input, file_id)
+    let digest = pdf_md5_digest(Bytes::from_array(digest_input))
     let mut encrypted = pdf_arc4_crypt(key, digest)
     for iteration in 1..<20 {
       let iteration_key = pdf_key_xor_iteration(key, iteration)

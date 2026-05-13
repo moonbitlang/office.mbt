@@ -211,6 +211,15 @@ Current backend snapshot:
   strict `TrailerExpected` gate plus password-aware reconstruction to the later
   physical trailer, decrypted objects, and AESV2 compressed-xref re-encryption.
   `moon test --target native` now reports 1292/1292 tests passing.~~
+- [x] ~~Add the seventh pre-refactor correctness sentinel: PDF MD5 derivation
+  no longer uses the external helper's 56-byte preimage crash path, and now
+  covers both the raw length-56 digest vector and a revision-4 `/U` entry with a
+  24-byte file ID.~~
+- [x] ~~Add the eighth pre-refactor correctness sentinel: native async file
+  wrappers now cover encrypted malformed classic trailers end to end, including
+  strict `TrailerExpected`, owner-password reconstruction, no plaintext leak in
+  repaired output, and user-password round-trip. `moon test --target native`
+  now reports 1294/1294 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~

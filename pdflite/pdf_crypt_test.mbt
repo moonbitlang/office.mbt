@@ -5044,6 +5044,48 @@ test "pdf_make_user_password_entry matches CamlPDF U values" {
 }
 
 ///|
+test "pdf_make_user_password_entry handles MD5 padding boundary file IDs" {
+  let owner = crypt_model_bytes_for_test([ for value in 0..<32 => value ])
+  let file_id = @ascii.encode("123456789012345678901234")
+  @test.assert_eq(file_id.length(), 24)
+  let user_entry = try! @pdflite.pdf_make_user_password_entry(
+    false,
+    @ascii.encode("user"),
+    4,
+    owner,
+    -3904,
+    file_id,
+    128,
+  )
+  @test.assert_eq(user_entry.length(), 32)
+  @test.assert_eq(
+    @pdflite.pdf_encryption_file_key(
+      false,
+      @ascii.encode("user"),
+      4,
+      owner,
+      -3904,
+      file_id,
+      128,
+    ).length(),
+    16,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_authenticate_user_password(
+      false,
+      @ascii.encode("user"),
+      4,
+      user_entry,
+      owner,
+      -3904,
+      file_id,
+      128,
+    ),
+    true,
+  )
+}
+
+///|
 test "pdf_authenticate_user_password validates R2 and R3 user entries" {
   let owner = crypt_model_bytes_for_test([ for value in 0..<32 => value ])
   let r2_entry = try! @pdflite.pdf_make_user_password_entry(

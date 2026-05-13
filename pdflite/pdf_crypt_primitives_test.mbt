@@ -64,6 +64,15 @@ test "pdf_md5_digest matches RFC 1321 vectors" {
       0xf1, 0x61, 0xd0,
     ]),
   )
+  @test.assert_eq(
+    @pdflite.pdf_md5_digest(
+      @ascii.encode("12345678901234567890123456789012345678901234567890123456"),
+    ),
+    crypt_bytes_for_test([
+      0x49, 0xf1, 0x93, 0xad, 0xce, 0x17, 0x84, 0x90, 0xe3, 0x4d, 0x1b, 0x3a, 0x4e,
+      0xc0, 0x06, 0x4c,
+    ]),
+  )
 }
 
 ///|
