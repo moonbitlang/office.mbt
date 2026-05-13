@@ -1922,6 +1922,11 @@ Current backend snapshot:
   tolerance from disk, covering CR, CRLF, padded line breaks, and inline padding
   across strict and public file reads. `moon test --target native` now reports
   1345/1345 tests passing.~~
+- [x] ~~Add the sixtieth pre-refactor correctness sentinel: native compressed
+  reader boundaries now preserve ToUnicode variation mappings for
+  supplementary-plane bfchar entries, bfrange-array multi-codepoint entries,
+  sequential bfrange entries, fallback unmapped bytes, and reverse lookup
+  behavior. `moon test --target native` now reports 1346/1346 tests passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.
