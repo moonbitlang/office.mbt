@@ -7734,6 +7734,48 @@ fn acceptance_bad_first_object_stream_entry_pdf_for_test() -> @pdflite.PdfBytes 
 }
 
 ///|
+fn acceptance_startxref_object_pdf_for_test(body : String) -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  acceptance_push_ascii_for_test(output, "%PDF-1.5\n")
+  let offset = acceptance_push_indirect_object_for_test(output, 2, 0, body)
+  acceptance_push_ascii_for_test(output, "startxref\n")
+  acceptance_push_ascii_for_test(output, offset.to_string())
+  acceptance_push_ascii_for_test(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
+fn acceptance_xref_stream_pdf_with_type_for_test(
+  type_entry : String,
+) -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  acceptance_push_ascii_for_test(output, "%PDF-1.5\n")
+  let catalog_offset = acceptance_push_indirect_object_for_test(
+    output, 1, 0, "<< /Type /Catalog >>",
+  )
+  let xref_offset = output.length()
+  let stream_data : Array[Byte] = []
+  acceptance_push_xref_stream_entry_for_test(stream_data, 0, 0, 65535)
+  acceptance_push_xref_stream_entry_for_test(stream_data, 1, catalog_offset, 0)
+  acceptance_push_xref_stream_entry_for_test(stream_data, 1, xref_offset, 0)
+  acceptance_push_ascii_for_test(output, "2 0 obj\n")
+  acceptance_push_ascii_for_test(output, "<< ")
+  acceptance_push_ascii_for_test(output, type_entry)
+  acceptance_push_ascii_for_test(output, " /Length ")
+  acceptance_push_ascii_for_test(output, stream_data.length().to_string())
+  acceptance_push_ascii_for_test(
+    output, " /Size 3 /Root 1 0 R /W [1 4 2] >>\nstream\n",
+  )
+  for byte in stream_data {
+    output.push(byte)
+  }
+  acceptance_push_ascii_for_test(output, "\nendstream\nendobj\nstartxref\n")
+  acceptance_push_ascii_for_test(output, xref_offset.to_string())
+  acceptance_push_ascii_for_test(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn acceptance_assert_object_stream_document_for_test(
   doc : @pdflite.PdfDocument,
 ) -> Unit raise {
@@ -10416,6 +10458,39 @@ test "native acceptance suite rejects invalid object-stream data slices" {
   )
   guard public is Err(@pdflite.PdfError::StreamDataExpected) else {
     fail("expected public invalid object-stream slice failure")
+  }
+}
+
+///|
+test "native acceptance suite rejects non-xref startxref targets" {
+  let non_stream : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_document_from_bytes(
+    acceptance_startxref_object_pdf_for_test("7"),
+  )
+  guard non_stream is Err(@pdflite.PdfError::XRefExpected) else {
+    fail("expected non-stream startxref target rejection")
+  }
+
+  let wrong_stream_type : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_document_from_bytes(
+    acceptance_startxref_object_pdf_for_test(
+      "<< /Length 0 >>\nstream\n\nendstream",
+    ),
+  )
+  guard wrong_stream_type is Err(@pdflite.PdfError::XRefExpected) else {
+    fail("expected stream without xref type rejection")
+  }
+
+  let explicit_wrong_type : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    acceptance_xref_stream_pdf_with_type_for_test("/Type /Catalog"),
+  )
+  guard explicit_wrong_type is Err(@pdflite.PdfError::XRefExpected) else {
+    fail("expected explicit wrong xref stream type rejection")
+  }
+
+  let non_name_type : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    acceptance_xref_stream_pdf_with_type_for_test("/Type 99"),
+  )
+  guard non_name_type is Err(@pdflite.PdfError::XRefExpected) else {
+    fail("expected non-name xref stream type rejection")
   }
 }
 

@@ -2032,6 +2032,11 @@ Current backend snapshot:
   points beyond the encoded member table, including strict and public reader
   failures before any partial document is accepted. `moon test --target native`
   now reports 1364/1364 tests passing.~~
+- [x] ~~Add the seventy-ninth pre-refactor correctness sentinel: native readers
+  now reject invalid `startxref` targets that point at non-xref indirect
+  objects, streams without `/Type /XRef`, xref streams with an explicit wrong
+  type, and xref streams with non-name `/Type` values. `moon test --target
+  native` now reports 1365/1365 tests passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.
