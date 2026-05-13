@@ -277,6 +277,11 @@ Current backend snapshot:
   stream `/N` and `/First` bounds are indirect objects, then rewrite and reread
   the recovered document through compressed xref output. `moon test --target
   native` now reports 1304/1304 tests passing.~~
+- [x] ~~Add the nineteenth pre-refactor correctness sentinel: native async file
+  wrappers now reconstruct bad-startxref xref-stream documents whose object
+  stream `/Filter` is an indirect object, preserve the retained object-stream
+  filter reference, and rewrite/reread the recovered compressed object. `moon
+  test --target native` now reports 1305/1305 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~

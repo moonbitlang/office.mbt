@@ -873,6 +873,79 @@ fn pdf_async_io_indirect_object_stream_bounds_bad_startxref_for_test() -> @pdfli
 }
 
 ///|
+fn pdf_async_io_indirect_object_stream_filter_bad_startxref_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
+  let catalog_offset = output.length()
+  pdf_async_io_write_indirect_object_for_test(
+    output,
+    1,
+    @pdflite.pdf_dictionary([
+      (
+        pdf_async_io_name_for_test("/Type"),
+        PdfNameObject(pdf_async_io_name_for_test("/Catalog")),
+      ),
+    ]),
+  )
+  let filter_offset = output.length()
+  pdf_async_io_write_indirect_object_for_test(
+    output,
+    2,
+    PdfNameObject(pdf_async_io_name_for_test("/ASCIIHexDecode")),
+  )
+  let object_stream_data : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(object_stream_data, "5 0 ")
+  let first = object_stream_data.length()
+  pdf_async_io_push_ascii_for_test(object_stream_data, "<< /Answer 42 >>")
+  let encoded_object_stream = @pdflite.pdf_ascii_hex_encode(
+    Bytes::from_array(object_stream_data),
+  )
+  let object_stream_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "3 0 obj\n")
+  pdf_async_io_push_ascii_for_test(output, "<< /Type /ObjStm /N 1 /First ")
+  pdf_async_io_push_ascii_for_test(output, first.to_string())
+  pdf_async_io_push_ascii_for_test(output, " /Filter 2 0 R /Length ")
+  pdf_async_io_push_ascii_for_test(
+    output,
+    encoded_object_stream.length().to_string(),
+  )
+  pdf_async_io_push_ascii_for_test(output, " >>\nstream\n")
+  for byte in encoded_object_stream {
+    output.push(byte)
+  }
+  pdf_async_io_push_ascii_for_test(output, "\nendstream\nendobj\n")
+  let xref_offset = output.length()
+  let xref_data : Array[Byte] = []
+  pdf_async_io_push_xref_stream_entry_for_test(xref_data, 0, 0, 65535)
+  pdf_async_io_push_xref_stream_entry_for_test(xref_data, 1, catalog_offset, 0)
+  pdf_async_io_push_xref_stream_entry_for_test(xref_data, 1, filter_offset, 0)
+  pdf_async_io_push_xref_stream_entry_for_test(
+    xref_data, 1, object_stream_offset, 0,
+  )
+  pdf_async_io_push_xref_stream_entry_for_test(xref_data, 1, xref_offset, 0)
+  pdf_async_io_push_xref_stream_entry_for_test(xref_data, 2, 3, 0)
+  let xref_stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (
+        pdf_async_io_name_for_test("/Type"),
+        PdfNameObject(pdf_async_io_name_for_test("/XRef")),
+      ),
+      (pdf_async_io_name_for_test("/Size"), PdfInteger(6)),
+      (pdf_async_io_name_for_test("/Root"), PdfIndirect(1)),
+      (
+        pdf_async_io_name_for_test("/W"),
+        PdfArray([PdfInteger(1), PdfInteger(4), PdfInteger(2)]),
+      ),
+      (pdf_async_io_name_for_test("/Length"), PdfInteger(xref_data.length())),
+    ]),
+    StreamGot(Bytes::from_array(xref_data)),
+  )
+  pdf_async_io_write_indirect_object_for_test(output, 4, xref_stream)
+  pdf_async_io_push_ascii_for_test(output, "startxref\n0\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn pdf_async_io_encrypted_object_stream_pdf_for_test(
   user_password : BytesView,
   owner_password : BytesView,
@@ -1542,6 +1615,55 @@ async test "async file wrappers reconstruct indirect object-stream bounds" {
   @test.assert_eq(reparsed.first_xref() > 0, true)
   @test.assert_eq(
     reparsed.lookup_object_or_null(7),
+    PdfDictionary([(pdf_async_io_name_for_test("/Answer"), PdfInteger(42))]),
+  )
+}
+
+///|
+async test "async file wrappers reconstruct object streams with indirect filters" {
+  let path = pdf_async_io_test_path_for_test("indirect_objstm_filter")
+  let repaired_path = pdf_async_io_test_path_for_test(
+    "indirect_objstm_filter_repaired",
+  )
+  pdf_async_io_remove_if_exists_for_test(path)
+  pdf_async_io_remove_if_exists_for_test(repaired_path)
+  @fs.write_file(
+    path,
+    pdf_async_io_indirect_object_stream_filter_bad_startxref_for_test(),
+    create=0o644,
+  )
+  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 5 })
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(path).binary(),
+  )
+  guard strict is Err(@pdflite.PdfError::XRefExpected) else {
+    fail("expected strict XRefExpected")
+  }
+  let recovered = pdf_read_document_from_file(path)
+  @test.assert_eq(recovered.first_xref(), 0)
+  @test.assert_eq(recovered.object_numbers(), [1, 2, 3, 5])
+  @test.assert_eq(
+    recovered.lookup_object_or_null(5),
+    PdfDictionary([(pdf_async_io_name_for_test("/Answer"), PdfInteger(42))]),
+  )
+  guard recovered.lookup_object_or_null(3) is PdfStreamObject(object_stream) else {
+    fail("expected object stream")
+  }
+  @test.assert_eq(
+    object_stream.dictionary.lookup_immediate(
+      pdf_async_io_name_for_test("/Filter"),
+    ),
+    Some(PdfIndirect(2)),
+  )
+  pdf_write_document_to_file_with_compressed_xref_stream(
+    recovered, repaired_path,
+  )
+  let reparsed = pdf_read_document_from_file(repaired_path)
+  pdf_async_io_remove_if_exists_for_test(path)
+  pdf_async_io_remove_if_exists_for_test(repaired_path)
+  @test.assert_eq(reparsed.first_xref() > 0, true)
+  @test.assert_eq(
+    reparsed.lookup_object_or_null(5),
     PdfDictionary([(pdf_async_io_name_for_test("/Answer"), PdfInteger(42))]),
   )
 }
