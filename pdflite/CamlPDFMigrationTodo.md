@@ -391,6 +391,10 @@ Current backend snapshot:
   file wrappers now preserve classic free xref entries during bad-`startxref`
   reconstruction while still keeping later physical updates for the same object
   number. `moon test --target native` now reports 1327/1327 tests passing.~~
+- [x] ~~Add the forty-second pre-refactor correctness sentinel: native async
+  file wrappers now reconstruct classic `/Prev` chains with a bad final
+  `startxref`, preserving the newest revision and sanitizing `/Prev`.
+  `moon test --target native` now reports 1328/1328 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~

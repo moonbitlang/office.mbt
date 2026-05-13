@@ -974,6 +974,51 @@ fn pdf_async_io_classic_xref_deleted_payload_bad_startxref_for_test(
 }
 
 ///|
+fn pdf_async_io_classic_catalog_pdf_with_prev_xref_bad_startxref_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  let original_offset = output.length()
+  pdf_async_io_write_indirect_object_for_test(
+    output,
+    1,
+    @pdflite.pdf_dictionary([
+      (
+        pdf_async_io_name_for_test("/Type"),
+        PdfNameObject(pdf_async_io_name_for_test("/Catalog")),
+      ),
+      (pdf_async_io_name_for_test("/Revision"), PdfInteger(1)),
+    ]),
+  )
+  let base_xref = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref\n0 2\n0000000000 65535 f \n")
+  pdf_async_io_push_classic_xref_entry_for_test(output, original_offset, 0)
+  pdf_async_io_push_classic_trailer_for_test(output, base_xref, 2)
+  let updated_offset = output.length()
+  pdf_async_io_write_indirect_object_for_test(
+    output,
+    1,
+    @pdflite.pdf_dictionary([
+      (
+        pdf_async_io_name_for_test("/Type"),
+        PdfNameObject(pdf_async_io_name_for_test("/Catalog")),
+      ),
+      (pdf_async_io_name_for_test("/Revision"), PdfInteger(2)),
+    ]),
+  )
+  let second_offset = output.length()
+  pdf_async_io_write_indirect_object_for_test(output, 2, PdfInteger(3))
+  pdf_async_io_push_ascii_for_test(output, "xref\n1 2\n")
+  pdf_async_io_push_classic_xref_entry_for_test(output, updated_offset, 0)
+  pdf_async_io_push_classic_xref_entry_for_test(output, second_offset, 0)
+  pdf_async_io_push_ascii_for_test(
+    output, "trailer\n<< /Root 1 0 R /Size 3 /Prev ",
+  )
+  pdf_async_io_push_ascii_for_test(output, base_xref.to_string())
+  pdf_async_io_push_ascii_for_test(output, " >>\nstartxref\n0\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn pdf_async_io_malformed_pdf_with_bad_xref_entry_for_test() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
@@ -3570,6 +3615,42 @@ async test "async file wrappers preserve classic free entries during reconstruct
   @test.assert_eq(later.root(), 1)
   @test.assert_eq(later.object_numbers(), [1, 2])
   @test.assert_eq(later.lookup_object_or_null(2), PdfInteger(99))
+}
+
+///|
+async test "async file wrappers reconstruct classic Prev chains with bad startxref" {
+  let path = pdf_async_io_test_path_for_test("classic_prev_bad_startxref")
+  pdf_async_io_remove_if_exists_for_test(path)
+  @fs.write_file(
+    path,
+    pdf_async_io_classic_catalog_pdf_with_prev_xref_bad_startxref_for_test(),
+    create=0o644,
+  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(path).binary(),
+  )
+  guard strict is Err(_) else {
+    fail("expected strict classic Prev bad-startxref failure")
+  }
+  let recovered = pdf_read_document_from_file(path)
+  pdf_async_io_remove_if_exists_for_test(path)
+  @test.assert_eq(recovered.version(), (1, 4))
+  @test.assert_eq(recovered.first_xref(), 0)
+  @test.assert_eq(recovered.root(), 1)
+  @test.assert_eq(recovered.object_numbers(), [1, 2])
+  @test.assert_eq(
+    recovered
+    .lookup_object_or_null(1)
+    .lookup_immediate(pdf_async_io_name_for_test("/Revision")),
+    Some(PdfInteger(2)),
+  )
+  @test.assert_eq(recovered.lookup_object_or_null(2), PdfInteger(3))
+  @test.assert_eq(
+    recovered
+    .trailer_dict()
+    .lookup_immediate(pdf_async_io_name_for_test("/Prev")),
+    None,
+  )
 }
 
 ///|
