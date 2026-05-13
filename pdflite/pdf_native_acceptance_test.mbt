@@ -139,6 +139,36 @@ fn acceptance_corrupt_first_in_use_xref_marker_for_test(
 }
 
 ///|
+fn acceptance_mark_classic_xref_entry_free_for_test(
+  bytes : @pdflite.PdfBytes,
+  object_number : Int,
+) -> @pdflite.PdfBytes raise {
+  if object_number < 0 {
+    fail("expected non-negative classic xref object number")
+  }
+  let header = acceptance_ascii_for_test("xref\n0 ")
+  let header_position = acceptance_find_bytes_for_test(bytes, header)
+  if header_position < 0 {
+    fail("expected first classic xref subsection header")
+  }
+  let mut header_end = header_position + header.length()
+  while header_end < bytes.length() && bytes[header_end] != b'\n' {
+    header_end += 1
+  }
+  let row_start = header_end + 1 + object_number * 20
+  let marker_position = row_start + 17
+  if marker_position >= bytes.length() || bytes[marker_position] != b'n' {
+    fail("expected in-use classic xref entry")
+  }
+  let output : Array[Byte] = []
+  for byte in bytes {
+    output.push(byte)
+  }
+  output[marker_position] = b'f'
+  Bytes::from_array(output)
+}
+
+///|
 fn acceptance_corrupt_first_xref_subsection_count_for_test(
   bytes : @pdflite.PdfBytes,
 ) -> @pdflite.PdfBytes raise {
@@ -7042,6 +7072,89 @@ test "native acceptance suite decrypts reconstructed encrypted missing-root trai
     acceptance_find_bytes_for_test(
       rerendered,
       acceptance_ascii_for_test("native-acceptance-missing-root-trailer-secret"),
+    ) <
+    0,
+    true,
+  )
+  let roundtrip = acceptance_unwrap_decryption_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      rerendered,
+      user_password=Some(user_password),
+    ),
+  )
+  @test.assert_eq(roundtrip.denied_permissions, denied)
+  acceptance_assert_one_page_invariants_for_test(roundtrip.document, (1, 5))
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(60), secret)
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(61), added_object)
+}
+
+///|
+test "native acceptance suite decrypts reconstructed encrypted catalogs missing from xref" {
+  let doc = acceptance_one_page_document_for_test()
+  let secret = acceptance_secret_object_for_test(
+    "native-acceptance-catalog-missing-xref-secret",
+  )
+  doc.add_object_given_number(60, secret)
+  let user_password = acceptance_ascii_for_test("user")
+  let owner_password = acceptance_ascii_for_test("owner")
+  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let encrypted = doc.encrypt_128bit_aesv2_with_iv_provider(
+    user_password,
+    owner_password,
+    denied,
+    fn(object_number, generation, index) {
+      acceptance_aes_iv_for_test(object_number, generation, index + 25)
+    },
+    encrypt_metadata=false,
+    file_id=acceptance_ascii_for_test(
+      "native-acceptance-catalog-missing-xref-id",
+    ),
+  )
+  let root_number = encrypted.root()
+  let rendered = @pdflite.pdf_write_document(encrypted)
+  let malformed = acceptance_mark_classic_xref_entry_free_for_test(
+    rendered, root_number,
+  )
+  let strict = @pdflite.pdf_read_classic_document_from_bytes(malformed)
+  @test.assert_eq(strict.root(), root_number)
+  let strict_catalog : Result[@pdflite.PdfObject, Error] = try? strict.catalog()
+  guard strict_catalog is Err(@pdflite.PdfError::RootExpected) else {
+    fail("expected missing root object to require reconstruction")
+  }
+  @test.assert_eq(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      malformed,
+      user_password=Some(acceptance_ascii_for_test("bad-user")),
+    ),
+    None,
+  )
+  let decrypted = acceptance_unwrap_decryption_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      malformed,
+      owner_password=Some(owner_password),
+    ),
+  )
+  @test.assert_eq(decrypted.document.first_xref(), 0)
+  @test.assert_eq(decrypted.denied_permissions, denied)
+  acceptance_assert_one_page_invariants_for_test(decrypted.document, (1, 4))
+  @test.assert_eq(decrypted.document.lookup_object_or_null(60), secret)
+  let added_object : @pdflite.PdfObject = PdfString(
+    acceptance_ascii_for_test("catalog-missing-xref-recrypt-added"),
+  )
+  decrypted.document.add_object_given_number(61, added_object)
+  let recrypted = decrypted.document.recrypt_with_password_aesv2_with_iv_provider(
+    owner_password,
+    fn(object_number, generation, index) {
+      acceptance_aes_iv_for_test(object_number, generation, index + 26)
+    },
+  )
+  let rerendered = @pdflite.pdf_write_document_with_compressed_xref_stream(
+    recrypted,
+  )
+  @test.assert_eq(
+    acceptance_find_bytes_for_test(
+      rerendered,
+      acceptance_ascii_for_test("native-acceptance-catalog-missing-xref-secret"),
     ) <
     0,
     true,

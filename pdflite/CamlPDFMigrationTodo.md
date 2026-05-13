@@ -231,6 +231,13 @@ Current backend snapshot:
   including strict `RootExpected`, owner-password reconstruction, no plaintext
   leak in repaired output, and user-password round-trip. `moon test --target
   native` now reports 1296/1296 tests passing.~~
+- [x] ~~Add the eleventh pre-refactor correctness sentinel: encrypted classic
+  documents whose trailer `/Root` object is physically present but marked free
+  in a valid xref table now reconstruct through the password-aware probe path.
+  Recovery no longer treats a trailer root's free xref entry as covering the
+  physical object, still preserves deleted non-root free entries, and validates
+  bad-password fallback. `moon test --target native` now reports 1297/1297 tests
+  passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~
