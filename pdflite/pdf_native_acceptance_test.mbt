@@ -7579,6 +7579,60 @@ fn acceptance_bad_first_object_stream_physical_page_tree_pdf_for_test() -> @pdfl
 }
 
 ///|
+fn acceptance_mismatched_object_stream_root_pdf_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  acceptance_push_ascii_for_test(output, "%PDF-1.5\n")
+  let object_stream_data : Array[Byte] = []
+  acceptance_push_ascii_for_test(object_stream_data, "2 0 ")
+  let first = object_stream_data.length()
+  acceptance_push_ascii_for_test(
+    object_stream_data, "<< /Type /Catalog /Mismatched true >>",
+  )
+  let object_stream_offset = output.length()
+  acceptance_push_ascii_for_test(output, "3 0 obj\n")
+  acceptance_push_ascii_for_test(output, "<< /Type /ObjStm /N 1 /First ")
+  acceptance_push_ascii_for_test(output, first.to_string())
+  acceptance_push_ascii_for_test(output, " /Length ")
+  acceptance_push_ascii_for_test(
+    output,
+    object_stream_data.length().to_string(),
+  )
+  acceptance_push_ascii_for_test(output, " >>\nstream\n")
+  for byte in object_stream_data {
+    output.push(byte)
+  }
+  acceptance_push_ascii_for_test(output, "\nendstream\nendobj\n")
+  let xref_offset = output.length()
+  let stream_data : Array[Byte] = []
+  acceptance_push_xref_stream_entry_for_test(stream_data, 0, 0, 65535)
+  acceptance_push_xref_stream_entry_for_test(stream_data, 2, 3, 0)
+  acceptance_push_xref_stream_entry_for_test(stream_data, 0, 0, 0)
+  acceptance_push_xref_stream_entry_for_test(
+    stream_data, 1, object_stream_offset, 0,
+  )
+  acceptance_push_xref_stream_entry_for_test(stream_data, 1, xref_offset, 0)
+  acceptance_push_ascii_for_test(output, "4 0 obj\n")
+  acceptance_push_ascii_for_test(output, "<< /Type /XRef /Length ")
+  acceptance_push_ascii_for_test(output, stream_data.length().to_string())
+  acceptance_push_ascii_for_test(
+    output, " /Size 5 /Root 1 0 R /W [1 4 2] >>\nstream\n",
+  )
+  for byte in stream_data {
+    output.push(byte)
+  }
+  acceptance_push_ascii_for_test(output, "\nendstream\nendobj\n")
+  ignore(
+    acceptance_push_indirect_object_for_test(
+      output, 1, 0, "<< /Type /Catalog /PhysicalFallback true >>",
+    ),
+  )
+  acceptance_push_ascii_for_test(output, "startxref\n")
+  acceptance_push_ascii_for_test(output, xref_offset.to_string())
+  acceptance_push_ascii_for_test(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn acceptance_assert_object_stream_document_for_test(
   doc : @pdflite.PdfDocument,
 ) -> Unit raise {
@@ -10193,6 +10247,23 @@ test "native acceptance suite reconstructs physical page trees when object-strea
   let reparsed = @pdflite.pdf_read_document_from_bytes(rewritten)
   @test.assert_eq(try! reparsed.endpage(), 1)
   @test.assert_eq(try! reparsed.page_reference_numbers(), [5])
+}
+
+///|
+test "native acceptance suite rejects mismatched object-stream root recovery" {
+  let bytes = acceptance_mismatched_object_stream_root_pdf_for_test()
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    bytes,
+  )
+  guard strict is Err(@pdflite.PdfError::XRefEntryExpected) else {
+    fail("expected strict object-stream root mismatch failure")
+  }
+  let public : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_document_from_bytes(
+    bytes,
+  )
+  guard public is Err(@pdflite.PdfError::XRefEntryExpected) else {
+    fail("expected public reader to reject physical fallback after mismatch")
+  }
 }
 
 ///|

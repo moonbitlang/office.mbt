@@ -2015,6 +2015,12 @@ Current backend snapshot:
   compressed xref-stream rewrite, retained object-stream payload checks, and
   reread stability. `moon test --target native` now reports 1361/1361 tests
   passing.~~
+- [x] ~~Add the seventy-sixth pre-refactor correctness sentinel: native
+  object-stream recovery now rejects mismatched xref-stream entries whose
+  embedded object number disagrees with the requested root, including strict
+  failure, public-reader failure, and protection against accepting a later
+  physical fallback object when xref metadata is available. `moon test --target
+  native` now reports 1362/1362 tests passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.
