@@ -438,6 +438,11 @@ Current backend snapshot:
   deferred stream data while ignoring `stream` tokens that appear only in length
   object comments. `moon test --target native` now reports 1337/1337 tests
   passing.~~
+- [x] ~~Add the fifty-second pre-refactor correctness sentinel: native async file
+  fixtures now preserve strict classic xref object mismatch errors from disk,
+  distinguishing wrong object numbers (`XRefEntryExpected`) from unparseable
+  xref targets (`ParseIndirectObjectExpected`). `moon test --target native` now
+  reports 1338/1338 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~

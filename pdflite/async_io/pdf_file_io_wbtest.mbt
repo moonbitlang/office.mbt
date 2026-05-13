@@ -1315,6 +1315,33 @@ fn pdf_async_io_classic_pdf_with_missing_indirect_stream_length_for_test() -> @p
 }
 
 ///|
+fn pdf_async_io_classic_pdf_with_mismatched_object_xref_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  let object_offset = pdf_async_io_push_raw_indirect_object_for_test(
+    output, 2, 0, "2",
+  )
+  let xref_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref\n1 1\n")
+  pdf_async_io_push_classic_xref_entry_for_test(output, object_offset, 0)
+  pdf_async_io_push_classic_trailer_for_test(output, xref_offset, 2)
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_async_io_classic_pdf_with_unparseable_xref_object_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  let object_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "notobject\n")
+  let xref_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref\n1 1\n")
+  pdf_async_io_push_classic_xref_entry_for_test(output, object_offset, 0)
+  pdf_async_io_push_classic_trailer_for_test(output, xref_offset, 2)
+  Bytes::from_array(output)
+}
+
+///|
 fn pdf_async_io_classic_pdf_with_commented_indirect_stream_length_for_test() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
@@ -4278,6 +4305,42 @@ async test "async file wrappers reconstruct malformed classic xref metadata" {
       parsed.lookup_object_or_null(1),
       pdf_async_io_classic_catalog_object_for_test(),
     )
+  }
+}
+
+///|
+async test "async file wrappers preserve strict xref object mismatch errors" {
+  let mismatched_path = pdf_async_io_test_path_for_test(
+    "classic_xref_mismatched_object",
+  )
+  let unparseable_path = pdf_async_io_test_path_for_test(
+    "classic_xref_unparseable_object",
+  )
+  pdf_async_io_remove_if_exists_for_test(mismatched_path)
+  pdf_async_io_remove_if_exists_for_test(unparseable_path)
+  @fs.write_file(
+    mismatched_path,
+    pdf_async_io_classic_pdf_with_mismatched_object_xref_for_test(),
+    create=0o644,
+  )
+  @fs.write_file(
+    unparseable_path,
+    pdf_async_io_classic_pdf_with_unparseable_xref_object_for_test(),
+    create=0o644,
+  )
+  let mismatched : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(mismatched_path).binary(),
+  )
+  let unparseable : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(unparseable_path).binary(),
+  )
+  pdf_async_io_remove_if_exists_for_test(mismatched_path)
+  pdf_async_io_remove_if_exists_for_test(unparseable_path)
+  guard mismatched is Err(@pdflite.PdfError::XRefEntryExpected) else {
+    fail("expected strict mismatched xref object failure")
+  }
+  guard unparseable is Err(@pdflite.PdfError::ParseIndirectObjectExpected) else {
+    fail("expected strict unparseable xref object failure")
   }
 }
 
