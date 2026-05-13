@@ -413,6 +413,11 @@ Current backend snapshot:
   preserving deferred data for resolvable lengths and materializing streams
   whose length references cannot be resolved. `moon test --target native` now
   reports 1332/1332 tests passing.~~
+- [x] ~~Add the forty-seventh pre-refactor correctness sentinel: native async
+  file wrappers now preserve unreconstructable malformed read errors from disk,
+  keeping rootless physical scans as `RootExpected` and malformed `startxref`
+  files with no recovery root as `NumberExpected`. `moon test --target native`
+  now reports 1333/1333 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~

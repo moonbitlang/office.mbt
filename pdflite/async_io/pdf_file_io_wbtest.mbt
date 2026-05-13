@@ -4198,6 +4198,44 @@ async test "async file wrappers reconstruct malformed objects" {
 }
 
 ///|
+async test "async file wrappers preserve unreconstructable malformed read errors" {
+  let rootless_path = pdf_async_io_test_path_for_test(
+    "unreconstructable_missing_root",
+  )
+  let malformed_startxref_path = pdf_async_io_test_path_for_test(
+    "unreconstructable_malformed_startxref",
+  )
+  pdf_async_io_remove_if_exists_for_test(rootless_path)
+  pdf_async_io_remove_if_exists_for_test(malformed_startxref_path)
+  @fs.write_file(
+    rootless_path,
+    @ascii.encode("%PDF-1.4\n1 0 obj\n1\nendobj\n"),
+    create=0o644,
+  )
+  @fs.write_file(
+    malformed_startxref_path,
+    @ascii.encode("%PDF-1.4\nstartxref\nabc\n%%EOF\n"),
+    create=0o644,
+  )
+  let rootless : Result[@pdflite.PdfDocument, Error] = try? pdf_read_document_from_file(
+    rootless_path,
+  )
+  let malformed_startxref : Result[@pdflite.PdfDocument, Error] = try? pdf_read_document_from_file(
+    malformed_startxref_path,
+  )
+  pdf_async_io_remove_if_exists_for_test(rootless_path)
+  pdf_async_io_remove_if_exists_for_test(malformed_startxref_path)
+  guard rootless is Err(@pdflite.PdfError::RootExpected) else {
+    fail("expected unreconstructable rootless PDF to stay RootExpected")
+  }
+  guard malformed_startxref is Err(@pdflite.PdfError::NumberExpected) else {
+    fail(
+      "expected unreconstructable malformed startxref to stay NumberExpected",
+    )
+  }
+}
+
+///|
 async test "async file wrappers load object-stream entries from disk" {
   let entries_path = pdf_async_io_test_path_for_test("objstm_entries")
   let entries_roundtrip_path = pdf_async_io_test_path_for_test(
