@@ -1937,6 +1937,11 @@ Current backend snapshot:
   through nested Form XObjects, including form-local image resources, indexed
   image decode, glyph-name extraction, and reread stability. `moon test
   --target native` now reports 1348/1348 tests passing.~~
+- [x] ~~Add the sixty-third pre-refactor correctness sentinel: native compressed
+  reader boundaries now preserve named image resource color spaces, `/CS`
+  aliases, raw decode arrays, image masks, and indexed palettes through
+  decompression and reread stability. `moon test --target native` now reports
+  1349/1349 tests passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.
