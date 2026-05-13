@@ -287,6 +287,11 @@ Current backend snapshot:
   non-stream object, a non-xref stream, an explicit non-xref `/Type`, or a
   non-name xref-stream `/Type`. `moon test --target native` now reports
   1306/1306 tests passing.~~
+- [x] ~~Add the twenty-first pre-refactor correctness sentinel: native async
+  file wrappers now reconstruct missing-`startxref` PDFs by scanning physical
+  objects and selecting the sane trailer, then rewrite/reread the recovered
+  document through compressed xref output. `moon test --target native` now
+  reports 1307/1307 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~

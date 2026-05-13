@@ -627,6 +627,32 @@ fn pdf_async_io_xref_stream_with_type_for_test(
 }
 
 ///|
+fn pdf_async_io_malformed_pdf_without_startxref_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  pdf_async_io_write_indirect_object_for_test(
+    output,
+    1,
+    @pdflite.pdf_dictionary([
+      (
+        pdf_async_io_name_for_test("/Type"),
+        PdfNameObject(pdf_async_io_name_for_test("/Catalog")),
+      ),
+    ]),
+  )
+  pdf_async_io_write_indirect_object_for_test(output, 2, PdfInteger(7))
+  pdf_async_io_push_ascii_for_test(output, "trailer\nnotdict\n")
+  pdf_async_io_push_ascii_for_test(
+    output, "trailer\n<< /Root 1 0 R /Size 99 /Prev 4 >>\n",
+  )
+  pdf_async_io_push_ascii_for_test(output, "trailer\n<< /Size 99 >>\n")
+  pdf_async_io_push_ascii_for_test(
+    output, "trailer\n<< /Root 2 0 R /Size 99 >>\n",
+  )
+  Bytes::from_array(output)
+}
+
+///|
 fn pdf_async_io_bad_first_object_stream_physical_page_tree_pdf_for_test() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
@@ -1702,6 +1728,63 @@ async test "async file wrappers reject non-xref startxref objects" {
   guard non_name_type is Err(@pdflite.PdfError::XRefExpected) else {
     fail("expected non-name xref stream type rejection")
   }
+}
+
+///|
+async test "async file wrappers reconstruct missing startxref PDFs" {
+  let path = pdf_async_io_test_path_for_test("missing_startxref")
+  let repaired_path = pdf_async_io_test_path_for_test(
+    "missing_startxref_repaired",
+  )
+  pdf_async_io_remove_if_exists_for_test(path)
+  pdf_async_io_remove_if_exists_for_test(repaired_path)
+  @fs.write_file(
+    path,
+    pdf_async_io_malformed_pdf_without_startxref_for_test(),
+    create=0o644,
+  )
+  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 4 })
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(path).binary(),
+  )
+  guard strict is Err(@pdflite.PdfError::StartXRefExpected) else {
+    fail("expected strict missing-startxref failure")
+  }
+  let recovered = pdf_read_document_from_file(path)
+  @test.assert_eq(recovered.version(), (1, 4))
+  @test.assert_eq(recovered.first_xref(), 0)
+  @test.assert_eq(recovered.root(), 1)
+  @test.assert_eq(recovered.object_numbers(), [1, 2])
+  @test.assert_eq(
+    recovered.lookup_object_or_null(1),
+    PdfDictionary([
+      (
+        pdf_async_io_name_for_test("/Type"),
+        PdfNameObject(pdf_async_io_name_for_test("/Catalog")),
+      ),
+    ]),
+  )
+  @test.assert_eq(
+    recovered
+    .trailer_dict()
+    .lookup_immediate(pdf_async_io_name_for_test("/Prev")),
+    None,
+  )
+  @test.assert_eq(
+    recovered
+    .trailer_dict()
+    .lookup_immediate(pdf_async_io_name_for_test("/Size")),
+    Some(PdfInteger(3)),
+  )
+  pdf_write_document_to_file_with_compressed_xref_stream(
+    recovered, repaired_path,
+  )
+  let reparsed = pdf_read_document_from_file(repaired_path)
+  pdf_async_io_remove_if_exists_for_test(path)
+  pdf_async_io_remove_if_exists_for_test(repaired_path)
+  @test.assert_eq(reparsed.first_xref() > 0, true)
+  @test.assert_eq(reparsed.root(), 1)
+  @test.assert_eq(reparsed.object_numbers(), [1, 2])
 }
 
 ///|
