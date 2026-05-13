@@ -7685,6 +7685,55 @@ fn acceptance_filtered_object_stream_root_pdf_for_test(
 }
 
 ///|
+fn acceptance_bad_first_object_stream_entry_pdf_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  acceptance_push_ascii_for_test(output, "%PDF-1.5\n")
+  let catalog_offset = acceptance_push_indirect_object_for_test(
+    output, 1, 0, "<< /Type /Catalog /Payload 2 0 R >>",
+  )
+  let object_stream_data : Array[Byte] = []
+  acceptance_push_ascii_for_test(object_stream_data, "2 0 ")
+  let bad_first = object_stream_data.length() + 32
+  acceptance_push_ascii_for_test(object_stream_data, "<< /Answer 42 >>")
+  let object_stream_offset = output.length()
+  acceptance_push_ascii_for_test(output, "3 0 obj\n")
+  acceptance_push_ascii_for_test(output, "<< /Type /ObjStm /N 1 /First ")
+  acceptance_push_ascii_for_test(output, bad_first.to_string())
+  acceptance_push_ascii_for_test(output, " /Length ")
+  acceptance_push_ascii_for_test(
+    output,
+    object_stream_data.length().to_string(),
+  )
+  acceptance_push_ascii_for_test(output, " >>\nstream\n")
+  for byte in object_stream_data {
+    output.push(byte)
+  }
+  acceptance_push_ascii_for_test(output, "\nendstream\nendobj\n")
+  let xref_offset = output.length()
+  let stream_data : Array[Byte] = []
+  acceptance_push_xref_stream_entry_for_test(stream_data, 0, 0, 65535)
+  acceptance_push_xref_stream_entry_for_test(stream_data, 1, catalog_offset, 0)
+  acceptance_push_xref_stream_entry_for_test(stream_data, 2, 3, 0)
+  acceptance_push_xref_stream_entry_for_test(
+    stream_data, 1, object_stream_offset, 0,
+  )
+  acceptance_push_xref_stream_entry_for_test(stream_data, 1, xref_offset, 0)
+  acceptance_push_ascii_for_test(output, "4 0 obj\n")
+  acceptance_push_ascii_for_test(output, "<< /Type /XRef /Length ")
+  acceptance_push_ascii_for_test(output, stream_data.length().to_string())
+  acceptance_push_ascii_for_test(
+    output, " /Size 5 /Root 1 0 R /W [1 4 2] >>\nstream\n",
+  )
+  for byte in stream_data {
+    output.push(byte)
+  }
+  acceptance_push_ascii_for_test(output, "\nendstream\nendobj\nstartxref\n")
+  acceptance_push_ascii_for_test(output, xref_offset.to_string())
+  acceptance_push_ascii_for_test(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn acceptance_assert_object_stream_document_for_test(
   doc : @pdflite.PdfDocument,
 ) -> Unit raise {
@@ -10351,6 +10400,23 @@ test "native acceptance suite rejects unsupported object-stream filters" {
     fail("expected unsupported object-stream predictor failure")
   }
   @test.assert_eq(predictor, 9)
+}
+
+///|
+test "native acceptance suite rejects invalid object-stream data slices" {
+  let bytes = acceptance_bad_first_object_stream_entry_pdf_for_test()
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    bytes,
+  )
+  guard strict is Err(@pdflite.PdfError::StreamDataExpected) else {
+    fail("expected strict invalid object-stream slice failure")
+  }
+  let public : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_document_from_bytes(
+    bytes,
+  )
+  guard public is Err(@pdflite.PdfError::StreamDataExpected) else {
+    fail("expected public invalid object-stream slice failure")
+  }
 }
 
 ///|

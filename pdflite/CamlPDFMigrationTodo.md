@@ -2027,6 +2027,11 @@ Current backend snapshot:
   malformed `/DecodeParms`, unsupported predictors, and exact propagated
   filter/predictor errors. `moon test --target native` now reports 1363/1363
   tests passing.~~
+- [x] ~~Add the seventy-eighth pre-refactor correctness sentinel: native
+  object-stream loading now rejects invalid member data slices where `/First`
+  points beyond the encoded member table, including strict and public reader
+  failures before any partial document is accepted. `moon test --target native`
+  now reports 1364/1364 tests passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.
