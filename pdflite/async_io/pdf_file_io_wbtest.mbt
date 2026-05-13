@@ -686,6 +686,68 @@ fn pdf_async_io_startxref_object_pdf_for_test(
 }
 
 ///|
+fn pdf_async_io_linearized_classic_pdf_for_test(
+  value : String,
+) -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
+  let linearized_offset = pdf_async_io_push_raw_indirect_object_for_test(
+    output,
+    1,
+    0,
+    "<< /Linearized " + value + " /L 0 >>",
+  )
+  let catalog_offset = pdf_async_io_push_raw_indirect_object_for_test(
+    output, 2, 0, "<< /Type /Catalog >>",
+  )
+  let xref_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref\n0 3\n0000000000 65535 f \n")
+  pdf_async_io_push_classic_xref_entry_for_test(output, linearized_offset, 0)
+  pdf_async_io_push_classic_xref_entry_for_test(output, catalog_offset, 0)
+  pdf_async_io_push_ascii_for_test(
+    output, "trailer\n<< /Root 2 0 R /Size 3 >>\nstartxref\n",
+  )
+  pdf_async_io_push_ascii_for_test(output, xref_offset.to_string())
+  pdf_async_io_push_ascii_for_test(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_async_io_linearized_classic_pdf_with_prev_xref_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
+  let linearized_offset = pdf_async_io_push_raw_indirect_object_for_test(
+    output, 1, 0, "<< /Linearized 1 /L 0 >>",
+  )
+  let catalog_offset = pdf_async_io_push_raw_indirect_object_for_test(
+    output, 2, 0, "<< /Type /Catalog >>",
+  )
+  let base_xref = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref\n0 3\n0000000000 65535 f \n")
+  pdf_async_io_push_classic_xref_entry_for_test(output, linearized_offset, 0)
+  pdf_async_io_push_classic_xref_entry_for_test(output, catalog_offset, 0)
+  pdf_async_io_push_ascii_for_test(
+    output, "trailer\n<< /Root 2 0 R /Size 3 >>\nstartxref\n",
+  )
+  pdf_async_io_push_ascii_for_test(output, base_xref.to_string())
+  pdf_async_io_push_ascii_for_test(output, "\n%%EOF\n")
+  let update_offset = pdf_async_io_push_raw_indirect_object_for_test(
+    output, 3, 0, "3",
+  )
+  let final_xref = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref\n3 1\n")
+  pdf_async_io_push_classic_xref_entry_for_test(output, update_offset, 0)
+  pdf_async_io_push_ascii_for_test(
+    output, "trailer\n<< /Root 2 0 R /Size 4 /Prev ",
+  )
+  pdf_async_io_push_ascii_for_test(output, base_xref.to_string())
+  pdf_async_io_push_ascii_for_test(output, " >>\nstartxref\n")
+  pdf_async_io_push_ascii_for_test(output, final_xref.to_string())
+  pdf_async_io_push_ascii_for_test(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn pdf_async_io_xref_stream_with_type_for_test(
   type_entry : String,
 ) -> @pdflite.PdfBytes {
@@ -3067,6 +3129,57 @@ async test "async file wrappers reject non-xref startxref objects" {
   guard non_name_type is Err(@pdflite.PdfError::XRefExpected) else {
     fail("expected non-name xref stream type rejection")
   }
+}
+
+///|
+async test "async file wrappers preserve linearized first-object markers" {
+  let integer_path = pdf_async_io_test_path_for_test(
+    "linearized_integer_marker",
+  )
+  let real_path = pdf_async_io_test_path_for_test("linearized_real_marker")
+  let non_numeric_path = pdf_async_io_test_path_for_test(
+    "linearized_non_numeric_marker",
+  )
+  let prev_path = pdf_async_io_test_path_for_test("linearized_prev_xref")
+  pdf_async_io_remove_if_exists_for_test(integer_path)
+  pdf_async_io_remove_if_exists_for_test(real_path)
+  pdf_async_io_remove_if_exists_for_test(non_numeric_path)
+  pdf_async_io_remove_if_exists_for_test(prev_path)
+  @fs.write_file(
+    integer_path,
+    pdf_async_io_linearized_classic_pdf_for_test("1"),
+    create=0o644,
+  )
+  @fs.write_file(
+    real_path,
+    pdf_async_io_linearized_classic_pdf_for_test("1.0"),
+    create=0o644,
+  )
+  @fs.write_file(
+    non_numeric_path,
+    pdf_async_io_linearized_classic_pdf_for_test("/Name"),
+    create=0o644,
+  )
+  @fs.write_file(
+    prev_path,
+    pdf_async_io_linearized_classic_pdf_with_prev_xref_for_test(),
+    create=0o644,
+  )
+  let integer_doc = pdf_read_document_from_file(integer_path)
+  let real_doc = pdf_read_document_from_file(real_path)
+  let non_numeric_doc = pdf_read_document_from_file(non_numeric_path)
+  @test.assert_eq(pdf_is_linearized_file(integer_path), true)
+  @test.assert_eq(pdf_is_linearized_file(non_numeric_path), false)
+  @test.assert_eq(pdf_revisions_from_file(integer_path), 1)
+  @test.assert_eq(pdf_revisions_from_file(prev_path), 1)
+  pdf_async_io_remove_if_exists_for_test(integer_path)
+  pdf_async_io_remove_if_exists_for_test(real_path)
+  pdf_async_io_remove_if_exists_for_test(non_numeric_path)
+  pdf_async_io_remove_if_exists_for_test(prev_path)
+  @test.assert_eq(integer_doc.was_linearized(), true)
+  @test.assert_eq(integer_doc.root(), 2)
+  @test.assert_eq(real_doc.was_linearized(), true)
+  @test.assert_eq(non_numeric_doc.was_linearized(), false)
 }
 
 ///|

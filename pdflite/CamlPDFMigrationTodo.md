@@ -423,6 +423,11 @@ Current backend snapshot:
   catalog objects, preserving strict `PageTreeExpected`/`RootExpected` gates
   before public recovery scans the missing physical objects. `moon test --target
   native` now reports 1334/1334 tests passing.~~
+- [x] ~~Add the forty-ninth pre-refactor correctness sentinel: native async file
+  wrappers now preserve linearized first-object markers from disk, including
+  numeric vs non-numeric `/Linearized` values, `pdf_is_linearized_file`, and
+  revision counting for linearized `/Prev` fixtures. `moon test --target native`
+  now reports 1335/1335 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~
