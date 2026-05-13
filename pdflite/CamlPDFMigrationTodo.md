@@ -370,6 +370,11 @@ Current backend snapshot:
   documents whose newest `/Root` lives inside an `/ObjStm`, sanitize `/Prev`,
   and preserve the reconstructed root through compressed xref write/reread.
   `moon test --target native` now reports 1322/1322 tests passing.~~
+- [x] ~~Add the thirty-seventh pre-refactor correctness sentinel: native async
+  file wrappers now preserve unrecoverable object-stream decode failures from
+  disk for unsupported `/ObjStm` filters, malformed `/DecodeParms`, and
+  unsupported predictors instead of reconstructing partial documents. `moon
+  test --target native` now reports 1323/1323 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~
