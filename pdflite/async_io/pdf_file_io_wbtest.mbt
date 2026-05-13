@@ -949,6 +949,31 @@ fn pdf_async_io_malformed_pdf_with_startxref_number_for_test(
 }
 
 ///|
+fn pdf_async_io_classic_xref_deleted_payload_bad_startxref_for_test(
+  later_update : Bool,
+) -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  let catalog_offset = output.length()
+  pdf_async_io_write_indirect_object_for_test(
+    output,
+    1,
+    pdf_async_io_catalog_with_payload_for_test(2),
+  )
+  pdf_async_io_write_indirect_object_for_test(output, 2, PdfInteger(13))
+  pdf_async_io_push_ascii_for_test(output, "xref\n0 3\n0000000000 65535 f \n")
+  pdf_async_io_push_classic_xref_entry_for_test(output, catalog_offset, 0)
+  pdf_async_io_push_ascii_for_test(output, "0000000000 00000 f \n")
+  pdf_async_io_push_ascii_for_test(
+    output, "trailer\n<< /Root 1 0 R /Size 3 >>\nstartxref\n0\n%%EOF\n",
+  )
+  if later_update {
+    pdf_async_io_write_indirect_object_for_test(output, 2, PdfInteger(99))
+  }
+  Bytes::from_array(output)
+}
+
+///|
 fn pdf_async_io_malformed_pdf_with_bad_xref_entry_for_test() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
@@ -3504,6 +3529,47 @@ async test "async file wrappers reconstruct malformed startxref numbers" {
       pdf_async_io_classic_catalog_object_for_test(),
     )
   }
+}
+
+///|
+async test "async file wrappers preserve classic free entries during reconstruction" {
+  let deleted_path = pdf_async_io_test_path_for_test(
+    "classic_free_entry_bad_startxref",
+  )
+  let later_path = pdf_async_io_test_path_for_test(
+    "classic_free_entry_later_update",
+  )
+  pdf_async_io_remove_if_exists_for_test(deleted_path)
+  pdf_async_io_remove_if_exists_for_test(later_path)
+  @fs.write_file(
+    deleted_path,
+    pdf_async_io_classic_xref_deleted_payload_bad_startxref_for_test(false),
+    create=0o644,
+  )
+  @fs.write_file(
+    later_path,
+    pdf_async_io_classic_xref_deleted_payload_bad_startxref_for_test(true),
+    create=0o644,
+  )
+  let strict_deleted : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(deleted_path).binary(),
+  )
+  guard strict_deleted is Err(_) else {
+    fail("expected strict bad-startxref free-entry failure")
+  }
+  let deleted = pdf_read_document_from_file(deleted_path)
+  let later = pdf_read_document_from_file(later_path)
+  pdf_async_io_remove_if_exists_for_test(deleted_path)
+  pdf_async_io_remove_if_exists_for_test(later_path)
+
+  @test.assert_eq(deleted.first_xref(), 0)
+  @test.assert_eq(deleted.root(), 1)
+  @test.assert_eq(deleted.object_numbers(), [1])
+  @test.assert_eq(deleted.lookup_object_or_null(2), PdfNull)
+  @test.assert_eq(later.first_xref(), 0)
+  @test.assert_eq(later.root(), 1)
+  @test.assert_eq(later.object_numbers(), [1, 2])
+  @test.assert_eq(later.lookup_object_or_null(2), PdfInteger(99))
 }
 
 ///|

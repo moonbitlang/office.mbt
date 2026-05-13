@@ -387,6 +387,10 @@ Current backend snapshot:
   wrappers now reconstruct malformed and overflowing classic `startxref`
   numbers from disk after preserving strict `NumberExpected`. `moon test
   --target native` now reports 1326/1326 tests passing.~~
+- [x] ~~Add the forty-first pre-refactor correctness sentinel: native async
+  file wrappers now preserve classic free xref entries during bad-`startxref`
+  reconstruction while still keeping later physical updates for the same object
+  number. `moon test --target native` now reports 1327/1327 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~
