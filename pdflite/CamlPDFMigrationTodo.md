@@ -375,6 +375,10 @@ Current backend snapshot:
   disk for unsupported `/ObjStm` filters, malformed `/DecodeParms`, and
   unsupported predictors instead of reconstructing partial documents. `moon
   test --target native` now reports 1323/1323 tests passing.~~
+- [x] ~~Add the thirty-eighth pre-refactor correctness sentinel: native async
+  file wrappers now reject truncated xref-stream entry data from disk with
+  `XRefEntryExpected`, preserving the byte-reader's unrecoverable short-stream
+  path. `moon test --target native` now reports 1324/1324 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~

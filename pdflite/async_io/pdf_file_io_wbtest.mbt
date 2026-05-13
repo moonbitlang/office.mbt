@@ -725,6 +725,22 @@ fn pdf_async_io_xref_stream_with_type_for_test(
 }
 
 ///|
+fn pdf_async_io_xref_stream_pdf_with_short_entry_data_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
+  let xref_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "2 0 obj\n")
+  pdf_async_io_push_ascii_for_test(
+    output, "<< /Type /XRef /Length 1 /Size 2 /Root 1 0 R /W [1 4 2] >>\nstream\n",
+  )
+  output.push(0)
+  pdf_async_io_push_ascii_for_test(output, "\nendstream\nendobj\nstartxref\n")
+  pdf_async_io_push_ascii_for_test(output, xref_offset.to_string())
+  pdf_async_io_push_ascii_for_test(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn pdf_async_io_malformed_pdf_without_startxref_for_test() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
@@ -2833,6 +2849,25 @@ async test "async file wrappers reject non-xref startxref objects" {
   }
   guard non_name_type is Err(@pdflite.PdfError::XRefExpected) else {
     fail("expected non-name xref stream type rejection")
+  }
+}
+
+///|
+async test "async file wrappers reject truncated xref stream data" {
+  let path = pdf_async_io_test_path_for_test("truncated_xref_stream_data")
+  pdf_async_io_remove_if_exists_for_test(path)
+  @fs.write_file(
+    path,
+    pdf_async_io_xref_stream_pdf_with_short_entry_data_for_test(),
+    create=0o644,
+  )
+  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 5 })
+  let result : Result[@pdflite.PdfDocument, Error] = try? pdf_read_document_from_file(
+    path,
+  )
+  pdf_async_io_remove_if_exists_for_test(path)
+  guard result is Err(@pdflite.PdfError::XRefEntryExpected) else {
+    fail("expected truncated xref stream data rejection")
   }
 }
 
