@@ -2434,7 +2434,11 @@ pub fn pdf_read_document_from_view(
         include_xref_stream_trailers=true,
       )
     XRefEntryExpected =>
-      pdf_read_reconstructed_or_raise(data, XRefEntryExpected)
+      if pdf_reader_startxref_root_uses_object_stream_or_false(data) {
+        raise XRefEntryExpected
+      } else {
+        pdf_read_reconstructed_or_raise(data, XRefEntryExpected)
+      }
     TrailerExpected => pdf_read_reconstructed_or_raise(data, TrailerExpected)
     RootExpected => pdf_read_reconstructed_or_raise(data, RootExpected)
     NumberExpected => pdf_read_reconstructed_or_raise(data, NumberExpected)
@@ -2451,7 +2455,7 @@ pub fn pdf_read_document_from_view(
       pdf_read_reconstructed_or_raise(data, ParseObjectExpected)
     InvalidHexEscape => pdf_read_reconstructed_or_raise(data, InvalidHexEscape)
     StreamDataExpected =>
-      if pdf_reader_root_object_stream_error_allows_reconstruction(data) {
+      if pdf_reader_startxref_root_uses_object_stream_or_false(data) {
         pdf_read_reconstructed_or_raise(
           data,
           StreamDataExpected,
@@ -2574,7 +2578,7 @@ fn pdf_reader_xref_entry_error_from_metadata(data : BytesView) -> Bool {
 }
 
 ///|
-fn pdf_reader_root_object_stream_error_allows_reconstruction(
+fn pdf_reader_startxref_root_uses_object_stream(
   data : BytesView,
 ) -> Bool raise PdfError {
   let cursor = byte_cursor_of_view(data)
@@ -2594,6 +2598,17 @@ fn pdf_reader_root_object_stream_error_allows_reconstruction(
     }
   } nobreak {
     false
+  }
+}
+
+///|
+fn pdf_reader_startxref_root_uses_object_stream_or_false(
+  data : BytesView,
+) -> Bool {
+  try pdf_reader_startxref_root_uses_object_stream(data) catch {
+    _ => false
+  } noraise {
+    value => value
   }
 }
 

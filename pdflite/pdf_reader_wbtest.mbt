@@ -117,7 +117,7 @@ test "private reconstructed coverage ignores xref sections without offsets" {
 ///|
 test "private object-stream root reconstruction guard rejects missing trailer roots" {
   @test.assert_eq(
-    pdf_reader_root_object_stream_error_allows_reconstruction(
+    pdf_reader_startxref_root_uses_object_stream(
       reader_wbtest_xref_stream_without_root(),
     ),
     false,

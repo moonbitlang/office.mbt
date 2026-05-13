@@ -187,6 +187,10 @@ Current backend snapshot:
   pointing at malformed classic xref subsection metadata now has a strict
   `NumberExpected` gate plus public reconstruction back to the physically
   scanned catalog.~~
+- [x] ~~Add the second pre-refactor correctness sentinel: a valid xref stream
+  whose trailer root points into an object stream with a mismatched embedded
+  object number now keeps raising `XRefEntryExpected`, even when a physical
+  catalog and fallback trailer are present.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~

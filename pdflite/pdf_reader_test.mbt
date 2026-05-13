@@ -1941,6 +1941,46 @@ fn reader_xref_stream_pdf_with_bad_first_object_stream_root_and_physical_page_tr
 }
 
 ///|
+fn reader_xref_stream_pdf_with_mismatched_object_stream_root_and_physical_catalog() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.5\n")
+  let object_stream_data : Array[Byte] = []
+  reader_push_ascii(object_stream_data, "2 0 ")
+  let first = object_stream_data.length()
+  reader_push_ascii(object_stream_data, "<< /Type /Catalog >>")
+  let object_stream_offset = output.length()
+  reader_push_ascii(output, "3 0 obj\n<< /Type /ObjStm /N 1 /First ")
+  reader_push_ascii(output, first.to_string())
+  reader_push_ascii(output, " /Length ")
+  reader_push_ascii(output, object_stream_data.length().to_string())
+  reader_push_ascii(output, " >>\nstream\n")
+  for byte in object_stream_data {
+    output.push(byte)
+  }
+  reader_push_ascii(output, "\nendstream\nendobj\n")
+  let xref_offset = output.length()
+  let stream_data : Array[Byte] = []
+  reader_push_xref_stream_entry(stream_data, 0, 0, 65535)
+  reader_push_xref_stream_entry(stream_data, 2, 3, 0)
+  reader_push_xref_stream_entry(stream_data, 0, 0, 0)
+  reader_push_xref_stream_entry(stream_data, 1, object_stream_offset, 0)
+  reader_push_xref_stream_entry(stream_data, 1, xref_offset, 0)
+  reader_push_ascii(output, "4 0 obj\n")
+  reader_push_ascii(output, "<< /Type /XRef /Length ")
+  reader_push_ascii(output, stream_data.length().to_string())
+  reader_push_ascii(output, " /Size 5 /Root 1 0 R /W [1 4 2] >>\nstream\n")
+  for byte in stream_data {
+    output.push(byte)
+  }
+  reader_push_ascii(output, "\nendstream\nendobj\n")
+  ignore(reader_push_indirect_object(output, 1, 0, "<< /Type /Catalog >>"))
+  reader_push_ascii(output, "trailer\n<< /Root 1 0 R /Size 5 >>\nstartxref\n")
+  reader_push_ascii(output, xref_offset.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_xref_stream_pdf_with_object_stream_root_bad_startxref() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.5\n")
@@ -4429,6 +4469,23 @@ test "pdf_read_document_from_bytes reconstructs physical page trees when object-
       (@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Pages")), PdfIndirect(2)),
     ]),
   )
+}
+
+///|
+test "pdf_read_document_from_bytes does not reconstruct mismatched object-stream roots" {
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_xref_stream_pdf_with_mismatched_object_stream_root_and_physical_catalog(),
+  )
+  guard strict is Err(@pdflite.PdfError::XRefEntryExpected) else {
+    fail("expected strict object-stream mismatch failure")
+  }
+
+  let public : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_document_from_bytes(
+    reader_xref_stream_pdf_with_mismatched_object_stream_root_and_physical_catalog(),
+  )
+  guard public is Err(@pdflite.PdfError::XRefEntryExpected) else {
+    fail("expected public object-stream mismatch failure")
+  }
 }
 
 ///|
