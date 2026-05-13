@@ -814,6 +814,35 @@ fn pdf_async_io_encrypted_object_stream_pdf_for_test(
 }
 
 ///|
+fn pdf_async_io_encrypted_xref_stream_missing_object_stream_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
+  let catalog_offset = output.length()
+  pdf_async_io_push_ascii_for_test(
+    output, "1 0 obj\n<< /Type /Catalog /Payload 2 0 R >>\nendobj\n",
+  )
+  let xref_offset = output.length()
+  let xref_data : Array[Byte] = []
+  pdf_async_io_push_xref_stream_entry_for_test(xref_data, 0, 0, 65535)
+  pdf_async_io_push_xref_stream_entry_for_test(xref_data, 1, catalog_offset, 0)
+  pdf_async_io_push_xref_stream_entry_for_test(xref_data, 2, 7, 0)
+  pdf_async_io_push_xref_stream_entry_for_test(xref_data, 1, xref_offset, 0)
+  pdf_async_io_push_ascii_for_test(output, "3 0 obj\n")
+  pdf_async_io_push_ascii_for_test(output, "<< /Type /XRef /Length ")
+  pdf_async_io_push_ascii_for_test(output, xref_data.length().to_string())
+  pdf_async_io_push_ascii_for_test(
+    output, " /Size 4 /Root 1 0 R /Encrypt << /Filter /Standard >> /W [1 4 2] >>\nstream\n",
+  )
+  for byte in xref_data {
+    output.push(byte)
+  }
+  pdf_async_io_push_ascii_for_test(output, "\nendstream\nendobj\nstartxref\n")
+  pdf_async_io_push_ascii_for_test(output, xref_offset.to_string())
+  pdf_async_io_push_ascii_for_test(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn pdf_async_io_assert_decrypted_object_stream_for_test(
   decrypted : @pdflite.PdfDecryptionResult,
   denied : Array[@pdflite.PdfPermission],
@@ -1283,6 +1312,27 @@ async test "async file wrappers read encrypted object streams and recover bad st
   pdf_async_io_remove_if_exists_for_test(corrupted_path)
   pdf_async_io_remove_if_exists_for_test(blank_path)
   pdf_async_io_assert_decrypted_object_stream_for_test(blank_decrypted, denied)
+}
+
+///|
+async test "async file wrappers reject encrypted xref streams with missing object streams" {
+  let path = pdf_async_io_test_path_for_test(
+    "encrypted_xref_stream_missing_objstm",
+  )
+  pdf_async_io_remove_if_exists_for_test(path)
+  @fs.write_file(
+    path,
+    pdf_async_io_encrypted_xref_stream_missing_object_stream_for_test(),
+    create=0o644,
+  )
+  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 5 })
+  let result : Result[@pdflite.PdfDecryptionResult?, Error] = try? pdf_read_document_from_file_with_passwords(
+    path,
+  )
+  pdf_async_io_remove_if_exists_for_test(path)
+  guard result is Err(@pdflite.PdfError::XRefEntryExpected) else {
+    fail("expected missing encrypted object stream to remain unrecoverable")
+  }
 }
 
 ///|

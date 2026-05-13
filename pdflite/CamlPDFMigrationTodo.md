@@ -256,6 +256,11 @@ Current backend snapshot:
   bad-password fallback, owner-password reconstruction, no plaintext leak in
   repaired output, and user-password round-trip. `moon test --target native`
   now reports 1300/1300 tests passing.~~
+- [x] ~~Add the fifteenth pre-refactor correctness sentinel: native async file
+  wrappers now preserve the byte-reader's unrecoverable error path for encrypted
+  xref-stream compressed entries whose referenced object stream is missing,
+  including header validation and `XRefEntryExpected` propagation. `moon test
+  --target native` now reports 1301/1301 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~
