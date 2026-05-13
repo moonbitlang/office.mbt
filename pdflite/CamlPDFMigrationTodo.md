@@ -433,6 +433,11 @@ Current backend snapshot:
   disk, including compressed predictor xref streams, bad-final-`startxref`
   recovery, and sanitized `/XRefStm`/`DecodeParms` trailer metadata. `moon test
   --target native` now reports 1336/1336 tests passing.~~
+- [x] ~~Add the fifty-first pre-refactor correctness sentinel: native async file
+  wrappers now resolve commented indirect stream lengths from disk, preserving
+  deferred stream data while ignoring `stream` tokens that appear only in length
+  object comments. `moon test --target native` now reports 1337/1337 tests
+  passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~

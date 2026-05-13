@@ -1315,6 +1315,24 @@ fn pdf_async_io_classic_pdf_with_missing_indirect_stream_length_for_test() -> @p
 }
 
 ///|
+fn pdf_async_io_classic_pdf_with_commented_indirect_stream_length_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  let stream_offset = pdf_async_io_push_raw_indirect_object_for_test(
+    output, 1, 0, "<< /Length 2 0 R >>\nstream\nHello\nendstream",
+  )
+  let length_offset = pdf_async_io_push_raw_indirect_object_for_test(
+    output, 2, 0, "5 % stream appears only in this comment",
+  )
+  let xref_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref\n0 3\n0000000000 65535 f \n")
+  pdf_async_io_push_classic_xref_entry_for_test(output, stream_offset, 0)
+  pdf_async_io_push_classic_xref_entry_for_test(output, length_offset, 0)
+  pdf_async_io_push_classic_trailer_for_test(output, xref_offset, 3)
+  Bytes::from_array(output)
+}
+
+///|
 fn pdf_async_io_classic_pdf_with_non_integer_stream_length_for_test() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
@@ -4337,6 +4355,36 @@ async test "async file wrappers recover unreadable stream lengths" {
     ]),
   )
   pdf_async_io_assert_recovered_hello_stream_for_test(unparseable)
+}
+
+///|
+async test "async file wrappers resolve commented indirect stream lengths" {
+  let path = pdf_async_io_test_path_for_test("commented_indirect_stream_length")
+  pdf_async_io_remove_if_exists_for_test(path)
+  @fs.write_file(
+    path,
+    pdf_async_io_classic_pdf_with_commented_indirect_stream_length_for_test(),
+    create=0o644,
+  )
+  let parsed = pdf_read_document_from_file(path)
+  pdf_async_io_remove_if_exists_for_test(path)
+  @test.assert_eq(parsed.first_xref() > 0, true)
+  @test.assert_eq(parsed.object_numbers(), [1, 2])
+  guard parsed.lookup_object_or_null(1) is PdfStreamObject(stream) else {
+    fail("expected stream object")
+  }
+  @test.assert_eq(
+    stream.dictionary.lookup_immediate(pdf_async_io_name_for_test("/Length")),
+    Some(PdfIndirect(2)),
+  )
+  guard stream.data is StreamToGet(_) else {
+    fail("expected commented stream length data to stay deferred")
+  }
+  @test.assert_eq(
+    @pdflite.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
+    @ascii.encode("Hello"),
+  )
+  @test.assert_eq(parsed.lookup_object_or_null(2), PdfInteger(5))
 }
 
 ///|
