@@ -350,6 +350,11 @@ Current backend snapshot:
   and object-looking bytes inside stream data, preserving deferred file-backed
   stream reads while avoiding false physical objects. `moon test --target
   native` now reports 1318/1318 tests passing.~~
+- [x] ~~Add the thirty-third pre-refactor correctness sentinel: native async
+  file wrappers now gate xref-stream `/Prev` revision handling for updated and
+  deleted newest entries, including revision counts, full reads, sanitized
+  trailers, and older revision reads from disk. `moon test --target native` now
+  reports 1319/1319 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~

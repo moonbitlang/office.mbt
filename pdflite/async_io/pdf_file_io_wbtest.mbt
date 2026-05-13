@@ -1162,6 +1162,77 @@ fn pdf_async_io_classic_pdf_with_malformed_object_for_test(
 }
 
 ///|
+fn pdf_async_io_xref_stream_pdf_with_prev_update_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
+  let original_offset = pdf_async_io_push_raw_indirect_object_for_test(
+    output, 1, 0, "1",
+  )
+  let base_xref = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref\n0 2\n0000000000 65535 f \n")
+  pdf_async_io_push_classic_xref_entry_for_test(output, original_offset, 0)
+  pdf_async_io_push_classic_trailer_for_test(output, base_xref, 2)
+  let updated_offset = pdf_async_io_push_raw_indirect_object_for_test(
+    output, 1, 0, "2",
+  )
+  let xref_stream_offset = output.length()
+  let stream_data : Array[Byte] = []
+  pdf_async_io_push_xref_stream_entry_for_test(stream_data, 0, 0, 65535)
+  pdf_async_io_push_xref_stream_entry_for_test(
+    stream_data, 1, updated_offset, 0,
+  )
+  pdf_async_io_push_xref_stream_entry_for_test(
+    stream_data, 1, xref_stream_offset, 0,
+  )
+  pdf_async_io_push_ascii_for_test(output, "2 0 obj\n")
+  pdf_async_io_push_ascii_for_test(output, "<< /Type /XRef /Length ")
+  pdf_async_io_push_ascii_for_test(output, stream_data.length().to_string())
+  pdf_async_io_push_ascii_for_test(output, " /Size 3 /Root 1 0 R /Prev ")
+  pdf_async_io_push_ascii_for_test(output, base_xref.to_string())
+  pdf_async_io_push_ascii_for_test(output, " /W [1 4 2] >>\nstream\n")
+  for byte in stream_data {
+    output.push(byte)
+  }
+  pdf_async_io_push_ascii_for_test(output, "\nendstream\nendobj\nstartxref\n")
+  pdf_async_io_push_ascii_for_test(output, xref_stream_offset.to_string())
+  pdf_async_io_push_ascii_for_test(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_async_io_xref_stream_pdf_with_prev_deleted_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
+  let original_offset = pdf_async_io_push_raw_indirect_object_for_test(
+    output, 1, 0, "1",
+  )
+  let base_xref = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref\n0 2\n0000000000 65535 f \n")
+  pdf_async_io_push_classic_xref_entry_for_test(output, original_offset, 0)
+  pdf_async_io_push_classic_trailer_for_test(output, base_xref, 2)
+  let xref_stream_offset = output.length()
+  let stream_data : Array[Byte] = []
+  pdf_async_io_push_xref_stream_entry_for_test(stream_data, 0, 0, 65535)
+  pdf_async_io_push_xref_stream_entry_for_test(stream_data, 0, 0, 0)
+  pdf_async_io_push_xref_stream_entry_for_test(
+    stream_data, 1, xref_stream_offset, 0,
+  )
+  pdf_async_io_push_ascii_for_test(output, "2 0 obj\n")
+  pdf_async_io_push_ascii_for_test(output, "<< /Type /XRef /Length ")
+  pdf_async_io_push_ascii_for_test(output, stream_data.length().to_string())
+  pdf_async_io_push_ascii_for_test(output, " /Size 3 /Root 1 0 R /Prev ")
+  pdf_async_io_push_ascii_for_test(output, base_xref.to_string())
+  pdf_async_io_push_ascii_for_test(output, " /W [1 4 2] >>\nstream\n")
+  for byte in stream_data {
+    output.push(byte)
+  }
+  pdf_async_io_push_ascii_for_test(output, "\nendstream\nendobj\nstartxref\n")
+  pdf_async_io_push_ascii_for_test(output, xref_stream_offset.to_string())
+  pdf_async_io_push_ascii_for_test(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn pdf_async_io_classic_pdf_with_self_prev_xref_for_test() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
@@ -2464,6 +2535,51 @@ async test "async file wrappers read classic Prev revisions" {
     PdfInteger(1),
   )
   @test.assert_eq(older_password_result.denied_permissions, [])
+}
+
+///|
+async test "async file wrappers read xref stream Prev revisions" {
+  let updated_path = pdf_async_io_test_path_for_test("xref_stream_prev_update")
+  let deleted_path = pdf_async_io_test_path_for_test("xref_stream_prev_deleted")
+  pdf_async_io_remove_if_exists_for_test(updated_path)
+  pdf_async_io_remove_if_exists_for_test(deleted_path)
+  @fs.write_file(
+    updated_path,
+    pdf_async_io_xref_stream_pdf_with_prev_update_for_test(),
+    create=0o644,
+  )
+  @fs.write_file(
+    deleted_path,
+    pdf_async_io_xref_stream_pdf_with_prev_deleted_for_test(),
+    create=0o644,
+  )
+  @test.assert_eq(pdf_read_header_from_file(updated_path), {
+    major: 1,
+    minor: 5,
+  })
+  @test.assert_eq(pdf_revisions_from_file(updated_path), 2)
+  @test.assert_eq(pdf_revisions_from_file(deleted_path), 2)
+  let updated = pdf_read_document_from_file(updated_path)
+  let updated_older = pdf_read_document_revision_from_file(updated_path, 2)
+  let deleted = pdf_read_document_from_file(deleted_path)
+  let deleted_older = pdf_read_document_revision_from_file(deleted_path, 2)
+  pdf_async_io_remove_if_exists_for_test(updated_path)
+  pdf_async_io_remove_if_exists_for_test(deleted_path)
+
+  @test.assert_eq(updated.object_numbers(), [1])
+  @test.assert_eq(updated.lookup_object_or_null(1), PdfInteger(2))
+  @test.assert_eq(
+    updated.trailer_dict().lookup_immediate(pdf_async_io_name_for_test("/Prev")),
+    None,
+  )
+  @test.assert_eq(updated_older.revision_read(), 2)
+  @test.assert_eq(updated_older.object_numbers(), [1])
+  @test.assert_eq(updated_older.lookup_object_or_null(1), PdfInteger(1))
+  @test.assert_eq(deleted.object_numbers(), [])
+  @test.assert_eq(deleted.lookup_object_or_null(1), PdfNull)
+  @test.assert_eq(deleted_older.revision_read(), 2)
+  @test.assert_eq(deleted_older.object_numbers(), [1])
+  @test.assert_eq(deleted_older.lookup_object_or_null(1), PdfInteger(1))
 }
 
 ///|
