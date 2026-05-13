@@ -261,6 +261,12 @@ Current backend snapshot:
   xref-stream compressed entries whose referenced object stream is missing,
   including header validation and `XRefEntryExpected` propagation. `moon test
   --target native` now reports 1301/1301 tests passing.~~
+- [x] ~~Add the sixteenth pre-refactor correctness sentinel: native async file
+  wrappers now preserve the byte-reader's unrecoverable error path for
+  mismatched object-stream roots, refusing to reconstruct from a later physical
+  catalog when the valid xref-stream root entry points to the wrong embedded
+  object number. `moon test --target native` now reports 1302/1302 tests
+  passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~
