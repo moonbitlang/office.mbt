@@ -321,6 +321,11 @@ Current backend snapshot:
   headers, and glued trailer dictionaries without falling back to
   reconstruction. `moon test --target native` now reports 1313/1313 tests
   passing.~~
+- [x] ~~Add the twenty-eighth pre-refactor correctness sentinel: native async
+  file wrappers now gate classic `startxref` pointer tolerance for trailing
+  junk after EOF, non-digit prefixes before the numeric pointer, and inline
+  numeric pointers across both document reads and revision metadata reads.
+  `moon test --target native` now reports 1314/1314 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~

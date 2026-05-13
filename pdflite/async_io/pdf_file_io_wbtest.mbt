@@ -800,6 +800,62 @@ fn pdf_async_io_classic_pdf_with_glued_trailer_for_test() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn pdf_async_io_classic_pdf_with_catalog_xref_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  let catalog_offset = pdf_async_io_write_catalog_object_for_test(output)
+  let xref_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref\n0 2\n0000000000 65535 f \n")
+  pdf_async_io_push_classic_xref_entry_for_test(output, catalog_offset, 0)
+  pdf_async_io_push_classic_trailer_for_test(output, xref_offset, 2)
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_async_io_classic_pdf_with_trailing_startxref_junk_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  for byte in pdf_async_io_classic_pdf_with_catalog_xref_for_test()[:] {
+    output.push(byte)
+  }
+  pdf_async_io_push_ascii_for_test(output, "\nstartxref\nnot-a-number\n")
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_async_io_classic_pdf_with_prefixed_startxref_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  let catalog_offset = pdf_async_io_write_catalog_object_for_test(output)
+  let xref_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref\n0 2\n0000000000 65535 f \n")
+  pdf_async_io_push_classic_xref_entry_for_test(output, catalog_offset, 0)
+  pdf_async_io_push_ascii_for_test(
+    output, "trailer\n<< /Root 1 0 R /Size 2 >>\n",
+  )
+  pdf_async_io_push_ascii_for_test(output, "startxref junk=")
+  pdf_async_io_push_ascii_for_test(output, xref_offset.to_string())
+  pdf_async_io_push_ascii_for_test(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_async_io_classic_pdf_with_inline_startxref_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  let catalog_offset = pdf_async_io_write_catalog_object_for_test(output)
+  let xref_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref\n0 2\n0000000000 65535 f \n")
+  pdf_async_io_push_classic_xref_entry_for_test(output, catalog_offset, 0)
+  pdf_async_io_push_ascii_for_test(
+    output, "trailer\n<< /Root 1 0 R /Size 2 >>\n",
+  )
+  pdf_async_io_push_ascii_for_test(output, "startxref ")
+  pdf_async_io_push_ascii_for_test(output, xref_offset.to_string())
+  pdf_async_io_push_ascii_for_test(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn pdf_async_io_classic_pdf_with_self_prev_xref_for_test() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
@@ -2305,6 +2361,52 @@ async test "async file wrappers accept classic xref layout variants" {
     @test.assert_eq(parsed.first_xref() > 0, true)
     @test.assert_eq(parsed.root(), 1)
     @test.assert_eq(parsed.object_numbers(), [])
+  }
+}
+
+///|
+async test "async file wrappers accept classic startxref pointer variants" {
+  let trailing_path = pdf_async_io_test_path_for_test("startxref_trailing_junk")
+  let prefixed_path = pdf_async_io_test_path_for_test("startxref_prefixed")
+  let inline_path = pdf_async_io_test_path_for_test("startxref_inline")
+  pdf_async_io_remove_if_exists_for_test(trailing_path)
+  pdf_async_io_remove_if_exists_for_test(prefixed_path)
+  pdf_async_io_remove_if_exists_for_test(inline_path)
+  @fs.write_file(
+    trailing_path,
+    pdf_async_io_classic_pdf_with_trailing_startxref_junk_for_test(),
+    create=0o644,
+  )
+  @fs.write_file(
+    prefixed_path,
+    pdf_async_io_classic_pdf_with_prefixed_startxref_for_test(),
+    create=0o644,
+  )
+  @fs.write_file(
+    inline_path,
+    pdf_async_io_classic_pdf_with_inline_startxref_for_test(),
+    create=0o644,
+  )
+  let trailing_revisions = pdf_revisions_from_file(trailing_path)
+  let prefixed_revisions = pdf_revisions_from_file(prefixed_path)
+  let inline_revisions = pdf_revisions_from_file(inline_path)
+  let trailing = pdf_read_document_from_file(trailing_path)
+  let prefixed = pdf_read_document_from_file(prefixed_path)
+  let inline = pdf_read_document_from_file(inline_path)
+  pdf_async_io_remove_if_exists_for_test(trailing_path)
+  pdf_async_io_remove_if_exists_for_test(prefixed_path)
+  pdf_async_io_remove_if_exists_for_test(inline_path)
+  @test.assert_eq(trailing_revisions, 1)
+  @test.assert_eq(prefixed_revisions, 1)
+  @test.assert_eq(inline_revisions, 1)
+  for parsed in [trailing, prefixed, inline] {
+    @test.assert_eq(parsed.first_xref() > 0, true)
+    @test.assert_eq(parsed.root(), 1)
+    @test.assert_eq(parsed.object_numbers(), [1])
+    @test.assert_eq(
+      parsed.lookup_object_or_null(1),
+      pdf_async_io_classic_catalog_object_for_test(),
+    )
   }
 }
 
