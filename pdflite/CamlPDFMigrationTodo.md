@@ -1927,6 +1927,11 @@ Current backend snapshot:
   supplementary-plane bfchar entries, bfrange-array multi-codepoint entries,
   sequential bfrange entries, fallback unmapped bytes, and reverse lookup
   behavior. `moon test --target native` now reports 1346/1346 tests passing.~~
+- [x] ~~Add the sixty-first pre-refactor correctness sentinel: native compressed
+  reader boundaries now preserve vertical predefined CMap extraction and
+  reverse lookup for GB1, CNS1, and Korea1 variants including GBK2K, Big5,
+  HKSCS, CNS1 Big5 variants, KSC-EUC, KSCpc-EUC, and KSCms-UHC. `moon test
+  --target native` now reports 1347/1347 tests passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.

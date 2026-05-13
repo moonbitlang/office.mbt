@@ -2013,6 +2013,264 @@ fn acceptance_cns_euc_text_document_for_test() -> @pdflite.PdfDocument raise {
 }
 
 ///|
+fn acceptance_vertical_predefined_cmap_cases_for_test() -> Array[
+  (
+    String,
+    String,
+    String,
+    String,
+    String,
+    Int,
+    Array[Int],
+    Array[Int],
+    Int,
+    Int,
+  ),
+] {
+  [
+    (
+      "/FvGbEuc",
+      "/VerticalGBEUC",
+      "/GB-EUC-V",
+      "/VerticalGBEUCDescendant",
+      "GB1",
+      140,
+      [0xA1, 0xA2],
+      [0x3001],
+      0x3001,
+      0xA1A2,
+    ),
+    (
+      "/FvGbpc",
+      "/VerticalGBpcEUC",
+      "/GBpc-EUC-V",
+      "/VerticalGBpcEUCDescendant",
+      "GB1",
+      142,
+      [0xA1, 0xA2],
+      [0x3001],
+      0x3001,
+      0xA1A2,
+    ),
+    (
+      "/FvGbk",
+      "/VerticalGBK",
+      "/GBK-EUC-V",
+      "/VerticalGBKDescendant",
+      "GB1",
+      144,
+      [0xA1, 0xA2],
+      [0x3001],
+      0x3001,
+      0xA1A2,
+    ),
+    (
+      "/FvGbkp",
+      "/VerticalGBKp",
+      "/GBKp-EUC-V",
+      "/VerticalGBKpDescendant",
+      "GB1",
+      146,
+      [0xA1, 0xA2],
+      [0x3001],
+      0x3001,
+      0xA1A2,
+    ),
+    (
+      "/FvGbk2k",
+      "/VerticalGBK2K",
+      "/GBK2K-V",
+      "/VerticalGBK2KDescendant",
+      "GB1",
+      148,
+      [0xA4, 0xC3],
+      [0x3064],
+      0x3064,
+      0xA4C3,
+    ),
+    (
+      "/FvB5",
+      "/VerticalB5",
+      "/B5-V",
+      "/VerticalB5Descendant",
+      "CNS1",
+      150,
+      [0xA1, 0x4B],
+      [0xFE19],
+      0xFE19,
+      0xA14B,
+    ),
+    (
+      "/FvB5pc",
+      "/VerticalB5pc",
+      "/B5pc-V",
+      "/VerticalB5pcDescendant",
+      "CNS1",
+      152,
+      [0xA1, 0x4B],
+      [0xFE19],
+      0xFE19,
+      0xA14B,
+    ),
+    (
+      "/FvETen",
+      "/VerticalETen",
+      "/ETen-B5-V",
+      "/VerticalETenDescendant",
+      "CNS1",
+      154,
+      [0xA1, 0x4B],
+      [0xFE19],
+      0xFE19,
+      0xA14B,
+    ),
+    (
+      "/FvETenms",
+      "/VerticalETenms",
+      "/ETenms-B5-V",
+      "/VerticalETenmsDescendant",
+      "CNS1",
+      156,
+      [0xA1, 0x4C],
+      [0xFE30],
+      0xFE30,
+      0xA14C,
+    ),
+    (
+      "/FvHKdla",
+      "/VerticalHKdla",
+      "/HKdla-B5-V",
+      "/VerticalHKdlaDescendant",
+      "CNS1",
+      158,
+      [0xA1, 0x4B],
+      [0xFE19],
+      0xFE19,
+      0xA14B,
+    ),
+    (
+      "/FvHKdlb",
+      "/VerticalHKdlb",
+      "/HKdlb-B5-V",
+      "/VerticalHKdlbDescendant",
+      "CNS1",
+      160,
+      [0xA1, 0x4B],
+      [0xFE19],
+      0xFE19,
+      0xA14B,
+    ),
+    (
+      "/FvHKgccs",
+      "/VerticalHKgccs",
+      "/HKgccs-B5-V",
+      "/VerticalHKgccsDescendant",
+      "CNS1",
+      162,
+      [0xA1, 0x4B],
+      [0xFE19],
+      0xFE19,
+      0xA14B,
+    ),
+    (
+      "/FvHKm314",
+      "/VerticalHKm314",
+      "/HKm314-B5-V",
+      "/VerticalHKm314Descendant",
+      "CNS1",
+      164,
+      [0xA1, 0x4B],
+      [0xFE19],
+      0xFE19,
+      0xA14B,
+    ),
+    (
+      "/FvHKm471",
+      "/VerticalHKm471",
+      "/HKm471-B5-V",
+      "/VerticalHKm471Descendant",
+      "CNS1",
+      166,
+      [0xA1, 0x4B],
+      [0xFE19],
+      0xFE19,
+      0xA14B,
+    ),
+    (
+      "/FvHKscs",
+      "/VerticalHKscs",
+      "/HKscs-B5-V",
+      "/VerticalHKscsDescendant",
+      "CNS1",
+      168,
+      [0xA1, 0x4B],
+      [0xFE19],
+      0xFE19,
+      0xA14B,
+    ),
+    (
+      "/FvKsc",
+      "/VerticalKSCEUC",
+      "/KSC-EUC-V",
+      "/VerticalKSCEUCDescendant",
+      "Korea1",
+      170,
+      [0xA1, 0xA6],
+      [0x22EF],
+      0x22EF,
+      0xA1A6,
+    ),
+    (
+      "/FvKscpc",
+      "/VerticalKSCpcEUC",
+      "/KSCpc-EUC-V",
+      "/VerticalKSCpcEUCDescendant",
+      "Korea1",
+      172,
+      [0xA1, 0xA6],
+      [0x22EF],
+      0x22EF,
+      0xA1A6,
+    ),
+    (
+      "/FvUhc",
+      "/VerticalKSCmsUHC",
+      "/KSCms-UHC-V",
+      "/VerticalKSCmsUHCDescendant",
+      "Korea1",
+      174,
+      [0xA1, 0xA6],
+      [0x22EF],
+      0x22EF,
+      0xA1A6,
+    ),
+  ]
+}
+
+///|
+fn acceptance_vertical_predefined_cmap_text_document_for_test() -> @pdflite.PdfDocument raise {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  let pages : Array[@pdflite.PdfPage] = []
+  for case in acceptance_vertical_predefined_cmap_cases_for_test() {
+    doc.add_object_given_number(
+      case.5,
+      acceptance_predefined_cmap_descendant_font_for_test(case.3, case.4),
+    )
+    pages.push(
+      acceptance_predefined_cmap_page_for_test(
+        case.0,
+        acceptance_predefined_cmap_type0_font_for_test(case.1, case.2, case.5),
+        acceptance_text_bytes_for_test(case.6),
+      ),
+    )
+  }
+  let page_root = doc.add_pagetree(pages)
+  ignore(doc.add_root(page_root, []))
+  doc
+}
+
+///|
 fn acceptance_korea_cmap_text_for_test() -> @pdflite.PdfBytes raise {
   acceptance_text_bytes_for_test([
     0x41, 0xB0, 0xA1, 0xC7, 0xD1, 0xB1, 0xDB, 0x81, 0x41, 0xA4, 0xD4, 0x81, 0x40,
@@ -2792,6 +3050,37 @@ fn acceptance_assert_cns_euc_text_for_test(
     Some(0xA1AC),
   )
   @test.assert_eq(vertical_extractor.charcode_of_codepoint(0x1F600), None)
+}
+
+///|
+fn acceptance_assert_vertical_predefined_cmap_text_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(doc.version(), (1, 5))
+  @test.assert_eq(doc.endpage(), 18)
+  let pages = doc.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 18)
+  let cases = acceptance_vertical_predefined_cmap_cases_for_test()
+  for index, case in cases {
+    let font = acceptance_assert_predefined_cmap_font_shape_for_test(
+      doc,
+      pages[index],
+      case.0,
+      case.2,
+      case.4,
+    )
+    @test.assert_eq(
+      acceptance_font_codepoints_of_page_for_test(
+        doc,
+        pages[index],
+        acceptance_name_for_test(case.0),
+      ),
+      case.7,
+    )
+    let extractor = doc.text_extractor_of_font(font)
+    @test.assert_eq(extractor.charcode_of_codepoint(case.8), Some(case.9))
+    @test.assert_eq(extractor.charcode_of_codepoint(0x1F600), None)
+  }
 }
 
 ///|
@@ -6219,6 +6508,16 @@ test "native acceptance suite extracts CNS-EUC predefined CMap text through read
   acceptance_assert_cns_euc_text_for_test(parsed)
   let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
   acceptance_assert_cns_euc_text_for_test(reparsed)
+}
+
+///|
+test "native acceptance suite extracts vertical predefined CMap text through reader boundaries" {
+  let parsed = acceptance_compressed_roundtrip_for_test(
+    acceptance_vertical_predefined_cmap_text_document_for_test(),
+  )
+  acceptance_assert_vertical_predefined_cmap_text_for_test(parsed)
+  let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
+  acceptance_assert_vertical_predefined_cmap_text_for_test(reparsed)
 }
 
 ///|
