@@ -463,6 +463,10 @@ Current backend snapshot:
   tolerance from disk, proving both strict and public file reads keep the
   catalog object intact. `moon test --target native` now reports 1342/1342
   tests passing.~~
+- [x] ~~Add the fifty-seventh pre-refactor correctness sentinel: native async
+  file fixtures now preserve missing-plain-`endobj` continuation from disk,
+  proving strict and public file reads still separate the following indirect
+  object. `moon test --target native` now reports 1343/1343 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~
