@@ -215,6 +215,76 @@ fn pdf_async_io_mark_classic_xref_entry_free_for_test(
 }
 
 ///|
+fn pdf_async_io_parse_positive_decimal_for_test(
+  bytes : BytesView,
+  start : Int,
+  end : Int,
+) -> Int raise {
+  if start >= end {
+    fail("expected decimal digits")
+  }
+  let mut value = 0
+  for index in start..<end {
+    let byte = bytes[index].to_int()
+    if byte < 48 || byte > 57 {
+      fail("expected decimal digit")
+    }
+    value = value * 10 + byte - 48
+  }
+  value
+}
+
+///|
+fn pdf_async_io_keep_catalog_and_encrypt_xref_entries_for_test(
+  bytes : @pdflite.PdfBytes,
+  encrypt_object_number : Int,
+) -> @pdflite.PdfBytes raise {
+  let header = @ascii.encode("xref\n0 ")
+  let header_position = pdf_async_io_find_bytes_for_test(bytes, header)
+  if header_position < 0 {
+    fail("expected first classic xref subsection header")
+  }
+  if encrypt_object_number <= 1 {
+    fail("expected encryption object after catalog")
+  }
+  let count_start = header_position + header.length()
+  let mut count_end = count_start
+  while count_end < bytes.length() && bytes[count_end] != b'\n' {
+    count_end += 1
+  }
+  let original_count = pdf_async_io_parse_positive_decimal_for_test(
+    bytes, count_start, count_end,
+  )
+  if encrypt_object_number >= original_count {
+    fail("expected encryption object xref row")
+  }
+  let rows_start = count_end + 1
+  let rows_end = rows_start + original_count * 20
+  let encrypt_row_start = rows_start + encrypt_object_number * 20
+  let encrypt_row_end = encrypt_row_start + 20
+  if rows_end > bytes.length() || encrypt_row_end > rows_end {
+    fail("expected complete classic xref rows")
+  }
+  let output : Array[Byte] = []
+  for index in 0..<(header_position + 5) {
+    output.push(bytes[index])
+  }
+  pdf_async_io_push_ascii_for_test(output, "0 2\n")
+  for index in rows_start..<(rows_start + 40) {
+    output.push(bytes[index])
+  }
+  pdf_async_io_push_ascii_for_test(output, encrypt_object_number.to_string())
+  pdf_async_io_push_ascii_for_test(output, " 1\n")
+  for index in encrypt_row_start..<encrypt_row_end {
+    output.push(bytes[index])
+  }
+  for index in rows_end..<bytes.length() {
+    output.push(bytes[index])
+  }
+  Bytes::from_array(output)
+}
+
+///|
 fn pdf_async_io_corrupt_first_xref_subsection_count_for_test(
   bytes : @pdflite.PdfBytes,
 ) -> @pdflite.PdfBytes raise {
@@ -2327,6 +2397,163 @@ async test "async file wrappers reconstruct encrypted catalogs missing from clas
   @test.assert_eq(try! roundtrip.document.endpage(), 1)
   @test.assert_eq(roundtrip.document.lookup_object_or_null(30), secret)
   @test.assert_eq(roundtrip.document.lookup_object_or_null(31), added_secret)
+}
+
+///|
+async test "async file wrappers reconstruct encrypted page trees missing from classic xref" {
+  let encrypted_path = pdf_async_io_test_path_for_test(
+    "encrypted_page_tree_missing_classic_xref",
+  )
+  let malformed_path = pdf_async_io_test_path_for_test(
+    "encrypted_page_tree_missing_classic_xref_malformed",
+  )
+  let repaired_path = pdf_async_io_test_path_for_test(
+    "encrypted_page_tree_missing_classic_xref_repaired",
+  )
+  pdf_async_io_remove_if_exists_for_test(encrypted_path)
+  pdf_async_io_remove_if_exists_for_test(malformed_path)
+  pdf_async_io_remove_if_exists_for_test(repaired_path)
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  doc.set_root(1)
+  doc.set_trailer_dict(
+    PdfDictionary([(pdf_async_io_name_for_test("/Root"), PdfIndirect(1))]),
+  )
+  doc.add_object_given_number(
+    1,
+    PdfDictionary([
+      (
+        pdf_async_io_name_for_test("/Type"),
+        PdfNameObject(pdf_async_io_name_for_test("/Catalog")),
+      ),
+      (pdf_async_io_name_for_test("/Pages"), PdfIndirect(2)),
+    ]),
+  )
+  doc.add_object_given_number(
+    2,
+    PdfDictionary([
+      (
+        pdf_async_io_name_for_test("/Type"),
+        PdfNameObject(pdf_async_io_name_for_test("/Pages")),
+      ),
+      (pdf_async_io_name_for_test("/Kids"), PdfArray([PdfIndirect(3)])),
+      (pdf_async_io_name_for_test("/Count"), PdfInteger(1)),
+    ]),
+  )
+  doc.add_object_given_number(
+    3,
+    PdfDictionary([
+      (
+        pdf_async_io_name_for_test("/Type"),
+        PdfNameObject(pdf_async_io_name_for_test("/Page")),
+      ),
+      (pdf_async_io_name_for_test("/Parent"), PdfIndirect(2)),
+      (
+        pdf_async_io_name_for_test("/MediaBox"),
+        PdfArray([PdfInteger(0), PdfInteger(0), PdfInteger(10), PdfInteger(10)]),
+      ),
+    ]),
+  )
+  let secret = pdf_async_io_secret_object_for_test(
+    "async page-tree missing xref secret",
+  )
+  doc.add_object_given_number(60, secret)
+  let user = @ascii.encode("user")
+  let owner = @ascii.encode("owner")
+  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let encrypted = try! doc.encrypt_128bit_aesv2_with_iv_provider(
+    user,
+    owner,
+    denied,
+    @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
+      @ascii.encode("async page-tree missing xref iv"),
+    ),
+    encrypt_metadata=false,
+    file_id=@ascii.encode("async-page-tree-missing-xref-id"),
+  )
+  let encrypt_object_number = match
+    encrypted
+    .trailer_dict()
+    .lookup_immediate(pdf_async_io_name_for_test("/Encrypt")) {
+    Some(PdfIndirect(number)) => number
+    _ => fail("expected encryption object reference")
+  }
+  pdf_write_document_to_file(encrypted, encrypted_path)
+  @test.assert_eq(
+    pdf_async_io_find_bytes_for_test(
+      @fs.read_file(encrypted_path).binary(),
+      @ascii.encode("async page-tree missing xref secret"),
+    ) <
+    0,
+    true,
+  )
+  let malformed = pdf_async_io_keep_catalog_and_encrypt_xref_entries_for_test(
+    @fs.read_file(encrypted_path).binary(),
+    encrypt_object_number,
+  )
+  @fs.write_file(malformed_path, malformed, create=0o644)
+  let strict = @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(malformed_path).binary(),
+  )
+  @test.assert_eq(strict.root(), 1)
+  @test.assert_eq(strict.object_numbers(), [1, encrypt_object_number])
+  let strict_pages : Result[Int, Error] = try? strict.endpage()
+  guard strict_pages is Err(@pdflite.PdfError::PageTreeExpected) else {
+    fail("expected missing page tree to require reconstruction")
+  }
+  @test.assert_eq(
+    pdf_read_document_from_file_with_passwords(
+      malformed_path,
+      user_password=Some(@ascii.encode("bad-user")),
+    ),
+    None,
+  )
+  let recovered = pdf_async_io_decryption_result_for_test(
+    pdf_read_document_from_file_with_passwords(
+      malformed_path,
+      owner_password=Some(owner),
+    ),
+  )
+  @test.assert_eq(recovered.document.first_xref(), 0)
+  @test.assert_eq(recovered.denied_permissions, denied)
+  @test.assert_eq(recovered.document.root(), 1)
+  @test.assert_eq(try! recovered.document.endpage(), 1)
+  @test.assert_eq(recovered.document.lookup_object_or_null(60), secret)
+  let added_secret = pdf_async_io_secret_object_for_test(
+    "async page-tree missing xref repaired",
+  )
+  recovered.document.add_object_given_number(61, added_secret)
+  let recrypted = try! recovered.document.recrypt_with_password_aesv2_with_iv_provider(
+    owner,
+    @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
+      @ascii.encode("async page-tree missing xref repair iv"),
+    ),
+  )
+  pdf_write_document_to_file_with_compressed_xref_stream(
+    recrypted, repaired_path,
+  )
+  @test.assert_eq(
+    pdf_async_io_find_bytes_for_test(
+      @fs.read_file(repaired_path).binary(),
+      @ascii.encode("async page-tree missing xref secret"),
+    ) <
+    0,
+    true,
+  )
+  let roundtrip = pdf_async_io_decryption_result_for_test(
+    pdf_read_document_from_file_with_passwords(
+      repaired_path,
+      user_password=Some(user),
+    ),
+  )
+  pdf_async_io_remove_if_exists_for_test(encrypted_path)
+  pdf_async_io_remove_if_exists_for_test(malformed_path)
+  pdf_async_io_remove_if_exists_for_test(repaired_path)
+  @test.assert_eq(roundtrip.denied_permissions, denied)
+  @test.assert_eq(roundtrip.document.root(), 1)
+  @test.assert_eq(try! roundtrip.document.endpage(), 1)
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(60), secret)
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(61), added_secret)
 }
 
 ///|

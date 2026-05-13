@@ -250,6 +250,12 @@ Current backend snapshot:
   password-aware page-tree probe path, preserve bad-password fallback,
   decrypted physical objects, and AESV2 compressed-xref re-encryption. `moon
   test --target native` now reports 1299/1299 tests passing.~~
+- [x] ~~Add the fourteenth pre-refactor correctness sentinel: native async file
+  wrappers now cover encrypted page-tree objects that are physically present
+  but omitted from the classic xref table, including strict page-tree failure,
+  bad-password fallback, owner-password reconstruction, no plaintext leak in
+  repaired output, and user-password round-trip. `moon test --target native`
+  now reports 1300/1300 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~
