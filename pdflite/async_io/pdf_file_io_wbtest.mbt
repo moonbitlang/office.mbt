@@ -185,6 +185,36 @@ fn pdf_async_io_corrupt_first_in_use_xref_marker_for_test(
 }
 
 ///|
+fn pdf_async_io_mark_classic_xref_entry_free_for_test(
+  bytes : @pdflite.PdfBytes,
+  object_number : Int,
+) -> @pdflite.PdfBytes raise {
+  if object_number < 0 {
+    fail("expected non-negative classic xref object number")
+  }
+  let header = @ascii.encode("xref\n0 ")
+  let header_position = pdf_async_io_find_bytes_for_test(bytes, header)
+  if header_position < 0 {
+    fail("expected first classic xref subsection header")
+  }
+  let mut header_end = header_position + header.length()
+  while header_end < bytes.length() && bytes[header_end] != b'\n' {
+    header_end += 1
+  }
+  let row_start = header_end + 1 + object_number * 20
+  let marker_position = row_start + 17
+  if marker_position >= bytes.length() || bytes[marker_position] != b'n' {
+    fail("expected in-use classic xref entry")
+  }
+  let output : Array[Byte] = []
+  for byte in bytes {
+    output.push(byte)
+  }
+  output[marker_position] = b'f'
+  Bytes::from_array(output)
+}
+
+///|
 fn pdf_async_io_corrupt_first_xref_subsection_count_for_test(
   bytes : @pdflite.PdfBytes,
 ) -> @pdflite.PdfBytes raise {
@@ -2171,6 +2201,115 @@ async test "async file wrappers reconstruct encrypted missing-root classic trail
     pdf_async_io_find_bytes_for_test(
       @fs.read_file(repaired_path).binary(),
       @ascii.encode("async missing-root trailer secret"),
+    ) <
+    0,
+    true,
+  )
+  let roundtrip = pdf_async_io_decryption_result_for_test(
+    pdf_read_document_from_file_with_passwords(
+      repaired_path,
+      user_password=Some(user),
+    ),
+  )
+  pdf_async_io_remove_if_exists_for_test(encrypted_path)
+  pdf_async_io_remove_if_exists_for_test(malformed_path)
+  pdf_async_io_remove_if_exists_for_test(repaired_path)
+  @test.assert_eq(roundtrip.denied_permissions, denied)
+  @test.assert_eq(try! roundtrip.document.endpage(), 1)
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(30), secret)
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(31), added_secret)
+}
+
+///|
+async test "async file wrappers reconstruct encrypted catalogs missing from classic xref" {
+  let encrypted_path = pdf_async_io_test_path_for_test(
+    "encrypted_catalog_missing_classic_xref",
+  )
+  let malformed_path = pdf_async_io_test_path_for_test(
+    "encrypted_catalog_missing_classic_xref_malformed",
+  )
+  let repaired_path = pdf_async_io_test_path_for_test(
+    "encrypted_catalog_missing_classic_xref_repaired",
+  )
+  pdf_async_io_remove_if_exists_for_test(encrypted_path)
+  pdf_async_io_remove_if_exists_for_test(malformed_path)
+  pdf_async_io_remove_if_exists_for_test(repaired_path)
+  let secret = pdf_async_io_secret_object_for_test(
+    "async catalog missing xref secret",
+  )
+  let doc = try! @pdflite.pdf_minimum_valid_pdf()
+  let root_number = doc.root()
+  doc.add_object_given_number(30, secret)
+  let user = @ascii.encode("user")
+  let owner = @ascii.encode("owner")
+  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  pdf_write_encrypted_aesv2_document_to_file_with_iv_provider(
+    doc,
+    encrypted_path,
+    user,
+    owner,
+    denied,
+    @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
+      @ascii.encode("async catalog missing xref iv"),
+    ),
+    encrypt_metadata=false,
+    file_id=@ascii.encode("async-catalog-missing-xref-id"),
+  )
+  @test.assert_eq(
+    pdf_async_io_find_bytes_for_test(
+      @fs.read_file(encrypted_path).binary(),
+      @ascii.encode("async catalog missing xref secret"),
+    ) <
+    0,
+    true,
+  )
+  let malformed = pdf_async_io_mark_classic_xref_entry_free_for_test(
+    @fs.read_file(encrypted_path).binary(),
+    root_number,
+  )
+  @fs.write_file(malformed_path, malformed, create=0o644)
+  let strict = @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(malformed_path).binary(),
+  )
+  @test.assert_eq(strict.root(), root_number)
+  let strict_catalog : Result[@pdflite.PdfObject, Error] = try? strict.catalog()
+  guard strict_catalog is Err(@pdflite.PdfError::RootExpected) else {
+    fail("expected missing root object to require reconstruction")
+  }
+  @test.assert_eq(
+    pdf_read_document_from_file_with_passwords(
+      malformed_path,
+      user_password=Some(@ascii.encode("bad-user")),
+    ),
+    None,
+  )
+  let recovered = pdf_async_io_decryption_result_for_test(
+    pdf_read_document_from_file_with_passwords(
+      malformed_path,
+      owner_password=Some(owner),
+    ),
+  )
+  @test.assert_eq(recovered.document.first_xref(), 0)
+  @test.assert_eq(recovered.denied_permissions, denied)
+  @test.assert_eq(try! recovered.document.endpage(), 1)
+  @test.assert_eq(recovered.document.lookup_object_or_null(30), secret)
+  let added_secret = pdf_async_io_secret_object_for_test(
+    "async catalog missing xref repaired",
+  )
+  recovered.document.add_object_given_number(31, added_secret)
+  let recrypted = try! recovered.document.recrypt_with_password_aesv2_with_iv_provider(
+    owner,
+    @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
+      @ascii.encode("async catalog missing xref repair iv"),
+    ),
+  )
+  pdf_write_document_to_file_with_compressed_xref_stream(
+    recrypted, repaired_path,
+  )
+  @test.assert_eq(
+    pdf_async_io_find_bytes_for_test(
+      @fs.read_file(repaired_path).binary(),
+      @ascii.encode("async catalog missing xref secret"),
     ) <
     0,
     true,

@@ -238,6 +238,12 @@ Current backend snapshot:
   physical object, still preserves deleted non-root free entries, and validates
   bad-password fallback. `moon test --target native` now reports 1297/1297 tests
   passing.~~
+- [x] ~~Add the twelfth pre-refactor correctness sentinel: native async file
+  wrappers now cover encrypted trailer-root objects that are physically present
+  but marked free in the classic xref table, including bad-password fallback,
+  owner-password reconstruction, no plaintext leak in repaired output, and
+  user-password round-trip. `moon test --target native` now reports 1298/1298
+  tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~
