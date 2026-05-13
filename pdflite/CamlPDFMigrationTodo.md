@@ -300,6 +300,11 @@ Current backend snapshot:
   file wrappers now preserve `XRefExpected` for full document reads with cyclic
   classic `/Prev` chains. `moon test --target native` now reports 1309/1309
   tests passing.~~
+- [x] ~~Add the twenty-fourth pre-refactor correctness sentinel: native async
+  file wrappers now gate hand-built classic `/Prev` revision reads, including
+  newest/older revision selection, sanitized `/Prev`, object deletion by older
+  revision view, and the password wrapper's empty-permission result. `moon test
+  --target native` now reports 1310/1310 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~

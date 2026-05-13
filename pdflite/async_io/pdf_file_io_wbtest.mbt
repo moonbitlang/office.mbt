@@ -103,6 +103,21 @@ fn pdf_async_io_push_ascii_for_test(
 }
 
 ///|
+fn pdf_async_io_push_padded_decimal_for_test(
+  output : Array[Byte],
+  value : Int,
+  width : Int,
+) -> Unit {
+  let text = value.to_string()
+  if text.length() < width {
+    for _ in 0..<(width - text.length()) {
+      output.push(b'0')
+    }
+  }
+  pdf_async_io_push_ascii_for_test(output, text)
+}
+
+///|
 fn pdf_async_io_is_pdf_whitespace_for_test(byte : Byte) -> Bool {
   match byte.to_int() {
     0 | 9 | 10 | 12 | 13 | 32 => true
@@ -556,6 +571,18 @@ fn pdf_async_io_push_xref_stream_entry_for_test(
 }
 
 ///|
+fn pdf_async_io_push_classic_xref_entry_for_test(
+  output : Array[Byte],
+  offset : Int,
+  generation : Int,
+) -> Unit {
+  pdf_async_io_push_padded_decimal_for_test(output, offset, 10)
+  output.push(b' ')
+  pdf_async_io_push_padded_decimal_for_test(output, generation, 5)
+  pdf_async_io_push_ascii_for_test(output, " n \n")
+}
+
+///|
 fn pdf_async_io_write_indirect_object_for_test(
   output : Array[Byte],
   number : Int,
@@ -682,6 +709,39 @@ fn pdf_async_io_classic_pdf_with_self_prev_xref_for_test() -> @pdflite.PdfBytes 
   pdf_async_io_push_ascii_for_test(output, xref_offset.to_string())
   pdf_async_io_push_ascii_for_test(output, " >>\nstartxref\n")
   pdf_async_io_push_ascii_for_test(output, xref_offset.to_string())
+  pdf_async_io_push_ascii_for_test(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_async_io_classic_pdf_with_prev_xref_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  let original_offset = output.length()
+  pdf_async_io_write_indirect_object_for_test(output, 1, PdfInteger(1))
+  let base_xref = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref\n0 2\n0000000000 65535 f \n")
+  pdf_async_io_push_classic_xref_entry_for_test(output, original_offset, 0)
+  pdf_async_io_push_ascii_for_test(
+    output, "trailer\n<< /Root 1 0 R /Size 2 >>\nstartxref\n",
+  )
+  pdf_async_io_push_ascii_for_test(output, base_xref.to_string())
+  pdf_async_io_push_ascii_for_test(output, "\n%%EOF\n")
+
+  let updated_offset = output.length()
+  pdf_async_io_write_indirect_object_for_test(output, 1, PdfInteger(2))
+  let second_offset = output.length()
+  pdf_async_io_write_indirect_object_for_test(output, 2, PdfInteger(3))
+  let final_xref = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref\n1 2\n")
+  pdf_async_io_push_classic_xref_entry_for_test(output, updated_offset, 0)
+  pdf_async_io_push_classic_xref_entry_for_test(output, second_offset, 0)
+  pdf_async_io_push_ascii_for_test(
+    output, "trailer\n<< /Root 1 0 R /Size 3 /Prev ",
+  )
+  pdf_async_io_push_ascii_for_test(output, base_xref.to_string())
+  pdf_async_io_push_ascii_for_test(output, " >>\nstartxref\n")
+  pdf_async_io_push_ascii_for_test(output, final_xref.to_string())
   pdf_async_io_push_ascii_for_test(output, "\n%%EOF\n")
   Bytes::from_array(output)
 }
@@ -1895,6 +1955,51 @@ async test "async file wrappers stop cyclic Prev chains" {
   guard result is Err(@pdflite.PdfError::XRefExpected) else {
     fail("expected cyclic Prev document read failure")
   }
+}
+
+///|
+async test "async file wrappers read classic Prev revisions" {
+  let path = pdf_async_io_test_path_for_test("classic_prev_revisions")
+  pdf_async_io_remove_if_exists_for_test(path)
+  @fs.write_file(
+    path,
+    pdf_async_io_classic_pdf_with_prev_xref_for_test(),
+    create=0o644,
+  )
+  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 4 })
+  @test.assert_eq(pdf_revisions_from_file(path), 2)
+  let full = pdf_read_document_from_file(path)
+  let latest = pdf_read_document_revision_from_file(path, 1)
+  let older = pdf_read_document_revision_from_file(path, 2)
+  guard pdf_read_document_revision_from_file_with_passwords(path, 2)
+    is Some(older_password_result) else {
+    fail("expected older revision password wrapper result")
+  }
+  pdf_async_io_remove_if_exists_for_test(path)
+
+  @test.assert_eq(full.object_numbers(), [1, 2])
+  @test.assert_eq(full.lookup_object_or_null(1), PdfInteger(2))
+  @test.assert_eq(full.lookup_object_or_null(2), PdfInteger(3))
+  @test.assert_eq(
+    full.trailer_dict().lookup_immediate(pdf_async_io_name_for_test("/Prev")),
+    None,
+  )
+  @test.assert_eq(latest.revision_read(), 1)
+  @test.assert_eq(latest.object_numbers(), [1, 2])
+  @test.assert_eq(latest.lookup_object_or_null(1), PdfInteger(2))
+  @test.assert_eq(latest.lookup_object_or_null(2), PdfInteger(3))
+  @test.assert_eq(older.revision_read(), 2)
+  @test.assert_eq(older.object_numbers(), [1])
+  @test.assert_eq(older.lookup_object_or_null(1), PdfInteger(1))
+  @test.assert_eq(older.lookup_object_or_null(2), PdfNull)
+  @test.assert_eq(older.first_xref() > 0, true)
+  @test.assert_eq(older_password_result.document.revision_read(), 2)
+  @test.assert_eq(older_password_result.document.object_numbers(), [1])
+  @test.assert_eq(
+    older_password_result.document.lookup_object_or_null(1),
+    PdfInteger(1),
+  )
+  @test.assert_eq(older_password_result.denied_permissions, [])
 }
 
 ///|
