@@ -408,6 +408,11 @@ Current backend snapshot:
   `trailer <<` and `trailer<<` forms, after preserving strict
   `StartXRefExpected`. `moon test --target native` now reports 1331/1331 tests
   passing.~~
+- [x] ~~Add the forty-sixth pre-refactor correctness sentinel: native async file
+  wrappers now reconstruct no-`startxref` PDFs with indirect stream lengths,
+  preserving deferred data for resolvable lengths and materializing streams
+  whose length references cannot be resolved. `moon test --target native` now
+  reports 1332/1332 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~

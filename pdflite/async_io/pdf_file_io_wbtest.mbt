@@ -1212,6 +1212,32 @@ fn pdf_async_io_classic_pdf_with_unparseable_stream_length_for_test() -> @pdflit
 }
 
 ///|
+fn pdf_async_io_malformed_pdf_with_indirect_stream_length_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  ignore(
+    pdf_async_io_push_raw_indirect_object_for_test(
+      output, 1, 0, "<< /Length 2 0 R >>\nstream\nHello\nendstream",
+    ),
+  )
+  ignore(pdf_async_io_push_raw_indirect_object_for_test(output, 2, 0, "5"))
+  ignore(
+    pdf_async_io_push_raw_indirect_object_for_test(
+      output, 3, 0, "<< /Type /Catalog /Payload 1 0 R >>",
+    ),
+  )
+  ignore(
+    pdf_async_io_push_raw_indirect_object_for_test(
+      output, 4, 0, "<< /Length 9 0 R >>\nstream\nIgnored\nendstream",
+    ),
+  )
+  pdf_async_io_push_ascii_for_test(
+    output, "trailer\n<< /Root 3 0 R /Size 5 >>\n",
+  )
+  Bytes::from_array(output)
+}
+
+///|
 fn pdf_async_io_assert_recovered_hello_stream_for_test(
   document : @pdflite.PdfDocument,
 ) -> Unit raise {
@@ -3944,6 +3970,52 @@ async test "async file wrappers recover unreadable stream lengths" {
     ]),
   )
   pdf_async_io_assert_recovered_hello_stream_for_test(unparseable)
+}
+
+///|
+async test "async file wrappers reconstruct indirect stream lengths" {
+  let path = pdf_async_io_test_path_for_test("indirect_stream_lengths")
+  pdf_async_io_remove_if_exists_for_test(path)
+  @fs.write_file(
+    path,
+    pdf_async_io_malformed_pdf_with_indirect_stream_length_for_test(),
+    create=0o644,
+  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(path).binary(),
+  )
+  guard strict is Err(@pdflite.PdfError::StartXRefExpected) else {
+    fail("expected strict indirect-stream-length missing-startxref failure")
+  }
+  let recovered = pdf_read_document_from_file(path)
+  pdf_async_io_remove_if_exists_for_test(path)
+  @test.assert_eq(recovered.first_xref(), 0)
+  @test.assert_eq(recovered.root(), 3)
+  @test.assert_eq(recovered.object_numbers(), [1, 2, 3, 4])
+  let first_object = recovered.lookup_object_or_null(1)
+  guard first_object is PdfStreamObject(first_stream) else {
+    fail("expected first recovered stream")
+  }
+  @test.assert_eq(
+    first_stream.dictionary.lookup_immediate(
+      pdf_async_io_name_for_test("/Length"),
+    ),
+    Some(PdfIndirect(2)),
+  )
+  guard first_stream.data is StreamToGet(_) else {
+    fail("expected first stream data to stay deferred")
+  }
+  @test.assert_eq(first_object.stream_bytes(), @ascii.encode("Hello"))
+  guard recovered.lookup_object_or_null(4) is PdfStreamObject(reconstructed) else {
+    fail("expected reconstructed missing-length stream")
+  }
+  @test.assert_eq(
+    reconstructed.dictionary.lookup_immediate(
+      pdf_async_io_name_for_test("/Length"),
+    ),
+    Some(PdfInteger(7)),
+  )
+  @test.assert_eq(reconstructed.data, StreamGot(@ascii.encode("Ignored")))
 }
 
 ///|
