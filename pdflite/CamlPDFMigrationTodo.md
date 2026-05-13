@@ -1959,6 +1959,11 @@ Current backend snapshot:
   `/MissingWidth`, inline-image glyph content, glyph-name extraction, and
   reread stability. `moon test --target native` now reports 1352/1352 tests
   passing.~~
+- [x] ~~Add the sixty-seventh pre-refactor correctness sentinel: native
+  compressed reader boundaries now preserve CMYK image conversion for named
+  `/CS` resources, explicit CMYK `/Decode` arrays, indexed DeviceCMYK palettes,
+  stream decompression, and reread stability. `moon test --target native` now
+  reports 1353/1353 tests passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.
