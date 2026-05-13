@@ -315,6 +315,12 @@ Current backend snapshot:
   malformed zero-offset rows, marker suffixes, and repeated xref section
   markers without falling back to reconstruction. `moon test --target native`
   now reports 1312/1312 tests passing.~~
+- [x] ~~Add the twenty-seventh pre-refactor correctness sentinel: native async
+  file wrappers now gate strict classic xref layout tolerance for fixed-width
+  separators, CR-only xref lines, tokenized unpadded rows, inline xref section
+  headers, and glued trailer dictionaries without falling back to
+  reconstruction. `moon test --target native` now reports 1313/1313 tests
+  passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~

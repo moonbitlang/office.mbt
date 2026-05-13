@@ -600,6 +600,27 @@ fn pdf_async_io_write_indirect_object_for_test(
 }
 
 ///|
+fn pdf_async_io_classic_catalog_object_for_test() -> @pdflite.PdfObject {
+  @pdflite.pdf_dictionary([
+    (
+      pdf_async_io_name_for_test("/Type"),
+      PdfNameObject(pdf_async_io_name_for_test("/Catalog")),
+    ),
+  ])
+}
+
+///|
+fn pdf_async_io_write_catalog_object_for_test(output : Array[Byte]) -> Int {
+  let offset = output.length()
+  pdf_async_io_write_indirect_object_for_test(
+    output,
+    1,
+    pdf_async_io_classic_catalog_object_for_test(),
+  )
+  offset
+}
+
+///|
 fn pdf_async_io_startxref_object_pdf_for_test(
   body : String,
 ) -> @pdflite.PdfBytes {
@@ -692,6 +713,87 @@ fn pdf_async_io_classic_pdf_with_xref_body_for_test(
   pdf_async_io_push_ascii_for_test(output, "trailer\n")
   pdf_async_io_push_ascii_for_test(output, trailer_body)
   pdf_async_io_push_ascii_for_test(output, "\nstartxref\n")
+  pdf_async_io_push_ascii_for_test(output, xref_offset.to_string())
+  pdf_async_io_push_ascii_for_test(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_async_io_push_classic_trailer_for_test(
+  output : Array[Byte],
+  xref_offset : Int,
+  size : Int,
+) -> Unit {
+  pdf_async_io_push_ascii_for_test(output, "trailer\n<< /Root 1 0 R /Size ")
+  pdf_async_io_push_ascii_for_test(output, size.to_string())
+  pdf_async_io_push_ascii_for_test(output, " >>\nstartxref\n")
+  pdf_async_io_push_ascii_for_test(output, xref_offset.to_string())
+  pdf_async_io_push_ascii_for_test(output, "\n%%EOF\n")
+}
+
+///|
+fn pdf_async_io_cr_line_endings_for_test(
+  bytes : @pdflite.PdfBytes,
+) -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  for byte in bytes {
+    let replacement = if byte.to_int() == 10 { (13).to_byte() } else { byte }
+    output.push(replacement)
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_async_io_classic_pdf_with_fixed_width_xref_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  let catalog_offset = pdf_async_io_write_catalog_object_for_test(output)
+  let xref_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref\n0 2\n")
+  pdf_async_io_push_padded_decimal_for_test(output, 0, 10)
+  pdf_async_io_push_ascii_for_test(output, "_65535_f \n")
+  pdf_async_io_push_padded_decimal_for_test(output, catalog_offset, 10)
+  pdf_async_io_push_ascii_for_test(output, "_00000_n \n")
+  pdf_async_io_push_classic_trailer_for_test(output, xref_offset, 2)
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_async_io_classic_pdf_with_unpadded_xref_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  let catalog_offset = pdf_async_io_write_catalog_object_for_test(output)
+  let xref_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref\n1 1\n")
+  pdf_async_io_push_ascii_for_test(output, catalog_offset.to_string())
+  pdf_async_io_push_ascii_for_test(output, " 0 n\n")
+  pdf_async_io_push_classic_trailer_for_test(output, xref_offset, 2)
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_async_io_classic_pdf_with_inline_xref_header_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  let catalog_offset = pdf_async_io_write_catalog_object_for_test(output)
+  let xref_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref 1 1\n")
+  pdf_async_io_push_classic_xref_entry_for_test(output, catalog_offset, 0)
+  pdf_async_io_push_classic_trailer_for_test(output, xref_offset, 2)
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_async_io_classic_pdf_with_glued_trailer_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  let catalog_offset = pdf_async_io_write_catalog_object_for_test(output)
+  let xref_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref\n0 2\n0000000000 65535 f \n")
+  pdf_async_io_push_classic_xref_entry_for_test(output, catalog_offset, 0)
+  pdf_async_io_push_ascii_for_test(
+    output, "trailer<< /Root 1 0 R /Size 2 >>\nstartxref\n",
+  )
   pdf_async_io_push_ascii_for_test(output, xref_offset.to_string())
   pdf_async_io_push_ascii_for_test(output, "\n%%EOF\n")
   Bytes::from_array(output)
@@ -2092,6 +2194,114 @@ async test "async file wrappers accept classic xref row variants" {
   pdf_async_io_remove_if_exists_for_test(marker_suffix_path)
   pdf_async_io_remove_if_exists_for_test(repeated_marker_path)
   for parsed in [blank, zero_offset, marker_suffix, repeated_marker] {
+    @test.assert_eq(parsed.first_xref() > 0, true)
+    @test.assert_eq(parsed.root(), 1)
+    @test.assert_eq(parsed.object_numbers(), [])
+  }
+}
+
+///|
+async test "async file wrappers accept classic xref layout variants" {
+  let fixed_path = pdf_async_io_test_path_for_test("classic_xref_fixed_width")
+  let cr_only_path = pdf_async_io_test_path_for_test("classic_xref_cr_only")
+  let mixed_first_path = pdf_async_io_test_path_for_test(
+    "classic_xref_mixed_first_separator",
+  )
+  let mixed_second_path = pdf_async_io_test_path_for_test(
+    "classic_xref_mixed_second_separator",
+  )
+  let tokenized_path = pdf_async_io_test_path_for_test("classic_xref_tokenized")
+  let tokenized_free_path = pdf_async_io_test_path_for_test(
+    "classic_xref_tokenized_free",
+  )
+  let inline_header_path = pdf_async_io_test_path_for_test(
+    "classic_xref_inline_header",
+  )
+  let glued_trailer_path = pdf_async_io_test_path_for_test(
+    "classic_xref_glued_trailer",
+  )
+  pdf_async_io_remove_if_exists_for_test(fixed_path)
+  pdf_async_io_remove_if_exists_for_test(cr_only_path)
+  pdf_async_io_remove_if_exists_for_test(mixed_first_path)
+  pdf_async_io_remove_if_exists_for_test(mixed_second_path)
+  pdf_async_io_remove_if_exists_for_test(tokenized_path)
+  pdf_async_io_remove_if_exists_for_test(tokenized_free_path)
+  pdf_async_io_remove_if_exists_for_test(inline_header_path)
+  pdf_async_io_remove_if_exists_for_test(glued_trailer_path)
+  @fs.write_file(
+    fixed_path,
+    pdf_async_io_classic_pdf_with_fixed_width_xref_for_test(),
+    create=0o644,
+  )
+  @fs.write_file(
+    cr_only_path,
+    pdf_async_io_cr_line_endings_for_test(
+      pdf_async_io_classic_pdf_with_fixed_width_xref_for_test(),
+    ),
+    create=0o644,
+  )
+  @fs.write_file(
+    mixed_first_path,
+    pdf_async_io_classic_pdf_with_xref_body_for_test(
+      "0 1\n0000000000_65535 f \n", "<< /Root 1 0 R /Size 1 >>",
+    ),
+    create=0o644,
+  )
+  @fs.write_file(
+    mixed_second_path,
+    pdf_async_io_classic_pdf_with_xref_body_for_test(
+      "0 1\n0000000000 65535_f \n", "<< /Root 1 0 R /Size 1 >>",
+    ),
+    create=0o644,
+  )
+  @fs.write_file(
+    tokenized_path,
+    pdf_async_io_classic_pdf_with_unpadded_xref_for_test(),
+    create=0o644,
+  )
+  @fs.write_file(
+    tokenized_free_path,
+    pdf_async_io_classic_pdf_with_xref_body_for_test(
+      "0 1\n0 0 f\n", "<< /Root 1 0 R /Size 1 >>",
+    ),
+    create=0o644,
+  )
+  @fs.write_file(
+    inline_header_path,
+    pdf_async_io_classic_pdf_with_inline_xref_header_for_test(),
+    create=0o644,
+  )
+  @fs.write_file(
+    glued_trailer_path,
+    pdf_async_io_classic_pdf_with_glued_trailer_for_test(),
+    create=0o644,
+  )
+  let fixed = pdf_read_document_from_file(fixed_path)
+  let cr_only = pdf_read_document_from_file(cr_only_path)
+  let mixed_first = pdf_read_document_from_file(mixed_first_path)
+  let mixed_second = pdf_read_document_from_file(mixed_second_path)
+  let tokenized = pdf_read_document_from_file(tokenized_path)
+  let tokenized_free = pdf_read_document_from_file(tokenized_free_path)
+  let inline_header = pdf_read_document_from_file(inline_header_path)
+  let glued_trailer = pdf_read_document_from_file(glued_trailer_path)
+  pdf_async_io_remove_if_exists_for_test(fixed_path)
+  pdf_async_io_remove_if_exists_for_test(cr_only_path)
+  pdf_async_io_remove_if_exists_for_test(mixed_first_path)
+  pdf_async_io_remove_if_exists_for_test(mixed_second_path)
+  pdf_async_io_remove_if_exists_for_test(tokenized_path)
+  pdf_async_io_remove_if_exists_for_test(tokenized_free_path)
+  pdf_async_io_remove_if_exists_for_test(inline_header_path)
+  pdf_async_io_remove_if_exists_for_test(glued_trailer_path)
+  for parsed in [fixed, cr_only, tokenized, inline_header, glued_trailer] {
+    @test.assert_eq(parsed.first_xref() > 0, true)
+    @test.assert_eq(parsed.root(), 1)
+    @test.assert_eq(parsed.object_numbers(), [1])
+    @test.assert_eq(
+      parsed.lookup_object_or_null(1),
+      pdf_async_io_classic_catalog_object_for_test(),
+    )
+  }
+  for parsed in [mixed_first, mixed_second, tokenized_free] {
     @test.assert_eq(parsed.first_xref() > 0, true)
     @test.assert_eq(parsed.root(), 1)
     @test.assert_eq(parsed.object_numbers(), [])
