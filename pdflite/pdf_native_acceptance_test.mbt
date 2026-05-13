@@ -6982,6 +6982,83 @@ test "native acceptance suite decrypts reconstructed encrypted malformed trailer
 }
 
 ///|
+test "native acceptance suite decrypts reconstructed encrypted missing-root trailers" {
+  let doc = acceptance_one_page_document_for_test()
+  let secret = acceptance_secret_object_for_test(
+    "native-acceptance-missing-root-trailer-secret",
+  )
+  doc.add_object_given_number(60, secret)
+  let user_password = acceptance_ascii_for_test("user")
+  let owner_password = acceptance_ascii_for_test("owner")
+  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let encrypted = doc.encrypt_128bit_aesv2_with_iv_provider(
+    user_password,
+    owner_password,
+    denied,
+    fn(object_number, generation, index) {
+      acceptance_aes_iv_for_test(object_number, generation, index + 23)
+    },
+    encrypt_metadata=false,
+    file_id=acceptance_ascii_for_test(
+      "native-acceptance-missing-root-trailer-id",
+    ),
+  )
+  let rendered = @pdflite.pdf_write_document(encrypted)
+  let malformed = acceptance_insert_ascii_before_last_marker_for_test(
+    rendered,
+    acceptance_ascii_for_test("trailer\n"),
+    "trailer\n<< /Size 999 >>\n",
+  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    malformed,
+  )
+  guard strict is Err(@pdflite.PdfError::RootExpected) else {
+    fail("expected missing-root trailer to require reconstruction")
+  }
+  let decrypted = acceptance_unwrap_decryption_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      malformed,
+      owner_password=Some(owner_password),
+    ),
+  )
+  @test.assert_eq(decrypted.document.first_xref(), 0)
+  @test.assert_eq(decrypted.denied_permissions, denied)
+  acceptance_assert_one_page_invariants_for_test(decrypted.document, (1, 4))
+  @test.assert_eq(decrypted.document.lookup_object_or_null(60), secret)
+  let added_object : @pdflite.PdfObject = PdfString(
+    acceptance_ascii_for_test("missing-root-trailer-recrypt-added"),
+  )
+  decrypted.document.add_object_given_number(61, added_object)
+  let recrypted = decrypted.document.recrypt_with_password_aesv2_with_iv_provider(
+    owner_password,
+    fn(object_number, generation, index) {
+      acceptance_aes_iv_for_test(object_number, generation, index + 24)
+    },
+  )
+  let rerendered = @pdflite.pdf_write_document_with_compressed_xref_stream(
+    recrypted,
+  )
+  @test.assert_eq(
+    acceptance_find_bytes_for_test(
+      rerendered,
+      acceptance_ascii_for_test("native-acceptance-missing-root-trailer-secret"),
+    ) <
+    0,
+    true,
+  )
+  let roundtrip = acceptance_unwrap_decryption_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      rerendered,
+      user_password=Some(user_password),
+    ),
+  )
+  @test.assert_eq(roundtrip.denied_permissions, denied)
+  acceptance_assert_one_page_invariants_for_test(roundtrip.document, (1, 5))
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(60), secret)
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(61), added_object)
+}
+
+///|
 test "native acceptance suite decrypts reconstructed malformed xref documents" {
   let doc = try! acceptance_one_page_document_for_test()
   let secret = acceptance_secret_object_for_test(

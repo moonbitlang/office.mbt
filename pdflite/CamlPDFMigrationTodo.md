@@ -220,6 +220,12 @@ Current backend snapshot:
   strict `TrailerExpected`, owner-password reconstruction, no plaintext leak in
   repaired output, and user-password round-trip. `moon test --target native`
   now reports 1294/1294 tests passing.~~
+- [x] ~~Add the ninth pre-refactor correctness sentinel: encrypted classic
+  documents with a valid `startxref` and a first trailer missing `/Root` now
+  have a strict `RootExpected` gate plus password-aware reconstruction to the
+  later physical trailer, decrypted objects, and AESV2 compressed-xref
+  re-encryption. `moon test --target native` now reports 1295/1295 tests
+  passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~
