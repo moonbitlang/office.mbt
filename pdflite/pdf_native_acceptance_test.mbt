@@ -2565,6 +2565,143 @@ fn acceptance_predefined_cmap_page_for_test(
 }
 
 ///|
+fn acceptance_unicode_predefined_tounicode_cmap_for_test() -> @pdflite.PdfObject {
+  let cmap = acceptance_ascii_for_test(
+    "2 begincodespacerange\n" +
+    "<E38182><E38182>\n" +
+    "<F09D849E><F09D849E>\n" +
+    "endcodespacerange\n" +
+    "2 beginbfchar\n" +
+    "<E38182><2603>\n" +
+    "<F09D849E><03A9>\n" +
+    "endbfchar\n",
+  )
+  let encoded = @pdflite.pdf_flate_encode(cmap)
+  @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (acceptance_name_for_test("/Length"), PdfInteger(encoded.length())),
+      (
+        acceptance_name_for_test("/Filter"),
+        PdfNameObject(acceptance_name_for_test("/FlateDecode")),
+      ),
+    ]),
+    StreamGot(encoded),
+  )
+}
+
+///|
+fn acceptance_unicode_predefined_cmap_document_for_test() -> @pdflite.PdfDocument raise {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  doc.add_object_given_number(
+    130,
+    acceptance_predefined_cmap_descendant_font_for_test(
+      "/UniJISUCS2Descendant", "Japan1",
+    ),
+  )
+  doc.add_object_given_number(
+    131,
+    acceptance_predefined_cmap_descendant_font_for_test(
+      "/UniCNSUCS2Descendant", "CNS1",
+    ),
+  )
+  doc.add_object_given_number(
+    132,
+    acceptance_predefined_cmap_descendant_font_for_test(
+      "/UniJISUTF16Descendant", "Japan1",
+    ),
+  )
+  doc.add_object_given_number(
+    133,
+    acceptance_predefined_cmap_descendant_font_for_test(
+      "/UniCNSUTF16Descendant", "CNS1",
+    ),
+  )
+  doc.add_object_given_number(
+    134,
+    acceptance_predefined_cmap_descendant_font_for_test(
+      "/UniJISUTF8Descendant", "Japan1",
+    ),
+  )
+  doc.add_object_given_number(
+    135,
+    acceptance_predefined_cmap_descendant_font_for_test(
+      "/UniCNSUTF32Descendant", "CNS1",
+    ),
+  )
+  doc.add_object_given_number(
+    136,
+    acceptance_predefined_cmap_descendant_font_for_test(
+      "/UniJISUTF8ToUnicodeDescendant", "Japan1",
+    ),
+  )
+  doc.add_object_given_number(
+    137,
+    acceptance_unicode_predefined_tounicode_cmap_for_test(),
+  )
+  let pages = [
+    acceptance_predefined_cmap_page_for_test(
+      "/FUcs2H",
+      acceptance_predefined_cmap_type0_font_for_test(
+        "/UniJISUCS2Top", "/UniJIS-UCS2-H", 130,
+      ),
+      acceptance_text_bytes_for_test([0x00, 0x41, 0x4E, 0x00]),
+    ),
+    acceptance_predefined_cmap_page_for_test(
+      "/FUcs2V",
+      acceptance_predefined_cmap_type0_font_for_test(
+        "/UniCNSUCS2VerticalTop", "/UniCNS-UCS2-V", 131,
+      ),
+      acceptance_text_bytes_for_test([0x00, 0x42, 0x4E, 0x8C]),
+    ),
+    acceptance_predefined_cmap_page_for_test(
+      "/FUtf16H",
+      acceptance_predefined_cmap_type0_font_for_test(
+        "/UniJISUTF16Top", "/UniJIS-UTF16-H", 132,
+      ),
+      acceptance_text_bytes_for_test([
+        0x30, 0x42, 0x30, 0xA2, 0xD8, 0x34, 0xDD, 0x1E,
+      ]),
+    ),
+    acceptance_predefined_cmap_page_for_test(
+      "/FUtf16V",
+      acceptance_predefined_cmap_type0_font_for_test(
+        "/UniCNSUTF16VerticalTop", "/UniCNS-UTF16-V", 133,
+      ),
+      acceptance_text_bytes_for_test([0x4E, 0x00, 0x4E, 0x8C]),
+    ),
+    acceptance_predefined_cmap_page_for_test(
+      "/FUtf8H",
+      acceptance_predefined_cmap_type0_font_for_test(
+        "/UniJISUTF8Top", "/UniJIS-UTF8-H", 134,
+      ),
+      acceptance_text_bytes_for_test([
+        0x41, 0xE3, 0x81, 0x82, 0xF0, 0x9D, 0x84, 0x9E,
+      ]),
+    ),
+    acceptance_predefined_cmap_page_for_test(
+      "/FUtf32V",
+      acceptance_predefined_cmap_type0_font_for_test(
+        "/UniCNSUTF32VerticalTop", "/UniCNS-UTF32-V", 135,
+      ),
+      acceptance_text_bytes_for_test([
+        0x00, 0x00, 0x00, 0x41, 0x00, 0x01, 0xD1, 0x1E,
+      ]),
+    ),
+    acceptance_predefined_cmap_page_for_test(
+      "/FUtf8TU",
+      acceptance_predefined_cmap_type0_font_for_test(
+        "/UniJISUTF8ToUnicodeTop", "/UniJIS-UTF8-H", 136,
+      ).add_dict_entry(acceptance_name_for_test("/ToUnicode"), PdfIndirect(137)),
+      acceptance_text_bytes_for_test([0xE3, 0x81, 0x82, 0xF0, 0x9D, 0x84, 0x9E]),
+    ),
+  ]
+  let page_root = doc.add_pagetree(pages)
+  ignore(doc.add_root(page_root, []))
+  doc
+}
+
+///|
 fn acceptance_korea_cmap_text_document_for_test() -> @pdflite.PdfDocument raise {
   let doc = @pdflite.pdf_document_empty()
   doc.set_version(1, 4)
@@ -3345,6 +3482,146 @@ fn acceptance_assert_predefined_cmap_font_shape_with_two_byte_for_test(
     acceptance_ascii_for_test(ordering),
   )
   font
+}
+
+///|
+fn acceptance_assert_bad_predefined_text_for_test(
+  extractor : @pdflite.PdfTextExtractor,
+  text : @pdflite.PdfBytes,
+  message : String,
+) -> Unit raise {
+  let result = try? extractor.codepoints_of_text(text)
+  guard result is Err(_) else { fail(message) }
+}
+
+///|
+fn acceptance_assert_unicode_predefined_page_for_test(
+  doc : @pdflite.PdfDocument,
+  page : @pdflite.PdfPage,
+  font_name : String,
+  encoding : String,
+  ordering : String,
+  uses_two_byte_codes : Bool,
+  expected_codepoints : Array[Int],
+) -> @pdflite.PdfTextExtractor raise {
+  let font = acceptance_assert_predefined_cmap_font_shape_with_two_byte_for_test(
+    doc, page, font_name, encoding, ordering, uses_two_byte_codes,
+  )
+  @test.assert_eq(
+    acceptance_font_codepoints_of_page_for_test(
+      doc,
+      page,
+      acceptance_name_for_test(font_name),
+    ),
+    expected_codepoints,
+  )
+  doc.text_extractor_of_font(font)
+}
+
+///|
+fn acceptance_assert_unicode_predefined_cmap_text_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(doc.version(), (1, 5))
+  @test.assert_eq(doc.endpage(), 7)
+  let pages = doc.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 7)
+  let ucs2_h = acceptance_assert_unicode_predefined_page_for_test(
+    doc,
+    pages[0],
+    "/FUcs2H",
+    "/UniJIS-UCS2-H",
+    "Japan1",
+    true,
+    [0x41, 0x4E00],
+  )
+  @test.assert_eq(ucs2_h.charcode_of_codepoint(0x4E00), Some(0x4E00))
+  acceptance_assert_bad_predefined_text_for_test(
+    ucs2_h,
+    acceptance_text_bytes_for_test([0x00, 0x41, 0x4E]),
+    "expected malformed UCS2 predefined CMap text",
+  )
+  let ucs2_v = acceptance_assert_unicode_predefined_page_for_test(
+    doc,
+    pages[1],
+    "/FUcs2V",
+    "/UniCNS-UCS2-V",
+    "CNS1",
+    true,
+    [0x42, 0x4E8C],
+  )
+  @test.assert_eq(ucs2_v.charcode_of_codepoint(0x4E8C), Some(0x4E8C))
+  let utf16_h = acceptance_assert_unicode_predefined_page_for_test(
+    doc,
+    pages[2],
+    "/FUtf16H",
+    "/UniJIS-UTF16-H",
+    "Japan1",
+    true,
+    [0x3042, 0x30A2, 0x1D11E],
+  )
+  @test.assert_eq(utf16_h.charcode_of_codepoint(0x3042), Some(0x3042))
+  @test.assert_eq(utf16_h.charcode_of_codepoint(0x1D11E), Some(0xD834DD1E))
+  acceptance_assert_bad_predefined_text_for_test(
+    utf16_h,
+    acceptance_text_bytes_for_test([0xD8, 0x34, 0x30, 0x42]),
+    "expected malformed UTF16 predefined CMap text",
+  )
+  let utf16_v = acceptance_assert_unicode_predefined_page_for_test(
+    doc,
+    pages[3],
+    "/FUtf16V",
+    "/UniCNS-UTF16-V",
+    "CNS1",
+    true,
+    [0x4E00, 0x4E8C],
+  )
+  @test.assert_eq(utf16_v.charcode_of_codepoint(0x4E8C), Some(0x4E8C))
+  let utf8_h = acceptance_assert_unicode_predefined_page_for_test(
+    doc,
+    pages[4],
+    "/FUtf8H",
+    "/UniJIS-UTF8-H",
+    "Japan1",
+    false,
+    [0x41, 0x3042, 0x1D11E],
+  )
+  @test.assert_eq(utf8_h.charcode_of_codepoint(0x3042), Some(0xE38182))
+  @test.assert_eq(utf8_h.charcode_of_codepoint(0x1D11E), Some(0xF09D849E))
+  acceptance_assert_bad_predefined_text_for_test(
+    utf8_h,
+    acceptance_text_bytes_for_test([0xE3, 0x81]),
+    "expected malformed UTF8 predefined CMap text",
+  )
+  let utf32_v = acceptance_assert_unicode_predefined_page_for_test(
+    doc,
+    pages[5],
+    "/FUtf32V",
+    "/UniCNS-UTF32-V",
+    "CNS1",
+    false,
+    [0x41, 0x1D11E],
+  )
+  @test.assert_eq(utf32_v.charcode_of_codepoint(0x1D11E), Some(0x1D11E))
+  acceptance_assert_bad_predefined_text_for_test(
+    utf32_v,
+    acceptance_text_bytes_for_test([0x00, 0x00, 0xD8, 0x00]),
+    "expected malformed UTF32 predefined CMap text",
+  )
+  let utf8_tounicode = acceptance_assert_unicode_predefined_page_for_test(
+    doc,
+    pages[6],
+    "/FUtf8TU",
+    "/UniJIS-UTF8-H",
+    "Japan1",
+    false,
+    [0x2603, 0x03A9],
+  )
+  @test.assert_eq(utf8_tounicode.charcode_of_codepoint(0x2603), Some(0xE38182))
+  @test.assert_eq(
+    utf8_tounicode.charcode_of_codepoint(0x03A9),
+    Some(0xF09D849E),
+  )
 }
 
 ///|
@@ -7044,6 +7321,16 @@ test "native acceptance suite extracts vertical predefined CMap text through rea
   acceptance_assert_vertical_predefined_cmap_text_for_test(parsed)
   let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
   acceptance_assert_vertical_predefined_cmap_text_for_test(reparsed)
+}
+
+///|
+test "native acceptance suite extracts Unicode predefined CMap text through reader boundaries" {
+  let parsed = acceptance_compressed_roundtrip_for_test(
+    acceptance_unicode_predefined_cmap_document_for_test(),
+  )
+  acceptance_assert_unicode_predefined_cmap_text_for_test(parsed)
+  let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
+  acceptance_assert_unicode_predefined_cmap_text_for_test(reparsed)
 }
 
 ///|

@@ -1942,6 +1942,11 @@ Current backend snapshot:
   aliases, raw decode arrays, image masks, and indexed palettes through
   decompression and reread stability. `moon test --target native` now reports
   1349/1349 tests passing.~~
+- [x] ~~Add the sixty-fourth pre-refactor correctness sentinel: native
+  compressed reader boundaries now preserve Unicode predefined CMap extraction
+  for UCS2, UTF16, UTF8, UTF32, vertical variants, malformed text rejection, and
+  multibyte UTF8 `/ToUnicode` overrides. `moon test --target native` now reports
+  1350/1350 tests passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.
