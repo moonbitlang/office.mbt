@@ -792,6 +792,63 @@ fn pdf_async_io_malformed_pdf_with_glued_reconstruction_trailers_for_test() -> @
 }
 
 ///|
+fn pdf_async_io_classic_pdf_with_page_tree_missing_from_xref_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  let catalog_offset = pdf_async_io_push_raw_indirect_object_for_test(
+    output, 1, 0, "<< /Type /Catalog /Pages 2 0 R >>",
+  )
+  ignore(
+    pdf_async_io_push_raw_indirect_object_for_test(
+      output, 2, 0, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    ),
+  )
+  ignore(
+    pdf_async_io_push_raw_indirect_object_for_test(
+      output, 3, 0, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 10 10] >>",
+    ),
+  )
+  let xref_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref\n0 2\n0000000000 65535 f \n")
+  pdf_async_io_push_classic_xref_entry_for_test(output, catalog_offset, 0)
+  pdf_async_io_push_ascii_for_test(
+    output, "trailer\n<< /Root 1 0 R /Size 4 >>\nstartxref\n",
+  )
+  pdf_async_io_push_ascii_for_test(output, xref_offset.to_string())
+  pdf_async_io_push_ascii_for_test(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_async_io_classic_pdf_with_catalog_missing_from_xref_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  ignore(
+    pdf_async_io_push_raw_indirect_object_for_test(
+      output, 1, 0, "<< /Type /Catalog /Pages 2 0 R >>",
+    ),
+  )
+  ignore(
+    pdf_async_io_push_raw_indirect_object_for_test(
+      output, 2, 0, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    ),
+  )
+  ignore(
+    pdf_async_io_push_raw_indirect_object_for_test(
+      output, 3, 0, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 10 10] >>",
+    ),
+  )
+  let xref_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref\n0 1\n0000000000 65535 f \n")
+  pdf_async_io_push_ascii_for_test(
+    output, "trailer\n<< /Root 1 0 R /Size 4 >>\nstartxref\n",
+  )
+  pdf_async_io_push_ascii_for_test(output, xref_offset.to_string())
+  pdf_async_io_push_ascii_for_test(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn pdf_async_io_classic_pdf_with_xref_body_for_test(
   xref_body : String,
   trailer_body : String,
@@ -3141,6 +3198,54 @@ async test "async file wrappers reconstruct glued trailer markers" {
     recovered.lookup_object_or_null(1),
     pdf_async_io_classic_catalog_object_for_test(),
   )
+}
+
+///|
+async test "async file wrappers reconstruct classic objects missing from xref" {
+  let pages_path = pdf_async_io_test_path_for_test("classic_pages_missing_xref")
+  let catalog_path = pdf_async_io_test_path_for_test(
+    "classic_catalog_missing_xref",
+  )
+  pdf_async_io_remove_if_exists_for_test(pages_path)
+  pdf_async_io_remove_if_exists_for_test(catalog_path)
+  @fs.write_file(
+    pages_path,
+    pdf_async_io_classic_pdf_with_page_tree_missing_from_xref_for_test(),
+    create=0o644,
+  )
+  @fs.write_file(
+    catalog_path,
+    pdf_async_io_classic_pdf_with_catalog_missing_from_xref_for_test(),
+    create=0o644,
+  )
+  let strict_pages = @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(pages_path).binary(),
+  )
+  @test.assert_eq(strict_pages.root(), 1)
+  @test.assert_eq(strict_pages.object_numbers(), [1])
+  let strict_page_count : Result[Int, Error] = try? strict_pages.endpage()
+  guard strict_page_count is Err(@pdflite.PdfError::PageTreeExpected) else {
+    fail("expected strict missing page tree to fail")
+  }
+  let strict_catalog = @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(catalog_path).binary(),
+  )
+  @test.assert_eq(strict_catalog.root(), 1)
+  @test.assert_eq(strict_catalog.object_numbers(), [])
+  let strict_catalog_object : Result[@pdflite.PdfObject, Error] = try? strict_catalog.catalog()
+  guard strict_catalog_object is Err(@pdflite.PdfError::RootExpected) else {
+    fail("expected strict missing catalog to fail")
+  }
+  let pages = pdf_read_document_from_file(pages_path)
+  let catalog = pdf_read_document_from_file(catalog_path)
+  pdf_async_io_remove_if_exists_for_test(pages_path)
+  pdf_async_io_remove_if_exists_for_test(catalog_path)
+  for recovered in [pages, catalog] {
+    @test.assert_eq(recovered.first_xref(), 0)
+    @test.assert_eq(recovered.root(), 1)
+    @test.assert_eq(recovered.object_numbers(), [1, 2, 3])
+    @test.assert_eq(try! recovered.endpage(), 1)
+  }
 }
 
 ///|

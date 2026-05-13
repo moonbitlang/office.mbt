@@ -418,6 +418,11 @@ Current backend snapshot:
   keeping rootless physical scans as `RootExpected` and malformed `startxref`
   files with no recovery root as `NumberExpected`. `moon test --target native`
   now reports 1333/1333 tests passing.~~
+- [x] ~~Add the forty-eighth pre-refactor correctness sentinel: native async file
+  wrappers now reconstruct valid classic xref tables that omit page-tree or
+  catalog objects, preserving strict `PageTreeExpected`/`RootExpected` gates
+  before public recovery scans the missing physical objects. `moon test --target
+  native` now reports 1334/1334 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~
