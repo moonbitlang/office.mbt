@@ -338,6 +338,12 @@ Current backend snapshot:
   direct lengths, and unparseable indirect lengths, preserving strict xref reads
   where possible and reconstructing only the unparseable case. `moon test
   --target native` now reports 1316/1316 tests passing.~~
+- [x] ~~Add the thirty-first pre-refactor correctness sentinel: native async
+  file wrappers now gate malformed stream-marker reconstruction for bad
+  `stream` keywords, bad `endstream` markers, bad `endobj` markers, and
+  truncated stream data, checking strict failures before public reconstruction
+  drops the malformed stream and preserves the catalog. `moon test --target
+  native` now reports 1317/1317 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~

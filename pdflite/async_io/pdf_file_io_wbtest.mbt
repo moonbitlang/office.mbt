@@ -627,6 +627,19 @@ fn pdf_async_io_classic_catalog_object_for_test() -> @pdflite.PdfObject {
 }
 
 ///|
+fn pdf_async_io_catalog_with_payload_for_test(
+  payload_number : Int,
+) -> @pdflite.PdfObject {
+  @pdflite.pdf_dictionary([
+    (
+      pdf_async_io_name_for_test("/Type"),
+      PdfNameObject(pdf_async_io_name_for_test("/Catalog")),
+    ),
+    (pdf_async_io_name_for_test("/Payload"), PdfIndirect(payload_number)),
+  ])
+}
+
+///|
 fn pdf_async_io_write_catalog_object_for_test(output : Array[Byte]) -> Int {
   let offset = output.length()
   pdf_async_io_write_indirect_object_for_test(
@@ -1040,6 +1053,51 @@ fn pdf_async_io_assert_recovered_hello_stream_for_test(
     Some(PdfInteger(5)),
   )
   @test.assert_eq(stream.data, StreamGot(@ascii.encode("Hello")))
+}
+
+///|
+fn pdf_async_io_classic_pdf_with_malformed_stream_for_test(
+  stream_body : String,
+) -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  let stream_offset = pdf_async_io_push_raw_indirect_object_for_test(
+    output, 1, 0, stream_body,
+  )
+  let catalog_offset = pdf_async_io_push_raw_indirect_object_for_test(
+    output, 2, 0, "<< /Type /Catalog /Payload 1 0 R >>",
+  )
+  let xref_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref\n0 3\n0000000000 65535 f \n")
+  pdf_async_io_push_classic_xref_entry_for_test(output, stream_offset, 0)
+  pdf_async_io_push_classic_xref_entry_for_test(output, catalog_offset, 0)
+  pdf_async_io_push_ascii_for_test(
+    output, "trailer\n<< /Root 2 0 R /Size 3 >>\nstartxref\n",
+  )
+  pdf_async_io_push_ascii_for_test(output, xref_offset.to_string())
+  pdf_async_io_push_ascii_for_test(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_async_io_classic_pdf_with_truncated_stream_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
+  let catalog_offset = pdf_async_io_push_raw_indirect_object_for_test(
+    output, 1, 0, "<< /Type /Catalog /Payload 2 0 R >>",
+  )
+  let stream_offset = output.length()
+  pdf_async_io_push_ascii_for_test(
+    output, "2 0 obj\n<< /Length 1000 >>\nstream\nHi\n",
+  )
+  let xref_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref\n0 1\n0000000000 65535 f \n")
+  pdf_async_io_push_ascii_for_test(output, "2 1\n")
+  pdf_async_io_push_classic_xref_entry_for_test(output, stream_offset, 0)
+  pdf_async_io_push_ascii_for_test(output, "1 1\n")
+  pdf_async_io_push_classic_xref_entry_for_test(output, catalog_offset, 0)
+  pdf_async_io_push_classic_trailer_for_test(output, xref_offset, 3)
+  Bytes::from_array(output)
 }
 
 ///|
@@ -2769,6 +2827,96 @@ async test "async file wrappers recover unreadable stream lengths" {
     ]),
   )
   pdf_async_io_assert_recovered_hello_stream_for_test(unparseable)
+}
+
+///|
+async test "async file wrappers reconstruct malformed stream markers" {
+  let bad_stream_path = pdf_async_io_test_path_for_test(
+    "malformed_stream_keyword",
+  )
+  let bad_endstream_path = pdf_async_io_test_path_for_test(
+    "malformed_endstream",
+  )
+  let bad_endobj_path = pdf_async_io_test_path_for_test("malformed_endobj")
+  let truncated_path = pdf_async_io_test_path_for_test("truncated_stream_data")
+  pdf_async_io_remove_if_exists_for_test(bad_stream_path)
+  pdf_async_io_remove_if_exists_for_test(bad_endstream_path)
+  pdf_async_io_remove_if_exists_for_test(bad_endobj_path)
+  pdf_async_io_remove_if_exists_for_test(truncated_path)
+  @fs.write_file(
+    bad_stream_path,
+    pdf_async_io_classic_pdf_with_malformed_stream_for_test(
+      "<< /Length 5 >>\nstram\nHello\nendstream",
+    ),
+    create=0o644,
+  )
+  @fs.write_file(
+    bad_endstream_path,
+    pdf_async_io_classic_pdf_with_malformed_stream_for_test(
+      "<< /Length 5 >>\nstream\nHello\nnot_a_stream_end",
+    ),
+    create=0o644,
+  )
+  @fs.write_file(
+    bad_endobj_path,
+    pdf_async_io_classic_pdf_with_malformed_stream_for_test(
+      "<< /Length 5 >>\nstream\nHello\nendstream\nnotendobj",
+    ),
+    create=0o644,
+  )
+  @fs.write_file(
+    truncated_path,
+    pdf_async_io_classic_pdf_with_truncated_stream_for_test(),
+    create=0o644,
+  )
+  let strict_bad_stream : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(bad_stream_path).binary(),
+  )
+  let strict_bad_endstream : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(bad_endstream_path).binary(),
+  )
+  let strict_bad_endobj : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(bad_endobj_path).binary(),
+  )
+  let strict_truncated : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(truncated_path).binary(),
+  )
+  let bad_stream = pdf_read_document_from_file(bad_stream_path)
+  let bad_endstream = pdf_read_document_from_file(bad_endstream_path)
+  let bad_endobj = pdf_read_document_from_file(bad_endobj_path)
+  let truncated = pdf_read_document_from_file(truncated_path)
+  pdf_async_io_remove_if_exists_for_test(bad_stream_path)
+  pdf_async_io_remove_if_exists_for_test(bad_endstream_path)
+  pdf_async_io_remove_if_exists_for_test(bad_endobj_path)
+  pdf_async_io_remove_if_exists_for_test(truncated_path)
+  guard strict_bad_stream is Err(@pdflite.PdfError::ParseStreamExpected) else {
+    fail("expected strict malformed stream keyword failure")
+  }
+  guard strict_bad_endstream is Err(@pdflite.PdfError::ParseEndStreamExpected) else {
+    fail("expected strict malformed endstream failure")
+  }
+  guard strict_bad_endobj is Err(@pdflite.PdfError::ParseEndObjectExpected) else {
+    fail("expected strict malformed endobj failure")
+  }
+  guard strict_truncated is Err(@pdflite.PdfError::EndOfInput) else {
+    fail("expected strict truncated stream failure")
+  }
+  for parsed in [bad_stream, bad_endstream, bad_endobj] {
+    @test.assert_eq(parsed.first_xref(), 0)
+    @test.assert_eq(parsed.root(), 2)
+    @test.assert_eq(parsed.object_numbers(), [2])
+    @test.assert_eq(
+      parsed.lookup_object_or_null(2),
+      pdf_async_io_catalog_with_payload_for_test(1),
+    )
+  }
+  @test.assert_eq(truncated.first_xref(), 0)
+  @test.assert_eq(truncated.root(), 1)
+  @test.assert_eq(truncated.object_numbers(), [1])
+  @test.assert_eq(
+    truncated.lookup_object_or_null(1),
+    pdf_async_io_catalog_with_payload_for_test(2),
+  )
 }
 
 ///|
