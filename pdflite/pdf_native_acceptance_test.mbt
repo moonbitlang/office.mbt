@@ -7291,6 +7291,106 @@ fn acceptance_object_stream_pdf_for_test() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn acceptance_indirect_filtered_object_stream_pages_for_test() -> String {
+  "<< /Type /Pages /Kids [5 0 R] /Count 1 >>"
+}
+
+///|
+fn acceptance_indirect_filtered_object_stream_page_for_test() -> String {
+  "<< /Type /Page /Parent 4 0 R /MediaBox [0 0 10 10] /Resources << >> >>"
+}
+
+///|
+fn acceptance_indirect_filtered_object_stream_payload_for_test() -> @pdflite.PdfBytes {
+  let pages_object = acceptance_indirect_filtered_object_stream_pages_for_test()
+  let page_object = acceptance_indirect_filtered_object_stream_page_for_test()
+  let second_offset = @ascii.encode(pages_object).length() + 1
+  let object_stream_data : Array[Byte] = []
+  acceptance_push_ascii_for_test(
+    object_stream_data,
+    "4 0 5 " + second_offset.to_string() + " ",
+  )
+  acceptance_push_ascii_for_test(object_stream_data, pages_object)
+  acceptance_push_byte_for_test(object_stream_data, 32)
+  acceptance_push_ascii_for_test(object_stream_data, page_object)
+  Bytes::from_array(object_stream_data)
+}
+
+///|
+fn acceptance_indirect_filtered_object_stream_first_for_test() -> Int {
+  let pages_object = acceptance_indirect_filtered_object_stream_pages_for_test()
+  let second_offset = @ascii.encode(pages_object).length() + 1
+  @ascii.encode("4 0 5 " + second_offset.to_string() + " ").length()
+}
+
+///|
+fn acceptance_indirect_filtered_object_stream_pdf_for_test(
+  startxref_override : Int?,
+) -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  acceptance_push_ascii_for_test(output, "%PDF-1.5\n")
+  let catalog_offset = acceptance_push_indirect_object_for_test(
+    output, 1, 0, "<< /Type /Catalog /Pages 4 0 R >>",
+  )
+  let count_offset = acceptance_push_indirect_object_for_test(output, 2, 0, "2")
+  let object_stream_data = acceptance_indirect_filtered_object_stream_payload_for_test()
+  let encoded_object_stream = @pdflite.pdf_ascii_hex_encode(object_stream_data)
+  let object_stream_offset = output.length()
+  acceptance_push_ascii_for_test(output, "3 0 obj\n")
+  acceptance_push_ascii_for_test(
+    output, "<< /Type /ObjStm /N 2 0 R /First 6 0 R /Filter 8 0 R /Length ",
+  )
+  acceptance_push_ascii_for_test(
+    output,
+    encoded_object_stream.length().to_string(),
+  )
+  acceptance_push_ascii_for_test(output, " >>\nstream\n")
+  for byte in encoded_object_stream {
+    output.push(byte)
+  }
+  acceptance_push_ascii_for_test(output, "\nendstream\nendobj\n")
+  let first_offset = acceptance_push_indirect_object_for_test(
+    output,
+    6,
+    0,
+    acceptance_indirect_filtered_object_stream_first_for_test().to_string(),
+  )
+  let filter_offset = acceptance_push_indirect_object_for_test(
+    output, 8, 0, "/ASCIIHexDecode",
+  )
+  let xref_offset = output.length()
+  let stream_data : Array[Byte] = []
+  acceptance_push_xref_stream_entry_for_test(stream_data, 0, 0, 65535)
+  acceptance_push_xref_stream_entry_for_test(stream_data, 1, catalog_offset, 0)
+  acceptance_push_xref_stream_entry_for_test(stream_data, 1, count_offset, 0)
+  acceptance_push_xref_stream_entry_for_test(
+    stream_data, 1, object_stream_offset, 0,
+  )
+  acceptance_push_xref_stream_entry_for_test(stream_data, 2, 3, 0)
+  acceptance_push_xref_stream_entry_for_test(stream_data, 2, 3, 1)
+  acceptance_push_xref_stream_entry_for_test(stream_data, 1, first_offset, 0)
+  acceptance_push_xref_stream_entry_for_test(stream_data, 1, xref_offset, 0)
+  acceptance_push_xref_stream_entry_for_test(stream_data, 1, filter_offset, 0)
+  acceptance_push_ascii_for_test(output, "7 0 obj\n")
+  acceptance_push_ascii_for_test(output, "<< /Type /XRef /Length ")
+  acceptance_push_ascii_for_test(output, stream_data.length().to_string())
+  acceptance_push_ascii_for_test(
+    output, " /Size 9 /Root 1 0 R /W [1 4 2] >>\nstream\n",
+  )
+  for byte in stream_data {
+    output.push(byte)
+  }
+  acceptance_push_ascii_for_test(output, "\nendstream\nendobj\nstartxref\n")
+  let startxref = match startxref_override {
+    Some(value) => value
+    None => xref_offset
+  }
+  acceptance_push_ascii_for_test(output, startxref.to_string())
+  acceptance_push_ascii_for_test(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn acceptance_bad_first_object_stream_physical_page_tree_pdf_for_test() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   acceptance_push_ascii_for_test(output, "%PDF-1.5\n")
@@ -7376,6 +7476,86 @@ fn acceptance_assert_object_stream_document_for_test(
   @test.assert_eq(
     object_stream.dictionary.lookup_immediate(acceptance_name_for_test("/Type")),
     Some(PdfNameObject(acceptance_name_for_test("/ObjStm"))),
+  )
+}
+
+///|
+fn acceptance_assert_indirect_filtered_object_stream_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(doc.version(), (1, 5))
+  @test.assert_eq(doc.object_numbers(), [1, 2, 3, 4, 5, 6, 8])
+  @test.assert_eq(doc.lookup_object_or_null(2), PdfInteger(2))
+  @test.assert_eq(
+    doc.lookup_object_or_null(6),
+    PdfInteger(acceptance_indirect_filtered_object_stream_first_for_test()),
+  )
+  @test.assert_eq(
+    doc.lookup_object_or_null(8),
+    PdfNameObject(acceptance_name_for_test("/ASCIIHexDecode")),
+  )
+  @test.assert_eq(try! doc.endpage(), 1)
+  @test.assert_eq(try! doc.page_reference_numbers(), [5])
+  @test.assert_eq(
+    doc.lookup_object_or_null(4),
+    PdfDictionary([
+      (
+        acceptance_name_for_test("/Type"),
+        PdfNameObject(acceptance_name_for_test("/Pages")),
+      ),
+      (acceptance_name_for_test("/Kids"), PdfArray([PdfIndirect(5)])),
+      (acceptance_name_for_test("/Count"), PdfInteger(1)),
+    ]),
+  )
+  @test.assert_eq(
+    doc.lookup_object_or_null(5),
+    PdfDictionary([
+      (
+        acceptance_name_for_test("/Type"),
+        PdfNameObject(acceptance_name_for_test("/Page")),
+      ),
+      (acceptance_name_for_test("/Parent"), PdfIndirect(4)),
+      (
+        acceptance_name_for_test("/MediaBox"),
+        PdfArray([PdfInteger(0), PdfInteger(0), PdfInteger(10), PdfInteger(10)]),
+      ),
+      (acceptance_name_for_test("/Resources"), PdfDictionary([])),
+    ]),
+  )
+  guard doc.lookup_object_or_null(3) is PdfStreamObject(object_stream) else {
+    fail("expected retained indirect-filter object stream")
+  }
+  @test.assert_eq(
+    object_stream.dictionary.lookup_immediate(acceptance_name_for_test("/Type")),
+    Some(PdfNameObject(acceptance_name_for_test("/ObjStm"))),
+  )
+  @test.assert_eq(
+    object_stream.dictionary.lookup_immediate(acceptance_name_for_test("/N")),
+    Some(PdfIndirect(2)),
+  )
+  @test.assert_eq(
+    object_stream.dictionary.lookup_immediate(
+      acceptance_name_for_test("/First"),
+    ),
+    Some(PdfIndirect(6)),
+  )
+  @test.assert_eq(
+    object_stream.dictionary.lookup_immediate(
+      acceptance_name_for_test("/Filter"),
+    ),
+    Some(PdfIndirect(8)),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_stream(object_stream.dictionary, object_stream.data).stream_bytes(),
+    @pdflite.pdf_ascii_hex_encode(
+      acceptance_indirect_filtered_object_stream_payload_for_test(),
+    ),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_ascii_hex_decode(
+      @pdflite.pdf_stream(object_stream.dictionary, object_stream.data).stream_bytes(),
+    ),
+    acceptance_indirect_filtered_object_stream_payload_for_test(),
   )
 }
 
@@ -9739,6 +9919,33 @@ test "native acceptance suite normalizes object-stream pages through writer" {
   let normalized = try! @pdflite.pdf_write_document(parsed)
   let reparsed = try! @pdflite.pdf_read_document_from_bytes(normalized)
   acceptance_assert_object_stream_document_for_test(reparsed)
+}
+
+///|
+test "native acceptance suite reconstructs indirect-filter object-stream page trees" {
+  let strict = @pdflite.pdf_read_document_from_bytes(
+    acceptance_indirect_filtered_object_stream_pdf_for_test(None),
+  )
+  acceptance_assert_indirect_filtered_object_stream_for_test(strict)
+
+  let malformed = acceptance_indirect_filtered_object_stream_pdf_for_test(
+    Some(0),
+  )
+  let strict_malformed : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    malformed,
+  )
+  guard strict_malformed is Err(@pdflite.PdfError::XRefExpected) else {
+    fail("expected malformed startxref to require object-stream reconstruction")
+  }
+  let recovered = @pdflite.pdf_read_document_from_bytes(malformed)
+  @test.assert_eq(recovered.first_xref(), 0)
+  acceptance_assert_indirect_filtered_object_stream_for_test(recovered)
+
+  let rewritten = @pdflite.pdf_write_document_with_compressed_xref_stream(
+    recovered,
+  )
+  let reparsed = @pdflite.pdf_read_document_from_bytes(rewritten)
+  acceptance_assert_indirect_filtered_object_stream_for_test(reparsed)
 }
 
 ///|

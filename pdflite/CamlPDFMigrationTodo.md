@@ -2002,6 +2002,12 @@ Current backend snapshot:
   JBIG2 short `/DP` globals, document-wide stream-decode passes, and reread
   stability. `moon test --target native` now reports 1359/1359 tests
   passing.~~
+- [x] ~~Add the seventy-fourth pre-refactor correctness sentinel: native
+  malformed-startxref reconstruction now preserves xref-stream page trees stored
+  in object streams with indirect `/N`, `/First`, and `/Filter` metadata,
+  including strict-reader failure, object-stream expansion, compressed
+  xref-stream rewrite, decoded payload checks, and reread stability. `moon test
+  --target native` now reports 1360/1360 tests passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.
