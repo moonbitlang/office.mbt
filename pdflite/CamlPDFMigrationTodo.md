@@ -196,6 +196,11 @@ Current backend snapshot:
   native file-output boundary, preserving key text markers and raw-control
   hygiene. The pre-refactor native correctness gate now reports `moon test
   --target native` at 1289/1289 tests passing.~~
+- [x] ~~Add the fourth pre-refactor correctness sentinel: encrypted classic
+  xref documents with a valid `startxref` and malformed subsection count now
+  have a strict `NumberExpected` gate, password-aware reconstruction back to
+  decrypted physical objects, and AESV2 re-encrypted compressed-xref round-trip
+  coverage. `moon test --target native` now reports 1290/1290 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~

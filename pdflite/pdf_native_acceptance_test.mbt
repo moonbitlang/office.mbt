@@ -139,6 +139,34 @@ fn acceptance_corrupt_first_in_use_xref_marker_for_test(
 }
 
 ///|
+fn acceptance_corrupt_first_xref_subsection_count_for_test(
+  bytes : @pdflite.PdfBytes,
+) -> @pdflite.PdfBytes raise {
+  let header = acceptance_ascii_for_test("xref\n0 ")
+  let header_position = acceptance_find_bytes_for_test(bytes, header)
+  if header_position < 0 {
+    fail("expected first classic xref subsection header")
+  }
+  let count_start = header_position + header.length()
+  let mut count_end = count_start
+  while count_end < bytes.length() && bytes[count_end] != b'\n' {
+    count_end += 1
+  }
+  if count_end == count_start {
+    fail("expected first classic xref subsection count")
+  }
+  let output : Array[Byte] = []
+  for index in 0..<count_start {
+    output.push(bytes[index])
+  }
+  acceptance_push_ascii_for_test(output, "/Bad")
+  for index in count_end..<bytes.length() {
+    output.push(bytes[index])
+  }
+  Bytes::from_array(output)
+}
+
+///|
 fn acceptance_corrupt_startxref_pointer_for_test(
   bytes : @pdflite.PdfBytes,
 ) -> @pdflite.PdfBytes raise {
@@ -6955,6 +6983,81 @@ test "native acceptance suite decrypts reconstructed encrypted malformed xref ma
   @test.assert_eq(decrypted.denied_permissions, denied)
   acceptance_assert_one_page_invariants_for_test(decrypted.document, (1, 4))
   @test.assert_eq(decrypted.document.lookup_object_or_null(60), secret)
+}
+
+///|
+test "native acceptance suite decrypts reconstructed encrypted malformed xref subsections" {
+  let doc = acceptance_one_page_document_for_test()
+  let secret = acceptance_secret_object_for_test(
+    "native-acceptance-xref-subsection-secret",
+  )
+  doc.add_object_given_number(60, secret)
+  let user_password = acceptance_ascii_for_test("user")
+  let owner_password = acceptance_ascii_for_test("owner")
+  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let encrypted = doc.encrypt_128bit_aesv2_with_iv_provider(
+    user_password,
+    owner_password,
+    denied,
+    fn(object_number, generation, index) {
+      acceptance_aes_iv_for_test(object_number, generation, index + 12)
+    },
+    encrypt_metadata=false,
+    file_id=acceptance_ascii_for_test(
+      "native-acceptance-bad-xref-subsection-id",
+    ),
+  )
+  let rendered = @pdflite.pdf_write_document(encrypted)
+  let corrupted = acceptance_corrupt_first_xref_subsection_count_for_test(
+    rendered,
+  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    corrupted,
+  )
+  guard strict is Err(@pdflite.PdfError::NumberExpected) else {
+    fail("expected malformed xref subsection to require reconstruction")
+  }
+  let decrypted = acceptance_unwrap_decryption_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      corrupted,
+      owner_password=Some(owner_password),
+    ),
+  )
+  @test.assert_eq(decrypted.document.first_xref(), 0)
+  @test.assert_eq(decrypted.denied_permissions, denied)
+  acceptance_assert_one_page_invariants_for_test(decrypted.document, (1, 4))
+  @test.assert_eq(decrypted.document.lookup_object_or_null(60), secret)
+  let added_object : @pdflite.PdfObject = PdfString(
+    acceptance_ascii_for_test("malformed-xref-subsection-recrypt-added"),
+  )
+  decrypted.document.add_object_given_number(61, added_object)
+  let recrypted = decrypted.document.recrypt_with_password_aesv2_with_iv_provider(
+    owner_password,
+    fn(object_number, generation, index) {
+      acceptance_aes_iv_for_test(object_number, generation, index + 13)
+    },
+  )
+  let rerendered = @pdflite.pdf_write_document_with_compressed_xref_stream(
+    recrypted,
+  )
+  @test.assert_eq(
+    acceptance_find_bytes_for_test(
+      rerendered,
+      acceptance_ascii_for_test("native-acceptance-xref-subsection-secret"),
+    ) <
+    0,
+    true,
+  )
+  let roundtrip = acceptance_unwrap_decryption_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      rerendered,
+      user_password=Some(user_password),
+    ),
+  )
+  @test.assert_eq(roundtrip.denied_permissions, denied)
+  acceptance_assert_one_page_invariants_for_test(roundtrip.document, (1, 5))
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(60), secret)
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(61), added_object)
 }
 
 ///|
