@@ -787,6 +787,66 @@ fn pdf_async_io_xref_stream_with_type_for_test(
 }
 
 ///|
+fn pdf_async_io_hybrid_xref_stream_pdf_for_test(
+  startxref_override : Int?,
+  compressed : Bool,
+) -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
+  let catalog_offset = pdf_async_io_push_raw_indirect_object_for_test(
+    output, 1, 0, "<< /Type /Catalog >>",
+  )
+  let value_offset = pdf_async_io_push_raw_indirect_object_for_test(
+    output, 2, 0, "7",
+  )
+  let xref_stream_offset = output.length()
+  let stream_data : Array[Byte] = []
+  pdf_async_io_push_xref_stream_entry_for_test(stream_data, 0, 0, 65535)
+  pdf_async_io_push_xref_stream_entry_for_test(stream_data, 1, value_offset, 0)
+  pdf_async_io_push_xref_stream_entry_for_test(
+    stream_data, 1, xref_stream_offset, 0,
+  )
+  let data = if compressed {
+    @pdflite.pdf_flate_encode(
+      pdf_async_io_png_none_predictor_rows_for_test(stream_data, 7),
+    )
+  } else {
+    Bytes::from_array(stream_data)
+  }
+  pdf_async_io_push_ascii_for_test(output, "3 0 obj\n")
+  pdf_async_io_push_ascii_for_test(output, "<< /Type /XRef /Length ")
+  pdf_async_io_push_ascii_for_test(output, data.length().to_string())
+  pdf_async_io_push_ascii_for_test(
+    output, " /Size 4 /W [1 4 2] /Index [0 1 2 2]",
+  )
+  if compressed {
+    pdf_async_io_push_ascii_for_test(
+      output, " /Filter /FlateDecode /DecodeParms << /Predictor 12 /Columns 7 >>",
+    )
+  }
+  pdf_async_io_push_ascii_for_test(output, " >>\nstream\n")
+  for byte in data {
+    output.push(byte)
+  }
+  pdf_async_io_push_ascii_for_test(output, "\nendstream\nendobj\n")
+  let classic_xref_offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "xref\n0 2\n0000000000 65535 f \n")
+  pdf_async_io_push_classic_xref_entry_for_test(output, catalog_offset, 0)
+  pdf_async_io_push_ascii_for_test(
+    output, "trailer\n<< /Root 1 0 R /Size 4 /XRefStm ",
+  )
+  pdf_async_io_push_ascii_for_test(output, xref_stream_offset.to_string())
+  pdf_async_io_push_ascii_for_test(output, " >>\nstartxref\n")
+  let startxref = match startxref_override {
+    Some(offset) => offset
+    None => classic_xref_offset
+  }
+  pdf_async_io_push_ascii_for_test(output, startxref.to_string())
+  pdf_async_io_push_ascii_for_test(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn pdf_async_io_xref_stream_pdf_with_short_entry_data_for_test() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
@@ -3180,6 +3240,95 @@ async test "async file wrappers preserve linearized first-object markers" {
   @test.assert_eq(integer_doc.root(), 2)
   @test.assert_eq(real_doc.was_linearized(), true)
   @test.assert_eq(non_numeric_doc.was_linearized(), false)
+}
+
+///|
+async test "async file wrappers reconstruct hybrid XRefStm trailers" {
+  let valid_path = pdf_async_io_test_path_for_test("hybrid_xrefstm")
+  let bad_path = pdf_async_io_test_path_for_test("hybrid_xrefstm_bad_startxref")
+  let compressed_path = pdf_async_io_test_path_for_test(
+    "hybrid_compressed_xrefstm",
+  )
+  let compressed_bad_path = pdf_async_io_test_path_for_test(
+    "hybrid_compressed_xrefstm_bad_startxref",
+  )
+  pdf_async_io_remove_if_exists_for_test(valid_path)
+  pdf_async_io_remove_if_exists_for_test(bad_path)
+  pdf_async_io_remove_if_exists_for_test(compressed_path)
+  pdf_async_io_remove_if_exists_for_test(compressed_bad_path)
+  @fs.write_file(
+    valid_path,
+    pdf_async_io_hybrid_xref_stream_pdf_for_test(None, false),
+    create=0o644,
+  )
+  @fs.write_file(
+    bad_path,
+    pdf_async_io_hybrid_xref_stream_pdf_for_test(Some(0), false),
+    create=0o644,
+  )
+  @fs.write_file(
+    compressed_path,
+    pdf_async_io_hybrid_xref_stream_pdf_for_test(None, true),
+    create=0o644,
+  )
+  @fs.write_file(
+    compressed_bad_path,
+    pdf_async_io_hybrid_xref_stream_pdf_for_test(Some(0), true),
+    create=0o644,
+  )
+  let valid = pdf_read_document_from_file(valid_path)
+  let compressed = pdf_read_document_from_file(compressed_path)
+  let strict_bad : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(bad_path).binary(),
+  )
+  let strict_compressed_bad : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    @fs.read_file(compressed_bad_path).binary(),
+  )
+  guard strict_bad is Err(_) else {
+    fail("expected strict hybrid bad-startxref read to fail")
+  }
+  guard strict_compressed_bad is Err(_) else {
+    fail("expected strict compressed hybrid bad-startxref read to fail")
+  }
+  let recovered = pdf_read_document_from_file(bad_path)
+  let compressed_recovered = pdf_read_document_from_file(compressed_bad_path)
+  pdf_async_io_remove_if_exists_for_test(valid_path)
+  pdf_async_io_remove_if_exists_for_test(bad_path)
+  pdf_async_io_remove_if_exists_for_test(compressed_path)
+  pdf_async_io_remove_if_exists_for_test(compressed_bad_path)
+  for parsed in [valid, compressed, recovered, compressed_recovered] {
+    @test.assert_eq(parsed.version(), (1, 5))
+    @test.assert_eq(parsed.root(), 1)
+    @test.assert_eq(parsed.object_numbers(), [1, 2])
+    @test.assert_eq(parsed.lookup_object_or_null(2), PdfInteger(7))
+    @test.assert_eq(
+      parsed
+      .trailer_dict()
+      .lookup_immediate(pdf_async_io_name_for_test("/XRefStm")),
+      None,
+    )
+  }
+  for parsed in [recovered, compressed_recovered] {
+    @test.assert_eq(parsed.first_xref(), 0)
+    @test.assert_eq(
+      parsed
+      .trailer_dict()
+      .lookup_immediate(pdf_async_io_name_for_test("/Size")),
+      Some(PdfInteger(3)),
+    )
+  }
+  @test.assert_eq(
+    compressed
+    .trailer_dict()
+    .lookup_immediate(pdf_async_io_name_for_test("/DecodeParms")),
+    None,
+  )
+  @test.assert_eq(
+    compressed_recovered
+    .trailer_dict()
+    .lookup_immediate(pdf_async_io_name_for_test("/DecodeParms")),
+    None,
+  )
 }
 
 ///|

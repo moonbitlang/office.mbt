@@ -428,6 +428,11 @@ Current backend snapshot:
   numeric vs non-numeric `/Linearized` values, `pdf_is_linearized_file`, and
   revision counting for linearized `/Prev` fixtures. `moon test --target native`
   now reports 1335/1335 tests passing.~~
+- [x] ~~Add the fiftieth pre-refactor correctness sentinel: native async file
+  wrappers now read and reconstruct hybrid classic `/XRefStm` trailers from
+  disk, including compressed predictor xref streams, bad-final-`startxref`
+  recovery, and sanitized `/XRefStm`/`DecodeParms` trailer metadata. `moon test
+  --target native` now reports 1336/1336 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~
