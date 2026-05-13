@@ -573,6 +573,60 @@ fn pdf_async_io_write_indirect_object_for_test(
 }
 
 ///|
+fn pdf_async_io_startxref_object_pdf_for_test(
+  body : String,
+) -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
+  let offset = output.length()
+  pdf_async_io_push_ascii_for_test(output, "2 0 obj\n")
+  pdf_async_io_push_ascii_for_test(output, body)
+  pdf_async_io_push_ascii_for_test(output, "\nendobj\nstartxref\n")
+  pdf_async_io_push_ascii_for_test(output, offset.to_string())
+  pdf_async_io_push_ascii_for_test(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_async_io_xref_stream_with_type_for_test(
+  type_entry : String,
+) -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
+  let catalog_offset = output.length()
+  pdf_async_io_write_indirect_object_for_test(
+    output,
+    1,
+    @pdflite.pdf_dictionary([
+      (
+        pdf_async_io_name_for_test("/Type"),
+        PdfNameObject(pdf_async_io_name_for_test("/Catalog")),
+      ),
+    ]),
+  )
+  let xref_offset = output.length()
+  let xref_data : Array[Byte] = []
+  pdf_async_io_push_xref_stream_entry_for_test(xref_data, 0, 0, 65535)
+  pdf_async_io_push_xref_stream_entry_for_test(xref_data, 1, catalog_offset, 0)
+  pdf_async_io_push_xref_stream_entry_for_test(xref_data, 1, xref_offset, 0)
+  pdf_async_io_push_ascii_for_test(output, "2 0 obj\n")
+  pdf_async_io_push_ascii_for_test(output, "<< /Type ")
+  pdf_async_io_push_ascii_for_test(output, type_entry)
+  pdf_async_io_push_ascii_for_test(output, " /Length ")
+  pdf_async_io_push_ascii_for_test(output, xref_data.length().to_string())
+  pdf_async_io_push_ascii_for_test(
+    output, " /Size 3 /Root 1 0 R /W [1 4 2] >>\nstream\n",
+  )
+  for byte in xref_data {
+    output.push(byte)
+  }
+  pdf_async_io_push_ascii_for_test(output, "\nendstream\nendobj\nstartxref\n")
+  pdf_async_io_push_ascii_for_test(output, xref_offset.to_string())
+  pdf_async_io_push_ascii_for_test(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn pdf_async_io_bad_first_object_stream_physical_page_tree_pdf_for_test() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
@@ -1576,6 +1630,77 @@ async test "async file wrappers reject invalid object-stream data slices" {
   pdf_async_io_remove_if_exists_for_test(path)
   guard result is Err(@pdflite.PdfError::StreamDataExpected) else {
     fail("expected invalid object-stream slice to remain unrecoverable")
+  }
+}
+
+///|
+async test "async file wrappers reject non-xref startxref objects" {
+  let non_stream_path = pdf_async_io_test_path_for_test("startxref_non_stream")
+  let wrong_stream_type_path = pdf_async_io_test_path_for_test(
+    "startxref_wrong_stream_type",
+  )
+  let explicit_wrong_type_path = pdf_async_io_test_path_for_test(
+    "startxref_explicit_wrong_xref_type",
+  )
+  let non_name_type_path = pdf_async_io_test_path_for_test(
+    "startxref_non_name_xref_type",
+  )
+  pdf_async_io_remove_if_exists_for_test(non_stream_path)
+  pdf_async_io_remove_if_exists_for_test(wrong_stream_type_path)
+  pdf_async_io_remove_if_exists_for_test(explicit_wrong_type_path)
+  pdf_async_io_remove_if_exists_for_test(non_name_type_path)
+
+  @fs.write_file(
+    non_stream_path,
+    pdf_async_io_startxref_object_pdf_for_test("7"),
+    create=0o644,
+  )
+  @fs.write_file(
+    wrong_stream_type_path,
+    pdf_async_io_startxref_object_pdf_for_test(
+      "<< /Length 0 >>\nstream\n\nendstream",
+    ),
+    create=0o644,
+  )
+  @fs.write_file(
+    explicit_wrong_type_path,
+    pdf_async_io_xref_stream_with_type_for_test("/Catalog"),
+    create=0o644,
+  )
+  @fs.write_file(
+    non_name_type_path,
+    pdf_async_io_xref_stream_with_type_for_test("99"),
+    create=0o644,
+  )
+
+  let non_stream : Result[@pdflite.PdfDocument, Error] = try? pdf_read_document_from_file(
+    non_stream_path,
+  )
+  let wrong_stream_type : Result[@pdflite.PdfDocument, Error] = try? pdf_read_document_from_file(
+    wrong_stream_type_path,
+  )
+  let explicit_wrong_type : Result[@pdflite.PdfDocument, Error] = try? pdf_read_document_from_file(
+    explicit_wrong_type_path,
+  )
+  let non_name_type : Result[@pdflite.PdfDocument, Error] = try? pdf_read_document_from_file(
+    non_name_type_path,
+  )
+  pdf_async_io_remove_if_exists_for_test(non_stream_path)
+  pdf_async_io_remove_if_exists_for_test(wrong_stream_type_path)
+  pdf_async_io_remove_if_exists_for_test(explicit_wrong_type_path)
+  pdf_async_io_remove_if_exists_for_test(non_name_type_path)
+
+  guard non_stream is Err(@pdflite.PdfError::XRefExpected) else {
+    fail("expected non-stream startxref object rejection")
+  }
+  guard wrong_stream_type is Err(@pdflite.PdfError::XRefExpected) else {
+    fail("expected non-xref stream startxref object rejection")
+  }
+  guard explicit_wrong_type is Err(@pdflite.PdfError::XRefExpected) else {
+    fail("expected explicit non-xref stream type rejection")
+  }
+  guard non_name_type is Err(@pdflite.PdfError::XRefExpected) else {
+    fail("expected non-name xref stream type rejection")
   }
 }
 

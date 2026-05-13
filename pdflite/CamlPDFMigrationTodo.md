@@ -282,6 +282,11 @@ Current backend snapshot:
   stream `/Filter` is an indirect object, preserve the retained object-stream
   filter reference, and rewrite/reread the recovered compressed object. `moon
   test --target native` now reports 1305/1305 tests passing.~~
+- [x] ~~Add the twentieth pre-refactor correctness sentinel: native async file
+  wrappers now preserve `XRefExpected` rejection when `startxref` points at a
+  non-stream object, a non-xref stream, an explicit non-xref `/Type`, or a
+  non-name xref-stream `/Type`. `moon test --target native` now reports
+  1306/1306 tests passing.~~
 - [x] ~~Finish warning 74 public API documentation with useful API-level
   behavior, ownership, error, target, and compatibility notes rather than
   placeholder warning fixes.~~
