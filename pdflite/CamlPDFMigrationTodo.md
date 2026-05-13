@@ -1953,6 +1953,12 @@ Current backend snapshot:
   odd-nibble hex strings, supplementary-plane mappings, multi-codepoint entries,
   and unmapped fallback bytes. `moon test --target native` now reports 1351/1351
   tests passing.~~
+- [x] ~~Add the sixty-sixth pre-refactor correctness sentinel: native compressed
+  reader boundaries now preserve fixture-shaped Type3 glyph programs with
+  low-code custom encodings, indirect CharProc streams, sparse metrics with
+  `/MissingWidth`, inline-image glyph content, glyph-name extraction, and
+  reread stability. `moon test --target native` now reports 1352/1352 tests
+  passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.

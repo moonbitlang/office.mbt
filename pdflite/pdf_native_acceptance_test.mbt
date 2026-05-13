@@ -1701,6 +1701,307 @@ fn acceptance_assert_type3_encoded_text_for_test(
 }
 
 ///|
+fn acceptance_type3_fixture_inline_dictionary_for_test() -> @pdflite.PdfObject {
+  PdfDictionary([
+    (acceptance_name_for_test("/W"), PdfInteger(2)),
+    (acceptance_name_for_test("/H"), PdfInteger(1)),
+    (
+      acceptance_name_for_test("/CS"),
+      PdfNameObject(acceptance_name_for_test("/GlyphGray")),
+    ),
+    (acceptance_name_for_test("/BPC"), PdfInteger(1)),
+    (acceptance_name_for_test("/IM"), PdfBoolean(true)),
+  ])
+}
+
+///|
+fn acceptance_type3_fixture_inline_data_for_test() -> @pdflite.PdfBytes raise {
+  acceptance_text_bytes_for_test([0x80])
+}
+
+///|
+fn acceptance_type3_fixture_t_ops_for_test() -> Array[@pdflite.PdfContentOp] raise {
+  [
+    Op_q,
+    Op_cm({ a: 6.0, b: 0.0, c: 0.0, d: 12.0, e: 1.0, f: 2.0 }),
+    Op_InlineImage(
+      acceptance_type3_fixture_inline_dictionary_for_test(),
+      None,
+      acceptance_type3_fixture_inline_data_for_test(),
+    ),
+    Op_Q,
+  ]
+}
+
+///|
+fn acceptance_type3_fixture_font_for_test() -> @pdflite.PdfObject {
+  @pdflite.pdf_dictionary([
+    (
+      acceptance_name_for_test("/Subtype"),
+      PdfNameObject(acceptance_name_for_test("/Type3")),
+    ),
+    (
+      acceptance_name_for_test("/FontBBox"),
+      PdfArray([
+        PdfInteger(-20),
+        PdfInteger(-10),
+        PdfInteger(1200),
+        PdfInteger(900),
+      ]),
+    ),
+    (
+      acceptance_name_for_test("/FontMatrix"),
+      PdfArray([
+        PdfReal(0.001),
+        PdfInteger(0),
+        PdfInteger(0),
+        PdfReal(0.001),
+        PdfInteger(2),
+        PdfInteger(3),
+      ]),
+    ),
+    (
+      acceptance_name_for_test("/CharProcs"),
+      @pdflite.pdf_dictionary([
+        (acceptance_name_for_test("/E"), PdfIndirect(186)),
+        (acceptance_name_for_test("/X"), PdfIndirect(187)),
+        (acceptance_name_for_test("/T"), PdfIndirect(188)),
+        (acceptance_name_for_test("/I"), PdfIndirect(189)),
+      ]),
+    ),
+    (
+      acceptance_name_for_test("/Resources"),
+      @pdflite.pdf_dictionary([
+        (
+          acceptance_name_for_test("/ProcSet"),
+          PdfArray([
+            PdfNameObject(acceptance_name_for_test("/PDF")),
+            PdfNameObject(acceptance_name_for_test("/ImageB")),
+          ]),
+        ),
+        (
+          acceptance_name_for_test("/ColorSpace"),
+          @pdflite.pdf_dictionary([
+            (
+              acceptance_name_for_test("/GlyphGray"),
+              PdfNameObject(acceptance_name_for_test("/DeviceGray")),
+            ),
+          ]),
+        ),
+      ]),
+    ),
+    (acceptance_name_for_test("/FirstChar"), PdfInteger(1)),
+    (acceptance_name_for_test("/LastChar"), PdfInteger(4)),
+    (
+      acceptance_name_for_test("/Widths"),
+      PdfArray([
+        PdfInteger(1150),
+        PdfInteger(1160),
+        PdfInteger(1170),
+        PdfInteger(700),
+      ]),
+    ),
+    (acceptance_name_for_test("/MissingWidth"), PdfInteger(99)),
+    (
+      acceptance_name_for_test("/Encoding"),
+      @pdflite.pdf_dictionary([
+        (
+          acceptance_name_for_test("/Differences"),
+          PdfArray([
+            PdfInteger(1),
+            PdfNameObject(acceptance_name_for_test("/E")),
+            PdfNameObject(acceptance_name_for_test("/X")),
+            PdfNameObject(acceptance_name_for_test("/T")),
+            PdfNameObject(acceptance_name_for_test("/I")),
+          ]),
+        ),
+      ]),
+    ),
+  ])
+}
+
+///|
+fn acceptance_type3_fixture_charproc_document_for_test() -> @pdflite.PdfDocument raise {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  doc.add_object_given_number(
+    186,
+    acceptance_type3_charproc_stream_for_test([Op_d0(1150.0, 0.0)]),
+  )
+  doc.add_object_given_number(
+    187,
+    acceptance_type3_charproc_stream_for_test([
+      Op_d1(1160.0, 0.0, -20.0, -10.0, 1160.0, 900.0),
+    ]),
+  )
+  doc.add_object_given_number(
+    188,
+    acceptance_type3_charproc_stream_for_test(
+      acceptance_type3_fixture_t_ops_for_test(),
+    ),
+  )
+  doc.add_object_given_number(
+    189,
+    acceptance_type3_charproc_stream_for_test([Op_d0(700.0, 0.0)]),
+  )
+  let resources = @pdflite.pdf_dictionary([
+    (
+      acceptance_name_for_test("/Font"),
+      @pdflite.pdf_dictionary([
+        (
+          acceptance_name_for_test("/Ft3Fixture"),
+          acceptance_type3_fixture_font_for_test(),
+        ),
+      ]),
+    ),
+  ])
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [
+      @pdflite.pdf_content_stream_of_ops([
+        Op_BT,
+        Op_Tf(acceptance_name_for_test("/Ft3Fixture"), 12.0),
+        Op_Tj(acceptance_text_bytes_for_test([1, 2])),
+        Op_TJ(
+          PdfArray([
+            PdfString(acceptance_text_bytes_for_test([3])),
+            PdfInteger(-20),
+            PdfString(acceptance_text_bytes_for_test([4])),
+          ]),
+        ),
+        Op_ET,
+      ]),
+    ],
+    resources,
+  }
+  let page_root = doc.add_pagetree([page])
+  ignore(doc.add_root(page_root, []))
+  doc
+}
+
+///|
+fn acceptance_assert_type3_fixture_charprocs_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(doc.version(), (1, 5))
+  @test.assert_eq(doc.endpage(), 1)
+  let pages = doc.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  let font = acceptance_font_object_by_name_for_test(
+    pages[0].resources,
+    acceptance_name_for_test("/Ft3Fixture"),
+  )
+  guard doc.read_font(font) is PdfFontSimple(simple) else {
+    fail("expected simple fixture-shaped Type3 font")
+  }
+  guard simple.fonttype is PdfType3(type3_data) else {
+    fail("expected fixture-shaped Type3 data")
+  }
+  @test.assert_eq(type3_data.fontbbox, {
+    min_x: -20.0,
+    min_y: -10.0,
+    max_x: 1200.0,
+    max_y: 900.0,
+  })
+  @test.assert_eq(type3_data.fontmatrix, {
+    a: 0.001,
+    b: 0.0,
+    c: 0.0,
+    d: 0.001,
+    e: 2.0,
+    f: 3.0,
+  })
+  @test.assert_eq([ for charproc in type3_data.charprocs => charproc.0 ], [
+    acceptance_name_for_test("/E"),
+    acceptance_name_for_test("/X"),
+    acceptance_name_for_test("/T"),
+    acceptance_name_for_test("/I"),
+  ])
+  @test.assert_eq(type3_data.charprocs, [
+    (acceptance_name_for_test("/E"), PdfIndirect(186)),
+    (acceptance_name_for_test("/X"), PdfIndirect(187)),
+    (acceptance_name_for_test("/T"), PdfIndirect(188)),
+    (acceptance_name_for_test("/I"), PdfIndirect(189)),
+  ])
+  @test.assert_eq(
+    @pdflite.pdf_parse_content_ops_from_bytes(
+      doc.direct(PdfIndirect(186)).stream_bytes(),
+    ),
+    [Op_d0(1150.0, 0.0)],
+  )
+  @test.assert_eq(
+    @pdflite.pdf_parse_content_ops_from_bytes(
+      doc.direct(PdfIndirect(187)).stream_bytes(),
+    ),
+    [Op_d1(1160.0, 0.0, -20.0, -10.0, 1160.0, 900.0)],
+  )
+  @test.assert_eq(
+    doc.parse_content_ops_with_resources(type3_data.resources, [
+      doc.direct(PdfIndirect(188)),
+    ]),
+    acceptance_type3_fixture_t_ops_for_test(),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_parse_content_ops_from_bytes(
+      doc.direct(PdfIndirect(189)).stream_bytes(),
+    ),
+    [Op_d0(700.0, 0.0)],
+  )
+  @test.assert_eq(
+    type3_data.resources,
+    @pdflite.pdf_dictionary([
+      (
+        acceptance_name_for_test("/ProcSet"),
+        PdfArray([
+          PdfNameObject(acceptance_name_for_test("/PDF")),
+          PdfNameObject(acceptance_name_for_test("/ImageB")),
+        ]),
+      ),
+      (
+        acceptance_name_for_test("/ColorSpace"),
+        @pdflite.pdf_dictionary([
+          (
+            acceptance_name_for_test("/GlyphGray"),
+            PdfNameObject(acceptance_name_for_test("/DeviceGray")),
+          ),
+        ]),
+      ),
+    ]),
+  )
+  guard simple.fontmetrics is Some(metrics) else {
+    fail("expected fixture-shaped Type3 font metrics")
+  }
+  @test.assert_eq(metrics[0], 99.0)
+  @test.assert_eq(metrics[1], 1150.0)
+  @test.assert_eq(metrics[2], 1160.0)
+  @test.assert_eq(metrics[3], 1170.0)
+  @test.assert_eq(metrics[4], 700.0)
+  @test.assert_eq(metrics[5], 99.0)
+  let extractor = doc.text_extractor_of_font(font)
+  @test.assert_eq(
+    try! extractor.glyphnames_of_text(
+      acceptance_text_bytes_for_test([1, 2, 3, 4]),
+    ),
+    [
+      acceptance_name_for_test("/E"),
+      acceptance_name_for_test("/X"),
+      acceptance_name_for_test("/T"),
+      acceptance_name_for_test("/I"),
+    ],
+  )
+  @test.assert_eq(
+    acceptance_font_codepoints_of_first_page_for_test(
+      doc,
+      acceptance_name_for_test("/Ft3Fixture"),
+    ),
+    [69, 88, 84, 73],
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(69), Some(1))
+  @test.assert_eq(extractor.charcode_of_codepoint(84), Some(3))
+  @test.assert_eq(extractor.charcode_of_codepoint(73), Some(4))
+}
+
+///|
 fn acceptance_identity_h_text_for_test() -> @pdflite.PdfBytes raise {
   acceptance_text_bytes_for_test([0x00, 0x41, 0x20, 0xAC])
 }
@@ -7392,6 +7693,16 @@ test "native acceptance suite extracts Type3 encoded glyph text through reader b
   acceptance_assert_type3_encoded_text_for_test(parsed)
   let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
   acceptance_assert_type3_encoded_text_for_test(reparsed)
+}
+
+///|
+test "native acceptance suite preserves Type3 fixture-shaped CharProcs through reader boundaries" {
+  let parsed = acceptance_compressed_roundtrip_for_test(
+    acceptance_type3_fixture_charproc_document_for_test(),
+  )
+  acceptance_assert_type3_fixture_charprocs_for_test(parsed)
+  let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
+  acceptance_assert_type3_fixture_charprocs_for_test(reparsed)
 }
 
 ///|
