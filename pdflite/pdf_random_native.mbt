@@ -140,63 +140,6 @@ pub fn PdfDocument::encrypt_256bit_aesv3_iso(
 }
 
 ///|
-/// CamlPDF-compatible AESV2 encryption wrapper using native randomness.
-pub fn pdf_encrypt_pdf_AES(
-  document : PdfDocument,
-  encrypt_metadata : Bool,
-  user_password : BytesView,
-  owner_password : BytesView,
-  denied_permissions : ArrayView[PdfPermission],
-  file_id? : BytesView = [],
-) -> PdfDocument raise PdfError {
-  document.encrypt_128bit_aesv2(
-    user_password,
-    owner_password,
-    denied_permissions,
-    encrypt_metadata~,
-    file_id~,
-  )
-}
-
-///|
-/// CamlPDF-compatible AESV3/AES-256 encryption wrapper using native randomness.
-pub fn pdf_encrypt_pdf_AES256(
-  document : PdfDocument,
-  encrypt_metadata : Bool,
-  user_password : BytesView,
-  owner_password : BytesView,
-  denied_permissions : ArrayView[PdfPermission],
-  file_id? : BytesView = [],
-) -> PdfDocument raise PdfError {
-  document.encrypt_256bit_aesv3(
-    user_password,
-    owner_password,
-    denied_permissions,
-    encrypt_metadata~,
-    file_id~,
-  )
-}
-
-///|
-/// CamlPDF-compatible ISO AESV3/AES-256 encryption wrapper using native randomness.
-pub fn pdf_encrypt_pdf_AES256ISO(
-  document : PdfDocument,
-  encrypt_metadata : Bool,
-  user_password : BytesView,
-  owner_password : BytesView,
-  denied_permissions : ArrayView[PdfPermission],
-  file_id? : BytesView = [],
-) -> PdfDocument raise PdfError {
-  document.encrypt_256bit_aesv3_iso(
-    user_password,
-    owner_password,
-    denied_permissions,
-    encrypt_metadata~,
-    file_id~,
-  )
-}
-
-///|
 /// Re-encrypt a decrypted AESV3 document using native random IVs.
 ///
 /// The document must carry saved encryption state from a previous decrypt
