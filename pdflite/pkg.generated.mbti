@@ -1377,7 +1377,6 @@ pub fn PdfDocument::select_object_numbers(Self, (PdfObject) -> Bool) -> Array[In
 pub fn PdfDocument::set_first_xref(Self, Int) -> Unit
 pub fn PdfDocument::set_revision_read(Self, Int) -> Unit
 pub fn PdfDocument::set_root(Self, Int) -> Unit
-pub fn PdfDocument::set_saved_encryption(Self, PdfSavedEncryption?) -> Unit
 pub fn PdfDocument::set_trailer_dict(Self, PdfObject) -> Unit
 pub fn PdfDocument::set_version(Self, Int, Int) -> Unit
 pub fn PdfDocument::set_was_linearized(Self, Bool) -> Unit

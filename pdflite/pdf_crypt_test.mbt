@@ -1709,22 +1709,19 @@ test "PdfDocument recrypt_with_password restores saved ARC4 encryption" {
     fail("expected missing saved encryption")
   }
 
-  let aes_saved : @pdflite.PdfSavedEncryption = {
-    values: {
-      crypt_type: PdfCryptAESV2,
-      user_entry: crypt_repeated_bytes_for_test(0x55, 32),
-      owner_entry: crypt_repeated_bytes_for_test(0x4f, 32),
-      permissions: -4,
-      file_id: @ascii.encode("doc-id"),
-      encrypt_metadata: true,
-      permissions_entry: None,
-      user_encryption_key: None,
-      owner_encryption_key: None,
+  let aes_encrypted = try! doc.encrypt_128bit_aesv2_with_iv_provider(
+    @ascii.encode("user"),
+    @ascii.encode("owner"),
+    [],
+    fn(object_number, generation, index) {
+      crypt_aes_document_iv_for_test(object_number, generation, index)
     },
-  }
-  let aes_doc = @pdflite.pdf_document_empty()
-  aes_doc.set_saved_encryption(Some(aes_saved))
-  let unsupported : Result[@pdflite.PdfDocument, Error] = try? aes_doc.recrypt_with_password(
+    file_id=@ascii.encode("doc-id"),
+  )
+  let aes_decrypted = crypt_unwrap_decryption_result_for_test(
+    try! aes_encrypted.decrypt_with_user_password(@ascii.encode("user")),
+  )
+  let unsupported : Result[@pdflite.PdfDocument, Error] = try? aes_decrypted.document.recrypt_with_password(
     @ascii.encode("user"),
   )
   guard unsupported
@@ -1991,22 +1988,20 @@ test "PdfDocument recrypt_with_password_aesv3_with_iv_provider restores saved AE
     fail("expected missing AESV3 saved encryption")
   }
 
-  let wrong_saved : @pdflite.PdfSavedEncryption = {
-    values: {
-      crypt_type: PdfCryptAESV2,
-      user_entry: Bytes::new(32),
-      owner_entry: Bytes::new(32),
-      permissions: -4,
-      file_id: @ascii.encode("doc-id"),
-      encrypt_metadata: true,
-      permissions_entry: None,
-      user_encryption_key: None,
-      owner_encryption_key: None,
+  let wrong_plain = crypt_minimal_catalog_document_for_test(1, 7)
+  let wrong_encrypted = try! wrong_plain.encrypt_128bit_aesv2_with_iv_provider(
+    @ascii.encode("user"),
+    @ascii.encode("owner"),
+    [],
+    fn(object_number, generation, index) {
+      crypt_aes_document_iv_for_test(object_number, generation, index)
     },
-  }
-  let wrong_doc = crypt_minimal_catalog_document_for_test(1, 7)
-  wrong_doc.set_saved_encryption(Some(wrong_saved))
-  let wrong_method : Result[@pdflite.PdfDocument, Error] = try? wrong_doc.recrypt_with_password_aesv3_with_iv_provider(
+    file_id=@ascii.encode("doc-id"),
+  )
+  let wrong_decrypted = crypt_unwrap_decryption_result_for_test(
+    try! wrong_encrypted.decrypt_with_user_password(@ascii.encode("user")),
+  )
+  let wrong_method : Result[@pdflite.PdfDocument, Error] = try? wrong_decrypted.document.recrypt_with_password_aesv3_with_iv_provider(
     @ascii.encode("user"),
     fn(object_number, generation, index) {
       crypt_aes_document_iv_for_test(object_number, generation, index)

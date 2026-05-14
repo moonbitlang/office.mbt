@@ -723,7 +723,7 @@ pub fn PdfDocument::saved_encryption(self : PdfDocument) -> PdfSavedEncryption? 
 
 ///|
 /// Set saved encryption metadata for the document.
-pub fn PdfDocument::set_saved_encryption(
+fn PdfDocument::set_saved_encryption(
   self : PdfDocument,
   saved_encryption : PdfSavedEncryption?,
 ) -> Unit {
