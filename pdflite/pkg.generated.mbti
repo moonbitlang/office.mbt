@@ -75,10 +75,6 @@ pub fn pdf_aesv2_decrypt_pdf_object(Int, Int, BytesView, Int, PdfObject, no_encr
 
 pub fn pdf_aesv2_encrypt_pdf_object_with_iv_provider(Int, Int, BytesView, Int, PdfObject, (Int) -> Bytes raise PdfError, no_encrypt_metadata? : Bool) -> PdfObject raise PdfError
 
-pub fn pdf_aesv3_decrypt_pdf_object(BytesView, PdfObject, no_encrypt_metadata? : Bool) -> PdfObject raise PdfError
-
-pub fn pdf_aesv3_encrypt_pdf_object_with_iv_provider(BytesView, PdfObject, (Int) -> Bytes raise PdfError, no_encrypt_metadata? : Bool) -> PdfObject raise PdfError
-
 pub fn pdf_annotation_make(PdfAnnotationSubtype, contents? : Bytes?, border? : PdfAnnotationBorder, rectangle? : PdfRectangle, colour? : PdfAnnotationColour?, subject? : Bytes?) -> PdfAnnotation
 
 pub fn pdf_annotation_make_border(Double, vertical_radius? : Double, horizontal_radius? : Double, style? : PdfAnnotationStyle, dash_array? : ArrayView[Int]) -> PdfAnnotationBorder

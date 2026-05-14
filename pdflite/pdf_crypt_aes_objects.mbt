@@ -183,7 +183,7 @@ pub fn pdf_aesv2_encrypt_pdf_object_with_iv_provider(
 ///
 /// The IV provider is called with a zero-based index for each encrypted string
 /// or stream inside the object. Identity crypt-filter streams are preserved.
-pub fn pdf_aesv3_encrypt_pdf_object_with_iv_provider(
+fn pdf_aesv3_encrypt_pdf_object_with_iv_provider(
   file_key : BytesView,
   object : PdfObject,
   iv_provider : (Int) -> PdfBytes raise PdfError,
@@ -319,7 +319,7 @@ pub fn pdf_aesv2_decrypt_pdf_object(
 ///
 /// Deferred stream data is annotated with AESV3 crypt state so it can be
 /// decrypted lazily when the stream bytes are loaded.
-pub fn pdf_aesv3_decrypt_pdf_object(
+fn pdf_aesv3_decrypt_pdf_object(
   file_key : BytesView,
   object : PdfObject,
   no_encrypt_metadata? : Bool = false,

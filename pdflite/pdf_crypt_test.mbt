@@ -92,15 +92,7 @@ fn crypt_aesv3_encrypt_data_for_test(
   data : BytesView,
   iv : BytesView,
 ) -> @pdflite.PdfBytes raise {
-  let encrypted = try! @pdflite.pdf_aesv3_encrypt_pdf_object_with_iv_provider(
-    file_key,
-    PdfString(data.to_owned()),
-    fn(_) { iv.to_owned() },
-  )
-  match encrypted {
-    PdfString(bytes) => bytes
-    _ => fail("expected encrypted AESV3 string")
-  }
+  @pdflite.pdf_aes_cbc_encrypt_with_iv(file_key, iv, data)
 }
 
 ///|
@@ -348,19 +340,20 @@ fn crypt_aesv3_r5_document_with_object_for_test(
   encrypt_metadata? : Bool = true,
 ) -> @pdflite.PdfDocument raise {
   let doc = crypt_minimal_catalog_document_for_test(major, minor)
-  let encrypted_object = @pdflite.pdf_aesv3_encrypt_pdf_object_with_iv_provider(
+  doc.add_object_given_number(object_number, object)
+  let encrypted = try! doc.aesv3_encrypt_parsed_objects_with_iv_provider(
     crypt_aesv3_r5_file_key_for_test(),
-    object,
-    fn(index) { crypt_aes_document_iv_for_test(object_number, 0, index) },
+    fn(encrypted_object_number, generation, index) {
+      crypt_aes_document_iv_for_test(encrypted_object_number, generation, index)
+    },
     no_encrypt_metadata=!encrypt_metadata,
   )
-  doc.add_object_given_number(object_number, encrypted_object)
-  doc.add_object_given_number(
+  encrypted.add_object_given_number(
     9,
     crypt_aesv3_r5_encrypt_dictionary_for_test(permissions~, encrypt_metadata~),
   )
-  doc.set_trailer_dict(
-    doc
+  encrypted.set_trailer_dict(
+    encrypted
     .trailer_dict()
     .add_dict_entry(crypt_name_for_test("/Encrypt"), PdfIndirect(9))
     .add_dict_entry(
@@ -371,7 +364,7 @@ fn crypt_aesv3_r5_document_with_object_for_test(
       ]),
     ),
   )
-  doc
+  encrypted
 }
 
 ///|
@@ -5798,7 +5791,7 @@ test "pdf_aesv2_decrypt_pdf_object recurses through strings arrays dictionaries 
 }
 
 ///|
-test "pdf_aesv3_encrypt_pdf_object_with_iv_provider round trips object data" {
+test "PdfDocument AESV3 parsed-object encryption round trips object data" {
   let file_key = crypt_aesv3_r5_file_key_for_test()
   let key_s = crypt_name_for_test("/S")
   let key_stream = crypt_name_for_test("/Stream")
@@ -5813,19 +5806,18 @@ test "pdf_aesv3_encrypt_pdf_object_with_iv_provider round trips object data" {
       ),
     ),
   ])
-  let encrypted = try! @pdflite.pdf_aesv3_encrypt_pdf_object_with_iv_provider(
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(12, object)
+  let encrypted = try! doc.aesv3_encrypt_parsed_objects_with_iv_provider(
     file_key,
-    object,
-    fn(index) { crypt_aes_iv_for_test(index) },
+    fn(_, _, index) { crypt_aes_iv_for_test(index) },
   )
-  @test.assert_eq(
-    try! @pdflite.pdf_aesv3_decrypt_pdf_object(file_key, encrypted),
-    object,
-  )
+  let decrypted = try! encrypted.aesv3_decrypt_parsed_objects(file_key)
+  @test.assert_eq(decrypted.lookup_object_or_null(12), object)
 }
 
 ///|
-test "pdf_aesv3_decrypt_pdf_object recurses through strings arrays dictionaries and streams" {
+test "PdfDocument AESV3 parsed-object decrypt recurses through object data" {
   let file_key = crypt_aesv3_r5_file_key_for_test()
   let iv = crypt_model_bytes_for_test([
     0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c,
@@ -5861,10 +5853,10 @@ test "pdf_aesv3_decrypt_pdf_object recurses through strings arrays dictionaries 
       ]),
     ),
   ])
-  @test.assert_eq(
-    try! @pdflite.pdf_aesv3_decrypt_pdf_object(file_key, encrypted),
-    object,
-  )
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(12, encrypted)
+  let decrypted = try! doc.aesv3_decrypt_parsed_objects(file_key)
+  @test.assert_eq(decrypted.lookup_object_or_null(12), object)
 
   let key_length = @pdflite.pdf_name_of_bytes(@ascii.encode("/Length"))
   let key_title = @pdflite.pdf_name_of_bytes(@ascii.encode("/Title"))
@@ -5882,10 +5874,12 @@ test "pdf_aesv3_decrypt_pdf_object recurses through strings arrays dictionaries 
     ]),
     data: StreamGot(@ascii.encode("hello")),
   })
-  @test.assert_eq(
-    try! @pdflite.pdf_aesv3_decrypt_pdf_object(file_key, encrypted_stream),
-    plain_stream,
+  let stream_doc = @pdflite.pdf_document_empty()
+  stream_doc.add_object_given_number(13, encrypted_stream)
+  let decrypted_stream_doc = try! stream_doc.aesv3_decrypt_parsed_objects(
+    file_key,
   )
+  @test.assert_eq(decrypted_stream_doc.lookup_object_or_null(13), plain_stream)
   let metadata_stream = crypt_stream_for_test(
     [
       (key_length, PdfInteger(encrypted_hello.length())),
@@ -5897,12 +5891,14 @@ test "pdf_aesv3_decrypt_pdf_object recurses through strings arrays dictionaries 
     ],
     encrypted_hello,
   )
+  let metadata_doc = @pdflite.pdf_document_empty()
+  metadata_doc.add_object_given_number(14, metadata_stream)
+  let decrypted_metadata_doc = try! metadata_doc.aesv3_decrypt_parsed_objects(
+    file_key,
+    no_encrypt_metadata=true,
+  )
   @test.assert_eq(
-    try! @pdflite.pdf_aesv3_decrypt_pdf_object(
-      file_key,
-      metadata_stream,
-      no_encrypt_metadata=true,
-    ),
+    decrypted_metadata_doc.lookup_object_or_null(14),
     metadata_stream,
   )
 }
