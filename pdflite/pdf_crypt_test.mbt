@@ -4881,26 +4881,6 @@ test "PdfDocument encryption_values reports malformed encryption dictionaries" {
 }
 
 ///|
-test "pdf_pad_password truncates or pads with PDF password padding" {
-  @test.assert_eq(@pdflite.pdf_password_padding().length(), 32)
-  @test.assert_eq(@pdflite.pdf_password_padding()[0].to_int(), 0x28)
-  @test.assert_eq(
-    @pdflite.pdf_pad_password(@ascii.encode("abc")),
-    crypt_model_bytes_for_test([
-      0x61, 0x62, 0x63, 0x28, 0xbf, 0x4e, 0x5e, 0x4e, 0x75, 0x8a, 0x41, 0x64, 0x00,
-      0x4e, 0x56, 0xff, 0xfa, 0x01, 0x08, 0x2e, 0x2e, 0x00, 0xb6, 0xd0, 0x68, 0x3e,
-      0x80, 0x2f, 0x0c, 0xa9, 0xfe, 0x64,
-    ]),
-  )
-  @test.assert_eq(
-    @pdflite.pdf_pad_password(
-      @ascii.encode("012345678901234567890123456789012345"),
-    ),
-    @ascii.encode("01234567890123456789012345678901"),
-  )
-}
-
-///|
 test "pdf_sha256_digest matches SHA-256 known vector" {
   @test.assert_eq(
     @pdflite.pdf_sha256_digest(@ascii.encode("abc")),
@@ -5320,7 +5300,11 @@ test "pdf_user_password_from_owner_password recovers padded user password" {
       owner_entry,
       40,
     ),
-    @pdflite.pdf_pad_password(@ascii.encode("user")),
+    crypt_model_bytes_for_test([
+      0x75, 0x73, 0x65, 0x72, 0x28, 0xbf, 0x4e, 0x5e, 0x4e, 0x75, 0x8a, 0x41, 0x64,
+      0x00, 0x4e, 0x56, 0xff, 0xfa, 0x01, 0x08, 0x2e, 0x2e, 0x00, 0xb6, 0xd0, 0x68,
+      0x3e, 0x80, 0x2f, 0x0c, 0xa9, 0xfe,
+    ]),
   )
   let owner_entry_r3 = try! @pdflite.pdf_make_owner_password_entry(
     3,
@@ -5335,7 +5319,11 @@ test "pdf_user_password_from_owner_password recovers padded user password" {
       owner_entry_r3,
       128,
     ),
-    @pdflite.pdf_password_padding(),
+    crypt_model_bytes_for_test([
+      0x28, 0xbf, 0x4e, 0x5e, 0x4e, 0x75, 0x8a, 0x41, 0x64, 0x00, 0x4e, 0x56, 0xff,
+      0xfa, 0x01, 0x08, 0x2e, 0x2e, 0x00, 0xb6, 0xd0, 0x68, 0x3e, 0x80, 0x2f, 0x0c,
+      0xa9, 0xfe, 0x64, 0x53, 0x69, 0x7a,
+    ]),
   )
 }
 

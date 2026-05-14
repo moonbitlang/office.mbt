@@ -9,7 +9,7 @@ fn pdf_password_padding_fixed() -> FixedArray[Byte] {
 
 ///|
 /// Return the standard 32-byte PDF password padding sequence.
-pub fn pdf_password_padding() -> PdfBytes {
+fn pdf_password_padding() -> PdfBytes {
   Bytes::from_array(pdf_password_padding_fixed())
 }
 
@@ -18,7 +18,7 @@ pub fn pdf_password_padding() -> PdfBytes {
 ///
 /// Passwords are byte sequences. Inputs longer than 32 bytes are truncated;
 /// shorter inputs are filled with the standard PDF padding sequence.
-pub fn pdf_pad_password(password : BytesView) -> PdfBytes {
+fn pdf_pad_password(password : BytesView) -> PdfBytes {
   let padding = pdf_password_padding_fixed()
   let output : Array[Byte] = []
   let copied = if password.length() < 32 { password.length() } else { 32 }

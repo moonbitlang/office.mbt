@@ -367,8 +367,6 @@ pub fn pdf_optional_content_merge(ArrayView[PdfDocument]) -> PdfOptionalContent?
 
 pub fn pdf_p_of_permissions(ArrayView[PdfPermission]) -> Int
 
-pub fn pdf_pad_password(BytesView) -> Bytes
-
 pub fn pdf_page_blank(PaperSize) -> PdfPage
 
 pub fn pdf_page_custom(PdfObject) -> PdfPage
@@ -440,8 +438,6 @@ pub fn pdf_parse_single_lexeme_object(ArrayView[PdfLexeme]) -> PdfObject raise P
 pub fn pdf_parse_stream_object_from_bytes(Bytes) -> PdfParsedIndirectObject raise PdfError
 
 pub fn pdf_parse_stream_object_from_view(BytesView) -> PdfParsedIndirectObject raise PdfError
-
-pub fn pdf_password_padding() -> Bytes
 
 pub fn pdf_pdfdocencoding_byte_of_codepoint(Int) -> Byte?
 
