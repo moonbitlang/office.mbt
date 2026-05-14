@@ -3798,7 +3798,7 @@ test "PdfDocument decrypt_with_passwords handles unencrypted, blank, user, and o
 }
 
 ///|
-test "pdfcrypt standalone wrappers expose CamlPDF-shaped workflows" {
+test "PdfDocument crypt methods cover standalone workflows" {
   let key_title = crypt_name_for_test("/Title")
   let plain_object : @pdflite.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("standalone-secret"))),
@@ -3810,16 +3810,14 @@ test "pdfcrypt standalone wrappers expose CamlPDF-shaped workflows" {
   @test.assert_eq(plain_doc.permissions(), [])
 
   let denied : Array[@pdflite.PdfPermission] = [PdfNoPrint]
-  let encrypted_40 = @pdflite.pdf_encrypt_pdf_40bit(
-    plain_doc,
+  let encrypted_40 = plain_doc.encrypt_40bit(
     @ascii.encode("user"),
     @ascii.encode("owner"),
     denied,
     file_id=@ascii.encode("standalone-40-id"),
   )
   @test.assert_eq(encrypted_40.what_encryption(), Some(PdfEncryption40Bit))
-  let encrypted = @pdflite.pdf_encrypt_pdf_128bit(
-    plain_doc,
+  let encrypted = plain_doc.encrypt_128bit(
     @ascii.encode("user"),
     @ascii.encode("owner"),
     denied,
@@ -3832,32 +3830,30 @@ test "pdfcrypt standalone wrappers expose CamlPDF-shaped workflows" {
   @test.assert_eq(values.crypt_type, PdfCryptARC4(128, 3))
   @test.assert_eq(@pdflite.pdf_banlist_of_p(values.permissions), denied)
 
-  let (bad_document, bad_permissions) = @pdflite.pdf_decrypt_pdf(
-    encrypted,
-    @ascii.encode("bad"),
+  let bad_decryption = encrypted.decrypt_with_passwords(
+    user_password=Some(@ascii.encode("bad")),
   )
-  @test.assert_eq(bad_document, None)
-  @test.assert_eq(bad_permissions, denied)
+  @test.assert_eq(bad_decryption, None)
+  @test.assert_eq(encrypted.permissions(), denied)
 
-  let (decrypted_document, permissions) = @pdflite.pdf_decrypt_pdf(
-    encrypted,
-    @ascii.encode("user"),
+  let decrypted_result = encrypted.decrypt_with_passwords(
+    user_password=Some(@ascii.encode("user")),
   )
-  guard decrypted_document is Some(decrypted) else {
+  guard decrypted_result is Some(decrypted_result) else {
     fail("expected user password decryption")
   }
-  @test.assert_eq(permissions, denied)
+  let decrypted = decrypted_result.document
+  @test.assert_eq(decrypted_result.denied_permissions, denied)
   @test.assert_eq(decrypted.lookup_object_or_null(1), plain_object)
-  let owner_decrypted = @pdflite.pdf_decrypt_pdf_owner(
-    encrypted,
+  let owner_decrypted = encrypted.decrypt_with_owner_password(
     @ascii.encode("owner"),
   )
   @test.assert_eq(
-    owner_decrypted.map(fn(document) { document.lookup_object_or_null(1) }),
+    owner_decrypted.map(fn(result) { result.document.lookup_object_or_null(1) }),
     Some(plain_object),
   )
   @test.assert_eq(
-    @pdflite.pdf_decrypt_pdf_owner(encrypted, @ascii.encode("bad")),
+    encrypted.decrypt_with_owner_password(@ascii.encode("bad")),
     None,
   )
 
@@ -3868,8 +3864,7 @@ test "pdfcrypt standalone wrappers expose CamlPDF-shaped workflows" {
   )
   let stream_doc = @pdflite.pdf_document_empty()
   stream_doc.add_object_given_number(1, plain_stream)
-  let encrypted_stream_doc = @pdflite.pdf_encrypt_pdf_40bit(
-    stream_doc,
+  let encrypted_stream_doc = stream_doc.encrypt_40bit(
     @ascii.encode(""),
     @ascii.encode("owner"),
     [],
@@ -3888,55 +3883,32 @@ test "pdfcrypt standalone wrappers expose CamlPDF-shaped workflows" {
     1,
     PdfDictionary([(key_title, PdfString(@ascii.encode("updated")))]),
   )
-  let recrypted_with_default_renumber = @pdflite.pdf_recrypt_pdf(
-    decrypted,
-    @ascii.encode("user"),
-  )
+  let recrypted_with_default_renumber = decrypted
+    .renumber_objects_compact()
+    .recrypt_with_password(@ascii.encode("user"))
   @test.assert_eq(
-    @pdflite.pdf_decrypt_pdf(
-      recrypted_with_default_renumber,
-      @ascii.encode("user"),
-    ).0.map(fn(document) { document.lookup_object_or_null(1) }),
+    recrypted_with_default_renumber
+    .decrypt_with_passwords(user_password=Some(@ascii.encode("user")))
+    .map(fn(result) { result.document.lookup_object_or_null(1) }),
     Some(PdfDictionary([(key_title, PdfString(@ascii.encode("updated")))])),
   )
-  let recrypted = @pdflite.pdf_recrypt_pdf(
-    decrypted,
-    @ascii.encode("user"),
-    renumber=false,
+  let recrypted = decrypted.recrypt_with_password(@ascii.encode("user"))
+  let roundtrip_result = recrypted.decrypt_with_passwords(
+    user_password=Some(@ascii.encode("user")),
   )
-  let (roundtrip_document, roundtrip_permissions) = @pdflite.pdf_decrypt_pdf(
-    recrypted,
-    @ascii.encode("user"),
-  )
-  guard roundtrip_document is Some(roundtrip) else {
+  guard roundtrip_result is Some(roundtrip_result) else {
     fail("expected recrypted document to decrypt")
   }
-  @test.assert_eq(roundtrip_permissions, denied)
+  let roundtrip = roundtrip_result.document
+  @test.assert_eq(roundtrip_result.denied_permissions, denied)
   @test.assert_eq(
     roundtrip.lookup_object_or_null(1),
     PdfDictionary([(key_title, PdfString(@ascii.encode("updated")))]),
   )
-  let provider_recrypted_arc4 = @pdflite.pdf_recrypt_pdf_with_iv_provider(
-    decrypted,
-    @ascii.encode("user"),
-    @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
-      @ascii.encode("arc4-provider-recrypt-unused"),
-    ),
-    renumber=false,
-  )
-  @test.assert_eq(
-    @pdflite.pdf_decrypt_pdf(provider_recrypted_arc4, @ascii.encode("user")).0.map(fn(
-        document,
-      ) {
-        document.lookup_object_or_null(1)
-      },
-    ),
-    Some(PdfDictionary([(key_title, PdfString(@ascii.encode("updated")))])),
-  )
 }
 
 ///|
-test "pdfcrypt standalone provider wrappers cover AES encrypt and recrypt" {
+test "PdfDocument provider methods cover AES encrypt and recrypt" {
   let key_title = crypt_name_for_test("/Title")
   let original_object : @pdflite.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("aes-wrapper-original"))),
@@ -3947,8 +3919,7 @@ test "pdfcrypt standalone provider wrappers cover AES encrypt and recrypt" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(1, original_object)
   let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
-  let no_saved : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_recrypt_pdf_with_iv_provider(
-    doc,
+  let no_saved : Result[@pdflite.PdfDocument, Error] = try? doc.recrypt_with_password_aesv2_with_iv_provider(
     @ascii.encode("user"),
     @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
       @ascii.encode("aes-wrapper-missing-saved"),
@@ -3957,64 +3928,56 @@ test "pdfcrypt standalone provider wrappers cover AES encrypt and recrypt" {
   guard no_saved is Err(_) else {
     fail("expected missing saved encryption to raise")
   }
-  let encrypted = @pdflite.pdf_encrypt_pdf_AES_with_iv_provider(
-    doc,
-    false,
+  let encrypted = doc.encrypt_128bit_aesv2_with_iv_provider(
     @ascii.encode("user"),
     @ascii.encode("owner"),
     denied,
     @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
       @ascii.encode("aes-wrapper-iv"),
     ),
+    encrypt_metadata=false,
     file_id=@ascii.encode("aes-wrapper-id"),
   )
   @test.assert_eq(encrypted.what_encryption(), Some(PdfEncryptionAES128(false)))
-  let (decrypted_document, permissions) = @pdflite.pdf_decrypt_pdf(
-    encrypted,
-    @ascii.encode("user"),
+  let decrypted_result = encrypted.decrypt_with_passwords(
+    user_password=Some(@ascii.encode("user")),
   )
-  guard decrypted_document is Some(decrypted) else {
+  guard decrypted_result is Some(decrypted_result) else {
     fail("expected AES wrapper decryption")
   }
-  @test.assert_eq(permissions, denied)
+  let decrypted = decrypted_result.document
+  @test.assert_eq(decrypted_result.denied_permissions, denied)
   @test.assert_eq(decrypted.lookup_object_or_null(1), original_object)
   decrypted.add_object_given_number(1, updated_object)
-  let recrypted_default = @pdflite.pdf_recrypt_pdf_with_iv_provider(
-    decrypted,
-    @ascii.encode("user"),
-    @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
-      @ascii.encode("aes-wrapper-default-recrypt-iv"),
-    ),
-  )
+  let recrypted_default = decrypted
+    .renumber_objects_compact()
+    .recrypt_with_password_aesv2_with_iv_provider(
+      @ascii.encode("user"),
+      @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
+        @ascii.encode("aes-wrapper-default-recrypt-iv"),
+      ),
+    )
   @test.assert_eq(
-    @pdflite.pdf_decrypt_pdf_owner(recrypted_default, @ascii.encode("owner")).map(fn(
-        document,
-      ) {
-        document.lookup_object_or_null(1)
-      },
-    ),
+    recrypted_default
+    .decrypt_with_owner_password(@ascii.encode("owner"))
+    .map(fn(result) { result.document.lookup_object_or_null(1) }),
     Some(updated_object),
   )
-  let recrypted = @pdflite.pdf_recrypt_pdf_with_iv_provider(
-    decrypted,
+  let recrypted = decrypted.recrypt_with_password_aesv2_with_iv_provider(
     @ascii.encode("user"),
     @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
       @ascii.encode("aes-wrapper-recrypt-iv"),
     ),
-    renumber=false,
   )
-  let owner_roundtrip = @pdflite.pdf_decrypt_pdf_owner(
-    recrypted,
+  let owner_roundtrip = recrypted.decrypt_with_owner_password(
     @ascii.encode("owner"),
   )
   @test.assert_eq(
-    owner_roundtrip.map(fn(document) { document.lookup_object_or_null(1) }),
+    owner_roundtrip.map(fn(result) { result.document.lookup_object_or_null(1) }),
     Some(updated_object),
   )
 
-  let aesv3 = @pdflite.pdf_encrypt_pdf_AES256_with_providers(
-    doc,
-    true,
+  let aesv3 = doc.encrypt_256bit_aesv3_with_providers(
     @ascii.encode("user"),
     @ascii.encode("owner"),
     [],
@@ -4024,31 +3987,28 @@ test "pdfcrypt standalone provider wrappers cover AES encrypt and recrypt" {
     @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
       @ascii.encode("aesv3-wrapper-iv"),
     ),
+    encrypt_metadata=true,
     file_id=@ascii.encode("aesv3-wrapper-id"),
   )
   @test.assert_eq(aesv3.what_encryption(), Some(PdfEncryptionAES256(true)))
-  let aesv3_decrypted = @pdflite.pdf_decrypt_pdf_owner(
-    aesv3,
+  let aesv3_decrypted = aesv3.decrypt_with_owner_password(
     @ascii.encode("owner"),
   )
-  guard aesv3_decrypted is Some(aesv3_plain) else {
+  guard aesv3_decrypted is Some(aesv3_decrypted) else {
     fail("expected AESV3 wrapper decryption")
   }
-  let aesv3_recrypted = @pdflite.pdf_recrypt_pdf_with_iv_provider(
-    aesv3_plain,
+  let aesv3_plain = aesv3_decrypted.document
+  let aesv3_recrypted = aesv3_plain.recrypt_with_password_aesv3_with_iv_provider(
     @ascii.encode("owner"),
     @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
       @ascii.encode("aesv3-wrapper-recrypt-iv"),
     ),
-    renumber=false,
   )
   @test.assert_eq(
     aesv3_recrypted.what_encryption(),
     Some(PdfEncryptionAES256(true)),
   )
-  let aesv3_iso = @pdflite.pdf_encrypt_pdf_AES256ISO_with_providers(
-    doc,
-    false,
+  let aesv3_iso = doc.encrypt_256bit_aesv3_iso_with_providers(
     @ascii.encode("user"),
     @ascii.encode("owner"),
     [],
@@ -4058,6 +4018,7 @@ test "pdfcrypt standalone provider wrappers cover AES encrypt and recrypt" {
     @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
       @ascii.encode("aesv3iso-wrapper-iv"),
     ),
+    encrypt_metadata=false,
     file_id=@ascii.encode("aesv3iso-wrapper-id"),
   )
   @test.assert_eq(
