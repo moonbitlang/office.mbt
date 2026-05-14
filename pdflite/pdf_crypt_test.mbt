@@ -277,65 +277,6 @@ fn crypt_aesv3_r5_random_for_test(
 }
 
 ///|
-fn crypt_aesv3_r5_encrypt_dictionary_for_test(
-  permissions? : Int = -3904,
-  encrypt_metadata? : Bool = true,
-) -> @pdflite.PdfObject {
-  crypt_standard_encrypt_dictionary_values_for_test(
-    [
-      (crypt_name_for_test("/V"), PdfInteger(5)),
-      (crypt_name_for_test("/R"), PdfInteger(5)),
-      (
-        crypt_name_for_test("/CF"),
-        PdfDictionary([
-          (
-            crypt_name_for_test("/StdCF"),
-            PdfDictionary([
-              (crypt_name_for_test("/Length"), PdfInteger(32)),
-              (
-                crypt_name_for_test("/AuthEvent"),
-                PdfNameObject(crypt_name_for_test("/DocOpen")),
-              ),
-              (
-                crypt_name_for_test("/CFM"),
-                PdfNameObject(crypt_name_for_test("/AESV3")),
-              ),
-            ]),
-          ),
-        ]),
-      ),
-      (crypt_name_for_test("/EncryptMetadata"), PdfBoolean(encrypt_metadata)),
-      (crypt_name_for_test("/Length"), PdfInteger(256)),
-      (
-        crypt_name_for_test("/UE"),
-        PdfString(crypt_aesv3_r5_user_encryption_key_for_test()),
-      ),
-      (
-        crypt_name_for_test("/OE"),
-        PdfString(crypt_aesv3_r5_owner_encryption_key_for_test()),
-      ),
-      (
-        crypt_name_for_test("/Perms"),
-        PdfString(
-          crypt_aesv3_r5_permissions_for_test(permissions~, encrypt_metadata~),
-        ),
-      ),
-      (
-        crypt_name_for_test("/StrF"),
-        PdfNameObject(crypt_name_for_test("/StdCF")),
-      ),
-      (
-        crypt_name_for_test("/StmF"),
-        PdfNameObject(crypt_name_for_test("/StdCF")),
-      ),
-    ],
-    crypt_aesv3_r5_owner_entry_for_test(),
-    crypt_aesv3_r5_user_entry_for_test(),
-    permissions,
-  )
-}
-
-///|
 test "deterministic AES providers derive stable bytes from seed and callsite" {
   let seed = @ascii.encode("fixture-seed")
   let iv_provider = @pdflite.pdf_deterministic_aes_iv_provider_from_seed(seed)
@@ -382,29 +323,30 @@ fn crypt_aesv3_r5_document_with_object_for_test(
 ) -> @pdflite.PdfDocument raise {
   let doc = crypt_minimal_catalog_document_for_test(major, minor)
   doc.add_object_given_number(object_number, object)
-  let encrypted = try! doc.aesv3_encrypt_parsed_objects_with_iv_provider(
-    crypt_aesv3_r5_file_key_for_test(),
+  let encrypted = try! doc.encrypt_256bit_aesv3_with_providers(
+    @ascii.encode("user"),
+    @ascii.encode("owner"),
+    @pdflite.pdf_permissions_of_p(permissions),
+    crypt_aesv3_r5_random_for_test,
     fn(encrypted_object_number, generation, index) {
       crypt_aes_document_iv_for_test(encrypted_object_number, generation, index)
     },
-    no_encrypt_metadata=!encrypt_metadata,
+    encrypt_metadata~,
+    file_id=@ascii.encode("doc-id"),
   )
-  encrypted.add_object_given_number(
-    9,
-    crypt_aesv3_r5_encrypt_dictionary_for_test(permissions~, encrypt_metadata~),
-  )
-  encrypted.set_trailer_dict(
-    encrypted
-    .trailer_dict()
-    .add_dict_entry(crypt_name_for_test("/Encrypt"), PdfIndirect(9))
-    .add_dict_entry(
-      crypt_name_for_test("/ID"),
-      PdfArray([
-        PdfString(@ascii.encode("doc-id")),
-        PdfString(@ascii.encode("ignored")),
-      ]),
-    ),
-  )
+  let key_encrypt = crypt_name_for_test("/Encrypt")
+  guard encrypted.trailer_dict().lookup_immediate(key_encrypt)
+    is Some(PdfIndirect(encrypt_number)) else {
+    fail("expected indirect AESV3 encryption dictionary")
+  }
+  if encrypt_number != 9 {
+    let encrypt_dictionary = encrypted.lookup_object_or_null(encrypt_number)
+    encrypted.add_object_given_number(9, encrypt_dictionary)
+    encrypted.remove_object(encrypt_number)
+    encrypted.set_trailer_dict(
+      encrypted.trailer_dict().add_dict_entry(key_encrypt, PdfIndirect(9)),
+    )
+  }
   encrypted
 }
 
