@@ -1437,8 +1437,7 @@ test "PdfDocument recrypt_with_password restores saved ARC4 encryption" {
   let unsupported : Result[@pdflite.PdfDocument, Error] = try? aes_decrypted.document.recrypt_with_password(
     @ascii.encode("user"),
   )
-  guard unsupported
-    is Err(@pdflite.PdfError::EncryptionRecryptUnsupported(PdfCryptAESV2)) else {
+  guard unsupported is Err(@pdflite.PdfError::EncryptionRecryptUnsupported(_)) else {
     fail("expected unsupported AES recrypt")
   }
 
@@ -1604,8 +1603,7 @@ test "PdfDocument recrypt_with_password_aesv2_with_iv_provider restores saved AE
       crypt_aes_document_iv_for_test(object_number, generation, index)
     },
   )
-  guard unsupported
-    is Err(@pdflite.PdfError::EncryptionRecryptUnsupported(PdfCryptARC4(40, 2))) else {
+  guard unsupported is Err(@pdflite.PdfError::EncryptionRecryptUnsupported(_)) else {
     fail("expected unsupported non-AESV2 recrypt")
   }
 }
@@ -1736,8 +1734,7 @@ test "PdfDocument recrypt_with_password_aesv3_with_iv_provider restores saved AE
       crypt_aes_document_iv_for_test(object_number, generation, index)
     },
   )
-  guard wrong_method
-    is Err(@pdflite.PdfError::EncryptionRecryptUnsupported(PdfCryptAESV2)) else {
+  guard wrong_method is Err(@pdflite.PdfError::EncryptionRecryptUnsupported(_)) else {
     fail("expected non-AESV3 saved encryption rejection")
   }
 }

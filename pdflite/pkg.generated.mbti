@@ -1203,11 +1203,7 @@ pub(all) enum PdfContentOp {
   Op_Unknown(Bytes)
 } derive(Eq, ToJson, @debug.Debug)
 
-pub(all) enum PdfCryptType {
-  PdfCryptARC4(Int, Int)
-  PdfCryptAESV2
-  PdfCryptAESV3(Bool)
-} derive(Eq, ToJson, @debug.Debug)
+type PdfCryptType derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfDate {
   year : Int

@@ -3,7 +3,7 @@
 ///
 /// ARC4 carries key length in bits and security-handler revision. AESV3 carries
 /// whether the ISO/PDF 2.0 hash variant is in use.
-pub(all) enum PdfCryptType {
+enum PdfCryptType {
   PdfCryptARC4(Int, Int)
   PdfCryptAESV2
   PdfCryptAESV3(Bool)
