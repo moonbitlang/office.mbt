@@ -27,6 +27,73 @@ fn crypt_wb_name_for_test(text : String) -> PdfName {
 }
 
 ///|
+fn crypt_wb_standard_encrypt_dictionary_for_test(
+  entries : ArrayView[(PdfName, PdfObject)],
+  owner_length? : Int = 40,
+  user_length? : Int = 40,
+) -> PdfObject {
+  crypt_wb_standard_encrypt_dictionary_values_for_test(
+    entries,
+    crypt_wb_repeated_bytes_for_test(0x4f, owner_length),
+    crypt_wb_repeated_bytes_for_test(0x55, user_length),
+    -4,
+  )
+}
+
+///|
+fn crypt_wb_standard_encrypt_dictionary_values_for_test(
+  entries : ArrayView[(PdfName, PdfObject)],
+  owner_entry : PdfBytes,
+  user_entry : PdfBytes,
+  permissions : Int,
+) -> PdfObject {
+  let output : Array[(PdfName, PdfObject)] = [
+    (
+      crypt_wb_name_for_test("/Filter"),
+      PdfNameObject(crypt_wb_name_for_test("/Standard")),
+    ),
+    (crypt_wb_name_for_test("/O"), PdfString(owner_entry)),
+    (crypt_wb_name_for_test("/U"), PdfString(user_entry)),
+    (crypt_wb_name_for_test("/P"), PdfInteger(permissions)),
+  ]
+  for entry in entries {
+    output.push(entry)
+  }
+  PdfDictionary(output)
+}
+
+///|
+fn crypt_wb_doc_with_encrypt_for_test(
+  encrypt_dictionary : PdfObject,
+) -> PdfDocument {
+  let doc = pdf_document_empty()
+  doc.set_trailer_dict(
+    PdfDictionary([
+      (crypt_wb_name_for_test("/Encrypt"), encrypt_dictionary),
+      (
+        crypt_wb_name_for_test("/ID"),
+        PdfArray([
+          PdfString(@ascii.encode("doc-id")),
+          PdfString(@ascii.encode("ignored")),
+        ]),
+      ),
+    ]),
+  )
+  doc
+}
+
+///|
+fn crypt_wb_expect_encryption_method_error_for_test(
+  encrypt_dictionary : PdfObject,
+) -> Unit raise {
+  let doc = crypt_wb_doc_with_encrypt_for_test(encrypt_dictionary)
+  let result : Result[PdfEncryptionValues, Error] = try? doc.encryption_values()
+  guard result is Err(PdfError::EncryptionMethodExpected) else {
+    fail("expected EncryptionMethodExpected")
+  }
+}
+
+///|
 fn crypt_wb_iv_for_test(index : Int) -> PdfBytes {
   crypt_wb_bytes_for_test(
     [
@@ -159,6 +226,372 @@ test "private encryption password settings reject AESV3" {
   guard result
     is Err(PdfError::EncryptionAuthenticationUnsupported(PdfCryptAESV3(false))) else {
     fail("expected unsupported AESV3 password settings")
+  }
+}
+
+///|
+test "private encryption values parse legacy ARC4 dictionary values" {
+  let doc = crypt_wb_doc_with_encrypt_for_test(
+    crypt_wb_standard_encrypt_dictionary_for_test([
+      (crypt_wb_name_for_test("/V"), PdfInteger(1)),
+      (crypt_wb_name_for_test("/R"), PdfInteger(2)),
+    ]),
+  )
+  let values = try! doc.encryption_values()
+  @test.assert_eq(values.crypt_type, PdfCryptARC4(40, 2))
+  @test.assert_eq(
+    values.owner_entry,
+    crypt_wb_repeated_bytes_for_test(0x4f, 32),
+  )
+  @test.assert_eq(values.user_entry, crypt_wb_repeated_bytes_for_test(0x55, 32))
+  @test.assert_eq(values.permissions, -4)
+  @test.assert_eq(values.file_id, @ascii.encode("doc-id"))
+  @test.assert_eq(values.encrypt_metadata, true)
+  @test.assert_eq(values.user_encryption_key, None)
+  @test.assert_eq(values.owner_encryption_key, None)
+
+  let r3_doc = crypt_wb_doc_with_encrypt_for_test(
+    crypt_wb_standard_encrypt_dictionary_for_test([
+      (crypt_wb_name_for_test("/V"), PdfInteger(2)),
+      (crypt_wb_name_for_test("/R"), PdfInteger(3)),
+    ]),
+  )
+  @test.assert_eq(
+    (try! r3_doc.encryption_values()).crypt_type,
+    PdfCryptARC4(40, 3),
+  )
+
+  let r3_length_doc = crypt_wb_doc_with_encrypt_for_test(
+    crypt_wb_standard_encrypt_dictionary_for_test([
+      (crypt_wb_name_for_test("/V"), PdfInteger(2)),
+      (crypt_wb_name_for_test("/Length"), PdfInteger(128)),
+      (crypt_wb_name_for_test("/R"), PdfInteger(3)),
+    ]),
+  )
+  let r3_values = try! r3_length_doc.encryption_values()
+  @test.assert_eq(r3_values.crypt_type, PdfCryptARC4(128, 3))
+  @test.assert_eq(r3_values.owner_entry.length(), 32)
+  @test.assert_eq(r3_values.user_entry.length(), 32)
+}
+
+///|
+test "private encryption values parse crypt filter methods" {
+  let arc4_doc = crypt_wb_doc_with_encrypt_for_test(
+    crypt_wb_standard_encrypt_dictionary_for_test([
+      (crypt_wb_name_for_test("/V"), PdfInteger(4)),
+      (crypt_wb_name_for_test("/R"), PdfInteger(4)),
+      (
+        crypt_wb_name_for_test("/CF"),
+        PdfDictionary([
+          (crypt_wb_name_for_test("/Length"), PdfInteger(96)),
+          (
+            crypt_wb_name_for_test("/StdCF"),
+            PdfDictionary([
+              (
+                crypt_wb_name_for_test("/CFM"),
+                PdfNameObject(crypt_wb_name_for_test("/V2")),
+              ),
+            ]),
+          ),
+        ]),
+      ),
+    ]),
+  )
+  @test.assert_eq(
+    (try! arc4_doc.encryption_values()).crypt_type,
+    PdfCryptARC4(96, 4),
+  )
+
+  let arc4_length_doc = crypt_wb_doc_with_encrypt_for_test(
+    crypt_wb_standard_encrypt_dictionary_for_test([
+      (crypt_wb_name_for_test("/V"), PdfInteger(4)),
+      (crypt_wb_name_for_test("/R"), PdfInteger(4)),
+      (crypt_wb_name_for_test("/Length"), PdfInteger(128)),
+      (
+        crypt_wb_name_for_test("/CF"),
+        PdfDictionary([
+          (
+            crypt_wb_name_for_test("/StdCF"),
+            PdfDictionary([
+              (
+                crypt_wb_name_for_test("/CFM"),
+                PdfNameObject(crypt_wb_name_for_test("/V2")),
+              ),
+            ]),
+          ),
+        ]),
+      ),
+    ]),
+  )
+  @test.assert_eq(
+    (try! arc4_length_doc.encryption_values()).crypt_type,
+    PdfCryptARC4(128, 4),
+  )
+
+  let aesv2_doc = crypt_wb_doc_with_encrypt_for_test(
+    crypt_wb_standard_encrypt_dictionary_for_test([
+      (crypt_wb_name_for_test("/V"), PdfInteger(4)),
+      (crypt_wb_name_for_test("/R"), PdfInteger(4)),
+      (
+        crypt_wb_name_for_test("/CF"),
+        PdfDictionary([
+          (
+            crypt_wb_name_for_test("/StdCF"),
+            PdfDictionary([
+              (
+                crypt_wb_name_for_test("/CFM"),
+                PdfNameObject(crypt_wb_name_for_test("/AESV2")),
+              ),
+            ]),
+          ),
+        ]),
+      ),
+    ]),
+  )
+  @test.assert_eq(
+    (try! aesv2_doc.encryption_values()).crypt_type,
+    PdfCryptAESV2,
+  )
+  let no_metadata_doc = crypt_wb_doc_with_encrypt_for_test(
+    crypt_wb_standard_encrypt_dictionary_for_test([
+      (crypt_wb_name_for_test("/V"), PdfInteger(4)),
+      (crypt_wb_name_for_test("/R"), PdfInteger(4)),
+      (crypt_wb_name_for_test("/EncryptMetadata"), PdfBoolean(false)),
+      (
+        crypt_wb_name_for_test("/CF"),
+        PdfDictionary([
+          (
+            crypt_wb_name_for_test("/StdCF"),
+            PdfDictionary([
+              (
+                crypt_wb_name_for_test("/CFM"),
+                PdfNameObject(crypt_wb_name_for_test("/AESV2")),
+              ),
+            ]),
+          ),
+        ]),
+      ),
+    ]),
+  )
+  let no_metadata_values = try! no_metadata_doc.encryption_values()
+  @test.assert_eq(no_metadata_values.crypt_type, PdfCryptAESV2)
+  @test.assert_eq(no_metadata_values.encrypt_metadata, false)
+
+  let aesv3_doc = crypt_wb_doc_with_encrypt_for_test(
+    crypt_wb_standard_encrypt_dictionary_for_test(
+      [
+        (crypt_wb_name_for_test("/V"), PdfInteger(5)),
+        (crypt_wb_name_for_test("/R"), PdfInteger(6)),
+        (
+          crypt_wb_name_for_test("/CF"),
+          PdfDictionary([
+            (
+              crypt_wb_name_for_test("/StdCF"),
+              PdfDictionary([
+                (
+                  crypt_wb_name_for_test("/CFM"),
+                  PdfNameObject(crypt_wb_name_for_test("/AESV3")),
+                ),
+              ]),
+            ),
+          ]),
+        ),
+        (
+          crypt_wb_name_for_test("/UE"),
+          PdfString(crypt_wb_aesv3_r5_user_encryption_key_for_test()),
+        ),
+        (
+          crypt_wb_name_for_test("/OE"),
+          PdfString(crypt_wb_aesv3_r5_owner_encryption_key_for_test()),
+        ),
+      ],
+      owner_length=56,
+      user_length=56,
+    ),
+  )
+  let aesv3_values = try! aesv3_doc.encryption_values()
+  @test.assert_eq(aesv3_values.crypt_type, PdfCryptAESV3(true))
+  @test.assert_eq(aesv3_values.owner_entry.length(), 48)
+  @test.assert_eq(aesv3_values.user_entry.length(), 48)
+  @test.assert_eq(
+    aesv3_values.user_encryption_key,
+    Some(crypt_wb_aesv3_r5_user_encryption_key_for_test()),
+  )
+  @test.assert_eq(
+    aesv3_values.owner_encryption_key,
+    Some(crypt_wb_aesv3_r5_owner_encryption_key_for_test()),
+  )
+  @test.assert_eq(
+    try! aesv3_doc.decrypt_with_user_password(@ascii.encode("user")),
+    None,
+  )
+}
+
+///|
+test "private encryption values report malformed encryption dictionaries" {
+  let no_encrypt : Result[PdfEncryptionValues, Error] = try? pdf_document_empty().encryption_values()
+  guard no_encrypt is Err(PdfError::EncryptionExpected) else {
+    fail("expected EncryptionExpected")
+  }
+
+  crypt_wb_expect_encryption_method_error_for_test(
+    crypt_wb_standard_encrypt_dictionary_for_test([
+      (crypt_wb_name_for_test("/V"), PdfInteger(99)),
+      (crypt_wb_name_for_test("/R"), PdfInteger(4)),
+    ]),
+  )
+
+  crypt_wb_expect_encryption_method_error_for_test(
+    PdfDictionary([
+      (crypt_wb_name_for_test("/Filter"), PdfInteger(1)),
+      (crypt_wb_name_for_test("/V"), PdfInteger(1)),
+      (crypt_wb_name_for_test("/R"), PdfInteger(2)),
+      (
+        crypt_wb_name_for_test("/O"),
+        PdfString(crypt_wb_repeated_bytes_for_test(0x4f, 32)),
+      ),
+      (
+        crypt_wb_name_for_test("/U"),
+        PdfString(crypt_wb_repeated_bytes_for_test(0x55, 32)),
+      ),
+      (crypt_wb_name_for_test("/P"), PdfInteger(-4)),
+    ]),
+  )
+
+  crypt_wb_expect_encryption_method_error_for_test(
+    crypt_wb_standard_encrypt_dictionary_for_test([
+      (crypt_wb_name_for_test("/V"), PdfInteger(4)),
+      (crypt_wb_name_for_test("/R"), PdfInteger(4)),
+    ]),
+  )
+
+  crypt_wb_expect_encryption_method_error_for_test(
+    crypt_wb_standard_encrypt_dictionary_for_test([
+      (crypt_wb_name_for_test("/V"), PdfInteger(4)),
+      (crypt_wb_name_for_test("/R"), PdfInteger(4)),
+      (crypt_wb_name_for_test("/CF"), PdfDictionary([])),
+    ]),
+  )
+
+  crypt_wb_expect_encryption_method_error_for_test(
+    crypt_wb_standard_encrypt_dictionary_for_test([
+      (crypt_wb_name_for_test("/V"), PdfInteger(4)),
+      (crypt_wb_name_for_test("/R"), PdfInteger(4)),
+      (
+        crypt_wb_name_for_test("/CF"),
+        PdfDictionary([
+          (
+            crypt_wb_name_for_test("/StdCF"),
+            PdfDictionary([
+              (
+                crypt_wb_name_for_test("/CFM"),
+                PdfNameObject(crypt_wb_name_for_test("/Unknown")),
+              ),
+            ]),
+          ),
+        ]),
+      ),
+    ]),
+  )
+
+  crypt_wb_expect_encryption_method_error_for_test(
+    crypt_wb_standard_encrypt_dictionary_for_test([
+      (crypt_wb_name_for_test("/V"), PdfInteger(4)),
+      (crypt_wb_name_for_test("/R"), PdfInteger(4)),
+      (
+        crypt_wb_name_for_test("/CF"),
+        PdfDictionary([
+          (
+            crypt_wb_name_for_test("/StdCF"),
+            PdfDictionary([
+              (
+                crypt_wb_name_for_test("/CFM"),
+                PdfNameObject(crypt_wb_name_for_test("/V2")),
+              ),
+            ]),
+          ),
+        ]),
+      ),
+    ]),
+  )
+
+  let missing_o = crypt_wb_doc_with_encrypt_for_test(
+    PdfDictionary([
+      (
+        crypt_wb_name_for_test("/Filter"),
+        PdfNameObject(crypt_wb_name_for_test("/Standard")),
+      ),
+      (crypt_wb_name_for_test("/V"), PdfInteger(1)),
+      (crypt_wb_name_for_test("/R"), PdfInteger(2)),
+      (
+        crypt_wb_name_for_test("/U"),
+        PdfString(crypt_wb_repeated_bytes_for_test(0x55, 32)),
+      ),
+      (crypt_wb_name_for_test("/P"), PdfInteger(-4)),
+    ]),
+  )
+  let missing_o_result : Result[PdfEncryptionValues, Error] = try? missing_o.encryption_values()
+  guard missing_o_result
+    is Err(PdfError::EncryptionDictionaryEntryExpected(name)) &&
+    name == crypt_wb_name_for_test("/O") else {
+    fail("expected missing /O")
+  }
+
+  let missing_p = crypt_wb_doc_with_encrypt_for_test(
+    PdfDictionary([
+      (
+        crypt_wb_name_for_test("/Filter"),
+        PdfNameObject(crypt_wb_name_for_test("/Standard")),
+      ),
+      (crypt_wb_name_for_test("/V"), PdfInteger(1)),
+      (crypt_wb_name_for_test("/R"), PdfInteger(2)),
+      (
+        crypt_wb_name_for_test("/O"),
+        PdfString(crypt_wb_repeated_bytes_for_test(0x4f, 32)),
+      ),
+      (
+        crypt_wb_name_for_test("/U"),
+        PdfString(crypt_wb_repeated_bytes_for_test(0x55, 32)),
+      ),
+    ]),
+  )
+  let missing_p_result : Result[PdfEncryptionValues, Error] = try? missing_p.encryption_values()
+  guard missing_p_result
+    is Err(PdfError::EncryptionDictionaryEntryExpected(name)) &&
+    name == crypt_wb_name_for_test("/P") else {
+    fail("expected missing /P")
+  }
+
+  let short_u = crypt_wb_doc_with_encrypt_for_test(
+    crypt_wb_standard_encrypt_dictionary_for_test(
+      [
+        (crypt_wb_name_for_test("/V"), PdfInteger(1)),
+        (crypt_wb_name_for_test("/R"), PdfInteger(2)),
+      ],
+      user_length=31,
+    ),
+  )
+  let short_u_result : Result[PdfEncryptionValues, Error] = try? short_u.encryption_values()
+  guard short_u_result is Err(PdfError::EncryptionDictionaryEntryTooShort(name)) &&
+    name == crypt_wb_name_for_test("/U") else {
+    fail("expected short /U")
+  }
+
+  let bad_id = pdf_document_empty()
+  bad_id.set_trailer_dict(
+    PdfDictionary([
+      (
+        crypt_wb_name_for_test("/Encrypt"),
+        crypt_wb_standard_encrypt_dictionary_for_test([
+          (crypt_wb_name_for_test("/V"), PdfInteger(1)),
+          (crypt_wb_name_for_test("/R"), PdfInteger(2)),
+        ]),
+      ),
+    ]),
+  )
+  let bad_id_result : Result[PdfEncryptionValues, Error] = try? bad_id.encryption_values()
+  guard bad_id_result is Err(PdfError::EncryptionIDExpected) else {
+    fail("expected EncryptionIDExpected")
   }
 }
 
