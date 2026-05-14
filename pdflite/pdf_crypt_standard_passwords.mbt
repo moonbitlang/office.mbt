@@ -225,7 +225,7 @@ pub fn pdf_make_owner_password_entry(
 ///
 /// The returned bytes are the padded/truncated internal password form, not a
 /// decoded MoonBit string.
-pub fn pdf_user_password_from_owner_password(
+fn pdf_user_password_from_owner_password(
   revision : Int,
   owner_password : BytesView,
   owner_entry : BytesView,

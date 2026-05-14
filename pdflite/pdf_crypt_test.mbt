@@ -5285,48 +5285,6 @@ test "pdf_make_owner_password_entry matches CamlPDF O values" {
 }
 
 ///|
-test "pdf_user_password_from_owner_password recovers padded user password" {
-  let owner_entry = try! @pdflite.pdf_make_owner_password_entry(
-    2,
-    @ascii.encode("owner"),
-    @ascii.encode("user"),
-    40,
-  )
-  @test.assert_eq(
-    try! @pdflite.pdf_user_password_from_owner_password(
-      2,
-      @ascii.encode("owner"),
-      owner_entry,
-      40,
-    ),
-    crypt_model_bytes_for_test([
-      0x75, 0x73, 0x65, 0x72, 0x28, 0xbf, 0x4e, 0x5e, 0x4e, 0x75, 0x8a, 0x41, 0x64,
-      0x00, 0x4e, 0x56, 0xff, 0xfa, 0x01, 0x08, 0x2e, 0x2e, 0x00, 0xb6, 0xd0, 0x68,
-      0x3e, 0x80, 0x2f, 0x0c, 0xa9, 0xfe,
-    ]),
-  )
-  let owner_entry_r3 = try! @pdflite.pdf_make_owner_password_entry(
-    3,
-    @ascii.encode("owner"),
-    Bytes::new(0),
-    128,
-  )
-  @test.assert_eq(
-    try! @pdflite.pdf_user_password_from_owner_password(
-      3,
-      @ascii.encode("owner"),
-      owner_entry_r3,
-      128,
-    ),
-    crypt_model_bytes_for_test([
-      0x28, 0xbf, 0x4e, 0x5e, 0x4e, 0x75, 0x8a, 0x41, 0x64, 0x00, 0x4e, 0x56, 0xff,
-      0xfa, 0x01, 0x08, 0x2e, 0x2e, 0x00, 0xb6, 0xd0, 0x68, 0x3e, 0x80, 0x2f, 0x0c,
-      0xa9, 0xfe, 0x64, 0x53, 0x69, 0x7a,
-    ]),
-  )
-}
-
-///|
 test "PdfEncryptionValues authenticate_owner_password validates through recovered user password" {
   let owner_entry = try! @pdflite.pdf_make_owner_password_entry(
     3,

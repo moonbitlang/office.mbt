@@ -609,8 +609,6 @@ pub fn pdf_transform_destination(PdfDocument, TransformMatrix, PdfDestination) -
 
 pub fn pdf_trim_structure_tree(PdfDocument, ArrayView[Int]) -> Unit raise PdfError
 
-pub fn pdf_user_password_from_owner_password(Int, BytesView, BytesView, Int) -> Bytes raise PdfError
-
 pub fn pdf_utf16be_of_codepoints(ArrayView[Int]) -> Bytes raise PdfError
 
 pub fn pdf_utf8_of_codepoints(ArrayView[Int]) -> Bytes raise PdfError
