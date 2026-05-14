@@ -1600,13 +1600,14 @@ test "PdfDocument encrypt_40bit encrypts parsed objects and installs dictionary"
     decrypted.document.trailer_dict().lookup_immediate(key_encrypt),
     None,
   )
-  guard decrypted.document.saved_encryption() is Some(saved) else {
-    fail("expected saved encryption")
-  }
-  @test.assert_eq(saved.values.crypt_type, PdfCryptARC4(40, 2))
-  @test.assert_eq(saved.values.permissions, permissions)
-  @test.assert_eq(saved.values.file_id, @ascii.encode("doc-id"))
-  @test.assert_eq(decrypted.document.copy().saved_encryption(), Some(saved))
+  let copied_recrypted = try! decrypted.document
+    .copy()
+    .recrypt_with_password(@ascii.encode("user"))
+  @test.assert_eq(copied_recrypted.is_encrypted(), true)
+  @test.assert_eq(
+    try! copied_recrypted.what_encryption(),
+    Some(PdfEncryption40Bit),
+  )
   let owner_decrypted = crypt_unwrap_decryption_result_for_test(
     try! encrypted.decrypt_with_owner_password(@ascii.encode("owner")),
   )
@@ -1686,7 +1687,12 @@ test "PdfDocument recrypt_with_password restores saved ARC4 encryption" {
     @ascii.encode("owner"),
   )
   @test.assert_eq(recrypted.is_encrypted(), true)
-  @test.assert_eq(recrypted.saved_encryption(), None)
+  let repeated_recrypt : Result[@pdflite.PdfDocument, Error] = try? recrypted.recrypt_with_password(
+    @ascii.encode("owner"),
+  )
+  guard repeated_recrypt is Err(@pdflite.PdfError::EncryptionSavedStateExpected) else {
+    fail("expected consumed ARC4 saved encryption")
+  }
   @test.assert_eq(try! recrypted.what_encryption(), Some(PdfEncryption128Bit))
   let roundtrip = crypt_unwrap_decryption_result_for_test(
     try! recrypted.decrypt_with_user_password(@ascii.encode("user")),
@@ -1817,7 +1823,15 @@ test "PdfDocument recrypt_with_password_aesv2_with_iv_provider restores saved AE
     },
   )
   @test.assert_eq(recrypted.is_encrypted(), true)
-  @test.assert_eq(recrypted.saved_encryption(), None)
+  let repeated_recrypt : Result[@pdflite.PdfDocument, Error] = try? recrypted.recrypt_with_password_aesv2_with_iv_provider(
+    @ascii.encode("owner"),
+    fn(object_number, generation, index) {
+      crypt_aes_document_iv_for_test(object_number, generation, index + 8)
+    },
+  )
+  guard repeated_recrypt is Err(@pdflite.PdfError::EncryptionSavedStateExpected) else {
+    fail("expected consumed AESV2 saved encryption")
+  }
   @test.assert_eq(
     try! recrypted.what_encryption(),
     Some(PdfEncryptionAES128(false)),
@@ -1931,7 +1945,15 @@ test "PdfDocument recrypt_with_password_aesv3_with_iv_provider restores saved AE
     },
   )
   @test.assert_eq(recrypted.is_encrypted(), true)
-  @test.assert_eq(recrypted.saved_encryption(), None)
+  let repeated_recrypt : Result[@pdflite.PdfDocument, Error] = try? recrypted.recrypt_with_password_aesv3_with_iv_provider(
+    @ascii.encode("owner"),
+    fn(object_number, generation, index) {
+      crypt_aes_document_iv_for_test(object_number, generation, index + 6)
+    },
+  )
+  guard repeated_recrypt is Err(@pdflite.PdfError::EncryptionSavedStateExpected) else {
+    fail("expected consumed AESV3 saved encryption")
+  }
   @test.assert_eq(
     try! recrypted.what_encryption(),
     Some(PdfEncryptionAES256(false)),
