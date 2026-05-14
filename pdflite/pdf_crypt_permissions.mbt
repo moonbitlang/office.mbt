@@ -132,9 +132,3 @@ pub fn pdf_permissions_of_p(mask : Int) -> Array[PdfPermission] {
   }
   permissions
 }
-
-///|
-/// Compatibility alias for `pdf_permissions_of_p`.
-pub fn pdf_banlist_of_p(mask : Int) -> Array[PdfPermission] {
-  pdf_permissions_of_p(mask)
-}

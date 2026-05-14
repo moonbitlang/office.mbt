@@ -125,8 +125,6 @@ pub fn pdf_authenticate_user_password(Bool, BytesView, Int, BytesView, BytesView
 
 pub fn pdf_authenticate_user_password_aesv3(Bool, BytesView, BytesView) -> Bool raise PdfError
 
-pub fn pdf_banlist_of_p(Int) -> Array[PdfPermission]
-
 pub let pdf_bookmark_black : PdfBookmarkColour
 
 pub fn pdf_build_name_tree(Bool, PdfDocument, ArrayView[(Bytes, PdfObject)]) -> PdfObject raise PdfError

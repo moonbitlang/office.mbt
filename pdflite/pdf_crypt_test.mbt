@@ -3828,7 +3828,7 @@ test "PdfDocument crypt methods cover standalone workflows" {
   @test.assert_eq(encrypted.permissions(), denied)
   let values = encrypted.encryption_values()
   @test.assert_eq(values.crypt_type, PdfCryptARC4(128, 3))
-  @test.assert_eq(@pdflite.pdf_banlist_of_p(values.permissions), denied)
+  @test.assert_eq(@pdflite.pdf_permissions_of_p(values.permissions), denied)
 
   let bad_decryption = encrypted.decrypt_with_passwords(
     user_password=Some(@ascii.encode("bad")),
