@@ -221,6 +221,193 @@ test "private password padding helpers truncate and pad PDF passwords" {
 }
 
 ///|
+test "private standard file key derivation matches CamlPDF R2 through R4" {
+  let owner = crypt_wb_bytes_for_test([ for value in 0..<32 => value ])
+  @test.assert_eq(
+    pdf_encryption_file_key(
+      false,
+      @ascii.encode("user"),
+      2,
+      owner,
+      -4,
+      @ascii.encode("doc-id"),
+      40,
+    ),
+    crypt_wb_bytes_for_test([0x09, 0xf0, 0x7c, 0x27, 0xf0]),
+  )
+  @test.assert_eq(
+    pdf_encryption_file_key(
+      false,
+      Bytes::new(0),
+      3,
+      owner,
+      -3904,
+      @ascii.encode("doc-id"),
+      128,
+    ),
+    crypt_wb_bytes_for_test([
+      0x48, 0xd9, 0x52, 0xab, 0x8e, 0xdc, 0x9b, 0x82, 0xa0, 0x3a, 0xf2, 0x1c, 0xb1,
+      0x6b, 0x61, 0x94,
+    ]),
+  )
+  @test.assert_eq(
+    pdf_encryption_file_key(
+      true,
+      Bytes::new(0),
+      4,
+      owner,
+      -3904,
+      @ascii.encode("doc-id"),
+      128,
+    ),
+    crypt_wb_bytes_for_test([
+      0x78, 0xcf, 0xeb, 0x72, 0x67, 0x35, 0x0d, 0x09, 0x98, 0xf4, 0xd4, 0xd5, 0x23,
+      0x75, 0x5c, 0x12,
+    ]),
+  )
+}
+
+///|
+test "private user password entries match CamlPDF U values" {
+  let owner = crypt_wb_bytes_for_test([ for value in 0..<32 => value ])
+  @test.assert_eq(
+    try! pdf_make_user_password_entry(
+      false,
+      @ascii.encode("user"),
+      2,
+      owner,
+      -4,
+      @ascii.encode("doc-id"),
+      40,
+    ),
+    crypt_wb_bytes_for_test([
+      0x20, 0x54, 0x2f, 0x95, 0x6b, 0x5f, 0x5d, 0x84, 0x77, 0x36, 0x04, 0xf4, 0x9c,
+      0x46, 0xfb, 0xdf, 0x57, 0x65, 0xe3, 0xa2, 0x96, 0x6c, 0xd3, 0x82, 0xb4, 0x96,
+      0x0b, 0xd3, 0x77, 0xa3, 0x03, 0x41,
+    ]),
+  )
+  @test.assert_eq(
+    try! pdf_make_user_password_entry(
+      false,
+      Bytes::new(0),
+      3,
+      owner,
+      -3904,
+      @ascii.encode("doc-id"),
+      128,
+    ),
+    crypt_wb_bytes_for_test([
+      0x3d, 0xae, 0x18, 0x1a, 0x3c, 0x13, 0x8f, 0x79, 0xa6, 0xe2, 0xfa, 0x16, 0x86,
+      0x96, 0x32, 0x9f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    ]),
+  )
+  @test.assert_eq(
+    try! pdf_make_user_password_entry(
+      true,
+      Bytes::new(0),
+      4,
+      owner,
+      -3904,
+      @ascii.encode("doc-id"),
+      128,
+    ),
+    crypt_wb_bytes_for_test([
+      0x93, 0x47, 0x7f, 0x4b, 0x13, 0x20, 0xa8, 0x08, 0x4f, 0x6a, 0x03, 0x20, 0xdc,
+      0x1f, 0xd2, 0x9f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    ]),
+  )
+}
+
+///|
+test "private user password entry handles MD5 padding boundary file IDs" {
+  let owner = crypt_wb_bytes_for_test([ for value in 0..<32 => value ])
+  let file_id = @ascii.encode("123456789012345678901234")
+  @test.assert_eq(file_id.length(), 24)
+  let user_entry = try! pdf_make_user_password_entry(
+    false,
+    @ascii.encode("user"),
+    4,
+    owner,
+    -3904,
+    file_id,
+    128,
+  )
+  @test.assert_eq(user_entry.length(), 32)
+  @test.assert_eq(
+    pdf_encryption_file_key(
+      false,
+      @ascii.encode("user"),
+      4,
+      owner,
+      -3904,
+      file_id,
+      128,
+    ).length(),
+    16,
+  )
+  let values : PdfEncryptionValues = {
+    crypt_type: PdfCryptARC4(128, 4),
+    user_entry,
+    owner_entry: owner,
+    permissions: -3904,
+    file_id,
+    encrypt_metadata: true,
+    permissions_entry: None,
+    user_encryption_key: None,
+    owner_encryption_key: None,
+  }
+  @test.assert_eq(
+    try! values.authenticate_user_password(@ascii.encode("user")),
+    true,
+  )
+}
+
+///|
+test "private owner password entries match CamlPDF O values" {
+  @test.assert_eq(
+    try! pdf_make_owner_password_entry(
+      2,
+      @ascii.encode("owner"),
+      @ascii.encode("user"),
+      40,
+    ),
+    crypt_wb_bytes_for_test([
+      0x94, 0xe8, 0x09, 0x44, 0x19, 0x66, 0x2a, 0x77, 0x44, 0x42, 0xfb, 0x07, 0x2e,
+      0x3d, 0x9f, 0x19, 0xe9, 0xd1, 0x30, 0xec, 0x09, 0xa4, 0xd0, 0x06, 0x1e, 0x78,
+      0xfe, 0x92, 0x0f, 0x7a, 0xb6, 0x2f,
+    ]),
+  )
+  @test.assert_eq(
+    try! pdf_make_owner_password_entry(
+      3,
+      @ascii.encode("owner"),
+      Bytes::new(0),
+      128,
+    ),
+    crypt_wb_bytes_for_test([
+      0x56, 0x6f, 0xa8, 0x73, 0xee, 0x33, 0xc7, 0x97, 0xcd, 0x3b, 0x90, 0x4f, 0xda,
+      0xdf, 0x81, 0x4a, 0xfa, 0x34, 0xdf, 0x9a, 0x38, 0xf6, 0xed, 0x41, 0xb9, 0x84,
+      0xe2, 0xc6, 0xda, 0x2a, 0xa6, 0xf5,
+    ]),
+  )
+  @test.assert_eq(
+    try! pdf_make_owner_password_entry(
+      2,
+      Bytes::new(0),
+      @ascii.encode("user"),
+      40,
+    ),
+    crypt_wb_bytes_for_test([
+      0x8e, 0xc9, 0x9e, 0x00, 0xc3, 0xd1, 0x84, 0x91, 0x0a, 0x40, 0x64, 0xdf, 0x0f,
+      0x95, 0x16, 0xb0, 0x41, 0x36, 0x2b, 0x9b, 0xf1, 0xdc, 0x3f, 0x68, 0xd1, 0x5b,
+      0xf7, 0x1f, 0xb1, 0x6d, 0xc5, 0xf3,
+    ]),
+  )
+}
+
+///|
 test "private owner-password recovery returns padded user password" {
   let owner_entry = try! pdf_make_owner_password_entry(
     2,
