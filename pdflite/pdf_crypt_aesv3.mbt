@@ -210,7 +210,7 @@ fn pdf_aesv3_permissions_entry(
 ///
 /// `iso` selects the ISO/PDF 2.0 hash variant. Short `/U` entries raise
 /// `EncryptionDictionaryEntryTooShort`.
-pub fn pdf_authenticate_user_password_aesv3(
+fn pdf_authenticate_user_password_aesv3(
   iso : Bool,
   password : BytesView,
   user_entry : BytesView,
@@ -227,7 +227,7 @@ pub fn pdf_authenticate_user_password_aesv3(
 ///
 /// Owner authentication incorporates the 48-byte user entry as required by the
 /// AESV3 security algorithm. Short `/O` or `/U` entries raise `PdfError`.
-pub fn pdf_authenticate_owner_password_aesv3(
+fn pdf_authenticate_owner_password_aesv3(
   iso : Bool,
   password : BytesView,
   user_entry : BytesView,

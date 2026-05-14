@@ -148,6 +148,25 @@ fn crypt_aesv3_r5_owner_entry_for_test() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn crypt_aesv3_values_for_test(
+  user_entry : BytesView,
+  owner_entry : BytesView,
+  iso? : Bool = false,
+) -> @pdflite.PdfEncryptionValues {
+  {
+    crypt_type: PdfCryptAESV3(iso),
+    user_entry: user_entry.to_owned(),
+    owner_entry: owner_entry.to_owned(),
+    permissions: -3904,
+    file_id: @ascii.encode("doc-id"),
+    encrypt_metadata: true,
+    permissions_entry: None,
+    user_encryption_key: None,
+    owner_encryption_key: None,
+  }
+}
+
+///|
 fn crypt_aesv3_r5_file_key_for_test() -> @pdflite.PdfBytes {
   crypt_model_bytes_for_test([ for value in 0..<32 => value ])
 }
@@ -5112,46 +5131,28 @@ test "PdfEncryptionValues authenticate_user_password validates R2 and R3 user en
 test "pdf_authenticate_aesv3_password validates R5 SHA-256 entries" {
   let user_entry = crypt_aesv3_r5_user_entry_for_test()
   let owner_entry = crypt_aesv3_r5_owner_entry_for_test()
+  let values = crypt_aesv3_values_for_test(user_entry, owner_entry)
   @test.assert_eq(
-    try! @pdflite.pdf_authenticate_user_password_aesv3(
-      false,
-      @ascii.encode("user"),
-      user_entry,
-    ),
+    try! values.authenticate_user_password(@ascii.encode("user")),
     true,
   )
   @test.assert_eq(
-    try! @pdflite.pdf_authenticate_user_password_aesv3(
-      false,
-      @ascii.encode("bad"),
-      user_entry,
-    ),
+    try! values.authenticate_user_password(@ascii.encode("bad")),
     false,
   )
   @test.assert_eq(
-    try! @pdflite.pdf_authenticate_owner_password_aesv3(
-      false,
-      @ascii.encode("owner"),
-      user_entry,
-      owner_entry,
-    ),
+    try! values.authenticate_owner_password(@ascii.encode("owner")),
     true,
   )
   @test.assert_eq(
-    try! @pdflite.pdf_authenticate_owner_password_aesv3(
-      false,
-      @ascii.encode("bad"),
-      user_entry,
-      owner_entry,
-    ),
+    try! values.authenticate_owner_password(@ascii.encode("bad")),
     false,
   )
 
   let short_user = crypt_repeated_bytes_for_test(0, 47)
-  let short_user_result : Result[Bool, Error] = try? @pdflite.pdf_authenticate_user_password_aesv3(
-    false,
+  let short_user_values = crypt_aesv3_values_for_test(short_user, owner_entry)
+  let short_user_result : Result[Bool, Error] = try? short_user_values.authenticate_user_password(
     @ascii.encode("user"),
-    short_user,
   )
   guard short_user_result
     is Err(@pdflite.PdfError::EncryptionDictionaryEntryTooShort(name)) &&
@@ -5160,11 +5161,9 @@ test "pdf_authenticate_aesv3_password validates R5 SHA-256 entries" {
   }
 
   let short_owner = crypt_repeated_bytes_for_test(0, 47)
-  let short_owner_result : Result[Bool, Error] = try? @pdflite.pdf_authenticate_owner_password_aesv3(
-    false,
+  let short_owner_values = crypt_aesv3_values_for_test(user_entry, short_owner)
+  let short_owner_result : Result[Bool, Error] = try? short_owner_values.authenticate_owner_password(
     @ascii.encode("owner"),
-    user_entry,
-    short_owner,
   )
   guard short_owner_result
     is Err(@pdflite.PdfError::EncryptionDictionaryEntryTooShort(name)) &&
@@ -5172,11 +5171,11 @@ test "pdf_authenticate_aesv3_password validates R5 SHA-256 entries" {
     fail("expected short AESV3 /O")
   }
 
-  let short_owner_user_result : Result[Bool, Error] = try? @pdflite.pdf_authenticate_owner_password_aesv3(
-    false,
+  let short_owner_user_values = crypt_aesv3_values_for_test(
+    short_user, owner_entry,
+  )
+  let short_owner_user_result : Result[Bool, Error] = try? short_owner_user_values.authenticate_owner_password(
     @ascii.encode("owner"),
-    short_user,
-    owner_entry,
   )
   guard short_owner_user_result
     is Err(@pdflite.PdfError::EncryptionDictionaryEntryTooShort(name)) &&
@@ -5199,37 +5198,19 @@ test "pdf_authenticate_aesv3_password validates R5 SHA-256 entries" {
   let iso_values = try! iso_encrypted.encryption_values()
   @test.assert_eq(iso_values.crypt_type, PdfCryptAESV3(true))
   @test.assert_eq(
-    try! @pdflite.pdf_authenticate_user_password_aesv3(
-      true,
-      @ascii.encode("user"),
-      iso_values.user_entry,
-    ),
+    try! iso_values.authenticate_user_password(@ascii.encode("user")),
     true,
   )
   @test.assert_eq(
-    try! @pdflite.pdf_authenticate_user_password_aesv3(
-      true,
-      @ascii.encode("bad"),
-      iso_values.user_entry,
-    ),
+    try! iso_values.authenticate_user_password(@ascii.encode("bad")),
     false,
   )
   @test.assert_eq(
-    try! @pdflite.pdf_authenticate_owner_password_aesv3(
-      true,
-      @ascii.encode("owner"),
-      iso_values.user_entry,
-      iso_values.owner_entry,
-    ),
+    try! iso_values.authenticate_owner_password(@ascii.encode("owner")),
     true,
   )
   @test.assert_eq(
-    try! @pdflite.pdf_authenticate_owner_password_aesv3(
-      true,
-      @ascii.encode("bad"),
-      iso_values.user_entry,
-      iso_values.owner_entry,
-    ),
+    try! iso_values.authenticate_owner_password(@ascii.encode("bad")),
     false,
   )
 
