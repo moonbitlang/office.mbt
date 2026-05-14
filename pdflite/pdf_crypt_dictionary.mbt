@@ -71,7 +71,7 @@ fn pdf_crypt_type_from_encrypt_dictionary(
 /// needed for authentication and object crypt. Missing encryption dictionaries,
 /// unsupported handlers, malformed `/O` or `/U` entries, and missing trailer
 /// `/ID` values raise `PdfError`.
-pub fn PdfDocument::encryption_values(
+fn PdfDocument::encryption_values(
   self : PdfDocument,
 ) -> PdfEncryptionValues raise PdfError {
   let encrypt_key = pdf_crypt_encrypt_name

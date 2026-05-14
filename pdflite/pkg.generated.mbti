@@ -1281,7 +1281,6 @@ pub fn PdfDocument::encrypt_128bit_r4(Self, BytesView, BytesView, ArrayView[PdfP
 pub fn PdfDocument::encrypt_256bit_aesv3_iso_with_providers(Self, BytesView, BytesView, ArrayView[PdfPermission], (PdfAesV3RandomField, Int) -> Bytes raise PdfError, (Int, Int, Int) -> Bytes raise PdfError, encrypt_metadata? : Bool, file_id? : BytesView) -> Self raise PdfError
 pub fn PdfDocument::encrypt_256bit_aesv3_with_providers(Self, BytesView, BytesView, ArrayView[PdfPermission], (PdfAesV3RandomField, Int) -> Bytes raise PdfError, (Int, Int, Int) -> Bytes raise PdfError, iso? : Bool, encrypt_metadata? : Bool, file_id? : BytesView) -> Self raise PdfError
 pub fn PdfDocument::encrypt_40bit(Self, BytesView, BytesView, ArrayView[PdfPermission], file_id? : BytesView) -> Self raise PdfError
-pub fn PdfDocument::encryption_values(Self) -> PdfEncryptionValues raise PdfError
 pub fn PdfDocument::endpage(Self) -> Int raise PdfError
 pub fn PdfDocument::endpage_fast(Self) -> Int raise PdfError
 pub fn PdfDocument::event_log(Self) -> Array[(Int, PdfObjectEvent)]
@@ -1427,17 +1426,7 @@ pub(all) enum PdfEncryptionMethod {
   PdfEncryptionAlreadyEncrypted
 } derive(Eq, ToJson, @debug.Debug)
 
-pub(all) struct PdfEncryptionValues {
-  crypt_type : PdfCryptType
-  user_entry : Bytes
-  owner_entry : Bytes
-  permissions : Int
-  file_id : Bytes
-  encrypt_metadata : Bool
-  permissions_entry : Bytes?
-  user_encryption_key : Bytes?
-  owner_encryption_key : Bytes?
-} derive(Eq, ToJson, @debug.Debug)
+type PdfEncryptionValues derive(Eq, ToJson, @debug.Debug)
 
 pub(all) enum PdfFont {
   PdfFontStandard(PdfStandardFontData)

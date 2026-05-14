@@ -34,7 +34,7 @@ pub(all) enum PdfAesV3RandomField {
 /// Password entries, permission masks, file IDs, and optional AESV3 wrapping
 /// entries are stored as PDF bytes. `crypt_type` describes the actual object
 /// encryption algorithm used for strings and streams.
-pub(all) struct PdfEncryptionValues {
+struct PdfEncryptionValues {
   crypt_type : PdfCryptType
   user_entry : PdfBytes
   owner_entry : PdfBytes
