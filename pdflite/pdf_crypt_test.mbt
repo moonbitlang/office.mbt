@@ -3805,9 +3805,9 @@ test "pdfcrypt standalone wrappers expose CamlPDF-shaped workflows" {
   ])
   let plain_doc = @pdflite.pdf_document_empty()
   plain_doc.add_object_given_number(1, plain_object)
-  @test.assert_eq(@pdflite.pdf_is_encrypted(plain_doc), false)
-  @test.assert_eq(@pdflite.pdf_what_encryption(plain_doc), None)
-  @test.assert_eq(@pdflite.pdf_permissions(plain_doc), [])
+  @test.assert_eq(plain_doc.is_encrypted(), false)
+  @test.assert_eq(plain_doc.what_encryption(), None)
+  @test.assert_eq(plain_doc.permissions(), [])
 
   let denied : Array[@pdflite.PdfPermission] = [PdfNoPrint]
   let encrypted_40 = @pdflite.pdf_encrypt_pdf_40bit(
@@ -3817,10 +3817,7 @@ test "pdfcrypt standalone wrappers expose CamlPDF-shaped workflows" {
     denied,
     file_id=@ascii.encode("standalone-40-id"),
   )
-  @test.assert_eq(
-    @pdflite.pdf_what_encryption(encrypted_40),
-    Some(PdfEncryption40Bit),
-  )
+  @test.assert_eq(encrypted_40.what_encryption(), Some(PdfEncryption40Bit))
   let encrypted = @pdflite.pdf_encrypt_pdf_128bit(
     plain_doc,
     @ascii.encode("user"),
@@ -3828,13 +3825,10 @@ test "pdfcrypt standalone wrappers expose CamlPDF-shaped workflows" {
     denied,
     file_id=@ascii.encode("standalone-id"),
   )
-  @test.assert_eq(@pdflite.pdf_is_encrypted(encrypted), true)
-  @test.assert_eq(
-    @pdflite.pdf_what_encryption(encrypted),
-    Some(PdfEncryption128Bit),
-  )
-  @test.assert_eq(@pdflite.pdf_permissions(encrypted), denied)
-  let values = @pdflite.pdf_get_encryption_values(encrypted)
+  @test.assert_eq(encrypted.is_encrypted(), true)
+  @test.assert_eq(encrypted.what_encryption(), Some(PdfEncryption128Bit))
+  @test.assert_eq(encrypted.permissions(), denied)
+  let values = encrypted.encryption_values()
   @test.assert_eq(values.crypt_type, PdfCryptARC4(128, 3))
   @test.assert_eq(@pdflite.pdf_banlist_of_p(values.permissions), denied)
 
@@ -3882,8 +3876,7 @@ test "pdfcrypt standalone wrappers expose CamlPDF-shaped workflows" {
     file_id=@ascii.encode("standalone-stream-id"),
   )
   @test.assert_eq(
-    @pdflite.pdf_decrypt_single_stream(
-      encrypted_stream_doc,
+    encrypted_stream_doc.decrypt_single_stream(
       1,
       0,
       encrypted_stream_doc.lookup_object_or_null(1),
@@ -3975,10 +3968,7 @@ test "pdfcrypt standalone provider wrappers cover AES encrypt and recrypt" {
     ),
     file_id=@ascii.encode("aes-wrapper-id"),
   )
-  @test.assert_eq(
-    @pdflite.pdf_what_encryption(encrypted),
-    Some(PdfEncryptionAES128(false)),
-  )
+  @test.assert_eq(encrypted.what_encryption(), Some(PdfEncryptionAES128(false)))
   let (decrypted_document, permissions) = @pdflite.pdf_decrypt_pdf(
     encrypted,
     @ascii.encode("user"),
@@ -4036,10 +4026,7 @@ test "pdfcrypt standalone provider wrappers cover AES encrypt and recrypt" {
     ),
     file_id=@ascii.encode("aesv3-wrapper-id"),
   )
-  @test.assert_eq(
-    @pdflite.pdf_what_encryption(aesv3),
-    Some(PdfEncryptionAES256(true)),
-  )
+  @test.assert_eq(aesv3.what_encryption(), Some(PdfEncryptionAES256(true)))
   let aesv3_decrypted = @pdflite.pdf_decrypt_pdf_owner(
     aesv3,
     @ascii.encode("owner"),
@@ -4056,7 +4043,7 @@ test "pdfcrypt standalone provider wrappers cover AES encrypt and recrypt" {
     renumber=false,
   )
   @test.assert_eq(
-    @pdflite.pdf_what_encryption(aesv3_recrypted),
+    aesv3_recrypted.what_encryption(),
     Some(PdfEncryptionAES256(true)),
   )
   let aesv3_iso = @pdflite.pdf_encrypt_pdf_AES256ISO_with_providers(
@@ -4074,7 +4061,7 @@ test "pdfcrypt standalone provider wrappers cover AES encrypt and recrypt" {
     file_id=@ascii.encode("aesv3iso-wrapper-id"),
   )
   @test.assert_eq(
-    @pdflite.pdf_what_encryption(aesv3_iso),
+    aesv3_iso.what_encryption(),
     Some(PdfEncryptionAES256ISO(false)),
   )
 }

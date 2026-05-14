@@ -85,57 +85,6 @@ pub fn pdf_decrypt_pdf_owner(
 }
 
 ///|
-/// Compatibility wrapper for `PdfDocument::is_encrypted`.
-pub fn pdf_is_encrypted(document : PdfDocument) -> Bool {
-  document.is_encrypted()
-}
-
-///|
-/// Compatibility wrapper for `PdfDocument::what_encryption`.
-pub fn pdf_what_encryption(
-  document : PdfDocument,
-) -> PdfEncryptionMethod? raise PdfError {
-  document.what_encryption()
-}
-
-///|
-/// Compatibility wrapper for `PdfDocument::permissions`.
-pub fn pdf_permissions(
-  document : PdfDocument,
-) -> Array[PdfPermission] raise PdfError {
-  document.permissions()
-}
-
-///|
-/// Compatibility wrapper for `PdfDocument::encryption_values`.
-pub fn pdf_get_encryption_values(
-  document : PdfDocument,
-) -> PdfEncryptionValues raise PdfError {
-  document.encryption_values()
-}
-
-///|
-/// Compatibility wrapper for `PdfDocument::decrypt_single_stream`.
-pub fn pdf_decrypt_single_stream(
-  document : PdfDocument,
-  object_number : Int,
-  generation : Int,
-  stream : PdfObject,
-  user_password? : BytesView? = None,
-  owner_password? : BytesView? = None,
-  no_encrypt_metadata? : Bool = false,
-) -> PdfObject? raise PdfError {
-  document.decrypt_single_stream(
-    object_number,
-    generation,
-    stream,
-    user_password~,
-    owner_password~,
-    no_encrypt_metadata~,
-  )
-}
-
-///|
 /// Compatibility wrapper for `PdfDocument::encrypt_40bit`.
 pub fn pdf_encrypt_pdf_40bit(
   document : PdfDocument,
