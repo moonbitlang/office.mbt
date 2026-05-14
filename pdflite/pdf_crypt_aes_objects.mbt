@@ -3,7 +3,7 @@
 ///
 /// `data` must include the leading CBC IV as stored in encrypted PDF strings
 /// and streams.
-pub fn pdf_aesv2_decrypt_object_data(
+fn pdf_aesv2_decrypt_object_data(
   object_number : Int,
   generation : Int,
   file_key : BytesView,
@@ -25,7 +25,7 @@ pub fn pdf_aesv2_decrypt_object_data(
 ///
 /// The returned bytes include the IV prefix expected by PDF AESV2 strings and
 /// streams.
-pub fn pdf_aesv2_encrypt_object_data(
+fn pdf_aesv2_encrypt_object_data(
   object_number : Int,
   generation : Int,
   file_key : BytesView,
@@ -47,7 +47,7 @@ pub fn pdf_aesv2_encrypt_object_data(
 /// Decrypt AESV3 object data bytes with the document file key.
 ///
 /// `data` must include the leading CBC IV.
-pub fn pdf_aesv3_decrypt_object_data(
+fn pdf_aesv3_decrypt_object_data(
   file_key : BytesView,
   data : BytesView,
 ) -> PdfBytes raise PdfError {
@@ -59,7 +59,7 @@ pub fn pdf_aesv3_decrypt_object_data(
 ///
 /// The returned bytes include the IV prefix expected by PDF AES strings and
 /// streams.
-pub fn pdf_aesv3_encrypt_object_data(
+fn pdf_aesv3_encrypt_object_data(
   file_key : BytesView,
   data : BytesView,
   iv : BytesView,
@@ -78,27 +78,27 @@ fn pdf_aes_next_iv(
 }
 
 ///|
-fn pdf_aes_encrypt_pdf_object_with_key(
-  key : BytesView,
+fn pdf_aes_encrypt_pdf_object_with_data_encryptor(
   object : PdfObject,
   iv_provider : (Int) -> PdfBytes raise PdfError,
   iv_index : Ref[Int],
+  encrypt_data : (BytesView, BytesView) -> PdfBytes raise PdfError,
   no_encrypt_metadata? : Bool = false,
 ) -> PdfObject raise PdfError {
   match object {
     PdfString(bytes) => {
       let iv = pdf_aes_next_iv(iv_provider, iv_index)
-      PdfString(pdf_aes_cbc_encrypt_with_iv(key, iv, bytes))
+      PdfString(encrypt_data(bytes, iv))
     }
     PdfArray(values) => {
       let output : Array[PdfObject] = []
       for value in values {
         output.push(
-          pdf_aes_encrypt_pdf_object_with_key(
-            key,
+          pdf_aes_encrypt_pdf_object_with_data_encryptor(
             value,
             iv_provider,
             iv_index,
+            encrypt_data,
             no_encrypt_metadata~,
           ),
         )
@@ -112,11 +112,11 @@ fn pdf_aes_encrypt_pdf_object_with_key(
         output.push(
           (
             name,
-            pdf_aes_encrypt_pdf_object_with_key(
-              key,
+            pdf_aes_encrypt_pdf_object_with_data_encryptor(
               value,
               iv_provider,
               iv_index,
+              encrypt_data,
               no_encrypt_metadata~,
             ),
           ),
@@ -128,16 +128,16 @@ fn pdf_aes_encrypt_pdf_object_with_key(
       if pdf_crypt_stream_is_identity(no_encrypt_metadata, stream.dictionary) {
         object
       } else {
-        let dictionary = pdf_aes_encrypt_pdf_object_with_key(
-          key,
+        let dictionary = pdf_aes_encrypt_pdf_object_with_data_encryptor(
           stream.dictionary,
           iv_provider,
           iv_index,
+          encrypt_data,
           no_encrypt_metadata~,
         )
         let data = pdf_stream_data_bytes(stream.data)
         let iv = pdf_aes_next_iv(iv_provider, iv_index)
-        let encrypted_data = pdf_aes_cbc_encrypt_with_iv(key, iv, data)
+        let encrypted_data = encrypt_data(data, iv)
         PdfStreamObject({
           dictionary: dictionary.add_dict_entry(
             pdf_crypt_stream_length_key(),
@@ -164,19 +164,16 @@ pub fn pdf_aesv2_encrypt_pdf_object_with_iv_provider(
   iv_provider : (Int) -> PdfBytes raise PdfError,
   no_encrypt_metadata? : Bool = false,
 ) -> PdfObject raise PdfError {
-  let object_key = pdf_encryption_object_key(
-    PdfCryptAESV2,
-    object_number,
-    generation,
-    file_key,
-    key_length_bits,
-  )
   let iv_index : Ref[Int] = { val: 0 }
-  pdf_aes_encrypt_pdf_object_with_key(
-    object_key,
+  pdf_aes_encrypt_pdf_object_with_data_encryptor(
     object,
     iv_provider,
     iv_index,
+    fn(data, iv) raise PdfError {
+      pdf_aesv2_encrypt_object_data(
+        object_number, generation, file_key, key_length_bits, data, iv,
+      )
+    },
     no_encrypt_metadata~,
   )
 }
@@ -193,11 +190,13 @@ pub fn pdf_aesv3_encrypt_pdf_object_with_iv_provider(
   no_encrypt_metadata? : Bool = false,
 ) -> PdfObject raise PdfError {
   let iv_index : Ref[Int] = { val: 0 }
-  pdf_aes_encrypt_pdf_object_with_key(
-    file_key,
+  pdf_aes_encrypt_pdf_object_with_data_encryptor(
     object,
     iv_provider,
     iv_index,
+    fn(data, iv) raise PdfError {
+      pdf_aesv3_encrypt_object_data(file_key, data, iv)
+    },
     no_encrypt_metadata~,
   )
 }

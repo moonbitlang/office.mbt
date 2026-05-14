@@ -71,10 +71,19 @@ fn crypt_aesv2_encrypt_data_for_test(
   key_length_bits : Int,
   data : BytesView,
   iv : BytesView,
-) -> @pdflite.PdfBytes {
-  try! @pdflite.pdf_aesv2_encrypt_object_data(
-    object_number, generation, file_key, key_length_bits, data, iv,
+) -> @pdflite.PdfBytes raise {
+  let encrypted = try! @pdflite.pdf_aesv2_encrypt_pdf_object_with_iv_provider(
+    object_number,
+    generation,
+    file_key,
+    key_length_bits,
+    PdfString(data.to_owned()),
+    fn(_) { iv.to_owned() },
   )
+  match encrypted {
+    PdfString(bytes) => bytes
+    _ => fail("expected encrypted AESV2 string")
+  }
 }
 
 ///|
@@ -82,8 +91,16 @@ fn crypt_aesv3_encrypt_data_for_test(
   file_key : BytesView,
   data : BytesView,
   iv : BytesView,
-) -> @pdflite.PdfBytes {
-  try! @pdflite.pdf_aesv3_encrypt_object_data(file_key, data, iv)
+) -> @pdflite.PdfBytes raise {
+  let encrypted = try! @pdflite.pdf_aesv3_encrypt_pdf_object_with_iv_provider(
+    file_key,
+    PdfString(data.to_owned()),
+    fn(_) { iv.to_owned() },
+  )
+  match encrypted {
+    PdfString(bytes) => bytes
+    _ => fail("expected encrypted AESV3 string")
+  }
 }
 
 ///|
@@ -4157,7 +4174,7 @@ test "PdfDocument decrypt_single_stream handles AESV2 and AESV3 streams" {
     0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c,
     0x1d, 0x1e, 0x1f,
   ])
-  let aesv2_encrypted_title = crypt_aesv2_encrypt_data_for_test(
+  let aesv2_encrypted_title = try! crypt_aesv2_encrypt_data_for_test(
     1,
     0,
     aesv2_file_key,
@@ -4165,7 +4182,7 @@ test "PdfDocument decrypt_single_stream handles AESV2 and AESV3 streams" {
     @ascii.encode("aes"),
     aesv2_iv,
   )
-  let aesv2_encrypted_data = crypt_aesv2_encrypt_data_for_test(
+  let aesv2_encrypted_data = try! crypt_aesv2_encrypt_data_for_test(
     1,
     0,
     aesv2_file_key,
@@ -4243,12 +4260,12 @@ test "PdfDocument decrypt_single_stream handles AESV2 and AESV3 streams" {
     0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c,
     0x2d, 0x2e, 0x2f,
   ])
-  let aesv3_encrypted_title = crypt_aesv3_encrypt_data_for_test(
+  let aesv3_encrypted_title = try! crypt_aesv3_encrypt_data_for_test(
     aesv3_file_key,
     @ascii.encode("aes"),
     aesv3_iv,
   )
-  let aesv3_encrypted_data = crypt_aesv3_encrypt_data_for_test(
+  let aesv3_encrypted_data = try! crypt_aesv3_encrypt_data_for_test(
     aesv3_file_key,
     @ascii.encode("raw"),
     aesv3_iv,
@@ -4348,7 +4365,7 @@ test "PdfDocument decrypt_with_user_password decrypts parsed AESV2 objects in a 
     (
       key_title,
       PdfString(
-        crypt_aesv2_encrypt_data_for_test(
+        try! crypt_aesv2_encrypt_data_for_test(
           1,
           0,
           file_key,
@@ -4479,7 +4496,7 @@ test "PdfDocument decrypt_with_user_password honors EncryptMetadata false" {
     (
       key_title,
       PdfString(
-        crypt_aesv2_encrypt_data_for_test(
+        try! crypt_aesv2_encrypt_data_for_test(
           1,
           0,
           file_key,
@@ -4588,11 +4605,15 @@ test "PdfDocument decrypt_with_user_password decrypts parsed AESV3 revision 5 ob
     (
       key_title,
       PdfString(
-        crypt_aesv3_encrypt_data_for_test(file_key, @ascii.encode("aes3"), iv),
+        try! crypt_aesv3_encrypt_data_for_test(
+          file_key,
+          @ascii.encode("aes3"),
+          iv,
+        ),
       ),
     ),
   ])
-  let encrypted_metadata = crypt_aesv3_encrypt_data_for_test(
+  let encrypted_metadata = try! crypt_aesv3_encrypt_data_for_test(
     file_key,
     @ascii.encode("meta"),
     iv,
@@ -5624,32 +5645,6 @@ test "pdf_arc4_crypt_pdf_object skips metadata and identity Crypt streams" {
 }
 
 ///|
-test "pdf_aesv2_encrypt_object_data uses object key and IV prefix" {
-  let file_key = crypt_model_bytes_for_test([ for value in 0..<16 => value ])
-  let iv = crypt_model_bytes_for_test([
-    0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c,
-    0x2d, 0x2e, 0x2f,
-  ])
-  let data = @ascii.encode("hello")
-  let encrypted = try! @pdflite.pdf_aesv2_encrypt_object_data(
-    12, 0, file_key, 128, data, iv,
-  )
-  let object_key = crypt_model_bytes_for_test([
-    0x70, 0x06, 0x4f, 0xbf, 0x73, 0x41, 0xdd, 0x2a, 0x2b, 0xf2, 0x8a, 0xd4, 0xce,
-    0xf2, 0xd8, 0xd5,
-  ])
-  @test.assert_eq(
-    encrypted,
-    try! @pdflite.pdf_aes_cbc_encrypt_with_iv(object_key, iv, data),
-  )
-  @test.assert_eq(encrypted[:16], iv)
-  @test.assert_eq(
-    try! @pdflite.pdf_aesv2_decrypt_object_data(12, 0, file_key, 128, encrypted),
-    data,
-  )
-}
-
-///|
 test "pdf_aesv2_encrypt_pdf_object_with_iv_provider recurses through object data" {
   let file_key = crypt_model_bytes_for_test([ for value in 0..<16 => value ])
   let key_s = crypt_name_for_test("/S")
@@ -5679,7 +5674,7 @@ test "pdf_aesv2_encrypt_pdf_object_with_iv_provider recurses through object data
       ),
     ),
   ])
-  let encrypted_s = crypt_aesv2_encrypt_data_for_test(
+  let encrypted_s = try! crypt_aesv2_encrypt_data_for_test(
     12,
     0,
     file_key,
@@ -5687,7 +5682,7 @@ test "pdf_aesv2_encrypt_pdf_object_with_iv_provider recurses through object data
     @ascii.encode("hello"),
     crypt_aes_iv_for_test(0),
   )
-  let encrypted_a = crypt_aesv2_encrypt_data_for_test(
+  let encrypted_a = try! crypt_aesv2_encrypt_data_for_test(
     12,
     0,
     file_key,
@@ -5695,7 +5690,7 @@ test "pdf_aesv2_encrypt_pdf_object_with_iv_provider recurses through object data
     @ascii.encode("bye"),
     crypt_aes_iv_for_test(1),
   )
-  let encrypted_title = crypt_aesv2_encrypt_data_for_test(
+  let encrypted_title = try! crypt_aesv2_encrypt_data_for_test(
     12,
     0,
     file_key,
@@ -5703,7 +5698,7 @@ test "pdf_aesv2_encrypt_pdf_object_with_iv_provider recurses through object data
     @ascii.encode("meta"),
     crypt_aes_iv_for_test(2),
   )
-  let encrypted_data = crypt_aesv2_encrypt_data_for_test(
+  let encrypted_data = try! crypt_aesv2_encrypt_data_for_test(
     12,
     0,
     file_key,
@@ -5789,19 +5784,13 @@ test "pdf_aesv2_decrypt_pdf_object recurses through strings arrays dictionaries 
   let key_s = @pdflite.pdf_name_of_bytes(@ascii.encode("/S"))
   let key_a = @pdflite.pdf_name_of_bytes(@ascii.encode("/A"))
   let key_n = @pdflite.pdf_name_of_bytes(@ascii.encode("/N"))
-  let encrypted_hello = crypt_aesv2_encrypt_data_for_test(
+  let encrypted_hello = try! crypt_aesv2_encrypt_data_for_test(
     12,
     0,
     file_key,
     128,
     @ascii.encode("hello"),
     iv,
-  )
-  @test.assert_eq(
-    try! @pdflite.pdf_aesv2_decrypt_object_data(
-      12, 0, file_key, 128, encrypted_hello,
-    ),
-    @ascii.encode("hello"),
   )
   let object : @pdflite.PdfObject = PdfDictionary([
     (key_s, PdfString(@ascii.encode("hello"))),
@@ -5890,28 +5879,6 @@ test "pdf_aesv2_decrypt_pdf_object recurses through strings arrays dictionaries 
 }
 
 ///|
-test "pdf_aesv3_encrypt_object_data uses file key and IV prefix" {
-  let file_key = crypt_aesv3_r5_file_key_for_test()
-  let iv = crypt_model_bytes_for_test([
-    0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b, 0x3c,
-    0x3d, 0x3e, 0x3f,
-  ])
-  let data = @ascii.encode("hello")
-  let encrypted = try! @pdflite.pdf_aesv3_encrypt_object_data(
-    file_key, data, iv,
-  )
-  @test.assert_eq(
-    encrypted,
-    try! @pdflite.pdf_aes_cbc_encrypt_with_iv(file_key, iv, data),
-  )
-  @test.assert_eq(encrypted[:16], iv)
-  @test.assert_eq(
-    try! @pdflite.pdf_aesv3_decrypt_object_data(file_key, encrypted),
-    data,
-  )
-}
-
-///|
 test "pdf_aesv3_encrypt_pdf_object_with_iv_provider round trips object data" {
   let file_key = crypt_aesv3_r5_file_key_for_test()
   let key_s = crypt_name_for_test("/S")
@@ -5948,7 +5915,7 @@ test "pdf_aesv3_decrypt_pdf_object recurses through strings arrays dictionaries 
   let key_s = @pdflite.pdf_name_of_bytes(@ascii.encode("/S"))
   let key_a = @pdflite.pdf_name_of_bytes(@ascii.encode("/A"))
   let key_n = @pdflite.pdf_name_of_bytes(@ascii.encode("/N"))
-  let encrypted_hello = crypt_aesv3_encrypt_data_for_test(
+  let encrypted_hello = try! crypt_aesv3_encrypt_data_for_test(
     file_key,
     @ascii.encode("hello"),
     iv,

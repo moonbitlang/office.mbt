@@ -71,19 +71,11 @@ pub fn pdf_aes_ecb_encrypt(BytesView, BytesView) -> Bytes raise PdfError
 
 pub fn pdf_aes_encrypt_block(BytesView, BytesView) -> Bytes raise PdfError
 
-pub fn pdf_aesv2_decrypt_object_data(Int, Int, BytesView, Int, BytesView) -> Bytes raise PdfError
-
 pub fn pdf_aesv2_decrypt_pdf_object(Int, Int, BytesView, Int, PdfObject, no_encrypt_metadata? : Bool) -> PdfObject raise PdfError
-
-pub fn pdf_aesv2_encrypt_object_data(Int, Int, BytesView, Int, BytesView, BytesView) -> Bytes raise PdfError
 
 pub fn pdf_aesv2_encrypt_pdf_object_with_iv_provider(Int, Int, BytesView, Int, PdfObject, (Int) -> Bytes raise PdfError, no_encrypt_metadata? : Bool) -> PdfObject raise PdfError
 
-pub fn pdf_aesv3_decrypt_object_data(BytesView, BytesView) -> Bytes raise PdfError
-
 pub fn pdf_aesv3_decrypt_pdf_object(BytesView, PdfObject, no_encrypt_metadata? : Bool) -> PdfObject raise PdfError
-
-pub fn pdf_aesv3_encrypt_object_data(BytesView, BytesView, BytesView) -> Bytes raise PdfError
 
 pub fn pdf_aesv3_encrypt_pdf_object_with_iv_provider(BytesView, PdfObject, (Int) -> Bytes raise PdfError, no_encrypt_metadata? : Bool) -> PdfObject raise PdfError
 

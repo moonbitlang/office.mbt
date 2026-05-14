@@ -203,6 +203,49 @@ test "private document decrypt supports ISO AESV3 object crypt with a file key" 
 }
 
 ///|
+test "private AESV2 object data uses object key and IV prefix" {
+  let file_key = crypt_wb_bytes_for_test([ for value in 0..<16 => value ])
+  let iv = crypt_wb_bytes_for_test([
+    0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c,
+    0x2d, 0x2e, 0x2f,
+  ])
+  let data = @ascii.encode("hello")
+  let encrypted = try! pdf_aesv2_encrypt_object_data(
+    12, 0, file_key, 128, data, iv,
+  )
+  let object_key = crypt_wb_bytes_for_test([
+    0x70, 0x06, 0x4f, 0xbf, 0x73, 0x41, 0xdd, 0x2a, 0x2b, 0xf2, 0x8a, 0xd4, 0xce,
+    0xf2, 0xd8, 0xd5,
+  ])
+  @test.assert_eq(
+    encrypted,
+    try! pdf_aes_cbc_encrypt_with_iv(object_key, iv, data),
+  )
+  @test.assert_eq(encrypted[:16], iv)
+  @test.assert_eq(
+    try! pdf_aesv2_decrypt_object_data(12, 0, file_key, 128, encrypted),
+    data,
+  )
+}
+
+///|
+test "private AESV3 object data uses file key and IV prefix" {
+  let file_key = crypt_wb_bytes_for_test([ for value in 0..<32 => value ])
+  let iv = crypt_wb_bytes_for_test([
+    0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b, 0x3c,
+    0x3d, 0x3e, 0x3f,
+  ])
+  let data = @ascii.encode("hello")
+  let encrypted = try! pdf_aesv3_encrypt_object_data(file_key, data, iv)
+  @test.assert_eq(
+    encrypted,
+    try! pdf_aes_cbc_encrypt_with_iv(file_key, iv, data),
+  )
+  @test.assert_eq(encrypted[:16], iv)
+  @test.assert_eq(try! pdf_aesv3_decrypt_object_data(file_key, encrypted), data)
+}
+
+///|
 test "private object key derivation matches CamlPDF Algorithm 3.1" {
   @test.assert_eq(
     pdf_encryption_object_key(

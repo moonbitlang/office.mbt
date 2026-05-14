@@ -368,13 +368,13 @@ test "canonical crypt primitive helpers cover AES data" {
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
   ]
   let aesv3_file_key = crypt_bytes_for_test([ for value in 0..<32 => value ])
-  let aesv3_encrypted = try! @pdflite.pdf_aesv3_encrypt_object_data(
+  let aesv3_encrypted = try! @pdflite.pdf_aes_cbc_encrypt_with_iv(
     aesv3_file_key,
-    @ascii.encode("moon"),
     iv,
+    @ascii.encode("moon"),
   )
   @test.assert_eq(
-    try! @pdflite.pdf_aesv3_decrypt_object_data(aesv3_file_key, aesv3_encrypted),
+    try! @pdflite.pdf_aes_cbc_decrypt(aesv3_file_key, aesv3_encrypted),
     @ascii.encode("moon"),
   )
 
