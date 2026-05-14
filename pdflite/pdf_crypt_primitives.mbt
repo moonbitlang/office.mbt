@@ -589,7 +589,7 @@ pub fn pdf_aes_ecb_encrypt(
 ///
 /// The object number, generation, file key, key length, and AESV2 salt are
 /// hashed according to the PDF standard-security object-key algorithm.
-pub fn pdf_encryption_object_key(
+fn pdf_encryption_object_key(
   crypt_type : PdfCryptType,
   object_number : Int,
   generation : Int,
@@ -628,7 +628,7 @@ pub fn pdf_encryption_object_key(
 ///
 /// The per-object key is derived from object number and generation before ARC4
 /// is applied.
-pub fn pdf_arc4_crypt_object(
+fn pdf_arc4_crypt_object(
   object_number : Int,
   generation : Int,
   file_key : BytesView,

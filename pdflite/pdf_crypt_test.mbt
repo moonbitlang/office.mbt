@@ -5634,13 +5634,10 @@ test "pdf_aesv2_encrypt_object_data uses object key and IV prefix" {
   let encrypted = try! @pdflite.pdf_aesv2_encrypt_object_data(
     12, 0, file_key, 128, data, iv,
   )
-  let object_key = @pdflite.pdf_encryption_object_key(
-    PdfCryptAESV2,
-    12,
-    0,
-    file_key,
-    128,
-  )
+  let object_key = crypt_model_bytes_for_test([
+    0x70, 0x06, 0x4f, 0xbf, 0x73, 0x41, 0xdd, 0x2a, 0x2b, 0xf2, 0x8a, 0xd4, 0xce,
+    0xf2, 0xd8, 0xd5,
+  ])
   @test.assert_eq(
     encrypted,
     try! @pdflite.pdf_aes_cbc_encrypt_with_iv(object_key, iv, data),

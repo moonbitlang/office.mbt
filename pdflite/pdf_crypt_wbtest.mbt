@@ -201,3 +201,56 @@ test "private document decrypt supports ISO AESV3 object crypt with a file key" 
   let decrypted = try! doc.decrypt_with_file_key(values, file_key)
   @test.assert_eq(decrypted.document.lookup_object_or_null(1), secret)
 }
+
+///|
+test "private object key derivation matches CamlPDF Algorithm 3.1" {
+  @test.assert_eq(
+    pdf_encryption_object_key(
+      PdfCryptARC4(40, 2),
+      12,
+      0,
+      crypt_wb_bytes_for_test([1, 2, 3, 4, 5]),
+      40,
+    ),
+    crypt_wb_bytes_for_test([
+      0x1e, 0x30, 0xc8, 0x8e, 0x24, 0x47, 0x1b, 0x28, 0x1f, 0x19,
+    ]),
+  )
+  let key128 = crypt_wb_bytes_for_test([
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+  ])
+  @test.assert_eq(
+    pdf_encryption_object_key(PdfCryptARC4(128, 3), 65537, 2, key128, 128),
+    crypt_wb_bytes_for_test([
+      0xab, 0xa1, 0xa7, 0x87, 0x99, 0x05, 0xa0, 0x15, 0x56, 0xf0, 0xf5, 0x74, 0xaa,
+      0x57, 0x5d, 0x8b,
+    ]),
+  )
+  @test.assert_eq(
+    pdf_encryption_object_key(PdfCryptAESV2, 65537, 2, key128, 128),
+    crypt_wb_bytes_for_test([
+      0x42, 0x0e, 0x4b, 0x00, 0xf8, 0x95, 0x95, 0x78, 0x19, 0xf2, 0xff, 0x83, 0x4b,
+      0x41, 0x14, 0x61,
+    ]),
+  )
+}
+
+///|
+test "private ARC4 object crypt applies derived object key" {
+  let file_key = crypt_wb_bytes_for_test([1, 2, 3, 4, 5])
+  let encrypted = try! pdf_arc4_crypt_object(
+    12,
+    0,
+    file_key,
+    40,
+    @ascii.encode("hello"),
+  )
+  @test.assert_eq(
+    encrypted,
+    crypt_wb_bytes_for_test([0x7d, 0x1c, 0x38, 0x4c, 0xca]),
+  )
+  @test.assert_eq(
+    try! pdf_arc4_crypt_object(12, 0, file_key, 40, encrypted),
+    @ascii.encode("hello"),
+  )
+}
