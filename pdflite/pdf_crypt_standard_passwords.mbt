@@ -152,7 +152,7 @@ fn pdf_bytes_prefix_equal(
 
 ///|
 /// Authenticate a revision 2-4 user password against a `/U` entry.
-pub fn pdf_authenticate_user_password(
+fn pdf_authenticate_user_password(
   no_encrypt_metadata : Bool,
   user_password : BytesView,
   revision : Int,
@@ -251,7 +251,7 @@ pub fn pdf_user_password_from_owner_password(
 ///
 /// This decrypts the owner entry to recover the padded user password and then
 /// validates that recovered password against the user entry.
-pub fn pdf_authenticate_owner_password(
+fn pdf_authenticate_owner_password(
   no_encrypt_metadata : Bool,
   owner_password : BytesView,
   revision : Int,

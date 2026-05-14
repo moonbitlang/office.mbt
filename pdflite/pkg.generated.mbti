@@ -107,11 +107,7 @@ pub fn pdf_ascii_hex_encode(Bytes) -> Bytes
 
 pub fn pdf_ascii_hex_encode_view(BytesView) -> Bytes
 
-pub fn pdf_authenticate_owner_password(Bool, BytesView, Int, BytesView, BytesView, Int, BytesView, Int) -> Bool raise PdfError
-
 pub fn pdf_authenticate_owner_password_aesv3(Bool, BytesView, BytesView, BytesView) -> Bool raise PdfError
-
-pub fn pdf_authenticate_user_password(Bool, BytesView, Int, BytesView, BytesView, Int, BytesView, Int) -> Bool raise PdfError
 
 pub fn pdf_authenticate_user_password_aesv3(Bool, BytesView, BytesView) -> Bool raise PdfError
 

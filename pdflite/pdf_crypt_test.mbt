@@ -5019,23 +5019,25 @@ test "pdf_make_user_password_entry handles MD5 padding boundary file IDs" {
     ).length(),
     16,
   )
+  let values : @pdflite.PdfEncryptionValues = {
+    crypt_type: PdfCryptARC4(128, 4),
+    user_entry,
+    owner_entry: owner,
+    permissions: -3904,
+    file_id,
+    encrypt_metadata: true,
+    permissions_entry: None,
+    user_encryption_key: None,
+    owner_encryption_key: None,
+  }
   @test.assert_eq(
-    try! @pdflite.pdf_authenticate_user_password(
-      false,
-      @ascii.encode("user"),
-      4,
-      user_entry,
-      owner,
-      -3904,
-      file_id,
-      128,
-    ),
+    try! values.authenticate_user_password(@ascii.encode("user")),
     true,
   )
 }
 
 ///|
-test "pdf_authenticate_user_password validates R2 and R3 user entries" {
+test "PdfEncryptionValues authenticate_user_password validates R2 and R3 user entries" {
   let owner = crypt_model_bytes_for_test([ for value in 0..<32 => value ])
   let r2_entry = try! @pdflite.pdf_make_user_password_entry(
     false,
@@ -5046,30 +5048,23 @@ test "pdf_authenticate_user_password validates R2 and R3 user entries" {
     @ascii.encode("doc-id"),
     40,
   )
+  let r2_values : @pdflite.PdfEncryptionValues = {
+    crypt_type: PdfCryptARC4(40, 2),
+    user_entry: r2_entry,
+    owner_entry: owner,
+    permissions: -4,
+    file_id: @ascii.encode("doc-id"),
+    encrypt_metadata: true,
+    permissions_entry: None,
+    user_encryption_key: None,
+    owner_encryption_key: None,
+  }
   @test.assert_eq(
-    try! @pdflite.pdf_authenticate_user_password(
-      false,
-      @ascii.encode("user"),
-      2,
-      r2_entry,
-      owner,
-      -4,
-      @ascii.encode("doc-id"),
-      40,
-    ),
+    try! r2_values.authenticate_user_password(@ascii.encode("user")),
     true,
   )
   @test.assert_eq(
-    try! @pdflite.pdf_authenticate_user_password(
-      false,
-      @ascii.encode("bad"),
-      2,
-      r2_entry,
-      owner,
-      -4,
-      @ascii.encode("doc-id"),
-      40,
-    ),
+    try! r2_values.authenticate_user_password(@ascii.encode("bad")),
     false,
   )
   let r3_entry = try! @pdflite.pdf_make_user_password_entry(
@@ -5081,30 +5076,34 @@ test "pdf_authenticate_user_password validates R2 and R3 user entries" {
     @ascii.encode("doc-id"),
     128,
   )
+  let r3_values_with_entry_prefix : @pdflite.PdfEncryptionValues = {
+    crypt_type: PdfCryptARC4(128, 3),
+    user_entry: r3_entry[:16].to_owned(),
+    owner_entry: owner,
+    permissions: -3904,
+    file_id: @ascii.encode("doc-id"),
+    encrypt_metadata: true,
+    permissions_entry: None,
+    user_encryption_key: None,
+    owner_encryption_key: None,
+  }
   @test.assert_eq(
-    try! @pdflite.pdf_authenticate_user_password(
-      false,
-      Bytes::new(0),
-      3,
-      r3_entry[:16],
-      owner,
-      -3904,
-      @ascii.encode("doc-id"),
-      128,
-    ),
+    try! r3_values_with_entry_prefix.authenticate_user_password(Bytes::new(0)),
     true,
   )
+  let r3_values_with_short_entry : @pdflite.PdfEncryptionValues = {
+    crypt_type: PdfCryptARC4(128, 3),
+    user_entry: r3_entry[:8].to_owned(),
+    owner_entry: owner,
+    permissions: -3904,
+    file_id: @ascii.encode("doc-id"),
+    encrypt_metadata: true,
+    permissions_entry: None,
+    user_encryption_key: None,
+    owner_encryption_key: None,
+  }
   @test.assert_eq(
-    try! @pdflite.pdf_authenticate_user_password(
-      false,
-      Bytes::new(0),
-      3,
-      r3_entry[:8],
-      owner,
-      -3904,
-      @ascii.encode("doc-id"),
-      128,
-    ),
+    try! r3_values_with_short_entry.authenticate_user_password(Bytes::new(0)),
     false,
   )
 }
@@ -5328,7 +5327,7 @@ test "pdf_user_password_from_owner_password recovers padded user password" {
 }
 
 ///|
-test "pdf_authenticate_owner_password validates through recovered user password" {
+test "PdfEncryptionValues authenticate_owner_password validates through recovered user password" {
   let owner_entry = try! @pdflite.pdf_make_owner_password_entry(
     3,
     @ascii.encode("owner"),
@@ -5344,30 +5343,23 @@ test "pdf_authenticate_owner_password validates through recovered user password"
     @ascii.encode("doc-id"),
     128,
   )
+  let values : @pdflite.PdfEncryptionValues = {
+    crypt_type: PdfCryptARC4(128, 3),
+    user_entry,
+    owner_entry,
+    permissions: -3904,
+    file_id: @ascii.encode("doc-id"),
+    encrypt_metadata: true,
+    permissions_entry: None,
+    user_encryption_key: None,
+    owner_encryption_key: None,
+  }
   @test.assert_eq(
-    try! @pdflite.pdf_authenticate_owner_password(
-      false,
-      @ascii.encode("owner"),
-      3,
-      user_entry,
-      owner_entry,
-      -3904,
-      @ascii.encode("doc-id"),
-      128,
-    ),
+    try! values.authenticate_owner_password(@ascii.encode("owner")),
     true,
   )
   @test.assert_eq(
-    try! @pdflite.pdf_authenticate_owner_password(
-      false,
-      @ascii.encode("bad"),
-      3,
-      user_entry,
-      owner_entry,
-      -3904,
-      @ascii.encode("doc-id"),
-      128,
-    ),
+    try! values.authenticate_owner_password(@ascii.encode("bad")),
     false,
   )
 }
