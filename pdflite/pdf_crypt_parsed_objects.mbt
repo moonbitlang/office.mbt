@@ -3,7 +3,7 @@
 ///
 /// `skip_object_number` is used to leave the encryption dictionary itself
 /// unencrypted. Deferred and object-stream placeholders are left untouched.
-pub fn PdfDocument::arc4_crypt_parsed_objects(
+fn PdfDocument::arc4_crypt_parsed_objects(
   self : PdfDocument,
   file_key : BytesView,
   key_length_bits : Int,
@@ -44,7 +44,7 @@ pub fn PdfDocument::arc4_crypt_parsed_objects(
 ///
 /// The IV provider receives object number, generation, and per-object IV index.
 /// `skip_object_number` leaves the encryption dictionary unencrypted.
-pub fn PdfDocument::aesv2_encrypt_parsed_objects_with_iv_provider(
+fn PdfDocument::aesv2_encrypt_parsed_objects_with_iv_provider(
   self : PdfDocument,
   file_key : BytesView,
   key_length_bits : Int,
@@ -89,7 +89,7 @@ pub fn PdfDocument::aesv2_encrypt_parsed_objects_with_iv_provider(
 /// Parsed streams may retain deferred crypt metadata so stream bytes can be
 /// decrypted lazily. `skip_object_number` leaves the encryption dictionary
 /// untouched.
-pub fn PdfDocument::aesv2_decrypt_parsed_objects(
+fn PdfDocument::aesv2_decrypt_parsed_objects(
   self : PdfDocument,
   file_key : BytesView,
   key_length_bits : Int,
@@ -129,7 +129,7 @@ pub fn PdfDocument::aesv2_decrypt_parsed_objects(
 ///
 /// The IV provider receives object number, generation, and per-object IV index.
 /// `skip_object_number` leaves the encryption dictionary unencrypted.
-pub fn PdfDocument::aesv3_encrypt_parsed_objects_with_iv_provider(
+fn PdfDocument::aesv3_encrypt_parsed_objects_with_iv_provider(
   self : PdfDocument,
   file_key : BytesView,
   iv_provider : (Int, Int, Int) -> PdfBytes raise PdfError,
@@ -170,7 +170,7 @@ pub fn PdfDocument::aesv3_encrypt_parsed_objects_with_iv_provider(
 /// Parsed streams may retain deferred crypt metadata so stream bytes can be
 /// decrypted lazily. `skip_object_number` leaves the encryption dictionary
 /// untouched.
-pub fn PdfDocument::aesv3_decrypt_parsed_objects(
+fn PdfDocument::aesv3_decrypt_parsed_objects(
   self : PdfDocument,
   file_key : BytesView,
   no_encrypt_metadata? : Bool = false,

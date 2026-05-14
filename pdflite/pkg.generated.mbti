@@ -1258,12 +1258,7 @@ pub fn PdfDocument::add_object_given_number(Self, Int, PdfObject, generation? : 
 pub fn PdfDocument::add_pagetree(Self, ArrayView[PdfPage]) -> Int raise PdfError
 pub fn PdfDocument::add_prefix(Self, String) -> Unit raise PdfError
 pub fn PdfDocument::add_root(Self, Int, ArrayView[(PdfName, PdfObject)]) -> Int raise PdfError
-pub fn PdfDocument::aesv2_decrypt_parsed_objects(Self, BytesView, Int, no_encrypt_metadata? : Bool, skip_object_number? : Int) -> Self raise PdfError
-pub fn PdfDocument::aesv2_encrypt_parsed_objects_with_iv_provider(Self, BytesView, Int, (Int, Int, Int) -> Bytes raise PdfError, no_encrypt_metadata? : Bool, skip_object_number? : Int) -> Self raise PdfError
-pub fn PdfDocument::aesv3_decrypt_parsed_objects(Self, BytesView, no_encrypt_metadata? : Bool, skip_object_number? : Int) -> Self raise PdfError
-pub fn PdfDocument::aesv3_encrypt_parsed_objects_with_iv_provider(Self, BytesView, (Int, Int, Int) -> Bytes raise PdfError, no_encrypt_metadata? : Bool, skip_object_number? : Int) -> Self raise PdfError
 pub fn PdfDocument::annotations_of_page(Self, PdfPage) -> Array[PdfAnnotation] raise PdfError
-pub fn PdfDocument::arc4_crypt_parsed_objects(Self, BytesView, Int, no_encrypt_metadata? : Bool, skip_object_number? : Int) -> Self raise PdfError
 pub fn PdfDocument::bpc(Self, PdfObject) -> PdfObject?
 pub fn PdfDocument::build_name_tree(Self, ArrayView[(Bytes, PdfObject)]) -> PdfObject
 pub fn PdfDocument::build_number_tree(Self, ArrayView[(Int, PdfObject)]) -> PdfObject
