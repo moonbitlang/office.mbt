@@ -6,6 +6,27 @@ fn crypt_wb_bytes_for_test(values : ArrayView[Int]) -> PdfBytes {
 }
 
 ///|
+fn crypt_wb_concat_bytes_for_test(parts : ArrayView[BytesView]) -> PdfBytes {
+  let output : Array[Byte] = []
+  for part in parts {
+    for byte in part {
+      output.push(byte)
+    }
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn crypt_wb_repeated_bytes_for_test(value : Int, length : Int) -> PdfBytes {
+  crypt_wb_bytes_for_test([ for _ in 0..<length => value ])
+}
+
+///|
+fn crypt_wb_name_for_test(text : String) -> PdfName {
+  pdf_name_of_bytes(@ascii.encode(text))
+}
+
+///|
 fn crypt_wb_iv_for_test(index : Int) -> PdfBytes {
   crypt_wb_bytes_for_test(
     [
@@ -66,6 +87,25 @@ fn crypt_wb_aesv3_r5_permissions_for_test() -> PdfBytes {
 }
 
 ///|
+fn crypt_wb_aesv3_values_for_test(
+  user_entry : BytesView,
+  owner_entry : BytesView,
+  iso? : Bool = false,
+) -> PdfEncryptionValues {
+  {
+    crypt_type: PdfCryptAESV3(iso),
+    user_entry: user_entry.to_owned(),
+    owner_entry: owner_entry.to_owned(),
+    permissions: -3904,
+    file_id: @ascii.encode("doc-id"),
+    encrypt_metadata: true,
+    permissions_entry: None,
+    user_encryption_key: None,
+    owner_encryption_key: None,
+  }
+}
+
+///|
 fn crypt_wb_aesv3_r5_values_for_test() -> PdfEncryptionValues {
   {
     crypt_type: PdfCryptAESV3(false),
@@ -79,6 +119,26 @@ fn crypt_wb_aesv3_r5_values_for_test() -> PdfEncryptionValues {
     owner_encryption_key: Some(
       crypt_wb_aesv3_r5_owner_encryption_key_for_test(),
     ),
+  }
+}
+
+///|
+#warnings("-unused_error_type")
+fn crypt_wb_aesv3_r5_random_for_test(
+  field : PdfAesV3RandomField,
+  _length : Int,
+) -> PdfBytes raise PdfError {
+  match field {
+    PdfAesV3FileKey => crypt_wb_aesv3_r5_file_key_for_test()
+    PdfAesV3UserValidationSalt =>
+      crypt_wb_bytes_for_test([0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08])
+    PdfAesV3UserKeySalt =>
+      crypt_wb_bytes_for_test([0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10])
+    PdfAesV3OwnerValidationSalt =>
+      crypt_wb_bytes_for_test([0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18])
+    PdfAesV3OwnerKeySalt =>
+      crypt_wb_bytes_for_test([0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20])
+    PdfAesV3PermissionsPadding => Bytes::new(4)
   }
 }
 
@@ -166,6 +226,178 @@ test "private AESV3 encryption values derive fixture file keys" {
   @test.assert_eq(
     try! values.file_key_for_owner_password(@ascii.encode("bad")),
     None,
+  )
+}
+
+///|
+test "private encryption values authenticate R2 and R3 user entries" {
+  let r2_values = try! (try! pdf_document_empty().encrypt_40bit(
+    @ascii.encode("user"),
+    @ascii.encode("owner"),
+    [],
+    file_id=@ascii.encode("doc-id"),
+  )).encryption_values()
+  @test.assert_eq(
+    try! r2_values.authenticate_user_password(@ascii.encode("user")),
+    true,
+  )
+  @test.assert_eq(
+    try! r2_values.authenticate_user_password(@ascii.encode("bad")),
+    false,
+  )
+
+  let r3_values = try! (try! pdf_document_empty().encrypt_128bit(
+    Bytes::new(0),
+    @ascii.encode("owner"),
+    pdf_permissions_of_p(-3904),
+    file_id=@ascii.encode("doc-id"),
+  )).encryption_values()
+  let r3_entry = r3_values.user_entry
+  let r3_values_with_entry_prefix : PdfEncryptionValues = {
+    crypt_type: PdfCryptARC4(128, 3),
+    user_entry: r3_entry[:16].to_owned(),
+    owner_entry: r3_values.owner_entry,
+    permissions: r3_values.permissions,
+    file_id: r3_values.file_id,
+    encrypt_metadata: r3_values.encrypt_metadata,
+    permissions_entry: None,
+    user_encryption_key: None,
+    owner_encryption_key: None,
+  }
+  @test.assert_eq(
+    try! r3_values_with_entry_prefix.authenticate_user_password(Bytes::new(0)),
+    true,
+  )
+  let r3_values_with_short_entry : PdfEncryptionValues = {
+    crypt_type: PdfCryptARC4(128, 3),
+    user_entry: r3_entry[:8].to_owned(),
+    owner_entry: r3_values.owner_entry,
+    permissions: r3_values.permissions,
+    file_id: r3_values.file_id,
+    encrypt_metadata: r3_values.encrypt_metadata,
+    permissions_entry: None,
+    user_encryption_key: None,
+    owner_encryption_key: None,
+  }
+  @test.assert_eq(
+    try! r3_values_with_short_entry.authenticate_user_password(Bytes::new(0)),
+    false,
+  )
+}
+
+///|
+test "private AESV3 password authentication validates R5 SHA-256 entries" {
+  let user_entry = crypt_wb_aesv3_r5_user_entry_for_test()
+  let owner_entry = crypt_wb_aesv3_r5_owner_entry_for_test()
+  let values = crypt_wb_aesv3_values_for_test(user_entry, owner_entry)
+  @test.assert_eq(
+    try! values.authenticate_user_password(@ascii.encode("user")),
+    true,
+  )
+  @test.assert_eq(
+    try! values.authenticate_user_password(@ascii.encode("bad")),
+    false,
+  )
+  @test.assert_eq(
+    try! values.authenticate_owner_password(@ascii.encode("owner")),
+    true,
+  )
+  @test.assert_eq(
+    try! values.authenticate_owner_password(@ascii.encode("bad")),
+    false,
+  )
+
+  let short_user = crypt_wb_repeated_bytes_for_test(0, 47)
+  let short_user_values = crypt_wb_aesv3_values_for_test(
+    short_user, owner_entry,
+  )
+  let short_user_result : Result[Bool, Error] = try? short_user_values.authenticate_user_password(
+    @ascii.encode("user"),
+  )
+  guard short_user_result
+    is Err(PdfError::EncryptionDictionaryEntryTooShort(name)) &&
+    name == crypt_wb_name_for_test("/U") else {
+    fail("expected short AESV3 /U")
+  }
+
+  let short_owner = crypt_wb_repeated_bytes_for_test(0, 47)
+  let short_owner_values = crypt_wb_aesv3_values_for_test(
+    user_entry, short_owner,
+  )
+  let short_owner_result : Result[Bool, Error] = try? short_owner_values.authenticate_owner_password(
+    @ascii.encode("owner"),
+  )
+  guard short_owner_result
+    is Err(PdfError::EncryptionDictionaryEntryTooShort(name)) &&
+    name == crypt_wb_name_for_test("/O") else {
+    fail("expected short AESV3 /O")
+  }
+
+  let short_owner_user_values = crypt_wb_aesv3_values_for_test(
+    short_user, owner_entry,
+  )
+  let short_owner_user_result : Result[Bool, Error] = try? short_owner_user_values.authenticate_owner_password(
+    @ascii.encode("owner"),
+  )
+  guard short_owner_user_result
+    is Err(PdfError::EncryptionDictionaryEntryTooShort(name)) &&
+    name == crypt_wb_name_for_test("/U") else {
+    fail("expected short AESV3 owner /U")
+  }
+
+  let iso_doc = pdf_document_empty()
+  iso_doc.set_version(1, 7)
+  let iso_encrypted = try! iso_doc.encrypt_256bit_aesv3_with_providers(
+    @ascii.encode("user"),
+    @ascii.encode("owner"),
+    pdf_permissions_of_p(-3904),
+    crypt_wb_aesv3_r5_random_for_test,
+    fn(_, _, _) { Bytes::new(16) },
+    iso=true,
+    file_id=@ascii.encode("doc-id"),
+  )
+  let iso_values = try! iso_encrypted.encryption_values()
+  @test.assert_eq(iso_values.crypt_type, PdfCryptAESV3(true))
+  @test.assert_eq(
+    try! iso_values.authenticate_user_password(@ascii.encode("user")),
+    true,
+  )
+  @test.assert_eq(
+    try! iso_values.authenticate_user_password(@ascii.encode("bad")),
+    false,
+  )
+  @test.assert_eq(
+    try! iso_values.authenticate_owner_password(@ascii.encode("owner")),
+    true,
+  )
+  @test.assert_eq(
+    try! iso_values.authenticate_owner_password(@ascii.encode("bad")),
+    false,
+  )
+
+  @test.assert_eq(
+    crypt_wb_concat_bytes_for_test([@ascii.encode("user"), user_entry[32:40]]),
+    crypt_wb_bytes_for_test([
+      0x75, 0x73, 0x65, 0x72, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+    ]),
+  )
+}
+
+///|
+test "private encryption values authenticate owner through recovered user password" {
+  let values = try! (try! pdf_document_empty().encrypt_128bit(
+    Bytes::new(0),
+    @ascii.encode("owner"),
+    pdf_permissions_of_p(-3904),
+    file_id=@ascii.encode("doc-id"),
+  )).encryption_values()
+  @test.assert_eq(
+    try! values.authenticate_owner_password(@ascii.encode("owner")),
+    true,
+  )
+  @test.assert_eq(
+    try! values.authenticate_owner_password(@ascii.encode("bad")),
+    false,
   )
 }
 

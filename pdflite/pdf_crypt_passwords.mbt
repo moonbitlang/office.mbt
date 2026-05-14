@@ -24,7 +24,8 @@ fn PdfEncryptionValues::password_settings(
 /// `password` is the raw PDF password byte sequence. AESV3 and earlier
 /// revisions use their respective standard-security algorithms. The optional
 /// metadata flag can force the revision-4 no-metadata key derivation path.
-pub fn PdfEncryptionValues::authenticate_user_password(
+#warnings("-unused_value")
+fn PdfEncryptionValues::authenticate_user_password(
   self : PdfEncryptionValues,
   password : BytesView,
   no_encrypt_metadata? : Bool = false,
@@ -114,7 +115,8 @@ fn PdfEncryptionValues::file_key_for_user_password(
 ///
 /// For pre-AESV3 handlers this first recovers the padded user password from
 /// the owner entry, then authenticates it as a user password.
-pub fn PdfEncryptionValues::authenticate_owner_password(
+#warnings("-unused_value")
+fn PdfEncryptionValues::authenticate_owner_password(
   self : PdfEncryptionValues,
   password : BytesView,
   no_encrypt_metadata? : Bool = false,

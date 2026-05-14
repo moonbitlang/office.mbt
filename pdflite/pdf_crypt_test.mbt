@@ -4,19 +4,6 @@ fn crypt_model_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
 }
 
 ///|
-fn crypt_concat_bytes_for_test(
-  parts : ArrayView[BytesView],
-) -> @pdflite.PdfBytes {
-  let output : Array[Byte] = []
-  for part in parts {
-    for byte in part {
-      output.push(byte)
-    }
-  }
-  Bytes::from_array(output)
-}
-
-///|
 fn crypt_restore_env_for_test(previous : String?) -> Unit {
   match previous {
     Some(value) => @env.set_env_var("CAMLPDF_REPRODUCIBLE_IDS", value)
@@ -121,25 +108,6 @@ fn crypt_aesv3_r5_owner_entry_for_test() -> @pdflite.PdfBytes {
     0x48, 0x36, 0x93, 0x7e, 0xbf, 0xf7, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
     0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20,
   ])
-}
-
-///|
-fn crypt_aesv3_values_for_test(
-  user_entry : BytesView,
-  owner_entry : BytesView,
-  iso? : Bool = false,
-) -> @pdflite.PdfEncryptionValues {
-  {
-    crypt_type: PdfCryptAESV3(iso),
-    user_entry: user_entry.to_owned(),
-    owner_entry: owner_entry.to_owned(),
-    permissions: -3904,
-    file_id: @ascii.encode("doc-id"),
-    encrypt_metadata: true,
-    permissions_entry: None,
-    user_encryption_key: None,
-    owner_encryption_key: None,
-  }
 }
 
 ///|
@@ -888,35 +856,33 @@ test "PdfDocument encryption_values parses crypt filter methods" {
     Some(crypt_aesv3_r5_owner_encryption_key_for_test()),
   )
   @test.assert_eq(
-    try! aesv3_values.authenticate_user_password(@ascii.encode("user")),
-    false,
+    try! aesv3_doc.decrypt_with_user_password(@ascii.encode("user")),
+    None,
   )
 }
 
 ///|
-test "PdfEncryptionValues authenticates user and owner passwords" {
+test "PdfDocument decrypt_with_password authenticates user and owner passwords" {
   let doc = try! @pdflite.pdf_document_empty().encrypt_128bit(
     @ascii.encode("user"),
     @ascii.encode("owner"),
     @pdflite.pdf_permissions_of_p(-3904),
     file_id=@ascii.encode("doc-id"),
   )
-  let values = try! doc.encryption_values()
+  guard (try! doc.decrypt_with_user_password(@ascii.encode("user"))) is Some(_) else {
+    fail("expected user password to decrypt")
+  }
   @test.assert_eq(
-    try! values.authenticate_user_password(@ascii.encode("user")),
-    true,
+    try! doc.decrypt_with_user_password(@ascii.encode("bad")),
+    None,
   )
+  guard (try! doc.decrypt_with_owner_password(@ascii.encode("owner")))
+    is Some(_) else {
+    fail("expected owner password to decrypt")
+  }
   @test.assert_eq(
-    try! values.authenticate_user_password(@ascii.encode("bad")),
-    false,
-  )
-  @test.assert_eq(
-    try! values.authenticate_owner_password(@ascii.encode("owner")),
-    true,
-  )
-  @test.assert_eq(
-    try! values.authenticate_owner_password(@ascii.encode("bad")),
-    false,
+    try! doc.decrypt_with_owner_password(@ascii.encode("bad")),
+    None,
   )
 }
 
@@ -931,14 +897,13 @@ test "PdfEncryptionValues treats AESV2 as revision 4 with 128-bit keys" {
   )
   let values = try! doc.encryption_values()
   @test.assert_eq(values.crypt_type, PdfCryptAESV2)
-  @test.assert_eq(
-    try! values.authenticate_user_password(@ascii.encode("user")),
-    true,
-  )
+  guard (try! doc.decrypt_with_user_password(@ascii.encode("user"))) is Some(_) else {
+    fail("expected AESV2 user password to decrypt")
+  }
 }
 
 ///|
-test "PdfEncryptionValues authenticates AESV3 revision 5 passwords" {
+test "PdfDocument decrypt_with_password authenticates AESV3 revision 5 passwords" {
   let user_entry = crypt_aesv3_r5_user_entry_for_test()
   let owner_entry = crypt_aesv3_r5_owner_entry_for_test()
   let doc = crypt_doc_with_encrypt_for_test(
@@ -980,21 +945,20 @@ test "PdfEncryptionValues authenticates AESV3 revision 5 passwords" {
   )
   let values = try! doc.encryption_values()
   @test.assert_eq(values.crypt_type, PdfCryptAESV3(false))
+  guard (try! doc.decrypt_with_user_password(@ascii.encode("user"))) is Some(_) else {
+    fail("expected AESV3 user password to decrypt")
+  }
   @test.assert_eq(
-    try! values.authenticate_user_password(@ascii.encode("user")),
-    true,
+    try! doc.decrypt_with_user_password(@ascii.encode("bad")),
+    None,
   )
+  guard (try! doc.decrypt_with_owner_password(@ascii.encode("owner")))
+    is Some(_) else {
+    fail("expected AESV3 owner password to decrypt")
+  }
   @test.assert_eq(
-    try! values.authenticate_user_password(@ascii.encode("bad")),
-    false,
-  )
-  @test.assert_eq(
-    try! values.authenticate_owner_password(@ascii.encode("owner")),
-    true,
-  )
-  @test.assert_eq(
-    try! values.authenticate_owner_password(@ascii.encode("bad")),
-    false,
+    try! doc.decrypt_with_owner_password(@ascii.encode("bad")),
+    None,
   )
 
   let missing_perms_doc = crypt_doc_with_encrypt_for_test(
@@ -4521,174 +4485,6 @@ test "PdfDocument encryption_values reports malformed encryption dictionaries" {
   guard bad_id_result is Err(@pdflite.PdfError::EncryptionIDExpected) else {
     fail("expected EncryptionIDExpected")
   }
-}
-
-///|
-test "PdfEncryptionValues authenticate_user_password validates R2 and R3 user entries" {
-  let r2_values = try! (try! @pdflite.pdf_document_empty().encrypt_40bit(
-    @ascii.encode("user"),
-    @ascii.encode("owner"),
-    [],
-    file_id=@ascii.encode("doc-id"),
-  )).encryption_values()
-  @test.assert_eq(
-    try! r2_values.authenticate_user_password(@ascii.encode("user")),
-    true,
-  )
-  @test.assert_eq(
-    try! r2_values.authenticate_user_password(@ascii.encode("bad")),
-    false,
-  )
-  let r3_values = try! (try! @pdflite.pdf_document_empty().encrypt_128bit(
-    Bytes::new(0),
-    @ascii.encode("owner"),
-    @pdflite.pdf_permissions_of_p(-3904),
-    file_id=@ascii.encode("doc-id"),
-  )).encryption_values()
-  let r3_entry = r3_values.user_entry
-  let r3_values_with_entry_prefix : @pdflite.PdfEncryptionValues = {
-    crypt_type: PdfCryptARC4(128, 3),
-    user_entry: r3_entry[:16].to_owned(),
-    owner_entry: r3_values.owner_entry,
-    permissions: r3_values.permissions,
-    file_id: r3_values.file_id,
-    encrypt_metadata: r3_values.encrypt_metadata,
-    permissions_entry: None,
-    user_encryption_key: None,
-    owner_encryption_key: None,
-  }
-  @test.assert_eq(
-    try! r3_values_with_entry_prefix.authenticate_user_password(Bytes::new(0)),
-    true,
-  )
-  let r3_values_with_short_entry : @pdflite.PdfEncryptionValues = {
-    crypt_type: PdfCryptARC4(128, 3),
-    user_entry: r3_entry[:8].to_owned(),
-    owner_entry: r3_values.owner_entry,
-    permissions: r3_values.permissions,
-    file_id: r3_values.file_id,
-    encrypt_metadata: r3_values.encrypt_metadata,
-    permissions_entry: None,
-    user_encryption_key: None,
-    owner_encryption_key: None,
-  }
-  @test.assert_eq(
-    try! r3_values_with_short_entry.authenticate_user_password(Bytes::new(0)),
-    false,
-  )
-}
-
-///|
-test "pdf_authenticate_aesv3_password validates R5 SHA-256 entries" {
-  let user_entry = crypt_aesv3_r5_user_entry_for_test()
-  let owner_entry = crypt_aesv3_r5_owner_entry_for_test()
-  let values = crypt_aesv3_values_for_test(user_entry, owner_entry)
-  @test.assert_eq(
-    try! values.authenticate_user_password(@ascii.encode("user")),
-    true,
-  )
-  @test.assert_eq(
-    try! values.authenticate_user_password(@ascii.encode("bad")),
-    false,
-  )
-  @test.assert_eq(
-    try! values.authenticate_owner_password(@ascii.encode("owner")),
-    true,
-  )
-  @test.assert_eq(
-    try! values.authenticate_owner_password(@ascii.encode("bad")),
-    false,
-  )
-
-  let short_user = crypt_repeated_bytes_for_test(0, 47)
-  let short_user_values = crypt_aesv3_values_for_test(short_user, owner_entry)
-  let short_user_result : Result[Bool, Error] = try? short_user_values.authenticate_user_password(
-    @ascii.encode("user"),
-  )
-  guard short_user_result
-    is Err(@pdflite.PdfError::EncryptionDictionaryEntryTooShort(name)) &&
-    name == crypt_name_for_test("/U") else {
-    fail("expected short AESV3 /U")
-  }
-
-  let short_owner = crypt_repeated_bytes_for_test(0, 47)
-  let short_owner_values = crypt_aesv3_values_for_test(user_entry, short_owner)
-  let short_owner_result : Result[Bool, Error] = try? short_owner_values.authenticate_owner_password(
-    @ascii.encode("owner"),
-  )
-  guard short_owner_result
-    is Err(@pdflite.PdfError::EncryptionDictionaryEntryTooShort(name)) &&
-    name == crypt_name_for_test("/O") else {
-    fail("expected short AESV3 /O")
-  }
-
-  let short_owner_user_values = crypt_aesv3_values_for_test(
-    short_user, owner_entry,
-  )
-  let short_owner_user_result : Result[Bool, Error] = try? short_owner_user_values.authenticate_owner_password(
-    @ascii.encode("owner"),
-  )
-  guard short_owner_user_result
-    is Err(@pdflite.PdfError::EncryptionDictionaryEntryTooShort(name)) &&
-    name == crypt_name_for_test("/U") else {
-    fail("expected short AESV3 owner /U")
-  }
-
-  let iso_doc = crypt_minimal_catalog_document_for_test(1, 7)
-  let iso_encrypted = try! iso_doc.encrypt_256bit_aesv3_with_providers(
-    @ascii.encode("user"),
-    @ascii.encode("owner"),
-    @pdflite.pdf_permissions_of_p(-3904),
-    crypt_aesv3_r5_random_for_test,
-    fn(object_number, generation, index) {
-      crypt_aes_document_iv_for_test(object_number, generation, index)
-    },
-    iso=true,
-    file_id=@ascii.encode("doc-id"),
-  )
-  let iso_values = try! iso_encrypted.encryption_values()
-  @test.assert_eq(iso_values.crypt_type, PdfCryptAESV3(true))
-  @test.assert_eq(
-    try! iso_values.authenticate_user_password(@ascii.encode("user")),
-    true,
-  )
-  @test.assert_eq(
-    try! iso_values.authenticate_user_password(@ascii.encode("bad")),
-    false,
-  )
-  @test.assert_eq(
-    try! iso_values.authenticate_owner_password(@ascii.encode("owner")),
-    true,
-  )
-  @test.assert_eq(
-    try! iso_values.authenticate_owner_password(@ascii.encode("bad")),
-    false,
-  )
-
-  @test.assert_eq(
-    crypt_concat_bytes_for_test([@ascii.encode("user"), user_entry[32:40]]),
-    crypt_model_bytes_for_test([
-      0x75, 0x73, 0x65, 0x72, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-    ]),
-  )
-}
-
-///|
-test "PdfEncryptionValues authenticate_owner_password validates through recovered user password" {
-  let values = try! (try! @pdflite.pdf_document_empty().encrypt_128bit(
-    Bytes::new(0),
-    @ascii.encode("owner"),
-    @pdflite.pdf_permissions_of_p(-3904),
-    file_id=@ascii.encode("doc-id"),
-  )).encryption_values()
-  @test.assert_eq(
-    try! values.authenticate_owner_password(@ascii.encode("owner")),
-    true,
-  )
-  @test.assert_eq(
-    try! values.authenticate_owner_password(@ascii.encode("bad")),
-    false,
-  )
 }
 
 ///|

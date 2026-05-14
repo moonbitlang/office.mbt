@@ -1438,8 +1438,6 @@ pub(all) struct PdfEncryptionValues {
   user_encryption_key : Bytes?
   owner_encryption_key : Bytes?
 } derive(Eq, ToJson, @debug.Debug)
-pub fn PdfEncryptionValues::authenticate_owner_password(Self, BytesView, no_encrypt_metadata? : Bool) -> Bool raise PdfError
-pub fn PdfEncryptionValues::authenticate_user_password(Self, BytesView, no_encrypt_metadata? : Bool) -> Bool raise PdfError
 
 pub(all) enum PdfFont {
   PdfFontStandard(PdfStandardFontData)
