@@ -83,6 +83,17 @@ fn crypt_arc4_crypt_object_for_test(
 }
 
 ///|
+fn crypt_user_file_key_for_test(
+  values : @pdflite.PdfEncryptionValues,
+  password : BytesView,
+) -> @pdflite.PdfBytes raise {
+  match values.file_key_for_user_password(password) {
+    Some(key) => key
+    None => fail("expected user file key")
+  }
+}
+
+///|
 fn crypt_aesv2_encrypt_data_for_test(
   object_number : Int,
   generation : Int,
@@ -1423,29 +1434,18 @@ test "PdfEncryptionValues authenticates AESV3 revision 5 passwords" {
 ///|
 test "PdfDocument decrypt_with_user_password decrypts parsed ARC4 objects in a copy" {
   let file_id = @ascii.encode("doc-id")
-  let owner_entry = try! @pdflite.pdf_make_owner_password_entry(
-    3,
+  let template = try! @pdflite.pdf_document_empty().encrypt_128bit(
+    @ascii.encode("user"),
     @ascii.encode("owner"),
-    @ascii.encode("user"),
-    128,
+    @pdflite.pdf_permissions_of_p(-3904),
+    file_id~,
   )
-  let user_entry = try! @pdflite.pdf_make_user_password_entry(
-    false,
+  let values = try! template.encryption_values()
+  let owner_entry = values.owner_entry
+  let user_entry = values.user_entry
+  let file_key = try! crypt_user_file_key_for_test(
+    values,
     @ascii.encode("user"),
-    3,
-    owner_entry,
-    -3904,
-    file_id,
-    128,
-  )
-  let file_key = @pdflite.pdf_encryption_file_key(
-    false,
-    @ascii.encode("user"),
-    3,
-    owner_entry,
-    -3904,
-    file_id,
-    128,
   )
   let encrypt_dictionary = crypt_standard_encrypt_dictionary_values_for_test(
     [
@@ -1550,29 +1550,18 @@ test "PdfDocument decrypt_with_user_password decrypts parsed ARC4 objects in a c
 ///|
 test "PdfDocument decrypt_with_owner_password decrypts parsed ARC4 objects in a copy" {
   let file_id = @ascii.encode("doc-id")
-  let owner_entry = try! @pdflite.pdf_make_owner_password_entry(
-    3,
+  let template = try! @pdflite.pdf_document_empty().encrypt_128bit(
+    @ascii.encode("user"),
     @ascii.encode("owner"),
-    @ascii.encode("user"),
-    128,
+    @pdflite.pdf_permissions_of_p(-3904),
+    file_id~,
   )
-  let user_entry = try! @pdflite.pdf_make_user_password_entry(
-    false,
+  let values = try! template.encryption_values()
+  let owner_entry = values.owner_entry
+  let user_entry = values.user_entry
+  let file_key = try! crypt_user_file_key_for_test(
+    values,
     @ascii.encode("user"),
-    3,
-    owner_entry,
-    -3904,
-    file_id,
-    128,
-  )
-  let file_key = @pdflite.pdf_encryption_file_key(
-    false,
-    @ascii.encode("user"),
-    3,
-    owner_entry,
-    -3904,
-    file_id,
-    128,
   )
   let encrypt_dictionary = crypt_standard_encrypt_dictionary_values_for_test(
     [
@@ -1675,21 +1664,13 @@ test "PdfDocument encrypt_40bit encrypts parsed objects and installs dictionary"
     @ascii.encode("owner"),
     [PdfNoPrint],
   )
-  let owner_entry = try! @pdflite.pdf_make_owner_password_entry(
-    2,
-    @ascii.encode("owner"),
-    @ascii.encode("user"),
-    40,
-  )
   let permissions = @pdflite.pdf_p_of_permissions([PdfNoPrint])
-  let file_key = @pdflite.pdf_encryption_file_key(
-    false,
+  let values = try! encrypted.encryption_values()
+  let owner_entry = values.owner_entry
+  let user_entry = values.user_entry
+  let file_key = try! crypt_user_file_key_for_test(
+    values,
     @ascii.encode("user"),
-    2,
-    owner_entry,
-    permissions,
-    @ascii.encode("doc-id"),
-    40,
   )
   @test.assert_eq(
     encrypted.lookup_object_or_null(1),
@@ -1721,11 +1702,11 @@ test "PdfDocument encrypt_40bit encrypts parsed objects and installs dictionary"
     Some(PdfString(owner_entry)),
   )
   guard encrypt_dictionary.lookup_immediate(key_u)
-    is Some(PdfString(user_entry)) else {
+    is Some(PdfString(found_user_entry)) else {
     fail("expected user entry")
   }
+  @test.assert_eq(found_user_entry, user_entry)
   @test.assert_eq(user_entry.length(), 32)
-  let values = try! encrypted.encryption_values()
   @test.assert_eq(values.crypt_type, PdfCryptARC4(40, 2))
   @test.assert_eq(values.permissions, permissions)
   @test.assert_eq(values.file_id, @ascii.encode("doc-id"))
@@ -2893,21 +2874,11 @@ test "PdfDocument encrypt_128bit encrypts parsed objects and writes length" {
     [PdfNoPrint, PdfNoCopy],
     file_id=@ascii.encode("doc-id"),
   )
-  let owner_entry = try! @pdflite.pdf_make_owner_password_entry(
-    3,
-    @ascii.encode("owner"),
-    @ascii.encode("user"),
-    128,
-  )
   let permissions = @pdflite.pdf_p_of_permissions([PdfNoPrint, PdfNoCopy])
-  let file_key = @pdflite.pdf_encryption_file_key(
-    false,
+  let values = try! encrypted.encryption_values()
+  let file_key = try! crypt_user_file_key_for_test(
+    values,
     @ascii.encode("user"),
-    3,
-    owner_entry,
-    permissions,
-    @ascii.encode("doc-id"),
-    128,
   )
   @test.assert_eq(
     encrypted.lookup_object_or_null(1),
@@ -2934,7 +2905,6 @@ test "PdfDocument encrypt_128bit encrypts parsed objects and writes length" {
     encrypt_dictionary.lookup_immediate(key_p),
     Some(PdfInteger(permissions)),
   )
-  let values = try! encrypted.encryption_values()
   @test.assert_eq(values.crypt_type, PdfCryptARC4(128, 3))
   let decrypted = crypt_unwrap_decryption_result_for_test(
     try! encrypted.decrypt_with_user_password(@ascii.encode("user")),
@@ -2992,21 +2962,11 @@ test "PdfDocument encrypt_128bit_r4 writes crypt filter and honors metadata flag
     encrypt_metadata=false,
     file_id=@ascii.encode("doc-id"),
   )
-  let owner_entry = try! @pdflite.pdf_make_owner_password_entry(
-    4,
-    @ascii.encode("owner"),
-    @ascii.encode("user"),
-    128,
-  )
   let permissions = @pdflite.pdf_p_of_permissions([PdfNoExtract])
-  let file_key = @pdflite.pdf_encryption_file_key(
-    true,
+  let values = try! encrypted.encryption_values()
+  let file_key = try! crypt_user_file_key_for_test(
+    values,
     @ascii.encode("user"),
-    4,
-    owner_entry,
-    permissions,
-    @ascii.encode("doc-id"),
-    128,
   )
   @test.assert_eq(
     encrypted.lookup_object_or_null(1),
@@ -4091,21 +4051,16 @@ test "PdfDocument decrypt_single_stream handles AESV2 and AESV3 streams" {
   )
 
   let aesv2_file_id = @ascii.encode("doc-id")
-  let aesv2_owner_entry = try! @pdflite.pdf_make_owner_password_entry(
-    4,
+  let aesv2_template = try! @pdflite.pdf_document_empty().encrypt_128bit_aesv2_with_iv_provider(
+    @ascii.encode("user"),
     @ascii.encode("owner"),
-    @ascii.encode("user"),
-    128,
+    @pdflite.pdf_permissions_of_p(-3904),
+    fn(_, _, _) { Bytes::new(16) },
+    file_id=aesv2_file_id,
   )
-  let aesv2_user_entry = try! @pdflite.pdf_make_user_password_entry(
-    false,
-    @ascii.encode("user"),
-    4,
-    aesv2_owner_entry,
-    -3904,
-    aesv2_file_id,
-    128,
-  )
+  let aesv2_values = try! aesv2_template.encryption_values()
+  let aesv2_owner_entry = aesv2_values.owner_entry
+  let aesv2_user_entry = aesv2_values.user_entry
   let aesv2_encrypt_dictionary = crypt_standard_encrypt_dictionary_values_for_test(
     [
       (crypt_name_for_test("/V"), PdfInteger(4)),
@@ -4129,14 +4084,9 @@ test "PdfDocument decrypt_single_stream handles AESV2 and AESV3 streams" {
     aesv2_user_entry,
     -3904,
   )
-  let aesv2_file_key = @pdflite.pdf_encryption_file_key(
-    false,
+  let aesv2_file_key = try! crypt_user_file_key_for_test(
+    aesv2_values,
     @ascii.encode("user"),
-    4,
-    aesv2_owner_entry,
-    -3904,
-    aesv2_file_id,
-    128,
   )
   let aesv2_iv = crypt_model_bytes_for_test([
     0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c,
@@ -4273,20 +4223,19 @@ test "PdfDocument decrypt_single_stream handles AESV2 and AESV3 streams" {
 ///|
 test "PdfDocument decrypt_with_user_password decrypts parsed AESV2 objects in a copy" {
   let file_id = @ascii.encode("doc-id")
-  let owner_entry = try! @pdflite.pdf_make_owner_password_entry(
-    4,
+  let template = try! @pdflite.pdf_document_empty().encrypt_128bit_aesv2_with_iv_provider(
+    @ascii.encode("user"),
     @ascii.encode("owner"),
-    @ascii.encode("user"),
-    128,
+    @pdflite.pdf_permissions_of_p(-3904),
+    fn(_, _, _) { Bytes::new(16) },
+    file_id~,
   )
-  let user_entry = try! @pdflite.pdf_make_user_password_entry(
-    false,
+  let values = try! template.encryption_values()
+  let owner_entry = values.owner_entry
+  let user_entry = values.user_entry
+  let file_key = try! crypt_user_file_key_for_test(
+    values,
     @ascii.encode("user"),
-    4,
-    owner_entry,
-    -3904,
-    file_id,
-    128,
   )
   let encrypt_dictionary = crypt_standard_encrypt_dictionary_values_for_test(
     [
@@ -4312,15 +4261,6 @@ test "PdfDocument decrypt_with_user_password decrypts parsed AESV2 objects in a 
     -3904,
   )
   let doc = @pdflite.pdf_document_empty()
-  let file_key = @pdflite.pdf_encryption_file_key(
-    false,
-    @ascii.encode("user"),
-    4,
-    owner_entry,
-    -3904,
-    file_id,
-    128,
-  )
   let iv = crypt_model_bytes_for_test([
     0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c,
     0x1d, 0x1e, 0x1f,
@@ -4404,20 +4344,20 @@ test "PdfDocument decrypt_with_user_password decrypts parsed AESV2 objects in a 
 ///|
 test "PdfDocument decrypt_with_user_password honors EncryptMetadata false" {
   let file_id = @ascii.encode("doc-id")
-  let owner_entry = try! @pdflite.pdf_make_owner_password_entry(
-    4,
+  let template = try! @pdflite.pdf_document_empty().encrypt_128bit_aesv2_with_iv_provider(
+    @ascii.encode("user"),
     @ascii.encode("owner"),
-    @ascii.encode("user"),
-    128,
+    @pdflite.pdf_permissions_of_p(-3904),
+    fn(_, _, _) { Bytes::new(16) },
+    encrypt_metadata=false,
+    file_id~,
   )
-  let user_entry = try! @pdflite.pdf_make_user_password_entry(
-    true,
+  let values = try! template.encryption_values()
+  let owner_entry = values.owner_entry
+  let user_entry = values.user_entry
+  let file_key = try! crypt_user_file_key_for_test(
+    values,
     @ascii.encode("user"),
-    4,
-    owner_entry,
-    -3904,
-    file_id,
-    128,
   )
   let encrypt_dictionary = crypt_standard_encrypt_dictionary_values_for_test(
     [
@@ -4442,15 +4382,6 @@ test "PdfDocument decrypt_with_user_password honors EncryptMetadata false" {
     owner_entry,
     user_entry,
     -3904,
-  )
-  let file_key = @pdflite.pdf_encryption_file_key(
-    true,
-    @ascii.encode("user"),
-    4,
-    owner_entry,
-    -3904,
-    file_id,
-    128,
   )
   let iv = crypt_model_bytes_for_test([
     0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d,

@@ -48,7 +48,7 @@ fn pdf_crypt_push_view(output : Array[Byte], data : BytesView) -> Unit {
 ///
 /// This implements revisions 2-4 key derivation. AESV3 uses wrapped file keys
 /// instead and should go through the `PdfEncryptionValues` helpers.
-pub fn pdf_encryption_file_key(
+fn pdf_encryption_file_key(
   no_encrypt_metadata : Bool,
   password : BytesView,
   revision : Int,
@@ -99,7 +99,7 @@ fn pdf_key_xor_iteration(key : BytesView, iteration : Int) -> PdfBytes {
 ///
 /// The entry is derived from the user password, owner entry, permission mask,
 /// file ID, key length, and metadata-encryption flag.
-pub fn pdf_make_user_password_entry(
+fn pdf_make_user_password_entry(
   no_encrypt_metadata : Bool,
   user_password : BytesView,
   revision : Int,
@@ -195,7 +195,7 @@ fn pdf_owner_password_key(
 ///
 /// A blank owner password follows PDF behavior by using the user password as
 /// the owner-password source.
-pub fn pdf_make_owner_password_entry(
+fn pdf_make_owner_password_entry(
   revision : Int,
   owner_password : BytesView,
   user_password : BytesView,
