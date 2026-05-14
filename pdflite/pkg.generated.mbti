@@ -203,20 +203,6 @@ pub fn pdf_content_end_artifact() -> PdfContentOp
 
 pub fn pdf_content_stream_of_ops(ArrayView[PdfContentOp]) -> PdfObject raise PdfError
 
-pub fn pdf_cryptprimitives_aes_decrypt_data(Int, ArrayView[Int], BytesView, remove_padding? : Bool) -> Bytes raise PdfError
-
-pub fn pdf_cryptprimitives_aes_decrypt_data_ecb(Int, ArrayView[Int], BytesView, remove_padding? : Bool) -> Bytes raise PdfError
-
-pub fn pdf_cryptprimitives_aes_encrypt_data_ecb(Int, ArrayView[Int], BytesView) -> Bytes raise PdfError
-
-pub fn pdf_cryptprimitives_aes_encrypt_data_with_firstblock(Int, ArrayView[Int], BytesView, BytesView) -> Bytes raise PdfError
-
-pub fn pdf_cryptprimitives_crypt(ArrayView[Int], BytesView) -> Bytes raise PdfError
-
-pub fn pdf_cryptprimitives_decrypt_stream_data(PdfCryptType, Bool, BytesView?, Int, Int, ArrayView[Int], Int, Int, BytesView, firstblock? : BytesView?) -> Bytes raise PdfError
-
-pub fn pdf_cryptprimitives_find_hash(PdfCryptType, Int, Int, ArrayView[Int], Int) -> Array[Int] raise PdfError
-
 pub fn pdf_date_of_bytes(Bytes) -> PdfDate raise PdfError
 
 pub fn pdf_date_of_object(PdfObject) -> PdfDate raise PdfError
