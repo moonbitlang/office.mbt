@@ -64,6 +64,25 @@ fn crypt_bytes_contain_for_test(
 }
 
 ///|
+fn crypt_arc4_crypt_object_for_test(
+  object_number : Int,
+  generation : Int,
+  file_key : BytesView,
+  key_length_bits : Int,
+  object : @pdflite.PdfObject,
+  no_encrypt_metadata? : Bool = false,
+) -> @pdflite.PdfObject raise {
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(object_number, object, generation~)
+  let crypted = doc.arc4_crypt_parsed_objects(
+    file_key,
+    key_length_bits,
+    no_encrypt_metadata~,
+  )
+  crypted.lookup_object_or_null(object_number)
+}
+
+///|
 fn crypt_aesv2_encrypt_data_for_test(
   object_number : Int,
   generation : Int,
@@ -1507,7 +1526,7 @@ test "PdfDocument decrypt_with_user_password decrypts parsed ARC4 objects in a c
   let plain_object : @pdflite.PdfObject = PdfDictionary([
     (crypt_name_for_test("/Title"), PdfString(@ascii.encode("hello"))),
   ])
-  let encrypted_object = try! @pdflite.pdf_arc4_crypt_pdf_object(
+  let encrypted_object = try! crypt_arc4_crypt_object_for_test(
     1, 0, file_key, 128, plain_object,
   )
   let doc = @pdflite.pdf_document_empty()
@@ -1634,7 +1653,7 @@ test "PdfDocument decrypt_with_owner_password decrypts parsed ARC4 objects in a 
   let plain_object : @pdflite.PdfObject = PdfDictionary([
     (crypt_name_for_test("/Title"), PdfString(@ascii.encode("owner"))),
   ])
-  let encrypted_object = try! @pdflite.pdf_arc4_crypt_pdf_object(
+  let encrypted_object = try! crypt_arc4_crypt_object_for_test(
     1, 0, file_key, 128, plain_object,
   )
   let doc = @pdflite.pdf_document_empty()
@@ -1740,7 +1759,7 @@ test "PdfDocument encrypt_40bit encrypts parsed objects and installs dictionary"
   )
   @test.assert_eq(
     encrypted.lookup_object_or_null(1),
-    try! @pdflite.pdf_arc4_crypt_pdf_object(1, 0, file_key, 40, plain_object),
+    try! crypt_arc4_crypt_object_for_test(1, 0, file_key, 40, plain_object),
   )
   guard encrypted.trailer_dict().lookup_immediate(key_encrypt)
     is Some(PdfIndirect(encrypt_number)) else {
@@ -2958,7 +2977,7 @@ test "PdfDocument encrypt_128bit encrypts parsed objects and writes length" {
   )
   @test.assert_eq(
     encrypted.lookup_object_or_null(1),
-    try! @pdflite.pdf_arc4_crypt_pdf_object(1, 0, file_key, 128, plain_object),
+    try! crypt_arc4_crypt_object_for_test(1, 0, file_key, 128, plain_object),
   )
   guard encrypted.trailer_dict().lookup_immediate(key_encrypt)
     is Some(PdfIndirect(encrypt_number)) else {
@@ -3057,7 +3076,7 @@ test "PdfDocument encrypt_128bit_r4 writes crypt filter and honors metadata flag
   )
   @test.assert_eq(
     encrypted.lookup_object_or_null(1),
-    try! @pdflite.pdf_arc4_crypt_pdf_object(
+    try! crypt_arc4_crypt_object_for_test(
       1,
       0,
       file_key,
@@ -5300,7 +5319,7 @@ test "PdfEncryptionValues authenticate_owner_password validates through recovere
 }
 
 ///|
-test "pdf_arc4_crypt_pdf_object recurses through strings arrays and dictionaries" {
+test "PdfDocument ARC4 parsed-object crypt recurses through dictionaries" {
   let key = crypt_model_bytes_for_test([1, 2, 3, 4, 5])
   let encrypted_hello = crypt_model_bytes_for_test([
     0x7d, 0x1c, 0x38, 0x4c, 0xca,
@@ -5319,9 +5338,7 @@ test "pdf_arc4_crypt_pdf_object recurses through strings arrays and dictionaries
       ]),
     ),
   ])
-  let encrypted = try! @pdflite.pdf_arc4_crypt_pdf_object(
-    12, 0, key, 40, object,
-  )
+  let encrypted = try! crypt_arc4_crypt_object_for_test(12, 0, key, 40, object)
   @test.assert_eq(
     encrypted,
     PdfDictionary([
@@ -5337,13 +5354,13 @@ test "pdf_arc4_crypt_pdf_object recurses through strings arrays and dictionaries
     ]),
   )
   @test.assert_eq(
-    try! @pdflite.pdf_arc4_crypt_pdf_object(12, 0, key, 40, encrypted),
+    try! crypt_arc4_crypt_object_for_test(12, 0, key, 40, encrypted),
     object,
   )
 }
 
 ///|
-test "pdf_arc4_crypt_pdf_object encrypts stream dictionaries and data" {
+test "PdfDocument ARC4 parsed-object crypt encrypts stream dictionaries and data" {
   let key = crypt_model_bytes_for_test([1, 2, 3, 4, 5])
   let encrypted_hello = crypt_model_bytes_for_test([
     0x7d, 0x1c, 0x38, 0x4c, 0xca,
@@ -5357,9 +5374,7 @@ test "pdf_arc4_crypt_pdf_object encrypts stream dictionaries and data" {
     ]),
     data: StreamGot(@ascii.encode("hello")),
   })
-  let encrypted = try! @pdflite.pdf_arc4_crypt_pdf_object(
-    12, 0, key, 40, object,
-  )
+  let encrypted = try! crypt_arc4_crypt_object_for_test(12, 0, key, 40, object)
   @test.assert_eq(
     encrypted,
     PdfStreamObject({
@@ -5371,13 +5386,13 @@ test "pdf_arc4_crypt_pdf_object encrypts stream dictionaries and data" {
     }),
   )
   @test.assert_eq(
-    try! @pdflite.pdf_arc4_crypt_pdf_object(12, 0, key, 40, encrypted),
+    try! crypt_arc4_crypt_object_for_test(12, 0, key, 40, encrypted),
     object,
   )
 }
 
 ///|
-test "pdf_arc4_crypt_pdf_object skips metadata and identity Crypt streams" {
+test "PdfDocument ARC4 parsed-object crypt skips metadata and identity Crypt streams" {
   let key = crypt_model_bytes_for_test([1, 2, 3, 4, 5])
   let hello = @ascii.encode("hello")
   let encrypted_hello = crypt_model_bytes_for_test([
@@ -5402,7 +5417,7 @@ test "pdf_arc4_crypt_pdf_object skips metadata and identity Crypt streams" {
     hello,
   )
   @test.assert_eq(
-    try! @pdflite.pdf_arc4_crypt_pdf_object(
+    try! crypt_arc4_crypt_object_for_test(
       12,
       0,
       key,
@@ -5413,7 +5428,7 @@ test "pdf_arc4_crypt_pdf_object skips metadata and identity Crypt streams" {
     metadata_stream,
   )
   @test.assert_eq(
-    try! @pdflite.pdf_arc4_crypt_pdf_object(12, 0, key, 40, metadata_stream),
+    try! crypt_arc4_crypt_object_for_test(12, 0, key, 40, metadata_stream),
     crypt_stream_for_test(
       [
         (key_length, PdfInteger(5)),
@@ -5428,7 +5443,7 @@ test "pdf_arc4_crypt_pdf_object skips metadata and identity Crypt streams" {
     hello,
   )
   @test.assert_eq(
-    try! @pdflite.pdf_arc4_crypt_pdf_object(
+    try! crypt_arc4_crypt_object_for_test(
       12,
       0,
       key,
@@ -5451,7 +5466,7 @@ test "pdf_arc4_crypt_pdf_object skips metadata and identity Crypt streams" {
     hello,
   )
   @test.assert_eq(
-    try! @pdflite.pdf_arc4_crypt_pdf_object(12, 0, key, 40, crypt_stream),
+    try! crypt_arc4_crypt_object_for_test(12, 0, key, 40, crypt_stream),
     crypt_stream,
   )
 
@@ -5468,9 +5483,7 @@ test "pdf_arc4_crypt_pdf_object skips metadata and identity Crypt streams" {
     hello,
   )
   @test.assert_eq(
-    try! @pdflite.pdf_arc4_crypt_pdf_object(
-      12, 0, key, 40, identity_dict_stream,
-    ),
+    try! crypt_arc4_crypt_object_for_test(12, 0, key, 40, identity_dict_stream),
     identity_dict_stream,
   )
 
@@ -5487,9 +5500,7 @@ test "pdf_arc4_crypt_pdf_object skips metadata and identity Crypt streams" {
     hello,
   )
   @test.assert_eq(
-    try! @pdflite.pdf_arc4_crypt_pdf_object(
-      12, 0, key, 40, identity_array_stream,
-    ),
+    try! crypt_arc4_crypt_object_for_test(12, 0, key, 40, identity_array_stream),
     identity_array_stream,
   )
 
@@ -5503,9 +5514,7 @@ test "pdf_arc4_crypt_pdf_object skips metadata and identity Crypt streams" {
     hello,
   )
   @test.assert_eq(
-    try! @pdflite.pdf_arc4_crypt_pdf_object(
-      12, 0, key, 40, unnamed_crypt_stream,
-    ),
+    try! crypt_arc4_crypt_object_for_test(12, 0, key, 40, unnamed_crypt_stream),
     unnamed_crypt_stream,
   )
 
@@ -5519,7 +5528,7 @@ test "pdf_arc4_crypt_pdf_object skips metadata and identity Crypt streams" {
     hello,
   )
   @test.assert_eq(
-    try! @pdflite.pdf_arc4_crypt_pdf_object(12, 0, key, 40, named_crypt_stream),
+    try! crypt_arc4_crypt_object_for_test(12, 0, key, 40, named_crypt_stream),
     crypt_stream_for_test(
       [
         (key_length, PdfInteger(5)),
@@ -5544,7 +5553,7 @@ test "pdf_arc4_crypt_pdf_object skips metadata and identity Crypt streams" {
     hello,
   )
   @test.assert_eq(
-    try! @pdflite.pdf_arc4_crypt_pdf_object(
+    try! crypt_arc4_crypt_object_for_test(
       12, 0, key, 40, malformed_crypt_stream,
     ),
     crypt_stream_for_test(
@@ -5921,7 +5930,7 @@ test "PdfDocument arc4_crypt_parsed_objects encrypts parsed objects in a copy" {
   )
   @test.assert_eq(
     encrypted.lookup_object_or_null(1),
-    try! @pdflite.pdf_arc4_crypt_pdf_object(
+    try! crypt_arc4_crypt_object_for_test(
       1,
       0,
       key,
@@ -5935,7 +5944,7 @@ test "PdfDocument arc4_crypt_parsed_objects encrypts parsed objects in a copy" {
   )
   @test.assert_eq(
     encrypted.lookup_object_or_null(3),
-    try! @pdflite.pdf_arc4_crypt_pdf_object(
+    try! crypt_arc4_crypt_object_for_test(
       3,
       1,
       key,

@@ -79,8 +79,6 @@ pub fn pdf_annotations_of_page(PdfDocument, PdfPage) -> Array[PdfAnnotation] rai
 
 pub fn pdf_arc4_crypt(BytesView, BytesView) -> Bytes raise PdfError
 
-pub fn pdf_arc4_crypt_pdf_object(Int, Int, BytesView, Int, PdfObject, no_encrypt_metadata? : Bool) -> PdfObject raise PdfError
-
 pub fn pdf_array(ArrayView[PdfObject]) -> PdfObject
 
 pub fn pdf_ascii85_decode(Bytes) -> Bytes raise PdfError

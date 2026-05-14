@@ -98,7 +98,7 @@ fn pdf_arc4_crypt_pdf_object_with_stream_policy(
 /// ARC4 is symmetric. The object key is derived from object number,
 /// generation, file key, and key length. Streams using identity crypt filters,
 /// and metadata streams when `no_encrypt_metadata=true`, are left unchanged.
-pub fn pdf_arc4_crypt_pdf_object(
+fn pdf_arc4_crypt_pdf_object(
   object_number : Int,
   generation : Int,
   file_key : BytesView,
