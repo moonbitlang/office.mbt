@@ -1742,9 +1742,7 @@ pub(all) struct PdfSampledFunction {
   samples : Array[Int]
 } derive(Eq, ToJson, @debug.Debug)
 
-pub(all) struct PdfSavedEncryption {
-  values : PdfEncryptionValues
-} derive(Eq, ToJson, @debug.Debug)
+type PdfSavedEncryption derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfSimpleFont {
   fonttype : PdfSimpleFontType

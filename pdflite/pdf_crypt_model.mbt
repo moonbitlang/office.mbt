@@ -51,7 +51,7 @@ pub(all) struct PdfEncryptionValues {
 ///
 /// Recrypt helpers use this to put a previously encrypted document back into
 /// its original security-handler shape after edits.
-pub(all) struct PdfSavedEncryption {
+struct PdfSavedEncryption {
   values : PdfEncryptionValues
 } derive(Debug, Eq, ToJson)
 
