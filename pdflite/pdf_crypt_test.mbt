@@ -894,7 +894,7 @@ test "PdfDocument encryption_values parses crypt filter methods" {
 }
 
 ///|
-test "PdfEncryptionValues authenticates passwords and derives file keys" {
+test "PdfEncryptionValues authenticates user and owner passwords" {
   let doc = try! @pdflite.pdf_document_empty().encrypt_128bit(
     @ascii.encode("user"),
     @ascii.encode("owner"),
@@ -902,10 +902,6 @@ test "PdfEncryptionValues authenticates passwords and derives file keys" {
     file_id=@ascii.encode("doc-id"),
   )
   let values = try! doc.encryption_values()
-  let expected_key = try! values.file_key_for_user_password(
-    @ascii.encode("user"),
-  )
-  guard expected_key is Some(_) else { fail("expected user file key") }
   @test.assert_eq(
     try! values.authenticate_user_password(@ascii.encode("user")),
     true,
@@ -915,28 +911,12 @@ test "PdfEncryptionValues authenticates passwords and derives file keys" {
     false,
   )
   @test.assert_eq(
-    try! values.file_key_for_user_password(@ascii.encode("user")),
-    expected_key,
-  )
-  @test.assert_eq(
-    try! values.file_key_for_user_password(@ascii.encode("bad")),
-    None,
-  )
-  @test.assert_eq(
     try! values.authenticate_owner_password(@ascii.encode("owner")),
     true,
   )
   @test.assert_eq(
     try! values.authenticate_owner_password(@ascii.encode("bad")),
     false,
-  )
-  @test.assert_eq(
-    try! values.file_key_for_owner_password(@ascii.encode("owner")),
-    expected_key,
-  )
-  @test.assert_eq(
-    try! values.file_key_for_owner_password(@ascii.encode("bad")),
-    None,
   )
 }
 
@@ -950,18 +930,10 @@ test "PdfEncryptionValues treats AESV2 as revision 4 with 128-bit keys" {
     file_id=@ascii.encode("doc-id"),
   )
   let values = try! doc.encryption_values()
-  let expected_key = try! values.file_key_for_user_password(
-    @ascii.encode("user"),
-  )
-  guard expected_key is Some(_) else { fail("expected AESV2 user file key") }
   @test.assert_eq(values.crypt_type, PdfCryptAESV2)
   @test.assert_eq(
     try! values.authenticate_user_password(@ascii.encode("user")),
     true,
-  )
-  @test.assert_eq(
-    try! values.file_key_for_user_password(@ascii.encode("user")),
-    expected_key,
   )
 }
 
@@ -1024,22 +996,6 @@ test "PdfEncryptionValues authenticates AESV3 revision 5 passwords" {
     try! values.authenticate_owner_password(@ascii.encode("bad")),
     false,
   )
-  @test.assert_eq(
-    try! values.file_key_for_user_password(@ascii.encode("user")),
-    Some(crypt_aesv3_r5_file_key_for_test()),
-  )
-  @test.assert_eq(
-    try! values.file_key_for_user_password(@ascii.encode("bad")),
-    None,
-  )
-  @test.assert_eq(
-    try! values.file_key_for_owner_password(@ascii.encode("owner")),
-    Some(crypt_aesv3_r5_file_key_for_test()),
-  )
-  @test.assert_eq(
-    try! values.file_key_for_owner_password(@ascii.encode("bad")),
-    None,
-  )
 
   let missing_perms_doc = crypt_doc_with_encrypt_for_test(
     crypt_standard_encrypt_dictionary_values_for_test(
@@ -1074,8 +1030,7 @@ test "PdfEncryptionValues authenticates AESV3 revision 5 passwords" {
       -3904,
     ),
   )
-  let missing_perms = try! missing_perms_doc.encryption_values()
-  let missing_perms_result : Result[@pdflite.PdfBytes?, Error] = try? missing_perms.file_key_for_user_password(
+  let missing_perms_result : Result[@pdflite.PdfDecryptionResult?, Error] = try? missing_perms_doc.decrypt_with_user_password(
     @ascii.encode("user"),
   )
   guard missing_perms_result
@@ -1118,8 +1073,7 @@ test "PdfEncryptionValues authenticates AESV3 revision 5 passwords" {
       -3904,
     ),
   )
-  let short_perms = try! short_perms_doc.encryption_values()
-  let short_perms_result : Result[@pdflite.PdfBytes?, Error] = try? short_perms.file_key_for_user_password(
+  let short_perms_result : Result[@pdflite.PdfDecryptionResult?, Error] = try? short_perms_doc.decrypt_with_user_password(
     @ascii.encode("user"),
   )
   guard short_perms_result
@@ -1162,8 +1116,7 @@ test "PdfEncryptionValues authenticates AESV3 revision 5 passwords" {
       -3904,
     ),
   )
-  let corrupt_perms = try! corrupt_perms_doc.encryption_values()
-  let corrupt_perms_result : Result[@pdflite.PdfBytes?, Error] = try? corrupt_perms.file_key_for_user_password(
+  let corrupt_perms_result : Result[@pdflite.PdfDecryptionResult?, Error] = try? corrupt_perms_doc.decrypt_with_user_password(
     @ascii.encode("user"),
   )
   guard corrupt_perms_result
@@ -1208,8 +1161,7 @@ test "PdfEncryptionValues authenticates AESV3 revision 5 passwords" {
       -3904,
     ),
   )
-  let mismatched_perms = try! mismatched_perms_doc.encryption_values()
-  let mismatched_perms_result : Result[@pdflite.PdfBytes?, Error] = try? mismatched_perms.file_key_for_owner_password(
+  let mismatched_perms_result : Result[@pdflite.PdfDecryptionResult?, Error] = try? mismatched_perms_doc.decrypt_with_owner_password(
     @ascii.encode("owner"),
   )
   guard mismatched_perms_result
@@ -1246,8 +1198,7 @@ test "PdfEncryptionValues authenticates AESV3 revision 5 passwords" {
       -3904,
     ),
   )
-  let missing_ue = try! missing_ue_doc.encryption_values()
-  let missing_ue_result : Result[@pdflite.PdfBytes?, Error] = try? missing_ue.file_key_for_user_password(
+  let missing_ue_result : Result[@pdflite.PdfDecryptionResult?, Error] = try? missing_ue_doc.decrypt_with_user_password(
     @ascii.encode("user"),
   )
   guard missing_ue_result
@@ -1289,8 +1240,7 @@ test "PdfEncryptionValues authenticates AESV3 revision 5 passwords" {
       -3904,
     ),
   )
-  let short_oe = try! short_oe_doc.encryption_values()
-  let short_oe_result : Result[@pdflite.PdfBytes?, Error] = try? short_oe.file_key_for_owner_password(
+  let short_oe_result : Result[@pdflite.PdfDecryptionResult?, Error] = try? short_oe_doc.decrypt_with_owner_password(
     @ascii.encode("owner"),
   )
   guard short_oe_result

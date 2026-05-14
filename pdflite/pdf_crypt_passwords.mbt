@@ -56,7 +56,7 @@ pub fn PdfEncryptionValues::authenticate_user_password(
 ///
 /// A wrong password returns `None`; malformed encryption values or corrupt
 /// AESV3 permission entries raise `PdfError`.
-pub fn PdfEncryptionValues::file_key_for_user_password(
+fn PdfEncryptionValues::file_key_for_user_password(
   self : PdfEncryptionValues,
   password : BytesView,
   no_encrypt_metadata? : Bool = false,
@@ -151,7 +151,7 @@ pub fn PdfEncryptionValues::authenticate_owner_password(
 ///
 /// A wrong password returns `None`; malformed encryption values or corrupt
 /// AESV3 permission entries raise `PdfError`.
-pub fn PdfEncryptionValues::file_key_for_owner_password(
+fn PdfEncryptionValues::file_key_for_owner_password(
   self : PdfEncryptionValues,
   password : BytesView,
   no_encrypt_metadata? : Bool = false,
