@@ -59,25 +59,11 @@ pub fn pdf_add_prefix(PdfDocument, String) -> Unit raise PdfError
 
 pub fn pdf_add_root(Int, ArrayView[(PdfName, PdfObject)], PdfDocument) -> PdfDocument raise PdfError
 
-pub fn pdf_aes_cbc_decrypt(BytesView, BytesView, remove_padding? : Bool) -> Bytes raise PdfError
-
-pub fn pdf_aes_cbc_encrypt_with_iv(BytesView, BytesView, BytesView) -> Bytes raise PdfError
-
-pub fn pdf_aes_decrypt_block(BytesView, BytesView) -> Bytes raise PdfError
-
-pub fn pdf_aes_ecb_decrypt(BytesView, BytesView, remove_padding? : Bool) -> Bytes raise PdfError
-
-pub fn pdf_aes_ecb_encrypt(BytesView, BytesView) -> Bytes raise PdfError
-
-pub fn pdf_aes_encrypt_block(BytesView, BytesView) -> Bytes raise PdfError
-
 pub fn pdf_annotation_make(PdfAnnotationSubtype, contents? : Bytes?, border? : PdfAnnotationBorder, rectangle? : PdfRectangle, colour? : PdfAnnotationColour?, subject? : Bytes?) -> PdfAnnotation
 
 pub fn pdf_annotation_make_border(Double, vertical_radius? : Double, horizontal_radius? : Double, style? : PdfAnnotationStyle, dash_array? : ArrayView[Int]) -> PdfAnnotationBorder
 
 pub fn pdf_annotations_of_page(PdfDocument, PdfPage) -> Array[PdfAnnotation] raise PdfError
-
-pub fn pdf_arc4_crypt(BytesView, BytesView) -> Bytes raise PdfError
 
 pub fn pdf_array(ArrayView[PdfObject]) -> PdfObject
 
@@ -295,8 +281,6 @@ pub fn pdf_make_hex_pdf_string(BytesView) -> Bytes
 
 pub fn pdf_make_pdf_string(BytesView) -> Bytes
 
-pub fn pdf_md5_digest(BytesView) -> Bytes
-
 pub fn pdf_merge_documents(ArrayView[PdfDocument], ArrayView[Array[Int]], retain_numbering? : Bool, retain_bookmarks? : Bool, retain_optional_content? : Bool, retain_acroforms? : Bool, retain_named_destinations? : Bool, retain_name_dictionary? : Bool, retain_structure_tree? : Bool, add_toplevel_document? : Bool, retain_info? : Bool, retain_catalog_entries? : Bool, remove_duplicate_fonts? : Bool) -> PdfDocument raise PdfError
 
 pub fn pdf_merge_name_trees_no_clash(PdfDocument, ArrayView[PdfObject]) -> PdfObject
@@ -512,12 +496,6 @@ pub fn pdf_run_length_decode_view(BytesView) -> Bytes
 pub fn pdf_run_length_encode(Bytes) -> Bytes
 
 pub fn pdf_run_length_encode_view(BytesView) -> Bytes
-
-pub fn pdf_sha256_digest(BytesView) -> Bytes
-
-pub fn pdf_sha384_digest(BytesView) -> Bytes
-
-pub fn pdf_sha512_digest(BytesView) -> Bytes
 
 pub fn pdf_shortest_unused_prefix(PdfDocument) -> String
 

@@ -26,10 +26,7 @@ fn pdf_arc4_swap(state : Array[Int], left : Int, right : Int) -> Unit {
 ///
 /// ARC4 is symmetric, so the same function encrypts and decrypts. Empty keys
 /// raise `CryptoKeyExpected`.
-pub fn pdf_arc4_crypt(
-  key : BytesView,
-  data : BytesView,
-) -> PdfBytes raise PdfError {
+fn pdf_arc4_crypt(key : BytesView, data : BytesView) -> PdfBytes raise PdfError {
   guard key.length() > 0 else { raise CryptoKeyExpected }
   let state : Array[Int] = []
   for value in 0..<256 {
@@ -94,7 +91,7 @@ let pdf_md5_constants : FixedArray[UInt] = [
 
 ///|
 /// Return the MD5 digest of `data`.
-pub fn pdf_md5_digest(data : BytesView) -> PdfBytes {
+fn pdf_md5_digest(data : BytesView) -> PdfBytes {
   let message : Array[Byte] = []
   for byte in data {
     message.push(byte)
@@ -160,7 +157,7 @@ pub fn pdf_md5_digest(data : BytesView) -> PdfBytes {
 
 ///|
 /// Return the SHA-256 digest of `data`.
-pub fn pdf_sha256_digest(data : BytesView) -> PdfBytes {
+fn pdf_sha256_digest(data : BytesView) -> PdfBytes {
   Bytes::from_array(@crypto.sha256(data))
 }
 
@@ -321,7 +318,7 @@ fn pdf_sha512_digest_with_state(
 
 ///|
 /// Return the SHA-384 digest of `data`.
-pub fn pdf_sha384_digest(data : BytesView) -> PdfBytes {
+fn pdf_sha384_digest(data : BytesView) -> PdfBytes {
   pdf_sha512_digest_with_state(
     data,
     [
@@ -334,7 +331,7 @@ pub fn pdf_sha384_digest(data : BytesView) -> PdfBytes {
 
 ///|
 /// Return the SHA-512 digest of `data`.
-pub fn pdf_sha512_digest(data : BytesView) -> PdfBytes {
+fn pdf_sha512_digest(data : BytesView) -> PdfBytes {
   pdf_sha512_digest_with_state(
     data,
     [
@@ -388,7 +385,7 @@ fn pdf_aes_decrypt_key(key : BytesView) -> FixedArray[Byte] raise PdfError {
 
 ///|
 /// Encrypt one 16-byte AES block with a 128-, 192-, or 256-bit key.
-pub fn pdf_aes_encrypt_block(
+fn pdf_aes_encrypt_block(
   key : BytesView,
   block : BytesView,
 ) -> PdfBytes raise PdfError {
@@ -401,7 +398,8 @@ pub fn pdf_aes_encrypt_block(
 
 ///|
 /// Decrypt one 16-byte AES block with a 128-, 192-, or 256-bit key.
-pub fn pdf_aes_decrypt_block(
+#warnings("-unused_value")
+fn pdf_aes_decrypt_block(
   key : BytesView,
   block : BytesView,
 ) -> PdfBytes raise PdfError {
@@ -438,7 +436,7 @@ fn pdf_aes_append_block(output : Array[Byte], block : FixedArray[Byte]) -> Unit 
 ///
 /// Data shorter than or equal to one block decrypts to empty bytes. Block
 /// lengths that are not multiples of 16 raise `InvalidCryptoDataLength`.
-pub fn pdf_aes_cbc_decrypt(
+fn pdf_aes_cbc_decrypt(
   key : BytesView,
   data : BytesView,
   remove_padding? : Bool = true,
@@ -498,7 +496,7 @@ fn pdf_aes_padded_blocks(data : BytesView) -> Array[FixedArray[Byte]] {
 ///
 /// PKCS-style padding is added and the returned bytes include the IV as the
 /// first block, matching PDF AES string and stream data layout.
-pub fn pdf_aes_cbc_encrypt_with_iv(
+fn pdf_aes_cbc_encrypt_with_iv(
   key : BytesView,
   iv : BytesView,
   data : BytesView,
@@ -528,7 +526,7 @@ pub fn pdf_aes_cbc_encrypt_with_iv(
 ///
 /// The input length must be a non-zero multiple of 16 unless it is empty.
 /// Padding is removed by default.
-pub fn pdf_aes_ecb_decrypt(
+fn pdf_aes_ecb_decrypt(
   key : BytesView,
   data : BytesView,
   remove_padding? : Bool = true,
@@ -561,7 +559,8 @@ pub fn pdf_aes_ecb_decrypt(
 /// Encrypt AES-ECB data without adding padding.
 ///
 /// The input length must be a non-zero multiple of 16 unless it is empty.
-pub fn pdf_aes_ecb_encrypt(
+#warnings("-unused_value")
+fn pdf_aes_ecb_encrypt(
   key : BytesView,
   data : BytesView,
 ) -> PdfBytes raise PdfError {

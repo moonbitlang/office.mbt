@@ -30,6 +30,11 @@ fn merge_name_for_test(text : String) -> @pdflite.PdfName {
 }
 
 ///|
+fn merge_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
+  try! @pdflite.pdf_bytes_of_int_array(values)
+}
+
+///|
 fn merge_restore_env_for_test(previous : String?) -> Unit {
   match previous {
     Some(value) => @env.set_env_var("CAMLPDF_REPRODUCIBLE_IDS", value)
@@ -1085,7 +1090,10 @@ test "pdf_merge_documents installs trailer file id" {
   @env.set_env_var("CAMLPDF_REPRODUCIBLE_IDS", "true")
   let merged = try! @pdflite.pdf_merge_documents([first, second], [[1], [1]])
   merge_restore_env_for_test(previous)
-  let expected = @pdflite.pdf_md5_digest(@ascii.encode("camlpdf"))
+  let expected = merge_bytes_for_test([
+    0xe1, 0x43, 0x6d, 0x66, 0xa1, 0x0b, 0xd6, 0x4e, 0xc8, 0xc8, 0xdc, 0x0a, 0xd7,
+    0xc3, 0x83, 0x55,
+  ])
   @test.assert_eq(
     merged.trailer_dict().lookup_immediate(key_id),
     Some(PdfArray([PdfString(expected), PdfString(expected)])),

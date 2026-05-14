@@ -125,7 +125,16 @@ fn crypt_aesv3_encrypt_data_for_test(
   data : BytesView,
   iv : BytesView,
 ) -> @pdflite.PdfBytes raise {
-  @pdflite.pdf_aes_cbc_encrypt_with_iv(file_key, iv, data)
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(1, PdfString(data.to_owned()))
+  let encrypted_doc = try! doc.aesv3_encrypt_parsed_objects_with_iv_provider(
+    file_key,
+    fn(_, _, _) { iv.to_owned() },
+  )
+  match encrypted_doc.lookup_object_or_null(1) {
+    PdfString(bytes) => bytes
+    _ => fail("expected encrypted AESV3 string")
+  }
 }
 
 ///|
@@ -219,25 +228,24 @@ fn crypt_aesv3_r5_permissions_for_test(
   permissions? : Int = -3904,
   encrypt_metadata? : Bool = true,
 ) -> @pdflite.PdfBytes {
-  let block : Array[Byte] = []
-  for shift in [0, 8, 16, 24] {
-    block.push(((permissions >> shift) & 0xff).to_byte())
+  match (permissions, encrypt_metadata) {
+    (-3904, true) =>
+      crypt_model_bytes_for_test([
+        0x61, 0x58, 0xb9, 0xdd, 0xf6, 0x26, 0xa8, 0xfa, 0x36, 0x68, 0x20, 0xad, 0x7e,
+        0xd7, 0xde, 0x4d,
+      ])
+    (-4, true) =>
+      crypt_model_bytes_for_test([
+        0x90, 0x96, 0xe4, 0x75, 0x19, 0xec, 0x03, 0x12, 0x27, 0x76, 0x55, 0xae, 0xd4,
+        0x41, 0x52, 0x20,
+      ])
+    (-3904, false) =>
+      crypt_model_bytes_for_test([
+        0xc1, 0x3b, 0x0f, 0x6a, 0xb2, 0xc5, 0x1a, 0x9e, 0x81, 0x15, 0xa5, 0xc3, 0xa3,
+        0x96, 0xd7, 0x26,
+      ])
+    _ => crypt_model_bytes_for_test([])
   }
-  for _ in 0..<4 {
-    block.push((255).to_byte())
-  }
-  block.push(if encrypt_metadata { b'T' } else { b'F' })
-  block.push(b'a')
-  block.push(b'd')
-  block.push(b'b')
-  for _ in 0..<4 {
-    block.push(b'\x00')
-  }
-  let block_bytes = Bytes::from_array(block)
-  try! @pdflite.pdf_aes_encrypt_block(
-    crypt_aesv3_r5_file_key_for_test(),
-    block_bytes,
-  )
 }
 
 ///|
@@ -1750,7 +1758,10 @@ test "PdfDocument encrypt_40bit adds a file id when missing" {
     [],
   )
   crypt_restore_env_for_test(previous)
-  let generated_id = @pdflite.pdf_md5_digest(@ascii.encode("camlpdf"))
+  let generated_id = crypt_model_bytes_for_test([
+    0xe1, 0x43, 0x6d, 0x66, 0xa1, 0x0b, 0xd6, 0x4e, 0xc8, 0xc8, 0xdc, 0x0a, 0xd7,
+    0xc3, 0x83, 0x55,
+  ])
   @test.assert_eq(
     generated.trailer_dict().lookup_immediate(key_id),
     Some(PdfArray([PdfString(generated_id), PdfString(generated_id)])),
@@ -4777,18 +4788,6 @@ test "PdfDocument encryption_values reports malformed encryption dictionaries" {
   guard bad_id_result is Err(@pdflite.PdfError::EncryptionIDExpected) else {
     fail("expected EncryptionIDExpected")
   }
-}
-
-///|
-test "pdf_sha256_digest matches SHA-256 known vector" {
-  @test.assert_eq(
-    @pdflite.pdf_sha256_digest(@ascii.encode("abc")),
-    crypt_model_bytes_for_test([
-      0xba, 0x78, 0x16, 0xbf, 0x8f, 0x01, 0xcf, 0xea, 0x41, 0x41, 0x40, 0xde, 0x5d,
-      0xae, 0x22, 0x23, 0xb0, 0x03, 0x61, 0xa3, 0x96, 0x17, 0x7a, 0x9c, 0xb4, 0x10,
-      0xff, 0x61, 0xf2, 0x00, 0x15, 0xad,
-    ]),
-  )
 }
 
 ///|
