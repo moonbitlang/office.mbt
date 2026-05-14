@@ -125,11 +125,18 @@ fn crypt_aesv3_encrypt_data_for_test(
   data : BytesView,
   iv : BytesView,
 ) -> @pdflite.PdfBytes raise {
+  guard file_key == crypt_aesv3_r5_file_key_for_test() else {
+    fail("expected AESV3 R5 file key fixture")
+  }
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(1, PdfString(data.to_owned()))
-  let encrypted_doc = try! doc.aesv3_encrypt_parsed_objects_with_iv_provider(
-    file_key,
+  let encrypted_doc = try! doc.encrypt_256bit_aesv3_with_providers(
+    @ascii.encode("user"),
+    @ascii.encode("owner"),
+    [],
+    crypt_aesv3_r5_random_for_test,
     fn(_, _, _) { iv.to_owned() },
+    file_id=@ascii.encode("doc-id"),
   )
   match encrypted_doc.lookup_object_or_null(1) {
     PdfString(bytes) => bytes
