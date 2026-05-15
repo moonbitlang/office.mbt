@@ -1,13 +1,51 @@
 ///|
-fn markdown_cmd_usage() -> Unit raise {
-  fail("usage: moon run --target native markdown/cmd <input.pdf> <output.md>")
+fn markdown_cmd_command() -> @argparse.Command {
+  @argparse.Command(
+    "pdflite-markdown",
+    about="Extract Markdown text from a PDF file.",
+    positionals=[
+      @argparse.PositionArg(
+        "input",
+        about="Input PDF path.",
+        num_args=@argparse.ValueRange::single(),
+      ),
+      @argparse.PositionArg(
+        "output",
+        about="Output Markdown path.",
+        num_args=@argparse.ValueRange::single(),
+      ),
+    ],
+  )
+}
+
+///|
+fn markdown_cmd_single_value(
+  matches : @argparse.Matches,
+  name : String,
+) -> String raise {
+  match matches.values.get(name) {
+    Some(values) if values.length() == 1 => values[0]
+    _ => fail("argparse did not return one value for " + name)
+  }
+}
+
+///|
+fn markdown_cmd_parse_args(argv? : ArrayView[String]) -> (String, String) raise {
+  let command = markdown_cmd_command()
+  let matches = match argv {
+    Some(argv) => command.parse(argv~, env={})
+    None => command.parse()
+  }
+  (
+    markdown_cmd_single_value(matches, "input"),
+    markdown_cmd_single_value(matches, "output"),
+  )
 }
 
 ///|
 async fn main {
-  let args = @env.args()
-  guard args.length() == 3 else { markdown_cmd_usage() }
-  markdown_cmd_convert_file(args[1], args[2])
+  let (input_path, output_path) = markdown_cmd_parse_args()
+  markdown_cmd_convert_file(input_path, output_path)
 }
 
 ///|

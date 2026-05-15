@@ -36,6 +36,77 @@ fn markdown_cmd_assert_contains_for_test(
 }
 
 ///|
+test "markdown command renders argparse help" {
+  inspect(
+    markdown_cmd_command().render_help(),
+    content=(
+      #|Usage: pdflite-markdown <input> <output>
+      #|
+      #|Extract Markdown text from a PDF file.
+      #|
+      #|Arguments:
+      #|  input   Input PDF path.
+      #|  output  Output Markdown path.
+      #|
+      #|Options:
+      #|  -h, --help  Show help information.
+      #|
+    ),
+  )
+}
+
+///|
+test "markdown command parses required input and output paths" {
+  let (input_path, output_path) = try! markdown_cmd_parse_args(argv=[
+    "input.pdf", "output.md",
+  ])
+  @test.assert_eq(input_path, "input.pdf")
+  @test.assert_eq(output_path, "output.md")
+}
+
+///|
+test "markdown command reports missing positional arguments with argparse help" {
+  try markdown_cmd_parse_args(argv=[]) catch {
+    err =>
+      inspect(
+        err.to_string(),
+        content=(
+          #|error: 'input' requires at least 1 values but only 0 were provided
+          #|
+          #|Usage: pdflite-markdown <input> <output>
+          #|
+          #|Extract Markdown text from a PDF file.
+          #|
+          #|Arguments:
+          #|  input   Input PDF path.
+          #|  output  Output Markdown path.
+          #|
+          #|Options:
+          #|  -h, --help  Show help information.
+          #|
+        ),
+      )
+  } noraise {
+    _ => fail("expected argparse to reject missing paths")
+  }
+}
+
+///|
+test "markdown command rejects extra positional arguments" {
+  try markdown_cmd_parse_args(argv=["input.pdf", "output.md", "extra"]) catch {
+    err => {
+      let message = err.to_string()
+      markdown_cmd_assert_contains_for_test(message, "unexpected value 'extra'")
+      markdown_cmd_assert_contains_for_test(
+        message, "Usage: pdflite-markdown <input> <output>",
+      )
+    }
+  } noraise {
+    _ => fail("expected argparse to reject extra paths")
+  }
+}
+
+///|
 fn markdown_cmd_raw_control_count_for_test(text : String) -> Int {
   let mut count = 0
   for char in text {
