@@ -32,6 +32,10 @@ pub fn pdf_pad_password(password : BytesView) -> PdfBytes {
 }
 
 ///|
+/// Return one byte of an integer after shifting it into the low position.
+///
+/// Standard-security permission values are serialized least-significant byte
+/// first when deriving the file encryption key.
 pub fn pdf_crypt_low_byte(value : Int, shift : Int) -> Byte {
   ((value >> shift) & 0xff).to_byte()
 }
@@ -133,6 +137,9 @@ pub fn pdf_make_user_password_entry(
 }
 
 ///|
+/// Return whether two byte views share the same prefix of the requested length.
+///
+/// If either input is shorter than `length`, the prefix comparison fails.
 pub fn pdf_bytes_prefix_equal(
   left : BytesView,
   right : BytesView,

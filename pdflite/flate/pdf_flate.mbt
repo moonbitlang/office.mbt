@@ -1658,6 +1658,10 @@ pub fn pdf_flate_decode(data : PdfBytes) -> PdfBytes raise PdfError {
 }
 
 ///|
+/// Decode the first zlib-wrapped Flate stream from a byte view.
+///
+/// Returns the decoded bytes and the number of encoded bytes consumed, which
+/// lets callers continue parsing data that follows the compressed stream.
 pub fn pdf_flate_decode_view_prefix(
   data : BytesView,
 ) -> (PdfBytes, Int) raise PdfError {
