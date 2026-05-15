@@ -83,3 +83,10 @@ pub using @geometry {
 
 ///|
 using @number_set {type PdfNumberSet, pdf_number_set, pdf_push_unique_number}
+
+///|
+pub using @crypt_core {
+  type PdfPermission,
+  pdf_p_of_permissions,
+  pdf_permissions_of_p,
+}

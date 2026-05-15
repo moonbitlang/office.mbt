@@ -3,6 +3,7 @@ package "bobzhang/pdflite"
 
 import {
   "bobzhang/pdflite/core",
+  "bobzhang/pdflite/crypt_core",
   "bobzhang/pdflite/geometry",
   "moonbitlang/core/debug",
   "moonbitlang/core/hashmap",
@@ -327,7 +328,7 @@ pub fn pdf_of_pages(PdfDocument, ArrayView[Int], retain_numbering? : Bool, proce
 
 pub fn pdf_optional_content_merge(ArrayView[PdfDocument]) -> PdfOptionalContent? raise @core.PdfError
 
-pub fn pdf_p_of_permissions(ArrayView[PdfPermission]) -> Int
+pub fn pdf_p_of_permissions(ArrayView[@crypt_core.PdfPermission]) -> Int
 
 pub fn pdf_page_blank(@geometry.PaperSize) -> PdfPage
 
@@ -409,7 +410,7 @@ pub fn pdf_pdfdocstring_of_codepoints(ArrayView[Int]) -> Bytes raise @core.PdfEr
 
 pub fn pdf_pdfdocstring_of_utf8(BytesView) -> Bytes raise @core.PdfError
 
-pub fn pdf_permissions_of_p(Int) -> Array[PdfPermission]
+pub fn pdf_permissions_of_p(Int) -> Array[@crypt_core.PdfPermission]
 
 pub fn pdf_postpend_operators(PdfDocument, ArrayView[PdfContentOp], PdfPage, fast? : Bool) -> PdfPage raise @core.PdfError
 
@@ -599,19 +600,19 @@ pub fn pdf_write_document_with_mode(PdfDocument, PdfWriteMode) -> Bytes raise @c
 
 pub fn pdf_write_document_with_xref_stream(PdfDocument) -> Bytes raise @core.PdfError
 
-pub fn pdf_write_encrypted_128bit_document(PdfDocument, BytesView, BytesView, ArrayView[PdfPermission], mode? : PdfWriteMode, file_id? : BytesView) -> Bytes raise @core.PdfError
+pub fn pdf_write_encrypted_128bit_document(PdfDocument, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission], mode? : PdfWriteMode, file_id? : BytesView) -> Bytes raise @core.PdfError
 
-pub fn pdf_write_encrypted_128bit_r4_document(PdfDocument, BytesView, BytesView, ArrayView[PdfPermission], encrypt_metadata? : Bool, mode? : PdfWriteMode, file_id? : BytesView) -> Bytes raise @core.PdfError
+pub fn pdf_write_encrypted_128bit_r4_document(PdfDocument, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission], encrypt_metadata? : Bool, mode? : PdfWriteMode, file_id? : BytesView) -> Bytes raise @core.PdfError
 
-pub fn pdf_write_encrypted_40bit_document(PdfDocument, BytesView, BytesView, ArrayView[PdfPermission], mode? : PdfWriteMode, file_id? : BytesView) -> Bytes raise @core.PdfError
+pub fn pdf_write_encrypted_40bit_document(PdfDocument, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission], mode? : PdfWriteMode, file_id? : BytesView) -> Bytes raise @core.PdfError
 
-pub fn pdf_write_encrypted_aesv2_document_with_iv_provider(PdfDocument, BytesView, BytesView, ArrayView[PdfPermission], (Int, Int, Int) -> Bytes raise @core.PdfError, encrypt_metadata? : Bool, mode? : PdfWriteMode, file_id? : BytesView) -> Bytes raise @core.PdfError
+pub fn pdf_write_encrypted_aesv2_document_with_iv_provider(PdfDocument, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission], (Int, Int, Int) -> Bytes raise @core.PdfError, encrypt_metadata? : Bool, mode? : PdfWriteMode, file_id? : BytesView) -> Bytes raise @core.PdfError
 
-pub fn pdf_write_encrypted_aesv3_document_with_providers(PdfDocument, BytesView, BytesView, ArrayView[PdfPermission], (PdfAesV3RandomField, Int) -> Bytes raise @core.PdfError, (Int, Int, Int) -> Bytes raise @core.PdfError, iso? : Bool, encrypt_metadata? : Bool, mode? : PdfWriteMode, file_id? : BytesView) -> Bytes raise @core.PdfError
+pub fn pdf_write_encrypted_aesv3_document_with_providers(PdfDocument, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission], (PdfAesV3RandomField, Int) -> Bytes raise @core.PdfError, (Int, Int, Int) -> Bytes raise @core.PdfError, iso? : Bool, encrypt_metadata? : Bool, mode? : PdfWriteMode, file_id? : BytesView) -> Bytes raise @core.PdfError
 
-pub fn pdf_write_encrypted_aesv3_iso_document_with_providers(PdfDocument, BytesView, BytesView, ArrayView[PdfPermission], (PdfAesV3RandomField, Int) -> Bytes raise @core.PdfError, (Int, Int, Int) -> Bytes raise @core.PdfError, encrypt_metadata? : Bool, mode? : PdfWriteMode, file_id? : BytesView) -> Bytes raise @core.PdfError
+pub fn pdf_write_encrypted_aesv3_iso_document_with_providers(PdfDocument, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission], (PdfAesV3RandomField, Int) -> Bytes raise @core.PdfError, (Int, Int, Int) -> Bytes raise @core.PdfError, encrypt_metadata? : Bool, mode? : PdfWriteMode, file_id? : BytesView) -> Bytes raise @core.PdfError
 
-pub fn pdf_write_encryption(PdfEncryptionMethod, BytesView, BytesView, ArrayView[PdfPermission]) -> PdfWriteEncryption
+pub fn pdf_write_encryption(PdfEncryptionMethod, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission]) -> PdfWriteEncryption
 
 pub fn pdf_write_font(PdfDocument, PdfFont, objnum? : Int?) -> Int raise @core.PdfError
 
@@ -1110,7 +1111,7 @@ pub(all) struct PdfDate {
 
 pub(all) struct PdfDecryptionResult {
   document : PdfDocument
-  denied_permissions : Array[PdfPermission]
+  denied_permissions : Array[@crypt_core.PdfPermission]
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) enum PdfDestination {
@@ -1163,12 +1164,12 @@ pub fn PdfDocument::decrypt_with_owner_password(Self, BytesView, no_encrypt_meta
 pub fn PdfDocument::decrypt_with_passwords(Self, user_password? : BytesView?, owner_password? : BytesView?, no_encrypt_metadata? : Bool) -> PdfDecryptionResult? raise @core.PdfError
 pub fn PdfDocument::decrypt_with_user_password(Self, BytesView, no_encrypt_metadata? : Bool) -> PdfDecryptionResult? raise @core.PdfError
 pub fn PdfDocument::direct(Self, PdfObject) -> PdfObject
-pub fn PdfDocument::encrypt_128bit(Self, BytesView, BytesView, ArrayView[PdfPermission], file_id? : BytesView) -> Self raise @core.PdfError
-pub fn PdfDocument::encrypt_128bit_aesv2_with_iv_provider(Self, BytesView, BytesView, ArrayView[PdfPermission], (Int, Int, Int) -> Bytes raise @core.PdfError, encrypt_metadata? : Bool, file_id? : BytesView) -> Self raise @core.PdfError
-pub fn PdfDocument::encrypt_128bit_r4(Self, BytesView, BytesView, ArrayView[PdfPermission], encrypt_metadata? : Bool, file_id? : BytesView) -> Self raise @core.PdfError
-pub fn PdfDocument::encrypt_256bit_aesv3_iso_with_providers(Self, BytesView, BytesView, ArrayView[PdfPermission], (PdfAesV3RandomField, Int) -> Bytes raise @core.PdfError, (Int, Int, Int) -> Bytes raise @core.PdfError, encrypt_metadata? : Bool, file_id? : BytesView) -> Self raise @core.PdfError
-pub fn PdfDocument::encrypt_256bit_aesv3_with_providers(Self, BytesView, BytesView, ArrayView[PdfPermission], (PdfAesV3RandomField, Int) -> Bytes raise @core.PdfError, (Int, Int, Int) -> Bytes raise @core.PdfError, iso? : Bool, encrypt_metadata? : Bool, file_id? : BytesView) -> Self raise @core.PdfError
-pub fn PdfDocument::encrypt_40bit(Self, BytesView, BytesView, ArrayView[PdfPermission], file_id? : BytesView) -> Self raise @core.PdfError
+pub fn PdfDocument::encrypt_128bit(Self, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission], file_id? : BytesView) -> Self raise @core.PdfError
+pub fn PdfDocument::encrypt_128bit_aesv2_with_iv_provider(Self, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission], (Int, Int, Int) -> Bytes raise @core.PdfError, encrypt_metadata? : Bool, file_id? : BytesView) -> Self raise @core.PdfError
+pub fn PdfDocument::encrypt_128bit_r4(Self, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission], encrypt_metadata? : Bool, file_id? : BytesView) -> Self raise @core.PdfError
+pub fn PdfDocument::encrypt_256bit_aesv3_iso_with_providers(Self, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission], (PdfAesV3RandomField, Int) -> Bytes raise @core.PdfError, (Int, Int, Int) -> Bytes raise @core.PdfError, encrypt_metadata? : Bool, file_id? : BytesView) -> Self raise @core.PdfError
+pub fn PdfDocument::encrypt_256bit_aesv3_with_providers(Self, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission], (PdfAesV3RandomField, Int) -> Bytes raise @core.PdfError, (Int, Int, Int) -> Bytes raise @core.PdfError, iso? : Bool, encrypt_metadata? : Bool, file_id? : BytesView) -> Self raise @core.PdfError
+pub fn PdfDocument::encrypt_40bit(Self, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission], file_id? : BytesView) -> Self raise @core.PdfError
 pub fn PdfDocument::endpage(Self) -> Int raise @core.PdfError
 pub fn PdfDocument::endpage_fast(Self) -> Int raise @core.PdfError
 pub fn PdfDocument::event_log(Self) -> Array[(Int, PdfObjectEvent)]
@@ -1220,7 +1221,7 @@ pub fn PdfDocument::pdf_decode_stream_until_unknown(Self, PdfObject) -> PdfObjec
 pub fn PdfDocument::pdf_decode_streams_until_unknown(Self) -> Unit raise @core.PdfError
 pub fn PdfDocument::pdf_object_of_function(Self, PdfFunction) -> PdfObject
 pub fn PdfDocument::pdf_of_pages(Self, ArrayView[Int], retain_numbering? : Bool, process_struct_tree? : Bool) -> Self raise @core.PdfError
-pub fn PdfDocument::permissions(Self) -> Array[PdfPermission] raise @core.PdfError
+pub fn PdfDocument::permissions(Self) -> Array[@crypt_core.PdfPermission] raise @core.PdfError
 pub fn PdfDocument::postpend_operators(Self, PdfPage, ArrayView[PdfContentOp], fast? : Bool) -> PdfPage raise @core.PdfError
 pub fn PdfDocument::prepend_operators(Self, PdfPage, ArrayView[PdfContentOp], fast? : Bool) -> PdfPage raise @core.PdfError
 pub fn PdfDocument::process_xobjects(Self, PdfPage, (Self, PdfObject, ArrayView[PdfObject]) -> Array[PdfObject] raise @core.PdfError) -> Unit raise @core.PdfError
@@ -1580,17 +1581,6 @@ pub(all) struct PdfParsedIndirectObject {
   object : PdfObject
 } derive(Eq, ToJson, @debug.Debug)
 
-pub(all) enum PdfPermission {
-  PdfNoEdit
-  PdfNoPrint
-  PdfNoCopy
-  PdfNoAnnot
-  PdfNoForms
-  PdfNoExtract
-  PdfNoAssemble
-  PdfNoHqPrint
-} derive(Eq, ToJson, @debug.Debug)
-
 pub(all) enum PdfPixelLayout {
   PdfBPP1
   PdfBPP8
@@ -1752,7 +1742,7 @@ pub(all) struct PdfWriteEncryption {
   encryption_method : PdfEncryptionMethod
   user_password : Bytes
   owner_password : Bytes
-  denied_permissions : Array[PdfPermission]
+  denied_permissions : Array[@crypt_core.PdfPermission]
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) enum PdfWriteMode {
@@ -1782,6 +1772,8 @@ pub using @core {type PdfCryptType}
 pub using @core {type PdfError}
 
 pub using @core {type PdfName}
+
+pub using @crypt_core {type PdfPermission}
 
 pub using @geometry {type PdfUnit}
 

@@ -1,0 +1,30 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pdflite/crypt_core"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn pdf_p_of_permissions(ArrayView[PdfPermission]) -> Int
+
+pub fn pdf_permissions_of_p(Int) -> Array[PdfPermission]
+
+// Errors
+
+// Types and methods
+pub(all) enum PdfPermission {
+  PdfNoEdit
+  PdfNoPrint
+  PdfNoCopy
+  PdfNoAnnot
+  PdfNoForms
+  PdfNoExtract
+  PdfNoAssemble
+  PdfNoHqPrint
+} derive(Eq, ToJson, @debug.Debug)
+
+// Type aliases
+
+// Traits
+
