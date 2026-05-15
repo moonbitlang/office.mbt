@@ -1721,7 +1721,7 @@ test "PdfDocument get_image_24bpp reports malformed raw images" {
     short_rgb,
   )
   guard result is Err(@pdflite.PdfError::EndOfInput) else {
-    fail("expected PdfError::EndOfInput for short raw image")
+    fail("expected @pdflite.PdfError::EndOfInput for short raw image")
   }
 }
 

@@ -156,7 +156,7 @@ test "pdf_ascii_hex_decode reports invalid hex data" {
     codec_ascii_for_test("6Z>"),
   )
   guard result is Err(@pdflite.PdfError::InvalidHexEscape) else {
-    fail("expected PdfError::InvalidHexEscape")
+    fail("expected @pdflite.PdfError::InvalidHexEscape")
   }
 }
 
@@ -223,31 +223,31 @@ test "pdf_ascii85_decode reports malformed data" {
     codec_ascii_for_test("9jqo{~>"),
   )
   guard bad_char is Err(@pdflite.PdfError::InvalidASCII85Data) else {
-    fail("expected PdfError::InvalidASCII85Data")
+    fail("expected @pdflite.PdfError::InvalidASCII85Data")
   }
   let bad_zero : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_ascii85_decode(
     codec_ascii_for_test("!z~>"),
   )
   guard bad_zero is Err(@pdflite.PdfError::InvalidASCII85Data) else {
-    fail("expected PdfError::InvalidASCII85Data")
+    fail("expected @pdflite.PdfError::InvalidASCII85Data")
   }
   let one_digit : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_ascii85_decode(
     codec_ascii_for_test("!~>"),
   )
   guard one_digit is Err(@pdflite.PdfError::InvalidASCII85Data) else {
-    fail("expected PdfError::InvalidASCII85Data")
+    fail("expected @pdflite.PdfError::InvalidASCII85Data")
   }
   let overflowing_group : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_ascii85_decode(
     codec_ascii_for_test("uuuuu~>"),
   )
   guard overflowing_group is Err(@pdflite.PdfError::InvalidASCII85Data) else {
-    fail("expected PdfError::InvalidASCII85Data")
+    fail("expected @pdflite.PdfError::InvalidASCII85Data")
   }
   let unterminated : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_ascii85_decode(
     codec_ascii_for_test("9jqo"),
   )
   guard unterminated is Err(@pdflite.PdfError::InvalidASCII85Data) else {
-    fail("expected PdfError::InvalidASCII85Data")
+    fail("expected @pdflite.PdfError::InvalidASCII85Data")
   }
 }
 
@@ -317,13 +317,13 @@ test "pdf_lzw_decode reports malformed input codes" {
     codec_bytes_for_test([128, 75, 32, 32]),
   )
   guard result is Err(@pdflite.PdfError::InvalidLZWData) else {
-    fail("expected PdfError::InvalidLZWData")
+    fail("expected @pdflite.PdfError::InvalidLZWData")
   }
   let result : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_lzw_decode(
     codec_lzw_codes_for_test([65, 300], 1),
   )
   guard result is Err(@pdflite.PdfError::InvalidLZWData) else {
-    fail("expected PdfError::InvalidLZWData")
+    fail("expected @pdflite.PdfError::InvalidLZWData")
   }
 }
 
@@ -370,31 +370,31 @@ test "pdf_flate_decode reports malformed zlib data" {
     codec_bytes_for_test([120, 1, 0]),
   )
   guard short_data is Err(@pdflite.PdfError::InvalidFlateData) else {
-    fail("expected PdfError::InvalidFlateData")
+    fail("expected @pdflite.PdfError::InvalidFlateData")
   }
   let bad_header : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_flate_decode(
     codec_bytes_for_test([120, 2, 1, 0, 0, 255, 255, 0, 0, 0, 1]),
   )
   guard bad_header is Err(@pdflite.PdfError::InvalidFlateData) else {
-    fail("expected PdfError::InvalidFlateData")
+    fail("expected @pdflite.PdfError::InvalidFlateData")
   }
   let bad_stored_length : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_flate_decode(
     codec_bytes_for_test([120, 1, 1, 1, 0, 0, 0, 65, 0, 66, 0, 66]),
   )
   guard bad_stored_length is Err(@pdflite.PdfError::InvalidFlateData) else {
-    fail("expected PdfError::InvalidFlateData")
+    fail("expected @pdflite.PdfError::InvalidFlateData")
   }
   let bad_block_type : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_flate_decode(
     codec_bytes_for_test([120, 1, 7, 0, 1, 0, 0]),
   )
   guard bad_block_type is Err(@pdflite.PdfError::InvalidFlateData) else {
-    fail("expected PdfError::InvalidFlateData")
+    fail("expected @pdflite.PdfError::InvalidFlateData")
   }
   let bad_checksum : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_flate_decode(
     codec_bytes_for_test([120, 1, 1, 1, 0, 254, 255, 65, 0, 0, 0, 0]),
   )
   guard bad_checksum is Err(@pdflite.PdfError::InvalidFlateData) else {
-    fail("expected PdfError::InvalidFlateData")
+    fail("expected @pdflite.PdfError::InvalidFlateData")
   }
 }
 
@@ -855,7 +855,7 @@ test "pdf filter dispatch reports unsupported filters" {
   )
   guard result is Err(@pdflite.PdfError::FilterNotSupported(filter)) &&
     filter == flate else {
-    fail("expected PdfError::FilterNotSupported")
+    fail("expected @pdflite.PdfError::FilterNotSupported")
   }
   let result : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_encode_filter_bytes(
     flate,
@@ -863,7 +863,7 @@ test "pdf filter dispatch reports unsupported filters" {
   )
   guard result is Err(@pdflite.PdfError::FilterNotSupported(filter)) &&
     filter == flate else {
-    fail("expected PdfError::FilterNotSupported")
+    fail("expected @pdflite.PdfError::FilterNotSupported")
   }
 }
 
@@ -977,7 +977,7 @@ test "pdf_decode_predictor reports unsupported predictor" {
     codec_bytes_for_test([0]),
   )
   guard result is Err(@pdflite.PdfError::PredictorNotSupported(9)) else {
-    fail("expected PdfError::PredictorNotSupported")
+    fail("expected @pdflite.PdfError::PredictorNotSupported")
   }
   let result : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_decode_predictor(
     15,
@@ -987,7 +987,7 @@ test "pdf_decode_predictor reports unsupported predictor" {
     codec_bytes_for_test([9, 0]),
   )
   guard result is Err(@pdflite.PdfError::PredictorNotSupported(9)) else {
-    fail("expected PdfError::PredictorNotSupported")
+    fail("expected @pdflite.PdfError::PredictorNotSupported")
   }
   let result : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_decode_predictor(
     2,
@@ -997,7 +997,7 @@ test "pdf_decode_predictor reports unsupported predictor" {
     codec_bytes_for_test([0]),
   )
   guard result is Err(@pdflite.PdfError::PredictorNotSupported(2)) else {
-    fail("expected PdfError::PredictorNotSupported")
+    fail("expected @pdflite.PdfError::PredictorNotSupported")
   }
   let result : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_decode_predictor(
     2,
@@ -1007,7 +1007,7 @@ test "pdf_decode_predictor reports unsupported predictor" {
     codec_bytes_for_test([0]),
   )
   guard result is Err(@pdflite.PdfError::PredictorExpected) else {
-    fail("expected PdfError::PredictorExpected")
+    fail("expected @pdflite.PdfError::PredictorExpected")
   }
 }
 
@@ -1033,7 +1033,7 @@ test "pdf predictors keep identity data and reject bad encode parameters" {
     codec_bytes_for_test([0]),
   )
   guard unsupported_tiff is Err(@pdflite.PdfError::PredictorNotSupported(2)) else {
-    fail("expected PdfError::PredictorNotSupported")
+    fail("expected @pdflite.PdfError::PredictorNotSupported")
   }
   let unsupported : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_encode_predictor(
     9,
@@ -1043,7 +1043,7 @@ test "pdf predictors keep identity data and reject bad encode parameters" {
     codec_ascii_for_test("raw"),
   )
   guard unsupported is Err(@pdflite.PdfError::PredictorNotSupported(9)) else {
-    fail("expected PdfError::PredictorNotSupported")
+    fail("expected @pdflite.PdfError::PredictorNotSupported")
   }
   let bad_dimensions : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_encode_predictor(
     11,
@@ -1053,7 +1053,7 @@ test "pdf predictors keep identity data and reject bad encode parameters" {
     codec_ascii_for_test("raw"),
   )
   guard bad_dimensions is Err(@pdflite.PdfError::PredictorExpected) else {
-    fail("expected PdfError::PredictorExpected")
+    fail("expected @pdflite.PdfError::PredictorExpected")
   }
 }
 
@@ -1649,7 +1649,7 @@ test "PdfDocument pdf_decode_stream reports malformed document-aware metadata" {
     PdfNull,
   )
   guard result is Err(@pdflite.PdfError::ParseStreamExpected) else {
-    fail("expected PdfError::ParseStreamExpected")
+    fail("expected @pdflite.PdfError::ParseStreamExpected")
   }
   let stream = @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
@@ -1661,7 +1661,7 @@ test "PdfDocument pdf_decode_stream reports malformed document-aware metadata" {
     stream,
   )
   guard result is Err(@pdflite.PdfError::StreamLengthExpected) else {
-    fail("expected PdfError::StreamLengthExpected")
+    fail("expected @pdflite.PdfError::StreamLengthExpected")
   }
   let stream = @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([(length, PdfInteger(2)), (filter, PdfInteger(1))]),
@@ -1671,7 +1671,7 @@ test "PdfDocument pdf_decode_stream reports malformed document-aware metadata" {
     stream,
   )
   guard result is Err(@pdflite.PdfError::FilterExpected) else {
-    fail("expected PdfError::FilterExpected")
+    fail("expected @pdflite.PdfError::FilterExpected")
   }
   let stream = @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
@@ -1684,7 +1684,7 @@ test "PdfDocument pdf_decode_stream reports malformed document-aware metadata" {
     stream,
   )
   guard result is Err(@pdflite.PdfError::FilterExpected) else {
-    fail("expected PdfError::FilterExpected")
+    fail("expected @pdflite.PdfError::FilterExpected")
   }
   doc.add_object_given_number(
     9,
@@ -1704,7 +1704,7 @@ test "PdfDocument pdf_decode_stream reports malformed document-aware metadata" {
     stream,
   )
   guard result is Err(@pdflite.PdfError::PredictorExpected) else {
-    fail("expected PdfError::PredictorExpected")
+    fail("expected @pdflite.PdfError::PredictorExpected")
   }
   let stream = @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
@@ -1718,7 +1718,7 @@ test "PdfDocument pdf_decode_stream reports malformed document-aware metadata" {
     stream,
   )
   guard result is Err(@pdflite.PdfError::PredictorExpected) else {
-    fail("expected PdfError::PredictorExpected")
+    fail("expected @pdflite.PdfError::PredictorExpected")
   }
   let stream = @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
@@ -1732,7 +1732,7 @@ test "PdfDocument pdf_decode_stream reports malformed document-aware metadata" {
     stream,
   )
   guard result is Err(@pdflite.PdfError::PredictorExpected) else {
-    fail("expected PdfError::PredictorExpected")
+    fail("expected @pdflite.PdfError::PredictorExpected")
   }
 }
 
@@ -1759,7 +1759,7 @@ test "PdfDocument pdf_decode_stream bounds excessive filter stages" {
     stream,
   )
   guard result is Err(@pdflite.PdfError::FilterExpected) else {
-    fail("expected PdfError::FilterExpected")
+    fail("expected @pdflite.PdfError::FilterExpected")
   }
 }
 
@@ -1966,7 +1966,7 @@ test "PdfDocument pdf_decode_stream_until_unknown handles raw and malformed inpu
     PdfNull,
   )
   guard result is Err(@pdflite.PdfError::ParseStreamExpected) else {
-    fail("expected PdfError::ParseStreamExpected")
+    fail("expected @pdflite.PdfError::ParseStreamExpected")
   }
   let stream = @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
@@ -1979,7 +1979,7 @@ test "PdfDocument pdf_decode_stream_until_unknown handles raw and malformed inpu
     stream,
   )
   guard result is Err(@pdflite.PdfError::InvalidHexEscape) else {
-    fail("expected PdfError::InvalidHexEscape")
+    fail("expected @pdflite.PdfError::InvalidHexEscape")
   }
   let stream = @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
@@ -1999,7 +1999,7 @@ test "PdfDocument pdf_decode_stream_until_unknown handles raw and malformed inpu
     stream,
   )
   guard result is Err(@pdflite.PdfError::FilterExpected) else {
-    fail("expected PdfError::FilterExpected")
+    fail("expected @pdflite.PdfError::FilterExpected")
   }
 }
 
@@ -2225,7 +2225,7 @@ test "pdf_decode_stream bounds excessive filter stages" {
     stream,
   )
   guard result is Err(@pdflite.PdfError::FilterExpected) else {
-    fail("expected PdfError::FilterExpected")
+    fail("expected @pdflite.PdfError::FilterExpected")
   }
 }
 
@@ -2740,7 +2740,7 @@ test "pdf_decode_stream_onestage reports malformed stream filters and materializ
     stream,
   )
   guard result is Err(@pdflite.PdfError::FilterExpected) else {
-    fail("expected PdfError::FilterExpected")
+    fail("expected @pdflite.PdfError::FilterExpected")
   }
   let stream = @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([]),
@@ -2750,19 +2750,19 @@ test "pdf_decode_stream_onestage reports malformed stream filters and materializ
     stream,
   )
   guard result is Err(@pdflite.PdfError::StreamLengthExpected) else {
-    fail("expected PdfError::StreamLengthExpected")
+    fail("expected @pdflite.PdfError::StreamLengthExpected")
   }
   let result : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_decode_stream_onestage(
     PdfNull,
   )
   guard result is Err(@pdflite.PdfError::ParseStreamExpected) else {
-    fail("expected PdfError::ParseStreamExpected")
+    fail("expected @pdflite.PdfError::ParseStreamExpected")
   }
   let result : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_decode_stream(
     PdfNull,
   )
   guard result is Err(@pdflite.PdfError::ParseStreamExpected) else {
-    fail("expected PdfError::ParseStreamExpected")
+    fail("expected @pdflite.PdfError::ParseStreamExpected")
   }
   let deferred = @pdflite.stream_to_get(
     @pdflite.byte_cursor_of_bytes(codec_ascii_for_test("Hi")),
@@ -2801,7 +2801,7 @@ test "pdf_decode_stream_onestage reports malformed stream filters and materializ
     stream,
   )
   guard result is Err(@pdflite.PdfError::PredictorExpected) else {
-    fail("expected PdfError::PredictorExpected")
+    fail("expected @pdflite.PdfError::PredictorExpected")
   }
   let stream = @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
@@ -2815,7 +2815,7 @@ test "pdf_decode_stream_onestage reports malformed stream filters and materializ
     stream,
   )
   guard result is Err(@pdflite.PdfError::PredictorExpected) else {
-    fail("expected PdfError::PredictorExpected")
+    fail("expected @pdflite.PdfError::PredictorExpected")
   }
 }
 
@@ -2828,7 +2828,7 @@ test "pdf stream encoding reports malformed objects and materializes deferred da
     PdfNull,
   )
   guard result is Err(@pdflite.PdfError::ParseStreamExpected) else {
-    fail("expected PdfError::ParseStreamExpected")
+    fail("expected @pdflite.PdfError::ParseStreamExpected")
   }
   let deferred = @pdflite.stream_to_get(
     @pdflite.byte_cursor_of_bytes(codec_ascii_for_test("Hi")),
@@ -2857,7 +2857,7 @@ test "pdf stream encoding reports malformed objects and materializes deferred da
     stream,
   )
   guard result is Err(@pdflite.PdfError::FilterExpected) else {
-    fail("expected PdfError::FilterExpected")
+    fail("expected @pdflite.PdfError::FilterExpected")
   }
   let decodeparms = codec_name_for_test("/DecodeParms")
   let stream = @pdflite.pdf_stream(
@@ -2876,7 +2876,7 @@ test "pdf stream encoding reports malformed objects and materializes deferred da
     stream,
   )
   guard result is Err(@pdflite.PdfError::PredictorExpected) else {
-    fail("expected PdfError::PredictorExpected")
+    fail("expected @pdflite.PdfError::PredictorExpected")
   }
   let result : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_encode_stream_with_filter_and_predictor(
     codec_name_for_test("/ASCIIHexDecode"),
@@ -2887,7 +2887,7 @@ test "pdf stream encoding reports malformed objects and materializes deferred da
     PdfNull,
   )
   guard result is Err(@pdflite.PdfError::ParseStreamExpected) else {
-    fail("expected PdfError::ParseStreamExpected")
+    fail("expected @pdflite.PdfError::ParseStreamExpected")
   }
   let stream = @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([(length, PdfInteger(2))]),

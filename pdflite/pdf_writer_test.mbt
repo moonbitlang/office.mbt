@@ -589,7 +589,7 @@ test "pdf_write_document_incremental_update rejects originals without startxref"
     document,
   )
   guard result is Err(@pdflite.PdfError::StartXRefExpected) else {
-    fail("expected PdfError::StartXRefExpected")
+    fail("expected @pdflite.PdfError::StartXRefExpected")
   }
 }
 

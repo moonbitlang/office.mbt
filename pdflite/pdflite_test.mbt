@@ -45,14 +45,16 @@ test "PdfBytes make immutable filled byte data" {
     -1,
   )
   guard bad_length is Err(@pdflite.PdfError::InvalidReadLength(-1)) else {
-    fail("expected PdfError::InvalidReadLength for negative byte allocation")
+    fail(
+      "expected @pdflite.PdfError::InvalidReadLength for negative byte allocation",
+    )
   }
   let bad_value : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_bytes_make(
     1,
     value=256,
   )
   guard bad_value is Err(@pdflite.PdfError::InvalidByte(256)) else {
-    fail("expected PdfError::InvalidByte for filled byte allocation")
+    fail("expected @pdflite.PdfError::InvalidByte for filled byte allocation")
   }
 }
 
@@ -88,7 +90,7 @@ test "PdfBytes expose CamlPDF int-array compatibility conversions" {
     ],
   )
   guard invalid is Err(@pdflite.PdfError::InvalidByte(256)) else {
-    fail("expected PdfError::InvalidByte for nested int arrays")
+    fail("expected @pdflite.PdfError::InvalidByte for nested int arrays")
   }
 }
 
@@ -103,7 +105,7 @@ test "PdfBytes map byte values without mutating the source" {
     value => value + 1,
   )
   guard invalid is Err(@pdflite.PdfError::InvalidByte(256)) else {
-    fail("expected PdfError::InvalidByte for mapped byte")
+    fail("expected @pdflite.PdfError::InvalidByte for mapped byte")
   }
 }
 
@@ -111,11 +113,11 @@ test "PdfBytes map byte values without mutating the source" {
 test "PdfBytes reject out-of-range integers" {
   let too_large : Result[Byte, Error] = try? @pdflite.pdf_byte_of_int(256)
   guard too_large is Err(@pdflite.PdfError::InvalidByte(256)) else {
-    fail("expected PdfError::InvalidByte for 256")
+    fail("expected @pdflite.PdfError::InvalidByte for 256")
   }
   let negative : Result[Byte, Error] = try? @pdflite.pdf_byte_of_int(-1)
   guard negative is Err(@pdflite.PdfError::InvalidByte(-1)) else {
-    fail("expected PdfError::InvalidByte for -1")
+    fail("expected @pdflite.PdfError::InvalidByte for -1")
   }
 }
 

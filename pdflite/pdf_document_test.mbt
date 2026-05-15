@@ -192,11 +192,11 @@ test "PdfDocument empty document mirrors CamlPDF defaults" {
 }
 
 ///|
-test "PdfDocument catalog reads the root object or reports PdfError::RootExpected" {
+test "PdfDocument catalog reads the root object or reports @pdflite.PdfError::RootExpected" {
   let doc = @pdflite.pdf_document_empty()
   let missing : Result[@pdflite.PdfObject, Error] = try? doc.catalog()
   guard missing is Err(@pdflite.PdfError::RootExpected) else {
-    fail("expected PdfError::RootExpected for missing catalog")
+    fail("expected @pdflite.PdfError::RootExpected for missing catalog")
   }
   doc.set_root(4)
   doc.add_object_given_number(4, @pdflite.pdf_dictionary([]))
@@ -204,7 +204,7 @@ test "PdfDocument catalog reads the root object or reports PdfError::RootExpecte
   doc.add_object_given_number(4, PdfNull)
   let null_root : Result[@pdflite.PdfObject, Error] = try? doc.catalog()
   guard null_root is Err(@pdflite.PdfError::RootExpected) else {
-    fail("expected PdfError::RootExpected for null catalog")
+    fail("expected @pdflite.PdfError::RootExpected for null catalog")
   }
 }
 
@@ -237,7 +237,7 @@ test "PdfDocument catalog prefers trailer Root over stale root number" {
   doc.set_trailer_dict(@pdflite.pdf_dictionary([(key_root, PdfIndirect(99))]))
   let missing : Result[@pdflite.PdfObject, Error] = try? doc.catalog()
   guard missing is Err(@pdflite.PdfError::RootExpected) else {
-    fail("expected PdfError::RootExpected for unresolved trailer root")
+    fail("expected @pdflite.PdfError::RootExpected for unresolved trailer root")
   }
 }
 
@@ -585,6 +585,6 @@ test "PdfDocument renumber_objects_by_offset rejects negative offsets" {
     -1,
   )
   guard result is Err(@pdflite.PdfError::InvalidObjectNumber(-1)) else {
-    fail("expected PdfError::InvalidObjectNumber")
+    fail("expected @pdflite.PdfError::InvalidObjectNumber")
   }
 }

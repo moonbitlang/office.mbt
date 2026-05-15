@@ -2750,7 +2750,7 @@ test "pdf_parse_stream_object_from_bytes reports malformed stream keyword" {
     ),
   )
   guard result is Err(@pdflite.PdfError::ParseStreamExpected) else {
-    fail("expected PdfError::ParseStreamExpected")
+    fail("expected @pdflite.PdfError::ParseStreamExpected")
   }
 }
 
@@ -2944,7 +2944,7 @@ test "pdf_read_document_from_bytes reconstructs xref stream Index ranges" {
     reader_xref_stream_pdf_with_index_bad_startxref(),
   )
   guard strict is Err(@pdflite.PdfError::XRefExpected) else {
-    fail("expected strict PdfError::XRefExpected")
+    fail("expected strict @pdflite.PdfError::XRefExpected")
   }
 
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
@@ -2982,7 +2982,7 @@ test "pdf_read_document_from_bytes reconstructs xref streams with omitted type f
     reader_xref_stream_pdf_with_default_in_use_width_bad_startxref(),
   )
   guard strict is Err(@pdflite.PdfError::XRefExpected) else {
-    fail("expected strict PdfError::XRefExpected")
+    fail("expected strict @pdflite.PdfError::XRefExpected")
   }
 
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
@@ -3009,7 +3009,7 @@ test "pdf_read_document_from_bytes reconstructs unknown xref stream entry types"
     reader_xref_stream_pdf_with_unknown_entry_type_bad_startxref(),
   )
   guard strict is Err(@pdflite.PdfError::XRefExpected) else {
-    fail("expected strict PdfError::XRefExpected")
+    fail("expected strict @pdflite.PdfError::XRefExpected")
   }
 
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
@@ -3051,7 +3051,7 @@ test "pdf_read_document_from_bytes reconstructs filtered xref streams" {
     reader_xref_stream_pdf_with_ascii_hex_filter_bad_startxref(),
   )
   guard strict is Err(@pdflite.PdfError::XRefExpected) else {
-    fail("expected strict PdfError::XRefExpected")
+    fail("expected strict @pdflite.PdfError::XRefExpected")
   }
 
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
@@ -3088,7 +3088,7 @@ test "pdf_read_document_from_bytes reconstructs Flate xref streams" {
     reader_xref_stream_pdf_with_flate_filter_bad_startxref(),
   )
   guard strict is Err(@pdflite.PdfError::XRefExpected) else {
-    fail("expected strict PdfError::XRefExpected")
+    fail("expected strict @pdflite.PdfError::XRefExpected")
   }
 
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
@@ -3128,7 +3128,7 @@ test "pdf_read_document_from_bytes reconstructs Flate predictor xref streams" {
     reader_xref_stream_pdf_with_flate_predictor_bad_startxref(),
   )
   guard strict is Err(@pdflite.PdfError::XRefExpected) else {
-    fail("expected strict PdfError::XRefExpected")
+    fail("expected strict @pdflite.PdfError::XRefExpected")
   }
 
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
@@ -3168,7 +3168,7 @@ test "pdf_read_document_from_bytes reconstructs short-name Flate predictor xref 
     reader_xref_stream_pdf_with_short_flate_predictor_bad_startxref(),
   )
   guard strict is Err(@pdflite.PdfError::XRefExpected) else {
-    fail("expected strict PdfError::XRefExpected")
+    fail("expected strict @pdflite.PdfError::XRefExpected")
   }
 
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
@@ -3206,7 +3206,7 @@ test "pdf_read_document_from_bytes reconstructs xref stream filter arrays" {
     reader_xref_stream_pdf_with_filter_array_bad_startxref(),
   )
   guard strict is Err(@pdflite.PdfError::XRefExpected) else {
-    fail("expected strict PdfError::XRefExpected")
+    fail("expected strict @pdflite.PdfError::XRefExpected")
   }
 
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
@@ -3246,7 +3246,7 @@ test "pdf_read_document_from_bytes reconstructs xref stream filter arrays with p
     reader_xref_stream_pdf_with_filter_array_predictor_bad_startxref(),
   )
   guard strict is Err(@pdflite.PdfError::XRefExpected) else {
-    fail("expected strict PdfError::XRefExpected")
+    fail("expected strict @pdflite.PdfError::XRefExpected")
   }
 
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
@@ -3489,7 +3489,7 @@ test "pdf_revisions_from_bytes reports malformed revision metadata" {
     reader_pdf_ascii("%PDF-1.4\nxref\n0 1\n0000000000 65535 f \n%%EOF\n"),
   )
   guard missing_startxref is Err(@pdflite.PdfError::StartXRefExpected) else {
-    fail("expected PdfError::StartXRefExpected")
+    fail("expected @pdflite.PdfError::StartXRefExpected")
   }
 
   let malformed_prev : Result[Int, Error] = try? @pdflite.pdf_revisions_from_bytes(
@@ -3498,14 +3498,14 @@ test "pdf_revisions_from_bytes reports malformed revision metadata" {
     ),
   )
   guard malformed_prev is Err(@pdflite.PdfError::TrailerExpected) else {
-    fail("expected PdfError::TrailerExpected")
+    fail("expected @pdflite.PdfError::TrailerExpected")
   }
 
   let cyclic_prev : Result[Int, Error] = try? @pdflite.pdf_revisions_from_bytes(
     reader_classic_pdf_with_self_prev_xref(),
   )
   guard cyclic_prev is Err(@pdflite.PdfError::XRefExpected) else {
-    fail("expected PdfError::XRefExpected")
+    fail("expected @pdflite.PdfError::XRefExpected")
   }
 }
 
@@ -3562,7 +3562,7 @@ test "pdf_read_document_from_bytes reconstructs page trees missing from xref" {
   @test.assert_eq(strict.object_numbers(), [1])
   let strict_pages : Result[Int, Error] = try? strict.endpage()
   guard strict_pages is Err(@pdflite.PdfError::PageTreeExpected) else {
-    fail("expected PdfError::PageTreeExpected")
+    fail("expected @pdflite.PdfError::PageTreeExpected")
   }
 
   let parsed = try! @pdflite.pdf_read_document_from_bytes(payload)
@@ -3580,7 +3580,7 @@ test "pdf_read_document_from_bytes reconstructs catalog missing from xref" {
   @test.assert_eq(strict.object_numbers(), [])
   let strict_catalog : Result[@pdflite.PdfObject, Error] = try? strict.catalog()
   guard strict_catalog is Err(@pdflite.PdfError::RootExpected) else {
-    fail("expected PdfError::RootExpected")
+    fail("expected @pdflite.PdfError::RootExpected")
   }
 
   let parsed = try! @pdflite.pdf_read_document_from_bytes(payload)
@@ -3681,7 +3681,7 @@ test "pdf_read_document_from_bytes reconstructs malformed startxref numbers" {
     reader_malformed_pdf_with_malformed_startxref_number(),
   )
   guard strict is Err(@pdflite.PdfError::NumberExpected) else {
-    fail("expected strict PdfError::NumberExpected")
+    fail("expected strict @pdflite.PdfError::NumberExpected")
   }
 
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
@@ -3695,7 +3695,7 @@ test "pdf_read_document_from_bytes reconstructs malformed startxref numbers" {
     reader_malformed_pdf_with_overflow_startxref_number(),
   )
   guard strict_overflow is Err(@pdflite.PdfError::NumberExpected) else {
-    fail("expected strict PdfError::NumberExpected")
+    fail("expected strict @pdflite.PdfError::NumberExpected")
   }
   let overflow = try! @pdflite.pdf_read_document_from_bytes(
     reader_malformed_pdf_with_overflow_startxref_number(),
@@ -3711,7 +3711,7 @@ test "pdf_read_document_from_bytes reconstructs xref stream trailers" {
     reader_xref_stream_pdf_with_bad_startxref(),
   )
   guard strict is Err(@pdflite.PdfError::XRefExpected) else {
-    fail("expected strict PdfError::XRefExpected")
+    fail("expected strict @pdflite.PdfError::XRefExpected")
   }
 
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
@@ -3770,7 +3770,7 @@ test "pdf_read_document_from_bytes reconstructs xref stream object-stream roots"
     reader_xref_stream_pdf_with_object_stream_root_bad_startxref(),
   )
   guard strict is Err(@pdflite.PdfError::XRefExpected) else {
-    fail("expected strict PdfError::XRefExpected")
+    fail("expected strict @pdflite.PdfError::XRefExpected")
   }
 
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
@@ -3808,11 +3808,11 @@ test "pdf_read_document_from_bytes does not reconstruct unsupported object-strea
   let filter = match result {
     Err(@pdflite.PdfError::FilterNotSupported(filter)) => filter
     Err(@pdflite.PdfError::RootExpected) =>
-      fail("unexpected PdfError::RootExpected")
+      fail("unexpected @pdflite.PdfError::RootExpected")
     Err(@pdflite.PdfError::XRefExpected) =>
-      fail("unexpected PdfError::XRefExpected")
+      fail("unexpected @pdflite.PdfError::XRefExpected")
     Err(@pdflite.PdfError::XRefEntryExpected) =>
-      fail("unexpected PdfError::XRefEntryExpected")
+      fail("unexpected @pdflite.PdfError::XRefEntryExpected")
     Ok(parsed) =>
       fail(
         "unexpected reconstructed document with " +
@@ -3854,7 +3854,7 @@ test "pdf_read_document_from_bytes reconstructs multi-revision xref stream objec
     reader_xref_stream_prev_update_with_object_stream_root_bad_startxref(),
   )
   guard strict is Err(@pdflite.PdfError::XRefExpected) else {
-    fail("expected strict PdfError::XRefExpected")
+    fail("expected strict @pdflite.PdfError::XRefExpected")
   }
 
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
@@ -3890,7 +3890,7 @@ test "pdf_read_document_from_bytes rejects truncated xref stream data" {
     reader_xref_stream_pdf_with_short_entry_data(),
   )
   guard result is Err(@pdflite.PdfError::XRefEntryExpected) else {
-    fail("expected PdfError::XRefEntryExpected")
+    fail("expected @pdflite.PdfError::XRefEntryExpected")
   }
 }
 
@@ -3900,7 +3900,7 @@ test "pdf_read_document_from_bytes reconstructs out-of-range startxref PDFs" {
     reader_malformed_pdf_with_out_of_range_startxref(),
   )
   guard strict is Err(@pdflite.PdfError::InvalidCursorPosition(999999)) else {
-    fail("expected strict PdfError::InvalidCursorPosition")
+    fail("expected strict @pdflite.PdfError::InvalidCursorPosition")
   }
 
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
@@ -3917,7 +3917,7 @@ test "pdf_read_document_from_bytes reconstructs bad xref rows" {
     reader_malformed_pdf_with_bad_xref_entry(),
   )
   guard strict is Err(@pdflite.PdfError::XRefEntryExpected) else {
-    fail("expected strict PdfError::XRefEntryExpected")
+    fail("expected strict @pdflite.PdfError::XRefEntryExpected")
   }
 
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
@@ -3934,7 +3934,7 @@ test "pdf_read_document_from_bytes reconstructs bad xref subsection metadata" {
     reader_malformed_pdf_with_bad_xref_subsection_count(),
   )
   guard strict is Err(@pdflite.PdfError::NumberExpected) else {
-    fail("expected strict PdfError::NumberExpected")
+    fail("expected strict @pdflite.PdfError::NumberExpected")
   }
 
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
@@ -3951,7 +3951,7 @@ test "pdf_read_document_from_bytes reconstructs malformed trailers" {
     reader_malformed_pdf_with_bad_trailer_object(),
   )
   guard strict_bad_trailer is Err(@pdflite.PdfError::TrailerExpected) else {
-    fail("expected strict PdfError::TrailerExpected")
+    fail("expected strict @pdflite.PdfError::TrailerExpected")
   }
 
   let bad_trailer = try! @pdflite.pdf_read_document_from_bytes(
@@ -3965,7 +3965,7 @@ test "pdf_read_document_from_bytes reconstructs malformed trailers" {
     reader_malformed_pdf_with_missing_root_trailer(),
   )
   guard strict_missing_root is Err(@pdflite.PdfError::RootExpected) else {
-    fail("expected strict PdfError::RootExpected")
+    fail("expected strict @pdflite.PdfError::RootExpected")
   }
 
   let missing_root = try! @pdflite.pdf_read_document_from_bytes(
@@ -3989,7 +3989,7 @@ test "pdf_read_document_from_bytes reconstructs bad object offsets" {
     reader_malformed_pdf_with_bad_object_offset(),
   )
   guard strict is Err(@pdflite.PdfError::ParseIndirectObjectExpected) else {
-    fail("expected strict PdfError::ParseIndirectObjectExpected")
+    fail("expected strict @pdflite.PdfError::ParseIndirectObjectExpected")
   }
 
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
@@ -4141,7 +4141,7 @@ test "pdf_read_document_from_bytes reconstructs around malformed stream markers"
     bad_stream,
   )
   guard strict_stream is Err(@pdflite.PdfError::ParseStreamExpected) else {
-    fail("expected strict PdfError::ParseStreamExpected")
+    fail("expected strict @pdflite.PdfError::ParseStreamExpected")
   }
   reader_assert_reconstructs_catalog(bad_stream)
 
@@ -4152,7 +4152,7 @@ test "pdf_read_document_from_bytes reconstructs around malformed stream markers"
     bad_endstream,
   )
   guard strict_endstream is Err(@pdflite.PdfError::ParseEndStreamExpected) else {
-    fail("expected strict PdfError::ParseEndStreamExpected")
+    fail("expected strict @pdflite.PdfError::ParseEndStreamExpected")
   }
   reader_assert_reconstructs_catalog(bad_endstream)
 
@@ -4163,7 +4163,7 @@ test "pdf_read_document_from_bytes reconstructs around malformed stream markers"
     bad_endobj,
   )
   guard strict_endobj is Err(@pdflite.PdfError::ParseEndObjectExpected) else {
-    fail("expected strict PdfError::ParseEndObjectExpected")
+    fail("expected strict @pdflite.PdfError::ParseEndObjectExpected")
   }
   reader_assert_reconstructs_catalog(bad_endobj)
 }
@@ -4175,7 +4175,7 @@ test "pdf_read_document_from_bytes reconstructs around truncated stream data" {
     data,
   )
   guard strict is Err(@pdflite.PdfError::EndOfInput) else {
-    fail("expected strict PdfError::EndOfInput")
+    fail("expected strict @pdflite.PdfError::EndOfInput")
   }
 
   let parsed = try! @pdflite.pdf_read_document_from_bytes(data)
@@ -4191,7 +4191,7 @@ test "pdf_read_document_from_bytes reconstructs around malformed objects" {
     bad_object,
   )
   guard strict_object is Err(@pdflite.PdfError::ParseObjectExpected) else {
-    fail("expected strict PdfError::ParseObjectExpected")
+    fail("expected strict @pdflite.PdfError::ParseObjectExpected")
   }
   let parsed_object = try! @pdflite.pdf_read_document_from_bytes(bad_object)
   @test.assert_eq(parsed_object.first_xref(), 0)
@@ -4205,7 +4205,7 @@ test "pdf_read_document_from_bytes reconstructs around malformed objects" {
     bad_name,
   )
   guard strict_name is Err(@pdflite.PdfError::InvalidHexEscape) else {
-    fail("expected strict PdfError::InvalidHexEscape")
+    fail("expected strict @pdflite.PdfError::InvalidHexEscape")
   }
   let parsed_name = try! @pdflite.pdf_read_document_from_bytes(bad_name)
   @test.assert_eq(parsed_name.first_xref(), 0)
@@ -4219,7 +4219,7 @@ test "pdf_read_document_from_bytes reports missing reconstructed root" {
     reader_pdf_ascii("%PDF-1.4\n1 0 obj\n1\nendobj\n"),
   )
   guard result is Err(@pdflite.PdfError::RootExpected) else {
-    fail("expected PdfError::RootExpected")
+    fail("expected @pdflite.PdfError::RootExpected")
   }
 }
 
@@ -4229,7 +4229,7 @@ test "pdf_read_document_from_bytes propagates unreconstructable errors" {
     reader_pdf_ascii("%PDF-1.4\nstartxref\nabc\n%%EOF\n"),
   )
   guard result is Err(@pdflite.PdfError::NumberExpected) else {
-    fail("expected PdfError::NumberExpected")
+    fail("expected @pdflite.PdfError::NumberExpected")
   }
 }
 
@@ -4284,7 +4284,7 @@ test "pdf_read_document_from_bytes reconstructs compressed xref stream Prev chai
     reader_xref_stream_pdf_with_compressed_prev_update_bad_startxref(),
   )
   guard strict is Err(@pdflite.PdfError::XRefExpected) else {
-    fail("expected strict PdfError::XRefExpected")
+    fail("expected strict @pdflite.PdfError::XRefExpected")
   }
 
   let updated = try! @pdflite.pdf_read_document_from_bytes(
@@ -4421,7 +4421,7 @@ test "pdf_read_document_from_bytes reconstructs object streams with indirect fil
     reader_xref_stream_pdf_with_indirect_object_stream_filter_bad_startxref(),
   )
   guard strict is Err(@pdflite.PdfError::XRefExpected) else {
-    fail("expected strict PdfError::XRefExpected")
+    fail("expected strict @pdflite.PdfError::XRefExpected")
   }
 
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
@@ -4496,7 +4496,7 @@ test "pdf_read_document_from_bytes_with_passwords rejects missing encrypted obje
     reader_encrypted_xref_stream_pdf_with_missing_object_stream_for_test(),
   )
   guard result is Err(@pdflite.PdfError::XRefEntryExpected) else {
-    fail("expected PdfError::XRefEntryExpected")
+    fail("expected @pdflite.PdfError::XRefEntryExpected")
   }
 }
 
@@ -4520,7 +4520,7 @@ test "pdf_read_document_from_bytes reconstructs indirect object-stream bounds" {
     reader_xref_stream_pdf_with_indirect_object_stream_bounds_bad_startxref(),
   )
   guard strict is Err(@pdflite.PdfError::XRefExpected) else {
-    fail("expected strict PdfError::XRefExpected")
+    fail("expected strict @pdflite.PdfError::XRefExpected")
   }
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
     reader_xref_stream_pdf_with_indirect_object_stream_bounds_bad_startxref(),
@@ -4541,7 +4541,7 @@ test "pdf_read_document_from_bytes rejects mismatched object-stream entries" {
     reader_xref_stream_pdf_with_mismatched_object_stream(),
   )
   guard result is Err(@pdflite.PdfError::XRefEntryExpected) else {
-    fail("expected PdfError::XRefEntryExpected")
+    fail("expected @pdflite.PdfError::XRefEntryExpected")
   }
 }
 
@@ -4551,7 +4551,7 @@ test "pdf_read_document_from_bytes rejects invalid object-stream data slices" {
     reader_xref_stream_pdf_with_object_stream_bad_first(),
   )
   guard result is Err(@pdflite.PdfError::StreamDataExpected) else {
-    fail("expected PdfError::StreamDataExpected")
+    fail("expected @pdflite.PdfError::StreamDataExpected")
   }
 }
 
@@ -4561,14 +4561,14 @@ test "pdf_read_document_from_bytes rejects non-xref startxref objects" {
     reader_startxref_object_pdf("7"),
   )
   guard non_stream is Err(@pdflite.PdfError::XRefExpected) else {
-    fail("expected PdfError::XRefExpected")
+    fail("expected @pdflite.PdfError::XRefExpected")
   }
 
   let wrong_stream_type : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_document_from_bytes(
     reader_startxref_object_pdf("<< /Length 0 >>\nstream\n\nendstream"),
   )
   guard wrong_stream_type is Err(@pdflite.PdfError::XRefExpected) else {
-    fail("expected PdfError::XRefExpected")
+    fail("expected @pdflite.PdfError::XRefExpected")
   }
 
   let explicit_wrong_type : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
@@ -4734,7 +4734,7 @@ test "pdf_read_classic_document_revision_from_bytes reports bad revisions" {
     0,
   )
   guard invalid is Err(@pdflite.PdfError::BadRevision) else {
-    fail("expected PdfError::BadRevision")
+    fail("expected @pdflite.PdfError::BadRevision")
   }
 
   let missing : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_revision_from_bytes(
@@ -4742,7 +4742,7 @@ test "pdf_read_classic_document_revision_from_bytes reports bad revisions" {
     3,
   )
   guard missing is Err(@pdflite.PdfError::BadRevision) else {
-    fail("expected PdfError::BadRevision")
+    fail("expected @pdflite.PdfError::BadRevision")
   }
 }
 
@@ -4930,7 +4930,7 @@ test "pdf_read_classic_document_from_bytes reports missing startxref" {
     ),
   )
   guard result is Err(@pdflite.PdfError::StartXRefExpected) else {
-    fail("expected PdfError::StartXRefExpected")
+    fail("expected @pdflite.PdfError::StartXRefExpected")
   }
 }
 
@@ -4940,7 +4940,7 @@ test "pdf_read_classic_document_from_bytes reports malformed startxref number" {
     reader_pdf_ascii("%PDF-1.4\nstartxref\nabc\n%%EOF\n"),
   )
   guard result is Err(@pdflite.PdfError::NumberExpected) else {
-    fail("expected PdfError::NumberExpected")
+    fail("expected @pdflite.PdfError::NumberExpected")
   }
 }
 
@@ -4950,7 +4950,7 @@ test "pdf_read_classic_document_from_bytes reports missing xref marker" {
     reader_pdf_ascii("%PDF-1.4\nstartxref\n9\n%%EOF\n"),
   )
   guard result is Err(@pdflite.PdfError::XRefExpected) else {
-    fail("expected PdfError::XRefExpected")
+    fail("expected @pdflite.PdfError::XRefExpected")
   }
 }
 
@@ -4960,7 +4960,7 @@ test "pdf_read_classic_document_from_bytes reports trailerless xrefs" {
     reader_classic_pdf_without_trailer_after_xref(),
   )
   guard result is Err(@pdflite.PdfError::TrailerExpected) else {
-    fail("expected PdfError::TrailerExpected")
+    fail("expected @pdflite.PdfError::TrailerExpected")
   }
 }
 
@@ -4972,13 +4972,13 @@ test "pdf_read_classic_document_from_bytes reports malformed xref rows" {
     ),
   )
   guard bad_token is Err(@pdflite.PdfError::XRefEntryExpected) else {
-    fail("expected PdfError::XRefEntryExpected")
+    fail("expected @pdflite.PdfError::XRefEntryExpected")
   }
   let short_row : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     reader_classic_pdf_with_xref_body("0\n", "<< /Root 1 0 R /Size 1 >>"),
   )
   guard short_row is Err(@pdflite.PdfError::XRefEntryExpected) else {
-    fail("expected PdfError::XRefEntryExpected")
+    fail("expected @pdflite.PdfError::XRefEntryExpected")
   }
   let bad_fixed_digit : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     reader_classic_pdf_with_xref_body(
@@ -4986,7 +4986,7 @@ test "pdf_read_classic_document_from_bytes reports malformed xref rows" {
     ),
   )
   guard bad_fixed_digit is Err(@pdflite.PdfError::XRefEntryExpected) else {
-    fail("expected PdfError::XRefEntryExpected")
+    fail("expected @pdflite.PdfError::XRefEntryExpected")
   }
   let bad_fixed_marker : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     reader_classic_pdf_with_xref_body(
@@ -4994,7 +4994,7 @@ test "pdf_read_classic_document_from_bytes reports malformed xref rows" {
     ),
   )
   guard bad_fixed_marker is Err(@pdflite.PdfError::XRefEntryExpected) else {
-    fail("expected PdfError::XRefEntryExpected")
+    fail("expected @pdflite.PdfError::XRefEntryExpected")
   }
 }
 
@@ -5004,7 +5004,7 @@ test "pdf_read_classic_document_from_bytes reports malformed trailers" {
     reader_classic_pdf_with_xref_body("0 1\n0000000000 65535 f \n", "1"),
   )
   guard non_dictionary is Err(@pdflite.PdfError::TrailerExpected) else {
-    fail("expected PdfError::TrailerExpected")
+    fail("expected @pdflite.PdfError::TrailerExpected")
   }
   let missing_root : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     reader_classic_pdf_with_xref_body(
@@ -5012,7 +5012,7 @@ test "pdf_read_classic_document_from_bytes reports malformed trailers" {
     ),
   )
   guard missing_root is Err(@pdflite.PdfError::RootExpected) else {
-    fail("expected PdfError::RootExpected")
+    fail("expected @pdflite.PdfError::RootExpected")
   }
   let bad_prev : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     reader_classic_pdf_with_xref_body(
@@ -5020,7 +5020,7 @@ test "pdf_read_classic_document_from_bytes reports malformed trailers" {
     ),
   )
   guard bad_prev is Err(@pdflite.PdfError::TrailerExpected) else {
-    fail("expected PdfError::TrailerExpected")
+    fail("expected @pdflite.PdfError::TrailerExpected")
   }
 }
 
@@ -5030,7 +5030,7 @@ test "pdf_read_classic_document_from_bytes stops cyclic Prev chains" {
     reader_classic_pdf_with_self_prev_xref(),
   )
   guard result is Err(@pdflite.PdfError::XRefExpected) else {
-    fail("expected PdfError::XRefExpected")
+    fail("expected @pdflite.PdfError::XRefExpected")
   }
 }
 
@@ -5050,7 +5050,7 @@ test "pdf_read_classic_document_from_bytes recovers unreadable stream lengths" {
     reader_classic_pdf_with_mismatched_stream_length_xref(),
   )
   guard mismatched is Err(@pdflite.PdfError::XRefEntryExpected) else {
-    fail("expected PdfError::XRefEntryExpected")
+    fail("expected @pdflite.PdfError::XRefEntryExpected")
   }
 
   let stream_length_object = try! @pdflite.pdf_read_classic_document_from_bytes(
@@ -5070,14 +5070,14 @@ test "pdf_read_classic_document_from_bytes reports xref object mismatches" {
     reader_classic_pdf_with_mismatched_object_xref(),
   )
   guard mismatched_object is Err(@pdflite.PdfError::XRefEntryExpected) else {
-    fail("expected PdfError::XRefEntryExpected")
+    fail("expected @pdflite.PdfError::XRefEntryExpected")
   }
   let unparseable_object : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     reader_classic_pdf_with_unparseable_xref_object(),
   )
   guard unparseable_object
     is Err(@pdflite.PdfError::ParseIndirectObjectExpected) else {
-    fail("expected PdfError::ParseIndirectObjectExpected")
+    fail("expected @pdflite.PdfError::ParseIndirectObjectExpected")
   }
 }
 

@@ -186,7 +186,7 @@ test "PdfDocument annotation APIs report malformed annotation dictionaries" {
     PdfDictionary([]),
   )
   guard missing_rect is Err(@pdflite.PdfError::RectangleExpected) else {
-    fail("expected PdfError::RectangleExpected")
+    fail("expected @pdflite.PdfError::RectangleExpected")
   }
   let bad_rest = {
     ..@pdflite.pdf_annotation_make(AnnotationText),
@@ -197,7 +197,7 @@ test "PdfDocument annotation APIs report malformed annotation dictionaries" {
     bad_rest,
   )
   guard bad_rest_result is Err(@pdflite.PdfError::DictionaryExpected) else {
-    fail("expected PdfError::DictionaryExpected")
+    fail("expected @pdflite.PdfError::DictionaryExpected")
   }
   let bad_annots_result : Result[@pdflite.PdfPage, Error] = try? doc.add_annotation(
     {
@@ -207,7 +207,7 @@ test "PdfDocument annotation APIs report malformed annotation dictionaries" {
     @pdflite.pdf_annotation_make(AnnotationText),
   )
   guard bad_annots_result is Err(@pdflite.PdfError::DictionaryExpected) else {
-    fail("expected PdfError::DictionaryExpected")
+    fail("expected @pdflite.PdfError::DictionaryExpected")
   }
 }
 

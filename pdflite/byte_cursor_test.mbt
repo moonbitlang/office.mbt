@@ -84,11 +84,11 @@ test "ByteCursor peeks byte slices without advancing" {
   @test.assert_eq(cursor.position(), 1)
   let bad_length : Result[BytesView, Error] = try? cursor.peek_view(-1)
   guard bad_length is Err(@pdflite.PdfError::InvalidReadLength(-1)) else {
-    fail("expected PdfError::InvalidReadLength for negative peek")
+    fail("expected @pdflite.PdfError::InvalidReadLength for negative peek")
   }
   let too_long : Result[BytesView, Error] = try? cursor.peek_view(3)
   guard too_long is Err(@pdflite.PdfError::EndOfInput) else {
-    fail("expected PdfError::EndOfInput for oversized peek")
+    fail("expected @pdflite.PdfError::EndOfInput for oversized peek")
   }
 }
 
@@ -112,11 +112,15 @@ test "ByteCursor reports checked offset and rewind errors" {
   let cursor = @pdflite.byte_cursor_of_bytes(bytes)
   let bad_offset : Result[Unit, Error] = try? cursor.set_offset(-1)
   guard bad_offset is Err(@pdflite.PdfError::InvalidCursorPosition(-1)) else {
-    fail("expected PdfError::InvalidCursorPosition for negative offset")
+    fail(
+      "expected @pdflite.PdfError::InvalidCursorPosition for negative offset",
+    )
   }
   let bad_rewind : Result[Unit, Error] = try? cursor.rewind()
   guard bad_rewind is Err(@pdflite.PdfError::InvalidCursorPosition(-1)) else {
-    fail("expected PdfError::InvalidCursorPosition for rewind before start")
+    fail(
+      "expected @pdflite.PdfError::InvalidCursorPosition for rewind before start",
+    )
   }
 }
 
@@ -212,7 +216,7 @@ test "ByteCursor read_until_view handles EOF policy" {
     eof_is_delimiter=false,
   )
   guard missing is Err(@pdflite.PdfError::EndOfInput) else {
-    fail("expected PdfError::EndOfInput when EOF is not a delimiter")
+    fail("expected @pdflite.PdfError::EndOfInput when EOF is not a delimiter")
   }
   @test.assert_eq(strict.position(), 2)
 }
@@ -230,7 +234,7 @@ test "ByteCursor ignore_until stops before matching byte" {
     eof_is_delimiter=false,
   )
   guard missing is Err(@pdflite.PdfError::EndOfInput) else {
-    fail("expected PdfError::EndOfInput for strict ignore_until")
+    fail("expected @pdflite.PdfError::EndOfInput for strict ignore_until")
   }
   @test.assert_eq(cursor.position(), 4)
 
@@ -253,7 +257,7 @@ test "ByteCursor reads lines as byte data" {
   )
   let result : Result[BytesView, Error] = try? cursor.read_line_view()
   guard result is Err(@pdflite.PdfError::EndOfInput) else {
-    fail("expected PdfError::EndOfInput after all lines are consumed")
+    fail("expected @pdflite.PdfError::EndOfInput after all lines are consumed")
   }
 }
 
@@ -313,20 +317,22 @@ test "ByteCursor reports checked cursor errors" {
   let cursor = @pdflite.byte_cursor_of_bytes(bytes)
   let bad_seek : Result[Unit, Error] = try? cursor.seek(-1)
   guard bad_seek is Err(@pdflite.PdfError::InvalidCursorPosition(-1)) else {
-    fail("expected PdfError::InvalidCursorPosition for negative seek")
+    fail("expected @pdflite.PdfError::InvalidCursorPosition for negative seek")
   }
   let bad_read_position : Result[BytesView, Error] = try? cursor.read_view_at(
     -1, 1,
   )
   guard bad_read_position is Err(@pdflite.PdfError::InvalidCursorPosition(-1)) else {
-    fail("expected PdfError::InvalidCursorPosition for negative read position")
+    fail(
+      "expected @pdflite.PdfError::InvalidCursorPosition for negative read position",
+    )
   }
   let bad_length : Result[BytesView, Error] = try? cursor.read_view(-1)
   guard bad_length is Err(@pdflite.PdfError::InvalidReadLength(-1)) else {
-    fail("expected PdfError::InvalidReadLength for negative read")
+    fail("expected @pdflite.PdfError::InvalidReadLength for negative read")
   }
   let too_long : Result[BytesView, Error] = try? cursor.read_view(3)
   guard too_long is Err(@pdflite.PdfError::EndOfInput) else {
-    fail("expected PdfError::EndOfInput for oversized read")
+    fail("expected @pdflite.PdfError::EndOfInput for oversized read")
   }
 }
