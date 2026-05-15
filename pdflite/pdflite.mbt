@@ -90,3 +90,18 @@ pub using @crypt_core {
   pdf_p_of_permissions,
   pdf_permissions_of_p,
 }
+
+///|
+using @crypt_core {
+  pdf_arc4_crypt,
+  pdf_md5_digest,
+  pdf_sha256_digest,
+  pdf_sha384_digest,
+  pdf_sha512_digest,
+  pdf_aes_encrypt_block,
+  pdf_aes_cbc_decrypt,
+  pdf_aes_cbc_encrypt_with_iv,
+  pdf_aes_ecb_decrypt,
+  pdf_encryption_object_key,
+  pdf_arc4_crypt_object,
+}

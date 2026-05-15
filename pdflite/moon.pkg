@@ -3,14 +3,12 @@ import {
   "bobzhang/pdflite/crypt_core" @crypt_core,
   "bobzhang/pdflite/geometry" @geometry,
   "bobzhang/pdflite/internal/number_set" @number_set,
-  "illusory0x0/rijndael/rijndael",
   "moonbitlang/core/env",
   "moonbitlang/core/encoding/ascii",
   "moonbitlang/core/hashmap",
   "moonbitlang/core/math",
   "moonbitlang/core/random",
   "moonbitlang/core/strconv",
-  "moonbitlang/x/crypto",
 }
 
 import {

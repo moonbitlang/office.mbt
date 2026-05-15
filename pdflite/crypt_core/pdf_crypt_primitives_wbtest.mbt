@@ -1,4 +1,7 @@
 ///|
+using @core {pdf_bytes_of_int_array}
+
+///|
 fn crypt_bytes_for_test(values : ArrayView[Int]) -> PdfBytes {
   try! pdf_bytes_of_int_array(values)
 }

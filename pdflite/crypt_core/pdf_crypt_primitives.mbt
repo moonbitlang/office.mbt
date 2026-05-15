@@ -15,7 +15,10 @@ fn pdf_arc4_swap(state : Array[Int], left : Int, right : Int) -> Unit {
 ///
 /// ARC4 is symmetric, so the same function encrypts and decrypts. Empty keys
 /// raise `PdfError::CryptoKeyExpected`.
-fn pdf_arc4_crypt(key : BytesView, data : BytesView) -> PdfBytes raise PdfError {
+pub fn pdf_arc4_crypt(
+  key : BytesView,
+  data : BytesView,
+) -> PdfBytes raise PdfError {
   guard key.length() > 0 else { raise PdfError::CryptoKeyExpected }
   let state : Array[Int] = []
   for value in 0..<256 {
@@ -80,7 +83,7 @@ let pdf_md5_constants : FixedArray[UInt] = [
 
 ///|
 /// Return the MD5 digest of `data`.
-fn pdf_md5_digest(data : BytesView) -> PdfBytes {
+pub fn pdf_md5_digest(data : BytesView) -> PdfBytes {
   let message : Array[Byte] = []
   for byte in data {
     message.push(byte)
@@ -146,7 +149,7 @@ fn pdf_md5_digest(data : BytesView) -> PdfBytes {
 
 ///|
 /// Return the SHA-256 digest of `data`.
-fn pdf_sha256_digest(data : BytesView) -> PdfBytes {
+pub fn pdf_sha256_digest(data : BytesView) -> PdfBytes {
   Bytes::from_array(@crypto.sha256(data))
 }
 
@@ -307,7 +310,7 @@ fn pdf_sha512_digest_with_state(
 
 ///|
 /// Return the SHA-384 digest of `data`.
-fn pdf_sha384_digest(data : BytesView) -> PdfBytes {
+pub fn pdf_sha384_digest(data : BytesView) -> PdfBytes {
   pdf_sha512_digest_with_state(
     data,
     [
@@ -320,7 +323,7 @@ fn pdf_sha384_digest(data : BytesView) -> PdfBytes {
 
 ///|
 /// Return the SHA-512 digest of `data`.
-fn pdf_sha512_digest(data : BytesView) -> PdfBytes {
+pub fn pdf_sha512_digest(data : BytesView) -> PdfBytes {
   pdf_sha512_digest_with_state(
     data,
     [
@@ -376,7 +379,7 @@ fn pdf_aes_decrypt_key(key : BytesView) -> FixedArray[Byte] raise PdfError {
 
 ///|
 /// Encrypt one 16-byte AES block with a 128-, 192-, or 256-bit key.
-fn pdf_aes_encrypt_block(
+pub fn pdf_aes_encrypt_block(
   key : BytesView,
   block : BytesView,
 ) -> PdfBytes raise PdfError {
@@ -390,7 +393,7 @@ fn pdf_aes_encrypt_block(
 ///|
 /// Decrypt one 16-byte AES block with a 128-, 192-, or 256-bit key.
 #warnings("-unused_value")
-fn pdf_aes_decrypt_block(
+pub fn pdf_aes_decrypt_block(
   key : BytesView,
   block : BytesView,
 ) -> PdfBytes raise PdfError {
@@ -427,7 +430,7 @@ fn pdf_aes_append_block(output : Array[Byte], block : FixedArray[Byte]) -> Unit 
 ///
 /// Data shorter than or equal to one block decrypts to empty bytes. Block
 /// lengths that are not multiples of 16 raise `PdfError::InvalidCryptoDataLength`.
-fn pdf_aes_cbc_decrypt(
+pub fn pdf_aes_cbc_decrypt(
   key : BytesView,
   data : BytesView,
   remove_padding? : Bool = true,
@@ -487,7 +490,7 @@ fn pdf_aes_padded_blocks(data : BytesView) -> Array[FixedArray[Byte]] {
 ///
 /// PKCS-style padding is added and the returned bytes include the IV as the
 /// first block, matching PDF AES string and stream data layout.
-fn pdf_aes_cbc_encrypt_with_iv(
+pub fn pdf_aes_cbc_encrypt_with_iv(
   key : BytesView,
   iv : BytesView,
   data : BytesView,
@@ -517,7 +520,7 @@ fn pdf_aes_cbc_encrypt_with_iv(
 ///
 /// The input length must be a non-zero multiple of 16 unless it is empty.
 /// Padding is removed by default.
-fn pdf_aes_ecb_decrypt(
+pub fn pdf_aes_ecb_decrypt(
   key : BytesView,
   data : BytesView,
   remove_padding? : Bool = true,
@@ -551,7 +554,7 @@ fn pdf_aes_ecb_decrypt(
 ///
 /// The input length must be a non-zero multiple of 16 unless it is empty.
 #warnings("-unused_value")
-fn pdf_aes_ecb_encrypt(
+pub fn pdf_aes_ecb_encrypt(
   key : BytesView,
   data : BytesView,
 ) -> PdfBytes raise PdfError {
@@ -579,7 +582,7 @@ fn pdf_aes_ecb_encrypt(
 ///
 /// The object number, generation, file key, key length, and AESV2 salt are
 /// hashed according to the PDF standard-security object-key algorithm.
-fn pdf_encryption_object_key(
+pub fn pdf_encryption_object_key(
   crypt_type : PdfCryptType,
   object_number : Int,
   generation : Int,
@@ -618,7 +621,7 @@ fn pdf_encryption_object_key(
 ///
 /// The per-object key is derived from object number and generation before ARC4
 /// is applied.
-fn pdf_arc4_crypt_object(
+pub fn pdf_arc4_crypt_object(
   object_number : Int,
   generation : Int,
   file_key : BytesView,
