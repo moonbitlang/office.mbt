@@ -132,3 +132,16 @@ pub using @date {
   pdf_date_of_string,
   pdf_bytes_of_date,
 }
+
+///|
+pub using @flate {
+  pdf_flate_encode_view_with_level,
+  pdf_flate_encode_view,
+  pdf_flate_encode_with_level,
+  pdf_flate_encode,
+  pdf_flate_decode_view,
+  pdf_flate_decode,
+}
+
+///|
+using @flate {pdf_flate_decode_view_prefix}

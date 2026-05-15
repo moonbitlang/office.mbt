@@ -1,0 +1,30 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pdflite/flate"
+
+import {
+  "bobzhang/pdflite/core",
+}
+
+// Values
+pub fn pdf_flate_decode(Bytes) -> Bytes raise @core.PdfError
+
+pub fn pdf_flate_decode_view(BytesView) -> Bytes raise @core.PdfError
+
+pub fn pdf_flate_decode_view_prefix(BytesView) -> (Bytes, Int) raise @core.PdfError
+
+pub fn pdf_flate_encode(Bytes) -> Bytes
+
+pub fn pdf_flate_encode_view(BytesView) -> Bytes
+
+pub fn pdf_flate_encode_view_with_level(BytesView, Int) -> Bytes raise @core.PdfError
+
+pub fn pdf_flate_encode_with_level(Bytes, Int) -> Bytes raise @core.PdfError
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits
+

@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "vendor/miniz/miniz.h"
-#include "vendor/miniz/miniz.c"
+#include "../vendor/miniz/miniz.h"
+#include "../vendor/miniz/miniz.c"
 
 static moonbit_bytes_t pdflite_zlib_result_bytes(
   int32_t ok,

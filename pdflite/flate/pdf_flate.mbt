@@ -1658,7 +1658,7 @@ pub fn pdf_flate_decode(data : PdfBytes) -> PdfBytes raise PdfError {
 }
 
 ///|
-fn pdf_flate_decode_view_prefix(
+pub fn pdf_flate_decode_view_prefix(
   data : BytesView,
 ) -> (PdfBytes, Int) raise PdfError {
   if data.length() == 0 {
