@@ -80,3 +80,6 @@ pub using @geometry {
   transform_recompose,
   transform_recompose_components,
 }
+
+///|
+using @number_set {type PdfNumberSet, pdf_number_set, pdf_push_unique_number}

@@ -1,10 +1,10 @@
 ///|
-priv struct PdfNumberSet {
+pub struct PdfNumberSet {
   values : @hashmap.HashMap[Int, Bool]
 }
 
 ///|
-fn pdf_number_set(numbers : ArrayView[Int]) -> PdfNumberSet {
+pub fn pdf_number_set(numbers : ArrayView[Int]) -> PdfNumberSet {
   let values : @hashmap.HashMap[Int, Bool] = HashMap([])
   for number in numbers {
     values[number] = true
@@ -13,17 +13,17 @@ fn pdf_number_set(numbers : ArrayView[Int]) -> PdfNumberSet {
 }
 
 ///|
-fn PdfNumberSet::contains(self : PdfNumberSet, number : Int) -> Bool {
+pub fn PdfNumberSet::contains(self : PdfNumberSet, number : Int) -> Bool {
   self.values.contains(number)
 }
 
 ///|
-fn PdfNumberSet::add(self : PdfNumberSet, number : Int) -> Unit {
+pub fn PdfNumberSet::add(self : PdfNumberSet, number : Int) -> Unit {
   self.values[number] = true
 }
 
 ///|
-fn pdf_push_unique_number(
+pub fn pdf_push_unique_number(
   numbers : Array[Int],
   seen : PdfNumberSet,
   number : Int,
