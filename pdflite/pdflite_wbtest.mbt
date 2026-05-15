@@ -1147,17 +1147,6 @@ test "page-label private helpers preserve non-uppercase bytes and root guards" {
 }
 
 ///|
-test "private date two-digit parser rejects short input" {
-  let result : Result[Int, Error] = try? pdf_date_two_digits(
-    @ascii.encode("1"),
-    0,
-  )
-  guard result is Err(PdfError::BadDate) else {
-    fail("expected PdfError::BadDate")
-  }
-}
-
-///|
 test "private annotation and bookmark guards report malformed roots" {
   let annotation_rest : Result[PdfObject, Error] = try? pdf_annotation_rest(
     PdfInteger(1),

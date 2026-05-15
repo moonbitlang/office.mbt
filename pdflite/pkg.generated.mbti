@@ -4,6 +4,7 @@ package "bobzhang/pdflite"
 import {
   "bobzhang/pdflite/core",
   "bobzhang/pdflite/crypt_core",
+  "bobzhang/pdflite/date",
   "bobzhang/pdflite/geometry",
   "moonbitlang/core/debug",
   "moonbitlang/core/hashmap",
@@ -106,7 +107,7 @@ pub fn pdf_bytes_map_int(BytesView, (Int) -> Int) -> Bytes raise @core.PdfError
 
 pub fn pdf_bytes_of_array_view(ArrayView[Byte]) -> Bytes
 
-pub fn pdf_bytes_of_date(PdfDate) -> Bytes raise @core.PdfError
+pub fn pdf_bytes_of_date(@date.PdfDate) -> Bytes raise @core.PdfError
 
 pub fn pdf_bytes_of_int_array(ArrayView[Int]) -> Bytes raise @core.PdfError
 
@@ -164,13 +165,13 @@ pub fn pdf_content_end_artifact() -> PdfContentOp
 
 pub fn pdf_content_stream_of_ops(ArrayView[PdfContentOp]) -> PdfObject raise @core.PdfError
 
-pub fn pdf_date_of_bytes(Bytes) -> PdfDate raise @core.PdfError
+pub fn pdf_date_of_bytes(Bytes) -> @date.PdfDate raise @core.PdfError
 
-pub fn pdf_date_of_object(PdfObject) -> PdfDate raise @core.PdfError
+pub fn pdf_date_of_object(PdfObject) -> @date.PdfDate raise @core.PdfError
 
-pub fn pdf_date_of_string(String) -> PdfDate raise @core.PdfError
+pub fn pdf_date_of_string(String) -> @date.PdfDate raise @core.PdfError
 
-pub fn pdf_date_of_view(BytesView) -> PdfDate raise @core.PdfError
+pub fn pdf_date_of_view(BytesView) -> @date.PdfDate raise @core.PdfError
 
 pub fn pdf_decode_filter_bytes(@core.PdfName, Bytes) -> Bytes raise @core.PdfError
 
@@ -310,7 +311,7 @@ pub fn pdf_object_map_empty() -> PdfObjectMap
 
 pub fn pdf_object_of_colour_space(PdfColourSpace) -> PdfObject?
 
-pub fn pdf_object_of_date(PdfDate) -> PdfObject raise @core.PdfError
+pub fn pdf_object_of_date(@date.PdfDate) -> PdfObject raise @core.PdfError
 
 pub fn pdf_object_of_destination(PdfDestination) -> PdfObject
 
@@ -532,7 +533,7 @@ pub fn pdf_string_of_content_op(PdfContentOp) -> Bytes raise @core.PdfError
 
 pub fn pdf_string_of_content_ops(ArrayView[PdfContentOp]) -> Bytes raise @core.PdfError
 
-pub fn pdf_string_of_date(PdfDate) -> String raise @core.PdfError
+pub fn pdf_string_of_date(@date.PdfDate) -> String raise @core.PdfError
 
 pub fn pdf_string_of_font(PdfFont) -> String
 
@@ -1096,17 +1097,6 @@ pub(all) enum PdfContentOp {
   Op_BX
   Op_EX
   Op_Unknown(Bytes)
-} derive(Eq, ToJson, @debug.Debug)
-
-pub(all) struct PdfDate {
-  year : Int
-  month : Int
-  day : Int
-  hour : Int
-  minute : Int
-  second : Int
-  hour_offset : Int
-  minute_offset : Int
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfDecryptionResult {
@@ -1768,6 +1758,8 @@ pub using @geometry {type PaperSize}
 pub type PdfBytes = Bytes
 
 pub using @core {type PdfCryptType}
+
+pub using @date {type PdfDate}
 
 pub using @core {type PdfError}
 

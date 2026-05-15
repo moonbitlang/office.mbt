@@ -105,3 +105,13 @@ using @crypt_core {
   pdf_encryption_object_key,
   pdf_arc4_crypt_object,
 }
+
+///|
+pub using @date {
+  type PdfDate,
+  pdf_string_of_date,
+  pdf_date_of_view,
+  pdf_date_of_bytes,
+  pdf_date_of_string,
+  pdf_bytes_of_date,
+}
