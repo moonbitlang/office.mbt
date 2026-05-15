@@ -3227,7 +3227,7 @@ fn acceptance_unicode_predefined_cmap_document_for_test() -> @pdflite.PdfDocumen
     137,
     acceptance_unicode_predefined_tounicode_cmap_for_test(),
   )
-  let pages = [
+  let pages : ReadOnlyArray[@pdflite.PdfPage] = [
     acceptance_predefined_cmap_page_for_test(
       "/FUcs2H",
       acceptance_predefined_cmap_type0_font_for_test(
