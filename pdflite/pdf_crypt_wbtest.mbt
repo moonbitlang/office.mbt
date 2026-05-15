@@ -1266,7 +1266,7 @@ test "private AESV2 object data uses object key and IV prefix" {
   ])
   @test.assert_eq(
     encrypted,
-    try! pdf_aes_cbc_encrypt_with_iv(object_key, iv, data),
+    try! @crypt_core.pdf_aes_cbc_encrypt_with_iv(object_key, iv, data),
   )
   @test.assert_eq(encrypted[:16], iv)
   @test.assert_eq(
@@ -1286,7 +1286,7 @@ test "private AESV3 object data uses file key and IV prefix" {
   let encrypted = try! pdf_aesv3_encrypt_object_data(file_key, data, iv)
   @test.assert_eq(
     encrypted,
-    try! pdf_aes_cbc_encrypt_with_iv(file_key, iv, data),
+    try! @crypt_core.pdf_aes_cbc_encrypt_with_iv(file_key, iv, data),
   )
   @test.assert_eq(encrypted[:16], iv)
   @test.assert_eq(try! pdf_aesv3_decrypt_object_data(file_key, encrypted), data)

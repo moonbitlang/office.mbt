@@ -102,10 +102,13 @@ using @crypt_core {
   pdf_sha512_digest,
   pdf_aes_encrypt_block,
   pdf_aes_cbc_decrypt,
-  pdf_aes_cbc_encrypt_with_iv,
   pdf_aes_ecb_decrypt,
   pdf_encryption_object_key,
   pdf_arc4_crypt_object,
+  pdf_aesv2_decrypt_object_data,
+  pdf_aesv2_encrypt_object_data,
+  pdf_aesv3_decrypt_object_data,
+  pdf_aesv3_encrypt_object_data,
 }
 
 ///|
