@@ -1004,10 +1004,10 @@ test "private document decrypt supports ISO AESV3 object crypt with a file key" 
 
 ///|
 test "private password padding helpers truncate and pad PDF passwords" {
-  @test.assert_eq(pdf_password_padding().length(), 32)
-  @test.assert_eq(pdf_password_padding()[0].to_int(), 0x28)
+  @test.assert_eq(@crypt_core.pdf_password_padding().length(), 32)
+  @test.assert_eq(@crypt_core.pdf_password_padding()[0].to_int(), 0x28)
   @test.assert_eq(
-    pdf_pad_password(@ascii.encode("abc")),
+    @crypt_core.pdf_pad_password(@ascii.encode("abc")),
     crypt_wb_bytes_for_test([
       0x61, 0x62, 0x63, 0x28, 0xbf, 0x4e, 0x5e, 0x4e, 0x75, 0x8a, 0x41, 0x64, 0x00,
       0x4e, 0x56, 0xff, 0xfa, 0x01, 0x08, 0x2e, 0x2e, 0x00, 0xb6, 0xd0, 0x68, 0x3e,
@@ -1015,7 +1015,9 @@ test "private password padding helpers truncate and pad PDF passwords" {
     ]),
   )
   @test.assert_eq(
-    pdf_pad_password(@ascii.encode("012345678901234567890123456789012345")),
+    @crypt_core.pdf_pad_password(
+      @ascii.encode("012345678901234567890123456789012345"),
+    ),
     @ascii.encode("01234567890123456789012345678901"),
   )
 }

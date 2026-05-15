@@ -95,7 +95,6 @@ pub using @crypt_core {
 
 ///|
 using @crypt_core {
-  pdf_arc4_crypt,
   pdf_md5_digest,
   pdf_sha256_digest,
   pdf_sha384_digest,
@@ -109,6 +108,14 @@ using @crypt_core {
   pdf_aesv2_encrypt_object_data,
   pdf_aesv3_decrypt_object_data,
   pdf_aesv3_encrypt_object_data,
+  pdf_crypt_low_byte,
+  pdf_encryption_file_key,
+  pdf_make_user_password_entry,
+  pdf_bytes_prefix_equal,
+  pdf_make_owner_password_entry,
+  pdf_user_password_from_owner_password,
+  pdf_authenticate_user_password,
+  pdf_authenticate_owner_password,
 }
 
 ///|

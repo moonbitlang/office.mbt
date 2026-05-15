@@ -9,7 +9,7 @@ fn pdf_password_padding_fixed() -> FixedArray[Byte] {
 
 ///|
 /// Return the standard 32-byte PDF password padding sequence.
-fn pdf_password_padding() -> PdfBytes {
+pub fn pdf_password_padding() -> PdfBytes {
   Bytes::from_array(pdf_password_padding_fixed())
 }
 
@@ -18,7 +18,7 @@ fn pdf_password_padding() -> PdfBytes {
 ///
 /// Passwords are byte sequences. Inputs longer than 32 bytes are truncated;
 /// shorter inputs are filled with the standard PDF padding sequence.
-fn pdf_pad_password(password : BytesView) -> PdfBytes {
+pub fn pdf_pad_password(password : BytesView) -> PdfBytes {
   let padding = pdf_password_padding_fixed()
   let output : Array[Byte] = []
   let copied = if password.length() < 32 { password.length() } else { 32 }
@@ -32,7 +32,7 @@ fn pdf_pad_password(password : BytesView) -> PdfBytes {
 }
 
 ///|
-fn pdf_crypt_low_byte(value : Int, shift : Int) -> Byte {
+pub fn pdf_crypt_low_byte(value : Int, shift : Int) -> Byte {
   ((value >> shift) & 0xff).to_byte()
 }
 
@@ -48,7 +48,7 @@ fn pdf_crypt_push_view(output : Array[Byte], data : BytesView) -> Unit {
 ///
 /// This implements revisions 2-4 key derivation. AESV3 uses wrapped file keys
 /// instead and should go through the `PdfEncryptionValues` helpers.
-fn pdf_encryption_file_key(
+pub fn pdf_encryption_file_key(
   no_encrypt_metadata : Bool,
   password : BytesView,
   revision : Int,
@@ -99,7 +99,7 @@ fn pdf_key_xor_iteration(key : BytesView, iteration : Int) -> PdfBytes {
 ///
 /// The entry is derived from the user password, owner entry, permission mask,
 /// file ID, key length, and metadata-encryption flag.
-fn pdf_make_user_password_entry(
+pub fn pdf_make_user_password_entry(
   no_encrypt_metadata : Bool,
   user_password : BytesView,
   revision : Int,
@@ -133,7 +133,7 @@ fn pdf_make_user_password_entry(
 }
 
 ///|
-fn pdf_bytes_prefix_equal(
+pub fn pdf_bytes_prefix_equal(
   left : BytesView,
   right : BytesView,
   length : Int,
@@ -152,7 +152,7 @@ fn pdf_bytes_prefix_equal(
 
 ///|
 /// Authenticate a revision 2-4 user password against a `/U` entry.
-fn pdf_authenticate_user_password(
+pub fn pdf_authenticate_user_password(
   no_encrypt_metadata : Bool,
   user_password : BytesView,
   revision : Int,
@@ -195,7 +195,7 @@ fn pdf_owner_password_key(
 ///
 /// A blank owner password follows PDF behavior by using the user password as
 /// the owner-password source.
-fn pdf_make_owner_password_entry(
+pub fn pdf_make_owner_password_entry(
   revision : Int,
   owner_password : BytesView,
   user_password : BytesView,
@@ -225,7 +225,7 @@ fn pdf_make_owner_password_entry(
 ///
 /// The returned bytes are the padded/truncated internal password form, not a
 /// decoded MoonBit string.
-fn pdf_user_password_from_owner_password(
+pub fn pdf_user_password_from_owner_password(
   revision : Int,
   owner_password : BytesView,
   owner_entry : BytesView,
@@ -251,7 +251,7 @@ fn pdf_user_password_from_owner_password(
 ///
 /// This decrypts the owner entry to recover the padded user password and then
 /// validates that recovered password against the user entry.
-fn pdf_authenticate_owner_password(
+pub fn pdf_authenticate_owner_password(
   no_encrypt_metadata : Bool,
   owner_password : BytesView,
   revision : Int,

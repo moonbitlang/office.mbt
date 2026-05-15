@@ -31,11 +31,29 @@ pub fn pdf_arc4_crypt(BytesView, BytesView) -> Bytes raise @core.PdfError
 
 pub fn pdf_arc4_crypt_object(Int, Int, BytesView, Int, BytesView) -> Bytes raise @core.PdfError
 
+pub fn pdf_authenticate_owner_password(Bool, BytesView, Int, BytesView, BytesView, Int, BytesView, Int) -> Bool raise @core.PdfError
+
+pub fn pdf_authenticate_user_password(Bool, BytesView, Int, BytesView, BytesView, Int, BytesView, Int) -> Bool raise @core.PdfError
+
+pub fn pdf_bytes_prefix_equal(BytesView, BytesView, Int) -> Bool
+
+pub fn pdf_crypt_low_byte(Int, Int) -> Byte
+
+pub fn pdf_encryption_file_key(Bool, BytesView, Int, BytesView, Int, BytesView, Int) -> Bytes
+
 pub fn pdf_encryption_object_key(@core.PdfCryptType, Int, Int, BytesView, Int) -> Bytes
+
+pub fn pdf_make_owner_password_entry(Int, BytesView, BytesView, Int) -> Bytes raise @core.PdfError
+
+pub fn pdf_make_user_password_entry(Bool, BytesView, Int, BytesView, Int, BytesView, Int) -> Bytes raise @core.PdfError
 
 pub fn pdf_md5_digest(BytesView) -> Bytes
 
 pub fn pdf_p_of_permissions(ArrayView[PdfPermission]) -> Int
+
+pub fn pdf_pad_password(BytesView) -> Bytes
+
+pub fn pdf_password_padding() -> Bytes
 
 pub fn pdf_permissions_of_p(Int) -> Array[PdfPermission]
 
@@ -44,6 +62,8 @@ pub fn pdf_sha256_digest(BytesView) -> Bytes
 pub fn pdf_sha384_digest(BytesView) -> Bytes
 
 pub fn pdf_sha512_digest(BytesView) -> Bytes
+
+pub fn pdf_user_password_from_owner_password(Int, BytesView, BytesView, Int) -> Bytes raise @core.PdfError
 
 // Errors
 
