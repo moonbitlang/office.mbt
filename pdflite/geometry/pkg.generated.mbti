@@ -1,0 +1,156 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pdflite/geometry"
+
+import {
+  "bobzhang/pdflite/core",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub let paper_a0 : PaperSize
+
+pub let paper_a1 : PaperSize
+
+pub let paper_a10 : PaperSize
+
+pub let paper_a2 : PaperSize
+
+pub let paper_a3 : PaperSize
+
+pub let paper_a4 : PaperSize
+
+pub let paper_a5 : PaperSize
+
+pub let paper_a6 : PaperSize
+
+pub let paper_a7 : PaperSize
+
+pub let paper_a8 : PaperSize
+
+pub let paper_a9 : PaperSize
+
+pub fn paper_size_make(PdfUnit, Double, Double) -> PaperSize
+
+pub let paper_uslegal : PaperSize
+
+pub let paper_usletter : PaperSize
+
+pub fn point2(Double, Double) -> Point2
+
+pub fn transform_append(ArrayView[TransformOp], ArrayView[TransformOp]) -> Array[TransformOp]
+
+pub fn transform_apply(ArrayView[TransformOp], Point2) -> Point2
+
+pub fn transform_apply_matrix(TransformMatrix, Point2) -> Point2
+
+pub fn transform_apply_ops(ArrayView[TransformOp], Point2) -> Point2
+
+pub fn transform_compose_op(TransformOp, ArrayView[TransformOp]) -> Array[TransformOp]
+
+pub fn transform_decompose(TransformMatrix) -> TransformDecomposition
+
+pub fn transform_identity() -> Array[TransformOp]
+
+pub let transform_identity_matrix : TransformMatrix
+
+pub fn transform_matrix_compose(TransformMatrix, TransformMatrix) -> TransformMatrix
+
+pub fn transform_matrix_invert(TransformMatrix) -> TransformMatrix raise @core.PdfError
+
+pub fn transform_matrix_of_op(TransformOp) -> TransformMatrix
+
+pub fn transform_matrix_of_ops(ArrayView[TransformOp]) -> TransformMatrix
+
+pub fn transform_matrix_of_transform(ArrayView[TransformOp]) -> TransformMatrix
+
+pub fn transform_recompose(TransformDecomposition) -> TransformMatrix
+
+pub fn transform_recompose_components(Double, Double, Double, Double, Double, Double) -> TransformMatrix
+
+pub fn transform_rotate(Point2, Double) -> TransformMatrix
+
+pub fn transform_scale(Point2, Double, Double) -> TransformMatrix
+
+pub fn transform_shear_x(Point2, Double) -> TransformMatrix
+
+pub fn transform_shear_y(Point2, Double) -> TransformMatrix
+
+pub fn transform_string_of_matrix(TransformMatrix) -> String
+
+pub fn transform_string_of_op(TransformOp) -> String
+
+pub fn transform_string_of_ops(ArrayView[TransformOp]) -> String
+
+pub fn transform_string_of_transform(ArrayView[TransformOp]) -> String
+
+pub fn transform_translate(Double, Double) -> TransformMatrix
+
+pub fn unit_centimetres(Double, PdfUnit) -> Double
+
+pub fn unit_inches(Double, PdfUnit) -> Double
+
+pub fn unit_millimetres(Double, PdfUnit) -> Double
+
+pub fn unit_points(Double, PdfUnit) -> Double
+
+// Errors
+
+// Types and methods
+pub(all) struct PaperSize {
+  unit : PdfUnit
+  width : Double
+  height : Double
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PaperSize::height(Self) -> Double
+pub fn PaperSize::landscape(Self) -> Self
+pub fn PaperSize::unit(Self) -> PdfUnit
+pub fn PaperSize::width(Self) -> Double
+
+pub(all) enum PdfUnit {
+  PdfPoint
+  Inch
+  Centimetre
+  Millimetre
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct Point2 {
+  x : Double
+  y : Double
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct TransformDecomposition {
+  scale : Double
+  aspect : Double
+  rotation : Double
+  shear : Double
+  translate_x : Double
+  translate_y : Double
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct TransformMatrix {
+  a : Double
+  b : Double
+  c : Double
+  d : Double
+  e : Double
+  f : Double
+} derive(Eq, ToJson, @debug.Debug)
+pub fn TransformMatrix::apply(Self, Point2) -> Point2
+pub fn TransformMatrix::debug_string(Self) -> String
+pub fn TransformMatrix::decompose(Self) -> TransformDecomposition
+pub fn TransformMatrix::invert(Self) -> Self raise @core.PdfError
+
+pub(all) enum TransformOp {
+  Scale(Point2, Double, Double)
+  Rotate(Point2, Double)
+  Translate(Double, Double)
+  ShearX(Point2, Double)
+  ShearY(Point2, Double)
+} derive(Eq, ToJson, @debug.Debug)
+pub fn TransformOp::debug_string(Self) -> String
+
+// Type aliases
+pub using @core {type PdfError}
+
+// Traits
+

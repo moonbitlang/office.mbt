@@ -3,6 +3,7 @@ package "bobzhang/pdflite"
 
 import {
   "bobzhang/pdflite/core",
+  "bobzhang/pdflite/geometry",
   "moonbitlang/core/debug",
   "moonbitlang/core/hashmap",
 }
@@ -22,33 +23,33 @@ pub fn byte_cursor_of_view(BytesView, source? : String) -> ByteCursor
 
 pub fn byte_output_new(initial_size? : Int) -> ByteOutput raise @core.PdfError
 
-pub let paper_a0 : PaperSize
+pub let paper_a0 : @geometry.PaperSize
 
-pub let paper_a1 : PaperSize
+pub let paper_a1 : @geometry.PaperSize
 
-pub let paper_a10 : PaperSize
+pub let paper_a10 : @geometry.PaperSize
 
-pub let paper_a2 : PaperSize
+pub let paper_a2 : @geometry.PaperSize
 
-pub let paper_a3 : PaperSize
+pub let paper_a3 : @geometry.PaperSize
 
-pub let paper_a4 : PaperSize
+pub let paper_a4 : @geometry.PaperSize
 
-pub let paper_a5 : PaperSize
+pub let paper_a5 : @geometry.PaperSize
 
-pub let paper_a6 : PaperSize
+pub let paper_a6 : @geometry.PaperSize
 
-pub let paper_a7 : PaperSize
+pub let paper_a7 : @geometry.PaperSize
 
-pub let paper_a8 : PaperSize
+pub let paper_a8 : @geometry.PaperSize
 
-pub let paper_a9 : PaperSize
+pub let paper_a9 : @geometry.PaperSize
 
-pub fn paper_size_make(PdfUnit, Double, Double) -> PaperSize
+pub fn paper_size_make(@geometry.PdfUnit, Double, Double) -> @geometry.PaperSize
 
-pub let paper_uslegal : PaperSize
+pub let paper_uslegal : @geometry.PaperSize
 
-pub let paper_usletter : PaperSize
+pub let paper_usletter : @geometry.PaperSize
 
 pub fn pdf_add_annotation(PdfDocument, PdfPage, PdfAnnotation) -> PdfPage raise @core.PdfError
 
@@ -124,7 +125,7 @@ pub fn pdf_ccitt_g4_encode(Int, Int, Bytes) -> Bytes raise @core.PdfError
 
 pub fn pdf_ccitt_g4_encode_view(Int, Int, BytesView) -> Bytes raise @core.PdfError
 
-pub fn pdf_change_pages(Bool, PdfDocument, ArrayView[PdfPage], matrices? : ArrayView[(Int, TransformMatrix)], changes? : ArrayView[(Int, Int)]) -> PdfDocument raise @core.PdfError
+pub fn pdf_change_pages(Bool, PdfDocument, ArrayView[PdfPage], matrices? : ArrayView[(Int, @geometry.TransformMatrix)], changes? : ArrayView[(Int, Int)]) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_charcode_extractor_of_font(PdfDocument, PdfObject, debug? : Bool) -> ((Int) -> Int?) raise @core.PdfError
 
@@ -314,7 +315,7 @@ pub fn pdf_object_of_destination(PdfDestination) -> PdfObject
 
 pub fn pdf_object_of_function(PdfDocument, PdfFunction) -> PdfObject
 
-pub fn pdf_object_of_matrix(TransformMatrix) -> PdfObject
+pub fn pdf_object_of_matrix(@geometry.TransformMatrix) -> PdfObject
 
 pub fn pdf_objects_empty() -> PdfObjects
 
@@ -328,7 +329,7 @@ pub fn pdf_optional_content_merge(ArrayView[PdfDocument]) -> PdfOptionalContent?
 
 pub fn pdf_p_of_permissions(ArrayView[PdfPermission]) -> Int
 
-pub fn pdf_page_blank(PaperSize) -> PdfPage
+pub fn pdf_page_blank(@geometry.PaperSize) -> PdfPage
 
 pub fn pdf_page_custom(PdfObject) -> PdfPage
 
@@ -356,11 +357,11 @@ pub fn pdf_page_label_text_of_single(Int, PdfPageLabel) -> Bytes
 
 pub fn pdf_page_object_number(PdfDocument, Int) -> Int? raise @core.PdfError
 
-pub fn[A, B, C] pdf_page_process_stub((A, B) -> C raise, A, B) -> (C, A, TransformMatrix) raise
+pub fn[A, B, C] pdf_page_process_stub((A, B) -> C raise, A, B) -> (C, A, @geometry.TransformMatrix) raise
 
 pub fn pdf_page_protect(ArrayView[PdfContentOp]) -> Array[PdfContentOp]
 
-pub fn pdf_page_rectangle_of_paper(PaperSize) -> PdfObject
+pub fn pdf_page_rectangle_of_paper(@geometry.PaperSize) -> PdfObject
 
 pub fn pdf_page_reference_numbers(PdfDocument) -> Array[Int] raise @core.PdfError
 
@@ -560,11 +561,11 @@ pub fn pdf_text_extractor_of_font(PdfDocument, PdfObject) -> PdfTextExtractor ra
 
 pub fn pdf_text_extractor_of_font_real(PdfFont) -> PdfTextExtractor
 
-pub fn pdf_transform_annotations(PdfDocument, TransformMatrix, PdfObject) -> Unit raise @core.PdfError
+pub fn pdf_transform_annotations(PdfDocument, @geometry.TransformMatrix, PdfObject) -> Unit raise @core.PdfError
 
-pub fn pdf_transform_bookmark(PdfDocument, TransformMatrix, PdfBookmark) -> PdfBookmark raise @core.PdfError
+pub fn pdf_transform_bookmark(PdfDocument, @geometry.TransformMatrix, PdfBookmark) -> PdfBookmark raise @core.PdfError
 
-pub fn pdf_transform_destination(PdfDocument, TransformMatrix, PdfDestination) -> PdfDestination raise @core.PdfError
+pub fn pdf_transform_destination(PdfDocument, @geometry.TransformMatrix, PdfDestination) -> PdfDestination raise @core.PdfError
 
 pub fn pdf_trim_structure_tree(PdfDocument, ArrayView[Int]) -> Unit raise @core.PdfError
 
@@ -630,65 +631,65 @@ pub fn pdf_write_page_labels(PdfDocument, ArrayView[PdfPageLabel]) -> PdfDocumen
 
 pub fn pdf_write_real(Double) -> Bytes raise @core.PdfError
 
-pub fn point2(Double, Double) -> Point2
+pub fn point2(Double, Double) -> @geometry.Point2
 
 pub fn stream_to_get(ByteCursor, Int, Int) -> ToGet
 
-pub fn transform_append(ArrayView[TransformOp], ArrayView[TransformOp]) -> Array[TransformOp]
+pub fn transform_append(ArrayView[@geometry.TransformOp], ArrayView[@geometry.TransformOp]) -> Array[@geometry.TransformOp]
 
-pub fn transform_apply(ArrayView[TransformOp], Point2) -> Point2
+pub fn transform_apply(ArrayView[@geometry.TransformOp], @geometry.Point2) -> @geometry.Point2
 
-pub fn transform_apply_matrix(TransformMatrix, Point2) -> Point2
+pub fn transform_apply_matrix(@geometry.TransformMatrix, @geometry.Point2) -> @geometry.Point2
 
-pub fn transform_apply_ops(ArrayView[TransformOp], Point2) -> Point2
+pub fn transform_apply_ops(ArrayView[@geometry.TransformOp], @geometry.Point2) -> @geometry.Point2
 
-pub fn transform_compose_op(TransformOp, ArrayView[TransformOp]) -> Array[TransformOp]
+pub fn transform_compose_op(@geometry.TransformOp, ArrayView[@geometry.TransformOp]) -> Array[@geometry.TransformOp]
 
-pub fn transform_decompose(TransformMatrix) -> TransformDecomposition
+pub fn transform_decompose(@geometry.TransformMatrix) -> @geometry.TransformDecomposition
 
-pub fn transform_identity() -> Array[TransformOp]
+pub fn transform_identity() -> Array[@geometry.TransformOp]
 
-pub let transform_identity_matrix : TransformMatrix
+pub let transform_identity_matrix : @geometry.TransformMatrix
 
-pub fn transform_matrix_compose(TransformMatrix, TransformMatrix) -> TransformMatrix
+pub fn transform_matrix_compose(@geometry.TransformMatrix, @geometry.TransformMatrix) -> @geometry.TransformMatrix
 
-pub fn transform_matrix_invert(TransformMatrix) -> TransformMatrix raise @core.PdfError
+pub fn transform_matrix_invert(@geometry.TransformMatrix) -> @geometry.TransformMatrix raise @core.PdfError
 
-pub fn transform_matrix_of_op(TransformOp) -> TransformMatrix
+pub fn transform_matrix_of_op(@geometry.TransformOp) -> @geometry.TransformMatrix
 
-pub fn transform_matrix_of_ops(ArrayView[TransformOp]) -> TransformMatrix
+pub fn transform_matrix_of_ops(ArrayView[@geometry.TransformOp]) -> @geometry.TransformMatrix
 
-pub fn transform_matrix_of_transform(ArrayView[TransformOp]) -> TransformMatrix
+pub fn transform_matrix_of_transform(ArrayView[@geometry.TransformOp]) -> @geometry.TransformMatrix
 
-pub fn transform_recompose(TransformDecomposition) -> TransformMatrix
+pub fn transform_recompose(@geometry.TransformDecomposition) -> @geometry.TransformMatrix
 
-pub fn transform_recompose_components(Double, Double, Double, Double, Double, Double) -> TransformMatrix
+pub fn transform_recompose_components(Double, Double, Double, Double, Double, Double) -> @geometry.TransformMatrix
 
-pub fn transform_rotate(Point2, Double) -> TransformMatrix
+pub fn transform_rotate(@geometry.Point2, Double) -> @geometry.TransformMatrix
 
-pub fn transform_scale(Point2, Double, Double) -> TransformMatrix
+pub fn transform_scale(@geometry.Point2, Double, Double) -> @geometry.TransformMatrix
 
-pub fn transform_shear_x(Point2, Double) -> TransformMatrix
+pub fn transform_shear_x(@geometry.Point2, Double) -> @geometry.TransformMatrix
 
-pub fn transform_shear_y(Point2, Double) -> TransformMatrix
+pub fn transform_shear_y(@geometry.Point2, Double) -> @geometry.TransformMatrix
 
-pub fn transform_string_of_matrix(TransformMatrix) -> String
+pub fn transform_string_of_matrix(@geometry.TransformMatrix) -> String
 
-pub fn transform_string_of_op(TransformOp) -> String
+pub fn transform_string_of_op(@geometry.TransformOp) -> String
 
-pub fn transform_string_of_ops(ArrayView[TransformOp]) -> String
+pub fn transform_string_of_ops(ArrayView[@geometry.TransformOp]) -> String
 
-pub fn transform_string_of_transform(ArrayView[TransformOp]) -> String
+pub fn transform_string_of_transform(ArrayView[@geometry.TransformOp]) -> String
 
-pub fn transform_translate(Double, Double) -> TransformMatrix
+pub fn transform_translate(Double, Double) -> @geometry.TransformMatrix
 
-pub fn unit_centimetres(Double, PdfUnit) -> Double
+pub fn unit_centimetres(Double, @geometry.PdfUnit) -> Double
 
-pub fn unit_inches(Double, PdfUnit) -> Double
+pub fn unit_inches(Double, @geometry.PdfUnit) -> Double
 
-pub fn unit_millimetres(Double, PdfUnit) -> Double
+pub fn unit_millimetres(Double, @geometry.PdfUnit) -> Double
 
-pub fn unit_points(Double, PdfUnit) -> Double
+pub fn unit_points(Double, @geometry.PdfUnit) -> Double
 
 // Errors
 
@@ -802,16 +803,6 @@ pub(all) struct ObjectStreamReference {
   object_stream_number : Int
   index : Int
 } derive(Eq, ToJson, @debug.Debug)
-
-pub(all) struct PaperSize {
-  unit : PdfUnit
-  width : Double
-  height : Double
-} derive(Eq, ToJson, @debug.Debug)
-pub fn PaperSize::height(Self) -> Double
-pub fn PaperSize::landscape(Self) -> Self
-pub fn PaperSize::unit(Self) -> PdfUnit
-pub fn PaperSize::width(Self) -> Double
 
 pub(all) enum PdfAesV3RandomField {
   PdfAesV3FileKey
@@ -1039,7 +1030,7 @@ pub(all) enum PdfContentOp {
   Op_i(Double)
   Op_q
   Op_Q
-  Op_cm(TransformMatrix)
+  Op_cm(@geometry.TransformMatrix)
   Op_m(Double, Double)
   Op_l(Double, Double)
   Op_c(Double, Double, Double, Double, Double, Double)
@@ -1070,7 +1061,7 @@ pub(all) enum PdfContentOp {
   Op_Ts(Double)
   Op_Td(Double, Double)
   Op_TD(Double, Double)
-  Op_Tm(TransformMatrix)
+  Op_Tm(@geometry.TransformMatrix)
   Op_Tstar
   Op_Tj(Bytes)
   Op_TJ(PdfObject)
@@ -1161,7 +1152,7 @@ pub fn PdfDocument::build_name_tree(Self, ArrayView[(Bytes, PdfObject)]) -> PdfO
 pub fn PdfDocument::build_number_tree(Self, ArrayView[(Int, PdfObject)]) -> PdfObject
 pub fn PdfDocument::catalog(Self) -> PdfObject raise @core.PdfError
 pub fn PdfDocument::change_id(Self, String, () -> Double) -> Unit raise @core.PdfError
-pub fn PdfDocument::change_pages(Self, ArrayView[PdfPage], change_references? : Bool, matrices? : ArrayView[(Int, TransformMatrix)], changes? : ArrayView[(Int, Int)]) -> Self raise @core.PdfError
+pub fn PdfDocument::change_pages(Self, ArrayView[PdfPage], change_references? : Bool, matrices? : ArrayView[(Int, @geometry.TransformMatrix)], changes? : ArrayView[(Int, Int)]) -> Self raise @core.PdfError
 pub fn PdfDocument::colour_space_components(Self, PdfObject, PdfObject) -> Int raise @core.PdfError
 pub fn PdfDocument::colspace(Self, PdfObject, PdfObject) -> PdfColourSpace raise @core.PdfError
 pub fn PdfDocument::combine_pdf_resources(Self, PdfObject, PdfObject) -> PdfObject
@@ -1221,7 +1212,7 @@ pub fn PdfDocument::parse_content_ops(Self, ArrayView[PdfObject]) -> Array[PdfCo
 pub fn PdfDocument::parse_content_ops_with_resources(Self, PdfObject, ArrayView[PdfObject]) -> Array[PdfContentOp] raise @core.PdfError
 pub fn PdfDocument::parse_content_view_with_resources(Self, PdfObject, BytesView) -> Array[PdfContentOp] raise @core.PdfError
 pub fn PdfDocument::parse_function(Self, PdfObject) -> PdfFunction raise @core.PdfError
-pub fn PdfDocument::parse_matrix(Self, @core.PdfName, PdfObject) -> TransformMatrix raise @core.PdfError
+pub fn PdfDocument::parse_matrix(Self, @core.PdfName, PdfObject) -> @geometry.TransformMatrix raise @core.PdfError
 pub fn PdfDocument::parse_rectangle(Self, PdfObject) -> PdfRectangle raise @core.PdfError
 pub fn PdfDocument::parsed_object_entries(Self) -> Array[(Int, Int, PdfObject)]
 pub fn PdfDocument::pdf_decode_stream(Self, PdfObject) -> PdfObject raise @core.PdfError
@@ -1280,11 +1271,11 @@ pub fn PdfDocument::stream_object_entries(Self) -> Array[(Int, Int, PdfStream)]
 pub fn PdfDocument::target_of_page_number(Self, Int) -> PdfDestination raise @core.PdfError
 pub fn PdfDocument::text_extractor_of_font(Self, PdfObject) -> PdfTextExtractor raise @core.PdfError
 pub fn PdfDocument::trailer_dict(Self) -> PdfObject
-pub fn PdfDocument::transform_annotations(Self, TransformMatrix, PdfObject) -> Unit raise @core.PdfError
-pub fn PdfDocument::transform_bookmark(Self, TransformMatrix, PdfBookmark) -> PdfBookmark raise @core.PdfError
-pub fn PdfDocument::transform_destination(Self, TransformMatrix, PdfDestination) -> PdfDestination raise @core.PdfError
-pub fn PdfDocument::transform_quadpoints(Self, TransformMatrix, PdfObject) -> PdfObject
-pub fn PdfDocument::transform_rect(Self, TransformMatrix, PdfObject) -> PdfObject raise @core.PdfError
+pub fn PdfDocument::transform_annotations(Self, @geometry.TransformMatrix, PdfObject) -> Unit raise @core.PdfError
+pub fn PdfDocument::transform_bookmark(Self, @geometry.TransformMatrix, PdfBookmark) -> PdfBookmark raise @core.PdfError
+pub fn PdfDocument::transform_destination(Self, @geometry.TransformMatrix, PdfDestination) -> PdfDestination raise @core.PdfError
+pub fn PdfDocument::transform_quadpoints(Self, @geometry.TransformMatrix, PdfObject) -> PdfObject
+pub fn PdfDocument::transform_rect(Self, @geometry.TransformMatrix, PdfObject) -> PdfObject raise @core.PdfError
 pub fn PdfDocument::trim_structure_tree(Self, ArrayView[Int]) -> Unit raise @core.PdfError
 pub fn PdfDocument::version(Self) -> (Int, Int)
 pub fn PdfDocument::was_linearized(Self) -> Bool
@@ -1747,16 +1738,9 @@ pub(all) struct PdfTristimulusPoint {
 
 pub(all) struct PdfType3Glyphs {
   fontbbox : PdfRectangle
-  fontmatrix : TransformMatrix
+  fontmatrix : @geometry.TransformMatrix
   charprocs : Array[(@core.PdfName, PdfObject)]
   resources : PdfObject
-} derive(Eq, ToJson, @debug.Debug)
-
-pub(all) enum PdfUnit {
-  PdfPoint
-  Inch
-  Centimetre
-  Millimetre
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfVersion {
@@ -1777,11 +1761,6 @@ pub(all) enum PdfWriteMode {
   PdfWriteCompressedXRefStream
 } derive(Eq, ToJson, @debug.Debug)
 
-pub(all) struct Point2 {
-  x : Double
-  y : Double
-} derive(Eq, ToJson, @debug.Debug)
-
 pub(all) struct ToGet {
   input : ByteCursor
   position : Int
@@ -1793,38 +1772,9 @@ pub fn ToGet::input(Self) -> ByteCursor
 pub fn ToGet::length(Self) -> Int
 pub fn ToGet::position(Self) -> Int
 
-pub(all) struct TransformDecomposition {
-  scale : Double
-  aspect : Double
-  rotation : Double
-  shear : Double
-  translate_x : Double
-  translate_y : Double
-} derive(Eq, ToJson, @debug.Debug)
-
-pub(all) struct TransformMatrix {
-  a : Double
-  b : Double
-  c : Double
-  d : Double
-  e : Double
-  f : Double
-} derive(Eq, ToJson, @debug.Debug)
-pub fn TransformMatrix::apply(Self, Point2) -> Point2
-pub fn TransformMatrix::debug_string(Self) -> String
-pub fn TransformMatrix::decompose(Self) -> TransformDecomposition
-pub fn TransformMatrix::invert(Self) -> Self raise @core.PdfError
-
-pub(all) enum TransformOp {
-  Scale(Point2, Double, Double)
-  Rotate(Point2, Double)
-  Translate(Double, Double)
-  ShearX(Point2, Double)
-  ShearY(Point2, Double)
-} derive(Eq, ToJson, @debug.Debug)
-pub fn TransformOp::debug_string(Self) -> String
-
 // Type aliases
+pub using @geometry {type PaperSize}
+
 pub type PdfBytes = Bytes
 
 pub using @core {type PdfCryptType}
@@ -1832,6 +1782,16 @@ pub using @core {type PdfCryptType}
 pub using @core {type PdfError}
 
 pub using @core {type PdfName}
+
+pub using @geometry {type PdfUnit}
+
+pub using @geometry {type Point2}
+
+pub using @geometry {type TransformDecomposition}
+
+pub using @geometry {type TransformMatrix}
+
+pub using @geometry {type TransformOp}
 
 // Traits
 
