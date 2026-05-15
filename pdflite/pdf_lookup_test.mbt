@@ -49,7 +49,7 @@ test "PdfDocument lookup_required mirrors CamlPDF lookup_exception" {
     (key_null, PdfNull),
   ])
   @test.assert_eq(
-    try! doc.lookup_required(key_type, dict, @pdflite.PdfError::RootExpected),
+    try! doc.lookup_required(key_type, dict, RootExpected),
     PdfInteger(42),
   )
   let stream = @pdflite.pdf_stream(
@@ -57,13 +57,13 @@ test "PdfDocument lookup_required mirrors CamlPDF lookup_exception" {
     StreamGot(try! @pdflite.pdf_bytes_of_int_array([65])),
   )
   @test.assert_eq(
-    try! doc.lookup_required(key_type, stream, @pdflite.PdfError::RootExpected),
+    try! doc.lookup_required(key_type, stream, RootExpected),
     PdfInteger(7),
   )
   let missing : Result[@pdflite.PdfObject, Error] = try? doc.lookup_required(
     key_missing,
     dict,
-    @pdflite.PdfError::RootExpected,
+    RootExpected,
   )
   guard missing is Err(@pdflite.PdfError::RootExpected) else {
     fail("expected @pdflite.PdfError::RootExpected for missing key")
@@ -71,7 +71,7 @@ test "PdfDocument lookup_required mirrors CamlPDF lookup_exception" {
   let null_value : Result[@pdflite.PdfObject, Error] = try? doc.lookup_required(
     key_null,
     dict,
-    @pdflite.PdfError::RootExpected,
+    RootExpected,
   )
   guard null_value is Err(@pdflite.PdfError::RootExpected) else {
     fail("expected @pdflite.PdfError::RootExpected for null value")
@@ -79,7 +79,7 @@ test "PdfDocument lookup_required mirrors CamlPDF lookup_exception" {
   let not_dictionary : Result[@pdflite.PdfObject, Error] = try? doc.lookup_required(
     key_type,
     PdfInteger(1),
-    @pdflite.PdfError::DictionaryExpected,
+    DictionaryExpected,
   )
   guard not_dictionary is Err(@pdflite.PdfError::DictionaryExpected) else {
     fail("expected caller-provided error for non-dictionary")

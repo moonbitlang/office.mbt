@@ -202,7 +202,7 @@ fn pdf_crypt_required_string(
 ) -> PdfBytes raise PdfError {
   match pdf_crypt_lookup_string(pdf, key, dictionary) {
     Some(value) => value
-    None => raise PdfError::EncryptionDictionaryEntryExpected(key)
+    None => raise EncryptionDictionaryEntryExpected(key)
   }
 }
 
@@ -214,7 +214,7 @@ fn pdf_crypt_required_int(
 ) -> Int raise PdfError {
   match pdf_crypt_lookup_int(pdf, key, dictionary) {
     Some(value) => value
-    None => raise PdfError::EncryptionDictionaryEntryExpected(key)
+    None => raise EncryptionDictionaryEntryExpected(key)
   }
 }
 
@@ -234,7 +234,7 @@ fn pdf_crypt_chop_view(
   need : Int,
 ) -> PdfBytes raise PdfError {
   if value.length() < need {
-    raise PdfError::EncryptionDictionaryEntryTooShort(key)
+    raise EncryptionDictionaryEntryTooShort(key)
   }
   value[:need].to_owned()
 }

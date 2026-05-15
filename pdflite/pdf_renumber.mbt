@@ -11,7 +11,7 @@ fn pdf_renumber_document_with_changes(
   for number in old_numbers {
     let new_number = change_map.changed_reference(number)
     if new_number < 1 || seen.contains(new_number) {
-      raise PdfError::InvalidObjectNumber(new_number)
+      raise InvalidObjectNumber(new_number)
     }
     seen[new_number] = true
     let entry = output.objects.get_entry(number).unwrap()
@@ -76,7 +76,7 @@ pub fn PdfDocument::renumber_objects_by_offset(
   offset : Int,
 ) -> PdfDocument raise PdfError {
   if offset < 0 {
-    raise PdfError::InvalidObjectNumber(offset)
+    raise InvalidObjectNumber(offset)
   }
   if offset == 0 {
     self.copy()

@@ -6,7 +6,7 @@ fn PdfDocument::pdf_object_stream_required_int(
 ) -> Int raise PdfError {
   match self.lookup_direct(key, dictionary) {
     Some(PdfInteger(value)) if value >= 0 => value
-    _ => raise PdfError::XRefEntryExpected
+    _ => raise XRefEntryExpected
   }
 }
 
@@ -17,18 +17,18 @@ fn pdf_object_stream_number_offsets(
   count : Int,
 ) -> Array[(Int, Int)] raise PdfError {
   if first < 0 || first > data.length() || count < 0 {
-    raise PdfError::StreamDataExpected
+    raise StreamDataExpected
   }
   let values = pdf_parse_lexemes(pdf_lex_view(data[0:first]))
   if values.length() < count * 2 {
-    raise PdfError::XRefEntryExpected
+    raise XRefEntryExpected
   }
   let pairs : Array[(Int, Int)] = []
   for i in 0..<count {
     match (values[i * 2], values[i * 2 + 1]) {
       (PdfInteger(object_number), PdfInteger(offset)) if object_number > 0 &&
         offset >= 0 => pairs.push((object_number, offset))
-      _ => raise PdfError::XRefEntryExpected
+      _ => raise XRefEntryExpected
     }
   }
   pairs
@@ -84,7 +84,7 @@ fn PdfDocument::read_object_stream_context_from_object(
     PdfStreamObject(stream) => {
       match stream.dictionary.lookup_immediate(pdf_reader_type_name()) {
         Some(PdfNameObject(name)) if name == pdf_reader_objstm_name() => ()
-        Some(_) => raise PdfError::XRefEntryExpected
+        Some(_) => raise XRefEntryExpected
         None => ()
       }
       let decoded_stream = self.pdf_decode_stream_value_direct(stream)
@@ -105,7 +105,7 @@ fn PdfDocument::read_object_stream_context_from_object(
       )
       { data, first, pairs, end_offsets }
     }
-    _ => raise PdfError::XRefEntryExpected
+    _ => raise XRefEntryExpected
   }
 }
 
@@ -115,14 +115,14 @@ fn PdfObjectStreamContext::read_reference(
   reference : ObjectStreamReference,
 ) -> (Int, PdfObject) raise PdfError {
   if reference.index < 0 || reference.index >= self.pairs.length() {
-    raise PdfError::XRefEntryExpected
+    raise XRefEntryExpected
   }
   let next_offset = self.end_offsets[reference.index]
   let (object_number, offset) = self.pairs[reference.index]
   let start = self.first + offset
   let end = self.first + next_offset
   if start < self.first || start > end || end > self.data.length() {
-    raise PdfError::StreamDataExpected
+    raise StreamDataExpected
   }
   (
     object_number,
@@ -152,7 +152,7 @@ fn PdfDocument::read_object_stream_context_with_passwords(
   } else {
     let entry = match self.objects.get_entry(object_stream_number) {
       Some(entry) => entry
-      None => raise PdfError::XRefEntryExpected
+      None => raise XRefEntryExpected
     }
     let object_stream_object = self.lookup_object_or_null(object_stream_number)
     match
@@ -165,7 +165,7 @@ fn PdfDocument::read_object_stream_context_with_passwords(
       ) {
       Some(decrypted_stream) =>
         (self.read_object_stream_context_from_object(decrypted_stream), true)
-      None => raise PdfError::EncryptionAuthenticationUnsupported(PdfCryptAESV2)
+      None => raise EncryptionAuthenticationUnsupported(PdfCryptAESV2)
     }
   }
 }
@@ -208,7 +208,7 @@ fn PdfDocument::load_embedded_objects_from_context(
     if reference.object_stream_number == object_stream_number {
       let (object_number, object) = context.read_reference(reference)
       if object_number != xref.object_number {
-        raise PdfError::XRefEntryExpected
+        raise XRefEntryExpected
       }
       if already_decrypted {
         self.load_object_given_number_already_decrypted(

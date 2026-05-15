@@ -11,11 +11,11 @@ fn pdf_secure_random_bytes_with_provider(
   fill : (FixedArray[Byte], Int) -> Int,
 ) -> PdfBytes raise PdfError {
   if length < 0 {
-    raise PdfError::InvalidReadLength(length)
+    raise InvalidReadLength(length)
   }
   let output = FixedArray::make(length, b'\x00')
   if fill(output, length) != 1 {
-    raise PdfError::RandomBytesUnavailable
+    raise RandomBytesUnavailable
   }
   output.unsafe_reinterpret_as_bytes()
 }

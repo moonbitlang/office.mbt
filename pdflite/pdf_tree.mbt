@@ -302,7 +302,7 @@ fn pdf_tree_number_key_bytes(number : Int) -> PdfBytes {
 ///|
 fn pdf_tree_number_key_of_bytes(key : BytesView) -> Int raise PdfError {
   if key.length() == 0 {
-    raise PdfError::NumberExpected
+    raise NumberExpected
   }
   let mut index = 0
   let mut negative = false
@@ -315,15 +315,15 @@ fn pdf_tree_number_key_of_bytes(key : BytesView) -> Int raise PdfError {
     _ => ()
   }
   if index >= key.length() {
-    raise PdfError::NumberExpected
+    raise NumberExpected
   }
   let limit : Int64 = if negative { 2147483648L } else { 2147483647L }
   let mut value : Int64 = 0L
   while index < key.length() {
     let byte = key[index].to_int()
-    guard byte >= 48 && byte <= 57 else { raise PdfError::NumberExpected }
+    guard byte >= 48 && byte <= 57 else { raise NumberExpected }
     value = value * 10L + (byte - 48).to_int64()
-    guard value <= limit else { raise PdfError::NumberExpected }
+    guard value <= limit else { raise NumberExpected }
     index += 1
   }
   if negative {

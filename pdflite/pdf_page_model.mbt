@@ -43,7 +43,7 @@ pub fn pdf_page_rotation_of_int(value : Int) -> PdfPageRotation raise PdfError {
     90 | -270 => Rotate90
     180 | -180 => Rotate180
     270 | -90 => Rotate270
-    _ => raise PdfError::PageRotationExpected(value)
+    _ => raise PageRotationExpected(value)
   }
 }
 

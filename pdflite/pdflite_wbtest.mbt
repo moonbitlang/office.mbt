@@ -1066,7 +1066,7 @@ test "private reader xref helpers report malformed inputs" {
   let mismatch = byte_cursor_of_bytes(@ascii.encode("abc"))
   let mismatch_result : Result[Unit, Error] = try? mismatch.consume_pdf_ascii(
     [120],
-    PdfError::XRefExpected,
+    XRefExpected,
   )
   guard mismatch_result is Err(PdfError::XRefExpected) else {
     fail("expected PdfError::XRefExpected")
@@ -1128,9 +1128,7 @@ test "private password reconstruction xref metadata probe covers repair boundari
   let cyclic = try? pdf_reader_validate_xref_metadata_for_reconstruction(
     wbtest_cyclic_prev_xref_pdf(),
   )
-  guard cyclic is Err(PdfError::XRefExpected) else {
-    fail("expected cyclic Prev guard")
-  }
+  guard cyclic is Err(XRefExpected) else { fail("expected cyclic Prev guard") }
 }
 
 ///|

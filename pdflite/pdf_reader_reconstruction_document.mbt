@@ -280,7 +280,7 @@ fn PdfDocument::select_reconstructed_trailer(
       _ => ()
     }
   } nobreak {
-    raise PdfError::RootExpected
+    raise RootExpected
   }
 }
 
@@ -292,7 +292,7 @@ fn PdfDocument::set_trailer_and_root(
   self.set_trailer_dict(trailer)
   match trailer.lookup_immediate(pdf_reader_root_name()) {
     Some(PdfIndirect(root)) => self.set_root(root)
-    _ => raise PdfError::RootExpected
+    _ => raise RootExpected
   }
 }
 

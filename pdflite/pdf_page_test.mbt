@@ -1119,7 +1119,7 @@ test "PdfDocument process_xobjects rewrites form xobject streams" {
   }
   try! doc.process_xobjects(page, fn(_, _, streams) raise @pdflite.PdfError {
     if streams.length() < 0 {
-      raise @pdflite.PdfError::ParseStreamExpected
+      raise ParseStreamExpected
     }
     [
       @pdflite.pdf_stream(
@@ -1186,7 +1186,7 @@ test "PdfDocument process_xobjects materializes deferred form streams" {
   let seen_length : Ref[@pdflite.PdfObject?] = { val: None }
   try! doc.process_xobjects(page, fn(_, _, streams) raise @pdflite.PdfError {
     if streams.length() < 0 {
-      raise @pdflite.PdfError::ParseStreamExpected
+      raise ParseStreamExpected
     }
     match streams[0] {
       PdfStreamObject(stream) => {
@@ -1231,7 +1231,7 @@ test "PdfDocument process_xobjects skips non-form xobjects" {
   let calls : Ref[Int] = { val: 0 }
   try! doc.process_xobjects(page, fn(_, _, streams) raise @pdflite.PdfError {
     if streams.length() < 0 {
-      raise @pdflite.PdfError::ParseStreamExpected
+      raise ParseStreamExpected
     }
     calls.val += 1
     []
@@ -1262,7 +1262,7 @@ test "PdfDocument process_xobjects validates xobject resources" {
     non_indirect_page,
     fn(_, _, streams) raise @pdflite.PdfError {
       if streams.length() < 0 {
-        raise @pdflite.PdfError::ParseStreamExpected
+        raise ParseStreamExpected
       }
       []
     },
@@ -1281,7 +1281,7 @@ test "PdfDocument process_xobjects validates xobject resources" {
     missing_subtype_page,
     fn(_, _, streams) raise @pdflite.PdfError {
       if streams.length() < 0 {
-        raise @pdflite.PdfError::ParseStreamExpected
+        raise ParseStreamExpected
       }
       []
     },
@@ -1308,7 +1308,7 @@ test "PdfDocument process_xobjects validates xobject resources" {
     bad_result_page,
     fn(_, _, streams) raise @pdflite.PdfError {
       if streams.length() < 0 {
-        raise @pdflite.PdfError::ParseStreamExpected
+        raise ParseStreamExpected
       }
       [PdfDictionary([])]
     },
@@ -1320,7 +1320,7 @@ test "PdfDocument process_xobjects validates xobject resources" {
     bad_result_page,
     fn(_, _, streams) raise @pdflite.PdfError {
       if streams.length() < 0 {
-        raise @pdflite.PdfError::ParseStreamExpected
+        raise ParseStreamExpected
       }
       []
     },
@@ -1334,7 +1334,7 @@ test "PdfDocument process_xobjects validates xobject resources" {
     bad_result_page,
     fn(_, _, streams) raise @pdflite.PdfError {
       if streams.length() < 0 {
-        raise @pdflite.PdfError::ParseStreamExpected
+        raise ParseStreamExpected
       }
       [@pdflite.pdf_stream(PdfInteger(1), StreamGot(@ascii.encode("bad")))]
     },
@@ -1360,7 +1360,7 @@ test "PdfDocument process_xobjects validates xobject resources" {
     non_stream_page,
     fn(_, _, streams) raise @pdflite.PdfError {
       if streams.length() < 0 {
-        raise @pdflite.PdfError::ParseStreamExpected
+        raise ParseStreamExpected
       }
       []
     },
@@ -1375,7 +1375,7 @@ test "PdfDocument process_xobjects validates xobject resources" {
     streams,
   ) raise @pdflite.PdfError {
     if streams.length() < 0 {
-      raise @pdflite.PdfError::ParseStreamExpected
+      raise ParseStreamExpected
     }
     calls.val += 1
     []

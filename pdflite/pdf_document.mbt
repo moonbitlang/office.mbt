@@ -486,7 +486,7 @@ pub fn PdfDocument::catalog(self : PdfDocument) -> PdfObject raise PdfError {
     None => self.lookup_object_or_null(self.root)
   }
   match object {
-    PdfNull => raise PdfError::RootExpected
+    PdfNull => raise RootExpected
     catalog => catalog
   }
 }

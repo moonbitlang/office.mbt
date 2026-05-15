@@ -14,7 +14,7 @@ fn PdfEncryptionValues::password_settings(
     PdfCryptARC4(key_length_bits, revision) => (revision, key_length_bits)
     PdfCryptAESV2 => (4, 128)
     PdfCryptAESV3(_) =>
-      raise PdfError::EncryptionAuthenticationUnsupported(self.crypt_type)
+      raise EncryptionAuthenticationUnsupported(self.crypt_type)
   }
 }
 

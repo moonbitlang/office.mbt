@@ -32,7 +32,7 @@ fn pdf_date_check(date : PdfDate) -> Unit raise @core.PdfError {
     date.hour_offset > 23 ||
     date.minute_offset < -59 ||
     date.minute_offset > 59 {
-    raise @core.PdfError::BadDate
+    raise BadDate
   }
 }
 
@@ -115,11 +115,11 @@ fn pdf_date_two_digits(
   index : Int,
 ) -> Int raise @core.PdfError {
   if index + 1 >= bytes.length() {
-    raise @core.PdfError::BadDate
+    raise BadDate
   }
   match (pdf_date_digit(bytes[index]), pdf_date_digit(bytes[index + 1])) {
     (Some(first), Some(second)) => first * 10 + second
-    _ => raise @core.PdfError::BadDate
+    _ => raise BadDate
   }
 }
 
@@ -129,7 +129,7 @@ fn pdf_date_four_digits(
   index : Int,
 ) -> Int raise @core.PdfError {
   if index + 3 >= bytes.length() {
-    raise @core.PdfError::BadDate
+    raise BadDate
   }
   match
     (
@@ -139,7 +139,7 @@ fn pdf_date_four_digits(
       pdf_date_digit(bytes[index + 3]),
     ) {
     (Some(a), Some(b), Some(c), Some(d)) => ((a * 10 + b) * 10 + c) * 10 + d
-    _ => raise @core.PdfError::BadDate
+    _ => raise BadDate
   }
 }
 

@@ -185,13 +185,13 @@ test "pdf_utf16be_of_codepoints writes PDF Unicode strings as bytes" {
 ///|
 test "pdf_codepoints_of_utf16be rejects malformed UTF16BE bytes" {
   let odd = try? @pdflite.pdf_codepoints_of_utf16be(text_bytes_for_test([0x00]))
-  guard odd is Err(@pdflite.PdfError::InvalidUTF16BE) else {
+  guard odd is Err(InvalidUTF16BE) else {
     fail("expected @pdflite.PdfError::InvalidUTF16BE for odd byte length")
   }
   let unpaired_high = try? @pdflite.pdf_codepoints_of_utf16be(
     text_bytes_for_test([0xD8, 0x34, 0x00, 0x41]),
   )
-  guard unpaired_high is Err(@pdflite.PdfError::InvalidUTF16BE) else {
+  guard unpaired_high is Err(InvalidUTF16BE) else {
     fail(
       "expected @pdflite.PdfError::InvalidUTF16BE for unpaired high surrogate",
     )
@@ -199,7 +199,7 @@ test "pdf_codepoints_of_utf16be rejects malformed UTF16BE bytes" {
   let isolated_low = try? @pdflite.pdf_codepoints_of_utf16be(
     text_bytes_for_test([0xDD, 0x1E]),
   )
-  guard isolated_low is Err(@pdflite.PdfError::InvalidUTF16BE) else {
+  guard isolated_low is Err(InvalidUTF16BE) else {
     fail(
       "expected @pdflite.PdfError::InvalidUTF16BE for isolated low surrogate",
     )
@@ -209,13 +209,13 @@ test "pdf_codepoints_of_utf16be rejects malformed UTF16BE bytes" {
 ///|
 test "pdf_utf16be_of_codepoints rejects invalid Unicode scalar values" {
   let surrogate = try? @pdflite.pdf_utf16be_of_codepoints([0xD800])
-  guard surrogate is Err(@pdflite.PdfError::InvalidUnicodeCodepoint(0xD800)) else {
+  guard surrogate is Err(InvalidUnicodeCodepoint(0xD800)) else {
     fail(
       "expected @pdflite.PdfError::InvalidUnicodeCodepoint for surrogate scalar",
     )
   }
   let too_large = try? @pdflite.pdf_utf16be_of_codepoints([0x110000])
-  guard too_large is Err(@pdflite.PdfError::InvalidUnicodeCodepoint(0x110000)) else {
+  guard too_large is Err(InvalidUnicodeCodepoint(0x110000)) else {
     fail(
       "expected @pdflite.PdfError::InvalidUnicodeCodepoint for out-of-range scalar",
     )
@@ -243,25 +243,25 @@ test "pdf_codepoints_of_utf8 rejects malformed UTF8 bytes" {
   let truncated = try? @pdflite.pdf_codepoints_of_utf8(
     text_bytes_for_test([0xE2, 0x82]),
   )
-  guard truncated is Err(@pdflite.PdfError::InvalidUTF8) else {
+  guard truncated is Err(InvalidUTF8) else {
     fail("expected @pdflite.PdfError::InvalidUTF8 for truncated sequence")
   }
   let bad_continuation = try? @pdflite.pdf_codepoints_of_utf8(
     text_bytes_for_test([0xE2, 0x28, 0xAC]),
   )
-  guard bad_continuation is Err(@pdflite.PdfError::InvalidUTF8) else {
+  guard bad_continuation is Err(InvalidUTF8) else {
     fail("expected @pdflite.PdfError::InvalidUTF8 for bad continuation")
   }
   let overlong = try? @pdflite.pdf_codepoints_of_utf8(
     text_bytes_for_test([0xC0, 0x80]),
   )
-  guard overlong is Err(@pdflite.PdfError::InvalidUTF8) else {
+  guard overlong is Err(InvalidUTF8) else {
     fail("expected @pdflite.PdfError::InvalidUTF8 for overlong sequence")
   }
   let surrogate = try? @pdflite.pdf_codepoints_of_utf8(
     text_bytes_for_test([0xED, 0xA0, 0x80]),
   )
-  guard surrogate is Err(@pdflite.PdfError::InvalidUnicodeCodepoint(0xD800)) else {
+  guard surrogate is Err(InvalidUnicodeCodepoint(0xD800)) else {
     fail(
       "expected @pdflite.PdfError::InvalidUnicodeCodepoint for decoded surrogate",
     )
@@ -269,7 +269,7 @@ test "pdf_codepoints_of_utf8 rejects malformed UTF8 bytes" {
   let bad_four_byte_continuation = try? @pdflite.pdf_codepoints_of_utf8(
     text_bytes_for_test([0xF0, 0x9D, 0x28, 0x9E]),
   )
-  guard bad_four_byte_continuation is Err(@pdflite.PdfError::InvalidUTF8) else {
+  guard bad_four_byte_continuation is Err(InvalidUTF8) else {
     fail(
       "expected @pdflite.PdfError::InvalidUTF8 for bad four-byte continuation",
     )
@@ -277,7 +277,7 @@ test "pdf_codepoints_of_utf8 rejects malformed UTF8 bytes" {
   let invalid_leading_byte = try? @pdflite.pdf_codepoints_of_utf8(
     text_bytes_for_test([0xFF]),
   )
-  guard invalid_leading_byte is Err(@pdflite.PdfError::InvalidUTF8) else {
+  guard invalid_leading_byte is Err(InvalidUTF8) else {
     fail("expected @pdflite.PdfError::InvalidUTF8 for invalid leading byte")
   }
 }
@@ -303,8 +303,7 @@ test "PDFDocEncoding decodes CamlPDF byte mappings" {
   let undefined_byte_result = try? @pdflite.pdf_codepoint_of_pdfdocencoding_byte(
     0x94,
   )
-  guard undefined_byte_result
-    is Err(@pdflite.PdfError::InvalidPDFDocEncoding(0x94)) else {
+  guard undefined_byte_result is Err(InvalidPDFDocEncoding(0x94)) else {
     fail("expected @pdflite.PdfError::InvalidPDFDocEncoding for undefined byte")
   }
   @test.assert_eq(
@@ -897,8 +896,7 @@ test "PdfDocument read_encoding rejects malformed encoding dictionaries" {
     ),
   ])
   let differences_result = try? doc.read_encoding(bad_differences)
-  guard differences_result
-    is Err(@pdflite.PdfError::EncodingDifferencesMalformed) else {
+  guard differences_result is Err(EncodingDifferencesMalformed) else {
     fail("expected @pdflite.PdfError::EncodingDifferencesMalformed")
   }
   let bad_base = @pdflite.pdf_dictionary([
@@ -914,7 +912,7 @@ test "PdfDocument read_encoding rejects malformed encoding dictionaries" {
     ),
   ])
   let base_result = try? doc.read_encoding(bad_base)
-  guard base_result is Err(@pdflite.PdfError::EncodingExpected) else {
+  guard base_result is Err(EncodingExpected) else {
     fail("expected @pdflite.PdfError::EncodingExpected")
   }
   let unknown_base = @pdflite.pdf_dictionary([
@@ -933,7 +931,7 @@ test "PdfDocument read_encoding rejects malformed encoding dictionaries" {
     ),
   ])
   let unknown_base_result = try? doc.read_encoding(unknown_base)
-  guard unknown_base_result is Err(@pdflite.PdfError::EncodingExpected) else {
+  guard unknown_base_result is Err(EncodingExpected) else {
     fail("expected @pdflite.PdfError::EncodingExpected for unknown base")
   }
   let bad_difference_object = @pdflite.pdf_dictionary([
@@ -954,8 +952,7 @@ test "PdfDocument read_encoding rejects malformed encoding dictionaries" {
   let bad_difference_object_result = try? doc.read_encoding(
     bad_difference_object,
   )
-  guard bad_difference_object_result
-    is Err(@pdflite.PdfError::EncodingDifferencesMalformed) else {
+  guard bad_difference_object_result is Err(EncodingDifferencesMalformed) else {
     fail(
       "expected @pdflite.PdfError::EncodingDifferencesMalformed for bad difference object",
     )
@@ -973,7 +970,7 @@ test "PdfDocument read_encoding rejects malformed encoding dictionaries" {
     ),
   ])
   let non_array_result = try? doc.read_encoding(non_array_differences)
-  guard non_array_result is Err(@pdflite.PdfError::EncodingDifferencesMalformed) else {
+  guard non_array_result is Err(EncodingDifferencesMalformed) else {
     fail(
       "expected @pdflite.PdfError::EncodingDifferencesMalformed for non-array differences",
     )
@@ -987,14 +984,14 @@ test "PdfDocument read_encoding rejects malformed encoding dictionaries" {
     (text_name_for_test("/FontDescriptor"), @pdflite.pdf_dictionary([])),
   ])
   let missing_flags_result = try? doc.read_encoding(missing_flags)
-  guard missing_flags_result is Err(@pdflite.PdfError::FontFlagsExpected) else {
+  guard missing_flags_result is Err(FontFlagsExpected) else {
     fail("expected @pdflite.PdfError::FontFlagsExpected")
   }
   let bad_subtype = @pdflite.pdf_dictionary([
     (text_name_for_test("/Encoding"), @pdflite.pdf_dictionary([])),
   ])
   let subtype_result = try? doc.read_encoding(bad_subtype)
-  guard subtype_result is Err(@pdflite.PdfError::FontSubtypeExpected) else {
+  guard subtype_result is Err(FontSubtypeExpected) else {
     fail("expected @pdflite.PdfError::FontSubtypeExpected")
   }
 }
@@ -1163,7 +1160,7 @@ test "PdfDocument read_font_metrics handles Type3 fonts and malformed widths" {
     (text_name_for_test("/Widths"), PdfArray([PdfInteger(600)])),
   ])
   let malformed_result = try? doc.read_font_metrics(malformed)
-  guard malformed_result is Err(@pdflite.PdfError::FontWidthsExpected) else {
+  guard malformed_result is Err(FontWidthsExpected) else {
     fail("expected @pdflite.PdfError::FontWidthsExpected")
   }
 
@@ -1177,7 +1174,7 @@ test "PdfDocument read_font_metrics handles Type3 fonts and malformed widths" {
     ),
   ])
   let bad_width_result = try? doc.read_font_metrics(bad_width)
-  guard bad_width_result is Err(@pdflite.PdfError::FontWidthExpected) else {
+  guard bad_width_result is Err(FontWidthExpected) else {
     fail("expected @pdflite.PdfError::FontWidthExpected")
   }
 
@@ -1188,7 +1185,7 @@ test "PdfDocument read_font_metrics handles Type3 fonts and malformed widths" {
     (text_name_for_test("/Widths"), PdfArray([PdfInteger(600)])),
   ])
   let bad_firstchar_result = try? doc.read_font_metrics(bad_firstchar)
-  guard bad_firstchar_result is Err(@pdflite.PdfError::FontFirstCharExpected) else {
+  guard bad_firstchar_result is Err(FontFirstCharExpected) else {
     fail("expected @pdflite.PdfError::FontFirstCharExpected")
   }
 
@@ -1198,7 +1195,7 @@ test "PdfDocument read_font_metrics handles Type3 fonts and malformed widths" {
     (text_name_for_test("/LastChar"), PdfInteger(65)),
   ])
   let missing_widths_result = try? doc.read_font_metrics(missing_widths)
-  guard missing_widths_result is Err(@pdflite.PdfError::FontWidthsExpected) else {
+  guard missing_widths_result is Err(FontWidthsExpected) else {
     fail("expected @pdflite.PdfError::FontWidthsExpected for missing widths")
   }
 
@@ -1209,7 +1206,7 @@ test "PdfDocument read_font_metrics handles Type3 fonts and malformed widths" {
     (text_name_for_test("/Widths"), PdfArray([])),
   ])
   let inverted_bounds_result = try? doc.read_font_metrics(inverted_bounds)
-  guard inverted_bounds_result is Err(@pdflite.PdfError::FontWidthsExpected) else {
+  guard inverted_bounds_result is Err(FontWidthsExpected) else {
     fail("expected @pdflite.PdfError::FontWidthsExpected for inverted bounds")
   }
 }
@@ -1437,7 +1434,7 @@ test "PdfDocument read_simple_font covers MMType1 TrueType and Type3 resources" 
 test "PdfDocument read_simple_font rejects malformed simple fonts" {
   let doc = @pdflite.pdf_document_empty()
   let missing_subtype = try? doc.read_simple_font(@pdflite.pdf_dictionary([]))
-  guard missing_subtype is Err(@pdflite.PdfError::FontSubtypeExpected) else {
+  guard missing_subtype is Err(FontSubtypeExpected) else {
     fail("expected @pdflite.PdfError::FontSubtypeExpected for missing subtype")
   }
   let unknown_subtype = try? doc.read_simple_font(
@@ -1448,7 +1445,7 @@ test "PdfDocument read_simple_font rejects malformed simple fonts" {
       ),
     ]),
   )
-  guard unknown_subtype is Err(@pdflite.PdfError::FontSubtypeExpected) else {
+  guard unknown_subtype is Err(FontSubtypeExpected) else {
     fail("expected @pdflite.PdfError::FontSubtypeExpected for unknown subtype")
   }
   let missing_charprocs = try? doc.read_simple_font(
@@ -1459,7 +1456,7 @@ test "PdfDocument read_simple_font rejects malformed simple fonts" {
       ),
     ]),
   )
-  guard missing_charprocs is Err(@pdflite.PdfError::FontCharProcsExpected) else {
+  guard missing_charprocs is Err(FontCharProcsExpected) else {
     fail("expected @pdflite.PdfError::FontCharProcsExpected")
   }
 }
@@ -1545,13 +1542,13 @@ test "PdfDocument read_standard14_font rejects bad base fonts" {
     ),
   ])
   let unknown_result = try? doc.read_standard14_font(unknown)
-  guard unknown_result is Err(@pdflite.PdfError::StandardFontExpected) else {
+  guard unknown_result is Err(StandardFontExpected) else {
     fail("expected @pdflite.PdfError::StandardFontExpected")
   }
   let missing_result = try? doc.read_standard14_font(
     @pdflite.pdf_dictionary([]),
   )
-  guard missing_result is Err(@pdflite.PdfError::BaseFontExpected) else {
+  guard missing_result is Err(BaseFontExpected) else {
     fail("expected @pdflite.PdfError::BaseFontExpected")
   }
 }
@@ -1627,7 +1624,7 @@ test "PdfDocument read_font rejects unknown fonts" {
     ),
   ])
   let unknown_result = try? doc.read_font(unknown)
-  guard unknown_result is Err(@pdflite.PdfError::FontTypeExpected) else {
+  guard unknown_result is Err(FontTypeExpected) else {
     fail("expected @pdflite.PdfError::FontTypeExpected")
   }
 }
@@ -1889,7 +1886,7 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
   let missing_basefont = try? doc.read_cidkeyed_font(
     @pdflite.pdf_dictionary([]),
   )
-  guard missing_basefont is Err(@pdflite.PdfError::BaseFontExpected) else {
+  guard missing_basefont is Err(BaseFontExpected) else {
     fail("expected @pdflite.PdfError::BaseFontExpected")
   }
   let missing_descendant = try? doc.read_cidkeyed_font(
@@ -1897,7 +1894,7 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
       (text_name_for_test("/BaseFont"), PdfNameObject(text_name_for_test("/T"))),
     ]),
   )
-  guard missing_descendant is Err(@pdflite.PdfError::DescendantFontExpected) else {
+  guard missing_descendant is Err(DescendantFontExpected) else {
     fail("expected @pdflite.PdfError::DescendantFontExpected")
   }
 
@@ -1907,7 +1904,7 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
       (text_name_for_test("/Ordering"), PdfString(text_bytes_for_test([79]))),
     ]),
   )
-  guard bad_supplement is Err(@pdflite.PdfError::CIDSupplementExpected) else {
+  guard bad_supplement is Err(CIDSupplementExpected) else {
     fail("expected @pdflite.PdfError::CIDSupplementExpected")
   }
 
@@ -1935,7 +1932,7 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
     ),
   ])
   let system_result = try? doc.read_cidkeyed_font(bad_system_font)
-  guard system_result is Err(@pdflite.PdfError::CIDRegistryExpected) else {
+  guard system_result is Err(CIDRegistryExpected) else {
     fail("expected @pdflite.PdfError::CIDRegistryExpected")
   }
 
@@ -1955,7 +1952,7 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
       PdfNameObject(text_name_for_test("/Identity-H")),
     ),
   )
-  guard missing_system_result is Err(@pdflite.PdfError::CIDSystemInfoExpected) else {
+  guard missing_system_result is Err(CIDSystemInfoExpected) else {
     fail("expected @pdflite.PdfError::CIDSystemInfoExpected")
   }
 
@@ -1975,8 +1972,7 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
       PdfNameObject(text_name_for_test("/Identity-H")),
     ),
   )
-  guard missing_cid_basefont_result
-    is Err(@pdflite.PdfError::CIDBaseFontExpected) else {
+  guard missing_cid_basefont_result is Err(CIDBaseFontExpected) else {
     fail("expected @pdflite.PdfError::CIDBaseFontExpected")
   }
 
@@ -1999,8 +1995,7 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
       PdfNameObject(text_name_for_test("/Identity-H")),
     ),
   )
-  guard missing_descriptor_result
-    is Err(@pdflite.PdfError::CIDFontDescriptorExpected) else {
+  guard missing_descriptor_result is Err(CIDFontDescriptorExpected) else {
     fail("expected @pdflite.PdfError::CIDFontDescriptorExpected")
   }
 
@@ -2033,7 +2028,7 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
     ),
   ])
   let widths_result = try? doc.read_cidkeyed_font(bad_widths_font)
-  guard widths_result is Err(@pdflite.PdfError::CIDWidthsExpected) else {
+  guard widths_result is Err(CIDWidthsExpected) else {
     fail("expected @pdflite.PdfError::CIDWidthsExpected")
   }
 
@@ -2068,7 +2063,7 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
         PdfNameObject(text_name_for_test("/Identity-H")),
       ),
     )
-    guard result is Err(@pdflite.PdfError::CIDWidthsExpected) else {
+    guard result is Err(CIDWidthsExpected) else {
       fail("expected @pdflite.PdfError::CIDWidthsExpected for malformed widths")
     }
   }
@@ -2102,7 +2097,7 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
     ),
   ])
   let widths2_result = try? doc.read_cidkeyed_font(bad_widths2_font)
-  guard widths2_result is Err(@pdflite.PdfError::CIDWidths2Expected) else {
+  guard widths2_result is Err(CIDWidths2Expected) else {
     fail("expected @pdflite.PdfError::CIDWidths2Expected")
   }
 
@@ -2140,7 +2135,7 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
         PdfNameObject(text_name_for_test("/Identity-H")),
       ),
     )
-    guard result is Err(@pdflite.PdfError::CIDWidths2Expected) else {
+    guard result is Err(CIDWidths2Expected) else {
       fail(
         "expected @pdflite.PdfError::CIDWidths2Expected for malformed vertical widths",
       )
@@ -2172,13 +2167,13 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
     ),
   ])
   let direct_cmap_result = try? doc.read_cidkeyed_font(direct_cmap)
-  guard direct_cmap_result is Err(@pdflite.PdfError::CMapEncodingExpected) else {
+  guard direct_cmap_result is Err(CMapEncodingExpected) else {
     fail("expected @pdflite.PdfError::CMapEncodingExpected")
   }
   let bad_cmap = try? doc.read_cidkeyed_font(
     text_cid_top_font_for_test(9, PdfInteger(1)),
   )
-  guard bad_cmap is Err(@pdflite.PdfError::CMapEncodingExpected) else {
+  guard bad_cmap is Err(CMapEncodingExpected) else {
     fail(
       "expected @pdflite.PdfError::CMapEncodingExpected for non-name encoding",
     )
@@ -2213,7 +2208,7 @@ test "PdfDocument write_encoding writes custom differences" {
     ]),
   )
   let unsupported = try? doc.write_encoding(PdfWinAnsiEncoding)
-  guard unsupported is Err(@pdflite.PdfError::EncodingWriteUnsupported) else {
+  guard unsupported is Err(EncodingWriteUnsupported) else {
     fail("expected @pdflite.PdfError::EncodingWriteUnsupported")
   }
 }
@@ -2245,7 +2240,7 @@ test "pdf_make_font builds Type1 font dictionaries" {
     text_name_for_test("/Custom"),
     PdfCustomEncoding(PdfImplicitInFontFile, []),
   )
-  guard custom is Err(@pdflite.PdfError::EncodingWriteUnsupported) else {
+  guard custom is Err(EncodingWriteUnsupported) else {
     fail("expected @pdflite.PdfError::EncodingWriteUnsupported")
   }
 }
@@ -4236,9 +4231,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   @test.assert_eq(extractor.charcode_of_codepoint(0x41), None)
   @test.assert_eq(extractor.charcode_of_codepoint(0xF6E6), None)
   let odd = try? extractor.codepoints_of_text(text_bytes_for_test([0x00]))
-  guard odd is Err(@pdflite.PdfError::BadText) else {
-    fail("expected @pdflite.PdfError::BadText")
-  }
+  guard odd is Err(BadText) else { fail("expected @pdflite.PdfError::BadText") }
   let cid_font_v_data : @pdflite.PdfCIDKeyedFont = {
     basefont: text_name_for_test("/TopVertical"),
     composite,
@@ -4266,7 +4259,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   let vertical_odd = try? vertical_extractor.codepoints_of_text(
     text_bytes_for_test([0x4E]),
   )
-  guard vertical_odd is Err(@pdflite.PdfError::BadText) else {
+  guard vertical_odd is Err(BadText) else {
     fail("expected @pdflite.PdfError::BadText")
   }
   let ucs2_cmap_font_h : @pdflite.PdfFont = PdfFontCIDKeyed({
@@ -4457,7 +4450,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   let gb_euc_truncated = try? gb_euc_tounicode_font
     .text_extractor()
     .codepoints_of_text(text_bytes_for_test([0x81]))
-  guard gb_euc_truncated is Err(@pdflite.PdfError::BadText) else {
+  guard gb_euc_truncated is Err(BadText) else {
     fail("expected @pdflite.PdfError::BadText for truncated GB-EUC charcode")
   }
   let gb_euc_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
@@ -4556,7 +4549,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   let gbpc_euc_truncated = try? gbpc_euc_builtin_extractor.codepoints_of_text(
     text_bytes_for_test([0xA1]),
   )
-  guard gbpc_euc_truncated is Err(@pdflite.PdfError::BadText) else {
+  guard gbpc_euc_truncated is Err(BadText) else {
     fail("expected @pdflite.PdfError::BadText for truncated GBpc-EUC charcode")
   }
   let big5_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
@@ -4597,7 +4590,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   let big5_truncated = try? big5_builtin_extractor.codepoints_of_text(
     text_bytes_for_test([0xA7]),
   )
-  guard big5_truncated is Err(@pdflite.PdfError::BadText) else {
+  guard big5_truncated is Err(BadText) else {
     fail("expected @pdflite.PdfError::BadText for truncated Big5 charcode")
   }
   let b5pc_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
@@ -4658,7 +4651,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   let b5pc_truncated = try? b5pc_builtin_extractor.codepoints_of_text(
     text_bytes_for_test([0xA1]),
   )
-  guard b5pc_truncated is Err(@pdflite.PdfError::BadText) else {
+  guard b5pc_truncated is Err(BadText) else {
     fail("expected @pdflite.PdfError::BadText for truncated B5pc charcode")
   }
   let hkscs_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
@@ -4724,7 +4717,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   let hkscs_truncated = try? hkscs_builtin_extractor.codepoints_of_text(
     text_bytes_for_test([0x87]),
   )
-  guard hkscs_truncated is Err(@pdflite.PdfError::BadText) else {
+  guard hkscs_truncated is Err(BadText) else {
     fail("expected @pdflite.PdfError::BadText for truncated HKSCS charcode")
   }
   let etenms_b5_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
@@ -4764,7 +4757,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   let etenms_b5_truncated = try? etenms_b5_builtin_extractor.codepoints_of_text(
     text_bytes_for_test([0xA1]),
   )
-  guard etenms_b5_truncated is Err(@pdflite.PdfError::BadText) else {
+  guard etenms_b5_truncated is Err(BadText) else {
     fail("expected @pdflite.PdfError::BadText for truncated ETenms-B5 charcode")
   }
   let hk_b5_cases : Array[(String, Array[Int], Array[Int], Int, Int)] = [
@@ -4836,7 +4829,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   let hkgccs_b5_truncated = try? hkgccs_b5_builtin_extractor.codepoints_of_text(
     text_bytes_for_test([0x8A]),
   )
-  guard hkgccs_b5_truncated is Err(@pdflite.PdfError::BadText) else {
+  guard hkgccs_b5_truncated is Err(BadText) else {
     fail("expected @pdflite.PdfError::BadText for truncated HKgccs-B5 charcode")
   }
   let cns_euc_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
@@ -4892,7 +4885,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   let cns_euc_truncated = try? cns_euc_builtin_extractor.codepoints_of_text(
     text_bytes_for_test([0x8E, 0xA1, 0xA1]),
   )
-  guard cns_euc_truncated is Err(@pdflite.PdfError::BadText) else {
+  guard cns_euc_truncated is Err(BadText) else {
     fail("expected @pdflite.PdfError::BadText for truncated CNS-EUC charcode")
   }
   let uhc_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
@@ -4934,7 +4927,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   let uhc_truncated = try? uhc_builtin_extractor.codepoints_of_text(
     text_bytes_for_test([0x81]),
   )
-  guard uhc_truncated is Err(@pdflite.PdfError::BadText) else {
+  guard uhc_truncated is Err(BadText) else {
     fail("expected @pdflite.PdfError::BadText for truncated UHC charcode")
   }
   let gbk_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
@@ -4993,7 +4986,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   let gbk_truncated = try? gbk_builtin_extractor.codepoints_of_text(
     text_bytes_for_test([0x81]),
   )
-  guard gbk_truncated is Err(@pdflite.PdfError::BadText) else {
+  guard gbk_truncated is Err(BadText) else {
     fail("expected @pdflite.PdfError::BadText for truncated GBK charcode")
   }
   let gbk2k_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
@@ -5055,7 +5048,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   let gbk2k_truncated = try? gbk2k_builtin_extractor.codepoints_of_text(
     text_bytes_for_test([0x81, 0x30, 0x81]),
   )
-  guard gbk2k_truncated is Err(@pdflite.PdfError::BadText) else {
+  guard gbk2k_truncated is Err(BadText) else {
     fail("expected @pdflite.PdfError::BadText for truncated GBK2K charcode")
   }
   let ksc_euc_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
@@ -5104,7 +5097,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   let ksc_euc_truncated = try? ksc_euc_builtin_extractor.codepoints_of_text(
     text_bytes_for_test([0xA1]),
   )
-  guard ksc_euc_truncated is Err(@pdflite.PdfError::BadText) else {
+  guard ksc_euc_truncated is Err(BadText) else {
     fail("expected @pdflite.PdfError::BadText for truncated KSC-EUC charcode")
   }
   let kscpc_euc_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
@@ -5166,7 +5159,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   let kscpc_euc_truncated = try? kscpc_euc_builtin_extractor.codepoints_of_text(
     text_bytes_for_test([0xA1]),
   )
-  guard kscpc_euc_truncated is Err(@pdflite.PdfError::BadText) else {
+  guard kscpc_euc_truncated is Err(BadText) else {
     fail("expected @pdflite.PdfError::BadText for truncated KSCpc-EUC charcode")
   }
   let vertical_builtin_cases : Array[(String, Array[Int], Array[Int], Int, Int)] = [
@@ -5306,7 +5299,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   let jis_truncated = try? jis_builtin_extractor.codepoints_of_text(
     text_bytes_for_test([0x21]),
   )
-  guard jis_truncated is Err(@pdflite.PdfError::BadText) else {
+  guard jis_truncated is Err(BadText) else {
     fail("expected @pdflite.PdfError::BadText for truncated JIS charcode")
   }
   let japan_euc_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
@@ -5344,7 +5337,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   let hojo_euc_truncated = try? hojo_euc_builtin_extractor.codepoints_of_text(
     text_bytes_for_test([0x8F, 0xB4]),
   )
-  guard hojo_euc_truncated is Err(@pdflite.PdfError::BadText) else {
+  guard hojo_euc_truncated is Err(BadText) else {
     fail("expected @pdflite.PdfError::BadText for truncated Hojo-EUC charcode")
   }
   let external_cmap_font : @pdflite.PdfFont = PdfFontCIDKeyed({
@@ -10396,7 +10389,7 @@ test "PdfDocument write_font rejects unsupported font variants" {
       encoding: PdfWinAnsiEncoding,
     }),
   )
-  guard unsupported is Err(@pdflite.PdfError::FontWriteUnsupported) else {
+  guard unsupported is Err(FontWriteUnsupported) else {
     fail("expected @pdflite.PdfError::FontWriteUnsupported")
   }
   let unsupported_type3 = try? doc.write_font(
@@ -10416,7 +10409,7 @@ test "PdfDocument write_font rejects unsupported font variants" {
       encoding: PdfImplicitInFontFile,
     }),
   )
-  guard unsupported_type3 is Err(@pdflite.PdfError::FontWriteUnsupported) else {
+  guard unsupported_type3 is Err(FontWriteUnsupported) else {
     fail("expected @pdflite.PdfError::FontWriteUnsupported")
   }
   let unsupported_encoding = try? doc.write_font(
@@ -10436,7 +10429,7 @@ test "PdfDocument write_font rejects unsupported font variants" {
       encoding: PdfWinAnsiEncoding,
     }),
   )
-  guard unsupported_encoding is Err(@pdflite.PdfError::EncodingWriteUnsupported) else {
+  guard unsupported_encoding is Err(EncodingWriteUnsupported) else {
     fail("expected @pdflite.PdfError::EncodingWriteUnsupported")
   }
   let unsupported_truetype = try? doc.write_font(
@@ -10451,7 +10444,7 @@ test "PdfDocument write_font rejects unsupported font variants" {
       encoding: PdfWinAnsiEncoding,
     }),
   )
-  guard unsupported_truetype is Err(@pdflite.PdfError::FontWriteUnsupported) else {
+  guard unsupported_truetype is Err(FontWriteUnsupported) else {
     fail("expected @pdflite.PdfError::FontWriteUnsupported")
   }
   let unsupported_truetype_encoding = try? doc.write_font(
@@ -10469,8 +10462,7 @@ test "PdfDocument write_font rejects unsupported font variants" {
       encoding: PdfCustomEncoding(PdfImplicitInFontFile, []),
     }),
   )
-  guard unsupported_truetype_encoding
-    is Err(@pdflite.PdfError::EncodingWriteUnsupported) else {
+  guard unsupported_truetype_encoding is Err(EncodingWriteUnsupported) else {
     fail("expected @pdflite.PdfError::EncodingWriteUnsupported")
   }
 }

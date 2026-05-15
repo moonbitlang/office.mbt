@@ -19,7 +19,7 @@ pub fn pdf_arc4_crypt(
   key : BytesView,
   data : BytesView,
 ) -> @core.PdfBytes raise @core.PdfError {
-  guard key.length() > 0 else { raise @core.PdfError::CryptoKeyExpected }
+  guard key.length() > 0 else { raise CryptoKeyExpected }
   let state : Array[Int] = []
   for value in 0..<256 {
     state.push(value)
@@ -350,15 +350,13 @@ fn pdf_aes_valid_key_length(length : Int) -> Bool {
 
 ///|
 fn pdf_aes_check_key(key : BytesView) -> Unit raise @core.PdfError {
-  guard pdf_aes_valid_key_length(key.length()) else {
-    raise @core.PdfError::CryptoKeyExpected
-  }
+  guard pdf_aes_valid_key_length(key.length()) else { raise CryptoKeyExpected }
 }
 
 ///|
 fn pdf_aes_block(data : BytesView) -> FixedArray[Byte] raise @core.PdfError {
   guard data.length() == 16 else {
-    raise @core.PdfError::InvalidCryptoDataLength(data.length())
+    raise InvalidCryptoDataLength(data.length())
   }
   pdf_crypto_fixed_array(data)
 }
@@ -441,7 +439,7 @@ pub fn pdf_aes_cbc_decrypt(
 ) -> @core.PdfBytes raise @core.PdfError {
   guard data.length() > 16 else { return Bytes::new(0) }
   guard data.length() % 16 == 0 else {
-    raise @core.PdfError::InvalidCryptoDataLength(data.length())
+    raise InvalidCryptoDataLength(data.length())
   }
   let cooked_key = pdf_aes_decrypt_key(key)
   let output : Array[Byte] = []
@@ -531,7 +529,7 @@ pub fn pdf_aes_ecb_decrypt(
 ) -> @core.PdfBytes raise @core.PdfError {
   guard data.length() > 0 else { return Bytes::new(0) }
   guard data.length() % 16 == 0 else {
-    raise @core.PdfError::InvalidCryptoDataLength(data.length())
+    raise InvalidCryptoDataLength(data.length())
   }
   let cooked_key = pdf_aes_decrypt_key(key)
   let output : Array[Byte] = []
@@ -563,7 +561,7 @@ pub fn pdf_aes_ecb_encrypt(
   data : BytesView,
 ) -> @core.PdfBytes raise @core.PdfError {
   guard data.length() % 16 == 0 else {
-    raise @core.PdfError::InvalidCryptoDataLength(data.length())
+    raise InvalidCryptoDataLength(data.length())
   }
   guard data.length() > 0 else { return Bytes::new(0) }
   let cooked_key = pdf_aes_encrypt_key(key)

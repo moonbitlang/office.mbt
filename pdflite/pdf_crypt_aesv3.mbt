@@ -16,7 +16,7 @@ fn pdf_aesv3_cbc_encrypt_no_padding_with_iv(
   data : BytesView,
 ) -> PdfBytes raise PdfError {
   guard data.length() % 16 == 0 else {
-    raise PdfError::InvalidCryptoDataLength(data.length())
+    raise InvalidCryptoDataLength(data.length())
   }
   let output : Array[Byte] = []
   let mut previous = pdf_crypt_chop_view(pdf_crypt_iv_name, iv, 16)
@@ -216,7 +216,7 @@ fn pdf_authenticate_user_password_aesv3(
   user_entry : BytesView,
 ) -> Bool raise PdfError {
   if user_entry.length() < 48 {
-    raise PdfError::EncryptionDictionaryEntryTooShort(pdf_crypt_u_name)
+    raise EncryptionDictionaryEntryTooShort(pdf_crypt_u_name)
   }
   let expected = pdf_aesv3_password_hash(iso, password, user_entry[32:40])
   @crypt_core.pdf_bytes_prefix_equal(user_entry, expected, 32)
@@ -234,10 +234,10 @@ fn pdf_authenticate_owner_password_aesv3(
   owner_entry : BytesView,
 ) -> Bool raise PdfError {
   if owner_entry.length() < 48 {
-    raise PdfError::EncryptionDictionaryEntryTooShort(pdf_crypt_o_name)
+    raise EncryptionDictionaryEntryTooShort(pdf_crypt_o_name)
   }
   if user_entry.length() < 48 {
-    raise PdfError::EncryptionDictionaryEntryTooShort(pdf_crypt_u_name)
+    raise EncryptionDictionaryEntryTooShort(pdf_crypt_u_name)
   }
   let expected = pdf_aesv3_password_hash(
     iso,
@@ -255,7 +255,7 @@ fn pdf_aesv3_crypt_entry(
 ) -> PdfBytes raise PdfError {
   match entry {
     Some(value) => pdf_crypt_chop_string(key, value, 32)
-    None => raise PdfError::EncryptionDictionaryEntryExpected(key)
+    None => raise EncryptionDictionaryEntryExpected(key)
   }
 }
 
@@ -280,9 +280,7 @@ fn pdf_aesv3_permissions_from_entry(
   permissions_entry : BytesView,
 ) -> Int raise PdfError {
   if permissions_entry.length() < 16 {
-    raise PdfError::EncryptionDictionaryEntryTooShort(
-      pdf_aesv3_permissions_key(),
-    )
+    raise EncryptionDictionaryEntryTooShort(pdf_aesv3_permissions_key())
   }
   let decrypted = @crypt_core.pdf_aes_ecb_decrypt(
     file_key,
@@ -290,7 +288,7 @@ fn pdf_aesv3_permissions_from_entry(
     remove_padding=false,
   )
   guard decrypted[9] == b'a' && decrypted[10] == b'd' && decrypted[11] == b'b' else {
-    raise PdfError::EncryptionPermissionsCorrupt
+    raise EncryptionPermissionsCorrupt
   }
   decrypted[0].to_int() |
   (decrypted[1].to_int() << 8) |
@@ -305,16 +303,13 @@ fn PdfEncryptionValues::validate_aesv3_permissions(
 ) -> Unit raise PdfError {
   let permissions_entry = match self.permissions_entry {
     Some(value) => value
-    None =>
-      raise PdfError::EncryptionDictionaryEntryExpected(
-        pdf_aesv3_permissions_key(),
-      )
+    None => raise EncryptionDictionaryEntryExpected(pdf_aesv3_permissions_key())
   }
   let permissions = pdf_aesv3_permissions_from_entry(
     file_key, permissions_entry,
   )
   if permissions != self.permissions {
-    raise PdfError::EncryptionPermissionsMismatch(permissions, self.permissions)
+    raise EncryptionPermissionsMismatch(permissions, self.permissions)
   }
 }
 

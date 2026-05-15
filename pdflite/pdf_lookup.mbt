@@ -229,7 +229,7 @@ fn pdf_lookup_replace_array_entry(
   key : PdfName,
 ) -> PdfObject raise PdfError {
   if index < 0 || index >= values.length() {
-    raise PdfError::DictionaryKeyNotFound(key)
+    raise DictionaryKeyNotFound(key)
   } else {
     PdfArray(
       [
@@ -303,12 +303,12 @@ fn PdfDocument::replace_chain_in_object(
                 )
                 pdf_lookup_replace_array_entry(values, index, updated, key)
               }
-              None => raise PdfError::DictionaryKeyNotFound(key)
+              None => raise DictionaryKeyNotFound(key)
             }
           }
-        None => raise PdfError::DictionaryKeyNotFound(key)
+        None => raise DictionaryKeyNotFound(key)
       }
-    _ => raise PdfError::DictionaryExpected
+    _ => raise DictionaryExpected
   }
 }
 
@@ -326,7 +326,7 @@ pub fn PdfDocument::replace_chain(
   value : PdfObject,
 ) -> Unit raise PdfError {
   if chain.length() == 0 {
-    raise PdfError::DictionaryExpected
+    raise DictionaryExpected
   }
   self.trailer_dict = self.replace_chain_in_object(
     self.trailer_dict,
@@ -384,7 +384,7 @@ fn PdfDocument::remove_chain_from_object(
       match pdf_lookup_array_index_name(key) {
         Some(index) =>
           if final_key {
-            raise PdfError::DictionaryExpected
+            raise DictionaryExpected
           } else {
             match values.get(index) {
               Some(PdfIndirect(number)) => {
@@ -416,9 +416,9 @@ fn PdfDocument::remove_chain_from_object(
               None => (object, false)
             }
           }
-        None => raise PdfError::DictionaryKeyNotFound(key)
+        None => raise DictionaryKeyNotFound(key)
       }
-    _ => raise PdfError::DictionaryExpected
+    _ => raise DictionaryExpected
   }
 }
 
@@ -434,11 +434,11 @@ pub fn PdfDocument::remove_chain(
   chain : ArrayView[PdfName],
 ) -> Bool raise PdfError {
   if chain.length() == 0 {
-    raise PdfError::DictionaryExpected
+    raise DictionaryExpected
   }
   if chain.length() == 1 {
     match self.lookup_chain(self.trailer_dict, chain) {
-      Some(_) => raise PdfError::DictionaryExpected
+      Some(_) => raise DictionaryExpected
       None => return false
     }
   }
@@ -487,7 +487,7 @@ pub fn PdfDocument::get_number(
   match self.direct(object) {
     PdfReal(value) => value
     PdfInteger(value) => value.to_double()
-    _ => raise PdfError::NumberExpected
+    _ => raise NumberExpected
   }
 }
 
@@ -516,10 +516,10 @@ pub fn PdfDocument::parse_rectangle(
             max_x: double_max(x0, x1),
             max_y: double_max(y0, y1),
           }
-        _ => raise PdfError::BadRectangle
+        _ => raise BadRectangle
       }
     }
-    _ => raise PdfError::RectangleExpected
+    _ => raise RectangleExpected
   }
 }
 
@@ -646,7 +646,7 @@ pub fn PdfDocument::parse_matrix(
         e: self.get_number(values[4]),
         f: self.get_number(values[5]),
       }
-    _ => raise PdfError::MatrixMalformed
+    _ => raise MatrixMalformed
   }
 }
 

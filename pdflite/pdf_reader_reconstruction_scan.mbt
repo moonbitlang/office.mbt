@@ -165,7 +165,7 @@ fn ByteCursor::lex_reconstructed_indirect_object_tokens_at_current(
   if found {
     output
   } else {
-    raise PdfError::ParseIndirectObjectExpected
+    raise ParseIndirectObjectExpected
   }
 }
 
@@ -294,9 +294,9 @@ fn ByteCursor::read_reconstructed_xref_stream_trailer_at(
       if pdf_reader_xref_stream_type_ok(dictionary) {
         pdf_reader_stream_dictionary_without_xref_keys(dictionary)
       } else {
-        raise PdfError::XRefExpected
+        raise XRefExpected
       }
-    _ => raise PdfError::XRefExpected
+    _ => raise XRefExpected
   }
 }
 
@@ -349,9 +349,7 @@ fn ByteCursor::read_reconstructed_classic_xref_section_at(
 ) -> (PdfXRefSection, Int) raise PdfError {
   self.seek_pdf_absolute(position)
   let section = self.read_pdf_xref_section()
-  guard section.stream_object_number is None else {
-    raise PdfError::XRefExpected
-  }
+  guard section.stream_object_number is None else { raise XRefExpected }
   (section, self.absolute_position())
 }
 

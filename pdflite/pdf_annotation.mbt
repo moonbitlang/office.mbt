@@ -572,7 +572,7 @@ fn pdf_annotation_rest(annotation : PdfObject) -> PdfObject raise PdfError {
       }
       PdfDictionary(output)
     }
-    _ => raise PdfError::DictionaryExpected
+    _ => raise DictionaryExpected
   }
 }
 
@@ -598,7 +598,7 @@ fn PdfDocument::pdf_annotation_read_depth(
     rectangle: match
       self.lookup_direct(pdf_annotation_rect_key(), direct_annotation) {
       Some(rectangle) => self.parse_rectangle(rectangle)
-      None => raise PdfError::RectangleExpected
+      None => raise RectangleExpected
     },
     border: self.pdf_annotation_border(direct_annotation),
     colour: self.pdf_annotation_colour(direct_annotation),
@@ -701,7 +701,7 @@ fn pdf_annotation_rest_entries(
   match rest {
     PdfNull => []
     PdfDictionary(entries) => [ for entry in entries => entry ]
-    _ => raise PdfError::DictionaryExpected
+    _ => raise DictionaryExpected
   }
 }
 
@@ -769,7 +769,7 @@ pub fn PdfDocument::add_annotation(
   let annotations = match
     self.lookup_direct(pdf_annotation_annots_key(), page.rest) {
     Some(PdfArray(existing)) => [object, ..existing]
-    Some(_) => raise PdfError::DictionaryExpected
+    Some(_) => raise DictionaryExpected
     None => [object]
   }
   {

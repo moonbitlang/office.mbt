@@ -77,12 +77,12 @@ fn pdf_xref_stream_int_array(
       for value in values {
         match value {
           PdfInteger(number) => output.push(number)
-          _ => raise PdfError::XRefEntryExpected
+          _ => raise XRefEntryExpected
         }
       }
       Some(output)
     }
-    Some(_) => raise PdfError::XRefEntryExpected
+    Some(_) => raise XRefEntryExpected
     None => None
   }
 }
@@ -94,7 +94,7 @@ fn pdf_xref_stream_widths(
   match pdf_xref_stream_int_array(dictionary, pdf_reader_w_name()) {
     Some([w0, w1, w2]) if w0 >= 0 && w1 >= 0 && w2 >= 0 && w0 + w1 + w2 > 0 =>
       (w0, w1, w2)
-    _ => raise PdfError::XRefEntryExpected
+    _ => raise XRefEntryExpected
   }
 }
 
@@ -105,14 +105,14 @@ fn pdf_xref_stream_index_pairs(
   match pdf_xref_stream_int_array(dictionary, pdf_reader_index_name()) {
     Some(values) => {
       if values.length() % 2 != 0 {
-        raise PdfError::XRefEntryExpected
+        raise XRefEntryExpected
       }
       let pairs : Array[(Int, Int)] = []
       for i = 0; i < values.length(); i = i + 2 {
         let start = values[i]
         let length = values[i + 1]
         if start < 0 || length < 0 {
-          raise PdfError::XRefEntryExpected
+          raise XRefEntryExpected
         }
         pairs.push((start, length))
       }
@@ -121,7 +121,7 @@ fn pdf_xref_stream_index_pairs(
     None =>
       match dictionary.lookup_immediate(pdf_reader_size_name()) {
         Some(PdfInteger(size)) if size >= 0 => [(0, size)]
-        _ => raise PdfError::XRefEntryExpected
+        _ => raise XRefEntryExpected
       }
   }
 }
@@ -135,7 +135,7 @@ fn pdf_xref_stream_read_field(
   if width == 0 {
     (0, position)
   } else if position < 0 || position + width > data.length() {
-    raise PdfError::XRefEntryExpected
+    raise XRefEntryExpected
   } else {
     let mut value = 0
     for i in position..<(position + width) {
@@ -228,14 +228,12 @@ fn ByteCursor::read_pdf_xref_stream_section(
 ) -> PdfXRefSection raise PdfError {
   let stream_object_offset = self.absolute_position()
   if !pdf_is_digit_byte(self.peek_byte()) {
-    raise PdfError::XRefExpected
+    raise XRefExpected
   }
   let parsed = self.read_first_indirect_object_at_current([])
-  guard parsed.object is PdfStreamObject(stream) else {
-    raise PdfError::XRefExpected
-  }
+  guard parsed.object is PdfStreamObject(stream) else { raise XRefExpected }
   if !pdf_reader_xref_stream_type_ok(stream.dictionary) {
-    raise PdfError::XRefExpected
+    raise XRefExpected
   }
   let decoded_stream = pdf_decode_stream_value(stream)
   let widths = pdf_xref_stream_widths(decoded_stream.dictionary)

@@ -1,7 +1,7 @@
 ///|
 fn pdf_read_reader_revision_target(revision : Int?) -> Int? raise PdfError {
   match revision {
-    Some(value) if value < 1 => raise PdfError::BadRevision
+    Some(value) if value < 1 => raise BadRevision
     _ => revision
   }
 }
@@ -49,7 +49,7 @@ fn pdf_read_classic_document_from_view_at_revision(
   let mut depth = 0
   while !done {
     if depth >= 1024 {
-      raise PdfError::XRefExpected
+      raise XRefExpected
     }
     cursor.seek_pdf_absolute(current_xref)
     let section = cursor.read_pdf_xref_section()
@@ -83,12 +83,7 @@ fn pdf_read_classic_document_from_view_at_revision(
     }
     match pdf_trailer_prev_position(current_trailer) {
       Some(previous) => current_xref = previous
-      None =>
-        if read_section {
-          done = true
-        } else {
-          raise PdfError::BadRevision
-        }
+      None => if read_section { done = true } else { raise BadRevision }
     }
     depth += 1
   }
@@ -117,7 +112,7 @@ fn pdf_read_classic_document_from_view_at_revision(
           )
           if parsed.number != xref.object_number ||
             parsed.generation != xref.generation {
-            raise PdfError::XRefEntryExpected
+            raise XRefEntryExpected
           }
           document.load_object_given_number(
             parsed.number,
@@ -203,97 +198,88 @@ pub fn pdf_read_document_from_view(
     data,
     pdf_read_classic_document_from_view(data),
   ) catch {
-    PdfError::StartXRefExpected =>
-      pdf_read_reconstructed_document_from_view(data)
-    PdfError::XRefExpected =>
+    StartXRefExpected => pdf_read_reconstructed_document_from_view(data)
+    XRefExpected =>
       pdf_read_reconstructed_or_raise(
         data,
-        PdfError::XRefExpected,
+        XRefExpected,
         include_xref_stream_trailers=true,
       )
-    PdfError::XRefEntryExpected =>
+    XRefEntryExpected =>
       if pdf_reader_startxref_root_uses_object_stream_or_false(data) {
-        raise PdfError::XRefEntryExpected
+        raise XRefEntryExpected
       } else {
-        pdf_read_reconstructed_or_raise(data, PdfError::XRefEntryExpected)
+        pdf_read_reconstructed_or_raise(data, XRefEntryExpected)
       }
-    PdfError::TrailerExpected =>
-      pdf_read_reconstructed_or_raise(data, PdfError::TrailerExpected)
-    PdfError::RootExpected =>
-      pdf_read_reconstructed_or_raise(data, PdfError::RootExpected)
-    PdfError::NumberExpected =>
-      pdf_read_reconstructed_or_raise(data, PdfError::NumberExpected)
-    PdfError::ParseIndirectObjectExpected =>
-      pdf_read_reconstructed_or_raise(
-        data,
-        PdfError::ParseIndirectObjectExpected,
-      )
-    PdfError::ParseStreamExpected =>
-      pdf_read_reconstructed_or_raise(data, PdfError::ParseStreamExpected)
-    PdfError::ParseEndStreamExpected =>
-      pdf_read_reconstructed_or_raise(data, PdfError::ParseEndStreamExpected)
-    PdfError::ParseEndObjectExpected =>
-      pdf_read_reconstructed_or_raise(data, PdfError::ParseEndObjectExpected)
-    PdfError::EndOfInput =>
-      pdf_read_reconstructed_or_raise(data, PdfError::EndOfInput)
-    PdfError::ParseObjectExpected =>
-      pdf_read_reconstructed_or_raise(data, PdfError::ParseObjectExpected)
-    PdfError::InvalidHexEscape =>
-      pdf_read_reconstructed_or_raise(data, PdfError::InvalidHexEscape)
-    PdfError::StreamDataExpected =>
+    TrailerExpected => pdf_read_reconstructed_or_raise(data, TrailerExpected)
+    RootExpected => pdf_read_reconstructed_or_raise(data, RootExpected)
+    NumberExpected => pdf_read_reconstructed_or_raise(data, NumberExpected)
+    ParseIndirectObjectExpected =>
+      pdf_read_reconstructed_or_raise(data, ParseIndirectObjectExpected)
+    ParseStreamExpected =>
+      pdf_read_reconstructed_or_raise(data, ParseStreamExpected)
+    ParseEndStreamExpected =>
+      pdf_read_reconstructed_or_raise(data, ParseEndStreamExpected)
+    ParseEndObjectExpected =>
+      pdf_read_reconstructed_or_raise(data, ParseEndObjectExpected)
+    EndOfInput => pdf_read_reconstructed_or_raise(data, EndOfInput)
+    ParseObjectExpected =>
+      pdf_read_reconstructed_or_raise(data, ParseObjectExpected)
+    InvalidHexEscape => pdf_read_reconstructed_or_raise(data, InvalidHexEscape)
+    StreamDataExpected =>
       if pdf_reader_startxref_root_uses_object_stream_or_false(data) {
         pdf_read_reconstructed_or_raise(
           data,
-          PdfError::StreamDataExpected,
+          StreamDataExpected,
           include_xref_stream_trailers=true,
         )
       } else {
-        raise PdfError::StreamDataExpected
+        raise StreamDataExpected
       }
-    PdfError::InvalidCursorPosition(position) =>
+    InvalidCursorPosition(position) =>
       pdf_read_reconstructed_or_raise(
         data,
-        PdfError::InvalidCursorPosition(position),
+        InvalidCursorPosition(position),
         include_xref_stream_trailers=true,
       )
-    PdfError::FilterNotSupported(filter) =>
+    FilterNotSupported(filter) =>
       if pdf_reader_xref_metadata_error_allows_reconstruction(
           data,
-          PdfError::FilterNotSupported(filter),
+          FilterNotSupported(filter),
         ) {
         pdf_read_reconstructed_or_raise(
           data,
-          PdfError::FilterNotSupported(filter),
+          FilterNotSupported(filter),
           include_xref_stream_trailers=true,
         )
       } else {
-        raise PdfError::FilterNotSupported(filter)
+        raise FilterNotSupported(filter)
       }
-    PdfError::PredictorExpected =>
+    PredictorExpected =>
       if pdf_reader_xref_metadata_error_allows_reconstruction(
           data,
-          PdfError::PredictorExpected,
+          PredictorExpected,
         ) {
         pdf_read_reconstructed_or_raise(
           data,
-          PdfError::PredictorExpected,
+          PredictorExpected,
           include_xref_stream_trailers=true,
         )
       } else {
-        raise PdfError::PredictorExpected
+        raise PredictorExpected
       }
-    PdfError::PredictorNotSupported(predictor) =>
+    PredictorNotSupported(predictor) =>
       if pdf_reader_xref_metadata_error_allows_reconstruction(
           data,
-          PdfError::PredictorNotSupported(predictor),
+          PredictorNotSupported(predictor),
         ) {
         pdf_read_reconstructed_or_raise(
           data,
-          PdfError::PredictorNotSupported(predictor),
+          PredictorNotSupported(predictor),
           include_xref_stream_trailers=true,
         )
       } else {
-        raise PdfError::PredictorNotSupported(predictor)
+        raise PredictorNotSupported(predictor)
       }
     error => raise error
   }

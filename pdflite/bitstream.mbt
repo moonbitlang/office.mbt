@@ -87,7 +87,7 @@ pub fn BitStream::get_bit(self : BitStream) -> Bool raise PdfError {
   if self.bit_mask == 0 {
     let value = self.input.input_byte()
     if value == pdf_no_more {
-      raise PdfError::EndOfInput
+      raise EndOfInput
     }
     self.current_byte = value
     self.bit_mask = 0x80
@@ -132,7 +132,7 @@ pub fn BitStream::get_value_int(
   width : Int,
 ) -> Int raise PdfError {
   if width < 0 || width > 31 {
-    raise PdfError::InvalidBitCount(width)
+    raise InvalidBitCount(width)
   }
   let mut value = 0
   for _ in 0..<width {
@@ -152,7 +152,7 @@ pub fn BitStream::get_value_int64(
   width : Int,
 ) -> Int64 raise PdfError {
   if width < 0 || width > 32 {
-    raise PdfError::InvalidBitCount(width)
+    raise InvalidBitCount(width)
   }
   let mut value : Int64 = 0
   for _ in 0..<width {
@@ -214,7 +214,7 @@ fn BitWriter::put_bit_unchecked(self : BitWriter, bit : Int) -> Unit {
 /// Raises `PdfError::InvalidBit` for any other value.
 pub fn BitWriter::put_bit(self : BitWriter, bit : Int) -> Unit raise PdfError {
   if bit != 0 && bit != 1 {
-    raise PdfError::InvalidBit(bit)
+    raise InvalidBit(bit)
   }
   self.put_bit_unchecked(bit)
 }
@@ -229,7 +229,7 @@ pub fn BitWriter::put_value_int(
   value : Int,
 ) -> Unit raise PdfError {
   if width < 0 || width > 31 {
-    raise PdfError::InvalidBitCount(width)
+    raise InvalidBitCount(width)
   }
   for shift = width - 1; shift >= 0; shift = shift - 1 {
     self.put_bit((value >> shift) & 1)
@@ -246,7 +246,7 @@ pub fn BitWriter::put_value_int64(
   value : Int64,
 ) -> Unit raise PdfError {
   if width < 0 || width > 32 {
-    raise PdfError::InvalidBitCount(width)
+    raise InvalidBitCount(width)
   }
   for shift = width - 1; shift >= 0; shift = shift - 1 {
     self.put_bit_unchecked(((value >> shift) & 1).to_int())

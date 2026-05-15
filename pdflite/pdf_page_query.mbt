@@ -6,7 +6,7 @@ fn pdf_page_reference_numbers_inner(
   depth : Int,
 ) -> Array[Int] raise PdfError {
   if depth > 10000 {
-    raise PdfError::PageTreeExpected
+    raise PageTreeExpected
   }
   match pdf.lookup_direct(pdf_page_type_key(), pages_node) {
     Some(PdfNameObject(name)) if name == pdf_page_type_page() => [node_number]
@@ -47,7 +47,7 @@ fn PdfDocument::pdf_pages_of_pagetree_quick_node(
   depth : Int,
 ) -> Int raise PdfError {
   if depth > 10000 {
-    raise PdfError::PageTreeExpected
+    raise PageTreeExpected
   }
   if node == PdfNull {
     0
@@ -63,7 +63,7 @@ fn PdfDocument::pdf_pages_of_pagetree_quick_node(
                 PdfIndirect(number) => {
                   let child = self.lookup_object_or_null(number)
                   if child == PdfNull {
-                    raise PdfError::PageTreeExpected
+                    raise PageTreeExpected
                   }
                   count += self.pdf_pages_of_pagetree_quick_node(
                     child,
@@ -72,12 +72,12 @@ fn PdfDocument::pdf_pages_of_pagetree_quick_node(
                 }
                 PdfDictionary(_) =>
                   count += self.pdf_pages_of_pagetree_quick_node(kid, depth + 1)
-                _ => raise PdfError::PageTreeExpected
+                _ => raise PageTreeExpected
               }
             }
             count
           }
-          _ => raise PdfError::PageTreeExpected
+          _ => raise PageTreeExpected
         }
     }
   }
@@ -87,11 +87,11 @@ fn PdfDocument::pdf_pages_of_pagetree_quick_node(
 fn pdf_page_root_pages_node(pdf : PdfDocument) -> PdfObject raise PdfError {
   let root = match pdf.pdf_page_active_catalog() {
     Some((catalog, _)) => catalog
-    None => raise PdfError::RootExpected
+    None => raise RootExpected
   }
   match pdf.lookup_direct(pdf_page_pages_key(), root) {
     Some(pages) => pages
-    None => raise PdfError::PageTreeExpected
+    None => raise PageTreeExpected
   }
 }
 
