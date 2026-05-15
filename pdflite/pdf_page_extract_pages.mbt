@@ -4,12 +4,12 @@ fn pdf_page_select_pages(
   page_numbers : ArrayView[Int],
 ) -> Array[PdfPage] raise PdfError {
   if page_numbers.length() == 0 {
-    raise PageTreeExpected
+    raise PdfError::PageTreeExpected
   }
   let selected : Array[PdfPage] = []
   for page_number in page_numbers {
     if page_number < 1 || page_number > pages.length() {
-      raise PageTreeExpected
+      raise PdfError::PageTreeExpected
     }
     selected.push(pages[page_number - 1])
   }
@@ -22,12 +22,12 @@ fn pdf_page_select_numbers(
   page_numbers : ArrayView[Int],
 ) -> Array[Int] raise PdfError {
   if page_numbers.length() == 0 {
-    raise PageTreeExpected
+    raise PdfError::PageTreeExpected
   }
   let selected : Array[Int] = []
   for page_number in page_numbers {
     if page_number < 1 || page_number > numbers.length() {
-      raise PageTreeExpected
+      raise PdfError::PageTreeExpected
     }
     selected.push(numbers[page_number - 1])
   }
@@ -290,11 +290,11 @@ fn PdfDocument::pdf_page_fixup_destination_name_tree(
 fn pdf_page_root_pages_number(pdf : PdfDocument) -> Int raise PdfError {
   let root = match pdf.pdf_page_active_catalog() {
     Some((catalog, _)) => catalog
-    None => raise RootExpected
+    None => raise PdfError::RootExpected
   }
   match root.lookup_immediate(pdf_page_pages_key()) {
     Some(PdfIndirect(number)) => number
-    _ => raise PageTreeExpected
+    _ => raise PdfError::PageTreeExpected
   }
 }
 
@@ -306,7 +306,7 @@ fn PdfDocument::pdf_page_tree_nodes_not_pages_inner(
   depth : Int,
 ) -> Array[Int] raise PdfError {
   if depth > 10000 {
-    raise PageTreeExpected
+    raise PdfError::PageTreeExpected
   }
   match self.lookup_direct(pdf_page_type_key(), node) {
     Some(PdfNameObject(name)) if name == pdf_page_type_page() => []
@@ -355,7 +355,7 @@ fn PdfDocument::pdf_page_reference_numbers_unordered_inner(
   depth : Int,
 ) -> Array[Int] raise PdfError {
   if depth > 10000 {
-    raise PageTreeExpected
+    raise PdfError::PageTreeExpected
   }
   match self.lookup_direct(pdf_page_type_key(), node) {
     Some(PdfNameObject(name)) if name == pdf_page_type_page() => [node_number]
@@ -471,7 +471,7 @@ fn PdfDocument::pdf_page_rewrite_page_tree_first(
   }
   if !rewritten {
     self.remove_object(new_number)
-    raise PageTreeExpected
+    raise PdfError::PageTreeExpected
   }
 }
 
@@ -501,7 +501,7 @@ fn PdfDocument::pdf_page_fixup_parents_inner(
   depth : Int,
 ) -> Unit raise PdfError {
   if depth > 10000 {
-    raise PageTreeExpected
+    raise PdfError::PageTreeExpected
   }
   let node = self.lookup_object_or_null(node_number)
   match node.lookup_immediate(pdf_page_parent_key()) {

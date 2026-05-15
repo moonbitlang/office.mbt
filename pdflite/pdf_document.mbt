@@ -478,7 +478,7 @@ pub fn PdfDocument::root(self : PdfDocument) -> Int {
 ///
 /// A `/Root` entry in the trailer dictionary is preferred over the stored root
 /// number. The selected reference is resolved through `direct`; if it resolves
-/// to `PdfNull`, this raises `RootExpected`.
+/// to `PdfNull`, this raises `PdfError::RootExpected`.
 pub fn PdfDocument::catalog(self : PdfDocument) -> PdfObject raise PdfError {
   let object = match
     self.trailer_dict.lookup_immediate(pdf_document_root_key()) {
@@ -486,7 +486,7 @@ pub fn PdfDocument::catalog(self : PdfDocument) -> PdfObject raise PdfError {
     None => self.lookup_object_or_null(self.root)
   }
   match object {
-    PdfNull => raise RootExpected
+    PdfNull => raise PdfError::RootExpected
     catalog => catalog
   }
 }

@@ -51,7 +51,7 @@ test "PdfPageLabelStyle converts to and from CamlPDF names" {
     "Missing",
   )
   guard result is Err(@pdflite.PdfError::PageLabelStyleExpected("Missing")) else {
-    fail("expected PageLabelStyleExpected")
+    fail("expected PdfError::PageLabelStyleExpected")
   }
 }
 
@@ -343,7 +343,7 @@ test "PdfDocument read_page_labels keeps CamlPDF malformed range defaults" {
   )
   let empty_result : Result[Array[@pdflite.PdfPageLabel], Error] = try? empty_doc.read_page_labels()
   guard empty_result is Err(@pdflite.PdfError::PageTreeExpected) else {
-    fail("expected PageTreeExpected")
+    fail("expected PdfError::PageTreeExpected")
   }
 }
 
@@ -441,17 +441,17 @@ test "PdfDocument page label APIs require a root catalog" {
   let labels : Array[@pdflite.PdfPageLabel] = [@pdflite.pdf_page_label_basic]
   let read_result : Result[Array[@pdflite.PdfPageLabel], Error] = try? doc.read_page_labels()
   guard read_result is Err(@pdflite.PdfError::RootExpected) else {
-    fail("expected RootExpected from read_page_labels")
+    fail("expected PdfError::RootExpected from read_page_labels")
   }
   let write_result : Result[@pdflite.PdfDocument, Error] = try? doc.write_page_labels(
     labels,
   )
   guard write_result is Err(@pdflite.PdfError::RootExpected) else {
-    fail("expected RootExpected from write_page_labels")
+    fail("expected PdfError::RootExpected from write_page_labels")
   }
   let remove_result : Result[@pdflite.PdfDocument, Error] = try? doc.remove_page_labels()
   guard remove_result is Err(@pdflite.PdfError::RootExpected) else {
-    fail("expected RootExpected from remove_page_labels")
+    fail("expected PdfError::RootExpected from remove_page_labels")
   }
 
   let key_root = page_label_name_for_test("/Root")
@@ -459,7 +459,7 @@ test "PdfDocument page label APIs require a root catalog" {
   unresolved.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(99))]))
   let unresolved_read : Result[Array[@pdflite.PdfPageLabel], Error] = try? unresolved.read_page_labels()
   guard unresolved_read is Err(@pdflite.PdfError::RootExpected) else {
-    fail("expected RootExpected from unresolved trailer root")
+    fail("expected PdfError::RootExpected from unresolved trailer root")
   }
 }
 
@@ -796,6 +796,6 @@ test "pdf_page_label_merge rejects mismatched inputs" {
     [],
   )
   guard result is Err(@pdflite.PdfError::PageTreeExpected) else {
-    fail("expected PageTreeExpected")
+    fail("expected PdfError::PageTreeExpected")
   }
 }

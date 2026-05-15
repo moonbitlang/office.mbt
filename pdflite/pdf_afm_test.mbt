@@ -83,7 +83,7 @@ test "pdf_read_afm rejects malformed metric and kern rows" {
     bad_metric,
   )
   guard metric_result is Err(@pdflite.PdfError::AfmExpected) else {
-    fail("expected AfmExpected for bad metric row")
+    fail("expected PdfError::AfmExpected for bad metric row")
   }
   let missing_name = afm_ascii_for_test(
     "StartCharMetrics 1\nC 65 ; WX 600 ; N\nEndCharMetrics\n",
@@ -92,7 +92,7 @@ test "pdf_read_afm rejects malformed metric and kern rows" {
     missing_name,
   )
   guard missing_name_result is Err(@pdflite.PdfError::AfmExpected) else {
-    fail("expected AfmExpected for incomplete metric row")
+    fail("expected PdfError::AfmExpected for incomplete metric row")
   }
 
   let bad_kern = afm_ascii_for_test(
@@ -107,7 +107,7 @@ test "pdf_read_afm rejects malformed metric and kern rows" {
     bad_kern,
   )
   guard kern_result is Err(@pdflite.PdfError::AfmExpected) else {
-    fail("expected AfmExpected for bad kern row")
+    fail("expected PdfError::AfmExpected for bad kern row")
   }
 
   let bad_kern_operator = afm_ascii_for_test(
@@ -122,6 +122,6 @@ test "pdf_read_afm rejects malformed metric and kern rows" {
     bad_kern_operator,
   )
   guard kern_operator_result is Err(@pdflite.PdfError::AfmExpected) else {
-    fail("expected AfmExpected for bad kern operator")
+    fail("expected PdfError::AfmExpected for bad kern operator")
   }
 }

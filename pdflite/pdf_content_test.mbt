@@ -1092,13 +1092,13 @@ test "pdf_parse_content_ops_from_bytes reports unterminated inline images" {
     content_bytes_for_test("BI /W 1 ID abc"),
   )
   guard result is Err(@pdflite.PdfError::ParseEndStreamExpected) else {
-    fail("expected ParseEndStreamExpected")
+    fail("expected PdfError::ParseEndStreamExpected")
   }
   let sized_result : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
     content_bytes_for_test("BI /W 1 /H 1 /CS /G /BPC 8 ID A"),
   )
   guard sized_result is Err(@pdflite.PdfError::ParseEndStreamExpected) else {
-    fail("expected sized ParseEndStreamExpected")
+    fail("expected sized PdfError::ParseEndStreamExpected")
   }
   let run_length_data = content_concat_for_test([
     content_bytes_for_test("BI /W 1 /H 1 /CS /G /BPC 8 /F /RL ID "),
@@ -1109,19 +1109,19 @@ test "pdf_parse_content_ops_from_bytes reports unterminated inline images" {
     run_length_data,
   )
   guard run_length_result is Err(@pdflite.PdfError::ParseEndStreamExpected) else {
-    fail("expected RunLength ParseEndStreamExpected")
+    fail("expected RunLength PdfError::ParseEndStreamExpected")
   }
   let ascii85_result : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
     content_bytes_for_test("BI /W 1 /H 1 /CS /G /BPC 8 /F /A85 ID !!!! EI"),
   )
   guard ascii85_result is Err(@pdflite.PdfError::ParseEndStreamExpected) else {
-    fail("expected ASCII85 ParseEndStreamExpected")
+    fail("expected ASCII85 PdfError::ParseEndStreamExpected")
   }
   let ascii_hex_result : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
     content_bytes_for_test("BI /W 1 /H 1 /CS /G /BPC 8 /F /AHx ID 41 EI"),
   )
   guard ascii_hex_result is Err(@pdflite.PdfError::ParseEndStreamExpected) else {
-    fail("expected ASCIIHex ParseEndStreamExpected")
+    fail("expected ASCIIHex PdfError::ParseEndStreamExpected")
   }
 }
 
@@ -1499,7 +1499,7 @@ test "PdfDocument parse_content_ops reports non-stream content objects" {
     ],
   )
   guard result is Err(@pdflite.PdfError::ParseStreamExpected) else {
-    fail("expected ParseStreamExpected")
+    fail("expected PdfError::ParseStreamExpected")
   }
 }
 
@@ -1598,7 +1598,7 @@ test "pdf_parse_content_ops_from_bytes reports trailing operands" {
     content_bytes_for_test("1 2"),
   )
   guard result is Err(@pdflite.PdfError::ContentOperatorExpected) else {
-    fail("expected ContentOperatorExpected")
+    fail("expected PdfError::ContentOperatorExpected")
   }
 }
 
@@ -1608,19 +1608,19 @@ test "pdf content parser reports malformed complex and inline-image operands" {
     content_bytes_for_test("[/Bad] 0 d"),
   )
   guard malformed_dash is Err(@pdflite.PdfError::NumberExpected) else {
-    fail("expected NumberExpected")
+    fail("expected PdfError::NumberExpected")
   }
   let malformed_array : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
     content_bytes_for_test("[(A) 1 TJ"),
   )
   guard malformed_array is Err(@pdflite.PdfError::ParseObjectExpected) else {
-    fail("expected ParseObjectExpected")
+    fail("expected PdfError::ParseObjectExpected")
   }
   let malformed_inline_image : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
     content_bytes_for_test("BI /W ID abc EI"),
   )
   guard malformed_inline_image is Err(@pdflite.PdfError::ContentOperandExpected) else {
-    fail("expected ContentOperandExpected")
+    fail("expected PdfError::ContentOperandExpected")
   }
   let malformed_inline_dictionary : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_content_bytes_of_ops([
       Op_InlineImage(PdfInteger(1), None, content_bytes_for_test("abc")),
@@ -1628,6 +1628,6 @@ test "pdf content parser reports malformed complex and inline-image operands" {
   )
   guard malformed_inline_dictionary
     is Err(@pdflite.PdfError::DictionaryExpected) else {
-    fail("expected DictionaryExpected")
+    fail("expected PdfError::DictionaryExpected")
   }
 }

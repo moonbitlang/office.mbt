@@ -89,7 +89,7 @@ fn crypt_wb_expect_encryption_method_error_for_test(
   let doc = crypt_wb_doc_with_encrypt_for_test(encrypt_dictionary)
   let result : Result[PdfEncryptionValues, Error] = try? doc.encryption_values()
   guard result is Err(PdfError::EncryptionMethodExpected) else {
-    fail("expected EncryptionMethodExpected")
+    fail("expected PdfError::EncryptionMethodExpected")
   }
 }
 
@@ -431,7 +431,7 @@ test "private encryption values parse crypt filter methods" {
 test "private encryption values report malformed encryption dictionaries" {
   let no_encrypt : Result[PdfEncryptionValues, Error] = try? pdf_document_empty().encryption_values()
   guard no_encrypt is Err(PdfError::EncryptionExpected) else {
-    fail("expected EncryptionExpected")
+    fail("expected PdfError::EncryptionExpected")
   }
 
   crypt_wb_expect_encryption_method_error_for_test(
@@ -591,7 +591,7 @@ test "private encryption values report malformed encryption dictionaries" {
   )
   let bad_id_result : Result[PdfEncryptionValues, Error] = try? bad_id.encryption_values()
   guard bad_id_result is Err(PdfError::EncryptionIDExpected) else {
-    fail("expected EncryptionIDExpected")
+    fail("expected PdfError::EncryptionIDExpected")
   }
 }
 

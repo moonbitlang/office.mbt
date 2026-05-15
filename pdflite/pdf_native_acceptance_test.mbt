@@ -8849,7 +8849,7 @@ fn acceptance_process_resource_lifecycle_forms_for_test(
   for page in doc.pages_of_pagetree() {
     doc.process_xobjects(page, fn(_, _, streams) raise @pdflite.PdfError {
       if streams.length() != 1 {
-        raise ParseStreamExpected
+        raise PdfError::ParseStreamExpected
       }
       let bytes = acceptance_ascii_for_test("FORM-LIFECYCLE")
       [

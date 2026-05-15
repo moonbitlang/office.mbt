@@ -53,7 +53,7 @@ fn PdfDocument::pdf_page_parse_content_ops(
   content : ArrayView[PdfObject],
 ) -> Array[PdfContentOp] raise PdfError {
   self.parse_content_ops_with_resources(resources, content) catch {
-    DictionaryKeyNotFound(_) | ColourSpaceExpected =>
+    PdfError::DictionaryKeyNotFound(_) | PdfError::ColourSpaceExpected =>
       self.parse_content_ops(content)
     error => raise error
   }

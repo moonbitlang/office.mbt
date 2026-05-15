@@ -31,7 +31,7 @@ test "pdf_arc4_crypt rejects empty keys" {
     @ascii.encode("data"),
   )
   guard result is Err(PdfError::CryptoKeyExpected) else {
-    fail("expected CryptoKeyExpected")
+    fail("expected PdfError::CryptoKeyExpected")
   }
 }
 
@@ -257,7 +257,7 @@ test "pdf_aes_ecb_decrypt handles padding and checked errors" {
     plaintext,
   )
   guard bad_key is Err(PdfError::CryptoKeyExpected) else {
-    fail("expected CryptoKeyExpected")
+    fail("expected PdfError::CryptoKeyExpected")
   }
 
   let bad_block : Result[PdfBytes, Error] = try? pdf_aes_decrypt_block(
@@ -265,7 +265,7 @@ test "pdf_aes_ecb_decrypt handles padding and checked errors" {
     crypt_bytes_for_test([1, 2, 3]),
   )
   guard bad_block is Err(PdfError::InvalidCryptoDataLength(3)) else {
-    fail("expected InvalidCryptoDataLength for block")
+    fail("expected PdfError::InvalidCryptoDataLength for block")
   }
 
   let bad_cbc : Result[PdfBytes, Error] = try? pdf_aes_cbc_decrypt(
@@ -273,7 +273,7 @@ test "pdf_aes_ecb_decrypt handles padding and checked errors" {
     crypt_bytes_for_test([ for value in 0..<17 => value ]),
   )
   guard bad_cbc is Err(PdfError::InvalidCryptoDataLength(17)) else {
-    fail("expected InvalidCryptoDataLength for CBC")
+    fail("expected PdfError::InvalidCryptoDataLength for CBC")
   }
 
   let bad_ecb : Result[PdfBytes, Error] = try? pdf_aes_ecb_decrypt(
@@ -281,7 +281,7 @@ test "pdf_aes_ecb_decrypt handles padding and checked errors" {
     crypt_bytes_for_test([1, 2, 3]),
   )
   guard bad_ecb is Err(PdfError::InvalidCryptoDataLength(3)) else {
-    fail("expected InvalidCryptoDataLength for ECB")
+    fail("expected PdfError::InvalidCryptoDataLength for ECB")
   }
 
   let bad_ecb_encrypt : Result[PdfBytes, Error] = try? pdf_aes_ecb_encrypt(
@@ -289,7 +289,7 @@ test "pdf_aes_ecb_decrypt handles padding and checked errors" {
     crypt_bytes_for_test([1, 2, 3]),
   )
   guard bad_ecb_encrypt is Err(PdfError::InvalidCryptoDataLength(3)) else {
-    fail("expected InvalidCryptoDataLength for ECB encrypt")
+    fail("expected PdfError::InvalidCryptoDataLength for ECB encrypt")
   }
 }
 

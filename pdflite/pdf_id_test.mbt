@@ -106,6 +106,6 @@ test "PdfDocument change_id installs trailer ID" {
   )
   @test.assert_eq(updated.lookup_immediate(key_info), Some(PdfIndirect(7)))
   guard bad_result is Err(@pdflite.PdfError::DictionaryExpected) else {
-    fail("expected DictionaryExpected")
+    fail("expected PdfError::DictionaryExpected")
   }
 }

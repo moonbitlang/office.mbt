@@ -36,14 +36,14 @@ pub fn pdf_page_int_of_rotation(rotation : PdfPageRotation) -> Int {
 /// Convert a PDF `/Rotate` integer to a normalized rotation.
 ///
 /// Multiples equivalent to 0, 90, 180, and 270 degrees are accepted. Other
-/// values raise `PageRotationExpected`.
+/// values raise `PdfError::PageRotationExpected`.
 pub fn pdf_page_rotation_of_int(value : Int) -> PdfPageRotation raise PdfError {
   match value % 360 {
     0 => Rotate0
     90 | -270 => Rotate90
     180 | -180 => Rotate180
     270 | -90 => Rotate270
-    _ => raise PageRotationExpected(value)
+    _ => raise PdfError::PageRotationExpected(value)
   }
 }
 

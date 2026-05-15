@@ -268,7 +268,7 @@ test "TransformMatrix inversion reports non-invertable matrices" {
   }
   let result : Result[@pdflite.TransformMatrix, Error] = try? matrix.invert()
   guard result is Err(@pdflite.PdfError::MatrixNotInvertable) else {
-    fail("expected MatrixNotInvertable")
+    fail("expected PdfError::MatrixNotInvertable")
   }
 }
 
@@ -284,7 +284,7 @@ test "TransformMatrix inversion rejects overflow-scaled matrices" {
   }
   let result : Result[@pdflite.TransformMatrix, Error] = try? matrix.invert()
   guard result is Err(@pdflite.PdfError::MatrixNotInvertable) else {
-    fail("expected MatrixNotInvertable")
+    fail("expected PdfError::MatrixNotInvertable")
   }
 }
 

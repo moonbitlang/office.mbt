@@ -33,6 +33,6 @@ test "private current ID copy rejects malformed trailer dictionaries" {
     "bad.pdf",
   )
   guard result is Err(PdfError::DictionaryExpected) else {
-    fail("expected DictionaryExpected")
+    fail("expected PdfError::DictionaryExpected")
   }
 }

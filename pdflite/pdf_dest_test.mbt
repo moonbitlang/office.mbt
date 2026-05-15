@@ -374,7 +374,7 @@ test "PdfDocument read_destination resolves named catalog destinations" {
     PdfNameObject(name_chapter),
   )
   guard result is Err(@pdflite.PdfError::RootExpected) else {
-    fail("expected RootExpected")
+    fail("expected PdfError::RootExpected")
   }
 }
 
@@ -482,7 +482,7 @@ test "PdfDocument read_destination rejects unresolved trailer root for named des
     PdfNameObject(name_chapter),
   )
   guard result is Err(@pdflite.PdfError::RootExpected) else {
-    fail("expected RootExpected")
+    fail("expected PdfError::RootExpected")
   }
 }
 
@@ -607,7 +607,7 @@ test "PdfDocument read_destination rejects unresolved trailer root for string de
     PdfString(dest_bytes_for_test("intro")),
   )
   guard result is Err(@pdflite.PdfError::RootExpected) else {
-    fail("expected RootExpected")
+    fail("expected PdfError::RootExpected")
   }
 }
 

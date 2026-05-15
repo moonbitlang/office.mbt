@@ -130,7 +130,7 @@ test "PdfObject find_indirect reads immediate dictionary references" {
   )
   let stream_result : Result[Int?, Error] = try? stream.find_indirect(name_a)
   guard stream_result is Err(@pdflite.PdfError::DictionaryExpected) else {
-    fail("expected DictionaryExpected for non-dictionary object")
+    fail("expected PdfError::DictionaryExpected for non-dictionary object")
   }
 }
 
@@ -157,7 +157,7 @@ test "PdfObject stream_bytes materializes owned and deferred stream data" {
     1,
   ).stream_bytes()
   guard non_stream is Err(@pdflite.PdfError::ParseStreamExpected) else {
-    fail("expected ParseStreamExpected")
+    fail("expected PdfError::ParseStreamExpected")
   }
 }
 
@@ -213,7 +213,7 @@ test "PdfObject get_stream materializes deferred streams and corrects length" {
   let non_stream_object : @pdflite.PdfObject = PdfInteger(1)
   let non_stream : Result[Unit, Error] = try? non_stream_object.get_stream()
   guard non_stream is Err(@pdflite.PdfError::ParseStreamExpected) else {
-    fail("expected ParseStreamExpected")
+    fail("expected PdfError::ParseStreamExpected")
   }
 }
 
@@ -256,7 +256,7 @@ test "PdfObject unique_key reports non-dictionary objects" {
     "gs",
   )
   guard result is Err(@pdflite.PdfError::DictionaryExpected) else {
-    fail("expected DictionaryExpected")
+    fail("expected PdfError::DictionaryExpected")
   }
 }
 
@@ -273,7 +273,7 @@ test "PdfObject dictionary replace and remove report checked errors" {
   )
   guard missing is Err(@pdflite.PdfError::DictionaryKeyNotFound(missing_key)) &&
     missing_key == name_b else {
-    fail("expected DictionaryKeyNotFound")
+    fail("expected PdfError::DictionaryKeyNotFound")
   }
   let not_dict_replace : Result[@pdflite.PdfObject, Error] = try? @pdflite.PdfInteger(
     1,
@@ -281,7 +281,7 @@ test "PdfObject dictionary replace and remove report checked errors" {
   guard not_dict_replace
     is Err(@pdflite.PdfError::DictionaryKeyNotFound(missing_key)) &&
     missing_key == name_a else {
-    fail("expected DictionaryKeyNotFound")
+    fail("expected PdfError::DictionaryKeyNotFound")
   }
   let removed = try! dict.remove_dict_entry(name_a)
   @test.assert_eq(removed.lookup_immediate(name_a), None)
@@ -289,13 +289,13 @@ test "PdfObject dictionary replace and remove report checked errors" {
     1,
   ).add_dict_entry(name_a, PdfInteger(2))
   guard not_dict_add is Err(@pdflite.PdfError::DictionaryExpected) else {
-    fail("expected DictionaryExpected")
+    fail("expected PdfError::DictionaryExpected")
   }
   let not_dict : Result[@pdflite.PdfObject, Error] = try? @pdflite.PdfInteger(1).remove_dict_entry(
     name_a,
   )
   guard not_dict is Err(@pdflite.PdfError::DictionaryExpected) else {
-    fail("expected DictionaryExpected")
+    fail("expected PdfError::DictionaryExpected")
   }
 }
 

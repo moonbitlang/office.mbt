@@ -32,7 +32,7 @@ fn pdf_date_check(date : PdfDate) -> Unit raise PdfError {
     date.hour_offset > 23 ||
     date.minute_offset < -59 ||
     date.minute_offset > 59 {
-    raise BadDate
+    raise PdfError::BadDate
   }
 }
 
@@ -112,18 +112,18 @@ fn pdf_date_digit(byte : Byte) -> Int? {
 ///|
 fn pdf_date_two_digits(bytes : BytesView, index : Int) -> Int raise PdfError {
   if index + 1 >= bytes.length() {
-    raise BadDate
+    raise PdfError::BadDate
   }
   match (pdf_date_digit(bytes[index]), pdf_date_digit(bytes[index + 1])) {
     (Some(first), Some(second)) => first * 10 + second
-    _ => raise BadDate
+    _ => raise PdfError::BadDate
   }
 }
 
 ///|
 fn pdf_date_four_digits(bytes : BytesView, index : Int) -> Int raise PdfError {
   if index + 3 >= bytes.length() {
-    raise BadDate
+    raise PdfError::BadDate
   }
   match
     (
@@ -133,7 +133,7 @@ fn pdf_date_four_digits(bytes : BytesView, index : Int) -> Int raise PdfError {
       pdf_date_digit(bytes[index + 3]),
     ) {
     (Some(a), Some(b), Some(c), Some(d)) => ((a * 10 + b) * 10 + c) * 10 + d
-    _ => raise BadDate
+    _ => raise PdfError::BadDate
   }
 }
 
@@ -304,7 +304,7 @@ pub fn pdf_bytes_of_date(date : PdfDate) -> PdfBytes raise PdfError {
 pub fn pdf_date_of_object(object : PdfObject) -> PdfDate raise PdfError {
   match object {
     PdfString(bytes) => pdf_date_of_view(bytes)
-    _ => raise BadDate
+    _ => raise PdfError::BadDate
   }
 }
 

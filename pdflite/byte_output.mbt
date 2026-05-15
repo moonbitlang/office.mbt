@@ -17,7 +17,7 @@ pub struct ByteOutput {
 /// written output. Raises `PdfError::InvalidReadLength` for negative sizes.
 pub fn byte_output_new(initial_size? : Int = 0) -> ByteOutput raise PdfError {
   if initial_size < 0 {
-    raise InvalidReadLength(initial_size)
+    raise PdfError::InvalidReadLength(initial_size)
   }
   let data : Array[Byte] = [ for _ in 0..<initial_size => 0 ]
   { data, position: 0, written_length: 0 }
@@ -48,7 +48,7 @@ pub fn ByteOutput::seek(
   position : Int,
 ) -> Unit raise PdfError {
   if position < 0 {
-    raise InvalidCursorPosition(position)
+    raise PdfError::InvalidCursorPosition(position)
   }
   self.position = position
 }
@@ -101,7 +101,7 @@ pub fn ByteOutput::write_view(
 ) -> Unit raise PdfError {
   let end = self.position + bytes.length()
   if end < self.position {
-    raise InvalidReadLength(bytes.length())
+    raise PdfError::InvalidReadLength(bytes.length())
   }
   self.ensure_capacity(end)
   for byte in bytes {
@@ -139,17 +139,17 @@ pub fn ByteOutput::write_view_slice(
   length : Int,
 ) -> Unit raise PdfError {
   if offset < 0 {
-    raise InvalidCursorPosition(offset)
+    raise PdfError::InvalidCursorPosition(offset)
   }
   if length < 0 {
-    raise InvalidReadLength(length)
+    raise PdfError::InvalidReadLength(length)
   }
   let end = offset + length
   if end < offset {
-    raise InvalidReadLength(length)
+    raise PdfError::InvalidReadLength(length)
   }
   if end > bytes.length() {
-    raise EndOfInput
+    raise PdfError::EndOfInput
   }
   self.write_view(bytes[offset:end])
 }
@@ -165,12 +165,12 @@ pub fn ByteOutput::write_repeated_byte(
   value? : Int = 0,
 ) -> Unit raise PdfError {
   if length < 0 {
-    raise InvalidReadLength(length)
+    raise PdfError::InvalidReadLength(length)
   }
   let byte = pdf_byte_of_int(value)
   let end = self.position + length
   if end < self.position {
-    raise InvalidReadLength(length)
+    raise PdfError::InvalidReadLength(length)
   }
   self.ensure_capacity(end)
   for index in self.position..<end {

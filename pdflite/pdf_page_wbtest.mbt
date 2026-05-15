@@ -1327,14 +1327,14 @@ test "private page selection reports empty and invalid ranges" {
     [],
   )
   guard empty_result is Err(PdfError::PageTreeExpected) else {
-    fail("expected PageTreeExpected for empty page selection")
+    fail("expected PdfError::PageTreeExpected for empty page selection")
   }
   let invalid_result : Result[Array[PdfPage], Error] = try? pdf_page_select_pages(
     [page],
     [2],
   )
   guard invalid_result is Err(PdfError::PageTreeExpected) else {
-    fail("expected PageTreeExpected for invalid page selection")
+    fail("expected PdfError::PageTreeExpected for invalid page selection")
   }
 }
 

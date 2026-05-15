@@ -361,15 +361,15 @@ fn PdfDocument::pdf_space_named_components(
     name == pdf_space_cmyk_name {
     4
   } else if name == pdf_space_pattern_name {
-    raise ColourSpaceExpected
+    raise PdfError::ColourSpaceExpected
   } else {
     match self.lookup_direct(pdf_space_colorspace_key(), resources) {
       Some(colour_spaces) =>
         match self.lookup_direct(name, colour_spaces) {
           Some(resolved) => self.colour_space_components(resources, resolved)
-          None => raise DictionaryKeyNotFound(name)
+          None => raise PdfError::DictionaryKeyNotFound(name)
         }
-      None => raise DictionaryKeyNotFound(pdf_space_colorspace_key())
+      None => raise PdfError::DictionaryKeyNotFound(pdf_space_colorspace_key())
     }
   }
 }
@@ -397,7 +397,7 @@ pub fn PdfDocument::colour_space_components(
       pdf_space_iccbased_name =>
       match self.lookup_direct(pdf_space_n_key(), stream_object) {
         Some(PdfInteger(components)) => components
-        _ => raise ColourSpaceExpected
+        _ => raise PdfError::ColourSpaceExpected
       }
     PdfArray([PdfNameObject(kind), _, _, _]) if kind ==
       pdf_space_separation_name => 1
@@ -406,7 +406,7 @@ pub fn PdfDocument::colour_space_components(
     PdfArray([PdfNameObject(kind), PdfArray(names), _, ..]) if kind ==
       pdf_space_device_n_name => names.length()
     PdfArray([single]) => self.colour_space_components(resources, single)
-    _ => raise ColourSpaceExpected
+    _ => raise PdfError::ColourSpaceExpected
   }
 }
 
@@ -427,12 +427,12 @@ fn pdf_space_read_indexed_table(
   components : Int,
 ) -> Array[(Int, Array[Int])] raise PdfError {
   if hival < 0 {
-    raise InvalidReadLength(hival)
+    raise PdfError::InvalidReadLength(hival)
   }
   let count = hival + 1
   let required = count * components
   if data.length() < required {
-    raise EndOfInput
+    raise PdfError::EndOfInput
   }
   let table : Array[(Int, Array[Int])] = []
   for index in 0..<count {
@@ -520,7 +520,7 @@ fn PdfDocument::pdf_space_read_indexed(
 ) -> PdfColourSpace? raise PdfError {
   let hival = match hival_object {
     PdfInteger(hival) => hival
-    _ => raise NumberExpected
+    _ => raise PdfError::NumberExpected
   }
   match self.read_colour_space(resources, base_object) {
     Some(base) =>

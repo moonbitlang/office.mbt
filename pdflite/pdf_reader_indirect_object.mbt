@@ -30,11 +30,11 @@ fn ByteCursor::read_plain_indirect_object_at_current(
     match prefix {
       Some(prefix) =>
         if self.stopped_at_pdf_stream_candidate() {
-          raise StreamLengthExpected
+          raise PdfError::StreamLengthExpected
         } else {
           prefix
         }
-      None => raise ParseIndirectObjectExpected
+      None => raise PdfError::ParseIndirectObjectExpected
     }
   }
 }
@@ -81,23 +81,23 @@ fn ByteCursor::resolve_classic_stream_length(
           self.seek_pdf_absolute(saved_position)
           let (parsed, complete) = match parsed_result {
             Ok(parsed) => parsed
-            Err(_) => raise StreamLengthExpected
+            Err(_) => raise PdfError::StreamLengthExpected
           }
           if parsed.number != number || parsed.generation != xref.generation {
-            raise XRefEntryExpected
+            raise PdfError::XRefEntryExpected
           }
           if !complete {
-            raise StreamLengthExpected
+            raise PdfError::StreamLengthExpected
           }
           match parsed.object {
             PdfInteger(length) if length >= 0 => length
-            _ => raise StreamLengthExpected
+            _ => raise PdfError::StreamLengthExpected
           }
         }
-        None => raise StreamLengthExpected
+        None => raise PdfError::StreamLengthExpected
       }
     }
-    _ => raise StreamLengthExpected
+    _ => raise PdfError::StreamLengthExpected
   }
 }
 

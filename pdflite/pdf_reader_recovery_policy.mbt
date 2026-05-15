@@ -9,7 +9,7 @@ fn pdf_reader_validate_xref_metadata_for_reconstruction(
   let mut depth = 0
   while !done {
     if depth >= 1024 {
-      raise XRefExpected
+      raise PdfError::XRefExpected
     }
     cursor.seek_pdf_absolute(current_xref)
     let section = cursor.read_pdf_xref_section()
@@ -30,7 +30,10 @@ fn pdf_reader_validate_xref_metadata_for_reconstruction(
 
 ///|
 fn pdf_reader_xref_entry_error_from_metadata(data : BytesView) -> Bool {
-  pdf_reader_xref_metadata_error_allows_reconstruction(data, XRefEntryExpected)
+  pdf_reader_xref_metadata_error_allows_reconstruction(
+    data,
+    PdfError::XRefEntryExpected,
+  )
 }
 
 ///|
@@ -77,15 +80,15 @@ fn pdf_reader_xref_metadata_error_allows_reconstruction(
     data,
   )
   match (result, error) {
-    (Err(PdfError::XRefEntryExpected), XRefEntryExpected) => true
+    (Err(PdfError::XRefEntryExpected), PdfError::XRefEntryExpected) => true
     (
       Err(PdfError::FilterNotSupported(metadata_filter)),
-      FilterNotSupported(filter),
+      PdfError::FilterNotSupported(filter),
     ) => metadata_filter == filter
-    (Err(PdfError::PredictorExpected), PredictorExpected) => true
+    (Err(PdfError::PredictorExpected), PdfError::PredictorExpected) => true
     (
       Err(PdfError::PredictorNotSupported(metadata_predictor)),
-      PredictorNotSupported(predictor),
+      PdfError::PredictorNotSupported(predictor),
     ) => metadata_predictor == predictor
     _ => false
   }
@@ -97,25 +100,26 @@ fn pdf_reader_password_error_allows_reconstruction(
   error : PdfError,
 ) -> Bool {
   match error {
-    StartXRefExpected
-    | XRefExpected
-    | TrailerExpected
-    | RootExpected
-    | NumberExpected
-    | ParseIndirectObjectExpected
-    | ParseStreamExpected
-    | ParseEndStreamExpected
-    | ParseEndObjectExpected
-    | EndOfInput
-    | ParseObjectExpected
-    | InvalidHexEscape
-    | InvalidCursorPosition(_) => true
-    XRefEntryExpected => pdf_reader_xref_entry_error_from_metadata(data)
-    FilterNotSupported(_) =>
+    PdfError::StartXRefExpected
+    | PdfError::XRefExpected
+    | PdfError::TrailerExpected
+    | PdfError::RootExpected
+    | PdfError::NumberExpected
+    | PdfError::ParseIndirectObjectExpected
+    | PdfError::ParseStreamExpected
+    | PdfError::ParseEndStreamExpected
+    | PdfError::ParseEndObjectExpected
+    | PdfError::EndOfInput
+    | PdfError::ParseObjectExpected
+    | PdfError::InvalidHexEscape
+    | PdfError::InvalidCursorPosition(_) => true
+    PdfError::XRefEntryExpected =>
+      pdf_reader_xref_entry_error_from_metadata(data)
+    PdfError::FilterNotSupported(_) =>
       pdf_reader_xref_metadata_error_allows_reconstruction(data, error)
-    PredictorExpected =>
+    PdfError::PredictorExpected =>
       pdf_reader_xref_metadata_error_allows_reconstruction(data, error)
-    PredictorNotSupported(_) =>
+    PdfError::PredictorNotSupported(_) =>
       pdf_reader_xref_metadata_error_allows_reconstruction(data, error)
     _ => false
   }

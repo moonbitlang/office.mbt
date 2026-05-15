@@ -12,7 +12,7 @@ fn ByteCursor::seek_pdf_absolute(
   position : Int,
 ) -> Unit raise PdfError {
   if position < 0 || position > self.data.length() {
-    raise InvalidCursorPosition(position)
+    raise PdfError::InvalidCursorPosition(position)
   }
   self.position = position
 }
@@ -88,18 +88,18 @@ fn pdf_find_ascii_from(
 ///|
 fn pdf_parse_ascii_int_view(view : BytesView) -> Int raise PdfError {
   if view.length() == 0 {
-    raise NumberExpected
+    raise PdfError::NumberExpected
   }
   let limit = 2147483647L
   let mut value = 0L
   for byte in view {
     let digit = byte.to_int()
     if !pdf_is_digit_byte(digit) {
-      raise NumberExpected
+      raise PdfError::NumberExpected
     }
     value = value * 10L + (digit - 48).to_int64()
     if value > limit {
-      raise NumberExpected
+      raise PdfError::NumberExpected
     }
   }
   value.to_int()

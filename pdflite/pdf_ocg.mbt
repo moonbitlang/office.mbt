@@ -779,7 +779,7 @@ fn PdfDocument::pdf_ocg_read_individual(
 ) -> PdfOcg raise PdfError {
   let name = match self.lookup_direct(pdf_ocg_name_key(), ocg) {
     Some(PdfString(name)) => name
-    _ => raise DictionaryKeyNotFound(pdf_ocg_name_key())
+    _ => raise PdfError::DictionaryKeyNotFound(pdf_ocg_name_key())
   }
   let intent = match self.lookup_direct(pdf_ocg_intent_key(), ocg) {
     Some(object) => self.pdf_ocg_name_array(object)
@@ -822,7 +822,7 @@ pub fn PdfDocument::read_optional_content_groups(
       let default_config = match
         self.lookup_direct(pdf_ocg_d_key(), ocproperties) {
         Some(config) => self.pdf_ocg_read_config(config)
-        None => raise DictionaryKeyNotFound(pdf_ocg_d_key())
+        None => raise PdfError::DictionaryKeyNotFound(pdf_ocg_d_key())
       }
       let configs = match
         self.lookup_direct(pdf_ocg_configs_key(), ocproperties) {

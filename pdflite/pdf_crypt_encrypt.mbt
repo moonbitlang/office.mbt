@@ -482,7 +482,7 @@ fn pdf_crypt_saved_aesv3_dictionary(
           match values.permissions_entry {
             Some(value) => value
             None =>
-              raise EncryptionDictionaryEntryExpected(
+              raise PdfError::EncryptionDictionaryEntryExpected(
                 pdf_aesv3_permissions_key(),
               )
           },

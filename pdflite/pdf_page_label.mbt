@@ -137,7 +137,7 @@ pub fn PdfPageLabelStyle::debug_name(self : PdfPageLabelStyle) -> String {
 ///|
 /// Parse a debug-style page-label style name.
 ///
-/// Unknown names raise `PageLabelStyleExpected`.
+/// Unknown names raise `PdfError::PageLabelStyleExpected`.
 pub fn pdf_page_label_style_of_string(
   text : String,
 ) -> PdfPageLabelStyle raise PdfError {
@@ -148,7 +148,7 @@ pub fn pdf_page_label_style_of_string(
     "UppercaseLetters" => PageLabelUppercaseLetters
     "LowercaseLetters" => PageLabelLowercaseLetters
     "NoLabelPrefixOnly" => PageLabelNoLabelPrefixOnly
-    _ => raise PageLabelStyleExpected(text)
+    _ => raise PdfError::PageLabelStyleExpected(text)
   }
 }
 
@@ -494,7 +494,7 @@ pub fn pdf_page_label_merge(
   ranges : ArrayView[Array[Int]],
 ) -> Array[PdfPageLabel] raise PdfError {
   if pdfs.length() != ranges.length() {
-    raise PageTreeExpected
+    raise PdfError::PageTreeExpected
   }
   let labels : Array[PdfPageLabel] = []
   let mut merged_page = 1
@@ -563,7 +563,7 @@ fn PdfDocument::pdf_page_label_raw_entries(
               output.push(entry)
             }
           }
-        _ => raise PageTreeExpected
+        _ => raise PdfError::PageTreeExpected
       }
   }
   output

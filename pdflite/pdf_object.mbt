@@ -271,14 +271,14 @@ fn pdf_stream_to_get_raw_view(to_get : ToGet) -> BytesView raise PdfError {
   let start = to_get.position() + input.offset
   let length = to_get.length()
   if start < 0 {
-    raise InvalidCursorPosition(to_get.position())
+    raise PdfError::InvalidCursorPosition(to_get.position())
   }
   if length < 0 {
-    raise InvalidReadLength(length)
+    raise PdfError::InvalidReadLength(length)
   }
   let end = start + length
   if end > input.data.length() {
-    raise EndOfInput
+    raise PdfError::EndOfInput
   }
   input.data[start:end]
 }
@@ -319,11 +319,11 @@ fn pdf_stream_data_bytes(data : PdfStreamData) -> PdfBytes raise PdfError {
 /// `StreamGot` data is returned directly. Deferred `StreamToGet` data is read
 /// from its source cursor and decrypted if necessary, but this method does not
 /// mutate the stream object or update `/Length`; use `get_stream` for that.
-/// Non-stream objects raise `ParseStreamExpected`.
+/// Non-stream objects raise `PdfError::ParseStreamExpected`.
 pub fn PdfObject::stream_bytes(self : PdfObject) -> PdfBytes raise PdfError {
   match self {
     PdfStreamObject(stream) => pdf_stream_data_bytes(stream.data)
-    _ => raise ParseStreamExpected
+    _ => raise PdfError::ParseStreamExpected
   }
 }
 
@@ -333,7 +333,7 @@ pub fn PdfObject::stream_bytes(self : PdfObject) -> PdfBytes raise PdfError {
 /// Deferred stream data is read, decrypted if needed, stored back as
 /// `StreamGot`, and `/Length` is corrected when the stream dictionary is a PDF
 /// dictionary. Calling this on an already materialized stream is a no-op.
-/// Non-stream objects raise `ParseStreamExpected`.
+/// Non-stream objects raise `PdfError::ParseStreamExpected`.
 pub fn PdfObject::get_stream(self : PdfObject) -> Unit raise PdfError {
   match self {
     PdfStreamObject(stream) =>
@@ -352,7 +352,7 @@ pub fn PdfObject::get_stream(self : PdfObject) -> Unit raise PdfError {
           stream.data = StreamGot(data)
         }
       }
-    _ => raise ParseStreamExpected
+    _ => raise PdfError::ParseStreamExpected
   }
 }
 
@@ -431,7 +431,7 @@ pub fn PdfObject::lookup_immediate(
 /// Return the object number of an immediate indirect dictionary entry.
 ///
 /// Only plain dictionaries are accepted. Missing keys and non-indirect values
-/// return `None`; non-dictionary inputs raise `DictionaryExpected`.
+/// return `None`; non-dictionary inputs raise `PdfError::DictionaryExpected`.
 pub fn PdfObject::find_indirect(
   self : PdfObject,
   key : PdfName,
@@ -442,7 +442,7 @@ pub fn PdfObject::find_indirect(
         Some(PdfIndirect(number)) => Some(number)
         _ => None
       }
-    _ => raise DictionaryExpected
+    _ => raise PdfError::DictionaryExpected
   }
 }
 
@@ -504,7 +504,7 @@ fn pdf_object_dictionary_has_key(
 ///
 /// The scan starts at `n = 0` and increments until the name is absent from the
 /// dictionary or stream dictionary. Non-dictionary-like objects raise
-/// `DictionaryExpected`.
+/// `PdfError::DictionaryExpected`.
 pub fn PdfObject::unique_key(
   self : PdfObject,
   prefix : String,
@@ -519,7 +519,7 @@ pub fn PdfObject::unique_key(
       }
       candidate
     }
-    None => raise DictionaryExpected
+    None => raise PdfError::DictionaryExpected
   }
 }
 
@@ -542,7 +542,7 @@ fn dict_replace_entries(
       output.push((name, old_value))
     }
   } nobreak {
-    raise DictionaryKeyNotFound(key)
+    raise PdfError::DictionaryKeyNotFound(key)
   }
 }
 
@@ -581,7 +581,7 @@ pub fn PdfObject::add_dict_entry(
       stream.dictionary = stream.dictionary.add_dict_entry(key, value)
       self
     }
-    _ => raise DictionaryExpected
+    _ => raise PdfError::DictionaryExpected
   }
 }
 
@@ -589,7 +589,7 @@ pub fn PdfObject::add_dict_entry(
 /// Replace an existing dictionary entry.
 ///
 /// The key must already exist in a plain dictionary or stream dictionary.
-/// Missing keys and non-dictionary inputs raise `DictionaryKeyNotFound`.
+/// Missing keys and non-dictionary inputs raise `PdfError::DictionaryKeyNotFound`.
 pub fn PdfObject::replace_dict_entry(
   self : PdfObject,
   key : PdfName,
@@ -602,7 +602,7 @@ pub fn PdfObject::replace_dict_entry(
       stream.dictionary = stream.dictionary.replace_dict_entry(key, value)
       self
     }
-    _ => raise DictionaryKeyNotFound(key)
+    _ => raise PdfError::DictionaryKeyNotFound(key)
   }
 }
 
@@ -611,7 +611,7 @@ pub fn PdfObject::replace_dict_entry(
 ///
 /// Missing keys are ignored for dictionaries. Stream objects mutate their stream
 /// dictionary and return the same stream object. Non-dictionary inputs raise
-/// `DictionaryExpected`.
+/// `PdfError::DictionaryExpected`.
 pub fn PdfObject::remove_dict_entry(
   self : PdfObject,
   key : PdfName,
@@ -622,6 +622,6 @@ pub fn PdfObject::remove_dict_entry(
       stream.dictionary = stream.dictionary.remove_dict_entry(key)
       self
     }
-    _ => raise DictionaryExpected
+    _ => raise PdfError::DictionaryExpected
   }
 }

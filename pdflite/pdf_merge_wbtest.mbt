@@ -2,7 +2,7 @@
 test "private merge helpers cover guards and membership branches" {
   let empty_version : Result[(Int, Int), Error] = try? pdf_merge_max_version([])
   guard empty_version is Err(PdfError::PageTreeExpected) else {
-    fail("expected PageTreeExpected")
+    fail("expected PdfError::PageTreeExpected")
   }
 
   let key = pdf_merge_name("/ViewerPreferences")
@@ -290,14 +290,14 @@ test "private merge catalog and AcroForm helpers cover malformed roots" {
     key,
   )
   guard read_missing_root is Err(PdfError::RootExpected) else {
-    fail("expected RootExpected")
+    fail("expected PdfError::RootExpected")
   }
   let add_missing_root : Result[PdfDocument, Error] = try? empty.pdf_merge_add_catalog_entry(
     key,
     PdfInteger(1),
   )
   guard add_missing_root is Err(PdfError::RootExpected) else {
-    fail("expected RootExpected")
+    fail("expected PdfError::RootExpected")
   }
 
   let conflict = pdf_document_empty()

@@ -8,7 +8,7 @@ fn PdfEncryptionValues::file_key_for_recrypt_password(
     None =>
       match self.file_key_for_owner_password(password) {
         Some(key) => key
-        None => raise EncryptionRecryptFailed
+        None => raise PdfError::EncryptionRecryptFailed
       }
   }
 }
@@ -123,7 +123,7 @@ pub fn PdfDocument::recrypt_with_password(
 ) -> PdfDocument raise PdfError {
   let saved = match self.saved_encryption() {
     Some(saved) => saved
-    None => raise EncryptionSavedStateExpected
+    None => raise PdfError::EncryptionSavedStateExpected
   }
   let values = saved.values
   match values.crypt_type {
@@ -136,7 +136,7 @@ pub fn PdfDocument::recrypt_with_password(
         values, file_key, key_length_bits, revision,
       )
     }
-    _ => raise EncryptionRecryptUnsupported(values.crypt_type)
+    _ => raise PdfError::EncryptionRecryptUnsupported(values.crypt_type)
   }
 }
 
@@ -152,7 +152,7 @@ pub fn PdfDocument::recrypt_with_password_aesv2_with_iv_provider(
 ) -> PdfDocument raise PdfError {
   let saved = match self.saved_encryption() {
     Some(saved) => saved
-    None => raise EncryptionSavedStateExpected
+    None => raise PdfError::EncryptionSavedStateExpected
   }
   let values = saved.values
   match values.crypt_type {
@@ -160,7 +160,7 @@ pub fn PdfDocument::recrypt_with_password_aesv2_with_iv_provider(
       let file_key = values.file_key_for_recrypt_password(password)
       self.recrypt_aesv2_with_file_key(values, file_key, iv_provider)
     }
-    _ => raise EncryptionRecryptUnsupported(values.crypt_type)
+    _ => raise PdfError::EncryptionRecryptUnsupported(values.crypt_type)
   }
 }
 
@@ -177,7 +177,7 @@ pub fn PdfDocument::recrypt_with_password_aesv3_with_iv_provider(
 ) -> PdfDocument raise PdfError {
   let saved = match self.saved_encryption() {
     Some(saved) => saved
-    None => raise EncryptionSavedStateExpected
+    None => raise PdfError::EncryptionSavedStateExpected
   }
   let values = saved.values
   match values.crypt_type {
@@ -185,6 +185,6 @@ pub fn PdfDocument::recrypt_with_password_aesv3_with_iv_provider(
       let file_key = values.file_key_for_recrypt_password(password)
       self.recrypt_aesv3_with_file_key(values, file_key, iv_provider)
     }
-    _ => raise EncryptionRecryptUnsupported(values.crypt_type)
+    _ => raise PdfError::EncryptionRecryptUnsupported(values.crypt_type)
   }
 }

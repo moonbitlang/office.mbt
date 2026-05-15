@@ -41,14 +41,14 @@ test "ByteOutput writes bytes and views at explicit positions" {
   ])
   let bad_position : Result[Unit, Error] = try? output.write_byte_at(-1, 0)
   guard bad_position is Err(@pdflite.PdfError::InvalidCursorPosition(-1)) else {
-    fail("expected InvalidCursorPosition for positioned byte output")
+    fail("expected PdfError::InvalidCursorPosition for positioned byte output")
   }
   let bad_view_position : Result[Unit, Error] = try? output.write_view_at(
     -1,
     @ascii.encode("x"),
   )
   guard bad_view_position is Err(@pdflite.PdfError::InvalidCursorPosition(-1)) else {
-    fail("expected InvalidCursorPosition for positioned view output")
+    fail("expected PdfError::InvalidCursorPosition for positioned view output")
   }
 }
 
@@ -65,25 +65,25 @@ test "ByteOutput writes checked byte slices" {
     source, -1, 1,
   )
   guard bad_offset is Err(@pdflite.PdfError::InvalidCursorPosition(-1)) else {
-    fail("expected InvalidCursorPosition for byte output slice")
+    fail("expected PdfError::InvalidCursorPosition for byte output slice")
   }
   let bad_length : Result[Unit, Error] = try? output.write_view_slice(
     source, 0, -1,
   )
   guard bad_length is Err(@pdflite.PdfError::InvalidReadLength(-1)) else {
-    fail("expected InvalidReadLength for byte output slice")
+    fail("expected PdfError::InvalidReadLength for byte output slice")
   }
   let too_long : Result[Unit, Error] = try? output.write_view_slice(
     source, 4, 3,
   )
   guard too_long is Err(@pdflite.PdfError::EndOfInput) else {
-    fail("expected EndOfInput for byte output slice")
+    fail("expected PdfError::EndOfInput for byte output slice")
   }
   let overflow : Result[Unit, Error] = try? output.write_view_slice(
     source, 2147483647, 1,
   )
   guard overflow is Err(@pdflite.PdfError::InvalidReadLength(1)) else {
-    fail("expected InvalidReadLength for byte output slice overflow")
+    fail("expected PdfError::InvalidReadLength for byte output slice overflow")
   }
 }
 
@@ -115,19 +115,19 @@ test "ByteOutput writes repeated bytes for padding and fill" {
   @test.assert_eq(empty.to_bytes(), Bytes::new(0))
   let bad_length : Result[Unit, Error] = try? output.write_repeated_byte(-1)
   guard bad_length is Err(@pdflite.PdfError::InvalidReadLength(-1)) else {
-    fail("expected InvalidReadLength for repeated byte write")
+    fail("expected PdfError::InvalidReadLength for repeated byte write")
   }
   let bad_value : Result[Unit, Error] = try? output.write_repeated_byte(
     1,
     value=256,
   )
   guard bad_value is Err(@pdflite.PdfError::InvalidByte(256)) else {
-    fail("expected InvalidByte for repeated byte write")
+    fail("expected PdfError::InvalidByte for repeated byte write")
   }
   try! output.seek(2147483647)
   let overflow : Result[Unit, Error] = try? output.write_repeated_byte(1)
   guard overflow is Err(@pdflite.PdfError::InvalidReadLength(1)) else {
-    fail("expected InvalidReadLength for repeated byte overflow")
+    fail("expected PdfError::InvalidReadLength for repeated byte overflow")
   }
 }
 
@@ -137,22 +137,24 @@ test "ByteOutput reports checked cursor and byte errors" {
     initial_size=-1,
   )
   guard negative_size is Err(@pdflite.PdfError::InvalidReadLength(-1)) else {
-    fail("expected InvalidReadLength for negative byte output size")
+    fail("expected PdfError::InvalidReadLength for negative byte output size")
   }
   let output = try! @pdflite.byte_output_new()
   let bad_seek : Result[Unit, Error] = try? output.seek(-1)
   guard bad_seek is Err(@pdflite.PdfError::InvalidCursorPosition(-1)) else {
-    fail("expected InvalidCursorPosition for negative byte output seek")
+    fail(
+      "expected PdfError::InvalidCursorPosition for negative byte output seek",
+    )
   }
   let bad_byte : Result[Unit, Error] = try? output.write_byte(256)
   guard bad_byte is Err(@pdflite.PdfError::InvalidByte(256)) else {
-    fail("expected InvalidByte for byte output")
+    fail("expected PdfError::InvalidByte for byte output")
   }
   try! output.seek(2147483647)
   let overflow : Result[Unit, Error] = try? output.write_view(
     @ascii.encode("x"),
   )
   guard overflow is Err(@pdflite.PdfError::InvalidReadLength(1)) else {
-    fail("expected InvalidReadLength for byte output overflow")
+    fail("expected PdfError::InvalidReadLength for byte output overflow")
   }
 }

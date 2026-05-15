@@ -674,7 +674,7 @@ test "PdfDocument parse_function rejects float operands for integer operators" {
   let function = try! doc.parse_function(function_object)
   let result : Result[Array[Double], Error] = try? function.eval([])
   guard result is Err(@pdflite.PdfError::BadFunctionEvaluation(_)) else {
-    fail("expected BadFunctionEvaluation for float bitwise operand")
+    fail("expected PdfError::BadFunctionEvaluation for float bitwise operand")
   }
 }
 
@@ -719,7 +719,7 @@ test "PdfDocument parse_function reports unsupported or malformed functions" {
     ]),
   )
   guard unsupported is Err(@pdflite.PdfError::FunctionNotSupported(5)) else {
-    fail("expected FunctionNotSupported")
+    fail("expected PdfError::FunctionNotSupported")
   }
   let missing_domain : Result[@pdflite.PdfFunction, Error] = try? doc.parse_function(
     @pdflite.pdf_dictionary([

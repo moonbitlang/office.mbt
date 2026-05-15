@@ -172,7 +172,7 @@ fn pdf_page_merge_dictionary_objects(
         let (key, value) = entry
         output = output.add_dict_entry(key, value)
       }
-    _ => raise DictionaryExpected
+    _ => raise PdfError::DictionaryExpected
   }
   output
 }
@@ -192,7 +192,7 @@ fn PdfDocument::pdf_page_process_form_xobject(
           xobject.get_stream()
           let processed = process(self, resources, [PdfStreamObject(stream)])
           if processed.length() != 1 {
-            raise ParseStreamExpected
+            raise PdfError::ParseStreamExpected
           }
           match processed[0] {
             PdfStreamObject(processed_stream) => {
@@ -205,13 +205,13 @@ fn PdfDocument::pdf_page_process_form_xobject(
                 PdfStreamObject({ dictionary, data: processed_stream.data }),
               )
             }
-            _ => raise ParseStreamExpected
+            _ => raise PdfError::ParseStreamExpected
           }
         }
-        _ => raise ParseStreamExpected
+        _ => raise PdfError::ParseStreamExpected
       }
     Some(_) => ()
-    None => raise DictionaryKeyNotFound(pdf_page_subtype_key())
+    None => raise PdfError::DictionaryKeyNotFound(pdf_page_subtype_key())
   }
 }
 
@@ -246,7 +246,7 @@ pub fn PdfDocument::process_xobjects(
         match value {
           PdfIndirect(number) =>
             self.pdf_page_process_form_xobject(page.resources, number, process)
-          _ => raise DictionaryExpected
+          _ => raise PdfError::DictionaryExpected
         }
       }
     _ => ()

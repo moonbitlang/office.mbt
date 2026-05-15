@@ -8,7 +8,7 @@ fn assert_afm_number_expected_for_test(
   result : Result[Int, Error],
 ) -> Unit raise {
   guard result is Err(PdfError::NumberExpected) else {
-    fail("expected NumberExpected")
+    fail("expected PdfError::NumberExpected")
   }
 }
 

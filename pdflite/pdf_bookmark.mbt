@@ -500,7 +500,7 @@ fn PdfDocument::pdf_bookmark_traverse_siblings(
   depth : Int,
 ) -> Unit raise PdfError {
   if depth > 10000 {
-    raise PageTreeExpected
+    raise PdfError::PageTreeExpected
   }
   output.push(self.pdf_bookmark_of_outline(level, first, preserve_actions))
   self.pdf_bookmark_traverse_children(

@@ -78,12 +78,12 @@ fn PdfDocument::encryption_values(
   let encrypt_dictionary = match
     self.lookup_direct(encrypt_key, self.trailer_dict()) {
     Some(value) => value
-    None => raise EncryptionExpected
+    None => raise PdfError::EncryptionExpected
   }
   let crypt_type = match
     pdf_crypt_type_from_encrypt_dictionary(self, encrypt_dictionary) {
     Some(value) => value
-    None => raise EncryptionMethodExpected
+    None => raise PdfError::EncryptionMethodExpected
   }
   let user_owner_length = match crypt_type {
     PdfCryptAESV3(_) => 48
@@ -107,7 +107,7 @@ fn PdfDocument::encryption_values(
   )
   let file_id = match self.lookup_direct(id_key, self.trailer_dict()) {
     Some(PdfArray([PdfString(file_id), _])) => file_id
-    _ => raise EncryptionIDExpected
+    _ => raise PdfError::EncryptionIDExpected
   }
   let encrypt_metadata = match
     self.lookup_direct(pdf_crypt_encrypt_metadata_name, encrypt_dictionary) {

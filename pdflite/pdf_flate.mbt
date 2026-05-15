@@ -17,11 +17,11 @@ fn FlateBitReader::ensure_bits(
   count : Int,
 ) -> Unit raise PdfError {
   if count < 0 {
-    raise InvalidFlateData
+    raise PdfError::InvalidFlateData
   }
   while self.bit_count < count {
     if self.byte_pos >= self.bytes.length() || self.byte_pos < 0 {
-      raise InvalidFlateData
+      raise PdfError::InvalidFlateData
     }
     let byte = self.bytes[self.byte_pos].to_uint()
     self.bit_buf = self.bit_buf | (byte << self.bit_count)
@@ -183,7 +183,7 @@ fn pdf_flate_huffman_code_lengths(
   let nodes : Array[FlateHuffmanTreeNode] = []
   for symbol, frequency in frequencies {
     if frequency < 0 {
-      raise InvalidFlateData
+      raise PdfError::InvalidFlateData
     }
     if frequency > 0 {
       nodes.push({
@@ -196,7 +196,7 @@ fn pdf_flate_huffman_code_lengths(
     }
   }
   if nodes.length() == 0 {
-    raise InvalidFlateData
+    raise PdfError::InvalidFlateData
   }
   if nodes.length() == 1 {
     lengths[nodes[0].symbol] = 1
@@ -227,11 +227,11 @@ fn pdf_flate_huffman_code_lengths(
     let (node_index, depth) = stack.pop().unwrap()
     let node = nodes[node_index]
     if node.left < 0 && node.right < 0 {
-      guard depth <= max_bits else { raise InvalidFlateData }
+      guard depth <= max_bits else { raise PdfError::InvalidFlateData }
       lengths[node.symbol] = if depth == 0 { 1 } else { depth }
     } else {
       let child_depth = depth + 1
-      guard child_depth <= max_bits else { raise InvalidFlateData }
+      guard child_depth <= max_bits else { raise PdfError::InvalidFlateData }
       if node.left >= 0 {
         stack.push((node.left, child_depth))
       }
@@ -280,14 +280,14 @@ fn pdf_flate_build_huffman(
   let mut max_bits = 0
   for length in lengths {
     if length < 0 || length > 15 {
-      raise InvalidFlateData
+      raise PdfError::InvalidFlateData
     }
     if length > max_bits {
       max_bits = length
     }
   }
   if max_bits == 0 {
-    raise InvalidFlateData
+    raise PdfError::InvalidFlateData
   }
   let counts : Array[Int] = Array::make(max_bits + 1, 0)
   for length in lengths {
@@ -346,7 +346,7 @@ fn pdf_flate_decode_symbol(
       return table.sym[index]
     }
   }
-  raise InvalidFlateData
+  raise PdfError::InvalidFlateData
 }
 
 ///|
@@ -398,7 +398,7 @@ fn pdf_flate_fixed_distance_table() -> FlateHuffmanTable {
 ///|
 fn pdf_flate_check_dynamic_length_symbol(symbol : Int) -> Unit raise PdfError {
   if symbol < 0 || symbol > 18 {
-    raise InvalidFlateData
+    raise PdfError::InvalidFlateData
   }
 }
 
@@ -411,7 +411,7 @@ fn pdf_flate_push_repeated_lengths(
 ) -> Unit raise PdfError {
   for _ in 0..<repeat {
     if lengths.length() >= total {
-      raise InvalidFlateData
+      raise PdfError::InvalidFlateData
     }
     lengths.push(value)
   }
@@ -441,7 +441,7 @@ fn pdf_flate_read_dynamic_tables(
       lengths.push(symbol)
     } else if symbol == 16 {
       if lengths.length() == 0 {
-        raise InvalidFlateData
+        raise PdfError::InvalidFlateData
       }
       let repeat = reader.read_bits(2).reinterpret_as_int() + 3
       let previous = lengths[lengths.length() - 1]
@@ -479,7 +479,7 @@ fn pdf_flate_decode_huffman_block(
     } else {
       let length_index = symbol - 257
       if length_index < 0 || length_index >= pdf_flate_length_base.length() {
-        raise InvalidFlateData
+        raise PdfError::InvalidFlateData
       }
       let extra_length = pdf_flate_length_extra[length_index]
       let length = pdf_flate_length_base[length_index] +
@@ -487,14 +487,14 @@ fn pdf_flate_decode_huffman_block(
       let distance_symbol = pdf_flate_decode_symbol(reader, distance_table)
       if distance_symbol < 0 ||
         distance_symbol >= pdf_flate_distance_base.length() {
-        raise InvalidFlateData
+        raise PdfError::InvalidFlateData
       }
       let distance = pdf_flate_distance_base[distance_symbol] +
         reader
         .read_bits(pdf_flate_distance_extra[distance_symbol])
         .reinterpret_as_int()
       if distance <= 0 || distance > output.length() {
-        raise InvalidFlateData
+        raise PdfError::InvalidFlateData
       }
       for _ in 0..<length {
         let value = output[output.length() - distance]
@@ -520,7 +520,7 @@ fn pdf_deflate_decode_raw_prefix(
         let length = reader.read_bits(16).reinterpret_as_int()
         let nlength = reader.read_bits(16)
         if (length.reinterpret_as_uint() ^ nlength) != 0xFFFF {
-          raise InvalidFlateData
+          raise PdfError::InvalidFlateData
         }
         for _ in 0..<length {
           output.push(reader.read_byte())
@@ -535,7 +535,7 @@ fn pdf_deflate_decode_raw_prefix(
         let (literal, distance) = pdf_flate_read_dynamic_tables(reader)
         pdf_flate_decode_huffman_block(reader, literal, distance, output)
       }
-      _ => raise InvalidFlateData
+      _ => raise PdfError::InvalidFlateData
     }
     finished = final_block == 1
   }
@@ -571,7 +571,7 @@ fn pdf_flate_check_adler32(
     compressed[offset + 1].to_int() != (s2 & 0xFF) ||
     compressed[offset + 2].to_int() != ((s1 >> 8) & 0xFF) ||
     compressed[offset + 3].to_int() != (s1 & 0xFF) {
-    raise InvalidFlateData
+    raise PdfError::InvalidFlateData
   }
 }
 
@@ -665,7 +665,7 @@ fn pdf_flate_length_code(length : Int) -> (Int, Int, Int) raise PdfError {
       break (257 + index, length - base, extra_width)
     }
   } nobreak {
-    raise InvalidFlateData
+    raise PdfError::InvalidFlateData
   }
 }
 
@@ -678,7 +678,7 @@ fn pdf_flate_distance_code(distance : Int) -> (Int, Int, Int) raise PdfError {
       break (index, distance - base, extra_width)
     }
   } nobreak {
-    raise InvalidFlateData
+    raise PdfError::InvalidFlateData
   }
 }
 
@@ -712,7 +712,7 @@ fn pdf_flate_write_canonical_symbol(
   lengths : ArrayView[Int],
 ) -> Unit raise PdfError {
   guard symbol >= 0 && symbol < lengths.length() && lengths[symbol] > 0 else {
-    raise InvalidFlateData
+    raise PdfError::InvalidFlateData
   }
   let width = lengths[symbol]
   writer.write_bits(
@@ -1136,7 +1136,7 @@ fn pdf_flate_push_dynamic_match_block(
   final_block : Bool,
   max_probes : Int,
 ) -> Unit raise PdfError {
-  guard data.length() > 0 else { raise InvalidFlateData }
+  guard data.length() > 0 else { raise PdfError::InvalidFlateData }
   let tokens = pdf_flate_match_tokens(data, max_probes)
   let (literal_frequencies, distance_frequencies) = pdf_flate_count_dynamic_frequencies(
     tokens,
@@ -1203,7 +1203,7 @@ fn pdf_flate_default_header() -> Array[Byte] {
 
 ///|
 fn pdf_flate_header_for_level(level : Int) -> Array[Byte] raise PdfError {
-  guard level >= 0 && level <= 9 else { raise InvalidFlateData }
+  guard level >= 0 && level <= 9 else { raise PdfError::InvalidFlateData }
   let compression_hint = if level <= 1 {
     0
   } else if level <= 5 {
@@ -1432,7 +1432,7 @@ fn pdf_flate_native_payload(
   status : Ref[Int],
 ) -> PdfBytes raise PdfError {
   if status.val != 1 {
-    raise InvalidFlateData
+    raise PdfError::InvalidFlateData
   }
   result
 }
@@ -1462,7 +1462,7 @@ fn pdf_flate_encode_bytes_native(
 /// Encode borrowed bytes as a zlib-wrapped Flate stream.
 ///
 /// `level` must be in the zlib range `0..9`; invalid levels raise
-/// `InvalidFlateData`. On non-native targets this uses the pure MoonBit encoder.
+/// `PdfError::InvalidFlateData`. On non-native targets this uses the pure MoonBit encoder.
 #cfg(not(target="native"))
 pub fn pdf_flate_encode_view_with_level(
   data : BytesView,
@@ -1475,7 +1475,7 @@ pub fn pdf_flate_encode_view_with_level(
 /// Encode borrowed bytes as a zlib-wrapped Flate stream.
 ///
 /// `level` must be in the zlib range `0..9`; invalid levels raise
-/// `InvalidFlateData`. On the native target this tries the zlib FFI first and
+/// `PdfError::InvalidFlateData`. On the native target this tries the zlib FFI first and
 /// falls back to the pure MoonBit encoder if the native call fails.
 #cfg(target="native")
 #coverage.skip
@@ -1514,7 +1514,7 @@ pub fn pdf_flate_encode_view(data : BytesView) -> PdfBytes {
 /// Encode owned bytes as a zlib-wrapped Flate stream.
 ///
 /// `level` must be in the zlib range `0..9`; invalid levels raise
-/// `InvalidFlateData`. This non-native implementation uses the pure MoonBit
+/// `PdfError::InvalidFlateData`. This non-native implementation uses the pure MoonBit
 /// encoder.
 #cfg(not(target="native"))
 pub fn pdf_flate_encode_with_level(
@@ -1528,7 +1528,7 @@ pub fn pdf_flate_encode_with_level(
 /// Encode owned bytes as a zlib-wrapped Flate stream.
 ///
 /// `level` must be in the zlib range `0..9`; invalid levels raise
-/// `InvalidFlateData`. On the native target this uses zlib FFI with a pure
+/// `PdfError::InvalidFlateData`. On the native target this uses zlib FFI with a pure
 /// MoonBit fallback.
 #cfg(target="native")
 #coverage.skip
@@ -1569,12 +1569,12 @@ fn pdf_flate_decode_view_pure(data : BytesView) -> PdfBytes raise PdfError {
     Bytes::new(0)
   } else {
     if data.length() < 6 {
-      raise InvalidFlateData
+      raise PdfError::InvalidFlateData
     }
     let cmf = data[0].to_int()
     let flg = data[1].to_int()
     if (cmf & 0x0F) != 8 || ((cmf << 8) + flg) % 31 != 0 || (flg & 0x20) != 0 {
-      raise InvalidFlateData
+      raise PdfError::InvalidFlateData
     }
     let decoded = pdf_deflate_decode_raw(data[2:data.length() - 4])
     pdf_flate_check_adler32(data, decoded)
@@ -1605,7 +1605,7 @@ fn pdf_flate_decode_bytes_native(data : PdfBytes) -> PdfBytes raise PdfError {
 ///
 /// Empty input decodes to empty output. Malformed headers, unsupported preset
 /// dictionaries, invalid Deflate data, and Adler-32 mismatches raise
-/// `InvalidFlateData`.
+/// `PdfError::InvalidFlateData`.
 #cfg(not(target="native"))
 pub fn pdf_flate_decode_view(data : BytesView) -> PdfBytes raise PdfError {
   pdf_flate_decode_view_pure(data)
@@ -1616,7 +1616,7 @@ pub fn pdf_flate_decode_view(data : BytesView) -> PdfBytes raise PdfError {
 ///
 /// On the native target this tries zlib FFI first and falls back to the pure
 /// MoonBit decoder if the native call fails. Invalid compressed data raises
-/// `InvalidFlateData`.
+/// `PdfError::InvalidFlateData`.
 #cfg(target="native")
 #coverage.skip
 pub fn pdf_flate_decode_view(data : BytesView) -> PdfBytes raise PdfError {
@@ -1641,7 +1641,7 @@ pub fn pdf_flate_decode_view(data : BytesView) -> PdfBytes raise PdfError {
 /// Decode a zlib-wrapped Flate stream from owned bytes.
 ///
 /// Empty input decodes to empty output. Malformed compressed data raises
-/// `InvalidFlateData`.
+/// `PdfError::InvalidFlateData`.
 #cfg(not(target="native"))
 pub fn pdf_flate_decode(data : PdfBytes) -> PdfBytes raise PdfError {
   pdf_flate_decode_view_pure(data)
@@ -1665,17 +1665,17 @@ fn pdf_flate_decode_view_prefix(
     (Bytes::new(0), 0)
   } else {
     if data.length() < 6 {
-      raise InvalidFlateData
+      raise PdfError::InvalidFlateData
     }
     let cmf = data[0].to_int()
     let flg = data[1].to_int()
     if (cmf & 0x0F) != 8 || ((cmf << 8) + flg) % 31 != 0 || (flg & 0x20) != 0 {
-      raise InvalidFlateData
+      raise PdfError::InvalidFlateData
     }
     let (decoded, deflate_length) = pdf_deflate_decode_raw_prefix(data[2:])
     let encoded_length = 2 + deflate_length + 4
     if encoded_length > data.length() {
-      raise InvalidFlateData
+      raise PdfError::InvalidFlateData
     }
     pdf_flate_check_adler32(data[:encoded_length], decoded)
     (decoded, encoded_length)

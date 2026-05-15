@@ -217,9 +217,10 @@ pub fn PdfDocument::image_colour_space(
       Some(colour_space) =>
         match self.read_colour_space(resources, colour_space) {
           Some(space) => space
-          None => raise DictionaryKeyNotFound(pdf_image_colorspace_key())
+          None =>
+            raise PdfError::DictionaryKeyNotFound(pdf_image_colorspace_key())
         }
-      None => raise DictionaryKeyNotFound(pdf_image_colorspace_key())
+      None => raise PdfError::DictionaryKeyNotFound(pdf_image_colorspace_key())
     }
   }
 }
@@ -290,8 +291,8 @@ fn PdfDocument::pdf_image_lookup_int_or_else(
 ) -> Int raise PdfError {
   match self.lookup_direct_or_else(first_key, second_key, image) {
     Some(PdfInteger(value)) => value
-    Some(_) => raise NumberExpected
-    None => raise DictionaryKeyNotFound(first_key)
+    Some(_) => raise PdfError::NumberExpected
+    None => raise PdfError::DictionaryKeyNotFound(first_key)
   }
 }
 
@@ -302,7 +303,7 @@ fn PdfDocument::pdf_image_bits_per_component_int(
 ) -> Int? raise PdfError {
   match self.image_bits_per_component(image) {
     Some(PdfInteger(value)) => Some(value)
-    Some(_) => raise NumberExpected
+    Some(_) => raise PdfError::NumberExpected
     None => None
   }
 }
@@ -321,7 +322,7 @@ fn PdfDocument::pdf_image_decode_values(
       }
       Some(output)
     }
-    Some(_) => raise NumberExpected
+    Some(_) => raise PdfError::NumberExpected
     None => None
   }
 }
@@ -448,7 +449,7 @@ fn PdfDocument::pdf_image_decode_stream_stages(
       PdfImageJbig2Stream(current)
     Some(_) => {
       if stages >= 1024 {
-        raise FilterExpected
+        raise PdfError::FilterExpected
       }
       self.pdf_image_decode_stream_stages(
         self.pdf_decode_stream_onestage_value_direct(current),
@@ -466,7 +467,7 @@ fn PdfDocument::pdf_image_decode_to_image(
 ) -> PdfImageDecodedStream raise PdfError {
   let current = match self.direct(image) {
     PdfStreamObject(stream) => stream
-    _ => raise ParseStreamExpected
+    _ => raise PdfError::ParseStreamExpected
   }
   self.pdf_image_decode_stream_stages(current, 0)
 }
@@ -506,7 +507,7 @@ fn pdf_image_require_size(
   required : Int,
 ) -> Unit raise PdfError {
   if data.length() < required {
-    raise EndOfInput
+    raise PdfError::EndOfInput
   }
 }
 
@@ -517,7 +518,7 @@ fn pdf_image_decode_is_identity(
   if values.length() == 0 {
     true
   } else if values.length() % 2 != 0 {
-    raise FilterExpected
+    raise PdfError::FilterExpected
   } else {
     let mut identity = true
     for index in 0..<(values.length() / 2) {
@@ -595,7 +596,7 @@ fn pdf_image_apply_decode_borrowed(
           Some(1) => pdf_image_apply_1bpp_decode(data)
           Some(2) | Some(4) | Some(16) => data.to_owned()
           Some(8) => pdf_image_apply_8bpp_decode(data, values)
-          _ => raise FilterExpected
+          _ => raise PdfError::FilterExpected
         }
       }
   }
@@ -617,7 +618,7 @@ fn pdf_image_apply_decode(
           Some(1) => pdf_image_apply_decode_borrowed(data, bpc, Some(values))
           Some(2) | Some(4) | Some(16) => data
           Some(8) => pdf_image_apply_decode_borrowed(data, bpc, Some(values))
-          _ => raise FilterExpected
+          _ => raise PdfError::FilterExpected
         }
       }
   }
@@ -841,7 +842,7 @@ fn pdf_image_indexed_lookup(
       break entry.1
     }
   } nobreak {
-    raise EndOfInput
+    raise PdfError::EndOfInput
   }
 }
 
@@ -1176,7 +1177,7 @@ fn PdfDocument::pdf_image_separation_cmyk_8bpp_as_rgb24(
   for index in 0..<pixels {
     let values = tint_function.eval([data[index].to_double() / 255.0])
     if values.length() != 4 {
-      raise FilterExpected
+      raise PdfError::FilterExpected
     }
     let c = (values[0] * 255.0).to_int()
     let m = (values[2] * 255.0).to_int()
@@ -1227,7 +1228,7 @@ fn PdfDocument::pdf_image_raw_colour_space_as_rgb24(
           pdf_image_cmyk_indexed_1bpp_as_rgb24(width, height, table, data)
         PdfLab(white, _, _) =>
           pdf_image_lab_indexed_1bpp_as_rgb24(width, height, table, white, data)
-        _ => raise FilterExpected
+        _ => raise PdfError::FilterExpected
       }
     (PdfIndexed(base, table), Some(8)) =>
       match pdf_space_basic_table_colour_space(base) {
@@ -1237,7 +1238,7 @@ fn PdfDocument::pdf_image_raw_colour_space_as_rgb24(
           pdf_image_cmyk_indexed_8bpp_as_rgb24(width, height, table, data)
         PdfLab(white, _, _) =>
           pdf_image_lab_indexed_8bpp_as_rgb24(width, height, table, white, data)
-        _ => raise FilterExpected
+        _ => raise PdfError::FilterExpected
       }
     (PdfIndexed(base, table), Some(2)) =>
       match pdf_space_basic_table_colour_space(base) {
@@ -1247,7 +1248,7 @@ fn PdfDocument::pdf_image_raw_colour_space_as_rgb24(
           pdf_image_cmyk_indexed_2bpp_as_rgb24(width, height, table, data)
         PdfLab(white, _, _) =>
           pdf_image_lab_indexed_2bpp_as_rgb24(width, height, table, white, data)
-        _ => raise FilterExpected
+        _ => raise PdfError::FilterExpected
       }
     (PdfIndexed(base, table), Some(4)) =>
       match pdf_space_basic_table_colour_space(base) {
@@ -1257,7 +1258,7 @@ fn PdfDocument::pdf_image_raw_colour_space_as_rgb24(
           pdf_image_cmyk_indexed_4bpp_as_rgb24(width, height, table, data)
         PdfLab(white, _, _) =>
           pdf_image_lab_indexed_4bpp_as_rgb24(width, height, table, white, data)
-        _ => raise FilterExpected
+        _ => raise PdfError::FilterExpected
       }
     (_, Some(1)) => pdf_image_1bpp_as_rgb24(width, height, data)
     (PdfSeparation(_, PdfDeviceCMYK, tint), Some(8)) =>
@@ -1266,7 +1267,7 @@ fn PdfDocument::pdf_image_raw_colour_space_as_rgb24(
       self.pdf_image_raw_colour_space_as_rgb24(
         width, height, alternate, bpc, data,
       )
-    _ => raise FilterExpected
+    _ => raise PdfError::FilterExpected
   }
 }
 

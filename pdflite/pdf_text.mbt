@@ -2264,7 +2264,7 @@ fn pdf_text_parsed_cmap_charcodes_of_text(
         output.push(code)
         index += length
       }
-      None => raise BadText
+      None => raise PdfError::BadText
     }
   }
   output
@@ -2831,7 +2831,7 @@ fn PdfDocument::pdf_text_font_widths_array(
 ) -> Array[PdfObject] raise PdfError {
   match self.lookup_direct(pdf_text_widths_key_name, font) {
     Some(PdfArray(values)) => values
-    _ => raise FontWidthsExpected
+    _ => raise PdfError::FontWidthsExpected
   }
 }
 
@@ -2851,17 +2851,17 @@ pub fn PdfDocument::read_font_metrics(
       let firstchar = self.pdf_text_font_char_bound(
         font,
         pdf_text_first_char_key_name,
-        FontFirstCharExpected,
+        PdfError::FontFirstCharExpected,
       )
       let lastchar = self.pdf_text_font_char_bound(
         font,
         pdf_text_last_char_key_name,
-        FontLastCharExpected,
+        PdfError::FontLastCharExpected,
       )
-      guard lastchar >= firstchar else { raise FontWidthsExpected }
+      guard lastchar >= firstchar else { raise PdfError::FontWidthsExpected }
       let widths = self.pdf_text_font_widths_array(font)
       guard widths.length() == lastchar - firstchar + 1 else {
-        raise FontWidthsExpected
+        raise PdfError::FontWidthsExpected
       }
       let missingwidth = self.pdf_text_font_missing_width(descriptor)
       let metrics : Array[Double] = []
@@ -2871,7 +2871,7 @@ pub fn PdfDocument::read_font_metrics(
       for width in widths {
         metrics.push(
           self.get_number(width) catch {
-            _ => raise FontWidthExpected
+            _ => raise PdfError::FontWidthExpected
           },
         )
       }
@@ -2897,7 +2897,7 @@ fn PdfDocument::pdf_text_read_type3_glyphs(
   }
   let charprocs = match self.lookup_direct(pdf_text_charprocs_key_name, font) {
     Some(PdfDictionary(entries)) => entries
-    _ => raise FontCharProcsExpected
+    _ => raise PdfError::FontCharProcsExpected
   }
   let resources = match self.lookup_direct(pdf_text_resources_key_name, font) {
     Some(value) => value
@@ -2965,9 +2965,9 @@ pub fn PdfDocument::read_simple_font(
             fontmetrics: self.read_font_metrics(font),
             encoding: self.read_encoding(font),
           }
-        None => raise FontSubtypeExpected
+        None => raise PdfError::FontSubtypeExpected
       }
-    _ => raise FontSubtypeExpected
+    _ => raise PdfError::FontSubtypeExpected
   }
 }
 
@@ -2994,7 +2994,7 @@ fn PdfDocument::pdf_text_font_is_symbolic(
     Some(descriptor) =>
       match self.lookup_direct(pdf_text_flags_key_name, descriptor) {
         Some(PdfInteger(flags)) => (flags & (1 << 3)) > 0
-        _ => raise FontFlagsExpected
+        _ => raise PdfError::FontFlagsExpected
       }
     None => false
   }
@@ -3024,9 +3024,9 @@ fn PdfDocument::read_encoding_base(
     Some(PdfNameObject(name)) =>
       match pdf_encoding_of_name(name) {
         Some(encoding) => encoding
-        None => raise EncodingExpected
+        None => raise PdfError::EncodingExpected
       }
-    Some(_) => raise EncodingExpected
+    Some(_) => raise PdfError::EncodingExpected
     None => self.pdf_text_default_base_encoding(font)
   }
 }
@@ -3049,14 +3049,14 @@ fn PdfDocument::read_encoding_differences(
                 output.push({ name, code })
                 next_code = Some(code + 1)
               }
-              None => raise EncodingDifferencesMalformed
+              None => raise PdfError::EncodingDifferencesMalformed
             }
-          _ => raise EncodingDifferencesMalformed
+          _ => raise PdfError::EncodingDifferencesMalformed
         }
       }
       output
     }
-    _ => raise EncodingDifferencesMalformed
+    _ => raise PdfError::EncodingDifferencesMalformed
   }
 }
 
@@ -3118,7 +3118,7 @@ pub fn PdfDocument::read_encoding(
             encoding
           }
         }
-        _ => raise FontSubtypeExpected
+        _ => raise PdfError::FontSubtypeExpected
       }
     Some(_) => PdfImplicitInFontFile
     None => PdfImplicitInFontFile
@@ -3197,17 +3197,17 @@ pub fn PdfDocument::read_cid_system_info(
     registry: self.pdf_text_cid_string_entry(
       dictionary,
       pdf_text_registry_key_name,
-      CIDRegistryExpected,
+      PdfError::CIDRegistryExpected,
     ),
     ordering: self.pdf_text_cid_string_entry(
       dictionary,
       pdf_text_ordering_key_name,
-      CIDOrderingExpected,
+      PdfError::CIDOrderingExpected,
     ),
     supplement: match
       self.lookup_direct(pdf_text_supplement_key_name, dictionary) {
       Some(PdfInteger(value)) => value
-      _ => raise CIDSupplementExpected
+      _ => raise PdfError::CIDSupplementExpected
     },
   }
 }
@@ -3233,14 +3233,19 @@ fn PdfDocument::pdf_text_read_cid_widths(
   while index < values.length() {
     match self.direct(values[index]) {
       PdfInteger(first_code) => {
-        guard index + 1 < values.length() else { raise CIDWidthsExpected }
+        guard index + 1 < values.length() else {
+          raise PdfError::CIDWidthsExpected
+        }
         match self.direct(values[index + 1]) {
           PdfArray(widths) => {
             for offset in 0..<widths.length() {
               output.push(
                 (
                   first_code + offset,
-                  self.pdf_text_cid_number(widths[offset], CIDWidthsExpected),
+                  self.pdf_text_cid_number(
+                    widths[offset],
+                    PdfError::CIDWidthsExpected,
+                  ),
                 ),
               )
             }
@@ -3248,21 +3253,21 @@ fn PdfDocument::pdf_text_read_cid_widths(
           }
           PdfInteger(last_code) => {
             guard index + 2 < values.length() && last_code >= first_code else {
-              raise CIDWidthsExpected
+              raise PdfError::CIDWidthsExpected
             }
             let width = self.pdf_text_cid_number(
               values[index + 2],
-              CIDWidthsExpected,
+              PdfError::CIDWidthsExpected,
             )
             for code in first_code..<=last_code {
               output.push((code, width))
             }
             index += 3
           }
-          _ => raise CIDWidthsExpected
+          _ => raise PdfError::CIDWidthsExpected
         }
       }
-      _ => raise CIDWidthsExpected
+      _ => raise PdfError::CIDWidthsExpected
     }
   }
   output
@@ -3278,10 +3283,14 @@ fn PdfDocument::pdf_text_read_cid_widths2(
   while index < values.length() {
     match self.direct(values[index]) {
       PdfInteger(first_code) => {
-        guard index + 1 < values.length() else { raise CIDWidths2Expected }
+        guard index + 1 < values.length() else {
+          raise PdfError::CIDWidths2Expected
+        }
         match self.direct(values[index + 1]) {
           PdfArray(widths) => {
-            guard widths.length() % 3 == 0 else { raise CIDWidths2Expected }
+            guard widths.length() % 3 == 0 else {
+              raise PdfError::CIDWidths2Expected
+            }
             let mut code = first_code
             let mut width_index = 0
             while width_index < widths.length() {
@@ -3291,15 +3300,15 @@ fn PdfDocument::pdf_text_read_cid_widths2(
                   {
                     width: self.pdf_text_cid_number(
                       widths[width_index],
-                      CIDWidths2Expected,
+                      PdfError::CIDWidths2Expected,
                     ),
                     vx: self.pdf_text_cid_number(
                       widths[width_index + 1],
-                      CIDWidths2Expected,
+                      PdfError::CIDWidths2Expected,
                     ),
                     vy: self.pdf_text_cid_number(
                       widths[width_index + 2],
-                      CIDWidths2Expected,
+                      PdfError::CIDWidths2Expected,
                     ),
                   },
                 ),
@@ -3311,20 +3320,20 @@ fn PdfDocument::pdf_text_read_cid_widths2(
           }
           PdfInteger(last_code) => {
             guard index + 4 < values.length() && last_code >= first_code else {
-              raise CIDWidths2Expected
+              raise PdfError::CIDWidths2Expected
             }
             let width = {
               width: self.pdf_text_cid_number(
                 values[index + 2],
-                CIDWidths2Expected,
+                PdfError::CIDWidths2Expected,
               ),
               vx: self.pdf_text_cid_number(
                 values[index + 3],
-                CIDWidths2Expected,
+                PdfError::CIDWidths2Expected,
               ),
               vy: self.pdf_text_cid_number(
                 values[index + 4],
-                CIDWidths2Expected,
+                PdfError::CIDWidths2Expected,
               ),
             }
             for code in first_code..<=last_code {
@@ -3332,10 +3341,10 @@ fn PdfDocument::pdf_text_read_cid_widths2(
             }
             index += 5
           }
-          _ => raise CIDWidths2Expected
+          _ => raise PdfError::CIDWidths2Expected
         }
       }
-      _ => raise CIDWidths2Expected
+      _ => raise PdfError::CIDWidths2Expected
     }
   }
   output
@@ -3369,7 +3378,7 @@ fn PdfDocument::pdf_text_cid_default_width(
   dictionary : PdfObject,
 ) -> Double raise PdfError {
   match self.lookup_direct(pdf_text_dw_key_name, dictionary) {
-    Some(value) => self.pdf_text_cid_number(value, CIDWidthsExpected)
+    Some(value) => self.pdf_text_cid_number(value, PdfError::CIDWidthsExpected)
     None => 1000.0
   }
 }
@@ -3383,7 +3392,9 @@ fn PdfDocument::pdf_text_cid_default_width2(
     Some(PdfArray(values)) => {
       let output : Array[Double] = []
       for value in values {
-        output.push(self.pdf_text_cid_number(value, CIDWidths2Expected))
+        output.push(
+          self.pdf_text_cid_number(value, PdfError::CIDWidths2Expected),
+        )
       }
       output
     }
@@ -3399,16 +3410,16 @@ fn PdfDocument::pdf_text_read_descendant(
   let cid_system_info = match
     self.lookup_direct(pdf_text_cid_system_info_key_name, dictionary) {
     Some(system_info) => self.read_cid_system_info(system_info)
-    None => raise CIDSystemInfoExpected
+    None => raise PdfError::CIDSystemInfoExpected
   }
   let cid_basefont = match
     self.lookup_direct(pdf_text_base_font_key_name, dictionary) {
     Some(PdfNameObject(name)) => name
-    _ => raise CIDBaseFontExpected
+    _ => raise PdfError::CIDBaseFontExpected
   }
   let cid_fontdescriptor = match self.read_font_descriptor(dictionary) {
     Some(fontdescriptor) => fontdescriptor
-    None => raise CIDFontDescriptorExpected
+    None => raise PdfError::CIDFontDescriptorExpected
   }
   {
     cid_system_info,
@@ -3436,9 +3447,9 @@ fn PdfDocument::pdf_text_read_cmap_encoding(
           } noraise {
             parsed => PdfExternalCMap(number, parsed)
           }
-        None => raise CMapEncodingExpected
+        None => raise PdfError::CMapEncodingExpected
       }
-    _ => raise CMapEncodingExpected
+    _ => raise PdfError::CMapEncodingExpected
   }
 }
 
@@ -3454,13 +3465,13 @@ pub fn PdfDocument::read_cidkeyed_font(
 ) -> PdfCIDKeyedFont raise PdfError {
   let basefont = match self.lookup_direct(pdf_text_base_font_key_name, font) {
     Some(PdfNameObject(name)) => name
-    _ => raise BaseFontExpected
+    _ => raise PdfError::BaseFontExpected
   }
   let composite = match
     self.lookup_direct(pdf_text_descendant_fonts_key_name, font) {
     Some(PdfArray([descendant])) =>
       self.pdf_text_read_descendant(self.direct(descendant))
-    _ => raise DescendantFontExpected
+    _ => raise PdfError::DescendantFontExpected
   }
   { basefont, composite, encoding: self.pdf_text_read_cmap_encoding(font) }
 }
@@ -4935,7 +4946,7 @@ fn PdfDocument::pdf_text_decoded_cmap_stream_data_direct(
       }
       pdf_stream_data_bytes(decoded.data)
     }
-    _ => raise CMapEncodingExpected
+    _ => raise PdfError::CMapEncodingExpected
   }
 }
 
@@ -4947,7 +4958,7 @@ fn PdfDocument::parse_cmap_with_seen(
 ) -> PdfParsedCMap raise PdfError {
   match cmap {
     PdfIndirect(number) => {
-      guard !seen.contains(number) else { raise CMapEncodingExpected }
+      guard !seen.contains(number) else { raise PdfError::CMapEncodingExpected }
       seen[number] = true
     }
     _ => ()
@@ -5067,9 +5078,9 @@ pub fn PdfDocument::read_standard14_font(
       match pdf_standard_font_of_pdf_name(base_font) {
         Some(standard_font) =>
           { font: standard_font, encoding: self.read_encoding(font) }
-        None => raise StandardFontExpected
+        None => raise PdfError::StandardFontExpected
       }
-    _ => raise BaseFontExpected
+    _ => raise PdfError::BaseFontExpected
   }
 }
 
@@ -5090,7 +5101,7 @@ pub fn PdfDocument::read_font(
   } else if self.is_cidkeyed_font(font) {
     PdfFontCIDKeyed(self.read_cidkeyed_font(font))
   } else {
-    raise FontTypeExpected
+    raise PdfError::FontTypeExpected
   }
   read.pdf_text_with_tounicode(self.pdf_text_tounicode_of_font(font))
 }
@@ -10247,7 +10258,7 @@ fn pdf_text_push_two_byte_charcode(
   text : BytesView,
   index : Int,
 ) -> Int raise PdfError {
-  guard index + 1 < text.length() else { raise BadText }
+  guard index + 1 < text.length() else { raise PdfError::BadText }
   output.push((text[index].to_int() << 8) | text[index + 1].to_int())
   index + 2
 }
@@ -10258,7 +10269,7 @@ fn pdf_text_push_three_byte_charcode(
   text : BytesView,
   index : Int,
 ) -> Int raise PdfError {
-  guard index + 2 < text.length() else { raise BadText }
+  guard index + 2 < text.length() else { raise PdfError::BadText }
   output.push(
     (((text[index].to_int() << 8) | text[index + 1].to_int()) << 8) |
     text[index + 2].to_int(),
@@ -10272,7 +10283,7 @@ fn pdf_text_push_four_byte_charcode(
   text : BytesView,
   index : Int,
 ) -> Int raise PdfError {
-  guard index + 3 < text.length() else { raise BadText }
+  guard index + 3 < text.length() else { raise PdfError::BadText }
   output.push(
     (
       (
@@ -10296,13 +10307,13 @@ fn pdf_text_push_utf8_charcode(
   let (length, code) = if first >> 7 == 0 {
     (1, first)
   } else if first >> 5 == 0b110 {
-    guard index + 1 < text.length() else { raise InvalidUTF8 }
+    guard index + 1 < text.length() else { raise PdfError::InvalidUTF8 }
     (2, pdf_text_pack_two_bytes(first, text[index + 1].to_int()))
   } else if first >> 4 == 0b1110 {
-    guard index + 2 < text.length() else { raise InvalidUTF8 }
+    guard index + 2 < text.length() else { raise PdfError::InvalidUTF8 }
     (3, pdf_text_pack_bytes_as_charcode(text[index:index + 3]))
   } else if first >> 3 == 0b11110 {
-    guard index + 3 < text.length() else { raise InvalidUTF8 }
+    guard index + 3 < text.length() else { raise PdfError::InvalidUTF8 }
     (
       4,
       pdf_text_pack_four_bytes(
@@ -10313,10 +10324,10 @@ fn pdf_text_push_utf8_charcode(
       ),
     )
   } else {
-    raise InvalidUTF8
+    raise PdfError::InvalidUTF8
   }
   guard pdf_text_predefined_utf8_codepoints(code) is Some(_) else {
-    raise InvalidUTF8
+    raise PdfError::InvalidUTF8
   }
   output.push(code)
   index + length
@@ -10333,12 +10344,14 @@ fn pdf_text_push_utf16_charcode(
     text[index + 1].to_int(),
   )
   if first >= 0xD800 && first <= 0xDBFF {
-    guard index + 3 < text.length() else { raise InvalidUTF16BE }
+    guard index + 3 < text.length() else { raise PdfError::InvalidUTF16BE }
     let second = pdf_text_pack_two_bytes(
       text[index + 2].to_int(),
       text[index + 3].to_int(),
     )
-    guard second >= 0xDC00 && second <= 0xDFFF else { raise InvalidUTF16BE }
+    guard second >= 0xDC00 && second <= 0xDFFF else {
+      raise PdfError::InvalidUTF16BE
+    }
     output.push(
       pdf_text_pack_four_bytes(
         first >> 8,
@@ -10349,7 +10362,7 @@ fn pdf_text_push_utf16_charcode(
     )
     index + 4
   } else if first >= 0xDC00 && first <= 0xDFFF {
-    raise InvalidUTF16BE
+    raise PdfError::InvalidUTF16BE
   } else {
     output.push(first)
     index + 2
@@ -10362,7 +10375,7 @@ fn pdf_text_push_utf32_charcode(
   text : BytesView,
   index : Int,
 ) -> Int raise PdfError {
-  guard index + 3 < text.length() else { raise BadText }
+  guard index + 3 < text.length() else { raise PdfError::BadText }
   let code = pdf_text_pack_four_bytes(
     text[index].to_int(),
     text[index + 1].to_int(),
@@ -10370,7 +10383,7 @@ fn pdf_text_push_utf32_charcode(
     text[index + 3].to_int(),
   )
   guard pdf_text_valid_unicode_codepoint(code) else {
-    raise InvalidUnicodeCodepoint(code)
+    raise PdfError::InvalidUnicodeCodepoint(code)
   }
   output.push(code)
   index + 4
@@ -10469,7 +10482,7 @@ fn pdf_text_predefined_cmap_charcodes_of_text(
     }
     output
   } else if pdf_text_predefined_cmap_uses_utf16_charcodes(name) {
-    guard text.length() % 2 == 0 else { raise BadText }
+    guard text.length() % 2 == 0 else { raise PdfError::BadText }
     let output : Array[Int] = []
     let mut index = 0
     while index < text.length() {
@@ -10477,7 +10490,7 @@ fn pdf_text_predefined_cmap_charcodes_of_text(
     }
     output
   } else if pdf_text_predefined_cmap_uses_utf32_charcodes(name) {
-    guard text.length() % 4 == 0 else { raise BadText }
+    guard text.length() % 4 == 0 else { raise PdfError::BadText }
     let output : Array[Int] = []
     let mut index = 0
     while index < text.length() {
@@ -10491,7 +10504,7 @@ fn pdf_text_predefined_cmap_charcodes_of_text(
     if name == pdf_text_identity_h_name ||
       name == pdf_text_identity_v_name ||
       pdf_text_predefined_cmap_uses_two_byte_charcodes(name) {
-      guard text.length() % 2 == 0 else { raise BadText }
+      guard text.length() % 2 == 0 else { raise PdfError::BadText }
       let mut index = 0
       while index < text.length() {
         index = pdf_text_push_two_byte_charcode(output, text, index)
@@ -10530,7 +10543,7 @@ fn PdfFont::pdf_text_fixed_or_single_byte_charcodes_of_text(
 ) -> Array[Int] raise PdfError {
   let output : Array[Int] = []
   if self.uses_two_byte_codes() {
-    guard text.length() % 2 == 0 else { raise BadText }
+    guard text.length() % 2 == 0 else { raise PdfError::BadText }
     let mut index = 0
     while index < text.length() {
       index = pdf_text_push_two_byte_charcode(output, text, index)
@@ -10742,7 +10755,7 @@ pub fn pdf_charcode_extractor_of_font(
 ///
 /// Currently this supports `/Differences` over an implicit base encoding, which
 /// is the form needed by the font writer. Unsupported encodings raise
-/// `EncodingWriteUnsupported`.
+/// `PdfError::EncodingWriteUnsupported`.
 pub fn PdfDocument::write_encoding(
   self : PdfDocument,
   encoding : PdfEncoding,
@@ -10761,7 +10774,7 @@ pub fn PdfDocument::write_encoding(
         ]),
       )
     }
-    _ => raise EncodingWriteUnsupported
+    _ => raise PdfError::EncodingWriteUnsupported
   }
 }
 
@@ -10769,7 +10782,7 @@ pub fn PdfDocument::write_encoding(
 /// Build a simple Type 1 font dictionary for a base font and named encoding.
 ///
 /// Only encodings with a direct PDF name can be written this way; custom or
-/// implicit encodings raise `EncodingWriteUnsupported`.
+/// implicit encodings raise `PdfError::EncodingWriteUnsupported`.
 pub fn pdf_make_font(
   fontname : PdfName,
   encoding : PdfEncoding,
@@ -10782,7 +10795,7 @@ pub fn pdf_make_font(
         (pdf_text_encoding_key_name, PdfNameObject(encoding_name)),
         (pdf_text_base_font_key_name, PdfNameObject(fontname)),
       ])
-    None => raise EncodingWriteUnsupported
+    None => raise PdfError::EncodingWriteUnsupported
   }
 }
 
@@ -11003,7 +11016,7 @@ fn PdfDocument::pdf_text_make_true_type_font(
 ) -> PdfObject raise PdfError {
   let ttf = match pdf_text_fontfile2_number(descriptor.fontfile) {
     Some(number) => number
-    None => raise FontWriteUnsupported
+    None => raise PdfError::FontWriteUnsupported
   }
   let fontdescriptor = PdfDictionary([
     (pdf_text_type_key_name, PdfNameObject(pdf_text_font_descriptor_key_name)),
@@ -11047,7 +11060,7 @@ fn PdfDocument::pdf_text_make_true_type_font(
     None => {
       let encoding_name = match pdf_text_true_type_encoding_name(encoding) {
         Some(name) => name
-        None => raise EncodingWriteUnsupported
+        None => raise PdfError::EncodingWriteUnsupported
       }
       [(pdf_text_encoding_key_name, PdfNameObject(encoding_name))]
     }
@@ -11089,7 +11102,7 @@ fn PdfDocument::pdf_text_add_font_object(
 ///
 /// Standard fonts, Type 3 fonts with descriptors, and TrueType fonts with
 /// descriptors are supported. `objnum` can force the destination object number
-/// for rewrite workflows. Unsupported font shapes raise `FontWriteUnsupported`.
+/// for rewrite workflows. Unsupported font shapes raise `PdfError::FontWriteUnsupported`.
 pub fn PdfDocument::write_font(
   self : PdfDocument,
   font : PdfFont,
@@ -11120,7 +11133,7 @@ pub fn PdfDocument::write_font(
             ),
             objnum,
           )
-        None => raise FontWriteUnsupported
+        None => raise PdfError::FontWriteUnsupported
       }
     PdfFontSimple(
       {
@@ -11140,7 +11153,7 @@ pub fn PdfDocument::write_font(
         ),
         objnum,
       )
-    _ => raise FontWriteUnsupported
+    _ => raise PdfError::FontWriteUnsupported
   }
 }
 
@@ -11180,7 +11193,7 @@ fn pdf_text_push_utf16be_codepoint(
   if codepoint < 0 ||
     codepoint > 0x10FFFF ||
     (codepoint >= 0xD800 && codepoint <= 0xDFFF) {
-    raise InvalidUnicodeCodepoint(codepoint)
+    raise PdfError::InvalidUnicodeCodepoint(codepoint)
   }
   if codepoint < 0x10000 {
     pdf_text_push_utf16be_unit(output, codepoint)
@@ -11195,7 +11208,7 @@ fn pdf_text_push_utf16be_codepoint(
 /// Encode Unicode scalar values as a PDF UTF-16BE string with BOM.
 ///
 /// Invalid scalar values, including surrogate codepoints, raise
-/// `InvalidUnicodeCodepoint`.
+/// `PdfError::InvalidUnicodeCodepoint`.
 pub fn pdf_utf16be_of_codepoints(
   codepoints : ArrayView[Int],
 ) -> PdfBytes raise PdfError {
@@ -11210,7 +11223,7 @@ pub fn pdf_utf16be_of_codepoints(
 
 ///|
 fn pdf_text_utf16be_unit(bytes : BytesView, index : Int) -> Int raise PdfError {
-  guard index + 1 < bytes.length() else { raise InvalidUTF16BE }
+  guard index + 1 < bytes.length() else { raise PdfError::InvalidUTF16BE }
   (bytes[index].to_int() << 8) | bytes[index + 1].to_int()
 }
 
@@ -11219,7 +11232,7 @@ fn pdf_text_utf16be_unit(bytes : BytesView, index : Int) -> Int raise PdfError {
 ///
 /// The input should not include the leading `FE FF` BOM; callers that receive a
 /// PDF Unicode string normally pass `bytes[2:]`. Odd lengths, lone surrogates,
-/// and malformed pairs raise `InvalidUTF16BE`.
+/// and malformed pairs raise `PdfError::InvalidUTF16BE`.
 pub fn pdf_codepoints_of_utf16be(
   bytes : BytesView,
 ) -> Array[Int] raise PdfError {
@@ -11230,11 +11243,11 @@ pub fn pdf_codepoints_of_utf16be(
     index += 2
     if w1 >= 0xD800 && w1 <= 0xDBFF {
       let w2 = pdf_text_utf16be_unit(bytes, index)
-      guard w2 >= 0xDC00 && w2 <= 0xDFFF else { raise InvalidUTF16BE }
+      guard w2 >= 0xDC00 && w2 <= 0xDFFF else { raise PdfError::InvalidUTF16BE }
       index += 2
       codepoints.push((((w1 & 0x3FF) << 10) | (w2 & 0x3FF)) + 0x10000)
     } else if w1 >= 0xDC00 && w1 <= 0xDFFF {
-      raise InvalidUTF16BE
+      raise PdfError::InvalidUTF16BE
     } else {
       codepoints.push(w1)
     }
@@ -11247,7 +11260,7 @@ fn pdf_text_check_unicode_codepoint(codepoint : Int) -> Unit raise PdfError {
   if codepoint < 0 ||
     codepoint > 0x10FFFF ||
     (codepoint >= 0xD800 && codepoint <= 0xDFFF) {
-    raise InvalidUnicodeCodepoint(codepoint)
+    raise PdfError::InvalidUnicodeCodepoint(codepoint)
   }
 }
 
@@ -11255,7 +11268,7 @@ fn pdf_text_check_unicode_codepoint(codepoint : Int) -> Unit raise PdfError {
 /// Encode Unicode scalar values as UTF-8 bytes.
 ///
 /// Invalid scalar values, including surrogate codepoints, raise
-/// `InvalidUnicodeCodepoint`.
+/// `PdfError::InvalidUnicodeCodepoint`.
 pub fn pdf_utf8_of_codepoints(
   codepoints : ArrayView[Int],
 ) -> PdfBytes raise PdfError {
@@ -11293,7 +11306,7 @@ fn pdf_text_push_utf8_codepoint(
   min_codepoint : Int,
 ) -> Unit raise PdfError {
   pdf_text_check_unicode_codepoint(codepoint)
-  guard codepoint >= min_codepoint else { raise InvalidUTF8 }
+  guard codepoint >= min_codepoint else { raise PdfError::InvalidUTF8 }
   output.push(codepoint)
 }
 
@@ -11301,8 +11314,8 @@ fn pdf_text_push_utf8_codepoint(
 /// Decode UTF-8 bytes into Unicode scalar values.
 ///
 /// Overlong encodings, invalid continuation bytes, truncated sequences, and
-/// surrogate or out-of-range scalar values raise `InvalidUTF8` or
-/// `InvalidUnicodeCodepoint`.
+/// surrogate or out-of-range scalar values raise `PdfError::InvalidUTF8` or
+/// `PdfError::InvalidUnicodeCodepoint`.
 pub fn pdf_codepoints_of_utf8(bytes : BytesView) -> Array[Int] raise PdfError {
   let output : Array[Int] = []
   let mut index = 0
@@ -11312,9 +11325,11 @@ pub fn pdf_codepoints_of_utf8(bytes : BytesView) -> Array[Int] raise PdfError {
       output.push(first)
       index += 1
     } else if first >> 5 == 0b110 {
-      guard index + 1 < bytes.length() else { raise InvalidUTF8 }
+      guard index + 1 < bytes.length() else { raise PdfError::InvalidUTF8 }
       let b1 = bytes[index + 1].to_int()
-      guard pdf_text_is_utf8_continuation(b1) else { raise InvalidUTF8 }
+      guard pdf_text_is_utf8_continuation(b1) else {
+        raise PdfError::InvalidUTF8
+      }
       pdf_text_push_utf8_codepoint(
         output,
         ((first & 0x1F) << 6) | (b1 & 0x3F),
@@ -11322,12 +11337,12 @@ pub fn pdf_codepoints_of_utf8(bytes : BytesView) -> Array[Int] raise PdfError {
       )
       index += 2
     } else if first >> 4 == 0b1110 {
-      guard index + 2 < bytes.length() else { raise InvalidUTF8 }
+      guard index + 2 < bytes.length() else { raise PdfError::InvalidUTF8 }
       let b1 = bytes[index + 1].to_int()
       let b2 = bytes[index + 2].to_int()
       guard pdf_text_is_utf8_continuation(b1) &&
         pdf_text_is_utf8_continuation(b2) else {
-        raise InvalidUTF8
+        raise PdfError::InvalidUTF8
       }
       pdf_text_push_utf8_codepoint(
         output,
@@ -11336,14 +11351,14 @@ pub fn pdf_codepoints_of_utf8(bytes : BytesView) -> Array[Int] raise PdfError {
       )
       index += 3
     } else if first >> 3 == 0b11110 {
-      guard index + 3 < bytes.length() else { raise InvalidUTF8 }
+      guard index + 3 < bytes.length() else { raise PdfError::InvalidUTF8 }
       let b1 = bytes[index + 1].to_int()
       let b2 = bytes[index + 2].to_int()
       let b3 = bytes[index + 3].to_int()
       guard pdf_text_is_utf8_continuation(b1) &&
         pdf_text_is_utf8_continuation(b2) &&
         pdf_text_is_utf8_continuation(b3) else {
-        raise InvalidUTF8
+        raise PdfError::InvalidUTF8
       }
       pdf_text_push_utf8_codepoint(
         output,
@@ -11355,7 +11370,7 @@ pub fn pdf_codepoints_of_utf8(bytes : BytesView) -> Array[Int] raise PdfError {
       )
       index += 4
     } else {
-      raise InvalidUTF8
+      raise PdfError::InvalidUTF8
     }
   }
   output
@@ -11417,11 +11432,11 @@ fn pdf_codepoint_of_pdfdocencoding_byte_option(value : Int) -> Int? {
 ///|
 /// Decode one PDFDocEncoding byte to a Unicode codepoint.
 ///
-/// Undefined byte values raise `InvalidPDFDocEncoding`.
+/// Undefined byte values raise `PdfError::InvalidPDFDocEncoding`.
 pub fn pdf_codepoint_of_pdfdocencoding_byte(value : Int) -> Int raise PdfError {
   match pdf_codepoint_of_pdfdocencoding_byte_option(value) {
     Some(codepoint) => codepoint
-    None => raise InvalidPDFDocEncoding(value)
+    None => raise PdfError::InvalidPDFDocEncoding(value)
   }
 }
 
@@ -11523,7 +11538,7 @@ pub fn pdf_pdfdocstring_of_utf8(bytes : BytesView) -> PdfBytes raise PdfError {
 /// Re-encode a UTF-16BE PDF string using PDFDocEncoding when possible.
 ///
 /// Non-Unicode input is returned as an owned copy. Malformed UTF-16BE raises
-/// `InvalidUTF16BE`.
+/// `PdfError::InvalidUTF16BE`.
 pub fn pdf_simplify_utf16be(bytes : BytesView) -> PdfBytes raise PdfError {
   if pdf_is_unicode_string(bytes) {
     pdf_pdfdocstring_of_codepoints(pdf_codepoints_of_pdfdocstring(bytes))

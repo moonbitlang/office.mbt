@@ -229,7 +229,7 @@ fn pdf_lookup_replace_array_entry(
   key : PdfName,
 ) -> PdfObject raise PdfError {
   if index < 0 || index >= values.length() {
-    raise DictionaryKeyNotFound(key)
+    raise PdfError::DictionaryKeyNotFound(key)
   } else {
     PdfArray(
       [
@@ -303,12 +303,12 @@ fn PdfDocument::replace_chain_in_object(
                 )
                 pdf_lookup_replace_array_entry(values, index, updated, key)
               }
-              None => raise DictionaryKeyNotFound(key)
+              None => raise PdfError::DictionaryKeyNotFound(key)
             }
           }
-        None => raise DictionaryKeyNotFound(key)
+        None => raise PdfError::DictionaryKeyNotFound(key)
       }
-    _ => raise DictionaryExpected
+    _ => raise PdfError::DictionaryExpected
   }
 }
 
@@ -326,7 +326,7 @@ pub fn PdfDocument::replace_chain(
   value : PdfObject,
 ) -> Unit raise PdfError {
   if chain.length() == 0 {
-    raise DictionaryExpected
+    raise PdfError::DictionaryExpected
   }
   self.trailer_dict = self.replace_chain_in_object(
     self.trailer_dict,
@@ -384,7 +384,7 @@ fn PdfDocument::remove_chain_from_object(
       match pdf_lookup_array_index_name(key) {
         Some(index) =>
           if final_key {
-            raise DictionaryExpected
+            raise PdfError::DictionaryExpected
           } else {
             match values.get(index) {
               Some(PdfIndirect(number)) => {
@@ -416,9 +416,9 @@ fn PdfDocument::remove_chain_from_object(
               None => (object, false)
             }
           }
-        None => raise DictionaryKeyNotFound(key)
+        None => raise PdfError::DictionaryKeyNotFound(key)
       }
-    _ => raise DictionaryExpected
+    _ => raise PdfError::DictionaryExpected
   }
 }
 
@@ -426,7 +426,7 @@ fn PdfDocument::remove_chain_from_object(
 /// Remove a nested value along a path rooted at the trailer dictionary.
 ///
 /// Returns `true` when an entry was removed and `false` when the path is
-/// absent. Empty chains raise `DictionaryExpected`. A single-key chain is
+/// absent. Empty chains raise `PdfError::DictionaryExpected`. A single-key chain is
 /// treated as an invalid request when the key exists, preserving the trailer
 /// root rather than removing one of its direct entries.
 pub fn PdfDocument::remove_chain(
@@ -434,11 +434,11 @@ pub fn PdfDocument::remove_chain(
   chain : ArrayView[PdfName],
 ) -> Bool raise PdfError {
   if chain.length() == 0 {
-    raise DictionaryExpected
+    raise PdfError::DictionaryExpected
   }
   if chain.length() == 1 {
     match self.lookup_chain(self.trailer_dict, chain) {
-      Some(_) => raise DictionaryExpected
+      Some(_) => raise PdfError::DictionaryExpected
       None => return false
     }
   }
@@ -479,7 +479,7 @@ pub fn PdfDocument::lookup_chain(
 /// Read a PDF numeric object as a `Double`.
 ///
 /// The object is resolved first. PDF real numbers are returned directly and PDF
-/// integers are widened to `Double`; any other object raises `NumberExpected`.
+/// integers are widened to `Double`; any other object raises `PdfError::NumberExpected`.
 pub fn PdfDocument::get_number(
   self : PdfDocument,
   object : PdfObject,
@@ -487,7 +487,7 @@ pub fn PdfDocument::get_number(
   match self.direct(object) {
     PdfReal(value) => value
     PdfInteger(value) => value.to_double()
-    _ => raise NumberExpected
+    _ => raise PdfError::NumberExpected
   }
 }
 
@@ -496,8 +496,8 @@ pub fn PdfDocument::get_number(
 ///
 /// The input must resolve to an array of four numeric objects. Coordinates are
 /// normalized so the result always has lower bounds in `min_x`/`min_y` and
-/// upper bounds in `max_x`/`max_y`. Non-array inputs raise `RectangleExpected`;
-/// malformed numeric entries raise `BadRectangle`.
+/// upper bounds in `max_x`/`max_y`. Non-array inputs raise `PdfError::RectangleExpected`;
+/// malformed numeric entries raise `PdfError::BadRectangle`.
 pub fn PdfDocument::parse_rectangle(
   self : PdfDocument,
   object : PdfObject,
@@ -516,10 +516,10 @@ pub fn PdfDocument::parse_rectangle(
             max_x: double_max(x0, x1),
             max_y: double_max(y0, y1),
           }
-        _ => raise BadRectangle
+        _ => raise PdfError::BadRectangle
       }
     }
-    _ => raise RectangleExpected
+    _ => raise PdfError::RectangleExpected
   }
 }
 
@@ -629,7 +629,7 @@ pub fn PdfDocument::transform_quadpoints(
 ///
 /// If `key` is absent, the identity matrix is returned. Present values must be
 /// arrays of six numbers in PDF matrix order `[a b c d e f]`; malformed arrays
-/// raise `MatrixMalformed`, and non-numeric entries raise `NumberExpected`.
+/// raise `PdfError::MatrixMalformed`, and non-numeric entries raise `PdfError::NumberExpected`.
 pub fn PdfDocument::parse_matrix(
   self : PdfDocument,
   key : PdfName,
@@ -646,7 +646,7 @@ pub fn PdfDocument::parse_matrix(
         e: self.get_number(values[4]),
         f: self.get_number(values[5]),
       }
-    _ => raise MatrixMalformed
+    _ => raise PdfError::MatrixMalformed
   }
 }
 

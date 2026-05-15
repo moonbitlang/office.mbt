@@ -23,7 +23,7 @@ fn pdf_page_rest_entries(
       }
       output
     }
-    _ => raise DictionaryExpected
+    _ => raise PdfError::DictionaryExpected
   }
 }
 
@@ -40,7 +40,7 @@ fn pdf_page_rest_object_from_page(page : PdfObject) -> PdfObject raise PdfError 
       }
       PdfDictionary(rest)
     }
-    _ => raise DictionaryExpected
+    _ => raise PdfError::DictionaryExpected
   }
 }
 
@@ -207,7 +207,7 @@ fn pdf_page_root_entries_without_catalog_keys(
       }
       output
     }
-    _ => raise DictionaryExpected
+    _ => raise PdfError::DictionaryExpected
   }
 }
 
@@ -285,12 +285,12 @@ fn PdfDocument::pdf_page_direct_child(
     PdfIndirect(number) => {
       let child = self.lookup_object_or_null(number)
       if child == PdfNull {
-        raise PageTreeExpected
+        raise PdfError::PageTreeExpected
       }
       child
     }
     PdfDictionary(_) => kid
-    _ => raise PageTreeExpected
+    _ => raise PdfError::PageTreeExpected
   }
 }
 
@@ -337,7 +337,7 @@ fn PdfDocument::pdf_pages_of_branch(
       }
       pages
     }
-    _ => raise PageTreeExpected
+    _ => raise PdfError::PageTreeExpected
   }
 }
 
@@ -372,7 +372,7 @@ fn PdfDocument::pdf_page_find_inherited_attribute(
   depth : Int,
 ) -> PdfObject? raise PdfError {
   if depth > 10000 {
-    raise PageTreeExpected
+    raise PdfError::PageTreeExpected
   }
   match self.lookup_direct(key, object) {
     Some(_) => None
@@ -536,7 +536,7 @@ fn PdfDocument::pdf_pages_of_node(
   depth : Int,
 ) -> Array[PdfPage] raise PdfError {
   if depth > 10000 {
-    raise PageTreeExpected
+    raise PdfError::PageTreeExpected
   }
   match self.lookup_direct(pdf_page_type_key(), node) {
     Some(PdfNameObject(name)) if name == pdf_page_type_pages() =>

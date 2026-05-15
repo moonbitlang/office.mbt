@@ -3,7 +3,7 @@ fn pdf_merge_max_version(
   documents : ArrayView[PdfDocument],
 ) -> (Int, Int) raise PdfError {
   if documents.length() == 0 {
-    raise PageTreeExpected
+    raise PdfError::PageTreeExpected
   }
   let mut major = documents[0].major
   let mut minor = documents[0].minor
@@ -1647,7 +1647,7 @@ pub fn pdf_merge_documents(
   remove_duplicate_fonts? : Bool = false,
 ) -> PdfDocument raise PdfError {
   if documents.length() == 0 || documents.length() != ranges.length() {
-    raise PageTreeExpected
+    raise PdfError::PageTreeExpected
   }
   let page_labels = if retain_numbering {
     pdf_page_label_merge(documents, ranges)
@@ -1884,7 +1884,7 @@ pub fn pdf_merge_pdfs(
   add_toplevel_document? : Bool = false,
 ) -> PdfDocument raise PdfError {
   if names.length() != documents.length() {
-    raise PageTreeExpected
+    raise PdfError::PageTreeExpected
   }
   pdf_merge_documents(
     documents,

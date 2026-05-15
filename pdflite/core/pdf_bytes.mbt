@@ -1,4 +1,15 @@
 ///|
+/// Object encryption algorithm used by the PDF security handlers.
+///
+/// ARC4 carries key length in bits and security-handler revision. AESV3 carries
+/// whether the ISO/PDF 2.0 hash variant is in use.
+pub(all) enum PdfCryptType {
+  PdfCryptARC4(Int, Int)
+  PdfCryptAESV2
+  PdfCryptAESV3(Bool)
+} derive(Debug, Eq, ToJson)
+
+///|
 /// Error variants raised by pdflite parsing, writing, filtering, text, and
 /// encryption APIs.
 ///

@@ -83,7 +83,7 @@ test "private object-stream member parser reports missing endstream markers" {
     reader_wbtest_bytes("<< >>\nstream\nHi"),
   )
   guard result is Err(PdfError::ParseEndStreamExpected) else {
-    fail("expected ParseEndStreamExpected")
+    fail("expected PdfError::ParseEndStreamExpected")
   }
 }
 
@@ -93,7 +93,7 @@ test "private object-stream member parser rejects non-dictionary streams" {
     reader_wbtest_bytes("7\nstream\nHi\nendstream"),
   )
   guard result is Err(PdfError::ParseSingleObjectExpected) else {
-    fail("expected ParseSingleObjectExpected")
+    fail("expected PdfError::ParseSingleObjectExpected")
   }
 }
 
@@ -147,6 +147,6 @@ test "private reconstructed classic xref reader rejects xref streams" {
     0,
   )
   guard result is Err(PdfError::XRefExpected) else {
-    fail("expected XRefExpected")
+    fail("expected PdfError::XRefExpected")
   }
 }

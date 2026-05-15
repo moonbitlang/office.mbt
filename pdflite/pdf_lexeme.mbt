@@ -298,7 +298,7 @@ pub fn ByteCursor::lex_pdf_number(self : ByteCursor) -> PdfLexeme {
 /// Lex a PDF name object.
 ///
 /// Names start with `/` and keep the slash in the stored bytes. `#xx` hex
-/// escapes are decoded into raw bytes. Invalid escapes raise `InvalidHexEscape`;
+/// escapes are decoded into raw bytes. Invalid escapes raise `PdfError::InvalidHexEscape`;
 /// non-name input returns `LexNone` without consuming it.
 pub fn ByteCursor::lex_pdf_name(self : ByteCursor) -> PdfLexeme raise PdfError {
   if self.peek_byte() != 47 {
@@ -318,7 +318,7 @@ pub fn ByteCursor::lex_pdf_name(self : ByteCursor) -> PdfLexeme raise PdfError {
           let low = self.input_byte()
           match (pdf_hex_value(high), pdf_hex_value(low)) {
             (Some(high), Some(low)) => bytes.push((high * 16 + low).to_byte())
-            _ => raise InvalidHexEscape
+            _ => raise PdfError::InvalidHexEscape
           }
         } else {
           bytes.push(value.to_byte())
@@ -395,7 +395,7 @@ fn ByteCursor::read_pdf_string_escape_into(
     10 => ()
     value if pdf_is_octal_digit_byte(value) =>
       bytes.push(self.read_pdf_octal_escape(value))
-    value if value == pdf_no_more => raise EndOfInput
+    value if value == pdf_no_more => raise PdfError::EndOfInput
     value => bytes.push(value.to_byte())
   }
 }
@@ -406,7 +406,7 @@ fn ByteCursor::read_pdf_string_escape_into(
 /// Literal strings are enclosed in parentheses, may contain balanced nested
 /// parentheses, and support the PDF backslash escapes for control characters,
 /// octal bytes, escaped parentheses, and line continuation. Unterminated strings
-/// raise `EndOfInput`.
+/// raise `PdfError::EndOfInput`.
 pub fn ByteCursor::lex_pdf_literal_string(
   self : ByteCursor,
 ) -> PdfLexeme raise PdfError {
@@ -430,7 +430,7 @@ pub fn ByteCursor::lex_pdf_literal_string(
           }
         }
         92 => self.read_pdf_string_escape_into(bytes)
-        value if value == pdf_no_more => raise EndOfInput
+        value if value == pdf_no_more => raise PdfError::EndOfInput
         value => bytes.push(value.to_byte())
       }
     }
@@ -457,7 +457,7 @@ fn ByteCursor::input_next_pdf_hex_byte(self : ByteCursor) -> Int {
 ///
 /// The opening `<` must not be a dictionary delimiter `<<`. White space inside
 /// the hex string is ignored, odd trailing nibbles are padded in the PDF way,
-/// and invalid hex digits raise `InvalidHexEscape`.
+/// and invalid hex digits raise `PdfError::InvalidHexEscape`.
 pub fn ByteCursor::lex_pdf_hex_string(
   self : ByteCursor,
 ) -> PdfLexeme raise PdfError {
@@ -489,9 +489,9 @@ pub fn ByteCursor::lex_pdf_hex_string(
             (Some(high), low) =>
               match pdf_hex_value(low) {
                 Some(low) => bytes.push((high * 16 + low).to_byte())
-                None => raise InvalidHexEscape
+                None => raise PdfError::InvalidHexEscape
               }
-            _ => raise InvalidHexEscape
+            _ => raise PdfError::InvalidHexEscape
           }
         }
       }

@@ -413,7 +413,7 @@ test "PdfDocument colour_space_components rejects malformed spaces" {
     PdfNameObject(space_name_for_test("/Pattern")),
   )
   guard pattern is Err(@pdflite.PdfError::ColourSpaceExpected) else {
-    fail("expected ColourSpaceExpected for pattern")
+    fail("expected PdfError::ColourSpaceExpected for pattern")
   }
   let bad_icc : Result[Int, Error] = try? doc.colour_space_components(
     resources,
@@ -426,14 +426,14 @@ test "PdfDocument colour_space_components rejects malformed spaces" {
     ]),
   )
   guard bad_icc is Err(@pdflite.PdfError::ColourSpaceExpected) else {
-    fail("expected ColourSpaceExpected for bad ICCBased")
+    fail("expected PdfError::ColourSpaceExpected for bad ICCBased")
   }
   let malformed : Result[Int, Error] = try? doc.colour_space_components(
     resources,
     PdfArray([PdfInteger(1), PdfInteger(2)]),
   )
   guard malformed is Err(@pdflite.PdfError::ColourSpaceExpected) else {
-    fail("expected ColourSpaceExpected for malformed color space")
+    fail("expected PdfError::ColourSpaceExpected for malformed color space")
   }
 }
 
@@ -854,7 +854,7 @@ test "PdfDocument read_colour_space reports malformed Indexed data" {
     ]),
   )
   guard bad_hival is Err(@pdflite.PdfError::NumberExpected) else {
-    fail("expected NumberExpected for Indexed hival")
+    fail("expected PdfError::NumberExpected for Indexed hival")
   }
   let short_table : Result[@pdflite.PdfColourSpace?, Error] = try? doc.read_colour_space(
     @pdflite.pdf_dictionary([]),
@@ -866,7 +866,7 @@ test "PdfDocument read_colour_space reports malformed Indexed data" {
     ]),
   )
   guard short_table is Err(@pdflite.PdfError::EndOfInput) else {
-    fail("expected EndOfInput for short Indexed table")
+    fail("expected PdfError::EndOfInput for short Indexed table")
   }
   let negative_hival : Result[@pdflite.PdfColourSpace?, Error] = try? doc.read_colour_space(
     @pdflite.pdf_dictionary([]),
@@ -878,7 +878,7 @@ test "PdfDocument read_colour_space reports malformed Indexed data" {
     ]),
   )
   guard negative_hival is Err(@pdflite.PdfError::InvalidReadLength(-1)) else {
-    fail("expected InvalidReadLength for negative Indexed hival")
+    fail("expected PdfError::InvalidReadLength for negative Indexed hival")
   }
 }
 

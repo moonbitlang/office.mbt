@@ -48,7 +48,7 @@ test "ByteCursor read_jpeg_data reports missing JPEG EOI marker" {
   )
   let result : Result[@pdflite.PdfBytes, Error] = try? cursor.read_jpeg_data()
   guard result is Err(@pdflite.PdfError::EndOfInput) else {
-    fail("expected EndOfInput for missing JPEG EOI marker")
+    fail("expected PdfError::EndOfInput for missing JPEG EOI marker")
   }
   @test.assert_eq(cursor.position(), cursor.length())
 }

@@ -31,7 +31,7 @@ test "BitStream reads 32-bit values into Int64" {
   @test.assert_eq(stream.bits_read(), 32)
   let bad_count : Result[Int64, Error] = try? stream.get_value_int64(33)
   guard bad_count is Err(@pdflite.PdfError::InvalidBitCount(33)) else {
-    fail("expected InvalidBitCount for oversized 32-bit read")
+    fail("expected PdfError::InvalidBitCount for oversized 32-bit read")
   }
 }
 
@@ -63,11 +63,11 @@ test "BitStream reports checked read errors" {
   @test.assert_eq(try! stream.get_value_int(8), 0)
   let eof : Result[Bool, Error] = try? stream.get_bit()
   guard eof is Err(@pdflite.PdfError::EndOfInput) else {
-    fail("expected EndOfInput after all bits are consumed")
+    fail("expected PdfError::EndOfInput after all bits are consumed")
   }
   let bad_count : Result[Int, Error] = try? stream.get_value_int(32)
   guard bad_count is Err(@pdflite.PdfError::InvalidBitCount(32)) else {
-    fail("expected InvalidBitCount for oversized read width")
+    fail("expected PdfError::InvalidBitCount for oversized read width")
   }
 }
 
@@ -106,7 +106,7 @@ test "BitWriter writes 32-bit Int64 values" {
   ])
   let bad_count : Result[Unit, Error] = try? writer.put_value_int64(33, 0)
   guard bad_count is Err(@pdflite.PdfError::InvalidBitCount(33)) else {
-    fail("expected InvalidBitCount for oversized 32-bit write")
+    fail("expected PdfError::InvalidBitCount for oversized 32-bit write")
   }
 }
 
@@ -157,10 +157,10 @@ test "BitWriter reports checked write errors" {
   let writer = @pdflite.bit_writer_new()
   let bad_bit : Result[Unit, Error] = try? writer.put_bit(2)
   guard bad_bit is Err(@pdflite.PdfError::InvalidBit(2)) else {
-    fail("expected InvalidBit for values outside 0 or 1")
+    fail("expected PdfError::InvalidBit for values outside 0 or 1")
   }
   let bad_count : Result[Unit, Error] = try? writer.put_value_int(32, 0)
   guard bad_count is Err(@pdflite.PdfError::InvalidBitCount(32)) else {
-    fail("expected InvalidBitCount for oversized write width")
+    fail("expected PdfError::InvalidBitCount for oversized write width")
   }
 }

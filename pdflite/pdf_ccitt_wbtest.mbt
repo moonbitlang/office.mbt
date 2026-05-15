@@ -22,7 +22,7 @@ fn assert_ccitt_decodeparms_expected(
   result : Result[PdfCCITTParams, Error],
 ) -> Unit raise {
   guard result is Err(PdfError::CCITTDecodeParmsExpected) else {
-    fail("expected CCITTDecodeParmsExpected")
+    fail("expected PdfError::CCITTDecodeParmsExpected")
   }
 }
 
@@ -92,7 +92,7 @@ test "CCITT Group 3 covers alignment EOL padding EOF and invalid params" {
     2,
     0,
   )
-  guard bad_output is Err(InvalidCCITTData) else {
+  guard bad_output is Err(PdfError::InvalidCCITTData) else {
     fail("expected normalized invalid CCITT output")
   }
 }
@@ -256,7 +256,7 @@ test "CCITT Group 4 covers pass vertical horizontal black EOFB and unsupported m
     2,
     0,
   )
-  guard bad_output is Err(InvalidCCITTData) else {
+  guard bad_output is Err(PdfError::InvalidCCITTData) else {
     fail("expected normalized invalid CCITT Group 4 output")
   }
 }

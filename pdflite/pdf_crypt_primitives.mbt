@@ -1,15 +1,4 @@
 ///|
-/// Object encryption algorithm used by the PDF security handlers.
-///
-/// ARC4 carries key length in bits and security-handler revision. AESV3 carries
-/// whether the ISO/PDF 2.0 hash variant is in use.
-enum PdfCryptType {
-  PdfCryptARC4(Int, Int)
-  PdfCryptAESV2
-  PdfCryptAESV3(Bool)
-} derive(Debug, Eq, ToJson)
-
-///|
 fn pdf_crypto_low_byte(value : Int, shift : Int) -> Byte {
   ((value >> shift) & 0xff).to_byte()
 }
@@ -25,9 +14,9 @@ fn pdf_arc4_swap(state : Array[Int], left : Int, right : Int) -> Unit {
 /// Apply ARC4 to `data` with `key`.
 ///
 /// ARC4 is symmetric, so the same function encrypts and decrypts. Empty keys
-/// raise `CryptoKeyExpected`.
+/// raise `PdfError::CryptoKeyExpected`.
 fn pdf_arc4_crypt(key : BytesView, data : BytesView) -> PdfBytes raise PdfError {
-  guard key.length() > 0 else { raise CryptoKeyExpected }
+  guard key.length() > 0 else { raise PdfError::CryptoKeyExpected }
   let state : Array[Int] = []
   for value in 0..<256 {
     state.push(value)
@@ -358,13 +347,15 @@ fn pdf_aes_valid_key_length(length : Int) -> Bool {
 
 ///|
 fn pdf_aes_check_key(key : BytesView) -> Unit raise PdfError {
-  guard pdf_aes_valid_key_length(key.length()) else { raise CryptoKeyExpected }
+  guard pdf_aes_valid_key_length(key.length()) else {
+    raise PdfError::CryptoKeyExpected
+  }
 }
 
 ///|
 fn pdf_aes_block(data : BytesView) -> FixedArray[Byte] raise PdfError {
   guard data.length() == 16 else {
-    raise InvalidCryptoDataLength(data.length())
+    raise PdfError::InvalidCryptoDataLength(data.length())
   }
   pdf_crypto_fixed_array(data)
 }
@@ -435,7 +426,7 @@ fn pdf_aes_append_block(output : Array[Byte], block : FixedArray[Byte]) -> Unit 
 /// Decrypt AES-CBC data whose first block is the IV.
 ///
 /// Data shorter than or equal to one block decrypts to empty bytes. Block
-/// lengths that are not multiples of 16 raise `InvalidCryptoDataLength`.
+/// lengths that are not multiples of 16 raise `PdfError::InvalidCryptoDataLength`.
 fn pdf_aes_cbc_decrypt(
   key : BytesView,
   data : BytesView,
@@ -443,7 +434,7 @@ fn pdf_aes_cbc_decrypt(
 ) -> PdfBytes raise PdfError {
   guard data.length() > 16 else { return Bytes::new(0) }
   guard data.length() % 16 == 0 else {
-    raise InvalidCryptoDataLength(data.length())
+    raise PdfError::InvalidCryptoDataLength(data.length())
   }
   let cooked_key = pdf_aes_decrypt_key(key)
   let output : Array[Byte] = []
@@ -533,7 +524,7 @@ fn pdf_aes_ecb_decrypt(
 ) -> PdfBytes raise PdfError {
   guard data.length() > 0 else { return Bytes::new(0) }
   guard data.length() % 16 == 0 else {
-    raise InvalidCryptoDataLength(data.length())
+    raise PdfError::InvalidCryptoDataLength(data.length())
   }
   let cooked_key = pdf_aes_decrypt_key(key)
   let output : Array[Byte] = []
@@ -565,7 +556,7 @@ fn pdf_aes_ecb_encrypt(
   data : BytesView,
 ) -> PdfBytes raise PdfError {
   guard data.length() % 16 == 0 else {
-    raise InvalidCryptoDataLength(data.length())
+    raise PdfError::InvalidCryptoDataLength(data.length())
   }
   guard data.length() > 0 else { return Bytes::new(0) }
   let cooked_key = pdf_aes_encrypt_key(key)

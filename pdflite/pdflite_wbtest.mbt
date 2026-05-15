@@ -173,14 +173,14 @@ test "writer parses signed integer fragments for scientific reals" {
     0,
   )
   guard missing is Err(PdfError::NumberExpected) else {
-    fail("expected NumberExpected")
+    fail("expected PdfError::NumberExpected")
   }
   let malformed : Result[Int, Error] = try? pdf_writer_parse_signed_int(
     @ascii.encode("12a"),
     0,
   )
   guard malformed is Err(PdfError::NumberExpected) else {
-    fail("expected NumberExpected")
+    fail("expected PdfError::NumberExpected")
   }
 }
 
@@ -286,7 +286,7 @@ test "writer expands scientific real edge forms" {
     2,
   )
   guard malformed is Err(PdfError::NumberExpected) else {
-    fail("expected NumberExpected")
+    fail("expected PdfError::NumberExpected")
   }
 }
 
@@ -331,7 +331,7 @@ test "writer rounds plain significant real helper edge forms" {
     @ascii.encode("1.2.3"),
   )
   guard double_dot is Err(PdfError::NumberExpected) else {
-    fail("expected NumberExpected")
+    fail("expected PdfError::NumberExpected")
   }
 
   let bad_digit : Result[Unit, Error] = try? pdf_writer_push_plain_significant_real(
@@ -339,7 +339,7 @@ test "writer rounds plain significant real helper edge forms" {
     @ascii.encode("1a"),
   )
   guard bad_digit is Err(PdfError::NumberExpected) else {
-    fail("expected NumberExpected")
+    fail("expected PdfError::NumberExpected")
   }
 }
 
@@ -358,7 +358,7 @@ test "incremental writer rejects changed deferred objects" {
     original, changed,
   )
   guard result is Err(PdfError::ParsedObjectExpected) else {
-    fail("expected ParsedObjectExpected")
+    fail("expected PdfError::ParsedObjectExpected")
   }
 }
 
@@ -370,7 +370,7 @@ test "private xref stream helpers cover malformed and deferred entries" {
     PdfDictionary([(pdf_reader_xrefstm_name(), PdfInteger(-1))]),
   )
   guard negative_xrefstm is Err(PdfError::XRefExpected) else {
-    fail("expected XRefExpected")
+    fail("expected PdfError::XRefExpected")
   }
 
   let malformed_array_value : Result[Array[Int]?, Error] = try? pdf_xref_stream_int_array(
@@ -378,7 +378,7 @@ test "private xref stream helpers cover malformed and deferred entries" {
     key_w,
   )
   guard malformed_array_value is Err(PdfError::XRefEntryExpected) else {
-    fail("expected XRefEntryExpected")
+    fail("expected PdfError::XRefEntryExpected")
   }
 
   let malformed_non_array : Result[Array[Int]?, Error] = try? pdf_xref_stream_int_array(
@@ -386,35 +386,35 @@ test "private xref stream helpers cover malformed and deferred entries" {
     key_w,
   )
   guard malformed_non_array is Err(PdfError::XRefEntryExpected) else {
-    fail("expected XRefEntryExpected")
+    fail("expected PdfError::XRefEntryExpected")
   }
 
   let malformed_widths : Result[(Int, Int, Int), Error] = try? pdf_xref_stream_widths(
     PdfDictionary([(key_w, PdfArray([PdfInteger(1), PdfInteger(2)]))]),
   )
   guard malformed_widths is Err(PdfError::XRefEntryExpected) else {
-    fail("expected XRefEntryExpected")
+    fail("expected PdfError::XRefEntryExpected")
   }
 
   let odd_index : Result[Array[(Int, Int)], Error] = try? pdf_xref_stream_index_pairs(
     PdfDictionary([(key_index, PdfArray([PdfInteger(0)]))]),
   )
   guard odd_index is Err(PdfError::XRefEntryExpected) else {
-    fail("expected XRefEntryExpected")
+    fail("expected PdfError::XRefEntryExpected")
   }
 
   let negative_index : Result[Array[(Int, Int)], Error] = try? pdf_xref_stream_index_pairs(
     PdfDictionary([(key_index, PdfArray([PdfInteger(0), PdfInteger(-1)]))]),
   )
   guard negative_index is Err(PdfError::XRefEntryExpected) else {
-    fail("expected XRefEntryExpected")
+    fail("expected PdfError::XRefEntryExpected")
   }
 
   let missing_size : Result[Array[(Int, Int)], Error] = try? pdf_xref_stream_index_pairs(
     PdfDictionary([]),
   )
   guard missing_size is Err(PdfError::XRefEntryExpected) else {
-    fail("expected XRefEntryExpected")
+    fail("expected PdfError::XRefEntryExpected")
   }
 
   @test.assert_eq(
@@ -427,7 +427,7 @@ test "private xref stream helpers cover malformed and deferred entries" {
     2,
   )
   guard short_field is Err(PdfError::XRefEntryExpected) else {
-    fail("expected XRefEntryExpected")
+    fail("expected PdfError::XRefEntryExpected")
   }
 
   let default_kind_entries = try! pdf_xref_stream_entries(
@@ -474,7 +474,7 @@ test "private object stream helpers cover malformed object streams" {
     key_n,
   )
   guard missing_required is Err(PdfError::XRefEntryExpected) else {
-    fail("expected XRefEntryExpected")
+    fail("expected PdfError::XRefEntryExpected")
   }
 
   let bad_first : Result[Array[(Int, Int)], Error] = try? pdf_object_stream_number_offsets(
@@ -483,7 +483,7 @@ test "private object stream helpers cover malformed object streams" {
     1,
   )
   guard bad_first is Err(PdfError::StreamDataExpected) else {
-    fail("expected StreamDataExpected")
+    fail("expected PdfError::StreamDataExpected")
   }
 
   let short_header : Result[Array[(Int, Int)], Error] = try? pdf_object_stream_number_offsets(
@@ -492,7 +492,7 @@ test "private object stream helpers cover malformed object streams" {
     1,
   )
   guard short_header is Err(PdfError::XRefEntryExpected) else {
-    fail("expected XRefEntryExpected")
+    fail("expected PdfError::XRefEntryExpected")
   }
 
   let malformed_pair : Result[Array[(Int, Int)], Error] = try? pdf_object_stream_number_offsets(
@@ -501,7 +501,7 @@ test "private object stream helpers cover malformed object streams" {
     1,
   )
   guard malformed_pair is Err(PdfError::XRefEntryExpected) else {
-    fail("expected XRefEntryExpected")
+    fail("expected PdfError::XRefEntryExpected")
   }
 
   @test.assert_eq(
@@ -539,7 +539,7 @@ test "private object stream helpers cover malformed object streams" {
     },
   )
   guard bad_index is Err(PdfError::XRefEntryExpected) else {
-    fail("expected XRefEntryExpected")
+    fail("expected PdfError::XRefEntryExpected")
   }
   let recovered_doc = pdf_document_empty()
   recovered_doc.add_object_given_number(7, valid_stream)
@@ -672,14 +672,14 @@ test "private object stream helpers cover malformed object streams" {
     8,
   )
   guard wrong_type is Err(PdfError::XRefEntryExpected) else {
-    fail("expected XRefEntryExpected")
+    fail("expected PdfError::XRefEntryExpected")
   }
 
   let missing_stream : Result[PdfObjectStreamContext, Error] = try? doc.read_object_stream_context(
     99,
   )
   guard missing_stream is Err(PdfError::XRefEntryExpected) else {
-    fail("expected XRefEntryExpected")
+    fail("expected PdfError::XRefEntryExpected")
   }
 
   let missing_encrypted_stream : Result[(PdfObjectStreamContext, Bool), Error] = try? doc.read_object_stream_context_with_passwords(
@@ -688,7 +688,7 @@ test "private object stream helpers cover malformed object streams" {
     None,
   )
   guard missing_encrypted_stream is Err(PdfError::XRefEntryExpected) else {
-    fail("expected XRefEntryExpected")
+    fail("expected PdfError::XRefEntryExpected")
   }
 
   let bad_offset_doc = pdf_document_empty()
@@ -711,7 +711,7 @@ test "private object stream helpers cover malformed object streams" {
     },
   )
   guard bad_offset is Err(PdfError::StreamDataExpected) else {
-    fail("expected StreamDataExpected")
+    fail("expected PdfError::StreamDataExpected")
   }
 }
 
@@ -722,21 +722,21 @@ test "private stream data materialization reports invalid deferred slices" {
     StreamToGet(stream_to_get(cursor, -1, 1)),
   )
   guard bad_position is Err(PdfError::InvalidCursorPosition(-1)) else {
-    fail("expected InvalidCursorPosition")
+    fail("expected PdfError::InvalidCursorPosition")
   }
 
   let bad_length : Result[BytesView, Error] = try? pdf_stream_data_view(
     StreamToGet(stream_to_get(cursor, 0, -1)),
   )
   guard bad_length is Err(PdfError::InvalidReadLength(-1)) else {
-    fail("expected InvalidReadLength")
+    fail("expected PdfError::InvalidReadLength")
   }
 
   let too_long : Result[BytesView, Error] = try? pdf_stream_data_view(
     StreamToGet(stream_to_get(cursor, 2, 2)),
   )
   guard too_long is Err(PdfError::EndOfInput) else {
-    fail("expected EndOfInput")
+    fail("expected PdfError::EndOfInput")
   }
 }
 
@@ -753,7 +753,7 @@ test "pdf_write_document rejects deferred object states" {
   doc.objects.set_entry(1, pdf_object_entry(ObjectToParse))
   let result : Result[PdfBytes, Error] = try? pdf_write_document(doc)
   guard result is Err(PdfError::ParsedObjectExpected) else {
-    fail("expected ParsedObjectExpected")
+    fail("expected PdfError::ParsedObjectExpected")
   }
 }
 
@@ -792,7 +792,7 @@ test "parser prefix helper reports malformed indirect prefixes" {
     ],
   )
   guard too_short is Err(PdfError::ParseIndirectObjectExpected) else {
-    fail("expected ParseIndirectObjectExpected")
+    fail("expected PdfError::ParseIndirectObjectExpected")
   }
   let bad_header : Result[PdfParsedIndirectObject, Error] = try? pdf_parse_indirect_object_prefix_lexemes([
       LexInt(1),
@@ -801,7 +801,7 @@ test "parser prefix helper reports malformed indirect prefixes" {
     ],
   )
   guard bad_header is Err(PdfError::ParseIndirectObjectExpected) else {
-    fail("expected ParseIndirectObjectExpected")
+    fail("expected PdfError::ParseIndirectObjectExpected")
   }
   @test.assert_eq(
     try! pdf_parse_indirect_object_prefix_lexemes([
@@ -819,7 +819,7 @@ test "private reader byte-view helpers cover boundary cases" {
   let cursor = byte_cursor_of_bytes(@ascii.encode("abc"))
   let bad_seek : Result[Unit, Error] = try? cursor.seek_pdf_absolute(-1)
   guard bad_seek is Err(PdfError::InvalidCursorPosition(-1)) else {
-    fail("expected InvalidCursorPosition")
+    fail("expected PdfError::InvalidCursorPosition")
   }
 
   let view = @ascii.encode("abc")[:]
@@ -833,19 +833,19 @@ test "private reader byte-view helpers cover boundary cases" {
     Bytes::new(0),
   )
   guard empty_number is Err(PdfError::NumberExpected) else {
-    fail("expected NumberExpected")
+    fail("expected PdfError::NumberExpected")
   }
   let bad_number : Result[Int, Error] = try? pdf_parse_ascii_int_view(
     @ascii.encode("12a"),
   )
   guard bad_number is Err(PdfError::NumberExpected) else {
-    fail("expected NumberExpected")
+    fail("expected PdfError::NumberExpected")
   }
   let overflow_number : Result[Int, Error] = try? pdf_parse_ascii_int_view(
     @ascii.encode("2147483648"),
   )
   guard overflow_number is Err(PdfError::NumberExpected) else {
-    fail("expected NumberExpected")
+    fail("expected PdfError::NumberExpected")
   }
   @test.assert_eq(
     try! pdf_parse_ascii_int_view(@ascii.encode("2147483647")),
@@ -862,13 +862,13 @@ test "private reader xref helpers report malformed inputs" {
     Bytes::new(0),
   )
   guard empty_token is Err(PdfError::XRefEntryExpected) else {
-    fail("expected XRefEntryExpected")
+    fail("expected PdfError::XRefEntryExpected")
   }
   let bad_token : Result[Bool, Error] = try? pdf_xref_token_in_use(
     @ascii.encode("q"),
   )
   guard bad_token is Err(PdfError::XRefEntryExpected) else {
-    fail("expected XRefEntryExpected")
+    fail("expected PdfError::XRefEntryExpected")
   }
 
   let empty_xrefs : Array[PdfClassicXRefEntry] = []
@@ -915,13 +915,13 @@ test "private reader xref helpers report malformed inputs" {
     empty_xrefs,
   )
   guard no_object_result is Err(PdfError::ParseIndirectObjectExpected) else {
-    fail("expected ParseIndirectObjectExpected")
+    fail("expected PdfError::ParseIndirectObjectExpected")
   }
 
   let no_plain_object = byte_cursor_of_bytes(@ascii.encode("notobject"))
   let no_plain_object_result : Result[PdfParsedIndirectObject, Error] = try? no_plain_object.read_plain_indirect_object_at_current()
   guard no_plain_object_result is Err(PdfError::ParseIndirectObjectExpected) else {
-    fail("expected ParseIndirectObjectExpected")
+    fail("expected PdfError::ParseIndirectObjectExpected")
   }
   @test.assert_eq(
     try! byte_cursor_of_bytes(@ascii.encode("2 0 obj\n42\n")).read_plain_indirect_object_at_current(),
@@ -943,7 +943,7 @@ test "private reader xref helpers report malformed inputs" {
   let empty_prefix = byte_cursor_of_bytes(Bytes::new(0))
   let empty_prefix_result : Result[PdfParsedIndirectObject, Error] = try? empty_prefix.read_reconstructed_indirect_prefix_at_current()
   guard empty_prefix_result is Err(PdfError::ParseIndirectObjectExpected) else {
-    fail("expected ParseIndirectObjectExpected")
+    fail("expected PdfError::ParseIndirectObjectExpected")
   }
   let incomplete_scan = byte_cursor_of_bytes(@ascii.encode("3 0 obj\n42\n"))
   let (incomplete_candidate, incomplete_next) = try! incomplete_scan.read_reconstructed_indirect_scan_candidate_at_current(
@@ -1060,16 +1060,16 @@ test "private reader xref helpers report malformed inputs" {
     },
   )
   guard malformed_stream_result is Err(PdfError::ParseEndStreamExpected) else {
-    fail("expected ParseEndStreamExpected")
+    fail("expected PdfError::ParseEndStreamExpected")
   }
 
   let mismatch = byte_cursor_of_bytes(@ascii.encode("abc"))
   let mismatch_result : Result[Unit, Error] = try? mismatch.consume_pdf_ascii(
     [120],
-    XRefExpected,
+    PdfError::XRefExpected,
   )
   guard mismatch_result is Err(PdfError::XRefExpected) else {
-    fail("expected XRefExpected")
+    fail("expected PdfError::XRefExpected")
   }
 }
 
@@ -1128,7 +1128,9 @@ test "private password reconstruction xref metadata probe covers repair boundari
   let cyclic = try? pdf_reader_validate_xref_metadata_for_reconstruction(
     wbtest_cyclic_prev_xref_pdf(),
   )
-  guard cyclic is Err(XRefExpected) else { fail("expected cyclic Prev guard") }
+  guard cyclic is Err(PdfError::XRefExpected) else {
+    fail("expected cyclic Prev guard")
+  }
 }
 
 ///|
@@ -1140,7 +1142,7 @@ test "page-label private helpers preserve non-uppercase bytes and root guards" {
   let doc = pdf_document_empty()
   let result : Result[Bool, Error] = try? doc.pdf_page_label_has_labels()
   guard result is Err(PdfError::RootExpected) else {
-    fail("expected RootExpected")
+    fail("expected PdfError::RootExpected")
   }
 }
 
@@ -1150,7 +1152,9 @@ test "private date two-digit parser rejects short input" {
     @ascii.encode("1"),
     0,
   )
-  guard result is Err(PdfError::BadDate) else { fail("expected BadDate") }
+  guard result is Err(PdfError::BadDate) else {
+    fail("expected PdfError::BadDate")
+  }
 }
 
 ///|
@@ -1159,12 +1163,12 @@ test "private annotation and bookmark guards report malformed roots" {
     PdfInteger(1),
   )
   guard annotation_rest is Err(PdfError::DictionaryExpected) else {
-    fail("expected DictionaryExpected")
+    fail("expected PdfError::DictionaryExpected")
   }
   let doc = pdf_document_empty()
   let outlines : Result[Bool, Error] = try? doc.pdf_bookmark_has_outlines()
   guard outlines is Err(PdfError::RootExpected) else {
-    fail("expected RootExpected")
+    fail("expected PdfError::RootExpected")
   }
   let output : Array[PdfBookmark] = []
   let recursion : Result[Unit, Error] = try? doc.pdf_bookmark_traverse_siblings(
@@ -1175,7 +1179,7 @@ test "private annotation and bookmark guards report malformed roots" {
     10001,
   )
   guard recursion is Err(PdfError::PageTreeExpected) else {
-    fail("expected PageTreeExpected")
+    fail("expected PdfError::PageTreeExpected")
   }
 }
 
@@ -1306,7 +1310,7 @@ test "private content helpers cover malformed operand fallbacks" {
     byte_cursor_of_bytes(Bytes::new(0)),
   )
   guard empty_object is Err(PdfError::ParseObjectExpected) else {
-    fail("expected ParseObjectExpected")
+    fail("expected PdfError::ParseObjectExpected")
   }
   @test.assert_eq(
     try! pdf_content_read_inline_image_data(
@@ -1372,14 +1376,14 @@ test "private content helpers cover malformed operand fallbacks" {
     2,
   )
   guard short_sized_inline is Err(PdfError::ParseEndStreamExpected) else {
-    fail("expected ParseEndStreamExpected")
+    fail("expected PdfError::ParseEndStreamExpected")
   }
   let bad_sized_length : Result[PdfBytes, Error] = try? pdf_content_read_sized_inline_image_data(
     byte_cursor_of_bytes(@ascii.encode(" EI")),
     -1,
   )
   guard bad_sized_length is Err(PdfError::InvalidReadLength(-1)) else {
-    fail("expected InvalidReadLength")
+    fail("expected PdfError::InvalidReadLength")
   }
   let jpeg_data = try! pdf_bytes_of_int_array([0xFF, 0xD8, 0xFF, 0xD9])
   @test.assert_eq(
@@ -1675,7 +1679,7 @@ test "private content helpers cover malformed operand fallbacks" {
     byte_cursor_of_bytes(try! pdf_bytes_of_int_array([253, 90])),
   )
   guard missing_run_length_eod is Err(PdfError::ParseEndStreamExpected) else {
-    fail("expected ParseEndStreamExpected")
+    fail("expected PdfError::ParseEndStreamExpected")
   }
   let missing_encoded_run_length_eod : Result[PdfBytes, Error] = try? pdf_content_read_run_length_inline_image_data(
     byte_cursor_of_bytes(try! pdf_bytes_of_int_array([253, 90])),
@@ -1745,7 +1749,7 @@ test "private content helpers cover malformed operand fallbacks" {
     ),
   )
   guard bad_dct_end is Err(PdfError::ParseEndStreamExpected) else {
-    fail("expected ParseEndStreamExpected")
+    fail("expected PdfError::ParseEndStreamExpected")
   }
   let bad_inline : Result[PdfContentOp, Error] = try? pdf_content_read_inline_image(
     byte_cursor_of_bytes(@ascii.encode("1 ID data EI")),
@@ -1753,7 +1757,7 @@ test "private content helpers cover malformed operand fallbacks" {
     PdfDictionary([]),
   )
   guard bad_inline is Err(PdfError::ContentOperandExpected) else {
-    fail("expected ContentOperandExpected")
+    fail("expected PdfError::ContentOperandExpected")
   }
 
   @test.assert_eq(pdf_content_operand_number([], 0), None)
@@ -1792,7 +1796,7 @@ test "private content helpers cover malformed operand fallbacks" {
     @ascii.encode("d"),
   )
   guard bad_dash is Err(PdfError::NumberExpected) else {
-    fail("expected NumberExpected")
+    fail("expected PdfError::NumberExpected")
   }
   wbtest_assert_known_content_none("i", bad_number)
   wbtest_assert_known_content_none("cm", [
@@ -1928,7 +1932,7 @@ test "private codec dictionary and predictor guards report malformed inputs" {
     pdf_filter_key(),
   )
   guard bad_filter_result is Err(PdfError::FilterExpected) else {
-    fail("expected FilterExpected")
+    fail("expected PdfError::FilterExpected")
   }
   let bad_decodeparms = PdfDictionary([(pdf_decodeparms_key(), PdfInteger(1))])
   let bad_decodeparms_result : Result[PdfObject, Error] = try? pdf_remove_first_decodeparms_entry(
@@ -1936,11 +1940,11 @@ test "private codec dictionary and predictor guards report malformed inputs" {
     pdf_decodeparms_key(),
   )
   guard bad_decodeparms_result is Err(PdfError::FilterExpected) else {
-    fail("expected FilterExpected")
+    fail("expected PdfError::FilterExpected")
   }
   let bad_bpp : Result[Int, Error] = try? pdf_predictor_bytes_per_pixel(0, 8)
   guard bad_bpp is Err(PdfError::PredictorExpected) else {
-    fail("expected PredictorExpected")
+    fail("expected PdfError::PredictorExpected")
   }
   let bad_png_predictor : Result[Int, Error] = try? pdf_encode_png_predictor_value(
     5,
@@ -1951,7 +1955,7 @@ test "private codec dictionary and predictor guards report malformed inputs" {
     1,
   )
   guard bad_png_predictor is Err(PdfError::PredictorNotSupported(5)) else {
-    fail("expected PredictorNotSupported")
+    fail("expected PdfError::PredictorNotSupported")
   }
 }
 
@@ -1962,7 +1966,7 @@ test "private LZW code expansion rejects malformed tables" {
     32,
   )
   guard bad_next_code is Err(PdfError::InvalidLZWData) else {
-    fail("expected InvalidLZWData")
+    fail("expected PdfError::InvalidLZWData")
   }
 
   let short_prefix = Array::make(4, 0)
@@ -1971,7 +1975,7 @@ test "private LZW code expansion rejects malformed tables" {
     4, short_prefix, short_append, 4,
   )
   guard out_of_range is Err(PdfError::InvalidLZWData) else {
-    fail("expected InvalidLZWData")
+    fail("expected PdfError::InvalidLZWData")
   }
 
   let looping_prefix = Array::make(300, 0)
@@ -1981,7 +1985,7 @@ test "private LZW code expansion rejects malformed tables" {
     256, looping_prefix, looping_append, 300,
   )
   guard bad_chain is Err(PdfError::InvalidLZWData) else {
-    fail("expected InvalidLZWData")
+    fail("expected PdfError::InvalidLZWData")
   }
 
   let negative_prefix = Array::make(300, 0)
@@ -1991,7 +1995,7 @@ test "private LZW code expansion rejects malformed tables" {
     256, negative_prefix, negative_append, 300,
   )
   guard bad_terminal is Err(PdfError::InvalidLZWData) else {
-    fail("expected InvalidLZWData")
+    fail("expected PdfError::InvalidLZWData")
   }
 
   let prefix_encoded = wbtest_lzw_codes([65, 257], 1)
@@ -2031,7 +2035,7 @@ test "private LZW code expansion rejects malformed tables" {
     wbtest_lzw_codes([65, 256], 1),
   )
   guard clear_then_eof is Err(PdfError::InvalidLZWData) else {
-    fail("expected InvalidLZWData")
+    fail("expected PdfError::InvalidLZWData")
   }
   let repeated_previous_encoded = wbtest_lzw_codes([65, 258, 257], 1)
   @test.assert_eq(
@@ -2048,25 +2052,25 @@ test "private LZW code expansion rejects malformed tables" {
     bump_encoded,
   )
   guard bump_result is Err(PdfError::InvalidLZWData) else {
-    fail("expected InvalidLZWData")
+    fail("expected PdfError::InvalidLZWData")
   }
   let bad_forward_code : Result[(PdfBytes, Int), Error] = try? pdf_lzw_decode_view_prefix(
     wbtest_lzw_codes([65, 300], 1),
   )
   guard bad_forward_code is Err(PdfError::InvalidLZWData) else {
-    fail("expected InvalidLZWData")
+    fail("expected PdfError::InvalidLZWData")
   }
   let missing_eod : Result[(PdfBytes, Int), Error] = try? pdf_lzw_decode_view_prefix(
     wbtest_lzw_codes([65], 1),
   )
   guard missing_eod is Err(PdfError::InvalidLZWData) else {
-    fail("expected InvalidLZWData")
+    fail("expected PdfError::InvalidLZWData")
   }
   let empty_prefix : Result[(PdfBytes, Int), Error] = try? pdf_lzw_decode_view_prefix(
     Bytes::new(0),
   )
   guard empty_prefix is Err(PdfError::InvalidLZWData) else {
-    fail("expected InvalidLZWData")
+    fail("expected PdfError::InvalidLZWData")
   }
 }
 
@@ -2104,7 +2108,7 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
   let reader = FlateBitReader::new(Bytes::new(0))
   let negative_bits : Result[UInt, Error] = try? reader.read_bits(-1)
   guard negative_bits is Err(PdfError::InvalidFlateData) else {
-    fail("expected InvalidFlateData")
+    fail("expected PdfError::InvalidFlateData")
   }
   let peek_reader = FlateBitReader::new(
     try! pdf_bytes_of_int_array([0xAC, 0x03])[:],
@@ -2119,34 +2123,34 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
   let exhausted = FlateBitReader::new(Bytes::new(0))
   let missing_byte : Result[UInt, Error] = try? exhausted.read_bits(1)
   guard missing_byte is Err(PdfError::InvalidFlateData) else {
-    fail("expected InvalidFlateData")
+    fail("expected PdfError::InvalidFlateData")
   }
   let bad_length : Result[FlateHuffmanTable, Error] = try? pdf_flate_build_huffman([
       -1,
     ],
   )
   guard bad_length is Err(PdfError::InvalidFlateData) else {
-    fail("expected InvalidFlateData")
+    fail("expected PdfError::InvalidFlateData")
   }
   let empty_table : Result[FlateHuffmanTable, Error] = try? pdf_flate_build_huffman([
       0,
     ],
   )
   guard empty_table is Err(PdfError::InvalidFlateData) else {
-    fail("expected InvalidFlateData")
+    fail("expected PdfError::InvalidFlateData")
   }
   let bad_dynamic_symbol : Result[Unit, Error] = try? pdf_flate_check_dynamic_length_symbol(
     19,
   )
   guard bad_dynamic_symbol is Err(PdfError::InvalidFlateData) else {
-    fail("expected InvalidFlateData")
+    fail("expected PdfError::InvalidFlateData")
   }
   let repeated_lengths = [0]
   let repeated_overflow : Result[Unit, Error] = try? pdf_flate_push_repeated_lengths(
     repeated_lengths, 1, 1, 0,
   )
   guard repeated_overflow is Err(PdfError::InvalidFlateData) else {
-    fail("expected InvalidFlateData")
+    fail("expected PdfError::InvalidFlateData")
   }
   let (length_code, length_width) = pdf_flate_fixed_literal_code(280)
   let expected_length_code = 192
@@ -2170,13 +2174,13 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
     259,
   )
   guard bad_flate_length is Err(PdfError::InvalidFlateData) else {
-    fail("expected InvalidFlateData")
+    fail("expected PdfError::InvalidFlateData")
   }
   let bad_flate_distance : Result[(Int, Int, Int), Error] = try? pdf_flate_distance_code(
     0,
   )
   guard bad_flate_distance is Err(PdfError::InvalidFlateData) else {
-    fail("expected InvalidFlateData")
+    fail("expected PdfError::InvalidFlateData")
   }
   let shadowed_match = @ascii.encode("ABCDEFGHIJABCXABCDEFGHIJ")
   let last_by_prefix : Array[Int] = Array::make(65536, -1)
@@ -2243,19 +2247,19 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
     try! pdf_bytes_of_int_array([0x78])[:],
   )
   guard short_prefix is Err(PdfError::InvalidFlateData) else {
-    fail("expected InvalidFlateData")
+    fail("expected PdfError::InvalidFlateData")
   }
   let bad_prefix_header : Result[(PdfBytes, Int), Error] = try? pdf_flate_decode_view_prefix(
     try! pdf_bytes_of_int_array([0, 0, 0, 0, 0, 0])[:],
   )
   guard bad_prefix_header is Err(PdfError::InvalidFlateData) else {
-    fail("expected InvalidFlateData")
+    fail("expected PdfError::InvalidFlateData")
   }
   let truncated_prefix_adler : Result[(PdfBytes, Int), Error] = try? pdf_flate_decode_view_prefix(
     try! pdf_bytes_of_int_array([0x78, 0x01, 0x01, 0, 0, 0xFF, 0xFF])[:],
   )
   guard truncated_prefix_adler is Err(PdfError::InvalidFlateData) else {
-    fail("expected InvalidFlateData")
+    fail("expected PdfError::InvalidFlateData")
   }
 
   let dynamic_repeat_without_previous : Result[
@@ -2276,7 +2280,7 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
     ),
   )
   guard dynamic_repeat_without_previous is Err(PdfError::InvalidFlateData) else {
-    fail("expected InvalidFlateData")
+    fail("expected PdfError::InvalidFlateData")
   }
 
   let distance_lengths : ReadOnlyArray[Int] = [1]
@@ -2294,7 +2298,7 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
     invalid_length_output,
   )
   guard invalid_length is Err(PdfError::InvalidFlateData) else {
-    fail("expected InvalidFlateData")
+    fail("expected PdfError::InvalidFlateData")
   }
 
   let copy_lengths = Array::make(258, 0)
@@ -2313,7 +2317,7 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
     invalid_distance_output,
   )
   guard invalid_distance is Err(PdfError::InvalidFlateData) else {
-    fail("expected InvalidFlateData")
+    fail("expected PdfError::InvalidFlateData")
   }
 
   let past_output_output : Array[Byte] = []
@@ -2324,7 +2328,7 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
     past_output_output,
   )
   guard past_output is Err(PdfError::InvalidFlateData) else {
-    fail("expected InvalidFlateData")
+    fail("expected PdfError::InvalidFlateData")
   }
 }
 
@@ -2336,21 +2340,21 @@ test "private flate dynamic encoder helpers cover RLE and guards" {
     15,
   )
   guard no_frequency is Err(PdfError::InvalidFlateData) else {
-    fail("expected InvalidFlateData for empty huffman frequencies")
+    fail("expected PdfError::InvalidFlateData for empty huffman frequencies")
   }
   let negative_frequency : Result[Array[Int], Error] = try? pdf_flate_huffman_code_lengths(
     [-1],
     15,
   )
   guard negative_frequency is Err(PdfError::InvalidFlateData) else {
-    fail("expected InvalidFlateData for negative huffman frequency")
+    fail("expected PdfError::InvalidFlateData for negative huffman frequency")
   }
   let too_deep : Result[Array[Int], Error] = try? pdf_flate_huffman_code_lengths(
     [1, 1, 1],
     1,
   )
   guard too_deep is Err(PdfError::InvalidFlateData) else {
-    fail("expected InvalidFlateData for over-deep huffman tree")
+    fail("expected PdfError::InvalidFlateData for over-deep huffman tree")
   }
   @test.assert_eq(pdf_flate_canonical_codes([1, 2, 2]), [0, 2, 3])
   @test.assert_eq(pdf_flate_last_nonzero_length([0, 0]), -1)
@@ -2409,7 +2413,7 @@ test "private flate dynamic encoder helpers cover RLE and guards" {
     [0],
   )
   guard missing_symbol is Err(PdfError::InvalidFlateData) else {
-    fail("expected InvalidFlateData for missing canonical symbol")
+    fail("expected PdfError::InvalidFlateData for missing canonical symbol")
   }
   let empty_dynamic : Result[Unit, Error] = try? pdf_flate_push_dynamic_match_block(
     [],
@@ -2418,7 +2422,7 @@ test "private flate dynamic encoder helpers cover RLE and guards" {
     64,
   )
   guard empty_dynamic is Err(PdfError::InvalidFlateData) else {
-    fail("expected InvalidFlateData for empty dynamic block")
+    fail("expected PdfError::InvalidFlateData for empty dynamic block")
   }
 }
 

@@ -105,7 +105,7 @@ fn pdf_page_reference_changes(
   new_numbers : ArrayView[Int],
 ) -> Array[(Int, Int)] raise PdfError {
   if old_numbers.length() != new_numbers.length() {
-    raise PageTreeExpected
+    raise PdfError::PageTreeExpected
   }
   let changes : Array[(Int, Int)] = []
   for i in 0..<old_numbers.length() {
@@ -127,7 +127,7 @@ fn pdf_page_reference_changes_from_serials(
       old_page > old_numbers.length() ||
       new_page < 1 ||
       new_page > new_numbers.length() {
-      raise PageTreeExpected
+      raise PdfError::PageTreeExpected
     }
     output.push((old_numbers[old_page - 1], new_numbers[new_page - 1]))
   }

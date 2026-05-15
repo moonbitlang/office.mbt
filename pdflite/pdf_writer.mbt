@@ -231,13 +231,13 @@ fn pdf_writer_parse_signed_int(
     }
   }
   if index >= text.length() {
-    raise NumberExpected
+    raise PdfError::NumberExpected
   }
   let mut value = 0
   while index < text.length() {
     let digit = text[index].to_int()
     if !pdf_is_digit_byte(digit) {
-      raise NumberExpected
+      raise PdfError::NumberExpected
     }
     value = value * 10 + digit - 48
     index += 1
@@ -370,7 +370,7 @@ fn pdf_writer_push_scientific_real(
         fractional_digits += 1
       }
     } else {
-      raise NumberExpected
+      raise PdfError::NumberExpected
     }
   }
   if digits.length() == 0 {
@@ -404,13 +404,13 @@ fn pdf_writer_push_plain_significant_real(
     let value = text[index].to_int()
     if value == 46 {
       if decimal_position >= 0 {
-        raise NumberExpected
+        raise PdfError::NumberExpected
       }
       decimal_position = digits.length()
     } else if pdf_is_digit_byte(value) {
       digits.push(value - 48)
     } else {
-      raise NumberExpected
+      raise PdfError::NumberExpected
     }
     index += 1
   }
@@ -667,7 +667,7 @@ fn pdf_writer_write_document_objects(
           pdf_write_indirect_object({ number, generation, object }),
         )
       }
-      _ => raise ParsedObjectExpected
+      _ => raise PdfError::ParsedObjectExpected
     }
   }
   xrefs
@@ -849,7 +849,7 @@ fn pdf_writer_write_document_objects_for_numbers(
             pdf_write_indirect_object({ number, generation, object }),
           )
         }
-        Some(_) => raise ParsedObjectExpected
+        Some(_) => raise PdfError::ParsedObjectExpected
         None => ()
       }
     }
@@ -1355,7 +1355,7 @@ fn pdf_write_required_aes_iv_provider(
 ) -> ((Int, Int, Int) -> PdfBytes raise PdfError) raise PdfError {
   match provider {
     Some(provider) => provider
-    None => raise RandomBytesUnavailable
+    None => raise PdfError::RandomBytesUnavailable
   }
 }
 
@@ -1365,7 +1365,7 @@ fn pdf_write_required_aesv3_random_provider(
 ) -> ((PdfAesV3RandomField, Int) -> PdfBytes raise PdfError) raise PdfError {
   match provider {
     Some(provider) => provider
-    None => raise RandomBytesUnavailable
+    None => raise PdfError::RandomBytesUnavailable
   }
 }
 

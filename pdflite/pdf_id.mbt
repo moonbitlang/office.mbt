@@ -89,7 +89,7 @@ pub fn PdfDocument::change_id(
         .trailer_dict()
         .add_dict_entry(pdf_id_name(), pdf_generate_id(path, get_time)),
       )
-    _ => raise DictionaryExpected
+    _ => raise PdfError::DictionaryExpected
   }
 }
 
@@ -108,6 +108,6 @@ fn PdfDocument::copy_with_current_id(
       )
       output
     }
-    _ => raise DictionaryExpected
+    _ => raise PdfError::DictionaryExpected
   }
 }

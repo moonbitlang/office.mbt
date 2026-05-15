@@ -11,11 +11,11 @@ fn pdf_secure_random_bytes_with_provider(
   fill : (FixedArray[Byte], Int) -> Int,
 ) -> PdfBytes raise PdfError {
   if length < 0 {
-    raise InvalidReadLength(length)
+    raise PdfError::InvalidReadLength(length)
   }
   let output = FixedArray::make(length, b'\x00')
   if fill(output, length) != 1 {
-    raise RandomBytesUnavailable
+    raise PdfError::RandomBytesUnavailable
   }
   output.unsafe_reinterpret_as_bytes()
 }
@@ -25,7 +25,7 @@ fn pdf_secure_random_bytes_with_provider(
 ///
 /// The native stub uses the platform RNG (`BCryptGenRandom` on Windows and
 /// `/dev/urandom` on Unix-like systems). Negative lengths raise
-/// `InvalidReadLength`; RNG failures raise `RandomBytesUnavailable`.
+/// `PdfError::InvalidReadLength`; RNG failures raise `PdfError::RandomBytesUnavailable`.
 pub fn pdf_secure_random_bytes(length : Int) -> PdfBytes raise PdfError {
   pdf_secure_random_bytes_with_provider(length, pdf_secure_random_bytes_ffi)
 }

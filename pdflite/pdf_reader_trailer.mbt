@@ -17,7 +17,7 @@ fn pdf_reader_xrefstm_name() -> PdfName {
 fn pdf_trailer_prev_position(trailer : PdfObject) -> Int? raise PdfError {
   match trailer.lookup_immediate(pdf_reader_prev_name()) {
     Some(PdfInteger(position)) if position >= 0 => Some(position)
-    Some(_) => raise TrailerExpected
+    Some(_) => raise PdfError::TrailerExpected
     None => None
   }
 }
@@ -26,7 +26,7 @@ fn pdf_trailer_prev_position(trailer : PdfObject) -> Int? raise PdfError {
 fn pdf_trailer_xref_stream_position(trailer : PdfObject) -> Int? raise PdfError {
   match trailer.lookup_immediate(pdf_reader_xrefstm_name()) {
     Some(PdfInteger(position)) if position >= 0 => Some(position)
-    Some(PdfInteger(_)) => raise XRefExpected
+    Some(PdfInteger(_)) => raise PdfError::XRefExpected
     _ => None
   }
 }

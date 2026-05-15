@@ -60,7 +60,7 @@ fn PdfDocument::pdf_page_merged_content_stream(
             self.pdf_decode_stream_value_direct(stream).data,
           ),
         )
-      _ => raise ParseStreamExpected
+      _ => raise PdfError::ParseStreamExpected
     }
   }
   let data = pdf_content_concat_streams(decoded_streams)

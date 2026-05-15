@@ -160,7 +160,7 @@ fn pdf_parse_value_at(
 ) -> (PdfObject, Int) raise PdfError {
   let current = pdf_skip_comments(lexemes, index)
   if current >= lexemes.length() {
-    raise ParseObjectExpected
+    raise PdfError::ParseObjectExpected
   }
   match pdf_lexeme_indirect_reference_number(lexemes, current) {
     Some(object_number) => (PdfIndirect(object_number), current + 3)
@@ -174,7 +174,7 @@ fn pdf_parse_value_at(
         LexName(value) => (PdfNameObject(value), current + 1)
         LexLeftSquare => pdf_parse_array_at(lexemes, current + 1)
         LexLeftDict => pdf_parse_dictionary_at(lexemes, current + 1)
-        _ => raise ParseObjectExpected
+        _ => raise PdfError::ParseObjectExpected
       }
   }
 }
@@ -212,7 +212,7 @@ pub fn pdf_parse_single_lexeme_object(
   if objects.length() == 1 {
     objects[0]
   } else {
-    raise ParseSingleObjectExpected
+    raise PdfError::ParseSingleObjectExpected
   }
 }
 
@@ -255,7 +255,7 @@ fn pdf_parse_indirect_object_segment_at(
 ) -> (PdfParsedIndirectObject, Int, Bool) raise PdfError {
   let first = pdf_skip_comments(lexemes, index)
   if first + 2 >= lexemes.length() {
-    raise ParseIndirectObjectExpected
+    raise PdfError::ParseIndirectObjectExpected
   }
   match (lexemes[first], lexemes[first + 1], lexemes[first + 2]) {
     (LexInt(number), LexInt(generation), LexObj) => {
@@ -272,7 +272,7 @@ fn pdf_parse_indirect_object_segment_at(
         }
       }
     }
-    _ => raise ParseIndirectObjectExpected
+    _ => raise PdfError::ParseIndirectObjectExpected
   }
 }
 
@@ -282,7 +282,7 @@ fn pdf_parse_indirect_object_prefix_lexemes(
 ) -> PdfParsedIndirectObject raise PdfError {
   let first = pdf_skip_comments(lexemes, 0)
   if first + 2 >= lexemes.length() {
-    raise ParseIndirectObjectExpected
+    raise PdfError::ParseIndirectObjectExpected
   }
   match (lexemes[first], lexemes[first + 1], lexemes[first + 2]) {
     (LexInt(number), LexInt(generation), LexObj) => {
@@ -296,7 +296,7 @@ fn pdf_parse_indirect_object_prefix_lexemes(
       }
       { number, generation, object }
     }
-    _ => raise ParseIndirectObjectExpected
+    _ => raise PdfError::ParseIndirectObjectExpected
   }
 }
 

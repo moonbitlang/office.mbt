@@ -311,7 +311,7 @@ fn pdf_ccitt_read_run_code(
       }
     }
   }
-  raise InvalidCCITTData
+  raise PdfError::InvalidCCITTData
 }
 
 ///|
@@ -332,7 +332,7 @@ fn pdf_ccitt_read_run(input : BitStream, white : Bool) -> Int raise PdfError {
       return total
     }
   }
-  raise InvalidCCITTData
+  raise PdfError::InvalidCCITTData
 }
 
 ///|
@@ -346,7 +346,7 @@ fn pdf_ccitt_read_mode(input : BitStream) -> PdfCCITTModeKind raise PdfError {
       }
     }
   }
-  raise InvalidCCITTData
+  raise PdfError::InvalidCCITTData
 }
 
 ///|
@@ -362,7 +362,7 @@ fn pdf_ccitt_write_code(
       return
     }
   }
-  raise InvalidCCITTData
+  raise PdfError::InvalidCCITTData
 }
 
 ///|
@@ -386,8 +386,8 @@ fn pdf_ccitt_write_mode(
     CCITTVertical(-3) => output.put_value_int(7, 0b0000011)
     CCITTVertical(3) => output.put_value_int(7, 0b0000010)
     CCITTEOFB => output.put_value_int(24, 0b000000000001000000000001)
-    CCITTUncompressed => raise CCITTNotSupported("CCITT Uncompressed")
-    CCITTVertical(_) => raise InvalidCCITTData
+    CCITTUncompressed => raise PdfError::CCITTNotSupported("CCITT Uncompressed")
+    CCITTVertical(_) => raise PdfError::InvalidCCITTData
   }
 }
 
@@ -398,7 +398,7 @@ fn pdf_ccitt_write_run(
   length : Int,
 ) -> Unit raise PdfError {
   if length < 0 {
-    raise InvalidCCITTData
+    raise PdfError::InvalidCCITTData
   }
   let table = if white {
     pdf_ccitt_white_codes[:]
@@ -425,7 +425,7 @@ fn pdf_ccitt_encode_read_run(
   max_columns : Int,
 ) -> (Bool, Int) raise PdfError {
   if max_columns <= 0 {
-    raise InvalidCCITTData
+    raise PdfError::InvalidCCITTData
   }
   let iswhite = input.get_bit()
   let mut length = 1
@@ -449,11 +449,11 @@ fn pdf_ccitt_encode_g3_1d_view(
   rows : Int,
 ) -> PdfBytes raise PdfError {
   if columns <= 0 || rows < 0 {
-    raise InvalidCCITTData
+    raise PdfError::InvalidCCITTData
   }
   let row_bytes = (columns - 1) / 8 + 1
   if rows > 0 && row_bytes > data.length() / rows {
-    raise InvalidCCITTData
+    raise PdfError::InvalidCCITTData
   }
   let input = bitstream_of_view(data)
   let output = bit_writer_new()
@@ -486,7 +486,7 @@ fn pdf_ccitt_line_from_data(
   let row_bytes = (columns - 1) / 8 + 1
   let row_start = row * row_bytes
   if row_start + row_bytes > data.length() {
-    raise EndOfInput
+    raise PdfError::EndOfInput
   }
   let line : Array[Int] = []
   for column in 0..<columns {
@@ -504,11 +504,11 @@ fn pdf_ccitt_encode_g4_view(
   rows : Int,
 ) -> PdfBytes raise PdfError {
   if columns <= 0 || rows < 0 {
-    raise InvalidCCITTData
+    raise PdfError::InvalidCCITTData
   }
   let row_bytes = (columns - 1) / 8 + 1
   if rows > 0 && row_bytes > data.length() / rows {
-    raise InvalidCCITTData
+    raise PdfError::InvalidCCITTData
   }
   let output = bit_writer_new()
   let whiteval = 1
@@ -561,7 +561,7 @@ fn pdf_ccitt_output_span(
   value : Int,
 ) -> Int raise PdfError {
   if length < 0 || column < 0 || column + length > line.length() {
-    raise InvalidCCITTData
+    raise PdfError::InvalidCCITTData
   }
   for index in column..<(column + length) {
     line[index] = value
@@ -683,9 +683,9 @@ fn pdf_ccitt_decode_g3_1d(
     }
     output.to_bytes()
   } catch {
-    EndOfInput => output.to_bytes()
-    InvalidCCITTData => raise InvalidCCITTData
-    _ => raise InvalidCCITTData
+    PdfError::EndOfInput => output.to_bytes()
+    PdfError::InvalidCCITTData => raise PdfError::InvalidCCITTData
+    _ => raise PdfError::InvalidCCITTData
   }
 }
 
@@ -776,16 +776,18 @@ fn pdf_ccitt_decode_g4(
             white = !white
           }
           CCITTEOFB => finished = true
-          CCITTUncompressed => raise CCITTNotSupported("CCITT Uncompressed")
+          CCITTUncompressed =>
+            raise PdfError::CCITTNotSupported("CCITT Uncompressed")
         }
       }
     }
     output.to_bytes()
   } catch {
-    EndOfInput => output.to_bytes()
-    CCITTNotSupported(reason) => raise CCITTNotSupported(reason)
-    InvalidCCITTData => raise InvalidCCITTData
-    _ => raise InvalidCCITTData
+    PdfError::EndOfInput => output.to_bytes()
+    PdfError::CCITTNotSupported(reason) =>
+      raise PdfError::CCITTNotSupported(reason)
+    PdfError::InvalidCCITTData => raise PdfError::InvalidCCITTData
+    _ => raise PdfError::InvalidCCITTData
   }
 }
 
@@ -797,7 +799,7 @@ fn pdf_ccitt_decode_view(
   if params.columns <= 0 ||
     params.rows < 0 ||
     params.damaged_rows_before_error < 0 {
-    raise InvalidCCITTData
+    raise PdfError::InvalidCCITTData
   }
   ignore(params.end_of_line)
   ignore(params.end_of_block)
@@ -806,7 +808,7 @@ fn pdf_ccitt_decode_view(
   let input = bitstream_of_view(data)
   let output = bit_writer_new()
   if params.k > 0 {
-    raise CCITTNotSupported("CCITTFax K > 0")
+    raise PdfError::CCITTNotSupported("CCITTFax K > 0")
   } else if params.k < 0 {
     pdf_ccitt_decode_g4(input, output, params, whiteval, blackval)
   } else {

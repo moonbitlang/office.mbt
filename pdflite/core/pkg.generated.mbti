@@ -1,0 +1,161 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pdflite/core"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn pdf_byte_of_int(Int) -> Byte raise PdfError
+
+pub fn pdf_bytes_concat_views(ArrayView[BytesView]) -> Bytes
+
+pub fn pdf_bytes_copy(BytesView) -> Bytes
+
+pub fn pdf_bytes_get(Bytes, Int) -> Byte?
+
+pub fn pdf_bytes_length(Bytes) -> Int
+
+pub fn pdf_bytes_make(Int, value? : Int) -> Bytes raise PdfError
+
+pub fn pdf_bytes_map_int(BytesView, (Int) -> Int) -> Bytes raise PdfError
+
+pub fn pdf_bytes_of_array_view(ArrayView[Byte]) -> Bytes
+
+pub fn pdf_bytes_of_int_array(ArrayView[Int]) -> Bytes raise PdfError
+
+pub fn pdf_bytes_of_int_arrays(ArrayView[ArrayView[Int]]) -> Bytes raise PdfError
+
+pub fn pdf_bytes_of_view(BytesView) -> Bytes
+
+pub fn pdf_bytes_to_array(Bytes) -> Array[Byte]
+
+pub fn pdf_bytes_to_fixed_array(Bytes) -> FixedArray[Byte]
+
+pub fn pdf_int_array_of_bytes(BytesView) -> Array[Int]
+
+pub fn pdf_name_of_bytes(Bytes) -> PdfName
+
+pub fn pdf_name_of_view(BytesView) -> PdfName
+
+pub fn pdf_string_of_int_array(ArrayView[Int]) -> Bytes raise PdfError
+
+pub fn pdf_string_of_int_arrays(ArrayView[ArrayView[Int]]) -> Bytes raise PdfError
+
+// Errors
+pub(all) suberror PdfError {
+  InvalidByte(Int)
+  InvalidCursorPosition(Int)
+  InvalidReadLength(Int)
+  InvalidBit(Int)
+  InvalidBitCount(Int)
+  MatrixNotInvertable
+  DictionaryExpected
+  DictionaryKeyNotFound(PdfName)
+  NumberExpected
+  RectangleExpected
+  BadRectangle
+  MatrixMalformed
+  InvalidHexEscape
+  InvalidASCII85Data
+  FilterNotSupported(PdfName)
+  FilterExpected
+  CCITTDecodeParmsExpected
+  CCITTNotSupported(String)
+  InvalidCCITTData
+  PredictorExpected
+  PredictorNotSupported(Int)
+  InvalidLZWData
+  InvalidFlateData
+  ParseObjectExpected
+  ParseArrayMalformed
+  ParseSingleObjectExpected
+  ParseIndirectObjectExpected
+  ParseEndObjectExpected
+  ParseStreamExpected
+  ParseEndStreamExpected
+  StreamLengthExpected
+  StreamDataExpected
+  ParsedObjectExpected
+  PageTreeExpected
+  PageRotationExpected(Int)
+  ContentOperatorExpected
+  ContentOperandExpected
+  FunctionExpected
+  FunctionNotSupported(Int)
+  BadFunctionEvaluation(String)
+  StartXRefExpected
+  XRefExpected
+  XRefEntryExpected
+  TrailerExpected
+  RootExpected
+  BadRevision
+  InvalidObjectNumber(Int)
+  BadDate
+  InvalidUnicodeCodepoint(Int)
+  InvalidUTF16BE
+  InvalidUTF8
+  InvalidPDFDocEncoding(Int)
+  CryptoKeyExpected
+  InvalidCryptoDataLength(Int)
+  EncryptionExpected
+  EncryptionMethodExpected
+  EncryptionDictionaryEntryExpected(PdfName)
+  EncryptionDictionaryEntryTooShort(PdfName)
+  EncryptionIDExpected
+  EncryptionAuthenticationUnsupported(PdfCryptType)
+  EncryptionObjectCryptUnsupported(PdfCryptType)
+  EncryptionSavedStateExpected
+  EncryptionRecryptUnsupported(PdfCryptType)
+  EncryptionRecryptFailed
+  EncryptionPermissionsCorrupt
+  EncryptionPermissionsMismatch(Int, Int)
+  RandomBytesUnavailable
+  EncodingExpected
+  EncodingDifferencesMalformed
+  EncodingWriteUnsupported
+  FontSubtypeExpected
+  FontFlagsExpected
+  StandardFontExpected
+  BaseFontExpected
+  FontFirstCharExpected
+  FontLastCharExpected
+  FontWidthsExpected
+  FontWidthExpected
+  FontCharProcsExpected
+  FontTypeExpected
+  FontWriteUnsupported
+  AfmExpected
+  ColourSpaceExpected
+  BadText
+  CIDSystemInfoExpected
+  CIDRegistryExpected
+  CIDOrderingExpected
+  CIDSupplementExpected
+  CIDBaseFontExpected
+  CIDFontDescriptorExpected
+  CIDWidthsExpected
+  CIDWidths2Expected
+  DescendantFontExpected
+  CMapEncodingExpected
+  PageLabelStyleExpected(String)
+  EndOfInput
+} derive(Eq, ToJson, @debug.Debug)
+
+// Types and methods
+pub(all) enum PdfCryptType {
+  PdfCryptARC4(Int, Int)
+  PdfCryptAESV2
+  PdfCryptAESV3(Bool)
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfName(Bytes) derive(Eq, ToJson, @debug.Debug)
+pub fn PdfName::byte_length(Self) -> Int
+pub fn PdfName::bytes(Self) -> Bytes
+pub fn PdfName::view(Self) -> BytesView
+
+// Type aliases
+pub type PdfBytes = Bytes
+
+// Traits
+

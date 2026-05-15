@@ -11,7 +11,7 @@ fn pdf_renumber_document_with_changes(
   for number in old_numbers {
     let new_number = change_map.changed_reference(number)
     if new_number < 1 || seen.contains(new_number) {
-      raise InvalidObjectNumber(new_number)
+      raise PdfError::InvalidObjectNumber(new_number)
     }
     seen[new_number] = true
     let entry = output.objects.get_entry(number).unwrap()
@@ -45,7 +45,7 @@ fn pdf_renumber_document_with_changes(
 /// `changes` maps old object numbers to new object numbers; omitted objects keep
 /// their original number. All indirect references, the root reference, trailer
 /// dictionary, and object-stream metadata are updated. Duplicate or nonpositive
-/// target numbers raise `InvalidObjectNumber`.
+/// target numbers raise `PdfError::InvalidObjectNumber`.
 pub fn PdfDocument::renumber_objects(
   self : PdfDocument,
   changes : ArrayView[(Int, Int)],
@@ -70,13 +70,13 @@ pub fn PdfDocument::renumber_objects_compact(
 /// Return a copy with every object number increased by `offset`.
 ///
 /// `offset == 0` returns a plain copy. Negative offsets raise
-/// `InvalidObjectNumber`.
+/// `PdfError::InvalidObjectNumber`.
 pub fn PdfDocument::renumber_objects_by_offset(
   self : PdfDocument,
   offset : Int,
 ) -> PdfDocument raise PdfError {
   if offset < 0 {
-    raise InvalidObjectNumber(offset)
+    raise PdfError::InvalidObjectNumber(offset)
   }
   if offset == 0 {
     self.copy()

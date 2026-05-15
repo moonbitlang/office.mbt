@@ -49,7 +49,7 @@ test "PdfDocument lookup_required mirrors CamlPDF lookup_exception" {
     (key_null, PdfNull),
   ])
   @test.assert_eq(
-    try! doc.lookup_required(key_type, dict, RootExpected),
+    try! doc.lookup_required(key_type, dict, PdfError::RootExpected),
     PdfInteger(42),
   )
   let stream = @pdflite.pdf_stream(
@@ -57,29 +57,29 @@ test "PdfDocument lookup_required mirrors CamlPDF lookup_exception" {
     StreamGot(try! @pdflite.pdf_bytes_of_int_array([65])),
   )
   @test.assert_eq(
-    try! doc.lookup_required(key_type, stream, RootExpected),
+    try! doc.lookup_required(key_type, stream, PdfError::RootExpected),
     PdfInteger(7),
   )
   let missing : Result[@pdflite.PdfObject, Error] = try? doc.lookup_required(
     key_missing,
     dict,
-    RootExpected,
+    PdfError::RootExpected,
   )
   guard missing is Err(@pdflite.PdfError::RootExpected) else {
-    fail("expected RootExpected for missing key")
+    fail("expected PdfError::RootExpected for missing key")
   }
   let null_value : Result[@pdflite.PdfObject, Error] = try? doc.lookup_required(
     key_null,
     dict,
-    RootExpected,
+    PdfError::RootExpected,
   )
   guard null_value is Err(@pdflite.PdfError::RootExpected) else {
-    fail("expected RootExpected for null value")
+    fail("expected PdfError::RootExpected for null value")
   }
   let not_dictionary : Result[@pdflite.PdfObject, Error] = try? doc.lookup_required(
     key_type,
     PdfInteger(1),
-    DictionaryExpected,
+    PdfError::DictionaryExpected,
   )
   guard not_dictionary is Err(@pdflite.PdfError::DictionaryExpected) else {
     fail("expected caller-provided error for non-dictionary")
@@ -265,7 +265,9 @@ test "PdfDocument replace_chain updates array chain entries" {
   guard final_out_of_range
     is Err(@pdflite.PdfError::DictionaryKeyNotFound(missing)) &&
     missing == index_2 else {
-    fail("expected DictionaryKeyNotFound for final out-of-range array chain")
+    fail(
+      "expected PdfError::DictionaryKeyNotFound for final out-of-range array chain",
+    )
   }
   let out_of_range : Result[Unit, Error] = try? doc.replace_chain(
     [key_items, index_2, key_value],
@@ -273,7 +275,9 @@ test "PdfDocument replace_chain updates array chain entries" {
   )
   guard out_of_range is Err(@pdflite.PdfError::DictionaryKeyNotFound(missing)) &&
     missing == index_2 else {
-    fail("expected DictionaryKeyNotFound for out-of-range array chain")
+    fail(
+      "expected PdfError::DictionaryKeyNotFound for out-of-range array chain",
+    )
   }
   let malformed : Result[Unit, Error] = try? doc.replace_chain(
     [key_items, bad_index],
@@ -281,7 +285,7 @@ test "PdfDocument replace_chain updates array chain entries" {
   )
   guard malformed is Err(@pdflite.PdfError::DictionaryKeyNotFound(missing)) &&
     missing == bad_index else {
-    fail("expected DictionaryKeyNotFound for malformed array chain")
+    fail("expected PdfError::DictionaryKeyNotFound for malformed array chain")
   }
 }
 
@@ -291,7 +295,7 @@ test "PdfDocument replace_chain reports malformed chains" {
   let key_root = lookup_name_for_test([47, 82, 111, 111, 116])
   let empty : Result[Unit, Error] = try? doc.replace_chain([], PdfInteger(1))
   guard empty is Err(@pdflite.PdfError::DictionaryExpected) else {
-    fail("expected DictionaryExpected for empty chain")
+    fail("expected PdfError::DictionaryExpected for empty chain")
   }
   doc.set_trailer_dict(PdfInteger(1))
   let not_dictionary : Result[Unit, Error] = try? doc.replace_chain(
@@ -299,7 +303,7 @@ test "PdfDocument replace_chain reports malformed chains" {
     PdfInteger(2),
   )
   guard not_dictionary is Err(@pdflite.PdfError::DictionaryExpected) else {
-    fail("expected DictionaryExpected for non-dictionary trailer")
+    fail("expected PdfError::DictionaryExpected for non-dictionary trailer")
   }
 }
 
@@ -419,14 +423,14 @@ test "PdfDocument remove_chain updates array chain entries" {
     key_items, index_1,
   ])
   guard remove_array_slot is Err(@pdflite.PdfError::DictionaryExpected) else {
-    fail("expected DictionaryExpected for array slot removal")
+    fail("expected PdfError::DictionaryExpected for array slot removal")
   }
   let malformed : Result[Bool, Error] = try? doc.remove_chain([
     key_items, bad_index, key_value,
   ])
   guard malformed is Err(@pdflite.PdfError::DictionaryKeyNotFound(missing)) &&
     missing == bad_index else {
-    fail("expected DictionaryKeyNotFound for malformed array chain")
+    fail("expected PdfError::DictionaryKeyNotFound for malformed array chain")
   }
 }
 
@@ -437,19 +441,23 @@ test "PdfDocument remove_chain reports malformed short chains" {
   let key_child = lookup_name_for_test([47, 67, 104, 105, 108, 100])
   let empty : Result[Bool, Error] = try? doc.remove_chain([])
   guard empty is Err(@pdflite.PdfError::DictionaryExpected) else {
-    fail("expected DictionaryExpected for empty chain")
+    fail("expected PdfError::DictionaryExpected for empty chain")
   }
   @test.assert_eq(try! doc.remove_chain([key_root]), false)
   doc.set_trailer_dict(@pdflite.pdf_dictionary([(key_root, PdfInteger(1))]))
   let existing_single : Result[Bool, Error] = try? doc.remove_chain([key_root])
   guard existing_single is Err(@pdflite.PdfError::DictionaryExpected) else {
-    fail("expected DictionaryExpected for existing single-entry chain")
+    fail(
+      "expected PdfError::DictionaryExpected for existing single-entry chain",
+    )
   }
   let non_dictionary : Result[Bool, Error] = try? doc.remove_chain([
     key_root, key_child,
   ])
   guard non_dictionary is Err(@pdflite.PdfError::DictionaryExpected) else {
-    fail("expected DictionaryExpected for non-dictionary chain parent")
+    fail(
+      "expected PdfError::DictionaryExpected for non-dictionary chain parent",
+    )
   }
 }
 
@@ -468,19 +476,19 @@ test "PdfDocument get_number and parse_rectangle mirror Pdf helpers" {
   @test.assert_eq(rect.max_y, 20.0)
   let bad_number : Result[Double, Error] = try? doc.get_number(PdfNull)
   guard bad_number is Err(@pdflite.PdfError::NumberExpected) else {
-    fail("expected NumberExpected")
+    fail("expected PdfError::NumberExpected")
   }
   let bad_rect : Result[@pdflite.PdfRectangle, Error] = try? doc.parse_rectangle(
     PdfArray([PdfInteger(1)]),
   )
   guard bad_rect is Err(@pdflite.PdfError::RectangleExpected) else {
-    fail("expected RectangleExpected")
+    fail("expected PdfError::RectangleExpected")
   }
   let bad_number_rect : Result[@pdflite.PdfRectangle, Error] = try? doc.parse_rectangle(
     PdfArray([PdfInteger(1), PdfNull, PdfInteger(3), PdfInteger(4)]),
   )
   guard bad_number_rect is Err(@pdflite.PdfError::BadRectangle) else {
-    fail("expected BadRectangle")
+    fail("expected PdfError::BadRectangle")
   }
 }
 
@@ -542,7 +550,7 @@ test "PdfDocument transform_rect and transform_quadpoints update geometry" {
     PdfInteger(1),
   )
   guard bad_rect is Err(@pdflite.PdfError::RectangleExpected) else {
-    fail("expected RectangleExpected")
+    fail("expected PdfError::RectangleExpected")
   }
 }
 
@@ -564,6 +572,6 @@ test "PdfDocument parse_matrix and pdf_object_of_matrix round trip matrices" {
     key_matrix, bad,
   )
   guard bad_matrix is Err(@pdflite.PdfError::MatrixMalformed) else {
-    fail("expected MatrixMalformed")
+    fail("expected PdfError::MatrixMalformed")
   }
 }

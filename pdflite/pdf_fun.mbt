@@ -393,7 +393,7 @@ fn PdfDocument::pdf_fun_number_array(
       }
       output
     }
-    _ => raise NumberExpected
+    _ => raise PdfError::NumberExpected
   }
 }
 
@@ -418,7 +418,7 @@ fn PdfDocument::pdf_fun_lookup_required_number_array(
 ) -> Array[Double] raise PdfError {
   match self.lookup_direct(key, dictionary) {
     Some(value) => self.pdf_fun_number_array(value)
-    None => raise DictionaryKeyNotFound(key)
+    None => raise PdfError::DictionaryKeyNotFound(key)
   }
 }
 
@@ -430,7 +430,7 @@ fn PdfDocument::pdf_fun_lookup_required_number(
 ) -> Double raise PdfError {
   match self.lookup_direct(key, dictionary) {
     Some(value) => self.get_number(value)
-    None => raise DictionaryKeyNotFound(key)
+    None => raise PdfError::DictionaryKeyNotFound(key)
   }
 }
 
@@ -445,12 +445,12 @@ fn PdfDocument::pdf_fun_int_array(
       for value in values {
         match self.direct(value) {
           PdfInteger(integer) => output.push(integer)
-          _ => raise NumberExpected
+          _ => raise PdfError::NumberExpected
         }
       }
       output
     }
-    _ => raise NumberExpected
+    _ => raise PdfError::NumberExpected
   }
 }
 
@@ -461,7 +461,7 @@ fn PdfDocument::pdf_fun_object_array(
 ) -> Array[PdfObject] raise PdfError {
   match self.direct(object) {
     PdfArray(values) => [ for value in values => value ]
-    _ => raise FunctionExpected
+    _ => raise PdfError::FunctionExpected
   }
 }
 
@@ -473,7 +473,7 @@ fn PdfDocument::pdf_fun_lookup_required_object_array(
 ) -> Array[PdfObject] raise PdfError {
   match self.lookup_direct(key, dictionary) {
     Some(value) => self.pdf_fun_object_array(value)
-    None => raise DictionaryKeyNotFound(key)
+    None => raise PdfError::DictionaryKeyNotFound(key)
   }
 }
 
@@ -485,7 +485,7 @@ fn PdfDocument::pdf_fun_lookup_required_int_array(
 ) -> Array[Int] raise PdfError {
   match self.lookup_direct(key, dictionary) {
     Some(value) => self.pdf_fun_int_array(value)
-    None => raise DictionaryKeyNotFound(key)
+    None => raise PdfError::DictionaryKeyNotFound(key)
   }
 }
 
@@ -497,8 +497,8 @@ fn PdfDocument::pdf_fun_lookup_required_int(
 ) -> Int raise PdfError {
   match self.lookup_direct(key, dictionary) {
     Some(PdfInteger(value)) => value
-    Some(_) => raise NumberExpected
-    None => raise DictionaryKeyNotFound(key)
+    Some(_) => raise PdfError::NumberExpected
+    None => raise PdfError::DictionaryKeyNotFound(key)
   }
 }
 
@@ -511,7 +511,7 @@ fn PdfDocument::pdf_fun_lookup_int_or(
 ) -> Int raise PdfError {
   match self.lookup_direct(key, dictionary) {
     Some(PdfInteger(value)) => value
-    Some(_) => raise NumberExpected
+    Some(_) => raise PdfError::NumberExpected
     None => default
   }
 }
@@ -556,7 +556,7 @@ fn PdfDocument::pdf_fun_lookup_decode(
     None =>
       match range {
         Some(range) => [ for value in range => value ]
-        None => raise DictionaryKeyNotFound(pdf_fun_range_key())
+        None => raise PdfError::DictionaryKeyNotFound(pdf_fun_range_key())
       }
   }
 }
@@ -578,7 +578,7 @@ fn PdfDocument::pdf_fun_stream_data(
   match self.direct(object) {
     PdfStreamObject(stream) =>
       pdf_stream_data_bytes(self.pdf_decode_stream_value_direct(stream).data)
-    _ => raise ParseStreamExpected
+    _ => raise PdfError::ParseStreamExpected
   }
 }
 
@@ -597,7 +597,7 @@ fn PdfDocument::pdf_fun_read_sampled(
   let encode = self.pdf_fun_lookup_encode(dictionary, size)
   let decode = self.pdf_fun_lookup_decode(dictionary, range)
   if decode.length() % 2 != 0 {
-    raise FunctionExpected
+    raise PdfError::FunctionExpected
   }
   let bits_per_sample = self.pdf_fun_lookup_required_int(
     dictionary,
@@ -636,7 +636,7 @@ fn PdfDocument::pdf_fun_read_stitching(
   if functions.length() == 0 ||
     bounds.length() != functions.length() - 1 ||
     stitch_encode.length() != functions.length() * 2 {
-    raise FunctionExpected
+    raise PdfError::FunctionExpected
   }
   { functions, bounds, stitch_encode }
 }
@@ -724,10 +724,10 @@ fn pdf_fun_calculator_op_of_token(
                 text.unsafe_substring(start=1, end=text.length()),
               ) {
               Some(number) => number
-              None => raise FunctionExpected
+              None => raise PdfError::FunctionExpected
             }
           } else {
-            raise FunctionExpected
+            raise PdfError::FunctionExpected
           }
       }
   }
@@ -739,7 +739,7 @@ fn pdf_fun_calculator_text_token(
 ) -> PdfCalculatorToken? raise PdfError {
   if token.length() > 0 {
     let text = @ascii.decode(Bytes::from_array(token)) catch {
-      _ => raise FunctionExpected
+      _ => raise PdfError::FunctionExpected
     }
     Some(PdfCalculatorTokenText(text))
   } else {
@@ -806,7 +806,7 @@ fn pdf_fun_calculator_pop_procedure(
 ) -> Array[PdfCalculatorOp] raise PdfError {
   match items.pop() {
     Some(PdfCalculatorItemProcedure(operations)) => operations
-    _ => raise FunctionExpected
+    _ => raise PdfError::FunctionExpected
   }
 }
 
@@ -818,7 +818,7 @@ fn pdf_fun_calculator_items_to_operations(
   for item in items {
     match item {
       PdfCalculatorItemOp(operation) => operations.push(operation)
-      PdfCalculatorItemProcedure(_) => raise FunctionExpected
+      PdfCalculatorItemProcedure(_) => raise PdfError::FunctionExpected
     }
   }
   operations
@@ -870,7 +870,7 @@ fn pdf_fun_calculator_parse_items(
           closed = true
           index += 1
         } else {
-          raise FunctionExpected
+          raise PdfError::FunctionExpected
         }
       PdfCalculatorTokenText(text) => {
         pdf_fun_calculator_push_operator(items, text)
@@ -879,7 +879,7 @@ fn pdf_fun_calculator_parse_items(
     }
   }
   if stop_at_close && !closed {
-    raise FunctionExpected
+    raise PdfError::FunctionExpected
   }
   (items, index)
 }
@@ -909,7 +909,7 @@ fn pdf_fun_parse_calculator(
     _ => pdf_fun_calculator_parse_operations(tokens, 0, stop_at_close=false)
   }
   if next_index != tokens.length() {
-    raise FunctionExpected
+    raise PdfError::FunctionExpected
   }
   { operations, }
 }
@@ -938,8 +938,8 @@ pub fn PdfDocument::parse_function(
   let function_type = match
     self.lookup_direct(pdf_fun_function_type_key(), function_dictionary) {
     Some(PdfInteger(value)) => value
-    Some(_) => raise NumberExpected
-    None => raise DictionaryKeyNotFound(pdf_fun_function_type_key())
+    Some(_) => raise PdfError::NumberExpected
+    None => raise PdfError::DictionaryKeyNotFound(pdf_fun_function_type_key())
   }
   match function_type {
     0 =>
@@ -962,7 +962,7 @@ pub fn PdfDocument::parse_function(
         [1.0],
       )
       if c0.length() != c1.length() {
-        raise FunctionExpected
+        raise PdfError::FunctionExpected
       }
       {
         domain,
@@ -993,7 +993,7 @@ pub fn PdfDocument::parse_function(
           pdf_fun_parse_calculator(self.pdf_fun_stream_data(function_object)),
         ),
       }
-    other => raise FunctionNotSupported(other)
+    other => raise PdfError::FunctionNotSupported(other)
   }
 }
 
@@ -1112,7 +1112,7 @@ fn pdf_fun_clamp_values(
   range : ArrayView[Double],
 ) -> Array[Double] raise PdfError {
   if range.length() != values.length() * 2 {
-    raise BadFunctionEvaluation("range arity mismatch")
+    raise PdfError::BadFunctionEvaluation("range arity mismatch")
   }
   let output : Array[Double] = []
   for index in 0..<values.length() {
@@ -1136,7 +1136,7 @@ fn PdfSampledFunction::encoded_inputs(
 ) -> Array[Double] raise PdfError {
   if self.size.length() != clamped_inputs.length() ||
     self.encode.length() != clamped_inputs.length() * 2 {
-    raise BadFunctionEvaluation("sampled input arity mismatch")
+    raise PdfError::BadFunctionEvaluation("sampled input arity mismatch")
   }
   let output : Array[Double] = []
   for index in 0..<clamped_inputs.length() {
@@ -1164,7 +1164,7 @@ fn PdfSampledFunction::read_table(
   output_count : Int,
 ) -> Array[Double] raise PdfError {
   if self.size.length() != indices.length() {
-    raise BadFunctionEvaluation("sampled table arity mismatch")
+    raise PdfError::BadFunctionEvaluation("sampled table arity mismatch")
   }
   let mut position = 0
   let mut multiplier = 1
@@ -1174,7 +1174,7 @@ fn PdfSampledFunction::read_table(
   }
   let offset = position * output_count
   if offset < 0 || offset + output_count > self.samples.length() {
-    raise BadFunctionEvaluation("sampled table index out of range")
+    raise PdfError::BadFunctionEvaluation("sampled table index out of range")
   }
   let values : Array[Double] = []
   for index in 0..<output_count {
@@ -1191,12 +1191,13 @@ fn PdfSampledFunction::eval_sampled(
 ) -> Array[Double] raise PdfError {
   let range = match function.range {
     Some(range) => range
-    None => raise BadFunctionEvaluation("sampled function missing range")
+    None =>
+      raise PdfError::BadFunctionEvaluation("sampled function missing range")
   }
   if range.length() % 2 != 0 ||
     self.decode.length() != range.length() ||
     self.decode.length() % 2 != 0 {
-    raise BadFunctionEvaluation("sampled output arity mismatch")
+    raise PdfError::BadFunctionEvaluation("sampled output arity mismatch")
   }
   let output_count = range.length() / 2
   let encoded = self.encoded_inputs(function, clamped_inputs)
@@ -1232,7 +1233,7 @@ fn PdfStitchingFunction::eval_stitching(
   clamped_inputs : ArrayView[Double],
 ) -> Array[Double] raise PdfError {
   if clamped_inputs.length() != 1 || function.domain.length() != 2 {
-    raise BadFunctionEvaluation("stitching function arity mismatch")
+    raise PdfError::BadFunctionEvaluation("stitching function arity mismatch")
   }
   let input = clamped_inputs[0]
   let points : Array[Double] = [function.domain[0]]
@@ -1250,7 +1251,7 @@ fn PdfStitchingFunction::eval_stitching(
     }
   }
   if chosen < 0 {
-    raise BadFunctionEvaluation("stitching function bounds mismatch")
+    raise PdfError::BadFunctionEvaluation("stitching function bounds mismatch")
   }
   let encoded = pdf_fun_interpolate(
     input,
@@ -1275,7 +1276,7 @@ fn pdf_fun_calculator_pop_value(
 ) -> PdfCalculatorValue raise PdfError {
   match stack.pop() {
     Some(value) => value
-    None => raise BadFunctionEvaluation("calculator stack underflow")
+    None => raise PdfError::BadFunctionEvaluation("calculator stack underflow")
   }
 }
 
@@ -1287,7 +1288,7 @@ fn pdf_fun_calculator_pop_number(
     PdfCalculatorInt(value) => value.to_double()
     PdfCalculatorFloat(value) => value
     PdfCalculatorBoolean(_) =>
-      raise BadFunctionEvaluation("calculator number expected")
+      raise PdfError::BadFunctionEvaluation("calculator number expected")
   }
 }
 
@@ -1297,7 +1298,10 @@ fn pdf_fun_calculator_pop_int(
 ) -> Int raise PdfError {
   match pdf_fun_calculator_pop_value(stack) {
     PdfCalculatorInt(value) => value
-    _ => raise BadFunctionEvaluation("calculator integer operand expected")
+    _ =>
+      raise PdfError::BadFunctionEvaluation(
+        "calculator integer operand expected",
+      )
   }
 }
 
@@ -1308,7 +1312,7 @@ fn pdf_fun_calculator_pop_bool(
   match pdf_fun_calculator_pop_value(stack) {
     PdfCalculatorBoolean(value) => value
     PdfCalculatorInt(_) | PdfCalculatorFloat(_) =>
-      raise BadFunctionEvaluation("calculator boolean expected")
+      raise PdfError::BadFunctionEvaluation("calculator boolean expected")
   }
 }
 
@@ -1318,7 +1322,9 @@ fn pdf_fun_calculator_copy(
 ) -> Unit raise PdfError {
   let count = pdf_fun_calculator_pop_int(stack)
   if count < 0 || count > stack.length() {
-    raise BadFunctionEvaluation("calculator copy operand out of range")
+    raise PdfError::BadFunctionEvaluation(
+      "calculator copy operand out of range",
+    )
   }
   let start = stack.length() - count
   let end = stack.length()
@@ -1333,7 +1339,9 @@ fn pdf_fun_calculator_index(
 ) -> Unit raise PdfError {
   let index = pdf_fun_calculator_pop_int(stack)
   if index < 0 || index >= stack.length() {
-    raise BadFunctionEvaluation("calculator index operand out of range")
+    raise PdfError::BadFunctionEvaluation(
+      "calculator index operand out of range",
+    )
   }
   stack.push(stack[stack.length() - index - 1])
 }
@@ -1345,7 +1353,9 @@ fn pdf_fun_calculator_roll(
   let distance = pdf_fun_calculator_pop_int(stack)
   let count = pdf_fun_calculator_pop_int(stack)
   if count < 1 || count > stack.length() {
-    raise BadFunctionEvaluation("calculator roll operand out of range")
+    raise PdfError::BadFunctionEvaluation(
+      "calculator roll operand out of range",
+    )
   }
   let start = stack.length() - count
   let offset = (distance % count + count) % count
@@ -1389,7 +1399,7 @@ fn pdf_fun_calculator_numeric_binary(
       stack.push(PdfCalculatorFloat(float_op(left, right.to_double())))
     (PdfCalculatorFloat(left), PdfCalculatorFloat(right)) =>
       stack.push(PdfCalculatorFloat(float_op(left, right)))
-    _ => raise BadFunctionEvaluation("calculator type mismatch")
+    _ => raise PdfError::BadFunctionEvaluation("calculator type mismatch")
   }
 }
 
@@ -1406,7 +1416,7 @@ fn pdf_fun_calculator_boolean_or_integer_binary(
       stack.push(PdfCalculatorBoolean(bool_op(left, right)))
     (PdfCalculatorInt(left), PdfCalculatorInt(right)) =>
       stack.push(PdfCalculatorInt(int_op(left, right)))
-    _ => raise BadFunctionEvaluation("calculator type mismatch")
+    _ => raise PdfError::BadFunctionEvaluation("calculator type mismatch")
   }
 }
 
@@ -1418,7 +1428,9 @@ fn pdf_fun_calculator_not(
     PdfCalculatorBoolean(value) => stack.push(PdfCalculatorBoolean(!value))
     PdfCalculatorInt(value) => stack.push(PdfCalculatorInt(Int::lnot(value)))
     PdfCalculatorFloat(_) =>
-      raise BadFunctionEvaluation("calculator integer operand expected")
+      raise PdfError::BadFunctionEvaluation(
+        "calculator integer operand expected",
+      )
   }
 }
 
@@ -1473,7 +1485,7 @@ fn pdf_fun_calculator_eval_operations(
           PdfCalculatorFloat(value) =>
             stack.push(PdfCalculatorFloat(value.abs()))
           PdfCalculatorBoolean(_) =>
-            raise BadFunctionEvaluation("calculator number expected")
+            raise PdfError::BadFunctionEvaluation("calculator number expected")
         }
       PdfCalculatorAdd =>
         pdf_fun_calculator_numeric_binary(
@@ -1508,7 +1520,7 @@ fn pdf_fun_calculator_eval_operations(
           PdfCalculatorFloat(value) =>
             stack.push(PdfCalculatorFloat(value.ceil()))
           PdfCalculatorBoolean(_) =>
-            raise BadFunctionEvaluation("calculator number expected")
+            raise PdfError::BadFunctionEvaluation("calculator number expected")
         }
       PdfCalculatorCos =>
         stack.push(
@@ -1525,7 +1537,7 @@ fn pdf_fun_calculator_eval_operations(
           PdfCalculatorFloat(value) =>
             stack.push(PdfCalculatorInt(value.floor().to_int()))
           PdfCalculatorBoolean(_) =>
-            raise BadFunctionEvaluation("calculator number expected")
+            raise PdfError::BadFunctionEvaluation("calculator number expected")
         }
       PdfCalculatorCvr =>
         match pdf_fun_calculator_pop_value(stack) {
@@ -1533,7 +1545,7 @@ fn pdf_fun_calculator_eval_operations(
             stack.push(PdfCalculatorFloat(value.to_double()))
           PdfCalculatorFloat(value) => stack.push(PdfCalculatorFloat(value))
           PdfCalculatorBoolean(_) =>
-            raise BadFunctionEvaluation("calculator number expected")
+            raise PdfError::BadFunctionEvaluation("calculator number expected")
         }
       PdfCalculatorSub =>
         pdf_fun_calculator_numeric_binary(
@@ -1554,13 +1566,13 @@ fn pdf_fun_calculator_eval_operations(
       }
       PdfCalculatorDup => {
         if stack.length() == 0 {
-          raise BadFunctionEvaluation("calculator stack underflow")
+          raise PdfError::BadFunctionEvaluation("calculator stack underflow")
         }
         stack.push(stack[stack.length() - 1])
       }
       PdfCalculatorExch => {
         if stack.length() < 2 {
-          raise BadFunctionEvaluation("calculator stack underflow")
+          raise PdfError::BadFunctionEvaluation("calculator stack underflow")
         }
         let last = stack.length() - 1
         let value = stack[last]
@@ -1578,7 +1590,7 @@ fn pdf_fun_calculator_eval_operations(
           PdfCalculatorFloat(value) =>
             stack.push(PdfCalculatorInt(value.floor().to_int()))
           PdfCalculatorBoolean(_) =>
-            raise BadFunctionEvaluation("calculator number expected")
+            raise PdfError::BadFunctionEvaluation("calculator number expected")
         }
       PdfCalculatorIdiv => {
         let right = pdf_fun_calculator_pop_int(stack)
@@ -1655,7 +1667,7 @@ fn pdf_fun_calculator_eval_operations(
             }
           PdfCalculatorFloat(value) => stack.push(PdfCalculatorFloat(-value))
           PdfCalculatorBoolean(_) =>
-            raise BadFunctionEvaluation("calculator number expected")
+            raise PdfError::BadFunctionEvaluation("calculator number expected")
         }
       PdfCalculatorNot => pdf_fun_calculator_not(stack)
       PdfCalculatorOr =>
@@ -1674,7 +1686,7 @@ fn pdf_fun_calculator_eval_operations(
           PdfCalculatorFloat(value) =>
             stack.push(PdfCalculatorInt(value.round().to_int()))
           PdfCalculatorBoolean(_) =>
-            raise BadFunctionEvaluation("calculator number expected")
+            raise PdfError::BadFunctionEvaluation("calculator number expected")
         }
       PdfCalculatorSin =>
         stack.push(
@@ -1694,7 +1706,7 @@ fn pdf_fun_calculator_eval_operations(
           PdfCalculatorFloat(value) =>
             stack.push(PdfCalculatorInt(value.trunc().to_int()))
           PdfCalculatorBoolean(_) =>
-            raise BadFunctionEvaluation("calculator number expected")
+            raise PdfError::BadFunctionEvaluation("calculator number expected")
         }
       PdfCalculatorXor =>
         pdf_fun_calculator_boolean_or_integer_binary(
@@ -1722,7 +1734,9 @@ fn PdfCalculatorFunction::eval_calculator(
       PdfCalculatorInt(value) => output.push(value.to_double())
       PdfCalculatorFloat(value) => output.push(value)
       PdfCalculatorBoolean(_) =>
-        raise BadFunctionEvaluation("calculator output must be numeric")
+        raise PdfError::BadFunctionEvaluation(
+          "calculator output must be numeric",
+        )
     }
   }
   output
@@ -1734,7 +1748,7 @@ fn PdfFunction::clamped_inputs(
   inputs : ArrayView[Double],
 ) -> Array[Double] raise PdfError {
   if self.domain.length() != inputs.length() * 2 {
-    raise BadFunctionEvaluation("domain arity mismatch")
+    raise PdfError::BadFunctionEvaluation("domain arity mismatch")
   }
   let output : Array[Double] = []
   for index in 0..<inputs.length() {
@@ -1753,7 +1767,7 @@ fn PdfFunction::clamped_inputs(
 /// Evaluate a PDF function for the supplied inputs.
 ///
 /// Inputs are clamped to `domain` before dispatch. The evaluated output is
-/// clamped to `range` when one is present. Raises `BadFunctionEvaluation` when
+/// clamped to `range` when one is present. Raises `PdfError::BadFunctionEvaluation` when
 /// arities, sampled-table indexes, calculator stack types, or child stitching
 /// bounds are invalid.
 pub fn PdfFunction::eval(

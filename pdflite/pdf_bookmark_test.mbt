@@ -314,7 +314,7 @@ test "PdfDocument read_bookmarks requires a root catalog" {
   let doc = @pdflite.pdf_document_empty()
   let result : Result[Array[@pdflite.PdfBookmark], Error] = try? doc.read_bookmarks()
   guard result is Err(@pdflite.PdfError::RootExpected) else {
-    fail("expected RootExpected")
+    fail("expected PdfError::RootExpected")
   }
 }
 
@@ -332,7 +332,7 @@ test "PdfDocument read_bookmarks rejects unresolved trailer root" {
   )
   let result : Result[Array[@pdflite.PdfBookmark], Error] = try? doc.read_bookmarks()
   guard result is Err(@pdflite.PdfError::RootExpected) else {
-    fail("expected RootExpected")
+    fail("expected PdfError::RootExpected")
   }
 }
 
@@ -414,7 +414,7 @@ test "PdfDocument remove_bookmarks requires a root catalog" {
   let doc = @pdflite.pdf_document_empty()
   let result : Result[@pdflite.PdfDocument, Error] = try? doc.remove_bookmarks()
   guard result is Err(@pdflite.PdfError::RootExpected) else {
-    fail("expected RootExpected")
+    fail("expected PdfError::RootExpected")
   }
 }
 
@@ -587,7 +587,7 @@ test "PdfDocument add_bookmarks requires a root catalog" {
     bookmarks,
   )
   guard result is Err(@pdflite.PdfError::RootExpected) else {
-    fail("expected RootExpected")
+    fail("expected PdfError::RootExpected")
   }
 }
 

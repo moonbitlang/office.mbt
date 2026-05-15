@@ -42,7 +42,7 @@ pub fn pdf_revisions_from_view(data : BytesView) -> Int raise PdfError {
   let mut done = false
   while !done {
     if revisions >= 1024 {
-      raise XRefExpected
+      raise PdfError::XRefExpected
     }
     cursor.seek_pdf_absolute(current_xref)
     let section = cursor.read_pdf_xref_section()
