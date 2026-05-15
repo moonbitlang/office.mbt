@@ -383,11 +383,11 @@ pub fn TransformMatrix::invert(
 ) -> TransformMatrix raise PdfError {
   let divisor = self.a * self.d - self.b * self.c
   if divisor == 0.0 {
-    raise PdfError::MatrixNotInvertable
+    raise MatrixNotInvertable
   }
   let scale = 1.0 / divisor
   if scale == 0.0 {
-    raise PdfError::MatrixNotInvertable
+    raise MatrixNotInvertable
   }
   {
     a: scale * self.d,

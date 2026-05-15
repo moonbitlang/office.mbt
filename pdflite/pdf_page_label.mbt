@@ -148,7 +148,7 @@ pub fn pdf_page_label_style_of_string(
     "UppercaseLetters" => PageLabelUppercaseLetters
     "LowercaseLetters" => PageLabelLowercaseLetters
     "NoLabelPrefixOnly" => PageLabelNoLabelPrefixOnly
-    _ => raise PdfError::PageLabelStyleExpected(text)
+    _ => raise PageLabelStyleExpected(text)
   }
 }
 
@@ -494,7 +494,7 @@ pub fn pdf_page_label_merge(
   ranges : ArrayView[Array[Int]],
 ) -> Array[PdfPageLabel] raise PdfError {
   if pdfs.length() != ranges.length() {
-    raise PdfError::PageTreeExpected
+    raise PageTreeExpected
   }
   let labels : Array[PdfPageLabel] = []
   let mut merged_page = 1
@@ -563,7 +563,7 @@ fn PdfDocument::pdf_page_label_raw_entries(
               output.push(entry)
             }
           }
-        _ => raise PdfError::PageTreeExpected
+        _ => raise PageTreeExpected
       }
   }
   output

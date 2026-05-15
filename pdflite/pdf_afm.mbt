@@ -55,7 +55,7 @@ fn pdf_afm_trim_line_end(line : BytesView) -> BytesView {
 ///|
 fn pdf_afm_parse_int(token : BytesView) -> Int raise PdfError {
   if token.length() == 0 {
-    raise PdfError::NumberExpected
+    raise NumberExpected
   }
   let mut sign = 1
   let mut index = 0
@@ -66,13 +66,13 @@ fn pdf_afm_parse_int(token : BytesView) -> Int raise PdfError {
     index = 1
   }
   if index >= token.length() {
-    raise PdfError::NumberExpected
+    raise NumberExpected
   }
   let mut value = 0
   while index < token.length() {
     let byte = token[index].to_int()
     if !pdf_is_digit_byte(byte) {
-      raise PdfError::NumberExpected
+      raise NumberExpected
     }
     value = value * 10 + byte - 0x30
     index += 1
@@ -137,11 +137,11 @@ fn pdf_afm_char_metric(line : BytesView) -> (PdfBytes, Int, Int) raise PdfError 
     let char_number = pdf_afm_parse_int(tokens[1])
     let width = pdf_afm_parse_int(tokens[4])
     if tokens.length() < 8 {
-      raise PdfError::AfmExpected
+      raise AfmExpected
     }
     (tokens[7].to_owned(), char_number, width)
   } else {
-    raise PdfError::AfmExpected
+    raise AfmExpected
   }
 }
 
@@ -156,7 +156,7 @@ fn pdf_afm_lookup_char_number(
       break char_number
     }
   } nobreak {
-    raise PdfError::AfmExpected
+    raise AfmExpected
   }
 }
 
@@ -176,7 +176,7 @@ fn pdf_afm_kern(
       None
     }
   } else {
-    raise PdfError::AfmExpected
+    raise AfmExpected
   }
 }
 

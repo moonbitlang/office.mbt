@@ -17,14 +17,11 @@ fn ByteCursor::read_pdf_trailer_dictionary(
   self : ByteCursor,
 ) -> PdfObject raise PdfError {
   self.drop_pdf_whitespace()
-  self.consume_pdf_ascii(
-    [116, 114, 97, 105, 108, 101, 114],
-    PdfError::TrailerExpected,
-  )
+  self.consume_pdf_ascii([116, 114, 97, 105, 108, 101, 114], TrailerExpected)
   self.drop_pdf_whitespace()
   let object = pdf_parse_single_lexeme_object(self.lex_pdf_tokens())
   match object {
     PdfDictionary(_) => object
-    _ => raise PdfError::TrailerExpected
+    _ => raise TrailerExpected
   }
 }

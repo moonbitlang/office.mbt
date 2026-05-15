@@ -6,7 +6,7 @@
 pub fn pdf_date_of_object(object : PdfObject) -> PdfDate raise PdfError {
   match object {
     PdfString(bytes) => pdf_date_of_view(bytes)
-    _ => raise PdfError::BadDate
+    _ => raise BadDate
   }
 }
 

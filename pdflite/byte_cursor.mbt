@@ -113,7 +113,7 @@ pub fn ByteCursor::set_offset(
   offset : Int,
 ) -> Unit raise PdfError {
   if offset < 0 {
-    raise PdfError::InvalidCursorPosition(offset)
+    raise InvalidCursorPosition(offset)
   }
   if self.offset == 0 {
     self.offset = offset
@@ -132,7 +132,7 @@ pub fn ByteCursor::seek(
 ) -> Unit raise PdfError {
   let absolute = position + self.offset
   if absolute < 0 {
-    raise PdfError::InvalidCursorPosition(position)
+    raise InvalidCursorPosition(position)
   }
   self.position = absolute
 }
@@ -195,11 +195,11 @@ pub fn ByteCursor::peek_view(
   length : Int,
 ) -> BytesView raise PdfError {
   if length < 0 {
-    raise PdfError::InvalidReadLength(length)
+    raise InvalidReadLength(length)
   }
   let end = self.position + length
   if end > self.data.length() {
-    raise PdfError::EndOfInput
+    raise EndOfInput
   }
   self.data[self.position:end]
 }
@@ -228,7 +228,7 @@ pub fn ByteCursor::nudge(self : ByteCursor) -> Unit {
 /// logical start position.
 pub fn ByteCursor::rewind(self : ByteCursor) -> Unit raise PdfError {
   if self.position <= self.offset {
-    raise PdfError::InvalidCursorPosition(self.position() - 1)
+    raise InvalidCursorPosition(self.position() - 1)
   }
   self.position -= 1
 }
@@ -271,11 +271,11 @@ pub fn ByteCursor::read_view(
   length : Int,
 ) -> BytesView raise PdfError {
   if length < 0 {
-    raise PdfError::InvalidReadLength(length)
+    raise InvalidReadLength(length)
   }
   let end = self.position + length
   if end > self.data.length() {
-    raise PdfError::EndOfInput
+    raise EndOfInput
   }
   let view = self.data[self.position:end]
   self.position = end
@@ -315,7 +315,7 @@ pub fn ByteCursor::read_until_view(
       if eof_is_delimiter {
         done = true
       } else {
-        raise PdfError::EndOfInput
+        raise EndOfInput
       }
     } else if stop(value) {
       done = true
@@ -342,7 +342,7 @@ pub fn ByteCursor::ignore_until(
       if eof_is_delimiter {
         done = true
       } else {
-        raise PdfError::EndOfInput
+        raise EndOfInput
       }
     } else if stop(value) {
       done = true
@@ -391,7 +391,7 @@ pub fn ByteCursor::read_line_view(
   self : ByteCursor,
 ) -> BytesView raise PdfError {
   if self.position >= self.data.length() {
-    raise PdfError::EndOfInput
+    raise EndOfInput
   }
   let start = self.position
   let mut done = false

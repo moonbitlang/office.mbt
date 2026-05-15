@@ -201,7 +201,7 @@ fn pdf_page_renumber_lookup(
       changes, resource_key, page_number, old_name,
     ) {
     Some(new_name) => new_name
-    None => raise PdfError::DictionaryKeyNotFound(old_name)
+    None => raise DictionaryKeyNotFound(old_name)
   }
 }
 

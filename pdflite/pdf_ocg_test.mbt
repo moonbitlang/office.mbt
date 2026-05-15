@@ -335,7 +335,7 @@ test "PdfDocument read_optional_content_groups rejects unresolved trailer root" 
   )
   let result : Result[@pdflite.PdfOptionalContent?, Error] = try? doc.read_optional_content_groups()
   guard result is Err(@pdflite.PdfError::RootExpected) else {
-    fail("expected PdfError::RootExpected")
+    fail("expected @pdflite.PdfError::RootExpected")
   }
 }
 
@@ -508,16 +508,16 @@ test "PdfDocument optional content helpers require a root catalog" {
   }
   let read_result : Result[@pdflite.PdfOptionalContent?, Error] = try? doc.read_optional_content_groups()
   guard read_result is Err(@pdflite.PdfError::RootExpected) else {
-    fail("expected PdfError::RootExpected")
+    fail("expected @pdflite.PdfError::RootExpected")
   }
   let write_result : Result[@pdflite.PdfDocument, Error] = try? doc.write_optional_content_groups(
     content,
   )
   guard write_result is Err(@pdflite.PdfError::RootExpected) else {
-    fail("expected PdfError::RootExpected")
+    fail("expected @pdflite.PdfError::RootExpected")
   }
   let remove_result : Result[@pdflite.PdfDocument, Error] = try? doc.remove_optional_content_groups()
   guard remove_result is Err(@pdflite.PdfError::RootExpected) else {
-    fail("expected PdfError::RootExpected")
+    fail("expected @pdflite.PdfError::RootExpected")
   }
 }

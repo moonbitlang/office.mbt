@@ -41,7 +41,7 @@ fn pdf_crypt_deterministic_seed32(
   seed : BytesView,
   purpose : BytesView,
 ) -> PdfBytes {
-  pdf_sha256_digest(
+  @crypt_core.pdf_sha256_digest(
     pdf_crypt_concat_bytes([
       @ascii.encode("pdflite-deterministic-aes-provider"),
       seed,

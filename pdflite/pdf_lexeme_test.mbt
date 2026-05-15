@@ -186,7 +186,7 @@ test "ByteCursor reports malformed PDF name hex escapes" {
   )
   let result : Result[@pdflite.PdfLexeme, Error] = try? cursor.lex_pdf_name()
   guard result is Err(@pdflite.PdfError::InvalidHexEscape) else {
-    fail("expected PdfError::InvalidHexEscape")
+    fail("expected @pdflite.PdfError::InvalidHexEscape")
   }
 }
 
@@ -271,13 +271,13 @@ test "ByteCursor treats backslash newline in PDF literal strings as continuation
     lexeme_bytes_for_test([40, 65, 92]),
   ).lex_pdf_literal_string()
   guard missing_escaped is Err(@pdflite.PdfError::EndOfInput) else {
-    fail("expected PdfError::EndOfInput")
+    fail("expected @pdflite.PdfError::EndOfInput")
   }
   let unterminated : Result[@pdflite.PdfLexeme, Error] = try? @pdflite.byte_cursor_of_bytes(
     lexeme_bytes_for_test([40, 65]),
   ).lex_pdf_literal_string()
   guard unterminated is Err(@pdflite.PdfError::EndOfInput) else {
-    fail("expected PdfError::EndOfInput")
+    fail("expected @pdflite.PdfError::EndOfInput")
   }
 }
 
@@ -295,7 +295,7 @@ test "ByteCursor lexes PDF hex strings and rejects malformed hex" {
   )
   let result : Result[@pdflite.PdfLexeme, Error] = try? malformed.lex_pdf_hex_string()
   guard result is Err(@pdflite.PdfError::InvalidHexEscape) else {
-    fail("expected PdfError::InvalidHexEscape")
+    fail("expected @pdflite.PdfError::InvalidHexEscape")
   }
 
   let dict = @pdflite.byte_cursor_of_bytes(lexeme_bytes_for_test([60, 60]))
@@ -317,7 +317,7 @@ test "ByteCursor lexes PDF hex strings and rejects malformed hex" {
   )
   let result : Result[@pdflite.PdfLexeme, Error] = try? bad_high.lex_pdf_hex_string()
   guard result is Err(@pdflite.PdfError::InvalidHexEscape) else {
-    fail("expected PdfError::InvalidHexEscape")
+    fail("expected @pdflite.PdfError::InvalidHexEscape")
   }
 }
 

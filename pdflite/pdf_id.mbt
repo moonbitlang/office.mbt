@@ -41,7 +41,7 @@ fn pdf_generate_id_bytes_from_text(
   time_text : () -> String,
 ) -> PdfBytes {
   let seed = pdf_id_seed(path, time_text)
-  pdf_md5_digest(@ascii.encode(seed))
+  @crypt_core.pdf_md5_digest(@ascii.encode(seed))
 }
 
 ///|
@@ -89,7 +89,7 @@ pub fn PdfDocument::change_id(
         .trailer_dict()
         .add_dict_entry(pdf_id_name(), pdf_generate_id(path, get_time)),
       )
-    _ => raise PdfError::DictionaryExpected
+    _ => raise DictionaryExpected
   }
 }
 
@@ -108,6 +108,6 @@ fn PdfDocument::copy_with_current_id(
       )
       output
     }
-    _ => raise PdfError::DictionaryExpected
+    _ => raise DictionaryExpected
   }
 }

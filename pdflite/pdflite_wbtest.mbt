@@ -4,16 +4,16 @@
 
 ///|
 test "private PDF number set deduplicates membership and additions" {
-  let numbers = pdf_number_set([1, 1])
+  let numbers = @number_set.pdf_number_set([1, 1])
   @test.assert_eq(numbers.contains(1), true)
   @test.assert_eq(numbers.contains(2), false)
   numbers.add(2)
   numbers.add(2)
   @test.assert_eq(numbers.contains(2), true)
   let output : Array[Int] = []
-  pdf_push_unique_number(output, numbers, 2)
-  pdf_push_unique_number(output, numbers, 3)
-  pdf_push_unique_number(output, numbers, 3)
+  @number_set.pdf_push_unique_number(output, numbers, 2)
+  @number_set.pdf_push_unique_number(output, numbers, 3)
+  @number_set.pdf_push_unique_number(output, numbers, 3)
   @test.assert_eq(output, [3])
 }
 
@@ -1066,7 +1066,7 @@ test "private reader xref helpers report malformed inputs" {
   let mismatch = byte_cursor_of_bytes(@ascii.encode("abc"))
   let mismatch_result : Result[Unit, Error] = try? mismatch.consume_pdf_ascii(
     [120],
-    PdfError::XRefExpected,
+    XRefExpected,
   )
   guard mismatch_result is Err(PdfError::XRefExpected) else {
     fail("expected PdfError::XRefExpected")
@@ -1128,9 +1128,7 @@ test "private password reconstruction xref metadata probe covers repair boundari
   let cyclic = try? pdf_reader_validate_xref_metadata_for_reconstruction(
     wbtest_cyclic_prev_xref_pdf(),
   )
-  guard cyclic is Err(PdfError::XRefExpected) else {
-    fail("expected cyclic Prev guard")
-  }
+  guard cyclic is Err(XRefExpected) else { fail("expected cyclic Prev guard") }
 }
 
 ///|
@@ -1183,7 +1181,7 @@ test "private structure survival helpers cover direct cases" {
       (pdf_structure_k_key(), PdfInteger(0)),
     ]),
   )
-  let deleted_pages = pdf_number_set([2])
+  let deleted_pages = @number_set.pdf_number_set([2])
   @test.assert_eq(
     doc.pdf_structure_object_has_deleted_page_in_set(
       PdfIndirect(50),

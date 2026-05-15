@@ -311,7 +311,7 @@ test "private page object entry rewriting covers parser states" {
     ),
     pdf_object_entry(ObjectToParse),
   )
-  let deleted_pages = pdf_number_set([1])
+  let deleted_pages = @number_set.pdf_number_set([1])
   @test.assert_eq(
     pdf_page_nullify_entry(
       pdf_object_entry(ObjectParsedAlreadyDecrypted(PdfIndirect(1))),
@@ -860,14 +860,13 @@ test "private page destination cleanup uses trailer root catalog" {
   @test.assert_eq(page_wb_name_tree_entries_from_catalog(doc, 90), [
     (page_wb_text("keep"), page_wb_fit_destination(page_numbers[0])),
   ])
-  @test.assert_eq(
-    [
-      for entry in page_wb_name_tree_entries_from_catalog(
-        doc, stale_catalog_number,
-      ) => entry.0
-    ],
-    [page_wb_text("drop"), page_wb_text("keep")],
+  let stale_name_tree_entries = page_wb_name_tree_entries_from_catalog(
+    doc, stale_catalog_number,
   )
+  @test.assert_eq([ for entry in stale_name_tree_entries => entry.0 ], [
+    page_wb_text("drop"),
+    page_wb_text("keep"),
+  ])
 }
 
 ///|

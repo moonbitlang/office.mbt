@@ -69,7 +69,7 @@ pub fn pdf_ascii_hex_decode_view(data : BytesView) -> PdfBytes raise PdfError {
               }
               None => high = Some(nibble)
             }
-          None => raise PdfError::InvalidHexEscape
+          None => raise InvalidHexEscape
         }
       }
     }
@@ -165,7 +165,7 @@ fn pdf_ascii85_decode_group(
     word = word * 85 + digit.to_uint64()
   }
   if word > pdf_ascii85_max_word {
-    raise PdfError::InvalidASCII85Data
+    raise InvalidASCII85Data
   }
   if output_length >= 1 {
     output.push((word / 16777216).to_byte())
@@ -187,7 +187,7 @@ fn pdf_ascii85_finish_partial(
   output : Array[Byte],
 ) -> Unit raise PdfError {
   if digits.length() == 1 {
-    raise PdfError::InvalidASCII85Data
+    raise InvalidASCII85Data
   } else if digits.length() > 1 {
     let output_length = digits.length() - 1
     while digits.length() < 5 {
@@ -221,7 +221,7 @@ pub fn pdf_ascii85_decode_view(data : BytesView) -> PdfBytes raise PdfError {
           output.push(0)
           output.push(0)
         } else {
-          raise PdfError::InvalidASCII85Data
+          raise InvalidASCII85Data
         }
       } else if value >= 33 && value <= 117 {
         digits.push(value - 33)
@@ -230,12 +230,12 @@ pub fn pdf_ascii85_decode_view(data : BytesView) -> PdfBytes raise PdfError {
           digits = []
         }
       } else {
-        raise PdfError::InvalidASCII85Data
+        raise InvalidASCII85Data
       }
     }
   }
   if !done {
-    raise PdfError::InvalidASCII85Data
+    raise InvalidASCII85Data
   }
   Bytes::from_array(output)
 }
@@ -252,8 +252,8 @@ fn pdf_lzw_next_code(
   code_length : Int,
 ) -> Int? raise PdfError {
   try bits.get_value_int(code_length) catch {
-    PdfError::EndOfInput => None
-    _ => raise PdfError::InvalidLZWData
+    EndOfInput => None
+    _ => raise InvalidLZWData
   } noraise {
     value => Some(value)
   }
@@ -267,21 +267,21 @@ fn pdf_lzw_decode_code(
   next_code : Int,
 ) -> Array[Int] raise PdfError {
   if code < 0 || code >= next_code || code >= prefix_code.length() {
-    raise PdfError::InvalidLZWData
+    raise InvalidLZWData
   }
   let stack : Array[Int] = []
   let mut current = code
   let mut depth = 0
   while current > 255 {
     if current >= next_code || current >= prefix_code.length() || depth > 8192 {
-      raise PdfError::InvalidLZWData
+      raise InvalidLZWData
     }
     stack.push(append_character[current])
     current = prefix_code[current]
     depth += 1
   }
   if current < 0 || current > 255 {
-    raise PdfError::InvalidLZWData
+    raise InvalidLZWData
   }
   let output : Array[Int] = [current]
   if stack.length() > 0 {
@@ -314,7 +314,7 @@ fn pdf_lzw_output_literal(
   code : Int,
 ) -> Unit raise PdfError {
   if code < 0 || code > 255 {
-    raise PdfError::InvalidLZWData
+    raise InvalidLZWData
   }
   output.push(code.to_byte())
 }
@@ -343,7 +343,7 @@ fn pdf_lzw_decode_view_prefix(
   let mut old_code = 256
   let mut character = 0
   match pdf_lzw_read_non_clear_code(bits, code_length) {
-    None => raise PdfError::InvalidLZWData
+    None => raise InvalidLZWData
     Some(257) => (Bytes::from_array(output), pdf_lzw_consumed_bytes(bits))
     Some(first_code) => {
       pdf_lzw_output_literal(output, first_code)
@@ -353,7 +353,7 @@ fn pdf_lzw_decode_view_prefix(
       let mut finished = false
       while !finished {
         match pdf_lzw_next_code(bits, code_length) {
-          None => raise PdfError::InvalidLZWData
+          None => raise InvalidLZWData
           Some(257) => {
             consumed = pdf_lzw_consumed_bytes(bits)
             finished = true
@@ -363,7 +363,7 @@ fn pdf_lzw_decode_view_prefix(
             next_code = 258
             old_code = 256
             match pdf_lzw_read_non_clear_code(bits, code_length) {
-              None => raise PdfError::InvalidLZWData
+              None => raise InvalidLZWData
               Some(257) => {
                 consumed = pdf_lzw_consumed_bytes(bits)
                 finished = true
@@ -387,7 +387,7 @@ fn pdf_lzw_decode_view_prefix(
                 new_code, prefix_code, append_character, next_code,
               )
             } else {
-              raise PdfError::InvalidLZWData
+              raise InvalidLZWData
             }
             character = chars[0]
             for value in chars {
@@ -464,7 +464,7 @@ pub fn pdf_lzw_decode_view(
                 new_code, prefix_code, append_character, next_code,
               )
             } else {
-              raise PdfError::InvalidLZWData
+              raise InvalidLZWData
             }
             character = chars[0]
             for value in chars {
@@ -693,7 +693,7 @@ pub fn pdf_decode_filter_view(
     ) {
     pdf_ccitt_decode_view(data, pdf_ccitt_default_params())
   } else {
-    raise PdfError::FilterNotSupported(filter)
+    raise FilterNotSupported(filter)
   }
 }
 
@@ -769,7 +769,7 @@ fn pdf_encode_filter_view_with_optional_flate_level(
       None => pdf_flate_encode_view(data)
     }
   } else {
-    raise PdfError::FilterNotSupported(filter)
+    raise FilterNotSupported(filter)
   }
 }
 
@@ -962,7 +962,7 @@ fn pdf_columns_key() -> PdfName {
 fn pdf_stream_dictionary_length(dictionary : PdfObject) -> Unit raise PdfError {
   match dictionary.lookup_immediate(pdf_codec_length_key()) {
     Some(PdfInteger(_)) => ()
-    _ => raise PdfError::StreamLengthExpected
+    _ => raise StreamLengthExpected
   }
 }
 
@@ -981,7 +981,7 @@ fn pdf_stream_first_filter(dictionary : PdfObject) -> PdfName? raise PdfError {
     Some(PdfNameObject(name)) => Some(name)
     Some(PdfArray([])) => None
     Some(PdfArray([PdfNameObject(name), ..])) => Some(name)
-    _ => raise PdfError::FilterExpected
+    _ => raise FilterExpected
   }
 }
 
@@ -1023,9 +1023,9 @@ fn PdfDocument::pdf_stream_first_filter_entry_direct(
     Some((key, PdfArray([first, ..]) as value)) =>
       match self.direct(first) {
         PdfNameObject(name) => Some((key, value, name))
-        _ => raise PdfError::FilterExpected
+        _ => raise FilterExpected
       }
-    _ => raise PdfError::FilterExpected
+    _ => raise FilterExpected
   }
 }
 
@@ -1043,7 +1043,7 @@ fn pdf_remove_first_filter_entry(
         key,
         PdfArray([ for value in rest => value ]),
       )
-    _ => raise PdfError::FilterExpected
+    _ => raise FilterExpected
   }
 }
 
@@ -1061,7 +1061,7 @@ fn pdf_remove_first_decodeparms_entry(
         key,
         PdfArray([ for value in rest => value ]),
       )
-    _ => raise PdfError::FilterExpected
+    _ => raise FilterExpected
   }
 }
 
@@ -1151,7 +1151,7 @@ fn pdf_predictor_scanline_width(
   columns : Int,
 ) -> Int raise PdfError {
   if colors <= 0 || bits_per_component <= 0 || columns <= 0 {
-    raise PdfError::PredictorExpected
+    raise PredictorExpected
   }
   (colors * bits_per_component * columns + 7) / 8
 }
@@ -1162,7 +1162,7 @@ fn pdf_predictor_bytes_per_pixel(
   bits_per_component : Int,
 ) -> Int raise PdfError {
   if colors <= 0 || bits_per_component <= 0 {
-    raise PdfError::PredictorExpected
+    raise PredictorExpected
   }
   (colors * bits_per_component + 7) / 8
 }
@@ -1209,7 +1209,7 @@ fn pdf_decode_tiff_predictor(
   data : BytesView,
 ) -> PdfBytes raise PdfError {
   if bits_per_component != 8 {
-    raise PdfError::PredictorNotSupported(2)
+    raise PredictorNotSupported(2)
   }
   let scanline_width = pdf_predictor_scanline_width(
     colors, bits_per_component, columns,
@@ -1238,7 +1238,7 @@ fn pdf_encode_tiff_predictor(
   data : BytesView,
 ) -> PdfBytes raise PdfError {
   if bits_per_component != 8 {
-    raise PdfError::PredictorNotSupported(2)
+    raise PredictorNotSupported(2)
   }
   let scanline_width = pdf_predictor_scanline_width(
     colors, bits_per_component, columns,
@@ -1328,7 +1328,7 @@ fn pdf_decode_png_push_scanline(
         decoded[i] = (current + pdf_paeth_predictor(left, up, up_left)) % 256
         output.push(decoded[i].to_byte())
       }
-    _ => raise PdfError::PredictorNotSupported(predictor)
+    _ => raise PredictorNotSupported(predictor)
   }
 }
 
@@ -1387,7 +1387,7 @@ pub fn pdf_decode_predictor_view(
     2 => pdf_decode_tiff_predictor(colors, bits_per_component, columns, data)
     value if value >= 10 && value <= 15 =>
       pdf_decode_png_predictor(colors, bits_per_component, columns, data)
-    _ => raise PdfError::PredictorNotSupported(predictor)
+    _ => raise PredictorNotSupported(predictor)
   }
 }
 
@@ -1495,7 +1495,7 @@ fn pdf_encode_png_predictor_value(
     2 => up
     3 => (left + up) / 2
     4 => pdf_paeth_predictor(left, up, up_left)
-    _ => raise PdfError::PredictorNotSupported(predictor)
+    _ => raise PredictorNotSupported(predictor)
   }
 }
 
@@ -1639,7 +1639,7 @@ pub fn pdf_encode_predictor_view(
       pdf_encode_png_optimum_predictor(
         colors, bits_per_component, columns, data,
       )
-    _ => raise PdfError::PredictorNotSupported(predictor)
+    _ => raise PredictorNotSupported(predictor)
   }
 }
 
@@ -1678,7 +1678,7 @@ fn pdf_first_decodeparms(dictionary : PdfObject) -> PdfObject? raise PdfError {
     Some(PdfDictionary(_) as value) => Some(value)
     Some(PdfArray([PdfNull, ..])) => None
     Some(PdfArray([PdfDictionary(_) as value, ..])) => Some(value)
-    _ => raise PdfError::PredictorExpected
+    _ => raise PredictorExpected
   }
 }
 
@@ -1720,9 +1720,9 @@ fn PdfDocument::pdf_first_decodeparms_direct(
       match self.direct(first) {
         PdfNull => None
         PdfDictionary(_) as value => Some(value)
-        _ => raise PdfError::PredictorExpected
+        _ => raise PredictorExpected
       }
-    _ => raise PdfError::PredictorExpected
+    _ => raise PredictorExpected
   }
 }
 
@@ -1735,7 +1735,7 @@ fn pdf_decodeparms_int(
   match dictionary.lookup_immediate(key) {
     None => default
     Some(PdfInteger(value)) => value
-    _ => raise PdfError::PredictorExpected
+    _ => raise PredictorExpected
   }
 }
 
@@ -1749,7 +1749,7 @@ fn PdfDocument::pdf_decodeparms_int_direct(
   match self.lookup_direct(key, dictionary) {
     None => default
     Some(PdfInteger(value)) => value
-    _ => raise PdfError::PredictorExpected
+    _ => raise PredictorExpected
   }
 }
 
@@ -1840,7 +1840,7 @@ fn pdf_ccitt_first_decodeparms(
       None
     Some(PdfDictionary(_) as value) => Some(value)
     Some(PdfArray([PdfDictionary(_) as value, ..])) => Some(value)
-    _ => raise PdfError::CCITTDecodeParmsExpected
+    _ => raise CCITTDecodeParmsExpected
   }
 }
 
@@ -1856,9 +1856,9 @@ fn PdfDocument::pdf_ccitt_first_decodeparms_direct(
       match self.direct(first) {
         PdfNull => None
         PdfDictionary(_) as value => Some(value)
-        _ => raise PdfError::CCITTDecodeParmsExpected
+        _ => raise CCITTDecodeParmsExpected
       }
-    _ => raise PdfError::CCITTDecodeParmsExpected
+    _ => raise CCITTDecodeParmsExpected
   }
 }
 
@@ -1871,7 +1871,7 @@ fn pdf_ccitt_decodeparms_int(
   match dictionary.lookup_immediate(key) {
     None => default
     Some(PdfInteger(value)) => value
-    _ => raise PdfError::CCITTDecodeParmsExpected
+    _ => raise CCITTDecodeParmsExpected
   }
 }
 
@@ -1885,7 +1885,7 @@ fn PdfDocument::pdf_ccitt_decodeparms_int_direct(
   match self.lookup_direct(key, dictionary) {
     None => default
     Some(PdfInteger(value)) => value
-    _ => raise PdfError::CCITTDecodeParmsExpected
+    _ => raise CCITTDecodeParmsExpected
   }
 }
 
@@ -1898,7 +1898,7 @@ fn pdf_ccitt_decodeparms_bool(
   match dictionary.lookup_immediate(key) {
     None => default
     Some(PdfBoolean(value)) => value
-    _ => raise PdfError::CCITTDecodeParmsExpected
+    _ => raise CCITTDecodeParmsExpected
   }
 }
 
@@ -1912,7 +1912,7 @@ fn PdfDocument::pdf_ccitt_decodeparms_bool_direct(
   match self.lookup_direct(key, dictionary) {
     None => default
     Some(PdfBoolean(value)) => value
-    _ => raise PdfError::CCITTDecodeParmsExpected
+    _ => raise CCITTDecodeParmsExpected
   }
 }
 
@@ -2096,7 +2096,7 @@ fn PdfDocument::pdf_stream_dictionary_length_direct(
 ) -> Unit raise PdfError {
   match self.lookup_direct(pdf_codec_length_key(), dictionary) {
     Some(PdfInteger(_)) => ()
-    _ => raise PdfError::StreamLengthExpected
+    _ => raise StreamLengthExpected
   }
 }
 
@@ -2150,7 +2150,7 @@ pub fn pdf_decode_stream_onestage(
   match object {
     PdfStreamObject(stream) =>
       PdfStreamObject(pdf_decode_stream_onestage_value(stream))
-    _ => raise PdfError::ParseStreamExpected
+    _ => raise ParseStreamExpected
   }
 }
 
@@ -2171,7 +2171,7 @@ fn PdfDocument::pdf_decode_stream_value_direct(
   let mut stages = 0
   while self.pdf_stream_has_filter_value_direct(current) {
     if stages >= 1024 {
-      raise PdfError::FilterExpected
+      raise FilterExpected
     }
     current = self.pdf_decode_stream_onestage_value_direct(current)
     stages += 1
@@ -2191,7 +2191,7 @@ pub fn PdfDocument::pdf_decode_stream(
   match self.direct(object) {
     PdfStreamObject(stream) =>
       PdfStreamObject(self.pdf_decode_stream_value_direct(stream))
-    _ => raise PdfError::ParseStreamExpected
+    _ => raise ParseStreamExpected
   }
 }
 
@@ -2205,10 +2205,10 @@ fn PdfDocument::pdf_decode_stream_until_unknown_value_direct(
   let mut stopped = false
   while !stopped && self.pdf_stream_has_filter_value_direct(current) {
     if stages >= 1024 {
-      raise PdfError::FilterExpected
+      raise FilterExpected
     }
     try self.pdf_decode_stream_onestage_value_direct(current) catch {
-      PdfError::FilterNotSupported(_) => stopped = true
+      FilterNotSupported(_) => stopped = true
       error => raise error
     } noraise {
       decoded => {
@@ -2236,7 +2236,7 @@ pub fn PdfDocument::pdf_decode_stream_until_unknown(
   match self.direct(object) {
     PdfStreamObject(stream) =>
       PdfStreamObject(self.pdf_decode_stream_until_unknown_value_direct(stream))
-    _ => raise PdfError::ParseStreamExpected
+    _ => raise ParseStreamExpected
   }
 }
 
@@ -2290,7 +2290,7 @@ fn pdf_decode_stream_value(stream : PdfStream) -> PdfStream raise PdfError {
   let mut stages = 0
   while pdf_stream_has_filter_value(current) {
     if stages >= 1024 {
-      raise PdfError::FilterExpected
+      raise FilterExpected
     }
     current = pdf_decode_stream_onestage_value(current)
     stages += 1
@@ -2303,7 +2303,7 @@ fn pdf_decode_stream_value(stream : PdfStream) -> PdfStream raise PdfError {
 pub fn pdf_decode_stream(object : PdfObject) -> PdfObject raise PdfError {
   match object {
     PdfStreamObject(stream) => PdfStreamObject(pdf_decode_stream_value(stream))
-    _ => raise PdfError::ParseStreamExpected
+    _ => raise ParseStreamExpected
   }
 }
 
@@ -2325,7 +2325,7 @@ fn pdf_add_filter_to_dictionary(
         pdf_filter_key(),
         PdfArray([filter_object, ..filters]),
       )
-    _ => raise PdfError::FilterExpected
+    _ => raise FilterExpected
   }
 }
 
@@ -2359,7 +2359,7 @@ pub fn pdf_encode_stream_with_filter(
         pdf_stream(dictionary, StreamGot(encoded))
       }
     }
-    _ => raise PdfError::ParseStreamExpected
+    _ => raise ParseStreamExpected
   }
 }
 
@@ -2413,7 +2413,7 @@ fn pdf_add_decodeparms_to_dictionary(
         pdf_decodeparms_key(),
         PdfArray([decodeparms, ..values]),
       )
-    _ => raise PdfError::PredictorExpected
+    _ => raise PredictorExpected
   }
 }
 
@@ -2449,7 +2449,7 @@ fn pdf_encode_stream_with_ccitt(
         pdf_stream(dictionary, StreamGot(encoded))
       }
     }
-    _ => raise PdfError::ParseStreamExpected
+    _ => raise ParseStreamExpected
   }
 }
 
@@ -2498,7 +2498,7 @@ pub fn pdf_encode_stream_with_filter_and_predictor(
         pdf_stream(dictionary, StreamGot(encoded))
       }
     }
-    _ => raise PdfError::ParseStreamExpected
+    _ => raise ParseStreamExpected
   }
 }
 
@@ -2523,7 +2523,7 @@ pub fn pdf_encode_stream_with_encoding(
           pdf_encode_stream_with_ccitt(
             columns, rows, 0, object, only_if_smaller,
           )
-        Some(_) => raise PdfError::PredictorExpected
+        Some(_) => raise PredictorExpected
       }
     PdfStreamCCITTG4(columns, rows) =>
       match predictor {
@@ -2531,7 +2531,7 @@ pub fn pdf_encode_stream_with_encoding(
           pdf_encode_stream_with_ccitt(
             columns, rows, -1, object, only_if_smaller,
           )
-        Some(_) => raise PdfError::PredictorExpected
+        Some(_) => raise PredictorExpected
       }
     _ =>
       match predictor {

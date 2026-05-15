@@ -18,7 +18,7 @@ pub fn ByteCursor::read_jpeg_data(self : ByteCursor) -> PdfBytes raise PdfError 
           last = value
         }
       }
-      None => raise PdfError::EndOfInput
+      None => raise EndOfInput
     }
   }
   Bytes::from_array(output)

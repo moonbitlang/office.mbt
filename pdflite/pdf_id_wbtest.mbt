@@ -19,9 +19,12 @@ test "private current ID generation honors env and time source" {
     "unreached"
   })
   id_wb_restore_env_for_test(previous)
-  @test.assert_eq(ordinary, pdf_md5_digest(@ascii.encode("12345")))
+  @test.assert_eq(ordinary, @crypt_core.pdf_md5_digest(@ascii.encode("12345")))
   @test.assert_eq(current.length(), 16)
-  @test.assert_eq(reproducible, pdf_md5_digest(@ascii.encode("camlpdf")))
+  @test.assert_eq(
+    reproducible,
+    @crypt_core.pdf_md5_digest(@ascii.encode("camlpdf")),
+  )
   @test.assert_eq(called.val, false)
 }
 

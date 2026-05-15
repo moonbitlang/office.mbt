@@ -153,15 +153,15 @@ fn PdfDocument::load_reconstructed_xref_stream_objects(
 
 ///|
 priv struct PdfReconstructedXRefCoverage {
-  sections : Array[(Int, PdfNumberSet)]
+  sections : Array[(Int, @number_set.PdfNumberSet)]
 }
 
 ///|
 fn pdf_reconstructed_trailer_root_numbers(
   classic_sections : ArrayView[(Int, PdfXRefSection)],
   xref_stream_sections : ArrayView[PdfXRefSection],
-) -> PdfNumberSet {
-  let roots = pdf_number_set([])
+) -> @number_set.PdfNumberSet {
+  let roots = @number_set.pdf_number_set([])
   for item in classic_sections {
     match item.1.trailer.lookup_immediate(pdf_reader_root_name()) {
       Some(PdfIndirect(root)) => roots.add(root)
@@ -208,13 +208,13 @@ fn pdf_reconstructed_xref_coverage(
   classic_sections : ArrayView[(Int, PdfXRefSection)],
   xref_stream_sections : ArrayView[PdfXRefSection],
 ) -> PdfReconstructedXRefCoverage {
-  let covered : Array[(Int, PdfNumberSet)] = []
+  let covered : Array[(Int, @number_set.PdfNumberSet)] = []
   let trailer_roots = pdf_reconstructed_trailer_root_numbers(
     classic_sections, xref_stream_sections,
   )
   for item in classic_sections {
     let (offset, section) = item
-    let numbers = pdf_number_set([])
+    let numbers = @number_set.pdf_number_set([])
     let xref_index = pdf_classic_xref_index(section.entries)
     for xref in section.entries {
       if xref.object_number > 0 &&
@@ -233,7 +233,7 @@ fn pdf_reconstructed_xref_coverage(
   for section in xref_stream_sections {
     match section.stream_object_offset {
       Some(offset) => {
-        let numbers = pdf_number_set([])
+        let numbers = @number_set.pdf_number_set([])
         for xref in section.entries {
           if xref.object_number > 0 &&
             (xref.in_use || !trailer_roots.contains(xref.object_number)) {
@@ -280,7 +280,7 @@ fn PdfDocument::select_reconstructed_trailer(
       _ => ()
     }
   } nobreak {
-    raise PdfError::RootExpected
+    raise RootExpected
   }
 }
 
@@ -292,7 +292,7 @@ fn PdfDocument::set_trailer_and_root(
   self.set_trailer_dict(trailer)
   match trailer.lookup_immediate(pdf_reader_root_name()) {
     Some(PdfIndirect(root)) => self.set_root(root)
-    _ => raise PdfError::RootExpected
+    _ => raise RootExpected
   }
 }
 

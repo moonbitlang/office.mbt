@@ -3227,7 +3227,7 @@ fn acceptance_unicode_predefined_cmap_document_for_test() -> @pdflite.PdfDocumen
     137,
     acceptance_unicode_predefined_tounicode_cmap_for_test(),
   )
-  let pages = [
+  let pages : ReadOnlyArray[@pdflite.PdfPage] = [
     acceptance_predefined_cmap_page_for_test(
       "/FUcs2H",
       acceptance_predefined_cmap_type0_font_for_test(
@@ -8849,7 +8849,7 @@ fn acceptance_process_resource_lifecycle_forms_for_test(
   for page in doc.pages_of_pagetree() {
     doc.process_xobjects(page, fn(_, _, streams) raise @pdflite.PdfError {
       if streams.length() != 1 {
-        raise PdfError::ParseStreamExpected
+        raise ParseStreamExpected
       }
       let bytes = acceptance_ascii_for_test("FORM-LIFECYCLE")
       [

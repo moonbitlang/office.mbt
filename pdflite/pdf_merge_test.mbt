@@ -1742,13 +1742,13 @@ test "pdf_merge_documents rejects empty and mismatched inputs" {
     [],
   )
   guard empty is Err(@pdflite.PdfError::PageTreeExpected) else {
-    fail("expected PdfError::PageTreeExpected for empty merge")
+    fail("expected @pdflite.PdfError::PageTreeExpected for empty merge")
   }
   let mismatched : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_merge_documents(
     [doc],
     [],
   )
   guard mismatched is Err(@pdflite.PdfError::PageTreeExpected) else {
-    fail("expected PdfError::PageTreeExpected for mismatched merge")
+    fail("expected @pdflite.PdfError::PageTreeExpected for mismatched merge")
   }
 }

@@ -248,7 +248,7 @@ fn PdfStreamDataCrypt::decrypt(
       file_key,
       key_length_bits
     ) =>
-      pdf_arc4_crypt_object(
+      @crypt_core.pdf_arc4_crypt_object(
         object_number, generation, file_key, key_length_bits, data,
       )
     PdfStreamDataAesV2Decrypt(
@@ -257,11 +257,11 @@ fn PdfStreamDataCrypt::decrypt(
       file_key,
       key_length_bits
     ) =>
-      pdf_aesv2_decrypt_object_data(
+      @crypt_core.pdf_aesv2_decrypt_object_data(
         object_number, generation, file_key, key_length_bits, data,
       )
     PdfStreamDataAesV3Decrypt(file_key) =>
-      pdf_aesv3_decrypt_object_data(file_key, data)
+      @crypt_core.pdf_aesv3_decrypt_object_data(file_key, data)
   }
 }
 
@@ -271,14 +271,14 @@ fn pdf_stream_to_get_raw_view(to_get : ToGet) -> BytesView raise PdfError {
   let start = to_get.position() + input.offset
   let length = to_get.length()
   if start < 0 {
-    raise PdfError::InvalidCursorPosition(to_get.position())
+    raise InvalidCursorPosition(to_get.position())
   }
   if length < 0 {
-    raise PdfError::InvalidReadLength(length)
+    raise InvalidReadLength(length)
   }
   let end = start + length
   if end > input.data.length() {
-    raise PdfError::EndOfInput
+    raise EndOfInput
   }
   input.data[start:end]
 }
@@ -323,7 +323,7 @@ fn pdf_stream_data_bytes(data : PdfStreamData) -> PdfBytes raise PdfError {
 pub fn PdfObject::stream_bytes(self : PdfObject) -> PdfBytes raise PdfError {
   match self {
     PdfStreamObject(stream) => pdf_stream_data_bytes(stream.data)
-    _ => raise PdfError::ParseStreamExpected
+    _ => raise ParseStreamExpected
   }
 }
 
@@ -352,7 +352,7 @@ pub fn PdfObject::get_stream(self : PdfObject) -> Unit raise PdfError {
           stream.data = StreamGot(data)
         }
       }
-    _ => raise PdfError::ParseStreamExpected
+    _ => raise ParseStreamExpected
   }
 }
 
@@ -442,7 +442,7 @@ pub fn PdfObject::find_indirect(
         Some(PdfIndirect(number)) => Some(number)
         _ => None
       }
-    _ => raise PdfError::DictionaryExpected
+    _ => raise DictionaryExpected
   }
 }
 
@@ -519,7 +519,7 @@ pub fn PdfObject::unique_key(
       }
       candidate
     }
-    None => raise PdfError::DictionaryExpected
+    None => raise DictionaryExpected
   }
 }
 
@@ -542,7 +542,7 @@ fn dict_replace_entries(
       output.push((name, old_value))
     }
   } nobreak {
-    raise PdfError::DictionaryKeyNotFound(key)
+    raise DictionaryKeyNotFound(key)
   }
 }
 
@@ -581,7 +581,7 @@ pub fn PdfObject::add_dict_entry(
       stream.dictionary = stream.dictionary.add_dict_entry(key, value)
       self
     }
-    _ => raise PdfError::DictionaryExpected
+    _ => raise DictionaryExpected
   }
 }
 
@@ -602,7 +602,7 @@ pub fn PdfObject::replace_dict_entry(
       stream.dictionary = stream.dictionary.replace_dict_entry(key, value)
       self
     }
-    _ => raise PdfError::DictionaryKeyNotFound(key)
+    _ => raise DictionaryKeyNotFound(key)
   }
 }
 
@@ -622,6 +622,6 @@ pub fn PdfObject::remove_dict_entry(
       stream.dictionary = stream.dictionary.remove_dict_entry(key)
       self
     }
-    _ => raise PdfError::DictionaryExpected
+    _ => raise DictionaryExpected
   }
 }

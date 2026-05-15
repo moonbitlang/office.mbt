@@ -14,7 +14,7 @@ fn PdfEncryptionValues::password_settings(
     PdfCryptARC4(key_length_bits, revision) => (revision, key_length_bits)
     PdfCryptAESV2 => (4, 128)
     PdfCryptAESV3(_) =>
-      raise PdfError::EncryptionAuthenticationUnsupported(self.crypt_type)
+      raise EncryptionAuthenticationUnsupported(self.crypt_type)
   }
 }
 
@@ -38,7 +38,7 @@ fn PdfEncryptionValues::authenticate_user_password(
       pdf_authenticate_user_password_aesv3(iso, password, self.user_entry)
     _ => {
       let (revision, key_length_bits) = self.password_settings()
-      pdf_authenticate_user_password(
+      @crypt_core.pdf_authenticate_user_password(
         no_encrypt_metadata,
         password,
         revision,
@@ -82,7 +82,7 @@ fn PdfEncryptionValues::file_key_for_user_password(
       }
     _ => {
       let (revision, key_length_bits) = self.password_settings()
-      if pdf_authenticate_user_password(
+      if @crypt_core.pdf_authenticate_user_password(
           no_encrypt_metadata,
           password,
           revision,
@@ -93,7 +93,7 @@ fn PdfEncryptionValues::file_key_for_user_password(
           key_length_bits,
         ) {
         Some(
-          pdf_encryption_file_key(
+          @crypt_core.pdf_encryption_file_key(
             no_encrypt_metadata,
             password,
             revision,
@@ -134,7 +134,7 @@ fn PdfEncryptionValues::authenticate_owner_password(
       )
     _ => {
       let (revision, key_length_bits) = self.password_settings()
-      pdf_authenticate_owner_password(
+      @crypt_core.pdf_authenticate_owner_password(
         no_encrypt_metadata,
         password,
         revision,
@@ -179,13 +179,13 @@ fn PdfEncryptionValues::file_key_for_owner_password(
       }
     _ => {
       let (revision, key_length_bits) = self.password_settings()
-      let user_password = pdf_user_password_from_owner_password(
+      let user_password = @crypt_core.pdf_user_password_from_owner_password(
         revision,
         password,
         self.owner_entry,
         key_length_bits,
       )
-      if pdf_authenticate_user_password(
+      if @crypt_core.pdf_authenticate_user_password(
           no_encrypt_metadata,
           user_password,
           revision,
@@ -196,7 +196,7 @@ fn PdfEncryptionValues::file_key_for_owner_password(
           key_length_bits,
         ) {
         Some(
-          pdf_encryption_file_key(
+          @crypt_core.pdf_encryption_file_key(
             no_encrypt_metadata,
             user_password,
             revision,

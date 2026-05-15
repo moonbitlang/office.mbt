@@ -48,7 +48,7 @@ fn pdf_xref_fixed_width_entry(
     let in_use = match line[17].to_int() {
       110 => true
       102 => false
-      _ => raise PdfError::XRefEntryExpected
+      _ => raise XRefEntryExpected
     }
     Some({
       object_number,
@@ -69,7 +69,7 @@ fn pdf_read_startxref_position(data : BytesView) -> Int raise PdfError {
     115, 116, 97, 114, 116, 120, 114, 101, 102,
   ])
   if start < 0 {
-    raise PdfError::StartXRefExpected
+    raise StartXRefExpected
   }
   let rest = search[start + 9:]
   let mut index = 0
@@ -86,12 +86,12 @@ fn pdf_read_startxref_position(data : BytesView) -> Int raise PdfError {
 ///|
 fn pdf_xref_token_in_use(token : BytesView) -> Bool raise PdfError {
   if token.length() == 0 {
-    raise PdfError::XRefEntryExpected
+    raise XRefEntryExpected
   }
   match token[0].to_int() {
     110 => true
     102 => false
-    _ => raise PdfError::XRefEntryExpected
+    _ => raise XRefEntryExpected
   }
 }
 
@@ -140,7 +140,7 @@ fn pdf_classic_xrefs_add_newer_first(
   target : Array[PdfClassicXRefEntry],
   entries : ArrayView[PdfClassicXRefEntry],
 ) -> Unit {
-  let seen = pdf_number_set([])
+  let seen = @number_set.pdf_number_set([])
   for xref in target {
     seen.add(xref.object_number)
   }
@@ -157,7 +157,7 @@ fn ByteCursor::read_pdf_classic_xref_entries(
   self : ByteCursor,
 ) -> Array[PdfClassicXRefEntry] raise PdfError {
   self.drop_pdf_whitespace()
-  self.consume_pdf_ascii([120, 114, 101, 102], PdfError::XRefExpected)
+  self.consume_pdf_ascii([120, 114, 101, 102], XRefExpected)
   let entries : Array[PdfClassicXRefEntry] = []
   let mut object_number = 0
   let mut done = false
@@ -167,7 +167,7 @@ fn ByteCursor::read_pdf_classic_xref_entries(
     if self.matches_pdf_ascii_at(position, [116, 114, 97, 105, 108, 101, 114]) {
       done = true
     } else if self.peek_byte() == pdf_no_more {
-      raise PdfError::TrailerExpected
+      raise TrailerExpected
     } else {
       let line = self.read_line_view()
       let tokens = pdf_split_whitespace_tokens(line)
@@ -203,7 +203,7 @@ fn ByteCursor::read_pdf_classic_xref_entries(
             })
             object_number += 1
           } else {
-            raise PdfError::XRefEntryExpected
+            raise XRefEntryExpected
           }
       }
     }

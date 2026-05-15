@@ -500,7 +500,7 @@ fn PdfDocument::pdf_bookmark_traverse_siblings(
   depth : Int,
 ) -> Unit raise PdfError {
   if depth > 10000 {
-    raise PdfError::PageTreeExpected
+    raise PageTreeExpected
   }
   output.push(self.pdf_bookmark_of_outline(level, first, preserve_actions))
   self.pdf_bookmark_traverse_children(
@@ -609,7 +609,7 @@ fn PdfDocument::pdf_bookmarks_for_pages(
   let bookmarks = self.read_bookmarks(preserve_actions=true)
   let page_reference_numbers = self.page_reference_numbers()
   let page_number_lookup = pdf_page_number_lookup(page_reference_numbers)
-  let selected_pages = pdf_number_set(page_numbers)
+  let selected_pages = @number_set.pdf_number_set(page_numbers)
   let keep = [ for _ in bookmarks => false ]
   for index in 0..<bookmarks.length() {
     let page_number = self.pdf_destination_page_number_with_lookup(

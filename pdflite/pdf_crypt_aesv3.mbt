@@ -16,7 +16,7 @@ fn pdf_aesv3_cbc_encrypt_no_padding_with_iv(
   data : BytesView,
 ) -> PdfBytes raise PdfError {
   guard data.length() % 16 == 0 else {
-    raise PdfError::InvalidCryptoDataLength(data.length())
+    raise InvalidCryptoDataLength(data.length())
   }
   let output : Array[Byte] = []
   let mut previous = pdf_crypt_chop_view(pdf_crypt_iv_name, iv, 16)
@@ -28,7 +28,7 @@ fn pdf_aesv3_cbc_encrypt_no_padding_with_iv(
         (data[position + index].to_int() ^ previous[index].to_int()).to_byte(),
       )
     }
-    previous = pdf_aes_encrypt_block(key, Bytes::from_array(block))
+    previous = @crypt_core.pdf_aes_encrypt_block(key, Bytes::from_array(block))
     for byte in previous {
       output.push(byte)
     }
@@ -60,9 +60,9 @@ fn pdf_aesv3_shamix_repeat(data : BytesView, count : Int) -> PdfBytes {
 ///|
 fn pdf_aesv3_shamix_next_hash(data : BytesView) -> PdfBytes {
   match pdf_aesv3_shamix_mod3(data) {
-    0 => pdf_sha256_digest(data)
-    1 => pdf_sha384_digest(data)
-    _ => pdf_sha512_digest(data)
+    0 => @crypt_core.pdf_sha256_digest(data)
+    1 => @crypt_core.pdf_sha384_digest(data)
+    _ => @crypt_core.pdf_sha512_digest(data)
   }
 }
 
@@ -76,7 +76,7 @@ fn pdf_aesv3_shamix(
     Some(value) => value
     None => []
   }
-  let mut digest = pdf_sha256_digest(input)
+  let mut digest = @crypt_core.pdf_sha256_digest(input)
   let mut round = 0
   let mut last_encrypted_byte = 0
   while !(round >= 64 && last_encrypted_byte <= round - 32) {
@@ -110,7 +110,7 @@ fn pdf_aesv3_password_hash(
     }
     pdf_aesv3_shamix(password, user_data, input)
   } else {
-    pdf_sha256_digest(input)
+    @crypt_core.pdf_sha256_digest(input)
   }
 }
 
@@ -185,7 +185,7 @@ fn pdf_aesv3_permissions_entry(
 ) -> PdfBytes raise PdfError {
   let block : Array[Byte] = []
   for shift in [0, 8, 16, 24] {
-    block.push(pdf_crypt_low_byte(permissions, shift))
+    block.push(@crypt_core.pdf_crypt_low_byte(permissions, shift))
   }
   for _ in 0..<4 {
     block.push((255).to_byte())
@@ -202,7 +202,7 @@ fn pdf_aesv3_permissions_entry(
     ) {
     block.push(byte)
   }
-  pdf_aes_encrypt_block(file_key, Bytes::from_array(block))
+  @crypt_core.pdf_aes_encrypt_block(file_key, Bytes::from_array(block))
 }
 
 ///|
@@ -216,10 +216,10 @@ fn pdf_authenticate_user_password_aesv3(
   user_entry : BytesView,
 ) -> Bool raise PdfError {
   if user_entry.length() < 48 {
-    raise PdfError::EncryptionDictionaryEntryTooShort(pdf_crypt_u_name)
+    raise EncryptionDictionaryEntryTooShort(pdf_crypt_u_name)
   }
   let expected = pdf_aesv3_password_hash(iso, password, user_entry[32:40])
-  pdf_bytes_prefix_equal(user_entry, expected, 32)
+  @crypt_core.pdf_bytes_prefix_equal(user_entry, expected, 32)
 }
 
 ///|
@@ -234,10 +234,10 @@ fn pdf_authenticate_owner_password_aesv3(
   owner_entry : BytesView,
 ) -> Bool raise PdfError {
   if owner_entry.length() < 48 {
-    raise PdfError::EncryptionDictionaryEntryTooShort(pdf_crypt_o_name)
+    raise EncryptionDictionaryEntryTooShort(pdf_crypt_o_name)
   }
   if user_entry.length() < 48 {
-    raise PdfError::EncryptionDictionaryEntryTooShort(pdf_crypt_u_name)
+    raise EncryptionDictionaryEntryTooShort(pdf_crypt_u_name)
   }
   let expected = pdf_aesv3_password_hash(
     iso,
@@ -245,7 +245,7 @@ fn pdf_authenticate_owner_password_aesv3(
     owner_entry[32:40],
     user_entry=user_entry[:48],
   )
-  pdf_bytes_prefix_equal(owner_entry, expected, 32)
+  @crypt_core.pdf_bytes_prefix_equal(owner_entry, expected, 32)
 }
 
 ///|
@@ -255,7 +255,7 @@ fn pdf_aesv3_crypt_entry(
 ) -> PdfBytes raise PdfError {
   match entry {
     Some(value) => pdf_crypt_chop_string(key, value, 32)
-    None => raise PdfError::EncryptionDictionaryEntryExpected(key)
+    None => raise EncryptionDictionaryEntryExpected(key)
   }
 }
 
@@ -266,7 +266,7 @@ fn pdf_aesv3_unwrap_file_key(
 ) -> PdfBytes raise PdfError {
   let zero_iv = Bytes::new(16)
   let data = pdf_crypt_concat_bytes([zero_iv, encrypted_key])
-  pdf_aes_cbc_decrypt(digest, data, remove_padding=false)
+  @crypt_core.pdf_aes_cbc_decrypt(digest, data, remove_padding=false)
 }
 
 ///|
@@ -280,17 +280,15 @@ fn pdf_aesv3_permissions_from_entry(
   permissions_entry : BytesView,
 ) -> Int raise PdfError {
   if permissions_entry.length() < 16 {
-    raise PdfError::EncryptionDictionaryEntryTooShort(
-      pdf_aesv3_permissions_key(),
-    )
+    raise EncryptionDictionaryEntryTooShort(pdf_aesv3_permissions_key())
   }
-  let decrypted = pdf_aes_ecb_decrypt(
+  let decrypted = @crypt_core.pdf_aes_ecb_decrypt(
     file_key,
     permissions_entry[:16],
     remove_padding=false,
   )
   guard decrypted[9] == b'a' && decrypted[10] == b'd' && decrypted[11] == b'b' else {
-    raise PdfError::EncryptionPermissionsCorrupt
+    raise EncryptionPermissionsCorrupt
   }
   decrypted[0].to_int() |
   (decrypted[1].to_int() << 8) |
@@ -305,16 +303,13 @@ fn PdfEncryptionValues::validate_aesv3_permissions(
 ) -> Unit raise PdfError {
   let permissions_entry = match self.permissions_entry {
     Some(value) => value
-    None =>
-      raise PdfError::EncryptionDictionaryEntryExpected(
-        pdf_aesv3_permissions_key(),
-      )
+    None => raise EncryptionDictionaryEntryExpected(pdf_aesv3_permissions_key())
   }
   let permissions = pdf_aesv3_permissions_from_entry(
     file_key, permissions_entry,
   )
   if permissions != self.permissions {
-    raise PdfError::EncryptionPermissionsMismatch(permissions, self.permissions)
+    raise EncryptionPermissionsMismatch(permissions, self.permissions)
   }
 }
 

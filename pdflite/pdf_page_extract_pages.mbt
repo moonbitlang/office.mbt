@@ -4,12 +4,12 @@ fn pdf_page_select_pages(
   page_numbers : ArrayView[Int],
 ) -> Array[PdfPage] raise PdfError {
   if page_numbers.length() == 0 {
-    raise PdfError::PageTreeExpected
+    raise PageTreeExpected
   }
   let selected : Array[PdfPage] = []
   for page_number in page_numbers {
     if page_number < 1 || page_number > pages.length() {
-      raise PdfError::PageTreeExpected
+      raise PageTreeExpected
     }
     selected.push(pages[page_number - 1])
   }
@@ -22,12 +22,12 @@ fn pdf_page_select_numbers(
   page_numbers : ArrayView[Int],
 ) -> Array[Int] raise PdfError {
   if page_numbers.length() == 0 {
-    raise PdfError::PageTreeExpected
+    raise PageTreeExpected
   }
   let selected : Array[Int] = []
   for page_number in page_numbers {
     if page_number < 1 || page_number > numbers.length() {
-      raise PdfError::PageTreeExpected
+      raise PageTreeExpected
     }
     selected.push(numbers[page_number - 1])
   }
@@ -125,7 +125,7 @@ fn PdfDocument::pdf_page_fixup_duplicate_annots(
       self.pdf_page_annotation_numbers(self.lookup_object_or_null(page_number)),
     )
   }
-  let seen = pdf_number_set([])
+  let seen = @number_set.pdf_number_set([])
   let new_annots : Array[Array[Int]] = []
   for annots in existing_annots {
     let page_annots : Array[Int] = []
@@ -290,11 +290,11 @@ fn PdfDocument::pdf_page_fixup_destination_name_tree(
 fn pdf_page_root_pages_number(pdf : PdfDocument) -> Int raise PdfError {
   let root = match pdf.pdf_page_active_catalog() {
     Some((catalog, _)) => catalog
-    None => raise PdfError::RootExpected
+    None => raise RootExpected
   }
   match root.lookup_immediate(pdf_page_pages_key()) {
     Some(PdfIndirect(number)) => number
-    _ => raise PdfError::PageTreeExpected
+    _ => raise PageTreeExpected
   }
 }
 
@@ -306,7 +306,7 @@ fn PdfDocument::pdf_page_tree_nodes_not_pages_inner(
   depth : Int,
 ) -> Array[Int] raise PdfError {
   if depth > 10000 {
-    raise PdfError::PageTreeExpected
+    raise PageTreeExpected
   }
   match self.lookup_direct(pdf_page_type_key(), node) {
     Some(PdfNameObject(name)) if name == pdf_page_type_page() => []
@@ -355,7 +355,7 @@ fn PdfDocument::pdf_page_reference_numbers_unordered_inner(
   depth : Int,
 ) -> Array[Int] raise PdfError {
   if depth > 10000 {
-    raise PdfError::PageTreeExpected
+    raise PageTreeExpected
   }
   match self.lookup_direct(pdf_page_type_key(), node) {
     Some(PdfNameObject(name)) if name == pdf_page_type_page() => [node_number]
@@ -471,7 +471,7 @@ fn PdfDocument::pdf_page_rewrite_page_tree_first(
   }
   if !rewritten {
     self.remove_object(new_number)
-    raise PdfError::PageTreeExpected
+    raise PageTreeExpected
   }
 }
 
@@ -501,7 +501,7 @@ fn PdfDocument::pdf_page_fixup_parents_inner(
   depth : Int,
 ) -> Unit raise PdfError {
   if depth > 10000 {
-    raise PdfError::PageTreeExpected
+    raise PageTreeExpected
   }
   let node = self.lookup_object_or_null(node_number)
   match node.lookup_immediate(pdf_page_parent_key()) {
@@ -658,7 +658,7 @@ fn pdf_page_deleted_numbers(
   all_page_numbers : ArrayView[Int],
   active_page_numbers : ArrayView[Int],
 ) -> Array[Int] {
-  let active_pages = pdf_number_set(active_page_numbers)
+  let active_pages = @number_set.pdf_number_set(active_page_numbers)
   let deleted : Array[Int] = []
   for number in all_page_numbers {
     if !active_pages.contains(number) {

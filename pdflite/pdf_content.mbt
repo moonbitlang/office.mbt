@@ -480,7 +480,7 @@ fn pdf_content_push_inline_image(
           pdf_content_push_inline_image_entry(output, key, value)
         }
       }
-    _ => raise PdfError::DictionaryExpected
+    _ => raise DictionaryExpected
   }
   for entry in render_extra_entries {
     let (key, value) = entry
@@ -671,7 +671,7 @@ fn PdfDocument::pdf_content_raw_streams(
             self.pdf_decode_stream_value_direct(stream).data,
           ),
         )
-      _ => raise PdfError::ParseStreamExpected
+      _ => raise ParseStreamExpected
     }
   }
   raw_streams
@@ -693,7 +693,7 @@ fn pdf_content_read_complex_object(
   while array_depth > 0 || dict_depth > 0 {
     let token = cursor.lex_pdf_token()
     match token {
-      StopLexing | LexNone => raise PdfError::ParseObjectExpected
+      StopLexing | LexNone => raise ParseObjectExpected
       LexLeftSquare => array_depth += 1
       LexRightSquare => array_depth -= 1
       LexLeftDict => dict_depth += 1
@@ -709,7 +709,7 @@ fn pdf_content_read_complex_object(
 fn pdf_content_read_object(cursor : ByteCursor) -> PdfObject raise PdfError {
   let token = cursor.lex_pdf_token()
   match token {
-    StopLexing | LexNone => raise PdfError::ParseObjectExpected
+    StopLexing | LexNone => raise ParseObjectExpected
     LexLeftSquare | LexLeftDict =>
       pdf_content_read_complex_object(cursor, token)
     _ => pdf_parse_single_lexeme_object([token])
@@ -1346,7 +1346,7 @@ fn pdf_content_read_inline_image_data(
     }
   }
   if !found {
-    raise PdfError::ParseEndStreamExpected
+    raise ParseEndStreamExpected
   }
   let data = cursor.read_view(data_length).to_owned()
   if skip_before_marker > 0 {
@@ -1425,7 +1425,7 @@ fn pdf_content_read_text_encoded_inline_image_data(
       pdf_content_read_inline_image_end(cursor)
       data
     }
-    None => raise PdfError::ParseEndStreamExpected
+    None => raise ParseEndStreamExpected
   }
 }
 
@@ -1452,7 +1452,7 @@ fn pdf_content_read_text_encoded_inline_image_decoded(
       pdf_content_read_inline_image_end(cursor)
       decoded
     }
-    None => raise PdfError::ParseEndStreamExpected
+    None => raise ParseEndStreamExpected
   }
 }
 
@@ -1464,7 +1464,7 @@ fn pdf_content_read_flate_inline_image_data(
     value if pdf_is_whitespace_byte(value) => cursor.nudge()
     _ => ()
   }
-  let (_, length) = pdf_flate_decode_view_prefix(cursor.remaining_view())
+  let (_, length) = @flate.pdf_flate_decode_view_prefix(cursor.remaining_view())
   let data = cursor.read_view(length).to_owned()
   pdf_content_read_inline_image_end(cursor)
   data
@@ -1478,7 +1478,9 @@ fn pdf_content_read_flate_inline_image_decoded(
     value if pdf_is_whitespace_byte(value) => cursor.nudge()
     _ => ()
   }
-  let (decoded, length) = pdf_flate_decode_view_prefix(cursor.remaining_view())
+  let (decoded, length) = @flate.pdf_flate_decode_view_prefix(
+    cursor.remaining_view(),
+  )
   ignore(cursor.read_view(length))
   pdf_content_read_inline_image_end(cursor)
   decoded
@@ -1536,7 +1538,7 @@ fn pdf_content_read_run_length_inline_image_data(
       pdf_content_read_inline_image_end(cursor)
       data
     }
-    None => raise PdfError::ParseEndStreamExpected
+    None => raise ParseEndStreamExpected
   }
 }
 
@@ -1552,7 +1554,7 @@ fn pdf_content_run_length_decode_view_prefix(
     if control < 128 {
       let wanted = control + 1
       if index + wanted > data.length() {
-        raise PdfError::ParseEndStreamExpected
+        raise ParseEndStreamExpected
       }
       for i in 0..<wanted {
         output.push(data[index + i])
@@ -1560,7 +1562,7 @@ fn pdf_content_run_length_decode_view_prefix(
       index += wanted
     } else if control > 128 {
       if index >= data.length() {
-        raise PdfError::ParseEndStreamExpected
+        raise ParseEndStreamExpected
       }
       let value = data[index]
       index += 1
@@ -1571,7 +1573,7 @@ fn pdf_content_run_length_decode_view_prefix(
       return (Bytes::from_array(output), index)
     }
   }
-  raise PdfError::ParseEndStreamExpected
+  raise ParseEndStreamExpected
 }
 
 ///|
@@ -1645,7 +1647,7 @@ fn pdf_content_read_sized_inline_image_data(
     _ => ()
   }
   let data = cursor.read_view(length).to_owned() catch {
-      PdfError::EndOfInput => raise PdfError::ParseEndStreamExpected
+      EndOfInput => raise ParseEndStreamExpected
       error => raise error
     }
   pdf_content_read_inline_image_end(cursor)
@@ -1690,7 +1692,7 @@ fn pdf_content_read_inline_image_end(
     _ => {
       try! cursor.seek(marker_start)
       if !pdf_content_consume_next_inline_image_end(cursor) {
-        raise PdfError::ParseEndStreamExpected
+        raise ParseEndStreamExpected
       }
     }
   }
@@ -1731,10 +1733,10 @@ fn pdf_content_read_inline_image(
             } else {
               entries.push((key, value))
             }
-          _ => raise PdfError::ContentOperandExpected
+          _ => raise ContentOperandExpected
         }
       ContentComment => ()
-      _ => raise PdfError::ContentOperandExpected
+      _ => raise ContentOperandExpected
     }
   }
   let dictionary = PdfDictionary(entries)
@@ -2049,7 +2051,7 @@ fn pdf_content_dash_op_from_operands(
       (PdfArray(_), Some(phase)) =>
         match pdf_content_numbers_from_array(operands[0]) {
           Some(dashes) => Some(Op_d(dashes, phase))
-          None => raise PdfError::NumberExpected
+          None => raise NumberExpected
         }
       _ => None
     }
@@ -2480,7 +2482,7 @@ fn pdf_parse_content_ops_from_view_with_context(
     }
   }
   if operands.length() > 0 {
-    raise PdfError::ContentOperatorExpected
+    raise ContentOperatorExpected
   }
   ops
 }

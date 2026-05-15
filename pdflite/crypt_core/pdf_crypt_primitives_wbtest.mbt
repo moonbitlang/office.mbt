@@ -1,9 +1,6 @@
 ///|
-using @core {pdf_bytes_of_int_array}
-
-///|
-fn crypt_bytes_for_test(values : ArrayView[Int]) -> PdfBytes {
-  try! pdf_bytes_of_int_array(values)
+fn crypt_bytes_for_test(values : ArrayView[Int]) -> @core.PdfBytes {
+  try! @core.pdf_bytes_of_int_array(values)
 }
 
 ///|
@@ -29,12 +26,12 @@ test "pdf_arc4_crypt decrypts by applying the same stream" {
 
 ///|
 test "pdf_arc4_crypt rejects empty keys" {
-  let result : Result[PdfBytes, Error] = try? pdf_arc4_crypt(
+  let result : Result[@core.PdfBytes, Error] = try? pdf_arc4_crypt(
     Bytes::new(0),
     @ascii.encode("data"),
   )
-  guard result is Err(PdfError::CryptoKeyExpected) else {
-    fail("expected PdfError::CryptoKeyExpected")
+  guard result is Err(@core.PdfError::CryptoKeyExpected) else {
+    fail("expected @core.PdfError::CryptoKeyExpected")
   }
 }
 
@@ -255,44 +252,44 @@ test "pdf_aes_ecb_decrypt handles padding and checked errors" {
     ]),
   )
 
-  let bad_key : Result[PdfBytes, Error] = try? pdf_aes_encrypt_block(
+  let bad_key : Result[@core.PdfBytes, Error] = try? pdf_aes_encrypt_block(
     crypt_bytes_for_test([1, 2, 3]),
     plaintext,
   )
-  guard bad_key is Err(PdfError::CryptoKeyExpected) else {
-    fail("expected PdfError::CryptoKeyExpected")
+  guard bad_key is Err(@core.PdfError::CryptoKeyExpected) else {
+    fail("expected @core.PdfError::CryptoKeyExpected")
   }
 
-  let bad_block : Result[PdfBytes, Error] = try? pdf_aes_decrypt_block(
+  let bad_block : Result[@core.PdfBytes, Error] = try? pdf_aes_decrypt_block(
     key,
     crypt_bytes_for_test([1, 2, 3]),
   )
-  guard bad_block is Err(PdfError::InvalidCryptoDataLength(3)) else {
-    fail("expected PdfError::InvalidCryptoDataLength for block")
+  guard bad_block is Err(@core.PdfError::InvalidCryptoDataLength(3)) else {
+    fail("expected @core.PdfError::InvalidCryptoDataLength for block")
   }
 
-  let bad_cbc : Result[PdfBytes, Error] = try? pdf_aes_cbc_decrypt(
+  let bad_cbc : Result[@core.PdfBytes, Error] = try? pdf_aes_cbc_decrypt(
     key,
     crypt_bytes_for_test([ for value in 0..<17 => value ]),
   )
-  guard bad_cbc is Err(PdfError::InvalidCryptoDataLength(17)) else {
-    fail("expected PdfError::InvalidCryptoDataLength for CBC")
+  guard bad_cbc is Err(@core.PdfError::InvalidCryptoDataLength(17)) else {
+    fail("expected @core.PdfError::InvalidCryptoDataLength for CBC")
   }
 
-  let bad_ecb : Result[PdfBytes, Error] = try? pdf_aes_ecb_decrypt(
+  let bad_ecb : Result[@core.PdfBytes, Error] = try? pdf_aes_ecb_decrypt(
     key,
     crypt_bytes_for_test([1, 2, 3]),
   )
-  guard bad_ecb is Err(PdfError::InvalidCryptoDataLength(3)) else {
-    fail("expected PdfError::InvalidCryptoDataLength for ECB")
+  guard bad_ecb is Err(@core.PdfError::InvalidCryptoDataLength(3)) else {
+    fail("expected @core.PdfError::InvalidCryptoDataLength for ECB")
   }
 
-  let bad_ecb_encrypt : Result[PdfBytes, Error] = try? pdf_aes_ecb_encrypt(
+  let bad_ecb_encrypt : Result[@core.PdfBytes, Error] = try? pdf_aes_ecb_encrypt(
     key,
     crypt_bytes_for_test([1, 2, 3]),
   )
-  guard bad_ecb_encrypt is Err(PdfError::InvalidCryptoDataLength(3)) else {
-    fail("expected PdfError::InvalidCryptoDataLength for ECB encrypt")
+  guard bad_ecb_encrypt is Err(@core.PdfError::InvalidCryptoDataLength(3)) else {
+    fail("expected @core.PdfError::InvalidCryptoDataLength for ECB encrypt")
   }
 }
 
@@ -360,11 +357,11 @@ test "canonical crypt primitive helpers cover AES data" {
     @ascii.encode("moon"),
   )
 
-  let bad_key : Result[PdfBytes, Error] = try? pdf_aes_ecb_encrypt(
+  let bad_key : Result[@core.PdfBytes, Error] = try? pdf_aes_ecb_encrypt(
     crypt_bytes_for_test(key128_values)[:15],
     ecb_plain,
   )
-  guard bad_key is Err(PdfError::CryptoKeyExpected) else {
+  guard bad_key is Err(@core.PdfError::CryptoKeyExpected) else {
     fail("expected invalid AES key length to raise")
   }
 }

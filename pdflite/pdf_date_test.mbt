@@ -68,7 +68,7 @@ test "pdf_date object APIs bridge PDF strings and typed dates" {
     PdfNameObject(@pdflite.pdf_name_of_bytes(@ascii.encode("/Date"))),
   )
   guard non_string is Err(@pdflite.PdfError::BadDate) else {
-    fail("expected PdfError::BadDate for non-string date object")
+    fail("expected @pdflite.PdfError::BadDate for non-string date object")
   }
 }
 
@@ -226,24 +226,24 @@ test "pdf_date_of_string rejects malformed dates" {
     "D:20241301",
   )
   guard bad_month is Err(@pdflite.PdfError::BadDate) else {
-    fail("expected PdfError::BadDate for month")
+    fail("expected @pdflite.PdfError::BadDate for month")
   }
   let short : Result[@pdflite.PdfDate, Error] = try? @pdflite.pdf_date_of_string(
     "D:20",
   )
   guard short is Err(@pdflite.PdfError::BadDate) else {
-    fail("expected PdfError::BadDate for short date")
+    fail("expected @pdflite.PdfError::BadDate for short date")
   }
   let bad_year_digit : Result[@pdflite.PdfDate, Error] = try? @pdflite.pdf_date_of_string(
     "D:20A4",
   )
   guard bad_year_digit is Err(@pdflite.PdfError::BadDate) else {
-    fail("expected PdfError::BadDate for year")
+    fail("expected @pdflite.PdfError::BadDate for year")
   }
   let bad_month_digit : Result[@pdflite.PdfDate, Error] = try? @pdflite.pdf_date_of_string(
     "D:2024AA",
   )
   guard bad_month_digit is Err(@pdflite.PdfError::BadDate) else {
-    fail("expected PdfError::BadDate for month digits")
+    fail("expected @pdflite.PdfError::BadDate for month digits")
   }
 }

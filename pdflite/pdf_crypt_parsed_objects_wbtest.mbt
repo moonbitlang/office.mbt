@@ -56,7 +56,7 @@ fn crypt_parsed_aesv2_encrypt_data_for_test(
   data : BytesView,
   iv : BytesView,
 ) -> PdfBytes raise {
-  pdf_aesv2_encrypt_object_data(
+  @crypt_core.pdf_aesv2_encrypt_object_data(
     object_number, generation, file_key, key_length_bits, data, iv,
   )
 }
@@ -72,7 +72,7 @@ fn crypt_parsed_aesv3_encrypt_data_for_test(
   data : BytesView,
   iv : BytesView,
 ) -> PdfBytes raise {
-  pdf_aesv3_encrypt_object_data(file_key, data, iv)
+  @crypt_core.pdf_aesv3_encrypt_object_data(file_key, data, iv)
 }
 
 ///|

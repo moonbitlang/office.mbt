@@ -87,40 +87,12 @@ pub using @geometry {
 }
 
 ///|
-using @number_set {type PdfNumberSet, pdf_number_set, pdf_push_unique_number}
-
-///|
 pub using @crypt_core {
   type PdfPermission,
   type PdfEncryptionMethod,
   type PdfAesV3RandomField,
   pdf_p_of_permissions,
   pdf_permissions_of_p,
-}
-
-///|
-using @crypt_core {
-  pdf_md5_digest,
-  pdf_sha256_digest,
-  pdf_sha384_digest,
-  pdf_sha512_digest,
-  pdf_aes_encrypt_block,
-  pdf_aes_cbc_decrypt,
-  pdf_aes_ecb_decrypt,
-  pdf_encryption_object_key,
-  pdf_arc4_crypt_object,
-  pdf_aesv2_decrypt_object_data,
-  pdf_aesv2_encrypt_object_data,
-  pdf_aesv3_decrypt_object_data,
-  pdf_aesv3_encrypt_object_data,
-  pdf_crypt_low_byte,
-  pdf_encryption_file_key,
-  pdf_make_user_password_entry,
-  pdf_bytes_prefix_equal,
-  pdf_make_owner_password_entry,
-  pdf_user_password_from_owner_password,
-  pdf_authenticate_user_password,
-  pdf_authenticate_owner_password,
 }
 
 ///|
@@ -142,6 +114,3 @@ pub using @flate {
   pdf_flate_decode_view,
   pdf_flate_decode,
 }
-
-///|
-using @flate {pdf_flate_decode_view_prefix}

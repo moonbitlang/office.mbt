@@ -15,7 +15,7 @@ pub(all) struct PdfDate {
 } derive(Debug, Eq, ToJson)
 
 ///|
-fn pdf_date_check(date : PdfDate) -> Unit raise PdfError {
+fn pdf_date_check(date : PdfDate) -> Unit raise @core.PdfError {
   if date.year < 0 ||
     date.year > 9999 ||
     date.month < 1 ||
@@ -32,7 +32,7 @@ fn pdf_date_check(date : PdfDate) -> Unit raise PdfError {
     date.hour_offset > 23 ||
     date.minute_offset < -59 ||
     date.minute_offset > 59 {
-    raise PdfError::BadDate
+    raise BadDate
   }
 }
 
@@ -70,9 +70,9 @@ fn pdf_date_pad4(value : Int) -> String {
 ///|
 /// Formats a PDF date as an ASCII string in PDF date syntax.
 ///
-/// Raises `PdfError::BadDate` if any field is outside the representable PDF
+/// Raises `@core.PdfError::BadDate` if any field is outside the representable PDF
 /// date ranges.
-pub fn pdf_string_of_date(date : PdfDate) -> String raise PdfError {
+pub fn pdf_string_of_date(date : PdfDate) -> String raise @core.PdfError {
   pdf_date_check(date)
   let offset = if date.hour_offset < 0 {
     "-" +
@@ -110,20 +110,26 @@ fn pdf_date_digit(byte : Byte) -> Int? {
 }
 
 ///|
-fn pdf_date_two_digits(bytes : BytesView, index : Int) -> Int raise PdfError {
+fn pdf_date_two_digits(
+  bytes : BytesView,
+  index : Int,
+) -> Int raise @core.PdfError {
   if index + 1 >= bytes.length() {
-    raise PdfError::BadDate
+    raise BadDate
   }
   match (pdf_date_digit(bytes[index]), pdf_date_digit(bytes[index + 1])) {
     (Some(first), Some(second)) => first * 10 + second
-    _ => raise PdfError::BadDate
+    _ => raise BadDate
   }
 }
 
 ///|
-fn pdf_date_four_digits(bytes : BytesView, index : Int) -> Int raise PdfError {
+fn pdf_date_four_digits(
+  bytes : BytesView,
+  index : Int,
+) -> Int raise @core.PdfError {
   if index + 3 >= bytes.length() {
-    raise PdfError::BadDate
+    raise BadDate
   }
   match
     (
@@ -133,7 +139,7 @@ fn pdf_date_four_digits(bytes : BytesView, index : Int) -> Int raise PdfError {
       pdf_date_digit(bytes[index + 3]),
     ) {
     (Some(a), Some(b), Some(c), Some(d)) => ((a * 10 + b) * 10 + c) * 10 + d
-    _ => raise PdfError::BadDate
+    _ => raise BadDate
   }
 }
 
@@ -151,7 +157,7 @@ fn pdf_date_parse_optional_two(
   hour_offset : Ref[Int],
   minute_offset : Ref[Int],
   offset_sign : Ref[Int],
-) -> (Int, Int) raise PdfError {
+) -> (Int, Int) raise @core.PdfError {
   if index >= bytes.length() {
     (default, bytes.length())
   } else if pdf_date_is_local_time_start(bytes[index]) {
@@ -173,7 +179,7 @@ fn pdf_date_parse_local_time(
   hour_offset : Ref[Int],
   minute_offset : Ref[Int],
   offset_sign : Ref[Int],
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   if index < bytes.length() {
     let (sign, offset_index) = match bytes[index].to_int() {
       43 => (1, index + 1)
@@ -215,8 +221,8 @@ fn pdf_date_has_distiller_y2k_bug(bytes : BytesView, index : Int) -> Bool {
 ///
 /// Both strings with and without the `D:` prefix are accepted. Missing optional
 /// date fields use the PDF defaults described on `PdfDate`. Raises
-/// `PdfError::BadDate` for malformed or out-of-range dates.
-pub fn pdf_date_of_view(bytes : BytesView) -> PdfDate raise PdfError {
+/// `@core.PdfError::BadDate` for malformed or out-of-range dates.
+pub fn pdf_date_of_view(bytes : BytesView) -> PdfDate raise @core.PdfError {
   let mut index = if bytes.length() >= 2 &&
     bytes[0].to_int() == 68 &&
     bytes[1].to_int() == 58 {
@@ -273,15 +279,17 @@ pub fn pdf_date_of_view(bytes : BytesView) -> PdfDate raise PdfError {
 
 ///|
 /// Parses a PDF date from owned PDF bytes.
-pub fn pdf_date_of_bytes(bytes : PdfBytes) -> PdfDate raise PdfError {
+pub fn pdf_date_of_bytes(
+  bytes : @core.PdfBytes,
+) -> PdfDate raise @core.PdfError {
   pdf_date_of_view(bytes)
 }
 
 ///|
 /// Parses a PDF date from an ASCII string.
 ///
-/// Raises `PdfError::BadDate` for malformed or out-of-range dates.
-pub fn pdf_date_of_string(text : String) -> PdfDate raise PdfError {
+/// Raises `@core.PdfError::BadDate` for malformed or out-of-range dates.
+pub fn pdf_date_of_string(text : String) -> PdfDate raise @core.PdfError {
   let bytes = @ascii.encode(text)
   pdf_date_of_view(bytes)
 }
@@ -289,9 +297,9 @@ pub fn pdf_date_of_string(text : String) -> PdfDate raise PdfError {
 ///|
 /// Formats a PDF date as an owned PDF byte string.
 ///
-/// Raises `PdfError::BadDate` if any field is outside the representable PDF
+/// Raises `@core.PdfError::BadDate` if any field is outside the representable PDF
 /// date ranges.
-pub fn pdf_bytes_of_date(date : PdfDate) -> PdfBytes raise PdfError {
+pub fn pdf_bytes_of_date(date : PdfDate) -> @core.PdfBytes raise @core.PdfError {
   let text = pdf_string_of_date(date)
   @ascii.encode(text)
 }

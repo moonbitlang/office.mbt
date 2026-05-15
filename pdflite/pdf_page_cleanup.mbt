@@ -17,7 +17,7 @@ fn PdfDocument::pdf_page_object_numbers_in_map(
 ///|
 fn pdf_page_nullify_references(
   object : PdfObject,
-  deleted_pages : PdfNumberSet,
+  deleted_pages : @number_set.PdfNumberSet,
 ) -> PdfObject {
   match object {
     PdfIndirect(number) if deleted_pages.contains(number) => PdfNull
@@ -51,7 +51,7 @@ fn pdf_page_nullify_references(
 ///|
 fn pdf_page_nullify_entry(
   entry : PdfObjectEntry,
-  deleted_pages : PdfNumberSet,
+  deleted_pages : @number_set.PdfNumberSet,
 ) -> PdfObjectEntry {
   match entry.data {
     ObjectParsed(object) =>
@@ -80,7 +80,7 @@ fn PdfDocument::pdf_page_nullify_deleted_page_references(
     let deleted_pages = pdf_page_deleted_numbers(
       page_numbers, active_page_numbers,
     )
-    let deleted_page_set = pdf_number_set(deleted_pages)
+    let deleted_page_set = @number_set.pdf_number_set(deleted_pages)
     for number in self.object_numbers() {
       let entry = self.objects.get_entry(number).unwrap()
       self.objects.set_entry(

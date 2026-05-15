@@ -1026,7 +1026,7 @@ test "private password padding helpers truncate and pad PDF passwords" {
 test "private standard file key derivation matches CamlPDF R2 through R4" {
   let owner = crypt_wb_bytes_for_test([ for value in 0..<32 => value ])
   @test.assert_eq(
-    pdf_encryption_file_key(
+    @crypt_core.pdf_encryption_file_key(
       false,
       @ascii.encode("user"),
       2,
@@ -1038,7 +1038,7 @@ test "private standard file key derivation matches CamlPDF R2 through R4" {
     crypt_wb_bytes_for_test([0x09, 0xf0, 0x7c, 0x27, 0xf0]),
   )
   @test.assert_eq(
-    pdf_encryption_file_key(
+    @crypt_core.pdf_encryption_file_key(
       false,
       Bytes::new(0),
       3,
@@ -1053,7 +1053,7 @@ test "private standard file key derivation matches CamlPDF R2 through R4" {
     ]),
   )
   @test.assert_eq(
-    pdf_encryption_file_key(
+    @crypt_core.pdf_encryption_file_key(
       true,
       Bytes::new(0),
       4,
@@ -1073,7 +1073,7 @@ test "private standard file key derivation matches CamlPDF R2 through R4" {
 test "private user password entries match CamlPDF U values" {
   let owner = crypt_wb_bytes_for_test([ for value in 0..<32 => value ])
   @test.assert_eq(
-    try! pdf_make_user_password_entry(
+    try! @crypt_core.pdf_make_user_password_entry(
       false,
       @ascii.encode("user"),
       2,
@@ -1089,7 +1089,7 @@ test "private user password entries match CamlPDF U values" {
     ]),
   )
   @test.assert_eq(
-    try! pdf_make_user_password_entry(
+    try! @crypt_core.pdf_make_user_password_entry(
       false,
       Bytes::new(0),
       3,
@@ -1105,7 +1105,7 @@ test "private user password entries match CamlPDF U values" {
     ]),
   )
   @test.assert_eq(
-    try! pdf_make_user_password_entry(
+    try! @crypt_core.pdf_make_user_password_entry(
       true,
       Bytes::new(0),
       4,
@@ -1127,7 +1127,7 @@ test "private user password entry handles MD5 padding boundary file IDs" {
   let owner = crypt_wb_bytes_for_test([ for value in 0..<32 => value ])
   let file_id = @ascii.encode("123456789012345678901234")
   @test.assert_eq(file_id.length(), 24)
-  let user_entry = try! pdf_make_user_password_entry(
+  let user_entry = try! @crypt_core.pdf_make_user_password_entry(
     false,
     @ascii.encode("user"),
     4,
@@ -1138,7 +1138,7 @@ test "private user password entry handles MD5 padding boundary file IDs" {
   )
   @test.assert_eq(user_entry.length(), 32)
   @test.assert_eq(
-    pdf_encryption_file_key(
+    @crypt_core.pdf_encryption_file_key(
       false,
       @ascii.encode("user"),
       4,
@@ -1169,7 +1169,7 @@ test "private user password entry handles MD5 padding boundary file IDs" {
 ///|
 test "private owner password entries match CamlPDF O values" {
   @test.assert_eq(
-    try! pdf_make_owner_password_entry(
+    try! @crypt_core.pdf_make_owner_password_entry(
       2,
       @ascii.encode("owner"),
       @ascii.encode("user"),
@@ -1182,7 +1182,7 @@ test "private owner password entries match CamlPDF O values" {
     ]),
   )
   @test.assert_eq(
-    try! pdf_make_owner_password_entry(
+    try! @crypt_core.pdf_make_owner_password_entry(
       3,
       @ascii.encode("owner"),
       Bytes::new(0),
@@ -1195,7 +1195,7 @@ test "private owner password entries match CamlPDF O values" {
     ]),
   )
   @test.assert_eq(
-    try! pdf_make_owner_password_entry(
+    try! @crypt_core.pdf_make_owner_password_entry(
       2,
       Bytes::new(0),
       @ascii.encode("user"),
@@ -1211,14 +1211,14 @@ test "private owner password entries match CamlPDF O values" {
 
 ///|
 test "private owner-password recovery returns padded user password" {
-  let owner_entry = try! pdf_make_owner_password_entry(
+  let owner_entry = try! @crypt_core.pdf_make_owner_password_entry(
     2,
     @ascii.encode("owner"),
     @ascii.encode("user"),
     40,
   )
   @test.assert_eq(
-    try! pdf_user_password_from_owner_password(
+    try! @crypt_core.pdf_user_password_from_owner_password(
       2,
       @ascii.encode("owner"),
       owner_entry,
@@ -1230,14 +1230,14 @@ test "private owner-password recovery returns padded user password" {
       0x3e, 0x80, 0x2f, 0x0c, 0xa9, 0xfe,
     ]),
   )
-  let owner_entry_r3 = try! pdf_make_owner_password_entry(
+  let owner_entry_r3 = try! @crypt_core.pdf_make_owner_password_entry(
     3,
     @ascii.encode("owner"),
     Bytes::new(0),
     128,
   )
   @test.assert_eq(
-    try! pdf_user_password_from_owner_password(
+    try! @crypt_core.pdf_user_password_from_owner_password(
       3,
       @ascii.encode("owner"),
       owner_entry_r3,
@@ -1259,7 +1259,7 @@ test "private AESV2 object data uses object key and IV prefix" {
     0x2d, 0x2e, 0x2f,
   ])
   let data = @ascii.encode("hello")
-  let encrypted = try! pdf_aesv2_encrypt_object_data(
+  let encrypted = try! @crypt_core.pdf_aesv2_encrypt_object_data(
     12, 0, file_key, 128, data, iv,
   )
   let object_key = crypt_wb_bytes_for_test([
@@ -1272,7 +1272,9 @@ test "private AESV2 object data uses object key and IV prefix" {
   )
   @test.assert_eq(encrypted[:16], iv)
   @test.assert_eq(
-    try! pdf_aesv2_decrypt_object_data(12, 0, file_key, 128, encrypted),
+    try! @crypt_core.pdf_aesv2_decrypt_object_data(
+      12, 0, file_key, 128, encrypted,
+    ),
     data,
   )
 }
@@ -1285,19 +1287,24 @@ test "private AESV3 object data uses file key and IV prefix" {
     0x3d, 0x3e, 0x3f,
   ])
   let data = @ascii.encode("hello")
-  let encrypted = try! pdf_aesv3_encrypt_object_data(file_key, data, iv)
+  let encrypted = try! @crypt_core.pdf_aesv3_encrypt_object_data(
+    file_key, data, iv,
+  )
   @test.assert_eq(
     encrypted,
     try! @crypt_core.pdf_aes_cbc_encrypt_with_iv(file_key, iv, data),
   )
   @test.assert_eq(encrypted[:16], iv)
-  @test.assert_eq(try! pdf_aesv3_decrypt_object_data(file_key, encrypted), data)
+  @test.assert_eq(
+    try! @crypt_core.pdf_aesv3_decrypt_object_data(file_key, encrypted),
+    data,
+  )
 }
 
 ///|
 test "private object key derivation matches CamlPDF Algorithm 3.1" {
   @test.assert_eq(
-    pdf_encryption_object_key(
+    @crypt_core.pdf_encryption_object_key(
       PdfCryptARC4(40, 2),
       12,
       0,
@@ -1312,14 +1319,20 @@ test "private object key derivation matches CamlPDF Algorithm 3.1" {
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
   ])
   @test.assert_eq(
-    pdf_encryption_object_key(PdfCryptARC4(128, 3), 65537, 2, key128, 128),
+    @crypt_core.pdf_encryption_object_key(
+      PdfCryptARC4(128, 3),
+      65537,
+      2,
+      key128,
+      128,
+    ),
     crypt_wb_bytes_for_test([
       0xab, 0xa1, 0xa7, 0x87, 0x99, 0x05, 0xa0, 0x15, 0x56, 0xf0, 0xf5, 0x74, 0xaa,
       0x57, 0x5d, 0x8b,
     ]),
   )
   @test.assert_eq(
-    pdf_encryption_object_key(PdfCryptAESV2, 65537, 2, key128, 128),
+    @crypt_core.pdf_encryption_object_key(PdfCryptAESV2, 65537, 2, key128, 128),
     crypt_wb_bytes_for_test([
       0x42, 0x0e, 0x4b, 0x00, 0xf8, 0x95, 0x95, 0x78, 0x19, 0xf2, 0xff, 0x83, 0x4b,
       0x41, 0x14, 0x61,
@@ -1330,7 +1343,7 @@ test "private object key derivation matches CamlPDF Algorithm 3.1" {
 ///|
 test "private ARC4 object crypt applies derived object key" {
   let file_key = crypt_wb_bytes_for_test([1, 2, 3, 4, 5])
-  let encrypted = try! pdf_arc4_crypt_object(
+  let encrypted = try! @crypt_core.pdf_arc4_crypt_object(
     12,
     0,
     file_key,
@@ -1342,7 +1355,7 @@ test "private ARC4 object crypt applies derived object key" {
     crypt_wb_bytes_for_test([0x7d, 0x1c, 0x38, 0x4c, 0xca]),
   )
   @test.assert_eq(
-    try! pdf_arc4_crypt_object(12, 0, file_key, 40, encrypted),
+    try! @crypt_core.pdf_arc4_crypt_object(12, 0, file_key, 40, encrypted),
     @ascii.encode("hello"),
   )
 }
