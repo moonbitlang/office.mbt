@@ -26,6 +26,11 @@ pub using @core {
   pdf_bytes_to_fixed_array,
   pdf_name_of_bytes,
   pdf_name_of_view,
+  pdf_is_whitespace_byte,
+  pdf_is_newline_byte,
+  pdf_is_not_whitespace_byte,
+  pdf_is_delimiter_byte,
+  pdf_is_whitespace_or_delimiter_byte,
 }
 
 ///|
