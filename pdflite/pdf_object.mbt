@@ -248,7 +248,7 @@ fn PdfStreamDataCrypt::decrypt(
       file_key,
       key_length_bits
     ) =>
-      pdf_arc4_crypt_object(
+      @crypt_core.pdf_arc4_crypt_object(
         object_number, generation, file_key, key_length_bits, data,
       )
     PdfStreamDataAesV2Decrypt(
@@ -257,11 +257,11 @@ fn PdfStreamDataCrypt::decrypt(
       file_key,
       key_length_bits
     ) =>
-      pdf_aesv2_decrypt_object_data(
+      @crypt_core.pdf_aesv2_decrypt_object_data(
         object_number, generation, file_key, key_length_bits, data,
       )
     PdfStreamDataAesV3Decrypt(file_key) =>
-      pdf_aesv3_decrypt_object_data(file_key, data)
+      @crypt_core.pdf_aesv3_decrypt_object_data(file_key, data)
   }
 }
 

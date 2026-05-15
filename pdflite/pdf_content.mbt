@@ -1464,7 +1464,7 @@ fn pdf_content_read_flate_inline_image_data(
     value if pdf_is_whitespace_byte(value) => cursor.nudge()
     _ => ()
   }
-  let (_, length) = pdf_flate_decode_view_prefix(cursor.remaining_view())
+  let (_, length) = @flate.pdf_flate_decode_view_prefix(cursor.remaining_view())
   let data = cursor.read_view(length).to_owned()
   pdf_content_read_inline_image_end(cursor)
   data
@@ -1478,7 +1478,9 @@ fn pdf_content_read_flate_inline_image_decoded(
     value if pdf_is_whitespace_byte(value) => cursor.nudge()
     _ => ()
   }
-  let (decoded, length) = pdf_flate_decode_view_prefix(cursor.remaining_view())
+  let (decoded, length) = @flate.pdf_flate_decode_view_prefix(
+    cursor.remaining_view(),
+  )
   ignore(cursor.read_view(length))
   pdf_content_read_inline_image_end(cursor)
   decoded

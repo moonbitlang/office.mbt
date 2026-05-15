@@ -64,13 +64,13 @@ pub fn PdfDocument::encrypt_128bit_r4(
   let no_encrypt_metadata = !encrypt_metadata
   let (document, id) = self.with_file_id(file_id~)
   let permissions = pdf_p_of_permissions(denied_permissions)
-  let owner_entry = pdf_make_owner_password_entry(
+  let owner_entry = @crypt_core.pdf_make_owner_password_entry(
     4, owner_password, user_password, 128,
   )
-  let user_entry = pdf_make_user_password_entry(
+  let user_entry = @crypt_core.pdf_make_user_password_entry(
     no_encrypt_metadata, user_password, 4, owner_entry, permissions, id, 128,
   )
-  let file_key = pdf_encryption_file_key(
+  let file_key = @crypt_core.pdf_encryption_file_key(
     no_encrypt_metadata, user_password, 4, owner_entry, permissions, id, 128,
   )
   let encrypted = document.arc4_crypt_parsed_objects(
@@ -131,13 +131,13 @@ pub fn PdfDocument::encrypt_128bit_aesv2_with_iv_provider(
   let no_encrypt_metadata = !encrypt_metadata
   let (document, id) = self.with_file_id(file_id~)
   let permissions = pdf_p_of_permissions(denied_permissions)
-  let owner_entry = pdf_make_owner_password_entry(
+  let owner_entry = @crypt_core.pdf_make_owner_password_entry(
     4, owner_password, user_password, 128,
   )
-  let user_entry = pdf_make_user_password_entry(
+  let user_entry = @crypt_core.pdf_make_user_password_entry(
     no_encrypt_metadata, user_password, 4, owner_entry, permissions, id, 128,
   )
-  let file_key = pdf_encryption_file_key(
+  let file_key = @crypt_core.pdf_encryption_file_key(
     no_encrypt_metadata, user_password, 4, owner_entry, permissions, id, 128,
   )
   let encrypted = document.aesv2_encrypt_parsed_objects_with_iv_provider(
@@ -316,13 +316,13 @@ fn PdfDocument::encrypt_arc4_standard(
 ) -> PdfDocument raise PdfError {
   let (document, id) = self.with_file_id(file_id~)
   let permissions = pdf_p_of_permissions(denied_permissions)
-  let owner_entry = pdf_make_owner_password_entry(
+  let owner_entry = @crypt_core.pdf_make_owner_password_entry(
     revision, owner_password, user_password, key_length_bits,
   )
-  let user_entry = pdf_make_user_password_entry(
+  let user_entry = @crypt_core.pdf_make_user_password_entry(
     false, user_password, revision, owner_entry, permissions, id, key_length_bits,
   )
-  let file_key = pdf_encryption_file_key(
+  let file_key = @crypt_core.pdf_encryption_file_key(
     false, user_password, revision, owner_entry, permissions, id, key_length_bits,
   )
   let encrypted = document.arc4_crypt_parsed_objects(file_key, key_length_bits)

@@ -125,7 +125,7 @@ fn PdfDocument::pdf_page_fixup_duplicate_annots(
       self.pdf_page_annotation_numbers(self.lookup_object_or_null(page_number)),
     )
   }
-  let seen = pdf_number_set([])
+  let seen = @number_set.pdf_number_set([])
   let new_annots : Array[Array[Int]] = []
   for annots in existing_annots {
     let page_annots : Array[Int] = []
@@ -658,7 +658,7 @@ fn pdf_page_deleted_numbers(
   all_page_numbers : ArrayView[Int],
   active_page_numbers : ArrayView[Int],
 ) -> Array[Int] {
-  let active_pages = pdf_number_set(active_page_numbers)
+  let active_pages = @number_set.pdf_number_set(active_page_numbers)
   let deleted : Array[Int] = []
   for number in all_page_numbers {
     if !active_pages.contains(number) {

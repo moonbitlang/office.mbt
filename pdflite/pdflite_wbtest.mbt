@@ -4,16 +4,16 @@
 
 ///|
 test "private PDF number set deduplicates membership and additions" {
-  let numbers = pdf_number_set([1, 1])
+  let numbers = @number_set.pdf_number_set([1, 1])
   @test.assert_eq(numbers.contains(1), true)
   @test.assert_eq(numbers.contains(2), false)
   numbers.add(2)
   numbers.add(2)
   @test.assert_eq(numbers.contains(2), true)
   let output : Array[Int] = []
-  pdf_push_unique_number(output, numbers, 2)
-  pdf_push_unique_number(output, numbers, 3)
-  pdf_push_unique_number(output, numbers, 3)
+  @number_set.pdf_push_unique_number(output, numbers, 2)
+  @number_set.pdf_push_unique_number(output, numbers, 3)
+  @number_set.pdf_push_unique_number(output, numbers, 3)
   @test.assert_eq(output, [3])
 }
 
@@ -1183,7 +1183,7 @@ test "private structure survival helpers cover direct cases" {
       (pdf_structure_k_key(), PdfInteger(0)),
     ]),
   )
-  let deleted_pages = pdf_number_set([2])
+  let deleted_pages = @number_set.pdf_number_set([2])
   @test.assert_eq(
     doc.pdf_structure_object_has_deleted_page_in_set(
       PdfIndirect(50),

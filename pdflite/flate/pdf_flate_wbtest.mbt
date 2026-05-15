@@ -24,8 +24,8 @@ fn wbtest_flate_bits(bits : ArrayView[Int]) -> Bytes {
 test "private flate bit reader and huffman guards reject malformed inputs" {
   let reader = FlateBitReader::new(Bytes::new(0))
   let negative_bits : Result[UInt, Error] = try? reader.read_bits(-1)
-  guard negative_bits is Err(PdfError::InvalidFlateData) else {
-    fail("expected PdfError::InvalidFlateData")
+  guard negative_bits is Err(@core.PdfError::InvalidFlateData) else {
+    fail("expected @core.PdfError::InvalidFlateData")
   }
   let peek_reader = FlateBitReader::new(
     try! @core.pdf_bytes_of_int_array([0xAC, 0x03])[:],
@@ -39,35 +39,35 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
   @test.assert_eq(pdf_flate_bit_mask(17), 131071)
   let exhausted = FlateBitReader::new(Bytes::new(0))
   let missing_byte : Result[UInt, Error] = try? exhausted.read_bits(1)
-  guard missing_byte is Err(PdfError::InvalidFlateData) else {
-    fail("expected PdfError::InvalidFlateData")
+  guard missing_byte is Err(@core.PdfError::InvalidFlateData) else {
+    fail("expected @core.PdfError::InvalidFlateData")
   }
   let bad_length : Result[FlateHuffmanTable, Error] = try? pdf_flate_build_huffman([
       -1,
     ],
   )
-  guard bad_length is Err(PdfError::InvalidFlateData) else {
-    fail("expected PdfError::InvalidFlateData")
+  guard bad_length is Err(@core.PdfError::InvalidFlateData) else {
+    fail("expected @core.PdfError::InvalidFlateData")
   }
   let empty_table : Result[FlateHuffmanTable, Error] = try? pdf_flate_build_huffman([
       0,
     ],
   )
-  guard empty_table is Err(PdfError::InvalidFlateData) else {
-    fail("expected PdfError::InvalidFlateData")
+  guard empty_table is Err(@core.PdfError::InvalidFlateData) else {
+    fail("expected @core.PdfError::InvalidFlateData")
   }
   let bad_dynamic_symbol : Result[Unit, Error] = try? pdf_flate_check_dynamic_length_symbol(
     19,
   )
-  guard bad_dynamic_symbol is Err(PdfError::InvalidFlateData) else {
-    fail("expected PdfError::InvalidFlateData")
+  guard bad_dynamic_symbol is Err(@core.PdfError::InvalidFlateData) else {
+    fail("expected @core.PdfError::InvalidFlateData")
   }
   let repeated_lengths = [0]
   let repeated_overflow : Result[Unit, Error] = try? pdf_flate_push_repeated_lengths(
     repeated_lengths, 1, 1, 0,
   )
-  guard repeated_overflow is Err(PdfError::InvalidFlateData) else {
-    fail("expected PdfError::InvalidFlateData")
+  guard repeated_overflow is Err(@core.PdfError::InvalidFlateData) else {
+    fail("expected @core.PdfError::InvalidFlateData")
   }
   let (length_code, length_width) = pdf_flate_fixed_literal_code(280)
   let expected_length_code = 192
@@ -90,14 +90,14 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
   let bad_flate_length : Result[(Int, Int, Int), Error] = try? pdf_flate_length_code(
     259,
   )
-  guard bad_flate_length is Err(PdfError::InvalidFlateData) else {
-    fail("expected PdfError::InvalidFlateData")
+  guard bad_flate_length is Err(@core.PdfError::InvalidFlateData) else {
+    fail("expected @core.PdfError::InvalidFlateData")
   }
   let bad_flate_distance : Result[(Int, Int, Int), Error] = try? pdf_flate_distance_code(
     0,
   )
-  guard bad_flate_distance is Err(PdfError::InvalidFlateData) else {
-    fail("expected PdfError::InvalidFlateData")
+  guard bad_flate_distance is Err(@core.PdfError::InvalidFlateData) else {
+    fail("expected @core.PdfError::InvalidFlateData")
   }
   let shadowed_match = @ascii.encode("ABCDEFGHIJABCXABCDEFGHIJ")
   let last_by_prefix : Array[Int] = Array::make(65536, -1)
@@ -163,20 +163,20 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
   let short_prefix : Result[(Bytes, Int), Error] = try? pdf_flate_decode_view_prefix(
     try! @core.pdf_bytes_of_int_array([0x78])[:],
   )
-  guard short_prefix is Err(PdfError::InvalidFlateData) else {
-    fail("expected PdfError::InvalidFlateData")
+  guard short_prefix is Err(@core.PdfError::InvalidFlateData) else {
+    fail("expected @core.PdfError::InvalidFlateData")
   }
   let bad_prefix_header : Result[(Bytes, Int), Error] = try? pdf_flate_decode_view_prefix(
     try! @core.pdf_bytes_of_int_array([0, 0, 0, 0, 0, 0])[:],
   )
-  guard bad_prefix_header is Err(PdfError::InvalidFlateData) else {
-    fail("expected PdfError::InvalidFlateData")
+  guard bad_prefix_header is Err(@core.PdfError::InvalidFlateData) else {
+    fail("expected @core.PdfError::InvalidFlateData")
   }
   let truncated_prefix_adler : Result[(Bytes, Int), Error] = try? pdf_flate_decode_view_prefix(
     try! @core.pdf_bytes_of_int_array([0x78, 0x01, 0x01, 0, 0, 0xFF, 0xFF])[:],
   )
-  guard truncated_prefix_adler is Err(PdfError::InvalidFlateData) else {
-    fail("expected PdfError::InvalidFlateData")
+  guard truncated_prefix_adler is Err(@core.PdfError::InvalidFlateData) else {
+    fail("expected @core.PdfError::InvalidFlateData")
   }
 
   let dynamic_repeat_without_previous : Result[
@@ -196,8 +196,8 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
       ]),
     ),
   )
-  guard dynamic_repeat_without_previous is Err(PdfError::InvalidFlateData) else {
-    fail("expected PdfError::InvalidFlateData")
+  guard dynamic_repeat_without_previous is Err(@core.PdfError::InvalidFlateData) else {
+    fail("expected @core.PdfError::InvalidFlateData")
   }
 
   let distance_lengths : ReadOnlyArray[Int] = [1]
@@ -214,8 +214,8 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
     distance_table,
     invalid_length_output,
   )
-  guard invalid_length is Err(PdfError::InvalidFlateData) else {
-    fail("expected PdfError::InvalidFlateData")
+  guard invalid_length is Err(@core.PdfError::InvalidFlateData) else {
+    fail("expected @core.PdfError::InvalidFlateData")
   }
 
   let copy_lengths = Array::make(258, 0)
@@ -233,8 +233,8 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
     invalid_distance_table,
     invalid_distance_output,
   )
-  guard invalid_distance is Err(PdfError::InvalidFlateData) else {
-    fail("expected PdfError::InvalidFlateData")
+  guard invalid_distance is Err(@core.PdfError::InvalidFlateData) else {
+    fail("expected @core.PdfError::InvalidFlateData")
   }
 
   let past_output_output : Array[Byte] = []
@@ -244,8 +244,8 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
     distance_table,
     past_output_output,
   )
-  guard past_output is Err(PdfError::InvalidFlateData) else {
-    fail("expected PdfError::InvalidFlateData")
+  guard past_output is Err(@core.PdfError::InvalidFlateData) else {
+    fail("expected @core.PdfError::InvalidFlateData")
   }
 }
 
@@ -256,22 +256,26 @@ test "private flate dynamic encoder helpers cover RLE and guards" {
     [0, 0],
     15,
   )
-  guard no_frequency is Err(PdfError::InvalidFlateData) else {
-    fail("expected PdfError::InvalidFlateData for empty huffman frequencies")
+  guard no_frequency is Err(@core.PdfError::InvalidFlateData) else {
+    fail(
+      "expected @core.PdfError::InvalidFlateData for empty huffman frequencies",
+    )
   }
   let negative_frequency : Result[Array[Int], Error] = try? pdf_flate_huffman_code_lengths(
     [-1],
     15,
   )
-  guard negative_frequency is Err(PdfError::InvalidFlateData) else {
-    fail("expected PdfError::InvalidFlateData for negative huffman frequency")
+  guard negative_frequency is Err(@core.PdfError::InvalidFlateData) else {
+    fail(
+      "expected @core.PdfError::InvalidFlateData for negative huffman frequency",
+    )
   }
   let too_deep : Result[Array[Int], Error] = try? pdf_flate_huffman_code_lengths(
     [1, 1, 1],
     1,
   )
-  guard too_deep is Err(PdfError::InvalidFlateData) else {
-    fail("expected PdfError::InvalidFlateData for over-deep huffman tree")
+  guard too_deep is Err(@core.PdfError::InvalidFlateData) else {
+    fail("expected @core.PdfError::InvalidFlateData for over-deep huffman tree")
   }
   @test.assert_eq(pdf_flate_canonical_codes([1, 2, 2]), [0, 2, 3])
   @test.assert_eq(pdf_flate_last_nonzero_length([0, 0]), -1)
@@ -329,8 +333,10 @@ test "private flate dynamic encoder helpers cover RLE and guards" {
     [0],
     [0],
   )
-  guard missing_symbol is Err(PdfError::InvalidFlateData) else {
-    fail("expected PdfError::InvalidFlateData for missing canonical symbol")
+  guard missing_symbol is Err(@core.PdfError::InvalidFlateData) else {
+    fail(
+      "expected @core.PdfError::InvalidFlateData for missing canonical symbol",
+    )
   }
   let empty_dynamic : Result[Unit, Error] = try? pdf_flate_push_dynamic_match_block(
     [],
@@ -338,7 +344,7 @@ test "private flate dynamic encoder helpers cover RLE and guards" {
     true,
     64,
   )
-  guard empty_dynamic is Err(PdfError::InvalidFlateData) else {
-    fail("expected PdfError::InvalidFlateData for empty dynamic block")
+  guard empty_dynamic is Err(@core.PdfError::InvalidFlateData) else {
+    fail("expected @core.PdfError::InvalidFlateData for empty dynamic block")
   }
 }

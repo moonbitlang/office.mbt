@@ -4,7 +4,7 @@ test "private date two-digit parser rejects short input" {
     @ascii.encode("1"),
     0,
   )
-  guard result is Err(PdfError::BadDate) else {
-    fail("expected PdfError::BadDate")
+  guard result is Err(@core.PdfError::BadDate) else {
+    fail("expected @core.PdfError::BadDate")
   }
 }

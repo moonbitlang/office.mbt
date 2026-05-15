@@ -9,7 +9,7 @@ fn pdf_password_padding_fixed() -> FixedArray[Byte] {
 
 ///|
 /// Return the standard 32-byte PDF password padding sequence.
-pub fn pdf_password_padding() -> PdfBytes {
+pub fn pdf_password_padding() -> @core.PdfBytes {
   Bytes::from_array(pdf_password_padding_fixed())
 }
 
@@ -18,7 +18,7 @@ pub fn pdf_password_padding() -> PdfBytes {
 ///
 /// Passwords are byte sequences. Inputs longer than 32 bytes are truncated;
 /// shorter inputs are filled with the standard PDF padding sequence.
-pub fn pdf_pad_password(password : BytesView) -> PdfBytes {
+pub fn pdf_pad_password(password : BytesView) -> @core.PdfBytes {
   let padding = pdf_password_padding_fixed()
   let output : Array[Byte] = []
   let copied = if password.length() < 32 { password.length() } else { 32 }
@@ -60,7 +60,7 @@ pub fn pdf_encryption_file_key(
   permissions : Int,
   file_id : BytesView,
   key_length_bits : Int,
-) -> PdfBytes {
+) -> @core.PdfBytes {
   let padded_password = pdf_pad_password(password)
   let digest_input : Array[Byte] = []
   pdf_crypt_push_view(digest_input, padded_password)
@@ -92,7 +92,7 @@ pub fn pdf_encryption_file_key(
 }
 
 ///|
-fn pdf_key_xor_iteration(key : BytesView, iteration : Int) -> PdfBytes {
+fn pdf_key_xor_iteration(key : BytesView, iteration : Int) -> @core.PdfBytes {
   Bytes::makei(key.length(), index => {
     (key[index].to_int() ^ iteration).to_byte()
   })
@@ -111,7 +111,7 @@ pub fn pdf_make_user_password_entry(
   permissions : Int,
   file_id : BytesView,
   key_length_bits : Int,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let key = pdf_encryption_file_key(
     no_encrypt_metadata, user_password, revision, owner_entry, permissions, file_id,
     key_length_bits,
@@ -168,7 +168,7 @@ pub fn pdf_authenticate_user_password(
   permissions : Int,
   file_id : BytesView,
   key_length_bits : Int,
-) -> Bool raise PdfError {
+) -> Bool raise @core.PdfError {
   let expected = pdf_make_user_password_entry(
     no_encrypt_metadata, user_password, revision, owner_entry, permissions, file_id,
     key_length_bits,
@@ -186,7 +186,7 @@ fn pdf_owner_password_key(
   owner_password : BytesView,
   revision : Int,
   key_length_bits : Int,
-) -> PdfBytes {
+) -> @core.PdfBytes {
   let padded_owner = pdf_pad_password(owner_password)
   let mut digest = pdf_md5_digest(padded_owner)
   if revision >= 3 {
@@ -207,7 +207,7 @@ pub fn pdf_make_owner_password_entry(
   owner_password : BytesView,
   user_password : BytesView,
   key_length_bits : Int,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let source_password = if owner_password.length() == 0 {
     user_password
   } else {
@@ -237,7 +237,7 @@ pub fn pdf_user_password_from_owner_password(
   owner_password : BytesView,
   owner_entry : BytesView,
   key_length_bits : Int,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let key = pdf_owner_password_key(owner_password, revision, key_length_bits)
   if revision == 2 {
     pdf_arc4_crypt(key, owner_entry)
@@ -267,7 +267,7 @@ pub fn pdf_authenticate_owner_password(
   permissions : Int,
   file_id : BytesView,
   key_length_bits : Int,
-) -> Bool raise PdfError {
+) -> Bool raise @core.PdfError {
   let user_password = pdf_user_password_from_owner_password(
     revision, owner_password, owner_entry, key_length_bits,
   )

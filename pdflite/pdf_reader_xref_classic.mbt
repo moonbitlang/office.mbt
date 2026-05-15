@@ -140,7 +140,7 @@ fn pdf_classic_xrefs_add_newer_first(
   target : Array[PdfClassicXRefEntry],
   entries : ArrayView[PdfClassicXRefEntry],
 ) -> Unit {
-  let seen = pdf_number_set([])
+  let seen = @number_set.pdf_number_set([])
   for xref in target {
     seen.add(xref.object_number)
   }

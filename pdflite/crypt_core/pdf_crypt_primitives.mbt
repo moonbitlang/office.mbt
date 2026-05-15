@@ -14,12 +14,12 @@ fn pdf_arc4_swap(state : Array[Int], left : Int, right : Int) -> Unit {
 /// Apply ARC4 to `data` with `key`.
 ///
 /// ARC4 is symmetric, so the same function encrypts and decrypts. Empty keys
-/// raise `PdfError::CryptoKeyExpected`.
+/// raise `@core.PdfError::CryptoKeyExpected`.
 pub fn pdf_arc4_crypt(
   key : BytesView,
   data : BytesView,
-) -> PdfBytes raise PdfError {
-  guard key.length() > 0 else { raise PdfError::CryptoKeyExpected }
+) -> @core.PdfBytes raise @core.PdfError {
+  guard key.length() > 0 else { raise @core.PdfError::CryptoKeyExpected }
   let state : Array[Int] = []
   for value in 0..<256 {
     state.push(value)
@@ -83,7 +83,7 @@ let pdf_md5_constants : FixedArray[UInt] = [
 
 ///|
 /// Return the MD5 digest of `data`.
-pub fn pdf_md5_digest(data : BytesView) -> PdfBytes {
+pub fn pdf_md5_digest(data : BytesView) -> @core.PdfBytes {
   let message : Array[Byte] = []
   for byte in data {
     message.push(byte)
@@ -149,7 +149,7 @@ pub fn pdf_md5_digest(data : BytesView) -> PdfBytes {
 
 ///|
 /// Return the SHA-256 digest of `data`.
-pub fn pdf_sha256_digest(data : BytesView) -> PdfBytes {
+pub fn pdf_sha256_digest(data : BytesView) -> @core.PdfBytes {
   Bytes::from_array(@crypto.sha256(data))
 }
 
@@ -223,7 +223,7 @@ fn pdf_sha512_push_u64_be(output : Array[Byte], value : UInt64) -> Unit {
 }
 
 ///|
-fn pdf_sha512_padded(data : BytesView) -> PdfBytes {
+fn pdf_sha512_padded(data : BytesView) -> @core.PdfBytes {
   let bit_length = data.length().to_uint64() * 8
   let padded_length = (data.length() + 1 + 16 + 127) / 128 * 128
   let output : Array[Byte] = Array::new(capacity=padded_length)
@@ -294,7 +294,7 @@ fn pdf_sha512_digest_with_state(
   data : BytesView,
   state : Array[UInt64],
   output_words : Int,
-) -> PdfBytes {
+) -> @core.PdfBytes {
   let padded = pdf_sha512_padded(data)
   let mut offset = 0
   while offset < padded.length() {
@@ -310,7 +310,7 @@ fn pdf_sha512_digest_with_state(
 
 ///|
 /// Return the SHA-384 digest of `data`.
-pub fn pdf_sha384_digest(data : BytesView) -> PdfBytes {
+pub fn pdf_sha384_digest(data : BytesView) -> @core.PdfBytes {
   pdf_sha512_digest_with_state(
     data,
     [
@@ -323,7 +323,7 @@ pub fn pdf_sha384_digest(data : BytesView) -> PdfBytes {
 
 ///|
 /// Return the SHA-512 digest of `data`.
-pub fn pdf_sha512_digest(data : BytesView) -> PdfBytes {
+pub fn pdf_sha512_digest(data : BytesView) -> @core.PdfBytes {
   pdf_sha512_digest_with_state(
     data,
     [
@@ -349,29 +349,33 @@ fn pdf_aes_valid_key_length(length : Int) -> Bool {
 }
 
 ///|
-fn pdf_aes_check_key(key : BytesView) -> Unit raise PdfError {
+fn pdf_aes_check_key(key : BytesView) -> Unit raise @core.PdfError {
   guard pdf_aes_valid_key_length(key.length()) else {
-    raise PdfError::CryptoKeyExpected
+    raise @core.PdfError::CryptoKeyExpected
   }
 }
 
 ///|
-fn pdf_aes_block(data : BytesView) -> FixedArray[Byte] raise PdfError {
+fn pdf_aes_block(data : BytesView) -> FixedArray[Byte] raise @core.PdfError {
   guard data.length() == 16 else {
-    raise PdfError::InvalidCryptoDataLength(data.length())
+    raise @core.PdfError::InvalidCryptoDataLength(data.length())
   }
   pdf_crypto_fixed_array(data)
 }
 
 ///|
-fn pdf_aes_encrypt_key(key : BytesView) -> FixedArray[Byte] raise PdfError {
+fn pdf_aes_encrypt_key(
+  key : BytesView,
+) -> FixedArray[Byte] raise @core.PdfError {
   pdf_aes_check_key(key)
   let fixed_key = pdf_crypto_fixed_array(key)
   @rijndael.camlpdf_caml_aes_cook_encrypt_key(fixed_key, 0, fixed_key.length())
 }
 
 ///|
-fn pdf_aes_decrypt_key(key : BytesView) -> FixedArray[Byte] raise PdfError {
+fn pdf_aes_decrypt_key(
+  key : BytesView,
+) -> FixedArray[Byte] raise @core.PdfError {
   pdf_aes_check_key(key)
   let fixed_key = pdf_crypto_fixed_array(key)
   @rijndael.camlpdf_caml_aes_cook_decrypt_key(fixed_key, 0, fixed_key.length())
@@ -382,7 +386,7 @@ fn pdf_aes_decrypt_key(key : BytesView) -> FixedArray[Byte] raise PdfError {
 pub fn pdf_aes_encrypt_block(
   key : BytesView,
   block : BytesView,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let cooked_key = pdf_aes_encrypt_key(key)
   let src = pdf_aes_block(block)
   let dst = FixedArray::make(16, b'\x00')
@@ -396,7 +400,7 @@ pub fn pdf_aes_encrypt_block(
 pub fn pdf_aes_decrypt_block(
   key : BytesView,
   block : BytesView,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let cooked_key = pdf_aes_decrypt_key(key)
   let src = pdf_aes_block(block)
   let dst = FixedArray::make(16, b'\x00')
@@ -405,7 +409,7 @@ pub fn pdf_aes_decrypt_block(
 }
 
 ///|
-fn pdf_aes_remove_padding(data : BytesView) -> PdfBytes {
+fn pdf_aes_remove_padding(data : BytesView) -> @core.PdfBytes {
   let length = data.length()
   let padding = data[length - 1].to_int()
   guard padding >= 1 && padding <= 16 else { return data.to_owned() }
@@ -429,15 +433,15 @@ fn pdf_aes_append_block(output : Array[Byte], block : FixedArray[Byte]) -> Unit 
 /// Decrypt AES-CBC data whose first block is the IV.
 ///
 /// Data shorter than or equal to one block decrypts to empty bytes. Block
-/// lengths that are not multiples of 16 raise `PdfError::InvalidCryptoDataLength`.
+/// lengths that are not multiples of 16 raise `@core.PdfError::InvalidCryptoDataLength`.
 pub fn pdf_aes_cbc_decrypt(
   key : BytesView,
   data : BytesView,
   remove_padding? : Bool = true,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   guard data.length() > 16 else { return Bytes::new(0) }
   guard data.length() % 16 == 0 else {
-    raise PdfError::InvalidCryptoDataLength(data.length())
+    raise @core.PdfError::InvalidCryptoDataLength(data.length())
   }
   let cooked_key = pdf_aes_decrypt_key(key)
   let output : Array[Byte] = []
@@ -494,7 +498,7 @@ pub fn pdf_aes_cbc_encrypt_with_iv(
   key : BytesView,
   iv : BytesView,
   data : BytesView,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let cooked_key = pdf_aes_encrypt_key(key)
   let mut previous_ciphertext = pdf_aes_block(iv)
   let output : Array[Byte] = []
@@ -524,10 +528,10 @@ pub fn pdf_aes_ecb_decrypt(
   key : BytesView,
   data : BytesView,
   remove_padding? : Bool = true,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   guard data.length() > 0 else { return Bytes::new(0) }
   guard data.length() % 16 == 0 else {
-    raise PdfError::InvalidCryptoDataLength(data.length())
+    raise @core.PdfError::InvalidCryptoDataLength(data.length())
   }
   let cooked_key = pdf_aes_decrypt_key(key)
   let output : Array[Byte] = []
@@ -557,9 +561,9 @@ pub fn pdf_aes_ecb_decrypt(
 pub fn pdf_aes_ecb_encrypt(
   key : BytesView,
   data : BytesView,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   guard data.length() % 16 == 0 else {
-    raise PdfError::InvalidCryptoDataLength(data.length())
+    raise @core.PdfError::InvalidCryptoDataLength(data.length())
   }
   guard data.length() > 0 else { return Bytes::new(0) }
   let cooked_key = pdf_aes_encrypt_key(key)
@@ -583,12 +587,12 @@ pub fn pdf_aes_ecb_encrypt(
 /// The object number, generation, file key, key length, and AESV2 salt are
 /// hashed according to the PDF standard-security object-key algorithm.
 pub fn pdf_encryption_object_key(
-  crypt_type : PdfCryptType,
+  crypt_type : @core.PdfCryptType,
   object_number : Int,
   generation : Int,
   file_key : BytesView,
   key_length_bits : Int,
-) -> PdfBytes {
+) -> @core.PdfBytes {
   let md5 = @crypto.MD5::new()
   md5.update(file_key)
   let object_bytes : FixedArray[Byte] = [
@@ -627,7 +631,7 @@ pub fn pdf_arc4_crypt_object(
   file_key : BytesView,
   key_length_bits : Int,
   data : BytesView,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let object_key = pdf_encryption_object_key(
     PdfCryptARC4(key_length_bits, 0),
     object_number,

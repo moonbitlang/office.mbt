@@ -9,7 +9,7 @@ pub fn pdf_aesv2_decrypt_object_data(
   file_key : BytesView,
   key_length_bits : Int,
   data : BytesView,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let object_key = pdf_encryption_object_key(
     PdfCryptAESV2,
     object_number,
@@ -32,7 +32,7 @@ pub fn pdf_aesv2_encrypt_object_data(
   key_length_bits : Int,
   data : BytesView,
   iv : BytesView,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let object_key = pdf_encryption_object_key(
     PdfCryptAESV2,
     object_number,
@@ -50,7 +50,7 @@ pub fn pdf_aesv2_encrypt_object_data(
 pub fn pdf_aesv3_decrypt_object_data(
   file_key : BytesView,
   data : BytesView,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_aes_cbc_decrypt(file_key, data)
 }
 
@@ -63,6 +63,6 @@ pub fn pdf_aesv3_encrypt_object_data(
   file_key : BytesView,
   data : BytesView,
   iv : BytesView,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_aes_cbc_encrypt_with_iv(file_key, iv, data)
 }

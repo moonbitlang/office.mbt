@@ -648,7 +648,7 @@ pub fn PdfDocument::annotations_of_page(
           None => ()
         }
       }
-      let popup_parent_set = pdf_number_set(popup_parents)
+      let popup_parent_set = @number_set.pdf_number_set(popup_parents)
       let output : Array[PdfAnnotation] = []
       for annotation in annotations {
         match annotation {
