@@ -40,6 +40,24 @@ pub fn pdf_sha512_digest(BytesView) -> Bytes
 // Errors
 
 // Types and methods
+pub(all) enum PdfAesV3RandomField {
+  PdfAesV3FileKey
+  PdfAesV3UserValidationSalt
+  PdfAesV3UserKeySalt
+  PdfAesV3OwnerValidationSalt
+  PdfAesV3OwnerKeySalt
+  PdfAesV3PermissionsPadding
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfEncryptionMethod {
+  PdfEncryption40Bit
+  PdfEncryption128Bit
+  PdfEncryptionAES128(Bool)
+  PdfEncryptionAES256(Bool)
+  PdfEncryptionAES256ISO(Bool)
+  PdfEncryptionAlreadyEncrypted
+} derive(Eq, ToJson, @debug.Debug)
+
 pub(all) enum PdfPermission {
   PdfNoEdit
   PdfNoPrint

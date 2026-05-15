@@ -17,3 +17,4 @@ pub fn pdf_document_to_markdown(@pdflite.PdfDocument) -> String raise
 // Type aliases
 
 // Traits
+
