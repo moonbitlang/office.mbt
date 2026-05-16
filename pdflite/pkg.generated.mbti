@@ -119,6 +119,8 @@ pub fn pdf_bytes_to_array(Bytes) -> Array[Byte]
 
 pub fn pdf_bytes_to_fixed_array(Bytes) -> FixedArray[Byte]
 
+pub fn pdf_calculate_position(Bool, Double, PdfRectangle, PdfPosition) -> PdfCalculatedPosition
+
 pub fn pdf_ccitt_encode(Int, Int, Bytes) -> Bytes raise @core.PdfError
 
 pub fn pdf_ccitt_encode_view(Int, Int, BytesView) -> Bytes raise @core.PdfError
@@ -565,6 +567,8 @@ pub fn pdf_string_of_pdf(PdfObject) -> Bytes raise @core.PdfError
 
 pub fn pdf_string_of_pdf_including_data(PdfObject) -> Bytes raise @core.PdfError
 
+pub fn pdf_string_of_position(PdfPosition) -> String
+
 pub fn pdf_string_of_standard_font(PdfStandardFont) -> String
 
 pub fn pdf_table_of_encoding(PdfEncoding) -> Array[(Int, @core.PdfName)]
@@ -940,6 +944,12 @@ pub(all) enum PdfCMapEncoding {
 pub fn PdfCMapEncoding::is_identity_h(Self) -> Bool
 pub fn PdfCMapEncoding::is_identity_v(Self) -> Bool
 pub fn PdfCMapEncoding::uses_two_byte_codes(Self) -> Bool
+
+pub(all) struct PdfCalculatedPosition {
+  x : Double
+  y : Double
+  rotation : Double
+} derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfCalculatorFunction {
   operations : Array[PdfCalculatorOp]
@@ -1572,6 +1582,23 @@ pub(all) enum PdfPixelLayout {
   PdfBPP8
   PdfBPP24
   PdfBPP48
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfPosition {
+  PdfPositionPosCentre(Double, Double)
+  PdfPositionPosLeft(Double, Double)
+  PdfPositionPosRight(Double, Double)
+  PdfPositionTop(Double)
+  PdfPositionTopLeft(Double, Double)
+  PdfPositionTopRight(Double, Double)
+  PdfPositionLeft(Double)
+  PdfPositionBottomLeft(Double, Double)
+  PdfPositionBottom(Double)
+  PdfPositionBottomRight(Double, Double)
+  PdfPositionRight(Double)
+  PdfPositionDiagonal
+  PdfPositionReverseDiagonal
+  PdfPositionCentre
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfRectangle {
