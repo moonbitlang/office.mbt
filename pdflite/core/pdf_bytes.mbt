@@ -53,6 +53,9 @@ pub(all) suberror PdfError {
   PageTreeExpected
   PageRotationExpected(Int)
   BadPageSpecification(String)
+  BadCoordinateSpecification(String)
+  BadRectangleSpecification(String)
+  BadNumberArgument(String)
   ContentOperatorExpected
   ContentOperandExpected
   FunctionExpected

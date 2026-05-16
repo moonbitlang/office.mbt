@@ -385,6 +385,14 @@ pub fn pdf_parse_content_ops_from_bytes(Bytes) -> Array[PdfContentOp] raise @cor
 
 pub fn pdf_parse_content_ops_from_view(BytesView) -> Array[PdfContentOp] raise @core.PdfError
 
+pub fn pdf_parse_coordinate(PdfDocument, String) -> @geometry.Point2 raise @core.PdfError
+
+pub fn pdf_parse_coordinate_rectangle(PdfDocument, String) -> PdfCoordRectangle raise @core.PdfError
+
+pub fn pdf_parse_coordinate_rectangles(PdfDocument, String) -> Array[PdfCoordRectangle] raise @core.PdfError
+
+pub fn pdf_parse_coordinates(PdfDocument, String) -> Array[@geometry.Point2] raise @core.PdfError
+
 pub fn pdf_parse_function(PdfDocument, PdfObject) -> PdfFunction raise @core.PdfError
 
 pub fn pdf_parse_indirect_object_from_bytes(Bytes) -> PdfParsedIndirectObject raise @core.PdfError
@@ -409,9 +417,13 @@ pub fn pdf_parse_pagespec_without_pdf(String) -> Array[Int] raise @core.PdfError
 
 pub fn pdf_parse_single_lexeme_object(ArrayView[PdfLexeme]) -> PdfObject raise @core.PdfError
 
+pub fn pdf_parse_single_number(PdfDocument, String) -> Double raise @core.PdfError
+
 pub fn pdf_parse_stream_object_from_bytes(Bytes) -> PdfParsedIndirectObject raise @core.PdfError
 
 pub fn pdf_parse_stream_object_from_view(BytesView) -> PdfParsedIndirectObject raise @core.PdfError
+
+pub fn pdf_parse_units_string(PdfDocument, PdfPage, String) -> Array[Double] raise @core.PdfError
 
 pub fn pdf_pdfdocencoding_byte_of_codepoint(Int) -> Byte?
 
@@ -1112,6 +1124,13 @@ pub(all) enum PdfContentOp {
   Op_Unknown(Bytes)
 } derive(Eq, ToJson, @debug.Debug)
 
+pub(all) struct PdfCoordRectangle {
+  x : Double
+  y : Double
+  width : Double
+  height : Double
+} derive(Eq, ToJson, @debug.Debug)
+
 pub(all) struct PdfDecryptionResult {
   document : PdfDocument
   denied_permissions : Array[@crypt_core.PdfPermission]
@@ -1215,10 +1234,16 @@ pub fn PdfDocument::parse_content_bytes_with_resources(Self, PdfObject, Bytes) -
 pub fn PdfDocument::parse_content_ops(Self, ArrayView[PdfObject]) -> Array[PdfContentOp] raise @core.PdfError
 pub fn PdfDocument::parse_content_ops_with_resources(Self, PdfObject, ArrayView[PdfObject]) -> Array[PdfContentOp] raise @core.PdfError
 pub fn PdfDocument::parse_content_view_with_resources(Self, PdfObject, BytesView) -> Array[PdfContentOp] raise @core.PdfError
+pub fn PdfDocument::parse_coordinate(Self, String) -> @geometry.Point2 raise @core.PdfError
+pub fn PdfDocument::parse_coordinate_rectangle(Self, String) -> PdfCoordRectangle raise @core.PdfError
+pub fn PdfDocument::parse_coordinate_rectangles(Self, String) -> Array[PdfCoordRectangle] raise @core.PdfError
+pub fn PdfDocument::parse_coordinates(Self, String) -> Array[@geometry.Point2] raise @core.PdfError
 pub fn PdfDocument::parse_function(Self, PdfObject) -> PdfFunction raise @core.PdfError
 pub fn PdfDocument::parse_matrix(Self, @core.PdfName, PdfObject) -> @geometry.TransformMatrix raise @core.PdfError
 pub fn PdfDocument::parse_pagespec(Self, String) -> Array[Int] raise @core.PdfError
 pub fn PdfDocument::parse_rectangle(Self, PdfObject) -> PdfRectangle raise @core.PdfError
+pub fn PdfDocument::parse_single_number(Self, String) -> Double raise @core.PdfError
+pub fn PdfDocument::parse_units_string(Self, PdfPage, String) -> Array[Double] raise @core.PdfError
 pub fn PdfDocument::parsed_object_entries(Self) -> Array[(Int, Int, PdfObject)]
 pub fn PdfDocument::pdf_decode_stream(Self, PdfObject) -> PdfObject raise @core.PdfError
 pub fn PdfDocument::pdf_decode_stream_until_unknown(Self, PdfObject) -> PdfObject raise @core.PdfError
