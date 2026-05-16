@@ -251,6 +251,8 @@ pub fn pdf_image_colspace(PdfDocument, PdfObject, PdfObject) -> PdfColourSpace r
 
 pub fn pdf_int_array_of_bytes(BytesView) -> Array[Int]
 
+pub fn pdf_invert_page_range(Int, ArrayView[Int]) -> Array[Int]
+
 pub fn pdf_is_delimiter_byte(Int) -> Bool
 
 pub fn pdf_is_identity_h(PdfFont) -> Bool
@@ -396,6 +398,12 @@ pub fn pdf_parse_lexemes(ArrayView[PdfLexeme]) -> Array[PdfObject] raise @core.P
 pub fn pdf_parse_object_from_bytes(Bytes) -> PdfObject raise @core.PdfError
 
 pub fn pdf_parse_object_from_view(BytesView) -> PdfObject raise @core.PdfError
+
+pub fn pdf_parse_pagespec(PdfDocument, String) -> Array[Int] raise @core.PdfError
+
+pub fn pdf_parse_pagespec_for_count(Int, String) -> Array[Int] raise @core.PdfError
+
+pub fn pdf_parse_pagespec_without_pdf(String) -> Array[Int] raise @core.PdfError
 
 pub fn pdf_parse_single_lexeme_object(ArrayView[PdfLexeme]) -> PdfObject raise @core.PdfError
 
@@ -548,6 +556,10 @@ pub fn pdf_string_of_lexeme(PdfLexeme) -> String
 pub fn pdf_string_of_lexemes(ArrayView[PdfLexeme]) -> String
 
 pub fn pdf_string_of_page_label(PdfPageLabel) -> Bytes
+
+pub fn pdf_string_of_pagespec(PdfDocument, ArrayView[Int]) -> String raise @core.PdfError
+
+pub fn pdf_string_of_pagespec_for_count(Int, ArrayView[Int]) -> String
 
 pub fn pdf_string_of_pdf(PdfObject) -> Bytes raise @core.PdfError
 
@@ -1195,6 +1207,7 @@ pub fn PdfDocument::parse_content_ops_with_resources(Self, PdfObject, ArrayView[
 pub fn PdfDocument::parse_content_view_with_resources(Self, PdfObject, BytesView) -> Array[PdfContentOp] raise @core.PdfError
 pub fn PdfDocument::parse_function(Self, PdfObject) -> PdfFunction raise @core.PdfError
 pub fn PdfDocument::parse_matrix(Self, @core.PdfName, PdfObject) -> @geometry.TransformMatrix raise @core.PdfError
+pub fn PdfDocument::parse_pagespec(Self, String) -> Array[Int] raise @core.PdfError
 pub fn PdfDocument::parse_rectangle(Self, PdfObject) -> PdfRectangle raise @core.PdfError
 pub fn PdfDocument::parsed_object_entries(Self) -> Array[(Int, Int, PdfObject)]
 pub fn PdfDocument::pdf_decode_stream(Self, PdfObject) -> PdfObject raise @core.PdfError
@@ -1250,6 +1263,7 @@ pub fn PdfDocument::set_version(Self, Int, Int) -> Unit
 pub fn PdfDocument::set_was_linearized(Self, Bool) -> Unit
 pub fn PdfDocument::shortest_unused_prefix(Self) -> String
 pub fn PdfDocument::stream_object_entries(Self) -> Array[(Int, Int, PdfStream)]
+pub fn PdfDocument::string_of_pagespec(Self, ArrayView[Int]) -> String raise @core.PdfError
 pub fn PdfDocument::target_of_page_number(Self, Int) -> PdfDestination raise @core.PdfError
 pub fn PdfDocument::text_extractor_of_font(Self, PdfObject) -> PdfTextExtractor raise @core.PdfError
 pub fn PdfDocument::trailer_dict(Self) -> PdfObject

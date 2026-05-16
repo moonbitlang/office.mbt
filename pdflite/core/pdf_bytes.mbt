@@ -52,6 +52,7 @@ pub(all) suberror PdfError {
   ParsedObjectExpected
   PageTreeExpected
   PageRotationExpected(Int)
+  BadPageSpecification(String)
   ContentOperatorExpected
   ContentOperandExpected
   FunctionExpected
