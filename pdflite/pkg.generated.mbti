@@ -513,6 +513,8 @@ pub fn pdf_renumber_pages(PdfDocument, ArrayView[PdfPage]) -> Array[PdfPage] rai
 
 pub fn pdf_renumber_parent_trees(ArrayView[PdfDocument]) -> Unit raise @core.PdfError
 
+pub fn pdf_restrict_angle(Double, Double) -> Double
+
 pub fn pdf_reverse_table_of_encoding(PdfEncoding) -> Array[(@core.PdfName, Int)]
 
 pub fn pdf_revisions_from_bytes(Bytes) -> Int raise @core.PdfError
@@ -526,6 +528,12 @@ pub fn pdf_run_length_decode_view(BytesView) -> Bytes
 pub fn pdf_run_length_encode(Bytes) -> Bytes
 
 pub fn pdf_run_length_encode_view(BytesView) -> Bytes
+
+pub fn pdf_shape_circle(Double, Double, Double) -> PdfPath
+
+pub let pdf_shape_kappa : Double
+
+pub fn pdf_shape_rectangle(Double, Double, Double, Double) -> PdfPath
 
 pub fn pdf_shortest_unused_prefix(PdfDocument) -> String
 
@@ -1604,6 +1612,37 @@ pub(all) struct PdfParsedIndirectObject {
   number : Int
   generation : Int
   object : PdfObject
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfPath {
+  winding_rule : PdfPathWindingRule
+  subpaths : Array[PdfPathSubpath]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfPathClosure {
+  PdfPathClosed
+  PdfPathOpen
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfPathHole {
+  PdfPathHole
+  PdfPathNotHole
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfPathSegment {
+  PdfPathStraight(@geometry.Point2, @geometry.Point2)
+  PdfPathBezier(@geometry.Point2, @geometry.Point2, @geometry.Point2, @geometry.Point2)
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfPathSubpath {
+  hole : PdfPathHole
+  closure : PdfPathClosure
+  segments : Array[PdfPathSegment]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfPathWindingRule {
+  PdfPathEvenOdd
+  PdfPathNonZero
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) enum PdfPixelLayout {
