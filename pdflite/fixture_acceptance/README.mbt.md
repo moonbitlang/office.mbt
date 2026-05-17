@@ -18,15 +18,25 @@ flowchart LR
 ```moonbit check
 ///|
 #cfg(target="native")
-async test "checked-in CamlPDF fixtures are present" {
-  let base = match @env.current_dir() {
+async test "checked-in PDF fixtures are present" {
+  let root = match @env.current_dir() {
     Some(current_dir) => current_dir + "/fixtures/camlpdf/"
     None => "fixtures/camlpdf/"
   }
-  let logo = @fs.read_file(base + "logo.pdf").binary()
-  let introduction = @fs.read_file(base + "introduction_to_camlpdf.pdf").binary()
-  if logo.length() == 0 || introduction.length() == 0 {
-    fail("expected non-empty CamlPDF fixtures")
+  let markdown_root = match @env.current_dir() {
+    Some(current_dir) => current_dir + "/markdown/fixtures/"
+    None => "markdown/fixtures/"
+  }
+  let fixtures = [
+    root + "logo.pdf",
+    root + "introduction_to_camlpdf.pdf",
+    markdown_root + "pandoc_latin.pdf",
+    markdown_root + "pandoc_cjk.pdf",
+  ]
+  for path in fixtures {
+    if @fs.read_file(path).binary().length() == 0 {
+      fail("expected non-empty checked-in PDF fixture")
+    }
   }
 }
 ```

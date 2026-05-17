@@ -1074,6 +1074,12 @@ Current backend snapshot:
   reader failure, reconstructs through the public recovery reader, and verifies
   compressed-xref rewrite/reread page counts. `moon test --target native
   fixture_acceptance` reports 3/3 tests passing.~~
+- [x] ~~Add checked-in Pandoc real-world malformed-startxref fixture gates:
+  `fixture_acceptance` now also corrupts the object-stream-backed
+  `pandoc_latin.pdf` and `pandoc_cjk.pdf` fixtures, requires strict-reader
+  failure, reconstructs through the public recovery reader, and verifies
+  compressed-xref rewrite/reread page counts. `moon test --target native
+  fixture_acceptance` reports 5/5 tests passing.~~
 - [ ] Add further malformed xref-table/xref-stream/object-stream recovery cases
   from real-world PDFs.
 - [x] ~~Add a native reader-boundary gate for the next available predefined CMap

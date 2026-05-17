@@ -150,3 +150,19 @@ async test "checked-in CamlPDF introduction fixture reconstructs xref stream bad
     10,
   )
 }
+
+///|
+async test "checked-in Pandoc Latin fixture reconstructs object-stream bad startxref" {
+  fixture_acceptance_assert_reconstructs_for_test(
+    fixture_acceptance_bytes_for_test("markdown/fixtures/pandoc_latin.pdf"),
+    2,
+  )
+}
+
+///|
+async test "checked-in Pandoc CJK fixture reconstructs object-stream bad startxref" {
+  fixture_acceptance_assert_reconstructs_for_test(
+    fixture_acceptance_bytes_for_test("markdown/fixtures/pandoc_cjk.pdf"),
+    1,
+  )
+}
