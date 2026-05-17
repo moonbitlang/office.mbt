@@ -173,6 +173,18 @@ pub fn pdf_chop(PdfDocument, Int, Int, Bool, Bool, Bool, ArrayView[Int]) -> PdfD
 
 pub fn pdf_chop_hv(PdfDocument, Bool, Double, Bool, ArrayView[Int]) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_clip_contour(Bool, ArrayView[PdfClipVertex]) -> PdfClipContour
+
+pub fn pdf_clip_make_polygon(ArrayView[Bool], ArrayView[Array[PdfClipVertex]]) -> PdfClipPolygon raise @core.PdfError
+
+pub fn pdf_clip_null_polygon() -> PdfClipPolygon
+
+pub fn pdf_clip_polygon(ArrayView[PdfClipContour]) -> PdfClipPolygon
+
+pub fn pdf_clip_polygon_of_box(Double, Double, Double, Double) -> PdfClipPolygon
+
+pub fn pdf_clip_vertex(Double, Double) -> PdfClipVertex
+
 pub fn pdf_codepoint_of_pdfdocencoding_byte(Int) -> Int raise @core.PdfError
 
 pub fn pdf_codepoints_of_pdfdocencoding(BytesView) -> Array[Int] raise @core.PdfError
@@ -1339,6 +1351,31 @@ pub(all) enum PdfCalculatorOp {
 pub fn PdfCalculatorOp::debug_name(Self) -> String
 
 type PdfClassicXRefEntry derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfClipContour {
+  hole : Bool
+  vertices : Array[PdfClipVertex]
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfClipContour::hole_flag(Self) -> Int
+pub fn PdfClipContour::num_vertices(Self) -> Int
+
+pub(all) enum PdfClipOperation {
+  PdfClipDifference
+  PdfClipIntersection
+  PdfClipExclusiveOr
+  PdfClipUnion
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfClipOperation::gpc_code(Self) -> Int
+
+pub(all) struct PdfClipPolygon {
+  contours : Array[PdfClipContour]
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfClipPolygon::num_contours(Self) -> Int
+
+pub(all) struct PdfClipVertex {
+  x : Double
+  y : Double
+} derive(Eq, ToJson, @debug.Debug)
 
 pub(all) enum PdfColourSpace {
   PdfDeviceGray

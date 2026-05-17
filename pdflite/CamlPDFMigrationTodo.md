@@ -55,6 +55,14 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port the first `cpdfclip` polygon model slice:
+  `PdfClipOperation`, `PdfClipVertex`, `PdfClipContour`, and `PdfClipPolygon`
+  now cover cpdf/GPC operation codes, null polygons, box polygons, hole flags,
+  checked construction from parallel arrays, copy-on-construction behavior, and
+  JSON literal shape. The native GPC boolean operation remains a separate
+  vendored-C binding slice because `.repos/` is ignored and cannot be used as a
+  committed build dependency. `moon test --target native pdf_clip_test.mbt`
+  reports 5/5 tests passing.~~
 - [x] ~~Port cpdf scale-to-fit and legacy `twoup`:
   `PdfDocument::scale_to_fit_pages` now preserves aspect ratio against
   page-indexed target sizes, rewrites known boxes to the target sheet,
