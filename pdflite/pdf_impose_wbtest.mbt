@@ -143,6 +143,49 @@ test "pdf_impose_make_space fit scales and shifts while preserving page size" {
 }
 
 ///|
+test "pdf_impose_add_border appends cpdf stamp rectangle" {
+  let document = try! impose_document_for_test([
+    try! impose_page_for_test([Op_S], width=100.0, height=80.0),
+    try! impose_page_for_test([Op_BT, Op_ET], width=100.0, height=80.0),
+  ])
+  let bordered = try! document.pdf_impose_add_border(2.0, false)
+  let pages = try! bordered.pages_of_pagetree()
+  let border_ops = [
+    pdf_content_begin_artifact(),
+    Op_q,
+    Op_BMC(impose_name_for_test("/CPDFSTAMP")),
+    Op_rg(0.0, 0.0, 0.0),
+    Op_RG(0.0, 0.0, 0.0),
+    Op_w(2.0),
+    Op_re(1.0, 1.0, 98.0, 78.0),
+    Op_s,
+    Op_EMC,
+    Op_Q,
+    pdf_content_end_artifact(),
+  ]
+  @test.assert_eq(
+    try! impose_page_content_ops_for_test(bordered, pages[0]),
+    pdf_impose_concat_ops([Op_q, Op_S, Op_Q], border_ops),
+  )
+  @test.assert_eq(
+    try! impose_page_content_ops_for_test(bordered, pages[1]),
+    pdf_impose_concat_ops([Op_q, Op_BT, Op_ET, Op_Q], border_ops),
+  )
+}
+
+///|
+test "pdf_impose_add_border treats zero width as no border" {
+  let document = try! impose_document_for_test([
+    try! impose_page_for_test([Op_S], width=100.0, height=80.0),
+  ])
+  let bordered = try! document.pdf_impose_add_border(0.0, true)
+  let pages = try! bordered.pages_of_pagetree()
+  @test.assert_eq(try! impose_page_content_ops_for_test(bordered, pages[0]), [
+    Op_S,
+  ])
+}
+
+///|
 test "pdf_impose_transforms preserves row and column ordering" {
   @test.assert_eq(try! impose_transforms_for_test(columns=false, count=3), [
     transform_translate(0.0, 200.0),

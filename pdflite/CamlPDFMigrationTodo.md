@@ -25,7 +25,7 @@ Current estimate:
   XMP/document info JSON reporting, redaction annotation bounding-box overlays,
   imposition transform/content/page-assembly/pattern-matrix kernels, cpdf page
   hard-box/removal/shift/scale/set-mediabox helpers, imposition make-space
-  orchestration, and Markdown helper public APIs.
+  orchestration and border stamping, and Markdown helper public APIs.
 
 Current backend snapshot:
 
@@ -53,6 +53,14 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port the `cpdfimpose.add_border` helper: private
+  `pdf_impose_add_border` now appends a cpdf-style black stroked rectangle just
+  inside the first page's `/MediaBox`, wraps it in artifact and `/CPDFSTAMP`
+  marked content, uses the existing safe append path in normal and fast modes,
+  and treats zero line width as no border. White-box coverage pins both-page
+  border stamping, protected normal append shape, and zero-width no-op behavior.
+  `moon test --target native pdf_impose_wbtest.mbt` reports 16/16 tests
+  passing.~~
 - [x] ~~Port the `cpdfimpose.make_space` orchestration helper: private
   `pdf_impose_make_space` now hard-boxes pages to `/MediaBox`, preserves cpdf's
   zero-spacing hard-box behavior, expands non-fit output media boxes after
