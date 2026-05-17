@@ -117,6 +117,76 @@ test "PdfDocument hard_box handles missing boxes like cpdf" {
 }
 
 ///|
+test "PdfDocument copy_page_box copies selected boxes and wrappers" {
+  let document = page_box_document_for_test()
+  let key_crop = page_box_name_for_test("/CropBox")
+  let key_media = page_box_name_for_test("/MediaBox")
+  let key_trim = page_box_name_for_test("/TrimBox")
+  let copied = try! document.copy_page_box([1], key_crop, key_media)
+  let pages = try! copied.pages_of_pagetree()
+  @test.assert_eq(try! copied.parse_rectangle(pages[0].mediabox), {
+    min_x: 10.0,
+    min_y: 20.0,
+    max_x: 90.0,
+    max_y: 150.0,
+  })
+  @test.assert_eq(try! copied.parse_rectangle(pages[1].mediabox), {
+    min_x: 0.0,
+    min_y: 0.0,
+    max_x: 100.0,
+    max_y: 200.0,
+  })
+
+  let copied_media = try! @pdflite.pdf_copy_page_box(
+    document,
+    [2],
+    key_media,
+    key_trim,
+  )
+  let media_pages = try! copied_media.pages_of_pagetree()
+  @test.assert_eq(
+    media_pages[1].rest.lookup_immediate(key_trim),
+    Some(page_box_rect_for_test(0.0, 0.0, 100.0, 200.0)),
+  )
+}
+
+///|
+test "PdfDocument copy_page_box handles missing sources like cpdf" {
+  let document = page_box_document_for_test()
+  let key_trim = page_box_name_for_test("/TrimBox")
+  let key_bleed = page_box_name_for_test("/BleedBox")
+  let unchanged = try! document.copy_page_box([2], key_trim, key_bleed)
+  let unchanged_pages = try! unchanged.pages_of_pagetree()
+  @test.assert_eq(unchanged_pages[1].rest.lookup_immediate(key_bleed), None)
+
+  let fallback = try! document.copy_page_box(
+    [2],
+    key_trim,
+    key_bleed,
+    mediabox_if_missing=true,
+  )
+  let fallback_pages = try! fallback.pages_of_pagetree()
+  @test.assert_eq(
+    fallback_pages[1].rest.lookup_immediate(key_bleed),
+    Some(page_box_rect_for_test(0.0, 0.0, 100.0, 200.0)),
+  )
+
+  let bad_page : Result[@pdflite.PdfDocument, Error] = try? document.copy_page_box(
+    [3],
+    key_trim,
+    key_bleed,
+  )
+  guard bad_page
+    is Err(
+      @pdflite.PdfError::BadPageSpecification(
+        "copy_page_box: range contains pages not present in pdf"
+      )
+    ) else {
+    fail("expected copy_page_box to reject an out-of-range page")
+  }
+}
+
+///|
 test "PdfDocument set_mediaboxes uses page-indexed xywh boxes" {
   let document = page_box_document_for_test()
   let updated = try! document.set_mediaboxes([2], [

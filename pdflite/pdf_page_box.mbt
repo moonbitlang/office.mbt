@@ -161,6 +161,42 @@ fn PdfDocument::pdf_page_remove_box_page(
 }
 
 ///|
+fn PdfDocument::pdf_page_copy_box_source(
+  self : PdfDocument,
+  page : PdfPage,
+  from_box : PdfName,
+  mediabox_if_missing : Bool,
+) -> PdfObject? {
+  if from_box == pdf_page_mediabox_key() {
+    Some(page.mediabox)
+  } else {
+    match self.lookup_direct(from_box, page.rest) {
+      Some(value) => Some(value)
+      None => if mediabox_if_missing { Some(page.mediabox) } else { None }
+    }
+  }
+}
+
+///|
+fn PdfDocument::pdf_page_copy_box_page(
+  self : PdfDocument,
+  page : PdfPage,
+  from_box : PdfName,
+  to_box : PdfName,
+  mediabox_if_missing : Bool,
+) -> PdfPage raise PdfError {
+  match self.pdf_page_copy_box_source(page, from_box, mediabox_if_missing) {
+    Some(value) =>
+      if to_box == pdf_page_mediabox_key() {
+        { ..page, mediabox: value }
+      } else {
+        { ..page, rest: page.rest.add_dict_entry(to_box, value) }
+      }
+    None => page
+  }
+}
+
+///|
 fn PdfDocument::pdf_page_set_mediabox_page(
   self : PdfDocument,
   page_number : Int,
@@ -200,6 +236,35 @@ pub fn pdf_hard_box(
   fast? : Bool = false,
 ) -> PdfDocument raise PdfError {
   document.hard_box(page_numbers, box_name, mediabox_if_missing~, fast~)
+}
+
+///|
+/// Copy one page-box value to another on selected pages.
+///
+/// Missing source boxes leave the page unchanged unless `mediabox_if_missing`
+/// is true, in which case the page `/MediaBox` is copied.
+pub fn PdfDocument::copy_page_box(
+  self : PdfDocument,
+  page_numbers : ArrayView[Int],
+  from_box : PdfName,
+  to_box : PdfName,
+  mediabox_if_missing? : Bool = false,
+) -> PdfDocument raise PdfError {
+  self.pdf_page_box_rewrite_pages(page_numbers, "copy_page_box", (_, _, page) => {
+    self.pdf_page_copy_box_page(page, from_box, to_box, mediabox_if_missing)
+  })
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::copy_page_box`.
+pub fn pdf_copy_page_box(
+  document : PdfDocument,
+  page_numbers : ArrayView[Int],
+  from_box : PdfName,
+  to_box : PdfName,
+  mediabox_if_missing? : Bool = false,
+) -> PdfDocument raise PdfError {
+  document.copy_page_box(page_numbers, from_box, to_box, mediabox_if_missing~)
 }
 
 ///|

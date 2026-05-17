@@ -24,8 +24,8 @@ Current estimate:
   info synchronization, XMP metadata creation, XMP RDF list extraction,
   XMP/document info JSON reporting, redaction annotation bounding-box overlays,
   imposition transform/content/page-assembly/pattern-matrix kernels, cpdf page
-  hard-box/removal/shift/scale/set-mediabox helpers, imposition make-space
-  orchestration and border stamping, and Markdown helper public APIs.
+  hard-box/removal/shift/scale/set-mediabox/copy-box helpers, imposition
+  make-space orchestration and border stamping, and Markdown helper public APIs.
 
 Current backend snapshot:
 
@@ -53,6 +53,14 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port the `Cpdfpage.copy_box` helper used by full imposition:
+  `copy_page_box` now copies selected page-box values, updates the `PdfPage`
+  `/MediaBox` field directly when the target is `/MediaBox`, copies `/MediaBox`
+  into non-media targets, preserves cpdf's missing-source no-op behavior, and
+  supports the `mediabox_if_missing` fallback. Coverage pins selected-page
+  CropBox-to-MediaBox copies, MediaBox-to-rest copies through the wrapper,
+  missing-source fallback/no-op behavior, and invalid page rejection. `moon
+  test --target native pdf_page_box_test.mbt` reports 7/7 tests passing.~~
 - [x] ~~Port the `cpdfimpose.add_border` helper: private
   `pdf_impose_add_border` now appends a cpdf-style black stroked rectangle just
   inside the first page's `/MediaBox`, wraps it in artifact and `/CPDFSTAMP`
