@@ -801,3 +801,110 @@ test "pdf_page_label_merge rejects mismatched inputs" {
     fail("expected @pdflite.PdfError::PageTreeExpected")
   }
 }
+
+///|
+test "PdfDocument add_page_labels splits ranges and progresses numbering" {
+  let document = try! @pdflite.pdf_blank_document(10.0, 10.0, 5)
+  let updated = try! document.add_page_labels(
+    true,
+    PageLabelDecimalArabic,
+    Some(page_label_bytes_for_test("A-")),
+    10,
+    [2, 3, 5],
+  )
+  let labels = try! updated.read_page_labels()
+  @test.assert_eq(labels, [
+    @pdflite.pdf_page_label_basic,
+    {
+      label_style: PageLabelDecimalArabic,
+      label_prefix: Some(page_label_bytes_for_test("A-")),
+      start_page: 2,
+      start_value: 10,
+    },
+    { ..@pdflite.pdf_page_label_basic, start_page: 4, start_value: 4 },
+    {
+      label_style: PageLabelDecimalArabic,
+      label_prefix: Some(page_label_bytes_for_test("A-")),
+      start_page: 5,
+      start_value: 12,
+    },
+  ])
+  @test.assert_eq(
+    @pdflite.pdf_page_label_text_of_page_number(3, labels),
+    Some(page_label_bytes_for_test("A-11")),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_page_label_text_of_page_number(5, labels),
+    Some(page_label_bytes_for_test("A-12")),
+  )
+}
+
+///|
+test "pdf_add_page_labels can reuse start value for each range" {
+  let document = try! @pdflite.pdf_blank_document(10.0, 10.0, 5)
+  let updated = try! @pdflite.pdf_add_page_labels(
+    document,
+    false,
+    PageLabelDecimalArabic,
+    Some(page_label_bytes_for_test("A-")),
+    10,
+    [2, 3, 5],
+  )
+  let labels = try! updated.read_page_labels()
+  @test.assert_eq(labels[3], {
+    label_style: PageLabelDecimalArabic,
+    label_prefix: Some(page_label_bytes_for_test("A-")),
+    start_page: 5,
+    start_value: 10,
+  })
+  @test.assert_eq(
+    @pdflite.pdf_page_label_text_of_page_number(5, labels),
+    Some(page_label_bytes_for_test("A-10")),
+  )
+}
+
+///|
+test "PdfDocument add_page_labels preserves an existing page one label" {
+  let document = try! @pdflite.pdf_blank_document(10.0, 10.0, 5)
+  let original : @pdflite.PdfPageLabel = {
+    label_style: PageLabelLowercaseRoman,
+    label_prefix: Some(page_label_bytes_for_test("pre-")),
+    start_page: 1,
+    start_value: 3,
+  }
+  let seeded = try! document.write_page_labels([original])
+  let updated = try! seeded.add_page_labels(
+    false,
+    PageLabelUppercaseLetters,
+    None,
+    1,
+    [3],
+  )
+  let labels = try! updated.read_page_labels()
+  @test.assert_eq(labels, [
+    original,
+    {
+      label_style: PageLabelUppercaseLetters,
+      label_prefix: None,
+      start_page: 3,
+      start_value: 1,
+    },
+    { ..original, start_page: 4, start_value: 6 },
+  ])
+}
+
+///|
+test "PdfDocument add_page_labels rejects empty page ranges" {
+  let document = try! @pdflite.pdf_blank_document(10.0, 10.0, 1)
+  let result : Result[@pdflite.PdfDocument, Error] = try? document.add_page_labels(
+    false,
+    PageLabelDecimalArabic,
+    None,
+    1,
+    [],
+  )
+  guard result
+    is Err(@pdflite.PdfError::BadPageSpecification("empty page label range")) else {
+    fail("expected empty page-label range error")
+  }
+}

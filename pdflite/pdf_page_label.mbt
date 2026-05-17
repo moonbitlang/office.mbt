@@ -272,6 +272,118 @@ pub fn pdf_page_label_add_label(
 }
 
 ///|
+fn pdf_page_label_range_extents(
+  page_numbers : ArrayView[Int],
+) -> Array[(Int, Int)] {
+  let ranges : Array[(Int, Int)] = []
+  if page_numbers.length() > 0 {
+    let mut start = page_numbers[0]
+    let mut previous = page_numbers[0]
+    for index in 1..<page_numbers.length() {
+      let page_number = page_numbers[index]
+      if page_number == previous + 1 {
+        previous = page_number
+      } else {
+        ranges.push((start, previous))
+        start = page_number
+        previous = page_number
+      }
+    }
+    ranges.push((start, previous))
+  }
+  ranges
+}
+
+///|
+fn pdf_page_label_has_page_one(labels : ArrayView[PdfPageLabel]) -> Bool {
+  for label in labels {
+    if label.start_page == 1 {
+      break true
+    }
+  } nobreak {
+    false
+  }
+}
+
+///|
+fn pdf_page_label_start_additions(ranges : ArrayView[(Int, Int)]) -> Array[Int] {
+  let additions : Array[Int] = []
+  let mut so_far = 0
+  for range in ranges {
+    let (start_page, end_page) = range
+    additions.push(so_far)
+    so_far += end_page - start_page + 1
+  }
+  additions
+}
+
+///|
+fn pdf_page_label_with_basic_if_needed(
+  labels : ArrayView[PdfPageLabel],
+) -> Array[PdfPageLabel] {
+  let output : Array[PdfPageLabel] = []
+  if !pdf_page_label_has_page_one(labels) {
+    output.push(pdf_page_label_basic)
+  }
+  for label in labels {
+    output.push(label)
+  }
+  output
+}
+
+///|
+/// Add page-label ranges to the selected one-based page numbers.
+///
+/// `page_numbers` is interpreted in its existing order; contiguous runs are
+/// labelled as ranges. When `progress` is true, each later range starts after
+/// the number of pages already labelled by earlier ranges.
+pub fn PdfDocument::add_page_labels(
+  self : PdfDocument,
+  progress : Bool,
+  style : PdfPageLabelStyle,
+  prefix : PdfBytes?,
+  start_value : Int,
+  page_numbers : ArrayView[Int],
+) -> PdfDocument raise PdfError {
+  let ranges = pdf_page_label_range_extents(page_numbers)
+  if ranges.length() == 0 {
+    raise BadPageSpecification("empty page label range")
+  }
+  let additions = pdf_page_label_start_additions(ranges)
+  let end_page = self.endpage()
+  let mut labels = pdf_page_label_with_basic_if_needed(self.read_page_labels())
+  for index in 0..<ranges.length() {
+    let (range_start, range_end) = ranges[index]
+    let addition = if progress { additions[index] } else { 0 }
+    labels = pdf_page_label_add_label(
+      end_page,
+      labels,
+      {
+        label_style: style,
+        label_prefix: prefix,
+        start_page: range_start,
+        start_value: start_value + addition,
+      },
+      range_end,
+    )
+  }
+  self.write_page_labels(labels)
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::add_page_labels`.
+pub fn pdf_add_page_labels(
+  document : PdfDocument,
+  progress : Bool,
+  style : PdfPageLabelStyle,
+  prefix : PdfBytes?,
+  start_value : Int,
+  page_numbers : ArrayView[Int],
+) -> PdfDocument raise PdfError {
+  document.add_page_labels(progress, style, prefix, start_value, page_numbers)
+}
+
+///|
 fn pdf_page_label_push_bytes(output : Array[Byte], bytes : PdfBytes) -> Unit {
   for byte in bytes {
     output.push(byte)
