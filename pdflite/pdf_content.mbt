@@ -115,6 +115,14 @@ let pdf_content_inline_l_key_name : PdfName = pdf_content_name("/L")
 let pdf_content_artifact_name : PdfName = pdf_content_name("/Artifact")
 
 ///|
+let pdf_content_begin_artifact_name : PdfName = pdf_content_name(
+  "/BeginArtifact",
+)
+
+///|
+let pdf_content_end_artifact_name : PdfName = pdf_content_name("/EndArtifact")
+
+///|
 let pdf_content_inline_image_begin_operator : PdfBytes = pdf_content_ascii("BI")
 
 ///|
@@ -140,6 +148,56 @@ pub fn pdf_content_begin_artifact() -> PdfContentOp {
 /// Return the marked-content operation that ends the current PDF/UA artifact.
 pub fn pdf_content_end_artifact() -> PdfContentOp {
   Op_EMC
+}
+
+///|
+/// Mark unmarked content operations as PDF/UA artifacts.
+///
+/// This ports `cpdftype.ml`'s `add_artifacts` pass. Existing marked-content
+/// sections entered with `BDC` are preserved as real content; unmarked runs are
+/// wrapped in `/Artifact BMC ... EMC`. Back-channel `/BeginArtifact` and
+/// `/EndArtifact` markers are converted to ordinary artifact marked content.
+pub fn pdf_content_add_artifacts(
+  ops : ArrayView[PdfContentOp],
+) -> Array[PdfContentOp] {
+  let output : Array[PdfContentOp] = []
+  let mut in_content = false
+  let mut in_artifact = false
+  for op in ops {
+    match op {
+      Op_BMC(name) if name == pdf_content_begin_artifact_name => {
+        in_artifact = true
+        output.push(Op_BMC(pdf_content_artifact_name))
+      }
+      Op_BMC(name) if name == pdf_content_end_artifact_name => {
+        in_artifact = false
+        output.push(Op_EMC)
+      }
+      Op_BDC(_, _) => {
+        if in_artifact {
+          output.push(Op_EMC)
+        }
+        in_content = true
+        in_artifact = false
+        output.push(op)
+      }
+      Op_EMC => {
+        in_content = false
+        output.push(op)
+      }
+      _ => {
+        if !(in_content || in_artifact) {
+          in_artifact = true
+          output.push(Op_BMC(pdf_content_artifact_name))
+        }
+        output.push(op)
+      }
+    }
+  }
+  if in_artifact {
+    output.push(Op_EMC)
+  }
+  output
 }
 
 ///|

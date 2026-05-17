@@ -193,6 +193,8 @@ pub fn pdf_colour_space_of_object(PdfObject) -> PdfColourSpace?
 
 pub fn pdf_contains_javascript(PdfDocument) -> Bool
 
+pub fn pdf_content_add_artifacts(ArrayView[PdfContentOp]) -> Array[PdfContentOp]
+
 pub fn pdf_content_begin_artifact() -> PdfContentOp
 
 pub let pdf_content_black : PdfContentColour

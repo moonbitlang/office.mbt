@@ -1165,6 +1165,69 @@ test "pdf_content artifact helpers mirror CamlPDF artifact markers" {
 }
 
 ///|
+test "pdf_content_add_artifacts wraps unmarked operator runs" {
+  @test.assert_eq(
+    @pdflite.pdf_content_add_artifacts([
+      Op_q,
+      Op_Tj(content_bytes_for_test("artifact")),
+      Op_Q,
+    ]),
+    [
+      @pdflite.pdf_content_begin_artifact(),
+      Op_q,
+      Op_Tj(content_bytes_for_test("artifact")),
+      Op_Q,
+      @pdflite.pdf_content_end_artifact(),
+    ],
+  )
+  @test.assert_eq(@pdflite.pdf_content_add_artifacts([]), [])
+}
+
+///|
+test "pdf_content_add_artifacts preserves real marked content" {
+  let span = content_name_for_test("/Span")
+  let properties = @pdflite.pdf_dictionary([
+    (content_name_for_test("/MCID"), PdfInteger(7)),
+  ])
+  @test.assert_eq(
+    @pdflite.pdf_content_add_artifacts([
+      Op_Tj(content_bytes_for_test("artifact")),
+      Op_BDC(span, properties),
+      Op_Tj(content_bytes_for_test("content")),
+      Op_EMC,
+      Op_Tj(content_bytes_for_test("tail")),
+    ]),
+    [
+      @pdflite.pdf_content_begin_artifact(),
+      Op_Tj(content_bytes_for_test("artifact")),
+      @pdflite.pdf_content_end_artifact(),
+      Op_BDC(span, properties),
+      Op_Tj(content_bytes_for_test("content")),
+      Op_EMC,
+      @pdflite.pdf_content_begin_artifact(),
+      Op_Tj(content_bytes_for_test("tail")),
+      @pdflite.pdf_content_end_artifact(),
+    ],
+  )
+}
+
+///|
+test "pdf_content_add_artifacts converts cpdftype back-channel artifact markers" {
+  @test.assert_eq(
+    @pdflite.pdf_content_add_artifacts([
+      Op_BMC(content_name_for_test("/BeginArtifact")),
+      Op_Tj(content_bytes_for_test("backchannel")),
+      Op_BMC(content_name_for_test("/EndArtifact")),
+    ]),
+    [
+      @pdflite.pdf_content_begin_artifact(),
+      Op_Tj(content_bytes_for_test("backchannel")),
+      @pdflite.pdf_content_end_artifact(),
+    ],
+  )
+}
+
+///|
 test "pdf_content_bytes_of_ops renders extended graphics and text operators" {
   @test.assert_eq(
     try! @pdflite.pdf_content_bytes_of_ops(extended_content_ops_for_test()),

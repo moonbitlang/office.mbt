@@ -1402,6 +1402,13 @@ Current backend snapshot:
   validation reports `moon test --target native pdf_page_test.mbt` at 80/80
   tests passing; native full-suite validation reports 1555/1555 tests
   passing.~~
+- [x] ~~Standalone `cpdftype.ml` artifact-wrapping slice now exposes
+  `pdf_content_add_artifacts`, covering unmarked operator runs, empty inputs,
+  content sections entered by `BDC`, automatic artifact closure before real
+  marked content, and cpdftype back-channel `/BeginArtifact`/`/EndArtifact`
+  markers. Native focused validation reports
+  `moon test --target native pdf_content_test.mbt` at 58/58 tests passing;
+  native full-suite validation reports 1558/1558 tests passing.~~
 - [x] ~~Page labels, bookmarks, annotations, duplicate annotation repair,
   old-style destinations, name-tree destinations, `/OpenAction`, optional
   content, AcroForm merge basics, trailer `/Info`, and structure-tree
