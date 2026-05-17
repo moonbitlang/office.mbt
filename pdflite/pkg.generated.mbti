@@ -363,6 +363,8 @@ pub fn pdf_image_object_of_jpeg_data(BytesView) -> PdfObject raise @core.PdfErro
 
 pub fn pdf_image_object_of_png_data(PdfDocument, BytesView) -> PdfObject raise @core.PdfError
 
+pub fn pdf_impose(PdfDocument, Double, Double, fit? : Bool, columns? : Bool, rtl? : Bool, btt? : Bool, center? : Bool, margin? : Double, spacing? : Double, line_width? : Double, fast? : Bool) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_int_array_of_bytes(BytesView) -> Array[Int]
 
 pub fn pdf_invert_page_range(Int, ArrayView[Int]) -> Array[Int]
@@ -1550,6 +1552,7 @@ pub fn PdfDocument::get_number(Self, PdfObject) -> Double raise @core.PdfError
 pub fn PdfDocument::hard_box(Self, ArrayView[Int], @core.PdfName, mediabox_if_missing? : Bool, fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::image_bits_per_component(Self, PdfObject) -> PdfObject?
 pub fn PdfDocument::image_colour_space(Self, PdfObject, PdfObject) -> PdfColourSpace raise @core.PdfError
+pub fn PdfDocument::impose(Self, Double, Double, fit? : Bool, columns? : Bool, rtl? : Bool, btt? : Bool, center? : Bool, margin? : Double, spacing? : Double, line_width? : Double, fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::indirect_number(Self, @core.PdfName, PdfObject) -> Int?
 pub fn PdfDocument::info_json(Self, encoding? : PdfMetadataEncoding, unit? : @geometry.PdfUnit) -> Json raise @core.PdfError
 pub fn PdfDocument::info_json_blob(Self, encoding? : PdfMetadataEncoding, unit? : @geometry.PdfUnit) -> Bytes raise @core.PdfError

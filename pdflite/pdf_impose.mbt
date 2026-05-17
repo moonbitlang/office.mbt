@@ -249,6 +249,172 @@ fn PdfDocument::pdf_impose_layout(
 }
 
 ///|
+fn pdf_impose_split_pages(
+  pages : ArrayView[PdfPage],
+  chunk_size : Int,
+) -> Array[Array[PdfPage]] {
+  let chunks : Array[Array[PdfPage]] = []
+  let mut index = 0
+  while index < pages.length() {
+    let chunk : Array[PdfPage] = []
+    let stop = if index + chunk_size < pages.length() {
+      index + chunk_size
+    } else {
+      pages.length()
+    }
+    for page_index in index..<stop {
+      chunk.push(pages[page_index])
+    }
+    chunks.push(chunk)
+    index = stop
+  }
+  chunks
+}
+
+///|
+fn pdf_impose_page_reference_changes(
+  page_count : Int,
+  pages_per_sheet : Int,
+) -> Array[(Int, Int)] {
+  let changes : Array[(Int, Int)] = []
+  for page_number in 1..<=page_count {
+    changes.push(
+      (page_number, (page_number + pages_per_sheet - 1) / pages_per_sheet),
+    )
+  }
+  changes
+}
+
+///|
+fn PdfDocument::pdf_impose_preprocess(
+  self : PdfDocument,
+  fit : Bool,
+  spacing : Double,
+  line_width : Double,
+  fast : Bool,
+) -> PdfDocument raise PdfError {
+  let end_page = self.endpage()
+  let all_pages = pdf_impose_all_pages(end_page)
+  self
+  .copy_page_box(
+    all_pages,
+    pdf_page_cropbox_key(),
+    pdf_page_mediabox_key(),
+    mediabox_if_missing=true,
+  )
+  .remove_cropping(all_pages)
+  .upright_pages(all_pages, fast~)
+  .pdf_impose_add_border(line_width, fast)
+  .pdf_impose_make_space(fit, spacing, fast)
+}
+
+///|
+/// Impose pages into cpdf-style sheets.
+///
+/// In non-fit mode, `x` and `y` are grid dimensions; one of them may be zero to
+/// stack all pages in the other direction. In fit mode, `x` and `y` are the
+/// output page width and height, and the grid is calculated from the current
+/// page size.
+pub fn PdfDocument::impose(
+  self : PdfDocument,
+  x : Double,
+  y : Double,
+  fit? : Bool = false,
+  columns? : Bool = false,
+  rtl? : Bool = false,
+  btt? : Bool = false,
+  center? : Bool = false,
+  margin? : Double = 0.0,
+  spacing? : Double = 0.0,
+  line_width? : Double = 0.0,
+  fast? : Bool = false,
+) -> PdfDocument raise PdfError {
+  let original_page_count = self.endpage()
+  if original_page_count == 0 {
+    raise BadNumberArgument("impose: pages must not be empty")
+  }
+  let prepared = self.pdf_impose_preprocess(fit, spacing, line_width, fast)
+  let prepared_pages = prepared.pages_of_pagetree()
+  let layout = prepared.pdf_impose_layout(
+    fit,
+    x,
+    y,
+    margin,
+    original_page_count,
+    prepared_pages[0].mediabox,
+  )
+  let imposed_pages : Array[PdfPage] = []
+  for page_set in pdf_impose_split_pages(prepared_pages, layout.pages_per_sheet) {
+    imposed_pages.push(
+      prepared.pdf_impose_pages_core(
+        prepared.renumber_pages(page_set),
+        fit,
+        layout.x_slots,
+        layout.y_slots,
+        columns,
+        rtl,
+        btt,
+        center,
+        margin,
+        layout.output_mediabox,
+        fast,
+        layout.fit_extra_hspace,
+        layout.fit_extra_vspace,
+      ),
+    )
+  }
+  let imposed = prepared.change_pages(
+    imposed_pages,
+    change_references=true,
+    changes=pdf_impose_page_reference_changes(
+      original_page_count,
+      layout.pages_per_sheet,
+    ),
+  )
+  if fit {
+    imposed
+  } else {
+    let output_count = imposed.endpage()
+    imposed.shift_pages(
+      pdf_impose_all_pages(output_count),
+      pdf_impose_repeated_offsets(output_count, (margin, margin)),
+      fast~,
+    )
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::impose`.
+pub fn pdf_impose(
+  document : PdfDocument,
+  x : Double,
+  y : Double,
+  fit? : Bool = false,
+  columns? : Bool = false,
+  rtl? : Bool = false,
+  btt? : Bool = false,
+  center? : Bool = false,
+  margin? : Double = 0.0,
+  spacing? : Double = 0.0,
+  line_width? : Double = 0.0,
+  fast? : Bool = false,
+) -> PdfDocument raise PdfError {
+  document.impose(
+    x,
+    y,
+    fit~,
+    columns~,
+    rtl~,
+    btt~,
+    center~,
+    margin~,
+    spacing~,
+    line_width~,
+    fast~,
+  )
+}
+
+///|
 fn pdf_impose_concat_ops(
   first : ArrayView[PdfContentOp],
   second : ArrayView[PdfContentOp],

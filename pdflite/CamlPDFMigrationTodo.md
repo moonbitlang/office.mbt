@@ -25,8 +25,8 @@ Current estimate:
   XMP/document info JSON reporting, redaction annotation bounding-box overlays,
   imposition transform/content/page-assembly/pattern-matrix kernels, cpdf page
   hard-box/removal/shift/scale/upright/set-mediabox/copy-box helpers, imposition
-  make-space orchestration, border stamping, and layout planning, and Markdown
-  helper public APIs.
+  make-space orchestration, border stamping, layout planning, and first public
+  impose pipeline, and Markdown helper public APIs.
 
 Current backend snapshot:
 
@@ -54,6 +54,16 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Wire the first public `cpdfimpose.impose` pipeline:
+  `PdfDocument::impose` now preprocesses pages with CropBox-to-MediaBox copy,
+  crop removal, upright conversion, optional border stamping, and spacing; plans
+  fit or non-fit layouts; renumbers each imposed page set; assembles sheets with
+  the existing page core; updates page-reference changes; and applies cpdf's
+  final non-fit margin shift. Coverage pins simple 2-up assembly including
+  hard-box content, wrapper/margin behavior, and empty-document rejection.
+  Structure-tree artifact marking and legacy two-up wrappers remain separate
+  follow-up slices. `moon test --target native pdf_impose_wbtest.mbt` reports
+  21/21 tests passing.~~
 - [x] ~~Port the layout-planning branch of `cpdfimpose.impose`: private
   `pdf_impose_layout` now calculates fit-mode sheets, horizontal/vertical
   fit spacing, non-fit zero-dimension stack layouts, margin-expanded output

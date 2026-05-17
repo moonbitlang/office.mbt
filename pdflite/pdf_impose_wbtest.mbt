@@ -276,6 +276,60 @@ test "pdf_impose_layout calculates non-fit stacks and output boxes" {
 }
 
 ///|
+test "PdfDocument impose assembles simple non-fit sheets" {
+  let document = try! impose_document_for_test([
+    try! impose_page_for_test([Op_S], width=100.0, height=100.0),
+    try! impose_page_for_test([Op_BT, Op_ET], width=100.0, height=100.0),
+  ])
+  let imposed = try! document.impose(2.0, 1.0)
+  let pages = try! imposed.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  @test.assert_eq(pages[0].mediabox, impose_box_for_test(200.0, 100.0))
+  @test.assert_eq(try! impose_page_content_ops_for_test(imposed, pages[0]), [
+    Op_cm(transform_translate(0.0, 0.0)),
+    Op_q,
+    Op_cm(transform_translate(0.0, 0.0)),
+    Op_re(0.0, 0.0, 100.0, 100.0),
+    Op_W,
+    Op_n,
+    Op_S,
+    Op_Q,
+    Op_q,
+    Op_cm(transform_translate(100.0, 0.0)),
+    Op_re(0.0, 0.0, 100.0, 100.0),
+    Op_W,
+    Op_n,
+    Op_BT,
+    Op_ET,
+    Op_Q,
+  ])
+}
+
+///|
+test "PdfDocument impose applies non-fit output margin through wrapper" {
+  let document = try! impose_document_for_test([
+    try! impose_page_for_test([Op_S], width=100.0, height=100.0),
+    try! impose_page_for_test([Op_S], width=100.0, height=100.0),
+  ])
+  let imposed = try! pdf_impose(document, 1.0, 0.0, margin=10.0)
+  let pages = try! imposed.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  @test.assert_eq(pages[0].mediabox, impose_box_for_test(120.0, 220.0))
+  let ops = try! impose_page_content_ops_for_test(imposed, pages[0])
+  @test.assert_eq(ops[0], Op_cm(transform_translate(10.0, 10.0)))
+}
+
+///|
+test "PdfDocument impose rejects empty input" {
+  let document = try! pdf_blank_document(10.0, 10.0, 0)
+  let result : Result[PdfDocument, Error] = try? document.impose(1.0, 1.0)
+  guard result
+    is Err(PdfError::BadNumberArgument("impose: pages must not be empty")) else {
+    fail("expected impose to reject empty documents")
+  }
+}
+
+///|
 test "pdf_impose_transforms preserves row and column ordering" {
   @test.assert_eq(try! impose_transforms_for_test(columns=false, count=3), [
     transform_translate(0.0, 200.0),
