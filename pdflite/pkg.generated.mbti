@@ -581,6 +581,10 @@ pub fn pdf_replace_dict_entry(PdfDocument, @core.PdfName, PdfObject, search? : P
 
 pub fn pdf_restrict_angle(Double, Double) -> Double
 
+pub fn pdf_reveal_hidden_text(PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_reveal_hidden_text_ops(ArrayView[PdfContentOp]) -> Array[PdfContentOp]
+
 pub fn pdf_reverse_table_of_encoding(PdfEncoding) -> Array[(@core.PdfName, Int)]
 
 pub fn pdf_revisions_from_bytes(Bytes) -> Int raise @core.PdfError
@@ -1405,6 +1409,7 @@ pub fn PdfDocument::renumber_pages(Self, ArrayView[PdfPage]) -> Array[PdfPage] r
 pub fn PdfDocument::replace_chain(Self, ArrayView[@core.PdfName], PdfObject) -> Unit raise @core.PdfError
 pub fn PdfDocument::replace_dict_entry_everywhere(Self, @core.PdfName, PdfObject, search? : PdfObject?) -> Unit
 pub fn PdfDocument::replace_inherit(Self, ArrayView[Int]) -> Unit raise @core.PdfError
+pub fn PdfDocument::reveal_hidden_text(Self, ArrayView[Int]) -> Self raise @core.PdfError
 pub fn PdfDocument::revision_read(Self) -> Int
 pub fn PdfDocument::root(Self) -> Int
 pub fn PdfDocument::select_object_numbers(Self, (PdfObject) -> Bool) -> Array[Int]

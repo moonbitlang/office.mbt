@@ -1316,6 +1316,14 @@ Current backend snapshot:
   non-stream Form XObject errors. Native full-suite validation reports
   1519/1519 tests passing, and coverage reports
   no uncovered lines in `pdf_squeeze.mbt`.~~
+- [x] ~~Standalone `cpdftweak.ml` reveal-hidden-text slice now exposes
+  `PdfDocument::reveal_hidden_text`, `pdf_reveal_hidden_text`, and
+  `pdf_reveal_hidden_text_ops`, covering pure operator filtering, selected
+  page-only rewriting, original-document preservation, unselected page
+  preservation, and selected page Form XObject rewriting. Native focused
+  validation reports `moon test --target native pdf_tweak_test.mbt` at 3/3
+  tests passing; native full-suite validation reports 1522/1522 tests
+  passing; coverage analysis reports no uncovered lines in `pdf_tweak.mbt`.~~
 - [x] ~~Page labels, bookmarks, annotations, duplicate annotation repair,
   old-style destinations, name-tree destinations, `/OpenAction`, optional
   content, AcroForm merge basics, trailer `/Info`, and structure-tree
