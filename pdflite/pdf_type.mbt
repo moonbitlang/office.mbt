@@ -18,6 +18,33 @@ pub(all) enum PdfTypeElement {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Pages and per-page structure tags produced by the cpdftype typesetter.
+pub(all) struct PdfTypeTypesetResult {
+  pages : Array[PdfPage]
+  tags : Array[Array[(String, Int)]]
+} derive(Debug, Eq, ToJson)
+
+///|
+priv struct PdfTypeTypesetState {
+  mut xpos : Double
+  mut ypos : Double
+  mut width_table : Array[Double]
+  mut font : PdfFont?
+  mut font_id : String?
+  mut font_size : Double
+  mut dest : (PdfDestination, String?)?
+  mut mcid : Int
+  mut ops : Array[PdfContentOp]
+  fonts : Array[(String, Int)]
+  mut page_font_numbers : Array[Int]
+  mut page_annotations : Array[PdfObject]
+  mut dest_rectangles : Array[(Double, Double, Double, Double)]
+  pages : Array[PdfPage]
+  mut tags : Array[(String, Int)]
+  tags_out : Array[Array[(String, Int)]]
+}
+
+///|
 fn pdf_type_ascii(text : String) -> PdfBytes {
   @ascii.encode(text)
 }
@@ -300,4 +327,390 @@ pub fn pdf_type_paginate(
     }
   }
   output
+}
+
+///|
+fn pdf_type_number_tags(
+  elements : ArrayView[PdfTypeElement],
+) -> Array[PdfTypeElement] {
+  let output : Array[PdfTypeElement] = []
+  let mut tag_number = 0
+  for element in elements {
+    match element {
+      PdfTypeTag(name, _) => {
+        output.push(PdfTypeTag(name, tag_number))
+        tag_number += 1
+      }
+      other => output.push(other)
+    }
+  }
+  output
+}
+
+///|
+fn pdf_type_unique_sorted_numbers(numbers : ArrayView[Int]) -> Array[Int] {
+  let sorted = [ for number in numbers => number ]
+  sorted.sort()
+  let output : Array[Int] = []
+  for number in sorted {
+    if output.length() == 0 || output[output.length() - 1] != number {
+      output.push(number)
+    }
+  }
+  output
+}
+
+///|
+fn pdf_type_name(text : String) -> PdfName {
+  pdf_name_of_bytes(pdf_type_ascii(text))
+}
+
+///|
+fn pdf_type_font_resource_name(number : Int) -> PdfName {
+  pdf_type_name("/F" + number.to_string())
+}
+
+///|
+fn pdf_type_make_resources(font_numbers : ArrayView[Int]) -> PdfObject {
+  PdfDictionary([
+    (
+      pdf_type_name("/Font"),
+      PdfDictionary(
+        [
+          for number in pdf_type_unique_sorted_numbers(font_numbers) => {
+            (pdf_type_font_resource_name(number), PdfIndirect(number))
+          }
+        ],
+      ),
+    ),
+  ])
+}
+
+///|
+fn pdf_type_annotation_object(
+  destination : PdfDestination,
+  contents : String?,
+  rectangle : (Double, Double, Double, Double),
+) -> PdfObject {
+  let entries : Array[(PdfName, PdfObject)] = []
+  match contents {
+    Some(text) =>
+      entries.push(
+        (pdf_type_name("/Contents"), PdfString(pdf_type_ascii(text))),
+      )
+    None => ()
+  }
+  entries.push((pdf_type_name("/Type"), PdfNameObject(pdf_type_name("/Annot"))))
+  entries.push(
+    (pdf_type_name("/Subtype"), PdfNameObject(pdf_type_name("/Link"))),
+  )
+  entries.push(
+    (
+      pdf_type_name("/Border"),
+      PdfArray([PdfReal(0.0), PdfReal(0.0), PdfReal(0.0)]),
+    ),
+  )
+  entries.push(
+    (
+      pdf_type_name("/Rect"),
+      PdfArray([
+        PdfReal(rectangle.0),
+        PdfReal(rectangle.1),
+        PdfReal(rectangle.2),
+        PdfReal(rectangle.3),
+      ]),
+    ),
+  )
+  entries.push((pdf_type_name("/Dest"), pdf_object_of_destination(destination)))
+  PdfDictionary(entries)
+}
+
+///|
+fn pdf_type_make_annotations(
+  document : PdfDocument,
+  annotations : ArrayView[PdfObject],
+) -> PdfObject {
+  if annotations.length() == 0 {
+    PdfDictionary([])
+  } else {
+    PdfDictionary([
+      (
+        pdf_type_name("/Annots"),
+        PdfArray(
+          [
+            for annotation in annotations => {
+              PdfIndirect(document.add_object(annotation))
+            }
+          ],
+        ),
+      ),
+      (pdf_type_name("/Tabs"), PdfNameObject(pdf_type_name("/S"))),
+    ])
+  }
+}
+
+///|
+fn pdf_type_lookup_font_object(
+  fonts : ArrayView[(String, Int)],
+  id : String,
+) -> Int? {
+  let mut found = None
+  for entry in fonts {
+    if entry.0 == id {
+      found = Some(entry.1)
+    }
+  }
+  found
+}
+
+///|
+fn pdf_type_initial_state(
+  lmargin : Double,
+  tmargin : Double,
+) -> PdfTypeTypesetState {
+  {
+    xpos: lmargin,
+    ypos: tmargin,
+    width_table: [],
+    font: None,
+    font_id: None,
+    font_size: 0.0,
+    dest: None,
+    mcid: -1,
+    ops: [],
+    fonts: [],
+    page_font_numbers: [],
+    page_annotations: [],
+    dest_rectangles: [],
+    pages: [],
+    tags: [],
+    tags_out: [],
+  }
+}
+
+///|
+fn PdfTypeTypesetState::next_mcid(self : PdfTypeTypesetState) -> Int {
+  self.mcid += 1
+  self.mcid
+}
+
+///|
+fn PdfTypeTypesetState::write_page(
+  self : PdfTypeTypesetState,
+  document : PdfDocument,
+  process_struct_tree : Bool,
+  paper : PaperSize,
+) -> Unit raise PdfError {
+  let ops = if process_struct_tree {
+    pdf_content_add_artifacts(self.ops)
+  } else {
+    [
+      for op in self.ops => op
+    ]
+  }
+  self.pages.push({
+    content: if ops.length() == 0 {
+      []
+    } else {
+      [pdf_content_stream_of_ops(ops)]
+    },
+    mediabox: pdf_page_rectangle_of_paper(paper),
+    resources: pdf_type_make_resources(self.page_font_numbers),
+    rotate: Rotate0,
+    rest: pdf_type_make_annotations(document, self.page_annotations),
+  })
+  self.tags_out.push([ for tag in self.tags => tag ])
+  self.tags = []
+}
+
+///|
+fn PdfTypeTypesetState::write_destination_annotations(
+  self : PdfTypeTypesetState,
+) -> Unit {
+  match self.dest {
+    Some((destination, contents)) =>
+      if self.dest_rectangles.length() > 0 {
+        let annotations : Array[PdfObject] = []
+        let mut index = self.dest_rectangles.length()
+        while index > 0 {
+          index -= 1
+          annotations.push(
+            pdf_type_annotation_object(
+              destination,
+              contents,
+              self.dest_rectangles[index],
+            ),
+          )
+        }
+        for annotation in self.page_annotations {
+          annotations.push(annotation)
+        }
+        self.page_annotations = annotations
+      }
+    None => ()
+  }
+  self.dest = None
+  self.dest_rectangles = []
+}
+
+///|
+fn PdfTypeTypesetState::write_font(
+  self : PdfTypeTypesetState,
+  document : PdfDocument,
+  id : String,
+  font : PdfFont,
+  font_size : Double,
+) -> Unit raise PdfError {
+  let object_number = match pdf_type_lookup_font_object(self.fonts, id) {
+    Some(number) => number
+    None => {
+      let number = document.write_font(font)
+      self.fonts.push((id, number))
+      number
+    }
+  }
+  self.width_table = pdf_type_font_widths(font, font_size)
+  self.font = Some(font)
+  self.font_id = Some(id)
+  self.font_size = font_size
+  self.page_font_numbers.push(object_number)
+  self.ops.push(Op_Tf(pdf_type_font_resource_name(object_number), font_size))
+}
+
+///|
+fn PdfTypeTypesetState::write_text(
+  self : PdfTypeTypesetState,
+  text : PdfBytes,
+  page_height : Double,
+) -> Unit raise PdfError {
+  let text_width = pdf_type_width_of_bytes(self.width_table, text)
+  self.ops.push(Op_q)
+  self.ops.push(Op_cm(transform_translate(self.xpos, page_height - self.ypos)))
+  self.ops.push(Op_BT)
+  self.ops.push(Op_Tj(text))
+  self.ops.push(Op_ET)
+  self.ops.push(Op_Q)
+  match self.dest {
+    Some(_) =>
+      self.dest_rectangles.push(
+        (
+          self.xpos,
+          page_height - self.ypos,
+          self.xpos + text_width,
+          page_height - self.ypos + self.font_size,
+        ),
+      )
+    None => ()
+  }
+  self.xpos = self.xpos + text_width
+}
+
+///|
+fn PdfTypeTypesetState::new_page(
+  self : PdfTypeTypesetState,
+  document : PdfDocument,
+  process_struct_tree : Bool,
+  lmargin : Double,
+  tmargin : Double,
+  paper : PaperSize,
+) -> Unit raise PdfError {
+  self.write_page(document, process_struct_tree, paper)
+  self.page_font_numbers = []
+  self.page_annotations = []
+  self.ops = []
+  self.mcid = -1
+  match (self.font_id, self.font) {
+    (Some(id), Some(font)) =>
+      self.write_font(document, id, font, self.font_size)
+    _ => ()
+  }
+  self.xpos = lmargin
+  self.ypos = tmargin + self.font_size
+}
+
+///|
+fn PdfTypeTypesetState::write_element(
+  self : PdfTypeTypesetState,
+  document : PdfDocument,
+  process_struct_tree : Bool,
+  lmargin : Double,
+  tmargin : Double,
+  paper : PaperSize,
+  page_height : Double,
+  element : PdfTypeElement,
+) -> Unit raise PdfError {
+  match element {
+    PdfTypeText(text) => self.write_text(text, page_height)
+    PdfTypeFont(id, font, font_size) =>
+      self.write_font(document, id, font, font_size)
+    PdfTypeHGlue(length) => self.xpos = self.xpos + length
+    PdfTypeVGlue(length) => self.ypos = self.ypos + length
+    PdfTypeNewLine => {
+      self.xpos = lmargin
+      self.ypos = self.ypos + self.font_size * 1.3
+    }
+    PdfTypeNewPage =>
+      self.new_page(document, process_struct_tree, lmargin, tmargin, paper)
+    PdfTypeBeginDocument => self.ypos = tmargin + self.font_size
+    PdfTypeBeginDest(destination, contents) =>
+      self.dest = Some((destination, contents))
+    PdfTypeEndDest => self.write_destination_annotations()
+    PdfTypeTag(tag, number) => {
+      self.tags.push((tag, number))
+      self.ops.push(
+        Op_BDC(
+          pdf_type_name("/" + tag),
+          PdfDictionary([(pdf_type_name("/MCID"), PdfInteger(self.next_mcid()))]),
+        ),
+      )
+    }
+    PdfTypeEndTag => self.ops.push(Op_EMC)
+  }
+}
+
+///|
+/// Typeset cpdftype elements into PDF pages and per-page tag metadata.
+///
+/// The input stream is numbered, laid out, and paginated before content
+/// operators are emitted. The supplied document is mutated only for font and
+/// annotation objects; callers can add the returned pages to a page tree.
+pub fn PdfDocument::pdf_type_typeset(
+  self : PdfDocument,
+  process_struct_tree : Bool,
+  lmargin : Double,
+  rmargin : Double,
+  tmargin : Double,
+  bmargin : Double,
+  paper : PaperSize,
+  elements : ArrayView[PdfTypeElement],
+) -> PdfTypeTypesetResult raise PdfError {
+  let numbered = pdf_type_number_tags(elements)
+  let laid_out = pdf_type_layout(lmargin, rmargin, paper, numbered)
+  let paginated = pdf_type_paginate(tmargin, bmargin, paper, laid_out)
+  let page_height = unit_points(paper.height(), paper.unit())
+  let state = pdf_type_initial_state(lmargin, tmargin)
+  for element in paginated {
+    state.write_element(
+      self, process_struct_tree, lmargin, tmargin, paper, page_height, element,
+    )
+  }
+  state.write_page(self, process_struct_tree, paper)
+  { pages: state.pages, tags: state.tags_out }
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::pdf_type_typeset`.
+pub fn pdf_type_typeset(
+  document : PdfDocument,
+  process_struct_tree : Bool,
+  lmargin : Double,
+  rmargin : Double,
+  tmargin : Double,
+  bmargin : Double,
+  paper : PaperSize,
+  elements : ArrayView[PdfTypeElement],
+) -> PdfTypeTypesetResult raise PdfError {
+  document.pdf_type_typeset(
+    process_struct_tree, lmargin, rmargin, tmargin, bmargin, paper, elements,
+  )
 }

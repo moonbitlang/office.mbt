@@ -745,6 +745,8 @@ pub fn pdf_type_paginate(Double, Double, @geometry.PaperSize, ArrayView[PdfTypeE
 
 pub fn pdf_type_split_text(Double, ArrayView[Double], BytesView) -> (Bytes, Bool, Bytes) raise @core.PdfError
 
+pub fn pdf_type_typeset(PdfDocument, Bool, Double, Double, Double, Double, @geometry.PaperSize, ArrayView[PdfTypeElement]) -> PdfTypeTypesetResult raise @core.PdfError
+
 pub fn pdf_type_width_of_bytes(ArrayView[Double], BytesView) -> Double raise @core.PdfError
 
 pub fn pdf_utf16be_of_codepoints(ArrayView[Int]) -> Bytes raise @core.PdfError
@@ -1441,6 +1443,7 @@ pub fn PdfDocument::pdf_decode_stream_until_unknown(Self, PdfObject) -> PdfObjec
 pub fn PdfDocument::pdf_decode_streams_until_unknown(Self) -> Unit raise @core.PdfError
 pub fn PdfDocument::pdf_object_of_function(Self, PdfFunction) -> PdfObject
 pub fn PdfDocument::pdf_of_pages(Self, ArrayView[Int], retain_numbering? : Bool, process_struct_tree? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::pdf_type_typeset(Self, Bool, Double, Double, Double, Double, @geometry.PaperSize, ArrayView[PdfTypeElement]) -> PdfTypeTypesetResult raise @core.PdfError
 pub fn PdfDocument::permissions(Self) -> Array[@crypt_core.PdfPermission] raise @core.PdfError
 pub fn PdfDocument::portfolio(Self, ArrayView[PdfPortfolioEntry], mod_date? : Bytes?) -> Self raise @core.PdfError
 pub fn PdfDocument::postpend_operators(Self, PdfPage, ArrayView[PdfContentOp], fast? : Bool) -> PdfPage raise @core.PdfError
@@ -2041,6 +2044,11 @@ pub(all) enum PdfTypeElement {
   PdfTypeBeginDocument
   PdfTypeTag(String, Int)
   PdfTypeEndTag
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfTypeTypesetResult {
+  pages : Array[PdfPage]
+  tags : Array[Array[(String, Int)]]
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfVersion {

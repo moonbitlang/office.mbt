@@ -7,7 +7,7 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 98.3%.
+- Native main-feature parity: 98.5%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
   breadth: 85-90%.
 - Warning 74 public documentation cleanup: complete; 0 native diagnostics
@@ -44,6 +44,11 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue the cpdftype port with byte-preserving element streams,
+  CamlPDF-compatible split/layout/pagination helpers, and a first native
+  `typeset` layer that emits page content streams, font resources, link
+  annotations, marked-content tags, and per-page tag metadata. `moon test
+  --target native` now reports 1569/1569 tests passing.~~
 - [x] ~~Pre-refactor native hardening restored complete source coverage with
   focused white-box gates for Markdown table/layout edge cases, private
   simple-font text-width and malformed ToUnicode fallbacks, object-stream member

@@ -4,6 +4,49 @@ fn type_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
 }
 
 ///|
+fn type_name_for_test(text : String) -> @pdflite.PdfName {
+  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+}
+
+///|
+fn type_lookup_for_test(
+  object : @pdflite.PdfObject,
+  key : String,
+) -> @pdflite.PdfObject raise {
+  match object.lookup_immediate(type_name_for_test(key)) {
+    Some(value) => value
+    None => {
+      fail("missing dictionary key " + key)
+      PdfNull
+    }
+  }
+}
+
+///|
+fn type_page_ops_for_test(
+  page : @pdflite.PdfPage,
+) -> Array[@pdflite.PdfContentOp] raise {
+  guard page.content.length() == 1 else {
+    fail("expected exactly one content stream")
+  }
+  match page.content[0] {
+    PdfStreamObject(stream) =>
+      match stream.data {
+        StreamGot(bytes) =>
+          try! @pdflite.pdf_parse_content_ops_from_bytes(bytes)
+        _ => {
+          fail("expected materialized content stream")
+          []
+        }
+      }
+    _ => {
+      fail("expected content stream object")
+      []
+    }
+  }
+}
+
+///|
 fn type_simple_font_with_metrics_for_test() -> @pdflite.PdfFont {
   PdfFontSimple({
     fonttype: PdfType1,
@@ -238,5 +281,160 @@ test "pdf_type_paginate closes and reopens active tags around breaks" {
     PdfTypeNewPage,
     PdfTypeTag("P", 7),
     PdfTypeEndTag,
+  ])
+}
+
+///|
+test "pdf_type_typeset writes page content and font resources" {
+  let document = @pdflite.pdf_document_empty()
+  let font = type_standard_font_for_test()
+  let paper = @pdflite.paper_size_make(PdfPoint, 100.0, 100.0)
+  let result = try! document.pdf_type_typeset(
+    false,
+    10.0,
+    0.0,
+    20.0,
+    10.0,
+    paper,
+    [
+      PdfTypeFont("body", font, 10.0),
+      PdfTypeBeginDocument,
+      PdfTypeText(@ascii.encode("Hi")),
+    ],
+  )
+  @test.assert_eq(result.pages.length(), 1)
+  @test.assert_eq(result.tags, [[]])
+  let page = result.pages[0]
+  @test.assert_eq(
+    page.resources,
+    PdfDictionary([
+      (
+        type_name_for_test("/Font"),
+        PdfDictionary([(type_name_for_test("/F1"), PdfIndirect(1))]),
+      ),
+    ]),
+  )
+  @test.assert_eq(page.rest, PdfDictionary([]))
+  @test.assert_eq(try! type_page_ops_for_test(page), [
+    Op_Tf(type_name_for_test("/F1"), 10.0),
+    Op_q,
+    Op_cm(@pdflite.transform_translate(10.0, 70.0)),
+    Op_BT,
+    Op_Tj(@ascii.encode("Hi")),
+    Op_ET,
+    Op_Q,
+  ])
+}
+
+///|
+test "pdf_type_typeset reuses fonts across explicit page breaks" {
+  let document = @pdflite.pdf_document_empty()
+  let font = type_standard_font_for_test()
+  let paper = @pdflite.paper_size_make(PdfPoint, 100.0, 100.0)
+  let result = try! @pdflite.pdf_type_typeset(
+    document,
+    false,
+    10.0,
+    0.0,
+    20.0,
+    10.0,
+    paper,
+    [
+      PdfTypeFont("body", font, 10.0),
+      PdfTypeBeginDocument,
+      PdfTypeText(@ascii.encode("A")),
+      PdfTypeNewPage,
+      PdfTypeText(@ascii.encode("B")),
+    ],
+  )
+  @test.assert_eq(result.pages.length(), 2)
+  @test.assert_eq(result.pages[0].resources, result.pages[1].resources)
+  @test.assert_eq(try! type_page_ops_for_test(result.pages[1]), [
+    Op_Tf(type_name_for_test("/F1"), 10.0),
+    Op_q,
+    Op_cm(@pdflite.transform_translate(10.0, 70.0)),
+    Op_BT,
+    Op_Tj(@ascii.encode("B")),
+    Op_ET,
+    Op_Q,
+  ])
+}
+
+///|
+test "pdf_type_typeset creates link annotations and numbered marked content" {
+  let document = @pdflite.pdf_document_empty()
+  let font = type_standard_font_for_test()
+  let paper = @pdflite.paper_size_make(PdfPoint, 100.0, 100.0)
+  let link_text = @ascii.encode("Go")
+  let widths = try! @pdflite.pdf_type_font_widths(font, 10.0)
+  let link_width = try! @pdflite.pdf_type_width_of_bytes(widths, link_text)
+  let result = try! document.pdf_type_typeset(
+    false,
+    10.0,
+    0.0,
+    20.0,
+    10.0,
+    paper,
+    [
+      PdfTypeFont("body", font, 10.0),
+      PdfTypeBeginDocument,
+      PdfTypeBeginDest(DestFit(TargetPageObject(99)), Some("go")),
+      PdfTypeText(link_text),
+      PdfTypeEndDest,
+      PdfTypeTag("Span", 123),
+      PdfTypeText(@ascii.encode("T")),
+      PdfTypeEndTag,
+    ],
+  )
+  @test.assert_eq(result.tags, [[("Span", 0)]])
+  let page = result.pages[0]
+  @test.assert_eq(
+    page.rest,
+    PdfDictionary([
+      (type_name_for_test("/Annots"), PdfArray([PdfIndirect(2)])),
+      (type_name_for_test("/Tabs"), PdfNameObject(type_name_for_test("/S"))),
+    ]),
+  )
+  let annotation = document.lookup_object_or_null(2)
+  @test.assert_eq(
+    try! type_lookup_for_test(annotation, "/Contents"),
+    PdfString(@ascii.encode("go")),
+  )
+  @test.assert_eq(
+    try! type_lookup_for_test(annotation, "/Subtype"),
+    PdfNameObject(type_name_for_test("/Link")),
+  )
+  @test.assert_eq(
+    try! type_lookup_for_test(annotation, "/Rect"),
+    PdfArray([
+      PdfReal(10.0),
+      PdfReal(70.0),
+      PdfReal(10.0 + link_width),
+      PdfReal(80.0),
+    ]),
+  )
+  @test.assert_eq(
+    try! type_lookup_for_test(annotation, "/Dest"),
+    @pdflite.pdf_object_of_destination(DestFit(TargetPageObject(99))),
+  )
+  @test.assert_eq(try! type_page_ops_for_test(page), [
+    Op_Tf(type_name_for_test("/F1"), 10.0),
+    Op_q,
+    Op_cm(@pdflite.transform_translate(10.0, 70.0)),
+    Op_BT,
+    Op_Tj(link_text),
+    Op_ET,
+    Op_Q,
+    Op_BDC(
+      type_name_for_test("/Span"),
+      PdfDictionary([(type_name_for_test("/MCID"), PdfInteger(0))]),
+    ),
+    Op_q,
+    Op_cm(@pdflite.transform_translate(10.0 + link_width, 70.0)),
+    Op_BT,
+    Op_Tj(@ascii.encode("T")),
+    Op_ET,
+    Op_Q,
+    Op_EMC,
   ])
 }
