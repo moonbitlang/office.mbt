@@ -164,6 +164,82 @@ fn pdf_impose_push_objects(
 }
 
 ///|
+fn pdf_impose_all_pages(end_page : Int) -> Array[Int] {
+  let pages : Array[Int] = []
+  for page_number in 1..<=end_page {
+    pages.push(page_number)
+  }
+  pages
+}
+
+///|
+fn pdf_impose_repeated_offsets(
+  count : Int,
+  offset : (Double, Double),
+) -> Array[(Double, Double)] {
+  let offsets : Array[(Double, Double)] = []
+  for _ in 0..<count {
+    offsets.push(offset)
+  }
+  offsets
+}
+
+///|
+fn pdf_impose_repeated_boxes(
+  count : Int,
+  box : (Double, Double, Double, Double),
+) -> Array[(Double, Double, Double, Double)] {
+  let boxes : Array[(Double, Double, Double, Double)] = []
+  for _ in 0..<count {
+    boxes.push(box)
+  }
+  boxes
+}
+
+///|
+#warnings("-unused_value")
+fn PdfDocument::pdf_impose_make_space(
+  self : PdfDocument,
+  fit : Bool,
+  spacing : Double,
+  fast : Bool,
+) -> PdfDocument raise PdfError {
+  let end_page = self.endpage()
+  let all_pages = pdf_impose_all_pages(end_page)
+  let boxed = self.hard_box(all_pages, pdf_page_mediabox_key(), fast~)
+  if spacing == 0.0 || end_page == 0 {
+    boxed
+  } else {
+    let margin = spacing / 2.0
+    let pages = boxed.pages_of_pagetree()
+    let first_bounds = boxed.parse_rectangle(pages[0].mediabox)
+    let width = first_bounds.max_x - first_bounds.min_x
+    let height = first_bounds.max_y - first_bounds.min_y
+    let offsets = pdf_impose_repeated_offsets(end_page, (margin, margin))
+    if fit {
+      boxed
+      .scale_contents(
+        all_pages,
+        PdfPositionBottomLeft(0.0, 0.0),
+        (width - spacing) / width,
+        fast~,
+      )
+      .shift_pages(all_pages, offsets, fast~)
+    } else {
+      boxed
+      .shift_pages(all_pages, offsets, fast~)
+      .set_mediaboxes(
+        all_pages,
+        pdf_impose_repeated_boxes(
+          end_page,
+          (0.0, 0.0, width + spacing, height + spacing),
+        ),
+      )
+    }
+  }
+}
+
+///|
 let pdf_impose_matrix_key_name : PdfName = pdf_page_name("/Matrix")
 
 ///|

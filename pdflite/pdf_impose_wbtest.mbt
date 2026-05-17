@@ -77,6 +77,72 @@ fn impose_page_for_test(
 }
 
 ///|
+fn impose_document_for_test(
+  pages : ArrayView[PdfPage],
+) -> PdfDocument raise PdfError {
+  pdf_blank_document(100.0, 100.0, pages.length()).change_pages(pages)
+}
+
+///|
+fn impose_page_content_ops_for_test(
+  document : PdfDocument,
+  page : PdfPage,
+) -> Array[PdfContentOp] raise PdfError {
+  document.parse_content_ops_with_resources(page.resources, page.content)
+}
+
+///|
+test "pdf_impose_make_space hard boxes even with zero spacing" {
+  let document = try! impose_document_for_test([
+    try! impose_page_for_test([Op_S], width=100.0, height=80.0),
+  ])
+  let spaced = try! document.pdf_impose_make_space(false, 0.0, false)
+  let pages = try! spaced.pages_of_pagetree()
+  @test.assert_eq(pages[0].mediabox, impose_box_for_test(100.0, 80.0))
+  @test.assert_eq(try! impose_page_content_ops_for_test(spaced, pages[0]), [
+    Op_re(0.0, 0.0, 100.0, 80.0),
+    Op_W,
+    Op_n,
+    Op_S,
+  ])
+}
+
+///|
+test "pdf_impose_make_space expands non-fit pages after shifting contents" {
+  let document = try! impose_document_for_test([
+    try! impose_page_for_test([Op_S], width=100.0, height=80.0),
+  ])
+  let spaced = try! document.pdf_impose_make_space(false, 20.0, false)
+  let pages = try! spaced.pages_of_pagetree()
+  @test.assert_eq(pages[0].mediabox, impose_box_for_test(120.0, 100.0))
+  @test.assert_eq(try! impose_page_content_ops_for_test(spaced, pages[0]), [
+    Op_cm(transform_translate(10.0, 10.0)),
+    Op_re(0.0, 0.0, 100.0, 80.0),
+    Op_W,
+    Op_n,
+    Op_S,
+  ])
+}
+
+///|
+test "pdf_impose_make_space fit scales and shifts while preserving page size" {
+  let document = try! impose_document_for_test([
+    try! impose_page_for_test([Op_S], width=100.0, height=80.0),
+  ])
+  let spaced = try! document.pdf_impose_make_space(true, 20.0, false)
+  let pages = try! spaced.pages_of_pagetree()
+  @test.assert_eq(pages[0].mediabox, impose_box_for_test(100.0, 80.0))
+  @test.assert_eq(try! impose_page_content_ops_for_test(spaced, pages[0]), [
+    Op_cm(transform_translate(10.0, 10.0)),
+    Op_cm(transform_scale(point2(0.0, 0.0), 0.8, 0.8)),
+    Op_re(0.0, 0.0, 100.0, 80.0),
+    Op_W,
+    Op_n,
+    Op_S,
+  ])
+}
+
+///|
 test "pdf_impose_transforms preserves row and column ordering" {
   @test.assert_eq(try! impose_transforms_for_test(columns=false, count=3), [
     transform_translate(0.0, 200.0),

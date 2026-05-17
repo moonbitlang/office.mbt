@@ -24,8 +24,8 @@ Current estimate:
   info synchronization, XMP metadata creation, XMP RDF list extraction,
   XMP/document info JSON reporting, redaction annotation bounding-box overlays,
   imposition transform/content/page-assembly/pattern-matrix kernels, cpdf page
-  hard-box/removal/shift/scale/set-mediabox helpers, and Markdown helper public
-  APIs.
+  hard-box/removal/shift/scale/set-mediabox helpers, imposition make-space
+  orchestration, and Markdown helper public APIs.
 
 Current backend snapshot:
 
@@ -53,6 +53,13 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port the `cpdfimpose.make_space` orchestration helper: private
+  `pdf_impose_make_space` now hard-boxes pages to `/MediaBox`, preserves cpdf's
+  zero-spacing hard-box behavior, expands non-fit output media boxes after
+  shifting content by half-spacing, and fit-scales content from bottom-left
+  before shifting it into the retained page size. White-box coverage pins the
+  zero-spacing, non-fit, and fit operator/MediaBox shapes. `moon test --target
+  native pdf_impose_wbtest.mbt` reports 14/14 tests passing.~~
 - [x] ~~Port the `Cpdfpage.scale_contents` dependency used by imposition:
   `scale_contents` now uses `/CropBox` when present, otherwise `/MediaBox`, to
   calculate the cpdf-style transform origin and position offset, prepends the
