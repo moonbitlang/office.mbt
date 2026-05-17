@@ -972,6 +972,73 @@ test "PdfDocument shortest_unused_prefix preserves CamlPDF prefix sequence" {
 }
 
 ///|
+test "PdfDocument combine_pdf_rests preserves unknown entries and appends annotations" {
+  let doc = @pdflite.pdf_document_empty()
+  let first = @pdflite.pdf_dictionary([
+    (page_name_for_test("/Rotate"), PdfInteger(90)),
+    (page_name_for_test("/Annots"), PdfArray([PdfIndirect(1), PdfInteger(2)])),
+  ])
+  let second = @pdflite.pdf_dictionary([
+    (page_name_for_test("/Custom"), PdfBoolean(true)),
+    (page_name_for_test("/Annots"), PdfArray([PdfIndirect(3)])),
+  ])
+  @test.assert_eq(
+    doc.combine_pdf_rests(first, second),
+    @pdflite.pdf_dictionary([
+      (page_name_for_test("/Rotate"), PdfInteger(90)),
+      (page_name_for_test("/Custom"), PdfBoolean(true)),
+      (
+        page_name_for_test("/Annots"),
+        PdfArray([PdfIndirect(1), PdfInteger(2), PdfIndirect(3)]),
+      ),
+    ]),
+  )
+}
+
+///|
+test "PdfDocument combine_pdf_rests resolves indirect annotation arrays" {
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(20, PdfArray([PdfInteger(20), PdfIndirect(21)]))
+  let first = @pdflite.pdf_dictionary([
+    (page_name_for_test("/Annots"), PdfIndirect(20)),
+  ])
+  let second = @pdflite.pdf_dictionary([
+    (page_name_for_test("/Custom"), PdfNull),
+    (page_name_for_test("/Annots"), PdfInteger(1)),
+  ])
+  @test.assert_eq(
+    doc.combine_pdf_rests(first, second),
+    @pdflite.pdf_dictionary([
+      (page_name_for_test("/Custom"), PdfNull),
+      (
+        page_name_for_test("/Annots"),
+        PdfArray([PdfInteger(20), PdfIndirect(21)]),
+      ),
+    ]),
+  )
+}
+
+///|
+test "PdfDocument combine_pdf_rests ignores non-dictionary rest inputs" {
+  let doc = @pdflite.pdf_document_empty()
+  @test.assert_eq(
+    doc.combine_pdf_rests(
+      PdfInteger(1),
+      @pdflite.pdf_dictionary([
+        (page_name_for_test("/Annots"), PdfArray([PdfInteger(7)])),
+      ]),
+    ),
+    @pdflite.pdf_dictionary([
+      (page_name_for_test("/Annots"), PdfArray([PdfInteger(7)])),
+    ]),
+  )
+  @test.assert_eq(
+    doc.combine_pdf_rests(PdfInteger(1), PdfBoolean(false)),
+    @pdflite.pdf_dictionary([]),
+  )
+}
+
+///|
 test "PdfDocument combine_pdf_resources unions known and unknown resource keys" {
   let doc = @pdflite.pdf_document_empty()
   let first = @pdflite.pdf_dictionary([

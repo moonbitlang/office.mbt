@@ -119,6 +119,69 @@ fn PdfDocument::pdf_page_resource_entries(
 }
 
 ///|
+fn pdf_page_is_rest_combined_key(key : PdfName) -> Bool {
+  key == pdf_page_annots_key()
+}
+
+///|
+fn pdf_page_unknown_rest_entries(
+  rest : PdfObject,
+) -> Array[(PdfName, PdfObject)] {
+  let output : Array[(PdfName, PdfObject)] = []
+  match rest {
+    PdfDictionary(entries) =>
+      for entry in entries {
+        let (key, _) = entry
+        if !pdf_page_is_rest_combined_key(key) {
+          output.push(entry)
+        }
+      }
+    _ => ()
+  }
+  output
+}
+
+///|
+fn PdfDocument::pdf_page_rest_array_values(
+  self : PdfDocument,
+  rest : PdfObject,
+  key : PdfName,
+) -> Array[PdfObject] {
+  match self.lookup_direct(key, rest) {
+    Some(PdfArray(values)) => [ for value in values => value ]
+    _ => []
+  }
+}
+
+///|
+/// Merge two page rest dictionaries for future imposition support.
+///
+/// Unknown entries from both dictionaries are preserved. `/Annots` arrays are
+/// resolved from either dictionary and concatenated, matching the CamlPDF
+/// `cpdfimpose` helper without porting the full imposition pipeline yet.
+pub fn PdfDocument::combine_pdf_rests(
+  self : PdfDocument,
+  first : PdfObject,
+  second : PdfObject,
+) -> PdfObject {
+  let output : Array[(PdfName, PdfObject)] = []
+  for entry in pdf_page_unknown_rest_entries(first) {
+    output.push(entry)
+  }
+  for entry in pdf_page_unknown_rest_entries(second) {
+    output.push(entry)
+  }
+  let annots = self.pdf_page_rest_array_values(first, pdf_page_annots_key())
+  for annot in self.pdf_page_rest_array_values(second, pdf_page_annots_key()) {
+    annots.push(annot)
+  }
+  if annots.length() > 0 {
+    output.push((pdf_page_annots_key(), PdfArray(annots)))
+  }
+  PdfDictionary(output)
+}
+
+///|
 /// Merge two page resource dictionaries.
 ///
 /// Known resource categories such as `/Font`, `/XObject`, and `/ColorSpace`

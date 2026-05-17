@@ -1340,6 +1340,7 @@ pub fn PdfDocument::chop_hv(Self, Bool, Double, Bool, ArrayView[Int]) -> Self ra
 pub fn PdfDocument::colour_space_components(Self, PdfObject, PdfObject) -> Int raise @core.PdfError
 pub fn PdfDocument::colspace(Self, PdfObject, PdfObject) -> PdfColourSpace raise @core.PdfError
 pub fn PdfDocument::combine_pdf_resources(Self, PdfObject, PdfObject) -> PdfObject
+pub fn PdfDocument::combine_pdf_rests(Self, PdfObject, PdfObject) -> PdfObject
 pub fn PdfDocument::contains_javascript(Self) -> Bool
 pub fn PdfDocument::contents_of_name_tree(Self, PdfObject) -> Array[(PdfObject, PdfObject)]
 pub fn PdfDocument::copy(Self) -> Self

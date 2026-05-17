@@ -1395,6 +1395,13 @@ Current backend snapshot:
   full-suite validation reports 1552/1552 tests passing; coverage analysis
   reports only three defensive unreachable `InvalidUTF8` branches in
   `pdf_util.mbt`.~~
+- [x] ~~Standalone `cpdfimpose.ml` rest-dictionary merge slice now exposes
+  `PdfDocument::combine_pdf_rests`, covering preservation of unknown page-rest
+  entries, `/Annots` array concatenation, indirect annotation-array resolution,
+  malformed annotation values, and non-dictionary rest inputs. Native focused
+  validation reports `moon test --target native pdf_page_test.mbt` at 80/80
+  tests passing; native full-suite validation reports 1555/1555 tests
+  passing.~~
 - [x] ~~Page labels, bookmarks, annotations, duplicate annotation repair,
   old-style destinations, name-tree destinations, `/OpenAction`, optional
   content, AcroForm merge basics, trailer `/Info`, and structure-tree
