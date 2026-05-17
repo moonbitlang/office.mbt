@@ -89,6 +89,10 @@ pub fn pdf_ascii_hex_encode(Bytes) -> Bytes
 
 pub fn pdf_ascii_hex_encode_view(BytesView) -> Bytes
 
+pub fn pdf_attach_file(PdfDocument, String, BytesView, keep_version? : Bool, page_number? : Int?, relationship? : String?, description? : String?) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_attachment_remove_unsafe_characters(String) -> String raise @core.PdfError
+
 pub fn pdf_blank_document(Double, Double, Int) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_blank_document_paper(@geometry.PaperSize, Int) -> PdfDocument raise @core.PdfError
@@ -308,6 +312,8 @@ pub fn pdf_lex_single_view(BytesView) -> PdfLexeme raise @core.PdfError
 pub fn pdf_lex_view(BytesView) -> Array[PdfLexeme] raise @core.PdfError
 
 pub fn pdf_lexeme_debug_name(PdfLexeme) -> String
+
+pub fn pdf_list_attached_files(PdfDocument) -> Array[PdfAttachment] raise @core.PdfError
 
 pub fn pdf_list_spot_colours(PdfDocument) -> Array[@core.PdfName]
 
@@ -549,6 +555,8 @@ pub fn pdf_remove_all_text(PdfDocument, ArrayView[Int]) -> PdfDocument raise @co
 
 pub fn pdf_remove_all_text_ops(ArrayView[PdfContentOp]) -> Array[PdfContentOp]
 
+pub fn pdf_remove_attached_files(PdfDocument) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_remove_bookmarks(PdfDocument) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_remove_dict_entry(PdfDocument, @core.PdfName, search? : PdfObject?) -> Unit
@@ -594,6 +602,8 @@ pub fn pdf_shape_rectangle(Double, Double, Double, Double) -> PdfPath
 pub fn pdf_shortest_unused_prefix(PdfDocument) -> String
 
 pub fn pdf_simplify_utf16be(BytesView) -> Bytes raise @core.PdfError
+
+pub fn pdf_size_attached_files(PdfDocument) -> Int raise @core.PdfError
 
 pub fn pdf_standard14_afm_data(PdfStandardFont) -> PdfAfmData
 
@@ -975,6 +985,14 @@ pub(all) enum PdfAnnotationSubtype {
   AnnotationUnknown(@core.PdfName)
 } derive(Eq, ToJson, @debug.Debug)
 
+pub(all) struct PdfAttachment {
+  name : String
+  pagenumber : Int
+  data : Bytes?
+  description : String?
+  relationship : String?
+} derive(Eq, ToJson, @debug.Debug)
+
 pub(all) struct PdfBookmark {
   level : Int
   text : Bytes
@@ -1243,6 +1261,7 @@ pub fn PdfDocument::add_pagetree(Self, ArrayView[PdfPage]) -> Int raise @core.Pd
 pub fn PdfDocument::add_prefix(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDocument::add_root(Self, Int, ArrayView[(@core.PdfName, PdfObject)]) -> Int raise @core.PdfError
 pub fn PdfDocument::annotations_of_page(Self, PdfPage) -> Array[PdfAnnotation] raise @core.PdfError
+pub fn PdfDocument::attach_file(Self, String, BytesView, keep_version? : Bool, page_number? : Int?, relationship? : String?, description? : String?) -> Self raise @core.PdfError
 pub fn PdfDocument::bpc(Self, PdfObject) -> PdfObject?
 pub fn PdfDocument::build_name_tree(Self, ArrayView[(Bytes, PdfObject)]) -> PdfObject
 pub fn PdfDocument::build_number_tree(Self, ArrayView[(Int, PdfObject)]) -> PdfObject
@@ -1287,6 +1306,7 @@ pub fn PdfDocument::iter_objects(Self, (Int, PdfObject) -> Unit raise) -> Unit r
 pub fn PdfDocument::iter_objects_in_order(Self, (Int, PdfObject) -> Unit raise) -> Unit raise
 pub fn PdfDocument::iter_objects_with_generation(Self, (Int, Int, PdfObject) -> Unit raise) -> Unit raise
 pub fn PdfDocument::iter_stream(Self, (PdfObject) -> Unit raise) -> Unit raise
+pub fn PdfDocument::list_attached_files(Self) -> Array[PdfAttachment] raise @core.PdfError
 pub fn PdfDocument::list_spot_colours(Self) -> Array[@core.PdfName]
 pub fn PdfDocument::lookup_chain(Self, PdfObject, ArrayView[@core.PdfName]) -> PdfObject?
 pub fn PdfDocument::lookup_direct(Self, @core.PdfName, PdfObject) -> PdfObject?
@@ -1360,6 +1380,7 @@ pub fn PdfDocument::recrypt_with_password_aesv3_with_iv_provider(Self, BytesView
 pub fn PdfDocument::referenced_object_numbers(Self, PdfObject, no_follow_entries? : ArrayView[@core.PdfName], no_follow_contains? : ArrayView[(@core.PdfName, PdfObject)]) -> Array[Int]
 pub fn PdfDocument::remove_added_text(Self, ArrayView[Int]) -> Self raise @core.PdfError
 pub fn PdfDocument::remove_all_text(Self, ArrayView[Int]) -> Self raise @core.PdfError
+pub fn PdfDocument::remove_attached_files(Self) -> Self raise @core.PdfError
 pub fn PdfDocument::remove_bookmarks(Self) -> Self raise @core.PdfError
 pub fn PdfDocument::remove_chain(Self, ArrayView[@core.PdfName]) -> Bool raise @core.PdfError
 pub fn PdfDocument::remove_dict_entry_everywhere(Self, @core.PdfName, search? : PdfObject?) -> Unit
@@ -1386,6 +1407,7 @@ pub fn PdfDocument::set_trailer_dict(Self, PdfObject) -> Unit
 pub fn PdfDocument::set_version(Self, Int, Int) -> Unit
 pub fn PdfDocument::set_was_linearized(Self, Bool) -> Unit
 pub fn PdfDocument::shortest_unused_prefix(Self) -> String
+pub fn PdfDocument::size_attached_files(Self) -> Int raise @core.PdfError
 pub fn PdfDocument::stream_object_entries(Self) -> Array[(Int, Int, PdfStream)]
 pub fn PdfDocument::string_of_pagespec(Self, ArrayView[Int]) -> String raise @core.PdfError
 pub fn PdfDocument::target_of_page_number(Self, Int) -> PdfDestination raise @core.PdfError

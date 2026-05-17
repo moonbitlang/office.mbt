@@ -1287,6 +1287,14 @@ Current backend snapshot:
   `PdfDocument::chop`, `PdfDocument::chop_hv`, and compatibility wrappers,
   covering crop-box preference, grid ordering, horizontal/vertical splits,
   page-box and annotation erasure, unselected pages, and validation errors.~~
+- [x] ~~Core `cpdfattach.ml`-style attachment operations now expose in-memory
+  `PdfDocument::attach_file`, `list_attached_files`, `remove_attached_files`,
+  `size_attached_files`, and compatibility wrappers, covering document-level
+  embedded-file name trees, page-level `/FileAttachment` annotations, version
+  bump/keep-version behavior, unsafe filename filtering, checksum metadata,
+  malformed attachment dictionaries, and preservation of unrelated name-tree
+  and annotation entries. Native full-suite validation reports 1495/1495 tests
+  passing; filesystem attach/dump wrappers remain an async I/O follow-up.~~
 - [x] ~~Page labels, bookmarks, annotations, duplicate annotation repair,
   old-style destinations, name-tree destinations, `/OpenAction`, optional
   content, AcroForm merge basics, trailer `/Info`, and structure-tree
