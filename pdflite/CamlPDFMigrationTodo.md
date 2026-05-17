@@ -7,7 +7,7 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 98.2%.
+- Native main-feature parity: 98.3%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
   breadth: 85-90%.
 - Warning 74 public documentation cleanup: complete; 0 native diagnostics
@@ -21,7 +21,8 @@ Current estimate:
 Current backend snapshot:
 
 - Native: full suite passing; the latest coverage pass leaves no uncovered
-  lines in the squeeze stream-compression and duplicate-pruning slices, with
+  lines in `pdf_squeeze.mbt`, including stream compression, duplicate pruning,
+  page content stream normalization, and Form XObject normalization, with
   historical defensive and edge-path coverage gaps still present in older files.
 - WasmGC and JavaScript: full non-native test suites pass.
 - Wasm: backend smoke suite passes with 497 tests after keeping the largest
@@ -1308,11 +1309,13 @@ Current backend snapshot:
   old-filter payloads, duplicate object pruning/rewrite, fixed-point squeezing,
   page/annotation duplicate preservation, duplicate stream pruning before
   recompressing, deferred object-table entry preservation, original-document
-  preservation, and already-decrypted object-table state preservation. Native
-  full-suite validation reports 1511/1511 tests passing, and coverage reports
+  preservation, already-decrypted object-table state preservation, optional
+  page content stream normalization, shared page-content preservation, direct
+  content streams without resources, all parsed page objects outside the page
+  tree, Form XObject normalization, malformed XObject resource errors, and
+  non-stream Form XObject errors. Native full-suite validation reports
+  1519/1519 tests passing, and coverage reports
   no uncovered lines in `pdf_squeeze.mbt`.~~
-- [ ] Complete the remaining `cpdfsqueeze.ml` page-data path: optional page
-  content stream and Form XObject normalization.
 - [x] ~~Page labels, bookmarks, annotations, duplicate annotation repair,
   old-style destinations, name-tree destinations, `/OpenAction`, optional
   content, AcroForm merge basics, trailer `/Info`, and structure-tree

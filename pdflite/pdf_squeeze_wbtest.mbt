@@ -76,7 +76,7 @@ test "PdfDocument squeeze skips deferred object entries" {
   doc.objects.set_entry(41, pdf_object_entry(ObjectToParse))
   doc.add_object_given_number(42, PdfString(@ascii.encode("parsed")))
 
-  let squeezed = try! doc.squeeze()
+  let squeezed = try! doc.squeeze(page_data=false)
 
   @test.assert_eq(
     squeezed.objects.get_entry(40),

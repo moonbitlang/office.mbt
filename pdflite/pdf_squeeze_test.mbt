@@ -73,6 +73,65 @@ fn squeeze_stream_bytes_for_test(
 }
 
 ///|
+fn squeeze_document_with_pages_for_test(
+  pages : ArrayView[@pdflite.PdfPage],
+) -> @pdflite.PdfDocument {
+  let document = @pdflite.pdf_document_empty()
+  let page_root = try! document.add_pagetree(pages)
+  ignore(try! document.add_root(page_root, []))
+  document
+}
+
+///|
+fn squeeze_content_stream_for_test(text : String) -> @pdflite.PdfObject {
+  squeeze_stream_for_test([], @ascii.encode(text))
+}
+
+///|
+fn squeeze_page_resource_for_test(
+  name : String,
+  object_number : Int,
+) -> @pdflite.PdfObject {
+  PdfDictionary([
+    (
+      squeeze_name_for_test("/XObject"),
+      PdfDictionary([(squeeze_name_for_test(name), PdfIndirect(object_number))]),
+    ),
+  ])
+}
+
+///|
+fn squeeze_manual_page_document_for_test(
+  page : @pdflite.PdfObject,
+) -> @pdflite.PdfDocument {
+  let document = @pdflite.pdf_document_empty()
+  let key_type = squeeze_name_for_test("/Type")
+  let key_pages = squeeze_name_for_test("/Pages")
+  let key_kids = squeeze_name_for_test("/Kids")
+  let key_count = squeeze_name_for_test("/Count")
+  let key_root = squeeze_name_for_test("/Root")
+  document.add_object_given_number(
+    1,
+    PdfDictionary([
+      (key_type, PdfNameObject(squeeze_name_for_test("/Pages"))),
+      (key_kids, PdfArray([PdfIndirect(2)])),
+      (key_count, PdfInteger(1)),
+    ]),
+  )
+  document.add_object_given_number(2, page)
+  document.add_object_given_number(
+    3,
+    PdfDictionary([
+      (key_type, PdfNameObject(squeeze_name_for_test("/Catalog"))),
+      (key_pages, PdfIndirect(1)),
+    ]),
+  )
+  document.set_root(3)
+  document.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(3))]))
+  document
+}
+
+///|
 test "PdfDocument recompress flates uncompressed streams and skips metadata" {
   let data = squeeze_data_for_test()
   let normal = squeeze_stream_for_test([], data)
@@ -323,7 +382,7 @@ test "PdfDocument squeeze removes duplicate objects and rewrites references" {
   document.add_object_given_number(3, holder)
   document.set_trailer_dict(PdfDictionary([(key_info, PdfIndirect(2))]))
 
-  let squeezed = try! document.squeeze()
+  let squeezed = try! document.squeeze(page_data=false)
 
   @test.assert_eq(squeezed.lookup_object_or_null(1), first)
   @test.assert_eq(squeezed.lookup_object_or_null(2), PdfNull)
@@ -348,7 +407,7 @@ test "squeeze reaches duplicate-object fixed point" {
   document.add_object_given_number(5, same)
   document.add_object_given_number(6, PdfArray([PdfIndirect(2)]))
 
-  let squeezed = try! @pdflite.squeeze(document)
+  let squeezed = try! @pdflite.squeeze(document, page_data=false)
 
   @test.assert_eq(squeezed.lookup_object_or_null(5), PdfNull)
   @test.assert_eq(squeezed.lookup_object_or_null(2), PdfNull)
@@ -375,7 +434,7 @@ test "squeeze preserves duplicate page and annotation objects" {
   document.add_object_given_number(22, annotation)
   document.add_object_given_number(23, annotation)
 
-  let squeezed = try! document.squeeze()
+  let squeezed = try! document.squeeze(page_data=false)
 
   @test.assert_eq(squeezed.lookup_object_or_null(20), page)
   @test.assert_eq(squeezed.lookup_object_or_null(21), page)
@@ -392,7 +451,7 @@ test "squeeze deduplicates equal streams before recompressing" {
   document.add_object_given_number(31, stream)
   document.add_object_given_number(32, PdfArray([PdfIndirect(31)]))
 
-  let squeezed = try! document.squeeze()
+  let squeezed = try! document.squeeze(page_data=false)
   let decompressed = try! squeezed.decompress()
 
   @test.assert_eq(squeezed.lookup_object_or_null(31), PdfNull)
@@ -401,4 +460,228 @@ test "squeeze deduplicates equal streams before recompressing" {
     PdfArray([PdfIndirect(30)]),
   )
   @test.assert_eq(squeeze_stream_bytes_for_test(decompressed, 30), Some(data))
+}
+
+///|
+test "squeeze normalizes unshared page content streams" {
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [
+      squeeze_content_stream_for_test("q"),
+      squeeze_content_stream_for_test("Q"),
+    ],
+  }
+  let document = squeeze_document_with_pages_for_test([page])
+
+  let squeezed = try! document.squeeze()
+  let pages = try! squeezed.pages_of_pagetree()
+
+  @test.assert_eq(pages.length(), 1)
+  @test.assert_eq(pages[0].content.length(), 1)
+  @test.assert_eq(try! squeezed.parse_content_ops(pages[0].content), [
+    Op_q,
+    Op_Q,
+  ])
+  @test.assert_eq(document.object_count() + 1, squeezed.object_count())
+}
+
+///|
+test "squeeze normalizes direct page content without resources" {
+  let key_type = squeeze_name_for_test("/Type")
+  let key_parent = squeeze_name_for_test("/Parent")
+  let key_mediabox = squeeze_name_for_test("/MediaBox")
+  let key_contents = squeeze_name_for_test("/Contents")
+  let page : @pdflite.PdfObject = PdfDictionary([
+    (key_type, PdfNameObject(squeeze_name_for_test("/Page"))),
+    (key_parent, PdfIndirect(1)),
+    (
+      key_mediabox,
+      PdfArray([PdfInteger(0), PdfInteger(0), PdfInteger(200), PdfInteger(200)]),
+    ),
+    (key_contents, squeeze_content_stream_for_test("q Q")),
+  ])
+  let document = squeeze_manual_page_document_for_test(page)
+
+  let squeezed = try! document.squeeze()
+  let pages = try! squeezed.pages_of_pagetree()
+
+  @test.assert_eq(pages.length(), 1)
+  @test.assert_eq(pages[0].content.length(), 1)
+  @test.assert_eq(try! squeezed.parse_content_ops(pages[0].content), [
+    Op_q,
+    Op_Q,
+  ])
+}
+
+///|
+test "squeeze normalizes page objects outside the page tree" {
+  let key_type = squeeze_name_for_test("/Type")
+  let key_contents = squeeze_name_for_test("/Contents")
+  let page = @pdflite.pdf_page_blank(@pdflite.paper_a4)
+  let document = squeeze_document_with_pages_for_test([page])
+  let orphan_page : @pdflite.PdfObject = PdfDictionary([
+    (key_type, PdfNameObject(squeeze_name_for_test("/Page"))),
+    (key_contents, squeeze_content_stream_for_test("q Q")),
+  ])
+  document.add_object_given_number(120, orphan_page)
+
+  let squeezed = try! document.squeeze()
+  guard squeezed.lookup_object_or_null(120).lookup_immediate(key_contents)
+    is Some(PdfIndirect(stream_number)) else {
+    fail("expected rewritten orphan page contents")
+  }
+
+  @test.assert_eq(
+    try! squeezed.parse_content_ops([PdfIndirect(stream_number)]),
+    [Op_q, Op_Q],
+  )
+}
+
+///|
+test "squeeze leaves shared page content streams in place" {
+  let shared = squeeze_content_stream_for_test("q Q")
+  let document = @pdflite.pdf_document_empty()
+  document.add_object_given_number(80, shared)
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [PdfIndirect(80)],
+  }
+  let page_root = try! document.add_pagetree([page, page])
+  ignore(try! document.add_root(page_root, []))
+
+  let squeezed = try! document.squeeze()
+  let pages = try! squeezed.pages_of_pagetree()
+
+  @test.assert_eq(pages.length(), 2)
+  @test.assert_eq(pages[0].content, [PdfIndirect(80)])
+  @test.assert_eq(pages[1].content, [PdfIndirect(80)])
+  @test.assert_eq(try! squeezed.parse_content_ops([PdfIndirect(80)]), [
+    Op_q,
+    Op_Q,
+  ])
+}
+
+///|
+test "squeeze normalizes form xobject streams" {
+  let form_dictionary : @pdflite.PdfObject = PdfDictionary([
+    (
+      squeeze_name_for_test("/Subtype"),
+      PdfNameObject(squeeze_name_for_test("/Form")),
+    ),
+    (squeeze_name_for_test("/Resources"), PdfDictionary([])),
+    (squeeze_name_for_test("/Length"), PdfInteger(3)),
+  ])
+  let form_stream = @pdflite.pdf_stream(
+    form_dictionary,
+    StreamGot(@ascii.encode("q Q")),
+  )
+  let encoded_form = try! @pdflite.pdf_encode_stream_with_filter(
+    squeeze_name_for_test("/ASCIIHexDecode"),
+    form_stream,
+  )
+  let document = @pdflite.pdf_document_empty()
+  document.add_object_given_number(90, encoded_form)
+  document.add_object_given_number(
+    91,
+    PdfDictionary([
+      (
+        squeeze_name_for_test("/Subtype"),
+        PdfNameObject(squeeze_name_for_test("/Image")),
+      ),
+    ]),
+  )
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [squeeze_content_stream_for_test("q /Fm1 Do Q")],
+    resources: PdfDictionary([
+      (
+        squeeze_name_for_test("/XObject"),
+        PdfDictionary([
+          (squeeze_name_for_test("/Fm1"), PdfIndirect(90)),
+          (squeeze_name_for_test("/Im1"), PdfIndirect(91)),
+        ]),
+      ),
+    ]),
+  }
+  let page_root = try! document.add_pagetree([page])
+  ignore(try! document.add_root(page_root, []))
+
+  let squeezed = try! document.squeeze()
+  guard squeezed.lookup_object_or_null(90) is PdfStreamObject(form) else {
+    fail("expected form stream")
+  }
+
+  @test.assert_eq(
+    form.dictionary.lookup_immediate(squeeze_name_for_test("/Filter")),
+    None,
+  )
+  @test.assert_eq(try! squeezed.parse_content_ops([PdfIndirect(90)]), [
+    Op_q,
+    Op_Q,
+  ])
+}
+
+///|
+test "squeeze skips non-page page-tree leaves" {
+  let key_parent = squeeze_name_for_test("/Parent")
+  let leaf : @pdflite.PdfObject = PdfDictionary([
+    (key_parent, PdfIndirect(1)),
+    (squeeze_name_for_test("/Marker"), PdfString(@ascii.encode("not page"))),
+  ])
+  let document = squeeze_manual_page_document_for_test(leaf)
+
+  let squeezed = try! document.squeeze()
+
+  @test.assert_eq(squeezed.lookup_object_or_null(2), leaf)
+}
+
+///|
+test "squeeze reports malformed xobject resource entries" {
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: PdfDictionary([
+      (
+        squeeze_name_for_test("/XObject"),
+        PdfDictionary([
+          (
+            squeeze_name_for_test("/Bad"),
+            PdfNameObject(squeeze_name_for_test("/Image")),
+          ),
+        ]),
+      ),
+    ]),
+  }
+  let document = squeeze_document_with_pages_for_test([page])
+
+  let result : Result[@pdflite.PdfDocument, Error] = try? document.squeeze()
+
+  guard result is Err(@pdflite.PdfError::DictionaryExpected) else {
+    fail("expected malformed XObject resource entry")
+  }
+}
+
+///|
+test "squeeze reports non-stream form xobjects" {
+  let document = @pdflite.pdf_document_empty()
+  document.add_object_given_number(
+    95,
+    PdfDictionary([
+      (
+        squeeze_name_for_test("/Subtype"),
+        PdfNameObject(squeeze_name_for_test("/Form")),
+      ),
+    ]),
+  )
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: squeeze_page_resource_for_test("/Fm1", 95),
+  }
+  let page_root = try! document.add_pagetree([page])
+  ignore(try! document.add_root(page_root, []))
+
+  let result : Result[@pdflite.PdfDocument, Error] = try? document.squeeze()
+
+  guard result is Err(@pdflite.PdfError::ParseStreamExpected) else {
+    fail("expected non-stream form XObject failure")
+  }
 }
