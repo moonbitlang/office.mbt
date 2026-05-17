@@ -18,6 +18,25 @@ fn metadata_catalog_for_test(doc : @pdflite.PdfDocument) -> @pdflite.PdfObject {
 }
 
 ///|
+fn metadata_replace_catalog_for_test(
+  doc : @pdflite.PdfDocument,
+  catalog : @pdflite.PdfObject,
+) -> @pdflite.PdfDocument {
+  let updated = doc.copy()
+  let catalog_number = updated.add_object(catalog)
+  updated.set_root(catalog_number)
+  updated.set_trailer_dict(
+    try! updated
+    .trailer_dict()
+    .add_dict_entry(
+      metadata_name_for_test("/Root"),
+      PdfIndirect(catalog_number),
+    ),
+  )
+  updated
+}
+
+///|
 test "pdf_metadata_encode_output preserves raw utf8 and stripped forms" {
   let snowman = try! @pdflite.pdf_pdfdocstring_of_utf8(@utf8.encode("A ☃ B"))
   @test.assert_eq(
@@ -94,6 +113,29 @@ test "PdfDocument viewer preferences and catalog items use cpdf strings" {
     "UseThumbs",
   )
   @test.assert_eq(updated.viewer_preference_item(key_hide_toolbar), "true")
+  let wrapped = try! @pdflite.pdf_set_viewer_preference(
+    key_hide_toolbar,
+    PdfBoolean(false),
+    4,
+    try! @pdflite.pdf_set_non_full_screen_page_mode(
+      try! @pdflite.pdf_set_page_mode(
+        try! @pdflite.pdf_set_page_layout(doc, "OneColumn"),
+        "UseThumbs",
+      ),
+      "UseOC",
+    ),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_get_catalog_item(
+      metadata_name_for_test("/PageLayout"),
+      wrapped,
+    ),
+    "OneColumn",
+  )
+  @test.assert_eq(
+    @pdflite.pdf_get_viewer_pref_item(key_hide_toolbar, wrapped),
+    "false",
+  )
   let invalid : Result[@pdflite.PdfDocument, Error] = try? doc.set_page_layout(
     "Rows",
   )
@@ -180,6 +222,84 @@ test "PdfDocument set_open_action writes fit xyz and custom destinations" {
   guard invalid is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
     fail("expected bad open-action page")
   }
+}
+
+///|
+test "PdfDocument metadata report helpers rewrite open action and JSON" {
+  let doc = try! @pdflite.pdf_blank_document_paper(@pdflite.paper_a4, 2)
+  let open_doc = try! doc.set_open_action(2, fit=false)
+  let expected_object : @pdflite.PdfObject = PdfArray([
+    PdfInteger(2),
+    PdfNameObject(metadata_name_for_test("/XYZ")),
+    PdfNull,
+    PdfNull,
+    PdfNull,
+  ])
+  let expected_json : Json = [{ "I": 2.0 }, { "N": "/XYZ" }, null, null, null]
+  @test.assert_eq(try! open_doc.open_action(), expected_object)
+  @test.assert_eq(
+    try! open_doc.open_action_json_blob(),
+    @utf8.encode(expected_json.stringify()),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_get_open_action_json_blob(open_doc),
+    @utf8.encode(expected_json.stringify()),
+  )
+  @test.assert_eq(
+    try! open_doc.open_action_string(),
+    try! @ascii.decode(try! @pdflite.pdf_write_object(expected_object)),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_get_open_action_string(open_doc),
+    try! open_doc.open_action_string(),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_set_open_action(doc, true, 1).open_action(),
+    PdfArray([PdfInteger(1), PdfNameObject(metadata_name_for_test("/Fit"))]),
+  )
+  @test.assert_eq(try! doc.open_action(), PdfNull)
+  @test.assert_eq(try! doc.open_action_string(), "")
+}
+
+///|
+test "PdfDocument metadata report helpers cover mark info XFA version language" {
+  let doc = try! @pdflite.pdf_minimum_valid_pdf()
+  let catalog_with_mark = try! metadata_catalog_for_test(doc).add_dict_entry(
+    metadata_name_for_test("/MarkInfo"),
+    @pdflite.pdf_dictionary([
+      (metadata_name_for_test("/Marked"), PdfBoolean(true)),
+      (metadata_name_for_test("/Suspects"), PdfBoolean(false)),
+    ]),
+  )
+  let catalog_with_xfa = try! catalog_with_mark.add_dict_entry(
+    metadata_name_for_test("/AcroForm"),
+    @pdflite.pdf_dictionary([
+      (metadata_name_for_test("/XFA"), PdfString(@ascii.encode("xfa"))),
+    ]),
+  )
+  let reported = metadata_replace_catalog_for_test(doc, catalog_with_xfa)
+  @test.assert_eq(
+    reported.mark_info_item(metadata_name_for_test("/Marked")),
+    true,
+  )
+  @test.assert_eq(
+    @pdflite.pdf_get_mark_info_item(metadata_name_for_test("/Marked"), reported),
+    true,
+  )
+  @test.assert_eq(
+    reported.mark_info_item(metadata_name_for_test("/Suspects")),
+    false,
+  )
+  @test.assert_eq(reported.is_xfa(), true)
+  @test.assert_eq(@pdflite.pdf_is_xfa(reported), true)
+  let version_doc = try! @pdflite.pdf_minimum_valid_pdf()
+  @pdflite.pdf_set_version(7, version_doc)
+  @test.assert_eq(version_doc.version(), (1, 7))
+  let language_doc = try! @pdflite.pdf_set_language(doc, @ascii.encode("fr-FR"))
+  @test.assert_eq(
+    @pdflite.pdf_language(language_doc),
+    Some(@ascii.encode("fr-FR")),
+  )
 }
 
 ///|

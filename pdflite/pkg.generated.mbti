@@ -307,6 +307,8 @@ pub fn pdf_format_real(Double) -> Bytes raise @core.PdfError
 
 pub fn pdf_generate_id(String, () -> Double) -> PdfObject
 
+pub fn pdf_get_catalog_item(@core.PdfName, PdfDocument) -> String
+
 pub fn pdf_get_dict_entries(PdfDocument, @core.PdfName, utf8? : Bool) -> Bytes raise @core.PdfError
 
 pub fn pdf_get_image_24bpp(PdfDocument, PdfObject, PdfObject) -> PdfImage raise @core.PdfError
@@ -315,7 +317,17 @@ pub fn pdf_get_info_utf8(PdfDocument, @core.PdfName) -> String
 
 pub fn pdf_get_jpeg_data(ByteCursor) -> Bytes raise @core.PdfError
 
+pub fn pdf_get_mark_info_item(@core.PdfName, PdfDocument) -> Bool
+
 pub fn pdf_get_metadata(PdfDocument) -> Bytes? raise @core.PdfError
+
+pub fn pdf_get_open_action(PdfDocument) -> PdfObject raise @core.PdfError
+
+pub fn pdf_get_open_action_json_blob(PdfDocument) -> Bytes raise @core.PdfError
+
+pub fn pdf_get_open_action_string(PdfDocument) -> String raise @core.PdfError
+
+pub fn pdf_get_viewer_pref_item(@core.PdfName, PdfDocument) -> String
 
 pub fn pdf_glyphnames_of_text(PdfTextExtractor, BytesView) -> Array[@core.PdfName] raise @core.PdfError
 
@@ -361,6 +373,8 @@ pub fn pdf_is_whitespace_byte(Int) -> Bool
 
 pub fn pdf_is_whitespace_or_delimiter_byte(Int) -> Bool
 
+pub fn pdf_is_xfa(PdfDocument) -> Bool
+
 pub fn pdf_jpeg2000_dimensions(Bytes) -> (Int, Int) raise @core.PdfError
 
 pub fn pdf_jpeg2000_dimensions_view(BytesView) -> (Int, Int) raise @core.PdfError
@@ -368,6 +382,8 @@ pub fn pdf_jpeg2000_dimensions_view(BytesView) -> (Int, Int) raise @core.PdfErro
 pub fn pdf_jpeg_dimensions(Bytes) -> (Int, Int) raise @core.PdfError
 
 pub fn pdf_jpeg_dimensions_view(BytesView) -> (Int, Int) raise @core.PdfError
+
+pub fn pdf_language(PdfDocument) -> Bytes?
 
 pub fn pdf_lex_bytes(Bytes) -> Array[PdfLexeme] raise @core.PdfError
 
@@ -683,9 +699,21 @@ pub fn pdf_run_length_encode(Bytes) -> Bytes
 
 pub fn pdf_run_length_encode_view(BytesView) -> Bytes
 
+pub fn pdf_set_language(PdfDocument, BytesView) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_set_metadata_from_bytes(Bool, BytesView, PdfDocument) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_set_non_full_screen_page_mode(PdfDocument, String) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_set_open_action(PdfDocument, Bool, Int, destination? : PdfObject?) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_set_page_layout(PdfDocument, String) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_set_page_mode(PdfDocument, String) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_set_pdf_info(@core.PdfName, PdfObject, Int, PdfDocument, keep_version? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_set_version(Int, PdfDocument) -> Unit
 
 pub fn pdf_set_viewer_preference(@core.PdfName, PdfObject, Int, PdfDocument) -> PdfDocument raise @core.PdfError
 
@@ -1470,6 +1498,7 @@ pub fn PdfDocument::is_cidkeyed_font(Self, PdfObject) -> Bool
 pub fn PdfDocument::is_encrypted(Self) -> Bool
 pub fn PdfDocument::is_simple_font(Self, PdfObject) -> Bool
 pub fn PdfDocument::is_standard14_font(Self, PdfObject) -> Bool
+pub fn PdfDocument::is_xfa(Self) -> Bool
 pub fn PdfDocument::iter_objects(Self, (Int, PdfObject) -> Unit raise) -> Unit raise
 pub fn PdfDocument::iter_objects_in_order(Self, (Int, PdfObject) -> Unit raise) -> Unit raise
 pub fn PdfDocument::iter_objects_with_generation(Self, (Int, Int, PdfObject) -> Unit raise) -> Unit raise
@@ -1484,6 +1513,7 @@ pub fn PdfDocument::lookup_direct_or_else(Self, @core.PdfName, @core.PdfName, Pd
 pub fn PdfDocument::lookup_object_or_null(Self, Int) -> PdfObject
 pub fn PdfDocument::lookup_required(Self, @core.PdfName, PdfObject, @core.PdfError) -> PdfObject raise @core.PdfError
 pub fn PdfDocument::map_objects_in_place(Self, (PdfObject) -> PdfObject) -> Unit
+pub fn PdfDocument::mark_info_item(Self, @core.PdfName) -> Bool
 pub fn PdfDocument::merge_content_streams(Self) -> Unit raise @core.PdfError
 pub fn PdfDocument::merge_name_trees_no_clash(Self, ArrayView[PdfObject]) -> PdfObject
 pub fn PdfDocument::merge_number_trees_no_clash(Self, ArrayView[PdfObject]) -> PdfObject
@@ -1493,6 +1523,9 @@ pub fn PdfDocument::name_tree_lookup_object(Self, PdfObject, PdfObject) -> PdfOb
 pub fn PdfDocument::number_tree_lookup(Self, Int, PdfObject) -> PdfObject?
 pub fn PdfDocument::object_count(Self) -> Int
 pub fn PdfDocument::object_numbers(Self) -> Array[Int]
+pub fn PdfDocument::open_action(Self) -> PdfObject raise @core.PdfError
+pub fn PdfDocument::open_action_json_blob(Self) -> Bytes raise @core.PdfError
+pub fn PdfDocument::open_action_string(Self) -> String raise @core.PdfError
 pub fn PdfDocument::pad_after(Self, ArrayView[Int], pad_with? : Self?) -> Self raise @core.PdfError
 pub fn PdfDocument::pad_before(Self, ArrayView[Int], pad_with? : Self?) -> Self raise @core.PdfError
 pub fn PdfDocument::pad_to_multiple(Self, Int) -> Self raise @core.PdfError

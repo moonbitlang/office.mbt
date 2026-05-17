@@ -48,6 +48,13 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Extend the `cpdfmetadata` reporting surface with cpdf-style catalog and
+  viewer-preference wrappers, MarkInfo/XFA query helpers, OpenAction reporting
+  that rewrites page indirect references back to one-based page numbers,
+  JSON/PDF-syntax OpenAction output, PDF minor-version mutation, and language
+  wrappers. Coverage uses MoonBit JSON literals for the OpenAction row shape
+  and verifies wrapper argument order plus catalog-only report fields. `moon
+  test --target native pdf_metadata_test.mbt` now reports 10/10 tests passing.~~
 - [x] ~~Port the bounded core of `cpdfmetadata`: PDFDoc output encoding,
   trailer `/ID` copy with keep-version handling, `/Info` UTF-8 reporting,
   viewer preferences, catalog page layout/mode/open action controls,
