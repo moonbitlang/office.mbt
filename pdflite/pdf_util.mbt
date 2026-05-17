@@ -97,6 +97,7 @@ fn PdfDocument::pdf_util_json_of_object(
   self : PdfDocument,
   object : PdfObject,
   utf8 : Bool,
+  clean_strings : Bool,
 ) -> Json raise PdfError {
   match object {
     PdfNull => Json::null()
@@ -112,9 +113,11 @@ fn PdfDocument::pdf_util_json_of_object(
         Json::object(
           Map::of([("U", Json::string(pdf_util_string_from_utf8(utf8_bytes)))]),
         )
-      } else {
+      } else if clean_strings {
         let simplified = pdf_simplify_utf16be(bytes) catch { _ => bytes }
         Json::string(pdf_util_string_from_bytes(simplified))
+      } else {
+        Json::string(pdf_util_string_from_bytes(bytes))
       }
     PdfNameObject(name) =>
       Json::object(
@@ -123,7 +126,9 @@ fn PdfDocument::pdf_util_json_of_object(
     PdfArray(values) => {
       let json_values : Array[Json] = []
       for value in values {
-        json_values.push(self.pdf_util_json_of_object(value, utf8))
+        json_values.push(
+          self.pdf_util_json_of_object(value, utf8, clean_strings),
+        )
       }
       Json::array(json_values)
     }
@@ -132,7 +137,7 @@ fn PdfDocument::pdf_util_json_of_object(
       for entry in entries {
         json_entries.set(
           pdf_util_string_from_name(entry.0),
-          self.pdf_util_json_of_object(entry.1, utf8),
+          self.pdf_util_json_of_object(entry.1, utf8, clean_strings),
         )
       }
       Json::object(json_entries)
@@ -144,7 +149,11 @@ fn PdfDocument::pdf_util_json_of_object(
           (
             "S",
             Json::array([
-              self.pdf_util_json_of_object(stream.dictionary, utf8),
+              self.pdf_util_json_of_object(
+                stream.dictionary,
+                utf8,
+                clean_strings,
+              ),
               Json::string(pdf_util_string_from_bytes(stream_data)),
             ]),
           ),
@@ -159,14 +168,17 @@ fn PdfDocument::pdf_util_json_of_object(
 /// Convert a single PDF object to CPDFJSON format.
 ///
 /// This exposes the single-object output side of cpdf's `cpdfjson`
-/// conversion. Full document CPDFJSON import/export and parsed content-stream
-/// encoding are intentionally separate slices.
+/// conversion. `clean_strings` mirrors cpdf's deprecated
+/// `-output-json-clean-strings` behavior for non-UTF8 output. Full document
+/// CPDFJSON import/export and parsed content-stream encoding are intentionally
+/// separate slices.
 pub fn PdfDocument::json_of_object(
   self : PdfDocument,
   object : PdfObject,
   utf8? : Bool = false,
+  clean_strings? : Bool = false,
 ) -> Json raise PdfError {
-  self.pdf_util_json_of_object(object, utf8)
+  self.pdf_util_json_of_object(object, utf8, clean_strings)
 }
 
 ///|
@@ -371,7 +383,7 @@ fn PdfDocument::pdf_util_json_of_content_op(
       pdf_util_json_op_items(
         [
           pdf_util_json_name_object(tag),
-          self.pdf_util_json_of_object(object, utf8),
+          self.pdf_util_json_of_object(object, utf8, false),
         ],
         "BDC",
       )
@@ -486,7 +498,10 @@ fn PdfDocument::pdf_util_json_of_content_op(
       )
     Op_Tj(text) => pdf_util_json_op_items([pdf_util_json_op_string(text)], "Tj")
     Op_TJ(object) =>
-      pdf_util_json_op_items([self.pdf_util_json_of_object(object, utf8)], "TJ")
+      pdf_util_json_op_items(
+        [self.pdf_util_json_of_object(object, utf8, false)],
+        "TJ",
+      )
     Op_quote(text) =>
       pdf_util_json_op_items([pdf_util_json_op_string(text)], "'")
     Op_double_quote(word_space, char_space, text) =>
@@ -563,14 +578,14 @@ fn PdfDocument::pdf_util_json_of_content_op(
       pdf_util_json_op_items(
         [
           pdf_util_json_name_object(tag),
-          self.pdf_util_json_of_object(object, utf8),
+          self.pdf_util_json_of_object(object, utf8, false),
         ],
         "DP",
       )
     Op_InlineImage(dictionary, _, data) =>
       pdf_util_json_op_items(
         [
-          self.pdf_util_json_of_object(dictionary, utf8),
+          self.pdf_util_json_of_object(dictionary, utf8, false),
           pdf_util_json_op_string(data),
         ],
         "InlineImage",
@@ -1200,6 +1215,7 @@ fn PdfDocument::pdf_util_json_of_parsed_content_stream(
   self : PdfDocument,
   object : PdfObject,
   utf8 : Bool,
+  clean_strings : Bool,
 ) -> Json raise PdfError {
   match object {
     PdfStreamObject(stream) => {
@@ -1218,7 +1234,7 @@ fn PdfDocument::pdf_util_json_of_parsed_content_stream(
           (
             "S",
             Json::array([
-              self.pdf_util_json_of_object(dictionary, utf8),
+              self.pdf_util_json_of_object(dictionary, utf8, clean_strings),
               Json::array(op_jsons),
             ]),
           ),
@@ -1248,6 +1264,7 @@ fn PdfDocument::pdf_util_document_params_json(
       (pdf_util_cpdfjson_minor_version_key(), PdfInteger(minor)),
     ]),
     utf8,
+    false,
   )
 }
 
@@ -1263,13 +1280,16 @@ fn pdf_util_document_json_entry(number : Int, object : Json) -> Json {
 /// object `-1` carries CPDFJSON metadata, object `0` carries the trailer, and
 /// positive object numbers are emitted in ascending order. When `parse_content`
 /// is set, page `/Contents` streams plus referenced Form XObject and Pattern
-/// streams are emitted as cpdf-style operation arrays. Stream-data omission,
-/// forced decompression, and clean-string preprocessing remain separate
+/// streams are emitted as cpdf-style operation arrays. When `clean_strings` is
+/// set for non-UTF8 output, UTF-16BE strings in positive objects are simplified
+/// while the trailer dictionary is left unchanged to match cpdf's `/ID`
+/// precaution. Stream-data omission and forced decompression remain separate
 /// CPDFJSON option slices.
 pub fn PdfDocument::json_of_document(
   self : PdfDocument,
   utf8? : Bool = false,
   parse_content? : Bool = false,
+  clean_strings? : Bool = false,
 ) -> Json raise PdfError {
   let entries : Array[Json] = []
   entries.push(
@@ -1281,7 +1301,7 @@ pub fn PdfDocument::json_of_document(
   entries.push(
     pdf_util_document_json_entry(
       0,
-      self.pdf_util_json_of_object(self.trailer_dict(), utf8),
+      self.pdf_util_json_of_object(self.trailer_dict(), utf8, false),
     ),
   )
   let content_stream_numbers = if parse_content {
@@ -1294,9 +1314,9 @@ pub fn PdfDocument::json_of_document(
     let object_json = if pdf_util_int_array_contains(
         content_stream_numbers, number,
       ) {
-      self.pdf_util_json_of_parsed_content_stream(object, utf8)
+      self.pdf_util_json_of_parsed_content_stream(object, utf8, clean_strings)
     } else {
-      self.pdf_util_json_of_object(object, utf8)
+      self.pdf_util_json_of_object(object, utf8, clean_strings)
     }
     entries.push(pdf_util_document_json_entry(number, object_json))
   }
@@ -1466,7 +1486,7 @@ pub fn PdfDocument::dict_entries_json(
 ) -> PdfBytes raise PdfError {
   let values : Array[Json] = []
   for value in self.dict_entry_values(key) {
-    values.push(self.pdf_util_json_of_object(value, utf8))
+    values.push(self.pdf_util_json_of_object(value, utf8, false))
   }
   @utf8.encode(Json::array(values).stringify())
 }
@@ -1505,8 +1525,9 @@ pub fn pdf_json_of_object(
   document : PdfDocument,
   object : PdfObject,
   utf8? : Bool = false,
+  clean_strings? : Bool = false,
 ) -> Json raise PdfError {
-  document.json_of_object(object, utf8~)
+  document.json_of_object(object, utf8~, clean_strings~)
 }
 
 ///|
@@ -1515,8 +1536,9 @@ pub fn pdf_json_of_document(
   document : PdfDocument,
   utf8? : Bool = false,
   parse_content? : Bool = false,
+  clean_strings? : Bool = false,
 ) -> Json raise PdfError {
-  document.json_of_document(utf8~, parse_content~)
+  document.json_of_document(utf8~, parse_content~, clean_strings~)
 }
 
 ///|

@@ -339,6 +339,64 @@ test "PdfDocument json_of_object emits streams and utf8 string wrappers" {
 }
 
 ///|
+test "PdfDocument CPDFJSON output honors clean_strings option" {
+  let unicode_ascii = try! @pdflite.pdf_utf16be_of_codepoints([0x41, 0x42])
+  let raw_json = Json::string("<feff00410042>")
+  let clean_json = Json::string("AB")
+  let doc = @pdflite.pdf_document_empty()
+
+  @test.assert_eq(try! doc.json_of_object(PdfString(unicode_ascii)), raw_json)
+  @test.assert_eq(
+    try! doc.json_of_object(PdfString(unicode_ascii), clean_strings=true),
+    clean_json,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_json_of_object(
+      doc,
+      PdfString(unicode_ascii),
+      clean_strings=true,
+    ),
+    clean_json,
+  )
+  @test.assert_eq(
+    try! doc.json_of_object(
+      PdfString(unicode_ascii),
+      utf8=true,
+      clean_strings=true,
+    ),
+    Json::object(Map::of([("U", Json::string("AB"))])),
+  )
+
+  let key_root = util_name_for_test("/Root")
+  let key_title = util_name_for_test("/Title")
+  doc.set_trailer_dict(
+    PdfDictionary([
+      (key_root, PdfIndirect(1)),
+      (key_title, PdfString(unicode_ascii)),
+    ]),
+  )
+  doc.add_object_given_number(
+    1,
+    @pdflite.pdf_dictionary([(key_title, PdfString(unicode_ascii))]),
+  )
+  let exported = try! doc.json_of_document(clean_strings=true)
+  @test.assert_eq(
+    try! @pdflite.pdf_json_of_document(doc, clean_strings=true),
+    exported,
+  )
+
+  guard util_cpdfjson_entry_for_test(exported, 1) is Some(Object(object_json)) else {
+    fail("expected document object entry")
+  }
+  @test.assert_eq(object_json.get("/Title"), Some(clean_json))
+
+  guard util_cpdfjson_entry_for_test(exported, 0) is Some(Object(trailer_json)) else {
+    fail("expected trailer entry")
+  }
+  @test.assert_eq(trailer_json.get("/Title"), Some(raw_json))
+}
+
+///|
 test "pdf_object_of_json decodes cpdf single-object wrappers" {
   let key_array = util_name_for_test("/Array")
   let key_name = util_name_for_test("/Name")

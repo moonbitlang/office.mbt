@@ -1776,6 +1776,15 @@ Current backend snapshot:
   `pdf_document_of_json`. Native focused validation reports
   `moon test --target native pdf_util_test.mbt` at 20/20 tests passing; native
   full-suite validation reports 1707/1707 tests passing.~~
+- [x] ~~Standalone `cpdfjson.ml` clean-string output slice now extends
+  `PdfDocument::json_of_object`, `pdf_json_of_object`,
+  `PdfDocument::json_of_document`, and `pdf_json_of_document` with
+  `clean_strings=true`, covering explicit UTF-16BE simplification for non-UTF8
+  CPDFJSON strings, default raw-byte preservation, UTF8 precedence,
+  compatibility-wrapper parity, and cpdf's full-document trailer skip for
+  clean-string preprocessing. Native focused validation reports
+  `moon test --target native pdf_util_test.mbt` at 21/21 tests passing; native
+  full-suite validation reports 1708/1708 tests passing.~~
 - [x] ~~Standalone `cpdfpagelabels.ml` JSON adapter slice now exposes
   `PdfDocument::add_page_labels_json` and `pdf_add_page_labels_json`, covering
   cpdf's page-label JSON array shape, UTF-8 prefix-to-PDFDocString encoding,
