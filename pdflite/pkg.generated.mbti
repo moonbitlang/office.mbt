@@ -755,6 +755,8 @@ pub fn pdf_shape_rectangle(Double, Double, Double, Double) -> PdfPath
 
 pub fn pdf_shortest_unused_prefix(PdfDocument) -> String
 
+pub fn pdf_show_annotation_bounding_boxes(PdfDocument, ArrayView[Int], light? : Bool, fast? : Bool) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_show_composition_json_blob(Int, PdfDocument) -> Bytes raise @core.PdfError
 
 pub fn pdf_simplify_utf16be(BytesView) -> Bytes raise @core.PdfError
@@ -1663,6 +1665,7 @@ pub fn PdfDocument::set_version(Self, Int, Int) -> Unit
 pub fn PdfDocument::set_viewer_preference(Self, @core.PdfName, PdfObject, Int, keep_version? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::set_was_linearized(Self, Bool) -> Unit
 pub fn PdfDocument::shortest_unused_prefix(Self) -> String
+pub fn PdfDocument::show_annotation_bounding_boxes(Self, ArrayView[Int], light? : Bool, fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::size_attached_files(Self) -> Int raise @core.PdfError
 pub fn PdfDocument::squeeze(Self, page_data? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::stamp_as_xobject(Self, ArrayView[Int], Self) -> (Self, @core.PdfName) raise @core.PdfError

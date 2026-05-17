@@ -21,8 +21,9 @@ Current estimate:
   text-to-PDF subformat shaping, blank PDF/UA creation helpers, JPEG/JPEG2000,
   PNG, and JBIG2 image-to-PDF document assembly, Form XObject stamping,
   composition reporting, core metadata APIs, XMP metadata-date rewriting, XMP
-  info synchronization, XMP metadata creation, XMP RDF list extraction, and
-  XMP/document info JSON reporting, and Markdown helper public APIs.
+  info synchronization, XMP metadata creation, XMP RDF list extraction,
+  XMP/document info JSON reporting, redaction annotation bounding-box overlays,
+  and Markdown helper public APIs.
 
 Current backend snapshot:
 
@@ -50,6 +51,13 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port the implemented annotation-overlay part of `cpdfredact`:
+  `show_annotation_bounding_boxes` now draws cpdf-style yellow/light-yellow
+  annotation rectangles through the existing page-content rewrite path, handles
+  direct and indirect annotations, selected pages, and the fast append mode, and
+  includes a compatibility wrapper. Coverage pins exact generated content
+  operators for normal and light/fast overlays. `moon test --target native
+  pdf_redact_test.mbt` reports 2/2 tests passing.~~
 - [x] ~~Port the JSON side of `cpdfmetadata.output_info` for in-memory
   documents: `info_json` now reports cpdf-style version/page counts, legacy
   `/Info` fields with UTF-8/raw/stripped encoding, trapped state, catalog page
