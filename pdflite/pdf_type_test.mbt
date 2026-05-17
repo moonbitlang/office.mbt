@@ -32,12 +32,66 @@ fn type_simple_font_without_metrics_for_test() -> @pdflite.PdfFont {
 }
 
 ///|
+fn type_standard_font_for_test() -> @pdflite.PdfFont {
+  PdfFontStandard({ font: PdfHelvetica, encoding: PdfWinAnsiEncoding })
+}
+
+///|
+test "pdf_string_of_type_element preserves cpdftype debug spellings" {
+  @test.assert_eq(
+    @pdflite.pdf_string_of_type_element(
+      PdfTypeText(type_bytes_for_test([65, 0, 255])),
+    ),
+    type_bytes_for_test([65, 0, 255]),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_string_of_type_element(PdfTypeHGlue(1.0)),
+    @ascii.encode("HGLUE1."),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_string_of_type_element(PdfTypeVGlue(12.5)),
+    @ascii.encode("VGLUE"),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_string_of_type_element(
+      PdfTypeFont("body", type_standard_font_for_test(), 12.0),
+    ),
+    @ascii.encode("Font"),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_string_of_type_element(
+      PdfTypeBeginDest(DestFit(TargetPageObject(1)), Some("chapter")),
+    ),
+    @ascii.encode("BeginDest"),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_string_of_type_element(PdfTypeTag("P", 7)),
+    @ascii.encode("Tag P 7"),
+  )
+}
+
+///|
+test "pdf_string_of_type keeps CamlPDF leading newline format" {
+  @test.assert_eq(
+    @pdflite.pdf_string_of_type([
+      PdfTypeText(@ascii.encode("A")),
+      PdfTypeNewLine,
+      PdfTypeNewPage,
+      PdfTypeBeginDocument,
+      PdfTypeEndDest,
+      PdfTypeEndTag,
+    ]),
+    @ascii.encode("\nA\nNewLine\nNewPage\nBeginDocument\nEndDest\nEndTag"),
+  )
+  @test.assert_eq(@pdflite.pdf_string_of_type([]), @ascii.encode(""))
+}
+
+///|
 test "pdf_type_font_widths scales standard font charcode widths" {
-  let font : @pdflite.PdfFont = PdfFontStandard({
-    font: PdfHelvetica,
-    encoding: PdfWinAnsiEncoding,
-  })
-  let widths = try! @pdflite.pdf_type_font_widths(font, 12.0)
+  let widths = try! @pdflite.pdf_type_font_widths(
+    type_standard_font_for_test(),
+    12.0,
+  )
   @test.assert_eq(widths.length(), 256)
   @test.assert_eq(widths[32], 3.336)
   @test.assert_eq(widths[65], 8.004)

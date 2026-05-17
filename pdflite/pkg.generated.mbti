@@ -713,6 +713,10 @@ pub fn pdf_string_of_position(PdfPosition) -> String
 
 pub fn pdf_string_of_standard_font(PdfStandardFont) -> String
 
+pub fn pdf_string_of_type(ArrayView[PdfTypeElement]) -> Bytes
+
+pub fn pdf_string_of_type_element(PdfTypeElement) -> Bytes
+
 pub fn pdf_table_of_encoding(PdfEncoding) -> Array[(Int, @core.PdfName)]
 
 pub fn pdf_target_of_pagenumber(PdfDocument, Int) -> PdfDestination raise @core.PdfError
@@ -2017,6 +2021,20 @@ pub(all) struct PdfType3Glyphs {
   fontmatrix : @geometry.TransformMatrix
   charprocs : Array[(@core.PdfName, PdfObject)]
   resources : PdfObject
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfTypeElement {
+  PdfTypeText(Bytes)
+  PdfTypeHGlue(Double)
+  PdfTypeVGlue(Double)
+  PdfTypeNewLine
+  PdfTypeNewPage
+  PdfTypeFont(String, PdfFont, Double)
+  PdfTypeBeginDest(PdfDestination, String?)
+  PdfTypeEndDest
+  PdfTypeBeginDocument
+  PdfTypeTag(String, Int)
+  PdfTypeEndTag
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfVersion {
