@@ -277,6 +277,10 @@ pub fn pdf_is_whitespace_byte(Int) -> Bool
 
 pub fn pdf_is_whitespace_or_delimiter_byte(Int) -> Bool
 
+pub fn pdf_jpeg2000_dimensions(Bytes) -> (Int, Int) raise @core.PdfError
+
+pub fn pdf_jpeg2000_dimensions_view(BytesView) -> (Int, Int) raise @core.PdfError
+
 pub fn pdf_lex_bytes(Bytes) -> Array[PdfLexeme] raise @core.PdfError
 
 pub fn pdf_lex_single_view(BytesView) -> PdfLexeme raise @core.PdfError

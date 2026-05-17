@@ -40,6 +40,8 @@ pub(all) suberror PdfError {
   PredictorNotSupported(Int)
   InvalidLZWData
   InvalidFlateData
+  BadJPEG2000Header
+  JPEG2000DimensionsExpected
   ParseObjectExpected
   ParseArrayMalformed
   ParseSingleObjectExpected
