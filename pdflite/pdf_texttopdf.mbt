@@ -27,6 +27,16 @@ fn pdf_texttopdf_type_key() -> PdfName {
 }
 
 ///|
+let pdf_texttopdf_struct_tree_root_name : PdfName = pdf_texttopdf_name(
+  "/StructTreeRoot",
+)
+
+///|
+fn pdf_texttopdf_struct_tree_root() -> PdfName {
+  pdf_texttopdf_struct_tree_root_name
+}
+
+///|
 let pdf_texttopdf_mcr_name : PdfName = pdf_texttopdf_name("/MCR")
 
 ///|
@@ -70,6 +80,99 @@ fn pdf_texttopdf_p() -> PdfName {
 fn pdf_texttopdf_p_key() -> PdfName {
   pdf_texttopdf_p_name
 }
+
+///|
+let pdf_texttopdf_document_name_value : PdfName = pdf_texttopdf_name(
+  "/Document",
+)
+
+///|
+fn pdf_texttopdf_document_name() -> PdfName {
+  pdf_texttopdf_document_name_value
+}
+
+///|
+let pdf_texttopdf_ns_key_name : PdfName = pdf_texttopdf_name("/NS")
+
+///|
+fn pdf_texttopdf_ns_key() -> PdfName {
+  pdf_texttopdf_ns_key_name
+}
+
+///|
+let pdf_texttopdf_namespaces_key_name : PdfName = pdf_texttopdf_name(
+  "/Namespaces",
+)
+
+///|
+fn pdf_texttopdf_namespaces_key() -> PdfName {
+  pdf_texttopdf_namespaces_key_name
+}
+
+///|
+let pdf_texttopdf_info_key_name : PdfName = pdf_texttopdf_name("/Info")
+
+///|
+fn pdf_texttopdf_info_key() -> PdfName {
+  pdf_texttopdf_info_key_name
+}
+
+///|
+let pdf_texttopdf_title_key_name : PdfName = pdf_texttopdf_name("/Title")
+
+///|
+fn pdf_texttopdf_title_key() -> PdfName {
+  pdf_texttopdf_title_key_name
+}
+
+///|
+let pdf_texttopdf_markinfo_key_name : PdfName = pdf_texttopdf_name("/MarkInfo")
+
+///|
+fn pdf_texttopdf_markinfo_key() -> PdfName {
+  pdf_texttopdf_markinfo_key_name
+}
+
+///|
+let pdf_texttopdf_marked_key_name : PdfName = pdf_texttopdf_name("/Marked")
+
+///|
+fn pdf_texttopdf_marked_key() -> PdfName {
+  pdf_texttopdf_marked_key_name
+}
+
+///|
+let pdf_texttopdf_lang_key_name : PdfName = pdf_texttopdf_name("/Lang")
+
+///|
+fn pdf_texttopdf_lang_key() -> PdfName {
+  pdf_texttopdf_lang_key_name
+}
+
+///|
+let pdf_texttopdf_viewer_preferences_key_name : PdfName = pdf_texttopdf_name(
+  "/ViewerPreferences",
+)
+
+///|
+fn pdf_texttopdf_viewer_preferences_key() -> PdfName {
+  pdf_texttopdf_viewer_preferences_key_name
+}
+
+///|
+let pdf_texttopdf_display_doc_title_key_name : PdfName = pdf_texttopdf_name(
+  "/DisplayDocTitle",
+)
+
+///|
+fn pdf_texttopdf_display_doc_title_key() -> PdfName {
+  pdf_texttopdf_display_doc_title_key_name
+}
+
+///|
+let pdf_texttopdf_pdfua2_namespace : PdfBytes = @ascii.encode(
+  "http://iso.org/pdf2/ssn",
+)
 
 ///|
 fn pdf_texttopdf_push_text(
@@ -273,7 +376,7 @@ fn pdf_texttopdf_page_reference(
 ///|
 fn pdf_texttopdf_structure_elements(
   document : PdfDocument,
-  structure_root_number : Int,
+  parent_number : Int,
   page_references : ArrayView[Int],
   nodes : ArrayView[Array[(Int, Int, Int)]],
 ) -> Array[PdfObject] raise PdfError {
@@ -298,7 +401,7 @@ fn pdf_texttopdf_structure_elements(
         document.add_object(
           PdfDictionary([
             (pdf_structure_k_key(), PdfArray(kids)),
-            (pdf_texttopdf_p_key(), PdfIndirect(structure_root_number)),
+            (pdf_texttopdf_p_key(), PdfIndirect(parent_number)),
             (pdf_texttopdf_s_key(), PdfNameObject(pdf_texttopdf_p())),
           ]),
         ),
@@ -347,13 +450,38 @@ fn pdf_texttopdf_parent_tree_entries(
 fn PdfDocument::pdf_texttopdf_add_structure_tree(
   self : PdfDocument,
   tags : ArrayView[Array[(String, Int)]],
+  subformat : PdfUASubformat?,
 ) -> Unit raise PdfError {
   let triples = pdf_texttopdf_tag_triples(tags)
   let nodes = pdf_texttopdf_group_tag_triples(triples)
   let structure_root_number = self.add_object(PdfNull)
+  let namespace_object = match subformat {
+    Some(PdfUA2) =>
+      Some(
+        PdfIndirect(
+          self.add_object(
+            PdfDictionary([
+              (
+                pdf_texttopdf_ns_key(),
+                PdfString(pdf_texttopdf_pdfua2_namespace),
+              ),
+            ]),
+          ),
+        ),
+      )
+    _ => None
+  }
+  let document_number = match subformat {
+    Some(PdfUA2) => self.add_object(PdfNull)
+    _ => 0
+  }
+  let parent_number = match subformat {
+    Some(PdfUA2) => document_number
+    _ => structure_root_number
+  }
   let page_references = self.page_reference_numbers()
   let structure_elements = pdf_texttopdf_structure_elements(
-    self, structure_root_number, page_references, nodes,
+    self, parent_number, page_references, nodes,
   )
   let parent_tree = self.add_object(
     self.build_number_tree(
@@ -364,16 +492,74 @@ fn PdfDocument::pdf_texttopdf_add_structure_tree(
       ),
     ),
   )
+  let root_entries : Array[(PdfName, PdfObject)] = [
+    (pdf_texttopdf_type_key(), PdfNameObject(pdf_texttopdf_struct_tree_root())),
+    (pdf_structure_parent_tree_key(), PdfIndirect(parent_tree)),
+  ]
+  let root_k = match (subformat, namespace_object) {
+    (Some(PdfUA2), Some(ns_object)) => {
+      self.add_object_given_number(
+        document_number,
+        PdfDictionary([
+          (pdf_structure_k_key(), PdfArray(structure_elements)),
+          (pdf_texttopdf_p_key(), PdfIndirect(structure_root_number)),
+          (pdf_texttopdf_s_key(), PdfNameObject(pdf_texttopdf_document_name())),
+          (pdf_texttopdf_ns_key(), ns_object),
+        ]),
+      )
+      root_entries.push((pdf_texttopdf_namespaces_key(), PdfArray([ns_object])))
+      PdfIndirect(document_number)
+    }
+    _ => PdfArray(structure_elements)
+  }
+  root_entries.push((pdf_structure_k_key(), root_k))
   self.add_object_given_number(
     structure_root_number,
-    PdfDictionary([
-      (pdf_structure_k_key(), PdfArray(structure_elements)),
-      (pdf_structure_parent_tree_key(), PdfIndirect(parent_tree)),
-    ]),
+    PdfDictionary(root_entries),
   )
   self.replace_chain(
     [pdf_structure_root_key(), pdf_structure_struct_tree_root_key()],
     PdfIndirect(structure_root_number),
+  )
+}
+
+///|
+fn PdfDocument::pdf_texttopdf_apply_subformat_metadata(
+  self : PdfDocument,
+  subformat : PdfUASubformat,
+  title : String,
+) -> Unit raise PdfError {
+  match subformat {
+    PdfUA1 => self.set_version(1, 7)
+    PdfUA2 => self.set_version(2, 0)
+  }
+  let info_number = self.add_object(
+    PdfDictionary([(pdf_texttopdf_title_key(), PdfString(@utf8.encode(title)))]),
+  )
+  self.set_trailer_dict(
+    self
+    .trailer_dict()
+    .add_dict_entry(pdf_texttopdf_info_key(), PdfIndirect(info_number)),
+  )
+  self.replace_chain(
+    [
+      pdf_structure_root_key(),
+      pdf_texttopdf_markinfo_key(),
+      pdf_texttopdf_marked_key(),
+    ],
+    PdfBoolean(true),
+  )
+  self.replace_chain(
+    [pdf_structure_root_key(), pdf_texttopdf_lang_key()],
+    PdfString(@ascii.encode("en-US")),
+  )
+  self.replace_chain(
+    [
+      pdf_structure_root_key(),
+      pdf_texttopdf_viewer_preferences_key(),
+      pdf_texttopdf_display_doc_title_key(),
+    ],
+    PdfBoolean(true),
   )
 }
 
@@ -389,7 +575,15 @@ pub fn pdf_texttopdf_typeset(
   paper : PaperSize,
   text : BytesView,
   process_struct_tree? : Bool = false,
+  subformat? : PdfUASubformat? = None,
+  title? : String? = None,
 ) -> PdfDocument raise PdfError {
+  let process_struct_tree = process_struct_tree || subformat != None
+  let title = match (subformat, title) {
+    (Some(_), Some(title)) => Some(title)
+    (Some(_), None) => raise TitleExpected
+    (None, title) => title
+  }
   let document = pdf_document_empty()
   let instructions = pdf_texttopdf_of_utf8_with_newlines(
     fontpack, font_size, text,
@@ -412,7 +606,12 @@ pub fn pdf_texttopdf_typeset(
   let page_root = document.add_pagetree(pages)
   ignore(document.add_root(page_root, []))
   if process_struct_tree {
-    document.pdf_texttopdf_add_structure_tree(result.tags)
+    document.pdf_texttopdf_add_structure_tree(result.tags, subformat)
+  }
+  match (subformat, title) {
+    (Some(subformat), Some(title)) =>
+      document.pdf_texttopdf_apply_subformat_metadata(subformat, title)
+    _ => ()
   }
   document
 }

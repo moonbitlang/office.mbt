@@ -35,6 +35,20 @@ fn texttopdf_lookup_for_test(
 }
 
 ///|
+fn texttopdf_lookup_indirect_object_for_test(
+  document : @pdflite.PdfDocument,
+  object : @pdflite.PdfObject,
+  key : String,
+) -> (Int, @pdflite.PdfObject) raise {
+  let reference = try! texttopdf_lookup_for_test(object, key)
+  guard reference is PdfIndirect(number) else {
+    fail("expected dictionary key " + key + " to be indirect")
+    (0, PdfNull)
+  }
+  (number, document.lookup_object_or_null(number))
+}
+
+///|
 fn texttopdf_page_ops_for_test(
   document : @pdflite.PdfDocument,
   page : @pdflite.PdfPage,
@@ -279,4 +293,145 @@ test "pdf_texttopdf_typeset can build paragraph structure tree" {
     }
   }
   @test.assert_eq(marked_paragraphs, 2)
+}
+
+///|
+test "pdf_ua_subformat_of_string parses CamlPDF PDF/UA names" {
+  @test.assert_eq(try! @pdflite.pdf_ua_subformat_of_string("PDF/UA-1"), PdfUA1)
+  @test.assert_eq(try! @pdflite.pdf_ua_subformat_of_string("PDF/UA-2"), PdfUA2)
+  let unknown : Result[@pdflite.PdfUASubformat, Error] = try? @pdflite.pdf_ua_subformat_of_string(
+    "PDF/A-1",
+  )
+  guard unknown is Err(@pdflite.PdfError::BadText) else {
+    fail("expected unknown PDF/UA subformat to raise BadText")
+  }
+}
+
+///|
+test "pdf_texttopdf_typeset requires title when subformat is requested" {
+  let paper = @pdflite.paper_size_make(PdfPoint, 100.0, 100.0)
+  let result : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_texttopdf_typeset(
+    texttopdf_standard_pack_for_test(),
+    10.0,
+    paper,
+    @ascii.encode("Hi"),
+    subformat=Some(PdfUA1),
+  )
+  guard result is Err(@pdflite.PdfError::TitleExpected) else {
+    fail("expected PDF/UA text-to-PDF without title to raise TitleExpected")
+  }
+}
+
+///|
+test "pdf_texttopdf_typeset PDF/UA-1 writes accessibility catalog metadata" {
+  let paper = @pdflite.paper_size_make(PdfPoint, 120.0, 120.0)
+  let document = try! @pdflite.pdf_texttopdf_typeset(
+    texttopdf_standard_pack_for_test(),
+    10.0,
+    paper,
+    @ascii.encode("Hi"),
+    subformat=Some(PdfUA1),
+    title=Some("Sample title"),
+  )
+  @test.assert_eq(document.version(), (1, 7))
+  let pages = try! document.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  @test.assert_eq(
+    try! texttopdf_lookup_for_test(pages[0].rest, "/StructParents"),
+    PdfInteger(0),
+  )
+  let (_, info) = try! texttopdf_lookup_indirect_object_for_test(
+    document,
+    document.trailer_dict(),
+    "/Info",
+  )
+  @test.assert_eq(
+    try! texttopdf_lookup_for_test(info, "/Title"),
+    PdfString(@utf8.encode("Sample title")),
+  )
+  let catalog = try! document.catalog()
+  let mark_info = try! texttopdf_lookup_for_test(catalog, "/MarkInfo")
+  @test.assert_eq(
+    try! texttopdf_lookup_for_test(mark_info, "/Marked"),
+    PdfBoolean(true),
+  )
+  @test.assert_eq(
+    try! texttopdf_lookup_for_test(catalog, "/Lang"),
+    PdfString(@ascii.encode("en-US")),
+  )
+  let viewer_preferences = try! texttopdf_lookup_for_test(
+    catalog, "/ViewerPreferences",
+  )
+  @test.assert_eq(
+    try! texttopdf_lookup_for_test(viewer_preferences, "/DisplayDocTitle"),
+    PdfBoolean(true),
+  )
+  let (_, struct_root) = try! texttopdf_lookup_indirect_object_for_test(
+    document, catalog, "/StructTreeRoot",
+  )
+  @test.assert_eq(
+    try! texttopdf_lookup_for_test(struct_root, "/Type"),
+    PdfNameObject(texttopdf_name_for_test("/StructTreeRoot")),
+  )
+  guard (try! texttopdf_lookup_for_test(struct_root, "/K"))
+    is PdfArray([PdfIndirect(_)]) else {
+    fail("expected PDF/UA-1 root /K to contain paragraph nodes directly")
+  }
+}
+
+///|
+test "pdf_texttopdf_typeset PDF/UA-2 wraps paragraphs under document namespace" {
+  let paper = @pdflite.paper_size_make(PdfPoint, 120.0, 120.0)
+  let document = try! @pdflite.pdf_texttopdf_typeset(
+    texttopdf_standard_pack_for_test(),
+    10.0,
+    paper,
+    @ascii.encode("A\n\nB"),
+    subformat=Some(PdfUA2),
+    title=Some("UA2 title"),
+  )
+  @test.assert_eq(document.version(), (2, 0))
+  let catalog = try! document.catalog()
+  let (struct_root_number, struct_root) = try! texttopdf_lookup_indirect_object_for_test(
+    document, catalog, "/StructTreeRoot",
+  )
+  let namespace_objects = try! texttopdf_lookup_for_test(
+    struct_root, "/Namespaces",
+  )
+  guard namespace_objects is PdfArray([PdfIndirect(namespace_number)]) else {
+    fail("expected PDF/UA-2 namespace array")
+  }
+  let namespace_object = document.lookup_object_or_null(namespace_number)
+  @test.assert_eq(
+    try! texttopdf_lookup_for_test(namespace_object, "/NS"),
+    PdfString(@ascii.encode("http://iso.org/pdf2/ssn")),
+  )
+  let root_k = try! texttopdf_lookup_for_test(struct_root, "/K")
+  guard root_k is PdfIndirect(document_number) else {
+    fail("expected PDF/UA-2 root /K to reference document element")
+  }
+  let document_node = document.lookup_object_or_null(document_number)
+  @test.assert_eq(
+    try! texttopdf_lookup_for_test(document_node, "/S"),
+    PdfNameObject(texttopdf_name_for_test("/Document")),
+  )
+  @test.assert_eq(
+    try! texttopdf_lookup_for_test(document_node, "/P"),
+    PdfIndirect(struct_root_number),
+  )
+  @test.assert_eq(
+    try! texttopdf_lookup_for_test(document_node, "/NS"),
+    PdfIndirect(namespace_number),
+  )
+  guard (try! texttopdf_lookup_for_test(document_node, "/K"))
+    is PdfArray([PdfIndirect(first_para), PdfIndirect(second_para)]) else {
+    fail("expected PDF/UA-2 document element to contain two paragraphs")
+  }
+  for paragraph_number in [first_para, second_para] {
+    let paragraph = document.lookup_object_or_null(paragraph_number)
+    @test.assert_eq(
+      try! texttopdf_lookup_for_test(paragraph, "/P"),
+      PdfIndirect(document_number),
+    )
+  }
 }

@@ -735,7 +735,7 @@ pub fn pdf_texttopdf_of_utf8_with_newlines(PdfFontPack, Double, BytesView) -> Ar
 
 pub fn pdf_texttopdf_tag_paragraphs(ArrayView[PdfTypeElement]) -> Array[PdfTypeElement]
 
-pub fn pdf_texttopdf_typeset(PdfFontPack, Double, @geometry.PaperSize, BytesView, process_struct_tree? : Bool) -> PdfDocument raise @core.PdfError
+pub fn pdf_texttopdf_typeset(PdfFontPack, Double, @geometry.PaperSize, BytesView, process_struct_tree? : Bool, subformat? : PdfUASubformat?, title? : String?) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_thin_lines(PdfDocument, ArrayView[Int], Double) -> PdfDocument raise @core.PdfError
 
@@ -760,6 +760,8 @@ pub fn pdf_type_split_text(Double, ArrayView[Double], BytesView) -> (Bytes, Bool
 pub fn pdf_type_typeset(PdfDocument, Bool, Double, Double, Double, Double, @geometry.PaperSize, ArrayView[PdfTypeElement]) -> PdfTypeTypesetResult raise @core.PdfError
 
 pub fn pdf_type_width_of_bytes(ArrayView[Double], BytesView) -> Double raise @core.PdfError
+
+pub fn pdf_ua_subformat_of_string(String) -> PdfUASubformat raise @core.PdfError
 
 pub fn pdf_utf16be_of_codepoints(ArrayView[Int]) -> Bytes raise @core.PdfError
 
@@ -2073,6 +2075,11 @@ pub(all) enum PdfTypeElement {
 pub(all) struct PdfTypeTypesetResult {
   pages : Array[PdfPage]
   tags : Array[Array[(String, Int)]]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfUASubformat {
+  PdfUA1
+  PdfUA2
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfVersion {

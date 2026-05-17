@@ -113,6 +113,7 @@ pub(all) suberror PdfError {
   AfmExpected
   ColourSpaceExpected
   BadText
+  TitleExpected
   CIDSystemInfoExpected
   CIDRegistryExpected
   CIDOrderingExpected
