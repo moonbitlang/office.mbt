@@ -24,6 +24,302 @@ fn tweak_content_ops_for_test(
 }
 
 ///|
+test "pdf_black_text_ops moves colour state out of text blocks" {
+  let font = tweak_name_for_test("/F1")
+  let shade = tweak_name_for_test("/Shade")
+  @test.assert_eq(
+    @pdflite.pdf_black_text_ops(PdfContentRGB(0.1, 0.2, 0.3), [
+      Op_g(0.8),
+      Op_BT,
+      Op_rg(1.0, 0.0, 0.0),
+      Op_Tf(font, 12.0),
+      Op_Tj(tweak_bytes_for_test("text")),
+      Op_q,
+      Op_Td(1.0, 2.0),
+      Op_sh(shade),
+      Op_ET,
+      Op_rg(0.5, 0.5, 0.5),
+    ]),
+    [
+      Op_g(0.8),
+      Op_BT,
+      Op_rg(0.1, 0.2, 0.3),
+      Op_Tf(font, 12.0),
+      Op_Tj(tweak_bytes_for_test("text")),
+      Op_q,
+      Op_Td(1.0, 2.0),
+      Op_ET,
+      Op_rg(1.0, 0.0, 0.0),
+      Op_q,
+      Op_sh(shade),
+      Op_rg(0.5, 0.5, 0.5),
+    ],
+  )
+}
+
+///|
+test "pdf_black_lines_ops rewrites stroke colour operators" {
+  let device_rgb = tweak_name_for_test("/DeviceRGB")
+  let pattern = tweak_name_for_test("/Pattern")
+  let spot = tweak_name_for_test("/Spot")
+  @test.assert_eq(
+    @pdflite.pdf_black_lines_ops(PdfContentCMYK(0.1, 0.2, 0.3, 0.4), [
+      Op_CS(pattern),
+      Op_SC([1.0]),
+      Op_SCNName(spot, [0.5]),
+      Op_G(0.6),
+      Op_RG(1.0, 0.0, 0.0),
+      Op_K(0.0, 1.0, 0.0, 0.0),
+      Op_g(0.2),
+      Op_cs(pattern),
+    ]),
+    [
+      Op_CS(device_rgb),
+      Op_K(0.1, 0.2, 0.3, 0.4),
+      Op_K(0.1, 0.2, 0.3, 0.4),
+      Op_K(0.1, 0.2, 0.3, 0.4),
+      Op_K(0.1, 0.2, 0.3, 0.4),
+      Op_K(0.1, 0.2, 0.3, 0.4),
+      Op_g(0.2),
+      Op_cs(pattern),
+    ],
+  )
+  @test.assert_eq(
+    @pdflite.pdf_black_lines_ops(PdfContentRGB(0.1, 0.2, 0.3), [Op_G(0.6)]),
+    [Op_RG(0.1, 0.2, 0.3)],
+  )
+  @test.assert_eq(
+    @pdflite.pdf_black_lines_ops(@pdflite.pdf_content_black, [
+      Op_K(0.0, 0.0, 0.0, 1.0),
+    ]),
+    [Op_G(0.0)],
+  )
+}
+
+///|
+test "pdf_black_fills_ops rewrites fill colour operators" {
+  let device_rgb = tweak_name_for_test("/DeviceRGB")
+  let pattern = tweak_name_for_test("/Pattern")
+  let spot = tweak_name_for_test("/Spot")
+  @test.assert_eq(
+    @pdflite.pdf_black_fills_ops(PdfContentCMYK(0.1, 0.2, 0.3, 0.4), [
+      Op_cs(pattern),
+      Op_sc([1.0]),
+      Op_scnName(spot, [0.5]),
+      Op_g(0.6),
+      Op_rg(1.0, 0.0, 0.0),
+      Op_k(0.0, 1.0, 0.0, 0.0),
+      Op_G(0.2),
+      Op_CS(pattern),
+    ]),
+    [
+      Op_cs(device_rgb),
+      Op_k(0.1, 0.2, 0.3, 0.4),
+      Op_k(0.1, 0.2, 0.3, 0.4),
+      Op_k(0.1, 0.2, 0.3, 0.4),
+      Op_k(0.1, 0.2, 0.3, 0.4),
+      Op_k(0.1, 0.2, 0.3, 0.4),
+      Op_G(0.2),
+      Op_CS(pattern),
+    ],
+  )
+  @test.assert_eq(
+    @pdflite.pdf_black_fills_ops(PdfContentRGB(0.1, 0.2, 0.3), [Op_g(0.6)]),
+    [Op_rg(0.1, 0.2, 0.3)],
+  )
+  @test.assert_eq(
+    @pdflite.pdf_black_fills_ops(@pdflite.pdf_content_black, [
+      Op_k(0.0, 0.0, 0.0, 1.0),
+    ]),
+    [Op_g(0.0)],
+  )
+}
+
+///|
+test "PdfDocument black_text rewrites selected pages and form xobjects" {
+  let key_xobject = tweak_name_for_test("/XObject")
+  let key_subtype = tweak_name_for_test("/Subtype")
+  let key_form = tweak_name_for_test("/Form")
+  let form_name = tweak_name_for_test("/BlackTextForm")
+  let base = try! @pdflite.pdf_blank_document(200.0, 100.0, 2)
+  let form = try! tweak_stream_for_test([
+    Op_BT,
+    Op_rg(1.0, 0.0, 0.0),
+    Op_Tj(tweak_bytes_for_test("form")),
+    Op_ET,
+  ]).add_dict_entry(key_subtype, PdfNameObject(key_form))
+  let form_number = base.add_object(form)
+  let pages = try! base.pages_of_pagetree()
+  let first = {
+    ..pages[0],
+    resources: PdfDictionary([
+      (key_xobject, PdfDictionary([(form_name, PdfIndirect(form_number))])),
+    ]),
+    content: [
+      tweak_stream_for_test([
+        Op_Do(form_name),
+        Op_BT,
+        Op_g(0.5),
+        Op_Tj(tweak_bytes_for_test("page")),
+        Op_ET,
+      ]),
+    ],
+  }
+  let second = {
+    ..pages[1],
+    content: [
+      tweak_stream_for_test([
+        Op_BT,
+        Op_g(0.5),
+        Op_Tj(tweak_bytes_for_test("skip")),
+        Op_ET,
+      ]),
+    ],
+  }
+  let document = try! base.change_pages([first, second])
+
+  let rewritten = try! @pdflite.pdf_black_text(
+    document,
+    [1],
+    @pdflite.pdf_content_black,
+  )
+  let rewritten_pages = try! rewritten.pages_of_pagetree()
+
+  @test.assert_eq(tweak_content_ops_for_test(rewritten, rewritten_pages[0]), [
+    Op_Do(form_name),
+    Op_BT,
+    Op_g(0.0),
+    Op_Tj(tweak_bytes_for_test("page")),
+    Op_ET,
+    Op_g(0.5),
+  ])
+  @test.assert_eq(tweak_content_ops_for_test(rewritten, rewritten_pages[1]), [
+    Op_BT,
+    Op_g(0.5),
+    Op_Tj(tweak_bytes_for_test("skip")),
+    Op_ET,
+  ])
+  guard rewritten.lookup_object_or_null(form_number)
+    is PdfStreamObject(form_stream) else {
+    fail("expected retained form xobject stream")
+  }
+  @test.assert_eq(
+    try! rewritten.parse_content_ops([PdfStreamObject(form_stream)]),
+    [
+      Op_BT,
+      Op_g(0.0),
+      Op_Tj(tweak_bytes_for_test("form")),
+      Op_ET,
+      Op_rg(1.0, 0.0, 0.0),
+    ],
+  )
+}
+
+///|
+test "PdfDocument black_lines rewrites selected pages and form xobjects" {
+  let key_xobject = tweak_name_for_test("/XObject")
+  let key_subtype = tweak_name_for_test("/Subtype")
+  let key_form = tweak_name_for_test("/Form")
+  let form_name = tweak_name_for_test("/BlackLinesForm")
+  let base = try! @pdflite.pdf_blank_document(200.0, 100.0, 2)
+  let form = try! tweak_stream_for_test([Op_RG(1.0, 0.0, 0.0), Op_S]).add_dict_entry(
+    key_subtype,
+    PdfNameObject(key_form),
+  )
+  let form_number = base.add_object(form)
+  let pages = try! base.pages_of_pagetree()
+  let first = {
+    ..pages[0],
+    resources: PdfDictionary([
+      (key_xobject, PdfDictionary([(form_name, PdfIndirect(form_number))])),
+    ]),
+    content: [tweak_stream_for_test([Op_Do(form_name), Op_G(0.8), Op_S])],
+  }
+  let second = {
+    ..pages[1],
+    content: [tweak_stream_for_test([Op_G(0.8), Op_S])],
+  }
+  let document = try! base.change_pages([first, second])
+
+  let rewritten = try! @pdflite.pdf_black_lines(
+    document,
+    [1],
+    PdfContentRGB(0.1, 0.2, 0.3),
+  )
+  let rewritten_pages = try! rewritten.pages_of_pagetree()
+
+  @test.assert_eq(tweak_content_ops_for_test(rewritten, rewritten_pages[0]), [
+    Op_Do(form_name),
+    Op_RG(0.1, 0.2, 0.3),
+    Op_S,
+  ])
+  @test.assert_eq(tweak_content_ops_for_test(rewritten, rewritten_pages[1]), [
+    Op_G(0.8),
+    Op_S,
+  ])
+  guard rewritten.lookup_object_or_null(form_number)
+    is PdfStreamObject(form_stream) else {
+    fail("expected retained form xobject stream")
+  }
+  @test.assert_eq(
+    try! rewritten.parse_content_ops([PdfStreamObject(form_stream)]),
+    [Op_RG(0.1, 0.2, 0.3), Op_S],
+  )
+}
+
+///|
+test "PdfDocument black_fills rewrites selected pages and form xobjects" {
+  let key_xobject = tweak_name_for_test("/XObject")
+  let key_subtype = tweak_name_for_test("/Subtype")
+  let key_form = tweak_name_for_test("/Form")
+  let form_name = tweak_name_for_test("/BlackFillsForm")
+  let base = try! @pdflite.pdf_blank_document(200.0, 100.0, 2)
+  let form = try! tweak_stream_for_test([Op_rg(1.0, 0.0, 0.0), Op_f]).add_dict_entry(
+    key_subtype,
+    PdfNameObject(key_form),
+  )
+  let form_number = base.add_object(form)
+  let pages = try! base.pages_of_pagetree()
+  let first = {
+    ..pages[0],
+    resources: PdfDictionary([
+      (key_xobject, PdfDictionary([(form_name, PdfIndirect(form_number))])),
+    ]),
+    content: [tweak_stream_for_test([Op_Do(form_name), Op_g(0.8), Op_f])],
+  }
+  let second = {
+    ..pages[1],
+    content: [tweak_stream_for_test([Op_g(0.8), Op_f])],
+  }
+  let document = try! base.change_pages([first, second])
+
+  let rewritten = try! @pdflite.pdf_black_fills(
+    document,
+    [1],
+    PdfContentGrey(0.25),
+  )
+  let rewritten_pages = try! rewritten.pages_of_pagetree()
+
+  @test.assert_eq(tweak_content_ops_for_test(rewritten, rewritten_pages[0]), [
+    Op_Do(form_name),
+    Op_g(0.25),
+    Op_f,
+  ])
+  @test.assert_eq(tweak_content_ops_for_test(rewritten, rewritten_pages[1]), [
+    Op_g(0.8),
+    Op_f,
+  ])
+  guard rewritten.lookup_object_or_null(form_number)
+    is PdfStreamObject(form_stream) else {
+    fail("expected retained form xobject stream")
+  }
+  @test.assert_eq(
+    try! rewritten.parse_content_ops([PdfStreamObject(form_stream)]),
+    [Op_g(0.25), Op_f],
+  )
+}
+
+///|
 test "pdf_reveal_hidden_text_ops removes rendering mode operators" {
   let ops : Array[@pdflite.PdfContentOp] = [
     Op_BT,

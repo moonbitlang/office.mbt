@@ -1371,6 +1371,17 @@ Current backend snapshot:
   `moon test --target native pdf_tweak_test.mbt` at 21/21 tests passing;
   native full-suite validation reports 1540/1540 tests passing; coverage
   analysis reports no uncovered lines in `pdf_tweak.mbt`.~~
+- [x] ~~Standalone `cpdftweak.ml` colour-rewrite slice now exposes
+  `PdfContentColour`, `pdf_content_black`, `PdfDocument::black_text`,
+  `black_lines`, `black_fills`, pure operator transforms, and compatibility
+  wrappers, covering text-block colour insertion, colour and graphics-state
+  movement after `ET`, non-text operator copying, selected page-only rewriting,
+  selected Form XObject rewriting, original-document preservation, stroke and
+  fill colour-space normalization to `/DeviceRGB`, RGB/grey/CMYK colour
+  variants, and preservation of unrelated stroke/fill operators. Native
+  focused validation reports `moon test --target native pdf_tweak_test.mbt` at
+  27/27 tests passing; native full-suite validation reports 1546/1546 tests
+  passing; coverage analysis reports no uncovered lines in `pdf_tweak.mbt`.~~
 - [x] ~~Page labels, bookmarks, annotations, duplicate annotation repair,
   old-style destinations, name-tree destinations, `/OpenAction`, optional
   content, AcroForm merge basics, trailer `/Info`, and structure-tree

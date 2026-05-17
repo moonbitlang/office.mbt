@@ -103,6 +103,18 @@ pub fn pdf_attach_file(PdfDocument, String, BytesView, keep_version? : Bool, pag
 
 pub fn pdf_attachment_remove_unsafe_characters(String) -> String raise @core.PdfError
 
+pub fn pdf_black_fills(PdfDocument, ArrayView[Int], PdfContentColour) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_black_fills_ops(PdfContentColour, ArrayView[PdfContentOp]) -> Array[PdfContentOp]
+
+pub fn pdf_black_lines(PdfDocument, ArrayView[Int], PdfContentColour) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_black_lines_ops(PdfContentColour, ArrayView[PdfContentOp]) -> Array[PdfContentOp]
+
+pub fn pdf_black_text(PdfDocument, ArrayView[Int], PdfContentColour) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_black_text_ops(PdfContentColour, ArrayView[PdfContentOp]) -> Array[PdfContentOp]
+
 pub fn pdf_blank_document(Double, Double, Int) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_blank_document_paper(@geometry.PaperSize, Int) -> PdfDocument raise @core.PdfError
@@ -182,6 +194,8 @@ pub fn pdf_colour_space_of_object(PdfObject) -> PdfColourSpace?
 pub fn pdf_contains_javascript(PdfDocument) -> Bool
 
 pub fn pdf_content_begin_artifact() -> PdfContentOp
+
+pub let pdf_content_black : PdfContentColour
 
 pub fn pdf_content_bytes_of_op(PdfContentOp) -> Bytes raise @core.PdfError
 
@@ -1167,6 +1181,12 @@ pub(all) struct PdfCompositeCIDFont {
   cid_default_width2 : Array[Double]
 } derive(Eq, ToJson, @debug.Debug)
 
+pub(all) enum PdfContentColour {
+  PdfContentGrey(Double)
+  PdfContentRGB(Double, Double, Double)
+  PdfContentCMYK(Double, Double, Double, Double)
+} derive(Eq, ToJson, @debug.Debug)
+
 type PdfContentInlineTextFilter derive(Eq, @debug.Debug)
 
 type PdfContentLexeme derive(Eq, ToJson, @debug.Debug)
@@ -1300,6 +1320,9 @@ pub fn PdfDocument::append_page_content_multiple(Self, ArrayView[Bytes], before?
 pub fn PdfDocument::append_page_content_multiple_ops(Self, ArrayView[Array[PdfContentOp]], before? : Bool, fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::append_page_content_ops(Self, ArrayView[Int], ArrayView[PdfContentOp], before? : Bool, fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::attach_file(Self, String, BytesView, keep_version? : Bool, page_number? : Int?, relationship? : String?, description? : String?) -> Self raise @core.PdfError
+pub fn PdfDocument::black_fills(Self, ArrayView[Int], PdfContentColour) -> Self raise @core.PdfError
+pub fn PdfDocument::black_lines(Self, ArrayView[Int], PdfContentColour) -> Self raise @core.PdfError
+pub fn PdfDocument::black_text(Self, ArrayView[Int], PdfContentColour) -> Self raise @core.PdfError
 pub fn PdfDocument::bpc(Self, PdfObject) -> PdfObject?
 pub fn PdfDocument::build_name_tree(Self, ArrayView[(Bytes, PdfObject)]) -> PdfObject
 pub fn PdfDocument::build_number_tree(Self, ArrayView[(Int, PdfObject)]) -> PdfObject
