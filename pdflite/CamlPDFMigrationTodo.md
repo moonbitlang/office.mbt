@@ -24,7 +24,7 @@ Current estimate:
   info synchronization, XMP metadata creation, XMP RDF list extraction,
   XMP/document info JSON reporting, redaction annotation bounding-box overlays,
   imposition transform/content/page-assembly/pattern-matrix kernels, cpdf page
-  hard-box/removal helpers, and Markdown helper public APIs.
+  hard-box/removal/shift helpers, and Markdown helper public APIs.
 
 Current backend snapshot:
 
@@ -52,6 +52,14 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port the `Cpdfpage.shift_pdf` dependency used by imposition: `shift_pages`
+  now prepends translation matrices in normal and fast modes, rewrites pattern
+  matrices before wrapping, transforms direct and indirect annotations, and
+  passes page matrices through `change_pages` so destinations/open actions move
+  with shifted pages. Coverage pins content operators, annotation coordinates,
+  pattern matrix cloning, open-action destination updates, wrapper behavior, and
+  invalid page/offset validation. `moon test --target native
+  pdf_page_shift_test.mbt` reports 3/3 tests passing.~~
 - [x] ~~Port the small page-box dependency slice used by imposition and
   `cpdfpage`: `hard_box` now prepends a clipping rectangle for `/MediaBox` or
   another selected page box with cpdf's missing-box fallback behavior, and the
