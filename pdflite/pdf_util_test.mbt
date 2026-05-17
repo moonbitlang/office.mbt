@@ -264,6 +264,81 @@ test "pdf_get_dict_entries renders cpdf style JSON wrappers" {
 }
 
 ///|
+test "PdfDocument json_of_object exposes cpdf single-object dictionary shape" {
+  let key_array = util_name_for_test("/Array")
+  let key_name = util_name_for_test("/Name")
+  let key_number = util_name_for_test("/Number")
+  let key_value = util_name_for_test("/Value")
+  let doc = @pdflite.pdf_document_empty()
+  let object = @pdflite.pdf_dictionary([
+    (
+      key_array,
+      @pdflite.pdf_array([
+        PdfBoolean(true),
+        PdfNull,
+        PdfReal(1.5),
+        PdfIndirect(8),
+      ]),
+    ),
+    (key_name, PdfNameObject(key_value)),
+    (key_number, PdfInteger(7)),
+  ])
+  let expected = Json::object(
+    Map::of([
+      (
+        "/Array",
+        Json::array([
+          Json::boolean(true),
+          Json::null(),
+          Json::object(Map::of([("F", Json::number(1.5))])),
+          Json::number(8.0, repr="8"),
+        ]),
+      ),
+      ("/Name", Json::object(Map::of([("N", Json::string("/Value"))]))),
+      ("/Number", Json::object(Map::of([("I", Json::number(7.0, repr="7"))]))),
+    ]),
+  )
+
+  @test.assert_eq(try! doc.json_of_object(object), expected)
+  @test.assert_eq(try! @pdflite.pdf_json_of_object(doc, object), expected)
+}
+
+///|
+test "PdfDocument json_of_object emits streams and utf8 string wrappers" {
+  let key_other = util_name_for_test("/Other")
+  let doc = @pdflite.pdf_document_empty()
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([(key_other, PdfInteger(1))]),
+    StreamGot(@ascii.encode("payload")),
+  )
+  let stream_expected = Json::object(
+    Map::of([
+      (
+        "S",
+        Json::array([
+          Json::object(
+            Map::of([
+              (
+                "/Other",
+                Json::object(Map::of([("I", Json::number(1.0, repr="1"))])),
+              ),
+            ]),
+          ),
+          Json::string("payload"),
+        ]),
+      ),
+    ]),
+  )
+  let utf8_expected = Json::object(Map::of([("U", Json::string("hello"))]))
+
+  @test.assert_eq(try! doc.json_of_object(stream), stream_expected)
+  @test.assert_eq(
+    try! doc.json_of_object(PdfString(@ascii.encode("hello")), utf8=true),
+    utf8_expected,
+  )
+}
+
+///|
 test "pdf_get_dict_entries emits utf8 string wrappers when requested" {
   let key_target = util_name_for_test("/Target")
   let doc = @pdflite.pdf_document_empty()

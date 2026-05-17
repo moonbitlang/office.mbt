@@ -144,6 +144,20 @@ fn PdfDocument::pdf_util_json_of_object(
 }
 
 ///|
+/// Convert a single PDF object to CPDFJSON format.
+///
+/// This exposes the single-object output side of cpdf's `cpdfjson`
+/// conversion. Full document CPDFJSON import/export and parsed content-stream
+/// encoding are intentionally separate slices.
+pub fn PdfDocument::json_of_object(
+  self : PdfDocument,
+  object : PdfObject,
+  utf8? : Bool = false,
+) -> Json raise PdfError {
+  self.pdf_util_json_of_object(object, utf8)
+}
+
+///|
 fn PdfDocument::pdf_util_collect_dict_entry_values(
   self : PdfDocument,
   object : PdfObject,
@@ -337,6 +351,16 @@ pub fn pdf_get_dict_entries(
   utf8? : Bool = false,
 ) -> PdfBytes raise PdfError {
   document.dict_entries_json(key, utf8~)
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::json_of_object`.
+pub fn pdf_json_of_object(
+  document : PdfDocument,
+  object : PdfObject,
+  utf8? : Bool = false,
+) -> Json raise PdfError {
+  document.json_of_object(object, utf8~)
 }
 
 ///|

@@ -1729,6 +1729,13 @@ Current backend snapshot:
   full-suite validation reports 1552/1552 tests passing; coverage analysis
   reports only three defensive unreachable `InvalidUTF8` branches in
   `pdf_util.mbt`.~~
+- [x] ~~Standalone `cpdfjson.ml` single-object output slice now exposes
+  `PdfDocument::json_of_object` and `pdf_json_of_object`, covering CPDFJSON
+  dictionary, array, stream, name, integer, real, indirect, boolean, null, and
+  UTF-8 string-wrapper shapes without claiming full document import/export or
+  parsed content-stream encoding. Native focused validation reports
+  `moon test --target native pdf_util_test.mbt` at 12/12 tests passing; native
+  full-suite validation reports 1697/1697 tests passing.~~
 - [x] ~~Standalone `cpdfimpose.ml` rest-dictionary merge slice now exposes
   `PdfDocument::combine_pdf_rests`, covering preservation of unknown page-rest
   entries, `/Annots` array concatenation, indirect annotation-array resolution,
