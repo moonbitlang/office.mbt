@@ -54,6 +54,15 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port structure-tree artifact marking for imposition:
+  `PdfDocument::mark_all_as_artifact` now wraps every page content stream and
+  referenced Form XObject stream in `/Artifact BMC ... EMC`; `pdf_impose` and
+  `PdfDocument::impose` now honor `process_struct_tree=true` by applying that
+  pass before crop removal, upright conversion, borders, spacing, and sheet
+  assembly. Coverage pins the public artifact wrapper, Form XObject rewriting,
+  and the imposition flag path. `moon test --target native
+  pdf_page_artifact_test.mbt` reports 2/2 tests passing, and `moon test
+  --target native pdf_impose_wbtest.mbt` reports 24/24 tests passing.~~
 - [x] ~~Wire the first public `cpdfimpose.impose` pipeline:
   `PdfDocument::impose` now preprocesses pages with CropBox-to-MediaBox copy,
   crop removal, upright conversion, optional border stamping, and spacing; plans
@@ -62,9 +71,8 @@ Current backend snapshot:
   final non-fit margin shift. Coverage pins simple 2-up assembly including
   hard-box content, wrapper/margin behavior, fit-mode extra spacing,
   page-reference retargeting, and empty-document rejection.
-  Structure-tree artifact marking and legacy two-up wrappers remain separate
-  follow-up slices. `moon test --target native pdf_impose_wbtest.mbt` reports
-  23/23 tests passing.~~
+  Legacy two-up wrappers remain a separate follow-up slice. `moon test --target
+  native pdf_impose_wbtest.mbt` reports 23/23 tests passing.~~
 - [x] ~~Port the layout-planning branch of `cpdfimpose.impose`: private
   `pdf_impose_layout` now calculates fit-mode sheets, horizontal/vertical
   fit spacing, non-fit zero-dimension stack layouts, margin-expanded output

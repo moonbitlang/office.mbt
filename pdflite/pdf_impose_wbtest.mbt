@@ -384,6 +384,27 @@ test "PdfDocument impose retargets page references to imposed sheets" {
 }
 
 ///|
+test "PdfDocument impose marks source content as artifact for structure trees" {
+  let document = try! impose_document_for_test([
+    try! impose_page_for_test([Op_S], width=100.0, height=100.0),
+  ])
+  let imposed = try! document.impose(1.0, 1.0, process_struct_tree=true)
+  let pages = try! imposed.pages_of_pagetree()
+  @test.assert_eq(try! impose_page_content_ops_for_test(imposed, pages[0]), [
+    Op_cm(transform_translate(0.0, 0.0)),
+    Op_q,
+    Op_cm(transform_translate(0.0, 0.0)),
+    Op_re(0.0, 0.0, 100.0, 100.0),
+    Op_W,
+    Op_n,
+    pdf_content_begin_artifact(),
+    Op_S,
+    pdf_content_end_artifact(),
+    Op_Q,
+  ])
+}
+
+///|
 test "PdfDocument impose rejects empty input" {
   let document = try! pdf_blank_document(10.0, 10.0, 0)
   let result : Result[PdfDocument, Error] = try? document.impose(1.0, 1.0)

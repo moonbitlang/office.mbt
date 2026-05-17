@@ -328,12 +328,18 @@ pub fn PdfDocument::impose(
   spacing? : Double = 0.0,
   line_width? : Double = 0.0,
   fast? : Bool = false,
+  process_struct_tree? : Bool = false,
 ) -> PdfDocument raise PdfError {
-  let original_page_count = self.endpage()
+  let source = if process_struct_tree {
+    self.mark_all_as_artifact()
+  } else {
+    self
+  }
+  let original_page_count = source.endpage()
   if original_page_count == 0 {
     raise BadNumberArgument("impose: pages must not be empty")
   }
-  let prepared = self.pdf_impose_preprocess(fit, spacing, line_width, fast)
+  let prepared = source.pdf_impose_preprocess(fit, spacing, line_width, fast)
   let prepared_pages = prepared.pages_of_pagetree()
   let layout = prepared.pdf_impose_layout(
     fit,
@@ -398,6 +404,7 @@ pub fn pdf_impose(
   spacing? : Double = 0.0,
   line_width? : Double = 0.0,
   fast? : Bool = false,
+  process_struct_tree? : Bool = false,
 ) -> PdfDocument raise PdfError {
   document.impose(
     x,
@@ -411,6 +418,7 @@ pub fn pdf_impose(
     spacing~,
     line_width~,
     fast~,
+    process_struct_tree~,
   )
 }
 

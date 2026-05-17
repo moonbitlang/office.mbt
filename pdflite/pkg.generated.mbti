@@ -363,7 +363,7 @@ pub fn pdf_image_object_of_jpeg_data(BytesView) -> PdfObject raise @core.PdfErro
 
 pub fn pdf_image_object_of_png_data(PdfDocument, BytesView) -> PdfObject raise @core.PdfError
 
-pub fn pdf_impose(PdfDocument, Double, Double, fit? : Bool, columns? : Bool, rtl? : Bool, btt? : Bool, center? : Bool, margin? : Double, spacing? : Double, line_width? : Double, fast? : Bool) -> PdfDocument raise @core.PdfError
+pub fn pdf_impose(PdfDocument, Double, Double, fit? : Bool, columns? : Bool, rtl? : Bool, btt? : Bool, center? : Bool, margin? : Double, spacing? : Double, line_width? : Double, fast? : Bool, process_struct_tree? : Bool) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_int_array_of_bytes(BytesView) -> Array[Int]
 
@@ -418,6 +418,8 @@ pub fn pdf_make_font(@core.PdfName, PdfEncoding) -> PdfObject raise @core.PdfErr
 pub fn pdf_make_hex_pdf_string(BytesView) -> Bytes
 
 pub fn pdf_make_pdf_string(BytesView) -> Bytes
+
+pub fn pdf_mark_all_as_artifact(PdfDocument) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_merge_documents(ArrayView[PdfDocument], ArrayView[Array[Int]], retain_numbering? : Bool, retain_bookmarks? : Bool, retain_optional_content? : Bool, retain_acroforms? : Bool, retain_named_destinations? : Bool, retain_name_dictionary? : Bool, retain_structure_tree? : Bool, add_toplevel_document? : Bool, retain_info? : Bool, retain_catalog_entries? : Bool, remove_duplicate_fonts? : Bool) -> PdfDocument raise @core.PdfError
 
@@ -1552,7 +1554,7 @@ pub fn PdfDocument::get_number(Self, PdfObject) -> Double raise @core.PdfError
 pub fn PdfDocument::hard_box(Self, ArrayView[Int], @core.PdfName, mediabox_if_missing? : Bool, fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::image_bits_per_component(Self, PdfObject) -> PdfObject?
 pub fn PdfDocument::image_colour_space(Self, PdfObject, PdfObject) -> PdfColourSpace raise @core.PdfError
-pub fn PdfDocument::impose(Self, Double, Double, fit? : Bool, columns? : Bool, rtl? : Bool, btt? : Bool, center? : Bool, margin? : Double, spacing? : Double, line_width? : Double, fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::impose(Self, Double, Double, fit? : Bool, columns? : Bool, rtl? : Bool, btt? : Bool, center? : Bool, margin? : Double, spacing? : Double, line_width? : Double, fast? : Bool, process_struct_tree? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::indirect_number(Self, @core.PdfName, PdfObject) -> Int?
 pub fn PdfDocument::info_json(Self, encoding? : PdfMetadataEncoding, unit? : @geometry.PdfUnit) -> Json raise @core.PdfError
 pub fn PdfDocument::info_json_blob(Self, encoding? : PdfMetadataEncoding, unit? : @geometry.PdfUnit) -> Bytes raise @core.PdfError
@@ -1576,6 +1578,7 @@ pub fn PdfDocument::lookup_direct_or_else(Self, @core.PdfName, @core.PdfName, Pd
 pub fn PdfDocument::lookup_object_or_null(Self, Int) -> PdfObject
 pub fn PdfDocument::lookup_required(Self, @core.PdfName, PdfObject, @core.PdfError) -> PdfObject raise @core.PdfError
 pub fn PdfDocument::map_objects_in_place(Self, (PdfObject) -> PdfObject) -> Unit
+pub fn PdfDocument::mark_all_as_artifact(Self) -> Self raise @core.PdfError
 pub fn PdfDocument::mark_info_item(Self, @core.PdfName) -> Bool
 pub fn PdfDocument::merge_content_streams(Self) -> Unit raise @core.PdfError
 pub fn PdfDocument::merge_name_trees_no_clash(Self, ArrayView[PdfObject]) -> PdfObject
