@@ -54,6 +54,15 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port legacy `cpdfimpose.twoup_stack` and page rotation helpers:
+  `PdfDocument::rotate_pages`/`rotate_pages_by` now set absolute or relative
+  `/Rotate` values for selected pages with page-range and right-angle
+  validation, and `PdfDocument::twoup_stack` composes the cpdf pipeline of
+  2x1 non-fit imposition, `-90` rotation, and upright rectification. Coverage
+  pins absolute/relative rotation wrappers, invalid rotations/pages, twoup-stack
+  output geometry, content transforms, and wrapper behavior. `moon test --target
+  native pdf_page_rotate_test.mbt` reports 3/3 tests passing, and `moon test
+  --target native pdf_impose_wbtest.mbt` reports 25/25 tests passing.~~
 - [x] ~~Port structure-tree artifact marking for imposition:
   `PdfDocument::mark_all_as_artifact` now wraps every page content stream and
   referenced Form XObject stream in `/Artifact BMC ... EMC`; `pdf_impose` and
@@ -71,7 +80,7 @@ Current backend snapshot:
   final non-fit margin shift. Coverage pins simple 2-up assembly including
   hard-box content, wrapper/margin behavior, fit-mode extra spacing,
   page-reference retargeting, and empty-document rejection.
-  Legacy two-up wrappers remain a separate follow-up slice. `moon test --target
+  Legacy `twoup` remains a separate follow-up slice. `moon test --target
   native pdf_impose_wbtest.mbt` reports 23/23 tests passing.~~
 - [x] ~~Port the layout-planning branch of `cpdfimpose.impose`: private
   `pdf_impose_layout` now calculates fit-mode sheets, horizontal/vertical

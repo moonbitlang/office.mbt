@@ -9,6 +9,57 @@ fn impose_name_for_test(text : String) -> PdfName {
 }
 
 ///|
+fn impose_assert_close_for_test(
+  actual : Double,
+  expected : Double,
+) -> Unit raise {
+  if (actual - expected).abs() > 0.000000001 {
+    fail(
+      "expected " +
+      actual.to_string() +
+      " to be close to " +
+      expected.to_string(),
+    )
+  }
+}
+
+///|
+fn impose_assert_matrix_close_for_test(
+  actual : TransformMatrix,
+  expected : TransformMatrix,
+) -> Unit raise {
+  impose_assert_close_for_test(actual.a, expected.a)
+  impose_assert_close_for_test(actual.b, expected.b)
+  impose_assert_close_for_test(actual.c, expected.c)
+  impose_assert_close_for_test(actual.d, expected.d)
+  impose_assert_close_for_test(actual.e, expected.e)
+  impose_assert_close_for_test(actual.f, expected.f)
+}
+
+///|
+fn impose_assert_box_close_for_test(
+  document : PdfDocument,
+  box : PdfObject,
+  width : Double,
+  height : Double,
+) -> Unit raise {
+  let bounds = document.parse_rectangle(box)
+  impose_assert_close_for_test(bounds.min_x, 0.0)
+  impose_assert_close_for_test(bounds.min_y, 0.0)
+  impose_assert_close_for_test(bounds.max_x, width)
+  impose_assert_close_for_test(bounds.max_y, height)
+}
+
+///|
+fn impose_assert_cm_close_for_test(
+  op : PdfContentOp,
+  expected : TransformMatrix,
+) -> Unit raise {
+  guard op is Op_cm(matrix) else { fail("expected cm operator") }
+  impose_assert_matrix_close_for_test(matrix, expected)
+}
+
+///|
 fn impose_transforms_for_test(
   fit? : Bool = false,
   x? : Int = 2,
@@ -402,6 +453,54 @@ test "PdfDocument impose marks source content as artifact for structure trees" {
     pdf_content_end_artifact(),
     Op_Q,
   ])
+}
+
+///|
+test "PdfDocument twoup_stack imposes and uprights two-page sheets" {
+  let document = try! impose_document_for_test([
+    try! impose_page_for_test([Op_S], width=100.0, height=100.0),
+    try! impose_page_for_test([Op_BT, Op_ET], width=100.0, height=100.0),
+  ])
+  let stacked = try! document.twoup_stack()
+  let pages = try! stacked.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  @test.assert_eq(pages[0].rotate, Rotate0)
+  try! impose_assert_box_close_for_test(
+    stacked,
+    pages[0].mediabox,
+    100.0,
+    200.0,
+  )
+  let ops = try! impose_page_content_ops_for_test(stacked, pages[0])
+  impose_assert_cm_close_for_test(ops[0], transform_translate(-50.0, 50.0))
+  impose_assert_cm_close_for_test(
+    ops[1],
+    transform_rotate(point2(100.0, 50.0), @math.PI / 2.0),
+  )
+  let actual_tail : Array[PdfContentOp] = []
+  for op in ops[2:] {
+    actual_tail.push(op)
+  }
+  @test.assert_eq(actual_tail, [
+    Op_cm(transform_translate(0.0, 0.0)),
+    Op_q,
+    Op_cm(transform_translate(0.0, 0.0)),
+    Op_re(0.0, 0.0, 100.0, 100.0),
+    Op_W,
+    Op_n,
+    Op_S,
+    Op_Q,
+    Op_q,
+    Op_cm(transform_translate(100.0, 0.0)),
+    Op_re(0.0, 0.0, 100.0, 100.0),
+    Op_W,
+    Op_n,
+    Op_BT,
+    Op_ET,
+    Op_Q,
+  ])
+  let wrapped = try! pdf_twoup_stack(document)
+  @test.assert_eq((try! wrapped.pages_of_pagetree()).length(), 1)
 }
 
 ///|

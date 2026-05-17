@@ -737,6 +737,10 @@ pub fn pdf_revisions_from_bytes(Bytes) -> Int raise @core.PdfError
 
 pub fn pdf_revisions_from_view(BytesView) -> Int raise @core.PdfError
 
+pub fn pdf_rotate_pages(PdfDocument, Int, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_rotate_pages_by(PdfDocument, Int, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_run_length_decode(Bytes) -> Bytes
 
 pub fn pdf_run_length_decode_view(BytesView) -> Bytes
@@ -878,6 +882,8 @@ pub fn pdf_transform_bookmark(PdfDocument, @geometry.TransformMatrix, PdfBookmar
 pub fn pdf_transform_destination(PdfDocument, @geometry.TransformMatrix, PdfDestination) -> PdfDestination raise @core.PdfError
 
 pub fn pdf_trim_structure_tree(PdfDocument, ArrayView[Int]) -> Unit raise @core.PdfError
+
+pub fn pdf_twoup_stack(PdfDocument, fast? : Bool, process_struct_tree? : Bool) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_type_font_widths(PdfFont, Double) -> Array[Double] raise @core.PdfError
 
@@ -1683,6 +1689,8 @@ pub fn PdfDocument::replace_stream_by_spec(Self, String, BytesView) -> Unit rais
 pub fn PdfDocument::reveal_hidden_text(Self, ArrayView[Int]) -> Self raise @core.PdfError
 pub fn PdfDocument::revision_read(Self) -> Int
 pub fn PdfDocument::root(Self) -> Int
+pub fn PdfDocument::rotate_pages(Self, Int, ArrayView[Int]) -> Self raise @core.PdfError
+pub fn PdfDocument::rotate_pages_by(Self, Int, ArrayView[Int]) -> Self raise @core.PdfError
 pub fn PdfDocument::scale_contents(Self, ArrayView[Int], PdfPosition, Double, fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::select_object_numbers(Self, (PdfObject) -> Bool) -> Array[Int]
 pub fn PdfDocument::set_first_xref(Self, Int) -> Unit
@@ -1719,6 +1727,7 @@ pub fn PdfDocument::transform_destination(Self, @geometry.TransformMatrix, PdfDe
 pub fn PdfDocument::transform_quadpoints(Self, @geometry.TransformMatrix, PdfObject) -> PdfObject
 pub fn PdfDocument::transform_rect(Self, @geometry.TransformMatrix, PdfObject) -> PdfObject raise @core.PdfError
 pub fn PdfDocument::trim_structure_tree(Self, ArrayView[Int]) -> Unit raise @core.PdfError
+pub fn PdfDocument::twoup_stack(Self, fast? : Bool, process_struct_tree? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::upright_pages(Self, ArrayView[Int], fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::version(Self) -> (Int, Int)
 pub fn PdfDocument::viewer_preference_item(Self, @core.PdfName) -> String

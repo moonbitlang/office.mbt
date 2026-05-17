@@ -423,6 +423,31 @@ pub fn pdf_impose(
 }
 
 ///|
+/// Legacy cpdf two-up stack operation.
+///
+/// This first imposes source pages in a 2x1 non-fit grid, then rotates the
+/// imposed sheets by -90 degrees and uprights them into ordinary page geometry.
+pub fn PdfDocument::twoup_stack(
+  self : PdfDocument,
+  fast? : Bool = false,
+  process_struct_tree? : Bool = false,
+) -> PdfDocument raise PdfError {
+  let imposed = self.impose(2.0, 1.0, fast~, process_struct_tree~)
+  let all_pages = pdf_impose_all_pages(imposed.endpage())
+  imposed.rotate_pages(-90, all_pages).upright_pages(all_pages, fast~)
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::twoup_stack`.
+pub fn pdf_twoup_stack(
+  document : PdfDocument,
+  fast? : Bool = false,
+  process_struct_tree? : Bool = false,
+) -> PdfDocument raise PdfError {
+  document.twoup_stack(fast~, process_struct_tree~)
+}
+
+///|
 fn pdf_impose_concat_ops(
   first : ArrayView[PdfContentOp],
   second : ArrayView[PdfContentOp],
