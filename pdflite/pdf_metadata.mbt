@@ -969,6 +969,103 @@ fn pdf_metadata_push_if_some(values : Array[String], value : String?) -> Unit {
 }
 
 ///|
+fn pdf_metadata_namespace_fallback_prefix(xml_namespace : String) -> String {
+  if xml_namespace == pdf_metadata_adobe_namespace {
+    "pdf"
+  } else if xml_namespace == pdf_metadata_xmp_namespace {
+    "xmp"
+  } else if xml_namespace == pdf_metadata_dc_namespace {
+    "dc"
+  } else if xml_namespace == pdf_metadata_pdfuaid_namespace {
+    "pdfuaid"
+  } else if xml_namespace == pdf_metadata_pdfe_namespace {
+    "pdfe"
+  } else if xml_namespace == pdf_metadata_pdfaid_namespace {
+    "pdfaid"
+  } else if xml_namespace == pdf_metadata_pdfxid_namespace {
+    "pdfxid"
+  } else if xml_namespace == pdf_metadata_pdfvtid_namespace {
+    "pdfvtid"
+  } else {
+    ""
+  }
+}
+
+///|
+fn pdf_metadata_name_with_slash(name : PdfName) -> String? {
+  let text = @ascii.decode(name.bytes()) catch { _ => return None }
+  Some(text)
+}
+
+///|
+fn pdf_metadata_xmp_info_fields(key : PdfName) -> Array[(String, String)]? {
+  match pdf_metadata_name_with_slash(key) {
+    Some("/Title") =>
+      Some([
+        (pdf_metadata_adobe_namespace, "Title"),
+        (pdf_metadata_dc_namespace, "title"),
+      ])
+    Some("/Author") =>
+      Some([
+        (pdf_metadata_adobe_namespace, "Author"),
+        (pdf_metadata_dc_namespace, "creator"),
+      ])
+    Some("/Subject") =>
+      Some([
+        (pdf_metadata_adobe_namespace, "Subject"),
+        (pdf_metadata_dc_namespace, "subject"),
+      ])
+    Some("/Keywords") => Some([(pdf_metadata_adobe_namespace, "Keywords")])
+    Some("/Creator") =>
+      Some([
+        (pdf_metadata_adobe_namespace, "Creator"),
+        (pdf_metadata_xmp_namespace, "CreatorTool"),
+      ])
+    Some("/Producer") => Some([(pdf_metadata_adobe_namespace, "Producer")])
+    Some("/CreationDate") =>
+      Some([
+        (pdf_metadata_adobe_namespace, "CreationDate"),
+        (pdf_metadata_xmp_namespace, "CreateDate"),
+      ])
+    Some("/ModDate") =>
+      Some([
+        (pdf_metadata_adobe_namespace, "ModificationDate"),
+        (pdf_metadata_xmp_namespace, "ModifyDate"),
+      ])
+    _ => None
+  }
+}
+
+///|
+/// Return XMP metadata corresponding to a legacy `/Info` key.
+pub fn PdfDocument::xmp_info(self : PdfDocument, key : PdfName) -> String {
+  let fields = match pdf_metadata_xmp_info_fields(key) {
+    Some(fields) => fields
+    None => return ""
+  }
+  let metadata = try self.metadata() catch {
+    _ => return ""
+  } noraise {
+    Some(metadata) => metadata
+    None => return ""
+  }
+  for field in fields {
+    let value = pdf_metadata_get_xmp_data(
+      metadata,
+      field.0,
+      pdf_metadata_namespace_fallback_prefix(field.0),
+      field.1,
+    )
+    match value {
+      Some(value) if value != "" => break value
+      _ => ()
+    }
+  } nobreak {
+    ""
+  }
+}
+
+///|
 /// Determine PDF/A, PDF/E, PDF/UA, PDF/VT, and PDF/X subformat markers.
 ///
 /// This ports cpdf's in-memory subformat detection. It recognizes simple XMP
@@ -1191,6 +1288,12 @@ pub fn pdf_set_pdf_info(
 /// Compatibility wrapper for `PdfDocument::info_utf8`.
 pub fn pdf_get_info_utf8(document : PdfDocument, key : PdfName) -> String {
   document.info_utf8(key)
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::xmp_info`.
+pub fn pdf_get_xmp_info(document : PdfDocument, key : PdfName) -> String {
+  document.xmp_info(key)
 }
 
 ///|

@@ -48,6 +48,13 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port `cpdfmetadata.get_xmp_info` for legacy `/Info` key equivalents:
+  XMP lookup now maps title, author, subject, keywords, creator, producer,
+  creation date, and modification date through the Adobe/XMP/DC namespaces and
+  returns the first non-empty match. Coverage includes missing metadata,
+  fallback creator/mod-date fields, producer lookup, and unknown-key behavior.
+  `moon test --target native pdf_metadata_test.mbt` now reports 13/13 tests
+  passing.~~
 - [x] ~~Port `cpdfmetadata.determine_subformats` for in-memory documents:
   namespace-aware XMP scanning now detects PDF/E, PDF/UA, PDF/A part plus
   conformance, PDF/X, and PDF/VT markers in cpdf output order, including

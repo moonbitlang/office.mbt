@@ -444,6 +444,42 @@ test "PdfDocument determine_subformats falls back to Info PDFX marker" {
 }
 
 ///|
+test "PdfDocument xmp_info returns legacy Info-key equivalents" {
+  let doc = try! @pdflite.pdf_minimum_valid_pdf()
+  @test.assert_eq(doc.xmp_info(metadata_name_for_test("/Title")), "")
+  let xmp_text =
+    #|<x:xmpmeta xmlns:x="adobe:ns:meta/"
+    #| xmlns:pdf="http://ns.adobe.com/pdf/1.3/"
+    #| xmlns:xmp="http://ns.adobe.com/xap/1.0/">
+    #| <pdf:Title>Adobe Title</pdf:Title>
+    #| <pdf:Producer>pdflite</pdf:Producer>
+    #| <xmp:CreatorTool>fallback tool</xmp:CreatorTool>
+    #| <xmp:ModifyDate>2026-05-17T00:00:00Z</xmp:ModifyDate>
+    #|</x:xmpmeta>
+  let with_metadata = try! doc.set_metadata_from_bytes(@ascii.encode(xmp_text))
+  @test.assert_eq(
+    with_metadata.xmp_info(metadata_name_for_test("/Title")),
+    "Adobe Title",
+  )
+  @test.assert_eq(
+    with_metadata.xmp_info(metadata_name_for_test("/Creator")),
+    "fallback tool",
+  )
+  @test.assert_eq(
+    @pdflite.pdf_get_xmp_info(with_metadata, metadata_name_for_test("/ModDate")),
+    "2026-05-17T00:00:00Z",
+  )
+  @test.assert_eq(
+    @pdflite.pdf_get_xmp_info(
+      with_metadata,
+      metadata_name_for_test("/Producer"),
+    ),
+    "pdflite",
+  )
+  @test.assert_eq(with_metadata.xmp_info(metadata_name_for_test("/Custom")), "")
+}
+
+///|
 test "pdf metadata compatibility wrappers keep cpdf argument order" {
   let doc = try! @pdflite.pdf_minimum_valid_pdf()
   let key_producer = metadata_name_for_test("/Producer")
