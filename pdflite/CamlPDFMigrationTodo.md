@@ -1283,6 +1283,10 @@ Current backend snapshot:
   `PdfDocument::draft` and `pdf_draft`, covering image XObjects, inline images,
   named-only removal, recursive Form XObjects, malformed resources, unselected
   pages, and compressed write/read roundtrips.~~
+- [x] ~~Standalone `cpdfchop.ml`-style page chopping now exposes
+  `PdfDocument::chop`, `PdfDocument::chop_hv`, and compatibility wrappers,
+  covering crop-box preference, grid ordering, horizontal/vertical splits,
+  page-box and annotation erasure, unselected pages, and validation errors.~~
 - [x] ~~Page labels, bookmarks, annotations, duplicate annotation repair,
   old-style destinations, name-tree destinations, `/OpenAction`, optional
   content, AcroForm merge basics, trailer `/Info`, and structure-tree

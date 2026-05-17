@@ -143,6 +143,10 @@ pub fn pdf_charcode_extractor_of_font_real(PdfFont, debug? : Bool) -> (Int) -> I
 
 pub fn pdf_check_injectible(String) -> Unit raise @core.PdfError
 
+pub fn pdf_chop(PdfDocument, Int, Int, Bool, Bool, Bool, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_chop_hv(PdfDocument, Bool, Double, Bool, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_codepoint_of_pdfdocencoding_byte(Int) -> Int raise @core.PdfError
 
 pub fn pdf_codepoints_of_pdfdocencoding(BytesView) -> Array[Int] raise @core.PdfError
@@ -1245,6 +1249,8 @@ pub fn PdfDocument::build_number_tree(Self, ArrayView[(Int, PdfObject)]) -> PdfO
 pub fn PdfDocument::catalog(Self) -> PdfObject raise @core.PdfError
 pub fn PdfDocument::change_id(Self, String, () -> Double) -> Unit raise @core.PdfError
 pub fn PdfDocument::change_pages(Self, ArrayView[PdfPage], change_references? : Bool, matrices? : ArrayView[(Int, @geometry.TransformMatrix)], changes? : ArrayView[(Int, Int)]) -> Self raise @core.PdfError
+pub fn PdfDocument::chop(Self, Int, Int, Bool, Bool, Bool, ArrayView[Int]) -> Self raise @core.PdfError
+pub fn PdfDocument::chop_hv(Self, Bool, Double, Bool, ArrayView[Int]) -> Self raise @core.PdfError
 pub fn PdfDocument::colour_space_components(Self, PdfObject, PdfObject) -> Int raise @core.PdfError
 pub fn PdfDocument::colspace(Self, PdfObject, PdfObject) -> PdfColourSpace raise @core.PdfError
 pub fn PdfDocument::combine_pdf_resources(Self, PdfObject, PdfObject) -> PdfObject
