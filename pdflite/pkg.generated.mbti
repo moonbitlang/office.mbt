@@ -893,6 +893,8 @@ pub fn pdf_ua_create_pdfua2(String, @geometry.PaperSize, Int) -> PdfDocument rai
 
 pub fn pdf_ua_subformat_of_string(String) -> PdfUASubformat raise @core.PdfError
 
+pub fn pdf_upright_pages(PdfDocument, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_utf16be_of_codepoints(ArrayView[Int]) -> Bytes raise @core.PdfError
 
 pub fn pdf_utf8_of_codepoints(ArrayView[Int]) -> Bytes raise @core.PdfError
@@ -1711,6 +1713,7 @@ pub fn PdfDocument::transform_destination(Self, @geometry.TransformMatrix, PdfDe
 pub fn PdfDocument::transform_quadpoints(Self, @geometry.TransformMatrix, PdfObject) -> PdfObject
 pub fn PdfDocument::transform_rect(Self, @geometry.TransformMatrix, PdfObject) -> PdfObject raise @core.PdfError
 pub fn PdfDocument::trim_structure_tree(Self, ArrayView[Int]) -> Unit raise @core.PdfError
+pub fn PdfDocument::upright_pages(Self, ArrayView[Int], fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::version(Self) -> (Int, Int)
 pub fn PdfDocument::viewer_preference_item(Self, @core.PdfName) -> String
 pub fn PdfDocument::was_linearized(Self) -> Bool

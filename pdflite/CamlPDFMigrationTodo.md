@@ -24,7 +24,7 @@ Current estimate:
   info synchronization, XMP metadata creation, XMP RDF list extraction,
   XMP/document info JSON reporting, redaction annotation bounding-box overlays,
   imposition transform/content/page-assembly/pattern-matrix kernels, cpdf page
-  hard-box/removal/shift/scale/set-mediabox/copy-box helpers, imposition
+  hard-box/removal/shift/scale/upright/set-mediabox/copy-box helpers, imposition
   make-space orchestration and border stamping, and Markdown helper public APIs.
 
 Current backend snapshot:
@@ -53,6 +53,14 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port the `Cpdfpage.upright` helper used by full imposition:
+  `upright_pages` now removes selected page `/Rotate` values by transforming
+  content, annotations, known page boxes, and destination matrices into an
+  upright coordinate system, then rectifies non-zero `/MediaBox` origins back
+  to `(0, 0)`. Coverage pins rotated page content/box/annotation transforms,
+  non-zero-origin rectification, wrapper behavior, open-action destination
+  updates, and invalid page rejection. `moon test --target native
+  pdf_page_upright_test.mbt` reports 3/3 tests passing.~~
 - [x] ~~Port the `Cpdfpage.copy_box` helper used by full imposition:
   `copy_page_box` now copies selected page-box values, updates the `PdfPage`
   `/MediaBox` field directly when the target is `/MediaBox`, copies `/MediaBox`
