@@ -741,6 +741,8 @@ pub fn pdf_run_length_encode_view(BytesView) -> Bytes
 
 pub fn pdf_set_language(PdfDocument, BytesView) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_set_mediaboxes(PdfDocument, ArrayView[Int], ArrayView[(Double, Double, Double, Double)]) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_set_metadata_date(PdfDocument, String) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_set_metadata_from_bytes(Bool, BytesView, PdfDocument) -> PdfDocument raise @core.PdfError
@@ -1672,6 +1674,7 @@ pub fn PdfDocument::select_object_numbers(Self, (PdfObject) -> Bool) -> Array[In
 pub fn PdfDocument::set_first_xref(Self, Int) -> Unit
 pub fn PdfDocument::set_info_entry(Self, @core.PdfName, PdfObject, Int, keep_version? : Bool, xmp_also? : Bool, xmp_just_set? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::set_language(Self, BytesView) -> Self raise @core.PdfError
+pub fn PdfDocument::set_mediaboxes(Self, ArrayView[Int], ArrayView[(Double, Double, Double, Double)]) -> Self raise @core.PdfError
 pub fn PdfDocument::set_metadata_date(Self, String) -> Self raise @core.PdfError
 pub fn PdfDocument::set_metadata_from_bytes(Self, BytesView, keep_version? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::set_non_full_screen_page_mode(Self, String) -> Self raise @core.PdfError

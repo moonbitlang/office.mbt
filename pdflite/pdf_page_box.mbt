@@ -80,6 +80,26 @@ fn PdfDocument::pdf_page_box_rewrite_pages(
 }
 
 ///|
+fn pdf_page_box_validate_xywh_boxes(
+  boxes : ArrayView[(Double, Double, Double, Double)],
+  end_page : Int,
+) -> Unit raise PdfError {
+  if boxes.length() != end_page {
+    raise BadPageSpecification(
+      "set_mediaboxes: box count must match page count",
+    )
+  }
+}
+
+///|
+fn pdf_page_box_xywh_object(
+  box : (Double, Double, Double, Double),
+) -> PdfObject {
+  let (x, y, width, height) = box
+  PdfArray([PdfReal(x), PdfReal(y), PdfReal(x + width), PdfReal(y + height)])
+}
+
+///|
 fn PdfDocument::pdf_page_box_object(
   self : PdfDocument,
   page : PdfPage,
@@ -141,6 +161,17 @@ fn PdfDocument::pdf_page_remove_box_page(
 }
 
 ///|
+fn PdfDocument::pdf_page_set_mediabox_page(
+  self : PdfDocument,
+  page_number : Int,
+  page : PdfPage,
+  boxes : ArrayView[(Double, Double, Double, Double)],
+) -> PdfPage {
+  ignore(self)
+  { ..page, mediabox: pdf_page_box_xywh_object(boxes[page_number - 1]) }
+}
+
+///|
 /// Hard-clip selected pages to a page box by prepending a clipping rectangle.
 ///
 /// `page_numbers` are 1-based. `box_name` is usually `/MediaBox`, `/CropBox`,
@@ -169,6 +200,49 @@ pub fn pdf_hard_box(
   fast? : Bool = false,
 ) -> PdfDocument raise PdfError {
   document.hard_box(page_numbers, box_name, mediabox_if_missing~, fast~)
+}
+
+///|
+/// Set `/MediaBox` on selected pages from a page-indexed `(x, y, width, height)`
+/// list.
+///
+/// `boxes` must contain one entry for every page in the document, matching
+/// cpdf's rectangle parser. `page_numbers` selects which page entries are
+/// applied, and each selected page uses `boxes[page_number - 1]`.
+pub fn PdfDocument::set_mediaboxes(
+  self : PdfDocument,
+  page_numbers : ArrayView[Int],
+  boxes : ArrayView[(Double, Double, Double, Double)],
+) -> PdfDocument raise PdfError {
+  let pages = self.pages_of_pagetree()
+  pdf_page_box_validate_page_numbers(
+    page_numbers,
+    pages.length(),
+    "set_mediaboxes",
+  )
+  pdf_page_box_validate_xywh_boxes(boxes, pages.length())
+  let rewritten : Array[PdfPage] = []
+  for index in 0..<pages.length() {
+    let page_number = index + 1
+    if pdf_page_box_contains_page(page_numbers, page_number) {
+      rewritten.push(
+        self.pdf_page_set_mediabox_page(page_number, pages[index], boxes),
+      )
+    } else {
+      rewritten.push(pages[index])
+    }
+  }
+  self.change_pages(rewritten, change_references=true)
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::set_mediaboxes`.
+pub fn pdf_set_mediaboxes(
+  document : PdfDocument,
+  page_numbers : ArrayView[Int],
+  boxes : ArrayView[(Double, Double, Double, Double)],
+) -> PdfDocument raise PdfError {
+  document.set_mediaboxes(page_numbers, boxes)
 }
 
 ///|

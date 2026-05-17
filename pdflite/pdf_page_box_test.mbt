@@ -117,6 +117,70 @@ test "PdfDocument hard_box handles missing boxes like cpdf" {
 }
 
 ///|
+test "PdfDocument set_mediaboxes uses page-indexed xywh boxes" {
+  let document = page_box_document_for_test()
+  let updated = try! document.set_mediaboxes([2], [
+    (5.0, 6.0, 10.0, 20.0),
+    (1.0, 2.0, 30.0, 40.0),
+  ])
+  let pages = try! updated.pages_of_pagetree()
+  @test.assert_eq(try! updated.parse_rectangle(pages[0].mediabox), {
+    min_x: 0.0,
+    min_y: 0.0,
+    max_x: 100.0,
+    max_y: 200.0,
+  })
+  @test.assert_eq(try! updated.parse_rectangle(pages[1].mediabox), {
+    min_x: 1.0,
+    min_y: 2.0,
+    max_x: 31.0,
+    max_y: 42.0,
+  })
+
+  let wrapped = try! @pdflite.pdf_set_mediaboxes(document, [1], [
+    (10.0, 20.0, 30.0, 40.0),
+    (1.0, 2.0, 3.0, 4.0),
+  ])
+  let wrapped_pages = try! wrapped.pages_of_pagetree()
+  @test.assert_eq(try! wrapped.parse_rectangle(wrapped_pages[0].mediabox), {
+    min_x: 10.0,
+    min_y: 20.0,
+    max_x: 40.0,
+    max_y: 60.0,
+  })
+}
+
+///|
+test "PdfDocument set_mediaboxes validates page range and box count" {
+  let document = page_box_document_for_test()
+  let bad_count : Result[@pdflite.PdfDocument, Error] = try? document.set_mediaboxes(
+    [1],
+    [(1.0, 2.0, 3.0, 4.0)],
+  )
+  guard bad_count
+    is Err(
+      @pdflite.PdfError::BadPageSpecification(
+        "set_mediaboxes: box count must match page count"
+      )
+    ) else {
+    fail("expected set_mediaboxes to reject a partial page-indexed box list")
+  }
+
+  let bad_page : Result[@pdflite.PdfDocument, Error] = try? document.set_mediaboxes(
+    [3],
+    [(1.0, 2.0, 3.0, 4.0), (5.0, 6.0, 7.0, 8.0)],
+  )
+  guard bad_page
+    is Err(
+      @pdflite.PdfError::BadPageSpecification(
+        "set_mediaboxes: range contains pages not present in pdf"
+      )
+    ) else {
+    fail("expected set_mediaboxes to reject an out-of-range page")
+  }
+}
+
+///|
 test "PdfDocument remove page boxes affects only selected box and pages" {
   let document = page_box_document_for_test()
   let key_crop = page_box_name_for_test("/CropBox")
