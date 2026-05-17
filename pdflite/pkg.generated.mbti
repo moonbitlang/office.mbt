@@ -361,6 +361,12 @@ pub fn pdf_optional_content_merge(ArrayView[PdfDocument]) -> PdfOptionalContent?
 
 pub fn pdf_p_of_permissions(ArrayView[@crypt_core.PdfPermission]) -> Int
 
+pub fn pdf_pad_after(PdfDocument, ArrayView[Int], pad_with? : PdfDocument?) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_pad_before(PdfDocument, ArrayView[Int], pad_with? : PdfDocument?) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_pad_to_multiple(PdfDocument, Int) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_page_blank(@geometry.PaperSize) -> PdfPage
 
 pub fn pdf_page_custom(PdfObject) -> PdfPage
@@ -1284,6 +1290,9 @@ pub fn PdfDocument::name_tree_lookup_object(Self, PdfObject, PdfObject) -> PdfOb
 pub fn PdfDocument::number_tree_lookup(Self, Int, PdfObject) -> PdfObject?
 pub fn PdfDocument::object_count(Self) -> Int
 pub fn PdfDocument::object_numbers(Self) -> Array[Int]
+pub fn PdfDocument::pad_after(Self, ArrayView[Int], pad_with? : Self?) -> Self raise @core.PdfError
+pub fn PdfDocument::pad_before(Self, ArrayView[Int], pad_with? : Self?) -> Self raise @core.PdfError
+pub fn PdfDocument::pad_to_multiple(Self, Int) -> Self raise @core.PdfError
 pub fn PdfDocument::page_number_of_target(Self, PdfDestination) -> Int raise @core.PdfError
 pub fn PdfDocument::page_object_number(Self, Int) -> Int? raise @core.PdfError
 pub fn PdfDocument::page_reference_numbers(Self) -> Array[Int] raise @core.PdfError
