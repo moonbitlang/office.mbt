@@ -315,6 +315,16 @@ pub fn pdf_image_bpc(PdfDocument, PdfObject) -> PdfObject?
 
 pub fn pdf_image_colspace(PdfDocument, PdfObject, PdfObject) -> PdfColourSpace raise @core.PdfError
 
+pub fn pdf_image_document_of_jpeg2000_data(BytesView, process_struct_tree? : Bool, subformat? : PdfUASubformat?, title? : String?) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_image_document_of_jpeg_data(BytesView, process_struct_tree? : Bool, subformat? : PdfUASubformat?, title? : String?) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_image_document_of_object(PdfObject, process_struct_tree? : Bool, subformat? : PdfUASubformat?, title? : String?) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_image_object_of_jpeg2000_data(BytesView) -> PdfObject raise @core.PdfError
+
+pub fn pdf_image_object_of_jpeg_data(BytesView) -> PdfObject raise @core.PdfError
+
 pub fn pdf_int_array_of_bytes(BytesView) -> Array[Int]
 
 pub fn pdf_invert_page_range(Int, ArrayView[Int]) -> Array[Int]

@@ -9,6 +9,92 @@ fn image_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
 }
 
 ///|
+fn image_lookup_for_test(
+  object : @pdflite.PdfObject,
+  key : String,
+) -> @pdflite.PdfObject raise {
+  match object.lookup_immediate(image_name_for_test(key)) {
+    Some(value) => value
+    None => {
+      fail("missing dictionary key " + key)
+      PdfNull
+    }
+  }
+}
+
+///|
+fn image_lookup_indirect_object_for_test(
+  document : @pdflite.PdfDocument,
+  object : @pdflite.PdfObject,
+  key : String,
+) -> (Int, @pdflite.PdfObject) raise {
+  let reference = try! image_lookup_for_test(object, key)
+  guard reference is PdfIndirect(number) else {
+    fail("expected dictionary key " + key + " to be indirect")
+    (0, PdfNull)
+  }
+  (number, document.lookup_object_or_null(number))
+}
+
+///|
+fn image_jpeg_for_document_test() -> @pdflite.PdfBytes {
+  image_bytes_for_test([
+    0xFF, 0xD8, 0xFF, 0xE0,
+    // APP0 length = 9, followed by "JFIF\0" and padding.
+     0x00, 0x09, 0x4A, 0x46, 0x49, 0x46, 0x00, 0xAA, 0xBB,
+    // SOF0 marker, length, precision, height 300, width 400.
+     0xFF, 0xC0, 0x00, 0x0B, 0x08, 0x01, 0x2C, 0x01, 0x90, 0x03, 0x01, 0xFF, 0xD9,
+  ])
+}
+
+///|
+fn image_jpeg2000_for_document_test() -> @pdflite.PdfBytes {
+  image_bytes_for_test([
+    0x00, 0x00, 0x00, 0x0C, 0x6A, 0x50, 0x20, 0x20, 0x0D, 0x0A, 0x87, 0x0A,
+    // ihdr, height 300, width 400
+     0x69, 0x68, 0x64, 0x72, 0x00, 0x00, 0x01, 0x2C, 0x00, 0x00, 0x01, 0x90,
+  ])
+}
+
+///|
+fn image_bytes_start_with_at_for_test(
+  haystack : BytesView,
+  needle : BytesView,
+  start : Int,
+) -> Bool {
+  if start < 0 || start + needle.length() > haystack.length() {
+    false
+  } else {
+    for index in 0..<needle.length() {
+      if haystack[start + index] != needle[index] {
+        break false
+      }
+    } nobreak {
+      true
+    }
+  }
+}
+
+///|
+fn image_find_bytes_for_test(haystack : BytesView, needle : BytesView) -> Int {
+  if needle.length() == 0 {
+    0
+  } else if haystack.length() < needle.length() {
+    -1
+  } else {
+    for start = 0
+        start <= haystack.length() - needle.length()
+        start = start + 1 {
+      if image_bytes_start_with_at_for_test(haystack, needle, start) {
+        break start
+      }
+    } nobreak {
+      -1
+    }
+  }
+}
+
+///|
 test "PdfImage public variants preserve image payload metadata" {
   let layout : @pdflite.PdfPixelLayout = PdfBPP24
   @test.assert_eq(layout, PdfBPP24)
@@ -18,6 +104,243 @@ test "PdfImage public variants preserve image payload metadata" {
   @test.assert_eq(jbig2, PdfJBIG2(@ascii.encode("jbig"), None, Some(7)))
   let raw : @pdflite.PdfImage = PdfRawImage(1, 1, PdfBPP8, @ascii.encode("x"))
   @test.assert_eq(raw, PdfRawImage(1, 1, PdfBPP8, @ascii.encode("x")))
+}
+
+///|
+test "pdf_image_object_of_jpeg_data builds DCT image XObject" {
+  let jpeg = image_jpeg_for_document_test()
+  let object = try! @pdflite.pdf_image_object_of_jpeg_data(jpeg)
+  guard object is PdfStreamObject(stream) else {
+    fail("expected JPEG stream object")
+  }
+  @test.assert_eq(
+    try! image_lookup_for_test(stream.dictionary, "/Length"),
+    PdfInteger(jpeg.length()),
+  )
+  @test.assert_eq(
+    try! image_lookup_for_test(stream.dictionary, "/Filter"),
+    PdfNameObject(image_name_for_test("/DCTDecode")),
+  )
+  @test.assert_eq(
+    try! image_lookup_for_test(stream.dictionary, "/BitsPerComponent"),
+    PdfInteger(8),
+  )
+  @test.assert_eq(
+    try! image_lookup_for_test(stream.dictionary, "/ColorSpace"),
+    PdfNameObject(image_name_for_test("/DeviceRGB")),
+  )
+  @test.assert_eq(
+    try! image_lookup_for_test(stream.dictionary, "/Subtype"),
+    PdfNameObject(image_name_for_test("/Image")),
+  )
+  @test.assert_eq(
+    try! image_lookup_for_test(stream.dictionary, "/Width"),
+    PdfInteger(400),
+  )
+  @test.assert_eq(
+    try! image_lookup_for_test(stream.dictionary, "/Height"),
+    PdfInteger(300),
+  )
+  @test.assert_eq(stream.data, StreamGot(jpeg))
+}
+
+///|
+test "pdf_image_object_of_jpeg2000_data builds JPX image XObject" {
+  let jpeg2000 = image_jpeg2000_for_document_test()
+  let object = try! @pdflite.pdf_image_object_of_jpeg2000_data(jpeg2000)
+  guard object is PdfStreamObject(stream) else {
+    fail("expected JPEG2000 stream object")
+  }
+  @test.assert_eq(
+    try! image_lookup_for_test(stream.dictionary, "/Length"),
+    PdfInteger(jpeg2000.length()),
+  )
+  @test.assert_eq(
+    try! image_lookup_for_test(stream.dictionary, "/Filter"),
+    PdfNameObject(image_name_for_test("/JPXDecode")),
+  )
+  @test.assert_eq(
+    try! image_lookup_for_test(stream.dictionary, "/Subtype"),
+    PdfNameObject(image_name_for_test("/Image")),
+  )
+  @test.assert_eq(
+    try! image_lookup_for_test(stream.dictionary, "/Width"),
+    PdfInteger(400),
+  )
+  @test.assert_eq(
+    try! image_lookup_for_test(stream.dictionary, "/Height"),
+    PdfInteger(300),
+  )
+  @test.assert_eq(
+    stream.dictionary.lookup_immediate(image_name_for_test("/ColorSpace")),
+    None,
+  )
+  @test.assert_eq(stream.data, StreamGot(jpeg2000))
+}
+
+///|
+test "pdf_image_document_of_jpeg_data creates structured image page" {
+  let document = try! @pdflite.pdf_image_document_of_jpeg_data(
+    image_jpeg_for_document_test(),
+    process_struct_tree=true,
+    title=Some("Figure alt"),
+  )
+  let pages = try! document.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  @test.assert_eq(
+    pages[0].mediabox,
+    PdfArray([PdfReal(0.0), PdfReal(0.0), PdfReal(400.0), PdfReal(300.0)]),
+  )
+  @test.assert_eq(
+    try! image_lookup_for_test(pages[0].rest, "/StructParents"),
+    PdfInteger(1),
+  )
+  let placement = { ..@pdflite.transform_identity_matrix, a: 400.0, d: 300.0 }
+  @test.assert_eq(try! document.parse_content_ops(pages[0].content), [
+    Op_BDC(
+      image_name_for_test("/Figure"),
+      PdfDictionary([(image_name_for_test("/MCID"), PdfInteger(0))]),
+    ),
+    Op_cm(placement),
+    Op_Do(image_name_for_test("/I0")),
+    Op_EMC,
+  ])
+  let xobjects = try! image_lookup_for_test(pages[0].resources, "/XObject")
+  let (_, image_object) = try! image_lookup_indirect_object_for_test(
+    document, xobjects, "/I0",
+  )
+  guard image_object is PdfStreamObject(image_stream) else {
+    fail("expected page image stream")
+  }
+  @test.assert_eq(
+    try! image_lookup_for_test(image_stream.dictionary, "/Filter"),
+    PdfNameObject(image_name_for_test("/DCTDecode")),
+  )
+  let catalog = try! document.catalog()
+  let (struct_root_number, struct_root) = try! image_lookup_indirect_object_for_test(
+    document, catalog, "/StructTreeRoot",
+  )
+  let root_k = try! image_lookup_for_test(struct_root, "/K")
+  guard root_k is PdfArray([PdfIndirect(figure_number)]) else {
+    fail("expected image figure in StructTreeRoot /K")
+  }
+  let parent_tree_ref = try! image_lookup_for_test(struct_root, "/ParentTree")
+  guard parent_tree_ref is PdfIndirect(parent_tree_number) else {
+    fail("expected image parent tree")
+  }
+  @test.assert_eq(
+    try! image_lookup_for_test(
+      document.lookup_object_or_null(parent_tree_number),
+      "/Nums",
+    ),
+    PdfArray([PdfInteger(1), PdfArray([PdfIndirect(figure_number)])]),
+  )
+  let figure = document.lookup_object_or_null(figure_number)
+  @test.assert_eq(
+    try! image_lookup_for_test(figure, "/K"),
+    PdfArray([PdfInteger(0)]),
+  )
+  @test.assert_eq(
+    try! image_lookup_for_test(figure, "/P"),
+    PdfIndirect(struct_root_number),
+  )
+  @test.assert_eq(
+    try! image_lookup_for_test(figure, "/S"),
+    PdfNameObject(image_name_for_test("/Figure")),
+  )
+  @test.assert_eq(
+    try! image_lookup_for_test(figure, "/Alt"),
+    PdfString(@utf8.encode("Figure alt")),
+  )
+}
+
+///|
+test "pdf_image_document_of_jpeg_data creates PDF/UA-2 document wrapper" {
+  let document = try! @pdflite.pdf_image_document_of_jpeg_data(
+    image_jpeg_for_document_test(),
+    subformat=Some(PdfUA2),
+    title=Some("UA image"),
+  )
+  @test.assert_eq(document.version(), (2, 0))
+  let pages = try! document.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  @test.assert_eq(
+    try! image_lookup_for_test(pages[0].rest, "/StructParents"),
+    PdfInteger(1),
+  )
+  let catalog = try! document.catalog()
+  let (struct_root_number, struct_root) = try! image_lookup_indirect_object_for_test(
+    document, catalog, "/StructTreeRoot",
+  )
+  let namespaces = try! image_lookup_for_test(struct_root, "/Namespaces")
+  guard namespaces is PdfArray([PdfIndirect(namespace_number)]) else {
+    fail("expected PDF/UA-2 image namespace")
+  }
+  @test.assert_eq(
+    try! image_lookup_for_test(
+      document.lookup_object_or_null(namespace_number),
+      "/NS",
+    ),
+    PdfString(@ascii.encode("http://iso.org/pdf2/ssn")),
+  )
+  let root_k = try! image_lookup_for_test(struct_root, "/K")
+  guard root_k is PdfArray([PdfIndirect(document_number)]) else {
+    fail("expected PDF/UA-2 image document element")
+  }
+  let document_node = document.lookup_object_or_null(document_number)
+  @test.assert_eq(
+    try! image_lookup_for_test(document_node, "/S"),
+    PdfNameObject(image_name_for_test("/Document")),
+  )
+  @test.assert_eq(
+    try! image_lookup_for_test(document_node, "/P"),
+    PdfIndirect(struct_root_number),
+  )
+  @test.assert_eq(
+    try! image_lookup_for_test(document_node, "/NS"),
+    PdfIndirect(namespace_number),
+  )
+  guard (try! image_lookup_for_test(document_node, "/K"))
+    is PdfArray([PdfIndirect(figure_number)]) else {
+    fail("expected PDF/UA-2 image figure")
+  }
+  let figure = document.lookup_object_or_null(figure_number)
+  @test.assert_eq(
+    try! image_lookup_for_test(figure, "/P"),
+    PdfIndirect(document_number),
+  )
+  @test.assert_eq(
+    try! image_lookup_for_test(figure, "/Alt"),
+    PdfString(@utf8.encode("UA image")),
+  )
+  let (_, metadata) = try! image_lookup_indirect_object_for_test(
+    document, catalog, "/Metadata",
+  )
+  guard metadata is PdfStreamObject(metadata_stream) else {
+    fail("expected PDF/UA metadata stream")
+  }
+  guard metadata_stream.data is StreamGot(metadata_bytes) else {
+    fail("expected materialized PDF/UA metadata")
+  }
+  @test.assert_eq(
+    image_find_bytes_for_test(
+      metadata_bytes,
+      @ascii.encode("<pdfuaid:part>2</pdfuaid:part>"),
+    ) >=
+    0,
+    true,
+  )
+}
+
+///|
+test "pdf_image_document_of_jpeg_data requires title for PDF/UA subformat" {
+  let result : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_image_document_of_jpeg_data(
+    image_jpeg_for_document_test(),
+    subformat=Some(PdfUA1),
+  )
+  guard result is Err(@pdflite.PdfError::TitleExpected) else {
+    fail("expected missing PDF/UA image title to raise TitleExpected")
+  }
 }
 
 ///|

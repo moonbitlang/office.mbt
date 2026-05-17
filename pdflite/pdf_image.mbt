@@ -63,6 +63,64 @@ let pdf_image_jbig2decode_name_value : PdfName = pdf_image_name("/JBIG2Decode")
 let pdf_image_jpxdecode_name_value : PdfName = pdf_image_name("/JPXDecode")
 
 ///|
+let pdf_image_length_key_name : PdfName = pdf_image_name("/Length")
+
+///|
+let pdf_image_filter_key_name : PdfName = pdf_image_name("/Filter")
+
+///|
+let pdf_image_subtype_key_name : PdfName = pdf_image_name("/Subtype")
+
+///|
+let pdf_image_image_name_value : PdfName = pdf_image_name("/Image")
+
+///|
+let pdf_image_device_rgb_name_value : PdfName = pdf_image_name("/DeviceRGB")
+
+///|
+let pdf_image_xobject_key_name : PdfName = pdf_image_name("/XObject")
+
+///|
+let pdf_image_i0_name_value : PdfName = pdf_image_name("/I0")
+
+///|
+let pdf_image_struct_parents_key_name : PdfName = pdf_image_name(
+  "/StructParents",
+)
+
+///|
+let pdf_image_figure_name_value : PdfName = pdf_image_name("/Figure")
+
+///|
+let pdf_image_mcid_key_name : PdfName = pdf_image_name("/MCID")
+
+///|
+let pdf_image_alt_key_name : PdfName = pdf_image_name("/Alt")
+
+///|
+let pdf_image_p_key_name : PdfName = pdf_image_name("/P")
+
+///|
+let pdf_image_s_key_name : PdfName = pdf_image_name("/S")
+
+///|
+let pdf_image_nums_key_name : PdfName = pdf_image_name("/Nums")
+
+///|
+let pdf_image_namespaces_key_name : PdfName = pdf_image_name("/Namespaces")
+
+///|
+let pdf_image_ns_key_name : PdfName = pdf_image_name("/NS")
+
+///|
+let pdf_image_document_name_value : PdfName = pdf_image_name("/Document")
+
+///|
+let pdf_image_pdfua2_namespace : PdfBytes = @ascii.encode(
+  "http://iso.org/pdf2/ssn",
+)
+
+///|
 fn pdf_image_image_mask_key() -> PdfName {
   pdf_image_image_mask_key_name
 }
@@ -158,6 +216,91 @@ fn pdf_image_jpxdecode_name() -> PdfName {
 }
 
 ///|
+fn pdf_image_length_key() -> PdfName {
+  pdf_image_length_key_name
+}
+
+///|
+fn pdf_image_filter_key() -> PdfName {
+  pdf_image_filter_key_name
+}
+
+///|
+fn pdf_image_subtype_key() -> PdfName {
+  pdf_image_subtype_key_name
+}
+
+///|
+fn pdf_image_image_name() -> PdfName {
+  pdf_image_image_name_value
+}
+
+///|
+fn pdf_image_device_rgb_name() -> PdfName {
+  pdf_image_device_rgb_name_value
+}
+
+///|
+fn pdf_image_xobject_key() -> PdfName {
+  pdf_image_xobject_key_name
+}
+
+///|
+fn pdf_image_i0_name() -> PdfName {
+  pdf_image_i0_name_value
+}
+
+///|
+fn pdf_image_struct_parents_key() -> PdfName {
+  pdf_image_struct_parents_key_name
+}
+
+///|
+fn pdf_image_figure_name() -> PdfName {
+  pdf_image_figure_name_value
+}
+
+///|
+fn pdf_image_mcid_key() -> PdfName {
+  pdf_image_mcid_key_name
+}
+
+///|
+fn pdf_image_alt_key() -> PdfName {
+  pdf_image_alt_key_name
+}
+
+///|
+fn pdf_image_p_key() -> PdfName {
+  pdf_image_p_key_name
+}
+
+///|
+fn pdf_image_s_key() -> PdfName {
+  pdf_image_s_key_name
+}
+
+///|
+fn pdf_image_nums_key() -> PdfName {
+  pdf_image_nums_key_name
+}
+
+///|
+fn pdf_image_namespaces_key() -> PdfName {
+  pdf_image_namespaces_key_name
+}
+
+///|
+fn pdf_image_ns_key() -> PdfName {
+  pdf_image_ns_key_name
+}
+
+///|
+fn pdf_image_document_name() -> PdfName {
+  pdf_image_document_name_value
+}
+
+///|
 /// Pixel layout for extracted raw image data.
 pub(all) enum PdfPixelLayout {
   PdfBPP1
@@ -178,6 +321,261 @@ pub(all) enum PdfImage {
   PdfJBIG2(PdfBytes, Array[Double]?, Int?)
   PdfRawImage(Int, Int, PdfPixelLayout, PdfBytes)
 } derive(Debug, Eq, ToJson)
+
+///|
+/// Build a PDF image XObject for JPEG data.
+pub fn pdf_image_object_of_jpeg_data(
+  data : BytesView,
+) -> PdfObject raise PdfError {
+  let (width, height) = pdf_jpeg_dimensions_view(data)
+  let payload = data.to_owned()
+  pdf_stream(
+    PdfDictionary([
+      (pdf_image_length_key(), PdfInteger(payload.length())),
+      (pdf_image_filter_key(), PdfNameObject(pdf_image_dctdecode_name())),
+      (pdf_image_bits_per_component_key(), PdfInteger(8)),
+      (pdf_image_colorspace_key(), PdfNameObject(pdf_image_device_rgb_name())),
+      (pdf_image_subtype_key(), PdfNameObject(pdf_image_image_name())),
+      (pdf_image_width_key(), PdfInteger(width)),
+      (pdf_image_height_key(), PdfInteger(height)),
+    ]),
+    StreamGot(payload),
+  )
+}
+
+///|
+/// Build a PDF image XObject for JPEG2000 data.
+pub fn pdf_image_object_of_jpeg2000_data(
+  data : BytesView,
+) -> PdfObject raise PdfError {
+  let (width, height) = pdf_jpeg2000_dimensions_view(data)
+  let payload = data.to_owned()
+  pdf_stream(
+    PdfDictionary([
+      (pdf_image_length_key(), PdfInteger(payload.length())),
+      (pdf_image_filter_key(), PdfNameObject(pdf_image_jpxdecode_name())),
+      (pdf_image_subtype_key(), PdfNameObject(pdf_image_image_name())),
+      (pdf_image_width_key(), PdfInteger(width)),
+      (pdf_image_height_key(), PdfInteger(height)),
+    ]),
+    StreamGot(payload),
+  )
+}
+
+///|
+fn PdfDocument::pdf_image_add_structure_tree(
+  self : PdfDocument,
+  subformat : PdfUASubformat?,
+  title : String,
+) -> Unit raise PdfError {
+  let structure_root_number = self.add_object(PdfNull)
+  let figure_number = self.add_object(PdfNull)
+  let parent_tree_number = self.add_object(PdfNull)
+  let figure_reference = PdfIndirect(figure_number)
+  let parent_tree = PdfDictionary([
+    (
+      pdf_image_nums_key(),
+      PdfArray([PdfInteger(1), PdfArray([figure_reference])]),
+    ),
+  ])
+  self.add_object_given_number(parent_tree_number, parent_tree)
+  match subformat {
+    Some(PdfUA2) => {
+      let ns_object = PdfIndirect(
+        self.add_object(
+          PdfDictionary([
+            (pdf_image_ns_key(), PdfString(pdf_image_pdfua2_namespace)),
+          ]),
+        ),
+      )
+      let document_number = self.add_object(PdfNull)
+      self.add_object_given_number(
+        document_number,
+        PdfDictionary([
+          (pdf_structure_k_key(), PdfArray([figure_reference])),
+          (pdf_image_p_key(), PdfIndirect(structure_root_number)),
+          (pdf_image_s_key(), PdfNameObject(pdf_image_document_name())),
+          (pdf_image_ns_key(), ns_object),
+        ]),
+      )
+      self.add_object_given_number(
+        figure_number,
+        PdfDictionary([
+          (pdf_structure_k_key(), PdfArray([PdfInteger(0)])),
+          (pdf_image_p_key(), PdfIndirect(document_number)),
+          (pdf_image_s_key(), PdfNameObject(pdf_image_figure_name())),
+          (pdf_image_alt_key(), PdfString(@utf8.encode(title))),
+        ]),
+      )
+      self.add_object_given_number(
+        structure_root_number,
+        PdfDictionary([
+          (pdf_image_namespaces_key(), PdfArray([ns_object])),
+          (pdf_ua_type_key(), PdfNameObject(pdf_ua_struct_tree_root())),
+          (pdf_structure_k_key(), PdfArray([PdfIndirect(document_number)])),
+          (pdf_structure_parent_tree_key(), PdfIndirect(parent_tree_number)),
+        ]),
+      )
+    }
+    _ => {
+      self.add_object_given_number(
+        figure_number,
+        PdfDictionary([
+          (pdf_structure_k_key(), PdfArray([PdfInteger(0)])),
+          (pdf_image_p_key(), PdfIndirect(structure_root_number)),
+          (pdf_image_s_key(), PdfNameObject(pdf_image_figure_name())),
+          (pdf_image_alt_key(), PdfString(@utf8.encode(title))),
+        ]),
+      )
+      self.add_object_given_number(
+        structure_root_number,
+        PdfDictionary([
+          (pdf_ua_type_key(), PdfNameObject(pdf_ua_struct_tree_root())),
+          (pdf_structure_k_key(), PdfArray([figure_reference])),
+          (pdf_structure_parent_tree_key(), PdfIndirect(parent_tree_number)),
+        ]),
+      )
+    }
+  }
+  self.replace_chain(
+    [pdf_structure_root_key(), pdf_structure_struct_tree_root_key()],
+    PdfIndirect(structure_root_number),
+  )
+}
+
+///|
+fn pdf_image_title_for_subformat(
+  subformat : PdfUASubformat?,
+  title : String?,
+) -> String raise PdfError {
+  match (subformat, title) {
+    (Some(_), Some(title)) => title
+    (Some(_), None) => raise TitleExpected
+    (None, Some(title)) => title
+    (None, None) => ""
+  }
+}
+
+///|
+fn pdf_image_content_ops(
+  structinfo : Bool,
+  width : Int,
+  height : Int,
+) -> Array[PdfContentOp] {
+  let output : Array[PdfContentOp] = []
+  if structinfo {
+    output.push(
+      Op_BDC(
+        pdf_image_figure_name(),
+        PdfDictionary([(pdf_image_mcid_key(), PdfInteger(0))]),
+      ),
+    )
+  }
+  output.push(
+    Op_cm({
+      ..transform_identity_matrix,
+      a: width.to_double(),
+      d: height.to_double(),
+    }),
+  )
+  output.push(Op_Do(pdf_image_i0_name()))
+  if structinfo {
+    output.push(Op_EMC)
+  }
+  output
+}
+
+///|
+/// Build a single-page PDF document that draws `image` at its natural size.
+pub fn pdf_image_document_of_object(
+  image : PdfObject,
+  process_struct_tree? : Bool = false,
+  subformat? : PdfUASubformat? = None,
+  title? : String? = None,
+) -> PdfDocument raise PdfError {
+  let title = pdf_image_title_for_subformat(subformat, title)
+  let structinfo = process_struct_tree || subformat != None
+  let document = pdf_document_empty()
+  let width = document.pdf_image_lookup_int_or_else(
+    pdf_image_width_key(),
+    pdf_image_w_key(),
+    image,
+  )
+  let height = document.pdf_image_lookup_int_or_else(
+    pdf_image_height_key(),
+    pdf_image_h_key(),
+    image,
+  )
+  let image_number = document.add_object(image)
+  let page : PdfPage = {
+    content: [
+      pdf_content_stream_of_ops(
+        pdf_image_content_ops(structinfo, width, height),
+      ),
+    ],
+    mediabox: PdfArray([
+      PdfReal(0.0),
+      PdfReal(0.0),
+      PdfReal(width.to_double()),
+      PdfReal(height.to_double()),
+    ]),
+    resources: PdfDictionary([
+      (
+        pdf_image_xobject_key(),
+        PdfDictionary([(pdf_image_i0_name(), PdfIndirect(image_number))]),
+      ),
+    ]),
+    rotate: Rotate0,
+    rest: if structinfo {
+      PdfDictionary([(pdf_image_struct_parents_key(), PdfInteger(1))])
+    } else {
+      PdfDictionary([])
+    },
+  }
+  let page_root = document.add_pagetree([page])
+  ignore(document.add_root(page_root, []))
+  if structinfo {
+    document.pdf_image_add_structure_tree(subformat, title)
+  }
+  match subformat {
+    Some(subformat) =>
+      document.pdf_ua_apply_subformat_metadata(subformat, title)
+    None => ()
+  }
+  document
+}
+
+///|
+/// Build a single-page PDF document from JPEG data.
+pub fn pdf_image_document_of_jpeg_data(
+  data : BytesView,
+  process_struct_tree? : Bool = false,
+  subformat? : PdfUASubformat? = None,
+  title? : String? = None,
+) -> PdfDocument raise PdfError {
+  pdf_image_document_of_object(
+    pdf_image_object_of_jpeg_data(data),
+    process_struct_tree~,
+    subformat~,
+    title~,
+  )
+}
+
+///|
+/// Build a single-page PDF document from JPEG2000 data.
+pub fn pdf_image_document_of_jpeg2000_data(
+  data : BytesView,
+  process_struct_tree? : Bool = false,
+  subformat? : PdfUASubformat? = None,
+  title? : String? = None,
+) -> PdfDocument raise PdfError {
+  pdf_image_document_of_object(
+    pdf_image_object_of_jpeg2000_data(data),
+    process_struct_tree~,
+    subformat~,
+    title~,
+  )
+}
 
 ///|
 fn PdfDocument::pdf_image_is_mask(
