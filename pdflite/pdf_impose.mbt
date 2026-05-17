@@ -197,6 +197,93 @@ fn PdfDocument::pdf_impose_transform_content(
 }
 
 ///|
+fn PdfDocument::pdf_impose_combine_page_resources(
+  self : PdfDocument,
+  pages : ArrayView[PdfPage],
+) -> PdfObject {
+  let mut resources = pages[0].resources
+  for index in 1..<pages.length() {
+    resources = self.combine_pdf_resources(resources, pages[index].resources)
+  }
+  resources
+}
+
+///|
+fn PdfDocument::pdf_impose_combine_page_rests(
+  self : PdfDocument,
+  pages : ArrayView[PdfPage],
+) -> PdfObject {
+  let mut rest = pages[0].rest
+  for index in 1..<pages.length() {
+    rest = self.combine_pdf_rests(rest, pages[index].rest)
+  }
+  rest
+}
+
+///|
+#warnings("-unused_value")
+fn PdfDocument::pdf_impose_pages_core(
+  self : PdfDocument,
+  pages : ArrayView[PdfPage],
+  fit : Bool,
+  x : Int,
+  y : Int,
+  columns : Bool,
+  rtl : Bool,
+  btt : Bool,
+  center : Bool,
+  margin : Double,
+  output_mediabox : PdfObject,
+  fast : Bool,
+  fit_extra_hspace : Double,
+  fit_extra_vspace : Double,
+) -> PdfPage raise PdfError {
+  if pages.length() == 0 {
+    raise BadNumberArgument("impose: pages must not be empty")
+  }
+  let first_page = pages[0]
+  let transforms = self.pdf_impose_transforms(
+    fit,
+    x,
+    y,
+    columns,
+    rtl,
+    btt,
+    center,
+    margin,
+    first_page.mediabox,
+    output_mediabox,
+    fit_extra_hspace,
+    fit_extra_vspace,
+    pages.length(),
+  )
+  for index in 0..<pages.length() {
+    self.transform_annotations(transforms[index], pages[index].rest)
+  }
+  let resources = self.pdf_impose_combine_page_resources(pages)
+  let rest = self.pdf_impose_combine_page_rests(pages)
+  let content : Array[PdfObject] = []
+  for index in 0..<pages.length() {
+    pdf_impose_push_objects(
+      content,
+      self.pdf_impose_transform_content(
+        resources,
+        transforms[index],
+        pages[index].content,
+        fast,
+      ),
+    )
+  }
+  {
+    mediabox: output_mediabox,
+    rotate: first_page.rotate,
+    content,
+    resources,
+    rest,
+  }
+}
+
+///|
 #warnings("-unused_value")
 fn PdfDocument::pdf_impose_transforms(
   self : PdfDocument,

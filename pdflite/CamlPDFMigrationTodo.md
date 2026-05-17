@@ -23,7 +23,8 @@ Current estimate:
   composition reporting, core metadata APIs, XMP metadata-date rewriting, XMP
   info synchronization, XMP metadata creation, XMP RDF list extraction,
   XMP/document info JSON reporting, redaction annotation bounding-box overlays,
-  imposition transform/content kernels, and Markdown helper public APIs.
+  imposition transform/content/page-assembly kernels, and Markdown helper
+  public APIs.
 
 Current backend snapshot:
 
@@ -51,6 +52,14 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port the safe page-assembly core from `cpdfimpose.impose_pages`:
+  private `pdf_impose_pages_core` now assembles one imposed page from an
+  already-renumbered page set, preserves the first page rotation, combines page
+  resources and rest dictionaries, transforms direct and indirect annotation
+  geometry, and concatenates transformed content streams through the existing
+  fast/parsed content wrapper. The source pattern-matrix rewrite remains a
+  separate deferred slice. `moon test --target native pdf_impose_wbtest.mbt`
+  reports 8/8 tests passing.~~
 - [x] ~~Port the content-wrapping kernel from `cpdfimpose.impose_pages`:
   private `pdf_impose_transform_content` now preserves CamlPDF's fast path
   shape (`q cm`, original streams, `Q`) and normal parsed path shape using

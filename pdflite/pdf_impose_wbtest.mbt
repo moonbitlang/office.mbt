@@ -4,6 +4,11 @@ fn impose_box_for_test(width : Double, height : Double) -> PdfObject {
 }
 
 ///|
+fn impose_name_for_test(text : String) -> PdfName {
+  pdf_name_of_bytes(@ascii.encode(text))
+}
+
+///|
 fn impose_transforms_for_test(
   fit? : Bool = false,
   x? : Int = 2,
@@ -51,6 +56,24 @@ fn impose_content_ops_for_test(
   content : ArrayView[PdfObject],
 ) -> Array[PdfContentOp] raise PdfError {
   document.parse_content_ops_with_resources(PdfDictionary([]), content)
+}
+
+///|
+fn impose_page_for_test(
+  ops : ArrayView[PdfContentOp],
+  resources? : PdfObject = PdfDictionary([]),
+  rest? : PdfObject = PdfDictionary([]),
+  rotate? : PdfPageRotation = Rotate0,
+  width? : Double = 100.0,
+  height? : Double = 100.0,
+) -> PdfPage raise PdfError {
+  {
+    content: [pdf_content_stream_of_ops(ops)],
+    mediabox: impose_box_for_test(width, height),
+    resources,
+    rotate,
+    rest,
+  }
 }
 
 ///|
@@ -179,4 +202,136 @@ test "pdf_impose_transform_content wraps fast and parsed content like cpdf" {
     Op_BT,
     Op_Q,
   ])
+}
+
+///|
+test "pdf_impose_pages_core combines pages and transforms annotations" {
+  let document = pdf_document_empty()
+  let key_annots = impose_name_for_test("/Annots")
+  let key_rect = impose_name_for_test("/Rect")
+  let key_font = impose_name_for_test("/Font")
+  let key_xobject = impose_name_for_test("/XObject")
+  let key_first = impose_name_for_test("/First")
+  let key_second = impose_name_for_test("/Second")
+  let first_font = impose_name_for_test("/F1")
+  let second_xobject = impose_name_for_test("/Im1")
+  let direct_annotation = PdfDictionary([
+    (
+      key_rect,
+      PdfArray([PdfInteger(0), PdfInteger(0), PdfInteger(10), PdfInteger(10)]),
+    ),
+  ])
+  document.add_object_given_number(
+    20,
+    PdfDictionary([
+      (
+        key_rect,
+        PdfArray([PdfInteger(1), PdfInteger(2), PdfInteger(3), PdfInteger(4)]),
+      ),
+    ]),
+  )
+  let first_page = try! impose_page_for_test(
+    [Op_BT, Op_ET],
+    resources=PdfDictionary([
+      (key_font, PdfDictionary([(first_font, PdfIndirect(10))])),
+    ]),
+    rest=PdfDictionary([
+      (key_first, PdfInteger(1)),
+      (key_annots, PdfArray([direct_annotation])),
+    ]),
+    rotate=Rotate90,
+  )
+  let second_page = try! impose_page_for_test(
+    [Op_S],
+    resources=PdfDictionary([
+      (key_xobject, PdfDictionary([(second_xobject, PdfIndirect(11))])),
+    ]),
+    rest=PdfDictionary([
+      (key_second, PdfInteger(2)),
+      (key_annots, PdfArray([PdfIndirect(20)])),
+    ]),
+  )
+  let imposed = try! document.pdf_impose_pages_core(
+    [first_page, second_page],
+    false,
+    2,
+    1,
+    false,
+    false,
+    false,
+    false,
+    0.0,
+    impose_box_for_test(200.0, 100.0),
+    false,
+    0.0,
+    0.0,
+  )
+  @test.assert_eq(imposed.mediabox, impose_box_for_test(200.0, 100.0))
+  @test.assert_eq(imposed.rotate, Rotate90)
+  @test.assert_eq(imposed.content.length(), 2)
+  @test.assert_eq(
+    document.parse_content_ops_with_resources(
+      imposed.resources,
+      imposed.content,
+    ),
+    [
+      Op_q,
+      Op_cm(transform_translate(0.0, 0.0)),
+      Op_BT,
+      Op_ET,
+      Op_Q,
+      Op_q,
+      Op_cm(transform_translate(100.0, 0.0)),
+      Op_S,
+      Op_Q,
+    ],
+  )
+  @test.assert_eq(
+    imposed.resources.lookup_immediate(key_font),
+    Some(PdfDictionary([(first_font, PdfIndirect(10))])),
+  )
+  @test.assert_eq(
+    imposed.resources.lookup_immediate(key_xobject),
+    Some(PdfDictionary([(second_xobject, PdfIndirect(11))])),
+  )
+  @test.assert_eq(imposed.rest.lookup_immediate(key_first), Some(PdfInteger(1)))
+  @test.assert_eq(
+    imposed.rest.lookup_immediate(key_second),
+    Some(PdfInteger(2)),
+  )
+  guard imposed.rest.lookup_immediate(key_annots)
+    is Some(PdfArray([PdfDictionary(_) as annotation, PdfIndirect(20)])) else {
+    fail("expected combined annotation array")
+  }
+  @test.assert_eq(
+    annotation.lookup_immediate(key_rect),
+    Some(PdfArray([PdfReal(0.0), PdfReal(0.0), PdfReal(10.0), PdfReal(10.0)])),
+  )
+  @test.assert_eq(
+    document.lookup_object_or_null(20).lookup_immediate(key_rect),
+    Some(PdfArray([PdfReal(101.0), PdfReal(2.0), PdfReal(103.0), PdfReal(4.0)])),
+  )
+}
+
+///|
+test "pdf_impose_pages_core rejects empty page sets" {
+  let result : Result[PdfPage, Error] = try? pdf_document_empty().pdf_impose_pages_core(
+    [],
+    false,
+    1,
+    1,
+    false,
+    false,
+    false,
+    false,
+    0.0,
+    impose_box_for_test(100.0, 100.0),
+    false,
+    0.0,
+    0.0,
+  )
+  guard result
+    is Err(PdfError::BadNumberArgument("impose: pages must not be empty")) else {
+    fail("expected BadNumberArgument for empty imposition page set")
+  }
 }
