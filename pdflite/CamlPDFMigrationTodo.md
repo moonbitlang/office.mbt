@@ -23,7 +23,7 @@ Current estimate:
   composition reporting, core metadata APIs, XMP metadata-date rewriting, XMP
   info synchronization, XMP metadata creation, XMP RDF list extraction,
   XMP/document info JSON reporting, redaction annotation bounding-box overlays,
-  and Markdown helper public APIs.
+  the imposition transform kernel, and Markdown helper public APIs.
 
 Current backend snapshot:
 
@@ -51,6 +51,15 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port the pure transformation kernel from `cpdfimpose`: private
+  `pdf_impose_transforms` now preserves row-major and column-major placement,
+  right-to-left/bottom-to-top ordering, short-final-row centering, fit extra
+  spacing, and fitted margin scaling/rejection ahead of the full page
+  imposition pipeline. White-box coverage pins row and column ordering,
+  right-to-left/bottom-to-top ordering, centered final rows, fit spacing/
+  margins, and invalid grid/margin errors. `moon test --target native
+  pdf_impose_wbtest.mbt` reports 5/5 tests
+  passing.~~
 - [x] ~~Port the implemented annotation-overlay part of `cpdfredact`:
   `show_annotation_bounding_boxes` now draws cpdf-style yellow/light-yellow
   annotation rectangles through the existing page-content rewrite path, handles
