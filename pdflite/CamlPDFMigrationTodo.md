@@ -1276,6 +1276,13 @@ Current backend snapshot:
   read/write/reread boundaries.~~
 - [x] ~~Example-level gates for `pdfdecomp.ml`, `pdftest.ml`, `pdfdraft.ml`,
   `pdfencrypt.ml`, and `pdfmergeexample.ml`.~~
+- [x] ~~Standalone `cpdfportfolio.ml`-style portfolio assembly now exposes
+  in-memory entry APIs plus native async file wrappers, with embedded-file name
+  tree, collection dictionary, metadata, and file-path tests.~~
+- [x] ~~Standalone `cpdfdraft.ml`-style draft image removal now exposes
+  `PdfDocument::draft` and `pdf_draft`, covering image XObjects, inline images,
+  named-only removal, recursive Form XObjects, malformed resources, unselected
+  pages, and compressed write/read roundtrips.~~
 - [x] ~~Page labels, bookmarks, annotations, duplicate annotation repair,
   old-style destinations, name-tree destinations, `/OpenAction`, optional
   content, AcroForm merge basics, trailer `/Info`, and structure-tree
