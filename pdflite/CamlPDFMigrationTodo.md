@@ -48,6 +48,12 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port `cpdfmetadata.determine_subformats` for in-memory documents:
+  namespace-aware XMP scanning now detects PDF/E, PDF/UA, PDF/A part plus
+  conformance, PDF/X, and PDF/VT markers in cpdf output order, including
+  attribute and element forms, and preserves the `/Info /GTS_PDFXVersion`
+  fallback when XMP lacks a PDF/X marker. `moon test --target native
+  pdf_metadata_test.mbt` now reports 12/12 tests passing.~~
 - [x] ~~Extend the `cpdfmetadata` reporting surface with cpdf-style catalog and
   viewer-preference wrappers, MarkInfo/XFA query helpers, OpenAction reporting
   that rewrites page indirect references back to one-based page numbers,

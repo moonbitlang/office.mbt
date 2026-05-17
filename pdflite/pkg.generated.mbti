@@ -243,6 +243,8 @@ pub fn pdf_decode_stream_onestage(PdfObject) -> PdfObject raise @core.PdfError
 
 pub let pdf_default_version : PdfVersion
 
+pub fn pdf_determine_subformats(PdfDocument) -> Array[String] raise @core.PdfError
+
 pub fn pdf_deterministic_aes_iv_provider_from_seed(BytesView) -> (Int, Int, Int) -> Bytes raise @core.PdfError
 
 pub fn pdf_deterministic_aesv3_random_provider_from_seed(BytesView) -> (@crypt_core.PdfAesV3RandomField, Int) -> Bytes raise @core.PdfError
@@ -417,7 +419,25 @@ pub fn pdf_merge_pdfs(Bool, Bool, ArrayView[String], ArrayView[PdfDocument], Arr
 
 pub fn pdf_merge_structure_trees(PdfDocument, ArrayView[PdfDocument], add_toplevel_document? : Bool) -> Int? raise @core.PdfError
 
+pub let pdf_metadata_adobe_namespace : String
+
+pub let pdf_metadata_dc_namespace : String
+
 pub fn pdf_metadata_encode_output(PdfMetadataEncoding, BytesView) -> Bytes raise @core.PdfError
+
+pub let pdf_metadata_pdfaid_namespace : String
+
+pub let pdf_metadata_pdfe_namespace : String
+
+pub let pdf_metadata_pdfuaid_namespace : String
+
+pub let pdf_metadata_pdfvtid_namespace : String
+
+pub let pdf_metadata_pdfxid_namespace : String
+
+pub let pdf_metadata_rdf_namespace : String
+
+pub let pdf_metadata_xmp_namespace : String
 
 pub fn pdf_minimum_valid_pdf() -> PdfDocument raise @core.PdfError
 
@@ -1472,6 +1492,7 @@ pub fn PdfDocument::decrypt_single_stream(Self, Int, Int, PdfObject, user_passwo
 pub fn PdfDocument::decrypt_with_owner_password(Self, BytesView, no_encrypt_metadata? : Bool) -> PdfDecryptionResult? raise @core.PdfError
 pub fn PdfDocument::decrypt_with_passwords(Self, user_password? : BytesView?, owner_password? : BytesView?, no_encrypt_metadata? : Bool) -> PdfDecryptionResult? raise @core.PdfError
 pub fn PdfDocument::decrypt_with_user_password(Self, BytesView, no_encrypt_metadata? : Bool) -> PdfDecryptionResult? raise @core.PdfError
+pub fn PdfDocument::determine_subformats(Self) -> Array[String] raise @core.PdfError
 pub fn PdfDocument::dict_entries_json(Self, @core.PdfName, utf8? : Bool) -> Bytes raise @core.PdfError
 pub fn PdfDocument::dict_entry_rendered_values(Self, @core.PdfName) -> Array[Bytes] raise @core.PdfError
 pub fn PdfDocument::dict_entry_values(Self, @core.PdfName) -> Array[PdfObject]

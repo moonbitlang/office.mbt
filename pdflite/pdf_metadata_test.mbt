@@ -387,6 +387,63 @@ test "PdfDocument metadata stream set get remove and remove_all" {
 }
 
 ///|
+test "PdfDocument determine_subformats reads XMP markers in cpdf order" {
+  let doc = try! @pdflite.pdf_minimum_valid_pdf()
+  let metadata_text =
+    #|<x:xmpmeta xmlns:x="adobe:ns:meta/"
+    #| xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    #| xmlns:e="http://www.aiim.org/pdfe/ns/id/"
+    #| xmlns:ua="http://www.aiim.org/pdfua/ns/id/"
+    #| xmlns:aid="http://www.aiim.org/pdfa/ns/id/"
+    #| xmlns:px="http://www.npes.org/pdfx/ns/id/"
+    #| xmlns:vt="http://www.npes.org/pdfvt/ns/id/">
+    #| <rdf:RDF>
+    #|  <rdf:Description aid:part="2" aid:conformance="B"/>
+    #|  <e:ISO_PDFEVersion>PDF/E-1</e:ISO_PDFEVersion>
+    #|  <ua:part>2</ua:part>
+    #|  <px:GTS_PDFXVersion>PDF/X-4</px:GTS_PDFXVersion>
+    #|  <vt:GTS_PDFVTVersion>PDF/VT-1</vt:GTS_PDFVTVersion>
+    #| </rdf:RDF>
+    #|</x:xmpmeta>
+  let metadata = @ascii.encode(metadata_text)
+  let with_metadata = try! doc.set_metadata_from_bytes(metadata)
+  let expected = ["PDF/VT-1", "PDF/X-4", "PDF/A-2b", "PDF/UA-2", "PDF/E-1"]
+  @test.assert_eq(try! with_metadata.determine_subformats(), expected)
+  @test.assert_eq(
+    try! @pdflite.pdf_determine_subformats(with_metadata),
+    expected,
+  )
+}
+
+///|
+fn metadata_without_pdfx_text_for_test() -> String {
+  let text =
+    #|<x:xmpmeta xmlns:x="adobe:ns:meta/"
+    #| xmlns:pdfuaid="http://www.aiim.org/pdfua/ns/id/">
+    #| <pdfuaid:part>1</pdfuaid:part>
+    #|</x:xmpmeta>
+  text
+}
+
+///|
+test "PdfDocument determine_subformats falls back to Info PDFX marker" {
+  let doc = try! @pdflite.pdf_minimum_valid_pdf()
+  let key_pdfx = metadata_name_for_test("/GTS_PDFXVersion")
+  let with_info = try! doc.set_info_entry(
+    key_pdfx,
+    PdfString(@ascii.encode("PDF/X-1a:2003")),
+    3,
+  )
+  @test.assert_eq(try! with_info.determine_subformats(), ["PDF/X-1a:2003"])
+  let metadata_without_pdfx = try! with_info.set_metadata_from_bytes(
+    @ascii.encode(metadata_without_pdfx_text_for_test()),
+  )
+  @test.assert_eq(try! metadata_without_pdfx.determine_subformats(), [
+    "PDF/X-1a:2003", "PDF/UA-1",
+  ])
+}
+
+///|
 test "pdf metadata compatibility wrappers keep cpdf argument order" {
   let doc = try! @pdflite.pdf_minimum_valid_pdf()
   let key_producer = metadata_name_for_test("/Producer")

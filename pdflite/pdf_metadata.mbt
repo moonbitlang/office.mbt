@@ -199,6 +199,39 @@ fn pdf_metadata_trapped() -> PdfName {
 }
 
 ///|
+pub let pdf_metadata_adobe_namespace : String = "http://ns.adobe.com/pdf/1.3/"
+
+///|
+pub let pdf_metadata_xmp_namespace : String = "http://ns.adobe.com/xap/1.0/"
+
+///|
+pub let pdf_metadata_dc_namespace : String = "http://purl.org/dc/elements/1.1/"
+
+///|
+pub let pdf_metadata_rdf_namespace : String = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+
+///|
+pub let pdf_metadata_pdfaid_namespace : String = "http://www.aiim.org/pdfa/ns/id/"
+
+///|
+let pdf_metadata_pdfaid_wrong_iso_namespace : String = "http://www.aiim.org/pdfa/ns/id"
+
+///|
+let pdf_metadata_pdfaid_wrong_acrobat_namespace : String = "http://www.aiim.org/pdfa/ns/id.html"
+
+///|
+pub let pdf_metadata_pdfxid_namespace : String = "http://www.npes.org/pdfx/ns/id/"
+
+///|
+pub let pdf_metadata_pdfe_namespace : String = "http://www.aiim.org/pdfe/ns/id/"
+
+///|
+pub let pdf_metadata_pdfuaid_namespace : String = "http://www.aiim.org/pdfua/ns/id/"
+
+///|
+pub let pdf_metadata_pdfvtid_namespace : String = "http://www.npes.org/pdfvt/ns/id/"
+
+///|
 fn pdf_metadata_bool_string(value : Bool) -> String {
   if value {
     "True"
@@ -660,6 +693,373 @@ pub fn PdfDocument::open_action_string(
 }
 
 ///|
+fn pdf_metadata_is_xml_separator(byte : Byte) -> Bool {
+  match byte.to_int() {
+    9 | 10 | 13 | 32 | 60 => true
+    _ => false
+  }
+}
+
+///|
+fn pdf_metadata_is_xml_space(byte : Byte) -> Bool {
+  match byte.to_int() {
+    9 | 10 | 13 | 32 => true
+    _ => false
+  }
+}
+
+///|
+fn pdf_metadata_trim_xml_text(value : BytesView) -> BytesView {
+  let mut start = 0
+  let mut end = value.length()
+  while start < end && pdf_metadata_is_xml_space(value[start]) {
+    start += 1
+  }
+  while end > start && pdf_metadata_is_xml_space(value[end - 1]) {
+    end -= 1
+  }
+  value[start:end]
+}
+
+///|
+fn pdf_metadata_decode_xml_text(value : BytesView) -> String? {
+  let text = @utf8.decode(pdf_metadata_trim_xml_text(value)) catch {
+    _ => return None
+  }
+  Some(text)
+}
+
+///|
+fn pdf_metadata_find_byte(data : BytesView, start : Int, byte : Int) -> Int {
+  for position = start; position < data.length(); position = position + 1 {
+    if data[position].to_int() == byte {
+      break position
+    }
+  } nobreak {
+    -1
+  }
+}
+
+///|
+fn pdf_metadata_view_matches_at(
+  data : BytesView,
+  position : Int,
+  pattern : BytesView,
+) -> Bool {
+  if position < 0 || position + pattern.length() > data.length() {
+    false
+  } else {
+    for index = 0; index < pattern.length(); index = index + 1 {
+      if data[position + index] != pattern[index] {
+        break false
+      }
+    } nobreak {
+      true
+    }
+  }
+}
+
+///|
+fn pdf_metadata_find_bytes_from(
+  data : BytesView,
+  start : Int,
+  pattern : BytesView,
+) -> Int {
+  if pattern.length() == 0 {
+    start
+  } else if data.length() < pattern.length() ||
+    start > data.length() - pattern.length() {
+    -1
+  } else {
+    for position = start
+        position <= data.length() - pattern.length()
+        position = position + 1 {
+      if pdf_metadata_view_matches_at(data, position, pattern) {
+        break position
+      }
+    } nobreak {
+      -1
+    }
+  }
+}
+
+///|
+fn pdf_metadata_add_unique(values : Array[String], value : String) -> Unit {
+  if value != "" && !values.contains(value) {
+    values.push(value)
+  }
+}
+
+///|
+fn pdf_metadata_namespace_prefixes(
+  data : BytesView,
+  xml_namespace : String,
+  fallback : String,
+) -> Array[String] {
+  let prefixes : Array[String] = []
+  pdf_metadata_add_unique(prefixes, fallback)
+  let namespace_bytes = @ascii.encode(xml_namespace)
+  let xmlns = [120, 109, 108, 110, 115, 58]
+  let mut search_start = 0
+  while search_start < data.length() {
+    let namespace_start = pdf_metadata_find_bytes_from(
+      data, search_start, namespace_bytes,
+    )
+    if namespace_start < 0 {
+      search_start = data.length()
+    } else {
+      let mut attribute_start = namespace_start
+      while attribute_start > 0 &&
+            !pdf_metadata_is_xml_separator(data[attribute_start - 1]) {
+        attribute_start -= 1
+      }
+      if pdf_view_matches_ascii_at(data, attribute_start, xmlns) {
+        let prefix_start = attribute_start + xmlns.length()
+        let mut prefix_end = prefix_start
+        while prefix_end < namespace_start &&
+              data[prefix_end].to_int() != 61 &&
+              data[prefix_end].to_int() != 34 &&
+              data[prefix_end].to_int() != 39 {
+          prefix_end += 1
+        }
+        match pdf_metadata_decode_xml_text(data[prefix_start:prefix_end]) {
+          Some(prefix) => pdf_metadata_add_unique(prefixes, prefix)
+          None => ()
+        }
+      }
+      search_start = namespace_start + namespace_bytes.length()
+    }
+  }
+  prefixes
+}
+
+///|
+fn pdf_metadata_extract_quoted_xml_value(
+  data : BytesView,
+  start : Int,
+  quote : Int,
+) -> String? {
+  let end = pdf_metadata_find_byte(data, start, quote)
+  if end < 0 {
+    None
+  } else {
+    pdf_metadata_decode_xml_text(data[start:end])
+  }
+}
+
+///|
+fn pdf_metadata_extract_xmp_attribute(
+  data : BytesView,
+  prefix : String,
+  name : String,
+) -> String? {
+  let double_pattern = @ascii.encode(prefix + ":" + name + "=\"")
+  let double_start = pdf_metadata_find_bytes_from(data, 0, double_pattern)
+  if double_start >= 0 {
+    pdf_metadata_extract_quoted_xml_value(
+      data,
+      double_start + double_pattern.length(),
+      34,
+    )
+  } else {
+    let single_pattern = @ascii.encode(prefix + ":" + name + "='")
+    let single_start = pdf_metadata_find_bytes_from(data, 0, single_pattern)
+    if single_start >= 0 {
+      pdf_metadata_extract_quoted_xml_value(
+        data,
+        single_start + single_pattern.length(),
+        39,
+      )
+    } else {
+      None
+    }
+  }
+}
+
+///|
+fn pdf_metadata_extract_xmp_element(
+  data : BytesView,
+  prefix : String,
+  name : String,
+) -> String? {
+  let open_pattern = @ascii.encode("<" + prefix + ":" + name)
+  let tag_start = pdf_metadata_find_bytes_from(data, 0, open_pattern)
+  if tag_start < 0 {
+    None
+  } else {
+    let tag_end = pdf_metadata_find_byte(
+      data,
+      tag_start + open_pattern.length(),
+      62,
+    )
+    if tag_end < 0 || data[tag_end - 1].to_int() == 47 {
+      None
+    } else {
+      let close_pattern = @ascii.encode("</" + prefix + ":" + name + ">")
+      let value_start = tag_end + 1
+      let value_end = pdf_metadata_find_bytes_from(
+        data, value_start, close_pattern,
+      )
+      if value_end < 0 {
+        None
+      } else {
+        pdf_metadata_decode_xml_text(data[value_start:value_end])
+      }
+    }
+  }
+}
+
+///|
+fn pdf_metadata_get_xmp_data(
+  data : BytesView,
+  xml_namespace : String,
+  fallback_prefix : String,
+  name : String,
+) -> String? {
+  let prefixes = pdf_metadata_namespace_prefixes(
+    data, xml_namespace, fallback_prefix,
+  )
+  for prefix in prefixes {
+    match pdf_metadata_extract_xmp_attribute(data, prefix, name) {
+      Some(value) => break Some(value)
+      None =>
+        match pdf_metadata_extract_xmp_element(data, prefix, name) {
+          Some(value) => break Some(value)
+          None => ()
+        }
+    }
+  } nobreak {
+    None
+  }
+}
+
+///|
+fn pdf_metadata_decode_pdf_string(value : BytesView) -> String? {
+  let text = @utf8.decode(value) catch { _ => return None }
+  Some(text)
+}
+
+///|
+fn PdfDocument::pdf_metadata_fallback_pdfx(self : PdfDocument) -> String? {
+  match self.lookup_direct(pdf_metadata_info(), self.trailer_dict()) {
+    Some(info) =>
+      match self.lookup_direct(pdf_metadata_name("/GTS_PDFXVersion"), info) {
+        Some(PdfString(value)) => pdf_metadata_decode_pdf_string(value)
+        _ => None
+      }
+    None => None
+  }
+}
+
+///|
+fn pdf_metadata_reverse_strings(values : ArrayView[String]) -> Array[String] {
+  let output : Array[String] = []
+  for index = values.length() - 1; index >= 0; index = index - 1 {
+    output.push(values[index])
+  }
+  output
+}
+
+///|
+fn pdf_metadata_push_if_some(values : Array[String], value : String?) -> Unit {
+  match value {
+    Some(value) if value != "" => values.push(value)
+    _ => ()
+  }
+}
+
+///|
+/// Determine PDF/A, PDF/E, PDF/UA, PDF/VT, and PDF/X subformat markers.
+///
+/// This ports cpdf's in-memory subformat detection. It recognizes simple XMP
+/// element and attribute forms and falls back to `/Info /GTS_PDFXVersion`.
+pub fn PdfDocument::determine_subformats(
+  self : PdfDocument,
+) -> Array[String] raise PdfError {
+  let formats : Array[String] = []
+  match self.metadata() {
+    None =>
+      pdf_metadata_push_if_some(formats, self.pdf_metadata_fallback_pdfx())
+    Some(metadata) => {
+      pdf_metadata_push_if_some(
+        formats,
+        pdf_metadata_get_xmp_data(
+          metadata, pdf_metadata_pdfe_namespace, "pdfe", "ISO_PDFEVersion",
+        ),
+      )
+      match
+        pdf_metadata_get_xmp_data(
+          metadata, pdf_metadata_pdfuaid_namespace, "pdfuaid", "part",
+        ) {
+        Some(part) if part != "" => formats.push("PDF/UA-" + part)
+        _ => ()
+      }
+      let pdfa_part = match
+        pdf_metadata_get_xmp_data(
+          metadata, pdf_metadata_pdfaid_namespace, "pdfaid", "part",
+        ) {
+        Some(part) => Some(part)
+        None =>
+          match
+            pdf_metadata_get_xmp_data(
+              metadata, pdf_metadata_pdfaid_wrong_acrobat_namespace, "pdfaid", "part",
+            ) {
+            Some(part) => Some(part)
+            None =>
+              pdf_metadata_get_xmp_data(
+                metadata, pdf_metadata_pdfaid_wrong_iso_namespace, "pdfaid", "part",
+              )
+          }
+      }
+      match pdfa_part {
+        Some(part) if part != "" => {
+          let conformance = match
+            pdf_metadata_get_xmp_data(
+              metadata, pdf_metadata_pdfaid_namespace, "pdfaid", "conformance",
+            ) {
+            Some(value) => value.to_lower()
+            None =>
+              match
+                pdf_metadata_get_xmp_data(
+                  metadata, pdf_metadata_pdfaid_wrong_acrobat_namespace, "pdfaid",
+                  "conformance",
+                ) {
+                Some(value) => value.to_lower()
+                None =>
+                  match
+                    pdf_metadata_get_xmp_data(
+                      metadata, pdf_metadata_pdfaid_wrong_iso_namespace, "pdfaid",
+                      "conformance",
+                    ) {
+                    Some(value) => value.to_lower()
+                    None => ""
+                  }
+              }
+          }
+          formats.push("PDF/A-" + part + conformance)
+        }
+        _ => ()
+      }
+      match
+        pdf_metadata_get_xmp_data(
+          metadata, pdf_metadata_pdfxid_namespace, "pdfxid", "GTS_PDFXVersion",
+        ) {
+        Some(value) if value != "" => formats.push(value)
+        _ =>
+          pdf_metadata_push_if_some(formats, self.pdf_metadata_fallback_pdfx())
+      }
+      pdf_metadata_push_if_some(
+        formats,
+        pdf_metadata_get_xmp_data(
+          metadata, pdf_metadata_pdfvtid_namespace, "pdfvtid", "GTS_PDFVTVersion",
+        ),
+      )
+    }
+  }
+  pdf_metadata_reverse_strings(formats)
+}
+
+///|
 /// Return the catalog `/Lang` value, if present.
 pub fn PdfDocument::language(self : PdfDocument) -> PdfBytes? {
   match
@@ -896,6 +1296,14 @@ pub fn pdf_get_open_action_string(
 pub fn pdf_set_version(minor : Int, document : PdfDocument) -> Unit {
   let (major, _) = document.version()
   document.set_version(major, minor)
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::determine_subformats`.
+pub fn pdf_determine_subformats(
+  document : PdfDocument,
+) -> Array[String] raise PdfError {
+  document.determine_subformats()
 }
 
 ///|
