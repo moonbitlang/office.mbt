@@ -563,6 +563,10 @@ pub fn pdf_standard_font_of_pdf_name(@core.PdfName) -> PdfStandardFont?
 
 pub fn pdf_stream(PdfObject, PdfStreamData) -> PdfObject
 
+pub fn pdf_strftime_dummy_time() -> PdfStrftimeTime
+
+pub fn pdf_strftime_with_time(PdfStrftimeTime, String) -> String
+
 pub fn pdf_string_of_bookmark(PdfBookmark) -> Bytes raise @core.PdfError
 
 pub fn pdf_string_of_calculator(ArrayView[PdfCalculatorOp]) -> String
@@ -1789,6 +1793,18 @@ pub(all) enum PdfStreamPredictor {
   PdfStreamPredictorPNGOptimum
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfStreamPredictor::number(Self) -> Int
+
+pub(all) struct PdfStrftimeTime {
+  tm_sec : Int
+  tm_min : Int
+  tm_hour : Int
+  tm_mday : Int
+  tm_mon : Int
+  tm_year : Int
+  tm_wday : Int
+  tm_yday : Int
+  tm_isdst : Bool
+} derive(Eq, ToJson, @debug.Debug)
 
 pub(all) enum PdfTargetPage {
   TargetPageObject(Int)

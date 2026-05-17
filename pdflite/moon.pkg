@@ -24,7 +24,7 @@ import {
 } for "wbtest"
 
 options(
-  "native-stub": [ "pdf_random_native.c" ],
+  "native-stub": [ "pdf_random_native.c", "pdf_time_native.c" ],
   targets: {
     "pdf_codec_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
     "pdf_crypt_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
@@ -34,6 +34,8 @@ options(
     "pdf_random_native.mbt": [ "native" ],
     "pdf_random_native_test.mbt": [ "native" ],
     "pdf_random_native_wbtest.mbt": [ "native" ],
+    "pdf_strftime_native.mbt": [ "native" ],
+    "pdf_strftime_native_test.mbt": [ "native" ],
     "pdf_reader_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
     "pdf_text_agl_arabic_presentation_test.mbt": [
       "wasm-gc",
