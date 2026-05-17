@@ -1409,6 +1409,12 @@ Current backend snapshot:
   markers. Native focused validation reports
   `moon test --target native pdf_content_test.mbt` at 58/58 tests passing;
   native full-suite validation reports 1558/1558 tests passing.~~
+- [x] ~~Standalone `cpdftype.ml` width-helper slice now exposes
+  `pdf_type_font_widths` and `pdf_type_width_of_bytes`, covering standard-font
+  width scaling, simple-font explicit metrics, direct byte/charcode summation,
+  missing simple-font metrics, and short width-table failures. Native focused
+  validation reports `moon test --target native pdf_type_test.mbt` at 3/3 tests
+  passing; native full-suite validation reports 1561/1561 tests passing.~~
 - [x] ~~Page labels, bookmarks, annotations, duplicate annotation repair,
   old-style destinations, name-tree destinations, `/OpenAction`, optional
   content, AcroForm merge basics, trailer `/Info`, and structure-tree

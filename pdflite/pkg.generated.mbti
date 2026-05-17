@@ -733,6 +733,10 @@ pub fn pdf_transform_destination(PdfDocument, @geometry.TransformMatrix, PdfDest
 
 pub fn pdf_trim_structure_tree(PdfDocument, ArrayView[Int]) -> Unit raise @core.PdfError
 
+pub fn pdf_type_font_widths(PdfFont, Double) -> Array[Double] raise @core.PdfError
+
+pub fn pdf_type_width_of_bytes(ArrayView[Double], BytesView) -> Double raise @core.PdfError
+
 pub fn pdf_utf16be_of_codepoints(ArrayView[Int]) -> Bytes raise @core.PdfError
 
 pub fn pdf_utf8_of_codepoints(ArrayView[Int]) -> Bytes raise @core.PdfError
