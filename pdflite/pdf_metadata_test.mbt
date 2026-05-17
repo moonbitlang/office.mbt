@@ -387,6 +387,73 @@ test "PdfDocument metadata stream set get remove and remove_all" {
 }
 
 ///|
+test "PdfDocument set_metadata_date rewrites XMP metadata date fields" {
+  let doc = try! @pdflite.pdf_minimum_valid_pdf()
+  let xmp_text =
+    #|<x:xmpmeta xmlns:x="adobe:ns:meta/"
+    #| xmlns:xmp="http://ns.adobe.com/xap/1.0/"
+    #| xmlns:m="http://ns.adobe.com/xap/1.0/">
+    #| <xmp:MetadataDate>old</xmp:MetadataDate>
+    #| <m:MetadataDate custom="1"/>
+    #|</x:xmpmeta>
+  let with_metadata = try! doc.set_metadata_from_bytes(@ascii.encode(xmp_text))
+  let updated = try! @pdflite.pdf_set_metadata_date(
+    with_metadata, "2026-05-17T00:00:00Z",
+  )
+  guard (try! updated.metadata()) is Some(updated_metadata) else {
+    fail("expected updated metadata")
+  }
+  let updated_text = try! @ascii.decode(updated_metadata)
+  let self_closing_rewrite =
+    #|<m:MetadataDate custom="1">2026-05-17T00:00:00Z</m:MetadataDate>
+  @test.assert_eq(
+    updated_text.contains(
+      "<xmp:MetadataDate>2026-05-17T00:00:00Z</xmp:MetadataDate>",
+    ),
+    true,
+  )
+  @test.assert_eq(updated_text.contains(self_closing_rewrite), true)
+  @test.assert_eq(updated.version(), (1, 4))
+  let escaped = try! with_metadata.set_metadata_date("A&B<C>")
+  guard (try! escaped.metadata()) is Some(escaped_metadata) else {
+    fail("expected escaped metadata")
+  }
+  @test.assert_eq(
+    (try! @ascii.decode(escaped_metadata)).contains(
+      "<xmp:MetadataDate>A&amp;B&lt;C&gt;</xmp:MetadataDate>",
+    ),
+    true,
+  )
+  @test.assert_eq(try! doc.set_metadata_date("2026").metadata(), None)
+}
+
+///|
+test "PdfDocument set_metadata_date expands reproducible now" {
+  let previous = @env.get_env_var("CPDF_REPRODUCIBLE_DATES")
+  @env.set_env_var("CPDF_REPRODUCIBLE_DATES", "true")
+  let doc = try! @pdflite.pdf_minimum_valid_pdf()
+  let xmp_text =
+    #|<x:xmpmeta xmlns:xmp="http://ns.adobe.com/xap/1.0/">
+    #| <xmp:MetadataDate>old</xmp:MetadataDate>
+    #|</x:xmpmeta>
+  let with_metadata = try! doc.set_metadata_from_bytes(@ascii.encode(xmp_text))
+  let updated = try! with_metadata.set_metadata_date("now")
+  match previous {
+    Some(value) => @env.set_env_var("CPDF_REPRODUCIBLE_DATES", value)
+    None => @env.unset_env_var("CPDF_REPRODUCIBLE_DATES")
+  }
+  guard (try! updated.metadata()) is Some(updated_metadata) else {
+    fail("expected updated metadata")
+  }
+  @test.assert_eq(
+    (try! @ascii.decode(updated_metadata)).contains(
+      "<xmp:MetadataDate>3900-01-01T00:00:00Z</xmp:MetadataDate>",
+    ),
+    true,
+  )
+}
+
+///|
 test "PdfDocument determine_subformats reads XMP markers in cpdf order" {
   let doc = try! @pdflite.pdf_minimum_valid_pdf()
   let metadata_text =

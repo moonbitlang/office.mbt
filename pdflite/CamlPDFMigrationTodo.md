@@ -20,7 +20,8 @@ Current estimate:
   conversion, basic and tagged text-to-PDF document assembly, PDF/UA
   text-to-PDF subformat shaping, blank PDF/UA creation helpers, JPEG/JPEG2000,
   PNG, and JBIG2 image-to-PDF document assembly, Form XObject stamping,
-  composition reporting, core metadata APIs, and Markdown helper public APIs.
+  composition reporting, core metadata APIs, XMP metadata-date rewriting, and
+  Markdown helper public APIs.
 
 Current backend snapshot:
 
@@ -48,6 +49,13 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port `cpdfmetadata.set_metadata_date` for existing XMP streams:
+  namespace-aware XML element rewriting now updates `xmp:MetadataDate` across
+  declared prefixes, including self-closing tags with attributes, keeps PDF
+  version bumps suppressed for metadata-only rewrites, preserves no-metadata
+  behavior, and expands reproducible `"now"` through the existing cpdf
+  strftime path. `moon test --target native pdf_metadata_test.mbt` now reports
+  15/15 tests passing.~~
 - [x] ~~Port `cpdfmetadata.get_xmp_info` for legacy `/Info` key equivalents:
   XMP lookup now maps title, author, subject, keywords, creator, producer,
   creation date, and modification date through the Adobe/XMP/DC namespaces and

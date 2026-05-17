@@ -940,6 +940,234 @@ fn pdf_metadata_decode_pdf_string(value : BytesView) -> String? {
 }
 
 ///|
+fn pdf_metadata_push_view(output : Array[Byte], bytes : BytesView) -> Unit {
+  for byte in bytes {
+    output.push(byte)
+  }
+}
+
+///|
+fn pdf_metadata_xml_text(value : String) -> PdfBytes {
+  @utf8.encode(
+    value
+    .replace(old="&", new="&amp;")
+    .replace(old="<", new="&lt;")
+    .replace(old=">", new="&gt;"),
+  )
+}
+
+///|
+fn pdf_metadata_xml_tag_boundary(byte : Byte) -> Bool {
+  match byte.to_int() {
+    9 | 10 | 13 | 32 | 47 | 62 => true
+    _ => false
+  }
+}
+
+///|
+fn pdf_metadata_rewrite_xmp_element_prefix(
+  data : BytesView,
+  prefix : String,
+  field : String,
+  replacement : String,
+) -> (PdfBytes, Bool) {
+  let open_pattern = @ascii.encode("<" + prefix + ":" + field)
+  let close_pattern = @ascii.encode("</" + prefix + ":" + field + ">")
+  let replacement_bytes = pdf_metadata_xml_text(replacement)
+  let output : Array[Byte] = []
+  let mut changed = false
+  let mut search_start = 0
+  while search_start < data.length() {
+    let tag_start = pdf_metadata_find_bytes_from(
+      data, search_start, open_pattern,
+    )
+    if tag_start < 0 {
+      pdf_metadata_push_view(output, data[search_start:])
+      search_start = data.length()
+    } else {
+      let name_end = tag_start + open_pattern.length()
+      if name_end >= data.length() ||
+        !pdf_metadata_xml_tag_boundary(data[name_end]) {
+        pdf_metadata_push_view(output, data[search_start:name_end])
+        search_start = name_end
+      } else {
+        let tag_end = pdf_metadata_find_byte(data, name_end, 62)
+        if tag_end < 0 {
+          pdf_metadata_push_view(output, data[search_start:])
+          search_start = data.length()
+        } else if tag_end > tag_start && data[tag_end - 1].to_int() == 47 {
+          pdf_metadata_push_view(output, data[search_start:tag_end - 1])
+          output.push((62).to_byte())
+          pdf_metadata_push_view(output, replacement_bytes)
+          pdf_metadata_push_view(output, close_pattern)
+          search_start = tag_end + 1
+          changed = true
+        } else {
+          let value_start = tag_end + 1
+          let value_end = pdf_metadata_find_bytes_from(
+            data, value_start, close_pattern,
+          )
+          if value_end < 0 {
+            pdf_metadata_push_view(output, data[search_start:])
+            search_start = data.length()
+          } else {
+            pdf_metadata_push_view(output, data[search_start:value_start])
+            pdf_metadata_push_view(output, replacement_bytes)
+            pdf_metadata_push_view(
+              output,
+              data[value_end:value_end + close_pattern.length()],
+            )
+            search_start = value_end + close_pattern.length()
+            changed = true
+          }
+        }
+      }
+    }
+  }
+  if changed {
+    (Bytes::from_array(output), true)
+  } else {
+    (data.to_owned(), false)
+  }
+}
+
+///|
+fn pdf_metadata_rewrite_xmp_field(
+  data : BytesView,
+  xml_namespace : String,
+  fallback_prefix : String,
+  field : String,
+  replacement : String,
+) -> PdfBytes {
+  let mut output = data.to_owned()
+  let prefixes = pdf_metadata_namespace_prefixes(
+    data, xml_namespace, fallback_prefix,
+  )
+  for prefix in prefixes {
+    let (rewritten, _) = pdf_metadata_rewrite_xmp_element_prefix(
+      output, prefix, field, replacement,
+    )
+    output = rewritten
+  }
+  output
+}
+
+///|
+fn pdf_metadata_pad2(value : Int) -> String {
+  let absolute = if value < 0 { -value } else { value }
+  if absolute < 10 {
+    "0" + absolute.to_string()
+  } else {
+    absolute.to_string()
+  }
+}
+
+///|
+fn pdf_metadata_pad4(value : Int) -> String {
+  if value < 10 {
+    "000" + value.to_string()
+  } else if value < 100 {
+    "00" + value.to_string()
+  } else if value < 1000 {
+    "0" + value.to_string()
+  } else {
+    value.to_string()
+  }
+}
+
+///|
+fn pdf_metadata_xmp_date(date : String) -> String raise PdfError {
+  if !date.has_prefix("D:") {
+    "0000-01-01T00:00:00Z"
+  } else {
+    let parsed = pdf_date_of_string(date)
+    let tzd = if parsed.hour_offset == 0 && parsed.minute_offset == 0 {
+      "Z"
+    } else {
+      let sign = if parsed.hour_offset < 0 || parsed.minute_offset < 0 {
+        "-"
+      } else {
+        "+"
+      }
+      sign +
+      pdf_metadata_pad2(parsed.hour_offset) +
+      ":" +
+      pdf_metadata_pad2(parsed.minute_offset)
+    }
+    pdf_metadata_pad4(parsed.year) +
+    "-" +
+    pdf_metadata_pad2(parsed.month) +
+    "-" +
+    pdf_metadata_pad2(parsed.day) +
+    "T" +
+    pdf_metadata_pad2(parsed.hour) +
+    ":" +
+    pdf_metadata_pad2(parsed.minute) +
+    ":" +
+    pdf_metadata_pad2(parsed.second) +
+    tzd
+  }
+}
+
+///|
+fn pdf_metadata_is_leap_year(year : Int) -> Bool {
+  (year % 4 == 0 && year % 100 != 0) || year % 400 == 0
+}
+
+///|
+fn pdf_metadata_days_in_month(year : Int, month : Int) -> Int {
+  match month {
+    1 | 3 | 5 | 7 | 8 | 10 | 12 => 31
+    4 | 6 | 9 | 11 => 30
+    2 => if pdf_metadata_is_leap_year(year) { 29 } else { 28 }
+    _ => 30
+  }
+}
+
+///|
+fn pdf_metadata_pdf_date_from_unix_millis(milliseconds : UInt64) -> String {
+  let total_seconds = (milliseconds / (1000 : UInt64)).reinterpret_as_int64()
+  let mut days = (total_seconds / 86400L).to_int()
+  let seconds_of_day = (total_seconds % 86400L).to_int()
+  let hour = seconds_of_day / 3600
+  let minute = seconds_of_day % 3600 / 60
+  let second = seconds_of_day % 60
+  let mut year = 1970
+  let mut year_days = if pdf_metadata_is_leap_year(year) { 366 } else { 365 }
+  while days >= year_days {
+    days -= year_days
+    year += 1
+    year_days = if pdf_metadata_is_leap_year(year) { 366 } else { 365 }
+  }
+  let mut month = 1
+  while days >= pdf_metadata_days_in_month(year, month) {
+    days -= pdf_metadata_days_in_month(year, month)
+    month += 1
+  }
+  let day = days + 1
+  "D:" +
+  pdf_metadata_pad4(year) +
+  pdf_metadata_pad2(month) +
+  pdf_metadata_pad2(day) +
+  pdf_metadata_pad2(hour) +
+  pdf_metadata_pad2(minute) +
+  pdf_metadata_pad2(second)
+}
+
+///|
+fn pdf_metadata_expand_date(date : String) -> String {
+  if date == "now" {
+    match @env.get_env_var("CPDF_REPRODUCIBLE_DATES") {
+      Some("true") =>
+        pdf_strftime_with_time(pdf_strftime_dummy_time(), "D:%Y%m%d%H%M%S")
+      _ => pdf_metadata_pdf_date_from_unix_millis(@env.now())
+    }
+  } else {
+    date
+  }
+}
+
+///|
 fn PdfDocument::pdf_metadata_fallback_pdfx(self : PdfDocument) -> String? {
   match self.lookup_direct(pdf_metadata_info(), self.trailer_dict()) {
     Some(info) =>
@@ -1214,6 +1442,28 @@ pub fn PdfDocument::set_metadata_from_bytes(
 }
 
 ///|
+/// Set the XMP `/Metadata` stream's `xmp:MetadataDate` field.
+pub fn PdfDocument::set_metadata_date(
+  self : PdfDocument,
+  date : String,
+) -> PdfDocument raise PdfError {
+  match self.metadata() {
+    None => self
+    Some(metadata) => {
+      let value = if date == "now" {
+        pdf_metadata_xmp_date(pdf_metadata_expand_date(date))
+      } else {
+        date
+      }
+      let updated = pdf_metadata_rewrite_xmp_field(
+        metadata, pdf_metadata_xmp_namespace, "xmp", "MetadataDate", value,
+      )
+      self.set_metadata_from_bytes(updated, keep_version=true)
+    }
+  }
+}
+
+///|
 /// Extract the catalog metadata XML stream, decoding supported stream filters.
 pub fn PdfDocument::metadata(self : PdfDocument) -> PdfBytes? raise PdfError {
   match
@@ -1438,6 +1688,15 @@ pub fn pdf_set_metadata_from_bytes(
 /// Compatibility wrapper for `PdfDocument::metadata`.
 pub fn pdf_get_metadata(document : PdfDocument) -> PdfBytes? raise PdfError {
   document.metadata()
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::set_metadata_date`.
+pub fn pdf_set_metadata_date(
+  document : PdfDocument,
+  date : String,
+) -> PdfDocument raise PdfError {
+  document.set_metadata_date(date)
 }
 
 ///|
