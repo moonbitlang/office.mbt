@@ -142,3 +142,219 @@ test "PdfDocument reveal_hidden_text rewrites selected page form xobjects" {
     [Op_q, Op_BT, Op_Tj(tweak_bytes_for_test("form")), Op_ET, Op_Q],
   )
 }
+
+///|
+test "pdf_thin_lines_ops honors thresholds and CTM scale" {
+  let document = @pdflite.pdf_document_empty()
+  let scale_two : @pdflite.TransformMatrix = {
+    a: 2.0,
+    b: 0.0,
+    c: 0.0,
+    d: 2.0,
+    e: 0.0,
+    f: 0.0,
+  }
+
+  @test.assert_eq(
+    try! @pdflite.pdf_thin_lines_ops(
+      document,
+      PdfDictionary([]),
+      [Op_w(0.5), Op_cm(scale_two), Op_w(0.25), Op_w(2.0)],
+      2.0,
+    ),
+    [Op_w(2.0), Op_w(2.0), Op_cm(scale_two), Op_w(1.0), Op_w(2.0)],
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_thin_lines_ops(
+      document,
+      PdfDictionary([]),
+      [Op_w(3.0), Op_w(1.0)],
+      -2.0,
+    ),
+    [Op_w(2.0), Op_w(2.0), Op_w(1.0)],
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_thin_lines_ops(
+      document,
+      PdfDictionary([]),
+      [Op_Q, Op_w(0.5)],
+      2.0,
+    ),
+    [Op_w(2.0), Op_Q, Op_w(2.0)],
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_thin_lines_ops(
+      document,
+      PdfDictionary([]),
+      [Op_q, Op_cm(scale_two), Op_w(0.25), Op_Q, Op_w(0.25)],
+      2.0,
+    ),
+    [Op_w(2.0), Op_q, Op_cm(scale_two), Op_w(1.0), Op_Q, Op_w(2.0)],
+  )
+}
+
+///|
+test "pdf_thin_lines_ops inserts ExtGState line width" {
+  let document = @pdflite.pdf_document_empty()
+  let key_extgstate = tweak_name_for_test("/ExtGState")
+  let key_lw = tweak_name_for_test("/LW")
+  let name_gs = tweak_name_for_test("/GS1")
+  let resources : @pdflite.PdfObject = PdfDictionary([
+    (
+      key_extgstate,
+      PdfDictionary([(name_gs, PdfDictionary([(key_lw, PdfReal(0.75))]))]),
+    ),
+  ])
+  @test.assert_eq(
+    try! @pdflite.pdf_thin_lines_ops(
+      document,
+      resources,
+      [Op_gs(name_gs), Op_S],
+      1.0,
+    ),
+    [Op_gs(name_gs), Op_w(0.75), Op_S],
+  )
+
+  let integer_resources : @pdflite.PdfObject = PdfDictionary([
+    (
+      key_extgstate,
+      PdfDictionary([(name_gs, PdfDictionary([(key_lw, PdfInteger(2))]))]),
+    ),
+  ])
+  @test.assert_eq(
+    try! @pdflite.pdf_thin_lines_ops(
+      document,
+      integer_resources,
+      [Op_gs(name_gs), Op_S],
+      1.0,
+    ),
+    [Op_gs(name_gs), Op_w(2.0), Op_S],
+  )
+
+  let malformed_resources : @pdflite.PdfObject = PdfDictionary([
+    (
+      key_extgstate,
+      PdfDictionary([
+        (
+          name_gs,
+          PdfDictionary([(key_lw, PdfString(tweak_bytes_for_test("x")))]),
+        ),
+      ]),
+    ),
+  ])
+  @test.assert_eq(
+    try! @pdflite.pdf_thin_lines_ops(
+      document,
+      malformed_resources,
+      [Op_gs(name_gs), Op_S],
+      1.0,
+    ),
+    [Op_gs(name_gs), Op_S],
+  )
+  let missing_lw_resources : @pdflite.PdfObject = PdfDictionary([
+    (key_extgstate, PdfDictionary([(name_gs, PdfDictionary([]))])),
+  ])
+  @test.assert_eq(
+    try! @pdflite.pdf_thin_lines_ops(
+      document,
+      missing_lw_resources,
+      [Op_gs(name_gs), Op_S],
+      1.0,
+    ),
+    [Op_gs(name_gs), Op_S],
+  )
+  let missing_name_resources : @pdflite.PdfObject = PdfDictionary([
+    (key_extgstate, PdfDictionary([])),
+  ])
+  @test.assert_eq(
+    try! @pdflite.pdf_thin_lines_ops(
+      document,
+      missing_name_resources,
+      [Op_gs(name_gs), Op_S],
+      1.0,
+    ),
+    [Op_gs(name_gs), Op_S],
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_thin_lines_ops(
+      document,
+      PdfDictionary([]),
+      [Op_gs(name_gs), Op_S],
+      1.0,
+    ),
+    [Op_gs(name_gs), Op_S],
+  )
+}
+
+///|
+test "pdf_thin_lines_ops rejects CTM operations after unbalanced restore" {
+  let document = @pdflite.pdf_document_empty()
+  let scale_two : @pdflite.TransformMatrix = {
+    a: 2.0,
+    b: 0.0,
+    c: 0.0,
+    d: 2.0,
+    e: 0.0,
+    f: 0.0,
+  }
+  let result : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_thin_lines_ops(
+    document,
+    PdfDictionary([]),
+    [Op_Q, Op_cm(scale_two)],
+    2.0,
+  )
+  guard result is Err(@pdflite.PdfError::MatrixMalformed) else {
+    fail("expected MatrixMalformed for CTM update after unbalanced Q")
+  }
+  let double_restore : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_thin_lines_ops(
+    document,
+    PdfDictionary([]),
+    [Op_Q, Op_Q],
+    2.0,
+  )
+  guard double_restore is Err(@pdflite.PdfError::MatrixMalformed) else {
+    fail("expected MatrixMalformed for double unbalanced Q")
+  }
+  let restore_then_save : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_thin_lines_ops(
+    document,
+    PdfDictionary([]),
+    [Op_Q, Op_q],
+    2.0,
+  )
+  guard restore_then_save is Err(@pdflite.PdfError::MatrixMalformed) else {
+    fail("expected MatrixMalformed for q after unbalanced Q")
+  }
+}
+
+///|
+test "PdfDocument thin_lines rewrites only selected pages" {
+  let base = try! @pdflite.pdf_blank_document(200.0, 100.0, 2)
+  let pages = try! base.pages_of_pagetree()
+  let first = {
+    ..pages[0],
+    content: [tweak_stream_for_test([Op_w(0.25), Op_S])],
+  }
+  let second = {
+    ..pages[1],
+    content: [tweak_stream_for_test([Op_w(0.25), Op_S])],
+  }
+  let document = try! base.change_pages([first, second])
+  let original_pages = try! document.pages_of_pagetree()
+
+  let thinned = try! @pdflite.pdf_thin_lines(document, [2], 2.0)
+  let thinned_pages = try! thinned.pages_of_pagetree()
+
+  @test.assert_eq(tweak_content_ops_for_test(thinned, thinned_pages[0]), [
+    Op_w(0.25),
+    Op_S,
+  ])
+  @test.assert_eq(tweak_content_ops_for_test(thinned, thinned_pages[1]), [
+    Op_w(2.0),
+    Op_w(2.0),
+    Op_S,
+  ])
+  @test.assert_eq(tweak_content_ops_for_test(document, original_pages[1]), [
+    Op_w(0.25),
+    Op_S,
+  ])
+}

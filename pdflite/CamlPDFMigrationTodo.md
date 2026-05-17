@@ -1324,6 +1324,15 @@ Current backend snapshot:
   validation reports `moon test --target native pdf_tweak_test.mbt` at 3/3
   tests passing; native full-suite validation reports 1522/1522 tests
   passing; coverage analysis reports no uncovered lines in `pdf_tweak.mbt`.~~
+- [x] ~~Standalone `cpdftweak.ml` thin-lines slice now exposes
+  `PdfDocument::thin_lines`, `pdf_thin_lines`, and `pdf_thin_lines_ops`,
+  covering positive minimum thresholds, negative maximum thresholds, CTM scale
+  adjustment across `cm`, unbalanced graphics-state restore errors, `/ExtGState`
+  `/LW` insertion, malformed `/LW` ignoring, selected page-only rewriting, and
+  original-document preservation. Native focused validation reports
+  `moon test --target native pdf_tweak_test.mbt` at 7/7 tests passing; native
+  full-suite validation reports 1526/1526 tests passing; coverage analysis
+  reports no uncovered lines in `pdf_tweak.mbt`.~~
 - [x] ~~Page labels, bookmarks, annotations, duplicate annotation repair,
   old-style destinations, name-tree destinations, `/OpenAction`, optional
   content, AcroForm merge basics, trailer `/Info`, and structure-tree
