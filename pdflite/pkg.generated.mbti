@@ -735,7 +735,7 @@ pub fn pdf_texttopdf_of_utf8_with_newlines(PdfFontPack, Double, BytesView) -> Ar
 
 pub fn pdf_texttopdf_tag_paragraphs(ArrayView[PdfTypeElement]) -> Array[PdfTypeElement]
 
-pub fn pdf_texttopdf_typeset(PdfFontPack, Double, @geometry.PaperSize, BytesView) -> PdfDocument raise @core.PdfError
+pub fn pdf_texttopdf_typeset(PdfFontPack, Double, @geometry.PaperSize, BytesView, process_struct_tree? : Bool) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_thin_lines(PdfDocument, ArrayView[Int], Double) -> PdfDocument raise @core.PdfError
 

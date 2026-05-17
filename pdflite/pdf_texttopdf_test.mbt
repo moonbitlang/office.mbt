@@ -198,3 +198,85 @@ test "pdf_texttopdf_typeset creates a blank document for empty text" {
     PdfDictionary([(texttopdf_name_for_test("/Font"), PdfDictionary([]))]),
   )
 }
+
+///|
+test "pdf_texttopdf_typeset can build paragraph structure tree" {
+  let paper = @pdflite.paper_size_make(PdfPoint, 120.0, 120.0)
+  let document = try! @pdflite.pdf_texttopdf_typeset(
+    texttopdf_standard_pack_for_test(),
+    10.0,
+    paper,
+    @ascii.encode("A\n\nB"),
+    process_struct_tree=true,
+  )
+  let pages = try! document.pages_of_pagetree()
+  let page_refs = try! document.page_reference_numbers()
+  @test.assert_eq(pages.length(), 1)
+  @test.assert_eq(page_refs.length(), 1)
+  @test.assert_eq(
+    try! texttopdf_lookup_for_test(pages[0].rest, "/StructParents"),
+    PdfInteger(0),
+  )
+  let catalog = try! document.catalog()
+  let struct_root_ref = try! texttopdf_lookup_for_test(
+    catalog, "/StructTreeRoot",
+  )
+  guard struct_root_ref is PdfIndirect(struct_root_number) else {
+    fail("expected StructTreeRoot reference")
+  }
+  let struct_root = document.lookup_object_or_null(struct_root_number)
+  let root_k = try! texttopdf_lookup_for_test(struct_root, "/K")
+  guard root_k is PdfArray([PdfIndirect(first_para), PdfIndirect(second_para)]) else {
+    fail("expected two paragraph structure elements")
+  }
+  let parent_tree_ref = try! texttopdf_lookup_for_test(
+    struct_root, "/ParentTree",
+  )
+  guard parent_tree_ref is PdfIndirect(parent_tree_number) else {
+    fail("expected ParentTree reference")
+  }
+  let parent_entries = document.read_number_tree(
+    PdfIndirect(parent_tree_number),
+  )
+  @test.assert_eq(parent_entries.length(), 1)
+  @test.assert_eq(parent_entries[0].0, 0)
+  @test.assert_eq(
+    parent_entries[0].1,
+    PdfArray([PdfIndirect(first_para), PdfIndirect(second_para)]),
+  )
+  let first = document.lookup_object_or_null(first_para)
+  @test.assert_eq(
+    try! texttopdf_lookup_for_test(first, "/S"),
+    PdfNameObject(texttopdf_name_for_test("/P")),
+  )
+  @test.assert_eq(
+    try! texttopdf_lookup_for_test(first, "/P"),
+    PdfIndirect(struct_root_number),
+  )
+  let first_k = try! texttopdf_lookup_for_test(first, "/K")
+  guard first_k is PdfArray([first_mcr]) else {
+    fail("expected first paragraph MCR")
+  }
+  @test.assert_eq(
+    try! texttopdf_lookup_for_test(first_mcr, "/Type"),
+    PdfNameObject(texttopdf_name_for_test("/MCR")),
+  )
+  @test.assert_eq(
+    try! texttopdf_lookup_for_test(first_mcr, "/Pg"),
+    PdfIndirect(page_refs[0]),
+  )
+  @test.assert_eq(
+    try! texttopdf_lookup_for_test(first_mcr, "/MCID"),
+    PdfInteger(0),
+  )
+  let ops = try! texttopdf_page_ops_for_test(document, pages[0])
+  let mut marked_paragraphs = 0
+  for op in ops {
+    match op {
+      Op_BDC(tag, _) if tag == texttopdf_name_for_test("/P") =>
+        marked_paragraphs += 1
+      _ => ()
+    }
+  }
+  @test.assert_eq(marked_paragraphs, 2)
+}
