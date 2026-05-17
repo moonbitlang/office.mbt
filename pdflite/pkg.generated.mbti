@@ -191,6 +191,8 @@ pub fn pdf_colour_space_of_device_name(@core.PdfName) -> PdfColourSpace?
 
 pub fn pdf_colour_space_of_object(PdfObject) -> PdfColourSpace?
 
+pub fn pdf_composition(PdfDocument, Int) -> Array[PdfCompositionEntry] raise @core.PdfError
+
 pub fn pdf_contains_javascript(PdfDocument) -> Bool
 
 pub fn pdf_content_add_artifacts(ArrayView[PdfContentOp]) -> Array[PdfContentOp]
@@ -676,6 +678,8 @@ pub let pdf_shape_kappa : Double
 pub fn pdf_shape_rectangle(Double, Double, Double, Double) -> PdfPath
 
 pub fn pdf_shortest_unused_prefix(PdfDocument) -> String
+
+pub fn pdf_show_composition_json_blob(Int, PdfDocument) -> Bytes raise @core.PdfError
 
 pub fn pdf_simplify_utf16be(BytesView) -> Bytes raise @core.PdfError
 
@@ -1247,6 +1251,13 @@ pub(all) struct PdfCompositeCIDFont {
   cid_default_width2 : Array[Double]
 } derive(Eq, ToJson, @debug.Debug)
 
+pub(all) struct PdfCompositionEntry {
+  label : String
+  bytes : Int
+  percent : Double
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfCompositionEntry::to_json(Self) -> Json
+
 pub(all) enum PdfContentColour {
   PdfContentGrey(Double)
   PdfContentRGB(Double, Double, Double)
@@ -1401,6 +1412,9 @@ pub fn PdfDocument::colour_space_components(Self, PdfObject, PdfObject) -> Int r
 pub fn PdfDocument::colspace(Self, PdfObject, PdfObject) -> PdfColourSpace raise @core.PdfError
 pub fn PdfDocument::combine_pdf_resources(Self, PdfObject, PdfObject) -> PdfObject
 pub fn PdfDocument::combine_pdf_rests(Self, PdfObject, PdfObject) -> PdfObject
+pub fn PdfDocument::composition(Self, Int) -> Array[PdfCompositionEntry] raise @core.PdfError
+pub fn PdfDocument::composition_json(Self, Int) -> Json raise @core.PdfError
+pub fn PdfDocument::composition_json_blob(Self, Int) -> Bytes raise @core.PdfError
 pub fn PdfDocument::contains_javascript(Self) -> Bool
 pub fn PdfDocument::contents_of_name_tree(Self, PdfObject) -> Array[(PdfObject, PdfObject)]
 pub fn PdfDocument::copy(Self) -> Self

@@ -7,7 +7,7 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 99.5%.
+- Native main-feature parity: 99.6%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
   breadth: 85-90%.
 - Warning 74 public documentation cleanup: complete; 0 native diagnostics
@@ -19,8 +19,8 @@ Current estimate:
   renumbering, standard font-pack embedding, text-to-PDF instruction
   conversion, basic and tagged text-to-PDF document assembly, PDF/UA
   text-to-PDF subformat shaping, blank PDF/UA creation helpers, JPEG/JPEG2000,
-  PNG, and JBIG2 image-to-PDF document assembly, Form XObject stamping, and
-  Markdown helper public APIs.
+  PNG, and JBIG2 image-to-PDF document assembly, Form XObject stamping,
+  composition reporting, and Markdown helper public APIs.
 
 Current backend snapshot:
 
@@ -48,6 +48,12 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port `cpdfcomposition` as a native structured reporting API with
+  cpdf-compatible buckets for images, fonts, content streams, structure info,
+  attached files, xref tables, piece info, and unclassified bytes. Added JSON
+  row output with MoonBit JSON literal coverage, object-stream xref accounting,
+  and non-positive file-size rejection. `moon test --target native` now reports
+  1608/1608 tests passing.~~
 - [x] ~~Port `cpdfxobject.stamp_as_xobject` with overlay first-page Form XObject
   creation, resource prefixing, selected-page `/XObject` insertion, base
   bookmark retargeting after page-tree rebuild, trailer `/ID` preservation, and
