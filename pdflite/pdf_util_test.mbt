@@ -339,6 +339,69 @@ test "PdfDocument json_of_object emits streams and utf8 string wrappers" {
 }
 
 ///|
+test "pdf_object_of_json decodes cpdf single-object wrappers" {
+  let key_array = util_name_for_test("/Array")
+  let key_name = util_name_for_test("/Name")
+  let key_number = util_name_for_test("/Number")
+  let key_string = util_name_for_test("/String")
+  let key_value = util_name_for_test("/Value")
+  let json : Json = {
+    "/Array": [true, null, { "F": 1.5 }, 8.0],
+    "/Name": { "N": "/Value" },
+    "/Number": { "I": 7.0 },
+    "/String": "plain",
+  }
+
+  let object = try! @pdflite.pdf_object_of_json(json)
+
+  @test.assert_eq(util_lookup_for_test(object, key_number), Some(PdfInteger(7)))
+  @test.assert_eq(
+    util_lookup_for_test(object, key_name),
+    Some(PdfNameObject(key_value)),
+  )
+  @test.assert_eq(
+    util_lookup_for_test(object, key_string),
+    Some(PdfString(@ascii.encode("plain"))),
+  )
+  guard util_lookup_for_test(object, key_array)
+    is Some(PdfArray([PdfBoolean(true), PdfNull, PdfReal(1.5), PdfIndirect(8)])) else {
+    fail("expected decoded CPDFJSON array")
+  }
+}
+
+///|
+test "pdf_object_of_json decodes streams and utf8 string wrappers" {
+  let key_length = util_name_for_test("/Length")
+  let key_other = util_name_for_test("/Other")
+  let stream_json : Json = {
+    "S": [{ "/Length": { "I": 99.0 }, "/Other": { "I": 1.0 } }, "payload"],
+  }
+
+  guard (try! @pdflite.pdf_object_of_json(stream_json))
+    is PdfStreamObject(stream) else {
+    fail("expected decoded stream object")
+  }
+  @test.assert_eq(stream.data, StreamGot(@ascii.encode("payload")))
+  @test.assert_eq(
+    util_lookup_for_test(stream.dictionary, key_length),
+    Some(PdfInteger(7)),
+  )
+  @test.assert_eq(
+    util_lookup_for_test(stream.dictionary, key_other),
+    Some(PdfInteger(1)),
+  )
+
+  @test.assert_eq(
+    try! @pdflite.pdf_object_of_json({ "U": "hello" }),
+    PdfString(@ascii.encode("hello")),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_object_of_json({ "U": "Résumé" }),
+    PdfString(try! @pdflite.pdf_pdfdocstring_of_utf8(@utf8.encode("Résumé"))),
+  )
+}
+
+///|
 test "pdf_get_dict_entries emits utf8 string wrappers when requested" {
   let key_target = util_name_for_test("/Target")
   let doc = @pdflite.pdf_document_empty()

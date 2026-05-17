@@ -81,6 +81,18 @@ fn pdf_util_json_number(value : Int) -> Json {
 }
 
 ///|
+fn pdf_util_json_integral_number(value : Double) -> Int raise PdfError {
+  let integer = value.to_int()
+  guard integer.to_double() == value else { raise NumberExpected }
+  integer
+}
+
+///|
+fn pdf_util_json_truncated_number(value : Double) -> Int {
+  value.to_int()
+}
+
+///|
 fn PdfDocument::pdf_util_json_of_object(
   self : PdfDocument,
   object : PdfObject,
@@ -155,6 +167,101 @@ pub fn PdfDocument::json_of_object(
   utf8? : Bool = false,
 ) -> Json raise PdfError {
   self.pdf_util_json_of_object(object, utf8)
+}
+
+///|
+fn pdf_util_pdf_string_from_json_text(text : String) -> PdfBytes {
+  @utf8.encode(text)
+}
+
+///|
+fn pdf_util_utf8_pdf_string_from_json_text(text : String) -> PdfBytes {
+  pdf_pdfdocstring_of_utf8(@utf8.encode(text)) catch {
+    _ => @utf8.encode(text)
+  }
+}
+
+///|
+fn pdf_util_name_from_json_text(text : String) -> PdfName {
+  pdf_name_of_bytes(@utf8.encode(text))
+}
+
+///|
+fn pdf_util_stream_of_json_data(
+  dictionary_json : Json,
+  data : String,
+) -> PdfObject raise PdfError {
+  let stream_data = pdf_util_pdf_string_from_json_text(data)
+  let dictionary = pdf_object_of_json(dictionary_json).add_dict_entry(
+    pdf_object_length_name(),
+    PdfInteger(stream_data.length()),
+  )
+  pdf_stream(dictionary, StreamGot(stream_data))
+}
+
+///|
+fn pdf_util_object_of_json_object(
+  entries : Map[String, Json],
+) -> PdfObject raise PdfError {
+  if entries.length() == 1 {
+    match entries.get("U") {
+      Some(String(text)) =>
+        return PdfString(pdf_util_utf8_pdf_string_from_json_text(text))
+      _ => ()
+    }
+    match entries.get("I") {
+      Some(Number(value, repr=_)) =>
+        return PdfInteger(pdf_util_json_truncated_number(value))
+      _ => ()
+    }
+    match entries.get("F") {
+      Some(Number(value, repr=_)) => return PdfReal(value)
+      _ => ()
+    }
+    match entries.get("N") {
+      Some(String(name)) =>
+        return PdfNameObject(pdf_util_name_from_json_text(name))
+      _ => ()
+    }
+    match entries.get("S") {
+      Some(Array([dictionary_json, String(data)])) =>
+        return pdf_util_stream_of_json_data(dictionary_json, data)
+      _ => ()
+    }
+  }
+  let output : Array[(PdfName, PdfObject)] = []
+  for entry in entries {
+    output.push(
+      (pdf_util_name_from_json_text(entry.0), pdf_object_of_json(entry.1)),
+    )
+  }
+  PdfDictionary(output)
+}
+
+///|
+/// Convert a single CPDFJSON object to a PDF object.
+///
+/// This ports the ordinary object side of cpdf's `object_of_json`: primitive
+/// JSON values, CPDFJSON integer/real/name/string wrappers, dictionaries,
+/// arrays, indirect references, and streams with embedded string data are
+/// supported. Parsed content-stream operation arrays are intentionally left for
+/// a later full-document CPDFJSON slice.
+pub fn pdf_object_of_json(json : Json) -> PdfObject raise PdfError {
+  match json {
+    Null => PdfNull
+    True => PdfBoolean(true)
+    False => PdfBoolean(false)
+    Number(value, repr=_) => PdfIndirect(pdf_util_json_integral_number(value))
+    String(text) => PdfString(pdf_util_pdf_string_from_json_text(text))
+    Array(values) => {
+      let output : Array[PdfObject] = []
+      for value in values {
+        output.push(pdf_object_of_json(value))
+      }
+      PdfArray(output)
+    }
+    Object(entries) => pdf_util_object_of_json_object(entries)
+  }
 }
 
 ///|

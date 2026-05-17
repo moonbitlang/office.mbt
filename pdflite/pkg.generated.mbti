@@ -487,6 +487,8 @@ pub fn pdf_object_of_destination(PdfDestination) -> PdfObject
 
 pub fn pdf_object_of_function(PdfDocument, PdfFunction) -> PdfObject
 
+pub fn pdf_object_of_json(Json) -> PdfObject raise @core.PdfError
+
 pub fn pdf_object_of_matrix(@geometry.TransformMatrix) -> PdfObject
 
 pub fn pdf_objects_empty() -> PdfObjects

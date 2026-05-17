@@ -1736,6 +1736,14 @@ Current backend snapshot:
   parsed content-stream encoding. Native focused validation reports
   `moon test --target native pdf_util_test.mbt` at 12/12 tests passing; native
   full-suite validation reports 1697/1697 tests passing.~~
+- [x] ~~Standalone `cpdfjson.ml` single-object input slice now exposes
+  `pdf_object_of_json`, covering CPDFJSON primitive values, indirect
+  references, integer/real/name/string wrappers, dictionaries, arrays,
+  UTF-8 string wrappers via PDFDocString encoding, and stream string-data
+  reconstruction with `/Length` correction while leaving parsed content-stream
+  operation arrays to a later full-document slice. Native focused validation
+  reports `moon test --target native pdf_util_test.mbt` at 14/14 tests
+  passing; native full-suite validation reports 1699/1699 tests passing.~~
 - [x] ~~Standalone `cpdfimpose.ml` rest-dictionary merge slice now exposes
   `PdfDocument::combine_pdf_rests`, covering preservation of unknown page-rest
   entries, `/Annots` array concatenation, indirect annotation-array resolution,
