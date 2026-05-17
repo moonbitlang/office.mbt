@@ -1067,7 +1067,14 @@ Current backend snapshot:
   py-pdf ImageMagick fixture, requiring strict-reader failure,
   malformed-reader reconstruction, CCITT-to-RGB24 extraction, and compressed
   rewrite/reread preservation.~~
-- [ ] Add more malformed xref-table/xref-stream/object-stream recovery cases
+- [x] ~~Add checked-in CamlPDF real-world malformed-startxref fixture gates:
+  the native-only `fixture_acceptance` package now corrupts the final
+  `startxref` pointer for the linearized classic-xref `logo.pdf` fixture and
+  the xref/object-stream `introduction_to_camlpdf.pdf` fixture, requires strict
+  reader failure, reconstructs through the public recovery reader, and verifies
+  compressed-xref rewrite/reread page counts. `moon test --target native
+  fixture_acceptance` reports 3/3 tests passing.~~
+- [ ] Add further malformed xref-table/xref-stream/object-stream recovery cases
   from real-world PDFs.
 - [x] ~~Add a native reader-boundary gate for the next available predefined CMap
   source-table slice: GBK2K-H mixed 1/2/4-byte text extraction and reverse
