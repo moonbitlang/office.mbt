@@ -25,10 +25,12 @@ fn page_scale_page_for_test(
   ops : ArrayView[@pdflite.PdfContentOp],
   resources? : @pdflite.PdfObject = PdfDictionary([]),
   rest? : @pdflite.PdfObject = PdfDictionary([]),
+  width? : Double = 100.0,
+  height? : Double = 100.0,
 ) -> @pdflite.PdfPage {
   {
     content: [page_scale_stream_for_test(ops)],
-    mediabox: page_scale_rect_for_test(0.0, 0.0, 100.0, 100.0),
+    mediabox: page_scale_rect_for_test(0.0, 0.0, width, height),
     resources,
     rotate: Rotate0,
     rest,
@@ -190,5 +192,109 @@ test "PdfDocument scale_contents validates page range" {
       )
     ) else {
     fail("expected page range validation")
+  }
+}
+
+///|
+test "PdfDocument scale_pages scales boxes content and destinations" {
+  let key_crop = page_scale_name_for_test("/CropBox")
+  let key_open_action = page_scale_name_for_test("/OpenAction")
+  let xyz_name = page_scale_name_for_test("/XYZ")
+  let first = page_scale_page_for_test(
+    [Op_S],
+    rest=PdfDictionary([
+      (key_crop, page_scale_rect_for_test(10.0, 20.0, 50.0, 60.0)),
+    ]),
+    width=100.0,
+    height=80.0,
+  )
+  let second = page_scale_page_for_test([Op_BT, Op_ET])
+  let document = page_scale_document_for_test([first, second])
+  let page_numbers = try! document.page_reference_numbers()
+  document.add_object_given_number(
+    document.root(),
+    try! document
+    .lookup_object_or_null(document.root())
+    .add_dict_entry(
+      key_open_action,
+      PdfArray([
+        PdfIndirect(page_numbers[0]),
+        PdfNameObject(xyz_name),
+        PdfReal(4.0),
+        PdfReal(5.0),
+        PdfNull,
+      ]),
+    ),
+  )
+  let scaled = try! document.scale_pages([1], [(2.0, 3.0)])
+  let pages = try! scaled.pages_of_pagetree()
+  @test.assert_eq(
+    pages[0].mediabox,
+    page_scale_rect_for_test(0.0, 0.0, 200.0, 240.0),
+  )
+  @test.assert_eq(
+    pages[0].rest.lookup_immediate(key_crop),
+    Some(page_scale_rect_for_test(20.0, 60.0, 100.0, 180.0)),
+  )
+  @test.assert_eq(page_scale_ops_for_test(scaled, pages[0]), [
+    Op_cm(@pdflite.transform_scale(@pdflite.point2(0.0, 0.0), 2.0, 3.0)),
+    Op_S,
+  ])
+  @test.assert_eq(
+    pages[1].mediabox,
+    page_scale_rect_for_test(0.0, 0.0, 100.0, 100.0),
+  )
+  @test.assert_eq(page_scale_ops_for_test(scaled, pages[1]), [Op_BT, Op_ET])
+  let scaled_numbers = try! scaled.page_reference_numbers()
+  guard scaled
+    .lookup_object_or_null(scaled.root())
+    .lookup_immediate(key_open_action)
+    is Some(open_action) else {
+    fail("expected scaled document open action")
+  }
+  @test.assert_eq(
+    scaled.direct(open_action),
+    PdfArray([
+      PdfIndirect(scaled_numbers[0]),
+      PdfNameObject(xyz_name),
+      PdfReal(8.0),
+      PdfReal(15.0),
+      PdfNull,
+    ]),
+  )
+  let wrapped = try! @pdflite.pdf_scale_pages(document, [1], [(0.5, 0.5)])
+  let wrapped_pages = try! wrapped.pages_of_pagetree()
+  @test.assert_eq(
+    wrapped_pages[0].mediabox,
+    page_scale_rect_for_test(0.0, 0.0, 50.0, 40.0),
+  )
+}
+
+///|
+test "PdfDocument scale_pages validates scale counts and page range" {
+  let document = page_scale_document_for_test([page_scale_page_for_test([Op_S])])
+  let mismatch : Result[@pdflite.PdfDocument, Error] = try? document.scale_pages(
+    [1],
+    [],
+  )
+  guard mismatch
+    is Err(
+      @pdflite.PdfError::BadPageSpecification(
+        "scale_pages: scale count must match page count"
+      )
+    ) else {
+    fail("expected scale_pages to reject scale count mismatch")
+  }
+  let bad_page : Result[@pdflite.PdfDocument, Error] = try? document.scale_pages(
+    [2],
+    [(1.0, 1.0)],
+  )
+  guard bad_page
+    is Err(
+      @pdflite.PdfError::BadPageSpecification(
+        "scale_pages: range contains pages not present in pdf"
+      )
+    ) else {
+    fail("expected scale_pages to reject invalid pages")
   }
 }

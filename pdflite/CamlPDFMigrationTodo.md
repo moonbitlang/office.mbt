@@ -54,6 +54,13 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port cpdf-style page scaling needed by legacy `twoup`:
+  `PdfDocument::scale_pages` now applies per-page x/y scale factors from the
+  origin, transforms known page boxes, content streams, annotations, pattern
+  matrices, and destination coordinates, and validates scale-list lengths plus
+  selected page ranges. Coverage pins box/content/destination scaling, wrapper
+  behavior, mismatch rejection, and invalid-page rejection. `moon test --target
+  native pdf_page_scale_test.mbt` reports 5/5 tests passing.~~
 - [x] ~~Port legacy `cpdfimpose.twoup_stack` and page rotation helpers:
   `PdfDocument::rotate_pages`/`rotate_pages_by` now set absolute or relative
   `/Rotate` values for selected pages with page-range and right-angle

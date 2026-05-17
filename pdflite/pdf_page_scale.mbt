@@ -55,6 +55,43 @@ fn PdfDocument::pdf_page_scale_page(
 }
 
 ///|
+fn pdf_page_scale_pair_index(
+  page_numbers : ArrayView[Int],
+  page_number : Int,
+) -> Int? {
+  for index in 0..<page_numbers.length() {
+    if page_numbers[index] == page_number {
+      break Some(index)
+    }
+  } nobreak {
+    None
+  }
+}
+
+///|
+fn pdf_page_scale_validate_pairs(
+  page_numbers : ArrayView[Int],
+  scales : ArrayView[(Double, Double)],
+) -> Unit raise PdfError {
+  if page_numbers.length() != scales.length() {
+    raise BadPageSpecification("scale_pages: scale count must match page count")
+  }
+}
+
+///|
+fn PdfDocument::pdf_page_scale_page_data(
+  self : PdfDocument,
+  page : PdfPage,
+  matrix : TransformMatrix,
+  fast : Bool,
+) -> PdfPage raise PdfError {
+  let page = self.pdf_page_upright_transform_boxes(page, matrix)
+  let page = self.pdf_impose_change_pattern_matrices_page(matrix, page)
+  self.transform_annotations(matrix, page.rest)
+  self.prepend_operators(page, [Op_cm(matrix)], fast~)
+}
+
+///|
 /// Scale selected page contents and annotations around a cpdf-style position.
 ///
 /// The transform origin is calculated from `/CropBox` when present, otherwise
@@ -98,4 +135,53 @@ pub fn pdf_scale_contents(
   fast? : Bool = false,
 ) -> PdfDocument raise PdfError {
   document.scale_contents(page_numbers, position, scale, fast~)
+}
+
+///|
+/// Scale selected pages by per-page x/y factors, including boxes and content.
+///
+/// This ports cpdf's `scale_pdf`: selected page boxes, content streams,
+/// annotations, pattern matrices, and destination coordinates are transformed
+/// by a scale matrix around the origin.
+pub fn PdfDocument::scale_pages(
+  self : PdfDocument,
+  page_numbers : ArrayView[Int],
+  scales : ArrayView[(Double, Double)],
+  fast? : Bool = false,
+) -> PdfDocument raise PdfError {
+  pdf_page_box_validate_page_numbers(
+    page_numbers,
+    self.endpage(),
+    "scale_pages",
+  )
+  pdf_page_scale_validate_pairs(page_numbers, scales)
+  let pages = self.pages_of_pagetree()
+  let rewritten : Array[PdfPage] = []
+  let matrices : Array[(Int, TransformMatrix)] = []
+  for index in 0..<pages.length() {
+    let page_number = index + 1
+    match pdf_page_scale_pair_index(page_numbers, page_number) {
+      Some(scale_index) => {
+        let scale = scales[scale_index]
+        let matrix = transform_scale(point2(0.0, 0.0), scale.0, scale.1)
+        rewritten.push(
+          self.pdf_page_scale_page_data(pages[index], matrix, fast),
+        )
+        matrices.push((page_number, matrix))
+      }
+      None => rewritten.push(pages[index])
+    }
+  }
+  self.change_pages(rewritten, change_references=true, matrices~)
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::scale_pages`.
+pub fn pdf_scale_pages(
+  document : PdfDocument,
+  page_numbers : ArrayView[Int],
+  scales : ArrayView[(Double, Double)],
+  fast? : Bool = false,
+) -> PdfDocument raise PdfError {
+  document.scale_pages(page_numbers, scales, fast~)
 }

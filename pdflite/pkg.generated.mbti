@@ -751,6 +751,8 @@ pub fn pdf_run_length_encode_view(BytesView) -> Bytes
 
 pub fn pdf_scale_contents(PdfDocument, ArrayView[Int], PdfPosition, Double, fast? : Bool) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_scale_pages(PdfDocument, ArrayView[Int], ArrayView[(Double, Double)], fast? : Bool) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_set_language(PdfDocument, BytesView) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_set_mediaboxes(PdfDocument, ArrayView[Int], ArrayView[(Double, Double, Double, Double)]) -> PdfDocument raise @core.PdfError
@@ -1692,6 +1694,7 @@ pub fn PdfDocument::root(Self) -> Int
 pub fn PdfDocument::rotate_pages(Self, Int, ArrayView[Int]) -> Self raise @core.PdfError
 pub fn PdfDocument::rotate_pages_by(Self, Int, ArrayView[Int]) -> Self raise @core.PdfError
 pub fn PdfDocument::scale_contents(Self, ArrayView[Int], PdfPosition, Double, fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::scale_pages(Self, ArrayView[Int], ArrayView[(Double, Double)], fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::select_object_numbers(Self, (PdfObject) -> Bool) -> Array[Int]
 pub fn PdfDocument::set_first_xref(Self, Int) -> Unit
 pub fn PdfDocument::set_info_entry(Self, @core.PdfName, PdfObject, Int, keep_version? : Bool, xmp_also? : Bool, xmp_just_set? : Bool) -> Self raise @core.PdfError
