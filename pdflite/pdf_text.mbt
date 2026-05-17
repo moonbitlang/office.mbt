@@ -898,7 +898,7 @@ fn pdf_text_predefined_cmap_uses_utf16_charcodes(name : PdfName) -> Bool {
 fn pdf_text_predefined_cmap_uses_utf32_charcodes(name : PdfName) -> Bool {
   let text = pdf_text_string_of_name(name)
   pdf_text_predefined_cmap_has_text_orientation(text) &&
-  text.contains("-UTF32-")
+  (text.contains("-UTF32-") || text.contains("-UCS32-"))
 }
 
 ///|

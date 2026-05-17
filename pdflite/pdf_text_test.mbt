@@ -4417,7 +4417,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   guard utf32_bad is Err(_) else {
     fail("expected malformed UTF32 predefined CMap text error")
   }
-  let akr_direct_unicode_cases : Array[
+  let direct_unicode_predefined_cases : Array[
     (String, Array[Int], Array[Int], Int, Int),
   ] = [
     (
@@ -4429,19 +4429,28 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     ),
     ("/UniAKR-UTF16-H", [0xAC, 0x00], [0xAC00], 0xAC00, 0xAC00),
     ("/UniAKR-UTF32-H", [0x00, 0x00, 0xAC, 0x00], [0xAC00], 0xAC00, 0xAC00),
+    ("/UniGB-UTF16-H", [0x4E, 0x00], [0x4E00], 0x4E00, 0x4E00),
+    ("/UniGB-UTF16-V", [0x56, 0xFD], [0x56FD], 0x56FD, 0x56FD),
+    ("/UniGB-UCS32-H", [0x00, 0x00, 0x4E, 0x00], [0x4E00], 0x4E00, 0x4E00),
+    ("/UniGB-UCS32-V", [0x00, 0x00, 0x56, 0xFD], [0x56FD], 0x56FD, 0x56FD),
+    ("/UniKS-UCS2-H", [0xAC, 0x00], [0xAC00], 0xAC00, 0xAC00),
+    ("/UniKS-UCS2-V", [0xB0, 0x98], [0xB098], 0xB098, 0xB098),
   ]
-  for case in akr_direct_unicode_cases {
-    let akr_font : @pdflite.PdfFont = PdfFontCIDKeyed({
-      basefont: text_name_for_test("/TopAKR"),
+  for case in direct_unicode_predefined_cases {
+    let direct_unicode_font : @pdflite.PdfFont = PdfFontCIDKeyed({
+      basefont: text_name_for_test("/TopDirectUnicode"),
       composite,
       encoding: PdfPredefinedCMap(text_name_for_test(case.0)),
     })
-    let akr_extractor = akr_font.text_extractor()
+    let direct_unicode_extractor = direct_unicode_font.text_extractor()
     @test.assert_eq(
-      akr_extractor.codepoints_of_text(text_bytes_for_test(case.1)),
+      direct_unicode_extractor.codepoints_of_text(text_bytes_for_test(case.1)),
       case.2,
     )
-    @test.assert_eq(akr_extractor.charcode_of_codepoint(case.3), Some(case.4))
+    @test.assert_eq(
+      direct_unicode_extractor.charcode_of_codepoint(case.3),
+      Some(case.4),
+    )
   }
   let non_ucs2_predefined_font : @pdflite.PdfFont = PdfFontCIDKeyed({
     basefont: text_name_for_test("/TopGBEUC"),

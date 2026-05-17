@@ -3227,6 +3227,36 @@ fn acceptance_unicode_predefined_cmap_document_for_test() -> @pdflite.PdfDocumen
     137,
     acceptance_unicode_predefined_tounicode_cmap_for_test(),
   )
+  doc.add_object_given_number(
+    138,
+    acceptance_predefined_cmap_descendant_font_for_test(
+      "/UniGBUTF16Descendant", "GB1",
+    ),
+  )
+  doc.add_object_given_number(
+    139,
+    acceptance_predefined_cmap_descendant_font_for_test(
+      "/UniGBUTF16VerticalDescendant", "GB1",
+    ),
+  )
+  doc.add_object_given_number(
+    140,
+    acceptance_predefined_cmap_descendant_font_for_test(
+      "/UniGBUCS32Descendant", "GB1",
+    ),
+  )
+  doc.add_object_given_number(
+    141,
+    acceptance_predefined_cmap_descendant_font_for_test(
+      "/UniKSUCS2Descendant", "Korea1",
+    ),
+  )
+  doc.add_object_given_number(
+    142,
+    acceptance_predefined_cmap_descendant_font_for_test(
+      "/UniKSUCS2VerticalDescendant", "Korea1",
+    ),
+  )
   let pages : ReadOnlyArray[@pdflite.PdfPage] = [
     acceptance_predefined_cmap_page_for_test(
       "/FUcs2H",
@@ -3282,6 +3312,43 @@ fn acceptance_unicode_predefined_cmap_document_for_test() -> @pdflite.PdfDocumen
         "/UniJISUTF8ToUnicodeTop", "/UniJIS-UTF8-H", 136,
       ).add_dict_entry(acceptance_name_for_test("/ToUnicode"), PdfIndirect(137)),
       acceptance_text_bytes_for_test([0xE3, 0x81, 0x82, 0xF0, 0x9D, 0x84, 0x9E]),
+    ),
+    acceptance_predefined_cmap_page_for_test(
+      "/FUniGBUTF16H",
+      acceptance_predefined_cmap_type0_font_for_test(
+        "/UniGBUTF16Top", "/UniGB-UTF16-H", 138,
+      ),
+      acceptance_text_bytes_for_test([0x4E, 0x00, 0x56, 0xFD]),
+    ),
+    acceptance_predefined_cmap_page_for_test(
+      "/FUniGBUTF16V",
+      acceptance_predefined_cmap_type0_font_for_test(
+        "/UniGBUTF16VerticalTop", "/UniGB-UTF16-V", 139,
+      ),
+      acceptance_text_bytes_for_test([0x4E, 0x00, 0x56, 0xFD]),
+    ),
+    acceptance_predefined_cmap_page_for_test(
+      "/FUniGBUCS32H",
+      acceptance_predefined_cmap_type0_font_for_test(
+        "/UniGBUCS32Top", "/UniGB-UCS32-H", 140,
+      ),
+      acceptance_text_bytes_for_test([
+        0x00, 0x00, 0x4E, 0x00, 0x00, 0x00, 0x56, 0xFD,
+      ]),
+    ),
+    acceptance_predefined_cmap_page_for_test(
+      "/FUniKSUCS2H",
+      acceptance_predefined_cmap_type0_font_for_test(
+        "/UniKSUCS2Top", "/UniKS-UCS2-H", 141,
+      ),
+      acceptance_text_bytes_for_test([0xAC, 0x00, 0xB0, 0x98]),
+    ),
+    acceptance_predefined_cmap_page_for_test(
+      "/FUniKSUCS2V",
+      acceptance_predefined_cmap_type0_font_for_test(
+        "/UniKSUCS2VerticalTop", "/UniKS-UCS2-V", 142,
+      ),
+      acceptance_text_bytes_for_test([0xAC, 0x00, 0xB0, 0x98]),
     ),
   ]
   let page_root = doc.add_pagetree(pages)
@@ -4617,9 +4684,9 @@ fn acceptance_assert_unicode_predefined_cmap_text_for_test(
   doc : @pdflite.PdfDocument,
 ) -> Unit raise {
   @test.assert_eq(doc.version(), (1, 5))
-  @test.assert_eq(doc.endpage(), 7)
+  @test.assert_eq(doc.endpage(), 12)
   let pages = doc.pages_of_pagetree()
-  @test.assert_eq(pages.length(), 7)
+  @test.assert_eq(pages.length(), 12)
   let ucs2_h = acceptance_assert_unicode_predefined_page_for_test(
     doc,
     pages[0],
@@ -4716,6 +4783,56 @@ fn acceptance_assert_unicode_predefined_cmap_text_for_test(
     utf8_tounicode.charcode_of_codepoint(0x03A9),
     Some(0xF09D849E),
   )
+  let unigb_utf16_h = acceptance_assert_unicode_predefined_page_for_test(
+    doc,
+    pages[7],
+    "/FUniGBUTF16H",
+    "/UniGB-UTF16-H",
+    "GB1",
+    true,
+    [0x4E00, 0x56FD],
+  )
+  @test.assert_eq(unigb_utf16_h.charcode_of_codepoint(0x56FD), Some(0x56FD))
+  let unigb_utf16_v = acceptance_assert_unicode_predefined_page_for_test(
+    doc,
+    pages[8],
+    "/FUniGBUTF16V",
+    "/UniGB-UTF16-V",
+    "GB1",
+    true,
+    [0x4E00, 0x56FD],
+  )
+  @test.assert_eq(unigb_utf16_v.charcode_of_codepoint(0x4E00), Some(0x4E00))
+  let unigb_ucs32_h = acceptance_assert_unicode_predefined_page_for_test(
+    doc,
+    pages[9],
+    "/FUniGBUCS32H",
+    "/UniGB-UCS32-H",
+    "GB1",
+    false,
+    [0x4E00, 0x56FD],
+  )
+  @test.assert_eq(unigb_ucs32_h.charcode_of_codepoint(0x4E00), Some(0x4E00))
+  let uniks_ucs2_h = acceptance_assert_unicode_predefined_page_for_test(
+    doc,
+    pages[10],
+    "/FUniKSUCS2H",
+    "/UniKS-UCS2-H",
+    "Korea1",
+    true,
+    [0xAC00, 0xB098],
+  )
+  @test.assert_eq(uniks_ucs2_h.charcode_of_codepoint(0xB098), Some(0xB098))
+  let uniks_ucs2_v = acceptance_assert_unicode_predefined_page_for_test(
+    doc,
+    pages[11],
+    "/FUniKSUCS2V",
+    "/UniKS-UCS2-V",
+    "Korea1",
+    true,
+    [0xAC00, 0xB098],
+  )
+  @test.assert_eq(uniks_ucs2_v.charcode_of_codepoint(0xAC00), Some(0xAC00))
 }
 
 ///|
