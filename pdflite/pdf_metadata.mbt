@@ -777,7 +777,9 @@ pub fn PdfDocument::open_action_json_blob(
   self : PdfDocument,
 ) -> PdfBytes raise PdfError {
   @utf8.encode(
-    self.pdf_util_json_of_object(self.open_action(), true, false).stringify(),
+    self
+    .pdf_util_json_of_object(self.open_action(), true, false, false)
+    .stringify(),
   )
 }
 
@@ -1948,7 +1950,7 @@ pub fn PdfDocument::info_json(
   )
   output.set(
     "OpenAction",
-    self.pdf_util_json_of_object(self.open_action(), true, false),
+    self.pdf_util_json_of_object(self.open_action(), true, false, false),
   )
   let viewer_bool_fields : Array[(String, PdfName)] = [
     ("HideToolbar", pdf_metadata_name("/HideToolbar")),

@@ -397,6 +397,94 @@ test "PdfDocument CPDFJSON output honors clean_strings option" {
 }
 
 ///|
+test "PdfDocument CPDFJSON output honors no_stream_data option" {
+  let key_other = util_name_for_test("/Other")
+  let doc = @pdflite.pdf_document_empty()
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([(key_other, PdfInteger(1))]),
+    StreamGot(@ascii.encode("payload")),
+  )
+  let stream_json = try! doc.json_of_object(stream, no_stream_data=true)
+  @test.assert_eq(
+    try! @pdflite.pdf_json_of_object(doc, stream, no_stream_data=true),
+    stream_json,
+  )
+  guard stream_json is Object(stream_wrapper) else {
+    fail("expected elided stream wrapper")
+  }
+  guard stream_wrapper.get("S")
+    is Some(Array([dict_json, String("<<stream data elided>>")])) else {
+    fail("expected elided stream data")
+  }
+  guard dict_json is Object(dict_entries) else {
+    fail("expected stream dictionary")
+  }
+  @test.assert_eq(
+    dict_entries.get("/Other"),
+    Some(Json::object(Map::of([("I", Json::number(1.0, repr="1"))]))),
+  )
+
+  let document = try! @pdflite.pdf_document_of_json(
+    util_cpdfjson_document_for_test(),
+  )
+  let exported = try! document.json_of_document(no_stream_data=true)
+  @test.assert_eq(
+    try! @pdflite.pdf_json_of_document(document, no_stream_data=true),
+    exported,
+  )
+  guard util_cpdfjson_entry_for_test(exported, -1) is Some(params_json) else {
+    fail("expected CPDFJSON params entry")
+  }
+  let params = try! @pdflite.pdf_object_of_json(params_json)
+  @test.assert_eq(
+    util_lookup_for_test(
+      params,
+      util_name_for_test("/CPDFJSONstreamdataincluded"),
+    ),
+    Some(PdfBoolean(false)),
+  )
+  guard util_cpdfjson_entry_for_test(exported, 2)
+    is Some(Object(object2_wrapper)) else {
+    fail("expected object 2 stream wrapper")
+  }
+  guard object2_wrapper.get("S")
+    is Some(Array([_, String("<<stream data elided>>")])) else {
+    fail("expected elided document stream data")
+  }
+
+  let parsed = try! document.json_of_document(
+    parse_content=true,
+    no_stream_data=true,
+  )
+  guard util_cpdfjson_entry_for_test(parsed, -1) is Some(parsed_params_json) else {
+    fail("expected parsed CPDFJSON params entry")
+  }
+  let parsed_params = try! @pdflite.pdf_object_of_json(parsed_params_json)
+  @test.assert_eq(
+    util_lookup_for_test(
+      parsed_params,
+      util_name_for_test("/CPDFJSONcontentparsed"),
+    ),
+    Some(PdfBoolean(true)),
+  )
+  @test.assert_eq(
+    util_lookup_for_test(
+      parsed_params,
+      util_name_for_test("/CPDFJSONstreamdataincluded"),
+    ),
+    Some(PdfBoolean(false)),
+  )
+  guard util_cpdfjson_entry_for_test(parsed, 2)
+    is Some(Object(parsed_stream_wrapper)) else {
+    fail("expected parsed stream wrapper")
+  }
+  guard parsed_stream_wrapper.get("S") is Some(Array([_, Array(parsed_ops)])) else {
+    fail("expected parsed operation arrays despite no_stream_data")
+  }
+  @test.assert_eq(parsed_ops.length(), 5)
+}
+
+///|
 test "pdf_object_of_json decodes cpdf single-object wrappers" {
   let key_array = util_name_for_test("/Array")
   let key_name = util_name_for_test("/Name")

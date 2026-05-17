@@ -1785,6 +1785,15 @@ Current backend snapshot:
   clean-string preprocessing. Native focused validation reports
   `moon test --target native pdf_util_test.mbt` at 21/21 tests passing; native
   full-suite validation reports 1708/1708 tests passing.~~
+- [x] ~~Standalone `cpdfjson.ml` stream-data omission output slice now extends
+  `PdfDocument::json_of_object`, `pdf_json_of_object`,
+  `PdfDocument::json_of_document`, and `pdf_json_of_document` with
+  `no_stream_data=true`, covering cpdf's stream-data elision placeholder,
+  `/CPDFJSONstreamdataincluded=false` metadata, compatibility-wrapper parity,
+  and the `parse_content=true` interaction where selected content streams
+  still serialize as operation arrays. Native focused validation reports
+  `moon test --target native pdf_util_test.mbt` at 22/22 tests passing; native
+  full-suite validation reports 1709/1709 tests passing.~~
 - [x] ~~Standalone `cpdfpagelabels.ml` JSON adapter slice now exposes
   `PdfDocument::add_page_labels_json` and `pdf_add_page_labels_json`, covering
   cpdf's page-label JSON array shape, UTF-8 prefix-to-PDFDocString encoding,
