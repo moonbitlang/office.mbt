@@ -159,6 +159,8 @@ pub fn pdf_colour_space_of_device_name(@core.PdfName) -> PdfColourSpace?
 
 pub fn pdf_colour_space_of_object(PdfObject) -> PdfColourSpace?
 
+pub fn pdf_contains_javascript(PdfDocument) -> Bool
+
 pub fn pdf_content_begin_artifact() -> PdfContentOp
 
 pub fn pdf_content_bytes_of_op(PdfContentOp) -> Bytes raise @core.PdfError
@@ -520,6 +522,8 @@ pub fn pdf_remove_bookmarks(PdfDocument) -> PdfDocument raise @core.PdfError
 pub fn pdf_remove_dict_entry(PdfDocument, @core.PdfName, search? : PdfObject?) -> Unit
 
 pub fn pdf_remove_duplicate_fonts(PdfDocument) -> Unit
+
+pub fn pdf_remove_javascript(PdfDocument) -> Unit raise @core.PdfError
 
 pub fn pdf_remove_ocg(PdfDocument) -> PdfDocument raise @core.PdfError
 
@@ -1215,6 +1219,7 @@ pub fn PdfDocument::change_pages(Self, ArrayView[PdfPage], change_references? : 
 pub fn PdfDocument::colour_space_components(Self, PdfObject, PdfObject) -> Int raise @core.PdfError
 pub fn PdfDocument::colspace(Self, PdfObject, PdfObject) -> PdfColourSpace raise @core.PdfError
 pub fn PdfDocument::combine_pdf_resources(Self, PdfObject, PdfObject) -> PdfObject
+pub fn PdfDocument::contains_javascript(Self) -> Bool
 pub fn PdfDocument::contents_of_name_tree(Self, PdfObject) -> Array[(PdfObject, PdfObject)]
 pub fn PdfDocument::copy(Self) -> Self
 pub fn PdfDocument::decrypt_single_stream(Self, Int, Int, PdfObject, user_password? : BytesView?, owner_password? : BytesView?, no_encrypt_metadata? : Bool) -> PdfObject? raise @core.PdfError
@@ -1316,6 +1321,7 @@ pub fn PdfDocument::remove_bookmarks(Self) -> Self raise @core.PdfError
 pub fn PdfDocument::remove_chain(Self, ArrayView[@core.PdfName]) -> Bool raise @core.PdfError
 pub fn PdfDocument::remove_dict_entry_everywhere(Self, @core.PdfName, search? : PdfObject?) -> Unit
 pub fn PdfDocument::remove_duplicate_fonts(Self) -> Unit
+pub fn PdfDocument::remove_javascript(Self) -> Unit raise @core.PdfError
 pub fn PdfDocument::remove_object(Self, Int) -> Unit
 pub fn PdfDocument::remove_optional_content_groups(Self) -> Self raise @core.PdfError
 pub fn PdfDocument::remove_page_labels(Self) -> Self raise @core.PdfError
