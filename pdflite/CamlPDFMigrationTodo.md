@@ -1909,9 +1909,10 @@ Current backend snapshot:
   pdf_text_test.mbt` reports 152/152 tests passing.~~
 - [x] ~~Direct Unicode predefined CMap coverage now includes the cpdf-listed
   `/UniGB-UCS32-H`, `/UniGB-UCS32-V`, `/UniGB-UTF16-H`, `/UniGB-UTF16-V`,
-  `/UniKS-UCS2-H`, and `/UniKS-UCS2-V` names. `/UCS32/` CMaps now use the
-  UTF-32 text segmentation and reverse-lookup path, and the native
-  reader-boundary gate covers these names through compressed write/read/reread.
+  `/UniKS-UCS2-H`, `/UniKS-UCS2-V`, `/UniJIS-UCS2-HW-H`, and
+  `/UniJIS-UCS2-HW-V` names. `/UCS32/` CMaps now use the UTF-32 text
+  segmentation and reverse-lookup path, and the native reader-boundary gate
+  covers these names through compressed write/read/reread.
   `moon test --target native pdf_text_test.mbt` reports 152/152 tests passing,
   and `moon test --target native pdf_native_acceptance_test.mbt` reports 88/88
   tests passing.~~

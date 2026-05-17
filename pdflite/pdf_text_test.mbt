@@ -4435,6 +4435,8 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     ("/UniGB-UCS32-V", [0x00, 0x00, 0x56, 0xFD], [0x56FD], 0x56FD, 0x56FD),
     ("/UniKS-UCS2-H", [0xAC, 0x00], [0xAC00], 0xAC00, 0xAC00),
     ("/UniKS-UCS2-V", [0xB0, 0x98], [0xB098], 0xB098, 0xB098),
+    ("/UniJIS-UCS2-HW-H", [0x00, 0x41], [0x41], 0x41, 0x41),
+    ("/UniJIS-UCS2-HW-V", [0xFF, 0x76], [0xFF76], 0xFF76, 0xFF76),
   ]
   for case in direct_unicode_predefined_cases {
     let direct_unicode_font : @pdflite.PdfFont = PdfFontCIDKeyed({

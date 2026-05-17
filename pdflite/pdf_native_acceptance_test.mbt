@@ -3257,6 +3257,24 @@ fn acceptance_unicode_predefined_cmap_document_for_test() -> @pdflite.PdfDocumen
       "/UniKSUCS2VerticalDescendant", "Korea1",
     ),
   )
+  doc.add_object_given_number(
+    143,
+    acceptance_predefined_cmap_descendant_font_for_test(
+      "/UniGBUCS32VerticalDescendant", "GB1",
+    ),
+  )
+  doc.add_object_given_number(
+    144,
+    acceptance_predefined_cmap_descendant_font_for_test(
+      "/UniJISUCS2HWDescendant", "Japan1",
+    ),
+  )
+  doc.add_object_given_number(
+    145,
+    acceptance_predefined_cmap_descendant_font_for_test(
+      "/UniJISUCS2HWVerticalDescendant", "Japan1",
+    ),
+  )
   let pages : ReadOnlyArray[@pdflite.PdfPage] = [
     acceptance_predefined_cmap_page_for_test(
       "/FUcs2H",
@@ -3349,6 +3367,29 @@ fn acceptance_unicode_predefined_cmap_document_for_test() -> @pdflite.PdfDocumen
         "/UniKSUCS2VerticalTop", "/UniKS-UCS2-V", 142,
       ),
       acceptance_text_bytes_for_test([0xAC, 0x00, 0xB0, 0x98]),
+    ),
+    acceptance_predefined_cmap_page_for_test(
+      "/FUniGBUCS32V",
+      acceptance_predefined_cmap_type0_font_for_test(
+        "/UniGBUCS32VerticalTop", "/UniGB-UCS32-V", 143,
+      ),
+      acceptance_text_bytes_for_test([
+        0x00, 0x00, 0x4E, 0x00, 0x00, 0x00, 0x56, 0xFD,
+      ]),
+    ),
+    acceptance_predefined_cmap_page_for_test(
+      "/FUniJISUCS2HWH",
+      acceptance_predefined_cmap_type0_font_for_test(
+        "/UniJISUCS2HWTop", "/UniJIS-UCS2-HW-H", 144,
+      ),
+      acceptance_text_bytes_for_test([0x00, 0x41, 0xFF, 0x76]),
+    ),
+    acceptance_predefined_cmap_page_for_test(
+      "/FUniJISUCS2HWV",
+      acceptance_predefined_cmap_type0_font_for_test(
+        "/UniJISUCS2HWVerticalTop", "/UniJIS-UCS2-HW-V", 145,
+      ),
+      acceptance_text_bytes_for_test([0x00, 0x42, 0xFF, 0x76]),
     ),
   ]
   let page_root = doc.add_pagetree(pages)
@@ -4684,9 +4725,9 @@ fn acceptance_assert_unicode_predefined_cmap_text_for_test(
   doc : @pdflite.PdfDocument,
 ) -> Unit raise {
   @test.assert_eq(doc.version(), (1, 5))
-  @test.assert_eq(doc.endpage(), 12)
+  @test.assert_eq(doc.endpage(), 15)
   let pages = doc.pages_of_pagetree()
-  @test.assert_eq(pages.length(), 12)
+  @test.assert_eq(pages.length(), 15)
   let ucs2_h = acceptance_assert_unicode_predefined_page_for_test(
     doc,
     pages[0],
@@ -4833,6 +4874,36 @@ fn acceptance_assert_unicode_predefined_cmap_text_for_test(
     [0xAC00, 0xB098],
   )
   @test.assert_eq(uniks_ucs2_v.charcode_of_codepoint(0xAC00), Some(0xAC00))
+  let unigb_ucs32_v = acceptance_assert_unicode_predefined_page_for_test(
+    doc,
+    pages[12],
+    "/FUniGBUCS32V",
+    "/UniGB-UCS32-V",
+    "GB1",
+    false,
+    [0x4E00, 0x56FD],
+  )
+  @test.assert_eq(unigb_ucs32_v.charcode_of_codepoint(0x56FD), Some(0x56FD))
+  let unijis_ucs2_hw_h = acceptance_assert_unicode_predefined_page_for_test(
+    doc,
+    pages[13],
+    "/FUniJISUCS2HWH",
+    "/UniJIS-UCS2-HW-H",
+    "Japan1",
+    true,
+    [0x41, 0xFF76],
+  )
+  @test.assert_eq(unijis_ucs2_hw_h.charcode_of_codepoint(0xFF76), Some(0xFF76))
+  let unijis_ucs2_hw_v = acceptance_assert_unicode_predefined_page_for_test(
+    doc,
+    pages[14],
+    "/FUniJISUCS2HWV",
+    "/UniJIS-UCS2-HW-V",
+    "Japan1",
+    true,
+    [0x42, 0xFF76],
+  )
+  @test.assert_eq(unijis_ucs2_hw_v.charcode_of_codepoint(0x42), Some(0x42))
 }
 
 ///|
