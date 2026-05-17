@@ -761,6 +761,10 @@ pub fn pdf_type_typeset(PdfDocument, Bool, Double, Double, Double, Double, @geom
 
 pub fn pdf_type_width_of_bytes(ArrayView[Double], BytesView) -> Double raise @core.PdfError
 
+pub fn pdf_ua_create_pdfua1(String, @geometry.PaperSize, Int) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_ua_create_pdfua2(String, @geometry.PaperSize, Int) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_ua_subformat_of_string(String) -> PdfUASubformat raise @core.PdfError
 
 pub fn pdf_utf16be_of_codepoints(ArrayView[Int]) -> Bytes raise @core.PdfError

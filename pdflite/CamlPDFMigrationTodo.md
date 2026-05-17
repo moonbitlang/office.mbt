@@ -7,7 +7,7 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 99.0%.
+- Native main-feature parity: 99.1%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
   breadth: 85-90%.
 - Warning 74 public documentation cleanup: complete; 0 native diagnostics
@@ -18,7 +18,8 @@ Current estimate:
   content-stream, annotation, native secure-random, bookmark, image, structure,
   renumbering, standard font-pack embedding, text-to-PDF instruction
   conversion, basic and tagged text-to-PDF document assembly, PDF/UA
-  text-to-PDF subformat shaping, and Markdown helper public APIs.
+  text-to-PDF subformat shaping, blank PDF/UA creation helpers, and Markdown
+  helper public APIs.
 
 Current backend snapshot:
 
@@ -46,6 +47,11 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port the `Cpdfua.create_pdfua1`/`create_pdfua2` blank-document
+  creation slice with shared PDF/UA catalog metadata, PDF/UA-1 and PDF/UA-2
+  XMP marker streams, XML-escaped metadata titles, and reuse from
+  `pdf_texttopdf_typeset`. `moon test --target native` now reports 1586/1586
+  tests passing.~~
 - [x] ~~Complete the PDF/UA `cpdftexttopdf.typeset` subformat slice by adding
   `PDF/UA-1` and `PDF/UA-2` parsing, title enforcement, forced structure-tree
   processing, PDF/UA-1 catalog metadata, and PDF/UA-2 top-level `/Document`

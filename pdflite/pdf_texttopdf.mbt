@@ -110,66 +110,6 @@ fn pdf_texttopdf_namespaces_key() -> PdfName {
 }
 
 ///|
-let pdf_texttopdf_info_key_name : PdfName = pdf_texttopdf_name("/Info")
-
-///|
-fn pdf_texttopdf_info_key() -> PdfName {
-  pdf_texttopdf_info_key_name
-}
-
-///|
-let pdf_texttopdf_title_key_name : PdfName = pdf_texttopdf_name("/Title")
-
-///|
-fn pdf_texttopdf_title_key() -> PdfName {
-  pdf_texttopdf_title_key_name
-}
-
-///|
-let pdf_texttopdf_markinfo_key_name : PdfName = pdf_texttopdf_name("/MarkInfo")
-
-///|
-fn pdf_texttopdf_markinfo_key() -> PdfName {
-  pdf_texttopdf_markinfo_key_name
-}
-
-///|
-let pdf_texttopdf_marked_key_name : PdfName = pdf_texttopdf_name("/Marked")
-
-///|
-fn pdf_texttopdf_marked_key() -> PdfName {
-  pdf_texttopdf_marked_key_name
-}
-
-///|
-let pdf_texttopdf_lang_key_name : PdfName = pdf_texttopdf_name("/Lang")
-
-///|
-fn pdf_texttopdf_lang_key() -> PdfName {
-  pdf_texttopdf_lang_key_name
-}
-
-///|
-let pdf_texttopdf_viewer_preferences_key_name : PdfName = pdf_texttopdf_name(
-  "/ViewerPreferences",
-)
-
-///|
-fn pdf_texttopdf_viewer_preferences_key() -> PdfName {
-  pdf_texttopdf_viewer_preferences_key_name
-}
-
-///|
-let pdf_texttopdf_display_doc_title_key_name : PdfName = pdf_texttopdf_name(
-  "/DisplayDocTitle",
-)
-
-///|
-fn pdf_texttopdf_display_doc_title_key() -> PdfName {
-  pdf_texttopdf_display_doc_title_key_name
-}
-
-///|
 let pdf_texttopdf_pdfua2_namespace : PdfBytes = @ascii.encode(
   "http://iso.org/pdf2/ssn",
 )
@@ -524,46 +464,6 @@ fn PdfDocument::pdf_texttopdf_add_structure_tree(
 }
 
 ///|
-fn PdfDocument::pdf_texttopdf_apply_subformat_metadata(
-  self : PdfDocument,
-  subformat : PdfUASubformat,
-  title : String,
-) -> Unit raise PdfError {
-  match subformat {
-    PdfUA1 => self.set_version(1, 7)
-    PdfUA2 => self.set_version(2, 0)
-  }
-  let info_number = self.add_object(
-    PdfDictionary([(pdf_texttopdf_title_key(), PdfString(@utf8.encode(title)))]),
-  )
-  self.set_trailer_dict(
-    self
-    .trailer_dict()
-    .add_dict_entry(pdf_texttopdf_info_key(), PdfIndirect(info_number)),
-  )
-  self.replace_chain(
-    [
-      pdf_structure_root_key(),
-      pdf_texttopdf_markinfo_key(),
-      pdf_texttopdf_marked_key(),
-    ],
-    PdfBoolean(true),
-  )
-  self.replace_chain(
-    [pdf_structure_root_key(), pdf_texttopdf_lang_key()],
-    PdfString(@ascii.encode("en-US")),
-  )
-  self.replace_chain(
-    [
-      pdf_structure_root_key(),
-      pdf_texttopdf_viewer_preferences_key(),
-      pdf_texttopdf_display_doc_title_key(),
-    ],
-    PdfBoolean(true),
-  )
-}
-
-///|
 /// Typeset UTF-8 text into a standalone PDF document using an existing font
 /// pack.
 ///
@@ -610,7 +510,7 @@ pub fn pdf_texttopdf_typeset(
   }
   match (subformat, title) {
     (Some(subformat), Some(title)) =>
-      document.pdf_texttopdf_apply_subformat_metadata(subformat, title)
+      document.pdf_ua_apply_subformat_metadata(subformat, title)
     _ => ()
   }
   document
