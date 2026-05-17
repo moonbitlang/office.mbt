@@ -60,10 +60,11 @@ Current backend snapshot:
   fit or non-fit layouts; renumbers each imposed page set; assembles sheets with
   the existing page core; updates page-reference changes; and applies cpdf's
   final non-fit margin shift. Coverage pins simple 2-up assembly including
-  hard-box content, wrapper/margin behavior, and empty-document rejection.
+  hard-box content, wrapper/margin behavior, fit-mode extra spacing,
+  page-reference retargeting, and empty-document rejection.
   Structure-tree artifact marking and legacy two-up wrappers remain separate
   follow-up slices. `moon test --target native pdf_impose_wbtest.mbt` reports
-  21/21 tests passing.~~
+  23/23 tests passing.~~
 - [x] ~~Port the layout-planning branch of `cpdfimpose.impose`: private
   `pdf_impose_layout` now calculates fit-mode sheets, horizontal/vertical
   fit spacing, non-fit zero-dimension stack layouts, margin-expanded output

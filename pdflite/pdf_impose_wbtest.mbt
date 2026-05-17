@@ -320,6 +320,70 @@ test "PdfDocument impose applies non-fit output margin through wrapper" {
 }
 
 ///|
+test "PdfDocument impose calculates fit-mode extra spacing" {
+  let document = try! impose_document_for_test([
+    try! impose_page_for_test([Op_S], width=100.0, height=100.0),
+  ])
+  let imposed = try! document.impose(250.0, 120.0, fit=true)
+  let pages = try! imposed.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  @test.assert_eq(pages[0].mediabox, impose_box_for_test(250.0, 120.0))
+  @test.assert_eq(try! impose_page_content_ops_for_test(imposed, pages[0]), [
+    Op_q,
+    Op_cm(transform_translate(16.6666666667, 10.0)),
+    Op_re(0.0, 0.0, 100.0, 100.0),
+    Op_W,
+    Op_n,
+    Op_S,
+    Op_Q,
+  ])
+}
+
+///|
+test "PdfDocument impose retargets page references to imposed sheets" {
+  let key_open_action = impose_name_for_test("/OpenAction")
+  let xyz_name = impose_name_for_test("/XYZ")
+  let document = try! impose_document_for_test([
+    try! impose_page_for_test([Op_S], width=100.0, height=100.0),
+    try! impose_page_for_test([Op_BT, Op_ET], width=100.0, height=100.0),
+  ])
+  let page_numbers = try! document.page_reference_numbers()
+  document.add_object_given_number(
+    document.root(),
+    try! document
+    .lookup_object_or_null(document.root())
+    .add_dict_entry(
+      key_open_action,
+      PdfArray([
+        PdfIndirect(page_numbers[1]),
+        PdfNameObject(xyz_name),
+        PdfReal(10.0),
+        PdfReal(20.0),
+        PdfNull,
+      ]),
+    ),
+  )
+  let imposed = try! document.impose(2.0, 1.0)
+  let imposed_numbers = try! imposed.page_reference_numbers()
+  guard imposed
+    .lookup_object_or_null(imposed.root())
+    .lookup_immediate(key_open_action)
+    is Some(open_action) else {
+    fail("expected imposed open action")
+  }
+  @test.assert_eq(
+    imposed.direct(open_action),
+    PdfArray([
+      PdfIndirect(imposed_numbers[0]),
+      PdfNameObject(xyz_name),
+      PdfReal(10.0),
+      PdfReal(20.0),
+      PdfNull,
+    ]),
+  )
+}
+
+///|
 test "PdfDocument impose rejects empty input" {
   let document = try! pdf_blank_document(10.0, 10.0, 0)
   let result : Result[PdfDocument, Error] = try? document.impose(1.0, 1.0)
