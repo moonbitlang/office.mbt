@@ -7,7 +7,7 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 98.5%.
+- Native main-feature parity: 98.6%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
   breadth: 85-90%.
 - Warning 74 public documentation cleanup: complete; 0 native diagnostics
@@ -16,7 +16,7 @@ Current estimate:
   text/font extraction, cryptography and primitive crypto, page-tree, writer,
   native async file I/O, codec, page-label, function, optional-content, and
   content-stream, annotation, native secure-random, bookmark, image, structure,
-  renumbering, and Markdown helper public APIs.
+  renumbering, standard font-pack embedding, and Markdown helper public APIs.
 
 Current backend snapshot:
 
@@ -44,6 +44,10 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port the first `cpdfembed` slice with cpdf-style standard-font
+  `PdfFontPack` construction, Unicode codepoint lookup, duplicate mapping
+  behavior, invalid font-index safety, and run collation by font index. `moon
+  test --target native` now reports 1572/1572 tests passing.~~
 - [x] ~~Continue the cpdftype port with byte-preserving element streams,
   CamlPDF-compatible split/layout/pagination helpers, and a first native
   `typeset` layer that emits page content streams, font resources, link

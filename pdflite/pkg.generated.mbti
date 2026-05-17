@@ -293,6 +293,12 @@ pub fn pdf_flate_encode_view_with_level(BytesView, Int) -> Bytes raise @core.Pdf
 
 pub fn pdf_flate_encode_with_level(Bytes, Int) -> Bytes raise @core.PdfError
 
+pub fn pdf_fontpack_collate_runs(ArrayView[(Int, Int, PdfFont)]) -> Array[Array[(Int, Int, PdfFont)]]
+
+pub fn pdf_fontpack_get_char(PdfFontPack, Int) -> (Int, Int, PdfFont)?
+
+pub fn pdf_fontpack_of_standard_font(PdfFont) -> PdfFontPack raise @core.PdfError
+
 pub fn pdf_format_real(Double) -> Bytes raise @core.PdfError
 
 pub fn pdf_generate_id(String, () -> Double) -> PdfObject
@@ -1580,6 +1586,18 @@ pub(all) enum PdfFontFile {
   PdfFontFile(Int)
   PdfFontFile2(Int)
   PdfFontFile3(Int)
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfFontPack {
+  fonts : Array[PdfFont]
+  entries : Array[PdfFontPackEntry]
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfFontPack::get_char(Self, Int) -> (Int, Int, PdfFont)?
+
+pub(all) struct PdfFontPackEntry {
+  codepoint : Int
+  font_index : Int
+  charcode : Int
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfFunction {
