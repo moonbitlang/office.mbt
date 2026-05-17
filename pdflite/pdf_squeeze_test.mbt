@@ -30,6 +30,13 @@ fn squeeze_stream_for_test(
 }
 
 ///|
+fn squeeze_direct_stream_for_test(
+  data : @pdflite.PdfBytes,
+) -> @pdflite.PdfObject {
+  squeeze_stream_for_test([], data)
+}
+
+///|
 fn squeeze_filter_for_test(
   document : @pdflite.PdfDocument,
   object_number : Int,
@@ -300,4 +307,98 @@ test "PdfDocument recompress skips malformed old-filter streams" {
   let recompressed = try! document.recompress()
 
   @test.assert_eq(recompressed.lookup_object_or_null(9), malformed)
+}
+
+///|
+test "PdfDocument squeeze removes duplicate objects and rewrites references" {
+  let key_info = squeeze_name_for_test("/Info")
+  let first : @pdflite.PdfObject = PdfDictionary([
+    (squeeze_name_for_test("/Name"), PdfString(@ascii.encode("same"))),
+  ])
+  let second = first
+  let holder : @pdflite.PdfObject = PdfArray([PdfIndirect(2), PdfIndirect(1)])
+  let document = @pdflite.pdf_document_empty()
+  document.add_object_given_number(1, first)
+  document.add_object_given_number(2, second)
+  document.add_object_given_number(3, holder)
+  document.set_trailer_dict(PdfDictionary([(key_info, PdfIndirect(2))]))
+
+  let squeezed = try! document.squeeze()
+
+  @test.assert_eq(squeezed.lookup_object_or_null(1), first)
+  @test.assert_eq(squeezed.lookup_object_or_null(2), PdfNull)
+  @test.assert_eq(
+    squeezed.lookup_object_or_null(3),
+    PdfArray([PdfIndirect(1), PdfIndirect(1)]),
+  )
+  @test.assert_eq(
+    squeezed.trailer_dict().lookup_immediate(key_info),
+    Some(PdfIndirect(1)),
+  )
+  @test.assert_eq(document.lookup_object_or_null(2), second)
+}
+
+///|
+test "squeeze reaches duplicate-object fixed point" {
+  let same : @pdflite.PdfObject = PdfString(@ascii.encode("fixed point"))
+  let document = @pdflite.pdf_document_empty()
+  document.add_object_given_number(1, PdfArray([PdfIndirect(4)]))
+  document.add_object_given_number(2, PdfArray([PdfIndirect(5)]))
+  document.add_object_given_number(4, same)
+  document.add_object_given_number(5, same)
+  document.add_object_given_number(6, PdfArray([PdfIndirect(2)]))
+
+  let squeezed = try! @pdflite.squeeze(document)
+
+  @test.assert_eq(squeezed.lookup_object_or_null(5), PdfNull)
+  @test.assert_eq(squeezed.lookup_object_or_null(2), PdfNull)
+  @test.assert_eq(squeezed.lookup_object_or_null(6), PdfArray([PdfIndirect(1)]))
+}
+
+///|
+test "squeeze preserves duplicate page and annotation objects" {
+  let page : @pdflite.PdfObject = PdfDictionary([
+    (
+      squeeze_name_for_test("/Type"),
+      PdfNameObject(squeeze_name_for_test("/Page")),
+    ),
+  ])
+  let annotation : @pdflite.PdfObject = PdfDictionary([
+    (
+      squeeze_name_for_test("/Subtype"),
+      PdfNameObject(squeeze_name_for_test("/RichMedia")),
+    ),
+  ])
+  let document = @pdflite.pdf_document_empty()
+  document.add_object_given_number(20, page)
+  document.add_object_given_number(21, page)
+  document.add_object_given_number(22, annotation)
+  document.add_object_given_number(23, annotation)
+
+  let squeezed = try! document.squeeze()
+
+  @test.assert_eq(squeezed.lookup_object_or_null(20), page)
+  @test.assert_eq(squeezed.lookup_object_or_null(21), page)
+  @test.assert_eq(squeezed.lookup_object_or_null(22), annotation)
+  @test.assert_eq(squeezed.lookup_object_or_null(23), annotation)
+}
+
+///|
+test "squeeze deduplicates equal streams before recompressing" {
+  let data = squeeze_data_for_test()
+  let stream = squeeze_direct_stream_for_test(data)
+  let document = @pdflite.pdf_document_empty()
+  document.add_object_given_number(30, stream)
+  document.add_object_given_number(31, stream)
+  document.add_object_given_number(32, PdfArray([PdfIndirect(31)]))
+
+  let squeezed = try! document.squeeze()
+  let decompressed = try! squeezed.decompress()
+
+  @test.assert_eq(squeezed.lookup_object_or_null(31), PdfNull)
+  @test.assert_eq(
+    squeezed.lookup_object_or_null(32),
+    PdfArray([PdfIndirect(30)]),
+  )
+  @test.assert_eq(squeeze_stream_bytes_for_test(decompressed, 30), Some(data))
 }

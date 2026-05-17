@@ -7,7 +7,7 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 98.1%.
+- Native main-feature parity: 98.2%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
   breadth: 85-90%.
 - Warning 74 public documentation cleanup: complete; 0 native diagnostics
@@ -21,8 +21,8 @@ Current estimate:
 Current backend snapshot:
 
 - Native: full suite passing; the latest coverage pass leaves no uncovered
-  lines in the new squeeze stream-compression slice, with historical defensive
-  and edge-path coverage gaps still present in older files.
+  lines in the squeeze stream-compression and duplicate-pruning slices, with
+  historical defensive and edge-path coverage gaps still present in older files.
 - WasmGC and JavaScript: full non-native test suites pass.
 - Wasm: backend smoke suite passes with 497 tests after keeping the largest
   corpus/text regression files on wasm-gc/js/native/llvm; full plain-Wasm suite
@@ -1299,17 +1299,20 @@ Current backend snapshot:
   source paths, write sanitized attachment names, and reject malformed
   no-data attachments; native full-suite validation reports 1498/1498 tests
   passing.~~
-- [x] ~~Standalone `cpdfsqueeze.ml` stream compression/decompression slice now
-  exposes `PdfDocument::recompress`, `PdfDocument::decompress`,
-  `recompress_pdf`, and `decompress_pdf`, covering unfiltered streams, legacy
-  lossless filters, short `/F` aliases, filter arrays, metadata skipping,
-  encrypted no-op behavior, malformed filter metadata, malformed old-filter
-  payloads, original-document preservation, and already-decrypted object-table
-  state preservation. Native full-suite validation reports 1506/1506 tests
-  passing, and coverage reports no uncovered lines in `pdf_squeeze.mbt`.~~
-- [ ] Complete the remaining `cpdfsqueeze.ml` orchestration: duplicate-object
-  pruning/rewrite, repeated object-count squeezing, and the optional page
-  content/Form XObject normalization path.
+- [x] ~~Standalone `cpdfsqueeze.ml` stream compression/decompression and
+  conservative squeeze slices now expose `PdfDocument::recompress`,
+  `PdfDocument::decompress`, `PdfDocument::squeeze`, `recompress_pdf`,
+  `decompress_pdf`, and `squeeze`, covering unfiltered streams, legacy lossless
+  filters and abbreviations, short `/F` aliases, filter arrays, metadata
+  skipping, encrypted no-op behavior, malformed filter metadata, malformed
+  old-filter payloads, duplicate object pruning/rewrite, fixed-point squeezing,
+  page/annotation duplicate preservation, duplicate stream pruning before
+  recompressing, deferred object-table entry preservation, original-document
+  preservation, and already-decrypted object-table state preservation. Native
+  full-suite validation reports 1511/1511 tests passing, and coverage reports
+  no uncovered lines in `pdf_squeeze.mbt`.~~
+- [ ] Complete the remaining `cpdfsqueeze.ml` page-data path: optional page
+  content stream and Form XObject normalization.
 - [x] ~~Page labels, bookmarks, annotations, duplicate annotation repair,
   old-style destinations, name-tree destinations, `/OpenAction`, optional
   content, AcroForm merge basics, trailer `/Info`, and structure-tree

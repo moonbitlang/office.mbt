@@ -68,3 +68,26 @@ test "PdfDocument recompress preserves already-decrypted object-table state" {
   )
   @test.assert_eq(recompressed.lookup_object_or_null(3), PdfInteger(42))
 }
+
+///|
+test "PdfDocument squeeze skips deferred object entries" {
+  let doc = pdf_document_empty()
+  doc.objects.set_entry(40, pdf_object_entry(ObjectToParse))
+  doc.objects.set_entry(41, pdf_object_entry(ObjectToParse))
+  doc.add_object_given_number(42, PdfString(@ascii.encode("parsed")))
+
+  let squeezed = try! doc.squeeze()
+
+  @test.assert_eq(
+    squeezed.objects.get_entry(40),
+    Some(pdf_object_entry(ObjectToParse)),
+  )
+  @test.assert_eq(
+    squeezed.objects.get_entry(41),
+    Some(pdf_object_entry(ObjectToParse)),
+  )
+  @test.assert_eq(
+    squeezed.lookup_object_or_null(42),
+    PdfString(@ascii.encode("parsed")),
+  )
+}

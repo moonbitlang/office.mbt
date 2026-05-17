@@ -20,6 +20,22 @@ fn pdf_squeeze_metadata_name() -> PdfName {
 }
 
 ///|
+let pdf_squeeze_page_name_value : PdfName = pdf_squeeze_name("/Page")
+
+///|
+fn pdf_squeeze_page_name() -> PdfName {
+  pdf_squeeze_page_name_value
+}
+
+///|
+let pdf_squeeze_subtype_key_name : PdfName = pdf_squeeze_name("/Subtype")
+
+///|
+fn pdf_squeeze_subtype_key() -> PdfName {
+  pdf_squeeze_subtype_key_name
+}
+
+///|
 fn pdf_squeeze_old_filter(name : PdfName) -> Bool {
   name == pdf_filter_ascii_hex_decode_name ||
   name == pdf_filter_ascii_hex_short_name ||
@@ -29,6 +45,133 @@ fn pdf_squeeze_old_filter(name : PdfName) -> Bool {
   name == pdf_filter_lzw_short_name ||
   name == pdf_filter_run_length_decode_name ||
   name == pdf_filter_run_length_short_name
+}
+
+///|
+fn pdf_squeeze_annotation_subtype(name : PdfName) -> Bool {
+  name == pdf_squeeze_name("/Text") ||
+  name == pdf_squeeze_name("/Link") ||
+  name == pdf_squeeze_name("/FreeText") ||
+  name == pdf_squeeze_name("/Line") ||
+  name == pdf_squeeze_name("/Square") ||
+  name == pdf_squeeze_name("/Circle") ||
+  name == pdf_squeeze_name("/Polygon") ||
+  name == pdf_squeeze_name("/PolyLine") ||
+  name == pdf_squeeze_name("/Highlight") ||
+  name == pdf_squeeze_name("/Underline") ||
+  name == pdf_squeeze_name("/Squiggly") ||
+  name == pdf_squeeze_name("/StrikeOut") ||
+  name == pdf_squeeze_name("/Caret") ||
+  name == pdf_squeeze_name("/Stamp") ||
+  name == pdf_squeeze_name("/Ink") ||
+  name == pdf_squeeze_name("/Popup") ||
+  name == pdf_squeeze_name("/FileAttachment") ||
+  name == pdf_squeeze_name("/Sound") ||
+  name == pdf_squeeze_name("/Movie") ||
+  name == pdf_squeeze_name("/Screen") ||
+  name == pdf_squeeze_name("/Widget") ||
+  name == pdf_squeeze_name("/PrinterMark") ||
+  name == pdf_squeeze_name("/TrapNet") ||
+  name == pdf_squeeze_name("/3D") ||
+  name == pdf_squeeze_name("/Redact") ||
+  name == pdf_squeeze_name("/Projection") ||
+  name == pdf_squeeze_name("/RichMedia")
+}
+
+///|
+priv struct PdfSqueezeDuplicateCandidate {
+  number : Int
+  object : PdfObject
+}
+
+///|
+fn pdf_squeeze_materialized_object(
+  object : PdfObject,
+) -> PdfObject raise PdfError {
+  match object {
+    PdfStreamObject(stream) =>
+      PdfStreamObject({
+        dictionary: stream.dictionary,
+        data: StreamGot(pdf_stream_data_bytes(stream.data)),
+      })
+    _ => object
+  }
+}
+
+///|
+fn pdf_squeeze_duplicate_candidate(
+  number : Int,
+  object : PdfObject,
+) -> PdfSqueezeDuplicateCandidate raise PdfError {
+  { number, object: pdf_squeeze_materialized_object(object) }
+}
+
+///|
+fn PdfDocument::pdf_squeeze_skip_duplicate_candidate(
+  self : PdfDocument,
+  object : PdfObject,
+) -> Bool {
+  match self.lookup_direct(pdf_squeeze_type_key(), object) {
+    Some(PdfNameObject(name)) if name == pdf_squeeze_page_name() => true
+    _ =>
+      match self.lookup_direct(pdf_squeeze_subtype_key(), object) {
+        Some(PdfNameObject(name)) => pdf_squeeze_annotation_subtype(name)
+        _ => false
+      }
+  }
+}
+
+///|
+fn PdfDocument::pdf_squeeze_duplicate_object_changes(
+  self : PdfDocument,
+) -> Array[(Int, Int)] raise PdfError {
+  let unique : Array[PdfSqueezeDuplicateCandidate] = []
+  let changes : Array[(Int, Int)] = []
+  for entry in self.parsed_object_entries() {
+    let (number, _, object) = entry
+    let candidate = pdf_squeeze_duplicate_candidate(number, object)
+    if !self.pdf_squeeze_skip_duplicate_candidate(candidate.object) {
+      let duplicate = for existing in unique {
+        if existing.object == candidate.object {
+          changes.push((candidate.number, existing.number))
+          break true
+        }
+      } nobreak {
+        false
+      }
+      if !duplicate {
+        unique.push(candidate)
+      }
+    }
+  }
+  changes
+}
+
+///|
+fn PdfDocument::pdf_squeeze_apply_duplicate_changes(
+  self : PdfDocument,
+  changes : ArrayView[(Int, Int)],
+) -> Unit {
+  if changes.length() > 0 {
+    let change_map = pdf_page_reference_map(changes)
+    self.pdf_page_renumber_references(changes)
+    self.set_trailer_dict(
+      pdf_page_renumber_object_with_map(self.trailer_dict(), change_map),
+    )
+    for change in changes {
+      let (duplicate_number, _) = change
+      self.remove_object(duplicate_number)
+    }
+  }
+}
+
+///|
+fn PdfDocument::pdf_squeeze_prune_duplicate_objects_once(
+  self : PdfDocument,
+) -> Unit raise PdfError {
+  self.pdf_squeeze_apply_duplicate_changes(
+    self.pdf_squeeze_duplicate_object_changes(),
+  )
 }
 
 ///|
@@ -159,4 +302,26 @@ pub fn PdfDocument::decompress(
 /// Compatibility wrapper for `PdfDocument::decompress`.
 pub fn decompress_pdf(document : PdfDocument) -> PdfDocument raise PdfError {
   document.decompress()
+}
+
+///|
+/// Remove duplicate non-page, non-annotation objects, rewrite references to the
+/// first matching object, and recompress eligible streams.
+///
+/// This is the conservative cpdf squeeze path. It intentionally does not parse
+/// and rewrite page content streams or Form XObjects.
+pub fn PdfDocument::squeeze(self : PdfDocument) -> PdfDocument raise PdfError {
+  let document = self.copy()
+  let mut previous_count = -1
+  while previous_count != document.object_count() {
+    previous_count = document.object_count()
+    document.pdf_squeeze_prune_duplicate_objects_once()
+  }
+  document.recompress()
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::squeeze`.
+pub fn squeeze(document : PdfDocument) -> PdfDocument raise PdfError {
+  document.squeeze()
 }
