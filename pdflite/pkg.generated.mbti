@@ -187,6 +187,8 @@ pub fn pdf_date_of_string(String) -> @date.PdfDate raise @core.PdfError
 
 pub fn pdf_date_of_view(BytesView) -> @date.PdfDate raise @core.PdfError
 
+pub fn pdf_debug_objects(PdfDocument) -> Bytes raise @core.PdfError
+
 pub fn pdf_decode_filter_bytes(@core.PdfName, Bytes) -> Bytes raise @core.PdfError
 
 pub fn pdf_decode_filter_view(@core.PdfName, BytesView) -> Bytes raise @core.PdfError
@@ -1226,6 +1228,7 @@ pub fn PdfDocument::combine_pdf_resources(Self, PdfObject, PdfObject) -> PdfObje
 pub fn PdfDocument::contains_javascript(Self) -> Bool
 pub fn PdfDocument::contents_of_name_tree(Self, PdfObject) -> Array[(PdfObject, PdfObject)]
 pub fn PdfDocument::copy(Self) -> Self
+pub fn PdfDocument::debug_objects(Self) -> Bytes raise @core.PdfError
 pub fn PdfDocument::decrypt_single_stream(Self, Int, Int, PdfObject, user_password? : BytesView?, owner_password? : BytesView?, no_encrypt_metadata? : Bool) -> PdfObject? raise @core.PdfError
 pub fn PdfDocument::decrypt_with_owner_password(Self, BytesView, no_encrypt_metadata? : Bool) -> PdfDecryptionResult? raise @core.PdfError
 pub fn PdfDocument::decrypt_with_passwords(Self, user_password? : BytesView?, owner_password? : BytesView?, no_encrypt_metadata? : Bool) -> PdfDecryptionResult? raise @core.PdfError
