@@ -241,6 +241,8 @@ pub fn pdf_deterministic_aes_iv_provider_from_seed(BytesView) -> (Int, Int, Int)
 
 pub fn pdf_deterministic_aesv3_random_provider_from_seed(BytesView) -> (@crypt_core.PdfAesV3RandomField, Int) -> Bytes raise @core.PdfError
 
+pub fn pdf_dict_entry_values(PdfDocument, @core.PdfName) -> Array[PdfObject]
+
 pub fn pdf_dictionary(ArrayView[(@core.PdfName, PdfObject)]) -> PdfObject
 
 pub fn pdf_document_empty() -> PdfDocument
@@ -292,6 +294,8 @@ pub fn pdf_flate_encode_with_level(Bytes, Int) -> Bytes raise @core.PdfError
 pub fn pdf_format_real(Double) -> Bytes raise @core.PdfError
 
 pub fn pdf_generate_id(String, () -> Double) -> PdfObject
+
+pub fn pdf_get_dict_entries(PdfDocument, @core.PdfName, utf8? : Bool) -> Bytes raise @core.PdfError
 
 pub fn pdf_get_image_24bpp(PdfDocument, PdfObject, PdfObject) -> PdfImage raise @core.PdfError
 
@@ -514,6 +518,8 @@ pub fn pdf_postpend_operators(PdfDocument, ArrayView[PdfContentOp], PdfPage, fas
 pub fn pdf_prepend_operators(PdfDocument, ArrayView[PdfContentOp], PdfPage, fast? : Bool) -> PdfPage raise @core.PdfError
 
 pub fn pdf_presentation(ArrayView[Int], String?, Double?, Bool, Bool, Int, Double, PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_print_dict_entry(PdfDocument, @core.PdfName) -> Array[Bytes] raise @core.PdfError
 
 pub fn pdf_print_function(PdfFunction) -> Unit
 
@@ -1343,6 +1349,9 @@ pub fn PdfDocument::decrypt_single_stream(Self, Int, Int, PdfObject, user_passwo
 pub fn PdfDocument::decrypt_with_owner_password(Self, BytesView, no_encrypt_metadata? : Bool) -> PdfDecryptionResult? raise @core.PdfError
 pub fn PdfDocument::decrypt_with_passwords(Self, user_password? : BytesView?, owner_password? : BytesView?, no_encrypt_metadata? : Bool) -> PdfDecryptionResult? raise @core.PdfError
 pub fn PdfDocument::decrypt_with_user_password(Self, BytesView, no_encrypt_metadata? : Bool) -> PdfDecryptionResult? raise @core.PdfError
+pub fn PdfDocument::dict_entries_json(Self, @core.PdfName, utf8? : Bool) -> Bytes raise @core.PdfError
+pub fn PdfDocument::dict_entry_rendered_values(Self, @core.PdfName) -> Array[Bytes] raise @core.PdfError
+pub fn PdfDocument::dict_entry_values(Self, @core.PdfName) -> Array[PdfObject]
 pub fn PdfDocument::direct(Self, PdfObject) -> PdfObject
 pub fn PdfDocument::draft(Self, @core.PdfName?, Bool, ArrayView[Int]) -> Self raise @core.PdfError
 pub fn PdfDocument::encrypt_128bit(Self, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission], file_id? : BytesView) -> Self raise @core.PdfError

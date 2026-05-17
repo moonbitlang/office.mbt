@@ -1382,6 +1382,19 @@ Current backend snapshot:
   focused validation reports `moon test --target native pdf_tweak_test.mbt` at
   27/27 tests passing; native full-suite validation reports 1546/1546 tests
   passing; coverage analysis reports no uncovered lines in `pdf_tweak.mbt`.~~
+- [x] ~~Standalone `cpdftweak.ml` dictionary-entry reporting slice now exposes
+  `PdfDocument::dict_entry_values`, `dict_entry_rendered_values`,
+  `dict_entries_json`, `pdf_dict_entry_values`, `pdf_print_dict_entry`, and
+  `pdf_get_dict_entries`, covering nested dictionaries, arrays, stream
+  dictionaries, trailer traversal, indirect value resolution, PDF-syntax
+  rendering, cpdf-style JSON wrappers for null/boolean/integer/real/name/array/
+  stream/indirect values, UTF-8 string wrappers, malformed string/name byte
+  fallback escaping, malformed stream dictionaries, and existing remove-wrapper
+  behavior. Native focused validation reports
+  `moon test --target native pdf_util_test.mbt` at 10/10 tests passing; native
+  full-suite validation reports 1552/1552 tests passing; coverage analysis
+  reports only three defensive unreachable `InvalidUTF8` branches in
+  `pdf_util.mbt`.~~
 - [x] ~~Page labels, bookmarks, annotations, duplicate annotation repair,
   old-style destinations, name-tree destinations, `/OpenAction`, optional
   content, AcroForm merge basics, trailer `/Info`, and structure-tree
