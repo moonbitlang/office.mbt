@@ -864,6 +864,86 @@ test "pdf_add_page_labels can reuse start value for each range" {
 }
 
 ///|
+test "PdfDocument add_page_labels_json writes cpdf JSON label array" {
+  let document = try! @pdflite.pdf_blank_document(10.0, 10.0, 3)
+  let prefix = try! @pdflite.pdf_pdfdocstring_of_utf8(@utf8.encode("Résumé-"))
+  let json : Json = [
+    {
+      "labelstyle": "LowercaseRoman",
+      "labelprefix": "Résumé-",
+      "startpage": 1.0,
+      "startvalue": 3.0,
+    },
+    {
+      "labelstyle": "NoLabelPrefixOnly",
+      "labelprefix": null,
+      "startpage": 3.0,
+      "startvalue": 1.0,
+    },
+  ]
+  let expected : Array[@pdflite.PdfPageLabel] = [
+    {
+      label_style: PageLabelLowercaseRoman,
+      label_prefix: Some(prefix),
+      start_page: 1,
+      start_value: 3,
+    },
+    {
+      label_style: PageLabelNoLabelPrefixOnly,
+      label_prefix: None,
+      start_page: 3,
+      start_value: 1,
+    },
+  ]
+
+  let updated = try! document.add_page_labels_json(json)
+  let updated_from_wrapper = try! @pdflite.pdf_add_page_labels_json(
+    document, json,
+  )
+
+  @test.assert_eq(try! updated.read_page_labels(), expected)
+  @test.assert_eq(try! updated_from_wrapper.read_page_labels(), expected)
+}
+
+///|
+test "PdfDocument add_page_labels_json rejects malformed JSON" {
+  let document = try! @pdflite.pdf_blank_document(10.0, 10.0, 1)
+  let not_list : Json = {}
+  let malformed : Result[@pdflite.PdfDocument, Error] = try? document.add_page_labels_json(
+    not_list,
+  )
+  guard malformed is Err(@pdflite.PdfError::BadText) else {
+    fail("expected BadText for non-list page-label JSON")
+  }
+
+  let missing_field : Json = [
+    { "labelstyle": "DecimalArabic", "labelprefix": null, "startpage": 1.0 },
+  ]
+  let missing_result : Result[@pdflite.PdfDocument, Error] = try? document.add_page_labels_json(
+    missing_field,
+  )
+  guard missing_result is Err(@pdflite.PdfError::BadText) else {
+    fail("expected BadText for missing page-label JSON field")
+  }
+
+  let bad_style : Json = [
+    {
+      "labelstyle": "Missing",
+      "labelprefix": null,
+      "startpage": 1.0,
+      "startvalue": 1.0,
+    },
+  ]
+  let style_result : Result[@pdflite.PdfDocument, Error] = try? document.add_page_labels_json(
+    bad_style,
+  )
+  guard style_result
+    is Err(@pdflite.PdfError::PageLabelStyleExpected("Missing")) else {
+    fail("expected PageLabelStyleExpected for bad page-label style")
+  }
+}
+
+///|
 test "PdfDocument add_page_labels preserves an existing page one label" {
   let document = try! @pdflite.pdf_blank_document(10.0, 10.0, 5)
   let original : @pdflite.PdfPageLabel = {

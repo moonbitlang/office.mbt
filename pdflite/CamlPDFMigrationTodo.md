@@ -1744,6 +1744,13 @@ Current backend snapshot:
   operation arrays to a later full-document slice. Native focused validation
   reports `moon test --target native pdf_util_test.mbt` at 14/14 tests
   passing; native full-suite validation reports 1699/1699 tests passing.~~
+- [x] ~~Standalone `cpdfpagelabels.ml` JSON adapter slice now exposes
+  `PdfDocument::add_page_labels_json` and `pdf_add_page_labels_json`, covering
+  cpdf's page-label JSON array shape, UTF-8 prefix-to-PDFDocString encoding,
+  nullable prefixes, method and compatibility-wrapper paths, malformed JSON
+  errors, and invalid style propagation. Native focused validation reports
+  `moon test --target native pdf_page_label_test.mbt` at 25/25 tests passing;
+  native full-suite validation reports 1701/1701 tests passing.~~
 - [x] ~~Standalone `cpdfimpose.ml` rest-dictionary merge slice now exposes
   `PdfDocument::combine_pdf_rests`, covering preservation of unknown page-rest
   entries, `/Annots` array concatenation, indirect annotation-array resolution,

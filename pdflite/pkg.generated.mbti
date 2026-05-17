@@ -61,6 +61,8 @@ pub fn pdf_add_bookmarks(ArrayView[PdfBookmark], PdfDocument) -> PdfDocument rai
 
 pub fn pdf_add_page_labels(PdfDocument, Bool, PdfPageLabelStyle, Bytes?, Int, ArrayView[Int]) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_add_page_labels_json(PdfDocument, Json) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_add_pagetree(ArrayView[PdfPage], PdfDocument) -> (PdfDocument, Int) raise @core.PdfError
 
 pub fn pdf_add_prefix(PdfDocument, String) -> Unit raise @core.PdfError
@@ -1545,6 +1547,7 @@ pub fn PdfDocument::add_bookmarks(Self, ArrayView[PdfBookmark]) -> Self raise @c
 pub fn PdfDocument::add_object(Self, PdfObject, generation? : Int) -> Int
 pub fn PdfDocument::add_object_given_number(Self, Int, PdfObject, generation? : Int) -> Unit
 pub fn PdfDocument::add_page_labels(Self, Bool, PdfPageLabelStyle, Bytes?, Int, ArrayView[Int]) -> Self raise @core.PdfError
+pub fn PdfDocument::add_page_labels_json(Self, Json) -> Self raise @core.PdfError
 pub fn PdfDocument::add_pagetree(Self, ArrayView[PdfPage]) -> Int raise @core.PdfError
 pub fn PdfDocument::add_prefix(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDocument::add_root(Self, Int, ArrayView[(@core.PdfName, PdfObject)]) -> Int raise @core.PdfError
