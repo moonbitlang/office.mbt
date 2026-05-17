@@ -230,6 +230,149 @@ test "PdfDocument remove_clipping rewrites selected page form xobjects" {
 }
 
 ///|
+test "PdfDocument append_page_content prepends parsed bytes to selected pages" {
+  let base = try! @pdflite.pdf_blank_document(200.0, 100.0, 2)
+  let pages = try! base.pages_of_pagetree()
+  let first = { ..pages[0], content: [tweak_stream_for_test([Op_S])] }
+  let second = { ..pages[1], content: [tweak_stream_for_test([Op_S])] }
+  let document = try! base.change_pages([first, second])
+  let original_pages = try! document.pages_of_pagetree()
+
+  let appended = try! document.append_page_content(
+    [1],
+    tweak_bytes_for_test("BT ET"),
+    before=true,
+  )
+  let appended_pages = try! appended.pages_of_pagetree()
+
+  @test.assert_eq(tweak_content_ops_for_test(appended, appended_pages[0]), [
+    Op_BT,
+    Op_ET,
+    Op_S,
+  ])
+  @test.assert_eq(tweak_content_ops_for_test(appended, appended_pages[1]), [
+    Op_S,
+  ])
+  @test.assert_eq(tweak_content_ops_for_test(document, original_pages[0]), [
+    Op_S,
+  ])
+}
+
+///|
+test "PdfDocument append_page_content_ops appends selected pages in fast mode" {
+  let base = try! @pdflite.pdf_blank_document(200.0, 100.0, 2)
+  let pages = try! base.pages_of_pagetree()
+  let first = { ..pages[0], content: [tweak_stream_for_test([Op_BT, Op_ET])] }
+  let second = { ..pages[1], content: [tweak_stream_for_test([Op_BT, Op_ET])] }
+  let document = try! base.change_pages([first, second])
+
+  let appended = try! @pdflite.pdf_append_page_content_ops(
+    document,
+    [2],
+    [Op_g(0.5)],
+    fast=true,
+  )
+  let appended_pages = try! appended.pages_of_pagetree()
+
+  @test.assert_eq(tweak_content_ops_for_test(appended, appended_pages[0]), [
+    Op_BT,
+    Op_ET,
+  ])
+  @test.assert_eq(tweak_content_ops_for_test(appended, appended_pages[1]), [
+    Op_BT,
+    Op_ET,
+    Op_q,
+    Op_g(0.5),
+    Op_Q,
+  ])
+}
+
+///|
+test "PdfDocument append_page_content no-ops for empty content and ops" {
+  let base = try! @pdflite.pdf_blank_document(200.0, 100.0, 1)
+  let pages = try! base.pages_of_pagetree()
+  let page = { ..pages[0], content: [tweak_stream_for_test([Op_S])] }
+  let document = try! base.change_pages([page])
+  let unchanged_bytes = try! @pdflite.pdf_append_page_content(
+    document,
+    [1],
+    Bytes::new(0),
+  )
+  let unchanged_ops = try! document.append_page_content_ops([1], [])
+  @test.assert_eq(
+    tweak_content_ops_for_test(
+      unchanged_bytes,
+      (try! unchanged_bytes.pages_of_pagetree())[0],
+    ),
+    [Op_S],
+  )
+  @test.assert_eq(
+    tweak_content_ops_for_test(
+      unchanged_ops,
+      (try! unchanged_ops.pages_of_pagetree())[0],
+    ),
+    [Op_S],
+  )
+}
+
+///|
+test "PdfDocument append_page_content_multiple applies one payload per page" {
+  let base = try! @pdflite.pdf_blank_document(200.0, 100.0, 2)
+  let appended = try! @pdflite.pdf_append_page_content_multiple(base, [
+    tweak_bytes_for_test("BT ET"),
+    tweak_bytes_for_test("q Q"),
+  ])
+  let appended_pages = try! appended.pages_of_pagetree()
+  @test.assert_eq(tweak_content_ops_for_test(appended, appended_pages[0]), [
+    Op_BT,
+    Op_ET,
+  ])
+  @test.assert_eq(tweak_content_ops_for_test(appended, appended_pages[1]), [
+    Op_q,
+    Op_Q,
+  ])
+
+  let mismatch : Result[@pdflite.PdfDocument, Error] = try? base.append_page_content_multiple([
+      tweak_bytes_for_test("BT ET"),
+    ],
+  )
+  guard mismatch is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+    fail(
+      "expected BadPageSpecification for append_page_content_multiple mismatch",
+    )
+  }
+}
+
+///|
+test "PdfDocument append_page_content_multiple_ops applies one op list per page" {
+  let base = try! @pdflite.pdf_blank_document(200.0, 100.0, 2)
+  let appended = try! @pdflite.pdf_append_page_content_multiple_ops(
+    base,
+    [[Op_BT, Op_ET], [Op_q, Op_Q]],
+    before=true,
+  )
+  let appended_pages = try! appended.pages_of_pagetree()
+  @test.assert_eq(tweak_content_ops_for_test(appended, appended_pages[0]), [
+    Op_BT,
+    Op_ET,
+  ])
+  @test.assert_eq(tweak_content_ops_for_test(appended, appended_pages[1]), [
+    Op_q,
+    Op_Q,
+  ])
+
+  let mismatch : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_append_page_content_multiple_ops(
+    base,
+    [[Op_BT, Op_ET]],
+  )
+  guard mismatch is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+    fail(
+      "expected BadPageSpecification for append_page_content_multiple_ops mismatch",
+    )
+  }
+}
+
+///|
 test "pdf_thin_lines_ops honors thresholds and CTM scale" {
   let document = @pdflite.pdf_document_empty()
   let scale_two : @pdflite.TransformMatrix = {

@@ -73,6 +73,14 @@ pub fn pdf_annotation_make_border(Double, vertical_radius? : Double, horizontal_
 
 pub fn pdf_annotations_of_page(PdfDocument, PdfPage) -> Array[PdfAnnotation] raise @core.PdfError
 
+pub fn pdf_append_page_content(PdfDocument, ArrayView[Int], BytesView, before? : Bool, fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_append_page_content_multiple(PdfDocument, ArrayView[Bytes], before? : Bool, fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_append_page_content_multiple_ops(PdfDocument, ArrayView[Array[PdfContentOp]], before? : Bool, fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_append_page_content_ops(PdfDocument, ArrayView[Int], ArrayView[PdfContentOp], before? : Bool, fast? : Bool) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_array(ArrayView[PdfObject]) -> PdfObject
 
 pub fn pdf_ascii85_decode(Bytes) -> Bytes raise @core.PdfError
@@ -1279,6 +1287,10 @@ pub fn PdfDocument::add_pagetree(Self, ArrayView[PdfPage]) -> Int raise @core.Pd
 pub fn PdfDocument::add_prefix(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDocument::add_root(Self, Int, ArrayView[(@core.PdfName, PdfObject)]) -> Int raise @core.PdfError
 pub fn PdfDocument::annotations_of_page(Self, PdfPage) -> Array[PdfAnnotation] raise @core.PdfError
+pub fn PdfDocument::append_page_content(Self, ArrayView[Int], BytesView, before? : Bool, fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::append_page_content_multiple(Self, ArrayView[Bytes], before? : Bool, fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::append_page_content_multiple_ops(Self, ArrayView[Array[PdfContentOp]], before? : Bool, fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::append_page_content_ops(Self, ArrayView[Int], ArrayView[PdfContentOp], before? : Bool, fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::attach_file(Self, String, BytesView, keep_version? : Bool, page_number? : Int?, relationship? : String?, description? : String?) -> Self raise @core.PdfError
 pub fn PdfDocument::bpc(Self, PdfObject) -> PdfObject?
 pub fn PdfDocument::build_name_tree(Self, ArrayView[(Bytes, PdfObject)]) -> PdfObject
