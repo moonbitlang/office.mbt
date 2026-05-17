@@ -535,6 +535,25 @@ fn util_cpdfjson_document_for_test() -> Json {
 }
 
 ///|
+fn util_cpdfjson_entry_for_test(json : Json, number : Int) -> Json? {
+  match json {
+    Array(items) =>
+      for item in items {
+        match item {
+          Array([Number(value, repr=_), object]) =>
+            if value.to_int() == number && value == number.to_double() {
+              break Some(object)
+            }
+          _ => ()
+        }
+      } nobreak {
+        None
+      }
+    _ => None
+  }
+}
+
+///|
 test "pdf_document_of_json imports cpdf top-level document arrays" {
   let document = try! @pdflite.pdf_document_of_json(
     util_cpdfjson_document_for_test(),
@@ -560,6 +579,72 @@ test "pdf_document_of_json imports cpdf top-level document arrays" {
   }
   guard stream.data is StreamGot(data) else {
     fail("expected imported stream data")
+  }
+  @test.assert_eq(try! @pdflite.pdf_parse_content_ops_from_bytes(data), [
+    Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 50.0, f: 770.0 }),
+    Op_BT,
+    Op_Tf(util_name_for_test("/F0"), 36.0),
+    Op_Tj(@ascii.encode("Hello")),
+    Op_ET,
+  ])
+}
+
+///|
+test "PdfDocument json_of_document emits cpdf top-level arrays and round trips" {
+  let document = try! @pdflite.pdf_document_of_json(
+    util_cpdfjson_document_for_test(),
+  )
+  let exported = try! document.json_of_document()
+  @test.assert_eq(try! @pdflite.pdf_json_of_document(document), exported)
+
+  guard util_cpdfjson_entry_for_test(exported, -1) is Some(params_json) else {
+    fail("expected CPDFJSON params entry")
+  }
+  let params = try! @pdflite.pdf_object_of_json(params_json)
+  @test.assert_eq(
+    util_lookup_for_test(params, util_name_for_test("/CPDFJSONformatversion")),
+    Some(PdfInteger(3)),
+  )
+  @test.assert_eq(
+    util_lookup_for_test(params, util_name_for_test("/CPDFJSONcontentparsed")),
+    Some(PdfBoolean(false)),
+  )
+  @test.assert_eq(
+    util_lookup_for_test(
+      params,
+      util_name_for_test("/CPDFJSONstreamdataincluded"),
+    ),
+    Some(PdfBoolean(true)),
+  )
+  @test.assert_eq(
+    util_lookup_for_test(params, util_name_for_test("/CPDFJSONmajorpdfversion")),
+    Some(PdfInteger(1)),
+  )
+  @test.assert_eq(
+    util_lookup_for_test(params, util_name_for_test("/CPDFJSONminorpdfversion")),
+    Some(PdfInteger(7)),
+  )
+
+  guard util_cpdfjson_entry_for_test(exported, 0) is Some(trailer_json) else {
+    fail("expected CPDFJSON trailer entry")
+  }
+  @test.assert_eq(
+    util_lookup_for_test(
+      try! @pdflite.pdf_object_of_json(trailer_json),
+      util_name_for_test("/Root"),
+    ),
+    Some(PdfIndirect(4)),
+  )
+
+  let roundtripped = try! @pdflite.pdf_document_of_json(exported)
+  @test.assert_eq(roundtripped.version(), (1, 7))
+  @test.assert_eq(roundtripped.root(), 4)
+  @test.assert_eq(roundtripped.object_numbers(), [1, 2, 3, 4])
+  guard roundtripped.lookup_object_or_null(2) is PdfStreamObject(stream) else {
+    fail("expected round-tripped content stream")
+  }
+  guard stream.data is StreamGot(data) else {
+    fail("expected round-tripped stream data")
   }
   @test.assert_eq(try! @pdflite.pdf_parse_content_ops_from_bytes(data), [
     Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 50.0, f: 770.0 }),

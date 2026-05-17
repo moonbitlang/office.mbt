@@ -693,6 +693,65 @@ pub fn pdf_document_of_json(json : Json) -> PdfDocument raise PdfError {
 }
 
 ///|
+fn PdfDocument::pdf_util_document_params_json(
+  self : PdfDocument,
+  utf8 : Bool,
+) -> Json raise PdfError {
+  let (major, minor) = self.version()
+  self.pdf_util_json_of_object(
+    PdfDictionary([
+      (pdf_util_name_from_json_text("/CPDFJSONformatversion"), PdfInteger(3)),
+      (
+        pdf_util_name_from_json_text("/CPDFJSONcontentparsed"),
+        PdfBoolean(false),
+      ),
+      (pdf_util_cpdfjson_stream_data_included_key(), PdfBoolean(true)),
+      (pdf_util_cpdfjson_major_version_key(), PdfInteger(major)),
+      (pdf_util_cpdfjson_minor_version_key(), PdfInteger(minor)),
+    ]),
+    utf8,
+  )
+}
+
+///|
+fn pdf_util_document_json_entry(number : Int, object : Json) -> Json {
+  Json::array([pdf_util_json_number(number), object])
+}
+
+///|
+/// Convert an in-memory document to CPDFJSON format with stream data included.
+///
+/// This ports the basic document-output shape from cpdf's `json_of_pdf`:
+/// object `-1` carries CPDFJSON metadata, object `0` carries the trailer, and
+/// positive object numbers are emitted in ascending order. Parsed content
+/// streams, stream-data omission, forced decompression, and clean-string
+/// preprocessing remain separate CPDFJSON option slices.
+pub fn PdfDocument::json_of_document(
+  self : PdfDocument,
+  utf8? : Bool = false,
+) -> Json raise PdfError {
+  let entries : Array[Json] = []
+  entries.push(
+    pdf_util_document_json_entry(-1, self.pdf_util_document_params_json(utf8)),
+  )
+  entries.push(
+    pdf_util_document_json_entry(
+      0,
+      self.pdf_util_json_of_object(self.trailer_dict(), utf8),
+    ),
+  )
+  for number in self.object_numbers() {
+    entries.push(
+      pdf_util_document_json_entry(
+        number,
+        self.pdf_util_json_of_object(self.lookup_object_or_null(number), utf8),
+      ),
+    )
+  }
+  Json::array(entries)
+}
+
+///|
 fn PdfDocument::pdf_util_collect_dict_entry_values(
   self : PdfDocument,
   object : PdfObject,
@@ -896,6 +955,15 @@ pub fn pdf_json_of_object(
   utf8? : Bool = false,
 ) -> Json raise PdfError {
   document.json_of_object(object, utf8~)
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::json_of_document`.
+pub fn pdf_json_of_document(
+  document : PdfDocument,
+  utf8? : Bool = false,
+) -> Json raise PdfError {
+  document.json_of_document(utf8~)
 }
 
 ///|

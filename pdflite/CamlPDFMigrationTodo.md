@@ -1760,6 +1760,14 @@ Current backend snapshot:
   rejection, and malformed top-level JSON errors. Native focused validation
   reports `moon test --target native pdf_util_test.mbt` at 18/18 tests passing;
   native full-suite validation reports 1705/1705 tests passing.~~
+- [x] ~~Standalone `cpdfjson.ml` full-document output slice now exposes
+  `PdfDocument::json_of_document` and `pdf_json_of_document`, covering cpdf's
+  top-level CPDFJSON array shape with object `-1` parameters, object `0`
+  trailer output, sorted positive object entries, stream-data-included unparsed
+  content output, wrapper parity, and round-tripping through
+  `pdf_document_of_json`. Native focused validation reports
+  `moon test --target native pdf_util_test.mbt` at 19/19 tests passing; native
+  full-suite validation reports 1706/1706 tests passing.~~
 - [x] ~~Standalone `cpdfpagelabels.ml` JSON adapter slice now exposes
   `PdfDocument::add_page_labels_json` and `pdf_add_page_labels_json`, covering
   cpdf's page-label JSON array shape, UTF-8 prefix-to-PDFDocString encoding,
