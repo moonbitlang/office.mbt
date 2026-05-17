@@ -298,3 +298,85 @@ test "PdfDocument scale_pages validates scale counts and page range" {
     fail("expected scale_pages to reject invalid pages")
   }
 }
+
+///|
+test "PdfDocument scale_to_fit_pages centers content and sets target boxes" {
+  let key_crop = page_scale_name_for_test("/CropBox")
+  let page = page_scale_page_for_test(
+    [Op_S],
+    rest=PdfDictionary([
+      (key_crop, page_scale_rect_for_test(0.0, 0.0, 100.0, 50.0)),
+    ]),
+    width=100.0,
+    height=50.0,
+  )
+  let document = page_scale_document_for_test([page])
+  let fitted = try! document.scale_to_fit_pages([1], [(200.0, 200.0)])
+  let pages = try! fitted.pages_of_pagetree()
+  @test.assert_eq(
+    pages[0].mediabox,
+    page_scale_rect_for_test(0.0, 0.0, 200.0, 200.0),
+  )
+  @test.assert_eq(
+    pages[0].rest.lookup_immediate(key_crop),
+    Some(page_scale_rect_for_test(0.0, 0.0, 200.0, 200.0)),
+  )
+  @test.assert_eq(page_scale_ops_for_test(fitted, pages[0]), [
+    Op_cm(
+      @pdflite.transform_matrix_compose(
+        @pdflite.transform_translate(0.0, 0.0),
+        @pdflite.transform_matrix_compose(
+          @pdflite.transform_translate(0.0, 0.0),
+          @pdflite.transform_matrix_compose(
+            @pdflite.transform_translate(0.0, 50.0),
+            @pdflite.transform_scale(@pdflite.point2(0.0, 0.0), 2.0, 2.0),
+          ),
+        ),
+      ),
+    ),
+    Op_S,
+  ])
+  let wrapped = try! @pdflite.pdf_scale_to_fit_pages(
+    document,
+    [1],
+    [(50.0, 50.0)],
+    position=PdfPositionLeft(0.0),
+  )
+  let wrapped_pages = try! wrapped.pages_of_pagetree()
+  @test.assert_eq(
+    wrapped_pages[0].mediabox,
+    page_scale_rect_for_test(0.0, 0.0, 50.0, 50.0),
+  )
+}
+
+///|
+test "PdfDocument scale_to_fit_pages validates size counts and zero boxes" {
+  let document = page_scale_document_for_test([page_scale_page_for_test([Op_S])])
+  let mismatch : Result[@pdflite.PdfDocument, Error] = try? document.scale_to_fit_pages(
+    [1],
+    [],
+  )
+  guard mismatch
+    is Err(
+      @pdflite.PdfError::BadPageSpecification(
+        "scale_to_fit_pages: size count must match page count"
+      )
+    ) else {
+    fail("expected scale_to_fit_pages to reject size count mismatch")
+  }
+  let zero = page_scale_document_for_test([
+    page_scale_page_for_test([Op_S], width=0.0, height=10.0),
+  ])
+  let bad_size : Result[@pdflite.PdfDocument, Error] = try? zero.scale_to_fit_pages(
+    [1],
+    [(100.0, 100.0)],
+  )
+  guard bad_size
+    is Err(
+      @pdflite.PdfError::BadNumberArgument(
+        "scale_to_fit_pages: zero-sized pages are invalid"
+      )
+    ) else {
+    fail("expected scale_to_fit_pages to reject zero-sized pages")
+  }
+}

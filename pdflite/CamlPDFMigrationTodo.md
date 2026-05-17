@@ -24,9 +24,10 @@ Current estimate:
   info synchronization, XMP metadata creation, XMP RDF list extraction,
   XMP/document info JSON reporting, redaction annotation bounding-box overlays,
   imposition transform/content/page-assembly/pattern-matrix kernels, cpdf page
-  hard-box/removal/shift/scale/upright/set-mediabox/copy-box helpers, imposition
-  make-space orchestration, border stamping, layout planning, and first public
-  impose pipeline, and Markdown helper public APIs.
+  hard-box/removal/shift/scale/scale-to-fit/upright/set-mediabox/copy-box
+  helpers, imposition make-space orchestration, border stamping, layout
+  planning, and first public impose/twoup pipelines, and Markdown helper public
+  APIs.
 
 Current backend snapshot:
 
@@ -54,6 +55,17 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port cpdf scale-to-fit and legacy `twoup`:
+  `PdfDocument::scale_to_fit_pages` now preserves aspect ratio against
+  page-indexed target sizes, rewrites known boxes to the target sheet,
+  transforms content streams, annotations, pattern matrices, and destinations,
+  and validates size-list and zero-sized-page corner cases. `PdfDocument::twoup`
+  now composes cpdf's legacy scale, 2x1 centered impose, `-90` rotate/upright,
+  and final diagonal scale-to-fit pipeline. Coverage pins centered fit
+  transforms, box rewriting, wrapper behavior, validation failures, and final
+  two-up sheet geometry. `moon test --target native pdf_page_scale_test.mbt`
+  reports 7/7 tests passing, and `moon test --target native
+  pdf_impose_wbtest.mbt` reports 26/26 tests passing.~~
 - [x] ~~Port cpdf-style page scaling needed by legacy `twoup`:
   `PdfDocument::scale_pages` now applies per-page x/y scale factors from the
   origin, transforms known page boxes, content streams, annotations, pattern

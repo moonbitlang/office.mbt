@@ -504,6 +504,21 @@ test "PdfDocument twoup_stack imposes and uprights two-page sheets" {
 }
 
 ///|
+test "PdfDocument twoup scales imposed sheets back to first page size" {
+  let document = try! impose_document_for_test([
+    try! impose_page_for_test([Op_S], width=100.0, height=200.0),
+    try! impose_page_for_test([Op_BT, Op_ET], width=100.0, height=200.0),
+  ])
+  let twoup = try! document.twoup()
+  let pages = try! twoup.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  @test.assert_eq(pages[0].rotate, Rotate0)
+  try! impose_assert_box_close_for_test(twoup, pages[0].mediabox, 100.0, 200.0)
+  let wrapped = try! pdf_twoup(document)
+  @test.assert_eq((try! wrapped.pages_of_pagetree()).length(), 1)
+}
+
+///|
 test "PdfDocument impose rejects empty input" {
   let document = try! pdf_blank_document(10.0, 10.0, 0)
   let result : Result[PdfDocument, Error] = try? document.impose(1.0, 1.0)

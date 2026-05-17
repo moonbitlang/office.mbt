@@ -448,6 +448,78 @@ pub fn pdf_twoup_stack(
 }
 
 ///|
+/// Legacy cpdf two-up operation.
+///
+/// This scales source pages down, imposes them 2x1, rotates/uprights the
+/// imposed sheets, then scales each sheet back to the first page's original
+/// size.
+pub fn PdfDocument::twoup(
+  self : PdfDocument,
+  fast? : Bool = false,
+  process_struct_tree? : Bool = false,
+) -> PdfDocument raise PdfError {
+  let pages = self.pages_of_pagetree()
+  if pages.length() == 0 {
+    raise BadNumberArgument("twoup: pages must not be empty")
+  }
+  let bounds = self.parse_rectangle(pages[0].mediabox)
+  let width = bounds.max_x - bounds.min_x
+  let height = bounds.max_y - bounds.min_y
+  let scale = if width > height {
+    let page_ratio = height / width
+    let sheet_ratio = width / 2.0 / height
+    if page_ratio < sheet_ratio {
+      page_ratio
+    } else {
+      sheet_ratio
+    }
+  } else {
+    let page_ratio = width / height
+    let sheet_ratio = height / 2.0 / width
+    if page_ratio < sheet_ratio {
+      page_ratio
+    } else {
+      sheet_ratio
+    }
+  }
+  let source_count = self.endpage()
+  let source_pages = pdf_impose_all_pages(source_count)
+  let scaled = self.scale_pages(
+    source_pages,
+    pdf_impose_repeated_scales(source_count, (scale, scale)),
+    fast~,
+  )
+  let imposed = scaled.impose(
+    2.0,
+    1.0,
+    center=true,
+    fast~,
+    process_struct_tree~,
+  )
+  let output_count = imposed.endpage()
+  let output_pages = pdf_impose_all_pages(output_count)
+  let upright = imposed
+    .rotate_pages(-90, output_pages)
+    .upright_pages(output_pages, fast~)
+  upright.scale_to_fit_pages(
+    output_pages,
+    pdf_impose_repeated_scales(output_count, (width, height)),
+    position=PdfPositionDiagonal,
+    fast~,
+  )
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::twoup`.
+pub fn pdf_twoup(
+  document : PdfDocument,
+  fast? : Bool = false,
+  process_struct_tree? : Bool = false,
+) -> PdfDocument raise PdfError {
+  document.twoup(fast~, process_struct_tree~)
+}
+
+///|
 fn pdf_impose_concat_ops(
   first : ArrayView[PdfContentOp],
   second : ArrayView[PdfContentOp],
@@ -491,6 +563,18 @@ fn pdf_impose_repeated_offsets(
     offsets.push(offset)
   }
   offsets
+}
+
+///|
+fn pdf_impose_repeated_scales(
+  count : Int,
+  scale : (Double, Double),
+) -> Array[(Double, Double)] {
+  let scales : Array[(Double, Double)] = []
+  for _ in 0..<count {
+    scales.push(scale)
+  }
+  scales
 }
 
 ///|
