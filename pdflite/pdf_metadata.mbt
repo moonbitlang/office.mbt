@@ -199,6 +199,38 @@ fn pdf_metadata_trapped() -> PdfName {
 }
 
 ///|
+let pdf_metadata_cropbox_name : PdfName = pdf_metadata_name("/CropBox")
+
+///|
+fn pdf_metadata_cropbox() -> PdfName {
+  pdf_metadata_cropbox_name
+}
+
+///|
+let pdf_metadata_bleedbox_name : PdfName = pdf_metadata_name("/BleedBox")
+
+///|
+fn pdf_metadata_bleedbox() -> PdfName {
+  pdf_metadata_bleedbox_name
+}
+
+///|
+let pdf_metadata_trimbox_name : PdfName = pdf_metadata_name("/TrimBox")
+
+///|
+fn pdf_metadata_trimbox() -> PdfName {
+  pdf_metadata_trimbox_name
+}
+
+///|
+let pdf_metadata_artbox_name : PdfName = pdf_metadata_name("/ArtBox")
+
+///|
+fn pdf_metadata_artbox() -> PdfName {
+  pdf_metadata_artbox_name
+}
+
+///|
 pub let pdf_metadata_adobe_namespace : String = "http://ns.adobe.com/pdf/1.3/"
 
 ///|
@@ -1108,6 +1140,136 @@ fn pdf_metadata_json_string_array(values : ArrayView[String]) -> Json {
 }
 
 ///|
+fn pdf_metadata_unit_number(value : Double, unit : PdfUnit) -> Double {
+  match unit {
+    PdfPoint => value
+    Inch => unit_inches(value, PdfPoint)
+    Centimetre => unit_centimetres(value, PdfPoint)
+    Millimetre => unit_millimetres(value, PdfPoint)
+  }
+}
+
+///|
+fn pdf_metadata_string_json(value : String) -> Json {
+  if value == "" {
+    Json::null()
+  } else {
+    Json::string(value)
+  }
+}
+
+///|
+fn pdf_metadata_bool_json(value : String) -> Json {
+  if value == "" {
+    Json::null()
+  } else {
+    Json::boolean(value.to_lower() == "true")
+  }
+}
+
+///|
+fn PdfDocument::pdf_metadata_info_encoded(
+  self : PdfDocument,
+  key : PdfName,
+  encoding : PdfMetadataEncoding,
+) -> String {
+  let info = match
+    self.lookup_direct(pdf_metadata_info(), self.trailer_dict()) {
+    Some(dictionary) => dictionary
+    None => PdfDictionary([])
+  }
+  match self.lookup_direct(key, info) {
+    Some(PdfString(bytes)) =>
+      @utf8.decode_lossy(
+        pdf_metadata_encode_output(encoding, bytes) catch {
+          _ => return ""
+        },
+      )
+    Some(PdfBoolean(value)) => pdf_metadata_bool_string(value)
+    _ => if key == pdf_metadata_trapped() { "False" } else { "" }
+  }
+}
+
+///|
+fn PdfDocument::pdf_metadata_box_array_json(
+  self : PdfDocument,
+  box : PdfObject,
+  unit : PdfUnit,
+) -> Json? {
+  match self.direct(box) {
+    PdfArray(values) if values.length() == 4 => {
+      let output : Array[Json] = []
+      for value in values {
+        let number = self.get_number(value) catch { _ => return None }
+        output.push(Json::number(pdf_metadata_unit_number(number, unit)))
+      }
+      Some(Json::array(output))
+    }
+    _ => None
+  }
+}
+
+///|
+fn PdfDocument::pdf_metadata_page_box_json(
+  self : PdfDocument,
+  boxes : ArrayView[PdfObject?],
+  unit : PdfUnit,
+) -> Json {
+  if boxes.length() == 0 {
+    return Json::null()
+  }
+  let first = boxes[0]
+  for index in 1..<boxes.length() {
+    if boxes[index] != first {
+      return Json::string("various")
+    }
+  }
+  match first {
+    Some(box) =>
+      match self.pdf_metadata_box_array_json(box, unit) {
+        Some(json) => json
+        None => Json::null()
+      }
+    None => Json::null()
+  }
+}
+
+///|
+fn pdf_metadata_set_json_string(
+  output : Map[String, Json],
+  key : String,
+  value : String,
+) -> Unit {
+  output.set(key, pdf_metadata_string_json(value))
+}
+
+///|
+fn PdfDocument::pdf_metadata_info_json_boxes(
+  self : PdfDocument,
+  pages : ArrayView[PdfPage],
+  unit : PdfUnit,
+  output : Map[String, Json],
+) -> Unit {
+  let mediaboxes : Array[PdfObject?] = []
+  let cropboxes : Array[PdfObject?] = []
+  let bleedboxes : Array[PdfObject?] = []
+  let trimboxes : Array[PdfObject?] = []
+  let artboxes : Array[PdfObject?] = []
+  for page in pages {
+    mediaboxes.push(Some(page.mediabox))
+    cropboxes.push(self.lookup_direct(pdf_metadata_cropbox(), page.rest))
+    bleedboxes.push(self.lookup_direct(pdf_metadata_bleedbox(), page.rest))
+    trimboxes.push(self.lookup_direct(pdf_metadata_trimbox(), page.rest))
+    artboxes.push(self.lookup_direct(pdf_metadata_artbox(), page.rest))
+  }
+  output.set("MediaBox", self.pdf_metadata_page_box_json(mediaboxes, unit))
+  output.set("CropBox", self.pdf_metadata_page_box_json(cropboxes, unit))
+  output.set("BleedBox", self.pdf_metadata_page_box_json(bleedboxes, unit))
+  output.set("TrimBox", self.pdf_metadata_page_box_json(trimboxes, unit))
+  output.set("ArtBox", self.pdf_metadata_page_box_json(artboxes, unit))
+}
+
+///|
 let pdf_metadata_xmp_report_fields : Array[(String, String, String)] = [
   ("XMP pdf:Keywords", pdf_metadata_adobe_namespace, "Keywords"),
   ("XMP pdf:Producer", pdf_metadata_adobe_namespace, "Producer"),
@@ -1737,6 +1899,108 @@ pub fn PdfDocument::determine_subformats(
 }
 
 ///|
+/// Return cpdf-style document information report fields as JSON.
+pub fn PdfDocument::info_json(
+  self : PdfDocument,
+  encoding? : PdfMetadataEncoding = PdfMetadataUTF8,
+  unit? : PdfUnit = PdfPoint,
+) -> Json raise PdfError {
+  let output : Map[String, Json] = Map([])
+  let (major, minor) = self.version()
+  let pages = self.pages_of_pagetree()
+  output.set(
+    "Version",
+    Json::array([pdf_util_json_number(major), pdf_util_json_number(minor)]),
+  )
+  output.set("Pages", pdf_util_json_number(pages.length()))
+  let info_fields : Array[(String, PdfName)] = [
+    ("Title", pdf_metadata_name("/Title")),
+    ("Author", pdf_metadata_name("/Author")),
+    ("Subject", pdf_metadata_name("/Subject")),
+    ("Keywords", pdf_metadata_name("/Keywords")),
+    ("Creator", pdf_metadata_name("/Creator")),
+    ("Producer", pdf_metadata_name("/Producer")),
+    ("Created", pdf_metadata_name("/CreationDate")),
+    ("Modified", pdf_metadata_name("/ModDate")),
+  ]
+  for field in info_fields {
+    pdf_metadata_set_json_string(
+      output,
+      field.0,
+      self.pdf_metadata_info_encoded(field.1, encoding),
+    )
+  }
+  output.set(
+    "Trapped",
+    pdf_metadata_bool_json(
+      self.pdf_metadata_info_encoded(pdf_metadata_trapped(), encoding),
+    ),
+  )
+  pdf_metadata_set_json_string(
+    output,
+    "PageMode",
+    self.catalog_item(pdf_metadata_page_mode()),
+  )
+  pdf_metadata_set_json_string(
+    output,
+    "PageLayout",
+    self.catalog_item(pdf_metadata_page_layout()),
+  )
+  output.set(
+    "OpenAction",
+    self.pdf_util_json_of_object(self.open_action(), true),
+  )
+  let viewer_bool_fields : Array[(String, PdfName)] = [
+    ("HideToolbar", pdf_metadata_name("/HideToolbar")),
+    ("HideMenubar", pdf_metadata_name("/HideMenubar")),
+    ("HideWindowUI", pdf_metadata_name("/HideWindowUI")),
+    ("FitWindow", pdf_metadata_name("/FitWindow")),
+    ("CenterWindow", pdf_metadata_name("/CenterWindow")),
+    ("DisplayDocTitle", pdf_metadata_name("/DisplayDocTitle")),
+  ]
+  for field in viewer_bool_fields {
+    output.set(
+      field.0,
+      pdf_metadata_bool_json(self.viewer_preference_item(field.1)),
+    )
+  }
+  pdf_metadata_set_json_string(
+    output,
+    "NonFullPageScreenMode",
+    self.viewer_preference_item(pdf_metadata_non_full_screen_page_mode()),
+  )
+  output.set(
+    "AcroForm",
+    Json::boolean(self.catalog_item(pdf_metadata_acroform()) != ""),
+  )
+  output.set("XFA", Json::boolean(self.is_xfa()))
+  output.set(
+    "Marked",
+    Json::boolean(self.mark_info_item(pdf_metadata_name("/Marked"))),
+  )
+  output.set(
+    "UserProperties",
+    Json::boolean(self.mark_info_item(pdf_metadata_name("/UserProperties"))),
+  )
+  output.set(
+    "Suspects",
+    Json::boolean(self.mark_info_item(pdf_metadata_name("/Suspects"))),
+  )
+  self.pdf_metadata_info_json_boxes(pages, unit, output)
+  Json::object(output)
+}
+
+///|
+/// Return cpdf-style document information report fields as UTF-8 JSON bytes.
+pub fn PdfDocument::info_json_blob(
+  self : PdfDocument,
+  encoding? : PdfMetadataEncoding = PdfMetadataUTF8,
+  unit? : PdfUnit = PdfPoint,
+) -> PdfBytes raise PdfError {
+  @utf8.encode(self.info_json(encoding~, unit~).stringify())
+}
+
+///|
 /// Return cpdf-style XMP metadata report fields as JSON.
 pub fn PdfDocument::xmp_info_json(self : PdfDocument) -> Json raise PdfError {
   let output : Map[String, Json] = Map([])
@@ -2061,6 +2325,16 @@ pub fn pdf_determine_subformats(
   document : PdfDocument,
 ) -> Array[String] raise PdfError {
   document.determine_subformats()
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::info_json_blob`.
+pub fn pdf_output_info_json_blob(
+  document : PdfDocument,
+  encoding? : PdfMetadataEncoding = PdfMetadataUTF8,
+  unit? : PdfUnit = PdfPoint,
+) -> PdfBytes raise PdfError {
+  document.info_json_blob(encoding~, unit~)
 }
 
 ///|

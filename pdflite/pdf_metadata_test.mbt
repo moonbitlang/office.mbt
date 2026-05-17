@@ -37,6 +37,26 @@ fn metadata_replace_catalog_for_test(
 }
 
 ///|
+fn metadata_rect_for_test(
+  min_x : Double,
+  min_y : Double,
+  max_x : Double,
+  max_y : Double,
+) -> @pdflite.PdfObject {
+  PdfArray([PdfReal(min_x), PdfReal(min_y), PdfReal(max_x), PdfReal(max_y)])
+}
+
+///|
+fn metadata_document_with_pages_for_test(
+  pages : ArrayView[@pdflite.PdfPage],
+) -> @pdflite.PdfDocument {
+  let document = @pdflite.pdf_document_empty()
+  let page_root = try! document.add_pagetree(pages)
+  ignore(try! document.add_root(page_root, []))
+  document
+}
+
+///|
 test "pdf_metadata_encode_output preserves raw utf8 and stripped forms" {
   let snowman = try! @pdflite.pdf_pdfdocstring_of_utf8(@utf8.encode("A ☃ B"))
   @test.assert_eq(
@@ -300,6 +320,181 @@ test "PdfDocument metadata report helpers cover mark info XFA version language" 
     @pdflite.pdf_language(language_doc),
     Some(@ascii.encode("fr-FR")),
   )
+}
+
+///|
+test "PdfDocument info_json reports document fields and page boxes" {
+  let media = metadata_rect_for_test(0.0, 0.0, 72.0, 144.0)
+  let trim = metadata_rect_for_test(0.0, 0.0, 36.0, 72.0)
+  let page1 = {
+    ..@pdflite.pdf_page_custom(media),
+    rest: PdfDictionary([
+      (
+        metadata_name_for_test("/CropBox"),
+        metadata_rect_for_test(0.0, 0.0, 36.0, 36.0),
+      ),
+      (metadata_name_for_test("/TrimBox"), trim),
+      (
+        metadata_name_for_test("/ArtBox"),
+        PdfNameObject(metadata_name_for_test("/Malformed")),
+      ),
+    ]),
+  }
+  let page2 = {
+    ..@pdflite.pdf_page_custom(media),
+    rest: PdfDictionary([
+      (
+        metadata_name_for_test("/CropBox"),
+        metadata_rect_for_test(0.0, 0.0, 72.0, 72.0),
+      ),
+      (metadata_name_for_test("/TrimBox"), trim),
+      (
+        metadata_name_for_test("/ArtBox"),
+        PdfNameObject(metadata_name_for_test("/Malformed")),
+      ),
+    ]),
+  }
+  let base = metadata_document_with_pages_for_test([page1, page2])
+  let title = try! @pdflite.pdf_pdfdocstring_of_utf8(
+    @utf8.encode("Résumé ☃"),
+  )
+  let with_info = try! base
+    .set_info_entry(
+      metadata_name_for_test("/Title"),
+      PdfString(title),
+      4,
+      keep_version=true,
+    )
+    .set_info_entry(
+      metadata_name_for_test("/Author"),
+      PdfString(@ascii.encode("Ada")),
+      4,
+      keep_version=true,
+    )
+    .set_info_entry(
+      metadata_name_for_test("/Subject"),
+      PdfString(@ascii.encode("Metadata")),
+      4,
+      keep_version=true,
+    )
+    .set_info_entry(
+      metadata_name_for_test("/Keywords"),
+      PdfString(@ascii.encode("pdf,test")),
+      4,
+      keep_version=true,
+    )
+    .set_info_entry(
+      metadata_name_for_test("/Creator"),
+      PdfString(@ascii.encode("pdflite-test")),
+      4,
+      keep_version=true,
+    )
+    .set_info_entry(
+      metadata_name_for_test("/Producer"),
+      PdfString(@ascii.encode("pdflite")),
+      4,
+      keep_version=true,
+    )
+    .set_info_entry(
+      metadata_name_for_test("/CreationDate"),
+      PdfString(@ascii.encode("D:20260517010203Z")),
+      4,
+      keep_version=true,
+    )
+    .set_info_entry(
+      metadata_name_for_test("/ModDate"),
+      PdfString(@ascii.encode("D:20260518040506Z")),
+      4,
+      keep_version=true,
+    )
+    .set_info_entry(
+      metadata_name_for_test("/Trapped"),
+      PdfBoolean(true),
+      4,
+      keep_version=true,
+    )
+  let with_preferences = try! with_info
+    .set_page_layout("SinglePage")
+    .set_page_mode("UseOutlines")
+    .set_non_full_screen_page_mode("UseThumbs")
+    .set_viewer_preference(
+      metadata_name_for_test("/HideToolbar"),
+      PdfBoolean(true),
+      4,
+      keep_version=true,
+    )
+    .set_viewer_preference(
+      metadata_name_for_test("/DisplayDocTitle"),
+      PdfBoolean(false),
+      4,
+      keep_version=true,
+    )
+    .set_open_action(2, fit=false)
+  let catalog_with_mark = try! metadata_catalog_for_test(with_preferences).add_dict_entry(
+    metadata_name_for_test("/MarkInfo"),
+    @pdflite.pdf_dictionary([
+      (metadata_name_for_test("/Marked"), PdfBoolean(true)),
+      (metadata_name_for_test("/UserProperties"), PdfBoolean(true)),
+      (metadata_name_for_test("/Suspects"), PdfBoolean(false)),
+    ]),
+  )
+  let catalog_with_acroform = try! catalog_with_mark.add_dict_entry(
+    metadata_name_for_test("/AcroForm"),
+    @pdflite.pdf_dictionary([
+      (metadata_name_for_test("/XFA"), PdfString(@ascii.encode("xfa"))),
+    ]),
+  )
+  let reported = metadata_replace_catalog_for_test(
+    with_preferences, catalog_with_acroform,
+  )
+  @pdflite.pdf_set_version(7, reported)
+  let expected : Json = {
+    "AcroForm": true,
+    "ArtBox": null,
+    "Author": "Ada",
+    "BleedBox": null,
+    "CenterWindow": null,
+    "Created": "D:20260517010203Z",
+    "Creator": "pdflite-test",
+    "CropBox": "various",
+    "DisplayDocTitle": false,
+    "FitWindow": null,
+    "HideMenubar": null,
+    "HideToolbar": true,
+    "HideWindowUI": null,
+    "Keywords": "pdf,test",
+    "Marked": true,
+    "MediaBox": [0.0, 0.0, 1.0, 2.0],
+    "Modified": "D:20260518040506Z",
+    "NonFullPageScreenMode": "UseThumbs",
+    "OpenAction": [{ "I": 2.0 }, { "N": "/XYZ" }, null, null, null],
+    "PageLayout": "SinglePage",
+    "PageMode": "UseOutlines",
+    "Pages": 2.0,
+    "Producer": "pdflite",
+    "Subject": "Metadata",
+    "Suspects": false,
+    "Title": "Résumé ☃",
+    "Trapped": true,
+    "TrimBox": [0.0, 0.0, 0.5, 1.0],
+    "UserProperties": true,
+    "Version": [1.0, 7.0],
+    "XFA": true,
+  }
+  @test.assert_eq(try! reported.info_json(unit=Inch), expected)
+  @test.assert_eq(
+    try! @pdflite.pdf_output_info_json_blob(reported, unit=Inch),
+    @utf8.encode((try! reported.info_json(unit=Inch)).stringify()),
+  )
+  let stripped_report = try! reported.info_json(
+    encoding=PdfMetadataStripped,
+    unit=Inch,
+  )
+  match stripped_report {
+    Object(entries) =>
+      @test.assert_eq(entries.get("Title"), Some(Json::string("Rsum ")))
+    _ => fail("expected JSON object")
+  }
 }
 
 ///|
