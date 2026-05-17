@@ -261,6 +261,8 @@ pub fn pdf_endpage_fast(PdfDocument) -> Int raise @core.PdfError
 
 pub fn pdf_eval_function(PdfFunction, ArrayView[Double]) -> Array[Double] raise @core.PdfError
 
+pub fn pdf_find_object(PdfDocument, String) -> PdfObject raise @core.PdfError
+
 pub fn pdf_flate_decode(Bytes) -> Bytes raise @core.PdfError
 
 pub fn pdf_flate_decode_view(BytesView) -> Bytes raise @core.PdfError
@@ -1323,6 +1325,7 @@ pub fn PdfDocument::encrypt_40bit(Self, BytesView, BytesView, ArrayView[@crypt_c
 pub fn PdfDocument::endpage(Self) -> Int raise @core.PdfError
 pub fn PdfDocument::endpage_fast(Self) -> Int raise @core.PdfError
 pub fn PdfDocument::event_log(Self) -> Array[(Int, PdfObjectEvent)]
+pub fn PdfDocument::find_object_by_spec(Self, String) -> PdfObject raise @core.PdfError
 pub fn PdfDocument::first_xref(Self) -> Int
 pub fn PdfDocument::get_image_24bpp(Self, PdfObject, PdfObject) -> PdfImage raise @core.PdfError
 pub fn PdfDocument::get_number(Self, PdfObject) -> Double raise @core.PdfError

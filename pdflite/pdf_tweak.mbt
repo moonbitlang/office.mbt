@@ -115,6 +115,84 @@ fn pdf_tweak_validate_page_count(
 }
 
 ///|
+fn pdf_tweak_is_digit_byte(byte : Byte) -> Bool {
+  byte >= 48 && byte <= 57
+}
+
+///|
+fn pdf_tweak_parse_digits(
+  bytes : BytesView,
+  start : Int,
+  finish : Int,
+  source : String,
+) -> Int raise PdfError {
+  if start >= finish {
+    raise BadPageSpecification(source)
+  }
+  let mut value = 0
+  for index in start..<finish {
+    value = value * 10 + bytes[index].to_int() - 48
+  }
+  value
+}
+
+///|
+fn pdf_tweak_digit_end(bytes : BytesView, start : Int) -> Int {
+  let mut index = start
+  while index < bytes.length() && pdf_tweak_is_digit_byte(bytes[index]) {
+    index += 1
+  }
+  index
+}
+
+///|
+fn pdf_tweak_split_chain(bytes : BytesView, start : Int) -> Array[PdfName] {
+  let output : Array[PdfName] = []
+  let mut index = start
+  while index < bytes.length() {
+    if bytes[index].to_int() == 47 {
+      let segment_start = index
+      index += 1
+      while index < bytes.length() && bytes[index].to_int() != 47 {
+        index += 1
+      }
+      output.push(pdf_name_of_bytes(bytes[segment_start:index].to_owned()))
+    } else {
+      index = bytes.length()
+    }
+  }
+  output
+}
+
+///|
+fn PdfDocument::pdf_tweak_find_chained_object(
+  self : PdfDocument,
+  start : PdfObject,
+  chain : ArrayView[PdfName],
+  source : String,
+) -> PdfObject raise PdfError {
+  match self.lookup_chain(start, chain) {
+    Some(object) => object
+    None => raise BadPageSpecification(source)
+  }
+}
+
+///|
+fn PdfDocument::pdf_tweak_find_numbered_object(
+  self : PdfDocument,
+  number : Int,
+  chain : ArrayView[PdfName],
+  source : String,
+) -> PdfObject raise PdfError {
+  let object = if number == 0 {
+    self.trailer_dict()
+  } else {
+    self.lookup_object_or_null(number)
+  }
+  self.pdf_tweak_find_chained_object(object, chain, source)
+}
+
+///|
 /// Remove text rendering-mode operators so hidden text is rendered normally.
 pub fn pdf_reveal_hidden_text_ops(
   ops : ArrayView[PdfContentOp],
@@ -409,6 +487,48 @@ pub fn pdf_append_page_content_multiple_ops(
   fast? : Bool = false,
 ) -> PdfDocument raise PdfError {
   document.append_page_content_multiple_ops(op_lists, before~, fast~)
+}
+
+///|
+/// Find an object using cpdf's object-spec grammar.
+///
+/// `""` selects the trailer dictionary, `/A/B` follows a trailer-rooted chain,
+/// `4/A` follows a chain from object 4, and `P1/A` follows a chain from the
+/// first page object.
+pub fn PdfDocument::find_object_by_spec(
+  self : PdfDocument,
+  spec : String,
+) -> PdfObject raise PdfError {
+  let bytes = @ascii.encode(spec)
+  if bytes.length() == 0 {
+    self.trailer_dict()
+  } else if bytes[0].to_int() == 80 {
+    let digit_end = pdf_tweak_digit_end(bytes, 1)
+    let page_number = pdf_tweak_parse_digits(bytes, 1, digit_end, spec)
+    let page_refs = self.page_reference_numbers()
+    if page_number < 1 || page_number > page_refs.length() {
+      raise BadPageSpecification(spec)
+    }
+    let chain = pdf_tweak_split_chain(bytes, digit_end)
+    self.pdf_tweak_find_numbered_object(page_refs[page_number - 1], chain, spec)
+  } else if bytes[0].to_int() == 47 {
+    let chain = pdf_tweak_split_chain(bytes, 0)
+    self.pdf_tweak_find_chained_object(self.trailer_dict(), chain, spec)
+  } else {
+    let digit_end = pdf_tweak_digit_end(bytes, 0)
+    let object_number = pdf_tweak_parse_digits(bytes, 0, digit_end, spec)
+    let chain = pdf_tweak_split_chain(bytes, digit_end)
+    self.pdf_tweak_find_numbered_object(object_number, chain, spec)
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::find_object_by_spec`.
+pub fn pdf_find_object(
+  document : PdfDocument,
+  spec : String,
+) -> PdfObject raise PdfError {
+  document.find_object_by_spec(spec)
 }
 
 ///|

@@ -373,6 +373,89 @@ test "PdfDocument append_page_content_multiple_ops applies one op list per page"
 }
 
 ///|
+test "PdfDocument find_object_by_spec resolves trailer and object chains" {
+  let key_root = tweak_name_for_test("/Root")
+  let key_value = tweak_name_for_test("/Value")
+  let key_items = tweak_name_for_test("/Items")
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(
+    2,
+    PdfDictionary([
+      (key_value, PdfInteger(42)),
+      (
+        key_items,
+        PdfArray([PdfInteger(7), PdfDictionary([(key_value, PdfInteger(9))])]),
+      ),
+    ]),
+  )
+  doc.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(2))]))
+
+  @test.assert_eq(try! doc.find_object_by_spec(""), doc.trailer_dict())
+  @test.assert_eq(
+    try! @pdflite.pdf_find_object(doc, "/Root/Value"),
+    PdfInteger(42),
+  )
+  @test.assert_eq(
+    try! doc.find_object_by_spec("2/Items/[1/Value"),
+    PdfInteger(9),
+  )
+  @test.assert_eq(
+    try! doc.find_object_by_spec("2Value"),
+    doc.lookup_object_or_null(2),
+  )
+  @test.assert_eq(
+    try! doc.find_object_by_spec("0/Root"),
+    doc.lookup_object_or_null(2),
+  )
+}
+
+///|
+test "PdfDocument find_object_by_spec resolves page object specs" {
+  let key_page = tweak_name_for_test("/Page")
+  let doc = try! @pdflite.pdf_blank_document(200.0, 100.0, 1)
+  let page_refs = try! doc.page_reference_numbers()
+
+  @test.assert_eq(
+    try! doc.find_object_by_spec("P1"),
+    doc.lookup_object_or_null(page_refs[0]),
+  )
+  @test.assert_eq(
+    try! doc.find_object_by_spec("P1/Type"),
+    PdfNameObject(key_page),
+  )
+}
+
+///|
+test "PdfDocument find_object_by_spec reports malformed specs and missing chains" {
+  let doc = @pdflite.pdf_document_empty()
+  let page_doc = try! @pdflite.pdf_blank_document(200.0, 100.0, 1)
+  let bad_object : Result[@pdflite.PdfObject, Error] = try? doc.find_object_by_spec(
+    "abc",
+  )
+  guard bad_object is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+    fail("expected BadPageSpecification for malformed object spec")
+  }
+  let missing_chain : Result[@pdflite.PdfObject, Error] = try? doc.find_object_by_spec(
+    "/Missing",
+  )
+  guard missing_chain is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+    fail("expected BadPageSpecification for missing object chain")
+  }
+  let missing_page : Result[@pdflite.PdfObject, Error] = try? doc.find_object_by_spec(
+    "P1",
+  )
+  guard missing_page is Err(@pdflite.PdfError::RootExpected) else {
+    fail("expected RootExpected while resolving page object refs")
+  }
+  let out_of_range_page : Result[@pdflite.PdfObject, Error] = try? page_doc.find_object_by_spec(
+    "P2",
+  )
+  guard out_of_range_page is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+    fail("expected BadPageSpecification for out-of-range page object spec")
+  }
+}
+
+///|
 test "pdf_thin_lines_ops honors thresholds and CTM scale" {
   let document = @pdflite.pdf_document_empty()
   let scale_two : @pdflite.TransformMatrix = {

@@ -1351,6 +1351,14 @@ Current backend snapshot:
   reports `moon test --target native pdf_tweak_test.mbt` at 15/15 tests
   passing; native full-suite validation reports 1534/1534 tests passing;
   coverage analysis reports no uncovered lines in `pdf_tweak.mbt`.~~
+- [x] ~~Standalone `cpdftweak.ml` object-spec finder slice now exposes
+  `PdfDocument::find_object_by_spec` and `pdf_find_object`, covering trailer
+  selection, trailer-rooted chains, numbered object specs, array pseudo-key
+  traversal, page object specs, empty and non-slash suffix chains, malformed
+  specs, missing chains, and out-of-range page specs. Native focused
+  validation reports `moon test --target native pdf_tweak_test.mbt` at 18/18
+  tests passing; native full-suite validation reports 1537/1537 tests passing;
+  coverage analysis reports no uncovered lines in `pdf_tweak.mbt`.~~
 - [x] ~~Page labels, bookmarks, annotations, duplicate annotation repair,
   old-style destinations, name-tree destinations, `/OpenAction`, optional
   content, AcroForm merge basics, trailer `/Info`, and structure-tree
