@@ -34,6 +34,14 @@ fn pdf_tweak_line_width_key() -> PdfName {
 }
 
 ///|
+let pdf_tweak_length_key_name : PdfName = pdf_tweak_name("/Length")
+
+///|
+fn pdf_tweak_length_key() -> PdfName {
+  pdf_tweak_length_key_name
+}
+
+///|
 fn pdf_tweak_number(object : PdfObject) -> Double? {
   match object {
     PdfReal(value) => Some(value)
@@ -190,6 +198,166 @@ fn PdfDocument::pdf_tweak_find_numbered_object(
     self.lookup_object_or_null(number)
   }
   self.pdf_tweak_find_chained_object(object, chain, source)
+}
+
+///|
+fn pdf_tweak_replace_array_entry(
+  values : ArrayView[PdfObject],
+  index : Int,
+  value : PdfObject,
+  source : String,
+) -> PdfObject raise PdfError {
+  if index < 0 || index >= values.length() {
+    raise BadPageSpecification(source)
+  }
+  PdfArray(
+    [
+      for i in 0..<values.length() => if i == index { value } else { values[i] }
+    ],
+  )
+}
+
+///|
+fn pdf_tweak_chain_array_index(name : PdfName) -> Int? {
+  let bytes = name.bytes()
+  guard bytes.length() >= 3 &&
+    bytes[0].to_int() == 47 &&
+    bytes[1].to_int() == 91 else {
+    return None
+  }
+  guard pdf_tweak_is_digit_byte(bytes[2]) else { return None }
+  let mut value = 0
+  let mut index = 2
+  while index < bytes.length() && pdf_tweak_is_digit_byte(bytes[index]) {
+    value = value * 10 + bytes[index].to_int() - 48
+    index += 1
+  }
+  Some(value)
+}
+
+///|
+fn PdfDocument::pdf_tweak_replace_existing_chain(
+  self : PdfDocument,
+  object : PdfObject,
+  chain : ArrayView[PdfName],
+  chain_index : Int,
+  value : PdfObject,
+  source : String,
+) -> PdfObject raise PdfError {
+  let key = chain[chain_index]
+  let final_key = chain_index + 1 == chain.length()
+  match object {
+    PdfDictionary(_) | PdfStreamObject(_) =>
+      if final_key {
+        match object.lookup_immediate(key) {
+          Some(_) => object.replace_dict_entry(key, value)
+          None => raise BadPageSpecification(source)
+        }
+      } else {
+        match object.lookup_immediate(key) {
+          Some(PdfIndirect(number)) => {
+            let updated = self.pdf_tweak_replace_existing_chain(
+              self.lookup_object_or_null(number),
+              chain,
+              chain_index + 1,
+              value,
+              source,
+            )
+            self.add_object_given_number(number, updated)
+            object
+          }
+          Some(child) => {
+            let updated = self.pdf_tweak_replace_existing_chain(
+              child,
+              chain,
+              chain_index + 1,
+              value,
+              source,
+            )
+            object.replace_dict_entry(key, updated)
+          }
+          None => raise BadPageSpecification(source)
+        }
+      }
+    PdfArray(values) =>
+      match pdf_tweak_chain_array_index(key) {
+        Some(index) =>
+          if final_key {
+            pdf_tweak_replace_array_entry(values, index, value, source)
+          } else {
+            match values.get(index) {
+              Some(PdfIndirect(number)) => {
+                let updated = self.pdf_tweak_replace_existing_chain(
+                  self.lookup_object_or_null(number),
+                  chain,
+                  chain_index + 1,
+                  value,
+                  source,
+                )
+                self.add_object_given_number(number, updated)
+                object
+              }
+              Some(child) => {
+                let updated = self.pdf_tweak_replace_existing_chain(
+                  child,
+                  chain,
+                  chain_index + 1,
+                  value,
+                  source,
+                )
+                pdf_tweak_replace_array_entry(values, index, updated, source)
+              }
+              None => raise BadPageSpecification(source)
+            }
+          }
+        None => raise BadPageSpecification(source)
+      }
+    _ => raise BadPageSpecification(source)
+  }
+}
+
+///|
+fn PdfDocument::pdf_tweak_replace_numbered_object(
+  self : PdfDocument,
+  number : Int,
+  chain : ArrayView[PdfName],
+  value : PdfObject,
+  source : String,
+) -> Unit raise PdfError {
+  if chain.length() == 0 {
+    if number == 0 {
+      self.set_trailer_dict(value)
+    } else {
+      self.add_object_given_number(number, value)
+    }
+  } else {
+    let object = if number == 0 {
+      self.trailer_dict()
+    } else {
+      self.lookup_object_or_null(number)
+    }
+    let updated = self.pdf_tweak_replace_existing_chain(
+      object, chain, 0, value, source,
+    )
+    if number == 0 {
+      self.set_trailer_dict(updated)
+    } else {
+      self.add_object_given_number(number, updated)
+    }
+  }
+}
+
+///|
+fn pdf_tweak_number_spec(spec : String) -> Int raise PdfError {
+  let bytes = @ascii.encode(spec)
+  if bytes.length() == 0 {
+    raise BadPageSpecification(spec)
+  }
+  let digit_end = pdf_tweak_digit_end(bytes, 0)
+  if digit_end != bytes.length() {
+    raise BadPageSpecification(spec)
+  }
+  pdf_tweak_parse_digits(bytes, 0, digit_end, spec)
 }
 
 ///|
@@ -529,6 +697,102 @@ pub fn pdf_find_object(
   spec : String,
 ) -> PdfObject raise PdfError {
   document.find_object_by_spec(spec)
+}
+
+///|
+/// Replace an object using the cpdf object-spec grammar.
+pub fn PdfDocument::replace_object_by_spec(
+  self : PdfDocument,
+  spec : String,
+  value : PdfObject,
+) -> Unit raise PdfError {
+  let bytes = @ascii.encode(spec)
+  if bytes.length() == 0 {
+    self.set_trailer_dict(value)
+  } else if bytes[0].to_int() == 80 {
+    let digit_end = pdf_tweak_digit_end(bytes, 1)
+    let page_number = pdf_tweak_parse_digits(bytes, 1, digit_end, spec)
+    let page_refs = self.page_reference_numbers()
+    if page_number < 1 || page_number > page_refs.length() {
+      raise BadPageSpecification(spec)
+    }
+    let chain = pdf_tweak_split_chain(bytes, digit_end)
+    self.pdf_tweak_replace_numbered_object(
+      page_refs[page_number - 1],
+      chain,
+      value,
+      spec,
+    )
+  } else if bytes[0].to_int() == 47 {
+    let chain = pdf_tweak_split_chain(bytes, 0)
+    self.pdf_tweak_replace_numbered_object(0, chain, value, spec)
+  } else {
+    let digit_end = pdf_tweak_digit_end(bytes, 0)
+    let object_number = pdf_tweak_parse_digits(bytes, 0, digit_end, spec)
+    let chain = pdf_tweak_split_chain(bytes, digit_end)
+    self.pdf_tweak_replace_numbered_object(object_number, chain, value, spec)
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::replace_object_by_spec`.
+pub fn pdf_replace_object_by_spec(
+  document : PdfDocument,
+  spec : String,
+  value : PdfObject,
+) -> Unit raise PdfError {
+  document.replace_object_by_spec(spec, value)
+}
+
+///|
+/// Remove an object by decimal object number string.
+pub fn PdfDocument::remove_object_by_spec(
+  self : PdfDocument,
+  spec : String,
+) -> Unit raise PdfError {
+  self.remove_object(pdf_tweak_number_spec(spec))
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::remove_object_by_spec`.
+pub fn pdf_remove_object_by_spec(
+  document : PdfDocument,
+  spec : String,
+) -> Unit raise PdfError {
+  document.remove_object_by_spec(spec)
+}
+
+///|
+/// Replace a stream's bytes while preserving its dictionary except `/Length`.
+pub fn PdfDocument::replace_stream_by_spec(
+  self : PdfDocument,
+  spec : String,
+  data : BytesView,
+) -> Unit raise PdfError {
+  match self.find_object_by_spec(spec) {
+    PdfStreamObject(stream) => {
+      let data = data.to_owned()
+      let dictionary = stream.dictionary.add_dict_entry(
+        pdf_tweak_length_key(),
+        PdfInteger(data.length()),
+      )
+      self.replace_object_by_spec(
+        spec,
+        PdfStreamObject({ dictionary, data: StreamGot(data) }),
+      )
+    }
+    _ => raise ParseStreamExpected
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::replace_stream_by_spec`.
+pub fn pdf_replace_stream_by_spec(
+  document : PdfDocument,
+  spec : String,
+  data : BytesView,
+) -> Unit raise PdfError {
+  document.replace_stream_by_spec(spec, data)
 }
 
 ///|

@@ -456,6 +456,204 @@ test "PdfDocument find_object_by_spec reports malformed specs and missing chains
 }
 
 ///|
+test "PdfDocument replace_object_by_spec updates chains objects and page specs" {
+  let key_root = tweak_name_for_test("/Root")
+  let key_value = tweak_name_for_test("/Value")
+  let key_child = tweak_name_for_test("/Child")
+  let key_items = tweak_name_for_test("/Items")
+  let key_custom = tweak_name_for_test("/CustomPage")
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(5, PdfDictionary([(key_value, PdfInteger(5))]))
+  doc.add_object_given_number(
+    2,
+    PdfDictionary([
+      (key_value, PdfInteger(1)),
+      (key_child, PdfDictionary([(key_value, PdfInteger(2))])),
+      (
+        key_items,
+        PdfArray([
+          PdfIndirect(5),
+          PdfDictionary([(key_value, PdfInteger(9))]),
+          PdfInteger(0),
+        ]),
+      ),
+    ]),
+  )
+  doc.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(2))]))
+
+  try! @pdflite.pdf_replace_object_by_spec(doc, "/Root/Value", PdfInteger(99))
+  @test.assert_eq(try! doc.find_object_by_spec("/Root/Value"), PdfInteger(99))
+  try! doc.replace_object_by_spec("/Root/Child/Value", PdfInteger(10))
+  @test.assert_eq(
+    try! doc.find_object_by_spec("/Root/Child/Value"),
+    PdfInteger(10),
+  )
+  try! doc.replace_object_by_spec("2/Items/[1/Value", PdfInteger(11))
+  @test.assert_eq(
+    try! doc.find_object_by_spec("2/Items/[1/Value"),
+    PdfInteger(11),
+  )
+  try! doc.replace_object_by_spec("2/Items/[0/Value", PdfInteger(12))
+  @test.assert_eq(
+    try! doc.find_object_by_spec("2/Items/[0/Value"),
+    PdfInteger(12),
+  )
+  try! doc.replace_object_by_spec("2/Items/[1", PdfInteger(13))
+  @test.assert_eq(try! doc.find_object_by_spec("2/Items/[1"), PdfInteger(13))
+
+  try! doc.replace_object_by_spec("3", PdfInteger(3))
+  @test.assert_eq(doc.lookup_object_or_null(3), PdfInteger(3))
+
+  let trailer_doc = @pdflite.pdf_document_empty()
+  try! trailer_doc.replace_object_by_spec(
+    "",
+    PdfDictionary([(key_value, PdfInteger(1))]),
+  )
+  @test.assert_eq(
+    trailer_doc.trailer_dict(),
+    PdfDictionary([(key_value, PdfInteger(1))]),
+  )
+  try! trailer_doc.replace_object_by_spec(
+    "0",
+    PdfDictionary([(key_value, PdfInteger(2))]),
+  )
+  @test.assert_eq(
+    trailer_doc.trailer_dict(),
+    PdfDictionary([(key_value, PdfInteger(2))]),
+  )
+
+  let page_doc = try! @pdflite.pdf_blank_document(200.0, 100.0, 1)
+  try! page_doc.replace_object_by_spec("P1/Type", PdfNameObject(key_custom))
+  @test.assert_eq(
+    try! page_doc.find_object_by_spec("P1/Type"),
+    PdfNameObject(key_custom),
+  )
+
+  let missing : Result[Unit, Error] = try? doc.replace_object_by_spec(
+    "/Root/Missing",
+    PdfInteger(0),
+  )
+  guard missing is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+    fail("expected BadPageSpecification for missing replace chain")
+  }
+  let missing_intermediate : Result[Unit, Error] = try? doc.replace_object_by_spec(
+    "2/Missing/Value",
+    PdfInteger(0),
+  )
+  guard missing_intermediate is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+    fail("expected BadPageSpecification for missing intermediate replace chain")
+  }
+  let missing_array_index : Result[Unit, Error] = try? doc.replace_object_by_spec(
+    "2/Items/[9/Value",
+    PdfInteger(0),
+  )
+  guard missing_array_index is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+    fail("expected BadPageSpecification for missing array index")
+  }
+  let missing_direct_array_index : Result[Unit, Error] = try? doc.replace_object_by_spec(
+    "2/Items/[9",
+    PdfInteger(0),
+  )
+  guard missing_direct_array_index
+    is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+    fail("expected BadPageSpecification for direct missing array index")
+  }
+  let non_array_key : Result[Unit, Error] = try? doc.replace_object_by_spec(
+    "2/Items/Value",
+    PdfInteger(0),
+  )
+  guard non_array_key is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+    fail("expected BadPageSpecification for non-array key inside array")
+  }
+  let bad_array_key : Result[Unit, Error] = try? doc.replace_object_by_spec(
+    "2/Items/[x/Value",
+    PdfInteger(0),
+  )
+  guard bad_array_key is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+    fail("expected BadPageSpecification for malformed array pseudo-key")
+  }
+  let non_container : Result[Unit, Error] = try? doc.replace_object_by_spec(
+    "2/Items/[2/Value",
+    PdfInteger(0),
+  )
+  guard non_container is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+    fail("expected BadPageSpecification for non-container replace chain")
+  }
+  let out_of_range_page : Result[Unit, Error] = try? page_doc.replace_object_by_spec(
+    "P2/Type",
+    PdfInteger(0),
+  )
+  guard out_of_range_page is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+    fail("expected BadPageSpecification for out-of-range page replace spec")
+  }
+}
+
+///|
+test "PdfDocument remove_object_by_spec removes decimal object numbers" {
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(9, PdfInteger(9))
+
+  try! @pdflite.pdf_remove_object_by_spec(doc, "9")
+  @test.assert_eq(doc.lookup_object_or_null(9), PdfNull)
+
+  let bad_spec : Result[Unit, Error] = try? doc.remove_object_by_spec("9/A")
+  guard bad_spec is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+    fail("expected BadPageSpecification for non-decimal remove object spec")
+  }
+  let empty_spec : Result[Unit, Error] = try? doc.remove_object_by_spec("")
+  guard empty_spec is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+    fail("expected BadPageSpecification for empty remove object spec")
+  }
+}
+
+///|
+test "PdfDocument replace_stream_by_spec updates bytes and Length" {
+  let key_length = tweak_name_for_test("/Length")
+  let key_filter = tweak_name_for_test("/Filter")
+  let key_dummy = tweak_name_for_test("/Dummy")
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(
+    4,
+    @pdflite.pdf_stream(
+      PdfDictionary([
+        (key_length, PdfInteger(3)),
+        (key_filter, PdfNameObject(key_dummy)),
+      ]),
+      StreamGot(tweak_bytes_for_test("old")),
+    ),
+  )
+
+  try! @pdflite.pdf_replace_stream_by_spec(
+    doc,
+    "4",
+    tweak_bytes_for_test("new data"),
+  )
+  guard doc.lookup_object_or_null(4) is PdfStreamObject(stream) else {
+    fail("expected stream object after replace_stream_by_spec")
+  }
+  @test.assert_eq(
+    try! @pdflite.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
+    tweak_bytes_for_test("new data"),
+  )
+  @test.assert_eq(
+    doc.lookup_direct(key_length, PdfStreamObject(stream)),
+    Some(PdfInteger(tweak_bytes_for_test("new data").length())),
+  )
+  @test.assert_eq(
+    doc.lookup_direct(key_filter, PdfStreamObject(stream)),
+    Some(PdfNameObject(key_dummy)),
+  )
+
+  let non_stream : Result[Unit, Error] = try? doc.replace_stream_by_spec(
+    "3",
+    tweak_bytes_for_test("x"),
+  )
+  guard non_stream is Err(@pdflite.PdfError::ParseStreamExpected) else {
+    fail("expected ParseStreamExpected for non-stream replacement target")
+  }
+}
+
+///|
 test "pdf_thin_lines_ops honors thresholds and CTM scale" {
   let document = @pdflite.pdf_document_empty()
   let scale_two : @pdflite.TransformMatrix = {

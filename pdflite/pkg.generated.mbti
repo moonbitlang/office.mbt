@@ -581,6 +581,8 @@ pub fn pdf_remove_duplicate_fonts(PdfDocument) -> Unit
 
 pub fn pdf_remove_javascript(PdfDocument) -> Unit raise @core.PdfError
 
+pub fn pdf_remove_object_by_spec(PdfDocument, String) -> Unit raise @core.PdfError
+
 pub fn pdf_remove_ocg(PdfDocument) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_remove_page_labels(PdfDocument) -> PdfDocument raise @core.PdfError
@@ -592,6 +594,10 @@ pub fn pdf_renumber_pages(PdfDocument, ArrayView[PdfPage]) -> Array[PdfPage] rai
 pub fn pdf_renumber_parent_trees(ArrayView[PdfDocument]) -> Unit raise @core.PdfError
 
 pub fn pdf_replace_dict_entry(PdfDocument, @core.PdfName, PdfObject, search? : PdfObject?) -> Unit
+
+pub fn pdf_replace_object_by_spec(PdfDocument, String, PdfObject) -> Unit raise @core.PdfError
+
+pub fn pdf_replace_stream_by_spec(PdfDocument, String, BytesView) -> Unit raise @core.PdfError
 
 pub fn pdf_restrict_angle(Double, Double) -> Double
 
@@ -1423,6 +1429,7 @@ pub fn PdfDocument::remove_dict_entry_everywhere(Self, @core.PdfName, search? : 
 pub fn PdfDocument::remove_duplicate_fonts(Self) -> Unit
 pub fn PdfDocument::remove_javascript(Self) -> Unit raise @core.PdfError
 pub fn PdfDocument::remove_object(Self, Int) -> Unit
+pub fn PdfDocument::remove_object_by_spec(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDocument::remove_optional_content_groups(Self) -> Self raise @core.PdfError
 pub fn PdfDocument::remove_page_labels(Self) -> Self raise @core.PdfError
 pub fn PdfDocument::remove_unreferenced(Self) -> Unit raise @core.PdfError
@@ -1433,6 +1440,8 @@ pub fn PdfDocument::renumber_pages(Self, ArrayView[PdfPage]) -> Array[PdfPage] r
 pub fn PdfDocument::replace_chain(Self, ArrayView[@core.PdfName], PdfObject) -> Unit raise @core.PdfError
 pub fn PdfDocument::replace_dict_entry_everywhere(Self, @core.PdfName, PdfObject, search? : PdfObject?) -> Unit
 pub fn PdfDocument::replace_inherit(Self, ArrayView[Int]) -> Unit raise @core.PdfError
+pub fn PdfDocument::replace_object_by_spec(Self, String, PdfObject) -> Unit raise @core.PdfError
+pub fn PdfDocument::replace_stream_by_spec(Self, String, BytesView) -> Unit raise @core.PdfError
 pub fn PdfDocument::reveal_hidden_text(Self, ArrayView[Int]) -> Self raise @core.PdfError
 pub fn PdfDocument::revision_read(Self) -> Int
 pub fn PdfDocument::root(Self) -> Int

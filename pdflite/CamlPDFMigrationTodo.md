@@ -1359,6 +1359,18 @@ Current backend snapshot:
   validation reports `moon test --target native pdf_tweak_test.mbt` at 18/18
   tests passing; native full-suite validation reports 1537/1537 tests passing;
   coverage analysis reports no uncovered lines in `pdf_tweak.mbt`.~~
+- [x] ~~Standalone `cpdftweak.ml` object mutation slice now exposes
+  `PdfDocument::replace_object_by_spec`, `remove_object_by_spec`,
+  `replace_stream_by_spec`, and compatibility wrappers, covering trailer,
+  numbered-object, page-object, nested dictionary, array pseudo-key, direct and
+  indirect array target replacement, decimal object removal, malformed remove
+  specs, stream byte replacement with `/Length` correction, preserved stream
+  dictionary entries, non-stream replacement errors, missing chains, malformed
+  array pseudo-keys, direct array index bounds, non-array keys in array
+  contexts, and out-of-range page specs. Native focused validation reports
+  `moon test --target native pdf_tweak_test.mbt` at 21/21 tests passing;
+  native full-suite validation reports 1540/1540 tests passing; coverage
+  analysis reports no uncovered lines in `pdf_tweak.mbt`.~~
 - [x] ~~Page labels, bookmarks, annotations, duplicate annotation repair,
   old-style destinations, name-tree destinations, `/OpenAction`, optional
   content, AcroForm merge basics, trailer `/Info`, and structure-tree
