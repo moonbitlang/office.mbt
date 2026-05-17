@@ -7,7 +7,7 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 98.7%.
+- Native main-feature parity: 98.8%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
   breadth: 85-90%.
 - Warning 74 public documentation cleanup: complete; 0 native diagnostics
@@ -17,7 +17,8 @@ Current estimate:
   native async file I/O, codec, page-label, function, optional-content, and
   content-stream, annotation, native secure-random, bookmark, image, structure,
   renumbering, standard font-pack embedding, text-to-PDF instruction
-  conversion, and Markdown helper public APIs.
+  conversion, basic text-to-PDF document assembly, and Markdown helper public
+  APIs.
 
 Current backend snapshot:
 
@@ -45,6 +46,11 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port the basic non-PDF/UA `cpdftexttopdf.typeset` document assembly
+  path for existing font packs: add the first-font/`BeginDocument` prelude,
+  use CamlPDF's paper-width-derived margin, typeset pages, add a page tree and
+  catalog root, and cover both text and empty-input documents. `moon test
+  --target native` now reports 1579/1579 tests passing.~~
 - [x] ~~Port the first `cpdftexttopdf` instruction-conversion slice with
   byte-based UTF-8 decoding, newline and carriage-return behavior, missing
   glyph skipping, font-run switching through `PdfFontPack`, invalid charcode

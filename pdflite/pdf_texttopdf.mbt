@@ -108,3 +108,60 @@ pub fn pdf_texttopdf_tag_paragraphs(
   output.push(PdfTypeEndTag)
   output
 }
+
+///|
+fn pdf_texttopdf_first_font(
+  elements : ArrayView[PdfTypeElement],
+) -> PdfTypeElement? {
+  let mut found = None
+  for element in elements {
+    match element {
+      PdfTypeFont(_, _, _) if found is None => found = Some(element)
+      _ => ()
+    }
+  }
+  found
+}
+
+///|
+fn pdf_texttopdf_document_elements(
+  elements : ArrayView[PdfTypeElement],
+) -> Array[PdfTypeElement] {
+  match pdf_texttopdf_first_font(elements) {
+    Some(first_font) => {
+      let output : Array[PdfTypeElement] = [first_font, PdfTypeBeginDocument]
+      for element in elements {
+        output.push(element)
+      }
+      output
+    }
+    None => []
+  }
+}
+
+///|
+/// Typeset UTF-8 text into a standalone PDF document using an existing font
+/// pack.
+///
+/// This covers the non-PDF/UA `cpdftexttopdf.ml` path. Structure-tree assembly
+/// is kept separate because it mutates the catalog and parent tree after page
+/// generation.
+pub fn pdf_texttopdf_typeset(
+  fontpack : PdfFontPack,
+  font_size : Double,
+  paper : PaperSize,
+  text : BytesView,
+) -> PdfDocument raise PdfError {
+  let document = pdf_document_empty()
+  let instructions = pdf_texttopdf_of_utf8_with_newlines(
+    fontpack, font_size, text,
+  )
+  let elements = pdf_texttopdf_document_elements(instructions)
+  let margin = unit_points(paper.width(), paper.unit()) / 15.0
+  let result = document.pdf_type_typeset(
+    false, margin, margin, margin, margin, paper, elements,
+  )
+  let page_root = document.add_pagetree(result.pages)
+  ignore(document.add_root(page_root, []))
+  document
+}

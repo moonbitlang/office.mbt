@@ -16,6 +16,33 @@ fn texttopdf_standard_pack_for_test() -> @pdflite.PdfFontPack {
 }
 
 ///|
+fn texttopdf_name_for_test(text : String) -> @pdflite.PdfName {
+  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+}
+
+///|
+fn texttopdf_lookup_for_test(
+  object : @pdflite.PdfObject,
+  key : String,
+) -> @pdflite.PdfObject raise {
+  match object.lookup_immediate(texttopdf_name_for_test(key)) {
+    Some(value) => value
+    None => {
+      fail("missing dictionary key " + key)
+      PdfNull
+    }
+  }
+}
+
+///|
+fn texttopdf_page_ops_for_test(
+  document : @pdflite.PdfDocument,
+  page : @pdflite.PdfPage,
+) -> Array[@pdflite.PdfContentOp] raise {
+  document.parse_content_ops(page.content)
+}
+
+///|
 test "pdf_texttopdf_of_utf8_with_newlines maps UTF8 to cpdftype text" {
   let font = texttopdf_standard_font_for_test()
   @test.assert_eq(
@@ -116,5 +143,58 @@ test "pdf_texttopdf_tag_paragraphs wraps blank-line paragraphs" {
       PdfTypeText(@ascii.encode("B")),
       PdfTypeEndTag,
     ],
+  )
+}
+
+///|
+test "pdf_texttopdf_typeset creates a standalone text document" {
+  let paper = @pdflite.paper_size_make(PdfPoint, 100.0, 100.0)
+  let document = try! @pdflite.pdf_texttopdf_typeset(
+    texttopdf_standard_pack_for_test(),
+    10.0,
+    paper,
+    @ascii.encode("Hi"),
+  )
+  @test.assert_eq(document.root() > 0, true)
+  let catalog = try! document.catalog()
+  @test.assert_eq(
+    try! texttopdf_lookup_for_test(catalog, "/Type"),
+    PdfNameObject(texttopdf_name_for_test("/Catalog")),
+  )
+  let pages_ref = try! texttopdf_lookup_for_test(catalog, "/Pages")
+  guard pages_ref is PdfIndirect(_) else {
+    fail("expected catalog /Pages reference")
+  }
+  let pages = try! document.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  let ops = try! texttopdf_page_ops_for_test(document, pages[0])
+  let mut found_text = false
+  let mut font_ops = 0
+  for op in ops {
+    match op {
+      Op_Tf(_, 10.0) => font_ops += 1
+      Op_Tj(bytes) if bytes == @ascii.encode("Hi") => found_text = true
+      _ => ()
+    }
+  }
+  @test.assert_eq(font_ops >= 1, true)
+  @test.assert_eq(found_text, true)
+}
+
+///|
+test "pdf_texttopdf_typeset creates a blank document for empty text" {
+  let paper = @pdflite.paper_size_make(PdfPoint, 100.0, 100.0)
+  let document = try! @pdflite.pdf_texttopdf_typeset(
+    texttopdf_standard_pack_for_test(),
+    10.0,
+    paper,
+    @ascii.encode(""),
+  )
+  let pages = try! document.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  @test.assert_eq(pages[0].content, [])
+  @test.assert_eq(
+    pages[0].resources,
+    PdfDictionary([(texttopdf_name_for_test("/Font"), PdfDictionary([]))]),
   )
 }
