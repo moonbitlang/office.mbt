@@ -186,6 +186,96 @@ test "pdf_impose_add_border treats zero width as no border" {
 }
 
 ///|
+test "pdf_impose_layout calculates fit sheets and spacing" {
+  let layout = try! pdf_document_empty().pdf_impose_layout(
+    true,
+    220.0,
+    120.0,
+    0.0,
+    5,
+    impose_box_for_test(100.0, 50.0),
+  )
+  @test.assert_eq(layout.pages_per_sheet, 4)
+  @test.assert_eq(layout.x_slots, 2)
+  @test.assert_eq(layout.y_slots, 2)
+  @test.assert_eq(layout.output_mediabox, impose_box_for_test(220.0, 120.0))
+  @test.assert_eq(layout.fit_extra_hspace, 20.0 / 3.0)
+  @test.assert_eq(layout.fit_extra_vspace, 20.0 / 3.0)
+
+  let too_small : Result[PdfImposeLayout, Error] = try? pdf_document_empty().pdf_impose_layout(
+    true,
+    99.0,
+    120.0,
+    0.0,
+    5,
+    impose_box_for_test(100.0, 50.0),
+  )
+  guard too_small
+    is Err(
+      PdfError::BadNumberArgument("impose: not even a single page would fit")
+    ) else {
+    fail("expected fit layout to reject too-small output")
+  }
+}
+
+///|
+test "pdf_impose_layout calculates non-fit stacks and output boxes" {
+  let horizontal = try! pdf_document_empty().pdf_impose_layout(
+    false,
+    0.0,
+    1.0,
+    5.0,
+    3,
+    impose_box_for_test(100.0, 50.0),
+  )
+  @test.assert_eq(horizontal.pages_per_sheet, 3)
+  @test.assert_eq(horizontal.x_slots, 3)
+  @test.assert_eq(horizontal.y_slots, 1)
+  @test.assert_eq(horizontal.output_mediabox, impose_box_for_test(310.0, 60.0))
+
+  let vertical = try! pdf_document_empty().pdf_impose_layout(
+    false,
+    2.0,
+    0.0,
+    5.0,
+    3,
+    impose_box_for_test(100.0, 50.0),
+  )
+  @test.assert_eq(vertical.pages_per_sheet, 3)
+  @test.assert_eq(vertical.x_slots, 1)
+  @test.assert_eq(vertical.y_slots, 3)
+  @test.assert_eq(vertical.output_mediabox, impose_box_for_test(110.0, 160.0))
+
+  let grid = try! pdf_document_empty().pdf_impose_layout(
+    false,
+    2.0,
+    3.0,
+    5.0,
+    7,
+    impose_box_for_test(100.0, 50.0),
+  )
+  @test.assert_eq(grid.pages_per_sheet, 6)
+  @test.assert_eq(grid.x_slots, 2)
+  @test.assert_eq(grid.y_slots, 3)
+  @test.assert_eq(grid.output_mediabox, impose_box_for_test(210.0, 160.0))
+
+  let bad_zero : Result[PdfImposeLayout, Error] = try? pdf_document_empty().pdf_impose_layout(
+    false,
+    0.0,
+    0.0,
+    0.0,
+    3,
+    impose_box_for_test(100.0, 50.0),
+  )
+  guard bad_zero
+    is Err(
+      PdfError::BadNumberArgument("impose-xy: both dimensions cannot be zero")
+    ) else {
+    fail("expected non-fit layout to reject zero dimensions")
+  }
+}
+
+///|
 test "pdf_impose_transforms preserves row and column ordering" {
   @test.assert_eq(try! impose_transforms_for_test(columns=false, count=3), [
     transform_translate(0.0, 200.0),

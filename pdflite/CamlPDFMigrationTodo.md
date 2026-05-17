@@ -25,7 +25,8 @@ Current estimate:
   XMP/document info JSON reporting, redaction annotation bounding-box overlays,
   imposition transform/content/page-assembly/pattern-matrix kernels, cpdf page
   hard-box/removal/shift/scale/upright/set-mediabox/copy-box helpers, imposition
-  make-space orchestration and border stamping, and Markdown helper public APIs.
+  make-space orchestration, border stamping, and layout planning, and Markdown
+  helper public APIs.
 
 Current backend snapshot:
 
@@ -53,6 +54,14 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port the layout-planning branch of `cpdfimpose.impose`: private
+  `pdf_impose_layout` now calculates fit-mode sheets, horizontal/vertical
+  fit spacing, non-fit zero-dimension stack layouts, margin-expanded output
+  media boxes, and cpdf-compatible error cases before the full imposition
+  pipeline is wired. White-box coverage pins fit layout spacing, too-small fit
+  rejection, horizontal/vertical non-fit stacks, rectangular grids, and
+  zero-dimension rejection. `moon test --target native pdf_impose_wbtest.mbt`
+  reports 18/18 tests passing.~~
 - [x] ~~Port the `Cpdfpage.upright` helper used by full imposition:
   `upright_pages` now removes selected page `/Rotate` values by transforming
   content, annotations, known page boxes, and destination matrices into an

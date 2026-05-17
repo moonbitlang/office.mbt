@@ -139,6 +139,116 @@ fn PdfDocument::pdf_impose_transform_for_slot(
 }
 
 ///|
+#warnings("-unused_field")
+priv struct PdfImposeLayout {
+  pages_per_sheet : Int
+  x_slots : Int
+  y_slots : Int
+  output_mediabox : PdfObject
+  fit_extra_hspace : Double
+  fit_extra_vspace : Double
+}
+
+///|
+fn pdf_impose_output_box(width : Double, height : Double) -> PdfObject {
+  PdfArray([PdfReal(0.0), PdfReal(0.0), PdfReal(width), PdfReal(height)])
+}
+
+///|
+fn PdfDocument::pdf_impose_fit_layout(
+  self : PdfDocument,
+  x : Double,
+  y : Double,
+  page_width : Double,
+  page_height : Double,
+) -> PdfImposeLayout raise PdfError {
+  ignore(self)
+  let across = @math.floor(x / page_width + 0.001).to_int()
+  let down = @math.floor(y / page_height + 0.001).to_int()
+  if across < 1 || down < 1 {
+    raise BadNumberArgument("impose: not even a single page would fit")
+  }
+  {
+    pages_per_sheet: across * down,
+    x_slots: across,
+    y_slots: down,
+    output_mediabox: pdf_impose_output_box(x, y),
+    fit_extra_hspace: (x - across.to_double() * page_width) /
+    (across.to_double() + 1.0),
+    fit_extra_vspace: (y - down.to_double() * page_height) /
+    (down.to_double() + 1.0),
+  }
+}
+
+///|
+fn PdfDocument::pdf_impose_xy_layout(
+  self : PdfDocument,
+  x : Double,
+  y : Double,
+  margin : Double,
+  page_count : Int,
+  page_width : Double,
+  page_height : Double,
+) -> PdfImposeLayout raise PdfError {
+  ignore(self)
+  let ix = x.to_int()
+  let iy = y.to_int()
+  if ix == 0 && iy == 0 {
+    raise BadNumberArgument("impose-xy: both dimensions cannot be zero")
+  }
+  let (pages_per_sheet, x_slots, y_slots) = if ix == 0 {
+    (page_count, page_count, 1)
+  } else if iy == 0 {
+    (page_count, 1, page_count)
+  } else {
+    (ix * iy, ix, iy)
+  }
+  let margin2 = margin * 2.0
+  let output_mediabox = if x == 0.0 {
+    pdf_impose_output_box(
+      page_width * page_count.to_double() + margin2,
+      page_height + margin2,
+    )
+  } else if y == 0.0 {
+    pdf_impose_output_box(
+      page_width + margin2,
+      page_height * page_count.to_double() + margin2,
+    )
+  } else {
+    pdf_impose_output_box(page_width * x + margin2, page_height * y + margin2)
+  }
+  {
+    pages_per_sheet,
+    x_slots,
+    y_slots,
+    output_mediabox,
+    fit_extra_hspace: 0.0,
+    fit_extra_vspace: 0.0,
+  }
+}
+
+///|
+#warnings("-unused_value")
+fn PdfDocument::pdf_impose_layout(
+  self : PdfDocument,
+  fit : Bool,
+  x : Double,
+  y : Double,
+  margin : Double,
+  page_count : Int,
+  mediabox : PdfObject,
+) -> PdfImposeLayout raise PdfError {
+  let bounds = self.parse_rectangle(mediabox)
+  let page_width = bounds.max_x - bounds.min_x
+  let page_height = bounds.max_y - bounds.min_y
+  if fit {
+    self.pdf_impose_fit_layout(x, y, page_width, page_height)
+  } else {
+    self.pdf_impose_xy_layout(x, y, margin, page_count, page_width, page_height)
+  }
+}
+
+///|
 fn pdf_impose_concat_ops(
   first : ArrayView[PdfContentOp],
   second : ArrayView[PdfContentOp],
