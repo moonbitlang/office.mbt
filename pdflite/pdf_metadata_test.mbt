@@ -454,6 +454,82 @@ test "PdfDocument set_metadata_date expands reproducible now" {
 }
 
 ///|
+test "PdfDocument create_metadata builds cpdf XMP template from Info" {
+  let previous = @env.get_env_var("CPDF_REPRODUCIBLE_DATES")
+  @env.set_env_var("CPDF_REPRODUCIBLE_DATES", "true")
+  let doc = try! @pdflite.pdf_minimum_valid_pdf()
+  let title = try! @pdflite.pdf_pdfdocstring_of_utf8(
+    @utf8.encode("Résumé Title"),
+  )
+  let with_title = try! doc.set_info_entry(
+    metadata_name_for_test("/Title"),
+    PdfString(title),
+    4,
+    keep_version=true,
+  )
+  let with_creator = try! with_title.set_info_entry(
+    metadata_name_for_test("/Creator"),
+    PdfString(@ascii.encode("pdflite-test")),
+    4,
+    keep_version=true,
+  )
+  let with_created = try! with_creator.set_info_entry(
+    metadata_name_for_test("/CreationDate"),
+    PdfString(@ascii.encode("D:20260517010203+08'30'")),
+    4,
+    keep_version=true,
+  )
+  let with_metadata = try! @pdflite.pdf_create_metadata(with_created)
+  match previous {
+    Some(value) => @env.set_env_var("CPDF_REPRODUCIBLE_DATES", value)
+    None => @env.unset_env_var("CPDF_REPRODUCIBLE_DATES")
+  }
+  guard (try! with_metadata.metadata()) is Some(metadata) else {
+    fail("expected created metadata")
+  }
+  let metadata_text = try! @utf8.decode(metadata)
+  @test.assert_eq(
+    metadata_text.contains(
+      "<pdf:CreationDate>2026-05-17T01:02:03+08:30</pdf:CreationDate>",
+    ),
+    true,
+  )
+  @test.assert_eq(
+    metadata_text.contains(
+      "<xap:CreateDate>2026-05-17T01:02:03+08:30</xap:CreateDate>",
+    ),
+    true,
+  )
+  @test.assert_eq(
+    metadata_text.contains(
+      "<xap:ModifyDate>3900-01-01T00:00:00Z</xap:ModifyDate>",
+    ),
+    true,
+  )
+  @test.assert_eq(
+    metadata_text.contains(
+      "<xap:MetadataDate>3900-01-01T00:00:00Z</xap:MetadataDate>",
+    ),
+    true,
+  )
+  @test.assert_eq(
+    metadata_text.contains("<pdf:Creator>pdflite-test</pdf:Creator>"),
+    true,
+  )
+  @test.assert_eq(
+    metadata_text.contains(
+      "<rdf:li xml:lang='x-default'>Résumé Title</rdf:li>",
+    ),
+    true,
+  )
+  @test.assert_eq(
+    metadata_text.contains("<pdf:Trapped>False</pdf:Trapped>"),
+    true,
+  )
+  @test.assert_eq(with_metadata.version(), (1, 4))
+}
+
+///|
 test "PdfDocument determine_subformats reads XMP markers in cpdf order" {
   let doc = try! @pdflite.pdf_minimum_valid_pdf()
   let metadata_text =
