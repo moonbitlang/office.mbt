@@ -52,3 +52,105 @@ test "ByteCursor read_jpeg_data reports missing JPEG EOI marker" {
   }
   @test.assert_eq(cursor.position(), cursor.length())
 }
+
+///|
+fn jpeg_jfif_for_test(marker : Int) -> @pdflite.PdfBytes {
+  jpeg_bytes_for_test([
+    0xFF, 0xD8, 0xFF, 0xE0,
+    // APP0 length = 9, followed by "JFIF\0" and two padding bytes.
+     0x00, 0x09, 0x4A, 0x46, 0x49, 0x46, 0x00, 0xAA, 0xBB,
+    // SOF marker, length, precision, height 300, width 400.
+     0xFF, marker, 0x00, 0x0B, 0x08, 0x01, 0x2C, 0x01, 0x90, 0x03, 0x01,
+  ])
+}
+
+///|
+fn jpeg_exif_for_test() -> @pdflite.PdfBytes {
+  jpeg_bytes_for_test([
+    0xFF, 0xD8, 0xFF, 0xE1,
+    // APP1 length = 10, followed by "Exif\0" and three padding bytes.
+     0x00, 0x0A, 0x45, 0x78, 0x69, 0x66, 0x00, 0xAA, 0xBB, 0xCC,
+    // SOF0 marker, length, precision, height 256, width 512.
+     0xFF, 0xC0, 0x00, 0x0B, 0x08, 0x01, 0x00, 0x02, 0x00, 0x03, 0x01,
+  ])
+}
+
+///|
+fn jpeg_jfif_with_intermediate_block_for_test() -> @pdflite.PdfBytes {
+  jpeg_bytes_for_test([
+    0xFF, 0xD8, 0xFF, 0xE0,
+    // APP0 length = 9, followed by "JFIF\0" and two padding bytes.
+     0x00, 0x09, 0x4A, 0x46, 0x49, 0x46, 0x00, 0xAA, 0xBB,
+    // DQT-like non-SOF segment with length 4 and two payload bytes.
+     0xFF, 0xDB, 0x00, 0x04, 0x11, 0x22,
+    // SOF0 marker, length, precision, height 33, width 66.
+     0xFF, 0xC0, 0x00, 0x0B, 0x08, 0x00, 0x21, 0x00, 0x42, 0x03, 0x01,
+  ])
+}
+
+///|
+test "pdf_jpeg_dimensions reads JFIF and Exif baseline JPEG dimensions" {
+  @test.assert_eq(
+    try! @pdflite.pdf_jpeg_dimensions(jpeg_jfif_for_test(0xC0)),
+    (400, 300),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_jpeg_dimensions_view(jpeg_exif_for_test()),
+    (512, 256),
+  )
+}
+
+///|
+test "pdf_jpeg_dimensions scans over non-SOF JPEG segments" {
+  @test.assert_eq(
+    try! @pdflite.pdf_jpeg_dimensions(
+      jpeg_jfif_with_intermediate_block_for_test(),
+    ),
+    (66, 33),
+  )
+}
+
+///|
+test "pdf_jpeg_dimensions rejects progressive or missing SOF0 dimensions" {
+  let progressive : Result[(Int, Int), Error] = try? @pdflite.pdf_jpeg_dimensions(
+    jpeg_jfif_for_test(0xC2),
+  )
+  guard progressive is Err(@pdflite.PdfError::JPEGDimensionsExpected) else {
+    fail("expected JPEGDimensionsExpected for progressive JPEG")
+  }
+}
+
+///|
+test "pdf_jpeg_dimensions reports malformed JPEG inputs" {
+  let bad_header : Result[(Int, Int), Error] = try? @pdflite.pdf_jpeg_dimensions(
+    jpeg_bytes_for_test([0xFF, 0xD8, 0xFF, 0xDB]),
+  )
+  guard bad_header is Err(@pdflite.PdfError::BadJPEGHeader) else {
+    fail("expected BadJPEGHeader")
+  }
+  let bad_string : Result[(Int, Int), Error] = try? @pdflite.pdf_jpeg_dimensions(
+    jpeg_bytes_for_test([
+      0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x09, 0x4E, 0x4F, 0x50, 0x45, 0x00,
+    ]),
+  )
+  guard bad_string is Err(@pdflite.PdfError::BadJPEGString) else {
+    fail("expected BadJPEGString")
+  }
+  let bad_block : Result[(Int, Int), Error] = try? @pdflite.pdf_jpeg_dimensions(
+    jpeg_bytes_for_test([
+      0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x09, 0x4A, 0x46, 0x49, 0x46, 0x00, 0xAA, 0xBB,
+      0x00, 0xC0,
+    ]),
+  )
+  guard bad_block is Err(@pdflite.PdfError::InvalidJPEGBlock) else {
+    fail("expected InvalidJPEGBlock")
+  }
+  let truncated : Result[(Int, Int), Error] = try? @pdflite.pdf_jpeg_dimensions(
+    jpeg_bytes_for_test([
+      0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x09, 0x4A, 0x46, 0x49, 0x46, 0x00, 0xAA,
+    ]),
+  )
+  guard truncated is Err(@pdflite.PdfError::JPEGDimensionsExpected) else {
+    fail("expected JPEGDimensionsExpected for truncated JPEG")
+  }
+}
