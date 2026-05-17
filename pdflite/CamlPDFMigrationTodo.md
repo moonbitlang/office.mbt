@@ -23,8 +23,8 @@ Current estimate:
   composition reporting, core metadata APIs, XMP metadata-date rewriting, XMP
   info synchronization, XMP metadata creation, XMP RDF list extraction,
   XMP/document info JSON reporting, redaction annotation bounding-box overlays,
-  imposition transform/content/page-assembly/pattern-matrix kernels, and
-  Markdown helper public APIs.
+  imposition transform/content/page-assembly/pattern-matrix kernels, cpdf page
+  hard-box/removal helpers, and Markdown helper public APIs.
 
 Current backend snapshot:
 
@@ -52,6 +52,14 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port the small page-box dependency slice used by imposition and
+  `cpdfpage`: `hard_box` now prepends a clipping rectangle for `/MediaBox` or
+  another selected page box with cpdf's missing-box fallback behavior, and the
+  crop/trim/art/bleed removal helpers remove only the requested box from
+  selected pages while preserving page references. Coverage pins normal and
+  fast hard-box content, missing-box rejection/fallback, selected-page behavior,
+  and crop/trim removal wrappers. `moon test --target native
+  pdf_page_box_test.mbt` reports 3/3 tests passing.~~
 - [x] ~~Port the pattern-matrix rewrite from `cpdfpage.change_pattern_matrices_page`
   used by `cpdfimpose`: private imposition helpers now detect `/Pattern`
   resources used by `scn`/`SCN` with no numeric operands, clone those pattern

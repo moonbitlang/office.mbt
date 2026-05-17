@@ -337,6 +337,8 @@ pub fn pdf_get_xmp_info(PdfDocument, @core.PdfName) -> String
 
 pub fn pdf_glyphnames_of_text(PdfTextExtractor, BytesView) -> Array[@core.PdfName] raise @core.PdfError
 
+pub fn pdf_hard_box(PdfDocument, ArrayView[Int], @core.PdfName, mediabox_if_missing? : Bool, fast? : Bool) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_image_bpc(PdfDocument, PdfObject) -> PdfObject?
 
 pub fn pdf_image_colspace(PdfDocument, PdfObject, PdfObject) -> PdfColourSpace raise @core.PdfError
@@ -673,13 +675,19 @@ pub fn pdf_remove_all_text(PdfDocument, ArrayView[Int]) -> PdfDocument raise @co
 
 pub fn pdf_remove_all_text_ops(ArrayView[PdfContentOp]) -> Array[PdfContentOp]
 
+pub fn pdf_remove_art_pdf(PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_remove_attached_files(PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_remove_bleed_pdf(PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_remove_bookmarks(PdfDocument) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_remove_clipping(PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_remove_clipping_ops(ArrayView[PdfContentOp]) -> Array[PdfContentOp]
+
+pub fn pdf_remove_cropping_pdf(PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_remove_dict_entry(PdfDocument, @core.PdfName, search? : PdfObject?) -> Unit
 
@@ -693,7 +701,11 @@ pub fn pdf_remove_object_by_spec(PdfDocument, String) -> Unit raise @core.PdfErr
 
 pub fn pdf_remove_ocg(PdfDocument) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_remove_page_box(PdfDocument, ArrayView[Int], @core.PdfName) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_remove_page_labels(PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_remove_trim_pdf(PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_renumber_documents(ArrayView[PdfDocument]) -> Array[PdfDocument] raise @core.PdfError
 
@@ -1524,6 +1536,7 @@ pub fn PdfDocument::find_object_by_spec(Self, String) -> PdfObject raise @core.P
 pub fn PdfDocument::first_xref(Self) -> Int
 pub fn PdfDocument::get_image_24bpp(Self, PdfObject, PdfObject) -> PdfImage raise @core.PdfError
 pub fn PdfDocument::get_number(Self, PdfObject) -> Double raise @core.PdfError
+pub fn PdfDocument::hard_box(Self, ArrayView[Int], @core.PdfName, mediabox_if_missing? : Bool, fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::image_bits_per_component(Self, PdfObject) -> PdfObject?
 pub fn PdfDocument::image_colour_space(Self, PdfObject, PdfObject) -> PdfColourSpace raise @core.PdfError
 pub fn PdfDocument::indirect_number(Self, @core.PdfName, PdfObject) -> Int?
@@ -1623,10 +1636,13 @@ pub fn PdfDocument::referenced_object_numbers(Self, PdfObject, no_follow_entries
 pub fn PdfDocument::remove_added_text(Self, ArrayView[Int]) -> Self raise @core.PdfError
 pub fn PdfDocument::remove_all_metadata(Self) -> Self raise @core.PdfError
 pub fn PdfDocument::remove_all_text(Self, ArrayView[Int]) -> Self raise @core.PdfError
+pub fn PdfDocument::remove_art(Self, ArrayView[Int]) -> Self raise @core.PdfError
 pub fn PdfDocument::remove_attached_files(Self) -> Self raise @core.PdfError
+pub fn PdfDocument::remove_bleed(Self, ArrayView[Int]) -> Self raise @core.PdfError
 pub fn PdfDocument::remove_bookmarks(Self) -> Self raise @core.PdfError
 pub fn PdfDocument::remove_chain(Self, ArrayView[@core.PdfName]) -> Bool raise @core.PdfError
 pub fn PdfDocument::remove_clipping(Self, ArrayView[Int]) -> Self raise @core.PdfError
+pub fn PdfDocument::remove_cropping(Self, ArrayView[Int]) -> Self raise @core.PdfError
 pub fn PdfDocument::remove_dict_entry_everywhere(Self, @core.PdfName, search? : PdfObject?) -> Unit
 pub fn PdfDocument::remove_duplicate_fonts(Self) -> Unit
 pub fn PdfDocument::remove_javascript(Self) -> Unit raise @core.PdfError
@@ -1634,7 +1650,9 @@ pub fn PdfDocument::remove_metadata(Self) -> Self raise @core.PdfError
 pub fn PdfDocument::remove_object(Self, Int) -> Unit
 pub fn PdfDocument::remove_object_by_spec(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDocument::remove_optional_content_groups(Self) -> Self raise @core.PdfError
+pub fn PdfDocument::remove_page_box(Self, ArrayView[Int], @core.PdfName) -> Self raise @core.PdfError
 pub fn PdfDocument::remove_page_labels(Self) -> Self raise @core.PdfError
+pub fn PdfDocument::remove_trim(Self, ArrayView[Int]) -> Self raise @core.PdfError
 pub fn PdfDocument::remove_unreferenced(Self) -> Unit raise @core.PdfError
 pub fn PdfDocument::renumber_objects(Self, ArrayView[(Int, Int)]) -> Self raise @core.PdfError
 pub fn PdfDocument::renumber_objects_by_offset(Self, Int) -> Self raise @core.PdfError
