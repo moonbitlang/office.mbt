@@ -1099,6 +1099,56 @@ fn pdf_metadata_decode_pdf_string(value : BytesView) -> String? {
 }
 
 ///|
+fn pdf_metadata_json_string_array(values : ArrayView[String]) -> Json {
+  let items : Array[Json] = []
+  for value in values {
+    items.push(Json::string(value))
+  }
+  Json::array(items)
+}
+
+///|
+let pdf_metadata_xmp_report_fields : Array[(String, String, String)] = [
+  ("XMP pdf:Keywords", pdf_metadata_adobe_namespace, "Keywords"),
+  ("XMP pdf:Producer", pdf_metadata_adobe_namespace, "Producer"),
+  ("XMP pdf:Trapped", pdf_metadata_adobe_namespace, "Trapped"),
+  ("XMP pdf:Title", pdf_metadata_adobe_namespace, "Title"),
+  ("XMP pdf:Creator", pdf_metadata_adobe_namespace, "Creator"),
+  ("XMP pdf:Subject", pdf_metadata_adobe_namespace, "Subject"),
+  ("XMP pdf:Author", pdf_metadata_adobe_namespace, "Author"),
+  ("XMP pdf:CreationDate", pdf_metadata_adobe_namespace, "CreationDate"),
+  ("XMP pdf:ModDate", pdf_metadata_adobe_namespace, "ModDate"),
+  ("XMP xmp:CreateDate", pdf_metadata_xmp_namespace, "CreateDate"),
+  ("XMP xmp:CreatorTool", pdf_metadata_xmp_namespace, "CreatorTool"),
+  ("XMP xmp:MetadataDate", pdf_metadata_xmp_namespace, "MetadataDate"),
+  ("XMP xmp:ModifyDate", pdf_metadata_xmp_namespace, "ModifyDate"),
+  ("XMP dc:title", pdf_metadata_dc_namespace, "title"),
+  ("XMP dc:creator", pdf_metadata_dc_namespace, "creator"),
+  ("XMP dc:subject", pdf_metadata_dc_namespace, "subject"),
+  ("XMP dc:description", pdf_metadata_dc_namespace, "description"),
+  ("PDF/UA pdfuaid:amd", pdf_metadata_pdfuaid_namespace, "amd"),
+  ("PDF/UA pdfuaid:corr", pdf_metadata_pdfuaid_namespace, "corr"),
+]
+
+///|
+fn pdf_metadata_add_xmp_report_field(
+  output : Map[String, Json],
+  metadata : BytesView,
+  field : (String, String, String),
+) -> Unit {
+  match
+    pdf_metadata_get_xmp_data(
+      metadata,
+      field.1,
+      pdf_metadata_namespace_fallback_prefix(field.1),
+      field.2,
+    ) {
+    Some(value) => output.set(field.0, Json::string(value))
+    None => ()
+  }
+}
+
+///|
 fn pdf_metadata_push_view(output : Array[Byte], bytes : BytesView) -> Unit {
   for byte in bytes {
     output.push(byte)
@@ -1687,6 +1737,37 @@ pub fn PdfDocument::determine_subformats(
 }
 
 ///|
+/// Return cpdf-style XMP metadata report fields as JSON.
+pub fn PdfDocument::xmp_info_json(self : PdfDocument) -> Json raise PdfError {
+  let output : Map[String, Json] = Map([])
+  output.set(
+    "Subformats",
+    pdf_metadata_json_string_array(self.determine_subformats()),
+  )
+  match self.language() {
+    Some(language) =>
+      output.set("Language", Json::string(@utf8.decode_lossy(language)))
+    None => output.set("Language", Json::null())
+  }
+  match self.metadata() {
+    Some(metadata) =>
+      for field in pdf_metadata_xmp_report_fields {
+        pdf_metadata_add_xmp_report_field(output, metadata, field)
+      }
+    None => ()
+  }
+  Json::object(output)
+}
+
+///|
+/// Return cpdf-style XMP metadata report fields as UTF-8 JSON bytes.
+pub fn PdfDocument::xmp_info_json_blob(
+  self : PdfDocument,
+) -> PdfBytes raise PdfError {
+  @utf8.encode(self.xmp_info_json().stringify())
+}
+
+///|
 /// Return the catalog `/Lang` value, if present.
 pub fn PdfDocument::language(self : PdfDocument) -> PdfBytes? {
   match
@@ -1980,6 +2061,14 @@ pub fn pdf_determine_subformats(
   document : PdfDocument,
 ) -> Array[String] raise PdfError {
   document.determine_subformats()
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::xmp_info_json_blob`.
+pub fn pdf_output_xmp_info_json_blob(
+  document : PdfDocument,
+) -> PdfBytes raise PdfError {
+  document.xmp_info_json_blob()
 }
 
 ///|

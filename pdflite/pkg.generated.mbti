@@ -477,6 +477,8 @@ pub fn pdf_of_pages(PdfDocument, ArrayView[Int], retain_numbering? : Bool, proce
 
 pub fn pdf_optional_content_merge(ArrayView[PdfDocument]) -> PdfOptionalContent? raise @core.PdfError
 
+pub fn pdf_output_xmp_info_json_blob(PdfDocument) -> Bytes raise @core.PdfError
+
 pub fn pdf_p_of_permissions(ArrayView[@crypt_core.PdfPermission]) -> Int
 
 pub fn pdf_pad_after(PdfDocument, ArrayView[Int], pad_with? : PdfDocument?) -> PdfDocument raise @core.PdfError
@@ -1682,6 +1684,8 @@ pub fn PdfDocument::write_font(Self, PdfFont, objnum? : Int?) -> Int raise @core
 pub fn PdfDocument::write_optional_content_groups(Self, PdfOptionalContent) -> Self raise @core.PdfError
 pub fn PdfDocument::write_page_labels(Self, ArrayView[PdfPageLabel]) -> Self raise @core.PdfError
 pub fn PdfDocument::xmp_info(Self, @core.PdfName) -> String
+pub fn PdfDocument::xmp_info_json(Self) -> Json raise @core.PdfError
+pub fn PdfDocument::xmp_info_json_blob(Self) -> Bytes raise @core.PdfError
 
 pub(all) enum PdfEncoding {
   PdfImplicitInFontFile

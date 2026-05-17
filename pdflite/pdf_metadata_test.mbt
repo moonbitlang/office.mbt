@@ -639,6 +639,44 @@ test "PdfDocument xmp_info returns legacy Info-key equivalents" {
 }
 
 ///|
+test "PdfDocument xmp_info_json reports cpdf XMP fields" {
+  let empty = try! @pdflite.pdf_minimum_valid_pdf()
+  let empty_expected : Json = { "Language": null, "Subformats": [] }
+  @test.assert_eq(try! empty.xmp_info_json(), empty_expected)
+  let metadata_text =
+    #|<x:xmpmeta xmlns:pdf="http://ns.adobe.com/pdf/1.3/"
+    #| xmlns:xmp="http://ns.adobe.com/xap/1.0/"
+    #| xmlns:dc="http://purl.org/dc/elements/1.1/"
+    #| xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    #| xmlns:pdfuaid="http://www.aiim.org/pdfua/ns/id/">
+    #| <pdf:Title>PDF Title</pdf:Title>
+    #| <xmp:MetadataDate>2026-05-17T00:00:00Z</xmp:MetadataDate>
+    #| <dc:title><rdf:Alt>
+    #|  <rdf:li>First</rdf:li>
+    #|  <rdf:li>Second</rdf:li>
+    #| </rdf:Alt></dc:title>
+    #| <pdfuaid:part>1</pdfuaid:part>
+    #| <pdfuaid:amd>1</pdfuaid:amd>
+    #|</x:xmpmeta>
+  let with_metadata = try! empty
+    .set_language(@ascii.encode("en-US"))
+    .set_metadata_from_bytes(@ascii.encode(metadata_text))
+  let expected : Json = {
+    "Language": "en-US",
+    "PDF/UA pdfuaid:amd": "1",
+    "Subformats": ["PDF/UA-1"],
+    "XMP dc:title": "First, Second",
+    "XMP pdf:Title": "PDF Title",
+    "XMP xmp:MetadataDate": "2026-05-17T00:00:00Z",
+  }
+  @test.assert_eq(try! with_metadata.xmp_info_json(), expected)
+  @test.assert_eq(
+    try! @pdflite.pdf_output_xmp_info_json_blob(with_metadata),
+    @utf8.encode((try! with_metadata.xmp_info_json()).stringify()),
+  )
+}
+
+///|
 test "PdfDocument set_info_entry can synchronize XMP metadata" {
   let doc = try! @pdflite.pdf_minimum_valid_pdf()
   let xmp_text =
