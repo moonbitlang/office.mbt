@@ -1768,6 +1768,14 @@ Current backend snapshot:
   `pdf_document_of_json`. Native focused validation reports
   `moon test --target native pdf_util_test.mbt` at 19/19 tests passing; native
   full-suite validation reports 1706/1706 tests passing.~~
+- [x] ~~Standalone `cpdfjson.ml` parsed content-stream output slice now extends
+  `PdfDocument::json_of_document` and `pdf_json_of_document` with
+  `parse_content=true`, covering CPDFJSON contentparsed metadata, page
+  `/Contents` stream selection, operation-array output, `/Length` omission for
+  parsed stream dictionaries, wrapper parity, and round-tripping through
+  `pdf_document_of_json`. Native focused validation reports
+  `moon test --target native pdf_util_test.mbt` at 20/20 tests passing; native
+  full-suite validation reports 1707/1707 tests passing.~~
 - [x] ~~Standalone `cpdfpagelabels.ml` JSON adapter slice now exposes
   `PdfDocument::add_page_labels_json` and `pdf_add_page_labels_json`, covering
   cpdf's page-label JSON array shape, UTF-8 prefix-to-PDFDocString encoding,

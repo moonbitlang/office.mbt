@@ -273,6 +273,330 @@ fn pdf_util_json_op_floats(
 }
 
 ///|
+fn pdf_util_json_float_object(value : Double) -> Json {
+  Json::object(Map::of([("F", Json::number(value))]))
+}
+
+///|
+fn pdf_util_json_int_object(value : Int) -> Json {
+  Json::object(Map::of([("I", pdf_util_json_number(value))]))
+}
+
+///|
+fn pdf_util_json_float_objects(values : ArrayView[Double]) -> Array[Json] {
+  [
+    for value in values => pdf_util_json_float_object(value)
+  ]
+}
+
+///|
+fn pdf_util_json_op_items(items : ArrayView[Json], operator : String) -> Json {
+  let output : Array[Json] = []
+  for item in items {
+    output.push(item)
+  }
+  output.push(Json::string(operator))
+  Json::array(output)
+}
+
+///|
+fn pdf_util_json_name_object(name : PdfName) -> Json raise PdfError {
+  Json::string(pdf_util_string_from_name(name))
+}
+
+///|
+fn pdf_util_json_op_string(bytes : PdfBytes) -> Json raise PdfError {
+  Json::string(pdf_util_string_from_bytes(bytes))
+}
+
+///|
+fn PdfDocument::pdf_util_json_of_content_op(
+  self : PdfDocument,
+  op : PdfContentOp,
+  utf8 : Bool,
+) -> Json raise PdfError {
+  match op {
+    Op_S => Json::array([Json::string("S")])
+    Op_s => Json::array([Json::string("s")])
+    Op_f => Json::array([Json::string("f")])
+    Op_F => Json::array([Json::string("F")])
+    Op_fstar => Json::array([Json::string("f*")])
+    Op_B => Json::array([Json::string("B")])
+    Op_Bstar => Json::array([Json::string("B*")])
+    Op_b => Json::array([Json::string("b")])
+    Op_bstar => Json::array([Json::string("b*")])
+    Op_n => Json::array([Json::string("n")])
+    Op_W => Json::array([Json::string("W")])
+    Op_Wstar => Json::array([Json::string("W*")])
+    Op_BT => Json::array([Json::string("BT")])
+    Op_ET => Json::array([Json::string("ET")])
+    Op_q => Json::array([Json::string("q")])
+    Op_Q => Json::array([Json::string("Q")])
+    Op_h => Json::array([Json::string("h")])
+    Op_Tstar => Json::array([Json::string("T*")])
+    Op_EMC => Json::array([Json::string("EMC")])
+    Op_BX => Json::array([Json::string("BX")])
+    Op_EX => Json::array([Json::string("EX")])
+    Op_re(a, b, c, d) =>
+      pdf_util_json_op_items(
+        [
+          pdf_util_json_float_object(a),
+          pdf_util_json_float_object(b),
+          pdf_util_json_float_object(c),
+          pdf_util_json_float_object(d),
+        ],
+        "re",
+      )
+    Op_k(c, m, y, k) =>
+      pdf_util_json_op_items(
+        [
+          pdf_util_json_float_object(c),
+          pdf_util_json_float_object(m),
+          pdf_util_json_float_object(y),
+          pdf_util_json_float_object(k),
+        ],
+        "k",
+      )
+    Op_m(a, b) =>
+      pdf_util_json_op_items(
+        [pdf_util_json_float_object(a), pdf_util_json_float_object(b)],
+        "m",
+      )
+    Op_l(a, b) =>
+      pdf_util_json_op_items(
+        [pdf_util_json_float_object(a), pdf_util_json_float_object(b)],
+        "l",
+      )
+    Op_BDC(tag, object) =>
+      pdf_util_json_op_items(
+        [
+          pdf_util_json_name_object(tag),
+          self.pdf_util_json_of_object(object, utf8),
+        ],
+        "BDC",
+      )
+    Op_gs(name) =>
+      pdf_util_json_op_items([pdf_util_json_name_object(name)], "gs")
+    Op_Do(name) =>
+      pdf_util_json_op_items([pdf_util_json_name_object(name)], "Do")
+    Op_CS(name) =>
+      pdf_util_json_op_items([pdf_util_json_name_object(name)], "CS")
+    Op_j(value) =>
+      pdf_util_json_op_items([pdf_util_json_int_object(value)], "j")
+    Op_cm(matrix) =>
+      pdf_util_json_op_items(
+        [
+          pdf_util_json_float_object(matrix.a),
+          pdf_util_json_float_object(matrix.b),
+          pdf_util_json_float_object(matrix.c),
+          pdf_util_json_float_object(matrix.d),
+          pdf_util_json_float_object(matrix.e),
+          pdf_util_json_float_object(matrix.f),
+        ],
+        "cm",
+      )
+    Op_d(dash, phase) =>
+      pdf_util_json_op_items(
+        [
+          Json::array(pdf_util_json_float_objects(dash)),
+          pdf_util_json_float_object(phase),
+        ],
+        "d",
+      )
+    Op_w(value) =>
+      pdf_util_json_op_items([pdf_util_json_float_object(value)], "w")
+    Op_J(value) =>
+      pdf_util_json_op_items([pdf_util_json_int_object(value)], "J")
+    Op_M(value) =>
+      pdf_util_json_op_items([pdf_util_json_float_object(value)], "M")
+    Op_ri(name) =>
+      pdf_util_json_op_items([pdf_util_json_name_object(name)], "ri")
+    Op_i(value) =>
+      pdf_util_json_op_items([pdf_util_json_float_object(value)], "i")
+    Op_c(a, b, c, d, e, f) =>
+      pdf_util_json_op_items(
+        [
+          pdf_util_json_float_object(a),
+          pdf_util_json_float_object(b),
+          pdf_util_json_float_object(c),
+          pdf_util_json_float_object(d),
+          pdf_util_json_float_object(e),
+          pdf_util_json_float_object(f),
+        ],
+        "c",
+      )
+    Op_v(a, b, c, d) =>
+      pdf_util_json_op_items(
+        [
+          pdf_util_json_float_object(a),
+          pdf_util_json_float_object(b),
+          pdf_util_json_float_object(c),
+          pdf_util_json_float_object(d),
+        ],
+        "v",
+      )
+    Op_y(a, b, c, d) =>
+      pdf_util_json_op_items(
+        [
+          pdf_util_json_float_object(a),
+          pdf_util_json_float_object(b),
+          pdf_util_json_float_object(c),
+          pdf_util_json_float_object(d),
+        ],
+        "y",
+      )
+    Op_Tc(value) =>
+      pdf_util_json_op_items([pdf_util_json_float_object(value)], "Tc")
+    Op_Tw(value) =>
+      pdf_util_json_op_items([pdf_util_json_float_object(value)], "Tw")
+    Op_Tz(value) =>
+      pdf_util_json_op_items([pdf_util_json_float_object(value)], "Tz")
+    Op_TL(value) =>
+      pdf_util_json_op_items([pdf_util_json_float_object(value)], "TL")
+    Op_Tf(name, size) =>
+      pdf_util_json_op_items(
+        [pdf_util_json_name_object(name), pdf_util_json_float_object(size)],
+        "Tf",
+      )
+    Op_Tr(value) =>
+      pdf_util_json_op_items([pdf_util_json_int_object(value)], "Tr")
+    Op_Ts(value) =>
+      pdf_util_json_op_items([pdf_util_json_float_object(value)], "Ts")
+    Op_Td(a, b) =>
+      pdf_util_json_op_items(
+        [pdf_util_json_float_object(a), pdf_util_json_float_object(b)],
+        "Td",
+      )
+    Op_TD(a, b) =>
+      pdf_util_json_op_items(
+        [pdf_util_json_float_object(a), pdf_util_json_float_object(b)],
+        "TD",
+      )
+    Op_Tm(matrix) =>
+      pdf_util_json_op_items(
+        [
+          pdf_util_json_float_object(matrix.a),
+          pdf_util_json_float_object(matrix.b),
+          pdf_util_json_float_object(matrix.c),
+          pdf_util_json_float_object(matrix.d),
+          pdf_util_json_float_object(matrix.e),
+          pdf_util_json_float_object(matrix.f),
+        ],
+        "Tm",
+      )
+    Op_Tj(text) => pdf_util_json_op_items([pdf_util_json_op_string(text)], "Tj")
+    Op_TJ(object) =>
+      pdf_util_json_op_items([self.pdf_util_json_of_object(object, utf8)], "TJ")
+    Op_quote(text) =>
+      pdf_util_json_op_items([pdf_util_json_op_string(text)], "'")
+    Op_double_quote(word_space, char_space, text) =>
+      pdf_util_json_op_items(
+        [
+          pdf_util_json_float_object(word_space),
+          pdf_util_json_float_object(char_space),
+          pdf_util_json_op_string(text),
+        ],
+        "''",
+      )
+    Op_d0(width_x, width_y) =>
+      pdf_util_json_op_items(
+        [
+          pdf_util_json_float_object(width_x),
+          pdf_util_json_float_object(width_y),
+        ],
+        "d0",
+      )
+    Op_d1(width_x, width_y, llx, lly, urx, ury) =>
+      pdf_util_json_op_items(
+        [
+          pdf_util_json_float_object(width_x),
+          pdf_util_json_float_object(width_y),
+          pdf_util_json_float_object(llx),
+          pdf_util_json_float_object(lly),
+          pdf_util_json_float_object(urx),
+          pdf_util_json_float_object(ury),
+        ],
+        "d1",
+      )
+    Op_cs(name) =>
+      pdf_util_json_op_items([pdf_util_json_name_object(name)], "cs")
+    Op_G(value) =>
+      pdf_util_json_op_items([pdf_util_json_float_object(value)], "G")
+    Op_g(value) =>
+      pdf_util_json_op_items([pdf_util_json_float_object(value)], "g")
+    Op_RG(r, g, b) =>
+      pdf_util_json_op_items(
+        [
+          pdf_util_json_float_object(r),
+          pdf_util_json_float_object(g),
+          pdf_util_json_float_object(b),
+        ],
+        "RG",
+      )
+    Op_rg(r, g, b) =>
+      pdf_util_json_op_items(
+        [
+          pdf_util_json_float_object(r),
+          pdf_util_json_float_object(g),
+          pdf_util_json_float_object(b),
+        ],
+        "rg",
+      )
+    Op_K(c, m, y, k) =>
+      pdf_util_json_op_items(
+        [
+          pdf_util_json_float_object(c),
+          pdf_util_json_float_object(m),
+          pdf_util_json_float_object(y),
+          pdf_util_json_float_object(k),
+        ],
+        "K",
+      )
+    Op_sh(name) =>
+      pdf_util_json_op_items([pdf_util_json_name_object(name)], "sh")
+    Op_MP(tag) => pdf_util_json_op_items([pdf_util_json_name_object(tag)], "MP")
+    Op_BMC(tag) =>
+      pdf_util_json_op_items([pdf_util_json_name_object(tag)], "BMC")
+    Op_Unknown(bytes) =>
+      pdf_util_json_op_items([pdf_util_json_op_string(bytes)], "Unknown")
+    Op_DP(tag, object) =>
+      pdf_util_json_op_items(
+        [
+          pdf_util_json_name_object(tag),
+          self.pdf_util_json_of_object(object, utf8),
+        ],
+        "DP",
+      )
+    Op_InlineImage(dictionary, _, data) =>
+      pdf_util_json_op_items(
+        [
+          self.pdf_util_json_of_object(dictionary, utf8),
+          pdf_util_json_op_string(data),
+        ],
+        "InlineImage",
+      )
+    Op_SC(values) =>
+      pdf_util_json_op_items(pdf_util_json_float_objects(values), "SC")
+    Op_sc(values) =>
+      pdf_util_json_op_items(pdf_util_json_float_objects(values), "sc")
+    Op_SCN(values) =>
+      pdf_util_json_op_items(pdf_util_json_float_objects(values), "SCN")
+    Op_scn(values) =>
+      pdf_util_json_op_items(pdf_util_json_float_objects(values), "scn")
+    Op_SCNName(name, values) => {
+      let items = pdf_util_json_float_objects(values)
+      items.push(pdf_util_json_name_object(name))
+      pdf_util_json_op_items(items, "SCNName")
+    }
+    Op_scnName(name, values) => {
+      let items = pdf_util_json_float_objects(values)
+      items.push(pdf_util_json_name_object(name))
+      pdf_util_json_op_items(items, "scnName")
+    }
+  }
+}
+
+///|
 fn pdf_util_json_op_matrix(
   a : Json,
   b : Json,
@@ -592,6 +916,66 @@ fn pdf_util_cpdfjson_root_key() -> PdfName {
 }
 
 ///|
+let pdf_util_cpdfjson_contents_key_name : PdfName = pdf_util_name_from_json_text(
+  "/Contents",
+)
+
+///|
+fn pdf_util_cpdfjson_contents_key() -> PdfName {
+  pdf_util_cpdfjson_contents_key_name
+}
+
+///|
+let pdf_util_cpdfjson_subtype_key_name : PdfName = pdf_util_name_from_json_text(
+  "/Subtype",
+)
+
+///|
+fn pdf_util_cpdfjson_subtype_key() -> PdfName {
+  pdf_util_cpdfjson_subtype_key_name
+}
+
+///|
+let pdf_util_cpdfjson_form_name : PdfName = pdf_util_name_from_json_text(
+  "/Form",
+)
+
+///|
+fn pdf_util_cpdfjson_form() -> PdfName {
+  pdf_util_cpdfjson_form_name
+}
+
+///|
+let pdf_util_cpdfjson_type_key_name : PdfName = pdf_util_name_from_json_text(
+  "/Type",
+)
+
+///|
+fn pdf_util_cpdfjson_type_key() -> PdfName {
+  pdf_util_cpdfjson_type_key_name
+}
+
+///|
+let pdf_util_cpdfjson_pattern_name : PdfName = pdf_util_name_from_json_text(
+  "/Pattern",
+)
+
+///|
+fn pdf_util_cpdfjson_pattern() -> PdfName {
+  pdf_util_cpdfjson_pattern_name
+}
+
+///|
+let pdf_util_cpdfjson_filter_key_name : PdfName = pdf_util_name_from_json_text(
+  "/Filter",
+)
+
+///|
+fn pdf_util_cpdfjson_filter_key() -> PdfName {
+  pdf_util_cpdfjson_filter_key_name
+}
+
+///|
 fn pdf_util_cpdfjson_integer_field(
   object : PdfObject,
   key : PdfName,
@@ -693,9 +1077,163 @@ pub fn pdf_document_of_json(json : Json) -> PdfDocument raise PdfError {
 }
 
 ///|
+fn pdf_util_int_array_contains(values : ArrayView[Int], value : Int) -> Bool {
+  for item in values {
+    if item == value {
+      break true
+    }
+  } nobreak {
+    false
+  }
+}
+
+///|
+fn pdf_util_push_unique_int(values : Array[Int], value : Int) -> Unit {
+  if !pdf_util_int_array_contains(values, value) {
+    values.push(value)
+  }
+}
+
+///|
+fn PdfDocument::pdf_util_mark_contents_value(
+  self : PdfDocument,
+  value : PdfObject,
+  numbers : Array[Int],
+) -> Unit {
+  match value {
+    PdfIndirect(number) =>
+      match self.lookup_object_or_null(number) {
+        PdfArray(values) =>
+          for item in values {
+            match item {
+              PdfIndirect(item_number) =>
+                pdf_util_push_unique_int(numbers, item_number)
+              _ => ()
+            }
+          }
+        _ => pdf_util_push_unique_int(numbers, number)
+      }
+    PdfArray(values) =>
+      for item in values {
+        match item {
+          PdfIndirect(number) => pdf_util_push_unique_int(numbers, number)
+          _ => ()
+        }
+      }
+    _ => ()
+  }
+}
+
+///|
+fn PdfDocument::pdf_util_indirect_marks_content_stream(
+  self : PdfDocument,
+  number : Int,
+) -> Bool {
+  match self.lookup_object_or_null(number) {
+    PdfStreamObject(stream) =>
+      match
+        self.lookup_direct(
+          pdf_util_cpdfjson_subtype_key(),
+          PdfStreamObject(stream),
+        ) {
+        Some(PdfNameObject(name)) if name == pdf_util_cpdfjson_form() => true
+        _ =>
+          match
+            self.lookup_direct(
+              pdf_util_cpdfjson_type_key(),
+              PdfStreamObject(stream),
+            ) {
+            Some(PdfNameObject(name)) if name == pdf_util_cpdfjson_pattern() =>
+              true
+            _ => false
+          }
+      }
+    _ => false
+  }
+}
+
+///|
+fn PdfDocument::pdf_util_collect_content_stream_numbers(
+  self : PdfDocument,
+  object : PdfObject,
+  numbers : Array[Int],
+) -> Unit {
+  match object {
+    PdfDictionary(entries) =>
+      for entry in entries {
+        if entry.0 == pdf_util_cpdfjson_contents_key() {
+          self.pdf_util_mark_contents_value(entry.1, numbers)
+        }
+        self.pdf_util_collect_content_stream_numbers(entry.1, numbers)
+      }
+    PdfStreamObject(stream) =>
+      self.pdf_util_collect_content_stream_numbers(stream.dictionary, numbers)
+    PdfArray(values) =>
+      for value in values {
+        self.pdf_util_collect_content_stream_numbers(value, numbers)
+      }
+    PdfIndirect(number) =>
+      if self.pdf_util_indirect_marks_content_stream(number) {
+        pdf_util_push_unique_int(numbers, number)
+      }
+    _ => ()
+  }
+}
+
+///|
+fn PdfDocument::pdf_util_content_stream_numbers(
+  self : PdfDocument,
+) -> Array[Int] {
+  let numbers : Array[Int] = []
+  self.pdf_util_collect_content_stream_numbers(self.trailer_dict(), numbers)
+  for number in self.object_numbers() {
+    self.pdf_util_collect_content_stream_numbers(
+      self.lookup_object_or_null(number),
+      numbers,
+    )
+  }
+  numbers
+}
+
+///|
+fn PdfDocument::pdf_util_json_of_parsed_content_stream(
+  self : PdfDocument,
+  object : PdfObject,
+  utf8 : Bool,
+) -> Json raise PdfError {
+  match object {
+    PdfStreamObject(stream) => {
+      let decoded = self.pdf_decode_stream_until_unknown_value_direct(stream)
+      let data = pdf_stream_data_bytes(decoded.data)
+      let ops = pdf_parse_content_ops_from_bytes(data)
+      let dictionary = decoded.dictionary
+        .remove_dict_entry(pdf_object_length_name())
+        .remove_dict_entry(pdf_util_cpdfjson_filter_key())
+      let op_jsons : Array[Json] = []
+      for op in ops {
+        op_jsons.push(self.pdf_util_json_of_content_op(op, utf8))
+      }
+      Json::object(
+        Map::of([
+          (
+            "S",
+            Json::array([
+              self.pdf_util_json_of_object(dictionary, utf8),
+              Json::array(op_jsons),
+            ]),
+          ),
+        ]),
+      )
+    }
+    _ => raise ParseStreamExpected
+  }
+}
+
+///|
 fn PdfDocument::pdf_util_document_params_json(
   self : PdfDocument,
   utf8 : Bool,
+  parse_content : Bool,
 ) -> Json raise PdfError {
   let (major, minor) = self.version()
   self.pdf_util_json_of_object(
@@ -703,7 +1241,7 @@ fn PdfDocument::pdf_util_document_params_json(
       (pdf_util_name_from_json_text("/CPDFJSONformatversion"), PdfInteger(3)),
       (
         pdf_util_name_from_json_text("/CPDFJSONcontentparsed"),
-        PdfBoolean(false),
+        PdfBoolean(parse_content),
       ),
       (pdf_util_cpdfjson_stream_data_included_key(), PdfBoolean(true)),
       (pdf_util_cpdfjson_major_version_key(), PdfInteger(major)),
@@ -723,16 +1261,22 @@ fn pdf_util_document_json_entry(number : Int, object : Json) -> Json {
 ///
 /// This ports the basic document-output shape from cpdf's `json_of_pdf`:
 /// object `-1` carries CPDFJSON metadata, object `0` carries the trailer, and
-/// positive object numbers are emitted in ascending order. Parsed content
-/// streams, stream-data omission, forced decompression, and clean-string
-/// preprocessing remain separate CPDFJSON option slices.
+/// positive object numbers are emitted in ascending order. When `parse_content`
+/// is set, page `/Contents` streams plus referenced Form XObject and Pattern
+/// streams are emitted as cpdf-style operation arrays. Stream-data omission,
+/// forced decompression, and clean-string preprocessing remain separate
+/// CPDFJSON option slices.
 pub fn PdfDocument::json_of_document(
   self : PdfDocument,
   utf8? : Bool = false,
+  parse_content? : Bool = false,
 ) -> Json raise PdfError {
   let entries : Array[Json] = []
   entries.push(
-    pdf_util_document_json_entry(-1, self.pdf_util_document_params_json(utf8)),
+    pdf_util_document_json_entry(
+      -1,
+      self.pdf_util_document_params_json(utf8, parse_content),
+    ),
   )
   entries.push(
     pdf_util_document_json_entry(
@@ -740,13 +1284,21 @@ pub fn PdfDocument::json_of_document(
       self.pdf_util_json_of_object(self.trailer_dict(), utf8),
     ),
   )
+  let content_stream_numbers = if parse_content {
+    self.pdf_util_content_stream_numbers()
+  } else {
+    []
+  }
   for number in self.object_numbers() {
-    entries.push(
-      pdf_util_document_json_entry(
-        number,
-        self.pdf_util_json_of_object(self.lookup_object_or_null(number), utf8),
-      ),
-    )
+    let object = self.lookup_object_or_null(number)
+    let object_json = if pdf_util_int_array_contains(
+        content_stream_numbers, number,
+      ) {
+      self.pdf_util_json_of_parsed_content_stream(object, utf8)
+    } else {
+      self.pdf_util_json_of_object(object, utf8)
+    }
+    entries.push(pdf_util_document_json_entry(number, object_json))
   }
   Json::array(entries)
 }
@@ -962,8 +1514,9 @@ pub fn pdf_json_of_object(
 pub fn pdf_json_of_document(
   document : PdfDocument,
   utf8? : Bool = false,
+  parse_content? : Bool = false,
 ) -> Json raise PdfError {
-  document.json_of_document(utf8~)
+  document.json_of_document(utf8~, parse_content~)
 }
 
 ///|

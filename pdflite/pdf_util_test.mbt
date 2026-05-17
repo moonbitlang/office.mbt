@@ -656,6 +656,86 @@ test "PdfDocument json_of_document emits cpdf top-level arrays and round trips" 
 }
 
 ///|
+test "PdfDocument json_of_document parses content streams into operation arrays" {
+  let document = try! @pdflite.pdf_document_of_json(
+    util_cpdfjson_document_for_test(),
+  )
+  let exported = try! document.json_of_document(parse_content=true)
+  @test.assert_eq(
+    try! @pdflite.pdf_json_of_document(document, parse_content=true),
+    exported,
+  )
+
+  guard util_cpdfjson_entry_for_test(exported, -1) is Some(params_json) else {
+    fail("expected CPDFJSON params entry")
+  }
+  let params = try! @pdflite.pdf_object_of_json(params_json)
+  @test.assert_eq(
+    util_lookup_for_test(params, util_name_for_test("/CPDFJSONcontentparsed")),
+    Some(PdfBoolean(true)),
+  )
+
+  guard util_cpdfjson_entry_for_test(exported, 2)
+    is Some(Object(stream_wrapper)) else {
+    fail("expected exported stream wrapper")
+  }
+  guard stream_wrapper.get("S") is Some(Array([dict_json, Array(op_jsons)])) else {
+    fail("expected parsed stream JSON")
+  }
+  guard dict_json is Object(dict_entries) else {
+    fail("expected parsed stream dictionary")
+  }
+  @test.assert_eq(dict_entries.get("/Length"), None)
+  @test.assert_eq(op_jsons.length(), 5)
+  guard op_jsons.get(0) is Some(Array([_, _, _, _, _, _, String("cm")])) else {
+    fail("expected cm operator JSON")
+  }
+  guard op_jsons.get(1) is Some(Array([String("BT")])) else {
+    fail("expected BT operator JSON")
+  }
+  guard op_jsons.get(2) is Some(Array([String("/F0"), _, String("Tf")])) else {
+    fail("expected Tf operator JSON")
+  }
+  guard op_jsons.get(3) is Some(Array([String("Hello"), String("Tj")])) else {
+    fail("expected Tj operator JSON")
+  }
+  guard op_jsons.get(4) is Some(Array([String("ET")])) else {
+    fail("expected ET operator JSON")
+  }
+
+  let expected_ops : Array[@pdflite.PdfContentOp] = [
+    Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 50.0, f: 770.0 }),
+    Op_BT,
+    Op_Tf(util_name_for_test("/F0"), 36.0),
+    Op_Tj(@ascii.encode("Hello")),
+    Op_ET,
+  ]
+  guard (try! @pdflite.pdf_object_of_json(Json::object(stream_wrapper)))
+    is PdfStreamObject(parsed_stream) else {
+    fail("expected parsed stream object")
+  }
+  guard parsed_stream.data is StreamGot(parsed_data) else {
+    fail("expected parsed stream data")
+  }
+  @test.assert_eq(
+    try! @pdflite.pdf_parse_content_ops_from_bytes(parsed_data),
+    expected_ops,
+  )
+
+  let roundtripped = try! @pdflite.pdf_document_of_json(exported)
+  guard roundtripped.lookup_object_or_null(2) is PdfStreamObject(stream) else {
+    fail("expected round-tripped content stream")
+  }
+  guard stream.data is StreamGot(data) else {
+    fail("expected round-tripped stream data")
+  }
+  @test.assert_eq(
+    try! @pdflite.pdf_parse_content_ops_from_bytes(data),
+    expected_ops,
+  )
+}
+
+///|
 test "pdf_document_of_json rejects malformed cpdf document arrays" {
   let no_stream_data : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_document_of_json([
       [
