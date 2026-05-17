@@ -1487,6 +1487,11 @@ Current backend snapshot:
   preserving literal-string `%` bytes, preventing commented fake metadata,
   section markers, and mappings from affecting ToUnicode and Type0 external
   CMap extraction.~~
+- [x] ~~Rare predefined CMap regression coverage now gates direct Unicode
+  Adobe-KR `/UniAKR-UTF8-H`, `/UniAKR-UTF16-H`, and `/UniAKR-UTF32-H`
+  extraction/reverse lookup plus `/KSCms-UHC-HW-H` and `/KSCms-UHC-HW-V`
+  half-width Korean predefined maps. `moon test --target native
+  pdf_text_test.mbt` reports 152/152 tests passing.~~
 - [ ] Broader built-in non-UCS2 predefined CMap mapping tables beyond the
   current Adobe-GB1, Adobe-CNS1, Adobe-Japan1, and Adobe-Korea1 fallbacks,
   plus more real-world ToUnicode/CMap variation fixtures.

@@ -4417,6 +4417,32 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   guard utf32_bad is Err(_) else {
     fail("expected malformed UTF32 predefined CMap text error")
   }
+  let akr_direct_unicode_cases : Array[
+    (String, Array[Int], Array[Int], Int, Int),
+  ] = [
+    (
+      "/UniAKR-UTF8-H",
+      [0x41, 0xEA, 0xB0, 0x80],
+      [0x41, 0xAC00],
+      0xAC00,
+      0xEAB080,
+    ),
+    ("/UniAKR-UTF16-H", [0xAC, 0x00], [0xAC00], 0xAC00, 0xAC00),
+    ("/UniAKR-UTF32-H", [0x00, 0x00, 0xAC, 0x00], [0xAC00], 0xAC00, 0xAC00),
+  ]
+  for case in akr_direct_unicode_cases {
+    let akr_font : @pdflite.PdfFont = PdfFontCIDKeyed({
+      basefont: text_name_for_test("/TopAKR"),
+      composite,
+      encoding: PdfPredefinedCMap(text_name_for_test(case.0)),
+    })
+    let akr_extractor = akr_font.text_extractor()
+    @test.assert_eq(
+      akr_extractor.codepoints_of_text(text_bytes_for_test(case.1)),
+      case.2,
+    )
+    @test.assert_eq(akr_extractor.charcode_of_codepoint(case.3), Some(case.4))
+  }
   let non_ucs2_predefined_font : @pdflite.PdfFont = PdfFontCIDKeyed({
     basefont: text_name_for_test("/TopGBEUC"),
     composite,
@@ -4930,6 +4956,26 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   guard uhc_truncated is Err(BadText) else {
     fail("expected @pdflite.PdfError::BadText for truncated UHC charcode")
   }
+  let uhc_hw_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: text_name_for_test("/TopUHCHWBuiltin"),
+    composite,
+    encoding: PdfPredefinedCMap(text_name_for_test("/KSCms-UHC-HW-H")),
+  })
+  let uhc_hw_builtin_extractor = uhc_hw_builtin_font.text_extractor()
+  @test.assert_eq(
+    uhc_hw_builtin_extractor.codepoints_of_text(
+      text_bytes_for_test([0xB0, 0xA1, 0xA4, 0xD4]),
+    ),
+    [0xAC00, 0x3164],
+  )
+  @test.assert_eq(
+    uhc_hw_builtin_extractor.charcode_of_codepoint(0xAC00),
+    Some(0xB0A1),
+  )
+  @test.assert_eq(
+    uhc_hw_builtin_extractor.charcode_of_codepoint(0x3164),
+    Some(0xA4D4),
+  )
   let gbk_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
     basefont: text_name_for_test("/TopGBKBuiltin"),
     composite,
@@ -5181,6 +5227,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     ("/KSC-EUC-V", [0xA1, 0xA6], [0x22EF], 0x22EF, 0xA1A6),
     ("/KSCpc-EUC-V", [0xA1, 0xA6], [0x22EF], 0x22EF, 0xA1A6),
     ("/KSCms-UHC-V", [0xA1, 0xA6], [0x22EF], 0x22EF, 0xA1A6),
+    ("/KSCms-UHC-HW-V", [0xA1, 0xA6], [0x22EF], 0x22EF, 0xA1A6),
   ]
   for case in vertical_builtin_cases {
     let vertical_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
