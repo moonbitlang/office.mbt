@@ -63,6 +63,13 @@ Current backend snapshot:
   vendored-C binding slice because `.repos/` is ignored and cannot be used as a
   committed build dependency. `moon test --target native pdf_clip_test.mbt`
   reports 5/5 tests passing.~~
+- [x] ~~Port the native `cpdfclip` GPC boolean-operation bridge:
+  `pdf_clip_polygon_clip` and `PdfClipOperation::clip_polygons` now encode the
+  MoonBit polygon model into a native byte payload, call the vendored
+  Alan Murta GPC sources, and decode result contours back into `PdfClipPolygon`.
+  Native coverage gates overlapping-box intersection, disjoint intersection,
+  and disjoint-box union. `moon test --target native
+  pdf_clip_native_test.mbt` reports 3/3 tests passing.~~
 - [x] ~~Port cpdf scale-to-fit and legacy `twoup`:
   `PdfDocument::scale_to_fit_pages` now preserves aspect ratio against
   page-indexed target sizes, rewrites known boxes to the target sheet,
