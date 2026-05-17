@@ -402,6 +402,92 @@ test "pdf_object_of_json decodes streams and utf8 string wrappers" {
 }
 
 ///|
+test "pdf_object_of_json decodes parsed content-stream operation arrays" {
+  let key_length = util_name_for_test("/Length")
+  let key_other = util_name_for_test("/Other")
+  let parsed_stream_json : Json = {
+    "S": [
+      { "/Length": { "I": 999.0 }, "/Other": { "I": 1.0 } },
+      [
+        [
+          { "F": 1.0 },
+          { "F": 0.0 },
+          { "F": 0.0 },
+          { "F": 1.0 },
+          { "F": 50.0 },
+          { "F": 770.0 },
+          "cm",
+        ],
+        ["BT"],
+        ["/F0", { "F": 36.0 }, "Tf"],
+        ["Hello", "Tj"],
+        ["ET"],
+        [{ "F": 0.1 }, { "F": 0.2 }, { "F": 0.3 }, "RG"],
+        [[{ "F": 3.0 }, { "F": 1.0 }], { "F": 0.0 }, "d"],
+        ["/Span", { "N": "/Artifact" }, "BDC"],
+        ["EMC"],
+        [{ "F": 0.5 }, "/Spot", "SCNName"],
+        [{ "F": 0.25 }, "SC"],
+      ],
+    ],
+  }
+  let expected_ops : Array[@pdflite.PdfContentOp] = [
+    Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 50.0, f: 770.0 }),
+    Op_BT,
+    Op_Tf(util_name_for_test("/F0"), 36.0),
+    Op_Tj(@ascii.encode("Hello")),
+    Op_ET,
+    Op_RG(0.1, 0.2, 0.3),
+    Op_d([3.0, 1.0], 0.0),
+    Op_BDC(
+      util_name_for_test("/Span"),
+      PdfNameObject(util_name_for_test("/Artifact")),
+    ),
+    Op_EMC,
+    Op_SCNName(util_name_for_test("/Spot"), [0.5]),
+    Op_SC([0.25]),
+  ]
+  let expected_data = try! @pdflite.pdf_content_bytes_of_ops(expected_ops)
+
+  guard (try! @pdflite.pdf_object_of_json(parsed_stream_json))
+    is PdfStreamObject(stream) else {
+    fail("expected decoded parsed content stream")
+  }
+  @test.assert_eq(stream.data, StreamGot(expected_data))
+  @test.assert_eq(
+    util_lookup_for_test(stream.dictionary, key_length),
+    Some(PdfInteger(expected_data.length())),
+  )
+  @test.assert_eq(
+    util_lookup_for_test(stream.dictionary, key_other),
+    Some(PdfInteger(1)),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_parse_content_ops_from_bytes(expected_data),
+    expected_ops,
+  )
+}
+
+///|
+test "pdf_object_of_json rejects malformed parsed content operations" {
+  let bad_number : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_object_of_json({
+      "S": [{}, [[{ "I": 2.0 }, "w"]]],
+    },
+  )
+  guard bad_number is Err(@pdflite.PdfError::NumberExpected) else {
+    fail("expected NumberExpected for malformed parsed content number")
+  }
+
+  let bad_shape : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_object_of_json({
+      "S": [{}, [["q", "bad"]]],
+    },
+  )
+  guard bad_shape is Err(@pdflite.PdfError::BadText) else {
+    fail("expected BadText for malformed parsed content operator")
+  }
+}
+
+///|
 test "pdf_get_dict_entries emits utf8 string wrappers when requested" {
   let key_target = util_name_for_test("/Target")
   let doc = @pdflite.pdf_document_empty()
