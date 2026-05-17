@@ -451,6 +451,8 @@ pub fn pdf_prepend_operators(PdfDocument, ArrayView[PdfContentOp], PdfPage, fast
 
 pub fn pdf_print_function(PdfFunction) -> Unit
 
+pub fn[T] pdf_print_tree_to_string(T, (T) -> String, (T) -> Array[T], line_prefix? : String) -> String
+
 pub fn pdf_read_afm(BytesView) -> PdfAfmData raise @core.PdfError
 
 pub fn pdf_read_bookmarks(PdfDocument, preserve_actions? : Bool) -> Array[PdfBookmark] raise @core.PdfError
