@@ -273,6 +273,8 @@ pub fn pdf_dictionary(ArrayView[(@core.PdfName, PdfObject)]) -> PdfObject
 
 pub fn pdf_document_empty() -> PdfDocument
 
+pub fn pdf_document_of_json(Json) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_document_of_parsed_indirect_objects(ArrayView[PdfParsedIndirectObject], version? : PdfVersion) -> PdfDocument
 
 pub fn pdf_draft(@core.PdfName?, Bool, ArrayView[Int], PdfDocument) -> PdfDocument raise @core.PdfError

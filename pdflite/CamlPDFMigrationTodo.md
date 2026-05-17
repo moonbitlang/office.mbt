@@ -1752,6 +1752,14 @@ Current backend snapshot:
   operator arrays. Native focused validation reports
   `moon test --target native pdf_util_test.mbt` at 16/16 tests passing; native
   full-suite validation reports 1703/1703 tests passing.~~
+- [x] ~~Standalone `cpdfjson.ml` full-document input slice now exposes
+  `pdf_document_of_json`, covering top-level CPDFJSON arrays, object `-1`
+  parameters, object `0` trailer import, positive object-table entries, ignored
+  negative object numbers, version/root restoration, parsed stream arrays,
+  mutation-log-free object loading, omitted stream-data rejection, missing-root
+  rejection, and malformed top-level JSON errors. Native focused validation
+  reports `moon test --target native pdf_util_test.mbt` at 18/18 tests passing;
+  native full-suite validation reports 1705/1705 tests passing.~~
 - [x] ~~Standalone `cpdfpagelabels.ml` JSON adapter slice now exposes
   `PdfDocument::add_page_labels_json` and `pdf_add_page_labels_json`, covering
   cpdf's page-label JSON array shape, UTF-8 prefix-to-PDFDocString encoding,

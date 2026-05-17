@@ -488,6 +488,129 @@ test "pdf_object_of_json rejects malformed parsed content operations" {
 }
 
 ///|
+fn util_cpdfjson_document_for_test() -> Json {
+  [
+    [
+      -1.0,
+      {
+        "/CPDFJSONformatversion": { "I": 3.0 },
+        "/CPDFJSONcontentparsed": true,
+        "/CPDFJSONstreamdataincluded": true,
+        "/CPDFJSONmajorpdfversion": { "I": 1.0 },
+        "/CPDFJSONminorpdfversion": { "I": 7.0 },
+      },
+    ],
+    [0.0, { "/Size": { "I": 5.0 }, "/Root": 4.0 }],
+    [-2.0, { "I": 99.0 }],
+    [
+      1.0,
+      { "/Type": { "N": "/Pages" }, "/Kids": [3.0], "/Count": { "I": 1.0 } },
+    ],
+    [
+      2.0,
+      {
+        "S": [
+          { "/Length": { "I": 999.0 } },
+          [
+            [
+              { "F": 1.0 },
+              { "F": 0.0 },
+              { "F": 0.0 },
+              { "F": 1.0 },
+              { "F": 50.0 },
+              { "F": 770.0 },
+              "cm",
+            ],
+            ["BT"],
+            ["/F0", { "F": 36.0 }, "Tf"],
+            ["Hello", "Tj"],
+            ["ET"],
+          ],
+        ],
+      },
+    ],
+    [3.0, { "/Type": { "N": "/Page" }, "/Parent": 1.0, "/Contents": 2.0 }],
+    [4.0, { "/Type": { "N": "/Catalog" }, "/Pages": 1.0 }],
+  ]
+}
+
+///|
+test "pdf_document_of_json imports cpdf top-level document arrays" {
+  let document = try! @pdflite.pdf_document_of_json(
+    util_cpdfjson_document_for_test(),
+  )
+  @test.assert_eq(document.version(), (1, 7))
+  @test.assert_eq(document.root(), 4)
+  @test.assert_eq(document.object_numbers(), [1, 2, 3, 4])
+  @test.assert_eq(document.event_log(), [])
+  @test.assert_eq(
+    document.trailer_dict().lookup_immediate(util_name_for_test("/Root")),
+    Some(PdfIndirect(4)),
+  )
+  guard document.catalog() is PdfDictionary(catalog_entries) else {
+    fail("expected imported catalog")
+  }
+  let catalog_object : @pdflite.PdfObject = PdfDictionary(catalog_entries)
+  @test.assert_eq(
+    catalog_object.lookup_immediate(util_name_for_test("/Pages")),
+    Some(PdfIndirect(1)),
+  )
+  guard document.lookup_object_or_null(2) is PdfStreamObject(stream) else {
+    fail("expected imported content stream")
+  }
+  guard stream.data is StreamGot(data) else {
+    fail("expected imported stream data")
+  }
+  @test.assert_eq(try! @pdflite.pdf_parse_content_ops_from_bytes(data), [
+    Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 50.0, f: 770.0 }),
+    Op_BT,
+    Op_Tf(util_name_for_test("/F0"), 36.0),
+    Op_Tj(@ascii.encode("Hello")),
+    Op_ET,
+  ])
+}
+
+///|
+test "pdf_document_of_json rejects malformed cpdf document arrays" {
+  let no_stream_data : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_document_of_json([
+      [
+        -1.0,
+        {
+          "/CPDFJSONstreamdataincluded": false,
+          "/CPDFJSONmajorpdfversion": { "I": 1.0 },
+          "/CPDFJSONminorpdfversion": { "I": 7.0 },
+        },
+      ],
+      [0.0, { "/Root": 1.0 }],
+    ],
+  )
+  guard no_stream_data is Err(@pdflite.PdfError::BadText) else {
+    fail("expected BadText when CPDFJSON stream data is omitted")
+  }
+
+  let missing_root : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_document_of_json([
+      [
+        -1.0,
+        {
+          "/CPDFJSONmajorpdfversion": { "I": 1.0 },
+          "/CPDFJSONminorpdfversion": { "I": 7.0 },
+        },
+      ],
+      [0.0, {}],
+    ],
+  )
+  guard missing_root is Err(@pdflite.PdfError::RootExpected) else {
+    fail("expected RootExpected when CPDFJSON trailer omits /Root")
+  }
+
+  let bad_top : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_document_of_json({},
+  )
+  guard bad_top is Err(@pdflite.PdfError::BadText) else {
+    fail("expected BadText for non-array CPDFJSON top level")
+  }
+}
+
+///|
 test "pdf_get_dict_entries emits utf8 string wrappers when requested" {
   let key_target = util_name_for_test("/Target")
   let doc = @pdflite.pdf_document_empty()
