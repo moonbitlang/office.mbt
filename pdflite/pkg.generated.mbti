@@ -87,6 +87,10 @@ pub fn pdf_ascii_hex_encode(Bytes) -> Bytes
 
 pub fn pdf_ascii_hex_encode_view(BytesView) -> Bytes
 
+pub fn pdf_blank_document(Double, Double, Int) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_blank_document_paper(@geometry.PaperSize, Int) -> PdfDocument raise @core.PdfError
+
 pub let pdf_bookmark_black : PdfBookmarkColour
 
 pub fn pdf_build_name_tree(Bool, PdfDocument, ArrayView[(Bytes, PdfObject)]) -> PdfObject raise @core.PdfError
