@@ -22,7 +22,7 @@ Current estimate:
   PNG, and JBIG2 image-to-PDF document assembly, Form XObject stamping,
   composition reporting, core metadata APIs, XMP metadata-date rewriting, XMP
   info synchronization, XMP metadata creation, XMP RDF list extraction, and
-  XMP JSON reporting, and Markdown helper public APIs.
+  XMP/document info JSON reporting, and Markdown helper public APIs.
 
 Current backend snapshot:
 
@@ -50,6 +50,16 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port the JSON side of `cpdfmetadata.output_info` for in-memory
+  documents: `info_json` now reports cpdf-style version/page counts, legacy
+  `/Info` fields with UTF-8/raw/stripped encoding, trapped state, catalog page
+  mode/layout, OpenAction JSON, viewer preferences, AcroForm/XFA/MarkInfo, and
+  MediaBox/CropBox/BleedBox/TrimBox/ArtBox summaries with unit conversion and
+  `"various"` detection. Coverage uses MoonBit JSON literals for the expected
+  report, pins missing/malformed/varying page-box behavior, validates stripped
+  metadata output, and checks the UTF-8 blob wrapper. `moon test --target
+  native pdf_metadata_test.mbt` now reports 19/19 tests passing; full native
+  validation reports 1627/1627 tests passing.~~
 - [x] ~~Port the JSON side of `cpdfmetadata.output_xmp_info` for in-memory
   documents: `xmp_info_json` now reports subformats, language, and present XMP
   fields using cpdf's labels, including PDF/UA amendment/correction fields and
