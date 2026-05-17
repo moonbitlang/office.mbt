@@ -7,7 +7,7 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 99.2%.
+- Native main-feature parity: 99.3%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
   breadth: 85-90%.
 - Warning 74 public documentation cleanup: complete; 0 native diagnostics
@@ -19,7 +19,7 @@ Current estimate:
   renumbering, standard font-pack embedding, text-to-PDF instruction
   conversion, basic and tagged text-to-PDF document assembly, PDF/UA
   text-to-PDF subformat shaping, blank PDF/UA creation helpers, JPEG/JPEG2000
-  image-to-PDF document assembly, and Markdown helper public APIs.
+  and PNG image-to-PDF document assembly, and Markdown helper public APIs.
 
 Current backend snapshot:
 
@@ -47,6 +47,11 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port the PNG branch of `cpdfimage.image_of_input` and `Cpdfpng.read_png`
+  with IHDR parsing, split-IDAT concatenation, palette/interlace rejection,
+  RGB Flate image dictionaries, alpha-channel `/SMask` splitting, 16-bit alpha
+  rejection, and PNG single-page document assembly that preserves mask objects.
+  `moon test --target native` now reports 1597/1597 tests passing.~~
 - [x] ~~Port the first `cpdfimage.image_of_input` document assembly slice with
   JPEG and JPEG2000 image XObject builders, natural-size single-page image
   documents, optional figure structure trees, PDF/UA-2 `/Document` namespace

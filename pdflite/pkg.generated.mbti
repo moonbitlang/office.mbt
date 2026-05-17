@@ -321,9 +321,13 @@ pub fn pdf_image_document_of_jpeg_data(BytesView, process_struct_tree? : Bool, s
 
 pub fn pdf_image_document_of_object(PdfObject, process_struct_tree? : Bool, subformat? : PdfUASubformat?, title? : String?) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_image_document_of_png_data(BytesView, process_struct_tree? : Bool, subformat? : PdfUASubformat?, title? : String?) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_image_object_of_jpeg2000_data(BytesView) -> PdfObject raise @core.PdfError
 
 pub fn pdf_image_object_of_jpeg_data(BytesView) -> PdfObject raise @core.PdfError
+
+pub fn pdf_image_object_of_png_data(PdfDocument, BytesView) -> PdfObject raise @core.PdfError
 
 pub fn pdf_int_array_of_bytes(BytesView) -> Array[Int]
 
@@ -588,6 +592,10 @@ pub fn pdf_read_number_tree(PdfDocument, PdfObject) -> Array[(Bytes, PdfObject)]
 pub fn pdf_read_ocg(PdfDocument) -> PdfOptionalContent? raise @core.PdfError
 
 pub fn pdf_read_page_labels(PdfDocument) -> Array[PdfPageLabel] raise @core.PdfError
+
+pub fn pdf_read_png(Bytes) -> PdfPNG raise @core.PdfError
+
+pub fn pdf_read_png_view(BytesView) -> PdfPNG raise @core.PdfError
 
 pub fn pdf_read_primitive_document_from_bytes(Bytes) -> PdfDocument raise @core.PdfError
 
@@ -1469,6 +1477,7 @@ pub fn PdfDocument::parsed_object_entries(Self) -> Array[(Int, Int, PdfObject)]
 pub fn PdfDocument::pdf_decode_stream(Self, PdfObject) -> PdfObject raise @core.PdfError
 pub fn PdfDocument::pdf_decode_stream_until_unknown(Self, PdfObject) -> PdfObject raise @core.PdfError
 pub fn PdfDocument::pdf_decode_streams_until_unknown(Self) -> Unit raise @core.PdfError
+pub fn PdfDocument::pdf_image_object_of_png_data(Self, BytesView) -> PdfObject raise @core.PdfError
 pub fn PdfDocument::pdf_object_of_function(Self, PdfFunction) -> PdfObject
 pub fn PdfDocument::pdf_of_pages(Self, ArrayView[Int], retain_numbering? : Bool, process_struct_tree? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::pdf_type_typeset(Self, Bool, Double, Double, Double, Double, @geometry.PaperSize, ArrayView[PdfTypeElement]) -> PdfTypeTypesetResult raise @core.PdfError
@@ -1801,6 +1810,14 @@ pub(all) struct PdfOptionalContent {
   ocgs : Array[(Int, PdfOcg)]
   default_config : PdfOcgConfig
   configs : Array[PdfOcgConfig]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfPNG {
+  width : Int
+  height : Int
+  bit_depth : Int
+  color_type : Int
+  idat : Bytes
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfPage {

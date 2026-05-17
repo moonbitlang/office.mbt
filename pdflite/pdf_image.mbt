@@ -78,7 +78,13 @@ let pdf_image_image_name_value : PdfName = pdf_image_name("/Image")
 let pdf_image_device_rgb_name_value : PdfName = pdf_image_name("/DeviceRGB")
 
 ///|
+let pdf_image_device_gray_name_value : PdfName = pdf_image_name("/DeviceGray")
+
+///|
 let pdf_image_xobject_key_name : PdfName = pdf_image_name("/XObject")
+
+///|
+let pdf_image_smask_key_name : PdfName = pdf_image_name("/SMask")
 
 ///|
 let pdf_image_i0_name_value : PdfName = pdf_image_name("/I0")
@@ -241,8 +247,18 @@ fn pdf_image_device_rgb_name() -> PdfName {
 }
 
 ///|
+fn pdf_image_device_gray_name() -> PdfName {
+  pdf_image_device_gray_name_value
+}
+
+///|
 fn pdf_image_xobject_key() -> PdfName {
   pdf_image_xobject_key_name
+}
+
+///|
+fn pdf_image_smask_key() -> PdfName {
+  pdf_image_smask_key_name
 }
 
 ///|
@@ -360,6 +376,140 @@ pub fn pdf_image_object_of_jpeg2000_data(
     ]),
     StreamGot(payload),
   )
+}
+
+///|
+fn PdfPNG::pdf_image_png_components(self : PdfPNG) -> Int raise PdfError {
+  match self.color_type {
+    0 | 4 => 1
+    2 | 6 => 3
+    _ => raise BadPNG("obj_of_png_data unknown colortype")
+  }
+}
+
+///|
+fn PdfPNG::pdf_image_png_color_space(self : PdfPNG) -> PdfName raise PdfError {
+  match self.color_type {
+    0 | 4 => pdf_image_device_gray_name()
+    2 | 6 => pdf_image_device_rgb_name()
+    _ => raise BadPNG("obj_of_png_data unknown colortype")
+  }
+}
+
+///|
+fn pdf_image_png_dictionary(
+  png : PdfPNG,
+  data : PdfBytes,
+  color_space : PdfName,
+  colors : Int,
+  predictor : Bool,
+) -> Array[(PdfName, PdfObject)] {
+  let entries : Array[(PdfName, PdfObject)] = [
+    (pdf_image_length_key(), PdfInteger(data.length())),
+    (pdf_image_subtype_key(), PdfNameObject(pdf_image_image_name())),
+    (pdf_image_bits_per_component_key(), PdfInteger(png.bit_depth)),
+    (pdf_image_colorspace_key(), PdfNameObject(color_space)),
+    (pdf_image_width_key(), PdfInteger(png.width)),
+    (pdf_image_height_key(), PdfInteger(png.height)),
+    (pdf_image_filter_key(), PdfNameObject(PdfStreamFlate.filter_name())),
+  ]
+  if predictor {
+    entries.push(
+      (
+        pdf_decodeparms_key(),
+        pdf_predictor_decodeparms(15, colors, png.bit_depth, png.width),
+      ),
+    )
+  }
+  entries
+}
+
+///|
+fn PdfPNG::pdf_image_split_alpha(
+  self : PdfPNG,
+) -> (PdfBytes, PdfBytes) raise PdfError {
+  if self.bit_depth > 8 {
+    raise BadPNG("Cannot use alpha PNGs with >8bpp")
+  }
+  let components = match self.color_type {
+    4 => 1
+    6 => 3
+    _ => raise BadPNG("obj_of_png_data/split_mask: bad colortype")
+  }
+  let decoded = pdf_decode_predictor(
+    15,
+    components + 1,
+    self.bit_depth,
+    self.width,
+    pdf_flate_decode(self.idat),
+  )
+  let stride = components + 1
+  if decoded.length() % stride != 0 {
+    raise BadPNG("obj_of_png_data/split_mask: malformed alpha data")
+  }
+  let colors : Array[Byte] = []
+  let mask : Array[Byte] = []
+  for offset = 0; offset < decoded.length(); offset = offset + stride {
+    for component in 0..<components {
+      colors.push(decoded[offset + component])
+    }
+    mask.push(decoded[offset + components])
+  }
+  (
+    pdf_flate_encode(Bytes::from_array(colors)),
+    pdf_flate_encode(Bytes::from_array(mask)),
+  )
+}
+
+///|
+/// Build a PDF image XObject for PNG data, adding an `/SMask` object to
+/// `self` when the PNG carries an alpha channel.
+pub fn PdfDocument::pdf_image_object_of_png_data(
+  self : PdfDocument,
+  data : BytesView,
+) -> PdfObject raise PdfError {
+  let png = pdf_read_png_view(data)
+  let (image_data, mask_data, predictor) = match png.color_type {
+    4 | 6 => {
+      let (colors, mask) = png.pdf_image_split_alpha()
+      (colors, Some(mask), false)
+    }
+    _ => (png.idat, None, true)
+  }
+  let components = png.pdf_image_png_components()
+  let entries = pdf_image_png_dictionary(
+    png,
+    image_data,
+    png.pdf_image_png_color_space(),
+    components,
+    predictor,
+  )
+  match mask_data {
+    Some(mask) => {
+      let mask_entries = pdf_image_png_dictionary(
+        png,
+        mask,
+        pdf_image_device_gray_name(),
+        1,
+        predictor,
+      )
+      let smask = pdf_stream(PdfDictionary(mask_entries), StreamGot(mask))
+      let smask_number = self.add_object(smask)
+      entries.push((pdf_image_smask_key(), PdfIndirect(smask_number)))
+    }
+    None => ()
+  }
+  pdf_stream(PdfDictionary(entries), StreamGot(image_data))
+}
+
+///|
+/// Build a PDF image XObject for PNG data using `document` for any alpha mask
+/// object that must be added.
+pub fn pdf_image_object_of_png_data(
+  document : PdfDocument,
+  data : BytesView,
+) -> PdfObject raise PdfError {
+  document.pdf_image_object_of_png_data(data)
 }
 
 ///|
@@ -486,27 +636,26 @@ fn pdf_image_content_ops(
 }
 
 ///|
-/// Build a single-page PDF document that draws `image` at its natural size.
-pub fn pdf_image_document_of_object(
+fn PdfDocument::pdf_image_add_image_page(
+  self : PdfDocument,
   image : PdfObject,
-  process_struct_tree? : Bool = false,
-  subformat? : PdfUASubformat? = None,
-  title? : String? = None,
-) -> PdfDocument raise PdfError {
+  process_struct_tree : Bool,
+  subformat : PdfUASubformat?,
+  title : String?,
+) -> Unit raise PdfError {
   let title = pdf_image_title_for_subformat(subformat, title)
   let structinfo = process_struct_tree || subformat != None
-  let document = pdf_document_empty()
-  let width = document.pdf_image_lookup_int_or_else(
+  let width = self.pdf_image_lookup_int_or_else(
     pdf_image_width_key(),
     pdf_image_w_key(),
     image,
   )
-  let height = document.pdf_image_lookup_int_or_else(
+  let height = self.pdf_image_lookup_int_or_else(
     pdf_image_height_key(),
     pdf_image_h_key(),
     image,
   )
-  let image_number = document.add_object(image)
+  let image_number = self.add_object(image)
   let page : PdfPage = {
     content: [
       pdf_content_stream_of_ops(
@@ -532,16 +681,29 @@ pub fn pdf_image_document_of_object(
       PdfDictionary([])
     },
   }
-  let page_root = document.add_pagetree([page])
-  ignore(document.add_root(page_root, []))
+  let page_root = self.add_pagetree([page])
+  ignore(self.add_root(page_root, []))
   if structinfo {
-    document.pdf_image_add_structure_tree(subformat, title)
+    self.pdf_image_add_structure_tree(subformat, title)
   }
   match subformat {
-    Some(subformat) =>
-      document.pdf_ua_apply_subformat_metadata(subformat, title)
+    Some(subformat) => self.pdf_ua_apply_subformat_metadata(subformat, title)
     None => ()
   }
+}
+
+///|
+/// Build a single-page PDF document that draws `image` at its natural size.
+pub fn pdf_image_document_of_object(
+  image : PdfObject,
+  process_struct_tree? : Bool = false,
+  subformat? : PdfUASubformat? = None,
+  title? : String? = None,
+) -> PdfDocument raise PdfError {
+  let document = pdf_document_empty()
+  document.pdf_image_add_image_page(
+    image, process_struct_tree, subformat, title,
+  )
   document
 }
 
@@ -575,6 +737,22 @@ pub fn pdf_image_document_of_jpeg2000_data(
     subformat~,
     title~,
   )
+}
+
+///|
+/// Build a single-page PDF document from PNG data.
+pub fn pdf_image_document_of_png_data(
+  data : BytesView,
+  process_struct_tree? : Bool = false,
+  subformat? : PdfUASubformat? = None,
+  title? : String? = None,
+) -> PdfDocument raise PdfError {
+  let document = pdf_document_empty()
+  let image = document.pdf_image_object_of_png_data(data)
+  document.pdf_image_add_image_page(
+    image, process_struct_tree, subformat, title,
+  )
+  document
 }
 
 ///|

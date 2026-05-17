@@ -57,6 +57,121 @@ fn image_jpeg2000_for_document_test() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn image_push_byte_for_test(output : Array[Byte], value : Int) -> Unit {
+  output.push(try! @pdflite.pdf_byte_of_int(value))
+}
+
+///|
+fn image_push_u32_for_test(output : Array[Byte], value : Int) -> Unit {
+  image_push_byte_for_test(output, (value >> 24) & 0xFF)
+  image_push_byte_for_test(output, (value >> 16) & 0xFF)
+  image_push_byte_for_test(output, (value >> 8) & 0xFF)
+  image_push_byte_for_test(output, value & 0xFF)
+}
+
+///|
+fn image_append_bytes_for_test(output : Array[Byte], bytes : BytesView) -> Unit {
+  for index in 0..<bytes.length() {
+    output.push(bytes[index])
+  }
+}
+
+///|
+fn image_png_chunk_for_test(
+  chunk_type : ArrayView[Int],
+  data : BytesView,
+) -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  image_push_u32_for_test(output, data.length())
+  for value in chunk_type {
+    image_push_byte_for_test(output, value)
+  }
+  image_append_bytes_for_test(output, data)
+  image_push_u32_for_test(output, 0)
+  Bytes::from_array(output)
+}
+
+///|
+fn image_png_header_for_test(
+  width : Int,
+  height : Int,
+  bit_depth : Int,
+  color_type : Int,
+  interlace : Int,
+) -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  image_push_u32_for_test(output, width)
+  image_push_u32_for_test(output, height)
+  image_push_byte_for_test(output, bit_depth)
+  image_push_byte_for_test(output, color_type)
+  image_push_byte_for_test(output, 0)
+  image_push_byte_for_test(output, 0)
+  image_push_byte_for_test(output, interlace)
+  Bytes::from_array(output)
+}
+
+///|
+fn image_png_for_test(
+  width : Int,
+  height : Int,
+  bit_depth : Int,
+  color_type : Int,
+  interlace : Int,
+  idat_chunks : ArrayView[@pdflite.PdfBytes],
+) -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  for value in [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A] {
+    image_push_byte_for_test(output, value)
+  }
+  image_append_bytes_for_test(
+    output,
+    image_png_chunk_for_test(
+      [0x49, 0x48, 0x44, 0x52],
+      image_png_header_for_test(width, height, bit_depth, color_type, interlace),
+    ),
+  )
+  for idat in idat_chunks {
+    image_append_bytes_for_test(
+      output,
+      image_png_chunk_for_test([0x49, 0x44, 0x41, 0x54], idat),
+    )
+  }
+  image_append_bytes_for_test(
+    output,
+    image_png_chunk_for_test([0x49, 0x45, 0x4E, 0x44], []),
+  )
+  Bytes::from_array(output)
+}
+
+///|
+fn image_png_split_idat_for_test(
+  idat : @pdflite.PdfBytes,
+) -> Array[@pdflite.PdfBytes] {
+  let split = idat.length() / 2
+  [idat[:split].to_owned(), idat[split:].to_owned()]
+}
+
+///|
+fn image_png_rgb_for_test() -> (@pdflite.PdfBytes, @pdflite.PdfBytes) {
+  let raw = image_bytes_for_test([0, 10, 20, 30, 40, 50, 60])
+  let idat = @pdflite.pdf_flate_encode(raw)
+  (image_png_for_test(2, 1, 8, 2, 0, image_png_split_idat_for_test(idat)), idat)
+}
+
+///|
+fn image_png_rgba_for_test() -> @pdflite.PdfBytes {
+  let raw = image_bytes_for_test([0, 10, 20, 30, 40, 50, 60, 70, 80])
+  image_png_for_test(
+    2,
+    1,
+    8,
+    6,
+    0,
+    image_png_split_idat_for_test(@pdflite.pdf_flate_encode(raw)),
+  )
+}
+
+///|
 fn image_bytes_start_with_at_for_test(
   haystack : BytesView,
   needle : BytesView,
@@ -176,6 +291,192 @@ test "pdf_image_object_of_jpeg2000_data builds JPX image XObject" {
     None,
   )
   @test.assert_eq(stream.data, StreamGot(jpeg2000))
+}
+
+///|
+test "pdf_read_png reads IHDR and concatenated IDAT chunks" {
+  let (png_bytes, idat) = image_png_rgb_for_test()
+  let png = try! @pdflite.pdf_read_png(png_bytes)
+  @test.assert_eq(png.width, 2)
+  @test.assert_eq(png.height, 1)
+  @test.assert_eq(png.bit_depth, 8)
+  @test.assert_eq(png.color_type, 2)
+  @test.assert_eq(png.idat, idat)
+  @test.assert_eq(
+    try! @pdflite.pdf_flate_decode(png.idat),
+    image_bytes_for_test([0, 10, 20, 30, 40, 50, 60]),
+  )
+}
+
+///|
+test "pdf_read_png rejects unsupported palette and interlaced inputs" {
+  let palette : Result[@pdflite.PdfPNG, Error] = try? @pdflite.pdf_read_png(
+    image_png_for_test(1, 1, 8, 3, 0, []),
+  )
+  guard palette is Err(@pdflite.PdfError::BadPNG(_)) else {
+    fail("expected palette PNG to raise BadPNG")
+  }
+  let interlaced : Result[@pdflite.PdfPNG, Error] = try? @pdflite.pdf_read_png(
+    image_png_for_test(1, 1, 8, 2, 1, []),
+  )
+  guard interlaced is Err(@pdflite.PdfError::BadPNG(_)) else {
+    fail("expected interlaced PNG to raise BadPNG")
+  }
+}
+
+///|
+test "pdf_image_object_of_png_data builds RGB Flate image XObject" {
+  let (png_bytes, idat) = image_png_rgb_for_test()
+  let document = @pdflite.pdf_document_empty()
+  let object = try! @pdflite.pdf_image_object_of_png_data(document, png_bytes)
+  guard object is PdfStreamObject(stream) else {
+    fail("expected PNG stream object")
+  }
+  @test.assert_eq(
+    try! image_lookup_for_test(stream.dictionary, "/Length"),
+    PdfInteger(idat.length()),
+  )
+  @test.assert_eq(
+    try! image_lookup_for_test(stream.dictionary, "/Filter"),
+    PdfNameObject(image_name_for_test("/FlateDecode")),
+  )
+  @test.assert_eq(
+    try! image_lookup_for_test(stream.dictionary, "/ColorSpace"),
+    PdfNameObject(image_name_for_test("/DeviceRGB")),
+  )
+  @test.assert_eq(
+    try! image_lookup_for_test(stream.dictionary, "/Subtype"),
+    PdfNameObject(image_name_for_test("/Image")),
+  )
+  @test.assert_eq(
+    try! image_lookup_for_test(stream.dictionary, "/Width"),
+    PdfInteger(2),
+  )
+  @test.assert_eq(
+    try! image_lookup_for_test(stream.dictionary, "/Height"),
+    PdfInteger(1),
+  )
+  let decodeparms = try! image_lookup_for_test(
+    stream.dictionary,
+    "/DecodeParms",
+  )
+  @test.assert_eq(
+    try! image_lookup_for_test(decodeparms, "/Predictor"),
+    PdfInteger(15),
+  )
+  @test.assert_eq(
+    try! image_lookup_for_test(decodeparms, "/Colors"),
+    PdfInteger(3),
+  )
+  @test.assert_eq(
+    try! image_lookup_for_test(decodeparms, "/BitsPerComponent"),
+    PdfInteger(8),
+  )
+  @test.assert_eq(
+    try! image_lookup_for_test(decodeparms, "/Columns"),
+    PdfInteger(2),
+  )
+  @test.assert_eq(stream.data, StreamGot(idat))
+}
+
+///|
+test "pdf_image_object_of_png_data splits alpha into SMask" {
+  let document = @pdflite.pdf_document_empty()
+  let object = try! @pdflite.pdf_image_object_of_png_data(
+    document,
+    image_png_rgba_for_test(),
+  )
+  guard object is PdfStreamObject(stream) else {
+    fail("expected PNG stream object")
+  }
+  @test.assert_eq(
+    stream.dictionary.lookup_immediate(image_name_for_test("/DecodeParms")),
+    None,
+  )
+  @test.assert_eq(
+    try! image_lookup_for_test(stream.dictionary, "/ColorSpace"),
+    PdfNameObject(image_name_for_test("/DeviceRGB")),
+  )
+  let smask_reference = try! image_lookup_for_test(stream.dictionary, "/SMask")
+  guard smask_reference is PdfIndirect(smask_number) else {
+    fail("expected alpha SMask reference")
+  }
+  guard stream.data is StreamGot(image_data) else {
+    fail("expected materialized color image data")
+  }
+  @test.assert_eq(
+    try! @pdflite.pdf_flate_decode(image_data),
+    image_bytes_for_test([10, 20, 30, 50, 60, 70]),
+  )
+  let smask = document.lookup_object_or_null(smask_number)
+  guard smask is PdfStreamObject(smask_stream) else {
+    fail("expected SMask stream object")
+  }
+  @test.assert_eq(
+    try! image_lookup_for_test(smask_stream.dictionary, "/ColorSpace"),
+    PdfNameObject(image_name_for_test("/DeviceGray")),
+  )
+  @test.assert_eq(
+    smask_stream.dictionary.lookup_immediate(
+      image_name_for_test("/DecodeParms"),
+    ),
+    None,
+  )
+  guard smask_stream.data is StreamGot(mask_data) else {
+    fail("expected materialized mask data")
+  }
+  @test.assert_eq(
+    try! @pdflite.pdf_flate_decode(mask_data),
+    image_bytes_for_test([40, 80]),
+  )
+}
+
+///|
+test "pdf_image_document_of_png_data preserves alpha mask in image document" {
+  let document = try! @pdflite.pdf_image_document_of_png_data(
+    image_png_rgba_for_test(),
+    process_struct_tree=true,
+    title=Some("PNG alt"),
+  )
+  let pages = try! document.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  @test.assert_eq(
+    pages[0].mediabox,
+    PdfArray([PdfReal(0.0), PdfReal(0.0), PdfReal(2.0), PdfReal(1.0)]),
+  )
+  @test.assert_eq(
+    try! image_lookup_for_test(pages[0].rest, "/StructParents"),
+    PdfInteger(1),
+  )
+  let xobjects = try! image_lookup_for_test(pages[0].resources, "/XObject")
+  let (_, image_object) = try! image_lookup_indirect_object_for_test(
+    document, xobjects, "/I0",
+  )
+  guard image_object is PdfStreamObject(image_stream) else {
+    fail("expected page image stream")
+  }
+  let smask_reference = try! image_lookup_for_test(
+    image_stream.dictionary,
+    "/SMask",
+  )
+  guard smask_reference is PdfIndirect(smask_number) else {
+    fail("expected page image SMask")
+  }
+  guard document.lookup_object_or_null(smask_number) is PdfStreamObject(_) else {
+    fail("expected SMask object to remain in document")
+  }
+}
+
+///|
+test "pdf_image_object_of_png_data rejects 16-bit alpha PNGs" {
+  let document = @pdflite.pdf_document_empty()
+  let result : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_image_object_of_png_data(
+    document,
+    image_png_for_test(1, 1, 16, 6, 0, []),
+  )
+  guard result is Err(@pdflite.PdfError::BadPNG(_)) else {
+    fail("expected 16-bit alpha PNG to raise BadPNG")
+  }
 }
 
 ///|

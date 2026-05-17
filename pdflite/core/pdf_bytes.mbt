@@ -44,6 +44,7 @@ pub(all) suberror PdfError {
   BadJPEGString
   InvalidJPEGBlock
   JPEGDimensionsExpected
+  BadPNG(String)
   BadJPEG2000Header
   JPEG2000DimensionsExpected
   ParseObjectExpected
