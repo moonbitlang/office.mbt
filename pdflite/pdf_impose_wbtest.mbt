@@ -314,6 +314,180 @@ test "pdf_impose_pages_core combines pages and transforms annotations" {
 }
 
 ///|
+test "pdf_impose pattern matrix rewrite only changes scn-used patterns" {
+  let document = pdf_document_empty()
+  let key_matrix = impose_name_for_test("/Matrix")
+  let key_pattern = impose_name_for_test("/Pattern")
+  let pattern_name = impose_name_for_test("/P1")
+  let pattern_by_values = impose_name_for_test("/P2")
+  let old_matrix = {
+    ..transform_identity_matrix,
+    a: 2.0,
+    d: 3.0,
+    e: 4.0,
+    f: 5.0,
+  }
+  let by_values_matrix = transform_translate(7.0, 8.0)
+  let page = try! impose_page_for_test(
+    [Op_scnName(pattern_name, []), Op_SCNName(pattern_by_values, [0.5])],
+    resources=PdfDictionary([
+      (
+        key_pattern,
+        PdfDictionary([
+          (
+            pattern_name,
+            PdfDictionary([(key_matrix, pdf_object_of_matrix(old_matrix))]),
+          ),
+          (
+            pattern_by_values,
+            PdfDictionary([(key_matrix, pdf_object_of_matrix(by_values_matrix))]),
+          ),
+        ]),
+      ),
+    ]),
+  )
+  let rewritten = try! document.pdf_impose_change_pattern_matrices_page(
+    transform_translate(10.0, 20.0),
+    page,
+  )
+  guard rewritten.resources.lookup_immediate(key_pattern)
+    is Some(PdfDictionary(patterns)) else {
+    fail("expected rewritten pattern resource dictionary")
+  }
+  guard patterns[0] is (name, PdfIndirect(number)) && name == pattern_name else {
+    fail("expected scn-used pattern to be cloned as an indirect object")
+  }
+  let expected_matrix = transform_matrix_compose(
+    transform_translate(10.0, 20.0),
+    old_matrix,
+  )
+  @test.assert_eq(
+    document.lookup_object_or_null(number).lookup_immediate(key_matrix),
+    Some(pdf_object_of_matrix(expected_matrix)),
+  )
+  @test.assert_eq(
+    patterns[1],
+    (
+      pattern_by_values,
+      PdfDictionary([(key_matrix, pdf_object_of_matrix(by_values_matrix))]),
+    ),
+  )
+}
+
+///|
+test "pdf_impose pages core rewrites pattern matrices before combining resources" {
+  let document = pdf_document_empty()
+  let key_matrix = impose_name_for_test("/Matrix")
+  let key_pattern = impose_name_for_test("/Pattern")
+  let pattern_name = impose_name_for_test("/P1")
+  let old_matrix = transform_translate(3.0, 4.0)
+  let first_page = try! impose_page_for_test([Op_S])
+  let second_page = try! impose_page_for_test(
+    [Op_scnName(pattern_name, [])],
+    resources=PdfDictionary([
+      (
+        key_pattern,
+        PdfDictionary([
+          (
+            pattern_name,
+            PdfDictionary([(key_matrix, pdf_object_of_matrix(old_matrix))]),
+          ),
+        ]),
+      ),
+    ]),
+  )
+  let imposed = try! document.pdf_impose_pages_core(
+    [first_page, second_page],
+    false,
+    2,
+    1,
+    false,
+    false,
+    false,
+    false,
+    0.0,
+    impose_box_for_test(200.0, 100.0),
+    false,
+    0.0,
+    0.0,
+  )
+  guard imposed.resources.lookup_immediate(key_pattern)
+    is Some(PdfDictionary([(name, PdfIndirect(number))])) &&
+    name == pattern_name else {
+    fail("expected imposed resources to contain rewritten pattern")
+  }
+  @test.assert_eq(
+    document.lookup_object_or_null(number).lookup_immediate(key_matrix),
+    Some(
+      pdf_object_of_matrix(
+        transform_matrix_compose(transform_translate(100.0, 0.0), old_matrix),
+      ),
+    ),
+  )
+}
+
+///|
+test "pdf_impose pattern matrix rewrite descends into form xobjects" {
+  let document = pdf_document_empty()
+  let key_matrix = impose_name_for_test("/Matrix")
+  let key_pattern = impose_name_for_test("/Pattern")
+  let key_resources = impose_name_for_test("/Resources")
+  let key_xobject = impose_name_for_test("/XObject")
+  let key_subtype = impose_name_for_test("/Subtype")
+  let form_name = impose_name_for_test("/Form")
+  let xobject_name = impose_name_for_test("/Fm1")
+  let pattern_name = impose_name_for_test("/PX")
+  let old_matrix = transform_translate(1.0, 2.0)
+  let form = try! (try! pdf_content_stream_of_ops([Op_SCNName(pattern_name, [])]))
+    .add_dict_entry(key_subtype, PdfNameObject(form_name))
+    .add_dict_entry(
+      key_resources,
+      PdfDictionary([
+        (
+          key_pattern,
+          PdfDictionary([
+            (
+              pattern_name,
+              PdfDictionary([(key_matrix, pdf_object_of_matrix(old_matrix))]),
+            ),
+          ]),
+        ),
+      ]),
+    )
+  document.add_object_given_number(30, form)
+  let page = try! impose_page_for_test(
+    [Op_Do(xobject_name)],
+    resources=PdfDictionary([
+      (key_xobject, PdfDictionary([(xobject_name, PdfIndirect(30))])),
+    ]),
+  )
+  ignore(
+    try! document.pdf_impose_change_pattern_matrices_page(
+      transform_translate(10.0, 20.0),
+      page,
+    ),
+  )
+  guard document.lookup_object_or_null(30).lookup_immediate(key_resources)
+    is Some(
+      PdfDictionary(
+        [(pattern_key, PdfDictionary([(name, PdfIndirect(number))]))]
+      )
+    ) &&
+    pattern_key == key_pattern &&
+    name == pattern_name else {
+    fail("expected form xobject pattern to be rewritten")
+  }
+  @test.assert_eq(
+    document.lookup_object_or_null(number).lookup_immediate(key_matrix),
+    Some(
+      pdf_object_of_matrix(
+        transform_matrix_compose(transform_translate(10.0, 20.0), old_matrix),
+      ),
+    ),
+  )
+}
+
+///|
 test "pdf_impose_pages_core rejects empty page sets" {
   let result : Result[PdfPage, Error] = try? pdf_document_empty().pdf_impose_pages_core(
     [],

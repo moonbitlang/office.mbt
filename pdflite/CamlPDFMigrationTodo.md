@@ -23,8 +23,8 @@ Current estimate:
   composition reporting, core metadata APIs, XMP metadata-date rewriting, XMP
   info synchronization, XMP metadata creation, XMP RDF list extraction,
   XMP/document info JSON reporting, redaction annotation bounding-box overlays,
-  imposition transform/content/page-assembly kernels, and Markdown helper
-  public APIs.
+  imposition transform/content/page-assembly/pattern-matrix kernels, and
+  Markdown helper public APIs.
 
 Current backend snapshot:
 
@@ -52,6 +52,15 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port the pattern-matrix rewrite from `cpdfpage.change_pattern_matrices_page`
+  used by `cpdfimpose`: private imposition helpers now detect `/Pattern`
+  resources used by `scn`/`SCN` with no numeric operands, clone those pattern
+  dictionaries with `transform_matrix_compose(transform, old /Matrix)`, preserve
+  patterns used in other ways, and descend into indirect Form XObjects once per
+  rewrite pass. `pdf_impose_pages_core` now runs this rewrite before combining
+  resources. White-box coverage pins direct page resources, page-assembly
+  integration, and nested Form XObject resources. `moon test --target native
+  pdf_impose_wbtest.mbt` reports 11/11 tests passing.~~
 - [x] ~~Port the safe page-assembly core from `cpdfimpose.impose_pages`:
   private `pdf_impose_pages_core` now assembles one imposed page from an
   already-renumbered page set, preserves the first page rotation, combines page
