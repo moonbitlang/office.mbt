@@ -731,6 +731,10 @@ pub fn pdf_text_extractor_of_font(PdfDocument, PdfObject) -> PdfTextExtractor ra
 
 pub fn pdf_text_extractor_of_font_real(PdfFont) -> PdfTextExtractor
 
+pub fn pdf_texttopdf_of_utf8_with_newlines(PdfFontPack, Double, BytesView) -> Array[PdfTypeElement] raise @core.PdfError
+
+pub fn pdf_texttopdf_tag_paragraphs(ArrayView[PdfTypeElement]) -> Array[PdfTypeElement]
+
 pub fn pdf_thin_lines(PdfDocument, ArrayView[Int], Double) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_thin_lines_ops(PdfDocument, PdfObject, ArrayView[PdfContentOp], Double) -> Array[PdfContentOp] raise @core.PdfError
