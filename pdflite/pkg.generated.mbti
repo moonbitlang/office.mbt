@@ -467,6 +467,10 @@ pub fn pdf_pdfdocstring_of_utf8(BytesView) -> Bytes raise @core.PdfError
 
 pub fn pdf_permissions_of_p(Int) -> Array[@crypt_core.PdfPermission]
 
+pub fn pdf_portfolio(PdfDocument, ArrayView[PdfPortfolioEntry], mod_date? : Bytes?) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_portfolio_entry(String, BytesView, relationship? : String?, description? : String?) -> PdfPortfolioEntry
+
 pub fn pdf_postpend_operators(PdfDocument, ArrayView[PdfContentOp], PdfPage, fast? : Bool) -> PdfPage raise @core.PdfError
 
 pub fn pdf_prepend_operators(PdfDocument, ArrayView[PdfContentOp], PdfPage, fast? : Bool) -> PdfPage raise @core.PdfError
@@ -1320,6 +1324,7 @@ pub fn PdfDocument::pdf_decode_streams_until_unknown(Self) -> Unit raise @core.P
 pub fn PdfDocument::pdf_object_of_function(Self, PdfFunction) -> PdfObject
 pub fn PdfDocument::pdf_of_pages(Self, ArrayView[Int], retain_numbering? : Bool, process_struct_tree? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::permissions(Self) -> Array[@crypt_core.PdfPermission] raise @core.PdfError
+pub fn PdfDocument::portfolio(Self, ArrayView[PdfPortfolioEntry], mod_date? : Bytes?) -> Self raise @core.PdfError
 pub fn PdfDocument::postpend_operators(Self, PdfPage, ArrayView[PdfContentOp], fast? : Bool) -> PdfPage raise @core.PdfError
 pub fn PdfDocument::prepend_operators(Self, PdfPage, ArrayView[PdfContentOp], fast? : Bool) -> PdfPage raise @core.PdfError
 pub fn PdfDocument::presentation(Self, ArrayView[Int], String?, Double?, Bool, Bool, Int, Double) -> Self raise @core.PdfError
@@ -1713,6 +1718,13 @@ pub(all) enum PdfPixelLayout {
   PdfBPP8
   PdfBPP24
   PdfBPP48
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfPortfolioEntry {
+  filename : String
+  data : Bytes
+  relationship : String?
+  description : String?
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) enum PdfPosition {

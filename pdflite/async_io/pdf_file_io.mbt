@@ -185,6 +185,51 @@ pub async fn pdf_write_encrypted_40bit_document_to_file(
 }
 
 ///|
+/// One filesystem path to embed in a PDF portfolio.
+///
+/// `filename` is both the path read from disk and the source name used for the
+/// generated portfolio entry.
+pub(all) struct PdfPortfolioFileEntry {
+  filename : String
+  relationship : String?
+  description : String?
+} derive(Debug, Eq, ToJson)
+
+///|
+/// Construct a filesystem-backed portfolio entry.
+pub fn pdf_portfolio_file_entry(
+  filename : String,
+  relationship? : String? = None,
+  description? : String? = None,
+) -> PdfPortfolioFileEntry {
+  { filename, relationship, description }
+}
+
+///|
+/// Read files from disk and build a PDF portfolio.
+///
+/// PDF object construction is delegated to the core `PdfDocument::portfolio`
+/// API; this package only owns the native filesystem reads.
+pub async fn pdf_portfolio_from_files(
+  document : @pdflite.PdfDocument,
+  entries : ArrayView[PdfPortfolioFileEntry],
+  mod_date? : @pdflite.PdfBytes? = None,
+) -> @pdflite.PdfDocument {
+  let loaded : Array[@pdflite.PdfPortfolioEntry] = []
+  for entry in entries {
+    loaded.push(
+      @pdflite.pdf_portfolio_entry(
+        entry.filename,
+        @fs.read_file(entry.filename).binary(),
+        relationship=entry.relationship,
+        description=entry.description,
+      ),
+    )
+  }
+  @pdflite.pdf_portfolio(document, loaded, mod_date~)
+}
+
+///|
 /// Encrypt with 128-bit ARC4 revision 3, serialize, and write to a file.
 pub async fn pdf_write_encrypted_128bit_document_to_file(
   document : @pdflite.PdfDocument,

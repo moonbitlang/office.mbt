@@ -2928,6 +2928,78 @@ async test "async file wrappers write and read PDF documents" {
 }
 
 ///|
+async test "async file wrappers build portfolios from file paths" {
+  let first_path = pdf_async_io_test_path_for_test("portfolio_first")
+  let second_path = pdf_async_io_test_path_for_test("portfolio_second")
+  pdf_async_io_remove_if_exists_for_test(first_path)
+  pdf_async_io_remove_if_exists_for_test(second_path)
+  @fs.write_file(first_path, @ascii.encode("alpha"), create=0o644)
+  @fs.write_file(second_path, @ascii.encode("beta"), create=0o644)
+  let portfolio = try! pdf_portfolio_from_files(
+    try! @pdflite.pdf_minimum_valid_pdf(),
+    [
+      pdf_portfolio_file_entry(
+        first_path,
+        relationship=Some("Data"),
+        description=Some("Alpha file"),
+      ),
+      pdf_portfolio_file_entry(second_path),
+    ],
+    mod_date=Some(@ascii.encode("D:20240102030405")),
+  )
+  pdf_async_io_remove_if_exists_for_test(first_path)
+  pdf_async_io_remove_if_exists_for_test(second_path)
+  let catalog = try! portfolio.catalog()
+  guard portfolio.lookup_direct(pdf_async_io_name_for_test("/Names"), catalog)
+    is Some(names) else {
+    fail("expected root Names dictionary")
+  }
+  guard portfolio.lookup_direct(
+      pdf_async_io_name_for_test("/EmbeddedFiles"),
+      names,
+    )
+    is Some(tree) else {
+    fail("expected EmbeddedFiles name tree")
+  }
+  let entries = portfolio.read_name_tree(tree)
+  @test.assert_eq(entries.length(), 2)
+  @test.assert_eq(entries[0].0, @ascii.encode("0/" + first_path))
+  @test.assert_eq(entries[1].0, @ascii.encode("1/" + second_path))
+  let first_spec = portfolio.direct(entries[0].1)
+  @test.assert_eq(
+    portfolio.lookup_direct(pdf_async_io_name_for_test("/Desc"), first_spec),
+    Some(PdfString(@ascii.encode("Alpha file"))),
+  )
+  @test.assert_eq(
+    portfolio.lookup_direct(
+      pdf_async_io_name_for_test("/AFRelationship"),
+      first_spec,
+    ),
+    Some(PdfNameObject(pdf_async_io_name_for_test("/Data"))),
+  )
+  guard portfolio.lookup_direct(pdf_async_io_name_for_test("/EF"), first_spec)
+    is Some(ef) else {
+    fail("expected EF dictionary")
+  }
+  guard portfolio.lookup_direct(pdf_async_io_name_for_test("/F"), ef)
+    is Some(stream) else {
+    fail("expected embedded file stream")
+  }
+  @test.assert_eq(try! stream.stream_bytes(), @ascii.encode("alpha"))
+  guard portfolio.lookup_direct(
+      pdf_async_io_name_for_test("/Collection"),
+      catalog,
+    )
+    is Some(collection) else {
+    fail("expected portfolio collection")
+  }
+  @test.assert_eq(
+    portfolio.lookup_direct(pdf_async_io_name_for_test("/View"), collection),
+    Some(PdfNameObject(pdf_async_io_name_for_test("/T"))),
+  )
+}
+
+///|
 async test "async file wrappers can write generated trailer IDs" {
   let path = pdf_async_io_test_path_for_test("generated_id")
   pdf_async_io_remove_if_exists_for_test(path)
