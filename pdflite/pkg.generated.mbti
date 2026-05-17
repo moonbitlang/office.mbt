@@ -739,6 +739,12 @@ pub fn pdf_trim_structure_tree(PdfDocument, ArrayView[Int]) -> Unit raise @core.
 
 pub fn pdf_type_font_widths(PdfFont, Double) -> Array[Double] raise @core.PdfError
 
+pub fn pdf_type_layout(Double, Double, @geometry.PaperSize, ArrayView[PdfTypeElement]) -> Array[PdfTypeElement] raise @core.PdfError
+
+pub fn pdf_type_paginate(Double, Double, @geometry.PaperSize, ArrayView[PdfTypeElement]) -> Array[PdfTypeElement]
+
+pub fn pdf_type_split_text(Double, ArrayView[Double], BytesView) -> (Bytes, Bool, Bytes) raise @core.PdfError
+
 pub fn pdf_type_width_of_bytes(ArrayView[Double], BytesView) -> Double raise @core.PdfError
 
 pub fn pdf_utf16be_of_codepoints(ArrayView[Int]) -> Bytes raise @core.PdfError
