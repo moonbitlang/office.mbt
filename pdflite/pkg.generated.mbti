@@ -289,6 +289,8 @@ pub fn pdf_lex_view(BytesView) -> Array[PdfLexeme] raise @core.PdfError
 
 pub fn pdf_lexeme_debug_name(PdfLexeme) -> String
 
+pub fn pdf_list_spot_colours(PdfDocument) -> Array[@core.PdfName]
+
 pub fn pdf_lzw_decode(Bytes, early_change? : Int) -> Bytes raise @core.PdfError
 
 pub fn pdf_lzw_decode_view(BytesView, early_change? : Int) -> Bytes raise @core.PdfError
@@ -1239,6 +1241,7 @@ pub fn PdfDocument::iter_objects(Self, (Int, PdfObject) -> Unit raise) -> Unit r
 pub fn PdfDocument::iter_objects_in_order(Self, (Int, PdfObject) -> Unit raise) -> Unit raise
 pub fn PdfDocument::iter_objects_with_generation(Self, (Int, Int, PdfObject) -> Unit raise) -> Unit raise
 pub fn PdfDocument::iter_stream(Self, (PdfObject) -> Unit raise) -> Unit raise
+pub fn PdfDocument::list_spot_colours(Self) -> Array[@core.PdfName]
 pub fn PdfDocument::lookup_chain(Self, PdfObject, ArrayView[@core.PdfName]) -> PdfObject?
 pub fn PdfDocument::lookup_direct(Self, @core.PdfName, PdfObject) -> PdfObject?
 pub fn PdfDocument::lookup_direct_or_array(Self, @core.PdfName, PdfObject) -> PdfObject?
