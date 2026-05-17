@@ -56,6 +56,7 @@ pub(all) suberror PdfError {
   BadCoordinateSpecification(String)
   BadRectangleSpecification(String)
   BadNumberArgument(String)
+  InsecurePathName(String)
   ContentOperatorExpected
   ContentOperandExpected
   FunctionExpected

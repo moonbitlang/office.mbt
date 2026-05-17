@@ -135,6 +135,8 @@ pub fn pdf_charcode_extractor_of_font(PdfDocument, PdfObject, debug? : Bool) -> 
 
 pub fn pdf_charcode_extractor_of_font_real(PdfFont, debug? : Bool) -> (Int) -> Int?
 
+pub fn pdf_check_injectible(String) -> Unit raise @core.PdfError
+
 pub fn pdf_codepoint_of_pdfdocencoding_byte(Int) -> Int raise @core.PdfError
 
 pub fn pdf_codepoints_of_pdfdocencoding(BytesView) -> Array[Int] raise @core.PdfError
@@ -501,6 +503,8 @@ pub fn pdf_recurse_dict((PdfObject) -> PdfObject, ArrayView[(@core.PdfName, PdfO
 
 pub fn pdf_remove_bookmarks(PdfDocument) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_remove_dict_entry(PdfDocument, @core.PdfName, search? : PdfObject?) -> Unit
+
 pub fn pdf_remove_duplicate_fonts(PdfDocument) -> Unit
 
 pub fn pdf_remove_ocg(PdfDocument) -> PdfDocument raise @core.PdfError
@@ -512,6 +516,8 @@ pub fn pdf_renumber_documents(ArrayView[PdfDocument]) -> Array[PdfDocument] rais
 pub fn pdf_renumber_pages(PdfDocument, ArrayView[PdfPage]) -> Array[PdfPage] raise @core.PdfError
 
 pub fn pdf_renumber_parent_trees(ArrayView[PdfDocument]) -> Unit raise @core.PdfError
+
+pub fn pdf_replace_dict_entry(PdfDocument, @core.PdfName, PdfObject, search? : PdfObject?) -> Unit
 
 pub fn pdf_restrict_angle(Double, Double) -> Double
 
@@ -1288,6 +1294,7 @@ pub fn PdfDocument::recrypt_with_password_aesv3_with_iv_provider(Self, BytesView
 pub fn PdfDocument::referenced_object_numbers(Self, PdfObject, no_follow_entries? : ArrayView[@core.PdfName], no_follow_contains? : ArrayView[(@core.PdfName, PdfObject)]) -> Array[Int]
 pub fn PdfDocument::remove_bookmarks(Self) -> Self raise @core.PdfError
 pub fn PdfDocument::remove_chain(Self, ArrayView[@core.PdfName]) -> Bool raise @core.PdfError
+pub fn PdfDocument::remove_dict_entry_everywhere(Self, @core.PdfName, search? : PdfObject?) -> Unit
 pub fn PdfDocument::remove_duplicate_fonts(Self) -> Unit
 pub fn PdfDocument::remove_object(Self, Int) -> Unit
 pub fn PdfDocument::remove_optional_content_groups(Self) -> Self raise @core.PdfError
@@ -1298,6 +1305,7 @@ pub fn PdfDocument::renumber_objects_by_offset(Self, Int) -> Self raise @core.Pd
 pub fn PdfDocument::renumber_objects_compact(Self) -> Self raise @core.PdfError
 pub fn PdfDocument::renumber_pages(Self, ArrayView[PdfPage]) -> Array[PdfPage] raise @core.PdfError
 pub fn PdfDocument::replace_chain(Self, ArrayView[@core.PdfName], PdfObject) -> Unit raise @core.PdfError
+pub fn PdfDocument::replace_dict_entry_everywhere(Self, @core.PdfName, PdfObject, search? : PdfObject?) -> Unit
 pub fn PdfDocument::replace_inherit(Self, ArrayView[Int]) -> Unit raise @core.PdfError
 pub fn PdfDocument::revision_read(Self) -> Int
 pub fn PdfDocument::root(Self) -> Int
