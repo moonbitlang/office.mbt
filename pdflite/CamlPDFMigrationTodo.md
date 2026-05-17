@@ -24,7 +24,8 @@ Current estimate:
   info synchronization, XMP metadata creation, XMP RDF list extraction,
   XMP/document info JSON reporting, redaction annotation bounding-box overlays,
   imposition transform/content/page-assembly/pattern-matrix kernels, cpdf page
-  hard-box/removal/shift/set-mediabox helpers, and Markdown helper public APIs.
+  hard-box/removal/shift/scale/set-mediabox helpers, and Markdown helper public
+  APIs.
 
 Current backend snapshot:
 
@@ -52,6 +53,15 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port the `Cpdfpage.scale_contents` dependency used by imposition:
+  `scale_contents` now uses `/CropBox` when present, otherwise `/MediaBox`, to
+  calculate the cpdf-style transform origin and position offset, prepends the
+  scale matrix in normal and fast modes, rewrites pattern matrices, transforms
+  annotations, and passes matrices through `change_pages` so destinations/open
+  actions move with scaled pages. Coverage pins crop-box positioning,
+  annotation geometry, pattern matrix cloning, open-action destination updates,
+  wrapper behavior, and invalid page rejection. `moon test --target native
+  pdf_page_scale_test.mbt` reports 3/3 tests passing.~~
 - [x] ~~Port the `Cpdfpage.set_mediabox` dependency used by imposition:
   `set_mediaboxes` now rewrites selected page `/MediaBox` entries from
   page-indexed `(x, y, width, height)` tuples, preserving cpdf's behavior that
