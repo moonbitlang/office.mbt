@@ -144,6 +144,92 @@ test "PdfDocument reveal_hidden_text rewrites selected page form xobjects" {
 }
 
 ///|
+test "pdf_remove_clipping_ops removes exact W n pairs" {
+  @test.assert_eq(
+    @pdflite.pdf_remove_clipping_ops([Op_W, Op_n, Op_m(1.0, 2.0), Op_W]),
+    [Op_n, Op_m(1.0, 2.0), Op_W],
+  )
+  @test.assert_eq(@pdflite.pdf_remove_clipping_ops([Op_Wstar, Op_n]), [
+    Op_Wstar,
+    Op_n,
+  ])
+}
+
+///|
+test "PdfDocument remove_clipping rewrites only selected pages" {
+  let base = try! @pdflite.pdf_blank_document(200.0, 100.0, 2)
+  let pages = try! base.pages_of_pagetree()
+  let first = {
+    ..pages[0],
+    content: [tweak_stream_for_test([Op_W, Op_n, Op_S])],
+  }
+  let second = {
+    ..pages[1],
+    content: [tweak_stream_for_test([Op_W, Op_n, Op_S])],
+  }
+  let document = try! base.change_pages([first, second])
+  let original_pages = try! document.pages_of_pagetree()
+
+  let unclipped = try! document.remove_clipping([1])
+  let unclipped_pages = try! unclipped.pages_of_pagetree()
+
+  @test.assert_eq(tweak_content_ops_for_test(unclipped, unclipped_pages[0]), [
+    Op_n,
+    Op_S,
+  ])
+  @test.assert_eq(tweak_content_ops_for_test(unclipped, unclipped_pages[1]), [
+    Op_W,
+    Op_n,
+    Op_S,
+  ])
+  @test.assert_eq(tweak_content_ops_for_test(document, original_pages[0]), [
+    Op_W,
+    Op_n,
+    Op_S,
+  ])
+}
+
+///|
+test "PdfDocument remove_clipping rewrites selected page form xobjects" {
+  let key_xobject = tweak_name_for_test("/XObject")
+  let key_subtype = tweak_name_for_test("/Subtype")
+  let key_form = tweak_name_for_test("/Form")
+  let form_name = tweak_name_for_test("/ClipForm")
+  let base = try! @pdflite.pdf_blank_document(200.0, 100.0, 1)
+  let form = try! tweak_stream_for_test([Op_q, Op_W, Op_n, Op_S, Op_Q]).add_dict_entry(
+    key_subtype,
+    PdfNameObject(key_form),
+  )
+  let form_number = base.add_object(form)
+  let pages = try! base.pages_of_pagetree()
+  let page = {
+    ..pages[0],
+    resources: PdfDictionary([
+      (key_xobject, PdfDictionary([(form_name, PdfIndirect(form_number))])),
+    ]),
+    content: [tweak_stream_for_test([Op_Do(form_name), Op_W, Op_n, Op_S])],
+  }
+  let document = try! base.change_pages([page])
+
+  let unclipped = try! @pdflite.pdf_remove_clipping(document, [1])
+  let unclipped_pages = try! unclipped.pages_of_pagetree()
+
+  @test.assert_eq(tweak_content_ops_for_test(unclipped, unclipped_pages[0]), [
+    Op_Do(form_name),
+    Op_n,
+    Op_S,
+  ])
+  guard unclipped.lookup_object_or_null(form_number)
+    is PdfStreamObject(form_stream) else {
+    fail("expected retained form xobject stream")
+  }
+  @test.assert_eq(
+    try! unclipped.parse_content_ops([PdfStreamObject(form_stream)]),
+    [Op_q, Op_n, Op_S, Op_Q],
+  )
+}
+
+///|
 test "pdf_thin_lines_ops honors thresholds and CTM scale" {
   let document = @pdflite.pdf_document_empty()
   let scale_two : @pdflite.TransformMatrix = {

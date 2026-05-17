@@ -561,6 +561,10 @@ pub fn pdf_remove_attached_files(PdfDocument) -> PdfDocument raise @core.PdfErro
 
 pub fn pdf_remove_bookmarks(PdfDocument) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_remove_clipping(PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_remove_clipping_ops(ArrayView[PdfContentOp]) -> Array[PdfContentOp]
+
 pub fn pdf_remove_dict_entry(PdfDocument, @core.PdfName, search? : PdfObject?) -> Unit
 
 pub fn pdf_remove_duplicate_fonts(PdfDocument) -> Unit
@@ -1399,6 +1403,7 @@ pub fn PdfDocument::remove_all_text(Self, ArrayView[Int]) -> Self raise @core.Pd
 pub fn PdfDocument::remove_attached_files(Self) -> Self raise @core.PdfError
 pub fn PdfDocument::remove_bookmarks(Self) -> Self raise @core.PdfError
 pub fn PdfDocument::remove_chain(Self, ArrayView[@core.PdfName]) -> Bool raise @core.PdfError
+pub fn PdfDocument::remove_clipping(Self, ArrayView[Int]) -> Self raise @core.PdfError
 pub fn PdfDocument::remove_dict_entry_everywhere(Self, @core.PdfName, search? : PdfObject?) -> Unit
 pub fn PdfDocument::remove_duplicate_fonts(Self) -> Unit
 pub fn PdfDocument::remove_javascript(Self) -> Unit raise @core.PdfError

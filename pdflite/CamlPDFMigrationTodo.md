@@ -1333,6 +1333,14 @@ Current backend snapshot:
   `moon test --target native pdf_tweak_test.mbt` at 7/7 tests passing; native
   full-suite validation reports 1526/1526 tests passing; coverage analysis
   reports no uncovered lines in `pdf_tweak.mbt`.~~
+- [x] ~~Standalone `cpdftweak.ml` remove-clipping slice now exposes
+  `PdfDocument::remove_clipping`, `pdf_remove_clipping`, and
+  `pdf_remove_clipping_ops`, covering exact `W n` rewriting, `W* n`
+  preservation, selected page-only rewriting, original-document preservation,
+  and selected page Form XObject rewriting. Native focused validation reports
+  `moon test --target native pdf_tweak_test.mbt` at 10/10 tests passing;
+  native full-suite validation reports 1529/1529 tests passing; coverage
+  analysis reports no uncovered lines in `pdf_tweak.mbt`.~~
 - [x] ~~Page labels, bookmarks, annotations, duplicate annotation repair,
   old-style destinations, name-tree destinations, `/OpenAction`, optional
   content, AcroForm merge basics, trailer `/Info`, and structure-tree
