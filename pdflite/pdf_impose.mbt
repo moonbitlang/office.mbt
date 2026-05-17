@@ -139,6 +139,64 @@ fn PdfDocument::pdf_impose_transform_for_slot(
 }
 
 ///|
+fn pdf_impose_concat_ops(
+  first : ArrayView[PdfContentOp],
+  second : ArrayView[PdfContentOp],
+) -> Array[PdfContentOp] {
+  let output : Array[PdfContentOp] = []
+  for op in first {
+    output.push(op)
+  }
+  for op in second {
+    output.push(op)
+  }
+  output
+}
+
+///|
+fn pdf_impose_push_objects(
+  output : Array[PdfObject],
+  objects : ArrayView[PdfObject],
+) -> Unit {
+  for object in objects {
+    output.push(object)
+  }
+}
+
+///|
+#warnings("-unused_value")
+fn PdfDocument::pdf_impose_transform_content(
+  self : PdfDocument,
+  resources : PdfObject,
+  matrix : TransformMatrix,
+  content : ArrayView[PdfObject],
+  fast : Bool,
+) -> Array[PdfObject] raise PdfError {
+  if fast {
+    let output : Array[PdfObject] = [
+      pdf_content_stream_of_ops([Op_q, Op_cm(matrix)]),
+    ]
+    pdf_impose_push_objects(output, content)
+    output.push(pdf_content_stream_of_ops([Op_Q]))
+    output
+  } else {
+    let old_ops = self.parse_content_ops_with_resources(resources, content)
+    let protected_ops = pdf_impose_concat_ops(
+      pdf_page_protect(old_ops),
+      old_ops,
+    )
+    [
+      pdf_content_stream_of_ops(
+        pdf_impose_concat_ops(
+          [Op_q, Op_cm(matrix)],
+          pdf_impose_concat_ops(protected_ops, [Op_Q]),
+        ),
+      ),
+    ]
+  }
+}
+
+///|
 #warnings("-unused_value")
 fn PdfDocument::pdf_impose_transforms(
   self : PdfDocument,

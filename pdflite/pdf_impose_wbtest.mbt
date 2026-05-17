@@ -39,6 +39,21 @@ fn impose_transforms_for_test(
 }
 
 ///|
+fn impose_content_stream_for_test(
+  ops : ArrayView[PdfContentOp],
+) -> PdfObject raise PdfError {
+  pdf_content_stream_of_ops(ops)
+}
+
+///|
+fn impose_content_ops_for_test(
+  document : PdfDocument,
+  content : ArrayView[PdfObject],
+) -> Array[PdfContentOp] raise PdfError {
+  document.parse_content_ops_with_resources(PdfDictionary([]), content)
+}
+
+///|
 test "pdf_impose_transforms preserves row and column ordering" {
   @test.assert_eq(try! impose_transforms_for_test(columns=false, count=3), [
     transform_translate(0.0, 200.0),
@@ -126,4 +141,42 @@ test "pdf_impose_transforms rejects invalid grids and margins" {
     is Err(PdfError::BadNumberArgument("impose: margin would fill whole page")) else {
     fail("expected BadNumberArgument for over-large imposition margin")
   }
+}
+
+///|
+test "pdf_impose_transform_content wraps fast and parsed content like cpdf" {
+  let document = pdf_document_empty()
+  let matrix = transform_translate(10.0, 20.0)
+  let source = [try! impose_content_stream_for_test([Op_BT, Op_ET])]
+  let fast = try! document.pdf_impose_transform_content(
+    PdfDictionary([]),
+    matrix,
+    source,
+    true,
+  )
+  @test.assert_eq(fast.length(), 3)
+  @test.assert_eq(try! impose_content_ops_for_test(document, fast), [
+    Op_q,
+    Op_cm(matrix),
+    Op_BT,
+    Op_ET,
+    Op_Q,
+  ])
+
+  let unbalanced = [try! impose_content_stream_for_test([Op_q, Op_BT])]
+  let parsed = try! document.pdf_impose_transform_content(
+    PdfDictionary([]),
+    matrix,
+    unbalanced,
+    false,
+  )
+  @test.assert_eq(parsed.length(), 1)
+  @test.assert_eq(try! impose_content_ops_for_test(document, parsed), [
+    Op_q,
+    Op_cm(matrix),
+    Op_Q,
+    Op_q,
+    Op_BT,
+    Op_Q,
+  ])
 }
