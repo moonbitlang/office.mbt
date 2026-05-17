@@ -230,6 +230,79 @@ pub async fn pdf_portfolio_from_files(
 }
 
 ///|
+fn pdf_async_io_name(text : String) -> @pdflite.PdfName {
+  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+}
+
+///|
+fn pdf_async_io_join_path(directory : StringView, filename : String) -> String {
+  let dir = directory.to_owned()
+  if dir == "" {
+    filename
+  } else {
+    dir + "/" + filename
+  }
+}
+
+///|
+fn pdf_async_io_attachment_data(
+  attachment : @pdflite.PdfAttachment,
+) -> @pdflite.PdfBytes raise @pdflite.PdfError {
+  match attachment.data {
+    Some(data) => data
+    None => raise DictionaryKeyNotFound(pdf_async_io_name("/EF"))
+  }
+}
+
+///|
+/// Read a filesystem path and attach its bytes to the document.
+///
+/// PDF object construction is delegated to the core in-memory attachment API;
+/// this wrapper only owns the native filesystem read. `path` is also used as
+/// the source filename, so the core API stores its basename in the file spec.
+pub async fn pdf_attach_file_from_path(
+  document : @pdflite.PdfDocument,
+  path : StringView,
+  keep_version? : Bool = false,
+  page_number? : Int? = None,
+  relationship? : String? = None,
+  description? : String? = None,
+) -> @pdflite.PdfDocument {
+  @pdflite.pdf_attach_file(
+    document,
+    path.to_owned(),
+    @fs.read_file(path).binary(),
+    keep_version~,
+    page_number~,
+    relationship~,
+    description~,
+  )
+}
+
+///|
+/// Dump all listed attachments into `directory`.
+///
+/// Attachment names are sanitized with the core cpdf-compatible filename
+/// filter. Existing files with the same sanitized name are overwritten by
+/// `@fs.write_file`, matching cpdf's simple filename-based dump behavior.
+pub async fn pdf_dump_attached_files_to_directory(
+  document : @pdflite.PdfDocument,
+  directory : StringView,
+  permission? : Int = 0o644,
+) -> Unit {
+  for attachment in document.list_attached_files() {
+    let filename = @pdflite.pdf_attachment_remove_unsafe_characters(
+      attachment.name,
+    )
+    @fs.write_file(
+      pdf_async_io_join_path(directory, filename),
+      pdf_async_io_attachment_data(attachment),
+      create=permission,
+    )
+  }
+}
+
+///|
 /// Encrypt with 128-bit ARC4 revision 3, serialize, and write to a file.
 pub async fn pdf_write_encrypted_128bit_document_to_file(
   document : @pdflite.PdfDocument,

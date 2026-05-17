@@ -1293,8 +1293,10 @@ Current backend snapshot:
   embedded-file name trees, page-level `/FileAttachment` annotations, version
   bump/keep-version behavior, unsafe filename filtering, checksum metadata,
   malformed attachment dictionaries, and preservation of unrelated name-tree
-  and annotation entries. Native full-suite validation reports 1495/1495 tests
-  passing; filesystem attach/dump wrappers remain an async I/O follow-up.~~
+  and annotation entries. Native async file-path attach/dump wrappers now read
+  source paths, write sanitized attachment names, and reject malformed
+  no-data attachments; native full-suite validation reports 1498/1498 tests
+  passing.~~
 - [x] ~~Page labels, bookmarks, annotations, duplicate annotation repair,
   old-style destinations, name-tree destinations, `/OpenAction`, optional
   content, AcroForm merge basics, trailer `/Info`, and structure-tree

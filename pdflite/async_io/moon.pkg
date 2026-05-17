@@ -1,5 +1,6 @@
 import {
   "bobzhang/pdflite" @pdflite,
+  "moonbitlang/core/encoding/ascii",
   "moonbitlang/async/fs",
   "moonbitlang/async/io",
 }

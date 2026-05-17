@@ -34,6 +34,26 @@ fn pdf_async_io_repo_path_for_test(path : String) -> String {
 }
 
 ///|
+fn pdf_async_io_build_dir_for_test() -> String {
+  match @env.current_dir() {
+    Some(current_dir) => current_dir + "/_build"
+    None => "_build"
+  }
+}
+
+///|
+fn pdf_async_io_basename_for_test(path : String) -> String {
+  let mut start = 0
+  for index in 0..<path.length() {
+    let value = path.at(index).to_int()
+    if value == 47 || value == 92 {
+      start = index + 1
+    }
+  }
+  path[start:].to_owned()
+}
+
+///|
 fn pdf_async_io_bytes_start_with_at_for_test(
   haystack : BytesView,
   needle : BytesView,
@@ -2997,6 +3017,96 @@ async test "async file wrappers build portfolios from file paths" {
     portfolio.lookup_direct(pdf_async_io_name_for_test("/View"), collection),
     Some(PdfNameObject(pdf_async_io_name_for_test("/T"))),
   )
+}
+
+///|
+async test "async file wrappers attach files from paths" {
+  let path = pdf_async_io_test_path_for_test("attached_source")
+  pdf_async_io_remove_if_exists_for_test(path)
+  @fs.write_file(path, @ascii.encode("attached bytes"), create=0o644)
+  let document = try! pdf_attach_file_from_path(
+    try! @pdflite.pdf_minimum_valid_pdf(),
+    path,
+    relationship=Some("Data"),
+    description=Some("Path attachment"),
+  )
+  pdf_async_io_remove_if_exists_for_test(path)
+  @test.assert_eq(document.version(), (1, 4))
+  @test.assert_eq(try! document.list_attached_files(), [
+    {
+      name: pdf_async_io_basename_for_test(path),
+      pagenumber: 0,
+      data: Some(@ascii.encode("attached bytes")),
+      description: Some("Path attachment"),
+      relationship: Some("/Data"),
+    },
+  ])
+}
+
+///|
+async test "async file wrappers dump attached files to a directory" {
+  let directory = pdf_async_io_build_dir_for_test()
+  let document_output = directory + "/doc.txt"
+  let page_output = directory + "/pagenote.bin"
+  pdf_async_io_remove_if_exists_for_test(document_output)
+  pdf_async_io_remove_if_exists_for_test(page_output)
+  let base = try! @pdflite.pdf_minimum_valid_pdf()
+  let with_document = try! base.attach_file(
+    "doc?.txt",
+    @ascii.encode("document attachment"),
+  )
+  let with_both = try! with_document.attach_file(
+    "page:note.bin",
+    @ascii.encode("page attachment"),
+    page_number=Some(1),
+  )
+  pdf_dump_attached_files_to_directory(with_both, directory)
+  @test.assert_eq(
+    @fs.read_file(document_output).binary(),
+    @ascii.encode("document attachment"),
+  )
+  @test.assert_eq(
+    @fs.read_file(page_output).binary(),
+    @ascii.encode("page attachment"),
+  )
+  pdf_async_io_remove_if_exists_for_test(document_output)
+  pdf_async_io_remove_if_exists_for_test(page_output)
+}
+
+///|
+async test "async file wrappers fail dumping malformed attachment data" {
+  let file_spec : @pdflite.PdfObject = PdfDictionary([
+    (
+      pdf_async_io_name_for_test("/Type"),
+      PdfNameObject(pdf_async_io_name_for_test("/Filespec")),
+    ),
+    (pdf_async_io_name_for_test("/F"), PdfString(@ascii.encode("missing.bin"))),
+  ])
+  let annotation : @pdflite.PdfObject = PdfDictionary([
+    (
+      pdf_async_io_name_for_test("/Subtype"),
+      PdfNameObject(pdf_async_io_name_for_test("/FileAttachment")),
+    ),
+    (
+      pdf_async_io_name_for_test("/Contents"),
+      PdfString(@ascii.encode("missing.bin")),
+    ),
+    (pdf_async_io_name_for_test("/FS"), file_spec),
+  ])
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    rest: PdfDictionary([
+      (pdf_async_io_name_for_test("/Annots"), PdfArray([annotation])),
+    ]),
+  }
+  let document = try! @pdflite.pdf_minimum_valid_pdf().change_pages([page])
+  let result : Result[Unit, Error] = try? pdf_dump_attached_files_to_directory(
+    document,
+    pdf_async_io_build_dir_for_test(),
+  )
+  guard result is Err(@pdflite.PdfError::DictionaryKeyNotFound(_)) else {
+    fail("expected malformed attachment data to fail dumping")
+  }
 }
 
 ///|
