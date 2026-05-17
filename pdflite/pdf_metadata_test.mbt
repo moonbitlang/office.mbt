@@ -620,6 +620,22 @@ test "PdfDocument xmp_info returns legacy Info-key equivalents" {
     "pdflite",
   )
   @test.assert_eq(with_metadata.xmp_info(metadata_name_for_test("/Custom")), "")
+  let dc_list_text =
+    #|<x:xmpmeta xmlns:dc="http://purl.org/dc/elements/1.1/"
+    #| xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+    #| <dc:title><rdf:Alt>
+    #|  <rdf:li/>
+    #|  <rdf:li xml:lang="x-default">First</rdf:li>
+    #|  <rdf:li xml:lang="fr-FR">Second</rdf:li>
+    #| </rdf:Alt></dc:title>
+    #|</x:xmpmeta>
+  let dc_list_doc = try! doc.set_metadata_from_bytes(
+    @ascii.encode(dc_list_text),
+  )
+  @test.assert_eq(
+    dc_list_doc.xmp_info(metadata_name_for_test("/Title")),
+    "First, Second",
+  )
 }
 
 ///|

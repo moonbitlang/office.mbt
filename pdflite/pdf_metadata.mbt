@@ -948,6 +948,90 @@ fn pdf_metadata_extract_xmp_attribute(
 }
 
 ///|
+fn pdf_metadata_combine_list_items(values : ArrayView[String]) -> String {
+  let mut output = ""
+  for value in values {
+    if output == "" {
+      output = value
+    } else {
+      output = output + ", " + value
+    }
+  }
+  output
+}
+
+///|
+fn pdf_metadata_extract_rdf_list_items_for_prefix(
+  value : BytesView,
+  prefix : String,
+) -> Array[String] {
+  let items : Array[String] = []
+  let open_pattern = @ascii.encode("<" + prefix + ":li")
+  let close_pattern = @ascii.encode("</" + prefix + ":li>")
+  let mut search_start = 0
+  while search_start < value.length() {
+    let item_start = pdf_metadata_find_bytes_from(
+      value, search_start, open_pattern,
+    )
+    if item_start < 0 {
+      search_start = value.length()
+    } else {
+      let name_end = item_start + open_pattern.length()
+      if name_end >= value.length() ||
+        !pdf_metadata_xml_tag_boundary(value[name_end]) {
+        search_start = name_end
+      } else {
+        let item_tag_end = pdf_metadata_find_byte(value, name_end, 62)
+        if item_tag_end < 0 {
+          search_start = value.length()
+        } else if value[item_tag_end - 1].to_int() == 47 {
+          search_start = item_tag_end + 1
+        } else {
+          let item_value_start = item_tag_end + 1
+          let item_value_end = pdf_metadata_find_bytes_from(
+            value, item_value_start, close_pattern,
+          )
+          if item_value_end < 0 {
+            search_start = value.length()
+          } else {
+            match
+              pdf_metadata_decode_xml_text(
+                value[item_value_start:item_value_end],
+              ) {
+              Some(item) => items.push(item)
+              None => ()
+            }
+            search_start = item_value_end + close_pattern.length()
+          }
+        }
+      }
+    }
+  }
+  items
+}
+
+///|
+fn pdf_metadata_extract_rdf_list_items(
+  data : BytesView,
+  value : BytesView,
+) -> String? {
+  let items : Array[String] = []
+  let prefixes = pdf_metadata_namespace_prefixes(
+    data, pdf_metadata_rdf_namespace, "rdf",
+  )
+  for prefix in prefixes {
+    for item in pdf_metadata_extract_rdf_list_items_for_prefix(value, prefix) {
+      items.push(item)
+    }
+  }
+  if items.length() == 0 {
+    None
+  } else {
+    Some(pdf_metadata_combine_list_items(items))
+  }
+}
+
+///|
 fn pdf_metadata_extract_xmp_element(
   data : BytesView,
   prefix : String,
@@ -974,7 +1058,11 @@ fn pdf_metadata_extract_xmp_element(
       if value_end < 0 {
         None
       } else {
-        pdf_metadata_decode_xml_text(data[value_start:value_end])
+        let value = data[value_start:value_end]
+        match pdf_metadata_extract_rdf_list_items(data, value) {
+          Some(items) => Some(items)
+          None => pdf_metadata_decode_xml_text(value)
+        }
       }
     }
   }

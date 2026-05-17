@@ -21,7 +21,8 @@ Current estimate:
   text-to-PDF subformat shaping, blank PDF/UA creation helpers, JPEG/JPEG2000,
   PNG, and JBIG2 image-to-PDF document assembly, Form XObject stamping,
   composition reporting, core metadata APIs, XMP metadata-date rewriting, XMP
-  info synchronization, XMP metadata creation, and Markdown helper public APIs.
+  info synchronization, XMP metadata creation, XMP RDF list extraction, and
+  Markdown helper public APIs.
 
 Current backend snapshot:
 
@@ -49,6 +50,13 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port cpdf's RDF list extraction behavior for simple XMP lookup:
+  namespace-aware metadata scanning now recognizes nested `rdf:Alt`,
+  `rdf:Seq`, and `rdf:Bag`-style `rdf:li` values and combines list items with
+  cpdf's comma separator instead of returning raw nested XML. Coverage pins a
+  `dc:title` fallback with two localized `rdf:li` values through
+  `PdfDocument::xmp_info`. `moon test --target native pdf_metadata_test.mbt`
+  remains 17/17 passing.~~
 - [x] ~~Port `cpdfmetadata.create_metadata` for in-memory documents: metadata
   creation now fills the cpdf XMP template from `/Info`, converts creation and
   modification dates to XMP syntax, uses reproducible `"now"` for missing dates
