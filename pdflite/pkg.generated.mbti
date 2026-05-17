@@ -449,6 +449,8 @@ pub fn pdf_postpend_operators(PdfDocument, ArrayView[PdfContentOp], PdfPage, fas
 
 pub fn pdf_prepend_operators(PdfDocument, ArrayView[PdfContentOp], PdfPage, fast? : Bool) -> PdfPage raise @core.PdfError
 
+pub fn pdf_presentation(ArrayView[Int], String?, Double?, Bool, Bool, Int, Double, PdfDocument) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_print_function(PdfFunction) -> Unit
 
 pub fn[T] pdf_print_tree_to_string(T, (T) -> String, (T) -> Array[T], line_prefix? : String) -> String
@@ -1281,6 +1283,7 @@ pub fn PdfDocument::pdf_of_pages(Self, ArrayView[Int], retain_numbering? : Bool,
 pub fn PdfDocument::permissions(Self) -> Array[@crypt_core.PdfPermission] raise @core.PdfError
 pub fn PdfDocument::postpend_operators(Self, PdfPage, ArrayView[PdfContentOp], fast? : Bool) -> PdfPage raise @core.PdfError
 pub fn PdfDocument::prepend_operators(Self, PdfPage, ArrayView[PdfContentOp], fast? : Bool) -> PdfPage raise @core.PdfError
+pub fn PdfDocument::presentation(Self, ArrayView[Int], String?, Double?, Bool, Bool, Int, Double) -> Self raise @core.PdfError
 pub fn PdfDocument::process_xobjects(Self, PdfPage, (Self, PdfObject, ArrayView[PdfObject]) -> Array[PdfObject] raise @core.PdfError) -> Unit raise @core.PdfError
 pub fn PdfDocument::read_annotation(Self, PdfObject) -> PdfAnnotation raise @core.PdfError
 pub fn PdfDocument::read_bookmarks(Self, preserve_actions? : Bool) -> Array[PdfBookmark] raise @core.PdfError
