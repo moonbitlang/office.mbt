@@ -7,7 +7,7 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 99.3%.
+- Native main-feature parity: 99.4%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
   breadth: 85-90%.
 - Warning 74 public documentation cleanup: complete; 0 native diagnostics
@@ -18,8 +18,9 @@ Current estimate:
   content-stream, annotation, native secure-random, bookmark, image, structure,
   renumbering, standard font-pack embedding, text-to-PDF instruction
   conversion, basic and tagged text-to-PDF document assembly, PDF/UA
-  text-to-PDF subformat shaping, blank PDF/UA creation helpers, JPEG/JPEG2000
-  and PNG image-to-PDF document assembly, and Markdown helper public APIs.
+  text-to-PDF subformat shaping, blank PDF/UA creation helpers, JPEG/JPEG2000,
+  PNG, and JBIG2 image-to-PDF document assembly, and Markdown helper public
+  APIs.
 
 Current backend snapshot:
 
@@ -47,6 +48,11 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port the standalone `cpdfimage.obj_of_jbig2_data` branch with cpdf's
+  byte-offset dimension extraction, `/JBIG2Decode` image dictionaries,
+  optional `/JBIG2Globals` decode parameters, fixed object `10000` globals
+  streams, JBIG2 single-page document assembly, and short-data error coverage.
+  `moon test --target native` now reports 1601/1601 tests passing.~~
 - [x] ~~Port the PNG branch of `cpdfimage.image_of_input` and `Cpdfpng.read_png`
   with IHDR parsing, split-IDAT concatenation, palette/interlace rejection,
   RGB Flate image dictionaries, alpha-channel `/SMask` splitting, 16-bit alpha

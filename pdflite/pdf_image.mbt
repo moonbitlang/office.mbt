@@ -127,6 +127,9 @@ let pdf_image_pdfua2_namespace : PdfBytes = @ascii.encode(
 )
 
 ///|
+let pdf_image_jbig2_globals_object_number : Int = 10000
+
+///|
 fn pdf_image_image_mask_key() -> PdfName {
   pdf_image_image_mask_key_name
 }
@@ -513,6 +516,78 @@ pub fn pdf_image_object_of_png_data(
 }
 
 ///|
+fn pdf_image_jbig2_u32_at(data : BytesView, offset : Int) -> Int raise PdfError {
+  if offset < 0 || offset + 4 > data.length() {
+    raise EndOfInput
+  }
+  let value = (data[offset].to_uint() << 24) |
+    (data[offset + 1].to_uint() << 16) |
+    (data[offset + 2].to_uint() << 8) |
+    data[offset + 3].to_uint()
+  value.to_int64().to_int()
+}
+
+///|
+fn pdf_image_jbig2_dimensions_view(
+  data : BytesView,
+) -> (Int, Int) raise PdfError {
+  (pdf_image_jbig2_u32_at(data, 11), pdf_image_jbig2_u32_at(data, 15))
+}
+
+///|
+/// Build a PDF image XObject for JBIG2 data.
+///
+/// When `global` is supplied, the returned extra object list contains the
+/// `/JBIG2Globals` stream at object number `10000`, matching cpdf's standalone
+/// `obj_of_jbig2_data` contract.
+pub fn pdf_image_object_of_jbig2_data(
+  data : BytesView,
+  global? : BytesView? = None,
+) -> (PdfObject, Array[(Int, PdfObject)]) raise PdfError {
+  let payload = data.to_owned()
+  let (width, height) = pdf_image_jbig2_dimensions_view(data)
+  let entries : Array[(PdfName, PdfObject)] = [
+    (pdf_image_length_key(), PdfInteger(payload.length())),
+    (pdf_image_filter_key(), PdfNameObject(pdf_image_jbig2decode_name())),
+    (pdf_image_subtype_key(), PdfNameObject(pdf_image_image_name())),
+    (pdf_image_bits_per_component_key(), PdfInteger(1)),
+    (pdf_image_colorspace_key(), PdfNameObject(pdf_image_device_gray_name())),
+    (pdf_image_width_key(), PdfInteger(width)),
+    (pdf_image_height_key(), PdfInteger(height)),
+  ]
+  let extra : Array[(Int, PdfObject)] = []
+  match global {
+    Some(global) => {
+      let global_payload = global.to_owned()
+      entries.push(
+        (
+          pdf_decodeparms_key(),
+          PdfDictionary([
+            (
+              pdf_image_jbig2_globals_key(),
+              PdfIndirect(pdf_image_jbig2_globals_object_number),
+            ),
+          ]),
+        ),
+      )
+      extra.push(
+        (
+          pdf_image_jbig2_globals_object_number,
+          pdf_stream(
+            PdfDictionary([
+              (pdf_image_length_key(), PdfInteger(global_payload.length())),
+            ]),
+            StreamGot(global_payload),
+          ),
+        ),
+      )
+    }
+    None => ()
+  }
+  (pdf_stream(PdfDictionary(entries), StreamGot(payload)), extra)
+}
+
+///|
 fn PdfDocument::pdf_image_add_structure_tree(
   self : PdfDocument,
   subformat : PdfUASubformat?,
@@ -749,6 +824,26 @@ pub fn pdf_image_document_of_png_data(
 ) -> PdfDocument raise PdfError {
   let document = pdf_document_empty()
   let image = document.pdf_image_object_of_png_data(data)
+  document.pdf_image_add_image_page(
+    image, process_struct_tree, subformat, title,
+  )
+  document
+}
+
+///|
+/// Build a single-page PDF document from JBIG2 data.
+pub fn pdf_image_document_of_jbig2_data(
+  data : BytesView,
+  global? : BytesView? = None,
+  process_struct_tree? : Bool = false,
+  subformat? : PdfUASubformat? = None,
+  title? : String? = None,
+) -> PdfDocument raise PdfError {
+  let document = pdf_document_empty()
+  let (image, extra_objects) = pdf_image_object_of_jbig2_data(data, global~)
+  for extra in extra_objects {
+    document.add_object_given_number(extra.0, extra.1)
+  }
   document.pdf_image_add_image_page(
     image, process_struct_tree, subformat, title,
   )

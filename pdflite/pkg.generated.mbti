@@ -315,6 +315,8 @@ pub fn pdf_image_bpc(PdfDocument, PdfObject) -> PdfObject?
 
 pub fn pdf_image_colspace(PdfDocument, PdfObject, PdfObject) -> PdfColourSpace raise @core.PdfError
 
+pub fn pdf_image_document_of_jbig2_data(BytesView, global? : BytesView?, process_struct_tree? : Bool, subformat? : PdfUASubformat?, title? : String?) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_image_document_of_jpeg2000_data(BytesView, process_struct_tree? : Bool, subformat? : PdfUASubformat?, title? : String?) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_image_document_of_jpeg_data(BytesView, process_struct_tree? : Bool, subformat? : PdfUASubformat?, title? : String?) -> PdfDocument raise @core.PdfError
@@ -322,6 +324,8 @@ pub fn pdf_image_document_of_jpeg_data(BytesView, process_struct_tree? : Bool, s
 pub fn pdf_image_document_of_object(PdfObject, process_struct_tree? : Bool, subformat? : PdfUASubformat?, title? : String?) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_image_document_of_png_data(BytesView, process_struct_tree? : Bool, subformat? : PdfUASubformat?, title? : String?) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_image_object_of_jbig2_data(BytesView, global? : BytesView?) -> (PdfObject, Array[(Int, PdfObject)]) raise @core.PdfError
 
 pub fn pdf_image_object_of_jpeg2000_data(BytesView) -> PdfObject raise @core.PdfError
 

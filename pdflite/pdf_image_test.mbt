@@ -57,6 +57,15 @@ fn image_jpeg2000_for_document_test() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn image_jbig2_for_document_test() -> @pdflite.PdfBytes {
+  image_bytes_for_test([
+    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A,
+    // Width 640, height 480 at the cpdf JBIG2 dimension offsets.
+     0x00, 0x00, 0x02, 0x80, 0x00, 0x00, 0x01, 0xE0, 0xAA,
+  ])
+}
+
+///|
 fn image_push_byte_for_test(output : Array[Byte], value : Int) -> Unit {
   output.push(try! @pdflite.pdf_byte_of_int(value))
 }
@@ -476,6 +485,133 @@ test "pdf_image_object_of_png_data rejects 16-bit alpha PNGs" {
   )
   guard result is Err(@pdflite.PdfError::BadPNG(_)) else {
     fail("expected 16-bit alpha PNG to raise BadPNG")
+  }
+}
+
+///|
+test "pdf_image_object_of_jbig2_data builds JBIG2 image XObject" {
+  let data = image_jbig2_for_document_test()
+  let (object, extra) = try! @pdflite.pdf_image_object_of_jbig2_data(data)
+  @test.assert_eq(extra.length(), 0)
+  guard object is PdfStreamObject(stream) else {
+    fail("expected JBIG2 stream object")
+  }
+  @test.assert_eq(
+    try! image_lookup_for_test(stream.dictionary, "/Length"),
+    PdfInteger(data.length()),
+  )
+  @test.assert_eq(
+    try! image_lookup_for_test(stream.dictionary, "/Filter"),
+    PdfNameObject(image_name_for_test("/JBIG2Decode")),
+  )
+  @test.assert_eq(
+    try! image_lookup_for_test(stream.dictionary, "/Subtype"),
+    PdfNameObject(image_name_for_test("/Image")),
+  )
+  @test.assert_eq(
+    try! image_lookup_for_test(stream.dictionary, "/BitsPerComponent"),
+    PdfInteger(1),
+  )
+  @test.assert_eq(
+    try! image_lookup_for_test(stream.dictionary, "/ColorSpace"),
+    PdfNameObject(image_name_for_test("/DeviceGray")),
+  )
+  @test.assert_eq(
+    try! image_lookup_for_test(stream.dictionary, "/Width"),
+    PdfInteger(640),
+  )
+  @test.assert_eq(
+    try! image_lookup_for_test(stream.dictionary, "/Height"),
+    PdfInteger(480),
+  )
+  @test.assert_eq(
+    stream.dictionary.lookup_immediate(image_name_for_test("/DecodeParms")),
+    None,
+  )
+  @test.assert_eq(stream.data, StreamGot(data))
+}
+
+///|
+test "pdf_image_object_of_jbig2_data returns globals extra object" {
+  let data = image_jbig2_for_document_test()
+  let globals = @ascii.encode("jbig2-globals")
+  let (object, extra) = try! @pdflite.pdf_image_object_of_jbig2_data(
+    data,
+    global=Some(globals),
+  )
+  @test.assert_eq(extra.length(), 1)
+  @test.assert_eq(extra[0].0, 10000)
+  guard extra[0].1 is PdfStreamObject(global_stream) else {
+    fail("expected JBIG2 globals stream")
+  }
+  @test.assert_eq(
+    try! image_lookup_for_test(global_stream.dictionary, "/Length"),
+    PdfInteger(globals.length()),
+  )
+  @test.assert_eq(global_stream.data, StreamGot(globals))
+  guard object is PdfStreamObject(stream) else {
+    fail("expected JBIG2 stream object")
+  }
+  let decodeparms = try! image_lookup_for_test(
+    stream.dictionary,
+    "/DecodeParms",
+  )
+  @test.assert_eq(
+    try! image_lookup_for_test(decodeparms, "/JBIG2Globals"),
+    PdfIndirect(10000),
+  )
+}
+
+///|
+test "pdf_image_document_of_jbig2_data preserves globals object" {
+  let globals = @ascii.encode("document-jbig2-globals")
+  let document = try! @pdflite.pdf_image_document_of_jbig2_data(
+    image_jbig2_for_document_test(),
+    global=Some(globals),
+    process_struct_tree=true,
+    title=Some("JBIG2 alt"),
+  )
+  let pages = try! document.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  @test.assert_eq(
+    pages[0].mediabox,
+    PdfArray([PdfReal(0.0), PdfReal(0.0), PdfReal(640.0), PdfReal(480.0)]),
+  )
+  @test.assert_eq(
+    try! image_lookup_for_test(pages[0].rest, "/StructParents"),
+    PdfInteger(1),
+  )
+  let xobjects = try! image_lookup_for_test(pages[0].resources, "/XObject")
+  let (_, image_object) = try! image_lookup_indirect_object_for_test(
+    document, xobjects, "/I0",
+  )
+  guard image_object is PdfStreamObject(image_stream) else {
+    fail("expected page JBIG2 image stream")
+  }
+  let decodeparms = try! image_lookup_for_test(
+    image_stream.dictionary,
+    "/DecodeParms",
+  )
+  @test.assert_eq(
+    try! image_lookup_for_test(decodeparms, "/JBIG2Globals"),
+    PdfIndirect(10000),
+  )
+  guard document.lookup_object_or_null(10000) is PdfStreamObject(global_stream) else {
+    fail("expected document-level JBIG2 globals object")
+  }
+  @test.assert_eq(global_stream.data, StreamGot(globals))
+}
+
+///|
+test "pdf_image_object_of_jbig2_data reports short data" {
+  let result : Result[
+    (@pdflite.PdfObject, Array[(Int, @pdflite.PdfObject)]),
+    Error,
+  ] = try? @pdflite.pdf_image_object_of_jbig2_data(
+    image_bytes_for_test([0, 1, 2]),
+  )
+  guard result is Err(@pdflite.PdfError::EndOfInput) else {
+    fail("expected short JBIG2 data to raise EndOfInput")
   }
 }
 
