@@ -547,6 +547,114 @@ test "PdfDocument xmp_info returns legacy Info-key equivalents" {
 }
 
 ///|
+test "PdfDocument set_info_entry can synchronize XMP metadata" {
+  let doc = try! @pdflite.pdf_minimum_valid_pdf()
+  let xmp_text =
+    #|<x:xmpmeta xmlns:pdf="http://ns.adobe.com/pdf/1.3/"
+    #| xmlns:xmp="http://ns.adobe.com/xap/1.0/"
+    #| xmlns:dc="http://purl.org/dc/elements/1.1/">
+    #| <pdf:Title/>
+    #| <dc:title/>
+    #| <pdf:Creator/>
+    #| <xmp:CreatorTool/>
+    #| <dc:creator/>
+    #| <pdf:CreationDate/>
+    #| <xmp:CreateDate/>
+    #| <pdf:Trapped/>
+    #|</x:xmpmeta>
+  let with_metadata = try! doc.set_metadata_from_bytes(@ascii.encode(xmp_text))
+  let key_title = metadata_name_for_test("/Title")
+  let title = try! @pdflite.pdf_pdfdocstring_of_utf8(
+    @utf8.encode("Résumé & Review"),
+  )
+  let title_doc = try! with_metadata.set_info_entry(
+    key_title,
+    PdfString(title),
+    4,
+    xmp_also=true,
+  )
+  guard (try! title_doc.metadata()) is Some(title_metadata) else {
+    fail("expected title metadata")
+  }
+  let title_text = try! @utf8.decode(title_metadata)
+  @test.assert_eq(
+    title_text.contains("<pdf:Title>Résumé &amp; Review</pdf:Title>"),
+    true,
+  )
+  @test.assert_eq(
+    title_text.contains("<dc:title>Résumé &amp; Review</dc:title>"),
+    true,
+  )
+  @test.assert_eq(title_doc.info_utf8(key_title), "Résumé & Review")
+  let key_creator = metadata_name_for_test("/Creator")
+  let creator_doc = try! @pdflite.pdf_set_pdf_info(
+    key_creator,
+    PdfString(@ascii.encode("tool")),
+    4,
+    with_metadata,
+    xmp_also=true,
+  )
+  guard (try! creator_doc.metadata()) is Some(creator_metadata) else {
+    fail("expected creator metadata")
+  }
+  let creator_text = try! @ascii.decode(creator_metadata)
+  @test.assert_eq(
+    creator_text.contains("<pdf:Creator>tool</pdf:Creator>"),
+    true,
+  )
+  @test.assert_eq(
+    creator_text.contains("<xmp:CreatorTool>tool</xmp:CreatorTool>"),
+    true,
+  )
+  @test.assert_eq(creator_text.contains("<dc:creator>tool</dc:creator>"), true)
+  @test.assert_eq(creator_doc.info_utf8(key_creator), "tool")
+  let key_creation = metadata_name_for_test("/CreationDate")
+  let date_doc = try! with_metadata.set_info_entry(
+    key_creation,
+    PdfString(@ascii.encode("D:20260517010203+08'30'")),
+    4,
+    xmp_also=true,
+    xmp_just_set=true,
+  )
+  guard (try! date_doc.metadata()) is Some(date_metadata) else {
+    fail("expected date metadata")
+  }
+  let date_text = try! @ascii.decode(date_metadata)
+  @test.assert_eq(
+    date_text.contains(
+      "<xmp:CreateDate>2026-05-17T01:02:03+08:30</xmp:CreateDate>",
+    ),
+    true,
+  )
+  @test.assert_eq(date_doc.info_utf8(key_creation), "")
+  let trapped_doc = try! with_metadata.set_info_entry(
+    metadata_name_for_test("/Trapped"),
+    PdfBoolean(true),
+    4,
+    xmp_also=true,
+    xmp_just_set=true,
+  )
+  guard (try! trapped_doc.metadata()) is Some(trapped_metadata) else {
+    fail("expected trapped metadata")
+  }
+  @test.assert_eq(
+    (try! @ascii.decode(trapped_metadata)).contains(
+      "<pdf:Trapped>True</pdf:Trapped>",
+    ),
+    true,
+  )
+  let bad : Result[@pdflite.PdfDocument, Error] = try? with_metadata.set_info_entry(
+    key_title,
+    PdfInteger(1),
+    4,
+    xmp_also=true,
+  )
+  guard bad is Err(@pdflite.PdfError::BadNumberArgument(_)) else {
+    fail("expected bad XMP info value")
+  }
+}
+
+///|
 test "pdf metadata compatibility wrappers keep cpdf argument order" {
   let doc = try! @pdflite.pdf_minimum_valid_pdf()
   let key_producer = metadata_name_for_test("/Producer")

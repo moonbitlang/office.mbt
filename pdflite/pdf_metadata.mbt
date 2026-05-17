@@ -347,30 +347,54 @@ pub fn PdfDocument::copy_id_from(
 
 ///|
 /// Set or replace one `/Info` dictionary entry.
-///
-/// This core metadata slice updates the document information dictionary only;
-/// XMP synchronization is intentionally left to a later XML/XMP slice.
 pub fn PdfDocument::set_info_entry(
   self : PdfDocument,
   key : PdfName,
   value : PdfObject,
   version : Int,
   keep_version? : Bool = false,
+  xmp_also? : Bool = false,
+  xmp_just_set? : Bool = false,
 ) -> PdfDocument raise PdfError {
-  let document = self.copy()
-  let info = match
-    document.lookup_direct(pdf_metadata_info(), document.trailer_dict()) {
-    Some(dictionary) => dictionary
-    None => PdfDictionary([])
-  }
-  let info_number = document.add_object(info.add_dict_entry(key, value))
-  document.set_trailer_dict(
+  let document = if xmp_just_set {
+    self
+  } else {
+    let document = self.copy()
+    let info = match
+      document.lookup_direct(pdf_metadata_info(), document.trailer_dict()) {
+      Some(dictionary) => dictionary
+      None => PdfDictionary([])
+    }
+    let info_number = document.add_object(info.add_dict_entry(key, value))
+    document.set_trailer_dict(
+      document
+      .trailer_dict()
+      .add_dict_entry(pdf_metadata_info(), PdfIndirect(info_number)),
+    )
+    document.pdf_metadata_bump_minor(version, keep_version)
     document
-    .trailer_dict()
-    .add_dict_entry(pdf_metadata_info(), PdfIndirect(info_number)),
-  )
-  document.pdf_metadata_bump_minor(version, keep_version)
-  document
+  }
+  if !xmp_also {
+    document
+  } else {
+    match document.metadata() {
+      None => document
+      Some(metadata) => {
+        let (changes, replacement) = pdf_metadata_info_xmp_changes(key, value)
+        let mut updated = metadata
+        for change in changes {
+          updated = pdf_metadata_rewrite_xmp_field(
+            updated,
+            change.0,
+            pdf_metadata_namespace_fallback_prefix(change.0),
+            change.1,
+            replacement,
+          )
+        }
+        document.set_metadata_from_bytes(updated, keep_version=true)
+      }
+    }
+  }
 }
 
 ///|
@@ -1168,6 +1192,103 @@ fn pdf_metadata_expand_date(date : String) -> String {
 }
 
 ///|
+fn pdf_metadata_xml_value_of_object(value : PdfObject) -> String raise PdfError {
+  match value {
+    PdfString(bytes) =>
+      @utf8.decode(pdf_utf8_of_pdfdocstring(bytes)) catch {
+        _ => raise InvalidUTF8
+      }
+    PdfBoolean(true) => "True"
+    PdfBoolean(false) => "False"
+    _ => raise BadNumberArgument("set_pdf_info_xml: not a string")
+  }
+}
+
+///|
+fn pdf_metadata_xmp_date_of_object(value : PdfObject) -> String raise PdfError {
+  match value {
+    PdfString(bytes) =>
+      pdf_metadata_xmp_date(
+        @ascii.decode(bytes) catch {
+          _ => raise InvalidUTF8
+        },
+      )
+    _ => raise BadNumberArgument("xmp_date not a string")
+  }
+}
+
+///|
+fn pdf_metadata_info_xmp_changes(
+  key : PdfName,
+  value : PdfObject,
+) -> (Array[(String, String)], String) raise PdfError {
+  match pdf_metadata_name_with_slash(key) {
+    Some("/Producer") =>
+      (
+        [(pdf_metadata_adobe_namespace, "Producer")],
+        pdf_metadata_xml_value_of_object(value),
+      )
+    Some("/Creator") =>
+      (
+        [
+          (pdf_metadata_adobe_namespace, "Creator"),
+          (pdf_metadata_xmp_namespace, "CreatorTool"),
+          (pdf_metadata_dc_namespace, "creator"),
+        ],
+        pdf_metadata_xml_value_of_object(value),
+      )
+    Some("/Author") =>
+      (
+        [(pdf_metadata_adobe_namespace, "Author")],
+        pdf_metadata_xml_value_of_object(value),
+      )
+    Some("/Title") =>
+      (
+        [
+          (pdf_metadata_adobe_namespace, "Title"),
+          (pdf_metadata_dc_namespace, "title"),
+        ],
+        pdf_metadata_xml_value_of_object(value),
+      )
+    Some("/Subject") =>
+      (
+        [
+          (pdf_metadata_adobe_namespace, "Subject"),
+          (pdf_metadata_dc_namespace, "subject"),
+        ],
+        pdf_metadata_xml_value_of_object(value),
+      )
+    Some("/Keywords") =>
+      (
+        [(pdf_metadata_adobe_namespace, "Keywords")],
+        pdf_metadata_xml_value_of_object(value),
+      )
+    Some("/CreationDate") =>
+      (
+        [
+          (pdf_metadata_adobe_namespace, "CreationDate"),
+          (pdf_metadata_xmp_namespace, "CreateDate"),
+        ],
+        pdf_metadata_xmp_date_of_object(value),
+      )
+    Some("/ModDate") =>
+      (
+        [
+          (pdf_metadata_adobe_namespace, "ModDate"),
+          (pdf_metadata_xmp_namespace, "ModifyDate"),
+        ],
+        pdf_metadata_xmp_date_of_object(value),
+      )
+    Some("/Trapped") =>
+      (
+        [(pdf_metadata_adobe_namespace, "Trapped")],
+        pdf_metadata_xml_value_of_object(value),
+      )
+    _ => raise BadNumberArgument("Unknown call to set_pdf_info")
+  }
+}
+
+///|
 fn PdfDocument::pdf_metadata_fallback_pdfx(self : PdfDocument) -> String? {
   match self.lookup_direct(pdf_metadata_info(), self.trailer_dict()) {
     Some(info) =>
@@ -1530,8 +1651,17 @@ pub fn pdf_set_pdf_info(
   version : Int,
   document : PdfDocument,
   keep_version? : Bool = false,
+  xmp_also? : Bool = false,
+  xmp_just_set? : Bool = false,
 ) -> PdfDocument raise PdfError {
-  document.set_info_entry(key, value, version, keep_version~)
+  document.set_info_entry(
+    key,
+    value,
+    version,
+    keep_version~,
+    xmp_also~,
+    xmp_just_set~,
+  )
 }
 
 ///|

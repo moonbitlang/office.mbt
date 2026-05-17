@@ -735,7 +735,7 @@ pub fn pdf_set_page_layout(PdfDocument, String) -> PdfDocument raise @core.PdfEr
 
 pub fn pdf_set_page_mode(PdfDocument, String) -> PdfDocument raise @core.PdfError
 
-pub fn pdf_set_pdf_info(@core.PdfName, PdfObject, Int, PdfDocument, keep_version? : Bool) -> PdfDocument raise @core.PdfError
+pub fn pdf_set_pdf_info(@core.PdfName, PdfObject, Int, PdfDocument, keep_version? : Bool, xmp_also? : Bool, xmp_just_set? : Bool) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_set_version(Int, PdfDocument) -> Unit
 
@@ -1639,7 +1639,7 @@ pub fn PdfDocument::revision_read(Self) -> Int
 pub fn PdfDocument::root(Self) -> Int
 pub fn PdfDocument::select_object_numbers(Self, (PdfObject) -> Bool) -> Array[Int]
 pub fn PdfDocument::set_first_xref(Self, Int) -> Unit
-pub fn PdfDocument::set_info_entry(Self, @core.PdfName, PdfObject, Int, keep_version? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::set_info_entry(Self, @core.PdfName, PdfObject, Int, keep_version? : Bool, xmp_also? : Bool, xmp_just_set? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::set_language(Self, BytesView) -> Self raise @core.PdfError
 pub fn PdfDocument::set_metadata_date(Self, String) -> Self raise @core.PdfError
 pub fn PdfDocument::set_metadata_from_bytes(Self, BytesView, keep_version? : Bool) -> Self raise @core.PdfError
