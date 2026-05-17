@@ -213,6 +213,8 @@ pub fn pdf_content_end_artifact() -> PdfContentOp
 
 pub fn pdf_content_stream_of_ops(ArrayView[PdfContentOp]) -> PdfObject raise @core.PdfError
 
+pub fn pdf_copy_id(Bool, PdfDocument, PdfDocument) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_css_colour_value(String) -> Int?
 
 pub fn pdf_css_colours() -> Array[(String, Int)]
@@ -309,7 +311,11 @@ pub fn pdf_get_dict_entries(PdfDocument, @core.PdfName, utf8? : Bool) -> Bytes r
 
 pub fn pdf_get_image_24bpp(PdfDocument, PdfObject, PdfObject) -> PdfImage raise @core.PdfError
 
+pub fn pdf_get_info_utf8(PdfDocument, @core.PdfName) -> String
+
 pub fn pdf_get_jpeg_data(ByteCursor) -> Bytes raise @core.PdfError
+
+pub fn pdf_get_metadata(PdfDocument) -> Bytes? raise @core.PdfError
 
 pub fn pdf_glyphnames_of_text(PdfTextExtractor, BytesView) -> Array[@core.PdfName] raise @core.PdfError
 
@@ -394,6 +400,8 @@ pub fn pdf_merge_number_trees_no_clash(PdfDocument, ArrayView[PdfObject]) -> Pdf
 pub fn pdf_merge_pdfs(Bool, Bool, ArrayView[String], ArrayView[PdfDocument], ArrayView[Array[Int]], process_struct_trees? : Bool, add_toplevel_document? : Bool) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_merge_structure_trees(PdfDocument, ArrayView[PdfDocument], add_toplevel_document? : Bool) -> Int? raise @core.PdfError
+
+pub fn pdf_metadata_encode_output(PdfMetadataEncoding, BytesView) -> Bytes raise @core.PdfError
 
 pub fn pdf_minimum_valid_pdf() -> PdfDocument raise @core.PdfError
 
@@ -615,6 +623,8 @@ pub fn pdf_remove_added_text(PdfDocument, ArrayView[Int]) -> PdfDocument raise @
 
 pub fn pdf_remove_added_text_ops(ArrayView[PdfContentOp]) -> Array[PdfContentOp]
 
+pub fn pdf_remove_all_metadata(PdfDocument) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_remove_all_text(PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_remove_all_text_ops(ArrayView[PdfContentOp]) -> Array[PdfContentOp]
@@ -632,6 +642,8 @@ pub fn pdf_remove_dict_entry(PdfDocument, @core.PdfName, search? : PdfObject?) -
 pub fn pdf_remove_duplicate_fonts(PdfDocument) -> Unit
 
 pub fn pdf_remove_javascript(PdfDocument) -> Unit raise @core.PdfError
+
+pub fn pdf_remove_metadata(PdfDocument) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_remove_object_by_spec(PdfDocument, String) -> Unit raise @core.PdfError
 
@@ -670,6 +682,12 @@ pub fn pdf_run_length_decode_view(BytesView) -> Bytes
 pub fn pdf_run_length_encode(Bytes) -> Bytes
 
 pub fn pdf_run_length_encode_view(BytesView) -> Bytes
+
+pub fn pdf_set_metadata_from_bytes(Bool, BytesView, PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_set_pdf_info(@core.PdfName, PdfObject, Int, PdfDocument, keep_version? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_set_viewer_preference(@core.PdfName, PdfObject, Int, PdfDocument) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_shape_circle(Double, Double, Double) -> PdfPath
 
@@ -1404,6 +1422,7 @@ pub fn PdfDocument::bpc(Self, PdfObject) -> PdfObject?
 pub fn PdfDocument::build_name_tree(Self, ArrayView[(Bytes, PdfObject)]) -> PdfObject
 pub fn PdfDocument::build_number_tree(Self, ArrayView[(Int, PdfObject)]) -> PdfObject
 pub fn PdfDocument::catalog(Self) -> PdfObject raise @core.PdfError
+pub fn PdfDocument::catalog_item(Self, @core.PdfName) -> String
 pub fn PdfDocument::change_id(Self, String, () -> Double) -> Unit raise @core.PdfError
 pub fn PdfDocument::change_pages(Self, ArrayView[PdfPage], change_references? : Bool, matrices? : ArrayView[(Int, @geometry.TransformMatrix)], changes? : ArrayView[(Int, Int)]) -> Self raise @core.PdfError
 pub fn PdfDocument::chop(Self, Int, Int, Bool, Bool, Bool, ArrayView[Int]) -> Self raise @core.PdfError
@@ -1418,6 +1437,7 @@ pub fn PdfDocument::composition_json_blob(Self, Int) -> Bytes raise @core.PdfErr
 pub fn PdfDocument::contains_javascript(Self) -> Bool
 pub fn PdfDocument::contents_of_name_tree(Self, PdfObject) -> Array[(PdfObject, PdfObject)]
 pub fn PdfDocument::copy(Self) -> Self
+pub fn PdfDocument::copy_id_from(Self, Self, keep_version? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::debug_objects(Self) -> Bytes raise @core.PdfError
 pub fn PdfDocument::decompress(Self) -> Self raise @core.PdfError
 pub fn PdfDocument::decrypt_single_stream(Self, Int, Int, PdfObject, user_password? : BytesView?, owner_password? : BytesView?, no_encrypt_metadata? : Bool) -> PdfObject? raise @core.PdfError
@@ -1445,6 +1465,7 @@ pub fn PdfDocument::get_number(Self, PdfObject) -> Double raise @core.PdfError
 pub fn PdfDocument::image_bits_per_component(Self, PdfObject) -> PdfObject?
 pub fn PdfDocument::image_colour_space(Self, PdfObject, PdfObject) -> PdfColourSpace raise @core.PdfError
 pub fn PdfDocument::indirect_number(Self, @core.PdfName, PdfObject) -> Int?
+pub fn PdfDocument::info_utf8(Self, @core.PdfName) -> String
 pub fn PdfDocument::is_cidkeyed_font(Self, PdfObject) -> Bool
 pub fn PdfDocument::is_encrypted(Self) -> Bool
 pub fn PdfDocument::is_simple_font(Self, PdfObject) -> Bool
@@ -1453,6 +1474,7 @@ pub fn PdfDocument::iter_objects(Self, (Int, PdfObject) -> Unit raise) -> Unit r
 pub fn PdfDocument::iter_objects_in_order(Self, (Int, PdfObject) -> Unit raise) -> Unit raise
 pub fn PdfDocument::iter_objects_with_generation(Self, (Int, Int, PdfObject) -> Unit raise) -> Unit raise
 pub fn PdfDocument::iter_stream(Self, (PdfObject) -> Unit raise) -> Unit raise
+pub fn PdfDocument::language(Self) -> Bytes?
 pub fn PdfDocument::list_attached_files(Self) -> Array[PdfAttachment] raise @core.PdfError
 pub fn PdfDocument::list_spot_colours(Self) -> Array[@core.PdfName]
 pub fn PdfDocument::lookup_chain(Self, PdfObject, ArrayView[@core.PdfName]) -> PdfObject?
@@ -1465,6 +1487,7 @@ pub fn PdfDocument::map_objects_in_place(Self, (PdfObject) -> PdfObject) -> Unit
 pub fn PdfDocument::merge_content_streams(Self) -> Unit raise @core.PdfError
 pub fn PdfDocument::merge_name_trees_no_clash(Self, ArrayView[PdfObject]) -> PdfObject
 pub fn PdfDocument::merge_number_trees_no_clash(Self, ArrayView[PdfObject]) -> PdfObject
+pub fn PdfDocument::metadata(Self) -> Bytes? raise @core.PdfError
 pub fn PdfDocument::name_tree_lookup(Self, BytesView, PdfObject) -> PdfObject?
 pub fn PdfDocument::name_tree_lookup_object(Self, PdfObject, PdfObject) -> PdfObject?
 pub fn PdfDocument::number_tree_lookup(Self, Int, PdfObject) -> PdfObject?
@@ -1529,6 +1552,7 @@ pub fn PdfDocument::recrypt_with_password_aesv2_with_iv_provider(Self, BytesView
 pub fn PdfDocument::recrypt_with_password_aesv3_with_iv_provider(Self, BytesView, (Int, Int, Int) -> Bytes raise @core.PdfError) -> Self raise @core.PdfError
 pub fn PdfDocument::referenced_object_numbers(Self, PdfObject, no_follow_entries? : ArrayView[@core.PdfName], no_follow_contains? : ArrayView[(@core.PdfName, PdfObject)]) -> Array[Int]
 pub fn PdfDocument::remove_added_text(Self, ArrayView[Int]) -> Self raise @core.PdfError
+pub fn PdfDocument::remove_all_metadata(Self) -> Self raise @core.PdfError
 pub fn PdfDocument::remove_all_text(Self, ArrayView[Int]) -> Self raise @core.PdfError
 pub fn PdfDocument::remove_attached_files(Self) -> Self raise @core.PdfError
 pub fn PdfDocument::remove_bookmarks(Self) -> Self raise @core.PdfError
@@ -1537,6 +1561,7 @@ pub fn PdfDocument::remove_clipping(Self, ArrayView[Int]) -> Self raise @core.Pd
 pub fn PdfDocument::remove_dict_entry_everywhere(Self, @core.PdfName, search? : PdfObject?) -> Unit
 pub fn PdfDocument::remove_duplicate_fonts(Self) -> Unit
 pub fn PdfDocument::remove_javascript(Self) -> Unit raise @core.PdfError
+pub fn PdfDocument::remove_metadata(Self) -> Self raise @core.PdfError
 pub fn PdfDocument::remove_object(Self, Int) -> Unit
 pub fn PdfDocument::remove_object_by_spec(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDocument::remove_optional_content_groups(Self) -> Self raise @core.PdfError
@@ -1556,10 +1581,18 @@ pub fn PdfDocument::revision_read(Self) -> Int
 pub fn PdfDocument::root(Self) -> Int
 pub fn PdfDocument::select_object_numbers(Self, (PdfObject) -> Bool) -> Array[Int]
 pub fn PdfDocument::set_first_xref(Self, Int) -> Unit
+pub fn PdfDocument::set_info_entry(Self, @core.PdfName, PdfObject, Int, keep_version? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::set_language(Self, BytesView) -> Self raise @core.PdfError
+pub fn PdfDocument::set_metadata_from_bytes(Self, BytesView, keep_version? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::set_non_full_screen_page_mode(Self, String) -> Self raise @core.PdfError
+pub fn PdfDocument::set_open_action(Self, Int, fit? : Bool, destination? : PdfObject?) -> Self raise @core.PdfError
+pub fn PdfDocument::set_page_layout(Self, String) -> Self raise @core.PdfError
+pub fn PdfDocument::set_page_mode(Self, String) -> Self raise @core.PdfError
 pub fn PdfDocument::set_revision_read(Self, Int) -> Unit
 pub fn PdfDocument::set_root(Self, Int) -> Unit
 pub fn PdfDocument::set_trailer_dict(Self, PdfObject) -> Unit
 pub fn PdfDocument::set_version(Self, Int, Int) -> Unit
+pub fn PdfDocument::set_viewer_preference(Self, @core.PdfName, PdfObject, Int, keep_version? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::set_was_linearized(Self, Bool) -> Unit
 pub fn PdfDocument::shortest_unused_prefix(Self) -> String
 pub fn PdfDocument::size_attached_files(Self) -> Int raise @core.PdfError
@@ -1578,6 +1611,7 @@ pub fn PdfDocument::transform_quadpoints(Self, @geometry.TransformMatrix, PdfObj
 pub fn PdfDocument::transform_rect(Self, @geometry.TransformMatrix, PdfObject) -> PdfObject raise @core.PdfError
 pub fn PdfDocument::trim_structure_tree(Self, ArrayView[Int]) -> Unit raise @core.PdfError
 pub fn PdfDocument::version(Self) -> (Int, Int)
+pub fn PdfDocument::viewer_preference_item(Self, @core.PdfName) -> String
 pub fn PdfDocument::was_linearized(Self) -> Bool
 pub fn PdfDocument::what_encryption(Self) -> @crypt_core.PdfEncryptionMethod? raise @core.PdfError
 pub fn PdfDocument::write_colour_space(Self, PdfColourSpace) -> PdfObject
@@ -1699,6 +1733,12 @@ pub(all) enum PdfLexeme {
   LexComment(Bytes)
   StopLexing
   LexNone
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfMetadataEncoding {
+  PdfMetadataRaw
+  PdfMetadataUTF8
+  PdfMetadataStripped
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) enum PdfObject {

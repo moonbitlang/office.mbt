@@ -7,7 +7,7 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 99.6%.
+- Native main-feature parity: 99.7%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
   breadth: 85-90%.
 - Warning 74 public documentation cleanup: complete; 0 native diagnostics
@@ -20,7 +20,7 @@ Current estimate:
   conversion, basic and tagged text-to-PDF document assembly, PDF/UA
   text-to-PDF subformat shaping, blank PDF/UA creation helpers, JPEG/JPEG2000,
   PNG, and JBIG2 image-to-PDF document assembly, Form XObject stamping,
-  composition reporting, and Markdown helper public APIs.
+  composition reporting, core metadata APIs, and Markdown helper public APIs.
 
 Current backend snapshot:
 
@@ -48,6 +48,15 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port the bounded core of `cpdfmetadata`: PDFDoc output encoding,
+  trailer `/ID` copy with keep-version handling, `/Info` UTF-8 reporting,
+  viewer preferences, catalog page layout/mode/open action controls,
+  language getters/setters, and catalog metadata stream set/get/remove/remove-
+  all. Coverage includes missing metadata removal, filtered metadata stream
+  decoding, invalid layout/page arguments, original-document preservation, and
+  compatibility wrapper argument order. XML/XMP synchronization and file
+  extraction remain deferred to a later metadata slice. `moon test --target
+  native` now reports 1616/1616 tests passing.~~
 - [x] ~~Port `cpdfcomposition` as a native structured reporting API with
   cpdf-compatible buckets for images, fonts, content streams, structure info,
   attached files, xref tables, piece info, and unclassified bytes. Added JSON

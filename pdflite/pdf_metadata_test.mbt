@@ -1,0 +1,300 @@
+///|
+fn metadata_name_for_test(text : String) -> @pdflite.PdfName {
+  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+}
+
+///|
+fn metadata_lookup_for_test(
+  doc : @pdflite.PdfDocument,
+  object : @pdflite.PdfObject,
+  key : String,
+) -> @pdflite.PdfObject? {
+  doc.lookup_direct(metadata_name_for_test(key), object)
+}
+
+///|
+fn metadata_catalog_for_test(doc : @pdflite.PdfDocument) -> @pdflite.PdfObject {
+  try! doc.catalog()
+}
+
+///|
+test "pdf_metadata_encode_output preserves raw utf8 and stripped forms" {
+  let snowman = try! @pdflite.pdf_pdfdocstring_of_utf8(@utf8.encode("A ☃ B"))
+  @test.assert_eq(
+    try! @pdflite.pdf_metadata_encode_output(PdfMetadataRaw, snowman),
+    snowman,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_metadata_encode_output(PdfMetadataUTF8, snowman),
+    @utf8.encode("A ☃ B"),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_metadata_encode_output(PdfMetadataStripped, snowman),
+    @ascii.encode("A  B"),
+  )
+}
+
+///|
+test "PdfDocument copy_id_from copies trailer ID and bumps version" {
+  let key_id = metadata_name_for_test("/ID")
+  let source = try! @pdflite.pdf_minimum_valid_pdf()
+  let id : @pdflite.PdfObject = PdfArray([
+    PdfString(@ascii.encode("first-id")),
+    PdfString(@ascii.encode("second-id")),
+  ])
+  source.set_trailer_dict(source.trailer_dict().add_dict_entry(key_id, id))
+  let target = try! @pdflite.pdf_minimum_valid_pdf()
+  let copied = try! target.copy_id_from(source)
+  @test.assert_eq(
+    metadata_lookup_for_test(copied, copied.trailer_dict(), "/ID"),
+    Some(id),
+  )
+  @test.assert_eq(copied.version(), (1, 1))
+  let kept = try! target.copy_id_from(source, keep_version=true)
+  @test.assert_eq(kept.version(), (1, 0))
+}
+
+///|
+test "PdfDocument set_info_entry stores PDF info and decodes UTF8" {
+  let key_title = metadata_name_for_test("/Title")
+  let doc = try! @pdflite.pdf_minimum_valid_pdf()
+  let title = try! @pdflite.pdf_pdfdocstring_of_utf8(@utf8.encode("Résumé"))
+  let updated = try! doc.set_info_entry(key_title, PdfString(title), 4)
+  @test.assert_eq(updated.version(), (1, 4))
+  @test.assert_eq(updated.info_utf8(key_title), "Résumé")
+  @test.assert_eq(@pdflite.pdf_get_info_utf8(updated, key_title), "Résumé")
+  @test.assert_eq(
+    updated.info_utf8(metadata_name_for_test("/Trapped")),
+    "False",
+  )
+  @test.assert_eq(doc.info_utf8(key_title), "")
+}
+
+///|
+test "PdfDocument viewer preferences and catalog items use cpdf strings" {
+  let key_hide_toolbar = metadata_name_for_test("/HideToolbar")
+  let doc = try! @pdflite.pdf_minimum_valid_pdf()
+  let updated = try! doc
+    .set_page_layout("TwoColumnLeft")
+    .set_page_mode("FullScreen")
+    .set_non_full_screen_page_mode("UseThumbs")
+    .set_viewer_preference(key_hide_toolbar, PdfBoolean(true), 4)
+  @test.assert_eq(
+    updated.catalog_item(metadata_name_for_test("/PageLayout")),
+    "TwoColumnLeft",
+  )
+  @test.assert_eq(
+    updated.catalog_item(metadata_name_for_test("/PageMode")),
+    "FullScreen",
+  )
+  @test.assert_eq(
+    updated.viewer_preference_item(
+      metadata_name_for_test("/NonFullScreenPageMode"),
+    ),
+    "UseThumbs",
+  )
+  @test.assert_eq(updated.viewer_preference_item(key_hide_toolbar), "true")
+  let invalid : Result[@pdflite.PdfDocument, Error] = try? doc.set_page_layout(
+    "Rows",
+  )
+  guard invalid is Err(@pdflite.PdfError::BadNumberArgument(_)) else {
+    fail("expected bad page layout")
+  }
+}
+
+///|
+test "PdfDocument set_open_action writes fit xyz and custom destinations" {
+  let doc = try! @pdflite.pdf_blank_document_paper(@pdflite.paper_a4, 2)
+  let page_refs = try! doc.page_reference_numbers()
+  let fit_doc = try! doc.set_open_action(2)
+  guard metadata_lookup_for_test(
+      fit_doc,
+      metadata_catalog_for_test(fit_doc),
+      "/OpenAction",
+    )
+    is Some(PdfDictionary(fit_entries)) else {
+    fail("expected OpenAction dictionary")
+  }
+  let fit_action : @pdflite.PdfObject = PdfDictionary(fit_entries)
+  @test.assert_eq(
+    metadata_lookup_for_test(fit_doc, fit_action, "/D"),
+    Some(
+      PdfArray([
+        PdfIndirect(page_refs[1]),
+        PdfNameObject(metadata_name_for_test("/Fit")),
+      ]),
+    ),
+  )
+  let xyz_doc = try! doc.set_open_action(1, fit=false)
+  guard metadata_lookup_for_test(
+      xyz_doc,
+      metadata_catalog_for_test(xyz_doc),
+      "/OpenAction",
+    )
+    is Some(PdfDictionary(xyz_entries)) else {
+    fail("expected XYZ OpenAction dictionary")
+  }
+  @test.assert_eq(
+    metadata_lookup_for_test(xyz_doc, PdfDictionary(xyz_entries), "/D"),
+    Some(
+      PdfArray([
+        PdfIndirect(page_refs[0]),
+        PdfNameObject(metadata_name_for_test("/XYZ")),
+        PdfNull,
+        PdfNull,
+        PdfNull,
+      ]),
+    ),
+  )
+  let custom = try! doc.set_open_action(
+    1,
+    destination=Some(
+      PdfArray([
+        PdfInteger(2),
+        PdfNameObject(metadata_name_for_test("/FitH")),
+        PdfInteger(12),
+      ]),
+    ),
+  )
+  guard metadata_lookup_for_test(
+      custom,
+      metadata_catalog_for_test(custom),
+      "/OpenAction",
+    )
+    is Some(PdfDictionary(custom_entries)) else {
+    fail("expected custom OpenAction dictionary")
+  }
+  @test.assert_eq(
+    metadata_lookup_for_test(custom, PdfDictionary(custom_entries), "/D"),
+    Some(
+      PdfArray([
+        PdfIndirect(page_refs[1]),
+        PdfNameObject(metadata_name_for_test("/FitH")),
+        PdfInteger(12),
+      ]),
+    ),
+  )
+  let invalid : Result[@pdflite.PdfDocument, Error] = try? doc.set_open_action(
+    3,
+  )
+  guard invalid is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+    fail("expected bad open-action page")
+  }
+}
+
+///|
+test "PdfDocument language getter and setter preserve original document" {
+  let doc = try! @pdflite.pdf_minimum_valid_pdf()
+  @test.assert_eq(doc.language(), None)
+  let updated = try! doc.set_language(@ascii.encode("en-US"))
+  @test.assert_eq(updated.language(), Some(@ascii.encode("en-US")))
+  @test.assert_eq(doc.language(), None)
+}
+
+///|
+test "PdfDocument metadata stream set get remove and remove_all" {
+  let doc = try! @pdflite.pdf_minimum_valid_pdf()
+  let data = @ascii.encode("<xmp>metadata</xmp>")
+  let no_metadata = try! doc.remove_metadata()
+  @test.assert_eq(try! no_metadata.metadata(), None)
+  let updated = try! doc.set_metadata_from_bytes(data)
+  @test.assert_eq(updated.version(), (1, 4))
+  @test.assert_eq(try! updated.metadata(), Some(data))
+  guard metadata_lookup_for_test(
+      updated,
+      metadata_catalog_for_test(updated),
+      "/Metadata",
+    )
+    is Some(PdfStreamObject(_) | PdfIndirect(_)) else {
+    fail("expected metadata catalog entry")
+  }
+  let removed = try! updated.remove_metadata()
+  @test.assert_eq(try! removed.metadata(), None)
+  @test.assert_eq(try! updated.metadata(), Some(data))
+  let compressed = doc.copy()
+  let encoded = @pdflite.pdf_flate_encode(data)
+  let metadata_number = compressed.add_object(
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (metadata_name_for_test("/Length"), PdfInteger(encoded.length())),
+        (
+          metadata_name_for_test("/Type"),
+          PdfNameObject(metadata_name_for_test("/Metadata")),
+        ),
+        (
+          metadata_name_for_test("/Subtype"),
+          PdfNameObject(metadata_name_for_test("/XML")),
+        ),
+        (
+          metadata_name_for_test("/Filter"),
+          PdfNameObject(metadata_name_for_test("/FlateDecode")),
+        ),
+      ]),
+      StreamGot(encoded),
+    ),
+  )
+  let catalog_number = compressed.add_object(
+    try! metadata_catalog_for_test(compressed).add_dict_entry(
+      metadata_name_for_test("/Metadata"),
+      PdfIndirect(metadata_number),
+    ),
+  )
+  compressed.set_root(catalog_number)
+  compressed.set_trailer_dict(
+    try! compressed
+    .trailer_dict()
+    .add_dict_entry(
+      metadata_name_for_test("/Root"),
+      PdfIndirect(catalog_number),
+    ),
+  )
+  @test.assert_eq(try! compressed.metadata(), Some(data))
+  let stray = updated.copy()
+  let stray_number = stray.add_object(
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (
+          metadata_name_for_test("/Type"),
+          PdfNameObject(metadata_name_for_test("/Metadata")),
+        ),
+      ]),
+      StreamGot(@ascii.encode("stray")),
+    ),
+  )
+  let cleaned = try! stray.remove_all_metadata()
+  @test.assert_eq(try! cleaned.metadata(), None)
+  @test.assert_eq(cleaned.lookup_object_or_null(stray_number), PdfNull)
+}
+
+///|
+test "pdf metadata compatibility wrappers keep cpdf argument order" {
+  let doc = try! @pdflite.pdf_minimum_valid_pdf()
+  let key_producer = metadata_name_for_test("/Producer")
+  let with_info = try! @pdflite.pdf_set_pdf_info(
+    key_producer,
+    PdfString(@ascii.encode("pdflite")),
+    3,
+    doc,
+  )
+  @test.assert_eq(
+    @pdflite.pdf_get_info_utf8(with_info, key_producer),
+    "pdflite",
+  )
+  let with_metadata = try! @pdflite.pdf_set_metadata_from_bytes(
+    false,
+    @ascii.encode("<m/>"),
+    with_info,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_get_metadata(with_metadata),
+    Some(@ascii.encode("<m/>")),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_get_metadata(
+      try! @pdflite.pdf_remove_metadata(with_metadata),
+    ),
+    None,
+  )
+  let all_removed = try! @pdflite.pdf_remove_all_metadata(with_metadata)
+  @test.assert_eq(try! all_removed.metadata(), None)
+}
