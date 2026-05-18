@@ -14,6 +14,90 @@ fn annotation_rect_for_test(
 }
 
 ///|
+fn annotation_contents_for_test(text : String) -> @pdflite.PdfObject {
+  PdfString(@ascii.encode(text))
+}
+
+///|
+fn annotation_cpdf_helper_document_for_test() -> @pdflite.PdfDocument raise {
+  let key_annots = annotation_name_for_test("/Annots")
+  let key_contents = annotation_name_for_test("/Contents")
+  let document = try! @pdflite.pdf_blank_document(100.0, 100.0, 2)
+  document.add_object_given_number(
+    30,
+    PdfDictionary([(key_contents, annotation_contents_for_test("second"))]),
+  )
+  let first_page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    rest: PdfDictionary([
+      (
+        key_annots,
+        PdfArray([
+          PdfDictionary([(key_contents, annotation_contents_for_test("first"))]),
+        ]),
+      ),
+    ]),
+  }
+  let second_page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    rest: PdfDictionary([
+      (key_annots, PdfArray([PdfIndirect(30), PdfDictionary([])])),
+    ]),
+  }
+  document.change_pages([first_page, second_page])
+}
+
+///|
+test "PdfDocument get_annotations returns old-style page content pairs" {
+  let document = try! annotation_cpdf_helper_document_for_test()
+  let expected = [
+    (1, @ascii.encode("first")),
+    (2, @ascii.encode("second")),
+    (2, Bytes::new(0)),
+  ]
+  @test.assert_eq(
+    try! document.get_annotations(encoding=PdfMetadataRaw),
+    expected,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_get_annotations(PdfMetadataRaw, document),
+    expected,
+  )
+}
+
+///|
+test "PdfDocument remove_annotations removes selected page arrays" {
+  let key_annots = annotation_name_for_test("/Annots")
+  let document = try! annotation_cpdf_helper_document_for_test()
+  let removed = try! document.remove_annotations([2])
+  let wrapper = try! @pdflite.pdf_remove_annotations([2], document)
+  @test.assert_eq(try! document.get_annotations(encoding=PdfMetadataRaw), [
+    (1, @ascii.encode("first")),
+    (2, @ascii.encode("second")),
+    (2, Bytes::new(0)),
+  ])
+  @test.assert_eq(try! removed.get_annotations(encoding=PdfMetadataRaw), [
+    (1, @ascii.encode("first")),
+  ])
+  @test.assert_eq(
+    try! wrapper.get_annotations(encoding=PdfMetadataRaw),
+    try! removed.get_annotations(encoding=PdfMetadataRaw),
+  )
+  let pages = try! removed.pages_of_pagetree()
+  guard pages[0].rest.lookup_immediate(key_annots) is Some(_) else {
+    fail("expected first page annotations")
+  }
+  @test.assert_eq(pages[1].rest.lookup_immediate(key_annots), None)
+  let bad_page : Result[@pdflite.PdfDocument, Error] = try? document.remove_annotations([
+      3,
+    ],
+  )
+  guard bad_page is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+    fail("expected @pdflite.PdfError::BadPageSpecification")
+  }
+}
+
+///|
 test "PdfDocument annotations_of_page reads popup annotations" {
   let key_subtype = annotation_name_for_test("/Subtype")
   let key_contents = annotation_name_for_test("/Contents")

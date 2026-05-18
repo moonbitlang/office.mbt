@@ -1810,6 +1810,14 @@ Current backend snapshot:
   duplicate OCG object removal. Native focused validation reports `moon test
   --target native pdf_ocg_test.mbt` at 13/13 tests passing; native full-suite
   validation reports 1732/1732 tests passing.~~
+- [x] ~~Annotation old-style helper slice exposes encoded `(page, contents)`
+  extraction and selected-page annotation removal wrappers. Coverage pins direct
+  and indirect `/Contents` lookup, empty-content preservation,
+  encoding-wrapper parity, copy-on-write selected-page `/Annots` removal,
+  original-document preservation, wrapper parity, and out-of-range page
+  diagnostics. Native focused validation reports `moon test --target native
+  pdf_annotation_test.mbt` at 10/10 tests passing; native full-suite validation
+  reports 1734/1734 tests passing.~~
 - [x] ~~Standalone utility ports for `cpdfdebug.ml`, `cpdfprinttree.ml`, and
   `cpdfstrftime.ml` expose `PdfDocument::debug_objects`,
   `pdf_print_tree_to_string`, explicit-time and native-current-time strftime

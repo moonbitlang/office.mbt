@@ -672,6 +672,88 @@ pub fn pdf_annotations_of_page(
 }
 
 ///|
+fn PdfDocument::pdf_annotation_contents_text(
+  self : PdfDocument,
+  encoding : PdfMetadataEncoding,
+  annotation : PdfObject,
+) -> PdfBytes raise PdfError {
+  match self.lookup_direct(pdf_annotation_contents_key(), annotation) {
+    Some(PdfString(contents)) => pdf_metadata_encode_output(encoding, contents)
+    _ => []
+  }
+}
+
+///|
+/// Return old-style annotation contents as `(page_number, contents)` pairs.
+///
+/// Every annotation entry contributes one pair. Annotations without `/Contents`
+/// contribute an empty byte string, matching cpdf's old list behavior.
+pub fn PdfDocument::get_annotations(
+  self : PdfDocument,
+  encoding? : PdfMetadataEncoding = PdfMetadataUTF8,
+) -> Array[(Int, PdfBytes)] raise PdfError {
+  let pages = self.pages_of_pagetree()
+  let output : Array[(Int, PdfBytes)] = []
+  for index, page in pages {
+    match self.lookup_direct(pdf_annotation_annots_key(), page.rest) {
+      Some(PdfArray(annotations)) =>
+        for annotation in annotations {
+          output.push(
+            (index + 1, self.pdf_annotation_contents_text(encoding, annotation)),
+          )
+        }
+      _ => ()
+    }
+  }
+  output
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::get_annotations`.
+pub fn pdf_get_annotations(
+  encoding : PdfMetadataEncoding,
+  document : PdfDocument,
+) -> Array[(Int, PdfBytes)] raise PdfError {
+  document.get_annotations(encoding~)
+}
+
+///|
+/// Return a copy of the document with `/Annots` removed from selected pages.
+pub fn PdfDocument::remove_annotations(
+  self : PdfDocument,
+  page_numbers : ArrayView[Int],
+) -> PdfDocument raise PdfError {
+  let pages = self.pages_of_pagetree()
+  pdf_page_box_validate_page_numbers(
+    page_numbers,
+    pages.length(),
+    "remove_annotations",
+  )
+  let rewritten : Array[PdfPage] = []
+  for index, page in pages {
+    let page_number = index + 1
+    if pdf_page_box_contains_page(page_numbers, page_number) {
+      rewritten.push({
+        ..page,
+        rest: page.rest.remove_dict_entry(pdf_annotation_annots_key()),
+      })
+    } else {
+      rewritten.push(page)
+    }
+  }
+  self.change_pages(rewritten, change_references=true)
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::remove_annotations`.
+pub fn pdf_remove_annotations(
+  page_numbers : ArrayView[Int],
+  document : PdfDocument,
+) -> PdfDocument raise PdfError {
+  document.remove_annotations(page_numbers)
+}
+
+///|
 fn pdf_annotation_rectangle_object(rectangle : PdfRectangle) -> PdfObject {
   PdfArray([
     PdfReal(rectangle.min_x),
