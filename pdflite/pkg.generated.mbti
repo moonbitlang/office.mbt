@@ -1137,6 +1137,20 @@ pub fn pdf_thin_lines(PdfDocument, ArrayView[Int], Double) -> PdfDocument raise 
 
 pub fn pdf_thin_lines_ops(PdfDocument, PdfObject, ArrayView[PdfContentOp], Double) -> Array[PdfContentOp] raise @core.PdfError
 
+pub fn pdf_toc_make_dots(Double, PdfFontPack, Double) -> Array[PdfTypeElement] raise @core.PdfError
+
+pub fn pdf_toc_of_pdfdocencoding(PdfFontPack, Double, BytesView) -> Array[PdfTypeElement] raise @core.PdfError
+
+pub fn pdf_toc_of_utf8(PdfFontPack, Double, BytesView) -> Array[PdfTypeElement] raise @core.PdfError
+
+pub fn pdf_toc_shorten_text(PdfFontPack, Double, Double, ArrayView[PdfTypeElement]) -> Array[PdfTypeElement] raise @core.PdfError
+
+pub fn pdf_toc_split_title(BytesView) -> Array[Bytes]
+
+pub fn pdf_toc_title_real_newlines(BytesView) -> Bytes
+
+pub fn pdf_toc_width_of_runs(ArrayView[PdfTypeElement]) -> Double raise @core.PdfError
+
 pub fn pdf_transform_annotations(PdfDocument, @geometry.TransformMatrix, PdfObject) -> Unit raise @core.PdfError
 
 pub fn pdf_transform_bookmark(PdfDocument, @geometry.TransformMatrix, PdfBookmark) -> PdfBookmark raise @core.PdfError

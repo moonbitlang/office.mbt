@@ -2571,6 +2571,16 @@ Current backend snapshot:
   header no-op behavior. Native focused validation reports `moon test --target
   native --package bobzhang/pdflite --file pdf_truetype_test.mbt` at 3/3 tests
   passing; native full-suite validation reports 1894/1894 tests passing.~~
+- [x] ~~Standalone `cpdftoc.ml` text-run helper slice exposes
+  `pdf_toc_split_title`, `pdf_toc_title_real_newlines`, `pdf_toc_of_utf8`,
+  `pdf_toc_of_pdfdocencoding`, `pdf_toc_width_of_runs`,
+  `pdf_toc_shorten_text`, and `pdf_toc_make_dots`, covering literal `\n`
+  title splitting/bookmark newline conversion, fontpack run collation,
+  skipped unrepresentable codepoints, PDFDocString conversion, cpdftype width
+  summing, cpdf's final-run ellipsis trimming, and dot-leader remainder glue.
+  Native focused validation reports `moon test --target native --package
+  bobzhang/pdflite --file pdf_toc_test.mbt` at 7/7 tests passing; native
+  full-suite validation reports 1901/1901 tests passing.~~
 - [x] ~~Page labels, bookmarks, annotations, duplicate annotation repair,
   old-style destinations, name-tree destinations, `/OpenAction`, optional
   content, AcroForm merge basics, trailer `/Info`, and structure-tree
