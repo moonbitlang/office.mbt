@@ -1065,6 +1065,10 @@ pub fn pdf_standard_font_of_name(String) -> PdfStandardFont?
 
 pub fn pdf_standard_font_of_pdf_name(@core.PdfName) -> PdfStandardFont?
 
+pub fn pdf_standard_font_substitute_filenames(PdfStandardFont) -> Array[String]
+
+pub fn pdf_standard_font_substitute_font_name(PdfStandardFont) -> String
+
 pub fn pdf_stream(PdfObject, PdfStreamData) -> PdfObject
 
 pub fn pdf_strftime_dummy_time() -> PdfStrftimeTime

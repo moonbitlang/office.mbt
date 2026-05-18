@@ -58,3 +58,38 @@ test "pdf_fontpack_collate_runs groups consecutive equal font numbers" {
   ])
   @test.assert_eq(@pdflite.pdf_fontpack_collate_runs([]), [])
 }
+
+///|
+test "pdf_standard_font_substitute_filenames mirrors cpdf table" {
+  @test.assert_eq(
+    @pdflite.pdf_standard_font_substitute_filenames(PdfTimesRoman),
+    ["NimbusRoman-Regular.ttf"],
+  )
+  @test.assert_eq(
+    @pdflite.pdf_standard_font_substitute_filenames(PdfHelveticaBoldOblique),
+    ["NimbusSans-BoldItalic.ttf"],
+  )
+  @test.assert_eq(
+    @pdflite.pdf_standard_font_substitute_filenames(PdfCourierOblique),
+    ["NimbusMonoPS-Italic.ttf"],
+  )
+  @test.assert_eq(@pdflite.pdf_standard_font_substitute_filenames(PdfSymbol), [
+    "StandardSymbolsPS.ttf",
+  ])
+  @test.assert_eq(
+    @pdflite.pdf_standard_font_substitute_filenames(PdfZapfDingbats),
+    ["D050000L.ttf"],
+  )
+}
+
+///|
+test "pdf_standard_font_substitute_font_name strips ttf suffix" {
+  @test.assert_eq(
+    @pdflite.pdf_standard_font_substitute_font_name(PdfHelvetica),
+    "NimbusSans-Regular",
+  )
+  @test.assert_eq(
+    @pdflite.pdf_standard_font_substitute_font_name(PdfZapfDingbats),
+    "D050000L",
+  )
+}

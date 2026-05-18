@@ -439,6 +439,14 @@ Current backend snapshot:
   `PdfFontPack` construction, Unicode codepoint lookup, duplicate mapping
   behavior, invalid font-index safety, and run collation by font index. `moon
   test --target native` now reports 1572/1572 tests passing.~~
+- [x] ~~Port the `cpdfembed.load_substitute` Standard 14 filename table as pure
+  helpers: `pdf_standard_font_substitute_filenames` and
+  `pdf_standard_font_substitute_font_name` now expose cpdf's URW substitute
+  filename mapping and extension-stripped font names, leaving filesystem loading
+  to a later file-IO/native boundary. Focused validation reports `moon test
+  --target native --package bobzhang/pdflite --file pdf_embed_test.mbt` at
+  5/5 tests passing; native full-suite validation reports 1887/1887 tests
+  passing.~~
 - [x] ~~Continue the cpdftype port with byte-preserving element streams,
   CamlPDF-compatible split/layout/pagination helpers, and a first native
   `typeset` layer that emits page content streams, font resources, link
