@@ -1082,6 +1082,67 @@ test "pdf_addtext_width_of_text mirrors cpdf zero fallbacks" {
 }
 
 ///|
+test "pdf_addtext_width_of_selected_font scales parsed font widths" {
+  addtext_assert_close_for_test(
+    @pdflite.pdf_addtext_width_of_selected_font(
+      addtext_standard_font_for_test(),
+      10.0,
+      @ascii.encode("AV"),
+    ),
+    13.34,
+  )
+  let metrics : Array[Double] = [ for _ in 0..<256 => 0.0 ]
+  metrics[65] = 500.0
+  metrics[66] = 610.0
+  addtext_assert_close_for_test(
+    @pdflite.pdf_addtext_width_of_selected_font(
+      addtext_simple_font_with_metrics_for_test(Some(metrics)),
+      10.0,
+      @ascii.encode("AB"),
+    ),
+    11.1,
+  )
+  addtext_assert_close_for_test(
+    @pdflite.pdf_addtext_width_of_selected_font(
+      addtext_simple_font_with_metrics_for_test(None),
+      10.0,
+      @ascii.encode("AB"),
+    ),
+    0.0,
+  )
+}
+
+///|
+test "pdf_addtext_width_of_fontpack sums mapped codepoint widths" {
+  let metrics : Array[Double] = [ for _ in 0..<256 => 0.0 ]
+  metrics[66] = 610.0
+  let pack : @pdflite.PdfFontPack = {
+    fonts: [
+      addtext_standard_font_for_test(),
+      addtext_simple_font_with_metrics_for_test(Some(metrics)),
+    ],
+    entries: [
+      { codepoint: 65, font_index: 0, charcode: 65 },
+      { codepoint: 66, font_index: 1, charcode: 66 },
+    ],
+  }
+  addtext_assert_close_for_test(
+    try! @pdflite.pdf_addtext_width_of_fontpack(pack, 10.0, "ABC"),
+    12.77,
+  )
+  let bad_pack : @pdflite.PdfFontPack = {
+    fonts: [addtext_simple_font_with_metrics_for_test(None)],
+    entries: [{ codepoint: 65, font_index: 0, charcode: 65 }],
+  }
+  let result : Result[Double, Error] = try? @pdflite.pdf_addtext_width_of_fontpack(
+    bad_pack, 10.0, "A",
+  )
+  guard result is Err(@pdflite.PdfError::FontWidthExpected) else {
+    fail("expected FontWidthExpected for fontpack font without metrics")
+  }
+}
+
+///|
 test "pdf_addtext_justification_offset handles horizontal rotations" {
   @test.assert_eq(
     addtext_offset_for_test(

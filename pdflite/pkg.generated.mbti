@@ -133,6 +133,10 @@ pub fn pdf_addtext_text_ops(PdfFont?, PdfFontPack?, Double, Double, Double, Doub
 
 pub fn pdf_addtext_unescape_string(String) -> String raise @core.PdfError
 
+pub fn pdf_addtext_width_of_fontpack(PdfFontPack, Double, String) -> Double raise @core.PdfError
+
+pub fn pdf_addtext_width_of_selected_font(PdfFont, Double, BytesView) -> Double
+
 pub fn pdf_addtext_width_of_text(PdfFont, BytesView) -> Double
 
 pub fn pdf_annotation_make(PdfAnnotationSubtype, contents? : Bytes?, border? : PdfAnnotationBorder, rectangle? : PdfRectangle, colour? : PdfAnnotationColour?, subject? : Bytes?) -> PdfAnnotation

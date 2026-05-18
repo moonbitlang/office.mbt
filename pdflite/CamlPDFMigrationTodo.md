@@ -2236,6 +2236,15 @@ Current backend snapshot:
   validation reports `moon test --target native --package bobzhang/pdflite
   --file pdf_addtext_test.mbt` at 57/57 tests passing; native full-suite
   validation reports 1829/1829 tests passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` text-width calculation slice exposes
+  `pdf_addtext_width_of_selected_font` and
+  `pdf_addtext_width_of_fontpack`, covering cpdf's Standard 14 implicit-font
+  width branch, simple-font metric scaling, missing simple metrics as zero,
+  fontpack width-table summation, missing fontpack codepoint skipping, and
+  fontpack missing-metric diagnostics. Native focused validation reports `moon
+  test --target native --package bobzhang/pdflite --file pdf_addtext_test.mbt`
+  at 59/59 tests passing; native full-suite validation reports 1831/1831 tests
+  passing.~~
 - [x] ~~Standalone `cpdfremovetext.ml` removal slice exposes
   `pdf_remove_added_text_ops`, `pdf_remove_all_text_ops`,
   `PdfDocument::remove_added_text`, `remove_all_text`, and compatibility

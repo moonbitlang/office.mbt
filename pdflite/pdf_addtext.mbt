@@ -198,6 +198,48 @@ pub fn pdf_addtext_width_of_text(font : PdfFont, text : BytesView) -> Double {
 }
 
 ///|
+/// Measure add-text bytes with the selected parsed font at `font_size`.
+pub fn pdf_addtext_width_of_selected_font(
+  font : PdfFont,
+  font_size : Double,
+  text : BytesView,
+) -> Double {
+  let raw_width = match font {
+    PdfFontStandard({ font, .. }) =>
+      font.text_width(PdfImplicitInFontFile, text).to_double()
+    _ => pdf_addtext_width_of_text(font, text)
+  }
+  raw_width * font_size / 1000.0
+}
+
+///|
+/// Measure UTF-8 add-text with a cpdf font pack at `font_size`.
+pub fn pdf_addtext_width_of_fontpack(
+  fontpack : PdfFontPack,
+  font_size : Double,
+  text : String,
+) -> Double raise PdfError {
+  let width_tables : Array[Array[Double]] = []
+  for font in fontpack.fonts {
+    width_tables.push(pdf_type_font_widths(font, font_size))
+  }
+  let mut width = 0.0
+  for codepoint in pdf_codepoints_of_utf8(@utf8.encode(text)) {
+    match fontpack.get_char(codepoint) {
+      Some((charcode, font_index, _)) => {
+        let widths = width_tables[font_index]
+        if charcode < 0 || charcode >= widths.length() {
+          raise FontWidthExpected
+        }
+        width += widths[charcode]
+      }
+      None => ()
+    }
+  }
+  width
+}
+
+///|
 /// Build cpdf add-rectangle content operators after placement is resolved.
 pub fn pdf_addtext_rectangle_ops(
   x : Double,
