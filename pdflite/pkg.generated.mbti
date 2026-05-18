@@ -1145,6 +1145,8 @@ pub fn pdf_transform_destination(PdfDocument, @geometry.TransformMatrix, PdfDest
 
 pub fn pdf_trim_structure_tree(PdfDocument, ArrayView[Int]) -> Unit raise @core.PdfError
 
+pub fn pdf_truetype_cmaps(BytesView) -> Array[(Int, Int)]
+
 pub fn pdf_twoup(PdfDocument, fast? : Bool, process_struct_tree? : Bool) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_twoup_stack(PdfDocument, fast? : Bool, process_struct_tree? : Bool) -> PdfDocument raise @core.PdfError

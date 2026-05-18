@@ -2564,6 +2564,13 @@ Current backend snapshot:
   --target native --package bobzhang/pdflite --file pdf_font_test.mbt` at
   9/9 tests passing; native full-suite validation reports 1756/1756 tests
   passing.~~
+- [x] ~~Standalone `cpdftruetype.ml` cmap-listing slice exposes
+  `pdf_truetype_cmaps`, covering TrueType table-directory scanning, `cmap`
+  platform/encoding record collection in cpdf's prepended order, non-cmap table
+  skipping, malformed-tail tolerance after complete records, and malformed
+  header no-op behavior. Native focused validation reports `moon test --target
+  native --package bobzhang/pdflite --file pdf_truetype_test.mbt` at 3/3 tests
+  passing; native full-suite validation reports 1894/1894 tests passing.~~
 - [x] ~~Page labels, bookmarks, annotations, duplicate annotation repair,
   old-style destinations, name-tree destinations, `/OpenAction`, optional
   content, AcroForm merge basics, trailer `/Info`, and structure-tree
