@@ -4,6 +4,11 @@ fn content_state_json_int_for_test(value : Int) -> Json {
 }
 
 ///|
+fn content_state_name_for_test(text : String) -> @pdflite.PdfName {
+  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+}
+
+///|
 fn content_state_clipping_path_for_test() -> @pdflite.PdfPath {
   {
     winding_rule: PdfPathNonZero,
@@ -110,6 +115,71 @@ test "cpdfcontent state exposes initial content states" {
   @test.assert_eq(drawn.filled, false)
   @test.assert_eq(drawn.path.winding_rule, PdfPathEvenOdd)
   @test.assert_eq(drawn.path.subpaths.length(), 0)
+}
+
+///|
+test "cpdfcontent state applies basic path-state operators" {
+  let initial = @pdflite.pdf_content_initial_path_state(0.0, 0.0, 10.0, 10.0)
+  let state = initial
+    .content_apply_path_state_op(Op_w(2.5))
+    .content_apply_path_state_op(Op_J(1))
+    .content_apply_path_state_op(Op_j(2))
+    .content_apply_path_state_op(Op_d([3.0, 1.5], 0.25))
+    .content_apply_path_state_op(
+      Op_ri(content_state_name_for_test("/Absolute")),
+    )
+  @test.assert_eq(state.line_width, 2.5)
+  @test.assert_eq(state.line_cap, 1)
+  @test.assert_eq(state.line_join, 2)
+  @test.assert_eq(state.dash_pattern, { array: [3.0, 1.5], phase: 0.25 })
+  @test.assert_eq(state.rendering_intent, "/Absolute")
+  @test.assert_eq(
+    @pdflite.pdf_content_apply_path_state_op(state, Op_w(4.0)).line_width,
+    4.0,
+  )
+  @test.assert_eq(state.content_apply_path_state_op(Op_m(1.0, 2.0)), state)
+}
+
+///|
+test "cpdfcontent state applies colour path-state operators" {
+  let initial = @pdflite.pdf_content_initial_path_state(0.0, 0.0, 10.0, 10.0)
+  let device_stroke = initial
+    .content_apply_path_state_op(Op_RG(0.1, 0.2, 0.3))
+    .content_apply_path_state_op(Op_K(0.4, 0.5, 0.6, 0.7))
+    .content_apply_path_state_op(
+      Op_CS(content_state_name_for_test("/DeviceRGB")),
+    )
+  @test.assert_eq(device_stroke.colourspace_stroke, PdfDeviceRGB)
+  @test.assert_eq(
+    device_stroke.colour_stroke,
+    PdfContentColourFloats([0.0, 0.0, 0.0]),
+  )
+  let non_stroke = device_stroke
+    .content_apply_path_state_op(Op_g(0.25))
+    .content_apply_path_state_op(Op_rg(0.3, 0.4, 0.5))
+    .content_apply_path_state_op(Op_k(0.1, 0.2, 0.3, 0.4))
+    .content_apply_path_state_op(
+      Op_cs(content_state_name_for_test("/DeviceCMYK")),
+    )
+    .content_apply_path_state_op(Op_sc([0.8, 0.7, 0.6, 0.5]))
+  @test.assert_eq(non_stroke.colourspace_non_stroke, PdfDeviceCMYK)
+  @test.assert_eq(
+    non_stroke.colour_non_stroke,
+    PdfContentColourFloats([0.8, 0.7, 0.6, 0.5]),
+  )
+  let sampled = non_stroke
+    .content_apply_path_state_op(Op_SC([0.9]))
+    .content_apply_path_state_op(
+      Op_SCNName(content_state_name_for_test("/P1"), [0.6]),
+    )
+    .content_apply_path_state_op(
+      Op_scnName(content_state_name_for_test("/P2"), [0.2]),
+    )
+  @test.assert_eq(sampled.colour_stroke, PdfContentColourNamed("/P2", [0.2]))
+  @test.assert_eq(
+    sampled.colour_non_stroke,
+    PdfContentColourNamed("/P1", [0.6]),
+  )
 }
 
 ///|

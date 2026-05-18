@@ -353,6 +353,8 @@ pub fn pdf_content_apply_clipping_op(PdfContentPartialPath, ArrayView[PdfPath], 
 
 pub fn pdf_content_apply_path_op(PdfContentPartialPath, PdfContentOp) -> PdfContentPathOpResult
 
+pub fn pdf_content_apply_path_state_op(PdfContentPathState, PdfContentOp) -> PdfContentPathState
+
 pub fn pdf_content_begin_artifact() -> PdfContentOp
 
 pub let pdf_content_black : PdfContentColour
@@ -2051,6 +2053,7 @@ pub(all) struct PdfContentPathState {
   dash_pattern : PdfContentDashPattern
   rendering_intent : String
 } derive(Eq, ToJson, @debug.Debug)
+pub fn PdfContentPathState::content_apply_path_state_op(Self, PdfContentOp) -> Self
 pub fn PdfContentPathState::content_json(Self) -> Json
 
 pub(all) enum PdfContentPattern {

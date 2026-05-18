@@ -2649,6 +2649,16 @@ Current backend snapshot:
   reports `moon test --target native --package bobzhang/pdflite --file
   pdf_content_state_test.mbt` at 5/5 tests passing; native full-suite
   validation reports 1939/1939 tests passing.~~
+- [x] ~~Standalone `cpdfcontent.ml` pure path-state operator slice exposes
+  `PdfContentPathState::content_apply_path_state_op` and
+  `pdf_content_apply_path_state_op`, matching cpdf's `w`, `J`, `j`, `d`, `ri`,
+  device colour setters, float colour operands, device-name `CS`/`cs` initial
+  colours, ignored resource-dependent colour-space names, and the source-shaped
+  `SCN`/`scn` named-colour target behavior while leaving resource dictionary
+  lookup, graphics-state dictionaries, and the full stateful content walker for
+  later slices. Native focused validation reports `moon test --target native
+  --package bobzhang/pdflite --file pdf_content_state_test.mbt` at 7/7 tests
+  passing; native full-suite validation reports 1941/1941 tests passing.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,
