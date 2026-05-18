@@ -187,6 +187,299 @@ pub fn pdf_string_of_bookmark(
 }
 
 ///|
+fn pdf_bookmark_listing_escape_codepoints(
+  codepoints : ArrayView[Int],
+) -> Array[Int] {
+  let output : Array[Int] = []
+  for codepoint in codepoints {
+    match codepoint {
+      34 => {
+        output.push(92)
+        output.push(34)
+      }
+      92 => {
+        output.push(92)
+        output.push(92)
+      }
+      10 => {
+        output.push(92)
+        output.push(110)
+      }
+      _ => output.push(codepoint)
+    }
+  }
+  output
+}
+
+///|
+fn pdf_bookmark_listing_process_text(
+  encoding : PdfMetadataEncoding,
+  text : BytesView,
+) -> PdfBytes raise PdfError {
+  match encoding {
+    PdfMetadataRaw => text.to_owned()
+    PdfMetadataUTF8 => {
+      let escaped = pdf_bookmark_listing_escape_codepoints(
+        pdf_codepoints_of_pdfdocstring(text),
+      )
+      pdf_utf8_of_codepoints(escaped)
+    }
+    PdfMetadataStripped => {
+      let output : Array[Byte] = []
+      let escaped = pdf_bookmark_listing_escape_codepoints(
+        pdf_codepoints_of_pdfdocstring(text),
+      )
+      for codepoint in escaped {
+        if codepoint <= 127 {
+          output.push(pdf_byte_of_int(codepoint))
+        }
+      }
+      Bytes::from_array(output)
+    }
+  }
+}
+
+///|
+fn pdf_bookmark_listing_is_all_pages(
+  page_numbers : ArrayView[Int],
+  end_page : Int,
+) -> Bool {
+  if page_numbers.length() != end_page {
+    false
+  } else {
+    for index in 0..<page_numbers.length() {
+      if page_numbers[index] != index + 1 {
+        break false
+      }
+    } nobreak {
+      true
+    }
+  }
+}
+
+///|
+fn pdf_bookmark_listing_target_object(
+  target : PdfDestination,
+  page_number : Int,
+) -> PdfObject {
+  let object = pdf_object_of_destination(target)
+  match object {
+    PdfArray(items) =>
+      if items.length() == 0 {
+        object
+      } else {
+        let rewritten : Array[PdfObject] = [PdfInteger(page_number)]
+        for index in 1..<items.length() {
+          rewritten.push(items[index])
+        }
+        PdfArray(rewritten)
+      }
+    _ => object
+  }
+}
+
+///|
+fn PdfDocument::pdf_bookmark_listing_in_range(
+  self : PdfDocument,
+  bookmark : PdfBookmark,
+  page_numbers : ArrayView[Int],
+  range_is_all : Bool,
+) -> Bool raise PdfError {
+  if range_is_all || bookmark.target == DestNull {
+    true
+  } else {
+    match bookmark.target {
+      DestNamed(_) | DestString(_) => true
+      _ =>
+        pdf_page_box_contains_page(
+          page_numbers,
+          self.page_number_of_target(bookmark.target),
+        )
+    }
+  }
+}
+
+///|
+fn PdfDocument::pdf_bookmark_listing_text_line(
+  self : PdfDocument,
+  output : Array[Byte],
+  bookmark : PdfBookmark,
+  encoding : PdfMetadataEncoding,
+) -> Unit raise PdfError {
+  let page_number = self.page_number_of_target(bookmark.target)
+  pdf_writer_push_ascii(output, bookmark.level.to_string())
+  pdf_writer_push_ascii(output, " \"")
+  pdf_writer_push_view(
+    output,
+    pdf_bookmark_listing_process_text(encoding, bookmark.text),
+  )
+  pdf_writer_push_ascii(output, "\" ")
+  pdf_writer_push_ascii(output, page_number.to_string())
+  if bookmark.is_open {
+    pdf_writer_push_ascii(output, " open")
+  }
+  pdf_writer_push_ascii(output, " \"")
+  pdf_writer_push_view(
+    output,
+    pdf_write_object(
+      pdf_bookmark_listing_target_object(bookmark.target, page_number),
+    ),
+  )
+  pdf_writer_push_ascii(output, "\"\n")
+}
+
+///|
+fn pdf_bookmark_json_text(text : BytesView) -> String raise PdfError {
+  let simplified = pdf_simplify_utf16be(text)
+  let utf8 = pdf_utf8_of_pdfdocstring(simplified)
+  @utf8.decode(utf8) catch {
+    _ => raise InvalidUTF8
+  }
+}
+
+///|
+fn PdfDocument::pdf_bookmark_json_mark(
+  self : PdfDocument,
+  bookmark : PdfBookmark,
+) -> Json raise PdfError {
+  let page_number = self.page_number_of_target(bookmark.target)
+  Json::object(
+    Map::of([
+      ("level", pdf_util_json_number(bookmark.level)),
+      ("text", Json::string(pdf_bookmark_json_text(bookmark.text))),
+      ("page", pdf_util_json_number(page_number)),
+      ("open", Json::boolean(bookmark.is_open)),
+      (
+        "target",
+        self.json_of_object(
+          pdf_bookmark_listing_target_object(bookmark.target, page_number),
+        ),
+      ),
+      (
+        "colour",
+        Json::array([
+          Json::number(bookmark.colour.red),
+          Json::number(bookmark.colour.green),
+          Json::number(bookmark.colour.blue),
+        ]),
+      ),
+      ("italic", Json::boolean((bookmark.flags & 1) > 0)),
+      ("bold", Json::boolean((bookmark.flags & 2) > 0)),
+    ]),
+  )
+}
+
+///|
+fn PdfDocument::pdf_bookmark_listing_json(
+  self : PdfDocument,
+  bookmarks : ArrayView[PdfBookmark],
+) -> Json raise PdfError {
+  let output : Array[Json] = []
+  for bookmark in bookmarks {
+    output.push(self.pdf_bookmark_json_mark(bookmark))
+  }
+  Json::array(output)
+}
+
+///|
+fn PdfDocument::pdf_bookmark_listing_bookmarks(
+  self : PdfDocument,
+  page_numbers : ArrayView[Int],
+  preserve_actions : Bool,
+) -> Array[PdfBookmark] raise PdfError {
+  let end_page = self.endpage()
+  pdf_page_box_validate_page_numbers(page_numbers, end_page, "list_bookmarks")
+  let range_is_all = pdf_bookmark_listing_is_all_pages(page_numbers, end_page)
+  let bookmarks = self.read_bookmarks(preserve_actions~)
+  let output : Array[PdfBookmark] = []
+  for bookmark in bookmarks {
+    if self.pdf_bookmark_listing_in_range(bookmark, page_numbers, range_is_all) {
+      output.push(bookmark)
+    }
+  }
+  output
+}
+
+///|
+/// Render cpdf's bookmark listing for selected pages.
+///
+/// Text output matches cpdf's line-oriented bookmark format. When `json` is
+/// set, this returns UTF-8 JSON bytes for the same filtered bookmark set.
+pub fn PdfDocument::list_bookmarks(
+  self : PdfDocument,
+  page_numbers : ArrayView[Int],
+  encoding? : PdfMetadataEncoding = PdfMetadataUTF8,
+  json? : Bool = false,
+  json_preserve_actions? : Bool = false,
+) -> PdfBytes raise PdfError {
+  let bookmarks = self.pdf_bookmark_listing_bookmarks(
+    page_numbers,
+    json && json_preserve_actions,
+  )
+  if json {
+    @utf8.encode(self.pdf_bookmark_listing_json(bookmarks).stringify())
+  } else {
+    let output : Array[Byte] = []
+    for bookmark in bookmarks {
+      self.pdf_bookmark_listing_text_line(output, bookmark, encoding)
+    }
+    Bytes::from_array(output)
+  }
+}
+
+///|
+/// Return cpdf's full-document bookmark JSON listing.
+pub fn PdfDocument::bookmarks_json(
+  self : PdfDocument,
+  json_preserve_actions? : Bool = false,
+) -> Json raise PdfError {
+  let end_page = self.endpage()
+  let page_numbers : Array[Int] = []
+  for page_number in 1..<=end_page {
+    page_numbers.push(page_number)
+  }
+  let bookmarks = self.pdf_bookmark_listing_bookmarks(
+    page_numbers, json_preserve_actions,
+  )
+  self.pdf_bookmark_listing_json(bookmarks)
+}
+
+///|
+/// Return cpdf's full-document bookmark JSON listing as UTF-8 JSON bytes.
+pub fn PdfDocument::bookmarks_json_blob(
+  self : PdfDocument,
+  json_preserve_actions? : Bool = false,
+) -> PdfBytes raise PdfError {
+  @utf8.encode(self.bookmarks_json(json_preserve_actions~).stringify())
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::list_bookmarks`.
+pub fn pdf_list_bookmarks(
+  json : Bool,
+  json_preserve_actions : Bool,
+  encoding : PdfMetadataEncoding,
+  page_numbers : ArrayView[Int],
+  document : PdfDocument,
+) -> PdfBytes raise PdfError {
+  document.list_bookmarks(
+    page_numbers,
+    encoding~,
+    json~,
+    json_preserve_actions~,
+  )
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::bookmarks_json_blob`.
+pub fn pdf_get_bookmarks_json(
+  json_preserve_actions : Bool,
+  document : PdfDocument,
+) -> PdfBytes raise PdfError {
+  document.bookmarks_json_blob(json_preserve_actions~)
+}
+
+///|
 fn PdfDocument::pdf_bookmark_title(
   self : PdfDocument,
   outline : PdfObject,

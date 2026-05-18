@@ -343,6 +343,8 @@ pub fn pdf_get_annotations(PdfMetadataEncoding, PdfDocument) -> Array[(Int, Byte
 
 pub fn pdf_get_annotations_json(ArrayView[Int], PdfDocument) -> Bytes raise @core.PdfError
 
+pub fn pdf_get_bookmarks_json(Bool, PdfDocument) -> Bytes raise @core.PdfError
+
 pub fn pdf_get_catalog_item(@core.PdfName, PdfDocument) -> String
 
 pub fn pdf_get_dict_entries(PdfDocument, @core.PdfName, utf8? : Bool) -> Bytes raise @core.PdfError
@@ -444,6 +446,8 @@ pub fn pdf_lexeme_debug_name(PdfLexeme) -> String
 pub fn pdf_list_annotations(ArrayView[Int], PdfMetadataEncoding, PdfDocument) -> Bytes raise @core.PdfError
 
 pub fn pdf_list_attached_files(PdfDocument) -> Array[PdfAttachment] raise @core.PdfError
+
+pub fn pdf_list_bookmarks(Bool, Bool, PdfMetadataEncoding, ArrayView[Int], PdfDocument) -> Bytes raise @core.PdfError
 
 pub fn pdf_list_spot_colours(PdfDocument) -> Array[@core.PdfName]
 
@@ -1613,6 +1617,8 @@ pub fn PdfDocument::attach_file(Self, String, BytesView, keep_version? : Bool, p
 pub fn PdfDocument::black_fills(Self, ArrayView[Int], PdfContentColour) -> Self raise @core.PdfError
 pub fn PdfDocument::black_lines(Self, ArrayView[Int], PdfContentColour) -> Self raise @core.PdfError
 pub fn PdfDocument::black_text(Self, ArrayView[Int], PdfContentColour) -> Self raise @core.PdfError
+pub fn PdfDocument::bookmarks_json(Self, json_preserve_actions? : Bool) -> Json raise @core.PdfError
+pub fn PdfDocument::bookmarks_json_blob(Self, json_preserve_actions? : Bool) -> Bytes raise @core.PdfError
 pub fn PdfDocument::bookmarks_open_to_level(Self, Int) -> Self raise @core.PdfError
 pub fn PdfDocument::bpc(Self, PdfObject) -> PdfObject?
 pub fn PdfDocument::build_name_tree(Self, ArrayView[(Bytes, PdfObject)]) -> PdfObject
@@ -1684,6 +1690,7 @@ pub fn PdfDocument::json_of_object(Self, PdfObject, utf8? : Bool, clean_strings?
 pub fn PdfDocument::language(Self) -> Bytes?
 pub fn PdfDocument::list_annotations(Self, ArrayView[Int], encoding? : PdfMetadataEncoding) -> Bytes raise @core.PdfError
 pub fn PdfDocument::list_attached_files(Self) -> Array[PdfAttachment] raise @core.PdfError
+pub fn PdfDocument::list_bookmarks(Self, ArrayView[Int], encoding? : PdfMetadataEncoding, json? : Bool, json_preserve_actions? : Bool) -> Bytes raise @core.PdfError
 pub fn PdfDocument::list_spot_colours(Self) -> Array[@core.PdfName]
 pub fn PdfDocument::lookup_chain(Self, PdfObject, ArrayView[@core.PdfName]) -> PdfObject?
 pub fn PdfDocument::lookup_direct(Self, @core.PdfName, PdfObject) -> PdfObject?

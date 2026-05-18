@@ -1802,6 +1802,15 @@ Current backend snapshot:
   validation reports `moon test --target native pdf_bookmark_test.mbt` at
   19/19 tests passing; native full-suite validation reports 1728/1728 tests
   passing.~~
+- [x] ~~Bookmark output helper slice exposes cpdf-style selected-page bookmark
+  listing, full-document bookmark JSON rows, UTF-8 JSON bytes, and compatibility
+  wrappers while leaving bookmark-file parsing/import for a later slice.
+  Coverage pins text line formatting, title escaping, page-number target
+  rewriting, selected-page filtering, named-destination retention, invalid-range
+  diagnostics, JSON row fields, colour/flag projection, wrapper parity, and JSON
+  filtered listing output. Native focused validation reports `moon test --target
+  native pdf_bookmark_test.mbt` at 21/21 tests passing; native full-suite
+  validation reports 1738/1738 tests passing.~~
 - [x] ~~Optional-content group management helper slice exposes cpdf-style raw
   OCG name listing, rename, order-all, and same-name coalescing wrappers.
   Coverage pins raw layer-name listing, copy-on-write rename behavior, wrapper

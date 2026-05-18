@@ -16,6 +16,34 @@ fn bookmark_bytes_from_ints_for_test(
 }
 
 ///|
+fn bookmark_join_bytes_for_test(
+  parts : ArrayView[@pdflite.PdfBytes],
+) -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  for part in parts {
+    for byte in part {
+      output.push(byte)
+    }
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn bookmark_json_int_for_test(value : Int) -> Json {
+  Json::number(value.to_double(), repr=value.to_string())
+}
+
+///|
+fn bookmark_json_pdf_int_for_test(value : Int) -> Json {
+  Json::object(Map::of([("I", bookmark_json_int_for_test(value))]))
+}
+
+///|
+fn bookmark_json_name_for_test(name : String) -> Json {
+  Json::object(Map::of([("N", Json::string(name))]))
+}
+
+///|
 fn bookmark_colour_for_test(
   red : Double,
   green : Double,
@@ -102,6 +130,44 @@ fn bookmark_document_for_test() -> @pdflite.PdfDocument {
 }
 
 ///|
+fn bookmark_listing_document_for_test() -> @pdflite.PdfDocument raise {
+  let document = try! @pdflite.pdf_blank_document(100.0, 100.0, 2)
+  let page_refs = try! document.page_reference_numbers()
+  let bookmarks : Array[@pdflite.PdfBookmark] = [
+    {
+      level: 0,
+      text: bookmark_bytes_for_test("Top\nQuote\""),
+      target: DestFit(TargetPageObject(page_refs[0])),
+      is_open: true,
+      colour: bookmark_colour_for_test(0.1, 0.2, 0.3),
+      flags: 2,
+    },
+    {
+      level: 1,
+      text: bookmark_bytes_for_test("Child"),
+      target: DestXYZ(
+        TargetPageObject(page_refs[1]),
+        Some(1.0),
+        Some(2.0),
+        None,
+      ),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 1,
+    },
+    {
+      level: 0,
+      text: bookmark_bytes_for_test("Named"),
+      target: DestString(bookmark_bytes_for_test("named")),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+  ]
+  document.add_bookmarks(bookmarks)
+}
+
+///|
 fn bookmark_single_outline_doc_for_test(
   outline : @pdflite.PdfObject,
 ) -> @pdflite.PdfDocument {
@@ -141,6 +207,117 @@ test "pdf_string_of_bookmark renders CamlPDF debug line as bytes" {
       49, 32, 65, 255, 32, 91, 55, 32, 48, 32, 82, 32, 47, 70, 105, 116, 93, 32,
       116, 114, 117, 101, 10,
     ]),
+  )
+}
+
+///|
+test "PdfDocument list_bookmarks renders selected cpdf bookmark lines" {
+  let document = try! bookmark_listing_document_for_test()
+  let expected = bookmark_join_bytes_for_test([
+    @ascii.encode("0 \"Top\\nQuote\\\"\" 1 open \""),
+    try! @pdflite.pdf_write_object(
+      PdfArray([PdfInteger(1), PdfNameObject(bookmark_name_for_test("/Fit"))]),
+    ),
+    @ascii.encode("\"\n0 \"Named\" 0 \""),
+    try! @pdflite.pdf_write_object(PdfString(bookmark_bytes_for_test("named"))),
+    @ascii.encode("\"\n"),
+  ])
+  @test.assert_eq(
+    try! document.list_bookmarks([1], encoding=PdfMetadataUTF8),
+    expected,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_list_bookmarks(
+      false,
+      false,
+      PdfMetadataUTF8,
+      [1],
+      document,
+    ),
+    expected,
+  )
+  let bad_page : Result[@pdflite.PdfBytes, Error] = try? document.list_bookmarks(
+    [3],
+    encoding=PdfMetadataUTF8,
+  )
+  guard bad_page is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+    fail("expected @pdflite.PdfError::BadPageSpecification")
+  }
+}
+
+///|
+test "PdfDocument bookmarks_json exports cpdf bookmark rows" {
+  let document = try! bookmark_listing_document_for_test()
+  let top_row = Json::object(
+    Map::of([
+      ("level", bookmark_json_int_for_test(0)),
+      ("text", Json::string("Top\nQuote\"")),
+      ("page", bookmark_json_int_for_test(1)),
+      ("open", Json::boolean(true)),
+      (
+        "target",
+        Json::array([
+          bookmark_json_pdf_int_for_test(1),
+          bookmark_json_name_for_test("/Fit"),
+        ]),
+      ),
+      (
+        "colour",
+        Json::array([Json::number(0.1), Json::number(0.2), Json::number(0.3)]),
+      ),
+      ("italic", Json::boolean(false)),
+      ("bold", Json::boolean(true)),
+    ]),
+  )
+  let child_row = Json::object(
+    Map::of([
+      ("level", bookmark_json_int_for_test(1)),
+      ("text", Json::string("Child")),
+      ("page", bookmark_json_int_for_test(2)),
+      ("open", Json::boolean(false)),
+      (
+        "target",
+        Json::array([
+          bookmark_json_pdf_int_for_test(2),
+          bookmark_json_name_for_test("/XYZ"),
+          Json::object(Map::of([("F", Json::number(1.0))])),
+          Json::object(Map::of([("F", Json::number(2.0))])),
+          Json::null(),
+        ]),
+      ),
+      (
+        "colour",
+        Json::array([Json::number(0.0), Json::number(0.0), Json::number(0.0)]),
+      ),
+      ("italic", Json::boolean(true)),
+      ("bold", Json::boolean(false)),
+    ]),
+  )
+  let named_row = Json::object(
+    Map::of([
+      ("level", bookmark_json_int_for_test(0)),
+      ("text", Json::string("Named")),
+      ("page", bookmark_json_int_for_test(0)),
+      ("open", Json::boolean(false)),
+      ("target", Json::string("named")),
+      (
+        "colour",
+        Json::array([Json::number(0.0), Json::number(0.0), Json::number(0.0)]),
+      ),
+      ("italic", Json::boolean(false)),
+      ("bold", Json::boolean(false)),
+    ]),
+  )
+  let expected = Json::array([top_row, child_row, named_row])
+  let expected_filtered = Json::array([top_row, named_row])
+  @test.assert_eq(try! document.bookmarks_json(), expected)
+  @test.assert_eq(
+    try! @pdflite.pdf_get_bookmarks_json(false, document),
+    @utf8.encode(expected.stringify()),
+  )
+  @test.assert_eq(
+    try! document.list_bookmarks([1], json=true),
+    @utf8.encode(expected_filtered.stringify()),
   )
 }
 
