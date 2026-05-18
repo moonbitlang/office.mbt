@@ -29,6 +29,15 @@ fn addtext_assert_pair_close_for_test(
 }
 
 ///|
+fn addtext_assert_point_close_for_test(
+  actual : @pdflite.Point2,
+  expected : @pdflite.Point2,
+) -> Unit raise {
+  addtext_assert_close_for_test(actual.x, expected.x)
+  addtext_assert_close_for_test(actual.y, expected.y)
+}
+
+///|
 fn addtext_process_time_for_test() -> @pdflite.PdfStrftimeTime {
   {
     tm_sec: 5,
@@ -979,6 +988,68 @@ test "pdf_addtext_url_annotation builds cpdf link annotation objects" {
     bs.lookup_immediate(addtext_name_for_test("/W")),
     Some(PdfInteger(0)),
   )
+}
+
+///|
+test "pdf_addtext_url_annotation_height uses cap height and font-size fallback" {
+  addtext_assert_close_for_test(
+    @pdflite.pdf_addtext_url_annotation_height(None, "Helvetica", 10.0),
+    7.18,
+  )
+  @test.assert_eq(
+    @pdflite.pdf_addtext_url_annotation_height(None, "NotAFont", 10.0),
+    10.0,
+  )
+}
+
+///|
+test "pdf_addtext_url_annotation_geometry builds unrotated quads and bounds" {
+  let geometry = @pdflite.pdf_addtext_url_annotation_geometry(
+    @pdflite.point2(100.0, 200.0),
+    10.0,
+    20.0,
+    5.0,
+    0.0,
+    @pdflite.point2(0.0, 0.0),
+    0.0,
+    3.0,
+    13.0,
+    7.0,
+  )
+  @test.assert_eq(geometry.p0, @pdflite.point2(88.0, 180.0))
+  @test.assert_eq(geometry.p1, @pdflite.point2(98.0, 187.0))
+  @test.assert_eq(geometry.p2, @pdflite.point2(88.0, 187.0))
+  @test.assert_eq(geometry.p3, @pdflite.point2(98.0, 180.0))
+  @test.assert_eq(geometry.rectangle, {
+    min_x: 88.0,
+    min_y: 180.0,
+    max_x: 98.0,
+    max_y: 187.0,
+  })
+}
+
+///|
+test "pdf_addtext_url_annotation_geometry applies rotation before offset" {
+  let geometry = @pdflite.pdf_addtext_url_annotation_geometry(
+    @pdflite.point2(10.0, 20.0),
+    0.0,
+    0.0,
+    0.0,
+    @math.PI / 2.0,
+    @pdflite.point2(1.0, 2.0),
+    0.0,
+    0.0,
+    4.0,
+    2.0,
+  )
+  addtext_assert_point_close_for_test(geometry.p0, @pdflite.point2(11.0, 22.0))
+  addtext_assert_point_close_for_test(geometry.p1, @pdflite.point2(9.0, 26.0))
+  addtext_assert_point_close_for_test(geometry.p2, @pdflite.point2(9.0, 22.0))
+  addtext_assert_point_close_for_test(geometry.p3, @pdflite.point2(11.0, 26.0))
+  addtext_assert_close_for_test(geometry.rectangle.min_x, 9.0)
+  addtext_assert_close_for_test(geometry.rectangle.min_y, 22.0)
+  addtext_assert_close_for_test(geometry.rectangle.max_x, 11.0)
+  addtext_assert_close_for_test(geometry.rectangle.max_y, 26.0)
 }
 
 ///|

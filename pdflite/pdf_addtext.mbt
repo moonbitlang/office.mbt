@@ -34,6 +34,16 @@ pub(all) struct PdfAddTextUrlLine {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Transformed geometry for one add-text URL annotation.
+pub(all) struct PdfAddTextUrlAnnotationGeometry {
+  p0 : Point2
+  p1 : Point2
+  p2 : Point2
+  p3 : Point2
+  rectangle : PdfRectangle
+} derive(Debug, Eq, ToJson)
+
+///|
 /// Values used to build cpdf add-text replacement callbacks.
 pub(all) struct PdfAddTextReplacementValues {
   page_number : Int
@@ -827,6 +837,65 @@ pub fn pdf_addtext_url_annotation(
       ]),
     ),
   ])
+}
+
+///|
+fn pdf_addtext_bounds_of_points(
+  p0 : Point2,
+  p1 : Point2,
+  p2 : Point2,
+  p3 : Point2,
+) -> PdfRectangle {
+  {
+    min_x: double_min(double_min(p0.x, p1.x), double_min(p2.x, p3.x)),
+    min_y: double_min(double_min(p0.y, p1.y), double_min(p2.y, p3.y)),
+    max_x: double_max(double_max(p0.x, p1.x), double_max(p2.x, p3.x)),
+    max_y: double_max(double_max(p0.y, p1.y), double_max(p2.y, p3.y)),
+  }
+}
+
+///|
+/// Return cpdf's add-text URL annotation height for a font selection.
+pub fn pdf_addtext_url_annotation_height(
+  font : PdfFont?,
+  fontname : String,
+  font_size : Double,
+) -> Double {
+  match pdf_addtext_cap_height(font, fontname) {
+    Some(cap_height) => cap_height * font_size / 1000.0
+    None => font_size
+  }
+}
+
+///|
+/// Calculate the transformed quad points and bounds for an add-text URL span.
+pub fn pdf_addtext_url_annotation_geometry(
+  origin : Point2,
+  horizontal_offset : Double,
+  vertical_offset : Double,
+  justification_offset : Double,
+  rotation : Double,
+  rotation_offset : Point2,
+  page_rotation : Double,
+  start_width : Double,
+  end_width : Double,
+  height : Double,
+) -> PdfAddTextUrlAnnotationGeometry {
+  let base_x = origin.x - horizontal_offset - justification_offset
+  let base_y = origin.y - vertical_offset
+  let min_x = base_x + start_width
+  let min_y = base_y
+  let max_x = base_x + end_width
+  let max_y = base_y + height
+  let matrix = transform_matrix_of_transform([
+    Translate(rotation_offset.x, rotation_offset.y),
+    Rotate(point2(base_x, base_y), rotation + page_rotation),
+  ])
+  let p0 = matrix.apply(point2(min_x, min_y))
+  let p1 = matrix.apply(point2(max_x, max_y))
+  let p2 = matrix.apply(point2(min_x, max_y))
+  let p3 = matrix.apply(point2(max_x, min_y))
+  { p0, p1, p2, p3, rectangle: pdf_addtext_bounds_of_points(p0, p1, p2, p3) }
 }
 
 ///|

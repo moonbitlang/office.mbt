@@ -145,6 +145,10 @@ pub fn pdf_addtext_unescape_string(String) -> String raise @core.PdfError
 
 pub fn pdf_addtext_url_annotation(@geometry.Point2, @geometry.Point2, @geometry.Point2, @geometry.Point2, PdfRectangle, String, Bool) -> PdfObject
 
+pub fn pdf_addtext_url_annotation_geometry(@geometry.Point2, Double, Double, Double, Double, @geometry.Point2, Double, Double, Double, Double) -> PdfAddTextUrlAnnotationGeometry
+
+pub fn pdf_addtext_url_annotation_height(PdfFont?, String, Double) -> Double
+
 pub fn pdf_addtext_width_of_fontpack(PdfFontPack, Double, String) -> Double raise @core.PdfError
 
 pub fn pdf_addtext_width_of_selected_font(PdfFont, Double, BytesView) -> Double
@@ -1404,6 +1408,14 @@ pub(all) struct PdfAddTextUrl {
   url : String
   start : Int
   end : Int
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfAddTextUrlAnnotationGeometry {
+  p0 : @geometry.Point2
+  p1 : @geometry.Point2
+  p2 : @geometry.Point2
+  p3 : @geometry.Point2
+  rectangle : PdfRectangle
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfAddTextUrlLine {
