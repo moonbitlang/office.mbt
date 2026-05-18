@@ -2134,6 +2134,13 @@ Current backend snapshot:
   reports `moon test --target native --package bobzhang/pdflite --file
   pdf_addtext_test.mbt` at 23/23 tests passing; native full-suite validation
   reports 1795/1795 tests passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` cap-height helper slice exposes
+  `pdf_addtext_cap_height`, covering explicit simple-font descriptor
+  cap-height, Standard 14 AFM fallback lookup, missing/unknown standard-font
+  behavior, and cpdf's slashless font-name convention. Native focused
+  validation reports `moon test --target native --package bobzhang/pdflite
+  --file pdf_addtext_test.mbt` at 25/25 tests passing; native full-suite
+  validation reports 1797/1797 tests passing.~~
 - [x] ~~Standalone `cpdfremovetext.ml` removal slice exposes
   `pdf_remove_added_text_ops`, `pdf_remove_all_text_ops`,
   `PdfDocument::remove_added_text`, `remove_all_text`, and compatibility

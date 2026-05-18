@@ -46,6 +46,41 @@ fn addtext_bookmark_for_test(
 }
 
 ///|
+fn addtext_font_descriptor_for_test(
+  capheight : Double,
+) -> @pdflite.PdfFontDescriptor {
+  {
+    ascent: 0.0,
+    descent: 0.0,
+    avgwidth: 0.0,
+    maxwidth: 0.0,
+    flags: 0,
+    fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0 },
+    italicangle: 0.0,
+    capheight,
+    xheight: 0.0,
+    stemv: 0.0,
+    fontfile: None,
+    charset: None,
+    tounicode: None,
+  }
+}
+
+///|
+fn addtext_simple_font_for_test(capheight : Double) -> @pdflite.PdfFont {
+  PdfFontSimple({
+    fonttype: PdfType1,
+    basefont: None,
+    firstchar: 0,
+    lastchar: -1,
+    widths: [],
+    fontdescriptor: Some(addtext_font_descriptor_for_test(capheight)),
+    fontmetrics: None,
+    encoding: PdfWinAnsiEncoding,
+  })
+}
+
+///|
 test "pdf_addtext_justification_offset handles horizontal rotations" {
   @test.assert_eq(
     addtext_offset_for_test(
@@ -543,4 +578,26 @@ test "pdf_addtext_replacement_values wrapper matches method" {
     None,
   )
   @test.assert_eq(wrapper_values, method_values)
+}
+
+///|
+test "pdf_addtext_cap_height prefers simple font descriptors" {
+  @test.assert_eq(
+    @pdflite.pdf_addtext_cap_height(
+      Some(addtext_simple_font_for_test(681.0)),
+      "Helvetica",
+    ),
+    Some(681.0),
+  )
+}
+
+///|
+test "pdf_addtext_cap_height falls back to Standard 14 AFM data" {
+  @test.assert_eq(
+    @pdflite.pdf_addtext_cap_height(None, "Helvetica"),
+    Some(718.0),
+  )
+  @test.assert_eq(@pdflite.pdf_addtext_cap_height(None, "Courier"), Some(562.0))
+  @test.assert_eq(@pdflite.pdf_addtext_cap_height(None, "NotAFont"), None)
+  @test.assert_eq(@pdflite.pdf_addtext_cap_height(None, "/Helvetica"), None)
 }

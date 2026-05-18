@@ -79,6 +79,8 @@ pub fn pdf_addtext_bates_number(Int, Int, Int?) -> String
 
 pub fn pdf_addtext_bookmark_for_page(PdfDocument, ArrayView[PdfBookmark], Int, Int) -> String raise @core.PdfError
 
+pub fn pdf_addtext_cap_height(PdfFont?, String) -> Double?
+
 pub fn pdf_addtext_expand_lines_with_time(PdfStrftimeTime, ArrayView[String], ArrayView[(String, () -> String)]) -> Array[String] raise @core.PdfError
 
 pub fn pdf_addtext_get_urls_line(String) -> PdfAddTextUrlLine raise @core.PdfError
