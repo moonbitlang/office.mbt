@@ -1819,6 +1819,16 @@ Current backend snapshot:
   diagnostics. Native focused validation reports `moon test --target native
   pdf_annotation_test.mbt` at 11/11 tests passing; native full-suite validation
   reports 1735/1735 tests passing.~~
+- [x] ~~Annotation JSON export helper slice exposes selected-page cpdf
+  annotation JSON rows and UTF-8 JSON bytes while leaving annotation JSON import
+  and copy for a later slice. Coverage pins the format-version header, indirect
+  annotation-only row emission, `/P`, `/Dest`, and action `/D` page-reference
+  rewriting for annotations without `/Dest`, direct annotation skipping,
+  ancillary object collection, `/Popup`/`/Parent` ancillary exclusion, wrapper
+  parity, empty selected-page output, and out-of-range diagnostics. Native
+  focused validation reports `moon test --target native pdf_annotation_test.mbt`
+  at 12/12 tests passing; native full-suite validation reports 1736/1736 tests
+  passing.~~
 - [x] ~~Standalone utility ports for `cpdfdebug.ml`, `cpdfprinttree.ml`, and
   `cpdfstrftime.ml` expose `PdfDocument::debug_objects`,
   `pdf_print_tree_to_string`, explicit-time and native-current-time strftime

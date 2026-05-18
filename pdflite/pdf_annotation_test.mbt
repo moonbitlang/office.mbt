@@ -48,6 +48,107 @@ fn annotation_cpdf_helper_document_for_test() -> @pdflite.PdfDocument raise {
 }
 
 ///|
+fn annotation_json_int_for_test(value : Int) -> Json {
+  Json::number(value.to_double(), repr=value.to_string())
+}
+
+///|
+fn annotation_json_pdf_int_for_test(value : Int) -> Json {
+  Json::object(Map::of([("I", annotation_json_int_for_test(value))]))
+}
+
+///|
+fn annotation_json_name_for_test(name : String) -> Json {
+  Json::object(Map::of([("N", Json::string(name))]))
+}
+
+///|
+fn annotation_json_text_for_test(text : String) -> Json {
+  Json::object(Map::of([("U", Json::string(text))]))
+}
+
+///|
+fn annotation_json_header_for_test() -> Json {
+  Json::array([
+    annotation_json_int_for_test(-1),
+    Json::object(
+      Map::of([
+        ("/CPDFJSONannotformatversion", annotation_json_pdf_int_for_test(1)),
+      ]),
+    ),
+  ])
+}
+
+///|
+fn annotation_json_helper_document_for_test() -> @pdflite.PdfDocument {
+  let key_annots = annotation_name_for_test("/Annots")
+  let key_contents = annotation_name_for_test("/Contents")
+  let key_p = annotation_name_for_test("/P")
+  let key_dest = annotation_name_for_test("/Dest")
+  let key_a = annotation_name_for_test("/A")
+  let key_d = annotation_name_for_test("/D")
+  let key_ref = annotation_name_for_test("/Ref")
+  let key_popup = annotation_name_for_test("/Popup")
+  let key_parent = annotation_name_for_test("/Parent")
+  let key_extra = annotation_name_for_test("/Extra")
+  let type_fit = annotation_name_for_test("/Fit")
+  let document = try! @pdflite.pdf_blank_document(100.0, 100.0, 2)
+  let pages = try! document.pages_of_pagetree()
+  let second_page = {
+    ..pages[1],
+    rest: try! pages[1].rest.add_dict_entry(
+      key_annots,
+      PdfArray([
+        PdfIndirect(30),
+        PdfIndirect(31),
+        PdfDictionary([(key_contents, annotation_contents_for_test("direct"))]),
+      ]),
+    ),
+  }
+  let changed = try! document.change_pages([pages[0], second_page])
+  let page_refs = try! changed.page_reference_numbers()
+  changed.add_object_given_number(
+    30,
+    PdfDictionary([
+      (key_contents, annotation_contents_for_test("json")),
+      (key_p, PdfIndirect(page_refs[1])),
+      (
+        key_a,
+        PdfDictionary([
+          (
+            key_d,
+            PdfArray([PdfIndirect(page_refs[1]), PdfNameObject(type_fit)]),
+          ),
+        ]),
+      ),
+      (key_ref, PdfIndirect(40)),
+      (key_popup, PdfIndirect(41)),
+      (key_parent, PdfIndirect(42)),
+    ]),
+  )
+  changed.add_object_given_number(
+    31,
+    PdfDictionary([
+      (key_contents, annotation_contents_for_test("dest")),
+      (key_dest, PdfArray([PdfIndirect(page_refs[0]), PdfNameObject(type_fit)])),
+    ]),
+  )
+  changed.add_object_given_number(
+    40,
+    PdfDictionary([(key_extra, annotation_contents_for_test("kept"))]),
+  )
+  changed.add_object_given_number(
+    41,
+    PdfDictionary([(key_contents, annotation_contents_for_test("popup"))]),
+  )
+  changed.add_object_given_number(
+    42,
+    PdfDictionary([(key_contents, annotation_contents_for_test("parent"))]),
+  )
+  changed
+}
+
+///|
 test "PdfDocument get_annotations returns old-style page content pairs" {
   let document = try! annotation_cpdf_helper_document_for_test()
   let expected = [
@@ -85,6 +186,76 @@ test "PdfDocument list_annotations renders selected non-empty old-style lines" {
     [3],
     encoding=PdfMetadataRaw,
   )
+  guard bad_page is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+    fail("expected @pdflite.PdfError::BadPageSpecification")
+  }
+}
+
+///|
+test "PdfDocument annotations_json exports cpdf annotation rows" {
+  let document = annotation_json_helper_document_for_test()
+  let expected_annotation = Json::object(
+    Map::of([
+      ("/Contents", annotation_json_text_for_test("json")),
+      ("/P", annotation_json_pdf_int_for_test(2)),
+      (
+        "/A",
+        Json::object(
+          Map::of([
+            (
+              "/D",
+              Json::array([
+                annotation_json_pdf_int_for_test(2),
+                annotation_json_name_for_test("/Fit"),
+              ]),
+            ),
+          ]),
+        ),
+      ),
+      ("/Ref", annotation_json_int_for_test(40)),
+      ("/Popup", annotation_json_int_for_test(41)),
+      ("/Parent", annotation_json_int_for_test(42)),
+    ]),
+  )
+  let expected_destination_annotation = Json::object(
+    Map::of([
+      ("/Contents", annotation_json_text_for_test("dest")),
+      (
+        "/Dest",
+        Json::array([
+          annotation_json_pdf_int_for_test(1),
+          annotation_json_name_for_test("/Fit"),
+        ]),
+      ),
+    ]),
+  )
+  let expected_extra = Json::object(
+    Map::of([("/Extra", annotation_json_text_for_test("kept"))]),
+  )
+  let expected = Json::array([
+    annotation_json_header_for_test(),
+    Json::array([
+      annotation_json_int_for_test(2),
+      annotation_json_int_for_test(30),
+      expected_annotation,
+    ]),
+    Json::array([
+      annotation_json_int_for_test(2),
+      annotation_json_int_for_test(31),
+      expected_destination_annotation,
+    ]),
+    Json::array([annotation_json_int_for_test(40), expected_extra]),
+  ])
+  @test.assert_eq(try! document.annotations_json([2]), expected)
+  @test.assert_eq(
+    try! @pdflite.pdf_get_annotations_json([2], document),
+    @utf8.encode(expected.stringify()),
+  )
+  @test.assert_eq(
+    try! document.annotations_json([1]),
+    Json::array([annotation_json_header_for_test()]),
+  )
+  let bad_page : Result[Json, Error] = try? document.annotations_json([3])
   guard bad_page is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
     fail("expected @pdflite.PdfError::BadPageSpecification")
   }
