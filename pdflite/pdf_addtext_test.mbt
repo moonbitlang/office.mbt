@@ -40,6 +40,26 @@ fn addtext_bounds_for_test() -> @pdflite.PdfRectangle {
 }
 
 ///|
+fn addtext_matrix_for_test(
+  x : Double,
+  y : Double,
+  base_rotation : Double,
+  horizontal_offset : Double,
+  vertical_offset : Double,
+  text_rotation : Double,
+  rotation_h_offset : Double,
+  rotation_v_offset : Double,
+) -> @pdflite.TransformMatrix {
+  @pdflite.transform_matrix_of_transform([
+    Translate(
+      x - horizontal_offset + rotation_h_offset,
+      y - vertical_offset + rotation_v_offset,
+    ),
+    Rotate(@pdflite.point2(0.0, 0.0), base_rotation + text_rotation),
+  ])
+}
+
+///|
 fn addtext_content_ops_for_test(
   document : @pdflite.PdfDocument,
   page : @pdflite.PdfPage,
@@ -229,6 +249,115 @@ test "pdf_addtext_rectangle_ops builds outlined rectangle stamps" {
       Op_gs(gs),
       Op_re(1.0, 2.0, 3.0, 4.0),
       Op_s,
+      Op_EMC,
+      Op_Q,
+      @pdflite.pdf_content_end_artifact(),
+    ],
+  )
+}
+
+///|
+test "pdf_addtext_text_ops builds simple font text stamps" {
+  let font = addtext_standard_font_for_test()
+  let font_name = addtext_name_for_test("/F0")
+  let gs = addtext_name_for_test("/gs0")
+  @test.assert_eq(
+    try! @pdflite.pdf_addtext_text_ops(
+      Some(font),
+      None,
+      100.0,
+      200.0,
+      0.25,
+      10.0,
+      20.0,
+      true,
+      0.5,
+      font_name,
+      [],
+      Some(gs),
+      PdfContentRGB(0.1, 0.2, 0.3),
+      12.0,
+      "Aé☃",
+      0.75,
+      2.0,
+      3.0,
+    ),
+    [
+      @pdflite.pdf_content_begin_artifact(),
+      Op_q,
+      Op_BMC(addtext_name_for_test("/CPDFSTAMP")),
+      Op_cm(
+        addtext_matrix_for_test(100.0, 200.0, 0.25, 10.0, 20.0, 0.75, 2.0, 3.0),
+      ),
+      Op_BT,
+      Op_w(0.5),
+      Op_Tr(1),
+      Op_rg(0.1, 0.2, 0.3),
+      Op_RG(0.1, 0.2, 0.3),
+      Op_gs(gs),
+      Op_Tf(font_name, 12.0),
+      Op_Tj(try! @pdflite.pdf_bytes_of_int_array([65, 233])),
+      Op_ET,
+      Op_EMC,
+      Op_Q,
+      @pdflite.pdf_content_end_artifact(),
+    ],
+  )
+}
+
+///|
+test "pdf_addtext_text_ops switches fontpack runs" {
+  let regular = addtext_standard_font_for_test()
+  let bold = addtext_simple_font_for_test(700.0)
+  let pack : @pdflite.PdfFontPack = {
+    fonts: [regular, bold],
+    entries: [
+      { codepoint: 65, font_index: 0, charcode: 1 },
+      { codepoint: 66, font_index: 1, charcode: 2 },
+      { codepoint: 67, font_index: 1, charcode: 3 },
+      { codepoint: 68, font_index: 0, charcode: 4 },
+    ],
+  }
+  let fallback_font = addtext_name_for_test("/Fallback")
+  let regular_name = addtext_name_for_test("/F0")
+  let bold_name = addtext_name_for_test("/F1")
+  @test.assert_eq(
+    try! @pdflite.pdf_addtext_text_ops(
+      None,
+      Some(pack),
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      false,
+      1.0,
+      fallback_font,
+      [regular_name, bold_name],
+      None,
+      PdfContentGrey(0.25),
+      10.0,
+      "ABCDZ",
+      0.0,
+      0.0,
+      0.0,
+    ),
+    [
+      @pdflite.pdf_content_begin_artifact(),
+      Op_q,
+      Op_BMC(addtext_name_for_test("/CPDFSTAMP")),
+      Op_cm(addtext_matrix_for_test(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)),
+      Op_BT,
+      Op_Tr(0),
+      Op_g(0.25),
+      Op_G(0.25),
+      Op_Tf(regular_name, 10.0),
+      Op_Tj(try! @pdflite.pdf_bytes_of_int_array([1])),
+      Op_Tf(bold_name, 10.0),
+      Op_Tj(try! @pdflite.pdf_bytes_of_int_array([2, 3])),
+      Op_Tf(regular_name, 10.0),
+      Op_Tj(try! @pdflite.pdf_bytes_of_int_array([4])),
+      Op_ET,
       Op_EMC,
       Op_Q,
       @pdflite.pdf_content_end_artifact(),

@@ -109,6 +109,8 @@ pub fn pdf_addtext_replacement_values(PdfDocument, ArrayView[PdfBookmark], Int, 
 
 pub fn pdf_addtext_split_at_newline(String) -> Array[String]
 
+pub fn pdf_addtext_text_ops(PdfFont?, PdfFontPack?, Double, Double, Double, Double, Double, Bool, Double, @core.PdfName, ArrayView[@core.PdfName], @core.PdfName?, PdfContentColour, Double, String, Double, Double, Double) -> Array[PdfContentOp] raise @core.PdfError
+
 pub fn pdf_addtext_unescape_string(String) -> String raise @core.PdfError
 
 pub fn pdf_addtext_width_of_text(PdfFont, BytesView) -> Double

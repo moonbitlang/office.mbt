@@ -2193,6 +2193,14 @@ Current backend snapshot:
   --target native --package bobzhang/pdflite --file pdf_addtext_test.mbt` at
   42/42 tests passing; native full-suite validation reports 1814/1814 tests
   passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` text-operator helper slice exposes
+  `pdf_addtext_text_ops`, covering cpdf's `/CPDFSTAMP` artifact-wrapped text
+  content ordering, translate/rotate placement matrix, outline rendering mode,
+  fill/stroke colour operators, optional opacity graphics state, simple-font
+  UTF-8-to-charcode conversion with missing-codepoint skipping, and fontpack
+  run switching. Native focused validation reports `moon test --target native
+  --package bobzhang/pdflite --file pdf_addtext_test.mbt` at 44/44 tests
+  passing; native full-suite validation reports 1816/1816 tests passing.~~
 - [x] ~~Standalone `cpdfremovetext.ml` removal slice exposes
   `pdf_remove_added_text_ops`, `pdf_remove_all_text_ops`,
   `PdfDocument::remove_added_text`, `remove_all_text`, and compatibility
