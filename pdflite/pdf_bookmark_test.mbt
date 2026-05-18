@@ -463,6 +463,131 @@ test "PdfDocument parse_bookmark_text validates plain text structure" {
 }
 
 ///|
+test "PdfDocument parse_bookmark_json reads cpdf bookmark rows" {
+  let document = try! @pdflite.pdf_blank_document(100.0, 100.0, 2)
+  let page_refs = try! document.page_reference_numbers()
+  let json = Json::array([
+    Json::object(
+      Map::of([
+        ("level", bookmark_json_int_for_test(0)),
+        ("text", Json::string("Top")),
+        ("page", bookmark_json_int_for_test(1)),
+        ("open", Json::boolean(true)),
+        (
+          "target",
+          Json::array([
+            bookmark_json_pdf_int_for_test(1),
+            bookmark_json_name_for_test("/Fit"),
+          ]),
+        ),
+        (
+          "colour",
+          Json::array([Json::number(0.1), Json::number(0.2), Json::number(0.3)]),
+        ),
+        ("italic", Json::boolean(true)),
+        ("bold", Json::boolean(false)),
+      ]),
+    ),
+    Json::object(
+      Map::of([
+        ("level", bookmark_json_int_for_test(1)),
+        ("text", Json::string("Child")),
+        ("page", bookmark_json_int_for_test(2)),
+        ("open", Json::boolean(false)),
+        (
+          "target",
+          Json::array([
+            bookmark_json_pdf_int_for_test(2),
+            bookmark_json_name_for_test("/XYZ"),
+            Json::object(Map::of([("F", Json::number(10.0))])),
+            Json::null(),
+            Json::object(Map::of([("F", Json::number(2.0))])),
+          ]),
+        ),
+        (
+          "colour",
+          Json::array([Json::number(0.0), Json::number(0.0), Json::number(0.0)]),
+        ),
+        ("italic", Json::boolean(false)),
+        ("bold", Json::boolean(true)),
+      ]),
+    ),
+    Json::object(
+      Map::of([
+        ("level", bookmark_json_int_for_test(0)),
+        ("text", Json::string("Named")),
+        ("page", bookmark_json_int_for_test(0)),
+        ("open", Json::boolean(false)),
+        ("target", Json::string("chapter")),
+        (
+          "colour",
+          Json::array([Json::number(0.0), Json::number(0.0), Json::number(0.0)]),
+        ),
+        ("italic", Json::boolean(false)),
+        ("bold", Json::boolean(false)),
+      ]),
+    ),
+  ])
+  let expected : Array[@pdflite.PdfBookmark] = [
+    {
+      level: 0,
+      text: bookmark_bytes_for_test("Top"),
+      target: DestFit(TargetPageObject(page_refs[0])),
+      is_open: true,
+      colour: bookmark_colour_for_test(0.1, 0.2, 0.3),
+      flags: 1,
+    },
+    {
+      level: 1,
+      text: bookmark_bytes_for_test("Child"),
+      target: DestXYZ(
+        TargetPageObject(page_refs[1]),
+        Some(10.0),
+        None,
+        Some(2.0),
+      ),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 2,
+    },
+    {
+      level: 0,
+      text: bookmark_bytes_for_test("Named"),
+      target: DestString(bookmark_bytes_for_test("chapter")),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+  ]
+  @test.assert_eq(try! document.parse_bookmark_json(json), expected)
+  @test.assert_eq(
+    try! @pdflite.pdf_parse_bookmark_json(true, json, document),
+    expected,
+  )
+  let updated = try! @pdflite.pdf_add_bookmarks_from_json(true, json, document)
+  @test.assert_eq(try! updated.read_bookmarks(preserve_actions=true), expected)
+}
+
+///|
+test "PdfDocument parse_bookmark_json rejects malformed rows" {
+  let document = try! @pdflite.pdf_blank_document(100.0, 100.0, 2)
+  let top_level : Result[Array[@pdflite.PdfBookmark], Error] = try? document.parse_bookmark_json(
+    Json::object(Map([])),
+  )
+  guard top_level is Err(@pdflite.PdfError::SoftError(_)) else {
+    fail("expected @pdflite.PdfError::SoftError for top-level object")
+  }
+  let malformed_row : Result[Array[@pdflite.PdfBookmark], Error] = try? document.parse_bookmark_json(
+    Json::array([
+      Json::object(Map::of([("level", bookmark_json_int_for_test(0))])),
+    ]),
+  )
+  guard malformed_row is Err(@pdflite.PdfError::SoftError(_)) else {
+    fail("expected @pdflite.PdfError::SoftError for malformed row")
+  }
+}
+
+///|
 test "PdfDocument read_bookmarks traverses outline trees" {
   let doc = bookmark_document_for_test()
   let expected : Array[@pdflite.PdfBookmark] = [
