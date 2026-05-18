@@ -118,6 +118,47 @@ test "cpdfcontent state exposes initial content states" {
 }
 
 ///|
+test "cpdfcontent state derives JSON-facing states from operator state" {
+  let clipping_path = [content_state_clipping_path_for_test()]
+  let clipping_state = @pdflite.pdf_content_clipping_state_of_paths(
+    clipping_path,
+  )
+  @test.assert_eq(clipping_state.clipping_path, clipping_path)
+  @test.assert_eq(
+    clipping_state.content_json(),
+    Json::object(
+      Map::of([("clipping path", content_state_clipping_json_for_test())]),
+    ),
+  )
+  let path_state = @pdflite.pdf_content_initial_path_state(0.0, 0.0, 10.0, 10.0).content_with_clipping_path(
+    clipping_path,
+  )
+  @test.assert_eq(path_state.clipping_path, clipping_path)
+  @test.assert_eq(
+    @pdflite.pdf_content_path_state_with_clipping_path(
+      @pdflite.pdf_content_initial_path_state(0.0, 0.0, 10.0, 10.0),
+      clipping_path,
+    ).clipping_path,
+    clipping_path,
+  )
+  let text_state = @pdflite.pdf_content_initial_text_state()
+    .content_apply_text_state_op(
+      Op_Tf(content_state_name_for_test("/F2"), 13.0),
+    )
+    .content_apply_text_state_op(Op_Tr(5))
+  let glyph_state = text_state.content_glyph_state(clipping_path)
+  @test.assert_eq(glyph_state.rendering_mode, 5)
+  @test.assert_eq(glyph_state.knockout, true)
+  @test.assert_eq(glyph_state.font, "/F2")
+  @test.assert_eq(glyph_state.font_size, 13.0)
+  @test.assert_eq(glyph_state.clipping_path, clipping_path)
+  @test.assert_eq(
+    @pdflite.pdf_content_glyph_state_of_text_state(text_state, clipping_path),
+    glyph_state,
+  )
+}
+
+///|
 test "cpdfcontent state applies basic path-state operators" {
   let initial = @pdflite.pdf_content_initial_path_state(0.0, 0.0, 10.0, 10.0)
   let state = initial

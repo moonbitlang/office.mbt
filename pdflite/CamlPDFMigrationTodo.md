@@ -2681,6 +2681,18 @@ Current backend snapshot:
   reports `moon test --target native --package bobzhang/pdflite --file
   pdf_content_text_test.mbt` at 13/13 tests passing; native full-suite
   validation reports 1945/1945 tests passing.~~
+- [x] ~~Standalone `cpdfcontent.ml` JSON-facing state adapter slice exposes
+  `pdf_content_clipping_state_of_paths`,
+  `PdfContentPathState::content_with_clipping_path`,
+  `pdf_content_path_state_with_clipping_path`,
+  `PdfContentTextState::content_glyph_state`, and
+  `pdf_content_glyph_state_of_text_state`, matching cpdf's reuse of the current
+  clipping path stack across clipping-only/path/glyph JSON states and glyph
+  state projection from text rendering mode, knockout, font, and font size
+  while leaving the full stateful content walker for later slices. Native
+  focused validation reports `moon test --target native --package
+  bobzhang/pdflite --file pdf_content_state_test.mbt` at 8/8 tests passing;
+  native full-suite validation reports 1946/1946 tests passing.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,

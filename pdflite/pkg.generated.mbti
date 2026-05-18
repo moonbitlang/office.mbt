@@ -375,6 +375,8 @@ pub fn pdf_content_charcodes_of_bytes(BytesView, PdfFont) -> Array[Int]
 
 pub fn pdf_content_clipping_state_content_json(PdfContentClippingState) -> Json
 
+pub fn pdf_content_clipping_state_of_paths(ArrayView[PdfPath]) -> PdfContentClippingState
+
 pub fn pdf_content_colour_values_content_json(PdfContentColourValues) -> Json
 
 pub fn pdf_content_concat_stream_views(ArrayView[BytesView]) -> Bytes
@@ -388,6 +390,8 @@ pub fn pdf_content_end_artifact() -> PdfContentOp
 pub fn pdf_content_extra_metrics(PdfFont) -> (Double, Double)
 
 pub fn pdf_content_glyph_state_content_json(PdfContentGlyphState) -> Json
+
+pub fn pdf_content_glyph_state_of_text_state(PdfContentTextState, ArrayView[PdfPath]) -> PdfContentGlyphState
 
 pub fn pdf_content_initial_clipping_path(Double, Double, Double, Double) -> Array[PdfPath]
 
@@ -412,6 +416,8 @@ pub fn pdf_content_no_partial_path() -> PdfContentPartialPath
 pub fn pdf_content_object_content_json(PdfContentObject) -> Json
 
 pub fn pdf_content_path_state_content_json(PdfContentPathState) -> Json
+
+pub fn pdf_content_path_state_with_clipping_path(PdfContentPathState, ArrayView[PdfPath]) -> PdfContentPathState
 
 pub fn pdf_content_read_pattern(PdfDocument, PdfObject, @core.PdfName) -> PdfContentPattern? raise @core.PdfError
 
@@ -2061,6 +2067,7 @@ pub(all) struct PdfContentPathState {
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfContentPathState::content_apply_path_state_op(Self, PdfContentOp) -> Self
 pub fn PdfContentPathState::content_json(Self) -> Json
+pub fn PdfContentPathState::content_with_clipping_path(Self, ArrayView[PdfPath]) -> Self
 
 pub(all) enum PdfContentPattern {
   PdfContentColouredTilingPattern(PdfContentTiling)
@@ -2147,6 +2154,7 @@ pub(all) struct PdfContentTextState {
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfContentTextState::content_apply_text_op(Self, PdfFont, @geometry.TransformMatrix, PdfContentOp) -> PdfContentTextOpResult
 pub fn PdfContentTextState::content_apply_text_state_op(Self, PdfContentOp) -> Self
+pub fn PdfContentTextState::content_glyph_state(Self, ArrayView[PdfPath]) -> PdfContentGlyphState
 pub fn PdfContentTextState::content_text_layout(Self, @geometry.TransformMatrix) -> PdfContentTextLayout
 
 pub(all) enum PdfContentTiling {
