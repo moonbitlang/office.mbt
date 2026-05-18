@@ -14,6 +14,19 @@ pub(all) struct PdfFontListEntry {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// One cpdf-style missing-font report entry.
+///
+/// `encoding == "Built-in"` records cpdf's fallback when a missing font does
+/// not have a named `/Encoding`.
+pub(all) struct PdfMissingFontEntry {
+  page : Int
+  name : String
+  subtype : String
+  basefont : String
+  encoding : String
+} derive(Debug, Eq, ToJson)
+
+///|
 fn PdfDocument::pdf_font_name_field(
   self : PdfDocument,
   font : PdfObject,
@@ -277,6 +290,173 @@ pub fn pdf_fonts_json_blob(
   page_numbers : ArrayView[Int],
 ) -> PdfBytes raise PdfError {
   document.fonts_json_blob(page_numbers)
+}
+
+///|
+fn PdfDocument::pdf_font_has_embedded_file(
+  self : PdfDocument,
+  descriptor : PdfObject,
+) -> Bool {
+  self.lookup_direct(pdf_text_font_file_key_name, descriptor) is Some(_) ||
+  self.lookup_direct(pdf_text_font_file2_key_name, descriptor) is Some(_) ||
+  self.lookup_direct(pdf_text_font_file3_key_name, descriptor) is Some(_)
+}
+
+///|
+/// Return whether a font dictionary has no embedded font program.
+///
+/// Type 3 fonts are never reported as missing, matching cpdf. Other fonts are
+/// missing when they have no `/FontDescriptor`, or when their descriptor lacks
+/// `/FontFile`, `/FontFile2`, and `/FontFile3`.
+pub fn PdfDocument::is_missing_font(
+  self : PdfDocument,
+  font : PdfObject,
+) -> Bool {
+  match self.lookup_direct(pdf_text_subtype_key_name, font) {
+    Some(PdfNameObject(name)) if name == pdf_text_type3_name => false
+    _ =>
+      match self.lookup_direct(pdf_text_font_descriptor_key_name, font) {
+        None => true
+        Some(descriptor) => !self.pdf_font_has_embedded_file(descriptor)
+      }
+  }
+}
+
+///|
+fn PdfDocument::pdf_missing_font_entry(
+  self : PdfDocument,
+  page : Int,
+  name : PdfName,
+  font : PdfObject,
+) -> PdfMissingFontEntry raise PdfError {
+  let encoding = match
+    self.pdf_font_name_field(font, pdf_text_encoding_key_name) {
+    "" => "Built-in"
+    value => value
+  }
+  {
+    page,
+    name: pdf_util_string_from_name(name),
+    subtype: self.pdf_font_name_field(font, pdf_text_subtype_key_name),
+    basefont: self.pdf_font_name_field(font, pdf_text_base_font_key_name),
+    encoding,
+  }
+}
+
+///|
+fn PdfDocument::pdf_missing_font_candidates(
+  self : PdfDocument,
+  name : PdfName,
+  font : PdfObject,
+) -> Array[(PdfName, PdfObject)] {
+  match self.lookup_direct(pdf_text_descendant_fonts_key_name, font) {
+    Some(PdfArray(descendants)) =>
+      [
+        for descendant in descendants => (name, descendant)
+      ]
+    _ => [(name, font)]
+  }
+}
+
+///|
+fn PdfDocument::pdf_missing_fonts_on_page(
+  self : PdfDocument,
+  page : Int,
+  resources : PdfObject,
+) -> Array[PdfMissingFontEntry] raise PdfError {
+  let output : Array[PdfMissingFontEntry] = []
+  match self.lookup_direct(pdf_page_font_resource_name, resources) {
+    Some(PdfDictionary(fonts)) =>
+      for font_entry in fonts {
+        for
+          candidate in self.pdf_missing_font_candidates(
+            font_entry.0,
+            font_entry.1,
+          ) {
+          if self.is_missing_font(candidate.1) {
+            output.push(
+              self.pdf_missing_font_entry(page, candidate.0, candidate.1),
+            )
+          }
+        }
+      }
+    _ => ()
+  }
+  output
+}
+
+///|
+/// Return cpdf's missing-font report for selected pages.
+///
+/// This follows cpdf's current behavior by inspecting page `/Font` resources and
+/// descendant fonts. It does not recurse into Form XObjects; the cpdf source
+/// marks that as a separate FIXME.
+pub fn PdfDocument::missing_fonts(
+  self : PdfDocument,
+  page_numbers : ArrayView[Int],
+) -> Array[PdfMissingFontEntry] raise PdfError {
+  let pages = self.pages_of_pagetree()
+  pdf_page_box_validate_page_numbers(
+    page_numbers,
+    pages.length(),
+    "missing_fonts",
+  )
+  let output : Array[PdfMissingFontEntry] = []
+  for index, page in pages {
+    let page_number = index + 1
+    if pdf_page_box_contains_page(page_numbers, page_number) {
+      output.append(self.pdf_missing_fonts_on_page(page_number, page.resources))
+    }
+  }
+  output
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::missing_fonts`.
+pub fn pdf_missing_fonts(
+  document : PdfDocument,
+  page_numbers : ArrayView[Int],
+) -> Array[PdfMissingFontEntry] raise PdfError {
+  document.missing_fonts(page_numbers)
+}
+
+///|
+fn pdf_missing_font_push_text(
+  output : Array[Byte],
+  entry : PdfMissingFontEntry,
+) -> Unit {
+  pdf_font_push_utf8(output, entry.page.to_string())
+  pdf_font_push_utf8(output, ", ")
+  pdf_font_push_utf8(output, entry.name)
+  pdf_font_push_utf8(output, ", ")
+  pdf_font_push_utf8(output, entry.subtype)
+  pdf_font_push_utf8(output, ", ")
+  pdf_font_push_utf8(output, entry.basefont)
+  pdf_font_push_utf8(output, ", ")
+  pdf_font_push_utf8(output, entry.encoding)
+  output.push(10)
+}
+
+///|
+/// Render cpdf's plain-text missing-font report for selected pages.
+pub fn PdfDocument::missing_fonts_text(
+  self : PdfDocument,
+  page_numbers : ArrayView[Int],
+) -> PdfBytes raise PdfError {
+  let output : Array[Byte] = []
+  for entry in self.missing_fonts(page_numbers) {
+    pdf_missing_font_push_text(output, entry)
+  }
+  Bytes::from_array(output)
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::missing_fonts_text`.
+pub fn pdf_missing_fonts_text(
+  document : PdfDocument,
+  page_numbers : ArrayView[Int],
+) -> PdfBytes raise PdfError {
+  document.missing_fonts_text(page_numbers)
 }
 
 ///|

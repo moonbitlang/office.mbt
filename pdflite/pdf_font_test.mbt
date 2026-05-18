@@ -81,6 +81,43 @@ fn font_font_object_for_test(
 }
 
 ///|
+fn font_font_object_with_descriptor_for_test(
+  subtype : String,
+  basefont : String,
+  encoding : String?,
+  descriptor : @pdflite.PdfObject,
+) -> @pdflite.PdfObject {
+  guard font_font_object_for_test(subtype, basefont, encoding)
+    is PdfDictionary(entries) else {
+    return PdfDictionary([])
+  }
+  entries.push((font_name_for_test("/FontDescriptor"), descriptor))
+  PdfDictionary(entries)
+}
+
+///|
+fn font_composite_font_for_test(
+  descendants : ArrayView[@pdflite.PdfObject],
+) -> @pdflite.PdfObject {
+  guard font_font_object_for_test("/Type0", "/CompositeFont", None)
+    is PdfDictionary(entries) else {
+    return PdfDictionary([])
+  }
+  entries.push(
+    (
+      font_name_for_test("/DescendantFonts"),
+      PdfArray([ for descendant in descendants => descendant ]),
+    ),
+  )
+  PdfDictionary(entries)
+}
+
+///|
+fn font_descriptor_without_files_for_test() -> @pdflite.PdfObject {
+  PdfDictionary([(font_name_for_test("/Flags"), PdfInteger(4))])
+}
+
+///|
 fn font_minimal_font_object_for_test() -> @pdflite.PdfObject {
   PdfDictionary([
     (font_name_for_test("/Type"), PdfNameObject(font_name_for_test("/Font"))),
@@ -161,6 +198,108 @@ fn font_listing_document_for_test() -> @pdflite.PdfDocument {
     page,
     @pdflite.pdf_page_blank(@pdflite.paper_a4),
   ])
+  ignore(try! doc.add_root(page_root, []))
+  doc
+}
+
+///|
+fn font_missing_document_for_test() -> @pdflite.PdfDocument {
+  let key_font = font_name_for_test("/Font")
+  let key_xobject = font_name_for_test("/XObject")
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(4, PdfString(@ascii.encode("font one")))
+  doc.add_object_given_number(5, PdfString(@ascii.encode("font two")))
+  doc.add_object_given_number(6, PdfString(@ascii.encode("font three")))
+  doc.add_object_given_number(
+    40,
+    font_font_object_for_test("/Type1", "/MissingOne", None),
+  )
+  doc.add_object_given_number(
+    41,
+    font_font_object_for_test("/Type3", "/InlineType3", None),
+  )
+  doc.add_object_given_number(
+    42,
+    font_font_object_with_descriptor_for_test(
+      "/Type1",
+      "/EmbeddedOne",
+      None,
+      PdfIndirect(48),
+    ),
+  )
+  doc.add_object_given_number(
+    43,
+    font_composite_font_for_test([PdfIndirect(45), PdfIndirect(46)]),
+  )
+  doc.add_object_given_number(
+    44,
+    font_font_object_with_descriptor_for_test(
+      "/Type1",
+      "/DescriptorMissing",
+      Some("/MacRomanEncoding"),
+      PdfIndirect(49),
+    ),
+  )
+  doc.add_object_given_number(
+    45,
+    font_font_object_for_test("/CIDFontType2", "/CIDMissing", None),
+  )
+  doc.add_object_given_number(
+    46,
+    font_font_object_with_descriptor_for_test(
+      "/CIDFontType2",
+      "/CIDEmbedded",
+      None,
+      PdfIndirect(48),
+    ),
+  )
+  doc.add_object_given_number(
+    47,
+    font_font_object_for_test("/Type1", "/SecondPageMissing", None),
+  )
+  doc.add_object_given_number(48, font_descriptor_for_test())
+  doc.add_object_given_number(49, font_descriptor_without_files_for_test())
+  doc.add_object_given_number(
+    50,
+    font_form_xobject_for_test(
+      PdfDictionary([
+        (
+          key_font,
+          font_resource_dictionary_for_test([("/XF", PdfIndirect(51))]),
+        ),
+      ]),
+    ),
+  )
+  doc.add_object_given_number(
+    51,
+    font_font_object_for_test("/Type1", "/XObjectMissing", None),
+  )
+  let first_page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: PdfDictionary([
+      (
+        key_font,
+        font_resource_dictionary_for_test([
+          ("/F1", PdfIndirect(40)),
+          ("/F2", PdfIndirect(41)),
+          ("/F3", PdfIndirect(42)),
+          ("/F4", PdfIndirect(43)),
+          ("/F5", PdfIndirect(44)),
+        ]),
+      ),
+      (
+        key_xobject,
+        font_resource_dictionary_for_test([("/Fm", PdfIndirect(50))]),
+      ),
+    ]),
+  }
+  let second_page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: PdfDictionary([
+      (key_font, font_resource_dictionary_for_test([("/F6", PdfIndirect(47))])),
+    ]),
+  }
+  let page_root = try! doc.add_pagetree([first_page, second_page])
   ignore(try! doc.add_root(page_root, []))
   doc
 }
@@ -296,4 +435,56 @@ test "PdfDocument font listing renders text and JSON" {
     try! @pdflite.pdf_fonts_json_blob(doc, [1]),
     @utf8.encode(expected.stringify()),
   )
+}
+
+///|
+test "PdfDocument missing_fonts reports page and descendant fonts" {
+  let doc = font_missing_document_for_test()
+  let missing = try! doc.missing_fonts([1])
+  let wrapped = try! @pdflite.pdf_missing_fonts(doc, [1])
+  @test.assert_eq(wrapped, missing)
+  @test.assert_eq(missing.length(), 3)
+  @test.assert_eq(missing[0].page, 1)
+  @test.assert_eq(missing[0].name, "/F1")
+  @test.assert_eq(missing[0].subtype, "/Type1")
+  @test.assert_eq(missing[0].basefont, "/MissingOne")
+  @test.assert_eq(missing[0].encoding, "Built-in")
+  @test.assert_eq(missing[1].name, "/F4")
+  @test.assert_eq(missing[1].subtype, "/CIDFontType2")
+  @test.assert_eq(missing[1].basefont, "/CIDMissing")
+  @test.assert_eq(missing[1].encoding, "Built-in")
+  @test.assert_eq(missing[2].name, "/F5")
+  @test.assert_eq(missing[2].subtype, "/Type1")
+  @test.assert_eq(missing[2].basefont, "/DescriptorMissing")
+  @test.assert_eq(missing[2].encoding, "/MacRomanEncoding")
+  let second_page = try! doc.missing_fonts([2])
+  @test.assert_eq(second_page.length(), 1)
+  @test.assert_eq(second_page[0].name, "/F6")
+  @test.assert_eq(second_page[0].basefont, "/SecondPageMissing")
+  @test.assert_eq(doc.is_missing_font(doc.lookup_object_or_null(40)), true)
+  @test.assert_eq(doc.is_missing_font(doc.lookup_object_or_null(41)), false)
+  @test.assert_eq(doc.is_missing_font(doc.lookup_object_or_null(42)), false)
+  @test.assert_eq(doc.is_missing_font(doc.lookup_object_or_null(44)), true)
+  let bad_page : Result[Array[@pdflite.PdfMissingFontEntry], Error] = try? doc.missing_fonts([
+      3,
+    ],
+  )
+  guard bad_page is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+    fail("expected BadPageSpecification")
+  }
+}
+
+///|
+test "PdfDocument missing_fonts_text matches cpdf rows" {
+  let doc = font_missing_document_for_test()
+  let text = try! doc.missing_fonts_text([1])
+  @test.assert_eq(
+    text,
+    @ascii.encode(
+      "1, /F1, /Type1, /MissingOne, Built-in\n" +
+      "1, /F4, /CIDFontType2, /CIDMissing, Built-in\n" +
+      "1, /F5, /Type1, /DescriptorMissing, /MacRomanEncoding\n",
+    ),
+  )
+  @test.assert_eq(try! @pdflite.pdf_missing_fonts_text(doc, [1]), text)
 }

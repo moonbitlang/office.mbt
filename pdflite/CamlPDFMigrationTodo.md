@@ -2065,6 +2065,15 @@ Current backend snapshot:
   rejection. Native focused validation reports `moon test --target native
   pdf_font_test.mbt` at 3/3 tests passing; native full-suite validation reports
   1750/1750 tests passing.~~
+- [x] ~~Standalone `cpdffont.ml` missing-font reporting slice now exposes
+  `PdfMissingFontEntry`, `PdfDocument::is_missing_font`, `missing_fonts`,
+  `missing_fonts_text`, and compatibility wrappers, covering Type3 exclusion,
+  missing descriptors, embedded `/FontFile*` descriptors, descriptor-without-file
+  detection, descendant-font expansion, cpdf's page-resource-only traversal,
+  Built-in encoding fallback, wrapper parity, and invalid-page rejection. Native
+  focused validation reports `moon test --target native pdf_font_test.mbt` at
+  5/5 tests passing; native full-suite validation reports 1752/1752 tests
+  passing.~~
 - [x] ~~Page labels, bookmarks, annotations, duplicate annotation repair,
   old-style destinations, name-tree destinations, `/OpenAction`, optional
   content, AcroForm merge basics, trailer `/Info`, and structure-tree

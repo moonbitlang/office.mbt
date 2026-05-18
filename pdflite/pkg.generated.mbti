@@ -509,6 +509,10 @@ pub let pdf_metadata_xmp_namespace : String
 
 pub fn pdf_minimum_valid_pdf() -> PdfDocument raise @core.PdfError
 
+pub fn pdf_missing_fonts(PdfDocument, ArrayView[Int]) -> Array[PdfMissingFontEntry] raise @core.PdfError
+
+pub fn pdf_missing_fonts_text(PdfDocument, ArrayView[Int]) -> Bytes raise @core.PdfError
+
 pub fn pdf_name_of_bytes(Bytes) -> @core.PdfName
 
 pub fn pdf_name_of_colour_space(PdfColourSpace) -> @core.PdfName?
@@ -1711,6 +1715,7 @@ pub fn PdfDocument::info_json_blob(Self, encoding? : PdfMetadataEncoding, unit? 
 pub fn PdfDocument::info_utf8(Self, @core.PdfName) -> String
 pub fn PdfDocument::is_cidkeyed_font(Self, PdfObject) -> Bool
 pub fn PdfDocument::is_encrypted(Self) -> Bool
+pub fn PdfDocument::is_missing_font(Self, PdfObject) -> Bool
 pub fn PdfDocument::is_simple_font(Self, PdfObject) -> Bool
 pub fn PdfDocument::is_standard14_font(Self, PdfObject) -> Bool
 pub fn PdfDocument::is_xfa(Self) -> Bool
@@ -1740,6 +1745,8 @@ pub fn PdfDocument::merge_content_streams(Self) -> Unit raise @core.PdfError
 pub fn PdfDocument::merge_name_trees_no_clash(Self, ArrayView[PdfObject]) -> PdfObject
 pub fn PdfDocument::merge_number_trees_no_clash(Self, ArrayView[PdfObject]) -> PdfObject
 pub fn PdfDocument::metadata(Self) -> Bytes? raise @core.PdfError
+pub fn PdfDocument::missing_fonts(Self, ArrayView[Int]) -> Array[PdfMissingFontEntry] raise @core.PdfError
+pub fn PdfDocument::missing_fonts_text(Self, ArrayView[Int]) -> Bytes raise @core.PdfError
 pub fn PdfDocument::name_tree_lookup(Self, BytesView, PdfObject) -> PdfObject?
 pub fn PdfDocument::name_tree_lookup_object(Self, PdfObject, PdfObject) -> PdfObject?
 pub fn PdfDocument::number_tree_lookup(Self, Int, PdfObject) -> PdfObject?
@@ -2034,6 +2041,14 @@ pub(all) enum PdfMetadataEncoding {
   PdfMetadataRaw
   PdfMetadataUTF8
   PdfMetadataStripped
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfMissingFontEntry {
+  page : Int
+  name : String
+  subtype : String
+  basefont : String
+  encoding : String
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) enum PdfObject {
