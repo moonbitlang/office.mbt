@@ -99,6 +99,7 @@ fn PdfDocument::pdf_util_json_of_object(
   utf8 : Bool,
   clean_strings : Bool,
   no_stream_data : Bool,
+  decompress_streams : Bool,
 ) -> Json raise PdfError {
   match object {
     PdfNull => Json::null()
@@ -129,7 +130,7 @@ fn PdfDocument::pdf_util_json_of_object(
       for value in values {
         json_values.push(
           self.pdf_util_json_of_object(
-            value, utf8, clean_strings, no_stream_data,
+            value, utf8, clean_strings, no_stream_data, decompress_streams,
           ),
         )
       }
@@ -145,16 +146,22 @@ fn PdfDocument::pdf_util_json_of_object(
             utf8,
             clean_strings,
             no_stream_data,
+            decompress_streams,
           ),
         )
       }
       Json::object(json_entries)
     }
     PdfStreamObject(stream) => {
+      let output_stream = if decompress_streams {
+        self.pdf_decode_stream_until_unknown_value_direct(stream)
+      } else {
+        stream
+      }
       let stream_data_json = if no_stream_data {
         Json::string("<<stream data elided>>")
       } else {
-        let stream_data = PdfStreamObject(stream).stream_bytes()
+        let stream_data = PdfStreamObject(output_stream).stream_bytes()
         Json::string(pdf_util_string_from_bytes(stream_data))
       }
       Json::object(
@@ -163,10 +170,11 @@ fn PdfDocument::pdf_util_json_of_object(
             "S",
             Json::array([
               self.pdf_util_json_of_object(
-                stream.dictionary,
+                output_stream.dictionary,
                 utf8,
                 clean_strings,
                 no_stream_data,
+                decompress_streams,
               ),
               stream_data_json,
             ]),
@@ -194,7 +202,9 @@ pub fn PdfDocument::json_of_object(
   clean_strings? : Bool = false,
   no_stream_data? : Bool = false,
 ) -> Json raise PdfError {
-  self.pdf_util_json_of_object(object, utf8, clean_strings, no_stream_data)
+  self.pdf_util_json_of_object(
+    object, utf8, clean_strings, no_stream_data, false,
+  )
 }
 
 ///|
@@ -399,7 +409,7 @@ fn PdfDocument::pdf_util_json_of_content_op(
       pdf_util_json_op_items(
         [
           pdf_util_json_name_object(tag),
-          self.pdf_util_json_of_object(object, utf8, false, false),
+          self.pdf_util_json_of_object(object, utf8, false, false, false),
         ],
         "BDC",
       )
@@ -515,7 +525,7 @@ fn PdfDocument::pdf_util_json_of_content_op(
     Op_Tj(text) => pdf_util_json_op_items([pdf_util_json_op_string(text)], "Tj")
     Op_TJ(object) =>
       pdf_util_json_op_items(
-        [self.pdf_util_json_of_object(object, utf8, false, false)],
+        [self.pdf_util_json_of_object(object, utf8, false, false, false)],
         "TJ",
       )
     Op_quote(text) =>
@@ -594,14 +604,14 @@ fn PdfDocument::pdf_util_json_of_content_op(
       pdf_util_json_op_items(
         [
           pdf_util_json_name_object(tag),
-          self.pdf_util_json_of_object(object, utf8, false, false),
+          self.pdf_util_json_of_object(object, utf8, false, false, false),
         ],
         "DP",
       )
     Op_InlineImage(dictionary, _, data) =>
       pdf_util_json_op_items(
         [
-          self.pdf_util_json_of_object(dictionary, utf8, false, false),
+          self.pdf_util_json_of_object(dictionary, utf8, false, false, false),
           pdf_util_json_op_string(data),
         ],
         "InlineImage",
@@ -1252,7 +1262,7 @@ fn PdfDocument::pdf_util_json_of_parsed_content_stream(
             "S",
             Json::array([
               self.pdf_util_json_of_object(
-                dictionary, utf8, clean_strings, no_stream_data,
+                dictionary, utf8, clean_strings, no_stream_data, false,
               ),
               Json::array(op_jsons),
             ]),
@@ -1289,6 +1299,7 @@ fn PdfDocument::pdf_util_document_params_json(
     utf8,
     false,
     false,
+    false,
   )
 }
 
@@ -1308,14 +1319,16 @@ fn pdf_util_document_json_entry(number : Int, object : Json) -> Json {
 /// set for non-UTF8 output, UTF-16BE strings in positive objects are simplified
 /// while the trailer dictionary is left unchanged to match cpdf's `/ID`
 /// precaution. When `no_stream_data` is set, ordinary stream data is elided
-/// and CPDFJSON metadata records that omission. Forced decompression remains a
-/// separate CPDFJSON option slice.
+/// and CPDFJSON metadata records that omission. When `decompress_streams` is
+/// set, positive object streams are decoded through supported filters until
+/// the first unknown filter.
 pub fn PdfDocument::json_of_document(
   self : PdfDocument,
   utf8? : Bool = false,
   parse_content? : Bool = false,
   clean_strings? : Bool = false,
   no_stream_data? : Bool = false,
+  decompress_streams? : Bool = false,
 ) -> Json raise PdfError {
   let entries : Array[Json] = []
   entries.push(
@@ -1332,6 +1345,7 @@ pub fn PdfDocument::json_of_document(
         utf8,
         false,
         no_stream_data,
+        false,
       ),
     ),
   )
@@ -1349,7 +1363,9 @@ pub fn PdfDocument::json_of_document(
         object, utf8, clean_strings, no_stream_data,
       )
     } else {
-      self.pdf_util_json_of_object(object, utf8, clean_strings, no_stream_data)
+      self.pdf_util_json_of_object(
+        object, utf8, clean_strings, no_stream_data, decompress_streams,
+      )
     }
     entries.push(pdf_util_document_json_entry(number, object_json))
   }
@@ -1519,7 +1535,7 @@ pub fn PdfDocument::dict_entries_json(
 ) -> PdfBytes raise PdfError {
   let values : Array[Json] = []
   for value in self.dict_entry_values(key) {
-    values.push(self.pdf_util_json_of_object(value, utf8, false, false))
+    values.push(self.pdf_util_json_of_object(value, utf8, false, false, false))
   }
   @utf8.encode(Json::array(values).stringify())
 }
@@ -1572,12 +1588,14 @@ pub fn pdf_json_of_document(
   parse_content? : Bool = false,
   clean_strings? : Bool = false,
   no_stream_data? : Bool = false,
+  decompress_streams? : Bool = false,
 ) -> Json raise PdfError {
   document.json_of_document(
     utf8~,
     parse_content~,
     clean_strings~,
     no_stream_data~,
+    decompress_streams~,
   )
 }
 

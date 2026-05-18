@@ -485,6 +485,74 @@ test "PdfDocument CPDFJSON output honors no_stream_data option" {
 }
 
 ///|
+test "PdfDocument CPDFJSON document output honors decompress_streams option" {
+  let key_root = util_name_for_test("/Root")
+  let key_length = util_name_for_test("/Length")
+  let key_filter = util_name_for_test("/Filter")
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(1))]))
+  doc.add_object_given_number(1, @pdflite.pdf_dictionary([]))
+  doc.add_object_given_number(
+    5,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (key_length, PdfInteger(5)),
+        (key_filter, PdfNameObject(util_name_for_test("/ASCIIHexDecode"))),
+      ]),
+      StreamGot(@ascii.encode("4869>")),
+    ),
+  )
+
+  let raw = try! doc.json_of_document()
+  guard util_cpdfjson_entry_for_test(raw, 5) is Some(Object(raw_wrapper)) else {
+    fail("expected raw stream wrapper")
+  }
+  guard raw_wrapper.get("S") is Some(Array([Object(raw_dict), String("4869>")])) else {
+    fail("expected encoded stream data before decompression")
+  }
+  @test.assert_eq(
+    raw_dict.get("/Filter"),
+    Some(Json::object(Map::of([("N", Json::string("/ASCIIHexDecode"))]))),
+  )
+
+  let decompressed = try! doc.json_of_document(decompress_streams=true)
+  @test.assert_eq(
+    try! @pdflite.pdf_json_of_document(doc, decompress_streams=true),
+    decompressed,
+  )
+  guard util_cpdfjson_entry_for_test(decompressed, 5)
+    is Some(Object(decoded_wrapper)) else {
+    fail("expected decoded stream wrapper")
+  }
+  guard decoded_wrapper.get("S")
+    is Some(Array([Object(decoded_dict), String("Hi")])) else {
+    fail("expected decoded stream data")
+  }
+  @test.assert_eq(decoded_dict.get("/Filter"), None)
+  @test.assert_eq(
+    decoded_dict.get("/Length"),
+    Some(Json::object(Map::of([("I", Json::number(2.0, repr="2"))]))),
+  )
+
+  let elided = try! doc.json_of_document(
+    decompress_streams=true,
+    no_stream_data=true,
+  )
+  guard util_cpdfjson_entry_for_test(elided, 5) is Some(Object(elided_wrapper)) else {
+    fail("expected elided decoded stream wrapper")
+  }
+  guard elided_wrapper.get("S")
+    is Some(Array([Object(elided_dict), String("<<stream data elided>>")])) else {
+    fail("expected elided decoded stream data")
+  }
+  @test.assert_eq(elided_dict.get("/Filter"), None)
+  @test.assert_eq(
+    elided_dict.get("/Length"),
+    Some(Json::object(Map::of([("I", Json::number(2.0, repr="2"))]))),
+  )
+}
+
+///|
 test "pdf_object_of_json decodes cpdf single-object wrappers" {
   let key_array = util_name_for_test("/Array")
   let key_name = util_name_for_test("/Name")

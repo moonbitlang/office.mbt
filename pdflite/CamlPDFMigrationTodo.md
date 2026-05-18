@@ -1794,6 +1794,14 @@ Current backend snapshot:
   still serialize as operation arrays. Native focused validation reports
   `moon test --target native pdf_util_test.mbt` at 22/22 tests passing; native
   full-suite validation reports 1709/1709 tests passing.~~
+- [x] ~~Standalone `cpdfjson.ml` forced stream decompression output slice now
+  extends `PdfDocument::json_of_document` and `pdf_json_of_document` with
+  `decompress_streams=true`, covering supported-filter stream decoding,
+  `/Filter` removal, `/Length` refresh, wrapper parity, and the
+  `no_stream_data=true` interaction where decoded dictionaries are still
+  emitted with stream bytes elided. Native focused validation reports
+  `moon test --target native pdf_util_test.mbt` at 23/23 tests passing; native
+  full-suite validation reports 1710/1710 tests passing.~~
 - [x] ~~Standalone `cpdfpagelabels.ml` JSON adapter slice now exposes
   `PdfDocument::add_page_labels_json` and `pdf_add_page_labels_json`, covering
   cpdf's page-label JSON array shape, UTF-8 prefix-to-PDFDocString encoding,
