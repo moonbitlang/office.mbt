@@ -225,6 +225,104 @@ pub fn pdf_content_is_vertical(font : PdfFont) -> Bool {
 }
 
 ///|
+/// Text state tracked by cpdfcontent before glyph layout is emitted.
+pub(all) struct PdfContentTextState {
+  character_spacing : Double
+  word_spacing : Double
+  horizontal_scaling : Double
+  leading : Double
+  font : String
+  font_size : Double
+  rendering_mode : Int
+  rise : Double
+  text_matrix : TransformMatrix
+  line_matrix : TransformMatrix
+} derive(Debug, Eq, ToJson)
+
+///|
+/// Return cpdfcontent's initial text state.
+pub fn pdf_content_initial_text_state() -> PdfContentTextState {
+  {
+    character_spacing: 0.0,
+    word_spacing: 0.0,
+    horizontal_scaling: 1.0,
+    leading: 0.0,
+    font: "",
+    font_size: 12.0,
+    rendering_mode: 0,
+    rise: 0.0,
+    text_matrix: transform_identity_matrix,
+    line_matrix: transform_identity_matrix,
+  }
+}
+
+///|
+fn pdf_content_text_state_name_text(name : PdfName) -> String {
+  @ascii.decode_lossy(name.bytes())
+}
+
+///|
+fn PdfContentTextState::content_text_move(
+  self : PdfContentTextState,
+  tx : Double,
+  ty : Double,
+) -> PdfContentTextState {
+  let line_matrix = transform_matrix_compose(
+    self.line_matrix,
+    transform_translate(tx, ty),
+  )
+  { ..self, text_matrix: line_matrix, line_matrix }
+}
+
+///|
+/// Apply cpdfcontent text-state operators that do not require font resources.
+pub fn PdfContentTextState::content_apply_text_state_op(
+  self : PdfContentTextState,
+  op : PdfContentOp,
+) -> PdfContentTextState {
+  match op {
+    Op_BT =>
+      {
+        ..self,
+        text_matrix: transform_identity_matrix,
+        line_matrix: transform_identity_matrix,
+      }
+    Op_ET => self
+    Op_Tc(spacing) => { ..self, character_spacing: spacing }
+    Op_Tw(spacing) => { ..self, word_spacing: spacing }
+    Op_Tz(scale) => { ..self, horizontal_scaling: scale / 100.0 }
+    Op_TL(leading) => { ..self, leading, }
+    Op_Tf(font, size) =>
+      { ..self, font: pdf_content_text_state_name_text(font), font_size: size }
+    Op_Tr(mode) => { ..self, rendering_mode: mode }
+    Op_Ts(rise) => { ..self, rise, }
+    Op_Td(tx, ty) => self.content_text_move(tx, ty)
+    Op_TD(tx, ty) =>
+      self
+      .content_apply_text_state_op(Op_TL(-ty))
+      .content_apply_text_state_op(Op_Td(tx, ty))
+    Op_Tm(matrix) => { ..self, text_matrix: matrix, line_matrix: matrix }
+    Op_Tstar => self.content_apply_text_state_op(Op_TD(0.0, -self.leading))
+    Op_quote(_) => self.content_apply_text_state_op(Op_Tstar)
+    Op_double_quote(word_spacing, character_spacing, _) =>
+      self
+      .content_apply_text_state_op(Op_Tw(word_spacing))
+      .content_apply_text_state_op(Op_Tc(character_spacing))
+      .content_apply_text_state_op(Op_Tstar)
+    _ => self
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfContentTextState::content_apply_text_state_op`.
+pub fn pdf_content_apply_text_state_op(
+  state : PdfContentTextState,
+  op : PdfContentOp,
+) -> PdfContentTextState {
+  state.content_apply_text_state_op(op)
+}
+
+///|
 fn pdf_content_cid_width_lookup(
   widths : ArrayView[(Int, Double)],
   charcode : Int,

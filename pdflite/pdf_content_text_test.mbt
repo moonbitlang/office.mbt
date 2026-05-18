@@ -47,6 +47,88 @@ fn content_text_assert_bbox_close_for_test(
 }
 
 ///|
+test "cpdfcontent text state exposes initial defaults and basic operators" {
+  let initial = @pdflite.pdf_content_initial_text_state()
+  @test.assert_eq(initial.character_spacing, 0.0)
+  @test.assert_eq(initial.word_spacing, 0.0)
+  @test.assert_eq(initial.horizontal_scaling, 1.0)
+  @test.assert_eq(initial.leading, 0.0)
+  @test.assert_eq(initial.font, "")
+  @test.assert_eq(initial.font_size, 12.0)
+  @test.assert_eq(initial.rendering_mode, 0)
+  @test.assert_eq(initial.rise, 0.0)
+  @test.assert_eq(initial.text_matrix, @pdflite.transform_identity_matrix)
+  @test.assert_eq(initial.line_matrix, @pdflite.transform_identity_matrix)
+  let state = initial
+    .content_apply_text_state_op(Op_Tc(1.5))
+    .content_apply_text_state_op(Op_Tw(2.5))
+    .content_apply_text_state_op(Op_Tz(80.0))
+    .content_apply_text_state_op(Op_TL(14.0))
+    .content_apply_text_state_op(Op_Tf(content_text_name_for_test("/F1"), 9.0))
+    .content_apply_text_state_op(Op_Tr(3))
+    .content_apply_text_state_op(Op_Ts(4.0))
+  @test.assert_eq(state.character_spacing, 1.5)
+  @test.assert_eq(state.word_spacing, 2.5)
+  @test.assert_eq(state.horizontal_scaling, 0.8)
+  @test.assert_eq(state.leading, 14.0)
+  @test.assert_eq(state.font, "/F1")
+  @test.assert_eq(state.font_size, 9.0)
+  @test.assert_eq(state.rendering_mode, 3)
+  @test.assert_eq(state.rise, 4.0)
+  @test.assert_eq(
+    @pdflite.pdf_content_apply_text_state_op(state, Op_Tc(7.0)).character_spacing,
+    7.0,
+  )
+}
+
+///|
+test "cpdfcontent text state applies text matrix operators" {
+  let moved = @pdflite.pdf_content_initial_text_state()
+    .content_apply_text_state_op(Op_Td(10.0, 20.0))
+    .content_apply_text_state_op(Op_TD(5.0, -7.0))
+  @test.assert_eq(moved.leading, 7.0)
+  content_text_assert_matrix_close_for_test(
+    moved.text_matrix,
+    @pdflite.transform_translate(15.0, 13.0),
+  )
+  content_text_assert_matrix_close_for_test(
+    moved.line_matrix,
+    @pdflite.transform_translate(15.0, 13.0),
+  )
+  let next_line = moved.content_apply_text_state_op(Op_Tstar)
+  content_text_assert_matrix_close_for_test(
+    next_line.text_matrix,
+    @pdflite.transform_translate(15.0, 6.0),
+  )
+  let replaced = next_line.content_apply_text_state_op(
+    Op_Tm(@pdflite.transform_translate(1.0, 2.0)),
+  )
+  content_text_assert_matrix_close_for_test(
+    replaced.line_matrix,
+    @pdflite.transform_translate(1.0, 2.0),
+  )
+  let quote = replaced
+    .content_apply_text_state_op(Op_TL(3.0))
+    .content_apply_text_state_op(Op_quote(content_text_bytes_for_test([65])))
+  content_text_assert_matrix_close_for_test(
+    quote.text_matrix,
+    @pdflite.transform_translate(1.0, -1.0),
+  )
+  let double_quote = quote.content_apply_text_state_op(
+    Op_double_quote(8.0, 9.0, content_text_bytes_for_test([66])),
+  )
+  @test.assert_eq(double_quote.word_spacing, 8.0)
+  @test.assert_eq(double_quote.character_spacing, 9.0)
+  content_text_assert_matrix_close_for_test(
+    double_quote.text_matrix,
+    @pdflite.transform_translate(1.0, -4.0),
+  )
+  let reset = double_quote.content_apply_text_state_op(Op_BT)
+  @test.assert_eq(reset.text_matrix, @pdflite.transform_identity_matrix)
+  @test.assert_eq(reset.line_matrix, @pdflite.transform_identity_matrix)
+}
+
+///|
 fn content_text_font_descriptor_for_test() -> @pdflite.PdfFontDescriptor {
   {
     ascent: 0.0,

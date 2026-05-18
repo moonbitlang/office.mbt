@@ -355,6 +355,8 @@ pub fn pdf_content_apply_path_op(PdfContentPartialPath, PdfContentOp) -> PdfCont
 
 pub fn pdf_content_apply_path_state_op(PdfContentPathState, PdfContentOp) -> PdfContentPathState
 
+pub fn pdf_content_apply_text_state_op(PdfContentTextState, PdfContentOp) -> PdfContentTextState
+
 pub fn pdf_content_begin_artifact() -> PdfContentOp
 
 pub let pdf_content_black : PdfContentColour
@@ -394,6 +396,8 @@ pub fn pdf_content_initial_drawn_path() -> PdfDrawnPath
 pub fn pdf_content_initial_glyph_state(Double, Double, Double, Double) -> PdfContentGlyphState
 
 pub fn pdf_content_initial_path_state(Double, Double, Double, Double) -> PdfContentPathState
+
+pub fn pdf_content_initial_text_state() -> PdfContentTextState
 
 pub fn pdf_content_is_vertical(PdfFont) -> Bool
 
@@ -2121,6 +2125,20 @@ pub(all) struct PdfContentTextLayoutResult {
   glyphs : Array[PdfContentTextGlyphPlacement]
   text_matrix : @geometry.TransformMatrix
 } derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfContentTextState {
+  character_spacing : Double
+  word_spacing : Double
+  horizontal_scaling : Double
+  leading : Double
+  font : String
+  font_size : Double
+  rendering_mode : Int
+  rise : Double
+  text_matrix : @geometry.TransformMatrix
+  line_matrix : @geometry.TransformMatrix
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfContentTextState::content_apply_text_state_op(Self, PdfContentOp) -> Self
 
 pub(all) enum PdfContentTiling {
   PdfContentTiling
