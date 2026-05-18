@@ -2475,6 +2475,16 @@ Current backend snapshot:
   arcs, and segment joining. Native focused validation reports `moon test
   --target native pdf_shape_test.mbt` at 4/4 tests passing; native full-suite
   validation reports 1721/1721 tests passing.~~
+- [x] ~~Standalone `cpdfcontent.ml` path-geometry slice extends the cpdf path
+  model with `PdfPathSegment::bounds`, `PdfPath::bounds`,
+  `PdfPathSegment::transform`, `PdfPath::transform`, and compatibility
+  wrappers, covering straight-segment bounds, Bezier control-point bounds,
+  multi-subpath path bounds, cpdf's empty-path zero rectangle, segment
+  transforms, and whole-path transforms while leaving the full semantic
+  content-object filter/JSON walk for later slices. Native focused validation
+  reports `moon test --target native --package bobzhang/pdflite --file
+  pdf_shape_test.mbt` at 6/6 tests passing; native full-suite validation
+  reports 1911/1911 tests passing.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,

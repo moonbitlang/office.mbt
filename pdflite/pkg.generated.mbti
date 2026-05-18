@@ -815,6 +815,14 @@ pub fn pdf_parse_stream_object_from_view(BytesView) -> PdfParsedIndirectObject r
 
 pub fn pdf_parse_units_string(PdfDocument, PdfPage, String) -> Array[Double] raise @core.PdfError
 
+pub fn pdf_path_bounds(PdfPath) -> PdfRectangle
+
+pub fn pdf_path_segment_bounds(PdfPathSegment) -> PdfRectangle
+
+pub fn pdf_path_segment_transform(PdfPathSegment, @geometry.TransformMatrix) -> PdfPathSegment
+
+pub fn pdf_path_transform(PdfPath, @geometry.TransformMatrix) -> PdfPath
+
 pub fn pdf_pdfdocencoding_byte_of_codepoint(Int) -> Byte?
 
 pub fn pdf_pdfdocencoding_of_codepoints(ArrayView[Int]) -> Bytes?
@@ -2588,6 +2596,8 @@ pub(all) struct PdfPath {
   winding_rule : PdfPathWindingRule
   subpaths : Array[PdfPathSubpath]
 } derive(Eq, ToJson, @debug.Debug)
+pub fn PdfPath::bounds(Self) -> PdfRectangle
+pub fn PdfPath::transform(Self, @geometry.TransformMatrix) -> Self
 
 pub(all) enum PdfPathClosure {
   PdfPathClosed
@@ -2603,6 +2613,8 @@ pub(all) enum PdfPathSegment {
   PdfPathStraight(@geometry.Point2, @geometry.Point2)
   PdfPathBezier(@geometry.Point2, @geometry.Point2, @geometry.Point2, @geometry.Point2)
 } derive(Eq, ToJson, @debug.Debug)
+pub fn PdfPathSegment::bounds(Self) -> PdfRectangle
+pub fn PdfPathSegment::transform(Self, @geometry.TransformMatrix) -> Self
 
 pub(all) struct PdfPathSubpath {
   hole : PdfPathHole
