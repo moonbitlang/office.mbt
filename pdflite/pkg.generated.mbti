@@ -375,6 +375,8 @@ pub fn pdf_content_dash_pattern_content_json(PdfContentDashPattern) -> Json
 
 pub fn pdf_content_end_artifact() -> PdfContentOp
 
+pub fn pdf_content_extra_metrics(PdfFont) -> (Double, Double)
+
 pub fn pdf_content_glyph_state_content_json(PdfContentGlyphState) -> Json
 
 pub fn pdf_content_json_entries_content_json(ArrayView[PdfContentJsonEntry]) -> Json
@@ -2398,6 +2400,7 @@ pub(all) enum PdfFont {
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfFont::content_bytes_of_charcode(Self, Int) -> Bytes raise @core.PdfError
 pub fn PdfFont::content_charcodes_of_bytes(Self, BytesView) -> Array[Int]
+pub fn PdfFont::content_extra_metrics(Self) -> (Double, Double)
 pub fn PdfFont::debug_name(Self) -> String
 pub fn PdfFont::embedded_fontfile_number(Self) -> Int?
 pub fn PdfFont::is_identity_h(Self) -> Bool

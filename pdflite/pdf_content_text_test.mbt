@@ -29,6 +29,15 @@ fn content_text_font_descriptor_for_test() -> @pdflite.PdfFontDescriptor {
 
 ///|
 fn content_text_cid_font_for_test() -> @pdflite.PdfFont {
+  content_text_cid_font_with_descriptor_for_test(
+    content_text_font_descriptor_for_test(),
+  )
+}
+
+///|
+fn content_text_cid_font_with_descriptor_for_test(
+  descriptor : @pdflite.PdfFontDescriptor,
+) -> @pdflite.PdfFont {
   PdfFontCIDKeyed({
     basefont: content_text_name_for_test("/Top"),
     composite: {
@@ -38,7 +47,7 @@ fn content_text_cid_font_for_test() -> @pdflite.PdfFont {
         supplement: 0,
       },
       cid_basefont: content_text_name_for_test("/Descendant"),
-      cid_fontdescriptor: content_text_font_descriptor_for_test(),
+      cid_fontdescriptor: descriptor,
       cid_widths: [],
       cid_widths2: [],
       cid_default_width: 1000.0,
@@ -126,4 +135,65 @@ test "cpdfcontent charcode bytes mirror glyph JSON byte construction" {
   guard cid_overflow is Err(@pdflite.PdfError::InvalidByte(256)) else {
     fail("expected @pdflite.PdfError::InvalidByte for CID high byte")
   }
+}
+
+///|
+test "cpdfcontent extra metrics mirror font-specific fallbacks" {
+  let standard : @pdflite.PdfFont = PdfFontStandard({
+    font: PdfHelvetica,
+    encoding: PdfWinAnsiEncoding,
+  })
+  @test.assert_eq(standard.content_extra_metrics(), (-225.0, 931.0))
+  @test.assert_eq(@pdflite.pdf_content_extra_metrics(standard), (-225.0, 931.0))
+  let descriptor = {
+    ..content_text_font_descriptor_for_test(),
+    ascent: 810.0,
+    descent: -190.0,
+    fontbbox: { min_x: -20.0, min_y: -210.0, max_x: 520.0, max_y: 730.0 },
+  }
+  let simple : @pdflite.PdfFont = PdfFontSimple({
+    fonttype: PdfTrueType,
+    basefont: None,
+    firstchar: 0,
+    lastchar: 0,
+    widths: [],
+    fontdescriptor: Some(descriptor),
+    fontmetrics: None,
+    encoding: PdfWinAnsiEncoding,
+  })
+  @test.assert_eq(simple.content_extra_metrics(), (-210.0, 730.0))
+  let zero_bbox_descriptor = {
+    ..content_text_font_descriptor_for_test(),
+    ascent: 700.0,
+    descent: -180.0,
+  }
+  let cid = content_text_cid_font_with_descriptor_for_test(zero_bbox_descriptor)
+  @test.assert_eq(cid.content_extra_metrics(), (700.0, -180.0))
+  let type3 : @pdflite.PdfFont = PdfFontSimple({
+    fonttype: PdfType3({
+      fontbbox: { min_x: 1.0, min_y: -200.0, max_x: 500.0, max_y: 700.0 },
+      fontmatrix: { a: 1.0, b: 0.0, c: 0.0, d: 0.5, e: 2.0, f: 3.0 },
+      charprocs: [],
+      resources: @pdflite.pdf_dictionary([]),
+    }),
+    basefont: None,
+    firstchar: 0,
+    lastchar: 0,
+    widths: [],
+    fontdescriptor: None,
+    fontmetrics: None,
+    encoding: PdfWinAnsiEncoding,
+  })
+  @test.assert_eq(type3.content_extra_metrics(), (353.0, -97.0))
+  let missing_descriptor : @pdflite.PdfFont = PdfFontSimple({
+    fonttype: PdfType1,
+    basefont: None,
+    firstchar: 0,
+    lastchar: 0,
+    widths: [],
+    fontdescriptor: None,
+    fontmetrics: None,
+    encoding: PdfWinAnsiEncoding,
+  })
+  @test.assert_eq(missing_descriptor.content_extra_metrics(), (0.0, 0.0))
 }

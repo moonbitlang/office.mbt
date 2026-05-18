@@ -2546,6 +2546,15 @@ Current backend snapshot:
   `moon test --target native --package bobzhang/pdflite --file
   pdf_content_text_test.mbt` at 2/2 tests passing; native full-suite validation
   reports 1919/1919 tests passing.~~
+- [x] ~~Standalone `cpdfcontent.ml` text extra-metrics slice exposes
+  `PdfFont::content_extra_metrics` and `pdf_content_extra_metrics`, matching
+  cpdf's Type3 font-matrix bbox transform, descriptor bbox/ascent-descent
+  fallback for simple and CID fonts, Standard 14 AFM `FontBBox` extraction, and
+  missing-simple-descriptor zero fallback while leaving glyph placement in
+  `process_tj` for later slices. Native focused validation reports `moon test
+  --target native --package bobzhang/pdflite --file pdf_content_text_test.mbt`
+  at 3/3 tests passing; native full-suite validation reports 1920/1920 tests
+  passing.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,
