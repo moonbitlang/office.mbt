@@ -2227,6 +2227,15 @@ Current backend snapshot:
   fallback. Native focused validation reports `moon test --target native
   --package bobzhang/pdflite --file pdf_addtext_test.mbt` at 54/54 tests
   passing; native full-suite validation reports 1826/1826 tests passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` font-resource helper slice exposes
+  `pdf_addtext_allocate_font_names` and
+  `pdf_addtext_fontpack_resource_dictionary`, covering cpdf's `/F*` unique-name
+  scan, non-fontpack fallback name selection, fontpack placeholder reservation,
+  embedded-font indirect resource installation, existing dictionary
+  preservation, and mismatched fontpack resource diagnostics. Native focused
+  validation reports `moon test --target native --package bobzhang/pdflite
+  --file pdf_addtext_test.mbt` at 57/57 tests passing; native full-suite
+  validation reports 1829/1829 tests passing.~~
 - [x] ~~Standalone `cpdfremovetext.ml` removal slice exposes
   `pdf_remove_added_text_ops`, `pdf_remove_all_text_ops`,
   `PdfDocument::remove_added_text`, `remove_all_text`, and compatibility

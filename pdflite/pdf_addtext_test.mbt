@@ -791,6 +791,70 @@ test "pdf_addtext_effective_encoding follows selected add-text font" {
 }
 
 ///|
+test "pdf_addtext_allocate_font_names handles non-fontpack resources" {
+  let f0 = addtext_name_for_test("/F0")
+  let f1 = addtext_name_for_test("/F1")
+  let f2 = addtext_name_for_test("/F2")
+  let fontdict : @pdflite.PdfObject = PdfDictionary([
+    (f0, PdfInteger(1)),
+    (f1, PdfInteger(2)),
+  ])
+  let allocated = try! @pdflite.pdf_addtext_allocate_font_names(fontdict, None)
+  @test.assert_eq(allocated.0, f2)
+  @test.assert_eq(allocated.1, fontdict)
+  @test.assert_eq(allocated.2, [])
+}
+
+///|
+test "pdf_addtext_allocate_font_names reserves fontpack placeholders" {
+  let f0 = addtext_name_for_test("/F0")
+  let f1 = addtext_name_for_test("/F1")
+  let f2 = addtext_name_for_test("/F2")
+  let fontdict : @pdflite.PdfObject = PdfDictionary([(f0, PdfInteger(1))])
+  let pack : @pdflite.PdfFontPack = {
+    fonts: [
+      addtext_standard_font_for_test(),
+      addtext_simple_font_for_test(700.0),
+    ],
+    entries: [],
+  }
+  let allocated = try! @pdflite.pdf_addtext_allocate_font_names(
+    fontdict,
+    Some(pack),
+  )
+  @test.assert_eq(allocated.0, f1)
+  @test.assert_eq(allocated.2, [f1, f2])
+  @test.assert_eq(allocated.1.lookup_immediate(f0), Some(PdfInteger(1)))
+  @test.assert_eq(allocated.1.lookup_immediate(f1), Some(PdfNull))
+  @test.assert_eq(allocated.1.lookup_immediate(f2), Some(PdfNull))
+}
+
+///|
+test "pdf_addtext_fontpack_resource_dictionary installs embedded font references" {
+  let f0 = addtext_name_for_test("/F0")
+  let f1 = addtext_name_for_test("/F1")
+  let f2 = addtext_name_for_test("/F2")
+  let fontdict : @pdflite.PdfObject = PdfDictionary([(f0, PdfInteger(1))])
+  let updated = try! @pdflite.pdf_addtext_fontpack_resource_dictionary(
+    fontdict,
+    [f1, f2],
+    [10, 11],
+  )
+  @test.assert_eq(updated.lookup_immediate(f0), Some(PdfInteger(1)))
+  @test.assert_eq(updated.lookup_immediate(f1), Some(PdfIndirect(10)))
+  @test.assert_eq(updated.lookup_immediate(f2), Some(PdfIndirect(11)))
+  let result : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_addtext_fontpack_resource_dictionary(
+    fontdict,
+    [f1],
+    [10, 11],
+  )
+  guard result
+    is Err(@pdflite.PdfError::SoftError("bad add-text fontpack resource list")) else {
+    fail("expected SoftError for mismatched fontpack resource lists")
+  }
+}
+
+///|
 test "pdf_addtext_rectangle_origin lowers top positions by rectangle height" {
   let bounds = addtext_bounds_for_test()
   @test.assert_eq(

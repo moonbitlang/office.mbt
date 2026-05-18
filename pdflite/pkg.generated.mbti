@@ -75,6 +75,8 @@ pub fn pdf_add_prefix(PdfDocument, String) -> Unit raise @core.PdfError
 
 pub fn pdf_add_root(Int, ArrayView[(@core.PdfName, PdfObject)], PdfDocument) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_addtext_allocate_font_names(PdfObject, PdfFontPack?) -> (@core.PdfName, PdfObject, Array[@core.PdfName]) raise @core.PdfError
+
 pub fn pdf_addtext_baseline_offsets(PdfFont?, Double, PdfPosition, PdfAddTextRotation, Bool, Bool) -> (Double, Double)
 
 pub fn pdf_addtext_bates_number(Int, Int, Int?) -> String
@@ -94,6 +96,8 @@ pub fn pdf_addtext_diagonal_offsets(PdfRectangle, PdfPosition, PdfAddTextRotatio
 pub fn pdf_addtext_effective_encoding(PdfFont?) -> PdfEncoding
 
 pub fn pdf_addtext_expand_lines_with_time(PdfStrftimeTime, ArrayView[String], ArrayView[(String, () -> String)]) -> Array[String] raise @core.PdfError
+
+pub fn pdf_addtext_fontpack_resource_dictionary(PdfObject, ArrayView[@core.PdfName], ArrayView[Int]) -> PdfObject raise @core.PdfError
 
 pub fn pdf_addtext_get_urls_line(String) -> PdfAddTextUrlLine raise @core.PdfError
 

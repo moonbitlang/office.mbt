@@ -618,6 +618,48 @@ pub fn pdf_addtext_effective_encoding(font : PdfFont?) -> PdfEncoding {
 }
 
 ///|
+/// Allocate cpdf add-text font resource names for the selected font and
+/// optional font pack.
+pub fn pdf_addtext_allocate_font_names(
+  fontdict : PdfObject,
+  fontpack : PdfFontPack?,
+) -> (PdfName, PdfObject, Array[PdfName]) raise PdfError {
+  let unique_fontname = fontdict.unique_key("F")
+  let mut updated = fontdict
+  let unique_fontnames : Array[PdfName] = []
+  match fontpack {
+    Some(pack) =>
+      for _ in pack.fonts {
+        let key = updated.unique_key("F")
+        updated = updated.add_dict_entry(key, PdfNull)
+        unique_fontnames.push(key)
+      }
+    None => ()
+  }
+  (unique_fontname, updated, unique_fontnames)
+}
+
+///|
+/// Replace cpdf add-text fontpack placeholders with embedded font references.
+pub fn pdf_addtext_fontpack_resource_dictionary(
+  fontdict : PdfObject,
+  unique_fontnames : ArrayView[PdfName],
+  font_objects : ArrayView[Int],
+) -> PdfObject raise PdfError {
+  if font_objects.length() != unique_fontnames.length() {
+    raise SoftError("bad add-text fontpack resource list")
+  }
+  let mut updated = fontdict
+  for index in 0..<font_objects.length() {
+    updated = updated.add_dict_entry(
+      unique_fontnames[index],
+      PdfIndirect(font_objects[index]),
+    )
+  }
+  updated
+}
+
+///|
 /// Calculate the cpdf add-rectangle lower-left origin after placement.
 pub fn pdf_addtext_rectangle_origin(
   bounds : PdfRectangle,
