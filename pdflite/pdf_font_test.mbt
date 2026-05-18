@@ -673,6 +673,37 @@ test "PdfDocument font_from_name resolves page and XObject paths" {
 }
 
 ///|
+test "PdfDocument font_table renders Helvetica encoding rows" {
+  let doc = font_listing_document_for_test()
+  let table = try! doc.font_table("/F1", 1)
+  let wrapped = try! @pdflite.pdf_font_table(doc, "/F1", 1)
+  @test.assert_eq(wrapped, table)
+  let row = for entry in table {
+    if entry.code == 65 {
+      break Some(entry)
+    }
+  } nobreak {
+    None
+  }
+  guard row is Some(row) else { fail("expected code 65 row") }
+  @test.assert_eq(row.unicode, "0041")
+  @test.assert_eq(row.utf8, "A")
+  @test.assert_eq(row.unicode_name, "")
+  @test.assert_eq(row.glyphnames, "A")
+  let text = try! doc.font_table_text("/F1", 1)
+  @test.assert_eq(try! @pdflite.pdf_font_table_text(doc, "/F1", 1), text)
+  let rendered = @utf8.decode(text) catch { _ => fail("expected UTF-8 text") }
+  @test.assert_eq(rendered.contains("65 = U+0041 (A - ) = A\n"), true)
+  @test.assert_eq(rendered.contains(".notdef"), false)
+  let bad_page : Result[Array[@pdflite.PdfFontTableEntry], Error] = try? doc.font_table(
+    "/F1", 3,
+  )
+  guard bad_page is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+    fail("expected BadPageSpecification")
+  }
+}
+
+///|
 test "PdfDocument extract_fontfile_bytes returns decoded embedded bytes" {
   let doc = font_extraction_document_for_test()
   @test.assert_eq(

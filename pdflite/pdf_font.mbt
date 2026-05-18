@@ -27,6 +27,19 @@ pub(all) struct PdfMissingFontEntry {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// One row from cpdf's font encoding table.
+///
+/// `unicode_name` is empty when this port has no Unicode character-name table
+/// entry for the codepoint. `utf8` is `<nonprintable>` for C0/C1 controls.
+pub(all) struct PdfFontTableEntry {
+  code : Int
+  unicode : String
+  utf8 : String
+  unicode_name : String
+  glyphnames : String
+} derive(Debug, Eq, ToJson)
+
+///|
 fn PdfDocument::pdf_font_name_field(
   self : PdfDocument,
   font : PdfObject,
@@ -383,6 +396,250 @@ pub fn pdf_font_from_name(
   page_number : Int,
 ) -> PdfObject raise PdfError {
   document.font_from_name(font_name, page_number)
+}
+
+///|
+fn PdfDocument::pdf_font_table_target_font(
+  self : PdfDocument,
+  font_name : String,
+  page_number : Int,
+) -> PdfObject raise PdfError {
+  let font = self.font_from_name(font_name, page_number)
+  let mut selected = font
+  match font {
+    PdfDictionary(entries) =>
+      for entry in entries {
+        match self.lookup_direct(pdf_text_base_font_key_name, entry.1) {
+          Some(PdfNameObject(name)) if pdf_util_string_from_name(name) ==
+            font_name => selected = entry.1
+          _ => ()
+        }
+      }
+    _ => ()
+  }
+  selected
+}
+
+///|
+fn pdf_font_table_charset(font : PdfFont) -> Array[PdfName]? {
+  match font {
+    PdfFontSimple({ fontdescriptor: Some({ charset: Some(charset), .. }), .. }) =>
+      Some(charset)
+    _ => None
+  }
+}
+
+///|
+fn pdf_font_table_text_bytes(
+  font : PdfFont,
+  code : Int,
+) -> PdfBytes raise PdfError {
+  let bytes : Array[Byte] = []
+  if font.uses_two_byte_codes() {
+    bytes.push(pdf_byte_of_int(0))
+  }
+  bytes.push(pdf_byte_of_int(code))
+  Bytes::from_array(bytes)
+}
+
+///|
+fn pdf_font_table_strip_name_slash(name : PdfName) -> String {
+  let text = pdf_util_string_from_name(name) catch {
+    _ => @ascii.decode_lossy(name.bytes())
+  }
+  if text.has_prefix("/") {
+    text[1:].to_owned()
+  } else {
+    text
+  }
+}
+
+///|
+fn pdf_font_table_glyphnames_text(glyphnames : ArrayView[PdfName]) -> String {
+  let mut text = ""
+  for glyphname in glyphnames {
+    text = text + pdf_font_table_strip_name_slash(glyphname)
+  }
+  text
+}
+
+///|
+fn pdf_font_table_in_charset(
+  glyphnames : String,
+  charset : ArrayView[PdfName],
+) -> Bool {
+  for name in charset {
+    if pdf_font_table_strip_name_slash(name) == glyphnames {
+      return true
+    }
+  }
+  false
+}
+
+///|
+fn pdf_font_table_codepoint_hex_digit(value : Int) -> Byte {
+  if value < 10 {
+    (48 + value).to_byte()
+  } else {
+    (55 + value).to_byte()
+  }
+}
+
+///|
+fn pdf_font_table_codepoint_hex(codepoint : Int) -> String {
+  let digits : Array[Byte] = []
+  let mut value = codepoint
+  while value > 0 {
+    digits.push(pdf_font_table_codepoint_hex_digit(value % 16))
+    value = value / 16
+  }
+  if digits.length() == 0 {
+    digits.push(48)
+  }
+  while digits.length() < 4 {
+    digits.push(48)
+  }
+  let output : Array[Byte] = []
+  for index in 0..<digits.length() {
+    output.push(digits[digits.length() - index - 1])
+  }
+  @ascii.decode(Bytes::from_array(output)) catch {
+    _ => ""
+  }
+}
+
+///|
+fn pdf_font_table_is_control_codepoint(codepoint : Int) -> Bool {
+  (codepoint >= 0 && codepoint <= 0x1F) ||
+  (codepoint >= 0x7F && codepoint <= 0x9F)
+}
+
+///|
+fn pdf_font_table_utf8_text(
+  codepoints : ArrayView[Int],
+) -> String raise PdfError {
+  let bytes = pdf_utf8_of_codepoints(codepoints)
+  @utf8.decode(bytes) catch {
+    _ => ""
+  }
+}
+
+///|
+fn pdf_font_table_unicode_fields(
+  codepoints : ArrayView[Int],
+) -> (String, String, String) raise PdfError {
+  match codepoints {
+    [codepoint] => {
+      let unicode = pdf_font_table_codepoint_hex(codepoint)
+      let utf8 = if pdf_font_table_is_control_codepoint(codepoint) {
+        "<nonprintable>"
+      } else {
+        pdf_font_table_utf8_text(codepoints)
+      }
+      (unicode, utf8, "")
+    }
+    _ => ("***multiple", pdf_font_table_utf8_text(codepoints), "***multiple")
+  }
+}
+
+///|
+fn pdf_font_table_entry(
+  font : PdfFont,
+  extractor : PdfTextExtractor,
+  code : Int,
+) -> PdfFontTableEntry? raise PdfError {
+  let text = pdf_font_table_text_bytes(font, code)
+  let glyphnames = extractor.glyphnames_of_text(text)
+  let glyphnames_text = pdf_font_table_glyphnames_text(glyphnames)
+  if glyphnames_text == ".notdef" {
+    None
+  } else {
+    match pdf_font_table_charset(font) {
+      Some(charset) if !pdf_font_table_in_charset(glyphnames_text, charset) =>
+        None
+      _ => {
+        let codepoints = extractor.codepoints_of_text(text)
+        let (unicode, utf8, unicode_name) = pdf_font_table_unicode_fields(
+          codepoints,
+        )
+        Some({ code, unicode, utf8, unicode_name, glyphnames: glyphnames_text })
+      }
+    }
+  }
+}
+
+///|
+/// Return cpdf's font encoding table rows for one named page font.
+///
+/// This is the in-memory counterpart to cpdf's `print_font_table`. Font names
+/// use the same page resource path syntax as `font_from_name`, such as `/F1`.
+pub fn PdfDocument::font_table(
+  self : PdfDocument,
+  font_name : String,
+  page_number : Int,
+) -> Array[PdfFontTableEntry] raise PdfError {
+  let font_object = self.pdf_font_table_target_font(font_name, page_number)
+  let font = self.read_font(font_object)
+  let extractor = font.text_extractor()
+  let output : Array[PdfFontTableEntry] = []
+  for code in 0..<256 {
+    match pdf_font_table_entry(font, extractor, code) {
+      Some(entry) => output.push(entry)
+      None => ()
+    }
+  }
+  output
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::font_table`.
+pub fn pdf_font_table(
+  document : PdfDocument,
+  font_name : String,
+  page_number : Int,
+) -> Array[PdfFontTableEntry] raise PdfError {
+  document.font_table(font_name, page_number)
+}
+
+///|
+fn pdf_font_push_table_line(
+  output : Array[Byte],
+  entry : PdfFontTableEntry,
+) -> Unit {
+  pdf_font_push_utf8(output, entry.code.to_string())
+  pdf_font_push_utf8(output, " = U+")
+  pdf_font_push_utf8(output, entry.unicode)
+  pdf_font_push_utf8(output, " (")
+  pdf_font_push_utf8(output, entry.utf8)
+  pdf_font_push_utf8(output, " - ")
+  pdf_font_push_utf8(output, entry.unicode_name)
+  pdf_font_push_utf8(output, ") = ")
+  pdf_font_push_utf8(output, entry.glyphnames)
+  output.push(10)
+}
+
+///|
+/// Render cpdf's plain-text font encoding table for one named page font.
+pub fn PdfDocument::font_table_text(
+  self : PdfDocument,
+  font_name : String,
+  page_number : Int,
+) -> PdfBytes raise PdfError {
+  let output : Array[Byte] = []
+  for entry in self.font_table(font_name, page_number) {
+    pdf_font_push_table_line(output, entry)
+  }
+  Bytes::from_array(output)
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::font_table_text`.
+pub fn pdf_font_table_text(
+  document : PdfDocument,
+  font_name : String,
+  page_number : Int,
+) -> PdfBytes raise PdfError {
+  document.font_table_text(font_name, page_number)
 }
 
 ///|

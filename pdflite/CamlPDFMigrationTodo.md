@@ -2091,6 +2091,14 @@ Current backend snapshot:
   rejection. Native focused validation reports `moon test --target native
   pdf_font_test.mbt` at 8/8 tests passing; native full-suite validation reports
   1755/1755 tests passing.~~
+- [x] ~~Standalone `cpdffont.ml` font-table slice now exposes
+  `PdfFontTableEntry`, `PdfDocument::font_table`, `font_table_text`, and
+  compatibility wrappers, covering named page-font resolution, cpdf row-format
+  rendering, glyph-name slash stripping, `.notdef` filtering, wrapper parity,
+  and invalid-page rejection. Native focused validation reports `moon test
+  --target native --package bobzhang/pdflite --file pdf_font_test.mbt` at
+  9/9 tests passing; native full-suite validation reports 1756/1756 tests
+  passing.~~
 - [x] ~~Page labels, bookmarks, annotations, duplicate annotation repair,
   old-style destinations, name-tree destinations, `/OpenAction`, optional
   content, AcroForm merge basics, trailer `/Info`, and structure-tree
