@@ -407,6 +407,12 @@ Current backend snapshot:
   native --package bobzhang/pdflite --file pdf_structure_test.mbt` reports
   11/11 tests passing; native full-suite validation reports 1764/1764 tests
   passing.~~
+- [x] ~~Port `cpdfua.print_struct_tree` as byte-returning structure-tree text
+  rendering: the MoonBit API now follows `/StructTreeRoot` `/K` children,
+  applies `/RoleMap` rewriting, prunes empty marked-content leaves, appends
+  page numbers from `/Pg`, and emits the same tree branch glyphs as
+  `Cpdfprinttree`. Focused native structure tests report 12/12 passing; native
+  full-suite validation reports 1770/1770 tests passing.~~
 - [x] ~~Complete the PDF/UA `cpdftexttopdf.typeset` subformat slice by adding
   `PDF/UA-1` and `PDF/UA-2` parsing, title enforcement, forced structure-tree
   processing, PDF/UA-1 catalog metadata, and PDF/UA-2 top-level `/Document`

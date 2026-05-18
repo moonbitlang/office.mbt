@@ -1049,6 +1049,8 @@ pub fn pdf_ua_mark(PdfDocument) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_ua_mark2(Int, PdfDocument) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_ua_print_struct_tree(PdfDocument) -> Bytes raise @core.PdfError
+
 pub fn pdf_ua_remove_mark(PdfDocument) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_ua_replace_struct_tree(PdfDocument, Json) -> PdfDocument raise @core.PdfError
@@ -1950,6 +1952,7 @@ pub fn PdfDocument::stamp_as_xobject(Self, ArrayView[Int], Self) -> (Self, @core
 pub fn PdfDocument::stream_object_entries(Self) -> Array[(Int, Int, PdfStream)]
 pub fn PdfDocument::string_of_pagespec(Self, ArrayView[Int]) -> String raise @core.PdfError
 pub fn PdfDocument::struct_tree_json_blob(Self) -> Bytes raise @core.PdfError
+pub fn PdfDocument::struct_tree_text(Self) -> Bytes raise @core.PdfError
 pub fn PdfDocument::target_of_page_number(Self, Int) -> PdfDestination raise @core.PdfError
 pub fn PdfDocument::text_extractor_of_font(Self, PdfObject) -> PdfTextExtractor raise @core.PdfError
 pub fn PdfDocument::thin_lines(Self, ArrayView[Int], Double) -> Self raise @core.PdfError
