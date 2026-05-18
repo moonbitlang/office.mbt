@@ -2296,6 +2296,14 @@ Current backend snapshot:
   native --package bobzhang/pdflite --file pdf_addtext_test.mbt` at 103/103
   tests passing; native full-suite validation reports 1875/1875 tests
   passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` single-page line emitter slice exposes
+  `PdfDocument::addtext_line_page` and `pdf_addtext_line_page`, covering
+  prepared-line placement, resource installation, text operator emission,
+  selected-font URL annotation insertion, shifted text content, wrapper parity,
+  prepend/fast insertion, and cpdf's existing-font opacity suppression. Native
+  focused validation reports `moon test --target native --package
+  bobzhang/pdflite --file pdf_addtext_test.mbt` at 105/105 tests passing;
+  native full-suite validation reports 1877/1877 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` line-width selection and justification
   application slice exposes `pdf_addtext_longest_width` and
   `pdf_addtext_apply_justification_offset`, covering cpdf's widest expanded

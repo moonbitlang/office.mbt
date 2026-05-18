@@ -1141,6 +1141,150 @@ test "PdfDocument addtext_resource_setup preserves existing-font resources" {
 }
 
 ///|
+test "PdfDocument addtext_line_page appends text and URL annotations" {
+  let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
+  let page = (try! document.pages_of_pagetree())[0]
+  let font = addtext_standard_font_for_test()
+  let stamped = try! document.addtext_line_page(
+    page,
+    addtext_process_time_for_test(),
+    ["%URL[A|https://a.test]"],
+    [],
+    Some(font),
+    None,
+    addtext_name_for_test("/Helvetica"),
+    Some(PdfIndirect(10)),
+    [],
+    10.0,
+    "%URL[A|https://a.test]",
+    PdfContentGrey(0.25),
+    PdfPositionBottomLeft(10.0, 20.0),
+    shift_x=2.0,
+    shift_y=3.0,
+    url_border=true,
+  )
+  @test.assert_eq(
+    addtext_content_ops_for_test(document, stamped),
+    try! @pdflite.pdf_addtext_text_ops(
+      Some(font),
+      None,
+      12.0,
+      23.0,
+      0.0,
+      0.0,
+      0.0,
+      false,
+      1.0,
+      addtext_name_for_test("/F0"),
+      [],
+      None,
+      PdfContentGrey(0.25),
+      10.0,
+      "A",
+      0.0,
+      0.0,
+      0.0,
+    ),
+  )
+  guard stamped.resources.lookup_immediate(addtext_name_for_test("/Font"))
+    is Some(fonts) else {
+    fail("expected line-page font resources")
+  }
+  @test.assert_eq(
+    fonts.lookup_immediate(addtext_name_for_test("/F0")),
+    Some(PdfIndirect(10)),
+  )
+  guard stamped.rest.lookup_immediate(addtext_name_for_test("/Annots"))
+    is Some(PdfArray([PdfIndirect(annotation_number)])) else {
+    fail("expected URL annotation reference")
+  }
+  let annotation = document.lookup_object_or_null(annotation_number)
+  guard annotation.lookup_immediate(addtext_name_for_test("/A")) is Some(action) else {
+    fail("expected URL annotation action")
+  }
+  @test.assert_eq(
+    action.lookup_immediate(addtext_name_for_test("/URI")),
+    Some(PdfString(@utf8.encode("https://a.test"))),
+  )
+  @test.assert_eq(
+    annotation.lookup_immediate(addtext_name_for_test("/BS")),
+    Some(PdfDictionary([(addtext_name_for_test("/W"), PdfInteger(1))])),
+  )
+}
+
+///|
+test "pdf_addtext_line_page wrapper prepends existing font text without opacity" {
+  let document = @pdflite.pdf_document_empty()
+  let font_key = addtext_name_for_test("/Font")
+  let extgstate = addtext_name_for_test("/ExtGState")
+  let resource_name = addtext_name_for_test("/Fx")
+  let font_object : @pdflite.PdfObject = PdfDictionary([
+    (
+      addtext_name_for_test("/Subtype"),
+      PdfNameObject(addtext_name_for_test("/Type1")),
+    ),
+    (
+      addtext_name_for_test("/BaseFont"),
+      PdfNameObject(addtext_name_for_test("/Helvetica")),
+    ),
+  ])
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: PdfDictionary([
+      (font_key, PdfDictionary([(resource_name, font_object)])),
+    ]),
+    content: [try! @pdflite.pdf_content_stream_of_ops([Op_BT, Op_ET])],
+  }
+  let stamped = try! @pdflite.pdf_addtext_line_page(
+    document,
+    page,
+    addtext_process_time_for_test(),
+    ["A"],
+    [],
+    None,
+    None,
+    resource_name,
+    None,
+    [],
+    10.0,
+    "A",
+    PdfContentGrey(0.0),
+    PdfPositionBottomLeft(1.0, 2.0),
+    opacity=0.25,
+    underneath=true,
+    fast=true,
+  )
+  @test.assert_eq(stamped.resources.lookup_immediate(extgstate), None)
+  @test.assert_eq(
+    addtext_content_ops_for_test(document, stamped),
+    [
+      ..try! @pdflite.pdf_addtext_text_ops(
+        None,
+        None,
+        1.0,
+        2.0,
+        0.0,
+        0.0,
+        0.0,
+        false,
+        1.0,
+        resource_name,
+        [],
+        None,
+        PdfContentGrey(0.0),
+        10.0,
+        "A",
+        0.0,
+        0.0,
+        0.0,
+      ),
+      Op_BT,
+      Op_ET,
+    ],
+  )
+}
+
+///|
 test "PdfDocument addtext_existing_font_resource finds direct resource keys" {
   let document = @pdflite.pdf_document_empty()
   let resource_name = addtext_name_for_test("/F1")
