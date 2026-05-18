@@ -1827,6 +1827,15 @@ Current backend snapshot:
   duplicate OCG object removal. Native focused validation reports `moon test
   --target native pdf_ocg_test.mbt` at 13/13 tests passing; native full-suite
   validation reports 1732/1732 tests passing.~~
+- [x] ~~Optional-content group JSON round-trip slice exposes cpdf-style OCG JSON
+  listing, UTF-8 JSON bytes, strict `pdf_ocg_read_json` import, and
+  `ocg_replace_json` replacement wrappers. Coverage pins exact exported field
+  shape, `null` no-OCG handling, export-to-import round-tripping through
+  `PdfOptionalContent`, page-element subtype preservation, replacement through
+  the writer, wrapper parity, and malformed JSON soft errors. Native focused
+  validation reports `moon test --target native pdf_ocg_test.mbt` at 17/17
+  tests passing; native full-suite validation reports 1747/1747 tests
+  passing.~~
 - [x] ~~Annotation old-style helper slice exposes encoded `(page, contents)`
   extraction, cpdf-style listing rendering, and selected-page annotation removal
   wrappers. Coverage pins direct and indirect `/Contents` lookup, empty-content

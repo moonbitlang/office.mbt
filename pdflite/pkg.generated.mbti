@@ -541,7 +541,11 @@ pub fn pdf_ocg_list_json_blob(PdfDocument) -> Bytes raise @core.PdfError
 
 pub fn pdf_ocg_order_all(PdfDocument) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_ocg_read_json(Json) -> PdfOptionalContent? raise @core.PdfError
+
 pub fn pdf_ocg_rename(Bytes, Bytes, PdfDocument) -> PdfDocument
+
+pub fn pdf_ocg_replace_json(Json, PdfDocument) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_of_pages(PdfDocument, ArrayView[Int], retain_numbering? : Bool, process_struct_tree? : Bool) -> PdfDocument raise @core.PdfError
 
@@ -1733,6 +1737,7 @@ pub fn PdfDocument::ocg_list_json(Self) -> Json raise @core.PdfError
 pub fn PdfDocument::ocg_list_json_blob(Self) -> Bytes raise @core.PdfError
 pub fn PdfDocument::ocg_order_all(Self) -> Self raise @core.PdfError
 pub fn PdfDocument::ocg_rename(Self, Bytes, Bytes) -> Self
+pub fn PdfDocument::ocg_replace_json(Self, Json) -> Self raise @core.PdfError
 pub fn PdfDocument::open_action(Self) -> PdfObject raise @core.PdfError
 pub fn PdfDocument::open_action_json_blob(Self) -> Bytes raise @core.PdfError
 pub fn PdfDocument::open_action_string(Self) -> String raise @core.PdfError

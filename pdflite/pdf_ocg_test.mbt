@@ -434,6 +434,68 @@ test "PdfDocument ocg_list_json exports cpdf optional content shape" {
 }
 
 ///|
+test "pdf_ocg_read_json parses exported optional content JSON" {
+  let source = ocg_document_with_content_for_test()
+  let json = try! source.ocg_list_json()
+  guard (try! source.read_optional_content_groups()) is Some(expected) else {
+    fail("expected source optional content")
+  }
+  @test.assert_eq(try! @pdflite.pdf_ocg_read_json(json), Some(expected))
+  guard (try! @pdflite.pdf_ocg_read_json(json)) is Some(parsed) else {
+    fail("expected parsed optional content")
+  }
+  guard parsed.ocgs[0].1.usage is Some(usage) else {
+    fail("expected OCG usage")
+  }
+  @test.assert_eq(usage.view_state, Some(ocg_name_for_test("/ON")))
+  @test.assert_eq(usage.page_element_subtype, Some(ocg_name_for_test("/FG")))
+}
+
+///|
+test "PdfDocument ocg_replace_json writes parsed optional content" {
+  let source = ocg_document_with_content_for_test()
+  let json = try! source.ocg_list_json()
+  guard (try! source.read_optional_content_groups()) is Some(expected) else {
+    fail("expected source optional content")
+  }
+  let replaced = try! ocg_catalog_document_for_test().ocg_replace_json(json)
+  let replaced_from_function = try! @pdflite.pdf_ocg_replace_json(
+    json,
+    ocg_catalog_document_for_test(),
+  )
+  @test.assert_eq(try! replaced.read_optional_content_groups(), Some(expected))
+  @test.assert_eq(
+    try! replaced_from_function.read_optional_content_groups(),
+    Some(expected),
+  )
+  let unchanged = try! source.ocg_replace_json(Json::null())
+  @test.assert_eq(try! unchanged.read_optional_content_groups(), Some(expected))
+  @test.assert_eq(try! @pdflite.pdf_ocg_read_json(Json::null()), None)
+}
+
+///|
+test "pdf_ocg_read_json rejects malformed optional content JSON" {
+  let top_level : Result[@pdflite.PdfOptionalContent?, Error] = try? @pdflite.pdf_ocg_read_json(
+    Json::array([]),
+  )
+  guard top_level is Err(@pdflite.PdfError::SoftError(_)) else {
+    fail("expected @pdflite.PdfError::SoftError for top-level array")
+  }
+  let bad_default : Result[@pdflite.PdfOptionalContent?, Error] = try? @pdflite.pdf_ocg_read_json(
+    Json::object(
+      Map::of([
+        ("OCGs", Json::object(Map([]))),
+        ("Default", Json::object(Map([]))),
+        ("Configs", Json::array([])),
+      ]),
+    ),
+  )
+  guard bad_default is Err(@pdflite.PdfError::SoftError(_)) else {
+    fail("expected @pdflite.PdfError::SoftError for malformed config")
+  }
+}
+
+///|
 test "PdfDocument ocg_rename rewrites OCG dictionaries" {
   let doc = ocg_document_with_content_for_test()
   let renamed = doc.ocg_rename(
