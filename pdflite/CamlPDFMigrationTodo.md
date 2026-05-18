@@ -2502,6 +2502,14 @@ Current backend snapshot:
   later slice. Native focused validation reports `moon test --target native
   --package bobzhang/pdflite --file pdf_space_test.mbt` at 22/22 tests passing;
   native full-suite validation reports 1913/1913 tests passing.~~
+- [x] ~~Standalone `cpdfcontent.ml` path-state JSON slice exposes
+  `PdfContentDashPattern`, `PdfContentPathState`, their `content_json` methods,
+  and compatibility wrappers, matching cpdf's clipping-path wrapping,
+  colour-space/colour-value fields, line width/cap/join, dash-pattern object,
+  and rendering-intent state while leaving operator-driven state extraction for
+  later slices. Native focused validation reports `moon test --target native
+  --package bobzhang/pdflite --file pdf_content_state_test.mbt` at 1/1 tests
+  passing; native full-suite validation reports 1914/1914 tests passing.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,

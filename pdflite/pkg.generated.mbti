@@ -363,7 +363,11 @@ pub fn pdf_content_concat_stream_views(ArrayView[BytesView]) -> Bytes
 
 pub fn pdf_content_concat_streams(ArrayView[Bytes]) -> Bytes
 
+pub fn pdf_content_dash_pattern_content_json(PdfContentDashPattern) -> Json
+
 pub fn pdf_content_end_artifact() -> PdfContentOp
+
+pub fn pdf_content_path_state_content_json(PdfContentPathState) -> Json
 
 pub fn pdf_content_stream_of_ops(ArrayView[PdfContentOp]) -> PdfObject raise @core.PdfError
 
@@ -1819,6 +1823,12 @@ pub(all) enum PdfContentColourValues {
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfContentColourValues::content_json(Self) -> Json
 
+pub(all) struct PdfContentDashPattern {
+  array : Array[Double]
+  phase : Double
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfContentDashPattern::content_json(Self) -> Json
+
 type PdfContentInlineTextFilter derive(Eq, @debug.Debug)
 
 type PdfContentLexeme derive(Eq, ToJson, @debug.Debug)
@@ -1899,6 +1909,20 @@ pub(all) enum PdfContentOp {
   Op_EX
   Op_Unknown(Bytes)
 } derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfContentPathState {
+  clipping_path : Array[PdfPath]
+  colourspace_stroke : PdfColourSpace
+  colourspace_non_stroke : PdfColourSpace
+  colour_stroke : PdfContentColourValues
+  colour_non_stroke : PdfContentColourValues
+  line_width : Double
+  line_cap : Int
+  line_join : Int
+  dash_pattern : PdfContentDashPattern
+  rendering_intent : String
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfContentPathState::content_json(Self) -> Json
 
 pub(all) struct PdfCoordRectangle {
   x : Double
