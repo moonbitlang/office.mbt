@@ -57,6 +57,11 @@ let pdf_addtext_extgstate_key_name : PdfName = pdf_name_of_bytes(
 )
 
 ///|
+let pdf_addtext_font_key_name : PdfName = pdf_name_of_bytes(
+  @ascii.encode("/Font"),
+)
+
+///|
 let pdf_addtext_ca_key_name : PdfName = pdf_name_of_bytes(@ascii.encode("/ca"))
 
 ///|
@@ -72,6 +77,11 @@ fn pdf_addtext_cpdf_stamp() -> PdfName {
 ///|
 fn pdf_addtext_extgstate_key() -> PdfName {
   pdf_addtext_extgstate_key_name
+}
+
+///|
+fn pdf_addtext_font_key() -> PdfName {
+  pdf_addtext_font_key_name
 }
 
 ///|
@@ -716,6 +726,40 @@ pub fn pdf_addtext_fontpack_resource_dictionary(
     )
   }
   updated
+}
+
+///|
+/// Install one selected add-text font resource into a page resource dictionary.
+pub fn pdf_addtext_install_font_resource(
+  resources : PdfObject,
+  fontdict : PdfObject,
+  unique_fontname : PdfName,
+  font_object : PdfObject?,
+) -> PdfObject raise PdfError {
+  match font_object {
+    Some(font_object) =>
+      resources.add_dict_entry(
+        pdf_addtext_font_key(),
+        fontdict.add_dict_entry(unique_fontname, font_object),
+      )
+    None => resources
+  }
+}
+
+///|
+/// Install cpdf add-text fontpack resources into a page resource dictionary.
+pub fn pdf_addtext_install_fontpack_resources(
+  resources : PdfObject,
+  fontdict : PdfObject,
+  unique_fontnames : ArrayView[PdfName],
+  font_objects : ArrayView[Int],
+) -> PdfObject raise PdfError {
+  resources.add_dict_entry(
+    pdf_addtext_font_key(),
+    pdf_addtext_fontpack_resource_dictionary(
+      fontdict, unique_fontnames, font_objects,
+    ),
+  )
 }
 
 ///|

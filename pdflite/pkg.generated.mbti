@@ -105,6 +105,10 @@ pub fn pdf_addtext_get_urls_line(String) -> PdfAddTextUrlLine raise @core.PdfErr
 
 pub fn pdf_addtext_initial_line_offsets(PdfPosition, Int, Double, Double) -> (Double, Double)
 
+pub fn pdf_addtext_install_font_resource(PdfObject, PdfObject, @core.PdfName, PdfObject?) -> PdfObject raise @core.PdfError
+
+pub fn pdf_addtext_install_fontpack_resources(PdfObject, PdfObject, ArrayView[@core.PdfName], ArrayView[Int]) -> PdfObject raise @core.PdfError
+
 pub fn pdf_addtext_justification_offset(PdfAddTextRotation, Double, Double, PdfPosition, PdfAddTextJustification) -> Double
 
 pub fn pdf_addtext_line_advance(PdfAddTextRotation, Double, Double) -> (Double, Double)

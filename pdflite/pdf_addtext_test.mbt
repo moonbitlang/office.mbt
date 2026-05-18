@@ -855,6 +855,59 @@ test "pdf_addtext_fontpack_resource_dictionary installs embedded font references
 }
 
 ///|
+test "pdf_addtext_install_font_resource adds selected font dictionary" {
+  let font_key = addtext_name_for_test("/Font")
+  let procset = addtext_name_for_test("/ProcSet")
+  let f0 = addtext_name_for_test("/F0")
+  let f1 = addtext_name_for_test("/F1")
+  let resources : @pdflite.PdfObject = PdfDictionary([(procset, PdfArray([]))])
+  let fontdict : @pdflite.PdfObject = PdfDictionary([(f0, PdfInteger(1))])
+  let updated = try! @pdflite.pdf_addtext_install_font_resource(
+    resources,
+    fontdict,
+    f1,
+    Some(PdfIndirect(10)),
+  )
+  @test.assert_eq(updated.lookup_immediate(procset), Some(PdfArray([])))
+  guard updated.lookup_immediate(font_key) is Some(fonts) else {
+    fail("expected updated font resource dictionary")
+  }
+  @test.assert_eq(fonts.lookup_immediate(f0), Some(PdfInteger(1)))
+  @test.assert_eq(fonts.lookup_immediate(f1), Some(PdfIndirect(10)))
+  @test.assert_eq(
+    try! @pdflite.pdf_addtext_install_font_resource(
+      resources,
+      fontdict,
+      f1,
+      None,
+    ),
+    resources,
+  )
+}
+
+///|
+test "pdf_addtext_install_fontpack_resources adds embedded font dictionary" {
+  let font_key = addtext_name_for_test("/Font")
+  let f0 = addtext_name_for_test("/F0")
+  let f1 = addtext_name_for_test("/F1")
+  let f2 = addtext_name_for_test("/F2")
+  let resources : @pdflite.PdfObject = PdfDictionary([])
+  let fontdict : @pdflite.PdfObject = PdfDictionary([(f0, PdfInteger(1))])
+  let updated = try! @pdflite.pdf_addtext_install_fontpack_resources(
+    resources,
+    fontdict,
+    [f1, f2],
+    [10, 11],
+  )
+  guard updated.lookup_immediate(font_key) is Some(fonts) else {
+    fail("expected updated fontpack resource dictionary")
+  }
+  @test.assert_eq(fonts.lookup_immediate(f0), Some(PdfInteger(1)))
+  @test.assert_eq(fonts.lookup_immediate(f1), Some(PdfIndirect(10)))
+  @test.assert_eq(fonts.lookup_immediate(f2), Some(PdfIndirect(11)))
+}
+
+///|
 test "pdf_addtext_rectangle_origin lowers top positions by rectangle height" {
   let bounds = addtext_bounds_for_test()
   @test.assert_eq(

@@ -2253,6 +2253,15 @@ Current backend snapshot:
   `voffset`. Native focused validation reports `moon test --target native
   --package bobzhang/pdflite --file pdf_addtext_test.mbt` at 61/61 tests
   passing; native full-suite validation reports 1833/1833 tests passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` font resource installation slice exposes
+  `pdf_addtext_install_font_resource` and
+  `pdf_addtext_install_fontpack_resources`, covering cpdf's `/Font` resource
+  dictionary insertion for selected-font and fontpack paths, existing resource
+  preservation, embedded font indirect references, existing font dictionary
+  preservation, and the missing-font no-op branch. Native focused validation
+  reports `moon test --target native --package bobzhang/pdflite --file
+  pdf_addtext_test.mbt` at 63/63 tests passing; native full-suite validation
+  reports 1835/1835 tests passing.~~
 - [x] ~~Standalone `cpdfremovetext.ml` removal slice exposes
   `pdf_remove_added_text_ops`, `pdf_remove_all_text_ops`,
   `PdfDocument::remove_added_text`, `remove_all_text`, and compatibility
