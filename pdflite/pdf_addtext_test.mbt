@@ -10,6 +10,21 @@ fn addtext_offset_for_test(
 }
 
 ///|
+fn addtext_process_time_for_test() -> @pdflite.PdfStrftimeTime {
+  {
+    tm_sec: 5,
+    tm_min: 4,
+    tm_hour: 13,
+    tm_mday: 3,
+    tm_mon: 8,
+    tm_year: 123,
+    tm_wday: 0,
+    tm_yday: 6,
+    tm_isdst: false,
+  }
+}
+
+///|
 test "pdf_addtext_justification_offset handles horizontal rotations" {
   @test.assert_eq(
     addtext_offset_for_test(
@@ -219,4 +234,92 @@ test "pdf_addtext_get_urls_line reports malformed URL markers" {
     is Err(@pdflite.PdfError::SoftError("bad URL syntax in text")) else {
     fail("expected SoftError for URL marker without closing bracket")
   }
+}
+
+///|
+test "pdf_addtext_process_text_with_time applies replacements before strftime" {
+  let page_calls : Ref[Int] = { val: 0 }
+  let replacements : Array[(String, () -> String)] = [
+    (
+      "%Page",
+      fn() {
+        page_calls.val += 1
+        "7"
+      },
+    ),
+    ("%Date", fn() { "%Y-%m-%d" }),
+  ]
+  @test.assert_eq(
+    @pdflite.pdf_addtext_process_text_with_time(
+      addtext_process_time_for_test(),
+      "page %Page on %Date",
+      replacements,
+    ),
+    "page 7 on 2023-09-03",
+  )
+  @test.assert_eq(page_calls.val, 1)
+}
+
+///|
+test "pdf_addtext_process_text_with_time keeps lazy replacement order" {
+  let absent_calls : Ref[Int] = { val: 0 }
+  let one_calls : Ref[Int] = { val: 0 }
+  let two_calls : Ref[Int] = { val: 0 }
+  let replacements : Array[(String, () -> String)] = [
+    (
+      "%Absent",
+      fn() {
+        absent_calls.val += 1
+        "bad"
+      },
+    ),
+    (
+      "%One",
+      fn() {
+        one_calls.val += 1
+        "%Two"
+      },
+    ),
+    (
+      "%Two",
+      fn() {
+        two_calls.val += 1
+        "ok"
+      },
+    ),
+  ]
+  @test.assert_eq(
+    @pdflite.pdf_addtext_process_text_with_time(
+      addtext_process_time_for_test(),
+      "%One/%One/%Y",
+      replacements,
+    ),
+    "ok/ok/2023",
+  )
+  @test.assert_eq(absent_calls.val, 0)
+  @test.assert_eq(one_calls.val, 2)
+  @test.assert_eq(two_calls.val, 2)
+}
+
+///|
+test "pdf_addtext_process_text_with_time ignores empty replacement markers" {
+  let calls : Ref[Int] = { val: 0 }
+  let replacements : Array[(String, () -> String)] = [
+    (
+      "",
+      fn() {
+        calls.val += 1
+        "ignored"
+      },
+    ),
+  ]
+  @test.assert_eq(
+    @pdflite.pdf_addtext_process_text_with_time(
+      addtext_process_time_for_test(),
+      "%Y",
+      replacements,
+    ),
+    "2023",
+  )
+  @test.assert_eq(calls.val, 0)
 }

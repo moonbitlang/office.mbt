@@ -2090,6 +2090,13 @@ Current backend snapshot:
   soft errors. Native focused validation reports `moon test --target native
   --package bobzhang/pdflite --file pdf_addtext_test.mbt` at 9/9 tests
   passing; native full-suite validation reports 1781/1781 tests passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` replacement processing slice exposes
+  `pdf_addtext_process_text_with_time`, covering lazy callback evaluation,
+  left-to-right ordered marker replacement, empty-marker no-op behavior, and the
+  final cpdf strftime pass. Native focused validation reports `moon test
+  --target native --package bobzhang/pdflite --file pdf_addtext_test.mbt` at
+  12/12 tests passing; native full-suite validation reports 1784/1784 tests
+  passing.~~
 - [x] ~~Standalone `cpdfremovetext.ml` removal slice exposes
   `pdf_remove_added_text_ops`, `pdf_remove_all_text_ops`,
   `PdfDocument::remove_added_text`, `remove_all_text`, and compatibility

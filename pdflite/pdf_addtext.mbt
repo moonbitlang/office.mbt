@@ -229,6 +229,69 @@ pub fn pdf_addtext_justification_offset(
 }
 
 ///|
+fn pdf_addtext_bytes_match_at(
+  bytes : BytesView,
+  index : Int,
+  pattern : BytesView,
+) -> Bool {
+  if pattern.length() == 0 || index + pattern.length() > bytes.length() {
+    false
+  } else {
+    for offset in 0..<pattern.length() {
+      if bytes[index + offset].to_int() != pattern[offset].to_int() {
+        return false
+      }
+    }
+    true
+  }
+}
+
+///|
+fn pdf_addtext_replace_all_lazy(
+  text : String,
+  search : String,
+  replacement : () -> String,
+) -> String {
+  let search_bytes = @utf8.encode(search)
+  if search_bytes.length() == 0 {
+    text
+  } else {
+    let text_bytes = @utf8.encode(text)
+    let output : Array[Byte] = []
+    let mut index = 0
+    while index < text_bytes.length() {
+      if pdf_addtext_bytes_match_at(text_bytes, index, search_bytes) {
+        for byte in @utf8.encode(replacement()) {
+          output.push(byte)
+        }
+        index += search_bytes.length()
+      } else {
+        output.push(text_bytes[index])
+        index += 1
+      }
+    }
+    @utf8.decode_lossy(Bytes::from_array(output))
+  }
+}
+
+///|
+/// Apply cpdf add-text replacements, then run the cpdf strftime pass.
+///
+/// Replacement callbacks are only evaluated for markers that occur in `text`,
+/// matching cpdf's `string_replace_all_lazy` helper.
+pub fn pdf_addtext_process_text_with_time(
+  time : PdfStrftimeTime,
+  text : String,
+  replacements : ArrayView[(String, () -> String)],
+) -> String {
+  let mut output = text
+  for replacement in replacements {
+    output = pdf_addtext_replace_all_lazy(output, replacement.0, replacement.1)
+  }
+  pdf_strftime_with_time(time, output)
+}
+
+///|
 fn pdf_addtext_find_byte(bytes : BytesView, start : Int, value : Int) -> Int? {
   let mut index = start
   while index < bytes.length() {
