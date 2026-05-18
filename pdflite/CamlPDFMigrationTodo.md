@@ -1869,6 +1869,13 @@ Current backend snapshot:
   validation reports `moon test --target native pdf_remove_text_test.mbt` at
   7/7 tests passing; native full-suite validation reports 1719/1719 tests
   passing.~~
+- [x] ~~Standalone `cpdfshape.ml` shape helper slice exposes the cpdf path
+  model, `pdf_shape_kappa`, `pdf_restrict_angle`, `pdf_shape_circle`, and
+  `pdf_shape_rectangle`, covering kappa parity, `restrict_angle` rounding and
+  source edge semantics, rectangle path construction, circle Bezier quarter
+  arcs, and segment joining. Native focused validation reports `moon test
+  --target native pdf_shape_test.mbt` at 4/4 tests passing; native full-suite
+  validation reports 1721/1721 tests passing.~~
 - [x] ~~Standalone `cpdfpagelabels.ml` JSON adapter slice now exposes
   `PdfDocument::add_page_labels_json` and `pdf_add_page_labels_json`, covering
   cpdf's page-label JSON array shape, UTF-8 prefix-to-PDFDocString encoding,

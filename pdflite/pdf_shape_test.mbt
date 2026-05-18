@@ -42,6 +42,15 @@ test "cpdf shape exposes kappa and restricts angles" {
 }
 
 ///|
+test "cpdf shape restrict angle preserves source edge semantics" {
+  assert_close_for_shape_test(@pdflite.pdf_restrict_angle(1.0, 0.5), 1.0)
+  assert_close_for_shape_test(
+    @pdflite.pdf_restrict_angle(@math.PI / 2.0, 2.0 * @math.PI - 0.1),
+    3.0 * @math.PI / 2.0,
+  )
+}
+
+///|
 test "cpdf shape builds rectangle paths" {
   let path = @pdflite.pdf_shape_rectangle(10.0, 20.0, 30.0, 40.0)
   @test.assert_eq(path.winding_rule, PdfPathEvenOdd)
