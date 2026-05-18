@@ -2286,6 +2286,16 @@ Current backend snapshot:
   parity. Native focused validation reports `moon test --target native
   --package bobzhang/pdflite --file pdf_addtext_test.mbt` at 100/100 tests
   passing; native full-suite validation reports 1872/1872 tests passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` resource-setup integration slice exposes
+  `PdfAddTextResourceSetup`, `PdfDocument::addtext_resource_setup`, and
+  `pdf_addtext_resource_setup`, covering selected-font `/Font` installation,
+  fontpack resource installation, unique font-name reporting, opacity
+  `/ExtGState` setup, placeholder font dictionaries, wrapper parity, and
+  cpdf's existing-font branch that preserves page resources and suppresses
+  opacity selection. Native focused validation reports `moon test --target
+  native --package bobzhang/pdflite --file pdf_addtext_test.mbt` at 103/103
+  tests passing; native full-suite validation reports 1875/1875 tests
+  passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` line-width selection and justification
   application slice exposes `pdf_addtext_longest_width` and
   `pdf_addtext_apply_justification_offset`, covering cpdf's widest expanded

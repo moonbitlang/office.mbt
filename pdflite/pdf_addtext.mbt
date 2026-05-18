@@ -77,6 +77,16 @@ pub(all) struct PdfAddTextPreparedLine {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Page resources prepared for one cpdf add-text line.
+pub(all) struct PdfAddTextResourceSetup {
+  resources : PdfObject
+  font_dictionary : PdfObject
+  unique_fontname : PdfName
+  unique_fontnames : Array[PdfName]
+  extgstate_name : PdfName?
+} derive(Debug, Eq, ToJson)
+
+///|
 /// Values used to build cpdf add-text replacement callbacks.
 pub(all) struct PdfAddTextReplacementValues {
   page_number : Int
@@ -1114,6 +1124,91 @@ pub fn pdf_addtext_selected_font_object(
   font : PdfFont?,
 ) -> PdfObject? raise PdfError {
   document.addtext_selected_font_object(font)
+}
+
+///|
+/// Prepare page resources for one cpdf add-text line.
+///
+/// Selected-font and fontpack modes install new `/Font` entries and optional
+/// opacity resources. Existing-named-font mode reuses the page resources
+/// unchanged and suppresses opacity graphics state selection, matching cpdf's
+/// `font = None` branch.
+pub fn PdfDocument::addtext_resource_setup(
+  self : PdfDocument,
+  page : PdfPage,
+  font : PdfFont?,
+  fontpack : PdfFontPack?,
+  fontname : PdfName,
+  font_object : PdfObject?,
+  fontpack_font_objects : ArrayView[Int],
+  opacity : Double,
+) -> PdfAddTextResourceSetup raise PdfError {
+  let fontdict = self.addtext_page_font_dictionary(page)
+  match (font, fontpack) {
+    (None, None) =>
+      {
+        resources: page.resources,
+        font_dictionary: fontdict,
+        unique_fontname: fontname,
+        unique_fontnames: [],
+        extgstate_name: None,
+      }
+    (_, Some(fontpack)) => {
+      let (resources, extgstate_name) = self.addtext_opacity_resources(
+        page.resources,
+        opacity,
+      )
+      let (unique_fontname, reserved_fontdict, unique_fontnames) = pdf_addtext_allocate_font_names(
+        fontdict,
+        Some(fontpack),
+      )
+      {
+        resources: pdf_addtext_install_fontpack_resources(
+          resources, reserved_fontdict, unique_fontnames, fontpack_font_objects,
+        ),
+        font_dictionary: reserved_fontdict,
+        unique_fontname,
+        unique_fontnames,
+        extgstate_name,
+      }
+    }
+    (Some(_), None) => {
+      let (resources, extgstate_name) = self.addtext_opacity_resources(
+        page.resources,
+        opacity,
+      )
+      let (unique_fontname, fontdict, unique_fontnames) = pdf_addtext_allocate_font_names(
+        fontdict,
+        None,
+      )
+      {
+        resources: pdf_addtext_install_font_resource(
+          resources, fontdict, unique_fontname, font_object,
+        ),
+        font_dictionary: fontdict,
+        unique_fontname,
+        unique_fontnames,
+        extgstate_name,
+      }
+    }
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::addtext_resource_setup`.
+pub fn pdf_addtext_resource_setup(
+  document : PdfDocument,
+  page : PdfPage,
+  font : PdfFont?,
+  fontpack : PdfFontPack?,
+  fontname : PdfName,
+  font_object : PdfObject?,
+  fontpack_font_objects : ArrayView[Int],
+  opacity : Double,
+) -> PdfAddTextResourceSetup raise PdfError {
+  document.addtext_resource_setup(
+    page, font, fontpack, fontname, font_object, fontpack_font_objects, opacity,
+  )
 }
 
 ///|

@@ -1032,6 +1032,115 @@ test "PdfDocument addtext_selected_font_object propagates writer errors" {
 }
 
 ///|
+test "PdfDocument addtext_resource_setup installs selected font and opacity" {
+  let document = @pdflite.pdf_document_empty()
+  let font_key = addtext_name_for_test("/Font")
+  let extgstate = addtext_name_for_test("/ExtGState")
+  let gs0 = addtext_name_for_test("/gs0")
+  let f0 = addtext_name_for_test("/F0")
+  let f1 = addtext_name_for_test("/F1")
+  let ca = addtext_name_for_test("/ca")
+  let ca_stroke = addtext_name_for_test("/CA")
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: PdfDictionary([(font_key, PdfDictionary([(f0, PdfInteger(1))]))]),
+  }
+  let setup = try! document.addtext_resource_setup(
+    page,
+    Some(addtext_standard_font_for_test()),
+    None,
+    addtext_name_for_test("/Helvetica"),
+    Some(PdfIndirect(10)),
+    [],
+    0.5,
+  )
+  @test.assert_eq(setup.unique_fontname, f1)
+  @test.assert_eq(setup.unique_fontnames, [])
+  @test.assert_eq(setup.extgstate_name, Some(gs0))
+  guard setup.resources.lookup_immediate(font_key) is Some(fonts) else {
+    fail("expected prepared font dictionary")
+  }
+  @test.assert_eq(fonts.lookup_immediate(f0), Some(PdfInteger(1)))
+  @test.assert_eq(fonts.lookup_immediate(f1), Some(PdfIndirect(10)))
+  guard setup.resources.lookup_immediate(extgstate) is Some(states) else {
+    fail("expected prepared ExtGState dictionary")
+  }
+  guard states.lookup_immediate(gs0) is Some(opacity) else {
+    fail("expected opacity resource")
+  }
+  @test.assert_eq(opacity.lookup_immediate(ca), Some(PdfReal(0.5)))
+  @test.assert_eq(opacity.lookup_immediate(ca_stroke), Some(PdfReal(0.5)))
+}
+
+///|
+test "pdf_addtext_resource_setup installs fontpack resources" {
+  let document = @pdflite.pdf_document_empty()
+  let font_key = addtext_name_for_test("/Font")
+  let f0 = addtext_name_for_test("/F0")
+  let f1 = addtext_name_for_test("/F1")
+  let f2 = addtext_name_for_test("/F2")
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: PdfDictionary([(font_key, PdfDictionary([(f0, PdfInteger(1))]))]),
+  }
+  let pack : @pdflite.PdfFontPack = {
+    fonts: [
+      addtext_standard_font_for_test(),
+      addtext_simple_font_for_test(700.0),
+    ],
+    entries: [],
+  }
+  let setup = try! @pdflite.pdf_addtext_resource_setup(
+    document,
+    page,
+    None,
+    Some(pack),
+    addtext_name_for_test("/Fallback"),
+    None,
+    [20, 21],
+    1.0,
+  )
+  @test.assert_eq(setup.unique_fontname, f1)
+  @test.assert_eq(setup.unique_fontnames, [f1, f2])
+  @test.assert_eq(setup.extgstate_name, None)
+  @test.assert_eq(setup.font_dictionary.lookup_immediate(f1), Some(PdfNull))
+  guard setup.resources.lookup_immediate(font_key) is Some(fonts) else {
+    fail("expected prepared fontpack dictionary")
+  }
+  @test.assert_eq(fonts.lookup_immediate(f0), Some(PdfInteger(1)))
+  @test.assert_eq(fonts.lookup_immediate(f1), Some(PdfIndirect(20)))
+  @test.assert_eq(fonts.lookup_immediate(f2), Some(PdfIndirect(21)))
+}
+
+///|
+test "PdfDocument addtext_resource_setup preserves existing-font resources" {
+  let document = @pdflite.pdf_document_empty()
+  let font_key = addtext_name_for_test("/Font")
+  let resource_name = addtext_name_for_test("/Fx")
+  let fontdict : @pdflite.PdfObject = PdfDictionary([
+    (resource_name, PdfIndirect(10)),
+  ])
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: PdfDictionary([(font_key, fontdict)]),
+  }
+  let setup = try! document.addtext_resource_setup(
+    page,
+    None,
+    None,
+    resource_name,
+    Some(PdfIndirect(99)),
+    [],
+    0.25,
+  )
+  @test.assert_eq(setup.resources, page.resources)
+  @test.assert_eq(setup.font_dictionary, fontdict)
+  @test.assert_eq(setup.unique_fontname, resource_name)
+  @test.assert_eq(setup.unique_fontnames, [])
+  @test.assert_eq(setup.extgstate_name, None)
+}
+
+///|
 test "PdfDocument addtext_existing_font_resource finds direct resource keys" {
   let document = @pdflite.pdf_document_empty()
   let resource_name = addtext_name_for_test("/F1")
