@@ -2623,10 +2623,21 @@ Current backend snapshot:
   to three explicit line segments plus a closed subpath, nonzero/even-odd
   fill/stroke painting, `s`/`b`/`B*` close-before-paint behavior, source-shaped
   `b*` double-close behavior, `n` reset, and non-path operator ignore behavior
-  while leaving clipping `W`/`W*` and the full stateful content walker for later
-  slices. Native focused validation reports `moon test --target native
-  --package bobzhang/pdflite --file pdf_content_path_machine_test.mbt` at 5/5
-  tests passing; native full-suite validation reports 1936/1936 tests passing.~~
+  while leaving the full stateful content walker for later slices. Native
+  focused validation reports `moon test --target native --package
+  bobzhang/pdflite --file pdf_content_path_machine_test.mbt` at 5/5 tests
+  passing; native full-suite validation reports 1936/1936 tests passing.~~
+- [x] ~~Standalone `cpdfcontent.ml` clipping path update slice exposes
+  `PdfContentClippingOpResult`,
+  `PdfContentPartialPath::content_apply_clipping_op`, and
+  `pdf_content_apply_clipping_op`, matching cpdf's `W`/`W*` handling,
+  nonzero/even-odd clipping rules, closed current-segment clipping, preserved
+  partial path until a later `n`, no-op empty/no-partial clipping, newest
+  clipping-path stack prepending, and cpdf's newest-subpath-first clipping
+  order while leaving the full stateful content walker for later slices. Native
+  focused validation reports `moon test --target native --package
+  bobzhang/pdflite --file pdf_content_path_machine_test.mbt` at 7/7 tests
+  passing; native full-suite validation reports 1938/1938 tests passing.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,

@@ -349,6 +349,8 @@ pub fn pdf_contains_javascript(PdfDocument) -> Bool
 
 pub fn pdf_content_add_artifacts(ArrayView[PdfContentOp]) -> Array[PdfContentOp]
 
+pub fn pdf_content_apply_clipping_op(PdfContentPartialPath, ArrayView[PdfPath], PdfContentOp) -> PdfContentClippingOpResult
+
 pub fn pdf_content_apply_path_op(PdfContentPartialPath, PdfContentOp) -> PdfContentPathOpResult
 
 pub fn pdf_content_begin_artifact() -> PdfContentOp
@@ -1867,6 +1869,11 @@ pub(all) struct PdfContentBoundingBox {
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfContentBoundingBox::content_json(Self) -> Json
 
+pub(all) struct PdfContentClippingOpResult {
+  partial_path : PdfContentPartialPath
+  clipping_path : Array[PdfPath]
+} derive(Eq, ToJson, @debug.Debug)
+
 pub(all) struct PdfContentClippingState {
   clipping_path : Array[PdfPath]
 } derive(Eq, ToJson, @debug.Debug)
@@ -2007,6 +2014,7 @@ pub(all) enum PdfContentPartialPath {
   PdfContentNoPartialPath
   PdfContentPartialPath(PdfContentPartialPathState)
 } derive(Eq, ToJson, @debug.Debug)
+pub fn PdfContentPartialPath::content_apply_clipping_op(Self, ArrayView[PdfPath], PdfContentOp) -> PdfContentClippingOpResult
 pub fn PdfContentPartialPath::content_apply_path_op(Self, PdfContentOp) -> PdfContentPathOpResult
 
 pub(all) struct PdfContentPartialPathState {

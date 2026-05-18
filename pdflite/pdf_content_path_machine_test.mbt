@@ -167,3 +167,67 @@ test "cpdfcontent path machine expands rectangle operator before painting" {
   @test.assert_eq(cleared.partial_path, PdfContentNoPartialPath)
   @test.assert_eq(cleared.drawn_path, None)
 }
+
+///|
+test "cpdfcontent clipping op closes current segments and preserves path" {
+  let partial = content_path_apply_for_test([Op_m(0.0, 0.0), Op_l(1.0, 0.0)]).partial_path
+  let result = @pdflite.pdf_content_apply_clipping_op(partial, [], Op_W)
+  @test.assert_eq(result.clipping_path.length(), 1)
+  let clipping = result.clipping_path[0]
+  @test.assert_eq(clipping.winding_rule, PdfPathNonZero)
+  @test.assert_eq(clipping.subpaths.length(), 1)
+  @test.assert_eq(clipping.subpaths[0].closure, PdfPathClosed)
+  match clipping.subpaths[0].segments[0] {
+    PdfPathStraight(start, finish) => {
+      content_path_assert_point_for_test(start, 0.0, 0.0)
+      content_path_assert_point_for_test(finish, 1.0, 0.0)
+    }
+    _ => fail("expected clipping line segment")
+  }
+  let stroked = result.partial_path.content_apply_path_op(Op_S)
+  guard stroked.drawn_path is Some(drawn) else {
+    fail("expected preserved path to stroke")
+  }
+  @test.assert_eq(drawn.path.subpaths[0].closure, PdfPathOpen)
+}
+
+///|
+test "cpdfcontent clipping op prepends and keeps cpdf subpath order" {
+  let partial = content_path_apply_for_test([
+      Op_m(0.0, 0.0),
+      Op_l(1.0, 0.0),
+      Op_h,
+      Op_m(2.0, 2.0),
+      Op_l(3.0, 2.0),
+      Op_h,
+    ]).partial_path
+  let existing : @pdflite.PdfPath = {
+    winding_rule: PdfPathNonZero,
+    subpaths: [],
+  }
+  let result = partial.content_apply_clipping_op([existing], Op_Wstar)
+  @test.assert_eq(result.clipping_path.length(), 2)
+  @test.assert_eq(result.clipping_path[0].winding_rule, PdfPathEvenOdd)
+  @test.assert_eq(result.clipping_path[1], existing)
+  let subpaths = result.clipping_path[0].subpaths
+  @test.assert_eq(subpaths.length(), 2)
+  match subpaths[0].segments[0] {
+    PdfPathStraight(start, finish) => {
+      content_path_assert_point_for_test(start, 2.0, 2.0)
+      content_path_assert_point_for_test(finish, 3.0, 2.0)
+    }
+    _ => fail("expected newest clipping subpath first")
+  }
+  match subpaths[1].segments[0] {
+    PdfPathStraight(start, finish) => {
+      content_path_assert_point_for_test(start, 0.0, 0.0)
+      content_path_assert_point_for_test(finish, 1.0, 0.0)
+    }
+    _ => fail("expected older clipping subpath second")
+  }
+  let ignored = result.partial_path.content_apply_clipping_op(
+    result.clipping_path,
+    Op_S,
+  )
+  @test.assert_eq(ignored.clipping_path, result.clipping_path)
+}

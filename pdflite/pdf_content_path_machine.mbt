@@ -19,6 +19,12 @@ pub(all) struct PdfContentPathOpResult {
 } derive(Debug, Eq, ToJson)
 
 ///|
+pub(all) struct PdfContentClippingOpResult {
+  partial_path : PdfContentPartialPath
+  clipping_path : Array[PdfPath]
+} derive(Debug, Eq, ToJson)
+
+///|
 pub fn pdf_content_no_partial_path() -> PdfContentPartialPath {
   PdfContentNoPartialPath
 }
@@ -59,6 +65,13 @@ fn pdf_content_path_copy_subpaths(
 }
 
 ///|
+fn pdf_content_path_reverse_subpaths(
+  subpaths : ArrayView[PdfPathSubpath],
+) -> Array[PdfPathSubpath] {
+  pdf_content_path_copy_subpaths(subpaths).rev()
+}
+
+///|
 fn pdf_content_path_append_subpath(
   subpaths : ArrayView[PdfPathSubpath],
   subpath : PdfPathSubpath,
@@ -85,6 +98,25 @@ fn pdf_content_partial_path_clear(
   state : PdfContentPartialPathState,
 ) -> PdfContentPartialPath {
   PdfContentPartialPath({ ..state, segments: [], subpaths: [] })
+}
+
+///|
+fn pdf_content_path_copy_paths(paths : ArrayView[PdfPath]) -> Array[PdfPath] {
+  [
+    for path in paths => path
+  ]
+}
+
+///|
+fn pdf_content_path_prepend_path(
+  paths : ArrayView[PdfPath],
+  path : PdfPath,
+) -> Array[PdfPath] {
+  let output = [path]
+  for existing in paths {
+    output.push(existing)
+  }
+  output
 }
 
 ///|
@@ -237,6 +269,51 @@ fn PdfContentPartialPath::content_paint(
 }
 
 ///|
+fn PdfContentPartialPath::content_clipping_path(
+  self : PdfContentPartialPath,
+  winding_rule : PdfPathWindingRule,
+) -> PdfPath? {
+  match self {
+    PdfContentPartialPath(state) =>
+      if state.segments.length() == 0 && state.subpaths.length() == 0 {
+        None
+      } else {
+        let subpaths = if state.segments.length() == 0 {
+          pdf_content_path_reverse_subpaths(state.subpaths)
+        } else {
+          let output = [pdf_content_path_subpath(PdfPathClosed, state.segments)]
+          for subpath in pdf_content_path_reverse_subpaths(state.subpaths) {
+            output.push(subpath)
+          }
+          output
+        }
+        Some({ winding_rule, subpaths })
+      }
+    PdfContentNoPartialPath => None
+  }
+}
+
+///|
+fn PdfContentPartialPath::content_clip(
+  self : PdfContentPartialPath,
+  clipping_path : ArrayView[PdfPath],
+  winding_rule : PdfPathWindingRule,
+) -> PdfContentClippingOpResult {
+  match self.content_clipping_path(winding_rule) {
+    Some(path) =>
+      {
+        partial_path: self,
+        clipping_path: pdf_content_path_prepend_path(clipping_path, path),
+      }
+    None =>
+      {
+        partial_path: self,
+        clipping_path: pdf_content_path_copy_paths(clipping_path),
+      }
+  }
+}
+
+///|
 /// Apply cpdfcontent path-construction and path-painting operator semantics.
 ///
 /// Non-path operators are ignored. Painting operators return the drawn path and
@@ -318,4 +395,35 @@ pub fn pdf_content_apply_path_op(
   op : PdfContentOp,
 ) -> PdfContentPathOpResult {
   partial_path.content_apply_path_op(op)
+}
+
+///|
+/// Apply cpdfcontent clipping operator semantics for `W` and `W*`.
+///
+/// The partial path is intentionally preserved. In PDF content streams, `n`
+/// commonly follows a clipping operator and clears the current path separately.
+pub fn PdfContentPartialPath::content_apply_clipping_op(
+  self : PdfContentPartialPath,
+  clipping_path : ArrayView[PdfPath],
+  op : PdfContentOp,
+) -> PdfContentClippingOpResult {
+  match op {
+    Op_W => self.content_clip(clipping_path, PdfPathNonZero)
+    Op_Wstar => self.content_clip(clipping_path, PdfPathEvenOdd)
+    _ =>
+      {
+        partial_path: self,
+        clipping_path: pdf_content_path_copy_paths(clipping_path),
+      }
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfContentPartialPath::content_apply_clipping_op`.
+pub fn pdf_content_apply_clipping_op(
+  partial_path : PdfContentPartialPath,
+  clipping_path : ArrayView[PdfPath],
+  op : PdfContentOp,
+) -> PdfContentClippingOpResult {
+  partial_path.content_apply_clipping_op(clipping_path, op)
 }
