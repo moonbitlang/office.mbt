@@ -4,6 +4,36 @@ fn structure_name_for_test(text : String) -> @pdflite.PdfName {
 }
 
 ///|
+fn structure_json_int_for_test(value : Int) -> Json {
+  Json::number(value.to_double(), repr=value.to_string())
+}
+
+///|
+fn structure_struct_tree_doc_for_test() -> @pdflite.PdfDocument raise {
+  let key_struct_tree_root = structure_name_for_test("/StructTreeRoot")
+  let key_k = structure_name_for_test("/K")
+  let key_pg = structure_name_for_test("/Pg")
+  let key_label = structure_name_for_test("/Label")
+  let doc = @pdflite.pdf_document_empty()
+  let page_root = doc.add_pagetree([@pdflite.pdf_page_blank(@pdflite.paper_a4)])
+  ignore(doc.add_root(page_root, [(key_struct_tree_root, PdfIndirect(30))]))
+  let page_numbers = doc.page_reference_numbers()
+  doc.add_object_given_number(
+    30,
+    @pdflite.pdf_dictionary([(key_k, PdfIndirect(31))]),
+  )
+  doc.add_object_given_number(
+    31,
+    @pdflite.pdf_dictionary([
+      (key_pg, PdfIndirect(page_numbers[0])),
+      (key_k, PdfInteger(0)),
+      (key_label, PdfString(@ascii.encode("figure"))),
+    ]),
+  )
+  doc
+}
+
+///|
 fn structure_parent_tree_doc_for_test(
   entries : ArrayView[(Int, @pdflite.PdfObject)],
 ) -> @pdflite.PdfDocument {
@@ -109,6 +139,99 @@ fn structure_direct_root_doc_for_test() -> @pdflite.PdfDocument {
     ]),
   )
   doc
+}
+
+///|
+test "PdfDocument extract_struct_tree exports cpdf-style object graph JSON" {
+  let doc = try! structure_struct_tree_doc_for_test()
+  let page_numbers = try! doc.page_reference_numbers()
+  let exported = try! doc.extract_struct_tree()
+  let expected = Json::array([
+    Json::array([
+      structure_json_int_for_test(0),
+      Json::object(
+        Map::of([
+          ("/CPDFJSONformatversion", structure_json_int_for_test(1)),
+          (
+            "/CPDFJSONpageobjnumbers",
+            Json::array([structure_json_int_for_test(page_numbers[0])]),
+          ),
+        ]),
+      ),
+    ]),
+    Json::array([
+      structure_json_int_for_test(30),
+      try! doc.json_of_object(doc.lookup_object_or_null(30), utf8=true),
+    ]),
+    Json::array([
+      structure_json_int_for_test(31),
+      try! doc.json_of_object(doc.lookup_object_or_null(31), utf8=true),
+    ]),
+  ])
+  @test.assert_eq(exported, expected)
+  @test.assert_eq(try! @pdflite.pdf_ua_extract_struct_tree(doc), exported)
+  @test.assert_eq(
+    try! doc.struct_tree_json_blob(),
+    @utf8.encode(exported.stringify()),
+  )
+
+  let without_tree = @pdflite.pdf_blank_document_paper(@pdflite.paper_a4, 1)
+  guard (try! without_tree.extract_struct_tree()) is Array([_]) else {
+    fail("expected only the CPDFJSON header when no structure tree exists")
+  }
+}
+
+///|
+test "PdfDocument replace_struct_tree imports new negative objects" {
+  let key_k = structure_name_for_test("/K")
+  let key_label = structure_name_for_test("/Label")
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(
+    30,
+    @pdflite.pdf_dictionary([
+      (key_k, PdfInteger(0)),
+      (key_label, PdfString(@ascii.encode("old"))),
+    ]),
+  )
+  let replacement = Json::array([
+    Json::array([structure_json_int_for_test(0), Json::null()]),
+    Json::array([
+      structure_json_int_for_test(30),
+      try! doc.json_of_object(
+        @pdflite.pdf_dictionary([(key_k, PdfIndirect(-1))]),
+        utf8=true,
+      ),
+    ]),
+    Json::array([
+      structure_json_int_for_test(-1),
+      try! doc.json_of_object(
+        @pdflite.pdf_dictionary([
+          (key_k, PdfInteger(0)),
+          (key_label, PdfString(@ascii.encode("new"))),
+        ]),
+        utf8=true,
+      ),
+    ]),
+  ])
+  let replaced = try! @pdflite.pdf_ua_replace_struct_tree(doc, replacement)
+  @test.assert_eq(
+    doc.lookup_object_or_null(30).lookup_immediate(key_label),
+    Some(PdfString(@ascii.encode("old"))),
+  )
+  @test.assert_eq(
+    replaced.lookup_object_or_null(30).lookup_immediate(key_k),
+    Some(PdfIndirect(31)),
+  )
+  @test.assert_eq(
+    replaced.lookup_object_or_null(31).lookup_immediate(key_label),
+    Some(PdfString(@ascii.encode("new"))),
+  )
+  let bad : Result[@pdflite.PdfDocument, Error] = try? doc.replace_struct_tree(
+    Json::null(),
+  )
+  guard bad is Err(@pdflite.PdfError::SoftError(_)) else {
+    fail("expected malformed structure-tree JSON to raise SoftError")
+  }
 }
 
 ///|

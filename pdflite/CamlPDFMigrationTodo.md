@@ -19,8 +19,9 @@ Current estimate:
   renumbering, standard font-pack embedding, text-to-PDF instruction
   conversion, basic and tagged text-to-PDF document assembly, PDF/UA
   text-to-PDF subformat shaping, blank PDF/UA creation helpers, PDF/UA XMP
-  marker insertion/removal helpers, JPEG/JPEG2000, PNG, and JBIG2 image-to-PDF
-  document assembly, Form XObject stamping,
+  marker insertion/removal helpers, PDF/UA structure-tree JSON
+  import/export helpers, JPEG/JPEG2000, PNG, and JBIG2 image-to-PDF document
+  assembly, Form XObject stamping,
   composition reporting, core metadata APIs, XMP metadata-date rewriting, XMP
   info synchronization, XMP metadata creation, XMP RDF list extraction,
   XMP/document info JSON reporting, redaction annotation bounding-box overlays,
@@ -380,6 +381,15 @@ Current backend snapshot:
   streams when removing markers. `moon test --target native --package
   bobzhang/pdflite --file pdf_create_test.mbt` reports 7/7 tests passing;
   native full-suite validation reports 1762/1762 tests passing.~~
+- [x] ~~Port the JSON structure-tree helpers from `cpdfua`:
+  `extract_struct_tree` exports the cpdf header row plus referenced structure
+  objects while avoiding `/Pg`, `/Obj`, `/Stm`, and `/StmOwn` edges, and
+  `replace_struct_tree` imports positive object replacements plus nonpositive
+  new-object rows with indirect-reference rewriting. UTF-8 JSON byte wrappers
+  and cpdf-style compatibility wrappers are included. `moon test --target
+  native --package bobzhang/pdflite --file pdf_structure_test.mbt` reports
+  11/11 tests passing; native full-suite validation reports 1764/1764 tests
+  passing.~~
 - [x] ~~Complete the PDF/UA `cpdftexttopdf.typeset` subformat slice by adding
   `PDF/UA-1` and `PDF/UA-2` parsing, title enforcement, forced structure-tree
   processing, PDF/UA-1 catalog metadata, and PDF/UA-2 top-level `/Document`
