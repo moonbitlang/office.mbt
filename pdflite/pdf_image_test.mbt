@@ -9,6 +9,65 @@ fn image_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
 }
 
 ///|
+fn image_json_int_for_test(value : Int) -> Json {
+  Json::number(value.to_double(), repr=value.to_string())
+}
+
+///|
+fn image_json_int_or_null_for_test(value : Int?) -> Json {
+  match value {
+    Some(value) => image_json_int_for_test(value)
+    None => Json::null()
+  }
+}
+
+///|
+fn image_json_string_or_null_for_test(value : String?) -> Json {
+  match value {
+    Some(value) => Json::string(value)
+    None => Json::null()
+  }
+}
+
+///|
+fn image_json_entry_for_test(
+  object_number : Int,
+  pages : ArrayView[Int],
+  name : String,
+  width : Int,
+  height : Int,
+  byte_count : Int,
+  bits_per_component : Int?,
+  colourspace : String?,
+  filter : String?,
+  mask : String,
+  mask_object_number : Int?,
+) -> Json {
+  Json::object(
+    Map::of([
+      ("Object", image_json_int_for_test(object_number)),
+      (
+        "Pages",
+        Json::array(
+          [
+            for page_number in pages => image_json_int_for_test(page_number)
+          ],
+        ),
+      ),
+      ("Name", Json::string(name)),
+      ("Width", image_json_int_for_test(width)),
+      ("Height", image_json_int_for_test(height)),
+      ("Bytes", image_json_int_for_test(byte_count)),
+      ("BitsPerComponent", image_json_int_or_null_for_test(bits_per_component)),
+      ("Colourspace", image_json_string_or_null_for_test(colourspace)),
+      ("Filter", image_json_string_or_null_for_test(filter)),
+      ("Mask", Json::string(mask)),
+      ("MaskObjNum", image_json_int_or_null_for_test(mask_object_number)),
+    ]),
+  )
+}
+
+///|
 fn image_lookup_for_test(
   object : @pdflite.PdfObject,
   key : String,
@@ -216,6 +275,160 @@ fn image_find_bytes_for_test(haystack : BytesView, needle : BytesView) -> Int {
       -1
     }
   }
+}
+
+///|
+test "PdfDocument images_json lists image xobjects and soft masks" {
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(
+    21,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (
+          image_name_for_test("/Subtype"),
+          PdfNameObject(image_name_for_test("/Image")),
+        ),
+        (image_name_for_test("/Width"), PdfInteger(2)),
+        (image_name_for_test("/Height"), PdfInteger(2)),
+        (image_name_for_test("/ImageMask"), PdfBoolean(true)),
+        (image_name_for_test("/Length"), PdfInteger(7)),
+      ]),
+      StreamGot(@ascii.encode("mask")),
+    ),
+  )
+  doc.add_object_given_number(
+    20,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (
+          image_name_for_test("/Subtype"),
+          PdfNameObject(image_name_for_test("/Image")),
+        ),
+        (image_name_for_test("/Width"), PdfInteger(10)),
+        (image_name_for_test("/Height"), PdfInteger(5)),
+        (image_name_for_test("/BitsPerComponent"), PdfInteger(8)),
+        (
+          image_name_for_test("/ColorSpace"),
+          PdfNameObject(image_name_for_test("/DeviceRGB")),
+        ),
+        (
+          image_name_for_test("/Filter"),
+          PdfNameObject(image_name_for_test("/DCTDecode")),
+        ),
+        (image_name_for_test("/Length"), PdfInteger(123)),
+        (image_name_for_test("/SMask"), PdfIndirect(21)),
+      ]),
+      StreamGot(@ascii.encode("jpg")),
+    ),
+  )
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: @pdflite.pdf_dictionary([
+      (
+        image_name_for_test("/XObject"),
+        @pdflite.pdf_dictionary([(image_name_for_test("/Im1"), PdfIndirect(20))]),
+      ),
+    ]),
+  }
+  let page_root = try! doc.add_pagetree([page])
+  ignore(try! doc.add_root(page_root, []))
+  let expected = Json::array([
+    image_json_entry_for_test(
+      21,
+      [1],
+      "/SMask",
+      2,
+      2,
+      7,
+      Some(1),
+      Some("/DeviceGray"),
+      None,
+      "ImageMask",
+      None,
+    ),
+    image_json_entry_for_test(
+      20,
+      [1],
+      "/Im1",
+      10,
+      5,
+      123,
+      Some(8),
+      Some("/DeviceRGB"),
+      Some("/DCTDecode"),
+      "SMask",
+      Some(21),
+    ),
+  ])
+  @test.assert_eq(try! doc.images_json([1]), expected)
+  @test.assert_eq(try! @pdflite.pdf_image_images(false, doc, [1]), expected)
+  @test.assert_eq(
+    try! doc.images_json_blob([1]),
+    @utf8.encode(expected.stringify()),
+  )
+  let bad_page : Result[Json, Error] = try? doc.images_json([2])
+  guard bad_page is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+    fail("expected images_json invalid page to raise BadPageSpecification")
+  }
+}
+
+///|
+test "PdfDocument images_json optionally includes form inline images" {
+  let doc = @pdflite.pdf_document_empty()
+  let inline_dict = @pdflite.pdf_dictionary([
+    (image_name_for_test("/W"), PdfInteger(3)),
+    (image_name_for_test("/H"), PdfInteger(1)),
+    (image_name_for_test("/BPC"), PdfInteger(8)),
+    (
+      image_name_for_test("/CS"),
+      PdfNameObject(image_name_for_test("/DeviceRGB")),
+    ),
+  ])
+  let form = (try! @pdflite.pdf_content_stream_of_ops([
+      Op_InlineImage(inline_dict, None, @ascii.encode("abc")),
+    ]))
+    .add_dict_entry(
+      image_name_for_test("/Subtype"),
+      PdfNameObject(image_name_for_test("/Form")),
+    )
+    .add_dict_entry(
+      image_name_for_test("/Resources"),
+      @pdflite.pdf_dictionary([]),
+    )
+  doc.add_object_given_number(30, form)
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: @pdflite.pdf_dictionary([
+      (
+        image_name_for_test("/XObject"),
+        @pdflite.pdf_dictionary([(image_name_for_test("/Fm1"), PdfIndirect(30))]),
+      ),
+    ]),
+  }
+  let page_root = try! doc.add_pagetree([page])
+  ignore(try! doc.add_root(page_root, []))
+  @test.assert_eq(try! doc.images_json([1]), Json::array([]))
+  let with_inline = try! doc.images_json([1], inline=true)
+  let expected = Json::array([
+    image_json_entry_for_test(
+      0,
+      [1],
+      "/InlineImage",
+      3,
+      1,
+      3,
+      Some(8),
+      Some("/DeviceRGB"),
+      None,
+      "NoMask",
+      None,
+    ),
+  ])
+  @test.assert_eq(with_inline, expected)
+  @test.assert_eq(
+    try! @pdflite.pdf_image_images_json_blob(true, doc, [1]),
+    @utf8.encode(expected.stringify()),
+  )
 }
 
 ///|
