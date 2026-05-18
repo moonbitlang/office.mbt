@@ -197,3 +197,58 @@ test "cpdfcontent extra metrics mirror font-specific fallbacks" {
   })
   @test.assert_eq(missing_descriptor.content_extra_metrics(), (0.0, 0.0))
 }
+
+///|
+test "cpdfcontent vertical predicate mirrors source CMap cases" {
+  let standard : @pdflite.PdfFont = PdfFontStandard({
+    font: PdfHelvetica,
+    encoding: PdfWinAnsiEncoding,
+  })
+  @test.assert_eq(standard.content_is_vertical(), false)
+  let composite = match content_text_cid_font_for_test() {
+    PdfFontCIDKeyed(font) => font.composite
+    _ => abort("expected CID font")
+  }
+  let identity_v : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: content_text_name_for_test("/Top"),
+    composite,
+    encoding: PdfPredefinedCMap(content_text_name_for_test("/Identity-V")),
+  })
+  @test.assert_eq(identity_v.content_is_vertical(), true)
+  @test.assert_eq(@pdflite.pdf_content_is_vertical(identity_v), true)
+  let identity_h : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: content_text_name_for_test("/Top"),
+    composite,
+    encoding: PdfPredefinedCMap(content_text_name_for_test("/Identity-H")),
+  })
+  @test.assert_eq(identity_h.content_is_vertical(), false)
+  let other_predefined_v : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: content_text_name_for_test("/Top"),
+    composite,
+    encoding: PdfPredefinedCMap(content_text_name_for_test("/CNS-EUC-V")),
+  })
+  @test.assert_eq(other_predefined_v.content_is_vertical(), false)
+  let parsed_vertical : @pdflite.PdfParsedCMap = {
+    map: [],
+    cid_map: [],
+    notdef_map: [],
+    codespaces: [],
+    usecmap: None,
+    wmode: Some(1),
+    cmap_name: None,
+    cmap_type: None,
+    cid_system_info: None,
+  }
+  let external_vertical : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: content_text_name_for_test("/Top"),
+    composite,
+    encoding: PdfExternalCMap(7, parsed_vertical),
+  })
+  @test.assert_eq(external_vertical.content_is_vertical(), true)
+  let external_horizontal : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: content_text_name_for_test("/Top"),
+    composite,
+    encoding: PdfExternalCMap(8, { ..parsed_vertical, wmode: Some(0) }),
+  })
+  @test.assert_eq(external_horizontal.content_is_vertical(), false)
+}

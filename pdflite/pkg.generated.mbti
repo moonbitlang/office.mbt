@@ -379,6 +379,8 @@ pub fn pdf_content_extra_metrics(PdfFont) -> (Double, Double)
 
 pub fn pdf_content_glyph_state_content_json(PdfContentGlyphState) -> Json
 
+pub fn pdf_content_is_vertical(PdfFont) -> Bool
+
 pub fn pdf_content_json_entries_content_json(ArrayView[PdfContentJsonEntry]) -> Json
 
 pub fn pdf_content_json_entry_content_json(PdfContentJsonEntry) -> Json
@@ -2401,6 +2403,7 @@ pub(all) enum PdfFont {
 pub fn PdfFont::content_bytes_of_charcode(Self, Int) -> Bytes raise @core.PdfError
 pub fn PdfFont::content_charcodes_of_bytes(Self, BytesView) -> Array[Int]
 pub fn PdfFont::content_extra_metrics(Self) -> (Double, Double)
+pub fn PdfFont::content_is_vertical(Self) -> Bool
 pub fn PdfFont::debug_name(Self) -> String
 pub fn PdfFont::embedded_fontfile_number(Self) -> Int?
 pub fn PdfFont::is_identity_h(Self) -> Bool

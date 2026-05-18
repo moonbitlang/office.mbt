@@ -2555,6 +2555,15 @@ Current backend snapshot:
   --target native --package bobzhang/pdflite --file pdf_content_text_test.mbt`
   at 3/3 tests passing; native full-suite validation reports 1920/1920 tests
   passing.~~
+- [x] ~~Standalone `cpdfcontent.ml` vertical-text predicate slice exposes
+  `PdfFont::content_is_vertical` and `pdf_content_is_vertical`, matching
+  cpdf's narrow `/Identity-V` predefined-CMap handling, horizontal
+  `/Identity-H`, parsed external CMap `wmode = 1`, and false fallbacks for
+  other fonts and other predefined CMaps while leaving width/placement
+  integration for `process_tj` later. Native focused validation reports `moon
+  test --target native --package bobzhang/pdflite --file
+  pdf_content_text_test.mbt` at 4/4 tests passing; native full-suite validation
+  reports 1921/1921 tests passing.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,

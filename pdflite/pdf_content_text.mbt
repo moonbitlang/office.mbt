@@ -200,3 +200,26 @@ pub fn PdfFont::content_extra_metrics(self : PdfFont) -> (Double, Double) {
 pub fn pdf_content_extra_metrics(font : PdfFont) -> (Double, Double) {
   font.content_extra_metrics()
 }
+
+///|
+/// Return whether cpdfcontent treats this font as vertical text.
+///
+/// This intentionally mirrors cpdfcontent's narrow `vertical` helper: only the
+/// predefined `/Identity-V` CMap is vertical among predefined maps, and parsed
+/// external CMaps are vertical only when their `wmode` is `1`.
+pub fn PdfFont::content_is_vertical(self : PdfFont) -> Bool {
+  match self {
+    PdfFontCIDKeyed({ encoding: PdfPredefinedCMap(name), .. }) =>
+      name == pdf_text_identity_v_name
+    PdfFontCIDKeyed(
+      { encoding: PdfExternalCMap(_, { wmode: Some(1), .. }), .. }
+    ) => true
+    _ => false
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfFont::content_is_vertical`.
+pub fn pdf_content_is_vertical(font : PdfFont) -> Bool {
+  font.content_is_vertical()
+}
