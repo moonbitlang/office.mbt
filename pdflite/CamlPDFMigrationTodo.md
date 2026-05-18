@@ -21,7 +21,8 @@ Current estimate:
   text-to-PDF subformat shaping, blank PDF/UA creation helpers, PDF/UA XMP
   marker insertion/removal helpers, PDF/UA structure-tree JSON
   import/export helpers, JPEG/JPEG2000, PNG, and JBIG2 image-to-PDF document
-  assembly, image XObject JSON listing, Form XObject stamping,
+  assembly, image XObject JSON listing, image-resolution reporting,
+  Form XObject stamping,
   composition reporting, core metadata APIs, XMP metadata-date rewriting, XMP
   info synchronization, XMP metadata creation, XMP RDF list extraction,
   XMP/document info JSON reporting, redaction annotation bounding-box overlays,
@@ -346,6 +347,14 @@ Current backend snapshot:
   `moon test --target native --package bobzhang/pdflite --file
   pdf_image_test.mbt` at 41/41 tests passing; native full-suite validation
   reports 1766/1766 tests passing.~~
+- [x] ~~Port `cpdfimage.image_resolution` and JSON reporting with selected-page
+  XObject DPI rows, CTM/q/Q tracking, Form XObject recursion, optional inline
+  image reporting, threshold filtering, JSON/UTF-8 byte output, and
+  compatibility wrappers. Coverage pins direct image DPI, threshold filtering,
+  inline opt-in behavior, JSON/blob parity, and nested Form XObject transforms.
+  Native focused validation reports `moon test --target native --package
+  bobzhang/pdflite --file pdf_image_test.mbt` at 44/44 tests passing; native
+  full-suite validation reports 1769/1769 tests passing.~~
 - [x] ~~Port the standalone `cpdfimage.obj_of_jbig2_data` branch with cpdf's
   byte-offset dimension extraction, `/JBIG2Decode` image dictionaries,
   optional `/JBIG2Globals` decode parameters, fixed object `10000` globals

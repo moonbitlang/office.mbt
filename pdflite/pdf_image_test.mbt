@@ -68,6 +68,29 @@ fn image_json_entry_for_test(
 }
 
 ///|
+fn image_resolution_json_entry_for_test(
+  object_number : Int,
+  page_number : Int,
+  xobject : String,
+  width : Int,
+  height : Int,
+  xdpi : Double,
+  ydpi : Double,
+) -> Json {
+  Json::object(
+    Map::of([
+      ("Object", image_json_int_for_test(object_number)),
+      ("Page", image_json_int_for_test(page_number)),
+      ("XObject", Json::string(xobject)),
+      ("W", image_json_int_for_test(width)),
+      ("H", image_json_int_for_test(height)),
+      ("Xdpi", Json::number(xdpi)),
+      ("Ydpi", Json::number(ydpi)),
+    ]),
+  )
+}
+
+///|
 fn image_lookup_for_test(
   object : @pdflite.PdfObject,
   key : String,
@@ -429,6 +452,164 @@ test "PdfDocument images_json optionally includes form inline images" {
     try! @pdflite.pdf_image_images_json_blob(true, doc, [1]),
     @utf8.encode(expected.stringify()),
   )
+}
+
+///|
+test "PdfDocument image_resolution reports selected image xobject DPI" {
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(
+    20,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (
+          image_name_for_test("/Subtype"),
+          PdfNameObject(image_name_for_test("/Image")),
+        ),
+        (image_name_for_test("/Width"), PdfInteger(400)),
+        (image_name_for_test("/Height"), PdfInteger(300)),
+        (image_name_for_test("/Length"), PdfInteger(0)),
+      ]),
+      StreamGot([]),
+    ),
+  )
+  let placement = { ..@pdflite.transform_identity_matrix, a: 400.0, d: 300.0 }
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: @pdflite.pdf_dictionary([
+      (
+        image_name_for_test("/XObject"),
+        @pdflite.pdf_dictionary([(image_name_for_test("/Im1"), PdfIndirect(20))]),
+      ),
+    ]),
+    content: [
+      try! @pdflite.pdf_content_stream_of_ops([
+        Op_cm(placement),
+        Op_Do(image_name_for_test("/Im1")),
+      ]),
+    ],
+  }
+  let page_root = try! doc.add_pagetree([page])
+  ignore(try! doc.add_root(page_root, []))
+  let expected = [(1, "/Im1", 400, 300, 72.0, 72.0, 20)]
+  @test.assert_eq(try! doc.image_resolution([1], 100.0), expected)
+  @test.assert_eq(
+    try! @pdflite.pdf_image_resolution(false, doc, [1], 100.0),
+    expected,
+  )
+  @test.assert_eq(try! doc.image_resolution([1], 50.0), [])
+  let expected_json = Json::array([
+    image_resolution_json_entry_for_test(20, 1, "/Im1", 400, 300, 72.0, 72.0),
+  ])
+  @test.assert_eq(try! doc.image_resolution_json([1], 100.0), expected_json)
+  @test.assert_eq(
+    try! @pdflite.pdf_image_resolution_json(false, doc, [1], 100.0),
+    expected_json,
+  )
+  @test.assert_eq(
+    try! doc.image_resolution_json_blob([1], 100.0),
+    @utf8.encode(expected_json.stringify()),
+  )
+}
+
+///|
+test "PdfDocument image_resolution optionally includes inline images" {
+  let doc = @pdflite.pdf_document_empty()
+  let inline_dict = @pdflite.pdf_dictionary([
+    (image_name_for_test("/W"), PdfInteger(288)),
+    (image_name_for_test("/H"), PdfInteger(72)),
+    (image_name_for_test("/BPC"), PdfInteger(8)),
+    (
+      image_name_for_test("/CS"),
+      PdfNameObject(image_name_for_test("/DeviceRGB")),
+    ),
+  ])
+  let placement = { ..@pdflite.transform_identity_matrix, a: 144.0, d: 72.0 }
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [
+      try! @pdflite.pdf_content_stream_of_ops([
+        Op_cm(placement),
+        Op_InlineImage(inline_dict, None, @ascii.encode("abc")),
+      ]),
+    ],
+  }
+  let page_root = try! doc.add_pagetree([page])
+  ignore(try! doc.add_root(page_root, []))
+  @test.assert_eq(try! doc.image_resolution([1], 100.0), [])
+  let expected = [(1, "/InlineImage", 288, 72, 144.0, 72.0, 0)]
+  @test.assert_eq(try! doc.image_resolution([1], 100.0, inline=true), expected)
+  @test.assert_eq(
+    try! @pdflite.pdf_image_resolution_json_blob(true, doc, [1], 100.0),
+    @utf8.encode(
+      Json::array([
+        image_resolution_json_entry_for_test(
+          0, 1, "/InlineImage", 288, 72, 144.0, 72.0,
+        ),
+      ]).stringify(),
+    ),
+  )
+}
+
+///|
+test "PdfDocument image_resolution descends into form xobjects" {
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(
+    22,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (
+          image_name_for_test("/Subtype"),
+          PdfNameObject(image_name_for_test("/Image")),
+        ),
+        (image_name_for_test("/Width"), PdfInteger(72)),
+        (image_name_for_test("/Height"), PdfInteger(72)),
+        (image_name_for_test("/Length"), PdfInteger(0)),
+      ]),
+      StreamGot([]),
+    ),
+  )
+  let form_scale = { ..@pdflite.transform_identity_matrix, a: 72.0, d: 72.0 }
+  let form = (try! @pdflite.pdf_content_stream_of_ops([
+      Op_cm(form_scale),
+      Op_Do(image_name_for_test("/Inner")),
+    ]))
+    .add_dict_entry(
+      image_name_for_test("/Subtype"),
+      PdfNameObject(image_name_for_test("/Form")),
+    )
+    .add_dict_entry(
+      image_name_for_test("/Resources"),
+      @pdflite.pdf_dictionary([
+        (
+          image_name_for_test("/XObject"),
+          @pdflite.pdf_dictionary([
+            (image_name_for_test("/Inner"), PdfIndirect(22)),
+          ]),
+        ),
+      ]),
+    )
+  doc.add_object_given_number(30, form)
+  let page_scale = { ..@pdflite.transform_identity_matrix, a: 2.0, d: 2.0 }
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: @pdflite.pdf_dictionary([
+      (
+        image_name_for_test("/XObject"),
+        @pdflite.pdf_dictionary([(image_name_for_test("/Fm1"), PdfIndirect(30))]),
+      ),
+    ]),
+    content: [
+      try! @pdflite.pdf_content_stream_of_ops([
+        Op_cm(page_scale),
+        Op_Do(image_name_for_test("/Fm1")),
+      ]),
+    ],
+  }
+  let page_root = try! doc.add_pagetree([page])
+  ignore(try! doc.add_root(page_root, []))
+  @test.assert_eq(try! doc.image_resolution([1], 100.0), [
+    (1, "/Inner", 72, 72, 36.0, 36.0, 22),
+  ])
 }
 
 ///|
