@@ -1285,6 +1285,66 @@ test "pdf_addtext_line_page wrapper prepends existing font text without opacity"
 }
 
 ///|
+test "PdfDocument addtext_line_page emits resolved BaseFont resource names" {
+  let document = @pdflite.pdf_document_empty()
+  let font_key = addtext_name_for_test("/Font")
+  let resource_name = addtext_name_for_test("/Fx")
+  let basefont = addtext_name_for_test("/Helvetica")
+  let font_object : @pdflite.PdfObject = PdfDictionary([
+    (
+      addtext_name_for_test("/Subtype"),
+      PdfNameObject(addtext_name_for_test("/Type1")),
+    ),
+    (addtext_name_for_test("/BaseFont"), PdfNameObject(basefont)),
+  ])
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: PdfDictionary([
+      (font_key, PdfDictionary([(resource_name, font_object)])),
+    ]),
+  }
+  let stamped = try! document.addtext_line_page(
+    page,
+    addtext_process_time_for_test(),
+    ["A"],
+    [],
+    None,
+    None,
+    basefont,
+    None,
+    [],
+    10.0,
+    "A",
+    PdfContentGrey(0.0),
+    PdfPositionBottomLeft(1.0, 2.0),
+  )
+  @test.assert_eq(stamped.resources, page.resources)
+  @test.assert_eq(
+    addtext_content_ops_for_test(document, stamped),
+    try! @pdflite.pdf_addtext_text_ops(
+      None,
+      None,
+      1.0,
+      2.0,
+      0.0,
+      0.0,
+      0.0,
+      false,
+      1.0,
+      resource_name,
+      [],
+      None,
+      PdfContentGrey(0.0),
+      10.0,
+      "A",
+      0.0,
+      0.0,
+      0.0,
+    ),
+  )
+}
+
+///|
 test "PdfDocument addtext_page_lines advances selected-font paragraphs" {
   let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
   let page = (try! document.pages_of_pagetree())[0]

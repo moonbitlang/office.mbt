@@ -2322,6 +2322,14 @@ Current backend snapshot:
   validation reports `moon test --target native --package bobzhang/pdflite
   --file pdf_addtext_test.mbt` at 109/109 tests passing; native full-suite
   validation reports 1881/1881 tests passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` existing-font effective-name slice covers
+  cpdf's `/BaseFont` fallback after existing page font lookup, so
+  `PdfDocument::addtext_line_page` emits the resolved page resource key while
+  preserving existing font dictionaries and leaving selected-font/fontpack
+  resource names unchanged. Native focused validation reports `moon test
+  --target native --package bobzhang/pdflite --file pdf_addtext_test.mbt` at
+  110/110 tests passing; native full-suite validation reports 1882/1882 tests
+  passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` line-width selection and justification
   application slice exposes `pdf_addtext_longest_width` and
   `pdf_addtext_apply_justification_offset`, covering cpdf's widest expanded

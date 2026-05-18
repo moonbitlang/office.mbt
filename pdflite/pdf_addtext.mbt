@@ -1222,6 +1222,25 @@ fn pdf_addtext_height_font_name(fontname : PdfName) -> String {
 }
 
 ///|
+fn PdfDocument::pdf_addtext_effective_fontname(
+  self : PdfDocument,
+  page : PdfPage,
+  font : PdfFont?,
+  fontpack : PdfFontPack?,
+  fontname : PdfName,
+) -> PdfName raise PdfError {
+  match (font, fontpack) {
+    (None, None) => {
+      let (resource_name, _) = self.addtext_existing_font_resource(
+        page, fontname,
+      )
+      resource_name
+    }
+    _ => fontname
+  }
+}
+
+///|
 /// Add one prepared cpdf add-text line to a page.
 ///
 /// This is the single-page counterpart of cpdf's local `addtext_page`: it
@@ -1257,6 +1276,9 @@ pub fn PdfDocument::addtext_line_page(
   raw? : Bool = false,
   url_border? : Bool = false,
 ) -> PdfPage raise PdfError {
+  let effective_fontname = self.pdf_addtext_effective_fontname(
+    page, font, fontpack, fontname,
+  )
   let prepared = self.addtext_prepare_line(
     page,
     time,
@@ -1264,7 +1286,7 @@ pub fn PdfDocument::addtext_line_page(
     replacements,
     font,
     fontpack,
-    fontname,
+    effective_fontname,
     font_size,
     text,
     position,
@@ -1276,7 +1298,8 @@ pub fn PdfDocument::addtext_line_page(
     raw~,
   )
   let setup = self.addtext_resource_setup(
-    page, font, fontpack, fontname, font_object, fontpack_font_objects, opacity,
+    page, font, fontpack, effective_fontname, font_object, fontpack_font_objects,
+    opacity,
   )
   let ops = pdf_addtext_text_ops(
     font,
@@ -1304,7 +1327,7 @@ pub fn PdfDocument::addtext_line_page(
     fn(prefix) raise PdfError {
       let bytes = pdf_addtext_measurement_bytes(font, fontpack, raw, prefix)
       self.addtext_calc_textwidth(
-        page, font, fontpack, fontname, font_size, bytes,
+        page, font, fontpack, effective_fontname, font_size, bytes,
       )
     },
     prepared.placement.origin,
@@ -1315,7 +1338,7 @@ pub fn PdfDocument::addtext_line_page(
     prepared.placement.rotation_offset,
     prepared.placement.base_rotation,
     font,
-    pdf_addtext_height_font_name(fontname),
+    pdf_addtext_height_font_name(effective_fontname),
     font_size,
     url_border,
   )
