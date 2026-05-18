@@ -2261,6 +2261,14 @@ Current backend snapshot:
   test --target native --package bobzhang/pdflite --file pdf_addtext_test.mbt`
   at 59/59 tests passing; native full-suite validation reports 1831/1831 tests
   passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` local `calc_textwidth` slice exposes
+  `PdfDocument::addtext_calc_textwidth` and `pdf_addtext_calc_textwidth`,
+  covering cpdf's selected parsed-font branch, fontpack UTF-8/codepoint branch,
+  existing page-font branch, malformed fontpack UTF-8 diagnostics, wrapper
+  parity, and byte-level PDF text measurement semantics. Native focused
+  validation reports `moon test --target native --package bobzhang/pdflite
+  --file pdf_addtext_test.mbt` at 92/92 tests passing; native full-suite
+  validation reports 1864/1864 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` line-width selection and justification
   application slice exposes `pdf_addtext_longest_width` and
   `pdf_addtext_apply_justification_offset`, covering cpdf's widest expanded

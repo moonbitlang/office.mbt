@@ -1778,6 +1778,104 @@ test "pdf_addtext_width_of_fontpack sums mapped codepoint widths" {
 }
 
 ///|
+test "PdfDocument addtext_calc_textwidth measures selected fonts" {
+  let document = @pdflite.pdf_document_empty()
+  let page = @pdflite.pdf_page_blank(@pdflite.paper_a4)
+  addtext_assert_close_for_test(
+    try! document.addtext_calc_textwidth(
+      page,
+      Some(addtext_standard_font_for_test()),
+      None,
+      addtext_name_for_test("/F0"),
+      10.0,
+      @ascii.encode("AV"),
+    ),
+    13.34,
+  )
+}
+
+///|
+test "PdfDocument addtext_calc_textwidth measures fontpacks from UTF-8" {
+  let document = @pdflite.pdf_document_empty()
+  let page = @pdflite.pdf_page_blank(@pdflite.paper_a4)
+  let metrics : Array[Double] = [ for _ in 0..<256 => 0.0 ]
+  metrics[66] = 610.0
+  let pack : @pdflite.PdfFontPack = {
+    fonts: [
+      addtext_standard_font_for_test(),
+      addtext_simple_font_with_metrics_for_test(Some(metrics)),
+    ],
+    entries: [
+      { codepoint: 65, font_index: 0, charcode: 65 },
+      { codepoint: 66, font_index: 1, charcode: 66 },
+    ],
+  }
+  addtext_assert_close_for_test(
+    try! @pdflite.pdf_addtext_calc_textwidth(
+      document,
+      page,
+      None,
+      Some(pack),
+      addtext_name_for_test("/F0"),
+      10.0,
+      @utf8.encode("ABC"),
+    ),
+    12.77,
+  )
+  let bad : Result[Double, Error] = try? document.addtext_calc_textwidth(
+    page,
+    None,
+    Some(pack),
+    addtext_name_for_test("/F0"),
+    10.0,
+    [0xFF],
+  )
+  guard bad is Err(@pdflite.PdfError::InvalidUTF8) else {
+    fail("expected InvalidUTF8 for malformed fontpack text")
+  }
+}
+
+///|
+test "PdfDocument addtext_calc_textwidth measures existing page fonts" {
+  let document = @pdflite.pdf_document_empty()
+  let resource_name = addtext_name_for_test("/F1")
+  let basefont = addtext_name_for_test("/Helvetica")
+  let font_object : @pdflite.PdfObject = PdfDictionary([
+    (
+      addtext_name_for_test("/Subtype"),
+      PdfNameObject(addtext_name_for_test("/Type1")),
+    ),
+    (addtext_name_for_test("/BaseFont"), PdfNameObject(basefont)),
+  ])
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: PdfDictionary([
+      (
+        addtext_name_for_test("/Font"),
+        PdfDictionary([(resource_name, font_object)]),
+      ),
+    ]),
+  }
+  let expected = try! document.addtext_width_of_existing_font_resource(
+    page,
+    resource_name,
+    10.0,
+    @ascii.encode("A"),
+  )
+  addtext_assert_close_for_test(
+    try! document.addtext_calc_textwidth(
+      page,
+      None,
+      None,
+      resource_name,
+      10.0,
+      @ascii.encode("A"),
+    ),
+    expected.1,
+  )
+}
+
+///|
 test "pdf_addtext_longest_width selects widest expanded line" {
   @test.assert_eq(@pdflite.pdf_addtext_longest_width([12.0, 7.0, 19.0]), 19.0)
   @test.assert_eq(@pdflite.pdf_addtext_longest_width([-3.0, -1.0]), -1.0)

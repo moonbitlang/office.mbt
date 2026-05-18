@@ -294,6 +294,58 @@ pub fn pdf_addtext_width_of_fontpack(
 }
 
 ///|
+/// Measure text bytes with cpdf add-text's selected font mode.
+///
+/// This ports the local `calc_textwidth` branch in `cpdfaddtext.ml`. Font packs
+/// interpret `text` as UTF-8 so codepoints can select pack members; selected
+/// parsed fonts and existing page fonts treat `text` as the PDF text bytes to
+/// measure.
+pub fn PdfDocument::addtext_calc_textwidth(
+  self : PdfDocument,
+  page : PdfPage,
+  font : PdfFont?,
+  fontpack : PdfFontPack?,
+  fontname : PdfName,
+  font_size : Double,
+  text : BytesView,
+) -> Double raise PdfError {
+  match fontpack {
+    Some(fontpack) =>
+      pdf_addtext_width_of_fontpack(
+        fontpack,
+        font_size,
+        pdf_addtext_utf8_string(text),
+      )
+    None =>
+      match font {
+        Some(font) => pdf_addtext_width_of_selected_font(font, font_size, text)
+        None => {
+          let (_, width) = self.addtext_width_of_existing_font_resource(
+            page, fontname, font_size, text,
+          )
+          width
+        }
+      }
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::addtext_calc_textwidth`.
+pub fn pdf_addtext_calc_textwidth(
+  document : PdfDocument,
+  page : PdfPage,
+  font : PdfFont?,
+  fontpack : PdfFontPack?,
+  fontname : PdfName,
+  font_size : Double,
+  text : BytesView,
+) -> Double raise PdfError {
+  document.addtext_calc_textwidth(
+    page, font, fontpack, fontname, font_size, text,
+  )
+}
+
+///|
 /// Return the widest add-text line width.
 pub fn pdf_addtext_longest_width(
   widths : ArrayView[Double],

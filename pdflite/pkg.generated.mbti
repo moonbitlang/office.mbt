@@ -85,6 +85,8 @@ pub fn pdf_addtext_bates_number(Int, Int, Int?) -> String
 
 pub fn pdf_addtext_bookmark_for_page(PdfDocument, ArrayView[PdfBookmark], Int, Int) -> String raise @core.PdfError
 
+pub fn pdf_addtext_calc_textwidth(PdfDocument, PdfPage, PdfFont?, PdfFontPack?, @core.PdfName, Double, BytesView) -> Double raise @core.PdfError
+
 pub fn pdf_addtext_cap_height(PdfFont?, String) -> Double?
 
 pub fn pdf_addtext_charcodes_of_utf8(PdfFont, String) -> Bytes raise @core.PdfError
@@ -1826,6 +1828,7 @@ pub fn PdfDocument::add_pagetree(Self, ArrayView[PdfPage]) -> Int raise @core.Pd
 pub fn PdfDocument::add_prefix(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDocument::add_root(Self, Int, ArrayView[(@core.PdfName, PdfObject)]) -> Int raise @core.PdfError
 pub fn PdfDocument::addtext_bookmark_for_page(Self, ArrayView[PdfBookmark], Int, Int) -> String raise @core.PdfError
+pub fn PdfDocument::addtext_calc_textwidth(Self, PdfPage, PdfFont?, PdfFontPack?, @core.PdfName, Double, BytesView) -> Double raise @core.PdfError
 pub fn PdfDocument::addtext_existing_font_resource(Self, PdfPage, @core.PdfName) -> (@core.PdfName, PdfObject) raise @core.PdfError
 pub fn PdfDocument::addtext_opacity_resources(Self, PdfObject, Double) -> (PdfObject, @core.PdfName?) raise @core.PdfError
 pub fn PdfDocument::addtext_page_font_dictionary(Self, PdfPage) -> PdfObject
