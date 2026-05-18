@@ -1729,6 +1729,12 @@ Current backend snapshot:
   full-suite validation reports 1552/1552 tests passing; coverage analysis
   reports only three defensive unreachable `InvalidUTF8` branches in
   `pdf_util.mbt`.~~
+- [x] ~~Standalone `cpdfcreate.ml` blank-document slice exposes
+  `pdf_blank_document` and `pdf_blank_document_paper`, covering point-sized
+  pages, named paper sizes, zero-page documents, page-tree/root creation, and
+  generated trailer `/ID` arrays. Native focused validation reports `moon test
+  --target native pdf_create_test.mbt` at 5/5 tests passing; native full-suite
+  validation reports 1721/1721 tests passing.~~
 - [x] ~~Standalone utility ports for `cpdfdebug.ml`, `cpdfprinttree.ml`, and
   `cpdfstrftime.ml` expose `PdfDocument::debug_objects`,
   `pdf_print_tree_to_string`, explicit-time and native-current-time strftime
