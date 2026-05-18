@@ -227,6 +227,15 @@ Current backend snapshot:
   includes a compatibility wrapper. Coverage pins exact generated content
   operators for normal and light/fast overlays. `moon test --target native
   pdf_redact_test.mbt` reports 2/2 tests passing.~~
+- [x] ~~Port the current stub/no-op redaction APIs from `cpdfredact`: `redact`
+  is exposed as `redact_path`/`pdf_redact` and preserves page content while
+  validating the selected page range, while `apply` and `apply_type` are
+  exposed as explicit no-op `apply_redactions`/`pdf_apply_redactions` and
+  `apply_redaction_type`/`pdf_apply_redaction_type` helpers. Coverage pins
+  no-op content preservation, wrapper parity, invalid-page diagnostics for
+  `redact_path`, and no-op apply calls. `moon test --target native --package
+  bobzhang/pdflite --file pdf_redact_test.mbt` reports 4/4 tests passing;
+  native full-suite validation reports 1760/1760 tests passing.~~
 - [x] ~~Port the JSON side of `cpdfmetadata.output_info` for in-memory
   documents: `info_json` now reports cpdf-style version/page counts, legacy
   `/Info` fields with UTF-8/raw/stripped encoding, trapped state, catalog page

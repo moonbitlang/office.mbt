@@ -83,6 +83,50 @@ fn redact_concat_ops_for_test(
 }
 
 ///|
+test "PdfDocument redact_path preserves content and validates selected pages" {
+  let base = try! @pdflite.pdf_blank_document(200.0, 100.0, 2)
+  let pages = try! base.pages_of_pagetree()
+  let document = try! base.change_pages([
+    {
+      ..pages[0],
+      content: [try! @pdflite.pdf_content_stream_of_ops([Op_BT, Op_ET])],
+    },
+    pages[1],
+  ])
+  let path = [(0.0, 0.0), (10.0, 10.0), (20.0, 0.0)]
+  let redacted = try! document.redact_path(path, [1])
+  let wrapper = try! @pdflite.pdf_redact(document, path, [1])
+  let redacted_pages = try! redacted.pages_of_pagetree()
+  let wrapper_pages = try! wrapper.pages_of_pagetree()
+  @test.assert_eq(redact_content_ops_for_test(redacted, redacted_pages[0]), [
+    Op_BT,
+    Op_ET,
+  ])
+  @test.assert_eq(redact_content_ops_for_test(redacted, redacted_pages[1]), [])
+  @test.assert_eq(redact_content_ops_for_test(wrapper, wrapper_pages[0]), [
+    Op_BT,
+    Op_ET,
+  ])
+  let bad_page : Result[@pdflite.PdfDocument, Error] = try? document.redact_path(
+    path,
+    [3],
+  )
+  guard bad_page is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+    fail("expected @pdflite.PdfError::BadPageSpecification")
+  }
+}
+
+///|
+test "redaction apply stubs leave documents untouched" {
+  let document = try! @pdflite.pdf_blank_document(200.0, 100.0, 1)
+  document.apply_redactions([99])
+  @pdflite.pdf_apply_redactions(document, [99])
+  document.apply_redaction_type("Square", [99])
+  @pdflite.pdf_apply_redaction_type(document, "Square", [99])
+  @test.assert_eq((try! document.pages_of_pagetree()).length(), 1)
+}
+
+///|
 test "PdfDocument show_annotation_bounding_boxes draws selected annotation rectangles" {
   let key_annots = redact_name_for_test("/Annots")
   let direct_annotation = redact_annotation_object_for_test(
