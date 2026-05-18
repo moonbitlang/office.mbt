@@ -437,6 +437,74 @@ pub fn pdf_addtext_page_label(
 }
 
 ///|
+fn pdf_addtext_bookmark_text(bookmark : PdfBookmark) -> String raise PdfError {
+  pdf_addtext_pdfdocstring_to_string(bookmark.text)
+}
+
+///|
+/// Return cpdf add-text's current bookmark text at `level` for `page_number`.
+///
+/// The search is constrained to the current bookmark branch so section
+/// bookmarks from a previous chapter do not leak into a later chapter.
+pub fn PdfDocument::addtext_bookmark_for_page(
+  self : PdfDocument,
+  bookmarks : ArrayView[PdfBookmark],
+  level : Int,
+  page_number : Int,
+) -> String raise PdfError {
+  let before : Array[PdfBookmark] = []
+  for bookmark in bookmarks {
+    if self.page_number_of_target(bookmark.target) <= page_number {
+      before.push(bookmark)
+    } else {
+      break
+    }
+  }
+  let branch : Array[PdfBookmark] = []
+  let mut before_index = before.length()
+  while before_index > 0 {
+    before_index -= 1
+    let bookmark = before[before_index]
+    if bookmark.level >= level {
+      branch.push(bookmark)
+    } else {
+      break
+    }
+  }
+  let pickfrom : Array[PdfBookmark] = []
+  let mut branch_index = branch.length()
+  while branch_index > 0 {
+    branch_index -= 1
+    let bookmark = branch[branch_index]
+    if bookmark.level == level {
+      pickfrom.push(bookmark)
+    }
+  }
+  let mut fallback : PdfBookmark? = None
+  for bookmark in pickfrom {
+    if self.page_number_of_target(bookmark.target) == page_number {
+      return pdf_addtext_bookmark_text(bookmark)
+    }
+    fallback = Some(bookmark)
+  }
+  match fallback {
+    Some(bookmark) => pdf_addtext_bookmark_text(bookmark)
+    None => ""
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::addtext_bookmark_for_page`.
+pub fn pdf_addtext_bookmark_for_page(
+  document : PdfDocument,
+  bookmarks : ArrayView[PdfBookmark],
+  level : Int,
+  page_number : Int,
+) -> String raise PdfError {
+  document.addtext_bookmark_for_page(bookmarks, level, page_number)
+}
+
+///|
 fn pdf_addtext_find_byte(bytes : BytesView, start : Int, value : Int) -> Int? {
   let mut index = start
   while index < bytes.length() {

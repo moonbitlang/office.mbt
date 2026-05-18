@@ -77,6 +77,8 @@ pub fn pdf_add_root(Int, ArrayView[(@core.PdfName, PdfObject)], PdfDocument) -> 
 
 pub fn pdf_addtext_bates_number(Int, Int, Int?) -> String
 
+pub fn pdf_addtext_bookmark_for_page(PdfDocument, ArrayView[PdfBookmark], Int, Int) -> String raise @core.PdfError
+
 pub fn pdf_addtext_expand_lines_with_time(PdfStrftimeTime, ArrayView[String], ArrayView[(String, () -> String)]) -> Array[String] raise @core.PdfError
 
 pub fn pdf_addtext_get_urls_line(String) -> PdfAddTextUrlLine raise @core.PdfError
@@ -1735,6 +1737,7 @@ pub fn PdfDocument::add_page_labels_json(Self, Json) -> Self raise @core.PdfErro
 pub fn PdfDocument::add_pagetree(Self, ArrayView[PdfPage]) -> Int raise @core.PdfError
 pub fn PdfDocument::add_prefix(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDocument::add_root(Self, Int, ArrayView[(@core.PdfName, PdfObject)]) -> Int raise @core.PdfError
+pub fn PdfDocument::addtext_bookmark_for_page(Self, ArrayView[PdfBookmark], Int, Int) -> String raise @core.PdfError
 pub fn PdfDocument::addtext_page_label(Self, Int) -> String raise @core.PdfError
 pub fn PdfDocument::annotations_json(Self, ArrayView[Int]) -> Json raise @core.PdfError
 pub fn PdfDocument::annotations_json_blob(Self, ArrayView[Int]) -> Bytes raise @core.PdfError

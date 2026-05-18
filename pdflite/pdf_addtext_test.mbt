@@ -25,6 +25,27 @@ fn addtext_process_time_for_test() -> @pdflite.PdfStrftimeTime {
 }
 
 ///|
+fn addtext_pdfdoc_text_for_test(text : String) -> @pdflite.PdfBytes {
+  try! @pdflite.pdf_pdfdocstring_of_utf8(@utf8.encode(text))
+}
+
+///|
+fn addtext_bookmark_for_test(
+  level : Int,
+  text : String,
+  page_object : Int,
+) -> @pdflite.PdfBookmark {
+  {
+    level,
+    text: addtext_pdfdoc_text_for_test(text),
+    target: DestFit(TargetPageObject(page_object)),
+    is_open: true,
+    colour: { red: 0.0, green: 0.0, blue: 0.0 },
+    flags: 0,
+  }
+}
+
+///|
 test "pdf_addtext_justification_offset handles horizontal rotations" {
   @test.assert_eq(
     addtext_offset_for_test(
@@ -421,4 +442,43 @@ test "PdfDocument addtext_page_label decodes PDFDocString prefixes" {
     },
   ])
   @test.assert_eq(try! labelled.addtext_page_label(2), "A ☃-2")
+}
+
+///|
+test "PdfDocument addtext_bookmark_for_page picks current branch bookmarks" {
+  let document = try! @pdflite.pdf_blank_document(10.0, 10.0, 5)
+  let page_refs = try! document.page_reference_numbers()
+  let bookmarks : Array[@pdflite.PdfBookmark] = [
+    addtext_bookmark_for_test(0, "Chapter 1", page_refs[0]),
+    addtext_bookmark_for_test(1, "Section 1.1", page_refs[1]),
+    addtext_bookmark_for_test(1, "Section 1.2", page_refs[2]),
+    addtext_bookmark_for_test(0, "Chapter 2", page_refs[3]),
+    addtext_bookmark_for_test(1, "Section 2.1", page_refs[4]),
+  ]
+  @test.assert_eq(
+    try! document.addtext_bookmark_for_page(bookmarks, 0, 3),
+    "Chapter 1",
+  )
+  @test.assert_eq(
+    try! document.addtext_bookmark_for_page(bookmarks, 1, 3),
+    "Section 1.2",
+  )
+  @test.assert_eq(try! document.addtext_bookmark_for_page(bookmarks, 1, 4), "")
+  @test.assert_eq(
+    try! document.addtext_bookmark_for_page(bookmarks, 1, 5),
+    "Section 2.1",
+  )
+}
+
+///|
+test "pdf_addtext_bookmark_for_page wrapper preserves lookup behavior" {
+  let document = try! @pdflite.pdf_blank_document(10.0, 10.0, 2)
+  let page_refs = try! document.page_reference_numbers()
+  let bookmarks : Array[@pdflite.PdfBookmark] = [
+    addtext_bookmark_for_test(0, "Intro ☃", page_refs[0]),
+  ]
+  @test.assert_eq(
+    try! @pdflite.pdf_addtext_bookmark_for_page(document, bookmarks, 0, 2),
+    "Intro ☃",
+  )
 }

@@ -2118,6 +2118,14 @@ Current backend snapshot:
   focused validation reports `moon test --target native --package
   bobzhang/pdflite --file pdf_addtext_test.mbt` at 19/19 tests passing; native
   full-suite validation reports 1791/1791 tests passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` bookmark lookup helper slice exposes
+  `PdfDocument::addtext_bookmark_for_page` and
+  `pdf_addtext_bookmark_for_page`, covering current-branch bookmark selection,
+  exact page hits, fallback to the last prior bookmark at the requested level,
+  chapter-boundary reset behavior, wrapper parity, and PDFDocString title
+  decoding. Native focused validation reports `moon test --target native
+  --package bobzhang/pdflite --file pdf_addtext_test.mbt` at 21/21 tests
+  passing; native full-suite validation reports 1793/1793 tests passing.~~
 - [x] ~~Standalone `cpdfremovetext.ml` removal slice exposes
   `pdf_remove_added_text_ops`, `pdf_remove_all_text_ops`,
   `PdfDocument::remove_added_text`, `remove_all_text`, and compatibility
