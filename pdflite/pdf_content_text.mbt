@@ -240,6 +240,12 @@ pub(all) struct PdfContentTextState {
 } derive(Debug, Eq, ToJson)
 
 ///|
+pub(all) struct PdfContentTextOpResult {
+  text_state : PdfContentTextState
+  glyphs : Array[PdfContentTextGlyphPlacement]
+} derive(Debug, Eq, ToJson)
+
+///|
 /// Return cpdfcontent's initial text state.
 pub fn pdf_content_initial_text_state() -> PdfContentTextState {
   {
@@ -272,6 +278,23 @@ fn PdfContentTextState::content_text_move(
     transform_translate(tx, ty),
   )
   { ..self, text_matrix: line_matrix, line_matrix }
+}
+
+///|
+/// Convert text state to the layout input used by cpdfcontent glyph placement.
+pub fn PdfContentTextState::content_text_layout(
+  self : PdfContentTextState,
+  ctm : TransformMatrix,
+) -> PdfContentTextLayout {
+  {
+    font_size: self.font_size,
+    horizontal_scaling: self.horizontal_scaling,
+    character_spacing: self.character_spacing,
+    word_spacing: self.word_spacing,
+    rise: self.rise,
+    ctm,
+    text_matrix: self.text_matrix,
+  }
 }
 
 ///|
@@ -320,6 +343,73 @@ pub fn pdf_content_apply_text_state_op(
   op : PdfContentOp,
 ) -> PdfContentTextState {
   state.content_apply_text_state_op(op)
+}
+
+///|
+fn pdf_content_empty_text_op_result(
+  state : PdfContentTextState,
+) -> PdfContentTextOpResult {
+  { text_state: state, glyphs: [] }
+}
+
+///|
+fn pdf_content_text_op_with_layout_result(
+  state : PdfContentTextState,
+  result : PdfContentTextLayoutResult,
+) -> PdfContentTextOpResult {
+  {
+    text_state: { ..state, text_matrix: result.text_matrix },
+    glyphs: result.glyphs,
+  }
+}
+
+///|
+/// Apply cpdfcontent text-state and text-showing operators with a known font.
+pub fn PdfContentTextState::content_apply_text_op(
+  self : PdfContentTextState,
+  font : PdfFont,
+  ctm : TransformMatrix,
+  op : PdfContentOp,
+) -> PdfContentTextOpResult {
+  match op {
+    Op_Tj(text) =>
+      pdf_content_text_op_with_layout_result(
+        self,
+        font.content_text_layout_of_bytes(text, self.content_text_layout(ctm)),
+      )
+    Op_TJ(elements) =>
+      pdf_content_text_op_with_layout_result(
+        self,
+        font.content_text_layout_of_tj_array(
+          match elements {
+            PdfArray(values) => values
+            _ => []
+          },
+          self.content_text_layout(ctm),
+        ),
+      )
+    Op_quote(text) =>
+      self
+      .content_apply_text_state_op(Op_Tstar)
+      .content_apply_text_op(font, ctm, Op_Tj(text))
+    Op_double_quote(word_spacing, character_spacing, text) =>
+      self
+      .content_apply_text_state_op(Op_Tw(word_spacing))
+      .content_apply_text_state_op(Op_Tc(character_spacing))
+      .content_apply_text_op(font, ctm, Op_quote(text))
+    _ => pdf_content_empty_text_op_result(self.content_apply_text_state_op(op))
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfContentTextState::content_apply_text_op`.
+pub fn pdf_content_apply_text_op(
+  state : PdfContentTextState,
+  font : PdfFont,
+  ctm : TransformMatrix,
+  op : PdfContentOp,
+) -> PdfContentTextOpResult {
+  state.content_apply_text_op(font, ctm, op)
 }
 
 ///|

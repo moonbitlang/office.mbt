@@ -2670,6 +2670,17 @@ Current backend snapshot:
   slices. Native focused validation reports `moon test --target native
   --package bobzhang/pdflite --file pdf_content_text_test.mbt` at 11/11 tests
   passing; native full-suite validation reports 1943/1943 tests passing.~~
+- [x] ~~Standalone `cpdfcontent.ml` text-show operator slice exposes
+  `PdfContentTextOpResult`, `PdfContentTextState::content_text_layout`,
+  `PdfContentTextState::content_apply_text_op`, and
+  `pdf_content_apply_text_op`, integrating the existing `Tj`/`TJ` glyph layout
+  helpers with text-state matrix advancement, preserving line matrix state,
+  handling non-array `TJ` operands as empty, and applying quote/double-quote
+  shorthands before glyph emission while leaving font resource lookup and the
+  full stateful content walker for later slices. Native focused validation
+  reports `moon test --target native --package bobzhang/pdflite --file
+  pdf_content_text_test.mbt` at 13/13 tests passing; native full-suite
+  validation reports 1945/1945 tests passing.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,

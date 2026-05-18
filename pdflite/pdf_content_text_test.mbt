@@ -148,6 +148,120 @@ fn content_text_font_descriptor_for_test() -> @pdflite.PdfFontDescriptor {
 }
 
 ///|
+fn content_text_simple_width_font_for_test() -> @pdflite.PdfFont {
+  PdfFontSimple({
+    fonttype: PdfTrueType,
+    basefont: None,
+    firstchar: 0,
+    lastchar: 255,
+    widths: [],
+    fontdescriptor: Some({
+      ..content_text_font_descriptor_for_test(),
+      fontbbox: { min_x: 0.0, min_y: -200.0, max_x: 600.0, max_y: 800.0 },
+    }),
+    fontmetrics: Some(
+      [
+        for code in 0..<256 => if code == 32 { 250.0 } else { 500.0 }
+      ],
+    ),
+    encoding: PdfWinAnsiEncoding,
+  })
+}
+
+///|
+test "cpdfcontent text op emits glyphs and advances text matrix" {
+  let font = content_text_simple_width_font_for_test()
+  let state = @pdflite.pdf_content_initial_text_state()
+    .content_apply_text_state_op(Op_Tf(content_text_name_for_test("/F1"), 10.0))
+    .content_apply_text_state_op(Op_Tc(1.0))
+    .content_apply_text_state_op(Op_Tw(2.0))
+    .content_apply_text_state_op(Op_Tz(80.0))
+    .content_apply_text_state_op(Op_Ts(3.0))
+    .content_apply_text_state_op(Op_Td(10.0, 20.0))
+  let layout = state.content_text_layout(
+    @pdflite.transform_translate(100.0, 200.0),
+  )
+  @test.assert_eq(layout.font_size, 10.0)
+  @test.assert_eq(layout.horizontal_scaling, 0.8)
+  @test.assert_eq(layout.rise, 3.0)
+  let result = state.content_apply_text_op(
+    font,
+    @pdflite.transform_translate(100.0, 200.0),
+    Op_Tj(content_text_bytes_for_test([65, 32])),
+  )
+  @test.assert_eq(result.glyphs.length(), 2)
+  @test.assert_eq(result.glyphs[0].charcode, 65)
+  @test.assert_eq(result.glyphs[1].charcode, 32)
+  content_text_assert_matrix_close_for_test(
+    result.text_state.text_matrix,
+    @pdflite.transform_translate(19.2, 20.0),
+  )
+  content_text_assert_matrix_close_for_test(
+    result.text_state.line_matrix,
+    @pdflite.transform_translate(10.0, 20.0),
+  )
+  let tj = @pdflite.pdf_content_apply_text_op(
+    @pdflite.pdf_content_initial_text_state()
+    .content_apply_text_state_op(Op_Tf(content_text_name_for_test("/F1"), 10.0))
+    .content_apply_text_state_op(Op_Tc(1.0))
+    .content_apply_text_state_op(Op_Tw(2.0))
+    .content_apply_text_state_op(Op_Tz(80.0)),
+    font,
+    @pdflite.transform_identity_matrix,
+    Op_TJ(
+      PdfArray([
+        PdfString(content_text_bytes_for_test([65])),
+        PdfReal(120.0),
+        PdfString(content_text_bytes_for_test([66])),
+      ]),
+    ),
+  )
+  @test.assert_eq(tj.glyphs.length(), 2)
+  content_text_assert_matrix_close_for_test(
+    tj.text_state.text_matrix,
+    @pdflite.transform_translate(8.64, 0.0),
+  )
+}
+
+///|
+test "cpdfcontent text op applies quote shorthands before showing text" {
+  let font = content_text_simple_width_font_for_test()
+  let state = @pdflite.pdf_content_initial_text_state()
+    .content_apply_text_state_op(Op_Tf(content_text_name_for_test("/F1"), 10.0))
+    .content_apply_text_state_op(Op_TL(7.0))
+    .content_apply_text_state_op(Op_Tm(@pdflite.transform_translate(1.0, 2.0)))
+  let quote = state.content_apply_text_op(
+    font,
+    @pdflite.transform_identity_matrix,
+    Op_quote(content_text_bytes_for_test([65])),
+  )
+  @test.assert_eq(quote.glyphs.length(), 1)
+  content_text_assert_matrix_close_for_test(
+    quote.glyphs[0].text_matrix,
+    @pdflite.transform_translate(1.0, -5.0),
+  )
+  content_text_assert_matrix_close_for_test(
+    quote.text_state.text_matrix,
+    @pdflite.transform_translate(6.0, -5.0),
+  )
+  content_text_assert_matrix_close_for_test(
+    quote.text_state.line_matrix,
+    @pdflite.transform_translate(1.0, -5.0),
+  )
+  let double_quote = state.content_apply_text_op(
+    font,
+    @pdflite.transform_identity_matrix,
+    Op_double_quote(8.0, 9.0, content_text_bytes_for_test([65])),
+  )
+  @test.assert_eq(double_quote.text_state.word_spacing, 8.0)
+  @test.assert_eq(double_quote.text_state.character_spacing, 9.0)
+  content_text_assert_matrix_close_for_test(
+    double_quote.text_state.text_matrix,
+    @pdflite.transform_translate(15.0, -5.0),
+  )
+}
+
+///|
 fn content_text_cid_font_for_test() -> @pdflite.PdfFont {
   content_text_cid_font_with_descriptor_for_test(
     content_text_font_descriptor_for_test(),

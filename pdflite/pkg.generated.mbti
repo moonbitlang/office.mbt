@@ -355,6 +355,8 @@ pub fn pdf_content_apply_path_op(PdfContentPartialPath, PdfContentOp) -> PdfCont
 
 pub fn pdf_content_apply_path_state_op(PdfContentPathState, PdfContentOp) -> PdfContentPathState
 
+pub fn pdf_content_apply_text_op(PdfContentTextState, PdfFont, @geometry.TransformMatrix, PdfContentOp) -> PdfContentTextOpResult
+
 pub fn pdf_content_apply_text_state_op(PdfContentTextState, PdfContentOp) -> PdfContentTextState
 
 pub fn pdf_content_begin_artifact() -> PdfContentOp
@@ -2126,6 +2128,11 @@ pub(all) struct PdfContentTextLayoutResult {
   text_matrix : @geometry.TransformMatrix
 } derive(Eq, ToJson, @debug.Debug)
 
+pub(all) struct PdfContentTextOpResult {
+  text_state : PdfContentTextState
+  glyphs : Array[PdfContentTextGlyphPlacement]
+} derive(Eq, ToJson, @debug.Debug)
+
 pub(all) struct PdfContentTextState {
   character_spacing : Double
   word_spacing : Double
@@ -2138,7 +2145,9 @@ pub(all) struct PdfContentTextState {
   text_matrix : @geometry.TransformMatrix
   line_matrix : @geometry.TransformMatrix
 } derive(Eq, ToJson, @debug.Debug)
+pub fn PdfContentTextState::content_apply_text_op(Self, PdfFont, @geometry.TransformMatrix, PdfContentOp) -> PdfContentTextOpResult
 pub fn PdfContentTextState::content_apply_text_state_op(Self, PdfContentOp) -> Self
+pub fn PdfContentTextState::content_text_layout(Self, @geometry.TransformMatrix) -> PdfContentTextLayout
 
 pub(all) enum PdfContentTiling {
   PdfContentTiling
