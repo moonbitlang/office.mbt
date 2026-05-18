@@ -34,6 +34,19 @@ pub(all) struct PdfAddTextUrlLine {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Values used to build cpdf add-text replacement callbacks.
+pub(all) struct PdfAddTextReplacementValues {
+  page_number : Int
+  end_page : Int
+  filename : String
+  page_label : String
+  end_label : String
+  bates : Int
+  bates_pad : Int?
+  bookmarks : Array[String]
+} derive(Debug, Eq, ToJson)
+
+///|
 fn pdf_addtext_vertical_justification(
   rotation : PdfAddTextRotation,
   justification : PdfAddTextJustification,
@@ -289,6 +302,88 @@ pub fn pdf_addtext_process_text_with_time(
     output = pdf_addtext_replace_all_lazy(output, replacement.0, replacement.1)
   }
   pdf_strftime_with_time(time, output)
+}
+
+///|
+fn pdf_addtext_roman_upper(number : Int) -> String {
+  @ascii.decode_lossy(pdf_page_label_roman_upper(number))
+}
+
+///|
+fn pdf_addtext_roman_lower(number : Int) -> String {
+  @ascii.decode_lossy(
+    pdf_page_label_lowercase(pdf_page_label_roman_upper(number)),
+  )
+}
+
+///|
+/// Format cpdf add-text's `%Bates` replacement for one page.
+pub fn pdf_addtext_bates_number(
+  bates : Int,
+  page_number : Int,
+  bates_pad : Int?,
+) -> String {
+  let number_text = (bates + page_number - 1).to_string()
+  match bates_pad {
+    None => number_text
+    Some(width) =>
+      if number_text.length() >= width {
+        number_text
+      } else {
+        let mut output = number_text
+        for _ in 0..<(width - number_text.length()) {
+          output = "0" + output
+        }
+        output
+      }
+  }
+}
+
+///|
+fn pdf_addtext_bookmark_replacement(
+  values : PdfAddTextReplacementValues,
+  level : Int,
+) -> String {
+  if level >= 0 && level < values.bookmarks.length() {
+    values.bookmarks[level]
+  } else {
+    ""
+  }
+}
+
+///|
+/// Build cpdf add-text replacement callbacks for page-local fields.
+///
+/// Page labels and bookmark strings are supplied by the caller; this helper
+/// preserves cpdf's marker names and Bates/roman/page-number formatting.
+pub fn pdf_addtext_replacement_pairs(
+  values : PdfAddTextReplacementValues,
+) -> Array[(String, () -> String)] {
+  [
+    ("%PageDiv2", fn() { ((values.page_number + 1) / 2).to_string() }),
+    ("%Page", fn() { values.page_number.to_string() }),
+    ("%Roman", fn() { pdf_addtext_roman_upper(values.page_number) }),
+    ("%roman", fn() { pdf_addtext_roman_lower(values.page_number) }),
+    ("%filename", fn() { values.filename }),
+    ("%Label", fn() { values.page_label }),
+    ("%EndPage", fn() { values.end_page.to_string() }),
+    ("%EndLabel", fn() { values.end_label }),
+    ("%Bookmark0", fn() { pdf_addtext_bookmark_replacement(values, 0) }),
+    ("%Bookmark1", fn() { pdf_addtext_bookmark_replacement(values, 1) }),
+    ("%Bookmark2", fn() { pdf_addtext_bookmark_replacement(values, 2) }),
+    ("%Bookmark3", fn() { pdf_addtext_bookmark_replacement(values, 3) }),
+    ("%Bookmark4", fn() { pdf_addtext_bookmark_replacement(values, 4) }),
+    (
+      "%Bates",
+      fn() {
+        pdf_addtext_bates_number(
+          values.bates,
+          values.page_number,
+          values.bates_pad,
+        )
+      },
+    ),
+  ]
 }
 
 ///|

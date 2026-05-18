@@ -358,3 +358,31 @@ test "pdf_addtext_expand_lines_with_time reports malformed URL lines" {
     fail("expected SoftError for malformed URL marker during line expansion")
   }
 }
+
+///|
+test "pdf_addtext_bates_number formats optional zero padding" {
+  @test.assert_eq(@pdflite.pdf_addtext_bates_number(98, 5, None), "102")
+  @test.assert_eq(@pdflite.pdf_addtext_bates_number(98, 5, Some(4)), "0102")
+  @test.assert_eq(@pdflite.pdf_addtext_bates_number(12345, 1, Some(3)), "12345")
+}
+
+///|
+test "pdf_addtext_replacement_pairs builds cpdf addtext fields" {
+  let values : @pdflite.PdfAddTextReplacementValues = {
+    page_number: 5,
+    end_page: 12,
+    filename: "input.pdf",
+    page_label: "v",
+    end_label: "xii",
+    bates: 98,
+    bates_pad: Some(4),
+    bookmarks: ["Intro", "Section"],
+  }
+  let processed = @pdflite.pdf_addtext_process_text_with_time(
+    addtext_process_time_for_test(),
+    "%PageDiv2|%Page|%Roman|%roman|%filename|%Label|" +
+    "%EndPage|%EndLabel|%Bookmark0|%Bookmark1|%Bookmark4|%Bates",
+    @pdflite.pdf_addtext_replacement_pairs(values),
+  )
+  @test.assert_eq(processed, "3|5|V|v|input.pdf|v|12|xii|Intro|Section||0102")
+}

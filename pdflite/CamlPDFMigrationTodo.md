@@ -2104,6 +2104,13 @@ Current backend snapshot:
   --target native --package bobzhang/pdflite --file pdf_addtext_test.mbt` at
   14/14 tests passing; native full-suite validation reports 1786/1786 tests
   passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` replacement-pair slice exposes
+  `PdfAddTextReplacementValues`, `pdf_addtext_bates_number`, and
+  `pdf_addtext_replacement_pairs`, covering `%PageDiv2`, `%Page`, roman page
+  markers, filename, labels, bookmark levels 0-4, and `%Bates` zero-padding.
+  Native focused validation reports `moon test --target native --package
+  bobzhang/pdflite --file pdf_addtext_test.mbt` at 16/16 tests passing; native
+  full-suite validation reports 1788/1788 tests passing.~~
 - [x] ~~Standalone `cpdfremovetext.ml` removal slice exposes
   `pdf_remove_added_text_ops`, `pdf_remove_all_text_ops`,
   `PdfDocument::remove_added_text`, `remove_all_text`, and compatibility

@@ -75,6 +75,8 @@ pub fn pdf_add_prefix(PdfDocument, String) -> Unit raise @core.PdfError
 
 pub fn pdf_add_root(Int, ArrayView[(@core.PdfName, PdfObject)], PdfDocument) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_addtext_bates_number(Int, Int, Int?) -> String
+
 pub fn pdf_addtext_expand_lines_with_time(PdfStrftimeTime, ArrayView[String], ArrayView[(String, () -> String)]) -> Array[String] raise @core.PdfError
 
 pub fn pdf_addtext_get_urls_line(String) -> PdfAddTextUrlLine raise @core.PdfError
@@ -82,6 +84,8 @@ pub fn pdf_addtext_get_urls_line(String) -> PdfAddTextUrlLine raise @core.PdfErr
 pub fn pdf_addtext_justification_offset(PdfAddTextRotation, Double, Double, PdfPosition, PdfAddTextJustification) -> Double
 
 pub fn pdf_addtext_process_text_with_time(PdfStrftimeTime, String, ArrayView[(String, () -> String)]) -> String
+
+pub fn pdf_addtext_replacement_pairs(PdfAddTextReplacementValues) -> Array[(String, () -> String)]
 
 pub fn pdf_annotation_make(PdfAnnotationSubtype, contents? : Bytes?, border? : PdfAnnotationBorder, rectangle? : PdfRectangle, colour? : PdfAnnotationColour?, subject? : Bytes?) -> PdfAnnotation
 
@@ -1312,6 +1316,17 @@ pub(all) enum PdfAddTextJustification {
   PdfAddTextLeftJustify
   PdfAddTextCentreJustify
   PdfAddTextRightJustify
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfAddTextReplacementValues {
+  page_number : Int
+  end_page : Int
+  filename : String
+  page_label : String
+  end_label : String
+  bates : Int
+  bates_pad : Int?
+  bookmarks : Array[String]
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) enum PdfAddTextRotation {
