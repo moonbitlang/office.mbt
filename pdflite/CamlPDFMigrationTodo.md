@@ -1826,6 +1826,13 @@ Current backend snapshot:
   positive/negative multiple padding. Native focused validation reports
   `moon test --target native pdf_pad_test.mbt` at 8/8 tests passing; native
   full-suite validation reports 1714/1714 tests passing.~~
+- [x] ~~Standalone `cpdfposition.ml` position helper slice exposes the
+  `PdfPosition` model, `pdf_string_of_position`, and
+  `pdf_calculate_position`, covering every cpdf debug spelling, centered and
+  absolute placements, edge placements with and without ignored distances, and
+  diagonal/reverse-diagonal rotation math. Native focused validation reports
+  `moon test --target native pdf_position_test.mbt` at 5/5 tests passing;
+  native full-suite validation reports 1715/1715 tests passing.~~
 - [x] ~~Standalone `cpdfpagelabels.ml` JSON adapter slice now exposes
   `PdfDocument::add_page_labels_json` and `pdf_add_page_labels_json`, covering
   cpdf's page-label JSON array shape, UTF-8 prefix-to-PDFDocString encoding,

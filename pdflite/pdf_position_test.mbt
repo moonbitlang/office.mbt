@@ -47,8 +47,48 @@ test "cpdf position debug strings use OCaml fixed precision spellings" {
     "PosCentre 1.500000 -2.250000",
   )
   @test.assert_eq(
+    @pdflite.pdf_string_of_position(PdfPositionPosLeft(1.0, 2.0)),
+    "PosLeft 1.000000 2.000000",
+  )
+  @test.assert_eq(
+    @pdflite.pdf_string_of_position(PdfPositionPosRight(3.0, 4.0)),
+    "PosRight 3.000000 4.000000",
+  )
+  @test.assert_eq(
     @pdflite.pdf_string_of_position(PdfPositionTop(7.0)),
     "Top 7.000000",
+  )
+  @test.assert_eq(
+    @pdflite.pdf_string_of_position(PdfPositionTopLeft(1.0, 2.0)),
+    "TopLeft 1.000000 2.000000",
+  )
+  @test.assert_eq(
+    @pdflite.pdf_string_of_position(PdfPositionTopRight(3.0, 4.0)),
+    "TopRight 3.000000 4.000000",
+  )
+  @test.assert_eq(
+    @pdflite.pdf_string_of_position(PdfPositionLeft(8.0)),
+    "Left 8.000000",
+  )
+  @test.assert_eq(
+    @pdflite.pdf_string_of_position(PdfPositionBottomLeft(1.0, 2.0)),
+    "BottomLeft 1.000000 2.000000",
+  )
+  @test.assert_eq(
+    @pdflite.pdf_string_of_position(PdfPositionBottom(9.0)),
+    "Bottom 9.000000",
+  )
+  @test.assert_eq(
+    @pdflite.pdf_string_of_position(PdfPositionBottomRight(3.0, 4.0)),
+    "BottomRight 3.000000 4.000000",
+  )
+  @test.assert_eq(
+    @pdflite.pdf_string_of_position(PdfPositionRight(10.0)),
+    "Right 10.000000",
+  )
+  @test.assert_eq(
+    @pdflite.pdf_string_of_position(PdfPositionDiagonal),
+    "Diagonal",
   )
   @test.assert_eq(
     @pdflite.pdf_string_of_position(PdfPositionReverseDiagonal),
@@ -121,10 +161,27 @@ test "cpdf position calculates edge placements and ignore distance" {
       false,
       20.0,
       bounds,
+      PdfPositionTopLeft(3.0, 4.0),
+    ),
+    3.0,
+    46.0,
+    0.0,
+  )
+  assert_position_for_test(
+    @pdflite.pdf_calculate_position(
+      false,
+      20.0,
+      bounds,
       PdfPositionTopRight(3.0, 4.0),
     ),
     77.0,
     46.0,
+    0.0,
+  )
+  assert_position_for_test(
+    @pdflite.pdf_calculate_position(false, 20.0, bounds, PdfPositionLeft(5.0)),
+    5.0,
+    25.0,
     0.0,
   )
   assert_position_for_test(
@@ -139,8 +196,92 @@ test "cpdf position calculates edge placements and ignore distance" {
     0.0,
   )
   assert_position_for_test(
+    @pdflite.pdf_calculate_position(false, 20.0, bounds, PdfPositionBottom(5.0)),
+    40.0,
+    5.0,
+    0.0,
+  )
+  assert_position_for_test(
+    @pdflite.pdf_calculate_position(
+      false,
+      20.0,
+      bounds,
+      PdfPositionBottomRight(3.0, 4.0),
+    ),
+    77.0,
+    4.0,
+    0.0,
+  )
+  assert_position_for_test(
     @pdflite.pdf_calculate_position(false, 20.0, bounds, PdfPositionRight(5.0)),
     75.0,
+    25.0,
+    0.0,
+  )
+}
+
+///|
+test "cpdf position ignore distance zeros all edge offsets" {
+  let bounds = position_bounds_for_test()
+  assert_position_for_test(
+    @pdflite.pdf_calculate_position(
+      true,
+      20.0,
+      bounds,
+      PdfPositionTopLeft(3.0, 4.0),
+    ),
+    0.0,
+    50.0,
+    0.0,
+  )
+  assert_position_for_test(
+    @pdflite.pdf_calculate_position(
+      true,
+      20.0,
+      bounds,
+      PdfPositionTopRight(3.0, 4.0),
+    ),
+    80.0,
+    50.0,
+    0.0,
+  )
+  assert_position_for_test(
+    @pdflite.pdf_calculate_position(true, 20.0, bounds, PdfPositionLeft(5.0)),
+    0.0,
+    25.0,
+    0.0,
+  )
+  assert_position_for_test(
+    @pdflite.pdf_calculate_position(
+      true,
+      20.0,
+      bounds,
+      PdfPositionBottomLeft(3.0, 4.0),
+    ),
+    0.0,
+    0.0,
+    0.0,
+  )
+  assert_position_for_test(
+    @pdflite.pdf_calculate_position(true, 20.0, bounds, PdfPositionBottom(5.0)),
+    40.0,
+    0.0,
+    0.0,
+  )
+  assert_position_for_test(
+    @pdflite.pdf_calculate_position(
+      true,
+      20.0,
+      bounds,
+      PdfPositionBottomRight(3.0, 4.0),
+    ),
+    80.0,
+    0.0,
+    0.0,
+  )
+  assert_position_for_test(
+    @pdflite.pdf_calculate_position(true, 20.0, bounds, PdfPositionRight(5.0)),
+    80.0,
     25.0,
     0.0,
   )
