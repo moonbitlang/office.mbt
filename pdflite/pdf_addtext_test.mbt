@@ -81,6 +81,38 @@ fn addtext_simple_font_for_test(capheight : Double) -> @pdflite.PdfFont {
 }
 
 ///|
+test "pdf_addtext_colour_op maps fill colours to content operators" {
+  @test.assert_eq(
+    @pdflite.pdf_addtext_colour_op(PdfContentGrey(0.25)),
+    Op_g(0.25),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_addtext_colour_op(PdfContentRGB(0.1, 0.2, 0.3)),
+    Op_rg(0.1, 0.2, 0.3),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_addtext_colour_op(PdfContentCMYK(0.0, 0.1, 0.2, 0.3)),
+    Op_k(0.0, 0.1, 0.2, 0.3),
+  )
+}
+
+///|
+test "pdf_addtext_colour_op_stroke maps stroke colours to content operators" {
+  @test.assert_eq(
+    @pdflite.pdf_addtext_colour_op_stroke(PdfContentGrey(0.75)),
+    Op_G(0.75),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_addtext_colour_op_stroke(PdfContentRGB(0.4, 0.5, 0.6)),
+    Op_RG(0.4, 0.5, 0.6),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_addtext_colour_op_stroke(PdfContentCMYK(0.7, 0.8, 0.9, 1.0)),
+    Op_K(0.7, 0.8, 0.9, 1.0),
+  )
+}
+
+///|
 test "pdf_addtext_justification_offset handles horizontal rotations" {
   @test.assert_eq(
     addtext_offset_for_test(

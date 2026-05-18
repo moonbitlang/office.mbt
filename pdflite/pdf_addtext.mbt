@@ -47,6 +47,18 @@ pub(all) struct PdfAddTextReplacementValues {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Build the cpdf add-text fill colour operator.
+pub fn pdf_addtext_colour_op(colour : PdfContentColour) -> PdfContentOp {
+  colour.pdf_tweak_fill_op()
+}
+
+///|
+/// Build the cpdf add-text stroke colour operator.
+pub fn pdf_addtext_colour_op_stroke(colour : PdfContentColour) -> PdfContentOp {
+  colour.pdf_tweak_stroke_op()
+}
+
+///|
 fn pdf_addtext_vertical_justification(
   rotation : PdfAddTextRotation,
   justification : PdfAddTextJustification,

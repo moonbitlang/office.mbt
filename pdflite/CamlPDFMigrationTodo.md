@@ -2149,6 +2149,13 @@ Current backend snapshot:
   Native focused validation reports `moon test --target native --package
   bobzhang/pdflite --file pdf_addtext_test.mbt` at 28/28 tests passing; native
   full-suite validation reports 1800/1800 tests passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` colour-operator slice exposes
+  `pdf_addtext_colour_op` and `pdf_addtext_colour_op_stroke`, reusing
+  `PdfContentColour` for cpdf add-text colours and covering gray/RGB/CMYK fill
+  mappings to `g`/`rg`/`k` plus stroke mappings to `G`/`RG`/`K`. Native focused
+  validation reports `moon test --target native --package bobzhang/pdflite
+  --file pdf_addtext_test.mbt` at 30/30 tests passing; native full-suite
+  validation reports 1802/1802 tests passing.~~
 - [x] ~~Standalone `cpdfremovetext.ml` removal slice exposes
   `pdf_remove_added_text_ops`, `pdf_remove_all_text_ops`,
   `PdfDocument::remove_added_text`, `remove_all_text`, and compatibility
