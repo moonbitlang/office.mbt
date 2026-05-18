@@ -83,6 +83,8 @@ pub fn pdf_addtext_get_urls_line(String) -> PdfAddTextUrlLine raise @core.PdfErr
 
 pub fn pdf_addtext_justification_offset(PdfAddTextRotation, Double, Double, PdfPosition, PdfAddTextJustification) -> Double
 
+pub fn pdf_addtext_page_label(PdfDocument, Int) -> String raise @core.PdfError
+
 pub fn pdf_addtext_process_text_with_time(PdfStrftimeTime, String, ArrayView[(String, () -> String)]) -> String
 
 pub fn pdf_addtext_replacement_pairs(PdfAddTextReplacementValues) -> Array[(String, () -> String)]
@@ -1733,6 +1735,7 @@ pub fn PdfDocument::add_page_labels_json(Self, Json) -> Self raise @core.PdfErro
 pub fn PdfDocument::add_pagetree(Self, ArrayView[PdfPage]) -> Int raise @core.PdfError
 pub fn PdfDocument::add_prefix(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDocument::add_root(Self, Int, ArrayView[(@core.PdfName, PdfObject)]) -> Int raise @core.PdfError
+pub fn PdfDocument::addtext_page_label(Self, Int) -> String raise @core.PdfError
 pub fn PdfDocument::annotations_json(Self, ArrayView[Int]) -> Json raise @core.PdfError
 pub fn PdfDocument::annotations_json_blob(Self, ArrayView[Int]) -> Bytes raise @core.PdfError
 pub fn PdfDocument::annotations_of_page(Self, PdfPage) -> Array[PdfAnnotation] raise @core.PdfError

@@ -386,3 +386,39 @@ test "pdf_addtext_replacement_pairs builds cpdf addtext fields" {
   )
   @test.assert_eq(processed, "3|5|V|v|input.pdf|v|12|xii|Intro|Section||0102")
 }
+
+///|
+test "PdfDocument addtext_page_label falls back to decimal labels" {
+  let document = try! @pdflite.pdf_blank_document(10.0, 10.0, 3)
+  @test.assert_eq(try! document.addtext_page_label(2), "2")
+  @test.assert_eq(try! @pdflite.pdf_addtext_page_label(document, 3), "3")
+}
+
+///|
+test "PdfDocument addtext_page_label renders existing page labels" {
+  let document = try! @pdflite.pdf_blank_document(10.0, 10.0, 3)
+  let labelled = try! document.write_page_labels([
+    {
+      label_style: PageLabelLowercaseRoman,
+      label_prefix: Some(@ascii.encode("intro-")),
+      start_page: 1,
+      start_value: 1,
+    },
+  ])
+  @test.assert_eq(try! labelled.addtext_page_label(3), "intro-iii")
+}
+
+///|
+test "PdfDocument addtext_page_label decodes PDFDocString prefixes" {
+  let document = try! @pdflite.pdf_blank_document(10.0, 10.0, 2)
+  let prefix = try! @pdflite.pdf_pdfdocstring_of_utf8(@utf8.encode("A ☃-"))
+  let labelled = try! document.write_page_labels([
+    {
+      label_style: PageLabelDecimalArabic,
+      label_prefix: Some(prefix),
+      start_page: 1,
+      start_value: 1,
+    },
+  ])
+  @test.assert_eq(try! labelled.addtext_page_label(2), "A ☃-2")
+}

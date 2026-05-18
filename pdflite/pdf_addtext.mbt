@@ -387,6 +387,56 @@ pub fn pdf_addtext_replacement_pairs(
 }
 
 ///|
+fn pdf_addtext_pdfdocstring_to_string(
+  bytes : BytesView,
+) -> String raise PdfError {
+  @utf8.decode(pdf_utf8_of_pdfdocstring(bytes)) catch {
+    _ => raise InvalidUTF8
+  }
+}
+
+///|
+fn pdf_addtext_page_label_prefix(label : PdfPageLabel) -> String raise PdfError {
+  match label.label_prefix {
+    Some(prefix) => pdf_addtext_pdfdocstring_to_string(prefix)
+    None => ""
+  }
+}
+
+///|
+fn pdf_addtext_page_label_number(label : PdfPageLabel) -> String {
+  @ascii.decode_lossy(
+    pdf_page_label_number_bytes(label.start_value, label.label_style),
+  )
+}
+
+///|
+/// Return cpdf add-text's visible page label for a 1-based page number.
+///
+/// Documents without page labels fall back to decimal page numbers.
+pub fn PdfDocument::addtext_page_label(
+  self : PdfDocument,
+  page_number : Int,
+) -> String raise PdfError {
+  let labels = pdf_page_label_complete(self.read_page_labels())
+  match pdf_page_label_of_page_number(page_number, labels) {
+    Some(label) =>
+      pdf_addtext_page_label_prefix(label) +
+      pdf_addtext_page_label_number(label)
+    None => page_number.to_string()
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::addtext_page_label`.
+pub fn pdf_addtext_page_label(
+  document : PdfDocument,
+  page_number : Int,
+) -> String raise PdfError {
+  document.addtext_page_label(page_number)
+}
+
+///|
 fn pdf_addtext_find_byte(bytes : BytesView, start : Int, value : Int) -> Int? {
   let mut index = start
   while index < bytes.length() {
