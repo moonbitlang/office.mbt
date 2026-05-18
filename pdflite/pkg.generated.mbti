@@ -393,6 +393,8 @@ pub fn pdf_content_state_content_json(PdfContentState) -> Json
 
 pub fn pdf_content_stream_of_ops(ArrayView[PdfContentOp]) -> PdfObject raise @core.PdfError
 
+pub fn pdf_content_width_of_charcode(PdfFont, Int) -> (Double, Double, Double)
+
 pub fn pdf_copy_annotations(ArrayView[Int], PdfDocument, PdfDocument) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_copy_font(PdfDocument, String, Int, ArrayView[Int], PdfDocument) -> PdfDocument raise @core.PdfError
@@ -2404,6 +2406,7 @@ pub fn PdfFont::content_bytes_of_charcode(Self, Int) -> Bytes raise @core.PdfErr
 pub fn PdfFont::content_charcodes_of_bytes(Self, BytesView) -> Array[Int]
 pub fn PdfFont::content_extra_metrics(Self) -> (Double, Double)
 pub fn PdfFont::content_is_vertical(Self) -> Bool
+pub fn PdfFont::content_width_of_charcode(Self, Int) -> (Double, Double, Double)
 pub fn PdfFont::debug_name(Self) -> String
 pub fn PdfFont::embedded_fontfile_number(Self) -> Int?
 pub fn PdfFont::is_identity_h(Self) -> Bool

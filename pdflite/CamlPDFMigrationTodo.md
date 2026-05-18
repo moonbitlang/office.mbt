@@ -2564,6 +2564,16 @@ Current backend snapshot:
   test --target native --package bobzhang/pdflite --file
   pdf_content_text_test.mbt` at 4/4 tests passing; native full-suite validation
   reports 1921/1921 tests passing.~~
+- [x] ~~Standalone `cpdfcontent.ml` glyph width slice exposes
+  `PdfFont::content_width_of_charcode` and
+  `pdf_content_width_of_charcode`, matching cpdf's simple-font metric branch
+  including Type3 font-matrix transforms, Standard 14 charwidth lookup, CID
+  horizontal default-width fallback, CID vertical `/W2` widths, vertical
+  fallback from `/W`, and zero fallback for missing vertical widths and simple
+  fonts without metrics while leaving `process_tj` placement integration for
+  later slices. Native focused validation reports `moon test --target native
+  --package bobzhang/pdflite --file pdf_content_text_test.mbt` at 5/5 tests
+  passing; native full-suite validation reports 1922/1922 tests passing.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,

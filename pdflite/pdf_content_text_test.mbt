@@ -252,3 +252,87 @@ test "cpdfcontent vertical predicate mirrors source CMap cases" {
   })
   @test.assert_eq(external_horizontal.content_is_vertical(), false)
 }
+
+///|
+test "cpdfcontent width of charcode mirrors font metric branches" {
+  let simple : @pdflite.PdfFont = PdfFontSimple({
+    fonttype: PdfTrueType,
+    basefont: None,
+    firstchar: 0,
+    lastchar: 2,
+    widths: [],
+    fontdescriptor: None,
+    fontmetrics: Some([10.0, 20.0, 30.0]),
+    encoding: PdfWinAnsiEncoding,
+  })
+  @test.assert_eq(simple.content_width_of_charcode(1), (20.0, 0.0, 0.0))
+  @test.assert_eq(simple.content_width_of_charcode(3), (0.0, 0.0, 0.0))
+  let type3 : @pdflite.PdfFont = PdfFontSimple({
+    fonttype: PdfType3({
+      fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0 },
+      fontmatrix: { a: 0.5, b: 0.0, c: 0.0, d: 1.0, e: 0.0, f: 0.0 },
+      charprocs: [],
+      resources: @pdflite.pdf_dictionary([]),
+    }),
+    basefont: None,
+    firstchar: 0,
+    lastchar: 0,
+    widths: [],
+    fontdescriptor: None,
+    fontmetrics: Some([400.0]),
+    encoding: PdfWinAnsiEncoding,
+  })
+  @test.assert_eq(type3.content_width_of_charcode(0), (200.0, 0.0, 0.0))
+  let no_metrics : @pdflite.PdfFont = PdfFontSimple({
+    fonttype: PdfType1,
+    basefont: Some(content_text_name_for_test("/Helvetica")),
+    firstchar: 0,
+    lastchar: 0,
+    widths: [],
+    fontdescriptor: None,
+    fontmetrics: None,
+    encoding: PdfWinAnsiEncoding,
+  })
+  @test.assert_eq(no_metrics.content_width_of_charcode(65), (0.0, 0.0, 0.0))
+  let standard : @pdflite.PdfFont = PdfFontStandard({
+    font: PdfHelvetica,
+    encoding: PdfWinAnsiEncoding,
+  })
+  @test.assert_eq(standard.content_width_of_charcode(65), (667.0, 0.0, 0.0))
+  @test.assert_eq(
+    @pdflite.pdf_content_width_of_charcode(standard, 65),
+    (667.0, 0.0, 0.0),
+  )
+  let descriptor = content_text_font_descriptor_for_test()
+  let horizontal_cid = content_text_cid_font_with_descriptor_for_test(
+    descriptor,
+  )
+  @test.assert_eq(
+    horizontal_cid.content_width_of_charcode(6),
+    (1000.0, 0.0, 0.0),
+  )
+  let composite = match horizontal_cid {
+    PdfFontCIDKeyed(font) =>
+      {
+        ..font.composite,
+        cid_widths: [(5, 600.0), (6, 640.0)],
+        cid_widths2: [(5, { width: 700.0, vx: 11.0, vy: 12.0 })],
+        cid_default_width2: [880.0, -1000.0],
+      }
+    _ => abort("expected CID font")
+  }
+  let vertical_cid : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: content_text_name_for_test("/Top"),
+    composite,
+    encoding: PdfPredefinedCMap(content_text_name_for_test("/Identity-V")),
+  })
+  @test.assert_eq(
+    vertical_cid.content_width_of_charcode(5),
+    (700.0, 11.0, 12.0),
+  )
+  @test.assert_eq(
+    vertical_cid.content_width_of_charcode(6),
+    (320.0, 880.0, -1000.0),
+  )
+  @test.assert_eq(vertical_cid.content_width_of_charcode(7), (0.0, 0.0, 0.0))
+}
