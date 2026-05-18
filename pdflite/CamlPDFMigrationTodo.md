@@ -2269,6 +2269,14 @@ Current backend snapshot:
   --target native --package bobzhang/pdflite --file pdf_addtext_test.mbt` at
   64/64 tests passing; native full-suite validation reports 1836/1836 tests
   passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` page annotation update slice exposes
+  `PdfDocument::addtext_page_rest_with_annotations` and
+  `pdf_addtext_page_rest_with_annotations`, covering cpdf's empty-annotation
+  no-op, direct writeback to `/Annots`, prepending new annotation references
+  before resolved existing arrays, and malformed existing annotation handling.
+  Native focused validation reports `moon test --target native --package
+  bobzhang/pdflite --file pdf_addtext_test.mbt` at 67/67 tests passing; native
+  full-suite validation reports 1839/1839 tests passing.~~
 - [x] ~~Standalone `cpdfremovetext.ml` removal slice exposes
   `pdf_remove_added_text_ops`, `pdf_remove_all_text_ops`,
   `PdfDocument::remove_added_text`, `remove_all_text`, and compatibility

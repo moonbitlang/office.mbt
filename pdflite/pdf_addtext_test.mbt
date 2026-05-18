@@ -982,6 +982,56 @@ test "pdf_addtext_url_annotation builds cpdf link annotation objects" {
 }
 
 ///|
+test "pdf_addtext_page_rest_with_annotations preserves empty annotation updates" {
+  let document = @pdflite.pdf_document_empty()
+  let rest : @pdflite.PdfObject = PdfInteger(7)
+  let annotations : Array[@pdflite.PdfObject] = []
+  @test.assert_eq(
+    try! document.addtext_page_rest_with_annotations(rest, annotations),
+    rest,
+  )
+}
+
+///|
+test "pdf_addtext_page_rest_with_annotations prepends resolved existing arrays" {
+  let document = @pdflite.pdf_document_empty()
+  let existing_number = document.add_object(PdfArray([PdfIndirect(30)]))
+  let key_annots = addtext_name_for_test("/Annots")
+  let key_other = addtext_name_for_test("/Other")
+  let rest : @pdflite.PdfObject = PdfDictionary([
+    (key_annots, PdfIndirect(existing_number)),
+    (key_other, PdfInteger(5)),
+  ])
+  let annotations : Array[@pdflite.PdfObject] = [
+    PdfIndirect(10),
+    PdfIndirect(11),
+  ]
+  let updated = try! document.addtext_page_rest_with_annotations(
+    rest, annotations,
+  )
+  @test.assert_eq(
+    updated.lookup_immediate(key_annots),
+    Some(PdfArray([PdfIndirect(10), PdfIndirect(11), PdfIndirect(30)])),
+  )
+  @test.assert_eq(updated.lookup_immediate(key_other), Some(PdfInteger(5)))
+}
+
+///|
+test "pdf_addtext_page_rest_with_annotations treats malformed annots as empty" {
+  let document = @pdflite.pdf_document_empty()
+  let key_annots = addtext_name_for_test("/Annots")
+  let rest : @pdflite.PdfObject = PdfDictionary([(key_annots, PdfInteger(99))])
+  let annotations : Array[@pdflite.PdfObject] = [PdfIndirect(20)]
+  let updated = try! @pdflite.pdf_addtext_page_rest_with_annotations(
+    document, rest, annotations,
+  )
+  @test.assert_eq(
+    updated.lookup_immediate(key_annots),
+    Some(PdfArray([PdfIndirect(20)])),
+  )
+}
+
+///|
 test "pdf_addtext_rectangle_origin lowers top positions by rectangle height" {
   let bounds = addtext_bounds_for_test()
   @test.assert_eq(

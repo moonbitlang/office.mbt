@@ -62,6 +62,11 @@ let pdf_addtext_font_key_name : PdfName = pdf_name_of_bytes(
 )
 
 ///|
+let pdf_addtext_annots_key_name : PdfName = pdf_name_of_bytes(
+  @ascii.encode("/Annots"),
+)
+
+///|
 let pdf_addtext_ca_key_name : PdfName = pdf_name_of_bytes(@ascii.encode("/ca"))
 
 ///|
@@ -82,6 +87,11 @@ fn pdf_addtext_extgstate_key() -> PdfName {
 ///|
 fn pdf_addtext_font_key() -> PdfName {
   pdf_addtext_font_key_name
+}
+
+///|
+fn pdf_addtext_annots_key() -> PdfName {
+  pdf_addtext_annots_key_name
 }
 
 ///|
@@ -817,6 +827,44 @@ pub fn pdf_addtext_url_annotation(
       ]),
     ),
   ])
+}
+
+///|
+/// Return a page rest dictionary with cpdf add-text annotations prepended.
+///
+/// Empty new annotation lists leave `rest` unchanged. Existing `/Annots`
+/// arrays are resolved through `document`; missing or malformed values are
+/// treated as empty, matching cpdf's add-text page update.
+pub fn PdfDocument::addtext_page_rest_with_annotations(
+  self : PdfDocument,
+  rest : PdfObject,
+  annotations : ArrayView[PdfObject],
+) -> PdfObject raise PdfError {
+  if annotations.length() == 0 {
+    rest
+  } else {
+    let updated : Array[PdfObject] = [
+      for annotation in annotations => annotation
+    ]
+    match self.lookup_direct(pdf_addtext_annots_key(), rest) {
+      Some(PdfArray(existing)) =>
+        for annotation in existing {
+          updated.push(annotation)
+        }
+      _ => ()
+    }
+    rest.add_dict_entry(pdf_addtext_annots_key(), PdfArray(updated))
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::addtext_page_rest_with_annotations`.
+pub fn pdf_addtext_page_rest_with_annotations(
+  document : PdfDocument,
+  rest : PdfObject,
+  annotations : ArrayView[PdfObject],
+) -> PdfObject raise PdfError {
+  document.addtext_page_rest_with_annotations(rest, annotations)
 }
 
 ///|
