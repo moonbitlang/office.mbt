@@ -9,6 +9,11 @@ fn ocg_bytes_for_test(text : String) -> @pdflite.PdfBytes {
 }
 
 ///|
+fn ocg_json_int_for_test(value : Int) -> Json {
+  Json::number(value.to_double(), repr=value.to_string())
+}
+
+///|
 fn ocg_name_object_for_test(text : String) -> @pdflite.PdfObject {
   PdfNameObject(ocg_name_for_test(text))
 }
@@ -316,6 +321,116 @@ test "PdfDocument ocg_get_list returns raw layer names" {
     ocg_bytes_for_test("Layer 1"),
   ])
   @test.assert_eq(try! ocg_catalog_document_for_test().ocg_get_list(), [])
+}
+
+///|
+test "PdfDocument ocg_list_json exports cpdf optional content shape" {
+  let doc = ocg_document_with_content_for_test()
+  let usage_json = Json::object(
+    Map::of([
+      ("CreatorInfo-Creator", Json::string("tool")),
+      ("CreatorInfo-Subtype", Json::string("/Artwork")),
+      ("Language-Language", Json::string("en-US")),
+      ("Language-Preferred", Json::string("/ON")),
+      ("Export", Json::string("/ON")),
+      ("Zoom-Min", Json::number(0.5)),
+      ("Zoom-Max", Json::number(2.0)),
+      ("Print-Subtype", Json::string("/Watermark")),
+      ("Print-PrintState", Json::string("/OFF")),
+      ("ViewState", Json::string("/ON")),
+      ("User-Type", Json::string("/Ind")),
+      ("User-Name", Json::array([Json::string("Alice"), Json::string("Bob")])),
+      ("PageElement-Subtype", Json::string("/FG")),
+    ]),
+  )
+  let appdict_json = Json::object(
+    Map::of([
+      ("Event", Json::string("/Print")),
+      ("OCGs", Json::array([ocg_json_int_for_test(10)])),
+      ("Category", Json::array([Json::string("/Print")])),
+    ]),
+  )
+  let default_json = Json::object(
+    Map::of([
+      ("Name", Json::string("Default")),
+      ("Creator", Json::string("Author")),
+      ("BaseState", Json::string("/OFF")),
+      ("ON", Json::array([ocg_json_int_for_test(10)])),
+      ("OFF", Json::array([ocg_json_int_for_test(11)])),
+      ("Intent", Json::array([Json::string("/View")])),
+      ("AS", Json::array([appdict_json])),
+      (
+        "Order",
+        Json::array([
+          Json::object(
+            Map::of([
+              ("Name", Json::string("Layers")),
+              ("OCGs", Json::array([ocg_json_int_for_test(10)])),
+            ]),
+          ),
+        ]),
+      ),
+      ("ListMode", Json::string("/VisiblePages")),
+      (
+        "RBGroups",
+        Json::array([
+          Json::array([ocg_json_int_for_test(10), ocg_json_int_for_test(11)]),
+        ]),
+      ),
+      ("Locked", Json::array([ocg_json_int_for_test(10)])),
+    ]),
+  )
+  let config_json = Json::object(
+    Map::of([
+      ("Name", Json::null()),
+      ("Creator", Json::null()),
+      ("BaseState", Json::string("/Unchanged")),
+      ("ON", Json::array([])),
+      ("OFF", Json::array([])),
+      ("Intent", Json::array([Json::string("/View")])),
+      ("AS", Json::array([])),
+      ("Order", Json::null()),
+      ("ListMode", Json::string("/AllPages")),
+      ("RBGroups", Json::null()),
+      ("Locked", Json::array([])),
+    ]),
+  )
+  let expected = Json::object(
+    Map::of([
+      (
+        "OCGs",
+        Json::object(
+          Map::of([
+            (
+              "10",
+              Json::object(
+                Map::of([
+                  ("Name", Json::string("Layer 1")),
+                  (
+                    "Intent",
+                    Json::array([Json::string("/View"), Json::string("/Print")]),
+                  ),
+                  ("Usage", usage_json),
+                ]),
+              ),
+            ),
+          ]),
+        ),
+      ),
+      ("Default", default_json),
+      ("Configs", Json::array([config_json])),
+    ]),
+  )
+  @test.assert_eq(try! doc.ocg_list_json(), expected)
+  @test.assert_eq(try! @pdflite.pdf_ocg_list_json(doc), expected)
+  @test.assert_eq(
+    try! @pdflite.pdf_ocg_list_json_blob(doc),
+    @utf8.encode(expected.stringify()),
+  )
+  @test.assert_eq(
+    try! ocg_catalog_document_for_test().ocg_list_json(),
+    Json::null(),
+  )
 }
 
 ///|
