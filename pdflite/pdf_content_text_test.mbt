@@ -9,6 +9,44 @@ fn content_text_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
 }
 
 ///|
+fn content_text_assert_close_for_test(
+  actual : Double,
+  expected : Double,
+) -> Unit raise {
+  if (actual - expected).abs() > 0.000000001 {
+    fail("expected " + expected.to_string() + ", got " + actual.to_string())
+  }
+}
+
+///|
+fn content_text_assert_matrix_close_for_test(
+  actual : @pdflite.TransformMatrix,
+  expected : @pdflite.TransformMatrix,
+) -> Unit raise {
+  content_text_assert_close_for_test(actual.a, expected.a)
+  content_text_assert_close_for_test(actual.b, expected.b)
+  content_text_assert_close_for_test(actual.c, expected.c)
+  content_text_assert_close_for_test(actual.d, expected.d)
+  content_text_assert_close_for_test(actual.e, expected.e)
+  content_text_assert_close_for_test(actual.f, expected.f)
+}
+
+///|
+fn content_text_assert_bbox_close_for_test(
+  actual : @pdflite.PdfContentBoundingBox,
+  expected : @pdflite.PdfContentBoundingBox,
+) -> Unit raise {
+  content_text_assert_close_for_test(actual.x0, expected.x0)
+  content_text_assert_close_for_test(actual.y0, expected.y0)
+  content_text_assert_close_for_test(actual.x1, expected.x1)
+  content_text_assert_close_for_test(actual.y1, expected.y1)
+  content_text_assert_close_for_test(actual.x2, expected.x2)
+  content_text_assert_close_for_test(actual.y2, expected.y2)
+  content_text_assert_close_for_test(actual.x3, expected.x3)
+  content_text_assert_close_for_test(actual.y3, expected.y3)
+}
+
+///|
 fn content_text_font_descriptor_for_test() -> @pdflite.PdfFontDescriptor {
   {
     ascent: 0.0,
@@ -335,4 +373,145 @@ test "cpdfcontent width of charcode mirrors font metric branches" {
     (320.0, 880.0, -1000.0),
   )
   @test.assert_eq(vertical_cid.content_width_of_charcode(7), (0.0, 0.0, 0.0))
+}
+
+///|
+test "cpdfcontent text layout mirrors horizontal process_tj placement" {
+  let font : @pdflite.PdfFont = PdfFontSimple({
+    fonttype: PdfTrueType,
+    basefont: None,
+    firstchar: 0,
+    lastchar: 255,
+    widths: [],
+    fontdescriptor: Some({
+      ..content_text_font_descriptor_for_test(),
+      fontbbox: { min_x: 0.0, min_y: -200.0, max_x: 600.0, max_y: 800.0 },
+    }),
+    fontmetrics: Some(
+      [
+        for code in 0..<256 => if code == 32 { 250.0 } else { 500.0 }
+      ],
+    ),
+    encoding: PdfWinAnsiEncoding,
+  })
+  let layout : @pdflite.PdfContentTextLayout = {
+    font_size: 10.0,
+    horizontal_scaling: 0.8,
+    character_spacing: 1.0,
+    word_spacing: 2.0,
+    rise: 3.0,
+    ctm: @pdflite.transform_translate(100.0, 200.0),
+    text_matrix: @pdflite.transform_translate(10.0, 20.0),
+  }
+  let result = font.content_text_layout_of_bytes(
+    content_text_bytes_for_test([65, 32]),
+    layout,
+  )
+  @test.assert_eq(result.glyphs.length(), 2)
+  let first = result.glyphs[0]
+  @test.assert_eq(first.charcode, 65)
+  content_text_assert_matrix_close_for_test(
+    first.text_matrix,
+    @pdflite.transform_translate(10.0, 20.0),
+  )
+  content_text_assert_close_for_test(first.width, 0.5)
+  content_text_assert_close_for_test(first.advance_x, 4.8)
+  content_text_assert_close_for_test(first.advance_y, 0.0)
+  content_text_assert_bbox_close_for_test(first.bounding_box, {
+    x0: 110.0,
+    y0: 231.0,
+    x1: 110.0,
+    y1: 221.0,
+    x2: 114.0,
+    y2: 221.0,
+    x3: 114.0,
+    y3: 231.0,
+  })
+  let second = result.glyphs[1]
+  @test.assert_eq(second.charcode, 32)
+  content_text_assert_matrix_close_for_test(
+    second.text_matrix,
+    @pdflite.transform_translate(14.8, 20.0),
+  )
+  content_text_assert_close_for_test(second.width, 0.25)
+  content_text_assert_close_for_test(second.advance_x, 4.4)
+  content_text_assert_bbox_close_for_test(second.bounding_box, {
+    x0: 114.8,
+    y0: 231.0,
+    x1: 114.8,
+    y1: 221.0,
+    x2: 116.8,
+    y2: 221.0,
+    x3: 116.8,
+    y3: 231.0,
+  })
+  content_text_assert_matrix_close_for_test(
+    result.text_matrix,
+    @pdflite.transform_translate(19.2, 20.0),
+  )
+  let wrapped = @pdflite.pdf_content_text_layout_of_bytes(
+    font,
+    content_text_bytes_for_test([65]),
+    layout,
+  )
+  @test.assert_eq(wrapped.glyphs.length(), 1)
+  @test.assert_eq(wrapped.glyphs[0].charcode, 65)
+}
+
+///|
+test "cpdfcontent text layout mirrors vertical process_tj placement" {
+  let descriptor = {
+    ..content_text_font_descriptor_for_test(),
+    ascent: 800.0,
+    descent: -200.0,
+  }
+  let base = content_text_cid_font_with_descriptor_for_test(descriptor)
+  let composite = match base {
+    PdfFontCIDKeyed(font) =>
+      {
+        ..font.composite,
+        cid_widths2: [(0x0102, { width: 700.0, vx: 20.0, vy: 30.0 })],
+      }
+    _ => abort("expected CID font")
+  }
+  let font : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: content_text_name_for_test("/Top"),
+    composite,
+    encoding: PdfPredefinedCMap(content_text_name_for_test("/Identity-V")),
+  })
+  let layout : @pdflite.PdfContentTextLayout = {
+    font_size: 10.0,
+    horizontal_scaling: 0.25,
+    character_spacing: 1.0,
+    word_spacing: 2.0,
+    rise: 0.0,
+    ctm: @pdflite.transform_identity_matrix,
+    text_matrix: @pdflite.transform_identity_matrix,
+  }
+  let result = font.content_text_layout_of_bytes(
+    content_text_bytes_for_test([0x01, 0x02]),
+    layout,
+  )
+  @test.assert_eq(result.glyphs.length(), 1)
+  let glyph = result.glyphs[0]
+  @test.assert_eq(glyph.charcode, 0x0102)
+  content_text_assert_close_for_test(glyph.width, 0.7)
+  content_text_assert_close_for_test(glyph.pvx, 0.02)
+  content_text_assert_close_for_test(glyph.pvy, 0.03)
+  content_text_assert_close_for_test(glyph.advance_x, 0.0)
+  content_text_assert_close_for_test(glyph.advance_y, 10.0)
+  content_text_assert_bbox_close_for_test(glyph.bounding_box, {
+    x0: 0.05,
+    y0: -2.3,
+    x1: 0.05,
+    y1: 7.7,
+    x2: 1.8,
+    y2: 7.7,
+    x3: 1.8,
+    y3: -2.3,
+  })
+  content_text_assert_matrix_close_for_test(
+    result.text_matrix,
+    @pdflite.transform_translate(0.0, 10.0),
+  )
 }

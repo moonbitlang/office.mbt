@@ -2574,6 +2574,17 @@ Current backend snapshot:
   later slices. Native focused validation reports `moon test --target native
   --package bobzhang/pdflite --file pdf_content_text_test.mbt` at 5/5 tests
   passing; native full-suite validation reports 1922/1922 tests passing.~~
+- [x] ~~Standalone `cpdfcontent.ml` `process_tj` geometry slice exposes
+  `PdfContentTextLayout`, `PdfContentTextGlyphPlacement`,
+  `PdfContentTextLayoutResult`, `PdfFont::content_text_layout_of_bytes`, and
+  `pdf_content_text_layout_of_bytes`, matching cpdf's glyph-unit divisor,
+  text-rendering matrix composition, horizontal word/character spacing,
+  vertical advance behavior, CID placement vectors, and final text-matrix
+  advance while leaving the operator-driven content filter walk and `TJ`
+  array adjustment integration for later slices. Native focused validation
+  reports `moon test --target native --package bobzhang/pdflite --file
+  pdf_content_text_test.mbt` at 7/7 tests passing; native full-suite validation
+  reports 1924/1924 tests passing.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,
