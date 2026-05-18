@@ -1802,6 +1802,14 @@ Current backend snapshot:
   validation reports `moon test --target native pdf_bookmark_test.mbt` at
   19/19 tests passing; native full-suite validation reports 1728/1728 tests
   passing.~~
+- [x] ~~Optional-content group management helper slice exposes cpdf-style raw
+  OCG name listing, rename, order-all, and same-name coalescing wrappers.
+  Coverage pins raw layer-name listing, copy-on-write rename behavior, wrapper
+  parity, default `/Order` population from `/OCGs`, duplicate-name coalescing,
+  metadata reference de-duplication, ordinary indirect-reference rewriting, and
+  duplicate OCG object removal. Native focused validation reports `moon test
+  --target native pdf_ocg_test.mbt` at 13/13 tests passing; native full-suite
+  validation reports 1732/1732 tests passing.~~
 - [x] ~~Standalone utility ports for `cpdfdebug.ml`, `cpdfprinttree.ml`, and
   `cpdfstrftime.ml` expose `PdfDocument::debug_objects`,
   `pdf_print_tree_to_string`, explicit-time and native-current-time strftime

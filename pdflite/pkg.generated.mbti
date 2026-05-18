@@ -513,7 +513,15 @@ pub fn pdf_objects_empty() -> PdfObjects
 
 pub fn pdf_objects_of_entries(ArrayView[(Int, PdfObjectEntry)]) -> PdfObjects
 
+pub fn pdf_ocg_coalesce(PdfDocument) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_ocg_default_config() -> PdfOcgConfig
+
+pub fn pdf_ocg_get_list(PdfDocument) -> Array[Bytes] raise @core.PdfError
+
+pub fn pdf_ocg_order_all(PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_ocg_rename(Bytes, Bytes, PdfDocument) -> PdfDocument
 
 pub fn pdf_of_pages(PdfDocument, ArrayView[Int], retain_numbering? : Bool, process_struct_tree? : Bool) -> PdfDocument raise @core.PdfError
 
@@ -1683,6 +1691,10 @@ pub fn PdfDocument::name_tree_lookup_object(Self, PdfObject, PdfObject) -> PdfOb
 pub fn PdfDocument::number_tree_lookup(Self, Int, PdfObject) -> PdfObject?
 pub fn PdfDocument::object_count(Self) -> Int
 pub fn PdfDocument::object_numbers(Self) -> Array[Int]
+pub fn PdfDocument::ocg_coalesce(Self) -> Self raise @core.PdfError
+pub fn PdfDocument::ocg_get_list(Self) -> Array[Bytes] raise @core.PdfError
+pub fn PdfDocument::ocg_order_all(Self) -> Self raise @core.PdfError
+pub fn PdfDocument::ocg_rename(Self, Bytes, Bytes) -> Self
 pub fn PdfDocument::open_action(Self) -> PdfObject raise @core.PdfError
 pub fn PdfDocument::open_action_json_blob(Self) -> Bytes raise @core.PdfError
 pub fn PdfDocument::open_action_string(Self) -> String raise @core.PdfError

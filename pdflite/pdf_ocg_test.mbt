@@ -309,6 +309,132 @@ test "PdfDocument read_optional_content_groups decodes OCG dictionaries" {
 }
 
 ///|
+test "PdfDocument ocg_get_list returns raw layer names" {
+  let doc = ocg_document_with_content_for_test()
+  @test.assert_eq(try! doc.ocg_get_list(), [ocg_bytes_for_test("Layer 1")])
+  @test.assert_eq(try! @pdflite.pdf_ocg_get_list(doc), [
+    ocg_bytes_for_test("Layer 1"),
+  ])
+  @test.assert_eq(try! ocg_catalog_document_for_test().ocg_get_list(), [])
+}
+
+///|
+test "PdfDocument ocg_rename rewrites OCG dictionaries" {
+  let doc = ocg_document_with_content_for_test()
+  let renamed = doc.ocg_rename(
+    ocg_bytes_for_test("Layer 1"),
+    ocg_bytes_for_test("Renamed"),
+  )
+  let wrapper = @pdflite.pdf_ocg_rename(
+    ocg_bytes_for_test("Layer 1"),
+    ocg_bytes_for_test("Renamed"),
+    doc,
+  )
+  @test.assert_eq(try! doc.ocg_get_list(), [ocg_bytes_for_test("Layer 1")])
+  @test.assert_eq(try! renamed.ocg_get_list(), [ocg_bytes_for_test("Renamed")])
+  @test.assert_eq(try! wrapper.ocg_get_list(), [ocg_bytes_for_test("Renamed")])
+}
+
+///|
+test "PdfDocument ocg_order_all writes every group to default order" {
+  let content = ocg_merge_content_for_test(7, "Layer A", OcgOn, [7], [])
+  let content = {
+    ..content,
+    ocgs: [
+      ..content.ocgs,
+      (
+        12,
+        {
+          name: ocg_bytes_for_test("Layer B"),
+          intent: [ocg_name_for_test("/View")],
+          usage: None,
+        },
+      ),
+    ],
+    default_config: { ..content.default_config, order: None },
+  }
+  let doc = try! ocg_catalog_document_for_test().write_optional_content_groups(
+    content,
+  )
+  let ordered = try! doc.ocg_order_all()
+  let wrapper = try! @pdflite.pdf_ocg_order_all(doc)
+  guard (try! ordered.read_optional_content_groups()) is Some(read_back) else {
+    fail("expected optional content")
+  }
+  @test.assert_eq(
+    read_back.default_config.order,
+    Some([(None, [7]), (None, [12])]),
+  )
+  @test.assert_eq(try! wrapper.read_optional_content_groups(), Some(read_back))
+}
+
+///|
+test "PdfDocument ocg_coalesce removes duplicate names and rewrites references" {
+  let key_custom = ocg_name_for_test("/Custom")
+  let doc = ocg_catalog_document_for_test()
+  doc.add_object_given_number(
+    20,
+    PdfDictionary([(key_custom, PdfIndirect(11))]),
+  )
+  let duplicate_content : @pdflite.PdfOptionalContent = {
+    ocgs: [
+      (
+        10,
+        {
+          name: ocg_bytes_for_test("Layer"),
+          intent: [ocg_name_for_test("/View")],
+          usage: None,
+        },
+      ),
+      (
+        11,
+        {
+          name: ocg_bytes_for_test("Layer"),
+          intent: [ocg_name_for_test("/Print")],
+          usage: None,
+        },
+      ),
+    ],
+    default_config: {
+      ..@pdflite.pdf_ocg_default_config(),
+      on: [10, 11],
+      off: [11],
+      usage_applications: [
+        { event: OcgView, ocgs: [11], category: [ocg_name_for_test("/View")] },
+      ],
+      order: Some([(None, [10]), (None, [11])]),
+      radio_button_groups: Some([[10, 11]]),
+      locked: [11],
+    },
+    configs: [{ ..@pdflite.pdf_ocg_default_config(), locked: [11] }],
+  }
+  let with_duplicates = try! doc.write_optional_content_groups(
+    duplicate_content,
+  )
+  let coalesced = try! with_duplicates.ocg_coalesce()
+  let wrapper = try! @pdflite.pdf_ocg_coalesce(with_duplicates)
+  guard (try! coalesced.read_optional_content_groups()) is Some(content) else {
+    fail("expected optional content")
+  }
+  @test.assert_eq(content.ocgs.length(), 1)
+  @test.assert_eq(content.ocgs[0].0, 10)
+  @test.assert_eq(content.ocgs[0].1.name, ocg_bytes_for_test("Layer"))
+  @test.assert_eq(content.default_config.on, [10])
+  @test.assert_eq(content.default_config.off, [10])
+  @test.assert_eq(content.default_config.usage_applications[0].ocgs, [10])
+  @test.assert_eq(content.default_config.order, Some([(None, [10])]))
+  @test.assert_eq(content.default_config.radio_button_groups, Some([[10]]))
+  @test.assert_eq(content.default_config.locked, [10])
+  @test.assert_eq(content.configs[0].locked, [10])
+  @test.assert_eq(
+    coalesced.lookup_object_or_null(20).lookup_immediate(key_custom),
+    Some(PdfIndirect(10)),
+  )
+  @test.assert_eq(coalesced.lookup_object_or_null(11), PdfNull)
+  @test.assert_eq(try! wrapper.read_optional_content_groups(), Some(content))
+}
+
+///|
 test "PdfDocument read_optional_content_groups prefers trailer root" {
   let doc = ocg_conflicting_root_document_for_test(true)
   @test.assert_eq(

@@ -846,6 +846,146 @@ pub fn pdf_read_ocg(
 }
 
 ///|
+/// Return the raw PDF string names of catalog optional-content groups.
+///
+/// This mirrors cpdf's `ocg_get_list`: missing optional-content metadata yields
+/// an empty list, and malformed individual group entries are skipped.
+pub fn PdfDocument::ocg_get_list(
+  self : PdfDocument,
+) -> Array[PdfBytes] raise PdfError {
+  let root = self.pdf_ocg_root()
+  match self.lookup_direct(pdf_ocg_ocproperties_key(), root) {
+    None => []
+    Some(ocproperties) =>
+      match self.lookup_direct(pdf_ocg_ocgs_key(), ocproperties) {
+        Some(PdfArray(indirects)) => {
+          let names : Array[PdfBytes] = []
+          for indirect in indirects {
+            match indirect {
+              PdfIndirect(_) =>
+                match self.lookup_direct(pdf_ocg_name_key(), indirect) {
+                  Some(PdfString(name)) => names.push(name)
+                  _ => ()
+                }
+              _ => ()
+            }
+          }
+          names
+        }
+        _ => []
+      }
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::ocg_get_list`.
+pub fn pdf_ocg_get_list(
+  document : PdfDocument,
+) -> Array[PdfBytes] raise PdfError {
+  document.ocg_get_list()
+}
+
+///|
+/// Return a copy of the document with matching optional-content group names
+/// replaced.
+pub fn PdfDocument::ocg_rename(
+  self : PdfDocument,
+  old_name : PdfBytes,
+  new_name : PdfBytes,
+) -> PdfDocument {
+  let pdf = self.copy()
+  pdf.map_objects_in_place(fn(object) {
+    match object {
+      PdfDictionary(entries) =>
+        match
+          (
+            pdf.lookup_direct(pdf_ocg_type_key(), object),
+            pdf.lookup_direct(pdf_ocg_name_key(), object),
+          ) {
+          (Some(PdfNameObject(kind)), Some(PdfString(name))) =>
+            if kind == pdf_ocg_ocg_name() && name == old_name {
+              PdfDictionary(
+                dict_add_entries(
+                  entries,
+                  pdf_ocg_name_key(),
+                  PdfString(new_name),
+                ),
+              )
+            } else {
+              object
+            }
+          _ => object
+        }
+      _ => object
+    }
+  })
+  pdf
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::ocg_rename`.
+pub fn pdf_ocg_rename(
+  old_name : PdfBytes,
+  new_name : PdfBytes,
+  document : PdfDocument,
+) -> PdfDocument {
+  document.ocg_rename(old_name, new_name)
+}
+
+///|
+/// Return a copy of the document with every OCG listed in the default `/Order`.
+///
+/// Documents without optional-content properties, without `/OCGs`, or without a
+/// default `/D` dictionary are returned unchanged.
+pub fn PdfDocument::ocg_order_all(
+  self : PdfDocument,
+) -> PdfDocument raise PdfError {
+  let root = self.pdf_ocg_root()
+  match self.lookup_direct(pdf_ocg_ocproperties_key(), root) {
+    None => self.copy()
+    Some(ocproperties) =>
+      match
+        (
+          self.lookup_direct(pdf_ocg_ocgs_key(), ocproperties),
+          self.lookup_direct(pdf_ocg_d_key(), ocproperties),
+        ) {
+        (Some(PdfArray(ocgs)), Some(PdfDictionary(_))) => {
+          let pdf = self.copy()
+          let default_config = self
+            .lookup_direct(pdf_ocg_d_key(), ocproperties)
+            .unwrap()
+            .add_dict_entry(pdf_ocg_order_key(), PdfArray(ocgs.copy()))
+          let new_ocproperties = ocproperties.add_dict_entry(
+            pdf_ocg_d_key(),
+            default_config,
+          )
+          let ocproperties_number = pdf.add_object(new_ocproperties)
+          let new_root = pdf.add_object(
+            root.add_dict_entry(
+              pdf_ocg_ocproperties_key(),
+              PdfIndirect(ocproperties_number),
+            ),
+          )
+          pdf.set_root(new_root)
+          pdf.set_trailer_dict(
+            pdf
+            .trailer_dict()
+            .add_dict_entry(pdf_ocg_root_key(), PdfIndirect(new_root)),
+          )
+          pdf
+        }
+        _ => self.copy()
+      }
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::ocg_order_all`.
+pub fn pdf_ocg_order_all(document : PdfDocument) -> PdfDocument raise PdfError {
+  document.ocg_order_all()
+}
+
+///|
 fn pdf_ocg_copy_usage(usage : PdfOcgUsage) -> PdfOcgUsage {
   {
     creator_info: usage.creator_info,
@@ -1045,6 +1185,179 @@ pub fn pdf_optional_content_merge(
       configs,
     })
   }
+}
+
+///|
+fn pdf_ocg_representative_number(
+  representatives : ArrayView[(PdfBytes, Int)],
+  name : PdfBytes,
+) -> Int? {
+  for representative in representatives {
+    if representative.0 == name {
+      break Some(representative.1)
+    }
+  } nobreak {
+    None
+  }
+}
+
+///|
+fn pdf_ocg_changed_number(changes : ArrayView[(Int, Int)], number : Int) -> Int {
+  for change in changes {
+    if change.0 == number {
+      break change.1
+    }
+  } nobreak {
+    number
+  }
+}
+
+///|
+fn pdf_ocg_push_unique_number(output : Array[Int], number : Int) -> Unit {
+  if !output.contains(number) {
+    output.push(number)
+  }
+}
+
+///|
+fn pdf_ocg_coalesce_numbers(
+  changes : ArrayView[(Int, Int)],
+  numbers : ArrayView[Int],
+) -> Array[Int] {
+  let output : Array[Int] = []
+  for number in numbers {
+    pdf_ocg_push_unique_number(output, pdf_ocg_changed_number(changes, number))
+  }
+  output
+}
+
+///|
+fn pdf_ocg_coalesce_order(
+  changes : ArrayView[(Int, Int)],
+  order : ArrayView[(PdfBytes?, Array[Int])],
+) -> Array[(PdfBytes?, Array[Int])] {
+  let output : Array[(PdfBytes?, Array[Int])] = []
+  let seen : Array[Int] = []
+  for item in order {
+    let numbers : Array[Int] = []
+    for number in item.1 {
+      let changed = pdf_ocg_changed_number(changes, number)
+      if !seen.contains(changed) {
+        seen.push(changed)
+        numbers.push(changed)
+      }
+    }
+    if numbers.length() > 0 {
+      output.push((item.0, numbers))
+    }
+  }
+  output
+}
+
+///|
+fn pdf_ocg_coalesce_appdict(
+  changes : ArrayView[(Int, Int)],
+  appdict : PdfOcgAppDict,
+) -> PdfOcgAppDict {
+  { ..appdict, ocgs: pdf_ocg_coalesce_numbers(changes, appdict.ocgs) }
+}
+
+///|
+fn pdf_ocg_coalesce_config(
+  changes : ArrayView[(Int, Int)],
+  config : PdfOcgConfig,
+) -> PdfOcgConfig {
+  {
+    ..config,
+    on: pdf_ocg_coalesce_numbers(changes, config.on),
+    off: pdf_ocg_coalesce_numbers(changes, config.off),
+    usage_applications: [
+      for appdict in config.usage_applications => {
+        pdf_ocg_coalesce_appdict(changes, appdict)
+      }
+    ],
+    order: match config.order {
+      Some(order) => Some(pdf_ocg_coalesce_order(changes, order))
+      None => None
+    },
+    radio_button_groups: match config.radio_button_groups {
+      Some(groups) =>
+        Some(
+          [
+            for group in groups => pdf_ocg_coalesce_numbers(changes, group)
+          ],
+        )
+      None => None
+    },
+    locked: pdf_ocg_coalesce_numbers(changes, config.locked),
+  }
+}
+
+///|
+fn pdf_ocg_coalesce_content(
+  content : PdfOptionalContent,
+) -> (PdfOptionalContent, Array[(Int, Int)]) {
+  let representatives : Array[(PdfBytes, Int)] = []
+  let ocgs : Array[(Int, PdfOcg)] = []
+  let changes : Array[(Int, Int)] = []
+  for entry in content.ocgs {
+    let (number, ocg) = entry
+    match pdf_ocg_representative_number(representatives, ocg.name) {
+      Some(representative) =>
+        if representative != number {
+          changes.push((number, representative))
+        }
+      None => {
+        representatives.push((ocg.name, number))
+        ocgs.push((number, pdf_ocg_copy_ocg(ocg)))
+      }
+    }
+  }
+  (
+    {
+      ocgs,
+      default_config: pdf_ocg_coalesce_config(changes, content.default_config),
+      configs: [
+        for config in content.configs => {
+          pdf_ocg_coalesce_config(changes, config)
+        }
+      ],
+    },
+    changes,
+  )
+}
+
+///|
+/// Return a copy with same-named optional-content groups coalesced.
+///
+/// The first group for each raw PDF name is kept. Duplicate group references in
+/// optional-content metadata and parsed document objects are rewritten to the
+/// kept object number, and duplicate OCG objects are removed.
+pub fn PdfDocument::ocg_coalesce(
+  self : PdfDocument,
+) -> PdfDocument raise PdfError {
+  match self.read_optional_content_groups() {
+    None => self.copy()
+    Some(content) => {
+      let (coalesced, changes) = pdf_ocg_coalesce_content(content)
+      if changes.length() == 0 {
+        self.copy()
+      } else {
+        let pdf = self.write_optional_content_groups(coalesced)
+        pdf.pdf_page_renumber_references(changes)
+        for change in changes {
+          pdf.remove_object(change.0)
+        }
+        pdf
+      }
+    }
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::ocg_coalesce`.
+pub fn pdf_ocg_coalesce(document : PdfDocument) -> PdfDocument raise PdfError {
+  document.ocg_coalesce()
 }
 
 ///|
