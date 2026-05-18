@@ -1167,6 +1167,8 @@ pub fn pdf_toc_width_of_runs(ArrayView[PdfTypeElement]) -> Double raise @core.Pd
 
 pub fn pdf_toc_with_fontpack(PdfDocument, PdfFontPack, Double, BytesView, bookmark? : Bool, dotleader? : Bool) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_toc_with_source(PdfDocument, PdfTocFontSource, Double, BytesView, bookmark? : Bool, dotleader? : Bool) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_transform_annotations(PdfDocument, @geometry.TransformMatrix, PdfObject) -> Unit raise @core.PdfError
 
 pub fn pdf_transform_bookmark(PdfDocument, @geometry.TransformMatrix, PdfBookmark) -> PdfBookmark raise @core.PdfError
@@ -2220,6 +2222,7 @@ pub fn PdfDocument::toc_type_elements(Self, PdfFontPack, Double, BytesView, Bool
 pub fn PdfDocument::toc_typeset_pages(Self, PdfFontPack, Double, BytesView, Bool, Bool, ArrayView[PdfPageLabel], ArrayView[PdfBookmark]) -> PdfTypeTypesetResult raise @core.PdfError
 pub fn PdfDocument::toc_used_codepoints(Self, ArrayView[PdfPageLabel], BytesView, ArrayView[PdfBookmark]) -> Array[Int] raise @core.PdfError
 pub fn PdfDocument::toc_with_fontpack(Self, PdfFontPack, Double, BytesView, bookmark? : Bool, dotleader? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::toc_with_source(Self, PdfTocFontSource, Double, BytesView, bookmark? : Bool, dotleader? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::trailer_dict(Self) -> PdfObject
 pub fn PdfDocument::transform_annotations(Self, @geometry.TransformMatrix, PdfObject) -> Unit raise @core.PdfError
 pub fn PdfDocument::transform_bookmark(Self, @geometry.TransformMatrix, PdfBookmark) -> PdfBookmark raise @core.PdfError
@@ -2785,6 +2788,11 @@ pub fn PdfTextExtractor::text_width(Self, BytesView) -> Double raise @core.PdfEr
 pub(all) struct PdfTextGlyph {
   glyphname : @core.PdfName
   codepoints : Array[Int]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfTocFontSource {
+  PdfTocPreMadeFontPack(PdfFontPack)
+  PdfTocExistingNamedFont
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfTristimulusPoint {

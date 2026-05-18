@@ -644,3 +644,56 @@ test "PdfDocument toc_with_fontpack composes non-structured TOC" {
   @test.assert_eq((try! unchanged.pages_of_pagetree()).length(), 1)
   @test.assert_eq(try! unchanged.read_bookmarks(), [])
 }
+
+///|
+test "PdfDocument toc_with_source handles cpdftoc font-source dispatch" {
+  let base = try! @pdflite.pdf_blank_document(100.0, 100.0, 2)
+  let page_refs = try! base.page_reference_numbers()
+  let source_bookmark : @pdflite.PdfBookmark = {
+    level: 0,
+    text: toc_pdfdoc_for_test("Second"),
+    target: DestFit(TargetPageObject(page_refs[1])),
+    is_open: true,
+    colour: @pdflite.pdf_bookmark_black,
+    flags: 0,
+  }
+  let document = try! base.add_bookmarks([source_bookmark])
+  let pack = toc_standard_pack_for_test()
+  let title = toc_bytes_for_test("Contents")
+  let updated = try! document.toc_with_source(
+    @pdflite.PdfTocPreMadeFontPack(pack),
+    10.0,
+    title,
+  )
+  let toc_page_count = (try! updated.pages_of_pagetree()).length() - 2
+  guard toc_page_count > 0 else { fail("expected inserted TOC pages") }
+  let bookmarks = try! updated.read_bookmarks(preserve_actions=true)
+  @test.assert_eq(bookmarks.length(), 1)
+  @test.assert_eq(
+    try! updated.page_number_of_target(bookmarks[0].target),
+    2 + toc_page_count,
+  )
+  let wrapped = try! @pdflite.pdf_toc_with_source(
+    document,
+    @pdflite.PdfTocPreMadeFontPack(pack),
+    10.0,
+    title,
+  )
+  @test.assert_eq(
+    (try! wrapped.pages_of_pagetree()).length(),
+    2 + toc_page_count,
+  )
+  let rejected : Result[@pdflite.PdfDocument, Error] = try? document.toc_with_source(
+    PdfTocExistingNamedFont,
+    10.0,
+    title,
+  )
+  guard rejected
+    is Err(
+      @pdflite.PdfError::SoftError(
+        "Cannot use existing font with -table-of-contents"
+      )
+    ) else {
+    fail("expected existing named font rejection")
+  }
+}

@@ -2638,6 +2638,15 @@ Current backend snapshot:
   slices. Native focused validation reports `moon test --target native
   --package bobzhang/pdflite --file pdf_toc_test.mbt` at 14/14 tests passing;
   native full-suite validation reports 1908/1908 tests passing.~~
+- [x] ~~Standalone `cpdftoc.ml` font-source dispatch slice exposes
+  `PdfTocFontSource`, `PdfDocument::toc_with_source`, and
+  `pdf_toc_with_source`, covering premade-fontpack dispatch into the composed
+  TOC path, the cpdf-compatible existing-named-font rejection message, and
+  wrapper parity while leaving TrueType `EmbedInfo` font embedding and PDF/UA
+  structure-tree integration for later slices. Native focused validation reports
+  `moon test --target native --package bobzhang/pdflite --file
+  pdf_toc_test.mbt` at 15/15 tests passing; native full-suite validation reports
+  1909/1909 tests passing.~~
 - [x] ~~Page labels, bookmarks, annotations, duplicate annotation repair,
   old-style destinations, name-tree destinations, `/OpenAction`, optional
   content, AcroForm merge basics, trailer `/Info`, and structure-tree

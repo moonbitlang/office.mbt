@@ -9,6 +9,16 @@ fn pdf_toc_type_font_id(font_index : Int) -> String {
 }
 
 ///|
+/// Font source options for table-of-contents generation.
+///
+/// This ports the non-embedding cpdftoc font-source dispatch. TrueType
+/// `EmbedInfo` remains a separate embedding slice.
+pub(all) enum PdfTocFontSource {
+  PdfTocPreMadeFontPack(PdfFontPack)
+  PdfTocExistingNamedFont
+} derive(Debug, Eq, ToJson)
+
+///|
 fn pdf_toc_push_font_text_runs(
   output : Array[PdfTypeElement],
   runs : ArrayView[(Int, Int, PdfFont)],
@@ -842,4 +852,50 @@ pub fn pdf_toc_with_fontpack(
   dotleader? : Bool = false,
 ) -> PdfDocument raise PdfError {
   document.toc_with_fontpack(fontpack, font_size, title, bookmark~, dotleader~)
+}
+
+///|
+fn pdf_toc_fontpack_of_source(
+  source : PdfTocFontSource,
+) -> PdfFontPack raise PdfError {
+  match source {
+    PdfTocPreMadeFontPack(pack) => pack
+    PdfTocExistingNamedFont =>
+      raise SoftError("Cannot use existing font with -table-of-contents")
+  }
+}
+
+///|
+/// Add a table of contents using a cpdftoc font source.
+///
+/// Existing named fonts are rejected for TOCs, matching cpdf. Embeddable
+/// TrueType font sources will be handled by a later embedding slice.
+pub fn PdfDocument::toc_with_source(
+  self : PdfDocument,
+  source : PdfTocFontSource,
+  font_size : Double,
+  title : BytesView,
+  bookmark? : Bool = false,
+  dotleader? : Bool = false,
+) -> PdfDocument raise PdfError {
+  self.toc_with_fontpack(
+    pdf_toc_fontpack_of_source(source),
+    font_size,
+    title,
+    bookmark~,
+    dotleader~,
+  )
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::toc_with_source`.
+pub fn pdf_toc_with_source(
+  document : PdfDocument,
+  source : PdfTocFontSource,
+  font_size : Double,
+  title : BytesView,
+  bookmark? : Bool = false,
+  dotleader? : Bool = false,
+) -> PdfDocument raise PdfError {
+  document.toc_with_source(source, font_size, title, bookmark~, dotleader~)
 }
