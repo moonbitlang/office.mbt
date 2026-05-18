@@ -149,6 +149,8 @@ pub fn pdf_addtext_url_annotation_geometry(@geometry.Point2, Double, Double, Dou
 
 pub fn pdf_addtext_url_annotation_height(PdfFont?, String, Double) -> Double
 
+pub fn pdf_addtext_url_annotation_widths(String, PdfAddTextUrl, (String) -> Double) -> (Double, Double) raise @core.PdfError
+
 pub fn pdf_addtext_width_of_fontpack(PdfFontPack, Double, String) -> Double raise @core.PdfError
 
 pub fn pdf_addtext_width_of_selected_font(PdfFont, Double, BytesView) -> Double

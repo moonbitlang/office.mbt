@@ -1053,6 +1053,36 @@ test "pdf_addtext_url_annotation_geometry applies rotation before offset" {
 }
 
 ///|
+test "pdf_addtext_url_annotation_widths measures span prefixes" {
+  let span : @pdflite.PdfAddTextUrl = { url: "u", start: 1, end: 4 }
+  @test.assert_eq(
+    try! @pdflite.pdf_addtext_url_annotation_widths("abcde", span, fn(prefix) {
+      prefix.length().to_double() * 2.0
+    }),
+    (2.0, 8.0),
+  )
+}
+
+///|
+test "pdf_addtext_url_annotation_widths uses UTF-8 byte offsets" {
+  let span : @pdflite.PdfAddTextUrl = { url: "u", start: 2, end: 3 }
+  @test.assert_eq(
+    try! @pdflite.pdf_addtext_url_annotation_widths("éx", span, fn(prefix) {
+      @utf8.encode(prefix).length().to_double()
+    }),
+    (2.0, 3.0),
+  )
+  let bad : Result[(Double, Double), Error] = try? @pdflite.pdf_addtext_url_annotation_widths(
+    "é",
+    { url: "u", start: 1, end: 2 },
+    fn(prefix) { prefix.length().to_double() },
+  )
+  guard bad is Err(@pdflite.PdfError::SoftError("bad add-text URL byte offset")) else {
+    fail("expected invalid UTF-8 span offset to raise SoftError")
+  }
+}
+
+///|
 test "pdf_addtext_page_rest_with_annotations preserves empty annotation updates" {
   let document = @pdflite.pdf_document_empty()
   let rest : @pdflite.PdfObject = PdfInteger(7)

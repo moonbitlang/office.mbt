@@ -899,6 +899,33 @@ pub fn pdf_addtext_url_annotation_geometry(
 }
 
 ///|
+fn pdf_addtext_url_annotation_prefix(
+  text : String,
+  position : Int,
+) -> String raise PdfError {
+  let bytes = @utf8.encode(text)
+  if position < 0 || position > bytes.length() {
+    raise SoftError("bad add-text URL byte offset")
+  }
+  @utf8.decode(bytes[:position]) catch {
+    _ => raise SoftError("bad add-text URL byte offset")
+  }
+}
+
+///|
+/// Measure cpdf's start and end prefix widths for an add-text URL span.
+pub fn pdf_addtext_url_annotation_widths(
+  text : String,
+  url : PdfAddTextUrl,
+  measure : (String) -> Double,
+) -> (Double, Double) raise PdfError {
+  (
+    measure(pdf_addtext_url_annotation_prefix(text, url.start)),
+    measure(pdf_addtext_url_annotation_prefix(text, url.end)),
+  )
+}
+
+///|
 /// Return a page rest dictionary with cpdf add-text annotations prepended.
 ///
 /// Empty new annotation lists leave `rest` unchanged. Existing `/Annots`

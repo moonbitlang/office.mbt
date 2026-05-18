@@ -2287,6 +2287,13 @@ Current backend snapshot:
   --target native --package bobzhang/pdflite --file pdf_addtext_test.mbt` at
   70/70 tests passing; native full-suite validation reports 1842/1842 tests
   passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` URL annotation prefix-width slice exposes
+  `pdf_addtext_url_annotation_widths`, covering cpdf's `annot_coord` behavior
+  for start/end URL span offsets, caller-provided text measurement, UTF-8 byte
+  offset handling, and malformed span-boundary errors. Native focused validation
+  reports `moon test --target native --package bobzhang/pdflite --file
+  pdf_addtext_test.mbt` at 72/72 tests passing; native full-suite validation
+  reports 1844/1844 tests passing.~~
 - [x] ~~Standalone `cpdfremovetext.ml` removal slice exposes
   `pdf_remove_added_text_ops`, `pdf_remove_all_text_ops`,
   `PdfDocument::remove_added_text`, `remove_all_text`, and compatibility
