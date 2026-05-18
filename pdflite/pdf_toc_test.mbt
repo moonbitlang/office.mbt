@@ -540,3 +540,33 @@ test "PdfDocument toc_insert_pages prepends pages and shifts labels" {
     3,
   )
 }
+
+///|
+test "PdfDocument toc_add_bookmark prepends generated bookmark" {
+  let base = try! @pdflite.pdf_blank_document(100.0, 100.0, 2)
+  let page_refs = try! base.page_reference_numbers()
+  let existing : @pdflite.PdfBookmark = {
+    level: 0,
+    text: toc_pdfdoc_for_test("Existing"),
+    target: DestFit(TargetPageObject(page_refs[1])),
+    is_open: true,
+    colour: @pdflite.pdf_bookmark_black,
+    flags: 0,
+  }
+  let document = try! base.add_bookmarks([existing])
+  let title = toc_bytes_for_test("Contents\\nLine")
+  let expected_title = toc_pdfdoc_for_test("Contents\nLine")
+  @test.assert_eq(try! @pdflite.pdf_toc_bookmark_text(title), expected_title)
+  let updated = try! document.toc_add_bookmark(title)
+  let bookmarks = try! updated.read_bookmarks(preserve_actions=true)
+  @test.assert_eq(bookmarks.length(), 2)
+  @test.assert_eq(bookmarks[0].text, expected_title)
+  @test.assert_eq(bookmarks[0].level, 0)
+  @test.assert_eq(bookmarks[0].is_open, false)
+  @test.assert_eq(try! updated.page_number_of_target(bookmarks[0].target), 1)
+  @test.assert_eq(bookmarks[1].level, 0)
+  @test.assert_eq(bookmarks[1].text, existing.text)
+  @test.assert_eq(try! updated.page_number_of_target(bookmarks[1].target), 2)
+  let wrapped = try! @pdflite.pdf_toc_add_bookmark(document, title)
+  @test.assert_eq(try! wrapped.read_bookmarks(preserve_actions=true), bookmarks)
+}

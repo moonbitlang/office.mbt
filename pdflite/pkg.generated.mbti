@@ -1137,6 +1137,10 @@ pub fn pdf_thin_lines(PdfDocument, ArrayView[Int], Double) -> PdfDocument raise 
 
 pub fn pdf_thin_lines_ops(PdfDocument, PdfObject, ArrayView[PdfContentOp], Double) -> Array[PdfContentOp] raise @core.PdfError
 
+pub fn pdf_toc_add_bookmark(PdfDocument, BytesView) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_toc_bookmark_text(BytesView) -> Bytes raise @core.PdfError
+
 pub fn pdf_toc_insert_pages(PdfDocument, ArrayView[PdfPage], ArrayView[PdfPageLabel]) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_toc_make_dots(Double, PdfFontPack, Double) -> Array[PdfTypeElement] raise @core.PdfError
@@ -2208,6 +2212,7 @@ pub fn PdfDocument::struct_tree_text(Self) -> Bytes raise @core.PdfError
 pub fn PdfDocument::target_of_page_number(Self, Int) -> PdfDestination raise @core.PdfError
 pub fn PdfDocument::text_extractor_of_font(Self, PdfObject) -> PdfTextExtractor raise @core.PdfError
 pub fn PdfDocument::thin_lines(Self, ArrayView[Int], Double) -> Self raise @core.PdfError
+pub fn PdfDocument::toc_add_bookmark(Self, BytesView) -> Self raise @core.PdfError
 pub fn PdfDocument::toc_insert_pages(Self, ArrayView[PdfPage], ArrayView[PdfPageLabel]) -> Self raise @core.PdfError
 pub fn PdfDocument::toc_type_elements(Self, PdfFontPack, Double, BytesView, Bool, Bool, ArrayView[PdfPageLabel], ArrayView[PdfBookmark], Double, Double) -> Array[PdfTypeElement] raise @core.PdfError
 pub fn PdfDocument::toc_typeset_pages(Self, PdfFontPack, Double, BytesView, Bool, Bool, ArrayView[PdfPageLabel], ArrayView[PdfBookmark]) -> PdfTypeTypesetResult raise @core.PdfError

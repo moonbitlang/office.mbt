@@ -2618,6 +2618,16 @@ Current backend snapshot:
   Native focused validation reports `moon test --target native --package
   bobzhang/pdflite --file pdf_toc_test.mbt` at 12/12 tests passing; native
   full-suite validation reports 1906/1906 tests passing.~~
+- [x] ~~Standalone `cpdftoc.ml` TOC bookmark creation slice exposes
+  `pdf_toc_bookmark_text`, `PdfDocument::toc_add_bookmark`, and
+  `pdf_toc_add_bookmark`, covering cpdf's literal-title-`\n` to line-feed
+  conversion, PDFDocString bookmark title encoding, prepending a closed
+  top-level TOC bookmark, targeting the first inserted TOC page with an XYZ
+  destination, preserving existing bookmark order/levels, and wrapper parity
+  while leaving PDF/UA2 structure-destination actions for a later slice. Native
+  focused validation reports `moon test --target native --package
+  bobzhang/pdflite --file pdf_toc_test.mbt` at 13/13 tests passing; native
+  full-suite validation reports 1907/1907 tests passing.~~
 - [x] ~~Page labels, bookmarks, annotations, duplicate annotation repair,
   old-style destinations, name-tree destinations, `/OpenAction`, optional
   content, AcroForm merge basics, trailer `/Info`, and structure-tree
