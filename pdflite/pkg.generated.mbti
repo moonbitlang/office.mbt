@@ -1031,6 +1031,12 @@ pub fn pdf_ua_create_pdfua1(String, @geometry.PaperSize, Int) -> PdfDocument rai
 
 pub fn pdf_ua_create_pdfua2(String, @geometry.PaperSize, Int) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_ua_mark(PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_ua_mark2(Int, PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_ua_remove_mark(PdfDocument) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_ua_subformat_of_string(String) -> PdfUASubformat raise @core.PdfError
 
 pub fn pdf_upright_pages(PdfDocument, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
@@ -1769,6 +1775,8 @@ pub fn PdfDocument::lookup_required(Self, @core.PdfName, PdfObject, @core.PdfErr
 pub fn PdfDocument::map_objects_in_place(Self, (PdfObject) -> PdfObject) -> Unit
 pub fn PdfDocument::mark_all_as_artifact(Self) -> Self raise @core.PdfError
 pub fn PdfDocument::mark_info_item(Self, @core.PdfName) -> Bool
+pub fn PdfDocument::mark_pdfua1(Self) -> Self raise @core.PdfError
+pub fn PdfDocument::mark_pdfua2(Self, Int) -> Self raise @core.PdfError
 pub fn PdfDocument::merge_content_streams(Self) -> Unit raise @core.PdfError
 pub fn PdfDocument::merge_name_trees_no_clash(Self, ArrayView[PdfObject]) -> PdfObject
 pub fn PdfDocument::merge_number_trees_no_clash(Self, ArrayView[PdfObject]) -> PdfObject
@@ -1872,6 +1880,7 @@ pub fn PdfDocument::remove_object_by_spec(Self, String) -> Unit raise @core.PdfE
 pub fn PdfDocument::remove_optional_content_groups(Self) -> Self raise @core.PdfError
 pub fn PdfDocument::remove_page_box(Self, ArrayView[Int], @core.PdfName) -> Self raise @core.PdfError
 pub fn PdfDocument::remove_page_labels(Self) -> Self raise @core.PdfError
+pub fn PdfDocument::remove_pdfua_mark(Self) -> Self raise @core.PdfError
 pub fn PdfDocument::remove_trim(Self, ArrayView[Int]) -> Self raise @core.PdfError
 pub fn PdfDocument::remove_unreferenced(Self) -> Unit raise @core.PdfError
 pub fn PdfDocument::renumber_objects(Self, ArrayView[(Int, Int)]) -> Self raise @core.PdfError

@@ -102,6 +102,14 @@ fn create_assert_metadata_contains_for_test(
 }
 
 ///|
+fn create_assert_metadata_not_contains_for_test(
+  metadata : BytesView,
+  text : String,
+) -> Unit raise {
+  @test.assert_eq(create_find_bytes_for_test(metadata, @ascii.encode(text)), -1)
+}
+
+///|
 fn create_assert_pdfua_common_for_test(
   document : @pdflite.PdfDocument,
   version : (Int, Int),
@@ -225,6 +233,61 @@ test "pdf_ua_create_pdfua2 creates PDF 2.0 marker and escapes title XML" {
     metadata, "<pdfuaid:rev>2024</pdfuaid:rev>",
   )
   try! create_assert_metadata_contains_for_test(metadata, "A&amp;B &lt;C&gt;")
+}
+
+///|
+test "PdfDocument mark_pdfua1 creates metadata without mutating original" {
+  let document = try! @pdflite.pdf_blank_document(200.0, 100.0, 1)
+  @test.assert_eq(try! document.metadata(), None)
+  let marked = try! document.mark_pdfua1()
+  guard (try! marked.metadata()) is Some(metadata) else {
+    fail("expected PDF/UA marker metadata")
+  }
+  try! create_assert_metadata_contains_for_test(
+    metadata, "<pdfuaid:part>1</pdfuaid:part>",
+  )
+  try! create_assert_metadata_not_contains_for_test(metadata, "<pdfuaid:rev>")
+  @test.assert_eq(try! marked.determine_subformats(), ["PDF/UA-1"])
+  @test.assert_eq(try! document.metadata(), None)
+  let wrapped = try! @pdflite.pdf_ua_mark(document)
+  @test.assert_eq(try! wrapped.determine_subformats(), ["PDF/UA-1"])
+}
+
+///|
+test "PdfDocument mark_pdfua2 replaces and remove_pdfua_mark deletes marker" {
+  let document = try! @pdflite.pdf_ua_create_pdfua1(
+    "Accessible title", @pdflite.paper_a4, 1,
+  )
+  let marked = try! @pdflite.pdf_ua_mark2(2026, document)
+  guard (try! marked.metadata()) is Some(marked_metadata) else {
+    fail("expected PDF/UA-2 marker metadata")
+  }
+  try! create_assert_metadata_contains_for_test(
+    marked_metadata, "<pdfuaid:part>2</pdfuaid:part>",
+  )
+  try! create_assert_metadata_contains_for_test(
+    marked_metadata, "<pdfuaid:rev>2026</pdfuaid:rev>",
+  )
+  try! create_assert_metadata_not_contains_for_test(
+    marked_metadata, "<pdfuaid:part>1</pdfuaid:part>",
+  )
+  @test.assert_eq(try! marked.determine_subformats(), ["PDF/UA-2"])
+  @test.assert_eq(try! document.determine_subformats(), ["PDF/UA-1"])
+
+  let removed = try! @pdflite.pdf_ua_remove_mark(marked)
+  guard (try! removed.metadata()) is Some(removed_metadata) else {
+    fail("expected metadata to remain after removing PDF/UA marker")
+  }
+  try! create_assert_metadata_not_contains_for_test(
+    removed_metadata, "<pdfuaid:part>",
+  )
+  try! create_assert_metadata_not_contains_for_test(
+    removed_metadata, "<pdfuaid:rev>",
+  )
+  @test.assert_eq(try! removed.determine_subformats(), [])
+
+  let no_metadata = try! document.remove_metadata()
+  @test.assert_eq(try! no_metadata.remove_pdfua_mark().metadata(), None)
 }
 
 ///|

@@ -18,8 +18,9 @@ Current estimate:
   content-stream, annotation, native secure-random, bookmark, image, structure,
   renumbering, standard font-pack embedding, text-to-PDF instruction
   conversion, basic and tagged text-to-PDF document assembly, PDF/UA
-  text-to-PDF subformat shaping, blank PDF/UA creation helpers, JPEG/JPEG2000,
-  PNG, and JBIG2 image-to-PDF document assembly, Form XObject stamping,
+  text-to-PDF subformat shaping, blank PDF/UA creation helpers, PDF/UA XMP
+  marker insertion/removal helpers, JPEG/JPEG2000, PNG, and JBIG2 image-to-PDF
+  document assembly, Form XObject stamping,
   composition reporting, core metadata APIs, XMP metadata-date rewriting, XMP
   info synchronization, XMP metadata creation, XMP RDF list extraction,
   XMP/document info JSON reporting, redaction annotation bounding-box overlays,
@@ -370,6 +371,15 @@ Current backend snapshot:
   XMP marker streams, XML-escaped metadata titles, and reuse from
   `pdf_texttopdf_typeset`. `moon test --target native` now reports 1586/1586
   tests passing.~~
+- [x] ~~Port the PDF/UA XMP marker helpers from `cpdfua`: `mark`,
+  `mark2`, and `remove_mark` are exposed as copy-returning
+  `mark_pdfua1`, `mark_pdfua2`, and `remove_pdfua_mark` methods plus
+  cpdf-style wrappers. The implementation creates missing metadata,
+  removes existing PDF/UA `part`/`rev`/`amd`/`corr` fields before inserting a
+  fresh RDF description marker, preserves source documents, and keeps metadata
+  streams when removing markers. `moon test --target native --package
+  bobzhang/pdflite --file pdf_create_test.mbt` reports 7/7 tests passing;
+  native full-suite validation reports 1762/1762 tests passing.~~
 - [x] ~~Complete the PDF/UA `cpdftexttopdf.typeset` subformat slice by adding
   `PDF/UA-1` and `PDF/UA-2` parsing, title enforcement, forced structure-tree
   processing, PDF/UA-1 catalog metadata, and PDF/UA-2 top-level `/Document`
