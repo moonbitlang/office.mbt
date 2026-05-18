@@ -2589,6 +2589,15 @@ Current backend snapshot:
   validation reports `moon test --target native --package bobzhang/pdflite
   --file pdf_toc_test.mbt` at 8/8 tests passing; native full-suite validation
   reports 1902/1902 tests passing.~~
+- [x] ~~Standalone `cpdftoc.ml` cpdftype element assembly slice exposes
+  `PdfDocument::toc_type_elements` and `pdf_toc_type_elements`, covering
+  title splitting into doubled-size runs, `BeginDocument` first-font prelude,
+  bookmark destination rows, indentation, page-label runs, optional structure
+  tags, dot-leader insertion, no-leader glue, and wrapper parity while leaving
+  actual typesetting/page insertion for a later slice. Native focused
+  validation reports `moon test --target native --package bobzhang/pdflite
+  --file pdf_toc_test.mbt` at 10/10 tests passing; native full-suite validation
+  reports 1904/1904 tests passing.~~
 - [x] ~~Page labels, bookmarks, annotations, duplicate annotation repair,
   old-style destinations, name-tree destinations, `/OpenAction`, optional
   content, AcroForm merge basics, trailer `/Info`, and structure-tree

@@ -115,6 +115,138 @@ fn pdf_toc_append_elements(
 }
 
 ///|
+fn pdf_toc_append_optional_elements(
+  output : Array[PdfTypeElement],
+  enabled : Bool,
+  elements : ArrayView[PdfTypeElement],
+) -> Unit {
+  if enabled {
+    pdf_toc_append_elements(output, elements)
+  }
+}
+
+///|
+fn pdf_toc_destination_contents(text : BytesView) -> String raise PdfError {
+  @utf8.decode(pdf_utf8_of_pdfdocstring(text)) catch {
+    _ => raise BadText
+  }
+}
+
+///|
+fn PdfDocument::pdf_toc_bookmark_label_runs(
+  self : PdfDocument,
+  fontpack : PdfFontPack,
+  font_size : Double,
+  labels : ArrayView[PdfPageLabel],
+  bookmark : PdfBookmark,
+) -> Array[PdfTypeElement] raise PdfError {
+  if bookmark.target == DestNull {
+    []
+  } else {
+    let page_number = self.page_number_of_target(bookmark.target)
+    pdf_toc_of_pdfdocencoding(
+      fontpack,
+      font_size,
+      pdf_toc_page_label_text(page_number, labels),
+    )
+  }
+}
+
+///|
+fn PdfDocument::pdf_toc_bookmark_elements(
+  self : PdfDocument,
+  fontpack : PdfFontPack,
+  font_size : Double,
+  labels : ArrayView[PdfPageLabel],
+  page_width : Double,
+  margin : Double,
+  dotleader : Bool,
+  process_struct_tree : Bool,
+  bookmark : PdfBookmark,
+) -> Array[PdfTypeElement] raise PdfError {
+  let indent = bookmark.level.to_double() * font_size * 2.0
+  let textruns = pdf_toc_of_pdfdocencoding(fontpack, font_size, bookmark.text)
+  let labelruns = self.pdf_toc_bookmark_label_runs(
+    fontpack, font_size, labels, bookmark,
+  )
+  let textgap = page_width -
+    margin * 2.0 -
+    indent -
+    pdf_toc_width_of_runs(labelruns)
+  let shortened = pdf_toc_shorten_text(
+    fontpack,
+    font_size,
+    textgap - font_size * 3.0,
+    textruns,
+  )
+  let space = textgap - pdf_toc_width_of_runs(shortened)
+  let output : Array[PdfTypeElement] = [
+    PdfTypeBeginDest(
+      bookmark.target,
+      Some(pdf_toc_destination_contents(bookmark.text)),
+    ),
+    PdfTypeHGlue(indent),
+  ]
+  pdf_toc_append_optional_elements(output, process_struct_tree, [
+    PdfTypeTag("Link", 0),
+  ])
+  pdf_toc_append_elements(output, shortened)
+  pdf_toc_append_optional_elements(output, process_struct_tree, [PdfTypeEndTag])
+  if dotleader && labelruns.length() > 0 {
+    pdf_toc_append_elements(
+      output,
+      pdf_toc_make_dots(space, fontpack, font_size),
+    )
+  } else {
+    output.push(PdfTypeHGlue(space))
+  }
+  pdf_toc_append_optional_elements(output, process_struct_tree, [
+    PdfTypeTag("Link", 0),
+  ])
+  pdf_toc_append_elements(output, labelruns)
+  pdf_toc_append_optional_elements(output, process_struct_tree, [PdfTypeEndTag])
+  output.push(PdfTypeEndDest)
+  output.push(PdfTypeNewLine)
+  output
+}
+
+///|
+fn pdf_toc_title_elements(
+  fontpack : PdfFontPack,
+  font_size : Double,
+  title : BytesView,
+  process_struct_tree : Bool,
+) -> Array[PdfTypeElement] raise PdfError {
+  let output : Array[PdfTypeElement] = []
+  pdf_toc_append_optional_elements(output, process_struct_tree, [
+    PdfTypeTag("P", 0),
+  ])
+  for line in pdf_toc_split_title(title) {
+    pdf_toc_append_elements(
+      output,
+      pdf_toc_of_utf8(fontpack, font_size * 2.0, line),
+    )
+    output.push(PdfTypeNewLine)
+  }
+  pdf_toc_append_optional_elements(output, process_struct_tree, [PdfTypeEndTag])
+  output.push(PdfTypeVGlue(font_size * 2.0))
+  output
+}
+
+///|
+fn pdf_toc_first_font(
+  elements : ArrayView[PdfTypeElement],
+) -> PdfTypeElement raise PdfError {
+  for element in elements {
+    match element {
+      PdfTypeFont(_, _, _) => return element
+      _ => ()
+    }
+  }
+  raise SoftError("toc_type_elements: no font")
+}
+
+///|
 /// Split a TOC title on the literal byte sequence `\n`.
 ///
 /// This mirrors `cpdftoc.ml`'s `split_toc_title`, which splits before UTF-8
@@ -355,4 +487,64 @@ pub fn pdf_toc_make_dots(
     pdf_toc_append_elements(output, dot_runs)
   }
   output
+}
+
+///|
+/// Build the cpdftype element stream for a table of contents.
+///
+/// `page_width` and `margin` are the already-resolved first-page dimensions
+/// from cpdftoc's caller. Actual page typesetting and insertion remain a
+/// separate step.
+pub fn PdfDocument::toc_type_elements(
+  self : PdfDocument,
+  fontpack : PdfFontPack,
+  font_size : Double,
+  title : BytesView,
+  dotleader : Bool,
+  process_struct_tree : Bool,
+  labels : ArrayView[PdfPageLabel],
+  bookmarks : ArrayView[PdfBookmark],
+  page_width : Double,
+  margin : Double,
+) -> Array[PdfTypeElement] raise PdfError {
+  let title_elements = pdf_toc_title_elements(
+    fontpack, font_size, title, process_struct_tree,
+  )
+  let body : Array[PdfTypeElement] = []
+  pdf_toc_append_elements(body, title_elements)
+  for bookmark in bookmarks {
+    pdf_toc_append_elements(
+      body,
+      self.pdf_toc_bookmark_elements(
+        fontpack, font_size, labels, page_width, margin, dotleader, process_struct_tree,
+        bookmark,
+      ),
+    )
+  }
+  let output : Array[PdfTypeElement] = [
+    pdf_toc_first_font(body),
+    PdfTypeBeginDocument,
+  ]
+  pdf_toc_append_elements(output, body)
+  output
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::toc_type_elements`.
+pub fn pdf_toc_type_elements(
+  document : PdfDocument,
+  fontpack : PdfFontPack,
+  font_size : Double,
+  title : BytesView,
+  dotleader : Bool,
+  process_struct_tree : Bool,
+  labels : ArrayView[PdfPageLabel],
+  bookmarks : ArrayView[PdfBookmark],
+  page_width : Double,
+  margin : Double,
+) -> Array[PdfTypeElement] raise PdfError {
+  document.toc_type_elements(
+    fontpack, font_size, title, dotleader, process_struct_tree, labels, bookmarks,
+    page_width, margin,
+  )
 }

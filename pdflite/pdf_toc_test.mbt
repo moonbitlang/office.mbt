@@ -28,6 +28,16 @@ fn toc_standard_pack_for_test() -> @pdflite.PdfFontPack {
 }
 
 ///|
+fn toc_append_elements_for_test(
+  output : Array[@pdflite.PdfTypeElement],
+  elements : ArrayView[@pdflite.PdfTypeElement],
+) -> Unit {
+  for element in elements {
+    output.push(element)
+  }
+}
+
+///|
 fn toc_pdfdoc_for_test(text : String) -> @pdflite.PdfBytes {
   try! @pdflite.pdf_pdfdocstring_of_utf8(@utf8.encode(text))
 }
@@ -225,4 +235,156 @@ test "PdfDocument toc_used_codepoints scans title bookmarks and labels" {
     ),
     expected,
   )
+}
+
+///|
+test "PdfDocument toc_type_elements builds untagged TOC runs" {
+  let document = try! @pdflite.pdf_blank_document(100.0, 100.0, 1)
+  let page_refs = try! document.page_reference_numbers()
+  let font = toc_standard_font_for_test()
+  let pack = toc_standard_pack_for_test()
+  let target : @pdflite.PdfDestination = DestFit(TargetPageObject(page_refs[0]))
+  let bookmark : @pdflite.PdfBookmark = {
+    level: 0,
+    text: toc_pdfdoc_for_test("Chapter"),
+    target,
+    is_open: true,
+    colour: @pdflite.pdf_bookmark_black,
+    flags: 0,
+  }
+  let title_runs = try! @pdflite.pdf_toc_of_utf8(
+    pack,
+    20.0,
+    toc_bytes_for_test("Contents"),
+  )
+  let text_runs = try! @pdflite.pdf_toc_of_pdfdocencoding(
+    pack,
+    10.0,
+    toc_pdfdoc_for_test("Chapter"),
+  )
+  let label_runs = try! @pdflite.pdf_toc_of_pdfdocencoding(
+    pack,
+    10.0,
+    toc_bytes_for_test("1"),
+  )
+  let label_width = try! @pdflite.pdf_toc_width_of_runs(label_runs)
+  let text_width = try! @pdflite.pdf_toc_width_of_runs(text_runs)
+  let textgap = 200.0 - 20.0 - label_width
+  let space = textgap - text_width
+  let expected : Array[@pdflite.PdfTypeElement] = [
+    title_runs[0],
+    PdfTypeBeginDocument,
+  ]
+  toc_append_elements_for_test(expected, title_runs)
+  expected.push(PdfTypeNewLine)
+  expected.push(PdfTypeVGlue(20.0))
+  expected.push(PdfTypeBeginDest(target, Some("Chapter")))
+  expected.push(PdfTypeHGlue(0.0))
+  toc_append_elements_for_test(expected, text_runs)
+  expected.push(PdfTypeHGlue(space))
+  toc_append_elements_for_test(expected, label_runs)
+  expected.push(PdfTypeEndDest)
+  expected.push(PdfTypeNewLine)
+  @test.assert_eq(
+    try! document.toc_type_elements(
+      pack,
+      10.0,
+      toc_bytes_for_test("Contents"),
+      false,
+      false,
+      [],
+      [bookmark],
+      200.0,
+      10.0,
+    ),
+    expected,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_toc_type_elements(
+      document,
+      pack,
+      10.0,
+      toc_bytes_for_test("Contents"),
+      false,
+      false,
+      [],
+      [bookmark],
+      200.0,
+      10.0,
+    ),
+    expected,
+  )
+  @test.assert_eq(expected[0], PdfTypeFont("0", font, 20.0))
+}
+
+///|
+test "PdfDocument toc_type_elements adds structure tags and dot leaders" {
+  let document = try! @pdflite.pdf_blank_document(100.0, 100.0, 1)
+  let page_refs = try! document.page_reference_numbers()
+  let font = toc_standard_font_for_test()
+  let pack = toc_standard_pack_for_test()
+  let target : @pdflite.PdfDestination = DestFit(TargetPageObject(page_refs[0]))
+  let bookmark : @pdflite.PdfBookmark = {
+    level: 1,
+    text: toc_pdfdoc_for_test("A"),
+    target,
+    is_open: true,
+    colour: @pdflite.pdf_bookmark_black,
+    flags: 0,
+  }
+  let title_runs = try! @pdflite.pdf_toc_of_utf8(
+    pack,
+    20.0,
+    toc_bytes_for_test("T"),
+  )
+  let text_runs = try! @pdflite.pdf_toc_of_pdfdocencoding(
+    pack,
+    10.0,
+    toc_pdfdoc_for_test("A"),
+  )
+  let label_runs = try! @pdflite.pdf_toc_of_pdfdocencoding(
+    pack,
+    10.0,
+    toc_bytes_for_test("1"),
+  )
+  let label_width = try! @pdflite.pdf_toc_width_of_runs(label_runs)
+  let text_width = try! @pdflite.pdf_toc_width_of_runs(text_runs)
+  let textgap = 100.0 - 20.0 - 20.0 - label_width
+  let space = textgap - text_width
+  let leader = try! @pdflite.pdf_toc_make_dots(space, pack, 10.0)
+  let expected : Array[@pdflite.PdfTypeElement] = [
+    title_runs[0],
+    PdfTypeBeginDocument,
+    PdfTypeTag("P", 0),
+  ]
+  toc_append_elements_for_test(expected, title_runs)
+  expected.push(PdfTypeNewLine)
+  expected.push(PdfTypeEndTag)
+  expected.push(PdfTypeVGlue(20.0))
+  expected.push(PdfTypeBeginDest(target, Some("A")))
+  expected.push(PdfTypeHGlue(20.0))
+  expected.push(PdfTypeTag("Link", 0))
+  toc_append_elements_for_test(expected, text_runs)
+  expected.push(PdfTypeEndTag)
+  toc_append_elements_for_test(expected, leader)
+  expected.push(PdfTypeTag("Link", 0))
+  toc_append_elements_for_test(expected, label_runs)
+  expected.push(PdfTypeEndTag)
+  expected.push(PdfTypeEndDest)
+  expected.push(PdfTypeNewLine)
+  @test.assert_eq(
+    try! document.toc_type_elements(
+      pack,
+      10.0,
+      toc_bytes_for_test("T"),
+      true,
+      true,
+      [],
+      [bookmark],
+      100.0,
+      10.0,
+    ),
+    expected,
+  )
+  @test.assert_eq(expected[0], PdfTypeFont("0", font, 20.0))
 }
