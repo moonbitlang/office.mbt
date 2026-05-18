@@ -351,6 +351,8 @@ pub fn pdf_content_add_artifacts(ArrayView[PdfContentOp]) -> Array[PdfContentOp]
 
 pub fn pdf_content_apply_clipping_op(PdfContentPartialPath, ArrayView[PdfPath], PdfContentOp) -> PdfContentClippingOpResult
 
+pub fn pdf_content_apply_core_op(PdfContentOperatorState, PdfContentOp) -> PdfContentOperatorState
+
 pub fn pdf_content_apply_graphics_state_op(PdfContentOperatorState, PdfContentOp) -> PdfContentOperatorState
 
 pub fn pdf_content_apply_path_op(PdfContentPartialPath, PdfContentOp) -> PdfContentPathOpResult
@@ -2056,6 +2058,7 @@ pub(all) struct PdfContentOperatorState {
   text_state : PdfContentTextState
   state_stack : Array[PdfContentOperatorFrame]
 } derive(Eq, ToJson, @debug.Debug)
+pub fn PdfContentOperatorState::content_apply_core_op(Self, PdfContentOp) -> Self
 pub fn PdfContentOperatorState::content_apply_graphics_state_op(Self, PdfContentOp) -> Self
 
 pub(all) enum PdfContentPartialPath {

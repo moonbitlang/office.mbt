@@ -116,3 +116,76 @@ pub fn pdf_content_apply_graphics_state_op(
 ) -> PdfContentOperatorState {
   state.content_apply_graphics_state_op(op)
 }
+
+///|
+fn PdfContentOperatorState::content_with_clipping_path(
+  self : PdfContentOperatorState,
+  clipping_path : ArrayView[PdfPath],
+) -> PdfContentOperatorState {
+  let paths = pdf_content_state_copy_paths(clipping_path)
+  {
+    ..self,
+    clipping_path: paths,
+    path_state: self.path_state.content_with_clipping_path(paths),
+  }
+}
+
+///|
+fn PdfContentOperatorState::content_apply_path_machine_op(
+  self : PdfContentOperatorState,
+  op : PdfContentOp,
+) -> PdfContentOperatorState {
+  let result = self.partial_path.content_apply_path_op(op)
+  match result.drawn_path {
+    Some(path) => { ..self, partial_path: result.partial_path, path }
+    None => { ..self, partial_path: result.partial_path }
+  }
+}
+
+///|
+fn PdfContentOperatorState::content_apply_clipping_state_op(
+  self : PdfContentOperatorState,
+  op : PdfContentOp,
+) -> PdfContentOperatorState {
+  let result = self.partial_path.content_apply_clipping_op(
+    self.clipping_path,
+    op,
+  )
+  { ..self, partial_path: result.partial_path }.content_with_clipping_path(
+    result.clipping_path,
+  )
+}
+
+///|
+/// Apply cpdfcontent operators whose state effects do not require resources.
+///
+/// This covers graphics-state stack operators, CTM concatenation, path
+/// construction/painting, clipping, path drawing state, and text state. Font
+/// lookup, glyph emission, shadings, images, XObjects, marked-content metadata,
+/// and graphics-state dictionaries remain separate resource-backed slices.
+pub fn PdfContentOperatorState::content_apply_core_op(
+  self : PdfContentOperatorState,
+  op : PdfContentOp,
+) -> PdfContentOperatorState {
+  match op {
+    Op_q | Op_Q | Op_cm(_) => self.content_apply_graphics_state_op(op)
+    Op_W | Op_Wstar => self.content_apply_clipping_state_op(op)
+    _ => {
+      let state = self.content_apply_path_machine_op(op)
+      {
+        ..state,
+        path_state: state.path_state.content_apply_path_state_op(op),
+        text_state: state.text_state.content_apply_text_state_op(op),
+      }
+    }
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfContentOperatorState::content_apply_core_op`.
+pub fn pdf_content_apply_core_op(
+  state : PdfContentOperatorState,
+  op : PdfContentOp,
+) -> PdfContentOperatorState {
+  state.content_apply_core_op(op)
+}

@@ -2704,6 +2704,16 @@ Current backend snapshot:
   `moon test --target native --package bobzhang/pdflite --file
   pdf_content_operator_state_test.mbt` at 3/3 tests passing; native full-suite
   validation reports 1949/1949 tests passing.~~
+- [x] ~~Standalone `cpdfcontent.ml` resource-free operator dispatcher slice
+  exposes `PdfContentOperatorState::content_apply_core_op` and
+  `pdf_content_apply_core_op`, routing q/Q/cm, path construction and painting,
+  clipping-path updates, path drawing state, and text state through the
+  already-ported helpers while deliberately leaving font lookup, glyph emission,
+  shadings, images/XObjects, marked-content metadata, and graphics-state
+  dictionaries for resource-backed slices. Native focused validation reports
+  `moon test --target native --package bobzhang/pdflite --file
+  pdf_content_operator_state_test.mbt` at 5/5 tests passing; native full-suite
+  validation reports 1951/1951 tests passing.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,

@@ -70,3 +70,59 @@ test "cpdfcontent operator state composes cm matrices" {
   )
   @test.assert_eq(initial.content_apply_graphics_state_op(Op_w(9.0)), initial)
 }
+
+///|
+test "cpdfcontent operator core applies path clipping and state ops" {
+  let initial = @pdflite.pdf_content_initial_operator_state(
+    0.0, 0.0, 100.0, 200.0,
+  )
+  let state = initial
+    .content_apply_core_op(Op_w(2.5))
+    .content_apply_core_op(Op_Tc(3.5))
+    .content_apply_core_op(Op_m(0.0, 0.0))
+    .content_apply_core_op(Op_l(10.0, 0.0))
+    .content_apply_core_op(Op_W)
+    .content_apply_core_op(Op_n)
+  @test.assert_eq(state.path_state.line_width, 2.5)
+  @test.assert_eq(state.text_state.character_spacing, 3.5)
+  @test.assert_eq(
+    state.clipping_path.length(),
+    initial.clipping_path.length() + 1,
+  )
+  @test.assert_eq(state.path_state.clipping_path, state.clipping_path)
+  @test.assert_eq(state.partial_path, PdfContentNoPartialPath)
+  let painted = initial
+    .content_apply_core_op(Op_m(1.0, 2.0))
+    .content_apply_core_op(Op_l(3.0, 4.0))
+    .content_apply_core_op(Op_S)
+  @test.assert_eq(painted.path.stroked, true)
+  @test.assert_eq(painted.path.filled, false)
+  @test.assert_eq(painted.path.path.subpaths.length(), 1)
+  guard painted.partial_path is PdfContentPartialPath(partial) else {
+    fail("expected retained cleared partial path")
+  }
+  @test.assert_eq(partial.segments.length(), 0)
+  @test.assert_eq(partial.subpaths.length(), 0)
+  @test.assert_eq(
+    @pdflite.pdf_content_apply_core_op(initial, Op_w(4.0)).path_state.line_width,
+    4.0,
+  )
+}
+
+///|
+test "cpdfcontent operator core threads graphics stack" {
+  let initial = @pdflite.pdf_content_initial_operator_state(
+    0.0, 0.0, 100.0, 200.0,
+  )
+  let changed = initial
+    .content_apply_core_op(Op_q)
+    .content_apply_core_op(Op_cm(@pdflite.transform_translate(5.0, 6.0)))
+    .content_apply_core_op(Op_w(7.0))
+    .content_apply_core_op(Op_Tw(8.0))
+  @test.assert_eq(changed.state_stack.length(), 1)
+  @test.assert_eq(changed.ctm, @pdflite.transform_translate(5.0, 6.0))
+  @test.assert_eq(changed.path_state.line_width, 7.0)
+  @test.assert_eq(changed.text_state.word_spacing, 8.0)
+  @test.assert_eq(changed.content_apply_core_op(Op_Q), initial)
+  @test.assert_eq(initial.content_apply_core_op(Op_BX), initial)
+}
