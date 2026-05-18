@@ -2210,6 +2210,15 @@ Current backend snapshot:
   native --package bobzhang/pdflite --file pdf_addtext_test.mbt` at 47/47
   tests passing; native full-suite validation reports 1819/1819 tests
   passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` multiline text-offset helper slice exposes
+  `pdf_addtext_initial_line_offsets`, `pdf_addtext_line_advance`, and
+  `pdf_addtext_baseline_offsets`, covering cpdf's paragraph alignment offsets
+  for bottom/side/diagonal positions, rotation-dependent line advancement,
+  midline/topline Standard 14 baseline adjustment, simple-font cap-height
+  adjustment, diagonal topline behavior, midline precedence, and no-op missing
+  font metrics. Native focused validation reports `moon test --target native
+  --package bobzhang/pdflite --file pdf_addtext_test.mbt` at 51/51 tests
+  passing; native full-suite validation reports 1823/1823 tests passing.~~
 - [x] ~~Standalone `cpdfremovetext.ml` removal slice exposes
   `pdf_remove_added_text_ops`, `pdf_remove_all_text_ops`,
   `PdfDocument::remove_added_text`, `remove_all_text`, and compatibility

@@ -75,6 +75,8 @@ pub fn pdf_add_prefix(PdfDocument, String) -> Unit raise @core.PdfError
 
 pub fn pdf_add_root(Int, ArrayView[(@core.PdfName, PdfObject)], PdfDocument) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_addtext_baseline_offsets(PdfFont?, Double, PdfPosition, PdfAddTextRotation, Bool, Bool) -> (Double, Double)
+
 pub fn pdf_addtext_bates_number(Int, Int, Int?) -> String
 
 pub fn pdf_addtext_bookmark_for_page(PdfDocument, ArrayView[PdfBookmark], Int, Int) -> String raise @core.PdfError
@@ -93,7 +95,11 @@ pub fn pdf_addtext_expand_lines_with_time(PdfStrftimeTime, ArrayView[String], Ar
 
 pub fn pdf_addtext_get_urls_line(String) -> PdfAddTextUrlLine raise @core.PdfError
 
+pub fn pdf_addtext_initial_line_offsets(PdfPosition, Int, Double, Double) -> (Double, Double)
+
 pub fn pdf_addtext_justification_offset(PdfAddTextRotation, Double, Double, PdfPosition, PdfAddTextJustification) -> Double
+
+pub fn pdf_addtext_line_advance(PdfAddTextRotation, Double, Double) -> (Double, Double)
 
 pub fn pdf_addtext_page_label(PdfDocument, Int) -> String raise @core.PdfError
 

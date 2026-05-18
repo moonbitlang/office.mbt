@@ -138,6 +138,20 @@ fn addtext_simple_font_for_test(capheight : Double) -> @pdflite.PdfFont {
 }
 
 ///|
+fn addtext_simple_font_without_descriptor_for_test() -> @pdflite.PdfFont {
+  PdfFontSimple({
+    fonttype: PdfType1,
+    basefont: None,
+    firstchar: 0,
+    lastchar: -1,
+    widths: [],
+    fontdescriptor: None,
+    fontmetrics: None,
+    encoding: PdfWinAnsiEncoding,
+  })
+}
+
+///|
 fn addtext_simple_font_with_metrics_for_test(
   metrics : Array[Double]?,
 ) -> @pdflite.PdfFont {
@@ -503,6 +517,238 @@ test "pdf_addtext_diagonal_offsets mirrors diagonal and reverse diagonal math" {
       0.0,
     ),
     (5.0, 10.0),
+  )
+}
+
+///|
+test "pdf_addtext_initial_line_offsets matches cpdf multiline alignment" {
+  addtext_assert_pair_close_for_test(
+    @pdflite.pdf_addtext_initial_line_offsets(
+      PdfPositionBottom(0.0),
+      3,
+      1.2,
+      10.0,
+    ),
+    (0.0, -24.0),
+  )
+  addtext_assert_pair_close_for_test(
+    @pdflite.pdf_addtext_initial_line_offsets(
+      PdfPositionBottomLeft(0.0, 0.0),
+      3,
+      1.2,
+      10.0,
+    ),
+    (0.0, -24.0),
+  )
+  addtext_assert_pair_close_for_test(
+    @pdflite.pdf_addtext_initial_line_offsets(
+      PdfPositionBottomRight(0.0, 0.0),
+      3,
+      1.2,
+      10.0,
+    ),
+    (0.0, -24.0),
+  )
+  addtext_assert_pair_close_for_test(
+    @pdflite.pdf_addtext_initial_line_offsets(
+      PdfPositionLeft(0.0),
+      3,
+      1.2,
+      10.0,
+    ),
+    (0.0, -12.0),
+  )
+  addtext_assert_pair_close_for_test(
+    @pdflite.pdf_addtext_initial_line_offsets(
+      PdfPositionRight(0.0),
+      3,
+      1.2,
+      10.0,
+    ),
+    (0.0, -12.0),
+  )
+  addtext_assert_pair_close_for_test(
+    @pdflite.pdf_addtext_initial_line_offsets(PdfPositionDiagonal, 3, 1.2, 10.0),
+    (0.0, -12.0),
+  )
+  addtext_assert_pair_close_for_test(
+    @pdflite.pdf_addtext_initial_line_offsets(
+      PdfPositionReverseDiagonal,
+      3,
+      1.2,
+      10.0,
+    ),
+    (0.0, -12.0),
+  )
+  addtext_assert_pair_close_for_test(
+    @pdflite.pdf_addtext_initial_line_offsets(PdfPositionTop(0.0), 3, 1.2, 10.0),
+    (0.0, 0.0),
+  )
+  addtext_assert_pair_close_for_test(
+    @pdflite.pdf_addtext_initial_line_offsets(PdfPositionCentre, 3, 1.2, 10.0),
+    (0.0, 0.0),
+  )
+}
+
+///|
+test "pdf_addtext_line_advance follows text rotation" {
+  addtext_assert_pair_close_for_test(
+    @pdflite.pdf_addtext_line_advance(PdfAddTextRot0, 1.2, 10.0),
+    (0.0, 12.0),
+  )
+  addtext_assert_pair_close_for_test(
+    @pdflite.pdf_addtext_line_advance(PdfAddTextRot180, 1.2, 10.0),
+    (0.0, 12.0),
+  )
+  addtext_assert_pair_close_for_test(
+    @pdflite.pdf_addtext_line_advance(PdfAddTextRot90, 1.2, 10.0),
+    (12.0, 0.0),
+  )
+  addtext_assert_pair_close_for_test(
+    @pdflite.pdf_addtext_line_advance(PdfAddTextRot270, 1.2, 10.0),
+    (12.0, 0.0),
+  )
+}
+
+///|
+test "pdf_addtext_baseline_offsets handles standard font midline and topline" {
+  let font = addtext_standard_font_for_test()
+  addtext_assert_pair_close_for_test(
+    @pdflite.pdf_addtext_baseline_offsets(
+      Some(font),
+      10.0,
+      PdfPositionTop(0.0),
+      PdfAddTextRot0,
+      true,
+      false,
+    ),
+    (0.0, 3.59),
+  )
+  addtext_assert_pair_close_for_test(
+    @pdflite.pdf_addtext_baseline_offsets(
+      Some(font),
+      10.0,
+      PdfPositionTop(0.0),
+      PdfAddTextRot90,
+      true,
+      false,
+    ),
+    (3.59, 0.0),
+  )
+  addtext_assert_pair_close_for_test(
+    @pdflite.pdf_addtext_baseline_offsets(
+      Some(font),
+      10.0,
+      PdfPositionTop(0.0),
+      PdfAddTextRot180,
+      true,
+      false,
+    ),
+    (0.0, -3.59),
+  )
+  addtext_assert_pair_close_for_test(
+    @pdflite.pdf_addtext_baseline_offsets(
+      Some(font),
+      10.0,
+      PdfPositionTop(0.0),
+      PdfAddTextRot270,
+      true,
+      false,
+    ),
+    (-3.59, 0.0),
+  )
+  addtext_assert_pair_close_for_test(
+    @pdflite.pdf_addtext_baseline_offsets(
+      Some(font),
+      10.0,
+      PdfPositionTop(0.0),
+      PdfAddTextRot0,
+      false,
+      true,
+    ),
+    (0.0, 7.18),
+  )
+  addtext_assert_pair_close_for_test(
+    @pdflite.pdf_addtext_baseline_offsets(
+      Some(font),
+      10.0,
+      PdfPositionDiagonal,
+      PdfAddTextRot270,
+      false,
+      true,
+    ),
+    (0.0, 7.18),
+  )
+  addtext_assert_pair_close_for_test(
+    @pdflite.pdf_addtext_baseline_offsets(
+      Some(font),
+      10.0,
+      PdfPositionTop(0.0),
+      PdfAddTextRot90,
+      true,
+      true,
+    ),
+    (3.59, 0.0),
+  )
+}
+
+///|
+test "pdf_addtext_baseline_offsets handles simple font capheight and fallbacks" {
+  let font = addtext_simple_font_for_test(700.0)
+  addtext_assert_pair_close_for_test(
+    @pdflite.pdf_addtext_baseline_offsets(
+      Some(font),
+      10.0,
+      PdfPositionTop(0.0),
+      PdfAddTextRot0,
+      true,
+      false,
+    ),
+    (0.0, 3.5),
+  )
+  addtext_assert_pair_close_for_test(
+    @pdflite.pdf_addtext_baseline_offsets(
+      Some(font),
+      10.0,
+      PdfPositionTop(0.0),
+      PdfAddTextRot90,
+      false,
+      true,
+    ),
+    (7.0, 0.0),
+  )
+  addtext_assert_pair_close_for_test(
+    @pdflite.pdf_addtext_baseline_offsets(
+      Some(font),
+      10.0,
+      PdfPositionDiagonal,
+      PdfAddTextRot180,
+      false,
+      true,
+    ),
+    (0.0, 7.0),
+  )
+  addtext_assert_pair_close_for_test(
+    @pdflite.pdf_addtext_baseline_offsets(
+      Some(addtext_simple_font_without_descriptor_for_test()),
+      10.0,
+      PdfPositionTop(0.0),
+      PdfAddTextRot0,
+      true,
+      false,
+    ),
+    (0.0, 0.0),
+  )
+  addtext_assert_pair_close_for_test(
+    @pdflite.pdf_addtext_baseline_offsets(
+      None,
+      10.0,
+      PdfPositionTop(0.0),
+      PdfAddTextRot0,
+      false,
+      true,
+    ),
+    (0.0, 0.0),
   )
 }
 

@@ -505,6 +505,109 @@ pub fn pdf_addtext_diagonal_offsets(
 }
 
 ///|
+/// Return cpdf's initial `(horizontal, vertical)` offset for a multi-line
+/// add-text paragraph.
+pub fn pdf_addtext_initial_line_offsets(
+  position : PdfPosition,
+  line_count : Int,
+  line_spacing : Double,
+  font_size : Double,
+) -> (Double, Double) {
+  let line_delta = (line_count - 1).to_double()
+  let paragraph_height = line_spacing * font_size * line_delta
+  let vertical = match position {
+    PdfPositionBottomLeft(_, _)
+    | PdfPositionBottom(_)
+    | PdfPositionBottomRight(_, _) => -paragraph_height
+    PdfPositionLeft(_) | PdfPositionRight(_) => -(paragraph_height / 2.0)
+    PdfPositionDiagonal | PdfPositionReverseDiagonal =>
+      -(paragraph_height / 2.0)
+    _ => 0.0
+  }
+  (0.0, vertical)
+}
+
+///|
+/// Return cpdf's per-line `(horizontal, vertical)` advance for add-text.
+pub fn pdf_addtext_line_advance(
+  rotation : PdfAddTextRotation,
+  line_spacing : Double,
+  font_size : Double,
+) -> (Double, Double) {
+  let advance = line_spacing * font_size
+  match rotation {
+    PdfAddTextRot90 | PdfAddTextRot270 => (advance, 0.0)
+    PdfAddTextRot0 | PdfAddTextRot180 => (0.0, advance)
+  }
+}
+
+///|
+fn pdf_addtext_rotation_adjustment_offsets(
+  rotation : PdfAddTextRotation,
+  adjustment : Double,
+) -> (Double, Double) {
+  match rotation {
+    PdfAddTextRot0 => (0.0, adjustment)
+    PdfAddTextRot90 => (adjustment, 0.0)
+    PdfAddTextRot180 => (0.0, -adjustment)
+    PdfAddTextRot270 => (-adjustment, 0.0)
+  }
+}
+
+///|
+/// Return cpdf's `(horizontal, vertical)` baseline shift for midline/topline
+/// add-text placement.
+pub fn pdf_addtext_baseline_offsets(
+  font : PdfFont?,
+  font_size : Double,
+  position : PdfPosition,
+  rotation : PdfAddTextRotation,
+  midline : Bool,
+  topline : Bool,
+) -> (Double, Double) {
+  if midline {
+    match font {
+      Some(PdfFontStandard({ font, .. })) =>
+        pdf_addtext_rotation_adjustment_offsets(
+          rotation,
+          font_size *
+          pdf_standard14_baseline_adjustment(font).to_double() /
+          1000.0,
+        )
+      Some(PdfFontSimple({ fontdescriptor: Some(descriptor), .. })) =>
+        pdf_addtext_rotation_adjustment_offsets(
+          rotation,
+          font_size * descriptor.capheight / 2.0 / 1000.0,
+        )
+      _ => (0.0, 0.0)
+    }
+  } else if topline {
+    match font {
+      Some(PdfFontStandard({ font, .. })) => {
+        let adjustment = font_size *
+          pdf_standard14_baseline_adjustment(font).to_double() *
+          2.0 /
+          1000.0
+        match position {
+          PdfPositionDiagonal | PdfPositionReverseDiagonal => (0.0, adjustment)
+          _ => pdf_addtext_rotation_adjustment_offsets(rotation, adjustment)
+        }
+      }
+      Some(PdfFontSimple({ fontdescriptor: Some(descriptor), .. })) => {
+        let adjustment = font_size * descriptor.capheight / 1000.0
+        match position {
+          PdfPositionDiagonal | PdfPositionReverseDiagonal => (0.0, adjustment)
+          _ => pdf_addtext_rotation_adjustment_offsets(rotation, adjustment)
+        }
+      }
+      _ => (0.0, 0.0)
+    }
+  } else {
+    (0.0, 0.0)
+  }
+}
+
+///|
 /// Calculate the cpdf add-rectangle lower-left origin after placement.
 pub fn pdf_addtext_rectangle_origin(
   bounds : PdfRectangle,
