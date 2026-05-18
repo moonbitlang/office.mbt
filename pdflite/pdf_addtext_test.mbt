@@ -35,6 +35,11 @@ fn addtext_name_for_test(text : String) -> @pdflite.PdfName {
 }
 
 ///|
+fn addtext_bounds_for_test() -> @pdflite.PdfRectangle {
+  { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 50.0 }
+}
+
+///|
 fn addtext_bookmark_for_test(
   level : Int,
   text : String,
@@ -220,6 +225,65 @@ test "pdf_addtext_rectangle_ops builds outlined rectangle stamps" {
       Op_Q,
       @pdflite.pdf_content_end_artifact(),
     ],
+  )
+}
+
+///|
+test "pdf_addtext_rectangle_origin lowers top positions by rectangle height" {
+  let bounds = addtext_bounds_for_test()
+  @test.assert_eq(
+    @pdflite.pdf_addtext_rectangle_origin(
+      bounds,
+      PdfPositionTopLeft(3.0, 4.0),
+      20.0,
+      10.0,
+    ),
+    (3.0, 36.0),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_addtext_rectangle_origin(
+      bounds,
+      PdfPositionTop(5.0),
+      20.0,
+      10.0,
+    ),
+    (40.0, 35.0),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_addtext_rectangle_origin(
+      bounds,
+      PdfPositionTopRight(3.0, 4.0),
+      20.0,
+      10.0,
+    ),
+    (77.0, 36.0),
+  )
+}
+
+///|
+test "pdf_addtext_rectangle_origin handles center and unchanged positions" {
+  let bounds = addtext_bounds_for_test()
+  @test.assert_eq(
+    @pdflite.pdf_addtext_rectangle_origin(bounds, PdfPositionCentre, 20.0, 10.0),
+    (40.0, 20.0),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_addtext_rectangle_origin(
+      bounds,
+      PdfPositionPosCentre(50.0, 4.0),
+      20.0,
+      10.0,
+    ),
+    (40.0, -1.0),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_addtext_rectangle_origin(
+      bounds,
+      PdfPositionBottomLeft(3.0, 4.0),
+      20.0,
+      10.0,
+    ),
+    (3.0, 4.0),
   )
 }
 

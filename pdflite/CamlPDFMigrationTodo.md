@@ -2177,6 +2177,13 @@ Current backend snapshot:
   selection. Native focused validation reports `moon test --target native
   --package bobzhang/pdflite --file pdf_addtext_test.mbt` at 36/36 tests
   passing; native full-suite validation reports 1808/1808 tests passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` add-rectangle origin slice exposes
+  `pdf_addtext_rectangle_origin`, covering cpdf's `calculate_position false`
+  placement for rectangle width, top-position y lowering by rectangle height,
+  centre/`PosCentre` y lowering by half height, and unchanged bottom/edge
+  positions. Native focused validation reports `moon test --target native
+  --package bobzhang/pdflite --file pdf_addtext_test.mbt` at 38/38 tests
+  passing; native full-suite validation reports 1810/1810 tests passing.~~
 - [x] ~~Standalone `cpdfremovetext.ml` removal slice exposes
   `pdf_remove_added_text_ops`, `pdf_remove_all_text_ops`,
   `PdfDocument::remove_added_text`, `remove_all_text`, and compatibility

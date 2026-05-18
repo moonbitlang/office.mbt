@@ -146,6 +146,24 @@ pub fn pdf_addtext_rectangle_ops(
 }
 
 ///|
+/// Calculate the cpdf add-rectangle lower-left origin after placement.
+pub fn pdf_addtext_rectangle_origin(
+  bounds : PdfRectangle,
+  position : PdfPosition,
+  width : Double,
+  height : Double,
+) -> (Double, Double) {
+  let placed = pdf_calculate_position(false, width, bounds, position)
+  let y = match position {
+    PdfPositionTop(_) | PdfPositionTopLeft(_, _) | PdfPositionTopRight(_, _) =>
+      placed.y - height
+    PdfPositionCentre | PdfPositionPosCentre(_, _) => placed.y - height / 2.0
+    _ => placed.y
+  }
+  (placed.x, y)
+}
+
+///|
 fn pdf_addtext_vertical_justification(
   rotation : PdfAddTextRotation,
   justification : PdfAddTextJustification,
