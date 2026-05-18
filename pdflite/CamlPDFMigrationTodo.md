@@ -320,6 +320,20 @@ Current backend snapshot:
   optional `/JBIG2Globals` decode parameters, fixed object `10000` globals
   streams, JBIG2 single-page document assembly, and short-data error coverage.
   `moon test --target native` now reports 1601/1601 tests passing.~~
+- [x] ~~Port the standalone image metadata modules `cpdfjpeg.ml`,
+  `cpdfjpeg2000.ml`, and `cpdfpng.ml` as in-memory parsers exposing
+  JPEG/JPEG2000 dimension readers and PNG IHDR/IDAT parsing. Coverage pins
+  JFIF and Exif APP headers, SOF0 scanning over intermediate JPEG segments,
+  progressive/malformed/truncated JPEG errors, JP2 signature validation,
+  byte-by-byte JPEG2000 `ihdr` scanning, missing/truncated JPEG2000 errors,
+  PNG IHDR parsing, split-IDAT concatenation, palette/interlace rejection, and
+  image XObject reuse. Native focused validation reports `moon test --target
+  native pdf_jpeg_test.mbt` at 7/7 tests passing,
+  `moon test --target native pdf_jpeg2000_test.mbt` at 3/3 tests passing, and
+  `moon test --target native pdf_image_test.mbt` at 39/39 tests passing; native
+  full-suite validation reports 1724/1724 tests passing. The ImageMagick
+  `cpdfjpeg.backup_jpeg_dimensions` path remains covered by the optional
+  external-tool integration backlog.~~
 - [x] ~~Port the PNG branch of `cpdfimage.image_of_input` and `Cpdfpng.read_png`
   with IHDR parsing, split-IDAT concatenation, palette/interlace rejection,
   RGB Flate image dictionaries, alpha-channel `/SMask` splitting, 16-bit alpha
