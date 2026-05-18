@@ -1802,6 +1802,14 @@ Current backend snapshot:
   emitted with stream bytes elided. Native focused validation reports
   `moon test --target native pdf_util_test.mbt` at 23/23 tests passing; native
   full-suite validation reports 1710/1710 tests passing.~~
+- [x] ~~Standalone `cpdfjson.ml` document reachability output slice now makes
+  `PdfDocument::json_of_document` and `pdf_json_of_document` omit positive
+  objects unreachable from the trailer or stored root, matching cpdf's
+  document-output pruning while preserving the source document. Coverage pins
+  wrapper parity, detached-object omission, original object-table preservation,
+  and round-tripping through `pdf_document_of_json`. Native focused validation
+  reports `moon test --target native pdf_util_test.mbt` at 24/24 tests passing;
+  native full-suite validation reports 1711/1711 tests passing.~~
 - [x] ~~Standalone `cpdfpagelabels.ml` JSON adapter slice now exposes
   `PdfDocument::add_page_labels_json` and `pdf_add_page_labels_json`, covering
   cpdf's page-label JSON array shape, UTF-8 prefix-to-PDFDocString encoding,

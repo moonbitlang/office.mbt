@@ -487,11 +487,15 @@ test "PdfDocument CPDFJSON output honors no_stream_data option" {
 ///|
 test "PdfDocument CPDFJSON document output honors decompress_streams option" {
   let key_root = util_name_for_test("/Root")
+  let key_payload = util_name_for_test("/Payload")
   let key_length = util_name_for_test("/Length")
   let key_filter = util_name_for_test("/Filter")
   let doc = @pdflite.pdf_document_empty()
   doc.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(1))]))
-  doc.add_object_given_number(1, @pdflite.pdf_dictionary([]))
+  doc.add_object_given_number(
+    1,
+    @pdflite.pdf_dictionary([(key_payload, PdfIndirect(5))]),
+  )
   doc.add_object_given_number(
     5,
     @pdflite.pdf_stream(
@@ -550,6 +554,27 @@ test "PdfDocument CPDFJSON document output honors decompress_streams option" {
     elided_dict.get("/Length"),
     Some(Json::object(Map::of([("I", Json::number(2.0, repr="2"))]))),
   )
+}
+
+///|
+test "PdfDocument CPDFJSON document output omits unreachable objects" {
+  let document = try! @pdflite.pdf_document_of_json(
+    util_cpdfjson_document_for_test(),
+  )
+  document.add_object_given_number(99, PdfString(@ascii.encode("detached")))
+  @test.assert_eq(document.object_numbers(), [1, 2, 3, 4, 99])
+
+  let exported = try! document.json_of_document()
+  @test.assert_eq(try! @pdflite.pdf_json_of_document(document), exported)
+  @test.assert_eq(util_cpdfjson_entry_for_test(exported, 99), None)
+  @test.assert_eq(document.object_numbers(), [1, 2, 3, 4, 99])
+  @test.assert_eq(
+    document.lookup_object_or_null(99),
+    PdfString(@ascii.encode("detached")),
+  )
+
+  let roundtripped = try! @pdflite.pdf_document_of_json(exported)
+  @test.assert_eq(roundtripped.object_numbers(), [1, 2, 3, 4])
 }
 
 ///|

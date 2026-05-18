@@ -1309,19 +1309,47 @@ fn pdf_util_document_json_entry(number : Int, object : Json) -> Json {
 }
 
 ///|
+fn PdfDocument::pdf_util_reachable_document_object_numbers(
+  self : PdfDocument,
+) -> Array[Int] {
+  let referenced : @hashmap.HashMap[Int, Bool] = HashMap([])
+  if self.trailer_dict().lookup_immediate(pdf_util_cpdfjson_root_key()) is None &&
+    self.root() > 0 {
+    referenced[self.root()] = true
+    for
+      number in self.referenced_object_numbers(
+        self.lookup_object_or_null(self.root()),
+      ) {
+      referenced[number] = true
+    }
+  }
+  for number in self.referenced_object_numbers(self.trailer_dict()) {
+    referenced[number] = true
+  }
+  let numbers : Array[Int] = []
+  for number in self.object_numbers() {
+    if referenced.contains(number) {
+      numbers.push(number)
+    }
+  }
+  numbers
+}
+
+///|
 /// Convert an in-memory document to CPDFJSON format with stream data included.
 ///
 /// This ports the basic document-output shape from cpdf's `json_of_pdf`:
 /// object `-1` carries CPDFJSON metadata, object `0` carries the trailer, and
-/// positive object numbers are emitted in ascending order. When `parse_content`
-/// is set, page `/Contents` streams plus referenced Form XObject and Pattern
-/// streams are emitted as cpdf-style operation arrays. When `clean_strings` is
-/// set for non-UTF8 output, UTF-16BE strings in positive objects are simplified
-/// while the trailer dictionary is left unchanged to match cpdf's `/ID`
-/// precaution. When `no_stream_data` is set, ordinary stream data is elided
-/// and CPDFJSON metadata records that omission. When `decompress_streams` is
-/// set, positive object streams are decoded through supported filters until
-/// the first unknown filter.
+/// positive object numbers reachable from the trailer or stored root are
+/// emitted in ascending order. When `parse_content` is set, page `/Contents`
+/// streams plus referenced Form XObject and Pattern streams are emitted as
+/// cpdf-style operation arrays. When `clean_strings` is set for non-UTF8
+/// output, UTF-16BE strings in positive objects are simplified while the
+/// trailer dictionary is left unchanged to match cpdf's `/ID` precaution. When
+/// `no_stream_data` is set, ordinary stream data is elided and CPDFJSON
+/// metadata records that omission. When `decompress_streams` is set, positive
+/// object streams are decoded through supported filters until the first
+/// unknown filter.
 pub fn PdfDocument::json_of_document(
   self : PdfDocument,
   utf8? : Bool = false,
@@ -1354,7 +1382,7 @@ pub fn PdfDocument::json_of_document(
   } else {
     []
   }
-  for number in self.object_numbers() {
+  for number in self.pdf_util_reachable_document_object_numbers() {
     let object = self.lookup_object_or_null(number)
     let object_json = if pdf_util_int_array_contains(
         content_stream_numbers, number,
