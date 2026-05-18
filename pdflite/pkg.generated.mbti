@@ -383,6 +383,16 @@ pub fn pdf_content_extra_metrics(PdfFont) -> (Double, Double)
 
 pub fn pdf_content_glyph_state_content_json(PdfContentGlyphState) -> Json
 
+pub fn pdf_content_initial_clipping_path(Double, Double, Double, Double) -> Array[PdfPath]
+
+pub fn pdf_content_initial_clipping_state(Double, Double, Double, Double) -> PdfContentClippingState
+
+pub fn pdf_content_initial_drawn_path() -> PdfDrawnPath
+
+pub fn pdf_content_initial_glyph_state(Double, Double, Double, Double) -> PdfContentGlyphState
+
+pub fn pdf_content_initial_path_state(Double, Double, Double, Double) -> PdfContentPathState
+
 pub fn pdf_content_is_vertical(PdfFont) -> Bool
 
 pub fn pdf_content_json_entries_content_json(ArrayView[PdfContentJsonEntry]) -> Json

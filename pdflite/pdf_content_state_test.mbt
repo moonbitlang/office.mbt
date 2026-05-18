@@ -39,6 +39,80 @@ fn content_state_clipping_json_for_test() -> Json {
 }
 
 ///|
+fn content_state_initial_clipping_json_for_test() -> Json {
+  Json::array([
+    {
+      "winding": "even-odd",
+      "subpaths": [
+        {
+          "closed": true,
+          "segments": [
+            { "line": [{ "x": 10.0, "y": 20.0 }, { "x": 10.0, "y": 220.0 }] },
+            { "line": [{ "x": 10.0, "y": 220.0 }, { "x": 110.0, "y": 220.0 }] },
+            { "line": [{ "x": 110.0, "y": 220.0 }, { "x": 110.0, "y": 20.0 }] },
+            { "line": [{ "x": 110.0, "y": 20.0 }, { "x": 10.0, "y": 20.0 }] },
+          ],
+        },
+      ],
+      "stroked": false,
+      "filled": false,
+    },
+  ])
+}
+
+///|
+test "cpdfcontent state exposes initial content states" {
+  let clipping_path = @pdflite.pdf_content_initial_clipping_path(
+    10.0, 20.0, 110.0, 220.0,
+  )
+  @test.assert_eq(clipping_path.length(), 1)
+  @test.assert_eq(clipping_path[0].winding_rule, PdfPathEvenOdd)
+  @test.assert_eq(clipping_path[0].subpaths[0].closure, PdfPathClosed)
+  @test.assert_eq(clipping_path[0].subpaths[0].segments.length(), 4)
+  let path_state = @pdflite.pdf_content_initial_path_state(
+    10.0, 20.0, 110.0, 220.0,
+  )
+  let dash_json = Json::object(
+    Map::of([("array", Json::array([])), ("phase", Json::number(0.0))]),
+  )
+  let path_expected = Json::object(
+    Map::of([
+      ("clipping path", content_state_initial_clipping_json_for_test()),
+      ("colourspace stroke", Json::string("DeviceGray")),
+      ("colourspace non stroke", Json::string("DeviceGray")),
+      ("colour stroke", Json::array([Json::number(1.0)])),
+      ("colour non stroke", Json::array([Json::number(1.0)])),
+      ("line width", Json::number(1.0)),
+      ("line cap", content_state_json_int_for_test(0)),
+      ("line join", content_state_json_int_for_test(0)),
+      ("dash pattern", dash_json),
+      ("rendering intent", Json::string("/RelativeColorimetric")),
+    ]),
+  )
+  @test.assert_eq(path_state.content_json(), path_expected)
+  @test.assert_eq(
+    @pdflite.pdf_content_initial_clipping_state(10.0, 20.0, 110.0, 220.0).content_json(),
+    Json::object(
+      Map::of([
+        ("clipping path", content_state_initial_clipping_json_for_test()),
+      ]),
+    ),
+  )
+  let glyph_state = @pdflite.pdf_content_initial_glyph_state(
+    10.0, 20.0, 110.0, 220.0,
+  )
+  @test.assert_eq(glyph_state.rendering_mode, 0)
+  @test.assert_eq(glyph_state.knockout, true)
+  @test.assert_eq(glyph_state.font, "")
+  @test.assert_eq(glyph_state.font_size, 12.0)
+  let drawn = @pdflite.pdf_content_initial_drawn_path()
+  @test.assert_eq(drawn.stroked, false)
+  @test.assert_eq(drawn.filled, false)
+  @test.assert_eq(drawn.path.winding_rule, PdfPathEvenOdd)
+  @test.assert_eq(drawn.path.subpaths.length(), 0)
+}
+
+///|
 test "cpdfcontent state serializes path drawing state JSON" {
   let clipping_path = content_state_clipping_path_for_test()
   let state : @pdflite.PdfContentPathState = {

@@ -2638,6 +2638,17 @@ Current backend snapshot:
   focused validation reports `moon test --target native --package
   bobzhang/pdflite --file pdf_content_path_machine_test.mbt` at 7/7 tests
   passing; native full-suite validation reports 1938/1938 tests passing.~~
+- [x] ~~Standalone `cpdfcontent.ml` initial-state slice exposes
+  `pdf_content_initial_clipping_path`, `pdf_content_initial_drawn_path`,
+  `pdf_content_initial_path_state`, `pdf_content_initial_clipping_state`, and
+  `pdf_content_initial_glyph_state`, matching cpdf's page-boundary even-odd
+  clipping rectangle, empty drawn-path placeholder, DeviceGray/default-white
+  colour state, default line/dash/rendering-intent path state, and default
+  glyph rendering mode, knockout, font name, and font size while leaving the
+  full stateful content walker for later slices. Native focused validation
+  reports `moon test --target native --package bobzhang/pdflite --file
+  pdf_content_state_test.mbt` at 5/5 tests passing; native full-suite
+  validation reports 1939/1939 tests passing.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,
