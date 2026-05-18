@@ -192,3 +192,58 @@ test "cpdfcontent path geometry transforms segments and paths" {
     _ => fail("expected transformed straight segment")
   }
 }
+
+///|
+test "cpdfcontent path geometry serializes drawn path content JSON" {
+  let straight = @pdflite.PdfPathStraight(
+    @pdflite.point2(1.0, 2.0),
+    @pdflite.point2(3.0, 4.0),
+  )
+  let bezier = @pdflite.PdfPathBezier(
+    @pdflite.point2(5.0, 6.0),
+    @pdflite.point2(7.0, 8.0),
+    @pdflite.point2(9.0, 10.0),
+    @pdflite.point2(11.0, 12.0),
+  )
+  let subpath : @pdflite.PdfPathSubpath = {
+    hole: PdfPathHole,
+    closure: PdfPathClosed,
+    segments: [straight, bezier],
+  }
+  let drawn : @pdflite.PdfDrawnPath = {
+    stroked: true,
+    filled: false,
+    path: { winding_rule: PdfPathEvenOdd, subpaths: [subpath] },
+  }
+  let segment_json : Json = {
+    "line": [{ "x": 1.0, "y": 2.0 }, { "x": 3.0, "y": 4.0 }],
+  }
+  @test.assert_eq(
+    @pdflite.pdf_path_segment_content_json(straight),
+    segment_json,
+  )
+  let subpath_json : Json = {
+    "closed": true,
+    "segments": [
+      segment_json,
+      {
+        "bezier": [
+          { "x": 5.0, "y": 6.0 },
+          { "x": 7.0, "y": 8.0 },
+          { "x": 9.0, "y": 10.0 },
+          { "x": 11.0, "y": 12.0 },
+        ],
+      },
+    ],
+  }
+  @test.assert_eq(subpath.content_json(), subpath_json)
+  @test.assert_eq(@pdflite.pdf_path_subpath_content_json(subpath), subpath_json)
+  let expected : Json = {
+    "winding": "even-odd",
+    "subpaths": [subpath_json],
+    "stroked": true,
+    "filled": false,
+  }
+  @test.assert_eq(drawn.content_json(), expected)
+  @test.assert_eq(@pdflite.pdf_drawn_path_content_json(drawn), expected)
+}

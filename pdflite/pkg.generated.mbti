@@ -419,6 +419,8 @@ pub fn pdf_document_of_parsed_indirect_objects(ArrayView[PdfParsedIndirectObject
 
 pub fn pdf_draft(@core.PdfName?, Bool, ArrayView[Int], PdfDocument) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_drawn_path_content_json(PdfDrawnPath) -> Json
+
 pub fn pdf_encode_filter_bytes(@core.PdfName, Bytes) -> Bytes raise @core.PdfError
 
 pub fn pdf_encode_filter_bytes_with_flate_level(@core.PdfName, Bytes, Int) -> Bytes raise @core.PdfError
@@ -819,7 +821,11 @@ pub fn pdf_path_bounds(PdfPath) -> PdfRectangle
 
 pub fn pdf_path_segment_bounds(PdfPathSegment) -> PdfRectangle
 
+pub fn pdf_path_segment_content_json(PdfPathSegment) -> Json
+
 pub fn pdf_path_segment_transform(PdfPathSegment, @geometry.TransformMatrix) -> PdfPathSegment
+
+pub fn pdf_path_subpath_content_json(PdfPathSubpath) -> Json
 
 pub fn pdf_path_transform(PdfPath, @geometry.TransformMatrix) -> PdfPath
 
@@ -2254,6 +2260,13 @@ pub fn PdfDocument::xmp_info(Self, @core.PdfName) -> String
 pub fn PdfDocument::xmp_info_json(Self) -> Json raise @core.PdfError
 pub fn PdfDocument::xmp_info_json_blob(Self) -> Bytes raise @core.PdfError
 
+pub(all) struct PdfDrawnPath {
+  stroked : Bool
+  filled : Bool
+  path : PdfPath
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfDrawnPath::content_json(Self) -> Json
+
 pub(all) enum PdfEncoding {
   PdfImplicitInFontFile
   PdfStandardEncoding
@@ -2614,6 +2627,7 @@ pub(all) enum PdfPathSegment {
   PdfPathBezier(@geometry.Point2, @geometry.Point2, @geometry.Point2, @geometry.Point2)
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfPathSegment::bounds(Self) -> PdfRectangle
+pub fn PdfPathSegment::content_json(Self) -> Json
 pub fn PdfPathSegment::transform(Self, @geometry.TransformMatrix) -> Self
 
 pub(all) struct PdfPathSubpath {
@@ -2621,6 +2635,7 @@ pub(all) struct PdfPathSubpath {
   closure : PdfPathClosure
   segments : Array[PdfPathSegment]
 } derive(Eq, ToJson, @debug.Debug)
+pub fn PdfPathSubpath::content_json(Self) -> Json
 
 pub(all) enum PdfPathWindingRule {
   PdfPathEvenOdd

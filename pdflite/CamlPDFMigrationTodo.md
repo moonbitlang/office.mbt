@@ -2485,6 +2485,15 @@ Current backend snapshot:
   reports `moon test --target native --package bobzhang/pdflite --file
   pdf_shape_test.mbt` at 6/6 tests passing; native full-suite validation
   reports 1911/1911 tests passing.~~
+- [x] ~~Standalone `cpdfcontent.ml` path JSON slice exposes
+  `PdfDrawnPath`, `PdfPathSegment::content_json`,
+  `PdfPathSubpath::content_json`, `PdfDrawnPath::content_json`, and
+  compatibility wrappers, matching cpdf's line/Bezier point arrays, closed
+  subpath flag, winding strings, stroked/filled flags, and omitted subpath hole
+  flag while leaving full semantic content-object extraction for later slices.
+  Native focused validation reports `moon test --target native --package
+  bobzhang/pdflite --file pdf_shape_test.mbt` at 7/7 tests passing; native
+  full-suite validation reports 1912/1912 tests passing.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,
