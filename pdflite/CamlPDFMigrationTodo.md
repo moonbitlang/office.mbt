@@ -1865,7 +1865,7 @@ Current backend snapshot:
   passing.~~
 - [x] ~~Bookmark output helper slice exposes cpdf-style selected-page bookmark
   listing, full-document bookmark JSON rows, UTF-8 JSON bytes, and compatibility
-  wrappers while leaving bookmark-file parsing/import for a later slice.
+  wrappers; bookmark-file parsing/import is covered by the later import slice.
   Coverage pins text line formatting, title escaping, page-number target
   rewriting, selected-page filtering, named-destination retention, invalid-range
   diagnostics, JSON row fields, colour/flag projection, wrapper parity, and JSON
@@ -1873,13 +1873,21 @@ Current backend snapshot:
   native pdf_bookmark_test.mbt` at 21/21 tests passing; native full-suite
   validation reports 1738/1738 tests passing.~~
 - [x] ~~Bookmark filename-spec helper slice exposes cpdf-style `name_of_spec`
-  expansion for already-read bookmark lists while leaving bookmark-file parsing
-  and import for a later slice. Coverage pins percent sequence substitution,
+  expansion for already-read bookmark lists; bookmark-file parsing and import are
+  covered by the later import slice. Coverage pins percent sequence substitution,
   `@F`, `@N`, `@S`, `@E`, `@B`, and `@b...@` expansion, unsafe bookmark-title
   character filtering, UTF-8-safe truncation, wrapper parity, and over-wide
   field diagnostics. Native focused validation reports `moon test --target
   native pdf_bookmark_test.mbt` at 22/22 tests passing; native full-suite
   validation reports 1739/1739 tests passing.~~
+- [x] ~~Bookmark import helper slice exposes cpdf plain-text and JSON bookmark
+  import through `PdfDocument::parse_bookmark_text`, `add_bookmarks_from_text`,
+  `parse_bookmark_json`, `add_bookmarks_from_json`, and compatibility wrappers.
+  Coverage pins quoted title escaping, open-state parsing, page-object and
+  named destinations, bookmark structure validation, JSON row shape, colour and
+  style flags, malformed-row diagnostics, and add-wrapper behavior. Current
+  native focused validation reports `moon test --target native --package
+  bobzhang/pdflite --file pdf_bookmark_test.mbt` at 26/26 tests passing.~~
 - [x] ~~Optional-content group management helper slice exposes cpdf-style raw
   OCG name listing, rename, order-all, and same-name coalescing wrappers.
   Coverage pins raw layer-name listing, copy-on-write rename behavior, wrapper
