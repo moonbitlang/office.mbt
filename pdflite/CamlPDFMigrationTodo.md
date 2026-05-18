@@ -2075,6 +2075,14 @@ Current backend snapshot:
   diagonal/reverse-diagonal rotation math. Native focused validation reports
   `moon test --target native pdf_position_test.mbt` at 5/5 tests passing;
   native full-suite validation reports 1715/1715 tests passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` justification-offset helper slice exposes
+  `PdfAddTextRotation`, `PdfAddTextJustification`, and
+  `pdf_addtext_justification_offset`, covering cpdf's horizontal and vertical
+  position groups, 180/270-degree justification swaps, centered/right/left
+  offsets, and diagonal no-op behavior. Native focused validation reports
+  `moon test --target native --package bobzhang/pdflite --file
+  pdf_addtext_test.mbt` at 5/5 tests passing; native full-suite validation
+  reports 1777/1777 tests passing.~~
 - [x] ~~Standalone `cpdfremovetext.ml` removal slice exposes
   `pdf_remove_added_text_ops`, `pdf_remove_all_text_ops`,
   `PdfDocument::remove_added_text`, `remove_all_text`, and compatibility

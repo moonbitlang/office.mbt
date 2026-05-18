@@ -75,6 +75,8 @@ pub fn pdf_add_prefix(PdfDocument, String) -> Unit raise @core.PdfError
 
 pub fn pdf_add_root(Int, ArrayView[(@core.PdfName, PdfObject)], PdfDocument) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_addtext_justification_offset(PdfAddTextRotation, Double, Double, PdfPosition, PdfAddTextJustification) -> Double
+
 pub fn pdf_annotation_make(PdfAnnotationSubtype, contents? : Bytes?, border? : PdfAnnotationBorder, rectangle? : PdfRectangle, colour? : PdfAnnotationColour?, subject? : Bytes?) -> PdfAnnotation
 
 pub fn pdf_annotation_make_border(Double, vertical_radius? : Double, horizontal_radius? : Double, style? : PdfAnnotationStyle, dash_array? : ArrayView[Int]) -> PdfAnnotationBorder
@@ -1298,6 +1300,19 @@ pub fn ByteOutput::write_view_slice(Self, BytesView, Int, Int) -> Unit raise @co
 pub(all) struct ObjectStreamReference {
   object_stream_number : Int
   index : Int
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfAddTextJustification {
+  PdfAddTextLeftJustify
+  PdfAddTextCentreJustify
+  PdfAddTextRightJustify
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfAddTextRotation {
+  PdfAddTextRot0
+  PdfAddTextRot90
+  PdfAddTextRot180
+  PdfAddTextRot270
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfAfmData {
