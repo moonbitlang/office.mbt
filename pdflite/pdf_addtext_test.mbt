@@ -10,6 +10,25 @@ fn addtext_offset_for_test(
 }
 
 ///|
+fn addtext_assert_close_for_test(
+  actual : Double,
+  expected : Double,
+) -> Unit raise {
+  if (actual - expected).abs() > 0.000000001 {
+    fail("addtext values were not close enough")
+  }
+}
+
+///|
+fn addtext_assert_pair_close_for_test(
+  actual : (Double, Double),
+  expected : (Double, Double),
+) -> Unit raise {
+  addtext_assert_close_for_test(actual.0, expected.0)
+  addtext_assert_close_for_test(actual.1, expected.1)
+}
+
+///|
 fn addtext_process_time_for_test() -> @pdflite.PdfStrftimeTime {
   {
     tm_sec: 5,
@@ -362,6 +381,128 @@ test "pdf_addtext_text_ops switches fontpack runs" {
       Op_Q,
       @pdflite.pdf_content_end_artifact(),
     ],
+  )
+}
+
+///|
+test "pdf_addtext_rotation_radians mirrors cpdf addtext rotation mapping" {
+  addtext_assert_close_for_test(
+    @pdflite.pdf_addtext_rotation_radians(PdfAddTextRot0),
+    0.0,
+  )
+  addtext_assert_close_for_test(
+    @pdflite.pdf_addtext_rotation_radians(PdfAddTextRot90),
+    @math.PI * 1.5,
+  )
+  addtext_assert_close_for_test(
+    @pdflite.pdf_addtext_rotation_radians(PdfAddTextRot180),
+    @math.PI,
+  )
+  addtext_assert_close_for_test(
+    @pdflite.pdf_addtext_rotation_radians(PdfAddTextRot270),
+    @math.PI / 2.0,
+  )
+}
+
+///|
+test "pdf_addtext_rotation_offsets follows cpdf position table" {
+  @test.assert_eq(
+    @pdflite.pdf_addtext_rotation_offsets(
+      PdfPositionTopRight(0.0, 0.0),
+      PdfAddTextRot90,
+      40.0,
+    ),
+    (40.0, 0.0),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_addtext_rotation_offsets(
+      PdfPositionTopRight(0.0, 0.0),
+      PdfAddTextRot270,
+      40.0,
+    ),
+    (40.0, -40.0),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_addtext_rotation_offsets(
+      PdfPositionCentre,
+      PdfAddTextRot270,
+      40.0,
+    ),
+    (20.0, -20.0),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_addtext_rotation_offsets(
+      PdfPositionBottomLeft(0.0, 0.0),
+      PdfAddTextRot90,
+      40.0,
+    ),
+    (0.0, 40.0),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_addtext_rotation_offsets(
+      PdfPositionDiagonal,
+      PdfAddTextRot180,
+      40.0,
+    ),
+    (0.0, 0.0),
+  )
+}
+
+///|
+test "pdf_addtext_diagonal_offsets mirrors diagonal and reverse diagonal math" {
+  let bounds = addtext_bounds_for_test()
+  addtext_assert_pair_close_for_test(
+    @pdflite.pdf_addtext_diagonal_offsets(
+      bounds,
+      PdfPositionDiagonal,
+      PdfAddTextRot0,
+      20.0,
+      5.0,
+      10.0,
+      0.0,
+    ),
+    (0.0, 10.0),
+  )
+  let angle = @math.atan(
+    (bounds.max_y - bounds.min_y) / (bounds.max_x - bounds.min_x),
+  )
+  let dx = @math.cos(angle) * 20.0
+  let dy = @math.sin(angle) * 20.0
+  addtext_assert_pair_close_for_test(
+    @pdflite.pdf_addtext_diagonal_offsets(
+      bounds,
+      PdfPositionDiagonal,
+      PdfAddTextRot180,
+      20.0,
+      5.0,
+      10.0,
+      0.0,
+    ),
+    (-dx, -10.0 - dy),
+  )
+  addtext_assert_pair_close_for_test(
+    @pdflite.pdf_addtext_diagonal_offsets(
+      bounds,
+      PdfPositionReverseDiagonal,
+      PdfAddTextRot180,
+      20.0,
+      5.0,
+      10.0,
+      0.0,
+    ),
+    (-dx, -10.0 + dy),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_addtext_diagonal_offsets(
+      bounds,
+      PdfPositionTop(0.0),
+      PdfAddTextRot180,
+      20.0,
+      5.0,
+      10.0,
+      0.0,
+    ),
+    (5.0, 10.0),
   )
 }
 

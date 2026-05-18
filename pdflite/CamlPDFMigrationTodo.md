@@ -2201,6 +2201,15 @@ Current backend snapshot:
   run switching. Native focused validation reports `moon test --target native
   --package bobzhang/pdflite --file pdf_addtext_test.mbt` at 44/44 tests
   passing; native full-suite validation reports 1816/1816 tests passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` text-placement helper slice exposes
+  `pdf_addtext_rotation_radians`, `pdf_addtext_rotation_offsets`, and
+  `pdf_addtext_diagonal_offsets`, covering cpdf's explicit rotation-to-radians
+  mapping, position-specific rotated text origin offsets, diagonal/reverse
+  diagonal vertical-offset projection, Rot180 text-width backoff, and unchanged
+  non-diagonal offsets. Native focused validation reports `moon test --target
+  native --package bobzhang/pdflite --file pdf_addtext_test.mbt` at 47/47
+  tests passing; native full-suite validation reports 1819/1819 tests
+  passing.~~
 - [x] ~~Standalone `cpdfremovetext.ml` removal slice exposes
   `pdf_remove_added_text_ops`, `pdf_remove_all_text_ops`,
   `PdfDocument::remove_added_text`, `remove_all_text`, and compatibility
