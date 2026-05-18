@@ -2585,6 +2585,15 @@ Current backend snapshot:
   reports `moon test --target native --package bobzhang/pdflite --file
   pdf_content_text_test.mbt` at 7/7 tests passing; native full-suite validation
   reports 1924/1924 tests passing.~~
+- [x] ~~Standalone `cpdfcontent.ml` `process_capital_tj` adjustment slice
+  exposes `PdfFont::content_text_layout_of_tj_array` and
+  `pdf_content_text_layout_of_tj_array`, matching cpdf's `PdfString` delegation
+  to `process_tj`, horizontal numeric text-matrix backtracking, vertical numeric
+  displacement, ignored non-string/non-real operands, and final text-matrix
+  threading while leaving the full operator-driven content filter walk for
+  later slices. Native focused validation reports `moon test --target native
+  --package bobzhang/pdflite --file pdf_content_text_test.mbt` at 9/9 tests
+  passing; native full-suite validation reports 1926/1926 tests passing.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,

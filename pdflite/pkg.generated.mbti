@@ -395,6 +395,8 @@ pub fn pdf_content_stream_of_ops(ArrayView[PdfContentOp]) -> PdfObject raise @co
 
 pub fn pdf_content_text_layout_of_bytes(PdfFont, BytesView, PdfContentTextLayout) -> PdfContentTextLayoutResult
 
+pub fn pdf_content_text_layout_of_tj_array(PdfFont, ArrayView[PdfObject], PdfContentTextLayout) -> PdfContentTextLayoutResult
+
 pub fn pdf_content_width_of_charcode(PdfFont, Int) -> (Double, Double, Double)
 
 pub fn pdf_copy_annotations(ArrayView[Int], PdfDocument, PdfDocument) -> PdfDocument raise @core.PdfError
@@ -2435,6 +2437,7 @@ pub fn PdfFont::content_charcodes_of_bytes(Self, BytesView) -> Array[Int]
 pub fn PdfFont::content_extra_metrics(Self) -> (Double, Double)
 pub fn PdfFont::content_is_vertical(Self) -> Bool
 pub fn PdfFont::content_text_layout_of_bytes(Self, BytesView, PdfContentTextLayout) -> PdfContentTextLayoutResult
+pub fn PdfFont::content_text_layout_of_tj_array(Self, ArrayView[PdfObject], PdfContentTextLayout) -> PdfContentTextLayoutResult
 pub fn PdfFont::content_width_of_charcode(Self, Int) -> (Double, Double, Double)
 pub fn PdfFont::debug_name(Self) -> String
 pub fn PdfFont::embedded_fontfile_number(Self) -> Int?

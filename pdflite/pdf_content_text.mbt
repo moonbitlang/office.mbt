@@ -511,3 +511,69 @@ pub fn pdf_content_text_layout_of_bytes(
 ) -> PdfContentTextLayoutResult {
   font.content_text_layout_of_bytes(text, layout)
 }
+
+///|
+fn pdf_content_text_tj_adjustment(
+  vertical : Bool,
+  value : Double,
+  layout : PdfContentTextLayout,
+) -> (Double, Double) {
+  if vertical {
+    (0.0, -value / 1000.0 * layout.font_size)
+  } else {
+    (-value / 1000.0 * layout.horizontal_scaling * layout.font_size, 0.0)
+  }
+}
+
+///|
+/// Place a normalized PDF `TJ` array as cpdfcontent's `process_capital_tj` does.
+///
+/// `PdfString` operands are delegated to `content_text_layout_of_bytes`.
+/// `PdfReal` operands adjust the current text matrix. Other operands are
+/// ignored, matching the source function and the local content parser's
+/// normalized `TJ` array shape.
+pub fn PdfFont::content_text_layout_of_tj_array(
+  self : PdfFont,
+  elements : ArrayView[PdfObject],
+  layout : PdfContentTextLayout,
+) -> PdfContentTextLayoutResult {
+  let glyphs : Array[PdfContentTextGlyphPlacement] = []
+  let vertical = self.content_is_vertical()
+  let mut text_matrix = layout.text_matrix
+  for element in elements {
+    match element {
+      PdfString(text) => {
+        let result = self.content_text_layout_of_bytes(text, {
+          ..layout,
+          text_matrix,
+        })
+        for glyph in result.glyphs {
+          glyphs.push(glyph)
+        }
+        text_matrix = result.text_matrix
+      }
+      PdfReal(value) => {
+        let advance = pdf_content_text_tj_adjustment(vertical, value, {
+          ..layout,
+          text_matrix,
+        })
+        text_matrix = transform_matrix_compose(
+          text_matrix,
+          transform_translate(advance.0, advance.1),
+        )
+      }
+      _ => ()
+    }
+  }
+  { glyphs, text_matrix }
+}
+
+///|
+/// Compatibility wrapper for `PdfFont::content_text_layout_of_tj_array`.
+pub fn pdf_content_text_layout_of_tj_array(
+  font : PdfFont,
+  elements : ArrayView[PdfObject],
+  layout : PdfContentTextLayout,
+) -> PdfContentTextLayoutResult {
+  font.content_text_layout_of_tj_array(elements, layout)
+}

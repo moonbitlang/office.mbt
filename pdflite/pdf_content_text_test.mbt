@@ -515,3 +515,104 @@ test "cpdfcontent text layout mirrors vertical process_tj placement" {
     @pdflite.transform_translate(0.0, 10.0),
   )
 }
+
+///|
+test "cpdfcontent TJ layout applies horizontal numeric adjustments" {
+  let font : @pdflite.PdfFont = PdfFontSimple({
+    fonttype: PdfTrueType,
+    basefont: None,
+    firstchar: 0,
+    lastchar: 255,
+    widths: [],
+    fontdescriptor: Some({
+      ..content_text_font_descriptor_for_test(),
+      fontbbox: { min_x: 0.0, min_y: -200.0, max_x: 600.0, max_y: 800.0 },
+    }),
+    fontmetrics: Some([ for _ in 0..<256 => 500.0 ]),
+    encoding: PdfWinAnsiEncoding,
+  })
+  let layout : @pdflite.PdfContentTextLayout = {
+    font_size: 10.0,
+    horizontal_scaling: 0.8,
+    character_spacing: 1.0,
+    word_spacing: 2.0,
+    rise: 0.0,
+    ctm: @pdflite.transform_identity_matrix,
+    text_matrix: @pdflite.transform_identity_matrix,
+  }
+  let result = font.content_text_layout_of_tj_array(
+    [
+      PdfString(content_text_bytes_for_test([65])),
+      PdfReal(120.0),
+      PdfString(content_text_bytes_for_test([66])),
+    ],
+    layout,
+  )
+  @test.assert_eq(result.glyphs.length(), 2)
+  @test.assert_eq(result.glyphs[0].charcode, 65)
+  @test.assert_eq(result.glyphs[1].charcode, 66)
+  content_text_assert_matrix_close_for_test(
+    result.glyphs[1].text_matrix,
+    @pdflite.transform_translate(3.84, 0.0),
+  )
+  content_text_assert_matrix_close_for_test(
+    result.text_matrix,
+    @pdflite.transform_translate(8.64, 0.0),
+  )
+  let wrapped = @pdflite.pdf_content_text_layout_of_tj_array(
+    font,
+    [PdfString(content_text_bytes_for_test([65]))],
+    layout,
+  )
+  @test.assert_eq(wrapped.glyphs.length(), 1)
+  content_text_assert_matrix_close_for_test(
+    wrapped.text_matrix,
+    @pdflite.transform_translate(4.8, 0.0),
+  )
+}
+
+///|
+test "cpdfcontent TJ layout applies vertical numeric adjustments" {
+  let descriptor = {
+    ..content_text_font_descriptor_for_test(),
+    ascent: 800.0,
+    descent: -200.0,
+  }
+  let base = content_text_cid_font_with_descriptor_for_test(descriptor)
+  let composite = match base {
+    PdfFontCIDKeyed(font) =>
+      {
+        ..font.composite,
+        cid_widths2: [(0x0102, { width: 700.0, vx: 0.0, vy: 0.0 })],
+      }
+    _ => abort("expected CID font")
+  }
+  let font : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: content_text_name_for_test("/Top"),
+    composite,
+    encoding: PdfPredefinedCMap(content_text_name_for_test("/Identity-V")),
+  })
+  let layout : @pdflite.PdfContentTextLayout = {
+    font_size: 10.0,
+    horizontal_scaling: 0.5,
+    character_spacing: 0.0,
+    word_spacing: 0.0,
+    rise: 0.0,
+    ctm: @pdflite.transform_identity_matrix,
+    text_matrix: @pdflite.transform_identity_matrix,
+  }
+  let text = content_text_bytes_for_test([0x01, 0x02])
+  let result = font.content_text_layout_of_tj_array(
+    [PdfString(text), PdfReal(250.0), PdfString(text)],
+    layout,
+  )
+  @test.assert_eq(result.glyphs.length(), 2)
+  content_text_assert_matrix_close_for_test(
+    result.glyphs[1].text_matrix,
+    @pdflite.transform_translate(0.0, 4.5),
+  )
+  content_text_assert_matrix_close_for_test(
+    result.text_matrix,
+    @pdflite.transform_translate(0.0, 11.5),
+  )
+}
