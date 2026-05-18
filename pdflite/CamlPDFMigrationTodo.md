@@ -2606,6 +2606,14 @@ Current backend snapshot:
   focused validation reports `moon test --target native --package
   bobzhang/pdflite --file pdf_content_shading_test.mbt` at 4/4 tests passing;
   native full-suite validation reports 1930/1930 tests passing.~~
+- [x] ~~Standalone `cpdfcontent.ml` path bounding-box emission slice exposes
+  `PdfPath::content_bounding_box` and `pdf_path_content_bounding_box`, matching
+  cpdf's CTM-first path transform, empty-path suppression, stroked line-width
+  expansion from the transformed `(line_width, line_width)` vector, and
+  eight-point quad assembly while leaving the stateful operator callback wiring
+  for later slices. Native focused validation reports `moon test --target
+  native --package bobzhang/pdflite --file pdf_shape_test.mbt` at 8/8 tests
+  passing; native full-suite validation reports 1931/1931 tests passing.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,

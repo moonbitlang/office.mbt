@@ -43,6 +43,28 @@ fn assert_rectangle_for_shape_test(
 }
 
 ///|
+fn assert_content_bbox_for_shape_test(
+  actual : @pdflite.PdfContentBoundingBox,
+  x0 : Double,
+  y0 : Double,
+  x1 : Double,
+  y1 : Double,
+  x2 : Double,
+  y2 : Double,
+  x3 : Double,
+  y3 : Double,
+) -> Unit raise {
+  assert_close_for_shape_test(actual.x0, x0)
+  assert_close_for_shape_test(actual.y0, y0)
+  assert_close_for_shape_test(actual.x1, x1)
+  assert_close_for_shape_test(actual.y1, y1)
+  assert_close_for_shape_test(actual.x2, x2)
+  assert_close_for_shape_test(actual.y2, y2)
+  assert_close_for_shape_test(actual.x3, x3)
+  assert_close_for_shape_test(actual.y3, y3)
+}
+
+///|
 test "cpdf shape exposes kappa and restricts angles" {
   assert_close_for_shape_test(@pdflite.pdf_shape_kappa, 0.5522847498307936)
   assert_close_for_shape_test(
@@ -191,6 +213,50 @@ test "cpdfcontent path geometry transforms segments and paths" {
     }
     _ => fail("expected transformed straight segment")
   }
+}
+
+///|
+test "cpdfcontent path geometry emits content bounding box quads" {
+  let path : @pdflite.PdfPath = {
+    winding_rule: PdfPathEvenOdd,
+    subpaths: [
+      {
+        hole: PdfPathNotHole,
+        closure: PdfPathOpen,
+        segments: [
+          PdfPathStraight(@pdflite.point2(1.0, 2.0), @pdflite.point2(3.0, 5.0)),
+        ],
+      },
+    ],
+  }
+  guard path.content_bounding_box(
+      @pdflite.transform_translate(10.0, 20.0),
+      1.0,
+      false,
+    )
+    is Some(filled) else {
+    fail("expected filled path bounding box")
+  }
+  assert_content_bbox_for_shape_test(
+    filled, 11.0, 22.0, 11.0, 25.0, 13.0, 25.0, 13.0, 22.0,
+  )
+  let scaled_ctm : @pdflite.TransformMatrix = {
+    ..@pdflite.transform_identity_matrix,
+    a: 2.0,
+    d: 3.0,
+  }
+  guard @pdflite.pdf_path_content_bounding_box(path, scaled_ctm, 2.0, true)
+    is Some(stroked) else {
+    fail("expected stroked path bounding box")
+  }
+  assert_content_bbox_for_shape_test(
+    stroked, 0.0, 3.0, 0.0, 18.0, 8.0, 18.0, 8.0, 3.0,
+  )
+  let empty : @pdflite.PdfPath = { winding_rule: PdfPathEvenOdd, subpaths: [] }
+  @test.assert_eq(
+    empty.content_bounding_box(@pdflite.transform_identity_matrix, 1.0, false),
+    None,
+  )
 }
 
 ///|

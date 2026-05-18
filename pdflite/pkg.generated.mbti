@@ -859,6 +859,8 @@ pub fn pdf_parse_units_string(PdfDocument, PdfPage, String) -> Array[Double] rai
 
 pub fn pdf_path_bounds(PdfPath) -> PdfRectangle
 
+pub fn pdf_path_content_bounding_box(PdfPath, @geometry.TransformMatrix, Double, Bool) -> PdfContentBoundingBox?
+
 pub fn pdf_path_segment_bounds(PdfPathSegment) -> PdfRectangle
 
 pub fn pdf_path_segment_content_json(PdfPathSegment) -> Json
@@ -2816,6 +2818,7 @@ pub(all) struct PdfPath {
   subpaths : Array[PdfPathSubpath]
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfPath::bounds(Self) -> PdfRectangle
+pub fn PdfPath::content_bounding_box(Self, @geometry.TransformMatrix, Double, Bool) -> PdfContentBoundingBox?
 pub fn PdfPath::transform(Self, @geometry.TransformMatrix) -> Self
 
 pub(all) enum PdfPathClosure {
