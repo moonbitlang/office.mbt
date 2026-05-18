@@ -1876,6 +1876,14 @@ Current backend snapshot:
   arcs, and segment joining. Native focused validation reports `moon test
   --target native pdf_shape_test.mbt` at 4/4 tests passing; native full-suite
   validation reports 1721/1721 tests passing.~~
+- [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
+  `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
+  top-level `/Separation` array scan, direct and indirect colourant names,
+  ignored `/DeviceN`, nested dictionary colour spaces, non-name colourants,
+  unresolved indirect colourants, output order, and wrapper parity. Native
+  focused validation reports `moon test --target native pdf_spot_test.mbt` at
+  2/2 tests passing; native full-suite validation reports 1721/1721 tests
+  passing.~~
 - [x] ~~Standalone `cpdfpagelabels.ml` JSON adapter slice now exposes
   `PdfDocument::add_page_labels_json` and `pdf_add_page_labels_json`, covering
   cpdf's page-label JSON array shape, UTF-8 prefix-to-PDFDocString encoding,
