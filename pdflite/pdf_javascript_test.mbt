@@ -53,6 +53,36 @@ test "PdfDocument contains_javascript follows cpdf string and URI checks" {
 }
 
 ///|
+test "PdfDocument contains_javascript scans stream dictionaries" {
+  let key_s = javascript_name_for_test("/S")
+  let document = javascript_document_with_object_for_test(
+    PdfStreamObject({
+      dictionary: PdfDictionary([
+        (key_s, PdfString(@ascii.encode("/JavaScript"))),
+      ]),
+      data: StreamGot(@ascii.encode("payload")),
+    }),
+  )
+  @test.assert_eq(document.contains_javascript(), true)
+}
+
+///|
+test "PdfDocument contains_javascript detects root JavaScript name tree" {
+  let key_root = javascript_name_for_test("/Root")
+  let key_names = javascript_name_for_test("/Names")
+  let key_javascript = javascript_name_for_test("/JavaScript")
+  let document = @pdflite.pdf_document_empty()
+  document.add_object_given_number(
+    10,
+    PdfDictionary([
+      (key_names, PdfDictionary([(key_javascript, PdfDictionary([]))])),
+    ]),
+  )
+  document.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(10))]))
+  @test.assert_eq(document.contains_javascript(), true)
+}
+
+///|
 fn javascript_removal_document_for_test() -> @pdflite.PdfDocument {
   let key_js = javascript_name_for_test("/JS")
   let key_uri = javascript_name_for_test("/URI")

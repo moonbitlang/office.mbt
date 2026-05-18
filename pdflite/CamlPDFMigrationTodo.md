@@ -1818,6 +1818,14 @@ Current backend snapshot:
   round-tripping through `pdf_document_of_json`. Native focused validation
   reports `moon test --target native pdf_util_test.mbt` at 25/25 tests passing;
   native full-suite validation reports 1712/1712 tests passing.~~
+- [x] ~~Standalone `cpdfjs.ml` JavaScript scrub/detect slice exposes
+  `PdfDocument::contains_javascript`, `remove_javascript`, and compatibility
+  wrappers, covering cpdf's string-only `/S /JavaScript` detection, lowercase
+  `javascript:` URI detection, stream dictionaries, root JavaScript name trees,
+  recursive `/JS` and `/URI` blanking, name-tree removal, and wrapper parity.
+  Native focused validation reports `moon test --target native
+  pdf_javascript_test.mbt` at 5/5 tests passing; native full-suite validation
+  reports 1717/1717 tests passing.~~
 - [x] ~~Standalone `cpdfpad.ml` padding slice exposes `PdfDocument::pad_after`,
   `pad_before`, `pad_to_multiple`, and compatibility wrappers, covering blank
   page insertion before/after selected pages, annotation removal from generated
