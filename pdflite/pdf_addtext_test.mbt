@@ -323,3 +323,38 @@ test "pdf_addtext_process_text_with_time ignores empty replacement markers" {
   )
   @test.assert_eq(calls.val, 0)
 }
+
+///|
+test "pdf_addtext_expand_lines_with_time expands replacements and strips URLs" {
+  let page_calls : Ref[Int] = { val: 0 }
+  let replacements : Array[(String, () -> String)] = [
+    (
+      "%Page",
+      fn() {
+        page_calls.val += 1
+        "3"
+      },
+    ),
+  ]
+  @test.assert_eq(
+    try! @pdflite.pdf_addtext_expand_lines_with_time(
+      addtext_process_time_for_test(),
+      ["%Page %URL[link|https://example.test]", "plain %Y"],
+      replacements,
+    ),
+    ["3 link", "plain 2023"],
+  )
+  @test.assert_eq(page_calls.val, 1)
+}
+
+///|
+test "pdf_addtext_expand_lines_with_time reports malformed URL lines" {
+  let result : Result[Array[String], Error] = try? @pdflite.pdf_addtext_expand_lines_with_time(
+    addtext_process_time_for_test(),
+    ["ok", "%URL[broken"],
+    [],
+  )
+  guard result is Err(@pdflite.PdfError::SoftError("bad URL syntax in text")) else {
+    fail("expected SoftError for malformed URL marker during line expansion")
+  }
+}

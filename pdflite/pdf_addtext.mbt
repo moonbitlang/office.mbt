@@ -367,3 +367,21 @@ pub fn pdf_addtext_get_urls_line(
   }
   { text: pdf_addtext_utf8_string(Bytes::from_array(output)), urls }
 }
+
+///|
+/// Expand add-text lines and strip URL markup before line measurement.
+///
+/// This mirrors cpdf's `expand_lines` behavior after callers have supplied the
+/// document-specific replacement callbacks.
+pub fn pdf_addtext_expand_lines_with_time(
+  time : PdfStrftimeTime,
+  lines : ArrayView[String],
+  replacements : ArrayView[(String, () -> String)],
+) -> Array[String] raise PdfError {
+  let output : Array[String] = []
+  for line in lines {
+    let processed = pdf_addtext_process_text_with_time(time, line, replacements)
+    output.push(pdf_addtext_get_urls_line(processed).text)
+  }
+  output
+}

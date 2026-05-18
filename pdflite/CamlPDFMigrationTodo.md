@@ -2097,6 +2097,13 @@ Current backend snapshot:
   --target native --package bobzhang/pdflite --file pdf_addtext_test.mbt` at
   12/12 tests passing; native full-suite validation reports 1784/1784 tests
   passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` line expansion slice exposes
+  `pdf_addtext_expand_lines_with_time`, covering replacement expansion,
+  post-expansion URL stripping for line measurement, strftime integration, and
+  malformed URL propagation. Native focused validation reports `moon test
+  --target native --package bobzhang/pdflite --file pdf_addtext_test.mbt` at
+  14/14 tests passing; native full-suite validation reports 1786/1786 tests
+  passing.~~
 - [x] ~~Standalone `cpdfremovetext.ml` removal slice exposes
   `pdf_remove_added_text_ops`, `pdf_remove_all_text_ops`,
   `PdfDocument::remove_added_text`, `remove_all_text`, and compatibility
