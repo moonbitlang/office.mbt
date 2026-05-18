@@ -293,6 +293,196 @@ pub fn pdf_fonts_json_blob(
 }
 
 ///|
+fn pdf_font_name_segments(font_name : String) -> Array[String] {
+  let segments : Array[String] = []
+  let mut start = 0
+  for index in 0..<font_name.length() {
+    if font_name.at(index).to_int() == 47 {
+      if index > start {
+        segments.push(font_name[start:index].to_owned())
+      }
+      start = index + 1
+    }
+  }
+  if start < font_name.length() {
+    segments.push(font_name[start:].to_owned())
+  }
+  segments
+}
+
+///|
+fn pdf_font_segment_name(segment : String) -> PdfName {
+  pdf_name_of_bytes(@ascii.encode("/" + segment))
+}
+
+///|
+/// Resolve a cpdf font name path on a page.
+///
+/// `font_name` is the name shown by `list_fonts`, such as `/F1` for a page font
+/// or `/Fm/FX` for a font inside a Form XObject. Valid pages whose path is not
+/// found return `PdfNull`.
+pub fn PdfDocument::font_from_name(
+  self : PdfDocument,
+  font_name : String,
+  page_number : Int,
+) -> PdfObject raise PdfError {
+  let pages = self.pages_of_pagetree()
+  pdf_page_box_validate_page_numbers(
+    [page_number],
+    pages.length(),
+    "font_from_name",
+  )
+  let segments = pdf_font_name_segments(font_name)
+  if segments.length() == 0 {
+    PdfNull
+  } else {
+    let mut resources = pages[page_number - 1].resources
+    let mut found = PdfNull
+    let mut failed = false
+    for index, segment in segments {
+      if !failed {
+        let key = pdf_font_segment_name(segment)
+        if index == segments.length() - 1 {
+          match self.lookup_direct(pdf_page_font_resource_name, resources) {
+            Some(fonts) =>
+              match self.lookup_direct(key, fonts) {
+                Some(font) => found = font
+                None => failed = true
+              }
+            None => failed = true
+          }
+        } else {
+          match self.lookup_direct(pdf_page_xobject_key(), resources) {
+            Some(xobjects) =>
+              match self.lookup_direct(key, xobjects) {
+                Some(xobject) =>
+                  match self.lookup_direct(pdf_page_resources_key(), xobject) {
+                    Some(next_resources) => resources = next_resources
+                    None => failed = true
+                  }
+                None => failed = true
+              }
+            None => failed = true
+          }
+        }
+      }
+    }
+    if failed {
+      PdfNull
+    } else {
+      found
+    }
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::font_from_name`.
+pub fn pdf_font_from_name(
+  document : PdfDocument,
+  font_name : String,
+  page_number : Int,
+) -> PdfObject raise PdfError {
+  document.font_from_name(font_name, page_number)
+}
+
+///|
+/// Return the object number referenced by an embedded font-file marker.
+pub fn PdfFontFile::object_number(self : PdfFontFile) -> Int {
+  match self {
+    PdfFontFile(number) | PdfFontFile2(number) | PdfFontFile3(number) => number
+  }
+}
+
+///|
+/// Return the embedded font-file stream object number for a parsed font.
+pub fn PdfFont::embedded_fontfile_number(self : PdfFont) -> Int? {
+  match self {
+    PdfFontSimple(
+      { fontdescriptor: Some({ fontfile: Some(fontfile), .. }), .. }
+    ) => Some(fontfile.object_number())
+    PdfFontCIDKeyed(
+      {
+        composite: { cid_fontdescriptor: { fontfile: Some(fontfile), .. }, .. },
+        ..,
+      }
+    ) => Some(fontfile.object_number())
+    _ => None
+  }
+}
+
+///|
+fn PdfDocument::pdf_font_descriptor_file_number(
+  self : PdfDocument,
+  font : PdfObject,
+) -> Int? {
+  match self.lookup_direct(pdf_text_font_descriptor_key_name, font) {
+    Some(descriptor) =>
+      match pdf_text_fontfile_of_descriptor(descriptor) {
+        Some(fontfile) => Some(fontfile.object_number())
+        None => None
+      }
+    None => None
+  }
+}
+
+///|
+fn PdfDocument::pdf_font_embedded_file_number(
+  self : PdfDocument,
+  font : PdfObject,
+) -> Int? {
+  match self.pdf_font_descriptor_file_number(font) {
+    Some(number) => Some(number)
+    None =>
+      match self.lookup_direct(pdf_text_descendant_fonts_key_name, font) {
+        Some(PdfArray(descendants)) =>
+          for descendant in descendants {
+            match self.pdf_font_descriptor_file_number(descendant) {
+              Some(number) => break Some(number)
+              None => continue
+            }
+          } nobreak {
+            None
+          }
+        _ => None
+      }
+  }
+}
+
+///|
+/// Return decoded embedded font-file bytes for a named page font, if present.
+///
+/// This is the in-memory counterpart to cpdf's `extract_fontfile`, which writes
+/// the decoded font program to a path. Missing names or fonts without embedded
+/// font programs return `None`; malformed font dictionaries or font-file stream
+/// objects raise through the normal PDF error path.
+pub fn PdfDocument::extract_fontfile_bytes(
+  self : PdfDocument,
+  page_number : Int,
+  font_name : String,
+) -> PdfBytes? raise PdfError {
+  let font = self.font_from_name(font_name, page_number)
+  if font == PdfNull {
+    None
+  } else {
+    match self.pdf_font_embedded_file_number(font) {
+      Some(number) =>
+        Some(self.pdf_decode_stream(PdfIndirect(number)).stream_bytes())
+      None => None
+    }
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::extract_fontfile_bytes`.
+pub fn pdf_extract_fontfile_bytes(
+  document : PdfDocument,
+  page_number : Int,
+  font_name : String,
+) -> PdfBytes? raise PdfError {
+  document.extract_fontfile_bytes(page_number, font_name)
+}
+
+///|
 fn PdfDocument::pdf_font_has_embedded_file(
   self : PdfDocument,
   descriptor : PdfObject,

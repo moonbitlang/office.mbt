@@ -118,6 +118,26 @@ fn font_descriptor_without_files_for_test() -> @pdflite.PdfObject {
 }
 
 ///|
+fn font_descriptor_with_file_for_test(
+  key : String,
+  number : Int,
+) -> @pdflite.PdfObject {
+  PdfDictionary([
+    (font_name_for_test(key), PdfIndirect(number)),
+    (font_name_for_test("/Flags"), PdfInteger(32)),
+  ])
+}
+
+///|
+fn font_file_stream_for_test(data : String) -> @pdflite.PdfObject {
+  let bytes = @ascii.encode(data)
+  @pdflite.pdf_stream(
+    PdfDictionary([(font_name_for_test("/Length"), PdfInteger(bytes.length()))]),
+    StreamGot(bytes),
+  )
+}
+
+///|
 fn font_minimal_font_object_for_test() -> @pdflite.PdfObject {
   PdfDictionary([
     (font_name_for_test("/Type"), PdfNameObject(font_name_for_test("/Font"))),
@@ -305,6 +325,79 @@ fn font_missing_document_for_test() -> @pdflite.PdfDocument {
 }
 
 ///|
+fn font_extraction_document_for_test() -> @pdflite.PdfDocument {
+  let key_font = font_name_for_test("/Font")
+  let key_xobject = font_name_for_test("/XObject")
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(80, font_file_stream_for_test("outer-font"))
+  doc.add_object_given_number(
+    81,
+    font_descriptor_with_file_for_test("/FontFile2", 80),
+  )
+  doc.add_object_given_number(
+    82,
+    font_font_object_with_descriptor_for_test(
+      "/TrueType",
+      "/CustomEmbedded",
+      Some("/WinAnsiEncoding"),
+      PdfIndirect(81),
+    ),
+  )
+  doc.add_object_given_number(90, font_file_stream_for_test("nested-font"))
+  doc.add_object_given_number(
+    91,
+    font_descriptor_with_file_for_test("/FontFile", 90),
+  )
+  doc.add_object_given_number(
+    92,
+    font_font_object_with_descriptor_for_test(
+      "/Type1",
+      "/NestedEmbedded",
+      Some("/MacRomanEncoding"),
+      PdfIndirect(91),
+    ),
+  )
+  doc.add_object_given_number(
+    93,
+    font_form_xobject_for_test(
+      PdfDictionary([
+        (
+          key_font,
+          font_resource_dictionary_for_test([("/FX", PdfIndirect(92))]),
+        ),
+      ]),
+    ),
+  )
+  doc.add_object_given_number(
+    94,
+    font_font_object_for_test(
+      "/Type1",
+      "/NoEmbeddedFile",
+      Some("/StandardEncoding"),
+    ),
+  )
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: PdfDictionary([
+      (
+        key_font,
+        font_resource_dictionary_for_test([
+          ("/F1", PdfIndirect(82)),
+          ("/FNo", PdfIndirect(94)),
+        ]),
+      ),
+      (
+        key_xobject,
+        font_resource_dictionary_for_test([("/Fm", PdfIndirect(93))]),
+      ),
+    ]),
+  }
+  let page_root = try! doc.add_pagetree([page])
+  ignore(try! doc.add_root(page_root, []))
+  doc
+}
+
+///|
 test "PdfDocument remove_embedded_fonts strips font files from descriptors" {
   let key_font_descriptor = font_name_for_test("/FontDescriptor")
   let key_font_file = font_name_for_test("/FontFile")
@@ -487,4 +580,40 @@ test "PdfDocument missing_fonts_text matches cpdf rows" {
     ),
   )
   @test.assert_eq(try! @pdflite.pdf_missing_fonts_text(doc, [1]), text)
+}
+
+///|
+test "PdfDocument font_from_name resolves page and XObject paths" {
+  let doc = font_extraction_document_for_test()
+  @test.assert_eq(
+    try! doc.font_from_name("/F1", 1),
+    doc.lookup_object_or_null(82),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_font_from_name(doc, "/Fm/FX", 1),
+    doc.lookup_object_or_null(92),
+  )
+  @test.assert_eq(try! doc.font_from_name("/Missing", 1), PdfNull)
+  @test.assert_eq(try! doc.font_from_name("/Fm/Missing", 1), PdfNull)
+  let bad_page : Result[@pdflite.PdfObject, Error] = try? doc.font_from_name(
+    "/F1", 2,
+  )
+  guard bad_page is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+    fail("expected BadPageSpecification")
+  }
+}
+
+///|
+test "PdfDocument extract_fontfile_bytes returns decoded embedded bytes" {
+  let doc = font_extraction_document_for_test()
+  @test.assert_eq(
+    try! doc.extract_fontfile_bytes(1, "/F1"),
+    Some(@ascii.encode("outer-font")),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_extract_fontfile_bytes(doc, 1, "/Fm/FX"),
+    Some(@ascii.encode("nested-font")),
+  )
+  @test.assert_eq(try! doc.extract_fontfile_bytes(1, "/FNo"), None)
+  @test.assert_eq(try! doc.extract_fontfile_bytes(1, "/Missing"), None)
 }

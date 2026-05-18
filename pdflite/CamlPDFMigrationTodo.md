@@ -2074,6 +2074,15 @@ Current backend snapshot:
   focused validation reports `moon test --target native pdf_font_test.mbt` at
   5/5 tests passing; native full-suite validation reports 1752/1752 tests
   passing.~~
+- [x] ~~Standalone `cpdffont.ml` font path and extraction slice now exposes
+  `PdfDocument::font_from_name`, `PdfFontFile::object_number`,
+  `PdfFont::embedded_fontfile_number`, `extract_fontfile_bytes`, and
+  compatibility wrappers, covering page font-name resolution, nested XObject
+  font paths, missing-path nulls, invalid-page rejection, decoded embedded
+  `/FontFile` and `/FontFile2` stream extraction, no-fontfile `None`, and
+  missing-font `None`. Native focused validation reports `moon test --target
+  native pdf_font_test.mbt` at 7/7 tests passing; native full-suite validation
+  reports 1754/1754 tests passing.~~
 - [x] ~~Page labels, bookmarks, annotations, duplicate annotation repair,
   old-style destinations, name-tree destinations, `/OpenAction`, optional
   content, AcroForm merge basics, trailer `/Info`, and structure-tree

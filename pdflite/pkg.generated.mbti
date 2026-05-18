@@ -321,6 +321,8 @@ pub fn pdf_error(String) -> Unit raise @core.PdfError
 
 pub fn pdf_eval_function(PdfFunction, ArrayView[Double]) -> Array[Double] raise @core.PdfError
 
+pub fn pdf_extract_fontfile_bytes(PdfDocument, Int, String) -> Bytes? raise @core.PdfError
+
 pub fn pdf_find_object(PdfDocument, String) -> PdfObject raise @core.PdfError
 
 pub fn pdf_flate_decode(Bytes) -> Bytes raise @core.PdfError
@@ -334,6 +336,8 @@ pub fn pdf_flate_encode_view(BytesView) -> Bytes
 pub fn pdf_flate_encode_view_with_level(BytesView, Int) -> Bytes raise @core.PdfError
 
 pub fn pdf_flate_encode_with_level(Bytes, Int) -> Bytes raise @core.PdfError
+
+pub fn pdf_font_from_name(PdfDocument, String, Int) -> PdfObject raise @core.PdfError
 
 pub fn pdf_fontpack_collate_runs(ArrayView[(Int, Int, PdfFont)]) -> Array[Array[(Int, Int, PdfFont)]]
 
@@ -1698,8 +1702,10 @@ pub fn PdfDocument::encrypt_40bit(Self, BytesView, BytesView, ArrayView[@crypt_c
 pub fn PdfDocument::endpage(Self) -> Int raise @core.PdfError
 pub fn PdfDocument::endpage_fast(Self) -> Int raise @core.PdfError
 pub fn PdfDocument::event_log(Self) -> Array[(Int, PdfObjectEvent)]
+pub fn PdfDocument::extract_fontfile_bytes(Self, Int, String) -> Bytes? raise @core.PdfError
 pub fn PdfDocument::find_object_by_spec(Self, String) -> PdfObject raise @core.PdfError
 pub fn PdfDocument::first_xref(Self) -> Int
+pub fn PdfDocument::font_from_name(Self, String, Int) -> PdfObject raise @core.PdfError
 pub fn PdfDocument::fonts_json(Self, ArrayView[Int]) -> Json raise @core.PdfError
 pub fn PdfDocument::fonts_json_blob(Self, ArrayView[Int]) -> Bytes raise @core.PdfError
 pub fn PdfDocument::get_annotations(Self, encoding? : PdfMetadataEncoding) -> Array[(Int, Bytes)] raise @core.PdfError
@@ -1940,6 +1946,7 @@ pub(all) enum PdfFont {
   PdfFontCIDKeyed(PdfCIDKeyedFont)
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfFont::debug_name(Self) -> String
+pub fn PdfFont::embedded_fontfile_number(Self) -> Int?
 pub fn PdfFont::is_identity_h(Self) -> Bool
 pub fn PdfFont::is_identity_v(Self) -> Bool
 pub fn PdfFont::text_extractor(Self) -> PdfTextExtractor
@@ -1966,6 +1973,7 @@ pub(all) enum PdfFontFile {
   PdfFontFile2(Int)
   PdfFontFile3(Int)
 } derive(Eq, ToJson, @debug.Debug)
+pub fn PdfFontFile::object_number(Self) -> Int
 
 pub(all) struct PdfFontListEntry {
   page : Int
