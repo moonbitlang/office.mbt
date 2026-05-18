@@ -29,6 +29,32 @@ pub(all) struct PdfContentPathState {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Clipping-only state exported for inline images, images, and shadings.
+pub(all) struct PdfContentClippingState {
+  clipping_path : Array[PdfPath]
+} derive(Debug, Eq, ToJson)
+
+///|
+/// Text state fields exported alongside glyph content objects.
+pub(all) struct PdfContentGlyphState {
+  rendering_mode : Int
+  knockout : Bool
+  font : String
+  font_size : Double
+  clipping_path : Array[PdfPath]
+} derive(Debug, Eq, ToJson)
+
+///|
+/// Content objects emitted by cpdfcontent's JSON exporter.
+pub(all) enum PdfContentObject {
+  PdfContentGlyphObject(Int, String, String)
+  PdfContentInlineImageObject
+  PdfContentImageObject(String)
+  PdfContentPathObject(PdfDrawnPath)
+  PdfContentShadingObject(String)
+} derive(Debug, Eq, ToJson)
+
+///|
 fn pdf_colour_space_content_name(space : PdfColourSpace) -> String {
   match space {
     PdfDeviceGray => "DeviceGray"
@@ -144,4 +170,96 @@ pub fn PdfContentPathState::content_json(self : PdfContentPathState) -> Json {
 /// Compatibility wrapper for `PdfContentPathState::content_json`.
 pub fn pdf_content_path_state_content_json(state : PdfContentPathState) -> Json {
   state.content_json()
+}
+
+///|
+/// Return cpdfcontent's JSON shape for clipping-only state.
+pub fn PdfContentClippingState::content_json(
+  self : PdfContentClippingState,
+) -> Json {
+  Json::object(
+    Map::of([
+      (
+        "clipping path",
+        pdf_content_clipping_path_content_json(self.clipping_path),
+      ),
+    ]),
+  )
+}
+
+///|
+/// Compatibility wrapper for `PdfContentClippingState::content_json`.
+pub fn pdf_content_clipping_state_content_json(
+  state : PdfContentClippingState,
+) -> Json {
+  state.content_json()
+}
+
+///|
+/// Return cpdfcontent's JSON shape for glyph state.
+pub fn PdfContentGlyphState::content_json(self : PdfContentGlyphState) -> Json {
+  Json::object(
+    Map::of([
+      ("rendering mode", pdf_util_json_number(self.rendering_mode)),
+      ("knockout", Json::boolean(self.knockout)),
+      ("font", Json::string(self.font)),
+      ("font size", Json::number(self.font_size)),
+      (
+        "clipping path",
+        pdf_content_clipping_path_content_json(self.clipping_path),
+      ),
+    ]),
+  )
+}
+
+///|
+/// Compatibility wrapper for `PdfContentGlyphState::content_json`.
+pub fn pdf_content_glyph_state_content_json(
+  state : PdfContentGlyphState,
+) -> Json {
+  state.content_json()
+}
+
+///|
+/// Return cpdfcontent's JSON shape for a content object.
+pub fn PdfContentObject::content_json(self : PdfContentObject) -> Json {
+  match self {
+    PdfContentGlyphObject(charcode, bytes, extracted_text) =>
+      Json::object(
+        Map::of([
+          ("obj", Json::string("glyph")),
+          ("charcode", pdf_util_json_number(charcode)),
+          ("bytes", Json::string(bytes)),
+          ("extracted text", Json::string(extracted_text)),
+        ]),
+      )
+    PdfContentInlineImageObject =>
+      Json::object(
+        Map::of([
+          ("obj", Json::string("inline image")),
+          ("inline image", Json::null()),
+        ]),
+      )
+    PdfContentImageObject(name) =>
+      Json::object(
+        Map::of([("obj", Json::string("image")), ("image", Json::string(name))]),
+      )
+    PdfContentPathObject(path) =>
+      Json::object(
+        Map::of([("obj", Json::string("path")), ("path", path.content_json())]),
+      )
+    PdfContentShadingObject(name) =>
+      Json::object(
+        Map::of([
+          ("obj", Json::string("shading")),
+          ("shading", Json::string(name)),
+        ]),
+      )
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfContentObject::content_json`.
+pub fn pdf_content_object_content_json(object : PdfContentObject) -> Json {
+  object.content_json()
 }

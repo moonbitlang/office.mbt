@@ -2510,6 +2510,16 @@ Current backend snapshot:
   later slices. Native focused validation reports `moon test --target native
   --package bobzhang/pdflite --file pdf_content_state_test.mbt` at 1/1 tests
   passing; native full-suite validation reports 1914/1914 tests passing.~~
+- [x] ~~Standalone `cpdfcontent.ml` content object/state JSON slice exposes
+  `PdfContentClippingState`, `PdfContentGlyphState`, `PdfContentObject`, their
+  `content_json` methods, and compatibility wrappers, matching cpdf's
+  clipping-only state, glyph text-state fields, inline-image null placeholder,
+  image/path/shading object JSON, and precomputed glyph bytes/extracted text
+  fields while leaving font-driven glyph extraction and operator-driven content
+  traversal for later slices. Native focused validation reports `moon test
+  --target native --package bobzhang/pdflite --file pdf_content_state_test.mbt`
+  at 3/3 tests passing; native full-suite validation reports 1916/1916 tests
+  passing.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,
