@@ -22,6 +22,7 @@ Current estimate:
   marker insertion/removal helpers, PDF/UA structure-tree JSON
   import/export helpers, JPEG/JPEG2000, PNG, and JBIG2 image-to-PDF document
   assembly, image XObject JSON listing, image-resolution reporting,
+  cpdf draw-control colour parsing,
   Form XObject stamping,
   composition reporting, core metadata APIs, XMP metadata-date rewriting, XMP
   info synchronization, XMP metadata creation, XMP RDF list extraction,
@@ -1822,6 +1823,14 @@ Current backend snapshot:
   lookup, and missing-colour lookup. Native focused validation reports `moon
   test --target native pdf_colour_test.mbt` at 2/2 tests passing; native
   full-suite validation reports 1724/1724 tests passing.~~
+- [x] ~~Standalone `cpdfdrawcontrol.ml` colour parser slice now exposes
+  `pdf_parse_content_colour`, reusing `PdfContentColour` for cpdf draw/add-text
+  colour arguments. Coverage pins case-insensitive CSS colour conversion to
+  normalized RGB, one/three/four numeric arities for gray/RGB/CMYK, PDF lexical
+  integer/real token handling, and malformed arities/tokens. Native focused
+  validation reports `moon test --target native --package bobzhang/pdflite
+  --file pdf_colour_test.mbt` at 4/4 tests passing; native full-suite
+  validation reports 1772/1772 tests passing.~~
 - [x] ~~Standalone `cpdfcreate.ml` blank-document slice exposes
   `pdf_blank_document` and `pdf_blank_document_paper`, covering point-sized
   pages, named paper sizes, zero-page documents, page-tree/root creation, and

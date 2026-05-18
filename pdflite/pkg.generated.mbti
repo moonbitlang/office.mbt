@@ -651,6 +651,8 @@ pub fn pdf_parse_cmap(PdfDocument, PdfObject) -> PdfParsedCMap raise @core.PdfEr
 
 pub fn pdf_parse_cmap_data(BytesView) -> PdfParsedCMap
 
+pub fn pdf_parse_content_colour(String) -> PdfContentColour raise @core.PdfError
+
 pub fn pdf_parse_content_ops_from_bytes(Bytes) -> Array[PdfContentOp] raise @core.PdfError
 
 pub fn pdf_parse_content_ops_from_view(BytesView) -> Array[PdfContentOp] raise @core.PdfError

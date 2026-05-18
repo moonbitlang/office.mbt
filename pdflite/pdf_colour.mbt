@@ -165,3 +165,85 @@ pub fn pdf_css_colour_value(name : String) -> Int? {
     None
   }
 }
+
+///|
+fn pdf_colour_bad() -> Unit raise PdfError {
+  raise BadNumberArgument("Bad color")
+}
+
+///|
+fn pdf_colour_number(lexeme : PdfLexeme) -> Double raise PdfError {
+  match lexeme {
+    LexInt(value) => value.to_double()
+    LexReal(value) => value
+    _ => {
+      pdf_colour_bad()
+      0.0
+    }
+  }
+}
+
+///|
+fn pdf_colour_lexemes(text : String) -> Array[PdfLexeme] raise PdfError {
+  let cursor = byte_cursor_of_view(@utf8.encode(text))
+  let tokens : Array[PdfLexeme] = []
+  let mut done = false
+  while !done {
+    match cursor.lex_pdf_token() {
+      StopLexing => {
+        cursor.drop_pdf_whitespace()
+        if cursor.peek_byte() != pdf_no_more {
+          pdf_colour_bad()
+        }
+        done = true
+      }
+      LexNone => pdf_colour_bad()
+      token => tokens.push(token)
+    }
+  }
+  tokens
+}
+
+///|
+fn pdf_colour_rgb_value(value : Int) -> PdfContentColour {
+  PdfContentRGB(
+    ((value >> 16) & 0xFF).to_double() / 255.0,
+    ((value >> 8) & 0xFF).to_double() / 255.0,
+    (value & 0xFF).to_double() / 255.0,
+  )
+}
+
+///|
+/// Parse a cpdf draw/add-text colour argument.
+///
+/// CSS colour names are converted to RGB values in the range `0.0..1.0`.
+/// Numeric arguments follow cpdf's arity convention: one number is gray,
+/// three numbers are RGB, and four numbers are CMYK.
+pub fn pdf_parse_content_colour(
+  text : String,
+) -> PdfContentColour raise PdfError {
+  match pdf_css_colour_value(text) {
+    Some(value) => pdf_colour_rgb_value(value)
+    None =>
+      match pdf_colour_lexemes(text) {
+        [grey] => PdfContentGrey(pdf_colour_number(grey))
+        [red, green, blue] =>
+          PdfContentRGB(
+            pdf_colour_number(red),
+            pdf_colour_number(green),
+            pdf_colour_number(blue),
+          )
+        [cyan, magenta, yellow, black] =>
+          PdfContentCMYK(
+            pdf_colour_number(cyan),
+            pdf_colour_number(magenta),
+            pdf_colour_number(yellow),
+            pdf_colour_number(black),
+          )
+        _ => {
+          pdf_colour_bad()
+          PdfContentGrey(0.0)
+        }
+      }
+  }
+}
