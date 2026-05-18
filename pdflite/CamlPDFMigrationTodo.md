@@ -2581,6 +2581,14 @@ Current backend snapshot:
   Native focused validation reports `moon test --target native --package
   bobzhang/pdflite --file pdf_toc_test.mbt` at 7/7 tests passing; native
   full-suite validation reports 1901/1901 tests passing.~~
+- [x] ~~Standalone `cpdftoc.ml` used-codepoint scan slice exposes
+  `PdfDocument::toc_used_codepoints` and `pdf_toc_used_codepoints`, covering
+  cpdf's pre-embedding dot/title/bookmark/page-label scan, PDFDocString
+  decoding, destination-to-page-label lookup, null-target fallback numbering,
+  first-occurrence de-duplication, and wrapper parity. Native focused
+  validation reports `moon test --target native --package bobzhang/pdflite
+  --file pdf_toc_test.mbt` at 8/8 tests passing; native full-suite validation
+  reports 1902/1902 tests passing.~~
 - [x] ~~Page labels, bookmarks, annotations, duplicate annotation repair,
   old-style destinations, name-tree destinations, `/OpenAction`, optional
   content, AcroForm merge basics, trailer `/Info`, and structure-tree

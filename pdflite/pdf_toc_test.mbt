@@ -28,6 +28,11 @@ fn toc_standard_pack_for_test() -> @pdflite.PdfFontPack {
 }
 
 ///|
+fn toc_pdfdoc_for_test(text : String) -> @pdflite.PdfBytes {
+  try! @pdflite.pdf_pdfdocstring_of_utf8(@utf8.encode(text))
+}
+
+///|
 test "pdf_toc_split_title and real_newlines mirror cpdf title escaping" {
   @test.assert_eq(
     @pdflite.pdf_toc_split_title(toc_bytes_for_test("A\\nB\\n")),
@@ -164,4 +169,60 @@ test "pdf_toc_make_dots creates cpdf dot leader with remainder glue" {
   @test.assert_eq(try! @pdflite.pdf_toc_make_dots(-1.0, pack, 8.0), [
     PdfTypeHGlue(-1.0),
   ])
+}
+
+///|
+test "PdfDocument toc_used_codepoints scans title bookmarks and labels" {
+  let document = try! @pdflite.pdf_blank_document(100.0, 100.0, 2)
+  let page_refs = try! document.page_reference_numbers()
+  let labels : Array[@pdflite.PdfPageLabel] = [
+    {
+      label_style: PageLabelDecimalArabic,
+      label_prefix: None,
+      start_page: 1,
+      start_value: 1,
+    },
+    {
+      label_style: PageLabelDecimalArabic,
+      label_prefix: Some(toc_pdfdoc_for_test("P-")),
+      start_page: 2,
+      start_value: 5,
+    },
+  ]
+  let bookmarks : Array[@pdflite.PdfBookmark] = [
+    {
+      level: 0,
+      text: toc_pdfdoc_for_test("Go"),
+      target: DestFit(TargetPageObject(page_refs[1])),
+      is_open: true,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+    {
+      level: 0,
+      text: toc_pdfdoc_for_test("Zero"),
+      target: DestNull,
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+  ]
+  let expected = [46, 84, 79, 67, 71, 111, 80, 45, 53, 90, 101, 114, 48]
+  @test.assert_eq(
+    try! document.toc_used_codepoints(
+      labels,
+      toc_bytes_for_test("TOC"),
+      bookmarks,
+    ),
+    expected,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_toc_used_codepoints(
+      document,
+      labels,
+      toc_bytes_for_test("TOC"),
+      bookmarks,
+    ),
+    expected,
+  )
 }

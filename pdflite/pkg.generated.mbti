@@ -1149,6 +1149,8 @@ pub fn pdf_toc_split_title(BytesView) -> Array[Bytes]
 
 pub fn pdf_toc_title_real_newlines(BytesView) -> Bytes
 
+pub fn pdf_toc_used_codepoints(PdfDocument, ArrayView[PdfPageLabel], BytesView, ArrayView[PdfBookmark]) -> Array[Int] raise @core.PdfError
+
 pub fn pdf_toc_width_of_runs(ArrayView[PdfTypeElement]) -> Double raise @core.PdfError
 
 pub fn pdf_transform_annotations(PdfDocument, @geometry.TransformMatrix, PdfObject) -> Unit raise @core.PdfError
@@ -2198,6 +2200,7 @@ pub fn PdfDocument::struct_tree_text(Self) -> Bytes raise @core.PdfError
 pub fn PdfDocument::target_of_page_number(Self, Int) -> PdfDestination raise @core.PdfError
 pub fn PdfDocument::text_extractor_of_font(Self, PdfObject) -> PdfTextExtractor raise @core.PdfError
 pub fn PdfDocument::thin_lines(Self, ArrayView[Int], Double) -> Self raise @core.PdfError
+pub fn PdfDocument::toc_used_codepoints(Self, ArrayView[PdfPageLabel], BytesView, ArrayView[PdfBookmark]) -> Array[Int] raise @core.PdfError
 pub fn PdfDocument::trailer_dict(Self) -> PdfObject
 pub fn PdfDocument::transform_annotations(Self, @geometry.TransformMatrix, PdfObject) -> Unit raise @core.PdfError
 pub fn PdfDocument::transform_bookmark(Self, @geometry.TransformMatrix, PdfBookmark) -> PdfBookmark raise @core.PdfError

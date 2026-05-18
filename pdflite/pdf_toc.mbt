@@ -183,6 +183,98 @@ pub fn pdf_toc_of_utf8(
 }
 
 ///|
+fn pdf_toc_codepoints_contains(
+  codepoints : ArrayView[Int],
+  codepoint : Int,
+) -> Bool {
+  for current in codepoints {
+    if current == codepoint {
+      return true
+    }
+  }
+  false
+}
+
+///|
+fn pdf_toc_append_unique_codepoints(
+  output : Array[Int],
+  codepoints : ArrayView[Int],
+) -> Unit {
+  for codepoint in codepoints {
+    if !pdf_toc_codepoints_contains(output, codepoint) {
+      output.push(codepoint)
+    }
+  }
+}
+
+///|
+fn pdf_toc_append_utf8_codepoints(
+  output : Array[Int],
+  text : BytesView,
+) -> Unit raise PdfError {
+  pdf_toc_append_unique_codepoints(output, pdf_codepoints_of_utf8(text))
+}
+
+///|
+fn pdf_toc_append_pdfdocstring_codepoints(
+  output : Array[Int],
+  text : BytesView,
+) -> Unit raise PdfError {
+  pdf_toc_append_utf8_codepoints(output, pdf_utf8_of_pdfdocstring(text))
+}
+
+///|
+fn pdf_toc_page_label_text(
+  page_number : Int,
+  labels : ArrayView[PdfPageLabel],
+) -> PdfBytes {
+  if page_number < 1 {
+    pdf_toc_ascii(page_number.to_string())
+  } else {
+    match pdf_page_label_text_of_page_number(page_number, labels) {
+      Some(label) => label
+      None => pdf_toc_ascii(page_number.to_string())
+    }
+  }
+}
+
+///|
+/// Return the unique Unicode codepoints cpdftoc needs before embedding a font.
+///
+/// The scan includes the dot used by ellipses/leaders, the TOC title, bookmark
+/// titles, and the visible page-label text for each bookmark target. The
+/// returned order is first occurrence for deterministic callers and tests.
+pub fn PdfDocument::toc_used_codepoints(
+  self : PdfDocument,
+  labels : ArrayView[PdfPageLabel],
+  title : BytesView,
+  bookmarks : ArrayView[PdfBookmark],
+) -> Array[Int] raise PdfError {
+  let used : Array[Int] = [46]
+  pdf_toc_append_utf8_codepoints(used, title)
+  for bookmark in bookmarks {
+    pdf_toc_append_pdfdocstring_codepoints(used, bookmark.text)
+    let page_number = self.page_number_of_target(bookmark.target)
+    pdf_toc_append_pdfdocstring_codepoints(
+      used,
+      pdf_toc_page_label_text(page_number, labels),
+    )
+  }
+  used
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::toc_used_codepoints`.
+pub fn pdf_toc_used_codepoints(
+  document : PdfDocument,
+  labels : ArrayView[PdfPageLabel],
+  title : BytesView,
+  bookmarks : ArrayView[PdfBookmark],
+) -> Array[Int] raise PdfError {
+  document.toc_used_codepoints(labels, title, bookmarks)
+}
+
+///|
 /// Convert PDFDocEncoding/PDFDocString bytes into the font/text runs used by
 /// cpdftoc.
 pub fn pdf_toc_of_pdfdocencoding(
