@@ -61,6 +61,8 @@ pub fn pdf_add_bookmark_title(String, Bool, PdfDocument) -> PdfDocument raise @c
 
 pub fn pdf_add_bookmarks(ArrayView[PdfBookmark], PdfDocument) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_add_bookmarks_from_text(Bool, BytesView, PdfDocument) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_add_page_labels(PdfDocument, Bool, PdfPageLabelStyle, Bytes?, Int, ArrayView[Int]) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_add_page_labels_json(PdfDocument, Json) -> PdfDocument raise @core.PdfError
@@ -592,6 +594,8 @@ pub fn pdf_page_rotation_of_int(Int) -> PdfPageRotation raise @core.PdfError
 pub fn pdf_pagenumber_of_target(PdfDocument, PdfDestination) -> Int raise @core.PdfError
 
 pub fn pdf_pages_of_pagetree(PdfDocument) -> Array[PdfPage] raise @core.PdfError
+
+pub fn pdf_parse_bookmark_text(Bool, BytesView, PdfDocument) -> Array[PdfBookmark] raise @core.PdfError
 
 pub fn pdf_parse_cmap(PdfDocument, PdfObject) -> PdfParsedCMap raise @core.PdfError
 
@@ -1601,6 +1605,7 @@ pub struct PdfDocument {
 pub fn PdfDocument::add_annotation(Self, PdfPage, PdfAnnotation) -> PdfPage raise @core.PdfError
 pub fn PdfDocument::add_bookmark_title(Self, String, Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::add_bookmarks(Self, ArrayView[PdfBookmark]) -> Self raise @core.PdfError
+pub fn PdfDocument::add_bookmarks_from_text(Self, BytesView, verify? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::add_object(Self, PdfObject, generation? : Int) -> Int
 pub fn PdfDocument::add_object_given_number(Self, Int, PdfObject, generation? : Int) -> Unit
 pub fn PdfDocument::add_page_labels(Self, Bool, PdfPageLabelStyle, Bytes?, Int, ArrayView[Int]) -> Self raise @core.PdfError
@@ -1728,6 +1733,7 @@ pub fn PdfDocument::page_object_number(Self, Int) -> Int? raise @core.PdfError
 pub fn PdfDocument::page_reference_numbers(Self) -> Array[Int] raise @core.PdfError
 pub fn PdfDocument::pages_of_pagetree(Self) -> Array[PdfPage] raise @core.PdfError
 pub fn PdfDocument::pages_of_pagetree_quick(Self) -> Int raise @core.PdfError
+pub fn PdfDocument::parse_bookmark_text(Self, BytesView, verify? : Bool) -> Array[PdfBookmark] raise @core.PdfError
 pub fn PdfDocument::parse_cmap(Self, PdfObject) -> PdfParsedCMap raise @core.PdfError
 pub fn PdfDocument::parse_content_bytes_with_resources(Self, PdfObject, Bytes) -> Array[PdfContentOp] raise @core.PdfError
 pub fn PdfDocument::parse_content_ops(Self, ArrayView[PdfObject]) -> Array[PdfContentOp] raise @core.PdfError

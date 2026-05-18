@@ -382,6 +382,87 @@ test "PdfDocument bookmark_name_of_spec expands cpdf filename fields" {
 }
 
 ///|
+test "PdfDocument parse_bookmark_text reads cpdf plain text bookmarks" {
+  let document = try! @pdflite.pdf_blank_document(100.0, 100.0, 2)
+  let page_refs = try! document.page_reference_numbers()
+  let source = @ascii.encode(
+    "0 \"Top\\nQuote\\\"Slash\\\\\" 1 open \"[1 /Fit]\"\n" +
+    "1 \"Child\" 2 \"[1 /XYZ 10 null 2]\"\n" +
+    "0 \"Named\" 0 \"(chapter)\"\n\n",
+  )
+  let expected : Array[@pdflite.PdfBookmark] = [
+    {
+      level: 0,
+      text: bookmark_bytes_for_test("Top\nQuote\"Slash\\"),
+      target: DestFit(TargetPageObject(page_refs[0])),
+      is_open: true,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+    {
+      level: 1,
+      text: bookmark_bytes_for_test("Child"),
+      target: DestXYZ(
+        TargetPageObject(page_refs[1]),
+        Some(10.0),
+        None,
+        Some(2.0),
+      ),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+    {
+      level: 0,
+      text: bookmark_bytes_for_test("Named"),
+      target: DestString(bookmark_bytes_for_test("chapter")),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+  ]
+  @test.assert_eq(try! document.parse_bookmark_text(source), expected)
+  @test.assert_eq(
+    try! @pdflite.pdf_parse_bookmark_text(true, source, document),
+    expected,
+  )
+  let updated = try! @pdflite.pdf_add_bookmarks_from_text(
+    true, source, document,
+  )
+  @test.assert_eq(try! updated.read_bookmarks(preserve_actions=true), expected)
+}
+
+///|
+test "PdfDocument parse_bookmark_text validates plain text structure" {
+  let document = try! @pdflite.pdf_blank_document(100.0, 100.0, 2)
+  let bad_first_level : Result[Array[@pdflite.PdfBookmark], Error] = try? document.parse_bookmark_text(
+    @ascii.encode("1 \"Bad\" 1\n"),
+  )
+  guard bad_first_level is Err(@pdflite.PdfError::SoftError(_)) else {
+    fail("expected @pdflite.PdfError::SoftError for first level")
+  }
+  let bad_jump : Result[Array[@pdflite.PdfBookmark], Error] = try? document.parse_bookmark_text(
+    @ascii.encode("0 \"Top\" 1\n2 \"Bad\" 1\n"),
+  )
+  guard bad_jump is Err(@pdflite.PdfError::SoftError(_)) else {
+    fail("expected @pdflite.PdfError::SoftError for level jump")
+  }
+  let malformed : Result[Array[@pdflite.PdfBookmark], Error] = try? document.parse_bookmark_text(
+    @ascii.encode("0 not-a-string 1\n"),
+  )
+  guard malformed is Err(@pdflite.PdfError::SoftError(_)) else {
+    fail("expected @pdflite.PdfError::SoftError for malformed line")
+  }
+  @test.assert_eq(
+    (try! document.parse_bookmark_text(
+      @ascii.encode("0 \"Top\" 1\n2 \"Allowed\" 1\n"),
+      verify=false,
+    )).length(),
+    2,
+  )
+}
+
+///|
 test "PdfDocument read_bookmarks traverses outline trees" {
   let doc = bookmark_document_for_test()
   let expected : Array[@pdflite.PdfBookmark] = [
