@@ -1729,6 +1729,17 @@ Current backend snapshot:
   full-suite validation reports 1552/1552 tests passing; coverage analysis
   reports only three defensive unreachable `InvalidUTF8` branches in
   `pdf_util.mbt`.~~
+- [x] ~~Standalone utility ports for `cpdfdebug.ml`, `cpdfprinttree.ml`, and
+  `cpdfstrftime.ml` expose `PdfDocument::debug_objects`,
+  `pdf_print_tree_to_string`, explicit-time and native-current-time strftime
+  helpers, and compatibility wrappers where applicable. Coverage pins cpdf's
+  trailer/catalog/pages dump spelling, missing-root and no-pages diagnostics,
+  Unicode tree-line rendering with line prefixes, strftime replacement order,
+  field quirks, invalid-field fallback names, and native local-time field
+  ranges. Native focused validation reports `moon test --target native
+  pdf_debug_test.mbt` at 3/3, `pdf_print_tree_test.mbt` at 2/2,
+  `pdf_strftime_test.mbt` at 3/3, and `pdf_strftime_native_test.mbt` at 2/2;
+  native full-suite validation reports 1717/1717 tests passing.~~
 - [x] ~~Standalone `cpdfjson.ml` single-object output slice now exposes
   `PdfDocument::json_of_object` and `pdf_json_of_object`, covering CPDFJSON
   dictionary, array, stream, name, integer, real, indirect, boolean, null, and
