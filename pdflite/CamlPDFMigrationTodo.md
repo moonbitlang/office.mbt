@@ -1845,6 +1845,14 @@ Current backend snapshot:
   positive/negative multiple padding. Native focused validation reports
   `moon test --target native pdf_pad_test.mbt` at 8/8 tests passing; native
   full-suite validation reports 1714/1714 tests passing.~~
+- [x] ~~Standalone `cpdfpresent.ml` presentation-transition slice exposes
+  `PdfDocument::presentation` and `pdf_presentation`, covering accepted cpdf
+  transition names, transition-specific `/Dm`, `/M`, and `/Di` entries, delay
+  insertion/removal, selected-page application with out-of-range pages ignored,
+  no-transition dictionaries, unknown-name errors, wrapper parity, and
+  source-document preservation. Native focused validation reports `moon test
+  --target native pdf_presentation_test.mbt` at 6/6 tests passing; native
+  full-suite validation reports 1720/1720 tests passing.~~
 - [x] ~~Standalone `cpdfposition.ml` position helper slice exposes the
   `PdfPosition` model, `pdf_string_of_position`, and
   `pdf_calculate_position`, covering every cpdf debug spelling, centered and

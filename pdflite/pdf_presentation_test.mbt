@@ -250,6 +250,41 @@ test "pdf_presentation supports direction effects and delay removal" {
 }
 
 ///|
+test "pdf_presentation wrapper preserves source document" {
+  let document = presentation_document_for_test()
+  let updated = try! @pdflite.pdf_presentation(
+    [1],
+    Some("Box"),
+    Some(1.5),
+    true,
+    false,
+    0,
+    0.5,
+    document,
+  )
+  let key_trans = presentation_name_for_test("/Trans")
+  let key_dur = presentation_name_for_test("/Dur")
+  let updated_pages = try! updated.pages_of_pagetree()
+  @test.assert_eq(
+    presentation_lookup_for_test(updated_pages[0].rest, key_trans) != None,
+    true,
+  )
+  @test.assert_eq(
+    presentation_lookup_for_test(updated_pages[0].rest, key_dur),
+    Some(PdfReal(1.5)),
+  )
+  let original_pages = try! document.pages_of_pagetree()
+  @test.assert_eq(
+    presentation_lookup_for_test(original_pages[0].rest, key_trans),
+    None,
+  )
+  @test.assert_eq(
+    presentation_lookup_for_test(original_pages[0].rest, key_dur),
+    Some(PdfReal(99.0)),
+  )
+}
+
+///|
 test "PdfDocument presentation supports no transition name" {
   let updated = try! presentation_document_for_test().presentation(
     [2],
