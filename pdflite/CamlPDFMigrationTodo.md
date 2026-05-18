@@ -2083,6 +2083,14 @@ Current backend snapshot:
   missing-font `None`. Native focused validation reports `moon test --target
   native pdf_font_test.mbt` at 7/7 tests passing; native full-suite validation
   reports 1754/1754 tests passing.~~
+- [x] ~~Standalone `cpdffont.ml` copy-font slice now exposes
+  `PdfDocument::copy_font_from` and `pdf_copy_font`, covering source/target
+  object renumbering, copied referenced font objects, adding the direct source
+  font under its `/BaseFont` resource name, preserving existing target page
+  fonts, selected-page-only updates, wrapper parity, and invalid target-page
+  rejection. Native focused validation reports `moon test --target native
+  pdf_font_test.mbt` at 8/8 tests passing; native full-suite validation reports
+  1755/1755 tests passing.~~
 - [x] ~~Page labels, bookmarks, annotations, duplicate annotation repair,
   old-style destinations, name-tree destinations, `/OpenAction`, optional
   content, AcroForm merge basics, trailer `/Info`, and structure-tree

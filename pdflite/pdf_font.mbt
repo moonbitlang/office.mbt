@@ -483,6 +483,98 @@ pub fn pdf_extract_fontfile_bytes(
 }
 
 ///|
+fn PdfDocument::pdf_font_copy_referenced_objects_from(
+  self : PdfDocument,
+  source : PdfDocument,
+  font : PdfObject,
+) -> Unit {
+  for number in source.referenced_object_numbers(font) {
+    self.add_object_given_number(number, source.lookup_object_or_null(number))
+  }
+}
+
+///|
+fn PdfDocument::pdf_font_resource_dictionary_or_empty(
+  self : PdfDocument,
+  resources : PdfObject,
+) -> PdfObject raise PdfError {
+  match self.lookup_direct(pdf_page_font_resource_name, resources) {
+    Some(PdfDictionary(_) as fonts) => fonts
+    Some(_) => raise DictionaryExpected
+    None => PdfDictionary([])
+  }
+}
+
+///|
+fn PdfDocument::pdf_font_add_to_page_resources(
+  self : PdfDocument,
+  page : PdfPage,
+  resource_name : PdfName,
+  font : PdfObject,
+) -> PdfPage raise PdfError {
+  let fonts = self.pdf_font_resource_dictionary_or_empty(page.resources)
+  let updated_fonts = fonts.add_dict_entry(resource_name, font)
+  {
+    ..page,
+    resources: page.resources.add_dict_entry(
+      pdf_page_font_resource_name, updated_fonts,
+    ),
+  }
+}
+
+///|
+/// Copy a named font from `source` onto selected pages of this document.
+///
+/// This ports cpdf's `copy_font`: both documents are first renumbered into one
+/// non-overlapping object space, the direct source font dictionary is added to
+/// selected target pages under its `/BaseFont` name, and all objects referenced
+/// by the copied font dictionary are copied into the target document.
+pub fn PdfDocument::copy_font_from(
+  self : PdfDocument,
+  source : PdfDocument,
+  font_name : String,
+  font_page : Int,
+  page_numbers : ArrayView[Int],
+) -> PdfDocument raise PdfError {
+  let renumbered = pdf_renumber_documents([source, self])
+  let source_pdf = renumbered[0]
+  let target_pdf = renumbered[1]
+  let font = source_pdf.font_from_name(font_name, font_page)
+  let resource_name = match
+    source_pdf.lookup_direct(pdf_text_base_font_key_name, font) {
+    Some(PdfNameObject(name)) => name
+    _ => pdf_name_of_bytes(b"/CopyFontAddedNoName")
+  }
+  target_pdf.pdf_font_copy_referenced_objects_from(source_pdf, font)
+  let pages = target_pdf.pages_of_pagetree()
+  pdf_page_box_validate_page_numbers(page_numbers, pages.length(), "copy_font")
+  let rewritten : Array[PdfPage] = []
+  for index, page in pages {
+    let page_number = index + 1
+    if pdf_page_box_contains_page(page_numbers, page_number) {
+      rewritten.push(
+        target_pdf.pdf_font_add_to_page_resources(page, resource_name, font),
+      )
+    } else {
+      rewritten.push(page)
+    }
+  }
+  target_pdf.change_pages(rewritten)
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::copy_font_from`.
+pub fn pdf_copy_font(
+  source : PdfDocument,
+  font_name : String,
+  font_page : Int,
+  page_numbers : ArrayView[Int],
+  target : PdfDocument,
+) -> PdfDocument raise PdfError {
+  target.copy_font_from(source, font_name, font_page, page_numbers)
+}
+
+///|
 fn PdfDocument::pdf_font_has_embedded_file(
   self : PdfDocument,
   descriptor : PdfObject,

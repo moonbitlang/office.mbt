@@ -241,6 +241,8 @@ pub fn pdf_content_end_artifact() -> PdfContentOp
 
 pub fn pdf_content_stream_of_ops(ArrayView[PdfContentOp]) -> PdfObject raise @core.PdfError
 
+pub fn pdf_copy_font(PdfDocument, String, Int, ArrayView[Int], PdfDocument) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_copy_id(Bool, PdfDocument, PdfDocument) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_copy_page_box(PdfDocument, ArrayView[Int], @core.PdfName, @core.PdfName, mediabox_if_missing? : Bool) -> PdfDocument raise @core.PdfError
@@ -1678,6 +1680,7 @@ pub fn PdfDocument::composition_json_blob(Self, Int) -> Bytes raise @core.PdfErr
 pub fn PdfDocument::contains_javascript(Self) -> Bool
 pub fn PdfDocument::contents_of_name_tree(Self, PdfObject) -> Array[(PdfObject, PdfObject)]
 pub fn PdfDocument::copy(Self) -> Self
+pub fn PdfDocument::copy_font_from(Self, Self, String, Int, ArrayView[Int]) -> Self raise @core.PdfError
 pub fn PdfDocument::copy_id_from(Self, Self, keep_version? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::copy_page_box(Self, ArrayView[Int], @core.PdfName, @core.PdfName, mediabox_if_missing? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::create_metadata(Self) -> Self raise @core.PdfError

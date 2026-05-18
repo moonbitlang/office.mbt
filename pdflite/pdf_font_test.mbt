@@ -54,6 +54,18 @@ fn font_resource_dictionary_for_test(
 }
 
 ///|
+fn font_required_lookup_for_test(
+  document : @pdflite.PdfDocument,
+  key : String,
+  object : @pdflite.PdfObject,
+) -> @pdflite.PdfObject raise {
+  match document.lookup_direct(font_name_for_test(key), object) {
+    Some(value) => value
+    None => fail("missing key " + key)
+  }
+}
+
+///|
 fn font_font_object_for_test(
   subtype : String,
   basefont : String,
@@ -398,6 +410,63 @@ fn font_extraction_document_for_test() -> @pdflite.PdfDocument {
 }
 
 ///|
+fn font_copy_source_document_for_test() -> @pdflite.PdfDocument {
+  let key_font = font_name_for_test("/Font")
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(80, font_file_stream_for_test("copy-font"))
+  doc.add_object_given_number(
+    81,
+    font_descriptor_with_file_for_test("/FontFile2", 80),
+  )
+  doc.add_object_given_number(
+    82,
+    font_font_object_with_descriptor_for_test(
+      "/TrueType",
+      "/CopiedFont",
+      Some("/WinAnsiEncoding"),
+      PdfIndirect(81),
+    ),
+  )
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: PdfDictionary([
+      (
+        key_font,
+        font_resource_dictionary_for_test([("/FSrc", PdfIndirect(82))]),
+      ),
+    ]),
+  }
+  let page_root = try! doc.add_pagetree([page])
+  ignore(try! doc.add_root(page_root, []))
+  doc
+}
+
+///|
+fn font_copy_target_document_for_test() -> @pdflite.PdfDocument {
+  let key_font = font_name_for_test("/Font")
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(
+    30,
+    font_font_object_for_test("/Type1", "/ExistingFont", None),
+  )
+  let first_page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: PdfDictionary([
+      (
+        key_font,
+        font_resource_dictionary_for_test([("/Existing", PdfIndirect(30))]),
+      ),
+    ]),
+  }
+  let page_root = try! doc.add_pagetree([
+    first_page,
+    @pdflite.pdf_page_blank(@pdflite.paper_a4),
+  ])
+  ignore(try! doc.add_root(page_root, []))
+  doc
+}
+
+///|
 test "PdfDocument remove_embedded_fonts strips font files from descriptors" {
   let key_font_descriptor = font_name_for_test("/FontDescriptor")
   let key_font_file = font_name_for_test("/FontFile")
@@ -616,4 +685,65 @@ test "PdfDocument extract_fontfile_bytes returns decoded embedded bytes" {
   )
   @test.assert_eq(try! doc.extract_fontfile_bytes(1, "/FNo"), None)
   @test.assert_eq(try! doc.extract_fontfile_bytes(1, "/Missing"), None)
+}
+
+///|
+test "PdfDocument copy_font_from adds source font to selected target pages" {
+  let source = font_copy_source_document_for_test()
+  let target = font_copy_target_document_for_test()
+  let copied = try! target.copy_font_from(source, "/FSrc", 1, [2])
+  let pages = try! copied.pages_of_pagetree()
+  let first_fonts = try! font_required_lookup_for_test(
+    copied,
+    "/Font",
+    pages[0].resources,
+  )
+  @test.assert_eq(
+    copied.lookup_direct(font_name_for_test("/Existing"), first_fonts) != None,
+    true,
+  )
+  @test.assert_eq(
+    copied.lookup_direct(font_name_for_test("/CopiedFont"), first_fonts),
+    None,
+  )
+  let second_fonts = try! font_required_lookup_for_test(
+    copied,
+    "/Font",
+    pages[1].resources,
+  )
+  let copied_font = try! font_required_lookup_for_test(
+    copied, "/CopiedFont", second_fonts,
+  )
+  @test.assert_eq(
+    copied.lookup_direct(font_name_for_test("/BaseFont"), copied_font),
+    Some(PdfNameObject(font_name_for_test("/CopiedFont"))),
+  )
+  let descriptor = try! font_required_lookup_for_test(
+    copied, "/FontDescriptor", copied_font,
+  )
+  let font_file = try! font_required_lookup_for_test(
+    copied, "/FontFile2", descriptor,
+  )
+  @test.assert_eq(try! font_file.stream_bytes(), @ascii.encode("copy-font"))
+  let wrapped = try! @pdflite.pdf_copy_font(source, "/FSrc", 1, [2], target)
+  let wrapped_pages = try! wrapped.pages_of_pagetree()
+  let wrapped_fonts = try! font_required_lookup_for_test(
+    wrapped,
+    "/Font",
+    wrapped_pages[1].resources,
+  )
+  @test.assert_eq(
+    wrapped.lookup_direct(font_name_for_test("/CopiedFont"), wrapped_fonts) !=
+    None,
+    true,
+  )
+  let bad_page : Result[@pdflite.PdfDocument, Error] = try? target.copy_font_from(
+    source,
+    "/FSrc",
+    1,
+    [3],
+  )
+  guard bad_page is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+    fail("expected BadPageSpecification")
+  }
 }
