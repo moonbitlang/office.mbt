@@ -69,6 +69,82 @@ test "PdfColourSpace debug names preserve CamlPDF forms" {
 }
 
 ///|
+test "cpdfcontent state serializes colour spaces and colour operands" {
+  let spaces : Array[(@pdflite.PdfColourSpace, Json)] = [
+    (PdfDeviceGray, Json::string("DeviceGray")),
+    (PdfDeviceRGB, Json::string("DeviceRGB")),
+    (PdfDeviceCMYK, Json::string("DeviceCMYK")),
+    (
+      PdfCalGray({ x: 1.0, y: 1.0, z: 1.0 }, { x: 0.0, y: 0.0, z: 0.0 }, 1.0),
+      Json::string("CalGray"),
+    ),
+    (
+      PdfCalRGB(
+        { x: 1.0, y: 1.0, z: 1.0 },
+        { x: 0.0, y: 0.0, z: 0.0 },
+        [1.0, 1.0, 1.0],
+        [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
+      ),
+      Json::string("CalRGB"),
+    ),
+    (
+      PdfLab({ x: 1.0, y: 1.0, z: 1.0 }, { x: 0.0, y: 0.0, z: 0.0 }, [
+        -100.0, 100.0, -100.0, 100.0,
+      ]),
+      Json::string("Lab"),
+    ),
+    (
+      PdfICCBased(1, PdfDeviceRGB, [0.0, 1.0], None, PdfNull),
+      Json::string("ICCBased"),
+    ),
+    (PdfIndexed(PdfDeviceRGB, [(0, [0, 0, 0])]), Json::string("Indexed")),
+    (PdfPattern, Json::string("Pattern")),
+    (
+      PdfPatternWithBaseColourSpace(PdfDeviceRGB),
+      Json::string("PatternWithBaseColourspace"),
+    ),
+    (
+      PdfSeparation(space_name_for_test("/Spot"), PdfDeviceCMYK, PdfNull),
+      Json::string("Separation"),
+    ),
+    (
+      PdfDeviceN(
+        [space_name_for_test("/Cyan")],
+        PdfDeviceCMYK,
+        PdfNull,
+        PdfNull,
+      ),
+      Json::string("DeviceN"),
+    ),
+  ]
+  for item in spaces {
+    let (space, expected) = item
+    @test.assert_eq(space.content_json(), expected)
+    @test.assert_eq(@pdflite.pdf_colour_space_content_json(space), expected)
+  }
+  let floats = @pdflite.PdfContentColourFloats([0.1, 0.2, 0.3])
+  @test.assert_eq(
+    floats.content_json(),
+    Json::array([Json::number(0.1), Json::number(0.2), Json::number(0.3)]),
+  )
+  let named = @pdflite.PdfContentColourNamed("/P1", [0.25, 0.75])
+  let named_json = Json::array([
+    Json::string("/P1"),
+    Json::number(0.25),
+    Json::number(0.75),
+  ])
+  @test.assert_eq(named.content_json(), named_json)
+  @test.assert_eq(
+    @pdflite.pdf_content_colour_values_content_json(named),
+    named_json,
+  )
+  @test.assert_eq(
+    @pdflite.PdfContentColourPattern.content_json(),
+    Json::string("pattern"),
+  )
+}
+
+///|
 test "PdfColourSpace name only reports separation colourants" {
   @test.assert_eq(@pdflite.PdfDeviceRGB.name(), None)
   @test.assert_eq(@pdflite.pdf_name_of_colour_space(PdfDeviceRGB), None)

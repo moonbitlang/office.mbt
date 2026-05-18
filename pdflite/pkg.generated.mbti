@@ -337,6 +337,8 @@ pub fn pdf_codepoints_of_utf8(BytesView) -> Array[Int] raise @core.PdfError
 
 pub fn pdf_colour_space_components(PdfDocument, PdfObject, PdfObject) -> Int raise @core.PdfError
 
+pub fn pdf_colour_space_content_json(PdfColourSpace) -> Json
+
 pub fn pdf_colour_space_of_device_name(@core.PdfName) -> PdfColourSpace?
 
 pub fn pdf_colour_space_of_object(PdfObject) -> PdfColourSpace?
@@ -354,6 +356,8 @@ pub let pdf_content_black : PdfContentColour
 pub fn pdf_content_bytes_of_op(PdfContentOp) -> Bytes raise @core.PdfError
 
 pub fn pdf_content_bytes_of_ops(ArrayView[PdfContentOp]) -> Bytes raise @core.PdfError
+
+pub fn pdf_content_colour_values_content_json(PdfContentColourValues) -> Json
 
 pub fn pdf_content_concat_stream_views(ArrayView[BytesView]) -> Bytes
 
@@ -1781,6 +1785,7 @@ pub(all) enum PdfColourSpace {
   PdfSeparation(@core.PdfName, PdfColourSpace, PdfObject)
   PdfDeviceN(Array[@core.PdfName], PdfColourSpace, PdfObject, PdfObject)
 } derive(Eq, ToJson, @debug.Debug)
+pub fn PdfColourSpace::content_json(Self) -> Json
 pub fn PdfColourSpace::debug_name(Self) -> String
 pub fn PdfColourSpace::name(Self) -> @core.PdfName?
 
@@ -1806,6 +1811,13 @@ pub(all) enum PdfContentColour {
   PdfContentRGB(Double, Double, Double)
   PdfContentCMYK(Double, Double, Double, Double)
 } derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfContentColourValues {
+  PdfContentColourFloats(Array[Double])
+  PdfContentColourNamed(String, Array[Double])
+  PdfContentColourPattern
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfContentColourValues::content_json(Self) -> Json
 
 type PdfContentInlineTextFilter derive(Eq, @debug.Debug)
 
