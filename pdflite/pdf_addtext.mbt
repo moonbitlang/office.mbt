@@ -47,6 +47,16 @@ pub(all) struct PdfAddTextReplacementValues {
 } derive(Debug, Eq, ToJson)
 
 ///|
+let pdf_addtext_cpdf_stamp_name : PdfName = pdf_name_of_bytes(
+  @ascii.encode("/CPDFSTAMP"),
+)
+
+///|
+fn pdf_addtext_cpdf_stamp() -> PdfName {
+  pdf_addtext_cpdf_stamp_name
+}
+
+///|
 /// Build the cpdf add-text fill colour operator.
 pub fn pdf_addtext_colour_op(colour : PdfContentColour) -> PdfContentOp {
   colour.pdf_tweak_fill_op()
@@ -99,6 +109,40 @@ pub fn pdf_addtext_width_of_text(font : PdfFont, text : BytesView) -> Double {
     }
     _ => 0.0
   }
+}
+
+///|
+/// Build cpdf add-rectangle content operators after placement is resolved.
+pub fn pdf_addtext_rectangle_ops(
+  x : Double,
+  y : Double,
+  width : Double,
+  height : Double,
+  colour : PdfContentColour,
+  outline : Bool,
+  line_width : Double,
+  extgstate_name : PdfName?,
+) -> Array[PdfContentOp] {
+  let ops = [
+    pdf_content_begin_artifact(),
+    Op_q,
+    Op_BMC(pdf_addtext_cpdf_stamp()),
+    pdf_addtext_colour_op(colour),
+    pdf_addtext_colour_op_stroke(colour),
+  ]
+  if outline {
+    ops.push(Op_w(line_width))
+  }
+  match extgstate_name {
+    Some(name) => ops.push(Op_gs(name))
+    None => ()
+  }
+  ops.push(Op_re(x, y, width, height))
+  ops.push(if outline { Op_s } else { Op_f })
+  ops.push(Op_EMC)
+  ops.push(Op_Q)
+  ops.push(pdf_content_end_artifact())
+  ops
 }
 
 ///|

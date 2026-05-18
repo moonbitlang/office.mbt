@@ -97,6 +97,8 @@ pub fn pdf_addtext_page_label(PdfDocument, Int) -> String raise @core.PdfError
 
 pub fn pdf_addtext_process_text_with_time(PdfStrftimeTime, String, ArrayView[(String, () -> String)]) -> String
 
+pub fn pdf_addtext_rectangle_ops(Double, Double, Double, Double, PdfContentColour, Bool, Double, @core.PdfName?) -> Array[PdfContentOp]
+
 pub fn pdf_addtext_replacement_pairs(PdfAddTextReplacementValues) -> Array[(String, () -> String)]
 
 pub fn pdf_addtext_replacement_values(PdfDocument, ArrayView[PdfBookmark], Int, Int, String, Int, Int?) -> PdfAddTextReplacementValues raise @core.PdfError

@@ -30,6 +30,11 @@ fn addtext_pdfdoc_text_for_test(text : String) -> @pdflite.PdfBytes {
 }
 
 ///|
+fn addtext_name_for_test(text : String) -> @pdflite.PdfName {
+  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+}
+
+///|
 fn addtext_bookmark_for_test(
   level : Int,
   text : String,
@@ -156,6 +161,65 @@ test "pdf_addtext_charcodes_of_utf8 skips missing font codepoints" {
       ),
     ),
     [65, 66],
+  )
+}
+
+///|
+test "pdf_addtext_rectangle_ops builds filled rectangle stamps" {
+  @test.assert_eq(
+    @pdflite.pdf_addtext_rectangle_ops(
+      10.0,
+      20.0,
+      30.0,
+      40.0,
+      PdfContentRGB(1.0, 0.0, 0.0),
+      false,
+      2.0,
+      None,
+    ),
+    [
+      @pdflite.pdf_content_begin_artifact(),
+      Op_q,
+      Op_BMC(addtext_name_for_test("/CPDFSTAMP")),
+      Op_rg(1.0, 0.0, 0.0),
+      Op_RG(1.0, 0.0, 0.0),
+      Op_re(10.0, 20.0, 30.0, 40.0),
+      Op_f,
+      Op_EMC,
+      Op_Q,
+      @pdflite.pdf_content_end_artifact(),
+    ],
+  )
+}
+
+///|
+test "pdf_addtext_rectangle_ops builds outlined rectangle stamps" {
+  let gs = addtext_name_for_test("/gs0")
+  @test.assert_eq(
+    @pdflite.pdf_addtext_rectangle_ops(
+      1.0,
+      2.0,
+      3.0,
+      4.0,
+      PdfContentGrey(0.5),
+      true,
+      1.25,
+      Some(gs),
+    ),
+    [
+      @pdflite.pdf_content_begin_artifact(),
+      Op_q,
+      Op_BMC(addtext_name_for_test("/CPDFSTAMP")),
+      Op_g(0.5),
+      Op_G(0.5),
+      Op_w(1.25),
+      Op_gs(gs),
+      Op_re(1.0, 2.0, 3.0, 4.0),
+      Op_s,
+      Op_EMC,
+      Op_Q,
+      @pdflite.pdf_content_end_artifact(),
+    ],
   )
 }
 
