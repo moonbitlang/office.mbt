@@ -355,6 +355,8 @@ pub fn pdf_content_apply_core_op(PdfContentOperatorState, PdfContentOp) -> PdfCo
 
 pub fn pdf_content_apply_graphics_state_op(PdfContentOperatorState, PdfContentOp) -> PdfContentOperatorState
 
+pub fn pdf_content_apply_marked_content_op(PdfContentOperatorState, PdfContentOp) -> PdfContentOperatorState
+
 pub fn pdf_content_apply_path_op(PdfContentPartialPath, PdfContentOp) -> PdfContentPathOpResult
 
 pub fn pdf_content_apply_path_state_op(PdfContentPathState, PdfContentOp) -> PdfContentPathState
@@ -1954,6 +1956,11 @@ pub fn PdfContentJsonEntry::content_json(Self) -> Json
 
 type PdfContentLexeme derive(Eq, ToJson, @debug.Debug)
 
+pub(all) struct PdfContentMarkedContent {
+  tag : String
+  properties : PdfObject?
+} derive(Eq, ToJson, @debug.Debug)
+
 pub(all) enum PdfContentObject {
   PdfContentGlyphObject(Int, String, String)
   PdfContentInlineImageObject
@@ -2047,6 +2054,8 @@ pub(all) struct PdfContentOperatorFrame {
   path : PdfDrawnPath
   path_state : PdfContentPathState
   text_state : PdfContentTextState
+  marked_content_point : PdfContentMarkedContent?
+  marked_content : Array[PdfContentMarkedContent]
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfContentOperatorState {
@@ -2056,10 +2065,13 @@ pub(all) struct PdfContentOperatorState {
   path : PdfDrawnPath
   path_state : PdfContentPathState
   text_state : PdfContentTextState
+  marked_content_point : PdfContentMarkedContent?
+  marked_content : Array[PdfContentMarkedContent]
   state_stack : Array[PdfContentOperatorFrame]
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfContentOperatorState::content_apply_core_op(Self, PdfContentOp) -> Self
 pub fn PdfContentOperatorState::content_apply_graphics_state_op(Self, PdfContentOp) -> Self
+pub fn PdfContentOperatorState::content_apply_marked_content_op(Self, PdfContentOp) -> Self
 
 pub(all) enum PdfContentPartialPath {
   PdfContentNoPartialPath

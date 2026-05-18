@@ -6,6 +6,8 @@ pub(all) struct PdfContentOperatorFrame {
   path : PdfDrawnPath
   path_state : PdfContentPathState
   text_state : PdfContentTextState
+  marked_content_point : PdfContentMarkedContent?
+  marked_content : Array[PdfContentMarkedContent]
 } derive(Debug, Eq, ToJson)
 
 ///|
@@ -16,7 +18,15 @@ pub(all) struct PdfContentOperatorState {
   path : PdfDrawnPath
   path_state : PdfContentPathState
   text_state : PdfContentTextState
+  marked_content_point : PdfContentMarkedContent?
+  marked_content : Array[PdfContentMarkedContent]
   state_stack : Array[PdfContentOperatorFrame]
+} derive(Debug, Eq, ToJson)
+
+///|
+pub(all) struct PdfContentMarkedContent {
+  tag : String
+  properties : PdfObject?
 } derive(Debug, Eq, ToJson)
 
 ///|
@@ -35,6 +45,8 @@ pub fn pdf_content_initial_operator_state(
     path: pdf_content_initial_drawn_path(),
     path_state: pdf_content_initial_path_state(minx, miny, maxx, maxy),
     text_state: pdf_content_initial_text_state(),
+    marked_content_point: None,
+    marked_content: [],
     state_stack: [],
   }
 }
@@ -50,6 +62,10 @@ fn PdfContentOperatorState::content_frame(
     path: self.path,
     path_state: self.path_state,
     text_state: self.text_state,
+    marked_content_point: self.marked_content_point,
+    marked_content: pdf_content_operator_copy_marked_content(
+      self.marked_content,
+    ),
   }
 }
 
@@ -60,6 +76,49 @@ fn pdf_content_operator_copy_stack(
   [
     for frame in stack => frame
   ]
+}
+
+///|
+fn pdf_content_operator_copy_marked_content(
+  marked_content : ArrayView[PdfContentMarkedContent],
+) -> Array[PdfContentMarkedContent] {
+  [
+    for content in marked_content => content
+  ]
+}
+
+///|
+fn pdf_content_operator_marked_content(
+  tag : PdfName,
+  properties : PdfObject?,
+) -> PdfContentMarkedContent {
+  { tag: pdf_content_state_name_text(tag), properties }
+}
+
+///|
+fn pdf_content_operator_prepend_marked_content(
+  marked_content : ArrayView[PdfContentMarkedContent],
+  content : PdfContentMarkedContent,
+) -> Array[PdfContentMarkedContent] {
+  let output = [content]
+  for existing in marked_content {
+    output.push(existing)
+  }
+  output
+}
+
+///|
+fn pdf_content_operator_pop_marked_content(
+  marked_content : ArrayView[PdfContentMarkedContent],
+) -> Array[PdfContentMarkedContent] {
+  let length = marked_content.length()
+  if length == 0 {
+    []
+  } else {
+    [
+      for index in 1..<length => marked_content[index]
+    ]
+  }
 }
 
 ///|
@@ -87,6 +146,10 @@ fn PdfContentOperatorState::content_pop_state(
       path: frame.path,
       path_state: frame.path_state,
       text_state: frame.text_state,
+      marked_content_point: frame.marked_content_point,
+      marked_content: pdf_content_operator_copy_marked_content(
+        frame.marked_content,
+      ),
       state_stack: [
         for index in 0..<(length - 1) => self.state_stack[index]
       ],
@@ -115,6 +178,63 @@ pub fn pdf_content_apply_graphics_state_op(
   op : PdfContentOp,
 ) -> PdfContentOperatorState {
   state.content_apply_graphics_state_op(op)
+}
+
+///|
+/// Apply cpdfcontent marked-content state operators.
+pub fn PdfContentOperatorState::content_apply_marked_content_op(
+  self : PdfContentOperatorState,
+  op : PdfContentOp,
+) -> PdfContentOperatorState {
+  match op {
+    Op_MP(tag) =>
+      {
+        ..self,
+        marked_content_point: Some(
+          pdf_content_operator_marked_content(tag, None),
+        ),
+      }
+    Op_DP(tag, properties) =>
+      {
+        ..self,
+        marked_content_point: Some(
+          pdf_content_operator_marked_content(tag, Some(properties)),
+        ),
+      }
+    Op_BMC(tag) =>
+      {
+        ..self,
+        marked_content: pdf_content_operator_prepend_marked_content(
+          self.marked_content,
+          pdf_content_operator_marked_content(tag, None),
+        ),
+      }
+    Op_BDC(tag, properties) =>
+      {
+        ..self,
+        marked_content: pdf_content_operator_prepend_marked_content(
+          self.marked_content,
+          pdf_content_operator_marked_content(tag, Some(properties)),
+        ),
+      }
+    Op_EMC =>
+      {
+        ..self,
+        marked_content: pdf_content_operator_pop_marked_content(
+          self.marked_content,
+        ),
+      }
+    _ => self
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfContentOperatorState::content_apply_marked_content_op`.
+pub fn pdf_content_apply_marked_content_op(
+  state : PdfContentOperatorState,
+  op : PdfContentOp,
+) -> PdfContentOperatorState {
+  state.content_apply_marked_content_op(op)
 }
 
 ///|
@@ -171,7 +291,9 @@ pub fn PdfContentOperatorState::content_apply_core_op(
     Op_q | Op_Q | Op_cm(_) => self.content_apply_graphics_state_op(op)
     Op_W | Op_Wstar => self.content_apply_clipping_state_op(op)
     _ => {
-      let state = self.content_apply_path_machine_op(op)
+      let state = self
+        .content_apply_path_machine_op(op)
+        .content_apply_marked_content_op(op)
       {
         ..state,
         path_state: state.path_state.content_apply_path_state_op(op),

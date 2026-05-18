@@ -2714,6 +2714,16 @@ Current backend snapshot:
   `moon test --target native --package bobzhang/pdflite --file
   pdf_content_operator_state_test.mbt` at 5/5 tests passing; native full-suite
   validation reports 1951/1951 tests passing.~~
+- [x] ~~Standalone `cpdfcontent.ml` marked-content state slice adds
+  `PdfContentMarkedContent`, carries `marked_content_point` and
+  `marked_content` through `PdfContentOperatorState`/stack frames, and exposes
+  `PdfContentOperatorState::content_apply_marked_content_op` plus
+  `pdf_content_apply_marked_content_op`, matching cpdf's MP/DP point assignment,
+  BMC/BDC newest-first stack push, EMC pop, underflow no-op, and q/Q
+  save/restore behavior. Native focused validation reports `moon test --target
+  native --package bobzhang/pdflite --file pdf_content_operator_state_test.mbt`
+  at 6/6 tests passing; native full-suite validation reports 1952/1952 tests
+  passing.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,
