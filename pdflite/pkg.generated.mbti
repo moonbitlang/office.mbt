@@ -81,6 +81,8 @@ pub fn pdf_addtext_bookmark_for_page(PdfDocument, ArrayView[PdfBookmark], Int, I
 
 pub fn pdf_addtext_cap_height(PdfFont?, String) -> Double?
 
+pub fn pdf_addtext_charcodes_of_utf8(PdfFont, String) -> Bytes raise @core.PdfError
+
 pub fn pdf_addtext_colour_op(PdfContentColour) -> PdfContentOp
 
 pub fn pdf_addtext_colour_op_stroke(PdfContentColour) -> PdfContentOp

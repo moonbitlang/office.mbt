@@ -59,6 +59,26 @@ pub fn pdf_addtext_colour_op_stroke(colour : PdfContentColour) -> PdfContentOp {
 }
 
 ///|
+/// Convert UTF-8 add-text input to PDF charcode bytes for `font`.
+///
+/// Codepoints not representable by the font are skipped, matching cpdf's
+/// `option_map` behavior in `charcodes_of_utf8`.
+pub fn pdf_addtext_charcodes_of_utf8(
+  font : PdfFont,
+  text : String,
+) -> PdfBytes raise PdfError {
+  let extractor = pdf_charcode_extractor_of_font_real(font)
+  let output : Array[Byte] = []
+  for codepoint in pdf_codepoints_of_utf8(@utf8.encode(text)) {
+    match extractor(codepoint) {
+      Some(charcode) => output.push(pdf_byte_of_int(charcode))
+      None => ()
+    }
+  }
+  Bytes::from_array(output)
+}
+
+///|
 /// Measure cpdf add-text charcode bytes with simple-font metrics.
 ///
 /// This mirrors cpdf's narrow `width_of_text` helper: only simple fonts with

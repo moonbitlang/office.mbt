@@ -97,6 +97,11 @@ fn addtext_simple_font_with_metrics_for_test(
 }
 
 ///|
+fn addtext_standard_font_for_test() -> @pdflite.PdfFont {
+  PdfFontStandard({ font: PdfHelvetica, encoding: PdfWinAnsiEncoding })
+}
+
+///|
 test "pdf_addtext_colour_op maps fill colours to content operators" {
   @test.assert_eq(
     @pdflite.pdf_addtext_colour_op(PdfContentGrey(0.25)),
@@ -125,6 +130,32 @@ test "pdf_addtext_colour_op_stroke maps stroke colours to content operators" {
   @test.assert_eq(
     @pdflite.pdf_addtext_colour_op_stroke(PdfContentCMYK(0.7, 0.8, 0.9, 1.0)),
     Op_K(0.7, 0.8, 0.9, 1.0),
+  )
+}
+
+///|
+test "pdf_addtext_charcodes_of_utf8 emits font charcode bytes" {
+  @test.assert_eq(
+    @pdflite.pdf_int_array_of_bytes(
+      try! @pdflite.pdf_addtext_charcodes_of_utf8(
+        addtext_standard_font_for_test(),
+        "AéB",
+      ),
+    ),
+    [65, 233, 66],
+  )
+}
+
+///|
+test "pdf_addtext_charcodes_of_utf8 skips missing font codepoints" {
+  @test.assert_eq(
+    @pdflite.pdf_int_array_of_bytes(
+      try! @pdflite.pdf_addtext_charcodes_of_utf8(
+        addtext_standard_font_for_test(),
+        "A☃B",
+      ),
+    ),
+    [65, 66],
   )
 }
 
