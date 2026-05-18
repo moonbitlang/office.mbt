@@ -262,6 +262,108 @@ test "PdfDocument annotations_json exports cpdf annotation rows" {
 }
 
 ///|
+test "PdfDocument set_annotations_json imports cpdf annotation rows" {
+  let key_contents = annotation_name_for_test("/Contents")
+  let key_p = annotation_name_for_test("/P")
+  let key_dest = annotation_name_for_test("/Dest")
+  let key_a = annotation_name_for_test("/A")
+  let key_d = annotation_name_for_test("/D")
+  let key_ref = annotation_name_for_test("/Ref")
+  let key_extra = annotation_name_for_test("/Extra")
+  let fit = annotation_name_for_test("/Fit")
+  let source = annotation_json_helper_document_for_test()
+  let target = try! annotation_cpdf_helper_document_for_test()
+  let json = try! source.annotations_json([2])
+  let imported = try! target.set_annotations_json(json)
+  let wrapper = try! @pdflite.pdf_set_annotations_json(json, target)
+  let copied = try! target.copy_annotations_from(source, [2])
+  let copied_wrapper = try! @pdflite.pdf_copy_annotations([2], source, target)
+  let expected_annotations = [
+    (1, @ascii.encode("first")),
+    (2, @ascii.encode("second")),
+    (2, Bytes::new(0)),
+    (2, @ascii.encode("json")),
+    (2, @ascii.encode("dest")),
+  ]
+  @test.assert_eq(try! target.get_annotations(encoding=PdfMetadataRaw), [
+    (1, @ascii.encode("first")),
+    (2, @ascii.encode("second")),
+    (2, Bytes::new(0)),
+  ])
+  @test.assert_eq(
+    try! imported.get_annotations(encoding=PdfMetadataRaw),
+    expected_annotations,
+  )
+  @test.assert_eq(
+    try! wrapper.get_annotations(encoding=PdfMetadataRaw),
+    expected_annotations,
+  )
+  @test.assert_eq(
+    try! copied.get_annotations(encoding=PdfMetadataRaw),
+    expected_annotations,
+  )
+  @test.assert_eq(
+    try! copied_wrapper.get_annotations(encoding=PdfMetadataRaw),
+    expected_annotations,
+  )
+  let page_refs = try! imported.page_reference_numbers()
+  guard imported.lookup_object_or_null(30) is PdfDictionary(imported_entries) else {
+    fail("expected imported annotation 30")
+  }
+  let imported_annotation : @pdflite.PdfObject = PdfDictionary(imported_entries)
+  @test.assert_eq(
+    imported_annotation.lookup_immediate(key_contents),
+    Some(annotation_contents_for_test("json")),
+  )
+  @test.assert_eq(
+    imported_annotation.lookup_immediate(key_p),
+    Some(PdfIndirect(page_refs[1])),
+  )
+  @test.assert_eq(
+    imported_annotation.lookup_immediate(key_ref),
+    Some(PdfIndirect(40)),
+  )
+  guard imported_annotation.lookup_immediate(key_a)
+    is Some(PdfDictionary(action_entries)) else {
+    fail("expected imported action")
+  }
+  let action_object : @pdflite.PdfObject = PdfDictionary(action_entries)
+  @test.assert_eq(
+    action_object.lookup_immediate(key_d),
+    Some(PdfArray([PdfIndirect(page_refs[1]), PdfNameObject(fit)])),
+  )
+  @test.assert_eq(
+    imported.lookup_object_or_null(40),
+    PdfDictionary([(key_extra, annotation_contents_for_test("kept"))]),
+  )
+  guard imported.lookup_object_or_null(31) is PdfDictionary(dest_entries) else {
+    fail("expected imported annotation 31")
+  }
+  let dest_annotation : @pdflite.PdfObject = PdfDictionary(dest_entries)
+  @test.assert_eq(
+    dest_annotation.lookup_immediate(key_dest),
+    Some(PdfArray([PdfIndirect(page_refs[0]), PdfNameObject(fit)])),
+  )
+}
+
+///|
+test "PdfDocument set_annotations_json reports malformed annotation JSON" {
+  let target = try! annotation_cpdf_helper_document_for_test()
+  let bad_top_level : Result[@pdflite.PdfDocument, Error] = try? target.set_annotations_json(
+    Json::object(Map([])),
+  )
+  guard bad_top_level is Err(@pdflite.PdfError::SoftError(_)) else {
+    fail("expected @pdflite.PdfError::SoftError for annotation JSON top level")
+  }
+  let malformed_row : Result[@pdflite.PdfDocument, Error] = try? target.set_annotations_json(
+    Json::array([Json::array([Json::string("bad")])]),
+  )
+  guard malformed_row is Err(@pdflite.PdfError::SoftError(_)) else {
+    fail("expected @pdflite.PdfError::SoftError for annotation JSON row")
+  }
+}
+
+///|
 test "PdfDocument remove_annotations removes selected page arrays" {
   let key_annots = annotation_name_for_test("/Annots")
   let document = try! annotation_cpdf_helper_document_for_test()

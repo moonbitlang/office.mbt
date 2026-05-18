@@ -1846,8 +1846,8 @@ Current backend snapshot:
   pdf_annotation_test.mbt` at 11/11 tests passing; native full-suite validation
   reports 1735/1735 tests passing.~~
 - [x] ~~Annotation JSON export helper slice exposes selected-page cpdf
-  annotation JSON rows and UTF-8 JSON bytes while leaving annotation JSON import
-  and copy for a later slice. Coverage pins the format-version header, indirect
+  annotation JSON rows and UTF-8 JSON bytes. Coverage pins the format-version
+  header, indirect
   annotation-only row emission, `/P`, `/Dest`, and action `/D` page-reference
   rewriting for annotations without `/Dest`, direct annotation skipping,
   ancillary object collection, `/Popup`/`/Parent` ancillary exclusion, wrapper
@@ -1855,6 +1855,18 @@ Current backend snapshot:
   focused validation reports `moon test --target native pdf_annotation_test.mbt`
   at 12/12 tests passing; native full-suite validation reports 1736/1736 tests
   passing.~~
+- [x] ~~Annotation JSON import/copy helper slice exposes
+  `set_annotations_json`, `pdf_set_annotations_json`,
+  `copy_annotations_from`, and `pdf_copy_annotations`. Imported cpdf
+  annotation rows now renumber the target document out of the imported object
+  range, preserve positive ancillary objects, append selected page annotations,
+  rewrite JSON page numbers in `/P`, `/Dest`, and action `/D` back to page
+  object references, and keep existing target annotations. Coverage pins
+  collision renumbering, extra-object preservation, wrapper parity, copy parity,
+  original-document preservation, and malformed JSON soft errors. Native
+  focused validation reports `moon test --target native --package
+  bobzhang/pdflite --file pdf_annotation_test.mbt` at 14/14 tests passing;
+  native full-suite validation reports 1758/1758 tests passing.~~
 - [x] ~~Standalone utility ports for `cpdfdebug.ml`, `cpdfprinttree.ml`, and
   `cpdfstrftime.ml` expose `PdfDocument::debug_objects`,
   `pdf_print_tree_to_string`, explicit-time and native-current-time strftime

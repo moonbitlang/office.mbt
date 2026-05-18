@@ -241,6 +241,8 @@ pub fn pdf_content_end_artifact() -> PdfContentOp
 
 pub fn pdf_content_stream_of_ops(ArrayView[PdfContentOp]) -> PdfObject raise @core.PdfError
 
+pub fn pdf_copy_annotations(ArrayView[Int], PdfDocument, PdfDocument) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_copy_font(PdfDocument, String, Int, ArrayView[Int], PdfDocument) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_copy_id(Bool, PdfDocument, PdfDocument) -> PdfDocument raise @core.PdfError
@@ -864,6 +866,8 @@ pub fn pdf_scale_contents(PdfDocument, ArrayView[Int], PdfPosition, Double, fast
 pub fn pdf_scale_pages(PdfDocument, ArrayView[Int], ArrayView[(Double, Double)], fast? : Bool) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_scale_to_fit_pages(PdfDocument, ArrayView[Int], ArrayView[(Double, Double)], position? : PdfPosition, input_scale? : Double, fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_set_annotations_json(Json, PdfDocument) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_set_language(PdfDocument, BytesView) -> PdfDocument raise @core.PdfError
 
@@ -1684,6 +1688,7 @@ pub fn PdfDocument::composition_json_blob(Self, Int) -> Bytes raise @core.PdfErr
 pub fn PdfDocument::contains_javascript(Self) -> Bool
 pub fn PdfDocument::contents_of_name_tree(Self, PdfObject) -> Array[(PdfObject, PdfObject)]
 pub fn PdfDocument::copy(Self) -> Self
+pub fn PdfDocument::copy_annotations_from(Self, Self, ArrayView[Int]) -> Self raise @core.PdfError
 pub fn PdfDocument::copy_font_from(Self, Self, String, Int, ArrayView[Int]) -> Self raise @core.PdfError
 pub fn PdfDocument::copy_id_from(Self, Self, keep_version? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::copy_page_box(Self, ArrayView[Int], @core.PdfName, @core.PdfName, mediabox_if_missing? : Bool) -> Self raise @core.PdfError
@@ -1878,6 +1883,7 @@ pub fn PdfDocument::scale_contents(Self, ArrayView[Int], PdfPosition, Double, fa
 pub fn PdfDocument::scale_pages(Self, ArrayView[Int], ArrayView[(Double, Double)], fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::scale_to_fit_pages(Self, ArrayView[Int], ArrayView[(Double, Double)], position? : PdfPosition, input_scale? : Double, fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::select_object_numbers(Self, (PdfObject) -> Bool) -> Array[Int]
+pub fn PdfDocument::set_annotations_json(Self, Json) -> Self raise @core.PdfError
 pub fn PdfDocument::set_first_xref(Self, Int) -> Unit
 pub fn PdfDocument::set_info_entry(Self, @core.PdfName, PdfObject, Int, keep_version? : Bool, xmp_also? : Bool, xmp_just_set? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::set_language(Self, BytesView) -> Self raise @core.PdfError
