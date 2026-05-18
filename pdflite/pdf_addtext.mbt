@@ -996,15 +996,100 @@ fn pdf_addtext_url_annotation_prefix(
 }
 
 ///|
+fn pdf_addtext_url_annotation_widths_with_measure(
+  text : String,
+  url : PdfAddTextUrl,
+  measure : (String) -> Double raise PdfError,
+) -> (Double, Double) raise PdfError {
+  (
+    measure(pdf_addtext_url_annotation_prefix(text, url.start)),
+    measure(pdf_addtext_url_annotation_prefix(text, url.end)),
+  )
+}
+
+///|
 /// Measure cpdf's start and end prefix widths for an add-text URL span.
 pub fn pdf_addtext_url_annotation_widths(
   text : String,
   url : PdfAddTextUrl,
   measure : (String) -> Double,
 ) -> (Double, Double) raise PdfError {
-  (
-    measure(pdf_addtext_url_annotation_prefix(text, url.start)),
-    measure(pdf_addtext_url_annotation_prefix(text, url.end)),
+  pdf_addtext_url_annotation_widths_with_measure(text, url, fn(prefix) {
+    measure(prefix)
+  })
+}
+
+///|
+/// Build indirect URL link annotations for one cpdf add-text line.
+///
+/// This mirrors cpdf's add-text annotation pass: each parsed URL span is
+/// measured against the visible line, converted to transformed quad points, and
+/// written as a new indirect annotation object.
+pub fn PdfDocument::addtext_url_annotation_references(
+  self : PdfDocument,
+  text : String,
+  urls : ArrayView[PdfAddTextUrl],
+  measure : (String) -> Double raise PdfError,
+  origin : Point2,
+  horizontal_offset : Double,
+  vertical_offset : Double,
+  justification_offset : Double,
+  rotation : Double,
+  rotation_offset : Point2,
+  page_rotation : Double,
+  font : PdfFont?,
+  fontname : String,
+  font_size : Double,
+  url_border : Bool,
+) -> Array[PdfObject] raise PdfError {
+  let height = pdf_addtext_url_annotation_height(font, fontname, font_size)
+  let annotations : Array[PdfObject] = []
+  for url in urls {
+    let (start_width, end_width) = pdf_addtext_url_annotation_widths_with_measure(
+      text, url, measure,
+    )
+    let geometry = pdf_addtext_url_annotation_geometry(
+      origin, horizontal_offset, vertical_offset, justification_offset, rotation,
+      rotation_offset, page_rotation, start_width, end_width, height,
+    )
+    let object_number = self.add_object(
+      pdf_addtext_url_annotation(
+        geometry.p0,
+        geometry.p1,
+        geometry.p2,
+        geometry.p3,
+        geometry.rectangle,
+        url.url,
+        url_border,
+      ),
+    )
+    annotations.push(PdfIndirect(object_number))
+  }
+  annotations
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::addtext_url_annotation_references`.
+pub fn pdf_addtext_url_annotation_references(
+  document : PdfDocument,
+  text : String,
+  urls : ArrayView[PdfAddTextUrl],
+  measure : (String) -> Double raise PdfError,
+  origin : Point2,
+  horizontal_offset : Double,
+  vertical_offset : Double,
+  justification_offset : Double,
+  rotation : Double,
+  rotation_offset : Point2,
+  page_rotation : Double,
+  font : PdfFont?,
+  fontname : String,
+  font_size : Double,
+  url_border : Bool,
+) -> Array[PdfObject] raise PdfError {
+  document.addtext_url_annotation_references(
+    text, urls, measure, origin, horizontal_offset, vertical_offset, justification_offset,
+    rotation, rotation_offset, page_rotation, font, fontname, font_size, url_border,
   )
 }
 

@@ -2317,6 +2317,15 @@ Current backend snapshot:
   Native focused validation reports `moon test --target native --package
   bobzhang/pdflite --file pdf_addtext_test.mbt` at 79/79 tests passing; native
   full-suite validation reports 1851/1851 tests passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` URL annotation reference slice exposes
+  `PdfDocument::addtext_url_annotation_references` and
+  `pdf_addtext_url_annotation_references`, covering cpdf's URL-span annotation
+  construction path, visible-line prefix measurement, cap-height/font-size
+  rectangle height, transformed quad/rect creation, indirect annotation object
+  insertion, wrapper parity, and typed measurement-error propagation. Native
+  focused validation reports `moon test --target native --package
+  bobzhang/pdflite --file pdf_addtext_test.mbt` at 81/81 tests passing; native
+  full-suite validation reports 1853/1853 tests passing.~~
 - [x] ~~Standalone `cpdfremovetext.ml` removal slice exposes
   `pdf_remove_added_text_ops`, `pdf_remove_all_text_ops`,
   `PdfDocument::remove_added_text`, `remove_all_text`, and compatibility

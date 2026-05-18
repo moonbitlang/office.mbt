@@ -1231,6 +1231,100 @@ test "pdf_addtext_url_annotation_widths uses UTF-8 byte offsets" {
 }
 
 ///|
+test "PdfDocument addtext_url_annotation_references creates indirect links" {
+  let document = @pdflite.pdf_document_empty()
+  let urls : Array[@pdflite.PdfAddTextUrl] = [
+    { url: "https://a.test", start: 1, end: 3 },
+    { url: "https://b.test", start: 0, end: 4 },
+  ]
+  let refs = try! document.addtext_url_annotation_references(
+    "abcd",
+    urls,
+    fn(prefix) { prefix.length().to_double() * 2.0 },
+    @pdflite.point2(100.0, 200.0),
+    10.0,
+    20.0,
+    5.0,
+    0.0,
+    @pdflite.point2(0.0, 0.0),
+    0.0,
+    None,
+    "NotAFont",
+    7.0,
+    true,
+  )
+  @test.assert_eq(refs.length(), 2)
+  guard refs[0] is PdfIndirect(first_number) else {
+    fail("expected first annotation reference")
+  }
+  let first = document.lookup_object_or_null(first_number)
+  guard first is PdfDictionary(_) else {
+    fail("expected first annotation object")
+  }
+  @test.assert_eq(
+    first.lookup_immediate(addtext_name_for_test("/Rect")),
+    Some(
+      PdfArray([PdfReal(87.0), PdfReal(180.0), PdfReal(91.0), PdfReal(187.0)]),
+    ),
+  )
+  @test.assert_eq(
+    first.lookup_immediate(addtext_name_for_test("/QuadPoints")),
+    Some(
+      PdfArray([
+        PdfReal(87.0),
+        PdfReal(180.0),
+        PdfReal(91.0),
+        PdfReal(180.0),
+        PdfReal(91.0),
+        PdfReal(187.0),
+        PdfReal(87.0),
+        PdfReal(187.0),
+      ]),
+    ),
+  )
+  guard first.lookup_immediate(addtext_name_for_test("/A")) is Some(action) else {
+    fail("expected link action")
+  }
+  @test.assert_eq(
+    action.lookup_immediate(addtext_name_for_test("/URI")),
+    Some(PdfString(@utf8.encode("https://a.test"))),
+  )
+}
+
+///|
+test "pdf_addtext_url_annotation_references wrapper propagates measure errors" {
+  let document = @pdflite.pdf_document_empty()
+  let urls : Array[@pdflite.PdfAddTextUrl] = [
+    { url: "https://a.test", start: 0, end: 2 },
+  ]
+  let result : Result[Array[@pdflite.PdfObject], Error] = try? @pdflite.pdf_addtext_url_annotation_references(
+    document,
+    "ab",
+    urls,
+    fn(prefix) raise @pdflite.PdfError {
+      if prefix.length() == 2 {
+        raise @pdflite.PdfError::SoftError("measure failed")
+      }
+      prefix.length().to_double()
+    },
+    @pdflite.point2(0.0, 0.0),
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    @pdflite.point2(0.0, 0.0),
+    0.0,
+    Some(addtext_simple_font_for_test(500.0)),
+    "Ignored",
+    10.0,
+    false,
+  )
+  guard result is Err(@pdflite.PdfError::SoftError("measure failed")) else {
+    fail("expected measure error")
+  }
+}
+
+///|
 test "pdf_addtext_page_rest_with_annotations preserves empty annotation updates" {
   let document = @pdflite.pdf_document_empty()
   let rest : @pdflite.PdfObject = PdfInteger(7)
