@@ -13,6 +13,21 @@ fn toc_raw_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
 }
 
 ///|
+fn toc_name_for_test(text : String) -> @pdflite.PdfName {
+  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+}
+
+///|
+fn toc_rectangle_for_test(
+  min_x : Double,
+  min_y : Double,
+  max_x : Double,
+  max_y : Double,
+) -> @pdflite.PdfObject {
+  PdfArray([PdfReal(min_x), PdfReal(min_y), PdfReal(max_x), PdfReal(max_y)])
+}
+
+///|
 fn toc_standard_font_for_test() -> @pdflite.PdfFont {
   PdfFontStandard({ font: PdfHelvetica, encoding: PdfWinAnsiEncoding })
 }
@@ -387,4 +402,85 @@ test "PdfDocument toc_type_elements adds structure tags and dot leaders" {
     expected,
   )
   @test.assert_eq(expected[0], PdfTypeFont("0", font, 20.0))
+}
+
+///|
+test "PdfDocument toc_typeset_pages uses first-page cropbox geometry" {
+  let cropbox_key = toc_name_for_test("/CropBox")
+  let cropbox = toc_rectangle_for_test(10.0, 20.0, 160.0, 80.0)
+  let base = try! @pdflite.pdf_blank_document(200.0, 100.0, 1)
+  let source_pages = try! base.pages_of_pagetree()
+  let source_page = {
+    ..source_pages[0],
+    rest: try! source_pages[0].rest.add_dict_entry(cropbox_key, cropbox),
+  }
+  let document = try! base.change_pages([source_page])
+  let page_refs = try! document.page_reference_numbers()
+  let pack = toc_standard_pack_for_test()
+  let target : @pdflite.PdfDestination = DestFit(TargetPageObject(page_refs[0]))
+  let bookmark : @pdflite.PdfBookmark = {
+    level: 0,
+    text: toc_pdfdoc_for_test("Chapter"),
+    target,
+    is_open: true,
+    colour: @pdflite.pdf_bookmark_black,
+    flags: 0,
+  }
+  let expected_document = document.copy()
+  let expected_elements = try! expected_document.toc_type_elements(
+    pack,
+    10.0,
+    toc_bytes_for_test("Contents"),
+    false,
+    false,
+    [],
+    [bookmark],
+    150.0,
+    10.0,
+  )
+  let expected_raw = try! expected_document.pdf_type_typeset(
+    false,
+    20.0,
+    50.0,
+    30.0,
+    30.0,
+    @pdflite.paper_size_make(PdfPoint, 200.0, 100.0),
+    expected_elements,
+  )
+  let expected_pages = [
+    for page in expected_raw.pages => {
+      { ..page, rest: try! page.rest.add_dict_entry(cropbox_key, cropbox) }
+    }
+  ]
+  let expected = { ..expected_raw, pages: expected_pages }
+  let result = try! document
+    .copy()
+    .toc_typeset_pages(
+      pack,
+      10.0,
+      toc_bytes_for_test("Contents"),
+      false,
+      false,
+      [],
+      [bookmark],
+    )
+  @test.assert_eq(result, expected)
+  @test.assert_eq(
+    try! @pdflite.pdf_toc_typeset_pages(
+      document.copy(),
+      pack,
+      10.0,
+      toc_bytes_for_test("Contents"),
+      false,
+      false,
+      [],
+      [bookmark],
+    ),
+    expected,
+  )
+  guard result.pages.length() > 0 else { fail("expected TOC page") }
+  @test.assert_eq(
+    document.lookup_direct(cropbox_key, result.pages[0].rest),
+    Some(cropbox),
+  )
 }

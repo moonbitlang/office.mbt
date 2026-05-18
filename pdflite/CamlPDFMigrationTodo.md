@@ -2598,6 +2598,16 @@ Current backend snapshot:
   validation reports `moon test --target native --package bobzhang/pdflite
   --file pdf_toc_test.mbt` at 10/10 tests passing; native full-suite validation
   reports 1904/1904 tests passing.~~
+- [x] ~~Standalone `cpdftoc.ml` TOC page typesetting geometry slice exposes
+  `PdfDocument::toc_typeset_pages` and `pdf_toc_typeset_pages`, covering
+  first-page media-box paper sizing, cpdf's 10% minimum-dimension margin,
+  cropbox-adjusted content width and margins, cpdftype page/tag generation,
+  generated-TOC cropbox copying, and wrapper parity while leaving TOC page
+  insertion, page-label shifting, bookmark addition, and full structure-tree
+  rewrites for later slices. Native focused validation reports `moon test
+  --target native --package bobzhang/pdflite --file pdf_toc_test.mbt` at 11/11
+  tests passing; native full-suite validation reports 1905/1905 tests
+  passing.~~
 - [x] ~~Page labels, bookmarks, annotations, duplicate annotation repair,
   old-style destinations, name-tree destinations, `/OpenAction`, optional
   content, AcroForm merge basics, trailer `/Info`, and structure-tree

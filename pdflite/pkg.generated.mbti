@@ -1151,6 +1151,8 @@ pub fn pdf_toc_title_real_newlines(BytesView) -> Bytes
 
 pub fn pdf_toc_type_elements(PdfDocument, PdfFontPack, Double, BytesView, Bool, Bool, ArrayView[PdfPageLabel], ArrayView[PdfBookmark], Double, Double) -> Array[PdfTypeElement] raise @core.PdfError
 
+pub fn pdf_toc_typeset_pages(PdfDocument, PdfFontPack, Double, BytesView, Bool, Bool, ArrayView[PdfPageLabel], ArrayView[PdfBookmark]) -> PdfTypeTypesetResult raise @core.PdfError
+
 pub fn pdf_toc_used_codepoints(PdfDocument, ArrayView[PdfPageLabel], BytesView, ArrayView[PdfBookmark]) -> Array[Int] raise @core.PdfError
 
 pub fn pdf_toc_width_of_runs(ArrayView[PdfTypeElement]) -> Double raise @core.PdfError
@@ -2203,6 +2205,7 @@ pub fn PdfDocument::target_of_page_number(Self, Int) -> PdfDestination raise @co
 pub fn PdfDocument::text_extractor_of_font(Self, PdfObject) -> PdfTextExtractor raise @core.PdfError
 pub fn PdfDocument::thin_lines(Self, ArrayView[Int], Double) -> Self raise @core.PdfError
 pub fn PdfDocument::toc_type_elements(Self, PdfFontPack, Double, BytesView, Bool, Bool, ArrayView[PdfPageLabel], ArrayView[PdfBookmark], Double, Double) -> Array[PdfTypeElement] raise @core.PdfError
+pub fn PdfDocument::toc_typeset_pages(Self, PdfFontPack, Double, BytesView, Bool, Bool, ArrayView[PdfPageLabel], ArrayView[PdfBookmark]) -> PdfTypeTypesetResult raise @core.PdfError
 pub fn PdfDocument::toc_used_codepoints(Self, ArrayView[PdfPageLabel], BytesView, ArrayView[PdfBookmark]) -> Array[Int] raise @core.PdfError
 pub fn PdfDocument::trailer_dict(Self) -> PdfObject
 pub fn PdfDocument::transform_annotations(Self, @geometry.TransformMatrix, PdfObject) -> Unit raise @core.PdfError
