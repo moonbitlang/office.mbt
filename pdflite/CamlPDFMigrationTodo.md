@@ -2235,6 +2235,14 @@ Current backend snapshot:
   fallback. Native focused validation reports `moon test --target native
   --package bobzhang/pdflite --file pdf_addtext_test.mbt` at 54/54 tests
   passing; native full-suite validation reports 1826/1826 tests passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` page font-dictionary setup slice exposes
+  `PdfDocument::addtext_page_font_dictionary` and
+  `pdf_addtext_page_font_dictionary`, covering cpdf's page `/Font` resource
+  lookup, empty dictionary fallback for missing resources, indirect resource
+  resolution, malformed present value preservation, and wrapper parity. Native
+  focused validation reports `moon test --target native --package
+  bobzhang/pdflite --file pdf_addtext_test.mbt` at 89/89 tests passing; native
+  full-suite validation reports 1861/1861 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` font-resource helper slice exposes
   `pdf_addtext_allocate_font_names` and
   `pdf_addtext_fontpack_resource_dictionary`, covering cpdf's `/F*` unique-name

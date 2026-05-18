@@ -731,6 +731,31 @@ pub fn pdf_addtext_effective_encoding(font : PdfFont?) -> PdfEncoding {
 }
 
 ///|
+/// Return the page font resource object used by cpdf add-text setup.
+///
+/// Missing `/Font` resources are treated as an empty dictionary. Present values
+/// are resolved through the document and returned as-is, matching cpdf's
+/// `Pdf.lookup_direct` setup before unique font-name allocation.
+pub fn PdfDocument::addtext_page_font_dictionary(
+  self : PdfDocument,
+  page : PdfPage,
+) -> PdfObject {
+  match self.lookup_direct(pdf_addtext_font_key(), page.resources) {
+    Some(fontdict) => fontdict
+    None => PdfDictionary([])
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::addtext_page_font_dictionary`.
+pub fn pdf_addtext_page_font_dictionary(
+  document : PdfDocument,
+  page : PdfPage,
+) -> PdfObject {
+  document.addtext_page_font_dictionary(page)
+}
+
+///|
 /// Allocate cpdf add-text font resource names for the selected font and
 /// optional font pack.
 pub fn pdf_addtext_allocate_font_names(

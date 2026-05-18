@@ -121,6 +121,8 @@ pub fn pdf_addtext_longest_width(ArrayView[Double]) -> Double raise @core.PdfErr
 
 pub fn pdf_addtext_opacity_resources(PdfDocument, PdfObject, Double) -> (PdfObject, @core.PdfName?) raise @core.PdfError
 
+pub fn pdf_addtext_page_font_dictionary(PdfDocument, PdfPage) -> PdfObject
+
 pub fn pdf_addtext_page_label(PdfDocument, Int) -> String raise @core.PdfError
 
 pub fn pdf_addtext_page_rest_with_annotations(PdfDocument, PdfObject, ArrayView[PdfObject]) -> PdfObject raise @core.PdfError
@@ -1826,6 +1828,7 @@ pub fn PdfDocument::add_root(Self, Int, ArrayView[(@core.PdfName, PdfObject)]) -
 pub fn PdfDocument::addtext_bookmark_for_page(Self, ArrayView[PdfBookmark], Int, Int) -> String raise @core.PdfError
 pub fn PdfDocument::addtext_existing_font_resource(Self, PdfPage, @core.PdfName) -> (@core.PdfName, PdfObject) raise @core.PdfError
 pub fn PdfDocument::addtext_opacity_resources(Self, PdfObject, Double) -> (PdfObject, @core.PdfName?) raise @core.PdfError
+pub fn PdfDocument::addtext_page_font_dictionary(Self, PdfPage) -> PdfObject
 pub fn PdfDocument::addtext_page_label(Self, Int) -> String raise @core.PdfError
 pub fn PdfDocument::addtext_page_rest_with_annotations(Self, PdfObject, ArrayView[PdfObject]) -> PdfObject raise @core.PdfError
 pub fn PdfDocument::addtext_rectangle(Self, ArrayView[Int], String, PdfContentColour, PdfPosition, relative_to_box? : @core.PdfName, outline? : Bool, line_width? : Double, opacity? : Double, underneath? : Bool, fast? : Bool) -> Self raise @core.PdfError

@@ -842,6 +842,45 @@ test "pdf_addtext_effective_encoding follows selected add-text font" {
 }
 
 ///|
+test "PdfDocument addtext_page_font_dictionary uses empty fallback" {
+  let document = @pdflite.pdf_document_empty()
+  let page = @pdflite.pdf_page_blank(@pdflite.paper_a4)
+  @test.assert_eq(
+    document.addtext_page_font_dictionary(page),
+    PdfDictionary([]),
+  )
+}
+
+///|
+test "PdfDocument addtext_page_font_dictionary resolves indirect fonts" {
+  let document = @pdflite.pdf_document_empty()
+  let fonts : @pdflite.PdfObject = PdfDictionary([
+    (addtext_name_for_test("/F0"), PdfInteger(1)),
+  ])
+  let number = document.add_object(fonts)
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: PdfDictionary([
+      (addtext_name_for_test("/Font"), PdfIndirect(number)),
+    ]),
+  }
+  @test.assert_eq(
+    @pdflite.pdf_addtext_page_font_dictionary(document, page),
+    fonts,
+  )
+}
+
+///|
+test "PdfDocument addtext_page_font_dictionary preserves malformed values" {
+  let document = @pdflite.pdf_document_empty()
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: PdfDictionary([(addtext_name_for_test("/Font"), PdfInteger(7))]),
+  }
+  @test.assert_eq(document.addtext_page_font_dictionary(page), PdfInteger(7))
+}
+
+///|
 test "pdf_addtext_allocate_font_names handles non-fontpack resources" {
   let f0 = addtext_name_for_test("/F0")
   let f1 = addtext_name_for_test("/F1")
