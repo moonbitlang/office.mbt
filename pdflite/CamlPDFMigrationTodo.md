@@ -2693,6 +2693,17 @@ Current backend snapshot:
   focused validation reports `moon test --target native --package
   bobzhang/pdflite --file pdf_content_state_test.mbt` at 8/8 tests passing;
   native full-suite validation reports 1946/1946 tests passing.~~
+- [x] ~~Standalone `cpdfcontent.ml` graphics-state stack slice exposes
+  `PdfContentOperatorFrame`, `PdfContentOperatorState`,
+  `pdf_content_initial_operator_state`,
+  `PdfContentOperatorState::content_apply_graphics_state_op`, and
+  `pdf_content_apply_graphics_state_op`, matching cpdf's initial operator-state
+  assembly, `q` frame push, `Q` frame restore with underflow no-op behavior,
+  and `cm` CTM concatenation while leaving resource dictionaries and the full
+  stateful content walker for later slices. Native focused validation reports
+  `moon test --target native --package bobzhang/pdflite --file
+  pdf_content_operator_state_test.mbt` at 3/3 tests passing; native full-suite
+  validation reports 1949/1949 tests passing.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,

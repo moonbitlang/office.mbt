@@ -351,6 +351,8 @@ pub fn pdf_content_add_artifacts(ArrayView[PdfContentOp]) -> Array[PdfContentOp]
 
 pub fn pdf_content_apply_clipping_op(PdfContentPartialPath, ArrayView[PdfPath], PdfContentOp) -> PdfContentClippingOpResult
 
+pub fn pdf_content_apply_graphics_state_op(PdfContentOperatorState, PdfContentOp) -> PdfContentOperatorState
+
 pub fn pdf_content_apply_path_op(PdfContentPartialPath, PdfContentOp) -> PdfContentPathOpResult
 
 pub fn pdf_content_apply_path_state_op(PdfContentPathState, PdfContentOp) -> PdfContentPathState
@@ -400,6 +402,8 @@ pub fn pdf_content_initial_clipping_state(Double, Double, Double, Double) -> Pdf
 pub fn pdf_content_initial_drawn_path() -> PdfDrawnPath
 
 pub fn pdf_content_initial_glyph_state(Double, Double, Double, Double) -> PdfContentGlyphState
+
+pub fn pdf_content_initial_operator_state(Double, Double, Double, Double) -> PdfContentOperatorState
 
 pub fn pdf_content_initial_path_state(Double, Double, Double, Double) -> PdfContentPathState
 
@@ -2033,6 +2037,26 @@ pub(all) enum PdfContentOp {
   Op_EX
   Op_Unknown(Bytes)
 } derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfContentOperatorFrame {
+  ctm : @geometry.TransformMatrix
+  partial_path : PdfContentPartialPath
+  clipping_path : Array[PdfPath]
+  path : PdfDrawnPath
+  path_state : PdfContentPathState
+  text_state : PdfContentTextState
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfContentOperatorState {
+  ctm : @geometry.TransformMatrix
+  partial_path : PdfContentPartialPath
+  clipping_path : Array[PdfPath]
+  path : PdfDrawnPath
+  path_state : PdfContentPathState
+  text_state : PdfContentTextState
+  state_stack : Array[PdfContentOperatorFrame]
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfContentOperatorState::content_apply_graphics_state_op(Self, PdfContentOp) -> Self
 
 pub(all) enum PdfContentPartialPath {
   PdfContentNoPartialPath
