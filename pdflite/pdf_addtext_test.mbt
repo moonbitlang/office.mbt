@@ -1876,6 +1876,76 @@ test "PdfDocument addtext_calc_textwidth measures existing page fonts" {
 }
 
 ///|
+test "PdfDocument addtext_line_widths measures selected font paragraphs" {
+  let document = @pdflite.pdf_document_empty()
+  let page = @pdflite.pdf_page_blank(@pdflite.paper_a4)
+  let widths = try! document.addtext_line_widths(
+    page,
+    Some(addtext_standard_font_for_test()),
+    None,
+    addtext_name_for_test("/F0"),
+    10.0,
+    @ascii.encode("A"),
+    [@ascii.encode("A"), @ascii.encode("AV")],
+  )
+  addtext_assert_close_for_test(widths.text_width, 6.67)
+  @test.assert_eq(widths.widths.length(), 2)
+  addtext_assert_close_for_test(widths.widths[0], 6.67)
+  addtext_assert_close_for_test(widths.widths[1], 13.34)
+  addtext_assert_close_for_test(widths.longest_width, 13.34)
+}
+
+///|
+test "pdf_addtext_line_widths wrapper handles fontpacks" {
+  let document = @pdflite.pdf_document_empty()
+  let page = @pdflite.pdf_page_blank(@pdflite.paper_a4)
+  let metrics : Array[Double] = [ for _ in 0..<256 => 0.0 ]
+  metrics[66] = 610.0
+  let pack : @pdflite.PdfFontPack = {
+    fonts: [
+      addtext_standard_font_for_test(),
+      addtext_simple_font_with_metrics_for_test(Some(metrics)),
+    ],
+    entries: [
+      { codepoint: 65, font_index: 0, charcode: 65 },
+      { codepoint: 66, font_index: 1, charcode: 66 },
+    ],
+  }
+  let widths = try! @pdflite.pdf_addtext_line_widths(
+    document,
+    page,
+    None,
+    Some(pack),
+    addtext_name_for_test("/F0"),
+    10.0,
+    @utf8.encode("AB"),
+    [@utf8.encode("A"), @utf8.encode("AB")],
+  )
+  addtext_assert_close_for_test(widths.text_width, 12.77)
+  addtext_assert_close_for_test(widths.widths[0], 6.67)
+  addtext_assert_close_for_test(widths.widths[1], 12.77)
+  addtext_assert_close_for_test(widths.longest_width, 12.77)
+}
+
+///|
+test "PdfDocument addtext_line_widths reports empty expanded lines" {
+  let document = @pdflite.pdf_document_empty()
+  let page = @pdflite.pdf_page_blank(@pdflite.paper_a4)
+  let result : Result[@pdflite.PdfAddTextLineWidths, Error] = try? document.addtext_line_widths(
+    page,
+    Some(addtext_standard_font_for_test()),
+    None,
+    addtext_name_for_test("/F0"),
+    10.0,
+    @ascii.encode("A"),
+    [],
+  )
+  guard result is Err(@pdflite.PdfError::SoftError("empty add-text width list")) else {
+    fail("expected empty add-text width list error")
+  }
+}
+
+///|
 test "pdf_addtext_longest_width selects widest expanded line" {
   @test.assert_eq(@pdflite.pdf_addtext_longest_width([12.0, 7.0, 19.0]), 19.0)
   @test.assert_eq(@pdflite.pdf_addtext_longest_width([-3.0, -1.0]), -1.0)

@@ -2269,6 +2269,14 @@ Current backend snapshot:
   validation reports `moon test --target native --package bobzhang/pdflite
   --file pdf_addtext_test.mbt` at 92/92 tests passing; native full-suite
   validation reports 1864/1864 tests passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` local line-width aggregation slice exposes
+  `PdfAddTextLineWidths`, `PdfDocument::addtext_line_widths`, and
+  `pdf_addtext_line_widths`, covering cpdf's current-line width measurement,
+  expanded paragraph width list, longest-width selection, selected-font and
+  fontpack branches, empty expanded-line diagnostics, and wrapper parity.
+  Native focused validation reports `moon test --target native --package
+  bobzhang/pdflite --file pdf_addtext_test.mbt` at 97/97 tests passing; native
+  full-suite validation reports 1869/1869 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` line-width selection and justification
   application slice exposes `pdf_addtext_longest_width` and
   `pdf_addtext_apply_justification_offset`, covering cpdf's widest expanded

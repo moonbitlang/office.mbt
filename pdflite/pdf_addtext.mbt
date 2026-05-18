@@ -56,6 +56,14 @@ pub(all) struct PdfAddTextLinePlacement {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Width measurements for one cpdf add-text line and its expanded paragraph.
+pub(all) struct PdfAddTextLineWidths {
+  text_width : Double
+  widths : Array[Double]
+  longest_width : Double
+} derive(Debug, Eq, ToJson)
+
+///|
 /// Values used to build cpdf add-text replacement callbacks.
 pub(all) struct PdfAddTextReplacementValues {
   page_number : Int
@@ -354,6 +362,52 @@ pub fn pdf_addtext_calc_textwidth(
 ) -> Double raise PdfError {
   document.addtext_calc_textwidth(
     page, font, fontpack, fontname, font_size, text,
+  )
+}
+
+///|
+/// Measure cpdf add-text's current line and expanded paragraph widths.
+///
+/// This ports the local `textwidth`, `allwidths`, and `longest_w` block in
+/// `cpdfaddtext.ml` after replacement expansion and URL stripping.
+pub fn PdfDocument::addtext_line_widths(
+  self : PdfDocument,
+  page : PdfPage,
+  font : PdfFont?,
+  fontpack : PdfFontPack?,
+  fontname : PdfName,
+  font_size : Double,
+  text : BytesView,
+  expanded_lines : ArrayView[Bytes],
+) -> PdfAddTextLineWidths raise PdfError {
+  let text_width = self.addtext_calc_textwidth(
+    page, font, fontpack, fontname, font_size, text,
+  )
+  let widths : Array[Double] = []
+  for line in expanded_lines {
+    widths.push(
+      self.addtext_calc_textwidth(
+        page, font, fontpack, fontname, font_size, line,
+      ),
+    )
+  }
+  { text_width, widths, longest_width: pdf_addtext_longest_width(widths) }
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::addtext_line_widths`.
+pub fn pdf_addtext_line_widths(
+  document : PdfDocument,
+  page : PdfPage,
+  font : PdfFont?,
+  fontpack : PdfFontPack?,
+  fontname : PdfName,
+  font_size : Double,
+  text : BytesView,
+  expanded_lines : ArrayView[Bytes],
+) -> PdfAddTextLineWidths raise PdfError {
+  document.addtext_line_widths(
+    page, font, fontpack, fontname, font_size, text, expanded_lines,
   )
 }
 
