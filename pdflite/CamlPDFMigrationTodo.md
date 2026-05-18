@@ -2184,6 +2184,15 @@ Current backend snapshot:
   positions. Native focused validation reports `moon test --target native
   --package bobzhang/pdflite --file pdf_addtext_test.mbt` at 38/38 tests
   passing; native full-suite validation reports 1810/1810 tests passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` add-rectangle document slice exposes
+  `PdfDocument::addtext_rectangle` and `pdf_addtext_rectangle`, covering
+  selected-page rectangle stamping, cpdf coordinate parsing, relative page-box
+  placement with MediaBox fallback, optional opacity `/ExtGState` resources,
+  outline/fill behavior, underneath fast insertion, wrapper parity, and invalid
+  coordinate/page diagnostics. Native focused validation reports `moon test
+  --target native --package bobzhang/pdflite --file pdf_addtext_test.mbt` at
+  42/42 tests passing; native full-suite validation reports 1814/1814 tests
+  passing.~~
 - [x] ~~Standalone `cpdfremovetext.ml` removal slice exposes
   `pdf_remove_added_text_ops`, `pdf_remove_all_text_ops`,
   `PdfDocument::remove_added_text`, `remove_all_text`, and compatibility

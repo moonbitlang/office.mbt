@@ -40,6 +40,14 @@ fn addtext_bounds_for_test() -> @pdflite.PdfRectangle {
 }
 
 ///|
+fn addtext_content_ops_for_test(
+  document : @pdflite.PdfDocument,
+  page : @pdflite.PdfPage,
+) -> Array[@pdflite.PdfContentOp] {
+  try! document.parse_content_ops_with_resources(page.resources, page.content)
+}
+
+///|
 fn addtext_bookmark_for_test(
   level : Int,
   text : String,
@@ -285,6 +293,137 @@ test "pdf_addtext_rectangle_origin handles center and unchanged positions" {
     ),
     (3.0, 4.0),
   )
+}
+
+///|
+test "PdfDocument addtext_rectangle appends selected page rectangle" {
+  let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 2)
+  let stamped = try! document.addtext_rectangle(
+    [2],
+    "20 10",
+    PdfContentRGB(1.0, 0.0, 0.0),
+    PdfPositionTopRight(3.0, 4.0),
+  )
+  let pages = try! stamped.pages_of_pagetree()
+  @test.assert_eq(pages[0].content.length(), 0)
+  @test.assert_eq(
+    addtext_content_ops_for_test(stamped, pages[1]),
+    @pdflite.pdf_addtext_rectangle_ops(
+      77.0,
+      36.0,
+      20.0,
+      10.0,
+      PdfContentRGB(1.0, 0.0, 0.0),
+      false,
+      1.0,
+      None,
+    ),
+  )
+}
+
+///|
+test "PdfDocument addtext_rectangle handles relative box opacity and underneath fast mode" {
+  let base = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
+  let pages = try! base.pages_of_pagetree()
+  let cropbox = addtext_name_for_test("/CropBox")
+  let extgstate = addtext_name_for_test("/ExtGState")
+  let gs = addtext_name_for_test("/gs0")
+  let ca = addtext_name_for_test("/ca")
+  let ca_stroke = addtext_name_for_test("/CA")
+  let page = {
+    ..pages[0],
+    content: [try! @pdflite.pdf_content_stream_of_ops([Op_BT, Op_ET])],
+    rest: @pdflite.pdf_dictionary([
+      (
+        cropbox,
+        PdfArray([PdfReal(10.0), PdfReal(20.0), PdfReal(70.0), PdfReal(40.0)]),
+      ),
+    ]),
+  }
+  let document = try! base.change_pages([page])
+  let stamped = try! @pdflite.pdf_addtext_rectangle(
+    document,
+    [1],
+    "20 10",
+    PdfContentGrey(0.5),
+    PdfPositionCentre,
+    relative_to_box=cropbox,
+    outline=true,
+    line_width=1.25,
+    opacity=0.5,
+    underneath=true,
+    fast=true,
+  )
+  let stamped_pages = try! stamped.pages_of_pagetree()
+  @test.assert_eq(
+    addtext_content_ops_for_test(stamped, stamped_pages[0]),
+    [
+      ..@pdflite.pdf_addtext_rectangle_ops(
+        30.0,
+        25.0,
+        20.0,
+        10.0,
+        PdfContentGrey(0.5),
+        true,
+        1.25,
+        Some(gs),
+      ),
+      Op_BT,
+      Op_ET,
+    ],
+  )
+  guard stamped.lookup_direct(extgstate, stamped_pages[0].resources)
+    is Some(resource_dictionary) else {
+    fail("expected ExtGState resource dictionary")
+  }
+  guard stamped.lookup_direct(gs, resource_dictionary)
+    is Some(opacity_dictionary) else {
+    fail("expected generated opacity graphics state")
+  }
+  @test.assert_eq(
+    stamped.lookup_direct(ca, opacity_dictionary),
+    Some(PdfReal(0.5)),
+  )
+  @test.assert_eq(
+    stamped.lookup_direct(ca_stroke, opacity_dictionary),
+    Some(PdfReal(0.5)),
+  )
+}
+
+///|
+test "PdfDocument addtext_rectangle reports bad coordinate specifications" {
+  let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
+  let result : Result[@pdflite.PdfDocument, Error] = try? document.addtext_rectangle(
+    [1],
+    "10 20 30",
+    PdfContentGrey(0.0),
+    PdfPositionBottomLeft(0.0, 0.0),
+  )
+  guard result
+    is Err(@pdflite.PdfError::SoftError("bad coordinate specification")) else {
+    fail("expected SoftError for addtext rectangle coordinate arity")
+  }
+}
+
+///|
+test "PdfDocument addtext_rectangle validates selected pages" {
+  let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
+  let result : Result[@pdflite.PdfDocument, Error] = try? document.addtext_rectangle(
+    [2],
+    "10 20",
+    PdfContentGrey(0.0),
+    PdfPositionBottomLeft(0.0, 0.0),
+  )
+  guard result
+    is Err(
+      @pdflite.PdfError::BadPageSpecification(
+        "addtext_rectangle: range contains pages not present in pdf"
+      )
+    ) else {
+    fail(
+      "expected BadPageSpecification for out-of-range addtext rectangle page",
+    )
+  }
 }
 
 ///|

@@ -97,6 +97,8 @@ pub fn pdf_addtext_page_label(PdfDocument, Int) -> String raise @core.PdfError
 
 pub fn pdf_addtext_process_text_with_time(PdfStrftimeTime, String, ArrayView[(String, () -> String)]) -> String
 
+pub fn pdf_addtext_rectangle(PdfDocument, ArrayView[Int], String, PdfContentColour, PdfPosition, relative_to_box? : @core.PdfName, outline? : Bool, line_width? : Double, opacity? : Double, underneath? : Bool, fast? : Bool) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_addtext_rectangle_ops(Double, Double, Double, Double, PdfContentColour, Bool, Double, @core.PdfName?) -> Array[PdfContentOp]
 
 pub fn pdf_addtext_rectangle_origin(PdfRectangle, PdfPosition, Double, Double) -> (Double, Double)
@@ -1759,6 +1761,7 @@ pub fn PdfDocument::add_prefix(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDocument::add_root(Self, Int, ArrayView[(@core.PdfName, PdfObject)]) -> Int raise @core.PdfError
 pub fn PdfDocument::addtext_bookmark_for_page(Self, ArrayView[PdfBookmark], Int, Int) -> String raise @core.PdfError
 pub fn PdfDocument::addtext_page_label(Self, Int) -> String raise @core.PdfError
+pub fn PdfDocument::addtext_rectangle(Self, ArrayView[Int], String, PdfContentColour, PdfPosition, relative_to_box? : @core.PdfName, outline? : Bool, line_width? : Double, opacity? : Double, underneath? : Bool, fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::addtext_replacement_values(Self, ArrayView[PdfBookmark], Int, Int, String, Int, Int?) -> PdfAddTextReplacementValues raise @core.PdfError
 pub fn PdfDocument::annotations_json(Self, ArrayView[Int]) -> Json raise @core.PdfError
 pub fn PdfDocument::annotations_json_blob(Self, ArrayView[Int]) -> Bytes raise @core.PdfError
