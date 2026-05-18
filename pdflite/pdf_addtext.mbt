@@ -783,6 +783,30 @@ pub fn pdf_addtext_install_fontpack_resources(
 }
 
 ///|
+/// Write the selected cpdf add-text font and return its indirect reference.
+///
+/// Existing-named-font mode has no selected font to write, so `None` is
+/// preserved for callers that later reuse the page's current font resource.
+pub fn PdfDocument::addtext_selected_font_object(
+  self : PdfDocument,
+  font : PdfFont?,
+) -> PdfObject? raise PdfError {
+  match font {
+    Some(font) => Some(PdfIndirect(self.write_font(font)))
+    None => None
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::addtext_selected_font_object`.
+pub fn pdf_addtext_selected_font_object(
+  document : PdfDocument,
+  font : PdfFont?,
+) -> PdfObject? raise PdfError {
+  document.addtext_selected_font_object(font)
+}
+
+///|
 fn pdf_addtext_font_not_found(fontname : PdfName) -> PdfError {
   SoftError(
     "addtext: font " + @ascii.decode_lossy(fontname.bytes()) + " not found",

@@ -139,6 +139,8 @@ pub fn pdf_addtext_rotation_offsets(PdfPosition, PdfAddTextRotation, Double) -> 
 
 pub fn pdf_addtext_rotation_radians(PdfAddTextRotation) -> Double
 
+pub fn pdf_addtext_selected_font_object(PdfDocument, PdfFont?) -> PdfObject? raise @core.PdfError
+
 pub fn pdf_addtext_split_at_newline(String) -> Array[String]
 
 pub fn pdf_addtext_text_ops(PdfFont?, PdfFontPack?, Double, Double, Double, Double, Double, Bool, Double, @core.PdfName, ArrayView[@core.PdfName], @core.PdfName?, PdfContentColour, Double, String, Double, Double, Double) -> Array[PdfContentOp] raise @core.PdfError
@@ -1825,6 +1827,7 @@ pub fn PdfDocument::addtext_page_label(Self, Int) -> String raise @core.PdfError
 pub fn PdfDocument::addtext_page_rest_with_annotations(Self, PdfObject, ArrayView[PdfObject]) -> PdfObject raise @core.PdfError
 pub fn PdfDocument::addtext_rectangle(Self, ArrayView[Int], String, PdfContentColour, PdfPosition, relative_to_box? : @core.PdfName, outline? : Bool, line_width? : Double, opacity? : Double, underneath? : Bool, fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::addtext_replacement_values(Self, ArrayView[PdfBookmark], Int, Int, String, Int, Int?) -> PdfAddTextReplacementValues raise @core.PdfError
+pub fn PdfDocument::addtext_selected_font_object(Self, PdfFont?) -> PdfObject? raise @core.PdfError
 pub fn PdfDocument::addtext_url_annotation_references(Self, String, ArrayView[PdfAddTextUrl], (String) -> Double raise @core.PdfError, @geometry.Point2, Double, Double, Double, Double, @geometry.Point2, Double, PdfFont?, String, Double, Bool) -> Array[PdfObject] raise @core.PdfError
 pub fn PdfDocument::addtext_width_of_existing_font_resource(Self, PdfPage, @core.PdfName, Double, BytesView) -> (@core.PdfName, Double) raise @core.PdfError
 pub fn PdfDocument::annotations_json(Self, ArrayView[Int]) -> Json raise @core.PdfError

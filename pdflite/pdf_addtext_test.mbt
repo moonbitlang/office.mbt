@@ -917,6 +917,40 @@ test "pdf_addtext_install_fontpack_resources adds embedded font dictionary" {
 }
 
 ///|
+test "PdfDocument addtext_selected_font_object writes standard fonts" {
+  let document = @pdflite.pdf_document_empty()
+  let reference = try! document.addtext_selected_font_object(
+    Some(addtext_standard_font_for_test()),
+  )
+  @test.assert_eq(reference, Some(PdfIndirect(1)))
+  let font_object = document.lookup_object_or_null(1)
+  @test.assert_eq(
+    font_object.lookup_immediate(addtext_name_for_test("/BaseFont")),
+    Some(PdfNameObject(addtext_name_for_test("/Helvetica"))),
+  )
+}
+
+///|
+test "pdf_addtext_selected_font_object preserves existing-font mode" {
+  let document = @pdflite.pdf_document_empty()
+  @test.assert_eq(
+    try! @pdflite.pdf_addtext_selected_font_object(document, None),
+    None,
+  )
+}
+
+///|
+test "PdfDocument addtext_selected_font_object propagates writer errors" {
+  let document = @pdflite.pdf_document_empty()
+  let result : Result[@pdflite.PdfObject?, Error] = try? document.addtext_selected_font_object(
+    Some(addtext_simple_font_for_test(700.0)),
+  )
+  guard result is Err(@pdflite.PdfError::FontWriteUnsupported) else {
+    fail("expected unsupported selected font error")
+  }
+}
+
+///|
 test "PdfDocument addtext_existing_font_resource finds direct resource keys" {
   let document = @pdflite.pdf_document_empty()
   let resource_name = addtext_name_for_test("/F1")

@@ -2262,6 +2262,14 @@ Current backend snapshot:
   reports `moon test --target native --package bobzhang/pdflite --file
   pdf_addtext_test.mbt` at 63/63 tests passing; native full-suite validation
   reports 1835/1835 tests passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` selected-font object slice exposes
+  `PdfDocument::addtext_selected_font_object` and
+  `pdf_addtext_selected_font_object`, covering cpdf's selected parsed-font
+  write path, indirect font object references, existing-named-font no-op mode,
+  wrapper parity, and writer-error propagation for unsupported local font
+  shapes. Native focused validation reports `moon test --target native
+  --package bobzhang/pdflite --file pdf_addtext_test.mbt` at 84/84 tests
+  passing; native full-suite validation reports 1856/1856 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` URL annotation object slice exposes
   `pdf_addtext_url_annotation`, covering cpdf's `/Link` subtype dictionary,
   QuadPoints ordering, rectangle serialization, URI action dictionary, and
