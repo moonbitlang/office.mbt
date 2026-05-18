@@ -1738,6 +1738,12 @@ Current backend snapshot:
   parsing. Native focused validation reports `moon test --target native
   pdf_coord_test.mbt` at 6/6 tests passing; native full-suite validation
   reports 1722/1722 tests passing.~~
+- [x] ~~Standalone `cpdfcolours.ml` CSS colour table slice exposes
+  `pdf_css_colours` and `pdf_css_colour_value`, covering the complete 148-entry
+  lowercased table, first/last entry order, alias preservation, case-insensitive
+  lookup, and missing-colour lookup. Native focused validation reports `moon
+  test --target native pdf_colour_test.mbt` at 2/2 tests passing; native
+  full-suite validation reports 1724/1724 tests passing.~~
 - [x] ~~Standalone `cpdfcreate.ml` blank-document slice exposes
   `pdf_blank_document` and `pdf_blank_document_paper`, covering point-sized
   pages, named paper sizes, zero-page documents, page-tree/root creation, and
