@@ -908,6 +908,80 @@ test "pdf_addtext_install_fontpack_resources adds embedded font dictionary" {
 }
 
 ///|
+test "pdf_addtext_url_annotation builds cpdf link annotation objects" {
+  let annotation = @pdflite.pdf_addtext_url_annotation(
+    @pdflite.point2(1.0, 2.0),
+    @pdflite.point2(3.0, 4.0),
+    @pdflite.point2(5.0, 6.0),
+    @pdflite.point2(7.0, 8.0),
+    { min_x: 1.0, min_y: 2.0, max_x: 7.0, max_y: 8.0 },
+    "https://example.test",
+    true,
+  )
+  let expected : @pdflite.PdfObject = PdfDictionary([
+    (
+      addtext_name_for_test("/Subtype"),
+      PdfNameObject(addtext_name_for_test("/Link")),
+    ),
+    (
+      addtext_name_for_test("/QuadPoints"),
+      PdfArray([
+        PdfReal(1.0),
+        PdfReal(2.0),
+        PdfReal(7.0),
+        PdfReal(8.0),
+        PdfReal(3.0),
+        PdfReal(4.0),
+        PdfReal(5.0),
+        PdfReal(6.0),
+      ]),
+    ),
+    (
+      addtext_name_for_test("/Rect"),
+      PdfArray([PdfReal(1.0), PdfReal(2.0), PdfReal(7.0), PdfReal(8.0)]),
+    ),
+    (
+      addtext_name_for_test("/BS"),
+      PdfDictionary([(addtext_name_for_test("/W"), PdfInteger(1))]),
+    ),
+    (
+      addtext_name_for_test("/A"),
+      PdfDictionary([
+        (
+          addtext_name_for_test("/URI"),
+          PdfString(@utf8.encode("https://example.test")),
+        ),
+        (
+          addtext_name_for_test("/Type"),
+          PdfNameObject(addtext_name_for_test("/Action")),
+        ),
+        (
+          addtext_name_for_test("/S"),
+          PdfNameObject(addtext_name_for_test("/URI")),
+        ),
+      ]),
+    ),
+  ])
+  @test.assert_eq(annotation, expected)
+  let hidden_border = @pdflite.pdf_addtext_url_annotation(
+    @pdflite.point2(1.0, 2.0),
+    @pdflite.point2(3.0, 4.0),
+    @pdflite.point2(5.0, 6.0),
+    @pdflite.point2(7.0, 8.0),
+    addtext_bounds_for_test(),
+    "https://example.test",
+    false,
+  )
+  guard hidden_border.lookup_immediate(addtext_name_for_test("/BS")) is Some(bs) else {
+    fail("expected URL border dictionary")
+  }
+  @test.assert_eq(
+    bs.lookup_immediate(addtext_name_for_test("/W")),
+    Some(PdfInteger(0)),
+  )
+}
+
+///|
 test "pdf_addtext_rectangle_origin lowers top positions by rectangle height" {
   let bounds = addtext_bounds_for_test()
   @test.assert_eq(

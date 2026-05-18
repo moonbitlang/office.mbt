@@ -763,6 +763,63 @@ pub fn pdf_addtext_install_fontpack_resources(
 }
 
 ///|
+fn pdf_addtext_name(text : String) -> PdfName {
+  pdf_name_of_bytes(@ascii.encode(text))
+}
+
+///|
+/// Build cpdf's URL link annotation object for add-text markup.
+pub fn pdf_addtext_url_annotation(
+  p0 : Point2,
+  p1 : Point2,
+  p2 : Point2,
+  p3 : Point2,
+  rectangle : PdfRectangle,
+  url : String,
+  url_border : Bool,
+) -> PdfObject {
+  PdfDictionary([
+    (pdf_addtext_name("/Subtype"), PdfNameObject(pdf_addtext_name("/Link"))),
+    (
+      pdf_addtext_name("/QuadPoints"),
+      PdfArray([
+        PdfReal(p0.x),
+        PdfReal(p0.y),
+        PdfReal(p3.x),
+        PdfReal(p3.y),
+        PdfReal(p1.x),
+        PdfReal(p1.y),
+        PdfReal(p2.x),
+        PdfReal(p2.y),
+      ]),
+    ),
+    (
+      pdf_addtext_name("/Rect"),
+      PdfArray([
+        PdfReal(rectangle.min_x),
+        PdfReal(rectangle.min_y),
+        PdfReal(rectangle.max_x),
+        PdfReal(rectangle.max_y),
+      ]),
+    ),
+    (
+      pdf_addtext_name("/BS"),
+      PdfDictionary([
+        (pdf_addtext_name("/W"), PdfInteger(if url_border { 1 } else { 0 })),
+      ]),
+    ),
+    (
+      pdf_addtext_name("/A"),
+      PdfDictionary([
+        (pdf_addtext_name("/URI"), PdfString(@utf8.encode(url))),
+        (pdf_addtext_name("/Type"), PdfNameObject(pdf_addtext_name("/Action"))),
+        (pdf_addtext_name("/S"), PdfNameObject(pdf_addtext_name("/URI"))),
+      ]),
+    ),
+  ])
+}
+
+///|
 /// Calculate the cpdf add-rectangle lower-left origin after placement.
 pub fn pdf_addtext_rectangle_origin(
   bounds : PdfRectangle,

@@ -141,6 +141,8 @@ pub fn pdf_addtext_text_ops(PdfFont?, PdfFontPack?, Double, Double, Double, Doub
 
 pub fn pdf_addtext_unescape_string(String) -> String raise @core.PdfError
 
+pub fn pdf_addtext_url_annotation(@geometry.Point2, @geometry.Point2, @geometry.Point2, @geometry.Point2, PdfRectangle, String, Bool) -> PdfObject
+
 pub fn pdf_addtext_width_of_fontpack(PdfFontPack, Double, String) -> Double raise @core.PdfError
 
 pub fn pdf_addtext_width_of_selected_font(PdfFont, Double, BytesView) -> Double
