@@ -97,6 +97,8 @@ pub fn pdf_addtext_diagonal_offsets(PdfRectangle, PdfPosition, PdfAddTextRotatio
 
 pub fn pdf_addtext_effective_encoding(PdfFont?) -> PdfEncoding
 
+pub fn pdf_addtext_existing_font_resource(PdfDocument, PdfPage, @core.PdfName) -> (@core.PdfName, PdfObject) raise @core.PdfError
+
 pub fn pdf_addtext_expand_lines_with_time(PdfStrftimeTime, ArrayView[String], ArrayView[(String, () -> String)]) -> Array[String] raise @core.PdfError
 
 pub fn pdf_addtext_fontpack_resource_dictionary(PdfObject, ArrayView[@core.PdfName], ArrayView[Int]) -> PdfObject raise @core.PdfError
@@ -1814,6 +1816,7 @@ pub fn PdfDocument::add_pagetree(Self, ArrayView[PdfPage]) -> Int raise @core.Pd
 pub fn PdfDocument::add_prefix(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDocument::add_root(Self, Int, ArrayView[(@core.PdfName, PdfObject)]) -> Int raise @core.PdfError
 pub fn PdfDocument::addtext_bookmark_for_page(Self, ArrayView[PdfBookmark], Int, Int) -> String raise @core.PdfError
+pub fn PdfDocument::addtext_existing_font_resource(Self, PdfPage, @core.PdfName) -> (@core.PdfName, PdfObject) raise @core.PdfError
 pub fn PdfDocument::addtext_page_label(Self, Int) -> String raise @core.PdfError
 pub fn PdfDocument::addtext_page_rest_with_annotations(Self, PdfObject, ArrayView[PdfObject]) -> PdfObject raise @core.PdfError
 pub fn PdfDocument::addtext_rectangle(Self, ArrayView[Int], String, PdfContentColour, PdfPosition, relative_to_box? : @core.PdfName, outline? : Bool, line_width? : Double, opacity? : Double, underneath? : Bool, fast? : Bool) -> Self raise @core.PdfError

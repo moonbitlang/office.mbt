@@ -917,6 +917,84 @@ test "pdf_addtext_install_fontpack_resources adds embedded font dictionary" {
 }
 
 ///|
+test "PdfDocument addtext_existing_font_resource finds direct resource keys" {
+  let document = @pdflite.pdf_document_empty()
+  let resource_name = addtext_name_for_test("/F1")
+  let font_object : @pdflite.PdfObject = PdfDictionary([
+    (
+      addtext_name_for_test("/BaseFont"),
+      PdfNameObject(addtext_name_for_test("/Helvetica")),
+    ),
+  ])
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: PdfDictionary([
+      (
+        addtext_name_for_test("/Font"),
+        PdfDictionary([(resource_name, font_object)]),
+      ),
+    ]),
+  }
+  @test.assert_eq(
+    try! document.addtext_existing_font_resource(page, resource_name),
+    (resource_name, font_object),
+  )
+}
+
+///|
+test "PdfDocument addtext_existing_font_resource falls back to BaseFont names" {
+  let document = @pdflite.pdf_document_empty()
+  let resource_name = addtext_name_for_test("/F1")
+  let basefont = addtext_name_for_test("/Helvetica")
+  document.add_object_given_number(
+    10,
+    PdfDictionary([
+      (addtext_name_for_test("/BaseFont"), PdfNameObject(basefont)),
+    ]),
+  )
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: PdfDictionary([
+      (
+        addtext_name_for_test("/Font"),
+        PdfDictionary([(resource_name, PdfIndirect(10))]),
+      ),
+    ]),
+  }
+  @test.assert_eq(
+    try! @pdflite.pdf_addtext_existing_font_resource(document, page, basefont),
+    (resource_name, PdfIndirect(10)),
+  )
+}
+
+///|
+test "PdfDocument addtext_existing_font_resource reports missing fonts" {
+  let document = @pdflite.pdf_document_empty()
+  let basefont = addtext_name_for_test("/Helvetica")
+  let missing_dictionary : Result[(@pdflite.PdfName, @pdflite.PdfObject), Error] = try? document.addtext_existing_font_resource(
+    @pdflite.pdf_page_blank(@pdflite.paper_a4),
+    basefont,
+  )
+  guard missing_dictionary
+    is Err(@pdflite.PdfError::SoftError("addtext: font dictionary not present")) else {
+    fail("expected missing font dictionary error")
+  }
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: PdfDictionary([
+      (addtext_name_for_test("/Font"), PdfDictionary([])),
+    ]),
+  }
+  let missing_font : Result[(@pdflite.PdfName, @pdflite.PdfObject), Error] = try? document.addtext_existing_font_resource(
+    page, basefont,
+  )
+  guard missing_font
+    is Err(@pdflite.PdfError::SoftError("addtext: font /Helvetica not found")) else {
+    fail("expected missing font error")
+  }
+}
+
+///|
 test "pdf_addtext_url_annotation builds cpdf link annotation objects" {
   let annotation = @pdflite.pdf_addtext_url_annotation(
     @pdflite.point2(1.0, 2.0),
