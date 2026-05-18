@@ -2219,6 +2219,14 @@ Current backend snapshot:
   font metrics. Native focused validation reports `moon test --target native
   --package bobzhang/pdflite --file pdf_addtext_test.mbt` at 51/51 tests
   passing; native full-suite validation reports 1823/1823 tests passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` line-preparation and encoding helper slice
+  exposes `pdf_addtext_lines_for_rotation` and
+  `pdf_addtext_effective_encoding`, covering cpdf's split-then-unescape line
+  preparation, Rot180/Rot270 line reversal, Rot0/Rot90 order preservation,
+  selected Standard/simple font encodings, and the missing-font WinAnsi
+  fallback. Native focused validation reports `moon test --target native
+  --package bobzhang/pdflite --file pdf_addtext_test.mbt` at 54/54 tests
+  passing; native full-suite validation reports 1826/1826 tests passing.~~
 - [x] ~~Standalone `cpdfremovetext.ml` removal slice exposes
   `pdf_remove_added_text_ops`, `pdf_remove_all_text_ops`,
   `PdfDocument::remove_added_text`, `remove_all_text`, and compatibility

@@ -608,6 +608,16 @@ pub fn pdf_addtext_baseline_offsets(
 }
 
 ///|
+/// Return the text encoding cpdf add-text uses for the selected font.
+pub fn pdf_addtext_effective_encoding(font : PdfFont?) -> PdfEncoding {
+  match font {
+    Some(PdfFontStandard({ encoding, .. })) => encoding
+    Some(PdfFontSimple({ encoding, .. })) => encoding
+    _ => PdfWinAnsiEncoding
+  }
+}
+
+///|
 /// Calculate the cpdf add-rectangle lower-left origin after placement.
 pub fn pdf_addtext_rectangle_origin(
   bounds : PdfRectangle,
@@ -1106,6 +1116,21 @@ pub fn pdf_addtext_unescape_string(text : String) -> String raise PdfError {
     }
   }
   pdf_addtext_decode_lossy(output)
+}
+
+///|
+/// Split and unescape add-text lines, reversing them for upside-down rotations.
+pub fn pdf_addtext_lines_for_rotation(
+  text : String,
+  rotation : PdfAddTextRotation,
+) -> Array[String] raise PdfError {
+  let lines = pdf_addtext_split_at_newline(text).map(line => {
+    pdf_addtext_unescape_string(line)
+  })
+  match rotation {
+    PdfAddTextRot180 | PdfAddTextRot270 => lines.rev()
+    PdfAddTextRot0 | PdfAddTextRot90 => lines
+  }
 }
 
 ///|

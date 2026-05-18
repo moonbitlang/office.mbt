@@ -91,6 +91,8 @@ pub fn pdf_addtext_colour_op_stroke(PdfContentColour) -> PdfContentOp
 
 pub fn pdf_addtext_diagonal_offsets(PdfRectangle, PdfPosition, PdfAddTextRotation, Double, Double, Double, Double) -> (Double, Double)
 
+pub fn pdf_addtext_effective_encoding(PdfFont?) -> PdfEncoding
+
 pub fn pdf_addtext_expand_lines_with_time(PdfStrftimeTime, ArrayView[String], ArrayView[(String, () -> String)]) -> Array[String] raise @core.PdfError
 
 pub fn pdf_addtext_get_urls_line(String) -> PdfAddTextUrlLine raise @core.PdfError
@@ -100,6 +102,8 @@ pub fn pdf_addtext_initial_line_offsets(PdfPosition, Int, Double, Double) -> (Do
 pub fn pdf_addtext_justification_offset(PdfAddTextRotation, Double, Double, PdfPosition, PdfAddTextJustification) -> Double
 
 pub fn pdf_addtext_line_advance(PdfAddTextRotation, Double, Double) -> (Double, Double)
+
+pub fn pdf_addtext_lines_for_rotation(String, PdfAddTextRotation) -> Array[String] raise @core.PdfError
 
 pub fn pdf_addtext_page_label(PdfDocument, Int) -> String raise @core.PdfError
 

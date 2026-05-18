@@ -138,6 +138,22 @@ fn addtext_simple_font_for_test(capheight : Double) -> @pdflite.PdfFont {
 }
 
 ///|
+fn addtext_simple_font_with_encoding_for_test(
+  encoding : @pdflite.PdfEncoding,
+) -> @pdflite.PdfFont {
+  PdfFontSimple({
+    fonttype: PdfType1,
+    basefont: None,
+    firstchar: 0,
+    lastchar: -1,
+    widths: [],
+    fontdescriptor: Some(addtext_font_descriptor_for_test(700.0)),
+    fontmetrics: None,
+    encoding,
+  })
+}
+
+///|
 fn addtext_simple_font_without_descriptor_for_test() -> @pdflite.PdfFont {
   PdfFontSimple({
     fonttype: PdfType1,
@@ -753,6 +769,28 @@ test "pdf_addtext_baseline_offsets handles simple font capheight and fallbacks" 
 }
 
 ///|
+test "pdf_addtext_effective_encoding follows selected add-text font" {
+  @test.assert_eq(
+    @pdflite.pdf_addtext_effective_encoding(
+      Some(
+        PdfFontStandard({ font: PdfTimesRoman, encoding: PdfMacRomanEncoding }),
+      ),
+    ),
+    PdfMacRomanEncoding,
+  )
+  @test.assert_eq(
+    @pdflite.pdf_addtext_effective_encoding(
+      Some(addtext_simple_font_with_encoding_for_test(PdfMacExpertEncoding)),
+    ),
+    PdfMacExpertEncoding,
+  )
+  @test.assert_eq(
+    @pdflite.pdf_addtext_effective_encoding(None),
+    PdfWinAnsiEncoding,
+  )
+}
+
+///|
 test "pdf_addtext_rectangle_origin lowers top positions by rectangle height" {
   let bounds = addtext_bounds_for_test()
   @test.assert_eq(
@@ -1318,6 +1356,39 @@ test "pdf_addtext_unescape_string reports octal escapes outside byte range" {
   guard result is Err(@pdflite.PdfError::SoftError("bad add-text octal escape")) else {
     fail("expected SoftError for octal escape outside byte range")
   }
+}
+
+///|
+test "pdf_addtext_lines_for_rotation prepares forward-rotation lines" {
+  @test.assert_eq(
+    try! @pdflite.pdf_addtext_lines_for_rotation(
+      "A\\101\\nB\\\\C",
+      PdfAddTextRot0,
+    ),
+    ["AA", "B\\C"],
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_addtext_lines_for_rotation("one\\ntwo", PdfAddTextRot90),
+    ["one", "two"],
+  )
+}
+
+///|
+test "pdf_addtext_lines_for_rotation reverses upside-down rotations" {
+  @test.assert_eq(
+    try! @pdflite.pdf_addtext_lines_for_rotation(
+      "one\\ntwo\\nthree",
+      PdfAddTextRot180,
+    ),
+    ["three", "two", "one"],
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_addtext_lines_for_rotation(
+      "one\\ntwo\\nthree",
+      PdfAddTextRot270,
+    ),
+    ["three", "two", "one"],
+  )
 }
 
 ///|
