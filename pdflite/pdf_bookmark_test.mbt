@@ -322,6 +322,66 @@ test "PdfDocument bookmarks_json exports cpdf bookmark rows" {
 }
 
 ///|
+test "PdfDocument bookmark_name_of_spec expands cpdf filename fields" {
+  let document = try! bookmark_listing_document_for_test()
+  let bookmarks = try! document.read_bookmarks(preserve_actions=true)
+  let spec = "sec-%%-@F-@N@-@Sxx@-@Exxx@-@B-@b4@"
+  @test.assert_eq(
+    try! document.bookmark_name_of_spec(
+      PdfMetadataUTF8,
+      bookmarks,
+      0,
+      spec,
+      7,
+      "base",
+      1,
+      2,
+    ),
+    "sec-07-base-7-01-002-TopQuote-TopQ",
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_bookmark_name_of_spec(
+      PdfMetadataUTF8,
+      bookmarks,
+      document,
+      0,
+      spec,
+      7,
+      "base",
+      1,
+      2,
+    ),
+    "sec-07-base-7-01-002-TopQuote-TopQ",
+  )
+  @test.assert_eq(
+    try! document.bookmark_name_of_spec(
+      PdfMetadataUTF8,
+      bookmarks,
+      0,
+      "plain-%",
+      123,
+      "base",
+      1,
+      2,
+    ),
+    "plain-3",
+  )
+  let broad : Result[String, Error] = try? document.bookmark_name_of_spec(
+    PdfMetadataUTF8,
+    bookmarks,
+    0,
+    "@Nxxxxxxxxx@",
+    7,
+    "base",
+    1,
+    2,
+  )
+  guard broad is Err(@pdflite.PdfError::SoftError(_)) else {
+    fail("expected @pdflite.PdfError::SoftError")
+  }
+}
+
+///|
 test "PdfDocument read_bookmarks traverses outline trees" {
   let doc = bookmark_document_for_test()
   let expected : Array[@pdflite.PdfBookmark] = [

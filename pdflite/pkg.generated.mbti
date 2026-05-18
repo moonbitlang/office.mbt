@@ -125,6 +125,8 @@ pub fn pdf_blank_document_paper(@geometry.PaperSize, Int) -> PdfDocument raise @
 
 pub let pdf_bookmark_black : PdfBookmarkColour
 
+pub fn pdf_bookmark_name_of_spec(PdfMetadataEncoding, ArrayView[PdfBookmark], PdfDocument, Int, String, Int, String, Int, Int) -> String raise @core.PdfError
+
 pub fn pdf_bookmarks_open_to_level(Int, PdfDocument) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_build_name_tree(Bool, PdfDocument, ArrayView[(Bytes, PdfObject)]) -> PdfObject raise @core.PdfError
@@ -1617,6 +1619,7 @@ pub fn PdfDocument::attach_file(Self, String, BytesView, keep_version? : Bool, p
 pub fn PdfDocument::black_fills(Self, ArrayView[Int], PdfContentColour) -> Self raise @core.PdfError
 pub fn PdfDocument::black_lines(Self, ArrayView[Int], PdfContentColour) -> Self raise @core.PdfError
 pub fn PdfDocument::black_text(Self, ArrayView[Int], PdfContentColour) -> Self raise @core.PdfError
+pub fn PdfDocument::bookmark_name_of_spec(Self, PdfMetadataEncoding, ArrayView[PdfBookmark], Int, String, Int, String, Int, Int) -> String raise @core.PdfError
 pub fn PdfDocument::bookmarks_json(Self, json_preserve_actions? : Bool) -> Json raise @core.PdfError
 pub fn PdfDocument::bookmarks_json_blob(Self, json_preserve_actions? : Bool) -> Bytes raise @core.PdfError
 pub fn PdfDocument::bookmarks_open_to_level(Self, Int) -> Self raise @core.PdfError

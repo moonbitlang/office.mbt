@@ -480,6 +480,265 @@ pub fn pdf_get_bookmarks_json(
 }
 
 ///|
+fn pdf_bookmark_name_spec_padded_number(
+  width : Int,
+  value : Int,
+) -> String raise PdfError {
+  if width > 8 {
+    raise SoftError("width of field too broad")
+  }
+  let text = value.to_string()
+  if width <= 1 || text.length() >= width {
+    text
+  } else {
+    "0".repeat(width - text.length()) + text
+  }
+}
+
+///|
+fn pdf_bookmark_name_spec_percent_number(width : Int, value : Int) -> String {
+  let text = value.to_string()
+  if text.length() > width {
+    text[text.length() - width:].to_owned()
+  } else {
+    "0".repeat(width - text.length()) + text
+  }
+}
+
+///|
+fn pdf_bookmark_name_spec_expand_percent(
+  spec : String,
+  sequence : Int,
+) -> String {
+  let bytes = @utf8.encode(spec)
+  let mut first = -1
+  for index in 0..<bytes.length() {
+    if bytes[index].to_int() == 37 {
+      first = index
+      break
+    }
+  }
+  if first < 0 {
+    spec
+  } else {
+    let mut end = first
+    while end < bytes.length() && bytes[end].to_int() == 37 {
+      end = end + 1
+    }
+    let before = @utf8.decode(bytes[:first]) catch { _ => "" }
+    let after = @utf8.decode(bytes[end:]) catch { _ => "" }
+    before +
+    pdf_bookmark_name_spec_percent_number(end - first, sequence) +
+    after
+  }
+}
+
+///|
+fn pdf_bookmark_name_spec_utf8_prefix(
+  text : String,
+  byte_length : Int,
+) -> String {
+  let bytes = @utf8.encode(text)
+  let mut end = if byte_length < bytes.length() {
+    byte_length
+  } else {
+    bytes.length()
+  }
+  while end > 0 {
+    try @utf8.decode(bytes[:end]) catch {
+      _ => end = end - 1
+    } noraise {
+      value => return value
+    }
+  }
+  ""
+}
+
+///|
+fn pdf_bookmark_name_spec_decimal(
+  bytes : BytesView,
+  start : Int,
+  end : Int,
+) -> Int raise PdfError {
+  if start == end {
+    raise SoftError("Bad @b spec")
+  }
+  let mut value = 0
+  for index in start..<end {
+    let digit = bytes[index].to_int()
+    if digit < 48 || digit > 57 {
+      raise SoftError("Bad @b spec")
+    }
+    value = value * 10 + digit - 48
+  }
+  value
+}
+
+///|
+fn PdfDocument::pdf_bookmark_name_for_page(
+  self : PdfDocument,
+  bookmarks : ArrayView[PdfBookmark],
+  split_level : Int,
+  page_number : Int,
+) -> String raise PdfError {
+  for bookmark in bookmarks {
+    if bookmark.level <= split_level &&
+      self.page_number_of_target(bookmark.target) == page_number {
+      let text = @utf8.decode(pdf_utf8_of_pdfdocstring(bookmark.text)) catch {
+        _ => raise InvalidUTF8
+      }
+      return pdf_attachment_remove_unsafe_characters(text)
+    }
+  }
+  ""
+}
+
+///|
+fn pdf_bookmark_name_spec_scan_to_at(
+  bytes : BytesView,
+  start : Int,
+) -> (Int, Int) {
+  let mut end = start
+  while end < bytes.length() && bytes[end].to_int() != 64 {
+    end = end + 1
+  }
+  let next = if end < bytes.length() { end + 1 } else { end }
+  (end - start, next)
+}
+
+///|
+fn PdfDocument::pdf_bookmark_name_spec_process_at_fields(
+  self : PdfDocument,
+  bookmarks : ArrayView[PdfBookmark],
+  split_level : Int,
+  spec : String,
+  sequence : Int,
+  filename : String,
+  start_page : Int,
+  end_page : Int,
+) -> String raise PdfError {
+  let bytes = @utf8.encode(spec)
+  let output : Array[Byte] = []
+  let bookmark_name = self.pdf_bookmark_name_for_page(
+    bookmarks, split_level, start_page,
+  )
+  let mut index = 0
+  while index < bytes.length() {
+    if bytes[index].to_int() == 64 && index + 1 < bytes.length() {
+      match bytes[index + 1].to_int() {
+        70 => {
+          pdf_writer_push_ascii(output, filename)
+          index = index + 2
+        }
+        78 | 83 | 69 as field => {
+          let (width, next) = pdf_bookmark_name_spec_scan_to_at(
+            bytes,
+            index + 2,
+          )
+          let value = match field {
+            78 => sequence
+            83 => start_page
+            _ => end_page
+          }
+          pdf_writer_push_ascii(
+            output,
+            pdf_bookmark_name_spec_padded_number(width, value),
+          )
+          index = next
+        }
+        66 => {
+          pdf_writer_push_ascii(output, bookmark_name)
+          index = index + 2
+        }
+        98 => {
+          let mut digits_end = index + 2
+          while digits_end < bytes.length() {
+            let digit = bytes[digits_end].to_int()
+            if digit < 48 || digit > 57 {
+              break
+            }
+            digits_end = digits_end + 1
+          }
+          if digits_end == index + 2 {
+            raise SoftError("Bad @b spec")
+          }
+          let length = pdf_bookmark_name_spec_decimal(
+            bytes,
+            index + 2,
+            digits_end,
+          )
+          pdf_writer_push_ascii(
+            output,
+            pdf_bookmark_name_spec_utf8_prefix(bookmark_name, length),
+          )
+          index = if digits_end < bytes.length() {
+            digits_end + 1
+          } else {
+            digits_end
+          }
+        }
+        _ => {
+          output.push(bytes[index])
+          index = index + 1
+        }
+      }
+    } else {
+      output.push(bytes[index])
+      index = index + 1
+    }
+  }
+  @utf8.decode(Bytes::from_array(output)) catch {
+    _ => raise InvalidUTF8
+  }
+}
+
+///|
+/// Expand cpdf's bookmark-based output filename specification.
+///
+/// This ports the output-side `name_of_spec` helper. Bookmark-file parsing is
+/// intentionally separate; callers pass the already-read bookmark list.
+pub fn PdfDocument::bookmark_name_of_spec(
+  self : PdfDocument,
+  encoding : PdfMetadataEncoding,
+  bookmarks : ArrayView[PdfBookmark],
+  split_level : Int,
+  spec : String,
+  sequence : Int,
+  filename : String,
+  start_page : Int,
+  end_page : Int,
+) -> String raise PdfError {
+  let _ = encoding
+  self.pdf_bookmark_name_spec_process_at_fields(
+    bookmarks,
+    split_level,
+    pdf_bookmark_name_spec_expand_percent(spec, sequence),
+    sequence,
+    filename,
+    start_page,
+    end_page,
+  )
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::bookmark_name_of_spec`.
+pub fn pdf_bookmark_name_of_spec(
+  encoding : PdfMetadataEncoding,
+  bookmarks : ArrayView[PdfBookmark],
+  document : PdfDocument,
+  split_level : Int,
+  spec : String,
+  sequence : Int,
+  filename : String,
+  start_page : Int,
+  end_page : Int,
+) -> String raise PdfError {
+  document.bookmark_name_of_spec(
+    encoding, bookmarks, split_level, spec, sequence, filename, start_page, end_page,
+  )
+}
+
+///|
 fn PdfDocument::pdf_bookmark_title(
   self : PdfDocument,
   outline : PdfObject,

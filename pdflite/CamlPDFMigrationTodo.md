@@ -1811,6 +1811,14 @@ Current backend snapshot:
   filtered listing output. Native focused validation reports `moon test --target
   native pdf_bookmark_test.mbt` at 21/21 tests passing; native full-suite
   validation reports 1738/1738 tests passing.~~
+- [x] ~~Bookmark filename-spec helper slice exposes cpdf-style `name_of_spec`
+  expansion for already-read bookmark lists while leaving bookmark-file parsing
+  and import for a later slice. Coverage pins percent sequence substitution,
+  `@F`, `@N`, `@S`, `@E`, `@B`, and `@b...@` expansion, unsafe bookmark-title
+  character filtering, UTF-8-safe truncation, wrapper parity, and over-wide
+  field diagnostics. Native focused validation reports `moon test --target
+  native pdf_bookmark_test.mbt` at 22/22 tests passing; native full-suite
+  validation reports 1739/1739 tests passing.~~
 - [x] ~~Optional-content group management helper slice exposes cpdf-style raw
   OCG name listing, rename, order-all, and same-name coalescing wrappers.
   Coverage pins raw layer-name listing, copy-on-write rename behavior, wrapper
