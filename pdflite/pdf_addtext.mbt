@@ -16,6 +16,24 @@ pub(all) enum PdfAddTextJustification {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// A URL span parsed from cpdf add-text `%URL[text|url]` markup.
+///
+/// `start` and `end` are byte offsets in the visible output line, matching
+/// OCaml cpdf's `String.length` accounting.
+pub(all) struct PdfAddTextUrl {
+  url : String
+  start : Int
+  end : Int
+} derive(Debug, Eq, ToJson)
+
+///|
+/// One add-text line after stripping `%URL[text|url]` markup.
+pub(all) struct PdfAddTextUrlLine {
+  text : String
+  urls : Array[PdfAddTextUrl]
+} derive(Debug, Eq, ToJson)
+
+///|
 fn pdf_addtext_vertical_justification(
   rotation : PdfAddTextRotation,
   justification : PdfAddTextJustification,
@@ -208,4 +226,81 @@ pub fn pdf_addtext_justification_offset(
         pdf_addtext_horizontal_justification(rotation, justification),
       )
   }
+}
+
+///|
+fn pdf_addtext_find_byte(bytes : BytesView, start : Int, value : Int) -> Int? {
+  let mut index = start
+  while index < bytes.length() {
+    if bytes[index].to_int() == value {
+      return Some(index)
+    }
+    index += 1
+  }
+  None
+}
+
+///|
+fn pdf_addtext_require_byte(
+  bytes : BytesView,
+  start : Int,
+  value : Int,
+) -> Int raise PdfError {
+  match pdf_addtext_find_byte(bytes, start, value) {
+    Some(index) => index
+    None => raise SoftError("bad URL syntax in text")
+  }
+}
+
+///|
+fn pdf_addtext_is_url_marker(bytes : BytesView, index : Int) -> Bool {
+  index + 4 < bytes.length() &&
+  bytes[index].to_int() == 37 &&
+  bytes[index + 1].to_int() == 85 &&
+  bytes[index + 2].to_int() == 82 &&
+  bytes[index + 3].to_int() == 76 &&
+  bytes[index + 4].to_int() == 91
+}
+
+///|
+fn pdf_addtext_utf8_string(bytes : BytesView) -> String raise PdfError {
+  @utf8.decode(bytes) catch {
+    _ => raise InvalidUTF8
+  }
+}
+
+///|
+/// Strip cpdf add-text `%URL[text|url]` markup from one line.
+///
+/// The returned URL spans use byte offsets in the stripped visible text, as in
+/// cpdf's `get_urls_line` helper.
+pub fn pdf_addtext_get_urls_line(
+  line : String,
+) -> PdfAddTextUrlLine raise PdfError {
+  let bytes = @utf8.encode(line)
+  let output : Array[Byte] = []
+  let urls : Array[PdfAddTextUrl] = []
+  let mut index = 0
+  let mut position = 0
+  while index < bytes.length() {
+    if pdf_addtext_is_url_marker(bytes, index) {
+      let text_start = index + 5
+      let pipe = pdf_addtext_require_byte(bytes, text_start, 124)
+      let close = pdf_addtext_require_byte(bytes, pipe + 1, 93)
+      for byte in bytes[text_start:pipe] {
+        output.push(byte)
+      }
+      let url = pdf_addtext_utf8_string(bytes[pipe + 1:close])
+      let start = position
+      let end = position + pipe - text_start
+      urls.push({ url, start, end })
+      position = end
+      index = close + 1
+    } else {
+      output.push(bytes[index])
+      position += 1
+      index += 1
+    }
+  }
+  { text: pdf_addtext_utf8_string(Bytes::from_array(output)), urls }
 }

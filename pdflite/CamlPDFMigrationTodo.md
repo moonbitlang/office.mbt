@@ -2083,6 +2083,13 @@ Current backend snapshot:
   `moon test --target native --package bobzhang/pdflite --file
   pdf_addtext_test.mbt` at 5/5 tests passing; native full-suite validation
   reports 1777/1777 tests passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` URL marker helper slice exposes
+  `PdfAddTextUrl`, `PdfAddTextUrlLine`, and
+  `pdf_addtext_get_urls_line`, covering `%URL[text|url]` stripping, multiple
+  ordered URL spans, byte-offset parity for UTF-8 text, and malformed-marker
+  soft errors. Native focused validation reports `moon test --target native
+  --package bobzhang/pdflite --file pdf_addtext_test.mbt` at 9/9 tests
+  passing; native full-suite validation reports 1781/1781 tests passing.~~
 - [x] ~~Standalone `cpdfremovetext.ml` removal slice exposes
   `pdf_remove_added_text_ops`, `pdf_remove_all_text_ops`,
   `PdfDocument::remove_added_text`, `remove_all_text`, and compatibility
