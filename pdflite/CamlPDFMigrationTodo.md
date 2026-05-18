@@ -2245,6 +2245,14 @@ Current backend snapshot:
   test --target native --package bobzhang/pdflite --file pdf_addtext_test.mbt`
   at 59/59 tests passing; native full-suite validation reports 1831/1831 tests
   passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` line-width selection and justification
+  application slice exposes `pdf_addtext_longest_width` and
+  `pdf_addtext_apply_justification_offset`, covering cpdf's widest expanded
+  line selection, empty-width diagnostics, horizontal-rotation justification
+  addition to `hoffset`, and vertical-rotation justification subtraction from
+  `voffset`. Native focused validation reports `moon test --target native
+  --package bobzhang/pdflite --file pdf_addtext_test.mbt` at 61/61 tests
+  passing; native full-suite validation reports 1833/1833 tests passing.~~
 - [x] ~~Standalone `cpdfremovetext.ml` removal slice exposes
   `pdf_remove_added_text_ops`, `pdf_remove_all_text_ops`,
   `PdfDocument::remove_added_text`, `remove_all_text`, and compatibility

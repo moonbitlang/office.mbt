@@ -1143,6 +1143,16 @@ test "pdf_addtext_width_of_fontpack sums mapped codepoint widths" {
 }
 
 ///|
+test "pdf_addtext_longest_width selects widest expanded line" {
+  @test.assert_eq(@pdflite.pdf_addtext_longest_width([12.0, 7.0, 19.0]), 19.0)
+  @test.assert_eq(@pdflite.pdf_addtext_longest_width([-3.0, -1.0]), -1.0)
+  let result : Result[Double, Error] = try? @pdflite.pdf_addtext_longest_width([])
+  guard result is Err(@pdflite.PdfError::SoftError("empty add-text width list")) else {
+    fail("expected SoftError for empty add-text width list")
+  }
+}
+
+///|
 test "pdf_addtext_justification_offset handles horizontal rotations" {
   @test.assert_eq(
     addtext_offset_for_test(
@@ -1191,6 +1201,46 @@ test "pdf_addtext_justification_offset handles horizontal rotations" {
       PdfAddTextCentreJustify,
     ),
     20.0,
+  )
+}
+
+///|
+test "pdf_addtext_apply_justification_offset follows cpdf rotation branch" {
+  @test.assert_eq(
+    @pdflite.pdf_addtext_apply_justification_offset(
+      PdfAddTextRot0,
+      5.0,
+      10.0,
+      2.0,
+    ),
+    (7.0, 10.0),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_addtext_apply_justification_offset(
+      PdfAddTextRot180,
+      5.0,
+      10.0,
+      2.0,
+    ),
+    (7.0, 10.0),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_addtext_apply_justification_offset(
+      PdfAddTextRot90,
+      5.0,
+      10.0,
+      2.0,
+    ),
+    (5.0, 8.0),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_addtext_apply_justification_offset(
+      PdfAddTextRot270,
+      5.0,
+      10.0,
+      2.0,
+    ),
+    (5.0, 8.0),
   )
 }
 

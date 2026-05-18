@@ -240,6 +240,23 @@ pub fn pdf_addtext_width_of_fontpack(
 }
 
 ///|
+/// Return the widest add-text line width.
+pub fn pdf_addtext_longest_width(
+  widths : ArrayView[Double],
+) -> Double raise PdfError {
+  if widths.length() == 0 {
+    raise SoftError("empty add-text width list")
+  }
+  let mut longest = widths[0]
+  for index in 1..<widths.length() {
+    if widths[index] > longest {
+      longest = widths[index]
+    }
+  }
+  longest
+}
+
+///|
 /// Build cpdf add-rectangle content operators after placement is resolved.
 pub fn pdf_addtext_rectangle_ops(
   x : Double,
@@ -1043,6 +1060,22 @@ pub fn pdf_addtext_justification_offset(
         position,
         pdf_addtext_horizontal_justification(rotation, justification),
       )
+  }
+}
+
+///|
+/// Apply cpdf's scalar justification offset to `(horizontal, vertical)`.
+pub fn pdf_addtext_apply_justification_offset(
+  rotation : PdfAddTextRotation,
+  horizontal_offset : Double,
+  vertical_offset : Double,
+  justification_offset : Double,
+) -> (Double, Double) {
+  match rotation {
+    PdfAddTextRot90 | PdfAddTextRot270 =>
+      (horizontal_offset, vertical_offset - justification_offset)
+    PdfAddTextRot0 | PdfAddTextRot180 =>
+      (horizontal_offset + justification_offset, vertical_offset)
   }
 }
 

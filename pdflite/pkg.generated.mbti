@@ -77,6 +77,8 @@ pub fn pdf_add_root(Int, ArrayView[(@core.PdfName, PdfObject)], PdfDocument) -> 
 
 pub fn pdf_addtext_allocate_font_names(PdfObject, PdfFontPack?) -> (@core.PdfName, PdfObject, Array[@core.PdfName]) raise @core.PdfError
 
+pub fn pdf_addtext_apply_justification_offset(PdfAddTextRotation, Double, Double, Double) -> (Double, Double)
+
 pub fn pdf_addtext_baseline_offsets(PdfFont?, Double, PdfPosition, PdfAddTextRotation, Bool, Bool) -> (Double, Double)
 
 pub fn pdf_addtext_bates_number(Int, Int, Int?) -> String
@@ -108,6 +110,8 @@ pub fn pdf_addtext_justification_offset(PdfAddTextRotation, Double, Double, PdfP
 pub fn pdf_addtext_line_advance(PdfAddTextRotation, Double, Double) -> (Double, Double)
 
 pub fn pdf_addtext_lines_for_rotation(String, PdfAddTextRotation) -> Array[String] raise @core.PdfError
+
+pub fn pdf_addtext_longest_width(ArrayView[Double]) -> Double raise @core.PdfError
 
 pub fn pdf_addtext_page_label(PdfDocument, Int) -> String raise @core.PdfError
 
