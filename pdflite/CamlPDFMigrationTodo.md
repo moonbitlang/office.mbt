@@ -2277,6 +2277,15 @@ Current backend snapshot:
   Native focused validation reports `moon test --target native --package
   bobzhang/pdflite --file pdf_addtext_test.mbt` at 97/97 tests passing; native
   full-suite validation reports 1869/1869 tests passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` prepared-line integration slice exposes
+  `PdfAddTextPreparedLine`, `pdf_addtext_measurement_bytes`,
+  `PdfDocument::addtext_prepare_line`, and `pdf_addtext_prepare_line`,
+  covering replacement expansion, URL stripping and span preservation,
+  selected-font/raw/fontpack measurement bytes, expanded-line byte
+  materialization, relative-box placement, width aggregation, and wrapper
+  parity. Native focused validation reports `moon test --target native
+  --package bobzhang/pdflite --file pdf_addtext_test.mbt` at 100/100 tests
+  passing; native full-suite validation reports 1872/1872 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` line-width selection and justification
   application slice exposes `pdf_addtext_longest_width` and
   `pdf_addtext_apply_justification_offset`, covering cpdf's widest expanded

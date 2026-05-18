@@ -1946,6 +1946,127 @@ test "PdfDocument addtext_line_widths reports empty expanded lines" {
 }
 
 ///|
+test "pdf_addtext_measurement_bytes follows cpdf selected-font modes" {
+  let font = addtext_standard_font_for_test()
+  @test.assert_eq(
+    @pdflite.pdf_int_array_of_bytes(
+      try! @pdflite.pdf_addtext_measurement_bytes(
+        Some(font),
+        None,
+        false,
+        "A☃B",
+      ),
+    ),
+    [65, 66],
+  )
+  @test.assert_eq(
+    @pdflite.pdf_int_array_of_bytes(
+      try! @pdflite.pdf_addtext_measurement_bytes(
+        Some(font),
+        None,
+        true,
+        "A☃B",
+      ),
+    ),
+    [65, 226, 152, 131, 66],
+  )
+  let pack : @pdflite.PdfFontPack = { fonts: [font], entries: [] }
+  @test.assert_eq(
+    try! @pdflite.pdf_addtext_measurement_bytes(
+      Some(font),
+      Some(pack),
+      false,
+      "A☃B",
+    ),
+    @utf8.encode("A☃B"),
+  )
+}
+
+///|
+test "PdfDocument addtext_prepare_line expands URLs widths and placement" {
+  let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
+  let page = (try! document.pages_of_pagetree())[0]
+  let font = addtext_standard_font_for_test()
+  let replacements : Array[(String, () -> String)] = [("%Page", fn() { "3" })]
+  let prepared = try! document.addtext_prepare_line(
+    page,
+    addtext_process_time_for_test(),
+    ["%Page %URL[A|u]", "Wide"],
+    replacements,
+    Some(font),
+    None,
+    addtext_name_for_test("/F0"),
+    10.0,
+    "%Page %URL[A|u]",
+    PdfPositionTopRight(5.0, 6.0),
+    horizontal_offset=2.0,
+    vertical_offset=3.0,
+    justification=PdfAddTextLeftJustify,
+  )
+  @test.assert_eq(prepared.text, "3 A")
+  @test.assert_eq(prepared.urls, [{ url: "u", start: 2, end: 3 }])
+  @test.assert_eq(prepared.expanded_lines, ["3 A", "Wide"])
+  @test.assert_eq(@pdflite.pdf_int_array_of_bytes(prepared.text_bytes), [
+    51, 32, 65,
+  ])
+  let text_width = @pdflite.pdf_addtext_width_of_selected_font(
+    font,
+    10.0,
+    prepared.text_bytes,
+  )
+  let wide_width = @pdflite.pdf_addtext_width_of_selected_font(
+    font,
+    10.0,
+    prepared.expanded_line_bytes[1],
+  )
+  addtext_assert_close_for_test(prepared.widths.text_width, text_width)
+  addtext_assert_close_for_test(prepared.widths.longest_width, wide_width)
+  addtext_assert_close_for_test(prepared.placement.origin.x, 95.0 - text_width)
+  addtext_assert_close_for_test(prepared.placement.origin.y, 44.0)
+  addtext_assert_close_for_test(
+    prepared.placement.justification_offset,
+    wide_width - text_width,
+  )
+  addtext_assert_close_for_test(
+    prepared.placement.horizontal_offset,
+    2.0 + wide_width - text_width,
+  )
+  addtext_assert_close_for_test(prepared.placement.vertical_offset, 3.0)
+}
+
+///|
+test "pdf_addtext_prepare_line wrapper honors relative boxes" {
+  let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
+  let cropbox = addtext_name_for_test("/CropBox")
+  let page = {
+    ..(try! document.pages_of_pagetree())[0],
+    rest: @pdflite.pdf_dictionary([
+      (
+        cropbox,
+        PdfArray([PdfReal(10.0), PdfReal(20.0), PdfReal(70.0), PdfReal(40.0)]),
+      ),
+    ]),
+  }
+  let prepared = try! @pdflite.pdf_addtext_prepare_line(
+    document,
+    page,
+    addtext_process_time_for_test(),
+    ["A"],
+    [],
+    Some(addtext_standard_font_for_test()),
+    None,
+    addtext_name_for_test("/F0"),
+    10.0,
+    "A",
+    PdfPositionCentre,
+    relative_to_box=cropbox,
+    raw=true,
+  )
+  @test.assert_eq(prepared.expanded_line_bytes, [@utf8.encode("A")])
+  addtext_assert_close_for_test(prepared.placement.origin.y, 30.0)
+}
+
+///|
 test "pdf_addtext_longest_width selects widest expanded line" {
   @test.assert_eq(@pdflite.pdf_addtext_longest_width([12.0, 7.0, 19.0]), 19.0)
   @test.assert_eq(@pdflite.pdf_addtext_longest_width([-3.0, -1.0]), -1.0)
