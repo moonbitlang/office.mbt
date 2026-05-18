@@ -209,3 +209,70 @@ test "cpdfcontent state serializes content object JSON" {
     @test.assert_eq(@pdflite.pdf_content_object_content_json(object), expected)
   }
 }
+
+///|
+test "cpdfcontent state serializes content JSON entries" {
+  let clipping_state : @pdflite.PdfContentClippingState = {
+    clipping_path: [content_state_clipping_path_for_test()],
+  }
+  let state : @pdflite.PdfContentState = PdfContentStateClipping(clipping_state)
+  let state_json = Json::object(
+    Map::of([("clipping path", content_state_clipping_json_for_test())]),
+  )
+  @test.assert_eq(state.content_json(), state_json)
+  @test.assert_eq(@pdflite.pdf_content_state_content_json(state), state_json)
+  let bbox : @pdflite.PdfContentBoundingBox = {
+    x0: 0.0,
+    y0: 1.0,
+    x1: 2.0,
+    y1: 3.0,
+    x2: 4.0,
+    y2: 5.0,
+    x3: 6.0,
+    y3: 7.0,
+  }
+  let bbox_json = Json::array([
+    Json::number(0.0),
+    Json::number(1.0),
+    Json::number(2.0),
+    Json::number(3.0),
+    Json::number(4.0),
+    Json::number(5.0),
+    Json::number(6.0),
+    Json::number(7.0),
+  ])
+  @test.assert_eq(bbox.content_json(), bbox_json)
+  @test.assert_eq(
+    @pdflite.pdf_content_bounding_box_content_json(bbox),
+    bbox_json,
+  )
+  let entry : @pdflite.PdfContentJsonEntry = {
+    object: PdfContentImageObject("Im1"),
+    state,
+    bounding_box: bbox,
+  }
+  let entry_json = Json::object(
+    Map::of([
+      (
+        "object",
+        Json::object(
+          Map::of([
+            ("obj", Json::string("image")),
+            ("image", Json::string("Im1")),
+          ]),
+        ),
+      ),
+      ("state", state_json),
+      ("bbox", bbox_json),
+    ]),
+  )
+  @test.assert_eq(entry.content_json(), entry_json)
+  @test.assert_eq(
+    @pdflite.pdf_content_json_entry_content_json(entry),
+    entry_json,
+  )
+  @test.assert_eq(
+    @pdflite.pdf_content_json_entries_content_json([entry]),
+    Json::array([entry_json]),
+  )
+}

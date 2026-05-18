@@ -2520,6 +2520,14 @@ Current backend snapshot:
   --target native --package bobzhang/pdflite --file pdf_content_state_test.mbt`
   at 3/3 tests passing; native full-suite validation reports 1916/1916 tests
   passing.~~
+- [x] ~~Standalone `cpdfcontent.ml` content entry JSON assembly slice exposes
+  `PdfContentState`, `PdfContentBoundingBox`, `PdfContentJsonEntry`, their
+  `content_json` methods, and entry-array serialization, matching cpdf's
+  `{"object", "state", "bbox"}` entry shape and eight-number bbox array while
+  leaving `filter`-driven content discovery for later slices. Native focused
+  validation reports `moon test --target native --package bobzhang/pdflite
+  --file pdf_content_state_test.mbt` at 4/4 tests passing; native full-suite
+  validation reports 1917/1917 tests passing.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,

@@ -353,6 +353,8 @@ pub fn pdf_content_begin_artifact() -> PdfContentOp
 
 pub let pdf_content_black : PdfContentColour
 
+pub fn pdf_content_bounding_box_content_json(PdfContentBoundingBox) -> Json
+
 pub fn pdf_content_bytes_of_op(PdfContentOp) -> Bytes raise @core.PdfError
 
 pub fn pdf_content_bytes_of_ops(ArrayView[PdfContentOp]) -> Bytes raise @core.PdfError
@@ -371,9 +373,15 @@ pub fn pdf_content_end_artifact() -> PdfContentOp
 
 pub fn pdf_content_glyph_state_content_json(PdfContentGlyphState) -> Json
 
+pub fn pdf_content_json_entries_content_json(ArrayView[PdfContentJsonEntry]) -> Json
+
+pub fn pdf_content_json_entry_content_json(PdfContentJsonEntry) -> Json
+
 pub fn pdf_content_object_content_json(PdfContentObject) -> Json
 
 pub fn pdf_content_path_state_content_json(PdfContentPathState) -> Json
+
+pub fn pdf_content_state_content_json(PdfContentState) -> Json
 
 pub fn pdf_content_stream_of_ops(ArrayView[PdfContentOp]) -> PdfObject raise @core.PdfError
 
@@ -1816,6 +1824,18 @@ pub(all) struct PdfCompositionEntry {
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfCompositionEntry::to_json(Self) -> Json
 
+pub(all) struct PdfContentBoundingBox {
+  x0 : Double
+  y0 : Double
+  x1 : Double
+  y1 : Double
+  x2 : Double
+  y2 : Double
+  x3 : Double
+  y3 : Double
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfContentBoundingBox::content_json(Self) -> Json
+
 pub(all) struct PdfContentClippingState {
   clipping_path : Array[PdfPath]
 } derive(Eq, ToJson, @debug.Debug)
@@ -1850,6 +1870,13 @@ pub(all) struct PdfContentGlyphState {
 pub fn PdfContentGlyphState::content_json(Self) -> Json
 
 type PdfContentInlineTextFilter derive(Eq, @debug.Debug)
+
+pub(all) struct PdfContentJsonEntry {
+  object : PdfContentObject
+  state : PdfContentState
+  bounding_box : PdfContentBoundingBox
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfContentJsonEntry::content_json(Self) -> Json
 
 type PdfContentLexeme derive(Eq, ToJson, @debug.Debug)
 
@@ -1952,6 +1979,13 @@ pub(all) struct PdfContentPathState {
   rendering_intent : String
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfContentPathState::content_json(Self) -> Json
+
+pub(all) enum PdfContentState {
+  PdfContentStateGlyph(PdfContentGlyphState)
+  PdfContentStatePath(PdfContentPathState)
+  PdfContentStateClipping(PdfContentClippingState)
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfContentState::content_json(Self) -> Json
 
 pub(all) struct PdfCoordRectangle {
   x : Double

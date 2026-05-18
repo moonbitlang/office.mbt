@@ -55,6 +55,35 @@ pub(all) enum PdfContentObject {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Content state variant carried by one cpdfcontent JSON entry.
+pub(all) enum PdfContentState {
+  PdfContentStateGlyph(PdfContentGlyphState)
+  PdfContentStatePath(PdfContentPathState)
+  PdfContentStateClipping(PdfContentClippingState)
+} derive(Debug, Eq, ToJson)
+
+///|
+/// Eight-point cpdfcontent bounding box quad.
+pub(all) struct PdfContentBoundingBox {
+  x0 : Double
+  y0 : Double
+  x1 : Double
+  y1 : Double
+  x2 : Double
+  y2 : Double
+  x3 : Double
+  y3 : Double
+} derive(Debug, Eq, ToJson)
+
+///|
+/// One item in cpdfcontent's JSON content list.
+pub(all) struct PdfContentJsonEntry {
+  object : PdfContentObject
+  state : PdfContentState
+  bounding_box : PdfContentBoundingBox
+} derive(Debug, Eq, ToJson)
+
+///|
 fn pdf_colour_space_content_name(space : PdfColourSpace) -> String {
   match space {
     PdfDeviceGray => "DeviceGray"
@@ -262,4 +291,71 @@ pub fn PdfContentObject::content_json(self : PdfContentObject) -> Json {
 /// Compatibility wrapper for `PdfContentObject::content_json`.
 pub fn pdf_content_object_content_json(object : PdfContentObject) -> Json {
   object.content_json()
+}
+
+///|
+/// Return cpdfcontent's JSON shape for a content state variant.
+pub fn PdfContentState::content_json(self : PdfContentState) -> Json {
+  match self {
+    PdfContentStateGlyph(state) => state.content_json()
+    PdfContentStatePath(state) => state.content_json()
+    PdfContentStateClipping(state) => state.content_json()
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfContentState::content_json`.
+pub fn pdf_content_state_content_json(state : PdfContentState) -> Json {
+  state.content_json()
+}
+
+///|
+/// Return cpdfcontent's eight-number bbox array.
+pub fn PdfContentBoundingBox::content_json(
+  self : PdfContentBoundingBox,
+) -> Json {
+  Json::array([
+    Json::number(self.x0),
+    Json::number(self.y0),
+    Json::number(self.x1),
+    Json::number(self.y1),
+    Json::number(self.x2),
+    Json::number(self.y2),
+    Json::number(self.x3),
+    Json::number(self.y3),
+  ])
+}
+
+///|
+/// Compatibility wrapper for `PdfContentBoundingBox::content_json`.
+pub fn pdf_content_bounding_box_content_json(
+  bbox : PdfContentBoundingBox,
+) -> Json {
+  bbox.content_json()
+}
+
+///|
+/// Return cpdfcontent's JSON shape for one content-list entry.
+pub fn PdfContentJsonEntry::content_json(self : PdfContentJsonEntry) -> Json {
+  Json::object(
+    Map::of([
+      ("object", self.object.content_json()),
+      ("state", self.state.content_json()),
+      ("bbox", self.bounding_box.content_json()),
+    ]),
+  )
+}
+
+///|
+/// Compatibility wrapper for `PdfContentJsonEntry::content_json`.
+pub fn pdf_content_json_entry_content_json(entry : PdfContentJsonEntry) -> Json {
+  entry.content_json()
+}
+
+///|
+/// Return cpdfcontent's JSON shape for a content-list entry array.
+pub fn pdf_content_json_entries_content_json(
+  entries : ArrayView[PdfContentJsonEntry],
+) -> Json {
+  Json::array([ for entry in entries => entry.content_json() ])
 }
