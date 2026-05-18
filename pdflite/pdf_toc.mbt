@@ -797,3 +797,49 @@ pub fn pdf_toc_add_bookmark(
 ) -> PdfDocument raise PdfError {
   document.toc_add_bookmark(title)
 }
+
+///|
+/// Add a table of contents using an already prepared font pack.
+///
+/// This composes the non-structure-tree cpdftoc path: read existing bookmarks
+/// and labels, typeset TOC pages, prepend them, shift page labels, and
+/// optionally add the generated TOC bookmark. Documents without bookmarks are
+/// returned unchanged.
+pub fn PdfDocument::toc_with_fontpack(
+  self : PdfDocument,
+  fontpack : PdfFontPack,
+  font_size : Double,
+  title : BytesView,
+  bookmark? : Bool = false,
+  dotleader? : Bool = false,
+) -> PdfDocument raise PdfError {
+  let source_bookmarks = self.read_bookmarks(preserve_actions=true)
+  if source_bookmarks.length() == 0 {
+    self
+  } else {
+    let labels = self.read_page_labels()
+    let row_bookmarks = self.read_bookmarks(preserve_actions=false)
+    let result = self.toc_typeset_pages(
+      fontpack, font_size, title, dotleader, false, labels, row_bookmarks,
+    )
+    let inserted = self.toc_insert_pages(result.pages, labels)
+    if bookmark {
+      inserted.toc_add_bookmark(title)
+    } else {
+      inserted
+    }
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::toc_with_fontpack`.
+pub fn pdf_toc_with_fontpack(
+  document : PdfDocument,
+  fontpack : PdfFontPack,
+  font_size : Double,
+  title : BytesView,
+  bookmark? : Bool = false,
+  dotleader? : Bool = false,
+) -> PdfDocument raise PdfError {
+  document.toc_with_fontpack(fontpack, font_size, title, bookmark~, dotleader~)
+}

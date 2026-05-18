@@ -1165,6 +1165,8 @@ pub fn pdf_toc_used_codepoints(PdfDocument, ArrayView[PdfPageLabel], BytesView, 
 
 pub fn pdf_toc_width_of_runs(ArrayView[PdfTypeElement]) -> Double raise @core.PdfError
 
+pub fn pdf_toc_with_fontpack(PdfDocument, PdfFontPack, Double, BytesView, bookmark? : Bool, dotleader? : Bool) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_transform_annotations(PdfDocument, @geometry.TransformMatrix, PdfObject) -> Unit raise @core.PdfError
 
 pub fn pdf_transform_bookmark(PdfDocument, @geometry.TransformMatrix, PdfBookmark) -> PdfBookmark raise @core.PdfError
@@ -2217,6 +2219,7 @@ pub fn PdfDocument::toc_insert_pages(Self, ArrayView[PdfPage], ArrayView[PdfPage
 pub fn PdfDocument::toc_type_elements(Self, PdfFontPack, Double, BytesView, Bool, Bool, ArrayView[PdfPageLabel], ArrayView[PdfBookmark], Double, Double) -> Array[PdfTypeElement] raise @core.PdfError
 pub fn PdfDocument::toc_typeset_pages(Self, PdfFontPack, Double, BytesView, Bool, Bool, ArrayView[PdfPageLabel], ArrayView[PdfBookmark]) -> PdfTypeTypesetResult raise @core.PdfError
 pub fn PdfDocument::toc_used_codepoints(Self, ArrayView[PdfPageLabel], BytesView, ArrayView[PdfBookmark]) -> Array[Int] raise @core.PdfError
+pub fn PdfDocument::toc_with_fontpack(Self, PdfFontPack, Double, BytesView, bookmark? : Bool, dotleader? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::trailer_dict(Self) -> PdfObject
 pub fn PdfDocument::transform_annotations(Self, @geometry.TransformMatrix, PdfObject) -> Unit raise @core.PdfError
 pub fn PdfDocument::transform_bookmark(Self, @geometry.TransformMatrix, PdfBookmark) -> PdfBookmark raise @core.PdfError

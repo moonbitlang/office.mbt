@@ -2628,6 +2628,16 @@ Current backend snapshot:
   focused validation reports `moon test --target native --package
   bobzhang/pdflite --file pdf_toc_test.mbt` at 13/13 tests passing; native
   full-suite validation reports 1907/1907 tests passing.~~
+- [x] ~~Standalone `cpdftoc.ml` composed non-structure TOC slice exposes
+  `PdfDocument::toc_with_fontpack` and `pdf_toc_with_fontpack`, covering the
+  prepared-fontpack path that reads document bookmarks/page labels, no-ops when
+  there are no bookmarks, typesets TOC pages, prepends them, shifts page labels,
+  preserves bookmark destinations after insertion, optionally adds the generated
+  TOC bookmark, and validates wrapper parity semantically while leaving TrueType
+  embedding/font-source dispatch and PDF/UA structure-tree integration for later
+  slices. Native focused validation reports `moon test --target native
+  --package bobzhang/pdflite --file pdf_toc_test.mbt` at 14/14 tests passing;
+  native full-suite validation reports 1908/1908 tests passing.~~
 - [x] ~~Page labels, bookmarks, annotations, duplicate annotation repair,
   old-style destinations, name-tree destinations, `/OpenAction`, optional
   content, AcroForm merge basics, trailer `/Info`, and structure-tree

@@ -570,3 +570,77 @@ test "PdfDocument toc_add_bookmark prepends generated bookmark" {
   let wrapped = try! @pdflite.pdf_toc_add_bookmark(document, title)
   @test.assert_eq(try! wrapped.read_bookmarks(preserve_actions=true), bookmarks)
 }
+
+///|
+test "PdfDocument toc_with_fontpack composes non-structured TOC" {
+  let base = try! @pdflite.pdf_blank_document(100.0, 100.0, 2)
+  let page_refs = try! base.page_reference_numbers()
+  let source_bookmark : @pdflite.PdfBookmark = {
+    level: 0,
+    text: toc_pdfdoc_for_test("Second"),
+    target: DestFit(TargetPageObject(page_refs[1])),
+    is_open: true,
+    colour: @pdflite.pdf_bookmark_black,
+    flags: 0,
+  }
+  let labels : Array[@pdflite.PdfPageLabel] = [
+    {
+      label_style: PageLabelDecimalArabic,
+      label_prefix: Some(toc_pdfdoc_for_test("P-")),
+      start_page: 2,
+      start_value: 5,
+    },
+  ]
+  let source = try! (try! base.add_bookmarks([source_bookmark])).write_page_labels(
+    labels,
+  )
+  let pack = toc_standard_pack_for_test()
+  let title = toc_bytes_for_test("Contents\\nLine")
+  let updated = try! source.toc_with_fontpack(pack, 10.0, title, bookmark=true)
+  let updated_pages = try! updated.pages_of_pagetree()
+  let toc_page_count = updated_pages.length() - 2
+  guard toc_page_count > 0 else { fail("expected inserted TOC pages") }
+  @test.assert_eq(try! updated.read_page_labels(), [
+    {
+      label_style: PageLabelNoLabelPrefixOnly,
+      label_prefix: None,
+      start_page: 1,
+      start_value: 1,
+    },
+    { ..labels[0], start_page: labels[0].start_page + toc_page_count },
+  ])
+  let bookmarks = try! updated.read_bookmarks(preserve_actions=true)
+  @test.assert_eq(bookmarks.length(), 2)
+  @test.assert_eq(bookmarks[0].text, toc_pdfdoc_for_test("Contents\nLine"))
+  @test.assert_eq(try! updated.page_number_of_target(bookmarks[0].target), 1)
+  @test.assert_eq(bookmarks[1].text, source_bookmark.text)
+  @test.assert_eq(
+    try! updated.page_number_of_target(bookmarks[1].target),
+    2 + toc_page_count,
+  )
+
+  let wrapped = try! @pdflite.pdf_toc_with_fontpack(
+    source,
+    pack,
+    10.0,
+    title,
+    bookmark=true,
+  )
+  let wrapped_bookmarks = try! wrapped.read_bookmarks(preserve_actions=true)
+  @test.assert_eq(wrapped_bookmarks.length(), 2)
+  @test.assert_eq(wrapped_bookmarks[0].text, bookmarks[0].text)
+  @test.assert_eq(
+    try! wrapped.page_number_of_target(wrapped_bookmarks[0].target),
+    1,
+  )
+  @test.assert_eq(wrapped_bookmarks[1].text, bookmarks[1].text)
+  @test.assert_eq(
+    try! wrapped.page_number_of_target(wrapped_bookmarks[1].target),
+    2 + toc_page_count,
+  )
+
+  let no_bookmarks = try! @pdflite.pdf_blank_document(100.0, 100.0, 1)
+  let unchanged = try! no_bookmarks.toc_with_fontpack(pack, 10.0, title)
+  @test.assert_eq((try! unchanged.pages_of_pagetree()).length(), 1)
+  @test.assert_eq(try! unchanged.read_bookmarks(), [])
+}
