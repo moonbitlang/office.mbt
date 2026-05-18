@@ -975,6 +975,84 @@ test "PdfDocument json_of_document parses content streams into operation arrays"
 }
 
 ///|
+test "PdfDocument json_of_document precombines split content before parsing" {
+  let key_length = util_name_for_test("/Length")
+  let document = @pdflite.pdf_document_empty()
+  document.add_object_given_number(
+    2,
+    @pdflite.pdf_stream(
+      PdfDictionary([(key_length, PdfInteger(6))]),
+      StreamGot(@ascii.encode("BT /F0")),
+    ),
+  )
+  document.add_object_given_number(
+    3,
+    @pdflite.pdf_stream(
+      PdfDictionary([(key_length, PdfInteger(8))]),
+      StreamGot(@ascii.encode("36 Tf ET")),
+    ),
+  )
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [PdfIndirect(2), PdfIndirect(3)],
+  }
+  let page_root = try! document.add_pagetree([page])
+  ignore(try! document.add_root(page_root, []))
+
+  let exported = try! document.json_of_document(parse_content=true)
+  @test.assert_eq(
+    try! @pdflite.pdf_json_of_document(document, parse_content=true),
+    exported,
+  )
+  @test.assert_eq(util_cpdfjson_entry_for_test(exported, 2), None)
+  @test.assert_eq(util_cpdfjson_entry_for_test(exported, 3), None)
+  @test.assert_eq(document.lookup_object_or_null(2) is PdfStreamObject(_), true)
+  @test.assert_eq(document.lookup_object_or_null(3) is PdfStreamObject(_), true)
+
+  let parsed_streams : Array[(Int, Array[Json])] = []
+  match exported {
+    Array(items) =>
+      for item in items {
+        match item {
+          Array([Number(value, repr=_), Object(wrapper)]) if value > 0.0 =>
+            match wrapper.get("S") {
+              Some(Array([_, Array(op_jsons)])) =>
+                parsed_streams.push((value.to_int(), op_jsons))
+              _ => ()
+            }
+          _ => ()
+        }
+      }
+    _ => fail("expected CPDFJSON document array")
+  }
+  guard parsed_streams.get(0) is Some(stream_entry) else {
+    fail("expected one parsed stream entry")
+  }
+  @test.assert_eq(parsed_streams.length(), 1)
+  @test.assert_eq(stream_entry.0 == 2 || stream_entry.0 == 3, false)
+  let op_jsons = stream_entry.1
+  @test.assert_eq(op_jsons.length(), 3)
+  guard op_jsons.get(0) is Some(Array([String("BT")])) else {
+    fail("expected BT operator JSON")
+  }
+  guard op_jsons.get(1) is Some(Array([String("/F0"), _, String("Tf")])) else {
+    fail("expected precombined Tf operator JSON")
+  }
+  guard op_jsons.get(2) is Some(Array([String("ET")])) else {
+    fail("expected ET operator JSON")
+  }
+
+  let roundtripped = try! @pdflite.pdf_document_of_json(exported)
+  let pages = try! roundtripped.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  @test.assert_eq(try! roundtripped.parse_content_ops(pages[0].content), [
+    Op_BT,
+    Op_Tf(util_name_for_test("/F0"), 36.0),
+    Op_ET,
+  ])
+}
+
+///|
 test "pdf_document_of_json rejects malformed cpdf document arrays" {
   let no_stream_data : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_document_of_json([
       [

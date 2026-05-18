@@ -1275,6 +1275,29 @@ fn PdfDocument::pdf_util_json_of_parsed_content_stream(
 }
 
 ///|
+fn PdfDocument::pdf_util_precombine_page_content(
+  self : PdfDocument,
+) -> PdfDocument raise PdfError {
+  let pages = self.pages_of_pagetree()
+  let rewritten : Array[PdfPage] = []
+  let mut changed = false
+  for page in pages {
+    if page.content.length() <= 1 {
+      rewritten.push(page)
+    } else {
+      let ops = self.pdf_page_parse_content_ops(page.resources, page.content)
+      rewritten.push({ ..page, content: [pdf_content_stream_of_ops(ops)] })
+      changed = true
+    }
+  }
+  if changed {
+    self.change_pages(rewritten, change_references=true)
+  } else {
+    self
+  }
+}
+
+///|
 fn PdfDocument::pdf_util_document_params_json(
   self : PdfDocument,
   utf8 : Bool,
@@ -1343,7 +1366,8 @@ fn PdfDocument::pdf_util_reachable_document_object_numbers(
 /// positive object numbers reachable from the trailer or stored root are
 /// emitted in ascending order. When `parse_content` is set, page `/Contents`
 /// streams plus referenced Form XObject and Pattern streams are emitted as
-/// cpdf-style operation arrays. When `clean_strings` is set for non-UTF8
+/// cpdf-style operation arrays, after multi-stream pages are precombined on a
+/// prepared copy of the document. When `clean_strings` is set for non-UTF8
 /// output, UTF-16BE strings in positive objects are simplified while the
 /// trailer dictionary is left unchanged to match cpdf's `/ID` precaution. When
 /// `no_stream_data` is set, ordinary stream data is elided and CPDFJSON
@@ -1358,18 +1382,25 @@ pub fn PdfDocument::json_of_document(
   no_stream_data? : Bool = false,
   decompress_streams? : Bool = false,
 ) -> Json raise PdfError {
+  let document = if parse_content {
+    self.pdf_util_precombine_page_content()
+  } else {
+    self
+  }
   let entries : Array[Json] = []
   entries.push(
     pdf_util_document_json_entry(
       -1,
-      self.pdf_util_document_params_json(utf8, parse_content, no_stream_data),
+      document.pdf_util_document_params_json(
+        utf8, parse_content, no_stream_data,
+      ),
     ),
   )
   entries.push(
     pdf_util_document_json_entry(
       0,
-      self.pdf_util_json_of_object(
-        self.trailer_dict(),
+      document.pdf_util_json_of_object(
+        document.trailer_dict(),
         utf8,
         false,
         no_stream_data,
@@ -1378,20 +1409,20 @@ pub fn PdfDocument::json_of_document(
     ),
   )
   let content_stream_numbers = if parse_content {
-    self.pdf_util_content_stream_numbers()
+    document.pdf_util_content_stream_numbers()
   } else {
     []
   }
-  for number in self.pdf_util_reachable_document_object_numbers() {
-    let object = self.lookup_object_or_null(number)
+  for number in document.pdf_util_reachable_document_object_numbers() {
+    let object = document.lookup_object_or_null(number)
     let object_json = if pdf_util_int_array_contains(
         content_stream_numbers, number,
       ) {
-      self.pdf_util_json_of_parsed_content_stream(
+      document.pdf_util_json_of_parsed_content_stream(
         object, utf8, clean_strings, no_stream_data,
       )
     } else {
-      self.pdf_util_json_of_object(
+      document.pdf_util_json_of_object(
         object, utf8, clean_strings, no_stream_data, decompress_streams,
       )
     }
