@@ -341,6 +341,10 @@ pub fn pdf_fontpack_get_char(PdfFontPack, Int) -> (Int, Int, PdfFont)?
 
 pub fn pdf_fontpack_of_standard_font(PdfFont) -> PdfFontPack raise @core.PdfError
 
+pub fn pdf_fonts_json(PdfDocument, ArrayView[Int]) -> Json raise @core.PdfError
+
+pub fn pdf_fonts_json_blob(PdfDocument, ArrayView[Int]) -> Bytes raise @core.PdfError
+
 pub fn pdf_format_real(Double) -> Bytes raise @core.PdfError
 
 pub fn pdf_generate_id(String, () -> Double) -> PdfObject
@@ -454,6 +458,10 @@ pub fn pdf_list_annotations(ArrayView[Int], PdfMetadataEncoding, PdfDocument) ->
 pub fn pdf_list_attached_files(PdfDocument) -> Array[PdfAttachment] raise @core.PdfError
 
 pub fn pdf_list_bookmarks(Bool, Bool, PdfMetadataEncoding, ArrayView[Int], PdfDocument) -> Bytes raise @core.PdfError
+
+pub fn pdf_list_fonts(PdfDocument, ArrayView[Int]) -> Array[PdfFontListEntry] raise @core.PdfError
+
+pub fn pdf_list_fonts_text(PdfDocument, ArrayView[Int]) -> Bytes raise @core.PdfError
 
 pub fn pdf_list_spot_colours(PdfDocument) -> Array[@core.PdfName]
 
@@ -1688,6 +1696,8 @@ pub fn PdfDocument::endpage_fast(Self) -> Int raise @core.PdfError
 pub fn PdfDocument::event_log(Self) -> Array[(Int, PdfObjectEvent)]
 pub fn PdfDocument::find_object_by_spec(Self, String) -> PdfObject raise @core.PdfError
 pub fn PdfDocument::first_xref(Self) -> Int
+pub fn PdfDocument::fonts_json(Self, ArrayView[Int]) -> Json raise @core.PdfError
+pub fn PdfDocument::fonts_json_blob(Self, ArrayView[Int]) -> Bytes raise @core.PdfError
 pub fn PdfDocument::get_annotations(Self, encoding? : PdfMetadataEncoding) -> Array[(Int, Bytes)] raise @core.PdfError
 pub fn PdfDocument::get_image_24bpp(Self, PdfObject, PdfObject) -> PdfImage raise @core.PdfError
 pub fn PdfDocument::get_number(Self, PdfObject) -> Double raise @core.PdfError
@@ -1714,6 +1724,8 @@ pub fn PdfDocument::language(Self) -> Bytes?
 pub fn PdfDocument::list_annotations(Self, ArrayView[Int], encoding? : PdfMetadataEncoding) -> Bytes raise @core.PdfError
 pub fn PdfDocument::list_attached_files(Self) -> Array[PdfAttachment] raise @core.PdfError
 pub fn PdfDocument::list_bookmarks(Self, ArrayView[Int], encoding? : PdfMetadataEncoding, json? : Bool, json_preserve_actions? : Bool) -> Bytes raise @core.PdfError
+pub fn PdfDocument::list_fonts(Self, ArrayView[Int]) -> Array[PdfFontListEntry] raise @core.PdfError
+pub fn PdfDocument::list_fonts_text(Self, ArrayView[Int]) -> Bytes raise @core.PdfError
 pub fn PdfDocument::list_spot_colours(Self) -> Array[@core.PdfName]
 pub fn PdfDocument::lookup_chain(Self, PdfObject, ArrayView[@core.PdfName]) -> PdfObject?
 pub fn PdfDocument::lookup_direct(Self, @core.PdfName, PdfObject) -> PdfObject?
@@ -1946,6 +1958,15 @@ pub(all) enum PdfFontFile {
   PdfFontFile(Int)
   PdfFontFile2(Int)
   PdfFontFile3(Int)
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfFontListEntry {
+  page : Int
+  name : String
+  subtype : String
+  basefont : String
+  encoding : String
+  font : PdfObject
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfFontPack {

@@ -2056,6 +2056,15 @@ Current backend snapshot:
   Native focused validation reports `moon test --target native
   pdf_font_test.mbt` at 1/1 tests passing; native full-suite validation reports
   1748/1748 tests passing.~~
+- [x] ~~Standalone `cpdffont.ml` font-listing slice now exposes
+  `PdfFontListEntry`, `PdfDocument::list_fonts`, `list_fonts_text`,
+  `fonts_json`, `fonts_json_blob`, and compatibility wrappers, covering page
+  resource fonts, nested XObject resources, duplicate indirect XObject
+  suppression, cpdf plain-text line formatting, JSON null conversion for
+  missing subtype/basefont/encoding fields, wrapper parity, and invalid-page
+  rejection. Native focused validation reports `moon test --target native
+  pdf_font_test.mbt` at 3/3 tests passing; native full-suite validation reports
+  1750/1750 tests passing.~~
 - [x] ~~Page labels, bookmarks, annotations, duplicate annotation repair,
   old-style destinations, name-tree destinations, `/OpenAction`, optional
   content, AcroForm merge basics, trailer `/Info`, and structure-tree
