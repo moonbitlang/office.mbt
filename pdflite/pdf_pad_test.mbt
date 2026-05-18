@@ -68,11 +68,34 @@ test "PdfDocument pad_before inserts blank pages before selected pages" {
 }
 
 ///|
+test "blank padding preserves duplicate selected pages" {
+  let document = pad_doc_for_test([10.0, 20.0])
+  let after = try! document.pad_after([1, 1])
+  @test.assert_eq(pad_widths_for_test(after), [10.0, 10.0, 10.0, 20.0])
+  let before = try! document.pad_before([2, 2])
+  @test.assert_eq(pad_widths_for_test(before), [10.0, 20.0, 20.0, 20.0])
+}
+
+///|
 test "PdfDocument pad_after can insert another document once per selected page" {
   let document = pad_doc_for_test([10.0, 20.0])
   let pad_with = pad_doc_for_test([100.0, 200.0])
   let padded = try! document.pad_after([1], pad_with=Some(pad_with))
   @test.assert_eq(pad_widths_for_test(padded), [10.0, 100.0, 200.0, 20.0])
+}
+
+///|
+test "PdfDocument pad_before can insert another document before each unique selected page" {
+  let document = pad_doc_for_test([10.0, 20.0, 30.0])
+  let pad_with = pad_doc_for_test([100.0, 200.0])
+  let padded = try! document.pad_before([2, 2], pad_with=Some(pad_with))
+  @test.assert_eq(pad_widths_for_test(padded), [10.0, 100.0, 200.0, 20.0, 30.0])
+  let wrapper = try! @pdflite.pdf_pad_before(
+    document,
+    [2, 2],
+    pad_with=Some(pad_with),
+  )
+  @test.assert_eq(pad_widths_for_test(wrapper), pad_widths_for_test(padded))
 }
 
 ///|
