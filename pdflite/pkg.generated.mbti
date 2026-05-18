@@ -359,6 +359,8 @@ pub fn pdf_content_bytes_of_op(PdfContentOp) -> Bytes raise @core.PdfError
 
 pub fn pdf_content_bytes_of_ops(ArrayView[PdfContentOp]) -> Bytes raise @core.PdfError
 
+pub fn pdf_content_charcodes_of_bytes(BytesView, PdfFont) -> Array[Int]
+
 pub fn pdf_content_clipping_state_content_json(PdfContentClippingState) -> Json
 
 pub fn pdf_content_colour_values_content_json(PdfContentColourValues) -> Json
@@ -2392,6 +2394,7 @@ pub(all) enum PdfFont {
   PdfFontSimple(PdfSimpleFont)
   PdfFontCIDKeyed(PdfCIDKeyedFont)
 } derive(Eq, ToJson, @debug.Debug)
+pub fn PdfFont::content_charcodes_of_bytes(Self, BytesView) -> Array[Int]
 pub fn PdfFont::debug_name(Self) -> String
 pub fn PdfFont::embedded_fontfile_number(Self) -> Int?
 pub fn PdfFont::is_identity_h(Self) -> Bool

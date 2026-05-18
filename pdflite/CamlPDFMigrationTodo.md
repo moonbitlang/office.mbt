@@ -2528,6 +2528,15 @@ Current backend snapshot:
   validation reports `moon test --target native --package bobzhang/pdflite
   --file pdf_content_state_test.mbt` at 4/4 tests passing; native full-suite
   validation reports 1917/1917 tests passing.~~
+- [x] ~~Standalone `cpdfcontent.ml` raw-text charcode slice exposes
+  `PdfFont::content_charcodes_of_bytes` and
+  `pdf_content_charcodes_of_bytes`, matching cpdf's `charcodes_of_string`
+  behavior for one-byte standard/simple fonts, big-endian two-byte CID-keyed
+  fonts, and odd-length CID input returning an empty result while leaving
+  `filter`-driven glyph discovery for later slices. Native focused validation
+  reports `moon test --target native --package bobzhang/pdflite --file
+  pdf_content_text_test.mbt` at 1/1 tests passing; native full-suite validation
+  reports 1918/1918 tests passing.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,
