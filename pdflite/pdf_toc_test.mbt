@@ -484,3 +484,59 @@ test "PdfDocument toc_typeset_pages uses first-page cropbox geometry" {
     Some(cropbox),
   )
 }
+
+///|
+test "PdfDocument toc_insert_pages prepends pages and shifts labels" {
+  let base = try! @pdflite.pdf_blank_document(100.0, 100.0, 2)
+  let page_refs = try! base.page_reference_numbers()
+  let bookmark : @pdflite.PdfBookmark = {
+    level: 0,
+    text: toc_pdfdoc_for_test("Second"),
+    target: DestFit(TargetPageObject(page_refs[1])),
+    is_open: true,
+    colour: @pdflite.pdf_bookmark_black,
+    flags: 0,
+  }
+  let document = try! base.add_bookmarks([bookmark])
+  let labels : Array[@pdflite.PdfPageLabel] = [
+    {
+      label_style: PageLabelDecimalArabic,
+      label_prefix: Some(toc_pdfdoc_for_test("P-")),
+      start_page: 2,
+      start_value: 5,
+    },
+  ]
+  let toc_page = @pdflite.pdf_page_blank(
+    @pdflite.paper_size_make(PdfPoint, 50.0, 50.0),
+  )
+  let expected_labels : Array[@pdflite.PdfPageLabel] = [
+    {
+      label_style: PageLabelNoLabelPrefixOnly,
+      label_prefix: None,
+      start_page: 1,
+      start_value: 1,
+    },
+    { ..labels[0], start_page: 3 },
+  ]
+  @test.assert_eq(
+    @pdflite.pdf_toc_shift_page_labels(1, labels),
+    expected_labels,
+  )
+  let inserted = try! document.toc_insert_pages([toc_page], labels)
+  let inserted_pages = try! inserted.pages_of_pagetree()
+  @test.assert_eq(inserted_pages.length(), 3)
+  @test.assert_eq(try! inserted.read_page_labels(), expected_labels)
+  let inserted_bookmarks = try! inserted.read_bookmarks(preserve_actions=true)
+  @test.assert_eq(
+    try! inserted.page_number_of_target(inserted_bookmarks[0].target),
+    3,
+  )
+  let wrapped = try! @pdflite.pdf_toc_insert_pages(document, [toc_page], labels)
+  @test.assert_eq(try! wrapped.read_page_labels(), expected_labels)
+  @test.assert_eq(
+    try! wrapped.page_number_of_target(
+      (try! wrapped.read_bookmarks(preserve_actions=true))[0].target,
+    ),
+    3,
+  )
+}

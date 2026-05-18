@@ -2608,6 +2608,16 @@ Current backend snapshot:
   --target native --package bobzhang/pdflite --file pdf_toc_test.mbt` at 11/11
   tests passing; native full-suite validation reports 1905/1905 tests
   passing.~~
+- [x] ~~Standalone `cpdftoc.ml` TOC page insertion slice exposes
+  `pdf_toc_shift_page_labels`, `PdfDocument::toc_insert_pages`, and
+  `pdf_toc_insert_pages`, covering prepending already-generated TOC pages,
+  explicit old-to-new page-serial reference changes, destination/bookmark
+  reference preservation after insertion, cpdf's no-label TOC range, shifted
+  existing page-label ranges, and wrapper parity while leaving font embedding,
+  TOC bookmark creation, and structure-tree integration for later slices.
+  Native focused validation reports `moon test --target native --package
+  bobzhang/pdflite --file pdf_toc_test.mbt` at 12/12 tests passing; native
+  full-suite validation reports 1906/1906 tests passing.~~
 - [x] ~~Page labels, bookmarks, annotations, duplicate annotation repair,
   old-style destinations, name-tree destinations, `/OpenAction`, optional
   content, AcroForm merge basics, trailer `/Info`, and structure-tree
