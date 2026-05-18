@@ -2309,6 +2309,14 @@ Current backend snapshot:
   font errors. Native focused validation reports `moon test --target native
   --package bobzhang/pdflite --file pdf_addtext_test.mbt` at 77/77 tests
   passing; native full-suite validation reports 1849/1849 tests passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` existing-font width slice exposes
+  `PdfDocument::addtext_width_of_existing_font_resource` and
+  `pdf_addtext_width_of_existing_font_resource`, covering cpdf's existing-font
+  measurement path, direct resource-key lookup, `/BaseFont` fallback resource
+  names, parsed font reading, Standard 14 width scaling, and wrapper parity.
+  Native focused validation reports `moon test --target native --package
+  bobzhang/pdflite --file pdf_addtext_test.mbt` at 79/79 tests passing; native
+  full-suite validation reports 1851/1851 tests passing.~~
 - [x] ~~Standalone `cpdfremovetext.ml` removal slice exposes
   `pdf_remove_added_text_ops`, `pdf_remove_all_text_ops`,
   `PdfDocument::remove_added_text`, `remove_all_text`, and compatibility

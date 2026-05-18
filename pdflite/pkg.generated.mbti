@@ -155,6 +155,8 @@ pub fn pdf_addtext_url_annotation_widths(String, PdfAddTextUrl, (String) -> Doub
 
 pub fn pdf_addtext_used_codepoints(ArrayView[String]) -> Array[Int] raise @core.PdfError
 
+pub fn pdf_addtext_width_of_existing_font_resource(PdfDocument, PdfPage, @core.PdfName, Double, BytesView) -> (@core.PdfName, Double) raise @core.PdfError
+
 pub fn pdf_addtext_width_of_fontpack(PdfFontPack, Double, String) -> Double raise @core.PdfError
 
 pub fn pdf_addtext_width_of_selected_font(PdfFont, Double, BytesView) -> Double
@@ -1821,6 +1823,7 @@ pub fn PdfDocument::addtext_page_label(Self, Int) -> String raise @core.PdfError
 pub fn PdfDocument::addtext_page_rest_with_annotations(Self, PdfObject, ArrayView[PdfObject]) -> PdfObject raise @core.PdfError
 pub fn PdfDocument::addtext_rectangle(Self, ArrayView[Int], String, PdfContentColour, PdfPosition, relative_to_box? : @core.PdfName, outline? : Bool, line_width? : Double, opacity? : Double, underneath? : Bool, fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::addtext_replacement_values(Self, ArrayView[PdfBookmark], Int, Int, String, Int, Int?) -> PdfAddTextReplacementValues raise @core.PdfError
+pub fn PdfDocument::addtext_width_of_existing_font_resource(Self, PdfPage, @core.PdfName, Double, BytesView) -> (@core.PdfName, Double) raise @core.PdfError
 pub fn PdfDocument::annotations_json(Self, ArrayView[Int]) -> Json raise @core.PdfError
 pub fn PdfDocument::annotations_json_blob(Self, ArrayView[Int]) -> Bytes raise @core.PdfError
 pub fn PdfDocument::annotations_of_page(Self, PdfPage) -> Array[PdfAnnotation] raise @core.PdfError

@@ -836,6 +836,36 @@ pub fn pdf_addtext_existing_font_resource(
 }
 
 ///|
+/// Measure add-text bytes using an existing page font resource.
+pub fn PdfDocument::addtext_width_of_existing_font_resource(
+  self : PdfDocument,
+  page : PdfPage,
+  fontname : PdfName,
+  font_size : Double,
+  text : BytesView,
+) -> (PdfName, Double) raise PdfError {
+  let (resource_name, font_object) = self.addtext_existing_font_resource(
+    page, fontname,
+  )
+  let font = self.read_font(font_object)
+  (resource_name, pdf_addtext_width_of_selected_font(font, font_size, text))
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::addtext_width_of_existing_font_resource`.
+pub fn pdf_addtext_width_of_existing_font_resource(
+  document : PdfDocument,
+  page : PdfPage,
+  fontname : PdfName,
+  font_size : Double,
+  text : BytesView,
+) -> (PdfName, Double) raise PdfError {
+  document.addtext_width_of_existing_font_resource(
+    page, fontname, font_size, text,
+  )
+}
+
+///|
 fn pdf_addtext_name(text : String) -> PdfName {
   pdf_name_of_bytes(@ascii.encode(text))
 }

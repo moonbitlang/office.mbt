@@ -995,6 +995,76 @@ test "PdfDocument addtext_existing_font_resource reports missing fonts" {
 }
 
 ///|
+test "PdfDocument addtext_width_of_existing_font_resource measures direct keys" {
+  let document = @pdflite.pdf_document_empty()
+  let resource_name = addtext_name_for_test("/F1")
+  let font_object : @pdflite.PdfObject = PdfDictionary([
+    (
+      addtext_name_for_test("/Subtype"),
+      PdfNameObject(addtext_name_for_test("/Type1")),
+    ),
+    (
+      addtext_name_for_test("/BaseFont"),
+      PdfNameObject(addtext_name_for_test("/Helvetica")),
+    ),
+  ])
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: PdfDictionary([
+      (
+        addtext_name_for_test("/Font"),
+        PdfDictionary([(resource_name, font_object)]),
+      ),
+    ]),
+  }
+  let result = try! document.addtext_width_of_existing_font_resource(
+    page,
+    resource_name,
+    12.0,
+    @ascii.encode("ABC"),
+  )
+  let expected = @pdflite.pdf_addtext_width_of_selected_font(
+    try! document.read_font(font_object),
+    12.0,
+    @ascii.encode("ABC"),
+  )
+  @test.assert_eq(result.0, resource_name)
+  addtext_assert_close_for_test(result.1, expected)
+}
+
+///|
+test "PdfDocument addtext_width_of_existing_font_resource returns fallback resource name" {
+  let document = @pdflite.pdf_document_empty()
+  let resource_name = addtext_name_for_test("/Fx")
+  let basefont = addtext_name_for_test("/Helvetica")
+  let font_object : @pdflite.PdfObject = PdfDictionary([
+    (
+      addtext_name_for_test("/Subtype"),
+      PdfNameObject(addtext_name_for_test("/Type1")),
+    ),
+    (addtext_name_for_test("/BaseFont"), PdfNameObject(basefont)),
+  ])
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: PdfDictionary([
+      (
+        addtext_name_for_test("/Font"),
+        PdfDictionary([(resource_name, font_object)]),
+      ),
+    ]),
+  }
+  let result = try! @pdflite.pdf_addtext_width_of_existing_font_resource(
+    document,
+    page,
+    basefont,
+    10.0,
+    @ascii.encode("A"),
+  )
+  @test.assert_eq(result.0, resource_name)
+  @test.assert_eq(result.1 > 0.0, true)
+}
+
+///|
 test "pdf_addtext_url_annotation builds cpdf link annotation objects" {
   let annotation = @pdflite.pdf_addtext_url_annotation(
     @pdflite.point2(1.0, 2.0),
