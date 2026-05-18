@@ -2313,6 +2313,15 @@ Current backend snapshot:
   `moon test --target native --package bobzhang/pdflite --file
   pdf_addtext_test.mbt` at 107/107 tests passing; native full-suite validation
   reports 1879/1879 tests passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` selected-page add-text integration slice
+  exposes `PdfDocument::addtext_pages_with_font` and
+  `pdf_addtext_pages_with_font`, covering empty-selection no-op behavior,
+  one-based page validation, cpdf shift-coordinate parsing, page-local
+  replacement values, selected page rewrites through `change_pages`, and
+  wrapper parity for already resolved font/fontpack inputs. Native focused
+  validation reports `moon test --target native --package bobzhang/pdflite
+  --file pdf_addtext_test.mbt` at 109/109 tests passing; native full-suite
+  validation reports 1881/1881 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` line-width selection and justification
   application slice exposes `pdf_addtext_longest_width` and
   `pdf_addtext_apply_justification_offset`, covering cpdf's widest expanded

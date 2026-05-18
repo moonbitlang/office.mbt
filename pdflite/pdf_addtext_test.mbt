@@ -1413,6 +1413,82 @@ test "pdf_addtext_page_lines wrapper applies baseline offsets" {
 }
 
 ///|
+test "PdfDocument addtext_pages_with_font stamps selected pages with replacements" {
+  let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 2)
+  let font = addtext_standard_font_for_test()
+  let stamped = try! document.addtext_pages_with_font(
+    [2],
+    ["%Page"],
+    addtext_process_time_for_test(),
+    [],
+    Some(font),
+    None,
+    addtext_name_for_test("/Helvetica"),
+    Some(PdfIndirect(10)),
+    [],
+    10.0,
+    1.0,
+    PdfContentGrey(0.0),
+    PdfPositionBottomLeft(1.0, 2.0),
+    shift="2 3",
+  )
+  let pages = try! stamped.pages_of_pagetree()
+  @test.assert_eq(pages[0].content.length(), 0)
+  @test.assert_eq(
+    addtext_content_ops_for_test(stamped, pages[1]),
+    try! @pdflite.pdf_addtext_text_ops(
+      Some(font),
+      None,
+      3.0,
+      5.0,
+      0.0,
+      0.0,
+      0.0,
+      false,
+      1.0,
+      addtext_name_for_test("/F0"),
+      [],
+      None,
+      PdfContentGrey(0.0),
+      10.0,
+      "2",
+      0.0,
+      0.0,
+      0.0,
+    ),
+  )
+}
+
+///|
+test "pdf_addtext_pages_with_font wrapper validates selected pages" {
+  let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
+  let result : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_addtext_pages_with_font(
+    document,
+    [2],
+    ["A"],
+    addtext_process_time_for_test(),
+    [],
+    Some(addtext_standard_font_for_test()),
+    None,
+    addtext_name_for_test("/Helvetica"),
+    Some(PdfIndirect(10)),
+    [],
+    10.0,
+    1.0,
+    PdfContentGrey(0.0),
+    PdfPositionBottomLeft(0.0, 0.0),
+  )
+  guard result
+    is Err(
+      @pdflite.PdfError::BadPageSpecification(
+        "addtext_pages_with_font: range contains pages not present in pdf"
+      )
+    ) else {
+    fail("expected BadPageSpecification for out-of-range addtext page")
+  }
+}
+
+///|
 test "PdfDocument addtext_existing_font_resource finds direct resource keys" {
   let document = @pdflite.pdf_document_empty()
   let resource_name = addtext_name_for_test("/F1")
