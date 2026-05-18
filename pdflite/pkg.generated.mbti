@@ -135,6 +135,8 @@ pub fn pdf_addtext_page_font_dictionary(PdfDocument, PdfPage) -> PdfObject
 
 pub fn pdf_addtext_page_label(PdfDocument, Int) -> String raise @core.PdfError
 
+pub fn pdf_addtext_page_lines(PdfDocument, PdfPage, PdfStrftimeTime, ArrayView[String], ArrayView[(String, () -> String)], PdfFont?, PdfFontPack?, @core.PdfName, PdfObject?, ArrayView[Int], Double, Double, PdfContentColour, PdfPosition, relative_to_box? : @core.PdfName, opacity? : Double, justification? : PdfAddTextJustification, rotation? : PdfAddTextRotation, midline? : Bool, topline? : Bool, shift_x? : Double, shift_y? : Double, outline? : Bool, line_width? : Double, underneath? : Bool, fast? : Bool, raw? : Bool, url_border? : Bool) -> PdfPage raise @core.PdfError
+
 pub fn pdf_addtext_page_rest_with_annotations(PdfDocument, PdfObject, ArrayView[PdfObject]) -> PdfObject raise @core.PdfError
 
 pub fn pdf_addtext_prepare_line(PdfDocument, PdfPage, PdfStrftimeTime, ArrayView[String], ArrayView[(String, () -> String)], PdfFont?, PdfFontPack?, @core.PdfName, Double, String, PdfPosition, relative_to_box? : @core.PdfName, horizontal_offset? : Double, vertical_offset? : Double, justification? : PdfAddTextJustification, rotation? : PdfAddTextRotation, raw? : Bool) -> PdfAddTextPreparedLine raise @core.PdfError
@@ -1881,6 +1883,7 @@ pub fn PdfDocument::addtext_line_widths(Self, PdfPage, PdfFont?, PdfFontPack?, @
 pub fn PdfDocument::addtext_opacity_resources(Self, PdfObject, Double) -> (PdfObject, @core.PdfName?) raise @core.PdfError
 pub fn PdfDocument::addtext_page_font_dictionary(Self, PdfPage) -> PdfObject
 pub fn PdfDocument::addtext_page_label(Self, Int) -> String raise @core.PdfError
+pub fn PdfDocument::addtext_page_lines(Self, PdfPage, PdfStrftimeTime, ArrayView[String], ArrayView[(String, () -> String)], PdfFont?, PdfFontPack?, @core.PdfName, PdfObject?, ArrayView[Int], Double, Double, PdfContentColour, PdfPosition, relative_to_box? : @core.PdfName, opacity? : Double, justification? : PdfAddTextJustification, rotation? : PdfAddTextRotation, midline? : Bool, topline? : Bool, shift_x? : Double, shift_y? : Double, outline? : Bool, line_width? : Double, underneath? : Bool, fast? : Bool, raw? : Bool, url_border? : Bool) -> PdfPage raise @core.PdfError
 pub fn PdfDocument::addtext_page_rest_with_annotations(Self, PdfObject, ArrayView[PdfObject]) -> PdfObject raise @core.PdfError
 pub fn PdfDocument::addtext_prepare_line(Self, PdfPage, PdfStrftimeTime, ArrayView[String], ArrayView[(String, () -> String)], PdfFont?, PdfFontPack?, @core.PdfName, Double, String, PdfPosition, relative_to_box? : @core.PdfName, horizontal_offset? : Double, vertical_offset? : Double, justification? : PdfAddTextJustification, rotation? : PdfAddTextRotation, raw? : Bool) -> PdfAddTextPreparedLine raise @core.PdfError
 pub fn PdfDocument::addtext_rectangle(Self, ArrayView[Int], String, PdfContentColour, PdfPosition, relative_to_box? : @core.PdfName, outline? : Bool, line_width? : Double, opacity? : Double, underneath? : Bool, fast? : Bool) -> Self raise @core.PdfError

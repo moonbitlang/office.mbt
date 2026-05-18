@@ -2304,6 +2304,15 @@ Current backend snapshot:
   focused validation reports `moon test --target native --package
   bobzhang/pdflite --file pdf_addtext_test.mbt` at 105/105 tests passing;
   native full-suite validation reports 1877/1877 tests passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` page-lines integration slice exposes
+  `PdfDocument::addtext_page_lines` and `pdf_addtext_page_lines`, covering
+  cpdf's initial multiline paragraph offsets, midline baseline adjustment,
+  rotation-dependent line advancement via repeated single-line emission,
+  resource accumulation across lines, content isolation wrappers when appending
+  to non-empty pages, and wrapper parity. Native focused validation reports
+  `moon test --target native --package bobzhang/pdflite --file
+  pdf_addtext_test.mbt` at 107/107 tests passing; native full-suite validation
+  reports 1879/1879 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` line-width selection and justification
   application slice exposes `pdf_addtext_longest_width` and
   `pdf_addtext_apply_justification_offset`, covering cpdf's widest expanded

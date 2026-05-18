@@ -1285,6 +1285,134 @@ test "pdf_addtext_line_page wrapper prepends existing font text without opacity"
 }
 
 ///|
+test "PdfDocument addtext_page_lines advances selected-font paragraphs" {
+  let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
+  let page = (try! document.pages_of_pagetree())[0]
+  let font = addtext_standard_font_for_test()
+  let stamped = try! document.addtext_page_lines(
+    page,
+    addtext_process_time_for_test(),
+    ["A", "B"],
+    [],
+    Some(font),
+    None,
+    addtext_name_for_test("/Helvetica"),
+    Some(PdfIndirect(10)),
+    [],
+    10.0,
+    1.0,
+    PdfContentGrey(0.0),
+    PdfPositionBottomLeft(0.0, 0.0),
+  )
+  @test.assert_eq(
+    addtext_content_ops_for_test(document, stamped),
+    [
+      Op_q,
+      ..try! @pdflite.pdf_addtext_text_ops(
+        Some(font),
+        None,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -10.0,
+        false,
+        1.0,
+        addtext_name_for_test("/F0"),
+        [],
+        None,
+        PdfContentGrey(0.0),
+        10.0,
+        "A",
+        0.0,
+        0.0,
+        0.0,
+      ),
+      Op_Q,
+      ..try! @pdflite.pdf_addtext_text_ops(
+        Some(font),
+        None,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        false,
+        1.0,
+        addtext_name_for_test("/F1"),
+        [],
+        None,
+        PdfContentGrey(0.0),
+        10.0,
+        "B",
+        0.0,
+        0.0,
+        0.0,
+      ),
+    ],
+  )
+  guard stamped.resources.lookup_immediate(addtext_name_for_test("/Font"))
+    is Some(fonts) else {
+    fail("expected paragraph font resources")
+  }
+  @test.assert_eq(
+    fonts.lookup_immediate(addtext_name_for_test("/F0")),
+    Some(PdfIndirect(10)),
+  )
+  @test.assert_eq(
+    fonts.lookup_immediate(addtext_name_for_test("/F1")),
+    Some(PdfIndirect(10)),
+  )
+}
+
+///|
+test "pdf_addtext_page_lines wrapper applies baseline offsets" {
+  let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
+  let page = (try! document.pages_of_pagetree())[0]
+  let font = addtext_standard_font_for_test()
+  let stamped = try! @pdflite.pdf_addtext_page_lines(
+    document,
+    page,
+    addtext_process_time_for_test(),
+    ["A"],
+    [],
+    Some(font),
+    None,
+    addtext_name_for_test("/Helvetica"),
+    Some(PdfIndirect(10)),
+    [],
+    10.0,
+    1.0,
+    PdfContentGrey(0.0),
+    PdfPositionBottomLeft(0.0, 0.0),
+    midline=true,
+  )
+  @test.assert_eq(
+    addtext_content_ops_for_test(document, stamped),
+    try! @pdflite.pdf_addtext_text_ops(
+      Some(font),
+      None,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      3.59,
+      false,
+      1.0,
+      addtext_name_for_test("/F0"),
+      [],
+      None,
+      PdfContentGrey(0.0),
+      10.0,
+      "A",
+      0.0,
+      0.0,
+      0.0,
+    ),
+  )
+}
+
+///|
 test "PdfDocument addtext_existing_font_resource finds direct resource keys" {
   let document = @pdflite.pdf_document_empty()
   let resource_name = addtext_name_for_test("/F1")
