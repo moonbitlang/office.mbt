@@ -282,6 +282,18 @@ Current backend snapshot:
   fallback creator/mod-date fields, producer lookup, and unknown-key behavior.
   `moon test --target native pdf_metadata_test.mbt` now reports 13/13 tests
   passing.~~
+- [x] ~~Replacement-scope port note for vendored `cpdfyojson.ml` and
+  `cpdfxmlm.ml`: pdflite does not clone the general Yojson/Xmlm libraries;
+  their cpdf call sites are covered by MoonBit `Json` plus targeted CPDFJSON
+  and XMP/XML helpers. Coverage pins single-object and document CPDFJSON
+  import/export, parsed content-stream JSON arrays, stream-data elision,
+  clean/UTF-8 string wrappers, metadata/XMP report JSON, namespace-aware XMP
+  field extraction and rewrite, RDF list extraction, XML escaping, and PDF/UA
+  metadata generation. Native focused validation reports `moon test --target
+  native pdf_util_test.mbt` at 25/25 tests passing,
+  `moon test --target native pdf_metadata_test.mbt` at 19/19 tests passing,
+  and `moon test --target native pdf_create_test.mbt` at 5/5 tests passing;
+  native full-suite validation reports 1724/1724 tests passing.~~
 - [x] ~~Port `cpdfmetadata.determine_subformats` for in-memory documents:
   namespace-aware XMP scanning now detects PDF/E, PDF/UA, PDF/A part plus
   conformance, PDF/X, and PDF/VT markers in cpdf output order, including
