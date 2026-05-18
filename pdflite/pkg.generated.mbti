@@ -117,6 +117,8 @@ pub fn pdf_addtext_justification_offset(PdfAddTextRotation, Double, Double, PdfP
 
 pub fn pdf_addtext_line_advance(PdfAddTextRotation, Double, Double) -> (Double, Double)
 
+pub fn pdf_addtext_line_placement(PdfRectangle, PdfPosition, PdfAddTextRotation, Double, Double, Double, Double, PdfAddTextJustification) -> PdfAddTextLinePlacement
+
 pub fn pdf_addtext_lines_for_rotation(String, PdfAddTextRotation) -> Array[String] raise @core.PdfError
 
 pub fn pdf_addtext_longest_width(ArrayView[Double]) -> Double raise @core.PdfError
@@ -1402,6 +1404,16 @@ pub(all) enum PdfAddTextJustification {
   PdfAddTextLeftJustify
   PdfAddTextCentreJustify
   PdfAddTextRightJustify
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfAddTextLinePlacement {
+  origin : @geometry.Point2
+  base_rotation : Double
+  text_rotation : Double
+  rotation_offset : @geometry.Point2
+  horizontal_offset : Double
+  vertical_offset : Double
+  justification_offset : Double
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfAddTextReplacementValues {

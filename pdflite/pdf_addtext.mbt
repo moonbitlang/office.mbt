@@ -44,6 +44,18 @@ pub(all) struct PdfAddTextUrlAnnotationGeometry {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Resolved placement values for one cpdf add-text line.
+pub(all) struct PdfAddTextLinePlacement {
+  origin : Point2
+  base_rotation : Double
+  text_rotation : Double
+  rotation_offset : Point2
+  horizontal_offset : Double
+  vertical_offset : Double
+  justification_offset : Double
+} derive(Debug, Eq, ToJson)
+
+///|
 /// Values used to build cpdf add-text replacement callbacks.
 pub(all) struct PdfAddTextReplacementValues {
   page_number : Int
@@ -1614,6 +1626,52 @@ pub fn pdf_addtext_apply_justification_offset(
       (horizontal_offset, vertical_offset - justification_offset)
     PdfAddTextRot0 | PdfAddTextRot180 =>
       (horizontal_offset + justification_offset, vertical_offset)
+  }
+}
+
+///|
+/// Resolve cpdf add-text placement values for one line.
+///
+/// This combines cpdf's `calculate_position`, diagonal offset correction,
+/// justification offset application, explicit text rotation, and
+/// rotation-origin offset selection.
+pub fn pdf_addtext_line_placement(
+  bounds : PdfRectangle,
+  position : PdfPosition,
+  rotation : PdfAddTextRotation,
+  text_width : Double,
+  longest_width : Double,
+  horizontal_offset : Double,
+  vertical_offset : Double,
+  justification : PdfAddTextJustification,
+) -> PdfAddTextLinePlacement {
+  let placed = pdf_calculate_position(false, text_width, bounds, position)
+  let justification_offset = pdf_addtext_justification_offset(
+    rotation, longest_width, text_width, position, justification,
+  )
+  let (diagonal_h_offset, diagonal_v_offset) = pdf_addtext_diagonal_offsets(
+    bounds,
+    position,
+    rotation,
+    text_width,
+    horizontal_offset,
+    vertical_offset,
+    placed.rotation,
+  )
+  let (final_h_offset, final_v_offset) = pdf_addtext_apply_justification_offset(
+    rotation, diagonal_h_offset, diagonal_v_offset, justification_offset,
+  )
+  let (rotation_h_offset, rotation_v_offset) = pdf_addtext_rotation_offsets(
+    position, rotation, text_width,
+  )
+  {
+    origin: point2(placed.x, placed.y),
+    base_rotation: placed.rotation,
+    text_rotation: pdf_addtext_rotation_radians(rotation),
+    rotation_offset: point2(rotation_h_offset, rotation_v_offset),
+    horizontal_offset: final_h_offset,
+    vertical_offset: final_v_offset,
+    justification_offset,
   }
 }
 

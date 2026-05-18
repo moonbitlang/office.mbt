@@ -2277,6 +2277,14 @@ Current backend snapshot:
   `voffset`. Native focused validation reports `moon test --target native
   --package bobzhang/pdflite --file pdf_addtext_test.mbt` at 61/61 tests
   passing; native full-suite validation reports 1833/1833 tests passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` line-placement composition slice exposes
+  `PdfAddTextLinePlacement` and `pdf_addtext_line_placement`, covering cpdf's
+  `calculate_position` integration, diagonal offset correction hook,
+  justification offset application, explicit text rotation, rotation-origin
+  offsets, and horizontal/vertical rotation branches for one resolved add-text
+  line. Native focused validation reports `moon test --target native --package
+  bobzhang/pdflite --file pdf_addtext_test.mbt` at 94/94 tests passing; native
+  full-suite validation reports 1866/1866 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` font resource installation slice exposes
   `pdf_addtext_install_font_resource` and
   `pdf_addtext_install_fontpack_resources`, covering cpdf's `/Font` resource

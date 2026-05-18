@@ -1978,6 +1978,48 @@ test "pdf_addtext_apply_justification_offset follows cpdf rotation branch" {
 }
 
 ///|
+test "pdf_addtext_line_placement combines horizontal placement values" {
+  let placement = @pdflite.pdf_addtext_line_placement(
+    addtext_bounds_for_test(),
+    PdfPositionTopRight(5.0, 6.0),
+    PdfAddTextRot0,
+    20.0,
+    50.0,
+    2.0,
+    3.0,
+    PdfAddTextLeftJustify,
+  )
+  @test.assert_eq(placement.origin, @pdflite.point2(75.0, 44.0))
+  @test.assert_eq(placement.base_rotation, 0.0)
+  @test.assert_eq(placement.text_rotation, 0.0)
+  @test.assert_eq(placement.rotation_offset, @pdflite.point2(0.0, 0.0))
+  @test.assert_eq(placement.horizontal_offset, 32.0)
+  @test.assert_eq(placement.vertical_offset, 3.0)
+  @test.assert_eq(placement.justification_offset, 30.0)
+}
+
+///|
+test "pdf_addtext_line_placement combines vertical rotation values" {
+  let placement = @pdflite.pdf_addtext_line_placement(
+    addtext_bounds_for_test(),
+    PdfPositionTop(4.0),
+    PdfAddTextRot90,
+    20.0,
+    50.0,
+    2.0,
+    3.0,
+    PdfAddTextCentreJustify,
+  )
+  @test.assert_eq(placement.origin, @pdflite.point2(40.0, 46.0))
+  @test.assert_eq(placement.base_rotation, 0.0)
+  addtext_assert_close_for_test(placement.text_rotation, @math.PI * 3.0 / 2.0)
+  @test.assert_eq(placement.rotation_offset, @pdflite.point2(10.0, 0.0))
+  @test.assert_eq(placement.horizontal_offset, 2.0)
+  @test.assert_eq(placement.vertical_offset, 18.0)
+  @test.assert_eq(placement.justification_offset, -15.0)
+}
+
+///|
 test "pdf_addtext_justification_offset swaps horizontal justification at 180 degrees" {
   @test.assert_eq(
     addtext_offset_for_test(
