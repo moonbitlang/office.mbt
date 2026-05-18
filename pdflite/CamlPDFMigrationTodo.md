@@ -2537,6 +2537,15 @@ Current backend snapshot:
   reports `moon test --target native --package bobzhang/pdflite --file
   pdf_content_text_test.mbt` at 1/1 tests passing; native full-suite validation
   reports 1918/1918 tests passing.~~
+- [x] ~~Standalone `cpdfcontent.ml` glyph byte-construction slice exposes
+  `PdfFont::content_bytes_of_charcode` and
+  `pdf_content_bytes_of_charcode`, matching the raw byte construction used by
+  cpdf's glyph JSON and test extractor paths for one-byte standard/simple
+  fonts, big-endian two-byte CID-keyed fonts, and `char_of_int`-style invalid
+  byte failures via `PdfError::InvalidByte`. Native focused validation reports
+  `moon test --target native --package bobzhang/pdflite --file
+  pdf_content_text_test.mbt` at 2/2 tests passing; native full-suite validation
+  reports 1919/1919 tests passing.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,
