@@ -95,6 +95,10 @@ pub fn pdf_addtext_replacement_pairs(PdfAddTextReplacementValues) -> Array[(Stri
 
 pub fn pdf_addtext_replacement_values(PdfDocument, ArrayView[PdfBookmark], Int, Int, String, Int, Int?) -> PdfAddTextReplacementValues raise @core.PdfError
 
+pub fn pdf_addtext_split_at_newline(String) -> Array[String]
+
+pub fn pdf_addtext_unescape_string(String) -> String raise @core.PdfError
+
 pub fn pdf_annotation_make(PdfAnnotationSubtype, contents? : Bytes?, border? : PdfAnnotationBorder, rectangle? : PdfRectangle, colour? : PdfAnnotationColour?, subject? : Bytes?) -> PdfAnnotation
 
 pub fn pdf_annotation_make_border(Double, vertical_radius? : Double, horizontal_radius? : Double, style? : PdfAnnotationStyle, dash_array? : ArrayView[Int]) -> PdfAnnotationBorder

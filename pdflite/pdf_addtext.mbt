@@ -305,6 +305,99 @@ pub fn pdf_addtext_process_text_with_time(
 }
 
 ///|
+fn pdf_addtext_decode_lossy(bytes : Array[Byte]) -> String {
+  @utf8.decode_lossy(Bytes::from_array(bytes))
+}
+
+///|
+/// Split add-text input at cpdf's literal `\n` line marker.
+///
+/// A doubled backslash before `n` is preserved as text, matching cpdf's
+/// `split_at_newline` helper.
+pub fn pdf_addtext_split_at_newline(text : String) -> Array[String] {
+  let bytes = @utf8.encode(text)
+  let lines : Array[String] = []
+  let mut current : Array[Byte] = []
+  let mut index = 0
+  while index < bytes.length() {
+    if index + 2 < bytes.length() &&
+      bytes[index].to_int() == 92 &&
+      bytes[index + 1].to_int() == 92 &&
+      bytes[index + 2].to_int() == 110 {
+      current.push(bytes[index])
+      current.push(bytes[index + 1])
+      current.push(bytes[index + 2])
+      index += 3
+    } else if index + 1 < bytes.length() &&
+      bytes[index].to_int() == 92 &&
+      bytes[index + 1].to_int() == 110 {
+      lines.push(pdf_addtext_decode_lossy(current))
+      current = []
+      index += 2
+    } else {
+      current.push(bytes[index])
+      index += 1
+    }
+  }
+  lines.push(pdf_addtext_decode_lossy(current))
+  lines
+}
+
+///|
+fn pdf_addtext_is_octal_digit(byte : Byte) -> Bool {
+  let value = byte.to_int()
+  value >= 48 && value <= 55
+}
+
+///|
+fn pdf_addtext_octal_value(a : Byte, b : Byte, c : Byte) -> Int {
+  (a.to_int() - 48) * 64 + (b.to_int() - 48) * 8 + c.to_int() - 48
+}
+
+///|
+/// Decode cpdf add-text backslash escapes after line splitting.
+///
+/// Three-digit octal escapes emit one byte, doubled backslashes emit one
+/// backslash, and other non-newline escapes drop the backslash.
+pub fn pdf_addtext_unescape_string(text : String) -> String raise PdfError {
+  let bytes = @utf8.encode(text)
+  let output : Array[Byte] = []
+  let mut index = 0
+  while index < bytes.length() {
+    if bytes[index].to_int() == 92 {
+      if index + 3 < bytes.length() &&
+        pdf_addtext_is_octal_digit(bytes[index + 1]) &&
+        pdf_addtext_is_octal_digit(bytes[index + 2]) &&
+        pdf_addtext_is_octal_digit(bytes[index + 3]) {
+        let value = pdf_addtext_octal_value(
+          bytes[index + 1],
+          bytes[index + 2],
+          bytes[index + 3],
+        )
+        if value > 255 {
+          raise SoftError("bad add-text octal escape")
+        }
+        output.push(value.to_byte())
+        index += 4
+      } else if index + 1 < bytes.length() && bytes[index + 1].to_int() == 92 {
+        output.push((92).to_byte())
+        index += 2
+      } else if index + 1 < bytes.length() && bytes[index + 1].to_int() != 110 {
+        output.push(bytes[index + 1])
+        index += 2
+      } else {
+        output.push(bytes[index])
+        index += 1
+      }
+    } else {
+      output.push(bytes[index])
+      index += 1
+    }
+  }
+  pdf_addtext_decode_lossy(output)
+}
+
+///|
 fn pdf_addtext_roman_upper(number : Int) -> String {
   @ascii.decode_lossy(pdf_page_label_roman_upper(number))
 }

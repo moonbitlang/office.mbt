@@ -2141,6 +2141,14 @@ Current backend snapshot:
   validation reports `moon test --target native --package bobzhang/pdflite
   --file pdf_addtext_test.mbt` at 25/25 tests passing; native full-suite
   validation reports 1797/1797 tests passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` input preprocessing slice exposes
+  `pdf_addtext_split_at_newline` and `pdf_addtext_unescape_string`, covering
+  literal `\n` line splitting, escaped `\\n` preservation, real-newline
+  non-splitting, UTF-8 byte preservation, octal byte escapes, doubled-backslash
+  collapse, non-newline backslash escapes, and out-of-range octal soft errors.
+  Native focused validation reports `moon test --target native --package
+  bobzhang/pdflite --file pdf_addtext_test.mbt` at 28/28 tests passing; native
+  full-suite validation reports 1800/1800 tests passing.~~
 - [x] ~~Standalone `cpdfremovetext.ml` removal slice exposes
   `pdf_remove_added_text_ops`, `pdf_remove_all_text_ops`,
   `PdfDocument::remove_added_text`, `remove_all_text`, and compatibility

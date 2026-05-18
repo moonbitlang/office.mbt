@@ -381,6 +381,47 @@ test "pdf_addtext_process_text_with_time ignores empty replacement markers" {
 }
 
 ///|
+test "pdf_addtext_split_at_newline matches cpdf literal line markers" {
+  @test.assert_eq(@pdflite.pdf_addtext_split_at_newline("one\\ntwo\\n"), [
+    "one", "two", "",
+  ])
+  @test.assert_eq(@pdflite.pdf_addtext_split_at_newline("one\\\\ntwo"), [
+    "one\\\\ntwo",
+  ])
+  @test.assert_eq(@pdflite.pdf_addtext_split_at_newline("one\ntwo"), [
+    "one\ntwo",
+  ])
+  @test.assert_eq(@pdflite.pdf_addtext_split_at_newline("é\\nß"), ["é", "ß"])
+}
+
+///|
+test "pdf_addtext_unescape_string decodes cpdf add-text escapes" {
+  @test.assert_eq(
+    try! @pdflite.pdf_addtext_unescape_string("A\\101\\040B"),
+    "AA B",
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_addtext_unescape_string("slash\\\\mark"),
+    "slash\\mark",
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_addtext_unescape_string("x\\ty\\8z\\n"),
+    "xty8z\\n",
+  )
+  @test.assert_eq(try! @pdflite.pdf_addtext_unescape_string("\\303\\251"), "é")
+}
+
+///|
+test "pdf_addtext_unescape_string reports octal escapes outside byte range" {
+  let result : Result[String, Error] = try? @pdflite.pdf_addtext_unescape_string(
+    "\\777",
+  )
+  guard result is Err(@pdflite.PdfError::SoftError("bad add-text octal escape")) else {
+    fail("expected SoftError for octal escape outside byte range")
+  }
+}
+
+///|
 test "pdf_addtext_expand_lines_with_time expands replacements and strips URLs" {
   let page_calls : Ref[Int] = { val: 0 }
   let replacements : Array[(String, () -> String)] = [
