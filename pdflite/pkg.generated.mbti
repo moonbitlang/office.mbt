@@ -303,6 +303,8 @@ pub fn pdf_endpage(PdfDocument) -> Int raise @core.PdfError
 
 pub fn pdf_endpage_fast(PdfDocument) -> Int raise @core.PdfError
 
+pub fn pdf_error(String) -> Unit raise @core.PdfError
+
 pub fn pdf_eval_function(PdfFunction, ArrayView[Double]) -> Array[Double] raise @core.PdfError
 
 pub fn pdf_find_object(PdfDocument, String) -> PdfObject raise @core.PdfError
@@ -356,6 +358,8 @@ pub fn pdf_get_xmp_info(PdfDocument, @core.PdfName) -> String
 pub fn pdf_glyphnames_of_text(PdfTextExtractor, BytesView) -> Array[@core.PdfName] raise @core.PdfError
 
 pub fn pdf_hard_box(PdfDocument, ArrayView[Int], @core.PdfName, mediabox_if_missing? : Bool, fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_hard_error(String) -> Unit raise @core.PdfError
 
 pub fn pdf_image_bpc(PdfDocument, PdfObject) -> PdfObject?
 
@@ -816,6 +820,8 @@ pub fn pdf_show_composition_json_blob(Int, PdfDocument) -> Bytes raise @core.Pdf
 pub fn pdf_simplify_utf16be(BytesView) -> Bytes raise @core.PdfError
 
 pub fn pdf_size_attached_files(PdfDocument) -> Int raise @core.PdfError
+
+pub fn pdf_soft_error(String) -> Unit raise @core.PdfError
 
 pub fn pdf_stamp_as_xobject(PdfDocument, ArrayView[Int], PdfDocument) -> (PdfDocument, @core.PdfName) raise @core.PdfError
 

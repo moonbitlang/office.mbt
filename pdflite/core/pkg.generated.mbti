@@ -101,6 +101,8 @@ pub(all) suberror PdfError {
   BadRectangleSpecification(String)
   BadNumberArgument(String)
   BadPresentationEffect(String)
+  SoftError(String)
+  HardError(String)
   InsecurePathName(String)
   ContentOperatorExpected
   ContentOperandExpected

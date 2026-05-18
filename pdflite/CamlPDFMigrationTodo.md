@@ -1744,6 +1744,13 @@ Current backend snapshot:
   generated trailer `/ID` arrays. Native focused validation reports `moon test
   --target native pdf_create_test.mbt` at 5/5 tests passing; native full-suite
   validation reports 1721/1721 tests passing.~~
+- [x] ~~Standalone `cpdferror.ml` exception-helper slice exposes
+  `PdfError::SoftError`, `PdfError::HardError`, `pdf_error`,
+  `pdf_soft_error`, and `pdf_hard_error`, covering cpdf's soft-error default
+  and distinct hard-error helper while updating generated interfaces. Native
+  focused validation reports `moon test --target native pdf_error_test.mbt` at
+  2/2 tests passing; native full-suite validation reports 1724/1724 tests
+  passing.~~
 - [x] ~~Standalone utility ports for `cpdfdebug.ml`, `cpdfprinttree.ml`, and
   `cpdfstrftime.ml` expose `PdfDocument::debug_objects`,
   `pdf_print_tree_to_string`, explicit-time and native-current-time strftime

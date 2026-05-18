@@ -1,0 +1,19 @@
+///|
+test "pdf_error raises cpdf soft error" {
+  let result : Result[Unit, Error] = try? @pdflite.pdf_error("soft")
+  guard result is Err(@pdflite.PdfError::SoftError("soft")) else {
+    fail("expected SoftError")
+  }
+}
+
+///|
+test "pdf_soft_error and pdf_hard_error raise distinct cpdf errors" {
+  let soft : Result[Unit, Error] = try? @pdflite.pdf_soft_error("recoverable")
+  guard soft is Err(@pdflite.PdfError::SoftError("recoverable")) else {
+    fail("expected SoftError")
+  }
+  let hard : Result[Unit, Error] = try? @pdflite.pdf_hard_error("fatal")
+  guard hard is Err(@pdflite.PdfError::HardError("fatal")) else {
+    fail("expected HardError")
+  }
+}
