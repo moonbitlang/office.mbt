@@ -684,6 +684,19 @@ fn PdfDocument::pdf_annotation_contents_text(
 }
 
 ///|
+fn pdf_annotation_push_listing_line(
+  output : Array[Byte],
+  page_number : Int,
+  contents : BytesView,
+) -> Unit {
+  pdf_writer_push_ascii(output, "Page ")
+  pdf_writer_push_ascii(output, page_number.to_string())
+  pdf_writer_push_ascii(output, ": ")
+  pdf_writer_push_view(output, contents)
+  pdf_writer_push_byte(output, 10)
+}
+
+///|
 /// Return old-style annotation contents as `(page_number, contents)` pairs.
 ///
 /// Every annotation entry contributes one pair. Annotations without `/Contents`
@@ -715,6 +728,53 @@ pub fn pdf_get_annotations(
   document : PdfDocument,
 ) -> Array[(Int, PdfBytes)] raise PdfError {
   document.get_annotations(encoding~)
+}
+
+///|
+/// Render cpdf's old-style annotation listing for selected pages.
+///
+/// Unlike `get_annotations`, this suppresses empty `/Contents` entries and
+/// returns the bytes cpdf would print instead of writing to stdout.
+pub fn PdfDocument::list_annotations(
+  self : PdfDocument,
+  page_numbers : ArrayView[Int],
+  encoding? : PdfMetadataEncoding = PdfMetadataUTF8,
+) -> PdfBytes raise PdfError {
+  let pages = self.pages_of_pagetree()
+  pdf_page_box_validate_page_numbers(
+    page_numbers,
+    pages.length(),
+    "list_annotations",
+  )
+  let output : Array[Byte] = []
+  for index, page in pages {
+    let page_number = index + 1
+    if pdf_page_box_contains_page(page_numbers, page_number) {
+      match self.lookup_direct(pdf_annotation_annots_key(), page.rest) {
+        Some(PdfArray(annotations)) =>
+          for annotation in annotations {
+            let contents = self.pdf_annotation_contents_text(
+              encoding, annotation,
+            )
+            if contents.length() > 0 {
+              pdf_annotation_push_listing_line(output, page_number, contents)
+            }
+          }
+        _ => ()
+      }
+    }
+  }
+  Bytes::from_array(output)
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::list_annotations`.
+pub fn pdf_list_annotations(
+  page_numbers : ArrayView[Int],
+  encoding : PdfMetadataEncoding,
+  document : PdfDocument,
+) -> PdfBytes raise PdfError {
+  document.list_annotations(page_numbers, encoding~)
 }
 
 ///|

@@ -66,6 +66,31 @@ test "PdfDocument get_annotations returns old-style page content pairs" {
 }
 
 ///|
+test "PdfDocument list_annotations renders selected non-empty old-style lines" {
+  let document = try! annotation_cpdf_helper_document_for_test()
+  let expected = @ascii.encode("Page 1: first\nPage 2: second\n")
+  @test.assert_eq(
+    try! document.list_annotations([1, 2], encoding=PdfMetadataRaw),
+    expected,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_list_annotations([1, 2], PdfMetadataRaw, document),
+    expected,
+  )
+  @test.assert_eq(
+    try! document.list_annotations([2], encoding=PdfMetadataRaw),
+    @ascii.encode("Page 2: second\n"),
+  )
+  let bad_page : Result[@pdflite.PdfBytes, Error] = try? document.list_annotations(
+    [3],
+    encoding=PdfMetadataRaw,
+  )
+  guard bad_page is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+    fail("expected @pdflite.PdfError::BadPageSpecification")
+  }
+}
+
+///|
 test "PdfDocument remove_annotations removes selected page arrays" {
   let key_annots = annotation_name_for_test("/Annots")
   let document = try! annotation_cpdf_helper_document_for_test()
