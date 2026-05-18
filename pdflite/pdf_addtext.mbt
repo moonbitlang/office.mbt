@@ -173,6 +173,30 @@ fn PdfDocument::pdf_addtext_opacity_resources(
 }
 
 ///|
+/// Return resources updated with cpdf add-text opacity graphics state.
+///
+/// Opacity values below `1.0` allocate a unique `/gs*` entry under
+/// `/ExtGState` with both fill and stroke alpha set. Opaque values leave the
+/// resource dictionary unchanged and return no graphics-state name.
+pub fn PdfDocument::addtext_opacity_resources(
+  self : PdfDocument,
+  resources : PdfObject,
+  opacity : Double,
+) -> (PdfObject, PdfName?) raise PdfError {
+  self.pdf_addtext_opacity_resources(resources, opacity)
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::addtext_opacity_resources`.
+pub fn pdf_addtext_opacity_resources(
+  document : PdfDocument,
+  resources : PdfObject,
+  opacity : Double,
+) -> (PdfObject, PdfName?) raise PdfError {
+  document.addtext_opacity_resources(resources, opacity)
+}
+
+///|
 /// Build the cpdf add-text fill colour operator.
 pub fn pdf_addtext_colour_op(colour : PdfContentColour) -> PdfContentOp {
   colour.pdf_tweak_fill_op()

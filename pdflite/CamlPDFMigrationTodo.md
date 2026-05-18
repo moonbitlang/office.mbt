@@ -2156,6 +2156,14 @@ Current backend snapshot:
   validation reports `moon test --target native --package bobzhang/pdflite
   --file pdf_addtext_test.mbt` at 30/30 tests passing; native full-suite
   validation reports 1802/1802 tests passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` opacity-resource slice exposes
+  `PdfDocument::addtext_opacity_resources` and
+  `pdf_addtext_opacity_resources`, covering cpdf's `/ExtGState` resource
+  update, unique `/gs*` allocation, fill/stroke alpha dictionary entries,
+  existing resource preservation, opaque no-op behavior, and wrapper parity.
+  Native focused validation reports `moon test --target native --package
+  bobzhang/pdflite --file pdf_addtext_test.mbt` at 86/86 tests passing; native
+  full-suite validation reports 1858/1858 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` UTF-8 charcode helper slice exposes
   `pdf_addtext_charcodes_of_utf8`, covering cpdf's charcode-string byte output
   as `PdfBytes`, WinAnsi byte mapping for representable codepoints, and

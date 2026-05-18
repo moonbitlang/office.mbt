@@ -230,6 +230,48 @@ test "pdf_addtext_colour_op_stroke maps stroke colours to content operators" {
 }
 
 ///|
+test "PdfDocument addtext_opacity_resources allocates graphics state" {
+  let document = @pdflite.pdf_document_empty()
+  let extgstate = addtext_name_for_test("/ExtGState")
+  let gs0 = addtext_name_for_test("/gs0")
+  let gs1 = addtext_name_for_test("/gs1")
+  let ca = addtext_name_for_test("/ca")
+  let ca_stroke = addtext_name_for_test("/CA")
+  let resources : @pdflite.PdfObject = PdfDictionary([
+    (extgstate, PdfDictionary([(gs0, PdfInteger(1))])),
+  ])
+  let (updated, name) = try! document.addtext_opacity_resources(resources, 0.25)
+  @test.assert_eq(name, Some(gs1))
+  guard updated.lookup_immediate(extgstate) is Some(resource_dictionary) else {
+    fail("expected ExtGState resource dictionary")
+  }
+  @test.assert_eq(
+    resource_dictionary.lookup_immediate(gs0),
+    Some(PdfInteger(1)),
+  )
+  guard resource_dictionary.lookup_immediate(gs1) is Some(opacity_dictionary) else {
+    fail("expected opacity graphics state")
+  }
+  @test.assert_eq(opacity_dictionary.lookup_immediate(ca), Some(PdfReal(0.25)))
+  @test.assert_eq(
+    opacity_dictionary.lookup_immediate(ca_stroke),
+    Some(PdfReal(0.25)),
+  )
+}
+
+///|
+test "pdf_addtext_opacity_resources preserves opaque resources" {
+  let document = @pdflite.pdf_document_empty()
+  let resources : @pdflite.PdfObject = PdfDictionary([
+    (addtext_name_for_test("/ProcSet"), PdfArray([])),
+  ])
+  @test.assert_eq(
+    try! @pdflite.pdf_addtext_opacity_resources(document, resources, 1.0),
+    (resources, None),
+  )
+}
+
+///|
 test "pdf_addtext_charcodes_of_utf8 emits font charcode bytes" {
   @test.assert_eq(
     @pdflite.pdf_int_array_of_bytes(
