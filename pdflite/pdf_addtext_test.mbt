@@ -1676,6 +1676,158 @@ test "pdf_addtexts_with_font skips empty visible text before writing fonts" {
 }
 
 ///|
+test "PdfDocument addtexts_with_source uses first premade fontpack font" {
+  let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
+  let first = addtext_standard_font_for_test()
+  let second : @pdflite.PdfFont = PdfFontStandard({
+    font: PdfTimesRoman,
+    encoding: PdfWinAnsiEncoding,
+  })
+  let pack : @pdflite.PdfFontPack = { fonts: [first, second], entries: [] }
+  let stamped = try! document.addtexts_with_source(
+    [1],
+    "A",
+    addtext_process_time_for_test(),
+    [],
+    @pdflite.PdfAddTextPreMadeFontPack(pack),
+    addtext_name_for_test("/Helvetica"),
+    10.0,
+    1.0,
+    PdfContentGrey(0.0),
+    PdfPositionBottomLeft(1.0, 2.0),
+  )
+  let page = (try! stamped.pages_of_pagetree())[0]
+  @test.assert_eq(
+    addtext_content_ops_for_test(stamped, page),
+    try! @pdflite.pdf_addtext_text_ops(
+      Some(first),
+      None,
+      1.0,
+      2.0,
+      0.0,
+      0.0,
+      0.0,
+      false,
+      1.0,
+      addtext_name_for_test("/F0"),
+      [],
+      None,
+      PdfContentGrey(0.0),
+      10.0,
+      "A",
+      0.0,
+      0.0,
+      0.0,
+    ),
+  )
+}
+
+///|
+test "PdfDocument addtexts_with_source delegates existing named fonts" {
+  let base = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
+  let pages = try! base.pages_of_pagetree()
+  let font_key = addtext_name_for_test("/Font")
+  let resource_name = addtext_name_for_test("/Fx")
+  let basefont = addtext_name_for_test("/Helvetica")
+  let font_object : @pdflite.PdfObject = PdfDictionary([
+    (
+      addtext_name_for_test("/Subtype"),
+      PdfNameObject(addtext_name_for_test("/Type1")),
+    ),
+    (addtext_name_for_test("/BaseFont"), PdfNameObject(basefont)),
+  ])
+  let page = {
+    ..pages[0],
+    resources: PdfDictionary([
+      (font_key, PdfDictionary([(resource_name, font_object)])),
+    ]),
+  }
+  let document = try! base.change_pages([page])
+  let stamped = try! document.addtexts_with_source(
+    [1],
+    "Aé☃",
+    addtext_process_time_for_test(),
+    [],
+    @pdflite.PdfAddTextExistingNamedFont,
+    basefont,
+    10.0,
+    1.0,
+    PdfContentGrey(0.0),
+    PdfPositionBottomLeft(1.0, 2.0),
+  )
+  let stamped_page = (try! stamped.pages_of_pagetree())[0]
+  @test.assert_eq(
+    addtext_content_ops_for_test(stamped, stamped_page),
+    try! @pdflite.pdf_addtext_text_ops(
+      Some(try! document.read_font(font_object)),
+      None,
+      1.0,
+      2.0,
+      0.0,
+      0.0,
+      0.0,
+      false,
+      1.0,
+      resource_name,
+      [],
+      None,
+      PdfContentGrey(0.0),
+      10.0,
+      "Aé☃",
+      0.0,
+      0.0,
+      0.0,
+    ),
+  )
+}
+
+///|
+test "pdf_addtexts_with_source skips empty visible text before resolving sources" {
+  let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
+  let before = document.object_count()
+  let empty_pack : @pdflite.PdfFontPack = { fonts: [], entries: [] }
+  let stamped = try! @pdflite.pdf_addtexts_with_source(
+    document,
+    [1],
+    "%URL[|https://example.test]",
+    addtext_process_time_for_test(),
+    [],
+    @pdflite.PdfAddTextPreMadeFontPack(empty_pack),
+    addtext_name_for_test("/Helvetica"),
+    10.0,
+    1.0,
+    PdfContentGrey(0.0),
+    PdfPositionBottomLeft(1.0, 2.0),
+  )
+  let pages = try! stamped.pages_of_pagetree()
+  @test.assert_eq(stamped.object_count(), before)
+  @test.assert_eq(pages[0].content.length(), 0)
+}
+
+///|
+test "pdf_addtexts_with_source rejects empty premade fontpacks" {
+  let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
+  let empty_pack : @pdflite.PdfFontPack = { fonts: [], entries: [] }
+  let result : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_addtexts_with_source(
+    document,
+    [1],
+    "A",
+    addtext_process_time_for_test(),
+    [],
+    @pdflite.PdfAddTextPreMadeFontPack(empty_pack),
+    addtext_name_for_test("/Helvetica"),
+    10.0,
+    1.0,
+    PdfContentGrey(0.0),
+    PdfPositionBottomLeft(1.0, 2.0),
+  )
+  guard result
+    is Err(@pdflite.PdfError::SoftError("addtexts: fontpack is empty")) else {
+    fail("expected empty premade fontpack diagnostic")
+  }
+}
+
+///|
 test "PdfDocument addtext_existing_font_resource finds direct resource keys" {
   let document = @pdflite.pdf_document_empty()
   let resource_name = addtext_name_for_test("/F1")

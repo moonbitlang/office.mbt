@@ -191,6 +191,8 @@ pub fn pdf_addtext_width_of_text(PdfFont, BytesView) -> Double
 
 pub fn pdf_addtexts_with_font(PdfDocument, ArrayView[Int], String, PdfStrftimeTime, ArrayView[PdfBookmark], PdfFont?, PdfFontPack?, @core.PdfName, Double, Double, PdfContentColour, PdfPosition, filename? : String, bates? : Int, bates_pad? : Int?, relative_to_box? : @core.PdfName, shift? : String, opacity? : Double, justification? : PdfAddTextJustification, rotation? : PdfAddTextRotation, midline? : Bool, topline? : Bool, outline? : Bool, line_width? : Double, underneath? : Bool, fast? : Bool, raw? : Bool, url_border? : Bool) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_addtexts_with_source(PdfDocument, ArrayView[Int], String, PdfStrftimeTime, ArrayView[PdfBookmark], PdfAddTextFontSource, @core.PdfName, Double, Double, PdfContentColour, PdfPosition, filename? : String, bates? : Int, bates_pad? : Int?, relative_to_box? : @core.PdfName, shift? : String, opacity? : Double, justification? : PdfAddTextJustification, rotation? : PdfAddTextRotation, midline? : Bool, topline? : Bool, outline? : Bool, line_width? : Double, underneath? : Bool, fast? : Bool, raw? : Bool, url_border? : Bool) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_annotation_make(PdfAnnotationSubtype, contents? : Bytes?, border? : PdfAnnotationBorder, rectangle? : PdfRectangle, colour? : PdfAnnotationColour?, subject? : Bytes?) -> PdfAnnotation
 
 pub fn pdf_annotation_make_border(Double, vertical_radius? : Double, horizontal_radius? : Double, style? : PdfAnnotationStyle, dash_array? : ArrayView[Int]) -> PdfAnnotationBorder
@@ -1420,6 +1422,11 @@ pub(all) struct ObjectStreamReference {
   index : Int
 } derive(Eq, ToJson, @debug.Debug)
 
+pub(all) enum PdfAddTextFontSource {
+  PdfAddTextPreMadeFontPack(PdfFontPack)
+  PdfAddTextExistingNamedFont
+} derive(Eq, ToJson, @debug.Debug)
+
 pub(all) enum PdfAddTextJustification {
   PdfAddTextLeftJustify
   PdfAddTextCentreJustify
@@ -1902,6 +1909,7 @@ pub fn PdfDocument::addtext_selected_font_object(Self, PdfFont?) -> PdfObject? r
 pub fn PdfDocument::addtext_url_annotation_references(Self, String, ArrayView[PdfAddTextUrl], (String) -> Double raise @core.PdfError, @geometry.Point2, Double, Double, Double, Double, @geometry.Point2, Double, PdfFont?, String, Double, Bool) -> Array[PdfObject] raise @core.PdfError
 pub fn PdfDocument::addtext_width_of_existing_font_resource(Self, PdfPage, @core.PdfName, Double, BytesView) -> (@core.PdfName, Double) raise @core.PdfError
 pub fn PdfDocument::addtexts_with_font(Self, ArrayView[Int], String, PdfStrftimeTime, ArrayView[PdfBookmark], PdfFont?, PdfFontPack?, @core.PdfName, Double, Double, PdfContentColour, PdfPosition, filename? : String, bates? : Int, bates_pad? : Int?, relative_to_box? : @core.PdfName, shift? : String, opacity? : Double, justification? : PdfAddTextJustification, rotation? : PdfAddTextRotation, midline? : Bool, topline? : Bool, outline? : Bool, line_width? : Double, underneath? : Bool, fast? : Bool, raw? : Bool, url_border? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::addtexts_with_source(Self, ArrayView[Int], String, PdfStrftimeTime, ArrayView[PdfBookmark], PdfAddTextFontSource, @core.PdfName, Double, Double, PdfContentColour, PdfPosition, filename? : String, bates? : Int, bates_pad? : Int?, relative_to_box? : @core.PdfName, shift? : String, opacity? : Double, justification? : PdfAddTextJustification, rotation? : PdfAddTextRotation, midline? : Bool, topline? : Bool, outline? : Bool, line_width? : Double, underneath? : Bool, fast? : Bool, raw? : Bool, url_border? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::annotations_json(Self, ArrayView[Int]) -> Json raise @core.PdfError
 pub fn PdfDocument::annotations_json_blob(Self, ArrayView[Int]) -> Bytes raise @core.PdfError
 pub fn PdfDocument::annotations_of_page(Self, PdfPage) -> Array[PdfAnnotation] raise @core.PdfError

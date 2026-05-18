@@ -2353,6 +2353,15 @@ Current backend snapshot:
   Native focused validation reports `moon test --target native --package
   bobzhang/pdflite --file pdf_addtext_test.mbt` at 113/113 tests passing;
   native full-suite validation reports 1885/1885 tests passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` non-embedding font-source slice exposes
+  `PdfAddTextFontSource`, `PdfDocument::addtexts_with_source`, and
+  `pdf_addtexts_with_source`, covering cpdf `PreMadeFontPack` first-font
+  behavior, `ExistingNamedFont` delegation, empty-visible-text no-op before
+  source resolution, and empty premade fontpack diagnostics while leaving
+  TrueType `EmbedInfo` embedding for a separate slice. Native focused validation
+  reports `moon test --target native --package bobzhang/pdflite --file
+  pdf_addtext_test.mbt` at 117/117 tests passing; native full-suite validation
+  reports 1891/1891 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` line-width selection and justification
   application slice exposes `pdf_addtext_longest_width` and
   `pdf_addtext_apply_justification_offset`, covering cpdf's widest expanded
