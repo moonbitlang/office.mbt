@@ -1885,3 +1885,36 @@ pub fn pdf_addtext_expand_lines_with_time(
   }
   output
 }
+
+///|
+fn pdf_addtext_codepoints_contains(
+  codepoints : ArrayView[Int],
+  codepoint : Int,
+) -> Bool {
+  for existing in codepoints {
+    if existing == codepoint {
+      return true
+    }
+  }
+  false
+}
+
+///|
+/// Return the unique Unicode codepoints used by expanded add-text lines.
+///
+/// This mirrors cpdf's pre-embedding `used` scan after replacement expansion
+/// and URL stripping. The returned order is first occurrence for deterministic
+/// callers and tests.
+pub fn pdf_addtext_used_codepoints(
+  lines : ArrayView[String],
+) -> Array[Int] raise PdfError {
+  let used : Array[Int] = []
+  for line in lines {
+    for codepoint in pdf_codepoints_of_utf8(@utf8.encode(line)) {
+      if !pdf_addtext_codepoints_contains(used, codepoint) {
+        used.push(codepoint)
+      }
+    }
+  }
+  used
+}

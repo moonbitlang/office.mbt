@@ -2294,6 +2294,13 @@ Current backend snapshot:
   reports `moon test --target native --package bobzhang/pdflite --file
   pdf_addtext_test.mbt` at 72/72 tests passing; native full-suite validation
   reports 1844/1844 tests passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` used-codepoint scan slice exposes
+  `pdf_addtext_used_codepoints`, covering cpdf's pre-embedding scan over
+  expanded visible add-text lines, URL-stripped text, duplicate suppression,
+  UTF-8 codepoints, and empty-line behavior. Native focused validation reports
+  `moon test --target native --package bobzhang/pdflite --file
+  pdf_addtext_test.mbt` at 74/74 tests passing; native full-suite validation
+  reports 1846/1846 tests passing.~~
 - [x] ~~Standalone `cpdfremovetext.ml` removal slice exposes
   `pdf_remove_added_text_ops`, `pdf_remove_all_text_ops`,
   `PdfDocument::remove_added_text`, `remove_all_text`, and compatibility

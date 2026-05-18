@@ -1880,6 +1880,23 @@ test "pdf_addtext_expand_lines_with_time reports malformed URL lines" {
 }
 
 ///|
+test "pdf_addtext_used_codepoints collects visible expanded-line codepoints" {
+  let expanded = try! @pdflite.pdf_addtext_expand_lines_with_time(
+    addtext_process_time_for_test(),
+    ["A%URL[é|https://example.test]", "BA"],
+    [],
+  )
+  @test.assert_eq(try! @pdflite.pdf_addtext_used_codepoints(expanded), [
+    65, 0xE9, 66,
+  ])
+}
+
+///|
+test "pdf_addtext_used_codepoints handles empty lines" {
+  @test.assert_eq(try! @pdflite.pdf_addtext_used_codepoints(["", ""]), [])
+}
+
+///|
 test "pdf_addtext_bates_number formats optional zero padding" {
   @test.assert_eq(@pdflite.pdf_addtext_bates_number(98, 5, None), "102")
   @test.assert_eq(@pdflite.pdf_addtext_bates_number(98, 5, Some(4)), "0102")
