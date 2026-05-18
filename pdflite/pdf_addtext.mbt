@@ -505,6 +505,51 @@ pub fn pdf_addtext_bookmark_for_page(
 }
 
 ///|
+/// Build cpdf add-text replacement values from document-local state.
+pub fn PdfDocument::addtext_replacement_values(
+  self : PdfDocument,
+  bookmarks : ArrayView[PdfBookmark],
+  page_number : Int,
+  end_page : Int,
+  filename : String,
+  bates : Int,
+  bates_pad : Int?,
+) -> PdfAddTextReplacementValues raise PdfError {
+  let bookmark_values : Array[String] = []
+  for level in 0..<5 {
+    bookmark_values.push(
+      self.addtext_bookmark_for_page(bookmarks, level, page_number),
+    )
+  }
+  {
+    page_number,
+    end_page,
+    filename,
+    page_label: self.addtext_page_label(page_number),
+    end_label: self.addtext_page_label(end_page),
+    bates,
+    bates_pad,
+    bookmarks: bookmark_values,
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::addtext_replacement_values`.
+pub fn pdf_addtext_replacement_values(
+  document : PdfDocument,
+  bookmarks : ArrayView[PdfBookmark],
+  page_number : Int,
+  end_page : Int,
+  filename : String,
+  bates : Int,
+  bates_pad : Int?,
+) -> PdfAddTextReplacementValues raise PdfError {
+  document.addtext_replacement_values(
+    bookmarks, page_number, end_page, filename, bates, bates_pad,
+  )
+}
+
+///|
 fn pdf_addtext_find_byte(bytes : BytesView, start : Int, value : Int) -> Int? {
   let mut index = start
   while index < bytes.length() {

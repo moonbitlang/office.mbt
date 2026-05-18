@@ -2126,6 +2126,14 @@ Current backend snapshot:
   decoding. Native focused validation reports `moon test --target native
   --package bobzhang/pdflite --file pdf_addtext_test.mbt` at 21/21 tests
   passing; native full-suite validation reports 1793/1793 tests passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` document replacement-values slice exposes
+  `PdfDocument::addtext_replacement_values` and
+  `pdf_addtext_replacement_values`, covering document-derived `%Label`,
+  `%EndLabel`, `%Bookmark0`-`%Bookmark4`, Bates inputs, wrapper parity, and
+  integration with `pdf_addtext_replacement_pairs`. Native focused validation
+  reports `moon test --target native --package bobzhang/pdflite --file
+  pdf_addtext_test.mbt` at 23/23 tests passing; native full-suite validation
+  reports 1795/1795 tests passing.~~
 - [x] ~~Standalone `cpdfremovetext.ml` removal slice exposes
   `pdf_remove_added_text_ops`, `pdf_remove_all_text_ops`,
   `PdfDocument::remove_added_text`, `remove_all_text`, and compatibility

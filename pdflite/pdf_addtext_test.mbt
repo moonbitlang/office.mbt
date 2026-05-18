@@ -482,3 +482,65 @@ test "pdf_addtext_bookmark_for_page wrapper preserves lookup behavior" {
     "Intro ☃",
   )
 }
+
+///|
+test "PdfDocument addtext_replacement_values derives labels and bookmarks" {
+  let document = try! @pdflite.pdf_blank_document(10.0, 10.0, 5)
+  let labelled = try! document.write_page_labels([
+    {
+      label_style: PageLabelDecimalArabic,
+      label_prefix: Some(@ascii.encode("p.")),
+      start_page: 1,
+      start_value: 10,
+    },
+  ])
+  let page_refs = try! labelled.page_reference_numbers()
+  let bookmarks : Array[@pdflite.PdfBookmark] = [
+    addtext_bookmark_for_test(0, "Chapter 1", page_refs[0]),
+    addtext_bookmark_for_test(1, "Section 1.1", page_refs[1]),
+    addtext_bookmark_for_test(1, "Section 1.2", page_refs[2]),
+    addtext_bookmark_for_test(0, "Chapter 2", page_refs[3]),
+  ]
+  let values = try! labelled.addtext_replacement_values(
+    bookmarks,
+    3,
+    5,
+    "input.pdf",
+    98,
+    Some(4),
+  )
+  @test.assert_eq(values.page_label, "p.12")
+  @test.assert_eq(values.end_label, "p.14")
+  @test.assert_eq(values.bookmarks, ["Chapter 1", "Section 1.2", "", "", ""])
+  @test.assert_eq(
+    @pdflite.pdf_addtext_process_text_with_time(
+      addtext_process_time_for_test(),
+      "%Label|%EndLabel|%Bookmark0|%Bookmark1|%Bookmark2|%Bates",
+      @pdflite.pdf_addtext_replacement_pairs(values),
+    ),
+    "p.12|p.14|Chapter 1|Section 1.2||0100",
+  )
+}
+
+///|
+test "pdf_addtext_replacement_values wrapper matches method" {
+  let document = try! @pdflite.pdf_blank_document(10.0, 10.0, 1)
+  let method_values = try! document.addtext_replacement_values(
+    [],
+    1,
+    1,
+    "input.pdf",
+    7,
+    None,
+  )
+  let wrapper_values = try! @pdflite.pdf_addtext_replacement_values(
+    document,
+    [],
+    1,
+    1,
+    "input.pdf",
+    7,
+    None,
+  )
+  @test.assert_eq(wrapper_values, method_values)
+}
