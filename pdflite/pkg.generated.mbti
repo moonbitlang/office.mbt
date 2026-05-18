@@ -57,6 +57,8 @@ pub let paper_usletter : @geometry.PaperSize
 
 pub fn pdf_add_annotation(PdfDocument, PdfPage, PdfAnnotation) -> PdfPage raise @core.PdfError
 
+pub fn pdf_add_bookmark_title(String, Bool, PdfDocument) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_add_bookmarks(ArrayView[PdfBookmark], PdfDocument) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_add_page_labels(PdfDocument, Bool, PdfPageLabelStyle, Bytes?, Int, ArrayView[Int]) -> PdfDocument raise @core.PdfError
@@ -123,6 +125,8 @@ pub fn pdf_blank_document_paper(@geometry.PaperSize, Int) -> PdfDocument raise @
 
 pub let pdf_bookmark_black : PdfBookmarkColour
 
+pub fn pdf_bookmarks_open_to_level(Int, PdfDocument) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_build_name_tree(Bool, PdfDocument, ArrayView[(Bytes, PdfObject)]) -> PdfObject raise @core.PdfError
 
 pub fn pdf_byte_of_int(Int) -> Byte raise @core.PdfError
@@ -162,6 +166,8 @@ pub fn pdf_ccitt_encode_view(Int, Int, BytesView) -> Bytes raise @core.PdfError
 pub fn pdf_ccitt_g4_encode(Int, Int, Bytes) -> Bytes raise @core.PdfError
 
 pub fn pdf_ccitt_g4_encode_view(Int, Int, BytesView) -> Bytes raise @core.PdfError
+
+pub fn pdf_change_bookmark(ArrayView[(Int, Int)], PdfBookmark) -> PdfBookmark
 
 pub fn pdf_change_pages(Bool, PdfDocument, ArrayView[PdfPage], matrices? : ArrayView[(Int, @geometry.TransformMatrix)], changes? : ArrayView[(Int, Int)]) -> PdfDocument raise @core.PdfError
 
@@ -1571,6 +1577,7 @@ pub struct PdfDocument {
   mut revision_read : Int
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfDocument::add_annotation(Self, PdfPage, PdfAnnotation) -> PdfPage raise @core.PdfError
+pub fn PdfDocument::add_bookmark_title(Self, String, Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::add_bookmarks(Self, ArrayView[PdfBookmark]) -> Self raise @core.PdfError
 pub fn PdfDocument::add_object(Self, PdfObject, generation? : Int) -> Int
 pub fn PdfDocument::add_object_given_number(Self, Int, PdfObject, generation? : Int) -> Unit
@@ -1588,6 +1595,7 @@ pub fn PdfDocument::attach_file(Self, String, BytesView, keep_version? : Bool, p
 pub fn PdfDocument::black_fills(Self, ArrayView[Int], PdfContentColour) -> Self raise @core.PdfError
 pub fn PdfDocument::black_lines(Self, ArrayView[Int], PdfContentColour) -> Self raise @core.PdfError
 pub fn PdfDocument::black_text(Self, ArrayView[Int], PdfContentColour) -> Self raise @core.PdfError
+pub fn PdfDocument::bookmarks_open_to_level(Self, Int) -> Self raise @core.PdfError
 pub fn PdfDocument::bpc(Self, PdfObject) -> PdfObject?
 pub fn PdfDocument::build_name_tree(Self, ArrayView[(Bytes, PdfObject)]) -> PdfObject
 pub fn PdfDocument::build_number_tree(Self, ArrayView[(Int, PdfObject)]) -> PdfObject

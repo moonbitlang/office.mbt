@@ -592,6 +592,122 @@ test "PdfDocument add_bookmarks requires a root catalog" {
 }
 
 ///|
+test "PdfDocument add_bookmark_title indents existing bookmarks" {
+  let doc = try! @pdflite.pdf_minimum_valid_pdf()
+  let page_refs = try! doc.page_reference_numbers()
+  let bookmarked = try! doc.add_bookmarks([
+    {
+      level: 0,
+      text: bookmark_bytes_for_test("Top"),
+      target: DestFit(TargetPageObject(page_refs[0])),
+      is_open: true,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+  ])
+
+  let titled = try! @pdflite.pdf_add_bookmark_title(
+    "/tmp/report.pdf", false, bookmarked,
+  )
+  @test.assert_eq(try! titled.read_bookmarks(preserve_actions=true), [
+    {
+      level: 0,
+      text: bookmark_bytes_for_test("report.pdf"),
+      target: DestXYZ(TargetPageObject(page_refs[0]), None, None, None),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+    {
+      level: 1,
+      text: bookmark_bytes_for_test("Top"),
+      target: DestFit(TargetPageObject(page_refs[0])),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+  ])
+}
+
+///|
+test "PdfDocument bookmarks_open_to_level rewrites open state" {
+  let doc = try! @pdflite.pdf_minimum_valid_pdf()
+  let page_refs = try! doc.page_reference_numbers()
+  let bookmarked = try! doc.add_bookmarks([
+    {
+      level: 0,
+      text: bookmark_bytes_for_test("Top"),
+      target: DestFit(TargetPageObject(page_refs[0])),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+    {
+      level: 1,
+      text: bookmark_bytes_for_test("Child"),
+      target: DestFit(TargetPageObject(page_refs[0])),
+      is_open: true,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+  ])
+
+  let opened = try! bookmarked.bookmarks_open_to_level(1)
+  let wrapper = try! @pdflite.pdf_bookmarks_open_to_level(1, bookmarked)
+  let expected : Array[@pdflite.PdfBookmark] = [
+    {
+      level: 0,
+      text: bookmark_bytes_for_test("Top"),
+      target: DestFit(TargetPageObject(page_refs[0])),
+      is_open: true,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+    {
+      level: 1,
+      text: bookmark_bytes_for_test("Child"),
+      target: DestFit(TargetPageObject(page_refs[0])),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+  ]
+  @test.assert_eq(try! opened.read_bookmarks(preserve_actions=true), expected)
+  @test.assert_eq(try! wrapper.read_bookmarks(preserve_actions=true), expected)
+}
+
+///|
+test "pdf_change_bookmark rewrites page-object destinations" {
+  let bookmark : @pdflite.PdfBookmark = {
+    level: 0,
+    text: bookmark_bytes_for_test("Top"),
+    target: DestFitR(TargetPageObject(10), 1.0, 2.0, 3.0, 4.0),
+    is_open: false,
+    colour: @pdflite.pdf_bookmark_black,
+    flags: 0,
+  }
+  @test.assert_eq(
+    @pdflite.pdf_change_bookmark([(10, 42)], bookmark).target,
+    DestFitR(TargetPageObject(42), 1.0, 2.0, 3.0, 4.0),
+  )
+  @test.assert_eq(@pdflite.pdf_change_bookmark([(11, 42)], bookmark), bookmark)
+  @test.assert_eq(
+    @pdflite.pdf_change_bookmark([(10, 42)], {
+      ..bookmark,
+      target: DestFitB(TargetPageObject(10)),
+    }).target,
+    DestFit(TargetPageObject(42)),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_change_bookmark([(10, 42)], {
+      ..bookmark,
+      target: DestFit(TargetOtherDocPageNumber(10)),
+    }).target,
+    DestFit(TargetOtherDocPageNumber(10)),
+  )
+}
+
+///|
 test "PdfDocument transform_bookmark transforms bookmark target" {
   let doc = @pdflite.pdf_document_empty()
   let bookmark : @pdflite.PdfBookmark = {

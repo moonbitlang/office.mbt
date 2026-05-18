@@ -1793,6 +1793,15 @@ Current backend snapshot:
   focused validation reports `moon test --target native pdf_util_test.mbt` at
   26/26 tests passing; native full-suite validation reports 1725/1725 tests
   passing.~~
+- [x] ~~Extend bookmark compatibility helpers with cpdf-style title bookmark
+  insertion, open-to-level rewriting, and page-object destination renumbering.
+  Coverage pins basename title selection, page-one XYZ title targets, existing
+  bookmark indentation, leaf open-state round-tripping, wrapper parity, FitR
+  destination renumbering, the cpdf FitB-to-Fit compatibility quirk, and
+  preservation of unmapped and page-number destinations. Native focused
+  validation reports `moon test --target native pdf_bookmark_test.mbt` at
+  19/19 tests passing; native full-suite validation reports 1728/1728 tests
+  passing.~~
 - [x] ~~Standalone utility ports for `cpdfdebug.ml`, `cpdfprinttree.ml`, and
   `cpdfstrftime.ml` expose `PdfDocument::debug_objects`,
   `pdf_print_tree_to_string`, explicit-time and native-current-time strftime
