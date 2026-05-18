@@ -2614,6 +2614,19 @@ Current backend snapshot:
   for later slices. Native focused validation reports `moon test --target
   native --package bobzhang/pdflite --file pdf_shape_test.mbt` at 8/8 tests
   passing; native full-suite validation reports 1931/1931 tests passing.~~
+- [x] ~~Standalone `cpdfcontent.ml` path state-machine slice exposes
+  `PdfContentPartialPath`, `PdfContentPartialPathState`,
+  `PdfContentPathOpResult`, `pdf_content_no_partial_path`,
+  `PdfContentPartialPath::content_apply_path_op`, and
+  `pdf_content_apply_path_op`, matching cpdf's move-to subpath splitting,
+  line/Bezier shorthand construction, close-path behavior, rectangle expansion
+  to three explicit line segments plus a closed subpath, nonzero/even-odd
+  fill/stroke painting, `s`/`b`/`B*` close-before-paint behavior, source-shaped
+  `b*` double-close behavior, `n` reset, and non-path operator ignore behavior
+  while leaving clipping `W`/`W*` and the full stateful content walker for later
+  slices. Native focused validation reports `moon test --target native
+  --package bobzhang/pdflite --file pdf_content_path_machine_test.mbt` at 5/5
+  tests passing; native full-suite validation reports 1936/1936 tests passing.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,

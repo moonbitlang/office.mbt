@@ -349,6 +349,8 @@ pub fn pdf_contains_javascript(PdfDocument) -> Bool
 
 pub fn pdf_content_add_artifacts(ArrayView[PdfContentOp]) -> Array[PdfContentOp]
 
+pub fn pdf_content_apply_path_op(PdfContentPartialPath, PdfContentOp) -> PdfContentPathOpResult
+
 pub fn pdf_content_begin_artifact() -> PdfContentOp
 
 pub let pdf_content_black : PdfContentColour
@@ -384,6 +386,8 @@ pub fn pdf_content_is_vertical(PdfFont) -> Bool
 pub fn pdf_content_json_entries_content_json(ArrayView[PdfContentJsonEntry]) -> Json
 
 pub fn pdf_content_json_entry_content_json(PdfContentJsonEntry) -> Json
+
+pub fn pdf_content_no_partial_path() -> PdfContentPartialPath
 
 pub fn pdf_content_object_content_json(PdfContentObject) -> Json
 
@@ -1997,6 +2001,24 @@ pub(all) enum PdfContentOp {
   Op_BX
   Op_EX
   Op_Unknown(Bytes)
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfContentPartialPath {
+  PdfContentNoPartialPath
+  PdfContentPartialPath(PdfContentPartialPathState)
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfContentPartialPath::content_apply_path_op(Self, PdfContentOp) -> PdfContentPathOpResult
+
+pub(all) struct PdfContentPartialPathState {
+  start_point : @geometry.Point2
+  current_point : @geometry.Point2
+  segments : Array[PdfPathSegment]
+  subpaths : Array[PdfPathSubpath]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfContentPathOpResult {
+  partial_path : PdfContentPartialPath
+  drawn_path : PdfDrawnPath?
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfContentPathState {
