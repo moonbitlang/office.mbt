@@ -1867,6 +1867,14 @@ Current backend snapshot:
   positive/negative multiple padding. Native focused validation reports
   `moon test --target native pdf_pad_test.mbt` at 8/8 tests passing; native
   full-suite validation reports 1714/1714 tests passing.~~
+- [x] ~~Standalone `cpdfpagespec.ml` page-spec parser/formatter slice exposes
+  count-only, document-backed, and compatibility parser APIs plus pagespec
+  formatting, covering ranges, `end`, negative `~n` indices, reverse/empty/all,
+  odd/even suffix filters, `NOT`, `DUP`, out-of-bounds filtering,
+  malformed-syntax errors, portrait/landscape/annotated document filters, page
+  label resolution, and compact range formatting. Native focused validation
+  reports `moon test --target native pdf_page_spec_test.mbt` at 6/6 tests
+  passing; native full-suite validation reports 1724/1724 tests passing.~~
 - [x] ~~Standalone `cpdfpresent.ml` presentation-transition slice exposes
   `PdfDocument::presentation` and `pdf_presentation`, covering accepted cpdf
   transition names, transition-specific `/Dm`, `/M`, and `/Di` entries, delay
