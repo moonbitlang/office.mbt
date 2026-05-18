@@ -389,6 +389,10 @@ pub fn pdf_content_object_content_json(PdfContentObject) -> Json
 
 pub fn pdf_content_path_state_content_json(PdfContentPathState) -> Json
 
+pub fn pdf_content_read_pattern(PdfDocument, PdfObject, @core.PdfName) -> PdfContentPattern? raise @core.PdfError
+
+pub fn pdf_content_read_tiling_pattern(PdfObject) -> PdfContentPattern
+
 pub fn pdf_content_state_content_json(PdfContentState) -> Json
 
 pub fn pdf_content_stream_of_ops(ArrayView[PdfContentOp]) -> PdfObject raise @core.PdfError
@@ -1838,6 +1842,13 @@ pub(all) struct PdfCompositionEntry {
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfCompositionEntry::to_json(Self) -> Json
 
+pub(all) struct PdfContentAxialShading {
+  axialshading_coords : (Double, Double, Double, Double)
+  axialshading_domain : (Double, Double)
+  axialshading_function : Array[PdfFunction]
+  axialshading_extend : (Bool, Bool)
+} derive(Eq, ToJson, @debug.Debug)
+
 pub(all) struct PdfContentBoundingBox {
   x0 : Double
   y0 : Double
@@ -1873,6 +1884,12 @@ pub(all) struct PdfContentDashPattern {
   phase : Double
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfContentDashPattern::content_json(Self) -> Json
+
+pub(all) struct PdfContentFunctionShading {
+  funshading_domain : (Double, Double, Double, Double)
+  funshading_matrix : @geometry.TransformMatrix
+  funshading_function : PdfFunction
+} derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfContentGlyphState {
   rendering_mode : Int
@@ -1994,6 +2011,39 @@ pub(all) struct PdfContentPathState {
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfContentPathState::content_json(Self) -> Json
 
+pub(all) enum PdfContentPattern {
+  PdfContentColouredTilingPattern(PdfContentTiling)
+  PdfContentUncolouredTilingPattern(PdfContentTiling)
+  PdfContentShadingPattern(PdfContentShading)
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfContentRadialShading {
+  radialshading_coords : (Double, Double, Double, Double, Double, Double)
+  radialshading_domain : (Double, Double)
+  radialshading_function : Array[PdfFunction]
+  radialshading_extend : (Bool, Bool)
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfContentShading {
+  shading_colourspace : PdfObject
+  shading_background : PdfObject?
+  shading_bbox : PdfObject?
+  shading_antialias : Bool
+  shading_matrix : @geometry.TransformMatrix
+  shading_extgstate : PdfObject
+  shading : PdfContentShadingKind
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfContentShadingKind {
+  PdfContentFunctionShading(PdfContentFunctionShading)
+  PdfContentAxialShading(PdfContentAxialShading)
+  PdfContentRadialShading(PdfContentRadialShading)
+  PdfContentFreeFormGouraudShading
+  PdfContentLatticeFormGouraudShading
+  PdfContentCoonsPatchMesh
+  PdfContentTensorProductPatchMesh
+} derive(Eq, ToJson, @debug.Debug)
+
 pub(all) enum PdfContentState {
   PdfContentStateGlyph(PdfContentGlyphState)
   PdfContentStatePath(PdfContentPathState)
@@ -2025,6 +2075,10 @@ pub(all) struct PdfContentTextLayout {
 pub(all) struct PdfContentTextLayoutResult {
   glyphs : Array[PdfContentTextGlyphPlacement]
   text_matrix : @geometry.TransformMatrix
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfContentTiling {
+  PdfContentTiling
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfCoordRectangle {
@@ -2131,6 +2185,12 @@ pub fn PdfDocument::composition(Self, Int) -> Array[PdfCompositionEntry] raise @
 pub fn PdfDocument::composition_json(Self, Int) -> Json raise @core.PdfError
 pub fn PdfDocument::composition_json_blob(Self, Int) -> Bytes raise @core.PdfError
 pub fn PdfDocument::contains_javascript(Self) -> Bool
+pub fn PdfDocument::content_read_axial_shading(Self, PdfObject) -> PdfContentShadingKind raise @core.PdfError
+pub fn PdfDocument::content_read_function_shading(Self, PdfObject) -> PdfContentShadingKind raise @core.PdfError
+pub fn PdfDocument::content_read_pattern(Self, PdfObject, @core.PdfName) -> PdfContentPattern? raise @core.PdfError
+pub fn PdfDocument::content_read_radial_shading(Self, PdfObject) -> PdfContentShadingKind raise @core.PdfError
+pub fn PdfDocument::content_read_shading(Self, @geometry.TransformMatrix, PdfObject, PdfObject) -> PdfContentShading raise @core.PdfError
+pub fn PdfDocument::content_read_shading_pattern(Self, PdfObject) -> PdfContentPattern raise @core.PdfError
 pub fn PdfDocument::contents_of_name_tree(Self, PdfObject) -> Array[(PdfObject, PdfObject)]
 pub fn PdfDocument::copy(Self) -> Self
 pub fn PdfDocument::copy_annotations_from(Self, Self, ArrayView[Int]) -> Self raise @core.PdfError

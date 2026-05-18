@@ -2594,6 +2594,18 @@ Current backend snapshot:
   later slices. Native focused validation reports `moon test --target native
   --package bobzhang/pdflite --file pdf_content_text_test.mbt` at 9/9 tests
   passing; native full-suite validation reports 1926/1926 tests passing.~~
+- [x] ~~Standalone `cpdfcontent.ml` shading/pattern reader slice exposes
+  `PdfContentTiling`, `PdfContentFunctionShading`,
+  `PdfContentRadialShading`, `PdfContentAxialShading`,
+  `PdfContentShadingKind`, `PdfContentShading`, `PdfContentPattern`,
+  document shading-reader methods, and pattern lookup wrappers, matching cpdf's
+  function/radial/axial domain defaults, function fallback, extend defaults,
+  shading-type dispatch, lowercase `/colourSpace` lookup, `/BBox`-driven
+  antialias behavior, tiling-pattern placeholder, and missing-shading error
+  while leaving stateful colour/pattern integration for later slices. Native
+  focused validation reports `moon test --target native --package
+  bobzhang/pdflite --file pdf_content_shading_test.mbt` at 4/4 tests passing;
+  native full-suite validation reports 1930/1930 tests passing.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,
