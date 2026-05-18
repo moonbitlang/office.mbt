@@ -1852,6 +1852,15 @@ Current backend snapshot:
   diagonal/reverse-diagonal rotation math. Native focused validation reports
   `moon test --target native pdf_position_test.mbt` at 5/5 tests passing;
   native full-suite validation reports 1715/1715 tests passing.~~
+- [x] ~~Standalone `cpdfremovetext.ml` removal slice exposes
+  `pdf_remove_added_text_ops`, `pdf_remove_all_text_ops`,
+  `PdfDocument::remove_added_text`, `remove_all_text`, and compatibility
+  wrappers, covering nested and unterminated `/CPDFSTAMP` removal,
+  text-showing operator filtering, selected-page rewrites, Form XObject text
+  removal, wrapper parity, and source-document preservation. Native focused
+  validation reports `moon test --target native pdf_remove_text_test.mbt` at
+  7/7 tests passing; native full-suite validation reports 1719/1719 tests
+  passing.~~
 - [x] ~~Standalone `cpdfpagelabels.ml` JSON adapter slice now exposes
   `PdfDocument::add_page_labels_json` and `pdf_add_page_labels_json`, covering
   cpdf's page-label JSON array shape, UTF-8 prefix-to-PDFDocString encoding,

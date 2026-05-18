@@ -123,6 +123,41 @@ test "PdfDocument remove_added_text rewrites only selected pages" {
 }
 
 ///|
+test "pdf_remove_added_text wrapper preserves source document" {
+  let stamp = remove_text_name_for_test("/CPDFSTAMP")
+  let base = try! @pdflite.pdf_blank_document(200.0, 100.0, 1)
+  let pages = try! base.pages_of_pagetree()
+  let page = {
+    ..pages[0],
+    content: [
+      remove_text_stream_for_test([
+        Op_BMC(stamp),
+        Op_Tj(remove_text_bytes_for_test("drop")),
+        Op_EMC,
+        Op_Tj(remove_text_bytes_for_test("keep")),
+      ]),
+    ],
+  }
+  let document = try! base.change_pages([page])
+  let stripped = try! @pdflite.pdf_remove_added_text(document, [1])
+  let stripped_pages = try! stripped.pages_of_pagetree()
+  @test.assert_eq(
+    remove_text_content_ops_for_test(stripped, stripped_pages[0]),
+    [Op_Tj(remove_text_bytes_for_test("keep"))],
+  )
+  let original_pages = try! document.pages_of_pagetree()
+  @test.assert_eq(
+    remove_text_content_ops_for_test(document, original_pages[0]),
+    [
+      Op_BMC(stamp),
+      Op_Tj(remove_text_bytes_for_test("drop")),
+      Op_EMC,
+      Op_Tj(remove_text_bytes_for_test("keep")),
+    ],
+  )
+}
+
+///|
 test "PdfDocument remove_all_text rewrites selected page and form xobjects" {
   let key_type = remove_text_name_for_test("/Type")
   let key_xobject = remove_text_name_for_test("/XObject")
@@ -167,5 +202,32 @@ test "PdfDocument remove_all_text rewrites selected page and form xobjects" {
   @test.assert_eq(
     try! stripped.parse_content_ops([PdfStreamObject(form_stream)]),
     [Op_q, Op_Q],
+  )
+}
+
+///|
+test "pdf_remove_all_text wrapper preserves source document" {
+  let base = try! @pdflite.pdf_blank_document(200.0, 100.0, 1)
+  let pages = try! base.pages_of_pagetree()
+  let page = {
+    ..pages[0],
+    content: [
+      remove_text_stream_for_test([
+        Op_Tj(remove_text_bytes_for_test("drop")),
+        Op_Tstar,
+      ]),
+    ],
+  }
+  let document = try! base.change_pages([page])
+  let stripped = try! @pdflite.pdf_remove_all_text(document, [1])
+  let stripped_pages = try! stripped.pages_of_pagetree()
+  @test.assert_eq(
+    remove_text_content_ops_for_test(stripped, stripped_pages[0]),
+    [Op_Tstar],
+  )
+  let original_pages = try! document.pages_of_pagetree()
+  @test.assert_eq(
+    remove_text_content_ops_for_test(document, original_pages[0]),
+    [Op_Tj(remove_text_bytes_for_test("drop")), Op_Tstar],
   )
 }
