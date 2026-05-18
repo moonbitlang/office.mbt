@@ -1608,6 +1608,74 @@ test "pdf_addtext_pages_with_font wrapper validates selected pages" {
 }
 
 ///|
+test "PdfDocument addtexts_with_font prepares selected-font input" {
+  let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 2)
+  let font = addtext_standard_font_for_test()
+  let stamped = try! document.addtexts_with_font(
+    [2],
+    "%Page",
+    addtext_process_time_for_test(),
+    [],
+    Some(font),
+    None,
+    addtext_name_for_test("/Helvetica"),
+    10.0,
+    1.0,
+    PdfContentGrey(0.0),
+    PdfPositionBottomLeft(1.0, 2.0),
+    shift="2 3",
+  )
+  let pages = try! stamped.pages_of_pagetree()
+  @test.assert_eq(pages[0].content.length(), 0)
+  @test.assert_eq(
+    addtext_content_ops_for_test(stamped, pages[1]),
+    try! @pdflite.pdf_addtext_text_ops(
+      Some(font),
+      None,
+      3.0,
+      5.0,
+      0.0,
+      0.0,
+      0.0,
+      false,
+      1.0,
+      addtext_name_for_test("/F0"),
+      [],
+      None,
+      PdfContentGrey(0.0),
+      10.0,
+      "2",
+      0.0,
+      0.0,
+      0.0,
+    ),
+  )
+}
+
+///|
+test "pdf_addtexts_with_font skips empty visible text before writing fonts" {
+  let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
+  let before = document.object_count()
+  let stamped = try! @pdflite.pdf_addtexts_with_font(
+    document,
+    [1],
+    "%URL[|https://example.test]",
+    addtext_process_time_for_test(),
+    [],
+    Some(addtext_standard_font_for_test()),
+    None,
+    addtext_name_for_test("/Helvetica"),
+    10.0,
+    1.0,
+    PdfContentGrey(0.0),
+    PdfPositionBottomLeft(1.0, 2.0),
+  )
+  let pages = try! stamped.pages_of_pagetree()
+  @test.assert_eq(stamped.object_count(), before)
+  @test.assert_eq(pages[0].content.length(), 0)
+}
+
+///|
 test "PdfDocument addtext_existing_font_resource finds direct resource keys" {
   let document = @pdflite.pdf_document_empty()
   let resource_name = addtext_name_for_test("/F1")
