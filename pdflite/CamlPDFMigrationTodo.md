@@ -2048,6 +2048,14 @@ Current backend snapshot:
   width-table failures. Native focused validation reports
   `moon test --target native pdf_type_test.mbt` at 5/5 tests passing; native
   full-suite validation reports 1563/1563 tests passing.~~
+- [x] ~~Standalone `cpdffont.ml` embedded-font removal slice now exposes
+  `PdfDocument::remove_embedded_fonts` and `pdf_remove_fonts`, covering
+  copy-on-write `/Type /Font` descriptor rewriting, `/FontFile`, `/FontFile2`,
+  and `/FontFile3` stripping, descriptor metadata preservation, original
+  descriptor preservation, wrapper parity, and non-font dictionary no-ops.
+  Native focused validation reports `moon test --target native
+  pdf_font_test.mbt` at 1/1 tests passing; native full-suite validation reports
+  1748/1748 tests passing.~~
 - [x] ~~Page labels, bookmarks, annotations, duplicate annotation repair,
   old-style destinations, name-tree destinations, `/OpenAction`, optional
   content, AcroForm merge basics, trailer `/Info`, and structure-tree

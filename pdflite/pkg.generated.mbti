@@ -785,6 +785,8 @@ pub fn pdf_remove_dict_entry(PdfDocument, @core.PdfName, search? : PdfObject?) -
 
 pub fn pdf_remove_duplicate_fonts(PdfDocument) -> Unit
 
+pub fn pdf_remove_fonts(PdfDocument) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_remove_javascript(PdfDocument) -> Unit raise @core.PdfError
 
 pub fn pdf_remove_metadata(PdfDocument) -> PdfDocument raise @core.PdfError
@@ -1814,6 +1816,7 @@ pub fn PdfDocument::remove_clipping(Self, ArrayView[Int]) -> Self raise @core.Pd
 pub fn PdfDocument::remove_cropping(Self, ArrayView[Int]) -> Self raise @core.PdfError
 pub fn PdfDocument::remove_dict_entry_everywhere(Self, @core.PdfName, search? : PdfObject?) -> Unit
 pub fn PdfDocument::remove_duplicate_fonts(Self) -> Unit
+pub fn PdfDocument::remove_embedded_fonts(Self) -> Self raise @core.PdfError
 pub fn PdfDocument::remove_javascript(Self) -> Unit raise @core.PdfError
 pub fn PdfDocument::remove_metadata(Self) -> Self raise @core.PdfError
 pub fn PdfDocument::remove_object(Self, Int) -> Unit
