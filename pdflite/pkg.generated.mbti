@@ -103,6 +103,8 @@ pub fn pdf_addtext_split_at_newline(String) -> Array[String]
 
 pub fn pdf_addtext_unescape_string(String) -> String raise @core.PdfError
 
+pub fn pdf_addtext_width_of_text(PdfFont, BytesView) -> Double
+
 pub fn pdf_annotation_make(PdfAnnotationSubtype, contents? : Bytes?, border? : PdfAnnotationBorder, rectangle? : PdfRectangle, colour? : PdfAnnotationColour?, subject? : Bytes?) -> PdfAnnotation
 
 pub fn pdf_annotation_make_border(Double, vertical_radius? : Double, horizontal_radius? : Double, style? : PdfAnnotationStyle, dash_array? : ArrayView[Int]) -> PdfAnnotationBorder

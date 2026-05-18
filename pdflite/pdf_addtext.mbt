@@ -59,6 +59,29 @@ pub fn pdf_addtext_colour_op_stroke(colour : PdfContentColour) -> PdfContentOp {
 }
 
 ///|
+/// Measure cpdf add-text charcode bytes with simple-font metrics.
+///
+/// This mirrors cpdf's narrow `width_of_text` helper: only simple fonts with
+/// explicit `fontmetrics` are measured, and any missing metric makes the whole
+/// result `0`.
+pub fn pdf_addtext_width_of_text(font : PdfFont, text : BytesView) -> Double {
+  match font {
+    PdfFontSimple({ fontmetrics: Some(metrics), .. }) => {
+      let mut width = 0.0
+      for byte in text {
+        let code = byte.to_int()
+        if code >= metrics.length() {
+          return 0.0
+        }
+        width += metrics[code]
+      }
+      width
+    }
+    _ => 0.0
+  }
+}
+
+///|
 fn pdf_addtext_vertical_justification(
   rotation : PdfAddTextRotation,
   justification : PdfAddTextJustification,

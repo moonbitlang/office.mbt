@@ -81,6 +81,22 @@ fn addtext_simple_font_for_test(capheight : Double) -> @pdflite.PdfFont {
 }
 
 ///|
+fn addtext_simple_font_with_metrics_for_test(
+  metrics : Array[Double]?,
+) -> @pdflite.PdfFont {
+  PdfFontSimple({
+    fonttype: PdfType1,
+    basefont: None,
+    firstchar: 0,
+    lastchar: 255,
+    widths: [],
+    fontdescriptor: Some(addtext_font_descriptor_for_test(0.0)),
+    fontmetrics: metrics,
+    encoding: PdfWinAnsiEncoding,
+  })
+}
+
+///|
 test "pdf_addtext_colour_op maps fill colours to content operators" {
   @test.assert_eq(
     @pdflite.pdf_addtext_colour_op(PdfContentGrey(0.25)),
@@ -109,6 +125,43 @@ test "pdf_addtext_colour_op_stroke maps stroke colours to content operators" {
   @test.assert_eq(
     @pdflite.pdf_addtext_colour_op_stroke(PdfContentCMYK(0.7, 0.8, 0.9, 1.0)),
     Op_K(0.7, 0.8, 0.9, 1.0),
+  )
+}
+
+///|
+test "pdf_addtext_width_of_text sums simple font metrics" {
+  let metrics : Array[Double] = [ for _ in 0..<256 => 0.0 ]
+  metrics[65] = 500.0
+  metrics[66] = 610.0
+  let font = addtext_simple_font_with_metrics_for_test(Some(metrics))
+  @test.assert_eq(
+    @pdflite.pdf_addtext_width_of_text(font, @ascii.encode("ABA")),
+    1610.0,
+  )
+}
+
+///|
+test "pdf_addtext_width_of_text mirrors cpdf zero fallbacks" {
+  @test.assert_eq(
+    @pdflite.pdf_addtext_width_of_text(
+      addtext_simple_font_with_metrics_for_test(None),
+      @ascii.encode("A"),
+    ),
+    0.0,
+  )
+  @test.assert_eq(
+    @pdflite.pdf_addtext_width_of_text(
+      addtext_simple_font_with_metrics_for_test(Some([100.0])),
+      @ascii.encode("A"),
+    ),
+    0.0,
+  )
+  @test.assert_eq(
+    @pdflite.pdf_addtext_width_of_text(
+      PdfFontStandard({ font: PdfHelvetica, encoding: PdfWinAnsiEncoding }),
+      @ascii.encode("A"),
+    ),
+    0.0,
   )
 }
 
