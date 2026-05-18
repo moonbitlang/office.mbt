@@ -1729,6 +1729,15 @@ Current backend snapshot:
   full-suite validation reports 1552/1552 tests passing; coverage analysis
   reports only three defensive unreachable `InvalidUTF8` branches in
   `pdf_util.mbt`.~~
+- [x] ~~Standalone `cpdfcoord.ml` coordinate parser slice exposes unit
+  conversion, page-box characteristics, coordinate/rectangle parsers, document
+  page-dependent variants, single-number parsing, paper-size literals, arithmetic
+  updates, and compatibility wrappers, covering point/mm/cm/in units,
+  portrait paper sizes, media/crop/art/trim/bleed box values, absolute rectangle
+  syntax, scale-to-fit `*` preprocessing, arity errors, and wrapper rectangle
+  parsing. Native focused validation reports `moon test --target native
+  pdf_coord_test.mbt` at 6/6 tests passing; native full-suite validation
+  reports 1722/1722 tests passing.~~
 - [x] ~~Standalone `cpdfcreate.ml` blank-document slice exposes
   `pdf_blank_document` and `pdf_blank_document_paper`, covering point-sized
   pages, named paper sizes, zero-page documents, page-tree/root creation, and

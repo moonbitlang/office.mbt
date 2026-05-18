@@ -33,6 +33,24 @@ fn coord_page_for_test(
 }
 
 ///|
+fn coord_page_with_boxes_for_test() -> @pdflite.PdfPage {
+  {
+    ..coord_page_for_test(200, 100),
+    rest: PdfDictionary([
+      (coord_name_for_test("/ArtBox"), coord_rect_object_for_test(1, 2, 11, 22)),
+      (
+        coord_name_for_test("/TrimBox"),
+        coord_rect_object_for_test(3, 4, 23, 44),
+      ),
+      (
+        coord_name_for_test("/BleedBox"),
+        coord_rect_object_for_test(5, 6, 35, 66),
+      ),
+    ]),
+  }
+}
+
+///|
 fn coord_document_for_test(
   pages : ArrayView[@pdflite.PdfPage],
 ) -> @pdflite.PdfDocument raise {
@@ -145,6 +163,23 @@ test "cpdf coord reads page and cropbox characteristics" {
     try! document.parse_units_string(page, "PW div 2 PH add 10"),
     [100.0, 110.0],
   )
+}
+
+///|
+test "cpdf coord reads alternate page boxes and rectangle wrapper" {
+  let document = try! coord_document_for_test([coord_page_with_boxes_for_test()])
+  let page = (try! document.pages_of_pagetree())[0]
+  @test.assert_eq(
+    try! document.parse_units_string(
+      page, "AW AH AMINX AMAXY TW TH TMINY TMAXX BW BH BMINX BMAXY",
+    ),
+    [10.0, 20.0, 1.0, 22.0, 20.0, 40.0, 4.0, 23.0, 30.0, 60.0, 5.0, 66.0],
+  )
+  let rectangles = try! @pdflite.pdf_parse_coordinate_rectangles(
+    document, "?AMINX AMINY AMAXX AMAXY",
+  )
+  @test.assert_eq(rectangles.length(), 1)
+  assert_coord_rectangle_for_test(rectangles[0], 1.0, 2.0, 10.0, 20.0)
 }
 
 ///|
