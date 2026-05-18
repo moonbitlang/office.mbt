@@ -457,6 +457,31 @@ pub fn pdf_addtext_measurement_bytes(
 }
 
 ///|
+fn PdfDocument::pdf_addtext_measurement_bytes_for_page(
+  self : PdfDocument,
+  page : PdfPage,
+  font : PdfFont?,
+  fontpack : PdfFontPack?,
+  fontname : PdfName,
+  raw : Bool,
+  text : String,
+) -> PdfBytes raise PdfError {
+  if raw || fontpack is Some(_) {
+    @utf8.encode(text)
+  } else {
+    match font {
+      Some(font) => pdf_addtext_charcodes_of_utf8(font, text)
+      None => {
+        let (_, font_object) = self.addtext_existing_font_resource(
+          page, fontname,
+        )
+        pdf_addtext_charcodes_of_utf8(self.read_font(font_object), text)
+      }
+    }
+  }
+}
+
+///|
 /// Prepare one cpdf add-text line for later content and annotation emission.
 ///
 /// This ports the source-level block which expands page-local replacement
@@ -486,16 +511,20 @@ pub fn PdfDocument::addtext_prepare_line(
   let expanded_lines = pdf_addtext_expand_lines_with_time(
     time, lines, replacements,
   )
-  let text_bytes = pdf_addtext_measurement_bytes(
+  let text_bytes = self.pdf_addtext_measurement_bytes_for_page(
+    page,
     font,
     fontpack,
+    fontname,
     raw,
     parsed.text,
   )
   let expanded_line_bytes : Array[PdfBytes] = []
   for line in expanded_lines {
     expanded_line_bytes.push(
-      pdf_addtext_measurement_bytes(font, fontpack, raw, line),
+      self.pdf_addtext_measurement_bytes_for_page(
+        page, font, fontpack, fontname, raw, line,
+      ),
     )
   }
   let widths = self.addtext_line_widths(
@@ -647,32 +676,18 @@ fn pdf_addtext_fontpack_text_ops(
 }
 
 ///|
-fn pdf_addtext_simple_text_ops(
-  font : PdfFont?,
-  unique_fontname : PdfName,
-  font_size : Double,
-  text : String,
-) -> Array[PdfContentOp] raise PdfError {
-  let bytes = match font {
-    Some(font) => pdf_addtext_charcodes_of_utf8(font, text)
-    None => @utf8.encode(text)
-  }
-  [Op_Tf(unique_fontname, font_size), Op_Tj(bytes)]
-}
-
-///|
-fn pdf_addtext_font_text_ops(
-  font : PdfFont?,
+fn pdf_addtext_font_text_ops_with_bytes(
   fontpack : PdfFontPack?,
   unique_fontname : PdfName,
   unique_fontnames : ArrayView[PdfName],
   font_size : Double,
   text : String,
+  text_bytes : PdfBytes,
 ) -> Array[PdfContentOp] raise PdfError {
   match fontpack {
     Some(fontpack) =>
       pdf_addtext_fontpack_text_ops(fontpack, unique_fontnames, font_size, text)
-    None => pdf_addtext_simple_text_ops(font, unique_fontname, font_size, text)
+    None => [Op_Tf(unique_fontname, font_size), Op_Tj(text_bytes)]
   }
 }
 
@@ -697,14 +712,7 @@ fn pdf_addtext_text_matrix(
 }
 
 ///|
-/// Build cpdf add-text text-stamp content operators after placement is resolved.
-///
-/// This ports the source-level `cpdfaddtext.ml` `ops` helper, including
-/// `/CPDFSTAMP` artifact wrapping, placement matrix, outline rendering mode,
-/// colour operators, optional opacity graphics state, simple-font charcode
-/// conversion, and fontpack run switching.
-pub fn pdf_addtext_text_ops(
-  font : PdfFont?,
+fn pdf_addtext_text_ops_with_bytes(
   fontpack : PdfFontPack?,
   x : Double,
   y : Double,
@@ -719,12 +727,13 @@ pub fn pdf_addtext_text_ops(
   colour : PdfContentColour,
   font_size : Double,
   text : String,
+  text_bytes : PdfBytes,
   text_rotation : Double,
   rotation_h_offset : Double,
   rotation_v_offset : Double,
 ) -> Array[PdfContentOp] raise PdfError {
-  let textops = pdf_addtext_font_text_ops(
-    font, fontpack, unique_fontname, unique_fontnames, font_size, text,
+  let textops = pdf_addtext_font_text_ops_with_bytes(
+    fontpack, unique_fontname, unique_fontnames, font_size, text, text_bytes,
   )
   let ops = [
     pdf_content_begin_artifact(),
@@ -758,6 +767,44 @@ pub fn pdf_addtext_text_ops(
   ops.push(Op_Q)
   ops.push(pdf_content_end_artifact())
   ops
+}
+
+///|
+/// Build cpdf add-text text-stamp content operators after placement is resolved.
+///
+/// This ports the source-level `cpdfaddtext.ml` `ops` helper, including
+/// `/CPDFSTAMP` artifact wrapping, placement matrix, outline rendering mode,
+/// colour operators, optional opacity graphics state, simple-font charcode
+/// conversion, and fontpack run switching.
+pub fn pdf_addtext_text_ops(
+  font : PdfFont?,
+  fontpack : PdfFontPack?,
+  x : Double,
+  y : Double,
+  base_rotation : Double,
+  horizontal_offset : Double,
+  vertical_offset : Double,
+  outline : Bool,
+  line_width : Double,
+  unique_fontname : PdfName,
+  unique_fontnames : ArrayView[PdfName],
+  extgstate_name : PdfName?,
+  colour : PdfContentColour,
+  font_size : Double,
+  text : String,
+  text_rotation : Double,
+  rotation_h_offset : Double,
+  rotation_v_offset : Double,
+) -> Array[PdfContentOp] raise PdfError {
+  let text_bytes = match font {
+    Some(font) => pdf_addtext_charcodes_of_utf8(font, text)
+    None => @utf8.encode(text)
+  }
+  pdf_addtext_text_ops_with_bytes(
+    fontpack, x, y, base_rotation, horizontal_offset, vertical_offset, outline, line_width,
+    unique_fontname, unique_fontnames, extgstate_name, colour, font_size, text, text_bytes,
+    text_rotation, rotation_h_offset, rotation_v_offset,
+  )
 }
 
 ///|
@@ -1301,8 +1348,7 @@ pub fn PdfDocument::addtext_line_page(
     page, font, fontpack, effective_fontname, font_object, fontpack_font_objects,
     opacity,
   )
-  let ops = pdf_addtext_text_ops(
-    font,
+  let ops = pdf_addtext_text_ops_with_bytes(
     fontpack,
     prepared.placement.origin.x + shift_x,
     prepared.placement.origin.y + shift_y,
@@ -1317,6 +1363,7 @@ pub fn PdfDocument::addtext_line_page(
     colour,
     font_size,
     prepared.text,
+    prepared.text_bytes,
     prepared.placement.text_rotation,
     prepared.placement.rotation_offset.x,
     prepared.placement.rotation_offset.y,
@@ -1325,7 +1372,9 @@ pub fn PdfDocument::addtext_line_page(
     prepared.text,
     prepared.urls,
     fn(prefix) raise PdfError {
-      let bytes = pdf_addtext_measurement_bytes(font, fontpack, raw, prefix)
+      let bytes = self.pdf_addtext_measurement_bytes_for_page(
+        page, font, fontpack, effective_fontname, raw, prefix,
+      )
       self.addtext_calc_textwidth(
         page, font, fontpack, effective_fontname, font_size, bytes,
       )

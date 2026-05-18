@@ -2330,6 +2330,13 @@ Current backend snapshot:
   --target native --package bobzhang/pdflite --file pdf_addtext_test.mbt` at
   110/110 tests passing; native full-suite validation reports 1882/1882 tests
   passing.~~
+- [x] ~~Standalone `cpdfaddtext.ml` existing-font text encoding slice covers
+  cpdf's non-raw conversion of existing-font add-text through the resolved page
+  font before width measurement, URL prefix measurement, and text-operator
+  emission, while keeping fontpack/raw UTF-8 paths unchanged. Native focused
+  validation reports `moon test --target native --package bobzhang/pdflite
+  --file pdf_addtext_test.mbt` at 111/111 tests passing; native full-suite
+  validation reports 1883/1883 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` line-width selection and justification
   application slice exposes `pdf_addtext_longest_width` and
   `pdf_addtext_apply_justification_offset`, covering cpdf's widest expanded
