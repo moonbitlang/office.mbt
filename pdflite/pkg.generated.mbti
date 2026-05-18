@@ -175,6 +175,8 @@ pub fn pdf_chop(PdfDocument, Int, Int, Bool, Bool, Bool, ArrayView[Int]) -> PdfD
 
 pub fn pdf_chop_hv(PdfDocument, Bool, Double, Bool, ArrayView[Int]) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_clear_progress_output() -> Unit
+
 pub fn pdf_clip_contour(Bool, ArrayView[PdfClipVertex]) -> PdfClipContour
 
 pub fn pdf_clip_make_polygon(ArrayView[Bool], ArrayView[Array[PdfClipVertex]]) -> PdfClipPolygon raise @core.PdfError
@@ -639,6 +641,20 @@ pub fn pdf_print_function(PdfFunction) -> Unit
 
 pub fn[T] pdf_print_tree_to_string(T, (T) -> String, (T) -> Array[T], line_prefix? : String) -> String
 
+pub fn pdf_progress() -> Bool
+
+pub fn pdf_progress_done() -> Unit
+
+pub fn pdf_progress_endpage() -> Unit
+
+pub fn pdf_progress_line(String) -> Unit
+
+pub fn pdf_progress_line_no_end(String) -> Unit
+
+pub fn pdf_progress_output() -> String
+
+pub fn pdf_progress_page(Int) -> Unit
+
 pub fn pdf_read_afm(BytesView) -> PdfAfmData raise @core.PdfError
 
 pub fn pdf_read_bookmarks(PdfDocument, preserve_actions? : Bool) -> Array[PdfBookmark] raise @core.PdfError
@@ -798,6 +814,8 @@ pub fn pdf_set_page_layout(PdfDocument, String) -> PdfDocument raise @core.PdfEr
 pub fn pdf_set_page_mode(PdfDocument, String) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_set_pdf_info(@core.PdfName, PdfObject, Int, PdfDocument, keep_version? : Bool, xmp_also? : Bool, xmp_just_set? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_set_progress(Bool) -> Unit
 
 pub fn pdf_set_version(Int, PdfDocument) -> Unit
 

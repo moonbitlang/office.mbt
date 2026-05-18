@@ -1,4 +1,32 @@
 ///|
+test "pdf progress helpers gate and record cpdf fragments" {
+  @pdflite.pdf_set_progress(false)
+  @pdflite.pdf_clear_progress_output()
+  @pdflite.pdf_progress_line("Loading file input.pdf")
+  @pdflite.pdf_progress_line_no_end("ignored")
+  @pdflite.pdf_progress_page(9)
+  @pdflite.pdf_progress_endpage()
+  @pdflite.pdf_progress_done()
+  @test.assert_eq(@pdflite.pdf_progress_output(), "")
+  @test.assert_eq(@pdflite.pdf_progress(), false)
+
+  @pdflite.pdf_set_progress(true)
+  @pdflite.pdf_progress_line("Loading file input.pdf")
+  @pdflite.pdf_progress_line_no_end("Page ")
+  @pdflite.pdf_progress_page(9)
+  @pdflite.pdf_progress_endpage()
+  @pdflite.pdf_progress_done()
+
+  @test.assert_eq(@pdflite.pdf_progress(), true)
+  @test.assert_eq(
+    @pdflite.pdf_progress_output(),
+    "Loading file input.pdf\nPage 9.\n",
+  )
+  @pdflite.pdf_set_progress(false)
+  @pdflite.pdf_clear_progress_output()
+}
+
+///|
 fn util_name_for_test(text : String) -> @pdflite.PdfName {
   @pdflite.pdf_name_of_bytes(@ascii.encode(text))
 }

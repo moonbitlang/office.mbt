@@ -1783,6 +1783,16 @@ Current backend snapshot:
   focused validation reports `moon test --target native pdf_error_test.mbt` at
   2/2 tests passing; native full-suite validation reports 1724/1724 tests
   passing.~~
+- [x] ~~Standalone `cpdfutil.ml` helper slice exposes cpdf-style progress
+  toggles/fragments, recursive dictionary-entry removal and replacement,
+  dictionary-entry reporting helpers, and the injectible path guard. Coverage
+  pins disabled progress no-ops, line/page/endpage/done fragment ordering,
+  recursive trailer/object/array/stream dictionary rewrites, resolved search
+  matching, malformed stream dictionary preservation, rendered/JSON dictionary
+  reporting, and shell metacharacter rejection without process exit. Native
+  focused validation reports `moon test --target native pdf_util_test.mbt` at
+  26/26 tests passing; native full-suite validation reports 1725/1725 tests
+  passing.~~
 - [x] ~~Standalone utility ports for `cpdfdebug.ml`, `cpdfprinttree.ml`, and
   `cpdfstrftime.ml` expose `PdfDocument::debug_objects`,
   `pdf_print_tree_to_string`, explicit-time and native-current-time strftime

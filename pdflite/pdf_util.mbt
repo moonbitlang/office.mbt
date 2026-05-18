@@ -1,4 +1,62 @@
 ///|
+let pdf_progress_enabled : Ref[Bool] = { val: false }
+
+///|
+let pdf_progress_fragments : Ref[Array[String]] = { val: [] }
+
+///|
+pub fn pdf_progress() -> Bool {
+  pdf_progress_enabled.val
+}
+
+///|
+pub fn pdf_set_progress(enabled : Bool) -> Unit {
+  pdf_progress_enabled.val = enabled
+}
+
+///|
+fn pdf_progress_emit(fragment : String) -> Unit {
+  if pdf_progress_enabled.val {
+    pdf_progress_fragments.val.push(fragment)
+  }
+}
+
+///|
+pub fn pdf_clear_progress_output() -> Unit {
+  pdf_progress_fragments.val = []
+}
+
+///|
+pub fn pdf_progress_output() -> String {
+  pdf_progress_fragments.val.join("")
+}
+
+///|
+pub fn pdf_progress_line(text : String) -> Unit {
+  pdf_progress_emit(text + "\n")
+}
+
+///|
+pub fn pdf_progress_line_no_end(text : String) -> Unit {
+  pdf_progress_emit(text)
+}
+
+///|
+pub fn pdf_progress_page(page : Int) -> Unit {
+  pdf_progress_emit(page.to_string())
+}
+
+///|
+pub fn pdf_progress_endpage() -> Unit {
+  pdf_progress_emit(".")
+}
+
+///|
+pub fn pdf_progress_done() -> Unit {
+  pdf_progress_emit("\n")
+}
+
+///|
 fn PdfDocument::pdf_util_dict_entry_single_object(
   self : PdfDocument,
   object : PdfObject,
