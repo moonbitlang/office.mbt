@@ -1171,6 +1171,8 @@ pub fn pdf_revisions_from_bytes(Bytes) -> Int raise @core.PdfError
 
 pub fn pdf_revisions_from_view(BytesView) -> Int raise @core.PdfError
 
+pub fn pdf_rotate_contents(PdfDocument, Double, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_rotate_pages(PdfDocument, Int, ArrayView[Int]) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_rotate_pages_by(PdfDocument, Int, ArrayView[Int]) -> PdfDocument raise @core.PdfError
@@ -2744,6 +2746,7 @@ pub fn PdfDocument::replace_struct_tree(Self, Json) -> Self raise @core.PdfError
 pub fn PdfDocument::reveal_hidden_text(Self, ArrayView[Int]) -> Self raise @core.PdfError
 pub fn PdfDocument::revision_read(Self) -> Int
 pub fn PdfDocument::root(Self) -> Int
+pub fn PdfDocument::rotate_contents(Self, Double, ArrayView[Int], fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::rotate_pages(Self, Int, ArrayView[Int]) -> Self raise @core.PdfError
 pub fn PdfDocument::rotate_pages_by(Self, Int, ArrayView[Int]) -> Self raise @core.PdfError
 pub fn PdfDocument::scale_contents(Self, ArrayView[Int], PdfPosition, Double, fast? : Bool) -> Self raise @core.PdfError
