@@ -3003,6 +3003,23 @@ Current backend snapshot:
   `markdown/cmd` warning and `moon check --target native --warn-list +73` at the
   known 10-warning baseline. Full native suite validation is deferred to the
   next batch.~~
+- [x] ~~Standalone `cpdfcontent.ml` ExtGState font-state slice exposes
+  `PdfDocument::content_apply_extgstate_font_op` and
+  `pdf_content_apply_extgstate_font_op`, matching cpdf's `/Font` branch for a
+  resolved ExtGState dictionary by accepting `[indirect-font size]`, validating
+  the indirect font through `read_font`, assigning the synthetic
+  `__EXTGSTATE__<object-number>` font name, widening numeric font sizes,
+  preserving the previous size for malformed size objects, ignoring non-indirect
+  font arrays, and propagating malformed font-object errors while leaving cached
+  `font_data`/text-extractor storage and glyph emission from ExtGState fonts for
+  a later resource-backed pass. Focused native validation reports `moon test
+  --target native pdf_content_operator_state_test.mbt --filter '*ExtGState*'` at
+  10/10 tests passing and `moon test --target native
+  pdf_content_operator_state_test.mbt` at 26/26 tests passing; native check
+  validation reports `moon check --target native` passing with the known
+  `markdown/cmd` warning and `moon check --target native --warn-list +73` at the
+  known 10-warning baseline. Full native suite validation is deferred to the
+  next batch.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,

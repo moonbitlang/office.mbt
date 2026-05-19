@@ -91,6 +91,11 @@ let pdf_content_extgstate_d_name : PdfName = pdf_content_extgstate_name("/D")
 let pdf_content_extgstate_ri_name : PdfName = pdf_content_extgstate_name("/RI")
 
 ///|
+let pdf_content_extgstate_font_name : PdfName = pdf_content_extgstate_name(
+  "/Font",
+)
+
+///|
 let pdf_content_extgstate_op_stroke_name : PdfName = pdf_content_extgstate_name(
   "/OP",
 )
@@ -587,6 +592,43 @@ pub fn pdf_content_apply_extgstate_dash_op(
   extgstate : PdfObject,
 ) -> PdfContentOperatorState raise PdfError {
   document.content_apply_extgstate_dash_op(state, extgstate)
+}
+
+///|
+/// Apply cpdfcontent font state from a resolved ExtGState dictionary.
+pub fn PdfDocument::content_apply_extgstate_font_op(
+  self : PdfDocument,
+  state : PdfContentOperatorState,
+  extgstate : PdfObject,
+) -> PdfContentOperatorState raise PdfError {
+  match self.lookup_direct(pdf_content_extgstate_font_name, extgstate) {
+    Some(PdfArray([PdfIndirect(font_number), size])) => {
+      ignore(self.read_font(PdfIndirect(font_number)))
+      let size_result : Result[Double, Error] = try? self.get_number(size)
+      let text_state = match size_result {
+        Ok(value) => { ..state.text_state, font_size: value }
+        Err(_) => state.text_state
+      }
+      {
+        ..state,
+        text_state: {
+          ..text_state,
+          font: "__EXTGSTATE__" + font_number.to_string(),
+        },
+      }
+    }
+    _ => state
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::content_apply_extgstate_font_op`.
+pub fn pdf_content_apply_extgstate_font_op(
+  document : PdfDocument,
+  state : PdfContentOperatorState,
+  extgstate : PdfObject,
+) -> PdfContentOperatorState raise PdfError {
+  document.content_apply_extgstate_font_op(state, extgstate)
 }
 
 ///|

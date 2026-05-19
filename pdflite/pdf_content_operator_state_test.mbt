@@ -385,6 +385,73 @@ test "cpdfcontent operator state applies ExtGState dash parameters" {
 }
 
 ///|
+test "cpdfcontent operator state applies ExtGState font parameters" {
+  let doc = @pdflite.pdf_document_empty()
+  let initial = @pdflite.pdf_content_initial_operator_state(
+    0.0, 0.0, 100.0, 200.0,
+  )
+  let subtype_key = content_operator_name_for_test("/Subtype")
+  let base_font_key = content_operator_name_for_test("/BaseFont")
+  let font_key = content_operator_name_for_test("/Font")
+  doc.add_object_given_number(
+    7,
+    @pdflite.pdf_dictionary([
+      (subtype_key, PdfNameObject(content_operator_name_for_test("/Type1"))),
+      (
+        base_font_key,
+        PdfNameObject(content_operator_name_for_test("/Helvetica")),
+      ),
+    ]),
+  )
+  let extgstate = @pdflite.pdf_dictionary([
+    (font_key, PdfArray([PdfIndirect(7), PdfReal(18.5)])),
+  ])
+  let state = try! doc.content_apply_extgstate_font_op(initial, extgstate)
+  @test.assert_eq(state.text_state.font, "__EXTGSTATE__7")
+  @test.assert_eq(state.text_state.font_size, 18.5)
+  @test.assert_eq(
+    try! @pdflite.pdf_content_apply_extgstate_font_op(doc, initial, extgstate),
+    state,
+  )
+  let malformed_size = try! doc.content_apply_extgstate_font_op(
+    initial,
+    @pdflite.pdf_dictionary([
+      (font_key, PdfArray([PdfIndirect(7), PdfString(b"large")])),
+    ]),
+  )
+  @test.assert_eq(malformed_size.text_state.font, "__EXTGSTATE__7")
+  @test.assert_eq(
+    malformed_size.text_state.font_size,
+    initial.text_state.font_size,
+  )
+  @test.assert_eq(
+    try! doc.content_apply_extgstate_font_op(
+      initial,
+      @pdflite.pdf_dictionary([
+        (
+          font_key,
+          PdfArray([
+            PdfNameObject(content_operator_name_for_test("/F1")),
+            PdfInteger(10),
+          ]),
+        ),
+      ]),
+    ),
+    initial,
+  )
+  doc.add_object_given_number(9, @pdflite.pdf_dictionary([]))
+  let bad_font : Result[@pdflite.PdfContentOperatorState, Error] = try? doc.content_apply_extgstate_font_op(
+    initial,
+    @pdflite.pdf_dictionary([
+      (font_key, PdfArray([PdfIndirect(9), PdfInteger(10)])),
+    ]),
+  )
+  guard bad_font is Err(@pdflite.PdfError::FontTypeExpected) else {
+    fail("expected FontTypeExpected for malformed ExtGState font object")
+  }
+}
+
+///|
 test "cpdfcontent operator state applies ExtGState alpha parameters" {
   let doc = @pdflite.pdf_document_empty()
   let initial = @pdflite.pdf_content_initial_operator_state(

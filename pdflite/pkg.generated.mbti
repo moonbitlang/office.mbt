@@ -359,6 +359,8 @@ pub fn pdf_content_apply_extgstate_compositing_op(PdfDocument, PdfContentOperato
 
 pub fn pdf_content_apply_extgstate_dash_op(PdfDocument, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState raise @core.PdfError
 
+pub fn pdf_content_apply_extgstate_font_op(PdfDocument, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState raise @core.PdfError
+
 pub fn pdf_content_apply_extgstate_graphics_parameter_op(PdfDocument, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState
 
 pub fn pdf_content_apply_extgstate_halftone_op(PdfDocument, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState
@@ -2407,6 +2409,7 @@ pub fn PdfDocument::contains_javascript(Self) -> Bool
 pub fn PdfDocument::content_apply_extgstate_alpha_op(Self, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState
 pub fn PdfDocument::content_apply_extgstate_compositing_op(Self, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState
 pub fn PdfDocument::content_apply_extgstate_dash_op(Self, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState raise @core.PdfError
+pub fn PdfDocument::content_apply_extgstate_font_op(Self, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState raise @core.PdfError
 pub fn PdfDocument::content_apply_extgstate_graphics_parameter_op(Self, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState
 pub fn PdfDocument::content_apply_extgstate_halftone_op(Self, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState
 pub fn PdfDocument::content_apply_extgstate_overprint_op(Self, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState
