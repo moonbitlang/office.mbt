@@ -11,6 +11,8 @@ pub(all) struct PdfContentOperatorFrame {
   alpha_constant_stroke : Double
   alpha_constant_non_stroke : Double
   alpha_source : Bool
+  smoothness : Double
+  stroke_adjustment : Bool
   marked_content_point : PdfContentMarkedContent?
   marked_content : Array[PdfContentMarkedContent]
   type3_d0 : PdfContentType3D0?
@@ -30,6 +32,8 @@ pub(all) struct PdfContentOperatorState {
   alpha_constant_stroke : Double
   alpha_constant_non_stroke : Double
   alpha_source : Bool
+  smoothness : Double
+  stroke_adjustment : Bool
   marked_content_point : PdfContentMarkedContent?
   marked_content : Array[PdfContentMarkedContent]
   type3_d0 : PdfContentType3D0?
@@ -68,6 +72,12 @@ let pdf_content_extgstate_ri_name : PdfName = pdf_content_extgstate_name("/RI")
 
 ///|
 let pdf_content_extgstate_fl_name : PdfName = pdf_content_extgstate_name("/FL")
+
+///|
+let pdf_content_extgstate_sm_name : PdfName = pdf_content_extgstate_name("/SM")
+
+///|
+let pdf_content_extgstate_sa_name : PdfName = pdf_content_extgstate_name("/SA")
 
 ///|
 let pdf_content_extgstate_ca_stroke_name : PdfName = pdf_content_extgstate_name(
@@ -129,6 +139,8 @@ pub fn pdf_content_initial_operator_state(
     alpha_constant_stroke: 1.0,
     alpha_constant_non_stroke: 1.0,
     alpha_source: false,
+    smoothness: 0.5,
+    stroke_adjustment: false,
     marked_content_point: None,
     marked_content: [],
     type3_d0: None,
@@ -153,6 +165,8 @@ fn PdfContentOperatorState::content_frame(
     alpha_constant_stroke: self.alpha_constant_stroke,
     alpha_constant_non_stroke: self.alpha_constant_non_stroke,
     alpha_source: self.alpha_source,
+    smoothness: self.smoothness,
+    stroke_adjustment: self.stroke_adjustment,
     marked_content_point: self.marked_content_point,
     marked_content: pdf_content_operator_copy_marked_content(
       self.marked_content,
@@ -244,6 +258,8 @@ fn PdfContentOperatorState::content_pop_state(
       alpha_constant_stroke: frame.alpha_constant_stroke,
       alpha_constant_non_stroke: frame.alpha_constant_non_stroke,
       alpha_source: frame.alpha_source,
+      smoothness: frame.smoothness,
+      stroke_adjustment: frame.stroke_adjustment,
       marked_content_point: frame.marked_content_point,
       marked_content: pdf_content_operator_copy_marked_content(
         frame.marked_content,
@@ -459,6 +475,37 @@ pub fn pdf_content_apply_extgstate_dash_op(
   extgstate : PdfObject,
 ) -> PdfContentOperatorState raise PdfError {
   document.content_apply_extgstate_dash_op(state, extgstate)
+}
+
+///|
+/// Apply cpdfcontent smoothness and stroke-adjustment from a resolved ExtGState dictionary.
+pub fn PdfDocument::content_apply_extgstate_rendering_op(
+  self : PdfDocument,
+  state : PdfContentOperatorState,
+  extgstate : PdfObject,
+) -> PdfContentOperatorState {
+  let mut output = state
+  match
+    self.content_extgstate_number(extgstate, pdf_content_extgstate_sm_name) {
+    Some(value) => output = { ..output, smoothness: value }
+    None => ()
+  }
+  match
+    self.content_extgstate_boolean(extgstate, pdf_content_extgstate_sa_name) {
+    Some(value) => output = { ..output, stroke_adjustment: value }
+    None => ()
+  }
+  output
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::content_apply_extgstate_rendering_op`.
+pub fn pdf_content_apply_extgstate_rendering_op(
+  document : PdfDocument,
+  state : PdfContentOperatorState,
+  extgstate : PdfObject,
+) -> PdfContentOperatorState {
+  document.content_apply_extgstate_rendering_op(state, extgstate)
 }
 
 ///|

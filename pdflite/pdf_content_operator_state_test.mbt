@@ -43,6 +43,8 @@ test "cpdfcontent operator state exposes initial state" {
   @test.assert_eq(state.alpha_constant_stroke, 1.0)
   @test.assert_eq(state.alpha_constant_non_stroke, 1.0)
   @test.assert_eq(state.alpha_source, false)
+  @test.assert_eq(state.smoothness, 0.5)
+  @test.assert_eq(state.stroke_adjustment, false)
   @test.assert_eq(state.marked_content_point, None)
   @test.assert_eq(state.marked_content.length(), 0)
   @test.assert_eq(state.type3_d0, None)
@@ -63,6 +65,8 @@ test "cpdfcontent operator state saves and restores q Q frames" {
   @test.assert_eq(pushed.state_stack[0].alpha_constant_stroke, 1.0)
   @test.assert_eq(pushed.state_stack[0].alpha_constant_non_stroke, 1.0)
   @test.assert_eq(pushed.state_stack[0].alpha_source, false)
+  @test.assert_eq(pushed.state_stack[0].smoothness, 0.5)
+  @test.assert_eq(pushed.state_stack[0].stroke_adjustment, false)
   let changed : @pdflite.PdfContentOperatorState = {
     ..pushed,
     ctm: @pdflite.transform_translate(7.0, 8.0),
@@ -73,6 +77,8 @@ test "cpdfcontent operator state saves and restores q Q frames" {
     alpha_constant_stroke: 0.75,
     alpha_constant_non_stroke: 0.5,
     alpha_source: true,
+    smoothness: 0.25,
+    stroke_adjustment: true,
   }
   let restored = changed.content_apply_graphics_state_op(Op_Q)
   @test.assert_eq(restored.ctm, initial.ctm)
@@ -87,6 +93,8 @@ test "cpdfcontent operator state saves and restores q Q frames" {
     initial.alpha_constant_non_stroke,
   )
   @test.assert_eq(restored.alpha_source, initial.alpha_source)
+  @test.assert_eq(restored.smoothness, initial.smoothness)
+  @test.assert_eq(restored.stroke_adjustment, initial.stroke_adjustment)
   @test.assert_eq(restored.state_stack.length(), 0)
   @test.assert_eq(initial.content_apply_graphics_state_op(Op_Q), initial)
 }
@@ -355,6 +363,33 @@ test "cpdfcontent operator state applies ExtGState alpha parameters" {
       ),
       (content_operator_name_for_test("/ca"), PdfBoolean(false)),
       (content_operator_name_for_test("/AIS"), PdfInteger(1)),
+    ]),
+  )
+  @test.assert_eq(ignored, state)
+}
+
+///|
+test "cpdfcontent operator state applies ExtGState rendering parameters" {
+  let doc = @pdflite.pdf_document_empty()
+  let initial = @pdflite.pdf_content_initial_operator_state(
+    0.0, 0.0, 100.0, 200.0,
+  )
+  let extgstate = @pdflite.pdf_dictionary([
+    (content_operator_name_for_test("/SM"), PdfInteger(2)),
+    (content_operator_name_for_test("/SA"), PdfBoolean(true)),
+  ])
+  let state = doc.content_apply_extgstate_rendering_op(initial, extgstate)
+  @test.assert_eq(state.smoothness, 2.0)
+  @test.assert_eq(state.stroke_adjustment, true)
+  @test.assert_eq(
+    @pdflite.pdf_content_apply_extgstate_rendering_op(doc, initial, extgstate),
+    state,
+  )
+  let ignored = doc.content_apply_extgstate_rendering_op(
+    state,
+    @pdflite.pdf_dictionary([
+      (content_operator_name_for_test("/SM"), PdfBoolean(false)),
+      (content_operator_name_for_test("/SA"), PdfInteger(1)),
     ]),
   )
   @test.assert_eq(ignored, state)
