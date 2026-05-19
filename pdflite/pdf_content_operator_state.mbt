@@ -43,6 +43,24 @@ fn pdf_content_extgstate_name(text : String) -> PdfName {
 }
 
 ///|
+let pdf_content_extgstate_lw_name : PdfName = pdf_content_extgstate_name("/LW")
+
+///|
+let pdf_content_extgstate_lc_name : PdfName = pdf_content_extgstate_name("/LC")
+
+///|
+let pdf_content_extgstate_lj_name : PdfName = pdf_content_extgstate_name("/LJ")
+
+///|
+let pdf_content_extgstate_ml_name : PdfName = pdf_content_extgstate_name("/ML")
+
+///|
+let pdf_content_extgstate_ri_name : PdfName = pdf_content_extgstate_name("/RI")
+
+///|
+let pdf_content_extgstate_fl_name : PdfName = pdf_content_extgstate_name("/FL")
+
+///|
 let pdf_content_extgstate_tk_name : PdfName = pdf_content_extgstate_name("/TK")
 
 ///|
@@ -249,6 +267,110 @@ pub fn pdf_content_apply_graphics_parameter_op(
   op : PdfContentOp,
 ) -> PdfContentOperatorState {
   state.content_apply_graphics_parameter_op(op)
+}
+
+///|
+fn pdf_content_extgstate_number(object : PdfObject) -> Double? {
+  match object {
+    PdfReal(value) => Some(value)
+    PdfInteger(value) => Some(value.to_double())
+    _ => None
+  }
+}
+
+///|
+fn pdf_content_extgstate_integer(object : PdfObject) -> Int? {
+  match object {
+    PdfInteger(value) => Some(value)
+    _ => None
+  }
+}
+
+///|
+fn PdfDocument::content_extgstate_number(
+  self : PdfDocument,
+  extgstate : PdfObject,
+  key : PdfName,
+) -> Double? {
+  match self.lookup_direct(key, extgstate) {
+    Some(value) => pdf_content_extgstate_number(value)
+    None => None
+  }
+}
+
+///|
+fn PdfDocument::content_extgstate_integer(
+  self : PdfDocument,
+  extgstate : PdfObject,
+  key : PdfName,
+) -> Int? {
+  match self.lookup_direct(key, extgstate) {
+    Some(value) => pdf_content_extgstate_integer(value)
+    None => None
+  }
+}
+
+///|
+fn PdfDocument::content_extgstate_name_value(
+  self : PdfDocument,
+  extgstate : PdfObject,
+  key : PdfName,
+) -> PdfName? {
+  match self.lookup_direct(key, extgstate) {
+    Some(PdfNameObject(value)) => Some(value)
+    _ => None
+  }
+}
+
+///|
+/// Apply cpdfcontent scalar graphics parameters from a resolved ExtGState dictionary.
+pub fn PdfDocument::content_apply_extgstate_graphics_parameter_op(
+  self : PdfDocument,
+  state : PdfContentOperatorState,
+  extgstate : PdfObject,
+) -> PdfContentOperatorState {
+  let mut output = state
+  match
+    self.content_extgstate_number(extgstate, pdf_content_extgstate_lw_name) {
+    Some(value) => output = output.content_apply_core_op(Op_w(value))
+    None => ()
+  }
+  match
+    self.content_extgstate_integer(extgstate, pdf_content_extgstate_lc_name) {
+    Some(value) => output = output.content_apply_core_op(Op_J(value))
+    None => ()
+  }
+  match
+    self.content_extgstate_integer(extgstate, pdf_content_extgstate_lj_name) {
+    Some(value) => output = output.content_apply_core_op(Op_j(value))
+    None => ()
+  }
+  match
+    self.content_extgstate_number(extgstate, pdf_content_extgstate_ml_name) {
+    Some(value) => output = output.content_apply_core_op(Op_M(value))
+    None => ()
+  }
+  match
+    self.content_extgstate_name_value(extgstate, pdf_content_extgstate_ri_name) {
+    Some(value) => output = output.content_apply_core_op(Op_ri(value))
+    None => ()
+  }
+  match
+    self.content_extgstate_number(extgstate, pdf_content_extgstate_fl_name) {
+    Some(value) => output = output.content_apply_core_op(Op_i(value))
+    None => ()
+  }
+  output
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::content_apply_extgstate_graphics_parameter_op`.
+pub fn pdf_content_apply_extgstate_graphics_parameter_op(
+  document : PdfDocument,
+  state : PdfContentOperatorState,
+  extgstate : PdfObject,
+) -> PdfContentOperatorState {
+  document.content_apply_extgstate_graphics_parameter_op(state, extgstate)
 }
 
 ///|

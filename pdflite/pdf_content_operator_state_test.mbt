@@ -180,6 +180,55 @@ test "cpdfcontent operator state applies direct graphics parameters" {
 }
 
 ///|
+test "cpdfcontent operator state applies ExtGState graphics parameters" {
+  let doc = @pdflite.pdf_document_empty()
+  let initial = @pdflite.pdf_content_initial_operator_state(
+    0.0, 0.0, 100.0, 200.0,
+  )
+  let extgstate = @pdflite.pdf_dictionary([
+    (content_operator_name_for_test("/LW"), PdfReal(2.5)),
+    (content_operator_name_for_test("/LC"), PdfInteger(1)),
+    (content_operator_name_for_test("/LJ"), PdfInteger(2)),
+    (content_operator_name_for_test("/ML"), PdfInteger(13)),
+    (
+      content_operator_name_for_test("/RI"),
+      PdfNameObject(content_operator_name_for_test("/AbsoluteColorimetric")),
+    ),
+    (content_operator_name_for_test("/FL"), PdfInteger(3)),
+  ])
+  let state = doc.content_apply_extgstate_graphics_parameter_op(
+    initial, extgstate,
+  )
+  @test.assert_eq(state.path_state.line_width, 2.5)
+  @test.assert_eq(state.path_state.line_cap, 1)
+  @test.assert_eq(state.path_state.line_join, 2)
+  @test.assert_eq(state.miter_limit, 13.0)
+  @test.assert_eq(state.path_state.rendering_intent, "/AbsoluteColorimetric")
+  @test.assert_eq(state.flatness, 3.0)
+  @test.assert_eq(
+    @pdflite.pdf_content_apply_extgstate_graphics_parameter_op(
+      doc, initial, extgstate,
+    ),
+    state,
+  )
+  let ignored = doc.content_apply_extgstate_graphics_parameter_op(
+    state,
+    @pdflite.pdf_dictionary([
+      (
+        content_operator_name_for_test("/LW"),
+        PdfNameObject(content_operator_name_for_test("/Ignored")),
+      ),
+      (content_operator_name_for_test("/LC"), PdfReal(9.0)),
+      (content_operator_name_for_test("/LJ"), PdfReal(8.0)),
+      (content_operator_name_for_test("/ML"), PdfBoolean(false)),
+      (content_operator_name_for_test("/RI"), PdfString(b"Relative")),
+      (content_operator_name_for_test("/FL"), PdfBoolean(true)),
+    ]),
+  )
+  @test.assert_eq(ignored, state)
+}
+
+///|
 test "cpdfcontent operator state applies ExtGState text knockout" {
   let doc = @pdflite.pdf_document_empty()
   let initial = @pdflite.pdf_content_initial_operator_state(
