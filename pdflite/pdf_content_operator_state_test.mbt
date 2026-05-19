@@ -45,6 +45,9 @@ test "cpdfcontent operator state exposes initial state" {
   @test.assert_eq(state.alpha_source, false)
   @test.assert_eq(state.smoothness, 0.5)
   @test.assert_eq(state.stroke_adjustment, false)
+  @test.assert_eq(state.overprint_stroke, false)
+  @test.assert_eq(state.overprint_non_stroke, false)
+  @test.assert_eq(state.overprint_mode, 0)
   @test.assert_eq(state.marked_content_point, None)
   @test.assert_eq(state.marked_content.length(), 0)
   @test.assert_eq(state.type3_d0, None)
@@ -67,6 +70,9 @@ test "cpdfcontent operator state saves and restores q Q frames" {
   @test.assert_eq(pushed.state_stack[0].alpha_source, false)
   @test.assert_eq(pushed.state_stack[0].smoothness, 0.5)
   @test.assert_eq(pushed.state_stack[0].stroke_adjustment, false)
+  @test.assert_eq(pushed.state_stack[0].overprint_stroke, false)
+  @test.assert_eq(pushed.state_stack[0].overprint_non_stroke, false)
+  @test.assert_eq(pushed.state_stack[0].overprint_mode, 0)
   let changed : @pdflite.PdfContentOperatorState = {
     ..pushed,
     ctm: @pdflite.transform_translate(7.0, 8.0),
@@ -79,6 +85,9 @@ test "cpdfcontent operator state saves and restores q Q frames" {
     alpha_source: true,
     smoothness: 0.25,
     stroke_adjustment: true,
+    overprint_stroke: true,
+    overprint_non_stroke: true,
+    overprint_mode: 1,
   }
   let restored = changed.content_apply_graphics_state_op(Op_Q)
   @test.assert_eq(restored.ctm, initial.ctm)
@@ -95,6 +104,9 @@ test "cpdfcontent operator state saves and restores q Q frames" {
   @test.assert_eq(restored.alpha_source, initial.alpha_source)
   @test.assert_eq(restored.smoothness, initial.smoothness)
   @test.assert_eq(restored.stroke_adjustment, initial.stroke_adjustment)
+  @test.assert_eq(restored.overprint_stroke, initial.overprint_stroke)
+  @test.assert_eq(restored.overprint_non_stroke, initial.overprint_non_stroke)
+  @test.assert_eq(restored.overprint_mode, initial.overprint_mode)
   @test.assert_eq(restored.state_stack.length(), 0)
   @test.assert_eq(initial.content_apply_graphics_state_op(Op_Q), initial)
 }
@@ -393,6 +405,61 @@ test "cpdfcontent operator state applies ExtGState rendering parameters" {
     ]),
   )
   @test.assert_eq(ignored, state)
+}
+
+///|
+test "cpdfcontent operator state applies ExtGState overprint parameters" {
+  let doc = @pdflite.pdf_document_empty()
+  let initial = @pdflite.pdf_content_initial_operator_state(
+    0.0, 0.0, 100.0, 200.0,
+  )
+  let op_stroke = content_operator_name_for_test("/OP")
+  let op_non_stroke = content_operator_name_for_test("/op")
+  let stroke_only = doc.content_apply_extgstate_overprint_op(
+    initial,
+    @pdflite.pdf_dictionary([(op_stroke, PdfBoolean(true))]),
+  )
+  @test.assert_eq(stroke_only.overprint_stroke, true)
+  @test.assert_eq(stroke_only.overprint_non_stroke, true)
+  @test.assert_eq(stroke_only.overprint_mode, 0)
+  let split = doc.content_apply_extgstate_overprint_op(
+    initial,
+    @pdflite.pdf_dictionary([
+      (op_stroke, PdfBoolean(true)),
+      (op_non_stroke, PdfBoolean(false)),
+    ]),
+  )
+  @test.assert_eq(split.overprint_stroke, true)
+  @test.assert_eq(split.overprint_non_stroke, false)
+  let mode = doc.content_apply_extgstate_overprint_op(
+    initial,
+    @pdflite.pdf_dictionary([
+      (op_stroke, PdfBoolean(true)),
+      (op_non_stroke, PdfInteger(2)),
+    ]),
+  )
+  @test.assert_eq(mode.overprint_stroke, true)
+  @test.assert_eq(mode.overprint_non_stroke, true)
+  @test.assert_eq(mode.overprint_mode, 2)
+  @test.assert_eq(
+    @pdflite.pdf_content_apply_extgstate_overprint_op(
+      doc,
+      initial,
+      @pdflite.pdf_dictionary([
+        (op_stroke, PdfBoolean(true)),
+        (op_non_stroke, PdfInteger(2)),
+      ]),
+    ),
+    mode,
+  )
+  let ignored = doc.content_apply_extgstate_overprint_op(
+    mode,
+    @pdflite.pdf_dictionary([
+      (op_stroke, PdfInteger(1)),
+      (op_non_stroke, PdfReal(2.0)),
+    ]),
+  )
+  @test.assert_eq(ignored, mode)
 }
 
 ///|

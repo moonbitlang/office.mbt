@@ -13,6 +13,9 @@ pub(all) struct PdfContentOperatorFrame {
   alpha_source : Bool
   smoothness : Double
   stroke_adjustment : Bool
+  overprint_stroke : Bool
+  overprint_non_stroke : Bool
+  overprint_mode : Int
   marked_content_point : PdfContentMarkedContent?
   marked_content : Array[PdfContentMarkedContent]
   type3_d0 : PdfContentType3D0?
@@ -34,6 +37,9 @@ pub(all) struct PdfContentOperatorState {
   alpha_source : Bool
   smoothness : Double
   stroke_adjustment : Bool
+  overprint_stroke : Bool
+  overprint_non_stroke : Bool
+  overprint_mode : Int
   marked_content_point : PdfContentMarkedContent?
   marked_content : Array[PdfContentMarkedContent]
   type3_d0 : PdfContentType3D0?
@@ -69,6 +75,16 @@ let pdf_content_extgstate_d_name : PdfName = pdf_content_extgstate_name("/D")
 
 ///|
 let pdf_content_extgstate_ri_name : PdfName = pdf_content_extgstate_name("/RI")
+
+///|
+let pdf_content_extgstate_op_stroke_name : PdfName = pdf_content_extgstate_name(
+  "/OP",
+)
+
+///|
+let pdf_content_extgstate_op_non_stroke_name : PdfName = pdf_content_extgstate_name(
+  "/op",
+)
 
 ///|
 let pdf_content_extgstate_fl_name : PdfName = pdf_content_extgstate_name("/FL")
@@ -141,6 +157,9 @@ pub fn pdf_content_initial_operator_state(
     alpha_source: false,
     smoothness: 0.5,
     stroke_adjustment: false,
+    overprint_stroke: false,
+    overprint_non_stroke: false,
+    overprint_mode: 0,
     marked_content_point: None,
     marked_content: [],
     type3_d0: None,
@@ -167,6 +186,9 @@ fn PdfContentOperatorState::content_frame(
     alpha_source: self.alpha_source,
     smoothness: self.smoothness,
     stroke_adjustment: self.stroke_adjustment,
+    overprint_stroke: self.overprint_stroke,
+    overprint_non_stroke: self.overprint_non_stroke,
+    overprint_mode: self.overprint_mode,
     marked_content_point: self.marked_content_point,
     marked_content: pdf_content_operator_copy_marked_content(
       self.marked_content,
@@ -260,6 +282,9 @@ fn PdfContentOperatorState::content_pop_state(
       alpha_source: frame.alpha_source,
       smoothness: frame.smoothness,
       stroke_adjustment: frame.stroke_adjustment,
+      overprint_stroke: frame.overprint_stroke,
+      overprint_non_stroke: frame.overprint_non_stroke,
+      overprint_mode: frame.overprint_mode,
       marked_content_point: frame.marked_content_point,
       marked_content: pdf_content_operator_copy_marked_content(
         frame.marked_content,
@@ -506,6 +531,54 @@ pub fn pdf_content_apply_extgstate_rendering_op(
   extgstate : PdfObject,
 ) -> PdfContentOperatorState {
   document.content_apply_extgstate_rendering_op(state, extgstate)
+}
+
+///|
+/// Apply cpdfcontent overprint parameters from a resolved ExtGState dictionary.
+pub fn PdfDocument::content_apply_extgstate_overprint_op(
+  self : PdfDocument,
+  state : PdfContentOperatorState,
+  extgstate : PdfObject,
+) -> PdfContentOperatorState {
+  let mut output = state
+  let non_stroke_overprint = self.content_extgstate_boolean(
+    extgstate, pdf_content_extgstate_op_non_stroke_name,
+  )
+  match
+    self.content_extgstate_boolean(
+      extgstate, pdf_content_extgstate_op_stroke_name,
+    ) {
+    Some(value) => {
+      output = { ..output, overprint_stroke: value }
+      match non_stroke_overprint {
+        Some(_) => ()
+        None => output = { ..output, overprint_non_stroke: value }
+      }
+    }
+    None => ()
+  }
+  match non_stroke_overprint {
+    Some(value) => output = { ..output, overprint_non_stroke: value }
+    None => ()
+  }
+  match
+    self.content_extgstate_integer(
+      extgstate, pdf_content_extgstate_op_non_stroke_name,
+    ) {
+    Some(value) => output = { ..output, overprint_mode: value }
+    None => ()
+  }
+  output
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::content_apply_extgstate_overprint_op`.
+pub fn pdf_content_apply_extgstate_overprint_op(
+  document : PdfDocument,
+  state : PdfContentOperatorState,
+  extgstate : PdfObject,
+) -> PdfContentOperatorState {
+  document.content_apply_extgstate_overprint_op(state, extgstate)
 }
 
 ///|

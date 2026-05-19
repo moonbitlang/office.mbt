@@ -2919,6 +2919,24 @@ Current backend snapshot:
   native` passing with the known `markdown/cmd` warning and `moon check --target
   native --warn-list +73` at the known 10-warning baseline. Full native suite
   validation is deferred to the next batch.~~
+- [x] ~~Standalone `cpdfcontent.ml` ExtGState overprint-state slice adds
+  `overprint_stroke`, `overprint_non_stroke`, and `overprint_mode` to
+  `PdfContentOperatorState` and q/Q frames, and exposes
+  `PdfDocument::content_apply_extgstate_overprint_op` plus
+  `pdf_content_apply_extgstate_overprint_op`, matching cpdf's initial overprint
+  defaults and `read_graphics_state_dictionary` `/OP` and source-shaped `/op`
+  branches once an ExtGState dictionary has been resolved, including `/OP`
+  propagation to non-stroking overprint when boolean `/op` is absent, explicit
+  boolean `/op` non-stroking override, integer `/op` overprint-mode assignment,
+  ignored malformed values, and q/Q save-restore behavior while leaving
+  resource-name resolution and the remaining non-JSON graphics-state fields for
+  later slices. Focused native validation reports `moon test --target native
+  pdf_content_operator_state_test.mbt --filter '*ExtGState*'` at 6/6 tests
+  passing and `moon test --target native pdf_content_operator_state_test.mbt` at
+  22/22 tests passing; native check validation reports `moon check --target
+  native` passing with the known `markdown/cmd` warning and `moon check --target
+  native --warn-list +73` at the known 10-warning baseline. Native full-suite
+  validation reports 1968/1968 tests passing.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,

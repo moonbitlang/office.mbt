@@ -359,6 +359,8 @@ pub fn pdf_content_apply_extgstate_dash_op(PdfDocument, PdfContentOperatorState,
 
 pub fn pdf_content_apply_extgstate_graphics_parameter_op(PdfDocument, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState
 
+pub fn pdf_content_apply_extgstate_overprint_op(PdfDocument, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState
+
 pub fn pdf_content_apply_extgstate_rendering_op(PdfDocument, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState
 
 pub fn pdf_content_apply_extgstate_text_op(PdfDocument, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState
@@ -2093,6 +2095,9 @@ pub(all) struct PdfContentOperatorFrame {
   alpha_source : Bool
   smoothness : Double
   stroke_adjustment : Bool
+  overprint_stroke : Bool
+  overprint_non_stroke : Bool
+  overprint_mode : Int
   marked_content_point : PdfContentMarkedContent?
   marked_content : Array[PdfContentMarkedContent]
   type3_d0 : PdfContentType3D0?
@@ -2113,6 +2118,9 @@ pub(all) struct PdfContentOperatorState {
   alpha_source : Bool
   smoothness : Double
   stroke_adjustment : Bool
+  overprint_stroke : Bool
+  overprint_non_stroke : Bool
+  overprint_mode : Int
   marked_content_point : PdfContentMarkedContent?
   marked_content : Array[PdfContentMarkedContent]
   type3_d0 : PdfContentType3D0?
@@ -2379,6 +2387,7 @@ pub fn PdfDocument::contains_javascript(Self) -> Bool
 pub fn PdfDocument::content_apply_extgstate_alpha_op(Self, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState
 pub fn PdfDocument::content_apply_extgstate_dash_op(Self, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState raise @core.PdfError
 pub fn PdfDocument::content_apply_extgstate_graphics_parameter_op(Self, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState
+pub fn PdfDocument::content_apply_extgstate_overprint_op(Self, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState
 pub fn PdfDocument::content_apply_extgstate_rendering_op(Self, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState
 pub fn PdfDocument::content_apply_extgstate_text_op(Self, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState
 pub fn PdfDocument::content_form_xobject_enter_state(Self, PdfContentOperatorState, PdfObject, @core.PdfName) -> PdfContentOperatorState? raise @core.PdfError
