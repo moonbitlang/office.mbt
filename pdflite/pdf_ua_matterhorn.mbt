@@ -562,6 +562,15 @@ fn pdf_ua_matterhorn_test_28_004() -> PdfUAMatterhornTest {
 }
 
 ///|
+fn pdf_ua_matterhorn_test_28_005() -> PdfUAMatterhornTest {
+  {
+    name: "28-005",
+    error: "A form field does not have a TU entry and does not have an alternative description (in the form of an Alt entry in the enclosing structure element).",
+    section: "UA1:7.18.1-4",
+  }
+}
+
+///|
 fn pdf_ua_matterhorn_test_28_006() -> PdfUAMatterhornTest {
   {
     name: "28-006",
@@ -972,6 +981,7 @@ fn pdf_ua_matterhorn_implemented_tests() -> Array[PdfUAMatterhornTest] {
     pdf_ua_matterhorn_test_26_002(),
     pdf_ua_matterhorn_test_28_002(),
     pdf_ua_matterhorn_test_28_004(),
+    pdf_ua_matterhorn_test_28_005(),
     pdf_ua_matterhorn_test_28_006(),
     pdf_ua_matterhorn_test_28_007(),
     pdf_ua_matterhorn_test_28_008(),
@@ -2087,6 +2097,13 @@ fn PdfDocument::pdf_ua_matterhorn_check_28_004(self : PdfDocument) -> Json? {
 }
 
 ///|
+// Preserve cpdf source behavior: get_field_object_numbers only returns fields
+// with /T, then 28-005 checks the returned fields for missing /T.
+fn PdfDocument::pdf_ua_matterhorn_check_28_005(_self : PdfDocument) -> Json? {
+  None
+}
+
+///|
 fn PdfDocument::pdf_ua_matterhorn_struct_parent_check(
   self : PdfDocument,
   object : PdfObject,
@@ -3127,6 +3144,7 @@ fn PdfDocument::pdf_ua_matterhorn_run_test(
     "26-002" => self.pdf_ua_matterhorn_check_26_002()
     "28-002" => self.pdf_ua_matterhorn_check_28_002()
     "28-004" => self.pdf_ua_matterhorn_check_28_004()
+    "28-005" => self.pdf_ua_matterhorn_check_28_005()
     "28-006" => self.pdf_ua_matterhorn_check_28_006()
     "28-007" => self.pdf_ua_matterhorn_check_28_007()
     "28-008" => self.pdf_ua_matterhorn_check_28_008()
@@ -3237,6 +3255,7 @@ fn PdfDocument::pdf_ua_matterhorn_failures(
 /// encryption checks `26-001` and `26-002`,
 /// annotation parent structure check `28-002`,
 /// annotation contents-or-Alt check `28-004`,
+/// source-compatible form-field no-op check `28-005`,
 /// annotation subtype and tab-order checks `28-006` through `28-009`,
 /// annotation structure-parent checks `28-010` and `28-011`,
 /// link annotation contents check `28-012`,

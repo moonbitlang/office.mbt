@@ -648,6 +648,20 @@ Current backend snapshot:
   native` passing with the known `markdown/cmd` warning and `moon check
   --target native --warn-list +73` at the known 10-warning baseline. Full
   native suite validation is deferred to the next batch.~~
+- [x] ~~Port the `cpdfua` Matterhorn form-field TU slice: the covered
+  Matterhorn surface now includes source check `28-005` as an explicit
+  source-compatible no-op, preserving cpdf's current unreachable failure path
+  where field object numbers are first filtered to objects with `/T` and then
+  checked for missing `/T`. Coverage pins a real AcroForm field with `/T`,
+  missing `/TU`, and a structure parent without `/Alt` as a no-failure case.
+  Focused native validation reports `moon test --target native
+  pdf_ua_matterhorn_test.mbt --filter '*source no-op form field TU*'` at 1/1
+  test passing; widened native validation reports `moon test --target native
+  pdf_ua_matterhorn_test.mbt` at 40/40 tests passing. Native check validation
+  reports `moon check --target native` passing with the known `markdown/cmd`
+  warning and `moon check --target native --warn-list +73` at the known
+  10-warning baseline. Full native suite validation is deferred to the next
+  batch.~~
 - [x] ~~Port the current stub/no-op redaction APIs from `cpdfredact`: `redact`
   is exposed as `redact_path`/`pdf_redact` and preserves page content while
   validating the selected page range, while `apply` and `apply_type` are

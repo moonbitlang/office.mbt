@@ -1988,6 +1988,41 @@ test "PdfDocument test_matterhorn_json checks annotation Contents or Alt" {
 }
 
 ///|
+test "PdfDocument test_matterhorn_json preserves source no-op form field TU check" {
+  let key_struct_parent = ua_matterhorn_name_for_test("/StructParent")
+  let field_number = 40
+  let parent_tree = @pdflite.pdf_document_empty().build_number_tree([
+    (7, ua_matterhorn_structure_element_for_test("/Form")),
+  ])
+  let document = ua_matterhorn_document_for_test([], root_extras=[
+    (
+      ua_matterhorn_name_for_test("/AcroForm"),
+      PdfDictionary([
+        (
+          ua_matterhorn_name_for_test("/Fields"),
+          PdfArray([PdfIndirect(field_number)]),
+        ),
+      ]),
+    ),
+    (
+      ua_matterhorn_name_for_test("/StructTreeRoot"),
+      PdfDictionary([(ua_matterhorn_name_for_test("/ParentTree"), parent_tree)]),
+    ),
+  ])
+  document.add_object_given_number(
+    field_number,
+    PdfDictionary([
+      (
+        ua_matterhorn_name_for_test("/T"),
+        PdfString(@ascii.encode("field name")),
+      ),
+      (key_struct_parent, PdfInteger(7)),
+    ]),
+  )
+  @test.assert_eq(try! document.test_matterhorn_json("28-005"), Json::array([]))
+}
+
+///|
 test "PdfDocument test_matterhorn_json checks annotation structure parents" {
   let key_struct_parent = ua_matterhorn_name_for_test("/StructParent")
 
