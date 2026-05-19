@@ -1185,6 +1185,8 @@ pub fn pdf_scale_pages(PdfDocument, ArrayView[Int], ArrayView[(Double, Double)],
 
 pub fn pdf_scale_to_fit_pages(PdfDocument, ArrayView[Int], ArrayView[(Double, Double)], position? : PdfPosition, input_scale? : Double, fast? : Bool) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_scale_to_fit_rotate_pages(PdfDocument, ArrayView[Int], ArrayView[(Double, Double)], Int, fast? : Bool) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_set_annotations_json(Json, PdfDocument) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_set_box(PdfDocument, ArrayView[Int], @core.PdfName, Double, Double, Double, Double) -> PdfDocument raise @core.PdfError
@@ -2737,6 +2739,7 @@ pub fn PdfDocument::rotate_pages_by(Self, Int, ArrayView[Int]) -> Self raise @co
 pub fn PdfDocument::scale_contents(Self, ArrayView[Int], PdfPosition, Double, fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::scale_pages(Self, ArrayView[Int], ArrayView[(Double, Double)], fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::scale_to_fit_pages(Self, ArrayView[Int], ArrayView[(Double, Double)], position? : PdfPosition, input_scale? : Double, fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::scale_to_fit_rotate_pages(Self, ArrayView[Int], ArrayView[(Double, Double)], Int, fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::select_object_numbers(Self, (PdfObject) -> Bool) -> Array[Int]
 pub fn PdfDocument::set_annotations_json(Self, Json) -> Self raise @core.PdfError
 pub fn PdfDocument::set_first_xref(Self, Int) -> Unit

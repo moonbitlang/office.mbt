@@ -27,12 +27,13 @@ fn page_scale_page_for_test(
   rest? : @pdflite.PdfObject = PdfDictionary([]),
   width? : Double = 100.0,
   height? : Double = 100.0,
+  rotate? : @pdflite.PdfPageRotation = Rotate0,
 ) -> @pdflite.PdfPage {
   {
     content: [page_scale_stream_for_test(ops)],
     mediabox: page_scale_rect_for_test(0.0, 0.0, width, height),
     resources,
-    rotate: Rotate0,
+    rotate,
     rest,
   }
 }
@@ -378,5 +379,82 @@ test "PdfDocument scale_to_fit_pages validates size counts and zero boxes" {
       )
     ) else {
     fail("expected scale_to_fit_pages to reject zero-sized pages")
+  }
+}
+
+///|
+test "PdfDocument scale_to_fit_rotate_pages rotates mismatched orientation before upright" {
+  let document = page_scale_document_for_test([
+    page_scale_page_for_test([Op_S], width=100.0, height=200.0),
+  ])
+  let rotated = try! document.scale_to_fit_rotate_pages(
+    [1],
+    [(300.0, 100.0)],
+    90,
+  )
+  let expected = try! (try! document.rotate_pages_by(90, [1])).upright_pages([1])
+  let rotated_pages = try! rotated.pages_of_pagetree()
+  let expected_pages = try! expected.pages_of_pagetree()
+  @test.assert_eq(rotated_pages[0].mediabox, expected_pages[0].mediabox)
+  @test.assert_eq(rotated_pages[0].rotate, expected_pages[0].rotate)
+  @test.assert_eq(
+    page_scale_ops_for_test(rotated, rotated_pages[0]),
+    page_scale_ops_for_test(expected, expected_pages[0]),
+  )
+  @test.assert_eq(try! rotated.all_pages_upright([1]), true)
+}
+
+///|
+test "PdfDocument scale_to_fit_rotate_pages uprights selected pages even without added rotation" {
+  let document = page_scale_document_for_test([
+    page_scale_page_for_test([Op_S], width=100.0, height=200.0, rotate=Rotate90),
+  ])
+  let upright = try! @pdflite.pdf_scale_to_fit_rotate_pages(
+    document,
+    [1],
+    [(100.0, 300.0)],
+    90,
+  )
+  let expected = try! document.upright_pages([1])
+  let upright_pages = try! upright.pages_of_pagetree()
+  let expected_pages = try! expected.pages_of_pagetree()
+  @test.assert_eq(upright_pages[0].mediabox, expected_pages[0].mediabox)
+  @test.assert_eq(upright_pages[0].rotate, expected_pages[0].rotate)
+  @test.assert_eq(
+    page_scale_ops_for_test(upright, upright_pages[0]),
+    page_scale_ops_for_test(expected, expected_pages[0]),
+  )
+  @test.assert_eq(try! upright.all_pages_upright([1]), true)
+}
+
+///|
+test "PdfDocument scale_to_fit_rotate_pages validates page range and size count" {
+  let document = page_scale_document_for_test([page_scale_page_for_test([Op_S])])
+  let mismatch : Result[@pdflite.PdfDocument, Error] = try? document.scale_to_fit_rotate_pages(
+    [1],
+    [],
+    90,
+  )
+  guard mismatch
+    is Err(
+      @pdflite.PdfError::BadPageSpecification(
+        "scale_to_fit_rotate_pages: size count must match page count"
+      )
+    ) else {
+    fail("expected scale_to_fit_rotate_pages to reject size count mismatch")
+  }
+
+  let bad_page : Result[@pdflite.PdfDocument, Error] = try? document.scale_to_fit_rotate_pages(
+    [2],
+    [(100.0, 200.0)],
+    90,
+  )
+  guard bad_page
+    is Err(
+      @pdflite.PdfError::BadPageSpecification(
+        "scale_to_fit_rotate_pages: range contains pages not present in pdf"
+      )
+    ) else {
+    fail("expected scale_to_fit_rotate_pages to reject an out-of-range page")
   }
 }
