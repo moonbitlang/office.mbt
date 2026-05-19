@@ -30,7 +30,7 @@ Current estimate:
   cpdfua Matterhorn content/role-map/XMP/viewer-preference/optional-content/
   media-clip/file-attachment/PrinterMark/reference-XObject/MCID Form XObject/
   Type0 CIDSystemInfo/CIDToGIDMap/CMap-name/WMode/font-file no-op/TrueType
-  encoding validation, imposition
+  encoding/cmap validation, imposition
   transform/content/page-assembly/pattern-matrix kernels, cpdf page
   hard-box/removal/shift/scale/scale-to-fit/upright/set-mediabox/copy-box
   helpers, imposition make-space orchestration, border stamping, layout
@@ -466,6 +466,23 @@ Current backend snapshot:
   `markdown/cmd` warning and `moon check --target native --warn-list +73` at
   the known 10-warning baseline. Full native suite validation is deferred to the
   next batch.~~
+- [x] ~~Port the `cpdfua` Matterhorn TrueType cmap and symbolic-font slice: the
+  covered Matterhorn surface now includes source checks `31-017`, `31-023`,
+  `31-024`, `31-025`, and `31-026`, using decoded `/FontFile2` bytes with the
+  existing `pdf_truetype_cmaps` parser. The source quirk in `31-017` is
+  preserved: despite its non-symbolic diagnostic, cpdf checks symbolic TrueType
+  fonts and reports non-symbolic cmap entries. Coverage pins missing `(3,1)`
+  Microsoft Unicode cmap failures, font-file absence bypass behavior, symbolic
+  `/Encoding` failures, no-cmap symbolic font failures, symbolic-only cmap
+  passes, and multi-cmap symbolic fonts without `(3,0)` failures. Focused
+  native validation reports `moon test --target native
+  pdf_ua_matterhorn_test.mbt --filter '*TrueType cmap*'` at 1/1 test passing;
+  widened native validation reports `moon test --target native
+  pdf_ua_matterhorn_test.mbt` at 28/28 tests passing. Native check validation
+  reports `moon check --target native` passing with the known `markdown/cmd`
+  warning and `moon check --target native --warn-list +73` at the known
+  10-warning baseline. Full native suite validation is deferred to the next
+  batch.~~
 - [x] ~~Port the current stub/no-op redaction APIs from `cpdfredact`: `redact`
   is exposed as `redact_path`/`pdf_redact` and preserves page content while
   validating the selected page range, while `apply` and `apply_type` are

@@ -643,6 +643,15 @@ fn pdf_ua_matterhorn_test_31_016() -> PdfUAMatterhornTest {
 }
 
 ///|
+fn pdf_ua_matterhorn_test_31_017() -> PdfUAMatterhornTest {
+  {
+    name: "31-017",
+    error: "A non-symbolic TrueType font is used for rendering, but none of the cmap entries in the embedded font program is a non-symbolic cmap.",
+    section: "UA1:7.21.6-1",
+  }
+}
+
+///|
 fn pdf_ua_matterhorn_test_31_018() -> PdfUAMatterhornTest {
   {
     name: "31-018",
@@ -684,6 +693,42 @@ fn pdf_ua_matterhorn_test_31_022() -> PdfUAMatterhornTest {
     name: "31-022",
     error: "The Differences array in the Encoding entry in a non-symbolic TrueType font dictionary contains one or more glyph names which are not listed in the Adobe Glyph List.",
     section: "UA1:7.21.6-6",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_31_023() -> PdfUAMatterhornTest {
+  {
+    name: "31-023",
+    error: "The Differences array is present in the Encoding entry in a non-symbolic TrueType font dictionary but the embedded font program does not contain a (3,1) Microsoft Unicode cmap.",
+    section: "UA1:7.21.6-7",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_31_024() -> PdfUAMatterhornTest {
+  {
+    name: "31-024",
+    error: "The Encoding entry is present in the font dictionary for a symbolic TrueType font.",
+    section: "UA1:7.21.6-8",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_31_025() -> PdfUAMatterhornTest {
+  {
+    name: "31-025",
+    error: "The embedded font program for a symbolic TrueType font contains no cmap.",
+    section: "UA1:7.21.6-9",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_31_026() -> PdfUAMatterhornTest {
+  {
+    name: "31-026",
+    error: "The embedded font program for a symbolic TrueType font contains more than one cmap, but none of the cmap entries is a (3,0) Microsoft Symbol cmap.",
+    section: "UA1:7.21.6-10",
   }
 }
 
@@ -735,11 +780,16 @@ fn pdf_ua_matterhorn_implemented_tests() -> Array[PdfUAMatterhornTest] {
     pdf_ua_matterhorn_test_31_014(),
     pdf_ua_matterhorn_test_31_015(),
     pdf_ua_matterhorn_test_31_016(),
+    pdf_ua_matterhorn_test_31_017(),
     pdf_ua_matterhorn_test_31_018(),
     pdf_ua_matterhorn_test_31_019(),
     pdf_ua_matterhorn_test_31_020(),
     pdf_ua_matterhorn_test_31_021(),
     pdf_ua_matterhorn_test_31_022(),
+    pdf_ua_matterhorn_test_31_023(),
+    pdf_ua_matterhorn_test_31_024(),
+    pdf_ua_matterhorn_test_31_025(),
+    pdf_ua_matterhorn_test_31_026(),
     pdf_ua_matterhorn_test_31_030(),
   ]
 }
@@ -1861,16 +1911,23 @@ fn PdfDocument::pdf_ua_matterhorn_is_non_symbolic(
 }
 
 ///|
-fn PdfDocument::pdf_ua_matterhorn_is_non_symbolic_truetype(
+fn PdfDocument::pdf_ua_matterhorn_is_truetype(
   self : PdfDocument,
   object : PdfObject,
 ) -> Bool {
   match self.lookup_direct(pdf_ua_subtype_key(), object) {
-    Some(PdfNameObject(subtype)) =>
-      subtype == pdf_text_true_type_name_value &&
-      self.pdf_ua_matterhorn_is_non_symbolic(object)
+    Some(PdfNameObject(subtype)) => subtype == pdf_text_true_type_name_value
     _ => false
   }
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_is_non_symbolic_truetype(
+  self : PdfDocument,
+  object : PdfObject,
+) -> Bool {
+  self.pdf_ua_matterhorn_is_truetype(object) &&
+  self.pdf_ua_matterhorn_is_non_symbolic(object)
 }
 
 ///|
@@ -1966,6 +2023,152 @@ fn PdfDocument::pdf_ua_matterhorn_check_31_022(self : PdfDocument) -> Json? {
 }
 
 ///|
+fn PdfDocument::pdf_ua_matterhorn_truetype_fontfile(
+  self : PdfDocument,
+  object : PdfObject,
+) -> PdfBytes? raise PdfError {
+  match
+    self.lookup_chain(object, [
+      pdf_text_font_descriptor_key_name, pdf_text_font_file2_key_name,
+    ]) {
+    Some(PdfStreamObject(stream)) => {
+      let decoded = match
+        self.pdf_stream_first_filter_direct(stream.dictionary) {
+        None => stream
+        Some(_) => self.pdf_decode_stream_until_unknown_value_direct(stream)
+      }
+      Some(pdf_stream_data_bytes(decoded.data))
+    }
+    _ => None
+  }
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_truetype_cmaps(
+  self : PdfDocument,
+  object : PdfObject,
+) -> Array[(Int, Int)]? raise PdfError {
+  match self.pdf_ua_matterhorn_truetype_fontfile(object) {
+    Some(fontfile) => Some(pdf_truetype_cmaps(fontfile))
+    None => None
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_cmaps_contain(
+  cmaps : ArrayView[(Int, Int)],
+  platform_id : Int,
+  encoding_id : Int,
+) -> Bool {
+  for cmap in cmaps {
+    if cmap.0 == platform_id && cmap.1 == encoding_id {
+      return true
+    }
+  }
+  false
+}
+
+///|
+fn pdf_ua_matterhorn_symbolic_cmap(cmap : (Int, Int)) -> Bool {
+  (cmap.0 == 1 && cmap.1 == 8) || (cmap.0 == 3 && cmap.1 == 0)
+}
+
+///|
+fn pdf_ua_matterhorn_cmap_extra(cmap : (Int, Int)) -> Json {
+  Json::string("(" + cmap.0.to_string() + ", " + cmap.1.to_string() + ") cmap")
+}
+
+///|
+// Preserve cpdf source behavior: despite the 31-017 diagnostic saying
+// "non-symbolic", the source checks symbolic TrueType fonts and reports any
+// non-symbolic cmap entry.
+fn PdfDocument::pdf_ua_matterhorn_check_31_017(
+  self : PdfDocument,
+) -> Json? raise PdfError {
+  for entry in self.parsed_object_entries() {
+    if self.pdf_ua_matterhorn_is_truetype(entry.2) &&
+      !self.pdf_ua_matterhorn_is_non_symbolic(entry.2) {
+      match self.pdf_ua_matterhorn_truetype_cmaps(entry.2) {
+        Some(cmaps) =>
+          for cmap in cmaps {
+            if !pdf_ua_matterhorn_symbolic_cmap(cmap) {
+              return Some(pdf_ua_matterhorn_cmap_extra(cmap))
+            }
+          }
+        None => ()
+      }
+    }
+  }
+  None
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_31_023(
+  self : PdfDocument,
+) -> Json? raise PdfError {
+  for entry in self.parsed_object_entries() {
+    if self.pdf_ua_matterhorn_is_non_symbolic_truetype(entry.2) &&
+      self.lookup_chain(entry.2, [
+        pdf_text_encoding_key_name, pdf_text_differences_key_name,
+      ])
+      is Some(_) {
+      match self.pdf_ua_matterhorn_truetype_cmaps(entry.2) {
+        Some(cmaps) if !pdf_ua_matterhorn_cmaps_contain(cmaps, 3, 1) =>
+          return Some(Json::null())
+        _ => ()
+      }
+    }
+  }
+  None
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_31_024(self : PdfDocument) -> Json? {
+  for entry in self.parsed_object_entries() {
+    if self.pdf_ua_matterhorn_is_truetype(entry.2) &&
+      !self.pdf_ua_matterhorn_is_non_symbolic(entry.2) &&
+      self.lookup_direct(pdf_text_encoding_key_name, entry.2) is Some(_) {
+      return Some(Json::null())
+    }
+  }
+  None
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_31_025(
+  self : PdfDocument,
+) -> Json? raise PdfError {
+  for entry in self.parsed_object_entries() {
+    if self.pdf_ua_matterhorn_is_truetype(entry.2) &&
+      !self.pdf_ua_matterhorn_is_non_symbolic(entry.2) {
+      match self.pdf_ua_matterhorn_truetype_cmaps(entry.2) {
+        Some(cmaps) if cmaps.length() == 0 => return Some(Json::null())
+        _ => ()
+      }
+    }
+  }
+  None
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_31_026(
+  self : PdfDocument,
+) -> Json? raise PdfError {
+  for entry in self.parsed_object_entries() {
+    if self.pdf_ua_matterhorn_is_truetype(entry.2) &&
+      !self.pdf_ua_matterhorn_is_non_symbolic(entry.2) {
+      match self.pdf_ua_matterhorn_truetype_cmaps(entry.2) {
+        Some(cmaps) if cmaps.length() > 1 &&
+          !pdf_ua_matterhorn_cmaps_contain(cmaps, 3, 0) =>
+          return Some(Json::null())
+        _ => ()
+      }
+    }
+  }
+  None
+}
+
+///|
 fn pdf_ua_matterhorn_check_source_unimplemented_font_file() -> Json? {
   None
 }
@@ -2006,10 +2209,15 @@ fn PdfDocument::pdf_ua_matterhorn_run_test(
     "31-006" => self.pdf_ua_matterhorn_check_31_006()
     "31-007" => self.pdf_ua_matterhorn_check_31_007()
     "31-008" => self.pdf_ua_matterhorn_check_31_008()
+    "31-017" => self.pdf_ua_matterhorn_check_31_017()
     "31-019" => self.pdf_ua_matterhorn_check_31_019()
     "31-020" => self.pdf_ua_matterhorn_check_31_020()
     "31-021" => self.pdf_ua_matterhorn_check_31_021()
     "31-022" => self.pdf_ua_matterhorn_check_31_022()
+    "31-023" => self.pdf_ua_matterhorn_check_31_023()
+    "31-024" => self.pdf_ua_matterhorn_check_31_024()
+    "31-025" => self.pdf_ua_matterhorn_check_31_025()
+    "31-026" => self.pdf_ua_matterhorn_check_31_026()
     "31-011"
     | "31-012"
     | "31-013"
@@ -2086,9 +2294,9 @@ fn PdfDocument::pdf_ua_matterhorn_failures(
 /// checks `30-001` and `30-002`, plus font CIDSystemInfo/CIDToGIDMap/CMap
 /// checks `31-001` through `31-008`, and source-unimplemented font-file checks
 /// `31-011` through `31-016`, `31-018`, and `31-030`, plus TrueType encoding
-/// dictionary checks `31-019` through `31-022`. Passing `""` runs the covered
-/// subset; unsupported individual test names raise a soft error until their
-/// source checks are ported.
+/// dictionary and cmap checks `31-017` and `31-019` through `31-026`. Passing
+/// `""` runs the covered subset; unsupported individual test names raise a soft
+/// error until their source checks are ported.
 pub fn PdfDocument::test_matterhorn_json(
   self : PdfDocument,
   test_name : String,

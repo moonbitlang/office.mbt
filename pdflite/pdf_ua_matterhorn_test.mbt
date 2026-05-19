@@ -300,6 +300,14 @@ fn ua_matterhorn_31_008_failure_for_test(name : String) -> Json {
 }
 
 ///|
+fn ua_matterhorn_31_017_failure_for_test(extra : Json) -> Json {
+  ua_matterhorn_failure_for_test(
+    "31-017", "UA1:7.21.6-1", "A non-symbolic TrueType font is used for rendering, but none of the cmap entries in the embedded font program is a non-symbolic cmap.",
+    extra,
+  )
+}
+
+///|
 fn ua_matterhorn_31_019_failure_for_test() -> Json {
   ua_matterhorn_failure_for_test(
     "31-019",
@@ -334,6 +342,46 @@ fn ua_matterhorn_31_022_failure_for_test(name : String) -> Json {
     "UA1:7.21.6-6",
     "The Differences array in the Encoding entry in a non-symbolic TrueType font dictionary contains one or more glyph names which are not listed in the Adobe Glyph List.",
     Json::string(name),
+  )
+}
+
+///|
+fn ua_matterhorn_31_023_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "31-023",
+    "UA1:7.21.6-7",
+    "The Differences array is present in the Encoding entry in a non-symbolic TrueType font dictionary but the embedded font program does not contain a (3,1) Microsoft Unicode cmap.",
+    Json::null(),
+  )
+}
+
+///|
+fn ua_matterhorn_31_024_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "31-024",
+    "UA1:7.21.6-8",
+    "The Encoding entry is present in the font dictionary for a symbolic TrueType font.",
+    Json::null(),
+  )
+}
+
+///|
+fn ua_matterhorn_31_025_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "31-025",
+    "UA1:7.21.6-9",
+    "The embedded font program for a symbolic TrueType font contains no cmap.",
+    Json::null(),
+  )
+}
+
+///|
+fn ua_matterhorn_31_026_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "31-026",
+    "UA1:7.21.6-10",
+    "The embedded font program for a symbolic TrueType font contains more than one cmap, but none of the cmap entries is a (3,0) Microsoft Symbol cmap.",
+    Json::null(),
   )
 }
 
@@ -559,6 +607,25 @@ fn ua_matterhorn_font_descriptor_for_test(flags : Int?) -> @pdflite.PdfObject {
 }
 
 ///|
+fn ua_matterhorn_font_descriptor_with_file_for_test(
+  flags : Int?,
+  fontfile : @pdflite.PdfBytes,
+) -> @pdflite.PdfObject {
+  let entries : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = [
+    (
+      ua_matterhorn_name_for_test("/FontFile2"),
+      @pdflite.pdf_stream(PdfDictionary([]), StreamGot(fontfile)),
+    ),
+  ]
+  match flags {
+    Some(value) =>
+      entries.push((ua_matterhorn_name_for_test("/Flags"), PdfInteger(value)))
+    None => ()
+  }
+  PdfDictionary(entries)
+}
+
+///|
 fn ua_matterhorn_truetype_font_for_test(
   flags : Int?,
   encoding : @pdflite.PdfObject?,
@@ -582,10 +649,72 @@ fn ua_matterhorn_truetype_font_for_test(
 }
 
 ///|
+fn ua_matterhorn_truetype_font_with_file_for_test(
+  flags : Int?,
+  encoding : @pdflite.PdfObject?,
+  fontfile : @pdflite.PdfBytes,
+) -> @pdflite.PdfObject {
+  let entries : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = [
+    (
+      ua_matterhorn_name_for_test("/Subtype"),
+      PdfNameObject(ua_matterhorn_name_for_test("/TrueType")),
+    ),
+    (
+      ua_matterhorn_name_for_test("/FontDescriptor"),
+      ua_matterhorn_font_descriptor_with_file_for_test(flags, fontfile),
+    ),
+  ]
+  match encoding {
+    Some(value) =>
+      entries.push((ua_matterhorn_name_for_test("/Encoding"), value))
+    None => ()
+  }
+  PdfDictionary(entries)
+}
+
+///|
 fn ua_matterhorn_encoding_dictionary_for_test(
   entries : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)],
 ) -> @pdflite.PdfObject {
   PdfDictionary([ for entry in entries => entry ])
+}
+
+///|
+fn ua_matterhorn_push_u16_for_test(output : Array[Byte], value : Int) -> Unit {
+  output.push((value / 256).to_byte())
+  output.push((value % 256).to_byte())
+}
+
+///|
+fn ua_matterhorn_push_u32_for_test(output : Array[Byte], value : Int) -> Unit {
+  output.push((value / 16777216).to_byte())
+  output.push((value / 65536 % 256).to_byte())
+  output.push((value / 256 % 256).to_byte())
+  output.push((value % 256).to_byte())
+}
+
+///|
+fn ua_matterhorn_truetype_cmap_font_for_test(
+  records : ArrayView[(Int, Int)],
+) -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  ua_matterhorn_push_u32_for_test(output, 0x00010000)
+  ua_matterhorn_push_u16_for_test(output, 1)
+  ua_matterhorn_push_u16_for_test(output, 0)
+  ua_matterhorn_push_u16_for_test(output, 0)
+  ua_matterhorn_push_u16_for_test(output, 0)
+  output.append([0x63, 0x6D, 0x61, 0x70])
+  ua_matterhorn_push_u32_for_test(output, 0)
+  ua_matterhorn_push_u32_for_test(output, 28)
+  ua_matterhorn_push_u32_for_test(output, 4 + records.length() * 8)
+  ua_matterhorn_push_u16_for_test(output, 0)
+  ua_matterhorn_push_u16_for_test(output, records.length())
+  for record in records {
+    ua_matterhorn_push_u16_for_test(output, record.0)
+    ua_matterhorn_push_u16_for_test(output, record.1)
+    ua_matterhorn_push_u32_for_test(output, 12)
+  }
+  Bytes::from_array(output)
 }
 
 ///|
@@ -1702,5 +1831,157 @@ test "PdfDocument test_matterhorn_json checks TrueType encoding Matterhorn check
   @test.assert_eq(
     try! valid_difference.test_matterhorn_json("31-022"),
     Json::array([]),
+  )
+}
+
+///|
+test "PdfDocument test_matterhorn_json checks TrueType cmap Matterhorn checks" {
+  let encoding_with_differences = ua_matterhorn_encoding_dictionary_for_test([
+    (
+      ua_matterhorn_name_for_test("/Differences"),
+      PdfArray([
+        PdfInteger(65),
+        PdfNameObject(ua_matterhorn_name_for_test("/A")),
+      ]),
+    ),
+  ])
+
+  let missing_unicode_cmap = ua_matterhorn_document_for_test([])
+  missing_unicode_cmap.add_object_given_number(
+    40,
+    ua_matterhorn_truetype_font_with_file_for_test(
+      Some(32),
+      Some(encoding_with_differences),
+      ua_matterhorn_truetype_cmap_font_for_test([(1, 0)]),
+    ),
+  )
+  @test.assert_eq(
+    try! missing_unicode_cmap.test_matterhorn_json("31-023"),
+    Json::array([ua_matterhorn_31_023_failure_for_test()]),
+  )
+
+  let unicode_cmap = ua_matterhorn_document_for_test([])
+  unicode_cmap.add_object_given_number(
+    40,
+    ua_matterhorn_truetype_font_with_file_for_test(
+      Some(32),
+      Some(encoding_with_differences),
+      ua_matterhorn_truetype_cmap_font_for_test([(3, 1)]),
+    ),
+  )
+  @test.assert_eq(
+    try! unicode_cmap.test_matterhorn_json("31-023"),
+    Json::array([]),
+  )
+
+  let no_fontfile = ua_matterhorn_document_for_test([])
+  no_fontfile.add_object_given_number(
+    40,
+    ua_matterhorn_truetype_font_for_test(
+      Some(32),
+      Some(encoding_with_differences),
+    ),
+  )
+  @test.assert_eq(
+    try! no_fontfile.test_matterhorn_json("31-023"),
+    Json::array([]),
+  )
+
+  let symbolic_encoding = ua_matterhorn_document_for_test([])
+  symbolic_encoding.add_object_given_number(
+    40,
+    ua_matterhorn_truetype_font_for_test(
+      Some(4),
+      Some(PdfNameObject(ua_matterhorn_name_for_test("/WinAnsiEncoding"))),
+    ),
+  )
+  @test.assert_eq(
+    try! symbolic_encoding.test_matterhorn_json("31-024"),
+    Json::array([ua_matterhorn_31_024_failure_for_test()]),
+  )
+
+  let non_symbolic_encoding = ua_matterhorn_document_for_test([])
+  non_symbolic_encoding.add_object_given_number(
+    40,
+    ua_matterhorn_truetype_font_for_test(
+      Some(32),
+      Some(PdfNameObject(ua_matterhorn_name_for_test("/WinAnsiEncoding"))),
+    ),
+  )
+  @test.assert_eq(
+    try! non_symbolic_encoding.test_matterhorn_json("31-024"),
+    Json::array([]),
+  )
+
+  let symbolic_non_symbolic_cmap = ua_matterhorn_document_for_test([])
+  symbolic_non_symbolic_cmap.add_object_given_number(
+    40,
+    ua_matterhorn_truetype_font_with_file_for_test(
+      Some(4),
+      None,
+      ua_matterhorn_truetype_cmap_font_for_test([(3, 1)]),
+    ),
+  )
+  @test.assert_eq(
+    try! symbolic_non_symbolic_cmap.test_matterhorn_json("31-017"),
+    Json::array([
+      ua_matterhorn_31_017_failure_for_test(Json::string("(3, 1) cmap")),
+    ]),
+  )
+  @test.assert_eq(
+    try! symbolic_non_symbolic_cmap.test_matterhorn_json("31-026"),
+    Json::array([]),
+  )
+
+  let symbolic_cmaps = ua_matterhorn_document_for_test([])
+  symbolic_cmaps.add_object_given_number(
+    40,
+    ua_matterhorn_truetype_font_with_file_for_test(
+      Some(4),
+      None,
+      ua_matterhorn_truetype_cmap_font_for_test([(1, 8), (3, 0)]),
+    ),
+  )
+  @test.assert_eq(
+    try! symbolic_cmaps.test_matterhorn_json("31-017"),
+    Json::array([]),
+  )
+  @test.assert_eq(
+    try! symbolic_cmaps.test_matterhorn_json("31-026"),
+    Json::array([]),
+  )
+
+  let symbolic_no_cmap = ua_matterhorn_document_for_test([])
+  symbolic_no_cmap.add_object_given_number(
+    40,
+    ua_matterhorn_truetype_font_with_file_for_test(Some(4), None, b"\x00"),
+  )
+  @test.assert_eq(
+    try! symbolic_no_cmap.test_matterhorn_json("31-025"),
+    Json::array([ua_matterhorn_31_025_failure_for_test()]),
+  )
+
+  let symbolic_missing_fontfile = ua_matterhorn_document_for_test([])
+  symbolic_missing_fontfile.add_object_given_number(
+    40,
+    ua_matterhorn_truetype_font_for_test(Some(4), None),
+  )
+  @test.assert_eq(
+    try! symbolic_missing_fontfile.test_matterhorn_json("31-025"),
+    Json::array([]),
+  )
+
+  let multiple_without_symbol_cmap = ua_matterhorn_document_for_test([])
+  multiple_without_symbol_cmap.add_object_given_number(
+    40,
+    ua_matterhorn_truetype_font_with_file_for_test(
+      Some(4),
+      None,
+      ua_matterhorn_truetype_cmap_font_for_test([(1, 0), (3, 1)]),
+    ),
+  )
+  @test.assert_eq(
+    try! multiple_without_symbol_cmap.test_matterhorn_json("31-026"),
+    Json::array([ua_matterhorn_31_026_failure_for_test()]),
   )
 }
