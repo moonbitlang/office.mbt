@@ -2954,6 +2954,23 @@ Current backend snapshot:
   native` passing with the known `markdown/cmd` warning and `moon check --target
   native --warn-list +73` at the known 10-warning baseline. Full native suite
   validation is deferred to the next batch.~~
+- [x] ~~Standalone `cpdfcontent.ml` ExtGState halftone-state slice adds
+  `halftone` to `PdfContentOperatorState` and q/Q frames, and exposes
+  `PdfDocument::content_apply_extgstate_halftone_op` plus
+  `pdf_content_apply_extgstate_halftone_op`, matching cpdf's initial `Pdf.Null`
+  default and `read_graphics_state_dictionary` `/HT`, source-shaped `/SMask`, and
+  `/HTO` assignments once an ExtGState dictionary has been resolved, including
+  source-order override behavior where `/SMask` replaces `/HT` and `/HTO`
+  replaces both, ignored `Null` values, arbitrary direct PDF object preservation,
+  and q/Q save-restore behavior while leaving resource-name resolution and the
+  remaining non-JSON graphics-state fields for later slices. Focused native
+  validation reports `moon test --target native
+  pdf_content_operator_state_test.mbt --filter '*ExtGState*'` at 8/8 tests
+  passing and `moon test --target native pdf_content_operator_state_test.mbt` at
+  24/24 tests passing; native check validation reports `moon check --target
+  native` passing with the known `markdown/cmd` warning and `moon check --target
+  native --warn-list +73` at the known 10-warning baseline. Full native suite
+  validation is deferred to the next batch.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,

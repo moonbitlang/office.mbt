@@ -19,6 +19,7 @@ pub(all) struct PdfContentOperatorFrame {
   black_generation : PdfObject
   undercolour_removal : PdfObject
   transfer : PdfObject
+  halftone : PdfObject
   marked_content_point : PdfContentMarkedContent?
   marked_content : Array[PdfContentMarkedContent]
   type3_d0 : PdfContentType3D0?
@@ -46,6 +47,7 @@ pub(all) struct PdfContentOperatorState {
   black_generation : PdfObject
   undercolour_removal : PdfObject
   transfer : PdfObject
+  halftone : PdfObject
   marked_content_point : PdfContentMarkedContent?
   marked_content : Array[PdfContentMarkedContent]
   type3_d0 : PdfContentType3D0?
@@ -116,6 +118,19 @@ let pdf_content_extgstate_tr_name : PdfName = pdf_content_extgstate_name("/TR")
 ///|
 let pdf_content_extgstate_tr2_name : PdfName = pdf_content_extgstate_name(
   "/TR2",
+)
+
+///|
+let pdf_content_extgstate_ht_name : PdfName = pdf_content_extgstate_name("/HT")
+
+///|
+let pdf_content_extgstate_smask_name : PdfName = pdf_content_extgstate_name(
+  "/SMask",
+)
+
+///|
+let pdf_content_extgstate_hto_name : PdfName = pdf_content_extgstate_name(
+  "/HTO",
 )
 
 ///|
@@ -195,6 +210,7 @@ pub fn pdf_content_initial_operator_state(
     black_generation: PdfNull,
     undercolour_removal: PdfNull,
     transfer: PdfNull,
+    halftone: PdfNull,
     marked_content_point: None,
     marked_content: [],
     type3_d0: None,
@@ -227,6 +243,7 @@ fn PdfContentOperatorState::content_frame(
     black_generation: self.black_generation,
     undercolour_removal: self.undercolour_removal,
     transfer: self.transfer,
+    halftone: self.halftone,
     marked_content_point: self.marked_content_point,
     marked_content: pdf_content_operator_copy_marked_content(
       self.marked_content,
@@ -326,6 +343,7 @@ fn PdfContentOperatorState::content_pop_state(
       black_generation: frame.black_generation,
       undercolour_removal: frame.undercolour_removal,
       transfer: frame.transfer,
+      halftone: frame.halftone,
       marked_content_point: frame.marked_content_point,
       marked_content: pdf_content_operator_copy_marked_content(
         frame.marked_content,
@@ -665,6 +683,39 @@ pub fn pdf_content_apply_extgstate_transfer_op(
   extgstate : PdfObject,
 ) -> PdfContentOperatorState {
   document.content_apply_extgstate_transfer_op(state, extgstate)
+}
+
+///|
+/// Apply cpdfcontent halftone objects from a resolved ExtGState dictionary.
+pub fn PdfDocument::content_apply_extgstate_halftone_op(
+  self : PdfDocument,
+  state : PdfContentOperatorState,
+  extgstate : PdfObject,
+) -> PdfContentOperatorState {
+  let mut output = state
+  match self.lookup_direct(pdf_content_extgstate_ht_name, extgstate) {
+    Some(value) => output = { ..output, halftone: value }
+    None => ()
+  }
+  match self.lookup_direct(pdf_content_extgstate_smask_name, extgstate) {
+    Some(value) => output = { ..output, halftone: value }
+    None => ()
+  }
+  match self.lookup_direct(pdf_content_extgstate_hto_name, extgstate) {
+    Some(value) => output = { ..output, halftone: value }
+    None => ()
+  }
+  output
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::content_apply_extgstate_halftone_op`.
+pub fn pdf_content_apply_extgstate_halftone_op(
+  document : PdfDocument,
+  state : PdfContentOperatorState,
+  extgstate : PdfObject,
+) -> PdfContentOperatorState {
+  document.content_apply_extgstate_halftone_op(state, extgstate)
 }
 
 ///|
