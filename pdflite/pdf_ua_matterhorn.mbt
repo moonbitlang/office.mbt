@@ -63,6 +63,16 @@ fn pdf_ua_matterhorn_cid_font_type2() -> PdfName {
 }
 
 ///|
+let pdf_ua_matterhorn_cid_font_type0_name : PdfName = pdf_ua_name(
+  "/CIDFontType0",
+)
+
+///|
+fn pdf_ua_matterhorn_cid_font_type0() -> PdfName {
+  pdf_ua_matterhorn_cid_font_type0_name
+}
+
+///|
 let pdf_ua_matterhorn_identity_name : PdfName = pdf_ua_name("/Identity")
 
 ///|
@@ -85,6 +95,26 @@ let pdf_ua_matterhorn_identity_v_name : PdfName = pdf_ua_name("/Identity-V")
 fn pdf_ua_matterhorn_identity_v() -> PdfName {
   pdf_ua_matterhorn_identity_v_name
 }
+
+///|
+let pdf_ua_matterhorn_adobe_name : PdfName = pdf_ua_name("/Adobe")
+
+///|
+fn pdf_ua_matterhorn_adobe() -> PdfName {
+  pdf_ua_matterhorn_adobe_name
+}
+
+///|
+let pdf_ua_matterhorn_gb1_name : PdfName = pdf_ua_name("/GB1")
+
+///|
+let pdf_ua_matterhorn_cns1_name : PdfName = pdf_ua_name("/CNS1")
+
+///|
+let pdf_ua_matterhorn_japan1_name : PdfName = pdf_ua_name("/Japan1")
+
+///|
+let pdf_ua_matterhorn_korea1_name : PdfName = pdf_ua_name("/Korea1")
 
 ///|
 let pdf_ua_matterhorn_cmap_names : Array[PdfName] = [
@@ -742,6 +772,15 @@ fn pdf_ua_matterhorn_test_31_026() -> PdfUAMatterhornTest {
 }
 
 ///|
+fn pdf_ua_matterhorn_test_31_027() -> PdfUAMatterhornTest {
+  {
+    name: "31-027",
+    error: "A font dictionary does not contain the ToUnicode entry and none of the following is true: the font uses MacRomanEncoding, MacExpertEncoding or WinAnsiEncoding; the font is a Type 1 or Type 3 font and the glyph names of the glyphs referenced are all contained in the Adobe Glyph List or the set of named characters in the Symbol font, as defined in ISO 32000-1:2008, Annex D; the font is a Type 0 font, and its descendant CIDFont uses Adobe-GB1, Adobe-CNS1, Adobe-Japan1 or Adobe-Korea1 character collections; the font is a non-symbolic TrueType font.",
+    section: "UA1:7.21.7-1",
+  }
+}
+
+///|
 fn pdf_ua_matterhorn_test_31_028() -> PdfUAMatterhornTest {
   {
     name: "31-028",
@@ -818,6 +857,7 @@ fn pdf_ua_matterhorn_implemented_tests() -> Array[PdfUAMatterhornTest] {
     pdf_ua_matterhorn_test_31_024(),
     pdf_ua_matterhorn_test_31_025(),
     pdf_ua_matterhorn_test_31_026(),
+    pdf_ua_matterhorn_test_31_027(),
     pdf_ua_matterhorn_test_31_028(),
     pdf_ua_matterhorn_test_31_029(),
     pdf_ua_matterhorn_test_31_030(),
@@ -2237,6 +2277,104 @@ fn PdfDocument::pdf_ua_matterhorn_check_31_026(
 }
 
 ///|
+fn pdf_ua_matterhorn_font_uses_known_encoding(
+  document : PdfDocument,
+  object : PdfObject,
+) -> Bool {
+  match document.lookup_direct(pdf_text_encoding_key_name, object) {
+    Some(PdfNameObject(name)) =>
+      name == pdf_text_mac_roman_encoding_name ||
+      name == pdf_text_mac_expert_encoding_name ||
+      name == pdf_text_win_ansi_encoding_name
+    _ => false
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_supported_cid_ordering(name : PdfName) -> Bool {
+  name == pdf_ua_matterhorn_gb1_name ||
+  name == pdf_ua_matterhorn_cns1_name ||
+  name == pdf_ua_matterhorn_japan1_name ||
+  name == pdf_ua_matterhorn_korea1_name
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_type0_uses_supported_cid_collection(
+  self : PdfDocument,
+  object : PdfObject,
+) -> Bool {
+  match
+    (
+      self.lookup_direct(pdf_text_subtype_key_name, object),
+      self.lookup_direct(pdf_text_descendant_fonts_key_name, object),
+    ) {
+    (Some(PdfNameObject(subtype)), Some(PdfArray([descendant]))) if subtype ==
+      pdf_text_type0_name =>
+      match self.lookup_direct(pdf_text_cid_system_info_key_name, descendant) {
+        Some(info) =>
+          match
+            (
+              self.lookup_direct(pdf_text_registry_key_name, info),
+              self.lookup_direct(pdf_text_ordering_key_name, info),
+            ) {
+            (Some(PdfNameObject(registry)), Some(PdfNameObject(ordering))) =>
+              registry == pdf_ua_matterhorn_adobe() &&
+              pdf_ua_matterhorn_supported_cid_ordering(ordering)
+            _ => false
+          }
+        None => false
+      }
+    _ => false
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_source_silences_missing_tounicode(
+  subtype : PdfName,
+) -> Bool {
+  subtype == pdf_text_type0_name ||
+  subtype == pdf_ua_matterhorn_cid_font_type0() ||
+  subtype == pdf_ua_matterhorn_cid_font_type2()
+}
+
+///|
+fn pdf_ua_matterhorn_missing_tounicode_source_unimplemented(
+  subtype : PdfName,
+) -> Bool {
+  subtype == pdf_text_type1_name ||
+  subtype == pdf_text_mmtype1_name ||
+  subtype == pdf_text_type3_name
+}
+
+///|
+/// Preserve cpdf source behavior: the Type1/Type3 referenced-glyph branch raises
+/// MatterhornUnimplemented and is caught by the source runner as no failure.
+fn PdfDocument::pdf_ua_matterhorn_check_31_027(self : PdfDocument) -> Json? {
+  for entry in self.parsed_object_entries() {
+    if self.lookup_direct(pdf_text_tounicode_key_name, entry.2) is None {
+      match self.lookup_direct(pdf_text_type_key_name, entry.2) {
+        Some(PdfNameObject(type_name)) if type_name == pdf_text_font_name =>
+          if !pdf_ua_matterhorn_font_uses_known_encoding(self, entry.2) &&
+            !self.pdf_ua_matterhorn_type0_uses_supported_cid_collection(entry.2) &&
+            !self.pdf_ua_matterhorn_is_non_symbolic(entry.2) {
+            match self.lookup_direct(pdf_text_subtype_key_name, entry.2) {
+              Some(PdfNameObject(subtype)) if pdf_ua_matterhorn_source_silences_missing_tounicode(
+                  subtype,
+                ) => ()
+              Some(PdfNameObject(subtype)) if pdf_ua_matterhorn_missing_tounicode_source_unimplemented(
+                  subtype,
+                ) => return None
+              _ => return Some(pdf_ua_matterhorn_object_string_extra(entry.2))
+            }
+          }
+        _ => ()
+      }
+    }
+  }
+  None
+}
+
+///|
 fn PdfDocument::pdf_ua_matterhorn_tounicode_numbers(
   self : PdfDocument,
 ) -> Array[Int] {
@@ -2344,6 +2482,7 @@ fn PdfDocument::pdf_ua_matterhorn_run_test(
     "31-024" => self.pdf_ua_matterhorn_check_31_024()
     "31-025" => self.pdf_ua_matterhorn_check_31_025()
     "31-026" => self.pdf_ua_matterhorn_check_31_026()
+    "31-027" => self.pdf_ua_matterhorn_check_31_027()
     "31-028" => self.pdf_ua_matterhorn_check_31_028()
     "31-029" => self.pdf_ua_matterhorn_check_31_029()
     "31-011"
@@ -2423,7 +2562,7 @@ fn PdfDocument::pdf_ua_matterhorn_failures(
 /// checks `31-001` through `31-009`, and source-unimplemented font-file checks
 /// `31-011` through `31-016`, `31-018`, and `31-030`, plus TrueType encoding
 /// dictionary and cmap checks `31-017` and `31-019` through `31-026`, and
-/// ToUnicode value checks `31-028` and `31-029`. Passing `""` runs the covered
+/// ToUnicode presence/value checks `31-027` through `31-029`. Passing `""` runs the covered
 /// subset; unsupported individual test names raise a soft error until their
 /// source checks are ported.
 pub fn PdfDocument::test_matterhorn_json(

@@ -394,6 +394,14 @@ fn ua_matterhorn_31_026_failure_for_test() -> Json {
 }
 
 ///|
+fn ua_matterhorn_31_027_failure_for_test(extra : Json) -> Json {
+  ua_matterhorn_failure_for_test(
+    "31-027", "UA1:7.21.7-1", "A font dictionary does not contain the ToUnicode entry and none of the following is true: the font uses MacRomanEncoding, MacExpertEncoding or WinAnsiEncoding; the font is a Type 1 or Type 3 font and the glyph names of the glyphs referenced are all contained in the Adobe Glyph List or the set of named characters in the Symbol font, as defined in ISO 32000-1:2008, Annex D; the font is a Type 0 font, and its descendant CIDFont uses Adobe-GB1, Adobe-CNS1, Adobe-Japan1 or Adobe-Korea1 character collections; the font is a non-symbolic TrueType font.",
+    extra,
+  )
+}
+
+///|
 fn ua_matterhorn_31_028_failure_for_test() -> Json {
   ua_matterhorn_failure_for_test(
     "31-028",
@@ -629,6 +637,7 @@ fn ua_matterhorn_font_for_test(
   basefont : String,
   encoding : String?,
   descriptor : @pdflite.PdfObject?,
+  extras? : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)] = [],
 ) -> @pdflite.PdfObject {
   let entries : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = [
     (
@@ -658,6 +667,9 @@ fn ua_matterhorn_font_for_test(
     Some(value) =>
       entries.push((ua_matterhorn_name_for_test("/FontDescriptor"), value))
     None => ()
+  }
+  for extra in extras {
+    entries.push(extra)
   }
   PdfDictionary(entries)
 }
@@ -2131,6 +2143,129 @@ test "PdfDocument test_matterhorn_json checks TrueType cmap Matterhorn checks" {
   @test.assert_eq(
     try! multiple_without_symbol_cmap.test_matterhorn_json("31-026"),
     Json::array([ua_matterhorn_31_026_failure_for_test()]),
+  )
+}
+
+///|
+test "PdfDocument test_matterhorn_json checks missing ToUnicode exemptions" {
+  let symbolic_descriptor = ua_matterhorn_font_descriptor_for_test(Some(4))
+  let symbolic_truetype = ua_matterhorn_font_for_test(
+    "/TrueType",
+    "/SymbolicTrueType",
+    None,
+    Some(symbolic_descriptor),
+  )
+  let missing_tounicode = ua_matterhorn_document_for_test([])
+  missing_tounicode.add_object_given_number(40, symbolic_truetype)
+  @test.assert_eq(
+    try! missing_tounicode.test_matterhorn_json("31-027"),
+    Json::array([
+      ua_matterhorn_31_027_failure_for_test(
+        ua_matterhorn_serialized_object_extra_for_test(symbolic_truetype),
+      ),
+    ]),
+  )
+
+  let with_tounicode = ua_matterhorn_document_for_test([])
+  with_tounicode.add_object_given_number(
+    40,
+    ua_matterhorn_font_for_test(
+      "/TrueType",
+      "/SymbolicTrueType",
+      None,
+      Some(symbolic_descriptor),
+      extras=[
+        (
+          ua_matterhorn_name_for_test("/ToUnicode"),
+          @pdflite.pdf_stream(PdfDictionary([]), StreamGot(b"")),
+        ),
+      ],
+    ),
+  )
+  @test.assert_eq(
+    try! with_tounicode.test_matterhorn_json("31-027"),
+    Json::array([]),
+  )
+
+  let winansi = ua_matterhorn_document_for_test([])
+  winansi.add_object_given_number(
+    40,
+    ua_matterhorn_font_for_test(
+      "/TrueType",
+      "/SymbolicTrueType",
+      Some("/WinAnsiEncoding"),
+      Some(symbolic_descriptor),
+    ),
+  )
+  @test.assert_eq(try! winansi.test_matterhorn_json("31-027"), Json::array([]))
+
+  let type0_collection = ua_matterhorn_document_for_test([])
+  type0_collection.add_object_given_number(
+    41,
+    PdfDictionary([
+      (
+        ua_matterhorn_name_for_test("/CIDSystemInfo"),
+        PdfDictionary([
+          (
+            ua_matterhorn_name_for_test("/Registry"),
+            PdfNameObject(ua_matterhorn_name_for_test("/Adobe")),
+          ),
+          (
+            ua_matterhorn_name_for_test("/Ordering"),
+            PdfNameObject(ua_matterhorn_name_for_test("/GB1")),
+          ),
+        ]),
+      ),
+    ]),
+  )
+  type0_collection.add_object_given_number(
+    40,
+    ua_matterhorn_font_for_test(
+      "/Type0",
+      "/Composite",
+      None,
+      Some(symbolic_descriptor),
+      extras=[
+        (
+          ua_matterhorn_name_for_test("/DescendantFonts"),
+          PdfArray([PdfIndirect(41)]),
+        ),
+      ],
+    ),
+  )
+  @test.assert_eq(
+    try! type0_collection.test_matterhorn_json("31-027"),
+    Json::array([]),
+  )
+
+  let cid_font_silent = ua_matterhorn_document_for_test([])
+  cid_font_silent.add_object_given_number(
+    40,
+    ua_matterhorn_font_for_test(
+      "/CIDFontType2",
+      "/CID",
+      None,
+      Some(symbolic_descriptor),
+    ),
+  )
+  @test.assert_eq(
+    try! cid_font_silent.test_matterhorn_json("31-027"),
+    Json::array([]),
+  )
+
+  let type1_unimplemented = ua_matterhorn_document_for_test([])
+  type1_unimplemented.add_object_given_number(
+    40,
+    ua_matterhorn_font_for_test(
+      "/Type1",
+      "/SymbolicType1",
+      None,
+      Some(symbolic_descriptor),
+    ),
+  )
+  @test.assert_eq(
+    try! type1_unimplemented.test_matterhorn_json("31-027"),
+    Json::array([]),
   )
 }
 
