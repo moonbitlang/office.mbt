@@ -28,7 +28,8 @@ Current estimate:
   info synchronization, XMP metadata creation, XMP RDF list extraction,
   XMP/document info JSON reporting, redaction annotation bounding-box overlays,
   cpdfua Matterhorn content/role-map/XMP/viewer-preference/optional-content/
-  reference-XObject validation, imposition
+  media-clip/file-attachment/PrinterMark/reference-XObject validation,
+  imposition
   transform/content/page-assembly/pattern-matrix kernels, cpdf page
   hard-box/removal/shift/scale/scale-to-fit/upright/set-mediabox/copy-box
   helpers, imposition make-space orchestration, border stamping, layout
@@ -325,6 +326,26 @@ Current backend snapshot:
   the known 10-warning baseline; `moon info` and `moon fmt` were run to update
   generated interfaces and formatting. Batched full native validation reports
   `moon test --target native` at 1998/1998 tests passing.~~
+- [x] ~~Port the `cpdfua` Matterhorn media-clip and PrinterMark slice:
+  the covered Matterhorn surface now includes source checks `28-014`,
+  `28-015`, `28-016`, and `28-017`, preserving cpdf's object traversal for
+  media clip data dictionaries and PrinterMark annotations. Check `28-015`
+  intentionally matches the source implementation by testing the same missing
+  `/CT` condition as `28-014`, despite its Matterhorn label mentioning `/Alt`;
+  check `28-016` remains the source no-op covered elsewhere. Coverage pins both
+  `28-014` and `28-015` on `/Type /MediaClip` plus `/S /MCD` without `/CT`,
+  verifies adding `/CT` clears both failures, confirms `28-016` returns no
+  failures, and detects `/Subtype /PrinterMark` only when `/StructParent` is
+  present. Focused native validation reports
+  `moon test --target native pdf_ua_matterhorn_test.mbt --filter '*media
+  clip*'`, `moon test --target native pdf_ua_matterhorn_test.mbt --filter
+  '*PrinterMark*'`, and `moon test --target native pdf_ua_matterhorn_test.mbt
+  --filter '*file attachment*'` at 1/1 test passing each; widened native
+  validation reports `moon test --target native pdf_ua_matterhorn_test.mbt` at
+  19/19 tests passing. Native check validation reports
+  `moon check --target native` passing with the known `markdown/cmd` warning
+  and `moon check --target native --warn-list +73` at the known 10-warning
+  baseline. Full native suite validation is deferred to the next batch.~~
 - [x] ~~Port the current stub/no-op redaction APIs from `cpdfredact`: `redact`
   is exposed as `redact_path`/`pdf_redact` and preserves page content while
   validating the selected page range, while `apply` and `apply_type` are

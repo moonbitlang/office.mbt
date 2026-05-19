@@ -162,6 +162,36 @@ fn ua_matterhorn_20_003_failure_for_test() -> Json {
 }
 
 ///|
+fn ua_matterhorn_28_014_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "28-014",
+    "",
+    "CT entry is missing from the media clip data dictionary.",
+    Json::null(),
+  )
+}
+
+///|
+fn ua_matterhorn_28_015_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "28-015",
+    "UA1:7.18.6.2-1",
+    "Alt entry is missing from the media clip data dictionary.",
+    Json::null(),
+  )
+}
+
+///|
+fn ua_matterhorn_28_017_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "28-017",
+    "UA1:7.18.8-1",
+    "A PrinterMark annotation is included in the logical structure.",
+    Json::null(),
+  )
+}
+
+///|
 fn ua_matterhorn_30_001_failure_for_test() -> Json {
   ua_matterhorn_failure_for_test(
     "30-001",
@@ -613,6 +643,87 @@ test "PdfDocument test_matterhorn_json detects optional content AS entries" {
     ]),
   ])
   @test.assert_eq(try! valid.test_matterhorn_json("20-003"), Json::array([]))
+}
+
+///|
+test "PdfDocument test_matterhorn_json detects media clip dictionaries" {
+  let key_type = ua_matterhorn_name_for_test("/Type")
+  let key_s = ua_matterhorn_name_for_test("/S")
+  let key_ct = ua_matterhorn_name_for_test("/CT")
+  let media_clip : @pdflite.PdfObject = PdfDictionary([
+    (key_type, PdfNameObject(ua_matterhorn_name_for_test("/MediaClip"))),
+    (key_s, PdfNameObject(ua_matterhorn_name_for_test("/MCD"))),
+  ])
+  let document = ua_matterhorn_document_for_test([])
+  document.add_object_given_number(40, media_clip)
+  @test.assert_eq(
+    try! document.test_matterhorn_json("28-014"),
+    Json::array([ua_matterhorn_28_014_failure_for_test()]),
+  )
+  @test.assert_eq(
+    try! document.test_matterhorn_json("28-015"),
+    Json::array([ua_matterhorn_28_015_failure_for_test()]),
+  )
+
+  let with_ct = ua_matterhorn_document_for_test([])
+  with_ct.add_object_given_number(
+    40,
+    try! media_clip.add_dict_entry(
+      key_ct,
+      PdfString(@ascii.encode("video/mp4")),
+    ),
+  )
+  @test.assert_eq(try! with_ct.test_matterhorn_json("28-014"), Json::array([]))
+  @test.assert_eq(try! with_ct.test_matterhorn_json("28-015"), Json::array([]))
+}
+
+///|
+test "PdfDocument test_matterhorn_json handles file attachment conformance no-op" {
+  let document = ua_matterhorn_document_for_test([])
+  @test.assert_eq(try! document.test_matterhorn_json("28-016"), Json::array([]))
+}
+
+///|
+test "PdfDocument test_matterhorn_json detects PrinterMark structure entries" {
+  let key_subtype = ua_matterhorn_name_for_test("/Subtype")
+  let key_struct_parent = ua_matterhorn_name_for_test("/StructParent")
+  let document = ua_matterhorn_document_for_test([])
+  document.add_object_given_number(
+    40,
+    PdfDictionary([
+      (key_subtype, PdfNameObject(ua_matterhorn_name_for_test("/PrinterMark"))),
+      (key_struct_parent, PdfInteger(0)),
+    ]),
+  )
+  @test.assert_eq(
+    try! document.test_matterhorn_json("28-017"),
+    Json::array([ua_matterhorn_28_017_failure_for_test()]),
+  )
+
+  let unstructured = ua_matterhorn_document_for_test([])
+  unstructured.add_object_given_number(
+    40,
+    PdfDictionary([
+      (key_subtype, PdfNameObject(ua_matterhorn_name_for_test("/PrinterMark"))),
+    ]),
+  )
+  @test.assert_eq(
+    try! unstructured.test_matterhorn_json("28-017"),
+    Json::array([]),
+  )
+
+  let other_subtype = ua_matterhorn_document_for_test([])
+  other_subtype.add_object_given_number(
+    40,
+    PdfDictionary([
+      (key_subtype, PdfNameObject(ua_matterhorn_name_for_test("/Text"))),
+      (key_struct_parent, PdfInteger(0)),
+    ]),
+  )
+  @test.assert_eq(
+    try! other_subtype.test_matterhorn_json("28-017"),
+    Json::array([]),
+  )
 }
 
 ///|

@@ -77,6 +77,48 @@ fn pdf_ua_matterhorn_ref_key() -> PdfName {
 }
 
 ///|
+let pdf_ua_matterhorn_ct_key_name : PdfName = pdf_ua_name("/CT")
+
+///|
+fn pdf_ua_matterhorn_ct_key() -> PdfName {
+  pdf_ua_matterhorn_ct_key_name
+}
+
+///|
+let pdf_ua_matterhorn_struct_parent_key_name : PdfName = pdf_ua_name(
+  "/StructParent",
+)
+
+///|
+fn pdf_ua_matterhorn_struct_parent_key() -> PdfName {
+  pdf_ua_matterhorn_struct_parent_key_name
+}
+
+///|
+let pdf_ua_matterhorn_media_clip_name : PdfName = pdf_ua_name("/MediaClip")
+
+///|
+fn pdf_ua_matterhorn_media_clip() -> PdfName {
+  pdf_ua_matterhorn_media_clip_name
+}
+
+///|
+let pdf_ua_matterhorn_mcd_name : PdfName = pdf_ua_name("/MCD")
+
+///|
+fn pdf_ua_matterhorn_mcd() -> PdfName {
+  pdf_ua_matterhorn_mcd_name
+}
+
+///|
+let pdf_ua_matterhorn_printer_mark_name : PdfName = pdf_ua_name("/PrinterMark")
+
+///|
+fn pdf_ua_matterhorn_printer_mark() -> PdfName {
+  pdf_ua_matterhorn_printer_mark_name
+}
+
+///|
 fn pdf_ua_matterhorn_test_01_003() -> PdfUAMatterhornTest {
   {
     name: "01-003",
@@ -208,6 +250,42 @@ fn pdf_ua_matterhorn_test_20_003() -> PdfUAMatterhornTest {
 }
 
 ///|
+fn pdf_ua_matterhorn_test_28_014() -> PdfUAMatterhornTest {
+  {
+    name: "28-014",
+    error: "CT entry is missing from the media clip data dictionary.",
+    section: "",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_28_015() -> PdfUAMatterhornTest {
+  {
+    name: "28-015",
+    error: "Alt entry is missing from the media clip data dictionary.",
+    section: "UA1:7.18.6.2-1",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_28_016() -> PdfUAMatterhornTest {
+  {
+    name: "28-016",
+    error: "File attachment annotations do not conform to 7.11.",
+    section: "UA1:7.18.7-1",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_28_017() -> PdfUAMatterhornTest {
+  {
+    name: "28-017",
+    error: "A PrinterMark annotation is included in the logical structure.",
+    section: "UA1:7.18.8-1",
+  }
+}
+
+///|
 fn pdf_ua_matterhorn_test_30_001() -> PdfUAMatterhornTest {
   {
     name: "30-001",
@@ -234,6 +312,10 @@ fn pdf_ua_matterhorn_implemented_tests() -> Array[PdfUAMatterhornTest] {
     pdf_ua_matterhorn_test_20_001(),
     pdf_ua_matterhorn_test_20_002(),
     pdf_ua_matterhorn_test_20_003(),
+    pdf_ua_matterhorn_test_28_014(),
+    pdf_ua_matterhorn_test_28_015(),
+    pdf_ua_matterhorn_test_28_016(),
+    pdf_ua_matterhorn_test_28_017(),
     pdf_ua_matterhorn_test_30_001(),
   ]
 }
@@ -884,6 +966,67 @@ fn PdfDocument::pdf_ua_matterhorn_check_20_003(self : PdfDocument) -> Json? {
 }
 
 ///|
+fn PdfDocument::pdf_ua_matterhorn_media_clip_mcd_without_ct(
+  self : PdfDocument,
+  object : PdfObject,
+) -> Bool {
+  match
+    (
+      self.lookup_direct(pdf_ua_type_key(), object),
+      self.lookup_direct(pdf_ua_s_key(), object),
+      self.lookup_direct(pdf_ua_matterhorn_ct_key(), object),
+    ) {
+    (Some(PdfNameObject(kind)), Some(PdfNameObject(subtype)), None) =>
+      kind == pdf_ua_matterhorn_media_clip() &&
+      subtype == pdf_ua_matterhorn_mcd()
+    _ => false
+  }
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_28_014(self : PdfDocument) -> Json? {
+  for entry in self.parsed_object_entries() {
+    if self.pdf_ua_matterhorn_media_clip_mcd_without_ct(entry.2) {
+      return Some(Json::null())
+    }
+  }
+  None
+}
+
+///|
+// Preserve cpdf source behavior: 28-015 reports missing /Alt but checks the
+// same missing /CT condition as 28-014.
+fn PdfDocument::pdf_ua_matterhorn_check_28_015(self : PdfDocument) -> Json? {
+  for entry in self.parsed_object_entries() {
+    if self.pdf_ua_matterhorn_media_clip_mcd_without_ct(entry.2) {
+      return Some(Json::null())
+    }
+  }
+  None
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_28_016(_self : PdfDocument) -> Json? {
+  None
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_28_017(self : PdfDocument) -> Json? {
+  for entry in self.parsed_object_entries() {
+    match
+      (
+        self.lookup_direct(pdf_ua_subtype_key(), entry.2),
+        self.lookup_direct(pdf_ua_matterhorn_struct_parent_key(), entry.2),
+      ) {
+      (Some(PdfNameObject(subtype)), Some(_)) if subtype ==
+        pdf_ua_matterhorn_printer_mark() => return Some(Json::null())
+      _ => ()
+    }
+  }
+  None
+}
+
+///|
 fn PdfDocument::pdf_ua_matterhorn_check_30_001(self : PdfDocument) -> Json? {
   for entry in self.parsed_object_entries() {
     match
@@ -920,6 +1063,10 @@ fn PdfDocument::pdf_ua_matterhorn_run_test(
     "20-001" => self.pdf_ua_matterhorn_check_20_001()
     "20-002" => self.pdf_ua_matterhorn_check_20_002()
     "20-003" => self.pdf_ua_matterhorn_check_20_003()
+    "28-014" => self.pdf_ua_matterhorn_check_28_014()
+    "28-015" => self.pdf_ua_matterhorn_check_28_015()
+    "28-016" => self.pdf_ua_matterhorn_check_28_016()
+    "28-017" => self.pdf_ua_matterhorn_check_28_017()
     "30-001" => self.pdf_ua_matterhorn_check_30_001()
     _ => None
   }
@@ -983,10 +1130,11 @@ fn PdfDocument::pdf_ua_matterhorn_failures(
 /// The current migration covers content-marking checks `01-003`, `01-004`,
 /// `01-005`, and `01-007`, role-map checks `02-001`, `02-003`, and `02-004`,
 /// XMP metadata and DisplayDocTitle checks `06-001` through `07-002`, and
-/// optional-content configuration checks `20-001` through `20-003`, plus
-/// reference-XObject check `30-001`. Passing `""` runs the covered subset;
-/// unsupported individual test names raise a soft error until their source
-/// checks are ported.
+/// optional-content configuration checks `20-001` through `20-003`, media-clip
+/// checks `28-014` and `28-015`, file-attachment no-op `28-016`, PrinterMark
+/// object check `28-017`, plus reference-XObject check `30-001`. Passing `""`
+/// runs the covered subset; unsupported individual test names raise a soft
+/// error until their source checks are ported.
 pub fn PdfDocument::test_matterhorn_json(
   self : PdfDocument,
   test_name : String,
