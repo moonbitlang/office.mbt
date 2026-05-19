@@ -16,6 +16,9 @@ pub(all) struct PdfContentOperatorFrame {
   overprint_stroke : Bool
   overprint_non_stroke : Bool
   overprint_mode : Int
+  black_generation : PdfObject
+  undercolour_removal : PdfObject
+  transfer : PdfObject
   marked_content_point : PdfContentMarkedContent?
   marked_content : Array[PdfContentMarkedContent]
   type3_d0 : PdfContentType3D0?
@@ -40,6 +43,9 @@ pub(all) struct PdfContentOperatorState {
   overprint_stroke : Bool
   overprint_non_stroke : Bool
   overprint_mode : Int
+  black_generation : PdfObject
+  undercolour_removal : PdfObject
+  transfer : PdfObject
   marked_content_point : PdfContentMarkedContent?
   marked_content : Array[PdfContentMarkedContent]
   type3_d0 : PdfContentType3D0?
@@ -84,6 +90,32 @@ let pdf_content_extgstate_op_stroke_name : PdfName = pdf_content_extgstate_name(
 ///|
 let pdf_content_extgstate_op_non_stroke_name : PdfName = pdf_content_extgstate_name(
   "/op",
+)
+
+///|
+let pdf_content_extgstate_bg_name : PdfName = pdf_content_extgstate_name("/BG")
+
+///|
+let pdf_content_extgstate_bg2_name : PdfName = pdf_content_extgstate_name(
+  "/BG2",
+)
+
+///|
+let pdf_content_extgstate_ucr_name : PdfName = pdf_content_extgstate_name(
+  "/UCR",
+)
+
+///|
+let pdf_content_extgstate_ucr2_name : PdfName = pdf_content_extgstate_name(
+  "/UCR2",
+)
+
+///|
+let pdf_content_extgstate_tr_name : PdfName = pdf_content_extgstate_name("/TR")
+
+///|
+let pdf_content_extgstate_tr2_name : PdfName = pdf_content_extgstate_name(
+  "/TR2",
 )
 
 ///|
@@ -160,6 +192,9 @@ pub fn pdf_content_initial_operator_state(
     overprint_stroke: false,
     overprint_non_stroke: false,
     overprint_mode: 0,
+    black_generation: PdfNull,
+    undercolour_removal: PdfNull,
+    transfer: PdfNull,
     marked_content_point: None,
     marked_content: [],
     type3_d0: None,
@@ -189,6 +224,9 @@ fn PdfContentOperatorState::content_frame(
     overprint_stroke: self.overprint_stroke,
     overprint_non_stroke: self.overprint_non_stroke,
     overprint_mode: self.overprint_mode,
+    black_generation: self.black_generation,
+    undercolour_removal: self.undercolour_removal,
+    transfer: self.transfer,
     marked_content_point: self.marked_content_point,
     marked_content: pdf_content_operator_copy_marked_content(
       self.marked_content,
@@ -285,6 +323,9 @@ fn PdfContentOperatorState::content_pop_state(
       overprint_stroke: frame.overprint_stroke,
       overprint_non_stroke: frame.overprint_non_stroke,
       overprint_mode: frame.overprint_mode,
+      black_generation: frame.black_generation,
+      undercolour_removal: frame.undercolour_removal,
+      transfer: frame.transfer,
       marked_content_point: frame.marked_content_point,
       marked_content: pdf_content_operator_copy_marked_content(
         frame.marked_content,
@@ -579,6 +620,51 @@ pub fn pdf_content_apply_extgstate_overprint_op(
   extgstate : PdfObject,
 ) -> PdfContentOperatorState {
   document.content_apply_extgstate_overprint_op(state, extgstate)
+}
+
+///|
+/// Apply cpdfcontent transfer-function objects from a resolved ExtGState dictionary.
+pub fn PdfDocument::content_apply_extgstate_transfer_op(
+  self : PdfDocument,
+  state : PdfContentOperatorState,
+  extgstate : PdfObject,
+) -> PdfContentOperatorState {
+  let mut output = state
+  match self.lookup_direct(pdf_content_extgstate_bg_name, extgstate) {
+    Some(value) => output = { ..output, black_generation: value }
+    None => ()
+  }
+  match self.lookup_direct(pdf_content_extgstate_bg2_name, extgstate) {
+    Some(value) => output = { ..output, black_generation: value }
+    None => ()
+  }
+  match self.lookup_direct(pdf_content_extgstate_ucr_name, extgstate) {
+    Some(value) => output = { ..output, undercolour_removal: value }
+    None => ()
+  }
+  match self.lookup_direct(pdf_content_extgstate_ucr2_name, extgstate) {
+    Some(value) => output = { ..output, undercolour_removal: value }
+    None => ()
+  }
+  match self.lookup_direct(pdf_content_extgstate_tr_name, extgstate) {
+    Some(value) => output = { ..output, transfer: value }
+    None => ()
+  }
+  match self.lookup_direct(pdf_content_extgstate_tr2_name, extgstate) {
+    Some(value) => output = { ..output, transfer: value }
+    None => ()
+  }
+  output
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::content_apply_extgstate_transfer_op`.
+pub fn pdf_content_apply_extgstate_transfer_op(
+  document : PdfDocument,
+  state : PdfContentOperatorState,
+  extgstate : PdfObject,
+) -> PdfContentOperatorState {
+  document.content_apply_extgstate_transfer_op(state, extgstate)
 }
 
 ///|
