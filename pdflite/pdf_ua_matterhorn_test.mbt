@@ -59,6 +59,56 @@ fn ua_matterhorn_01_007_failure_for_test() -> Json {
 }
 
 ///|
+fn ua_matterhorn_06_001_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "06-001",
+    "UA1:7.1-8",
+    "Document does not contain an XMP metadata stream",
+    Json::null(),
+  )
+}
+
+///|
+fn ua_matterhorn_06_002_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "06-002",
+    "UA1:5",
+    "The XMP metadata stream in the Catalog dictionary does not include the PDF/UA identifier.",
+    Json::null(),
+  )
+}
+
+///|
+fn ua_matterhorn_06_003_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "06-003",
+    "UA1:7.1-8",
+    "XMP metadata stream does not contain dc:title",
+    Json::null(),
+  )
+}
+
+///|
+fn ua_matterhorn_07_001_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "07-001",
+    "UA1:7.1-9",
+    "ViewerPreferences dictionary of the Catalog dictionary does not contain a DisplayDocTitle entry",
+    Json::null(),
+  )
+}
+
+///|
+fn ua_matterhorn_07_002_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "07-002",
+    "UA1:7.1-9",
+    "ViewerPreferences dictionary of the Catalog dictionary contains a DisplayDocTitle entry with a value of false",
+    Json::null(),
+  )
+}
+
+///|
 fn ua_matterhorn_document_for_test(
   ops : ArrayView[@pdflite.PdfContentOp],
   root_extras? : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)] = [],
@@ -71,6 +121,27 @@ fn ua_matterhorn_document_for_test(
   let page_root = try! doc.add_pagetree([page])
   ignore(try! doc.add_root(page_root, root_extras))
   doc
+}
+
+///|
+fn ua_matterhorn_document_with_metadata_for_test(
+  metadata : BytesView,
+  root_extras? : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)] = [],
+) -> @pdflite.PdfDocument {
+  let document = ua_matterhorn_document_for_test([], root_extras~)
+  try! document.set_metadata_from_bytes(metadata)
+}
+
+///|
+fn ua_matterhorn_display_doc_title_for_test(
+  value : Bool,
+) -> (@pdflite.PdfName, @pdflite.PdfObject) {
+  (
+    ua_matterhorn_name_for_test("/ViewerPreferences"),
+    PdfDictionary([
+      (ua_matterhorn_name_for_test("/DisplayDocTitle"), PdfBoolean(value)),
+    ]),
+  )
 }
 
 ///|
@@ -110,6 +181,8 @@ test "PdfDocument test_matterhorn_json detects content artifact nesting" {
     Json::array([
       ua_matterhorn_01_003_failure_for_test(),
       ua_matterhorn_01_004_failure_for_test(),
+      ua_matterhorn_06_001_failure_for_test(),
+      ua_matterhorn_07_001_failure_for_test(),
     ]),
   )
 }
@@ -200,4 +273,72 @@ test "PdfDocument test_matterhorn_json rejects unsupported individual checks" {
   guard result is Err(@pdflite.PdfError::SoftError(_)) else {
     fail("expected unsupported Matterhorn test to raise SoftError")
   }
+}
+
+///|
+test "PdfDocument test_matterhorn_json detects missing metadata and viewer preferences" {
+  let document = ua_matterhorn_document_for_test([])
+  @test.assert_eq(
+    try! document.test_matterhorn_json("06-001"),
+    Json::array([ua_matterhorn_06_001_failure_for_test()]),
+  )
+  @test.assert_eq(try! document.test_matterhorn_json("06-002"), Json::array([]))
+  @test.assert_eq(try! document.test_matterhorn_json("06-003"), Json::array([]))
+  @test.assert_eq(
+    try! document.test_matterhorn_json("07-001"),
+    Json::array([ua_matterhorn_07_001_failure_for_test()]),
+  )
+}
+
+///|
+test "PdfDocument test_matterhorn_json detects missing XMP fields" {
+  let metadata =
+    #|<x:xmpmeta xmlns:x="adobe:ns:meta/"
+    #| xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+    #| <rdf:RDF><rdf:Description/></rdf:RDF>
+    #|</x:xmpmeta>
+  let document = ua_matterhorn_document_with_metadata_for_test(
+    @ascii.encode(metadata),
+    root_extras=[ua_matterhorn_display_doc_title_for_test(true)],
+  )
+  @test.assert_eq(try! document.test_matterhorn_json("06-001"), Json::array([]))
+  @test.assert_eq(
+    try! document.test_matterhorn_json("06-002"),
+    Json::array([ua_matterhorn_06_002_failure_for_test()]),
+  )
+  @test.assert_eq(
+    try! document.test_matterhorn_json("06-003"),
+    Json::array([ua_matterhorn_06_003_failure_for_test()]),
+  )
+  @test.assert_eq(
+    try! document.test_matterhorn_json(""),
+    Json::array([
+      ua_matterhorn_06_002_failure_for_test(),
+      ua_matterhorn_06_003_failure_for_test(),
+    ]),
+  )
+}
+
+///|
+test "PdfDocument test_matterhorn_json accepts PDF/UA metadata" {
+  let document = try! @pdflite.pdf_ua_create_pdfua1(
+    "Accessible Title", @pdflite.paper_a4, 1,
+  )
+  @test.assert_eq(try! document.test_matterhorn_json("06-001"), Json::array([]))
+  @test.assert_eq(try! document.test_matterhorn_json("06-002"), Json::array([]))
+  @test.assert_eq(try! document.test_matterhorn_json("06-003"), Json::array([]))
+  @test.assert_eq(try! document.test_matterhorn_json("07-001"), Json::array([]))
+  @test.assert_eq(try! document.test_matterhorn_json("07-002"), Json::array([]))
+}
+
+///|
+test "PdfDocument test_matterhorn_json detects false DisplayDocTitle" {
+  let document = ua_matterhorn_document_for_test([], root_extras=[
+    ua_matterhorn_display_doc_title_for_test(false),
+  ])
+  @test.assert_eq(try! document.test_matterhorn_json("07-001"), Json::array([]))
+  @test.assert_eq(
+    try! document.test_matterhorn_json("07-002"),
+    Json::array([ua_matterhorn_07_002_failure_for_test()]),
+  )
 }

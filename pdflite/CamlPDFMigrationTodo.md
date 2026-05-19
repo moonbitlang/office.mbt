@@ -27,7 +27,8 @@ Current estimate:
   composition reporting, core metadata APIs, XMP metadata-date rewriting, XMP
   info synchronization, XMP metadata creation, XMP RDF list extraction,
   XMP/document info JSON reporting, redaction annotation bounding-box overlays,
-  imposition transform/content/page-assembly/pattern-matrix kernels, cpdf page
+  cpdfua Matterhorn content/XMP/viewer-preference validation, imposition
+  transform/content/page-assembly/pattern-matrix kernels, cpdf page
   hard-box/removal/shift/scale/scale-to-fit/upright/set-mediabox/copy-box
   helpers, imposition make-space orchestration, border stamping, layout
   planning, and first public impose/twoup pipelines, and Markdown helper public
@@ -261,6 +262,22 @@ Current backend snapshot:
   10-warning baseline; `moon info` and `moon fmt` were run to update the public
   interface summary and formatting. Full native suite validation is deferred to
   the next batch.~~
+- [x] ~~Port the `cpdfua` Matterhorn XMP metadata and viewer-preference slice:
+  the public Matterhorn JSON/text surface now also covers source checks
+  `06-001`, `06-002`, `06-003`, `07-001`, and `07-002`, preserving cpdf's
+  behavior that missing metadata reports only `06-001` while missing
+  `pdfuaid:part` and `dc:title` are reported only when an XMP metadata stream
+  exists. ViewerPreferences checks now distinguish absent `/DisplayDocTitle`
+  from explicit `false`, and the covered `""` subset includes the new checks in
+  source order. Focused native validation reports `moon test --target native
+  pdf_ua_matterhorn_test.mbt --filter '*metadata*'` at 2/2 tests passing;
+  widened native validation reports `moon test --target native
+  pdf_ua_matterhorn_test.mbt` at 9/9 tests passing. Native check validation
+  reports `moon check --target native` passing with the known `markdown/cmd`
+  warning and `moon check --target native --warn-list +73` at the known
+  10-warning baseline; `moon info` and `moon fmt` were run to update generated
+  interfaces and formatting. Batched full native validation reports `moon test
+  --target native` at 1991/1991 tests passing.~~
 - [x] ~~Port the current stub/no-op redaction APIs from `cpdfredact`: `redact`
   is exposed as `redact_path`/`pdf_redact` and preserves page content while
   validating the selected page range, while `apply` and `apply_type` are

@@ -105,12 +105,62 @@ fn pdf_ua_matterhorn_test_01_007() -> PdfUAMatterhornTest {
 }
 
 ///|
+fn pdf_ua_matterhorn_test_06_001() -> PdfUAMatterhornTest {
+  {
+    name: "06-001",
+    error: "Document does not contain an XMP metadata stream",
+    section: "UA1:7.1-8",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_06_002() -> PdfUAMatterhornTest {
+  {
+    name: "06-002",
+    error: "The XMP metadata stream in the Catalog dictionary does not include the PDF/UA identifier.",
+    section: "UA1:5",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_06_003() -> PdfUAMatterhornTest {
+  {
+    name: "06-003",
+    error: "XMP metadata stream does not contain dc:title",
+    section: "UA1:7.1-8",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_07_001() -> PdfUAMatterhornTest {
+  {
+    name: "07-001",
+    error: "ViewerPreferences dictionary of the Catalog dictionary does not contain a DisplayDocTitle entry",
+    section: "UA1:7.1-9",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_07_002() -> PdfUAMatterhornTest {
+  {
+    name: "07-002",
+    error: "ViewerPreferences dictionary of the Catalog dictionary contains a DisplayDocTitle entry with a value of false",
+    section: "UA1:7.1-9",
+  }
+}
+
+///|
 fn pdf_ua_matterhorn_implemented_tests() -> Array[PdfUAMatterhornTest] {
   [
     pdf_ua_matterhorn_test_01_003(),
     pdf_ua_matterhorn_test_01_004(),
     pdf_ua_matterhorn_test_01_005(),
     pdf_ua_matterhorn_test_01_007(),
+    pdf_ua_matterhorn_test_06_001(),
+    pdf_ua_matterhorn_test_06_002(),
+    pdf_ua_matterhorn_test_06_003(),
+    pdf_ua_matterhorn_test_07_001(),
+    pdf_ua_matterhorn_test_07_002(),
   ]
 }
 
@@ -427,6 +477,88 @@ fn PdfDocument::pdf_ua_matterhorn_check_01_007(self : PdfDocument) -> Json? {
 }
 
 ///|
+fn pdf_ua_matterhorn_xmp_field_exists(
+  metadata : BytesView,
+  xml_namespace : String,
+  fallback_prefix : String,
+  name : String,
+) -> Bool {
+  pdf_metadata_get_xmp_data(metadata, xml_namespace, fallback_prefix, name)
+  is Some(_)
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_06_001(
+  self : PdfDocument,
+) -> Json? raise PdfError {
+  match self.metadata() {
+    Some(_) => None
+    None => Some(Json::null())
+  }
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_06_002(
+  self : PdfDocument,
+) -> Json? raise PdfError {
+  match self.metadata() {
+    Some(metadata) =>
+      if pdf_ua_matterhorn_xmp_field_exists(
+          metadata, pdf_metadata_pdfuaid_namespace, "pdfuaid", "part",
+        ) {
+        None
+      } else {
+        Some(Json::null())
+      }
+    None => None
+  }
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_06_003(
+  self : PdfDocument,
+) -> Json? raise PdfError {
+  match self.metadata() {
+    Some(metadata) =>
+      if pdf_ua_matterhorn_xmp_field_exists(
+          metadata, pdf_metadata_dc_namespace, "dc", "title",
+        ) {
+        None
+      } else {
+        Some(Json::null())
+      }
+    None => None
+  }
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_display_doc_title(
+  self : PdfDocument,
+) -> PdfObject? {
+  self.lookup_chain(self.trailer_dict(), [
+    pdf_ua_root_key(),
+    pdf_ua_viewer_preferences_key(),
+    pdf_ua_display_doc_title_key(),
+  ])
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_07_001(self : PdfDocument) -> Json? {
+  match self.pdf_ua_matterhorn_display_doc_title() {
+    None => Some(Json::null())
+    Some(_) => None
+  }
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_07_002(self : PdfDocument) -> Json? {
+  match self.pdf_ua_matterhorn_display_doc_title() {
+    Some(PdfBoolean(false)) => Some(Json::null())
+    _ => None
+  }
+}
+
+///|
 fn PdfDocument::pdf_ua_matterhorn_run_test(
   self : PdfDocument,
   check : PdfUAMatterhornTest,
@@ -436,6 +568,11 @@ fn PdfDocument::pdf_ua_matterhorn_run_test(
     "01-004" => self.pdf_ua_matterhorn_check_01_004()
     "01-005" => self.pdf_ua_matterhorn_check_01_005()
     "01-007" => self.pdf_ua_matterhorn_check_01_007()
+    "06-001" => self.pdf_ua_matterhorn_check_06_001()
+    "06-002" => self.pdf_ua_matterhorn_check_06_002()
+    "06-003" => self.pdf_ua_matterhorn_check_06_003()
+    "07-001" => self.pdf_ua_matterhorn_check_07_001()
+    "07-002" => self.pdf_ua_matterhorn_check_07_002()
     _ => None
   }
   match result {
@@ -479,10 +616,11 @@ fn PdfDocument::pdf_ua_matterhorn_failures(
 ///|
 /// Return cpdf-style PDF/UA Matterhorn failures as JSON.
 ///
-/// This first migration slice covers the implemented content-marking checks
-/// `01-003`, `01-004`, `01-005`, and `01-007`. Passing `""` runs the covered
-/// subset; unsupported individual test names raise a soft error until their
-/// source checks are ported.
+/// The current migration covers content-marking checks `01-003`, `01-004`,
+/// `01-005`, and `01-007`, plus XMP metadata and DisplayDocTitle checks
+/// `06-001` through `07-002`. Passing `""` runs the covered subset;
+/// unsupported individual test names raise a soft error until their source
+/// checks are ported.
 pub fn PdfDocument::test_matterhorn_json(
   self : PdfDocument,
   test_name : String,
