@@ -278,6 +278,117 @@ test "cpdfcontent operator state emits image entries from current CTM" {
 }
 
 ///|
+test "cpdfcontent operator state reads image entries from XObject resources" {
+  let doc = @pdflite.pdf_document_empty()
+  let initial = @pdflite.pdf_content_initial_operator_state(
+    0.0, 0.0, 100.0, 200.0,
+  )
+  let state : @pdflite.PdfContentOperatorState = {
+    ..initial,
+    ctm: @pdflite.transform_translate(5.0, 6.0),
+  }
+  let image_name = content_operator_name_for_test("/Im1")
+  let form_name = content_operator_name_for_test("/Fm1")
+  let unknown_name = content_operator_name_for_test("/Ps1")
+  let no_subtype_name = content_operator_name_for_test("/NoSubtype")
+  let xobject_key = content_operator_name_for_test("/XObject")
+  let subtype_key = content_operator_name_for_test("/Subtype")
+  let resources = @pdflite.pdf_dictionary([
+    (
+      xobject_key,
+      @pdflite.pdf_dictionary([
+        (
+          image_name,
+          @pdflite.pdf_dictionary([
+            (
+              subtype_key,
+              PdfNameObject(content_operator_name_for_test("/Image")),
+            ),
+          ]),
+        ),
+        (
+          form_name,
+          @pdflite.pdf_dictionary([
+            (
+              subtype_key,
+              PdfNameObject(content_operator_name_for_test("/Form")),
+            ),
+          ]),
+        ),
+        (
+          unknown_name,
+          @pdflite.pdf_dictionary([
+            (subtype_key, PdfNameObject(content_operator_name_for_test("/PS"))),
+          ]),
+        ),
+        (no_subtype_name, @pdflite.pdf_dictionary([])),
+      ]),
+    ),
+  ])
+  let image_result : Result[@pdflite.PdfContentJsonEntry?, Error] = try? doc.content_image_entry_from_resources(
+    state, resources, image_name,
+  )
+  guard image_result is Ok(Some(image_entry)) else {
+    fail("expected image XObject entry")
+  }
+  @test.assert_eq(image_entry.object, PdfContentImageObject("/Im1"))
+  @test.assert_eq(image_entry.bounding_box, {
+    x0: 5.0,
+    y0: 6.0,
+    x1: 5.0,
+    y1: 7.0,
+    x2: 6.0,
+    y2: 7.0,
+    x3: 6.0,
+    y3: 6.0,
+  })
+  let form_result : Result[@pdflite.PdfContentJsonEntry?, Error] = try? doc.content_image_entry_from_resources(
+    state, resources, form_name,
+  )
+  guard form_result is Ok(None) else {
+    fail("expected form XObject to emit no image entry")
+  }
+  let wrapper_result : Result[@pdflite.PdfContentJsonEntry?, Error] = try? @pdflite.pdf_content_image_entry_from_resources(
+    doc, state, resources, image_name,
+  )
+  guard wrapper_result is Ok(Some(wrapper_entry)) else {
+    fail("expected wrapper image XObject entry")
+  }
+  @test.assert_eq(wrapper_entry, image_entry)
+  let missing_resources : Result[@pdflite.PdfContentJsonEntry?, Error] = try? doc.content_image_entry_from_resources(
+    state,
+    @pdflite.pdf_dictionary([]),
+    image_name,
+  )
+  guard missing_resources
+    is Err(@pdflite.PdfError::SoftError("xobject not found")) else {
+    fail("expected missing /XObject resource error")
+  }
+  let missing_name : Result[@pdflite.PdfContentJsonEntry?, Error] = try? doc.content_image_entry_from_resources(
+    state,
+    resources,
+    content_operator_name_for_test("/Missing"),
+  )
+  guard missing_name is Err(@pdflite.PdfError::SoftError("Unknown xobject")) else {
+    fail("expected missing named XObject error")
+  }
+  let unknown_kind : Result[@pdflite.PdfContentJsonEntry?, Error] = try? doc.content_image_entry_from_resources(
+    state, resources, unknown_name,
+  )
+  guard unknown_kind
+    is Err(@pdflite.PdfError::SoftError("Unknown kind of xobject")) else {
+    fail("expected unknown XObject kind error")
+  }
+  let missing_subtype : Result[@pdflite.PdfContentJsonEntry?, Error] = try? doc.content_image_entry_from_resources(
+    state, resources, no_subtype_name,
+  )
+  guard missing_subtype
+    is Err(@pdflite.PdfError::SoftError("Unknown kind of xobject")) else {
+    fail("expected missing XObject subtype error")
+  }
+}
+
+///|
 test "cpdfcontent operator state emits path entries for drawn paths" {
   let initial = @pdflite.pdf_content_initial_operator_state(
     0.0, 0.0, 100.0, 200.0,

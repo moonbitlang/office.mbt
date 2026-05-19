@@ -2779,6 +2779,16 @@ Current backend snapshot:
   --package bobzhang/pdflite --file pdf_content_operator_state_test.mbt` at
   12/12 tests passing; native full-suite validation reports 1958/1958 tests
   passing.~~
+- [x] ~~Standalone `cpdfcontent.ml` image XObject resource-entry slice exposes
+  `PdfDocument::content_image_entry_from_resources` and
+  `pdf_content_image_entry_from_resources`, matching cpdf's `Op_Do` `/XObject`
+  lookup for named image resources, cpdf error strings for missing resources,
+  missing names, and unknown XObject kinds, and the no-entry behavior for
+  `/Form` XObjects while leaving recursive Form content walking for later
+  slices. Native focused validation reports `moon test --target native
+  --package bobzhang/pdflite --file pdf_content_operator_state_test.mbt` at
+  13/13 tests passing; native full-suite validation reports 1959/1959 tests
+  passing.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,

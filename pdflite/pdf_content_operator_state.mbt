@@ -544,6 +544,50 @@ pub fn pdf_content_image_entry(
 }
 
 ///|
+fn PdfDocument::content_xobject_from_resources(
+  self : PdfDocument,
+  resources : PdfObject,
+  name : PdfName,
+) -> PdfObject raise PdfError {
+  match self.lookup_direct(pdf_xobject_xobject(), resources) {
+    Some(xobjects) =>
+      match self.lookup_direct(name, xobjects) {
+        Some(xobject) => xobject
+        None => raise SoftError("Unknown xobject")
+      }
+    None => raise SoftError("xobject not found")
+  }
+}
+
+///|
+/// Look up a named image XObject resource and return its cpdfcontent JSON entry.
+pub fn PdfDocument::content_image_entry_from_resources(
+  self : PdfDocument,
+  state : PdfContentOperatorState,
+  resources : PdfObject,
+  name : PdfName,
+) -> PdfContentJsonEntry? raise PdfError {
+  let xobject = self.content_xobject_from_resources(resources, name)
+  match self.lookup_direct(pdf_xobject_subtype_key(), xobject) {
+    Some(PdfNameObject(subtype)) if subtype == pdf_image_image_name() =>
+      Some(state.content_image_entry(name))
+    Some(PdfNameObject(subtype)) if subtype == pdf_xobject_form() => None
+    _ => raise SoftError("Unknown kind of xobject")
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::content_image_entry_from_resources`.
+pub fn pdf_content_image_entry_from_resources(
+  document : PdfDocument,
+  state : PdfContentOperatorState,
+  resources : PdfObject,
+  name : PdfName,
+) -> PdfContentJsonEntry? raise PdfError {
+  document.content_image_entry_from_resources(state, resources, name)
+}
+
+///|
 fn PdfContentOperatorState::content_with_clipping_path(
   self : PdfContentOperatorState,
   clipping_path : ArrayView[PdfPath],

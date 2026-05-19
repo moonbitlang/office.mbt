@@ -405,6 +405,8 @@ pub fn pdf_content_glyph_state_of_text_state(PdfContentTextState, ArrayView[PdfP
 
 pub fn pdf_content_image_entry(PdfContentOperatorState, @core.PdfName) -> PdfContentJsonEntry
 
+pub fn pdf_content_image_entry_from_resources(PdfDocument, PdfContentOperatorState, PdfObject, @core.PdfName) -> PdfContentJsonEntry? raise @core.PdfError
+
 pub fn pdf_content_initial_clipping_path(Double, Double, Double, Double) -> Array[PdfPath]
 
 pub fn pdf_content_initial_clipping_state(Double, Double, Double, Double) -> PdfContentClippingState
@@ -2347,6 +2349,7 @@ pub fn PdfDocument::composition(Self, Int) -> Array[PdfCompositionEntry] raise @
 pub fn PdfDocument::composition_json(Self, Int) -> Json raise @core.PdfError
 pub fn PdfDocument::composition_json_blob(Self, Int) -> Bytes raise @core.PdfError
 pub fn PdfDocument::contains_javascript(Self) -> Bool
+pub fn PdfDocument::content_image_entry_from_resources(Self, PdfContentOperatorState, PdfObject, @core.PdfName) -> PdfContentJsonEntry? raise @core.PdfError
 pub fn PdfDocument::content_read_axial_shading(Self, PdfObject) -> PdfContentShadingKind raise @core.PdfError
 pub fn PdfDocument::content_read_function_shading(Self, PdfObject) -> PdfContentShadingKind raise @core.PdfError
 pub fn PdfDocument::content_read_pattern(Self, PdfObject, @core.PdfName) -> PdfContentPattern? raise @core.PdfError
