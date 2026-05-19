@@ -55,6 +55,9 @@ let pdf_content_extgstate_lj_name : PdfName = pdf_content_extgstate_name("/LJ")
 let pdf_content_extgstate_ml_name : PdfName = pdf_content_extgstate_name("/ML")
 
 ///|
+let pdf_content_extgstate_d_name : PdfName = pdf_content_extgstate_name("/D")
+
+///|
 let pdf_content_extgstate_ri_name : PdfName = pdf_content_extgstate_name("/RI")
 
 ///|
@@ -371,6 +374,49 @@ pub fn pdf_content_apply_extgstate_graphics_parameter_op(
   extgstate : PdfObject,
 ) -> PdfContentOperatorState {
   document.content_apply_extgstate_graphics_parameter_op(state, extgstate)
+}
+
+///|
+fn PdfDocument::content_extgstate_dash_array(
+  self : PdfDocument,
+  object : PdfObject,
+) -> Array[Double] raise PdfError {
+  match self.direct(object) {
+    PdfArray(values) => {
+      let output : Array[Double] = []
+      for value in values {
+        output.push(self.get_number(value))
+      }
+      output
+    }
+    _ => []
+  }
+}
+
+///|
+/// Apply cpdfcontent dash parameters from a resolved ExtGState dictionary.
+pub fn PdfDocument::content_apply_extgstate_dash_op(
+  self : PdfDocument,
+  state : PdfContentOperatorState,
+  extgstate : PdfObject,
+) -> PdfContentOperatorState raise PdfError {
+  match self.lookup_direct(pdf_content_extgstate_d_name, extgstate) {
+    Some(PdfArray([array, phase])) => {
+      let dashes = self.content_extgstate_dash_array(array)
+      state.content_apply_core_op(Op_d(dashes, self.get_number(phase)))
+    }
+    _ => state
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::content_apply_extgstate_dash_op`.
+pub fn pdf_content_apply_extgstate_dash_op(
+  document : PdfDocument,
+  state : PdfContentOperatorState,
+  extgstate : PdfObject,
+) -> PdfContentOperatorState raise PdfError {
+  document.content_apply_extgstate_dash_op(state, extgstate)
 }
 
 ///|

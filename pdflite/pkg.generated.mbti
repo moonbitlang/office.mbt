@@ -353,6 +353,8 @@ pub fn pdf_content_apply_clipping_op(PdfContentPartialPath, ArrayView[PdfPath], 
 
 pub fn pdf_content_apply_core_op(PdfContentOperatorState, PdfContentOp) -> PdfContentOperatorState
 
+pub fn pdf_content_apply_extgstate_dash_op(PdfDocument, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState raise @core.PdfError
+
 pub fn pdf_content_apply_extgstate_graphics_parameter_op(PdfDocument, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState
 
 pub fn pdf_content_apply_extgstate_text_op(PdfDocument, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState
@@ -2360,6 +2362,7 @@ pub fn PdfDocument::composition(Self, Int) -> Array[PdfCompositionEntry] raise @
 pub fn PdfDocument::composition_json(Self, Int) -> Json raise @core.PdfError
 pub fn PdfDocument::composition_json_blob(Self, Int) -> Bytes raise @core.PdfError
 pub fn PdfDocument::contains_javascript(Self) -> Bool
+pub fn PdfDocument::content_apply_extgstate_dash_op(Self, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState raise @core.PdfError
 pub fn PdfDocument::content_apply_extgstate_graphics_parameter_op(Self, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState
 pub fn PdfDocument::content_apply_extgstate_text_op(Self, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState
 pub fn PdfDocument::content_form_xobject_enter_state(Self, PdfContentOperatorState, PdfObject, @core.PdfName) -> PdfContentOperatorState? raise @core.PdfError

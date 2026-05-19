@@ -2870,6 +2870,22 @@ Current backend snapshot:
   native` passing with the known `markdown/cmd` warning and `moon check --target
   native --warn-list +73` at the known 10-warning baseline. Full native suite
   validation is deferred to the next batch.~~
+- [x] ~~Standalone `cpdfcontent.ml` ExtGState dash-parameter slice exposes
+  `PdfDocument::content_apply_extgstate_dash_op` and
+  `pdf_content_apply_extgstate_dash_op`, matching cpdf's
+  `read_graphics_state_dictionary` `/D` branch once an ExtGState dictionary has
+  been resolved by applying exact two-element dash arrays, widening integer dash
+  values and phase to floats, treating a non-array dash-list operand as an empty
+  dash array, ignoring malformed outer `/D` shapes, and propagating
+  `NumberExpected` for malformed numeric dash members or phase while leaving
+  resource-name resolution and the remaining non-JSON graphics-state fields for
+  later slices. Focused native validation reports `moon test --target native
+  pdf_content_operator_state_test.mbt --filter '*ExtGState*'` at 3/3 tests
+  passing and `moon test --target native pdf_content_operator_state_test.mbt` at
+  19/19 tests passing; native check validation reports `moon check --target
+  native` passing with the known `markdown/cmd` warning and `moon check --target
+  native --warn-list +73` at the known 10-warning baseline. Native full-suite
+  validation reports 1965/1965 tests passing.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,

@@ -229,6 +229,90 @@ test "cpdfcontent operator state applies ExtGState graphics parameters" {
 }
 
 ///|
+test "cpdfcontent operator state applies ExtGState dash parameters" {
+  let doc = @pdflite.pdf_document_empty()
+  let initial = @pdflite.pdf_content_initial_operator_state(
+    0.0, 0.0, 100.0, 200.0,
+  )
+  let dash = content_operator_name_for_test("/D")
+  let state = try! doc.content_apply_extgstate_dash_op(
+    initial,
+    @pdflite.pdf_dictionary([
+      (dash, PdfArray([PdfArray([PdfInteger(3), PdfReal(1.5)]), PdfInteger(2)])),
+    ]),
+  )
+  @test.assert_eq(state.path_state.dash_pattern, {
+    array: [3.0, 1.5],
+    phase: 2.0,
+  })
+  @test.assert_eq(
+    try! @pdflite.pdf_content_apply_extgstate_dash_op(
+      doc,
+      initial,
+      @pdflite.pdf_dictionary([
+        (
+          dash,
+          PdfArray([PdfArray([PdfInteger(3), PdfReal(1.5)]), PdfInteger(2)]),
+        ),
+      ]),
+    ),
+    state,
+  )
+  @test.assert_eq(
+    try! doc.content_apply_extgstate_dash_op(
+      state,
+      @pdflite.pdf_dictionary([
+        (
+          dash,
+          PdfArray([
+            PdfNameObject(content_operator_name_for_test("/NoArray")),
+            PdfReal(0.5),
+          ]),
+        ),
+      ]),
+    ).path_state.dash_pattern,
+    { array: [], phase: 0.5 },
+  )
+  @test.assert_eq(
+    try! doc.content_apply_extgstate_dash_op(
+      state,
+      @pdflite.pdf_dictionary([(dash, PdfArray([PdfArray([])]))]),
+    ),
+    state,
+  )
+  let bad_phase : Result[@pdflite.PdfContentOperatorState, Error] = try? doc.content_apply_extgstate_dash_op(
+    initial,
+    @pdflite.pdf_dictionary([
+      (
+        dash,
+        PdfArray([
+          PdfArray([PdfInteger(1)]),
+          PdfNameObject(content_operator_name_for_test("/BadPhase")),
+        ]),
+      ),
+    ]),
+  )
+  guard bad_phase is Err(@pdflite.PdfError::NumberExpected) else {
+    fail("expected NumberExpected for malformed ExtGState dash phase")
+  }
+  let bad_dash : Result[@pdflite.PdfContentOperatorState, Error] = try? doc.content_apply_extgstate_dash_op(
+    initial,
+    @pdflite.pdf_dictionary([
+      (
+        dash,
+        PdfArray([
+          PdfArray([PdfNameObject(content_operator_name_for_test("/BadDash"))]),
+          PdfInteger(0),
+        ]),
+      ),
+    ]),
+  )
+  guard bad_dash is Err(@pdflite.PdfError::NumberExpected) else {
+    fail("expected NumberExpected for malformed ExtGState dash array")
+  }
+}
+
+///|
 test "cpdfcontent operator state applies ExtGState text knockout" {
   let doc = @pdflite.pdf_document_empty()
   let initial = @pdflite.pdf_content_initial_operator_state(
