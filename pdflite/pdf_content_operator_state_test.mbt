@@ -359,3 +359,102 @@ test "cpdfcontent operator state emits shading entries" {
     Some(unbounded),
   )
 }
+
+///|
+test "cpdfcontent operator state reads shading entries from resources" {
+  let doc = @pdflite.pdf_document_empty()
+  let initial = @pdflite.pdf_content_initial_operator_state(
+    0.0, 0.0, 100.0, 200.0,
+  )
+  let state : @pdflite.PdfContentOperatorState = {
+    ..initial,
+    ctm: @pdflite.transform_translate(5.0, 6.0),
+  }
+  let shading_name = content_operator_name_for_test("/Sh1")
+  let unbounded_name = content_operator_name_for_test("/Sh2")
+  let invalid_name = content_operator_name_for_test("/Sh3")
+  let resources = @pdflite.pdf_dictionary([
+    (
+      content_operator_name_for_test("/Shading"),
+      @pdflite.pdf_dictionary([
+        (
+          shading_name,
+          @pdflite.pdf_dictionary([
+            (content_operator_name_for_test("/ShadingType"), PdfInteger(2)),
+            (
+              content_operator_name_for_test("/BBox"),
+              PdfArray([
+                PdfInteger(1),
+                PdfInteger(2),
+                PdfInteger(3),
+                PdfInteger(4),
+              ]),
+            ),
+          ]),
+        ),
+        (
+          unbounded_name,
+          @pdflite.pdf_dictionary([
+            (content_operator_name_for_test("/ShadingType"), PdfInteger(2)),
+          ]),
+        ),
+        (
+          invalid_name,
+          @pdflite.pdf_dictionary([
+            (content_operator_name_for_test("/ShadingType"), PdfInteger(2)),
+            (content_operator_name_for_test("/BBox"), PdfBoolean(true)),
+          ]),
+        ),
+      ]),
+    ),
+  ])
+  guard doc.content_shading_entry_from_resources(state, resources, shading_name)
+    is Some(explicit) else {
+    fail("expected explicit shading resource entry")
+  }
+  @test.assert_eq(explicit.object, PdfContentShadingObject("/Sh1"))
+  @test.assert_eq(explicit.bounding_box, {
+    x0: 1.0,
+    y0: 2.0,
+    x1: 1.0,
+    y1: 4.0,
+    x2: 3.0,
+    y2: 4.0,
+    x3: 3.0,
+    y3: 2.0,
+  })
+  guard doc.content_shading_entry_from_resources(
+      state, resources, unbounded_name,
+    )
+    is Some(unbounded) else {
+    fail("expected unbounded shading resource entry")
+  }
+  @test.assert_eq(unbounded.bounding_box, {
+    x0: 5.0,
+    y0: 6.0,
+    x1: 5.0,
+    y1: 206.0,
+    x2: 105.0,
+    y2: 206.0,
+    x3: 105.0,
+    y3: 6.0,
+  })
+  @test.assert_eq(
+    doc.content_shading_entry_from_resources(state, resources, invalid_name),
+    None,
+  )
+  @test.assert_eq(
+    doc.content_shading_entry_from_resources(
+      state,
+      resources,
+      content_operator_name_for_test("/Missing"),
+    ),
+    None,
+  )
+  @test.assert_eq(
+    @pdflite.pdf_content_shading_entry_from_resources(
+      doc, state, resources, shading_name,
+    ),
+    Some(explicit),
+  )
+}

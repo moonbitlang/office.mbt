@@ -2769,6 +2769,16 @@ Current backend snapshot:
   validation reports `moon test --target native --package bobzhang/pdflite
   --file pdf_content_operator_state_test.mbt` at 11/11 tests passing; native
   full-suite validation reports 1957/1957 tests passing.~~
+- [x] ~~Standalone `cpdfcontent.ml` shading resource-entry slice exposes
+  `PdfDocument::content_shading_entry_from_resources` and
+  `pdf_content_shading_entry_from_resources`, matching cpdf's `Op_sh`
+  resource lookup for named `/Shading` entries, explicit `/BBox` parsing,
+  malformed bbox suppression, missing-resource no-op, and unbounded fallback
+  to the current clipping path while leaving full operator walking for later
+  slices. Native focused validation reports `moon test --target native
+  --package bobzhang/pdflite --file pdf_content_operator_state_test.mbt` at
+  12/12 tests passing; native full-suite validation reports 1958/1958 tests
+  passing.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,

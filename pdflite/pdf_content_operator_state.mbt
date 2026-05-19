@@ -431,6 +431,56 @@ pub fn pdf_content_shading_entry(
 }
 
 ///|
+/// Look up a named shading resource and return its cpdfcontent JSON entry.
+pub fn PdfDocument::content_shading_entry_from_resources(
+  self : PdfDocument,
+  state : PdfContentOperatorState,
+  resources : PdfObject,
+  name : PdfName,
+) -> PdfContentJsonEntry? {
+  match self.lookup_direct(pdf_content_shading_shading_name, resources) {
+    Some(shading_dictionary) =>
+      match self.lookup_direct(name, shading_dictionary) {
+        Some(shading_object) =>
+          try
+            self.content_read_shading(
+              transform_identity_matrix,
+              PdfNull,
+              shading_object,
+            )
+          catch {
+            _ => None
+          } noraise {
+            shading =>
+              match shading.shading_bbox {
+                Some(bbox_object) =>
+                  try self.parse_rectangle(bbox_object) catch {
+                    _ => None
+                  } noraise {
+                    rectangle =>
+                      state.content_shading_entry(name, Some(rectangle))
+                  }
+                None => state.content_shading_entry(name, None)
+              }
+          }
+        None => None
+      }
+    None => None
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::content_shading_entry_from_resources`.
+pub fn pdf_content_shading_entry_from_resources(
+  document : PdfDocument,
+  state : PdfContentOperatorState,
+  resources : PdfObject,
+  name : PdfName,
+) -> PdfContentJsonEntry? {
+  document.content_shading_entry_from_resources(state, resources, name)
+}
+
+///|
 /// Return the CTM-transformed unit-square bounding box used for image objects.
 pub fn PdfContentOperatorState::content_unit_square_bounding_box(
   self : PdfContentOperatorState,

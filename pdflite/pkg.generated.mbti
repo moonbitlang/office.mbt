@@ -443,6 +443,8 @@ pub fn pdf_content_read_tiling_pattern(PdfObject) -> PdfContentPattern
 
 pub fn pdf_content_shading_entry(PdfContentOperatorState, @core.PdfName, PdfRectangle?) -> PdfContentJsonEntry?
 
+pub fn pdf_content_shading_entry_from_resources(PdfDocument, PdfContentOperatorState, PdfObject, @core.PdfName) -> PdfContentJsonEntry?
+
 pub fn pdf_content_state_content_json(PdfContentState) -> Json
 
 pub fn pdf_content_stream_of_ops(ArrayView[PdfContentOp]) -> PdfObject raise @core.PdfError
@@ -2351,6 +2353,7 @@ pub fn PdfDocument::content_read_pattern(Self, PdfObject, @core.PdfName) -> PdfC
 pub fn PdfDocument::content_read_radial_shading(Self, PdfObject) -> PdfContentShadingKind raise @core.PdfError
 pub fn PdfDocument::content_read_shading(Self, @geometry.TransformMatrix, PdfObject, PdfObject) -> PdfContentShading raise @core.PdfError
 pub fn PdfDocument::content_read_shading_pattern(Self, PdfObject) -> PdfContentPattern raise @core.PdfError
+pub fn PdfDocument::content_shading_entry_from_resources(Self, PdfContentOperatorState, PdfObject, @core.PdfName) -> PdfContentJsonEntry?
 pub fn PdfDocument::contents_of_name_tree(Self, PdfObject) -> Array[(PdfObject, PdfObject)]
 pub fn PdfDocument::copy(Self) -> Self
 pub fn PdfDocument::copy_annotations_from(Self, Self, ArrayView[Int]) -> Self raise @core.PdfError
