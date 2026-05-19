@@ -112,6 +112,14 @@ fn pdf_page_box_xywh_object(
 }
 
 ///|
+fn pdf_page_box_bounds_object(
+  bounds : (Double, Double, Double, Double),
+) -> PdfObject {
+  let (min_x, min_y, max_x, max_y) = bounds
+  PdfArray([PdfReal(min_x), PdfReal(min_y), PdfReal(max_x), PdfReal(max_y)])
+}
+
+///|
 fn PdfDocument::pdf_page_box_object(
   self : PdfDocument,
   page : PdfPage,
@@ -220,6 +228,23 @@ fn PdfDocument::pdf_page_set_mediabox_page(
 }
 
 ///|
+fn PdfDocument::pdf_page_change_box_object(
+  self : PdfDocument,
+  object : PdfObject,
+  transform : (Double, Double, Double, Double) -> (
+    Double,
+    Double,
+    Double,
+    Double,
+  ),
+) -> PdfObject raise PdfError {
+  let bounds = self.parse_rectangle(object)
+  pdf_page_box_bounds_object(
+    transform(bounds.min_x, bounds.min_y, bounds.max_x, bounds.max_y),
+  )
+}
+
+///|
 /// Hard-clip selected pages to a page box by prepending a clipping rectangle.
 ///
 /// `page_numbers` are 1-based. `box_name` is usually `/MediaBox`, `/CropBox`,
@@ -311,6 +336,54 @@ pub fn pdf_copy_page_box(
 }
 
 ///|
+/// Change `/MediaBox` and known page boxes with a coordinate transform.
+///
+/// The callback receives `(min_x, min_y, max_x, max_y)` and returns replacement
+/// bounds. This ports cpdf's single-page `change_boxes` helper.
+pub fn PdfDocument::change_boxes(
+  self : PdfDocument,
+  page : PdfPage,
+  transform : (Double, Double, Double, Double) -> (
+    Double,
+    Double,
+    Double,
+    Double,
+  ),
+) -> PdfPage raise PdfError {
+  let mut rest = page.rest
+  for name in pdf_page_upright_box_names() {
+    match self.lookup_direct(name, page.rest) {
+      Some(value) =>
+        rest = rest.add_dict_entry(
+          name,
+          self.pdf_page_change_box_object(value, transform),
+        )
+      None => ()
+    }
+  }
+  {
+    ..page,
+    mediabox: self.pdf_page_change_box_object(page.mediabox, transform),
+    rest,
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::change_boxes`.
+pub fn pdf_change_boxes(
+  document : PdfDocument,
+  page : PdfPage,
+  transform : (Double, Double, Double, Double) -> (
+    Double,
+    Double,
+    Double,
+    Double,
+  ),
+) -> PdfPage raise PdfError {
+  document.change_boxes(page, transform)
+}
+
+///|
 /// Set `/MediaBox` on selected pages from a page-indexed `(x, y, width, height)`
 /// list.
 ///
@@ -376,16 +449,60 @@ pub fn PdfDocument::shift_boxes(
     if pdf_page_box_contains_page(page_numbers, page_number) {
       let offset = offsets[page_number - 1]
       rewritten.push(
-        self.pdf_page_upright_transform_boxes(
-          pages[index],
-          transform_translate(offset.0, offset.1),
-        ),
+        self.change_boxes(pages[index], (min_x, min_y, max_x, max_y) => {
+          (
+            min_x + offset.0,
+            min_y + offset.1,
+            max_x + offset.0,
+            max_y + offset.1,
+          )
+        }),
       )
     } else {
       rewritten.push(pages[index])
     }
   }
   self.change_pages(rewritten, change_references=true)
+}
+
+///|
+/// Rectify a page so its media-box origin is `(0, 0)`.
+///
+/// Known page boxes are shifted by the same amount, and page content,
+/// annotations, and pattern matrices receive the compensating translation.
+pub fn PdfDocument::rectify_boxes(
+  self : PdfDocument,
+  page : PdfPage,
+  fast? : Bool = false,
+) -> PdfPage raise PdfError {
+  let bounds = self.parse_rectangle(page.mediabox)
+  let page = self.change_boxes(page, (min_x, min_y, max_x, max_y) => {
+    (
+      min_x - bounds.min_x,
+      min_y - bounds.min_y,
+      max_x - bounds.min_x,
+      max_y - bounds.min_y,
+    )
+  })
+  if bounds.min_x != 0.0 || bounds.min_y != 0.0 {
+    self.pdf_page_shift_page(
+      page,
+      transform_translate(-bounds.min_x, -bounds.min_y),
+      fast,
+    )
+  } else {
+    page
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::rectify_boxes`.
+pub fn pdf_rectify_boxes(
+  document : PdfDocument,
+  page : PdfPage,
+  fast? : Bool = false,
+) -> PdfPage raise PdfError {
+  document.rectify_boxes(page, fast~)
 }
 
 ///|

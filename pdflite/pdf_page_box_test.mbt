@@ -205,6 +205,81 @@ test "PdfDocument copy_page_box handles missing sources like cpdf" {
 }
 
 ///|
+test "PdfDocument change_boxes transforms media and known page boxes" {
+  let document = page_box_document_for_test()
+  let key_crop = page_box_name_for_test("/CropBox")
+  let key_trim = page_box_name_for_test("/TrimBox")
+  let pages = try! document.pages_of_pagetree()
+  let changed = try! document.change_boxes(pages[0], (
+    min_x,
+    min_y,
+    max_x,
+    max_y,
+  ) => (min_x + 1.0, min_y + 2.0, max_x + 3.0, max_y + 4.0))
+  @test.assert_eq(try! document.parse_rectangle(changed.mediabox), {
+    min_x: 1.0,
+    min_y: 2.0,
+    max_x: 103.0,
+    max_y: 204.0,
+  })
+  @test.assert_eq(
+    changed.rest.lookup_immediate(key_crop),
+    Some(page_box_rect_for_test(11.0, 22.0, 93.0, 154.0)),
+  )
+  @test.assert_eq(
+    changed.rest.lookup_immediate(key_trim),
+    Some(page_box_rect_for_test(2.0, 4.0, 6.0, 8.0)),
+  )
+
+  let wrapped = try! @pdflite.pdf_change_boxes(document, pages[1], (
+    min_x,
+    min_y,
+    max_x,
+    max_y,
+  ) => (min_x - 1.0, min_y - 1.0, max_x - 1.0, max_y - 1.0))
+  @test.assert_eq(try! document.parse_rectangle(wrapped.mediabox), {
+    min_x: -1.0,
+    min_y: -1.0,
+    max_x: 99.0,
+    max_y: 199.0,
+  })
+}
+
+///|
+test "PdfDocument rectify_boxes zeroes media origin and shifts content" {
+  let document = page_box_document_for_test()
+  let key_crop = page_box_name_for_test("/CropBox")
+  let page = page_box_page_for_test(
+    PdfDictionary([(key_crop, page_box_rect_for_test(20.0, 30.0, 80.0, 90.0))]),
+  )
+  let page = {
+    ..page,
+    mediabox: page_box_rect_for_test(10.0, 20.0, 110.0, 120.0),
+  }
+  let rectified = try! document.rectify_boxes(page)
+  @test.assert_eq(try! document.parse_rectangle(rectified.mediabox), {
+    min_x: 0.0,
+    min_y: 0.0,
+    max_x: 100.0,
+    max_y: 100.0,
+  })
+  @test.assert_eq(
+    rectified.rest.lookup_immediate(key_crop),
+    Some(page_box_rect_for_test(10.0, 10.0, 70.0, 70.0)),
+  )
+  @test.assert_eq(page_box_ops_for_test(document, rectified), [
+    Op_cm(@pdflite.transform_translate(-10.0, -20.0)),
+    Op_S,
+  ])
+
+  let already_rectified = try! @pdflite.pdf_rectify_boxes(
+    document,
+    page_box_page_for_test(PdfDictionary([])),
+  )
+  @test.assert_eq(page_box_ops_for_test(document, already_rectified), [Op_S])
+}
+
+///|
 test "PdfDocument set_mediaboxes uses page-indexed xywh boxes" {
   let document = page_box_document_for_test()
   let updated = try! document.set_mediaboxes([2], [
