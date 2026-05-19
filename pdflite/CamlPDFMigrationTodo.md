@@ -380,11 +380,13 @@ Current backend snapshot:
   the known 10-warning baseline. Batched full native validation reports `moon
   test --target native` at 2003/2003 tests passing.~~
 - [x] ~~Port the `cpdfua` Matterhorn Type 0 CIDSystemInfo registry/ordering
-  slice: the covered Matterhorn surface now includes source checks `31-001` and
-  `31-002`, preserving cpdf's indirect-CMap-only path and its skip for
-  `/Identity-H` and `/Identity-V` encodings. Coverage pins registry mismatch
-  and ordering mismatch failures, identity encoding bypass behavior, and a
-  matching CIDSystemInfo pass. Focused native validation reports `moon test
+  slice: the covered Matterhorn surface now includes source checks `31-001`,
+  `31-002`, and `31-003`, preserving cpdf's indirect-CMap-only path and its
+  skip for `/Identity-H` and `/Identity-V` encodings. Coverage pins registry
+  mismatch and ordering mismatch failures, identity encoding bypass behavior,
+  a matching CIDSystemInfo pass, and the source `31-003` behavior comparing
+  the CMap `/Registry` against the descendant CIDFont `/Ordering` despite its
+  Supplement-label diagnostic. Focused native validation reports `moon test
   --target native pdf_ua_matterhorn_test.mbt --filter '*CIDSystemInfo*'` at
   1/1 test passing; widened native validation reports `moon test --target
   native pdf_ua_matterhorn_test.mbt` at 22/22 tests passing. Native check

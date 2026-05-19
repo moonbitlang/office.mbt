@@ -242,6 +242,16 @@ fn ua_matterhorn_31_002_failure_for_test() -> Json {
 }
 
 ///|
+fn ua_matterhorn_31_003_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "31-003",
+    "UA1:7.21.3.1-1",
+    "A Type 0 font dictionary with encoding other than Identity-H and Identity-V has a value for Supplement in the CIDSystemInfo dictionary of the CID font that is less than the value for Supplement in the CIDSystemInfo dictionary of the CMap.",
+    Json::null(),
+  )
+}
+
+///|
 fn ua_matterhorn_document_for_test(
   ops : ArrayView[@pdflite.PdfContentOp],
   resources? : @pdflite.PdfObject = PdfDictionary([]),
@@ -1058,6 +1068,10 @@ test "PdfDocument test_matterhorn_json detects Type0 CIDSystemInfo mismatches" {
     try! identity_encoding.test_matterhorn_json("31-002"),
     Json::array([]),
   )
+  @test.assert_eq(
+    try! identity_encoding.test_matterhorn_json("31-003"),
+    Json::array([]),
+  )
 
   let matching = ua_matterhorn_document_for_test([])
   matching.add_object_given_number(
@@ -1074,4 +1088,40 @@ test "PdfDocument test_matterhorn_json detects Type0 CIDSystemInfo mismatches" {
   )
   @test.assert_eq(try! matching.test_matterhorn_json("31-001"), Json::array([]))
   @test.assert_eq(try! matching.test_matterhorn_json("31-002"), Json::array([]))
+
+  let source_supplement_comparison = ua_matterhorn_document_for_test([])
+  source_supplement_comparison.add_object_given_number(
+    40,
+    ua_matterhorn_type0_font_for_test(PdfIndirect(42), 41),
+  )
+  source_supplement_comparison.add_object_given_number(
+    41,
+    ua_matterhorn_cid_font_for_test("Adobe", "UCS"),
+  )
+  source_supplement_comparison.add_object_given_number(
+    42,
+    ua_matterhorn_cmap_for_test("Adobe", "UCS"),
+  )
+  @test.assert_eq(
+    try! source_supplement_comparison.test_matterhorn_json("31-003"),
+    Json::array([ua_matterhorn_31_003_failure_for_test()]),
+  )
+
+  let source_supplement_match = ua_matterhorn_document_for_test([])
+  source_supplement_match.add_object_given_number(
+    40,
+    ua_matterhorn_type0_font_for_test(PdfIndirect(42), 41),
+  )
+  source_supplement_match.add_object_given_number(
+    41,
+    ua_matterhorn_cid_font_for_test("Other", "Adobe"),
+  )
+  source_supplement_match.add_object_given_number(
+    42,
+    ua_matterhorn_cmap_for_test("Adobe", "UCS"),
+  )
+  @test.assert_eq(
+    try! source_supplement_match.test_matterhorn_json("31-003"),
+    Json::array([]),
+  )
 }

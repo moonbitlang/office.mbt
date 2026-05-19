@@ -423,6 +423,15 @@ fn pdf_ua_matterhorn_test_31_002() -> PdfUAMatterhornTest {
 }
 
 ///|
+fn pdf_ua_matterhorn_test_31_003() -> PdfUAMatterhornTest {
+  {
+    name: "31-003",
+    error: "A Type 0 font dictionary with encoding other than Identity-H and Identity-V has a value for Supplement in the CIDSystemInfo dictionary of the CID font that is less than the value for Supplement in the CIDSystemInfo dictionary of the CMap.",
+    section: "UA1:7.21.3.1-1",
+  }
+}
+
+///|
 fn pdf_ua_matterhorn_implemented_tests() -> Array[PdfUAMatterhornTest] {
   [
     pdf_ua_matterhorn_test_01_003(),
@@ -449,6 +458,7 @@ fn pdf_ua_matterhorn_implemented_tests() -> Array[PdfUAMatterhornTest] {
     pdf_ua_matterhorn_test_30_002(),
     pdf_ua_matterhorn_test_31_001(),
     pdf_ua_matterhorn_test_31_002(),
+    pdf_ua_matterhorn_test_31_003(),
   ]
 }
 
@@ -1429,6 +1439,29 @@ fn PdfDocument::pdf_ua_matterhorn_check_31_002(self : PdfDocument) -> Json? {
 }
 
 ///|
+// Preserve cpdf source behavior: 31-003 reports a Supplement comparison, but
+// checks the CMap /Registry against the descendant CIDFont /Ordering.
+fn PdfDocument::pdf_ua_matterhorn_check_31_003(self : PdfDocument) -> Json? {
+  for entry in self.parsed_object_entries() {
+    match self.pdf_ua_matterhorn_type0_indirect_encoding(entry.2) {
+      Some(encoding_number) =>
+        if self.pdf_ua_matterhorn_cid_system_entry(
+            PdfIndirect(encoding_number),
+            pdf_ua_matterhorn_registry_key(),
+          ) !=
+          self.pdf_ua_matterhorn_descendant_cid_system_entry(
+            entry.2,
+            pdf_ua_matterhorn_ordering_key(),
+          ) {
+          return Some(Json::null())
+        }
+      None => ()
+    }
+  }
+  None
+}
+
+///|
 fn PdfDocument::pdf_ua_matterhorn_run_test(
   self : PdfDocument,
   check : PdfUAMatterhornTest,
@@ -1458,6 +1491,7 @@ fn PdfDocument::pdf_ua_matterhorn_run_test(
     "30-002" => self.pdf_ua_matterhorn_check_30_002()
     "31-001" => self.pdf_ua_matterhorn_check_31_001()
     "31-002" => self.pdf_ua_matterhorn_check_31_002()
+    "31-003" => self.pdf_ua_matterhorn_check_31_003()
     _ => None
   }
   match result {
@@ -1524,8 +1558,9 @@ fn PdfDocument::pdf_ua_matterhorn_failures(
 /// checks `28-014` and `28-015`, file-attachment no-op `28-016`, PrinterMark
 /// object and appearance checks `28-017` and `28-018`, plus reference-XObject
 /// checks `30-001` and `30-002`, plus Type 0 CIDSystemInfo checks `31-001` and
-/// `31-002`. Passing `""` runs the covered subset; unsupported individual test
-/// names raise a soft error until their source checks are ported.
+/// through `31-003`. Passing `""` runs the covered subset; unsupported
+/// individual test names raise a soft error until their source checks are
+/// ported.
 pub fn PdfDocument::test_matterhorn_json(
   self : PdfDocument,
   test_name : String,
