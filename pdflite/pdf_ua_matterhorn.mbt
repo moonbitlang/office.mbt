@@ -575,6 +575,15 @@ fn pdf_ua_matterhorn_test_09_008() -> PdfUAMatterhornTest {
 }
 
 ///|
+fn pdf_ua_matterhorn_test_10_001() -> PdfUAMatterhornTest {
+  {
+    name: "10-001",
+    error: "Character code cannot be mapped to Unicode.",
+    section: "UA1:7.2-2",
+  }
+}
+
+///|
 fn pdf_ua_matterhorn_test_11_001() -> PdfUAMatterhornTest {
   {
     name: "11-001",
@@ -1215,6 +1224,7 @@ fn pdf_ua_matterhorn_implemented_tests() -> Array[PdfUAMatterhornTest] {
     pdf_ua_matterhorn_test_09_006(),
     pdf_ua_matterhorn_test_09_007(),
     pdf_ua_matterhorn_test_09_008(),
+    pdf_ua_matterhorn_test_10_001(),
     pdf_ua_matterhorn_test_11_001(),
     pdf_ua_matterhorn_test_11_002(),
     pdf_ua_matterhorn_test_11_003(),
@@ -2404,6 +2414,95 @@ fn PdfDocument::pdf_ua_matterhorn_check_09_008(
   pdf_ua_matterhorn_check_warichu_node(
     self.pdf_ua_matterhorn_read_struct_tree(),
   )
+}
+
+///|
+fn pdf_ua_matterhorn_check_10_001_differences(differences : PdfObject) -> Json? {
+  match differences {
+    PdfArray(items) =>
+      for item in items {
+        match item {
+          PdfNameObject(name) if !pdf_ua_matterhorn_agl_glyph_name(name) =>
+            return Some(Json::null())
+          _ => ()
+        }
+      }
+    _ => ()
+  }
+  None
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_10_001_font(
+  self : PdfDocument,
+  font : PdfObject,
+) -> (Json?, Bool) {
+  if self.lookup_direct(pdf_text_tounicode_key_name, font) is Some(_) {
+    (None, false)
+  } else {
+    match self.lookup_direct(pdf_text_encoding_key_name, font) {
+      Some(PdfNameObject(name)) if name == pdf_text_mac_roman_encoding_name ||
+        name == pdf_text_mac_expert_encoding_name ||
+        name == pdf_text_win_ansi_encoding_name => (None, false)
+      Some(encoding) =>
+        match self.lookup_direct(pdf_text_differences_key_name, encoding) {
+          Some(differences) =>
+            (pdf_ua_matterhorn_check_10_001_differences(differences), false)
+          None => (Some(Json::string("No /Differences")), false)
+        }
+      None =>
+        match self.lookup_direct(pdf_text_subtype_key_name, font) {
+          Some(PdfNameObject(subtype)) if subtype == pdf_text_type0_name =>
+            (None, true)
+          _ => (Some(Json::string("Not a Type 0 font")), false)
+        }
+    }
+  }
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_all_page_numbers(
+  self : PdfDocument,
+) -> Array[Int] raise PdfError {
+  let pages : Array[Int] = []
+  for page in 1..<=self.endpage() {
+    pages.push(page)
+  }
+  pages
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_10_001(
+  self : PdfDocument,
+) -> Json? raise PdfError {
+  for entry in self.list_fonts(self.pdf_ua_matterhorn_all_page_numbers()) {
+    match
+      (
+        self.lookup_direct(pdf_text_type_key_name, entry.font),
+        self.lookup_direct(pdf_text_subtype_key_name, entry.font),
+      ) {
+      (Some(PdfNameObject(type_name)), Some(PdfNameObject(subtype))) if type_name ==
+        pdf_text_font_name &&
+        (
+          subtype == pdf_ua_matterhorn_cid_font_type0() ||
+          subtype == pdf_ua_matterhorn_cid_font_type2()
+        ) => ()
+      (Some(PdfNameObject(type_name)), _) if type_name == pdf_text_font_name => {
+        let (failure, unimplemented) = self.pdf_ua_matterhorn_check_10_001_font(
+          entry.font,
+        )
+        if unimplemented {
+          return None
+        }
+        match failure {
+          Some(extra) => return Some(extra)
+          None => ()
+        }
+      }
+      _ => ()
+    }
+  }
+  None
 }
 
 ///|
@@ -4167,6 +4266,7 @@ fn PdfDocument::pdf_ua_matterhorn_run_test(
     "09-006" => self.pdf_ua_matterhorn_check_09_006()
     "09-007" => self.pdf_ua_matterhorn_check_09_007()
     "09-008" => self.pdf_ua_matterhorn_check_09_008()
+    "10-001" => self.pdf_ua_matterhorn_check_10_001()
     "11-001" => self.pdf_ua_matterhorn_check_11_001()
     "11-002" | "11-003" | "11-004" | "11-005" | "11-006" =>
       pdf_ua_matterhorn_check_source_unimplemented_language()
@@ -4296,6 +4396,7 @@ fn PdfDocument::pdf_ua_matterhorn_failures(
 /// `01-005`, and `01-007`, role-map checks `02-001`, `02-003`, and `02-004`,
 /// XMP metadata and DisplayDocTitle checks `06-001` through `07-002`, and
 /// structure syntax checks `09-004` through `09-008`,
+/// character-code Unicode mapping check `10-001`,
 /// natural-language top-level `/Lang` check `11-001` plus source-unimplemented
 /// language checks `11-002` through `11-006`,
 /// structure-tree attribute checks `13-004`, `15-003`, `17-002`, `17-003`,
