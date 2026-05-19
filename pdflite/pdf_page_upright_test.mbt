@@ -54,6 +54,37 @@ fn page_upright_ops_for_test(
 }
 
 ///|
+test "PdfDocument upright predicates mirror cpdf page checks" {
+  let upright = page_upright_page_for_test(
+    [Op_S],
+    page_upright_rect_for_test(0.0, 0.0, 100.0, 100.0),
+  )
+  let shifted_origin = page_upright_page_for_test(
+    [Op_S],
+    page_upright_rect_for_test(10.0, 20.0, 110.0, 120.0),
+  )
+  let rotated = page_upright_page_for_test(
+    [Op_S],
+    page_upright_rect_for_test(0.0, 0.0, 100.0, 100.0),
+    rotate=Rotate90,
+  )
+  let document = page_upright_document_for_test([
+    upright, shifted_origin, rotated,
+  ])
+
+  @test.assert_eq(try! document.all_pages_upright([1]), true)
+  @test.assert_eq(try! document.all_pages_upright([1, 2]), false)
+  @test.assert_eq(try! document.all_pages_upright_only([1, 2]), true)
+  @test.assert_eq(try! document.all_pages_upright_only([1, 3]), false)
+  @test.assert_eq(try! @pdflite.pdf_allupright(document, [1]), true)
+  @test.assert_eq(try! @pdflite.pdf_alluprightonly(document, [2]), true)
+
+  // cpdf's select_pages helper ignores invalid page numbers for these checks.
+  @test.assert_eq(try! document.all_pages_upright([4]), true)
+  @test.assert_eq(try! document.all_pages_upright_only([0, 4]), true)
+}
+
+///|
 test "PdfDocument upright_pages removes rotation and rectifies boxes" {
   let key_annots = page_upright_name_for_test("/Annots")
   let key_crop = page_upright_name_for_test("/CropBox")

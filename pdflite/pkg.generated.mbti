@@ -193,6 +193,10 @@ pub fn pdf_addtexts_with_font(PdfDocument, ArrayView[Int], String, PdfStrftimeTi
 
 pub fn pdf_addtexts_with_source(PdfDocument, ArrayView[Int], String, PdfStrftimeTime, ArrayView[PdfBookmark], PdfAddTextFontSource, @core.PdfName, Double, Double, PdfContentColour, PdfPosition, filename? : String, bates? : Int, bates_pad? : Int?, relative_to_box? : @core.PdfName, shift? : String, opacity? : Double, justification? : PdfAddTextJustification, rotation? : PdfAddTextRotation, midline? : Bool, topline? : Bool, outline? : Bool, line_width? : Double, underneath? : Bool, fast? : Bool, raw? : Bool, url_border? : Bool) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_allupright(PdfDocument, ArrayView[Int]) -> Bool raise @core.PdfError
+
+pub fn pdf_alluprightonly(PdfDocument, ArrayView[Int]) -> Bool raise @core.PdfError
+
 pub fn pdf_annotation_make(PdfAnnotationSubtype, contents? : Bytes?, border? : PdfAnnotationBorder, rectangle? : PdfRectangle, colour? : PdfAnnotationColour?, subject? : Bytes?) -> PdfAnnotation
 
 pub fn pdf_annotation_make_border(Double, vertical_radius? : Double, horizontal_radius? : Double, style? : PdfAnnotationStyle, dash_array? : ArrayView[Int]) -> PdfAnnotationBorder
@@ -664,6 +668,8 @@ pub fn pdf_glyphnames_of_text(PdfTextExtractor, BytesView) -> Array[@core.PdfNam
 pub fn pdf_hard_box(PdfDocument, ArrayView[Int], @core.PdfName, mediabox_if_missing? : Bool, fast? : Bool) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_hard_error(String) -> Unit raise @core.PdfError
+
+pub fn pdf_hasbox(PdfDocument, Int, @core.PdfName) -> Bool raise @core.PdfError
 
 pub fn pdf_image_bpc(PdfDocument, PdfObject) -> PdfObject?
 
@@ -2427,6 +2433,8 @@ pub fn PdfDocument::addtext_url_annotation_references(Self, String, ArrayView[Pd
 pub fn PdfDocument::addtext_width_of_existing_font_resource(Self, PdfPage, @core.PdfName, Double, BytesView) -> (@core.PdfName, Double) raise @core.PdfError
 pub fn PdfDocument::addtexts_with_font(Self, ArrayView[Int], String, PdfStrftimeTime, ArrayView[PdfBookmark], PdfFont?, PdfFontPack?, @core.PdfName, Double, Double, PdfContentColour, PdfPosition, filename? : String, bates? : Int, bates_pad? : Int?, relative_to_box? : @core.PdfName, shift? : String, opacity? : Double, justification? : PdfAddTextJustification, rotation? : PdfAddTextRotation, midline? : Bool, topline? : Bool, outline? : Bool, line_width? : Double, underneath? : Bool, fast? : Bool, raw? : Bool, url_border? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::addtexts_with_source(Self, ArrayView[Int], String, PdfStrftimeTime, ArrayView[PdfBookmark], PdfAddTextFontSource, @core.PdfName, Double, Double, PdfContentColour, PdfPosition, filename? : String, bates? : Int, bates_pad? : Int?, relative_to_box? : @core.PdfName, shift? : String, opacity? : Double, justification? : PdfAddTextJustification, rotation? : PdfAddTextRotation, midline? : Bool, topline? : Bool, outline? : Bool, line_width? : Double, underneath? : Bool, fast? : Bool, raw? : Bool, url_border? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::all_pages_upright(Self, ArrayView[Int]) -> Bool raise @core.PdfError
+pub fn PdfDocument::all_pages_upright_only(Self, ArrayView[Int]) -> Bool raise @core.PdfError
 pub fn PdfDocument::annotations_json(Self, ArrayView[Int]) -> Json raise @core.PdfError
 pub fn PdfDocument::annotations_json_blob(Self, ArrayView[Int]) -> Bytes raise @core.PdfError
 pub fn PdfDocument::annotations_of_page(Self, PdfPage) -> Array[PdfAnnotation] raise @core.PdfError
@@ -2533,6 +2541,7 @@ pub fn PdfDocument::get_annotations(Self, encoding? : PdfMetadataEncoding) -> Ar
 pub fn PdfDocument::get_image_24bpp(Self, PdfObject, PdfObject) -> PdfImage raise @core.PdfError
 pub fn PdfDocument::get_number(Self, PdfObject) -> Double raise @core.PdfError
 pub fn PdfDocument::hard_box(Self, ArrayView[Int], @core.PdfName, mediabox_if_missing? : Bool, fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::has_page_box(Self, Int, @core.PdfName) -> Bool raise @core.PdfError
 pub fn PdfDocument::image_bits_per_component(Self, PdfObject) -> PdfObject?
 pub fn PdfDocument::image_colour_space(Self, PdfObject, PdfObject) -> PdfColourSpace raise @core.PdfError
 pub fn PdfDocument::image_resolution(Self, ArrayView[Int], Double, inline? : Bool) -> Array[(Int, String, Int, Int, Double, Double, Int)] raise @core.PdfError

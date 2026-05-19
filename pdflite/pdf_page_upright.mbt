@@ -35,6 +35,66 @@ fn PdfDocument::pdf_page_upright_all_upright(
 }
 
 ///|
+/// Return whether selected pages are rotation-free and have a near-zero origin.
+///
+/// This ports cpdf's `allupright` predicate. Like the source, page numbers
+/// outside the document are ignored rather than treated as a range error.
+pub fn PdfDocument::all_pages_upright(
+  self : PdfDocument,
+  page_numbers : ArrayView[Int],
+) -> Bool raise PdfError {
+  let pages = self.pages_of_pagetree()
+  for page_number in page_numbers {
+    if page_number >= 1 && page_number <= pages.length() {
+      if !self.pdf_page_upright_is_upright(pages[page_number - 1]) {
+        break false
+      }
+    }
+  } nobreak {
+    true
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::all_pages_upright`.
+pub fn pdf_allupright(
+  document : PdfDocument,
+  page_numbers : ArrayView[Int],
+) -> Bool raise PdfError {
+  document.all_pages_upright(page_numbers)
+}
+
+///|
+/// Return whether selected pages have no page dictionary rotation.
+///
+/// This ports cpdf's `alluprightonly`, which intentionally does not require a
+/// `(0, 0)` media-box origin and ignores out-of-range page numbers.
+pub fn PdfDocument::all_pages_upright_only(
+  self : PdfDocument,
+  page_numbers : ArrayView[Int],
+) -> Bool raise PdfError {
+  let pages = self.pages_of_pagetree()
+  for page_number in page_numbers {
+    if page_number >= 1 && page_number <= pages.length() {
+      if pages[page_number - 1].rotate != Rotate0 {
+        break false
+      }
+    }
+  } nobreak {
+    true
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::all_pages_upright_only`.
+pub fn pdf_alluprightonly(
+  document : PdfDocument,
+  page_numbers : ArrayView[Int],
+) -> Bool raise PdfError {
+  document.all_pages_upright_only(page_numbers)
+}
+
+///|
 fn PdfDocument::pdf_page_upright_rotation_matrix(
   self : PdfDocument,
   page : PdfPage,

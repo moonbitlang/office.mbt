@@ -239,6 +239,37 @@ pub fn pdf_hard_box(
 }
 
 ///|
+/// Return whether a 1-based page has a named non-media page box.
+///
+/// This mirrors cpdf's `hasbox`: invalid page numbers raise, and the check is
+/// performed against the page's explicit dictionary entries rather than treating
+/// `/MediaBox` as always present.
+pub fn PdfDocument::has_page_box(
+  self : PdfDocument,
+  page_number : Int,
+  box_name : PdfName,
+) -> Bool raise PdfError {
+  let pages = self.pages_of_pagetree()
+  if page_number < 1 || page_number > pages.length() {
+    raise BadPageSpecification("hasbox: bad page")
+  }
+  match self.lookup_direct(box_name, pages[page_number - 1].rest) {
+    Some(_) => true
+    None => false
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::has_page_box`.
+pub fn pdf_hasbox(
+  document : PdfDocument,
+  page_number : Int,
+  box_name : PdfName,
+) -> Bool raise PdfError {
+  document.has_page_box(page_number, box_name)
+}
+
+///|
 /// Copy one page-box value to another on selected pages.
 ///
 /// Missing source boxes leave the page unchanged unless `mediabox_if_missing`

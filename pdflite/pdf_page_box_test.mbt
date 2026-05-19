@@ -117,6 +117,24 @@ test "PdfDocument hard_box handles missing boxes like cpdf" {
 }
 
 ///|
+test "PdfDocument has_page_box mirrors cpdf hasbox" {
+  let document = page_box_document_for_test()
+  let key_crop = page_box_name_for_test("/CropBox")
+  let key_trim = page_box_name_for_test("/TrimBox")
+  let key_media = page_box_name_for_test("/MediaBox")
+
+  @test.assert_eq(try! document.has_page_box(1, key_crop), true)
+  @test.assert_eq(try! @pdflite.pdf_hasbox(document, 2, key_trim), false)
+  @test.assert_eq(try! document.has_page_box(1, key_media), false)
+
+  let bad_page : Result[Bool, Error] = try? document.has_page_box(3, key_crop)
+  guard bad_page
+    is Err(@pdflite.PdfError::BadPageSpecification("hasbox: bad page")) else {
+    fail("expected hasbox to reject an invalid page")
+  }
+}
+
+///|
 test "PdfDocument copy_page_box copies selected boxes and wrappers" {
   let document = page_box_document_for_test()
   let key_crop = page_box_name_for_test("/CropBox")
