@@ -212,14 +212,26 @@ fn ua_matterhorn_30_001_failure_for_test() -> Json {
 }
 
 ///|
+fn ua_matterhorn_30_002_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "30-002",
+    "UA1:7.21.3.1-1",
+    "Form XObject contains MCIDs and is referenced more than once.",
+    Json::null(),
+  )
+}
+
+///|
 fn ua_matterhorn_document_for_test(
   ops : ArrayView[@pdflite.PdfContentOp],
+  resources? : @pdflite.PdfObject = PdfDictionary([]),
   root_extras? : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)] = [],
 ) -> @pdflite.PdfDocument {
   let doc = @pdflite.pdf_document_empty()
   let page = {
     ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
     content: [try! @pdflite.pdf_content_stream_of_ops(ops)],
+    resources,
   }
   let page_root = try! doc.add_pagetree([page])
   ignore(try! doc.add_root(page_root, root_extras))
@@ -284,15 +296,25 @@ fn ua_matterhorn_display_doc_title_for_test(
 ///|
 fn ua_matterhorn_form_stream_for_test(
   ops : ArrayView[@pdflite.PdfContentOp],
+  resources? : @pdflite.PdfObject = PdfDictionary([]),
 ) -> @pdflite.PdfObject {
   let stream = try! @pdflite.pdf_content_stream_of_ops(ops)
   try! (try! stream.add_dict_entry(
     ua_matterhorn_name_for_test("/Subtype"),
     PdfNameObject(ua_matterhorn_name_for_test("/Form")),
-  )).add_dict_entry(
-    ua_matterhorn_name_for_test("/Resources"),
-    PdfDictionary([]),
-  )
+  )).add_dict_entry(ua_matterhorn_name_for_test("/Resources"), resources)
+}
+
+///|
+fn ua_matterhorn_xobject_resources_for_test(
+  entries : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)],
+) -> @pdflite.PdfObject {
+  PdfDictionary([
+    (
+      ua_matterhorn_name_for_test("/XObject"),
+      PdfDictionary([ for entry in entries => entry ]),
+    ),
+  ])
 }
 
 ///|
@@ -827,4 +849,67 @@ test "PdfDocument test_matterhorn_json detects reference XObjects" {
     PdfDictionary([(key_ref, PdfDictionary([]))]),
   )
   @test.assert_eq(try! non_form.test_matterhorn_json("30-001"), Json::array([]))
+}
+
+///|
+test "PdfDocument test_matterhorn_json detects multiply referenced MCID Form XObjects" {
+  let span = ua_matterhorn_name_for_test("/Span")
+  let mcid = ua_matterhorn_name_for_test("/MCID")
+  let form_name = ua_matterhorn_name_for_test("/Fm1")
+  let wrapper_name = ua_matterhorn_name_for_test("/Fm2")
+  let target = ua_matterhorn_form_stream_for_test([
+    Op_BDC(span, PdfDictionary([(mcid, PdfInteger(0))])),
+    Op_Tj(b"content"),
+    Op_EMC,
+  ])
+  let document = ua_matterhorn_document_for_test(
+    [],
+    resources=ua_matterhorn_xobject_resources_for_test([
+      (form_name, PdfIndirect(40)),
+    ]),
+  )
+  document.add_object_given_number(40, target)
+  document.add_object_given_number(
+    41,
+    ua_matterhorn_form_stream_for_test(
+      [],
+      resources=ua_matterhorn_xobject_resources_for_test([
+        (wrapper_name, PdfIndirect(40)),
+      ]),
+    ),
+  )
+  @test.assert_eq(
+    try! document.test_matterhorn_json("30-002"),
+    Json::array([ua_matterhorn_30_002_failure_for_test()]),
+  )
+
+  let single = ua_matterhorn_document_for_test(
+    [],
+    resources=ua_matterhorn_xobject_resources_for_test([
+      (form_name, PdfIndirect(40)),
+    ]),
+  )
+  single.add_object_given_number(40, target)
+  @test.assert_eq(try! single.test_matterhorn_json("30-002"), Json::array([]))
+
+  let no_mcid = ua_matterhorn_document_for_test(
+    [],
+    resources=ua_matterhorn_xobject_resources_for_test([
+      (form_name, PdfIndirect(40)),
+    ]),
+  )
+  no_mcid.add_object_given_number(
+    40,
+    ua_matterhorn_form_stream_for_test([Op_Tj(b"content")]),
+  )
+  no_mcid.add_object_given_number(
+    41,
+    ua_matterhorn_form_stream_for_test(
+      [],
+      resources=ua_matterhorn_xobject_resources_for_test([
+        (wrapper_name, PdfIndirect(40)),
+      ]),
+    ),
+  )
+  @test.assert_eq(try! no_mcid.test_matterhorn_json("30-002"), Json::array([]))
 }

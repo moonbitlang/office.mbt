@@ -28,8 +28,8 @@ Current estimate:
   info synchronization, XMP metadata creation, XMP RDF list extraction,
   XMP/document info JSON reporting, redaction annotation bounding-box overlays,
   cpdfua Matterhorn content/role-map/XMP/viewer-preference/optional-content/
-  media-clip/file-attachment/PrinterMark/reference-XObject validation,
-  imposition
+  media-clip/file-attachment/PrinterMark/reference-XObject/MCID Form XObject
+  validation, imposition
   transform/content/page-assembly/pattern-matrix kernels, cpdf page
   hard-box/removal/shift/scale/scale-to-fit/upright/set-mediabox/copy-box
   helpers, imposition make-space orchestration, border stamping, layout
@@ -345,7 +345,8 @@ Current backend snapshot:
   19/19 tests passing. Native check validation reports
   `moon check --target native` passing with the known `markdown/cmd` warning
   and `moon check --target native --warn-list +73` at the known 10-warning
-  baseline. Full native suite validation is deferred to the next batch.~~
+  baseline. Batched full native validation after the next two Matterhorn slices
+  reports `moon test --target native` at 2003/2003 tests passing.~~
 - [x] ~~Port the `cpdfua` Matterhorn PrinterMark appearance slice:
   the covered Matterhorn surface now includes source check `28-018`, following
   `/AP /N` from PrinterMark annotations and scanning both direct normal
@@ -360,8 +361,24 @@ Current backend snapshot:
   test --target native pdf_ua_matterhorn_test.mbt` at 20/20 tests passing.
   Native check validation reports `moon check --target native` passing with the
   known `markdown/cmd` warning and `moon check --target native --warn-list +73`
-  at the known 10-warning baseline. Full native suite validation is deferred to
-  the next batch.~~
+  at the known 10-warning baseline. Batched full native validation after the
+  following Matterhorn slice reports `moon test --target native` at 2003/2003
+  tests passing.~~
+- [x] ~~Port the `cpdfua` Matterhorn repeated Form XObject MCID slice:
+  the covered Matterhorn surface now includes source check `30-002`, parsing
+  Form XObject content streams to find marked-content dictionaries with `/MCID`,
+  materializing inherited page resources via `replace_inherit`, and failing when
+  an MCID-bearing Form XObject is referenced more than once from page or Form
+  XObject `/Resources /XObject` dictionaries. Coverage pins a page-plus-Form
+  repeated indirect reference failure, a single-reference pass, and a repeated
+  non-MCID Form XObject pass. Focused native validation reports `moon test
+  --target native pdf_ua_matterhorn_test.mbt --filter '*multiply referenced*'`
+  at 1/1 test passing; widened native validation reports `moon test --target
+  native pdf_ua_matterhorn_test.mbt` at 21/21 tests passing. Native check
+  validation reports `moon check --target native` passing with the known
+  `markdown/cmd` warning and `moon check --target native --warn-list +73` at
+  the known 10-warning baseline. Batched full native validation reports `moon
+  test --target native` at 2003/2003 tests passing.~~
 - [x] ~~Port the current stub/no-op redaction APIs from `cpdfredact`: `redact`
   is exposed as `redact_path`/`pdf_redact` and preserves page content while
   validating the selected page range, while `apply` and `apply_type` are
