@@ -270,6 +270,26 @@ fn ua_matterhorn_31_005_failure_for_test() -> Json {
 }
 
 ///|
+fn ua_matterhorn_31_006_failure_for_test(name : String) -> Json {
+  ua_matterhorn_failure_for_test(
+    "31-006",
+    "UA1:7.21.3.3-1",
+    "A CMap is neither listed as described in ISO 32000- 1:2008, 9.7.5.2, Table 118 nor is it embedded.",
+    Json::string(name),
+  )
+}
+
+///|
+fn ua_matterhorn_31_008_failure_for_test(name : String) -> Json {
+  ua_matterhorn_failure_for_test(
+    "31-008",
+    "UA1:7.21.3.3-2",
+    "A CMap references another CMap which is not listed in ISO 32000-1:2008, 9.7.5.2, Table 118.",
+    Json::string(name),
+  )
+}
+
+///|
 fn ua_matterhorn_serialized_object_extra_for_test(
   object : @pdflite.PdfObject,
 ) -> Json {
@@ -1251,6 +1271,109 @@ test "PdfDocument test_matterhorn_json checks Type2 CIDToGIDMap" {
   )
   @test.assert_eq(
     try! non_cid_type2.test_matterhorn_json("31-005"),
+    Json::array([]),
+  )
+}
+
+///|
+test "PdfDocument test_matterhorn_json checks CMap names" {
+  let unlisted_encoding = ua_matterhorn_document_for_test([])
+  unlisted_encoding.add_object_given_number(
+    40,
+    ua_matterhorn_type0_font_for_test(
+      PdfNameObject(ua_matterhorn_name_for_test("/Private-H")),
+      41,
+    ),
+  )
+  @test.assert_eq(
+    try! unlisted_encoding.test_matterhorn_json("31-006"),
+    Json::array([ua_matterhorn_31_006_failure_for_test("/Private-H")]),
+  )
+
+  let listed_encoding = ua_matterhorn_document_for_test([])
+  listed_encoding.add_object_given_number(
+    40,
+    ua_matterhorn_type0_font_for_test(
+      PdfNameObject(ua_matterhorn_name_for_test("/GB-EUC-H")),
+      41,
+    ),
+  )
+  @test.assert_eq(
+    try! listed_encoding.test_matterhorn_json("31-006"),
+    Json::array([]),
+  )
+
+  let embedded_encoding = ua_matterhorn_document_for_test([])
+  embedded_encoding.add_object_given_number(
+    40,
+    ua_matterhorn_type0_font_for_test(PdfIndirect(42), 41),
+  )
+  @test.assert_eq(
+    try! embedded_encoding.test_matterhorn_json("31-006"),
+    Json::array([]),
+  )
+
+  let non_type0 = ua_matterhorn_document_for_test([])
+  non_type0.add_object_given_number(
+    40,
+    PdfDictionary([
+      (
+        ua_matterhorn_name_for_test("/Subtype"),
+        PdfNameObject(ua_matterhorn_name_for_test("/Type1")),
+      ),
+      (
+        ua_matterhorn_name_for_test("/Encoding"),
+        PdfNameObject(ua_matterhorn_name_for_test("/Private-H")),
+      ),
+    ]),
+  )
+  @test.assert_eq(
+    try! non_type0.test_matterhorn_json("31-006"),
+    Json::array([]),
+  )
+
+  let unlisted_base = ua_matterhorn_document_for_test([])
+  unlisted_base.add_object_given_number(
+    42,
+    PdfDictionary([
+      (
+        ua_matterhorn_name_for_test("/UseCMap"),
+        PdfNameObject(ua_matterhorn_name_for_test("/PrivateBase-H")),
+      ),
+    ]),
+  )
+  @test.assert_eq(
+    try! unlisted_base.test_matterhorn_json("31-008"),
+    Json::array([ua_matterhorn_31_008_failure_for_test("/PrivateBase-H")]),
+  )
+
+  let listed_base = ua_matterhorn_document_for_test([])
+  listed_base.add_object_given_number(
+    42,
+    PdfDictionary([
+      (
+        ua_matterhorn_name_for_test("/UseCMap"),
+        PdfNameObject(ua_matterhorn_name_for_test("/Identity-H")),
+      ),
+    ]),
+  )
+  @test.assert_eq(
+    try! listed_base.test_matterhorn_json("31-008"),
+    Json::array([]),
+  )
+
+  let embedded_base = ua_matterhorn_document_for_test([])
+  embedded_base.add_object_given_number(
+    42,
+    PdfDictionary([
+      (
+        ua_matterhorn_name_for_test("/UseCMap"),
+        @pdflite.pdf_stream(PdfDictionary([]), StreamGot(b"")),
+      ),
+    ]),
+  )
+  @test.assert_eq(
+    try! embedded_base.test_matterhorn_json("31-008"),
     Json::array([]),
   )
 }

@@ -87,6 +87,74 @@ fn pdf_ua_matterhorn_identity_v() -> PdfName {
 }
 
 ///|
+let pdf_ua_matterhorn_cmap_names : Array[PdfName] = [
+  pdf_ua_name("/GB-EUC-H"),
+  pdf_ua_name("/GB-EUC-V"),
+  pdf_ua_name("/GBpc-EUC-H"),
+  pdf_ua_name("/GBpc-EUC-V"),
+  pdf_ua_name("/GBK-EUC-H"),
+  pdf_ua_name("/GBK-EUC-V"),
+  pdf_ua_name("/GBKp-EUC-H"),
+  pdf_ua_name("/GBKp-EUC-V"),
+  pdf_ua_name("/GBK2K-H"),
+  pdf_ua_name("/GBK2K-V"),
+  pdf_ua_name("/UniGB-UCS32-H"),
+  pdf_ua_name("/UniGB-UCS32-V"),
+  pdf_ua_name("/UniGB-UTF16-H"),
+  pdf_ua_name("/UniGB-UTF16-V"),
+  pdf_ua_name("/B5pc-H"),
+  pdf_ua_name("/B5pc-V"),
+  pdf_ua_name("/HKscs-B5-H"),
+  pdf_ua_name("/HKscs-B5-V"),
+  pdf_ua_name("/ETen-B5-H"),
+  pdf_ua_name("/ETen-B5-V"),
+  pdf_ua_name("/ETenms-B5-H"),
+  pdf_ua_name("/ETenms-B5-V"),
+  pdf_ua_name("/CNS-EUC-H"),
+  pdf_ua_name("/CNS-EUC-V"),
+  pdf_ua_name("/UniCNS-UCS2-H"),
+  pdf_ua_name("/UniCNS-UCS2-V"),
+  pdf_ua_name("/UniCNS-UTF16-H"),
+  pdf_ua_name("/UniCNS-UTF16-V"),
+  pdf_ua_name("/83pv-RKSJ-H"),
+  pdf_ua_name("/90ms-RKSJ-H"),
+  pdf_ua_name("/90ms-RKSJ-V"),
+  pdf_ua_name("/90msp-RKSJ-H"),
+  pdf_ua_name("/90msp-RKSJ-V"),
+  pdf_ua_name("/90pv-RKSJ-H"),
+  pdf_ua_name("/Add-RKSJ-H"),
+  pdf_ua_name("/Add-RKSJ-V"),
+  pdf_ua_name("/EUC-H"),
+  pdf_ua_name("/EUC-V"),
+  pdf_ua_name("/Ext-RKSJ-H"),
+  pdf_ua_name("/Ext-RKSJ-V"),
+  pdf_ua_name("/H"),
+  pdf_ua_name("/V"),
+  pdf_ua_name("/UniJIS-UCS2-H"),
+  pdf_ua_name("/UniJIS-UCS2-V"),
+  pdf_ua_name("/UniJIS-UCS2-HW-H"),
+  pdf_ua_name("/UniJIS-UCS2-HW-V"),
+  pdf_ua_name("/UniJIS-UTF16-H"),
+  pdf_ua_name("/UniJIS-UTF16-V"),
+  pdf_ua_name("/KSC-EUC-H"),
+  pdf_ua_name("/KSC-EUC-V"),
+  pdf_ua_name("/KSCms-UHC-H"),
+  pdf_ua_name("/KSCms-UHC-V"),
+  pdf_ua_name("/KSCms-UHC-HW-H"),
+  pdf_ua_name("/KSCms-UHS-HW-V"),
+  pdf_ua_name("/KSCpc-EUC-H"),
+  pdf_ua_name("/UniKS-UCS2-H"),
+  pdf_ua_name("/UniKS-UCS2-V"),
+  pdf_ua_name("/Identity-H"),
+  pdf_ua_name("/Identity-V"),
+]
+
+///|
+fn pdf_ua_matterhorn_cmap_name_is_listed(name : PdfName) -> Bool {
+  pdf_ua_matterhorn_cmap_names.contains(name)
+}
+
+///|
 let pdf_ua_matterhorn_resources_key_name : PdfName = pdf_ua_name("/Resources")
 
 ///|
@@ -166,6 +234,14 @@ let pdf_ua_matterhorn_cid_to_gid_map_key_name : PdfName = pdf_ua_name(
 ///|
 fn pdf_ua_matterhorn_cid_to_gid_map_key() -> PdfName {
   pdf_ua_matterhorn_cid_to_gid_map_key_name
+}
+
+///|
+let pdf_ua_matterhorn_usecmap_key_name : PdfName = pdf_ua_name("/UseCMap")
+
+///|
+fn pdf_ua_matterhorn_usecmap_key() -> PdfName {
+  pdf_ua_matterhorn_usecmap_key_name
 }
 
 ///|
@@ -478,6 +554,24 @@ fn pdf_ua_matterhorn_test_31_005() -> PdfUAMatterhornTest {
 }
 
 ///|
+fn pdf_ua_matterhorn_test_31_006() -> PdfUAMatterhornTest {
+  {
+    name: "31-006",
+    error: "A CMap is neither listed as described in ISO 32000- 1:2008, 9.7.5.2, Table 118 nor is it embedded.",
+    section: "UA1:7.21.3.3-1",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_31_008() -> PdfUAMatterhornTest {
+  {
+    name: "31-008",
+    error: "A CMap references another CMap which is not listed in ISO 32000-1:2008, 9.7.5.2, Table 118.",
+    section: "UA1:7.21.3.3-2",
+  }
+}
+
+///|
 fn pdf_ua_matterhorn_implemented_tests() -> Array[PdfUAMatterhornTest] {
   [
     pdf_ua_matterhorn_test_01_003(),
@@ -507,6 +601,8 @@ fn pdf_ua_matterhorn_implemented_tests() -> Array[PdfUAMatterhornTest] {
     pdf_ua_matterhorn_test_31_003(),
     pdf_ua_matterhorn_test_31_004(),
     pdf_ua_matterhorn_test_31_005(),
+    pdf_ua_matterhorn_test_31_006(),
+    pdf_ua_matterhorn_test_31_008(),
   ]
 }
 
@@ -1528,6 +1624,11 @@ fn pdf_ua_matterhorn_object_string_extra(object : PdfObject) -> Json {
 }
 
 ///|
+fn pdf_ua_matterhorn_name_extra(name : PdfName) -> Json {
+  Json::string(@ascii.decode_lossy(name.bytes()))
+}
+
+///|
 fn PdfDocument::pdf_ua_matterhorn_check_31_004(self : PdfDocument) -> Json? {
   for entry in self.parsed_object_entries() {
     if self.pdf_ua_matterhorn_is_cid_font_type2(entry.2) {
@@ -1549,6 +1650,36 @@ fn PdfDocument::pdf_ua_matterhorn_check_31_005(self : PdfDocument) -> Json? {
       self.lookup_direct(pdf_ua_matterhorn_cid_to_gid_map_key(), entry.2)
       is None {
       return Some(Json::null())
+    }
+  }
+  None
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_31_006(self : PdfDocument) -> Json? {
+  for entry in self.parsed_object_entries() {
+    match
+      (
+        self.lookup_direct(pdf_ua_subtype_key(), entry.2),
+        self.lookup_direct(pdf_ua_matterhorn_encoding_key(), entry.2),
+      ) {
+      (Some(PdfNameObject(subtype)), Some(PdfNameObject(encoding))) if subtype ==
+        pdf_ua_matterhorn_type0() &&
+        !pdf_ua_matterhorn_cmap_name_is_listed(encoding) =>
+        return Some(pdf_ua_matterhorn_name_extra(encoding))
+      _ => ()
+    }
+  }
+  None
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_31_008(self : PdfDocument) -> Json? {
+  for entry in self.parsed_object_entries() {
+    match self.lookup_direct(pdf_ua_matterhorn_usecmap_key(), entry.2) {
+      Some(PdfNameObject(name)) if !pdf_ua_matterhorn_cmap_name_is_listed(name) =>
+        return Some(pdf_ua_matterhorn_name_extra(name))
+      _ => ()
     }
   }
   None
@@ -1587,6 +1718,8 @@ fn PdfDocument::pdf_ua_matterhorn_run_test(
     "31-003" => self.pdf_ua_matterhorn_check_31_003()
     "31-004" => self.pdf_ua_matterhorn_check_31_004()
     "31-005" => self.pdf_ua_matterhorn_check_31_005()
+    "31-006" => self.pdf_ua_matterhorn_check_31_006()
+    "31-008" => self.pdf_ua_matterhorn_check_31_008()
     _ => None
   }
   match result {
@@ -1652,8 +1785,9 @@ fn PdfDocument::pdf_ua_matterhorn_failures(
 /// optional-content configuration checks `20-001` through `20-003`, media-clip
 /// checks `28-014` and `28-015`, file-attachment no-op `28-016`, PrinterMark
 /// object and appearance checks `28-017` and `28-018`, plus reference-XObject
-/// checks `30-001` and `30-002`, plus font CIDSystemInfo/CIDToGIDMap checks
-/// `31-001` through `31-005`. Passing `""` runs the covered subset; unsupported
+/// checks `30-001` and `30-002`, plus font CIDSystemInfo/CIDToGIDMap/CMap
+/// checks `31-001` through `31-006` and `31-008`. Passing `""` runs the
+/// covered subset; unsupported
 /// individual test names raise a soft error until their source checks are
 /// ported.
 pub fn PdfDocument::test_matterhorn_json(
