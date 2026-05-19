@@ -37,6 +37,14 @@ fn pdf_ua_matterhorn_span() -> PdfName {
 }
 
 ///|
+let pdf_ua_matterhorn_annot_name : PdfName = pdf_ua_name("/Annot")
+
+///|
+fn pdf_ua_matterhorn_annot() -> PdfName {
+  pdf_ua_matterhorn_annot_name
+}
+
+///|
 let pdf_ua_matterhorn_form_name : PdfName = pdf_ua_name("/Form")
 
 ///|
@@ -528,6 +536,15 @@ fn pdf_ua_matterhorn_test_26_002() -> PdfUAMatterhornTest {
 }
 
 ///|
+fn pdf_ua_matterhorn_test_28_002() -> PdfUAMatterhornTest {
+  {
+    name: "28-002",
+    error: "An annotation, other than of subtype Widget, Link and PrinterMark, is not a direct child of an <Annot> structure element.",
+    section: "UA1:7.18.1-2",
+  }
+}
+
+///|
 fn pdf_ua_matterhorn_test_28_006() -> PdfUAMatterhornTest {
   {
     name: "28-006",
@@ -936,6 +953,7 @@ fn pdf_ua_matterhorn_implemented_tests() -> Array[PdfUAMatterhornTest] {
     pdf_ua_matterhorn_test_25_001(),
     pdf_ua_matterhorn_test_26_001(),
     pdf_ua_matterhorn_test_26_002(),
+    pdf_ua_matterhorn_test_28_002(),
     pdf_ua_matterhorn_test_28_006(),
     pdf_ua_matterhorn_test_28_007(),
     pdf_ua_matterhorn_test_28_008(),
@@ -1928,6 +1946,34 @@ fn PdfDocument::pdf_ua_matterhorn_check_28_009(
 }
 
 ///|
+let pdf_ua_matterhorn_28_002_subtypes : Array[PdfName] = [
+  pdf_annotation_stamp_name,
+  pdf_annotation_line_name,
+  pdf_ua_name("Square"),
+  pdf_annotation_circle_name,
+  pdf_annotation_polygon_name,
+  pdf_annotation_polyline_name,
+  pdf_annotation_highlight_name,
+  pdf_annotation_underline_name,
+  pdf_annotation_squiggly_name,
+  pdf_annotation_strikeout_name,
+  pdf_annotation_caret_name,
+  pdf_annotation_ink_name,
+  pdf_annotation_file_attachment_name,
+  pdf_annotation_sound_name,
+  pdf_annotation_movie_name,
+  pdf_annotation_screen_name,
+  pdf_annotation_trap_net_name,
+  pdf_annotation_watermark_name,
+  pdf_annotation_three_dee_name,
+]
+
+///|
+fn pdf_ua_matterhorn_28_002_subtype_requires_annot(subtype : PdfName) -> Bool {
+  pdf_ua_matterhorn_28_002_subtypes.contains(subtype)
+}
+
+///|
 fn PdfDocument::pdf_ua_matterhorn_parent_tree_entries(
   self : PdfDocument,
 ) -> Array[(Int, PdfObject)] {
@@ -1950,6 +1996,36 @@ fn pdf_ua_matterhorn_parent_tree_lookup(
   for entry in parent_tree {
     if entry.0 == key {
       return Some(entry.1)
+    }
+  }
+  None
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_28_002(self : PdfDocument) -> Json? {
+  let parent_tree = self.pdf_ua_matterhorn_parent_tree_entries()
+  for entry in self.parsed_object_entries() {
+    match self.lookup_direct(pdf_ua_subtype_key(), entry.2) {
+      Some(PdfNameObject(subtype)) =>
+        if pdf_ua_matterhorn_28_002_subtype_requires_annot(subtype) {
+          match
+            self.lookup_direct(pdf_ua_matterhorn_struct_parent_key(), entry.2) {
+            Some(PdfInteger(key)) =>
+              match pdf_ua_matterhorn_parent_tree_lookup(parent_tree, key) {
+                Some(structure) =>
+                  match self.lookup_direct(pdf_ua_s_key(), structure) {
+                    Some(PdfNameObject(kind)) =>
+                      if kind != pdf_ua_matterhorn_annot() {
+                        return Some(Json::null())
+                      }
+                    _ => return Some(Json::null())
+                  }
+                None => return Some(Json::null())
+              }
+            _ => return Some(Json::null())
+          }
+        }
+      _ => ()
     }
   }
   None
@@ -2994,6 +3070,7 @@ fn PdfDocument::pdf_ua_matterhorn_run_test(
     "25-001" => self.pdf_ua_matterhorn_check_25_001()
     "26-001" => self.pdf_ua_matterhorn_check_26_001()
     "26-002" => self.pdf_ua_matterhorn_check_26_002()
+    "28-002" => self.pdf_ua_matterhorn_check_28_002()
     "28-006" => self.pdf_ua_matterhorn_check_28_006()
     "28-007" => self.pdf_ua_matterhorn_check_28_007()
     "28-008" => self.pdf_ua_matterhorn_check_28_008()
@@ -3102,6 +3179,7 @@ fn PdfDocument::pdf_ua_matterhorn_failures(
 /// optional-content configuration checks `20-001` through `20-003`, embedded
 /// file-spec check `21-001`, XFA dynamicRender check `25-001`,
 /// encryption checks `26-001` and `26-002`,
+/// annotation parent structure check `28-002`,
 /// annotation subtype and tab-order checks `28-006` through `28-009`,
 /// annotation structure-parent checks `28-010` and `28-011`,
 /// link annotation contents check `28-012`,

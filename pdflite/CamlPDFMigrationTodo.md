@@ -615,6 +615,22 @@ Current backend snapshot:
   `markdown/cmd` warning and `moon check --target native --warn-list +73` at
   the known 10-warning baseline. Full native suite validation is deferred to the
   next batch.~~
+- [x] ~~Port the `cpdfua` Matterhorn annotation `/Annot` parent slice: the
+  covered Matterhorn surface now includes source check `28-002`, scanning
+  parsed annotation objects for the source subtype set and requiring matching
+  annotations to resolve through `/StructParent` and the catalog parent tree to
+  a structure element with `/S /Annot`. Coverage pins missing `/StructParent`
+  failures, wrong structure types, missing parent-tree entries, valid `/Annot`
+  parents, the `/Link`/`/Widget`/`/PrinterMark` exemptions, and the
+  source-compatible `/Square` no-failure behavior from cpdf's exact subtype
+  pattern. Focused native validation reports `moon test --target native
+  pdf_ua_matterhorn_test.mbt --filter '*annotation Annot parents*'` at 1/1 test
+  passing; widened native validation reports `moon test --target native
+  pdf_ua_matterhorn_test.mbt` at 38/38 tests passing. Batched full native
+  validation reports `moon test --target native` at 2020/2020 tests passing.
+  Native check validation reports `moon check --target native` passing with the
+  known `markdown/cmd` warning and `moon check --target native --warn-list +73`
+  at the known 10-warning baseline.~~
 - [x] ~~Port the current stub/no-op redaction APIs from `cpdfredact`: `redact`
   is exposed as `redact_path`/`pdf_redact` and preserves page content while
   validating the selected page range, while `apply` and `apply_type` are

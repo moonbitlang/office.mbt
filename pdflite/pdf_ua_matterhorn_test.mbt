@@ -192,6 +192,16 @@ fn ua_matterhorn_26_002_failure_for_test() -> Json {
 }
 
 ///|
+fn ua_matterhorn_28_002_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "28-002",
+    "UA1:7.18.1-2",
+    "An annotation, other than of subtype Widget, Link and PrinterMark, is not a direct child of an <Annot> structure element.",
+    Json::null(),
+  )
+}
+
+///|
 fn ua_matterhorn_28_006_failure_for_test() -> Json {
   ua_matterhorn_failure_for_test(
     "28-006",
@@ -1738,6 +1748,91 @@ test "PdfDocument test_matterhorn_json checks annotation subtype and tabs" {
   )
   @test.assert_eq(try! link.test_matterhorn_json("28-009"), Json::array([]))
   @test.assert_eq(try! no_tabs.test_matterhorn_json("28-009"), Json::array([]))
+}
+
+///|
+test "PdfDocument test_matterhorn_json checks annotation Annot parents" {
+  let key_struct_parent = ua_matterhorn_name_for_test("/StructParent")
+
+  let missing_struct_parent = ua_matterhorn_document_for_test([])
+  missing_struct_parent.add_object_given_number(
+    40,
+    ua_matterhorn_annotation_for_test("/Stamp"),
+  )
+  @test.assert_eq(
+    try! missing_struct_parent.test_matterhorn_json("28-002"),
+    Json::array([ua_matterhorn_28_002_failure_for_test()]),
+  )
+
+  let wrong_type = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_struct_parent_tree_root_for_test([
+      (7, ua_matterhorn_structure_element_for_test("/Span")),
+    ]),
+  )
+  wrong_type.add_object_given_number(
+    40,
+    ua_matterhorn_annotation_for_test("/Stamp", extras=[
+      (key_struct_parent, PdfInteger(7)),
+    ]),
+  )
+  @test.assert_eq(
+    try! wrong_type.test_matterhorn_json("28-002"),
+    Json::array([ua_matterhorn_28_002_failure_for_test()]),
+  )
+
+  let missing_parent = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_struct_parent_tree_root_for_test([
+      (7, ua_matterhorn_structure_element_for_test("/Annot")),
+    ]),
+  )
+  missing_parent.add_object_given_number(
+    40,
+    ua_matterhorn_annotation_for_test("/Stamp", extras=[
+      (key_struct_parent, PdfInteger(99)),
+    ]),
+  )
+  @test.assert_eq(
+    try! missing_parent.test_matterhorn_json("28-002"),
+    Json::array([ua_matterhorn_28_002_failure_for_test()]),
+  )
+
+  let valid = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_struct_parent_tree_root_for_test([
+      (7, ua_matterhorn_structure_element_for_test("/Annot")),
+    ]),
+  )
+  valid.add_object_given_number(
+    40,
+    ua_matterhorn_annotation_for_test("/Stamp", extras=[
+      (key_struct_parent, PdfInteger(7)),
+    ]),
+  )
+  @test.assert_eq(try! valid.test_matterhorn_json("28-002"), Json::array([]))
+
+  let exempt = ua_matterhorn_document_for_test([])
+  exempt.add_object_given_number(40, ua_matterhorn_annotation_for_test("/Link"))
+  exempt.add_object_given_number(
+    41,
+    ua_matterhorn_annotation_for_test("/Widget"),
+  )
+  exempt.add_object_given_number(
+    42,
+    ua_matterhorn_annotation_for_test("/PrinterMark"),
+  )
+  @test.assert_eq(try! exempt.test_matterhorn_json("28-002"), Json::array([]))
+
+  let source_square_typo = ua_matterhorn_document_for_test([])
+  source_square_typo.add_object_given_number(
+    40,
+    ua_matterhorn_annotation_for_test("/Square"),
+  )
+  @test.assert_eq(
+    try! source_square_typo.test_matterhorn_json("28-002"),
+    Json::array([]),
+  )
 }
 
 ///|
