@@ -652,6 +652,42 @@ fn pdf_ua_matterhorn_test_31_018() -> PdfUAMatterhornTest {
 }
 
 ///|
+fn pdf_ua_matterhorn_test_31_019() -> PdfUAMatterhornTest {
+  {
+    name: "31-019",
+    error: "The font dictionary for a non-symbolic TrueType font does not contain an Encoding entry.",
+    section: "UA1:7.21.6-3",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_31_020() -> PdfUAMatterhornTest {
+  {
+    name: "31-020",
+    error: "The font dictionary for a non-symbolic TrueType font contains an Encoding dictionary which does not contain a BaseEncoding entry.",
+    section: "UA1:7.21.6-4",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_31_021() -> PdfUAMatterhornTest {
+  {
+    name: "31-021",
+    error: "The value for either the Encoding entry or the BaseEncoding entry in the Encoding dictionary in a non-symbolic TrueType font dictionary is neither MacRomanEncoding nor WinAnsiEncoding.",
+    section: "UA1:7.21.6-5",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_31_022() -> PdfUAMatterhornTest {
+  {
+    name: "31-022",
+    error: "The Differences array in the Encoding entry in a non-symbolic TrueType font dictionary contains one or more glyph names which are not listed in the Adobe Glyph List.",
+    section: "UA1:7.21.6-6",
+  }
+}
+
+///|
 fn pdf_ua_matterhorn_test_31_030() -> PdfUAMatterhornTest {
   {
     name: "31-030",
@@ -700,6 +736,10 @@ fn pdf_ua_matterhorn_implemented_tests() -> Array[PdfUAMatterhornTest] {
     pdf_ua_matterhorn_test_31_015(),
     pdf_ua_matterhorn_test_31_016(),
     pdf_ua_matterhorn_test_31_018(),
+    pdf_ua_matterhorn_test_31_019(),
+    pdf_ua_matterhorn_test_31_020(),
+    pdf_ua_matterhorn_test_31_021(),
+    pdf_ua_matterhorn_test_31_022(),
     pdf_ua_matterhorn_test_31_030(),
   ]
 }
@@ -1806,6 +1846,126 @@ fn PdfDocument::pdf_ua_matterhorn_check_31_008(self : PdfDocument) -> Json? {
 }
 
 ///|
+fn PdfDocument::pdf_ua_matterhorn_is_non_symbolic(
+  self : PdfDocument,
+  object : PdfObject,
+) -> Bool {
+  match self.lookup_direct(pdf_text_font_descriptor_key_name, object) {
+    Some(descriptor) =>
+      match self.lookup_direct(pdf_text_flags_key_name, descriptor) {
+        Some(PdfInteger(flags)) => !((flags & 4) > 0)
+        _ => true
+      }
+    None => true
+  }
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_is_non_symbolic_truetype(
+  self : PdfDocument,
+  object : PdfObject,
+) -> Bool {
+  match self.lookup_direct(pdf_ua_subtype_key(), object) {
+    Some(PdfNameObject(subtype)) =>
+      subtype == pdf_text_true_type_name_value &&
+      self.pdf_ua_matterhorn_is_non_symbolic(object)
+    _ => false
+  }
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_31_019(self : PdfDocument) -> Json? {
+  for entry in self.parsed_object_entries() {
+    if self.pdf_ua_matterhorn_is_non_symbolic_truetype(entry.2) &&
+      self.lookup_direct(pdf_text_encoding_key_name, entry.2) is None {
+      return Some(Json::null())
+    }
+  }
+  None
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_31_020(self : PdfDocument) -> Json? {
+  for entry in self.parsed_object_entries() {
+    match
+      (
+        self.pdf_ua_matterhorn_is_non_symbolic_truetype(entry.2),
+        self.lookup_direct(pdf_text_encoding_key_name, entry.2),
+      ) {
+      (true, Some(PdfDictionary(_) as encoding)) =>
+        if self.lookup_direct(pdf_text_base_encoding_key_name, encoding) is None {
+          return Some(Json::null())
+        }
+      _ => ()
+    }
+  }
+  None
+}
+
+///|
+fn pdf_ua_matterhorn_is_mac_roman_or_win_ansi(name : PdfName) -> Bool {
+  name == pdf_text_mac_roman_encoding_name ||
+  name == pdf_text_win_ansi_encoding_name
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_31_021(self : PdfDocument) -> Json? {
+  for entry in self.parsed_object_entries() {
+    if self.pdf_ua_matterhorn_is_non_symbolic_truetype(entry.2) {
+      match self.lookup_direct(pdf_text_encoding_key_name, entry.2) {
+        Some(PdfNameObject(name)) =>
+          if !pdf_ua_matterhorn_is_mac_roman_or_win_ansi(name) {
+            return Some(Json::null())
+          }
+        Some(PdfDictionary(_) as encoding) =>
+          match self.lookup_direct(pdf_text_base_encoding_key_name, encoding) {
+            Some(PdfNameObject(name)) if pdf_ua_matterhorn_is_mac_roman_or_win_ansi(
+                name,
+              ) => ()
+            Some(base_encoding) =>
+              return Some(pdf_ua_matterhorn_object_string_extra(base_encoding))
+            None => ()
+          }
+        _ => ()
+      }
+    }
+  }
+  None
+}
+
+///|
+fn pdf_ua_matterhorn_agl_glyph_name(name : PdfName) -> Bool {
+  match pdf_text_codepoints_of_agl_sequence_glyphname(name) {
+    Some(_) => true
+    None => pdf_text_codepoint_of_agl_base_glyphname(name) is Some(_)
+  }
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_31_022(self : PdfDocument) -> Json? {
+  for entry in self.parsed_object_entries() {
+    if self.pdf_ua_matterhorn_is_non_symbolic_truetype(entry.2) {
+      match self.lookup_direct(pdf_text_encoding_key_name, entry.2) {
+        Some(encoding) =>
+          match self.lookup_direct(pdf_text_differences_key_name, encoding) {
+            Some(PdfArray(differences)) =>
+              for difference in differences {
+                match difference {
+                  PdfNameObject(name) if !pdf_ua_matterhorn_agl_glyph_name(name) =>
+                    return Some(pdf_ua_matterhorn_name_extra(name))
+                  _ => ()
+                }
+              }
+            _ => ()
+          }
+        None => ()
+      }
+    }
+  }
+  None
+}
+
+///|
 fn pdf_ua_matterhorn_check_source_unimplemented_font_file() -> Json? {
   None
 }
@@ -1846,6 +2006,10 @@ fn PdfDocument::pdf_ua_matterhorn_run_test(
     "31-006" => self.pdf_ua_matterhorn_check_31_006()
     "31-007" => self.pdf_ua_matterhorn_check_31_007()
     "31-008" => self.pdf_ua_matterhorn_check_31_008()
+    "31-019" => self.pdf_ua_matterhorn_check_31_019()
+    "31-020" => self.pdf_ua_matterhorn_check_31_020()
+    "31-021" => self.pdf_ua_matterhorn_check_31_021()
+    "31-022" => self.pdf_ua_matterhorn_check_31_022()
     "31-011"
     | "31-012"
     | "31-013"
@@ -1921,9 +2085,10 @@ fn PdfDocument::pdf_ua_matterhorn_failures(
 /// object and appearance checks `28-017` and `28-018`, plus reference-XObject
 /// checks `30-001` and `30-002`, plus font CIDSystemInfo/CIDToGIDMap/CMap
 /// checks `31-001` through `31-008`, and source-unimplemented font-file checks
-/// `31-011` through `31-016`, `31-018`, and `31-030`. Passing `""` runs the
-/// covered subset; unsupported individual test names raise a soft error until
-/// their source checks are ported.
+/// `31-011` through `31-016`, `31-018`, and `31-030`, plus TrueType encoding
+/// dictionary checks `31-019` through `31-022`. Passing `""` runs the covered
+/// subset; unsupported individual test names raise a soft error until their
+/// source checks are ported.
 pub fn PdfDocument::test_matterhorn_json(
   self : PdfDocument,
   test_name : String,
