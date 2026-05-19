@@ -162,6 +162,16 @@ fn ua_matterhorn_20_003_failure_for_test() -> Json {
 }
 
 ///|
+fn ua_matterhorn_21_001_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "21-001",
+    "UA1:7.11-1",
+    "The file specification dictionary for an embedded file does not contain F and UF entries.",
+    Json::null(),
+  )
+}
+
+///|
 fn ua_matterhorn_28_014_failure_for_test() -> Json {
   ua_matterhorn_failure_for_test(
     "28-014",
@@ -433,12 +443,14 @@ fn ua_matterhorn_document_for_test(
   ops : ArrayView[@pdflite.PdfContentOp],
   resources? : @pdflite.PdfObject = PdfDictionary([]),
   root_extras? : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)] = [],
+  rest? : @pdflite.PdfObject = PdfDictionary([]),
 ) -> @pdflite.PdfDocument {
   let doc = @pdflite.pdf_document_empty()
   let page = {
     ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
     content: [try! @pdflite.pdf_content_stream_of_ops(ops)],
     resources,
+    rest,
   }
   let page_root = try! doc.add_pagetree([page])
   ignore(try! doc.add_root(page_root, root_extras))
@@ -498,6 +510,73 @@ fn ua_matterhorn_display_doc_title_for_test(
       (ua_matterhorn_name_for_test("/DisplayDocTitle"), PdfBoolean(value)),
     ]),
   )
+}
+
+///|
+fn ua_matterhorn_file_spec_for_test(
+  f : String?,
+  uf : String?,
+) -> @pdflite.PdfObject {
+  let entries : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = [
+    (
+      ua_matterhorn_name_for_test("/Type"),
+      PdfNameObject(ua_matterhorn_name_for_test("/Filespec")),
+    ),
+  ]
+  match f {
+    Some(value) =>
+      entries.push(
+        (ua_matterhorn_name_for_test("/F"), PdfString(@ascii.encode(value))),
+      )
+    None => ()
+  }
+  match uf {
+    Some(value) =>
+      entries.push(
+        (ua_matterhorn_name_for_test("/UF"), PdfString(@ascii.encode(value))),
+      )
+    None => ()
+  }
+  PdfDictionary(entries)
+}
+
+///|
+fn ua_matterhorn_embedded_files_root_for_test(
+  file_spec : @pdflite.PdfObject,
+) -> Array[(@pdflite.PdfName, @pdflite.PdfObject)] {
+  [
+    (
+      ua_matterhorn_name_for_test("/Names"),
+      PdfDictionary([
+        (
+          ua_matterhorn_name_for_test("/EmbeddedFiles"),
+          PdfDictionary([
+            (
+              ua_matterhorn_name_for_test("/Names"),
+              PdfArray([PdfString(@ascii.encode("attachment.bin")), file_spec]),
+            ),
+          ]),
+        ),
+      ]),
+    ),
+  ]
+}
+
+///|
+fn ua_matterhorn_file_attachment_annotation_for_test(
+  file_spec : @pdflite.PdfObject?,
+) -> @pdflite.PdfObject {
+  let entries : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = [
+    (
+      ua_matterhorn_name_for_test("/Subtype"),
+      PdfNameObject(ua_matterhorn_name_for_test("/FileAttachment")),
+    ),
+  ]
+  match file_spec {
+    Some(value) => entries.push((ua_matterhorn_name_for_test("/FS"), value))
+    None => ()
+  }
+  PdfDictionary(entries)
 }
 
 ///|
@@ -1201,6 +1280,66 @@ test "PdfDocument test_matterhorn_json detects optional content AS entries" {
     ]),
   ])
   @test.assert_eq(try! valid.test_matterhorn_json("20-003"), Json::array([]))
+}
+
+///|
+test "PdfDocument test_matterhorn_json checks embedded file specs" {
+  let missing_uf = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_embedded_files_root_for_test(
+      ua_matterhorn_file_spec_for_test(Some("attachment.bin"), None),
+    ),
+  )
+  @test.assert_eq(
+    try! missing_uf.test_matterhorn_json("21-001"),
+    Json::array([ua_matterhorn_21_001_failure_for_test()]),
+  )
+
+  let valid_named = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_embedded_files_root_for_test(
+      ua_matterhorn_file_spec_for_test(
+        Some("attachment.bin"),
+        Some("attachment.bin"),
+      ),
+    ),
+  )
+  @test.assert_eq(
+    try! valid_named.test_matterhorn_json("21-001"),
+    Json::array([]),
+  )
+
+  let missing_annotation_uf = ua_matterhorn_document_for_test(
+    [],
+    rest=PdfDictionary([
+      (
+        ua_matterhorn_name_for_test("/Annots"),
+        PdfArray([
+          ua_matterhorn_file_attachment_annotation_for_test(
+            Some(ua_matterhorn_file_spec_for_test(Some("page.bin"), None)),
+          ),
+        ]),
+      ),
+    ]),
+  )
+  @test.assert_eq(
+    try! missing_annotation_uf.test_matterhorn_json("21-001"),
+    Json::array([ua_matterhorn_21_001_failure_for_test()]),
+  )
+
+  let no_fs_annotation = ua_matterhorn_document_for_test(
+    [],
+    rest=PdfDictionary([
+      (
+        ua_matterhorn_name_for_test("/Annots"),
+        PdfArray([ua_matterhorn_file_attachment_annotation_for_test(None)]),
+      ),
+    ]),
+  )
+  @test.assert_eq(
+    try! no_fs_annotation.test_matterhorn_json("21-001"),
+    Json::array([]),
+  )
 }
 
 ///|

@@ -484,6 +484,15 @@ fn pdf_ua_matterhorn_test_20_003() -> PdfUAMatterhornTest {
 }
 
 ///|
+fn pdf_ua_matterhorn_test_21_001() -> PdfUAMatterhornTest {
+  {
+    name: "21-001",
+    error: "The file specification dictionary for an embedded file does not contain F and UF entries.",
+    section: "UA1:7.11-1",
+  }
+}
+
+///|
 fn pdf_ua_matterhorn_test_28_014() -> PdfUAMatterhornTest {
   {
     name: "28-014",
@@ -825,6 +834,7 @@ fn pdf_ua_matterhorn_implemented_tests() -> Array[PdfUAMatterhornTest] {
     pdf_ua_matterhorn_test_20_001(),
     pdf_ua_matterhorn_test_20_002(),
     pdf_ua_matterhorn_test_20_003(),
+    pdf_ua_matterhorn_test_21_001(),
     pdf_ua_matterhorn_test_28_014(),
     pdf_ua_matterhorn_test_28_015(),
     pdf_ua_matterhorn_test_28_016(),
@@ -1505,6 +1515,53 @@ fn PdfDocument::pdf_ua_matterhorn_check_20_003(self : PdfDocument) -> Json? {
         }
       }
     _ => ()
+  }
+  None
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_file_spec_has_f_and_uf(
+  self : PdfDocument,
+  file_spec : PdfObject,
+) -> Bool {
+  self.lookup_direct(pdf_attach_f_key(), file_spec) is Some(_) &&
+  self.lookup_direct(pdf_attach_uf_key(), file_spec) is Some(_)
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_21_001(
+  self : PdfDocument,
+) -> Json? raise PdfError {
+  match
+    self.lookup_chain(self.trailer_dict(), [
+      pdf_ua_root_key(),
+      pdf_attach_names_key(),
+      pdf_attach_embedded_files_key(),
+    ]) {
+    Some(tree) =>
+      for entry in self.read_name_tree(tree) {
+        if !self.pdf_ua_matterhorn_file_spec_has_f_and_uf(entry.1) {
+          return Some(Json::null())
+        }
+      }
+    None => ()
+  }
+  for page in self.pages_of_pagetree() {
+    match self.lookup_direct(pdf_attach_annots_key(), page.rest) {
+      Some(PdfArray(annotations)) =>
+        for annotation in annotations {
+          if self.pdf_attach_is_file_attachment_annotation(annotation) {
+            match self.lookup_direct(pdf_attach_fs_key(), annotation) {
+              Some(file_spec) =>
+                if !self.pdf_ua_matterhorn_file_spec_has_f_and_uf(file_spec) {
+                  return Some(Json::null())
+                }
+              None => ()
+            }
+          }
+        }
+      _ => ()
+    }
   }
   None
 }
@@ -2457,6 +2514,7 @@ fn PdfDocument::pdf_ua_matterhorn_run_test(
     "20-001" => self.pdf_ua_matterhorn_check_20_001()
     "20-002" => self.pdf_ua_matterhorn_check_20_002()
     "20-003" => self.pdf_ua_matterhorn_check_20_003()
+    "21-001" => self.pdf_ua_matterhorn_check_21_001()
     "28-014" => self.pdf_ua_matterhorn_check_28_014()
     "28-015" => self.pdf_ua_matterhorn_check_28_015()
     "28-016" => self.pdf_ua_matterhorn_check_28_016()
@@ -2555,10 +2613,11 @@ fn PdfDocument::pdf_ua_matterhorn_failures(
 /// The current migration covers content-marking checks `01-003`, `01-004`,
 /// `01-005`, and `01-007`, role-map checks `02-001`, `02-003`, and `02-004`,
 /// XMP metadata and DisplayDocTitle checks `06-001` through `07-002`, and
-/// optional-content configuration checks `20-001` through `20-003`, media-clip
-/// checks `28-014` and `28-015`, file-attachment no-op `28-016`, PrinterMark
-/// object and appearance checks `28-017` and `28-018`, plus reference-XObject
-/// checks `30-001` and `30-002`, plus font CIDSystemInfo/CIDToGIDMap/CMap
+/// optional-content configuration checks `20-001` through `20-003`, embedded
+/// file-spec check `21-001`, media-clip checks `28-014` and `28-015`,
+/// file-attachment no-op `28-016`, PrinterMark object and appearance checks
+/// `28-017` and `28-018`, plus reference-XObject checks `30-001` and
+/// `30-002`, plus font CIDSystemInfo/CIDToGIDMap/CMap
 /// checks `31-001` through `31-009`, and source-unimplemented font-file checks
 /// `31-011` through `31-016`, `31-018`, and `31-030`, plus TrueType encoding
 /// dictionary and cmap checks `31-017` and `31-019` through `31-026`, and

@@ -525,6 +525,21 @@ Current backend snapshot:
   native` passing with the known `markdown/cmd` warning and `moon check
   --target native --warn-list +73` at the known 10-warning baseline. Full
   native suite validation is deferred to the next batch.~~
+- [x] ~~Port the `cpdfua` Matterhorn embedded file-spec slice: the covered
+  Matterhorn surface now includes source check `21-001`, checking document name
+  tree embedded file specs and page `/FileAttachment` annotation `/FS`
+  dictionaries for both `/F` and `/UF` entries while preserving cpdf's no-failure
+  behavior for file-attachment annotations without `/FS`. Coverage pins missing
+  `/UF` failures from both the `/EmbeddedFiles` name tree and page annotations,
+  valid `/F` plus `/UF` passes, and no-`/FS` annotation passes. Focused native
+  validation reports `moon test --target native pdf_ua_matterhorn_test.mbt
+  --filter '*embedded file specs*'` at 1/1 test passing; widened native
+  validation reports `moon test --target native pdf_ua_matterhorn_test.mbt` at
+  32/32 tests passing. Native check validation reports `moon check --target
+  native` passing with the known `markdown/cmd` warning and `moon check
+  --target native --warn-list +73` at the known 10-warning baseline. Batched
+  full native validation reports `moon test --target native` at 2014/2014 tests
+  passing.~~
 - [x] ~~Port the current stub/no-op redaction APIs from `cpdfredact`: `redact`
   is exposed as `redact_path`/`pdf_redact` and preserves page content while
   validating the selected page range, while `apply` and `apply_type` are
