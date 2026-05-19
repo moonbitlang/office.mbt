@@ -662,6 +662,76 @@ pub fn pdf_content_form_xobject_enter_state(
 }
 
 ///|
+fn PdfDocument::content_direct_dictionary_object(
+  self : PdfDocument,
+  object : PdfObject,
+) -> PdfObject {
+  match self.direct(object) {
+    PdfDictionary(entries) => PdfDictionary([ for entry in entries => entry ])
+    _ => PdfDictionary([])
+  }
+}
+
+///|
+fn PdfDocument::content_form_xobject_resource_dictionary(
+  self : PdfDocument,
+  xobject : PdfObject,
+) -> PdfObject {
+  match self.direct(xobject) {
+    PdfStreamObject(stream) =>
+      match self.lookup_direct(pdf_xobject_resources_key(), stream.dictionary) {
+        Some(PdfDictionary(entries)) =>
+          PdfDictionary([ for entry in entries => entry ])
+        _ => PdfDictionary([])
+      }
+    _ => PdfDictionary([])
+  }
+}
+
+///|
+fn PdfDocument::content_form_xobject_merge_resources(
+  self : PdfDocument,
+  resources : PdfObject,
+  xobject : PdfObject,
+) -> PdfObject raise PdfError {
+  let mut total = self.content_direct_dictionary_object(resources)
+  match self.content_form_xobject_resource_dictionary(xobject) {
+    PdfDictionary(entries) =>
+      for entry in entries {
+        total = total.add_dict_entry(entry.0, entry.1)
+      }
+    _ => ()
+  }
+  total
+}
+
+///|
+/// Look up a named Form XObject resource and return the resources used inside it.
+pub fn PdfDocument::content_form_xobject_resources(
+  self : PdfDocument,
+  resources : PdfObject,
+  name : PdfName,
+) -> PdfObject? raise PdfError {
+  let xobject = self.content_xobject_from_resources(resources, name)
+  match self.lookup_direct(pdf_xobject_subtype_key(), xobject) {
+    Some(PdfNameObject(subtype)) if subtype == pdf_xobject_form() =>
+      Some(self.content_form_xobject_merge_resources(resources, xobject))
+    Some(PdfNameObject(subtype)) if subtype == pdf_image_image_name() => None
+    _ => raise SoftError("Unknown kind of xobject")
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::content_form_xobject_resources`.
+pub fn pdf_content_form_xobject_resources(
+  document : PdfDocument,
+  resources : PdfObject,
+  name : PdfName,
+) -> PdfObject? raise PdfError {
+  document.content_form_xobject_resources(resources, name)
+}
+
+///|
 fn PdfContentOperatorState::content_with_clipping_path(
   self : PdfContentOperatorState,
   clipping_path : ArrayView[PdfPath],

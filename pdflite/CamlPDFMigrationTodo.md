@@ -2799,6 +2799,20 @@ Current backend snapshot:
   native --package bobzhang/pdflite --file
   pdf_content_operator_state_test.mbt` at 14/14 tests passing; native
   full-suite validation reports 1960/1960 tests passing.~~
+- [x] ~~Standalone `cpdfcontent.ml` Form XObject resource-merge slice exposes
+  `PdfDocument::content_form_xobject_resources` and
+  `pdf_content_form_xobject_resources`, matching cpdf's `process_form_xobject`
+  shallow `mergedict pagedict xobjdict` behavior where Form stream
+  `/Resources` replace page resources on duplicate top-level keys, page-only
+  resources are retained, image XObjects produce no Form resources, and
+  recursive Form content walking remains for a later slice. Focused native
+  validation reports `moon test --target native
+  pdf_content_operator_state_test.mbt --filter '*Form XObject*'` at 2/2 tests
+  passing and `moon test --target native pdf_content_operator_state_test.mbt`
+  at 15/15 tests passing; native check validation reports `moon check --target
+  native` passing with the known `markdown/cmd` warning and
+  `moon check --target native --warn-list +73` at the known 10-warning
+  baseline. Full native suite validation is deferred to the next batch.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,

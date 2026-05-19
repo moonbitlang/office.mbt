@@ -401,6 +401,8 @@ pub fn pdf_content_extra_metrics(PdfFont) -> (Double, Double)
 
 pub fn pdf_content_form_xobject_enter_state(PdfDocument, PdfContentOperatorState, PdfObject, @core.PdfName) -> PdfContentOperatorState? raise @core.PdfError
 
+pub fn pdf_content_form_xobject_resources(PdfDocument, PdfObject, @core.PdfName) -> PdfObject? raise @core.PdfError
+
 pub fn pdf_content_glyph_state_content_json(PdfContentGlyphState) -> Json
 
 pub fn pdf_content_glyph_state_of_text_state(PdfContentTextState, ArrayView[PdfPath]) -> PdfContentGlyphState
@@ -2352,6 +2354,7 @@ pub fn PdfDocument::composition_json(Self, Int) -> Json raise @core.PdfError
 pub fn PdfDocument::composition_json_blob(Self, Int) -> Bytes raise @core.PdfError
 pub fn PdfDocument::contains_javascript(Self) -> Bool
 pub fn PdfDocument::content_form_xobject_enter_state(Self, PdfContentOperatorState, PdfObject, @core.PdfName) -> PdfContentOperatorState? raise @core.PdfError
+pub fn PdfDocument::content_form_xobject_resources(Self, PdfObject, @core.PdfName) -> PdfObject? raise @core.PdfError
 pub fn PdfDocument::content_image_entry_from_resources(Self, PdfContentOperatorState, PdfObject, @core.PdfName) -> PdfContentJsonEntry? raise @core.PdfError
 pub fn PdfDocument::content_read_axial_shading(Self, PdfObject) -> PdfContentShadingKind raise @core.PdfError
 pub fn PdfDocument::content_read_function_shading(Self, PdfObject) -> PdfContentShadingKind raise @core.PdfError

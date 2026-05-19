@@ -558,6 +558,103 @@ test "cpdfcontent operator state prepares Form XObject resources" {
 }
 
 ///|
+test "cpdfcontent operator state merges Form XObject resources" {
+  let doc = @pdflite.pdf_document_empty()
+  let form_name = content_operator_name_for_test("/Fm1")
+  let image_name = content_operator_name_for_test("/Im1")
+  let nested_name = content_operator_name_for_test("/Nested")
+  let xobject_key = content_operator_name_for_test("/XObject")
+  let subtype_key = content_operator_name_for_test("/Subtype")
+  let resources_key = content_operator_name_for_test("/Resources")
+  let font_key = content_operator_name_for_test("/Font")
+  let color_space_key = content_operator_name_for_test("/ColorSpace")
+  let extgstate_key = content_operator_name_for_test("/ExtGState")
+  let custom_key = content_operator_name_for_test("/Custom")
+  let page_font_name = content_operator_name_for_test("/FPage")
+  let form_font_name = content_operator_name_for_test("/FForm")
+  let color_space_name = content_operator_name_for_test("/CSPage")
+  let graphics_state_name = content_operator_name_for_test("/GSForm")
+  let form_xobject = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (subtype_key, PdfNameObject(content_operator_name_for_test("/Form"))),
+      (
+        resources_key,
+        @pdflite.pdf_dictionary([
+          (font_key, @pdflite.pdf_dictionary([(form_font_name, PdfInteger(2))])),
+          (
+            xobject_key,
+            @pdflite.pdf_dictionary([(nested_name, PdfInteger(10))]),
+          ),
+          (
+            extgstate_key,
+            @pdflite.pdf_dictionary([(graphics_state_name, PdfInteger(11))]),
+          ),
+          (custom_key, PdfInteger(9)),
+        ]),
+      ),
+    ]),
+    StreamGot(Bytes::new(0)),
+  )
+  let image_xobject = @pdflite.pdf_dictionary([
+    (subtype_key, PdfNameObject(content_operator_name_for_test("/Image"))),
+  ])
+  let page_resources = @pdflite.pdf_dictionary([
+    (font_key, @pdflite.pdf_dictionary([(page_font_name, PdfInteger(1))])),
+    (
+      color_space_key,
+      @pdflite.pdf_dictionary([(color_space_name, PdfInteger(3))]),
+    ),
+    (
+      xobject_key,
+      @pdflite.pdf_dictionary([
+        (form_name, form_xobject),
+        (image_name, image_xobject),
+      ]),
+    ),
+    (custom_key, PdfInteger(7)),
+  ])
+  let result : Result[@pdflite.PdfObject?, Error] = try? doc.content_form_xobject_resources(
+    page_resources, form_name,
+  )
+  guard result is Ok(Some(total_resources)) else {
+    fail("expected merged Form XObject resources")
+  }
+  @test.assert_eq(
+    doc.lookup_direct(font_key, total_resources),
+    Some(@pdflite.pdf_dictionary([(form_font_name, PdfInteger(2))])),
+  )
+  @test.assert_eq(
+    doc.lookup_direct(color_space_key, total_resources),
+    Some(@pdflite.pdf_dictionary([(color_space_name, PdfInteger(3))])),
+  )
+  @test.assert_eq(
+    doc.lookup_direct(xobject_key, total_resources),
+    Some(@pdflite.pdf_dictionary([(nested_name, PdfInteger(10))])),
+  )
+  @test.assert_eq(
+    doc.lookup_direct(extgstate_key, total_resources),
+    Some(@pdflite.pdf_dictionary([(graphics_state_name, PdfInteger(11))])),
+  )
+  @test.assert_eq(
+    doc.lookup_direct(custom_key, total_resources),
+    Some(PdfInteger(9)),
+  )
+  let wrapper_result : Result[@pdflite.PdfObject?, Error] = try? @pdflite.pdf_content_form_xobject_resources(
+    doc, page_resources, form_name,
+  )
+  guard wrapper_result is Ok(Some(wrapper_resources)) else {
+    fail("expected wrapper merged Form XObject resources")
+  }
+  @test.assert_eq(wrapper_resources, total_resources)
+  let image_result : Result[@pdflite.PdfObject?, Error] = try? doc.content_form_xobject_resources(
+    page_resources, image_name,
+  )
+  guard image_result is Ok(None) else {
+    fail("expected image XObject to emit no Form resources")
+  }
+}
+
+///|
 test "cpdfcontent operator state emits path entries for drawn paths" {
   let initial = @pdflite.pdf_content_initial_operator_state(
     0.0, 0.0, 100.0, 200.0,
