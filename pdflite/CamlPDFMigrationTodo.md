@@ -2734,6 +2734,15 @@ Current backend snapshot:
   --target native --package bobzhang/pdflite --file
   pdf_content_operator_state_test.mbt` at 7/7 tests passing; native full-suite
   validation reports 1953/1953 tests passing.~~
+- [x] ~~Standalone `cpdfcontent.ml` direct graphics-parameter slice adds
+  `miter_limit` and `flatness` to the operator state and stack frames, and
+  exposes `PdfContentOperatorState::content_apply_graphics_parameter_op` plus
+  `pdf_content_apply_graphics_parameter_op`, matching cpdf's initial `M = 10`
+  and `i = 1` values, direct `M`/`i` assignment, and q/Q save/restore behavior
+  while leaving ExtGState dictionary parsing for a later resource-backed slice.
+  Native focused validation reports `moon test --target native --package
+  bobzhang/pdflite --file pdf_content_operator_state_test.mbt` at 8/8 tests
+  passing; native full-suite validation reports 1954/1954 tests passing.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,

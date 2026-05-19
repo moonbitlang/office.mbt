@@ -21,6 +21,8 @@ test "cpdfcontent operator state exposes initial state" {
   )
   @test.assert_eq(state.path_state.clipping_path, clipping_path)
   @test.assert_eq(state.text_state, @pdflite.pdf_content_initial_text_state())
+  @test.assert_eq(state.miter_limit, 10.0)
+  @test.assert_eq(state.flatness, 1.0)
   @test.assert_eq(state.marked_content_point, None)
   @test.assert_eq(state.marked_content.length(), 0)
   @test.assert_eq(state.type3_d0, None)
@@ -128,6 +130,8 @@ test "cpdfcontent operator core threads graphics stack" {
     .content_apply_core_op(Op_cm(@pdflite.transform_translate(5.0, 6.0)))
     .content_apply_core_op(Op_w(7.0))
     .content_apply_core_op(Op_Tw(8.0))
+    .content_apply_core_op(Op_M(9.0))
+    .content_apply_core_op(Op_i(0.25))
     .content_apply_core_op(Op_BMC(content_operator_name_for_test("/Artifact")))
     .content_apply_core_op(Op_d0(500.0, 0.0))
   @test.assert_eq(changed.state_stack.length(), 1)
@@ -135,9 +139,27 @@ test "cpdfcontent operator core threads graphics stack" {
   @test.assert_eq(changed.path_state.line_width, 7.0)
   @test.assert_eq(changed.text_state.word_spacing, 8.0)
   @test.assert_eq(changed.marked_content.length(), 1)
+  @test.assert_eq(changed.miter_limit, 9.0)
+  @test.assert_eq(changed.flatness, 0.25)
   @test.assert_eq(changed.type3_d0, Some({ width_x: 500.0, width_y: 0.0 }))
   @test.assert_eq(changed.content_apply_core_op(Op_Q), initial)
   @test.assert_eq(initial.content_apply_core_op(Op_BX), initial)
+}
+
+///|
+test "cpdfcontent operator state applies direct graphics parameters" {
+  let initial = @pdflite.pdf_content_initial_operator_state(
+    0.0, 0.0, 100.0, 200.0,
+  )
+  let state = initial
+    .content_apply_graphics_parameter_op(Op_M(13.0))
+    .content_apply_graphics_parameter_op(Op_i(0.5))
+  @test.assert_eq(state.miter_limit, 13.0)
+  @test.assert_eq(state.flatness, 0.5)
+  @test.assert_eq(
+    @pdflite.pdf_content_apply_graphics_parameter_op(initial, Op_i(0.125)).flatness,
+    0.125,
+  )
 }
 
 ///|

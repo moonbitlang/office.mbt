@@ -6,6 +6,8 @@ pub(all) struct PdfContentOperatorFrame {
   path : PdfDrawnPath
   path_state : PdfContentPathState
   text_state : PdfContentTextState
+  miter_limit : Double
+  flatness : Double
   marked_content_point : PdfContentMarkedContent?
   marked_content : Array[PdfContentMarkedContent]
   type3_d0 : PdfContentType3D0?
@@ -20,6 +22,8 @@ pub(all) struct PdfContentOperatorState {
   path : PdfDrawnPath
   path_state : PdfContentPathState
   text_state : PdfContentTextState
+  miter_limit : Double
+  flatness : Double
   marked_content_point : PdfContentMarkedContent?
   marked_content : Array[PdfContentMarkedContent]
   type3_d0 : PdfContentType3D0?
@@ -65,6 +69,8 @@ pub fn pdf_content_initial_operator_state(
     path: pdf_content_initial_drawn_path(),
     path_state: pdf_content_initial_path_state(minx, miny, maxx, maxy),
     text_state: pdf_content_initial_text_state(),
+    miter_limit: 10.0,
+    flatness: 1.0,
     marked_content_point: None,
     marked_content: [],
     type3_d0: None,
@@ -84,6 +90,8 @@ fn PdfContentOperatorState::content_frame(
     path: self.path,
     path_state: self.path_state,
     text_state: self.text_state,
+    miter_limit: self.miter_limit,
+    flatness: self.flatness,
     marked_content_point: self.marked_content_point,
     marked_content: pdf_content_operator_copy_marked_content(
       self.marked_content,
@@ -170,6 +178,8 @@ fn PdfContentOperatorState::content_pop_state(
       path: frame.path,
       path_state: frame.path_state,
       text_state: frame.text_state,
+      miter_limit: frame.miter_limit,
+      flatness: frame.flatness,
       marked_content_point: frame.marked_content_point,
       marked_content: pdf_content_operator_copy_marked_content(
         frame.marked_content,
@@ -204,6 +214,28 @@ pub fn pdf_content_apply_graphics_state_op(
   op : PdfContentOp,
 ) -> PdfContentOperatorState {
   state.content_apply_graphics_state_op(op)
+}
+
+///|
+/// Apply cpdfcontent direct graphics-parameter operators.
+pub fn PdfContentOperatorState::content_apply_graphics_parameter_op(
+  self : PdfContentOperatorState,
+  op : PdfContentOp,
+) -> PdfContentOperatorState {
+  match op {
+    Op_M(limit) => { ..self, miter_limit: limit }
+    Op_i(flatness) => { ..self, flatness, }
+    _ => self
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfContentOperatorState::content_apply_graphics_parameter_op`.
+pub fn pdf_content_apply_graphics_parameter_op(
+  state : PdfContentOperatorState,
+  op : PdfContentOp,
+) -> PdfContentOperatorState {
+  state.content_apply_graphics_parameter_op(op)
 }
 
 ///|
@@ -329,10 +361,10 @@ fn PdfContentOperatorState::content_apply_clipping_state_op(
 /// Apply cpdfcontent operators whose state effects do not require resources.
 ///
 /// This covers graphics-state stack operators, CTM concatenation, path
-/// construction/painting, clipping, path drawing state, text state,
-/// marked-content state, and Type 3 glyph metrics. Font lookup, glyph emission,
-/// shadings, images, XObjects, and graphics-state dictionaries remain separate
-/// resource-backed slices.
+/// construction/painting, clipping, path drawing state, direct graphics
+/// parameters, text state, marked-content state, and Type 3 glyph metrics. Font
+/// lookup, glyph emission, shadings, images, XObjects, and graphics-state
+/// dictionaries remain separate resource-backed slices.
 pub fn PdfContentOperatorState::content_apply_core_op(
   self : PdfContentOperatorState,
   op : PdfContentOp,
@@ -343,6 +375,7 @@ pub fn PdfContentOperatorState::content_apply_core_op(
     _ => {
       let state = self
         .content_apply_path_machine_op(op)
+        .content_apply_graphics_parameter_op(op)
         .content_apply_marked_content_op(op)
         .content_apply_type3_metrics_op(op)
       {

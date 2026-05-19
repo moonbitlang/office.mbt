@@ -353,6 +353,8 @@ pub fn pdf_content_apply_clipping_op(PdfContentPartialPath, ArrayView[PdfPath], 
 
 pub fn pdf_content_apply_core_op(PdfContentOperatorState, PdfContentOp) -> PdfContentOperatorState
 
+pub fn pdf_content_apply_graphics_parameter_op(PdfContentOperatorState, PdfContentOp) -> PdfContentOperatorState
+
 pub fn pdf_content_apply_graphics_state_op(PdfContentOperatorState, PdfContentOp) -> PdfContentOperatorState
 
 pub fn pdf_content_apply_marked_content_op(PdfContentOperatorState, PdfContentOp) -> PdfContentOperatorState
@@ -2056,6 +2058,8 @@ pub(all) struct PdfContentOperatorFrame {
   path : PdfDrawnPath
   path_state : PdfContentPathState
   text_state : PdfContentTextState
+  miter_limit : Double
+  flatness : Double
   marked_content_point : PdfContentMarkedContent?
   marked_content : Array[PdfContentMarkedContent]
   type3_d0 : PdfContentType3D0?
@@ -2069,6 +2073,8 @@ pub(all) struct PdfContentOperatorState {
   path : PdfDrawnPath
   path_state : PdfContentPathState
   text_state : PdfContentTextState
+  miter_limit : Double
+  flatness : Double
   marked_content_point : PdfContentMarkedContent?
   marked_content : Array[PdfContentMarkedContent]
   type3_d0 : PdfContentType3D0?
@@ -2076,6 +2082,7 @@ pub(all) struct PdfContentOperatorState {
   state_stack : Array[PdfContentOperatorFrame]
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfContentOperatorState::content_apply_core_op(Self, PdfContentOp) -> Self
+pub fn PdfContentOperatorState::content_apply_graphics_parameter_op(Self, PdfContentOp) -> Self
 pub fn PdfContentOperatorState::content_apply_graphics_state_op(Self, PdfContentOp) -> Self
 pub fn PdfContentOperatorState::content_apply_marked_content_op(Self, PdfContentOp) -> Self
 pub fn PdfContentOperatorState::content_apply_type3_metrics_op(Self, PdfContentOp) -> Self
