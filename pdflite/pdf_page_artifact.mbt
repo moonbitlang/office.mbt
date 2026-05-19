@@ -14,6 +14,61 @@ fn PdfDocument::pdf_page_mark_all_as_artifact_streams(
 }
 
 ///|
+let pdf_page_struct_parent_key_name : PdfName = pdf_page_name("/StructParent")
+
+///|
+let pdf_page_struct_parents_key_name : PdfName = pdf_page_name("/StructParents")
+
+///|
+fn pdf_page_struct_parent_key() -> PdfName {
+  pdf_page_struct_parent_key_name
+}
+
+///|
+fn pdf_page_struct_parents_key() -> PdfName {
+  pdf_page_struct_parents_key_name
+}
+
+///|
+fn pdf_page_remove_struct_tree_op(op : PdfContentOp) -> Bool {
+  match op {
+    Op_MP(_) | Op_DP(_, _) | Op_BMC(_) | Op_BDC(_, _) | Op_EMC => true
+    _ => false
+  }
+}
+
+///|
+fn PdfDocument::pdf_page_remove_struct_tree_streams(
+  self : PdfDocument,
+  resources : PdfObject,
+  content : ArrayView[PdfObject],
+) -> Array[PdfObject] raise PdfError {
+  let ops = self.pdf_page_parse_content_ops(resources, content)
+  let output : Array[PdfContentOp] = []
+  for op in ops {
+    if !pdf_page_remove_struct_tree_op(op) {
+      output.push(op)
+    }
+  }
+  [pdf_content_stream_of_ops(output)]
+}
+
+///|
+fn PdfDocument::pdf_page_remove_struct_tree_page(
+  self : PdfDocument,
+  page : PdfPage,
+) -> PdfPage raise PdfError {
+  let content = self.pdf_page_remove_struct_tree_streams(
+    page.resources,
+    page.content,
+  )
+  self.process_xobjects(page, fn(document, resources, streams) raise PdfError {
+    document.pdf_page_remove_struct_tree_streams(resources, streams)
+  })
+  { ..page, content, }
+}
+
+///|
 fn PdfDocument::pdf_page_mark_all_as_artifact_page(
   self : PdfDocument,
   page : PdfPage,
@@ -26,6 +81,35 @@ fn PdfDocument::pdf_page_mark_all_as_artifact_page(
     document.pdf_page_mark_all_as_artifact_streams(resources, streams)
   })
   { ..page, content, }
+}
+
+///|
+/// Remove the structure tree and marked-content structure operators.
+///
+/// This ports cpdfpage's `remove_struct_tree`: `/StructTreeRoot`,
+/// `/StructParent`, and `/StructParents` entries are removed throughout the
+/// document, and marked-content structure delimiters are stripped from page
+/// streams and referenced Form XObjects.
+pub fn PdfDocument::remove_struct_tree(
+  self : PdfDocument,
+) -> PdfDocument raise PdfError {
+  let document = self.copy()
+  document.remove_dict_entry_everywhere(pdf_structure_struct_tree_root_key())
+  document.remove_dict_entry_everywhere(pdf_page_struct_parent_key())
+  document.remove_dict_entry_everywhere(pdf_page_struct_parents_key())
+  let rewritten : Array[PdfPage] = []
+  for page in document.pages_of_pagetree() {
+    rewritten.push(document.pdf_page_remove_struct_tree_page(page))
+  }
+  document.change_pages(rewritten, change_references=true)
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::remove_struct_tree`.
+pub fn pdf_remove_struct_tree(
+  document : PdfDocument,
+) -> PdfDocument raise PdfError {
+  document.remove_struct_tree()
 }
 
 ///|

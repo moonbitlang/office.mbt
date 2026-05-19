@@ -1145,6 +1145,8 @@ pub fn pdf_remove_page_box(PdfDocument, ArrayView[Int], @core.PdfName) -> PdfDoc
 
 pub fn pdf_remove_page_labels(PdfDocument) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_remove_struct_tree(PdfDocument) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_remove_trim_pdf(PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_renumber_documents(ArrayView[PdfDocument]) -> Array[PdfDocument] raise @core.PdfError
@@ -2733,6 +2735,7 @@ pub fn PdfDocument::remove_optional_content_groups(Self) -> Self raise @core.Pdf
 pub fn PdfDocument::remove_page_box(Self, ArrayView[Int], @core.PdfName) -> Self raise @core.PdfError
 pub fn PdfDocument::remove_page_labels(Self) -> Self raise @core.PdfError
 pub fn PdfDocument::remove_pdfua_mark(Self) -> Self raise @core.PdfError
+pub fn PdfDocument::remove_struct_tree(Self) -> Self raise @core.PdfError
 pub fn PdfDocument::remove_trim(Self, ArrayView[Int]) -> Self raise @core.PdfError
 pub fn PdfDocument::remove_unreferenced(Self) -> Unit raise @core.PdfError
 pub fn PdfDocument::renumber_objects(Self, ArrayView[(Int, Int)]) -> Self raise @core.PdfError
