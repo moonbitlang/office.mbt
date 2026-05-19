@@ -27,7 +27,8 @@ Current estimate:
   composition reporting, core metadata APIs, XMP metadata-date rewriting, XMP
   info synchronization, XMP metadata creation, XMP RDF list extraction,
   XMP/document info JSON reporting, redaction annotation bounding-box overlays,
-  cpdfua Matterhorn content/role-map/XMP/viewer-preference validation, imposition
+  cpdfua Matterhorn content/role-map/XMP/viewer-preference/optional-content
+  validation, imposition
   transform/content/page-assembly/pattern-matrix kernels, cpdf page
   hard-box/removal/shift/scale/scale-to-fit/upright/set-mediabox/copy-box
   helpers, imposition make-space orchestration, border stamping, layout
@@ -297,6 +298,21 @@ Current backend snapshot:
   10-warning baseline; `moon info` and `moon fmt` were run to update generated
   interfaces and formatting. Full native suite validation is deferred to the
   next batch.~~
+- [x] ~~Port the `cpdfua` Matterhorn optional-content configuration slice:
+  the covered Matterhorn surface now includes source checks `20-001`,
+  `20-002`, and `20-003`, preserving cpdf's direct catalog inspection of
+  `/OCProperties /Configs` and `/OCProperties /D`. Coverage pins missing and
+  empty config `/Name` entries, missing versus empty default configuration
+  `/Name` diagnostics, and forbidden `/AS` entries in both default and alternate
+  optional-content configuration dictionaries. Focused native validation reports
+  `moon test --target native pdf_ua_matterhorn_test.mbt --filter '*optional
+  content*'` at 3/3 tests passing; widened native validation reports `moon test
+  --target native pdf_ua_matterhorn_test.mbt` at 15/15 tests passing. Native
+  check validation reports `moon check --target native` passing with the known
+  `markdown/cmd` warning and `moon check --target native --warn-list +73` at
+  the known 10-warning baseline; `moon info` and `moon fmt` were run to update
+  generated interfaces and formatting. Full native suite validation is deferred
+  to the next batch.~~
 - [x] ~~Port the current stub/no-op redaction APIs from `cpdfredact`: `redact`
   is exposed as `redact_path`/`pdf_redact` and preserves page content while
   validating the selected page range, while `apply` and `apply_type` are

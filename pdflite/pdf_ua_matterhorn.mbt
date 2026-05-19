@@ -173,6 +173,33 @@ fn pdf_ua_matterhorn_test_07_002() -> PdfUAMatterhornTest {
 }
 
 ///|
+fn pdf_ua_matterhorn_test_20_001() -> PdfUAMatterhornTest {
+  {
+    name: "20-001",
+    error: "Name entry is missing or has an empty string as its value in an Optional Content Configuration Dictionary in the Configs entry in the OCProperties entry in the Catalog dictionary.",
+    section: "UA1:7.10-1",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_20_002() -> PdfUAMatterhornTest {
+  {
+    name: "20-002",
+    error: "Name entry is missing or has an empty string as its value in an Optional Content Configuration Dictionary that is the value of the D entry in the OCProperties entry in the Catalog dictionary.",
+    section: "UA1:7.10-1",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_20_003() -> PdfUAMatterhornTest {
+  {
+    name: "20-003",
+    error: "An AS entry appears in an Optional Content Configuration Dictionary.",
+    section: "UA1:7.10-2",
+  }
+}
+
+///|
 fn pdf_ua_matterhorn_implemented_tests() -> Array[PdfUAMatterhornTest] {
   [
     pdf_ua_matterhorn_test_01_003(),
@@ -187,6 +214,9 @@ fn pdf_ua_matterhorn_implemented_tests() -> Array[PdfUAMatterhornTest] {
     pdf_ua_matterhorn_test_06_003(),
     pdf_ua_matterhorn_test_07_001(),
     pdf_ua_matterhorn_test_07_002(),
+    pdf_ua_matterhorn_test_20_001(),
+    pdf_ua_matterhorn_test_20_002(),
+    pdf_ua_matterhorn_test_20_003(),
   ]
 }
 
@@ -753,6 +783,89 @@ fn PdfDocument::pdf_ua_matterhorn_check_07_002(self : PdfDocument) -> Json? {
 }
 
 ///|
+fn PdfDocument::pdf_ua_matterhorn_ocproperties_d(
+  self : PdfDocument,
+) -> PdfObject? {
+  self.lookup_chain(self.trailer_dict(), [
+    pdf_ua_root_key(),
+    pdf_ocg_ocproperties_key(),
+    pdf_ocg_d_key(),
+  ])
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_ocproperties_configs(
+  self : PdfDocument,
+) -> PdfObject? {
+  self.lookup_chain(self.trailer_dict(), [
+    pdf_ua_root_key(),
+    pdf_ocg_ocproperties_key(),
+    pdf_ocg_configs_key(),
+  ])
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_20_001(self : PdfDocument) -> Json? {
+  match self.pdf_ua_matterhorn_ocproperties_configs() {
+    Some(PdfArray(configs)) =>
+      for config in configs {
+        match self.lookup_direct(pdf_ocg_name_key(), config) {
+          None => return Some(Json::null())
+          Some(PdfNameObject(name)) if name == pdf_ua_empty_name() =>
+            return Some(Json::null())
+          _ => ()
+        }
+      }
+    _ => ()
+  }
+  None
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_20_002(self : PdfDocument) -> Json? {
+  match
+    (
+      self.pdf_ua_matterhorn_ocproperties_d(),
+      self.lookup_chain(self.trailer_dict(), [
+        pdf_ua_root_key(),
+        pdf_ocg_ocproperties_key(),
+        pdf_ocg_d_key(),
+        pdf_ocg_name_key(),
+      ]),
+    ) {
+    (Some(_), Some(PdfString(value))) if value.length() == 0 =>
+      Some(Json::string("empty string"))
+    (Some(_), None) => Some(Json::string("not present"))
+    _ => None
+  }
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_20_003(self : PdfDocument) -> Json? {
+  match
+    self.lookup_chain(self.trailer_dict(), [
+      pdf_ua_root_key(),
+      pdf_ocg_ocproperties_key(),
+      pdf_ocg_d_key(),
+      pdf_ocg_as_key(),
+    ]) {
+    Some(_) => return Some(Json::null())
+    None => ()
+  }
+  match self.pdf_ua_matterhorn_ocproperties_configs() {
+    Some(PdfArray(configs)) =>
+      for config in configs {
+        match self.lookup_direct(pdf_ocg_as_key(), config) {
+          Some(_) => return Some(Json::null())
+          None => ()
+        }
+      }
+    _ => ()
+  }
+  None
+}
+
+///|
 fn PdfDocument::pdf_ua_matterhorn_run_test(
   self : PdfDocument,
   check : PdfUAMatterhornTest,
@@ -770,6 +883,9 @@ fn PdfDocument::pdf_ua_matterhorn_run_test(
     "06-003" => self.pdf_ua_matterhorn_check_06_003()
     "07-001" => self.pdf_ua_matterhorn_check_07_001()
     "07-002" => self.pdf_ua_matterhorn_check_07_002()
+    "20-001" => self.pdf_ua_matterhorn_check_20_001()
+    "20-002" => self.pdf_ua_matterhorn_check_20_002()
+    "20-003" => self.pdf_ua_matterhorn_check_20_003()
     _ => None
   }
   match result {
@@ -831,9 +947,10 @@ fn PdfDocument::pdf_ua_matterhorn_failures(
 ///
 /// The current migration covers content-marking checks `01-003`, `01-004`,
 /// `01-005`, and `01-007`, role-map checks `02-001`, `02-003`, and `02-004`,
-/// plus XMP metadata and DisplayDocTitle checks `06-001` through `07-002`.
-/// Passing `""` runs the covered subset; unsupported individual test names
-/// raise a soft error until their source checks are ported.
+/// XMP metadata and DisplayDocTitle checks `06-001` through `07-002`, and
+/// optional-content configuration checks `20-001` through `20-003`. Passing
+/// `""` runs the covered subset; unsupported individual test names raise a
+/// soft error until their source checks are ported.
 pub fn PdfDocument::test_matterhorn_json(
   self : PdfDocument,
   test_name : String,

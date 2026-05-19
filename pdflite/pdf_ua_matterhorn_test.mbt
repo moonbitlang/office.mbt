@@ -134,6 +134,34 @@ fn ua_matterhorn_07_002_failure_for_test() -> Json {
 }
 
 ///|
+fn ua_matterhorn_20_001_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "20-001",
+    "UA1:7.10-1",
+    "Name entry is missing or has an empty string as its value in an Optional Content Configuration Dictionary in the Configs entry in the OCProperties entry in the Catalog dictionary.",
+    Json::null(),
+  )
+}
+
+///|
+fn ua_matterhorn_20_002_failure_for_test(extra : Json) -> Json {
+  ua_matterhorn_failure_for_test(
+    "20-002", "UA1:7.10-1", "Name entry is missing or has an empty string as its value in an Optional Content Configuration Dictionary that is the value of the D entry in the OCProperties entry in the Catalog dictionary.",
+    extra,
+  )
+}
+
+///|
+fn ua_matterhorn_20_003_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "20-003",
+    "UA1:7.10-2",
+    "An AS entry appears in an Optional Content Configuration Dictionary.",
+    Json::null(),
+  )
+}
+
+///|
 fn ua_matterhorn_document_for_test(
   ops : ArrayView[@pdflite.PdfContentOp],
   root_extras? : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)] = [],
@@ -178,6 +206,16 @@ fn ua_matterhorn_rolemap_for_test(
         ),
       ),
     ]),
+  )
+}
+
+///|
+fn ua_matterhorn_ocproperties_for_test(
+  entries : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)],
+) -> (@pdflite.PdfName, @pdflite.PdfObject) {
+  (
+    ua_matterhorn_name_for_test("/OCProperties"),
+    PdfDictionary([ for entry in entries => entry ]),
   )
 }
 
@@ -451,4 +489,118 @@ test "PdfDocument test_matterhorn_json detects false DisplayDocTitle" {
     try! document.test_matterhorn_json("07-002"),
     Json::array([ua_matterhorn_07_002_failure_for_test()]),
   )
+}
+
+///|
+test "PdfDocument test_matterhorn_json detects optional content config names" {
+  let key_configs = ua_matterhorn_name_for_test("/Configs")
+  let key_name = ua_matterhorn_name_for_test("/Name")
+  let missing_name = ua_matterhorn_document_for_test([], root_extras=[
+    ua_matterhorn_ocproperties_for_test([
+      (key_configs, PdfArray([PdfDictionary([])])),
+    ]),
+  ])
+  @test.assert_eq(
+    try! missing_name.test_matterhorn_json("20-001"),
+    Json::array([ua_matterhorn_20_001_failure_for_test()]),
+  )
+
+  let empty_name = ua_matterhorn_document_for_test([], root_extras=[
+    ua_matterhorn_ocproperties_for_test([
+      (
+        key_configs,
+        PdfArray([
+          PdfDictionary([
+            (key_name, PdfNameObject(ua_matterhorn_name_for_test(""))),
+          ]),
+        ]),
+      ),
+    ]),
+  ])
+  @test.assert_eq(
+    try! empty_name.test_matterhorn_json("20-001"),
+    Json::array([ua_matterhorn_20_001_failure_for_test()]),
+  )
+
+  let valid = ua_matterhorn_document_for_test([], root_extras=[
+    ua_matterhorn_ocproperties_for_test([
+      (
+        key_configs,
+        PdfArray([
+          PdfDictionary([
+            (key_name, PdfNameObject(ua_matterhorn_name_for_test("/Layer"))),
+          ]),
+        ]),
+      ),
+    ]),
+  ])
+  @test.assert_eq(try! valid.test_matterhorn_json("20-001"), Json::array([]))
+}
+
+///|
+test "PdfDocument test_matterhorn_json detects default optional content names" {
+  let key_d = ua_matterhorn_name_for_test("/D")
+  let key_name = ua_matterhorn_name_for_test("/Name")
+  let missing_name = ua_matterhorn_document_for_test([], root_extras=[
+    ua_matterhorn_ocproperties_for_test([(key_d, PdfDictionary([]))]),
+  ])
+  @test.assert_eq(
+    try! missing_name.test_matterhorn_json("20-002"),
+    Json::array([
+      ua_matterhorn_20_002_failure_for_test(Json::string("not present")),
+    ]),
+  )
+
+  let empty_name = ua_matterhorn_document_for_test([], root_extras=[
+    ua_matterhorn_ocproperties_for_test([
+      (key_d, PdfDictionary([(key_name, PdfString(@ascii.encode("")))])),
+    ]),
+  ])
+  @test.assert_eq(
+    try! empty_name.test_matterhorn_json("20-002"),
+    Json::array([
+      ua_matterhorn_20_002_failure_for_test(Json::string("empty string")),
+    ]),
+  )
+
+  let valid = ua_matterhorn_document_for_test([], root_extras=[
+    ua_matterhorn_ocproperties_for_test([
+      (key_d, PdfDictionary([(key_name, PdfString(@ascii.encode("Default")))])),
+    ]),
+  ])
+  @test.assert_eq(try! valid.test_matterhorn_json("20-002"), Json::array([]))
+}
+
+///|
+test "PdfDocument test_matterhorn_json detects optional content AS entries" {
+  let key_as = ua_matterhorn_name_for_test("/AS")
+  let key_configs = ua_matterhorn_name_for_test("/Configs")
+  let key_d = ua_matterhorn_name_for_test("/D")
+  let default_as = ua_matterhorn_document_for_test([], root_extras=[
+    ua_matterhorn_ocproperties_for_test([
+      (key_d, PdfDictionary([(key_as, PdfArray([]))])),
+    ]),
+  ])
+  @test.assert_eq(
+    try! default_as.test_matterhorn_json("20-003"),
+    Json::array([ua_matterhorn_20_003_failure_for_test()]),
+  )
+
+  let config_as = ua_matterhorn_document_for_test([], root_extras=[
+    ua_matterhorn_ocproperties_for_test([
+      (key_configs, PdfArray([PdfDictionary([(key_as, PdfArray([]))])])),
+    ]),
+  ])
+  @test.assert_eq(
+    try! config_as.test_matterhorn_json("20-003"),
+    Json::array([ua_matterhorn_20_003_failure_for_test()]),
+  )
+
+  let valid = ua_matterhorn_document_for_test([], root_extras=[
+    ua_matterhorn_ocproperties_for_test([
+      (key_d, PdfDictionary([])),
+      (key_configs, PdfArray([PdfDictionary([])])),
+    ]),
+  ])
+  @test.assert_eq(try! valid.test_matterhorn_json("20-003"), Json::array([]))
 }
