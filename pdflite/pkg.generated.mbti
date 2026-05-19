@@ -299,6 +299,8 @@ pub fn pdf_ccitt_g4_encode(Int, Int, Bytes) -> Bytes raise @core.PdfError
 
 pub fn pdf_ccitt_g4_encode_view(Int, Int, BytesView) -> Bytes raise @core.PdfError
 
+pub fn pdf_center_to_fit_pages(PdfDocument, ArrayView[Int], ArrayView[(Double, Double)]) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_change_bookmark(ArrayView[(Int, Int)], PdfBookmark) -> PdfBookmark
 
 pub fn pdf_change_boxes(PdfDocument, PdfPage, (Double, Double, Double, Double) -> (Double, Double, Double, Double)) -> PdfPage raise @core.PdfError
@@ -2479,6 +2481,7 @@ pub fn PdfDocument::build_name_tree(Self, ArrayView[(Bytes, PdfObject)]) -> PdfO
 pub fn PdfDocument::build_number_tree(Self, ArrayView[(Int, PdfObject)]) -> PdfObject
 pub fn PdfDocument::catalog(Self) -> PdfObject raise @core.PdfError
 pub fn PdfDocument::catalog_item(Self, @core.PdfName) -> String
+pub fn PdfDocument::center_to_fit_pages(Self, ArrayView[Int], ArrayView[(Double, Double)]) -> Self raise @core.PdfError
 pub fn PdfDocument::change_boxes(Self, PdfPage, (Double, Double, Double, Double) -> (Double, Double, Double, Double)) -> PdfPage raise @core.PdfError
 pub fn PdfDocument::change_id(Self, String, () -> Double) -> Unit raise @core.PdfError
 pub fn PdfDocument::change_pages(Self, ArrayView[PdfPage], change_references? : Bool, matrices? : ArrayView[(Int, @geometry.TransformMatrix)], changes? : ArrayView[(Int, Int)]) -> Self raise @core.PdfError

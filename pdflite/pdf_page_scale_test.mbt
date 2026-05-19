@@ -458,3 +458,105 @@ test "PdfDocument scale_to_fit_rotate_pages validates page range and size count"
     fail("expected scale_to_fit_rotate_pages to reject an out-of-range page")
   }
 }
+
+///|
+test "PdfDocument center_to_fit_pages composes cpdf box operations" {
+  let key_art = page_scale_name_for_test("/ArtBox")
+  let key_bleed = page_scale_name_for_test("/BleedBox")
+  let key_crop = page_scale_name_for_test("/CropBox")
+  let key_trim = page_scale_name_for_test("/TrimBox")
+  let document = page_scale_document_for_test([
+    page_scale_page_for_test(
+      [Op_S],
+      rest=PdfDictionary([
+        (key_crop, page_scale_rect_for_test(10.0, 20.0, 90.0, 120.0)),
+        (key_art, page_scale_rect_for_test(1.0, 2.0, 3.0, 4.0)),
+        (key_bleed, page_scale_rect_for_test(5.0, 6.0, 7.0, 8.0)),
+        (key_trim, page_scale_rect_for_test(9.0, 10.0, 11.0, 12.0)),
+      ]),
+      width=100.0,
+      height=150.0,
+    ),
+    page_scale_page_for_test(
+      [Op_BT, Op_ET],
+      rest=PdfDictionary([
+        (key_art, page_scale_rect_for_test(20.0, 30.0, 40.0, 50.0)),
+        (key_bleed, page_scale_rect_for_test(60.0, 70.0, 80.0, 90.0)),
+      ]),
+    ),
+  ])
+  let centered = try! document.center_to_fit_pages([1], [
+    (200.0, 300.0),
+    (400.0, 500.0),
+  ])
+  let pages = try! centered.pages_of_pagetree()
+  @test.assert_eq(
+    pages[0].mediabox,
+    page_scale_rect_for_test(-60.0, -100.0, 140.0, 200.0),
+  )
+  @test.assert_eq(
+    pages[0].rest.lookup_immediate(key_crop),
+    Some(page_scale_rect_for_test(-60.0, -100.0, 140.0, 200.0)),
+  )
+  @test.assert_eq(pages[0].rest.lookup_immediate(key_art), None)
+  @test.assert_eq(pages[0].rest.lookup_immediate(key_bleed), None)
+  @test.assert_eq(
+    pages[0].rest.lookup_immediate(key_trim),
+    Some(page_scale_rect_for_test(-51.0, -90.0, -49.0, -88.0)),
+  )
+  @test.assert_eq(
+    pages[1].mediabox,
+    page_scale_rect_for_test(0.0, 0.0, 100.0, 100.0),
+  )
+  @test.assert_eq(
+    pages[1].rest.lookup_immediate(key_art),
+    Some(page_scale_rect_for_test(20.0, 30.0, 40.0, 50.0)),
+  )
+}
+
+///|
+test "PdfDocument center_to_fit_pages wrapper uses first target for all offsets" {
+  let document = page_scale_document_for_test([
+    page_scale_page_for_test([Op_S]),
+    page_scale_page_for_test([Op_BT, Op_ET]),
+  ])
+  let centered = try! @pdflite.pdf_center_to_fit_pages(document, [2], [
+    (200.0, 300.0),
+    (400.0, 500.0),
+  ])
+  let pages = try! centered.pages_of_pagetree()
+  @test.assert_eq(
+    pages[1].mediabox,
+    page_scale_rect_for_test(-50.0, -100.0, 350.0, 400.0),
+  )
+}
+
+///|
+test "PdfDocument center_to_fit_pages validates page range and size count" {
+  let document = page_scale_document_for_test([page_scale_page_for_test([Op_S])])
+  let mismatch : Result[@pdflite.PdfDocument, Error] = try? document.center_to_fit_pages(
+    [1],
+    [],
+  )
+  guard mismatch
+    is Err(
+      @pdflite.PdfError::BadPageSpecification(
+        "center_to_fit_pages: size count must match page count"
+      )
+    ) else {
+    fail("expected center_to_fit_pages to reject size count mismatch")
+  }
+
+  let bad_page : Result[@pdflite.PdfDocument, Error] = try? document.center_to_fit_pages(
+    [2],
+    [(100.0, 200.0)],
+  )
+  guard bad_page
+    is Err(
+      @pdflite.PdfError::BadPageSpecification(
+        "center_to_fit_pages: range contains pages not present in pdf"
+      )
+    ) else {
+    fail("expected center_to_fit_pages to reject an out-of-range page")
+  }
+}
