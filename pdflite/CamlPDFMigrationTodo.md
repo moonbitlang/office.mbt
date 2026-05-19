@@ -3020,6 +3020,25 @@ Current backend snapshot:
   `markdown/cmd` warning and `moon check --target native --warn-list +73` at the
   known 10-warning baseline. Full native suite validation is deferred to the
   next batch.~~
+- [x] ~~Standalone `cpdfcontent.ml` source-shaped ExtGState resource slice
+  exposes `PdfDocument::content_apply_extgstate_resource_op` and
+  `pdf_content_apply_extgstate_resource_op`, mirroring cpdf's `Op_gs` dispatch
+  by looking up `/ExtGState` in the supplied resources and treating that object
+  itself as the graphics-state dictionary while deliberately ignoring the `gs`
+  operand name, then applying the already-ported graphics, dash, font,
+  overprint, transfer, halftone, rendering, compositing, alpha, and text-state
+  branches in cpdf-compatible order. Coverage locks down source-shaped direct
+  `/ExtGState` dictionaries, wrapper parity, missing resources, and the
+  source-compatible non-application of spec-shaped nested `/GS1` dictionaries
+  while leaving a future spec-correct named-resource helper, if desired, separate
+  from the cpdf port. Focused native validation reports `moon test --target
+  native pdf_content_operator_state_test.mbt --filter '*ExtGState*'` at 11/11
+  tests passing and `moon test --target native
+  pdf_content_operator_state_test.mbt` at 27/27 tests passing; native check
+  validation reports `moon check --target native` passing with the known
+  `markdown/cmd` warning and `moon check --target native --warn-list +73` at the
+  known 10-warning baseline. Native full-suite validation reports `moon test
+  --target native` at 1973/1973 tests passing.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,

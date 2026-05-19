@@ -452,6 +452,89 @@ test "cpdfcontent operator state applies ExtGState font parameters" {
 }
 
 ///|
+test "cpdfcontent operator state applies source-shaped ExtGState resources" {
+  let doc = @pdflite.pdf_document_empty()
+  let initial = @pdflite.pdf_content_initial_operator_state(
+    0.0, 0.0, 100.0, 200.0,
+  )
+  let subtype_key = content_operator_name_for_test("/Subtype")
+  let base_font_key = content_operator_name_for_test("/BaseFont")
+  doc.add_object_given_number(
+    7,
+    @pdflite.pdf_dictionary([
+      (subtype_key, PdfNameObject(content_operator_name_for_test("/Type1"))),
+      (
+        base_font_key,
+        PdfNameObject(content_operator_name_for_test("/Helvetica")),
+      ),
+    ]),
+  )
+  let extgstate_key = content_operator_name_for_test("/ExtGState")
+  let gs_name = content_operator_name_for_test("/GS1")
+  let resources = @pdflite.pdf_dictionary([
+    (
+      extgstate_key,
+      @pdflite.pdf_dictionary([
+        (content_operator_name_for_test("/LW"), PdfReal(2.5)),
+        (
+          content_operator_name_for_test("/Font"),
+          PdfArray([PdfIndirect(7), PdfInteger(16)]),
+        ),
+        (
+          content_operator_name_for_test("/BM"),
+          PdfNameObject(content_operator_name_for_test("/Multiply")),
+        ),
+        (content_operator_name_for_test("/TK"), PdfBoolean(false)),
+      ]),
+    ),
+  ])
+  let state = try! doc.content_apply_extgstate_resource_op(
+    initial, resources, gs_name,
+  )
+  @test.assert_eq(state.path_state.line_width, 2.5)
+  @test.assert_eq(state.text_state.font, "__EXTGSTATE__7")
+  @test.assert_eq(state.text_state.font_size, 16.0)
+  @test.assert_eq(
+    state.blend_mode,
+    PdfNameObject(content_operator_name_for_test("/Multiply")),
+  )
+  @test.assert_eq(state.text_state.knockout, false)
+  @test.assert_eq(
+    try! @pdflite.pdf_content_apply_extgstate_resource_op(
+      doc, initial, resources, gs_name,
+    ),
+    state,
+  )
+  let spec_shaped_resources = @pdflite.pdf_dictionary([
+    (
+      extgstate_key,
+      @pdflite.pdf_dictionary([
+        (
+          gs_name,
+          @pdflite.pdf_dictionary([
+            (content_operator_name_for_test("/LW"), PdfReal(9.0)),
+          ]),
+        ),
+      ]),
+    ),
+  ])
+  @test.assert_eq(
+    try! doc.content_apply_extgstate_resource_op(
+      initial, spec_shaped_resources, gs_name,
+    ),
+    initial,
+  )
+  @test.assert_eq(
+    try! doc.content_apply_extgstate_resource_op(
+      initial,
+      @pdflite.pdf_dictionary([]),
+      gs_name,
+    ),
+    initial,
+  )
+}
+
+///|
 test "cpdfcontent operator state applies ExtGState alpha parameters" {
   let doc = @pdflite.pdf_document_empty()
   let initial = @pdflite.pdf_content_initial_operator_state(
