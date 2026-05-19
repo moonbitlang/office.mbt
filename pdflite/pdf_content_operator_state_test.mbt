@@ -23,6 +23,8 @@ test "cpdfcontent operator state exposes initial state" {
   @test.assert_eq(state.text_state, @pdflite.pdf_content_initial_text_state())
   @test.assert_eq(state.marked_content_point, None)
   @test.assert_eq(state.marked_content.length(), 0)
+  @test.assert_eq(state.type3_d0, None)
+  @test.assert_eq(state.type3_d1, None)
   @test.assert_eq(state.state_stack.length(), 0)
 }
 
@@ -127,11 +129,13 @@ test "cpdfcontent operator core threads graphics stack" {
     .content_apply_core_op(Op_w(7.0))
     .content_apply_core_op(Op_Tw(8.0))
     .content_apply_core_op(Op_BMC(content_operator_name_for_test("/Artifact")))
+    .content_apply_core_op(Op_d0(500.0, 0.0))
   @test.assert_eq(changed.state_stack.length(), 1)
   @test.assert_eq(changed.ctm, @pdflite.transform_translate(5.0, 6.0))
   @test.assert_eq(changed.path_state.line_width, 7.0)
   @test.assert_eq(changed.text_state.word_spacing, 8.0)
   @test.assert_eq(changed.marked_content.length(), 1)
+  @test.assert_eq(changed.type3_d0, Some({ width_x: 500.0, width_y: 0.0 }))
   @test.assert_eq(changed.content_apply_core_op(Op_Q), initial)
   @test.assert_eq(initial.content_apply_core_op(Op_BX), initial)
 }
@@ -177,5 +181,35 @@ test "cpdfcontent operator state applies marked content operators" {
   @test.assert_eq(
     @pdflite.pdf_content_apply_marked_content_op(initial, Op_BMC(span)).marked_content[0].tag,
     "/Span",
+  )
+}
+
+///|
+test "cpdfcontent operator state applies Type 3 metric operators" {
+  let initial = @pdflite.pdf_content_initial_operator_state(
+    0.0, 0.0, 100.0, 200.0,
+  )
+  let d0 = initial.content_apply_type3_metrics_op(Op_d0(500.0, 0.0))
+  @test.assert_eq(d0.type3_d0, Some({ width_x: 500.0, width_y: 0.0 }))
+  @test.assert_eq(d0.type3_d1, None)
+  let d1 = d0.content_apply_core_op(Op_d1(500.0, 0.0, 0.0, -10.0, 600.0, 700.0))
+  @test.assert_eq(d1.type3_d0, d0.type3_d0)
+  @test.assert_eq(
+    d1.type3_d1,
+    Some({
+      width_x: 500.0,
+      width_y: 0.0,
+      llx: 0.0,
+      lly: -10.0,
+      urx: 600.0,
+      ury: 700.0,
+    }),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_content_apply_type3_metrics_op(
+      initial,
+      Op_d1(1.0, 2.0, 3.0, 4.0, 5.0, 6.0),
+    ).type3_d1,
+    Some({ width_x: 1.0, width_y: 2.0, llx: 3.0, lly: 4.0, urx: 5.0, ury: 6.0 }),
   )
 }

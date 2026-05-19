@@ -8,6 +8,8 @@ pub(all) struct PdfContentOperatorFrame {
   text_state : PdfContentTextState
   marked_content_point : PdfContentMarkedContent?
   marked_content : Array[PdfContentMarkedContent]
+  type3_d0 : PdfContentType3D0?
+  type3_d1 : PdfContentType3D1?
 } derive(Debug, Eq, ToJson)
 
 ///|
@@ -20,6 +22,8 @@ pub(all) struct PdfContentOperatorState {
   text_state : PdfContentTextState
   marked_content_point : PdfContentMarkedContent?
   marked_content : Array[PdfContentMarkedContent]
+  type3_d0 : PdfContentType3D0?
+  type3_d1 : PdfContentType3D1?
   state_stack : Array[PdfContentOperatorFrame]
 } derive(Debug, Eq, ToJson)
 
@@ -27,6 +31,22 @@ pub(all) struct PdfContentOperatorState {
 pub(all) struct PdfContentMarkedContent {
   tag : String
   properties : PdfObject?
+} derive(Debug, Eq, ToJson)
+
+///|
+pub(all) struct PdfContentType3D0 {
+  width_x : Double
+  width_y : Double
+} derive(Debug, Eq, ToJson)
+
+///|
+pub(all) struct PdfContentType3D1 {
+  width_x : Double
+  width_y : Double
+  llx : Double
+  lly : Double
+  urx : Double
+  ury : Double
 } derive(Debug, Eq, ToJson)
 
 ///|
@@ -47,6 +67,8 @@ pub fn pdf_content_initial_operator_state(
     text_state: pdf_content_initial_text_state(),
     marked_content_point: None,
     marked_content: [],
+    type3_d0: None,
+    type3_d1: None,
     state_stack: [],
   }
 }
@@ -66,6 +88,8 @@ fn PdfContentOperatorState::content_frame(
     marked_content: pdf_content_operator_copy_marked_content(
       self.marked_content,
     ),
+    type3_d0: self.type3_d0,
+    type3_d1: self.type3_d1,
   }
 }
 
@@ -150,6 +174,8 @@ fn PdfContentOperatorState::content_pop_state(
       marked_content: pdf_content_operator_copy_marked_content(
         frame.marked_content,
       ),
+      type3_d0: frame.type3_d0,
+      type3_d1: frame.type3_d1,
       state_stack: [
         for index in 0..<(length - 1) => self.state_stack[index]
       ],
@@ -238,6 +264,29 @@ pub fn pdf_content_apply_marked_content_op(
 }
 
 ///|
+/// Apply cpdfcontent Type 3 glyph metric operators `d0` and `d1`.
+pub fn PdfContentOperatorState::content_apply_type3_metrics_op(
+  self : PdfContentOperatorState,
+  op : PdfContentOp,
+) -> PdfContentOperatorState {
+  match op {
+    Op_d0(width_x, width_y) => { ..self, type3_d0: Some({ width_x, width_y }) }
+    Op_d1(width_x, width_y, llx, lly, urx, ury) =>
+      { ..self, type3_d1: Some({ width_x, width_y, llx, lly, urx, ury }) }
+    _ => self
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfContentOperatorState::content_apply_type3_metrics_op`.
+pub fn pdf_content_apply_type3_metrics_op(
+  state : PdfContentOperatorState,
+  op : PdfContentOp,
+) -> PdfContentOperatorState {
+  state.content_apply_type3_metrics_op(op)
+}
+
+///|
 fn PdfContentOperatorState::content_with_clipping_path(
   self : PdfContentOperatorState,
   clipping_path : ArrayView[PdfPath],
@@ -280,9 +329,10 @@ fn PdfContentOperatorState::content_apply_clipping_state_op(
 /// Apply cpdfcontent operators whose state effects do not require resources.
 ///
 /// This covers graphics-state stack operators, CTM concatenation, path
-/// construction/painting, clipping, path drawing state, and text state. Font
-/// lookup, glyph emission, shadings, images, XObjects, marked-content metadata,
-/// and graphics-state dictionaries remain separate resource-backed slices.
+/// construction/painting, clipping, path drawing state, text state,
+/// marked-content state, and Type 3 glyph metrics. Font lookup, glyph emission,
+/// shadings, images, XObjects, and graphics-state dictionaries remain separate
+/// resource-backed slices.
 pub fn PdfContentOperatorState::content_apply_core_op(
   self : PdfContentOperatorState,
   op : PdfContentOp,
@@ -294,6 +344,7 @@ pub fn PdfContentOperatorState::content_apply_core_op(
       let state = self
         .content_apply_path_machine_op(op)
         .content_apply_marked_content_op(op)
+        .content_apply_type3_metrics_op(op)
       {
         ..state,
         path_state: state.path_state.content_apply_path_state_op(op),

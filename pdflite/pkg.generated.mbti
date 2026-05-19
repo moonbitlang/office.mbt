@@ -365,6 +365,8 @@ pub fn pdf_content_apply_text_op(PdfContentTextState, PdfFont, @geometry.Transfo
 
 pub fn pdf_content_apply_text_state_op(PdfContentTextState, PdfContentOp) -> PdfContentTextState
 
+pub fn pdf_content_apply_type3_metrics_op(PdfContentOperatorState, PdfContentOp) -> PdfContentOperatorState
+
 pub fn pdf_content_begin_artifact() -> PdfContentOp
 
 pub let pdf_content_black : PdfContentColour
@@ -2056,6 +2058,8 @@ pub(all) struct PdfContentOperatorFrame {
   text_state : PdfContentTextState
   marked_content_point : PdfContentMarkedContent?
   marked_content : Array[PdfContentMarkedContent]
+  type3_d0 : PdfContentType3D0?
+  type3_d1 : PdfContentType3D1?
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfContentOperatorState {
@@ -2067,11 +2071,14 @@ pub(all) struct PdfContentOperatorState {
   text_state : PdfContentTextState
   marked_content_point : PdfContentMarkedContent?
   marked_content : Array[PdfContentMarkedContent]
+  type3_d0 : PdfContentType3D0?
+  type3_d1 : PdfContentType3D1?
   state_stack : Array[PdfContentOperatorFrame]
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfContentOperatorState::content_apply_core_op(Self, PdfContentOp) -> Self
 pub fn PdfContentOperatorState::content_apply_graphics_state_op(Self, PdfContentOp) -> Self
 pub fn PdfContentOperatorState::content_apply_marked_content_op(Self, PdfContentOp) -> Self
+pub fn PdfContentOperatorState::content_apply_type3_metrics_op(Self, PdfContentOp) -> Self
 
 pub(all) enum PdfContentPartialPath {
   PdfContentNoPartialPath
@@ -2198,6 +2205,20 @@ pub fn PdfContentTextState::content_text_layout(Self, @geometry.TransformMatrix)
 
 pub(all) enum PdfContentTiling {
   PdfContentTiling
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfContentType3D0 {
+  width_x : Double
+  width_y : Double
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfContentType3D1 {
+  width_x : Double
+  width_y : Double
+  llx : Double
+  lly : Double
+  urx : Double
+  ury : Double
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfCoordRectangle {

@@ -2724,6 +2724,16 @@ Current backend snapshot:
   native --package bobzhang/pdflite --file pdf_content_operator_state_test.mbt`
   at 6/6 tests passing; native full-suite validation reports 1952/1952 tests
   passing.~~
+- [x] ~~Standalone `cpdfcontent.ml` Type 3 metric-state slice adds
+  `PdfContentType3D0`, `PdfContentType3D1`, `type3_d0`, and `type3_d1` to the
+  operator state and stack frames, and exposes
+  `PdfContentOperatorState::content_apply_type3_metrics_op` plus
+  `pdf_content_apply_type3_metrics_op`, matching cpdf's `d0` and `d1` state
+  assignments and q/Q save/restore behavior while leaving Type 3 resource
+  integration for later slices. Native focused validation reports `moon test
+  --target native --package bobzhang/pdflite --file
+  pdf_content_operator_state_test.mbt` at 7/7 tests passing; native full-suite
+  validation reports 1953/1953 tests passing.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,
