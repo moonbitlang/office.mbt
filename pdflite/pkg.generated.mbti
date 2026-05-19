@@ -675,6 +675,8 @@ pub fn pdf_hard_error(String) -> Unit raise @core.PdfError
 
 pub fn pdf_hasbox(PdfDocument, Int, @core.PdfName) -> Bool raise @core.PdfError
 
+pub fn pdf_hflip_pdf(PdfDocument, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_image_bpc(PdfDocument, PdfObject) -> PdfObject?
 
 pub fn pdf_image_colspace(PdfDocument, PdfObject, PdfObject) -> PdfColourSpace raise @core.PdfError
@@ -1414,6 +1416,8 @@ pub fn pdf_utf16be_of_codepoints(ArrayView[Int]) -> Bytes raise @core.PdfError
 pub fn pdf_utf8_of_codepoints(ArrayView[Int]) -> Bytes raise @core.PdfError
 
 pub fn pdf_utf8_of_pdfdocstring(BytesView) -> Bytes raise @core.PdfError
+
+pub fn pdf_vflip_pdf(PdfDocument, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_write_colour_space(PdfDocument, PdfColourSpace) -> PdfObject
 
@@ -2550,6 +2554,8 @@ pub fn PdfDocument::extract_fontfile_bytes(Self, Int, String) -> Bytes? raise @c
 pub fn PdfDocument::extract_struct_tree(Self) -> Json raise @core.PdfError
 pub fn PdfDocument::find_object_by_spec(Self, String) -> PdfObject raise @core.PdfError
 pub fn PdfDocument::first_xref(Self) -> Int
+pub fn PdfDocument::flip_pages_horizontally(Self, ArrayView[Int], fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::flip_pages_vertically(Self, ArrayView[Int], fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::font_from_name(Self, String, Int) -> PdfObject raise @core.PdfError
 pub fn PdfDocument::font_table(Self, String, Int) -> Array[PdfFontTableEntry] raise @core.PdfError
 pub fn PdfDocument::font_table_text(Self, String, Int) -> Bytes raise @core.PdfError
