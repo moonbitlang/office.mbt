@@ -1151,6 +1151,46 @@ pub fn pdf_content_apply_text_show_op(
 }
 
 ///|
+/// Apply cpdfcontent text operators that depend on page resources or font data.
+pub fn PdfDocument::content_apply_text_resource_op(
+  self : PdfDocument,
+  state : PdfContentOperatorState,
+  resources : PdfObject,
+  op : PdfContentOp,
+) -> PdfContentOperatorTextResult raise PdfError {
+  match op {
+    Op_Tf(font_name, font_size) =>
+      {
+        state: self.content_apply_font_resource_op(
+          state, resources, font_name, font_size,
+        ),
+        entries: [],
+      }
+    Op_Tj(_) | Op_TJ(_) | Op_quote(_) | Op_double_quote(_, _, _) =>
+      state.content_apply_text_show_op(state.text_state.current_font, op)
+    _ =>
+      {
+        state: {
+          ..state,
+          text_state: state.text_state.content_apply_text_state_op(op),
+        },
+        entries: [],
+      }
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::content_apply_text_resource_op`.
+pub fn pdf_content_apply_text_resource_op(
+  document : PdfDocument,
+  state : PdfContentOperatorState,
+  resources : PdfObject,
+  op : PdfContentOp,
+) -> PdfContentOperatorTextResult raise PdfError {
+  document.content_apply_text_resource_op(state, resources, op)
+}
+
+///|
 fn PdfContentOperatorState::content_clipping_content_state(
   self : PdfContentOperatorState,
 ) -> PdfContentState {

@@ -538,6 +538,73 @@ test "cpdfcontent operator state applies resource font lookup and cache" {
 }
 
 ///|
+test "cpdfcontent operator state applies resource-backed text operators" {
+  let doc = @pdflite.pdf_document_empty()
+  let initial = @pdflite.pdf_content_initial_operator_state(
+    0.0, 0.0, 100.0, 200.0,
+  )
+  let subtype_key = content_operator_name_for_test("/Subtype")
+  let base_font_key = content_operator_name_for_test("/BaseFont")
+  let font_resource_key = content_operator_name_for_test("/Font")
+  let f1_key = content_operator_name_for_test("/F1")
+  doc.add_object_given_number(
+    7,
+    @pdflite.pdf_dictionary([
+      (subtype_key, PdfNameObject(content_operator_name_for_test("/Type1"))),
+      (
+        base_font_key,
+        PdfNameObject(content_operator_name_for_test("/Helvetica")),
+      ),
+    ]),
+  )
+  let resources = @pdflite.pdf_dictionary([
+    (font_resource_key, @pdflite.pdf_dictionary([(f1_key, PdfIndirect(7))])),
+  ])
+  let font = try! doc.read_font(PdfIndirect(7))
+  let tf_result = try! doc.content_apply_text_resource_op(
+    initial,
+    resources,
+    Op_Tf(f1_key, 10.0),
+  )
+  @test.assert_eq(tf_result.entries.length(), 0)
+  @test.assert_eq(tf_result.state.text_state.font, "/F1")
+  @test.assert_eq(tf_result.state.text_state.font_size, 10.0)
+  @test.assert_eq(tf_result.state.text_state.current_font, font)
+  let show_result = try! doc.content_apply_text_resource_op(
+    tf_result.state,
+    resources,
+    Op_Tj(b"A"),
+  )
+  @test.assert_eq(
+    show_result,
+    try! tf_result.state.content_apply_text_show_op(font, Op_Tj(b"A")),
+  )
+  @test.assert_eq(show_result.entries.length(), 1)
+  @test.assert_eq(
+    show_result.entries[0].object,
+    PdfContentGlyphObject(65, "A", "A"),
+  )
+  let spacing_result = try! doc.content_apply_text_resource_op(
+    tf_result.state,
+    resources,
+    Op_Tc(2.5),
+  )
+  @test.assert_eq(spacing_result.entries.length(), 0)
+  @test.assert_eq(spacing_result.state.text_state.character_spacing, 2.5)
+  let quote_result = try! @pdflite.pdf_content_apply_text_resource_op(
+    doc,
+    tf_result.state,
+    resources,
+    Op_quote(b"B"),
+  )
+  @test.assert_eq(quote_result.entries.length(), 1)
+  @test.assert_eq(
+    quote_result.entries[0].object,
+    PdfContentGlyphObject(66, "B", "B"),
+  )
+}
+
+///|
 test "cpdfcontent operator state applies source-shaped ExtGState resources" {
   let doc = @pdflite.pdf_document_empty()
   let initial = @pdflite.pdf_content_initial_operator_state(

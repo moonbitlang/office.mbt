@@ -3083,6 +3083,22 @@ Current backend snapshot:
   native` passing with the known `markdown/cmd` warning and `moon check --target
   native --warn-list +73` at the known 10-warning baseline. Full native suite
   validation is deferred to the next batch.~~
+- [x] ~~Standalone `cpdfcontent.ml` resource-backed text operator slice adds
+  `PdfDocument::content_apply_text_resource_op` and
+  `pdf_content_apply_text_resource_op`, routing `Tf` through the page `/Font`
+  resource/cache bridge, applying text-state-only operators without emitted
+  entries, and emitting `Tj`/`TJ`/quote/double-quote glyph entries through the
+  current font stored in `PdfContentTextState.current_font`. This connects the
+  previous font-data bridge to the glyph-entry bridge while leaving path/image/
+  shading/Form dispatch and the full stateful content walker for later slices.
+  Focused native validation reports `moon test --target native
+  pdf_content_operator_state_test.mbt --filter '*text operators*'` at 1/1 test
+  passing; widened native validation reports `moon test --target native
+  pdf_content_operator_state_test.mbt` at 30/30 tests passing. Native check
+  validation reports `moon check --target native` passing with the known
+  `markdown/cmd` warning and `moon check --target native --warn-list +73` at the
+  known 10-warning baseline. Batch full-suite validation reports `moon test
+  --target native` at 1976/1976 tests passing.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,
