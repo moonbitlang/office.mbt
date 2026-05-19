@@ -2886,6 +2886,23 @@ Current backend snapshot:
   native` passing with the known `markdown/cmd` warning and `moon check --target
   native --warn-list +73` at the known 10-warning baseline. Native full-suite
   validation reports 1965/1965 tests passing.~~
+- [x] ~~Standalone `cpdfcontent.ml` ExtGState alpha-state slice adds
+  `alpha_constant_stroke`, `alpha_constant_non_stroke`, and `alpha_source` to
+  `PdfContentOperatorState` and q/Q frames, and exposes
+  `PdfDocument::content_apply_extgstate_alpha_op` plus
+  `pdf_content_apply_extgstate_alpha_op`, matching cpdf's initial alpha defaults
+  and `read_graphics_state_dictionary` `/CA`, `/ca`, and `/AIS` branches once an
+  ExtGState dictionary has been resolved, including integer-to-float widening,
+  boolean alpha-source handling, ignored malformed values, and q/Q
+  save-restore behavior while leaving resource-name resolution and the remaining
+  non-JSON graphics-state fields for later slices. Focused native validation
+  reports `moon test --target native pdf_content_operator_state_test.mbt
+  --filter '*ExtGState*'` at 4/4 tests passing and `moon test --target native
+  pdf_content_operator_state_test.mbt` at 20/20 tests passing; native check
+  validation reports `moon check --target native` passing with the known
+  `markdown/cmd` warning and `moon check --target native --warn-list +73` at the
+  known 10-warning baseline. Full native suite validation is deferred to the
+  next batch.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,

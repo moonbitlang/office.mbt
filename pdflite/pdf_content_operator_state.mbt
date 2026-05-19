@@ -8,6 +8,9 @@ pub(all) struct PdfContentOperatorFrame {
   text_state : PdfContentTextState
   miter_limit : Double
   flatness : Double
+  alpha_constant_stroke : Double
+  alpha_constant_non_stroke : Double
+  alpha_source : Bool
   marked_content_point : PdfContentMarkedContent?
   marked_content : Array[PdfContentMarkedContent]
   type3_d0 : PdfContentType3D0?
@@ -24,6 +27,9 @@ pub(all) struct PdfContentOperatorState {
   text_state : PdfContentTextState
   miter_limit : Double
   flatness : Double
+  alpha_constant_stroke : Double
+  alpha_constant_non_stroke : Double
+  alpha_source : Bool
   marked_content_point : PdfContentMarkedContent?
   marked_content : Array[PdfContentMarkedContent]
   type3_d0 : PdfContentType3D0?
@@ -62,6 +68,21 @@ let pdf_content_extgstate_ri_name : PdfName = pdf_content_extgstate_name("/RI")
 
 ///|
 let pdf_content_extgstate_fl_name : PdfName = pdf_content_extgstate_name("/FL")
+
+///|
+let pdf_content_extgstate_ca_stroke_name : PdfName = pdf_content_extgstate_name(
+  "/CA",
+)
+
+///|
+let pdf_content_extgstate_ca_non_stroke_name : PdfName = pdf_content_extgstate_name(
+  "/ca",
+)
+
+///|
+let pdf_content_extgstate_ais_name : PdfName = pdf_content_extgstate_name(
+  "/AIS",
+)
 
 ///|
 let pdf_content_extgstate_tk_name : PdfName = pdf_content_extgstate_name("/TK")
@@ -105,6 +126,9 @@ pub fn pdf_content_initial_operator_state(
     text_state: pdf_content_initial_text_state(),
     miter_limit: 10.0,
     flatness: 1.0,
+    alpha_constant_stroke: 1.0,
+    alpha_constant_non_stroke: 1.0,
+    alpha_source: false,
     marked_content_point: None,
     marked_content: [],
     type3_d0: None,
@@ -126,6 +150,9 @@ fn PdfContentOperatorState::content_frame(
     text_state: self.text_state,
     miter_limit: self.miter_limit,
     flatness: self.flatness,
+    alpha_constant_stroke: self.alpha_constant_stroke,
+    alpha_constant_non_stroke: self.alpha_constant_non_stroke,
+    alpha_source: self.alpha_source,
     marked_content_point: self.marked_content_point,
     marked_content: pdf_content_operator_copy_marked_content(
       self.marked_content,
@@ -214,6 +241,9 @@ fn PdfContentOperatorState::content_pop_state(
       text_state: frame.text_state,
       miter_limit: frame.miter_limit,
       flatness: frame.flatness,
+      alpha_constant_stroke: frame.alpha_constant_stroke,
+      alpha_constant_non_stroke: frame.alpha_constant_non_stroke,
+      alpha_source: frame.alpha_source,
       marked_content_point: frame.marked_content_point,
       marked_content: pdf_content_operator_copy_marked_content(
         frame.marked_content,
@@ -326,6 +356,18 @@ fn PdfDocument::content_extgstate_name_value(
 }
 
 ///|
+fn PdfDocument::content_extgstate_boolean(
+  self : PdfDocument,
+  extgstate : PdfObject,
+  key : PdfName,
+) -> Bool? {
+  match self.lookup_direct(key, extgstate) {
+    Some(PdfBoolean(value)) => Some(value)
+    _ => None
+  }
+}
+
+///|
 /// Apply cpdfcontent scalar graphics parameters from a resolved ExtGState dictionary.
 pub fn PdfDocument::content_apply_extgstate_graphics_parameter_op(
   self : PdfDocument,
@@ -417,6 +459,46 @@ pub fn pdf_content_apply_extgstate_dash_op(
   extgstate : PdfObject,
 ) -> PdfContentOperatorState raise PdfError {
   document.content_apply_extgstate_dash_op(state, extgstate)
+}
+
+///|
+/// Apply cpdfcontent alpha parameters from a resolved ExtGState dictionary.
+pub fn PdfDocument::content_apply_extgstate_alpha_op(
+  self : PdfDocument,
+  state : PdfContentOperatorState,
+  extgstate : PdfObject,
+) -> PdfContentOperatorState {
+  let mut output = state
+  match
+    self.content_extgstate_number(
+      extgstate, pdf_content_extgstate_ca_stroke_name,
+    ) {
+    Some(value) => output = { ..output, alpha_constant_stroke: value }
+    None => ()
+  }
+  match
+    self.content_extgstate_number(
+      extgstate, pdf_content_extgstate_ca_non_stroke_name,
+    ) {
+    Some(value) => output = { ..output, alpha_constant_non_stroke: value }
+    None => ()
+  }
+  match
+    self.content_extgstate_boolean(extgstate, pdf_content_extgstate_ais_name) {
+    Some(value) => output = { ..output, alpha_source: value }
+    None => ()
+  }
+  output
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::content_apply_extgstate_alpha_op`.
+pub fn pdf_content_apply_extgstate_alpha_op(
+  document : PdfDocument,
+  state : PdfContentOperatorState,
+  extgstate : PdfObject,
+) -> PdfContentOperatorState {
+  document.content_apply_extgstate_alpha_op(state, extgstate)
 }
 
 ///|

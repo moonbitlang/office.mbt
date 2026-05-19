@@ -40,6 +40,9 @@ test "cpdfcontent operator state exposes initial state" {
   @test.assert_eq(state.text_state, @pdflite.pdf_content_initial_text_state())
   @test.assert_eq(state.miter_limit, 10.0)
   @test.assert_eq(state.flatness, 1.0)
+  @test.assert_eq(state.alpha_constant_stroke, 1.0)
+  @test.assert_eq(state.alpha_constant_non_stroke, 1.0)
+  @test.assert_eq(state.alpha_source, false)
   @test.assert_eq(state.marked_content_point, None)
   @test.assert_eq(state.marked_content.length(), 0)
   @test.assert_eq(state.type3_d0, None)
@@ -57,6 +60,9 @@ test "cpdfcontent operator state saves and restores q Q frames" {
   @test.assert_eq(pushed.state_stack[0].ctm, initial.ctm)
   @test.assert_eq(pushed.state_stack[0].path_state, initial.path_state)
   @test.assert_eq(pushed.state_stack[0].text_state, initial.text_state)
+  @test.assert_eq(pushed.state_stack[0].alpha_constant_stroke, 1.0)
+  @test.assert_eq(pushed.state_stack[0].alpha_constant_non_stroke, 1.0)
+  @test.assert_eq(pushed.state_stack[0].alpha_source, false)
   let changed : @pdflite.PdfContentOperatorState = {
     ..pushed,
     ctm: @pdflite.transform_translate(7.0, 8.0),
@@ -64,6 +70,9 @@ test "cpdfcontent operator state saves and restores q Q frames" {
     clipping_path: [],
     path_state: pushed.path_state.content_apply_path_state_op(Op_w(3.0)),
     text_state: pushed.text_state.content_apply_text_state_op(Op_Tc(5.0)),
+    alpha_constant_stroke: 0.75,
+    alpha_constant_non_stroke: 0.5,
+    alpha_source: true,
   }
   let restored = changed.content_apply_graphics_state_op(Op_Q)
   @test.assert_eq(restored.ctm, initial.ctm)
@@ -72,6 +81,12 @@ test "cpdfcontent operator state saves and restores q Q frames" {
   @test.assert_eq(restored.path, initial.path)
   @test.assert_eq(restored.path_state, initial.path_state)
   @test.assert_eq(restored.text_state, initial.text_state)
+  @test.assert_eq(restored.alpha_constant_stroke, initial.alpha_constant_stroke)
+  @test.assert_eq(
+    restored.alpha_constant_non_stroke,
+    initial.alpha_constant_non_stroke,
+  )
+  @test.assert_eq(restored.alpha_source, initial.alpha_source)
   @test.assert_eq(restored.state_stack.length(), 0)
   @test.assert_eq(initial.content_apply_graphics_state_op(Op_Q), initial)
 }
@@ -310,6 +325,39 @@ test "cpdfcontent operator state applies ExtGState dash parameters" {
   guard bad_dash is Err(@pdflite.PdfError::NumberExpected) else {
     fail("expected NumberExpected for malformed ExtGState dash array")
   }
+}
+
+///|
+test "cpdfcontent operator state applies ExtGState alpha parameters" {
+  let doc = @pdflite.pdf_document_empty()
+  let initial = @pdflite.pdf_content_initial_operator_state(
+    0.0, 0.0, 100.0, 200.0,
+  )
+  let extgstate = @pdflite.pdf_dictionary([
+    (content_operator_name_for_test("/CA"), PdfReal(0.75)),
+    (content_operator_name_for_test("/ca"), PdfInteger(0)),
+    (content_operator_name_for_test("/AIS"), PdfBoolean(true)),
+  ])
+  let state = doc.content_apply_extgstate_alpha_op(initial, extgstate)
+  @test.assert_eq(state.alpha_constant_stroke, 0.75)
+  @test.assert_eq(state.alpha_constant_non_stroke, 0.0)
+  @test.assert_eq(state.alpha_source, true)
+  @test.assert_eq(
+    @pdflite.pdf_content_apply_extgstate_alpha_op(doc, initial, extgstate),
+    state,
+  )
+  let ignored = doc.content_apply_extgstate_alpha_op(
+    state,
+    @pdflite.pdf_dictionary([
+      (
+        content_operator_name_for_test("/CA"),
+        PdfNameObject(content_operator_name_for_test("/Ignored")),
+      ),
+      (content_operator_name_for_test("/ca"), PdfBoolean(false)),
+      (content_operator_name_for_test("/AIS"), PdfInteger(1)),
+    ]),
+  )
+  @test.assert_eq(ignored, state)
 }
 
 ///|
