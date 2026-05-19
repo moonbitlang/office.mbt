@@ -540,6 +540,20 @@ Current backend snapshot:
   --target native --warn-list +73` at the known 10-warning baseline. Batched
   full native validation reports `moon test --target native` at 2014/2014 tests
   passing.~~
+- [x] ~~Port the `cpdfua` Matterhorn encryption-permission slice: the covered
+  Matterhorn surface now includes source checks `26-001` and `26-002`,
+  preserving cpdf's no-op behavior for missing `/P` and checking decrypted
+  documents' saved encryption permission mask for denied extraction
+  (`PdfNoExtract`). Coverage pins plain-document passes, the `26-001` no-op,
+  `PdfNoExtract` failure after decryption, and unrelated denied permissions
+  passing. Focused native validation reports `moon test --target native
+  pdf_ua_matterhorn_test.mbt --filter '*encryption permissions*'` at 1/1 test
+  passing; widened native validation reports `moon test --target native
+  pdf_ua_matterhorn_test.mbt` at 33/33 tests passing. Native check validation
+  reports `moon check --target native` passing with the known `markdown/cmd`
+  warning and `moon check --target native --warn-list +73` at the known
+  10-warning baseline. Full native suite validation is deferred to the next
+  batch.~~
 - [x] ~~Port the current stub/no-op redaction APIs from `cpdfredact`: `redact`
   is exposed as `redact_path`/`pdf_redact` and preserves page content while
   validating the selected page range, while `apply` and `apply_type` are

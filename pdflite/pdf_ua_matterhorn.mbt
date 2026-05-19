@@ -493,6 +493,24 @@ fn pdf_ua_matterhorn_test_21_001() -> PdfUAMatterhornTest {
 }
 
 ///|
+fn pdf_ua_matterhorn_test_26_001() -> PdfUAMatterhornTest {
+  {
+    name: "26-001",
+    error: "The file is encrypted but does not contain a P entry in its encryption dictionary.",
+    section: "UA1:7.16-1",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_26_002() -> PdfUAMatterhornTest {
+  {
+    name: "26-002",
+    error: "The file is encrypted and does contain a P entry but the 10th bit position of the P entry is false.",
+    section: "UA1:7.16-1",
+  }
+}
+
+///|
 fn pdf_ua_matterhorn_test_28_014() -> PdfUAMatterhornTest {
   {
     name: "28-014",
@@ -835,6 +853,8 @@ fn pdf_ua_matterhorn_implemented_tests() -> Array[PdfUAMatterhornTest] {
     pdf_ua_matterhorn_test_20_002(),
     pdf_ua_matterhorn_test_20_003(),
     pdf_ua_matterhorn_test_21_001(),
+    pdf_ua_matterhorn_test_26_001(),
+    pdf_ua_matterhorn_test_26_002(),
     pdf_ua_matterhorn_test_28_014(),
     pdf_ua_matterhorn_test_28_015(),
     pdf_ua_matterhorn_test_28_016(),
@@ -1564,6 +1584,21 @@ fn PdfDocument::pdf_ua_matterhorn_check_21_001(
     }
   }
   None
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_26_001(_self : PdfDocument) -> Json? {
+  None
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_26_002(self : PdfDocument) -> Json? {
+  match self.saved_encryption() {
+    Some(saved) if pdf_permissions_of_p(saved.values.permissions).contains(
+        PdfNoExtract,
+      ) => Some(Json::null())
+    _ => None
+  }
 }
 
 ///|
@@ -2515,6 +2550,8 @@ fn PdfDocument::pdf_ua_matterhorn_run_test(
     "20-002" => self.pdf_ua_matterhorn_check_20_002()
     "20-003" => self.pdf_ua_matterhorn_check_20_003()
     "21-001" => self.pdf_ua_matterhorn_check_21_001()
+    "26-001" => self.pdf_ua_matterhorn_check_26_001()
+    "26-002" => self.pdf_ua_matterhorn_check_26_002()
     "28-014" => self.pdf_ua_matterhorn_check_28_014()
     "28-015" => self.pdf_ua_matterhorn_check_28_015()
     "28-016" => self.pdf_ua_matterhorn_check_28_016()
@@ -2614,10 +2651,11 @@ fn PdfDocument::pdf_ua_matterhorn_failures(
 /// `01-005`, and `01-007`, role-map checks `02-001`, `02-003`, and `02-004`,
 /// XMP metadata and DisplayDocTitle checks `06-001` through `07-002`, and
 /// optional-content configuration checks `20-001` through `20-003`, embedded
-/// file-spec check `21-001`, media-clip checks `28-014` and `28-015`,
-/// file-attachment no-op `28-016`, PrinterMark object and appearance checks
-/// `28-017` and `28-018`, plus reference-XObject checks `30-001` and
-/// `30-002`, plus font CIDSystemInfo/CIDToGIDMap/CMap
+/// file-spec check `21-001`, encryption checks `26-001` and `26-002`,
+/// media-clip checks `28-014` and `28-015`, file-attachment no-op `28-016`,
+/// PrinterMark object and appearance checks `28-017` and `28-018`, plus
+/// reference-XObject checks `30-001` and `30-002`, plus font
+/// CIDSystemInfo/CIDToGIDMap/CMap
 /// checks `31-001` through `31-009`, and source-unimplemented font-file checks
 /// `31-011` through `31-016`, `31-018`, and `31-030`, plus TrueType encoding
 /// dictionary and cmap checks `31-017` and `31-019` through `31-026`, and

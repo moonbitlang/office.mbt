@@ -172,6 +172,16 @@ fn ua_matterhorn_21_001_failure_for_test() -> Json {
 }
 
 ///|
+fn ua_matterhorn_26_002_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "26-002",
+    "UA1:7.16-1",
+    "The file is encrypted and does contain a P entry but the 10th bit position of the P entry is false.",
+    Json::null(),
+  )
+}
+
+///|
 fn ua_matterhorn_28_014_failure_for_test() -> Json {
   ua_matterhorn_failure_for_test(
     "28-014",
@@ -464,6 +474,16 @@ fn ua_matterhorn_document_with_metadata_for_test(
 ) -> @pdflite.PdfDocument {
   let document = ua_matterhorn_document_for_test([], root_extras~)
   try! document.set_metadata_from_bytes(metadata)
+}
+
+///|
+fn ua_matterhorn_decryption_result_for_test(
+  result : @pdflite.PdfDecryptionResult?,
+) -> @pdflite.PdfDecryptionResult raise {
+  match result {
+    Some(value) => value
+    None => fail("expected decryption result")
+  }
 }
 
 ///|
@@ -1338,6 +1358,49 @@ test "PdfDocument test_matterhorn_json checks embedded file specs" {
   )
   @test.assert_eq(
     try! no_fs_annotation.test_matterhorn_json("21-001"),
+    Json::array([]),
+  )
+}
+
+///|
+test "PdfDocument test_matterhorn_json checks encryption permissions" {
+  let plain = ua_matterhorn_document_for_test([])
+  @test.assert_eq(try! plain.test_matterhorn_json("26-001"), Json::array([]))
+  @test.assert_eq(try! plain.test_matterhorn_json("26-002"), Json::array([]))
+
+  let no_extract_encrypted = try! ua_matterhorn_document_for_test([]).encrypt_40bit(
+    @ascii.encode("user"),
+    @ascii.encode("owner"),
+    [PdfNoExtract],
+    file_id=@ascii.encode("ua-no-extract"),
+  )
+  let no_extract = ua_matterhorn_decryption_result_for_test(
+      try! no_extract_encrypted.decrypt_with_user_password(
+        @ascii.encode("user"),
+      ),
+    ).document
+  @test.assert_eq(
+    try! no_extract.test_matterhorn_json("26-001"),
+    Json::array([]),
+  )
+  @test.assert_eq(
+    try! no_extract.test_matterhorn_json("26-002"),
+    Json::array([ua_matterhorn_26_002_failure_for_test()]),
+  )
+
+  let print_denied_encrypted = try! ua_matterhorn_document_for_test([]).encrypt_40bit(
+    @ascii.encode("user"),
+    @ascii.encode("owner"),
+    [PdfNoPrint],
+    file_id=@ascii.encode("ua-print-denied"),
+  )
+  let print_denied = ua_matterhorn_decryption_result_for_test(
+      try! print_denied_encrypted.decrypt_with_user_password(
+        @ascii.encode("user"),
+      ),
+    ).document
+  @test.assert_eq(
+    try! print_denied.test_matterhorn_json("26-002"),
     Json::array([]),
   )
 }
