@@ -245,6 +245,14 @@ fn pdf_ua_matterhorn_usecmap_key() -> PdfName {
 }
 
 ///|
+let pdf_ua_matterhorn_wmode_key_name : PdfName = pdf_ua_name("/WMode")
+
+///|
+fn pdf_ua_matterhorn_wmode_key() -> PdfName {
+  pdf_ua_matterhorn_wmode_key_name
+}
+
+///|
 let pdf_ua_matterhorn_descendant_fonts_key_name : PdfName = pdf_ua_name(
   "/DescendantFonts",
 )
@@ -563,6 +571,15 @@ fn pdf_ua_matterhorn_test_31_006() -> PdfUAMatterhornTest {
 }
 
 ///|
+fn pdf_ua_matterhorn_test_31_007() -> PdfUAMatterhornTest {
+  {
+    name: "31-007",
+    error: "The WMode entry in a CMap dictionary is not identical to the WMode value in the CMap stream.",
+    section: "UA1:7.21.3.3-1",
+  }
+}
+
+///|
 fn pdf_ua_matterhorn_test_31_008() -> PdfUAMatterhornTest {
   {
     name: "31-008",
@@ -602,6 +619,7 @@ fn pdf_ua_matterhorn_implemented_tests() -> Array[PdfUAMatterhornTest] {
     pdf_ua_matterhorn_test_31_004(),
     pdf_ua_matterhorn_test_31_005(),
     pdf_ua_matterhorn_test_31_006(),
+    pdf_ua_matterhorn_test_31_007(),
     pdf_ua_matterhorn_test_31_008(),
   ]
 }
@@ -1674,6 +1692,28 @@ fn PdfDocument::pdf_ua_matterhorn_check_31_006(self : PdfDocument) -> Json? {
 }
 
 ///|
+fn PdfDocument::pdf_ua_matterhorn_check_31_007(
+  self : PdfDocument,
+) -> Json? raise PdfError {
+  for entry in self.parsed_object_entries() {
+    match self.lookup_direct(pdf_ua_matterhorn_wmode_key(), entry.2) {
+      Some(PdfInteger(from_dictionary)) => {
+        let bytes = self.pdf_text_decoded_cmap_stream_data_direct(entry.2)
+        let from_stream = match pdf_parse_cmap_data(bytes).wmode {
+          Some(value) => value
+          None => 0
+        }
+        if from_stream != from_dictionary {
+          return Some(Json::null())
+        }
+      }
+      _ => ()
+    }
+  }
+  None
+}
+
+///|
 fn PdfDocument::pdf_ua_matterhorn_check_31_008(self : PdfDocument) -> Json? {
   for entry in self.parsed_object_entries() {
     match self.lookup_direct(pdf_ua_matterhorn_usecmap_key(), entry.2) {
@@ -1719,6 +1759,7 @@ fn PdfDocument::pdf_ua_matterhorn_run_test(
     "31-004" => self.pdf_ua_matterhorn_check_31_004()
     "31-005" => self.pdf_ua_matterhorn_check_31_005()
     "31-006" => self.pdf_ua_matterhorn_check_31_006()
+    "31-007" => self.pdf_ua_matterhorn_check_31_007()
     "31-008" => self.pdf_ua_matterhorn_check_31_008()
     _ => None
   }
@@ -1786,8 +1827,8 @@ fn PdfDocument::pdf_ua_matterhorn_failures(
 /// checks `28-014` and `28-015`, file-attachment no-op `28-016`, PrinterMark
 /// object and appearance checks `28-017` and `28-018`, plus reference-XObject
 /// checks `30-001` and `30-002`, plus font CIDSystemInfo/CIDToGIDMap/CMap
-/// checks `31-001` through `31-006` and `31-008`. Passing `""` runs the
-/// covered subset; unsupported
+/// checks `31-001` through `31-008`. Passing `""` runs the covered subset;
+/// unsupported
 /// individual test names raise a soft error until their source checks are
 /// ported.
 pub fn PdfDocument::test_matterhorn_json(

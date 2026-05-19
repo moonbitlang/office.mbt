@@ -280,6 +280,16 @@ fn ua_matterhorn_31_006_failure_for_test(name : String) -> Json {
 }
 
 ///|
+fn ua_matterhorn_31_007_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "31-007",
+    "UA1:7.21.3.3-1",
+    "The WMode entry in a CMap dictionary is not identical to the WMode value in the CMap stream.",
+    Json::null(),
+  )
+}
+
+///|
 fn ua_matterhorn_31_008_failure_for_test(name : String) -> Json {
   ua_matterhorn_failure_for_test(
     "31-008",
@@ -421,6 +431,29 @@ fn ua_matterhorn_cmap_for_test(
       ua_matterhorn_cid_system_info_for_test(registry, ordering),
     ),
   ])
+}
+
+///|
+fn ua_matterhorn_cmap_stream_for_test(
+  dictionary_wmode : Int?,
+  stream_wmode : Int?,
+) -> @pdflite.PdfObject {
+  let dictionary_entries : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = []
+  match dictionary_wmode {
+    Some(wmode) =>
+      dictionary_entries.push(
+        (ua_matterhorn_name_for_test("/WMode"), PdfInteger(wmode)),
+      )
+    None => ()
+  }
+  let stream_text = match stream_wmode {
+    Some(wmode) => "/WMode " + wmode.to_string() + " def\n"
+    None => ""
+  }
+  @pdflite.pdf_stream(
+    PdfDictionary(dictionary_entries),
+    StreamGot(@ascii.encode(stream_text)),
+  )
 }
 
 ///|
@@ -1374,6 +1407,46 @@ test "PdfDocument test_matterhorn_json checks CMap names" {
   )
   @test.assert_eq(
     try! embedded_base.test_matterhorn_json("31-008"),
+    Json::array([]),
+  )
+}
+
+///|
+test "PdfDocument test_matterhorn_json compares CMap WMode values" {
+  let mismatch = ua_matterhorn_document_for_test([])
+  mismatch.add_object_given_number(
+    42,
+    ua_matterhorn_cmap_stream_for_test(Some(0), Some(1)),
+  )
+  @test.assert_eq(
+    try! mismatch.test_matterhorn_json("31-007"),
+    Json::array([ua_matterhorn_31_007_failure_for_test()]),
+  )
+
+  let matching = ua_matterhorn_document_for_test([])
+  matching.add_object_given_number(
+    42,
+    ua_matterhorn_cmap_stream_for_test(Some(1), Some(1)),
+  )
+  @test.assert_eq(try! matching.test_matterhorn_json("31-007"), Json::array([]))
+
+  let default_stream_wmode = ua_matterhorn_document_for_test([])
+  default_stream_wmode.add_object_given_number(
+    42,
+    ua_matterhorn_cmap_stream_for_test(Some(0), None),
+  )
+  @test.assert_eq(
+    try! default_stream_wmode.test_matterhorn_json("31-007"),
+    Json::array([]),
+  )
+
+  let no_dictionary_wmode = ua_matterhorn_document_for_test([])
+  no_dictionary_wmode.add_object_given_number(
+    42,
+    ua_matterhorn_cmap_stream_for_test(None, Some(1)),
+  )
+  @test.assert_eq(
+    try! no_dictionary_wmode.test_matterhorn_json("31-007"),
     Json::array([]),
   )
 }
