@@ -222,6 +222,26 @@ fn ua_matterhorn_30_002_failure_for_test() -> Json {
 }
 
 ///|
+fn ua_matterhorn_31_001_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "31-001",
+    "UA1:7.21.3-1",
+    "A Type 0 font dictionary with encoding other than Identity-H and Identity-V has values for Registry in both CIDSystemInfo dictionaries that are not identical.",
+    Json::null(),
+  )
+}
+
+///|
+fn ua_matterhorn_31_002_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "31-002",
+    "UA1:7.21.3.1-1",
+    "A Type 0 font dictionary with encoding other than Identity-H and Identity-V has values for Ordering in both CIDSystemInfo dictionaries that are not identical.",
+    Json::null(),
+  )
+}
+
+///|
 fn ua_matterhorn_document_for_test(
   ops : ArrayView[@pdflite.PdfContentOp],
   resources? : @pdflite.PdfObject = PdfDictionary([]),
@@ -313,6 +333,72 @@ fn ua_matterhorn_xobject_resources_for_test(
     (
       ua_matterhorn_name_for_test("/XObject"),
       PdfDictionary([ for entry in entries => entry ]),
+    ),
+  ])
+}
+
+///|
+fn ua_matterhorn_cid_system_info_for_test(
+  registry : String,
+  ordering : String,
+) -> @pdflite.PdfObject {
+  PdfDictionary([
+    (
+      ua_matterhorn_name_for_test("/Registry"),
+      PdfString(@ascii.encode(registry)),
+    ),
+    (
+      ua_matterhorn_name_for_test("/Ordering"),
+      PdfString(@ascii.encode(ordering)),
+    ),
+    (ua_matterhorn_name_for_test("/Supplement"), PdfInteger(0)),
+  ])
+}
+
+///|
+fn ua_matterhorn_cmap_for_test(
+  registry : String,
+  ordering : String,
+) -> @pdflite.PdfObject {
+  PdfDictionary([
+    (
+      ua_matterhorn_name_for_test("/CIDSystemInfo"),
+      ua_matterhorn_cid_system_info_for_test(registry, ordering),
+    ),
+  ])
+}
+
+///|
+fn ua_matterhorn_cid_font_for_test(
+  registry : String,
+  ordering : String,
+) -> @pdflite.PdfObject {
+  PdfDictionary([
+    (
+      ua_matterhorn_name_for_test("/Subtype"),
+      PdfNameObject(ua_matterhorn_name_for_test("/CIDFontType2")),
+    ),
+    (
+      ua_matterhorn_name_for_test("/CIDSystemInfo"),
+      ua_matterhorn_cid_system_info_for_test(registry, ordering),
+    ),
+  ])
+}
+
+///|
+fn ua_matterhorn_type0_font_for_test(
+  encoding : @pdflite.PdfObject,
+  descendant_number : Int,
+) -> @pdflite.PdfObject {
+  PdfDictionary([
+    (
+      ua_matterhorn_name_for_test("/Subtype"),
+      PdfNameObject(ua_matterhorn_name_for_test("/Type0")),
+    ),
+    (ua_matterhorn_name_for_test("/Encoding"), encoding),
+    (
+      ua_matterhorn_name_for_test("/DescendantFonts"),
+      PdfArray([PdfIndirect(descendant_number)]),
     ),
   ])
 }
@@ -912,4 +998,80 @@ test "PdfDocument test_matterhorn_json detects multiply referenced MCID Form XOb
     ),
   )
   @test.assert_eq(try! no_mcid.test_matterhorn_json("30-002"), Json::array([]))
+}
+
+///|
+test "PdfDocument test_matterhorn_json detects Type0 CIDSystemInfo mismatches" {
+  let registry_mismatch = ua_matterhorn_document_for_test([])
+  registry_mismatch.add_object_given_number(
+    40,
+    ua_matterhorn_type0_font_for_test(PdfIndirect(42), 41),
+  )
+  registry_mismatch.add_object_given_number(
+    41,
+    ua_matterhorn_cid_font_for_test("Other", "UCS"),
+  )
+  registry_mismatch.add_object_given_number(
+    42,
+    ua_matterhorn_cmap_for_test("Adobe", "UCS"),
+  )
+  @test.assert_eq(
+    try! registry_mismatch.test_matterhorn_json("31-001"),
+    Json::array([ua_matterhorn_31_001_failure_for_test()]),
+  )
+
+  let ordering_mismatch = ua_matterhorn_document_for_test([])
+  ordering_mismatch.add_object_given_number(
+    40,
+    ua_matterhorn_type0_font_for_test(PdfIndirect(42), 41),
+  )
+  ordering_mismatch.add_object_given_number(
+    41,
+    ua_matterhorn_cid_font_for_test("Adobe", "Japan1"),
+  )
+  ordering_mismatch.add_object_given_number(
+    42,
+    ua_matterhorn_cmap_for_test("Adobe", "UCS"),
+  )
+  @test.assert_eq(
+    try! ordering_mismatch.test_matterhorn_json("31-002"),
+    Json::array([ua_matterhorn_31_002_failure_for_test()]),
+  )
+
+  let identity_encoding = ua_matterhorn_document_for_test([])
+  identity_encoding.add_object_given_number(
+    40,
+    ua_matterhorn_type0_font_for_test(
+      PdfNameObject(ua_matterhorn_name_for_test("/Identity-H")),
+      41,
+    ),
+  )
+  identity_encoding.add_object_given_number(
+    41,
+    ua_matterhorn_cid_font_for_test("Other", "Japan1"),
+  )
+  @test.assert_eq(
+    try! identity_encoding.test_matterhorn_json("31-001"),
+    Json::array([]),
+  )
+  @test.assert_eq(
+    try! identity_encoding.test_matterhorn_json("31-002"),
+    Json::array([]),
+  )
+
+  let matching = ua_matterhorn_document_for_test([])
+  matching.add_object_given_number(
+    40,
+    ua_matterhorn_type0_font_for_test(PdfIndirect(42), 41),
+  )
+  matching.add_object_given_number(
+    41,
+    ua_matterhorn_cid_font_for_test("Adobe", "UCS"),
+  )
+  matching.add_object_given_number(
+    42,
+    ua_matterhorn_cmap_for_test("Adobe", "UCS"),
+  )
+  @test.assert_eq(try! matching.test_matterhorn_json("31-001"), Json::array([]))
+  @test.assert_eq(try! matching.test_matterhorn_json("31-002"), Json::array([]))
 }

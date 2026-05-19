@@ -28,8 +28,8 @@ Current estimate:
   info synchronization, XMP metadata creation, XMP RDF list extraction,
   XMP/document info JSON reporting, redaction annotation bounding-box overlays,
   cpdfua Matterhorn content/role-map/XMP/viewer-preference/optional-content/
-  media-clip/file-attachment/PrinterMark/reference-XObject/MCID Form XObject
-  validation, imposition
+  media-clip/file-attachment/PrinterMark/reference-XObject/MCID Form XObject/
+  Type0 CIDSystemInfo validation, imposition
   transform/content/page-assembly/pattern-matrix kernels, cpdf page
   hard-box/removal/shift/scale/scale-to-fit/upright/set-mediabox/copy-box
   helpers, imposition make-space orchestration, border stamping, layout
@@ -379,6 +379,19 @@ Current backend snapshot:
   `markdown/cmd` warning and `moon check --target native --warn-list +73` at
   the known 10-warning baseline. Batched full native validation reports `moon
   test --target native` at 2003/2003 tests passing.~~
+- [x] ~~Port the `cpdfua` Matterhorn Type 0 CIDSystemInfo registry/ordering
+  slice: the covered Matterhorn surface now includes source checks `31-001` and
+  `31-002`, preserving cpdf's indirect-CMap-only path and its skip for
+  `/Identity-H` and `/Identity-V` encodings. Coverage pins registry mismatch
+  and ordering mismatch failures, identity encoding bypass behavior, and a
+  matching CIDSystemInfo pass. Focused native validation reports `moon test
+  --target native pdf_ua_matterhorn_test.mbt --filter '*CIDSystemInfo*'` at
+  1/1 test passing; widened native validation reports `moon test --target
+  native pdf_ua_matterhorn_test.mbt` at 22/22 tests passing. Native check
+  validation reports `moon check --target native` passing with the known
+  `markdown/cmd` warning and `moon check --target native --warn-list +73` at
+  the known 10-warning baseline. Full native suite validation is deferred to
+  the next batch.~~
 - [x] ~~Port the current stub/no-op redaction APIs from `cpdfredact`: `redact`
   is exposed as `redact_path`/`pdf_redact` and preserves page content while
   validating the selected page range, while `apply` and `apply_type` are

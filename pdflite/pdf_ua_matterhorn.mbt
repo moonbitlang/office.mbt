@@ -45,6 +45,30 @@ fn pdf_ua_matterhorn_form() -> PdfName {
 }
 
 ///|
+let pdf_ua_matterhorn_type0_name : PdfName = pdf_ua_name("/Type0")
+
+///|
+fn pdf_ua_matterhorn_type0() -> PdfName {
+  pdf_ua_matterhorn_type0_name
+}
+
+///|
+let pdf_ua_matterhorn_identity_h_name : PdfName = pdf_ua_name("/Identity-H")
+
+///|
+fn pdf_ua_matterhorn_identity_h() -> PdfName {
+  pdf_ua_matterhorn_identity_h_name
+}
+
+///|
+let pdf_ua_matterhorn_identity_v_name : PdfName = pdf_ua_name("/Identity-V")
+
+///|
+fn pdf_ua_matterhorn_identity_v() -> PdfName {
+  pdf_ua_matterhorn_identity_v_name
+}
+
+///|
 let pdf_ua_matterhorn_resources_key_name : PdfName = pdf_ua_name("/Resources")
 
 ///|
@@ -106,6 +130,50 @@ let pdf_ua_matterhorn_ct_key_name : PdfName = pdf_ua_name("/CT")
 ///|
 fn pdf_ua_matterhorn_ct_key() -> PdfName {
   pdf_ua_matterhorn_ct_key_name
+}
+
+///|
+let pdf_ua_matterhorn_encoding_key_name : PdfName = pdf_ua_name("/Encoding")
+
+///|
+fn pdf_ua_matterhorn_encoding_key() -> PdfName {
+  pdf_ua_matterhorn_encoding_key_name
+}
+
+///|
+let pdf_ua_matterhorn_descendant_fonts_key_name : PdfName = pdf_ua_name(
+  "/DescendantFonts",
+)
+
+///|
+fn pdf_ua_matterhorn_descendant_fonts_key() -> PdfName {
+  pdf_ua_matterhorn_descendant_fonts_key_name
+}
+
+///|
+let pdf_ua_matterhorn_cid_system_info_key_name : PdfName = pdf_ua_name(
+  "/CIDSystemInfo",
+)
+
+///|
+fn pdf_ua_matterhorn_cid_system_info_key() -> PdfName {
+  pdf_ua_matterhorn_cid_system_info_key_name
+}
+
+///|
+let pdf_ua_matterhorn_registry_key_name : PdfName = pdf_ua_name("/Registry")
+
+///|
+fn pdf_ua_matterhorn_registry_key() -> PdfName {
+  pdf_ua_matterhorn_registry_key_name
+}
+
+///|
+let pdf_ua_matterhorn_ordering_key_name : PdfName = pdf_ua_name("/Ordering")
+
+///|
+fn pdf_ua_matterhorn_ordering_key() -> PdfName {
+  pdf_ua_matterhorn_ordering_key_name
 }
 
 ///|
@@ -337,6 +405,24 @@ fn pdf_ua_matterhorn_test_30_002() -> PdfUAMatterhornTest {
 }
 
 ///|
+fn pdf_ua_matterhorn_test_31_001() -> PdfUAMatterhornTest {
+  {
+    name: "31-001",
+    error: "A Type 0 font dictionary with encoding other than Identity-H and Identity-V has values for Registry in both CIDSystemInfo dictionaries that are not identical.",
+    section: "UA1:7.21.3-1",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_31_002() -> PdfUAMatterhornTest {
+  {
+    name: "31-002",
+    error: "A Type 0 font dictionary with encoding other than Identity-H and Identity-V has values for Ordering in both CIDSystemInfo dictionaries that are not identical.",
+    section: "UA1:7.21.3.1-1",
+  }
+}
+
+///|
 fn pdf_ua_matterhorn_implemented_tests() -> Array[PdfUAMatterhornTest] {
   [
     pdf_ua_matterhorn_test_01_003(),
@@ -361,6 +447,8 @@ fn pdf_ua_matterhorn_implemented_tests() -> Array[PdfUAMatterhornTest] {
     pdf_ua_matterhorn_test_28_018(),
     pdf_ua_matterhorn_test_30_001(),
     pdf_ua_matterhorn_test_30_002(),
+    pdf_ua_matterhorn_test_31_001(),
+    pdf_ua_matterhorn_test_31_002(),
   ]
 }
 
@@ -1257,6 +1345,90 @@ fn PdfDocument::pdf_ua_matterhorn_check_30_002(
 }
 
 ///|
+fn PdfDocument::pdf_ua_matterhorn_type0_indirect_encoding(
+  self : PdfDocument,
+  object : PdfObject,
+) -> Int? {
+  let direct_object = self.direct(object)
+  match
+    (
+      self.lookup_direct(pdf_ua_subtype_key(), direct_object),
+      direct_object.lookup_immediate(pdf_ua_matterhorn_encoding_key()),
+    ) {
+    (Some(PdfNameObject(subtype)), Some(PdfNameObject(encoding))) if subtype ==
+      pdf_ua_matterhorn_type0() &&
+      (
+        encoding == pdf_ua_matterhorn_identity_h() ||
+        encoding == pdf_ua_matterhorn_identity_v()
+      ) => None
+    (Some(PdfNameObject(subtype)), Some(PdfIndirect(encoding_number))) if subtype ==
+      pdf_ua_matterhorn_type0() => Some(encoding_number)
+    _ => None
+  }
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_cid_system_entry(
+  self : PdfDocument,
+  object : PdfObject,
+  key : PdfName,
+) -> PdfObject? {
+  match self.lookup_direct(pdf_ua_matterhorn_cid_system_info_key(), object) {
+    Some(info) => self.lookup_direct(key, info)
+    None => None
+  }
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_descendant_cid_system_entry(
+  self : PdfDocument,
+  type0_font : PdfObject,
+  key : PdfName,
+) -> PdfObject? {
+  match
+    self.lookup_direct(pdf_ua_matterhorn_descendant_fonts_key(), type0_font) {
+    Some(PdfArray([descendant, ..])) =>
+      self.pdf_ua_matterhorn_cid_system_entry(descendant, key)
+    _ => None
+  }
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_type0_cid_system_entry(
+  self : PdfDocument,
+  key : PdfName,
+) -> Json? {
+  for entry in self.parsed_object_entries() {
+    match self.pdf_ua_matterhorn_type0_indirect_encoding(entry.2) {
+      Some(encoding_number) =>
+        if self.pdf_ua_matterhorn_cid_system_entry(
+            PdfIndirect(encoding_number),
+            key,
+          ) !=
+          self.pdf_ua_matterhorn_descendant_cid_system_entry(entry.2, key) {
+          return Some(Json::null())
+        }
+      None => ()
+    }
+  }
+  None
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_31_001(self : PdfDocument) -> Json? {
+  self.pdf_ua_matterhorn_check_type0_cid_system_entry(
+    pdf_ua_matterhorn_registry_key(),
+  )
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_31_002(self : PdfDocument) -> Json? {
+  self.pdf_ua_matterhorn_check_type0_cid_system_entry(
+    pdf_ua_matterhorn_ordering_key(),
+  )
+}
+
+///|
 fn PdfDocument::pdf_ua_matterhorn_run_test(
   self : PdfDocument,
   check : PdfUAMatterhornTest,
@@ -1284,6 +1456,8 @@ fn PdfDocument::pdf_ua_matterhorn_run_test(
     "28-018" => self.pdf_ua_matterhorn_check_28_018()
     "30-001" => self.pdf_ua_matterhorn_check_30_001()
     "30-002" => self.pdf_ua_matterhorn_check_30_002()
+    "31-001" => self.pdf_ua_matterhorn_check_31_001()
+    "31-002" => self.pdf_ua_matterhorn_check_31_002()
     _ => None
   }
   match result {
@@ -1349,9 +1523,9 @@ fn PdfDocument::pdf_ua_matterhorn_failures(
 /// optional-content configuration checks `20-001` through `20-003`, media-clip
 /// checks `28-014` and `28-015`, file-attachment no-op `28-016`, PrinterMark
 /// object and appearance checks `28-017` and `28-018`, plus reference-XObject
-/// checks `30-001` and `30-002`. Passing `""` runs the covered subset;
-/// unsupported individual test names raise a soft error until their source
-/// checks are ported.
+/// checks `30-001` and `30-002`, plus Type 0 CIDSystemInfo checks `31-001` and
+/// `31-002`. Passing `""` runs the covered subset; unsupported individual test
+/// names raise a soft error until their source checks are ported.
 pub fn PdfDocument::test_matterhorn_json(
   self : PdfDocument,
   test_name : String,
