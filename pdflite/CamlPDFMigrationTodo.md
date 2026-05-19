@@ -597,6 +597,24 @@ Current backend snapshot:
   native` passing with the known `markdown/cmd` warning and `moon check
   --target native --warn-list +73` at the known 10-warning baseline. Full
   native suite validation is deferred to the next batch.~~
+- [x] ~~Port the `cpdfua` Matterhorn annotation structure-parent slice: the
+  covered Matterhorn surface now includes source checks `28-010` and `28-011`,
+  scanning parsed objects for `/Widget` and `/Link` annotations, reading the
+  catalog `/StructTreeRoot` `/ParentTree` number tree, requiring widgets to
+  resolve to `/S /Form`, and requiring linked structure entries to resolve to
+  `/S /Link` while preserving source-compatible no-failure behavior for links
+  without `/StructParent`. Coverage pins widget missing-`/StructParent`
+  failures, wrong parent structure types, missing parent-tree entries, valid
+  widget parents, link no-`/StructParent` passes, wrong link parent structure
+  types, valid link parents, and missing link parent-tree entries with the
+  source `merror_str` extras. Focused native validation reports `moon test
+  --target native pdf_ua_matterhorn_test.mbt --filter '*annotation structure
+  parents*'` at 1/1 test passing; widened native validation reports `moon test
+  --target native pdf_ua_matterhorn_test.mbt` at 37/37 tests passing. Native
+  check validation reports `moon check --target native` passing with the known
+  `markdown/cmd` warning and `moon check --target native --warn-list +73` at
+  the known 10-warning baseline. Full native suite validation is deferred to the
+  next batch.~~
 - [x] ~~Port the current stub/no-op redaction APIs from `cpdfredact`: `redact`
   is exposed as `redact_path`/`pdf_redact` and preserves page content while
   validating the selected page range, while `apply` and `apply_type` are

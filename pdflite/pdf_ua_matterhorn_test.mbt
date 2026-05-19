@@ -232,6 +232,22 @@ fn ua_matterhorn_28_009_failure_for_test() -> Json {
 }
 
 ///|
+fn ua_matterhorn_28_010_failure_for_test(extra : Json) -> Json {
+  ua_matterhorn_failure_for_test(
+    "28-010", "UA1:7.18.4-1", "A widget annotation is not nested within a <Form> tag.",
+    extra,
+  )
+}
+
+///|
+fn ua_matterhorn_28_011_failure_for_test(extra : Json) -> Json {
+  ua_matterhorn_failure_for_test(
+    "28-011", "UA1:7.18.5-1", "A link annotation is not nested within a <Link> tag.",
+    extra,
+  )
+}
+
+///|
 fn ua_matterhorn_28_012_failure_for_test() -> Json {
   ua_matterhorn_failure_for_test(
     "28-012",
@@ -678,6 +694,36 @@ fn ua_matterhorn_annotation_for_test(
     entries.push(extra)
   }
   PdfDictionary(entries)
+}
+
+///|
+fn ua_matterhorn_structure_element_for_test(
+  kind : String,
+) -> @pdflite.PdfObject {
+  PdfDictionary([
+    (
+      ua_matterhorn_name_for_test("/S"),
+      PdfNameObject(ua_matterhorn_name_for_test(kind)),
+    ),
+  ])
+}
+
+///|
+fn ua_matterhorn_struct_parent_tree_root_for_test(
+  entries : ArrayView[(Int, @pdflite.PdfObject)],
+) -> Array[(@pdflite.PdfName, @pdflite.PdfObject)] {
+  let tree_doc = @pdflite.pdf_document_empty()
+  [
+    (
+      ua_matterhorn_name_for_test("/StructTreeRoot"),
+      PdfDictionary([
+        (
+          ua_matterhorn_name_for_test("/ParentTree"),
+          tree_doc.build_number_tree(entries),
+        ),
+      ]),
+    ),
+  ]
 }
 
 ///|
@@ -1692,6 +1738,149 @@ test "PdfDocument test_matterhorn_json checks annotation subtype and tabs" {
   )
   @test.assert_eq(try! link.test_matterhorn_json("28-009"), Json::array([]))
   @test.assert_eq(try! no_tabs.test_matterhorn_json("28-009"), Json::array([]))
+}
+
+///|
+test "PdfDocument test_matterhorn_json checks annotation structure parents" {
+  let key_struct_parent = ua_matterhorn_name_for_test("/StructParent")
+
+  let widget_unstructured = ua_matterhorn_document_for_test([])
+  widget_unstructured.add_object_given_number(
+    40,
+    ua_matterhorn_annotation_for_test("/Widget"),
+  )
+  @test.assert_eq(
+    try! widget_unstructured.test_matterhorn_json("28-010"),
+    Json::array([
+      ua_matterhorn_28_010_failure_for_test(
+        Json::string("not in structure tree"),
+      ),
+    ]),
+  )
+
+  let widget_wrong_type = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_struct_parent_tree_root_for_test([
+      (7, ua_matterhorn_structure_element_for_test("/Link")),
+    ]),
+  )
+  widget_wrong_type.add_object_given_number(
+    40,
+    ua_matterhorn_annotation_for_test("/Widget", extras=[
+      (key_struct_parent, PdfInteger(7)),
+    ]),
+  )
+  @test.assert_eq(
+    try! widget_wrong_type.test_matterhorn_json("28-010"),
+    Json::array([
+      ua_matterhorn_28_010_failure_for_test(Json::string("type is not form")),
+    ]),
+  )
+
+  let widget_valid = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_struct_parent_tree_root_for_test([
+      (7, ua_matterhorn_structure_element_for_test("/Form")),
+    ]),
+  )
+  widget_valid.add_object_given_number(
+    40,
+    ua_matterhorn_annotation_for_test("/Widget", extras=[
+      (key_struct_parent, PdfInteger(7)),
+    ]),
+  )
+  @test.assert_eq(
+    try! widget_valid.test_matterhorn_json("28-010"),
+    Json::array([]),
+  )
+
+  let widget_missing_parent = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_struct_parent_tree_root_for_test([
+      (7, ua_matterhorn_structure_element_for_test("/Form")),
+    ]),
+  )
+  widget_missing_parent.add_object_given_number(
+    40,
+    ua_matterhorn_annotation_for_test("/Widget", extras=[
+      (key_struct_parent, PdfInteger(99)),
+    ]),
+  )
+  @test.assert_eq(
+    try! widget_missing_parent.test_matterhorn_json("28-010"),
+    Json::array([
+      ua_matterhorn_28_010_failure_for_test(
+        Json::string("not found in parent tree"),
+      ),
+    ]),
+  )
+
+  let link_unstructured = ua_matterhorn_document_for_test([])
+  link_unstructured.add_object_given_number(
+    40,
+    ua_matterhorn_annotation_for_test("/Link"),
+  )
+  @test.assert_eq(
+    try! link_unstructured.test_matterhorn_json("28-011"),
+    Json::array([]),
+  )
+
+  let link_wrong_type = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_struct_parent_tree_root_for_test([
+      (8, ua_matterhorn_structure_element_for_test("/Form")),
+    ]),
+  )
+  link_wrong_type.add_object_given_number(
+    40,
+    ua_matterhorn_annotation_for_test("/Link", extras=[
+      (key_struct_parent, PdfInteger(8)),
+    ]),
+  )
+  @test.assert_eq(
+    try! link_wrong_type.test_matterhorn_json("28-011"),
+    Json::array([
+      ua_matterhorn_28_011_failure_for_test(Json::string("type is not link")),
+    ]),
+  )
+
+  let link_valid = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_struct_parent_tree_root_for_test([
+      (8, ua_matterhorn_structure_element_for_test("/Link")),
+    ]),
+  )
+  link_valid.add_object_given_number(
+    40,
+    ua_matterhorn_annotation_for_test("/Link", extras=[
+      (key_struct_parent, PdfInteger(8)),
+    ]),
+  )
+  @test.assert_eq(
+    try! link_valid.test_matterhorn_json("28-011"),
+    Json::array([]),
+  )
+
+  let link_missing_parent = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_struct_parent_tree_root_for_test([
+      (8, ua_matterhorn_structure_element_for_test("/Link")),
+    ]),
+  )
+  link_missing_parent.add_object_given_number(
+    40,
+    ua_matterhorn_annotation_for_test("/Link", extras=[
+      (key_struct_parent, PdfInteger(99)),
+    ]),
+  )
+  @test.assert_eq(
+    try! link_missing_parent.test_matterhorn_json("28-011"),
+    Json::array([
+      ua_matterhorn_28_011_failure_for_test(
+        Json::string("not found in parent tree"),
+      ),
+    ]),
+  )
 }
 
 ///|

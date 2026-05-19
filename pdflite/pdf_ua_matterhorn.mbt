@@ -564,6 +564,24 @@ fn pdf_ua_matterhorn_test_28_009() -> PdfUAMatterhornTest {
 }
 
 ///|
+fn pdf_ua_matterhorn_test_28_010() -> PdfUAMatterhornTest {
+  {
+    name: "28-010",
+    error: "A widget annotation is not nested within a <Form> tag.",
+    section: "UA1:7.18.4-1",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_28_011() -> PdfUAMatterhornTest {
+  {
+    name: "28-011",
+    error: "A link annotation is not nested within a <Link> tag.",
+    section: "UA1:7.18.5-1",
+  }
+}
+
+///|
 fn pdf_ua_matterhorn_test_28_012() -> PdfUAMatterhornTest {
   {
     name: "28-012",
@@ -922,6 +940,8 @@ fn pdf_ua_matterhorn_implemented_tests() -> Array[PdfUAMatterhornTest] {
     pdf_ua_matterhorn_test_28_007(),
     pdf_ua_matterhorn_test_28_008(),
     pdf_ua_matterhorn_test_28_009(),
+    pdf_ua_matterhorn_test_28_010(),
+    pdf_ua_matterhorn_test_28_011(),
     pdf_ua_matterhorn_test_28_012(),
     pdf_ua_matterhorn_test_28_014(),
     pdf_ua_matterhorn_test_28_015(),
@@ -1908,6 +1928,107 @@ fn PdfDocument::pdf_ua_matterhorn_check_28_009(
 }
 
 ///|
+fn PdfDocument::pdf_ua_matterhorn_parent_tree_entries(
+  self : PdfDocument,
+) -> Array[(Int, PdfObject)] {
+  match
+    self.lookup_chain(self.trailer_dict(), [
+      pdf_ua_root_key(),
+      pdf_ua_struct_tree_root_key(),
+      pdf_structure_parent_tree_key(),
+    ]) {
+    Some(parent_tree) => self.read_number_tree(parent_tree)
+    None => []
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_parent_tree_lookup(
+  parent_tree : ArrayView[(Int, PdfObject)],
+  key : Int,
+) -> PdfObject? {
+  for entry in parent_tree {
+    if entry.0 == key {
+      return Some(entry.1)
+    }
+  }
+  None
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_struct_parent_check(
+  self : PdfDocument,
+  object : PdfObject,
+  parent_tree : ArrayView[(Int, PdfObject)],
+  expected_type : PdfName,
+  wrong_type_extra : String,
+  missing_struct_parent_extra : String?,
+) -> Json? {
+  match self.lookup_direct(pdf_ua_matterhorn_struct_parent_key(), object) {
+    Some(PdfInteger(key)) =>
+      match pdf_ua_matterhorn_parent_tree_lookup(parent_tree, key) {
+        Some(structure) =>
+          match self.lookup_direct(pdf_ua_s_key(), structure) {
+            Some(PdfNameObject(kind)) if kind == expected_type => None
+            _ => Some(Json::string(wrong_type_extra))
+          }
+        None => Some(Json::string("not found in parent tree"))
+      }
+    _ =>
+      match missing_struct_parent_extra {
+        Some(extra) => Some(Json::string(extra))
+        None => None
+      }
+  }
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_28_010(self : PdfDocument) -> Json? {
+  let parent_tree = self.pdf_ua_matterhorn_parent_tree_entries()
+  for entry in self.parsed_object_entries() {
+    match self.lookup_direct(pdf_ua_subtype_key(), entry.2) {
+      Some(PdfNameObject(subtype)) if subtype == pdf_annotation_widget_name =>
+        match
+          self.pdf_ua_matterhorn_struct_parent_check(
+            entry.2,
+            parent_tree,
+            pdf_ua_matterhorn_form(),
+            "type is not form",
+            Some("not in structure tree"),
+          ) {
+          Some(extra) => return Some(extra)
+          None => ()
+        }
+      _ => ()
+    }
+  }
+  None
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_28_011(self : PdfDocument) -> Json? {
+  let parent_tree = self.pdf_ua_matterhorn_parent_tree_entries()
+  for entry in self.parsed_object_entries() {
+    match self.lookup_direct(pdf_ua_subtype_key(), entry.2) {
+      Some(PdfNameObject(subtype)) if subtype == pdf_annotation_link_name =>
+        match
+          self.pdf_ua_matterhorn_struct_parent_check(
+            entry.2,
+            parent_tree,
+            pdf_annotation_link_name,
+            "type is not link",
+            None,
+          ) {
+          Some(extra) => return Some(extra)
+          None => ()
+        }
+      _ => ()
+    }
+  }
+  None
+}
+
+///|
 fn PdfDocument::pdf_ua_matterhorn_check_28_012(
   self : PdfDocument,
 ) -> Json? raise PdfError {
@@ -2877,6 +2998,8 @@ fn PdfDocument::pdf_ua_matterhorn_run_test(
     "28-007" => self.pdf_ua_matterhorn_check_28_007()
     "28-008" => self.pdf_ua_matterhorn_check_28_008()
     "28-009" => self.pdf_ua_matterhorn_check_28_009()
+    "28-010" => self.pdf_ua_matterhorn_check_28_010()
+    "28-011" => self.pdf_ua_matterhorn_check_28_011()
     "28-012" => self.pdf_ua_matterhorn_check_28_012()
     "28-014" => self.pdf_ua_matterhorn_check_28_014()
     "28-015" => self.pdf_ua_matterhorn_check_28_015()
@@ -2980,6 +3103,7 @@ fn PdfDocument::pdf_ua_matterhorn_failures(
 /// file-spec check `21-001`, XFA dynamicRender check `25-001`,
 /// encryption checks `26-001` and `26-002`,
 /// annotation subtype and tab-order checks `28-006` through `28-009`,
+/// annotation structure-parent checks `28-010` and `28-011`,
 /// link annotation contents check `28-012`,
 /// media-clip checks `28-014` and `28-015`, file-attachment no-op `28-016`,
 /// PrinterMark object and appearance checks `28-017` and `28-018`, plus
