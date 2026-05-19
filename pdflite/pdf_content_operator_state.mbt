@@ -588,6 +588,80 @@ pub fn pdf_content_image_entry_from_resources(
 }
 
 ///|
+fn pdf_content_form_xobject_default_bbox() -> PdfRectangle {
+  let min_float = 2.2250738585072014e-308
+  let max_float = 1.7976931348623157e308
+  { min_x: min_float, min_y: min_float, max_x: max_float, max_y: max_float }
+}
+
+///|
+fn PdfDocument::content_form_xobject_bbox(
+  self : PdfDocument,
+  xobject : PdfObject,
+) -> PdfRectangle {
+  match self.lookup_direct(pdf_xobject_bbox_key(), xobject) {
+    Some(bbox) =>
+      try self.parse_rectangle(bbox) catch {
+        _ => pdf_content_form_xobject_default_bbox()
+      } noraise {
+        rectangle => rectangle
+      }
+    None => pdf_content_form_xobject_default_bbox()
+  }
+}
+
+///|
+fn PdfDocument::content_form_xobject_setup_state(
+  self : PdfDocument,
+  state : PdfContentOperatorState,
+  xobject : PdfObject,
+) -> PdfContentOperatorState raise PdfError {
+  let matrix = self.parse_matrix(pdf_xobject_matrix_key(), xobject)
+  let bounds = self.content_form_xobject_bbox(xobject)
+  state
+  .content_apply_core_op(Op_q)
+  .content_apply_core_op(Op_cm(matrix))
+  .content_apply_core_op(
+    Op_re(
+      bounds.min_x,
+      bounds.min_y,
+      bounds.max_x - bounds.min_x,
+      bounds.max_y - bounds.min_y,
+    ),
+  )
+  .content_apply_core_op(Op_W)
+  .content_apply_core_op(Op_n)
+}
+
+///|
+/// Look up a named Form XObject resource and return the state used to enter it.
+pub fn PdfDocument::content_form_xobject_enter_state(
+  self : PdfDocument,
+  state : PdfContentOperatorState,
+  resources : PdfObject,
+  name : PdfName,
+) -> PdfContentOperatorState? raise PdfError {
+  let xobject = self.content_xobject_from_resources(resources, name)
+  match self.lookup_direct(pdf_xobject_subtype_key(), xobject) {
+    Some(PdfNameObject(subtype)) if subtype == pdf_xobject_form() =>
+      Some(self.content_form_xobject_setup_state(state, xobject))
+    Some(PdfNameObject(subtype)) if subtype == pdf_image_image_name() => None
+    _ => raise SoftError("Unknown kind of xobject")
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::content_form_xobject_enter_state`.
+pub fn pdf_content_form_xobject_enter_state(
+  document : PdfDocument,
+  state : PdfContentOperatorState,
+  resources : PdfObject,
+  name : PdfName,
+) -> PdfContentOperatorState? raise PdfError {
+  document.content_form_xobject_enter_state(state, resources, name)
+}
+
+///|
 fn PdfContentOperatorState::content_with_clipping_path(
   self : PdfContentOperatorState,
   clipping_path : ArrayView[PdfPath],

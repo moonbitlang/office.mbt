@@ -4,6 +4,23 @@ fn content_operator_name_for_test(text : String) -> @pdflite.PdfName {
 }
 
 ///|
+fn content_operator_assert_line_for_test(
+  segment : @pdflite.PdfPathSegment,
+  start_x : Double,
+  start_y : Double,
+  finish_x : Double,
+  finish_y : Double,
+) -> Unit raise {
+  match segment {
+    PdfPathStraight(start, finish) => {
+      @test.assert_eq(start, @pdflite.point2(start_x, start_y))
+      @test.assert_eq(finish, @pdflite.point2(finish_x, finish_y))
+    }
+    _ => fail("expected straight path segment")
+  }
+}
+
+///|
 test "cpdfcontent operator state exposes initial state" {
   let state = @pdflite.pdf_content_initial_operator_state(
     0.0, 0.0, 100.0, 200.0,
@@ -385,6 +402,158 @@ test "cpdfcontent operator state reads image entries from XObject resources" {
   guard missing_subtype
     is Err(@pdflite.PdfError::SoftError("Unknown kind of xobject")) else {
     fail("expected missing XObject subtype error")
+  }
+}
+
+///|
+test "cpdfcontent operator state prepares Form XObject resources" {
+  let doc = @pdflite.pdf_document_empty()
+  let initial = @pdflite.pdf_content_initial_operator_state(
+    0.0, 0.0, 100.0, 200.0,
+  )
+  let state : @pdflite.PdfContentOperatorState = {
+    ..initial,
+    ctm: @pdflite.transform_translate(5.0, 6.0),
+  }
+  let form_name = content_operator_name_for_test("/Fm1")
+  let image_name = content_operator_name_for_test("/Im1")
+  let bad_bbox_name = content_operator_name_for_test("/BadBBox")
+  let bad_matrix_name = content_operator_name_for_test("/BadMatrix")
+  let xobject_key = content_operator_name_for_test("/XObject")
+  let subtype_key = content_operator_name_for_test("/Subtype")
+  let matrix_key = content_operator_name_for_test("/Matrix")
+  let bbox_key = content_operator_name_for_test("/BBox")
+  let form_matrix = @pdflite.transform_translate(10.0, 20.0)
+  let resources = @pdflite.pdf_dictionary([
+    (
+      xobject_key,
+      @pdflite.pdf_dictionary([
+        (
+          form_name,
+          @pdflite.pdf_dictionary([
+            (
+              subtype_key,
+              PdfNameObject(content_operator_name_for_test("/Form")),
+            ),
+            (matrix_key, @pdflite.pdf_object_of_matrix(form_matrix)),
+            (
+              bbox_key,
+              PdfArray([
+                PdfInteger(1),
+                PdfInteger(2),
+                PdfInteger(4),
+                PdfInteger(6),
+              ]),
+            ),
+          ]),
+        ),
+        (
+          image_name,
+          @pdflite.pdf_dictionary([
+            (
+              subtype_key,
+              PdfNameObject(content_operator_name_for_test("/Image")),
+            ),
+          ]),
+        ),
+        (
+          bad_bbox_name,
+          @pdflite.pdf_dictionary([
+            (
+              subtype_key,
+              PdfNameObject(content_operator_name_for_test("/Form")),
+            ),
+            (bbox_key, PdfBoolean(true)),
+          ]),
+        ),
+        (
+          bad_matrix_name,
+          @pdflite.pdf_dictionary([
+            (
+              subtype_key,
+              PdfNameObject(content_operator_name_for_test("/Form")),
+            ),
+            (matrix_key, PdfBoolean(true)),
+          ]),
+        ),
+      ]),
+    ),
+  ])
+  let form_result : Result[@pdflite.PdfContentOperatorState?, Error] = try? doc.content_form_xobject_enter_state(
+    state, resources, form_name,
+  )
+  guard form_result is Ok(Some(form_state)) else {
+    fail("expected Form XObject entry state")
+  }
+  @test.assert_eq(
+    form_state.ctm,
+    @pdflite.transform_matrix_compose(state.ctm, form_matrix),
+  )
+  @test.assert_eq(
+    form_state.state_stack.length(),
+    state.state_stack.length() + 1,
+  )
+  @test.assert_eq(form_state.path_state.clipping_path, form_state.clipping_path)
+  @test.assert_eq(form_state.partial_path, PdfContentNoPartialPath)
+  @test.assert_eq(form_state.content_apply_core_op(Op_Q), state)
+  @test.assert_eq(
+    form_state.clipping_path.length(),
+    state.clipping_path.length() + 1,
+  )
+  let clip = form_state.clipping_path[0]
+  @test.assert_eq(clip.winding_rule, PdfPathNonZero)
+  @test.assert_eq(clip.subpaths.length(), 1)
+  @test.assert_eq(clip.subpaths[0].closure, PdfPathClosed)
+  @test.assert_eq(clip.subpaths[0].segments.length(), 3)
+  content_operator_assert_line_for_test(
+    clip.subpaths[0].segments[0],
+    1.0,
+    2.0,
+    4.0,
+    2.0,
+  )
+  content_operator_assert_line_for_test(
+    clip.subpaths[0].segments[1],
+    4.0,
+    2.0,
+    4.0,
+    6.0,
+  )
+  content_operator_assert_line_for_test(
+    clip.subpaths[0].segments[2],
+    4.0,
+    6.0,
+    1.0,
+    6.0,
+  )
+  let wrapper_result : Result[@pdflite.PdfContentOperatorState?, Error] = try? @pdflite.pdf_content_form_xobject_enter_state(
+    doc, state, resources, form_name,
+  )
+  guard wrapper_result is Ok(Some(wrapper_state)) else {
+    fail("expected wrapper Form XObject entry state")
+  }
+  @test.assert_eq(wrapper_state, form_state)
+  let image_result : Result[@pdflite.PdfContentOperatorState?, Error] = try? doc.content_form_xobject_enter_state(
+    state, resources, image_name,
+  )
+  guard image_result is Ok(None) else {
+    fail("expected image XObject to emit no Form entry state")
+  }
+  let bad_bbox_result : Result[@pdflite.PdfContentOperatorState?, Error] = try? doc.content_form_xobject_enter_state(
+    state, resources, bad_bbox_name,
+  )
+  guard bad_bbox_result is Ok(Some(bad_bbox_state)) else {
+    fail("expected malformed Form BBox to use fallback bounds")
+  }
+  @test.assert_eq(
+    bad_bbox_state.state_stack.length(),
+    state.state_stack.length() + 1,
+  )
+  let bad_matrix_result : Result[@pdflite.PdfContentOperatorState?, Error] = try? doc.content_form_xobject_enter_state(
+    state, resources, bad_matrix_name,
+  )
+  guard bad_matrix_result is Err(@pdflite.PdfError::MatrixMalformed) else {
+    fail("expected malformed Form Matrix error")
   }
 }
 

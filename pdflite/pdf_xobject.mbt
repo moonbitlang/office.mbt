@@ -44,6 +44,14 @@ fn pdf_xobject_bbox_key() -> PdfName {
 }
 
 ///|
+let pdf_xobject_matrix_key_name : PdfName = pdf_xobject_name("/Matrix")
+
+///|
+fn pdf_xobject_matrix_key() -> PdfName {
+  pdf_xobject_matrix_key_name
+}
+
+///|
 let pdf_xobject_resources_key_name : PdfName = pdf_xobject_name("/Resources")
 
 ///|

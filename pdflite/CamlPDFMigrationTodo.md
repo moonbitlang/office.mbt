@@ -2789,6 +2789,16 @@ Current backend snapshot:
   --package bobzhang/pdflite --file pdf_content_operator_state_test.mbt` at
   13/13 tests passing; native full-suite validation reports 1959/1959 tests
   passing.~~
+- [x] ~~Standalone `cpdfcontent.ml` Form XObject entry-state slice exposes
+  `PdfDocument::content_form_xobject_enter_state` and
+  `pdf_content_form_xobject_enter_state`, matching cpdf's `Op_Do /Form` setup
+  for graphics-state save, Form `/Matrix` concatenation, `/BBox` clipping,
+  malformed or missing BBox fallback, malformed Matrix propagation, and
+  image-XObject no-entry behavior while leaving recursive Form content walking
+  for a later slice. Native focused validation reports `moon test --target
+  native --package bobzhang/pdflite --file
+  pdf_content_operator_state_test.mbt` at 14/14 tests passing; native
+  full-suite validation reports 1960/1960 tests passing.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,
