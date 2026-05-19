@@ -62,6 +62,36 @@ pub fn pdf_content_json_of_ops(
 }
 
 ///|
+/// Walk content entries, call `predicate` for each one, and return the original ops.
+pub fn PdfDocument::content_filter(
+  self : PdfDocument,
+  mediabox : PdfRectangle,
+  resources : PdfObject,
+  ops : ArrayView[PdfContentOp],
+  predicate : (PdfContentJsonEntry) -> Bool,
+) -> Array[PdfContentOp] raise PdfError {
+  let entries = self.content_entries_of_ops_recursive(mediabox, resources, ops)
+  for entry in entries {
+    ignore(predicate(entry))
+  }
+  [
+    for op in ops => op
+  ]
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::content_filter`.
+pub fn pdf_content_filter(
+  document : PdfDocument,
+  predicate : (PdfContentJsonEntry) -> Bool,
+  mediabox : PdfRectangle,
+  resources : PdfObject,
+  ops : ArrayView[PdfContentOp],
+) -> Array[PdfContentOp] raise PdfError {
+  document.content_filter(mediabox, resources, ops, predicate)
+}
+
+///|
 /// Serialize recursive cpdfcontent entries for one page.
 pub fn PdfDocument::content_json_of_page(
   self : PdfDocument,

@@ -65,6 +65,33 @@ test "cpdfcontent page JSON serializes selected page contents" {
     ),
     first_json,
   )
+  let seen : Array[@pdflite.PdfContentObject] = []
+  @test.assert_eq(
+    try! document.content_filter(mediabox, pages[0].resources, ops, entry => {
+      seen.push(entry.object)
+      false
+    }),
+    ops,
+  )
+  @test.assert_eq(seen.length(), 1)
+  guard seen[0] is PdfContentPathObject(_) else {
+    fail("expected filter callback to see path entry")
+  }
+  let wrapper_seen : Array[@pdflite.PdfContentObject] = []
+  @test.assert_eq(
+    try! @pdflite.pdf_content_filter(
+      document,
+      entry => {
+        wrapper_seen.push(entry.object)
+        true
+      },
+      mediabox,
+      pages[0].resources,
+      ops,
+    ),
+    ops,
+  )
+  @test.assert_eq(wrapper_seen.length(), 1)
   let selected = try! document.page_content_json([1])
   let expected = Json::array([
     Json::object(

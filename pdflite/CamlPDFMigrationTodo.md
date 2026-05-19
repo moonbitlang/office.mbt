@@ -3166,6 +3166,20 @@ Current backend snapshot:
   `markdown/cmd` warning and `moon check --target native --warn-list +73` at the
   known 10-warning baseline. Full native suite validation is deferred to the
   next batch.~~
+- [x] ~~Standalone `cpdfcontent.ml` content-filter callback slice adds
+  `PdfDocument::content_filter` and `pdf_content_filter`, matching cpdf's
+  current `filter` behavior by walking recursive content entries, invoking the
+  callback for each emitted object, ignoring the callback result, and returning
+  the original operator list unchanged. Coverage locks down callback observation
+  of page path entries, unchanged returned operators, and wrapper parity.
+  Focused native validation reports `moon test --target native
+  pdf_content_page_json_test.mbt --filter '*page JSON*'` at 1/1 test passing;
+  widened native validation reports `moon test --target native
+  pdf_content_page_json_test.mbt` at 1/1 test passing. Native check validation
+  reports `moon check --target native` passing with the known `markdown/cmd`
+  warning and `moon check --target native --warn-list +73` at the known
+  10-warning baseline. Full native suite validation is deferred to the next
+  batch.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,
