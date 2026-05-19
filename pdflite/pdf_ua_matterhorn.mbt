@@ -69,6 +69,14 @@ fn pdf_ua_matterhorn_suspects_key() -> PdfName {
 }
 
 ///|
+let pdf_ua_matterhorn_ref_key_name : PdfName = pdf_ua_name("/Ref")
+
+///|
+fn pdf_ua_matterhorn_ref_key() -> PdfName {
+  pdf_ua_matterhorn_ref_key_name
+}
+
+///|
 fn pdf_ua_matterhorn_test_01_003() -> PdfUAMatterhornTest {
   {
     name: "01-003",
@@ -200,6 +208,15 @@ fn pdf_ua_matterhorn_test_20_003() -> PdfUAMatterhornTest {
 }
 
 ///|
+fn pdf_ua_matterhorn_test_30_001() -> PdfUAMatterhornTest {
+  {
+    name: "30-001",
+    error: "A reference XObject is present.",
+    section: "UA1:7.2",
+  }
+}
+
+///|
 fn pdf_ua_matterhorn_implemented_tests() -> Array[PdfUAMatterhornTest] {
   [
     pdf_ua_matterhorn_test_01_003(),
@@ -217,6 +234,7 @@ fn pdf_ua_matterhorn_implemented_tests() -> Array[PdfUAMatterhornTest] {
     pdf_ua_matterhorn_test_20_001(),
     pdf_ua_matterhorn_test_20_002(),
     pdf_ua_matterhorn_test_20_003(),
+    pdf_ua_matterhorn_test_30_001(),
   ]
 }
 
@@ -866,6 +884,22 @@ fn PdfDocument::pdf_ua_matterhorn_check_20_003(self : PdfDocument) -> Json? {
 }
 
 ///|
+fn PdfDocument::pdf_ua_matterhorn_check_30_001(self : PdfDocument) -> Json? {
+  for entry in self.parsed_object_entries() {
+    match
+      (
+        self.lookup_direct(pdf_ua_subtype_key(), entry.2),
+        self.lookup_direct(pdf_ua_matterhorn_ref_key(), entry.2),
+      ) {
+      (Some(PdfNameObject(subtype)), Some(_)) if subtype ==
+        pdf_ua_matterhorn_form() => return Some(Json::null())
+      _ => ()
+    }
+  }
+  None
+}
+
+///|
 fn PdfDocument::pdf_ua_matterhorn_run_test(
   self : PdfDocument,
   check : PdfUAMatterhornTest,
@@ -886,6 +920,7 @@ fn PdfDocument::pdf_ua_matterhorn_run_test(
     "20-001" => self.pdf_ua_matterhorn_check_20_001()
     "20-002" => self.pdf_ua_matterhorn_check_20_002()
     "20-003" => self.pdf_ua_matterhorn_check_20_003()
+    "30-001" => self.pdf_ua_matterhorn_check_30_001()
     _ => None
   }
   match result {
@@ -948,9 +983,10 @@ fn PdfDocument::pdf_ua_matterhorn_failures(
 /// The current migration covers content-marking checks `01-003`, `01-004`,
 /// `01-005`, and `01-007`, role-map checks `02-001`, `02-003`, and `02-004`,
 /// XMP metadata and DisplayDocTitle checks `06-001` through `07-002`, and
-/// optional-content configuration checks `20-001` through `20-003`. Passing
-/// `""` runs the covered subset; unsupported individual test names raise a
-/// soft error until their source checks are ported.
+/// optional-content configuration checks `20-001` through `20-003`, plus
+/// reference-XObject check `30-001`. Passing `""` runs the covered subset;
+/// unsupported individual test names raise a soft error until their source
+/// checks are ported.
 pub fn PdfDocument::test_matterhorn_json(
   self : PdfDocument,
   test_name : String,

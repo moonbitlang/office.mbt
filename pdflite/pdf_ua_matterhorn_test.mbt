@@ -162,6 +162,16 @@ fn ua_matterhorn_20_003_failure_for_test() -> Json {
 }
 
 ///|
+fn ua_matterhorn_30_001_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "30-001",
+    "UA1:7.2",
+    "A reference XObject is present.",
+    Json::null(),
+  )
+}
+
+///|
 fn ua_matterhorn_document_for_test(
   ops : ArrayView[@pdflite.PdfContentOp],
   root_extras? : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)] = [],
@@ -603,4 +613,32 @@ test "PdfDocument test_matterhorn_json detects optional content AS entries" {
     ]),
   ])
   @test.assert_eq(try! valid.test_matterhorn_json("20-003"), Json::array([]))
+}
+
+///|
+test "PdfDocument test_matterhorn_json detects reference XObjects" {
+  let key_ref = ua_matterhorn_name_for_test("/Ref")
+  let document = ua_matterhorn_document_for_test([])
+  document.add_object_given_number(
+    40,
+    try! ua_matterhorn_form_stream_for_test([]).add_dict_entry(
+      key_ref,
+      PdfDictionary([]),
+    ),
+  )
+  @test.assert_eq(
+    try! document.test_matterhorn_json("30-001"),
+    Json::array([ua_matterhorn_30_001_failure_for_test()]),
+  )
+
+  let no_ref = ua_matterhorn_document_for_test([])
+  no_ref.add_object_given_number(40, ua_matterhorn_form_stream_for_test([]))
+  @test.assert_eq(try! no_ref.test_matterhorn_json("30-001"), Json::array([]))
+
+  let non_form = ua_matterhorn_document_for_test([])
+  non_form.add_object_given_number(
+    40,
+    PdfDictionary([(key_ref, PdfDictionary([]))]),
+  )
+  @test.assert_eq(try! non_form.test_matterhorn_json("30-001"), Json::array([]))
 }
