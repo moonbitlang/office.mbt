@@ -301,6 +301,123 @@ test "PdfDocument scale_pages validates scale counts and page range" {
 }
 
 ///|
+test "PdfDocument stretch_pages scales from cropbox without preserving aspect" {
+  let key_crop = page_scale_name_for_test("/CropBox")
+  let key_open_action = page_scale_name_for_test("/OpenAction")
+  let xyz_name = page_scale_name_for_test("/XYZ")
+  let matrix = @pdflite.transform_scale(@pdflite.point2(0.0, 0.0), 3.0, 4.0)
+  let first = page_scale_page_for_test(
+    [Op_S],
+    rest=PdfDictionary([
+      (key_crop, page_scale_rect_for_test(10.0, 10.0, 60.0, 30.0)),
+    ]),
+    width=100.0,
+    height=50.0,
+  )
+  let second = page_scale_page_for_test([Op_BT])
+  let document = page_scale_document_for_test([first, second])
+  let page_numbers = try! document.page_reference_numbers()
+  document.add_object_given_number(
+    document.root(),
+    try! document
+    .lookup_object_or_null(document.root())
+    .add_dict_entry(
+      key_open_action,
+      PdfArray([
+        PdfIndirect(page_numbers[0]),
+        PdfNameObject(xyz_name),
+        PdfReal(20.0),
+        PdfReal(10.0),
+        PdfNull,
+      ]),
+    ),
+  )
+  let stretched = try! document.stretch_pages([1], [(150.0, 80.0)])
+  let pages = try! stretched.pages_of_pagetree()
+  @test.assert_eq(
+    pages[0].mediabox,
+    page_scale_rect_for_test(0.0, 0.0, 300.0, 200.0),
+  )
+  @test.assert_eq(
+    pages[0].rest.lookup_immediate(key_crop),
+    Some(page_scale_rect_for_test(30.0, 40.0, 180.0, 120.0)),
+  )
+  @test.assert_eq(page_scale_ops_for_test(stretched, pages[0]), [
+    Op_cm(matrix),
+    Op_S,
+  ])
+  @test.assert_eq(page_scale_ops_for_test(stretched, pages[1]), [Op_BT])
+  let stretched_numbers = try! stretched.page_reference_numbers()
+  guard stretched
+    .lookup_object_or_null(stretched.root())
+    .lookup_immediate(key_open_action)
+    is Some(open_action) else {
+    fail("expected stretched document open action")
+  }
+  @test.assert_eq(
+    stretched.direct(open_action),
+    PdfArray([
+      PdfIndirect(stretched_numbers[0]),
+      PdfNameObject(xyz_name),
+      PdfReal(60.0),
+      PdfReal(40.0),
+      PdfNull,
+    ]),
+  )
+
+  let wrapped = try! @pdflite.pdf_stretch_pages(document, [2], [(50.0, 50.0)])
+  let wrapped_pages = try! wrapped.pages_of_pagetree()
+  @test.assert_eq(page_scale_ops_for_test(wrapped, wrapped_pages[0]), [Op_S])
+  guard page_scale_ops_for_test(wrapped, wrapped_pages[1]) is [Op_cm(_), Op_BT] else {
+    fail("expected wrapper to stretch selected second page")
+  }
+}
+
+///|
+test "PdfDocument stretch_pages validates size counts page range and zero boxes" {
+  let document = page_scale_document_for_test([page_scale_page_for_test([Op_S])])
+  let mismatch : Result[@pdflite.PdfDocument, Error] = try? document.stretch_pages(
+    [1],
+    [],
+  )
+  guard mismatch
+    is Err(
+      @pdflite.PdfError::BadPageSpecification(
+        "stretch_pages: size count must match page count"
+      )
+    ) else {
+    fail("expected stretch_pages to reject size count mismatch")
+  }
+  let bad_page : Result[@pdflite.PdfDocument, Error] = try? document.stretch_pages(
+    [2],
+    [(100.0, 100.0)],
+  )
+  guard bad_page
+    is Err(
+      @pdflite.PdfError::BadPageSpecification(
+        "stretch_pages: range contains pages not present in pdf"
+      )
+    ) else {
+    fail("expected stretch_pages to reject invalid pages")
+  }
+  let zero = page_scale_document_for_test([
+    page_scale_page_for_test([Op_S], width=0.0, height=10.0),
+  ])
+  let bad_size : Result[@pdflite.PdfDocument, Error] = try? zero.stretch_pages(
+    [1],
+    [(100.0, 100.0)],
+  )
+  guard bad_size
+    is Err(
+      @pdflite.PdfError::BadNumberArgument(
+        "stretch_pages: zero-sized pages are invalid"
+      )
+    ) else {
+    fail("expected stretch_pages to reject zero-sized pages")
+  }
+}
+
+///|
 test "PdfDocument scale_to_fit_pages centers content and sets target boxes" {
   let key_crop = page_scale_name_for_test("/CropBox")
   let page = page_scale_page_for_test(
