@@ -589,6 +589,15 @@ fn pdf_ua_matterhorn_test_31_008() -> PdfUAMatterhornTest {
 }
 
 ///|
+fn pdf_ua_matterhorn_test_31_009() -> PdfUAMatterhornTest {
+  {
+    name: "31-009",
+    error: "For a font used by text intended to be rendered the font program is not embedded.",
+    section: "UA1:7.21.4.1-1",
+  }
+}
+
+///|
 fn pdf_ua_matterhorn_test_31_011() -> PdfUAMatterhornTest {
   {
     name: "31-011",
@@ -792,6 +801,7 @@ fn pdf_ua_matterhorn_implemented_tests() -> Array[PdfUAMatterhornTest] {
     pdf_ua_matterhorn_test_31_006(),
     pdf_ua_matterhorn_test_31_007(),
     pdf_ua_matterhorn_test_31_008(),
+    pdf_ua_matterhorn_test_31_009(),
     pdf_ua_matterhorn_test_31_011(),
     pdf_ua_matterhorn_test_31_012(),
     pdf_ua_matterhorn_test_31_013(),
@@ -1916,6 +1926,44 @@ fn PdfDocument::pdf_ua_matterhorn_check_31_008(self : PdfDocument) -> Json? {
 }
 
 ///|
+fn pdf_ua_matterhorn_missing_font_extra(entry : PdfMissingFontEntry) -> Json {
+  Json::string(
+    entry.page.to_string() +
+    " " +
+    entry.name +
+    " " +
+    entry.subtype +
+    " " +
+    entry.basefont +
+    " " +
+    entry.encoding,
+  )
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_31_009(
+  self : PdfDocument,
+) -> Json? raise PdfError {
+  let page_count = self.pages_of_pagetree().length()
+  let missing = self.missing_fonts(
+    [
+      for page_number in 1..<=page_count => page_number
+    ],
+  )
+  if missing.length() == 0 {
+    None
+  } else {
+    Some(
+      Json::array(
+        [
+          for entry in missing => pdf_ua_matterhorn_missing_font_extra(entry)
+        ],
+      ),
+    )
+  }
+}
+
+///|
 fn PdfDocument::pdf_ua_matterhorn_is_non_symbolic(
   self : PdfDocument,
   object : PdfObject,
@@ -2286,6 +2334,7 @@ fn PdfDocument::pdf_ua_matterhorn_run_test(
     "31-006" => self.pdf_ua_matterhorn_check_31_006()
     "31-007" => self.pdf_ua_matterhorn_check_31_007()
     "31-008" => self.pdf_ua_matterhorn_check_31_008()
+    "31-009" => self.pdf_ua_matterhorn_check_31_009()
     "31-017" => self.pdf_ua_matterhorn_check_31_017()
     "31-019" => self.pdf_ua_matterhorn_check_31_019()
     "31-020" => self.pdf_ua_matterhorn_check_31_020()
@@ -2371,7 +2420,7 @@ fn PdfDocument::pdf_ua_matterhorn_failures(
 /// checks `28-014` and `28-015`, file-attachment no-op `28-016`, PrinterMark
 /// object and appearance checks `28-017` and `28-018`, plus reference-XObject
 /// checks `30-001` and `30-002`, plus font CIDSystemInfo/CIDToGIDMap/CMap
-/// checks `31-001` through `31-008`, and source-unimplemented font-file checks
+/// checks `31-001` through `31-009`, and source-unimplemented font-file checks
 /// `31-011` through `31-016`, `31-018`, and `31-030`, plus TrueType encoding
 /// dictionary and cmap checks `31-017` and `31-019` through `31-026`, and
 /// ToUnicode value checks `31-028` and `31-029`. Passing `""` runs the covered

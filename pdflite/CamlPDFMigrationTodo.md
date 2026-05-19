@@ -496,6 +496,20 @@ Current backend snapshot:
   `markdown/cmd` warning and `moon check --target native --warn-list +73` at
   the known 10-warning baseline. Batched full native validation reports `moon
   test --target native` at 2011/2011 tests passing.~~
+- [x] ~~Port the `cpdfua` Matterhorn missing-font embedding slice: the covered
+  Matterhorn surface now includes source check `31-009`, reusing the existing
+  cpdf-compatible `missing_fonts` page-resource scan over all document pages
+  and preserving cpdf's space-separated list entries in the Matterhorn `extra`
+  array. Coverage pins unembedded Type 1 fonts, descriptor-without-font-file
+  failures, Type 3 exclusion, embedded `/FontFile2` passes, Built-in encoding
+  fallback, and named encoding output. Focused native validation reports `moon
+  test --target native pdf_ua_matterhorn_test.mbt --filter '*missing fonts*'`
+  at 1/1 test passing; widened native validation reports `moon test --target
+  native pdf_ua_matterhorn_test.mbt` at 30/30 tests passing. Native check
+  validation reports `moon check --target native` passing with the known
+  `markdown/cmd` warning and `moon check --target native --warn-list +73` at
+  the known 10-warning baseline. Full native suite validation is deferred to
+  the next batch.~~
 - [x] ~~Port the current stub/no-op redaction APIs from `cpdfredact`: `redact`
   is exposed as `redact_path`/`pdf_redact` and preserves page content while
   validating the selected page range, while `apply` and `apply_type` are

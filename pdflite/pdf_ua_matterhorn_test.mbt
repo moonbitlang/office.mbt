@@ -300,6 +300,14 @@ fn ua_matterhorn_31_008_failure_for_test(name : String) -> Json {
 }
 
 ///|
+fn ua_matterhorn_31_009_failure_for_test(extra : Json) -> Json {
+  ua_matterhorn_failure_for_test(
+    "31-009", "UA1:7.21.4.1-1", "For a font used by text intended to be rendered the font program is not embedded.",
+    extra,
+  )
+}
+
+///|
 fn ua_matterhorn_31_017_failure_for_test(extra : Json) -> Json {
   ua_matterhorn_failure_for_test(
     "31-017", "UA1:7.21.6-1", "A non-symbolic TrueType font is used for rendering, but none of the cmap entries in the embedded font program is a non-symbolic cmap.",
@@ -509,6 +517,24 @@ fn ua_matterhorn_xobject_resources_for_test(
 }
 
 ///|
+fn ua_matterhorn_font_resources_for_test(
+  entries : ArrayView[(String, @pdflite.PdfObject)],
+) -> @pdflite.PdfObject {
+  PdfDictionary([
+    (
+      ua_matterhorn_name_for_test("/Font"),
+      PdfDictionary(
+        [
+          for entry in entries => {
+            (ua_matterhorn_name_for_test(entry.0), entry.1)
+          }
+        ],
+      ),
+    ),
+  ])
+}
+
+///|
 fn ua_matterhorn_cid_system_info_for_test(
   registry : String,
   ordering : String,
@@ -592,6 +618,45 @@ fn ua_matterhorn_cid_font_type2_for_test(
   match cid_to_gid_map {
     Some(map) =>
       entries.push((ua_matterhorn_name_for_test("/CIDToGIDMap"), map))
+    None => ()
+  }
+  PdfDictionary(entries)
+}
+
+///|
+fn ua_matterhorn_font_for_test(
+  subtype : String,
+  basefont : String,
+  encoding : String?,
+  descriptor : @pdflite.PdfObject?,
+) -> @pdflite.PdfObject {
+  let entries : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = [
+    (
+      ua_matterhorn_name_for_test("/Type"),
+      PdfNameObject(ua_matterhorn_name_for_test("/Font")),
+    ),
+    (
+      ua_matterhorn_name_for_test("/Subtype"),
+      PdfNameObject(ua_matterhorn_name_for_test(subtype)),
+    ),
+    (
+      ua_matterhorn_name_for_test("/BaseFont"),
+      PdfNameObject(ua_matterhorn_name_for_test(basefont)),
+    ),
+  ]
+  match encoding {
+    Some(value) =>
+      entries.push(
+        (
+          ua_matterhorn_name_for_test("/Encoding"),
+          PdfNameObject(ua_matterhorn_name_for_test(value)),
+        ),
+      )
+    None => ()
+  }
+  match descriptor {
+    Some(value) =>
+      entries.push((ua_matterhorn_name_for_test("/FontDescriptor"), value))
     None => ()
   }
   PdfDictionary(entries)
@@ -1689,6 +1754,56 @@ test "PdfDocument test_matterhorn_json compares CMap WMode values" {
   @test.assert_eq(
     try! no_dictionary_wmode.test_matterhorn_json("31-007"),
     Json::array([]),
+  )
+}
+
+///|
+test "PdfDocument test_matterhorn_json checks missing fonts" {
+  let document = ua_matterhorn_document_for_test(
+    [],
+    resources=ua_matterhorn_font_resources_for_test([
+      ("/F1", PdfIndirect(40)),
+      ("/F2", PdfIndirect(41)),
+      ("/F3", PdfIndirect(42)),
+      ("/F4", PdfIndirect(43)),
+    ]),
+  )
+  document.add_object_given_number(
+    40,
+    ua_matterhorn_font_for_test("/Type1", "/MissingOne", None, None),
+  )
+  document.add_object_given_number(
+    41,
+    ua_matterhorn_font_for_test("/Type3", "/InlineType3", None, None),
+  )
+  document.add_object_given_number(
+    42,
+    ua_matterhorn_font_for_test(
+      "/Type1",
+      "/EmbeddedOne",
+      None,
+      Some(ua_matterhorn_font_descriptor_with_file_for_test(None, b"font")),
+    ),
+  )
+  document.add_object_given_number(
+    43,
+    ua_matterhorn_font_for_test(
+      "/Type1",
+      "/DescriptorMissing",
+      Some("/MacRomanEncoding"),
+      Some(ua_matterhorn_font_descriptor_for_test(Some(32))),
+    ),
+  )
+  @test.assert_eq(
+    try! document.test_matterhorn_json("31-009"),
+    Json::array([
+      ua_matterhorn_31_009_failure_for_test(
+        Json::array([
+          Json::string("1 /F1 /Type1 /MissingOne Built-in"),
+          Json::string("1 /F4 /Type1 /DescriptorMissing /MacRomanEncoding"),
+        ]),
+      ),
+    ]),
   )
 }
 
