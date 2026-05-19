@@ -276,3 +276,38 @@ test "cpdfcontent operator state emits image entries from current CTM" {
     image,
   )
 }
+
+///|
+test "cpdfcontent operator state emits path entries for drawn paths" {
+  let initial = @pdflite.pdf_content_initial_operator_state(
+    0.0, 0.0, 100.0, 200.0,
+  )
+  @test.assert_eq(initial.content_path_entry(false), None)
+  let state = initial
+    .content_apply_core_op(Op_w(2.0))
+    .content_apply_core_op(Op_m(0.0, 0.0))
+    .content_apply_core_op(Op_l(10.0, 0.0))
+    .content_apply_core_op(Op_S)
+  guard state.content_path_entry(true) is Some(entry) else {
+    fail("expected current drawn path entry")
+  }
+  @test.assert_eq(entry.object, PdfContentPathObject(state.path))
+  let expected_state : @pdflite.PdfContentState = PdfContentStatePath(
+    @pdflite.pdf_content_path_state_with_clipping_path(
+      state.path_state,
+      state.clipping_path,
+    ),
+  )
+  @test.assert_eq(entry.state, expected_state)
+  @test.assert_eq(entry.bounding_box, {
+    x0: -1.0,
+    y0: -1.0,
+    x1: -1.0,
+    y1: 1.0,
+    x2: 11.0,
+    y2: 1.0,
+    x3: 11.0,
+    y3: -1.0,
+  })
+  @test.assert_eq(@pdflite.pdf_content_path_entry(state, true), Some(entry))
+}

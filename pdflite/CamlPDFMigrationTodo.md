@@ -2752,6 +2752,14 @@ Current backend snapshot:
   focused validation reports `moon test --target native --package
   bobzhang/pdflite --file pdf_content_operator_state_test.mbt` at 9/9 tests
   passing; native full-suite validation reports 1955/1955 tests passing.~~
+- [x] ~~Standalone `cpdfcontent.ml` path-entry emission slice exposes
+  `PdfContentOperatorState::content_path_entry` and
+  `pdf_content_path_entry`, matching cpdf's `emit_path_bounding_box` behavior
+  for current drawn paths: CTM-transformed path bounds, stroked line-width
+  expansion, clipping-aware path state, and no emitted entry for empty paths.
+  Native focused validation reports `moon test --target native --package
+  bobzhang/pdflite --file pdf_content_operator_state_test.mbt` at 10/10 tests
+  passing; native full-suite validation reports 1956/1956 tests passing.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,

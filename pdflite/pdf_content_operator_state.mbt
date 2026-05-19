@@ -328,6 +328,46 @@ fn PdfContentOperatorState::content_clipping_content_state(
 }
 
 ///|
+fn PdfContentOperatorState::content_path_content_state(
+  self : PdfContentOperatorState,
+) -> PdfContentState {
+  PdfContentStatePath(
+    self.path_state.content_with_clipping_path(self.clipping_path),
+  )
+}
+
+///|
+/// Return the cpdfcontent JSON entry for the current drawn path, when nonempty.
+pub fn PdfContentOperatorState::content_path_entry(
+  self : PdfContentOperatorState,
+  stroking : Bool,
+) -> PdfContentJsonEntry? {
+  match
+    self.path.path.content_bounding_box(
+      self.ctm,
+      self.path_state.line_width,
+      stroking,
+    ) {
+    Some(bounding_box) =>
+      Some({
+        object: PdfContentPathObject(self.path),
+        state: self.content_path_content_state(),
+        bounding_box,
+      })
+    None => None
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfContentOperatorState::content_path_entry`.
+pub fn pdf_content_path_entry(
+  state : PdfContentOperatorState,
+  stroking : Bool,
+) -> PdfContentJsonEntry? {
+  state.content_path_entry(stroking)
+}
+
+///|
 /// Return the CTM-transformed unit-square bounding box used for image objects.
 pub fn PdfContentOperatorState::content_unit_square_bounding_box(
   self : PdfContentOperatorState,

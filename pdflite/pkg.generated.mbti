@@ -431,6 +431,8 @@ pub fn pdf_content_no_partial_path() -> PdfContentPartialPath
 
 pub fn pdf_content_object_content_json(PdfContentObject) -> Json
 
+pub fn pdf_content_path_entry(PdfContentOperatorState, Bool) -> PdfContentJsonEntry?
+
 pub fn pdf_content_path_state_content_json(PdfContentPathState) -> Json
 
 pub fn pdf_content_path_state_with_clipping_path(PdfContentPathState, ArrayView[PdfPath]) -> PdfContentPathState
@@ -2092,6 +2094,7 @@ pub fn PdfContentOperatorState::content_apply_marked_content_op(Self, PdfContent
 pub fn PdfContentOperatorState::content_apply_type3_metrics_op(Self, PdfContentOp) -> Self
 pub fn PdfContentOperatorState::content_image_entry(Self, @core.PdfName) -> PdfContentJsonEntry
 pub fn PdfContentOperatorState::content_inline_image_entry(Self) -> PdfContentJsonEntry
+pub fn PdfContentOperatorState::content_path_entry(Self, Bool) -> PdfContentJsonEntry?
 pub fn PdfContentOperatorState::content_unit_square_bounding_box(Self) -> PdfContentBoundingBox
 
 pub(all) enum PdfContentPartialPath {
