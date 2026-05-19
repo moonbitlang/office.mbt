@@ -1159,6 +1159,103 @@ test "pdf_page_process_stub propagates callback errors" {
 }
 
 ///|
+test "PdfDocument process_pages rewrites selected pages and carries matrices" {
+  let key_open_action = page_name_for_test("/OpenAction")
+  let type_xyz = page_name_for_test("/XYZ")
+  let document = @pdflite.pdf_document_empty()
+  let page_root = try! document.add_pagetree([
+    @pdflite.pdf_page_blank(@pdflite.paper_a4),
+    @pdflite.pdf_page_blank(@pdflite.paper_a4),
+  ])
+  ignore(try! document.add_root(page_root, []))
+  let old_numbers = try! document.page_reference_numbers()
+  document.add_object_given_number(
+    document.root(),
+    try! document
+    .lookup_object_or_null(document.root())
+    .add_dict_entry(
+      key_open_action,
+      PdfArray([
+        PdfIndirect(old_numbers[0]),
+        PdfNameObject(type_xyz),
+        PdfReal(1.0),
+        PdfReal(2.0),
+        PdfNull,
+      ]),
+    ),
+  )
+  @pdflite.pdf_clear_progress_output()
+  @pdflite.pdf_set_progress(true)
+  let seen : Array[Int] = []
+  let processed = try! document.process_pages([1, 99], (page_number, page) => {
+    seen.push(page_number)
+    (
+      { ..page, rotate: Rotate90 },
+      page_number,
+      @pdflite.transform_translate(10.0, 20.0),
+    )
+  })
+  @pdflite.pdf_set_progress(false)
+
+  @test.assert_eq(seen, [1])
+  @test.assert_eq(@pdflite.pdf_progress_output(), "1.\n")
+  let pages = try! processed.pages_of_pagetree()
+  @test.assert_eq(pages[0].rotate, Rotate90)
+  @test.assert_eq(pages[1].rotate, Rotate0)
+  let new_numbers = try! processed.page_reference_numbers()
+  guard processed
+    .lookup_object_or_null(processed.root())
+    .lookup_immediate(key_open_action)
+    is Some(open_action) else {
+    fail("expected transformed open action")
+  }
+  @test.assert_eq(
+    processed.direct(open_action),
+    PdfArray([
+      PdfIndirect(new_numbers[0]),
+      PdfNameObject(type_xyz),
+      PdfReal(11.0),
+      PdfReal(22.0),
+      PdfNull,
+    ]),
+  )
+
+  let wrapped = try! @pdflite.pdf_process_pages(document, [2], (_, page) => {
+    (page, 2, @pdflite.transform_identity_matrix)
+  })
+  @test.assert_eq((try! wrapped.pages_of_pagetree()).length(), 2)
+}
+
+///|
+test "PdfDocument iter_pages and map_pages follow document order" {
+  let document = try! @pdflite.pdf_blank_document(10.0, 10.0, 3)
+  let iterated : Array[Int] = []
+  try! document.iter_pages([3, 1, 9], (page_number, page) => {
+    ignore(page)
+    iterated.push(page_number)
+  })
+  @test.assert_eq(iterated, [1, 3])
+
+  let wrapped_iterated : Array[Int] = []
+  try! @pdflite.pdf_iter_pages(document, [2], (page_number, page) => {
+    ignore(page)
+    wrapped_iterated.push(page_number)
+  })
+  @test.assert_eq(wrapped_iterated, [2])
+
+  let mapped = try! document.map_pages([3, 1, 9], (page_number, page) => {
+    page_number * 100 + @pdflite.pdf_page_int_of_rotation(page.rotate)
+  })
+  @test.assert_eq(mapped, [100, 300])
+  @test.assert_eq(
+    try! @pdflite.pdf_map_pages(document, [2], (page_number, page) => {
+      page_number + @pdflite.pdf_page_int_of_rotation(page.rotate)
+    }),
+    [2],
+  )
+}
+
+///|
 test "PdfDocument process_xobjects rewrites form xobject streams" {
   let key_subtype = page_name_for_test("/Subtype")
   let key_filter = page_name_for_test("/Filter")

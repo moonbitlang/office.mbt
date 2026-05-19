@@ -727,6 +727,8 @@ pub fn pdf_is_whitespace_or_delimiter_byte(Int) -> Bool
 
 pub fn pdf_is_xfa(PdfDocument) -> Bool
 
+pub fn pdf_iter_pages(PdfDocument, ArrayView[Int], (Int, PdfPage) -> Unit raise @core.PdfError) -> Unit raise @core.PdfError
+
 pub fn pdf_jpeg2000_dimensions(Bytes) -> (Int, Int) raise @core.PdfError
 
 pub fn pdf_jpeg2000_dimensions_view(BytesView) -> (Int, Int) raise @core.PdfError
@@ -770,6 +772,8 @@ pub fn pdf_make_font(@core.PdfName, PdfEncoding) -> PdfObject raise @core.PdfErr
 pub fn pdf_make_hex_pdf_string(BytesView) -> Bytes
 
 pub fn pdf_make_pdf_string(BytesView) -> Bytes
+
+pub fn[T] pdf_map_pages(PdfDocument, ArrayView[Int], (Int, PdfPage) -> T raise @core.PdfError) -> Array[T] raise @core.PdfError
 
 pub fn pdf_mark_all_as_artifact(PdfDocument) -> PdfDocument raise @core.PdfError
 
@@ -1008,6 +1012,8 @@ pub fn pdf_print_dict_entry(PdfDocument, @core.PdfName) -> Array[Bytes] raise @c
 pub fn pdf_print_function(PdfFunction) -> Unit
 
 pub fn[T] pdf_print_tree_to_string(T, (T) -> String, (T) -> Array[T], line_prefix? : String) -> String
+
+pub fn pdf_process_pages(PdfDocument, ArrayView[Int], (Int, PdfPage) -> (PdfPage, Int, @geometry.TransformMatrix) raise @core.PdfError) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_progress() -> Bool
 
@@ -2563,6 +2569,7 @@ pub fn PdfDocument::is_xfa(Self) -> Bool
 pub fn PdfDocument::iter_objects(Self, (Int, PdfObject) -> Unit raise) -> Unit raise
 pub fn PdfDocument::iter_objects_in_order(Self, (Int, PdfObject) -> Unit raise) -> Unit raise
 pub fn PdfDocument::iter_objects_with_generation(Self, (Int, Int, PdfObject) -> Unit raise) -> Unit raise
+pub fn PdfDocument::iter_pages(Self, ArrayView[Int], (Int, PdfPage) -> Unit raise @core.PdfError) -> Unit raise @core.PdfError
 pub fn PdfDocument::iter_stream(Self, (PdfObject) -> Unit raise) -> Unit raise
 pub fn PdfDocument::json_of_document(Self, utf8? : Bool, parse_content? : Bool, clean_strings? : Bool, no_stream_data? : Bool, decompress_streams? : Bool) -> Json raise @core.PdfError
 pub fn PdfDocument::json_of_object(Self, PdfObject, utf8? : Bool, clean_strings? : Bool, no_stream_data? : Bool) -> Json raise @core.PdfError
@@ -2580,6 +2587,7 @@ pub fn PdfDocument::lookup_direct_or_else(Self, @core.PdfName, @core.PdfName, Pd
 pub fn PdfDocument::lookup_object_or_null(Self, Int) -> PdfObject
 pub fn PdfDocument::lookup_required(Self, @core.PdfName, PdfObject, @core.PdfError) -> PdfObject raise @core.PdfError
 pub fn PdfDocument::map_objects_in_place(Self, (PdfObject) -> PdfObject) -> Unit
+pub fn[T] PdfDocument::map_pages(Self, ArrayView[Int], (Int, PdfPage) -> T raise @core.PdfError) -> Array[T] raise @core.PdfError
 pub fn PdfDocument::mark_all_as_artifact(Self) -> Self raise @core.PdfError
 pub fn PdfDocument::mark_info_item(Self, @core.PdfName) -> Bool
 pub fn PdfDocument::mark_pdfua1(Self) -> Self raise @core.PdfError
@@ -2644,6 +2652,7 @@ pub fn PdfDocument::portfolio(Self, ArrayView[PdfPortfolioEntry], mod_date? : By
 pub fn PdfDocument::postpend_operators(Self, PdfPage, ArrayView[PdfContentOp], fast? : Bool) -> PdfPage raise @core.PdfError
 pub fn PdfDocument::prepend_operators(Self, PdfPage, ArrayView[PdfContentOp], fast? : Bool) -> PdfPage raise @core.PdfError
 pub fn PdfDocument::presentation(Self, ArrayView[Int], String?, Double?, Bool, Bool, Int, Double) -> Self raise @core.PdfError
+pub fn PdfDocument::process_pages(Self, ArrayView[Int], (Int, PdfPage) -> (PdfPage, Int, @geometry.TransformMatrix) raise @core.PdfError) -> Self raise @core.PdfError
 pub fn PdfDocument::process_xobjects(Self, PdfPage, (Self, PdfObject, ArrayView[PdfObject]) -> Array[PdfObject] raise @core.PdfError) -> Unit raise @core.PdfError
 pub fn PdfDocument::read_annotation(Self, PdfObject) -> PdfAnnotation raise @core.PdfError
 pub fn PdfDocument::read_bookmarks(Self, preserve_actions? : Bool) -> Array[PdfBookmark] raise @core.PdfError
