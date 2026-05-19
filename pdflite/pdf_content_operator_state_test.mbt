@@ -410,6 +410,10 @@ test "cpdfcontent operator state applies ExtGState font parameters" {
   @test.assert_eq(state.text_state.font, "__EXTGSTATE__7")
   @test.assert_eq(state.text_state.font_size, 18.5)
   @test.assert_eq(
+    state.text_state.current_font,
+    try! doc.read_font(PdfIndirect(7)),
+  )
+  @test.assert_eq(
     try! @pdflite.pdf_content_apply_extgstate_font_op(doc, initial, extgstate),
     state,
   )
@@ -448,6 +452,88 @@ test "cpdfcontent operator state applies ExtGState font parameters" {
   )
   guard bad_font is Err(@pdflite.PdfError::FontTypeExpected) else {
     fail("expected FontTypeExpected for malformed ExtGState font object")
+  }
+}
+
+///|
+test "cpdfcontent operator state applies resource font lookup and cache" {
+  let doc = @pdflite.pdf_document_empty()
+  let initial = @pdflite.pdf_content_initial_operator_state(
+    0.0, 0.0, 100.0, 200.0,
+  )
+  let subtype_key = content_operator_name_for_test("/Subtype")
+  let base_font_key = content_operator_name_for_test("/BaseFont")
+  let font_resource_key = content_operator_name_for_test("/Font")
+  let f1_key = content_operator_name_for_test("/F1")
+  doc.add_object_given_number(
+    7,
+    @pdflite.pdf_dictionary([
+      (subtype_key, PdfNameObject(content_operator_name_for_test("/Type1"))),
+      (
+        base_font_key,
+        PdfNameObject(content_operator_name_for_test("/Helvetica")),
+      ),
+    ]),
+  )
+  let resources = @pdflite.pdf_dictionary([
+    (font_resource_key, @pdflite.pdf_dictionary([(f1_key, PdfIndirect(7))])),
+  ])
+  let font = try! doc.read_font(PdfIndirect(7))
+  let state = try! doc.content_apply_font_resource_op(
+    initial, resources, f1_key, 14.0,
+  )
+  @test.assert_eq(state.text_state.font, "/F1")
+  @test.assert_eq(state.text_state.font_size, 14.0)
+  @test.assert_eq(state.text_state.current_font, font)
+  @test.assert_eq(state.text_state.font_cache.length(), 1)
+  @test.assert_eq(state.text_state.font_cache[0].name, "/F1")
+  @test.assert_eq(state.text_state.font_cache[0].font, font)
+  @test.assert_eq(
+    try! @pdflite.pdf_content_apply_font_resource_op(
+      doc, initial, resources, f1_key, 14.0,
+    ),
+    state,
+  )
+  let cached = try! doc.content_apply_font_resource_op(
+    state,
+    @pdflite.pdf_dictionary([]),
+    f1_key,
+    16.0,
+  )
+  @test.assert_eq(cached.text_state.font, "/F1")
+  @test.assert_eq(cached.text_state.font_size, 16.0)
+  @test.assert_eq(cached.text_state.current_font, font)
+  @test.assert_eq(cached.text_state.font_cache.length(), 1)
+  let missing = try! doc.content_apply_font_resource_op(
+    initial,
+    resources,
+    content_operator_name_for_test("/Missing"),
+    9.0,
+  )
+  @test.assert_eq(missing.text_state.font, "/Missing")
+  @test.assert_eq(missing.text_state.font_size, 9.0)
+  @test.assert_eq(
+    missing.text_state.current_font,
+    initial.text_state.current_font,
+  )
+  @test.assert_eq(missing.text_state.font_cache.length(), 0)
+  doc.add_object_given_number(9, @pdflite.pdf_dictionary([]))
+  let bad_resources = @pdflite.pdf_dictionary([
+    (
+      font_resource_key,
+      @pdflite.pdf_dictionary([
+        (content_operator_name_for_test("/Bad"), PdfIndirect(9)),
+      ]),
+    ),
+  ])
+  let bad_font : Result[@pdflite.PdfContentOperatorState, Error] = try? doc.content_apply_font_resource_op(
+    initial,
+    bad_resources,
+    content_operator_name_for_test("/Bad"),
+    12.0,
+  )
+  guard bad_font is Err(@pdflite.PdfError::FontTypeExpected) else {
+    fail("expected FontTypeExpected for malformed resource font")
   }
 }
 

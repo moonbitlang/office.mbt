@@ -225,6 +225,12 @@ pub fn pdf_content_is_vertical(font : PdfFont) -> Bool {
 }
 
 ///|
+pub(all) struct PdfContentTextFontCacheEntry {
+  name : String
+  font : PdfFont
+} derive(Debug, Eq, ToJson)
+
+///|
 /// Text state tracked by cpdfcontent before glyph layout is emitted.
 pub(all) struct PdfContentTextState {
   character_spacing : Double
@@ -232,6 +238,8 @@ pub(all) struct PdfContentTextState {
   horizontal_scaling : Double
   leading : Double
   font : String
+  current_font : PdfFont
+  font_cache : Array[PdfContentTextFontCacheEntry]
   font_size : Double
   rendering_mode : Int
   rise : Double
@@ -247,20 +255,76 @@ pub(all) struct PdfContentTextOpResult {
 } derive(Debug, Eq, ToJson)
 
 ///|
+fn pdf_content_initial_text_font() -> PdfFont {
+  PdfFontStandard({ font: PdfTimesRoman, encoding: PdfWinAnsiEncoding })
+}
+
+///|
 /// Return cpdfcontent's initial text state.
 pub fn pdf_content_initial_text_state() -> PdfContentTextState {
+  let current_font = pdf_content_initial_text_font()
   {
     character_spacing: 0.0,
     word_spacing: 0.0,
     horizontal_scaling: 1.0,
     leading: 0.0,
     font: "",
+    current_font,
+    font_cache: [],
     font_size: 12.0,
     rendering_mode: 0,
     rise: 0.0,
     knockout: true,
     text_matrix: transform_identity_matrix,
     line_matrix: transform_identity_matrix,
+  }
+}
+
+///|
+pub fn PdfContentTextState::content_cached_font(
+  self : PdfContentTextState,
+  name : String,
+) -> PdfFont? {
+  for entry in self.font_cache {
+    if entry.name == name {
+      return Some(entry.font)
+    }
+  }
+  None
+}
+
+///|
+fn pdf_content_text_font_cache_with(
+  cache : ArrayView[PdfContentTextFontCacheEntry],
+  name : String,
+  font : PdfFont,
+) -> Array[PdfContentTextFontCacheEntry] {
+  let output : Array[PdfContentTextFontCacheEntry] = []
+  let mut found = false
+  for entry in cache {
+    if entry.name == name {
+      output.push({ name, font })
+      found = true
+    } else {
+      output.push(entry)
+    }
+  }
+  if !found {
+    output.push({ name, font })
+  }
+  output
+}
+
+///|
+pub fn PdfContentTextState::content_cache_font(
+  self : PdfContentTextState,
+  name : String,
+  font : PdfFont,
+) -> PdfContentTextState {
+  {
+    ..self,
+    current_font: font,
+    font_cache: pdf_content_text_font_cache_with(self.font_cache, name, font),
   }
 }
 

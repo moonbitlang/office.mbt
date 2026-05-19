@@ -3058,6 +3058,31 @@ Current backend snapshot:
   `markdown/cmd` warning and `moon check --target native --warn-list +73` at the
   known 10-warning baseline. Full native suite validation is deferred to the
   next batch.~~
+- [x] ~~Standalone `cpdfcontent.ml` font resource/cache bridge slice adds
+  `PdfContentTextFontCacheEntry`,
+  `PdfContentTextState.current_font`,
+  `PdfContentTextState.font_cache`,
+  `PdfContentTextState::content_cached_font`,
+  `PdfContentTextState::content_cache_font`,
+  `PdfDocument::content_apply_font_resource_op`, and
+  `pdf_content_apply_font_resource_op`, mirroring cpdf's `Tf` resource lookup
+  through page `/Font` dictionaries with cache hits before resource lookup,
+  missing-resource fallback that preserves the previous font data, and malformed
+  font-object error propagation. The slice also teaches ExtGState `/Font` to
+  update the current font object, matching cpdf's uncached ExtGState font-data
+  branch. It leaves resource-backed text-showing dispatch, Form XObject
+  temporary font-cache clearing, and the full stateful content walker for later
+  slices. Focused native validation reports the native
+  `pdf_content_text_test.mbt --filter '*initial defaults*'` run at 1/1 test
+  passing and the native `pdf_content_operator_state_test.mbt` run with
+  `--filter '*font*'` at 2/2 tests passing; widened native validation reports
+  `moon test --target native pdf_content_text_test.mbt` at 13/13 tests passing,
+  `moon test --target native pdf_content_operator_state_test.mbt` at 29/29
+  tests passing, and `moon test --target native pdf_content_state_test.mbt` at
+  8/8 tests passing. Native check validation reports `moon check --target
+  native` passing with the known `markdown/cmd` warning and `moon check --target
+  native --warn-list +73` at the known 10-warning baseline. Full native suite
+  validation is deferred to the next batch.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,

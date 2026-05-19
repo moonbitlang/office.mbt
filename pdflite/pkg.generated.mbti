@@ -375,6 +375,8 @@ pub fn pdf_content_apply_extgstate_text_op(PdfDocument, PdfContentOperatorState,
 
 pub fn pdf_content_apply_extgstate_transfer_op(PdfDocument, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState
 
+pub fn pdf_content_apply_font_resource_op(PdfDocument, PdfContentOperatorState, PdfObject, @core.PdfName, Double) -> PdfContentOperatorState raise @core.PdfError
+
 pub fn pdf_content_apply_graphics_parameter_op(PdfContentOperatorState, PdfContentOp) -> PdfContentOperatorState
 
 pub fn pdf_content_apply_graphics_state_op(PdfContentOperatorState, PdfContentOp) -> PdfContentOperatorState
@@ -2248,6 +2250,11 @@ pub(all) enum PdfContentState {
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfContentState::content_json(Self) -> Json
 
+pub(all) struct PdfContentTextFontCacheEntry {
+  name : String
+  font : PdfFont
+} derive(Eq, ToJson, @debug.Debug)
+
 pub(all) struct PdfContentTextGlyphPlacement {
   charcode : Int
   text_matrix : @geometry.TransformMatrix
@@ -2285,6 +2292,8 @@ pub(all) struct PdfContentTextState {
   horizontal_scaling : Double
   leading : Double
   font : String
+  current_font : PdfFont
+  font_cache : Array[PdfContentTextFontCacheEntry]
   font_size : Double
   rendering_mode : Int
   rise : Double
@@ -2294,6 +2303,8 @@ pub(all) struct PdfContentTextState {
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfContentTextState::content_apply_text_op(Self, PdfFont, @geometry.TransformMatrix, PdfContentOp) -> PdfContentTextOpResult
 pub fn PdfContentTextState::content_apply_text_state_op(Self, PdfContentOp) -> Self
+pub fn PdfContentTextState::content_cache_font(Self, String, PdfFont) -> Self
+pub fn PdfContentTextState::content_cached_font(Self, String) -> PdfFont?
 pub fn PdfContentTextState::content_glyph_state(Self, ArrayView[PdfPath]) -> PdfContentGlyphState
 pub fn PdfContentTextState::content_text_layout(Self, @geometry.TransformMatrix) -> PdfContentTextLayout
 
@@ -2430,6 +2441,7 @@ pub fn PdfDocument::content_apply_extgstate_rendering_op(Self, PdfContentOperato
 pub fn PdfDocument::content_apply_extgstate_resource_op(Self, PdfContentOperatorState, PdfObject, @core.PdfName) -> PdfContentOperatorState raise @core.PdfError
 pub fn PdfDocument::content_apply_extgstate_text_op(Self, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState
 pub fn PdfDocument::content_apply_extgstate_transfer_op(Self, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState
+pub fn PdfDocument::content_apply_font_resource_op(Self, PdfContentOperatorState, PdfObject, @core.PdfName, Double) -> PdfContentOperatorState raise @core.PdfError
 pub fn PdfDocument::content_form_xobject_enter_state(Self, PdfContentOperatorState, PdfObject, @core.PdfName) -> PdfContentOperatorState? raise @core.PdfError
 pub fn PdfDocument::content_form_xobject_ops(Self, PdfObject, @core.PdfName) -> Array[PdfContentOp]? raise @core.PdfError
 pub fn PdfDocument::content_form_xobject_resources(Self, PdfObject, @core.PdfName) -> PdfObject? raise @core.PdfError

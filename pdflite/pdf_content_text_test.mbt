@@ -54,6 +54,11 @@ test "cpdfcontent text state exposes initial defaults and basic operators" {
   @test.assert_eq(initial.horizontal_scaling, 1.0)
   @test.assert_eq(initial.leading, 0.0)
   @test.assert_eq(initial.font, "")
+  @test.assert_eq(
+    initial.current_font,
+    PdfFontStandard({ font: PdfTimesRoman, encoding: PdfWinAnsiEncoding }),
+  )
+  @test.assert_eq(initial.font_cache.length(), 0)
   @test.assert_eq(initial.font_size, 12.0)
   @test.assert_eq(initial.rendering_mode, 0)
   @test.assert_eq(initial.rise, 0.0)
@@ -73,6 +78,8 @@ test "cpdfcontent text state exposes initial defaults and basic operators" {
   @test.assert_eq(state.horizontal_scaling, 0.8)
   @test.assert_eq(state.leading, 14.0)
   @test.assert_eq(state.font, "/F1")
+  @test.assert_eq(state.current_font, initial.current_font)
+  @test.assert_eq(state.font_cache.length(), 0)
   @test.assert_eq(state.font_size, 9.0)
   @test.assert_eq(state.rendering_mode, 3)
   @test.assert_eq(state.rise, 4.0)
@@ -80,6 +87,15 @@ test "cpdfcontent text state exposes initial defaults and basic operators" {
     @pdflite.pdf_content_apply_text_state_op(state, Op_Tc(7.0)).character_spacing,
     7.0,
   )
+  let cached_font : @pdflite.PdfFont = PdfFontStandard({
+    font: PdfHelvetica,
+    encoding: PdfWinAnsiEncoding,
+  })
+  let cached = initial.content_cache_font("/F1", cached_font)
+  @test.assert_eq(cached.current_font, cached_font)
+  @test.assert_eq(cached.font_cache.length(), 1)
+  @test.assert_eq(cached.content_cached_font("/F1"), Some(cached_font))
+  @test.assert_eq(cached.content_cached_font("/Missing"), None)
 }
 
 ///|
