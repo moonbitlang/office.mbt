@@ -662,6 +662,21 @@ Current backend snapshot:
   warning and `moon check --target native --warn-list +73` at the known
   10-warning baseline. Full native suite validation is deferred to the next
   batch.~~
+- [x] ~~Port the `cpdfua` Matterhorn natural-language slice: the covered
+  Matterhorn surface now includes source check `11-001`, matching cpdf's
+  top-level catalog `/Lang` behavior and `merror_str` extras for missing and
+  empty language strings, plus source-compatible no-op handling for
+  `MatterhornUnimplemented` checks `11-002` through `11-006`. Coverage pins
+  missing `/Lang`, empty `/Lang`, valid `/Lang`, aggregate `""` failure ordering
+  after adding the language check, and individual no-failure behavior for
+  `11-002` through `11-006`. Focused native validation reports `moon test
+  --target native pdf_ua_matterhorn_test.mbt --filter '*language*'` at 2/2
+  tests passing; widened native validation reports `moon test --target native
+  pdf_ua_matterhorn_test.mbt` at 42/42 tests passing. Batched full native
+  validation reports `moon test --target native` at 2024/2024 tests passing.
+  Native check validation reports `moon check --target native` passing with the
+  known `markdown/cmd` warning and `moon check --target native --warn-list +73`
+  at the known 10-warning baseline.~~
 - [x] ~~Port the current stub/no-op redaction APIs from `cpdfredact`: `redact`
   is exposed as `redact_path`/`pdf_redact` and preserves page content while
   validating the selected page range, while `apply` and `apply_type` are

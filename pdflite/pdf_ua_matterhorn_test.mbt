@@ -134,6 +134,14 @@ fn ua_matterhorn_07_002_failure_for_test() -> Json {
 }
 
 ///|
+fn ua_matterhorn_11_001_failure_for_test(extra : Json) -> Json {
+  ua_matterhorn_failure_for_test(
+    "11-001", "UA1:7.2-3", "Natural language for text in page content cannot be determined.",
+    extra,
+  )
+}
+
+///|
 fn ua_matterhorn_20_001_failure_for_test() -> Json {
   ua_matterhorn_failure_for_test(
     "20-001",
@@ -1165,6 +1173,7 @@ test "PdfDocument test_matterhorn_json detects content artifact nesting" {
       ua_matterhorn_01_004_failure_for_test(),
       ua_matterhorn_06_001_failure_for_test(),
       ua_matterhorn_07_001_failure_for_test(),
+      ua_matterhorn_11_001_failure_for_test(Json::string("No top-level /Lang")),
     ]),
   )
 }
@@ -1358,6 +1367,7 @@ test "PdfDocument test_matterhorn_json detects missing XMP fields" {
     Json::array([
       ua_matterhorn_06_002_failure_for_test(),
       ua_matterhorn_06_003_failure_for_test(),
+      ua_matterhorn_11_001_failure_for_test(Json::string("No top-level /Lang")),
     ]),
   )
 }
@@ -1384,6 +1394,42 @@ test "PdfDocument test_matterhorn_json detects false DisplayDocTitle" {
     try! document.test_matterhorn_json("07-002"),
     Json::array([ua_matterhorn_07_002_failure_for_test()]),
   )
+}
+
+///|
+test "PdfDocument test_matterhorn_json checks top-level language" {
+  let missing = ua_matterhorn_document_for_test([])
+  @test.assert_eq(
+    try! missing.test_matterhorn_json("11-001"),
+    Json::array([
+      ua_matterhorn_11_001_failure_for_test(Json::string("No top-level /Lang")),
+    ]),
+  )
+
+  let empty = ua_matterhorn_document_for_test([], root_extras=[
+    (ua_matterhorn_name_for_test("/Lang"), PdfString(@ascii.encode(""))),
+  ])
+  @test.assert_eq(
+    try! empty.test_matterhorn_json("11-001"),
+    Json::array([
+      ua_matterhorn_11_001_failure_for_test(
+        Json::string("Top-level /Lang is empty"),
+      ),
+    ]),
+  )
+
+  let present = ua_matterhorn_document_for_test([], root_extras=[
+    (ua_matterhorn_name_for_test("/Lang"), PdfString(@ascii.encode("en-US"))),
+  ])
+  @test.assert_eq(try! present.test_matterhorn_json("11-001"), Json::array([]))
+}
+
+///|
+test "PdfDocument test_matterhorn_json preserves source no-op language checks" {
+  let document = ua_matterhorn_document_for_test([])
+  for name in ["11-002", "11-003", "11-004", "11-005", "11-006"] {
+    @test.assert_eq(try! document.test_matterhorn_json(name), Json::array([]))
+  }
 }
 
 ///|

@@ -481,6 +481,60 @@ fn pdf_ua_matterhorn_test_07_002() -> PdfUAMatterhornTest {
 }
 
 ///|
+fn pdf_ua_matterhorn_test_11_001() -> PdfUAMatterhornTest {
+  {
+    name: "11-001",
+    error: "Natural language for text in page content cannot be determined.",
+    section: "UA1:7.2-3",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_11_002() -> PdfUAMatterhornTest {
+  {
+    name: "11-002",
+    error: "Natural language for text in Alt, ActualText and E attributes cannot be determined.",
+    section: "UA1:7.2-3",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_11_003() -> PdfUAMatterhornTest {
+  {
+    name: "11-003",
+    error: "Natural language in the Outline entries cannot be determined.",
+    section: "UA1:7.2-3",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_11_004() -> PdfUAMatterhornTest {
+  {
+    name: "11-004",
+    error: "Natural language in the Contents entry for annotations cannot be determined.",
+    section: "UA1:7.2-3",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_11_005() -> PdfUAMatterhornTest {
+  {
+    name: "11-005",
+    error: "Natural language in the TU entry for form fields cannot be determined.",
+    section: "UA1:7.2-3",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_11_006() -> PdfUAMatterhornTest {
+  {
+    name: "11-006",
+    error: "Natural language for document metadata cannot be determined.",
+    section: "UA1:7.2-3",
+  }
+}
+
+///|
 fn pdf_ua_matterhorn_test_20_001() -> PdfUAMatterhornTest {
   {
     name: "20-001",
@@ -972,6 +1026,12 @@ fn pdf_ua_matterhorn_implemented_tests() -> Array[PdfUAMatterhornTest] {
     pdf_ua_matterhorn_test_06_003(),
     pdf_ua_matterhorn_test_07_001(),
     pdf_ua_matterhorn_test_07_002(),
+    pdf_ua_matterhorn_test_11_001(),
+    pdf_ua_matterhorn_test_11_002(),
+    pdf_ua_matterhorn_test_11_003(),
+    pdf_ua_matterhorn_test_11_004(),
+    pdf_ua_matterhorn_test_11_005(),
+    pdf_ua_matterhorn_test_11_006(),
     pdf_ua_matterhorn_test_20_001(),
     pdf_ua_matterhorn_test_20_002(),
     pdf_ua_matterhorn_test_20_003(),
@@ -1588,6 +1648,25 @@ fn PdfDocument::pdf_ua_matterhorn_check_07_002(self : PdfDocument) -> Json? {
     Some(PdfBoolean(false)) => Some(Json::null())
     _ => None
   }
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_11_001(self : PdfDocument) -> Json? {
+  match
+    self.lookup_chain(self.trailer_dict(), [
+      pdf_ua_root_key(),
+      pdf_ua_lang_key(),
+    ]) {
+    Some(PdfString(value)) if value.length() == 0 =>
+      Some(Json::string("Top-level /Lang is empty"))
+    None => Some(Json::string("No top-level /Lang"))
+    Some(_) => None
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_check_source_unimplemented_language() -> Json? {
+  None
 }
 
 ///|
@@ -3135,6 +3214,9 @@ fn PdfDocument::pdf_ua_matterhorn_run_test(
     "06-003" => self.pdf_ua_matterhorn_check_06_003()
     "07-001" => self.pdf_ua_matterhorn_check_07_001()
     "07-002" => self.pdf_ua_matterhorn_check_07_002()
+    "11-001" => self.pdf_ua_matterhorn_check_11_001()
+    "11-002" | "11-003" | "11-004" | "11-005" | "11-006" =>
+      pdf_ua_matterhorn_check_source_unimplemented_language()
     "20-001" => self.pdf_ua_matterhorn_check_20_001()
     "20-002" => self.pdf_ua_matterhorn_check_20_002()
     "20-003" => self.pdf_ua_matterhorn_check_20_003()
@@ -3250,6 +3332,8 @@ fn PdfDocument::pdf_ua_matterhorn_failures(
 /// The current migration covers content-marking checks `01-003`, `01-004`,
 /// `01-005`, and `01-007`, role-map checks `02-001`, `02-003`, and `02-004`,
 /// XMP metadata and DisplayDocTitle checks `06-001` through `07-002`, and
+/// natural-language top-level `/Lang` check `11-001` plus source-unimplemented
+/// language checks `11-002` through `11-006`,
 /// optional-content configuration checks `20-001` through `20-003`, embedded
 /// file-spec check `21-001`, XFA dynamicRender check `25-001`,
 /// encryption checks `26-001` and `26-002`,
