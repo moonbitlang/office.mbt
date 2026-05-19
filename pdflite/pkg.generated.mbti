@@ -1381,6 +1381,10 @@ pub fn pdf_ua_replace_struct_tree(PdfDocument, Json) -> PdfDocument raise @core.
 
 pub fn pdf_ua_subformat_of_string(String) -> PdfUASubformat raise @core.PdfError
 
+pub fn pdf_ua_test_matterhorn_json(PdfDocument, String) -> Json raise @core.PdfError
+
+pub fn pdf_ua_test_matterhorn_print(PdfDocument, String) -> Bytes raise @core.PdfError
+
 pub fn pdf_upright_pages(PdfDocument, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_utf16be_of_codepoints(ArrayView[Int]) -> Bytes raise @core.PdfError
@@ -2727,6 +2731,8 @@ pub fn PdfDocument::struct_tree_json_blob(Self) -> Bytes raise @core.PdfError
 pub fn PdfDocument::struct_tree_text(Self) -> Bytes raise @core.PdfError
 pub fn PdfDocument::target_of_page_number(Self, Int) -> PdfDestination raise @core.PdfError
 pub fn PdfDocument::test_extract_text(Self, ArrayView[Int]) -> Bytes raise @core.PdfError
+pub fn PdfDocument::test_matterhorn_json(Self, String) -> Json raise @core.PdfError
+pub fn PdfDocument::test_matterhorn_text(Self, String) -> Bytes raise @core.PdfError
 pub fn PdfDocument::text_extractor_of_font(Self, PdfObject) -> PdfTextExtractor raise @core.PdfError
 pub fn PdfDocument::thin_lines(Self, ArrayView[Int], Double) -> Self raise @core.PdfError
 pub fn PdfDocument::toc_add_bookmark(Self, BytesView) -> Self raise @core.PdfError

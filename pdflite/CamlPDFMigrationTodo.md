@@ -245,6 +245,22 @@ Current backend snapshot:
   `markdown/cmd` warning and `moon check --target native --warn-list +73` at the
   known 10-warning baseline. Full native suite validation is deferred to the
   next batch.~~
+- [x] ~~Port the first bounded `cpdfua` Matterhorn validation slice:
+  `test_matterhorn_json`, `test_matterhorn_text`, and compatibility wrappers
+  now cover source checks `01-003`, `01-004`, `01-005`, and `01-007`,
+  including page and Form XObject content-marker scanning, unmarked real
+  content detection with cpdf's clipping-path filter, malformed empty `EMC`
+  reporting, `/MarkInfo /Suspects true`, and explicit soft errors for
+  unsupported individual Matterhorn names until the rest of the protocol is
+  ported. Focused native validation reports `moon test --target native
+  pdf_ua_matterhorn_test.mbt --filter '*test_matterhorn*'` at 5/5 tests passing;
+  widened native validation reports `moon test --target native
+  pdf_ua_matterhorn_test.mbt` at 5/5 tests passing. Native check validation
+  reports `moon check --target native` passing with the known `markdown/cmd`
+  warning and `moon check --target native --warn-list +73` at the known
+  10-warning baseline; `moon info` and `moon fmt` were run to update the public
+  interface summary and formatting. Full native suite validation is deferred to
+  the next batch.~~
 - [x] ~~Port the current stub/no-op redaction APIs from `cpdfredact`: `redact`
   is exposed as `redact_path`/`pdf_redact` and preserves page content while
   validating the selected page range, while `apply` and `apply_type` are
