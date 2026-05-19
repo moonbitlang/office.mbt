@@ -403,6 +403,8 @@ pub fn pdf_content_glyph_state_content_json(PdfContentGlyphState) -> Json
 
 pub fn pdf_content_glyph_state_of_text_state(PdfContentTextState, ArrayView[PdfPath]) -> PdfContentGlyphState
 
+pub fn pdf_content_image_entry(PdfContentOperatorState, @core.PdfName) -> PdfContentJsonEntry
+
 pub fn pdf_content_initial_clipping_path(Double, Double, Double, Double) -> Array[PdfPath]
 
 pub fn pdf_content_initial_clipping_state(Double, Double, Double, Double) -> PdfContentClippingState
@@ -416,6 +418,8 @@ pub fn pdf_content_initial_operator_state(Double, Double, Double, Double) -> Pdf
 pub fn pdf_content_initial_path_state(Double, Double, Double, Double) -> PdfContentPathState
 
 pub fn pdf_content_initial_text_state() -> PdfContentTextState
+
+pub fn pdf_content_inline_image_entry(PdfContentOperatorState) -> PdfContentJsonEntry
 
 pub fn pdf_content_is_vertical(PdfFont) -> Bool
 
@@ -2086,6 +2090,9 @@ pub fn PdfContentOperatorState::content_apply_graphics_parameter_op(Self, PdfCon
 pub fn PdfContentOperatorState::content_apply_graphics_state_op(Self, PdfContentOp) -> Self
 pub fn PdfContentOperatorState::content_apply_marked_content_op(Self, PdfContentOp) -> Self
 pub fn PdfContentOperatorState::content_apply_type3_metrics_op(Self, PdfContentOp) -> Self
+pub fn PdfContentOperatorState::content_image_entry(Self, @core.PdfName) -> PdfContentJsonEntry
+pub fn PdfContentOperatorState::content_inline_image_entry(Self) -> PdfContentJsonEntry
+pub fn PdfContentOperatorState::content_unit_square_bounding_box(Self) -> PdfContentBoundingBox
 
 pub(all) enum PdfContentPartialPath {
   PdfContentNoPartialPath

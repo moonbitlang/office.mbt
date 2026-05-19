@@ -2743,6 +2743,15 @@ Current backend snapshot:
   Native focused validation reports `moon test --target native --package
   bobzhang/pdflite --file pdf_content_operator_state_test.mbt` at 8/8 tests
   passing; native full-suite validation reports 1954/1954 tests passing.~~
+- [x] ~~Standalone `cpdfcontent.ml` image-entry emission slice exposes
+  `PdfContentOperatorState::content_unit_square_bounding_box`,
+  `content_inline_image_entry`, `content_image_entry`, and compatibility
+  wrappers, matching cpdf's current-CTM unit-square bbox for inline images and
+  image XObjects plus clipping-only content state while leaving inline-image
+  data preservation and XObject resource lookup for later slices. Native
+  focused validation reports `moon test --target native --package
+  bobzhang/pdflite --file pdf_content_operator_state_test.mbt` at 9/9 tests
+  passing; native full-suite validation reports 1955/1955 tests passing.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,

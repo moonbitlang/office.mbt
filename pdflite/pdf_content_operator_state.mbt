@@ -319,6 +319,78 @@ pub fn pdf_content_apply_type3_metrics_op(
 }
 
 ///|
+fn PdfContentOperatorState::content_clipping_content_state(
+  self : PdfContentOperatorState,
+) -> PdfContentState {
+  PdfContentStateClipping(
+    pdf_content_clipping_state_of_paths(self.clipping_path),
+  )
+}
+
+///|
+/// Return the CTM-transformed unit-square bounding box used for image objects.
+pub fn PdfContentOperatorState::content_unit_square_bounding_box(
+  self : PdfContentOperatorState,
+) -> PdfContentBoundingBox {
+  let p0 = self.ctm.apply(point2(0.0, 0.0))
+  let p1 = self.ctm.apply(point2(0.0, 1.0))
+  let p2 = self.ctm.apply(point2(1.0, 1.0))
+  let p3 = self.ctm.apply(point2(1.0, 0.0))
+  {
+    x0: p0.x,
+    y0: p0.y,
+    x1: p1.x,
+    y1: p1.y,
+    x2: p2.x,
+    y2: p2.y,
+    x3: p3.x,
+    y3: p3.y,
+  }
+}
+
+///|
+/// Return the cpdfcontent JSON entry for an inline image at the current CTM.
+pub fn PdfContentOperatorState::content_inline_image_entry(
+  self : PdfContentOperatorState,
+) -> PdfContentJsonEntry {
+  {
+    object: PdfContentInlineImageObject,
+    state: self.content_clipping_content_state(),
+    bounding_box: self.content_unit_square_bounding_box(),
+  }
+}
+
+///|
+/// Return the cpdfcontent JSON entry for an image XObject at the current CTM.
+pub fn PdfContentOperatorState::content_image_entry(
+  self : PdfContentOperatorState,
+  name : PdfName,
+) -> PdfContentJsonEntry {
+  {
+    object: PdfContentImageObject(pdf_content_state_name_text(name)),
+    state: self.content_clipping_content_state(),
+    bounding_box: self.content_unit_square_bounding_box(),
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfContentOperatorState::content_inline_image_entry`.
+pub fn pdf_content_inline_image_entry(
+  state : PdfContentOperatorState,
+) -> PdfContentJsonEntry {
+  state.content_inline_image_entry()
+}
+
+///|
+/// Compatibility wrapper for `PdfContentOperatorState::content_image_entry`.
+pub fn pdf_content_image_entry(
+  state : PdfContentOperatorState,
+  name : PdfName,
+) -> PdfContentJsonEntry {
+  state.content_image_entry(name)
+}
+
+///|
 fn PdfContentOperatorState::content_with_clipping_path(
   self : PdfContentOperatorState,
   clipping_path : ArrayView[PdfPath],

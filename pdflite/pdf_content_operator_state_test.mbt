@@ -235,3 +235,44 @@ test "cpdfcontent operator state applies Type 3 metric operators" {
     Some({ width_x: 1.0, width_y: 2.0, llx: 3.0, lly: 4.0, urx: 5.0, ury: 6.0 }),
   )
 }
+
+///|
+test "cpdfcontent operator state emits image entries from current CTM" {
+  let initial = @pdflite.pdf_content_initial_operator_state(
+    0.0, 0.0, 100.0, 200.0,
+  )
+  let state : @pdflite.PdfContentOperatorState = {
+    ..initial,
+    ctm: @pdflite.transform_translate(5.0, 6.0),
+  }
+  let bounding_box : @pdflite.PdfContentBoundingBox = {
+    x0: 5.0,
+    y0: 6.0,
+    x1: 5.0,
+    y1: 7.0,
+    x2: 6.0,
+    y2: 7.0,
+    x3: 6.0,
+    y3: 6.0,
+  }
+  @test.assert_eq(state.content_unit_square_bounding_box(), bounding_box)
+  let clipping_state : @pdflite.PdfContentState = PdfContentStateClipping(
+    @pdflite.pdf_content_clipping_state_of_paths(state.clipping_path),
+  )
+  let inline_image = state.content_inline_image_entry()
+  @test.assert_eq(inline_image.object, PdfContentInlineImageObject)
+  @test.assert_eq(inline_image.state, clipping_state)
+  @test.assert_eq(inline_image.bounding_box, bounding_box)
+  let image = state.content_image_entry(content_operator_name_for_test("/Im1"))
+  @test.assert_eq(image.object, PdfContentImageObject("/Im1"))
+  @test.assert_eq(image.state, clipping_state)
+  @test.assert_eq(image.bounding_box, bounding_box)
+  @test.assert_eq(@pdflite.pdf_content_inline_image_entry(state), inline_image)
+  @test.assert_eq(
+    @pdflite.pdf_content_image_entry(
+      state,
+      content_operator_name_for_test("/Im1"),
+    ),
+    image,
+  )
+}
