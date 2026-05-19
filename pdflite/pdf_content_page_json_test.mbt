@@ -4,6 +4,11 @@ fn content_page_json_number_for_test(value : Int) -> Json {
 }
 
 ///|
+fn content_page_json_name_for_test(text : String) -> @pdflite.PdfName {
+  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+}
+
+///|
 fn content_page_json_document_for_test() -> @pdflite.PdfDocument raise @pdflite.PdfError {
   let base = try! @pdflite.pdf_blank_document(100.0, 100.0, 2)
   let pages = try! base.pages_of_pagetree()
@@ -20,6 +25,45 @@ fn content_page_json_document_for_test() -> @pdflite.PdfDocument raise @pdflite.
   base.change_pages([
     { ..pages[0], content: [first_stream] },
     { ..pages[1], content: [second_stream] },
+  ])
+}
+
+///|
+fn content_page_json_text_document_for_test() -> @pdflite.PdfDocument raise @pdflite.PdfError {
+  let document = try! @pdflite.pdf_blank_document(100.0, 100.0, 2)
+  let subtype_key = content_page_json_name_for_test("/Subtype")
+  let base_font_key = content_page_json_name_for_test("/BaseFont")
+  let font_resource_key = content_page_json_name_for_test("/Font")
+  let f1_key = content_page_json_name_for_test("/F1")
+  document.add_object_given_number(
+    7,
+    @pdflite.pdf_dictionary([
+      (subtype_key, PdfNameObject(content_page_json_name_for_test("/Type1"))),
+      (
+        base_font_key,
+        PdfNameObject(content_page_json_name_for_test("/Helvetica")),
+      ),
+    ]),
+  )
+  let resources = @pdflite.pdf_dictionary([
+    (font_resource_key, @pdflite.pdf_dictionary([(f1_key, PdfIndirect(7))])),
+  ])
+  let pages = try! document.pages_of_pagetree()
+  let first_stream = try! @pdflite.pdf_content_stream_of_ops([
+    Op_BT,
+    Op_Tf(f1_key, 10.0),
+    Op_Tj(b"A"),
+    Op_ET,
+  ])
+  let second_stream = try! @pdflite.pdf_content_stream_of_ops([
+    Op_BT,
+    Op_Tf(f1_key, 10.0),
+    Op_Tj(b"B"),
+    Op_ET,
+  ])
+  document.change_pages([
+    { ..pages[0], content: [first_stream], resources },
+    { ..pages[1], content: [second_stream], resources },
   ])
 }
 
@@ -123,6 +167,25 @@ test "cpdfcontent page JSON serializes selected page contents" {
   )
   @test.assert_eq(try! document.page_content_json([]), Json::array([]))
   let bad_page : Result[Json, Error] = try? document.page_content_json([3])
+  guard bad_page is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+    fail("expected @pdflite.PdfError::BadPageSpecification")
+  }
+}
+
+///|
+test "cpdfcontent test text extraction follows selected pages" {
+  let document = try! content_page_json_text_document_for_test()
+  @test.assert_eq(
+    try! document.test_extract_text([1, 2]),
+    @utf8.encode("\nA\nB"),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_test_extract_text(document, [1]),
+    @utf8.encode("\nA\n"),
+  )
+  @test.assert_eq(try! document.test_extract_text([2]), @utf8.encode("\n\nB"))
+  @test.assert_eq(try! document.test_extract_text([]), @utf8.encode("\n\n"))
+  let bad_page : Result[Bytes, Error] = try? document.test_extract_text([3])
   guard bad_page is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
     fail("expected @pdflite.PdfError::BadPageSpecification")
   }

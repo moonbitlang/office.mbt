@@ -92,6 +92,52 @@ pub fn pdf_content_filter(
 }
 
 ///|
+fn pdf_content_push_extracted_text(
+  output : Array[Byte],
+  entry : PdfContentJsonEntry,
+) -> Unit {
+  match entry.object {
+    PdfContentGlyphObject(_, _, extracted_text) =>
+      pdf_content_push_view(output, @utf8.encode(extracted_text))
+    _ => ()
+  }
+}
+
+///|
+/// Return cpdf's simple test text extraction bytes for selected 1-based pages.
+pub fn PdfDocument::test_extract_text(
+  self : PdfDocument,
+  page_numbers : ArrayView[Int],
+) -> PdfBytes raise PdfError {
+  let pages = self.pages_of_pagetree()
+  pdf_page_box_validate_page_numbers(
+    page_numbers,
+    pages.length(),
+    "test_extract_text",
+  )
+  let output : Array[Byte] = []
+  for index in 0..<pages.length() {
+    output.push(10)
+    let page_number = index + 1
+    if pdf_content_page_contains(page_numbers, page_number) {
+      for entry in self.content_entries_of_page(pages[index]) {
+        pdf_content_push_extracted_text(output, entry)
+      }
+    }
+  }
+  Bytes::from_array(output)
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::test_extract_text`.
+pub fn pdf_test_extract_text(
+  document : PdfDocument,
+  page_numbers : ArrayView[Int],
+) -> PdfBytes raise PdfError {
+  document.test_extract_text(page_numbers)
+}
+
+///|
 /// Serialize recursive cpdfcontent entries for one page.
 pub fn PdfDocument::content_json_of_page(
   self : PdfDocument,

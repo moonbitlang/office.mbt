@@ -3180,6 +3180,20 @@ Current backend snapshot:
   warning and `moon check --target native --warn-list +73` at the known
   10-warning baseline. Full native suite validation is deferred to the next
   batch.~~
+- [x] ~~Standalone `cpdfcontent.ml` test text-extraction slice adds
+  `PdfDocument::test_extract_text` and `pdf_test_extract_text`, matching cpdf's
+  simple proof/testing extractor by emitting one newline per document page,
+  extracting glyph text only from selected pages via the recursive page-content
+  entries, and returning UTF-8 bytes. Coverage locks down all-pages extraction,
+  wrapper parity for a selected first page, selected later-page newline
+  behavior, empty selection, and invalid-page diagnostics. Focused native
+  validation reports `moon test --target native pdf_content_page_json_test.mbt
+  --filter '*test text extraction*'` at 1/1 test passing; widened native
+  validation reports `moon test --target native pdf_content_page_json_test.mbt`
+  at 2/2 tests passing. Native check validation reports `moon check --target
+  native` passing with the known `markdown/cmd` warning and `moon check --target
+  native --warn-list +73` at the known 10-warning baseline. Batch full-suite
+  validation reports `moon test --target native` at 1981/1981 tests passing.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,

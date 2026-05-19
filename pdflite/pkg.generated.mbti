@@ -1285,6 +1285,8 @@ pub fn pdf_table_of_encoding(PdfEncoding) -> Array[(Int, @core.PdfName)]
 
 pub fn pdf_target_of_pagenumber(PdfDocument, Int) -> PdfDestination raise @core.PdfError
 
+pub fn pdf_test_extract_text(PdfDocument, ArrayView[Int]) -> Bytes raise @core.PdfError
+
 pub fn pdf_text_extractor_of_font(PdfDocument, PdfObject) -> PdfTextExtractor raise @core.PdfError
 
 pub fn pdf_text_extractor_of_font_real(PdfFont) -> PdfTextExtractor
@@ -2721,6 +2723,7 @@ pub fn PdfDocument::string_of_pagespec(Self, ArrayView[Int]) -> String raise @co
 pub fn PdfDocument::struct_tree_json_blob(Self) -> Bytes raise @core.PdfError
 pub fn PdfDocument::struct_tree_text(Self) -> Bytes raise @core.PdfError
 pub fn PdfDocument::target_of_page_number(Self, Int) -> PdfDestination raise @core.PdfError
+pub fn PdfDocument::test_extract_text(Self, ArrayView[Int]) -> Bytes raise @core.PdfError
 pub fn PdfDocument::text_extractor_of_font(Self, PdfObject) -> PdfTextExtractor raise @core.PdfError
 pub fn PdfDocument::thin_lines(Self, ArrayView[Int], Double) -> Self raise @core.PdfError
 pub fn PdfDocument::toc_add_bookmark(Self, BytesView) -> Self raise @core.PdfError
