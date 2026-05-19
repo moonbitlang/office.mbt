@@ -1450,3 +1450,14 @@ test "PdfDocument test_matterhorn_json compares CMap WMode values" {
     Json::array([]),
   )
 }
+
+///|
+test "PdfDocument test_matterhorn_json preserves source no-op font-file checks" {
+  let document = ua_matterhorn_document_for_test([])
+  for
+    name in [
+      "31-011", "31-012", "31-013", "31-014", "31-015", "31-016", "31-018", "31-030",
+    ] {
+    @test.assert_eq(try! document.test_matterhorn_json(name), Json::array([]))
+  }
+}

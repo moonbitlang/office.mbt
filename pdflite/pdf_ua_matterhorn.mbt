@@ -589,6 +589,78 @@ fn pdf_ua_matterhorn_test_31_008() -> PdfUAMatterhornTest {
 }
 
 ///|
+fn pdf_ua_matterhorn_test_31_011() -> PdfUAMatterhornTest {
+  {
+    name: "31-011",
+    error: "For a font used by text the font program is embedded but it does not contain glyphs for all of the glyphs referenced by the text used for rendering.",
+    section: "UA1:7.21.4.1-3",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_31_012() -> PdfUAMatterhornTest {
+  {
+    name: "31-012",
+    error: "The FontDescriptor dictionary of an embedded Type 1 font contains a CharSet string, but at least one of the glyphs present in the font program is not listed in the CharSet string.",
+    section: "UA1:7.21.4.2-1",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_31_013() -> PdfUAMatterhornTest {
+  {
+    name: "31-013",
+    error: "The FontDescriptor dictionary of an embedded Type 1 font contains a CharSet string, but at least one of the glyphs listed in the CharSet string is not present in the font program.",
+    section: "UA1:7.21.4.2-2",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_31_014() -> PdfUAMatterhornTest {
+  {
+    name: "31-014",
+    error: "The FontDescriptor dictionary of an embedded CID font contains a CIDSet string, but at least one of the glyphs present in the font program is not listed in the CIDSet string.",
+    section: "UA1:7.21.4.2-3",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_31_015() -> PdfUAMatterhornTest {
+  {
+    name: "31-015",
+    error: "The FontDescriptor dictionary of an embedded CID font contains a CIDSet string, but at least one of the glyphs listed in the CIDSet string is not present in the font program.",
+    section: "UA1:7.21.4.2-4",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_31_016() -> PdfUAMatterhornTest {
+  {
+    name: "31-016",
+    error: "For one or more glyphs, the glyph width information in the font dictionary and in the embedded font program differ by more than 1/1000 unit.",
+    section: "UA1:7.21.5-1",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_31_018() -> PdfUAMatterhornTest {
+  {
+    name: "31-018",
+    error: "A non-symbolic TrueType font is used for rendering, but for at least one glyph to be rendered the glyph cannot be looked up by any of the non-symbolic cmap entries in the embedded font program.",
+    section: "UA1:7.21.6-2",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_31_030() -> PdfUAMatterhornTest {
+  {
+    name: "31-030",
+    error: "One or more characters used in text showing operators reference the .notdef glyph.",
+    section: "UA1:7.21.8-1",
+  }
+}
+
+///|
 fn pdf_ua_matterhorn_implemented_tests() -> Array[PdfUAMatterhornTest] {
   [
     pdf_ua_matterhorn_test_01_003(),
@@ -621,6 +693,14 @@ fn pdf_ua_matterhorn_implemented_tests() -> Array[PdfUAMatterhornTest] {
     pdf_ua_matterhorn_test_31_006(),
     pdf_ua_matterhorn_test_31_007(),
     pdf_ua_matterhorn_test_31_008(),
+    pdf_ua_matterhorn_test_31_011(),
+    pdf_ua_matterhorn_test_31_012(),
+    pdf_ua_matterhorn_test_31_013(),
+    pdf_ua_matterhorn_test_31_014(),
+    pdf_ua_matterhorn_test_31_015(),
+    pdf_ua_matterhorn_test_31_016(),
+    pdf_ua_matterhorn_test_31_018(),
+    pdf_ua_matterhorn_test_31_030(),
   ]
 }
 
@@ -1726,6 +1806,11 @@ fn PdfDocument::pdf_ua_matterhorn_check_31_008(self : PdfDocument) -> Json? {
 }
 
 ///|
+fn pdf_ua_matterhorn_check_source_unimplemented_font_file() -> Json? {
+  None
+}
+
+///|
 fn PdfDocument::pdf_ua_matterhorn_run_test(
   self : PdfDocument,
   check : PdfUAMatterhornTest,
@@ -1761,6 +1846,14 @@ fn PdfDocument::pdf_ua_matterhorn_run_test(
     "31-006" => self.pdf_ua_matterhorn_check_31_006()
     "31-007" => self.pdf_ua_matterhorn_check_31_007()
     "31-008" => self.pdf_ua_matterhorn_check_31_008()
+    "31-011"
+    | "31-012"
+    | "31-013"
+    | "31-014"
+    | "31-015"
+    | "31-016"
+    | "31-018"
+    | "31-030" => pdf_ua_matterhorn_check_source_unimplemented_font_file()
     _ => None
   }
   match result {
@@ -1827,10 +1920,10 @@ fn PdfDocument::pdf_ua_matterhorn_failures(
 /// checks `28-014` and `28-015`, file-attachment no-op `28-016`, PrinterMark
 /// object and appearance checks `28-017` and `28-018`, plus reference-XObject
 /// checks `30-001` and `30-002`, plus font CIDSystemInfo/CIDToGIDMap/CMap
-/// checks `31-001` through `31-008`. Passing `""` runs the covered subset;
-/// unsupported
-/// individual test names raise a soft error until their source checks are
-/// ported.
+/// checks `31-001` through `31-008`, and source-unimplemented font-file checks
+/// `31-011` through `31-016`, `31-018`, and `31-030`. Passing `""` runs the
+/// covered subset; unsupported individual test names raise a soft error until
+/// their source checks are ported.
 pub fn PdfDocument::test_matterhorn_json(
   self : PdfDocument,
   test_name : String,
