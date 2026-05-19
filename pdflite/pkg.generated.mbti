@@ -387,6 +387,8 @@ pub fn pdf_content_apply_path_state_op(PdfContentPathState, PdfContentOp) -> Pdf
 
 pub fn pdf_content_apply_text_op(PdfContentTextState, PdfFont, @geometry.TransformMatrix, PdfContentOp) -> PdfContentTextOpResult
 
+pub fn pdf_content_apply_text_show_op(PdfContentOperatorState, PdfFont, PdfContentOp) -> PdfContentOperatorTextResult raise @core.PdfError
+
 pub fn pdf_content_apply_text_state_op(PdfContentTextState, PdfContentOp) -> PdfContentTextState
 
 pub fn pdf_content_apply_type3_metrics_op(PdfContentOperatorState, PdfContentOp) -> PdfContentOperatorState
@@ -478,6 +480,8 @@ pub fn pdf_content_shading_entry_from_resources(PdfDocument, PdfContentOperatorS
 pub fn pdf_content_state_content_json(PdfContentState) -> Json
 
 pub fn pdf_content_stream_of_ops(ArrayView[PdfContentOp]) -> PdfObject raise @core.PdfError
+
+pub fn pdf_content_text_glyph_entry(PdfContentOperatorState, PdfFont, PdfContentTextGlyphPlacement) -> PdfContentJsonEntry raise @core.PdfError
 
 pub fn pdf_content_text_layout_of_bytes(PdfFont, BytesView, PdfContentTextLayout) -> PdfContentTextLayoutResult
 
@@ -2155,12 +2159,19 @@ pub fn PdfContentOperatorState::content_apply_core_op(Self, PdfContentOp) -> Sel
 pub fn PdfContentOperatorState::content_apply_graphics_parameter_op(Self, PdfContentOp) -> Self
 pub fn PdfContentOperatorState::content_apply_graphics_state_op(Self, PdfContentOp) -> Self
 pub fn PdfContentOperatorState::content_apply_marked_content_op(Self, PdfContentOp) -> Self
+pub fn PdfContentOperatorState::content_apply_text_show_op(Self, PdfFont, PdfContentOp) -> PdfContentOperatorTextResult raise @core.PdfError
 pub fn PdfContentOperatorState::content_apply_type3_metrics_op(Self, PdfContentOp) -> Self
 pub fn PdfContentOperatorState::content_image_entry(Self, @core.PdfName) -> PdfContentJsonEntry
 pub fn PdfContentOperatorState::content_inline_image_entry(Self) -> PdfContentJsonEntry
 pub fn PdfContentOperatorState::content_path_entry(Self, Bool) -> PdfContentJsonEntry?
 pub fn PdfContentOperatorState::content_shading_entry(Self, @core.PdfName, PdfRectangle?) -> PdfContentJsonEntry?
+pub fn PdfContentOperatorState::content_text_glyph_entry(Self, PdfFont, PdfContentTextGlyphPlacement) -> PdfContentJsonEntry raise @core.PdfError
 pub fn PdfContentOperatorState::content_unit_square_bounding_box(Self) -> PdfContentBoundingBox
+
+pub(all) struct PdfContentOperatorTextResult {
+  state : PdfContentOperatorState
+  entries : Array[PdfContentJsonEntry]
+} derive(Eq, ToJson, @debug.Debug)
 
 pub(all) enum PdfContentPartialPath {
   PdfContentNoPartialPath

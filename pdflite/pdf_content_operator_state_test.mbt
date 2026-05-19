@@ -887,6 +887,87 @@ test "cpdfcontent operator state applies Type 3 metric operators" {
 }
 
 ///|
+test "cpdfcontent operator state emits text glyph entries" {
+  let font : @pdflite.PdfFont = PdfFontStandard({
+    font: PdfHelvetica,
+    encoding: PdfWinAnsiEncoding,
+  })
+  let initial = @pdflite.pdf_content_initial_operator_state(
+    0.0, 0.0, 100.0, 200.0,
+  )
+  let state = initial
+    .content_apply_core_op(Op_Tf(content_operator_name_for_test("/F1"), 10.0))
+    .content_apply_core_op(Op_Tc(1.0))
+  let text_result = state.text_state.content_apply_text_op(
+    font,
+    state.ctm,
+    Op_Tj(b"A"),
+  )
+  let result = try! state.content_apply_text_show_op(font, Op_Tj(b"A"))
+  @test.assert_eq(result.state.text_state, text_result.text_state)
+  @test.assert_eq(result.entries.length(), 1)
+  @test.assert_eq(result.entries[0].object, PdfContentGlyphObject(65, "A", "A"))
+  @test.assert_eq(
+    result.entries[0].state,
+    PdfContentStateGlyph(
+      state.text_state.content_glyph_state(state.clipping_path),
+    ),
+  )
+  @test.assert_eq(
+    result.entries[0].bounding_box,
+    text_result.glyphs[0].bounding_box,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_content_text_glyph_entry(
+      state,
+      font,
+      text_result.glyphs[0],
+    ),
+    result.entries[0],
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_content_apply_text_show_op(state, font, Op_Tj(b"A")),
+    result,
+  )
+  let tj_result = try! state.content_apply_text_show_op(
+    font,
+    Op_TJ(PdfArray([PdfString(b"A"), PdfReal(-120.0), PdfString(b"B")])),
+  )
+  @test.assert_eq(tj_result.entries.length(), 2)
+  @test.assert_eq(
+    tj_result.entries[0].object,
+    PdfContentGlyphObject(65, "A", "A"),
+  )
+  @test.assert_eq(
+    tj_result.entries[1].object,
+    PdfContentGlyphObject(66, "B", "B"),
+  )
+  let quote_text_result = state.text_state.content_apply_text_op(
+    font,
+    state.ctm,
+    Op_quote(b"C"),
+  )
+  let quote_result = try! state.content_apply_text_show_op(font, Op_quote(b"C"))
+  @test.assert_eq(quote_result.state.text_state, quote_text_result.text_state)
+  @test.assert_eq(quote_result.entries.length(), 1)
+  @test.assert_eq(
+    quote_result.entries[0].object,
+    PdfContentGlyphObject(67, "C", "C"),
+  )
+  let double_quote_result = try! state.content_apply_text_show_op(
+    font,
+    Op_double_quote(3.0, 0.25, b"D"),
+  )
+  @test.assert_eq(double_quote_result.state.text_state.word_spacing, 3.0)
+  @test.assert_eq(double_quote_result.state.text_state.character_spacing, 0.25)
+  @test.assert_eq(double_quote_result.entries.length(), 1)
+  @test.assert_eq(
+    double_quote_result.entries[0].object,
+    PdfContentGlyphObject(68, "D", "D"),
+  )
+}
+
+///|
 test "cpdfcontent operator state emits image entries from current CTM" {
   let initial = @pdflite.pdf_content_initial_operator_state(
     0.0, 0.0, 100.0, 200.0,
