@@ -3099,6 +3099,23 @@ Current backend snapshot:
   `markdown/cmd` warning and `moon check --target native --warn-list +73` at the
   known 10-warning baseline. Batch full-suite validation reports `moon test
   --target native` at 1976/1976 tests passing.~~
+- [x] ~~Standalone `cpdfcontent.ml` single resource-operator dispatcher slice
+  adds `PdfContentOperatorResourceResult`,
+  `PdfDocument::content_apply_resource_op`, and
+  `pdf_content_apply_resource_op`, composing the already-ported core state
+  machine, resource-backed text operator bridge, source-shaped ExtGState
+  application, path painting entry emission, shading lookup, image XObject entry
+  emission, and inline-image entry emission for one operator at a time. It
+  deliberately leaves recursive Form XObject walking and full page-content
+  collection for later slices. Focused native validation reports the native
+  `pdf_content_operator_state_test.mbt` run with
+  `--filter '*resource operator dispatcher*'` at 1/1 test passing; widened
+  native validation reports `moon test --target native
+  pdf_content_operator_state_test.mbt` at 31/31 tests passing. Native check
+  validation reports `moon check --target native` passing with the known
+  `markdown/cmd` warning and `moon check --target native --warn-list +73` at the
+  known 10-warning baseline. Full native suite validation is deferred to the
+  next batch.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,

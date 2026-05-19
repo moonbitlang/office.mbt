@@ -387,6 +387,8 @@ pub fn pdf_content_apply_path_op(PdfContentPartialPath, PdfContentOp) -> PdfCont
 
 pub fn pdf_content_apply_path_state_op(PdfContentPathState, PdfContentOp) -> PdfContentPathState
 
+pub fn pdf_content_apply_resource_op(PdfDocument, PdfContentOperatorState, PdfObject, PdfContentOp) -> PdfContentOperatorResourceResult raise @core.PdfError
+
 pub fn pdf_content_apply_text_op(PdfContentTextState, PdfFont, @geometry.TransformMatrix, PdfContentOp) -> PdfContentTextOpResult
 
 pub fn pdf_content_apply_text_resource_op(PdfDocument, PdfContentOperatorState, PdfObject, PdfContentOp) -> PdfContentOperatorTextResult raise @core.PdfError
@@ -2129,6 +2131,11 @@ pub(all) struct PdfContentOperatorFrame {
   type3_d1 : PdfContentType3D1?
 } derive(Eq, ToJson, @debug.Debug)
 
+pub(all) struct PdfContentOperatorResourceResult {
+  state : PdfContentOperatorState
+  entries : Array[PdfContentJsonEntry]
+} derive(Eq, ToJson, @debug.Debug)
+
 pub(all) struct PdfContentOperatorState {
   ctm : @geometry.TransformMatrix
   partial_path : PdfContentPartialPath
@@ -2444,6 +2451,7 @@ pub fn PdfDocument::content_apply_extgstate_resource_op(Self, PdfContentOperator
 pub fn PdfDocument::content_apply_extgstate_text_op(Self, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState
 pub fn PdfDocument::content_apply_extgstate_transfer_op(Self, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState
 pub fn PdfDocument::content_apply_font_resource_op(Self, PdfContentOperatorState, PdfObject, @core.PdfName, Double) -> PdfContentOperatorState raise @core.PdfError
+pub fn PdfDocument::content_apply_resource_op(Self, PdfContentOperatorState, PdfObject, PdfContentOp) -> PdfContentOperatorResourceResult raise @core.PdfError
 pub fn PdfDocument::content_apply_text_resource_op(Self, PdfContentOperatorState, PdfObject, PdfContentOp) -> PdfContentOperatorTextResult raise @core.PdfError
 pub fn PdfDocument::content_form_xobject_enter_state(Self, PdfContentOperatorState, PdfObject, @core.PdfName) -> PdfContentOperatorState? raise @core.PdfError
 pub fn PdfDocument::content_form_xobject_ops(Self, PdfObject, @core.PdfName) -> Array[PdfContentOp]? raise @core.PdfError

@@ -605,6 +605,112 @@ test "cpdfcontent operator state applies resource-backed text operators" {
 }
 
 ///|
+test "cpdfcontent operator state applies single resource operator dispatcher" {
+  let doc = @pdflite.pdf_document_empty()
+  let initial = @pdflite.pdf_content_initial_operator_state(
+    0.0, 0.0, 100.0, 200.0,
+  )
+  let subtype_key = content_operator_name_for_test("/Subtype")
+  let base_font_key = content_operator_name_for_test("/BaseFont")
+  let font_resource_key = content_operator_name_for_test("/Font")
+  let xobject_key = content_operator_name_for_test("/XObject")
+  let extgstate_key = content_operator_name_for_test("/ExtGState")
+  let alpha_key = content_operator_name_for_test("/ca")
+  let f1_key = content_operator_name_for_test("/F1")
+  let image_name = content_operator_name_for_test("/Im1")
+  doc.add_object_given_number(
+    7,
+    @pdflite.pdf_dictionary([
+      (subtype_key, PdfNameObject(content_operator_name_for_test("/Type1"))),
+      (
+        base_font_key,
+        PdfNameObject(content_operator_name_for_test("/Helvetica")),
+      ),
+    ]),
+  )
+  let resources = @pdflite.pdf_dictionary([
+    (font_resource_key, @pdflite.pdf_dictionary([(f1_key, PdfIndirect(7))])),
+    (
+      xobject_key,
+      @pdflite.pdf_dictionary([
+        (
+          image_name,
+          @pdflite.pdf_dictionary([
+            (
+              subtype_key,
+              PdfNameObject(content_operator_name_for_test("/Image")),
+            ),
+          ]),
+        ),
+      ]),
+    ),
+    (extgstate_key, @pdflite.pdf_dictionary([(alpha_key, PdfReal(0.4))])),
+  ])
+  let moved = try! doc.content_apply_resource_op(
+    initial,
+    resources,
+    Op_m(0.0, 0.0),
+  )
+  @test.assert_eq(moved.entries.length(), 0)
+  let lined = try! doc.content_apply_resource_op(
+    moved.state,
+    resources,
+    Op_l(10.0, 0.0),
+  )
+  let stroked = try! doc.content_apply_resource_op(lined.state, resources, Op_S)
+  @test.assert_eq(stroked.entries.length(), 1)
+  guard stroked.entries[0].object is PdfContentPathObject(_) else {
+    fail("expected stroked path entry")
+  }
+  let tf_result = try! doc.content_apply_resource_op(
+    initial,
+    resources,
+    Op_Tf(f1_key, 10.0),
+  )
+  @test.assert_eq(tf_result.entries.length(), 0)
+  let text_result = try! doc.content_apply_resource_op(
+    tf_result.state,
+    resources,
+    Op_Tj(b"A"),
+  )
+  @test.assert_eq(text_result.entries.length(), 1)
+  @test.assert_eq(
+    text_result.entries[0].object,
+    PdfContentGlyphObject(65, "A", "A"),
+  )
+  let gs_result = try! doc.content_apply_resource_op(
+    initial,
+    resources,
+    Op_gs(content_operator_name_for_test("/GS1")),
+  )
+  @test.assert_eq(gs_result.entries.length(), 0)
+  @test.assert_eq(gs_result.state.alpha_constant_non_stroke, 0.4)
+  let image_result = try! doc.content_apply_resource_op(
+    initial,
+    resources,
+    Op_Do(image_name),
+  )
+  @test.assert_eq(image_result.entries.length(), 1)
+  @test.assert_eq(image_result.entries[0].object, PdfContentImageObject("/Im1"))
+  let inline_result = try! doc.content_apply_resource_op(
+    initial,
+    resources,
+    Op_InlineImage(@pdflite.pdf_dictionary([]), None, b"raw"),
+  )
+  @test.assert_eq(inline_result.entries.length(), 1)
+  @test.assert_eq(inline_result.entries[0].object, PdfContentInlineImageObject)
+  @test.assert_eq(
+    try! @pdflite.pdf_content_apply_resource_op(
+      doc,
+      initial,
+      resources,
+      Op_Tc(1.25),
+    ).state.text_state.character_spacing,
+    1.25,
+  )
+}
+
+///|
 test "cpdfcontent operator state applies source-shaped ExtGState resources" {
   let doc = @pdflite.pdf_document_empty()
   let initial = @pdflite.pdf_content_initial_operator_state(

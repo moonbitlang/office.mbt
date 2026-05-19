@@ -68,6 +68,12 @@ pub(all) struct PdfContentOperatorTextResult {
 } derive(Debug, Eq, ToJson)
 
 ///|
+pub(all) struct PdfContentOperatorResourceResult {
+  state : PdfContentOperatorState
+  entries : Array[PdfContentJsonEntry]
+} derive(Debug, Eq, ToJson)
+
+///|
 pub(all) struct PdfContentMarkedContent {
   tag : String
   properties : PdfObject?
@@ -1709,4 +1715,96 @@ pub fn pdf_content_apply_core_op(
   op : PdfContentOp,
 ) -> PdfContentOperatorState {
   state.content_apply_core_op(op)
+}
+
+///|
+fn pdf_content_path_paint_stroking(op : PdfContentOp) -> Bool? {
+  match op {
+    Op_S | Op_s | Op_B | Op_Bstar | Op_b | Op_bstar => Some(true)
+    Op_f | Op_F | Op_fstar => Some(false)
+    _ => None
+  }
+}
+
+///|
+fn pdf_content_entries_of_optional(
+  entry : PdfContentJsonEntry?,
+) -> Array[PdfContentJsonEntry] {
+  match entry {
+    Some(entry) => [entry]
+    None => []
+  }
+}
+
+///|
+/// Apply one cpdfcontent operator with resource-backed entry emission.
+pub fn PdfDocument::content_apply_resource_op(
+  self : PdfDocument,
+  state : PdfContentOperatorState,
+  resources : PdfObject,
+  op : PdfContentOp,
+) -> PdfContentOperatorResourceResult raise PdfError {
+  match op {
+    Op_BT
+    | Op_ET
+    | Op_Tc(_)
+    | Op_Tw(_)
+    | Op_Tz(_)
+    | Op_TL(_)
+    | Op_Tf(_, _)
+    | Op_Tr(_)
+    | Op_Ts(_)
+    | Op_Td(_, _)
+    | Op_TD(_, _)
+    | Op_Tm(_)
+    | Op_Tstar
+    | Op_Tj(_)
+    | Op_TJ(_)
+    | Op_quote(_)
+    | Op_double_quote(_, _, _) => {
+      let result = self.content_apply_text_resource_op(state, resources, op)
+      { state: result.state, entries: result.entries }
+    }
+    Op_gs(name) =>
+      {
+        state: self.content_apply_extgstate_resource_op(state, resources, name),
+        entries: [],
+      }
+    Op_sh(name) =>
+      {
+        state,
+        entries: pdf_content_entries_of_optional(
+          self.content_shading_entry_from_resources(state, resources, name),
+        ),
+      }
+    Op_InlineImage(_, _, _) =>
+      { state, entries: [state.content_inline_image_entry()] }
+    Op_Do(name) =>
+      {
+        state,
+        entries: pdf_content_entries_of_optional(
+          self.content_image_entry_from_resources(state, resources, name),
+        ),
+      }
+    _ => {
+      let next = state.content_apply_core_op(op)
+      let entries = match pdf_content_path_paint_stroking(op) {
+        Some(stroking) =>
+          pdf_content_entries_of_optional(next.content_path_entry(stroking))
+        None => []
+      }
+      { state: next, entries }
+    }
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::content_apply_resource_op`.
+pub fn pdf_content_apply_resource_op(
+  document : PdfDocument,
+  state : PdfContentOperatorState,
+  resources : PdfObject,
+  op : PdfContentOp,
+) -> PdfContentOperatorResourceResult raise PdfError {
+  document.content_apply_resource_op(state, resources, op)
 }
