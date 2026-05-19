@@ -134,6 +134,50 @@ fn ua_matterhorn_07_002_failure_for_test() -> Json {
 }
 
 ///|
+fn ua_matterhorn_09_004_failure_for_test(extra : Json) -> Json {
+  ua_matterhorn_failure_for_test(
+    "09-004", "UA1-7.2-1", "A table-related structure element is used in a way that does not conform to the syntax defined in ISO 32000-1, Table 337.",
+    extra,
+  )
+}
+
+///|
+fn ua_matterhorn_09_005_failure_for_test(extra : Json) -> Json {
+  ua_matterhorn_failure_for_test(
+    "09-005", "UA1-7.2-1", "A list-related structure element is used in a way that does not conform to Table 336 in ISO 32000-1.",
+    extra,
+  )
+}
+
+///|
+fn ua_matterhorn_09_006_failure_for_test(extra : Json) -> Json {
+  ua_matterhorn_failure_for_test(
+    "09-006", "UA1-7.2-1", "A TOC-related structure element is used in a way that does not conform to Table 333 in ISO 32000-1.",
+    extra,
+  )
+}
+
+///|
+fn ua_matterhorn_09_007_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "09-007",
+    "UA1-7.2-1",
+    "A Ruby-related structure element is used in a way that does not conform to Table 338 in ISO 32000-1.",
+    Json::null(),
+  )
+}
+
+///|
+fn ua_matterhorn_09_008_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "09-008",
+    "UA1-7.2-1",
+    "A Warichu-related structure element is used in a way that does not conform to Table 338 in ISO 32000-1.",
+    Json::null(),
+  )
+}
+
+///|
 fn ua_matterhorn_11_001_failure_for_test(extra : Json) -> Json {
   ua_matterhorn_failure_for_test(
     "11-001", "UA1:7.2-3", "Natural language for text in page content cannot be determined.",
@@ -1362,11 +1406,300 @@ test "PdfDocument test_matterhorn_json detects MarkInfo suspects" {
 test "PdfDocument test_matterhorn_json rejects unsupported individual checks" {
   let document = ua_matterhorn_document_for_test([])
   let result : Result[Json, Error] = try? document.test_matterhorn_json(
-    "09-004",
+    "10-001",
   )
   guard result is Err(@pdflite.PdfError::SoftError(_)) else {
     fail("expected unsupported Matterhorn test to raise SoftError")
   }
+}
+
+///|
+test "PdfDocument test_matterhorn_json checks table and list structure syntax" {
+  let bad_table_row = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_struct_tree_root_for_test([
+      ua_matterhorn_structure_element_for_test("/Table", extras=[
+        (
+          ua_matterhorn_name_for_test("/K"),
+          PdfArray([
+            ua_matterhorn_structure_element_for_test("/TR", extras=[
+              (
+                ua_matterhorn_name_for_test("/K"),
+                PdfArray([ua_matterhorn_structure_element_for_test("/P")]),
+              ),
+            ]),
+          ]),
+        ),
+      ]),
+    ]),
+  )
+  @test.assert_eq(
+    try! bad_table_row.test_matterhorn_json("09-004"),
+    Json::array([
+      ua_matterhorn_09_004_failure_for_test(
+        Json::string("Every /TR element must be a /TH or /TD"),
+      ),
+    ]),
+  )
+
+  let bad_table_top = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_struct_tree_root_for_test([
+      ua_matterhorn_structure_element_for_test("/Table", extras=[
+        (
+          ua_matterhorn_name_for_test("/K"),
+          PdfArray([ua_matterhorn_structure_element_for_test("/P")]),
+        ),
+      ]),
+    ]),
+  )
+  @test.assert_eq(
+    try! bad_table_top.test_matterhorn_json("09-004"),
+    Json::array([
+      ua_matterhorn_09_004_failure_for_test(
+        Json::string("Top-level /Table not of required form"),
+      ),
+    ]),
+  )
+
+  let valid_table = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_struct_tree_root_for_test([
+      ua_matterhorn_structure_element_for_test("/Table", extras=[
+        (
+          ua_matterhorn_name_for_test("/K"),
+          PdfArray([
+            ua_matterhorn_structure_element_for_test("/TR", extras=[
+              (
+                ua_matterhorn_name_for_test("/K"),
+                PdfArray([
+                  ua_matterhorn_structure_element_for_test("/TH"),
+                  ua_matterhorn_structure_element_for_test("/TD"),
+                ]),
+              ),
+            ]),
+          ]),
+        ),
+      ]),
+    ]),
+  )
+  @test.assert_eq(
+    try! valid_table.test_matterhorn_json("09-004"),
+    Json::array([]),
+  )
+
+  let empty_list = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_struct_tree_root_for_test([
+      ua_matterhorn_structure_element_for_test("/L"),
+    ]),
+  )
+  @test.assert_eq(
+    try! empty_list.test_matterhorn_json("09-005"),
+    Json::array([
+      ua_matterhorn_09_005_failure_for_test(Json::string("No /LI in /L")),
+    ]),
+  )
+
+  let bad_list_item = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_struct_tree_root_for_test([
+      ua_matterhorn_structure_element_for_test("/L", extras=[
+        (
+          ua_matterhorn_name_for_test("/K"),
+          PdfArray([
+            ua_matterhorn_structure_element_for_test("/LI", extras=[
+              (
+                ua_matterhorn_name_for_test("/K"),
+                PdfArray([ua_matterhorn_structure_element_for_test("/P")]),
+              ),
+            ]),
+          ]),
+        ),
+      ]),
+    ]),
+  )
+  @test.assert_eq(
+    try! bad_list_item.test_matterhorn_json("09-005"),
+    Json::array([
+      ua_matterhorn_09_005_failure_for_test(
+        Json::string("Child of /LI must be /Lbl or /LBody"),
+      ),
+    ]),
+  )
+
+  let valid_list = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_struct_tree_root_for_test([
+      ua_matterhorn_structure_element_for_test("/L", extras=[
+        (
+          ua_matterhorn_name_for_test("/K"),
+          PdfArray([
+            ua_matterhorn_structure_element_for_test("/LI", extras=[
+              (
+                ua_matterhorn_name_for_test("/K"),
+                PdfArray([
+                  ua_matterhorn_structure_element_for_test("/Lbl"),
+                  ua_matterhorn_structure_element_for_test("/LBody"),
+                ]),
+              ),
+            ]),
+          ]),
+        ),
+      ]),
+    ]),
+  )
+  @test.assert_eq(
+    try! valid_list.test_matterhorn_json("09-005"),
+    Json::array([]),
+  )
+}
+
+///|
+test "PdfDocument test_matterhorn_json checks TOC Ruby and Warichu structure syntax" {
+  let loose_toci = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_struct_tree_root_for_test([
+      ua_matterhorn_structure_element_for_test("/TOCI"),
+    ]),
+  )
+  @test.assert_eq(
+    try! loose_toci.test_matterhorn_json("09-006"),
+    Json::array([
+      ua_matterhorn_09_006_failure_for_test(
+        Json::string("TOCI without TOC above"),
+      ),
+    ]),
+  )
+
+  let bad_toc_child = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_struct_tree_root_for_test([
+      ua_matterhorn_structure_element_for_test("/TOC", extras=[
+        (
+          ua_matterhorn_name_for_test("/K"),
+          PdfArray([ua_matterhorn_structure_element_for_test("/P")]),
+        ),
+      ]),
+    ]),
+  )
+  @test.assert_eq(
+    try! bad_toc_child.test_matterhorn_json("09-006"),
+    Json::array([
+      ua_matterhorn_09_006_failure_for_test(
+        Json::string("/TOC children must be /TOC or /TOCI"),
+      ),
+    ]),
+  )
+
+  let valid_toc = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_struct_tree_root_for_test([
+      ua_matterhorn_structure_element_for_test("/TOC", extras=[
+        (
+          ua_matterhorn_name_for_test("/K"),
+          PdfArray([
+            ua_matterhorn_structure_element_for_test("/TOCI", extras=[
+              (
+                ua_matterhorn_name_for_test("/K"),
+                PdfArray([
+                  ua_matterhorn_structure_element_for_test("/Lbl"),
+                  ua_matterhorn_structure_element_for_test("/P"),
+                ]),
+              ),
+            ]),
+          ]),
+        ),
+      ]),
+    ]),
+  )
+  @test.assert_eq(
+    try! valid_toc.test_matterhorn_json("09-006"),
+    Json::array([]),
+  )
+
+  let bad_ruby = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_struct_tree_root_for_test([
+      ua_matterhorn_structure_element_for_test("/Ruby", extras=[
+        (
+          ua_matterhorn_name_for_test("/K"),
+          PdfArray([ua_matterhorn_structure_element_for_test("/P")]),
+        ),
+      ]),
+    ]),
+  )
+  @test.assert_eq(
+    try! bad_ruby.test_matterhorn_json("09-007"),
+    Json::array([ua_matterhorn_09_007_failure_for_test()]),
+  )
+
+  let source_rp_typo = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_struct_tree_root_for_test([
+      ua_matterhorn_structure_element_for_test("/Ruby", extras=[
+        (
+          ua_matterhorn_name_for_test("/K"),
+          PdfArray([ua_matterhorn_structure_element_for_test("/RP")]),
+        ),
+      ]),
+    ]),
+  )
+  @test.assert_eq(
+    try! source_rp_typo.test_matterhorn_json("09-007"),
+    Json::array([ua_matterhorn_09_007_failure_for_test()]),
+  )
+
+  let source_warichu_target = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_struct_tree_root_for_test([
+      ua_matterhorn_structure_element_for_test("/Ruby", extras=[
+        (
+          ua_matterhorn_name_for_test("/K"),
+          PdfArray([ua_matterhorn_structure_element_for_test("/RB")]),
+        ),
+      ]),
+    ]),
+  )
+  @test.assert_eq(
+    try! source_warichu_target.test_matterhorn_json("09-008"),
+    Json::array([ua_matterhorn_09_008_failure_for_test()]),
+  )
+
+  let ignored_warichu = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_struct_tree_root_for_test([
+      ua_matterhorn_structure_element_for_test("/Warichu", extras=[
+        (
+          ua_matterhorn_name_for_test("/K"),
+          PdfArray([ua_matterhorn_structure_element_for_test("/P")]),
+        ),
+      ]),
+    ]),
+  )
+  @test.assert_eq(
+    try! ignored_warichu.test_matterhorn_json("09-008"),
+    Json::array([]),
+  )
+
+  let source_valid_warichu = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_struct_tree_root_for_test([
+      ua_matterhorn_structure_element_for_test("/Ruby", extras=[
+        (
+          ua_matterhorn_name_for_test("/K"),
+          PdfArray([
+            ua_matterhorn_structure_element_for_test("/WT"),
+            ua_matterhorn_structure_element_for_test("/WP"),
+          ]),
+        ),
+      ]),
+    ]),
+  )
+  @test.assert_eq(
+    try! source_valid_warichu.test_matterhorn_json("09-008"),
+    Json::array([]),
+  )
 }
 
 ///|
