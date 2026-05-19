@@ -234,7 +234,7 @@ pub fn PdfContentTextState::content_glyph_state(
 ) -> PdfContentGlyphState {
   {
     rendering_mode: self.rendering_mode,
-    knockout: true,
+    knockout: self.knockout,
     font: self.font,
     font_size: self.font_size,
     clipping_path: pdf_content_state_copy_paths(clipping_path),

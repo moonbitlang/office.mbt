@@ -152,6 +152,10 @@ test "cpdfcontent state derives JSON-facing states from operator state" {
   @test.assert_eq(glyph_state.font, "/F2")
   @test.assert_eq(glyph_state.font_size, 13.0)
   @test.assert_eq(glyph_state.clipping_path, clipping_path)
+  let non_knockout_state = { ..text_state, knockout: false }.content_glyph_state(
+    clipping_path,
+  )
+  @test.assert_eq(non_knockout_state.knockout, false)
   @test.assert_eq(
     @pdflite.pdf_content_glyph_state_of_text_state(text_state, clipping_path),
     glyph_state,

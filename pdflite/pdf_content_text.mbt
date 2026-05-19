@@ -235,6 +235,7 @@ pub(all) struct PdfContentTextState {
   font_size : Double
   rendering_mode : Int
   rise : Double
+  knockout : Bool
   text_matrix : TransformMatrix
   line_matrix : TransformMatrix
 } derive(Debug, Eq, ToJson)
@@ -257,6 +258,7 @@ pub fn pdf_content_initial_text_state() -> PdfContentTextState {
     font_size: 12.0,
     rendering_mode: 0,
     rise: 0.0,
+    knockout: true,
     text_matrix: transform_identity_matrix,
     line_matrix: transform_identity_matrix,
   }

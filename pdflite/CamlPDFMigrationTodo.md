@@ -2827,6 +2827,18 @@ Current backend snapshot:
   native` passing with the known `markdown/cmd` warning and
   `moon check --target native --warn-list +73` at the known 10-warning
   baseline. Full native suite validation is deferred to the next batch.~~
+- [x] ~~Standalone `cpdfcontent.ml` text knockout-state slice adds `knockout`
+  to `PdfContentTextState` and projects it through
+  `PdfContentTextState::content_glyph_state`, matching cpdf's
+  `initial_text_state` default and `json_of_state_glyph` use of the current text
+  state's knockout flag while preparing the later `/ExtGState /TK` slice.
+  Focused native validation reports `moon test --target native
+  pdf_content_text_test.mbt` at 13/13 tests passing and `moon test --target
+  native pdf_content_state_test.mbt` at 8/8 tests passing; native check
+  validation reports `moon check --target native` passing with the known
+  `markdown/cmd` warning and `moon check --target native --warn-list +73` at
+  the known 10-warning baseline. Native full-suite validation reports
+  1962/1962 tests passing.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,

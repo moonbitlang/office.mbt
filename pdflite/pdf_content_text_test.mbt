@@ -57,6 +57,7 @@ test "cpdfcontent text state exposes initial defaults and basic operators" {
   @test.assert_eq(initial.font_size, 12.0)
   @test.assert_eq(initial.rendering_mode, 0)
   @test.assert_eq(initial.rise, 0.0)
+  @test.assert_eq(initial.knockout, true)
   @test.assert_eq(initial.text_matrix, @pdflite.transform_identity_matrix)
   @test.assert_eq(initial.line_matrix, @pdflite.transform_identity_matrix)
   let state = initial

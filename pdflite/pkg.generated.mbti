@@ -2225,6 +2225,7 @@ pub(all) struct PdfContentTextState {
   font_size : Double
   rendering_mode : Int
   rise : Double
+  knockout : Bool
   text_matrix : @geometry.TransformMatrix
   line_matrix : @geometry.TransformMatrix
 } derive(Eq, ToJson, @debug.Debug)
