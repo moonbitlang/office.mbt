@@ -1099,6 +1099,8 @@ pub fn pdf_recurse_dict((PdfObject) -> PdfObject, ArrayView[(@core.PdfName, PdfO
 
 pub fn pdf_redact(PdfDocument, ArrayView[(Double, Double)], ArrayView[Int]) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_redact_pages(PdfDocument, ArrayView[Int], process_struct_tree? : Bool) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_remove_added_text(PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_remove_added_text_ops(ArrayView[PdfContentOp]) -> Array[PdfContentOp]
@@ -2702,6 +2704,7 @@ pub fn PdfDocument::recrypt_with_password(Self, BytesView) -> Self raise @core.P
 pub fn PdfDocument::recrypt_with_password_aesv2_with_iv_provider(Self, BytesView, (Int, Int, Int) -> Bytes raise @core.PdfError) -> Self raise @core.PdfError
 pub fn PdfDocument::recrypt_with_password_aesv3_with_iv_provider(Self, BytesView, (Int, Int, Int) -> Bytes raise @core.PdfError) -> Self raise @core.PdfError
 pub fn PdfDocument::rectify_boxes(Self, PdfPage, fast? : Bool) -> PdfPage raise @core.PdfError
+pub fn PdfDocument::redact_pages(Self, ArrayView[Int], process_struct_tree? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::redact_path(Self, ArrayView[(Double, Double)], ArrayView[Int]) -> Self raise @core.PdfError
 pub fn PdfDocument::referenced_object_numbers(Self, PdfObject, no_follow_entries? : ArrayView[@core.PdfName], no_follow_contains? : ArrayView[(@core.PdfName, PdfObject)]) -> Array[Int]
 pub fn PdfDocument::remove_added_text(Self, ArrayView[Int]) -> Self raise @core.PdfError
