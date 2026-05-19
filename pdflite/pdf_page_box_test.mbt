@@ -269,6 +269,77 @@ test "PdfDocument set_mediaboxes validates page range and box count" {
 }
 
 ///|
+test "PdfDocument shift_boxes shifts only selected page boxes" {
+  let document = page_box_document_for_test()
+  let key_crop = page_box_name_for_test("/CropBox")
+  let key_trim = page_box_name_for_test("/TrimBox")
+  let shifted = try! document.shift_boxes([2], [(100.0, 100.0), (5.0, -10.0)])
+  let pages = try! shifted.pages_of_pagetree()
+  @test.assert_eq(try! shifted.parse_rectangle(pages[0].mediabox), {
+    min_x: 0.0,
+    min_y: 0.0,
+    max_x: 100.0,
+    max_y: 200.0,
+  })
+  @test.assert_eq(
+    pages[0].rest.lookup_immediate(key_trim),
+    Some(page_box_rect_for_test(1.0, 2.0, 3.0, 4.0)),
+  )
+  @test.assert_eq(try! shifted.parse_rectangle(pages[1].mediabox), {
+    min_x: 5.0,
+    min_y: -10.0,
+    max_x: 105.0,
+    max_y: 190.0,
+  })
+  @test.assert_eq(
+    pages[1].rest.lookup_immediate(key_crop),
+    Some(page_box_rect_for_test(35.0, 30.0, 75.0, 70.0)),
+  )
+
+  let wrapped = try! @pdflite.pdf_shift_boxes(document, [1], [
+    (1.0, 2.0),
+    (3.0, 4.0),
+  ])
+  let wrapped_pages = try! wrapped.pages_of_pagetree()
+  @test.assert_eq(try! wrapped.parse_rectangle(wrapped_pages[0].mediabox), {
+    min_x: 1.0,
+    min_y: 2.0,
+    max_x: 101.0,
+    max_y: 202.0,
+  })
+}
+
+///|
+test "PdfDocument shift_boxes validates selected pages and offset count" {
+  let document = page_box_document_for_test()
+  let bad_count : Result[@pdflite.PdfDocument, Error] = try? document.shift_boxes(
+    [1],
+    [(1.0, 2.0)],
+  )
+  guard bad_count
+    is Err(
+      @pdflite.PdfError::BadPageSpecification(
+        "shift_boxes: offset count must match page count"
+      )
+    ) else {
+    fail("expected shift_boxes to reject a partial page-indexed offset list")
+  }
+
+  let bad_page : Result[@pdflite.PdfDocument, Error] = try? document.shift_boxes(
+    [3],
+    [(1.0, 2.0), (3.0, 4.0)],
+  )
+  guard bad_page
+    is Err(
+      @pdflite.PdfError::BadPageSpecification(
+        "shift_boxes: range contains pages not present in pdf"
+      )
+    ) else {
+    fail("expected shift_boxes to reject an out-of-range page")
+  }
+}
+
+///|
 test "PdfDocument remove page boxes affects only selected box and pages" {
   let document = page_box_document_for_test()
   let key_crop = page_box_name_for_test("/CropBox")

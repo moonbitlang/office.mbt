@@ -92,6 +92,18 @@ fn pdf_page_box_validate_xywh_boxes(
 }
 
 ///|
+fn pdf_page_box_validate_offsets(
+  offsets : ArrayView[(Double, Double)],
+  end_page : Int,
+) -> Unit raise PdfError {
+  if offsets.length() != end_page {
+    raise BadPageSpecification(
+      "shift_boxes: offset count must match page count",
+    )
+  }
+}
+
+///|
 fn pdf_page_box_xywh_object(
   box : (Double, Double, Double, Double),
 ) -> PdfObject {
@@ -339,6 +351,51 @@ pub fn pdf_set_mediaboxes(
   boxes : ArrayView[(Double, Double, Double, Double)],
 ) -> PdfDocument raise PdfError {
   document.set_mediaboxes(page_numbers, boxes)
+}
+
+///|
+/// Shift `/MediaBox` and known page boxes by page-indexed offsets.
+///
+/// This ports cpdf's `shift_boxes`: offsets are indexed by absolute page number
+/// and content streams, annotations, and destination coordinates are not moved.
+pub fn PdfDocument::shift_boxes(
+  self : PdfDocument,
+  page_numbers : ArrayView[Int],
+  offsets : ArrayView[(Double, Double)],
+) -> PdfDocument raise PdfError {
+  let pages = self.pages_of_pagetree()
+  pdf_page_box_validate_page_numbers(
+    page_numbers,
+    pages.length(),
+    "shift_boxes",
+  )
+  pdf_page_box_validate_offsets(offsets, pages.length())
+  let rewritten : Array[PdfPage] = []
+  for index in 0..<pages.length() {
+    let page_number = index + 1
+    if pdf_page_box_contains_page(page_numbers, page_number) {
+      let offset = offsets[page_number - 1]
+      rewritten.push(
+        self.pdf_page_upright_transform_boxes(
+          pages[index],
+          transform_translate(offset.0, offset.1),
+        ),
+      )
+    } else {
+      rewritten.push(pages[index])
+    }
+  }
+  self.change_pages(rewritten, change_references=true)
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::shift_boxes`.
+pub fn pdf_shift_boxes(
+  document : PdfDocument,
+  page_numbers : ArrayView[Int],
+  offsets : ArrayView[(Double, Double)],
+) -> PdfDocument raise PdfError {
+  document.shift_boxes(page_numbers, offsets)
 }
 
 ///|
