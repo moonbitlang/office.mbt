@@ -2760,6 +2760,15 @@ Current backend snapshot:
   Native focused validation reports `moon test --target native --package
   bobzhang/pdflite --file pdf_content_operator_state_test.mbt` at 10/10 tests
   passing; native full-suite validation reports 1956/1956 tests passing.~~
+- [x] ~~Standalone `cpdfcontent.ml` shading-entry emission slice exposes
+  `PdfContentOperatorState::content_shading_entry` and
+  `pdf_content_shading_entry`, matching cpdf's `Op_sh` entry assembly for
+  explicit shading `/BBox` rectangles and the unbounded-shading fallback to the
+  current CTM-transformed clipping path, with clipping-only content state while
+  leaving `/Shading` resource lookup for a later slice. Native focused
+  validation reports `moon test --target native --package bobzhang/pdflite
+  --file pdf_content_operator_state_test.mbt` at 11/11 tests passing; native
+  full-suite validation reports 1957/1957 tests passing.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,

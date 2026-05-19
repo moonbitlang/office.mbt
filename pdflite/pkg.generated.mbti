@@ -441,6 +441,8 @@ pub fn pdf_content_read_pattern(PdfDocument, PdfObject, @core.PdfName) -> PdfCon
 
 pub fn pdf_content_read_tiling_pattern(PdfObject) -> PdfContentPattern
 
+pub fn pdf_content_shading_entry(PdfContentOperatorState, @core.PdfName, PdfRectangle?) -> PdfContentJsonEntry?
+
 pub fn pdf_content_state_content_json(PdfContentState) -> Json
 
 pub fn pdf_content_stream_of_ops(ArrayView[PdfContentOp]) -> PdfObject raise @core.PdfError
@@ -2095,6 +2097,7 @@ pub fn PdfContentOperatorState::content_apply_type3_metrics_op(Self, PdfContentO
 pub fn PdfContentOperatorState::content_image_entry(Self, @core.PdfName) -> PdfContentJsonEntry
 pub fn PdfContentOperatorState::content_inline_image_entry(Self) -> PdfContentJsonEntry
 pub fn PdfContentOperatorState::content_path_entry(Self, Bool) -> PdfContentJsonEntry?
+pub fn PdfContentOperatorState::content_shading_entry(Self, @core.PdfName, PdfRectangle?) -> PdfContentJsonEntry?
 pub fn PdfContentOperatorState::content_unit_square_bounding_box(Self) -> PdfContentBoundingBox
 
 pub(all) enum PdfContentPartialPath {

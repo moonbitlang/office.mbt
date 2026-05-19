@@ -311,3 +311,51 @@ test "cpdfcontent operator state emits path entries for drawn paths" {
   })
   @test.assert_eq(@pdflite.pdf_content_path_entry(state, true), Some(entry))
 }
+
+///|
+test "cpdfcontent operator state emits shading entries" {
+  let initial = @pdflite.pdf_content_initial_operator_state(
+    0.0, 0.0, 100.0, 200.0,
+  )
+  let state : @pdflite.PdfContentOperatorState = {
+    ..initial,
+    ctm: @pdflite.transform_translate(5.0, 6.0),
+  }
+  let name = content_operator_name_for_test("/Sh1")
+  let explicit = state.content_shading_entry(
+    name,
+    Some({ min_x: 1.0, min_y: 2.0, max_x: 3.0, max_y: 4.0 }),
+  )
+  guard explicit is Some(explicit_entry) else {
+    fail("expected explicit shading bbox entry")
+  }
+  @test.assert_eq(explicit_entry.object, PdfContentShadingObject("/Sh1"))
+  @test.assert_eq(explicit_entry.bounding_box, {
+    x0: 1.0,
+    y0: 2.0,
+    x1: 1.0,
+    y1: 4.0,
+    x2: 3.0,
+    y2: 4.0,
+    x3: 3.0,
+    y3: 2.0,
+  })
+  guard state.content_shading_entry(name, None) is Some(unbounded) else {
+    fail("expected unbounded shading to use clipping path")
+  }
+  @test.assert_eq(unbounded.object, PdfContentShadingObject("/Sh1"))
+  @test.assert_eq(unbounded.bounding_box, {
+    x0: 5.0,
+    y0: 6.0,
+    x1: 5.0,
+    y1: 206.0,
+    x2: 105.0,
+    y2: 206.0,
+    x3: 105.0,
+    y3: 6.0,
+  })
+  @test.assert_eq(
+    @pdflite.pdf_content_shading_entry(state, name, None),
+    Some(unbounded),
+  )
+}

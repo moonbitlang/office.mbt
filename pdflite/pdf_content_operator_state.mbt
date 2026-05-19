@@ -368,6 +368,69 @@ pub fn pdf_content_path_entry(
 }
 
 ///|
+fn pdf_content_rectangle_bounding_box(
+  rectangle : PdfRectangle,
+) -> PdfContentBoundingBox {
+  {
+    x0: rectangle.min_x,
+    y0: rectangle.min_y,
+    x1: rectangle.min_x,
+    y1: rectangle.max_y,
+    x2: rectangle.max_x,
+    y2: rectangle.max_y,
+    x3: rectangle.max_x,
+    y3: rectangle.min_y,
+  }
+}
+
+///|
+fn PdfContentOperatorState::content_unbounded_shading_bounding_box(
+  self : PdfContentOperatorState,
+) -> PdfContentBoundingBox? {
+  if self.clipping_path.length() == 0 {
+    None
+  } else {
+    self.clipping_path[0].content_bounding_box(
+      self.ctm,
+      self.path_state.line_width,
+      false,
+    )
+  }
+}
+
+///|
+/// Return the cpdfcontent JSON entry for a shading, when its bbox is valid.
+pub fn PdfContentOperatorState::content_shading_entry(
+  self : PdfContentOperatorState,
+  name : PdfName,
+  shading_bbox : PdfRectangle?,
+) -> PdfContentJsonEntry? {
+  let bounding_box = match shading_bbox {
+    Some(rectangle) => Some(pdf_content_rectangle_bounding_box(rectangle))
+    None => self.content_unbounded_shading_bounding_box()
+  }
+  match bounding_box {
+    Some(bounding_box) =>
+      Some({
+        object: PdfContentShadingObject(pdf_content_state_name_text(name)),
+        state: self.content_clipping_content_state(),
+        bounding_box,
+      })
+    None => None
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfContentOperatorState::content_shading_entry`.
+pub fn pdf_content_shading_entry(
+  state : PdfContentOperatorState,
+  name : PdfName,
+  shading_bbox : PdfRectangle?,
+) -> PdfContentJsonEntry? {
+  state.content_shading_entry(name, shading_bbox)
+}
+
+///|
 /// Return the CTM-transformed unit-square bounding box used for image objects.
 pub fn PdfContentOperatorState::content_unit_square_bounding_box(
   self : PdfContentOperatorState,
