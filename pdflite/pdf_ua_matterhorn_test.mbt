@@ -142,6 +142,92 @@ fn ua_matterhorn_11_001_failure_for_test(extra : Json) -> Json {
 }
 
 ///|
+fn ua_matterhorn_13_004_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "13-004",
+    "UA1:7.3-3",
+    "<Figure> tag alternative or replacement text missing.",
+    Json::null(),
+  )
+}
+
+///|
+fn ua_matterhorn_14_002_failure_for_test(extra : Json) -> Json {
+  ua_matterhorn_failure_for_test(
+    "14-002", "UA1:7.4.2-1", "Does use numbered headings, but the first heading tag is not <H1>.",
+    extra,
+  )
+}
+
+///|
+fn ua_matterhorn_14_003_failure_for_test(extra : Json) -> Json {
+  ua_matterhorn_failure_for_test(
+    "14-003", "UA1:7.4-1", "Numbered heading levels in descending sequence are skipped (Example: <H3> follows directly after <H1>).",
+    extra,
+  )
+}
+
+///|
+fn ua_matterhorn_14_006_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "14-006",
+    "UA1:7.4.4-1",
+    "A node contains more than one <H> tag.",
+    Json::null(),
+  )
+}
+
+///|
+fn ua_matterhorn_14_007_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "14-007",
+    "UA1:7.4.4-3",
+    "Document uses both <H> and <H#> tags.",
+    Json::null(),
+  )
+}
+
+///|
+fn ua_matterhorn_15_003_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "15-003",
+    "UA1:7.5-2",
+    "In a table not organized with Headers attributes and IDs, a <TH> cell does not contain a Scope attribute.",
+    Json::string("No scope, table organization not checked."),
+  )
+}
+
+///|
+fn ua_matterhorn_17_002_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "17-002",
+    "UA1:7.7-1",
+    "<Formula> tag is missing an Alt attribute.",
+    Json::null(),
+  )
+}
+
+///|
+fn ua_matterhorn_19_003_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "19-003",
+    "UA1:7.9-2",
+    "ID entry of the <Note> tag is not present.",
+    Json::null(),
+  )
+}
+
+///|
+fn ua_matterhorn_19_004_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "19-004",
+    "UA1:7.9-2",
+    "ID entry of the <Note> tag is non-unique.",
+    Json::null(),
+  )
+}
+
+///|
 fn ua_matterhorn_20_001_failure_for_test() -> Json {
   ua_matterhorn_failure_for_test(
     "20-001",
@@ -757,6 +843,23 @@ fn ua_matterhorn_struct_parent_tree_root_for_test(
       ]),
     ),
   ]
+}
+
+///|
+fn ua_matterhorn_struct_tree_root_for_test(
+  children : ArrayView[@pdflite.PdfObject],
+  extras? : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)] = [],
+) -> Array[(@pdflite.PdfName, @pdflite.PdfObject)] {
+  let entries : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = [
+    (
+      ua_matterhorn_name_for_test("/K"),
+      PdfArray([ for child in children => child ]),
+    ),
+  ]
+  for extra in extras {
+    entries.push(extra)
+  }
+  [(ua_matterhorn_name_for_test("/StructTreeRoot"), PdfDictionary(entries))]
 }
 
 ///|
@@ -1430,6 +1533,187 @@ test "PdfDocument test_matterhorn_json preserves source no-op language checks" {
   for name in ["11-002", "11-003", "11-004", "11-005", "11-006"] {
     @test.assert_eq(try! document.test_matterhorn_json(name), Json::array([]))
   }
+}
+
+///|
+test "PdfDocument test_matterhorn_json checks structure attribute requirements" {
+  let bad = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_struct_tree_root_for_test([
+      ua_matterhorn_structure_element_for_test("/Figure"),
+      ua_matterhorn_structure_element_for_test("/TH"),
+      ua_matterhorn_structure_element_for_test("/Formula"),
+      ua_matterhorn_structure_element_for_test("/Note"),
+    ]),
+  )
+  @test.assert_eq(
+    try! bad.test_matterhorn_json("13-004"),
+    Json::array([ua_matterhorn_13_004_failure_for_test()]),
+  )
+  @test.assert_eq(
+    try! bad.test_matterhorn_json("15-003"),
+    Json::array([ua_matterhorn_15_003_failure_for_test()]),
+  )
+  @test.assert_eq(
+    try! bad.test_matterhorn_json("17-002"),
+    Json::array([ua_matterhorn_17_002_failure_for_test()]),
+  )
+  @test.assert_eq(try! bad.test_matterhorn_json("17-003"), Json::array([]))
+  @test.assert_eq(
+    try! bad.test_matterhorn_json("19-003"),
+    Json::array([ua_matterhorn_19_003_failure_for_test()]),
+  )
+
+  let good = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_struct_tree_root_for_test([
+      ua_matterhorn_structure_element_for_test("/Figure", extras=[
+        (
+          ua_matterhorn_name_for_test("/ActualText"),
+          PdfString(@ascii.encode("figure")),
+        ),
+      ]),
+      ua_matterhorn_structure_element_for_test("/TH", extras=[
+        (
+          ua_matterhorn_name_for_test("/A"),
+          PdfDictionary([
+            (
+              ua_matterhorn_name_for_test("/Scope"),
+              PdfNameObject(ua_matterhorn_name_for_test("/Column")),
+            ),
+          ]),
+        ),
+      ]),
+      ua_matterhorn_structure_element_for_test("/Formula", extras=[
+        (ua_matterhorn_name_for_test("/Alt"), PdfString(@ascii.encode("x"))),
+      ]),
+      ua_matterhorn_structure_element_for_test("/Note", extras=[
+        (ua_matterhorn_name_for_test("/ID"), PdfString(@ascii.encode("n1"))),
+      ]),
+    ]),
+  )
+  for name in ["13-004", "15-003", "17-002", "19-003"] {
+    @test.assert_eq(try! good.test_matterhorn_json(name), Json::array([]))
+  }
+
+  let mapped = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_struct_tree_root_for_test(
+      [ua_matterhorn_structure_element_for_test("/Figgy")],
+      extras=[
+        (
+          ua_matterhorn_name_for_test("/RoleMap"),
+          PdfDictionary([
+            (
+              ua_matterhorn_name_for_test("/Figgy"),
+              PdfNameObject(ua_matterhorn_name_for_test("/Figure")),
+            ),
+          ]),
+        ),
+      ],
+    ),
+  )
+  @test.assert_eq(
+    try! mapped.test_matterhorn_json("13-004"),
+    Json::array([ua_matterhorn_13_004_failure_for_test()]),
+  )
+}
+
+///|
+test "PdfDocument test_matterhorn_json checks numbered heading structure" {
+  let first_h2 = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_struct_tree_root_for_test([
+      ua_matterhorn_structure_element_for_test("/H2"),
+    ]),
+  )
+  @test.assert_eq(
+    try! first_h2.test_matterhorn_json("14-002"),
+    Json::array([ua_matterhorn_14_002_failure_for_test(Json::string("/H2"))]),
+  )
+
+  let skipped = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_struct_tree_root_for_test([
+      ua_matterhorn_structure_element_for_test("/H1"),
+      ua_matterhorn_structure_element_for_test("/H3"),
+    ]),
+  )
+  @test.assert_eq(
+    try! skipped.test_matterhorn_json("14-003"),
+    Json::array([ua_matterhorn_14_003_failure_for_test(Json::string("1 -> 3"))]),
+  )
+
+  let repeated_h = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_struct_tree_root_for_test([
+      ua_matterhorn_structure_element_for_test("/H"),
+      ua_matterhorn_structure_element_for_test("/H"),
+    ]),
+  )
+  @test.assert_eq(
+    try! repeated_h.test_matterhorn_json("14-006"),
+    Json::array([ua_matterhorn_14_006_failure_for_test()]),
+  )
+
+  let mixed = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_struct_tree_root_for_test([
+      ua_matterhorn_structure_element_for_test("/H"),
+      ua_matterhorn_structure_element_for_test("/H1"),
+    ]),
+  )
+  @test.assert_eq(
+    try! mixed.test_matterhorn_json("14-007"),
+    Json::array([ua_matterhorn_14_007_failure_for_test()]),
+  )
+
+  let valid = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_struct_tree_root_for_test([
+      ua_matterhorn_structure_element_for_test("/H1"),
+      ua_matterhorn_structure_element_for_test("/H2"),
+    ]),
+  )
+  for name in ["14-002", "14-003", "14-006", "14-007"] {
+    @test.assert_eq(try! valid.test_matterhorn_json(name), Json::array([]))
+  }
+}
+
+///|
+test "PdfDocument test_matterhorn_json detects duplicate note IDs" {
+  let duplicate = ua_matterhorn_document_for_test([])
+  duplicate.add_object_given_number(
+    40,
+    ua_matterhorn_structure_element_for_test("/Note", extras=[
+      (ua_matterhorn_name_for_test("/ID"), PdfString(@ascii.encode("same"))),
+    ]),
+  )
+  duplicate.add_object_given_number(
+    41,
+    ua_matterhorn_structure_element_for_test("/Note", extras=[
+      (ua_matterhorn_name_for_test("/ID"), PdfString(@ascii.encode("same"))),
+    ]),
+  )
+  @test.assert_eq(
+    try! duplicate.test_matterhorn_json("19-004"),
+    Json::array([ua_matterhorn_19_004_failure_for_test()]),
+  )
+
+  let unique = ua_matterhorn_document_for_test([])
+  unique.add_object_given_number(
+    40,
+    ua_matterhorn_structure_element_for_test("/Note", extras=[
+      (ua_matterhorn_name_for_test("/ID"), PdfString(@ascii.encode("a"))),
+    ]),
+  )
+  unique.add_object_given_number(
+    41,
+    ua_matterhorn_structure_element_for_test("/Note", extras=[
+      (ua_matterhorn_name_for_test("/ID"), PdfString(@ascii.encode("b"))),
+    ]),
+  )
+  @test.assert_eq(try! unique.test_matterhorn_json("19-004"), Json::array([]))
 }
 
 ///|

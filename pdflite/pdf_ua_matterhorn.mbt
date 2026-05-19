@@ -21,6 +21,13 @@ priv struct PdfUAMatterhornFailure {
 }
 
 ///|
+priv struct PdfUAMatterhornStructNode {
+  name : PdfName
+  attrs : Array[PdfName]
+  children : Array[PdfUAMatterhornStructNode]
+}
+
+///|
 let pdf_ua_matterhorn_artifact_name : PdfName = pdf_ua_name("/Artifact")
 
 ///|
@@ -270,6 +277,48 @@ let pdf_ua_matterhorn_alt_key_name : PdfName = pdf_ua_name("/Alt")
 ///|
 fn pdf_ua_matterhorn_alt_key() -> PdfName {
   pdf_ua_matterhorn_alt_key_name
+}
+
+///|
+let pdf_ua_matterhorn_actual_text_key_name : PdfName = pdf_ua_name(
+  "/ActualText",
+)
+
+///|
+fn pdf_ua_matterhorn_actual_text_key() -> PdfName {
+  pdf_ua_matterhorn_actual_text_key_name
+}
+
+///|
+let pdf_ua_matterhorn_id_key_name : PdfName = pdf_ua_name("/ID")
+
+///|
+fn pdf_ua_matterhorn_id_key() -> PdfName {
+  pdf_ua_matterhorn_id_key_name
+}
+
+///|
+let pdf_ua_matterhorn_a_key_name : PdfName = pdf_ua_name("/A")
+
+///|
+fn pdf_ua_matterhorn_a_key() -> PdfName {
+  pdf_ua_matterhorn_a_key_name
+}
+
+///|
+let pdf_ua_matterhorn_c_key_name : PdfName = pdf_ua_name("/C")
+
+///|
+fn pdf_ua_matterhorn_c_key() -> PdfName {
+  pdf_ua_matterhorn_c_key_name
+}
+
+///|
+let pdf_ua_matterhorn_scope_name : PdfName = pdf_ua_name("/Scope")
+
+///|
+fn pdf_ua_matterhorn_scope() -> PdfName {
+  pdf_ua_matterhorn_scope_name
 }
 
 ///|
@@ -531,6 +580,96 @@ fn pdf_ua_matterhorn_test_11_006() -> PdfUAMatterhornTest {
     name: "11-006",
     error: "Natural language for document metadata cannot be determined.",
     section: "UA1:7.2-3",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_13_004() -> PdfUAMatterhornTest {
+  {
+    name: "13-004",
+    error: "<Figure> tag alternative or replacement text missing.",
+    section: "UA1:7.3-3",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_14_002() -> PdfUAMatterhornTest {
+  {
+    name: "14-002",
+    error: "Does use numbered headings, but the first heading tag is not <H1>.",
+    section: "UA1:7.4.2-1",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_14_003() -> PdfUAMatterhornTest {
+  {
+    name: "14-003",
+    error: "Numbered heading levels in descending sequence are skipped (Example: <H3> follows directly after <H1>).",
+    section: "UA1:7.4-1",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_14_006() -> PdfUAMatterhornTest {
+  {
+    name: "14-006",
+    error: "A node contains more than one <H> tag.",
+    section: "UA1:7.4.4-1",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_14_007() -> PdfUAMatterhornTest {
+  {
+    name: "14-007",
+    error: "Document uses both <H> and <H#> tags.",
+    section: "UA1:7.4.4-3",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_15_003() -> PdfUAMatterhornTest {
+  {
+    name: "15-003",
+    error: "In a table not organized with Headers attributes and IDs, a <TH> cell does not contain a Scope attribute.",
+    section: "UA1:7.5-2",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_17_002() -> PdfUAMatterhornTest {
+  {
+    name: "17-002",
+    error: "<Formula> tag is missing an Alt attribute.",
+    section: "UA1:7.7-1",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_17_003() -> PdfUAMatterhornTest {
+  {
+    name: "17-003",
+    error: "Unicode mapping requirements are not met.",
+    section: "UA1:7.7-2",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_19_003() -> PdfUAMatterhornTest {
+  {
+    name: "19-003",
+    error: "ID entry of the <Note> tag is not present.",
+    section: "UA1:7.9-2",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_19_004() -> PdfUAMatterhornTest {
+  {
+    name: "19-004",
+    error: "ID entry of the <Note> tag is non-unique.",
+    section: "UA1:7.9-2",
   }
 }
 
@@ -1032,6 +1171,16 @@ fn pdf_ua_matterhorn_implemented_tests() -> Array[PdfUAMatterhornTest] {
     pdf_ua_matterhorn_test_11_004(),
     pdf_ua_matterhorn_test_11_005(),
     pdf_ua_matterhorn_test_11_006(),
+    pdf_ua_matterhorn_test_13_004(),
+    pdf_ua_matterhorn_test_14_002(),
+    pdf_ua_matterhorn_test_14_003(),
+    pdf_ua_matterhorn_test_14_006(),
+    pdf_ua_matterhorn_test_14_007(),
+    pdf_ua_matterhorn_test_15_003(),
+    pdf_ua_matterhorn_test_17_002(),
+    pdf_ua_matterhorn_test_17_003(),
+    pdf_ua_matterhorn_test_19_003(),
+    pdf_ua_matterhorn_test_19_004(),
     pdf_ua_matterhorn_test_20_001(),
     pdf_ua_matterhorn_test_20_002(),
     pdf_ua_matterhorn_test_20_003(),
@@ -1666,6 +1815,431 @@ fn PdfDocument::pdf_ua_matterhorn_check_11_001(self : PdfDocument) -> Json? {
 
 ///|
 fn pdf_ua_matterhorn_check_source_unimplemented_language() -> Json? {
+  None
+}
+
+///|
+fn pdf_ua_matterhorn_push_unique_name(
+  names : Array[PdfName],
+  name : PdfName,
+) -> Unit {
+  if !names.contains(name) {
+    names.push(name)
+  }
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_read_single_attribute(
+  self : PdfDocument,
+  object : PdfObject,
+) -> Array[PdfName] raise PdfError {
+  match self.direct(object) {
+    PdfDictionary(entries) => [ for entry in entries => entry.0 ]
+    PdfStreamObject(stream) =>
+      self.pdf_ua_matterhorn_read_single_attribute(stream.dictionary)
+    PdfNameObject(name) => [name]
+    _ => raise SoftError("read_single: malformed attribute")
+  }
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_read_attribute_entry(
+  self : PdfDocument,
+  key : PdfName,
+  node : PdfObject,
+) -> Array[PdfName] raise PdfError {
+  match self.lookup_direct(key, node) {
+    Some(PdfArray(items)) => {
+      let attrs : Array[PdfName] = []
+      for item in items {
+        match item {
+          PdfInteger(_) => ()
+          _ =>
+            for attr in self.pdf_ua_matterhorn_read_single_attribute(item) {
+              attrs.push(attr)
+            }
+        }
+      }
+      attrs
+    }
+    Some(PdfNameObject(name)) => [name]
+    Some(PdfDictionary(_) | PdfStreamObject(_) as object) =>
+      self.pdf_ua_matterhorn_read_single_attribute(object)
+    Some(_) | None => []
+  }
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_read_struct_attributes(
+  self : PdfDocument,
+  node : PdfObject,
+) -> Array[PdfName] raise PdfError {
+  let attrs : Array[PdfName] = []
+  for
+    attr in self.pdf_ua_matterhorn_read_attribute_entry(
+      pdf_ua_matterhorn_a_key(),
+      node,
+    ) {
+    pdf_ua_matterhorn_push_unique_name(attrs, attr)
+  }
+  for
+    attr in self.pdf_ua_matterhorn_read_attribute_entry(
+      pdf_ua_matterhorn_c_key(),
+      node,
+    ) {
+    pdf_ua_matterhorn_push_unique_name(attrs, attr)
+  }
+  if self.lookup_direct(pdf_ua_matterhorn_id_key(), node) is Some(_) {
+    attrs.push(pdf_ua_matterhorn_id_key())
+  }
+  if self.lookup_direct(pdf_ua_matterhorn_actual_text_key(), node) is Some(_) {
+    attrs.push(pdf_ua_matterhorn_actual_text_key())
+  }
+  if self.lookup_direct(pdf_ua_matterhorn_alt_key(), node) is Some(_) {
+    attrs.push(pdf_ua_matterhorn_alt_key())
+  }
+  match self.direct(node) {
+    PdfDictionary(entries) =>
+      for entry in entries {
+        if entry.0 == pdf_ua_pg_key() {
+          match entry.1 {
+            PdfIndirect(number) =>
+              attrs.push(pdf_ua_name("_" + number.to_string()))
+            _ => ()
+          }
+        }
+      }
+    _ => ()
+  }
+  attrs
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_read_struct_tree_inner(
+  self : PdfDocument,
+  node : PdfObject,
+  rolemap : PdfUAStructTreeRoleMap,
+  depth : Int,
+) -> PdfUAMatterhornStructNode raise PdfError {
+  if depth > 10000 {
+    raise SoftError("malformed st node")
+  }
+  let name = match self.lookup_direct(pdf_ua_s_key(), node) {
+    Some(PdfNameObject(raw_name)) => rolemap.rewrite_name(raw_name)
+    _ => pdf_ua_empty_name()
+  }
+  let attrs = self.pdf_ua_matterhorn_read_struct_attributes(node)
+  let children = match self.lookup_direct(pdf_ua_k_key(), node) {
+    None => []
+    Some(PdfDictionary(_) as child) =>
+      [self.pdf_ua_matterhorn_read_struct_tree_inner(child, rolemap, depth + 1)]
+    Some(PdfInteger(_)) => []
+    Some(PdfArray(items)) => {
+      let output : Array[PdfUAMatterhornStructNode] = []
+      for item in items {
+        output.push(
+          self.pdf_ua_matterhorn_read_struct_tree_inner(
+            item,
+            rolemap,
+            depth + 1,
+          ),
+        )
+      }
+      output
+    }
+    Some(_) => raise SoftError("malformed st node")
+  }
+  { name, attrs, children }
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_read_struct_tree(
+  self : PdfDocument,
+) -> PdfUAMatterhornStructNode raise PdfError {
+  let rolemap = self.pdf_ua_matterhorn_rolemap()
+  let root_name = rolemap.rewrite_name(pdf_ua_struct_tree_root_key())
+  let catalog = self.catalog() catch { _ => raise SoftError("read_st no root") }
+  match catalog.lookup_immediate(pdf_ua_struct_tree_root_key()) {
+    None => { name: root_name, attrs: [], children: [] }
+    Some(struct_tree_root) => {
+      let tree = self.pdf_ua_matterhorn_read_struct_tree_inner(
+        struct_tree_root, rolemap, 0,
+      )
+      { name: root_name, attrs: tree.attrs, children: tree.children }
+    }
+  }
+}
+
+///|
+fn PdfUAMatterhornStructNode::has_attr(
+  self : PdfUAMatterhornStructNode,
+  attr : PdfName,
+) -> Bool {
+  self.attrs.contains(attr)
+}
+
+///|
+fn PdfUAMatterhornStructNode::contains_name(
+  self : PdfUAMatterhornStructNode,
+  predicate : (PdfName) -> Bool,
+) -> Bool {
+  if predicate(self.name) {
+    true
+  } else {
+    for child in self.children {
+      if child.contains_name(predicate) {
+        return true
+      }
+    }
+    false
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_is_hnum(name : PdfName) -> Bool {
+  let text = pdf_ua_matterhorn_name_text(name)
+  if text == "/H" || !text.has_prefix("/H") {
+    false
+  } else {
+    let result : Result[Int, Error] = try? @strconv.from_str(
+      text[2:].to_owned(),
+    )
+    result is Ok(_)
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_hnum(name : PdfName) -> Int {
+  let text = pdf_ua_matterhorn_name_text(name)
+  @strconv.from_str(text[2:].to_owned()) catch {
+    _ => 0
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_heading_names(
+  node : PdfUAMatterhornStructNode,
+) -> Array[PdfName] {
+  let headings : Array[PdfName] = []
+  if pdf_ua_matterhorn_is_hnum(node.name) {
+    headings.push(node.name)
+  }
+  for child in node.children {
+    for heading in pdf_ua_matterhorn_heading_names(child) {
+      headings.push(heading)
+    }
+  }
+  headings
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_13_004(
+  self : PdfDocument,
+) -> Json? raise PdfError {
+  let figure = pdf_ua_name("/Figure")
+  let tree = self.pdf_ua_matterhorn_read_struct_tree()
+  fn check(node : PdfUAMatterhornStructNode, figure : PdfName) -> Bool {
+    if node.name == figure &&
+      !node.has_attr(pdf_ua_matterhorn_alt_key()) &&
+      !node.has_attr(pdf_ua_matterhorn_actual_text_key()) {
+      true
+    } else {
+      for child in node.children {
+        if check(child, figure) {
+          return true
+        }
+      }
+      false
+    }
+  }
+  if check(tree, figure) {
+    Some(Json::null())
+  } else {
+    None
+  }
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_14_002(
+  self : PdfDocument,
+) -> Json? raise PdfError {
+  let headings = pdf_ua_matterhorn_heading_names(
+    self.pdf_ua_matterhorn_read_struct_tree(),
+  )
+  match headings {
+    [] => None
+    [first, ..] =>
+      if first == pdf_ua_name("/H1") {
+        None
+      } else {
+        Some(Json::string(pdf_ua_matterhorn_name_text(first)))
+      }
+  }
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_14_003(
+  self : PdfDocument,
+) -> Json? raise PdfError {
+  let headings = pdf_ua_matterhorn_heading_names(
+    self.pdf_ua_matterhorn_read_struct_tree(),
+  )
+  let mut previous = 1
+  for heading in headings {
+    let current = pdf_ua_matterhorn_hnum(heading)
+    if current > previous + 1 {
+      return Some(
+        Json::string(previous.to_string() + " -> " + current.to_string()),
+      )
+    }
+    previous = current
+  }
+  None
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_14_006(
+  self : PdfDocument,
+) -> Json? raise PdfError {
+  let h = pdf_ua_name("/H")
+  fn check(node : PdfUAMatterhornStructNode, h : PdfName) -> Bool {
+    let mut count = 0
+    for child in node.children {
+      if child.name == h {
+        count += 1
+      }
+    }
+    if count > 1 {
+      true
+    } else {
+      for child in node.children {
+        if check(child, h) {
+          return true
+        }
+      }
+      false
+    }
+  }
+  if check(self.pdf_ua_matterhorn_read_struct_tree(), h) {
+    Some(Json::null())
+  } else {
+    None
+  }
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_14_007(
+  self : PdfDocument,
+) -> Json? raise PdfError {
+  let tree = self.pdf_ua_matterhorn_read_struct_tree()
+  let h = pdf_ua_name("/H")
+  if tree.contains_name(fn(name) { name == h }) &&
+    tree.contains_name(pdf_ua_matterhorn_is_hnum) {
+    Some(Json::null())
+  } else {
+    None
+  }
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_15_003(
+  self : PdfDocument,
+) -> Json? raise PdfError {
+  let th = pdf_ua_name("/TH")
+  let tree = self.pdf_ua_matterhorn_read_struct_tree()
+  fn check(node : PdfUAMatterhornStructNode, th : PdfName) -> Bool {
+    if node.name == th && !node.has_attr(pdf_ua_matterhorn_scope()) {
+      true
+    } else {
+      for child in node.children {
+        if check(child, th) {
+          return true
+        }
+      }
+      false
+    }
+  }
+  if check(tree, th) {
+    Some(Json::string("No scope, table organization not checked."))
+  } else {
+    None
+  }
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_17_002(
+  self : PdfDocument,
+) -> Json? raise PdfError {
+  let formula = pdf_ua_name("/Formula")
+  let tree = self.pdf_ua_matterhorn_read_struct_tree()
+  fn check(node : PdfUAMatterhornStructNode, formula : PdfName) -> Bool {
+    if node.name == formula && !node.has_attr(pdf_ua_matterhorn_alt_key()) {
+      true
+    } else {
+      for child in node.children {
+        if check(child, formula) {
+          return true
+        }
+      }
+      false
+    }
+  }
+  if check(tree, formula) {
+    Some(Json::null())
+  } else {
+    None
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_check_source_noop() -> Json? {
+  None
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_19_003(
+  self : PdfDocument,
+) -> Json? raise PdfError {
+  let note = pdf_ua_name("/Note")
+  let tree = self.pdf_ua_matterhorn_read_struct_tree()
+  fn check(node : PdfUAMatterhornStructNode, note : PdfName) -> Bool {
+    if node.name == note && !node.has_attr(pdf_ua_matterhorn_id_key()) {
+      true
+    } else {
+      for child in node.children {
+        if check(child, note) {
+          return true
+        }
+      }
+      false
+    }
+  }
+  if check(tree, note) {
+    Some(Json::null())
+  } else {
+    None
+  }
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_19_004(self : PdfDocument) -> Json? {
+  let note = pdf_ua_name("/Note")
+  let ids : Array[PdfBytes] = []
+  for entry in self.parsed_object_entries() {
+    match
+      (
+        self.lookup_direct(pdf_ua_s_key(), entry.2),
+        self.lookup_direct(pdf_ua_matterhorn_id_key(), entry.2),
+      ) {
+      (Some(PdfNameObject(kind)), Some(PdfString(id))) if kind == note =>
+        if ids.contains(id) {
+          return Some(Json::null())
+        } else {
+          ids.push(id)
+        }
+      _ => ()
+    }
+  }
   None
 }
 
@@ -3217,6 +3791,16 @@ fn PdfDocument::pdf_ua_matterhorn_run_test(
     "11-001" => self.pdf_ua_matterhorn_check_11_001()
     "11-002" | "11-003" | "11-004" | "11-005" | "11-006" =>
       pdf_ua_matterhorn_check_source_unimplemented_language()
+    "13-004" => self.pdf_ua_matterhorn_check_13_004()
+    "14-002" => self.pdf_ua_matterhorn_check_14_002()
+    "14-003" => self.pdf_ua_matterhorn_check_14_003()
+    "14-006" => self.pdf_ua_matterhorn_check_14_006()
+    "14-007" => self.pdf_ua_matterhorn_check_14_007()
+    "15-003" => self.pdf_ua_matterhorn_check_15_003()
+    "17-002" => self.pdf_ua_matterhorn_check_17_002()
+    "17-003" => pdf_ua_matterhorn_check_source_noop()
+    "19-003" => self.pdf_ua_matterhorn_check_19_003()
+    "19-004" => self.pdf_ua_matterhorn_check_19_004()
     "20-001" => self.pdf_ua_matterhorn_check_20_001()
     "20-002" => self.pdf_ua_matterhorn_check_20_002()
     "20-003" => self.pdf_ua_matterhorn_check_20_003()
@@ -3334,6 +3918,9 @@ fn PdfDocument::pdf_ua_matterhorn_failures(
 /// XMP metadata and DisplayDocTitle checks `06-001` through `07-002`, and
 /// natural-language top-level `/Lang` check `11-001` plus source-unimplemented
 /// language checks `11-002` through `11-006`,
+/// structure-tree attribute checks `13-004`, `15-003`, `17-002`, `17-003`,
+/// `19-003`, and `19-004`, heading checks `14-002`, `14-003`, `14-006`, and
+/// `14-007`,
 /// optional-content configuration checks `20-001` through `20-003`, embedded
 /// file-spec check `21-001`, XFA dynamicRender check `25-001`,
 /// encryption checks `26-001` and `26-002`,
