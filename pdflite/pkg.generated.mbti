@@ -2109,6 +2109,7 @@ pub(all) struct PdfContentOperatorFrame {
   transfer : PdfObject
   halftone : PdfObject
   blend_mode : PdfObject
+  soft_mask : PdfObject
   black_point_compensation : String
   marked_content_point : PdfContentMarkedContent?
   marked_content : Array[PdfContentMarkedContent]
@@ -2138,6 +2139,7 @@ pub(all) struct PdfContentOperatorState {
   transfer : PdfObject
   halftone : PdfObject
   blend_mode : PdfObject
+  soft_mask : PdfObject
   black_point_compensation : String
   marked_content_point : PdfContentMarkedContent?
   marked_content : Array[PdfContentMarkedContent]

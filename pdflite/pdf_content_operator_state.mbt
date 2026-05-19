@@ -21,6 +21,7 @@ pub(all) struct PdfContentOperatorFrame {
   transfer : PdfObject
   halftone : PdfObject
   blend_mode : PdfObject
+  soft_mask : PdfObject
   black_point_compensation : String
   marked_content_point : PdfContentMarkedContent?
   marked_content : Array[PdfContentMarkedContent]
@@ -51,6 +52,7 @@ pub(all) struct PdfContentOperatorState {
   transfer : PdfObject
   halftone : PdfObject
   blend_mode : PdfObject
+  soft_mask : PdfObject
   black_point_compensation : String
   marked_content_point : PdfContentMarkedContent?
   marked_content : Array[PdfContentMarkedContent]
@@ -229,6 +231,7 @@ pub fn pdf_content_initial_operator_state(
     transfer: PdfNull,
     halftone: PdfNull,
     blend_mode: PdfNameObject(pdf_content_extgstate_normal_name),
+    soft_mask: PdfNull,
     black_point_compensation: "/Default",
     marked_content_point: None,
     marked_content: [],
@@ -264,6 +267,7 @@ fn PdfContentOperatorState::content_frame(
     transfer: self.transfer,
     halftone: self.halftone,
     blend_mode: self.blend_mode,
+    soft_mask: self.soft_mask,
     black_point_compensation: self.black_point_compensation,
     marked_content_point: self.marked_content_point,
     marked_content: pdf_content_operator_copy_marked_content(
@@ -366,6 +370,7 @@ fn PdfContentOperatorState::content_pop_state(
       transfer: frame.transfer,
       halftone: frame.halftone,
       blend_mode: frame.blend_mode,
+      soft_mask: frame.soft_mask,
       black_point_compensation: frame.black_point_compensation,
       marked_content_point: frame.marked_content_point,
       marked_content: pdf_content_operator_copy_marked_content(

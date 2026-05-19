@@ -56,6 +56,7 @@ test "cpdfcontent operator state exposes initial state" {
     state.blend_mode,
     PdfNameObject(content_operator_name_for_test("/Normal")),
   )
+  @test.assert_eq(state.soft_mask, PdfNull)
   @test.assert_eq(state.black_point_compensation, "/Default")
   @test.assert_eq(state.marked_content_point, None)
   @test.assert_eq(state.marked_content.length(), 0)
@@ -90,6 +91,7 @@ test "cpdfcontent operator state saves and restores q Q frames" {
     pushed.state_stack[0].blend_mode,
     PdfNameObject(content_operator_name_for_test("/Normal")),
   )
+  @test.assert_eq(pushed.state_stack[0].soft_mask, PdfNull)
   @test.assert_eq(pushed.state_stack[0].black_point_compensation, "/Default")
   let changed : @pdflite.PdfContentOperatorState = {
     ..pushed,
@@ -111,6 +113,7 @@ test "cpdfcontent operator state saves and restores q Q frames" {
     transfer: PdfInteger(3),
     halftone: PdfInteger(4),
     blend_mode: PdfNameObject(content_operator_name_for_test("/Multiply")),
+    soft_mask: PdfInteger(5),
     black_point_compensation: "/ON",
   }
   let restored = changed.content_apply_graphics_state_op(Op_Q)
@@ -136,6 +139,7 @@ test "cpdfcontent operator state saves and restores q Q frames" {
   @test.assert_eq(restored.transfer, initial.transfer)
   @test.assert_eq(restored.halftone, initial.halftone)
   @test.assert_eq(restored.blend_mode, initial.blend_mode)
+  @test.assert_eq(restored.soft_mask, initial.soft_mask)
   @test.assert_eq(
     restored.black_point_compensation,
     initial.black_point_compensation,

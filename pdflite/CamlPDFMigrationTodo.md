@@ -2989,6 +2989,20 @@ Current backend snapshot:
   `markdown/cmd` warning and `moon check --target native --warn-list +73` at the
   known 10-warning baseline. Native full-suite validation reports `moon test
   --target native` at 1971/1971 tests passing.~~
+- [x] ~~Standalone `cpdfcontent.ml` soft-mask state-completeness slice adds the
+  cpdf initial `soft_mask = Pdf.Null` slot to `PdfContentOperatorState` and q/Q
+  frames, including initial-state exposure and graphics-state save/restore
+  coverage while preserving cpdf's source-shaped `/SMask` ExtGState assignment
+  through the existing halftone field rather than mutating this unused slot.
+  Focused native validation reports `moon test --target native
+  pdf_content_operator_state_test.mbt --filter '*initial state*'` at 1/1 test
+  passing, `moon test --target native pdf_content_operator_state_test.mbt
+  --filter '*q Q*'` at 1/1 test passing, and `moon test --target native
+  pdf_content_operator_state_test.mbt` at 25/25 tests passing; native check
+  validation reports `moon check --target native` passing with the known
+  `markdown/cmd` warning and `moon check --target native --warn-list +73` at the
+  known 10-warning baseline. Full native suite validation is deferred to the
+  next batch.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,
