@@ -758,6 +758,94 @@ test "cpdfcontent operator state collects nonrecursive content entries" {
 }
 
 ///|
+test "cpdfcontent operator state recursively collects Form XObject entries" {
+  let doc = @pdflite.pdf_document_empty()
+  let subtype_key = content_operator_name_for_test("/Subtype")
+  let base_font_key = content_operator_name_for_test("/BaseFont")
+  let length_key = content_operator_name_for_test("/Length")
+  let resources_key = content_operator_name_for_test("/Resources")
+  let font_resource_key = content_operator_name_for_test("/Font")
+  let xobject_key = content_operator_name_for_test("/XObject")
+  let bbox_key = content_operator_name_for_test("/BBox")
+  let fpage_key = content_operator_name_for_test("/FPage")
+  let fform_key = content_operator_name_for_test("/FForm")
+  let form_name = content_operator_name_for_test("/Fm1")
+  doc.add_object_given_number(
+    7,
+    @pdflite.pdf_dictionary([
+      (subtype_key, PdfNameObject(content_operator_name_for_test("/Type1"))),
+      (
+        base_font_key,
+        PdfNameObject(content_operator_name_for_test("/Helvetica")),
+      ),
+    ]),
+  )
+  doc.add_object_given_number(
+    8,
+    @pdflite.pdf_dictionary([
+      (subtype_key, PdfNameObject(content_operator_name_for_test("/Type1"))),
+      (base_font_key, PdfNameObject(content_operator_name_for_test("/Courier"))),
+    ]),
+  )
+  let form_data = @ascii.encode("/FForm 10 Tf (A) Tj")
+  let form_xobject = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (subtype_key, PdfNameObject(content_operator_name_for_test("/Form"))),
+      (length_key, PdfInteger(form_data.length())),
+      (
+        bbox_key,
+        PdfArray([PdfInteger(0), PdfInteger(0), PdfInteger(20), PdfInteger(20)]),
+      ),
+      (
+        resources_key,
+        @pdflite.pdf_dictionary([
+          (
+            font_resource_key,
+            @pdflite.pdf_dictionary([(fform_key, PdfIndirect(7))]),
+          ),
+        ]),
+      ),
+    ]),
+    StreamGot(form_data),
+  )
+  let page_resources = @pdflite.pdf_dictionary([
+    (font_resource_key, @pdflite.pdf_dictionary([(fpage_key, PdfIndirect(8))])),
+    (xobject_key, @pdflite.pdf_dictionary([(form_name, form_xobject)])),
+  ])
+  let mediabox : @pdflite.PdfRectangle = {
+    min_x: 0.0,
+    min_y: 0.0,
+    max_x: 100.0,
+    max_y: 200.0,
+  }
+  let ops : Array[@pdflite.PdfContentOp] = [
+    Op_Tf(fpage_key, 9.0),
+    Op_Do(form_name),
+    Op_Tj(b"B"),
+  ]
+  let entries = try! doc.content_entries_of_ops_recursive(
+    mediabox, page_resources, ops,
+  )
+  @test.assert_eq(entries.length(), 2)
+  @test.assert_eq(entries[0].object, PdfContentGlyphObject(65, "A", "A"))
+  guard entries[0].state is PdfContentStateGlyph(form_state) else {
+    fail("expected Form glyph state")
+  }
+  @test.assert_eq(form_state.font, "/FForm")
+  @test.assert_eq(entries[1].object, PdfContentGlyphObject(66, "B", "B"))
+  guard entries[1].state is PdfContentStateGlyph(page_state) else {
+    fail("expected page glyph state")
+  }
+  @test.assert_eq(page_state.font, "/FPage")
+  @test.assert_eq(
+    try! @pdflite.pdf_content_entries_of_ops_recursive(
+      doc, mediabox, page_resources, ops,
+    ),
+    entries,
+  )
+}
+
+///|
 test "cpdfcontent operator state applies source-shaped ExtGState resources" {
   let doc = @pdflite.pdf_document_empty()
   let initial = @pdflite.pdf_content_initial_operator_state(

@@ -429,6 +429,8 @@ pub fn pdf_content_end_artifact() -> PdfContentOp
 
 pub fn pdf_content_entries_of_ops(PdfDocument, PdfRectangle, PdfObject, ArrayView[PdfContentOp]) -> Array[PdfContentJsonEntry] raise @core.PdfError
 
+pub fn pdf_content_entries_of_ops_recursive(PdfDocument, PdfRectangle, PdfObject, ArrayView[PdfContentOp]) -> Array[PdfContentJsonEntry] raise @core.PdfError
+
 pub fn pdf_content_extra_metrics(PdfFont) -> (Double, Double)
 
 pub fn pdf_content_form_xobject_enter_state(PdfDocument, PdfContentOperatorState, PdfObject, @core.PdfName) -> PdfContentOperatorState? raise @core.PdfError
@@ -2456,6 +2458,7 @@ pub fn PdfDocument::content_apply_font_resource_op(Self, PdfContentOperatorState
 pub fn PdfDocument::content_apply_resource_op(Self, PdfContentOperatorState, PdfObject, PdfContentOp) -> PdfContentOperatorResourceResult raise @core.PdfError
 pub fn PdfDocument::content_apply_text_resource_op(Self, PdfContentOperatorState, PdfObject, PdfContentOp) -> PdfContentOperatorTextResult raise @core.PdfError
 pub fn PdfDocument::content_entries_of_ops(Self, PdfRectangle, PdfObject, ArrayView[PdfContentOp]) -> Array[PdfContentJsonEntry] raise @core.PdfError
+pub fn PdfDocument::content_entries_of_ops_recursive(Self, PdfRectangle, PdfObject, ArrayView[PdfContentOp]) -> Array[PdfContentJsonEntry] raise @core.PdfError
 pub fn PdfDocument::content_form_xobject_enter_state(Self, PdfContentOperatorState, PdfObject, @core.PdfName) -> PdfContentOperatorState? raise @core.PdfError
 pub fn PdfDocument::content_form_xobject_ops(Self, PdfObject, @core.PdfName) -> Array[PdfContentOp]? raise @core.PdfError
 pub fn PdfDocument::content_form_xobject_resources(Self, PdfObject, @core.PdfName) -> PdfObject? raise @core.PdfError
