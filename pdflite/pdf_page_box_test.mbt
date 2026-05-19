@@ -344,6 +344,120 @@ test "PdfDocument set_mediaboxes validates page range and box count" {
 }
 
 ///|
+test "PdfDocument crop_pages sets selected page-indexed boxes" {
+  let document = page_box_document_for_test()
+  let key_crop = page_box_name_for_test("/CropBox")
+  let key_bleed = page_box_name_for_test("/BleedBox")
+  let cropped = try! document.crop_pages([2], [
+    (1.0, 2.0, 10.0, 20.0),
+    (3.0, 4.0, 30.0, 40.0),
+  ])
+  let pages = try! cropped.pages_of_pagetree()
+  @test.assert_eq(
+    pages[0].rest.lookup_immediate(key_crop),
+    Some(page_box_rect_for_test(10.0, 20.0, 90.0, 150.0)),
+  )
+  @test.assert_eq(
+    pages[1].rest.lookup_immediate(key_crop),
+    Some(page_box_rect_for_test(3.0, 4.0, 33.0, 44.0)),
+  )
+
+  let wrapped = try! @pdflite.pdf_crop_pdf(
+    document,
+    [1],
+    [(5.0, 6.0, 7.0, 8.0), (0.0, 0.0, 1.0, 1.0)],
+    box_name=key_bleed,
+  )
+  let wrapped_pages = try! wrapped.pages_of_pagetree()
+  @test.assert_eq(
+    wrapped_pages[0].rest.lookup_immediate(key_bleed),
+    Some(page_box_rect_for_test(5.0, 6.0, 12.0, 14.0)),
+  )
+  @test.assert_eq(wrapped_pages[1].rest.lookup_immediate(key_bleed), None)
+}
+
+///|
+test "PdfDocument crop_pages validates page range and box count" {
+  let document = page_box_document_for_test()
+  let bad_count : Result[@pdflite.PdfDocument, Error] = try? document.crop_pages(
+    [1],
+    [(1.0, 2.0, 3.0, 4.0)],
+  )
+  guard bad_count
+    is Err(
+      @pdflite.PdfError::BadPageSpecification(
+        "crop_pages: box count must match page count"
+      )
+    ) else {
+    fail("expected crop_pages to reject a partial page-indexed box list")
+  }
+
+  let bad_page : Result[@pdflite.PdfDocument, Error] = try? document.crop_pages(
+    [3],
+    [(1.0, 2.0, 3.0, 4.0), (5.0, 6.0, 7.0, 8.0)],
+  )
+  guard bad_page
+    is Err(
+      @pdflite.PdfError::BadPageSpecification(
+        "crop_pages: range contains pages not present in pdf"
+      )
+    ) else {
+    fail("expected crop_pages to reject an out-of-range page")
+  }
+}
+
+///|
+test "PdfDocument set_page_box sets fixed named page box" {
+  let document = page_box_document_for_test()
+  let key_art = page_box_name_for_test("/ArtBox")
+  let key_bleed = page_box_name_for_test("/BleedBox")
+  let boxed = try! document.set_page_box([2], key_art, 10.0, 70.0, 20.0, 80.0)
+  let pages = try! boxed.pages_of_pagetree()
+  @test.assert_eq(pages[0].rest.lookup_immediate(key_art), None)
+  @test.assert_eq(
+    pages[1].rest.lookup_immediate(key_art),
+    Some(page_box_rect_for_test(10.0, 20.0, 70.0, 80.0)),
+  )
+
+  let wrapped = try! @pdflite.pdf_set_box(
+    document,
+    [1],
+    key_bleed,
+    1.0,
+    4.0,
+    2.0,
+    5.0,
+  )
+  let wrapped_pages = try! wrapped.pages_of_pagetree()
+  @test.assert_eq(
+    wrapped_pages[0].rest.lookup_immediate(key_bleed),
+    Some(page_box_rect_for_test(1.0, 2.0, 4.0, 5.0)),
+  )
+  @test.assert_eq(wrapped_pages[1].rest.lookup_immediate(key_bleed), None)
+}
+
+///|
+test "PdfDocument set_page_box validates selected pages" {
+  let document = page_box_document_for_test()
+  let bad_page : Result[@pdflite.PdfDocument, Error] = try? document.set_page_box(
+    [3],
+    page_box_name_for_test("/ArtBox"),
+    1.0,
+    2.0,
+    3.0,
+    4.0,
+  )
+  guard bad_page
+    is Err(
+      @pdflite.PdfError::BadPageSpecification(
+        "set_page_box: range contains pages not present in pdf"
+      )
+    ) else {
+    fail("expected set_page_box to reject an out-of-range page")
+  }
+}
+
+///|
 test "PdfDocument shift_boxes shifts only selected page boxes" {
   let document = page_box_document_for_test()
   let key_crop = page_box_name_for_test("/CropBox")

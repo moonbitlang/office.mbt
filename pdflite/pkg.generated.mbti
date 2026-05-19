@@ -523,6 +523,8 @@ pub fn pdf_copy_page_box(PdfDocument, ArrayView[Int], @core.PdfName, @core.PdfNa
 
 pub fn pdf_create_metadata(PdfDocument) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_crop_pdf(PdfDocument, ArrayView[Int], ArrayView[(Double, Double, Double, Double)], box_name? : @core.PdfName) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_css_colour_value(String) -> Int?
 
 pub fn pdf_css_colours() -> Array[(String, Int)]
@@ -1182,6 +1184,8 @@ pub fn pdf_scale_pages(PdfDocument, ArrayView[Int], ArrayView[(Double, Double)],
 pub fn pdf_scale_to_fit_pages(PdfDocument, ArrayView[Int], ArrayView[(Double, Double)], position? : PdfPosition, input_scale? : Double, fast? : Bool) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_set_annotations_json(Json, PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_set_box(PdfDocument, ArrayView[Int], @core.PdfName, Double, Double, Double, Double) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_set_language(PdfDocument, BytesView) -> PdfDocument raise @core.PdfError
 
@@ -2520,6 +2524,7 @@ pub fn PdfDocument::copy_font_from(Self, Self, String, Int, ArrayView[Int]) -> S
 pub fn PdfDocument::copy_id_from(Self, Self, keep_version? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::copy_page_box(Self, ArrayView[Int], @core.PdfName, @core.PdfName, mediabox_if_missing? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::create_metadata(Self) -> Self raise @core.PdfError
+pub fn PdfDocument::crop_pages(Self, ArrayView[Int], ArrayView[(Double, Double, Double, Double)], box_name? : @core.PdfName) -> Self raise @core.PdfError
 pub fn PdfDocument::debug_objects(Self) -> Bytes raise @core.PdfError
 pub fn PdfDocument::decompress(Self) -> Self raise @core.PdfError
 pub fn PdfDocument::decrypt_single_stream(Self, Int, Int, PdfObject, user_password? : BytesView?, owner_password? : BytesView?, no_encrypt_metadata? : Bool) -> PdfObject? raise @core.PdfError
@@ -2736,6 +2741,7 @@ pub fn PdfDocument::set_metadata_date(Self, String) -> Self raise @core.PdfError
 pub fn PdfDocument::set_metadata_from_bytes(Self, BytesView, keep_version? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::set_non_full_screen_page_mode(Self, String) -> Self raise @core.PdfError
 pub fn PdfDocument::set_open_action(Self, Int, fit? : Bool, destination? : PdfObject?) -> Self raise @core.PdfError
+pub fn PdfDocument::set_page_box(Self, ArrayView[Int], @core.PdfName, Double, Double, Double, Double) -> Self raise @core.PdfError
 pub fn PdfDocument::set_page_layout(Self, String) -> Self raise @core.PdfError
 pub fn PdfDocument::set_page_mode(Self, String) -> Self raise @core.PdfError
 pub fn PdfDocument::set_revision_read(Self, Int) -> Unit

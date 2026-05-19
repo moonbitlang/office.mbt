@@ -92,6 +92,17 @@ fn pdf_page_box_validate_xywh_boxes(
 }
 
 ///|
+fn pdf_page_box_validate_xywh_boxes_with_context(
+  boxes : ArrayView[(Double, Double, Double, Double)],
+  end_page : Int,
+  context : String,
+) -> Unit raise PdfError {
+  if boxes.length() != end_page {
+    raise BadPageSpecification(context + ": box count must match page count")
+  }
+}
+
+///|
 fn pdf_page_box_validate_offsets(
   offsets : ArrayView[(Double, Double)],
   end_page : Int,
@@ -225,6 +236,44 @@ fn PdfDocument::pdf_page_set_mediabox_page(
 ) -> PdfPage {
   ignore(self)
   { ..page, mediabox: pdf_page_box_xywh_object(boxes[page_number - 1]) }
+}
+
+///|
+fn PdfDocument::pdf_page_crop_page(
+  self : PdfDocument,
+  page_number : Int,
+  page : PdfPage,
+  boxes : ArrayView[(Double, Double, Double, Double)],
+  box_name : PdfName,
+) -> PdfPage raise PdfError {
+  ignore(self)
+  {
+    ..page,
+    rest: page.rest.add_dict_entry(
+      box_name,
+      pdf_page_box_xywh_object(boxes[page_number - 1]),
+    ),
+  }
+}
+
+///|
+fn PdfDocument::pdf_page_set_box_page(
+  self : PdfDocument,
+  page : PdfPage,
+  box_name : PdfName,
+  min_x : Double,
+  max_x : Double,
+  min_y : Double,
+  max_y : Double,
+) -> PdfPage raise PdfError {
+  ignore(self)
+  {
+    ..page,
+    rest: page.rest.add_dict_entry(
+      box_name,
+      pdf_page_box_bounds_object((min_x, min_y, max_x, max_y)),
+    ),
+  }
 }
 
 ///|
@@ -424,6 +473,84 @@ pub fn pdf_set_mediaboxes(
   boxes : ArrayView[(Double, Double, Double, Double)],
 ) -> PdfDocument raise PdfError {
   document.set_mediaboxes(page_numbers, boxes)
+}
+
+///|
+/// Set a named page box on selected pages from a page-indexed `(x, y, width,
+/// height)` list.
+///
+/// This ports cpdf's `crop_pdf`. By default it writes `/CropBox`; `box_name`
+/// can target another page-box dictionary entry. The selected pages use
+/// `boxes[page_number - 1]`.
+pub fn PdfDocument::crop_pages(
+  self : PdfDocument,
+  page_numbers : ArrayView[Int],
+  boxes : ArrayView[(Double, Double, Double, Double)],
+  box_name? : PdfName = pdf_page_cropbox_key(),
+) -> PdfDocument raise PdfError {
+  let pages = self.pages_of_pagetree()
+  pdf_page_box_validate_page_numbers(page_numbers, pages.length(), "crop_pages")
+  pdf_page_box_validate_xywh_boxes_with_context(
+    boxes,
+    pages.length(),
+    "crop_pages",
+  )
+  let rewritten : Array[PdfPage] = []
+  for index in 0..<pages.length() {
+    let page_number = index + 1
+    if pdf_page_box_contains_page(page_numbers, page_number) {
+      rewritten.push(
+        self.pdf_page_crop_page(page_number, pages[index], boxes, box_name),
+      )
+    } else {
+      rewritten.push(pages[index])
+    }
+  }
+  self.change_pages(rewritten, change_references=true)
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::crop_pages`.
+pub fn pdf_crop_pdf(
+  document : PdfDocument,
+  page_numbers : ArrayView[Int],
+  boxes : ArrayView[(Double, Double, Double, Double)],
+  box_name? : PdfName = pdf_page_cropbox_key(),
+) -> PdfDocument raise PdfError {
+  document.crop_pages(page_numbers, boxes, box_name~)
+}
+
+///|
+/// Set a fixed named page box on selected pages.
+///
+/// The scalar argument order mirrors cpdf's historical `setBox`:
+/// `(min_x, max_x, min_y, max_y)`.
+pub fn PdfDocument::set_page_box(
+  self : PdfDocument,
+  page_numbers : ArrayView[Int],
+  box_name : PdfName,
+  min_x : Double,
+  max_x : Double,
+  min_y : Double,
+  max_y : Double,
+) -> PdfDocument raise PdfError {
+  self.pdf_page_box_rewrite_pages(page_numbers, "set_page_box", (_, _, page) => {
+    self.pdf_page_set_box_page(page, box_name, min_x, max_x, min_y, max_y)
+  })
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::set_page_box`.
+pub fn pdf_set_box(
+  document : PdfDocument,
+  page_numbers : ArrayView[Int],
+  box_name : PdfName,
+  min_x : Double,
+  max_x : Double,
+  min_y : Double,
+  max_y : Double,
+) -> PdfDocument raise PdfError {
+  document.set_page_box(page_numbers, box_name, min_x, max_x, min_y, max_y)
 }
 
 ///|
