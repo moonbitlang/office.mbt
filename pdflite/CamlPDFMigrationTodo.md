@@ -231,6 +231,20 @@ Current backend snapshot:
   includes a compatibility wrapper. Coverage pins exact generated content
   operators for normal and light/fast overlays. `moon test --target native
   pdf_redact_test.mbt` reports 2/2 tests passing.~~
+- [x] ~~Port the implemented page-content overlay part of `cpdfredact`:
+  `show_bounding_boxes` now first applies annotation boxes, then draws
+  cpdf-style content-object bounding boxes with source colour choices and an
+  optional rectangle filter, including the compatibility wrapper
+  `pdf_show_bounding_boxes`. Coverage pins exact generated path-content box
+  operators, selected-page behavior, wrapper invocation, light/fast mode, and
+  shape filtering that suppresses non-matching boxes. Focused native validation
+  reports `moon test --target native pdf_redact_test.mbt --filter '*page content
+  rectangles*'` at 1/1 test passing; widened native validation reports `moon
+  test --target native pdf_redact_test.mbt` at 5/5 tests passing. Native check
+  validation reports `moon check --target native` passing with the known
+  `markdown/cmd` warning and `moon check --target native --warn-list +73` at the
+  known 10-warning baseline. Full native suite validation is deferred to the
+  next batch.~~
 - [x] ~~Port the current stub/no-op redaction APIs from `cpdfredact`: `redact`
   is exposed as `redact_path`/`pdf_redact` and preserves page content while
   validating the selected page range, while `apply` and `apply_type` are

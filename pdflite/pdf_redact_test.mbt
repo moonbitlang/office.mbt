@@ -68,6 +68,37 @@ fn redact_expected_annotation_box_for_test(
 }
 
 ///|
+fn redact_expected_path_content_box_for_test(
+  x0 : Double,
+  y0 : Double,
+  x1 : Double,
+  y1 : Double,
+  x2 : Double,
+  y2 : Double,
+  x3 : Double,
+  y3 : Double,
+  light : Bool,
+) -> Array[@pdflite.PdfContentOp] {
+  let stroke : @pdflite.PdfContentOp = if light {
+    Op_RG(0.5, 0.5, 1.0)
+  } else {
+    Op_RG(0.0, 0.0, 1.0)
+  }
+  [
+    Op_q,
+    stroke,
+    Op_w(0.5),
+    Op_m(x0, y0),
+    Op_l(x1, y1),
+    Op_l(x2, y2),
+    Op_l(x3, y3),
+    Op_h,
+    Op_S,
+    Op_Q,
+  ]
+}
+
+///|
 fn redact_concat_ops_for_test(
   first : ArrayView[@pdflite.PdfContentOp],
   second : ArrayView[@pdflite.PdfContentOp],
@@ -199,4 +230,44 @@ test "pdf_show_annotation_bounding_boxes supports light fast overlay" {
     ),
   )
   @test.assert_eq(redact_content_ops_for_test(boxed, boxed_page), expected)
+}
+
+///|
+test "PdfDocument show_bounding_boxes draws page content rectangles" {
+  let base = try! @pdflite.pdf_blank_document(100.0, 100.0, 2)
+  let pages = try! base.pages_of_pagetree()
+  let source_ops : Array[@pdflite.PdfContentOp] = [
+    Op_m(10.0, 20.0),
+    Op_l(30.0, 20.0),
+    Op_S,
+  ]
+  let document = try! base.change_pages([
+    {
+      ..pages[0],
+      content: [try! @pdflite.pdf_content_stream_of_ops(source_ops)],
+    },
+    pages[1],
+  ])
+  let boxed = try! document.show_bounding_boxes([1])
+  let boxed_pages = try! boxed.pages_of_pagetree()
+  let expected_box = redact_expected_path_content_box_for_test(
+    9.5, 19.5, 9.5, 20.5, 30.5, 20.5, 30.5, 19.5, false,
+  )
+  @test.assert_eq(
+    redact_content_ops_for_test(boxed, boxed_pages[0]),
+    redact_concat_ops_for_test([Op_q, ..source_ops, Op_Q], expected_box),
+  )
+  @test.assert_eq(redact_content_ops_for_test(boxed, boxed_pages[1]), [])
+  let filtered = try! @pdflite.pdf_show_bounding_boxes(
+    document,
+    [1],
+    shape=Some({ min_x: 0.0, min_y: 0.0, max_x: 5.0, max_y: 5.0 }),
+    light=true,
+    fast=true,
+  )
+  let filtered_page = (try! filtered.pages_of_pagetree())[0]
+  @test.assert_eq(
+    redact_content_ops_for_test(filtered, filtered_page),
+    source_ops,
+  )
 }
