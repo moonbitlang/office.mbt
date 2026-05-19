@@ -711,6 +711,53 @@ test "cpdfcontent operator state applies single resource operator dispatcher" {
 }
 
 ///|
+test "cpdfcontent operator state collects nonrecursive content entries" {
+  let doc = @pdflite.pdf_document_empty()
+  let subtype_key = content_operator_name_for_test("/Subtype")
+  let base_font_key = content_operator_name_for_test("/BaseFont")
+  let font_resource_key = content_operator_name_for_test("/Font")
+  let f1_key = content_operator_name_for_test("/F1")
+  doc.add_object_given_number(
+    7,
+    @pdflite.pdf_dictionary([
+      (subtype_key, PdfNameObject(content_operator_name_for_test("/Type1"))),
+      (
+        base_font_key,
+        PdfNameObject(content_operator_name_for_test("/Helvetica")),
+      ),
+    ]),
+  )
+  let resources = @pdflite.pdf_dictionary([
+    (font_resource_key, @pdflite.pdf_dictionary([(f1_key, PdfIndirect(7))])),
+  ])
+  let mediabox : @pdflite.PdfRectangle = {
+    min_x: 0.0,
+    min_y: 0.0,
+    max_x: 100.0,
+    max_y: 200.0,
+  }
+  let ops : Array[@pdflite.PdfContentOp] = [
+    Op_Tf(f1_key, 10.0),
+    Op_Tj(b"A"),
+    Op_m(0.0, 0.0),
+    Op_l(10.0, 0.0),
+    Op_S,
+    Op_InlineImage(@pdflite.pdf_dictionary([]), None, b"raw"),
+  ]
+  let entries = try! doc.content_entries_of_ops(mediabox, resources, ops)
+  @test.assert_eq(entries.length(), 3)
+  @test.assert_eq(entries[0].object, PdfContentGlyphObject(65, "A", "A"))
+  guard entries[1].object is PdfContentPathObject(_) else {
+    fail("expected path entry")
+  }
+  @test.assert_eq(entries[2].object, PdfContentInlineImageObject)
+  @test.assert_eq(
+    try! @pdflite.pdf_content_entries_of_ops(doc, mediabox, resources, ops),
+    entries,
+  )
+}
+
+///|
 test "cpdfcontent operator state applies source-shaped ExtGState resources" {
   let doc = @pdflite.pdf_document_empty()
   let initial = @pdflite.pdf_content_initial_operator_state(

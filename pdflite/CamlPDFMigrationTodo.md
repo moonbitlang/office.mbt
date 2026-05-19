@@ -3116,6 +3116,23 @@ Current backend snapshot:
   `markdown/cmd` warning and `moon check --target native --warn-list +73` at the
   known 10-warning baseline. Full native suite validation is deferred to the
   next batch.~~
+- [x] ~~Standalone `cpdfcontent.ml` nonrecursive content-entry collection slice
+  adds `PdfDocument::content_entries_of_ops` and
+  `pdf_content_entries_of_ops`, threading an initial cpdfcontent page state
+  through a content-operator array via `content_apply_resource_op` and
+  accumulating emitted JSON entries in source order. Coverage locks down mixed
+  font selection, glyph emission, path painting, inline-image emission, and
+  wrapper parity for a single nonrecursive content stream while leaving
+  recursive Form XObject walking and page-level content parsing for later
+  slices. Focused native validation reports the native
+  `pdf_content_operator_state_test.mbt` run with
+  `--filter '*nonrecursive content entries*'` at 1/1 test passing; widened
+  native validation reports `moon test --target native
+  pdf_content_operator_state_test.mbt` at 32/32 tests passing. Native check
+  validation reports `moon check --target native` passing with the known
+  `markdown/cmd` warning and `moon check --target native --warn-list +73` at the
+  known 10-warning baseline. Full native suite validation is deferred to the
+  next batch.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,

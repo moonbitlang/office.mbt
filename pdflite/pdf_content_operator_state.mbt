@@ -1808,3 +1808,37 @@ pub fn pdf_content_apply_resource_op(
 ) -> PdfContentOperatorResourceResult raise PdfError {
   document.content_apply_resource_op(state, resources, op)
 }
+
+///|
+/// Collect cpdfcontent JSON entries for one non-recursive content-operator list.
+pub fn PdfDocument::content_entries_of_ops(
+  self : PdfDocument,
+  mediabox : PdfRectangle,
+  resources : PdfObject,
+  ops : ArrayView[PdfContentOp],
+) -> Array[PdfContentJsonEntry] raise PdfError {
+  let mut state = pdf_content_initial_operator_state(
+    mediabox.min_x,
+    mediabox.min_y,
+    mediabox.max_x,
+    mediabox.max_y,
+  )
+  let entries : Array[PdfContentJsonEntry] = []
+  for op in ops {
+    let result = self.content_apply_resource_op(state, resources, op)
+    entries.append(result.entries)
+    state = result.state
+  }
+  entries
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::content_entries_of_ops`.
+pub fn pdf_content_entries_of_ops(
+  document : PdfDocument,
+  mediabox : PdfRectangle,
+  resources : PdfObject,
+  ops : ArrayView[PdfContentOp],
+) -> Array[PdfContentJsonEntry] raise PdfError {
+  document.content_entries_of_ops(mediabox, resources, ops)
+}
