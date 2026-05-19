@@ -105,6 +105,29 @@ fn pdf_ua_matterhorn_test_01_007() -> PdfUAMatterhornTest {
 }
 
 ///|
+fn pdf_ua_matterhorn_test_02_001() -> PdfUAMatterhornTest {
+  {
+    name: "02-001",
+    error: "One or more non-standard tag’s mapping does not terminate with a standard type.",
+    section: "UA1:7.1-3",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_02_003() -> PdfUAMatterhornTest {
+  { name: "02-003", error: "A circular mapping exists.", section: "UA1:7.1-3" }
+}
+
+///|
+fn pdf_ua_matterhorn_test_02_004() -> PdfUAMatterhornTest {
+  {
+    name: "02-004",
+    error: "One or more standard types are remapped.",
+    section: "UA1:7.1-4",
+  }
+}
+
+///|
 fn pdf_ua_matterhorn_test_06_001() -> PdfUAMatterhornTest {
   {
     name: "06-001",
@@ -156,6 +179,9 @@ fn pdf_ua_matterhorn_implemented_tests() -> Array[PdfUAMatterhornTest] {
     pdf_ua_matterhorn_test_01_004(),
     pdf_ua_matterhorn_test_01_005(),
     pdf_ua_matterhorn_test_01_007(),
+    pdf_ua_matterhorn_test_02_001(),
+    pdf_ua_matterhorn_test_02_003(),
+    pdf_ua_matterhorn_test_02_004(),
     pdf_ua_matterhorn_test_06_001(),
     pdf_ua_matterhorn_test_06_002(),
     pdf_ua_matterhorn_test_06_003(),
@@ -477,6 +503,174 @@ fn PdfDocument::pdf_ua_matterhorn_check_01_007(self : PdfDocument) -> Json? {
 }
 
 ///|
+fn pdf_ua_matterhorn_name_text(name : PdfName) -> String {
+  @ascii.decode_lossy(name.bytes())
+}
+
+///|
+fn pdf_ua_matterhorn_standard_structure_types_2008() -> Array[PdfName] {
+  [
+    pdf_ua_name("/Document"),
+    pdf_ua_name("/Part"),
+    pdf_ua_name("/Sect"),
+    pdf_ua_name("/Div"),
+    pdf_ua_name("/NonStruct"),
+    pdf_ua_name("/P"),
+    pdf_ua_name("/H1"),
+    pdf_ua_name("/H2"),
+    pdf_ua_name("/H3"),
+    pdf_ua_name("/H4"),
+    pdf_ua_name("/H5"),
+    pdf_ua_name("/H6"),
+    pdf_ua_name("/H"),
+    pdf_ua_name("/Lbl"),
+    pdf_ua_name("/Span"),
+    pdf_ua_name("/Link"),
+    pdf_ua_name("/Annot"),
+    pdf_ua_name("/Form"),
+    pdf_ua_name("/Ruby"),
+    pdf_ua_name("/RB"),
+    pdf_ua_name("/RT"),
+    pdf_ua_name("/RP"),
+    pdf_ua_name("/Warichu"),
+    pdf_ua_name("/WT"),
+    pdf_ua_name("/WP"),
+    pdf_ua_name("/L"),
+    pdf_ua_name("/LI"),
+    pdf_ua_name("/LBody"),
+    pdf_ua_name("/Table"),
+    pdf_ua_name("/TR"),
+    pdf_ua_name("/TH"),
+    pdf_ua_name("/TD"),
+    pdf_ua_name("/THead"),
+    pdf_ua_name("/TBody"),
+    pdf_ua_name("/TFoot"),
+    pdf_ua_name("/Caption"),
+    pdf_ua_name("/Figure"),
+    pdf_ua_name("/Formula"),
+    pdf_ua_name("/Art"),
+    pdf_ua_name("/BlockQuote"),
+    pdf_ua_name("/TOC"),
+    pdf_ua_name("/TOCI"),
+    pdf_ua_name("/Index"),
+    pdf_ua_name("/Private"),
+    pdf_ua_name("/Quote"),
+    pdf_ua_name("/Note"),
+    pdf_ua_name("/Reference"),
+    pdf_ua_name("/Code"),
+    pdf_ua_name("/BibEntry"),
+  ]
+}
+
+///|
+fn pdf_ua_matterhorn_standard_structure_type(name : PdfName) -> Bool {
+  pdf_ua_matterhorn_standard_structure_types_2008().contains(name)
+}
+
+///|
+fn PdfUAStructTreeRoleMap::pdf_ua_matterhorn_role_is_circular(
+  self : PdfUAStructTreeRoleMap,
+  name : PdfName,
+) -> Bool {
+  let mut current = name
+  let mut remaining = self.entries.length()
+  while true {
+    if remaining < 0 {
+      return true
+    }
+    match self.mapped(current) {
+      Some(next) => {
+        current = next
+        remaining -= 1
+      }
+      None => return false
+    }
+  }
+  false
+}
+
+///|
+fn PdfUAStructTreeRoleMap::pdf_ua_matterhorn_has_circular_mapping(
+  self : PdfUAStructTreeRoleMap,
+) -> Bool {
+  for entry in self.entries {
+    if self.pdf_ua_matterhorn_role_is_circular(entry.0) {
+      return true
+    }
+  }
+  false
+}
+
+///|
+fn PdfUAStructTreeRoleMap::pdf_ua_matterhorn_role_terminates_at_standard(
+  self : PdfUAStructTreeRoleMap,
+  name : PdfName,
+) -> Bool {
+  let mut current = name
+  let mut remaining = self.entries.length()
+  while remaining >= 0 {
+    match self.mapped(current) {
+      Some(next) =>
+        if pdf_ua_matterhorn_standard_structure_type(next) {
+          return true
+        } else {
+          current = next
+          remaining -= 1
+        }
+      None => return false
+    }
+  }
+  false
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_rolemap(
+  self : PdfDocument,
+) -> PdfUAStructTreeRoleMap {
+  self.pdf_ua_struct_tree_rolemap()
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_02_001(self : PdfDocument) -> Json? {
+  let rolemap = self.pdf_ua_matterhorn_rolemap()
+  if rolemap.pdf_ua_matterhorn_has_circular_mapping() {
+    None
+  } else {
+    for entry in rolemap.entries {
+      if !rolemap.pdf_ua_matterhorn_role_terminates_at_standard(entry.0) {
+        return Some(Json::string(pdf_ua_matterhorn_name_text(entry.0)))
+      }
+    }
+    None
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_circular_rolemap_extra() -> Json {
+  Json::string("STOP. If rolemap circular, cannot proceed with other checks.")
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_02_003(self : PdfDocument) -> Json? {
+  if self.pdf_ua_matterhorn_rolemap().pdf_ua_matterhorn_has_circular_mapping() {
+    Some(pdf_ua_matterhorn_circular_rolemap_extra())
+  } else {
+    None
+  }
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_02_004(self : PdfDocument) -> Json? {
+  let rolemap = self.pdf_ua_matterhorn_rolemap()
+  for entry in rolemap.entries {
+    if pdf_ua_matterhorn_standard_structure_type(entry.0) {
+      return Some(Json::string(pdf_ua_matterhorn_name_text(entry.0)))
+    }
+  }
+  None
+}
+
+///|
 fn pdf_ua_matterhorn_xmp_field_exists(
   metadata : BytesView,
   xml_namespace : String,
@@ -568,6 +762,9 @@ fn PdfDocument::pdf_ua_matterhorn_run_test(
     "01-004" => self.pdf_ua_matterhorn_check_01_004()
     "01-005" => self.pdf_ua_matterhorn_check_01_005()
     "01-007" => self.pdf_ua_matterhorn_check_01_007()
+    "02-001" => self.pdf_ua_matterhorn_check_02_001()
+    "02-003" => self.pdf_ua_matterhorn_check_02_003()
+    "02-004" => self.pdf_ua_matterhorn_check_02_004()
     "06-001" => self.pdf_ua_matterhorn_check_06_001()
     "06-002" => self.pdf_ua_matterhorn_check_06_002()
     "06-003" => self.pdf_ua_matterhorn_check_06_003()
@@ -577,6 +774,17 @@ fn PdfDocument::pdf_ua_matterhorn_run_test(
   }
   match result {
     Some(extra) => Some(pdf_ua_matterhorn_failure(check, extra~))
+    None => None
+  }
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_circular_rolemap_failure(
+  self : PdfDocument,
+) -> PdfUAMatterhornFailure? {
+  match self.pdf_ua_matterhorn_check_02_003() {
+    Some(extra) =>
+      Some(pdf_ua_matterhorn_failure(pdf_ua_matterhorn_test_02_003(), extra~))
     None => None
   }
 }
@@ -603,8 +811,13 @@ fn PdfDocument::pdf_ua_matterhorn_failures(
   self : PdfDocument,
   test_name : String,
 ) -> Array[PdfUAMatterhornFailure] raise PdfError {
+  let checks = pdf_ua_matterhorn_tests_for_name(test_name)
+  match self.pdf_ua_matterhorn_circular_rolemap_failure() {
+    Some(failure) => return [failure]
+    None => ()
+  }
   let failures : Array[PdfUAMatterhornFailure] = []
-  for check in pdf_ua_matterhorn_tests_for_name(test_name) {
+  for check in checks {
     match self.pdf_ua_matterhorn_run_test(check) {
       Some(failure) => failures.push(failure)
       None => ()
@@ -617,10 +830,10 @@ fn PdfDocument::pdf_ua_matterhorn_failures(
 /// Return cpdf-style PDF/UA Matterhorn failures as JSON.
 ///
 /// The current migration covers content-marking checks `01-003`, `01-004`,
-/// `01-005`, and `01-007`, plus XMP metadata and DisplayDocTitle checks
-/// `06-001` through `07-002`. Passing `""` runs the covered subset;
-/// unsupported individual test names raise a soft error until their source
-/// checks are ported.
+/// `01-005`, and `01-007`, role-map checks `02-001`, `02-003`, and `02-004`,
+/// plus XMP metadata and DisplayDocTitle checks `06-001` through `07-002`.
+/// Passing `""` runs the covered subset; unsupported individual test names
+/// raise a soft error until their source checks are ported.
 pub fn PdfDocument::test_matterhorn_json(
   self : PdfDocument,
   test_name : String,
@@ -643,7 +856,7 @@ fn pdf_ua_matterhorn_push_text_failure(
   output.push(32)
   pdf_ua_push_ascii(output, failure.section)
   output.push(32)
-  pdf_ua_push_ascii(output, failure.error)
+  pdf_ua_push_utf8(output, failure.error)
   output.push(32)
   if failure.extra != Json::null() {
     output.push(40)

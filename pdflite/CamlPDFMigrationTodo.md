@@ -27,7 +27,7 @@ Current estimate:
   composition reporting, core metadata APIs, XMP metadata-date rewriting, XMP
   info synchronization, XMP metadata creation, XMP RDF list extraction,
   XMP/document info JSON reporting, redaction annotation bounding-box overlays,
-  cpdfua Matterhorn content/XMP/viewer-preference validation, imposition
+  cpdfua Matterhorn content/role-map/XMP/viewer-preference validation, imposition
   transform/content/page-assembly/pattern-matrix kernels, cpdf page
   hard-box/removal/shift/scale/scale-to-fit/upright/set-mediabox/copy-box
   helpers, imposition make-space orchestration, border stamping, layout
@@ -278,6 +278,25 @@ Current backend snapshot:
   10-warning baseline; `moon info` and `moon fmt` were run to update generated
   interfaces and formatting. Batched full native validation reports `moon test
   --target native` at 1991/1991 tests passing.~~
+- [x] ~~Port the `cpdfua` Matterhorn role-map slice:
+  the covered Matterhorn surface now includes source checks `02-001`,
+  `02-003`, and `02-004`, including non-standard mappings that fail to
+  terminate at a PDF/UA-1 standard structure type, circular role-map detection,
+  and standard structure types remapped as keys. The cpdf runner's circularity
+  precheck is preserved: any implemented Matterhorn request on a document with
+  a circular role map returns the `02-003` stop failure before running the
+  selected checks. Text output now emits Matterhorn error strings as UTF-8 so
+  the source `02-001` diagnostic is preserved. Focused native validation
+  reports `moon test --target native pdf_ua_matterhorn_test.mbt --filter
+  '*role map*'` at 2/2 tests passing and `moon test --target native
+  pdf_ua_matterhorn_test.mbt --filter '*remapping*'` at 1/1 test passing;
+  widened native validation reports `moon test --target native
+  pdf_ua_matterhorn_test.mbt` at 12/12 tests passing. Native check validation
+  reports `moon check --target native` passing with the known `markdown/cmd`
+  warning and `moon check --target native --warn-list +73` at the known
+  10-warning baseline; `moon info` and `moon fmt` were run to update generated
+  interfaces and formatting. Full native suite validation is deferred to the
+  next batch.~~
 - [x] ~~Port the current stub/no-op redaction APIs from `cpdfredact`: `redact`
   is exposed as `redact_path`/`pdf_redact` and preserves page content while
   validating the selected page range, while `apply` and `apply_type` are

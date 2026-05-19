@@ -59,6 +59,31 @@ fn ua_matterhorn_01_007_failure_for_test() -> Json {
 }
 
 ///|
+fn ua_matterhorn_02_001_failure_for_test(extra : Json) -> Json {
+  ua_matterhorn_failure_for_test(
+    "02-001", "UA1:7.1-3", "One or more non-standard tag’s mapping does not terminate with a standard type.",
+    extra,
+  )
+}
+
+///|
+fn ua_matterhorn_02_003_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "02-003",
+    "UA1:7.1-3",
+    "A circular mapping exists.",
+    Json::string("STOP. If rolemap circular, cannot proceed with other checks."),
+  )
+}
+
+///|
+fn ua_matterhorn_02_004_failure_for_test(extra : Json) -> Json {
+  ua_matterhorn_failure_for_test(
+    "02-004", "UA1:7.1-4", "One or more standard types are remapped.", extra,
+  )
+}
+
+///|
 fn ua_matterhorn_06_001_failure_for_test() -> Json {
   ua_matterhorn_failure_for_test(
     "06-001",
@@ -130,6 +155,30 @@ fn ua_matterhorn_document_with_metadata_for_test(
 ) -> @pdflite.PdfDocument {
   let document = ua_matterhorn_document_for_test([], root_extras~)
   try! document.set_metadata_from_bytes(metadata)
+}
+
+///|
+fn ua_matterhorn_rolemap_for_test(
+  entries : ArrayView[(String, String)],
+) -> (@pdflite.PdfName, @pdflite.PdfObject) {
+  (
+    ua_matterhorn_name_for_test("/StructTreeRoot"),
+    PdfDictionary([
+      (
+        ua_matterhorn_name_for_test("/RoleMap"),
+        PdfDictionary(
+          [
+            for entry in entries => {
+              (
+                ua_matterhorn_name_for_test(entry.0),
+                PdfNameObject(ua_matterhorn_name_for_test(entry.1)),
+              )
+            }
+          ],
+        ),
+      ),
+    ]),
+  )
 }
 
 ///|
@@ -268,11 +317,72 @@ test "PdfDocument test_matterhorn_json detects MarkInfo suspects" {
 test "PdfDocument test_matterhorn_json rejects unsupported individual checks" {
   let document = ua_matterhorn_document_for_test([])
   let result : Result[Json, Error] = try? document.test_matterhorn_json(
-    "02-001",
+    "09-004",
   )
   guard result is Err(@pdflite.PdfError::SoftError(_)) else {
     fail("expected unsupported Matterhorn test to raise SoftError")
   }
+}
+
+///|
+test "PdfDocument test_matterhorn_json detects role map target chains" {
+  let bad = ua_matterhorn_document_for_test([], root_extras=[
+    ua_matterhorn_rolemap_for_test([("/Custom", "/StillCustom")]),
+  ])
+  @test.assert_eq(
+    try! bad.test_matterhorn_json("02-001"),
+    Json::array([ua_matterhorn_02_001_failure_for_test(Json::string("/Custom"))]),
+  )
+  @test.assert_eq(
+    try! bad.test_matterhorn_text("02-001"),
+    @utf8.encode(
+      "02-001 UA1:7.1-3 One or more non-standard tag’s mapping does not terminate with a standard type. (\"/Custom\")\n",
+    ),
+  )
+  @test.assert_eq(try! bad.test_matterhorn_json("02-003"), Json::array([]))
+  @test.assert_eq(try! bad.test_matterhorn_json("02-004"), Json::array([]))
+
+  let good = ua_matterhorn_document_for_test([], root_extras=[
+    ua_matterhorn_rolemap_for_test([
+      ("/Custom", "/Intermediate"),
+      ("/Intermediate", "/P"),
+    ]),
+  ])
+  @test.assert_eq(try! good.test_matterhorn_json("02-001"), Json::array([]))
+}
+
+///|
+test "PdfDocument test_matterhorn_json prechecks circular role maps" {
+  let document = ua_matterhorn_document_for_test([], root_extras=[
+    ua_matterhorn_rolemap_for_test([
+      ("/Custom", "/Other"),
+      ("/Other", "/Custom"),
+    ]),
+  ])
+  @test.assert_eq(
+    try! document.test_matterhorn_json("02-003"),
+    Json::array([ua_matterhorn_02_003_failure_for_test()]),
+  )
+  @test.assert_eq(
+    try! document.test_matterhorn_json("02-001"),
+    Json::array([ua_matterhorn_02_003_failure_for_test()]),
+  )
+  @test.assert_eq(
+    try! document.test_matterhorn_json("06-001"),
+    Json::array([ua_matterhorn_02_003_failure_for_test()]),
+  )
+}
+
+///|
+test "PdfDocument test_matterhorn_json detects standard type remapping" {
+  let document = ua_matterhorn_document_for_test([], root_extras=[
+    ua_matterhorn_rolemap_for_test([("/P", "/Span")]),
+  ])
+  @test.assert_eq(try! document.test_matterhorn_json("02-001"), Json::array([]))
+  @test.assert_eq(
+    try! document.test_matterhorn_json("02-004"),
+    Json::array([ua_matterhorn_02_004_failure_for_test(Json::string("/P"))]),
+  )
 }
 
 ///|
