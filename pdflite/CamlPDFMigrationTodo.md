@@ -569,6 +569,22 @@ Current backend snapshot:
   warning and `moon check --target native --warn-list +73` at the known
   10-warning baseline. Full native suite validation is deferred to the next
   batch.~~
+- [x] ~~Port the `cpdfua` Matterhorn basic annotation slice: the covered
+  Matterhorn surface now includes source checks `28-006` through `28-009`,
+  reusing the parsed page-annotation path to detect undefined annotation
+  subtypes and `/TrapNet`, and checking pages with annotations for missing
+  `/Tabs` or `/Tabs` values other than `/S`. Coverage pins custom subtype
+  failures, valid `/Link` passes, `/TrapNet` failures, missing `/Tabs`
+  failures, no-annotation passes, `/Tabs /R` failures, `/Tabs /S` passes, and
+  source-compatible no-failure behavior for `28-009` when `/Tabs` is absent.
+  Focused native validation reports `moon test --target native
+  pdf_ua_matterhorn_test.mbt --filter '*annotation subtype and tabs*'` at 1/1
+  test passing; widened native validation reports `moon test --target native
+  pdf_ua_matterhorn_test.mbt` at 35/35 tests passing. Native check validation
+  reports `moon check --target native` passing with the known `markdown/cmd`
+  warning and `moon check --target native --warn-list +73` at the known
+  10-warning baseline. Batched full native validation reports `moon test
+  --target native` at 2017/2017 tests passing.~~
 - [x] ~~Port the current stub/no-op redaction APIs from `cpdfredact`: `redact`
   is exposed as `redact_path`/`pdf_redact` and preserves page content while
   validating the selected page range, while `apply` and `apply_type` are

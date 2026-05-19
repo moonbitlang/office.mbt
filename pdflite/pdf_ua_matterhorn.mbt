@@ -97,6 +97,14 @@ fn pdf_ua_matterhorn_identity_v() -> PdfName {
 }
 
 ///|
+let pdf_ua_matterhorn_tabs_key_name : PdfName = pdf_ua_name("/Tabs")
+
+///|
+fn pdf_ua_matterhorn_tabs_key() -> PdfName {
+  pdf_ua_matterhorn_tabs_key_name
+}
+
+///|
 let pdf_ua_matterhorn_adobe_name : PdfName = pdf_ua_name("/Adobe")
 
 ///|
@@ -520,6 +528,42 @@ fn pdf_ua_matterhorn_test_26_002() -> PdfUAMatterhornTest {
 }
 
 ///|
+fn pdf_ua_matterhorn_test_28_006() -> PdfUAMatterhornTest {
+  {
+    name: "28-006",
+    error: "An annotation with subtype undefined in ISO 32000 does not meet 7.18.1.",
+    section: "UA1:7.18.2-1",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_28_007() -> PdfUAMatterhornTest {
+  {
+    name: "28-007",
+    error: "An annotation of subtype TrapNet exists.",
+    section: "UA1:7.18.2-2",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_28_008() -> PdfUAMatterhornTest {
+  {
+    name: "28-008",
+    error: "A page containing an annotation does not contain a Tabs entry",
+    section: "UA1:7.18.3-1",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_28_009() -> PdfUAMatterhornTest {
+  {
+    name: "28-009",
+    error: "A page containing an annotation has a Tabs entry with a value other than S.",
+    section: "UA1:7.18.3-1",
+  }
+}
+
+///|
 fn pdf_ua_matterhorn_test_28_014() -> PdfUAMatterhornTest {
   {
     name: "28-014",
@@ -865,6 +909,10 @@ fn pdf_ua_matterhorn_implemented_tests() -> Array[PdfUAMatterhornTest] {
     pdf_ua_matterhorn_test_25_001(),
     pdf_ua_matterhorn_test_26_001(),
     pdf_ua_matterhorn_test_26_002(),
+    pdf_ua_matterhorn_test_28_006(),
+    pdf_ua_matterhorn_test_28_007(),
+    pdf_ua_matterhorn_test_28_008(),
+    pdf_ua_matterhorn_test_28_009(),
     pdf_ua_matterhorn_test_28_014(),
     pdf_ua_matterhorn_test_28_015(),
     pdf_ua_matterhorn_test_28_016(),
@@ -1782,6 +1830,71 @@ fn PdfDocument::pdf_ua_matterhorn_check_26_002(self : PdfDocument) -> Json? {
       ) => Some(Json::null())
     _ => None
   }
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_28_006(
+  self : PdfDocument,
+) -> Json? raise PdfError {
+  for page in self.pages_of_pagetree() {
+    for annotation in self.annotations_of_page(page) {
+      if annotation.subtype is AnnotationUnknown(_) {
+        return Some(Json::null())
+      }
+    }
+  }
+  None
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_28_007(
+  self : PdfDocument,
+) -> Json? raise PdfError {
+  for page in self.pages_of_pagetree() {
+    for annotation in self.annotations_of_page(page) {
+      if annotation.subtype is AnnotationTrapNet {
+        return Some(Json::null())
+      }
+    }
+  }
+  None
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_page_annotation_count(
+  self : PdfDocument,
+  page : PdfPage,
+) -> Int raise PdfError {
+  self.annotations_of_page(page).length()
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_28_008(
+  self : PdfDocument,
+) -> Json? raise PdfError {
+  for page in self.pages_of_pagetree() {
+    if self.pdf_ua_matterhorn_page_annotation_count(page) > 0 &&
+      self.lookup_direct(pdf_ua_matterhorn_tabs_key(), page.rest) is None {
+      return Some(Json::null())
+    }
+  }
+  None
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_28_009(
+  self : PdfDocument,
+) -> Json? raise PdfError {
+  for page in self.pages_of_pagetree() {
+    if self.pdf_ua_matterhorn_page_annotation_count(page) > 0 {
+      match self.lookup_direct(pdf_ua_matterhorn_tabs_key(), page.rest) {
+        Some(PdfNameObject(name)) if name == pdf_ua_s_key() => ()
+        Some(_) => return Some(Json::null())
+        None => ()
+      }
+    }
+  }
+  None
 }
 
 ///|
@@ -2736,6 +2849,10 @@ fn PdfDocument::pdf_ua_matterhorn_run_test(
     "25-001" => self.pdf_ua_matterhorn_check_25_001()
     "26-001" => self.pdf_ua_matterhorn_check_26_001()
     "26-002" => self.pdf_ua_matterhorn_check_26_002()
+    "28-006" => self.pdf_ua_matterhorn_check_28_006()
+    "28-007" => self.pdf_ua_matterhorn_check_28_007()
+    "28-008" => self.pdf_ua_matterhorn_check_28_008()
+    "28-009" => self.pdf_ua_matterhorn_check_28_009()
     "28-014" => self.pdf_ua_matterhorn_check_28_014()
     "28-015" => self.pdf_ua_matterhorn_check_28_015()
     "28-016" => self.pdf_ua_matterhorn_check_28_016()
@@ -2837,6 +2954,7 @@ fn PdfDocument::pdf_ua_matterhorn_failures(
 /// optional-content configuration checks `20-001` through `20-003`, embedded
 /// file-spec check `21-001`, XFA dynamicRender check `25-001`,
 /// encryption checks `26-001` and `26-002`,
+/// annotation subtype and tab-order checks `28-006` through `28-009`,
 /// media-clip checks `28-014` and `28-015`, file-attachment no-op `28-016`,
 /// PrinterMark object and appearance checks `28-017` and `28-018`, plus
 /// reference-XObject checks `30-001` and `30-002`, plus font

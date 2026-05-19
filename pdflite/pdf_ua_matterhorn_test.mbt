@@ -192,6 +192,46 @@ fn ua_matterhorn_26_002_failure_for_test() -> Json {
 }
 
 ///|
+fn ua_matterhorn_28_006_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "28-006",
+    "UA1:7.18.2-1",
+    "An annotation with subtype undefined in ISO 32000 does not meet 7.18.1.",
+    Json::null(),
+  )
+}
+
+///|
+fn ua_matterhorn_28_007_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "28-007",
+    "UA1:7.18.2-2",
+    "An annotation of subtype TrapNet exists.",
+    Json::null(),
+  )
+}
+
+///|
+fn ua_matterhorn_28_008_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "28-008",
+    "UA1:7.18.3-1",
+    "A page containing an annotation does not contain a Tabs entry",
+    Json::null(),
+  )
+}
+
+///|
+fn ua_matterhorn_28_009_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "28-009",
+    "UA1:7.18.3-1",
+    "A page containing an annotation has a Tabs entry with a value other than S.",
+    Json::null(),
+  )
+}
+
+///|
 fn ua_matterhorn_28_014_failure_for_test() -> Json {
   ua_matterhorn_failure_for_test(
     "28-014",
@@ -604,6 +644,45 @@ fn ua_matterhorn_file_attachment_annotation_for_test(
   ]
   match file_spec {
     Some(value) => entries.push((ua_matterhorn_name_for_test("/FS"), value))
+    None => ()
+  }
+  PdfDictionary(entries)
+}
+
+///|
+fn ua_matterhorn_annotation_for_test(
+  subtype : String,
+  extras? : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)] = [],
+) -> @pdflite.PdfObject {
+  let entries : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = [
+    (
+      ua_matterhorn_name_for_test("/Subtype"),
+      PdfNameObject(ua_matterhorn_name_for_test(subtype)),
+    ),
+    (
+      ua_matterhorn_name_for_test("/Rect"),
+      PdfArray([PdfInteger(0), PdfInteger(0), PdfInteger(1), PdfInteger(1)]),
+    ),
+  ]
+  for extra in extras {
+    entries.push(extra)
+  }
+  PdfDictionary(entries)
+}
+
+///|
+fn ua_matterhorn_page_rest_with_annots_for_test(
+  annotations : ArrayView[@pdflite.PdfObject],
+  tabs? : @pdflite.PdfObject? = None,
+) -> @pdflite.PdfObject {
+  let entries : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = [
+    (
+      ua_matterhorn_name_for_test("/Annots"),
+      PdfArray([ for annotation in annotations => annotation ]),
+    ),
+  ]
+  match tabs {
+    Some(value) => entries.push((ua_matterhorn_name_for_test("/Tabs"), value))
     None => ()
   }
   PdfDictionary(entries)
@@ -1534,6 +1613,75 @@ test "PdfDocument test_matterhorn_json checks encryption permissions" {
     try! print_denied.test_matterhorn_json("26-002"),
     Json::array([]),
   )
+}
+
+///|
+test "PdfDocument test_matterhorn_json checks annotation subtype and tabs" {
+  let unknown = ua_matterhorn_document_for_test(
+    [],
+    rest=ua_matterhorn_page_rest_with_annots_for_test(
+      [ua_matterhorn_annotation_for_test("/Custom")],
+      tabs=Some(PdfNameObject(ua_matterhorn_name_for_test("/S"))),
+    ),
+  )
+  @test.assert_eq(
+    try! unknown.test_matterhorn_json("28-006"),
+    Json::array([ua_matterhorn_28_006_failure_for_test()]),
+  )
+
+  let link = ua_matterhorn_document_for_test(
+    [],
+    rest=ua_matterhorn_page_rest_with_annots_for_test(
+      [ua_matterhorn_annotation_for_test("/Link")],
+      tabs=Some(PdfNameObject(ua_matterhorn_name_for_test("/S"))),
+    ),
+  )
+  @test.assert_eq(try! link.test_matterhorn_json("28-006"), Json::array([]))
+
+  let trap_net = ua_matterhorn_document_for_test(
+    [],
+    rest=ua_matterhorn_page_rest_with_annots_for_test(
+      [ua_matterhorn_annotation_for_test("/TrapNet")],
+      tabs=Some(PdfNameObject(ua_matterhorn_name_for_test("/S"))),
+    ),
+  )
+  @test.assert_eq(
+    try! trap_net.test_matterhorn_json("28-007"),
+    Json::array([ua_matterhorn_28_007_failure_for_test()]),
+  )
+  @test.assert_eq(try! link.test_matterhorn_json("28-007"), Json::array([]))
+
+  let no_tabs = ua_matterhorn_document_for_test(
+    [],
+    rest=ua_matterhorn_page_rest_with_annots_for_test([
+      ua_matterhorn_annotation_for_test("/Link"),
+    ]),
+  )
+  @test.assert_eq(
+    try! no_tabs.test_matterhorn_json("28-008"),
+    Json::array([ua_matterhorn_28_008_failure_for_test()]),
+  )
+  @test.assert_eq(try! link.test_matterhorn_json("28-008"), Json::array([]))
+
+  let no_annotations = ua_matterhorn_document_for_test([])
+  @test.assert_eq(
+    try! no_annotations.test_matterhorn_json("28-008"),
+    Json::array([]),
+  )
+
+  let row_tabs = ua_matterhorn_document_for_test(
+    [],
+    rest=ua_matterhorn_page_rest_with_annots_for_test(
+      [ua_matterhorn_annotation_for_test("/Link")],
+      tabs=Some(PdfNameObject(ua_matterhorn_name_for_test("/R"))),
+    ),
+  )
+  @test.assert_eq(
+    try! row_tabs.test_matterhorn_json("28-009"),
+    Json::array([ua_matterhorn_28_009_failure_for_test()]),
+  )
+  @test.assert_eq(try! link.test_matterhorn_json("28-009"), Json::array([]))
+  @test.assert_eq(try! no_tabs.test_matterhorn_json("28-009"), Json::array([]))
 }
 
 ///|
