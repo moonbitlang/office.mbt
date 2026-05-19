@@ -733,6 +733,24 @@ fn pdf_ua_matterhorn_test_31_026() -> PdfUAMatterhornTest {
 }
 
 ///|
+fn pdf_ua_matterhorn_test_31_028() -> PdfUAMatterhornTest {
+  {
+    name: "31-028",
+    error: "One or more Unicode values specified in the ToUnicode CMap are zero (0).",
+    section: "UA1:7.21.7-2",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_31_029() -> PdfUAMatterhornTest {
+  {
+    name: "31-029",
+    error: "One or more Unicode values specified in the ToUnicode CMap are equal to either U+FEFF or U+FFFE.",
+    section: "UA1:7.21.7-3",
+  }
+}
+
+///|
 fn pdf_ua_matterhorn_test_31_030() -> PdfUAMatterhornTest {
   {
     name: "31-030",
@@ -790,6 +808,8 @@ fn pdf_ua_matterhorn_implemented_tests() -> Array[PdfUAMatterhornTest] {
     pdf_ua_matterhorn_test_31_024(),
     pdf_ua_matterhorn_test_31_025(),
     pdf_ua_matterhorn_test_31_026(),
+    pdf_ua_matterhorn_test_31_028(),
+    pdf_ua_matterhorn_test_31_029(),
     pdf_ua_matterhorn_test_31_030(),
   ]
 }
@@ -2169,6 +2189,63 @@ fn PdfDocument::pdf_ua_matterhorn_check_31_026(
 }
 
 ///|
+fn PdfDocument::pdf_ua_matterhorn_tounicode_numbers(
+  self : PdfDocument,
+) -> Array[Int] {
+  let numbers : Array[Int] = []
+  for entry in self.parsed_object_entries() {
+    match self.indirect_number(pdf_text_tounicode_key_name, entry.2) {
+      Some(number) if !pdf_ua_matterhorn_int_array_contains(numbers, number) =>
+        numbers.push(number)
+      _ => ()
+    }
+  }
+  numbers
+}
+
+///|
+fn pdf_ua_matterhorn_tounicode_has_codepoint(
+  map : ArrayView[(Int, PdfBytes)],
+  codepoint : Int,
+) -> Bool raise PdfError {
+  for entry in map {
+    for parsed_codepoint in pdf_codepoints_of_utf16be(entry.1) {
+      if parsed_codepoint == codepoint {
+        return true
+      }
+    }
+  }
+  false
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_31_028(
+  self : PdfDocument,
+) -> Json? raise PdfError {
+  for number in self.pdf_ua_matterhorn_tounicode_numbers() {
+    let parsed = self.parse_cmap(PdfIndirect(number))
+    if pdf_ua_matterhorn_tounicode_has_codepoint(parsed.map, 0) {
+      return Some(Json::null())
+    }
+  }
+  None
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_31_029(
+  self : PdfDocument,
+) -> Json? raise PdfError {
+  for number in self.pdf_ua_matterhorn_tounicode_numbers() {
+    let parsed = self.parse_cmap(PdfIndirect(number))
+    if pdf_ua_matterhorn_tounicode_has_codepoint(parsed.map, 0xFEFF) ||
+      pdf_ua_matterhorn_tounicode_has_codepoint(parsed.map, 0xFFFE) {
+      return Some(Json::null())
+    }
+  }
+  None
+}
+
+///|
 fn pdf_ua_matterhorn_check_source_unimplemented_font_file() -> Json? {
   None
 }
@@ -2218,6 +2295,8 @@ fn PdfDocument::pdf_ua_matterhorn_run_test(
     "31-024" => self.pdf_ua_matterhorn_check_31_024()
     "31-025" => self.pdf_ua_matterhorn_check_31_025()
     "31-026" => self.pdf_ua_matterhorn_check_31_026()
+    "31-028" => self.pdf_ua_matterhorn_check_31_028()
+    "31-029" => self.pdf_ua_matterhorn_check_31_029()
     "31-011"
     | "31-012"
     | "31-013"
@@ -2294,9 +2373,10 @@ fn PdfDocument::pdf_ua_matterhorn_failures(
 /// checks `30-001` and `30-002`, plus font CIDSystemInfo/CIDToGIDMap/CMap
 /// checks `31-001` through `31-008`, and source-unimplemented font-file checks
 /// `31-011` through `31-016`, `31-018`, and `31-030`, plus TrueType encoding
-/// dictionary and cmap checks `31-017` and `31-019` through `31-026`. Passing
-/// `""` runs the covered subset; unsupported individual test names raise a soft
-/// error until their source checks are ported.
+/// dictionary and cmap checks `31-017` and `31-019` through `31-026`, and
+/// ToUnicode value checks `31-028` and `31-029`. Passing `""` runs the covered
+/// subset; unsupported individual test names raise a soft error until their
+/// source checks are ported.
 pub fn PdfDocument::test_matterhorn_json(
   self : PdfDocument,
   test_name : String,

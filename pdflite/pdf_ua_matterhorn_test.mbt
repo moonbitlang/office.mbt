@@ -386,6 +386,26 @@ fn ua_matterhorn_31_026_failure_for_test() -> Json {
 }
 
 ///|
+fn ua_matterhorn_31_028_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "31-028",
+    "UA1:7.21.7-2",
+    "One or more Unicode values specified in the ToUnicode CMap are zero (0).",
+    Json::null(),
+  )
+}
+
+///|
+fn ua_matterhorn_31_029_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "31-029",
+    "UA1:7.21.7-3",
+    "One or more Unicode values specified in the ToUnicode CMap are equal to either U+FEFF or U+FFFE.",
+    Json::null(),
+  )
+}
+
+///|
 fn ua_matterhorn_serialized_object_extra_for_test(
   object : @pdflite.PdfObject,
 ) -> Json {
@@ -715,6 +735,19 @@ fn ua_matterhorn_truetype_cmap_font_for_test(
     ua_matterhorn_push_u32_for_test(output, 12)
   }
   Bytes::from_array(output)
+}
+
+///|
+fn ua_matterhorn_tounicode_stream_for_test(hex : String) -> @pdflite.PdfObject {
+  let cmap = "1 beginbfchar\n<41><" + hex + ">\nendbfchar\n"
+  @pdflite.pdf_stream(PdfDictionary([]), StreamGot(@ascii.encode(cmap)))
+}
+
+///|
+fn ua_matterhorn_font_with_tounicode_for_test(
+  tounicode : @pdflite.PdfObject,
+) -> @pdflite.PdfObject {
+  PdfDictionary([(ua_matterhorn_name_for_test("/ToUnicode"), tounicode)])
 }
 
 ///|
@@ -1983,5 +2016,88 @@ test "PdfDocument test_matterhorn_json checks TrueType cmap Matterhorn checks" {
   @test.assert_eq(
     try! multiple_without_symbol_cmap.test_matterhorn_json("31-026"),
     Json::array([ua_matterhorn_31_026_failure_for_test()]),
+  )
+}
+
+///|
+test "PdfDocument test_matterhorn_json checks ToUnicode value Matterhorn checks" {
+  let zero_value = ua_matterhorn_document_for_test([])
+  zero_value.add_object_given_number(
+    40,
+    ua_matterhorn_font_with_tounicode_for_test(PdfIndirect(41)),
+  )
+  zero_value.add_object_given_number(
+    41,
+    ua_matterhorn_tounicode_stream_for_test("0000"),
+  )
+  @test.assert_eq(
+    try! zero_value.test_matterhorn_json("31-028"),
+    Json::array([ua_matterhorn_31_028_failure_for_test()]),
+  )
+  @test.assert_eq(
+    try! zero_value.test_matterhorn_json("31-029"),
+    Json::array([]),
+  )
+
+  let byte_order_mark = ua_matterhorn_document_for_test([])
+  byte_order_mark.add_object_given_number(
+    40,
+    ua_matterhorn_font_with_tounicode_for_test(PdfIndirect(41)),
+  )
+  byte_order_mark.add_object_given_number(
+    41,
+    ua_matterhorn_tounicode_stream_for_test("FEFF"),
+  )
+  @test.assert_eq(
+    try! byte_order_mark.test_matterhorn_json("31-028"),
+    Json::array([]),
+  )
+  @test.assert_eq(
+    try! byte_order_mark.test_matterhorn_json("31-029"),
+    Json::array([ua_matterhorn_31_029_failure_for_test()]),
+  )
+
+  let reverse_bom = ua_matterhorn_document_for_test([])
+  reverse_bom.add_object_given_number(
+    40,
+    ua_matterhorn_font_with_tounicode_for_test(PdfIndirect(41)),
+  )
+  reverse_bom.add_object_given_number(
+    41,
+    ua_matterhorn_tounicode_stream_for_test("FFFE"),
+  )
+  @test.assert_eq(
+    try! reverse_bom.test_matterhorn_json("31-029"),
+    Json::array([ua_matterhorn_31_029_failure_for_test()]),
+  )
+
+  let normal_value = ua_matterhorn_document_for_test([])
+  normal_value.add_object_given_number(
+    40,
+    ua_matterhorn_font_with_tounicode_for_test(PdfIndirect(41)),
+  )
+  normal_value.add_object_given_number(
+    41,
+    ua_matterhorn_tounicode_stream_for_test("0041"),
+  )
+  @test.assert_eq(
+    try! normal_value.test_matterhorn_json("31-028"),
+    Json::array([]),
+  )
+  @test.assert_eq(
+    try! normal_value.test_matterhorn_json("31-029"),
+    Json::array([]),
+  )
+
+  let direct_tounicode = ua_matterhorn_document_for_test([])
+  direct_tounicode.add_object_given_number(
+    40,
+    ua_matterhorn_font_with_tounicode_for_test(
+      ua_matterhorn_tounicode_stream_for_test("0000"),
+    ),
+  )
+  @test.assert_eq(
+    try! direct_tounicode.test_matterhorn_json("31-028"),
+    Json::array([]),
   )
 }

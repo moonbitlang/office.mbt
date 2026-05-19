@@ -30,7 +30,7 @@ Current estimate:
   cpdfua Matterhorn content/role-map/XMP/viewer-preference/optional-content/
   media-clip/file-attachment/PrinterMark/reference-XObject/MCID Form XObject/
   Type0 CIDSystemInfo/CIDToGIDMap/CMap-name/WMode/font-file no-op/TrueType
-  encoding/cmap validation, imposition
+  encoding/cmap/ToUnicode validation, imposition
   transform/content/page-assembly/pattern-matrix kernels, cpdf page
   hard-box/removal/shift/scale/scale-to-fit/upright/set-mediabox/copy-box
   helpers, imposition make-space orchestration, border stamping, layout
@@ -483,6 +483,19 @@ Current backend snapshot:
   warning and `moon check --target native --warn-list +73` at the known
   10-warning baseline. Full native suite validation is deferred to the next
   batch.~~
+- [x] ~~Port the `cpdfua` Matterhorn ToUnicode forbidden-value slice: the
+  covered Matterhorn surface now includes source checks `31-028` and `31-029`,
+  preserving cpdf's indirect-only `/ToUnicode` object scan before parsing CMap
+  UTF-16BE mappings. Coverage pins zero-codepoint failures, `U+FEFF` and
+  `U+FFFE` failures, normal Unicode passes, and the source-compatible direct
+  `/ToUnicode` stream bypass. Focused native validation reports `moon test
+  --target native pdf_ua_matterhorn_test.mbt --filter '*ToUnicode value*'` at
+  1/1 test passing; widened native validation reports `moon test --target
+  native pdf_ua_matterhorn_test.mbt` at 29/29 tests passing. Native check
+  validation reports `moon check --target native` passing with the known
+  `markdown/cmd` warning and `moon check --target native --warn-list +73` at
+  the known 10-warning baseline. Batched full native validation reports `moon
+  test --target native` at 2011/2011 tests passing.~~
 - [x] ~~Port the current stub/no-op redaction APIs from `cpdfredact`: `redact`
   is exposed as `redact_path`/`pdf_redact` and preserves page content while
   validating the selected page range, while `apply` and `apply_type` are
