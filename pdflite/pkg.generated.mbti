@@ -431,6 +431,8 @@ pub fn pdf_content_entries_of_ops(PdfDocument, PdfRectangle, PdfObject, ArrayVie
 
 pub fn pdf_content_entries_of_ops_recursive(PdfDocument, PdfRectangle, PdfObject, ArrayView[PdfContentOp]) -> Array[PdfContentJsonEntry] raise @core.PdfError
 
+pub fn pdf_content_entries_of_page(PdfDocument, PdfPage) -> Array[PdfContentJsonEntry] raise @core.PdfError
+
 pub fn pdf_content_extra_metrics(PdfFont) -> (Double, Double)
 
 pub fn pdf_content_form_xobject_enter_state(PdfDocument, PdfContentOperatorState, PdfObject, @core.PdfName) -> PdfContentOperatorState? raise @core.PdfError
@@ -468,6 +470,10 @@ pub fn pdf_content_is_vertical(PdfFont) -> Bool
 pub fn pdf_content_json_entries_content_json(ArrayView[PdfContentJsonEntry]) -> Json
 
 pub fn pdf_content_json_entry_content_json(PdfContentJsonEntry) -> Json
+
+pub fn pdf_content_json_of_ops(PdfDocument, PdfRectangle, PdfObject, ArrayView[PdfContentOp]) -> Json raise @core.PdfError
+
+pub fn pdf_content_json_of_page(PdfDocument, PdfPage) -> Json raise @core.PdfError
 
 pub fn pdf_content_no_partial_path() -> PdfContentPartialPath
 
@@ -858,6 +864,8 @@ pub fn pdf_pad_before(PdfDocument, ArrayView[Int], pad_with? : PdfDocument?) -> 
 pub fn pdf_pad_to_multiple(PdfDocument, Int) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_page_blank(@geometry.PaperSize) -> PdfPage
+
+pub fn pdf_page_content_json(PdfDocument, ArrayView[Int]) -> Json raise @core.PdfError
 
 pub fn pdf_page_custom(PdfObject) -> PdfPage
 
@@ -2459,10 +2467,13 @@ pub fn PdfDocument::content_apply_resource_op(Self, PdfContentOperatorState, Pdf
 pub fn PdfDocument::content_apply_text_resource_op(Self, PdfContentOperatorState, PdfObject, PdfContentOp) -> PdfContentOperatorTextResult raise @core.PdfError
 pub fn PdfDocument::content_entries_of_ops(Self, PdfRectangle, PdfObject, ArrayView[PdfContentOp]) -> Array[PdfContentJsonEntry] raise @core.PdfError
 pub fn PdfDocument::content_entries_of_ops_recursive(Self, PdfRectangle, PdfObject, ArrayView[PdfContentOp]) -> Array[PdfContentJsonEntry] raise @core.PdfError
+pub fn PdfDocument::content_entries_of_page(Self, PdfPage) -> Array[PdfContentJsonEntry] raise @core.PdfError
 pub fn PdfDocument::content_form_xobject_enter_state(Self, PdfContentOperatorState, PdfObject, @core.PdfName) -> PdfContentOperatorState? raise @core.PdfError
 pub fn PdfDocument::content_form_xobject_ops(Self, PdfObject, @core.PdfName) -> Array[PdfContentOp]? raise @core.PdfError
 pub fn PdfDocument::content_form_xobject_resources(Self, PdfObject, @core.PdfName) -> PdfObject? raise @core.PdfError
 pub fn PdfDocument::content_image_entry_from_resources(Self, PdfContentOperatorState, PdfObject, @core.PdfName) -> PdfContentJsonEntry? raise @core.PdfError
+pub fn PdfDocument::content_json_of_ops(Self, PdfRectangle, PdfObject, ArrayView[PdfContentOp]) -> Json raise @core.PdfError
+pub fn PdfDocument::content_json_of_page(Self, PdfPage) -> Json raise @core.PdfError
 pub fn PdfDocument::content_read_axial_shading(Self, PdfObject) -> PdfContentShadingKind raise @core.PdfError
 pub fn PdfDocument::content_read_function_shading(Self, PdfObject) -> PdfContentShadingKind raise @core.PdfError
 pub fn PdfDocument::content_read_pattern(Self, PdfObject, @core.PdfName) -> PdfContentPattern? raise @core.PdfError
@@ -2577,6 +2588,7 @@ pub fn PdfDocument::open_action_string(Self) -> String raise @core.PdfError
 pub fn PdfDocument::pad_after(Self, ArrayView[Int], pad_with? : Self?) -> Self raise @core.PdfError
 pub fn PdfDocument::pad_before(Self, ArrayView[Int], pad_with? : Self?) -> Self raise @core.PdfError
 pub fn PdfDocument::pad_to_multiple(Self, Int) -> Self raise @core.PdfError
+pub fn PdfDocument::page_content_json(Self, ArrayView[Int]) -> Json raise @core.PdfError
 pub fn PdfDocument::page_number_of_target(Self, PdfDestination) -> Int raise @core.PdfError
 pub fn PdfDocument::page_object_number(Self, Int) -> Int? raise @core.PdfError
 pub fn PdfDocument::page_reference_numbers(Self) -> Array[Int] raise @core.PdfError
