@@ -53,6 +53,22 @@ fn pdf_ua_matterhorn_resources_key() -> PdfName {
 }
 
 ///|
+let pdf_ua_matterhorn_ap_key_name : PdfName = pdf_ua_name("/AP")
+
+///|
+fn pdf_ua_matterhorn_ap_key() -> PdfName {
+  pdf_ua_matterhorn_ap_key_name
+}
+
+///|
+let pdf_ua_matterhorn_n_key_name : PdfName = pdf_ua_name("/N")
+
+///|
+fn pdf_ua_matterhorn_n_key() -> PdfName {
+  pdf_ua_matterhorn_n_key_name
+}
+
+///|
 let pdf_ua_matterhorn_mcid_key_name : PdfName = pdf_ua_name("/MCID")
 
 ///|
@@ -286,6 +302,15 @@ fn pdf_ua_matterhorn_test_28_017() -> PdfUAMatterhornTest {
 }
 
 ///|
+fn pdf_ua_matterhorn_test_28_018() -> PdfUAMatterhornTest {
+  {
+    name: "28-018",
+    error: "The appearance stream of a PrinterMark annotation is not marked as Artifact.",
+    section: "UA1:7.18.8-2",
+  }
+}
+
+///|
 fn pdf_ua_matterhorn_test_30_001() -> PdfUAMatterhornTest {
   {
     name: "30-001",
@@ -316,6 +341,7 @@ fn pdf_ua_matterhorn_implemented_tests() -> Array[PdfUAMatterhornTest] {
     pdf_ua_matterhorn_test_28_015(),
     pdf_ua_matterhorn_test_28_016(),
     pdf_ua_matterhorn_test_28_017(),
+    pdf_ua_matterhorn_test_28_018(),
     pdf_ua_matterhorn_test_30_001(),
   ]
 }
@@ -1011,16 +1037,63 @@ fn PdfDocument::pdf_ua_matterhorn_check_28_016(_self : PdfDocument) -> Json? {
 }
 
 ///|
+fn PdfDocument::pdf_ua_matterhorn_is_printer_mark(
+  self : PdfDocument,
+  object : PdfObject,
+) -> Bool {
+  match self.lookup_direct(pdf_ua_subtype_key(), object) {
+    Some(PdfNameObject(subtype)) => subtype == pdf_ua_matterhorn_printer_mark()
+    _ => false
+  }
+}
+
+///|
 fn PdfDocument::pdf_ua_matterhorn_check_28_017(self : PdfDocument) -> Json? {
   for entry in self.parsed_object_entries() {
-    match
-      (
-        self.lookup_direct(pdf_ua_subtype_key(), entry.2),
-        self.lookup_direct(pdf_ua_matterhorn_struct_parent_key(), entry.2),
-      ) {
-      (Some(PdfNameObject(subtype)), Some(_)) if subtype ==
-        pdf_ua_matterhorn_printer_mark() => return Some(Json::null())
-      _ => ()
+    if self.pdf_ua_matterhorn_is_printer_mark(entry.2) &&
+      self.lookup_direct(pdf_ua_matterhorn_struct_parent_key(), entry.2)
+      is Some(_) {
+      return Some(Json::null())
+    }
+  }
+  None
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_normal_appearance_streams(
+  self : PdfDocument,
+  annotation : PdfObject,
+) -> Array[PdfObject] {
+  let output : Array[PdfObject] = []
+  match self.lookup_direct(pdf_ua_matterhorn_ap_key(), annotation) {
+    Some(appearance_dictionary) =>
+      match
+        self.lookup_direct(pdf_ua_matterhorn_n_key(), appearance_dictionary) {
+        Some(PdfDictionary(entries)) =>
+          for entry in entries {
+            output.push(self.direct(entry.1))
+          }
+        Some(appearance) => output.push(appearance)
+        None => ()
+      }
+    None => ()
+  }
+  output
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_28_018(
+  self : PdfDocument,
+) -> Json? raise PdfError {
+  for entry in self.parsed_object_entries() {
+    if self.pdf_ua_matterhorn_is_printer_mark(entry.2) {
+      for stream in self.pdf_ua_matterhorn_normal_appearance_streams(entry.2) {
+        let resources = self.pdf_ua_matterhorn_stream_resources(stream)
+        let ops = self.parse_content_ops_with_resources(resources, [stream])
+        if pdf_content_add_artifacts(ops) != ops {
+          return Some(Json::null())
+        }
+      }
     }
   }
   None
@@ -1067,6 +1140,7 @@ fn PdfDocument::pdf_ua_matterhorn_run_test(
     "28-015" => self.pdf_ua_matterhorn_check_28_015()
     "28-016" => self.pdf_ua_matterhorn_check_28_016()
     "28-017" => self.pdf_ua_matterhorn_check_28_017()
+    "28-018" => self.pdf_ua_matterhorn_check_28_018()
     "30-001" => self.pdf_ua_matterhorn_check_30_001()
     _ => None
   }
@@ -1132,9 +1206,10 @@ fn PdfDocument::pdf_ua_matterhorn_failures(
 /// XMP metadata and DisplayDocTitle checks `06-001` through `07-002`, and
 /// optional-content configuration checks `20-001` through `20-003`, media-clip
 /// checks `28-014` and `28-015`, file-attachment no-op `28-016`, PrinterMark
-/// object check `28-017`, plus reference-XObject check `30-001`. Passing `""`
-/// runs the covered subset; unsupported individual test names raise a soft
-/// error until their source checks are ported.
+/// object and appearance checks `28-017` and `28-018`, plus reference-XObject
+/// check `30-001`. Passing `""` runs the covered subset; unsupported
+/// individual test names raise a soft error until their source checks are
+/// ported.
 pub fn PdfDocument::test_matterhorn_json(
   self : PdfDocument,
   test_name : String,

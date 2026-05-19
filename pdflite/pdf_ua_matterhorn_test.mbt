@@ -192,6 +192,16 @@ fn ua_matterhorn_28_017_failure_for_test() -> Json {
 }
 
 ///|
+fn ua_matterhorn_28_018_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "28-018",
+    "UA1:7.18.8-2",
+    "The appearance stream of a PrinterMark annotation is not marked as Artifact.",
+    Json::null(),
+  )
+}
+
+///|
 fn ua_matterhorn_30_001_failure_for_test() -> Json {
   ua_matterhorn_failure_for_test(
     "30-001",
@@ -283,6 +293,22 @@ fn ua_matterhorn_form_stream_for_test(
     ua_matterhorn_name_for_test("/Resources"),
     PdfDictionary([]),
   )
+}
+
+///|
+fn ua_matterhorn_printer_mark_for_test(
+  normal_appearance : @pdflite.PdfObject,
+) -> @pdflite.PdfObject {
+  PdfDictionary([
+    (
+      ua_matterhorn_name_for_test("/Subtype"),
+      PdfNameObject(ua_matterhorn_name_for_test("/PrinterMark")),
+    ),
+    (
+      ua_matterhorn_name_for_test("/AP"),
+      PdfDictionary([(ua_matterhorn_name_for_test("/N"), normal_appearance)]),
+    ),
+  ])
 }
 
 ///|
@@ -724,6 +750,55 @@ test "PdfDocument test_matterhorn_json detects PrinterMark structure entries" {
     try! other_subtype.test_matterhorn_json("28-017"),
     Json::array([]),
   )
+}
+
+///|
+test "PdfDocument test_matterhorn_json checks PrinterMark appearance marking" {
+  let span = ua_matterhorn_name_for_test("/Span")
+  let document = ua_matterhorn_document_for_test([])
+  document.add_object_given_number(
+    40,
+    ua_matterhorn_printer_mark_for_test(PdfIndirect(41)),
+  )
+  document.add_object_given_number(
+    41,
+    ua_matterhorn_form_stream_for_test([Op_Tj(b"mark")]),
+  )
+  @test.assert_eq(
+    try! document.test_matterhorn_json("28-018"),
+    Json::array([ua_matterhorn_28_018_failure_for_test()]),
+  )
+
+  let dictionary_appearance = ua_matterhorn_document_for_test([])
+  dictionary_appearance.add_object_given_number(
+    40,
+    ua_matterhorn_printer_mark_for_test(
+      PdfDictionary([(ua_matterhorn_name_for_test("/On"), PdfIndirect(41))]),
+    ),
+  )
+  dictionary_appearance.add_object_given_number(
+    41,
+    ua_matterhorn_form_stream_for_test([Op_Tj(b"mark")]),
+  )
+  @test.assert_eq(
+    try! dictionary_appearance.test_matterhorn_json("28-018"),
+    Json::array([ua_matterhorn_28_018_failure_for_test()]),
+  )
+
+  let marked = ua_matterhorn_document_for_test([])
+  marked.add_object_given_number(
+    40,
+    ua_matterhorn_printer_mark_for_test(PdfIndirect(41)),
+  )
+  marked.add_object_given_number(
+    41,
+    ua_matterhorn_form_stream_for_test([
+      Op_BDC(span, PdfDictionary([])),
+      Op_Tj(b"mark"),
+      Op_EMC,
+    ]),
+  )
+  @test.assert_eq(try! marked.test_matterhorn_json("28-018"), Json::array([]))
 }
 
 ///|

@@ -346,6 +346,22 @@ Current backend snapshot:
   `moon check --target native` passing with the known `markdown/cmd` warning
   and `moon check --target native --warn-list +73` at the known 10-warning
   baseline. Full native suite validation is deferred to the next batch.~~
+- [x] ~~Port the `cpdfua` Matterhorn PrinterMark appearance slice:
+  the covered Matterhorn surface now includes source check `28-018`, following
+  `/AP /N` from PrinterMark annotations and scanning both direct normal
+  appearance streams and dictionary-valued normal appearances. The port
+  preserves cpdf's exact `Cpdftype.add_artifacts ops <> ops` comparison rather
+  than replacing it with a separate artifact predicate. Coverage pins an
+  unmarked direct `/N` appearance stream, an unmarked dictionary `/N`
+  appearance stream, and a marked-content appearance stream that remains
+  unchanged by the source comparison. Focused native validation reports
+  `moon test --target native pdf_ua_matterhorn_test.mbt --filter '*PrinterMark
+  appearance*'` at 1/1 test passing; widened native validation reports `moon
+  test --target native pdf_ua_matterhorn_test.mbt` at 20/20 tests passing.
+  Native check validation reports `moon check --target native` passing with the
+  known `markdown/cmd` warning and `moon check --target native --warn-list +73`
+  at the known 10-warning baseline. Full native suite validation is deferred to
+  the next batch.~~
 - [x] ~~Port the current stub/no-op redaction APIs from `cpdfredact`: `redact`
   is exposed as `redact_path`/`pdf_redact` and preserves page content while
   validating the selected page range, while `apply` and `apply_type` are
