@@ -554,6 +554,21 @@ Current backend snapshot:
   warning and `moon check --target native --warn-list +73` at the known
   10-warning baseline. Full native suite validation is deferred to the next
   batch.~~
+- [x] ~~Port the `cpdfua` Matterhorn XFA dynamicRender slice: the covered
+  Matterhorn surface now includes source check `25-001`, scanning the single
+  `/AcroForm /XFA` `config` packet stream for a `dynamicRender` element whose
+  direct text is exactly `required`, including namespace-prefixed tags.
+  Coverage pins direct and prefixed failures, non-required and whitespace-padded
+  text passes, duplicate `config` packet and non-array `/XFA` no-failure
+  behavior, and non-stream config passes. Focused native validation reports
+  `moon test --target native
+  pdf_ua_matterhorn_test.mbt --filter '*dynamicRender*'` at 1/1 test passing;
+  widened native validation reports `moon test --target native
+  pdf_ua_matterhorn_test.mbt` at 34/34 tests passing. Native check validation
+  reports `moon check --target native` passing with the known `markdown/cmd`
+  warning and `moon check --target native --warn-list +73` at the known
+  10-warning baseline. Full native suite validation is deferred to the next
+  batch.~~
 - [x] ~~Port the current stub/no-op redaction APIs from `cpdfredact`: `redact`
   is exposed as `redact_path`/`pdf_redact` and preserves page content while
   validating the selected page range, while `apply` and `apply_type` are

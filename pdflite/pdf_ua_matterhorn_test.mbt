@@ -172,6 +172,16 @@ fn ua_matterhorn_21_001_failure_for_test() -> Json {
 }
 
 ///|
+fn ua_matterhorn_25_001_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "25-001",
+    "UA1:7.15-1",
+    "File contains the dynamicRender element with value “required”.",
+    Json::null(),
+  )
+}
+
+///|
 fn ua_matterhorn_26_002_failure_for_test() -> Json {
   ua_matterhorn_failure_for_test(
     "26-002",
@@ -597,6 +607,34 @@ fn ua_matterhorn_file_attachment_annotation_for_test(
     None => ()
   }
   PdfDictionary(entries)
+}
+
+///|
+fn ua_matterhorn_xfa_config_stream_for_test(
+  data : BytesView,
+) -> @pdflite.PdfObject {
+  @pdflite.pdf_stream(PdfDictionary([]), StreamGot(data.to_owned()))
+}
+
+///|
+fn ua_matterhorn_xfa_root_for_test(
+  xfa : @pdflite.PdfObject,
+) -> Array[(@pdflite.PdfName, @pdflite.PdfObject)] {
+  [
+    (
+      ua_matterhorn_name_for_test("/AcroForm"),
+      PdfDictionary([(ua_matterhorn_name_for_test("/XFA"), xfa)]),
+    ),
+  ]
+}
+
+///|
+fn ua_matterhorn_xfa_config_root_for_test(
+  config : @pdflite.PdfObject,
+) -> Array[(@pdflite.PdfName, @pdflite.PdfObject)] {
+  ua_matterhorn_xfa_root_for_test(
+    PdfArray([PdfString(@ascii.encode("config")), config]),
+  )
 }
 
 ///|
@@ -1358,6 +1396,99 @@ test "PdfDocument test_matterhorn_json checks embedded file specs" {
   )
   @test.assert_eq(
     try! no_fs_annotation.test_matterhorn_json("21-001"),
+    Json::array([]),
+  )
+}
+
+///|
+test "PdfDocument test_matterhorn_json detects required XFA dynamicRender" {
+  let required = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_xfa_config_root_for_test(
+      ua_matterhorn_xfa_config_stream_for_test(
+        b"<template><dynamicRender>required</dynamicRender></template>",
+      ),
+    ),
+  )
+  @test.assert_eq(
+    try! required.test_matterhorn_json("25-001"),
+    Json::array([ua_matterhorn_25_001_failure_for_test()]),
+  )
+
+  let prefixed = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_xfa_config_root_for_test(
+      ua_matterhorn_xfa_config_stream_for_test(
+        b"<template><xfa:dynamicRender>required</xfa:dynamicRender></template>",
+      ),
+    ),
+  )
+  @test.assert_eq(
+    try! prefixed.test_matterhorn_json("25-001"),
+    Json::array([ua_matterhorn_25_001_failure_for_test()]),
+  )
+
+  let optional = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_xfa_config_root_for_test(
+      ua_matterhorn_xfa_config_stream_for_test(
+        b"<template><dynamicRender>optional</dynamicRender></template>",
+      ),
+    ),
+  )
+  @test.assert_eq(try! optional.test_matterhorn_json("25-001"), Json::array([]))
+
+  let spaced = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_xfa_config_root_for_test(
+      ua_matterhorn_xfa_config_stream_for_test(
+        b"<template><dynamicRender> required </dynamicRender></template>",
+      ),
+    ),
+  )
+  @test.assert_eq(try! spaced.test_matterhorn_json("25-001"), Json::array([]))
+
+  let duplicate_config = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_xfa_root_for_test(
+      PdfArray([
+        PdfString(@ascii.encode("config")),
+        ua_matterhorn_xfa_config_stream_for_test(
+          b"<dynamicRender>required</dynamicRender>",
+        ),
+        PdfString(@ascii.encode("config")),
+        ua_matterhorn_xfa_config_stream_for_test(
+          b"<dynamicRender>required</dynamicRender>",
+        ),
+      ]),
+    ),
+  )
+  @test.assert_eq(
+    try! duplicate_config.test_matterhorn_json("25-001"),
+    Json::array([]),
+  )
+
+  let non_array_xfa = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_xfa_root_for_test(
+      ua_matterhorn_xfa_config_stream_for_test(
+        b"<dynamicRender>required</dynamicRender>",
+      ),
+    ),
+  )
+  @test.assert_eq(
+    try! non_array_xfa.test_matterhorn_json("25-001"),
+    Json::array([]),
+  )
+
+  let non_stream_config = ua_matterhorn_document_for_test(
+    [],
+    root_extras=ua_matterhorn_xfa_config_root_for_test(
+      PdfString(@ascii.encode("required")),
+    ),
+  )
+  @test.assert_eq(
+    try! non_stream_config.test_matterhorn_json("25-001"),
     Json::array([]),
   )
 }
