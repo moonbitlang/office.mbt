@@ -564,6 +564,15 @@ fn pdf_ua_matterhorn_test_28_009() -> PdfUAMatterhornTest {
 }
 
 ///|
+fn pdf_ua_matterhorn_test_28_012() -> PdfUAMatterhornTest {
+  {
+    name: "28-012",
+    error: "A link annotation does not include an alternate description in its Contents entry.",
+    section: "UA1:7.18.5-2",
+  }
+}
+
+///|
 fn pdf_ua_matterhorn_test_28_014() -> PdfUAMatterhornTest {
   {
     name: "28-014",
@@ -913,6 +922,7 @@ fn pdf_ua_matterhorn_implemented_tests() -> Array[PdfUAMatterhornTest] {
     pdf_ua_matterhorn_test_28_007(),
     pdf_ua_matterhorn_test_28_008(),
     pdf_ua_matterhorn_test_28_009(),
+    pdf_ua_matterhorn_test_28_012(),
     pdf_ua_matterhorn_test_28_014(),
     pdf_ua_matterhorn_test_28_015(),
     pdf_ua_matterhorn_test_28_016(),
@@ -1898,6 +1908,20 @@ fn PdfDocument::pdf_ua_matterhorn_check_28_009(
 }
 
 ///|
+fn PdfDocument::pdf_ua_matterhorn_check_28_012(
+  self : PdfDocument,
+) -> Json? raise PdfError {
+  for page in self.pages_of_pagetree() {
+    for annotation in self.annotations_of_page(page) {
+      if annotation.subtype is AnnotationLink && annotation.contents is None {
+        return Some(Json::null())
+      }
+    }
+  }
+  None
+}
+
+///|
 fn PdfDocument::pdf_ua_matterhorn_media_clip_mcd_without_ct(
   self : PdfDocument,
   object : PdfObject,
@@ -2853,6 +2877,7 @@ fn PdfDocument::pdf_ua_matterhorn_run_test(
     "28-007" => self.pdf_ua_matterhorn_check_28_007()
     "28-008" => self.pdf_ua_matterhorn_check_28_008()
     "28-009" => self.pdf_ua_matterhorn_check_28_009()
+    "28-012" => self.pdf_ua_matterhorn_check_28_012()
     "28-014" => self.pdf_ua_matterhorn_check_28_014()
     "28-015" => self.pdf_ua_matterhorn_check_28_015()
     "28-016" => self.pdf_ua_matterhorn_check_28_016()
@@ -2955,6 +2980,7 @@ fn PdfDocument::pdf_ua_matterhorn_failures(
 /// file-spec check `21-001`, XFA dynamicRender check `25-001`,
 /// encryption checks `26-001` and `26-002`,
 /// annotation subtype and tab-order checks `28-006` through `28-009`,
+/// link annotation contents check `28-012`,
 /// media-clip checks `28-014` and `28-015`, file-attachment no-op `28-016`,
 /// PrinterMark object and appearance checks `28-017` and `28-018`, plus
 /// reference-XObject checks `30-001` and `30-002`, plus font

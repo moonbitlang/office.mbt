@@ -585,6 +585,18 @@ Current backend snapshot:
   warning and `moon check --target native --warn-list +73` at the known
   10-warning baseline. Batched full native validation reports `moon test
   --target native` at 2017/2017 tests passing.~~
+- [x] ~~Port the `cpdfua` Matterhorn link-annotation contents slice: the
+  covered Matterhorn surface now includes source check `28-012`, reusing parsed
+  page annotations and failing only for `/Link` annotations without a
+  `/Contents` alternate description. Coverage pins missing-contents failures,
+  `/Contents` passes, and non-link no-failure behavior. Focused native
+  validation reports `moon test --target native pdf_ua_matterhorn_test.mbt
+  --filter '*link annotation contents*'` at 1/1 test passing; widened native
+  validation reports `moon test --target native pdf_ua_matterhorn_test.mbt` at
+  36/36 tests passing. Native check validation reports `moon check --target
+  native` passing with the known `markdown/cmd` warning and `moon check
+  --target native --warn-list +73` at the known 10-warning baseline. Full
+  native suite validation is deferred to the next batch.~~
 - [x] ~~Port the current stub/no-op redaction APIs from `cpdfredact`: `redact`
   is exposed as `redact_path`/`pdf_redact` and preserves page content while
   validating the selected page range, while `apply` and `apply_type` are

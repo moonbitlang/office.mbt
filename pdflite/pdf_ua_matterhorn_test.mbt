@@ -232,6 +232,16 @@ fn ua_matterhorn_28_009_failure_for_test() -> Json {
 }
 
 ///|
+fn ua_matterhorn_28_012_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "28-012",
+    "UA1:7.18.5-2",
+    "A link annotation does not include an alternate description in its Contents entry.",
+    Json::null(),
+  )
+}
+
+///|
 fn ua_matterhorn_28_014_failure_for_test() -> Json {
   ua_matterhorn_failure_for_test(
     "28-014",
@@ -1682,6 +1692,49 @@ test "PdfDocument test_matterhorn_json checks annotation subtype and tabs" {
   )
   @test.assert_eq(try! link.test_matterhorn_json("28-009"), Json::array([]))
   @test.assert_eq(try! no_tabs.test_matterhorn_json("28-009"), Json::array([]))
+}
+
+///|
+test "PdfDocument test_matterhorn_json checks link annotation contents" {
+  let missing_contents = ua_matterhorn_document_for_test(
+    [],
+    rest=ua_matterhorn_page_rest_with_annots_for_test(
+      [ua_matterhorn_annotation_for_test("/Link")],
+      tabs=Some(PdfNameObject(ua_matterhorn_name_for_test("/S"))),
+    ),
+  )
+  @test.assert_eq(
+    try! missing_contents.test_matterhorn_json("28-012"),
+    Json::array([ua_matterhorn_28_012_failure_for_test()]),
+  )
+
+  let with_contents = ua_matterhorn_document_for_test(
+    [],
+    rest=ua_matterhorn_page_rest_with_annots_for_test(
+      [
+        ua_matterhorn_annotation_for_test("/Link", extras=[
+          (
+            ua_matterhorn_name_for_test("/Contents"),
+            PdfString(@ascii.encode("Open related section")),
+          ),
+        ]),
+      ],
+      tabs=Some(PdfNameObject(ua_matterhorn_name_for_test("/S"))),
+    ),
+  )
+  @test.assert_eq(
+    try! with_contents.test_matterhorn_json("28-012"),
+    Json::array([]),
+  )
+
+  let non_link = ua_matterhorn_document_for_test(
+    [],
+    rest=ua_matterhorn_page_rest_with_annots_for_test(
+      [ua_matterhorn_annotation_for_test("/Text")],
+      tabs=Some(PdfNameObject(ua_matterhorn_name_for_test("/S"))),
+    ),
+  )
+  @test.assert_eq(try! non_link.test_matterhorn_json("28-012"), Json::array([]))
 }
 
 ///|
