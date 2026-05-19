@@ -265,6 +265,14 @@ fn pdf_ua_matterhorn_ct_key() -> PdfName {
 }
 
 ///|
+let pdf_ua_matterhorn_alt_key_name : PdfName = pdf_ua_name("/Alt")
+
+///|
+fn pdf_ua_matterhorn_alt_key() -> PdfName {
+  pdf_ua_matterhorn_alt_key_name
+}
+
+///|
 let pdf_ua_matterhorn_encoding_key_name : PdfName = pdf_ua_name("/Encoding")
 
 ///|
@@ -541,6 +549,15 @@ fn pdf_ua_matterhorn_test_28_002() -> PdfUAMatterhornTest {
     name: "28-002",
     error: "An annotation, other than of subtype Widget, Link and PrinterMark, is not a direct child of an <Annot> structure element.",
     section: "UA1:7.18.1-2",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_28_004() -> PdfUAMatterhornTest {
+  {
+    name: "28-004",
+    error: "An annotation, other than of subtype Widget, does not have a Contents entry and does not have an alternative description (in the form of an Alt entry in the enclosing structure element).",
+    section: "UA1:7.18.1-4",
   }
 }
 
@@ -954,6 +971,7 @@ fn pdf_ua_matterhorn_implemented_tests() -> Array[PdfUAMatterhornTest] {
     pdf_ua_matterhorn_test_26_001(),
     pdf_ua_matterhorn_test_26_002(),
     pdf_ua_matterhorn_test_28_002(),
+    pdf_ua_matterhorn_test_28_004(),
     pdf_ua_matterhorn_test_28_006(),
     pdf_ua_matterhorn_test_28_007(),
     pdf_ua_matterhorn_test_28_008(),
@@ -1974,6 +1992,15 @@ fn pdf_ua_matterhorn_28_002_subtype_requires_annot(subtype : PdfName) -> Bool {
 }
 
 ///|
+fn pdf_ua_matterhorn_28_004_subtype_requires_contents_or_alt(
+  subtype : PdfName,
+) -> Bool {
+  pdf_ua_matterhorn_28_002_subtype_requires_annot(subtype) ||
+  subtype == pdf_annotation_link_name ||
+  subtype == pdf_annotation_printer_mark_name
+}
+
+///|
 fn PdfDocument::pdf_ua_matterhorn_parent_tree_entries(
   self : PdfDocument,
 ) -> Array[(Int, PdfObject)] {
@@ -2023,6 +2050,34 @@ fn PdfDocument::pdf_ua_matterhorn_check_28_002(self : PdfDocument) -> Json? {
                 None => return Some(Json::null())
               }
             _ => return Some(Json::null())
+          }
+        }
+      _ => ()
+    }
+  }
+  None
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_28_004(self : PdfDocument) -> Json? {
+  let parent_tree = self.pdf_ua_matterhorn_parent_tree_entries()
+  for entry in self.parsed_object_entries() {
+    match self.lookup_direct(pdf_ua_subtype_key(), entry.2) {
+      Some(PdfNameObject(subtype)) =>
+        if pdf_ua_matterhorn_28_004_subtype_requires_contents_or_alt(subtype) &&
+          self.lookup_direct(pdf_annotation_contents_key(), entry.2) is None {
+          match
+            self.lookup_direct(pdf_ua_matterhorn_struct_parent_key(), entry.2) {
+            Some(PdfInteger(key)) =>
+              match pdf_ua_matterhorn_parent_tree_lookup(parent_tree, key) {
+                Some(structure) =>
+                  if self.lookup_direct(pdf_ua_matterhorn_alt_key(), structure)
+                    is None {
+                    return Some(Json::null())
+                  }
+                None => return Some(Json::null())
+              }
+            _ => ()
           }
         }
       _ => ()
@@ -3071,6 +3126,7 @@ fn PdfDocument::pdf_ua_matterhorn_run_test(
     "26-001" => self.pdf_ua_matterhorn_check_26_001()
     "26-002" => self.pdf_ua_matterhorn_check_26_002()
     "28-002" => self.pdf_ua_matterhorn_check_28_002()
+    "28-004" => self.pdf_ua_matterhorn_check_28_004()
     "28-006" => self.pdf_ua_matterhorn_check_28_006()
     "28-007" => self.pdf_ua_matterhorn_check_28_007()
     "28-008" => self.pdf_ua_matterhorn_check_28_008()
@@ -3180,6 +3236,7 @@ fn PdfDocument::pdf_ua_matterhorn_failures(
 /// file-spec check `21-001`, XFA dynamicRender check `25-001`,
 /// encryption checks `26-001` and `26-002`,
 /// annotation parent structure check `28-002`,
+/// annotation contents-or-Alt check `28-004`,
 /// annotation subtype and tab-order checks `28-006` through `28-009`,
 /// annotation structure-parent checks `28-010` and `28-011`,
 /// link annotation contents check `28-012`,
