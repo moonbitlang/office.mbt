@@ -29,7 +29,7 @@ Current estimate:
   XMP/document info JSON reporting, redaction annotation bounding-box overlays,
   cpdfua Matterhorn content/role-map/XMP/viewer-preference/optional-content/
   media-clip/file-attachment/PrinterMark/reference-XObject/MCID Form XObject/
-  Type0 CIDSystemInfo validation, imposition
+  Type0 CIDSystemInfo/CIDToGIDMap validation, imposition
   transform/content/page-assembly/pattern-matrix kernels, cpdf page
   hard-box/removal/shift/scale/scale-to-fit/upright/set-mediabox/copy-box
   helpers, imposition make-space orchestration, border stamping, layout
@@ -394,6 +394,20 @@ Current backend snapshot:
   `markdown/cmd` warning and `moon check --target native --warn-list +73` at
   the known 10-warning baseline. Full native suite validation is deferred to
   the next batch.~~
+- [x] ~~Port the `cpdfua` Matterhorn Type 2 CIDToGIDMap slice: the covered
+  Matterhorn surface now includes source checks `31-004` and `31-005`,
+  preserving cpdf's object traversal over `/CIDFontType2` dictionaries and its
+  acceptance of either `/CIDToGIDMap /Identity` or a stream object. Coverage
+  pins the source `31-004` serialized-object extra for missing and invalid map
+  values, the separate `31-005` missing-entry failure, valid identity and stream
+  map passes, and non-Type2 bypass behavior. Focused native validation reports
+  `moon test --target native pdf_ua_matterhorn_test.mbt --filter
+  '*CIDToGIDMap*'` at 1/1 test passing; widened native validation reports
+  `moon test --target native pdf_ua_matterhorn_test.mbt` at 23/23 tests passing.
+  Native check validation reports `moon check --target native` passing with the
+  known `markdown/cmd` warning and `moon check --target native --warn-list +73`
+  at the known 10-warning baseline. Batched full native validation reports
+  `moon test --target native` at 2005/2005 tests passing.~~
 - [x] ~~Port the current stub/no-op redaction APIs from `cpdfredact`: `redact`
   is exposed as `redact_path`/`pdf_redact` and preserves page content while
   validating the selected page range, while `apply` and `apply_type` are

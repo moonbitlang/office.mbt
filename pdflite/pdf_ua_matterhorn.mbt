@@ -53,6 +53,24 @@ fn pdf_ua_matterhorn_type0() -> PdfName {
 }
 
 ///|
+let pdf_ua_matterhorn_cid_font_type2_name : PdfName = pdf_ua_name(
+  "/CIDFontType2",
+)
+
+///|
+fn pdf_ua_matterhorn_cid_font_type2() -> PdfName {
+  pdf_ua_matterhorn_cid_font_type2_name
+}
+
+///|
+let pdf_ua_matterhorn_identity_name : PdfName = pdf_ua_name("/Identity")
+
+///|
+fn pdf_ua_matterhorn_identity() -> PdfName {
+  pdf_ua_matterhorn_identity_name
+}
+
+///|
 let pdf_ua_matterhorn_identity_h_name : PdfName = pdf_ua_name("/Identity-H")
 
 ///|
@@ -138,6 +156,16 @@ let pdf_ua_matterhorn_encoding_key_name : PdfName = pdf_ua_name("/Encoding")
 ///|
 fn pdf_ua_matterhorn_encoding_key() -> PdfName {
   pdf_ua_matterhorn_encoding_key_name
+}
+
+///|
+let pdf_ua_matterhorn_cid_to_gid_map_key_name : PdfName = pdf_ua_name(
+  "/CIDToGIDMap",
+)
+
+///|
+fn pdf_ua_matterhorn_cid_to_gid_map_key() -> PdfName {
+  pdf_ua_matterhorn_cid_to_gid_map_key_name
 }
 
 ///|
@@ -432,6 +460,24 @@ fn pdf_ua_matterhorn_test_31_003() -> PdfUAMatterhornTest {
 }
 
 ///|
+fn pdf_ua_matterhorn_test_31_004() -> PdfUAMatterhornTest {
+  {
+    name: "31-004",
+    error: "A Type 2 CID font contains neither a stream nor the name Identity as the value of the CIDToGIDMap entry.",
+    section: "UA1:7.21.3.2-1",
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_test_31_005() -> PdfUAMatterhornTest {
+  {
+    name: "31-005",
+    error: "A Type 2 CID font does not contain a CIDToGIDMap entry.",
+    section: "UA1:7.21.3.2-1",
+  }
+}
+
+///|
 fn pdf_ua_matterhorn_implemented_tests() -> Array[PdfUAMatterhornTest] {
   [
     pdf_ua_matterhorn_test_01_003(),
@@ -459,6 +505,8 @@ fn pdf_ua_matterhorn_implemented_tests() -> Array[PdfUAMatterhornTest] {
     pdf_ua_matterhorn_test_31_001(),
     pdf_ua_matterhorn_test_31_002(),
     pdf_ua_matterhorn_test_31_003(),
+    pdf_ua_matterhorn_test_31_004(),
+    pdf_ua_matterhorn_test_31_005(),
   ]
 }
 
@@ -1462,6 +1510,51 @@ fn PdfDocument::pdf_ua_matterhorn_check_31_003(self : PdfDocument) -> Json? {
 }
 
 ///|
+fn PdfDocument::pdf_ua_matterhorn_is_cid_font_type2(
+  self : PdfDocument,
+  object : PdfObject,
+) -> Bool {
+  match self.lookup_direct(pdf_ua_subtype_key(), object) {
+    Some(PdfNameObject(subtype)) =>
+      subtype == pdf_ua_matterhorn_cid_font_type2()
+    _ => false
+  }
+}
+
+///|
+fn pdf_ua_matterhorn_object_string_extra(object : PdfObject) -> Json {
+  let bytes = pdf_write_object(object) catch { _ => b"" }
+  Json::string(@ascii.decode_lossy(bytes))
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_31_004(self : PdfDocument) -> Json? {
+  for entry in self.parsed_object_entries() {
+    if self.pdf_ua_matterhorn_is_cid_font_type2(entry.2) {
+      match
+        self.lookup_direct(pdf_ua_matterhorn_cid_to_gid_map_key(), entry.2) {
+        Some(PdfNameObject(name)) if name == pdf_ua_matterhorn_identity() => ()
+        Some(PdfStreamObject(_)) => ()
+        _ => return Some(pdf_ua_matterhorn_object_string_extra(entry.2))
+      }
+    }
+  }
+  None
+}
+
+///|
+fn PdfDocument::pdf_ua_matterhorn_check_31_005(self : PdfDocument) -> Json? {
+  for entry in self.parsed_object_entries() {
+    if self.pdf_ua_matterhorn_is_cid_font_type2(entry.2) &&
+      self.lookup_direct(pdf_ua_matterhorn_cid_to_gid_map_key(), entry.2)
+      is None {
+      return Some(Json::null())
+    }
+  }
+  None
+}
+
+///|
 fn PdfDocument::pdf_ua_matterhorn_run_test(
   self : PdfDocument,
   check : PdfUAMatterhornTest,
@@ -1492,6 +1585,8 @@ fn PdfDocument::pdf_ua_matterhorn_run_test(
     "31-001" => self.pdf_ua_matterhorn_check_31_001()
     "31-002" => self.pdf_ua_matterhorn_check_31_002()
     "31-003" => self.pdf_ua_matterhorn_check_31_003()
+    "31-004" => self.pdf_ua_matterhorn_check_31_004()
+    "31-005" => self.pdf_ua_matterhorn_check_31_005()
     _ => None
   }
   match result {
@@ -1557,8 +1652,8 @@ fn PdfDocument::pdf_ua_matterhorn_failures(
 /// optional-content configuration checks `20-001` through `20-003`, media-clip
 /// checks `28-014` and `28-015`, file-attachment no-op `28-016`, PrinterMark
 /// object and appearance checks `28-017` and `28-018`, plus reference-XObject
-/// checks `30-001` and `30-002`, plus Type 0 CIDSystemInfo checks `31-001` and
-/// through `31-003`. Passing `""` runs the covered subset; unsupported
+/// checks `30-001` and `30-002`, plus font CIDSystemInfo/CIDToGIDMap checks
+/// `31-001` through `31-005`. Passing `""` runs the covered subset; unsupported
 /// individual test names raise a soft error until their source checks are
 /// ported.
 pub fn PdfDocument::test_matterhorn_json(

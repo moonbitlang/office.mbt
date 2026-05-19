@@ -252,6 +252,31 @@ fn ua_matterhorn_31_003_failure_for_test() -> Json {
 }
 
 ///|
+fn ua_matterhorn_31_004_failure_for_test(extra : Json) -> Json {
+  ua_matterhorn_failure_for_test(
+    "31-004", "UA1:7.21.3.2-1", "A Type 2 CID font contains neither a stream nor the name Identity as the value of the CIDToGIDMap entry.",
+    extra,
+  )
+}
+
+///|
+fn ua_matterhorn_31_005_failure_for_test() -> Json {
+  ua_matterhorn_failure_for_test(
+    "31-005",
+    "UA1:7.21.3.2-1",
+    "A Type 2 CID font does not contain a CIDToGIDMap entry.",
+    Json::null(),
+  )
+}
+
+///|
+fn ua_matterhorn_serialized_object_extra_for_test(
+  object : @pdflite.PdfObject,
+) -> Json {
+  Json::string(@ascii.decode_lossy(try! @pdflite.pdf_write_object(object)))
+}
+
+///|
 fn ua_matterhorn_document_for_test(
   ops : ArrayView[@pdflite.PdfContentOp],
   resources? : @pdflite.PdfObject = PdfDictionary([]),
@@ -393,6 +418,24 @@ fn ua_matterhorn_cid_font_for_test(
       ua_matterhorn_cid_system_info_for_test(registry, ordering),
     ),
   ])
+}
+
+///|
+fn ua_matterhorn_cid_font_type2_for_test(
+  cid_to_gid_map : @pdflite.PdfObject?,
+) -> @pdflite.PdfObject {
+  let entries : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = [
+    (
+      ua_matterhorn_name_for_test("/Subtype"),
+      PdfNameObject(ua_matterhorn_name_for_test("/CIDFontType2")),
+    ),
+  ]
+  match cid_to_gid_map {
+    Some(map) =>
+      entries.push((ua_matterhorn_name_for_test("/CIDToGIDMap"), map))
+    None => ()
+  }
+  PdfDictionary(entries)
 }
 
 ///|
@@ -1122,6 +1165,92 @@ test "PdfDocument test_matterhorn_json detects Type0 CIDSystemInfo mismatches" {
   )
   @test.assert_eq(
     try! source_supplement_match.test_matterhorn_json("31-003"),
+    Json::array([]),
+  )
+}
+
+///|
+test "PdfDocument test_matterhorn_json checks Type2 CIDToGIDMap" {
+  let missing_map = ua_matterhorn_document_for_test([])
+  let missing_font = ua_matterhorn_cid_font_type2_for_test(None)
+  missing_map.add_object_given_number(40, missing_font)
+  @test.assert_eq(
+    try! missing_map.test_matterhorn_json("31-004"),
+    Json::array([
+      ua_matterhorn_31_004_failure_for_test(
+        ua_matterhorn_serialized_object_extra_for_test(missing_font),
+      ),
+    ]),
+  )
+  @test.assert_eq(
+    try! missing_map.test_matterhorn_json("31-005"),
+    Json::array([ua_matterhorn_31_005_failure_for_test()]),
+  )
+
+  let invalid_map = ua_matterhorn_document_for_test([])
+  let invalid_font = ua_matterhorn_cid_font_type2_for_test(Some(PdfInteger(7)))
+  invalid_map.add_object_given_number(40, invalid_font)
+  @test.assert_eq(
+    try! invalid_map.test_matterhorn_json("31-004"),
+    Json::array([
+      ua_matterhorn_31_004_failure_for_test(
+        ua_matterhorn_serialized_object_extra_for_test(invalid_font),
+      ),
+    ]),
+  )
+  @test.assert_eq(
+    try! invalid_map.test_matterhorn_json("31-005"),
+    Json::array([]),
+  )
+
+  let identity_map = ua_matterhorn_document_for_test([])
+  identity_map.add_object_given_number(
+    40,
+    ua_matterhorn_cid_font_type2_for_test(
+      Some(PdfNameObject(ua_matterhorn_name_for_test("/Identity"))),
+    ),
+  )
+  @test.assert_eq(
+    try! identity_map.test_matterhorn_json("31-004"),
+    Json::array([]),
+  )
+  @test.assert_eq(
+    try! identity_map.test_matterhorn_json("31-005"),
+    Json::array([]),
+  )
+
+  let stream_map = ua_matterhorn_document_for_test([])
+  stream_map.add_object_given_number(
+    40,
+    ua_matterhorn_cid_font_type2_for_test(
+      Some(@pdflite.pdf_stream(PdfDictionary([]), StreamGot(b"\x00\x01"))),
+    ),
+  )
+  @test.assert_eq(
+    try! stream_map.test_matterhorn_json("31-004"),
+    Json::array([]),
+  )
+  @test.assert_eq(
+    try! stream_map.test_matterhorn_json("31-005"),
+    Json::array([]),
+  )
+
+  let non_cid_type2 = ua_matterhorn_document_for_test([])
+  non_cid_type2.add_object_given_number(
+    40,
+    PdfDictionary([
+      (
+        ua_matterhorn_name_for_test("/Subtype"),
+        PdfNameObject(ua_matterhorn_name_for_test("/CIDFontType0")),
+      ),
+    ]),
+  )
+  @test.assert_eq(
+    try! non_cid_type2.test_matterhorn_json("31-004"),
+    Json::array([]),
+  )
+  @test.assert_eq(
+    try! non_cid_type2.test_matterhorn_json("31-005"),
     Json::array([]),
   )
 }
