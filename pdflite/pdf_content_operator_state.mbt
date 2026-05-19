@@ -20,6 +20,8 @@ pub(all) struct PdfContentOperatorFrame {
   undercolour_removal : PdfObject
   transfer : PdfObject
   halftone : PdfObject
+  blend_mode : PdfObject
+  black_point_compensation : String
   marked_content_point : PdfContentMarkedContent?
   marked_content : Array[PdfContentMarkedContent]
   type3_d0 : PdfContentType3D0?
@@ -48,6 +50,8 @@ pub(all) struct PdfContentOperatorState {
   undercolour_removal : PdfObject
   transfer : PdfObject
   halftone : PdfObject
+  blend_mode : PdfObject
+  black_point_compensation : String
   marked_content_point : PdfContentMarkedContent?
   marked_content : Array[PdfContentMarkedContent]
   type3_d0 : PdfContentType3D0?
@@ -134,6 +138,19 @@ let pdf_content_extgstate_hto_name : PdfName = pdf_content_extgstate_name(
 )
 
 ///|
+let pdf_content_extgstate_bm_name : PdfName = pdf_content_extgstate_name("/BM")
+
+///|
+let pdf_content_extgstate_use_black_pt_comp_name : PdfName = pdf_content_extgstate_name(
+  "/UseBlackPtComp",
+)
+
+///|
+let pdf_content_extgstate_normal_name : PdfName = pdf_content_extgstate_name(
+  "/Normal",
+)
+
+///|
 let pdf_content_extgstate_fl_name : PdfName = pdf_content_extgstate_name("/FL")
 
 ///|
@@ -211,6 +228,8 @@ pub fn pdf_content_initial_operator_state(
     undercolour_removal: PdfNull,
     transfer: PdfNull,
     halftone: PdfNull,
+    blend_mode: PdfNameObject(pdf_content_extgstate_normal_name),
+    black_point_compensation: "/Default",
     marked_content_point: None,
     marked_content: [],
     type3_d0: None,
@@ -244,6 +263,8 @@ fn PdfContentOperatorState::content_frame(
     undercolour_removal: self.undercolour_removal,
     transfer: self.transfer,
     halftone: self.halftone,
+    blend_mode: self.blend_mode,
+    black_point_compensation: self.black_point_compensation,
     marked_content_point: self.marked_content_point,
     marked_content: pdf_content_operator_copy_marked_content(
       self.marked_content,
@@ -344,6 +365,8 @@ fn PdfContentOperatorState::content_pop_state(
       undercolour_removal: frame.undercolour_removal,
       transfer: frame.transfer,
       halftone: frame.halftone,
+      blend_mode: frame.blend_mode,
+      black_point_compensation: frame.black_point_compensation,
       marked_content_point: frame.marked_content_point,
       marked_content: pdf_content_operator_copy_marked_content(
         frame.marked_content,
@@ -716,6 +739,42 @@ pub fn pdf_content_apply_extgstate_halftone_op(
   extgstate : PdfObject,
 ) -> PdfContentOperatorState {
   document.content_apply_extgstate_halftone_op(state, extgstate)
+}
+
+///|
+/// Apply cpdfcontent blend and black-point-compensation from a resolved ExtGState dictionary.
+pub fn PdfDocument::content_apply_extgstate_compositing_op(
+  self : PdfDocument,
+  state : PdfContentOperatorState,
+  extgstate : PdfObject,
+) -> PdfContentOperatorState {
+  let mut output = state
+  match self.lookup_direct(pdf_content_extgstate_bm_name, extgstate) {
+    Some(value) => output = { ..output, blend_mode: value }
+    None => ()
+  }
+  match
+    self.content_extgstate_name_value(
+      extgstate, pdf_content_extgstate_use_black_pt_comp_name,
+    ) {
+    Some(value) =>
+      output = {
+        ..output,
+        black_point_compensation: pdf_content_state_name_text(value),
+      }
+    None => ()
+  }
+  output
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::content_apply_extgstate_compositing_op`.
+pub fn pdf_content_apply_extgstate_compositing_op(
+  document : PdfDocument,
+  state : PdfContentOperatorState,
+  extgstate : PdfObject,
+) -> PdfContentOperatorState {
+  document.content_apply_extgstate_compositing_op(state, extgstate)
 }
 
 ///|

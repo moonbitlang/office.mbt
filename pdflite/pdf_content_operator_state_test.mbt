@@ -52,6 +52,11 @@ test "cpdfcontent operator state exposes initial state" {
   @test.assert_eq(state.undercolour_removal, PdfNull)
   @test.assert_eq(state.transfer, PdfNull)
   @test.assert_eq(state.halftone, PdfNull)
+  @test.assert_eq(
+    state.blend_mode,
+    PdfNameObject(content_operator_name_for_test("/Normal")),
+  )
+  @test.assert_eq(state.black_point_compensation, "/Default")
   @test.assert_eq(state.marked_content_point, None)
   @test.assert_eq(state.marked_content.length(), 0)
   @test.assert_eq(state.type3_d0, None)
@@ -81,6 +86,11 @@ test "cpdfcontent operator state saves and restores q Q frames" {
   @test.assert_eq(pushed.state_stack[0].undercolour_removal, PdfNull)
   @test.assert_eq(pushed.state_stack[0].transfer, PdfNull)
   @test.assert_eq(pushed.state_stack[0].halftone, PdfNull)
+  @test.assert_eq(
+    pushed.state_stack[0].blend_mode,
+    PdfNameObject(content_operator_name_for_test("/Normal")),
+  )
+  @test.assert_eq(pushed.state_stack[0].black_point_compensation, "/Default")
   let changed : @pdflite.PdfContentOperatorState = {
     ..pushed,
     ctm: @pdflite.transform_translate(7.0, 8.0),
@@ -100,6 +110,8 @@ test "cpdfcontent operator state saves and restores q Q frames" {
     undercolour_removal: PdfInteger(2),
     transfer: PdfInteger(3),
     halftone: PdfInteger(4),
+    blend_mode: PdfNameObject(content_operator_name_for_test("/Multiply")),
+    black_point_compensation: "/ON",
   }
   let restored = changed.content_apply_graphics_state_op(Op_Q)
   @test.assert_eq(restored.ctm, initial.ctm)
@@ -123,6 +135,11 @@ test "cpdfcontent operator state saves and restores q Q frames" {
   @test.assert_eq(restored.undercolour_removal, initial.undercolour_removal)
   @test.assert_eq(restored.transfer, initial.transfer)
   @test.assert_eq(restored.halftone, initial.halftone)
+  @test.assert_eq(restored.blend_mode, initial.blend_mode)
+  @test.assert_eq(
+    restored.black_point_compensation,
+    initial.black_point_compensation,
+  )
   @test.assert_eq(restored.state_stack.length(), 0)
   @test.assert_eq(initial.content_apply_graphics_state_op(Op_Q), initial)
 }
@@ -561,6 +578,39 @@ test "cpdfcontent operator state applies ExtGState halftone parameters" {
       (content_operator_name_for_test("/HT"), PdfNull),
       (content_operator_name_for_test("/SMask"), PdfNull),
       (content_operator_name_for_test("/HTO"), PdfNull),
+    ]),
+  )
+  @test.assert_eq(ignored, state)
+}
+
+///|
+test "cpdfcontent operator state applies ExtGState compositing parameters" {
+  let doc = @pdflite.pdf_document_empty()
+  let initial = @pdflite.pdf_content_initial_operator_state(
+    0.0, 0.0, 100.0, 200.0,
+  )
+  let blend : @pdflite.PdfObject = PdfNameObject(
+    content_operator_name_for_test("/Multiply"),
+  )
+  let extgstate = @pdflite.pdf_dictionary([
+    (content_operator_name_for_test("/BM"), blend),
+    (
+      content_operator_name_for_test("/UseBlackPtComp"),
+      PdfNameObject(content_operator_name_for_test("/ON")),
+    ),
+  ])
+  let state = doc.content_apply_extgstate_compositing_op(initial, extgstate)
+  @test.assert_eq(state.blend_mode, blend)
+  @test.assert_eq(state.black_point_compensation, "/ON")
+  @test.assert_eq(
+    @pdflite.pdf_content_apply_extgstate_compositing_op(doc, initial, extgstate),
+    state,
+  )
+  let ignored = doc.content_apply_extgstate_compositing_op(
+    state,
+    @pdflite.pdf_dictionary([
+      (content_operator_name_for_test("/BM"), PdfNull),
+      (content_operator_name_for_test("/UseBlackPtComp"), PdfString(b"ON")),
     ]),
   )
   @test.assert_eq(ignored, state)

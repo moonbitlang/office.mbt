@@ -355,6 +355,8 @@ pub fn pdf_content_apply_core_op(PdfContentOperatorState, PdfContentOp) -> PdfCo
 
 pub fn pdf_content_apply_extgstate_alpha_op(PdfDocument, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState
 
+pub fn pdf_content_apply_extgstate_compositing_op(PdfDocument, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState
+
 pub fn pdf_content_apply_extgstate_dash_op(PdfDocument, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState raise @core.PdfError
 
 pub fn pdf_content_apply_extgstate_graphics_parameter_op(PdfDocument, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState
@@ -2106,6 +2108,8 @@ pub(all) struct PdfContentOperatorFrame {
   undercolour_removal : PdfObject
   transfer : PdfObject
   halftone : PdfObject
+  blend_mode : PdfObject
+  black_point_compensation : String
   marked_content_point : PdfContentMarkedContent?
   marked_content : Array[PdfContentMarkedContent]
   type3_d0 : PdfContentType3D0?
@@ -2133,6 +2137,8 @@ pub(all) struct PdfContentOperatorState {
   undercolour_removal : PdfObject
   transfer : PdfObject
   halftone : PdfObject
+  blend_mode : PdfObject
+  black_point_compensation : String
   marked_content_point : PdfContentMarkedContent?
   marked_content : Array[PdfContentMarkedContent]
   type3_d0 : PdfContentType3D0?
@@ -2397,6 +2403,7 @@ pub fn PdfDocument::composition_json(Self, Int) -> Json raise @core.PdfError
 pub fn PdfDocument::composition_json_blob(Self, Int) -> Bytes raise @core.PdfError
 pub fn PdfDocument::contains_javascript(Self) -> Bool
 pub fn PdfDocument::content_apply_extgstate_alpha_op(Self, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState
+pub fn PdfDocument::content_apply_extgstate_compositing_op(Self, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState
 pub fn PdfDocument::content_apply_extgstate_dash_op(Self, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState raise @core.PdfError
 pub fn PdfDocument::content_apply_extgstate_graphics_parameter_op(Self, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState
 pub fn PdfDocument::content_apply_extgstate_halftone_op(Self, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState

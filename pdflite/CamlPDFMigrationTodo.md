@@ -2971,6 +2971,24 @@ Current backend snapshot:
   native` passing with the known `markdown/cmd` warning and `moon check --target
   native --warn-list +73` at the known 10-warning baseline. Full native suite
   validation is deferred to the next batch.~~
+- [x] ~~Standalone `cpdfcontent.ml` ExtGState compositing-state slice adds
+  `blend_mode` and `black_point_compensation` to `PdfContentOperatorState` and
+  q/Q frames, and exposes `PdfDocument::content_apply_extgstate_compositing_op`
+  plus `pdf_content_apply_extgstate_compositing_op`, matching cpdf's initial
+  `/Normal` blend-mode and `/Default` black-point-compensation defaults and
+  `read_graphics_state_dictionary` `/BM` and `/UseBlackPtComp` branches once an
+  ExtGState dictionary has been resolved, including arbitrary direct blend-mode
+  object preservation, name-only black-point-compensation assignment, ignored
+  `Null`/malformed values, and q/Q save-restore behavior while leaving
+  resource-name resolution, the unused `soft_mask` state slot, and font-backed
+  ExtGState entries for later slices. Focused native validation reports `moon
+  test --target native pdf_content_operator_state_test.mbt --filter
+  '*ExtGState*'` at 9/9 tests passing and `moon test --target native
+  pdf_content_operator_state_test.mbt` at 25/25 tests passing; native check
+  validation reports `moon check --target native` passing with the known
+  `markdown/cmd` warning and `moon check --target native --warn-list +73` at the
+  known 10-warning baseline. Native full-suite validation reports `moon test
+  --target native` at 1971/1971 tests passing.~~
 - [x] ~~Standalone `cpdfspot.ml` spot-colour listing slice exposes
   `PdfDocument::list_spot_colours` and `pdf_list_spot_colours`, covering cpdf's
   top-level `/Separation` array scan, direct and indirect colourant names,
