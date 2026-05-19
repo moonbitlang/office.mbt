@@ -732,6 +732,36 @@ pub fn pdf_content_form_xobject_resources(
 }
 
 ///|
+/// Look up a named Form XObject resource and parse its content operators.
+pub fn PdfDocument::content_form_xobject_ops(
+  self : PdfDocument,
+  resources : PdfObject,
+  name : PdfName,
+) -> Array[PdfContentOp]? raise PdfError {
+  let xobject = self.content_xobject_from_resources(resources, name)
+  match self.lookup_direct(pdf_xobject_subtype_key(), xobject) {
+    Some(PdfNameObject(subtype)) if subtype == pdf_xobject_form() => {
+      let total_resources = self.content_form_xobject_merge_resources(
+        resources, xobject,
+      )
+      Some(self.parse_content_ops_with_resources(total_resources, [xobject]))
+    }
+    Some(PdfNameObject(subtype)) if subtype == pdf_image_image_name() => None
+    _ => raise SoftError("Unknown kind of xobject")
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::content_form_xobject_ops`.
+pub fn pdf_content_form_xobject_ops(
+  document : PdfDocument,
+  resources : PdfObject,
+  name : PdfName,
+) -> Array[PdfContentOp]? raise PdfError {
+  document.content_form_xobject_ops(resources, name)
+}
+
+///|
 fn PdfContentOperatorState::content_with_clipping_path(
   self : PdfContentOperatorState,
   clipping_path : ArrayView[PdfPath],

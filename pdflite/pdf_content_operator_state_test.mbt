@@ -655,6 +655,87 @@ test "cpdfcontent operator state merges Form XObject resources" {
 }
 
 ///|
+test "cpdfcontent operator state parses Form XObject ops with merged resources" {
+  let doc = @pdflite.pdf_document_empty()
+  let form_name = content_operator_name_for_test("/Fm1")
+  let image_name = content_operator_name_for_test("/Im1")
+  let xobject_key = content_operator_name_for_test("/XObject")
+  let subtype_key = content_operator_name_for_test("/Subtype")
+  let resources_key = content_operator_name_for_test("/Resources")
+  let length_key = content_operator_name_for_test("/Length")
+  let color_space_key = content_operator_name_for_test("/ColorSpace")
+  let color_space_name = content_operator_name_for_test("/CSForm")
+  let form_data = @ascii.encode(
+    "BI /W 2 /H 1 /BPC 8 /CS /CSForm ID A EI B EI Q",
+  )
+  let form_xobject = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (subtype_key, PdfNameObject(content_operator_name_for_test("/Form"))),
+      (length_key, PdfInteger(form_data.length())),
+      (
+        resources_key,
+        @pdflite.pdf_dictionary([
+          (
+            color_space_key,
+            @pdflite.pdf_dictionary([
+              (
+                color_space_name,
+                PdfNameObject(content_operator_name_for_test("/RGB")),
+              ),
+            ]),
+          ),
+        ]),
+      ),
+    ]),
+    StreamGot(form_data),
+  )
+  let image_xobject = @pdflite.pdf_dictionary([
+    (subtype_key, PdfNameObject(content_operator_name_for_test("/Image"))),
+  ])
+  let page_resources = @pdflite.pdf_dictionary([
+    (
+      xobject_key,
+      @pdflite.pdf_dictionary([
+        (form_name, form_xobject),
+        (image_name, image_xobject),
+      ]),
+    ),
+  ])
+  let result : Result[Array[@pdflite.PdfContentOp]?, Error] = try? doc.content_form_xobject_ops(
+    page_resources, form_name,
+  )
+  guard result is Ok(Some(ops)) else {
+    fail("expected parsed Form XObject operators")
+  }
+  @test.assert_eq(ops, [
+    Op_InlineImage(
+      @pdflite.pdf_dictionary([
+        (content_operator_name_for_test("/W"), PdfInteger(2)),
+        (content_operator_name_for_test("/H"), PdfInteger(1)),
+        (content_operator_name_for_test("/BPC"), PdfInteger(8)),
+        (content_operator_name_for_test("/CS"), PdfNameObject(color_space_name)),
+      ]),
+      None,
+      @ascii.encode("A EI B"),
+    ),
+    Op_Q,
+  ])
+  let wrapper_result : Result[Array[@pdflite.PdfContentOp]?, Error] = try? @pdflite.pdf_content_form_xobject_ops(
+    doc, page_resources, form_name,
+  )
+  guard wrapper_result is Ok(Some(wrapper_ops)) else {
+    fail("expected wrapper parsed Form XObject operators")
+  }
+  @test.assert_eq(wrapper_ops, ops)
+  let image_result : Result[Array[@pdflite.PdfContentOp]?, Error] = try? doc.content_form_xobject_ops(
+    page_resources, image_name,
+  )
+  guard image_result is Ok(None) else {
+    fail("expected image XObject to emit no Form operators")
+  }
+}
+
+///|
 test "cpdfcontent operator state emits path entries for drawn paths" {
   let initial = @pdflite.pdf_content_initial_operator_state(
     0.0, 0.0, 100.0, 200.0,
