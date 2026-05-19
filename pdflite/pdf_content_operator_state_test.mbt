@@ -180,6 +180,48 @@ test "cpdfcontent operator state applies direct graphics parameters" {
 }
 
 ///|
+test "cpdfcontent operator state applies ExtGState text knockout" {
+  let doc = @pdflite.pdf_document_empty()
+  let initial = @pdflite.pdf_content_initial_operator_state(
+    0.0, 0.0, 100.0, 200.0,
+  )
+  let tk = content_operator_name_for_test("/TK")
+  let disabled = doc.content_apply_extgstate_text_op(
+    initial,
+    @pdflite.pdf_dictionary([(tk, PdfBoolean(false))]),
+  )
+  @test.assert_eq(disabled.text_state.knockout, false)
+  @test.assert_eq(
+    disabled.text_state.content_glyph_state(disabled.clipping_path).knockout,
+    false,
+  )
+  @test.assert_eq(
+    @pdflite.pdf_content_apply_extgstate_text_op(
+      doc,
+      initial,
+      @pdflite.pdf_dictionary([(tk, PdfBoolean(false))]),
+    ),
+    disabled,
+  )
+  @test.assert_eq(
+    doc.content_apply_extgstate_text_op(
+      disabled,
+      @pdflite.pdf_dictionary([
+        (tk, PdfNameObject(content_operator_name_for_test("/Ignored"))),
+      ]),
+    ),
+    disabled,
+  )
+  @test.assert_eq(
+    doc.content_apply_extgstate_text_op(
+      disabled,
+      @pdflite.pdf_dictionary([(tk, PdfBoolean(true))]),
+    ).text_state.knockout,
+    true,
+  )
+}
+
+///|
 test "cpdfcontent operator state applies marked content operators" {
   let initial = @pdflite.pdf_content_initial_operator_state(
     0.0, 0.0, 100.0, 200.0,

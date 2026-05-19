@@ -38,6 +38,19 @@ pub(all) struct PdfContentMarkedContent {
 } derive(Debug, Eq, ToJson)
 
 ///|
+fn pdf_content_extgstate_name(text : String) -> PdfName {
+  pdf_name_of_bytes(@ascii.encode(text))
+}
+
+///|
+let pdf_content_extgstate_tk_name : PdfName = pdf_content_extgstate_name("/TK")
+
+///|
+fn pdf_content_extgstate_tk_key() -> PdfName {
+  pdf_content_extgstate_tk_name
+}
+
+///|
 pub(all) struct PdfContentType3D0 {
   width_x : Double
   width_y : Double
@@ -236,6 +249,30 @@ pub fn pdf_content_apply_graphics_parameter_op(
   op : PdfContentOp,
 ) -> PdfContentOperatorState {
   state.content_apply_graphics_parameter_op(op)
+}
+
+///|
+/// Apply cpdfcontent text-state fields from a resolved ExtGState dictionary.
+pub fn PdfDocument::content_apply_extgstate_text_op(
+  self : PdfDocument,
+  state : PdfContentOperatorState,
+  extgstate : PdfObject,
+) -> PdfContentOperatorState {
+  match self.lookup_direct(pdf_content_extgstate_tk_key(), extgstate) {
+    Some(PdfBoolean(knockout)) =>
+      { ..state, text_state: { ..state.text_state, knockout, } }
+    _ => state
+  }
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::content_apply_extgstate_text_op`.
+pub fn pdf_content_apply_extgstate_text_op(
+  document : PdfDocument,
+  state : PdfContentOperatorState,
+  extgstate : PdfObject,
+) -> PdfContentOperatorState {
+  document.content_apply_extgstate_text_op(state, extgstate)
 }
 
 ///|
