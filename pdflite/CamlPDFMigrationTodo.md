@@ -5376,6 +5376,17 @@ Current backend snapshot:
   fixture_acceptance --filter '*table of contents*'` reports 1/1 test passing,
   `moon test --target native fixture_acceptance` reports 53/53 tests passing,
   and `moon test --target native` reports 2224/2224 tests passing.~~
+- [x] ~~Add the next source-boundary text-extraction slice: optional
+  `.repos/cpdf-source/cpdfmanual.pdf` now gates root-package
+  `PdfDocument::test_extract_text` output for selected real manual pages,
+  including the cover text, Basic Usage, Merging and Splitting, and Splitting on
+  Bookmarks, with no replacement characters or raw controls before compressed
+  rewrite/reread and after bad-`startxref` reconstruction. `moon test --target
+  native fixture_acceptance --filter '*extracts selected text*'` reports 1/1
+  test passing, `moon test --target native fixture_acceptance` reports 54/54
+  tests passing, `moon test --target native` reports 2225/2225 tests passing,
+  and `moon check --target all --warn-list +73` reports the known warning
+  baseline with 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.

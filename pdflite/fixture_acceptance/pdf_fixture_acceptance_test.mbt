@@ -1657,6 +1657,35 @@ fn fixture_acceptance_assert_contains_for_test(
 }
 
 ///|
+fn fixture_acceptance_replacement_count_for_test(text : String) -> Int {
+  let mut count = 0
+  for char in text {
+    if char.to_int() == 0xFFFD {
+      count += 1
+    }
+  }
+  count
+}
+
+///|
+fn fixture_acceptance_raw_control_count_for_test(text : String) -> Int {
+  let mut count = 0
+  for char in text {
+    let codepoint = char.to_int()
+    if (
+        codepoint < 0x20 &&
+        codepoint != 0x0A &&
+        codepoint != 0x09 &&
+        codepoint != 0x0C
+      ) ||
+      (codepoint >= 0x7F && codepoint <= 0x9F) {
+      count += 1
+    }
+  }
+  count
+}
+
+///|
 fn fixture_acceptance_pdf_name_for_test(text : String) -> @pdflite.PdfName {
   @pdflite.pdf_name_of_bytes(@ascii.encode(text))
 }
@@ -1738,6 +1767,24 @@ fn fixture_acceptance_assert_cpdf_manual_reports_for_test(
   fixture_acceptance_assert_contains_for_test(
     composition_json, "[\"XRef Table\",",
   )
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_manual_text_extraction_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 175)
+  let text = @utf8.decode_lossy(document.test_extract_text([1, 19, 31, 33]))
+  fixture_acceptance_assert_contains_for_test(text, "CoherentPDF")
+  fixture_acceptance_assert_contains_for_test(text, "CommandLineTools")
+  fixture_acceptance_assert_contains_for_test(text, "Chapter1BasicUsage")
+  fixture_acceptance_assert_contains_for_test(
+    text, "Chapter2MergingandSplitting",
+  )
+  fixture_acceptance_assert_contains_for_test(text, "SplittingonBookmarks")
+  @test.assert_eq(text.length() > 2000, true)
+  @test.assert_eq(fixture_acceptance_replacement_count_for_test(text), 0)
+  @test.assert_eq(fixture_acceptance_raw_control_count_for_test(text), 0)
 }
 
 ///|
@@ -2515,6 +2562,28 @@ async test "optional cpdf source manual fixture reports info page details and co
       fixture_acceptance_assert_cpdf_manual_reports_for_test(
         @pdflite.pdf_read_document_from_bytes(rewritten),
         rewritten.length(),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source manual fixture extracts selected text" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/cpdfmanual.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_manual_text_extraction_for_test(document)
+      fixture_acceptance_assert_cpdf_manual_text_extraction_for_test(
+        fixture_acceptance_reparse_compressed_for_test(document),
+      )
+      fixture_acceptance_assert_cpdf_manual_text_extraction_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(bytes),
+        ),
       )
     }
   }
