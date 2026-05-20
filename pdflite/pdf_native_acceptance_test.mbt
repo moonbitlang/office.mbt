@@ -3540,6 +3540,12 @@ fn acceptance_gb1_cmap_text_document_for_test() -> @pdflite.PdfDocument raise {
     112,
     acceptance_predefined_cmap_descendant_font_for_test("/GBKDescendant", "GB1"),
   )
+  doc.add_object_given_number(
+    114,
+    acceptance_predefined_cmap_descendant_font_for_test(
+      "/GBKpDescendant", "GB1",
+    ),
+  )
   let gb_euc_page = acceptance_predefined_cmap_page_for_test(
     "/Fgbeuc",
     acceptance_predefined_cmap_type0_font_for_test(
@@ -3559,7 +3565,16 @@ fn acceptance_gb1_cmap_text_document_for_test() -> @pdflite.PdfDocument raise {
     acceptance_predefined_cmap_type0_font_for_test("/GBKTop", "/GBK-EUC-H", 112),
     acceptance_gbk_text_for_test(),
   )
-  let page_root = doc.add_pagetree([gb_euc_page, gbpc_euc_page, gbk_page])
+  let gbkp_page = acceptance_predefined_cmap_page_for_test(
+    "/Fgbkp",
+    acceptance_predefined_cmap_type0_font_for_test(
+      "/GBKpTop", "/GBKp-EUC-H", 114,
+    ),
+    acceptance_gbk_text_for_test(),
+  )
+  let page_root = doc.add_pagetree([
+    gb_euc_page, gbpc_euc_page, gbk_page, gbkp_page,
+  ])
   ignore(doc.add_root(page_root, []))
   doc
 }
@@ -5097,9 +5112,9 @@ fn acceptance_assert_gb1_cmap_text_for_test(
   doc : @pdflite.PdfDocument,
 ) -> Unit raise {
   @test.assert_eq(doc.version(), (1, 5))
-  @test.assert_eq(doc.endpage(), 3)
+  @test.assert_eq(doc.endpage(), 4)
   let pages = doc.pages_of_pagetree()
-  @test.assert_eq(pages.length(), 3)
+  @test.assert_eq(pages.length(), 4)
   let gb_euc_font = acceptance_assert_predefined_cmap_font_shape_for_test(
     doc,
     pages[0],
@@ -5188,6 +5203,35 @@ fn acceptance_assert_gb1_cmap_text_for_test(
   @test.assert_eq(gbk_extractor.charcode_of_codepoint(0xE4C5), Some(0xFEFE))
   @test.assert_eq(gbk_extractor.charcode_of_codepoint(0xF8F5), Some(0xFF))
   @test.assert_eq(gbk_extractor.charcode_of_codepoint(0x1F600), None)
+  let gbkp_font = acceptance_assert_predefined_cmap_font_shape_for_test(
+    doc,
+    pages[3],
+    "/Fgbkp",
+    "/GBKp-EUC-H",
+    "GB1",
+  )
+  @test.assert_eq(
+    acceptance_font_codepoints_of_page_for_test(
+      doc,
+      pages[3],
+      acceptance_name_for_test("/Fgbkp"),
+    ),
+    [
+      0x41, 0x80, 0x4E02, 0x4F60, 0x597D, 0x3000, 0xFF21, 0xE4C6, 0x1E3F, 0xE4C5,
+      0xF8F5, 0x8139,
+    ],
+  )
+  let gbkp_extractor = doc.text_extractor_of_font(gbkp_font)
+  @test.assert_eq(gbkp_extractor.charcode_of_codepoint(0x41), Some(0x41))
+  @test.assert_eq(gbkp_extractor.charcode_of_codepoint(0x80), Some(0x80))
+  @test.assert_eq(gbkp_extractor.charcode_of_codepoint(0x4E02), Some(0x8140))
+  @test.assert_eq(gbkp_extractor.charcode_of_codepoint(0x4F60), Some(0xC4E3))
+  @test.assert_eq(gbkp_extractor.charcode_of_codepoint(0x597D), Some(0xBAC3))
+  @test.assert_eq(gbkp_extractor.charcode_of_codepoint(0xE4C6), Some(0xA140))
+  @test.assert_eq(gbkp_extractor.charcode_of_codepoint(0x1E3F), Some(0xA8BC))
+  @test.assert_eq(gbkp_extractor.charcode_of_codepoint(0xE4C5), Some(0xFEFE))
+  @test.assert_eq(gbkp_extractor.charcode_of_codepoint(0xF8F5), Some(0xFF))
+  @test.assert_eq(gbkp_extractor.charcode_of_codepoint(0x1F600), None)
 }
 
 ///|

@@ -5046,6 +5046,37 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   guard gbk_truncated is Err(BadText) else {
     fail("expected @pdflite.PdfError::BadText for truncated GBK charcode")
   }
+  let gbkp_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: text_name_for_test("/TopGBKpBuiltin"),
+    composite,
+    encoding: PdfPredefinedCMap(text_name_for_test("/GBKp-EUC-H")),
+  })
+  let gbkp_builtin_extractor = gbkp_builtin_font.text_extractor()
+  @test.assert_eq(
+    gbkp_builtin_extractor.codepoints_of_text(
+      text_bytes_for_test([0x41, 0x80, 0x81, 0x40, 0xC4, 0xE3, 0xFF, 0x81, 0x39]),
+    ),
+    [0x41, 0x80, 0x4E02, 0x4F60, 0xF8F5, 0x8139],
+  )
+  @test.assert_eq(
+    gbkp_builtin_extractor.charcode_of_codepoint(0x4E02),
+    Some(0x8140),
+  )
+  @test.assert_eq(
+    gbkp_builtin_extractor.charcode_of_codepoint(0x4F60),
+    Some(0xC4E3),
+  )
+  @test.assert_eq(
+    gbkp_builtin_extractor.charcode_of_codepoint(0xF8F5),
+    Some(0xFF),
+  )
+  @test.assert_eq(gbkp_builtin_extractor.charcode_of_codepoint(0x1F600), None)
+  let gbkp_truncated = try? gbkp_builtin_extractor.codepoints_of_text(
+    text_bytes_for_test([0x81]),
+  )
+  guard gbkp_truncated is Err(BadText) else {
+    fail("expected @pdflite.PdfError::BadText for truncated GBKp charcode")
+  }
   let gbk2k_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
     basefont: text_name_for_test("/TopGBK2KBuiltin"),
     composite,

@@ -4398,6 +4398,14 @@ Current backend snapshot:
   stability. `moon test --target native --package bobzhang/pdflite --file
   pdf_native_acceptance_test.mbt` reports 88/88 tests passing; native
   full-suite validation reports 2143/2143 tests passing.~~
+- [x] ~~The cpdfua-listed `/GBKp-EUC-H` predefined CMap now has direct
+  text-extractor and native compressed reader-boundary coverage, including GBK
+  mixed-byte segmentation with `0x80`/`0xFF` single-byte charcodes, Adobe-GB1
+  table lookup, raw-code fallback, reverse lookup, and truncated input
+  rejection. `moon test --target native pdf_text_test.mbt` reports 152/152
+  tests passing, `moon test --target native pdf_native_acceptance_test.mbt`
+  reports 88/88 tests passing, and `moon test --target native` reports
+  2200/2200 tests passing.~~
 - [ ] Broader built-in non-UCS2 predefined CMap mapping tables beyond the
   current Adobe-GB1, Adobe-CNS1, Adobe-Japan1, and Adobe-Korea1 fallbacks,
   plus more real-world ToUnicode/CMap variation fixtures.
@@ -5070,6 +5078,11 @@ Current backend snapshot:
   manual, covering public reconstruction for strict `ParseStreamExpected` and
   `ParseEndObjectExpected` errors plus strict length-repair for the malformed
   `endstream`. `moon test --target native` now reports 2197/2197 tests
+  passing.~~
+- [x] ~~Add the next remaining format parity slice: the cpdfua-listed
+  `/GBKp-EUC-H` predefined CMap now has direct extractor and compressed native
+  read/write/reread coverage for the same GBK mixed-byte semantics already
+  exercised by `/GBK-EUC-H`. `moon test --target native` reports 2200/2200 tests
   passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
