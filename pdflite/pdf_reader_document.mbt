@@ -240,7 +240,15 @@ pub fn pdf_read_document_from_view(
     ParseIndirectObjectExpected =>
       pdf_read_reconstructed_or_raise(data, ParseIndirectObjectExpected)
     ParseStreamExpected =>
-      pdf_read_reconstructed_or_raise(data, ParseStreamExpected)
+      if pdf_reader_startxref_has_xref_stream_prefix_or_false(data) {
+        pdf_read_reconstructed_or_raise(
+          data,
+          ParseStreamExpected,
+          include_xref_stream_trailers=true,
+        )
+      } else {
+        pdf_read_reconstructed_or_raise(data, ParseStreamExpected)
+      }
     ParseEndStreamExpected =>
       pdf_read_reconstructed_or_raise(data, ParseEndStreamExpected)
     ParseEndObjectExpected =>

@@ -1825,6 +1825,14 @@ Current backend snapshot:
   preservation. Focused native validation reports `moon test --target native
   fixture_acceptance` at 36/36 tests passing; native full-suite validation
   reports 2189/2189 tests passing.~~
+- [x] ~~Broaden optional `.repos/cpdf-source` cpdf manual xref-stream stream
+  marker recovery: `fixture_acceptance` now replaces the 175-page manual's
+  startxref-targeted xref stream `stream` marker with `stramx`, requiring
+  strict `ParseStreamExpected`, public reconstruction using the xref-stream
+  trailer prefix, and compressed rewrite/reread page preservation. Focused
+  native validation reports `moon test --target native fixture_acceptance` at
+  37/37 tests passing; native full-suite validation reports 2191/2191 tests
+  passing.~~
 - [ ] Add further malformed xref-table/xref-stream/object-stream recovery cases
   from real-world PDFs.
 - [x] ~~Add a native reader-boundary gate for the next available predefined CMap
@@ -5009,6 +5017,11 @@ Current backend snapshot:
   the 175-page manual through strict-reader rejection, public reconstruction,
   and compressed rewrite/reread preservation. `moon test --target native` now
   reports 2189/2189 tests passing.~~
+- [x] ~~Add the next remaining format parity slice: optional cpdf manual
+  source-corpus recovery now gates a malformed xref-stream `stream` marker in
+  the 175-page manual; public reconstruction now detects the xref-stream
+  dictionary prefix after `ParseStreamExpected` so the trailer root can be
+  reused. `moon test --target native` now reports 2191/2191 tests passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.

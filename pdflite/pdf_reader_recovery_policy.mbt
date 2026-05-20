@@ -169,6 +169,31 @@ fn pdf_reader_startxref_uses_xref_stream_or_false(data : BytesView) -> Bool {
 }
 
 ///|
+fn pdf_reader_startxref_has_xref_stream_prefix(
+  data : BytesView,
+) -> Bool raise PdfError {
+  let cursor = byte_cursor_of_view(data)
+  ignore(cursor.read_pdf_header())
+  cursor.seek_pdf_absolute(pdf_read_startxref_position(cursor.data))
+  let parsed = cursor.read_reconstructed_indirect_prefix_at_current()
+  match parsed.object {
+    PdfDictionary(_) as dictionary => pdf_reader_xref_stream_type_ok(dictionary)
+    _ => false
+  }
+}
+
+///|
+fn pdf_reader_startxref_has_xref_stream_prefix_or_false(
+  data : BytesView,
+) -> Bool {
+  try pdf_reader_startxref_has_xref_stream_prefix(data) catch {
+    _ => false
+  } noraise {
+    value => value
+  }
+}
+
+///|
 fn pdf_reader_xref_metadata_error_allows_reconstruction(
   data : BytesView,
   error : PdfError,
