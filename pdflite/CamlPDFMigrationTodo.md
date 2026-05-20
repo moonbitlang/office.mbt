@@ -1629,6 +1629,12 @@ Current backend snapshot:
   failure, reconstructs through the public recovery reader, and verifies
   compressed-xref rewrite/reread page counts. `moon test --target native
   fixture_acceptance` reports 5/5 tests passing.~~
+- [x] ~~Add a checked-in CamlPDF real-world malformed classic xref-row gate:
+  `fixture_acceptance` now corrupts the first in-use xref marker in the
+  linearized classic-xref `logo.pdf` fixture while keeping `startxref` valid,
+  requires strict-reader failure, reconstructs through the public recovery
+  reader, and verifies compressed-xref rewrite/reread page counts. `moon test
+  --target native fixture_acceptance` reports 6/6 tests passing.~~
 - [ ] Add further malformed xref-table/xref-stream/object-stream recovery cases
   from real-world PDFs.
 - [x] ~~Add a native reader-boundary gate for the next available predefined CMap
