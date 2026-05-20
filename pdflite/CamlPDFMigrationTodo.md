@@ -4522,6 +4522,12 @@ Current backend snapshot:
   `.repos/cpdf-source/cpdfmanual.pdf` source corpus when present, covering
   real-world cpdf manual extraction and malformed-`startxref` recovery without
   requiring ignored source fixtures in CI.~~
+- [x] ~~Markdown fixture acceptance now also gates the optional local
+  `.repos/cpdf-source/hello.pdf` source corpus when present, covering the
+  top-level PDF 1.1 hello fixture's text extraction and malformed-`startxref`
+  recovery with no raw controls or replacement characters. `moon test --target
+  native markdown/fixture_acceptance` reports 14/14 tests passing; native
+  full-suite validation reports 2172/2172 tests passing.~~
 - [ ] Broader real-world PDF corpus testing, including PDF-to-Markdown
   comparison fixtures after the local Pandoc gates are stable.
 - [ ] Performance tuning for large files, object streams, filters, and text/image

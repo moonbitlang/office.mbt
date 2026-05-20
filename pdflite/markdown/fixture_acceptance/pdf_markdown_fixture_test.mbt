@@ -224,6 +224,37 @@ async test "pdf_bytes_to_markdown tolerates checked-in CamlPDF logo fixture" {
 }
 
 ///|
+async test "pdf_bytes_to_markdown extracts optional cpdf source hello fixture" {
+  match
+    markdown_optional_fixture_markdown_for_test(".repos/cpdf-source/hello.pdf") {
+    None => ()
+    Some(markdown) => {
+      markdown_fixture_assert_contains_for_test(markdown, "# Page 1")
+      markdown_fixture_assert_contains_for_test(markdown, "Hello, World!")
+      @test.assert_eq(markdown_fixture_raw_control_count_for_test(markdown), 0)
+      @test.assert_eq(markdown_fixture_replacement_count_for_test(markdown), 0)
+    }
+  }
+}
+
+///|
+async test "pdf_bytes_to_markdown reconstructs optional cpdf source hello fixture with bad startxref" {
+  match
+    markdown_optional_fixture_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    None => ()
+    Some(bytes) => {
+      let markdown = @markdown.pdf_bytes_to_markdown(
+        markdown_fixture_corrupt_startxref_pointer_for_test(bytes),
+      )
+      markdown_fixture_assert_contains_for_test(markdown, "# Page 1")
+      markdown_fixture_assert_contains_for_test(markdown, "Hello, World!")
+      @test.assert_eq(markdown_fixture_raw_control_count_for_test(markdown), 0)
+      @test.assert_eq(markdown_fixture_replacement_count_for_test(markdown), 0)
+    }
+  }
+}
+
+///|
 async test "pdf_bytes_to_markdown extracts optional cpdf source manual fixture" {
   match
     markdown_optional_fixture_markdown_for_test(
