@@ -452,6 +452,15 @@ Current backend snapshot:
   `markdown/cmd` warning and `moon check --target native --warn-list +73` at
   the known 10-warning baseline. Batched full native validation reports `moon
   test --target native` at 2008/2008 tests passing.~~
+- [x] ~~Pin the cpdf source spelling edge in Matterhorn CMap-name checks:
+  source-listed `/KSCms-UHS-HW-V` remains accepted by `31-006` and `31-008`,
+  while the corrected-looking `/KSCms-UHC-HW-V` remains rejected, matching the
+  literal `cpdfua.ml` `cmap_names` table. Focused native validation reports
+  `moon test --target native --package bobzhang/pdflite --file
+  pdf_ua_matterhorn_test.mbt --filter '*CMap names*'` at 1/1 tests passing;
+  widened native validation reports `moon test --target native --package
+  bobzhang/pdflite --file pdf_ua_matterhorn_test.mbt` at 48/48 tests passing;
+  native full-suite validation reports 2143/2143 tests passing.~~
 - [x] ~~Port the `cpdfua` Matterhorn non-symbolic TrueType encoding dictionary
   slice: the covered Matterhorn surface now includes source checks `31-019`,
   `31-020`, `31-021`, and `31-022`, preserving cpdf's `/Flags & 4`

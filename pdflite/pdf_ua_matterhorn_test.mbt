@@ -3459,6 +3459,32 @@ test "PdfDocument test_matterhorn_json checks CMap names" {
     Json::array([]),
   )
 
+  let source_typo_encoding = ua_matterhorn_document_for_test([])
+  source_typo_encoding.add_object_given_number(
+    40,
+    ua_matterhorn_type0_font_for_test(
+      PdfNameObject(ua_matterhorn_name_for_test("/KSCms-UHS-HW-V")),
+      41,
+    ),
+  )
+  @test.assert_eq(
+    try! source_typo_encoding.test_matterhorn_json("31-006"),
+    Json::array([]),
+  )
+
+  let corrected_encoding = ua_matterhorn_document_for_test([])
+  corrected_encoding.add_object_given_number(
+    40,
+    ua_matterhorn_type0_font_for_test(
+      PdfNameObject(ua_matterhorn_name_for_test("/KSCms-UHC-HW-V")),
+      41,
+    ),
+  )
+  @test.assert_eq(
+    try! corrected_encoding.test_matterhorn_json("31-006"),
+    Json::array([ua_matterhorn_31_006_failure_for_test("/KSCms-UHC-HW-V")]),
+  )
+
   let embedded_encoding = ua_matterhorn_document_for_test([])
   embedded_encoding.add_object_given_number(
     40,
@@ -3516,6 +3542,36 @@ test "PdfDocument test_matterhorn_json checks CMap names" {
   @test.assert_eq(
     try! listed_base.test_matterhorn_json("31-008"),
     Json::array([]),
+  )
+
+  let source_typo_base = ua_matterhorn_document_for_test([])
+  source_typo_base.add_object_given_number(
+    42,
+    PdfDictionary([
+      (
+        ua_matterhorn_name_for_test("/UseCMap"),
+        PdfNameObject(ua_matterhorn_name_for_test("/KSCms-UHS-HW-V")),
+      ),
+    ]),
+  )
+  @test.assert_eq(
+    try! source_typo_base.test_matterhorn_json("31-008"),
+    Json::array([]),
+  )
+
+  let corrected_base = ua_matterhorn_document_for_test([])
+  corrected_base.add_object_given_number(
+    42,
+    PdfDictionary([
+      (
+        ua_matterhorn_name_for_test("/UseCMap"),
+        PdfNameObject(ua_matterhorn_name_for_test("/KSCms-UHC-HW-V")),
+      ),
+    ]),
+  )
+  @test.assert_eq(
+    try! corrected_base.test_matterhorn_json("31-008"),
+    Json::array([ua_matterhorn_31_008_failure_for_test("/KSCms-UHC-HW-V")]),
   )
 
   let embedded_base = ua_matterhorn_document_for_test([])

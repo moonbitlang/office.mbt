@@ -194,6 +194,7 @@ let pdf_ua_matterhorn_cmap_names : Array[PdfName] = [
   pdf_ua_name("/KSCms-UHC-H"),
   pdf_ua_name("/KSCms-UHC-V"),
   pdf_ua_name("/KSCms-UHC-HW-H"),
+  // cpdf source spells the vertical half-width name this way in cmap_names.
   pdf_ua_name("/KSCms-UHS-HW-V"),
   pdf_ua_name("/KSCpc-EUC-H"),
   pdf_ua_name("/UniKS-UCS2-H"),
