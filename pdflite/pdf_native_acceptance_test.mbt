@@ -3425,6 +3425,24 @@ fn acceptance_unicode_predefined_cmap_document_for_test() -> @pdflite.PdfDocumen
       "/UniJISUTF16VerticalDescendant", "Japan1",
     ),
   )
+  doc.add_object_given_number(
+    150,
+    acceptance_predefined_cmap_descendant_font_for_test(
+      "/UniAKRUTF8Descendant", "Korea1",
+    ),
+  )
+  doc.add_object_given_number(
+    151,
+    acceptance_predefined_cmap_descendant_font_for_test(
+      "/UniAKRUTF16Descendant", "Korea1",
+    ),
+  )
+  doc.add_object_given_number(
+    152,
+    acceptance_predefined_cmap_descendant_font_for_test(
+      "/UniAKRUTF32Descendant", "Korea1",
+    ),
+  )
   let pages : ReadOnlyArray[@pdflite.PdfPage] = [
     acceptance_predefined_cmap_page_for_test(
       "/FUcs2H",
@@ -3568,6 +3586,29 @@ fn acceptance_unicode_predefined_cmap_document_for_test() -> @pdflite.PdfDocumen
         "/UniJISUTF16VerticalTop", "/UniJIS-UTF16-V", 149,
       ),
       acceptance_text_bytes_for_test([0x30, 0x42, 0xD8, 0x34, 0xDD, 0x1E]),
+    ),
+    acceptance_predefined_cmap_page_for_test(
+      "/FUniAKRUTF8H",
+      acceptance_predefined_cmap_type0_font_for_test(
+        "/UniAKRUTF8Top", "/UniAKR-UTF8-H", 150,
+      ),
+      acceptance_text_bytes_for_test([0xEA, 0xB0, 0x80, 0xEB, 0x82, 0x98]),
+    ),
+    acceptance_predefined_cmap_page_for_test(
+      "/FUniAKRUTF16H",
+      acceptance_predefined_cmap_type0_font_for_test(
+        "/UniAKRUTF16Top", "/UniAKR-UTF16-H", 151,
+      ),
+      acceptance_text_bytes_for_test([0xAC, 0x00, 0xB0, 0x98]),
+    ),
+    acceptance_predefined_cmap_page_for_test(
+      "/FUniAKRUTF32H",
+      acceptance_predefined_cmap_type0_font_for_test(
+        "/UniAKRUTF32Top", "/UniAKR-UTF32-H", 152,
+      ),
+      acceptance_text_bytes_for_test([
+        0x00, 0x00, 0xAC, 0x00, 0x00, 0x00, 0xB0, 0x98,
+      ]),
     ),
   ]
   let page_root = doc.add_pagetree(pages)
@@ -4933,9 +4974,9 @@ fn acceptance_assert_unicode_predefined_cmap_text_for_test(
   doc : @pdflite.PdfDocument,
 ) -> Unit raise {
   @test.assert_eq(doc.version(), (1, 5))
-  @test.assert_eq(doc.endpage(), 19)
+  @test.assert_eq(doc.endpage(), 22)
   let pages = doc.pages_of_pagetree()
-  @test.assert_eq(pages.length(), 19)
+  @test.assert_eq(pages.length(), 22)
   let ucs2_h = acceptance_assert_unicode_predefined_page_for_test(
     doc,
     pages[0],
@@ -5158,6 +5199,39 @@ fn acceptance_assert_unicode_predefined_cmap_text_for_test(
     unijis_utf16_v.charcode_of_codepoint(0x1D11E),
     Some(0xD834DD1E),
   )
+  let uniakr_utf8_h = acceptance_assert_unicode_predefined_page_for_test(
+    doc,
+    pages[19],
+    "/FUniAKRUTF8H",
+    "/UniAKR-UTF8-H",
+    "Korea1",
+    false,
+    [0xAC00, 0xB098],
+  )
+  @test.assert_eq(uniakr_utf8_h.charcode_of_codepoint(0xAC00), Some(0xEAB080))
+  @test.assert_eq(uniakr_utf8_h.charcode_of_codepoint(0xB098), Some(0xEB8298))
+  let uniakr_utf16_h = acceptance_assert_unicode_predefined_page_for_test(
+    doc,
+    pages[20],
+    "/FUniAKRUTF16H",
+    "/UniAKR-UTF16-H",
+    "Korea1",
+    true,
+    [0xAC00, 0xB098],
+  )
+  @test.assert_eq(uniakr_utf16_h.charcode_of_codepoint(0xAC00), Some(0xAC00))
+  @test.assert_eq(uniakr_utf16_h.charcode_of_codepoint(0xB098), Some(0xB098))
+  let uniakr_utf32_h = acceptance_assert_unicode_predefined_page_for_test(
+    doc,
+    pages[21],
+    "/FUniAKRUTF32H",
+    "/UniAKR-UTF32-H",
+    "Korea1",
+    false,
+    [0xAC00, 0xB098],
+  )
+  @test.assert_eq(uniakr_utf32_h.charcode_of_codepoint(0xAC00), Some(0xAC00))
+  @test.assert_eq(uniakr_utf32_h.charcode_of_codepoint(0xB098), Some(0xB098))
 }
 
 ///|

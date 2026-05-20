@@ -5194,6 +5194,14 @@ Current backend snapshot:
   1/1 tests passing, `moon test --target native` reports 2207/2207 tests
   passing, and `moon check --target all --warn-list +73` completes with the
   known warning baseline and no errors.~~
+- [x] ~~Add the next remaining source-boundary predefined CMap slice: Adobe-KR
+  direct Unicode CMaps `/UniAKR-UTF8-H`, `/UniAKR-UTF16-H`, and
+  `/UniAKR-UTF32-H` now have native synthetic-PDF reader-boundary coverage for
+  extraction and reverse lookup, complementing the existing unit-level gates.
+  `moon test --target native pdf_native_acceptance_test.mbt --filter '*Unicode
+  predefined CMap*'` reports 1/1 tests passing, `moon test --target native`
+  reports 2207/2207 tests passing, and `moon check --target all --warn-list
+  +73` completes with the known warning baseline and no errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
