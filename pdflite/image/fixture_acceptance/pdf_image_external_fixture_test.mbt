@@ -443,6 +443,40 @@ async test "cpdf source manual fixture decodes embedded RGB24 image" {
 }
 
 ///|
+async test "cpdf source manual fixture reconstructs embedded RGB24 image" {
+  match
+    image_external_fixture_bytes_for_test(".repos/cpdf-source/cpdfmanual.pdf") {
+    None => ()
+    Some(bytes) => {
+      let corrupted = image_external_corrupt_startxref_pointer_for_test(bytes)
+      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+        corrupted,
+      )
+      guard strict is Err(_) else {
+        fail("expected bad startxref to require malformed reconstruction")
+      }
+      let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
+      @test.assert_eq(recovered.first_xref(), 0)
+      @test.assert_eq(recovered.endpage(), 175)
+      image_external_assert_raw_rgb_for_test(
+        image_external_images_for_test(recovered),
+        400,
+        294,
+        "expected cpdf source manual image after reconstruction",
+      )
+      image_external_assert_raw_rgb_for_test(
+        image_external_images_for_test(
+          image_external_reparse_compressed_for_test(recovered),
+        ),
+        400,
+        294,
+        "expected cpdf source manual image after reconstructed rewrite",
+      )
+    }
+  }
+}
+
+///|
 async test "cpdf source raw PNG sheet fixture creates image document" {
   match
     image_external_fixture_bytes_for_test(

@@ -5177,6 +5177,14 @@ Current backend snapshot:
   --target native` reports 2206/2206 tests passing, and `moon check --target
   all --warn-list +73` completes with the known warning baseline and no
   errors.~~
+- [x] ~~Add the next remaining format parity slice: source-corpus image
+  recovery now corrupts `.repos/cpdf-source/cpdfmanual.pdf`'s `startxref`,
+  requires strict-reader failure, reconstructs the 175-page manual through the
+  public reader, decodes the embedded 400x294 RGB image, and rechecks it after
+  compressed rewrite. `moon test --target native image/fixture_acceptance`
+  reports 14/14 tests passing, `moon test --target native` reports 2207/2207
+  tests passing, and `moon check --target all --warn-list +73` completes with
+  the known warning baseline and no errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.

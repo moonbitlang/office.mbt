@@ -4,7 +4,8 @@
 for image-heavy external PDFs. It checks JPEG, CCITT, indexed color, compressed
 rewrite, and xref reconstruction behavior when optional downloaded fixtures are
 available. During porting it also probes optional `.repos/cpdf-source`
-manual-image PDFs when that ignored source checkout is present.
+manual-image PDFs and the full cpdf manual when that ignored source checkout is
+present.
 
 ```mermaid
 flowchart LR
