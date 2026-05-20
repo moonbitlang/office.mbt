@@ -142,6 +142,37 @@ test "pdf draw grouped ops emit q and Q" {
 }
 
 ///|
+test "pdf draw text section and text state ops convert to PDF content ops" {
+  let ops : Array[@pdflite.PdfDrawOp] = [
+    PdfDrawTextSection([
+      PdfDrawLeading(14.0),
+      PdfDrawCharSpace(1.25),
+      PdfDrawWordSpace(2.5),
+      PdfDrawTextScale(90.0),
+      PdfDrawRenderMode(3),
+      PdfDrawRise(4.0),
+      PdfDrawNewline,
+      PdfDrawQq([PdfDrawMatrix(@pdflite.transform_translate(1.0, 2.0))]),
+    ]),
+  ]
+  let expected : Array[@pdflite.PdfContentOp] = [
+    Op_BT,
+    Op_TL(14.0),
+    Op_Tc(1.25),
+    Op_Tw(2.5),
+    Op_Tz(90.0),
+    Op_Tr(3),
+    Op_Ts(4.0),
+    Op_Tstar,
+    Op_q,
+    Op_cm(@pdflite.transform_translate(1.0, 2.0)),
+    Op_Q,
+    Op_ET,
+  ]
+  @test.assert_eq(try! @pdflite.pdf_drawops_to_content_ops(ops), expected)
+}
+
+///|
 test "pdf draw unsupported content op returns cpdf-style soft error" {
   let result : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_drawop_to_content_ops(
     PdfDrawText("hello"),

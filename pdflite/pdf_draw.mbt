@@ -236,6 +236,16 @@ pub fn PdfDrawOp::to_content_ops(
       output.push(Op_Q)
       output
     }
+    PdfDrawTextSection(ops) => {
+      let output : Array[PdfContentOp] = [Op_BT]
+      for op in ops {
+        for content_op in op.to_content_ops() {
+          output.push(content_op)
+        }
+      }
+      output.push(Op_ET)
+      output
+    }
     PdfDrawSetFill(colour) => pdf_draw_colour_fill_ops(colour)
     PdfDrawSetStroke(colour) => pdf_draw_colour_stroke_ops(colour)
     PdfDrawSetLineThickness(width) => [Op_w(width)]
@@ -258,6 +268,13 @@ pub fn PdfDrawOp::to_content_ops(
     PdfDrawFillStrokeEvenOdd => [Op_Bstar]
     PdfDrawClip => [Op_W, Op_n]
     PdfDrawClipEvenOdd => [Op_Wstar, Op_n]
+    PdfDrawLeading(leading) => [Op_TL(leading)]
+    PdfDrawCharSpace(spacing) => [Op_Tc(spacing)]
+    PdfDrawWordSpace(spacing) => [Op_Tw(spacing)]
+    PdfDrawTextScale(scale) => [Op_Tz(scale)]
+    PdfDrawRenderMode(mode) => [Op_Tr(mode)]
+    PdfDrawRise(rise) => [Op_Ts(rise)]
+    PdfDrawNewline => [Op_Tstar]
     _ => pdf_draw_content_unsupported(self)
   }
 }
