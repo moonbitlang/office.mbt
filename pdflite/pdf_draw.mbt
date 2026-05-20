@@ -53,6 +53,7 @@ pub(all) struct PdfDrawFontPackState {
 /// slices will extend this state with tagged-content resources.
 pub(all) struct PdfDrawRenderState {
   mut resource_number : Int
+  mut marked_content_id : Int
   extgstates : Array[PdfDrawExtGStateResource]
   xobjects : Array[PdfDrawXObjectResource]
   form_xobjects : Array[PdfDrawXObjectResource]
@@ -92,6 +93,15 @@ let pdf_draw_resources_key_name : PdfName = pdf_draw_name("/Resources")
 
 ///|
 let pdf_draw_bbox_key_name : PdfName = pdf_draw_name("/BBox")
+
+///|
+let pdf_draw_mcid_key_name : PdfName = pdf_draw_name("/MCID")
+
+///|
+let pdf_draw_begin_artifact_name : PdfName = pdf_draw_name("/BeginArtifact")
+
+///|
+let pdf_draw_end_artifact_name : PdfName = pdf_draw_name("/EndArtifact")
 
 ///|
 let pdf_draw_fill_alpha_key_name : PdfName = pdf_draw_name("/ca")
@@ -140,6 +150,21 @@ fn pdf_draw_bbox_key() -> PdfName {
 }
 
 ///|
+fn pdf_draw_mcid_key() -> PdfName {
+  pdf_draw_mcid_key_name
+}
+
+///|
+fn pdf_draw_begin_artifact() -> PdfName {
+  pdf_draw_begin_artifact_name
+}
+
+///|
+fn pdf_draw_end_artifact() -> PdfName {
+  pdf_draw_end_artifact_name
+}
+
+///|
 fn pdf_draw_fill_alpha_key() -> PdfName {
   pdf_draw_fill_alpha_key_name
 }
@@ -153,6 +178,7 @@ fn pdf_draw_stroke_alpha_key() -> PdfName {
 pub fn pdf_draw_render_state_new() -> PdfDrawRenderState {
   {
     resource_number: 0,
+    marked_content_id: -1,
     extgstates: [],
     xobjects: [],
     form_xobjects: [],
@@ -172,6 +198,12 @@ fn PdfDrawRenderState::fresh_name(
 ) -> PdfName {
   self.resource_number += 1
   pdf_draw_name(prefix + self.resource_number.to_string())
+}
+
+///|
+fn PdfDrawRenderState::fresh_mcid(self : PdfDrawRenderState) -> Int {
+  self.marked_content_id += 1
+  self.marked_content_id
 }
 
 ///|
@@ -700,6 +732,7 @@ fn PdfDrawRenderState::nested_form_state(
 ) -> PdfDrawRenderState {
   {
     resource_number: self.resource_number,
+    marked_content_id: self.marked_content_id,
     extgstates: [],
     xobjects: pdf_draw_copy_xobject_resources(self.xobjects),
     form_xobjects: pdf_draw_copy_xobject_resources(self.form_xobjects),
@@ -719,6 +752,9 @@ fn PdfDrawRenderState::adopt_resource_number(
 ) -> Unit {
   if child.resource_number > self.resource_number {
     self.resource_number = child.resource_number
+  }
+  if child.marked_content_id > self.marked_content_id {
+    self.marked_content_id = child.marked_content_id
   }
 }
 
@@ -917,6 +953,20 @@ fn pdf_draw_form_xobject_stream(
 }
 
 ///|
+fn PdfDrawRenderState::tag_ops(
+  self : PdfDrawRenderState,
+  tag : String,
+) -> Array[PdfContentOp] {
+  let mcid = self.fresh_mcid()
+  [
+    Op_BDC(
+      pdf_draw_name("/" + tag),
+      PdfDictionary([(pdf_draw_mcid_key(), PdfInteger(mcid))]),
+    ),
+  ]
+}
+
+///|
 fn PdfDrawOp::to_content_ops_internal(
   self : PdfDrawOp,
   state : PdfDrawRenderState?,
@@ -1050,6 +1100,20 @@ fn PdfDrawOp::to_content_ops_internal(
     PdfDrawRenderMode(mode) => [Op_Tr(mode)]
     PdfDrawRise(rise) => [Op_Ts(rise)]
     PdfDrawNewline => [Op_Tstar]
+    PdfDrawTag(tag) =>
+      match state {
+        Some(state) => state.tag_ops(tag)
+        None => pdf_draw_content_unsupported(self)
+      }
+    PdfDrawEndTag => [Op_EMC]
+    PdfDrawBeginArtifact => [Op_BMC(pdf_draw_begin_artifact())]
+    PdfDrawEndArtifact => [Op_BMC(pdf_draw_end_artifact())]
+    PdfDrawSTag(_)
+    | PdfDrawEndSTag
+    | PdfDrawNamespace(_)
+    | PdfDrawEltInfo(_, _)
+    | PdfDrawEndEltInfo(_)
+    | PdfDrawAutoTag(_) => []
     _ => pdf_draw_content_unsupported(self)
   }
 }

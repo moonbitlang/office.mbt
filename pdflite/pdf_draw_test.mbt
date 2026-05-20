@@ -345,6 +345,55 @@ test "pdf draw paragraph preserves cpdf multi paragraph breaks" {
 }
 
 ///|
+test "pdf draw tagged content emits sequential MCIDs" {
+  let state = @pdflite.pdf_draw_render_state_new()
+  let span = draw_name_for_test("/Span")
+  let p = draw_name_for_test("/P")
+  let mcid = draw_name_for_test("/MCID")
+  let ops = try! @pdflite.pdf_drawops_to_content_ops_with_state(state, [
+    PdfDrawTag("Span"),
+    PdfDrawEndTag,
+    PdfDrawTag("P"),
+    PdfDrawEndTag,
+  ])
+  @test.assert_eq(ops, [
+    Op_BDC(span, PdfDictionary([(mcid, PdfInteger(0))])),
+    Op_EMC,
+    Op_BDC(p, PdfDictionary([(mcid, PdfInteger(1))])),
+    Op_EMC,
+  ])
+}
+
+///|
+test "pdf draw manual artifacts use cpdf back-channel markers" {
+  let begin_artifact = draw_name_for_test("/BeginArtifact")
+  let end_artifact = draw_name_for_test("/EndArtifact")
+  let artifact = draw_name_for_test("/Artifact")
+  let raw = try! @pdflite.pdf_drawops_to_content_ops([
+    PdfDrawBeginArtifact,
+    PdfDrawEndArtifact,
+  ])
+  @test.assert_eq(raw, [Op_BMC(begin_artifact), Op_BMC(end_artifact)])
+  @test.assert_eq(@pdflite.pdf_content_add_artifacts(raw), [
+    Op_BMC(artifact),
+    Op_EMC,
+  ])
+}
+
+///|
+test "pdf draw structure metadata ops are content-empty" {
+  let ops = try! @pdflite.pdf_drawops_to_content_ops([
+    PdfDrawSTag("P"),
+    PdfDrawEndSTag,
+    PdfDrawNamespace("http://iso.org/pdf/ssn"),
+    PdfDrawEltInfo("Lang", PdfString(@ascii.encode("en-US"))),
+    PdfDrawEndEltInfo("Lang"),
+    PdfDrawAutoTag(false),
+  ])
+  @test.assert_eq(ops, [])
+}
+
+///|
 test "pdf draw font selection reports missing fontpack" {
   let state = @pdflite.pdf_draw_render_state_new()
   let result : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_drawop_to_content_ops_with_state(

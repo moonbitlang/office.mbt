@@ -3049,6 +3049,7 @@ pub fn PdfDrawOp::to_content_ops_with_state(Self, PdfDrawRenderState) -> Array[P
 
 pub(all) struct PdfDrawRenderState {
   mut resource_number : Int
+  mut marked_content_id : Int
   extgstates : Array[PdfDrawExtGStateResource]
   xobjects : Array[PdfDrawXObjectResource]
   form_xobjects : Array[PdfDrawXObjectResource]
