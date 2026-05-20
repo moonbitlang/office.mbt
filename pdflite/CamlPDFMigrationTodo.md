@@ -2455,6 +2455,14 @@ Current backend snapshot:
   validation reports `moon check --target native --warn-list +73` passing with
   the known markdown main-package warning and 10-warning baseline. Full native
   suite validation is deferred to the next batch.~~
+- [x] ~~Add optional `.repos/cpdf-source` manual drawing fixture coverage:
+  the new native-only `draw/fixture_acceptance` package reads
+  `manualimages/capjoins.pdf`, `dash.pdf`, and `text.pdf` when the ignored
+  source checkout is present, then verifies the MoonBit reader/content parser
+  sees cpdf-generated line-cap/join, dash-pattern, matrix, font, and text-show
+  operators. `moon test --target native draw/fixture_acceptance` reports 3/3
+  tests passing; native full-suite validation reports 2154/2154 tests
+  passing.~~
 - [x] ~~Standalone `cpdfcreate.ml` blank-document slice exposes
   `pdf_blank_document` and `pdf_blank_document_paper`, covering point-sized
   pages, named paper sizes, zero-page documents, page-tree/root creation, and
