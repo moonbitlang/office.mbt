@@ -1829,6 +1829,34 @@ fn fixture_acceptance_assert_cpdf_png_image_for_test(
 }
 
 ///|
+fn fixture_acceptance_assert_cpdf_manual_images_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 175)
+  let all_pages = document.parse_pagespec("")
+  let images_json = document.images_json(all_pages).stringify()
+  fixture_acceptance_assert_contains_for_test(images_json, "\"Width\":400")
+  fixture_acceptance_assert_contains_for_test(images_json, "\"Height\":294")
+  fixture_acceptance_assert_contains_for_test(
+    images_json, "\"BitsPerComponent\":8",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    images_json, "\"Colourspace\":\"/DeviceRGB\"",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    images_json, "\"Filter\":\"/FlateDecode\"",
+  )
+  let images_blob = @ascii.decode_lossy(document.images_json_blob(all_pages))
+  fixture_acceptance_assert_contains_for_test(images_blob, "\"Width\":400")
+  fixture_acceptance_assert_contains_for_test(images_blob, "\"Height\":294")
+  let resolution_json = document
+    .image_resolution_json(all_pages, 1000000.0)
+    .stringify()
+  fixture_acceptance_assert_contains_for_test(resolution_json, "\"W\":400")
+  fixture_acceptance_assert_contains_for_test(resolution_json, "\"H\":294")
+}
+
+///|
 async test "checked-in CamlPDF logo fixture reconstructs linearized bad startxref" {
   fixture_acceptance_assert_reconstructs_for_test(
     fixture_acceptance_bytes_for_test("fixtures/camlpdf/logo.pdf"),
@@ -2156,6 +2184,23 @@ async test "optional cpdf source manual fixture reports info page details and co
       fixture_acceptance_assert_cpdf_manual_reports_for_test(
         @pdflite.pdf_read_document_from_bytes(rewritten),
         rewritten.length(),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source manual fixture reports embedded images" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/cpdfmanual.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_manual_images_for_test(document)
+      fixture_acceptance_assert_cpdf_manual_images_for_test(
+        fixture_acceptance_reparse_compressed_for_test(document),
       )
     }
   }

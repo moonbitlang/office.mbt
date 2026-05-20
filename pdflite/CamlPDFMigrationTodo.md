@@ -5337,6 +5337,14 @@ Current backend snapshot:
   image fixture*'` reports 1/1 test passing, `moon test --target native
   fixture_acceptance` reports 48/48 tests passing, and `moon test --target
   native` reports 2219/2219 tests passing.~~
+- [x] ~~Add the next broader source-boundary image corpus slice: optional
+  `.repos/cpdf-source/cpdfmanual.pdf` now gates cpdf-style image JSON,
+  image-resolution JSON, and UTF-8 blob output for the real embedded
+  FlateDecode/DeviceRGB 400x294 manual image across all 175 pages before and
+  after compressed rewrite/reread. `moon test --target native
+  fixture_acceptance --filter '*embedded images*'` reports 1/1 test passing,
+  `moon test --target native fixture_acceptance` reports 49/49 tests passing,
+  and `moon test --target native` reports 2220/2220 tests passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
