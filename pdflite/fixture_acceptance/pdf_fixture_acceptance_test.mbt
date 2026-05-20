@@ -507,6 +507,30 @@ fn fixture_acceptance_replace_bytes_after_with_padded_ascii_for_test(
 }
 
 ///|
+fn fixture_acceptance_replace_bytes_at_for_test(
+  bytes : Bytes,
+  position : Int,
+  target : BytesView,
+  replacement : BytesView,
+  description : String,
+) -> Bytes raise {
+  if target.length() != replacement.length() {
+    fail("replacement must preserve byte length")
+  }
+  if !fixture_acceptance_bytes_start_with_at_for_test(bytes, target, position) {
+    fail("expected " + description)
+  }
+  let output : Array[Byte] = []
+  for byte in bytes {
+    output.push(byte)
+  }
+  for index in 0..<replacement.length() {
+    output[position + index] = replacement[index]
+  }
+  Bytes::from_array(output)
+}
+
+///|
 fn fixture_acceptance_corrupt_xref_stream_widths_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
@@ -652,6 +676,155 @@ fn fixture_acceptance_corrupt_xref_stream_decodeparms_entry_for_test(
 }
 
 ///|
+fn fixture_acceptance_skip_pdf_whitespace_for_test(
+  bytes : BytesView,
+  position : Int,
+) -> Int {
+  let mut current = position
+  while current < bytes.length() {
+    let value = bytes[current].to_int()
+    if value == 0 ||
+      value == 9 ||
+      value == 10 ||
+      value == 12 ||
+      value == 13 ||
+      value == 32 {
+      current += 1
+    } else {
+      break
+    }
+  }
+  current
+}
+
+///|
+fn fixture_acceptance_stream_data_start_for_test(
+  bytes : BytesView,
+  stream_position : Int,
+) -> Int {
+  let mut current = stream_position + @ascii.encode("stream").length()
+  while current < bytes.length() {
+    let value = bytes[current].to_int()
+    if value == 0 || value == 9 || value == 12 || value == 32 {
+      current += 1
+    } else {
+      break
+    }
+  }
+  if current < bytes.length() && bytes[current] == b'\r' {
+    current += 1
+    if current < bytes.length() && bytes[current] == b'\n' {
+      current += 1
+    }
+  } else if current < bytes.length() && bytes[current] == b'\n' {
+    current += 1
+  }
+  current
+}
+
+///|
+fn fixture_acceptance_direct_length_before_for_test(
+  bytes : BytesView,
+  anchor_position : Int,
+  limit : Int,
+  description : String,
+) -> Int raise {
+  let length_key = @ascii.encode("/Length")
+  let length_position = fixture_acceptance_find_bytes_after_for_test(
+    bytes, length_key, anchor_position,
+  )
+  if length_position < 0 || length_position >= limit {
+    fail("expected direct stream length for " + description)
+  }
+  let mut current = fixture_acceptance_skip_pdf_whitespace_for_test(
+    bytes,
+    length_position + length_key.length(),
+  )
+  let mut length = 0
+  let number_start = current
+  while current < limit && bytes[current] >= b'0' && bytes[current] <= b'9' {
+    length = length * 10 + bytes[current].to_int() - b'0'.to_int()
+    current += 1
+  }
+  if current == number_start {
+    fail("expected numeric stream length for " + description)
+  }
+  length
+}
+
+///|
+fn fixture_acceptance_first_object_stream_stream_position_for_test(
+  bytes : BytesView,
+) -> Int raise {
+  let anchor = @ascii.encode("/Type /ObjStm")
+  let anchor_position = fixture_acceptance_find_bytes_for_test(bytes, anchor)
+  if anchor_position < 0 {
+    fail("expected first object stream")
+  }
+  let stream_marker = @ascii.encode("stream")
+  let stream_position = fixture_acceptance_find_bytes_after_for_test(
+    bytes,
+    stream_marker,
+    anchor_position + anchor.length(),
+  )
+  if stream_position < 0 {
+    fail("expected first object stream marker")
+  }
+  stream_position
+}
+
+///|
+fn fixture_acceptance_first_object_stream_endstream_position_for_test(
+  bytes : BytesView,
+) -> Int raise {
+  let anchor = @ascii.encode("/Type /ObjStm")
+  let anchor_position = fixture_acceptance_find_bytes_for_test(bytes, anchor)
+  if anchor_position < 0 {
+    fail("expected first object stream")
+  }
+  let stream_position = fixture_acceptance_first_object_stream_stream_position_for_test(
+    bytes,
+  )
+  let length = fixture_acceptance_direct_length_before_for_test(
+    bytes, anchor_position, stream_position, "first object stream",
+  )
+  let marker_position = fixture_acceptance_skip_pdf_whitespace_for_test(
+    bytes,
+    fixture_acceptance_stream_data_start_for_test(bytes, stream_position) +
+    length,
+  )
+  if !fixture_acceptance_bytes_start_with_at_for_test(
+      bytes,
+      @ascii.encode("endstream"),
+      marker_position,
+    ) {
+    fail("expected first object stream endstream marker")
+  }
+  marker_position
+}
+
+///|
+fn fixture_acceptance_first_object_stream_endobj_position_for_test(
+  bytes : BytesView,
+) -> Int raise {
+  let endstream_position = fixture_acceptance_first_object_stream_endstream_position_for_test(
+    bytes,
+  )
+  let endobj_position = fixture_acceptance_skip_pdf_whitespace_for_test(
+    bytes,
+    endstream_position + @ascii.encode("endstream").length(),
+  )
+  if !fixture_acceptance_bytes_start_with_at_for_test(
+      bytes,
+      @ascii.encode("endobj"),
+      endobj_position,
+    ) {
+    fail("expected first object stream endobj marker")
+  }
+  endobj_position
+}
+
+///|
 fn fixture_acceptance_corrupt_first_object_stream_count_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
@@ -684,6 +857,45 @@ fn fixture_acceptance_corrupt_first_object_stream_filter_for_test(
     @ascii.encode("/Type /ObjStm"),
     @ascii.encode("/Filter /FlateDecode"),
     @ascii.encode("/Filter /NoSuchThing"),
+  )
+}
+
+///|
+fn fixture_acceptance_corrupt_first_object_stream_marker_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  fixture_acceptance_replace_bytes_at_for_test(
+    bytes,
+    fixture_acceptance_first_object_stream_stream_position_for_test(bytes),
+    @ascii.encode("stream"),
+    @ascii.encode("stramx"),
+    "first object stream marker",
+  )
+}
+
+///|
+fn fixture_acceptance_corrupt_first_object_stream_endstream_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  fixture_acceptance_replace_bytes_at_for_test(
+    bytes,
+    fixture_acceptance_first_object_stream_endstream_position_for_test(bytes),
+    @ascii.encode("endstream"),
+    @ascii.encode("endstreax"),
+    "first object stream endstream marker",
+  )
+}
+
+///|
+fn fixture_acceptance_corrupt_first_object_stream_endobj_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  fixture_acceptance_replace_bytes_at_for_test(
+    bytes,
+    fixture_acceptance_first_object_stream_endobj_position_for_test(bytes),
+    @ascii.encode("endobj"),
+    @ascii.encode("endobx"),
+    "first object stream endobj marker",
   )
 }
 
@@ -1142,6 +1354,74 @@ fn fixture_acceptance_assert_object_stream_filter_reconstructs_for_test(
       Ok(_) =>
         fail(
           "expected malformed object stream filter to require reconstruction",
+        )
+    }
+  }
+  let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
+  @test.assert_eq(recovered.first_xref(), 0)
+  @test.assert_eq(recovered.endpage(), expected_pages)
+  let reparsed = fixture_acceptance_reparse_compressed_for_test(recovered)
+  @test.assert_eq(reparsed.endpage(), expected_pages)
+}
+
+///|
+fn fixture_acceptance_assert_object_stream_marker_reconstructs_for_test(
+  bytes : Bytes,
+  expected_pages : Int,
+) -> Unit raise {
+  let corrupted = fixture_acceptance_corrupt_first_object_stream_marker_for_test(
+    bytes,
+  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    corrupted,
+  )
+  guard strict is Err(@pdflite.PdfError::ParseStreamExpected) else {
+    match strict {
+      Err(error) => fail(error.to_json().stringify())
+      Ok(_) =>
+        fail(
+          "expected malformed object stream marker to require reconstruction",
+        )
+    }
+  }
+  let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
+  @test.assert_eq(recovered.first_xref(), 0)
+  @test.assert_eq(recovered.endpage(), expected_pages)
+  let reparsed = fixture_acceptance_reparse_compressed_for_test(recovered)
+  @test.assert_eq(reparsed.endpage(), expected_pages)
+}
+
+///|
+fn fixture_acceptance_assert_object_stream_endstream_repairs_for_test(
+  bytes : Bytes,
+  expected_pages : Int,
+) -> Unit raise {
+  let corrupted = fixture_acceptance_corrupt_first_object_stream_endstream_for_test(
+    bytes,
+  )
+  let document = @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+  @test.assert_eq(document.endpage(), expected_pages)
+  let reparsed = fixture_acceptance_reparse_compressed_for_test(document)
+  @test.assert_eq(reparsed.endpage(), expected_pages)
+}
+
+///|
+fn fixture_acceptance_assert_object_stream_endobj_reconstructs_for_test(
+  bytes : Bytes,
+  expected_pages : Int,
+) -> Unit raise {
+  let corrupted = fixture_acceptance_corrupt_first_object_stream_endobj_for_test(
+    bytes,
+  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    corrupted,
+  )
+  guard strict is Err(@pdflite.PdfError::ParseEndObjectExpected) else {
+    match strict {
+      Err(error) => fail(error.to_json().stringify())
+      Ok(_) =>
+        fail(
+          "expected malformed object stream endobj to require reconstruction",
         )
     }
   }
@@ -1681,6 +1961,48 @@ async test "optional cpdf source manual fixture reconstructs malformed object st
     None => ()
     Some(bytes) =>
       fixture_acceptance_assert_object_stream_filter_reconstructs_for_test(
+        bytes, 175,
+      )
+  }
+}
+
+///|
+async test "optional cpdf source manual fixture reconstructs malformed object stream marker" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/cpdfmanual.pdf",
+    ) {
+    None => ()
+    Some(bytes) =>
+      fixture_acceptance_assert_object_stream_marker_reconstructs_for_test(
+        bytes, 175,
+      )
+  }
+}
+
+///|
+async test "optional cpdf source manual fixture repairs malformed object stream endstream" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/cpdfmanual.pdf",
+    ) {
+    None => ()
+    Some(bytes) =>
+      fixture_acceptance_assert_object_stream_endstream_repairs_for_test(
+        bytes, 175,
+      )
+  }
+}
+
+///|
+async test "optional cpdf source manual fixture reconstructs malformed object stream endobj" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/cpdfmanual.pdf",
+    ) {
+    None => ()
+    Some(bytes) =>
+      fixture_acceptance_assert_object_stream_endobj_reconstructs_for_test(
         bytes, 175,
       )
   }

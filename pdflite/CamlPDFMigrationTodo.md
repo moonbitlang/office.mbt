@@ -1841,6 +1841,16 @@ Current backend snapshot:
   rewrite/reread page preservation. Focused native validation reports `moon
   test --target native fixture_acceptance` at 38/38 tests passing; native
   full-suite validation reports 2194/2194 tests passing.~~
+- [x] ~~Broaden optional `.repos/cpdf-source` cpdf manual object-stream token
+  handling: `fixture_acceptance` now replaces the first `/ObjStm` `stream`
+  marker, its direct-`/Length`-derived physical `endstream`, and its physical
+  `endobj` marker in the 175-page manual, requiring strict
+  `ParseStreamExpected` plus public reconstruction for the stream marker, strict
+  length-repair plus compressed rewrite/reread for the shifted `endstream`, and
+  strict `ParseEndObjectExpected` plus public reconstruction for the `endobj`
+  marker. Focused native validation reports `moon test --target native
+  fixture_acceptance` at 41/41 tests passing; native full-suite validation
+  reports 2197/2197 tests passing.~~
 - [ ] Add further malformed xref-table/xref-stream/object-stream recovery cases
   from real-world PDFs.
 - [x] ~~Add a native reader-boundary gate for the next available predefined CMap
@@ -5036,6 +5046,13 @@ Current backend snapshot:
   the same xref-stream dictionary-prefix path after `ParseEndStreamExpected`
   and `ParseEndObjectExpected`. `moon test --target native` now reports
   2194/2194 tests passing.~~
+- [x] ~~Add the next remaining format parity slice: optional cpdf manual
+  source-corpus object-stream token handling now gates the first `/ObjStm`
+  `stream`, physical `endstream`, and physical `endobj` markers in the 175-page
+  manual, covering public reconstruction for strict `ParseStreamExpected` and
+  `ParseEndObjectExpected` errors plus strict length-repair for the malformed
+  `endstream`. `moon test --target native` now reports 2197/2197 tests
+  passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.
