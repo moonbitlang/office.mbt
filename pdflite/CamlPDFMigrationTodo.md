@@ -2463,6 +2463,14 @@ Current backend snapshot:
   operators. `moon test --target native draw/fixture_acceptance` reports 3/3
   tests passing; native full-suite validation reports 2154/2154 tests
   passing.~~
+- [x] ~~Broaden optional `.repos/cpdf-source` manual drawing fixture coverage:
+  `draw/fixture_acceptance` now also reads `manualimages/xobj.pdf`,
+  `trans.pdf`, and `fontparams.pdf` when the ignored source checkout is
+  present, verifying cpdf-generated Form XObject resources and reuse,
+  `/ExtGState` transparency resources, fill operators, and text-state
+  font-parameter operators. Focused native validation reports `moon test
+  --target native draw/fixture_acceptance` at 6/6 tests passing; native
+  full-suite validation reports 2157/2157 tests passing.~~
 - [x] ~~Standalone `cpdfcreate.ml` blank-document slice exposes
   `pdf_blank_document` and `pdf_blank_document_paper`, covering point-sized
   pages, named paper sizes, zero-page documents, page-tree/root creation, and

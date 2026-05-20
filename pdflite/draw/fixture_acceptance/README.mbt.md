@@ -18,7 +18,8 @@ flowchart LR
 - The package is native-only because it reads optional source-corpus files from
   disk.
 - Tests focus on cpdf-generated drawing output: line styles, dash patterns, text
-  sections, and later drawing fixtures that warrant source-backed coverage.
+  sections, Form XObject reuse, transparency resources, text-state parameters,
+  and later drawing fixtures that warrant source-backed coverage.
 - Library drawing and content APIs remain in the root package; this package is
   only for fixture-backed verification.
 
