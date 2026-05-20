@@ -155,6 +155,23 @@ fn markdown_cmd_unique_cjk_unified_count_for_test(text : String) -> Int {
 }
 
 ///|
+fn markdown_cmd_cpdf_source_manual_image_pdf_paths_for_test() -> Array[String] {
+  [
+    ".repos/cpdf-source/manualimages/bez.pdf", ".repos/cpdf-source/manualimages/capjoins.pdf",
+    ".repos/cpdf-source/manualimages/clip.pdf", ".repos/cpdf-source/manualimages/colfill.pdf",
+    ".repos/cpdf-source/manualimages/dash.pdf", ".repos/cpdf-source/manualimages/fill.pdf",
+    ".repos/cpdf-source/manualimages/fontparams.pdf", ".repos/cpdf-source/manualimages/fonts.pdf",
+    ".repos/cpdf-source/manualimages/h1.pdf", ".repos/cpdf-source/manualimages/line.pdf",
+    ".repos/cpdf-source/manualimages/lines.pdf", ".repos/cpdf-source/manualimages/matrix.pdf",
+    ".repos/cpdf-source/manualimages/para.pdf", ".repos/cpdf-source/manualimages/paras.pdf",
+    ".repos/cpdf-source/manualimages/png.pdf", ".repos/cpdf-source/manualimages/pop.pdf",
+    ".repos/cpdf-source/manualimages/stext.pdf", ".repos/cpdf-source/manualimages/text.pdf",
+    ".repos/cpdf-source/manualimages/textclip.pdf", ".repos/cpdf-source/manualimages/trans.pdf",
+    ".repos/cpdf-source/manualimages/xobj.pdf",
+  ]
+}
+
+///|
 async test "markdown command converts generated Latin fixture to UTF-8 file" {
   let input_path = markdown_cmd_repo_path_for_test(
     "markdown/fixtures/pandoc_latin.pdf",
@@ -207,6 +224,46 @@ async test "markdown command converts optional cpdf source manual fixture" {
     @test.assert_eq(output.length() > 200000, true)
     @test.assert_eq(markdown_cmd_replacement_count_for_test(output), 0)
     markdown_cmd_remove_if_exists_for_test(output_path)
+  }
+}
+
+///|
+async test "markdown command converts optional cpdf source manual image PDF corpus" {
+  let mut checked = 0
+  let mut textful = 0
+  for path in markdown_cmd_cpdf_source_manual_image_pdf_paths_for_test() {
+    let input_path = markdown_cmd_repo_path_for_test(path)
+    if @fs.exists(input_path) {
+      checked += 1
+      let output_path = markdown_cmd_output_path_for_test(
+        "cpdf_source_manual_image_" + checked.to_string(),
+      )
+      markdown_cmd_remove_if_exists_for_test(output_path)
+      markdown_cmd_convert_file(input_path, output_path)
+      let output = @utf8.decode_lossy(@fs.read_file(output_path).binary())
+      markdown_cmd_assert_contains_for_test(output, "# Page 1")
+      @test.assert_eq(
+        markdown_cmd_raw_control_count_for_test(output),
+        0,
+        msg=path,
+      )
+      @test.assert_eq(
+        markdown_cmd_replacement_count_for_test(output),
+        0,
+        msg=path,
+      )
+      if output != "# Page 1\n\n\n" {
+        textful += 1
+      }
+      markdown_cmd_remove_if_exists_for_test(output_path)
+    }
+  }
+  if checked > 0 {
+    @test.assert_eq(
+      checked,
+      markdown_cmd_cpdf_source_manual_image_pdf_paths_for_test().length(),
+    )
+    @test.assert_eq(textful > 0, true)
   }
 }
 

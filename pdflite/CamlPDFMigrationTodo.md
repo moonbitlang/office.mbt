@@ -5291,6 +5291,15 @@ Current backend snapshot:
   manual*'` reports 1/1 test passing, `moon test --target native markdown/cmd`
   reports 10/10 tests passing, and `moon test --target native` reports
   2214/2214 tests passing.~~
+- [x] ~~Add the next source-corpus Markdown command corpus slice: the native
+  `pdflite-markdown` command helper now converts every optional
+  `.repos/cpdf-source/manualimages/*.pdf` fixture through real file
+  input/output, verifies a clean `# Page 1` Markdown boundary, checks for no raw
+  controls or UTF-8 replacement characters, and requires at least one textful
+  extraction when the corpus is present. `moon test --target native
+  markdown/cmd --filter '*manual image PDF corpus*'` reports 1/1 test passing,
+  `moon test --target native markdown/cmd` reports 11/11 tests passing, and
+  `moon test --target native` reports 2215/2215 tests passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
