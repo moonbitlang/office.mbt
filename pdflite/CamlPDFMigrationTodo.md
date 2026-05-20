@@ -4122,6 +4122,13 @@ Current backend snapshot:
   `moon test --target native pdf_text_test.mbt` reports 152/152 tests passing,
   and `moon test --target native pdf_native_acceptance_test.mbt` reports 88/88
   tests passing.~~
+- [x] ~~The source-listed direct-Unicode predefined CMap reader-boundary gate
+  now also covers `/UniCNS-UCS2-H`, `/UniCNS-UTF16-H`, `/UniJIS-UCS2-V`, and
+  `/UniJIS-UTF16-V`, including horizontal CNS extraction, vertical JIS
+  extraction, surrogate-pair reverse lookup, and compressed write/read/reread
+  stability. `moon test --target native --package bobzhang/pdflite --file
+  pdf_native_acceptance_test.mbt` reports 88/88 tests passing; native
+  full-suite validation reports 2143/2143 tests passing.~~
 - [ ] Broader built-in non-UCS2 predefined CMap mapping tables beyond the
   current Adobe-GB1, Adobe-CNS1, Adobe-Japan1, and Adobe-Korea1 fallbacks,
   plus more real-world ToUnicode/CMap variation fixtures.

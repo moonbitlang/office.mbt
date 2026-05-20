@@ -3275,6 +3275,30 @@ fn acceptance_unicode_predefined_cmap_document_for_test() -> @pdflite.PdfDocumen
       "/UniJISUCS2HWVerticalDescendant", "Japan1",
     ),
   )
+  doc.add_object_given_number(
+    146,
+    acceptance_predefined_cmap_descendant_font_for_test(
+      "/UniCNSUCS2HorizontalDescendant", "CNS1",
+    ),
+  )
+  doc.add_object_given_number(
+    147,
+    acceptance_predefined_cmap_descendant_font_for_test(
+      "/UniCNSUTF16HorizontalDescendant", "CNS1",
+    ),
+  )
+  doc.add_object_given_number(
+    148,
+    acceptance_predefined_cmap_descendant_font_for_test(
+      "/UniJISUCS2VerticalDescendant", "Japan1",
+    ),
+  )
+  doc.add_object_given_number(
+    149,
+    acceptance_predefined_cmap_descendant_font_for_test(
+      "/UniJISUTF16VerticalDescendant", "Japan1",
+    ),
+  )
   let pages : ReadOnlyArray[@pdflite.PdfPage] = [
     acceptance_predefined_cmap_page_for_test(
       "/FUcs2H",
@@ -3390,6 +3414,34 @@ fn acceptance_unicode_predefined_cmap_document_for_test() -> @pdflite.PdfDocumen
         "/UniJISUCS2HWVerticalTop", "/UniJIS-UCS2-HW-V", 145,
       ),
       acceptance_text_bytes_for_test([0x00, 0x42, 0xFF, 0x76]),
+    ),
+    acceptance_predefined_cmap_page_for_test(
+      "/FUniCNSUCS2H",
+      acceptance_predefined_cmap_type0_font_for_test(
+        "/UniCNSUCS2HorizontalTop", "/UniCNS-UCS2-H", 146,
+      ),
+      acceptance_text_bytes_for_test([0x4E, 0x00, 0x4E, 0x8C]),
+    ),
+    acceptance_predefined_cmap_page_for_test(
+      "/FUniCNSUTF16H",
+      acceptance_predefined_cmap_type0_font_for_test(
+        "/UniCNSUTF16HorizontalTop", "/UniCNS-UTF16-H", 147,
+      ),
+      acceptance_text_bytes_for_test([0x4E, 0x00, 0xD8, 0x34, 0xDD, 0x1E]),
+    ),
+    acceptance_predefined_cmap_page_for_test(
+      "/FUniJISUCS2V",
+      acceptance_predefined_cmap_type0_font_for_test(
+        "/UniJISUCS2VerticalTop", "/UniJIS-UCS2-V", 148,
+      ),
+      acceptance_text_bytes_for_test([0x00, 0x42, 0x30, 0x42]),
+    ),
+    acceptance_predefined_cmap_page_for_test(
+      "/FUniJISUTF16V",
+      acceptance_predefined_cmap_type0_font_for_test(
+        "/UniJISUTF16VerticalTop", "/UniJIS-UTF16-V", 149,
+      ),
+      acceptance_text_bytes_for_test([0x30, 0x42, 0xD8, 0x34, 0xDD, 0x1E]),
     ),
   ]
   let page_root = doc.add_pagetree(pages)
@@ -4725,9 +4777,9 @@ fn acceptance_assert_unicode_predefined_cmap_text_for_test(
   doc : @pdflite.PdfDocument,
 ) -> Unit raise {
   @test.assert_eq(doc.version(), (1, 5))
-  @test.assert_eq(doc.endpage(), 15)
+  @test.assert_eq(doc.endpage(), 19)
   let pages = doc.pages_of_pagetree()
-  @test.assert_eq(pages.length(), 15)
+  @test.assert_eq(pages.length(), 19)
   let ucs2_h = acceptance_assert_unicode_predefined_page_for_test(
     doc,
     pages[0],
@@ -4904,6 +4956,52 @@ fn acceptance_assert_unicode_predefined_cmap_text_for_test(
     [0x42, 0xFF76],
   )
   @test.assert_eq(unijis_ucs2_hw_v.charcode_of_codepoint(0x42), Some(0x42))
+  let unicns_ucs2_h = acceptance_assert_unicode_predefined_page_for_test(
+    doc,
+    pages[15],
+    "/FUniCNSUCS2H",
+    "/UniCNS-UCS2-H",
+    "CNS1",
+    true,
+    [0x4E00, 0x4E8C],
+  )
+  @test.assert_eq(unicns_ucs2_h.charcode_of_codepoint(0x4E00), Some(0x4E00))
+  let unicns_utf16_h = acceptance_assert_unicode_predefined_page_for_test(
+    doc,
+    pages[16],
+    "/FUniCNSUTF16H",
+    "/UniCNS-UTF16-H",
+    "CNS1",
+    true,
+    [0x4E00, 0x1D11E],
+  )
+  @test.assert_eq(
+    unicns_utf16_h.charcode_of_codepoint(0x1D11E),
+    Some(0xD834DD1E),
+  )
+  let unijis_ucs2_v = acceptance_assert_unicode_predefined_page_for_test(
+    doc,
+    pages[17],
+    "/FUniJISUCS2V",
+    "/UniJIS-UCS2-V",
+    "Japan1",
+    true,
+    [0x42, 0x3042],
+  )
+  @test.assert_eq(unijis_ucs2_v.charcode_of_codepoint(0x3042), Some(0x3042))
+  let unijis_utf16_v = acceptance_assert_unicode_predefined_page_for_test(
+    doc,
+    pages[18],
+    "/FUniJISUTF16V",
+    "/UniJIS-UTF16-V",
+    "Japan1",
+    true,
+    [0x3042, 0x1D11E],
+  )
+  @test.assert_eq(
+    unijis_utf16_v.charcode_of_codepoint(0x1D11E),
+    Some(0xD834DD1E),
+  )
 }
 
 ///|
