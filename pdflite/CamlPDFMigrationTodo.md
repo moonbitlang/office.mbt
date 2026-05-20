@@ -4415,6 +4415,10 @@ Current backend snapshot:
 - [x] ~~Classic sparse incremental xref rows now use a carried sorted xref cursor
   across subsections, improving changed-object update writes without changing
   output bytes.~~
+- [x] ~~Recursive cpdfcontent `Do` walking now resolves each named XObject once
+  per operator and dispatches directly to image emission or Form recursion,
+  avoiding repeated Form resource/operator lookups without changing collected
+  entries.~~
 - [ ] Optional external-tool integration decisions for filter families that
   CamlPDF handled with C stubs or external binaries.
 

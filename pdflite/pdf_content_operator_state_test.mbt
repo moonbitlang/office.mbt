@@ -846,6 +846,61 @@ test "cpdfcontent operator state recursively collects Form XObject entries" {
 }
 
 ///|
+test "cpdfcontent operator state recursively collects image XObject entries" {
+  let doc = @pdflite.pdf_document_empty()
+  let image_name = content_operator_name_for_test("/Im1")
+  let xobject_key = content_operator_name_for_test("/XObject")
+  let subtype_key = content_operator_name_for_test("/Subtype")
+  let page_resources = @pdflite.pdf_dictionary([
+    (
+      xobject_key,
+      @pdflite.pdf_dictionary([
+        (
+          image_name,
+          @pdflite.pdf_dictionary([
+            (
+              subtype_key,
+              PdfNameObject(content_operator_name_for_test("/Image")),
+            ),
+          ]),
+        ),
+      ]),
+    ),
+  ])
+  let mediabox : @pdflite.PdfRectangle = {
+    min_x: 0.0,
+    min_y: 0.0,
+    max_x: 100.0,
+    max_y: 200.0,
+  }
+  let ops : Array[@pdflite.PdfContentOp] = [
+    Op_cm(@pdflite.transform_translate(5.0, 6.0)),
+    Op_Do(image_name),
+  ]
+  let entries = try! doc.content_entries_of_ops_recursive(
+    mediabox, page_resources, ops,
+  )
+  @test.assert_eq(entries.length(), 1)
+  @test.assert_eq(entries[0].object, PdfContentImageObject("/Im1"))
+  @test.assert_eq(entries[0].bounding_box, {
+    x0: 5.0,
+    y0: 6.0,
+    x1: 5.0,
+    y1: 7.0,
+    x2: 6.0,
+    y2: 7.0,
+    x3: 6.0,
+    y3: 6.0,
+  })
+  @test.assert_eq(
+    try! @pdflite.pdf_content_entries_of_ops_recursive(
+      doc, mediabox, page_resources, ops,
+    ),
+    entries,
+  )
+}
+
+///|
 test "cpdfcontent operator state applies source-shaped ExtGState resources" {
   let doc = @pdflite.pdf_document_empty()
   let initial = @pdflite.pdf_content_initial_operator_state(

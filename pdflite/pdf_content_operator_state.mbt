@@ -1851,6 +1851,35 @@ fn PdfContentOperatorState::content_without_font_cache(
 }
 
 ///|
+fn PdfDocument::content_entries_of_xobject_recursive(
+  self : PdfDocument,
+  state : PdfContentOperatorState,
+  resources : PdfObject,
+  name : PdfName,
+) -> Array[PdfContentJsonEntry] raise PdfError {
+  let xobject = self.content_xobject_from_resources(resources, name)
+  match self.lookup_direct(pdf_xobject_subtype_key(), xobject) {
+    Some(PdfNameObject(subtype)) if subtype == pdf_image_image_name() =>
+      [state.content_image_entry(name)]
+    Some(PdfNameObject(subtype)) if subtype == pdf_xobject_form() => {
+      let form_state = self.content_form_xobject_setup_state(state, xobject)
+      let form_resources = self.content_form_xobject_merge_resources(
+        resources, xobject,
+      )
+      let form_ops = self.parse_content_ops_with_resources(form_resources, [
+        xobject,
+      ])
+      self.content_entries_of_ops_recursive_from_state(
+        form_state.content_without_font_cache(),
+        form_resources,
+        form_ops,
+      ).entries
+    }
+    _ => raise SoftError("Unknown kind of xobject")
+  }
+}
+
+///|
 fn PdfDocument::content_entries_of_ops_recursive_from_state(
   self : PdfDocument,
   initial : PdfContentOperatorState,
@@ -1861,34 +1890,10 @@ fn PdfDocument::content_entries_of_ops_recursive_from_state(
   let entries : Array[PdfContentJsonEntry] = []
   for op in ops {
     match op {
-      Op_Do(name) => {
-        let result = self.content_apply_resource_op(state, resources, op)
-        entries.append(result.entries)
-        if result.entries.length() == 0 {
-          match self.content_form_xobject_enter_state(state, resources, name) {
-            Some(form_state) => {
-              let form_resources = match
-                self.content_form_xobject_resources(resources, name) {
-                Some(form_resources) => form_resources
-                None => resources
-              }
-              let form_ops = match
-                self.content_form_xobject_ops(resources, name) {
-                Some(form_ops) => form_ops
-                None => []
-              }
-              let nested = self.content_entries_of_ops_recursive_from_state(
-                form_state.content_without_font_cache(),
-                form_resources,
-                form_ops,
-              )
-              entries.append(nested.entries)
-            }
-            None => ()
-          }
-        }
-        state = result.state
-      }
+      Op_Do(name) =>
+        entries.append(
+          self.content_entries_of_xobject_recursive(state, resources, name),
+        )
       _ => {
         let result = self.content_apply_resource_op(state, resources, op)
         entries.append(result.entries)
