@@ -22,8 +22,8 @@ Current estimate:
   marker insertion/removal helpers, PDF/UA structure-tree JSON
   import/export helpers, JPEG/JPEG2000, PNG, and JBIG2 image-to-PDF document
   assembly, image XObject JSON listing, image-resolution reporting,
-  cpdf draw-control colour parsing and cpdfdraw structured role-map output with
-  fresh-structure-tree preservation,
+  cpdf draw-control colour parsing, role-map/auto-artifact state, and cpdfdraw
+  structured role-map output with fresh-structure-tree preservation,
   Form XObject stamping,
   composition reporting, core metadata APIs, XMP metadata-date rewriting, XMP
   info synchronization, XMP metadata creation, XMP RDF list extraction,
@@ -2308,6 +2308,14 @@ Current backend snapshot:
   `moon check --target native --warn-list +73` passing with the known markdown
   main-package warning and 10-warning baseline. Full native suite validation is
   deferred to the next batch.~~
+- [x] ~~`cpdfdrawcontrol.ml` automatic artifact state is now exposed on
+  `PdfDrawControl`, matching cpdf's `autoartifacts` control knob so callers can
+  carry the setting alongside generated draw operations and pass it through to
+  `PdfDocument::draw(add_artifacts=...)`. Coverage pins the default enabled
+  state, explicit disable, and that toggling the setting does not append draw
+  operations. Focused native validation reports `moon test --target native
+  pdf_draw_test.mbt` at 51/51 tests passing; full native validation is due at
+  the next batch gate.~~
 - [x] ~~Standalone `cpdfcreate.ml` blank-document slice exposes
   `pdf_blank_document` and `pdf_blank_document_paper`, covering point-sized
   pages, named paper sizes, zero-page documents, page-tree/root creation, and

@@ -2902,6 +2902,7 @@ pub struct PdfDrawControl {
   mut fontpack_initialized : Bool
   mut paragraph_indent : Double?
   mut role_map : String
+  mut auto_artifacts : Bool
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfDrawControl::add_bezier(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_bezier13(Self, String) -> Unit raise @core.PdfError
@@ -2930,6 +2931,7 @@ pub fn PdfDrawControl::add_text(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_text_scale(Self, Double) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_to(Self, PdfDocument, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_word_space(Self, Double) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::auto_artifacts(Self) -> Bool
 pub fn PdfDrawControl::begin_artifact(Self) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::begin_text_section(Self) -> Unit
 pub fn PdfDrawControl::clip(Self) -> Unit raise @core.PdfError
@@ -2955,6 +2957,7 @@ pub fn PdfDrawControl::ops(Self) -> Array[PdfDrawOp]
 pub fn PdfDrawControl::pop_group(Self) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::push_group(Self) -> Unit
 pub fn PdfDrawControl::role_map(Self) -> String
+pub fn PdfDrawControl::set_auto_artifacts(Self, Bool) -> Unit
 pub fn PdfDrawControl::set_auto_tag(Self, Bool) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::set_dash_pattern(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::set_fill(Self, String) -> Unit raise @core.PdfError

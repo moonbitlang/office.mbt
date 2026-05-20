@@ -29,6 +29,7 @@ pub struct PdfDrawControl {
   mut fontpack_initialized : Bool
   mut paragraph_indent : Double?
   mut role_map : String
+  mut auto_artifacts : Bool
 } derive(Debug, Eq, ToJson)
 
 ///|
@@ -48,6 +49,7 @@ pub fn pdf_draw_control_new() -> PdfDrawControl {
     fontpack_initialized: false,
     paragraph_indent: None,
     role_map: "",
+    auto_artifacts: true,
   }
 }
 
@@ -263,6 +265,21 @@ pub fn PdfDrawControl::set_role_map(
 /// Return the role-map body configured on this draw-control state.
 pub fn PdfDrawControl::role_map(self : PdfDrawControl) -> String {
   self.role_map
+}
+
+///|
+/// Enable or disable automatic artifact wrapping for structured draw output.
+pub fn PdfDrawControl::set_auto_artifacts(
+  self : PdfDrawControl,
+  enabled : Bool,
+) -> Unit {
+  self.auto_artifacts = enabled
+}
+
+///|
+/// Return whether automatic artifact wrapping is enabled on this state.
+pub fn PdfDrawControl::auto_artifacts(self : PdfDrawControl) -> Bool {
+  self.auto_artifacts
 }
 
 ///|

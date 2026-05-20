@@ -1265,6 +1265,9 @@ test "pdf draw control reports mismatched section closures" {
 ///|
 test "pdf draw control command helpers append cpdf draw ops" {
   let control = @pdflite.pdf_draw_control_new()
+  @test.assert_eq(control.auto_artifacts(), true)
+  control.set_auto_artifacts(false)
+  @test.assert_eq(control.auto_artifacts(), false)
   control.set_role_map("/H1 /H")
   @test.assert_eq(control.role_map(), "/H1 /H")
   try! control.set_stroke("red")
