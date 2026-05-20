@@ -148,6 +148,9 @@ let pdf_draw_ns_key_name : PdfName = pdf_draw_name("/NS")
 let pdf_draw_namespaces_key_name : PdfName = pdf_draw_name("/Namespaces")
 
 ///|
+let pdf_draw_role_map_key_name : PdfName = pdf_draw_name("/RoleMap")
+
+///|
 let pdf_draw_struct_parents_key_name : PdfName = pdf_draw_name("/StructParents")
 
 ///|
@@ -250,6 +253,11 @@ fn pdf_draw_ns_key() -> PdfName {
 ///|
 fn pdf_draw_namespaces_key() -> PdfName {
   pdf_draw_namespaces_key_name
+}
+
+///|
+fn pdf_draw_role_map_key() -> PdfName {
+  pdf_draw_role_map_key_name
 }
 
 ///|
@@ -2259,6 +2267,7 @@ fn PdfDocument::pdf_draw_write_structure_node(
 fn PdfDocument::pdf_draw_write_structure_tree(
   self : PdfDocument,
   data : ArrayView[PdfDrawStructureData],
+  role_map : String,
 ) -> Unit raise PdfError {
   let tree = self.pdf_draw_make_structure_tree(data)
   let namespaces = pdf_draw_namespace_map_new()
@@ -2290,6 +2299,14 @@ fn PdfDocument::pdf_draw_write_structure_tree(
     (pdf_draw_parent_tree_key(), PdfIndirect(parent_tree_number)),
     (pdf_draw_k_key(), PdfArray(children)),
   ]
+  if role_map != "" {
+    root_entries.push(
+      (
+        pdf_draw_role_map_key(),
+        pdf_parse_object_from_bytes(@ascii.encode("<<" + role_map + ">>")),
+      ),
+    )
+  }
   if namespaces.entries.length() > 0 {
     root_entries.push(
       (
@@ -2312,7 +2329,9 @@ fn PdfDocument::pdf_draw_write_structure_tree(
 /// split around `PdfDrawNewPage`, selected page ranges are advanced or padded
 /// between chunks, resources are merged into page resources, manual artifact
 /// back-channel markers are fixed before writing content, and `struct_tree`
-/// writes a fresh structure tree from rendered MCIDs.
+/// writes a fresh structure tree from rendered MCIDs. When `role_map` is not
+/// empty, it is parsed as the body of a PDF role-map dictionary and attached to
+/// the generated `/StructTreeRoot`.
 pub fn PdfDocument::draw(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
@@ -2325,6 +2344,7 @@ pub fn PdfDocument::draw(
   bates_pad? : Int? = None,
   time? : PdfStrftimeTime? = None,
   add_artifacts? : Bool = false,
+  role_map? : String = "",
 ) -> PdfDocument raise PdfError {
   pdf_page_box_validate_page_numbers(page_numbers, self.endpage(), "draw")
   let state = pdf_draw_render_state_new()
@@ -2363,7 +2383,7 @@ pub fn PdfDocument::draw(
     }
   }
   if struct_tree {
-    document.pdf_draw_write_structure_tree(state.structure_data)
+    document.pdf_draw_write_structure_tree(state.structure_data, role_map)
   }
   document
 }
@@ -2382,6 +2402,7 @@ pub fn pdf_draw(
   bates_pad? : Int? = None,
   time? : PdfStrftimeTime? = None,
   add_artifacts? : Bool = false,
+  role_map? : String = "",
 ) -> PdfDocument raise PdfError {
   document.draw(
     page_numbers,
@@ -2394,5 +2415,6 @@ pub fn pdf_draw(
     bates_pad~,
     time~,
     add_artifacts~,
+    role_map~,
   )
 }

@@ -1096,6 +1096,37 @@ test "PdfDocument draw structure-tree mode honors AutoTag false" {
 }
 
 ///|
+test "PdfDocument draw structure-tree mode writes role map" {
+  let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
+  let drawn = try! document.draw(
+    [1],
+    [PdfDrawSTag("H1"), PdfDrawEndSTag],
+    struct_tree=true,
+    role_map="/H1 /H /Aside /Div",
+  )
+  let key_role_map = draw_name_for_test("/RoleMap")
+  let key_struct_tree_root = draw_name_for_test("/StructTreeRoot")
+  let key_h1 = draw_name_for_test("/H1")
+  let key_h = draw_name_for_test("/H")
+  let key_aside = draw_name_for_test("/Aside")
+  let key_div = draw_name_for_test("/Div")
+  let catalog = try! drawn.catalog()
+  guard catalog.lookup_immediate(key_struct_tree_root)
+    is Some(PdfIndirect(root_number)) else {
+    fail("expected StructTreeRoot reference")
+  }
+  let root = drawn.lookup_object_or_null(root_number)
+  guard root.lookup_immediate(key_role_map) is Some(role_map) else {
+    fail("expected RoleMap")
+  }
+  @test.assert_eq(role_map.lookup_immediate(key_h1), Some(PdfNameObject(key_h)))
+  @test.assert_eq(
+    role_map.lookup_immediate(key_aside),
+    Some(PdfNameObject(key_div)),
+  )
+}
+
+///|
 test "pdf draw unsupported content op returns cpdf-style soft error" {
   let result : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_drawop_to_content_ops(
     PdfDrawText("hello"),
@@ -1167,6 +1198,8 @@ test "pdf draw control reports mismatched section closures" {
 ///|
 test "pdf draw control command helpers append cpdf draw ops" {
   let control = @pdflite.pdf_draw_control_new()
+  control.set_role_map("/H1 /H")
+  @test.assert_eq(control.role_map(), "/H1 /H")
   try! control.set_stroke("red")
   try! control.set_fill("not-a-colour")
   try! control.add_tag("Span")

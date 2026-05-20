@@ -575,7 +575,7 @@ pub fn pdf_document_of_parsed_indirect_objects(ArrayView[PdfParsedIndirectObject
 
 pub fn pdf_draft(@core.PdfName?, Bool, ArrayView[Int], PdfDocument) -> PdfDocument raise @core.PdfError
 
-pub fn pdf_draw(PdfDocument, ArrayView[Int], ArrayView[PdfDrawOp], struct_tree? : Bool, fast? : Bool, underneath? : Bool, filename? : String, bates? : Int, bates_pad? : Int?, time? : PdfStrftimeTime?, add_artifacts? : Bool) -> PdfDocument raise @core.PdfError
+pub fn pdf_draw(PdfDocument, ArrayView[Int], ArrayView[PdfDrawOp], struct_tree? : Bool, fast? : Bool, underneath? : Bool, filename? : String, bates? : Int, bates_pad? : Int?, time? : PdfStrftimeTime?, add_artifacts? : Bool, role_map? : String) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_draw_colour_of_string(String) -> PdfDrawColour
 
@@ -2610,7 +2610,7 @@ pub fn PdfDocument::dict_entry_rendered_values(Self, @core.PdfName) -> Array[Byt
 pub fn PdfDocument::dict_entry_values(Self, @core.PdfName) -> Array[PdfObject]
 pub fn PdfDocument::direct(Self, PdfObject) -> PdfObject
 pub fn PdfDocument::draft(Self, @core.PdfName?, Bool, ArrayView[Int]) -> Self raise @core.PdfError
-pub fn PdfDocument::draw(Self, ArrayView[Int], ArrayView[PdfDrawOp], struct_tree? : Bool, fast? : Bool, underneath? : Bool, filename? : String, bates? : Int, bates_pad? : Int?, time? : PdfStrftimeTime?, add_artifacts? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::draw(Self, ArrayView[Int], ArrayView[PdfDrawOp], struct_tree? : Bool, fast? : Bool, underneath? : Bool, filename? : String, bates? : Int, bates_pad? : Int?, time? : PdfStrftimeTime?, add_artifacts? : Bool, role_map? : String) -> Self raise @core.PdfError
 pub fn PdfDocument::draw_special_text_context(Self, Int, filename? : String, bates? : Int, bates_pad? : Int?, time? : PdfStrftimeTime?) -> PdfDrawSpecialTextContext raise @core.PdfError
 pub fn PdfDocument::encrypt_128bit(Self, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission], file_id? : BytesView) -> Self raise @core.PdfError
 pub fn PdfDocument::encrypt_128bit_aesv2_with_iv_provider(Self, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission], (Int, Int, Int) -> Bytes raise @core.PdfError, encrypt_metadata? : Bool, file_id? : BytesView) -> Self raise @core.PdfError
@@ -2901,6 +2901,7 @@ pub struct PdfDrawControl {
   mut fontpack : PdfFontPack?
   mut fontpack_initialized : Bool
   mut paragraph_indent : Double?
+  mut role_map : String
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfDrawControl::add_bezier(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_bezier13(Self, String) -> Unit raise @core.PdfError
@@ -2953,6 +2954,7 @@ pub fn PdfDrawControl::matrix_translate(Self, String) -> Unit raise @core.PdfErr
 pub fn PdfDrawControl::ops(Self) -> Array[PdfDrawOp]
 pub fn PdfDrawControl::pop_group(Self) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::push_group(Self) -> Unit
+pub fn PdfDrawControl::role_map(Self) -> String
 pub fn PdfDrawControl::set_auto_tag(Self, Bool) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::set_dash_pattern(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::set_fill(Self, String) -> Unit raise @core.PdfError
@@ -2966,6 +2968,7 @@ pub fn PdfDrawControl::set_line_thickness(Self, String) -> Unit raise @core.PdfE
 pub fn PdfDrawControl::set_matrix(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::set_miter_limit(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::set_paragraph_indent(Self, Double?) -> Unit
+pub fn PdfDrawControl::set_role_map(Self, String) -> Unit
 pub fn PdfDrawControl::set_stroke(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::set_xobject_bbox(Self, PdfCoordRectangle) -> Unit
 pub fn PdfDrawControl::start_xobject(Self, String) -> Unit

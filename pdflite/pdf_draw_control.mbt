@@ -28,6 +28,7 @@ pub struct PdfDrawControl {
   mut fontpack : PdfFontPack?
   mut fontpack_initialized : Bool
   mut paragraph_indent : Double?
+  mut role_map : String
 } derive(Debug, Eq, ToJson)
 
 ///|
@@ -46,6 +47,7 @@ pub fn pdf_draw_control_new() -> PdfDrawControl {
     fontpack: None,
     fontpack_initialized: false,
     paragraph_indent: None,
+    role_map: "",
   }
 }
 
@@ -243,6 +245,24 @@ pub fn PdfDrawControl::end_element_info(
   key : String,
 ) -> Unit raise PdfError {
   self.add_op(PdfDrawEndEltInfo(key))
+}
+
+///|
+/// Set the role-map body used by structured draw output.
+///
+/// The value follows cpdf's `-rolemap` convention: pass entries such as
+/// `"/H1 /H /Aside /Div"` without the surrounding `<< >>`.
+pub fn PdfDrawControl::set_role_map(
+  self : PdfDrawControl,
+  role_map : String,
+) -> Unit {
+  self.role_map = role_map
+}
+
+///|
+/// Return the role-map body configured on this draw-control state.
+pub fn PdfDrawControl::role_map(self : PdfDrawControl) -> String {
+  self.role_map
 }
 
 ///|
