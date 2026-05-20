@@ -1771,6 +1771,13 @@ Current backend snapshot:
   fallbacks, covering 90ms-RKSJ-H, 90pv-RKSJ-H, JIS H, EUC-H, and Hojo-EUC-H
   extraction plus reverse lookup through compressed write/read/reread
   boundaries.~~
+- [x] ~~Add package-local `PdfTextExtractor` coverage for rare Adobe-Japan1
+  predefined CMap aliases, mirroring the reader-boundary gates for 78, 78ms,
+  83pv, 90ms/90msp/90pv vertical, generic RKSJ, 78-EUC, Add, Ext, Hojo,
+  Hojo-EUC-V, and NWP extraction plus reverse lookup. `moon test --target
+  native pdf_text_test.mbt --filter 'PdfTextExtractor reads identity CMap text
+  as two-byte character codes'` reports 1/1 tests passing; native full-suite
+  validation reports 2172/2172 tests passing.~~
 - [ ] Decide any further rare predefined CMap source-table slices only when
   useful source tables or fixtures are available.
 - [x] ~~Route native normal Flate encode/decode through CamlPDF's vendored
