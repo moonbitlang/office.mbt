@@ -577,6 +577,10 @@ pub fn pdf_draft(@core.PdfName?, Bool, ArrayView[Int], PdfDocument) -> PdfDocume
 
 pub fn pdf_drawn_path_content_json(PdfDrawnPath) -> Json
 
+pub fn pdf_drawop_to_content_ops(PdfDrawOp) -> Array[PdfContentOp] raise @core.PdfError
+
+pub fn pdf_drawops_to_content_ops(ArrayView[PdfDrawOp]) -> Array[PdfContentOp] raise @core.PdfError
+
 pub fn pdf_encode_filter_bytes(@core.PdfName, Bytes) -> Bytes raise @core.PdfError
 
 pub fn pdf_encode_filter_bytes_with_flate_level(@core.PdfName, Bytes, Int) -> Bytes raise @core.PdfError
@@ -1300,6 +1304,10 @@ pub fn pdf_string_of_content_op(PdfContentOp) -> Bytes raise @core.PdfError
 pub fn pdf_string_of_content_ops(ArrayView[PdfContentOp]) -> Bytes raise @core.PdfError
 
 pub fn pdf_string_of_date(@date.PdfDate) -> String raise @core.PdfError
+
+pub fn pdf_string_of_drawop(PdfDrawOp) -> String
+
+pub fn pdf_string_of_drawops(ArrayView[PdfDrawOp]) -> String
 
 pub fn pdf_string_of_font(PdfFont) -> String
 
@@ -2842,6 +2850,77 @@ pub fn PdfDocument::write_page_labels(Self, ArrayView[PdfPageLabel]) -> Self rai
 pub fn PdfDocument::xmp_info(Self, @core.PdfName) -> String
 pub fn PdfDocument::xmp_info_json(Self) -> Json raise @core.PdfError
 pub fn PdfDocument::xmp_info_json_blob(Self) -> Bytes raise @core.PdfError
+
+pub(all) enum PdfDrawColour {
+  PdfDrawNoCol
+  PdfDrawRGB(Double, Double, Double)
+  PdfDrawGrey(Double)
+  PdfDrawCYMK(Double, Double, Double, Double)
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfDrawJustification {
+  PdfDrawLeft
+  PdfDrawRight
+  PdfDrawCentre
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfDrawOp {
+  PdfDrawRect(Double, Double, Double, Double)
+  PdfDrawBezier(Double, Double, Double, Double, Double, Double)
+  PdfDrawBezier23(Double, Double, Double, Double)
+  PdfDrawBezier13(Double, Double, Double, Double)
+  PdfDrawTo(Double, Double)
+  PdfDrawLine(Double, Double)
+  PdfDrawClosePath
+  PdfDrawSetFill(PdfDrawColour)
+  PdfDrawSetStroke(PdfDrawColour)
+  PdfDrawSetLineThickness(Double)
+  PdfDrawSetLineCap(Int)
+  PdfDrawSetLineJoin(Int)
+  PdfDrawSetMiterLimit(Double)
+  PdfDrawSetDashPattern(Array[Double], Double)
+  PdfDrawMatrix(@geometry.TransformMatrix)
+  PdfDrawQq(Array[PdfDrawOp])
+  PdfDrawFill
+  PdfDrawFillEvenOdd
+  PdfDrawStroke
+  PdfDrawFillStroke
+  PdfDrawFillStrokeEvenOdd
+  PdfDrawClip
+  PdfDrawClipEvenOdd
+  PdfDrawFormXObject(Double, Double, Double, Double, String, Array[PdfDrawOp])
+  PdfDrawUse(String)
+  PdfDrawImageXObject(String, PdfObject)
+  PdfDrawImage(String)
+  PdfDrawNewPage
+  PdfDrawOpacity(Double)
+  PdfDrawSOpacity(Double)
+  PdfDrawFontPack(String, PdfFontPack, Array[Int])
+  PdfDrawFont(String, Double)
+  PdfDrawTextSection(Array[PdfDrawOp])
+  PdfDrawText(String)
+  PdfDrawSpecialText(String)
+  PdfDrawPara(Double?, PdfDrawJustification, Double, Array[String])
+  PdfDrawNewline
+  PdfDrawLeading(Double)
+  PdfDrawCharSpace(Double)
+  PdfDrawWordSpace(Double)
+  PdfDrawTextScale(Double)
+  PdfDrawRenderMode(Int)
+  PdfDrawRise(Double)
+  PdfDrawTag(String)
+  PdfDrawEndTag
+  PdfDrawSTag(String)
+  PdfDrawEndSTag
+  PdfDrawBeginArtifact
+  PdfDrawEndArtifact
+  PdfDrawNamespace(String)
+  PdfDrawEltInfo(String, PdfObject)
+  PdfDrawEndEltInfo(String)
+  PdfDrawAutoTag(Bool)
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfDrawOp::debug_name(Self) -> String
+pub fn PdfDrawOp::to_content_ops(Self) -> Array[PdfContentOp] raise @core.PdfError
 
 pub(all) struct PdfDrawnPath {
   stroked : Bool
