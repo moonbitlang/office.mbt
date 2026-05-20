@@ -209,3 +209,124 @@ test "pdf draw control reports mismatched section closures" {
   }
   @test.assert_eq(group.depth(), 1)
 }
+
+///|
+test "pdf draw control command helpers append cpdf draw ops" {
+  let control = @pdflite.pdf_draw_control_new()
+  try! control.set_stroke("red")
+  try! control.set_fill("not-a-colour")
+  try! control.add_tag("Span")
+  try! control.add_structure_tag("P")
+  try! control.end_tag()
+  try! control.end_structure_tag()
+  try! control.set_auto_tag(false)
+  try! control.begin_artifact()
+  try! control.end_artifact()
+  try! control.add_namespace("NS")
+  try! control.add_element_info("K", PdfNull)
+  try! control.end_element_info("K")
+  try! control.set_line_thickness("2.5")
+  try! control.set_line_cap("square")
+  try! control.set_line_join("bevel")
+  try! control.set_miter_limit("4.5")
+  try! control.set_dash_pattern("1 2 3")
+  try! control.set_matrix("1 2 3 4 5 6")
+  try! control.matrix_translate("7 8")
+  try! control.matrix_rotate("0 0 0.5")
+  try! control.matrix_scale("1 2 3 4")
+  try! control.matrix_shear_x("1 2 0.25")
+  try! control.matrix_shear_y("1 2 0.75")
+  try! control.use_xobject("XO")
+
+  let expected : Array[@pdflite.PdfDrawOp] = [
+    PdfDrawSetStroke(PdfDrawRGB(1.0, 0.0, 0.0)),
+    PdfDrawSetFill(PdfDrawNoCol),
+    PdfDrawTag("Span"),
+    PdfDrawSTag("P"),
+    PdfDrawEndTag,
+    PdfDrawEndSTag,
+    PdfDrawAutoTag(false),
+    PdfDrawBeginArtifact,
+    PdfDrawEndArtifact,
+    PdfDrawNamespace("NS"),
+    PdfDrawEltInfo("K", PdfNull),
+    PdfDrawEndEltInfo("K"),
+    PdfDrawSetLineThickness(2.5),
+    PdfDrawSetLineCap(2),
+    PdfDrawSetLineJoin(2),
+    PdfDrawSetMiterLimit(4.5),
+    PdfDrawSetDashPattern([1.0, 2.0], 3.0),
+    PdfDrawMatrix({ a: 1.0, b: 2.0, c: 3.0, d: 4.0, e: 5.0, f: 6.0 }),
+    PdfDrawMatrix(@pdflite.transform_translate(7.0, 8.0)),
+    PdfDrawMatrix(@pdflite.transform_rotate(@pdflite.point2(0.0, 0.0), 0.5)),
+    PdfDrawMatrix(@pdflite.transform_scale(@pdflite.point2(1.0, 2.0), 3.0, 4.0)),
+    PdfDrawMatrix(@pdflite.transform_shear_x(@pdflite.point2(1.0, 2.0), 0.25)),
+    PdfDrawMatrix(@pdflite.transform_shear_y(@pdflite.point2(1.0, 2.0), 0.75)),
+    PdfDrawUse("XO"),
+  ]
+  @test.assert_eq(control.ops(), expected)
+}
+
+///|
+fn draw_control_assert_soft_error_for_test(
+  result : Result[Unit, Error],
+  expected : String,
+) -> Unit raise Error {
+  guard result is Err(@pdflite.PdfError::SoftError(message)) else {
+    fail("expected draw-control SoftError")
+  }
+  @test.assert_eq(message, expected)
+}
+
+///|
+test "pdf draw control command helpers report cpdf parse errors" {
+  let control = @pdflite.pdf_draw_control_new()
+  draw_control_assert_soft_error_for_test(
+    try? control.set_line_thickness("x"),
+    "Thickness must be a number",
+  )
+  draw_control_assert_soft_error_for_test(
+    try? control.set_line_cap("flat"),
+    "Unknown cap type",
+  )
+  draw_control_assert_soft_error_for_test(
+    try? control.set_line_join("flat"),
+    "Unknown join type",
+  )
+  draw_control_assert_soft_error_for_test(
+    try? control.set_miter_limit("x"),
+    "Miter limit must be a number",
+  )
+  draw_control_assert_soft_error_for_test(
+    try? control.set_dash_pattern("1 x"),
+    "Dash pattern elements must one or more numbers",
+  )
+  draw_control_assert_soft_error_for_test(
+    try? control.set_matrix("1 2"),
+    "Matrix must have six numbers",
+  )
+  draw_control_assert_soft_error_for_test(
+    try? control.set_matrix("1 x 3 4 5 6"),
+    "Matrix elements must be numbers",
+  )
+  draw_control_assert_soft_error_for_test(
+    try? control.matrix_translate("1"),
+    "-mtrans takes two numbers",
+  )
+  draw_control_assert_soft_error_for_test(
+    try? control.matrix_rotate("0 0"),
+    "-mrot takes three numbers",
+  )
+  draw_control_assert_soft_error_for_test(
+    try? control.matrix_scale("1 2 3"),
+    "-mscale takes four numbers",
+  )
+  draw_control_assert_soft_error_for_test(
+    try? control.matrix_shear_x("1 2"),
+    "-mshearx takes three numbers",
+  )
+  draw_control_assert_soft_error_for_test(
+    try? control.matrix_shear_y("1 2"),
+    "-msheary takes three numbers",
+  )
+}

@@ -2871,18 +2871,42 @@ pub struct PdfDrawControl {
   frames : Array[PdfDrawControlFrame]
   mut xobject_bbox : PdfCoordRectangle
 } derive(Eq, ToJson, @debug.Debug)
+pub fn PdfDrawControl::add_element_info(Self, String, PdfObject) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_namespace(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_op(Self, PdfDrawOp) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_structure_tag(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_tag(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::begin_artifact(Self) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::begin_text_section(Self) -> Unit
 pub fn PdfDrawControl::current_frame_name(Self) -> String raise @core.PdfError
 pub fn PdfDrawControl::current_ops(Self) -> Array[PdfDrawOp] raise @core.PdfError
 pub fn PdfDrawControl::depth(Self) -> Int
+pub fn PdfDrawControl::end_artifact(Self) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::end_element_info(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::end_structure_tag(Self) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::end_tag(Self) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::end_text_section(Self) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::end_xobject(Self) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::matrix_rotate(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::matrix_scale(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::matrix_shear_x(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::matrix_shear_y(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::matrix_translate(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::ops(Self) -> Array[PdfDrawOp]
 pub fn PdfDrawControl::pop_group(Self) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::push_group(Self) -> Unit
+pub fn PdfDrawControl::set_auto_tag(Self, Bool) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::set_dash_pattern(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::set_fill(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::set_line_cap(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::set_line_join(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::set_line_thickness(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::set_matrix(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::set_miter_limit(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::set_stroke(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::set_xobject_bbox(Self, PdfCoordRectangle) -> Unit
 pub fn PdfDrawControl::start_xobject(Self, String) -> Unit
+pub fn PdfDrawControl::use_xobject(Self, String) -> Unit raise @core.PdfError
 
 pub(all) struct PdfDrawControlFrame {
   name : String
