@@ -190,6 +190,27 @@ fn fixture_acceptance_corrupt_startxref_xref_header_for_test(
 }
 
 ///|
+fn fixture_acceptance_corrupt_startxref_trailer_keyword_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  let xref_offset = fixture_acceptance_startxref_offset_for_test(bytes)
+  let trailer_position = fixture_acceptance_find_bytes_after_for_test(
+    bytes,
+    @ascii.encode("trailer"),
+    xref_offset,
+  )
+  if trailer_position < 0 {
+    fail("expected classic xref trailer keyword after startxref target")
+  }
+  let output : Array[Byte] = []
+  for byte in bytes {
+    output.push(byte)
+  }
+  output[trailer_position] = b'u'
+  Bytes::from_array(output)
+}
+
+///|
 fn fixture_acceptance_corrupt_first_in_use_xref_marker_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
@@ -612,6 +633,31 @@ fn fixture_acceptance_assert_xref_header_reconstructs_for_test(
   )
   guard strict is Err(@pdflite.PdfError::XRefExpected) else {
     fail("expected malformed xref header to require reconstruction")
+  }
+  let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
+  @test.assert_eq(recovered.first_xref(), 0)
+  @test.assert_eq(recovered.endpage(), expected_pages)
+  let reparsed = fixture_acceptance_reparse_compressed_for_test(recovered)
+  @test.assert_eq(reparsed.endpage(), expected_pages)
+}
+
+///|
+fn fixture_acceptance_assert_trailer_keyword_reconstructs_for_test(
+  bytes : Bytes,
+  expected_pages : Int,
+) -> Unit raise {
+  let corrupted = fixture_acceptance_corrupt_startxref_trailer_keyword_for_test(
+    bytes,
+  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    corrupted,
+  )
+  guard strict is Err(@pdflite.PdfError::XRefEntryExpected) else {
+    match strict {
+      Err(error) => fail(error.to_json().stringify())
+      Ok(_) =>
+        fail("expected malformed trailer keyword to require reconstruction")
+    }
   }
   let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
   @test.assert_eq(recovered.first_xref(), 0)
@@ -1069,6 +1115,19 @@ async test "optional cpdf source manual image fixtures reconstruct damaged xref 
       None => ()
       Some(bytes) =>
         fixture_acceptance_assert_xref_header_reconstructs_for_test(bytes, 1)
+    }
+  }
+}
+
+///|
+async test "optional cpdf source manual image fixtures reconstruct damaged trailer keywords" {
+  for path in fixture_acceptance_cpdf_manual_image_paths_for_test {
+    match fixture_acceptance_optional_bytes_for_test(path) {
+      None => ()
+      Some(bytes) =>
+        fixture_acceptance_assert_trailer_keyword_reconstructs_for_test(
+          bytes, 1,
+        )
     }
   }
 }

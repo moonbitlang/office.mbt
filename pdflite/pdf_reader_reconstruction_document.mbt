@@ -309,7 +309,36 @@ fn PdfDocument::select_reconstructed_trailer(
       _ => ()
     }
   } nobreak {
-    raise RootExpected
+    if trailers.length() == 0 {
+      match self.infer_reconstructed_catalog_trailer() {
+        Some(trailer) => trailer
+        None => raise RootExpected
+      }
+    } else {
+      raise RootExpected
+    }
+  }
+}
+
+///|
+fn PdfDocument::infer_reconstructed_catalog_trailer(
+  self : PdfDocument,
+) -> PdfObject? {
+  for number in self.object_numbers() {
+    let object = self.lookup_object_or_null(number)
+    match object {
+      PdfDictionary(_) =>
+        if object.lookup_immediate(pdf_page_type_key()) ==
+          Some(PdfNameObject(pdf_page_type_catalog())) &&
+          object.lookup_immediate(pdf_page_pages_key()) is Some(_) {
+          break Some(
+            PdfDictionary([(pdf_reader_root_name(), PdfIndirect(number))]),
+          )
+        }
+      _ => ()
+    }
+  } nobreak {
+    None
   }
 }
 
