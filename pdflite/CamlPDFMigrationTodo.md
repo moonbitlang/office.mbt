@@ -1818,6 +1818,13 @@ Current backend snapshot:
   compressed rewrite/reread page preservation. Focused native validation
   reports `moon test --target native fixture_acceptance` at 35/35 tests
   passing; native full-suite validation reports 2187/2187 tests passing.~~
+- [x] ~~Broaden optional `.repos/cpdf-source` cpdf manual xref-stream type
+  recovery: `fixture_acceptance` now replaces the 175-page manual's
+  startxref-targeted `/Type /XRef` entry with `/Type /Bad`, requiring strict
+  `XRefExpected`, public reconstruction, and compressed rewrite/reread page
+  preservation. Focused native validation reports `moon test --target native
+  fixture_acceptance` at 36/36 tests passing; native full-suite validation
+  reports 2189/2189 tests passing.~~
 - [ ] Add further malformed xref-table/xref-stream/object-stream recovery cases
   from real-world PDFs.
 - [x] ~~Add a native reader-boundary gate for the next available predefined CMap
@@ -4997,6 +5004,11 @@ Current backend snapshot:
   image-document creation, RGB24 extraction, and compressed rewrite/reread
   preservation. `moon test --target native` now reports 2188/2188 tests
   passing.~~
+- [x] ~~Add the next remaining format parity slice: optional cpdf manual
+  source-corpus recovery now gates malformed xref-stream `/Type` metadata in
+  the 175-page manual through strict-reader rejection, public reconstruction,
+  and compressed rewrite/reread preservation. `moon test --target native` now
+  reports 2189/2189 tests passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.
