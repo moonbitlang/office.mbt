@@ -575,6 +575,8 @@ pub fn pdf_document_of_parsed_indirect_objects(ArrayView[PdfParsedIndirectObject
 
 pub fn pdf_draft(@core.PdfName?, Bool, ArrayView[Int], PdfDocument) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_draw(PdfDocument, ArrayView[Int], ArrayView[PdfDrawOp], struct_tree? : Bool, fast? : Bool, underneath? : Bool, filename? : String, bates? : Int, bates_pad? : Int?, time? : PdfStrftimeTime?, add_artifacts? : Bool) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_draw_colour_of_string(String) -> PdfDrawColour
 
 pub fn pdf_draw_control() -> PdfDrawControl
@@ -2608,6 +2610,7 @@ pub fn PdfDocument::dict_entry_rendered_values(Self, @core.PdfName) -> Array[Byt
 pub fn PdfDocument::dict_entry_values(Self, @core.PdfName) -> Array[PdfObject]
 pub fn PdfDocument::direct(Self, PdfObject) -> PdfObject
 pub fn PdfDocument::draft(Self, @core.PdfName?, Bool, ArrayView[Int]) -> Self raise @core.PdfError
+pub fn PdfDocument::draw(Self, ArrayView[Int], ArrayView[PdfDrawOp], struct_tree? : Bool, fast? : Bool, underneath? : Bool, filename? : String, bates? : Int, bates_pad? : Int?, time? : PdfStrftimeTime?, add_artifacts? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::draw_special_text_context(Self, Int, filename? : String, bates? : Int, bates_pad? : Int?, time? : PdfStrftimeTime?) -> PdfDrawSpecialTextContext raise @core.PdfError
 pub fn PdfDocument::encrypt_128bit(Self, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission], file_id? : BytesView) -> Self raise @core.PdfError
 pub fn PdfDocument::encrypt_128bit_aesv2_with_iv_provider(Self, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission], (Int, Int, Int) -> Bytes raise @core.PdfError, encrypt_metadata? : Bool, file_id? : BytesView) -> Self raise @core.PdfError

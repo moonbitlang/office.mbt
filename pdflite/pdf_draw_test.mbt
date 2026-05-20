@@ -35,6 +35,16 @@ fn draw_time_for_test() -> @pdflite.PdfStrftimeTime {
 }
 
 ///|
+fn draw_page_ops_for_test(
+  document : @pdflite.PdfDocument,
+  page_number : Int,
+) -> Array[@pdflite.PdfContentOp] raise Error {
+  let pages = try! document.pages_of_pagetree()
+  let page = pages[page_number - 1]
+  document.parse_content_ops_with_resources(page.resources, page.content)
+}
+
+///|
 test "pdf draw debug strings match cpdf spelling" {
   @test.assert_eq(
     @pdflite.pdf_string_of_drawop(PdfDrawRect(0.0, 0.0, 1.0, 2.0)),
@@ -741,6 +751,170 @@ test "pdf draw form use reports missing form name" {
     fail("expected SoftError for missing form XObject")
   }
   @test.assert_eq(message, "Form XObject not found: missing")
+}
+
+///|
+test "PdfDocument draw appends operators to selected pages" {
+  let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 2)
+  let drawn = try! document.draw([2], [
+    PdfDrawRect(1.0, 2.0, 3.0, 4.0),
+    PdfDrawStroke,
+  ])
+  @test.assert_eq(try! draw_page_ops_for_test(drawn, 1), [])
+  @test.assert_eq(try! draw_page_ops_for_test(drawn, 2), [
+    Op_re(1.0, 2.0, 3.0, 4.0),
+    Op_S,
+  ])
+}
+
+///|
+test "PdfDocument draw can prepend underneath existing content" {
+  let base = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
+  let pages = try! base.pages_of_pagetree()
+  let page = {
+    ..pages[0],
+    content: [
+      try! @pdflite.pdf_content_stream_of_ops([
+        Op_re(10.0, 20.0, 30.0, 40.0),
+        Op_S,
+      ]),
+    ],
+  }
+  let document = try! base.change_pages([page])
+  let drawn = try! document.draw(
+    [1],
+    [PdfDrawRect(1.0, 2.0, 3.0, 4.0), PdfDrawFill],
+    underneath=true,
+  )
+  @test.assert_eq(try! draw_page_ops_for_test(drawn, 1), [
+    Op_re(1.0, 2.0, 3.0, 4.0),
+    Op_f,
+    Op_re(10.0, 20.0, 30.0, 40.0),
+    Op_S,
+  ])
+}
+
+///|
+test "PdfDocument draw expands special text per selected page" {
+  let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 2)
+  let font = draw_standard_font_for_test(PdfHelvetica)
+  let pack = try! @pdflite.pdf_fontpack_of_standard_font(font)
+  let f1 = draw_name_for_test("/F1")
+  let drawn = try! document.draw(
+    [1, 2],
+    [
+      PdfDrawTextSection([
+        PdfDrawFontPack("Body", pack, []),
+        PdfDrawFont("Body", 10.0),
+        PdfDrawSpecialText("%Page"),
+      ]),
+    ],
+    time=Some(draw_time_for_test()),
+  )
+  @test.assert_eq(try! draw_page_ops_for_test(drawn, 1), [
+    Op_BT,
+    Op_Tf(f1, 10.0),
+    Op_Tj(@ascii.encode("1")),
+    Op_ET,
+  ])
+  @test.assert_eq(try! draw_page_ops_for_test(drawn, 2), [
+    Op_BT,
+    Op_Tf(f1, 10.0),
+    Op_Tj(@ascii.encode("2")),
+    Op_ET,
+  ])
+}
+
+///|
+test "PdfDocument draw starts resource names above selected page resources" {
+  let base = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
+  let pages = try! base.pages_of_pagetree()
+  let font_key = draw_name_for_test("/Font")
+  let old_font = draw_name_for_test("/F1")
+  let new_font = draw_name_for_test("/F3")
+  let page = {
+    ..pages[0],
+    resources: PdfDictionary([
+      (font_key, PdfDictionary([(old_font, PdfIndirect(99))])),
+    ]),
+  }
+  let document = try! base.change_pages([page])
+  let font = draw_standard_font_for_test(PdfHelvetica)
+  let pack = try! @pdflite.pdf_fontpack_of_standard_font(font)
+  let drawn = try! document.draw([1], [
+    PdfDrawTextSection([
+      PdfDrawFontPack("Body", pack, []),
+      PdfDrawFont("Body", 10.0),
+      PdfDrawText("A"),
+    ]),
+  ])
+  @test.assert_eq(try! draw_page_ops_for_test(drawn, 1), [
+    Op_BT,
+    Op_Tf(new_font, 10.0),
+    Op_Tj(@ascii.encode("A")),
+    Op_ET,
+  ])
+  let drawn_page = (try! drawn.pages_of_pagetree())[0]
+  guard drawn_page.resources.lookup_immediate(font_key) is Some(fonts) else {
+    fail("expected Font resources")
+  }
+  @test.assert_eq(fonts.lookup_immediate(old_font), Some(PdfIndirect(99)))
+  guard fonts.lookup_immediate(new_font) is Some(PdfIndirect(_)) else {
+    fail("expected new indirect font resource")
+  }
+}
+
+///|
+test "PdfDocument draw splits chunks around NewPage and pads at document end" {
+  let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
+  let drawn = try! document.draw([1], [
+    PdfDrawRect(1.0, 2.0, 3.0, 4.0),
+    PdfDrawStroke,
+    PdfDrawNewPage,
+    PdfDrawRect(5.0, 6.0, 7.0, 8.0),
+    PdfDrawFill,
+  ])
+  @test.assert_eq(try! drawn.endpage(), 2)
+  @test.assert_eq(try! draw_page_ops_for_test(drawn, 1), [
+    Op_re(1.0, 2.0, 3.0, 4.0),
+    Op_S,
+  ])
+  @test.assert_eq(try! draw_page_ops_for_test(drawn, 2), [
+    Op_re(5.0, 6.0, 7.0, 8.0),
+    Op_f,
+  ])
+}
+
+///|
+test "PdfDocument draw trailing NewPage adds one blank page" {
+  let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
+  let drawn = try! document.draw([1], [
+    PdfDrawRect(1.0, 2.0, 3.0, 4.0),
+    PdfDrawStroke,
+    PdfDrawNewPage,
+  ])
+  @test.assert_eq(try! drawn.endpage(), 2)
+  @test.assert_eq(try! draw_page_ops_for_test(drawn, 1), [
+    Op_re(1.0, 2.0, 3.0, 4.0),
+    Op_S,
+  ])
+  @test.assert_eq(try! draw_page_ops_for_test(drawn, 2), [])
+}
+
+///|
+test "PdfDocument draw rejects structure-tree mode until tree writing is ported" {
+  let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
+  let result : Result[@pdflite.PdfDocument, Error] = try? document.draw(
+    [1],
+    [PdfDrawRect(1.0, 2.0, 3.0, 4.0)],
+    struct_tree=true,
+  )
+  guard result is Err(@pdflite.PdfError::SoftError(message)) else {
+    fail("expected structured draw soft error")
+  }
+  @test.assert_eq(
+    message, "Cpdfdraw: structured draw output not yet implemented",
+  )
 }
 
 ///|
