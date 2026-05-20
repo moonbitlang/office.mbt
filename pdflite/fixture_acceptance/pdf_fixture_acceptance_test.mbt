@@ -161,6 +161,40 @@ fn fixture_acceptance_corrupt_first_in_use_xref_marker_for_test(
 }
 
 ///|
+fn fixture_acceptance_corrupt_first_in_use_xref_offset_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  let free_row = @ascii.encode("0000000000 65535 f")
+  let free_row_position = fixture_acceptance_find_bytes_for_test(
+    bytes, free_row,
+  )
+  if free_row_position < 0 {
+    fail("expected classic xref free row")
+  }
+  let mut row_start = free_row_position + free_row.length()
+  while row_start < bytes.length() &&
+        bytes[row_start] != b'\n' &&
+        bytes[row_start] != b'\r' {
+    row_start += 1
+  }
+  while row_start < bytes.length() &&
+        (bytes[row_start] == b'\n' || bytes[row_start] == b'\r') {
+    row_start += 1
+  }
+  if row_start + 10 > bytes.length() {
+    fail("expected first in-use xref row")
+  }
+  let output : Array[Byte] = []
+  for byte in bytes {
+    output.push(byte)
+  }
+  for index in row_start..<(row_start + 10) {
+    output[index] = b'9'
+  }
+  Bytes::from_array(output)
+}
+
+///|
 fn fixture_acceptance_replace_first_bytes_for_test(
   bytes : Bytes,
   target : BytesView,
@@ -336,6 +370,27 @@ fn fixture_acceptance_assert_classic_xref_marker_reconstructs_for_test(
 }
 
 ///|
+fn fixture_acceptance_assert_classic_xref_offset_reconstructs_for_test(
+  bytes : Bytes,
+  expected_pages : Int,
+) -> Unit raise {
+  let corrupted = fixture_acceptance_corrupt_first_in_use_xref_offset_for_test(
+    bytes,
+  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    corrupted,
+  )
+  guard strict is Err(_) else {
+    fail("expected malformed classic xref offset to require reconstruction")
+  }
+  let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
+  @test.assert_eq(recovered.first_xref(), 0)
+  @test.assert_eq(recovered.endpage(), expected_pages)
+  let reparsed = fixture_acceptance_reparse_compressed_for_test(recovered)
+  @test.assert_eq(reparsed.endpage(), expected_pages)
+}
+
+///|
 fn fixture_acceptance_assert_xref_stream_widths_reconstructs_for_test(
   bytes : Bytes,
   expected_pages : Int,
@@ -424,6 +479,14 @@ async test "checked-in CamlPDF logo fixture reconstructs linearized bad startxre
 ///|
 async test "checked-in CamlPDF logo fixture reconstructs malformed classic xref row" {
   fixture_acceptance_assert_classic_xref_marker_reconstructs_for_test(
+    fixture_acceptance_bytes_for_test("fixtures/camlpdf/logo.pdf"),
+    1,
+  )
+}
+
+///|
+async test "checked-in CamlPDF logo fixture reconstructs malformed classic xref offset" {
+  fixture_acceptance_assert_classic_xref_offset_reconstructs_for_test(
     fixture_acceptance_bytes_for_test("fixtures/camlpdf/logo.pdf"),
     1,
   )
