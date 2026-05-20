@@ -1736,6 +1736,29 @@ fn fixture_acceptance_assert_cpdf_manual_reports_for_test(
 }
 
 ///|
+fn fixture_acceptance_assert_cpdf_manual_annotations_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 175)
+  let annotated = document.parse_pagespec("annotated")
+  @test.assert_eq(annotated.length() > 0, true)
+  let page = annotated[0]
+  let annotation_json = document.annotations_json([page]).stringify()
+  fixture_acceptance_assert_contains_for_test(
+    annotation_json, "\"/CPDFJSONannotformatversion\"",
+  )
+  fixture_acceptance_assert_contains_for_test(annotation_json, "\"/Subtype\"")
+  fixture_acceptance_assert_contains_for_test(annotation_json, "\"/Link\"")
+  fixture_acceptance_assert_contains_for_test(annotation_json, "\"/Rect\"")
+  fixture_acceptance_assert_contains_for_test(annotation_json, "\"/A\"")
+  let annotation_blob = @ascii.decode_lossy(
+    document.annotations_json_blob([page]),
+  )
+  fixture_acceptance_assert_contains_for_test(annotation_blob, "\"/Link\"")
+  fixture_acceptance_assert_contains_for_test(annotation_blob, "\"/Rect\"")
+}
+
+///|
 async test "checked-in CamlPDF logo fixture reconstructs linearized bad startxref" {
   fixture_acceptance_assert_reconstructs_for_test(
     fixture_acceptance_bytes_for_test("fixtures/camlpdf/logo.pdf"),
@@ -2046,6 +2069,23 @@ async test "optional cpdf source manual fixture reports info page details and co
       fixture_acceptance_assert_cpdf_manual_reports_for_test(
         @pdflite.pdf_read_document_from_bytes(rewritten),
         rewritten.length(),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source manual fixture exports annotation JSON" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/cpdfmanual.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_manual_annotations_for_test(document)
+      fixture_acceptance_assert_cpdf_manual_annotations_for_test(
+        fixture_acceptance_reparse_compressed_for_test(document),
       )
     }
   }

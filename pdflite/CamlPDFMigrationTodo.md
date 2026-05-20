@@ -5322,6 +5322,13 @@ Current backend snapshot:
   2012/2012 tests passing. Full plain-Wasm `moon test --target wasm` remains
   explicitly not claimed because it still exceeds the runtime maximum
   function-size limit in `markdown.blackbox_test.wasm`.~~
+- [x] ~~Add the next source-boundary annotation JSON slice: optional
+  `.repos/cpdf-source/cpdfmanual.pdf` now gates cpdf-style real link annotation
+  JSON export and UTF-8 blob output from an annotated manual page before and
+  after compressed rewrite/reread. `moon test --target native
+  fixture_acceptance --filter '*annotation JSON*'` reports 1/1 test passing,
+  `moon test --target native fixture_acceptance` reports 47/47 tests passing,
+  and `moon test --target native` reports 2218/2218 tests passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
