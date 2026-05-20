@@ -1635,6 +1635,13 @@ Current backend snapshot:
   requires strict-reader failure, reconstructs through the public recovery
   reader, and verifies compressed-xref rewrite/reread page counts. `moon test
   --target native fixture_acceptance` reports 6/6 tests passing.~~
+- [x] ~~Add a checked-in CamlPDF real-world malformed xref-stream width gate:
+  `fixture_acceptance` now corrupts the `/W` entry in the xref-stream-backed
+  `introduction_to_camlpdf.pdf` fixture while keeping `startxref` valid,
+  public reconstruction expands physically present object streams when xref
+  stream entries are unavailable, and compressed-xref rewrite/reread preserves
+  all pages. `moon test --target native fixture_acceptance` reports 7/7 tests
+  passing.~~
 - [ ] Add further malformed xref-table/xref-stream/object-stream recovery cases
   from real-world PDFs.
 - [x] ~~Add a native reader-boundary gate for the next available predefined CMap

@@ -161,6 +161,40 @@ fn fixture_acceptance_corrupt_first_in_use_xref_marker_for_test(
 }
 
 ///|
+fn fixture_acceptance_replace_first_bytes_for_test(
+  bytes : Bytes,
+  target : BytesView,
+  replacement : BytesView,
+) -> Bytes raise {
+  if target.length() != replacement.length() {
+    fail("replacement must preserve byte length")
+  }
+  let position = fixture_acceptance_find_bytes_for_test(bytes, target)
+  if position < 0 {
+    fail("expected replacement target")
+  }
+  let output : Array[Byte] = []
+  for byte in bytes {
+    output.push(byte)
+  }
+  for index in 0..<replacement.length() {
+    output[position + index] = replacement[index]
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn fixture_acceptance_corrupt_xref_stream_widths_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  fixture_acceptance_replace_first_bytes_for_test(
+    bytes,
+    @ascii.encode("/W [1 3 1]"),
+    @ascii.encode("/W /Bad   "),
+  )
+}
+
+///|
 fn fixture_acceptance_reparse_compressed_for_test(
   document : @pdflite.PdfDocument,
 ) -> @pdflite.PdfDocument raise {
@@ -210,6 +244,25 @@ fn fixture_acceptance_assert_classic_xref_marker_reconstructs_for_test(
 }
 
 ///|
+fn fixture_acceptance_assert_xref_stream_widths_reconstructs_for_test(
+  bytes : Bytes,
+  expected_pages : Int,
+) -> Unit raise {
+  let corrupted = fixture_acceptance_corrupt_xref_stream_widths_for_test(bytes)
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    corrupted,
+  )
+  guard strict is Err(@pdflite.PdfError::XRefEntryExpected) else {
+    fail("expected malformed xref stream widths to require reconstruction")
+  }
+  let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
+  @test.assert_eq(recovered.first_xref(), 0)
+  @test.assert_eq(recovered.endpage(), expected_pages)
+  let reparsed = fixture_acceptance_reparse_compressed_for_test(recovered)
+  @test.assert_eq(reparsed.endpage(), expected_pages)
+}
+
+///|
 async test "checked-in CamlPDF logo fixture reconstructs linearized bad startxref" {
   fixture_acceptance_assert_reconstructs_for_test(
     fixture_acceptance_bytes_for_test("fixtures/camlpdf/logo.pdf"),
@@ -222,6 +275,16 @@ async test "checked-in CamlPDF logo fixture reconstructs malformed classic xref 
   fixture_acceptance_assert_classic_xref_marker_reconstructs_for_test(
     fixture_acceptance_bytes_for_test("fixtures/camlpdf/logo.pdf"),
     1,
+  )
+}
+
+///|
+async test "checked-in CamlPDF introduction fixture reconstructs malformed xref stream widths" {
+  fixture_acceptance_assert_xref_stream_widths_reconstructs_for_test(
+    fixture_acceptance_bytes_for_test(
+      "fixtures/camlpdf/introduction_to_camlpdf.pdf",
+    ),
+    10,
   )
 }
 

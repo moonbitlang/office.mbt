@@ -206,7 +206,13 @@ pub fn pdf_read_document_from_view(
         include_xref_stream_trailers=true,
       )
     XRefEntryExpected =>
-      if pdf_reader_startxref_root_uses_object_stream_or_false(data) {
+      if pdf_reader_xref_entry_error_from_metadata(data) {
+        pdf_read_reconstructed_or_raise(
+          data,
+          XRefEntryExpected,
+          include_xref_stream_trailers=true,
+        )
+      } else if pdf_reader_startxref_root_uses_object_stream_or_false(data) {
         raise XRefEntryExpected
       } else {
         pdf_read_reconstructed_or_raise(data, XRefEntryExpected)

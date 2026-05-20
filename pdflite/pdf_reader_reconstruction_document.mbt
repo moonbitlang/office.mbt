@@ -101,6 +101,35 @@ fn PdfDocument::load_reconstructed_xref_stream_embedded_objects(
 }
 
 ///|
+fn PdfDocument::load_reconstructed_physical_object_stream_members(
+  self : PdfDocument,
+) -> Unit {
+  for object_stream_number in self.object_numbers() {
+    let context_result : Result[PdfObjectStreamContext, Error] = try? self.read_object_stream_context(
+      object_stream_number,
+    )
+    match context_result {
+      Ok(context) =>
+        for index in 0..<context.pairs.length() {
+          let loaded_member : Result[(Int, PdfObject), Error] = try? context.read_reference({
+              object_stream_number,
+              index,
+            },
+          )
+          match loaded_member {
+            Ok((object_number, object)) =>
+              if self.lookup_object_or_null(object_number) is PdfNull {
+                self.load_object_given_number(object_number, object)
+              }
+            Err(_) => ()
+          }
+        }
+      Err(_) => ()
+    }
+  }
+}
+
+///|
 fn PdfDocument::load_reconstructed_xref_stream_embedded_objects_with_passwords(
   self : PdfDocument,
   xrefs : ArrayView[PdfClassicXRefEntry],
@@ -346,6 +375,7 @@ fn pdf_read_reconstructed_document_from_view(
   }
   if include_xref_stream_trailers {
     document.load_reconstructed_xref_stream_objects(data, xref_stream_sections)
+    document.load_reconstructed_physical_object_stream_members()
   }
   document.set_trailer_and_root(
     document.select_reconstructed_trailer(
