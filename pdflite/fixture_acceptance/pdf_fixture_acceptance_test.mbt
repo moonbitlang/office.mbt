@@ -1857,6 +1857,61 @@ fn fixture_acceptance_assert_cpdf_manual_images_for_test(
 }
 
 ///|
+fn fixture_acceptance_assert_cpdf_fonts_fixture_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 1)
+  let fonts = document.list_fonts([1])
+  @test.assert_eq(fonts.length(), 2)
+  @test.assert_eq(fonts[0].name, "/F1")
+  @test.assert_eq(fonts[0].subtype, "/Type1")
+  @test.assert_eq(fonts[0].basefont, "/Times-Roman")
+  @test.assert_eq(fonts[0].encoding, "/WinAnsiEncoding")
+  @test.assert_eq(fonts[1].name, "/F2")
+  @test.assert_eq(fonts[1].subtype, "/Type1")
+  @test.assert_eq(fonts[1].basefont, "/Times-BoldItalic")
+  @test.assert_eq(fonts[1].encoding, "/WinAnsiEncoding")
+  let fonts_text = @ascii.decode_lossy(document.list_fonts_text([1]))
+  fixture_acceptance_assert_contains_for_test(
+    fonts_text, "1 /F1 /Type1 /Times-Roman /WinAnsiEncoding\n",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    fonts_text, "1 /F2 /Type1 /Times-BoldItalic /WinAnsiEncoding\n",
+  )
+  let fonts_json = document.fonts_json([1]).stringify()
+  fixture_acceptance_assert_contains_for_test(fonts_json, "\"name\":\"/F1\"")
+  fixture_acceptance_assert_contains_for_test(
+    fonts_json, "\"basefont\":\"/Times-Roman\"",
+  )
+  fixture_acceptance_assert_contains_for_test(fonts_json, "\"name\":\"/F2\"")
+  fixture_acceptance_assert_contains_for_test(
+    fonts_json, "\"basefont\":\"/Times-BoldItalic\"",
+  )
+  let fonts_blob = @ascii.decode_lossy(document.fonts_json_blob([1]))
+  fixture_acceptance_assert_contains_for_test(fonts_blob, "\"name\":\"/F1\"")
+  let first_font = document.font_from_name("/F1", 1)
+  @test.assert_eq(first_font != PdfNull, true)
+  @test.assert_eq(document.font_from_name("/Missing", 1), PdfNull)
+  let font_table = @ascii.decode_lossy(document.font_table_text("/F1", 1))
+  fixture_acceptance_assert_contains_for_test(
+    font_table, "65 = U+0041 (A - LATIN CAPITAL LETTER A) = A\n",
+  )
+  let missing = document.missing_fonts([1])
+  @test.assert_eq(missing.length(), 2)
+  @test.assert_eq(missing[0].name, "/F1")
+  @test.assert_eq(missing[0].basefont, "/Times-Roman")
+  @test.assert_eq(missing[1].name, "/F2")
+  @test.assert_eq(missing[1].basefont, "/Times-BoldItalic")
+  let missing_text = @ascii.decode_lossy(document.missing_fonts_text([1]))
+  fixture_acceptance_assert_contains_for_test(
+    missing_text, "1, /F1, /Type1, /Times-Roman, /WinAnsiEncoding\n",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    missing_text, "1, /F2, /Type1, /Times-BoldItalic, /WinAnsiEncoding\n",
+  )
+}
+
+///|
 async test "checked-in CamlPDF logo fixture reconstructs linearized bad startxref" {
   fixture_acceptance_assert_reconstructs_for_test(
     fixture_acceptance_bytes_for_test("fixtures/camlpdf/logo.pdf"),
@@ -2130,6 +2185,23 @@ async test "optional cpdf source PNG image fixture reports and extracts image" {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
       fixture_acceptance_assert_cpdf_png_image_for_test(document)
       fixture_acceptance_assert_cpdf_png_image_for_test(
+        fixture_acceptance_reparse_compressed_for_test(document),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source manual font fixture reports font tables" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/manualimages/fonts.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_fonts_fixture_for_test(document)
+      fixture_acceptance_assert_cpdf_fonts_fixture_for_test(
         fixture_acceptance_reparse_compressed_for_test(document),
       )
     }

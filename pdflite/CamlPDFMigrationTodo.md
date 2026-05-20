@@ -5345,6 +5345,14 @@ Current backend snapshot:
   fixture_acceptance --filter '*embedded images*'` reports 1/1 test passing,
   `moon test --target native fixture_acceptance` reports 49/49 tests passing,
   and `moon test --target native` reports 2220/2220 tests passing.~~
+- [x] ~~Add the next source-boundary `cpdffont` slice: optional
+  `.repos/cpdf-source/manualimages/fonts.pdf` now gates real Type1 font
+  listing, font JSON/UTF-8 blob output, named font lookup, font-table rendering,
+  and cpdf-style missing-font rows for unembedded Times resources before and
+  after compressed rewrite/reread. `moon test --target native
+  fixture_acceptance --filter '*font fixture*'` reports 1/1 test passing,
+  `moon test --target native fixture_acceptance` reports 50/50 tests passing,
+  and `moon test --target native` reports 2221/2221 tests passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
