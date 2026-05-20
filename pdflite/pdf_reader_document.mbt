@@ -213,7 +213,15 @@ pub fn pdf_read_document_from_view(
           include_xref_stream_trailers=true,
         )
       } else if pdf_reader_startxref_root_uses_object_stream_or_false(data) {
-        raise XRefEntryExpected
+        if pdf_reader_startxref_object_stream_root_unusable_or_true(data) {
+          raise XRefEntryExpected
+        } else {
+          pdf_read_reconstructed_or_raise(
+            data,
+            XRefEntryExpected,
+            include_xref_stream_trailers=true,
+          )
+        }
       } else {
         pdf_read_reconstructed_or_raise(data, XRefEntryExpected)
       }

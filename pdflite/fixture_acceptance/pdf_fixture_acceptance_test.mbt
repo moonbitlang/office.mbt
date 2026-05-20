@@ -555,6 +555,18 @@ fn fixture_acceptance_corrupt_xref_stream_root_entry_for_test(
 }
 
 ///|
+fn fixture_acceptance_corrupt_first_object_stream_count_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  fixture_acceptance_replace_bytes_after_with_padded_ascii_for_test(
+    bytes,
+    @ascii.encode("/Type /ObjStm"),
+    @ascii.encode("/N 100"),
+    "/N/Bad",
+  )
+}
+
+///|
 fn fixture_acceptance_corrupt_xref_stream_filter_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
@@ -877,6 +889,31 @@ fn fixture_acceptance_assert_xref_stream_root_entry_reconstructs_for_test(
       Err(error) => fail(error.to_json().stringify())
       Ok(_) =>
         fail("expected malformed xref stream root to require reconstruction")
+    }
+  }
+  let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
+  @test.assert_eq(recovered.first_xref(), 0)
+  @test.assert_eq(recovered.endpage(), expected_pages)
+  let reparsed = fixture_acceptance_reparse_compressed_for_test(recovered)
+  @test.assert_eq(reparsed.endpage(), expected_pages)
+}
+
+///|
+fn fixture_acceptance_assert_object_stream_count_reconstructs_for_test(
+  bytes : Bytes,
+  expected_pages : Int,
+) -> Unit raise {
+  let corrupted = fixture_acceptance_corrupt_first_object_stream_count_for_test(
+    bytes,
+  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    corrupted,
+  )
+  guard strict is Err(@pdflite.PdfError::XRefEntryExpected) else {
+    match strict {
+      Err(error) => fail(error.to_json().stringify())
+      Ok(_) =>
+        fail("expected malformed object stream count to require reconstruction")
     }
   }
   let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
@@ -1262,6 +1299,20 @@ async test "optional cpdf source manual fixture reconstructs malformed xref stre
         bytes,
         175,
         @ascii.encode("/Root 1841 0 R"),
+      )
+  }
+}
+
+///|
+async test "optional cpdf source manual fixture reconstructs malformed object stream count" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/cpdfmanual.pdf",
+    ) {
+    None => ()
+    Some(bytes) =>
+      fixture_acceptance_assert_object_stream_count_reconstructs_for_test(
+        bytes, 175,
       )
   }
 }

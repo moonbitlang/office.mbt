@@ -69,6 +69,75 @@ fn pdf_reader_startxref_root_uses_object_stream_or_false(
 }
 
 ///|
+fn pdf_reader_startxref_object_stream_root_unusable(
+  data : BytesView,
+) -> Bool raise PdfError {
+  let cursor = byte_cursor_of_view(data)
+  ignore(cursor.read_pdf_header())
+  cursor.seek_pdf_absolute(pdf_read_startxref_position(cursor.data))
+  let section = cursor.read_pdf_xref_section()
+  match section.trailer.lookup_immediate(pdf_reader_root_name()) {
+    Some(PdfIndirect(root)) =>
+      match pdf_classic_xref_lookup(section.entries, root) {
+        Some(entry) =>
+          match entry.object_stream {
+            Some(root_reference) =>
+              match
+                pdf_classic_xref_lookup(
+                  section.entries,
+                  root_reference.object_stream_number,
+                ) {
+                Some(entry) =>
+                  match entry.object_stream {
+                    Some(_) => true
+                    None => {
+                      let object_stream_xref = entry
+                      let xref_index = pdf_classic_xref_index(section.entries)
+                      cursor.seek_pdf_absolute(object_stream_xref.offset)
+                      let parsed = cursor.read_first_indirect_object_at_current(
+                        section.entries,
+                        xref_index=Some(xref_index),
+                      )
+                      if parsed.number != root_reference.object_stream_number ||
+                        parsed.generation != object_stream_xref.generation {
+                        true
+                      } else {
+                        let document = pdf_document_empty()
+                        document.load_object_given_number(
+                          parsed.number,
+                          parsed.object,
+                          generation=parsed.generation,
+                        )
+                        let context = document.read_object_stream_context(
+                          root_reference.object_stream_number,
+                        )
+                        let root_object = context.read_reference(root_reference)
+                        root_object.0 != root
+                      }
+                    }
+                  }
+                None => true
+              }
+            None => false
+          }
+        None => false
+      }
+    _ => false
+  }
+}
+
+///|
+fn pdf_reader_startxref_object_stream_root_unusable_or_true(
+  data : BytesView,
+) -> Bool {
+  try pdf_reader_startxref_object_stream_root_unusable(data) catch {
+    _ => true
+  } noraise {
+    value => value
+  }
+}
+
+///|
 fn pdf_reader_startxref_uses_xref_stream(
   data : BytesView,
 ) -> Bool raise PdfError {
