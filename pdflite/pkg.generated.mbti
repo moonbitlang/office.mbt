@@ -2911,6 +2911,8 @@ pub fn PdfDrawControl::add_char_space(Self, Double) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_circle(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_element_info(Self, String, PdfObject) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_image(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_jpeg2000_data(Self, String, BytesView) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_jpeg_data(Self, String, BytesView) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_leading(Self, Double) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_line(Self, PdfDocument, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_namespace(Self, String) -> Unit raise @core.PdfError
@@ -2920,6 +2922,7 @@ pub fn PdfDrawControl::add_op(Self, PdfDrawOp) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_opacity(Self, Double) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_para(Self, PdfDocument, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_paras(Self, PdfDocument, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_png_data(Self, PdfDocument, String, BytesView) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_rect(Self, PdfDocument, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_render_mode(Self, Int) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_rise(Self, Double) -> Unit raise @core.PdfError

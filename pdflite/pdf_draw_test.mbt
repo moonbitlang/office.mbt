@@ -13,6 +13,77 @@ fn draw_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
 }
 
 ///|
+fn draw_append_bytes_for_test(output : Array[Byte], bytes : BytesView) -> Unit {
+  for byte in bytes {
+    output.push(byte)
+  }
+}
+
+///|
+fn draw_push_u32_for_test(output : Array[Byte], value : Int) -> Unit {
+  output.push(try! @pdflite.pdf_byte_of_int((value >> 24) & 0xFF))
+  output.push(try! @pdflite.pdf_byte_of_int((value >> 16) & 0xFF))
+  output.push(try! @pdflite.pdf_byte_of_int((value >> 8) & 0xFF))
+  output.push(try! @pdflite.pdf_byte_of_int(value & 0xFF))
+}
+
+///|
+fn draw_png_chunk_for_test(
+  chunk_type : ArrayView[Int],
+  data : BytesView,
+) -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  draw_push_u32_for_test(output, data.length())
+  for value in chunk_type {
+    output.push(try! @pdflite.pdf_byte_of_int(value))
+  }
+  draw_append_bytes_for_test(output, data)
+  draw_push_u32_for_test(output, 0)
+  Bytes::from_array(output)
+}
+
+///|
+fn draw_png_rgb_for_test() -> (@pdflite.PdfBytes, @pdflite.PdfBytes) {
+  let header = draw_bytes_for_test([0, 0, 0, 2, 0, 0, 0, 1, 8, 2, 0, 0, 0])
+  let idat = @pdflite.pdf_flate_encode(
+    draw_bytes_for_test([0, 10, 20, 30, 40, 50, 60]),
+  )
+  let output : Array[Byte] = []
+  for value in [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A] {
+    output.push(try! @pdflite.pdf_byte_of_int(value))
+  }
+  draw_append_bytes_for_test(
+    output,
+    draw_png_chunk_for_test([0x49, 0x48, 0x44, 0x52], header),
+  )
+  draw_append_bytes_for_test(
+    output,
+    draw_png_chunk_for_test([0x49, 0x44, 0x41, 0x54], idat),
+  )
+  draw_append_bytes_for_test(
+    output,
+    draw_png_chunk_for_test([0x49, 0x45, 0x4E, 0x44], []),
+  )
+  (Bytes::from_array(output), idat)
+}
+
+///|
+fn draw_jpeg_for_test() -> @pdflite.PdfBytes {
+  draw_bytes_for_test([
+    0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x09, 0x4A, 0x46, 0x49, 0x46, 0x00, 0xAA, 0xBB,
+    0xFF, 0xC0, 0x00, 0x0B, 0x08, 0x01, 0x2C, 0x01, 0x90, 0x03, 0x01, 0xFF, 0xD9,
+  ])
+}
+
+///|
+fn draw_jpeg2000_for_test() -> @pdflite.PdfBytes {
+  draw_bytes_for_test([
+    0x00, 0x00, 0x00, 0x0C, 0x6A, 0x50, 0x20, 0x20, 0x0D, 0x0A, 0x87, 0x0A, 0x69,
+    0x68, 0x64, 0x72, 0x00, 0x00, 0x01, 0x2C, 0x00, 0x00, 0x01, 0x90,
+  ])
+}
+
+///|
 fn draw_standard_font_for_test(
   font : @pdflite.PdfStandardFont,
 ) -> @pdflite.PdfFont {
@@ -1353,6 +1424,91 @@ test "pdf draw control media and text-state helpers append cpdf draw ops" {
     PdfDrawNewline,
   ]
   @test.assert_eq(control.ops(), expected)
+}
+
+///|
+test "pdf draw control image data helpers append image XObjects" {
+  let document = @pdflite.pdf_document_empty()
+  let control = @pdflite.pdf_draw_control_new()
+  let jpeg = draw_jpeg_for_test()
+  let (png, png_idat) = draw_png_rgb_for_test()
+  let jpeg2000 = draw_jpeg2000_for_test()
+  try! control.add_jpeg_data("J0", jpeg)
+  try! control.add_png_data(document, "P0", png)
+  try! control.add_jpeg2000_data("JP0", jpeg2000)
+
+  let ops = control.ops()
+  @test.assert_eq(ops.length(), 3)
+  guard ops[0] is PdfDrawImageXObject("J0", PdfStreamObject(jpeg_stream)) else {
+    fail("expected JPEG image XObject op")
+  }
+  @test.assert_eq(
+    jpeg_stream.dictionary.lookup_immediate(draw_name_for_test("/Filter")),
+    Some(PdfNameObject(draw_name_for_test("/DCTDecode"))),
+  )
+  @test.assert_eq(
+    jpeg_stream.dictionary.lookup_immediate(draw_name_for_test("/Width")),
+    Some(PdfInteger(400)),
+  )
+  @test.assert_eq(jpeg_stream.data, StreamGot(jpeg))
+
+  guard ops[1] is PdfDrawImageXObject("P0", PdfStreamObject(png_stream)) else {
+    fail("expected PNG image XObject op")
+  }
+  @test.assert_eq(
+    png_stream.dictionary.lookup_immediate(draw_name_for_test("/Filter")),
+    Some(PdfNameObject(draw_name_for_test("/FlateDecode"))),
+  )
+  @test.assert_eq(
+    png_stream.dictionary.lookup_immediate(draw_name_for_test("/Width")),
+    Some(PdfInteger(2)),
+  )
+  @test.assert_eq(
+    png_stream.dictionary.lookup_immediate(draw_name_for_test("/Height")),
+    Some(PdfInteger(1)),
+  )
+  @test.assert_eq(png_stream.data, StreamGot(png_idat))
+
+  guard ops[2] is PdfDrawImageXObject("JP0", PdfStreamObject(jp2_stream)) else {
+    fail("expected JPEG2000 image XObject op")
+  }
+  @test.assert_eq(
+    jp2_stream.dictionary.lookup_immediate(draw_name_for_test("/Filter")),
+    Some(PdfNameObject(draw_name_for_test("/JPXDecode"))),
+  )
+  @test.assert_eq(
+    jp2_stream.dictionary.lookup_immediate(draw_name_for_test("/Height")),
+    Some(PdfInteger(300)),
+  )
+  @test.assert_eq(jp2_stream.data, StreamGot(jpeg2000))
+}
+
+///|
+test "pdf draw control image data helpers propagate parser errors" {
+  let document = @pdflite.pdf_document_empty()
+  let control = @pdflite.pdf_draw_control_new()
+  let bad_jpeg : Result[Unit, Error] = try? control.add_jpeg_data(
+    "Bad",
+    draw_bytes_for_test([0xFF, 0xD8, 0xFF, 0xDB]),
+  )
+  guard bad_jpeg is Err(@pdflite.PdfError::BadJPEGHeader) else {
+    fail("expected BadJPEGHeader")
+  }
+  let bad_png : Result[Unit, Error] = try? control.add_png_data(
+    document,
+    "Bad",
+    draw_bytes_for_test([0x89, 0x50]),
+  )
+  guard bad_png is Err(@pdflite.PdfError::BadPNG(_)) else {
+    fail("expected BadPNG")
+  }
+  let bad_jp2 : Result[Unit, Error] = try? control.add_jpeg2000_data(
+    "Bad",
+    draw_bytes_for_test([0x00, 0x00, 0x00, 0x0C, 0x6A]),
+  )
+  guard bad_jp2 is Err(@pdflite.PdfError::BadJPEG2000Header) else {
+    fail("expected BadJPEG2000Header")
+  }
 }
 
 ///|

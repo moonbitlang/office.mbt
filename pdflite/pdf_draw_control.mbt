@@ -451,6 +451,49 @@ pub fn PdfDrawControl::add_image(
 }
 
 ///|
+/// Append a JPEG image XObject operation from supplied image bytes.
+///
+/// This ports the data-supplied branch of `cpdfdrawcontrol.ml`'s `addjpeg`.
+pub fn PdfDrawControl::add_jpeg_data(
+  self : PdfDrawControl,
+  name : String,
+  data : BytesView,
+) -> Unit raise PdfError {
+  self.add_op(PdfDrawImageXObject(name, pdf_image_object_of_jpeg_data(data)))
+}
+
+///|
+/// Append a PNG image XObject operation from supplied image bytes.
+///
+/// `document` is used when the PNG needs an alpha-mask object, matching
+/// `cpdfdrawcontrol.ml`'s `addpng pdf ?data` boundary.
+pub fn PdfDrawControl::add_png_data(
+  self : PdfDrawControl,
+  document : PdfDocument,
+  name : String,
+  data : BytesView,
+) -> Unit raise PdfError {
+  self.add_op(
+    PdfDrawImageXObject(name, document.pdf_image_object_of_png_data(data)),
+  )
+}
+
+///|
+/// Append a JPEG2000 image XObject operation from supplied image bytes.
+///
+/// This ports the data-supplied branch of `cpdfdrawcontrol.ml`'s
+/// `addjpeg2000`.
+pub fn PdfDrawControl::add_jpeg2000_data(
+  self : PdfDrawControl,
+  name : String,
+  data : BytesView,
+) -> Unit raise PdfError {
+  self.add_op(
+    PdfDrawImageXObject(name, pdf_image_object_of_jpeg2000_data(data)),
+  )
+}
+
+///|
 pub fn PdfDrawControl::add_new_page(
   self : PdfDrawControl,
 ) -> Unit raise PdfError {

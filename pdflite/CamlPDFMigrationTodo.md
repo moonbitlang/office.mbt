@@ -2316,6 +2316,17 @@ Current backend snapshot:
   operations. Focused native validation reports `moon test --target native
   pdf_draw_test.mbt` at 51/51 tests passing; full native validation is due at
   the next batch gate.~~
+- [x] ~~`cpdfdrawcontrol.ml` supplied-image insertion is now exposed through
+  `PdfDrawControl::add_jpeg_data`, `add_png_data`, and `add_jpeg2000_data`,
+  matching the `addjpeg ?data`, `addpng pdf ?data`, and `addjpeg2000 ?data`
+  branches by converting supplied image bytes into `PdfDrawImageXObject`
+  operations. Coverage pins JPEG `/DCTDecode`, PNG `/FlateDecode`, JPEG2000
+  `/JPXDecode`, image dimensions, payload preservation, and parser error
+  propagation. Focused native validation reports `moon test --target native
+  pdf_draw_test.mbt` at 53/53 tests passing; native check validation reports
+  `moon check --target native --warn-list +73` passing with the known markdown
+  main-package warning and 10-warning baseline. Full native suite validation is
+  deferred to the next batch.~~
 - [x] ~~Standalone `cpdfcreate.ml` blank-document slice exposes
   `pdf_blank_document` and `pdf_blank_document_paper`, covering point-sized
   pages, named paper sizes, zero-page documents, page-tree/root creation, and
