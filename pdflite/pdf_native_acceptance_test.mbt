@@ -3127,6 +3127,79 @@ fn acceptance_predefined_cmap_type0_font_for_test(
 }
 
 ///|
+fn acceptance_matterhorn_cmap_typo_document_for_test() -> @pdflite.PdfDocument raise {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  doc.add_object_given_number(
+    190,
+    acceptance_predefined_cmap_descendant_font_for_test(
+      "/MatterhornSourceTypoDescendant", "Korea1",
+    ),
+  )
+  doc.add_object_given_number(
+    192,
+    acceptance_predefined_cmap_descendant_font_for_test(
+      "/MatterhornCorrectedDescendant", "Korea1",
+    ),
+  )
+  doc.add_object_given_number(
+    194,
+    acceptance_predefined_cmap_type0_font_for_test(
+      "/MatterhornSourceTypoTop", "/KSCms-UHS-HW-V", 190,
+    ),
+  )
+  doc.add_object_given_number(
+    196,
+    acceptance_predefined_cmap_type0_font_for_test(
+      "/MatterhornCorrectedTop", "/KSCms-UHC-HW-V", 192,
+    ),
+  )
+  let source_typo_page = acceptance_predefined_cmap_page_for_test(
+    "/FsourceTypo",
+    PdfIndirect(194),
+    acceptance_text_bytes_for_test([0xA1, 0xA6]),
+  )
+  let corrected_page = acceptance_predefined_cmap_page_for_test(
+    "/Fcorrected",
+    PdfIndirect(196),
+    acceptance_text_bytes_for_test([0xA1, 0xA6]),
+  )
+  let page_root = doc.add_pagetree([source_typo_page, corrected_page])
+  ignore(doc.add_root(page_root, []))
+  doc
+}
+
+///|
+fn acceptance_matterhorn_31_006_cmap_failure_for_test(name : String) -> Json {
+  Json::object(
+    Map::of([
+      ("name", Json::string("31-006")),
+      ("section", Json::string("UA1:7.21.3.3-1")),
+      (
+        "error",
+        Json::string(
+          "A CMap is neither listed as described in ISO 32000- 1:2008, 9.7.5.2, Table 118 nor is it embedded.",
+        ),
+      ),
+      ("extra", Json::string(name)),
+    ]),
+  )
+}
+
+///|
+fn acceptance_assert_matterhorn_cmap_typo_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(doc.endpage(), 2)
+  @test.assert_eq(
+    try! doc.test_matterhorn_json("31-006"),
+    Json::array([
+      acceptance_matterhorn_31_006_cmap_failure_for_test("/KSCms-UHC-HW-V"),
+    ]),
+  )
+}
+
+///|
 fn acceptance_predefined_cmap_page_for_test(
   font_name : String,
   font : @pdflite.PdfObject,
@@ -10419,6 +10492,16 @@ test "native acceptance suite extracts vertical predefined CMap text through rea
   acceptance_assert_vertical_predefined_cmap_text_for_test(parsed)
   let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
   acceptance_assert_vertical_predefined_cmap_text_for_test(reparsed)
+}
+
+///|
+test "native acceptance suite preserves cpdfua source CMap name typo through reader boundaries" {
+  let parsed = acceptance_compressed_roundtrip_for_test(
+    acceptance_matterhorn_cmap_typo_document_for_test(),
+  )
+  acceptance_assert_matterhorn_cmap_typo_for_test(parsed)
+  let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
+  acceptance_assert_matterhorn_cmap_typo_for_test(reparsed)
 }
 
 ///|

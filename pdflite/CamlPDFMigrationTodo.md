@@ -4412,6 +4412,12 @@ Current backend snapshot:
   Hangul and half-width filler codepoints after write/read/reread. `moon test
   --target native pdf_native_acceptance_test.mbt` reports 88/88 tests passing,
   and `moon test --target native` reports 2200/2200 tests passing.~~
+- [x] ~~The cpdfua source typo `/KSCms-UHS-HW-V` is now pinned through a native
+  compressed reader-boundary Matterhorn gate: the typo remains listed for
+  `31-006`, while the corrected `/KSCms-UHC-HW-V` spelling is still reported as
+  unlisted after write/read/reread. `moon test --target native
+  pdf_native_acceptance_test.mbt` reports 89/89 tests passing, and `moon test
+  --target native` reports 2201/2201 tests passing.~~
 - [ ] Broader built-in non-UCS2 predefined CMap mapping tables beyond the
   current Adobe-GB1, Adobe-CNS1, Adobe-Japan1, and Adobe-Korea1 fallbacks,
   plus more real-world ToUnicode/CMap variation fixtures.
@@ -5095,6 +5101,11 @@ Current backend snapshot:
   read/write/reread coverage for Adobe-Korea1 Hangul and half-width filler
   extraction plus reverse lookup. `moon test --target native` reports 2200/2200
   tests passing.~~
+- [x] ~~Add the next remaining format parity slice: the cpdfua source typo
+  `/KSCms-UHS-HW-V` now has compressed native reader-boundary coverage for
+  Matterhorn `31-006`, preserving acceptance of the typo and rejection of the
+  corrected `/KSCms-UHC-HW-V` spelling. `moon test --target native` reports
+  2201/2201 tests passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.
