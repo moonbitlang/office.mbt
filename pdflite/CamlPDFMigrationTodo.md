@@ -1686,6 +1686,14 @@ Current backend snapshot:
   failure, reconstructs through the public reader, and verifies compressed-xref
   rewrite/reread page counts. `moon test --target native fixture_acceptance`
   reports 9/9 tests passing.~~
+- [x] ~~Add a checked-in CamlPDF real-world malformed xref-stream
+  `/DecodeParms` gate: `fixture_acceptance` now replaces the xref stream
+  dictionary's `/ID` entry in `introduction_to_camlpdf.pdf` with a padded
+  `/DecodeParms /Bad` entry while preserving offsets, requires strict
+  `PredictorExpected` failure, reconstructs through the public recovery reader,
+  and verifies compressed-xref rewrite/reread page counts. `moon test --target
+  native fixture_acceptance` reports 16/16 tests passing; native full-suite
+  validation reports 2148/2148 tests passing.~~
 - [x] ~~Add checked-in Pandoc real-world malformed compact xref-stream width
   gates: `fixture_acceptance` now corrupts `/W[1 2 2]` in the object-stream
   backed `pandoc_latin.pdf` and `pandoc_cjk.pdf` fixtures, covering xref
