@@ -1722,6 +1722,13 @@ Current backend snapshot:
   reconstruction before another compressed rewrite/reread. `moon test --target
   native fixture_acceptance` reports 19/19 tests passing; native full-suite
   validation reports 2164/2164 tests passing.~~
+- [x] ~~Broaden the optional `.repos/cpdf-source` cpdf manual xref-stream
+  recovery gate: `fixture_acceptance` now also corrupts the 175-page manual's
+  `/W [1 3 1]` xref-stream widths and `/Filter /FlateDecode` entry, requiring
+  strict-reader failure, public reconstruction, and compressed-xref
+  rewrite/reread preservation. `moon test --target native fixture_acceptance`
+  reports 21/21 tests passing; native full-suite validation reports 2166/2166
+  tests passing.~~
 - [ ] Add further malformed xref-table/xref-stream/object-stream recovery cases
   from real-world PDFs.
 - [x] ~~Add a native reader-boundary gate for the next available predefined CMap

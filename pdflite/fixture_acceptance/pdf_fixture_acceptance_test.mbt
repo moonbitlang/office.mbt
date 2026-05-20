@@ -935,3 +935,31 @@ async test "optional cpdf source manual fixture reconstructs bad startxref" {
     Some(bytes) => fixture_acceptance_assert_reconstructs_for_test(bytes, 175)
   }
 }
+
+///|
+async test "optional cpdf source manual fixture reconstructs malformed xref stream widths" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/cpdfmanual.pdf",
+    ) {
+    None => ()
+    Some(bytes) =>
+      fixture_acceptance_assert_xref_stream_widths_reconstructs_for_test(
+        bytes, 175,
+      )
+  }
+}
+
+///|
+async test "optional cpdf source manual fixture reconstructs malformed xref stream filter" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/cpdfmanual.pdf",
+    ) {
+    None => ()
+    Some(bytes) =>
+      fixture_acceptance_assert_xref_stream_filter_reconstructs_for_test(
+        bytes, 175,
+      )
+  }
+}
