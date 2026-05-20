@@ -1475,6 +1475,13 @@ Current backend snapshot:
 - [x] ~~Gate the downloaded DCT/JPEG, CCITT/FaxDecode, and indexed-CMYK image
   fixtures through compressed writer/read boundaries, so real image extraction
   is checked both before and after serialization.~~
+- [x] ~~Add optional `.repos/cpdf-source` raw PNG input coverage: the native
+  image fixture now reads `manualimages/sheet.png`, verifies the 400x294 RGB
+  PNG metadata, creates a single-page PDF image document from the source bytes,
+  extracts RGB24 pixels, and preserves the image through compressed
+  rewrite/reread boundaries. `moon test --target native
+  image/fixture_acceptance` reports 12/12 tests passing, and `moon test
+  --target native` reports 2188/2188 tests passing.~~
 - [x] ~~Start the separate PDF-to-Markdown acceptance package described in
   `PdfMarkdownAcceptancePlan.md`, with deterministic in-memory extraction tests
   before generated or downloaded fixtures.~~
@@ -4985,6 +4992,11 @@ Current backend snapshot:
   source-corpus recovery now gates malformed and unsupported xref-stream
   `/DecodeParms` metadata in the 175-page manual through public reconstruction
   and compressed rewrite/reread preservation.~~
+- [x] ~~Add the next remaining format parity slice: optional cpdf source raw
+  PNG input coverage now gates `manualimages/sheet.png` through PNG parsing,
+  image-document creation, RGB24 extraction, and compressed rewrite/reread
+  preservation. `moon test --target native` now reports 2188/2188 tests
+  passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.

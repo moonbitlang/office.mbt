@@ -414,3 +414,40 @@ async test "cpdf source PNG manual image fixture reconstructs malformed startxre
     }
   }
 }
+
+///|
+async test "cpdf source raw PNG sheet fixture creates image document" {
+  match
+    image_external_fixture_bytes_for_test(
+      ".repos/cpdf-source/manualimages/sheet.png",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let png = @pdflite.pdf_read_png(bytes)
+      @test.assert_eq(png.width, 400)
+      @test.assert_eq(png.height, 294)
+      @test.assert_eq(png.bit_depth, 8)
+      @test.assert_eq(png.color_type, 2)
+      @test.assert_eq(png.idat.length() > 50000, true)
+      let document = @pdflite.pdf_image_document_of_png_data(
+        bytes,
+        title=Some("cpdf source sheet"),
+      )
+      @test.assert_eq(document.endpage(), 1)
+      image_external_assert_raw_rgb_for_test(
+        image_external_images_for_test(document),
+        400,
+        294,
+        "expected cpdf source sheet PNG as raw RGB24 payload",
+      )
+      let reparsed = image_external_reparse_compressed_for_test(document)
+      @test.assert_eq(reparsed.endpage(), 1)
+      image_external_assert_raw_rgb_for_test(
+        image_external_images_for_test(reparsed),
+        400,
+        294,
+        "expected cpdf source sheet PNG after compressed rewrite",
+      )
+    }
+  }
+}
