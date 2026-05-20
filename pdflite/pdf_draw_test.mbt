@@ -20,6 +20,21 @@ fn draw_standard_font_for_test(
 }
 
 ///|
+fn draw_time_for_test() -> @pdflite.PdfStrftimeTime {
+  {
+    tm_sec: 5,
+    tm_min: 4,
+    tm_hour: 13,
+    tm_mday: 3,
+    tm_mon: 8,
+    tm_year: 123,
+    tm_wday: 0,
+    tm_yday: 6,
+    tm_isdst: false,
+  }
+}
+
+///|
 test "pdf draw debug strings match cpdf spelling" {
   @test.assert_eq(
     @pdflite.pdf_string_of_drawop(PdfDrawRect(0.0, 0.0, 1.0, 2.0)),
@@ -248,6 +263,73 @@ test "pdf draw document-aware fontpacks render text runs and resources" {
 }
 
 ///|
+test "pdf draw special text expands page-local replacements" {
+  let document = @pdflite.pdf_document_empty()
+  let state = @pdflite.pdf_draw_render_state_new()
+  let font = draw_standard_font_for_test(PdfHelvetica)
+  let pack = try! @pdflite.pdf_fontpack_of_standard_font(font)
+  let context = @pdflite.pdf_draw_special_text_context(draw_time_for_test(), {
+    page_number: 3,
+    end_page: 5,
+    filename: "input.pdf",
+    page_label: "p.3",
+    end_label: "p.5",
+    bates: 98,
+    bates_pad: Some(4),
+    bookmarks: ["Chapter", "Section", "", "", ""],
+  })
+  let f1 = draw_name_for_test("/F1")
+  let ops = try! @pdflite.pdf_drawops_to_content_ops_with_document_context(
+    state,
+    document,
+    context,
+    [
+      PdfDrawTextSection([
+        PdfDrawFontPack("Body", pack, []),
+        PdfDrawFont("Body", 10.0),
+        PdfDrawSpecialText(
+          "%Page|%EndPage|%Label|%EndLabel|%Bookmark0|%Bates|%Y",
+        ),
+      ]),
+    ],
+  )
+  @test.assert_eq(ops, [
+    Op_BT,
+    Op_Tf(f1, 10.0),
+    Op_Tj(@ascii.encode("3|5|p.3|p.5|Chapter|0100|2023")),
+    Op_ET,
+  ])
+}
+
+///|
+test "PdfDocument draw_special_text_context derives add-text replacements" {
+  let document = try! @pdflite.pdf_blank_document(10.0, 10.0, 3)
+  let labelled = try! document.write_page_labels([
+    {
+      label_style: PageLabelDecimalArabic,
+      label_prefix: Some(@ascii.encode("p.")),
+      start_page: 1,
+      start_value: 10,
+    },
+  ])
+  let context = try! labelled.draw_special_text_context(
+    2,
+    filename="input.pdf",
+    bates=7,
+    bates_pad=Some(3),
+    time=Some(draw_time_for_test()),
+  )
+  let values = context.replacement_values
+  @test.assert_eq(values.page_number, 2)
+  @test.assert_eq(values.end_page, 3)
+  @test.assert_eq(values.filename, "input.pdf")
+  @test.assert_eq(values.page_label, "p.11")
+  @test.assert_eq(values.end_label, "p.12")
+  @test.assert_eq(values.bates, 7)
+  @test.assert_eq(values.bates_pad, Some(3))
+}
+
+///|
 test "pdf draw paragraph renders selected fontpack text" {
   let document = @pdflite.pdf_document_empty()
   let state = @pdflite.pdf_draw_render_state_new()
@@ -417,6 +499,19 @@ test "pdf draw text reports missing selected fontpack" {
     fail("expected SoftError for unselected fontpack")
   }
   @test.assert_eq(message, "FontPack not selected")
+}
+
+///|
+test "pdf draw special text requires replacement context" {
+  let state = @pdflite.pdf_draw_render_state_new()
+  let result : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_drawop_to_content_ops_with_state(
+    state,
+    PdfDrawSpecialText("%Page"),
+  )
+  guard result is Err(@pdflite.PdfError::SoftError(message)) else {
+    fail("expected SoftError for missing special-text context")
+  }
+  @test.assert_eq(message, "Cpdfdraw: unsupported draw operation SpecialText")
 }
 
 ///|

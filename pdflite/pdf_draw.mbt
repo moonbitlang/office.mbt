@@ -46,6 +46,13 @@ pub(all) struct PdfDrawFontPackState {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Page-local context used to render `PdfDrawSpecialText`.
+pub(all) struct PdfDrawSpecialTextContext {
+  time : PdfStrftimeTime
+  replacement_values : PdfAddTextReplacementValues
+} derive(Debug, Eq, ToJson)
+
+///|
 /// Resource allocation state for rendering cpdf draw operations.
 ///
 /// This ports the resource-numbering and ExtGState cache used by
@@ -189,6 +196,60 @@ pub fn pdf_draw_render_state_new() -> PdfDrawRenderState {
     font_size: 12.0,
     page_names: [],
   }
+}
+
+///|
+/// Build a special-text context from explicit replacement values.
+pub fn pdf_draw_special_text_context(
+  time : PdfStrftimeTime,
+  replacement_values : PdfAddTextReplacementValues,
+) -> PdfDrawSpecialTextContext {
+  { time, replacement_values }
+}
+
+///|
+/// Build cpdf draw special-text context for one page of a document.
+pub fn PdfDocument::draw_special_text_context(
+  self : PdfDocument,
+  page_number : Int,
+  filename? : String = "",
+  bates? : Int = 1,
+  bates_pad? : Int? = None,
+  time? : PdfStrftimeTime? = None,
+) -> PdfDrawSpecialTextContext raise PdfError {
+  let resolved_time = match time {
+    Some(value) => value
+    None => pdf_strftime_dummy_time()
+  }
+  let bookmarks = self.read_bookmarks(preserve_actions=false)
+  let values = self.addtext_replacement_values(
+    bookmarks,
+    page_number,
+    self.endpage(),
+    filename,
+    bates,
+    bates_pad,
+  )
+  { time: resolved_time, replacement_values: values }
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::draw_special_text_context`.
+pub fn pdf_draw_special_text_context_for_document(
+  document : PdfDocument,
+  page_number : Int,
+  filename? : String = "",
+  bates? : Int = 1,
+  bates_pad? : Int? = None,
+  time? : PdfStrftimeTime? = None,
+) -> PdfDrawSpecialTextContext raise PdfError {
+  document.draw_special_text_context(
+    page_number,
+    filename~,
+    bates~,
+    bates_pad~,
+    time~,
+  )
 }
 
 ///|
@@ -967,16 +1028,32 @@ fn PdfDrawRenderState::tag_ops(
 }
 
 ///|
+fn PdfDrawSpecialTextContext::process(
+  self : PdfDrawSpecialTextContext,
+  text : String,
+) -> String {
+  pdf_addtext_process_text_with_time(
+    self.time,
+    text,
+    pdf_addtext_replacement_pairs(self.replacement_values),
+  )
+}
+
+///|
 fn PdfDrawOp::to_content_ops_internal(
   self : PdfDrawOp,
   state : PdfDrawRenderState?,
   document : PdfDocument?,
+  special_text_context : PdfDrawSpecialTextContext?,
 ) -> Array[PdfContentOp] raise PdfError {
   match self {
     PdfDrawQq(ops) => {
       let output : Array[PdfContentOp] = [Op_q]
       for op in ops {
-        for content_op in op.to_content_ops_internal(state, document) {
+        for
+          content_op in op.to_content_ops_internal(
+            state, document, special_text_context,
+          ) {
           output.push(content_op)
         }
       }
@@ -986,7 +1063,10 @@ fn PdfDrawOp::to_content_ops_internal(
     PdfDrawTextSection(ops) => {
       let output : Array[PdfContentOp] = [Op_BT]
       for op in ops {
-        for content_op in op.to_content_ops_internal(state, document) {
+        for
+          content_op in op.to_content_ops_internal(
+            state, document, special_text_context,
+          ) {
           output.push(content_op)
         }
       }
@@ -1019,8 +1099,11 @@ fn PdfDrawOp::to_content_ops_internal(
       match (state, document) {
         (Some(state), Some(document)) => {
           let form_state = state.nested_form_state()
-          let content_ops = pdf_drawops_to_content_ops_with_document(
-            form_state, document, ops,
+          let content_ops = pdf_drawops_to_content_ops_internal(
+            Some(form_state),
+            Some(document),
+            special_text_context,
+            ops,
           )
           let form_object = pdf_draw_form_xobject_stream(
             (a, b, c, d),
@@ -1074,6 +1157,11 @@ fn PdfDrawOp::to_content_ops_internal(
       match state {
         Some(state) => state.text_ops(text)
         None => pdf_draw_content_unsupported(self)
+      }
+    PdfDrawSpecialText(text) =>
+      match (state, special_text_context) {
+        (Some(state), Some(context)) => state.text_ops(context.process(text))
+        _ => pdf_draw_content_unsupported(self)
       }
     PdfDrawPara(indent, justification, width, paragraphs) =>
       match state {
@@ -1207,7 +1295,7 @@ pub fn pdf_string_of_drawop(op : PdfDrawOp) -> String {
 pub fn PdfDrawOp::to_content_ops(
   self : PdfDrawOp,
 ) -> Array[PdfContentOp] raise PdfError {
-  self.to_content_ops_internal(None, None)
+  self.to_content_ops_internal(None, None, None)
 }
 
 ///|
@@ -1216,7 +1304,17 @@ pub fn PdfDrawOp::to_content_ops_with_state(
   self : PdfDrawOp,
   state : PdfDrawRenderState,
 ) -> Array[PdfContentOp] raise PdfError {
-  self.to_content_ops_internal(Some(state), None)
+  self.to_content_ops_internal(Some(state), None, None)
+}
+
+///|
+/// Convert one cpdf draw operation using resource state and special-text data.
+pub fn PdfDrawOp::to_content_ops_with_context(
+  self : PdfDrawOp,
+  state : PdfDrawRenderState,
+  context : PdfDrawSpecialTextContext,
+) -> Array[PdfContentOp] raise PdfError {
+  self.to_content_ops_internal(Some(state), None, Some(context))
 }
 
 ///|
@@ -1227,7 +1325,34 @@ pub fn PdfDrawOp::to_content_ops_with_document(
   state : PdfDrawRenderState,
   document : PdfDocument,
 ) -> Array[PdfContentOp] raise PdfError {
-  self.to_content_ops_internal(Some(state), Some(document))
+  self.to_content_ops_internal(Some(state), Some(document), None)
+}
+
+///|
+/// Convert one cpdf draw operation using document resources and special-text data.
+pub fn PdfDrawOp::to_content_ops_with_document_context(
+  self : PdfDrawOp,
+  state : PdfDrawRenderState,
+  document : PdfDocument,
+  context : PdfDrawSpecialTextContext,
+) -> Array[PdfContentOp] raise PdfError {
+  self.to_content_ops_internal(Some(state), Some(document), Some(context))
+}
+
+///|
+fn pdf_drawops_to_content_ops_internal(
+  state : PdfDrawRenderState?,
+  document : PdfDocument?,
+  context : PdfDrawSpecialTextContext?,
+  ops : ArrayView[PdfDrawOp],
+) -> Array[PdfContentOp] raise PdfError {
+  let output : Array[PdfContentOp] = []
+  for op in ops {
+    for content_op in op.to_content_ops_internal(state, document, context) {
+      output.push(content_op)
+    }
+  }
+  output
 }
 
 ///|
@@ -1235,13 +1360,7 @@ pub fn PdfDrawOp::to_content_ops_with_document(
 pub fn pdf_drawops_to_content_ops(
   ops : ArrayView[PdfDrawOp],
 ) -> Array[PdfContentOp] raise PdfError {
-  let output : Array[PdfContentOp] = []
-  for op in ops {
-    for content_op in op.to_content_ops() {
-      output.push(content_op)
-    }
-  }
-  output
+  pdf_drawops_to_content_ops_internal(None, None, None, ops)
 }
 
 ///|
@@ -1258,13 +1377,17 @@ pub fn pdf_drawops_to_content_ops_with_state(
   state : PdfDrawRenderState,
   ops : ArrayView[PdfDrawOp],
 ) -> Array[PdfContentOp] raise PdfError {
-  let output : Array[PdfContentOp] = []
-  for op in ops {
-    for content_op in op.to_content_ops_with_state(state) {
-      output.push(content_op)
-    }
-  }
-  output
+  pdf_drawops_to_content_ops_internal(Some(state), None, None, ops)
+}
+
+///|
+/// Convert a sequence of cpdf draw operations using state and special-text data.
+pub fn pdf_drawops_to_content_ops_with_context(
+  state : PdfDrawRenderState,
+  context : PdfDrawSpecialTextContext,
+  ops : ArrayView[PdfDrawOp],
+) -> Array[PdfContentOp] raise PdfError {
+  pdf_drawops_to_content_ops_internal(Some(state), None, Some(context), ops)
 }
 
 ///|
@@ -1277,6 +1400,16 @@ pub fn pdf_drawop_to_content_ops_with_state(
 }
 
 ///|
+/// Compatibility wrapper for `PdfDrawOp::to_content_ops_with_context`.
+pub fn pdf_drawop_to_content_ops_with_context(
+  state : PdfDrawRenderState,
+  context : PdfDrawSpecialTextContext,
+  op : PdfDrawOp,
+) -> Array[PdfContentOp] raise PdfError {
+  op.to_content_ops_with_context(state, context)
+}
+
+///|
 /// Convert a sequence of cpdf draw operations using resource state and a
 /// document for indirect object allocation.
 pub fn pdf_drawops_to_content_ops_with_document(
@@ -1284,13 +1417,24 @@ pub fn pdf_drawops_to_content_ops_with_document(
   document : PdfDocument,
   ops : ArrayView[PdfDrawOp],
 ) -> Array[PdfContentOp] raise PdfError {
-  let output : Array[PdfContentOp] = []
-  for op in ops {
-    for content_op in op.to_content_ops_with_document(state, document) {
-      output.push(content_op)
-    }
-  }
-  output
+  pdf_drawops_to_content_ops_internal(Some(state), Some(document), None, ops)
+}
+
+///|
+/// Convert a sequence of cpdf draw operations using document resources and
+/// special-text data.
+pub fn pdf_drawops_to_content_ops_with_document_context(
+  state : PdfDrawRenderState,
+  document : PdfDocument,
+  context : PdfDrawSpecialTextContext,
+  ops : ArrayView[PdfDrawOp],
+) -> Array[PdfContentOp] raise PdfError {
+  pdf_drawops_to_content_ops_internal(
+    Some(state),
+    Some(document),
+    Some(context),
+    ops,
+  )
 }
 
 ///|
@@ -1301,4 +1445,15 @@ pub fn pdf_drawop_to_content_ops_with_document(
   op : PdfDrawOp,
 ) -> Array[PdfContentOp] raise PdfError {
   op.to_content_ops_with_document(state, document)
+}
+
+///|
+/// Compatibility wrapper for `PdfDrawOp::to_content_ops_with_document_context`.
+pub fn pdf_drawop_to_content_ops_with_document_context(
+  state : PdfDrawRenderState,
+  document : PdfDocument,
+  context : PdfDrawSpecialTextContext,
+  op : PdfDrawOp,
+) -> Array[PdfContentOp] raise PdfError {
+  op.to_content_ops_with_document_context(state, document, context)
 }

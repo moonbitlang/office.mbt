@@ -583,17 +583,29 @@ pub fn pdf_draw_control_new() -> PdfDrawControl
 
 pub fn pdf_draw_render_state_new() -> PdfDrawRenderState
 
+pub fn pdf_draw_special_text_context(PdfStrftimeTime, PdfAddTextReplacementValues) -> PdfDrawSpecialTextContext
+
+pub fn pdf_draw_special_text_context_for_document(PdfDocument, Int, filename? : String, bates? : Int, bates_pad? : Int?, time? : PdfStrftimeTime?) -> PdfDrawSpecialTextContext raise @core.PdfError
+
 pub fn pdf_drawn_path_content_json(PdfDrawnPath) -> Json
 
 pub fn pdf_drawop_to_content_ops(PdfDrawOp) -> Array[PdfContentOp] raise @core.PdfError
 
+pub fn pdf_drawop_to_content_ops_with_context(PdfDrawRenderState, PdfDrawSpecialTextContext, PdfDrawOp) -> Array[PdfContentOp] raise @core.PdfError
+
 pub fn pdf_drawop_to_content_ops_with_document(PdfDrawRenderState, PdfDocument, PdfDrawOp) -> Array[PdfContentOp] raise @core.PdfError
+
+pub fn pdf_drawop_to_content_ops_with_document_context(PdfDrawRenderState, PdfDocument, PdfDrawSpecialTextContext, PdfDrawOp) -> Array[PdfContentOp] raise @core.PdfError
 
 pub fn pdf_drawop_to_content_ops_with_state(PdfDrawRenderState, PdfDrawOp) -> Array[PdfContentOp] raise @core.PdfError
 
 pub fn pdf_drawops_to_content_ops(ArrayView[PdfDrawOp]) -> Array[PdfContentOp] raise @core.PdfError
 
+pub fn pdf_drawops_to_content_ops_with_context(PdfDrawRenderState, PdfDrawSpecialTextContext, ArrayView[PdfDrawOp]) -> Array[PdfContentOp] raise @core.PdfError
+
 pub fn pdf_drawops_to_content_ops_with_document(PdfDrawRenderState, PdfDocument, ArrayView[PdfDrawOp]) -> Array[PdfContentOp] raise @core.PdfError
+
+pub fn pdf_drawops_to_content_ops_with_document_context(PdfDrawRenderState, PdfDocument, PdfDrawSpecialTextContext, ArrayView[PdfDrawOp]) -> Array[PdfContentOp] raise @core.PdfError
 
 pub fn pdf_drawops_to_content_ops_with_state(PdfDrawRenderState, ArrayView[PdfDrawOp]) -> Array[PdfContentOp] raise @core.PdfError
 
@@ -2596,6 +2608,7 @@ pub fn PdfDocument::dict_entry_rendered_values(Self, @core.PdfName) -> Array[Byt
 pub fn PdfDocument::dict_entry_values(Self, @core.PdfName) -> Array[PdfObject]
 pub fn PdfDocument::direct(Self, PdfObject) -> PdfObject
 pub fn PdfDocument::draft(Self, @core.PdfName?, Bool, ArrayView[Int]) -> Self raise @core.PdfError
+pub fn PdfDocument::draw_special_text_context(Self, Int, filename? : String, bates? : Int, bates_pad? : Int?, time? : PdfStrftimeTime?) -> PdfDrawSpecialTextContext raise @core.PdfError
 pub fn PdfDocument::encrypt_128bit(Self, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission], file_id? : BytesView) -> Self raise @core.PdfError
 pub fn PdfDocument::encrypt_128bit_aesv2_with_iv_provider(Self, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission], (Int, Int, Int) -> Bytes raise @core.PdfError, encrypt_metadata? : Bool, file_id? : BytesView) -> Self raise @core.PdfError
 pub fn PdfDocument::encrypt_128bit_r4(Self, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission], encrypt_metadata? : Bool, file_id? : BytesView) -> Self raise @core.PdfError
@@ -3044,7 +3057,9 @@ pub(all) enum PdfDrawOp {
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfDrawOp::debug_name(Self) -> String
 pub fn PdfDrawOp::to_content_ops(Self) -> Array[PdfContentOp] raise @core.PdfError
+pub fn PdfDrawOp::to_content_ops_with_context(Self, PdfDrawRenderState, PdfDrawSpecialTextContext) -> Array[PdfContentOp] raise @core.PdfError
 pub fn PdfDrawOp::to_content_ops_with_document(Self, PdfDrawRenderState, PdfDocument) -> Array[PdfContentOp] raise @core.PdfError
+pub fn PdfDrawOp::to_content_ops_with_document_context(Self, PdfDrawRenderState, PdfDocument, PdfDrawSpecialTextContext) -> Array[PdfContentOp] raise @core.PdfError
 pub fn PdfDrawOp::to_content_ops_with_state(Self, PdfDrawRenderState) -> Array[PdfContentOp] raise @core.PdfError
 
 pub(all) struct PdfDrawRenderState {
@@ -3061,6 +3076,11 @@ pub(all) struct PdfDrawRenderState {
   page_names : Array[@core.PdfName]
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfDrawRenderState::resources(Self) -> PdfObject
+
+pub(all) struct PdfDrawSpecialTextContext {
+  time : PdfStrftimeTime
+  replacement_values : PdfAddTextReplacementValues
+} derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfDrawXObjectResource {
   source_name : String
