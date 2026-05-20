@@ -2599,6 +2599,15 @@ Current backend snapshot:
   round-tripping through `pdf_document_of_json`. Native focused validation
   reports `moon test --target native pdf_util_test.mbt` at 25/25 tests passing;
   native full-suite validation reports 1712/1712 tests passing.~~
+- [x] ~~Standalone `cpdfjson.ml` function-stream parse-content output slice now
+  extends `PdfDocument::json_of_object` and `pdf_json_of_object` with
+  `parse_content=true`, and threads that flag through `json_of_document` for
+  reachable non-content `/FunctionType` streams. Coverage pins cpdf's behavior
+  where parsed function streams are decoded even when `no_stream_data=true`,
+  while ordinary stream-data elision and parsed page-content arrays remain
+  unchanged. Native focused validation reports `moon test --target native
+  --package bobzhang/pdflite --file pdf_util_test.mbt` at 27/27 tests passing;
+  native full-suite validation reports 2140/2140 tests passing.~~
 - [x] ~~Standalone `cpdfjs.ml` JavaScript scrub/detect slice exposes
   `PdfDocument::contains_javascript`, `remove_javascript`, and compatibility
   wrappers, covering cpdf's string-only `/S /JavaScript` detection, lowercase

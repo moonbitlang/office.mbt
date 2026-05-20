@@ -513,6 +513,109 @@ test "PdfDocument CPDFJSON output honors no_stream_data option" {
 }
 
 ///|
+fn util_cpdfjson_encoded_function_stream_for_test(
+  data : String,
+) -> @pdflite.PdfObject {
+  let bytes = @ascii.encode(data)
+  let raw_stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (util_name_for_test("/FunctionType"), PdfInteger(4)),
+      (util_name_for_test("/Length"), PdfInteger(bytes.length())),
+    ]),
+    StreamGot(bytes),
+  )
+  try! @pdflite.pdf_encode_stream_with_filter(
+    util_name_for_test("/FlateDecode"),
+    raw_stream,
+  )
+}
+
+///|
+test "PdfDocument CPDFJSON parse_content decodes function streams" {
+  let doc = @pdflite.pdf_document_empty()
+  let encoded = util_cpdfjson_encoded_function_stream_for_test("{ 1 }")
+  let elided = try! doc.json_of_object(encoded, no_stream_data=true)
+  guard elided is Object(elided_wrapper) else {
+    fail("expected elided function stream wrapper")
+  }
+  guard elided_wrapper.get("S")
+    is Some(Array([_, String("<<stream data elided>>")])) else {
+    fail("expected ordinary no_stream_data elision")
+  }
+
+  let decoded = try! doc.json_of_object(
+    encoded,
+    parse_content=true,
+    no_stream_data=true,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_json_of_object(
+      doc,
+      encoded,
+      parse_content=true,
+      no_stream_data=true,
+    ),
+    decoded,
+  )
+  guard decoded is Object(decoded_wrapper) else {
+    fail("expected decoded function stream wrapper")
+  }
+  guard decoded_wrapper.get("S")
+    is Some(Array([Object(decoded_dict), String(decoded_data)])) else {
+    fail("expected decoded function stream data")
+  }
+  @test.assert_eq(decoded_data, "{ 1 }")
+  @test.assert_eq(decoded_dict.get("/Filter"), None)
+  @test.assert_eq(
+    decoded_dict.get("/FunctionType"),
+    Some(Json::object(Map::of([("I", Json::number(4.0, repr="4"))]))),
+  )
+  @test.assert_eq(
+    decoded_dict.get("/Length"),
+    Some(Json::object(Map::of([("I", Json::number(5.0, repr="5"))]))),
+  )
+
+  let key_function = util_name_for_test("/Function")
+  let document = try! @pdflite.pdf_document_of_json(
+    util_cpdfjson_document_for_test(),
+  )
+  document.add_object_given_number(
+    4,
+    @pdflite.pdf_dictionary([
+      (
+        util_name_for_test("/Type"),
+        PdfNameObject(util_name_for_test("/Catalog")),
+      ),
+      (util_name_for_test("/Pages"), PdfIndirect(1)),
+      (key_function, PdfIndirect(5)),
+    ]),
+  )
+  document.add_object_given_number(5, encoded)
+  let exported = try! document.json_of_document(
+    parse_content=true,
+    no_stream_data=true,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_json_of_document(
+      document,
+      parse_content=true,
+      no_stream_data=true,
+    ),
+    exported,
+  )
+  guard util_cpdfjson_entry_for_test(exported, 5)
+    is Some(Object(document_wrapper)) else {
+    fail("expected document function stream wrapper")
+  }
+  guard document_wrapper.get("S")
+    is Some(Array([Object(document_dict), String(document_data)])) else {
+    fail("expected decoded document function stream data")
+  }
+  @test.assert_eq(document_data, "{ 1 }")
+  @test.assert_eq(document_dict.get("/Filter"), None)
+}
+
+///|
 test "PdfDocument CPDFJSON document output honors decompress_streams option" {
   let key_root = util_name_for_test("/Root")
   let key_payload = util_name_for_test("/Payload")
