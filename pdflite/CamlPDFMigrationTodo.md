@@ -1749,6 +1749,14 @@ Current backend snapshot:
   `manualimages/*.pdf` fixtures. Focused native validation reports
   `moon test --target native fixture_acceptance` at 26/26 tests passing;
   native full-suite validation reports 2178/2178 tests passing.~~
+- [x] ~~Broaden optional `.repos/cpdf-source` manual-image xref recovery again:
+  `fixture_acceptance` now corrupts the classic xref row marker, offset,
+  generation, subsection object number, and subsection count across all 21
+  one-page `manualimages/*.pdf` fixtures, requiring strict failure, public
+  reconstruction, and compressed rewrite/reread preservation for each case.
+  Focused native validation reports `moon test --target native
+  fixture_acceptance` at 27/27 tests passing; native full-suite validation
+  reports 2179/2179 tests passing.~~
 - [ ] Add further malformed xref-table/xref-stream/object-stream recovery cases
   from real-world PDFs.
 - [x] ~~Add a native reader-boundary gate for the next available predefined CMap
@@ -4890,6 +4898,10 @@ Current backend snapshot:
 - [x] ~~Add the next remaining format parity slice: optional cpdf manual-image
   source-corpus PDFs now gate read/rewrite plus bad-`startxref` reconstruction
   across 21 one-page drawing/image fixtures.~~
+- [x] ~~Add the next remaining format parity slice: optional cpdf manual-image
+  source-corpus PDFs now gate malformed classic xref row marker, offset,
+  generation, subsection object number, and subsection count recovery across
+  the same 21 one-page drawing/image fixtures.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.

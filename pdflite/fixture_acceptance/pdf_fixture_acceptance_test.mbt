@@ -989,6 +989,32 @@ async test "optional cpdf source manual image fixtures read rewrite and reconstr
 }
 
 ///|
+async test "optional cpdf source manual image fixtures reconstruct malformed classic xref rows" {
+  for path in fixture_acceptance_cpdf_manual_image_paths_for_test {
+    match fixture_acceptance_optional_bytes_for_test(path) {
+      None => ()
+      Some(bytes) => {
+        fixture_acceptance_assert_classic_xref_marker_reconstructs_for_test(
+          bytes, 1,
+        )
+        fixture_acceptance_assert_classic_xref_offset_reconstructs_for_test(
+          bytes, 1,
+        )
+        fixture_acceptance_assert_classic_xref_generation_reconstructs_for_test(
+          bytes, 1,
+        )
+        fixture_acceptance_assert_classic_xref_object_reconstructs_for_test(
+          bytes, 1,
+        )
+        fixture_acceptance_assert_classic_xref_count_reconstructs_for_test(
+          bytes, 1,
+        )
+      }
+    }
+  }
+}
+
+///|
 async test "optional cpdf source manual fixture reads and rewrites" {
   match
     fixture_acceptance_optional_bytes_for_test(
