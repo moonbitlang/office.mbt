@@ -138,6 +138,17 @@ fn pdf_reader_startxref_object_stream_root_unusable_or_true(
 }
 
 ///|
+fn pdf_reader_object_stream_error_allows_reconstruction(
+  data : BytesView,
+) -> Bool {
+  if pdf_reader_startxref_root_uses_object_stream_or_false(data) {
+    !pdf_reader_startxref_object_stream_root_unusable_or_true(data)
+  } else {
+    true
+  }
+}
+
+///|
 fn pdf_reader_startxref_uses_xref_stream(
   data : BytesView,
 ) -> Bool raise PdfError {
@@ -201,11 +212,14 @@ fn pdf_reader_password_error_allows_reconstruction(
     | InvalidCursorPosition(_) => true
     XRefEntryExpected => pdf_reader_xref_entry_error_from_metadata(data)
     FilterNotSupported(_) =>
-      pdf_reader_xref_metadata_error_allows_reconstruction(data, error)
+      pdf_reader_xref_metadata_error_allows_reconstruction(data, error) ||
+      pdf_reader_object_stream_error_allows_reconstruction(data)
     PredictorExpected =>
-      pdf_reader_xref_metadata_error_allows_reconstruction(data, error)
+      pdf_reader_xref_metadata_error_allows_reconstruction(data, error) ||
+      pdf_reader_object_stream_error_allows_reconstruction(data)
     PredictorNotSupported(_) =>
-      pdf_reader_xref_metadata_error_allows_reconstruction(data, error)
+      pdf_reader_xref_metadata_error_allows_reconstruction(data, error) ||
+      pdf_reader_object_stream_error_allows_reconstruction(data)
     _ => false
   }
 }

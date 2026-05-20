@@ -275,6 +275,12 @@ pub fn pdf_read_document_from_view(
           FilterNotSupported(filter),
           include_xref_stream_trailers=true,
         )
+      } else if pdf_reader_object_stream_error_allows_reconstruction(data) {
+        pdf_read_reconstructed_or_raise(
+          data,
+          FilterNotSupported(filter),
+          include_xref_stream_trailers=true,
+        )
       } else {
         raise FilterNotSupported(filter)
       }
@@ -288,6 +294,12 @@ pub fn pdf_read_document_from_view(
           PredictorExpected,
           include_xref_stream_trailers=true,
         )
+      } else if pdf_reader_object_stream_error_allows_reconstruction(data) {
+        pdf_read_reconstructed_or_raise(
+          data,
+          PredictorExpected,
+          include_xref_stream_trailers=true,
+        )
       } else {
         raise PredictorExpected
       }
@@ -296,6 +308,12 @@ pub fn pdf_read_document_from_view(
           data,
           PredictorNotSupported(predictor),
         ) {
+        pdf_read_reconstructed_or_raise(
+          data,
+          PredictorNotSupported(predictor),
+          include_xref_stream_trailers=true,
+        )
+      } else if pdf_reader_object_stream_error_allows_reconstruction(data) {
         pdf_read_reconstructed_or_raise(
           data,
           PredictorNotSupported(predictor),
