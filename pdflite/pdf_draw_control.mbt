@@ -580,11 +580,29 @@ pub fn PdfDrawControl::set_font_name(
 }
 
 ///|
+/// Return the current draw-control font name.
+///
+/// This is the per-instance counterpart of `cpdfdrawcontrol.ml`'s
+/// `getfontname` callback.
+pub fn PdfDrawControl::font_name(self : PdfDrawControl) -> String {
+  self.font_name
+}
+
+///|
 pub fn PdfDrawControl::set_font_size(
   self : PdfDrawControl,
   font_size : Double,
 ) -> Unit {
   self.font_size = font_size
+}
+
+///|
+/// Return the current draw-control font size.
+///
+/// This is the per-instance counterpart of `cpdfdrawcontrol.ml`'s
+/// `getfontsize` callback.
+pub fn PdfDrawControl::font_size(self : PdfDrawControl) -> Double {
+  self.font_size
 }
 
 ///|
@@ -607,11 +625,29 @@ pub fn PdfDrawControl::set_fontpack(
 }
 
 ///|
+/// Return whether the current font pack has been emitted once.
+///
+/// This exposes the per-instance state corresponding to cpdf's
+/// `fontpack_initialised` ref.
+pub fn PdfDrawControl::fontpack_initialized(self : PdfDrawControl) -> Bool {
+  self.fontpack_initialized
+}
+
+///|
 pub fn PdfDrawControl::set_paragraph_indent(
   self : PdfDrawControl,
   indent : Double?,
 ) -> Unit {
   self.paragraph_indent = indent
+}
+
+///|
+/// Return the current paragraph indent used by `add_paras`.
+///
+/// This is the per-instance counterpart of `cpdfdrawcontrol.ml`'s `getindent`
+/// callback.
+pub fn PdfDrawControl::paragraph_indent(self : PdfDrawControl) -> Double? {
+  self.paragraph_indent
 }
 
 ///|

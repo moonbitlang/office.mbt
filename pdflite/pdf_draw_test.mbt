@@ -1577,6 +1577,31 @@ test "pdf draw control default fontpack helper appends once" {
 }
 
 ///|
+test "pdf draw control exposes font state readers" {
+  let control = @pdflite.pdf_draw_control_new()
+  @test.assert_eq(control.font_name(), "Times-Roman")
+  @test.assert_eq(control.font_size(), 12.0)
+  @test.assert_eq(control.paragraph_indent(), None)
+  @test.assert_eq(control.fontpack_initialized(), false)
+
+  control.set_font_name("Body")
+  control.set_font_size(9.5)
+  control.set_paragraph_indent(Some(4.0))
+  @test.assert_eq(control.font_name(), "Body")
+  @test.assert_eq(control.font_size(), 9.5)
+  @test.assert_eq(control.paragraph_indent(), Some(4.0))
+
+  let pack : @pdflite.PdfFontPack = { fonts: [], entries: [] }
+  control.set_fontpack(Some(pack))
+  @test.assert_eq(control.fontpack_initialized(), false)
+  try! control.add_default_fontpack(control.font_name())
+  @test.assert_eq(control.fontpack_initialized(), true)
+  control.set_font("Caption", 7.0)
+  @test.assert_eq(control.font_name(), "Caption")
+  @test.assert_eq(control.font_size(), 7.0)
+}
+
+///|
 test "pdf draw control paragraph helpers parse justification width and escaped newlines" {
   let document = @pdflite.pdf_document_empty()
   let control = @pdflite.pdf_draw_control_new()

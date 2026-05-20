@@ -2347,6 +2347,16 @@ Current backend snapshot:
   native --warn-list +73` passing with the known markdown main-package warning
   and 10-warning baseline. Full native suite validation is due at this batch
   gate.~~
+- [x] ~~`cpdfdrawcontrol.ml` font-state readers are now exposed as
+  per-instance `PdfDrawControl` methods: `font_name`, `font_size`,
+  `paragraph_indent`, and `fontpack_initialized`, covering the state carried by
+  cpdf's `getfontname`, `getfontsize`, `getindent`, and
+  `fontpack_initialised` refs. Coverage pins defaults, setter updates, and the
+  fontpack one-shot state transition. Focused native validation reports `moon
+  test --target native pdf_draw_test.mbt` at 56/56 tests passing; native check
+  validation reports `moon check --target native --warn-list +73` passing with
+  the known markdown main-package warning and 10-warning baseline. Full native
+  suite validation is deferred to the next batch.~~
 - [x] ~~Standalone `cpdfcreate.ml` blank-document slice exposes
   `pdf_blank_document` and `pdf_blank_document_paper`, covering point-sized
   pages, named paper sizes, zero-page documents, page-tree/root creation, and

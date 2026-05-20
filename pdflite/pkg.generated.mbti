@@ -2952,12 +2952,16 @@ pub fn PdfDrawControl::end_text_section(Self) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::end_xobject(Self) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::fill(Self) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::fill_even_odd(Self) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::font_name(Self) -> String
+pub fn PdfDrawControl::font_size(Self) -> Double
+pub fn PdfDrawControl::fontpack_initialized(Self) -> Bool
 pub fn PdfDrawControl::matrix_rotate(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::matrix_scale(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::matrix_shear_x(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::matrix_shear_y(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::matrix_translate(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::ops(Self) -> Array[PdfDrawOp]
+pub fn PdfDrawControl::paragraph_indent(Self) -> Double?
 pub fn PdfDrawControl::pop_group(Self) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::push_group(Self) -> Unit
 pub fn PdfDrawControl::role_map(Self) -> String
