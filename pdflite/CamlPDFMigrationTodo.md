@@ -5309,6 +5309,14 @@ Current backend snapshot:
   specifications*'` reports 1/1 test passing, `moon test --target native
   fixture_acceptance` reports 45/45 tests passing, and `moon test --target
   native` reports 2216/2216 tests passing.~~
+- [x] ~~Add the next source-boundary reporting slice: optional
+  `.repos/cpdf-source/cpdfmanual.pdf` now gates cpdf-style document-info JSON,
+  XMP/subformat reporting, page-info JSON/plain text, and composition bucket
+  reporting against the real 175-page manual before and after compressed
+  rewrite/reread. `moon test --target native fixture_acceptance --filter
+  '*reports info page details and composition*'` reports 1/1 test passing,
+  `moon test --target native fixture_acceptance` reports 46/46 tests passing,
+  and `moon test --target native` reports 2217/2217 tests passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.

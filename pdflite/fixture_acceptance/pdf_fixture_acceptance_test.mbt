@@ -1649,6 +1649,93 @@ fn fixture_acceptance_assert_cpdf_manual_pagespec_for_test(
 }
 
 ///|
+fn fixture_acceptance_assert_contains_for_test(
+  text : String,
+  fragment : String,
+) -> Unit raise {
+  @test.assert_eq(text.contains(fragment), true, msg="missing " + fragment)
+}
+
+///|
+fn fixture_acceptance_composition_entry_bytes_for_test(
+  entries : ArrayView[@pdflite.PdfCompositionEntry],
+  label : String,
+) -> Int raise {
+  for entry in entries {
+    if entry.label == label {
+      break entry.bytes
+    }
+  } nobreak {
+    fail("missing composition entry " + label)
+    0
+  }
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_manual_reports_for_test(
+  document : @pdflite.PdfDocument,
+  file_size : Int,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 175)
+  let info_json = document.info_json().stringify()
+  fixture_acceptance_assert_contains_for_test(info_json, "\"Version\":[1,7]")
+  fixture_acceptance_assert_contains_for_test(info_json, "\"Pages\":175")
+  fixture_acceptance_assert_contains_for_test(
+    info_json, "\"Creator\":\"LaTeX with hyperref\"",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    info_json, "\"Producer\":\"pdfTeX-1.40.29\"",
+  )
+  let xmp_json = document.xmp_info_json().stringify()
+  fixture_acceptance_assert_contains_for_test(xmp_json, "\"Subformats\":[]")
+  fixture_acceptance_assert_contains_for_test(xmp_json, "\"Language\":null")
+  let page_info_json = document.page_info_json([1, 175]).stringify()
+  fixture_acceptance_assert_contains_for_test(page_info_json, "\"Page\":1")
+  fixture_acceptance_assert_contains_for_test(page_info_json, "\"Page\":175")
+  fixture_acceptance_assert_contains_for_test(page_info_json, "\"Rotation\":0")
+  let page_info_text = @ascii.decode_lossy(document.page_info_text([1, 175]))
+  fixture_acceptance_assert_contains_for_test(page_info_text, "Page 1:\n")
+  fixture_acceptance_assert_contains_for_test(page_info_text, "Page 175:\n")
+  fixture_acceptance_assert_contains_for_test(
+    page_info_text, "MediaBox: 0.000000 0.000000 540.000000 666.000000\n",
+  )
+  fixture_acceptance_assert_contains_for_test(page_info_text, "Rotation: 0\n")
+  let composition = document.composition(file_size)
+  @test.assert_eq(composition.length(), 8)
+  @test.assert_eq(composition[0].label, "Images")
+  @test.assert_eq(composition[1].label, "Fonts")
+  @test.assert_eq(composition[2].label, "Content streams")
+  @test.assert_eq(composition[5].label, "XRef Table")
+  @test.assert_eq(
+    fixture_acceptance_composition_entry_bytes_for_test(composition, "Fonts") >
+    0,
+    true,
+  )
+  @test.assert_eq(
+    fixture_acceptance_composition_entry_bytes_for_test(
+      composition, "Content streams",
+    ) >
+    0,
+    true,
+  )
+  @test.assert_eq(
+    fixture_acceptance_composition_entry_bytes_for_test(
+      composition, "XRef Table",
+    ) >
+    0,
+    true,
+  )
+  let composition_json = document.composition_json(file_size).stringify()
+  fixture_acceptance_assert_contains_for_test(composition_json, "[\"Fonts\",")
+  fixture_acceptance_assert_contains_for_test(
+    composition_json, "[\"Content streams\",",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    composition_json, "[\"XRef Table\",",
+  )
+}
+
+///|
 async test "checked-in CamlPDF logo fixture reconstructs linearized bad startxref" {
   fixture_acceptance_assert_reconstructs_for_test(
     fixture_acceptance_bytes_for_test("fixtures/camlpdf/logo.pdf"),
@@ -1935,6 +2022,30 @@ async test "optional cpdf source manual fixture parses page specifications" {
       fixture_acceptance_assert_cpdf_manual_pagespec_for_test(document)
       fixture_acceptance_assert_cpdf_manual_pagespec_for_test(
         fixture_acceptance_reparse_compressed_for_test(document),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source manual fixture reports info page details and composition" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/cpdfmanual.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_manual_reports_for_test(
+        document,
+        bytes.length(),
+      )
+      let rewritten = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        document,
+      )
+      fixture_acceptance_assert_cpdf_manual_reports_for_test(
+        @pdflite.pdf_read_document_from_bytes(rewritten),
+        rewritten.length(),
       )
     }
   }
