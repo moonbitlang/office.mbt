@@ -1016,6 +1016,86 @@ test "PdfDocument draw structure-tree mode preserves nesting and namespaces" {
 }
 
 ///|
+test "PdfDocument draw structure-tree mode auto-tags text" {
+  let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
+  let font = draw_standard_font_for_test(PdfHelvetica)
+  let pack = try! @pdflite.pdf_fontpack_of_standard_font(font)
+  let drawn = try! document.draw(
+    [1],
+    [
+      PdfDrawTextSection([
+        PdfDrawFontPack("Body", pack, []),
+        PdfDrawFont("Body", 10.0),
+        PdfDrawText("A"),
+      ]),
+    ],
+    struct_tree=true,
+  )
+  let key_k = draw_name_for_test("/K")
+  let key_s = draw_name_for_test("/S")
+  let key_struct_tree_root = draw_name_for_test("/StructTreeRoot")
+  let catalog = try! drawn.catalog()
+  guard catalog.lookup_immediate(key_struct_tree_root)
+    is Some(PdfIndirect(root_number)) else {
+    fail("expected StructTreeRoot reference")
+  }
+  let root = drawn.lookup_object_or_null(root_number)
+  guard root.lookup_immediate(key_k)
+    is Some(PdfArray([PdfIndirect(paragraph_number)])) else {
+    fail("expected auto-tagged paragraph")
+  }
+  let paragraph = drawn.lookup_object_or_null(paragraph_number)
+  @test.assert_eq(
+    paragraph.lookup_immediate(key_s),
+    Some(PdfNameObject(draw_name_for_test("/P"))),
+  )
+  @test.assert_eq(
+    paragraph.lookup_immediate(key_k),
+    Some(PdfArray([PdfInteger(0)])),
+  )
+}
+
+///|
+test "PdfDocument draw structure-tree mode honors AutoTag false" {
+  let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
+  let font = draw_standard_font_for_test(PdfHelvetica)
+  let pack = try! @pdflite.pdf_fontpack_of_standard_font(font)
+  let drawn = try! document.draw(
+    [1],
+    [
+      PdfDrawTextSection([
+        PdfDrawFontPack("Body", pack, []),
+        PdfDrawFont("Body", 10.0),
+        PdfDrawAutoTag(false),
+        PdfDrawText("A"),
+      ]),
+    ],
+    struct_tree=true,
+  )
+  let key_k = draw_name_for_test("/K")
+  let key_parent_tree = draw_name_for_test("/ParentTree")
+  let key_struct_tree_root = draw_name_for_test("/StructTreeRoot")
+  let key_struct_parents = draw_name_for_test("/StructParents")
+  let catalog = try! drawn.catalog()
+  guard catalog.lookup_immediate(key_struct_tree_root)
+    is Some(PdfIndirect(root_number)) else {
+    fail("expected StructTreeRoot reference")
+  }
+  let root = drawn.lookup_object_or_null(root_number)
+  @test.assert_eq(root.lookup_immediate(key_k), Some(PdfArray([])))
+  guard root.lookup_immediate(key_parent_tree)
+    is Some(PdfIndirect(parent_tree_number)) else {
+    fail("expected ParentTree")
+  }
+  @test.assert_eq(
+    drawn.read_number_tree(drawn.lookup_object_or_null(parent_tree_number)),
+    [],
+  )
+  let pages = try! drawn.pages_of_pagetree()
+  @test.assert_eq(pages[0].rest.lookup_immediate(key_struct_parents), None)
+}
+
+///|
 test "pdf draw unsupported content op returns cpdf-style soft error" {
   let result : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_drawop_to_content_ops(
     PdfDrawText("hello"),
