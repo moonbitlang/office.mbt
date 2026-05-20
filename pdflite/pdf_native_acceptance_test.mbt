@@ -5923,6 +5923,28 @@ fn acceptance_image_jbig2_xobject_for_test() -> @pdflite.PdfObject {
 }
 
 ///|
+fn acceptance_jbig2_source_payload_for_test() -> @pdflite.PdfBytes raise {
+  acceptance_text_bytes_for_test([
+    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A,
+    // Width 640, height 480 at the cpdf JBIG2 dimension offsets.
+     0x00, 0x00, 0x02, 0x80, 0x00, 0x00, 0x01, 0xE0, 0xAA,
+  ])
+}
+
+///|
+fn acceptance_jbig2_source_globals_for_test() -> @pdflite.PdfBytes {
+  acceptance_ascii_for_test("source-jbig2-globals")
+}
+
+///|
+fn acceptance_jbig2_source_document_for_test() -> @pdflite.PdfDocument raise {
+  @pdflite.pdf_image_document_of_jbig2_data(
+    acceptance_jbig2_source_payload_for_test(),
+    global=Some(acceptance_jbig2_source_globals_for_test()),
+  )
+}
+
+///|
 fn acceptance_inline_image_dictionary_for_test() -> @pdflite.PdfObject {
   PdfDictionary([
     (acceptance_name_for_test("/W"), PdfInteger(3)),
@@ -6955,6 +6977,60 @@ fn acceptance_image_xobject_for_test(
     fail("expected image XObject")
   }
   image
+}
+
+///|
+fn acceptance_assert_jbig2_source_document_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(doc.endpage(), 1)
+  let pages = doc.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  @test.assert_eq(
+    pages[0].mediabox,
+    PdfArray([PdfInteger(0), PdfInteger(0), PdfInteger(640), PdfInteger(480)]),
+  )
+  let image = acceptance_image_xobject_for_test(
+    doc,
+    pages[0].resources,
+    acceptance_name_for_test("/I0"),
+  )
+  guard image is PdfStreamObject(stream) else {
+    fail("expected source JBIG2 image stream")
+  }
+  @test.assert_eq(
+    stream.dictionary.lookup_immediate(acceptance_name_for_test("/Width")),
+    Some(PdfInteger(640)),
+  )
+  @test.assert_eq(
+    stream.dictionary.lookup_immediate(acceptance_name_for_test("/Height")),
+    Some(PdfInteger(480)),
+  )
+  @test.assert_eq(
+    stream.dictionary.lookup_immediate(
+      acceptance_name_for_test("/BitsPerComponent"),
+    ),
+    Some(PdfInteger(1)),
+  )
+  @test.assert_eq(
+    stream.dictionary.lookup_immediate(acceptance_name_for_test("/ColorSpace")),
+    Some(PdfNameObject(acceptance_name_for_test("/DeviceGray"))),
+  )
+  @test.assert_eq(
+    doc.get_image_24bpp(pages[0].resources, image),
+    PdfJBIG2(
+      acceptance_jbig2_source_payload_for_test(),
+      Some([0.0, 1.0]),
+      Some(10000),
+    ),
+  )
+  guard doc.lookup_object_or_null(10000) is PdfStreamObject(globals) else {
+    fail("expected source JBIG2 globals stream")
+  }
+  @test.assert_eq(
+    @pdflite.pdf_stream(globals.dictionary, globals.data).stream_bytes(),
+    acceptance_jbig2_source_globals_for_test(),
+  )
 }
 
 ///|
@@ -10656,6 +10732,16 @@ test "native acceptance suite extracts images through reader boundaries" {
   acceptance_assert_image_lifecycle_for_test(decompressed)
   let reparsed = acceptance_compressed_roundtrip_for_test(decompressed)
   acceptance_assert_image_lifecycle_for_test(reparsed)
+}
+
+///|
+test "native acceptance suite builds cpdfimage JBIG2 documents through reader boundaries" {
+  let parsed = acceptance_compressed_roundtrip_for_test(
+    acceptance_jbig2_source_document_for_test(),
+  )
+  acceptance_assert_jbig2_source_document_for_test(parsed)
+  let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
+  acceptance_assert_jbig2_source_document_for_test(reparsed)
 }
 
 ///|

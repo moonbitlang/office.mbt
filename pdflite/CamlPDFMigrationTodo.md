@@ -4468,6 +4468,14 @@ Current backend snapshot:
 - [x] ~~The download-only py-pdf ImageMagick CCITT image fixture now also
   covers real-world malformed-startxref reconstruction through CCITT decoding
   and compressed rewrite/reread boundaries.~~
+- [x] ~~The cpdfimage JBIG2 fixed-offset dimension path now has a native
+  compressed reader-boundary gate: synthetic JBIG2 bytes with source-style
+  width/height offsets build a single-page `/JBIG2Decode` document, preserve
+  `/JBIG2Globals`, and re-extract the encoded payload after write/read/reread.
+  `moon test --target native pdf_native_acceptance_test.mbt` reports 90/90
+  tests passing, `moon test --target native` reports 2202/2202 tests passing,
+  and `moon check --target all --warn-list +73` completes with the known
+  warning-73/main-package warnings and no errors.~~
 - [ ] Optional external JBIG2 decoder integration and broader CCITT corpus
   validation.
 - [x] ~~Explicit zlib-style Flate level API across direct Flate, filter, and
@@ -5119,6 +5127,11 @@ Current backend snapshot:
   compressed native read/write/reread, preserving acceptance of
   `/KSCms-UHS-HW-V` and rejection of `/KSCms-UHC-HW-V`. `moon test --target
   native` reports 2201/2201 tests passing.~~
+- [x] ~~Add the next remaining format parity slice: cpdfimage JBIG2 document
+  construction from fixed source dimension offsets now has compressed native
+  read/write/reread coverage for page size, `/JBIG2Decode` metadata,
+  `/JBIG2Globals`, and encoded image extraction. `moon test --target native`
+  reports 2202/2202 tests passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.
