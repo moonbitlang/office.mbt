@@ -791,6 +791,15 @@ Current backend snapshot:
   row output with MoonBit JSON literal coverage, object-stream xref accounting,
   and non-positive file-size rejection. `moon test --target native` now reports
   1608/1608 tests passing.~~
+- [x] ~~`cpdfcomposition` bucket classification now also has a native compressed
+  reader-boundary gate using a source-shaped document with image, font
+  descriptor, page content, form XObject content, structure tree, and piece-info
+  objects. The gate verifies cpdf bucket order, byte accounting, JSON blob
+  parity, and stable write/read/reread behavior. `moon test --target native
+  pdf_native_acceptance_test.mbt` reports 91/91 tests passing, `moon test
+  --target native` reports 2203/2203 tests passing, and `moon check --target all
+  --warn-list +73` completes with the known warning-73/main-package warnings and
+  no errors.~~
 - [x] ~~Port `cpdfxobject.stamp_as_xobject` with overlay first-page Form XObject
   creation, resource prefixing, selected-page `/XObject` insertion, base
   bookmark retargeting after page-tree rebuild, trailer `/ID` preservation, and
@@ -5132,6 +5141,11 @@ Current backend snapshot:
   read/write/reread coverage for page size, `/JBIG2Decode` metadata,
   `/JBIG2Globals`, and encoded image extraction. `moon test --target native`
   reports 2202/2202 tests passing.~~
+- [x] ~~Add the next remaining format parity slice: cpdfcomposition bucket
+  classification now has compressed native read/write/reread coverage for images,
+  fonts, content streams, structure info, piece info, xref table accounting, JSON
+  blob parity, and unclassified bytes. `moon test --target native` reports
+  2203/2203 tests passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.

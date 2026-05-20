@@ -7034,6 +7034,201 @@ fn acceptance_assert_jbig2_source_document_for_test(
 }
 
 ///|
+fn acceptance_composition_source_stream_for_test(
+  entries : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)],
+  data : String,
+) -> @pdflite.PdfObject {
+  @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary(entries),
+    StreamGot(acceptance_ascii_for_test(data)),
+  )
+}
+
+///|
+fn acceptance_composition_source_document_for_test() -> @pdflite.PdfDocument {
+  let key_type = acceptance_name_for_test("/Type")
+  let key_pages = acceptance_name_for_test("/Pages")
+  let key_kids = acceptance_name_for_test("/Kids")
+  let key_count = acceptance_name_for_test("/Count")
+  let key_parent = acceptance_name_for_test("/Parent")
+  let key_contents = acceptance_name_for_test("/Contents")
+  let key_subtype = acceptance_name_for_test("/Subtype")
+  let key_font_descriptor = acceptance_name_for_test("/FontDescriptor")
+  let key_struct_tree_root = acceptance_name_for_test("/StructTreeRoot")
+  let key_pg = acceptance_name_for_test("/Pg")
+  let key_child = acceptance_name_for_test("/Child")
+  let key_piece_info = acceptance_name_for_test("/PieceInfo")
+  let key_private = acceptance_name_for_test("/Private")
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  doc.set_root(1)
+  doc.add_object_given_number(
+    1,
+    @pdflite.pdf_dictionary([
+      (key_type, PdfNameObject(acceptance_name_for_test("/Catalog"))),
+      (key_pages, PdfIndirect(2)),
+      (key_struct_tree_root, PdfIndirect(50)),
+    ]),
+  )
+  doc.add_object_given_number(
+    2,
+    @pdflite.pdf_dictionary([
+      (key_type, PdfNameObject(acceptance_name_for_test("/Pages"))),
+      (key_kids, PdfArray([PdfIndirect(3)])),
+      (key_count, PdfInteger(1)),
+    ]),
+  )
+  doc.add_object_given_number(
+    3,
+    @pdflite.pdf_dictionary([
+      (key_type, PdfNameObject(acceptance_name_for_test("/Page"))),
+      (key_parent, PdfIndirect(2)),
+      (key_contents, PdfArray([PdfIndirect(20)])),
+    ]),
+  )
+  doc.add_object_given_number(
+    20,
+    acceptance_composition_source_stream_for_test([], "BT ET"),
+  )
+  doc.add_object_given_number(
+    30,
+    acceptance_composition_source_stream_for_test(
+      [(key_subtype, PdfNameObject(acceptance_name_for_test("/Image")))],
+      "IMG",
+    ),
+  )
+  doc.add_object_given_number(
+    40,
+    @pdflite.pdf_dictionary([
+      (key_type, PdfNameObject(acceptance_name_for_test("/Font"))),
+      (key_font_descriptor, PdfIndirect(41)),
+    ]),
+  )
+  doc.add_object_given_number(41, @pdflite.pdf_dictionary([]))
+  doc.add_object_given_number(
+    50,
+    @pdflite.pdf_dictionary([
+      (key_pg, PdfIndirect(3)),
+      (key_child, PdfIndirect(51)),
+    ]),
+  )
+  doc.add_object_given_number(
+    51,
+    PdfString(acceptance_ascii_for_test("structure")),
+  )
+  doc.add_object_given_number(
+    60,
+    acceptance_composition_source_stream_for_test(
+      [(key_subtype, PdfNameObject(acceptance_name_for_test("/Form")))],
+      "q Q",
+    ),
+  )
+  doc.add_object_given_number(61, PdfString(acceptance_ascii_for_test("piece")))
+  doc.add_object_given_number(
+    70,
+    @pdflite.pdf_dictionary([
+      (
+        key_piece_info,
+        @pdflite.pdf_dictionary([(key_private, PdfIndirect(61))]),
+      ),
+    ]),
+  )
+  doc
+}
+
+///|
+fn acceptance_composition_entry_bytes_for_test(
+  entries : ArrayView[@pdflite.PdfCompositionEntry],
+  label : String,
+) -> Int raise {
+  for entry in entries {
+    if entry.label == label {
+      break entry.bytes
+    }
+  } nobreak {
+    fail("missing composition entry " + label)
+    0
+  }
+}
+
+///|
+fn acceptance_object_size_for_test(
+  doc : @pdflite.PdfDocument,
+  number : Int,
+) -> Int raise {
+  @pdflite.pdf_write_object(doc.lookup_object_or_null(number)).length()
+}
+
+///|
+fn acceptance_assert_composition_source_document_for_test(
+  doc : @pdflite.PdfDocument,
+  file_size : Int,
+) -> Unit raise {
+  @test.assert_eq(doc.endpage(), 1)
+  let entries = doc.composition(file_size)
+  @test.assert_eq(entries.length(), 8)
+  @test.assert_eq(entries[0].label, "Images")
+  @test.assert_eq(entries[1].label, "Fonts")
+  @test.assert_eq(entries[2].label, "Content streams")
+  @test.assert_eq(entries[3].label, "Structure Info")
+  @test.assert_eq(entries[4].label, "Attached Files")
+  @test.assert_eq(entries[5].label, "XRef Table")
+  @test.assert_eq(entries[6].label, "Piece Info")
+  @test.assert_eq(entries[7].label, "Unclassified")
+  let images = acceptance_object_size_for_test(doc, 30)
+  let fonts = acceptance_object_size_for_test(doc, 40) +
+    acceptance_object_size_for_test(doc, 41)
+  let content_streams = acceptance_object_size_for_test(doc, 20) +
+    acceptance_object_size_for_test(doc, 60)
+  let structure_info = acceptance_object_size_for_test(doc, 50) +
+    acceptance_object_size_for_test(doc, 51)
+  let piece_info = acceptance_object_size_for_test(doc, 61)
+  let xref_table = 20 * doc.object_count()
+  let classified = images +
+    fonts +
+    content_streams +
+    structure_info +
+    piece_info +
+    xref_table
+  @test.assert_eq(
+    try! acceptance_composition_entry_bytes_for_test(entries, "Images"),
+    images,
+  )
+  @test.assert_eq(
+    try! acceptance_composition_entry_bytes_for_test(entries, "Fonts"),
+    fonts,
+  )
+  @test.assert_eq(
+    try! acceptance_composition_entry_bytes_for_test(entries, "Content streams"),
+    content_streams,
+  )
+  @test.assert_eq(
+    try! acceptance_composition_entry_bytes_for_test(entries, "Structure Info"),
+    structure_info,
+  )
+  @test.assert_eq(
+    try! acceptance_composition_entry_bytes_for_test(entries, "Attached Files"),
+    0,
+  )
+  @test.assert_eq(
+    try! acceptance_composition_entry_bytes_for_test(entries, "XRef Table"),
+    xref_table,
+  )
+  @test.assert_eq(
+    try! acceptance_composition_entry_bytes_for_test(entries, "Piece Info"),
+    piece_info,
+  )
+  @test.assert_eq(
+    try! acceptance_composition_entry_bytes_for_test(entries, "Unclassified"),
+    file_size - classified,
+  )
+  @test.assert_eq(
+    doc.composition_json_blob(file_size),
+    @utf8.encode(doc.composition_json(file_size).stringify()),
+  )
+}
+
+///|
 fn acceptance_assert_image_lifecycle_for_test(
   doc : @pdflite.PdfDocument,
 ) -> Unit raise {
@@ -10742,6 +10937,26 @@ test "native acceptance suite builds cpdfimage JBIG2 documents through reader bo
   acceptance_assert_jbig2_source_document_for_test(parsed)
   let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
   acceptance_assert_jbig2_source_document_for_test(reparsed)
+}
+
+///|
+test "native acceptance suite reports cpdfcomposition buckets through reader boundaries" {
+  let rendered = @pdflite.pdf_write_document_with_compressed_xref_stream(
+    acceptance_composition_source_document_for_test(),
+  )
+  let parsed = @pdflite.pdf_read_document_from_bytes(rendered)
+  acceptance_assert_composition_source_document_for_test(
+    parsed,
+    rendered.length(),
+  )
+  let rerendered = @pdflite.pdf_write_document_with_compressed_xref_stream(
+    parsed,
+  )
+  let reparsed = @pdflite.pdf_read_document_from_bytes(rerendered)
+  acceptance_assert_composition_source_document_for_test(
+    reparsed,
+    rerendered.length(),
+  )
 }
 
 ///|
