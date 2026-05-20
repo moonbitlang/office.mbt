@@ -790,6 +790,21 @@ fn fixture_acceptance_assert_xref_stream_filter_reconstructs_for_test(
 }
 
 ///|
+let fixture_acceptance_cpdf_manual_image_paths_for_test : Array[String] = [
+  ".repos/cpdf-source/manualimages/bez.pdf", ".repos/cpdf-source/manualimages/capjoins.pdf",
+  ".repos/cpdf-source/manualimages/clip.pdf", ".repos/cpdf-source/manualimages/colfill.pdf",
+  ".repos/cpdf-source/manualimages/dash.pdf", ".repos/cpdf-source/manualimages/fill.pdf",
+  ".repos/cpdf-source/manualimages/fontparams.pdf", ".repos/cpdf-source/manualimages/fonts.pdf",
+  ".repos/cpdf-source/manualimages/h1.pdf", ".repos/cpdf-source/manualimages/line.pdf",
+  ".repos/cpdf-source/manualimages/lines.pdf", ".repos/cpdf-source/manualimages/matrix.pdf",
+  ".repos/cpdf-source/manualimages/para.pdf", ".repos/cpdf-source/manualimages/paras.pdf",
+  ".repos/cpdf-source/manualimages/png.pdf", ".repos/cpdf-source/manualimages/pop.pdf",
+  ".repos/cpdf-source/manualimages/stext.pdf", ".repos/cpdf-source/manualimages/text.pdf",
+  ".repos/cpdf-source/manualimages/textclip.pdf", ".repos/cpdf-source/manualimages/trans.pdf",
+  ".repos/cpdf-source/manualimages/xobj.pdf",
+]
+
+///|
 async test "checked-in CamlPDF logo fixture reconstructs linearized bad startxref" {
   fixture_acceptance_assert_reconstructs_for_test(
     fixture_acceptance_bytes_for_test("fixtures/camlpdf/logo.pdf"),
@@ -957,6 +972,19 @@ async test "optional cpdf source hello fixture reconstructs malformed classic xr
       fixture_acceptance_assert_classic_xref_marker_reconstructs_for_test(
         bytes, 1,
       )
+  }
+}
+
+///|
+async test "optional cpdf source manual image fixtures read rewrite and reconstruct" {
+  for path in fixture_acceptance_cpdf_manual_image_paths_for_test {
+    match fixture_acceptance_optional_bytes_for_test(path) {
+      None => ()
+      Some(bytes) => {
+        fixture_acceptance_assert_reads_and_rewrites_for_test(bytes, 1)
+        fixture_acceptance_assert_reconstructs_for_test(bytes, 1)
+      }
+    }
   }
 }
 
