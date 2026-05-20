@@ -3111,6 +3111,33 @@ async test "async draw control image file wrappers read path specs" {
 }
 
 ///|
+async test "async file wrappers load Standard 14 substitute font files" {
+  let directory = pdf_async_io_build_dir_for_test()
+  let helvetica_path = directory + "/NimbusSans-Regular.ttf"
+  let times_path = directory + "/NimbusRoman-Bold.ttf"
+  pdf_async_io_remove_if_exists_for_test(helvetica_path)
+  pdf_async_io_remove_if_exists_for_test(times_path)
+  let helvetica_bytes = @ascii.encode("fake helvetica substitute")
+  let times_bytes = @ascii.encode("fake times substitute")
+  @fs.write_file(helvetica_path, helvetica_bytes, create=0o644)
+  @fs.write_file(times_path, times_bytes, create=0o644)
+  let (loaded_helvetica, helvetica_name) = pdf_load_standard_font_substitute_file(
+    directory,
+    PdfHelvetica,
+  )
+  let (loaded_times, times_name) = pdf_load_standard_font_substitute_file(
+    directory + "/",
+    PdfTimesBold,
+  )
+  pdf_async_io_remove_if_exists_for_test(helvetica_path)
+  pdf_async_io_remove_if_exists_for_test(times_path)
+  @test.assert_eq(loaded_helvetica, helvetica_bytes)
+  @test.assert_eq(helvetica_name, "NimbusSans-Regular")
+  @test.assert_eq(loaded_times, times_bytes)
+  @test.assert_eq(times_name, "NimbusRoman-Bold")
+}
+
+///|
 async test "async draw control image file wrappers reject malformed specs" {
   let document = @pdflite.pdf_document_empty()
   let control = @pdflite.pdf_draw_control_new()

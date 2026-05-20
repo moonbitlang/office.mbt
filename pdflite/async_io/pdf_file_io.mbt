@@ -46,6 +46,41 @@ pub async fn pdf_is_linearized_file(path : StringView) -> Bool {
 }
 
 ///|
+fn pdf_async_io_join_directory_file(
+  directory : StringView,
+  filename : String,
+) -> String {
+  let text = directory.to_owned()
+  if text.length() == 0 {
+    filename
+  } else {
+    let last = text.at(text.length() - 1).to_int()
+    if last == 47 || last == 92 {
+      text + filename
+    } else {
+      text + "/" + filename
+    }
+  }
+}
+
+///|
+/// Load cpdf's Standard 14 substitute font file from a directory.
+///
+/// This mirrors `cpdfembed.ml`'s `load_substitute`: choose the URW substitute
+/// filename for `font`, read it from `directory`, and return the file bytes
+/// together with the extension-stripped font name.
+pub async fn pdf_load_standard_font_substitute_file(
+  directory : StringView,
+  font : @pdflite.PdfStandardFont,
+) -> (@pdflite.PdfBytes, String) {
+  let filename = @pdflite.pdf_standard_font_substitute_filenames(font)[0]
+  (
+    @fs.read_file(pdf_async_io_join_directory_file(directory, filename)).binary(),
+    @pdflite.pdf_standard_font_substitute_font_name(font),
+  )
+}
+
+///|
 fn pdf_draw_control_image_file_spec_for_async_io(
   spec : StringView,
   command : String,

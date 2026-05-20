@@ -912,6 +912,13 @@ Current backend snapshot:
   --target native --package bobzhang/pdflite --file pdf_embed_test.mbt` at
   5/5 tests passing; native full-suite validation reports 1887/1887 tests
   passing.~~
+- [x] ~~Close the `cpdfembed.load_substitute` file-IO boundary: native
+  `async_io` now exposes `pdf_load_standard_font_substitute_file`, joining the
+  requested directory with cpdf's URW substitute filename, reading the font
+  bytes, and returning the extension-stripped font name. Focused validation
+  reports `moon test --target native async_io --filter 'async file wrappers load
+  Standard 14 substitute font files'` at 1/1 test passing, and native full-suite
+  validation reports 2205/2205 tests passing.~~
 - [x] ~~Continue the cpdftype port with byte-preserving element streams,
   CamlPDF-compatible split/layout/pagination helpers, and a first native
   `typeset` layer that emits page content streams, font resources, link
@@ -5157,6 +5164,11 @@ Current backend snapshot:
   listing, decoded payloads, page annotation linkage, size accounting, and
   removal across rereads. `moon test --target native` reports 2204/2204 tests
   passing.~~
+- [x] ~~Add the next remaining source-boundary slice: cpdfembed Standard 14
+  substitute font loading now has a native async file wrapper that mirrors
+  `load_substitute` by reading the selected URW `.ttf` file and returning its
+  extension-stripped font name. `moon test --target native` reports 2205/2205
+  tests passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.
