@@ -184,6 +184,63 @@ fn fixture_acceptance_replace_first_bytes_for_test(
 }
 
 ///|
+fn fixture_acceptance_find_bytes_after_for_test(
+  haystack : BytesView,
+  needle : BytesView,
+  start : Int,
+) -> Int {
+  if needle.length() == 0 {
+    start
+  } else if start < 0 ||
+    start >= haystack.length() ||
+    haystack.length() - start < needle.length() {
+    -1
+  } else {
+    for position in start..<=(haystack.length() - needle.length()) {
+      if fixture_acceptance_bytes_start_with_at_for_test(
+          haystack, needle, position,
+        ) {
+        break position
+      }
+    } nobreak {
+      -1
+    }
+  }
+}
+
+///|
+fn fixture_acceptance_replace_bytes_after_for_test(
+  bytes : Bytes,
+  anchor : BytesView,
+  target : BytesView,
+  replacement : BytesView,
+) -> Bytes raise {
+  if target.length() != replacement.length() {
+    fail("replacement must preserve byte length")
+  }
+  let anchor_position = fixture_acceptance_find_bytes_for_test(bytes, anchor)
+  if anchor_position < 0 {
+    fail("expected replacement anchor")
+  }
+  let position = fixture_acceptance_find_bytes_after_for_test(
+    bytes,
+    target,
+    anchor_position + anchor.length(),
+  )
+  if position < 0 {
+    fail("expected replacement target after anchor")
+  }
+  let output : Array[Byte] = []
+  for byte in bytes {
+    output.push(byte)
+  }
+  for index in 0..<replacement.length() {
+    output[position + index] = replacement[index]
+  }
+  Bytes::from_array(output)
+}
+
+///|
 fn fixture_acceptance_corrupt_xref_stream_widths_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
@@ -191,6 +248,30 @@ fn fixture_acceptance_corrupt_xref_stream_widths_for_test(
     bytes,
     @ascii.encode("/W [1 3 1]"),
     @ascii.encode("/W /Bad   "),
+  )
+}
+
+///|
+fn fixture_acceptance_corrupt_xref_stream_index_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  fixture_acceptance_replace_bytes_after_for_test(
+    bytes,
+    @ascii.encode("/Type /XRef"),
+    @ascii.encode("/Index [0 104]"),
+    @ascii.encode("/Index /Bad   "),
+  )
+}
+
+///|
+fn fixture_acceptance_corrupt_xref_stream_filter_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  fixture_acceptance_replace_bytes_after_for_test(
+    bytes,
+    @ascii.encode("/Type /XRef"),
+    @ascii.encode("/Filter /FlateDecode"),
+    @ascii.encode("/Filter /NoSuchThing"),
   )
 }
 
@@ -263,6 +344,44 @@ fn fixture_acceptance_assert_xref_stream_widths_reconstructs_for_test(
 }
 
 ///|
+fn fixture_acceptance_assert_xref_stream_index_reconstructs_for_test(
+  bytes : Bytes,
+  expected_pages : Int,
+) -> Unit raise {
+  let corrupted = fixture_acceptance_corrupt_xref_stream_index_for_test(bytes)
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    corrupted,
+  )
+  guard strict is Err(@pdflite.PdfError::XRefEntryExpected) else {
+    fail("expected malformed xref stream index to require reconstruction")
+  }
+  let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
+  @test.assert_eq(recovered.first_xref(), 0)
+  @test.assert_eq(recovered.endpage(), expected_pages)
+  let reparsed = fixture_acceptance_reparse_compressed_for_test(recovered)
+  @test.assert_eq(reparsed.endpage(), expected_pages)
+}
+
+///|
+fn fixture_acceptance_assert_xref_stream_filter_reconstructs_for_test(
+  bytes : Bytes,
+  expected_pages : Int,
+) -> Unit raise {
+  let corrupted = fixture_acceptance_corrupt_xref_stream_filter_for_test(bytes)
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    corrupted,
+  )
+  guard strict is Err(@pdflite.PdfError::FilterNotSupported(_)) else {
+    fail("expected malformed xref stream filter to require reconstruction")
+  }
+  let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
+  @test.assert_eq(recovered.first_xref(), 0)
+  @test.assert_eq(recovered.endpage(), expected_pages)
+  let reparsed = fixture_acceptance_reparse_compressed_for_test(recovered)
+  @test.assert_eq(reparsed.endpage(), expected_pages)
+}
+
+///|
 async test "checked-in CamlPDF logo fixture reconstructs linearized bad startxref" {
   fixture_acceptance_assert_reconstructs_for_test(
     fixture_acceptance_bytes_for_test("fixtures/camlpdf/logo.pdf"),
@@ -281,6 +400,26 @@ async test "checked-in CamlPDF logo fixture reconstructs malformed classic xref 
 ///|
 async test "checked-in CamlPDF introduction fixture reconstructs malformed xref stream widths" {
   fixture_acceptance_assert_xref_stream_widths_reconstructs_for_test(
+    fixture_acceptance_bytes_for_test(
+      "fixtures/camlpdf/introduction_to_camlpdf.pdf",
+    ),
+    10,
+  )
+}
+
+///|
+async test "checked-in CamlPDF introduction fixture reconstructs malformed xref stream index" {
+  fixture_acceptance_assert_xref_stream_index_reconstructs_for_test(
+    fixture_acceptance_bytes_for_test(
+      "fixtures/camlpdf/introduction_to_camlpdf.pdf",
+    ),
+    10,
+  )
+}
+
+///|
+async test "checked-in CamlPDF introduction fixture reconstructs malformed xref stream filter" {
+  fixture_acceptance_assert_xref_stream_filter_reconstructs_for_test(
     fixture_acceptance_bytes_for_test(
       "fixtures/camlpdf/introduction_to_camlpdf.pdf",
     ),

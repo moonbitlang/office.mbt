@@ -1642,6 +1642,12 @@ Current backend snapshot:
   stream entries are unavailable, and compressed-xref rewrite/reread preserves
   all pages. `moon test --target native fixture_acceptance` reports 7/7 tests
   passing.~~
+- [x] ~~Add checked-in CamlPDF real-world malformed xref-stream `/Index` and
+  `/Filter` gates: `fixture_acceptance` now mutates only metadata after the
+  xref-stream anchor in `introduction_to_camlpdf.pdf`, requires strict reader
+  failure, reconstructs through the public reader, and verifies compressed-xref
+  rewrite/reread page counts. `moon test --target native fixture_acceptance`
+  reports 9/9 tests passing.~~
 - [ ] Add further malformed xref-table/xref-stream/object-stream recovery cases
   from real-world PDFs.
 - [x] ~~Add a native reader-boundary gate for the next available predefined CMap
