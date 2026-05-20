@@ -555,6 +555,20 @@ fn fixture_acceptance_corrupt_xref_stream_root_entry_for_test(
 }
 
 ///|
+fn fixture_acceptance_corrupt_xref_stream_decodeparms_entry_for_test(
+  bytes : Bytes,
+  metadata_entry : BytesView,
+  replacement_text : String,
+) -> Bytes raise {
+  fixture_acceptance_replace_bytes_after_with_padded_ascii_for_test(
+    bytes,
+    @ascii.encode("/Type /XRef"),
+    metadata_entry,
+    replacement_text,
+  )
+}
+
+///|
 fn fixture_acceptance_corrupt_first_object_stream_count_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
@@ -599,34 +613,6 @@ fn fixture_acceptance_corrupt_xref_stream_filter_for_test(
     @ascii.encode("/Type /XRef"),
     @ascii.encode("/Filter /FlateDecode"),
     @ascii.encode("/Filter /NoSuchThing"),
-  )
-}
-
-///|
-fn fixture_acceptance_corrupt_xref_stream_decodeparms_for_test(
-  bytes : Bytes,
-) -> Bytes raise {
-  fixture_acceptance_replace_bytes_after_with_padded_ascii_for_test(
-    bytes,
-    @ascii.encode("/Type /XRef"),
-    @ascii.encode(
-      "/ID [<2E7D00CFC8082E6E6E4942CA3A7D6E63> <2E7D00CFC8082E6E6E4942CA3A7D6E63>]",
-    ),
-    "/DecodeParms /Bad",
-  )
-}
-
-///|
-fn fixture_acceptance_corrupt_xref_stream_decodeparms_predictor_for_test(
-  bytes : Bytes,
-) -> Bytes raise {
-  fixture_acceptance_replace_bytes_after_with_padded_ascii_for_test(
-    bytes,
-    @ascii.encode("/Type /XRef"),
-    @ascii.encode(
-      "/ID [<2E7D00CFC8082E6E6E4942CA3A7D6E63> <2E7D00CFC8082E6E6E4942CA3A7D6E63>]",
-    ),
-    "/DecodeParms << /Predictor 9 >>",
   )
 }
 
@@ -1004,8 +990,23 @@ fn fixture_acceptance_assert_xref_stream_decodeparms_reconstructs_for_test(
   bytes : Bytes,
   expected_pages : Int,
 ) -> Unit raise {
-  let corrupted = fixture_acceptance_corrupt_xref_stream_decodeparms_for_test(
+  fixture_acceptance_assert_xref_stream_decodeparms_entry_reconstructs_for_test(
     bytes,
+    expected_pages,
+    @ascii.encode(
+      "/ID [<2E7D00CFC8082E6E6E4942CA3A7D6E63> <2E7D00CFC8082E6E6E4942CA3A7D6E63>]",
+    ),
+  )
+}
+
+///|
+fn fixture_acceptance_assert_xref_stream_decodeparms_entry_reconstructs_for_test(
+  bytes : Bytes,
+  expected_pages : Int,
+  metadata_entry : BytesView,
+) -> Unit raise {
+  let corrupted = fixture_acceptance_corrupt_xref_stream_decodeparms_entry_for_test(
+    bytes, metadata_entry, "/DecodeParms /Bad",
   )
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     corrupted,
@@ -1025,8 +1026,23 @@ fn fixture_acceptance_assert_xref_stream_decodeparms_predictor_reconstructs_for_
   bytes : Bytes,
   expected_pages : Int,
 ) -> Unit raise {
-  let corrupted = fixture_acceptance_corrupt_xref_stream_decodeparms_predictor_for_test(
+  fixture_acceptance_assert_xref_stream_decodeparms_predictor_entry_reconstructs_for_test(
     bytes,
+    expected_pages,
+    @ascii.encode(
+      "/ID [<2E7D00CFC8082E6E6E4942CA3A7D6E63> <2E7D00CFC8082E6E6E4942CA3A7D6E63>]",
+    ),
+  )
+}
+
+///|
+fn fixture_acceptance_assert_xref_stream_decodeparms_predictor_entry_reconstructs_for_test(
+  bytes : Bytes,
+  expected_pages : Int,
+  metadata_entry : BytesView,
+) -> Unit raise {
+  let corrupted = fixture_acceptance_corrupt_xref_stream_decodeparms_entry_for_test(
+    bytes, metadata_entry, "/DecodeParms << /Predictor 9 >>",
   )
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     corrupted,
@@ -1375,6 +1391,42 @@ async test "optional cpdf source manual fixture reconstructs malformed xref stre
         bytes,
         175,
         @ascii.encode("/Root 1841 0 R"),
+      )
+  }
+}
+
+///|
+async test "optional cpdf source manual fixture reconstructs malformed xref stream DecodeParms" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/cpdfmanual.pdf",
+    ) {
+    None => ()
+    Some(bytes) =>
+      fixture_acceptance_assert_xref_stream_decodeparms_entry_reconstructs_for_test(
+        bytes,
+        175,
+        @ascii.encode(
+          "/ID [<CA2FED47397E566603B0A9A8E7328C79> <CA2FED47397E566603B0A9A8E7328C79>]",
+        ),
+      )
+  }
+}
+
+///|
+async test "optional cpdf source manual fixture reconstructs unsupported xref stream DecodeParms predictor" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/cpdfmanual.pdf",
+    ) {
+    None => ()
+    Some(bytes) =>
+      fixture_acceptance_assert_xref_stream_decodeparms_predictor_entry_reconstructs_for_test(
+        bytes,
+        175,
+        @ascii.encode(
+          "/ID [<CA2FED47397E566603B0A9A8E7328C79> <CA2FED47397E566603B0A9A8E7328C79>]",
+        ),
       )
   }
 }
