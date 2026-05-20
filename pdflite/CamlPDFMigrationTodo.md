@@ -5368,6 +5368,14 @@ Current backend snapshot:
   --target native fixture_acceptance --filter '*bookmarks*'` reports 1/1 test
   passing, `moon test --target native fixture_acceptance` reports 52/52 tests
   passing, and `moon test --target native` reports 2223/2223 tests passing.~~
+- [x] ~~Add the next source-boundary `cpdftoc` slice: optional
+  `.repos/cpdf-source/cpdfmanual.pdf` now gates table-of-contents codepoint
+  collection, cpdftype element generation, dot leaders, destination contents,
+  and generated TOC bookmark round-tripping from the real manual outline before
+  and after compressed rewrite/reread. `moon test --target native
+  fixture_acceptance --filter '*table of contents*'` reports 1/1 test passing,
+  `moon test --target native fixture_acceptance` reports 53/53 tests passing,
+  and `moon test --target native` reports 2224/2224 tests passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.

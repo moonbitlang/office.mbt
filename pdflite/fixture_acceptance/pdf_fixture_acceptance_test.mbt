@@ -1806,6 +1806,142 @@ fn fixture_acceptance_assert_cpdf_manual_bookmarks_for_test(
 }
 
 ///|
+fn fixture_acceptance_cpdf_toc_fontpack_for_test() -> @pdflite.PdfFontPack raise {
+  @pdflite.pdf_fontpack_of_standard_font(
+    PdfFontStandard({ font: PdfHelvetica, encoding: PdfWinAnsiEncoding }),
+  )
+}
+
+///|
+fn fixture_acceptance_type_text_contains_for_test(
+  elements : ArrayView[@pdflite.PdfTypeElement],
+  fragment : String,
+) -> Bool {
+  for element in elements {
+    match element {
+      PdfTypeText(text) =>
+        if @ascii.decode_lossy(text).contains(fragment) {
+          break true
+        }
+      _ => ()
+    }
+  } nobreak {
+    false
+  }
+}
+
+///|
+fn fixture_acceptance_type_dest_contains_for_test(
+  elements : ArrayView[@pdflite.PdfTypeElement],
+  fragment : String,
+) -> Bool {
+  for element in elements {
+    match element {
+      PdfTypeBeginDest(_, Some(text)) =>
+        if text.contains(fragment) {
+          break true
+        }
+      _ => ()
+    }
+  } nobreak {
+    false
+  }
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_manual_toc_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 175)
+  let original_bookmarks = document.read_bookmarks(preserve_actions=true)
+  @test.assert_eq(original_bookmarks.length(), 163)
+  let title = @ascii.encode("Contents\\nGenerated")
+  let pack = fixture_acceptance_cpdf_toc_fontpack_for_test()
+  let toc_bookmarks = [
+    original_bookmarks[0],
+    original_bookmarks[21],
+    original_bookmarks[25],
+  ]
+  let used = document.toc_used_codepoints([], title, toc_bookmarks)
+  @test.assert_eq(used.contains(46), true)
+  @test.assert_eq(used.contains(67), true)
+  @test.assert_eq(used.contains(49), true)
+  let elements = document.toc_type_elements(
+    pack,
+    9.0,
+    title,
+    true,
+    false,
+    [],
+    toc_bookmarks,
+    540.0,
+    54.0,
+  )
+  @test.assert_eq(
+    fixture_acceptance_type_text_contains_for_test(elements, "Contents"),
+    true,
+  )
+  @test.assert_eq(
+    fixture_acceptance_type_text_contains_for_test(elements, "Basic"),
+    true,
+  )
+  @test.assert_eq(
+    fixture_acceptance_type_text_contains_for_test(elements, "Usage"),
+    true,
+  )
+  @test.assert_eq(
+    fixture_acceptance_type_text_contains_for_test(elements, "31"),
+    true,
+  )
+  @test.assert_eq(
+    fixture_acceptance_type_text_contains_for_test(elements, "."),
+    true,
+  )
+  @test.assert_eq(
+    fixture_acceptance_type_dest_contains_for_test(elements, "Basic"),
+    true,
+  )
+  @test.assert_eq(
+    fixture_acceptance_type_dest_contains_for_test(elements, "Merging"),
+    true,
+  )
+  let updated = document.toc_add_bookmark(title)
+  let bookmarks = updated.read_bookmarks(preserve_actions=true)
+  @test.assert_eq(bookmarks.length(), original_bookmarks.length() + 1)
+  @test.assert_eq(bookmarks[0].text, @pdflite.pdf_toc_bookmark_text(title))
+  @test.assert_eq(updated.page_number_of_target(bookmarks[0].target), 1)
+  @test.assert_eq(bookmarks[1].text, original_bookmarks[0].text)
+  @test.assert_eq(updated.page_number_of_target(bookmarks[1].target), 19)
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_manual_toc_bookmark_roundtrip_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  let original_bookmarks = document.read_bookmarks(preserve_actions=true)
+  @test.assert_eq(original_bookmarks.length(), 164)
+  @test.assert_eq(
+    original_bookmarks[0].text,
+    @pdflite.pdf_toc_bookmark_text(@ascii.encode("Contents\\nGenerated")),
+  )
+  @test.assert_eq(
+    document.page_number_of_target(original_bookmarks[0].target),
+    1,
+  )
+  @test.assert_eq(
+    document.page_number_of_target(original_bookmarks[1].target),
+    19,
+  )
+}
+
+///|
+fn fixture_acceptance_cpdf_manual_toc_bookmark_for_test(
+  document : @pdflite.PdfDocument,
+) -> @pdflite.PdfDocument raise {
+  document.toc_add_bookmark(@ascii.encode("Contents\\nGenerated"))
+}
+
+///|
 fn fixture_acceptance_cpdf_png_image_object_for_test(
   document : @pdflite.PdfDocument,
 ) -> @pdflite.PdfObject raise {
@@ -2437,6 +2573,32 @@ async test "optional cpdf source manual fixture lists bookmarks" {
       fixture_acceptance_assert_cpdf_manual_bookmarks_for_test(rebuilt)
       fixture_acceptance_assert_cpdf_manual_bookmarks_for_test(
         fixture_acceptance_reparse_compressed_for_test(rebuilt),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source manual fixture builds table of contents" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/cpdfmanual.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_manual_toc_for_test(document)
+      fixture_acceptance_assert_cpdf_manual_toc_for_test(
+        fixture_acceptance_reparse_compressed_for_test(document),
+      )
+      let bookmarked = fixture_acceptance_cpdf_manual_toc_bookmark_for_test(
+        document,
+      )
+      fixture_acceptance_assert_cpdf_manual_toc_bookmark_roundtrip_for_test(
+        bookmarked,
+      )
+      fixture_acceptance_assert_cpdf_manual_toc_bookmark_roundtrip_for_test(
+        fixture_acceptance_reparse_compressed_for_test(bookmarked),
       )
     }
   }
