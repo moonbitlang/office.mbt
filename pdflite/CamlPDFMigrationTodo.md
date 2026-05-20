@@ -2082,6 +2082,14 @@ Current backend snapshot:
   `BytesView` copy boundaries, inline-image encoded/error branches, borrowed
   raw RGB image helpers, lexeme empty/sign-only integer parsing, and
   reconstructed object-stream expansion recovery.~~
+- [x] ~~Refresh non-native backend validation after the cpdf source-corpus
+  gates: `moon test --target wasm-gc` reports 2012/2012 tests passing,
+  `moon test --target js` reports 2012/2012 tests passing, and `moon check
+  --target all --warn-list +73` completes with the known warning baseline and
+  no errors. Full plain-Wasm `moon test --target wasm` remains blocked by the
+  known runtime maximum-function-size limit, now observed in
+  `markdown.blackbox_test.wasm`, while `moon test --target wasm .` also exceeds
+  the same limit in `pdflite.blackbox_test.wasm`.~~
 - [ ] Revisit all-backend validation after native parity is stable.
 
 ## Big Picture Checklist
@@ -5250,6 +5258,12 @@ Current backend snapshot:
   --target native` reports 2211/2211 tests passing, and `moon check --target
   all --warn-list +73` completes with the known warning baseline and no
   errors.~~
+- [x] ~~Refresh portable backend validation after the latest source-corpus
+  gates: WasmGC and JavaScript full test suites each report 2012/2012 tests
+  passing, all-target type checking completes with the known warning baseline,
+  and full plain-Wasm test execution is still explicitly not claimed because it
+  hits the runtime maximum-function-size limit in the root/markdown blackbox
+  test executables.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
