@@ -577,6 +577,10 @@ pub fn pdf_draft(@core.PdfName?, Bool, ArrayView[Int], PdfDocument) -> PdfDocume
 
 pub fn pdf_draw_colour_of_string(String) -> PdfDrawColour
 
+pub fn pdf_draw_control() -> PdfDrawControl
+
+pub fn pdf_draw_control_new() -> PdfDrawControl
+
 pub fn pdf_drawn_path_content_json(PdfDrawnPath) -> Json
 
 pub fn pdf_drawop_to_content_ops(PdfDrawOp) -> Array[PdfContentOp] raise @core.PdfError
@@ -2861,6 +2865,28 @@ pub(all) enum PdfDrawColour {
   PdfDrawRGB(Double, Double, Double)
   PdfDrawGrey(Double)
   PdfDrawCYMK(Double, Double, Double, Double)
+} derive(Eq, ToJson, @debug.Debug)
+
+pub struct PdfDrawControl {
+  frames : Array[PdfDrawControlFrame]
+  mut xobject_bbox : PdfCoordRectangle
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfDrawControl::add_op(Self, PdfDrawOp) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::begin_text_section(Self) -> Unit
+pub fn PdfDrawControl::current_frame_name(Self) -> String raise @core.PdfError
+pub fn PdfDrawControl::current_ops(Self) -> Array[PdfDrawOp] raise @core.PdfError
+pub fn PdfDrawControl::depth(Self) -> Int
+pub fn PdfDrawControl::end_text_section(Self) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::end_xobject(Self) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::ops(Self) -> Array[PdfDrawOp]
+pub fn PdfDrawControl::pop_group(Self) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::push_group(Self) -> Unit
+pub fn PdfDrawControl::set_xobject_bbox(Self, PdfCoordRectangle) -> Unit
+pub fn PdfDrawControl::start_xobject(Self, String) -> Unit
+
+pub(all) struct PdfDrawControlFrame {
+  name : String
+  ops : Array[PdfDrawOp]
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) enum PdfDrawJustification {

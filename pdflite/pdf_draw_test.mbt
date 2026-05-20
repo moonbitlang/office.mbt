@@ -151,3 +151,61 @@ test "pdf draw unsupported content op returns cpdf-style soft error" {
   }
   @test.assert_eq(message, "Cpdfdraw: unsupported draw operation Text")
 }
+
+///|
+test "pdf draw control collects main text push and xobject frames in order" {
+  let control = @pdflite.pdf_draw_control_new()
+  @test.assert_eq(try! control.current_frame_name(), "_MAIN")
+  @test.assert_eq(control.depth(), 1)
+  try! control.add_op(PdfDrawRect(0.0, 0.0, 10.0, 20.0))
+
+  control.begin_text_section()
+  @test.assert_eq(try! control.current_frame_name(), "_TEXT")
+  try! control.add_op(PdfDrawFont("F0", 12.0))
+  try! control.add_op(PdfDrawText("hello"))
+  try! control.end_text_section()
+
+  control.push_group()
+  @test.assert_eq(try! control.current_frame_name(), "_PUSH")
+  try! control.add_op(PdfDrawSetFill(PdfDrawRGB(1.0, 0.0, 0.0)))
+  try! control.add_op(PdfDrawFill)
+  try! control.pop_group()
+
+  control.set_xobject_bbox({ x: 1.0, y: 2.0, width: 30.0, height: 40.0 })
+  control.start_xobject("XO")
+  @test.assert_eq(try! control.current_frame_name(), "XO")
+  try! control.add_op(PdfDrawLine(3.0, 4.0))
+  try! control.end_xobject()
+
+  let expected : Array[@pdflite.PdfDrawOp] = [
+    PdfDrawRect(0.0, 0.0, 10.0, 20.0),
+    PdfDrawTextSection([PdfDrawFont("F0", 12.0), PdfDrawText("hello")]),
+    PdfDrawQq([PdfDrawSetFill(PdfDrawRGB(1.0, 0.0, 0.0)), PdfDrawFill]),
+    PdfDrawFormXObject(1.0, 2.0, 30.0, 40.0, "XO", [PdfDrawLine(3.0, 4.0)]),
+  ]
+  @test.assert_eq(control.ops(), expected)
+  @test.assert_eq(
+    @pdflite.pdf_string_of_drawops(control.ops()),
+    " Rect TextSection ( Font F0  Text) Qq ( SetFill Fill) FormXObject ( Line)",
+  )
+  @test.assert_eq(control.depth(), 1)
+}
+
+///|
+test "pdf draw control reports mismatched section closures" {
+  let text = @pdflite.pdf_draw_control_new()
+  let text_result : Result[Unit, Error] = try? text.end_text_section()
+  guard text_result
+    is Err(@pdflite.PdfError::SoftError("not in a text section at -et")) else {
+    fail("expected text-section close error")
+  }
+  @test.assert_eq(text.depth(), 1)
+
+  let group = @pdflite.pdf_draw_control_new()
+  let group_result : Result[Unit, Error] = try? group.pop_group()
+  guard group_result
+    is Err(@pdflite.PdfError::SoftError("not in a pushed section at -pop")) else {
+    fail("expected pushed-section close error")
+  }
+  @test.assert_eq(group.depth(), 1)
+}
