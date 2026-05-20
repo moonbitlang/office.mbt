@@ -5273,6 +5273,15 @@ Current backend snapshot:
   1/1 test passing, `moon test --target native fixture_acceptance` reports
   43/43 tests passing, and `moon test --target native` reports 2212/2212 tests
   passing.~~
+- [x] ~~Add the next source-corpus object-stream repair slice: optional
+  `.repos/cpdf-source/cpdfmanual.pdf` now corrupts the first `/ObjStm`
+  `/Length 1526` entry to `/Length /Bad`, exercises strict malformed-stream
+  length repair by scanning to `endstream`, preserves the 175-page manual, and
+  rechecks the result after compressed rewrite/reread. `moon test --target
+  native fixture_acceptance --filter '*malformed object stream length*'`
+  reports 1/1 test passing, `moon test --target native fixture_acceptance`
+  reports 44/44 tests passing, and `moon test --target native` reports
+  2213/2213 tests passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
