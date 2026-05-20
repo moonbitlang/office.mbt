@@ -3052,6 +3052,18 @@ fn acceptance_vertical_predefined_cmap_cases_for_test() -> Array[
       0x22EF,
       0xA1A6,
     ),
+    (
+      "/FvUhcHw",
+      "/VerticalKSCmsUHCHW",
+      "/KSCms-UHC-HW-V",
+      "/VerticalKSCmsUHCHWDescendant",
+      "Korea1",
+      176,
+      [0xA1, 0xA6],
+      [0x22EF],
+      0x22EF,
+      0xA1A6,
+    ),
   ]
 }
 
@@ -4812,9 +4824,9 @@ fn acceptance_assert_vertical_predefined_cmap_text_for_test(
   doc : @pdflite.PdfDocument,
 ) -> Unit raise {
   @test.assert_eq(doc.version(), (1, 5))
-  @test.assert_eq(doc.endpage(), 18)
+  @test.assert_eq(doc.endpage(), 19)
   let pages = doc.pages_of_pagetree()
-  @test.assert_eq(pages.length(), 18)
+  @test.assert_eq(pages.length(), 19)
   let cases = acceptance_vertical_predefined_cmap_cases_for_test()
   for index, case in cases {
     let font = acceptance_assert_predefined_cmap_font_shape_for_test(

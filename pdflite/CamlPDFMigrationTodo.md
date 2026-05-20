@@ -5185,6 +5185,15 @@ Current backend snapshot:
   reports 14/14 tests passing, `moon test --target native` reports 2207/2207
   tests passing, and `moon check --target all --warn-list +73` completes with
   the known warning baseline and no errors.~~
+- [x] ~~Add the next remaining source-boundary predefined CMap slice:
+  `/KSCms-UHC-HW-V` now has native synthetic-PDF reader-boundary coverage in
+  the vertical predefined CMap acceptance document, complementing the existing
+  unit-level extraction and reverse-lookup coverage while preserving the
+  separate cpdfua Matterhorn typo checks. `moon test --target native
+  pdf_native_acceptance_test.mbt --filter '*vertical predefined CMap*'` reports
+  1/1 tests passing, `moon test --target native` reports 2207/2207 tests
+  passing, and `moon check --target all --warn-list +73` completes with the
+  known warning baseline and no errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
