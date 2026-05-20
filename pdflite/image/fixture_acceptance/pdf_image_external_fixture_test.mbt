@@ -410,6 +410,42 @@ async test "cpdf source manual image PDF corpus parses and rewrites" {
 }
 
 ///|
+async test "cpdf source manual image PDF corpus reconstructs malformed startxref" {
+  let mut checked = 0
+  for path in image_external_cpdf_source_manual_image_pdf_paths_for_test() {
+    match image_external_fixture_bytes_for_test(path) {
+      None => ()
+      Some(bytes) => {
+        checked += 1
+        let corrupted = image_external_corrupt_startxref_pointer_for_test(bytes)
+        let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+          corrupted,
+        )
+        guard strict is Err(_) else {
+          fail(
+            "expected bad startxref to require malformed reconstruction for " +
+            path,
+          )
+        }
+        let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
+        @test.assert_eq(recovered.first_xref(), 0)
+        image_external_assert_cpdf_manual_image_page_for_test(recovered, path)
+        image_external_assert_cpdf_manual_image_page_for_test(
+          image_external_reparse_compressed_for_test(recovered),
+          path,
+        )
+      }
+    }
+  }
+  if checked > 0 {
+    @test.assert_eq(
+      checked,
+      image_external_cpdf_source_manual_image_pdf_paths_for_test().length(),
+    )
+  }
+}
+
+///|
 async test "cpdf source PNG manual image fixture decodes predictor RGB24" {
   match
     image_external_fixture_document_for_test(

@@ -44,8 +44,8 @@ async test "image fixture manifest documents optional downloads" {
   images without bloating the repository.
 - Optional `.repos/cpdf-source` fixtures are skipped when absent because that
   source checkout is ignored in fresh clones. When present, the corpus gate reads
-  every `manualimages/*.pdf`, parses the page content, and checks compressed
-  rewrite stability.
+  every `manualimages/*.pdf`, parses the page content, checks compressed rewrite
+  stability, and verifies public-reader reconstruction after a bad `startxref`.
 - Library image APIs remain in the root package; this package is only for
   fixture-backed verification.
 

@@ -5220,6 +5220,16 @@ Current backend snapshot:
   reports 15/15 tests passing. `moon test --target native` reports 2208/2208
   tests passing, and `moon check --target all --warn-list +73` completes with
   the known warning baseline and no errors.~~
+- [x] ~~Add the next remaining malformed recovery source-corpus slice: the
+  optional `.repos/cpdf-source/manualimages/*.pdf` corpus now corrupts the final
+  `startxref`, requires strict-reader failure, reconstructs each one-page
+  manual-image PDF through the public reader, parses page content, and rechecks
+  after compressed rewrite. `moon test --target native image/fixture_acceptance
+  --filter '*manual image PDF corpus reconstructs malformed startxref*'`
+  reports 1/1 tests passing and `moon test --target native
+  image/fixture_acceptance` reports 16/16 tests passing. `moon test --target
+  native` reports 2209/2209 tests passing, and `moon check --target all
+  --warn-list +73` completes with the known warning baseline and no errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
