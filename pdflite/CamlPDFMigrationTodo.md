@@ -5264,6 +5264,15 @@ Current backend snapshot:
   and full plain-Wasm test execution is still explicitly not claimed because it
   hits the runtime maximum-function-size limit in the root/markdown blackbox
   test executables.~~
+- [x] ~~Add the next source-corpus malformed metadata slice: optional
+  `.repos/cpdf-source/cpdfmanual.pdf` now corrupts the final xref stream
+  `/Length 4551` entry to `/Length /Bad`, exercises strict stream-length
+  repair instead of physical reconstruction, preserves the 175-page manual, and
+  rechecks the result after compressed rewrite/reread. `moon test --target
+  native fixture_acceptance --filter '*malformed xref stream length*'` reports
+  1/1 test passing, `moon test --target native fixture_acceptance` reports
+  43/43 tests passing, and `moon test --target native` reports 2212/2212 tests
+  passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
