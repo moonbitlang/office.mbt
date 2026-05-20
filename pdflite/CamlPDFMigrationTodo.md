@@ -2406,6 +2406,12 @@ Current backend snapshot:
   source paths, write sanitized attachment names, and reject malformed
   no-data attachments; native full-suite validation reports 1498/1498 tests
   passing.~~
+- [x] ~~`cpdfattach.ml` document-level embedded-file name trees and page-level
+  `/FileAttachment` annotations now have compressed native read/write/reread
+  boundary coverage for payload data, names, page numbers, descriptions,
+  `/AFRelationship` values, raw size accounting, annotation `/FS` links, and
+  removal of both attachment forms. `moon test --target native` reports
+  2204/2204 tests passing.~~
 - [x] ~~Standalone `cpdfsqueeze.ml` stream compression/decompression and
   conservative squeeze slices now expose `PdfDocument::recompress`,
   `PdfDocument::decompress`, `PdfDocument::squeeze`, `recompress_pdf`,
@@ -5146,6 +5152,11 @@ Current backend snapshot:
   fonts, content streams, structure info, piece info, xref table accounting, JSON
   blob parity, and unclassified bytes. `moon test --target native` reports
   2203/2203 tests passing.~~
+- [x] ~~Add the next remaining format parity slice: cpdfattach document and
+  page attachments now have compressed native reader-boundary coverage for
+  listing, decoded payloads, page annotation linkage, size accounting, and
+  removal across rereads. `moon test --target native` reports 2204/2204 tests
+  passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.

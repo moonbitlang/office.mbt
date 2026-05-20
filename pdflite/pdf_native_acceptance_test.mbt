@@ -9371,6 +9371,90 @@ fn acceptance_pdfmergeexample_workflow_for_test(
 }
 
 ///|
+fn acceptance_cpdfattach_document_for_test() -> @pdflite.PdfDocument raise {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 3)
+  let page_root = doc.add_pagetree([
+    acceptance_text_page_for_test("attach-first"),
+    acceptance_text_page_for_test("attach-second"),
+  ])
+  ignore(doc.add_root(page_root, []))
+  let with_document = doc.attach_file(
+    "fixtures/report.txt",
+    acceptance_ascii_for_test("document attachment"),
+    relationship=Some("Data"),
+    description=Some("Document attachment"),
+  )
+  with_document.attach_file(
+    "pages/note.bin",
+    acceptance_ascii_for_test("page attachment"),
+    page_number=Some(2),
+    relationship=Some("/Source"),
+    description=Some("Page attachment"),
+  )
+}
+
+///|
+fn acceptance_assert_cpdfattach_document_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  let document_payload = acceptance_ascii_for_test("document attachment")
+  let page_payload = acceptance_ascii_for_test("page attachment")
+  @test.assert_eq(doc.version(), (1, 5))
+  acceptance_assert_text_pages_for_test(doc, ["attach-first", "attach-second"])
+  @test.assert_eq(
+    try! doc.size_attached_files(),
+    document_payload.length() + page_payload.length(),
+  )
+  @test.assert_eq(try! doc.list_attached_files(), [
+    {
+      name: "report.txt",
+      pagenumber: 0,
+      data: Some(document_payload),
+      description: Some("Document attachment"),
+      relationship: Some("/Data"),
+    },
+    {
+      name: "note.bin",
+      pagenumber: 2,
+      data: Some(page_payload),
+      description: Some("Page attachment"),
+      relationship: Some("/Source"),
+    },
+  ])
+  let pages = doc.pages_of_pagetree()
+  guard pages[1].rest.lookup_immediate(acceptance_name_for_test("/Annots"))
+    is Some(PdfArray([PdfDictionary(_) as annotation])) else {
+    fail("expected page-level file attachment annotation")
+  }
+  @test.assert_eq(
+    annotation.lookup_immediate(acceptance_name_for_test("/Subtype")),
+    Some(PdfNameObject(acceptance_name_for_test("/FileAttachment"))),
+  )
+  @test.assert_eq(
+    annotation.lookup_immediate(acceptance_name_for_test("/Contents")),
+    Some(PdfString(acceptance_ascii_for_test("note.bin"))),
+  )
+  guard annotation.lookup_immediate(acceptance_name_for_test("/FS"))
+    is Some(PdfIndirect(_)) else {
+    fail("expected indirect attachment file specification")
+  }
+}
+
+///|
+fn acceptance_assert_cpdfattach_removed_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(try! doc.list_attached_files(), [])
+  @test.assert_eq(try! doc.size_attached_files(), 0)
+  let pages = doc.pages_of_pagetree()
+  guard pages[1].rest.lookup_immediate(acceptance_name_for_test("/Annots"))
+    is Some(PdfArray([])) else {
+    fail("expected page attachment annotations to be removed")
+  }
+}
+
+///|
 fn acceptance_structure_extraction_document_for_test() -> @pdflite.PdfDocument raise {
   let key_struct_tree_root = acceptance_name_for_test("/StructTreeRoot")
   let key_parent_tree = acceptance_name_for_test("/ParentTree")
@@ -11844,6 +11928,20 @@ test "native acceptance suite extracts reused annotations with repaired links" {
   acceptance_assert_extracted_reused_annotations_for_test(extracted)
   let reparsed = acceptance_compressed_roundtrip_for_test(extracted)
   acceptance_assert_extracted_reused_annotations_for_test(reparsed)
+}
+
+///|
+test "native acceptance suite preserves cpdfattach files through reader boundaries" {
+  let parsed = acceptance_compressed_roundtrip_for_test(
+    acceptance_cpdfattach_document_for_test(),
+  )
+  acceptance_assert_cpdfattach_document_for_test(parsed)
+  let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
+  acceptance_assert_cpdfattach_document_for_test(reparsed)
+  let cleaned = reparsed.remove_attached_files()
+  acceptance_assert_cpdfattach_removed_for_test(cleaned)
+  let cleaned_reparsed = acceptance_compressed_roundtrip_for_test(cleaned)
+  acceptance_assert_cpdfattach_removed_for_test(cleaned_reparsed)
 }
 
 ///|
