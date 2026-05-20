@@ -325,7 +325,7 @@ test "PdfDocument presentation rejects unknown transition names" {
     0,
     1.0,
   )
-  guard result is Err(@pdflite.PdfError::BadPresentationEffect("Zoom")) else {
-    fail("expected BadPresentationEffect")
+  guard result is Err(@pdflite.PdfError::SoftError("Unknown presentation type")) else {
+    fail("expected Unknown presentation type SoftError")
   }
 }

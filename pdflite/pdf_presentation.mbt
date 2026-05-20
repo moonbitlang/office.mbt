@@ -64,7 +64,7 @@ fn pdf_presentation_effect_name(effect : String) -> PdfName raise PdfError {
   match effect {
     "Split" | "Blinds" | "Box" | "Wipe" | "Dissolve" | "Glitter" =>
       pdf_presentation_name("/" + effect)
-    _ => raise BadPresentationEffect(effect)
+    _ => raise SoftError("Unknown presentation type")
   }
 }
 
@@ -151,7 +151,7 @@ fn PdfPage::change_presentation_effect(
 ///
 /// The accepted transition names match cpdf: `Split`, `Blinds`, `Box`, `Wipe`,
 /// `Dissolve`, and `Glitter`. Unknown names raise
-/// `PdfError::BadPresentationEffect`.
+/// `PdfError::SoftError("Unknown presentation type")`.
 pub fn PdfDocument::presentation(
   self : PdfDocument,
   range : ArrayView[Int],

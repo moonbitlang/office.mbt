@@ -2640,6 +2640,13 @@ Current backend snapshot:
   source-document preservation. Native focused validation reports `moon test
   --target native pdf_presentation_test.mbt` at 6/6 tests passing; native
   full-suite validation reports 1720/1720 tests passing.~~
+- [x] ~~`cpdfpresent.ml` unknown-transition parity refinement now routes
+  unsupported transition names through the cpdf-style `Cpdferror.error` path as
+  `PdfError::SoftError("Unknown presentation type")`, replacing the local typed
+  placeholder branch while preserving the public presentation API. Native
+  focused validation reports `moon test --target native --package
+  bobzhang/pdflite --file pdf_presentation_test.mbt` at 6/6 tests passing;
+  native full-suite validation reports 2143/2143 tests passing.~~
 - [x] ~~Standalone `cpdfposition.ml` position helper slice exposes the
   `PdfPosition` model, `pdf_string_of_position`, and
   `pdf_calculate_position`, covering every cpdf debug spelling, centered and
