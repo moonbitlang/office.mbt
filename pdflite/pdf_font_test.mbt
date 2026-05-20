@@ -688,12 +688,15 @@ test "PdfDocument font_table renders Helvetica encoding rows" {
   guard row is Some(row) else { fail("expected code 65 row") }
   @test.assert_eq(row.unicode, "0041")
   @test.assert_eq(row.utf8, "A")
-  @test.assert_eq(row.unicode_name, "")
+  @test.assert_eq(row.unicode_name, "LATIN CAPITAL LETTER A")
   @test.assert_eq(row.glyphnames, "A")
   let text = try! doc.font_table_text("/F1", 1)
   @test.assert_eq(try! @pdflite.pdf_font_table_text(doc, "/F1", 1), text)
   let rendered = @utf8.decode(text) catch { _ => fail("expected UTF-8 text") }
-  @test.assert_eq(rendered.contains("65 = U+0041 (A - ) = A\n"), true)
+  @test.assert_eq(
+    rendered.contains("65 = U+0041 (A - LATIN CAPITAL LETTER A) = A\n"),
+    true,
+  )
   @test.assert_eq(rendered.contains(".notdef"), false)
   let bad_page : Result[Array[@pdflite.PdfFontTableEntry], Error] = try? doc.font_table(
     "/F1", 3,

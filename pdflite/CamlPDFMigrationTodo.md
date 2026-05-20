@@ -3985,9 +3985,18 @@ Current backend snapshot:
   reports `moon check --target native --warn-list +73` passing with the known
   markdown main-package warning and 10-warning baseline; native full-suite
   validation reports 2176/2176 tests passing.~~
-- [ ] Embed or otherwise provide cpdf's full `Cpdfunicodedata.unicodedata_source`
-  payload and memoized `unicodedata ()` provider, then wire font-table Unicode
-  names/control classification beyond the current empty-name fallback.
+- [x] ~~Standalone `cpdfunicodedata.ml` embedded-source/provider slice now
+  exposes `pdf_unicode_data_source` and `pdf_unicode_data`, generated from
+  cpdf's full compressed `unicodedata_source` payload and decoded/parsed on
+  demand with a cached table. `cpdffont.ml` font-table rows now use the same
+  UnicodeData lookup as cpdf for Unicode character names and `Cc`
+  nonprintable classification instead of the previous empty-name fallback.
+  Focused native validation reports `moon test --target native
+  pdf_unicode_data_test.mbt` at 5/5 tests passing and `moon test --target
+  native pdf_font_test.mbt --filter '*font_table*'` at 1/1 test passing;
+  native check validation reports `moon check --target native --warn-list +73`
+  passing with the known markdown main-package warning and 10-warning baseline;
+  native full-suite validation reports 2177/2177 tests passing.~~
 - [x] ~~Standalone `cpdftruetype.ml` cmap-listing slice exposes
   `pdf_truetype_cmaps`, covering TrueType table-directory scanning, `cmap`
   platform/encoding record collection in cpdf's prepended order, non-cmap table

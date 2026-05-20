@@ -1479,6 +1479,10 @@ pub fn pdf_ua_test_matterhorn_json(PdfDocument, String) -> Json raise @core.PdfE
 
 pub fn pdf_ua_test_matterhorn_print(PdfDocument, String) -> Bytes raise @core.PdfError
 
+pub fn pdf_unicode_data() -> Array[PdfUnicodeDataEntry] raise @core.PdfError
+
+pub fn pdf_unicode_data_source() -> Bytes raise @core.PdfError
+
 pub fn pdf_upright_pages(PdfDocument, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_utf16be_of_codepoints(ArrayView[Int]) -> Bytes raise @core.PdfError

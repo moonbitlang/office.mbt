@@ -477,44 +477,6 @@ fn pdf_font_table_in_charset(
 }
 
 ///|
-fn pdf_font_table_codepoint_hex_digit(value : Int) -> Byte {
-  if value < 10 {
-    (48 + value).to_byte()
-  } else {
-    (55 + value).to_byte()
-  }
-}
-
-///|
-fn pdf_font_table_codepoint_hex(codepoint : Int) -> String {
-  let digits : Array[Byte] = []
-  let mut value = codepoint
-  while value > 0 {
-    digits.push(pdf_font_table_codepoint_hex_digit(value % 16))
-    value = value / 16
-  }
-  if digits.length() == 0 {
-    digits.push(48)
-  }
-  while digits.length() < 4 {
-    digits.push(48)
-  }
-  let output : Array[Byte] = []
-  for index in 0..<digits.length() {
-    output.push(digits[digits.length() - index - 1])
-  }
-  @ascii.decode(Bytes::from_array(output)) catch {
-    _ => ""
-  }
-}
-
-///|
-fn pdf_font_table_is_control_codepoint(codepoint : Int) -> Bool {
-  (codepoint >= 0 && codepoint <= 0x1F) ||
-  (codepoint >= 0x7F && codepoint <= 0x9F)
-}
-
-///|
 fn pdf_font_table_utf8_text(
   codepoints : ArrayView[Int],
 ) -> String raise PdfError {
@@ -530,13 +492,25 @@ fn pdf_font_table_unicode_fields(
 ) -> (String, String, String) raise PdfError {
   match codepoints {
     [codepoint] => {
-      let unicode = pdf_font_table_codepoint_hex(codepoint)
-      let utf8 = if pdf_font_table_is_control_codepoint(codepoint) {
+      let data = pdf_unicode_data_lookup(codepoint)
+      let unicode = match data {
+        Some(data) => data.code_value
+        None => ""
+      }
+      let unicode_name = match data {
+        Some(data) => data.character_name
+        None => ""
+      }
+      let is_control = match data {
+        Some(data) => data.general_category == "Cc"
+        None => false
+      }
+      let utf8 = if is_control {
         "<nonprintable>"
       } else {
         pdf_font_table_utf8_text(codepoints)
       }
-      (unicode, utf8, "")
+      (unicode, utf8, unicode_name)
     }
     _ => ("***multiple", pdf_font_table_utf8_text(codepoints), "***multiple")
   }

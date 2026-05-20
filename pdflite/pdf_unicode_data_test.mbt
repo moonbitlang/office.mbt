@@ -51,6 +51,27 @@ test "pdf_parse_flate_unicode_data mirrors cpdf compressed source path" {
 }
 
 ///|
+test "pdf_unicode_data exposes cpdf embedded UnicodeData table" {
+  let source = try! @pdflite.pdf_unicode_data_source()
+  @test.assert_eq(source.length(), 272286)
+  @test.assert_eq(source[0].to_int(), 0x78)
+  @test.assert_eq(source[1].to_int(), 0x01)
+  let rows = try! @pdflite.pdf_unicode_data()
+  @test.assert_eq(rows.length(), 34626)
+  @test.assert_eq(rows[0].code_value, "0000")
+  @test.assert_eq(rows[0].character_name, "<control>")
+  @test.assert_eq(rows[0].general_category, "Cc")
+  @test.assert_eq(rows[0].unicode_10_name, "NULL")
+  @test.assert_eq(rows[65].code_value, "0041")
+  @test.assert_eq(rows[65].character_name, "LATIN CAPITAL LETTER A")
+  @test.assert_eq(rows[rows.length() - 1].code_value, "10FFFD")
+  @test.assert_eq(
+    rows[rows.length() - 1].character_name,
+    "<Plane 16 Private Use, Last>",
+  )
+}
+
+///|
 test "pdf_parse_unicode_data rejects malformed rows" {
   let missing_fields : Result[Array[@pdflite.PdfUnicodeDataEntry], Error] = try? @pdflite.pdf_parse_unicode_data(
     @ascii.encode("0041;LATIN CAPITAL LETTER A;Lu\n"),

@@ -23,6 +23,21 @@ pub(all) struct PdfUnicodeDataEntry {
 } derive(Debug, Eq, ToJson)
 
 ///|
+priv struct PdfUnicodeDataLookup {
+  code_value : String
+  general_category : String
+  character_name : String
+}
+
+///|
+let pdf_unicode_data_cache : Ref[Array[PdfUnicodeDataEntry]?] = { val: None }
+
+///|
+let pdf_unicode_data_lookup_cache : Ref[
+  @hashmap.HashMap[Int, PdfUnicodeDataLookup]?,
+] = { val: None }
+
+///|
 fn pdf_unicode_data_field(
   source : BytesView,
   start : Int,
@@ -102,4 +117,74 @@ pub fn pdf_parse_flate_unicode_data(
   source : BytesView,
 ) -> Array[PdfUnicodeDataEntry] raise PdfError {
   pdf_parse_unicode_data(pdf_flate_decode_view(source))
+}
+
+///|
+/// Return cpdf's parsed UnicodeData table, decoded and parsed on demand.
+pub fn pdf_unicode_data() -> Array[PdfUnicodeDataEntry] raise PdfError {
+  match pdf_unicode_data_cache.val {
+    Some(entries) => entries
+    None => {
+      let entries = pdf_parse_flate_unicode_data(pdf_unicode_data_source())
+      pdf_unicode_data_cache.val = Some(entries)
+      entries
+    }
+  }
+}
+
+///|
+fn pdf_unicode_data_hex_digit(value : Byte) -> Int? {
+  match value.to_int() {
+    digit if digit >= 0x30 && digit <= 0x39 => Some(digit - 0x30)
+    upper if upper >= 0x41 && upper <= 0x46 => Some(upper - 0x41 + 10)
+    lower if lower >= 0x61 && lower <= 0x66 => Some(lower - 0x61 + 10)
+    _ => None
+  }
+}
+
+///|
+fn pdf_unicode_data_codepoint(text : String) -> Int? {
+  let bytes = @ascii.encode(text)
+  guard bytes.length() > 0 else { return None }
+  let mut value = 0
+  for byte in bytes {
+    match pdf_unicode_data_hex_digit(byte) {
+      Some(digit) => value = value * 16 + digit
+      None => return None
+    }
+  }
+  Some(value)
+}
+
+///|
+fn pdf_unicode_data_lookup_table() -> @hashmap.HashMap[
+  Int,
+  PdfUnicodeDataLookup,
+] raise PdfError {
+  match pdf_unicode_data_lookup_cache.val {
+    Some(table) => table
+    None => {
+      let table : @hashmap.HashMap[Int, PdfUnicodeDataLookup] = HashMap([])
+      for entry in pdf_unicode_data() {
+        match pdf_unicode_data_codepoint(entry.code_value) {
+          Some(codepoint) =>
+            table[codepoint] = {
+              code_value: entry.code_value,
+              general_category: entry.general_category,
+              character_name: entry.character_name,
+            }
+          None => raise SoftError("malformed UnicodeData code value")
+        }
+      }
+      pdf_unicode_data_lookup_cache.val = Some(table)
+      table
+    }
+  }
+}
+
+///|
+fn pdf_unicode_data_lookup(
+  codepoint : Int,
+) -> PdfUnicodeDataLookup? raise PdfError {
+  pdf_unicode_data_lookup_table().get(codepoint)
 }

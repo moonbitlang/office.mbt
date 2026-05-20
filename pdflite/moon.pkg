@@ -7,6 +7,7 @@ import {
   "bobzhang/pdflite/internal/number_set" @number_set,
   "moonbitlang/core/env",
   "moonbitlang/core/encoding/ascii",
+  "moonbitlang/core/encoding/base64",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/hashmap",
   "moonbitlang/core/math",
