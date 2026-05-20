@@ -587,9 +587,13 @@ pub fn pdf_drawn_path_content_json(PdfDrawnPath) -> Json
 
 pub fn pdf_drawop_to_content_ops(PdfDrawOp) -> Array[PdfContentOp] raise @core.PdfError
 
+pub fn pdf_drawop_to_content_ops_with_document(PdfDrawRenderState, PdfDocument, PdfDrawOp) -> Array[PdfContentOp] raise @core.PdfError
+
 pub fn pdf_drawop_to_content_ops_with_state(PdfDrawRenderState, PdfDrawOp) -> Array[PdfContentOp] raise @core.PdfError
 
 pub fn pdf_drawops_to_content_ops(ArrayView[PdfDrawOp]) -> Array[PdfContentOp] raise @core.PdfError
+
+pub fn pdf_drawops_to_content_ops_with_document(PdfDrawRenderState, PdfDocument, ArrayView[PdfDrawOp]) -> Array[PdfContentOp] raise @core.PdfError
 
 pub fn pdf_drawops_to_content_ops_with_state(PdfDrawRenderState, ArrayView[PdfDrawOp]) -> Array[PdfContentOp] raise @core.PdfError
 
@@ -3028,13 +3032,22 @@ pub(all) enum PdfDrawOp {
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfDrawOp::debug_name(Self) -> String
 pub fn PdfDrawOp::to_content_ops(Self) -> Array[PdfContentOp] raise @core.PdfError
+pub fn PdfDrawOp::to_content_ops_with_document(Self, PdfDrawRenderState, PdfDocument) -> Array[PdfContentOp] raise @core.PdfError
 pub fn PdfDrawOp::to_content_ops_with_state(Self, PdfDrawRenderState) -> Array[PdfContentOp] raise @core.PdfError
 
 pub(all) struct PdfDrawRenderState {
   mut resource_number : Int
   extgstates : Array[PdfDrawExtGStateResource]
+  xobjects : Array[PdfDrawXObjectResource]
+  page_names : Array[@core.PdfName]
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfDrawRenderState::resources(Self) -> PdfObject
+
+pub(all) struct PdfDrawXObjectResource {
+  source_name : String
+  resource_name : @core.PdfName
+  object_number : Int
+} derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfDrawnPath {
   stroked : Bool

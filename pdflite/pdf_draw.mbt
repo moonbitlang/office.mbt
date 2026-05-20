@@ -25,14 +25,23 @@ pub(all) struct PdfDrawExtGStateResource {
 } derive(Debug, Eq, ToJson)
 
 ///|
+pub(all) struct PdfDrawXObjectResource {
+  source_name : String
+  resource_name : PdfName
+  object_number : Int
+} derive(Debug, Eq, ToJson)
+
+///|
 /// Resource allocation state for rendering cpdf draw operations.
 ///
 /// This ports the resource-numbering and ExtGState cache used by
 /// `cpdfdraw.ml`'s `res`/`fresh_name`/`extgstate` helpers. Later rendering
-/// slices will extend this state with image, font, and form-XObject resources.
+/// slices will extend this state with font and form-XObject resources.
 pub(all) struct PdfDrawRenderState {
   mut resource_number : Int
   extgstates : Array[PdfDrawExtGStateResource]
+  xobjects : Array[PdfDrawXObjectResource]
+  page_names : Array[PdfName]
 } derive(Debug, Eq, ToJson)
 
 ///|
@@ -44,6 +53,9 @@ fn pdf_draw_name(text : String) -> PdfName {
 let pdf_draw_extgstate_key_name : PdfName = pdf_draw_name("/ExtGState")
 
 ///|
+let pdf_draw_xobject_key_name : PdfName = pdf_draw_name("/XObject")
+
+///|
 let pdf_draw_fill_alpha_key_name : PdfName = pdf_draw_name("/ca")
 
 ///|
@@ -52,6 +64,11 @@ let pdf_draw_stroke_alpha_key_name : PdfName = pdf_draw_name("/CA")
 ///|
 fn pdf_draw_extgstate_key() -> PdfName {
   pdf_draw_extgstate_key_name
+}
+
+///|
+fn pdf_draw_xobject_key() -> PdfName {
+  pdf_draw_xobject_key_name
 }
 
 ///|
@@ -66,7 +83,7 @@ fn pdf_draw_stroke_alpha_key() -> PdfName {
 
 ///|
 pub fn pdf_draw_render_state_new() -> PdfDrawRenderState {
-  { resource_number: 0, extgstates: [] }
+  { resource_number: 0, extgstates: [], xobjects: [], page_names: [] }
 }
 
 ///|
@@ -95,6 +112,64 @@ fn PdfDrawRenderState::extgstate(
 }
 
 ///|
+fn PdfDrawRenderState::register_xobject(
+  self : PdfDrawRenderState,
+  source_name : String,
+  prefix : String,
+  object_number : Int,
+) -> PdfName {
+  let resource_name = self.fresh_name(prefix)
+  for index in 0..<self.xobjects.length() {
+    if self.xobjects[index].source_name == source_name {
+      self.xobjects[index] = { source_name, resource_name, object_number }
+      return resource_name
+    }
+  }
+  self.xobjects.push({ source_name, resource_name, object_number })
+  resource_name
+}
+
+///|
+fn PdfDrawRenderState::mark_page_resource(
+  self : PdfDrawRenderState,
+  resource_name : PdfName,
+) -> Unit {
+  for name in self.page_names {
+    if name == resource_name {
+      return
+    }
+  }
+  self.page_names.push(resource_name)
+}
+
+///|
+fn PdfDrawRenderState::image_resource_name(
+  self : PdfDrawRenderState,
+  source_name : String,
+) -> PdfName raise PdfError {
+  for entry in self.xobjects {
+    if entry.source_name == source_name {
+      self.mark_page_resource(entry.resource_name)
+      return entry.resource_name
+    }
+  }
+  raise SoftError("Image not found: " + source_name)
+}
+
+///|
+fn pdf_draw_resource_is_used(
+  page_names : ArrayView[PdfName],
+  name : PdfName,
+) -> Bool {
+  for page_name in page_names {
+    if page_name == name {
+      return true
+    }
+  }
+  false
+}
+
+///|
 /// Return the resource dictionary needed by the operations rendered so far.
 pub fn PdfDrawRenderState::resources(self : PdfDrawRenderState) -> PdfObject {
   let states : Array[(PdfName, PdfObject)] = []
@@ -103,11 +178,20 @@ pub fn PdfDrawRenderState::resources(self : PdfDrawRenderState) -> PdfObject {
       (entry.name, PdfDictionary([(entry.kind, PdfReal(entry.value))])),
     )
   }
-  if states.length() == 0 {
-    PdfDictionary([])
-  } else {
-    PdfDictionary([(pdf_draw_extgstate_key(), PdfDictionary(states))])
+  let xobjects : Array[(PdfName, PdfObject)] = []
+  for entry in self.xobjects {
+    if pdf_draw_resource_is_used(self.page_names, entry.resource_name) {
+      xobjects.push((entry.resource_name, PdfIndirect(entry.object_number)))
+    }
   }
+  let resources : Array[(PdfName, PdfObject)] = []
+  if xobjects.length() > 0 {
+    resources.push((pdf_draw_xobject_key(), PdfDictionary(xobjects)))
+  }
+  if states.length() > 0 {
+    resources.push((pdf_draw_extgstate_key(), PdfDictionary(states)))
+  }
+  PdfDictionary(resources)
 }
 
 ///|
@@ -234,12 +318,13 @@ fn pdf_draw_content_unsupported(
 fn PdfDrawOp::to_content_ops_internal(
   self : PdfDrawOp,
   state : PdfDrawRenderState?,
+  document : PdfDocument?,
 ) -> Array[PdfContentOp] raise PdfError {
   match self {
     PdfDrawQq(ops) => {
       let output : Array[PdfContentOp] = [Op_q]
       for op in ops {
-        for content_op in op.to_content_ops_internal(state) {
+        for content_op in op.to_content_ops_internal(state, document) {
           output.push(content_op)
         }
       }
@@ -249,7 +334,7 @@ fn PdfDrawOp::to_content_ops_internal(
     PdfDrawTextSection(ops) => {
       let output : Array[PdfContentOp] = [Op_BT]
       for op in ops {
-        for content_op in op.to_content_ops_internal(state) {
+        for content_op in op.to_content_ops_internal(state, document) {
           output.push(content_op)
         }
       }
@@ -278,6 +363,20 @@ fn PdfDrawOp::to_content_ops_internal(
     PdfDrawFillStrokeEvenOdd => [Op_Bstar]
     PdfDrawClip => [Op_W, Op_n]
     PdfDrawClipEvenOdd => [Op_Wstar, Op_n]
+    PdfDrawImage(source_name) =>
+      match state {
+        Some(state) => [Op_Do(state.image_resource_name(source_name))]
+        None => pdf_draw_content_unsupported(self)
+      }
+    PdfDrawImageXObject(source_name, object) =>
+      match (state, document) {
+        (Some(state), Some(document)) => {
+          let object_number = document.add_object(object)
+          let _ = state.register_xobject(source_name, "/I", object_number)
+          []
+        }
+        _ => pdf_draw_content_unsupported(self)
+      }
     PdfDrawOpacity(value) =>
       match state {
         Some(state) =>
@@ -389,7 +488,7 @@ pub fn pdf_string_of_drawop(op : PdfDrawOp) -> String {
 pub fn PdfDrawOp::to_content_ops(
   self : PdfDrawOp,
 ) -> Array[PdfContentOp] raise PdfError {
-  self.to_content_ops_internal(None)
+  self.to_content_ops_internal(None, None)
 }
 
 ///|
@@ -398,7 +497,18 @@ pub fn PdfDrawOp::to_content_ops_with_state(
   self : PdfDrawOp,
   state : PdfDrawRenderState,
 ) -> Array[PdfContentOp] raise PdfError {
-  self.to_content_ops_internal(Some(state))
+  self.to_content_ops_internal(Some(state), None)
+}
+
+///|
+/// Convert one cpdf draw operation using resource state and a document for
+/// indirect object allocation.
+pub fn PdfDrawOp::to_content_ops_with_document(
+  self : PdfDrawOp,
+  state : PdfDrawRenderState,
+  document : PdfDocument,
+) -> Array[PdfContentOp] raise PdfError {
+  self.to_content_ops_internal(Some(state), Some(document))
 }
 
 ///|
@@ -445,4 +555,31 @@ pub fn pdf_drawop_to_content_ops_with_state(
   op : PdfDrawOp,
 ) -> Array[PdfContentOp] raise PdfError {
   op.to_content_ops_with_state(state)
+}
+
+///|
+/// Convert a sequence of cpdf draw operations using resource state and a
+/// document for indirect object allocation.
+pub fn pdf_drawops_to_content_ops_with_document(
+  state : PdfDrawRenderState,
+  document : PdfDocument,
+  ops : ArrayView[PdfDrawOp],
+) -> Array[PdfContentOp] raise PdfError {
+  let output : Array[PdfContentOp] = []
+  for op in ops {
+    for content_op in op.to_content_ops_with_document(state, document) {
+      output.push(content_op)
+    }
+  }
+  output
+}
+
+///|
+/// Compatibility wrapper for `PdfDrawOp::to_content_ops_with_document`.
+pub fn pdf_drawop_to_content_ops_with_document(
+  state : PdfDrawRenderState,
+  document : PdfDocument,
+  op : PdfDrawOp,
+) -> Array[PdfContentOp] raise PdfError {
+  op.to_content_ops_with_document(state, document)
 }
