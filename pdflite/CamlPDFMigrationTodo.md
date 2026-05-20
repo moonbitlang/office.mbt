@@ -5202,6 +5202,15 @@ Current backend snapshot:
   predefined CMap*'` reports 1/1 tests passing, `moon test --target native`
   reports 2207/2207 tests passing, and `moon check --target all --warn-list
   +73` completes with the known warning baseline and no errors.~~
+- [x] ~~Add the next remaining source-boundary predefined CMap slice: the
+  cpdfua-listed generic Adobe-Japan1 `/V` CMap now has native synthetic-PDF
+  reader-boundary coverage for vertical JIS extraction and reverse lookup, and
+  the cpdfua `cmap_names` source list now has no entries absent from
+  `pdf_native_acceptance_test.mbt`. `moon test --target native
+  pdf_native_acceptance_test.mbt --filter '*Adobe-Japan1 predefined CMap*'`
+  reports 1/1 tests passing, `moon test --target native` reports 2207/2207
+  tests passing, and `moon check --target all --warn-list +73` completes with
+  the known warning baseline and no errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
