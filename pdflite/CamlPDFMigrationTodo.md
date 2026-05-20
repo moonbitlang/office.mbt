@@ -2327,6 +2327,18 @@ Current backend snapshot:
   `moon check --target native --warn-list +73` passing with the known markdown
   main-package warning and 10-warning baseline. Full native suite validation is
   deferred to the next batch.~~
+- [x] ~~`cpdfdrawcontrol.ml` image file-spec branches are now covered by the
+  native `async_io` wrappers `pdf_draw_control_add_jpeg_file`,
+  `pdf_draw_control_add_png_file`, and
+  `pdf_draw_control_add_jpeg2000_file`, matching cpdf's `Name=filename` parsing
+  while keeping filesystem reads outside the pure root package. Coverage pins
+  JPEG `/DCTDecode`, PNG `/FlateDecode`, JPEG2000 `/JPXDecode`, dimensions,
+  payload preservation, and malformed file-spec diagnostics. Focused native
+  validation reports `moon test --target native async_io` at 87/87 tests
+  passing; native check validation reports `moon check --target native
+  --warn-list +73` passing with the known markdown main-package warning and
+  10-warning baseline. Full native suite validation is deferred to the next
+  batch.~~
 - [x] ~~`cpdfdrawcontrol.ml` XObject bounding-box parsing is now exposed via
   `PdfDrawControl::set_xobject_bbox_from_string`, matching `xobjbbox s` by
   parsing cpdf rectangle text through the coordinate parser before the next

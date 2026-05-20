@@ -54,6 +54,91 @@ fn pdf_async_io_basename_for_test(path : String) -> String {
 }
 
 ///|
+fn pdf_async_io_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  for value in values {
+    output.push(try! @pdflite.pdf_byte_of_int(value))
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_async_io_append_bytes_for_test(
+  output : Array[Byte],
+  bytes : BytesView,
+) -> Unit {
+  for byte in bytes {
+    output.push(byte)
+  }
+}
+
+///|
+fn pdf_async_io_push_u32_for_test(output : Array[Byte], value : Int) -> Unit {
+  output.push(try! @pdflite.pdf_byte_of_int((value >> 24) & 0xFF))
+  output.push(try! @pdflite.pdf_byte_of_int((value >> 16) & 0xFF))
+  output.push(try! @pdflite.pdf_byte_of_int((value >> 8) & 0xFF))
+  output.push(try! @pdflite.pdf_byte_of_int(value & 0xFF))
+}
+
+///|
+fn pdf_async_io_png_chunk_for_test(
+  chunk_type : ArrayView[Int],
+  data : BytesView,
+) -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  pdf_async_io_push_u32_for_test(output, data.length())
+  for value in chunk_type {
+    output.push(try! @pdflite.pdf_byte_of_int(value))
+  }
+  pdf_async_io_append_bytes_for_test(output, data)
+  pdf_async_io_push_u32_for_test(output, 0)
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_async_io_png_rgb_for_test() -> (@pdflite.PdfBytes, @pdflite.PdfBytes) {
+  let header = pdf_async_io_bytes_for_test([
+    0, 0, 0, 2, 0, 0, 0, 1, 8, 2, 0, 0, 0,
+  ])
+  let idat = @pdflite.pdf_flate_encode(
+    pdf_async_io_bytes_for_test([0, 10, 20, 30, 40, 50, 60]),
+  )
+  let output : Array[Byte] = []
+  for value in [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A] {
+    output.push(try! @pdflite.pdf_byte_of_int(value))
+  }
+  pdf_async_io_append_bytes_for_test(
+    output,
+    pdf_async_io_png_chunk_for_test([0x49, 0x48, 0x44, 0x52], header),
+  )
+  pdf_async_io_append_bytes_for_test(
+    output,
+    pdf_async_io_png_chunk_for_test([0x49, 0x44, 0x41, 0x54], idat),
+  )
+  pdf_async_io_append_bytes_for_test(
+    output,
+    pdf_async_io_png_chunk_for_test([0x49, 0x45, 0x4E, 0x44], []),
+  )
+  (Bytes::from_array(output), idat)
+}
+
+///|
+fn pdf_async_io_jpeg_for_test() -> @pdflite.PdfBytes {
+  pdf_async_io_bytes_for_test([
+    0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x09, 0x4A, 0x46, 0x49, 0x46, 0x00, 0xAA, 0xBB,
+    0xFF, 0xC0, 0x00, 0x0B, 0x08, 0x01, 0x2C, 0x01, 0x90, 0x03, 0x01, 0xFF, 0xD9,
+  ])
+}
+
+///|
+fn pdf_async_io_jpeg2000_for_test() -> @pdflite.PdfBytes {
+  pdf_async_io_bytes_for_test([
+    0x00, 0x00, 0x00, 0x0C, 0x6A, 0x50, 0x20, 0x20, 0x0D, 0x0A, 0x87, 0x0A, 0x69,
+    0x68, 0x64, 0x72, 0x00, 0x00, 0x01, 0x2C, 0x00, 0x00, 0x01, 0x90,
+  ])
+}
+
+///|
 fn pdf_async_io_bytes_start_with_at_for_test(
   haystack : BytesView,
   needle : BytesView,
@@ -2945,6 +3030,111 @@ async test "async file wrappers write and read PDF documents" {
   pdf_async_io_remove_if_exists_for_test(path)
   @test.assert_eq(try! loaded.endpage(), 1)
   @test.assert_eq(loaded.version(), original.version())
+}
+
+///|
+async test "async draw control image file wrappers read path specs" {
+  let jpeg_path = pdf_async_io_test_path_for_test("draw_jpeg")
+  let png_path = pdf_async_io_test_path_for_test("draw_png")
+  let jpeg2000_path = pdf_async_io_test_path_for_test("draw_jpeg2000")
+  pdf_async_io_remove_if_exists_for_test(jpeg_path)
+  pdf_async_io_remove_if_exists_for_test(png_path)
+  pdf_async_io_remove_if_exists_for_test(jpeg2000_path)
+  let jpeg = pdf_async_io_jpeg_for_test()
+  let (png, png_idat) = pdf_async_io_png_rgb_for_test()
+  let jpeg2000 = pdf_async_io_jpeg2000_for_test()
+  @fs.write_file(jpeg_path, jpeg, create=0o644)
+  @fs.write_file(png_path, png, create=0o644)
+  @fs.write_file(jpeg2000_path, jpeg2000, create=0o644)
+
+  let document = @pdflite.pdf_document_empty()
+  let control = @pdflite.pdf_draw_control_new()
+  try! pdf_draw_control_add_jpeg_file(control, "J0=" + jpeg_path)
+  try! pdf_draw_control_add_png_file(control, document, "P0=" + png_path)
+  try! pdf_draw_control_add_jpeg2000_file(control, "JP0=" + jpeg2000_path)
+  pdf_async_io_remove_if_exists_for_test(jpeg_path)
+  pdf_async_io_remove_if_exists_for_test(png_path)
+  pdf_async_io_remove_if_exists_for_test(jpeg2000_path)
+
+  let ops = control.ops()
+  @test.assert_eq(ops.length(), 3)
+  guard ops[0] is PdfDrawImageXObject("J0", PdfStreamObject(jpeg_stream)) else {
+    fail("expected JPEG image XObject op")
+  }
+  @test.assert_eq(
+    jpeg_stream.dictionary.lookup_immediate(
+      pdf_async_io_name_for_test("/Filter"),
+    ),
+    Some(PdfNameObject(pdf_async_io_name_for_test("/DCTDecode"))),
+  )
+  @test.assert_eq(
+    jpeg_stream.dictionary.lookup_immediate(
+      pdf_async_io_name_for_test("/Width"),
+    ),
+    Some(PdfInteger(400)),
+  )
+  @test.assert_eq(jpeg_stream.data, StreamGot(jpeg))
+
+  guard ops[1] is PdfDrawImageXObject("P0", PdfStreamObject(png_stream)) else {
+    fail("expected PNG image XObject op")
+  }
+  @test.assert_eq(
+    png_stream.dictionary.lookup_immediate(
+      pdf_async_io_name_for_test("/Filter"),
+    ),
+    Some(PdfNameObject(pdf_async_io_name_for_test("/FlateDecode"))),
+  )
+  @test.assert_eq(
+    png_stream.dictionary.lookup_immediate(
+      pdf_async_io_name_for_test("/Height"),
+    ),
+    Some(PdfInteger(1)),
+  )
+  @test.assert_eq(png_stream.data, StreamGot(png_idat))
+
+  guard ops[2] is PdfDrawImageXObject("JP0", PdfStreamObject(jp2_stream)) else {
+    fail("expected JPEG2000 image XObject op")
+  }
+  @test.assert_eq(
+    jp2_stream.dictionary.lookup_immediate(
+      pdf_async_io_name_for_test("/Filter"),
+    ),
+    Some(PdfNameObject(pdf_async_io_name_for_test("/JPXDecode"))),
+  )
+  @test.assert_eq(
+    jp2_stream.dictionary.lookup_immediate(
+      pdf_async_io_name_for_test("/Height"),
+    ),
+    Some(PdfInteger(300)),
+  )
+  @test.assert_eq(jp2_stream.data, StreamGot(jpeg2000))
+}
+
+///|
+async test "async draw control image file wrappers reject malformed specs" {
+  let document = @pdflite.pdf_document_empty()
+  let control = @pdflite.pdf_draw_control_new()
+  let bad_jpeg : Result[Unit, Error] = try? pdf_draw_control_add_jpeg_file(
+    control, "bad",
+  )
+  guard bad_jpeg
+    is Err(@pdflite.PdfError::SoftError("addjpeg: bad file specification")) else {
+    fail("expected bad JPEG file spec")
+  }
+  let bad_png : Result[Unit, Error] = try? pdf_draw_control_add_png_file(
+    control, document, "name=one=two",
+  )
+  guard bad_png
+    is Err(@pdflite.PdfError::SoftError("addpng: bad file specification")) else {
+    fail("expected bad PNG file spec")
+  }
+  let bad_jpeg2000 : Result[Unit, Error] = try? pdf_draw_control_add_jpeg2000_file(
+    control, "bad",
+  )
+  guard bad_jpeg2000
+    is Err(@pdflite.PdfError::SoftError("addjpeg2000: bad file specification")) else {
+    fail("expected bad JPEG2000 file spec")
+  }
 }
 
 ///|
