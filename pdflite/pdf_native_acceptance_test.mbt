@@ -3154,6 +3154,24 @@ fn acceptance_matterhorn_cmap_typo_document_for_test() -> @pdflite.PdfDocument r
       "/MatterhornCorrectedTop", "/KSCms-UHC-HW-V", 192,
     ),
   )
+  doc.add_object_given_number(
+    198,
+    PdfDictionary([
+      (
+        acceptance_name_for_test("/UseCMap"),
+        PdfNameObject(acceptance_name_for_test("/KSCms-UHS-HW-V")),
+      ),
+    ]),
+  )
+  doc.add_object_given_number(
+    200,
+    PdfDictionary([
+      (
+        acceptance_name_for_test("/UseCMap"),
+        PdfNameObject(acceptance_name_for_test("/KSCms-UHC-HW-V")),
+      ),
+    ]),
+  )
   let source_typo_page = acceptance_predefined_cmap_page_for_test(
     "/FsourceTypo",
     PdfIndirect(194),
@@ -3187,6 +3205,23 @@ fn acceptance_matterhorn_31_006_cmap_failure_for_test(name : String) -> Json {
 }
 
 ///|
+fn acceptance_matterhorn_31_008_cmap_failure_for_test(name : String) -> Json {
+  Json::object(
+    Map::of([
+      ("name", Json::string("31-008")),
+      ("section", Json::string("UA1:7.21.3.3-2")),
+      (
+        "error",
+        Json::string(
+          "A CMap references another CMap which is not listed in ISO 32000-1:2008, 9.7.5.2, Table 118.",
+        ),
+      ),
+      ("extra", Json::string(name)),
+    ]),
+  )
+}
+
+///|
 fn acceptance_assert_matterhorn_cmap_typo_for_test(
   doc : @pdflite.PdfDocument,
 ) -> Unit raise {
@@ -3195,6 +3230,12 @@ fn acceptance_assert_matterhorn_cmap_typo_for_test(
     try! doc.test_matterhorn_json("31-006"),
     Json::array([
       acceptance_matterhorn_31_006_cmap_failure_for_test("/KSCms-UHC-HW-V"),
+    ]),
+  )
+  @test.assert_eq(
+    try! doc.test_matterhorn_json("31-008"),
+    Json::array([
+      acceptance_matterhorn_31_008_cmap_failure_for_test("/KSCms-UHC-HW-V"),
     ]),
   )
 }

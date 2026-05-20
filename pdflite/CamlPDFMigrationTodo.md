@@ -4418,6 +4418,14 @@ Current backend snapshot:
   unlisted after write/read/reread. `moon test --target native
   pdf_native_acceptance_test.mbt` reports 89/89 tests passing, and `moon test
   --target native` reports 2201/2201 tests passing.~~
+- [x] ~~The same cpdfua source typo is now pinned for Matterhorn `31-008`
+  `/UseCMap` dictionaries through the native compressed reader boundary: the
+  source `/KSCms-UHS-HW-V` spelling remains listed, while the corrected
+  `/KSCms-UHC-HW-V` spelling is still reported as unlisted after
+  write/read/reread. `moon test --target native pdf_native_acceptance_test.mbt`
+  reports 89/89 tests passing, `moon test --target native` reports 2201/2201
+  tests passing, and `moon check --target all --warn-list +73` completes with
+  the known warning-73/main-package warnings and no errors.~~
 - [ ] Broader built-in non-UCS2 predefined CMap mapping tables beyond the
   current Adobe-GB1, Adobe-CNS1, Adobe-Japan1, and Adobe-Korea1 fallbacks,
   plus more real-world ToUnicode/CMap variation fixtures.
@@ -5106,6 +5114,11 @@ Current backend snapshot:
   Matterhorn `31-006`, preserving acceptance of the typo and rejection of the
   corrected `/KSCms-UHC-HW-V` spelling. `moon test --target native` reports
   2201/2201 tests passing.~~
+- [x] ~~Add the next remaining format parity slice: Matterhorn `31-008`
+  `/UseCMap` handling now shares the cpdfua source CMap typo gate through
+  compressed native read/write/reread, preserving acceptance of
+  `/KSCms-UHS-HW-V` and rejection of `/KSCms-UHC-HW-V`. `moon test --target
+  native` reports 2201/2201 tests passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.
