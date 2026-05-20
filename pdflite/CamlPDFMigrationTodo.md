@@ -5317,6 +5317,11 @@ Current backend snapshot:
   '*reports info page details and composition*'` reports 1/1 test passing,
   `moon test --target native fixture_acceptance` reports 46/46 tests passing,
   and `moon test --target native` reports 2217/2217 tests passing.~~
+- [x] ~~Refresh portable backend validation after the latest cpdf source gates:
+  `moon test --target wasm-gc` and `moon test --target js` each report
+  2012/2012 tests passing. Full plain-Wasm `moon test --target wasm` remains
+  explicitly not claimed because it still exceeds the runtime maximum
+  function-size limit in `markdown.blackbox_test.wasm`.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
