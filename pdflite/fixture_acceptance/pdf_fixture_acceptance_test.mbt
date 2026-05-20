@@ -1657,6 +1657,11 @@ fn fixture_acceptance_assert_contains_for_test(
 }
 
 ///|
+fn fixture_acceptance_pdf_name_for_test(text : String) -> @pdflite.PdfName {
+  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+}
+
+///|
 fn fixture_acceptance_composition_entry_bytes_for_test(
   entries : ArrayView[@pdflite.PdfCompositionEntry],
   label : String,
@@ -1756,6 +1761,71 @@ fn fixture_acceptance_assert_cpdf_manual_annotations_for_test(
   )
   fixture_acceptance_assert_contains_for_test(annotation_blob, "\"/Link\"")
   fixture_acceptance_assert_contains_for_test(annotation_blob, "\"/Rect\"")
+}
+
+///|
+fn fixture_acceptance_cpdf_png_image_object_for_test(
+  document : @pdflite.PdfDocument,
+) -> @pdflite.PdfObject raise {
+  let pages = document.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  guard document.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/XObject"),
+      pages[0].resources,
+    )
+    is Some(xobjects) else {
+    fail("missing PNG fixture XObject resources")
+  }
+  guard document.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/I1"),
+      xobjects,
+    )
+    is Some(image) else {
+    fail("missing PNG fixture /I1 image")
+  }
+  image
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_png_image_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 1)
+  let images_json = document.images_json([1]).stringify()
+  fixture_acceptance_assert_contains_for_test(images_json, "\"Name\":\"/I1\"")
+  fixture_acceptance_assert_contains_for_test(images_json, "\"Pages\":[1]")
+  fixture_acceptance_assert_contains_for_test(images_json, "\"Width\":400")
+  fixture_acceptance_assert_contains_for_test(images_json, "\"Height\":294")
+  fixture_acceptance_assert_contains_for_test(
+    images_json, "\"BitsPerComponent\":8",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    images_json, "\"Colourspace\":\"/DeviceRGB\"",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    images_json, "\"Filter\":\"/FlateDecode\"",
+  )
+  let images_blob = @ascii.decode_lossy(document.images_json_blob([1]))
+  fixture_acceptance_assert_contains_for_test(images_blob, "\"Name\":\"/I1\"")
+  let resolution_json = document
+    .image_resolution_json([1], 1000000.0)
+    .stringify()
+  fixture_acceptance_assert_contains_for_test(
+    resolution_json, "\"XObject\":\"/I1\"",
+  )
+  fixture_acceptance_assert_contains_for_test(resolution_json, "\"W\":400")
+  fixture_acceptance_assert_contains_for_test(resolution_json, "\"H\":294")
+  let image = fixture_acceptance_cpdf_png_image_object_for_test(document)
+  match
+    document.get_image_24bpp(document.pages_of_pagetree()[0].resources, image) {
+    PdfRawImage(width, height, PdfBPP24, data) => {
+      @test.assert_eq(width, 400)
+      @test.assert_eq(height, 294)
+      @test.assert_eq(data.length(), 400 * 294 * 3)
+    }
+    _ =>
+      fail("expected extracted PNG fixture image to decode as 24bpp raw data")
+  }
 }
 
 ///|
@@ -2017,6 +2087,23 @@ async test "optional cpdf source manual image fixtures reconstruct malformed cla
           bytes, 1,
         )
       }
+    }
+  }
+}
+
+///|
+async test "optional cpdf source PNG image fixture reports and extracts image" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/manualimages/png.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_png_image_for_test(document)
+      fixture_acceptance_assert_cpdf_png_image_for_test(
+        fixture_acceptance_reparse_compressed_for_test(document),
+      )
     }
   }
 }

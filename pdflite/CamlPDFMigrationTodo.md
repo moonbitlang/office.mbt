@@ -5329,6 +5329,14 @@ Current backend snapshot:
   fixture_acceptance --filter '*annotation JSON*'` reports 1/1 test passing,
   `moon test --target native fixture_acceptance` reports 47/47 tests passing,
   and `moon test --target native` reports 2218/2218 tests passing.~~
+- [x] ~~Add the next source-boundary image corpus slice: optional
+  `.repos/cpdf-source/manualimages/png.pdf` now gates cpdf-style image JSON
+  listing, image-resolution JSON, UTF-8 blob output, and 24bpp extraction of the
+  real FlateDecode/DeviceRGB PNG XObject before and after compressed
+  rewrite/reread. `moon test --target native fixture_acceptance --filter '*PNG
+  image fixture*'` reports 1/1 test passing, `moon test --target native
+  fixture_acceptance` reports 48/48 tests passing, and `moon test --target
+  native` reports 2219/2219 tests passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
