@@ -4390,6 +4390,10 @@ Current backend snapshot:
   Unicode CJK chart through file output when present, preserving full
   U+4E00-9FFF unique-glyph coverage with no raw controls or replacement
   characters.~~
+- [x] ~~Markdown fixture acceptance now also gates the optional local
+  `.repos/cpdf-source/cpdfmanual.pdf` source corpus when present, covering
+  real-world cpdf manual extraction and malformed-`startxref` recovery without
+  requiring ignored source fixtures in CI.~~
 - [ ] Broader real-world PDF corpus testing, including PDF-to-Markdown
   comparison fixtures after the local Pandoc gates are stable.
 - [ ] Performance tuning for large files, object streams, filters, and text/image
