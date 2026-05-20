@@ -2867,6 +2867,12 @@ Current backend snapshot:
   label resolution, and compact range formatting. Native focused validation
   reports `moon test --target native pdf_page_spec_test.mbt` at 6/6 tests
   passing; native full-suite validation reports 1724/1724 tests passing.~~
+- [x] ~~Standalone `cpdfpagespec.ml` escaped page-label selector coverage now gates
+  cpdf's `resolve_pagelabels` behavior for bracket characters inside labels,
+  including `[A\\]1]`/`[B\\[2]` resolution and rejection of unescaped closing
+  brackets. Native focused validation reports `moon test --target native
+  pdf_page_spec_test.mbt` at 7/7 tests passing; native full-suite validation
+  reports 2199/2199 tests passing.~~
 - [x] ~~Standalone `cpdfpresent.ml` presentation-transition slice exposes
   `PdfDocument::presentation` and `pdf_presentation`, covering accepted cpdf
   transition names, transition-specific `/Dm`, `/M`, and `/Di` entries, delay

@@ -161,6 +161,35 @@ test "cpdf pagespec resolves page labels" {
 }
 
 ///|
+test "cpdf pagespec resolves escaped bracket page labels" {
+  let document = try! page_spec_document_for_test([
+    page_spec_page_for_test(400, 600),
+    page_spec_page_for_test(400, 600),
+    page_spec_page_for_test(400, 600),
+  ])
+  let labels : Array[@pdflite.PdfPageLabel] = [
+    {
+      label_style: PageLabelDecimalArabic,
+      label_prefix: Some(@ascii.encode("A]")),
+      start_page: 1,
+      start_value: 1,
+    },
+    {
+      label_style: PageLabelDecimalArabic,
+      label_prefix: Some(@ascii.encode("B[")),
+      start_page: 2,
+      start_value: 1,
+    },
+  ]
+  let labeled = try! document.write_page_labels(labels)
+  @test.assert_eq(try! labeled.parse_pagespec("[A\\]1],[B\\[2]"), [1, 3])
+  let nested : Result[Array[Int], Error] = try? labeled.parse_pagespec("[A]1]")
+  guard nested is Err(@pdflite.PdfError::BadPageSpecification("[A]1]")) else {
+    fail("expected BadPageSpecification for an unescaped closing bracket")
+  }
+}
+
+///|
 test "cpdf pagespec formats ranges" {
   @test.assert_eq(
     @pdflite.pdf_string_of_pagespec_for_count(10, [2, 4, 6, 8, 10]),
