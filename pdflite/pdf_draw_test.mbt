@@ -330,3 +330,90 @@ test "pdf draw control command helpers report cpdf parse errors" {
     "-msheary takes three numbers",
   )
 }
+
+///|
+test "pdf draw control path and paint helpers append cpdf draw ops" {
+  let document = @pdflite.pdf_document_empty()
+  let control = @pdflite.pdf_draw_control_new()
+  try! control.add_rect(document, "1 2 3 4")
+  try! control.add_to(document, "5 6")
+  try! control.add_line(document, "7 8")
+  try! control.add_bezier("1 2 3 4 5 6")
+  try! control.add_bezier23("7 8 9 10")
+  try! control.add_bezier13("11 12 13 14")
+  try! control.stroke()
+  try! control.fill()
+  try! control.fill_even_odd()
+  try! control.stroke_fill()
+  try! control.stroke_fill_even_odd()
+  try! control.clip()
+  try! control.clip_even_odd()
+  try! control.close_path()
+
+  let expected : Array[@pdflite.PdfDrawOp] = [
+    PdfDrawRect(1.0, 2.0, 3.0, 4.0),
+    PdfDrawTo(5.0, 6.0),
+    PdfDrawLine(7.0, 8.0),
+    PdfDrawBezier(1.0, 2.0, 3.0, 4.0, 5.0, 6.0),
+    PdfDrawBezier23(7.0, 8.0, 9.0, 10.0),
+    PdfDrawBezier13(11.0, 12.0, 13.0, 14.0),
+    PdfDrawStroke,
+    PdfDrawFill,
+    PdfDrawFillEvenOdd,
+    PdfDrawFillStroke,
+    PdfDrawFillStrokeEvenOdd,
+    PdfDrawClip,
+    PdfDrawClipEvenOdd,
+    PdfDrawClosePath,
+  ]
+  @test.assert_eq(control.ops(), expected)
+}
+
+///|
+test "pdf draw control circle helper expands to move and bezier ops" {
+  let control = @pdflite.pdf_draw_control_new()
+  try! control.add_circle("10 20 5")
+  let ops = control.ops()
+  @test.assert_eq(ops.length(), 5)
+  @test.assert_eq(ops[0], PdfDrawTo(15.0, 20.0))
+  guard ops[1] is PdfDrawBezier(_, _, _, _, _, _) else {
+    fail("expected circle quarter to be a Bezier op")
+  }
+}
+
+///|
+test "pdf draw control path helpers report cpdf parse errors" {
+  let control = @pdflite.pdf_draw_control_new()
+  draw_control_assert_soft_error_for_test(
+    try? control.add_bezier("1 2 3"),
+    "-bez requires six numbers",
+  )
+  draw_control_assert_soft_error_for_test(
+    try? control.add_bezier("1 x 3 4 5 6"),
+    "malformed -bez",
+  )
+  draw_control_assert_soft_error_for_test(
+    try? control.add_bezier23("1 2 3"),
+    "-bez23 requires four numbers",
+  )
+  draw_control_assert_soft_error_for_test(
+    try? control.add_bezier23("1 x 3 4"),
+    "malformed -bez23",
+  )
+  draw_control_assert_soft_error_for_test(
+    try? control.add_bezier13("1 2 3"),
+    "-bez13 requires four numbers",
+  )
+  draw_control_assert_soft_error_for_test(
+    try? control.add_bezier13("1 x 3 4"),
+    "malformed -bez13",
+  )
+  draw_control_assert_soft_error_for_test(
+    try? control.add_circle("1 2"),
+    "-circle requires three numbers",
+  )
+  draw_control_assert_soft_error_for_test(
+    try? control.add_circle("1 x 3"),
+    "malformed -circle",
+  )
+}

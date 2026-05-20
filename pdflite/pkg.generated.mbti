@@ -2871,13 +2871,23 @@ pub struct PdfDrawControl {
   frames : Array[PdfDrawControlFrame]
   mut xobject_bbox : PdfCoordRectangle
 } derive(Eq, ToJson, @debug.Debug)
+pub fn PdfDrawControl::add_bezier(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_bezier13(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_bezier23(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_circle(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_element_info(Self, String, PdfObject) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_line(Self, PdfDocument, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_namespace(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_op(Self, PdfDrawOp) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_rect(Self, PdfDocument, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_structure_tag(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_tag(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_to(Self, PdfDocument, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::begin_artifact(Self) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::begin_text_section(Self) -> Unit
+pub fn PdfDrawControl::clip(Self) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::clip_even_odd(Self) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::close_path(Self) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::current_frame_name(Self) -> String raise @core.PdfError
 pub fn PdfDrawControl::current_ops(Self) -> Array[PdfDrawOp] raise @core.PdfError
 pub fn PdfDrawControl::depth(Self) -> Int
@@ -2887,6 +2897,8 @@ pub fn PdfDrawControl::end_structure_tag(Self) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::end_tag(Self) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::end_text_section(Self) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::end_xobject(Self) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::fill(Self) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::fill_even_odd(Self) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::matrix_rotate(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::matrix_scale(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::matrix_shear_x(Self, String) -> Unit raise @core.PdfError
@@ -2906,6 +2918,9 @@ pub fn PdfDrawControl::set_miter_limit(Self, String) -> Unit raise @core.PdfErro
 pub fn PdfDrawControl::set_stroke(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::set_xobject_bbox(Self, PdfCoordRectangle) -> Unit
 pub fn PdfDrawControl::start_xobject(Self, String) -> Unit
+pub fn PdfDrawControl::stroke(Self) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::stroke_fill(Self) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::stroke_fill_even_odd(Self) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::use_xobject(Self, String) -> Unit raise @core.PdfError
 
 pub(all) struct PdfDrawControlFrame {
