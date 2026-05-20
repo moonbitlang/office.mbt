@@ -2969,6 +2969,18 @@ pub(all) struct PdfDrawExtGStateResource {
   name : @core.PdfName
 } derive(Eq, ToJson, @debug.Debug)
 
+pub(all) struct PdfDrawFontPackState {
+  identifier : String
+  fontpack : PdfFontPack
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfDrawFontResource {
+  identifier : String
+  font_index : Int
+  resource_name : @core.PdfName
+  object_number : Int
+} derive(Eq, ToJson, @debug.Debug)
+
 pub(all) enum PdfDrawJustification {
   PdfDrawLeft
   PdfDrawRight
@@ -3040,6 +3052,11 @@ pub(all) struct PdfDrawRenderState {
   extgstates : Array[PdfDrawExtGStateResource]
   xobjects : Array[PdfDrawXObjectResource]
   form_xobjects : Array[PdfDrawXObjectResource]
+  fonts : Array[PdfDrawFontResource]
+  fontpacks : Array[PdfDrawFontPackState]
+  mut current_fontpack_identifier : String
+  mut current_fontpack : PdfFontPack
+  mut font_size : Double
   page_names : Array[@core.PdfName]
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfDrawRenderState::resources(Self) -> PdfObject

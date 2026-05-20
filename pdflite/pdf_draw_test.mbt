@@ -4,6 +4,22 @@ fn draw_name_for_test(text : String) -> @pdflite.PdfName {
 }
 
 ///|
+fn draw_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  for value in values {
+    output.push(try! @pdflite.pdf_byte_of_int(value))
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn draw_standard_font_for_test(
+  font : @pdflite.PdfStandardFont,
+) -> @pdflite.PdfFont {
+  PdfFontStandard({ font, encoding: PdfWinAnsiEncoding })
+}
+
+///|
 test "pdf draw debug strings match cpdf spelling" {
   @test.assert_eq(
     @pdflite.pdf_string_of_drawop(PdfDrawRect(0.0, 0.0, 1.0, 2.0)),
@@ -175,6 +191,86 @@ test "pdf draw text section and text state ops convert to PDF content ops" {
     Op_ET,
   ]
   @test.assert_eq(try! @pdflite.pdf_drawops_to_content_ops(ops), expected)
+}
+
+///|
+test "pdf draw document-aware fontpacks render text runs and resources" {
+  let document = @pdflite.pdf_document_empty()
+  let state = @pdflite.pdf_draw_render_state_new()
+  let regular = draw_standard_font_for_test(PdfHelvetica)
+  let bold = draw_standard_font_for_test(PdfHelveticaBold)
+  let pack : @pdflite.PdfFontPack = {
+    fonts: [regular, bold],
+    entries: [
+      { codepoint: 65, font_index: 0, charcode: 1 },
+      { codepoint: 66, font_index: 1, charcode: 2 },
+      { codepoint: 67, font_index: 1, charcode: 3 },
+      { codepoint: 68, font_index: 0, charcode: 4 },
+      { codepoint: 90, font_index: 9, charcode: 5 },
+    ],
+  }
+  let f1 = draw_name_for_test("/F1")
+  let f2 = draw_name_for_test("/F2")
+  let font_key = draw_name_for_test("/Font")
+  let ops = try! @pdflite.pdf_drawops_to_content_ops_with_document(
+    state,
+    document,
+    [
+      PdfDrawTextSection([
+        PdfDrawFontPack("Body", pack, []),
+        PdfDrawFont("Body", 10.0),
+        PdfDrawText("ABCDZ"),
+      ]),
+    ],
+  )
+  @test.assert_eq(ops, [
+    Op_BT,
+    Op_Tf(f1, 10.0),
+    Op_Tj(draw_bytes_for_test([1])),
+    Op_Tf(f2, 10.0),
+    Op_Tj(draw_bytes_for_test([2, 3])),
+    Op_Tf(f1, 10.0),
+    Op_Tj(draw_bytes_for_test([4])),
+    Op_ET,
+  ])
+
+  guard document.lookup_object_or_null(1) is PdfDictionary(_) else {
+    fail("expected first written font object")
+  }
+  guard document.lookup_object_or_null(2) is PdfDictionary(_) else {
+    fail("expected second written font object")
+  }
+  guard state.resources().lookup_immediate(font_key) is Some(fonts) else {
+    fail("expected Font resources")
+  }
+  @test.assert_eq(fonts.lookup_immediate(f1), Some(PdfIndirect(1)))
+  @test.assert_eq(fonts.lookup_immediate(f2), Some(PdfIndirect(2)))
+}
+
+///|
+test "pdf draw font selection reports missing fontpack" {
+  let state = @pdflite.pdf_draw_render_state_new()
+  let result : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_drawop_to_content_ops_with_state(
+    state,
+    PdfDrawFont("Missing", 12.0),
+  )
+  guard result is Err(@pdflite.PdfError::SoftError(message)) else {
+    fail("expected SoftError for missing fontpack")
+  }
+  @test.assert_eq(message, "FontPack not found: Missing")
+}
+
+///|
+test "pdf draw text reports missing selected fontpack" {
+  let state = @pdflite.pdf_draw_render_state_new()
+  let result : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_drawop_to_content_ops_with_state(
+    state,
+    PdfDrawText("hello"),
+  )
+  guard result is Err(@pdflite.PdfError::SoftError(message)) else {
+    fail("expected SoftError for unselected fontpack")
+  }
+  @test.assert_eq(message, "FontPack not selected")
 }
 
 ///|

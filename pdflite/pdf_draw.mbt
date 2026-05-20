@@ -32,16 +32,35 @@ pub(all) struct PdfDrawXObjectResource {
 } derive(Debug, Eq, ToJson)
 
 ///|
+pub(all) struct PdfDrawFontResource {
+  identifier : String
+  font_index : Int
+  resource_name : PdfName
+  object_number : Int
+} derive(Debug, Eq, ToJson)
+
+///|
+pub(all) struct PdfDrawFontPackState {
+  identifier : String
+  fontpack : PdfFontPack
+} derive(Debug, Eq, ToJson)
+
+///|
 /// Resource allocation state for rendering cpdf draw operations.
 ///
 /// This ports the resource-numbering and ExtGState cache used by
 /// `cpdfdraw.ml`'s `res`/`fresh_name`/`extgstate` helpers. Later rendering
-/// slices will extend this state with font and form-XObject resources.
+/// slices will extend this state with paragraph and tagged-content resources.
 pub(all) struct PdfDrawRenderState {
   mut resource_number : Int
   extgstates : Array[PdfDrawExtGStateResource]
   xobjects : Array[PdfDrawXObjectResource]
   form_xobjects : Array[PdfDrawXObjectResource]
+  fonts : Array[PdfDrawFontResource]
+  fontpacks : Array[PdfDrawFontPackState]
+  mut current_fontpack_identifier : String
+  mut current_fontpack : PdfFontPack
+  mut font_size : Double
   page_names : Array[PdfName]
 } derive(Debug, Eq, ToJson)
 
@@ -55,6 +74,9 @@ let pdf_draw_extgstate_key_name : PdfName = pdf_draw_name("/ExtGState")
 
 ///|
 let pdf_draw_xobject_key_name : PdfName = pdf_draw_name("/XObject")
+
+///|
+let pdf_draw_font_key_name : PdfName = pdf_draw_name("/Font")
 
 ///|
 let pdf_draw_length_key_name : PdfName = pdf_draw_name("/Length")
@@ -85,6 +107,11 @@ fn pdf_draw_extgstate_key() -> PdfName {
 ///|
 fn pdf_draw_xobject_key() -> PdfName {
   pdf_draw_xobject_key_name
+}
+
+///|
+fn pdf_draw_font_key() -> PdfName {
+  pdf_draw_font_key_name
 }
 
 ///|
@@ -129,6 +156,11 @@ pub fn pdf_draw_render_state_new() -> PdfDrawRenderState {
     extgstates: [],
     xobjects: [],
     form_xobjects: [],
+    fonts: [],
+    fontpacks: [],
+    current_fontpack_identifier: "",
+    current_fontpack: { fonts: [], entries: [] },
+    font_size: 12.0,
     page_names: [],
   }
 }
@@ -194,6 +226,83 @@ fn PdfDrawRenderState::register_form_xobject(
 }
 
 ///|
+fn PdfDrawRenderState::stored_fontpack(
+  self : PdfDrawRenderState,
+  identifier : String,
+) -> PdfFontPack? {
+  for entry in self.fontpacks {
+    if entry.identifier == identifier {
+      return Some(entry.fontpack)
+    }
+  }
+  None
+}
+
+///|
+fn PdfDrawRenderState::ensure_fontpack(
+  self : PdfDrawRenderState,
+  identifier : String,
+  fontpack : PdfFontPack,
+) -> PdfFontPack {
+  match self.stored_fontpack(identifier) {
+    Some(stored) => stored
+    None => {
+      self.fontpacks.push({ identifier, fontpack })
+      fontpack
+    }
+  }
+}
+
+///|
+fn PdfDrawRenderState::stored_font_resource(
+  self : PdfDrawRenderState,
+  identifier : String,
+  font_index : Int,
+) -> PdfDrawFontResource? {
+  for resource in self.fonts {
+    if resource.identifier == identifier && resource.font_index == font_index {
+      return Some(resource)
+    }
+  }
+  None
+}
+
+///|
+fn PdfDrawRenderState::register_font_resource(
+  self : PdfDrawRenderState,
+  identifier : String,
+  font_index : Int,
+  object_number : Int,
+) -> PdfName {
+  let resource_name = self.fresh_name("/F")
+  self.fonts.push({ identifier, font_index, resource_name, object_number })
+  resource_name
+}
+
+///|
+fn PdfDrawRenderState::register_fontpack_resources(
+  self : PdfDrawRenderState,
+  identifier : String,
+  fontpack : PdfFontPack,
+  document : PdfDocument,
+) -> Unit raise PdfError {
+  let stored = self.ensure_fontpack(identifier, fontpack)
+  for index in 0..<stored.fonts.length() {
+    let resource = match self.stored_font_resource(identifier, index) {
+      Some(resource) => resource
+      None => {
+        let object_number = document.write_font(stored.fonts[index])
+        let resource_name = self.register_font_resource(
+          identifier, index, object_number,
+        )
+        { identifier, font_index: index, resource_name, object_number }
+      }
+    }
+    self.mark_page_resource(resource.resource_name)
+  }
+}
+
+///|
 fn PdfDrawRenderState::mark_page_resource(
   self : PdfDrawRenderState,
   resource_name : PdfName,
@@ -235,11 +344,97 @@ fn PdfDrawRenderState::form_resource_name(
 }
 
 ///|
+fn PdfDrawRenderState::font_resource_name(
+  self : PdfDrawRenderState,
+  identifier : String,
+  font_index : Int,
+) -> PdfName raise PdfError {
+  match self.stored_font_resource(identifier, font_index) {
+    Some(resource) => {
+      self.mark_page_resource(resource.resource_name)
+      resource.resource_name
+    }
+    None => raise SoftError("Font resource not found: " + identifier)
+  }
+}
+
+///|
+fn PdfDrawRenderState::set_current_font(
+  self : PdfDrawRenderState,
+  identifier : String,
+  size : Double,
+) -> Unit raise PdfError {
+  match self.stored_fontpack(identifier) {
+    Some(fontpack) => {
+      self.current_fontpack_identifier = identifier
+      self.current_fontpack = fontpack
+      self.font_size = size
+    }
+    None => raise SoftError("FontPack not found: " + identifier)
+  }
+}
+
+///|
+fn PdfDrawRenderState::text_ops(
+  self : PdfDrawRenderState,
+  text : String,
+) -> Array[PdfContentOp] raise PdfError {
+  if self.current_fontpack_identifier == "" {
+    raise SoftError("FontPack not selected")
+  }
+  let triples : Array[(Int, Int, PdfFont)] = []
+  for codepoint in pdf_codepoints_of_utf8(@utf8.encode(text)) {
+    match self.current_fontpack.get_char(codepoint) {
+      Some(triple) => triples.push(triple)
+      None => ()
+    }
+  }
+  let output : Array[PdfContentOp] = []
+  for run in pdf_fontpack_collate_runs(triples) {
+    guard run.length() > 0 else { continue }
+    let font_index = run[0].1
+    let resource_name = self.font_resource_name(
+      self.current_fontpack_identifier,
+      font_index,
+    )
+    let bytes : Array[Byte] = []
+    for triple in run {
+      bytes.push(pdf_byte_of_int(triple.0))
+    }
+    output.push(Op_Tf(resource_name, self.font_size))
+    output.push(Op_Tj(Bytes::from_array(bytes)))
+  }
+  output
+}
+
+///|
 fn pdf_draw_copy_xobject_resources(
   resources : ArrayView[PdfDrawXObjectResource],
 ) -> Array[PdfDrawXObjectResource] {
   let output : Array[PdfDrawXObjectResource] = []
   for entry in resources {
+    output.push(entry)
+  }
+  output
+}
+
+///|
+fn pdf_draw_copy_font_resources(
+  resources : ArrayView[PdfDrawFontResource],
+) -> Array[PdfDrawFontResource] {
+  let output : Array[PdfDrawFontResource] = []
+  for entry in resources {
+    output.push(entry)
+  }
+  output
+}
+
+///|
+fn pdf_draw_copy_fontpacks(
+  fontpacks : ArrayView[PdfDrawFontPackState],
+) -> Array[PdfDrawFontPackState] {
+  let output : Array[PdfDrawFontPackState] = []
+  for entry in fontpacks {
     output.push(entry)
   }
   output
@@ -263,6 +458,11 @@ fn PdfDrawRenderState::nested_form_state(
     extgstates: [],
     xobjects: pdf_draw_copy_xobject_resources(self.xobjects),
     form_xobjects: pdf_draw_copy_xobject_resources(self.form_xobjects),
+    fonts: pdf_draw_copy_font_resources(self.fonts),
+    fontpacks: pdf_draw_copy_fontpacks(self.fontpacks),
+    current_fontpack_identifier: self.current_fontpack_identifier,
+    current_fontpack: self.current_fontpack,
+    font_size: self.font_size,
     page_names: pdf_draw_copy_page_names(self.page_names),
   }
 }
@@ -310,12 +510,21 @@ pub fn PdfDrawRenderState::resources(self : PdfDrawRenderState) -> PdfObject {
       xobjects.push((entry.resource_name, PdfIndirect(entry.object_number)))
     }
   }
+  let fonts : Array[(PdfName, PdfObject)] = []
+  for entry in self.fonts {
+    if pdf_draw_resource_is_used(self.page_names, entry.resource_name) {
+      fonts.push((entry.resource_name, PdfIndirect(entry.object_number)))
+    }
+  }
   let resources : Array[(PdfName, PdfObject)] = []
   if xobjects.length() > 0 {
     resources.push((pdf_draw_xobject_key(), PdfDictionary(xobjects)))
   }
   if states.length() > 0 {
     resources.push((pdf_draw_extgstate_key(), PdfDictionary(states)))
+  }
+  if fonts.length() > 0 {
+    resources.push((pdf_draw_font_key(), PdfDictionary(fonts)))
   }
   PdfDictionary(resources)
 }
@@ -548,6 +757,28 @@ fn PdfDrawOp::to_content_ops_internal(
           []
         }
         _ => pdf_draw_content_unsupported(self)
+      }
+    PdfDrawFontPack(identifier, fontpack, codepoints) =>
+      match (state, document) {
+        (Some(state), Some(document)) => {
+          ignore(codepoints)
+          state.register_fontpack_resources(identifier, fontpack, document)
+          []
+        }
+        _ => pdf_draw_content_unsupported(self)
+      }
+    PdfDrawFont(identifier, size) =>
+      match state {
+        Some(state) => {
+          state.set_current_font(identifier, size)
+          []
+        }
+        None => pdf_draw_content_unsupported(self)
+      }
+    PdfDrawText(text) =>
+      match state {
+        Some(state) => state.text_ops(text)
+        None => pdf_draw_content_unsupported(self)
       }
     PdfDrawOpacity(value) =>
       match state {
