@@ -1648,6 +1648,12 @@ Current backend snapshot:
   failure, reconstructs through the public reader, and verifies compressed-xref
   rewrite/reread page counts. `moon test --target native fixture_acceptance`
   reports 9/9 tests passing.~~
+- [x] ~~Add checked-in Pandoc real-world malformed compact xref-stream width
+  gates: `fixture_acceptance` now corrupts `/W[1 2 2]` in the object-stream
+  backed `pandoc_latin.pdf` and `pandoc_cjk.pdf` fixtures, covering xref
+  streams identified by `/W` without an explicit `/Type /XRef`, and verifies
+  public reconstruction plus compressed-xref reread page counts. `moon test
+  --target native fixture_acceptance` reports 11/11 tests passing.~~
 - [ ] Add further malformed xref-table/xref-stream/object-stream recovery cases
   from real-world PDFs.
 - [x] ~~Add a native reader-boundary gate for the next available predefined CMap

@@ -252,6 +252,17 @@ fn fixture_acceptance_corrupt_xref_stream_widths_for_test(
 }
 
 ///|
+fn fixture_acceptance_corrupt_bare_xref_stream_widths_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  fixture_acceptance_replace_first_bytes_for_test(
+    bytes,
+    @ascii.encode("/W[1 2 2]"),
+    @ascii.encode("/W/Bad123"),
+  )
+}
+
+///|
 fn fixture_acceptance_corrupt_xref_stream_index_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
@@ -335,6 +346,27 @@ fn fixture_acceptance_assert_xref_stream_widths_reconstructs_for_test(
   )
   guard strict is Err(@pdflite.PdfError::XRefEntryExpected) else {
     fail("expected malformed xref stream widths to require reconstruction")
+  }
+  let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
+  @test.assert_eq(recovered.first_xref(), 0)
+  @test.assert_eq(recovered.endpage(), expected_pages)
+  let reparsed = fixture_acceptance_reparse_compressed_for_test(recovered)
+  @test.assert_eq(reparsed.endpage(), expected_pages)
+}
+
+///|
+fn fixture_acceptance_assert_bare_xref_stream_widths_reconstructs_for_test(
+  bytes : Bytes,
+  expected_pages : Int,
+) -> Unit raise {
+  let corrupted = fixture_acceptance_corrupt_bare_xref_stream_widths_for_test(
+    bytes,
+  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    corrupted,
+  )
+  guard strict is Err(@pdflite.PdfError::XRefEntryExpected) else {
+    fail("expected malformed bare xref stream widths to require reconstruction")
   }
   let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
   @test.assert_eq(recovered.first_xref(), 0)
@@ -434,6 +466,22 @@ async test "checked-in CamlPDF introduction fixture reconstructs xref stream bad
       "fixtures/camlpdf/introduction_to_camlpdf.pdf",
     ),
     10,
+  )
+}
+
+///|
+async test "checked-in Pandoc Latin fixture reconstructs malformed bare xref stream widths" {
+  fixture_acceptance_assert_bare_xref_stream_widths_reconstructs_for_test(
+    fixture_acceptance_bytes_for_test("markdown/fixtures/pandoc_latin.pdf"),
+    2,
+  )
+}
+
+///|
+async test "checked-in Pandoc CJK fixture reconstructs malformed bare xref stream widths" {
+  fixture_acceptance_assert_bare_xref_stream_widths_reconstructs_for_test(
+    fixture_acceptance_bytes_for_test("markdown/fixtures/pandoc_cjk.pdf"),
+    1,
   )
 }
 
