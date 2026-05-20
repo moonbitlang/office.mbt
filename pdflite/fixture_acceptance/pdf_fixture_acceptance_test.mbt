@@ -455,14 +455,15 @@ fn fixture_acceptance_corrupt_bare_xref_stream_widths_for_test(
 }
 
 ///|
-fn fixture_acceptance_corrupt_xref_stream_index_for_test(
+fn fixture_acceptance_corrupt_xref_stream_index_entry_for_test(
   bytes : Bytes,
+  index_entry : BytesView,
 ) -> Bytes raise {
-  fixture_acceptance_replace_bytes_after_for_test(
+  fixture_acceptance_replace_bytes_after_with_padded_ascii_for_test(
     bytes,
     @ascii.encode("/Type /XRef"),
-    @ascii.encode("/Index [0 104]"),
-    @ascii.encode("/Index /Bad   "),
+    index_entry,
+    "/Index /Bad",
   )
 }
 
@@ -693,11 +694,14 @@ fn fixture_acceptance_assert_bare_xref_stream_widths_reconstructs_for_test(
 }
 
 ///|
-fn fixture_acceptance_assert_xref_stream_index_reconstructs_for_test(
+fn fixture_acceptance_assert_xref_stream_index_entry_reconstructs_for_test(
   bytes : Bytes,
   expected_pages : Int,
+  index_entry : BytesView,
 ) -> Unit raise {
-  let corrupted = fixture_acceptance_corrupt_xref_stream_index_for_test(bytes)
+  let corrupted = fixture_acceptance_corrupt_xref_stream_index_entry_for_test(
+    bytes, index_entry,
+  )
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     corrupted,
   )
@@ -709,6 +713,18 @@ fn fixture_acceptance_assert_xref_stream_index_reconstructs_for_test(
   @test.assert_eq(recovered.endpage(), expected_pages)
   let reparsed = fixture_acceptance_reparse_compressed_for_test(recovered)
   @test.assert_eq(reparsed.endpage(), expected_pages)
+}
+
+///|
+fn fixture_acceptance_assert_xref_stream_index_reconstructs_for_test(
+  bytes : Bytes,
+  expected_pages : Int,
+) -> Unit raise {
+  fixture_acceptance_assert_xref_stream_index_entry_reconstructs_for_test(
+    bytes,
+    expected_pages,
+    @ascii.encode("/Index [0 104]"),
+  )
 }
 
 ///|
@@ -946,6 +962,22 @@ async test "optional cpdf source manual fixture reconstructs malformed xref stre
     Some(bytes) =>
       fixture_acceptance_assert_xref_stream_widths_reconstructs_for_test(
         bytes, 175,
+      )
+  }
+}
+
+///|
+async test "optional cpdf source manual fixture reconstructs malformed xref stream index" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/cpdfmanual.pdf",
+    ) {
+    None => ()
+    Some(bytes) =>
+      fixture_acceptance_assert_xref_stream_index_entry_reconstructs_for_test(
+        bytes,
+        175,
+        @ascii.encode("/Index [0 1844]"),
       )
   }
 }
