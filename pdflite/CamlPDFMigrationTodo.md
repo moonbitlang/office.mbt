@@ -5211,6 +5211,15 @@ Current backend snapshot:
   reports 1/1 tests passing, `moon test --target native` reports 2207/2207
   tests passing, and `moon check --target all --warn-list +73` completes with
   the known warning baseline and no errors.~~
+- [x] ~~Add the next remaining source-corpus parity slice: the optional
+  `.repos/cpdf-source/manualimages/*.pdf` corpus now has native fixture coverage
+  for reading every one-page manual-image PDF, parsing page content operators,
+  and preserving the same boundary after compressed rewrite. `moon test --target
+  native image/fixture_acceptance --filter '*manual image PDF corpus*'` reports
+  1/1 tests passing and `moon test --target native image/fixture_acceptance`
+  reports 15/15 tests passing. `moon test --target native` reports 2208/2208
+  tests passing, and `moon check --target all --warn-list +73` completes with
+  the known warning baseline and no errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.

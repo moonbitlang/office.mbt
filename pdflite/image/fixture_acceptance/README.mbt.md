@@ -4,8 +4,8 @@
 for image-heavy external PDFs. It checks JPEG, CCITT, indexed color, compressed
 rewrite, and xref reconstruction behavior when optional downloaded fixtures are
 available. During porting it also probes optional `.repos/cpdf-source`
-manual-image PDFs and the full cpdf manual when that ignored source checkout is
-present.
+manual-image PDFs, the manual-image PDF corpus, and the full cpdf manual when
+that ignored source checkout is present.
 
 ```mermaid
 flowchart LR
@@ -14,7 +14,9 @@ flowchart LR
   Source[optional .repos/cpdf-source PDFs] --> PDFs
   PDFs --> Reader["@pdflite reader"]
   Reader --> Images[get_image_24bpp]
-  Images --> Checks[format and pixel checks]
+  Reader --> Content[parse_content_ops]
+  Images --> Checks[format, pixel, and rewrite checks]
+  Content --> Checks
 ```
 
 ## Checked Examples
@@ -41,7 +43,9 @@ async test "image fixture manifest documents optional downloads" {
 - Optional external downloads let acceptance tests cover larger real-world
   images without bloating the repository.
 - Optional `.repos/cpdf-source` fixtures are skipped when absent because that
-  source checkout is ignored in fresh clones.
+  source checkout is ignored in fresh clones. When present, the corpus gate reads
+  every `manualimages/*.pdf`, parses the page content, and checks compressed
+  rewrite stability.
 - Library image APIs remain in the root package; this package is only for
   fixture-backed verification.
 

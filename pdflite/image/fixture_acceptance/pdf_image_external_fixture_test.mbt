@@ -151,6 +151,37 @@ fn image_external_reparse_compressed_for_test(
 }
 
 ///|
+fn image_external_cpdf_source_manual_image_pdf_paths_for_test() -> Array[String] {
+  [
+    ".repos/cpdf-source/manualimages/bez.pdf", ".repos/cpdf-source/manualimages/capjoins.pdf",
+    ".repos/cpdf-source/manualimages/clip.pdf", ".repos/cpdf-source/manualimages/colfill.pdf",
+    ".repos/cpdf-source/manualimages/dash.pdf", ".repos/cpdf-source/manualimages/fill.pdf",
+    ".repos/cpdf-source/manualimages/fontparams.pdf", ".repos/cpdf-source/manualimages/fonts.pdf",
+    ".repos/cpdf-source/manualimages/h1.pdf", ".repos/cpdf-source/manualimages/line.pdf",
+    ".repos/cpdf-source/manualimages/lines.pdf", ".repos/cpdf-source/manualimages/matrix.pdf",
+    ".repos/cpdf-source/manualimages/para.pdf", ".repos/cpdf-source/manualimages/paras.pdf",
+    ".repos/cpdf-source/manualimages/png.pdf", ".repos/cpdf-source/manualimages/pop.pdf",
+    ".repos/cpdf-source/manualimages/stext.pdf", ".repos/cpdf-source/manualimages/text.pdf",
+    ".repos/cpdf-source/manualimages/textclip.pdf", ".repos/cpdf-source/manualimages/trans.pdf",
+    ".repos/cpdf-source/manualimages/xobj.pdf",
+  ]
+}
+
+///|
+fn image_external_assert_cpdf_manual_image_page_for_test(
+  document : @pdflite.PdfDocument,
+  path : String,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 1)
+  let pages = document.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  let ops = document.parse_content_ops(pages[0].content)
+  guard ops.length() > 0 else {
+    fail("expected cpdf source manual-image content ops for " + path)
+  }
+}
+
+///|
 fn image_external_assert_jpeg_for_test(
   images : Array[@pdflite.PdfImage],
 ) -> Unit raise {
@@ -351,6 +382,30 @@ async test "external indexed CMYK image fixture survives compressed rewrite" {
         "expected indexed CMYK image as raw RGB24 payload after rewrite",
       )
     }
+  }
+}
+
+///|
+async test "cpdf source manual image PDF corpus parses and rewrites" {
+  let mut checked = 0
+  for path in image_external_cpdf_source_manual_image_pdf_paths_for_test() {
+    match image_external_fixture_document_for_test(path) {
+      None => ()
+      Some(document) => {
+        checked += 1
+        image_external_assert_cpdf_manual_image_page_for_test(document, path)
+        image_external_assert_cpdf_manual_image_page_for_test(
+          image_external_reparse_compressed_for_test(document),
+          path,
+        )
+      }
+    }
+  }
+  if checked > 0 {
+    @test.assert_eq(
+      checked,
+      image_external_cpdf_source_manual_image_pdf_paths_for_test().length(),
+    )
   }
 }
 
