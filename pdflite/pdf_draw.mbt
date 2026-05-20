@@ -1851,6 +1851,19 @@ fn pdf_draw_split_on_new_page(
 }
 
 ///|
+fn PdfDocument::pdf_draw_has_fresh_structure_tree(self : PdfDocument) -> Bool {
+  match
+    self.lookup_chain(self.trailer_dict(), [
+      pdf_structure_root_key(),
+      pdf_draw_struct_tree_root_key(),
+    ]) {
+    Some(PdfDictionary([(key, PdfNameObject(value))])) =>
+      key == pdf_draw_type_key() && value == pdf_draw_struct_tree_root_key()
+    _ => false
+  }
+}
+
+///|
 fn pdf_draw_single_page_ops(
   document : PdfDocument,
   state : PdfDrawRenderState,
@@ -2329,9 +2342,12 @@ fn PdfDocument::pdf_draw_write_structure_tree(
 /// split around `PdfDrawNewPage`, selected page ranges are advanced or padded
 /// between chunks, resources are merged into page resources, manual artifact
 /// back-channel markers are fixed before writing content, and `struct_tree`
-/// writes a fresh structure tree from rendered MCIDs. When `role_map` is not
-/// empty, it is parsed as the body of a PDF role-map dictionary and attached to
-/// the generated `/StructTreeRoot`.
+/// writes a fresh structure tree from rendered MCIDs only when the document has
+/// cpdf's fresh `/StructTreeRoot` placeholder. If a real structure tree is
+/// already present, or no fresh placeholder exists, requested structure mode
+/// artifacts the drawn content instead of replacing the tree. When `role_map`
+/// is not empty, it is parsed as the body of a PDF role-map dictionary and
+/// attached to the generated `/StructTreeRoot`.
 pub fn PdfDocument::draw(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
@@ -2347,8 +2363,12 @@ pub fn PdfDocument::draw(
   role_map? : String = "",
 ) -> PdfDocument raise PdfError {
   pdf_page_box_validate_page_numbers(page_numbers, self.endpage(), "draw")
+  let write_structure_tree = struct_tree &&
+    self.pdf_draw_has_fresh_structure_tree()
+  let effective_add_artifacts = add_artifacts ||
+    (struct_tree && !write_structure_tree)
   let state = pdf_draw_render_state_new()
-  state.set_structure_tree_enabled(struct_tree)
+  state.set_structure_tree_enabled(write_structure_tree)
   let chunks = pdf_draw_split_on_new_page(
     pdf_draw_double_trailing_new_page(drawops),
   )
@@ -2366,14 +2386,14 @@ pub fn PdfDocument::draw(
         state,
         current_pages,
         chunks[index],
-        struct_tree,
+        write_structure_tree,
         fast,
         underneath,
         filename,
         bates,
         bates_pad,
         time,
-        add_artifacts,
+        effective_add_artifacts,
       )
     }
     if index + 1 < chunks.length() {
@@ -2382,7 +2402,7 @@ pub fn PdfDocument::draw(
       current_pages = next.1
     }
   }
-  if struct_tree {
+  if write_structure_tree {
     document.pdf_draw_write_structure_tree(state.structure_data, role_map)
   }
   document

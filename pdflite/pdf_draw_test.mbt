@@ -35,6 +35,19 @@ fn draw_time_for_test() -> @pdflite.PdfStrftimeTime {
 }
 
 ///|
+fn draw_fresh_structure_document_for_test() -> @pdflite.PdfDocument {
+  let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
+  let key_root = draw_name_for_test("/Root")
+  let key_struct_tree_root = draw_name_for_test("/StructTreeRoot")
+  let key_type = draw_name_for_test("/Type")
+  try! document.replace_chain(
+    [key_root, key_struct_tree_root, key_type],
+    PdfNameObject(key_struct_tree_root),
+  )
+  document
+}
+
+///|
 fn draw_page_ops_for_test(
   document : @pdflite.PdfDocument,
   page_number : Int,
@@ -903,7 +916,7 @@ test "PdfDocument draw trailing NewPage adds one blank page" {
 
 ///|
 test "PdfDocument draw structure-tree mode writes MCID parent tree" {
-  let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
+  let document = draw_fresh_structure_document_for_test()
   let drawn = try! document.draw(
     [1],
     [PdfDrawTag("Span"), PdfDrawEndTag],
@@ -953,7 +966,7 @@ test "PdfDocument draw structure-tree mode writes MCID parent tree" {
 
 ///|
 test "PdfDocument draw structure-tree mode preserves nesting and namespaces" {
-  let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
+  let document = draw_fresh_structure_document_for_test()
   let drawn = try! document.draw(
     [1],
     [
@@ -1017,7 +1030,7 @@ test "PdfDocument draw structure-tree mode preserves nesting and namespaces" {
 
 ///|
 test "PdfDocument draw structure-tree mode auto-tags text" {
-  let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
+  let document = draw_fresh_structure_document_for_test()
   let font = draw_standard_font_for_test(PdfHelvetica)
   let pack = try! @pdflite.pdf_fontpack_of_standard_font(font)
   let drawn = try! document.draw(
@@ -1057,7 +1070,7 @@ test "PdfDocument draw structure-tree mode auto-tags text" {
 
 ///|
 test "PdfDocument draw structure-tree mode honors AutoTag false" {
-  let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
+  let document = draw_fresh_structure_document_for_test()
   let font = draw_standard_font_for_test(PdfHelvetica)
   let pack = try! @pdflite.pdf_fontpack_of_standard_font(font)
   let drawn = try! document.draw(
@@ -1097,7 +1110,7 @@ test "PdfDocument draw structure-tree mode honors AutoTag false" {
 
 ///|
 test "PdfDocument draw structure-tree mode writes role map" {
-  let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
+  let document = draw_fresh_structure_document_for_test()
   let drawn = try! document.draw(
     [1],
     [PdfDrawSTag("H1"), PdfDrawEndSTag],
@@ -1124,6 +1137,60 @@ test "PdfDocument draw structure-tree mode writes role map" {
     role_map.lookup_immediate(key_aside),
     Some(PdfNameObject(key_div)),
   )
+}
+
+///|
+test "PdfDocument draw structure-tree mode preserves existing structure tree" {
+  let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
+  let key_root = draw_name_for_test("/Root")
+  let key_struct_tree_root = draw_name_for_test("/StructTreeRoot")
+  let key_type = draw_name_for_test("/Type")
+  let key_k = draw_name_for_test("/K")
+  let key_role_map = draw_name_for_test("/RoleMap")
+  let key_artifact = draw_name_for_test("/Artifact")
+  let existing_tree : @pdflite.PdfObject = PdfDictionary([
+    (key_type, PdfNameObject(key_struct_tree_root)),
+    (key_k, PdfInteger(99)),
+  ])
+  try! document.replace_chain([key_root, key_struct_tree_root], existing_tree)
+  let drawn = try! document.draw(
+    [1],
+    [PdfDrawRect(1.0, 2.0, 3.0, 4.0), PdfDrawStroke],
+    struct_tree=true,
+    role_map="/H1 /H",
+  )
+  let catalog = try! drawn.catalog()
+  guard catalog.lookup_immediate(key_struct_tree_root) is Some(tree) else {
+    fail("expected existing StructTreeRoot")
+  }
+  @test.assert_eq(tree, existing_tree)
+  @test.assert_eq(tree.lookup_immediate(key_role_map), None)
+  @test.assert_eq(try! draw_page_ops_for_test(drawn, 1), [
+    Op_BMC(key_artifact),
+    Op_re(1.0, 2.0, 3.0, 4.0),
+    Op_S,
+    Op_EMC,
+  ])
+}
+
+///|
+test "PdfDocument draw structure-tree mode without placeholder artifacts content" {
+  let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
+  let key_struct_tree_root = draw_name_for_test("/StructTreeRoot")
+  let key_artifact = draw_name_for_test("/Artifact")
+  let drawn = try! document.draw(
+    [1],
+    [PdfDrawRect(5.0, 6.0, 7.0, 8.0), PdfDrawFill],
+    struct_tree=true,
+  )
+  let catalog = try! drawn.catalog()
+  @test.assert_eq(catalog.lookup_immediate(key_struct_tree_root), None)
+  @test.assert_eq(try! draw_page_ops_for_test(drawn, 1), [
+    Op_BMC(key_artifact),
+    Op_re(5.0, 6.0, 7.0, 8.0),
+    Op_f,
+    Op_EMC,
+  ])
 }
 
 ///|
