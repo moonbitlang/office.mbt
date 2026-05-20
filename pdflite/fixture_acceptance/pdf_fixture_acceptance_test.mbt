@@ -195,6 +195,64 @@ fn fixture_acceptance_corrupt_first_in_use_xref_offset_for_test(
 }
 
 ///|
+fn fixture_acceptance_corrupt_first_xref_subsection_count_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  let header = @ascii.encode("xref")
+  let header_position = fixture_acceptance_find_bytes_for_test(bytes, header)
+  if header_position < 0 {
+    fail("expected first classic xref header")
+  }
+  let mut first_start = header_position + header.length()
+  while first_start < bytes.length() &&
+        (
+          bytes[first_start] == b'\n' ||
+          bytes[first_start] == b'\r' ||
+          bytes[first_start] == b' ' ||
+          bytes[first_start] == b'\t'
+        ) {
+    first_start += 1
+  }
+  let mut first_end = first_start
+  while first_end < bytes.length() &&
+        bytes[first_end] >= b'0' &&
+        bytes[first_end] <= b'9' {
+    first_end += 1
+  }
+  if first_end == first_start {
+    fail("expected first classic xref subsection object number")
+  }
+  let mut count_start = first_end
+  while count_start < bytes.length() &&
+        (
+          bytes[count_start] == b'\n' ||
+          bytes[count_start] == b'\r' ||
+          bytes[count_start] == b' ' ||
+          bytes[count_start] == b'\t'
+        ) {
+    count_start += 1
+  }
+  let mut count_end = count_start
+  while count_end < bytes.length() &&
+        bytes[count_end] >= b'0' &&
+        bytes[count_end] <= b'9' {
+    count_end += 1
+  }
+  if count_end == count_start {
+    fail("expected first classic xref subsection count")
+  }
+  let output : Array[Byte] = []
+  for index in 0..<count_start {
+    output.push(bytes[index])
+  }
+  fixture_acceptance_push_ascii_for_test(output, "/Bad")
+  for index in count_end..<bytes.length() {
+    output.push(bytes[index])
+  }
+  Bytes::from_array(output)
+}
+
+///|
 fn fixture_acceptance_replace_first_bytes_for_test(
   bytes : Bytes,
   target : BytesView,
@@ -391,6 +449,27 @@ fn fixture_acceptance_assert_classic_xref_offset_reconstructs_for_test(
 }
 
 ///|
+fn fixture_acceptance_assert_classic_xref_count_reconstructs_for_test(
+  bytes : Bytes,
+  expected_pages : Int,
+) -> Unit raise {
+  let corrupted = fixture_acceptance_corrupt_first_xref_subsection_count_for_test(
+    bytes,
+  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    corrupted,
+  )
+  guard strict is Err(_) else {
+    fail("expected malformed classic xref count to require reconstruction")
+  }
+  let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
+  @test.assert_eq(recovered.first_xref(), 0)
+  @test.assert_eq(recovered.endpage(), expected_pages)
+  let reparsed = fixture_acceptance_reparse_compressed_for_test(recovered)
+  @test.assert_eq(reparsed.endpage(), expected_pages)
+}
+
+///|
 fn fixture_acceptance_assert_xref_stream_widths_reconstructs_for_test(
   bytes : Bytes,
   expected_pages : Int,
@@ -487,6 +566,14 @@ async test "checked-in CamlPDF logo fixture reconstructs malformed classic xref 
 ///|
 async test "checked-in CamlPDF logo fixture reconstructs malformed classic xref offset" {
   fixture_acceptance_assert_classic_xref_offset_reconstructs_for_test(
+    fixture_acceptance_bytes_for_test("fixtures/camlpdf/logo.pdf"),
+    1,
+  )
+}
+
+///|
+async test "checked-in CamlPDF logo fixture reconstructs malformed classic xref count" {
+  fixture_acceptance_assert_classic_xref_count_reconstructs_for_test(
     fixture_acceptance_bytes_for_test("fixtures/camlpdf/logo.pdf"),
     1,
   )

@@ -1651,6 +1651,13 @@ Current backend snapshot:
   reader, and verifies compressed-xref rewrite/reread page counts. `moon test
   --target native fixture_acceptance` reports 12/12 tests passing; native
   full-suite validation reports 2144/2144 tests passing.~~
+- [x] ~~Add a checked-in CamlPDF real-world malformed classic xref-count gate:
+  `fixture_acceptance` now corrupts the first classic xref subsection count in
+  the linearized classic-xref `logo.pdf` fixture while keeping `startxref`
+  valid, requires strict-reader failure, reconstructs through the public
+  recovery reader, and verifies compressed-xref rewrite/reread page counts.
+  `moon test --target native fixture_acceptance` reports 13/13 tests passing;
+  native full-suite validation reports 2145/2145 tests passing.~~
 - [x] ~~Add a checked-in CamlPDF real-world malformed xref-stream width gate:
   `fixture_acceptance` now corrupts the `/W` entry in the xref-stream-backed
   `introduction_to_camlpdf.pdf` fixture while keeping `startxref` valid,
