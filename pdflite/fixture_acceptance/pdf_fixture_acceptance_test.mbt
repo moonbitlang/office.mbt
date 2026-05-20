@@ -1613,6 +1613,42 @@ fn fixture_acceptance_cpdf_top_level_expected_pages_for_test(
 }
 
 ///|
+fn fixture_acceptance_assert_cpdf_manual_pagespec_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 175)
+  let all = document.parse_pagespec("")
+  @test.assert_eq(all.length(), 175)
+  @test.assert_eq(all[0], 1)
+  @test.assert_eq(all[174], 175)
+  @test.assert_eq(document.parse_pagespec("1,3-5,end,~2"), [
+    1, 3, 4, 5, 175, 174,
+  ])
+  @test.assert_eq(document.parse_pagespec("end-172"), [175, 174, 173, 172])
+  @test.assert_eq(document.parse_pagespec("NOT1-172"), [173, 174, 175])
+  @test.assert_eq(document.parse_pagespec("2DUP174-end"), [174, 174, 175, 175])
+  @test.assert_eq(document.parse_pagespec("1-10odd"), [1, 3, 5, 7, 9])
+  @test.assert_eq(document.parse_pagespec("1-10even"), [2, 4, 6, 8, 10])
+  let portrait = document.parse_pagespec("portrait")
+  @test.assert_eq(portrait.length(), 175)
+  @test.assert_eq(portrait[0], 1)
+  @test.assert_eq(portrait[174], 175)
+  @test.assert_eq(document.parse_pagespec("landscape"), [])
+  @test.assert_eq(document.parse_pagespec("1-10portrait"), [
+    1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+  ])
+  @test.assert_eq(document.parse_pagespec("1-10landscape"), [])
+  let annotated = document.parse_pagespec("annotated")
+  @test.assert_eq(annotated.length() > 0, true)
+  @test.assert_eq(annotated[0] >= 1, true)
+  @test.assert_eq(annotated[annotated.length() - 1] <= 175, true)
+  @test.assert_eq(
+    document.string_of_pagespec(document.parse_pagespec("1,3-5,end,~2")),
+    "1,3-5,174-175",
+  )
+}
+
+///|
 async test "checked-in CamlPDF logo fixture reconstructs linearized bad startxref" {
   fixture_acceptance_assert_reconstructs_for_test(
     fixture_acceptance_bytes_for_test("fixtures/camlpdf/logo.pdf"),
@@ -1884,6 +1920,23 @@ async test "optional cpdf source manual fixture reads and rewrites" {
     None => ()
     Some(bytes) =>
       fixture_acceptance_assert_reads_and_rewrites_for_test(bytes, 175)
+  }
+}
+
+///|
+async test "optional cpdf source manual fixture parses page specifications" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/cpdfmanual.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_manual_pagespec_for_test(document)
+      fixture_acceptance_assert_cpdf_manual_pagespec_for_test(
+        fixture_acceptance_reparse_compressed_for_test(document),
+      )
+    }
   }
 }
 

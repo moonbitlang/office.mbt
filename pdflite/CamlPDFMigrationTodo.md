@@ -5300,6 +5300,15 @@ Current backend snapshot:
   markdown/cmd --filter '*manual image PDF corpus*'` reports 1/1 test passing,
   `moon test --target native markdown/cmd` reports 11/11 tests passing, and
   `moon test --target native` reports 2215/2215 tests passing.~~
+- [x] ~~Add the next source-boundary `cpdfpagespec` slice: optional
+  `.repos/cpdf-source/cpdfmanual.pdf` now gates document-backed page-spec
+  parsing for `end`, `~n`, reversed ranges, `NOT`, `DUP`, odd/even suffixes,
+  portrait/landscape selectors, annotated-page selection, and compact
+  `string_of_pagespec` output before and after compressed rewrite/reread.
+  `moon test --target native fixture_acceptance --filter '*parses page
+  specifications*'` reports 1/1 test passing, `moon test --target native
+  fixture_acceptance` reports 45/45 tests passing, and `moon test --target
+  native` reports 2216/2216 tests passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
