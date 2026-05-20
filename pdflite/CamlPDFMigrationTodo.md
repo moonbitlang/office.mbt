@@ -2670,6 +2670,12 @@ Current backend snapshot:
   filtered listing output. Native focused validation reports `moon test --target
   native pdf_bookmark_test.mbt` at 21/21 tests passing; native full-suite
   validation reports 1738/1738 tests passing.~~
+- [x] ~~Follow-up `cpdfbookmarks.ml` listing parity gate pins
+  `process_string` backslash escaping before plain text bookmark output, with
+  compatibility wrapper parity for `pdf_list_bookmarks`. Current focused
+  validation reports `moon test --target native pdf_bookmark_test.mbt` at
+  27/27 tests passing; native full-suite validation reports 2200/2200 tests
+  passing.~~
 - [x] ~~Bookmark filename-spec helper slice exposes cpdf-style `name_of_spec`
   expansion for already-read bookmark lists; bookmark-file parsing and import are
   covered by the later import slice. Coverage pins percent sequence substitution,
