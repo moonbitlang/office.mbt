@@ -565,17 +565,18 @@ fn fixture_acceptance_corrupt_startxref_xref_stream_type_for_test(
 }
 
 ///|
-fn fixture_acceptance_corrupt_startxref_xref_stream_marker_for_test(
+fn fixture_acceptance_corrupt_startxref_xref_stream_token_for_test(
   bytes : Bytes,
+  target : BytesView,
+  replacement : BytesView,
+  description : String,
 ) -> Bytes raise {
   let xref_offset = fixture_acceptance_startxref_offset_for_test(bytes)
-  let target = @ascii.encode("stream")
-  let replacement = @ascii.encode("stramx")
   let position = fixture_acceptance_find_bytes_after_for_test(
     bytes, target, xref_offset,
   )
   if position < 0 {
-    fail("expected xref stream marker at startxref target")
+    fail("expected xref stream " + description + " at startxref target")
   }
   let output : Array[Byte] = []
   for byte in bytes {
@@ -585,6 +586,42 @@ fn fixture_acceptance_corrupt_startxref_xref_stream_marker_for_test(
     output[position + index] = replacement[index]
   }
   Bytes::from_array(output)
+}
+
+///|
+fn fixture_acceptance_corrupt_startxref_xref_stream_marker_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  fixture_acceptance_corrupt_startxref_xref_stream_token_for_test(
+    bytes,
+    @ascii.encode("stream"),
+    @ascii.encode("stramx"),
+    "stream marker",
+  )
+}
+
+///|
+fn fixture_acceptance_corrupt_startxref_xref_stream_endstream_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  fixture_acceptance_corrupt_startxref_xref_stream_token_for_test(
+    bytes,
+    @ascii.encode("endstream"),
+    @ascii.encode("endstreax"),
+    "endstream marker",
+  )
+}
+
+///|
+fn fixture_acceptance_corrupt_startxref_xref_stream_endobj_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  fixture_acceptance_corrupt_startxref_xref_stream_token_for_test(
+    bytes,
+    @ascii.encode("endobj"),
+    @ascii.encode("endobx"),
+    "endobj marker",
+  )
 }
 
 ///|
@@ -962,6 +999,48 @@ fn fixture_acceptance_assert_xref_stream_marker_reconstructs_for_test(
   )
   guard strict is Err(@pdflite.PdfError::ParseStreamExpected) else {
     fail("expected malformed xref stream marker to require reconstruction")
+  }
+  let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
+  @test.assert_eq(recovered.first_xref(), 0)
+  @test.assert_eq(recovered.endpage(), expected_pages)
+  let reparsed = fixture_acceptance_reparse_compressed_for_test(recovered)
+  @test.assert_eq(reparsed.endpage(), expected_pages)
+}
+
+///|
+fn fixture_acceptance_assert_xref_stream_endstream_reconstructs_for_test(
+  bytes : Bytes,
+  expected_pages : Int,
+) -> Unit raise {
+  let corrupted = fixture_acceptance_corrupt_startxref_xref_stream_endstream_for_test(
+    bytes,
+  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    corrupted,
+  )
+  guard strict is Err(@pdflite.PdfError::ParseEndStreamExpected) else {
+    fail("expected malformed xref stream endstream to require reconstruction")
+  }
+  let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
+  @test.assert_eq(recovered.first_xref(), 0)
+  @test.assert_eq(recovered.endpage(), expected_pages)
+  let reparsed = fixture_acceptance_reparse_compressed_for_test(recovered)
+  @test.assert_eq(reparsed.endpage(), expected_pages)
+}
+
+///|
+fn fixture_acceptance_assert_xref_stream_endobj_reconstructs_for_test(
+  bytes : Bytes,
+  expected_pages : Int,
+) -> Unit raise {
+  let corrupted = fixture_acceptance_corrupt_startxref_xref_stream_endobj_for_test(
+    bytes,
+  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    corrupted,
+  )
+  guard strict is Err(@pdflite.PdfError::ParseEndObjectExpected) else {
+    fail("expected malformed xref stream endobj to require reconstruction")
   }
   let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
   @test.assert_eq(recovered.first_xref(), 0)
@@ -1492,6 +1571,24 @@ async test "optional cpdf source manual fixture reconstructs malformed xref stre
       fixture_acceptance_assert_xref_stream_marker_reconstructs_for_test(
         bytes, 175,
       )
+  }
+}
+
+///|
+async test "optional cpdf source manual fixture reconstructs malformed xref stream terminators" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/cpdfmanual.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      fixture_acceptance_assert_xref_stream_endstream_reconstructs_for_test(
+        bytes, 175,
+      )
+      fixture_acceptance_assert_xref_stream_endobj_reconstructs_for_test(
+        bytes, 175,
+      )
+    }
   }
 }
 

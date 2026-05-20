@@ -186,6 +186,22 @@ pub fn pdf_read_classic_document_revision_from_bytes(
 }
 
 ///|
+fn pdf_read_reconstructed_after_stream_parse_error(
+  data : BytesView,
+  error : PdfError,
+) -> PdfDocument raise PdfError {
+  if pdf_reader_startxref_has_xref_stream_prefix_or_false(data) {
+    pdf_read_reconstructed_or_raise(
+      data,
+      error,
+      include_xref_stream_trailers=true,
+    )
+  } else {
+    pdf_read_reconstructed_or_raise(data, error)
+  }
+}
+
+///|
 /// Read a PDF document from a borrowed byte view.
 ///
 /// This is the high-level non-password reader. It first tries the strict classic
@@ -240,19 +256,17 @@ pub fn pdf_read_document_from_view(
     ParseIndirectObjectExpected =>
       pdf_read_reconstructed_or_raise(data, ParseIndirectObjectExpected)
     ParseStreamExpected =>
-      if pdf_reader_startxref_has_xref_stream_prefix_or_false(data) {
-        pdf_read_reconstructed_or_raise(
-          data,
-          ParseStreamExpected,
-          include_xref_stream_trailers=true,
-        )
-      } else {
-        pdf_read_reconstructed_or_raise(data, ParseStreamExpected)
-      }
+      pdf_read_reconstructed_after_stream_parse_error(data, ParseStreamExpected)
     ParseEndStreamExpected =>
-      pdf_read_reconstructed_or_raise(data, ParseEndStreamExpected)
+      pdf_read_reconstructed_after_stream_parse_error(
+        data,
+        ParseEndStreamExpected,
+      )
     ParseEndObjectExpected =>
-      pdf_read_reconstructed_or_raise(data, ParseEndObjectExpected)
+      pdf_read_reconstructed_after_stream_parse_error(
+        data,
+        ParseEndObjectExpected,
+      )
     EndOfInput => pdf_read_reconstructed_or_raise(data, EndOfInput)
     ParseObjectExpected =>
       pdf_read_reconstructed_or_raise(data, ParseObjectExpected)
