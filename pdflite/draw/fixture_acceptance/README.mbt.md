@@ -19,6 +19,7 @@ flowchart LR
   disk.
 - Tests focus on cpdf-generated drawing output: line styles, dash patterns, text
   sections, Form XObject reuse, transparency resources, text-state parameters,
+  path painting, clipping, colour operators, matrix save/restore, text clipping,
   and later drawing fixtures that warrant source-backed coverage.
 - Library drawing and content APIs remain in the root package; this package is
   only for fixture-backed verification.

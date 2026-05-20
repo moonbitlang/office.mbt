@@ -21,6 +21,18 @@ fn draw_fixture_name_for_test(text : String) -> @pdflite.PdfName {
 }
 
 ///|
+fn draw_fixture_matrix_for_test(
+  a : Double,
+  b : Double,
+  c : Double,
+  d : Double,
+  e : Double,
+  f : Double,
+) -> @pdflite.TransformMatrix {
+  { a, b, c, d, e, f }
+}
+
+///|
 fn draw_fixture_lookup_for_test(
   document : @pdflite.PdfDocument,
   object : @pdflite.PdfObject,
@@ -36,6 +48,33 @@ fn draw_fixture_lookup_for_test(
 }
 
 ///|
+fn draw_fixture_count_op_for_test(
+  ops : ArrayView[@pdflite.PdfContentOp],
+  expected : @pdflite.PdfContentOp,
+) -> Int {
+  let mut count = 0
+  for op in ops {
+    if op == expected {
+      count += 1
+    }
+  }
+  count
+}
+
+///|
+fn draw_fixture_assert_no_unknown_ops_for_test(
+  path : String,
+  ops : ArrayView[@pdflite.PdfContentOp],
+) -> Unit raise {
+  for op in ops {
+    match op {
+      Op_Unknown(_) => fail("unexpected unknown content operator in " + path)
+      _ => ()
+    }
+  }
+}
+
+///|
 fn draw_fixture_page_ops_for_test(
   document : @pdflite.PdfDocument,
 ) -> Array[@pdflite.PdfContentOp] raise {
@@ -46,6 +85,32 @@ fn draw_fixture_page_ops_for_test(
     pages[0].resources,
     pages[0].content,
   )
+}
+
+///|
+async test "cpdf source non-image manual fixtures parse without unknown operators" {
+  for
+    path in [
+      ".repos/cpdf-source/manualimages/bez.pdf", ".repos/cpdf-source/manualimages/capjoins.pdf",
+      ".repos/cpdf-source/manualimages/clip.pdf", ".repos/cpdf-source/manualimages/colfill.pdf",
+      ".repos/cpdf-source/manualimages/dash.pdf", ".repos/cpdf-source/manualimages/fill.pdf",
+      ".repos/cpdf-source/manualimages/fontparams.pdf", ".repos/cpdf-source/manualimages/fonts.pdf",
+      ".repos/cpdf-source/manualimages/h1.pdf", ".repos/cpdf-source/manualimages/line.pdf",
+      ".repos/cpdf-source/manualimages/lines.pdf", ".repos/cpdf-source/manualimages/matrix.pdf",
+      ".repos/cpdf-source/manualimages/para.pdf", ".repos/cpdf-source/manualimages/paras.pdf",
+      ".repos/cpdf-source/manualimages/pop.pdf", ".repos/cpdf-source/manualimages/stext.pdf",
+      ".repos/cpdf-source/manualimages/text.pdf", ".repos/cpdf-source/manualimages/textclip.pdf",
+      ".repos/cpdf-source/manualimages/trans.pdf", ".repos/cpdf-source/manualimages/xobj.pdf",
+    ] {
+    match draw_fixture_document_for_test(path) {
+      None => ()
+      Some(document) => {
+        let ops = draw_fixture_page_ops_for_test(document)
+        guard ops.length() > 0 else { fail("expected content ops in " + path) }
+        draw_fixture_assert_no_unknown_ops_for_test(path, ops)
+      }
+    }
+  }
 }
 
 ///|
@@ -65,6 +130,44 @@ async test "cpdf source capjoins manual fixture parses line cap join operators" 
         Op_l(200.0, 200.0),
         Op_l(220.0, 100.0),
         Op_S,
+      ])
+  }
+}
+
+///|
+async test "cpdf source bezier and paint manual fixtures parse path operators" {
+  match
+    draw_fixture_document_for_test(".repos/cpdf-source/manualimages/bez.pdf") {
+    None => ()
+    Some(document) =>
+      @test.assert_eq(draw_fixture_page_ops_for_test(document), [
+        Op_m(100.0, 100.0),
+        Op_c(400.0, 600.0, 600.0, 400.0, 300.0, 300.0),
+        Op_S,
+      ])
+  }
+  match
+    draw_fixture_document_for_test(".repos/cpdf-source/manualimages/line.pdf") {
+    None => ()
+    Some(document) =>
+      @test.assert_eq(draw_fixture_page_ops_for_test(document), [
+        Op_m(100.0, 100.0),
+        Op_l(400.0, 400.0),
+        Op_l(400.0, 100.0),
+        Op_h,
+        Op_S,
+      ])
+  }
+  match
+    draw_fixture_document_for_test(".repos/cpdf-source/manualimages/fill.pdf") {
+    None => ()
+    Some(document) =>
+      @test.assert_eq(draw_fixture_page_ops_for_test(document), [
+        Op_m(100.0, 100.0),
+        Op_l(400.0, 400.0),
+        Op_l(400.0, 100.0),
+        Op_h,
+        Op_f,
       ])
   }
 }
@@ -127,6 +230,84 @@ async test "cpdf source xobject manual fixture parses form resource reuse" {
           Op_S,
         ],
       )
+    }
+  }
+}
+
+///|
+async test "cpdf source clipping and colour manual fixtures parse graphics operators" {
+  match
+    draw_fixture_document_for_test(".repos/cpdf-source/manualimages/clip.pdf") {
+    None => ()
+    Some(document) => {
+      let ops = draw_fixture_page_ops_for_test(document)
+      @test.assert_eq(ops.length(), 13)
+      @test.assert_eq(ops[0], Op_m(400.0, 300.0))
+      @test.assert_eq(ops[5], Op_W)
+      @test.assert_eq(ops[6], Op_n)
+      @test.assert_eq(ops[12], Op_f)
+    }
+  }
+  match
+    draw_fixture_document_for_test(
+      ".repos/cpdf-source/manualimages/colfill.pdf",
+    ) {
+    None => ()
+    Some(document) => {
+      let ops = draw_fixture_page_ops_for_test(document)
+      @test.assert_eq(ops.length(), 9)
+      @test.assert_eq(ops[0], Op_w(20.0))
+      @test.assert_eq(ops[6], Op_G(0.5))
+      @test.assert_eq(ops[7], Op_rg(0.2, 0.7, 0.2))
+      @test.assert_eq(ops[8], Op_B)
+    }
+  }
+}
+
+///|
+async test "cpdf source matrix manual fixture parses save restore transforms" {
+  match
+    draw_fixture_document_for_test(".repos/cpdf-source/manualimages/matrix.pdf") {
+    None => ()
+    Some(document) => {
+      let ops = draw_fixture_page_ops_for_test(document)
+      @test.assert_eq(ops.length(), 22)
+      @test.assert_eq(ops[5], Op_S)
+      @test.assert_eq(ops[6], Op_q)
+      @test.assert_eq(
+        ops[7],
+        Op_cm(
+          draw_fixture_matrix_for_test(
+            0.955336489126, -0.295520206661, 0.295520206661, 0.955336489126, 0.0,
+            0.0,
+          ),
+        ),
+      )
+      @test.assert_eq(
+        ops[8],
+        Op_cm(draw_fixture_matrix_for_test(1.5, 0.0, 0.0, 2.0, 0.0, 0.0)),
+      )
+      @test.assert_eq(ops[15], Op_Q)
+      @test.assert_eq(ops[21], Op_f)
+    }
+  }
+}
+
+///|
+async test "cpdf source textclip manual fixture parses clipping text mode" {
+  match
+    draw_fixture_document_for_test(
+      ".repos/cpdf-source/manualimages/textclip.pdf",
+    ) {
+    None => ()
+    Some(document) => {
+      let ops = draw_fixture_page_ops_for_test(document)
+      @test.assert_eq(ops.length(), 19)
+      @test.assert_eq(ops[0], Op_Tr(7))
+      @test.assert_eq(ops[1], Op_cm(@pdflite.transform_translate(100.0, 200.0)))
+      @test.assert_eq(ops[2], Op_TL(55.0))
+      @test.assert_eq(draw_fixture_count_op_for_test(ops, Op_Tstar), 2)
+      @test.assert_eq(ops[18], Op_f)
     }
   }
 }

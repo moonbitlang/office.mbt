@@ -2471,6 +2471,15 @@ Current backend snapshot:
   font-parameter operators. Focused native validation reports `moon test
   --target native draw/fixture_acceptance` at 6/6 tests passing; native
   full-suite validation reports 2157/2157 tests passing.~~
+- [x] ~~Broaden optional `.repos/cpdf-source` manual drawing fixture coverage
+  across the remaining non-image manual PDFs: `draw/fixture_acceptance` now
+  parses all non-PNG `manualimages/*.pdf` fixtures when the ignored source
+  checkout is present and rejects any unknown content operators, with focused
+  checks for Bezier curves, closepath stroke/fill, clipping, gray/RGB colour
+  paint, graphics-state save/restore matrix transforms, and text clipping mode.
+  Focused native validation reports `moon test --target native
+  draw/fixture_acceptance` at 11/11 tests passing; native full-suite
+  validation reports 2162/2162 tests passing.~~
 - [x] ~~Standalone `cpdfcreate.ml` blank-document slice exposes
   `pdf_blank_document` and `pdf_blank_document_paper`, covering point-sized
   pages, named paper sizes, zero-page documents, page-tree/root creation, and
