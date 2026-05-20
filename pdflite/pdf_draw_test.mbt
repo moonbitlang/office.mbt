@@ -1334,6 +1334,27 @@ test "pdf draw control reports mismatched section closures" {
 }
 
 ///|
+test "pdf draw control parses XObject bbox strings" {
+  let document = @pdflite.pdf_document_empty()
+  let control = @pdflite.pdf_draw_control_new()
+  try! control.set_xobject_bbox_from_string(document, "1 2 30 40")
+  control.start_xobject("XO")
+  try! control.add_line(document, "3 4")
+  try! control.end_xobject()
+
+  @test.assert_eq(control.ops(), [
+    PdfDrawFormXObject(1.0, 2.0, 30.0, 40.0, "XO", [PdfDrawLine(3.0, 4.0)]),
+  ])
+
+  let bad : Result[Unit, Error] = try? control.set_xobject_bbox_from_string(
+    document, "1 2 3",
+  )
+  guard bad is Err(@pdflite.PdfError::BadRectangleSpecification("1 2 3")) else {
+    fail("expected BadRectangleSpecification")
+  }
+}
+
+///|
 test "pdf draw control command helpers append cpdf draw ops" {
   let control = @pdflite.pdf_draw_control_new()
   @test.assert_eq(control.auto_artifacts(), true)

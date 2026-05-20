@@ -2327,6 +2327,16 @@ Current backend snapshot:
   `moon check --target native --warn-list +73` passing with the known markdown
   main-package warning and 10-warning baseline. Full native suite validation is
   deferred to the next batch.~~
+- [x] ~~`cpdfdrawcontrol.ml` XObject bounding-box parsing is now exposed via
+  `PdfDrawControl::set_xobject_bbox_from_string`, matching `xobjbbox s` by
+  parsing cpdf rectangle text through the coordinate parser before the next
+  `FormXObject` is closed. Coverage pins parsed bbox coordinates on the
+  generated form operation and propagation of malformed rectangle diagnostics.
+  Focused native validation reports `moon test --target native
+  pdf_draw_test.mbt` at 54/54 tests passing; native check validation reports
+  `moon check --target native --warn-list +73` passing with the known markdown
+  main-package warning and 10-warning baseline. Full native suite validation is
+  deferred to the next batch.~~
 - [x] ~~Standalone `cpdfcreate.ml` blank-document slice exposes
   `pdf_blank_document` and `pdf_blank_document_paper`, covering point-sized
   pages, named paper sizes, zero-page documents, page-tree/root creation, and

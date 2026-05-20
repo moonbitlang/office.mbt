@@ -940,6 +940,18 @@ pub fn PdfDrawControl::set_xobject_bbox(
 }
 
 ///|
+/// Parse and set the bounding box used for the next closed form XObject.
+///
+/// This ports `cpdfdrawcontrol.ml`'s `xobjbbox` command helper.
+pub fn PdfDrawControl::set_xobject_bbox_from_string(
+  self : PdfDrawControl,
+  document : PdfDocument,
+  text : String,
+) -> Unit raise PdfError {
+  self.xobject_bbox = document.parse_coordinate_rectangle(text)
+}
+
+///|
 /// Finish the current form XObject and append a `PdfDrawFormXObject` op.
 pub fn PdfDrawControl::end_xobject(
   self : PdfDrawControl,

@@ -2977,6 +2977,7 @@ pub fn PdfDrawControl::set_paragraph_indent(Self, Double?) -> Unit
 pub fn PdfDrawControl::set_role_map(Self, String) -> Unit
 pub fn PdfDrawControl::set_stroke(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::set_xobject_bbox(Self, PdfCoordRectangle) -> Unit
+pub fn PdfDrawControl::set_xobject_bbox_from_string(Self, PdfDocument, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::start_xobject(Self, String) -> Unit
 pub fn PdfDrawControl::stroke(Self) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::stroke_fill(Self) -> Unit raise @core.PdfError
