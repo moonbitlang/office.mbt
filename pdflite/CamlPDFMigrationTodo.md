@@ -5361,6 +5361,13 @@ Current backend snapshot:
   test passing, `moon test --target native fixture_acceptance` reports 51/51
   tests passing, and `moon test --target native` reports 2222/2222 tests
   passing.~~
+- [x] ~~Add the next source-boundary `cpdfbookmarks` slice: optional
+  `.repos/cpdf-source/cpdfmanual.pdf` now gates the real 163-entry outline tree,
+  cpdf-style bookmark JSON/UTF-8 blob output, selected page bookmark listing,
+  compressed rewrite/reread, and remove/add bookmark round-tripping. `moon test
+  --target native fixture_acceptance --filter '*bookmarks*'` reports 1/1 test
+  passing, `moon test --target native fixture_acceptance` reports 52/52 tests
+  passing, and `moon test --target native` reports 2223/2223 tests passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.

@@ -1764,6 +1764,48 @@ fn fixture_acceptance_assert_cpdf_manual_annotations_for_test(
 }
 
 ///|
+fn fixture_acceptance_assert_cpdf_manual_bookmarks_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 175)
+  let bookmarks = document.read_bookmarks(preserve_actions=true)
+  @test.assert_eq(bookmarks.length(), 163)
+  @test.assert_eq(bookmarks[0].level, 0)
+  @test.assert_eq(document.page_number_of_target(bookmarks[0].target), 19)
+  @test.assert_eq(bookmarks[21].level, 0)
+  @test.assert_eq(document.page_number_of_target(bookmarks[21].target), 31)
+  let bookmarks_json = document
+    .bookmarks_json(json_preserve_actions=true)
+    .stringify()
+  fixture_acceptance_assert_contains_for_test(
+    bookmarks_json, "\"text\":\"1 Basic Usage\"",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    bookmarks_json, "\"text\":\"2 Merging and Splitting\"",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    bookmarks_json, "\"text\":\"6 Bookmarks\"",
+  )
+  fixture_acceptance_assert_contains_for_test(bookmarks_json, "\"page\":19")
+  let bookmarks_blob = @ascii.decode_lossy(
+    document.bookmarks_json_blob(json_preserve_actions=true),
+  )
+  fixture_acceptance_assert_contains_for_test(
+    bookmarks_blob, "\"text\":\"1 Basic Usage\"",
+  )
+  let listed = @ascii.decode_lossy(
+    document.list_bookmarks([19, 31, 33], encoding=PdfMetadataUTF8),
+  )
+  fixture_acceptance_assert_contains_for_test(listed, "0 \"1 Basic Usage\" 19")
+  fixture_acceptance_assert_contains_for_test(
+    listed, "0 \"2 Merging and Splitting\" 31",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    listed, "1 \"2.4 Splitting on Bookmarks\" 33",
+  )
+}
+
+///|
 fn fixture_acceptance_cpdf_png_image_object_for_test(
   document : @pdflite.PdfDocument,
 ) -> @pdflite.PdfObject raise {
@@ -2371,6 +2413,30 @@ async test "optional cpdf source manual fixture exports annotation JSON" {
       fixture_acceptance_assert_cpdf_manual_annotations_for_test(document)
       fixture_acceptance_assert_cpdf_manual_annotations_for_test(
         fixture_acceptance_reparse_compressed_for_test(document),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source manual fixture lists bookmarks" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/cpdfmanual.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_manual_bookmarks_for_test(document)
+      fixture_acceptance_assert_cpdf_manual_bookmarks_for_test(
+        fixture_acceptance_reparse_compressed_for_test(document),
+      )
+      let rebuilt = try! document
+        .remove_bookmarks()
+        .add_bookmarks(document.read_bookmarks(preserve_actions=true))
+      fixture_acceptance_assert_cpdf_manual_bookmarks_for_test(rebuilt)
+      fixture_acceptance_assert_cpdf_manual_bookmarks_for_test(
+        fixture_acceptance_reparse_compressed_for_test(rebuilt),
       )
     }
   }
