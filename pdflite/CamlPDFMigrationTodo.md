@@ -1788,6 +1788,13 @@ Current backend snapshot:
   page preservation. Focused native validation reports `moon test --target
   native fixture_acceptance` at 31/31 tests passing; native full-suite
   validation reports 2183/2183 tests passing.~~
+- [x] ~~Broaden optional `.repos/cpdf-source` cpdf manual object-stream bounds
+  recovery: `fixture_acceptance` now corrupts the first `/ObjStm` `/First 832`
+  entry in the 175-page manual, requiring strict `XRefEntryExpected`, public
+  reconstruction that tolerates the unrelated malformed object-stream bound,
+  and compressed rewrite/reread page preservation. Focused native validation
+  reports `moon test --target native fixture_acceptance` at 32/32 tests
+  passing; native full-suite validation reports 2184/2184 tests passing.~~
 - [ ] Add further malformed xref-table/xref-stream/object-stream recovery cases
   from real-world PDFs.
 - [x] ~~Add a native reader-boundary gate for the next available predefined CMap
@@ -4950,6 +4957,10 @@ Current backend snapshot:
   source-corpus recovery now gates an unrelated malformed `/ObjStm /N` entry
   in the 175-page manual while preserving the existing mismatched root
   object-stream rejection guard.~~
+- [x] ~~Add the next remaining format parity slice: optional cpdf manual
+  source-corpus recovery now gates an unrelated malformed `/ObjStm /First`
+  entry in the 175-page manual through public reconstruction and compressed
+  rewrite/reread preservation.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.
