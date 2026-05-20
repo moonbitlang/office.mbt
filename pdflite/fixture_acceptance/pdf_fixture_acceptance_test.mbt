@@ -12,6 +12,15 @@ async fn fixture_acceptance_bytes_for_test(path : String) -> Bytes {
 }
 
 ///|
+async fn fixture_acceptance_optional_bytes_for_test(path : String) -> Bytes? {
+  let read_result = try? @fs.read_file(fixture_acceptance_path_for_test(path))
+  match read_result {
+    Ok(data) => Some(data.binary())
+    Err(_) => None
+  }
+}
+
+///|
 fn fixture_acceptance_bytes_start_with_at_for_test(
   haystack : BytesView,
   needle : BytesView,
@@ -507,6 +516,17 @@ fn fixture_acceptance_reparse_compressed_for_test(
 }
 
 ///|
+fn fixture_acceptance_assert_reads_and_rewrites_for_test(
+  bytes : Bytes,
+  expected_pages : Int,
+) -> Unit raise {
+  let document = @pdflite.pdf_read_document_from_bytes(bytes)
+  @test.assert_eq(document.endpage(), expected_pages)
+  let reparsed = fixture_acceptance_reparse_compressed_for_test(document)
+  @test.assert_eq(reparsed.endpage(), expected_pages)
+}
+
+///|
 fn fixture_acceptance_assert_reconstructs_for_test(
   bytes : Bytes,
   expected_pages : Int,
@@ -891,4 +911,27 @@ async test "checked-in Pandoc CJK fixture reconstructs object-stream bad startxr
     fixture_acceptance_bytes_for_test("markdown/fixtures/pandoc_cjk.pdf"),
     1,
   )
+}
+
+///|
+async test "optional cpdf source manual fixture reads and rewrites" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/cpdfmanual.pdf",
+    ) {
+    None => ()
+    Some(bytes) =>
+      fixture_acceptance_assert_reads_and_rewrites_for_test(bytes, 175)
+  }
+}
+
+///|
+async test "optional cpdf source manual fixture reconstructs bad startxref" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/cpdfmanual.pdf",
+    ) {
+    None => ()
+    Some(bytes) => fixture_acceptance_assert_reconstructs_for_test(bytes, 175)
+  }
 }

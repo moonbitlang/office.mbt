@@ -1715,6 +1715,13 @@ Current backend snapshot:
   streams identified by `/W` without an explicit `/Type /XRef`, and verifies
   public reconstruction plus compressed-xref reread page counts. `moon test
   --target native fixture_acceptance` reports 11/11 tests passing.~~
+- [x] ~~Add an optional `.repos/cpdf-source` cpdf manual core reader/recovery
+  gate: `fixture_acceptance` now reads the 175-page `cpdfmanual.pdf` source
+  corpus fixture when the ignored checkout is present, rewrites/rereads it with
+  compressed xref streams, and corrupts the final `startxref` to require public
+  reconstruction before another compressed rewrite/reread. `moon test --target
+  native fixture_acceptance` reports 19/19 tests passing; native full-suite
+  validation reports 2164/2164 tests passing.~~
 - [ ] Add further malformed xref-table/xref-stream/object-stream recovery cases
   from real-world PDFs.
 - [x] ~~Add a native reader-boundary gate for the next available predefined CMap
