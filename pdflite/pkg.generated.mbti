@@ -2870,19 +2870,39 @@ pub(all) enum PdfDrawColour {
 pub struct PdfDrawControl {
   frames : Array[PdfDrawControlFrame]
   mut xobject_bbox : PdfCoordRectangle
+  mut font_name : String
+  mut font_size : Double
+  mut fontpack : PdfFontPack?
+  mut fontpack_initialized : Bool
+  mut paragraph_indent : Double?
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfDrawControl::add_bezier(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_bezier13(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_bezier23(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_char_space(Self, Double) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_circle(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_element_info(Self, String, PdfObject) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_image(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_leading(Self, Double) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_line(Self, PdfDocument, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_namespace(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_new_page(Self) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_newline(Self) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_op(Self, PdfDrawOp) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_opacity(Self, Double) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_para(Self, PdfDocument, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_paras(Self, PdfDocument, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_rect(Self, PdfDocument, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_render_mode(Self, Int) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_rise(Self, Double) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_special_text(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_stroke_opacity(Self, Double) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_structure_tag(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_tag(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_text(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_text_scale(Self, Double) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_to(Self, PdfDocument, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_word_space(Self, Double) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::begin_artifact(Self) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::begin_text_section(Self) -> Unit
 pub fn PdfDrawControl::clip(Self) -> Unit raise @core.PdfError
@@ -2910,11 +2930,16 @@ pub fn PdfDrawControl::push_group(Self) -> Unit
 pub fn PdfDrawControl::set_auto_tag(Self, Bool) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::set_dash_pattern(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::set_fill(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::set_font(Self, String, Double) -> Unit
+pub fn PdfDrawControl::set_font_name(Self, String) -> Unit
+pub fn PdfDrawControl::set_font_size(Self, Double) -> Unit
+pub fn PdfDrawControl::set_fontpack(Self, PdfFontPack?) -> Unit
 pub fn PdfDrawControl::set_line_cap(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::set_line_join(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::set_line_thickness(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::set_matrix(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::set_miter_limit(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::set_paragraph_indent(Self, Double?) -> Unit
 pub fn PdfDrawControl::set_stroke(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::set_xobject_bbox(Self, PdfCoordRectangle) -> Unit
 pub fn PdfDrawControl::start_xobject(Self, String) -> Unit

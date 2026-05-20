@@ -23,6 +23,11 @@ pub(all) struct PdfDrawControlFrame {
 pub struct PdfDrawControl {
   frames : Array[PdfDrawControlFrame]
   mut xobject_bbox : PdfCoordRectangle
+  mut font_name : String
+  mut font_size : Double
+  mut fontpack : PdfFontPack?
+  mut fontpack_initialized : Bool
+  mut paragraph_indent : Double?
 } derive(Debug, Eq, ToJson)
 
 ///|
@@ -36,6 +41,11 @@ pub fn pdf_draw_control_new() -> PdfDrawControl {
   {
     frames: [{ name: pdf_draw_control_main_frame, ops: [] }],
     xobject_bbox: pdf_draw_control_default_bbox(),
+    font_name: "Times-Roman",
+    font_size: 12.0,
+    fontpack: None,
+    fontpack_initialized: false,
+    paragraph_indent: None,
   }
 }
 
@@ -393,6 +403,289 @@ pub fn PdfDrawControl::use_xobject(
   name : String,
 ) -> Unit raise PdfError {
   self.add_op(PdfDrawUse(name))
+}
+
+///|
+pub fn PdfDrawControl::add_image(
+  self : PdfDrawControl,
+  name : String,
+) -> Unit raise PdfError {
+  self.add_op(PdfDrawImage(name))
+}
+
+///|
+pub fn PdfDrawControl::add_new_page(
+  self : PdfDrawControl,
+) -> Unit raise PdfError {
+  self.add_op(PdfDrawNewPage)
+}
+
+///|
+pub fn PdfDrawControl::add_opacity(
+  self : PdfDrawControl,
+  opacity : Double,
+) -> Unit raise PdfError {
+  self.add_op(PdfDrawOpacity(opacity))
+}
+
+///|
+pub fn PdfDrawControl::add_stroke_opacity(
+  self : PdfDrawControl,
+  opacity : Double,
+) -> Unit raise PdfError {
+  self.add_op(PdfDrawSOpacity(opacity))
+}
+
+///|
+pub fn PdfDrawControl::add_leading(
+  self : PdfDrawControl,
+  leading : Double,
+) -> Unit raise PdfError {
+  self.add_op(PdfDrawLeading(leading))
+}
+
+///|
+pub fn PdfDrawControl::add_char_space(
+  self : PdfDrawControl,
+  spacing : Double,
+) -> Unit raise PdfError {
+  self.add_op(PdfDrawCharSpace(spacing))
+}
+
+///|
+pub fn PdfDrawControl::add_word_space(
+  self : PdfDrawControl,
+  spacing : Double,
+) -> Unit raise PdfError {
+  self.add_op(PdfDrawWordSpace(spacing))
+}
+
+///|
+pub fn PdfDrawControl::add_text_scale(
+  self : PdfDrawControl,
+  scale : Double,
+) -> Unit raise PdfError {
+  self.add_op(PdfDrawTextScale(scale))
+}
+
+///|
+pub fn PdfDrawControl::add_render_mode(
+  self : PdfDrawControl,
+  mode : Int,
+) -> Unit raise PdfError {
+  self.add_op(PdfDrawRenderMode(mode))
+}
+
+///|
+pub fn PdfDrawControl::add_rise(
+  self : PdfDrawControl,
+  rise : Double,
+) -> Unit raise PdfError {
+  self.add_op(PdfDrawRise(rise))
+}
+
+///|
+pub fn PdfDrawControl::add_newline(
+  self : PdfDrawControl,
+) -> Unit raise PdfError {
+  self.add_op(PdfDrawNewline)
+}
+
+///|
+pub fn PdfDrawControl::set_font_name(
+  self : PdfDrawControl,
+  font_name : String,
+) -> Unit {
+  self.font_name = font_name
+}
+
+///|
+pub fn PdfDrawControl::set_font_size(
+  self : PdfDrawControl,
+  font_size : Double,
+) -> Unit {
+  self.font_size = font_size
+}
+
+///|
+pub fn PdfDrawControl::set_font(
+  self : PdfDrawControl,
+  font_name : String,
+  font_size : Double,
+) -> Unit {
+  self.font_name = font_name
+  self.font_size = font_size
+}
+
+///|
+pub fn PdfDrawControl::set_fontpack(
+  self : PdfDrawControl,
+  fontpack : PdfFontPack?,
+) -> Unit {
+  self.fontpack = fontpack
+  self.fontpack_initialized = false
+}
+
+///|
+pub fn PdfDrawControl::set_paragraph_indent(
+  self : PdfDrawControl,
+  indent : Double?,
+) -> Unit {
+  self.paragraph_indent = indent
+}
+
+///|
+fn PdfDrawControl::ensure_text_section(
+  self : PdfDrawControl,
+  message : String,
+) -> Unit raise PdfError {
+  if self.depth() < 2 {
+    raise SoftError(message)
+  }
+}
+
+///|
+fn PdfDrawControl::add_default_fontpack(
+  self : PdfDrawControl,
+) -> Unit raise PdfError {
+  if !self.fontpack_initialized {
+    match self.fontpack {
+      Some(fontpack) =>
+        self.add_op(PdfDrawFontPack(self.font_name, fontpack, []))
+      None => ()
+    }
+    self.fontpack_initialized = true
+  }
+}
+
+///|
+fn PdfDrawControl::add_current_font(
+  self : PdfDrawControl,
+) -> Unit raise PdfError {
+  self.add_op(PdfDrawFont(self.font_name, self.font_size))
+}
+
+///|
+pub fn PdfDrawControl::add_text(
+  self : PdfDrawControl,
+  text : String,
+) -> Unit raise PdfError {
+  self.ensure_text_section("-text must be in a -bt / -et section")
+  self.add_default_fontpack()
+  self.add_current_font()
+  self.add_op(PdfDrawText(text))
+}
+
+///|
+pub fn PdfDrawControl::add_special_text(
+  self : PdfDrawControl,
+  text : String,
+) -> Unit raise PdfError {
+  self.ensure_text_section("-stext must be in a -bt / -et section")
+  self.add_default_fontpack()
+  self.add_current_font()
+  self.add_op(PdfDrawSpecialText(text))
+}
+
+///|
+fn pdf_draw_control_utf8_string(bytes : BytesView) -> String {
+  @utf8.decode(bytes) catch {
+    _ => @utf8.decode_lossy(bytes)
+  }
+}
+
+///|
+fn pdf_draw_control_parse_para_spec(
+  document : PdfDocument,
+  spec : String,
+) -> (PdfDrawJustification, Double, String) raise PdfError {
+  let bytes = @utf8.encode(spec)
+  if bytes.length() == 0 {
+    raise SoftError("Unknown justification specification")
+  }
+  let justification = match bytes[0].to_int() {
+    76 => PdfDrawLeft
+    82 => PdfDrawRight
+    67 => PdfDrawCentre
+    _ => raise SoftError("Unknown justification specification")
+  }
+  let mut separator = -1
+  for index in 1..<bytes.length() {
+    if bytes[index].to_int() == 61 {
+      if separator >= 0 {
+        raise SoftError("addjpeg: bad file specification")
+      }
+      separator = index
+    }
+  }
+  if separator < 0 {
+    raise SoftError("addjpeg: bad file specification")
+  }
+  let width = document.parse_single_number(
+    @ascii.decode_lossy(bytes[1:separator]),
+  )
+  let text = pdf_draw_control_utf8_string(bytes[separator + 1:])
+  (justification, width, text)
+}
+
+///|
+fn pdf_draw_control_split_escaped_newlines(text : String) -> Array[String] {
+  let bytes = @utf8.encode(text)
+  let parts : Array[String] = []
+  let mut start = 0
+  let mut index = 0
+  while index < bytes.length() {
+    if index + 1 < bytes.length() &&
+      bytes[index].to_int() == 92 &&
+      bytes[index + 1].to_int() == 110 {
+      parts.push(pdf_draw_control_utf8_string(bytes[start:index]))
+      index = index + 2
+      start = index
+    } else {
+      index = index + 1
+    }
+  }
+  if start < bytes.length() {
+    parts.push(pdf_draw_control_utf8_string(bytes[start:]))
+  }
+  parts
+}
+
+///|
+pub fn PdfDrawControl::add_para(
+  self : PdfDrawControl,
+  document : PdfDocument,
+  spec : String,
+) -> Unit raise PdfError {
+  self.ensure_text_section("-para must be in a -bt / -et section")
+  self.add_default_fontpack()
+  self.add_current_font()
+  let (justification, width, text) = pdf_draw_control_parse_para_spec(
+    document, spec,
+  )
+  self.add_op(PdfDrawPara(None, justification, width, [text]))
+}
+
+///|
+pub fn PdfDrawControl::add_paras(
+  self : PdfDrawControl,
+  document : PdfDocument,
+  spec : String,
+) -> Unit raise PdfError {
+  self.ensure_text_section("-paras must be in a -bt / -et section")
+  self.add_default_fontpack()
+  self.add_current_font()
+  let (justification, width, text) = pdf_draw_control_parse_para_spec(
+    document, spec,
+  )
+  self.add_op(
+    PdfDrawPara(
+      self.paragraph_indent,
+      justification,
+      width,
+      pdf_draw_control_split_escaped_newlines(text),
+    ),
+  )
 }
 
 ///|

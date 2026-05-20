@@ -268,6 +268,82 @@ test "pdf draw control command helpers append cpdf draw ops" {
 }
 
 ///|
+test "pdf draw control media and text-state helpers append cpdf draw ops" {
+  let control = @pdflite.pdf_draw_control_new()
+  try! control.add_image("Im0")
+  try! control.add_new_page()
+  try! control.add_opacity(0.5)
+  try! control.add_stroke_opacity(0.25)
+  try! control.add_leading(12.0)
+  try! control.add_char_space(1.0)
+  try! control.add_word_space(2.0)
+  try! control.add_text_scale(90.0)
+  try! control.add_render_mode(3)
+  try! control.add_rise(4.0)
+  try! control.add_newline()
+
+  let expected : Array[@pdflite.PdfDrawOp] = [
+    PdfDrawImage("Im0"),
+    PdfDrawNewPage,
+    PdfDrawOpacity(0.5),
+    PdfDrawSOpacity(0.25),
+    PdfDrawLeading(12.0),
+    PdfDrawCharSpace(1.0),
+    PdfDrawWordSpace(2.0),
+    PdfDrawTextScale(90.0),
+    PdfDrawRenderMode(3),
+    PdfDrawRise(4.0),
+    PdfDrawNewline,
+  ]
+  @test.assert_eq(control.ops(), expected)
+}
+
+///|
+test "pdf draw control text helpers add fontpack once and font text ops" {
+  let control = @pdflite.pdf_draw_control_new()
+  let pack : @pdflite.PdfFontPack = { fonts: [], entries: [] }
+  control.set_font("F0", 10.0)
+  control.set_fontpack(Some(pack))
+  control.begin_text_section()
+  try! control.add_text("hello")
+  try! control.add_special_text("world")
+  try! control.end_text_section()
+
+  let expected : Array[@pdflite.PdfDrawOp] = [
+    PdfDrawTextSection([
+      PdfDrawFontPack("F0", pack, []),
+      PdfDrawFont("F0", 10.0),
+      PdfDrawText("hello"),
+      PdfDrawFont("F0", 10.0),
+      PdfDrawSpecialText("world"),
+    ]),
+  ]
+  @test.assert_eq(control.ops(), expected)
+}
+
+///|
+test "pdf draw control paragraph helpers parse justification width and escaped newlines" {
+  let document = @pdflite.pdf_document_empty()
+  let control = @pdflite.pdf_draw_control_new()
+  control.set_font("F1", 8.0)
+  control.set_paragraph_indent(Some(3.0))
+  control.begin_text_section()
+  try! control.add_para(document, "L200=One")
+  try! control.add_paras(document, "C100=One\\nTwo\\n")
+  try! control.end_text_section()
+
+  let expected : Array[@pdflite.PdfDrawOp] = [
+    PdfDrawTextSection([
+      PdfDrawFont("F1", 8.0),
+      PdfDrawPara(None, PdfDrawLeft, 200.0, ["One"]),
+      PdfDrawFont("F1", 8.0),
+      PdfDrawPara(Some(3.0), PdfDrawCentre, 100.0, ["One", "Two"]),
+    ]),
+  ]
+  @test.assert_eq(control.ops(), expected)
+}
+
+///|
 fn draw_control_assert_soft_error_for_test(
   result : Result[Unit, Error],
   expected : String,
@@ -328,6 +404,38 @@ test "pdf draw control command helpers report cpdf parse errors" {
   draw_control_assert_soft_error_for_test(
     try? control.matrix_shear_y("1 2"),
     "-msheary takes three numbers",
+  )
+}
+
+///|
+test "pdf draw control text helpers report cpdf parse errors" {
+  let document = @pdflite.pdf_document_empty()
+  draw_control_assert_soft_error_for_test(
+    try? @pdflite.pdf_draw_control_new().add_text("outside"),
+    "-text must be in a -bt / -et section",
+  )
+  draw_control_assert_soft_error_for_test(
+    try? @pdflite.pdf_draw_control_new().add_special_text("outside"),
+    "-stext must be in a -bt / -et section",
+  )
+  draw_control_assert_soft_error_for_test(
+    try? @pdflite.pdf_draw_control_new().add_para(document, "L100=outside"),
+    "-para must be in a -bt / -et section",
+  )
+  draw_control_assert_soft_error_for_test(
+    try? @pdflite.pdf_draw_control_new().add_paras(document, "L100=outside"),
+    "-paras must be in a -bt / -et section",
+  )
+
+  let control = @pdflite.pdf_draw_control_new()
+  control.begin_text_section()
+  draw_control_assert_soft_error_for_test(
+    try? control.add_para(document, "X100=bad"),
+    "Unknown justification specification",
+  )
+  draw_control_assert_soft_error_for_test(
+    try? control.add_para(document, "L100=bad=extra"),
+    "addjpeg: bad file specification",
   )
 }
 
