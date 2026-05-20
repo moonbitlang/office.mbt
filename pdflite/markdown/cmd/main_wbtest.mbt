@@ -191,6 +191,26 @@ async test "markdown command converts checked-in CamlPDF introduction fixture" {
 }
 
 ///|
+async test "markdown command converts optional cpdf source manual fixture" {
+  let input_path = markdown_cmd_repo_path_for_test(
+    ".repos/cpdf-source/cpdfmanual.pdf",
+  )
+  if @fs.exists(input_path) {
+    let output_path = markdown_cmd_output_path_for_test("cpdf_source_manual")
+    markdown_cmd_remove_if_exists_for_test(output_path)
+    markdown_cmd_convert_file(input_path, output_path)
+    let output = @utf8.decode_lossy(@fs.read_file(output_path).binary())
+    markdown_cmd_assert_contains_for_test(output, "Coherent PDF")
+    markdown_cmd_assert_contains_for_test(output, "Command Line Tools")
+    markdown_cmd_assert_contains_for_test(output, "Chapter 15: PDF and JSON")
+    markdown_cmd_assert_contains_for_test(output, "Accessible PDFs with PDF/UA")
+    @test.assert_eq(output.length() > 200000, true)
+    @test.assert_eq(markdown_cmd_replacement_count_for_test(output), 0)
+    markdown_cmd_remove_if_exists_for_test(output_path)
+  }
+}
+
+///|
 async test "markdown command converts optional external Adobe supplement fixture" {
   let input_path = markdown_cmd_repo_path_for_test(
     "markdown/external_fixtures/downloads/adobe_supplement_iso32000_1.pdf",

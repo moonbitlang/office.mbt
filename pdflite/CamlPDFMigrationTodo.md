@@ -5282,6 +5282,15 @@ Current backend snapshot:
   reports 1/1 test passing, `moon test --target native fixture_acceptance`
   reports 44/44 tests passing, and `moon test --target native` reports
   2213/2213 tests passing.~~
+- [x] ~~Add the next source-corpus Markdown command slice: the native
+  `pdflite-markdown` command helper now converts optional
+  `.repos/cpdf-source/cpdfmanual.pdf` through real file input/output, checks
+  manual markers such as `Coherent PDF`, `Chapter 15: PDF and JSON`, and
+  `Accessible PDFs with PDF/UA`, and verifies UTF-8 output without replacement
+  characters. `moon test --target native markdown/cmd --filter '*cpdf source
+  manual*'` reports 1/1 test passing, `moon test --target native markdown/cmd`
+  reports 10/10 tests passing, and `moon test --target native` reports
+  2214/2214 tests passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
