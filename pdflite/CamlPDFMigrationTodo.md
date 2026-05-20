@@ -1625,6 +1625,13 @@ Current backend snapshot:
   py-pdf ImageMagick fixture, requiring strict-reader failure,
   malformed-reader reconstruction, CCITT-to-RGB24 extraction, and compressed
   rewrite/reread preservation.~~
+- [x] ~~Add optional `.repos/cpdf-source` manual-image gates for
+  `manualimages/png.pdf`: the native image fixture package now decodes the
+  source PNG XObject's Flate PNG predictor payload to RGB24, verifies
+  compressed-xref rewrite/reread preservation, and corrupts `startxref` to
+  require malformed reconstruction before extracting the same 400x294 image.
+  `moon test --target native image/fixture_acceptance` reports 11/11 tests
+  passing; native full-suite validation reports 2151/2151 tests passing.~~
 - [x] ~~Add checked-in CamlPDF real-world malformed-startxref fixture gates:
   the native-only `fixture_acceptance` package now corrupts the final
   `startxref` pointer for the linearized classic-xref `logo.pdf` fixture and

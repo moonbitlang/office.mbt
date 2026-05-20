@@ -353,3 +353,64 @@ async test "external indexed CMYK image fixture survives compressed rewrite" {
     }
   }
 }
+
+///|
+async test "cpdf source PNG manual image fixture decodes predictor RGB24" {
+  match
+    image_external_fixture_document_for_test(
+      ".repos/cpdf-source/manualimages/png.pdf",
+    ) {
+    None => ()
+    Some(document) => {
+      @test.assert_eq(document.endpage(), 1)
+      image_external_assert_raw_rgb_for_test(
+        image_external_images_for_test(document),
+        400,
+        294,
+        "expected cpdf source PNG image as raw RGB24 payload",
+      )
+      let reparsed = image_external_reparse_compressed_for_test(document)
+      image_external_assert_raw_rgb_for_test(
+        image_external_images_for_test(reparsed),
+        400,
+        294,
+        "expected cpdf source PNG image as raw RGB24 payload after rewrite",
+      )
+    }
+  }
+}
+
+///|
+async test "cpdf source PNG manual image fixture reconstructs malformed startxref" {
+  match
+    image_external_fixture_bytes_for_test(
+      ".repos/cpdf-source/manualimages/png.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let corrupted = image_external_corrupt_startxref_pointer_for_test(bytes)
+      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+        corrupted,
+      )
+      guard strict is Err(_) else {
+        fail("expected bad startxref to require malformed reconstruction")
+      }
+      let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
+      @test.assert_eq(recovered.first_xref(), 0)
+      image_external_assert_raw_rgb_for_test(
+        image_external_images_for_test(recovered),
+        400,
+        294,
+        "expected cpdf source PNG image after reconstruction",
+      )
+      image_external_assert_raw_rgb_for_test(
+        image_external_images_for_test(
+          image_external_reparse_compressed_for_test(recovered),
+        ),
+        400,
+        294,
+        "expected cpdf source PNG image after reconstructed rewrite",
+      )
+    }
+  }
+}
