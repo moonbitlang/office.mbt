@@ -5169,7 +5169,15 @@ Current backend snapshot:
   `load_substitute` by reading the selected URW `.ttf` file and returning its
   extension-stripped font name. `moon test --target native` reports 2205/2205
   tests passing.~~
+- [x] ~~Add the next remaining format parity slice: source-corpus image
+  coverage now decodes the embedded 400x294 RGB image in
+  `.repos/cpdf-source/cpdfmanual.pdf`, verifies the 175-page manual boundary,
+  and rechecks the same image after compressed rewrite. `moon test --target
+  native image/fixture_acceptance` reports 13/13 tests passing, `moon test
+  --target native` reports 2206/2206 tests passing, and `moon check --target
+  all --warn-list +73` completes with the known warning baseline and no
+  errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
-  resource/glyph-program behavior, or real-world image corpus coverage.
+  resource/glyph-program behavior, or broader real-world image corpus coverage.
 - [ ] Revisit non-native backend validation after native parity is stable.

@@ -416,6 +416,33 @@ async test "cpdf source PNG manual image fixture reconstructs malformed startxre
 }
 
 ///|
+async test "cpdf source manual fixture decodes embedded RGB24 image" {
+  match
+    image_external_fixture_document_for_test(
+      ".repos/cpdf-source/cpdfmanual.pdf",
+    ) {
+    None => ()
+    Some(document) => {
+      @test.assert_eq(document.endpage(), 175)
+      image_external_assert_raw_rgb_for_test(
+        image_external_images_for_test(document),
+        400,
+        294,
+        "expected cpdf source manual embedded image as raw RGB24 payload",
+      )
+      let reparsed = image_external_reparse_compressed_for_test(document)
+      @test.assert_eq(reparsed.endpage(), 175)
+      image_external_assert_raw_rgb_for_test(
+        image_external_images_for_test(reparsed),
+        400,
+        294,
+        "expected cpdf source manual embedded image as raw RGB24 payload after rewrite",
+      )
+    }
+  }
+}
+
+///|
 async test "cpdf source raw PNG sheet fixture creates image document" {
   match
     image_external_fixture_bytes_for_test(
