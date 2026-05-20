@@ -2501,6 +2501,12 @@ Current backend snapshot:
   parsing. Native focused validation reports `moon test --target native
   pdf_coord_test.mbt` at 6/6 tests passing; native full-suite validation
   reports 1722/1722 tests passing.~~
+- [x] ~~Standalone `cpdfcoord.ml` compact-unit tokenization slice now mirrors the
+  source `space_units` preprocessing, accepting adjacent unit-suffixed coordinate
+  arguments such as `10mm20mm` and `1in2in3in4in` before lexical parsing. Native
+  focused validation reports `moon test --target native pdf_coord_test.mbt` at
+  7/7 tests passing; native full-suite validation reports 2198/2198 tests
+  passing.~~
 - [x] ~~Standalone `cpdfcolours.ml` CSS colour table slice exposes
   `pdf_css_colours` and `pdf_css_colour_value`, covering the complete 148-entry
   lowercased table, first/last entry order, alias preservation, case-insensitive

@@ -34,6 +34,35 @@ fn pdf_coord_is_word_boundary(value : Int) -> Bool {
 }
 
 ///|
+fn pdf_coord_is_unit_pair(first : Int, second : Int) -> Bool {
+  (first == 109 && second == 109) ||
+  (first == 99 && second == 109) ||
+  (first == 105 && second == 110) ||
+  (first == 112 && second == 116)
+}
+
+///|
+fn pdf_coord_space_units(text : String) -> String {
+  let bytes = @utf8.encode(text)
+  let output : Array[Byte] = []
+  let mut index = 0
+  while index < bytes.length() {
+    if index + 1 < bytes.length() &&
+      pdf_coord_is_unit_pair(bytes[index].to_int(), bytes[index + 1].to_int()) {
+      output.push(32)
+      output.push(bytes[index])
+      output.push(bytes[index + 1])
+      output.push(32)
+      index += 2
+    } else {
+      output.push(bytes[index])
+      index += 1
+    }
+  }
+  @utf8.decode_lossy(Bytes::from_array(output))
+}
+
+///|
 fn pdf_coord_number_end(bytes : BytesView, start : Int) -> Int {
   let mut index = start
   if index < bytes.length() &&
@@ -73,7 +102,7 @@ fn pdf_coord_number_end(bytes : BytesView, start : Int) -> Int {
 
 ///|
 fn pdf_coord_tokenize(text : String) -> Array[PdfCoordToken] {
-  let bytes = @utf8.encode(text)
+  let bytes = @utf8.encode(pdf_coord_space_units(text))
   let tokens : Array[PdfCoordToken] = []
   let mut index = 0
   while index < bytes.length() {

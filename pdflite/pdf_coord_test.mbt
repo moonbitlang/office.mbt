@@ -127,6 +127,23 @@ test "cpdf coord parses unit numbers and paper sizes" {
 }
 
 ///|
+test "cpdf coord parses compact adjacent unit suffixes" {
+  let document = @pdflite.pdf_document_empty()
+  assert_point_for_coord_test(
+    try! document.parse_coordinate("10mm20mm"),
+    10.0 / 10.0 / 2.54 * 72.0,
+    20.0 / 10.0 / 2.54 * 72.0,
+  )
+  assert_coord_rectangle_for_test(
+    try! document.parse_coordinate_rectangle("1in2in3in4in"),
+    72.0,
+    144.0,
+    216.0,
+    288.0,
+  )
+}
+
+///|
 test "cpdf coord parses rectangles and absolute rectangle syntax" {
   let document = @pdflite.pdf_document_empty()
   assert_coord_rectangle_for_test(
