@@ -351,6 +351,8 @@ pub fn pdf_colour_space_of_device_name(@core.PdfName) -> PdfColourSpace?
 
 pub fn pdf_colour_space_of_object(PdfObject) -> PdfColourSpace?
 
+pub fn pdf_combine_pages(PdfDocument, PdfDocument, fast? : Bool, scale_to_fit? : Bool, overlay_is_under? : Bool, process_struct_tree? : Bool) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_composition(PdfDocument, Int) -> Array[PdfCompositionEntry] raise @core.PdfError
 
 pub fn pdf_contains_javascript(PdfDocument) -> Bool
@@ -2509,6 +2511,7 @@ pub fn PdfDocument::chop(Self, Int, Int, Bool, Bool, Bool, ArrayView[Int]) -> Se
 pub fn PdfDocument::chop_hv(Self, Bool, Double, Bool, ArrayView[Int]) -> Self raise @core.PdfError
 pub fn PdfDocument::colour_space_components(Self, PdfObject, PdfObject) -> Int raise @core.PdfError
 pub fn PdfDocument::colspace(Self, PdfObject, PdfObject) -> PdfColourSpace raise @core.PdfError
+pub fn PdfDocument::combine_pages(Self, Self, fast? : Bool, scale_to_fit? : Bool, overlay_is_under? : Bool, process_struct_tree? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::combine_pdf_resources(Self, PdfObject, PdfObject) -> PdfObject
 pub fn PdfDocument::combine_pdf_rests(Self, PdfObject, PdfObject) -> PdfObject
 pub fn PdfDocument::composition(Self, Int) -> Array[PdfCompositionEntry] raise @core.PdfError
