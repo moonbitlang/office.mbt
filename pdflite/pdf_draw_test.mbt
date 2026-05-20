@@ -89,6 +89,42 @@ test "pdf draw core ops convert to PDF content ops" {
 }
 
 ///|
+test "pdf draw colour parser maps cpdf colours and malformed input" {
+  @test.assert_eq(
+    try! @pdflite.pdf_parse_draw_colour("red"),
+    PdfDrawRGB(1.0, 0.0, 0.0),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_parse_draw_colour("0.25"),
+    PdfDrawGrey(0.25),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_parse_draw_colour("0 0.1 0.2 0.3"),
+    PdfDrawCYMK(0.0, 0.1, 0.2, 0.3),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_draw_colour_of_string("not-a-colour"),
+    PdfDrawNoCol,
+  )
+}
+
+///|
+test "pdf draw parsed no-colour emits no fill or stroke operator" {
+  @test.assert_eq(
+    try! @pdflite.pdf_drawop_to_content_ops(
+      PdfDrawSetFill(@pdflite.pdf_draw_colour_of_string("bad")),
+    ),
+    [],
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_drawop_to_content_ops(
+      PdfDrawSetStroke(@pdflite.pdf_draw_colour_of_string("bad")),
+    ),
+    [],
+  )
+}
+
+///|
 test "pdf draw grouped ops emit q and Q" {
   let ops : Array[@pdflite.PdfDrawOp] = [
     PdfDrawQq([

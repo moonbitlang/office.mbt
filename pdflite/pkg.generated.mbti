@@ -575,6 +575,8 @@ pub fn pdf_document_of_parsed_indirect_objects(ArrayView[PdfParsedIndirectObject
 
 pub fn pdf_draft(@core.PdfName?, Bool, ArrayView[Int], PdfDocument) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_draw_colour_of_string(String) -> PdfDrawColour
+
 pub fn pdf_drawn_path_content_json(PdfDrawnPath) -> Json
 
 pub fn pdf_drawop_to_content_ops(PdfDrawOp) -> Array[PdfContentOp] raise @core.PdfError
@@ -960,6 +962,8 @@ pub fn pdf_parse_coordinate_rectangle(PdfDocument, String) -> PdfCoordRectangle 
 pub fn pdf_parse_coordinate_rectangles(PdfDocument, String) -> Array[PdfCoordRectangle] raise @core.PdfError
 
 pub fn pdf_parse_coordinates(PdfDocument, String) -> Array[@geometry.Point2] raise @core.PdfError
+
+pub fn pdf_parse_draw_colour(String) -> PdfDrawColour raise @core.PdfError
 
 pub fn pdf_parse_function(PdfDocument, PdfObject) -> PdfFunction raise @core.PdfError
 
@@ -2052,6 +2056,7 @@ pub(all) enum PdfContentColour {
   PdfContentRGB(Double, Double, Double)
   PdfContentCMYK(Double, Double, Double, Double)
 } derive(Eq, ToJson, @debug.Debug)
+pub fn PdfContentColour::to_draw_colour(Self) -> PdfDrawColour
 
 pub(all) enum PdfContentColourValues {
   PdfContentColourFloats(Array[Double])
