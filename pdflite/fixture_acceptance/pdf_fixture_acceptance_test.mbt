@@ -1912,6 +1912,57 @@ fn fixture_acceptance_assert_cpdf_fonts_fixture_for_test(
 }
 
 ///|
+fn fixture_acceptance_assert_cpdf_text_content_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 1)
+  let pages = document.pages_of_pagetree()
+  let entries = document.content_entries_of_page(pages[0])
+  @test.assert_eq(entries.length() > 0, true)
+  let mut has_glyph = false
+  for entry in entries {
+    match entry.object {
+      PdfContentGlyphObject(_, _, extracted_text) => {
+        has_glyph = true
+        @test.assert_eq(extracted_text.length() > 0, true)
+      }
+      _ => ()
+    }
+  }
+  @test.assert_eq(has_glyph, true)
+  let text = @ascii.decode_lossy(document.test_extract_text([1]))
+  fixture_acceptance_assert_contains_for_test(text, "Hello")
+  let content_json = document.page_content_json([1]).stringify()
+  fixture_acceptance_assert_contains_for_test(content_json, "\"page\":1")
+  fixture_acceptance_assert_contains_for_test(content_json, "\"obj\":\"glyph\"")
+  fixture_acceptance_assert_contains_for_test(
+    content_json, "\"extracted text\":\"H\"",
+  )
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_xobject_content_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 1)
+  let pages = document.pages_of_pagetree()
+  let entries = document.content_entries_of_page(pages[0])
+  @test.assert_eq(entries.length() > 0, true)
+  let mut has_path = false
+  for entry in entries {
+    match entry.object {
+      PdfContentPathObject(_) => has_path = true
+      _ => ()
+    }
+  }
+  @test.assert_eq(has_path, true)
+  let content_json = document.page_content_json([1]).stringify()
+  fixture_acceptance_assert_contains_for_test(content_json, "\"page\":1")
+  fixture_acceptance_assert_contains_for_test(content_json, "\"obj\":\"path\"")
+  fixture_acceptance_assert_contains_for_test(content_json, "\"bbox\"")
+}
+
+///|
 async test "checked-in CamlPDF logo fixture reconstructs linearized bad startxref" {
   fixture_acceptance_assert_reconstructs_for_test(
     fixture_acceptance_bytes_for_test("fixtures/camlpdf/logo.pdf"),
@@ -2202,6 +2253,36 @@ async test "optional cpdf source manual font fixture reports font tables" {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
       fixture_acceptance_assert_cpdf_fonts_fixture_for_test(document)
       fixture_acceptance_assert_cpdf_fonts_fixture_for_test(
+        fixture_acceptance_reparse_compressed_for_test(document),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source manual content fixtures export content JSON" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/manualimages/text.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_text_content_for_test(document)
+      fixture_acceptance_assert_cpdf_text_content_for_test(
+        fixture_acceptance_reparse_compressed_for_test(document),
+      )
+    }
+  }
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/manualimages/xobj.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_xobject_content_for_test(document)
+      fixture_acceptance_assert_cpdf_xobject_content_for_test(
         fixture_acceptance_reparse_compressed_for_test(document),
       )
     }

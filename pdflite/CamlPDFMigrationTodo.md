@@ -5353,6 +5353,14 @@ Current backend snapshot:
   fixture_acceptance --filter '*font fixture*'` reports 1/1 test passing,
   `moon test --target native fixture_acceptance` reports 50/50 tests passing,
   and `moon test --target native` reports 2221/2221 tests passing.~~
+- [x] ~~Add the next source-boundary `cpdfcontent` slice: optional
+  `.repos/cpdf-source/manualimages/text.pdf` and `xobj.pdf` now gate real
+  glyph/text extraction, page-content JSON, and recursive Form XObject path
+  content entries before and after compressed rewrite/reread. `moon test
+  --target native fixture_acceptance --filter '*content fixtures*'` reports 1/1
+  test passing, `moon test --target native fixture_acceptance` reports 51/51
+  tests passing, and `moon test --target native` reports 2222/2222 tests
+  passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
