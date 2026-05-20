@@ -3471,6 +3471,12 @@ fn acceptance_korea_cmap_text_document_for_test() -> @pdflite.PdfDocument raise 
       "/KSCpcEUCDescendant", "Korea1",
     ),
   )
+  doc.add_object_given_number(
+    108,
+    acceptance_predefined_cmap_descendant_font_for_test(
+      "/KSCmsUHCHWDescendant", "Korea1",
+    ),
+  )
   let uhc_page = acceptance_predefined_cmap_page_for_test(
     "/Fuhc",
     acceptance_predefined_cmap_type0_font_for_test(
@@ -3492,7 +3498,16 @@ fn acceptance_korea_cmap_text_document_for_test() -> @pdflite.PdfDocument raise 
     ),
     acceptance_kscpc_euc_text_for_test(),
   )
-  let page_root = doc.add_pagetree([uhc_page, ksc_euc_page, kscpc_euc_page])
+  let uhc_hw_page = acceptance_predefined_cmap_page_for_test(
+    "/Fuhchw",
+    acceptance_predefined_cmap_type0_font_for_test(
+      "/KSCmsUHCHWTop", "/KSCms-UHC-HW-H", 108,
+    ),
+    acceptance_text_bytes_for_test([0xB0, 0xA1, 0xA4, 0xD4]),
+  )
+  let page_root = doc.add_pagetree([
+    uhc_page, ksc_euc_page, kscpc_euc_page, uhc_hw_page,
+  ])
   ignore(doc.add_root(page_root, []))
   doc
 }
@@ -5024,9 +5039,9 @@ fn acceptance_assert_korea_cmap_text_for_test(
   doc : @pdflite.PdfDocument,
 ) -> Unit raise {
   @test.assert_eq(doc.version(), (1, 5))
-  @test.assert_eq(doc.endpage(), 3)
+  @test.assert_eq(doc.endpage(), 4)
   let pages = doc.pages_of_pagetree()
-  @test.assert_eq(pages.length(), 3)
+  @test.assert_eq(pages.length(), 4)
   let uhc_font = acceptance_assert_predefined_cmap_font_shape_for_test(
     doc,
     pages[0],
@@ -5105,6 +5120,25 @@ fn acceptance_assert_korea_cmap_text_for_test(
     Some(0xB0A1),
   )
   @test.assert_eq(kscpc_euc_extractor.charcode_of_codepoint(0x20DE), None)
+  let uhc_hw_font = acceptance_assert_predefined_cmap_font_shape_for_test(
+    doc,
+    pages[3],
+    "/Fuhchw",
+    "/KSCms-UHC-HW-H",
+    "Korea1",
+  )
+  @test.assert_eq(
+    acceptance_font_codepoints_of_page_for_test(
+      doc,
+      pages[3],
+      acceptance_name_for_test("/Fuhchw"),
+    ),
+    [0xAC00, 0x3164],
+  )
+  let uhc_hw_extractor = doc.text_extractor_of_font(uhc_hw_font)
+  @test.assert_eq(uhc_hw_extractor.charcode_of_codepoint(0xAC00), Some(0xB0A1))
+  @test.assert_eq(uhc_hw_extractor.charcode_of_codepoint(0x3164), Some(0xA4D4))
+  @test.assert_eq(uhc_hw_extractor.charcode_of_codepoint(0x1F600), None)
 }
 
 ///|

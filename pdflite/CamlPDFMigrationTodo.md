@@ -4406,6 +4406,12 @@ Current backend snapshot:
   tests passing, `moon test --target native pdf_native_acceptance_test.mbt`
   reports 88/88 tests passing, and `moon test --target native` reports
   2200/2200 tests passing.~~
+- [x] ~~The cpdfua-listed `/KSCms-UHC-HW-H` Korean half-width predefined CMap
+  now has native compressed reader-boundary coverage in addition to direct
+  extractor coverage, gating Adobe-Korea1 extraction and reverse lookup for
+  Hangul and half-width filler codepoints after write/read/reread. `moon test
+  --target native pdf_native_acceptance_test.mbt` reports 88/88 tests passing,
+  and `moon test --target native` reports 2200/2200 tests passing.~~
 - [ ] Broader built-in non-UCS2 predefined CMap mapping tables beyond the
   current Adobe-GB1, Adobe-CNS1, Adobe-Japan1, and Adobe-Korea1 fallbacks,
   plus more real-world ToUnicode/CMap variation fixtures.
@@ -5084,6 +5090,11 @@ Current backend snapshot:
   read/write/reread coverage for the same GBK mixed-byte semantics already
   exercised by `/GBK-EUC-H`. `moon test --target native` reports 2200/2200 tests
   passing.~~
+- [x] ~~Add the next remaining format parity slice: the cpdfua-listed
+  `/KSCms-UHC-HW-H` Korean half-width predefined CMap now has compressed native
+  read/write/reread coverage for Adobe-Korea1 Hangul and half-width filler
+  extraction plus reverse lookup. `moon test --target native` reports 2200/2200
+  tests passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.
