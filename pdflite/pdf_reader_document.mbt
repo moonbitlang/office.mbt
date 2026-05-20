@@ -218,7 +218,16 @@ pub fn pdf_read_document_from_view(
         pdf_read_reconstructed_or_raise(data, XRefEntryExpected)
       }
     TrailerExpected => pdf_read_reconstructed_or_raise(data, TrailerExpected)
-    RootExpected => pdf_read_reconstructed_or_raise(data, RootExpected)
+    RootExpected =>
+      if pdf_reader_startxref_uses_xref_stream_or_false(data) {
+        pdf_read_reconstructed_or_raise(
+          data,
+          RootExpected,
+          include_xref_stream_trailers=true,
+        )
+      } else {
+        pdf_read_reconstructed_or_raise(data, RootExpected)
+      }
     NumberExpected => pdf_read_reconstructed_or_raise(data, NumberExpected)
     ParseIndirectObjectExpected =>
       pdf_read_reconstructed_or_raise(data, ParseIndirectObjectExpected)

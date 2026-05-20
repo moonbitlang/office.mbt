@@ -1772,6 +1772,14 @@ Current backend snapshot:
   21 one-page `manualimages/*.pdf` fixtures. Focused native validation reports
   `moon test --target native fixture_acceptance` at 29/29 tests passing;
   native full-suite validation reports 2181/2181 tests passing.~~
+- [x] ~~Broaden optional `.repos/cpdf-source` cpdf manual xref-stream root
+  recovery: `fixture_acceptance` now corrupts the 175-page manual's
+  `/Root 1841 0 R` xref-stream trailer entry, requiring strict
+  `RootExpected`, public reconstruction through scanned catalog-root inference
+  with xref-stream object entries available, and compressed rewrite/reread page
+  preservation. Focused native validation reports `moon test --target native
+  fixture_acceptance` at 30/30 tests passing; native full-suite validation
+  reports 2182/2182 tests passing.~~
 - [ ] Add further malformed xref-table/xref-stream/object-stream recovery cases
   from real-world PDFs.
 - [x] ~~Add a native reader-boundary gate for the next available predefined CMap
@@ -4926,6 +4934,10 @@ Current backend snapshot:
   dictionary survives, and optional cpdf manual-image source-corpus PDFs now
   gate damaged classic `trailer` keyword recovery across the same 21 one-page
   drawing/image fixtures.~~
+- [x] ~~Add the next remaining format parity slice: optional cpdf manual
+  source-corpus recovery now gates damaged xref-stream `/Root` trailer entries
+  in the 175-page manual, reconstructing through scanned catalog-root inference
+  while keeping xref-stream object entries available.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.

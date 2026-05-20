@@ -542,6 +542,19 @@ fn fixture_acceptance_corrupt_xref_stream_index_entry_for_test(
 }
 
 ///|
+fn fixture_acceptance_corrupt_xref_stream_root_entry_for_test(
+  bytes : Bytes,
+  root_entry : BytesView,
+) -> Bytes raise {
+  fixture_acceptance_replace_bytes_after_with_padded_ascii_for_test(
+    bytes,
+    @ascii.encode("/Type /XRef"),
+    root_entry,
+    "/Root /Bad",
+  )
+}
+
+///|
 fn fixture_acceptance_corrupt_xref_stream_filter_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
@@ -845,6 +858,32 @@ fn fixture_acceptance_assert_xref_stream_index_reconstructs_for_test(
     expected_pages,
     @ascii.encode("/Index [0 104]"),
   )
+}
+
+///|
+fn fixture_acceptance_assert_xref_stream_root_entry_reconstructs_for_test(
+  bytes : Bytes,
+  expected_pages : Int,
+  root_entry : BytesView,
+) -> Unit raise {
+  let corrupted = fixture_acceptance_corrupt_xref_stream_root_entry_for_test(
+    bytes, root_entry,
+  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    corrupted,
+  )
+  guard strict is Err(@pdflite.PdfError::RootExpected) else {
+    match strict {
+      Err(error) => fail(error.to_json().stringify())
+      Ok(_) =>
+        fail("expected malformed xref stream root to require reconstruction")
+    }
+  }
+  let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
+  @test.assert_eq(recovered.first_xref(), 0)
+  @test.assert_eq(recovered.endpage(), expected_pages)
+  let reparsed = fixture_acceptance_reparse_compressed_for_test(recovered)
+  @test.assert_eq(reparsed.endpage(), expected_pages)
 }
 
 ///|
@@ -1207,6 +1246,22 @@ async test "optional cpdf source manual fixture reconstructs malformed xref stre
         bytes,
         175,
         @ascii.encode("/Index [0 1844]"),
+      )
+  }
+}
+
+///|
+async test "optional cpdf source manual fixture reconstructs malformed xref stream root" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/cpdfmanual.pdf",
+    ) {
+    None => ()
+    Some(bytes) =>
+      fixture_acceptance_assert_xref_stream_root_entry_reconstructs_for_test(
+        bytes,
+        175,
+        @ascii.encode("/Root 1841 0 R"),
       )
   }
 }

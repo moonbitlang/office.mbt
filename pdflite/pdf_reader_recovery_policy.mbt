@@ -69,6 +69,26 @@ fn pdf_reader_startxref_root_uses_object_stream_or_false(
 }
 
 ///|
+fn pdf_reader_startxref_uses_xref_stream(
+  data : BytesView,
+) -> Bool raise PdfError {
+  let cursor = byte_cursor_of_view(data)
+  ignore(cursor.read_pdf_header())
+  cursor.seek_pdf_absolute(pdf_read_startxref_position(cursor.data))
+  let section = cursor.read_pdf_xref_section()
+  section.stream_object_number is Some(_)
+}
+
+///|
+fn pdf_reader_startxref_uses_xref_stream_or_false(data : BytesView) -> Bool {
+  try pdf_reader_startxref_uses_xref_stream(data) catch {
+    _ => false
+  } noraise {
+    value => value
+  }
+}
+
+///|
 fn pdf_reader_xref_metadata_error_allows_reconstruction(
   data : BytesView,
   error : PdfError,

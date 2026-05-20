@@ -309,13 +309,9 @@ fn PdfDocument::select_reconstructed_trailer(
       _ => ()
     }
   } nobreak {
-    if trailers.length() == 0 {
-      match self.infer_reconstructed_catalog_trailer() {
-        Some(trailer) => trailer
-        None => raise RootExpected
-      }
-    } else {
-      raise RootExpected
+    match self.infer_reconstructed_catalog_trailer() {
+      Some(trailer) => trailer
+      None => raise RootExpected
     }
   }
 }
