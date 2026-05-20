@@ -248,6 +248,103 @@ test "pdf draw document-aware fontpacks render text runs and resources" {
 }
 
 ///|
+test "pdf draw paragraph renders selected fontpack text" {
+  let document = @pdflite.pdf_document_empty()
+  let state = @pdflite.pdf_draw_render_state_new()
+  let font = draw_standard_font_for_test(PdfHelvetica)
+  let pack = try! @pdflite.pdf_fontpack_of_standard_font(font)
+  let f1 = draw_name_for_test("/F1")
+  let ops = try! @pdflite.pdf_drawops_to_content_ops_with_document(
+    state,
+    document,
+    [
+      PdfDrawTextSection([
+        PdfDrawFontPack("Body", pack, []),
+        PdfDrawFont("Body", 10.0),
+        PdfDrawPara(None, PdfDrawLeft, 200.0, ["AB"]),
+      ]),
+    ],
+  )
+  @test.assert_eq(ops, [
+    Op_BT,
+    Op_Tstar,
+    Op_Td(-0.0, 0.0),
+    Op_Tf(f1, 10.0),
+    Op_Tj(draw_bytes_for_test([65, 66])),
+    Op_Td(0.0, 0.0),
+    Op_ET,
+  ])
+}
+
+///|
+test "pdf draw paragraph wraps lines and cleans duplicate text ops" {
+  let document = @pdflite.pdf_document_empty()
+  let state = @pdflite.pdf_draw_render_state_new()
+  let font = draw_standard_font_for_test(PdfHelvetica)
+  let pack = try! @pdflite.pdf_fontpack_of_standard_font(font)
+  let widths = try! @pdflite.pdf_type_font_widths(font, 10.0)
+  let line_width = widths[65] + widths[32] + widths[65] - 0.01
+  let f1 = draw_name_for_test("/F1")
+  let ops = try! @pdflite.pdf_drawops_to_content_ops_with_document(
+    state,
+    document,
+    [
+      PdfDrawTextSection([
+        PdfDrawFontPack("Body", pack, []),
+        PdfDrawFont("Body", 10.0),
+        PdfDrawPara(None, PdfDrawLeft, line_width, ["A A"]),
+      ]),
+    ],
+  )
+  @test.assert_eq(ops, [
+    Op_BT,
+    Op_Tstar,
+    Op_Td(-0.0, 0.0),
+    Op_Tf(f1, 10.0),
+    Op_Tj(draw_bytes_for_test([65])),
+    Op_Td(0.0, 0.0),
+    Op_Tstar,
+    Op_Tj(draw_bytes_for_test([65])),
+    Op_ET,
+  ])
+}
+
+///|
+test "pdf draw paragraph preserves cpdf multi paragraph breaks" {
+  let document = @pdflite.pdf_document_empty()
+  let state = @pdflite.pdf_draw_render_state_new()
+  let font = draw_standard_font_for_test(PdfHelvetica)
+  let pack = try! @pdflite.pdf_fontpack_of_standard_font(font)
+  let f1 = draw_name_for_test("/F1")
+  let ops = try! @pdflite.pdf_drawops_to_content_ops_with_document(
+    state,
+    document,
+    [
+      PdfDrawTextSection([
+        PdfDrawFontPack("Body", pack, []),
+        PdfDrawFont("Body", 10.0),
+        PdfDrawPara(None, PdfDrawLeft, 200.0, ["A", "B"]),
+      ]),
+    ],
+  )
+  @test.assert_eq(ops, [
+    Op_BT,
+    Op_Tstar,
+    Op_Td(-0.0, 0.0),
+    Op_Tf(f1, 10.0),
+    Op_Tj(draw_bytes_for_test([65])),
+    Op_Td(0.0, 0.0),
+    Op_Tstar,
+    Op_Tstar,
+    Op_Td(-0.0, 0.0),
+    Op_Tf(f1, 10.0),
+    Op_Tj(draw_bytes_for_test([66])),
+    Op_Td(0.0, 0.0),
+    Op_ET,
+  ])
+}
+
+///|
 test "pdf draw font selection reports missing fontpack" {
   let state = @pdflite.pdf_draw_render_state_new()
   let result : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_drawop_to_content_ops_with_state(

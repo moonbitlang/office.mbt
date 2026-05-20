@@ -50,7 +50,7 @@ pub(all) struct PdfDrawFontPackState {
 ///
 /// This ports the resource-numbering and ExtGState cache used by
 /// `cpdfdraw.ml`'s `res`/`fresh_name`/`extgstate` helpers. Later rendering
-/// slices will extend this state with paragraph and tagged-content resources.
+/// slices will extend this state with tagged-content resources.
 pub(all) struct PdfDrawRenderState {
   mut resource_number : Int
   extgstates : Array[PdfDrawExtGStateResource]
@@ -379,13 +379,59 @@ fn PdfDrawRenderState::text_ops(
   self : PdfDrawRenderState,
   text : String,
 ) -> Array[PdfContentOp] raise PdfError {
+  let width_cache = pdf_draw_font_width_cache_new(self.font_size)
+  let (ops, _) = self.text_ops_and_width_with_cache(text, width_cache)
+  ops
+}
+
+///|
+priv struct PdfDrawFontWidthCache {
+  font_size : Double
+  entries : Array[(Int, Array[Double])]
+}
+
+///|
+fn pdf_draw_font_width_cache_new(font_size : Double) -> PdfDrawFontWidthCache {
+  { font_size, entries: [] }
+}
+
+///|
+fn PdfDrawFontWidthCache::widths(
+  self : PdfDrawFontWidthCache,
+  font_index : Int,
+  font : PdfFont,
+) -> Array[Double] raise PdfError {
+  for entry in self.entries {
+    if entry.0 == font_index {
+      return entry.1
+    }
+  }
+  let widths = pdf_type_font_widths(font, self.font_size)
+  self.entries.push((font_index, widths))
+  widths
+}
+
+///|
+fn PdfDrawRenderState::text_ops_and_width_with_cache(
+  self : PdfDrawRenderState,
+  text : String,
+  width_cache : PdfDrawFontWidthCache,
+) -> (Array[PdfContentOp], Double) raise PdfError {
   if self.current_fontpack_identifier == "" {
     raise SoftError("FontPack not selected")
   }
   let triples : Array[(Int, Int, PdfFont)] = []
+  let mut width = 0.0
   for codepoint in pdf_codepoints_of_utf8(@utf8.encode(text)) {
     match self.current_fontpack.get_char(codepoint) {
-      Some(triple) => triples.push(triple)
+      Some((charcode, font_index, font)) => {
+        let widths = width_cache.widths(font_index, font)
+        if charcode < 0 || charcode >= widths.length() {
+          raise FontWidthExpected
+        }
+        width += widths[charcode]
+        triples.push((charcode, font_index, font))
+      }
       None => ()
     }
   }
@@ -403,6 +449,205 @@ fn PdfDrawRenderState::text_ops(
     }
     output.push(Op_Tf(resource_name, self.font_size))
     output.push(Op_Tj(Bytes::from_array(bytes)))
+  }
+  (output, width)
+}
+
+///|
+fn pdf_draw_split_on_space(text : String) -> Array[String] {
+  let parts : Array[String] = []
+  let mut current : Array[Byte] = []
+  for byte in @utf8.encode(text) {
+    if byte == b' ' {
+      parts.push(@utf8.decode_lossy(Bytes::from_array(current)))
+      current = []
+    } else {
+      current.push(byte)
+    }
+  }
+  parts.push(@utf8.decode_lossy(Bytes::from_array(current)))
+  parts
+}
+
+///|
+fn pdf_draw_remove_duplicate_tfs(
+  ops : ArrayView[PdfContentOp],
+) -> Array[PdfContentOp] {
+  let output : Array[PdfContentOp] = []
+  let mut previous : PdfName? = None
+  for op in ops {
+    match op {
+      Op_Tf(font, _) =>
+        match previous {
+          Some(seen) if seen == font => ()
+          _ => {
+            output.push(op)
+            previous = Some(font)
+          }
+        }
+      _ => output.push(op)
+    }
+  }
+  output
+}
+
+///|
+fn pdf_draw_merge_adjacent_tjs(
+  ops : ArrayView[PdfContentOp],
+) -> Array[PdfContentOp] {
+  let output : Array[PdfContentOp] = []
+  let mut index = 0
+  while index < ops.length() {
+    match ops[index] {
+      Op_Tj(_) => {
+        let bytes : Array[Byte] = []
+        while index < ops.length() {
+          match ops[index] {
+            Op_Tj(text) => {
+              for byte in text {
+                bytes.push(byte)
+              }
+              index += 1
+            }
+            _ => break
+          }
+        }
+        output.push(Op_Tj(Bytes::from_array(bytes)))
+      }
+      _ => {
+        output.push(ops[index])
+        index += 1
+      }
+    }
+  }
+  output
+}
+
+///|
+fn pdf_draw_clean_up_text_ops(
+  ops : ArrayView[PdfContentOp],
+) -> Array[PdfContentOp] {
+  pdf_draw_merge_adjacent_tjs(pdf_draw_remove_duplicate_tfs(ops))
+}
+
+///|
+fn PdfDrawRenderState::justify_paragraph_line(
+  self : PdfDrawRenderState,
+  ops : ArrayView[PdfContentOp],
+  first_line : Bool,
+  indent : Double,
+  justification : PdfDrawJustification,
+  remaining : Double,
+) -> Array[PdfContentOp] {
+  ignore(self)
+  let output : Array[PdfContentOp] = []
+  match justification {
+    PdfDrawLeft => {
+      if first_line {
+        output.push(Op_Td(-indent, 0.0))
+      }
+      output.append(ops)
+      if first_line {
+        output.push(Op_Td(indent, 0.0))
+      }
+    }
+    PdfDrawRight => {
+      output.push(Op_Td(-remaining, 0.0))
+      output.append(ops)
+      output.push(Op_Td(remaining, 0.0))
+    }
+    PdfDrawCentre => {
+      output.push(Op_Td(-remaining / 2.0, 0.0))
+      output.append(ops)
+      output.push(Op_Td(remaining / 2.0, 0.0))
+    }
+  }
+  output
+}
+
+///|
+fn PdfDrawRenderState::format_paragraph(
+  self : PdfDrawRenderState,
+  indent : Double,
+  justification : PdfDrawJustification,
+  width : Double,
+  text : String,
+) -> Array[PdfContentOp] raise PdfError {
+  let width_cache = pdf_draw_font_width_cache_new(self.font_size)
+  let words : Array[(Array[PdfContentOp], Double)] = []
+  for word in pdf_draw_split_on_space(text) {
+    words.push(self.text_ops_and_width_with_cache(word, width_cache))
+  }
+  let (space_ops, space_width) = self.text_ops_and_width_with_cache(
+    " ", width_cache,
+  )
+  let output : Array[PdfContentOp] = []
+  let mut line_ops : Array[PdfContentOp] = []
+  let mut remaining = width
+  let mut first_line = true
+  let mut first_loop = true
+  let mut index = 0
+  while index < words.length() {
+    if first_loop {
+      remaining -= indent
+      first_loop = false
+    }
+    let (word_ops, word_width) = words[index]
+    if remaining == width {
+      line_ops.append(word_ops)
+      remaining -= word_width
+      index += 1
+    } else if word_width + space_width <= remaining {
+      line_ops.append(space_ops)
+      line_ops.append(word_ops)
+      remaining -= word_width + space_width
+      index += 1
+    } else {
+      output.push(Op_Tstar)
+      output.append(
+        self.justify_paragraph_line(
+          line_ops, first_line, indent, justification, remaining,
+        ),
+      )
+      first_line = false
+      line_ops = []
+      remaining = width
+    }
+  }
+  output.push(Op_Tstar)
+  output.append(
+    self.justify_paragraph_line(
+      line_ops, first_line, indent, justification, remaining,
+    ),
+  )
+  pdf_draw_clean_up_text_ops(output)
+}
+
+///|
+fn PdfDrawRenderState::paragraph_ops(
+  self : PdfDrawRenderState,
+  indent : Double?,
+  justification : PdfDrawJustification,
+  width : Double,
+  paragraphs : ArrayView[String],
+) -> Array[PdfContentOp] raise PdfError {
+  let output : Array[PdfContentOp] = []
+  let mut first = true
+  for paragraph in paragraphs {
+    if !first {
+      match indent {
+        None => output.push(Op_Tstar)
+        Some(_) => ()
+      }
+    }
+    let paragraph_indent = match indent {
+      Some(value) if !first => value
+      _ => 0.0
+    }
+    output.append(
+      self.format_paragraph(paragraph_indent, justification, width, paragraph),
+    )
+    first = false
   }
   output
 }
@@ -534,8 +779,8 @@ pub fn PdfDrawRenderState::resources(self : PdfDrawRenderState) -> PdfObject {
 ///
 /// This mirrors the operation shape from `cpdfdraw.ml`. The first rendering
 /// slice converts path, graphics-state, colour, matrix, and paint operations to
-/// `PdfContentOp`; text, image, form, and structure operations are represented
-/// here and will be rendered by later cpdfdraw slices.
+/// `PdfContentOp`; structure and page-level operations are represented here
+/// and will be rendered by later cpdfdraw slices.
 pub(all) enum PdfDrawOp {
   PdfDrawRect(Double, Double, Double, Double)
   PdfDrawBezier(Double, Double, Double, Double, Double, Double)
@@ -780,6 +1025,12 @@ fn PdfDrawOp::to_content_ops_internal(
         Some(state) => state.text_ops(text)
         None => pdf_draw_content_unsupported(self)
       }
+    PdfDrawPara(indent, justification, width, paragraphs) =>
+      match state {
+        Some(state) =>
+          state.paragraph_ops(indent, justification, width, paragraphs)
+        None => pdf_draw_content_unsupported(self)
+      }
     PdfDrawOpacity(value) =>
       match state {
         Some(state) =>
@@ -886,8 +1137,9 @@ pub fn pdf_string_of_drawop(op : PdfDrawOp) -> String {
 ///
 /// The currently ported rendering subset covers the direct operator mappings in
 /// the front of `cpdfdraw.ml`'s `ops_of_drawop`: graphics state, matrix, path,
-/// colour, paint, clip, and `q`/`Q` grouping. Later slices will fill in forms,
-/// images, text, and tagged-content rendering.
+/// colour, paint, clip, `q`/`Q` grouping, resource-backed XObjects, fontpack
+/// text, and paragraph layout. Later slices will fill in tagged-content and
+/// page-level rendering.
 pub fn PdfDrawOp::to_content_ops(
   self : PdfDrawOp,
 ) -> Array[PdfContentOp] raise PdfError {
