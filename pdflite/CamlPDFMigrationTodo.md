@@ -1757,6 +1757,14 @@ Current backend snapshot:
   Focused native validation reports `moon test --target native
   fixture_acceptance` at 27/27 tests passing; native full-suite validation
   reports 2179/2179 tests passing.~~
+- [x] ~~Broaden optional `.repos/cpdf-source` manual-image xref recovery for
+  damaged classic xref headers: `fixture_acceptance` now corrupts the
+  `startxref` target's `xref` keyword across all 21 one-page
+  `manualimages/*.pdf` fixtures, requiring strict `XRefExpected`, public
+  reconstruction, and compressed rewrite/reread preservation. Focused native
+  validation reports `moon test --target native fixture_acceptance` at 28/28
+  tests passing; native full-suite validation reports 2180/2180 tests
+  passing.~~
 - [ ] Add further malformed xref-table/xref-stream/object-stream recovery cases
   from real-world PDFs.
 - [x] ~~Add a native reader-boundary gate for the next available predefined CMap
@@ -4902,6 +4910,10 @@ Current backend snapshot:
   source-corpus PDFs now gate malformed classic xref row marker, offset,
   generation, subsection object number, and subsection count recovery across
   the same 21 one-page drawing/image fixtures.~~
+- [x] ~~Add the next remaining format parity slice: optional cpdf manual-image
+  source-corpus PDFs now gate valid-`startxref` recovery when the targeted
+  classic `xref` table header itself is damaged across the same 21 one-page
+  drawing/image fixtures.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.
