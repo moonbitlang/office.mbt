@@ -36,7 +36,9 @@ async test "checked-in markdown fixture extracts expected text" {
 
 - Local fixture tests should be deterministic and always run in CI.
 - `.repos/cpdf-source` fixture tests are optional because that source corpus is
-  ignored in fresh checkouts but present during porting work.
+  ignored in fresh checkouts but present during porting work. When present, the
+  manual-image PDF corpus is checked for clean Markdown extraction and matching
+  output after public-reader bad-`startxref` reconstruction.
 - External fixture tests are optional because downloaded PDFs may not be present
   in a fresh checkout.
 - The package is native-only because fixture IO uses `moonbitlang/async/fs`.

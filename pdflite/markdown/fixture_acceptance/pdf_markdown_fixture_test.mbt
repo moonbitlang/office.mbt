@@ -154,6 +154,41 @@ fn markdown_fixture_unique_cjk_unified_count_for_test(text : String) -> Int {
 }
 
 ///|
+fn markdown_cpdf_source_manual_image_pdf_paths_for_test() -> Array[String] {
+  [
+    ".repos/cpdf-source/manualimages/bez.pdf", ".repos/cpdf-source/manualimages/capjoins.pdf",
+    ".repos/cpdf-source/manualimages/clip.pdf", ".repos/cpdf-source/manualimages/colfill.pdf",
+    ".repos/cpdf-source/manualimages/dash.pdf", ".repos/cpdf-source/manualimages/fill.pdf",
+    ".repos/cpdf-source/manualimages/fontparams.pdf", ".repos/cpdf-source/manualimages/fonts.pdf",
+    ".repos/cpdf-source/manualimages/h1.pdf", ".repos/cpdf-source/manualimages/line.pdf",
+    ".repos/cpdf-source/manualimages/lines.pdf", ".repos/cpdf-source/manualimages/matrix.pdf",
+    ".repos/cpdf-source/manualimages/para.pdf", ".repos/cpdf-source/manualimages/paras.pdf",
+    ".repos/cpdf-source/manualimages/png.pdf", ".repos/cpdf-source/manualimages/pop.pdf",
+    ".repos/cpdf-source/manualimages/stext.pdf", ".repos/cpdf-source/manualimages/text.pdf",
+    ".repos/cpdf-source/manualimages/textclip.pdf", ".repos/cpdf-source/manualimages/trans.pdf",
+    ".repos/cpdf-source/manualimages/xobj.pdf",
+  ]
+}
+
+///|
+fn markdown_fixture_assert_cpdf_manual_image_markdown_for_test(
+  markdown : String,
+  path : String,
+) -> Unit raise {
+  markdown_fixture_assert_contains_for_test(markdown, "# Page 1")
+  @test.assert_eq(
+    markdown_fixture_raw_control_count_for_test(markdown),
+    0,
+    msg=path,
+  )
+  @test.assert_eq(
+    markdown_fixture_replacement_count_for_test(markdown),
+    0,
+    msg=path,
+  )
+}
+
+///|
 async test "pdf_bytes_to_markdown extracts Pandoc Latin fixture" {
   let markdown = markdown_fixture_markdown_for_test(
     "markdown/fixtures/pandoc_latin.pdf",
@@ -251,6 +286,41 @@ async test "pdf_bytes_to_markdown reconstructs optional cpdf source hello fixtur
       @test.assert_eq(markdown_fixture_raw_control_count_for_test(markdown), 0)
       @test.assert_eq(markdown_fixture_replacement_count_for_test(markdown), 0)
     }
+  }
+}
+
+///|
+async test "pdf_bytes_to_markdown extracts optional cpdf source manual image PDF corpus" {
+  let mut checked = 0
+  let mut textful = 0
+  for path in markdown_cpdf_source_manual_image_pdf_paths_for_test() {
+    match markdown_optional_fixture_bytes_for_test(path) {
+      None => ()
+      Some(bytes) => {
+        checked += 1
+        let markdown = @markdown.pdf_bytes_to_markdown(bytes)
+        markdown_fixture_assert_cpdf_manual_image_markdown_for_test(
+          markdown, path,
+        )
+        if markdown != "# Page 1\n\n\n" {
+          textful += 1
+        }
+        let reconstructed = @markdown.pdf_bytes_to_markdown(
+          markdown_fixture_corrupt_startxref_pointer_for_test(bytes),
+        )
+        markdown_fixture_assert_cpdf_manual_image_markdown_for_test(
+          reconstructed, path,
+        )
+        @test.assert_eq(reconstructed, markdown, msg=path)
+      }
+    }
+  }
+  if checked > 0 {
+    @test.assert_eq(
+      checked,
+      markdown_cpdf_source_manual_image_pdf_paths_for_test().length(),
+    )
+    @test.assert_eq(textful > 0, true)
   }
 }
 

@@ -5230,6 +5230,16 @@ Current backend snapshot:
   image/fixture_acceptance` reports 16/16 tests passing. `moon test --target
   native` reports 2209/2209 tests passing, and `moon check --target all
   --warn-list +73` completes with the known warning baseline and no errors.~~
+- [x] ~~Add the next real-world PDF-to-Markdown corpus gate: the optional
+  `.repos/cpdf-source/manualimages/*.pdf` corpus now converts every one-page
+  manual-image PDF to clean Markdown, verifies at least one textful extraction,
+  corrupts the final `startxref`, and requires reconstructed Markdown to match
+  the normal output with no raw control or replacement characters. `moon test
+  --target native markdown/fixture_acceptance --filter '*manual image PDF
+  corpus*'` reports 1/1 tests passing and `moon test --target native
+  markdown/fixture_acceptance` reports 15/15 tests passing. `moon test --target
+  native` reports 2210/2210 tests passing, and `moon check --target all
+  --warn-list +73` completes with the known warning baseline and no errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
