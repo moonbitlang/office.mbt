@@ -3975,6 +3975,19 @@ Current backend snapshot:
   --target native --package bobzhang/pdflite --file pdf_font_test.mbt` at
   9/9 tests passing; native full-suite validation reports 1756/1756 tests
   passing.~~
+- [x] ~~Standalone `cpdfunicodedata.ml` row-parser slice now exposes
+  `PdfUnicodeDataEntry`, `pdf_parse_unicode_data`, and
+  `pdf_parse_flate_unicode_data`, covering cpdf's public UnicodeData row
+  schema, ASCII semicolon-field parsing, CRLF row endings, the compressed
+  source decode path through Flate, and malformed-row `SoftError` propagation.
+  Focused native validation reports `moon test --target native
+  pdf_unicode_data_test.mbt` at 4/4 tests passing; native check validation
+  reports `moon check --target native --warn-list +73` passing with the known
+  markdown main-package warning and 10-warning baseline; native full-suite
+  validation reports 2176/2176 tests passing.~~
+- [ ] Embed or otherwise provide cpdf's full `Cpdfunicodedata.unicodedata_source`
+  payload and memoized `unicodedata ()` provider, then wire font-table Unicode
+  names/control classification beyond the current empty-name fallback.
 - [x] ~~Standalone `cpdftruetype.ml` cmap-listing slice exposes
   `pdf_truetype_cmaps`, covering TrueType table-directory scanning, `cmap`
   platform/encoding record collection in cpdf's prepended order, non-cmap table

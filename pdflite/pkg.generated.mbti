@@ -993,6 +993,8 @@ pub fn pdf_parse_coordinates(PdfDocument, String) -> Array[@geometry.Point2] rai
 
 pub fn pdf_parse_draw_colour(String) -> PdfDrawColour raise @core.PdfError
 
+pub fn pdf_parse_flate_unicode_data(BytesView) -> Array[PdfUnicodeDataEntry] raise @core.PdfError
+
 pub fn pdf_parse_function(PdfDocument, PdfObject) -> PdfFunction raise @core.PdfError
 
 pub fn pdf_parse_indirect_object_from_bytes(Bytes) -> PdfParsedIndirectObject raise @core.PdfError
@@ -1022,6 +1024,8 @@ pub fn pdf_parse_single_number(PdfDocument, String) -> Double raise @core.PdfErr
 pub fn pdf_parse_stream_object_from_bytes(Bytes) -> PdfParsedIndirectObject raise @core.PdfError
 
 pub fn pdf_parse_stream_object_from_view(BytesView) -> PdfParsedIndirectObject raise @core.PdfError
+
+pub fn pdf_parse_unicode_data(BytesView) -> Array[PdfUnicodeDataEntry] raise @core.PdfError
 
 pub fn pdf_parse_units_string(PdfDocument, PdfPage, String) -> Array[Double] raise @core.PdfError
 
@@ -3724,6 +3728,24 @@ pub(all) struct PdfTypeTypesetResult {
 pub(all) enum PdfUASubformat {
   PdfUA1
   PdfUA2
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfUnicodeDataEntry {
+  code_value : String
+  character_name : String
+  general_category : String
+  canonical_combining_classes : String
+  bidirectional_category : String
+  character_decomposition_mapping : String
+  decimal_digit_value : String
+  digit_value : String
+  numeric_value : String
+  mirrored : String
+  unicode_10_name : String
+  iso_10646_comment_field : String
+  uppercase_mapping : String
+  lowercase_mapping : String
+  titlecase_mapping : String
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfVersion {
