@@ -1540,6 +1540,23 @@ let fixture_acceptance_cpdf_manual_image_paths_for_test : Array[String] = [
 ]
 
 ///|
+let fixture_acceptance_cpdf_top_level_pdf_paths_for_test : Array[String] = [
+  ".repos/cpdf-source/cpdfmanual.pdf", ".repos/cpdf-source/hello.pdf", ".repos/cpdf-source/logo.pdf",
+]
+
+///|
+fn fixture_acceptance_cpdf_top_level_expected_pages_for_test(
+  path : String,
+) -> Int raise {
+  match path {
+    ".repos/cpdf-source/cpdfmanual.pdf" => 175
+    ".repos/cpdf-source/hello.pdf" => 1
+    ".repos/cpdf-source/logo.pdf" => 1
+    _ => fail("unexpected cpdf source top-level PDF path: " + path)
+  }
+}
+
+///|
 async test "checked-in CamlPDF logo fixture reconstructs linearized bad startxref" {
   fixture_acceptance_assert_reconstructs_for_test(
     fixture_acceptance_bytes_for_test("fixtures/camlpdf/logo.pdf"),
@@ -1707,6 +1724,35 @@ async test "optional cpdf source hello fixture reconstructs malformed classic xr
       fixture_acceptance_assert_classic_xref_marker_reconstructs_for_test(
         bytes, 1,
       )
+  }
+}
+
+///|
+async test "optional cpdf source top-level PDF corpus reads rewrites and reconstructs" {
+  let mut checked = 0
+  let mut pages = 0
+  for path in fixture_acceptance_cpdf_top_level_pdf_paths_for_test {
+    match fixture_acceptance_optional_bytes_for_test(path) {
+      None => ()
+      Some(bytes) => {
+        checked += 1
+        let expected_pages = fixture_acceptance_cpdf_top_level_expected_pages_for_test(
+          path,
+        )
+        pages += expected_pages
+        fixture_acceptance_assert_reads_and_rewrites_for_test(
+          bytes, expected_pages,
+        )
+        fixture_acceptance_assert_reconstructs_for_test(bytes, expected_pages)
+      }
+    }
+  }
+  if checked > 0 {
+    @test.assert_eq(
+      checked,
+      fixture_acceptance_cpdf_top_level_pdf_paths_for_test.length(),
+    )
+    @test.assert_eq(pages, 177)
   }
 }
 

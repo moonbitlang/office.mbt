@@ -46,7 +46,9 @@ async test "checked-in PDF fixtures are present" {
 
 - The package is native-only because it reads committed fixture files from disk.
 - Tests here should cover stable local PDFs and optional already-local source
-  corpora, not downloads or network setup.
+  corpora, not downloads or network setup. When `.repos/cpdf-source` is
+  present, the top-level PDF corpus is checked through read, compressed rewrite,
+  and bad-`startxref` reconstruction boundaries.
 - Library APIs remain in the root package; this package owns fixture-backed
   acceptance coverage only.
 

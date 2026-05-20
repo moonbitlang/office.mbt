@@ -5240,6 +5240,16 @@ Current backend snapshot:
   markdown/fixture_acceptance` reports 15/15 tests passing. `moon test --target
   native` reports 2210/2210 tests passing, and `moon check --target all
   --warn-list +73` completes with the known warning baseline and no errors.~~
+- [x] ~~Add the next top-level cpdf source corpus reader gate: optional
+  `.repos/cpdf-source/cpdfmanual.pdf`, `hello.pdf`, and `logo.pdf` are now
+  checked together through public reading, compressed-xref rewrite/reread, and
+  bad-final-`startxref` reconstruction, with the source corpus expected to
+  cover 177 pages when present. `moon test --target native fixture_acceptance
+  --filter '*top-level PDF corpus*'` reports 1/1 tests passing and `moon test
+  --target native fixture_acceptance` reports 42/42 tests passing. `moon test
+  --target native` reports 2211/2211 tests passing, and `moon check --target
+  all --warn-list +73` completes with the known warning baseline and no
+  errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
