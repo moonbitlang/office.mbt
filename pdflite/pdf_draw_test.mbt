@@ -902,18 +902,116 @@ test "PdfDocument draw trailing NewPage adds one blank page" {
 }
 
 ///|
-test "PdfDocument draw rejects structure-tree mode until tree writing is ported" {
+test "PdfDocument draw structure-tree mode writes MCID parent tree" {
   let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
-  let result : Result[@pdflite.PdfDocument, Error] = try? document.draw(
+  let drawn = try! document.draw(
     [1],
-    [PdfDrawRect(1.0, 2.0, 3.0, 4.0)],
+    [PdfDrawTag("Span"), PdfDrawEndTag],
     struct_tree=true,
   )
-  guard result is Err(@pdflite.PdfError::SoftError(message)) else {
-    fail("expected structured draw soft error")
+  let page_refs = try! drawn.page_reference_numbers()
+  let key_k = draw_name_for_test("/K")
+  let key_s = draw_name_for_test("/S")
+  let key_pg = draw_name_for_test("/Pg")
+  let key_parent_tree = draw_name_for_test("/ParentTree")
+  let key_struct_tree_root = draw_name_for_test("/StructTreeRoot")
+  let key_struct_parents = draw_name_for_test("/StructParents")
+  let catalog = try! drawn.catalog()
+  guard catalog.lookup_immediate(key_struct_tree_root)
+    is Some(PdfIndirect(root_number)) else {
+    fail("expected StructTreeRoot reference")
+  }
+  let root = drawn.lookup_object_or_null(root_number)
+  guard root.lookup_immediate(key_k)
+    is Some(PdfArray([PdfIndirect(span_number)])) else {
+    fail("expected one structure child")
+  }
+  let span = drawn.lookup_object_or_null(span_number)
+  @test.assert_eq(
+    span.lookup_immediate(key_s),
+    Some(PdfNameObject(draw_name_for_test("/Span"))),
+  )
+  @test.assert_eq(
+    span.lookup_immediate(key_pg),
+    Some(PdfIndirect(page_refs[0])),
+  )
+  @test.assert_eq(span.lookup_immediate(key_k), Some(PdfArray([PdfInteger(0)])))
+  let pages = try! drawn.pages_of_pagetree()
+  @test.assert_eq(
+    pages[0].rest.lookup_immediate(key_struct_parents),
+    Some(PdfInteger(page_refs[0])),
+  )
+  guard root.lookup_immediate(key_parent_tree)
+    is Some(PdfIndirect(parent_tree_number)) else {
+    fail("expected ParentTree")
   }
   @test.assert_eq(
-    message, "Cpdfdraw: structured draw output not yet implemented",
+    drawn.read_number_tree(drawn.lookup_object_or_null(parent_tree_number)),
+    [(page_refs[0], PdfArray([PdfIndirect(span_number)]))],
+  )
+}
+
+///|
+test "PdfDocument draw structure-tree mode preserves nesting and namespaces" {
+  let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
+  let drawn = try! document.draw(
+    [1],
+    [
+      PdfDrawNamespace("http://iso.org/pdf2/ssn"),
+      PdfDrawEltInfo("Lang", PdfString(@ascii.encode("en-US"))),
+      PdfDrawSTag("Document"),
+      PdfDrawTag("Span"),
+      PdfDrawEndTag,
+      PdfDrawEndSTag,
+      PdfDrawEndEltInfo("Lang"),
+    ],
+    struct_tree=true,
+  )
+  let key_k = draw_name_for_test("/K")
+  let key_s = draw_name_for_test("/S")
+  let key_ns = draw_name_for_test("/NS")
+  let key_namespaces = draw_name_for_test("/Namespaces")
+  let key_lang = draw_name_for_test("/Lang")
+  let key_struct_tree_root = draw_name_for_test("/StructTreeRoot")
+  let catalog = try! drawn.catalog()
+  guard catalog.lookup_immediate(key_struct_tree_root)
+    is Some(PdfIndirect(root_number)) else {
+    fail("expected StructTreeRoot reference")
+  }
+  let root = drawn.lookup_object_or_null(root_number)
+  guard root.lookup_immediate(key_namespaces)
+    is Some(PdfArray([PdfIndirect(namespace_number)])) else {
+    fail("expected namespace array")
+  }
+  @test.assert_eq(
+    drawn.lookup_object_or_null(namespace_number).lookup_immediate(key_ns),
+    Some(PdfString(@ascii.encode("http://iso.org/pdf2/ssn"))),
+  )
+  guard root.lookup_immediate(key_k)
+    is Some(PdfArray([PdfIndirect(document_number)])) else {
+    fail("expected top-level document node")
+  }
+  let document_node = drawn.lookup_object_or_null(document_number)
+  @test.assert_eq(
+    document_node.lookup_immediate(key_s),
+    Some(PdfNameObject(draw_name_for_test("/Document"))),
+  )
+  @test.assert_eq(
+    document_node.lookup_immediate(key_ns),
+    Some(PdfIndirect(namespace_number)),
+  )
+  @test.assert_eq(
+    document_node.lookup_immediate(key_lang),
+    Some(PdfString(@ascii.encode("en-US"))),
+  )
+  guard document_node.lookup_immediate(key_k)
+    is Some(PdfArray([PdfIndirect(span_number)])) else {
+    fail("expected nested span")
+  }
+  let span = drawn.lookup_object_or_null(span_number)
+  @test.assert_eq(
+    span.lookup_immediate(key_s),
+    Some(PdfNameObject(draw_name_for_test("/Span"))),
   )
 }
 

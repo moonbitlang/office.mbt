@@ -46,6 +46,16 @@ pub(all) struct PdfDrawFontPackState {
 } derive(Debug, Eq, ToJson)
 
 ///|
+pub(all) enum PdfDrawStructureData {
+  PdfDrawStructureMCID(String, Int, Int)
+  PdfDrawStructureBeginTree(String)
+  PdfDrawStructureEndTree
+  PdfDrawStructureNamespace(String)
+  PdfDrawStructureElementInfo(String, PdfObject)
+  PdfDrawStructureEndElementInfo(String)
+} derive(Debug, Eq, ToJson)
+
+///|
 /// Page-local context used to render `PdfDrawSpecialText`.
 pub(all) struct PdfDrawSpecialTextContext {
   time : PdfStrftimeTime
@@ -69,6 +79,10 @@ pub(all) struct PdfDrawRenderState {
   mut current_fontpack_identifier : String
   mut current_fontpack : PdfFontPack
   mut font_size : Double
+  mut structure_tree_enabled : Bool
+  mut auto_tag : Bool
+  mut structure_page_number : Int
+  structure_data : Array[PdfDrawStructureData]
   page_names : Array[PdfName]
 } derive(Debug, Eq, ToJson)
 
@@ -103,6 +117,38 @@ let pdf_draw_bbox_key_name : PdfName = pdf_draw_name("/BBox")
 
 ///|
 let pdf_draw_mcid_key_name : PdfName = pdf_draw_name("/MCID")
+
+///|
+let pdf_draw_type_key_name : PdfName = pdf_draw_name("/Type")
+
+///|
+let pdf_draw_struct_tree_root_key_name : PdfName = pdf_draw_name(
+  "/StructTreeRoot",
+)
+
+///|
+let pdf_draw_parent_tree_key_name : PdfName = pdf_draw_name("/ParentTree")
+
+///|
+let pdf_draw_s_key_name : PdfName = pdf_draw_name("/S")
+
+///|
+let pdf_draw_p_key_name : PdfName = pdf_draw_name("/P")
+
+///|
+let pdf_draw_k_key_name : PdfName = pdf_draw_name("/K")
+
+///|
+let pdf_draw_pg_key_name : PdfName = pdf_draw_name("/Pg")
+
+///|
+let pdf_draw_ns_key_name : PdfName = pdf_draw_name("/NS")
+
+///|
+let pdf_draw_namespaces_key_name : PdfName = pdf_draw_name("/Namespaces")
+
+///|
+let pdf_draw_struct_parents_key_name : PdfName = pdf_draw_name("/StructParents")
 
 ///|
 let pdf_draw_begin_artifact_name : PdfName = pdf_draw_name("/BeginArtifact")
@@ -162,6 +208,56 @@ fn pdf_draw_mcid_key() -> PdfName {
 }
 
 ///|
+fn pdf_draw_type_key() -> PdfName {
+  pdf_draw_type_key_name
+}
+
+///|
+fn pdf_draw_struct_tree_root_key() -> PdfName {
+  pdf_draw_struct_tree_root_key_name
+}
+
+///|
+fn pdf_draw_parent_tree_key() -> PdfName {
+  pdf_draw_parent_tree_key_name
+}
+
+///|
+fn pdf_draw_s_key() -> PdfName {
+  pdf_draw_s_key_name
+}
+
+///|
+fn pdf_draw_p_key() -> PdfName {
+  pdf_draw_p_key_name
+}
+
+///|
+fn pdf_draw_k_key() -> PdfName {
+  pdf_draw_k_key_name
+}
+
+///|
+fn pdf_draw_pg_key() -> PdfName {
+  pdf_draw_pg_key_name
+}
+
+///|
+fn pdf_draw_ns_key() -> PdfName {
+  pdf_draw_ns_key_name
+}
+
+///|
+fn pdf_draw_namespaces_key() -> PdfName {
+  pdf_draw_namespaces_key_name
+}
+
+///|
+fn pdf_draw_struct_parents_key() -> PdfName {
+  pdf_draw_struct_parents_key_name
+}
+
+///|
 fn pdf_draw_begin_artifact() -> PdfName {
   pdf_draw_begin_artifact_name
 }
@@ -194,6 +290,10 @@ pub fn pdf_draw_render_state_new() -> PdfDrawRenderState {
     current_fontpack_identifier: "",
     current_fontpack: { fonts: [], entries: [] },
     font_size: 12.0,
+    structure_tree_enabled: false,
+    auto_tag: true,
+    structure_page_number: 0,
+    structure_data: [],
     page_names: [],
   }
 }
@@ -281,6 +381,22 @@ fn PdfDrawRenderState::set_minimum_resource_number(
 fn PdfDrawRenderState::reset_for_page_chunk(self : PdfDrawRenderState) -> Unit {
   self.extgstates.clear()
   self.marked_content_id = -1
+}
+
+///|
+fn PdfDrawRenderState::set_structure_tree_enabled(
+  self : PdfDrawRenderState,
+  enabled : Bool,
+) -> Unit {
+  self.structure_tree_enabled = enabled
+}
+
+///|
+fn PdfDrawRenderState::set_structure_page_number(
+  self : PdfDrawRenderState,
+  page_number : Int,
+) -> Unit {
+  self.structure_page_number = page_number
 }
 
 ///|
@@ -753,9 +869,14 @@ fn PdfDrawRenderState::paragraph_ops(
       Some(value) if !first => value
       _ => 0.0
     }
-    output.append(
-      self.format_paragraph(paragraph_indent, justification, width, paragraph),
+    let paragraph_ops = self.format_paragraph(
+      paragraph_indent, justification, width, paragraph,
     )
+    if self.structure_tree_enabled && self.auto_tag {
+      output.append(self.structure_tagged_ops("/P", paragraph_ops))
+    } else {
+      output.append(paragraph_ops)
+    }
     first = false
   }
   output
@@ -818,6 +939,10 @@ fn PdfDrawRenderState::nested_form_state(
     current_fontpack_identifier: self.current_fontpack_identifier,
     current_fontpack: self.current_fontpack,
     font_size: self.font_size,
+    structure_tree_enabled: self.structure_tree_enabled,
+    auto_tag: self.auto_tag,
+    structure_page_number: self.structure_page_number,
+    structure_data: self.structure_data,
     page_names: pdf_draw_copy_page_names(self.page_names),
   }
 }
@@ -1035,12 +1160,40 @@ fn PdfDrawRenderState::tag_ops(
   tag : String,
 ) -> Array[PdfContentOp] {
   let mcid = self.fresh_mcid()
+  if self.structure_tree_enabled {
+    self.structure_data.push(
+      PdfDrawStructureMCID("/" + tag, self.structure_page_number, mcid),
+    )
+  }
   [
     Op_BDC(
       pdf_draw_name("/" + tag),
       PdfDictionary([(pdf_draw_mcid_key(), PdfInteger(mcid))]),
     ),
   ]
+}
+
+///|
+fn PdfDrawRenderState::structure_tagged_ops(
+  self : PdfDrawRenderState,
+  tag : String,
+  ops : ArrayView[PdfContentOp],
+) -> Array[PdfContentOp] {
+  let mcid = self.fresh_mcid()
+  self.structure_data.push(
+    PdfDrawStructureMCID(tag, self.structure_page_number, mcid),
+  )
+  let output : Array[PdfContentOp] = [
+    Op_BDC(
+      pdf_draw_name(tag),
+      PdfDictionary([(pdf_draw_mcid_key(), PdfInteger(mcid))]),
+    ),
+  ]
+  for op in ops {
+    output.push(op)
+  }
+  output.push(Op_EMC)
+  output
 }
 
 ///|
@@ -1140,7 +1293,14 @@ fn PdfDrawOp::to_content_ops_internal(
       }
     PdfDrawImage(source_name) =>
       match state {
-        Some(state) => [Op_Do(state.image_resource_name(source_name))]
+        Some(state) => {
+          let ops = [Op_Do(state.image_resource_name(source_name))]
+          if state.structure_tree_enabled && state.auto_tag {
+            state.structure_tagged_ops("/Figure", ops)
+          } else {
+            ops
+          }
+        }
         None => pdf_draw_content_unsupported(self)
       }
     PdfDrawImageXObject(source_name, object) =>
@@ -1171,12 +1331,26 @@ fn PdfDrawOp::to_content_ops_internal(
       }
     PdfDrawText(text) =>
       match state {
-        Some(state) => state.text_ops(text)
+        Some(state) => {
+          let ops = state.text_ops(text)
+          if state.structure_tree_enabled && state.auto_tag {
+            state.structure_tagged_ops("/P", ops)
+          } else {
+            ops
+          }
+        }
         None => pdf_draw_content_unsupported(self)
       }
     PdfDrawSpecialText(text) =>
       match (state, special_text_context) {
-        (Some(state), Some(context)) => state.text_ops(context.process(text))
+        (Some(state), Some(context)) => {
+          let ops = state.text_ops(context.process(text))
+          if state.structure_tree_enabled && state.auto_tag {
+            state.structure_tagged_ops("/P", ops)
+          } else {
+            ops
+          }
+        }
         _ => pdf_draw_content_unsupported(self)
       }
     PdfDrawPara(indent, justification, width, paragraphs) =>
@@ -1212,12 +1386,53 @@ fn PdfDrawOp::to_content_ops_internal(
     PdfDrawEndTag => [Op_EMC]
     PdfDrawBeginArtifact => [Op_BMC(pdf_draw_begin_artifact())]
     PdfDrawEndArtifact => [Op_BMC(pdf_draw_end_artifact())]
-    PdfDrawSTag(_)
-    | PdfDrawEndSTag
-    | PdfDrawNamespace(_)
-    | PdfDrawEltInfo(_, _)
-    | PdfDrawEndEltInfo(_)
-    | PdfDrawAutoTag(_) => []
+    PdfDrawSTag(name) => {
+      match state {
+        Some(state) if state.structure_tree_enabled =>
+          state.structure_data.push(PdfDrawStructureBeginTree("/" + name))
+        _ => ()
+      }
+      []
+    }
+    PdfDrawEndSTag => {
+      match state {
+        Some(state) if state.structure_tree_enabled =>
+          state.structure_data.push(PdfDrawStructureEndTree)
+        _ => ()
+      }
+      []
+    }
+    PdfDrawNamespace(namespace_uri) => {
+      match state {
+        Some(state) if state.structure_tree_enabled =>
+          state.structure_data.push(PdfDrawStructureNamespace(namespace_uri))
+        _ => ()
+      }
+      []
+    }
+    PdfDrawEltInfo(key, value) => {
+      match state {
+        Some(state) if state.structure_tree_enabled =>
+          state.structure_data.push(PdfDrawStructureElementInfo(key, value))
+        _ => ()
+      }
+      []
+    }
+    PdfDrawEndEltInfo(key) => {
+      match state {
+        Some(state) if state.structure_tree_enabled =>
+          state.structure_data.push(PdfDrawStructureEndElementInfo(key))
+        _ => ()
+      }
+      []
+    }
+    PdfDrawAutoTag(value) => {
+      match state {
+        Some(state) => state.auto_tag = value
+        None => ()
+      }
+      []
+    }
     _ => pdf_draw_content_unsupported(self)
   }
 }
@@ -1667,6 +1882,7 @@ fn PdfDocument::pdf_draw_render_page_ops(
     for index in 0..<pages.length() {
       let page_number = index + 1
       if pdf_page_box_contains_page(page_numbers, page_number) {
+        state.set_structure_page_number(page_number)
         per_page[index] = pdf_draw_single_page_ops(
           self, state, drawops, page_number, filename, bates, bates_pad, time,
         )
@@ -1701,9 +1917,7 @@ fn PdfDocument::pdf_draw_apply_chunk(
   time : PdfStrftimeTime?,
   add_artifacts : Bool,
 ) -> PdfDocument raise PdfError {
-  if struct_tree {
-    raise SoftError("Cpdfdraw: structured draw output not yet implemented")
-  }
+  state.set_structure_tree_enabled(struct_tree)
   state.set_minimum_resource_number(
     self.pdf_draw_minimum_resource_number(page_numbers),
   )
@@ -1717,7 +1931,10 @@ fn PdfDocument::pdf_draw_apply_chunk(
     let page_number = index + 1
     let page = pages[index]
     if pdf_page_box_contains_page(page_numbers, page_number) {
-      let content_ops = pdf_draw_artifact_ops(per_page[index], add_artifacts)
+      let content_ops = pdf_draw_artifact_ops(
+        per_page[index],
+        add_artifacts || struct_tree,
+      )
       let page = {
         ..page,
         resources: self.combine_pdf_resources(page.resources, draw_resources),
@@ -1749,12 +1966,353 @@ fn pdf_draw_next_range(
 }
 
 ///|
+let pdf_draw_standard_namespace : String = "http://iso.org/pdf/ssn"
+
+///|
+priv enum PdfDrawStructureNode {
+  PdfDrawStructureNodeMCID(Int)
+  PdfDrawStructureNodeItem(PdfDrawStructureItem)
+}
+
+///|
+priv struct PdfDrawStructureItem {
+  kind : String
+  namespace_uri : String
+  page_object_number : Int?
+  alt : Array[(String, PdfObject)]
+  children : Array[PdfDrawStructureNode]
+}
+
+///|
+priv struct PdfDrawStructureBuildContext {
+  mut namespace_uri : String
+  element_info : Array[(String, PdfObject)]
+}
+
+///|
+fn pdf_draw_structure_context_new() -> PdfDrawStructureBuildContext {
+  { namespace_uri: pdf_draw_standard_namespace, element_info: [] }
+}
+
+///|
+fn PdfDrawStructureBuildContext::alt_copy(
+  self : PdfDrawStructureBuildContext,
+) -> Array[(String, PdfObject)] {
+  [
+    for entry in self.element_info => entry
+  ]
+}
+
+///|
+fn PdfDrawStructureBuildContext::set_element_info(
+  self : PdfDrawStructureBuildContext,
+  key : String,
+  value : PdfObject,
+) -> Unit {
+  for index in 0..<self.element_info.length() {
+    if self.element_info[index].0 == key {
+      self.element_info[index] = (key, value)
+      return
+    }
+  }
+  self.element_info.push((key, value))
+}
+
+///|
+fn PdfDrawStructureBuildContext::remove_element_info(
+  self : PdfDrawStructureBuildContext,
+  key : String,
+) -> Unit {
+  let output : Array[(String, PdfObject)] = []
+  for entry in self.element_info {
+    if entry.0 != key {
+      output.push(entry)
+    }
+  }
+  self.element_info.clear()
+  for entry in output {
+    self.element_info.push(entry)
+  }
+}
+
+///|
+fn pdf_draw_structure_page_object_number(
+  page_object_numbers : ArrayView[Int],
+  page_number : Int,
+) -> Int? {
+  if page_number >= 1 && page_number <= page_object_numbers.length() {
+    Some(page_object_numbers[page_number - 1])
+  } else {
+    None
+  }
+}
+
+///|
+fn pdf_draw_make_structure_tree_items(
+  data : ArrayView[PdfDrawStructureData],
+  index : Ref[Int],
+  context : PdfDrawStructureBuildContext,
+  page_object_numbers : ArrayView[Int],
+  expect_end_tree : Bool,
+) -> Array[PdfDrawStructureNode] raise PdfError {
+  let output : Array[PdfDrawStructureNode] = []
+  while index.val < data.length() {
+    match data[index.val] {
+      PdfDrawStructureMCID(kind, page_number, mcid) => {
+        output.push(
+          PdfDrawStructureNodeItem({
+            kind,
+            namespace_uri: context.namespace_uri,
+            page_object_number: pdf_draw_structure_page_object_number(
+              page_object_numbers, page_number,
+            ),
+            alt: context.alt_copy(),
+            children: [PdfDrawStructureNodeMCID(mcid)],
+          }),
+        )
+        index.val += 1
+      }
+      PdfDrawStructureBeginTree(kind) => {
+        let namespace_uri = context.namespace_uri
+        let alt = context.alt_copy()
+        index.val += 1
+        let children = pdf_draw_make_structure_tree_items(
+          data, index, context, page_object_numbers, true,
+        )
+        output.push(
+          PdfDrawStructureNodeItem({
+            kind,
+            namespace_uri,
+            page_object_number: None,
+            alt,
+            children,
+          }),
+        )
+      }
+      PdfDrawStructureEndTree =>
+        if expect_end_tree {
+          index.val += 1
+          return output
+        } else {
+          raise SoftError("Too many -end-tags")
+        }
+      PdfDrawStructureNamespace(namespace_uri) => {
+        context.namespace_uri = namespace_uri
+        index.val += 1
+      }
+      PdfDrawStructureElementInfo(key, value) => {
+        context.set_element_info(key, value)
+        index.val += 1
+      }
+      PdfDrawStructureEndElementInfo(key) => {
+        context.remove_element_info(key)
+        index.val += 1
+      }
+    }
+  }
+  if expect_end_tree {
+    raise SoftError("not enough -end-stag")
+  } else {
+    output
+  }
+}
+
+///|
+fn PdfDocument::pdf_draw_make_structure_tree(
+  self : PdfDocument,
+  data : ArrayView[PdfDrawStructureData],
+) -> Array[PdfDrawStructureNode] raise PdfError {
+  let index : Ref[Int] = { val: 0 }
+  pdf_draw_make_structure_tree_items(
+    data,
+    index,
+    pdf_draw_structure_context_new(),
+    self.page_reference_numbers(),
+    false,
+  )
+}
+
+///|
+priv struct PdfDrawNamespaceMap {
+  entries : Array[(String, Int)]
+}
+
+///|
+fn pdf_draw_namespace_map_new() -> PdfDrawNamespaceMap {
+  { entries: [] }
+}
+
+///|
+fn PdfDrawNamespaceMap::object_number(
+  self : PdfDrawNamespaceMap,
+  document : PdfDocument,
+  namespace_uri : String,
+) -> Int? {
+  if namespace_uri == pdf_draw_standard_namespace {
+    None
+  } else {
+    for entry in self.entries {
+      if entry.0 == namespace_uri {
+        return Some(entry.1)
+      }
+    }
+    let number = document.add_object(
+      PdfDictionary([
+        (pdf_draw_ns_key(), PdfString(@ascii.encode(namespace_uri))),
+      ]),
+    )
+    self.entries.push((namespace_uri, number))
+    Some(number)
+  }
+}
+
+///|
+priv struct PdfDrawParentMap {
+  entries : Array[(Int, Array[Int])]
+}
+
+///|
+fn pdf_draw_parent_map_new() -> PdfDrawParentMap {
+  { entries: [] }
+}
+
+///|
+fn PdfDrawParentMap::add(
+  self : PdfDrawParentMap,
+  page_object_number : Int,
+  structure_object_number : Int,
+) -> Unit {
+  for index in 0..<self.entries.length() {
+    if self.entries[index].0 == page_object_number {
+      self.entries[index].1.push(structure_object_number)
+      return
+    }
+  }
+  self.entries.push((page_object_number, [structure_object_number]))
+}
+
+///|
+fn PdfDrawParentMap::number_tree_entries(
+  self : PdfDrawParentMap,
+) -> Array[(Int, PdfObject)] {
+  [
+    for entry in self.entries => {
+      (
+        entry.0,
+        PdfArray([ for object_number in entry.1 => PdfIndirect(object_number) ]),
+      )
+    }
+  ]
+}
+
+///|
+fn PdfDocument::pdf_draw_write_structure_node(
+  self : PdfDocument,
+  parent_object_number : Int,
+  namespaces : PdfDrawNamespaceMap,
+  parent_map : PdfDrawParentMap,
+  node : PdfDrawStructureNode,
+) -> PdfObject raise PdfError {
+  match node {
+    PdfDrawStructureNodeMCID(mcid) => PdfInteger(mcid)
+    PdfDrawStructureNodeItem(item) => {
+      let object_number = self.add_object(PdfNull)
+      match item.page_object_number {
+        Some(page_object_number) =>
+          parent_map.add(page_object_number, object_number)
+        None => ()
+      }
+      let entries : Array[(PdfName, PdfObject)] = []
+      for entry in item.alt {
+        entries.push((pdf_draw_name("/" + entry.0), entry.1))
+      }
+      match item.page_object_number {
+        Some(page_object_number) =>
+          entries.push((pdf_draw_pg_key(), PdfIndirect(page_object_number)))
+        None => ()
+      }
+      match namespaces.object_number(self, item.namespace_uri) {
+        Some(namespace_object_number) =>
+          entries.push(
+            (pdf_draw_ns_key(), PdfIndirect(namespace_object_number)),
+          )
+        None => ()
+      }
+      entries.push((pdf_draw_s_key(), PdfNameObject(pdf_draw_name(item.kind))))
+      entries.push((pdf_draw_p_key(), PdfIndirect(parent_object_number)))
+      let children : Array[PdfObject] = []
+      for child in item.children {
+        children.push(
+          self.pdf_draw_write_structure_node(
+            object_number, namespaces, parent_map, child,
+          ),
+        )
+      }
+      entries.push((pdf_draw_k_key(), PdfArray(children)))
+      self.add_object_given_number(object_number, PdfDictionary(entries))
+      PdfIndirect(object_number)
+    }
+  }
+}
+
+///|
+fn PdfDocument::pdf_draw_write_structure_tree(
+  self : PdfDocument,
+  data : ArrayView[PdfDrawStructureData],
+) -> Unit raise PdfError {
+  let tree = self.pdf_draw_make_structure_tree(data)
+  let namespaces = pdf_draw_namespace_map_new()
+  let parent_map = pdf_draw_parent_map_new()
+  let root_object_number = self.add_object(PdfNull)
+  let children : Array[PdfObject] = []
+  for node in tree {
+    children.push(
+      self.pdf_draw_write_structure_node(
+        root_object_number, namespaces, parent_map, node,
+      ),
+    )
+  }
+  for entry in parent_map.entries {
+    let page_object = self.lookup_object_or_null(entry.0)
+    self.add_object_given_number(
+      entry.0,
+      page_object.add_dict_entry(
+        pdf_draw_struct_parents_key(),
+        PdfInteger(entry.0),
+      ),
+    )
+  }
+  let parent_tree_number = self.add_object(
+    self.build_number_tree(parent_map.number_tree_entries()),
+  )
+  let root_entries : Array[(PdfName, PdfObject)] = [
+    (pdf_draw_type_key(), PdfNameObject(pdf_draw_struct_tree_root_key())),
+    (pdf_draw_parent_tree_key(), PdfIndirect(parent_tree_number)),
+    (pdf_draw_k_key(), PdfArray(children)),
+  ]
+  if namespaces.entries.length() > 0 {
+    root_entries.push(
+      (
+        pdf_draw_namespaces_key(),
+        PdfArray([ for entry in namespaces.entries => PdfIndirect(entry.1) ]),
+      ),
+    )
+  }
+  self.add_object_given_number(root_object_number, PdfDictionary(root_entries))
+  self.replace_chain(
+    [pdf_structure_root_key(), pdf_draw_struct_tree_root_key()],
+    PdfIndirect(root_object_number),
+  )
+}
+
+///|
 /// Draw cpdf draw operations on selected pages.
 ///
-/// This ports the non-structure-tree page orchestration from `cpdfdraw.ml`:
-/// draw operations are split around `PdfDrawNewPage`, selected page ranges are
-/// advanced or padded between chunks, resources are merged into page resources,
-/// and manual artifact back-channel markers are fixed before writing content.
+/// This ports the page orchestration from `cpdfdraw.ml`: draw operations are
+/// split around `PdfDrawNewPage`, selected page ranges are advanced or padded
+/// between chunks, resources are merged into page resources, manual artifact
+/// back-channel markers are fixed before writing content, and `struct_tree`
+/// writes a fresh structure tree from rendered MCIDs.
 pub fn PdfDocument::draw(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
@@ -1770,6 +2328,7 @@ pub fn PdfDocument::draw(
 ) -> PdfDocument raise PdfError {
   pdf_page_box_validate_page_numbers(page_numbers, self.endpage(), "draw")
   let state = pdf_draw_render_state_new()
+  state.set_structure_tree_enabled(struct_tree)
   let chunks = pdf_draw_split_on_new_page(
     pdf_draw_double_trailing_new_page(drawops),
   )
@@ -1778,6 +2337,11 @@ pub fn PdfDocument::draw(
   for index in 0..<chunks.length() {
     state.reset_for_page_chunk()
     if chunks[index].length() > 0 {
+      if current_pages.length() > 0 {
+        state.set_structure_page_number(current_pages[0])
+      } else {
+        state.set_structure_page_number(0)
+      }
       document = document.pdf_draw_apply_chunk(
         state,
         current_pages,
@@ -1797,6 +2361,9 @@ pub fn PdfDocument::draw(
       document = next.0
       current_pages = next.1
     }
+  }
+  if struct_tree {
+    document.pdf_draw_write_structure_tree(state.structure_data)
   }
   document
 }

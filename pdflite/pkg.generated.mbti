@@ -3076,6 +3076,10 @@ pub(all) struct PdfDrawRenderState {
   mut current_fontpack_identifier : String
   mut current_fontpack : PdfFontPack
   mut font_size : Double
+  mut structure_tree_enabled : Bool
+  mut auto_tag : Bool
+  mut structure_page_number : Int
+  structure_data : Array[PdfDrawStructureData]
   page_names : Array[@core.PdfName]
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfDrawRenderState::resources(Self) -> PdfObject
@@ -3083,6 +3087,15 @@ pub fn PdfDrawRenderState::resources(Self) -> PdfObject
 pub(all) struct PdfDrawSpecialTextContext {
   time : PdfStrftimeTime
   replacement_values : PdfAddTextReplacementValues
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfDrawStructureData {
+  PdfDrawStructureMCID(String, Int, Int)
+  PdfDrawStructureBeginTree(String)
+  PdfDrawStructureEndTree
+  PdfDrawStructureNamespace(String)
+  PdfDrawStructureElementInfo(String, PdfObject)
+  PdfDrawStructureEndElementInfo(String)
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfDrawXObjectResource {
