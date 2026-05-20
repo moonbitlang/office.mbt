@@ -41,6 +41,7 @@ pub(all) struct PdfDrawRenderState {
   mut resource_number : Int
   extgstates : Array[PdfDrawExtGStateResource]
   xobjects : Array[PdfDrawXObjectResource]
+  form_xobjects : Array[PdfDrawXObjectResource]
   page_names : Array[PdfName]
 } derive(Debug, Eq, ToJson)
 
@@ -54,6 +55,21 @@ let pdf_draw_extgstate_key_name : PdfName = pdf_draw_name("/ExtGState")
 
 ///|
 let pdf_draw_xobject_key_name : PdfName = pdf_draw_name("/XObject")
+
+///|
+let pdf_draw_length_key_name : PdfName = pdf_draw_name("/Length")
+
+///|
+let pdf_draw_subtype_key_name : PdfName = pdf_draw_name("/Subtype")
+
+///|
+let pdf_draw_form_key_name : PdfName = pdf_draw_name("/Form")
+
+///|
+let pdf_draw_resources_key_name : PdfName = pdf_draw_name("/Resources")
+
+///|
+let pdf_draw_bbox_key_name : PdfName = pdf_draw_name("/BBox")
 
 ///|
 let pdf_draw_fill_alpha_key_name : PdfName = pdf_draw_name("/ca")
@@ -72,6 +88,31 @@ fn pdf_draw_xobject_key() -> PdfName {
 }
 
 ///|
+fn pdf_draw_length_key() -> PdfName {
+  pdf_draw_length_key_name
+}
+
+///|
+fn pdf_draw_subtype_key() -> PdfName {
+  pdf_draw_subtype_key_name
+}
+
+///|
+fn pdf_draw_form_key() -> PdfName {
+  pdf_draw_form_key_name
+}
+
+///|
+fn pdf_draw_resources_key() -> PdfName {
+  pdf_draw_resources_key_name
+}
+
+///|
+fn pdf_draw_bbox_key() -> PdfName {
+  pdf_draw_bbox_key_name
+}
+
+///|
 fn pdf_draw_fill_alpha_key() -> PdfName {
   pdf_draw_fill_alpha_key_name
 }
@@ -83,7 +124,13 @@ fn pdf_draw_stroke_alpha_key() -> PdfName {
 
 ///|
 pub fn pdf_draw_render_state_new() -> PdfDrawRenderState {
-  { resource_number: 0, extgstates: [], xobjects: [], page_names: [] }
+  {
+    resource_number: 0,
+    extgstates: [],
+    xobjects: [],
+    form_xobjects: [],
+    page_names: [],
+  }
 }
 
 ///|
@@ -130,6 +177,23 @@ fn PdfDrawRenderState::register_xobject(
 }
 
 ///|
+fn PdfDrawRenderState::register_form_xobject(
+  self : PdfDrawRenderState,
+  source_name : String,
+  object_number : Int,
+) -> PdfName {
+  let resource_name = self.fresh_name("/X")
+  for index in 0..<self.form_xobjects.length() {
+    if self.form_xobjects[index].source_name == source_name {
+      self.form_xobjects[index] = { source_name, resource_name, object_number }
+      return resource_name
+    }
+  }
+  self.form_xobjects.push({ source_name, resource_name, object_number })
+  resource_name
+}
+
+///|
 fn PdfDrawRenderState::mark_page_resource(
   self : PdfDrawRenderState,
   resource_name : PdfName,
@@ -157,6 +221,63 @@ fn PdfDrawRenderState::image_resource_name(
 }
 
 ///|
+fn PdfDrawRenderState::form_resource_name(
+  self : PdfDrawRenderState,
+  source_name : String,
+) -> PdfName raise PdfError {
+  for entry in self.form_xobjects {
+    if entry.source_name == source_name {
+      self.mark_page_resource(entry.resource_name)
+      return entry.resource_name
+    }
+  }
+  raise SoftError("Form XObject not found: " + source_name)
+}
+
+///|
+fn pdf_draw_copy_xobject_resources(
+  resources : ArrayView[PdfDrawXObjectResource],
+) -> Array[PdfDrawXObjectResource] {
+  let output : Array[PdfDrawXObjectResource] = []
+  for entry in resources {
+    output.push(entry)
+  }
+  output
+}
+
+///|
+fn pdf_draw_copy_page_names(names : ArrayView[PdfName]) -> Array[PdfName] {
+  let output : Array[PdfName] = []
+  for name in names {
+    output.push(name)
+  }
+  output
+}
+
+///|
+fn PdfDrawRenderState::nested_form_state(
+  self : PdfDrawRenderState,
+) -> PdfDrawRenderState {
+  {
+    resource_number: self.resource_number,
+    extgstates: [],
+    xobjects: pdf_draw_copy_xobject_resources(self.xobjects),
+    form_xobjects: pdf_draw_copy_xobject_resources(self.form_xobjects),
+    page_names: pdf_draw_copy_page_names(self.page_names),
+  }
+}
+
+///|
+fn PdfDrawRenderState::adopt_resource_number(
+  self : PdfDrawRenderState,
+  child : PdfDrawRenderState,
+) -> Unit {
+  if child.resource_number > self.resource_number {
+    self.resource_number = child.resource_number
+  }
+}
+
+///|
 fn pdf_draw_resource_is_used(
   page_names : ArrayView[PdfName],
   name : PdfName,
@@ -180,6 +301,11 @@ pub fn PdfDrawRenderState::resources(self : PdfDrawRenderState) -> PdfObject {
   }
   let xobjects : Array[(PdfName, PdfObject)] = []
   for entry in self.xobjects {
+    if pdf_draw_resource_is_used(self.page_names, entry.resource_name) {
+      xobjects.push((entry.resource_name, PdfIndirect(entry.object_number)))
+    }
+  }
+  for entry in self.form_xobjects {
     if pdf_draw_resource_is_used(self.page_names, entry.resource_name) {
       xobjects.push((entry.resource_name, PdfIndirect(entry.object_number)))
     }
@@ -315,6 +441,28 @@ fn pdf_draw_content_unsupported(
 }
 
 ///|
+fn pdf_draw_form_xobject_stream(
+  bbox : (Double, Double, Double, Double),
+  resources : PdfObject,
+  ops : ArrayView[PdfContentOp],
+) -> PdfObject raise PdfError {
+  let data = pdf_content_bytes_of_ops(ops)
+  let (a, b, c, d) = bbox
+  pdf_stream(
+    PdfDictionary([
+      (pdf_draw_length_key(), PdfInteger(data.length())),
+      (pdf_draw_subtype_key(), PdfNameObject(pdf_draw_form_key())),
+      (pdf_draw_resources_key(), resources),
+      (
+        pdf_draw_bbox_key(),
+        PdfArray([PdfReal(a), PdfReal(b), PdfReal(c), PdfReal(d)]),
+      ),
+    ]),
+    StreamGot(data),
+  )
+}
+
+///|
 fn PdfDrawOp::to_content_ops_internal(
   self : PdfDrawOp,
   state : PdfDrawRenderState?,
@@ -363,6 +511,30 @@ fn PdfDrawOp::to_content_ops_internal(
     PdfDrawFillStrokeEvenOdd => [Op_Bstar]
     PdfDrawClip => [Op_W, Op_n]
     PdfDrawClipEvenOdd => [Op_Wstar, Op_n]
+    PdfDrawFormXObject(a, b, c, d, source_name, ops) =>
+      match (state, document) {
+        (Some(state), Some(document)) => {
+          let form_state = state.nested_form_state()
+          let content_ops = pdf_drawops_to_content_ops_with_document(
+            form_state, document, ops,
+          )
+          let form_object = pdf_draw_form_xobject_stream(
+            (a, b, c, d),
+            form_state.resources(),
+            content_ops,
+          )
+          state.adopt_resource_number(form_state)
+          let object_number = document.add_object(form_object)
+          let _ = state.register_form_xobject(source_name, object_number)
+          []
+        }
+        _ => pdf_draw_content_unsupported(self)
+      }
+    PdfDrawUse(source_name) =>
+      match state {
+        Some(state) => [Op_Do(state.form_resource_name(source_name))]
+        None => pdf_draw_content_unsupported(self)
+      }
     PdfDrawImage(source_name) =>
       match state {
         Some(state) => [Op_Do(state.image_resource_name(source_name))]

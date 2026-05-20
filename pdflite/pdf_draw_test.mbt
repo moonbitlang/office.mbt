@@ -291,6 +291,122 @@ test "pdf draw image use reports missing image name" {
 }
 
 ///|
+test "pdf draw document-aware form XObjects register streams and emit Do" {
+  let document = @pdflite.pdf_document_empty()
+  let state = @pdflite.pdf_draw_render_state_new()
+  let x1 = draw_name_for_test("/X1")
+  let xobject = draw_name_for_test("/XObject")
+  let subtype = draw_name_for_test("/Subtype")
+  let form = draw_name_for_test("/Form")
+  let resources = draw_name_for_test("/Resources")
+  let bbox = draw_name_for_test("/BBox")
+  let ops = try! @pdflite.pdf_drawops_to_content_ops_with_document(
+    state,
+    document,
+    [
+      PdfDrawFormXObject(0.0, 0.0, 20.0, 30.0, "stamp", [
+        PdfDrawRect(1.0, 2.0, 3.0, 4.0),
+        PdfDrawStroke,
+      ]),
+      PdfDrawUse("stamp"),
+    ],
+  )
+  @test.assert_eq(ops, [Op_Do(x1)])
+
+  let form_object = document.lookup_object_or_null(1)
+  guard form_object is PdfStreamObject(stream) else {
+    fail("expected form XObject stream")
+  }
+  @test.assert_eq(
+    stream.dictionary.lookup_immediate(subtype),
+    Some(PdfNameObject(form)),
+  )
+  @test.assert_eq(
+    stream.dictionary.lookup_immediate(resources),
+    Some(PdfDictionary([])),
+  )
+  @test.assert_eq(
+    stream.dictionary.lookup_immediate(bbox),
+    Some(PdfArray([PdfReal(0.0), PdfReal(0.0), PdfReal(20.0), PdfReal(30.0)])),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_parse_content_ops_from_bytes(
+      try! form_object.stream_bytes(),
+    ),
+    [Op_re(1.0, 2.0, 3.0, 4.0), Op_S],
+  )
+
+  guard state.resources().lookup_immediate(xobject) is Some(xobjects) else {
+    fail("expected XObject resources")
+  }
+  @test.assert_eq(xobjects.lookup_immediate(x1), Some(PdfIndirect(1)))
+}
+
+///|
+test "pdf draw form XObjects carry nested image resources" {
+  let document = @pdflite.pdf_document_empty()
+  let state = @pdflite.pdf_draw_render_state_new()
+  let image_object : @pdflite.PdfObject = PdfDictionary([
+    (
+      draw_name_for_test("/Subtype"),
+      PdfNameObject(draw_name_for_test("/Image")),
+    ),
+  ])
+  let im1 = draw_name_for_test("/I1")
+  let x2 = draw_name_for_test("/X2")
+  let xobject = draw_name_for_test("/XObject")
+  let resources = draw_name_for_test("/Resources")
+  let ops = try! @pdflite.pdf_drawops_to_content_ops_with_document(
+    state,
+    document,
+    [
+      PdfDrawImageXObject("logo", image_object),
+      PdfDrawFormXObject(0.0, 0.0, 10.0, 10.0, "stamp", [PdfDrawImage("logo")]),
+      PdfDrawUse("stamp"),
+    ],
+  )
+  @test.assert_eq(ops, [Op_Do(x2)])
+  @test.assert_eq(document.lookup_object_or_null(1), image_object)
+
+  let form_object = document.lookup_object_or_null(2)
+  guard form_object is PdfStreamObject(stream) else {
+    fail("expected form XObject stream")
+  }
+  @test.assert_eq(
+    try! @pdflite.pdf_parse_content_ops_from_bytes(
+      try! form_object.stream_bytes(),
+    ),
+    [Op_Do(im1)],
+  )
+  guard stream.dictionary.lookup_immediate(resources) is Some(form_resources) else {
+    fail("expected form resources")
+  }
+  guard form_resources.lookup_immediate(xobject) is Some(form_xobjects) else {
+    fail("expected nested XObject resources")
+  }
+  @test.assert_eq(form_xobjects.lookup_immediate(im1), Some(PdfIndirect(1)))
+
+  guard state.resources().lookup_immediate(xobject) is Some(page_xobjects) else {
+    fail("expected page XObject resources")
+  }
+  @test.assert_eq(page_xobjects.lookup_immediate(im1), None)
+  @test.assert_eq(page_xobjects.lookup_immediate(x2), Some(PdfIndirect(2)))
+}
+
+///|
+test "pdf draw form use reports missing form name" {
+  let state = @pdflite.pdf_draw_render_state_new()
+  let result : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_drawop_to_content_ops_with_state(
+    state,
+    PdfDrawUse("missing"),
+  )
+  guard result is Err(@pdflite.PdfError::SoftError(message)) else {
+    fail("expected SoftError for missing form XObject")
+  }
+  @test.assert_eq(message, "Form XObject not found: missing")
+}
+
+///|
 test "pdf draw unsupported content op returns cpdf-style soft error" {
   let result : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_drawop_to_content_ops(
     PdfDrawText("hello"),
