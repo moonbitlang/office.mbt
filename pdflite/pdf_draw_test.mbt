@@ -1556,6 +1556,27 @@ test "pdf draw control text helpers add fontpack once and font text ops" {
 }
 
 ///|
+test "pdf draw control default fontpack helper appends once" {
+  let control = @pdflite.pdf_draw_control_new()
+  let first : @pdflite.PdfFontPack = { fonts: [], entries: [] }
+  let second : @pdflite.PdfFontPack = {
+    fonts: [draw_standard_font_for_test(PdfHelvetica)],
+    entries: [],
+  }
+  control.set_fontpack(Some(first))
+  try! control.add_default_fontpack("Body")
+  try! control.add_default_fontpack("Ignored")
+  @test.assert_eq(control.ops(), [PdfDrawFontPack("Body", first, [])])
+
+  control.set_fontpack(Some(second))
+  try! control.add_default_fontpack("Other")
+  @test.assert_eq(control.ops(), [
+    PdfDrawFontPack("Body", first, []),
+    PdfDrawFontPack("Other", second, []),
+  ])
+}
+
+///|
 test "pdf draw control paragraph helpers parse justification width and escaped newlines" {
   let document = @pdflite.pdf_document_empty()
   let control = @pdflite.pdf_draw_control_new()

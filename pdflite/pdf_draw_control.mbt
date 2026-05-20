@@ -625,13 +625,17 @@ fn PdfDrawControl::ensure_text_section(
 }
 
 ///|
-fn PdfDrawControl::add_default_fontpack(
+/// Append the current font pack once under `font_name`.
+///
+/// This ports `cpdfdrawcontrol.ml`'s `add_default_fontpack fontname` helper.
+/// Calling `set_fontpack` resets the one-shot guard.
+pub fn PdfDrawControl::add_default_fontpack(
   self : PdfDrawControl,
+  font_name : String,
 ) -> Unit raise PdfError {
   if !self.fontpack_initialized {
     match self.fontpack {
-      Some(fontpack) =>
-        self.add_op(PdfDrawFontPack(self.font_name, fontpack, []))
+      Some(fontpack) => self.add_op(PdfDrawFontPack(font_name, fontpack, []))
       None => ()
     }
     self.fontpack_initialized = true
@@ -651,7 +655,7 @@ pub fn PdfDrawControl::add_text(
   text : String,
 ) -> Unit raise PdfError {
   self.ensure_text_section("-text must be in a -bt / -et section")
-  self.add_default_fontpack()
+  self.add_default_fontpack(self.font_name)
   self.add_current_font()
   self.add_op(PdfDrawText(text))
 }
@@ -662,7 +666,7 @@ pub fn PdfDrawControl::add_special_text(
   text : String,
 ) -> Unit raise PdfError {
   self.ensure_text_section("-stext must be in a -bt / -et section")
-  self.add_default_fontpack()
+  self.add_default_fontpack(self.font_name)
   self.add_current_font()
   self.add_op(PdfDrawSpecialText(text))
 }
@@ -738,7 +742,7 @@ pub fn PdfDrawControl::add_para(
   spec : String,
 ) -> Unit raise PdfError {
   self.ensure_text_section("-para must be in a -bt / -et section")
-  self.add_default_fontpack()
+  self.add_default_fontpack(self.font_name)
   self.add_current_font()
   let (justification, width, text) = pdf_draw_control_parse_para_spec(
     document, spec,
@@ -753,7 +757,7 @@ pub fn PdfDrawControl::add_paras(
   spec : String,
 ) -> Unit raise PdfError {
   self.ensure_text_section("-paras must be in a -bt / -et section")
-  self.add_default_fontpack()
+  self.add_default_fontpack(self.font_name)
   self.add_current_font()
   let (justification, width, text) = pdf_draw_control_parse_para_spec(
     document, spec,

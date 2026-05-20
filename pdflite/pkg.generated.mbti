@@ -2909,6 +2909,7 @@ pub fn PdfDrawControl::add_bezier13(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_bezier23(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_char_space(Self, Double) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_circle(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_default_fontpack(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_element_info(Self, String, PdfObject) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_image(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::add_jpeg2000_data(Self, String, BytesView) -> Unit raise @core.PdfError

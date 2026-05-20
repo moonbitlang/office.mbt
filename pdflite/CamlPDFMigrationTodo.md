@@ -2337,6 +2337,16 @@ Current backend snapshot:
   `moon check --target native --warn-list +73` passing with the known markdown
   main-package warning and 10-warning baseline. Full native suite validation is
   deferred to the next batch.~~
+- [x] ~~`cpdfdrawcontrol.ml`'s explicit `add_default_fontpack fontname`
+  helper is now public on `PdfDrawControl`, appending the configured font pack
+  once under the supplied font name and resetting that one-shot state when
+  `set_fontpack` changes the configured pack. Coverage pins one-shot insertion,
+  ignored duplicate calls, and re-emission after a fontpack reset. Focused
+  native validation reports `moon test --target native pdf_draw_test.mbt` at
+  55/55 tests passing; native check validation reports `moon check --target
+  native --warn-list +73` passing with the known markdown main-package warning
+  and 10-warning baseline. Full native suite validation is due at this batch
+  gate.~~
 - [x] ~~Standalone `cpdfcreate.ml` blank-document slice exposes
   `pdf_blank_document` and `pdf_blank_document_paper`, covering point-sized
   pages, named paper sizes, zero-page documents, page-tree/root creation, and
