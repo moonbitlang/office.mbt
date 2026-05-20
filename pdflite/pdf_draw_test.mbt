@@ -1,4 +1,9 @@
 ///|
+fn draw_name_for_test(text : String) -> @pdflite.PdfName {
+  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+}
+
+///|
 test "pdf draw debug strings match cpdf spelling" {
   @test.assert_eq(
     @pdflite.pdf_string_of_drawop(PdfDrawRect(0.0, 0.0, 1.0, 2.0)),
@@ -170,6 +175,44 @@ test "pdf draw text section and text state ops convert to PDF content ops" {
     Op_ET,
   ]
   @test.assert_eq(try! @pdflite.pdf_drawops_to_content_ops(ops), expected)
+}
+
+///|
+test "pdf draw render state caches opacity ExtGState resources" {
+  let state = @pdflite.pdf_draw_render_state_new()
+  let g1 = draw_name_for_test("/G1")
+  let g2 = draw_name_for_test("/G2")
+  let extgstate = draw_name_for_test("/ExtGState")
+  let ca = draw_name_for_test("/ca")
+  let ca_stroke = draw_name_for_test("/CA")
+  let ops = try! @pdflite.pdf_drawops_to_content_ops_with_state(state, [
+    PdfDrawOpacity(0.5),
+    PdfDrawSOpacity(0.25),
+    PdfDrawQq([PdfDrawOpacity(0.5)]),
+    PdfDrawTextSection([PdfDrawSOpacity(0.25)]),
+  ])
+  @test.assert_eq(ops, [
+    Op_gs(g1),
+    Op_gs(g2),
+    Op_q,
+    Op_gs(g1),
+    Op_Q,
+    Op_BT,
+    Op_gs(g2),
+    Op_ET,
+  ])
+
+  guard state.resources().lookup_immediate(extgstate) is Some(resources) else {
+    fail("expected ExtGState resources")
+  }
+  @test.assert_eq(
+    resources.lookup_immediate(g1),
+    Some(PdfDictionary([(ca, PdfReal(0.5))])),
+  )
+  @test.assert_eq(
+    resources.lookup_immediate(g2),
+    Some(PdfDictionary([(ca_stroke, PdfReal(0.25))])),
+  )
 }
 
 ///|

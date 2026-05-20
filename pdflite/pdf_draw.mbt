@@ -18,6 +18,99 @@ pub(all) enum PdfDrawJustification {
 } derive(Debug, Eq, ToJson)
 
 ///|
+pub(all) struct PdfDrawExtGStateResource {
+  kind : PdfName
+  value : Double
+  name : PdfName
+} derive(Debug, Eq, ToJson)
+
+///|
+/// Resource allocation state for rendering cpdf draw operations.
+///
+/// This ports the resource-numbering and ExtGState cache used by
+/// `cpdfdraw.ml`'s `res`/`fresh_name`/`extgstate` helpers. Later rendering
+/// slices will extend this state with image, font, and form-XObject resources.
+pub(all) struct PdfDrawRenderState {
+  mut resource_number : Int
+  extgstates : Array[PdfDrawExtGStateResource]
+} derive(Debug, Eq, ToJson)
+
+///|
+fn pdf_draw_name(text : String) -> PdfName {
+  pdf_name_of_bytes(@ascii.encode(text))
+}
+
+///|
+let pdf_draw_extgstate_key_name : PdfName = pdf_draw_name("/ExtGState")
+
+///|
+let pdf_draw_fill_alpha_key_name : PdfName = pdf_draw_name("/ca")
+
+///|
+let pdf_draw_stroke_alpha_key_name : PdfName = pdf_draw_name("/CA")
+
+///|
+fn pdf_draw_extgstate_key() -> PdfName {
+  pdf_draw_extgstate_key_name
+}
+
+///|
+fn pdf_draw_fill_alpha_key() -> PdfName {
+  pdf_draw_fill_alpha_key_name
+}
+
+///|
+fn pdf_draw_stroke_alpha_key() -> PdfName {
+  pdf_draw_stroke_alpha_key_name
+}
+
+///|
+pub fn pdf_draw_render_state_new() -> PdfDrawRenderState {
+  { resource_number: 0, extgstates: [] }
+}
+
+///|
+fn PdfDrawRenderState::fresh_name(
+  self : PdfDrawRenderState,
+  prefix : String,
+) -> PdfName {
+  self.resource_number += 1
+  pdf_draw_name(prefix + self.resource_number.to_string())
+}
+
+///|
+fn PdfDrawRenderState::extgstate(
+  self : PdfDrawRenderState,
+  kind : PdfName,
+  value : Double,
+) -> PdfName {
+  for entry in self.extgstates {
+    if entry.kind == kind && entry.value == value {
+      return entry.name
+    }
+  }
+  let name = self.fresh_name("/G")
+  self.extgstates.push({ kind, value, name })
+  name
+}
+
+///|
+/// Return the resource dictionary needed by the operations rendered so far.
+pub fn PdfDrawRenderState::resources(self : PdfDrawRenderState) -> PdfObject {
+  let states : Array[(PdfName, PdfObject)] = []
+  for entry in self.extgstates {
+    states.push(
+      (entry.name, PdfDictionary([(entry.kind, PdfReal(entry.value))])),
+    )
+  }
+  if states.length() == 0 {
+    PdfDictionary([])
+  } else {
+    PdfDictionary([(pdf_draw_extgstate_key(), PdfDictionary(states))])
+  }
+}
+
+///|
 /// Source-level cpdf draw operation.
 ///
 /// This mirrors the operation shape from `cpdfdraw.ml`. The first rendering
@@ -138,6 +231,77 @@ fn pdf_draw_content_unsupported(
 }
 
 ///|
+fn PdfDrawOp::to_content_ops_internal(
+  self : PdfDrawOp,
+  state : PdfDrawRenderState?,
+) -> Array[PdfContentOp] raise PdfError {
+  match self {
+    PdfDrawQq(ops) => {
+      let output : Array[PdfContentOp] = [Op_q]
+      for op in ops {
+        for content_op in op.to_content_ops_internal(state) {
+          output.push(content_op)
+        }
+      }
+      output.push(Op_Q)
+      output
+    }
+    PdfDrawTextSection(ops) => {
+      let output : Array[PdfContentOp] = [Op_BT]
+      for op in ops {
+        for content_op in op.to_content_ops_internal(state) {
+          output.push(content_op)
+        }
+      }
+      output.push(Op_ET)
+      output
+    }
+    PdfDrawSetFill(colour) => pdf_draw_colour_fill_ops(colour)
+    PdfDrawSetStroke(colour) => pdf_draw_colour_stroke_ops(colour)
+    PdfDrawSetLineThickness(width) => [Op_w(width)]
+    PdfDrawSetLineCap(cap) => [Op_J(cap)]
+    PdfDrawSetLineJoin(join) => [Op_j(join)]
+    PdfDrawSetMiterLimit(limit) => [Op_M(limit)]
+    PdfDrawSetDashPattern(dashes, phase) => [Op_d(dashes, phase)]
+    PdfDrawMatrix(matrix) => [Op_cm(matrix)]
+    PdfDrawRect(x, y, w, h) => [Op_re(x, y, w, h)]
+    PdfDrawBezier(x1, y1, x2, y2, x3, y3) => [Op_c(x1, y1, x2, y2, x3, y3)]
+    PdfDrawBezier23(x2, y2, x3, y3) => [Op_v(x2, y2, x3, y3)]
+    PdfDrawBezier13(x1, y1, x3, y3) => [Op_y(x1, y1, x3, y3)]
+    PdfDrawTo(x, y) => [Op_m(x, y)]
+    PdfDrawLine(x, y) => [Op_l(x, y)]
+    PdfDrawClosePath => [Op_h]
+    PdfDrawFill => [Op_f]
+    PdfDrawFillEvenOdd => [Op_fstar]
+    PdfDrawStroke => [Op_S]
+    PdfDrawFillStroke => [Op_B]
+    PdfDrawFillStrokeEvenOdd => [Op_Bstar]
+    PdfDrawClip => [Op_W, Op_n]
+    PdfDrawClipEvenOdd => [Op_Wstar, Op_n]
+    PdfDrawOpacity(value) =>
+      match state {
+        Some(state) =>
+          [Op_gs(state.extgstate(pdf_draw_fill_alpha_key(), value))]
+        None => pdf_draw_content_unsupported(self)
+      }
+    PdfDrawSOpacity(value) =>
+      match state {
+        Some(state) =>
+          [Op_gs(state.extgstate(pdf_draw_stroke_alpha_key(), value))]
+        None => pdf_draw_content_unsupported(self)
+      }
+    PdfDrawLeading(leading) => [Op_TL(leading)]
+    PdfDrawCharSpace(spacing) => [Op_Tc(spacing)]
+    PdfDrawWordSpace(spacing) => [Op_Tw(spacing)]
+    PdfDrawTextScale(scale) => [Op_Tz(scale)]
+    PdfDrawRenderMode(mode) => [Op_Tr(mode)]
+    PdfDrawRise(rise) => [Op_Ts(rise)]
+    PdfDrawNewline => [Op_Tstar]
+    _ => pdf_draw_content_unsupported(self)
+  }
+}
+
+///|
 /// Return the cpdf diagnostic spelling for one draw operation.
 pub fn PdfDrawOp::debug_name(self : PdfDrawOp) -> String {
   match self {
@@ -225,58 +389,16 @@ pub fn pdf_string_of_drawop(op : PdfDrawOp) -> String {
 pub fn PdfDrawOp::to_content_ops(
   self : PdfDrawOp,
 ) -> Array[PdfContentOp] raise PdfError {
-  match self {
-    PdfDrawQq(ops) => {
-      let output : Array[PdfContentOp] = [Op_q]
-      for op in ops {
-        for content_op in op.to_content_ops() {
-          output.push(content_op)
-        }
-      }
-      output.push(Op_Q)
-      output
-    }
-    PdfDrawTextSection(ops) => {
-      let output : Array[PdfContentOp] = [Op_BT]
-      for op in ops {
-        for content_op in op.to_content_ops() {
-          output.push(content_op)
-        }
-      }
-      output.push(Op_ET)
-      output
-    }
-    PdfDrawSetFill(colour) => pdf_draw_colour_fill_ops(colour)
-    PdfDrawSetStroke(colour) => pdf_draw_colour_stroke_ops(colour)
-    PdfDrawSetLineThickness(width) => [Op_w(width)]
-    PdfDrawSetLineCap(cap) => [Op_J(cap)]
-    PdfDrawSetLineJoin(join) => [Op_j(join)]
-    PdfDrawSetMiterLimit(limit) => [Op_M(limit)]
-    PdfDrawSetDashPattern(dashes, phase) => [Op_d(dashes, phase)]
-    PdfDrawMatrix(matrix) => [Op_cm(matrix)]
-    PdfDrawRect(x, y, w, h) => [Op_re(x, y, w, h)]
-    PdfDrawBezier(x1, y1, x2, y2, x3, y3) => [Op_c(x1, y1, x2, y2, x3, y3)]
-    PdfDrawBezier23(x2, y2, x3, y3) => [Op_v(x2, y2, x3, y3)]
-    PdfDrawBezier13(x1, y1, x3, y3) => [Op_y(x1, y1, x3, y3)]
-    PdfDrawTo(x, y) => [Op_m(x, y)]
-    PdfDrawLine(x, y) => [Op_l(x, y)]
-    PdfDrawClosePath => [Op_h]
-    PdfDrawFill => [Op_f]
-    PdfDrawFillEvenOdd => [Op_fstar]
-    PdfDrawStroke => [Op_S]
-    PdfDrawFillStroke => [Op_B]
-    PdfDrawFillStrokeEvenOdd => [Op_Bstar]
-    PdfDrawClip => [Op_W, Op_n]
-    PdfDrawClipEvenOdd => [Op_Wstar, Op_n]
-    PdfDrawLeading(leading) => [Op_TL(leading)]
-    PdfDrawCharSpace(spacing) => [Op_Tc(spacing)]
-    PdfDrawWordSpace(spacing) => [Op_Tw(spacing)]
-    PdfDrawTextScale(scale) => [Op_Tz(scale)]
-    PdfDrawRenderMode(mode) => [Op_Tr(mode)]
-    PdfDrawRise(rise) => [Op_Ts(rise)]
-    PdfDrawNewline => [Op_Tstar]
-    _ => pdf_draw_content_unsupported(self)
-  }
+  self.to_content_ops_internal(None)
+}
+
+///|
+/// Convert one cpdf draw operation using resource allocation state.
+pub fn PdfDrawOp::to_content_ops_with_state(
+  self : PdfDrawOp,
+  state : PdfDrawRenderState,
+) -> Array[PdfContentOp] raise PdfError {
+  self.to_content_ops_internal(Some(state))
 }
 
 ///|
@@ -299,4 +421,28 @@ pub fn pdf_drawop_to_content_ops(
   op : PdfDrawOp,
 ) -> Array[PdfContentOp] raise PdfError {
   op.to_content_ops()
+}
+
+///|
+/// Convert a sequence of cpdf draw operations using resource allocation state.
+pub fn pdf_drawops_to_content_ops_with_state(
+  state : PdfDrawRenderState,
+  ops : ArrayView[PdfDrawOp],
+) -> Array[PdfContentOp] raise PdfError {
+  let output : Array[PdfContentOp] = []
+  for op in ops {
+    for content_op in op.to_content_ops_with_state(state) {
+      output.push(content_op)
+    }
+  }
+  output
+}
+
+///|
+/// Compatibility wrapper for `PdfDrawOp::to_content_ops_with_state`.
+pub fn pdf_drawop_to_content_ops_with_state(
+  state : PdfDrawRenderState,
+  op : PdfDrawOp,
+) -> Array[PdfContentOp] raise PdfError {
+  op.to_content_ops_with_state(state)
 }

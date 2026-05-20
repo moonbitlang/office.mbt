@@ -581,11 +581,17 @@ pub fn pdf_draw_control() -> PdfDrawControl
 
 pub fn pdf_draw_control_new() -> PdfDrawControl
 
+pub fn pdf_draw_render_state_new() -> PdfDrawRenderState
+
 pub fn pdf_drawn_path_content_json(PdfDrawnPath) -> Json
 
 pub fn pdf_drawop_to_content_ops(PdfDrawOp) -> Array[PdfContentOp] raise @core.PdfError
 
+pub fn pdf_drawop_to_content_ops_with_state(PdfDrawRenderState, PdfDrawOp) -> Array[PdfContentOp] raise @core.PdfError
+
 pub fn pdf_drawops_to_content_ops(ArrayView[PdfDrawOp]) -> Array[PdfContentOp] raise @core.PdfError
+
+pub fn pdf_drawops_to_content_ops_with_state(PdfDrawRenderState, ArrayView[PdfDrawOp]) -> Array[PdfContentOp] raise @core.PdfError
 
 pub fn pdf_encode_filter_bytes(@core.PdfName, Bytes) -> Bytes raise @core.PdfError
 
@@ -2953,6 +2959,12 @@ pub(all) struct PdfDrawControlFrame {
   ops : Array[PdfDrawOp]
 } derive(Eq, ToJson, @debug.Debug)
 
+pub(all) struct PdfDrawExtGStateResource {
+  kind : @core.PdfName
+  value : Double
+  name : @core.PdfName
+} derive(Eq, ToJson, @debug.Debug)
+
 pub(all) enum PdfDrawJustification {
   PdfDrawLeft
   PdfDrawRight
@@ -3016,6 +3028,13 @@ pub(all) enum PdfDrawOp {
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfDrawOp::debug_name(Self) -> String
 pub fn PdfDrawOp::to_content_ops(Self) -> Array[PdfContentOp] raise @core.PdfError
+pub fn PdfDrawOp::to_content_ops_with_state(Self, PdfDrawRenderState) -> Array[PdfContentOp] raise @core.PdfError
+
+pub(all) struct PdfDrawRenderState {
+  mut resource_number : Int
+  extgstates : Array[PdfDrawExtGStateResource]
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfDrawRenderState::resources(Self) -> PdfObject
 
 pub(all) struct PdfDrawnPath {
   stroked : Bool
