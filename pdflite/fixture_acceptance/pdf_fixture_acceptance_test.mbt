@@ -930,6 +930,37 @@ async test "checked-in Pandoc CJK fixture reconstructs object-stream bad startxr
 }
 
 ///|
+async test "optional cpdf source hello fixture reads and rewrites" {
+  match
+    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    None => ()
+    Some(bytes) =>
+      fixture_acceptance_assert_reads_and_rewrites_for_test(bytes, 1)
+  }
+}
+
+///|
+async test "optional cpdf source hello fixture reconstructs bad startxref" {
+  match
+    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    None => ()
+    Some(bytes) => fixture_acceptance_assert_reconstructs_for_test(bytes, 1)
+  }
+}
+
+///|
+async test "optional cpdf source hello fixture reconstructs malformed classic xref row" {
+  match
+    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    None => ()
+    Some(bytes) =>
+      fixture_acceptance_assert_classic_xref_marker_reconstructs_for_test(
+        bytes, 1,
+      )
+  }
+}
+
+///|
 async test "optional cpdf source manual fixture reads and rewrites" {
   match
     fixture_acceptance_optional_bytes_for_test(

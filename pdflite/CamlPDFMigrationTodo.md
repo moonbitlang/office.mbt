@@ -1736,6 +1736,13 @@ Current backend snapshot:
   rewrite/reread preservation. `moon test --target native fixture_acceptance`
   reports 22/22 tests passing; native full-suite validation reports 2167/2167
   tests passing.~~
+- [x] ~~Add an optional `.repos/cpdf-source/hello.pdf` source-corpus gate:
+  `fixture_acceptance` now reads the unique top-level PDF 1.1 hello fixture,
+  rewrites/rereads it with compressed xref streams, corrupts its final
+  `startxref`, and corrupts its first in-use classic xref marker to require
+  public reconstruction. `moon test --target native fixture_acceptance` reports
+  25/25 tests passing; native full-suite validation reports 2170/2170 tests
+  passing.~~
 - [ ] Add further malformed xref-table/xref-stream/object-stream recovery cases
   from real-world PDFs.
 - [x] ~~Add a native reader-boundary gate for the next available predefined CMap
