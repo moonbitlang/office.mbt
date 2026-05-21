@@ -6342,6 +6342,25 @@ Current backend snapshot:
   `moon info && moon fmt` reports no pending interface or formatting work, and
   `moon check --target all --warn-list +73` reports the known warning-73/main-
   package baseline with 7 warnings and 0 errors.~~
+- [x] ~~Broaden the source-boundary `cpdftexttopdf` PDF/UA slice: optional
+  `.repos/cpdf-source/README.md` now also feeds the real source README bytes
+  through `pdf_texttopdf_typeset` with `subformat=Some(PdfUA2)` and a required
+  title, exercising the source `cpdftexttopdf.ml` branch where PDF/UA
+  subformats force structure-tree processing. The gate reuses the source README
+  extraction and paragraph-tag assertions, then verifies PDF 2.0 output, `/Info`
+  title, `/MarkInfo /Marked true`, `/Lang (en-US)`, the `/ViewerPreferences`
+  `/DisplayDocTitle true` pair, the PDF/UA-2 namespace object, the `/StructTreeRoot`
+  raw reference, the document node under root `/K`, namespace parent links, and
+  paragraph `/P` parent references, before repeating all assertions through
+  compressed xref-stream rewrite/reread and bad-`startxref` recovery. `moon
+  check --target native fixture_acceptance --warn-list +73` passes, `moon test
+  --target native fixture_acceptance --filter 'optional cpdf source README
+  typesets PDF UA2 text PDF'` reports 1/1 test passing, `moon test --target
+  native fixture_acceptance` reports 110/110 tests passing, `moon test --target
+  native` reports 2282/2282 tests passing, `moon info && moon fmt` reports no
+  pending interface or formatting work, and `moon check --target all --warn-list
+  +73` reports the known warning-73/main-package baseline with 7 warnings and 0
+  errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, additional real-world ToUnicode/CMap fixtures when source
   material is available, or broader real-world image corpus coverage.

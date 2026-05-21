@@ -2892,6 +2892,96 @@ fn fixture_acceptance_assert_cpdf_source_readme_texttopdf_for_test(
 }
 
 ///|
+fn fixture_acceptance_assert_cpdf_source_readme_pdfua2_for_test(
+  document : @pdflite.PdfDocument,
+  title : String,
+) -> Unit raise {
+  fixture_acceptance_assert_cpdf_source_readme_texttopdf_for_test(document)
+  @test.assert_eq(document.version(), (2, 0))
+  @test.assert_eq(
+    document.info_utf8(fixture_acceptance_pdf_name_for_test("/Title")),
+    title,
+  )
+  let catalog = document.catalog()
+  let mark_info = fixture_acceptance_lookup_required_for_test(
+    document, "/MarkInfo", catalog,
+  )
+  @test.assert_eq(
+    fixture_acceptance_lookup_required_for_test(document, "/Marked", mark_info),
+    PdfBoolean(true),
+  )
+  @test.assert_eq(
+    fixture_acceptance_lookup_required_for_test(document, "/Lang", catalog),
+    PdfString(@ascii.encode("en-US")),
+  )
+  let viewer_preferences = fixture_acceptance_lookup_required_for_test(
+    document, "/ViewerPreferences", catalog,
+  )
+  @test.assert_eq(
+    fixture_acceptance_lookup_required_for_test(
+      document, "/DisplayDocTitle", viewer_preferences,
+    ),
+    PdfBoolean(true),
+  )
+  let (struct_root_number, struct_root) = fixture_acceptance_lookup_immediate_indirect_required_for_test(
+    document, "/StructTreeRoot", catalog,
+  )
+  let namespaces = fixture_acceptance_lookup_required_for_test(
+    document, "/Namespaces", struct_root,
+  )
+  guard namespaces is PdfArray([PdfIndirect(namespace_number)]) else {
+    fail("expected PDF/UA-2 namespace array")
+  }
+  let namespace_object = document.lookup_object_or_null(namespace_number)
+  @test.assert_eq(
+    fixture_acceptance_lookup_required_for_test(
+      document, "/NS", namespace_object,
+    ),
+    PdfString(@ascii.encode("http://iso.org/pdf2/ssn")),
+  )
+  let root_k = fixture_acceptance_lookup_immediate_required_for_test(
+    "/K", struct_root,
+  )
+  guard root_k is PdfIndirect(document_number) else {
+    fail("expected PDF/UA-2 root /K document node")
+  }
+  let document_node = document.lookup_object_or_null(document_number)
+  @test.assert_eq(
+    fixture_acceptance_lookup_required_for_test(document, "/S", document_node),
+    PdfNameObject(fixture_acceptance_pdf_name_for_test("/Document")),
+  )
+  @test.assert_eq(
+    fixture_acceptance_lookup_immediate_required_for_test("/P", document_node),
+    PdfIndirect(struct_root_number),
+  )
+  @test.assert_eq(
+    fixture_acceptance_lookup_immediate_required_for_test("/NS", document_node),
+    PdfIndirect(namespace_number),
+  )
+  let document_children = fixture_acceptance_lookup_immediate_required_for_test(
+    "/K", document_node,
+  )
+  guard document_children is PdfArray(paragraph_refs) else {
+    fail("expected PDF/UA-2 document node paragraph array")
+  }
+  @test.assert_eq(paragraph_refs.length() >= 2, true)
+  for paragraph_ref in paragraph_refs {
+    guard paragraph_ref is PdfIndirect(paragraph_number) else {
+      fail("expected PDF/UA-2 paragraph reference")
+    }
+    let paragraph = document.lookup_object_or_null(paragraph_number)
+    @test.assert_eq(
+      fixture_acceptance_lookup_required_for_test(document, "/S", paragraph),
+      PdfNameObject(fixture_acceptance_pdf_name_for_test("/P")),
+    )
+    @test.assert_eq(
+      fixture_acceptance_lookup_immediate_required_for_test("/P", paragraph),
+      PdfIndirect(document_number),
+    )
+  }
+}
+
+///|
 fn fixture_acceptance_lookup_required_for_test(
   document : @pdflite.PdfDocument,
   key : String,
@@ -2901,6 +2991,29 @@ fn fixture_acceptance_lookup_required_for_test(
     document.lookup_direct(fixture_acceptance_pdf_name_for_test(key), object) {
     Some(value) => value
     None => fail("missing PDF dictionary key " + key)
+  }
+}
+
+///|
+fn fixture_acceptance_lookup_immediate_required_for_test(
+  key : String,
+  object : @pdflite.PdfObject,
+) -> @pdflite.PdfObject raise {
+  match object.lookup_immediate(fixture_acceptance_pdf_name_for_test(key)) {
+    Some(value) => value
+    None => fail("missing PDF dictionary key " + key)
+  }
+}
+
+///|
+fn fixture_acceptance_lookup_immediate_indirect_required_for_test(
+  document : @pdflite.PdfDocument,
+  key : String,
+  object : @pdflite.PdfObject,
+) -> (Int, @pdflite.PdfObject) raise {
+  match fixture_acceptance_lookup_immediate_required_for_test(key, object) {
+    PdfIndirect(number) => (number, document.lookup_object_or_null(number))
+    _ => fail("expected indirect PDF dictionary key " + key)
   }
 }
 
@@ -10583,6 +10696,41 @@ async test "optional cpdf source README typesets tagged text PDF" {
         @pdflite.pdf_read_document_from_bytes(
           fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
         ),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source README typesets PDF UA2 text PDF" {
+  match
+    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/README.md") {
+    None => ()
+    Some(readme_payload) => {
+      let title = "cpdf source README PDF/UA-2"
+      let document = try! @pdflite.pdf_texttopdf_typeset(
+        fixture_acceptance_cpdf_source_texttopdf_fontpack_for_test(),
+        12.0,
+        @pdflite.paper_a4,
+        readme_payload,
+        subformat=Some(PdfUA2),
+        title=Some(title),
+      )
+      fixture_acceptance_assert_cpdf_source_readme_pdfua2_for_test(
+        document, title,
+      )
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        document,
+      )
+      fixture_acceptance_assert_cpdf_source_readme_pdfua2_for_test(
+        @pdflite.pdf_read_document_from_bytes(compressed),
+        title,
+      )
+      fixture_acceptance_assert_cpdf_source_readme_pdfua2_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+        ),
+        title,
       )
     }
   }
