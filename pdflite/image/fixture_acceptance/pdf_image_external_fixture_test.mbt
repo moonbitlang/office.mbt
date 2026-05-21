@@ -590,6 +590,111 @@ fn image_external_assert_cpdf_manual_image_reporting_for_test(
 }
 
 ///|
+fn image_external_assert_cpdf_source_hello_text_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 1)
+  image_external_assert_contains_for_test(
+    @ascii.decode_lossy(document.test_extract_text([1])),
+    "Hello, World!",
+  )
+}
+
+///|
+fn image_external_cpdf_source_inline_image_dictionary_for_test() -> @pdflite.PdfObject {
+  @pdflite.pdf_dictionary([
+    (image_external_name_for_test("/W"), PdfInteger(3)),
+    (image_external_name_for_test("/H"), PdfInteger(2)),
+    (image_external_name_for_test("/BPC"), PdfInteger(8)),
+    (
+      image_external_name_for_test("/CS"),
+      PdfNameObject(image_external_name_for_test("/DeviceRGB")),
+    ),
+  ])
+}
+
+///|
+fn image_external_cpdf_source_hello_with_inline_image_for_test(
+  document : @pdflite.PdfDocument,
+) -> @pdflite.PdfDocument raise {
+  let pages = document.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  let image_ops : Array[@pdflite.PdfContentOp] = [
+    Op_cm({ a: 72.0, b: 0.0, c: 0.0, d: 72.0, e: 0.0, f: 0.0 }),
+    Op_InlineImage(
+      image_external_cpdf_source_inline_image_dictionary_for_test(),
+      None,
+      @ascii.encode("abcdefghijklmnopqr"),
+    ),
+  ]
+  let updated_page = document.postpend_operators(pages[0], image_ops, fast=true)
+  document.change_pages([updated_page], change_references=true)
+}
+
+///|
+fn image_external_assert_cpdf_source_inline_image_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  image_external_assert_cpdf_source_hello_text_for_test(document)
+  let xobject_images = document.images_json([1])
+  @test.assert_eq(
+    @pdflite.pdf_image_images(false, document, [1]),
+    xobject_images,
+  )
+  @test.assert_eq(xobject_images.stringify(), "[]")
+  @test.assert_eq(document.image_resolution([1], 1000000.0), [])
+  let inline_images = document.images_json([1], inline=true)
+  @test.assert_eq(@pdflite.pdf_image_images(true, document, [1]), inline_images)
+  let inline_images_json = inline_images.stringify()
+  image_external_assert_contains_for_test(inline_images_json, "\"Object\":0")
+  image_external_assert_contains_for_test(
+    inline_images_json, "\"Name\":\"/InlineImage\"",
+  )
+  image_external_assert_contains_for_test(inline_images_json, "\"Pages\":[1]")
+  image_external_assert_contains_for_test(inline_images_json, "\"Width\":3")
+  image_external_assert_contains_for_test(inline_images_json, "\"Height\":2")
+  image_external_assert_contains_for_test(inline_images_json, "\"Bytes\":18")
+  image_external_assert_contains_for_test(
+    inline_images_json, "\"BitsPerComponent\":8",
+  )
+  image_external_assert_contains_for_test(
+    inline_images_json, "\"Colourspace\":\"/DeviceRGB\"",
+  )
+  image_external_assert_contains_for_test(inline_images_json, "\"Filter\":null")
+  @test.assert_eq(
+    @pdflite.pdf_image_images_json_blob(true, document, [1]),
+    document.images_json_blob([1], inline=true),
+  )
+  let inline_resolution = document.image_resolution([1], 1000000.0, inline=true)
+  @test.assert_eq(
+    @pdflite.pdf_image_resolution(true, document, [1], 1000000.0),
+    inline_resolution,
+  )
+  @test.assert_eq(inline_resolution, [(1, "/InlineImage", 3, 2, 3.0, 2.0, 0)])
+  let inline_resolution_json = document.image_resolution_json(
+    [1],
+    1000000.0,
+    inline=true,
+  )
+  @test.assert_eq(
+    @pdflite.pdf_image_resolution_json(true, document, [1], 1000000.0),
+    inline_resolution_json,
+  )
+  let inline_resolution_text = inline_resolution_json.stringify()
+  image_external_assert_contains_for_test(
+    inline_resolution_text, "\"XObject\":\"/InlineImage\"",
+  )
+  image_external_assert_contains_for_test(inline_resolution_text, "\"W\":3")
+  image_external_assert_contains_for_test(inline_resolution_text, "\"H\":2")
+  image_external_assert_contains_for_test(inline_resolution_text, "\"Xdpi\":3")
+  image_external_assert_contains_for_test(inline_resolution_text, "\"Ydpi\":2")
+  @test.assert_eq(
+    @pdflite.pdf_image_resolution_json_blob(true, document, [1], 1000000.0),
+    document.image_resolution_json_blob([1], 1000000.0, inline=true),
+  )
+}
+
+///|
 async test "external DCT image fixture extracts encoded JPEG XObject" {
   match
     image_external_images_from_fixture_for_test(
@@ -1050,6 +1155,40 @@ async test "cpdf source manual fixture reports embedded image metadata" {
       image_external_assert_cpdf_manual_image_reporting_for_test(recovered)
       image_external_assert_cpdf_manual_image_reporting_for_test(
         image_external_reparse_compressed_for_test(recovered),
+      )
+    }
+  }
+}
+
+///|
+async test "cpdf source hello fixture reports inline image metadata" {
+  match image_external_fixture_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      image_external_assert_cpdf_source_hello_text_for_test(document)
+      @test.assert_eq(document.images_json([1], inline=true).stringify(), "[]")
+      let with_inline = image_external_cpdf_source_hello_with_inline_image_for_test(
+        document,
+      )
+      image_external_assert_cpdf_source_inline_image_for_test(with_inline)
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        with_inline,
+      )
+      image_external_assert_cpdf_source_inline_image_for_test(
+        @pdflite.pdf_read_document_from_bytes(compressed),
+      )
+      let corrupted = image_external_corrupt_startxref_pointer_for_test(
+        compressed,
+      )
+      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+        corrupted,
+      )
+      guard strict is Err(_) else {
+        fail("expected bad startxref to require malformed reconstruction")
+      }
+      image_external_assert_cpdf_source_inline_image_for_test(
+        @pdflite.pdf_read_document_from_bytes(corrupted),
       )
     }
   }

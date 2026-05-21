@@ -6884,6 +6884,21 @@ Current backend snapshot:
   reports no pending interface or formatting work, and `moon check --target all
   --warn-list +73` reports the known warning-73/main-package baseline with 10
   warnings and 0 errors.~~
+- [x] ~~Add the next source-corpus image reporting slice: the native
+  `image/fixture_acceptance` package now gates optional
+  `.repos/cpdf-source/hello.pdf` through cpdf-style inline-image reporting.
+  The gate starts from the real source hello fixture, verifies it has no image
+  rows before injection, appends a `3x2` `/DeviceRGB` inline image, checks
+  `images_json`/blob wrappers and `image_resolution`/JSON/blob wrappers with
+  `inline=true`, preserves Hello text extraction, and repeats the checks after
+  compressed rewrite/reread plus bad-final-`startxref` reconstruction. `moon
+  check --target native image/fixture_acceptance --warn-list +73` passes, the
+  focused cpdf source hello inline-image test reports 1/1 test passing, `moon
+  test --target native image/fixture_acceptance` reports 20/20 tests passing,
+  and `moon test --target native` reports 2314/2314 tests passing. `moon info
+  && moon fmt` reports no pending interface or formatting work, and `moon check
+  --target all --warn-list +73` reports the known warning-73/main-package
+  baseline with 7 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.
