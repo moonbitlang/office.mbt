@@ -304,6 +304,107 @@ fn markdown_fixture_replace_bytes_after_with_padded_ascii_for_test(
 }
 
 ///|
+fn markdown_fixture_replace_bytes_at_for_test(
+  bytes : Bytes,
+  position : Int,
+  target : BytesView,
+  replacement : BytesView,
+  description : String,
+) -> Bytes raise {
+  if target.length() != replacement.length() {
+    fail("replacement must preserve byte length")
+  }
+  if !markdown_fixture_bytes_start_with_at_for_test(bytes, target, position) {
+    fail("expected " + description)
+  }
+  let output : Array[Byte] = []
+  for byte in bytes {
+    output.push(byte)
+  }
+  for index in 0..<replacement.length() {
+    output[position + index] = replacement[index]
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn markdown_fixture_skip_pdf_whitespace_for_test(
+  bytes : BytesView,
+  position : Int,
+) -> Int {
+  let mut current = position
+  while current < bytes.length() {
+    let value = bytes[current].to_int()
+    if value == 0 ||
+      value == 9 ||
+      value == 10 ||
+      value == 12 ||
+      value == 13 ||
+      value == 32 {
+      current += 1
+    } else {
+      break
+    }
+  }
+  current
+}
+
+///|
+fn markdown_fixture_stream_data_start_for_test(
+  bytes : BytesView,
+  stream_position : Int,
+) -> Int {
+  let mut current = stream_position + @ascii.encode("stream").length()
+  while current < bytes.length() {
+    let value = bytes[current].to_int()
+    if value == 0 || value == 9 || value == 12 || value == 32 {
+      current += 1
+    } else {
+      break
+    }
+  }
+  if current < bytes.length() && bytes[current] == b'\r' {
+    current += 1
+    if current < bytes.length() && bytes[current] == b'\n' {
+      current += 1
+    }
+  } else if current < bytes.length() && bytes[current] == b'\n' {
+    current += 1
+  }
+  current
+}
+
+///|
+fn markdown_fixture_direct_length_before_for_test(
+  bytes : BytesView,
+  anchor_position : Int,
+  limit : Int,
+  description : String,
+) -> Int raise {
+  let length_key = @ascii.encode("/Length")
+  let length_position = markdown_fixture_find_bytes_after_for_test(
+    bytes, length_key, anchor_position,
+  )
+  if length_position < 0 || length_position >= limit {
+    fail("expected direct stream length for " + description)
+  }
+  let mut current = markdown_fixture_skip_pdf_whitespace_for_test(
+    bytes,
+    length_position + length_key.length(),
+  )
+  let mut length = 0
+  let number_start = current
+  while current < limit && bytes[current] >= b'0' && bytes[current] <= b'9' {
+    length = length * 10 + bytes[current].to_int() - b'0'.to_int()
+    current += 1
+  }
+  if current == number_start {
+    fail("expected numeric stream length for " + description)
+  }
+  length
+}
+
+///|
 fn markdown_fixture_corrupt_startxref_xref_stream_type_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
@@ -387,6 +488,152 @@ fn markdown_fixture_corrupt_xref_stream_filter_for_test(
     @ascii.encode("/Filter /FlateDecode"),
     @ascii.encode("/Filter /NoSuchThing"),
     "filter",
+  )
+}
+
+///|
+fn markdown_fixture_first_object_stream_stream_position_for_test(
+  bytes : BytesView,
+) -> Int raise {
+  let anchor = @ascii.encode("/Type /ObjStm")
+  let anchor_position = markdown_fixture_find_bytes_for_test(bytes, anchor)
+  if anchor_position < 0 {
+    fail("expected first object stream")
+  }
+  let stream_marker = @ascii.encode("stream")
+  let stream_position = markdown_fixture_find_bytes_after_for_test(
+    bytes,
+    stream_marker,
+    anchor_position + anchor.length(),
+  )
+  if stream_position < 0 {
+    fail("expected first object stream marker")
+  }
+  stream_position
+}
+
+///|
+fn markdown_fixture_first_object_stream_endstream_position_for_test(
+  bytes : BytesView,
+) -> Int raise {
+  let anchor = @ascii.encode("/Type /ObjStm")
+  let anchor_position = markdown_fixture_find_bytes_for_test(bytes, anchor)
+  if anchor_position < 0 {
+    fail("expected first object stream")
+  }
+  let stream_position = markdown_fixture_first_object_stream_stream_position_for_test(
+    bytes,
+  )
+  let length = markdown_fixture_direct_length_before_for_test(
+    bytes, anchor_position, stream_position, "first object stream",
+  )
+  let marker_position = markdown_fixture_skip_pdf_whitespace_for_test(
+    bytes,
+    markdown_fixture_stream_data_start_for_test(bytes, stream_position) + length,
+  )
+  if !markdown_fixture_bytes_start_with_at_for_test(
+      bytes,
+      @ascii.encode("endstream"),
+      marker_position,
+    ) {
+    fail("expected first object stream endstream marker")
+  }
+  marker_position
+}
+
+///|
+fn markdown_fixture_first_object_stream_endobj_position_for_test(
+  bytes : BytesView,
+) -> Int raise {
+  let endstream_position = markdown_fixture_first_object_stream_endstream_position_for_test(
+    bytes,
+  )
+  let endobj_position = markdown_fixture_skip_pdf_whitespace_for_test(
+    bytes,
+    endstream_position + @ascii.encode("endstream").length(),
+  )
+  if !markdown_fixture_bytes_start_with_at_for_test(
+      bytes,
+      @ascii.encode("endobj"),
+      endobj_position,
+    ) {
+    fail("expected first object stream endobj marker")
+  }
+  endobj_position
+}
+
+///|
+fn markdown_fixture_corrupt_first_object_stream_count_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  markdown_fixture_replace_bytes_after_with_padded_ascii_for_test(
+    bytes,
+    @ascii.encode("/Type /ObjStm"),
+    @ascii.encode("/N 100"),
+    "/N/Bad",
+  )
+}
+
+///|
+fn markdown_fixture_corrupt_first_object_stream_first_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  markdown_fixture_replace_bytes_after_with_padded_ascii_for_test(
+    bytes,
+    @ascii.encode("/Type /ObjStm"),
+    @ascii.encode("/First 832"),
+    "/First/Bad",
+  )
+}
+
+///|
+fn markdown_fixture_corrupt_first_object_stream_filter_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  markdown_fixture_replace_bytes_after_with_padded_ascii_for_test(
+    bytes,
+    @ascii.encode("/Type /ObjStm"),
+    @ascii.encode("/Filter /FlateDecode"),
+    "/Filter /NoSuchThing",
+  )
+}
+
+///|
+fn markdown_fixture_corrupt_first_object_stream_marker_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  markdown_fixture_replace_bytes_at_for_test(
+    bytes,
+    markdown_fixture_first_object_stream_stream_position_for_test(bytes),
+    @ascii.encode("stream"),
+    @ascii.encode("stramx"),
+    "first object stream marker",
+  )
+}
+
+///|
+fn markdown_fixture_corrupt_first_object_stream_endstream_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  markdown_fixture_replace_bytes_at_for_test(
+    bytes,
+    markdown_fixture_first_object_stream_endstream_position_for_test(bytes),
+    @ascii.encode("endstream"),
+    @ascii.encode("endstreax"),
+    "first object stream endstream marker",
+  )
+}
+
+///|
+fn markdown_fixture_corrupt_first_object_stream_endobj_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  markdown_fixture_replace_bytes_at_for_test(
+    bytes,
+    markdown_fixture_first_object_stream_endobj_position_for_test(bytes),
+    @ascii.encode("endobj"),
+    @ascii.encode("endobx"),
+    "first object stream endobj marker",
   )
 }
 
@@ -1217,6 +1464,87 @@ async test "pdf_bytes_to_markdown reconstructs optional cpdf source manual fixtu
           0,
         )
       }
+    }
+  }
+}
+
+///|
+async test "pdf_bytes_to_markdown reconstructs optional cpdf source manual fixture with malformed object stream entries" {
+  match
+    markdown_optional_fixture_bytes_for_test(
+      ".repos/cpdf-source/cpdfmanual.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let markdown = @markdown.pdf_bytes_to_markdown(bytes)
+      markdown_fixture_assert_contains_for_test(markdown, "Coherent PDF")
+      markdown_fixture_assert_contains_for_test(markdown, "Command Line Tools")
+      markdown_fixture_assert_contains_for_test(
+        markdown, "Chapter 15: PDF and JSON",
+      )
+      markdown_fixture_assert_contains_for_test(
+        markdown, "Accessible PDFs with PDF/UA",
+      )
+      @test.assert_eq(markdown.length() > 200000, true)
+      @test.assert_eq(markdown_fixture_replacement_count_for_test(markdown), 0)
+      for
+        corrupted in [
+          markdown_fixture_corrupt_first_object_stream_count_for_test(bytes),
+          markdown_fixture_corrupt_first_object_stream_first_for_test(bytes),
+          markdown_fixture_corrupt_first_object_stream_filter_for_test(bytes),
+          markdown_fixture_corrupt_first_object_stream_marker_for_test(bytes),
+          markdown_fixture_corrupt_first_object_stream_endobj_for_test(bytes),
+        ] {
+        let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+          corrupted,
+        )
+        guard strict is Err(_) else {
+          fail(
+            "expected malformed object stream entry to require reconstruction",
+          )
+        }
+        let reconstructed = @markdown.pdf_bytes_to_markdown(corrupted)
+        markdown_fixture_assert_contains_for_test(reconstructed, "Coherent PDF")
+        markdown_fixture_assert_contains_for_test(
+          reconstructed, "Command Line Tools",
+        )
+        markdown_fixture_assert_contains_for_test(
+          reconstructed, "Chapter 15: PDF and JSON",
+        )
+        markdown_fixture_assert_contains_for_test(
+          reconstructed, "Accessible PDFs with PDF/UA",
+        )
+        @test.assert_eq(reconstructed, markdown)
+        @test.assert_eq(
+          markdown_fixture_replacement_count_for_test(reconstructed),
+          0,
+        )
+      }
+      let repaired = markdown_fixture_corrupt_first_object_stream_endstream_for_test(
+        bytes,
+      )
+      let strict_repaired = @pdflite.pdf_read_classic_document_from_bytes(
+        repaired,
+      )
+      @test.assert_eq(strict_repaired.endpage(), 175)
+      let repaired_markdown = @markdown.pdf_bytes_to_markdown(repaired)
+      markdown_fixture_assert_contains_for_test(
+        repaired_markdown, "Coherent PDF",
+      )
+      markdown_fixture_assert_contains_for_test(
+        repaired_markdown, "Command Line Tools",
+      )
+      markdown_fixture_assert_contains_for_test(
+        repaired_markdown, "Chapter 15: PDF and JSON",
+      )
+      markdown_fixture_assert_contains_for_test(
+        repaired_markdown, "Accessible PDFs with PDF/UA",
+      )
+      @test.assert_eq(repaired_markdown, markdown)
+      @test.assert_eq(
+        markdown_fixture_replacement_count_for_test(repaired_markdown),
+        0,
+      )
     }
   }
 }
