@@ -569,6 +569,16 @@ fn markdown_cmd_corrupt_xref_stream_filter_for_test(
 }
 
 ///|
+fn markdown_cmd_corrupt_xref_stream_length_entry_for_test(
+  bytes : Bytes,
+  length_entry : BytesView,
+) -> Bytes raise {
+  markdown_cmd_replace_xref_stream_entry_with_padded_ascii_for_test(
+    bytes, length_entry, "/Length /Bad", "length",
+  )
+}
+
+///|
 fn markdown_cmd_first_object_stream_marker_position_for_test(
   bytes : BytesView,
 ) -> Int raise {
@@ -662,6 +672,19 @@ fn markdown_cmd_corrupt_first_object_stream_first_for_test(
     @ascii.encode("/First 832"),
     "/First/Bad",
     "first object stream first offset",
+  )
+}
+
+///|
+fn markdown_cmd_corrupt_first_object_stream_length_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  markdown_cmd_replace_bytes_after_with_padded_ascii_for_test(
+    bytes,
+    @ascii.encode("/Type /ObjStm"),
+    @ascii.encode("/Length 1526"),
+    "/Length /Bad",
+    "first object stream length",
   )
 }
 
@@ -1074,6 +1097,66 @@ async test "markdown command reconstructs optional cpdf source manual fixture wi
       )
       let corrupt_output_path = markdown_cmd_output_path_for_test(
         "cpdf_source_manual_object_stream_" + case_index.to_string(),
+      )
+      markdown_cmd_remove_if_exists_for_test(corrupt_input_path)
+      markdown_cmd_remove_if_exists_for_test(corrupt_output_path)
+      @fs.write_file(corrupt_input_path, corrupted, create=0o644)
+      markdown_cmd_convert_file(corrupt_input_path, corrupt_output_path)
+      let corrupt_output = @utf8.decode_lossy(
+        @fs.read_file(corrupt_output_path).binary(),
+      )
+      markdown_cmd_assert_contains_for_test(corrupt_output, "Coherent PDF")
+      markdown_cmd_assert_contains_for_test(
+        corrupt_output, "Command Line Tools",
+      )
+      markdown_cmd_assert_contains_for_test(
+        corrupt_output, "Chapter 15: PDF and JSON",
+      )
+      markdown_cmd_assert_contains_for_test(
+        corrupt_output, "Accessible PDFs with PDF/UA",
+      )
+      @test.assert_eq(corrupt_output, clean_output)
+      @test.assert_eq(
+        markdown_cmd_replacement_count_for_test(corrupt_output),
+        0,
+      )
+      markdown_cmd_remove_if_exists_for_test(corrupt_input_path)
+      markdown_cmd_remove_if_exists_for_test(corrupt_output_path)
+    }
+    markdown_cmd_remove_if_exists_for_test(clean_output_path)
+  }
+}
+
+///|
+async test "markdown command repairs optional cpdf source manual fixture with malformed stream length entries" {
+  let input_path = markdown_cmd_repo_path_for_test(
+    ".repos/cpdf-source/cpdfmanual.pdf",
+  )
+  if @fs.exists(input_path) {
+    let clean_output_path = markdown_cmd_output_path_for_test(
+      "cpdf_source_manual_stream_length_clean",
+    )
+    markdown_cmd_remove_if_exists_for_test(clean_output_path)
+    markdown_cmd_convert_file(input_path, clean_output_path)
+    let clean_output = @utf8.decode_lossy(
+      @fs.read_file(clean_output_path).binary(),
+    )
+    let input_bytes = @fs.read_file(input_path).binary()
+    let mut case_index = 0
+    for
+      corrupted in [
+        markdown_cmd_corrupt_xref_stream_length_entry_for_test(
+          input_bytes,
+          @ascii.encode("/Length 4551"),
+        ),
+        markdown_cmd_corrupt_first_object_stream_length_for_test(input_bytes),
+      ] {
+      case_index += 1
+      let corrupt_input_path = markdown_cmd_output_path_for_test(
+        "cpdf_source_manual_stream_length_input_" + case_index.to_string(),
+      )
+      let corrupt_output_path = markdown_cmd_output_path_for_test(
+        "cpdf_source_manual_stream_length_" + case_index.to_string(),
       )
       markdown_cmd_remove_if_exists_for_test(corrupt_input_path)
       markdown_cmd_remove_if_exists_for_test(corrupt_output_path)
