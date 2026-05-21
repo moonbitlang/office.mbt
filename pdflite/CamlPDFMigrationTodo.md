@@ -6719,6 +6719,24 @@ Current backend snapshot:
   `moon info` and `moon fmt` report no pending interface or formatting work,
   and `moon check --target all --warn-list +73` reports the known
   warning-73/main-package baseline with 10 warnings and 0 errors.~~
+- [x] ~~Add the next source-corpus Markdown command recovery slice: the native
+  `pdflite-markdown` command helper now converts optional
+  `.repos/cpdf-source/cpdfmanual.pdf` copies with malformed first
+  object-stream entries through real file input/output. The gate corrupts the
+  first `/ObjStm` stream's `/N`, `/First`, `/Filter`, `stream`, `endstream`,
+  and `endobj` markers, compares each recovered Markdown output byte-for-byte
+  with clean command output, preserves manual markers such as `Coherent PDF`,
+  `Command Line Tools`, `Chapter 15: PDF and JSON`, and `Accessible PDFs with
+  PDF/UA`, and verifies UTF-8 output without replacement characters. `moon
+  check --target native markdown/cmd --warn-list +73` passes with the known
+  main-package warning baseline, `moon test --target native markdown/cmd
+  --filter 'markdown command reconstructs optional cpdf source manual fixture
+  with malformed object stream entries'` reports 1/1 test passing, `moon test
+  --target native markdown/cmd` reports 16/16 tests passing, and `moon test
+  --target native` reports 2303/2303 tests passing. `moon info` and `moon
+  fmt` report no pending interface or formatting work, and `moon check
+  --target all --warn-list +73` reports the known warning-73/main-package
+  baseline with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.
