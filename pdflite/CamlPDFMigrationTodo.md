@@ -5992,6 +5992,25 @@ Current backend snapshot:
   reports 2264/2264 tests passing, `moon info && moon fmt` reports no pending
   interface or formatting work, and `moon check --target all --warn-list +73`
   reports the warning 73 baseline with 10 warnings and 0 errors.~~
+- [x] ~~Broaden the source-boundary predefined CMap slice: optional
+  `.repos/cpdf-source/hello.pdf` now gates vertical Korea1 predefined CMaps on
+  a real source PDF after injecting Type0 CID-keyed fonts for `/KSC-EUC-V`,
+  `/KSCpc-EUC-V`, `/KSCms-UHC-V`, and `/KSCms-UHC-HW-V`. The gate preserves
+  the original Hello text, extracts injected vertical ellipsis text through the
+  source page content path, verifies `list_fonts` and `read_font` expose each
+  `/Type0` `PdfFontCIDKeyed` resource with the expected predefined CMap,
+  Korea1 CIDSystemInfo ordering, and mixed-byte code behavior, pins direct
+  `PdfTextExtractor::codepoints_of_text` and reverse `charcode_of_codepoint`
+  behavior for the vertical `A1 A6` byte stream, verifies unrelated Unicode
+  reverse lookup fails, and repeats the assertions through compressed
+  rewrite/reread and bad-`startxref` recovery. `moon check --target native
+  fixture_acceptance --warn-list +73` passes, `moon test --target native
+  fixture_acceptance --filter 'optional cpdf source hello fixture extracts
+  Korea1 vertical CMaps'` reports 1/1 test passing, `moon test --target native
+  fixture_acceptance` reports 93/93 tests passing, `moon test --target native`
+  reports 2265/2265 tests passing, `moon info && moon fmt` reports no pending
+  interface or formatting work, and `moon check --target all --warn-list +73`
+  reports the warning 73 baseline with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.

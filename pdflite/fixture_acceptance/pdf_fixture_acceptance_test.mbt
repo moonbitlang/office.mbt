@@ -5674,6 +5674,158 @@ fn fixture_acceptance_assert_cpdf_source_uniks_predefined_cmaps_for_test(
 }
 
 ///|
+fn fixture_acceptance_cpdf_source_hello_with_korea1_vertical_cmaps_for_test(
+  document : @pdflite.PdfDocument,
+) -> @pdflite.PdfDocument raise {
+  let output = document.copy()
+  let descendant_ksc_euc = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
+      "/SourceVerticalKSCEUCDescendant", "Korea1",
+    ),
+  )
+  let descendant_kscpc_euc = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
+      "/SourceVerticalKSCpcEUCDescendant", "Korea1",
+    ),
+  )
+  let descendant_uhc = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
+      "/SourceVerticalKSCmsUHCDescendant", "Korea1",
+    ),
+  )
+  let descendant_uhc_hw = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
+      "/SourceVerticalKSCmsUHCHWDescendant", "Korea1",
+    ),
+  )
+  let font_ksc_euc = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
+      "/SourceVerticalKSCEUCTop", "/KSC-EUC-V", descendant_ksc_euc,
+    ),
+  )
+  let font_kscpc_euc = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
+      "/SourceVerticalKSCpcEUCTop", "/KSCpc-EUC-V", descendant_kscpc_euc,
+    ),
+  )
+  let font_uhc = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
+      "/SourceVerticalKSCmsUHCTop", "/KSCms-UHC-V", descendant_uhc,
+    ),
+  )
+  let font_uhc_hw = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
+      "/SourceVerticalKSCmsUHCHWTop", "/KSCms-UHC-HW-V", descendant_uhc_hw,
+    ),
+  )
+  let pages = output.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  let font_resources = fixture_acceptance_cpdf_source_page_fonts_for_test(
+      output,
+      pages[0].resources,
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/SourceKSCV"),
+      PdfIndirect(font_ksc_euc),
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/SourceKSCpcV"),
+      PdfIndirect(font_kscpc_euc),
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/SourceUHCV"),
+      PdfIndirect(font_uhc),
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/SourceUHCHWV"),
+      PdfIndirect(font_uhc_hw),
+    )
+  let resources = pages[0].resources.add_dict_entry(
+    fixture_acceptance_pdf_name_for_test("/Font"),
+    font_resources,
+  )
+  let page = { ..pages[0], resources, }
+  let vertical_text = @pdflite.pdf_bytes_of_int_array([0xA1, 0xA6])
+  let updated_page = output.postpend_operators(
+    page,
+    [
+      Op_BT,
+      Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceKSCV"), 12.0),
+      Op_Tj(vertical_text),
+      Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceKSCpcV"), 12.0),
+      Op_Tj(vertical_text),
+      Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceUHCV"), 12.0),
+      Op_Tj(vertical_text),
+      Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceUHCHWV"), 12.0),
+      Op_Tj(vertical_text),
+      Op_ET,
+    ],
+    fast=true,
+  )
+  output.change_pages([updated_page], change_references=true)
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_korea1_vertical_font_for_test(
+  document : @pdflite.PdfDocument,
+  name : String,
+  basefont : String,
+  encoding : String,
+) -> Unit raise {
+  let source_font = fixture_acceptance_cpdf_source_font_entry_for_test(
+    document.list_fonts([1]),
+    name,
+  )
+  @test.assert_eq(source_font.subtype, "/Type0")
+  @test.assert_eq(source_font.basefont, basefont)
+  @test.assert_eq(source_font.encoding, encoding)
+  let font = document.read_font(source_font.font)
+  @test.assert_eq(font.uses_two_byte_codes(), false)
+  guard font is PdfFontCIDKeyed(cid_font) else {
+    fail("expected source Korea1 vertical predefined CID-keyed font")
+  }
+  @test.assert_eq(
+    cid_font.encoding,
+    PdfPredefinedCMap(fixture_acceptance_pdf_name_for_test(encoding)),
+  )
+  @test.assert_eq(
+    cid_font.composite.cid_system_info.ordering,
+    @ascii.encode("Korea1"),
+  )
+  let extractor = document.text_extractor_of_font(source_font.font)
+  @test.assert_eq(
+    extractor.codepoints_of_text(@pdflite.pdf_bytes_of_int_array([0xA1, 0xA6])),
+    [0x22EF],
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x22EF), Some(0xA1A6))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x1F600), None)
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_korea1_vertical_cmaps_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+  let expected_text = @utf8.decode_lossy(
+    @pdflite.pdf_utf8_of_codepoints([0x22EF]),
+  )
+  let text = @utf8.decode_lossy(document.test_extract_text([1]))
+  fixture_acceptance_assert_contains_for_test(text, expected_text)
+  fixture_acceptance_assert_cpdf_source_korea1_vertical_font_for_test(
+    document, "/SourceKSCV", "/SourceVerticalKSCEUCTop", "/KSC-EUC-V",
+  )
+  fixture_acceptance_assert_cpdf_source_korea1_vertical_font_for_test(
+    document, "/SourceKSCpcV", "/SourceVerticalKSCpcEUCTop", "/KSCpc-EUC-V",
+  )
+  fixture_acceptance_assert_cpdf_source_korea1_vertical_font_for_test(
+    document, "/SourceUHCV", "/SourceVerticalKSCmsUHCTop", "/KSCms-UHC-V",
+  )
+  fixture_acceptance_assert_cpdf_source_korea1_vertical_font_for_test(
+    document, "/SourceUHCHWV", "/SourceVerticalKSCmsUHCHWTop", "/KSCms-UHC-HW-V",
+  )
+}
+
+///|
 fn fixture_acceptance_cpdf_source_hello_with_japan1_predefined_cmaps_for_test(
   document : @pdflite.PdfDocument,
 ) -> @pdflite.PdfDocument raise {
@@ -8282,6 +8434,35 @@ async test "optional cpdf source hello fixture extracts UniKS predefined CMaps" 
         @pdflite.pdf_read_document_from_bytes(compressed),
       )
       fixture_acceptance_assert_cpdf_source_uniks_predefined_cmaps_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+        ),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source hello fixture extracts Korea1 vertical CMaps" {
+  match
+    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+      let with_cmaps = fixture_acceptance_cpdf_source_hello_with_korea1_vertical_cmaps_for_test(
+        document,
+      )
+      fixture_acceptance_assert_cpdf_source_korea1_vertical_cmaps_for_test(
+        with_cmaps,
+      )
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        with_cmaps,
+      )
+      fixture_acceptance_assert_cpdf_source_korea1_vertical_cmaps_for_test(
+        @pdflite.pdf_read_document_from_bytes(compressed),
+      )
+      fixture_acceptance_assert_cpdf_source_korea1_vertical_cmaps_for_test(
         @pdflite.pdf_read_document_from_bytes(
           fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
         ),
