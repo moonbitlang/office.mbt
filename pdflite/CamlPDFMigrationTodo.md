@@ -44,7 +44,8 @@ Current backend snapshot:
   lines in `pdf_squeeze.mbt`, including stream compression, duplicate pruning,
   page content stream normalization, and Form XObject normalization, with
   historical defensive and edge-path coverage gaps still present in older files.
-- WasmGC and JavaScript: full non-native test suites pass.
+- WasmGC and JavaScript: full non-native test suites pass, currently
+  2013/2013 on each backend after the latest source-corpus recovery gates.
 - Wasm: backend smoke suite passes with 497 tests after keeping the largest
   corpus/text regression files on wasm-gc/js/native/llvm; full plain-Wasm suite
   is still deferred because the generated package-level module exceeds the
@@ -6809,6 +6810,15 @@ Current backend snapshot:
   reports no pending interface or formatting work, and `moon check --target all
   --warn-list +73` reports the known warning-73/main-package baseline with 10
   warnings and 0 errors.~~
+- [x] ~~Refresh portable backend validation after the latest source-corpus
+  draw/parser recovery gate: `moon test --target wasm-gc` reports 2013/2013
+  tests passing, `moon test --target js` reports 2013/2013 tests passing, and
+  `moon check --target all --warn-list +73` reports the known
+  warning-73/main-package baseline with 10 warnings and 0 errors. Full
+  plain-Wasm `moon test --target wasm` remains explicitly not claimed; the
+  current run still fails when instantiating
+  `_build/wasm/debug/test/markdown/markdown.blackbox_test.wasm` because the
+  generated module exceeds the runtime maximum function-size limit.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.
