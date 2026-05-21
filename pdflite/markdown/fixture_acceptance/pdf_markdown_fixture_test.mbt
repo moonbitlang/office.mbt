@@ -267,6 +267,43 @@ fn markdown_fixture_corrupt_startxref_xref_stream_token_for_test(
 }
 
 ///|
+fn markdown_fixture_replace_bytes_after_with_padded_ascii_for_test(
+  bytes : Bytes,
+  anchor : BytesView,
+  target : BytesView,
+  replacement_text : String,
+) -> Bytes raise {
+  let replacement = @ascii.encode(replacement_text)
+  if replacement.length() > target.length() {
+    fail("replacement must fit target byte span")
+  }
+  let anchor_position = markdown_fixture_find_bytes_for_test(bytes, anchor)
+  if anchor_position < 0 {
+    fail("expected replacement anchor")
+  }
+  let position = markdown_fixture_find_bytes_after_for_test(
+    bytes,
+    target,
+    anchor_position + anchor.length(),
+  )
+  if position < 0 {
+    fail("expected replacement target after anchor")
+  }
+  let output : Array[Byte] = []
+  for byte in bytes {
+    output.push(byte)
+  }
+  for index in 0..<target.length() {
+    output[position + index] = if index < replacement.length() {
+      replacement[index]
+    } else {
+      b' '
+    }
+  }
+  Bytes::from_array(output)
+}
+
+///|
 fn markdown_fixture_corrupt_startxref_xref_stream_type_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
@@ -311,6 +348,45 @@ fn markdown_fixture_corrupt_startxref_xref_stream_endobj_for_test(
     @ascii.encode("endobj"),
     @ascii.encode("endobx"),
     "endobj marker",
+  )
+}
+
+///|
+fn markdown_fixture_corrupt_xref_stream_root_entry_for_test(
+  bytes : Bytes,
+  root_entry : BytesView,
+) -> Bytes raise {
+  markdown_fixture_replace_bytes_after_with_padded_ascii_for_test(
+    bytes,
+    @ascii.encode("/Type /XRef"),
+    root_entry,
+    "/Root /Bad",
+  )
+}
+
+///|
+fn markdown_fixture_corrupt_xref_stream_decodeparms_entry_for_test(
+  bytes : Bytes,
+  metadata_entry : BytesView,
+  replacement_text : String,
+) -> Bytes raise {
+  markdown_fixture_replace_bytes_after_with_padded_ascii_for_test(
+    bytes,
+    @ascii.encode("/Type /XRef"),
+    metadata_entry,
+    replacement_text,
+  )
+}
+
+///|
+fn markdown_fixture_corrupt_xref_stream_filter_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  markdown_fixture_corrupt_startxref_xref_stream_token_for_test(
+    bytes,
+    @ascii.encode("/Filter /FlateDecode"),
+    @ascii.encode("/Filter /NoSuchThing"),
+    "filter",
   )
 }
 
@@ -1057,6 +1133,71 @@ async test "pdf_bytes_to_markdown reconstructs optional cpdf source manual fixtu
         guard strict is Err(_) else {
           fail(
             "expected malformed xref stream terminator to require reconstruction",
+          )
+        }
+        let reconstructed = @markdown.pdf_bytes_to_markdown(corrupted)
+        markdown_fixture_assert_contains_for_test(reconstructed, "Coherent PDF")
+        markdown_fixture_assert_contains_for_test(
+          reconstructed, "Command Line Tools",
+        )
+        markdown_fixture_assert_contains_for_test(
+          reconstructed, "Chapter 15: PDF and JSON",
+        )
+        markdown_fixture_assert_contains_for_test(
+          reconstructed, "Accessible PDFs with PDF/UA",
+        )
+        @test.assert_eq(reconstructed, markdown)
+        @test.assert_eq(
+          markdown_fixture_replacement_count_for_test(reconstructed),
+          0,
+        )
+      }
+    }
+  }
+}
+
+///|
+async test "pdf_bytes_to_markdown reconstructs optional cpdf source manual fixture with malformed xref stream dictionary entries" {
+  match
+    markdown_optional_fixture_bytes_for_test(
+      ".repos/cpdf-source/cpdfmanual.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let markdown = @markdown.pdf_bytes_to_markdown(bytes)
+      markdown_fixture_assert_contains_for_test(markdown, "Coherent PDF")
+      markdown_fixture_assert_contains_for_test(markdown, "Command Line Tools")
+      markdown_fixture_assert_contains_for_test(
+        markdown, "Chapter 15: PDF and JSON",
+      )
+      markdown_fixture_assert_contains_for_test(
+        markdown, "Accessible PDFs with PDF/UA",
+      )
+      @test.assert_eq(markdown.length() > 200000, true)
+      @test.assert_eq(markdown_fixture_replacement_count_for_test(markdown), 0)
+      let manual_root_entry = @ascii.encode("/Root 1841 0 R")
+      let manual_id_entry = @ascii.encode(
+        "/ID [<CA2FED47397E566603B0A9A8E7328C79> <CA2FED47397E566603B0A9A8E7328C79>]",
+      )
+      for
+        corrupted in [
+          markdown_fixture_corrupt_xref_stream_root_entry_for_test(
+            bytes, manual_root_entry,
+          ),
+          markdown_fixture_corrupt_xref_stream_decodeparms_entry_for_test(
+            bytes, manual_id_entry, "/DecodeParms /Bad",
+          ),
+          markdown_fixture_corrupt_xref_stream_decodeparms_entry_for_test(
+            bytes, manual_id_entry, "/DecodeParms << /Predictor 9 >>",
+          ),
+          markdown_fixture_corrupt_xref_stream_filter_for_test(bytes),
+        ] {
+        let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+          corrupted,
+        )
+        guard strict is Err(_) else {
+          fail(
+            "expected malformed xref stream dictionary entry to require reconstruction",
           )
         }
         let reconstructed = @markdown.pdf_bytes_to_markdown(corrupted)
