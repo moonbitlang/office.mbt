@@ -1837,6 +1837,20 @@ fn fixture_acceptance_content_ops_contain_for_test(
 }
 
 ///|
+fn fixture_acceptance_content_op_count_for_test(
+  ops : ArrayView[@pdflite.PdfContentOp],
+  expected : @pdflite.PdfContentOp,
+) -> Int {
+  let mut count = 0
+  for op in ops {
+    if op == expected {
+      count += 1
+    }
+  }
+  count
+}
+
+///|
 fn fixture_acceptance_content_stroke_count_for_test(
   ops : ArrayView[@pdflite.PdfContentOp],
 ) -> Int {
@@ -1948,6 +1962,16 @@ fn fixture_acceptance_assert_content_op_for_test(
 ) -> Unit raise {
   if !fixture_acceptance_content_ops_contain_for_test(ops, expected) {
     fail("missing expected content op: " + expected.to_json().stringify())
+  }
+}
+
+///|
+fn fixture_acceptance_assert_no_content_op_for_test(
+  ops : ArrayView[@pdflite.PdfContentOp],
+  unexpected : @pdflite.PdfContentOp,
+) -> Unit raise {
+  if fixture_acceptance_content_ops_contain_for_test(ops, unexpected) {
+    fail("unexpected content op: " + unexpected.to_json().stringify())
   }
 }
 
@@ -3951,6 +3975,147 @@ fn fixture_acceptance_assert_cpdf_source_reveal_hidden_text_for_test(
 }
 
 ///|
+fn fixture_acceptance_assert_cpdf_source_same_page_shape_for_test(
+  original : @pdflite.PdfDocument,
+  updated : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(original.endpage(), 1)
+  @test.assert_eq(updated.endpage(), 1)
+  let original_pages = original.pages_of_pagetree()
+  let updated_pages = updated.pages_of_pagetree()
+  @test.assert_eq(updated_pages[0].mediabox, original_pages[0].mediabox)
+  @test.assert_eq(updated_pages[0].rotate, original_pages[0].rotate)
+  @test.assert_eq(updated_pages[0].resources, original_pages[0].resources)
+  @test.assert_eq(updated_pages[0].rest, original_pages[0].rest)
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_black_lines_for_test(
+  original : @pdflite.PdfDocument,
+  rewritten : @pdflite.PdfDocument,
+) -> Unit raise {
+  fixture_acceptance_assert_cpdf_source_same_page_shape_for_test(
+    original, rewritten,
+  )
+  let original_ops = fixture_acceptance_page_content_ops_for_test(original)
+  let rewritten_ops = fixture_acceptance_page_content_ops_for_test(rewritten)
+  fixture_acceptance_assert_content_op_for_test(original_ops, Op_G(0.5))
+  fixture_acceptance_assert_content_op_for_test(
+    original_ops,
+    Op_rg(0.2, 0.7, 0.2),
+  )
+  fixture_acceptance_assert_content_op_for_test(
+    rewritten_ops,
+    Op_RG(0.1, 0.2, 0.3),
+  )
+  fixture_acceptance_assert_no_content_op_for_test(rewritten_ops, Op_G(0.5))
+  fixture_acceptance_assert_content_op_for_test(
+    rewritten_ops,
+    Op_rg(0.2, 0.7, 0.2),
+  )
+  fixture_acceptance_assert_content_op_for_test(rewritten_ops, Op_B)
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_black_fills_for_test(
+  original : @pdflite.PdfDocument,
+  rewritten : @pdflite.PdfDocument,
+) -> Unit raise {
+  fixture_acceptance_assert_cpdf_source_same_page_shape_for_test(
+    original, rewritten,
+  )
+  let original_ops = fixture_acceptance_page_content_ops_for_test(original)
+  let rewritten_ops = fixture_acceptance_page_content_ops_for_test(rewritten)
+  fixture_acceptance_assert_content_op_for_test(original_ops, Op_G(0.5))
+  fixture_acceptance_assert_content_op_for_test(
+    original_ops,
+    Op_rg(0.2, 0.7, 0.2),
+  )
+  fixture_acceptance_assert_content_op_for_test(rewritten_ops, Op_G(0.5))
+  fixture_acceptance_assert_content_op_for_test(
+    rewritten_ops,
+    Op_rg(0.4, 0.5, 0.6),
+  )
+  fixture_acceptance_assert_no_content_op_for_test(
+    rewritten_ops,
+    Op_rg(0.2, 0.7, 0.2),
+  )
+  fixture_acceptance_assert_content_op_for_test(rewritten_ops, Op_B)
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_black_text_for_test(
+  original : @pdflite.PdfDocument,
+  rewritten : @pdflite.PdfDocument,
+) -> Unit raise {
+  fixture_acceptance_assert_cpdf_source_same_page_shape_for_test(
+    original, rewritten,
+  )
+  let original_ops = fixture_acceptance_page_content_ops_for_test(original)
+  let rewritten_ops = fixture_acceptance_page_content_ops_for_test(rewritten)
+  fixture_acceptance_assert_content_op_for_test(original_ops, Op_BT)
+  fixture_acceptance_assert_content_op_for_test(original_ops, Op_ET)
+  fixture_acceptance_assert_content_op_for_test(
+    original_ops,
+    Op_Tj(@ascii.encode("Different ")),
+  )
+  fixture_acceptance_assert_no_content_op_for_test(original_ops, Op_g(0.0))
+  fixture_acceptance_assert_content_op_for_test(rewritten_ops, Op_g(0.0))
+  fixture_acceptance_assert_content_op_for_test(
+    rewritten_ops,
+    Op_Tj(@ascii.encode("Different ")),
+  )
+  fixture_acceptance_assert_content_op_for_test(
+    rewritten_ops,
+    Op_Tj(@ascii.encode("fonts")),
+  )
+  fixture_acceptance_assert_content_op_for_test(
+    rewritten_ops,
+    Op_Tj(@ascii.encode(" and sizes")),
+  )
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_thin_lines_for_test(
+  original : @pdflite.PdfDocument,
+  rewritten : @pdflite.PdfDocument,
+) -> Unit raise {
+  fixture_acceptance_assert_cpdf_source_same_page_shape_for_test(
+    original, rewritten,
+  )
+  let original_ops = fixture_acceptance_page_content_ops_for_test(original)
+  let rewritten_ops = fixture_acceptance_page_content_ops_for_test(rewritten)
+  fixture_acceptance_assert_content_op_for_test(original_ops, Op_w(40.0))
+  fixture_acceptance_assert_no_content_op_for_test(rewritten_ops, Op_w(40.0))
+  @test.assert_eq(
+    fixture_acceptance_content_op_count_for_test(rewritten_ops, Op_w(30.0)),
+    2,
+  )
+  @test.assert_eq(rewritten_ops[0], Op_w(30.0))
+  fixture_acceptance_assert_content_op_for_test(rewritten_ops, Op_S)
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_appended_content_for_test(
+  original : @pdflite.PdfDocument,
+  appended : @pdflite.PdfDocument,
+) -> Unit raise {
+  fixture_acceptance_assert_cpdf_source_same_page_shape_for_test(
+    original, appended,
+  )
+  let ops = fixture_acceptance_page_content_ops_for_test(appended)
+  @test.assert_eq(ops[0], Op_g(0.25))
+  @test.assert_eq(ops[1], Op_re(10.0, 10.0, 20.0, 20.0))
+  @test.assert_eq(ops[2], Op_f)
+  fixture_acceptance_assert_content_op_for_test(
+    ops,
+    Op_Tj(@ascii.encode("Hello, World!")),
+  )
+  let text = @ascii.decode_lossy(appended.test_extract_text([1]))
+  fixture_acceptance_assert_contains_for_test(text, "Hello, World!")
+}
+
+///|
 fn fixture_acceptance_assert_cpdf_source_decompressed_streams_for_test(
   original : @pdflite.PdfDocument,
   decompressed : @pdflite.PdfDocument,
@@ -4426,6 +4591,143 @@ async test "optional cpdf source tweak fixtures remove clipping and reveal text"
         @pdflite.pdf_read_document_from_bytes(compressed),
       )
       fixture_acceptance_assert_cpdf_source_reveal_hidden_text_for_test(
+        document,
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+        ),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source tweak fixtures recolor thin and append content" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/manualimages/colfill.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_draw_operator_fixture_for_test(
+        ".repos/cpdf-source/manualimages/colfill.pdf", document,
+      )
+      let black_lines = @pdflite.pdf_black_lines(
+        document,
+        [1],
+        PdfContentRGB(0.1, 0.2, 0.3),
+      )
+      fixture_acceptance_assert_cpdf_source_black_lines_for_test(
+        document, black_lines,
+      )
+      fixture_acceptance_assert_cpdf_source_black_lines_for_test(
+        document,
+        fixture_acceptance_reparse_compressed_for_test(black_lines),
+      )
+      let black_fills = document.black_fills([1], PdfContentRGB(0.4, 0.5, 0.6))
+      fixture_acceptance_assert_cpdf_source_black_fills_for_test(
+        document, black_fills,
+      )
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        black_fills,
+      )
+      fixture_acceptance_assert_cpdf_source_black_fills_for_test(
+        document,
+        @pdflite.pdf_read_document_from_bytes(compressed),
+      )
+      fixture_acceptance_assert_cpdf_source_black_fills_for_test(
+        document,
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+        ),
+      )
+    }
+  }
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/manualimages/fontparams.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_draw_operator_fixture_for_test(
+        ".repos/cpdf-source/manualimages/fontparams.pdf", document,
+      )
+      let rewritten = @pdflite.pdf_black_text(
+        document,
+        [1],
+        @pdflite.pdf_content_black,
+      )
+      fixture_acceptance_assert_cpdf_source_black_text_for_test(
+        document, rewritten,
+      )
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        rewritten,
+      )
+      fixture_acceptance_assert_cpdf_source_black_text_for_test(
+        document,
+        @pdflite.pdf_read_document_from_bytes(compressed),
+      )
+      fixture_acceptance_assert_cpdf_source_black_text_for_test(
+        document,
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+        ),
+      )
+    }
+  }
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/manualimages/capjoins.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_draw_operator_fixture_for_test(
+        ".repos/cpdf-source/manualimages/capjoins.pdf", document,
+      )
+      let rewritten = document.thin_lines([1], -30.0)
+      fixture_acceptance_assert_cpdf_source_thin_lines_for_test(
+        document, rewritten,
+      )
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        rewritten,
+      )
+      fixture_acceptance_assert_cpdf_source_thin_lines_for_test(
+        document,
+        @pdflite.pdf_read_document_from_bytes(compressed),
+      )
+      fixture_acceptance_assert_cpdf_source_thin_lines_for_test(
+        document,
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+        ),
+      )
+    }
+  }
+  match
+    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+      let appended = @pdflite.pdf_append_page_content(
+        document,
+        [1],
+        @ascii.encode("0.25 g 10 10 20 20 re f"),
+        before=true,
+      )
+      fixture_acceptance_assert_cpdf_source_appended_content_for_test(
+        document, appended,
+      )
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        appended,
+      )
+      fixture_acceptance_assert_cpdf_source_appended_content_for_test(
+        document,
+        @pdflite.pdf_read_document_from_bytes(compressed),
+      )
+      fixture_acceptance_assert_cpdf_source_appended_content_for_test(
         document,
         @pdflite.pdf_read_document_from_bytes(
           fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),

@@ -5663,6 +5663,22 @@ Current backend snapshot:
   tests passing, `moon test --target native` reports 2247/2247 tests passing,
   and `moon check --target all --warn-list +73` reports the known warning
   baseline with 10 warnings and 0 errors.~~
+- [x] ~~Add the next source-boundary cpdftweak slice: optional
+  `.repos/cpdf-source/manualimages/colfill.pdf`, `fontparams.pdf`,
+  `capjoins.pdf`, and top-level `hello.pdf` now gate cpdf-style colour
+  rewrites, text fill insertion, thin-line maximum-width rewriting, and
+  byte-string page-content prepending on real cpdf source fixtures. The gate
+  verifies page geometry/resources/rest preservation, stroke-only and fill-only
+  colour replacement without changing the other paint channel, inserted black
+  text fill state while retaining source text operators, negative-width
+  `thin_lines` threshold behavior, parsed `append_page_content` byte payloads
+  before existing page content, text preservation, compressed rewrite/reread,
+  and bad-`startxref` recovery. `moon test --target native fixture_acceptance
+  --filter '*recolor thin and append*'` reports 1/1 test passing, `moon test
+  --target native fixture_acceptance` reports 77/77 tests passing, `moon test
+  --target native` reports 2248/2248 tests passing, and `moon check --target
+  all --warn-list +73` reports the known warning baseline with 10 warnings and
+  0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
