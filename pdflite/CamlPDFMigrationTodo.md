@@ -6868,6 +6868,22 @@ Current backend snapshot:
   moon fmt` reports no pending interface or formatting work, and `moon check
   --target all --warn-list +73` reports the known warning-73/main-package
   baseline with 10 warnings and 0 errors.~~
+- [x] ~~Add the next source-corpus image reporting slice: the native
+  `image/fixture_acceptance` package now gates optional
+  `.repos/cpdf-source/cpdfmanual.pdf` through cpdf-style image JSON rows,
+  JSON/UTF-8 byte wrappers, image-resolution tuples and JSON/blob wrappers,
+  direct `get_image_24bpp` extraction for the real FlateDecode/DeviceRGB
+  `400x294` manual image object, compressed rewrite/reread, and
+  bad-final-`startxref` reconstruction for the xref-stream-backed source
+  manual. The image fixture `startxref` corruptor now also tolerates ordinary
+  PDF whitespace after the keyword. `moon check --target native
+  image/fixture_acceptance --warn-list +73` passes, the focused cpdf source
+  manual image reporting test reports 1/1 test passing, `moon test --target
+  native image/fixture_acceptance` reports 19/19 tests passing, and `moon test
+  --target native` reports 2313/2313 tests passing. `moon info && moon fmt`
+  reports no pending interface or formatting work, and `moon check --target all
+  --warn-list +73` reports the known warning-73/main-package baseline with 10
+  warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.

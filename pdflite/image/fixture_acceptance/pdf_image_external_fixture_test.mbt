@@ -131,14 +131,25 @@ fn image_external_push_ascii_for_test(
 fn image_external_corrupt_startxref_pointer_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
-  let marker = @ascii.encode("startxref\n")
+  let marker = @ascii.encode("startxref")
   let marker_position = image_external_find_last_bytes_for_test(bytes, marker)
   if marker_position < 0 {
     fail("expected startxref marker")
   }
-  let number_start = marker_position + marker.length()
+  let mut number_start = marker_position + marker.length()
+  while number_start < bytes.length() &&
+        (
+          bytes[number_start] == b'\n' ||
+          bytes[number_start] == b'\r' ||
+          bytes[number_start] == b' ' ||
+          bytes[number_start] == b'\t'
+        ) {
+    number_start += 1
+  }
   let mut number_end = number_start
-  while number_end < bytes.length() && bytes[number_end] != b'\n' {
+  while number_end < bytes.length() &&
+        bytes[number_end] >= b'0' &&
+        bytes[number_end] <= b'9' {
     number_end += 1
   }
   let output : Array[Byte] = []
@@ -486,6 +497,96 @@ fn image_external_assert_raw_rgb_for_test(
     }
     _ => fail(message)
   }
+}
+
+///|
+fn image_external_assert_contains_for_test(
+  haystack : String,
+  needle : String,
+) -> Unit raise {
+  guard haystack.contains(needle) else {
+    fail("expected text to contain " + needle)
+  }
+}
+
+///|
+fn image_external_assert_cpdf_manual_extracted_image_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  match document.get_image_24bpp(PdfDictionary([]), PdfIndirect(1477)) {
+    PdfRawImage(width, height, PdfBPP24, data) => {
+      @test.assert_eq(width, 400)
+      @test.assert_eq(height, 294)
+      @test.assert_eq(data.length(), 400 * 294 * 3)
+      @test.assert_eq(data[0].to_int(), 255)
+      @test.assert_eq(data[1].to_int(), 255)
+      @test.assert_eq(data[2].to_int(), 255)
+      let middle_pixel = (147 * 400 + 200) * 3
+      @test.assert_eq(data[middle_pixel].to_int(), 250)
+      @test.assert_eq(data[middle_pixel + 1].to_int(), 250)
+      @test.assert_eq(data[middle_pixel + 2].to_int(), 250)
+    }
+    _ => fail("expected cpdf manual embedded image to decode as 24bpp")
+  }
+}
+
+///|
+fn image_external_assert_cpdf_manual_image_reporting_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 175)
+  let all_pages = document.parse_pagespec("")
+  let images = document.images_json(all_pages)
+  @test.assert_eq(@pdflite.pdf_image_images(false, document, all_pages), images)
+  let images_json = images.stringify()
+  image_external_assert_contains_for_test(images_json, "\"Object\":1477")
+  image_external_assert_contains_for_test(images_json, "\"Pages\":[128]")
+  image_external_assert_contains_for_test(images_json, "\"Width\":400")
+  image_external_assert_contains_for_test(images_json, "\"Height\":294")
+  image_external_assert_contains_for_test(images_json, "\"BitsPerComponent\":8")
+  image_external_assert_contains_for_test(
+    images_json, "\"Colourspace\":\"/DeviceRGB\"",
+  )
+  image_external_assert_contains_for_test(
+    images_json, "\"Filter\":\"/FlateDecode\"",
+  )
+  let images_blob = @ascii.decode_lossy(document.images_json_blob(all_pages))
+  image_external_assert_contains_for_test(images_blob, "\"Width\":400")
+  image_external_assert_contains_for_test(images_blob, "\"Height\":294")
+  @test.assert_eq(
+    @pdflite.pdf_image_images_json_blob(false, document, all_pages),
+    document.images_json_blob(all_pages),
+  )
+  let resolution = document.image_resolution(all_pages, 1000000.0)
+  @test.assert_eq(
+    @pdflite.pdf_image_resolution(false, document, all_pages, 1000000.0),
+    resolution,
+  )
+  let mut has_embedded_image_resolution = false
+  for entry in resolution {
+    if entry.0 == 128 && entry.2 == 400 && entry.3 == 294 && entry.6 == 1477 {
+      has_embedded_image_resolution = true
+    }
+  }
+  @test.assert_eq(has_embedded_image_resolution, true)
+  let resolution_json_object = document.image_resolution_json(
+    all_pages, 1000000.0,
+  )
+  @test.assert_eq(
+    @pdflite.pdf_image_resolution_json(false, document, all_pages, 1000000.0),
+    resolution_json_object,
+  )
+  let resolution_json = resolution_json_object.stringify()
+  image_external_assert_contains_for_test(resolution_json, "\"Page\":128")
+  image_external_assert_contains_for_test(resolution_json, "\"W\":400")
+  image_external_assert_contains_for_test(resolution_json, "\"H\":294")
+  @test.assert_eq(
+    @pdflite.pdf_image_resolution_json_blob(
+      false, document, all_pages, 1000000.0,
+    ),
+    document.image_resolution_json_blob(all_pages, 1000000.0),
+  )
+  image_external_assert_cpdf_manual_extracted_image_for_test(document)
 }
 
 ///|
@@ -921,6 +1022,34 @@ async test "cpdf source manual fixture reconstructs embedded RGB24 image" {
         400,
         294,
         "expected cpdf source manual image after reconstructed rewrite",
+      )
+    }
+  }
+}
+
+///|
+async test "cpdf source manual fixture reports embedded image metadata" {
+  match
+    image_external_fixture_bytes_for_test(".repos/cpdf-source/cpdfmanual.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      image_external_assert_cpdf_manual_image_reporting_for_test(document)
+      image_external_assert_cpdf_manual_image_reporting_for_test(
+        image_external_reparse_compressed_for_test(document),
+      )
+      let corrupted = image_external_corrupt_startxref_pointer_for_test(bytes)
+      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+        corrupted,
+      )
+      guard strict is Err(_) else {
+        fail("expected bad startxref to require malformed reconstruction")
+      }
+      let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
+      @test.assert_eq(recovered.first_xref(), 0)
+      image_external_assert_cpdf_manual_image_reporting_for_test(recovered)
+      image_external_assert_cpdf_manual_image_reporting_for_test(
+        image_external_reparse_compressed_for_test(recovered),
       )
     }
   }
