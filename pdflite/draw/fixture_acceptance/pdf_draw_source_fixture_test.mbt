@@ -763,6 +763,151 @@ fn draw_fixture_cpdf_source_manual_image_pdf_paths_for_test() -> Array[String] {
 }
 
 ///|
+fn draw_fixture_cpdf_source_manual_text_pdf_paths_for_test() -> Array[String] {
+  [
+    ".repos/cpdf-source/manualimages/fontparams.pdf", ".repos/cpdf-source/manualimages/fonts.pdf",
+    ".repos/cpdf-source/manualimages/h1.pdf", ".repos/cpdf-source/manualimages/lines.pdf",
+    ".repos/cpdf-source/manualimages/para.pdf", ".repos/cpdf-source/manualimages/paras.pdf",
+    ".repos/cpdf-source/manualimages/stext.pdf", ".repos/cpdf-source/manualimages/text.pdf",
+    ".repos/cpdf-source/manualimages/textclip.pdf",
+  ]
+}
+
+///|
+fn draw_fixture_expected_manual_content_counts_for_test(
+  path : String,
+) -> (Int, Int, Int) raise {
+  match path {
+    ".repos/cpdf-source/manualimages/bez.pdf" => (0, 0, 1)
+    ".repos/cpdf-source/manualimages/capjoins.pdf" => (0, 0, 1)
+    ".repos/cpdf-source/manualimages/clip.pdf" => (0, 0, 1)
+    ".repos/cpdf-source/manualimages/colfill.pdf" => (0, 0, 1)
+    ".repos/cpdf-source/manualimages/dash.pdf" => (0, 0, 1)
+    ".repos/cpdf-source/manualimages/fill.pdf" => (0, 0, 1)
+    ".repos/cpdf-source/manualimages/fontparams.pdf" => (25, 0, 0)
+    ".repos/cpdf-source/manualimages/fonts.pdf" => (25, 0, 0)
+    ".repos/cpdf-source/manualimages/h1.pdf" => (132, 0, 0)
+    ".repos/cpdf-source/manualimages/line.pdf" => (0, 0, 1)
+    ".repos/cpdf-source/manualimages/lines.pdf" => (23, 0, 0)
+    ".repos/cpdf-source/manualimages/matrix.pdf" => (0, 0, 3)
+    ".repos/cpdf-source/manualimages/para.pdf" => (81, 0, 0)
+    ".repos/cpdf-source/manualimages/paras.pdf" => (156, 0, 0)
+    ".repos/cpdf-source/manualimages/png.pdf" => (0, 1, 0)
+    ".repos/cpdf-source/manualimages/pop.pdf" => (0, 0, 3)
+    ".repos/cpdf-source/manualimages/stext.pdf" => (6, 0, 0)
+    ".repos/cpdf-source/manualimages/text.pdf" => (5, 0, 0)
+    ".repos/cpdf-source/manualimages/textclip.pdf" => (23, 0, 1)
+    ".repos/cpdf-source/manualimages/trans.pdf" => (0, 0, 2)
+    ".repos/cpdf-source/manualimages/xobj.pdf" => (0, 0, 2)
+    _ => fail("unexpected cpdf manual image path: " + path)
+  }
+}
+
+///|
+fn draw_fixture_expected_manual_text_for_test(path : String) -> String raise {
+  match path {
+    ".repos/cpdf-source/manualimages/fontparams.pdf" =>
+      "\nDifferent fonts and sizes"
+    ".repos/cpdf-source/manualimages/fonts.pdf" => "\nDifferent fonts and sizes"
+    ".repos/cpdf-source/manualimages/h1.pdf" =>
+      "\nThis is the headingThis is the firstparagraph, whichspreads over more thanone lineHere is the second,which also has multiplelines..."
+    ".repos/cpdf-source/manualimages/lines.pdf" => "\nThis ison multiplelines"
+    ".repos/cpdf-source/manualimages/para.pdf" =>
+      "\nThis is a paragraph ofwidth 200pt,left-justified, containingmore than one line..."
+    ".repos/cpdf-source/manualimages/paras.pdf" =>
+      "\nThis is the first paragraph, which isspread over multiple lines at thiswidth... And here is the second, alsotaking more than one line. Here is a little one."
+    ".repos/cpdf-source/manualimages/stext.pdf" => "\nPage 1"
+    ".repos/cpdf-source/manualimages/text.pdf" => "\nHello"
+    ".repos/cpdf-source/manualimages/textclip.pdf" =>
+      "\nThis ison multiplelines"
+    _ => fail("unexpected cpdf manual image text path: " + path)
+  }
+}
+
+///|
+fn draw_fixture_replacement_count_for_test(text : String) -> Int {
+  let mut count = 0
+  for char in text {
+    if char.to_int() == 0xFFFD {
+      count += 1
+    }
+  }
+  count
+}
+
+///|
+fn draw_fixture_raw_control_count_for_test(text : String) -> Int {
+  let mut count = 0
+  for char in text {
+    let codepoint = char.to_int()
+    if (
+        codepoint < 0x20 &&
+        codepoint != 0x0A &&
+        codepoint != 0x09 &&
+        codepoint != 0x0C
+      ) ||
+      (codepoint >= 0x7F && codepoint <= 0x9F) {
+      count += 1
+    }
+  }
+  count
+}
+
+///|
+fn draw_fixture_assert_manual_content_entries_for_test(
+  document : @pdflite.PdfDocument,
+) -> (Int, Int, Int) raise {
+  @test.assert_eq(document.endpage(), 1)
+  let pages = document.pages_of_pagetree()
+  let entries = document.content_entries_of_page(pages[0])
+  @test.assert_eq(
+    @pdflite.pdf_content_entries_of_page(document, pages[0]),
+    entries,
+  )
+  @test.assert_eq(entries.length() > 0, true)
+  let mut glyphs = 0
+  let mut images = 0
+  let mut paths = 0
+  for entry in entries {
+    match entry.object {
+      PdfContentGlyphObject(_, _, extracted_text) => {
+        glyphs += 1
+        @test.assert_eq(extracted_text.length() > 0, true)
+      }
+      PdfContentImageObject(_) => images += 1
+      PdfContentPathObject(_) => paths += 1
+      _ => ()
+    }
+  }
+  let page_json = document.content_json_of_page(pages[0])
+  @test.assert_eq(
+    @pdflite.pdf_content_json_of_page(document, pages[0]),
+    page_json,
+  )
+  let content_json = document.page_content_json([1])
+  @test.assert_eq(@pdflite.pdf_page_content_json(document, [1]), content_json)
+  let content_json_text = content_json.stringify()
+  draw_fixture_assert_contains_for_test(content_json_text, "\"page\":1")
+  draw_fixture_assert_contains_for_test(content_json_text, "\"bbox\"")
+  (glyphs, images, paths)
+}
+
+///|
+fn draw_fixture_assert_manual_text_for_test(
+  path : String,
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 1)
+  let pages = [1]
+  let extracted = document.test_extract_text(pages)
+  @test.assert_eq(@pdflite.pdf_test_extract_text(document, pages), extracted)
+  let text = @utf8.decode_lossy(extracted)
+  @test.assert_eq(text, draw_fixture_expected_manual_text_for_test(path))
+  @test.assert_eq(draw_fixture_replacement_count_for_test(text), 0)
+  @test.assert_eq(draw_fixture_raw_control_count_for_test(text), 0)
+}
+
+///|
 fn draw_fixture_assert_manual_image_content_for_test(
   document : @pdflite.PdfDocument,
   path : String,
@@ -770,6 +915,80 @@ fn draw_fixture_assert_manual_image_content_for_test(
   let ops = draw_fixture_page_ops_for_test(document)
   guard ops.length() > 0 else { fail("expected content ops in " + path) }
   draw_fixture_assert_no_unknown_ops_for_test(path, ops)
+}
+
+///|
+async test "cpdf source manual image fixtures traverse content entries" {
+  let mut checked = 0
+  let mut glyphs = 0
+  let mut images = 0
+  let mut paths = 0
+  for path in draw_fixture_cpdf_source_manual_image_pdf_paths_for_test() {
+    match draw_fixture_document_for_test(path) {
+      None => ()
+      Some(document) => {
+        checked += 1
+        let (doc_glyphs, doc_images, doc_paths) = draw_fixture_assert_manual_content_entries_for_test(
+          document,
+        )
+        let (rewritten_glyphs, rewritten_images, rewritten_paths) = draw_fixture_assert_manual_content_entries_for_test(
+          draw_fixture_reparse_compressed_for_test(document),
+        )
+        let (expected_glyphs, expected_images, expected_paths) = draw_fixture_expected_manual_content_counts_for_test(
+          path,
+        )
+        @test.assert_eq(doc_glyphs, expected_glyphs)
+        @test.assert_eq(doc_images, expected_images)
+        @test.assert_eq(doc_paths, expected_paths)
+        @test.assert_eq(rewritten_glyphs, doc_glyphs)
+        @test.assert_eq(rewritten_images, doc_images)
+        @test.assert_eq(rewritten_paths, doc_paths)
+        glyphs += doc_glyphs
+        images += doc_images
+        paths += doc_paths
+      }
+    }
+  }
+  if checked > 0 {
+    @test.assert_eq(
+      checked,
+      draw_fixture_cpdf_source_manual_image_pdf_paths_for_test().length(),
+    )
+    @test.assert_eq(glyphs, 476)
+    @test.assert_eq(images, 1)
+    @test.assert_eq(paths, 18)
+  }
+}
+
+///|
+async test "cpdf source manual image text fixtures extract exact text" {
+  let mut checked = 0
+  for path in draw_fixture_cpdf_source_manual_text_pdf_paths_for_test() {
+    match draw_fixture_bytes_for_test(path) {
+      None => ()
+      Some(bytes) => {
+        checked += 1
+        let document = @pdflite.pdf_read_document_from_bytes(bytes)
+        draw_fixture_assert_manual_text_for_test(path, document)
+        draw_fixture_assert_manual_text_for_test(
+          path,
+          draw_fixture_reparse_compressed_for_test(document),
+        )
+        draw_fixture_assert_manual_text_for_test(
+          path,
+          @pdflite.pdf_read_document_from_bytes(
+            draw_fixture_corrupt_startxref_pointer_for_test(bytes),
+          ),
+        )
+      }
+    }
+  }
+  if checked > 0 {
+    @test.assert_eq(
+      checked,
+      draw_fixture_cpdf_source_manual_text_pdf_paths_for_test().length(),
+    )
+  }
 }
 
 ///|

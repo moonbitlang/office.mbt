@@ -7003,6 +7003,25 @@ Current backend snapshot:
   pending interface or formatting work, and `moon check --target all --warn-list
   +73` reports the known warning-73/main-package baseline with 10 warnings and
   0 errors.~~
+- [x] ~~Add the next source-corpus manual-image content/text slice: the native
+  `draw/fixture_acceptance` package now gates the optional
+  `.repos/cpdf-source/manualimages/*.pdf` corpus through cpdfcontent-style
+  content-entry traversal and exact text extraction. The content-entry gate
+  verifies all 21 manual-image PDFs, wrapper parity for
+  `pdf_content_entries_of_page`, `pdf_content_json_of_page`, and
+  `pdf_page_content_json`, per-fixture glyph/image/path counts, compressed
+  rewrite/reread count stability, and aggregate source-corpus totals of 476
+  glyphs, 1 image, and 18 paths. The text gate verifies the nine text-bearing
+  fixtures against cpdf source expected strings, wrapper parity for
+  `pdf_test_extract_text`, and zero raw-control/replacement characters after
+  original reads, compressed rewrite/reread, and bad-final-`startxref`
+  reconstruction. `moon check --target native draw/fixture_acceptance
+  --warn-list +73` passes, both focused cpdf source manual-image corpus tests
+  report 1/1 test passing, `moon test --target native draw/fixture_acceptance`
+  reports 18/18 tests passing, and `moon test --target native` reports
+  2322/2322 tests passing. `moon info && moon fmt` reports no pending interface
+  or formatting work, and `moon check --target all --warn-list +73` reports the
+  known warning-73/main-package baseline with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.
