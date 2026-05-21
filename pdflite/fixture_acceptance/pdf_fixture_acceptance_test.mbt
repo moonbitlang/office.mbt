@@ -6247,6 +6247,28 @@ fn fixture_acceptance_cpdf_source_hello_with_unijis_unicode_boundary_text_for_te
 }
 
 ///|
+fn fixture_acceptance_cpdf_source_postpend_boundary_text_for_test(
+  document : @pdflite.PdfDocument,
+  font_name : String,
+  text : Array[Int],
+) -> @pdflite.PdfDocument raise {
+  let output = document.copy()
+  let pages = output.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  let updated_page = output.postpend_operators(
+    pages[0],
+    [
+      Op_BT,
+      Op_Tf(fixture_acceptance_pdf_name_for_test(font_name), 12.0),
+      Op_Tj(@pdflite.pdf_bytes_of_int_array(text)),
+      Op_ET,
+    ],
+    fast=true,
+  )
+  output.change_pages([updated_page], change_references=true)
+}
+
+///|
 fn fixture_acceptance_assert_cpdf_source_unijis_unicode_font_for_test(
   document : @pdflite.PdfDocument,
   name : String,
@@ -6569,6 +6591,78 @@ fn fixture_acceptance_assert_cpdf_source_uniakr_predefined_cmaps_for_test(
     0xB098,
     false,
   )
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_uniakr_utf8_cpdfcontent_boundary_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  let text = [0xEA, 0xB0, 0x80, 0xEB, 0x82, 0x98]
+  let ops = fixture_acceptance_page_content_ops_for_test(document)
+  fixture_acceptance_assert_content_op_for_test(
+    ops,
+    Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceAKR8"), 12.0),
+  )
+  fixture_acceptance_assert_content_op_for_test(
+    ops,
+    Op_Tj(@pdflite.pdf_bytes_of_int_array(text)),
+  )
+  fixture_acceptance_assert_cpdf_source_uniakr_predefined_font_for_test(
+    document,
+    "/SourceAKR8",
+    "/SourceUniAKRUTF8Top",
+    "/UniAKR-UTF8-H",
+    @pdflite.pdf_bytes_of_int_array(text),
+    0xEAB080,
+    0xEB8298,
+    false,
+  )
+  let extracted_result = try? document.test_extract_text([1])
+  guard extracted_result is Err(InvalidUTF8) else {
+    fail(
+      "expected cpdfcontent-style UniAKR UTF8 extraction to fail on split bytes",
+    )
+  }
+  let json_result = try? document.page_content_json([1])
+  guard json_result is Err(InvalidUTF8) else {
+    fail("expected cpdfcontent-style UniAKR UTF8 JSON to fail on split bytes")
+  }
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_uniakr_utf32_cpdfcontent_boundary_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  let text = [0x00, 0x00, 0xAC, 0x00, 0x00, 0x00, 0xB0, 0x98]
+  let ops = fixture_acceptance_page_content_ops_for_test(document)
+  fixture_acceptance_assert_content_op_for_test(
+    ops,
+    Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceAKR32"), 12.0),
+  )
+  fixture_acceptance_assert_content_op_for_test(
+    ops,
+    Op_Tj(@pdflite.pdf_bytes_of_int_array(text)),
+  )
+  fixture_acceptance_assert_cpdf_source_uniakr_predefined_font_for_test(
+    document,
+    "/SourceAKR32",
+    "/SourceUniAKRUTF32Top",
+    "/UniAKR-UTF32-H",
+    @pdflite.pdf_bytes_of_int_array(text),
+    0xAC00,
+    0xB098,
+    false,
+  )
+  let extracted_result = try? document.test_extract_text([1])
+  guard extracted_result is Err(BadText) else {
+    fail(
+      "expected cpdfcontent-style UniAKR UTF32 extraction to fail on split bytes",
+    )
+  }
+  let json_result = try? document.page_content_json([1])
+  guard json_result is Err(BadText) else {
+    fail("expected cpdfcontent-style UniAKR UTF32 JSON to fail on split bytes")
+  }
 }
 
 ///|
@@ -7484,6 +7578,44 @@ fn fixture_acceptance_assert_cpdf_source_gb_cns_predefined_cmaps_for_test(
     0x4E8C,
     true,
   )
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_gb_ucs32_cpdfcontent_boundary_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  let text = [0x00, 0x00, 0x4E, 0x00, 0x00, 0x00, 0x56, 0xFD]
+  let ops = fixture_acceptance_page_content_ops_for_test(document)
+  fixture_acceptance_assert_content_op_for_test(
+    ops,
+    Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceGB32H"), 12.0),
+  )
+  fixture_acceptance_assert_content_op_for_test(
+    ops,
+    Op_Tj(@pdflite.pdf_bytes_of_int_array(text)),
+  )
+  fixture_acceptance_assert_cpdf_source_gb_cns_predefined_font_for_test(
+    document,
+    "/SourceGB32H",
+    "/SourceUniGBUCS32Top",
+    "/UniGB-UCS32-H",
+    "GB1",
+    @pdflite.pdf_bytes_of_int_array(text),
+    [0x4E00, 0x56FD],
+    0x4E00,
+    0x4E00,
+    false,
+  )
+  let extracted_result = try? document.test_extract_text([1])
+  guard extracted_result is Err(BadText) else {
+    fail(
+      "expected cpdfcontent-style UniGB UCS32 extraction to fail on split bytes",
+    )
+  }
+  let json_result = try? document.page_content_json([1])
+  guard json_result is Err(BadText) else {
+    fail("expected cpdfcontent-style UniGB UCS32 JSON to fail on split bytes")
+  }
 }
 
 ///|
@@ -10955,6 +11087,93 @@ async test "optional cpdf source hello fixture extracts GB CNS predefined CMaps"
       fixture_acceptance_assert_cpdf_source_gb_cns_predefined_cmaps_for_test(
         @pdflite.pdf_read_document_from_bytes(
           fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+        ),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source hello fixture pins Korea GB direct Unicode cpdfcontent boundaries" {
+  match
+    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+      let akr_cmaps = fixture_acceptance_cpdf_source_hello_with_uniakr_predefined_cmaps_for_test(
+        document,
+      )
+      fixture_acceptance_assert_cpdf_source_uniakr_predefined_cmaps_for_test(
+        akr_cmaps,
+      )
+      let akr_utf8 = fixture_acceptance_cpdf_source_postpend_boundary_text_for_test(
+        akr_cmaps,
+        "/SourceAKR8",
+        [0xEA, 0xB0, 0x80, 0xEB, 0x82, 0x98],
+      )
+      fixture_acceptance_assert_cpdf_source_uniakr_utf8_cpdfcontent_boundary_for_test(
+        akr_utf8,
+      )
+      let compressed_akr_utf8 = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        akr_utf8,
+      )
+      fixture_acceptance_assert_cpdf_source_uniakr_utf8_cpdfcontent_boundary_for_test(
+        @pdflite.pdf_read_document_from_bytes(compressed_akr_utf8),
+      )
+      fixture_acceptance_assert_cpdf_source_uniakr_utf8_cpdfcontent_boundary_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(
+            compressed_akr_utf8,
+          ),
+        ),
+      )
+      let akr_utf32 = fixture_acceptance_cpdf_source_postpend_boundary_text_for_test(
+        akr_cmaps,
+        "/SourceAKR32",
+        [0x00, 0x00, 0xAC, 0x00, 0x00, 0x00, 0xB0, 0x98],
+      )
+      fixture_acceptance_assert_cpdf_source_uniakr_utf32_cpdfcontent_boundary_for_test(
+        akr_utf32,
+      )
+      let compressed_akr_utf32 = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        akr_utf32,
+      )
+      fixture_acceptance_assert_cpdf_source_uniakr_utf32_cpdfcontent_boundary_for_test(
+        @pdflite.pdf_read_document_from_bytes(compressed_akr_utf32),
+      )
+      fixture_acceptance_assert_cpdf_source_uniakr_utf32_cpdfcontent_boundary_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(
+            compressed_akr_utf32,
+          ),
+        ),
+      )
+      let gb_cmaps = fixture_acceptance_cpdf_source_hello_with_gb_cns_predefined_cmaps_for_test(
+        document,
+      )
+      fixture_acceptance_assert_cpdf_source_gb_cns_predefined_cmaps_for_test(
+        gb_cmaps,
+      )
+      let gb_ucs32 = fixture_acceptance_cpdf_source_postpend_boundary_text_for_test(
+        gb_cmaps,
+        "/SourceGB32H",
+        [0x00, 0x00, 0x4E, 0x00, 0x00, 0x00, 0x56, 0xFD],
+      )
+      fixture_acceptance_assert_cpdf_source_gb_ucs32_cpdfcontent_boundary_for_test(
+        gb_ucs32,
+      )
+      let compressed_gb_ucs32 = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        gb_ucs32,
+      )
+      fixture_acceptance_assert_cpdf_source_gb_ucs32_cpdfcontent_boundary_for_test(
+        @pdflite.pdf_read_document_from_bytes(compressed_gb_ucs32),
+      )
+      fixture_acceptance_assert_cpdf_source_gb_ucs32_cpdfcontent_boundary_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(
+            compressed_gb_ucs32,
+          ),
         ),
       )
     }

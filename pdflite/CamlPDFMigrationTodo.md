@@ -6260,6 +6260,23 @@ Current backend snapshot:
   interface or formatting work, and `moon check --target all --warn-list +73`
   reports the known warning-73/main-package baseline with 10 warnings and 0
   errors.~~
+- [x] ~~Pin the source-boundary Korea1/GB1 cpdfcontent variable-width
+  direct-Unicode boundary: optional `.repos/cpdf-source/hello.pdf` now injects
+  real page content for `/UniAKR-UTF8-H`, `/UniAKR-UTF32-H`, and
+  `/UniGB-UCS32-H`, verifies the page-content operators and direct
+  `PdfTextExtractor` codepoints/reverse lookups still succeed, and preserves
+  cpdfcontent's upstream fixed-two-byte CID glyph behavior by requiring
+  `test_extract_text` and `page_content_json` to raise `InvalidUTF8` or
+  `BadText` at those split variable-width boundaries after compressed
+  rewrite/reread and bad-`startxref` recovery. `moon check --target native
+  fixture_acceptance --warn-list +73` passes, `moon test --target native
+  fixture_acceptance --filter 'optional cpdf source hello fixture pins Korea GB
+  direct Unicode cpdfcontent boundaries'` reports 1/1 test passing, `moon test
+  --target native fixture_acceptance` reports 105/105 tests passing, `moon test
+  --target native` reports 2277/2277 tests passing, `moon info && moon fmt`
+  reports no pending interface or formatting work, and `moon check --target all
+  --warn-list +73` reports the known warning-73/main-package baseline with
+  10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
