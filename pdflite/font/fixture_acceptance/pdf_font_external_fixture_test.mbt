@@ -204,23 +204,32 @@ fn font_external_push_ascii_for_test(
 fn font_external_corrupt_startxref_pointer_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
-  let marker = @ascii.encode("startxref\n")
+  let marker = @ascii.encode("startxref")
   let marker_position = font_external_find_last_bytes_for_test(bytes, marker)
   if marker_position < 0 {
     fail("expected startxref marker")
   }
-  let number_start = marker_position + marker.length()
+  let mut number_start = marker_position + marker.length()
+  while number_start < bytes.length() &&
+        (
+          bytes[number_start] == b'\n' ||
+          bytes[number_start] == b'\r' ||
+          bytes[number_start] == b' ' ||
+          bytes[number_start] == b'\t'
+        ) {
+    number_start += 1
+  }
   let mut number_end = number_start
-  while number_end < bytes.length() && bytes[number_end] != b'\n' {
+  while number_end < bytes.length() &&
+        bytes[number_end] >= b'0' &&
+        bytes[number_end] <= b'9' {
     number_end += 1
   }
   let output : Array[Byte] = []
   for index in 0..<number_start {
     output.push(bytes[index])
   }
-  for byte in @ascii.encode((bytes.length() + 4096).to_string()) {
-    output.push(byte)
-  }
+  font_external_push_ascii_for_test(output, (bytes.length() + 4096).to_string())
   for index in number_end..<bytes.length() {
     output.push(bytes[index])
   }
@@ -631,6 +640,83 @@ fn font_external_assert_contains_for_test(
 }
 
 ///|
+fn font_external_cpdf_font_entry_for_test(
+  fonts : ArrayView[@pdflite.PdfFontListEntry],
+  basefont_fragment : String,
+) -> @pdflite.PdfFontListEntry raise {
+  for entry in fonts {
+    if entry.basefont.contains(basefont_fragment) {
+      break entry
+    }
+  } nobreak {
+    fail("missing font row " + basefont_fragment)
+  }
+}
+
+///|
+fn font_external_assert_font_table_has_unicode_for_test(
+  document : @pdflite.PdfDocument,
+  font : @pdflite.PdfFontListEntry,
+) -> Unit raise {
+  let table = document.font_table(font.name, font.page)
+  @test.assert_eq(table.length() > 0, true)
+  let mut has_unicode = false
+  for row in table {
+    if row.unicode != "" && row.glyphnames != ".notdef" {
+      has_unicode = true
+    }
+  }
+  @test.assert_eq(has_unicode, true)
+}
+
+///|
+fn font_external_assert_embedded_font_for_test(
+  document : @pdflite.PdfDocument,
+  fonts : ArrayView[@pdflite.PdfFontListEntry],
+  basefont_fragment : String,
+) -> Unit raise {
+  let font = font_external_cpdf_font_entry_for_test(fonts, basefont_fragment)
+  @test.assert_eq(font.subtype, "/Type1")
+  @test.assert_eq(font.encoding, "")
+  match document.extract_fontfile_bytes(font.page, font.name) {
+    Some(bytes) => @test.assert_eq(bytes.length() > 1000, true)
+    None => fail("missing embedded fontfile for " + font.basefont)
+  }
+}
+
+///|
+fn font_external_assert_cpdf_manual_embedded_fonts_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 175)
+  let all_pages = document.parse_pagespec("")
+  let fonts = document.list_fonts(all_pages)
+  @test.assert_eq(fonts.length() > 20, true)
+  font_external_assert_embedded_font_for_test(
+    document, fonts, "NimbusSanL-Bold",
+  )
+  font_external_assert_embedded_font_for_test(
+    document, fonts, "URWPalladioL-Roma",
+  )
+  font_external_assert_embedded_font_for_test(
+    document, fonts, "NimbusMonL-Regu",
+  )
+  let helvetica = font_external_cpdf_font_entry_for_test(fonts, "/Helvetica")
+  @test.assert_eq(
+    document.extract_fontfile_bytes(helvetica.page, helvetica.name),
+    None,
+  )
+  font_external_assert_font_table_has_unicode_for_test(document, helvetica)
+  @test.assert_eq(document.missing_fonts(all_pages).length(), 0)
+  let fonts_json = document.fonts_json(all_pages).stringify()
+  font_external_assert_contains_for_test(fonts_json, "NimbusSanL-Bold")
+  font_external_assert_contains_for_test(fonts_json, "URWPalladioL-Roma")
+  font_external_assert_contains_for_test(fonts_json, "NimbusMonL-Regu")
+  let missing_text = @ascii.decode_lossy(document.missing_fonts_text(all_pages))
+  @test.assert_eq(missing_text, "")
+}
+
+///|
 fn font_external_assert_cpdf_source_fonts_fixture_for_test(
   document : @pdflite.PdfDocument,
 ) -> Unit raise {
@@ -681,6 +767,34 @@ fn font_external_assert_cpdf_source_fonts_fixture_for_test(
   font_external_assert_contains_for_test(
     missing_text, "1, /F2, /Type1, /Times-BoldItalic, /WinAnsiEncoding\n",
   )
+}
+
+///|
+async test "cpdf source manual fixture reports embedded fonts" {
+  match
+    font_external_fixture_bytes_for_test(".repos/cpdf-source/cpdfmanual.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      font_external_assert_cpdf_manual_embedded_fonts_for_test(document)
+      font_external_assert_cpdf_manual_embedded_fonts_for_test(
+        font_external_reparse_compressed_for_test(document),
+      )
+      let corrupted = font_external_corrupt_startxref_pointer_for_test(bytes)
+      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+        corrupted,
+      )
+      guard strict is Err(_) else {
+        fail("expected bad startxref to require malformed reconstruction")
+      }
+      let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
+      @test.assert_eq(recovered.first_xref(), 0)
+      font_external_assert_cpdf_manual_embedded_fonts_for_test(recovered)
+      font_external_assert_cpdf_manual_embedded_fonts_for_test(
+        font_external_reparse_compressed_for_test(recovered),
+      )
+    }
+  }
 }
 
 ///|

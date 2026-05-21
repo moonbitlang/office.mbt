@@ -6836,6 +6836,21 @@ Current backend snapshot:
   pending interface or formatting work, and `moon check --target all
   --warn-list +73` reports the known warning-73/main-package baseline with 10
   warnings and 0 errors.~~
+- [x] ~~Add the next source-corpus font recovery slice: the native
+  `font/fixture_acceptance` package now also gates optional
+  `.repos/cpdf-source/cpdfmanual.pdf` embedded-font reporting across the real
+  175-page source manual. The gate verifies cpdf-style font listing, embedded
+  Type1 fontfile extraction for representative Nimbus/Palladio/Monospace fonts,
+  Helvetica's unembedded standard-font boundary and Unicode font table,
+  font-JSON reporting, empty missing-font reporting, compressed rewrite/reread,
+  and bad-final-`startxref` reconstruction for the xref-stream-backed source
+  manual. `moon check --target native font/fixture_acceptance --warn-list +73`
+  passes, focused cpdf source manual font tests report 3/3 tests passing,
+  `moon test --target native font/fixture_acceptance` reports 8/8 tests
+  passing, and `moon test --target native` reports 2311/2311 tests passing.
+  `moon info && moon fmt` reports no pending interface or formatting work, and
+  `moon check --target all --warn-list +73` reports the known
+  warning-73/main-package baseline with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.
