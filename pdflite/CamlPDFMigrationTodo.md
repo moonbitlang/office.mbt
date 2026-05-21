@@ -6032,6 +6032,26 @@ Current backend snapshot:
   reports no pending interface or formatting work, and `moon check --target
   all --warn-list +73` reports the warning 73 baseline with 10 warnings and 0
   errors.~~
+- [x] ~~Broaden the source-boundary predefined CMap slice to GB1 legacy
+  families: optional `.repos/cpdf-source/hello.pdf` now gates `/GB-EUC-H`,
+  `/GBpc-EUC-H`, `/GBK-EUC-H`, `/GBKp-EUC-H`, and `/GBK2K-H` on a real source
+  PDF after injecting Type0 CID-keyed font resources. The gate preserves the
+  original Hello text, verifies the injected GB-EUC text operator survives in
+  the parsed source page content stream, verifies `list_fonts` and `read_font`
+  expose each `/Type0` `PdfFontCIDKeyed` resource with GB1 CIDSystemInfo
+  ordering and mixed-byte code behavior, pins `PdfTextExtractor` codepoint and
+  reverse `charcode_of_codepoint` behavior for GB-EUC, GBpc-EUC, GBK, GBKp,
+  and four-byte GBK2K byte streams, checks unmapped reverse lookups for Euro,
+  combining-grave, emoji, and GBK private-use paths, and repeats the assertions
+  through compressed rewrite/reread and bad-`startxref` recovery. `moon check
+  --target native fixture_acceptance --warn-list +73` passes, `moon test
+  --target native fixture_acceptance --filter 'optional cpdf source hello
+  fixture extracts GB1 legacy predefined CMaps'` reports 1/1 test passing,
+  `moon test --target native fixture_acceptance` reports 95/95 tests passing,
+  `moon test --target native` reports 2267/2267 tests passing, `moon info &&
+  moon fmt` reports no pending interface or formatting work, and `moon check
+  --target all --warn-list +73` reports the warning 73 baseline with 10
+  warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.

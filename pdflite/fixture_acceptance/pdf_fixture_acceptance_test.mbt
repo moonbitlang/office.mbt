@@ -6473,6 +6473,237 @@ fn fixture_acceptance_assert_cpdf_source_gb_cns_predefined_cmaps_for_test(
 }
 
 ///|
+fn fixture_acceptance_cpdf_source_hello_with_gb1_legacy_cmaps_for_test(
+  document : @pdflite.PdfDocument,
+) -> @pdflite.PdfDocument raise {
+  let output = document.copy()
+  let descendant_gb_euc = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
+      "/SourceGBEUCDescendant", "GB1",
+    ),
+  )
+  let descendant_gbpc_euc = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
+      "/SourceGBpcEUCDescendant", "GB1",
+    ),
+  )
+  let descendant_gbk = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
+      "/SourceGBKDescendant", "GB1",
+    ),
+  )
+  let descendant_gbkp = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
+      "/SourceGBKpDescendant", "GB1",
+    ),
+  )
+  let descendant_gbk2k = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
+      "/SourceGBK2KDescendant", "GB1",
+    ),
+  )
+  let font_gb_euc = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
+      "/SourceGBEUCTop", "/GB-EUC-H", descendant_gb_euc,
+    ),
+  )
+  let font_gbpc_euc = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
+      "/SourceGBpcEUCTop", "/GBpc-EUC-H", descendant_gbpc_euc,
+    ),
+  )
+  let font_gbk = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
+      "/SourceGBKTop", "/GBK-EUC-H", descendant_gbk,
+    ),
+  )
+  let font_gbkp = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
+      "/SourceGBKpTop", "/GBKp-EUC-H", descendant_gbkp,
+    ),
+  )
+  let font_gbk2k = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
+      "/SourceGBK2KTop", "/GBK2K-H", descendant_gbk2k,
+    ),
+  )
+  let pages = output.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  let font_resources = fixture_acceptance_cpdf_source_page_fonts_for_test(
+      output,
+      pages[0].resources,
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/SourceGBEUC"),
+      PdfIndirect(font_gb_euc),
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/SourceGBpcEUC"),
+      PdfIndirect(font_gbpc_euc),
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/SourceGBK"),
+      PdfIndirect(font_gbk),
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/SourceGBKp"),
+      PdfIndirect(font_gbkp),
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/SourceGBK2K"),
+      PdfIndirect(font_gbk2k),
+    )
+  let resources = pages[0].resources.add_dict_entry(
+    fixture_acceptance_pdf_name_for_test("/Font"),
+    font_resources,
+  )
+  let page = { ..pages[0], resources, }
+  let updated_page = output.postpend_operators(
+    page,
+    [
+      Op_BT,
+      Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceGBEUC"), 12.0),
+      Op_Tj(
+        @pdflite.pdf_bytes_of_int_array([
+          0x41, 0xC4, 0xE3, 0xBA, 0xC3, 0xA1, 0xA1, 0xA3, 0xC1,
+        ]),
+      ),
+      Op_ET,
+    ],
+    fast=true,
+  )
+  output.change_pages([updated_page], change_references=true)
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_gb1_legacy_cmaps_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+  let ops = fixture_acceptance_page_content_ops_for_test(document)
+  fixture_acceptance_assert_content_op_for_test(
+    ops,
+    Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceGBEUC"), 12.0),
+  )
+  fixture_acceptance_assert_content_op_for_test(
+    ops,
+    Op_Tj(
+      @pdflite.pdf_bytes_of_int_array([
+        0x41, 0xC4, 0xE3, 0xBA, 0xC3, 0xA1, 0xA1, 0xA3, 0xC1,
+      ]),
+    ),
+  )
+  fixture_acceptance_assert_cpdf_source_gb_cns_predefined_font_for_test(
+    document,
+    "/SourceGBEUC",
+    "/SourceGBEUCTop",
+    "/GB-EUC-H",
+    "GB1",
+    @pdflite.pdf_bytes_of_int_array([
+      0x41, 0xC4, 0xE3, 0xBA, 0xC3, 0xA1, 0xA1, 0xA3, 0xC1,
+    ]),
+    [0x41, 0x4F60, 0x597D, 0x3000, 0xFF21],
+    0x4F60,
+    0xC4E3,
+    false,
+  )
+  let gb_euc = fixture_acceptance_source_font_extractor_for_test(
+    document, "/SourceGBEUC",
+  )
+  @test.assert_eq(gb_euc.charcode_of_codepoint(0x20AC), None)
+  fixture_acceptance_assert_cpdf_source_gb_cns_predefined_font_for_test(
+    document,
+    "/SourceGBpcEUC",
+    "/SourceGBpcEUCTop",
+    "/GBpc-EUC-H",
+    "GB1",
+    @pdflite.pdf_bytes_of_int_array([
+      0x41, 0x80, 0x83, 0xA0, 0xFD, 0xFE, 0xFF, 0xA1, 0xA1, 0xA1, 0xAB, 0xA8, 0xBF,
+      0xC4, 0xE3, 0xBA, 0xC3,
+    ]),
+    [
+      0x41, 0x00FC, 0x83, 0x00A0, 0x00A9, 0x2122, 0x2026, 0x3000, 0x301C, 0x006E,
+      0x0300, 0x4F60, 0x597D,
+    ],
+    0x301C,
+    0xA1AB,
+    false,
+  )
+  let gbpc_euc = fixture_acceptance_source_font_extractor_for_test(
+    document, "/SourceGBpcEUC",
+  )
+  @test.assert_eq(gbpc_euc.charcode_of_codepoint(0x00FC), Some(0x80))
+  @test.assert_eq(gbpc_euc.charcode_of_codepoint(0x0300), None)
+  fixture_acceptance_assert_cpdf_source_gb_cns_predefined_font_for_test(
+    document,
+    "/SourceGBK",
+    "/SourceGBKTop",
+    "/GBK-EUC-H",
+    "GB1",
+    @pdflite.pdf_bytes_of_int_array([
+      0x41, 0x80, 0x81, 0x40, 0xC4, 0xE3, 0xBA, 0xC3, 0xA1, 0xA1, 0xA3, 0xC1, 0xA1,
+      0x40, 0xA8, 0xBC, 0xFE, 0xFE, 0xFF, 0x81, 0x39,
+    ]),
+    [
+      0x41, 0x80, 0x4E02, 0x4F60, 0x597D, 0x3000, 0xFF21, 0xE4C6, 0x1E3F, 0xE4C5,
+      0xF8F5, 0x8139,
+    ],
+    0x4E02,
+    0x8140,
+    false,
+  )
+  let gbk = fixture_acceptance_source_font_extractor_for_test(
+    document, "/SourceGBK",
+  )
+  @test.assert_eq(gbk.charcode_of_codepoint(0xF8F5), Some(0xFF))
+  @test.assert_eq(gbk.charcode_of_codepoint(0x1F600), None)
+  fixture_acceptance_assert_cpdf_source_gb_cns_predefined_font_for_test(
+    document,
+    "/SourceGBKp",
+    "/SourceGBKpTop",
+    "/GBKp-EUC-H",
+    "GB1",
+    @pdflite.pdf_bytes_of_int_array([
+      0x41, 0x80, 0x81, 0x40, 0xC4, 0xE3, 0xBA, 0xC3, 0xA1, 0xA1, 0xA3, 0xC1, 0xA1,
+      0x40, 0xA8, 0xBC, 0xFE, 0xFE, 0xFF, 0x81, 0x39,
+    ]),
+    [
+      0x41, 0x80, 0x4E02, 0x4F60, 0x597D, 0x3000, 0xFF21, 0xE4C6, 0x1E3F, 0xE4C5,
+      0xF8F5, 0x8139,
+    ],
+    0x1E3F,
+    0xA8BC,
+    false,
+  )
+  let gbkp = fixture_acceptance_source_font_extractor_for_test(
+    document, "/SourceGBKp",
+  )
+  @test.assert_eq(gbkp.charcode_of_codepoint(0xF8F5), Some(0xFF))
+  @test.assert_eq(gbkp.charcode_of_codepoint(0x1F600), None)
+  fixture_acceptance_assert_cpdf_source_gb_cns_predefined_font_for_test(
+    document,
+    "/SourceGBK2K",
+    "/SourceGBK2KTop",
+    "/GBK2K-H",
+    "GB1",
+    @pdflite.pdf_bytes_of_int_array([
+      0x41, 0x81, 0x40, 0xC4, 0xE3, 0xBA, 0xC3, 0xFE, 0x51, 0x81, 0x30, 0x84, 0x36,
+      0x82, 0x36, 0x94, 0x35,
+    ]),
+    [0x41, 0x4E02, 0x4F60, 0x597D, 0x20087, 0x00A5, 0xA4C6],
+    0x00A5,
+    0x81308436,
+    false,
+  )
+  let gbk2k = fixture_acceptance_source_font_extractor_for_test(
+    document, "/SourceGBK2K",
+  )
+  @test.assert_eq(gbk2k.charcode_of_codepoint(0x20087), Some(0xFE51))
+  @test.assert_eq(gbk2k.charcode_of_codepoint(0xA4C6), Some(0x82369435))
+  @test.assert_eq(gbk2k.charcode_of_codepoint(0x1F600), None)
+}
+
+///|
 fn fixture_acceptance_draft_substitute_ops_for_test() -> Array[
   @pdflite.PdfContentOp,
 ] {
@@ -8738,6 +8969,35 @@ async test "optional cpdf source hello fixture extracts GB CNS predefined CMaps"
         @pdflite.pdf_read_document_from_bytes(compressed),
       )
       fixture_acceptance_assert_cpdf_source_gb_cns_predefined_cmaps_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+        ),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source hello fixture extracts GB1 legacy predefined CMaps" {
+  match
+    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+      let with_cmaps = fixture_acceptance_cpdf_source_hello_with_gb1_legacy_cmaps_for_test(
+        document,
+      )
+      fixture_acceptance_assert_cpdf_source_gb1_legacy_cmaps_for_test(
+        with_cmaps,
+      )
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        with_cmaps,
+      )
+      fixture_acceptance_assert_cpdf_source_gb1_legacy_cmaps_for_test(
+        @pdflite.pdf_read_document_from_bytes(compressed),
+      )
+      fixture_acceptance_assert_cpdf_source_gb1_legacy_cmaps_for_test(
         @pdflite.pdf_read_document_from_bytes(
           fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
         ),
