@@ -6361,6 +6361,26 @@ Current backend snapshot:
   pending interface or formatting work, and `moon check --target all --warn-list
   +73` reports the known warning-73/main-package baseline with 7 warnings and 0
   errors.~~
+- [x] ~~Complete the source-boundary `cpdftexttopdf` PDF/UA-1 corpus branch:
+  optional `.repos/cpdf-source/Changes.txt` now feeds the larger real source
+  changelog bytes through `pdf_texttopdf_typeset` with `subformat=Some(PdfUA1)`
+  and a required title, covering the source branch where PDF/UA-1 also forces
+  paragraph structure-tree processing. The gate verifies multi-page extraction
+  of source changelog markers, no replacement or raw-control characters,
+  per-page `/StructParents`, structure-tree text/JSON/blob output, paragraph
+  marked-content operators, PDF 1.7 output, `/Info` title, `/MarkInfo /Marked
+  true`, `/Lang (en-US)`, the `/ViewerPreferences` `/DisplayDocTitle true`
+  pair, the raw `/StructTreeRoot` reference, absence of PDF/UA-2 namespaces, root
+  `/K` paragraph arrays, and paragraph `/P` parent references, before repeating
+  all assertions through compressed xref-stream rewrite/reread and
+  bad-`startxref` recovery. `moon check --target native fixture_acceptance
+  --warn-list +73` passes, `moon test --target native fixture_acceptance
+  --filter 'optional cpdf source Changes typesets PDF UA1 text PDF'` reports
+  1/1 test passing, `moon test --target native fixture_acceptance` reports
+  111/111 tests passing, `moon test --target native` reports 2283/2283 tests
+  passing, `moon info && moon fmt` reports no pending interface or formatting
+  work, and `moon check --target all --warn-list +73` reports the known
+  warning-73/main-package baseline with 7 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, additional real-world ToUnicode/CMap fixtures when source
   material is available, or broader real-world image corpus coverage.

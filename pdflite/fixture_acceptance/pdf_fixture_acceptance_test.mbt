@@ -2836,8 +2836,9 @@ fn fixture_acceptance_cpdf_source_texttopdf_fontpack_for_test() -> @pdflite.PdfF
 }
 
 ///|
-fn fixture_acceptance_assert_cpdf_source_readme_texttopdf_for_test(
+fn fixture_acceptance_assert_cpdf_source_texttopdf_for_test(
   document : @pdflite.PdfDocument,
+  expected_fragments : ArrayView[String],
 ) -> Unit raise {
   @test.assert_eq(document.endpage() >= 2, true)
   let pages = document.pages_of_pagetree()
@@ -2858,13 +2859,9 @@ fn fixture_acceptance_assert_cpdf_source_readme_texttopdf_for_test(
     extracted,
   )
   let text = @utf8.decode_lossy(extracted)
-  fixture_acceptance_assert_contains_for_test(
-    text, "Coherent PDF Command Line Tools",
-  )
-  fixture_acceptance_assert_contains_for_test(
-    text, "CPDF is distributed under the AGPL",
-  )
-  fixture_acceptance_assert_contains_for_test(text, "opam install cpdf")
+  for fragment in expected_fragments {
+    fixture_acceptance_assert_contains_for_test(text, fragment)
+  }
   @test.assert_eq(fixture_acceptance_replacement_count_for_test(text), 0)
   @test.assert_eq(fixture_acceptance_raw_control_count_for_test(text), 0)
   let struct_text = @utf8.decode_lossy(document.struct_tree_text())
@@ -2889,6 +2886,15 @@ fn fixture_acceptance_assert_cpdf_source_readme_texttopdf_for_test(
     }
   }
   @test.assert_eq(marked_paragraphs >= 2, true)
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_readme_texttopdf_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  fixture_acceptance_assert_cpdf_source_texttopdf_for_test(document, [
+    "Coherent PDF Command Line Tools", "CPDF is distributed under the AGPL", "opam install cpdf",
+  ])
 }
 
 ///|
@@ -2977,6 +2983,75 @@ fn fixture_acceptance_assert_cpdf_source_readme_pdfua2_for_test(
     @test.assert_eq(
       fixture_acceptance_lookup_immediate_required_for_test("/P", paragraph),
       PdfIndirect(document_number),
+    )
+  }
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_changes_pdfua1_for_test(
+  document : @pdflite.PdfDocument,
+  title : String,
+) -> Unit raise {
+  fixture_acceptance_assert_cpdf_source_texttopdf_for_test(document, [
+    "2.9.1 (to come)", "Show digital signature information with -sig-info", "Sanitizes inputs to prevent command injection attacks",
+    "2.8.1 (April 2025)",
+  ])
+  @test.assert_eq(document.version(), (1, 7))
+  @test.assert_eq(
+    document.info_utf8(fixture_acceptance_pdf_name_for_test("/Title")),
+    title,
+  )
+  let catalog = document.catalog()
+  let mark_info = fixture_acceptance_lookup_required_for_test(
+    document, "/MarkInfo", catalog,
+  )
+  @test.assert_eq(
+    fixture_acceptance_lookup_required_for_test(document, "/Marked", mark_info),
+    PdfBoolean(true),
+  )
+  @test.assert_eq(
+    fixture_acceptance_lookup_required_for_test(document, "/Lang", catalog),
+    PdfString(@ascii.encode("en-US")),
+  )
+  let viewer_preferences = fixture_acceptance_lookup_required_for_test(
+    document, "/ViewerPreferences", catalog,
+  )
+  @test.assert_eq(
+    fixture_acceptance_lookup_required_for_test(
+      document, "/DisplayDocTitle", viewer_preferences,
+    ),
+    PdfBoolean(true),
+  )
+  let (struct_root_number, struct_root) = fixture_acceptance_lookup_immediate_indirect_required_for_test(
+    document, "/StructTreeRoot", catalog,
+  )
+  match
+    struct_root.lookup_immediate(
+      fixture_acceptance_pdf_name_for_test("/Namespaces"),
+    ) {
+    Some(_) =>
+      fail("PDF/UA-1 texttopdf structure tree should not have /Namespaces")
+    None => ()
+  }
+  let root_k = fixture_acceptance_lookup_immediate_required_for_test(
+    "/K", struct_root,
+  )
+  guard root_k is PdfArray(paragraph_refs) else {
+    fail("expected PDF/UA-1 root /K paragraph array")
+  }
+  @test.assert_eq(paragraph_refs.length() >= 4, true)
+  for paragraph_ref in paragraph_refs {
+    guard paragraph_ref is PdfIndirect(paragraph_number) else {
+      fail("expected PDF/UA-1 paragraph reference")
+    }
+    let paragraph = document.lookup_object_or_null(paragraph_number)
+    @test.assert_eq(
+      fixture_acceptance_lookup_required_for_test(document, "/S", paragraph),
+      PdfNameObject(fixture_acceptance_pdf_name_for_test("/P")),
+    )
+    @test.assert_eq(
+      fixture_acceptance_lookup_immediate_required_for_test("/P", paragraph),
+      PdfIndirect(struct_root_number),
     )
   }
 }
@@ -10727,6 +10802,41 @@ async test "optional cpdf source README typesets PDF UA2 text PDF" {
         title,
       )
       fixture_acceptance_assert_cpdf_source_readme_pdfua2_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+        ),
+        title,
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source Changes typesets PDF UA1 text PDF" {
+  match
+    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/Changes.txt") {
+    None => ()
+    Some(changes_payload) => {
+      let title = "cpdf source Changes PDF/UA-1"
+      let document = try! @pdflite.pdf_texttopdf_typeset(
+        fixture_acceptance_cpdf_source_texttopdf_fontpack_for_test(),
+        11.0,
+        @pdflite.paper_a4,
+        changes_payload,
+        subformat=Some(PdfUA1),
+        title=Some(title),
+      )
+      fixture_acceptance_assert_cpdf_source_changes_pdfua1_for_test(
+        document, title,
+      )
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        document,
+      )
+      fixture_acceptance_assert_cpdf_source_changes_pdfua1_for_test(
+        @pdflite.pdf_read_document_from_bytes(compressed),
+        title,
+      )
+      fixture_acceptance_assert_cpdf_source_changes_pdfua1_for_test(
         @pdflite.pdf_read_document_from_bytes(
           fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
         ),
