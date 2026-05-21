@@ -449,6 +449,83 @@ fn draw_fixture_reparse_compressed_for_test(
 }
 
 ///|
+fn draw_fixture_assert_contains_for_test(
+  haystack : String,
+  needle : String,
+) -> Unit raise {
+  guard haystack.contains(needle) else {
+    fail("expected text to contain " + needle)
+  }
+}
+
+///|
+fn draw_fixture_assert_cpdf_text_content_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 1)
+  let pages = document.pages_of_pagetree()
+  let entries = document.content_entries_of_page(pages[0])
+  @test.assert_eq(entries.length() > 0, true)
+  let mut has_glyph = false
+  for entry in entries {
+    match entry.object {
+      PdfContentGlyphObject(_, _, extracted_text) => {
+        has_glyph = true
+        @test.assert_eq(extracted_text.length() > 0, true)
+      }
+      _ => ()
+    }
+  }
+  @test.assert_eq(has_glyph, true)
+  draw_fixture_assert_contains_for_test(
+    @ascii.decode_lossy(document.test_extract_text([1])),
+    "Hello",
+  )
+  let page_json = document.content_json_of_page(pages[0])
+  @test.assert_eq(
+    @pdflite.pdf_content_json_of_page(document, pages[0]),
+    page_json,
+  )
+  let content_json = document.page_content_json([1])
+  @test.assert_eq(@pdflite.pdf_page_content_json(document, [1]), content_json)
+  let content_text = content_json.stringify()
+  draw_fixture_assert_contains_for_test(content_text, "\"page\":1")
+  draw_fixture_assert_contains_for_test(content_text, "\"obj\":\"glyph\"")
+  draw_fixture_assert_contains_for_test(
+    content_text, "\"extracted text\":\"H\"",
+  )
+}
+
+///|
+fn draw_fixture_assert_cpdf_xobject_content_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 1)
+  let pages = document.pages_of_pagetree()
+  let entries = document.content_entries_of_page(pages[0])
+  @test.assert_eq(entries.length() > 0, true)
+  let mut has_path = false
+  for entry in entries {
+    match entry.object {
+      PdfContentPathObject(_) => has_path = true
+      _ => ()
+    }
+  }
+  @test.assert_eq(has_path, true)
+  let page_json = document.content_json_of_page(pages[0])
+  @test.assert_eq(
+    @pdflite.pdf_content_json_of_page(document, pages[0]),
+    page_json,
+  )
+  let content_json = document.page_content_json([1])
+  @test.assert_eq(@pdflite.pdf_page_content_json(document, [1]), content_json)
+  let content_text = content_json.stringify()
+  draw_fixture_assert_contains_for_test(content_text, "\"page\":1")
+  draw_fixture_assert_contains_for_test(content_text, "\"obj\":\"path\"")
+  draw_fixture_assert_contains_for_test(content_text, "\"bbox\"")
+}
+
+///|
 fn draw_fixture_cpdf_source_manual_image_pdf_paths_for_test() -> Array[String] {
   [
     ".repos/cpdf-source/manualimages/bez.pdf", ".repos/cpdf-source/manualimages/capjoins.pdf",
@@ -545,6 +622,30 @@ async test "cpdf source manual image PDF corpus reconstructs malformed xref data
       checked,
       draw_fixture_cpdf_source_manual_image_pdf_paths_for_test().length(),
     )
+  }
+}
+
+///|
+async test "cpdf source manual content fixtures export content JSON" {
+  match
+    draw_fixture_document_for_test(".repos/cpdf-source/manualimages/text.pdf") {
+    None => ()
+    Some(document) => {
+      draw_fixture_assert_cpdf_text_content_for_test(document)
+      draw_fixture_assert_cpdf_text_content_for_test(
+        draw_fixture_reparse_compressed_for_test(document),
+      )
+    }
+  }
+  match
+    draw_fixture_document_for_test(".repos/cpdf-source/manualimages/xobj.pdf") {
+    None => ()
+    Some(document) => {
+      draw_fixture_assert_cpdf_xobject_content_for_test(document)
+      draw_fixture_assert_cpdf_xobject_content_for_test(
+        draw_fixture_reparse_compressed_for_test(document),
+      )
+    }
   }
 }
 

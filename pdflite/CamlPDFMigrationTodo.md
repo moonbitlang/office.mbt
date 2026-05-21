@@ -6933,6 +6933,23 @@ Current backend snapshot:
   pending interface or formatting work, and `moon check --target all --warn-list
   +73` reports the known warning-73/main-package baseline with 7 warnings and 0
   errors.~~
+- [x] ~~Add the next source-corpus content JSON slice: the native
+  `draw/fixture_acceptance` package now gates optional
+  `.repos/cpdf-source/manualimages/text.pdf` and
+  `.repos/cpdf-source/manualimages/xobj.pdf` through cpdfcontent-style content
+  entry and JSON reporting. The gate verifies glyph extraction and text JSON
+  markers for the text fixture, path/bounding-box JSON markers for the Form
+  XObject fixture, checks both method and wrapper surfaces
+  (`content_json_of_page`/`pdf_content_json_of_page` and
+  `page_content_json`/`pdf_page_content_json`), and repeats the assertions after
+  compressed rewrite/reread. `moon check --target native
+  draw/fixture_acceptance --warn-list +73` passes, the focused cpdf source
+  content JSON test reports 1/1 test passing, `moon test --target native
+  draw/fixture_acceptance` reports 13/13 tests passing, and `moon test --target
+  native` reports 2317/2317 tests passing. `moon info && moon fmt` reports no
+  pending interface or formatting work, and `moon check --target all --warn-list
+  +73` reports the known warning-73/main-package baseline with 7 warnings and 0
+  errors.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.
