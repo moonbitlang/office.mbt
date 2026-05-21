@@ -6223,6 +6223,26 @@ Current backend snapshot:
   fmt` reports no pending interface or formatting work, and `moon check
   --target all --warn-list +73` reports the warning 73 baseline with 7 warnings
   and 0 errors.~~
+- [x] ~~Broaden the source-boundary predefined CMap slice for UniJIS direct
+  Unicode maps: optional `.repos/cpdf-source/hello.pdf` now gates injected
+  `/UniJIS-UCS2-H`, `/UniJIS-UCS2-V`, `/UniJIS-UTF16-H`,
+  `/UniJIS-UTF16-V`, `/UniJIS-UTF8-H`, `/UniJIS-UCS2-HW-H`, and
+  `/UniJIS-UCS2-HW-V` Type0 CID-keyed fonts on a real source PDF. The gate
+  preserves the original Hello text, pins page-content `/Tf` and `/Tj`
+  operators for the two-byte families, verifies `list_fonts`, `read_font`,
+  `PdfPredefinedCMap` encoding, `/CIDSystemInfo` `Japan1` ordering,
+  two-byte-vs-UTF8 charcode classification, direct extractor codepoints, reverse
+  charcode lookup including UTF8 packed charcodes, and invalid-codepoint misses,
+  then repeats the assertions through compressed rewrite/reread and
+  bad-`startxref` recovery. `moon check --target native fixture_acceptance
+  --warn-list +73` passes, `moon test --target native fixture_acceptance
+  --filter 'optional cpdf source hello fixture extracts UniJIS Unicode predefined
+  CMaps'` reports 1/1 test passing, `moon test --target native
+  fixture_acceptance` reports 103/103 tests passing, `moon test --target native`
+  reports 2275/2275 tests passing, `moon info && moon fmt` reports no pending
+  interface or formatting work, and `moon check --target all --warn-list +73`
+  reports the known warning-73/main-package baseline with 10 warnings and 0
+  errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.

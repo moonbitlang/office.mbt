@@ -6090,6 +6090,229 @@ fn fixture_acceptance_assert_cpdf_source_identity_cmaps_for_test(
 }
 
 ///|
+fn fixture_acceptance_cpdf_source_unijis_unicode_cases_for_test() -> Array[
+  (String, String, String, Array[Int], Array[Int], Int, Int, Bool, Bool),
+] {
+  [
+    (
+      "/SourceUniJISUCS2H",
+      "/SourceUniJISUCS2HTop",
+      "/UniJIS-UCS2-H",
+      [0x00, 0x41, 0x30, 0x42],
+      [0x41, 0x3042],
+      0x3042,
+      0x3042,
+      true,
+      false,
+    ),
+    (
+      "/SourceUniJISUCS2V",
+      "/SourceUniJISUCS2VTop",
+      "/UniJIS-UCS2-V",
+      [0x00, 0x42, 0x30, 0x42],
+      [0x42, 0x3042],
+      0x3042,
+      0x3042,
+      true,
+      true,
+    ),
+    (
+      "/SourceUniJISUTF16H",
+      "/SourceUniJISUTF16HTop",
+      "/UniJIS-UTF16-H",
+      [0x30, 0x42, 0x30, 0xA2],
+      [0x3042, 0x30A2],
+      0x30A2,
+      0x30A2,
+      true,
+      false,
+    ),
+    (
+      "/SourceUniJISUTF16V",
+      "/SourceUniJISUTF16VTop",
+      "/UniJIS-UTF16-V",
+      [0x30, 0x42, 0x30, 0xA2],
+      [0x3042, 0x30A2],
+      0x30A2,
+      0x30A2,
+      true,
+      true,
+    ),
+    (
+      "/SourceUniJISUTF8H",
+      "/SourceUniJISUTF8HTop",
+      "/UniJIS-UTF8-H",
+      [0x41, 0xE3, 0x81, 0x82, 0xF0, 0x9D, 0x84, 0x9E],
+      [0x41, 0x3042, 0x1D11E],
+      0x1D11E,
+      0xF09D849E,
+      false,
+      false,
+    ),
+    (
+      "/SourceUniJISUCS2HWH",
+      "/SourceUniJISUCS2HWHTop",
+      "/UniJIS-UCS2-HW-H",
+      [0x00, 0x41, 0xFF, 0x76],
+      [0x41, 0xFF76],
+      0xFF76,
+      0xFF76,
+      true,
+      false,
+    ),
+    (
+      "/SourceUniJISUCS2HWV",
+      "/SourceUniJISUCS2HWVTop",
+      "/UniJIS-UCS2-HW-V",
+      [0x00, 0x42, 0xFF, 0x76],
+      [0x42, 0xFF76],
+      0xFF76,
+      0xFF76,
+      true,
+      true,
+    ),
+  ]
+}
+
+///|
+fn fixture_acceptance_cpdf_source_hello_with_unijis_unicode_cmaps_for_test(
+  document : @pdflite.PdfDocument,
+) -> @pdflite.PdfDocument raise {
+  let output = document.copy()
+  let pages = output.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  let cases = fixture_acceptance_cpdf_source_unijis_unicode_cases_for_test()
+  let mut font_resources = fixture_acceptance_cpdf_source_page_fonts_for_test(
+    output,
+    pages[0].resources,
+  )
+  for case in cases {
+    let descendant = output.add_object(
+      fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
+        case.1 + "Descendant",
+        "Japan1",
+      ),
+    )
+    let font = output.add_object(
+      fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
+        case.1,
+        case.2,
+        descendant,
+      ),
+    )
+    font_resources = font_resources.add_dict_entry(
+      fixture_acceptance_pdf_name_for_test(case.0),
+      PdfIndirect(font),
+    )
+  }
+  let resources = pages[0].resources.add_dict_entry(
+    fixture_acceptance_pdf_name_for_test("/Font"),
+    font_resources,
+  )
+  let page = { ..pages[0], resources, }
+  let ops : Array[@pdflite.PdfContentOp] = [Op_BT]
+  for case in cases {
+    if case.7 {
+      ops.push(Op_Tf(fixture_acceptance_pdf_name_for_test(case.0), 12.0))
+      ops.push(Op_Tj(@pdflite.pdf_bytes_of_int_array(case.3)))
+    }
+  }
+  ops.push(Op_ET)
+  let updated_page = output.postpend_operators(page, ops, fast=true)
+  output.change_pages([updated_page], change_references=true)
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_unijis_unicode_font_for_test(
+  document : @pdflite.PdfDocument,
+  name : String,
+  basefont : String,
+  encoding : String,
+  text : Array[Int],
+  expected_codepoints : Array[Int],
+  reverse_codepoint : Int,
+  reverse_charcode : Int,
+  uses_two_byte_codes : Bool,
+  vertical : Bool,
+) -> Unit raise {
+  let source_font = fixture_acceptance_cpdf_source_font_entry_for_test(
+    document.list_fonts([1]),
+    name,
+  )
+  @test.assert_eq(source_font.subtype, "/Type0")
+  @test.assert_eq(source_font.basefont, basefont)
+  @test.assert_eq(source_font.encoding, encoding)
+  let font = document.read_font(source_font.font)
+  @test.assert_eq(font.uses_two_byte_codes(), uses_two_byte_codes)
+  @test.assert_eq(font.is_identity_h(), false)
+  @test.assert_eq(font.is_identity_v(), false)
+  if vertical {
+    @test.assert_eq(encoding.has_suffix("-V"), true)
+  } else {
+    @test.assert_eq(encoding.has_suffix("-H"), true)
+  }
+  guard font is PdfFontCIDKeyed(cid_font) else {
+    fail("expected source UniJIS Unicode predefined CID-keyed font")
+  }
+  @test.assert_eq(
+    cid_font.encoding,
+    PdfPredefinedCMap(fixture_acceptance_pdf_name_for_test(encoding)),
+  )
+  @test.assert_eq(
+    cid_font.composite.cid_system_info.ordering,
+    @ascii.encode("Japan1"),
+  )
+  let extractor = document.text_extractor_of_font(source_font.font)
+  @test.assert_eq(
+    extractor.codepoints_of_text(@pdflite.pdf_bytes_of_int_array(text)),
+    expected_codepoints,
+  )
+  @test.assert_eq(
+    extractor.charcode_of_codepoint(reverse_codepoint),
+    Some(reverse_charcode),
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x110000), None)
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_unijis_unicode_cmaps_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+  let cases = fixture_acceptance_cpdf_source_unijis_unicode_cases_for_test()
+  let extracted = @utf8.decode_lossy(document.test_extract_text([1]))
+  let ops = fixture_acceptance_page_content_ops_for_test(document)
+  for case in cases {
+    if case.7 {
+      fixture_acceptance_assert_contains_for_test(
+        extracted,
+        @utf8.decode_lossy(@pdflite.pdf_utf8_of_codepoints(case.4)),
+      )
+      fixture_acceptance_assert_content_op_for_test(
+        ops,
+        Op_Tf(fixture_acceptance_pdf_name_for_test(case.0), 12.0),
+      )
+      fixture_acceptance_assert_content_op_for_test(
+        ops,
+        Op_Tj(@pdflite.pdf_bytes_of_int_array(case.3)),
+      )
+    }
+    fixture_acceptance_assert_cpdf_source_unijis_unicode_font_for_test(
+      document,
+      case.0,
+      case.1,
+      case.2,
+      case.3,
+      case.4,
+      case.5,
+      case.6,
+      case.7,
+      case.8,
+    )
+  }
+}
+
+///|
 fn fixture_acceptance_cpdf_source_hello_with_uniakr_predefined_cmaps_for_test(
   document : @pdflite.PdfDocument,
 ) -> @pdflite.PdfDocument raise {
@@ -10371,6 +10594,35 @@ async test "optional cpdf source hello fixture extracts Identity predefined CMap
         @pdflite.pdf_read_document_from_bytes(compressed),
       )
       fixture_acceptance_assert_cpdf_source_identity_cmaps_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+        ),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source hello fixture extracts UniJIS Unicode predefined CMaps" {
+  match
+    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+      let with_cmaps = fixture_acceptance_cpdf_source_hello_with_unijis_unicode_cmaps_for_test(
+        document,
+      )
+      fixture_acceptance_assert_cpdf_source_unijis_unicode_cmaps_for_test(
+        with_cmaps,
+      )
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        with_cmaps,
+      )
+      fixture_acceptance_assert_cpdf_source_unijis_unicode_cmaps_for_test(
+        @pdflite.pdf_read_document_from_bytes(compressed),
+      )
+      fixture_acceptance_assert_cpdf_source_unijis_unicode_cmaps_for_test(
         @pdflite.pdf_read_document_from_bytes(
           fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
         ),
