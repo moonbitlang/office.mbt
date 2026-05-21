@@ -5596,6 +5596,20 @@ Current backend snapshot:
   native` reports 2242/2242 tests passing, and `moon check --target all
   --warn-list +73` reports the known warning baseline with 10 warnings and 0
   errors.~~
+- [x] ~~Add the next source-boundary pad slice: optional
+  `.repos/cpdf-source/hello.pdf` now gates cpdfpad-style blank page insertion
+  on a real text-bearing source PDF. The gate decorates the source page with
+  `/Annots` and a retained dictionary key, runs `pdf_pad_after` through the
+  compatibility wrapper, and checks two-page output, blank-page MediaBox and
+  rotation inheritance, empty blank content/resources, annotation removal from
+  the inserted blank, retained non-annotation dictionary data, original text
+  preservation on page 1, blank page text absence, compressed rewrite/reread,
+  and bad-`startxref` recovery. `moon test --target native fixture_acceptance
+  --filter '*pads blank page after source*'` reports 1/1 test passing, `moon
+  test --target native fixture_acceptance` reports 72/72 tests passing, `moon
+  test --target native` reports 2243/2243 tests passing, and `moon check
+  --target all --warn-list +73` reports the known warning baseline with 10
+  warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.

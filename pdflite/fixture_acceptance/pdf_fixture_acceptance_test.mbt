@@ -2339,6 +2339,69 @@ fn fixture_acceptance_assert_cpdf_source_page_transform_for_test(
 }
 
 ///|
+fn fixture_acceptance_pad_source_hello_for_test(
+  document : @pdflite.PdfDocument,
+) -> @pdflite.PdfDocument raise {
+  let pages = document.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  let decorated_rest = pages[0].rest
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/Annots"),
+      PdfArray([PdfInteger(123)]),
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/Keep"),
+      PdfInteger(7),
+    )
+  let decorated = document.change_pages(
+    [{ ..pages[0], rest: decorated_rest }],
+    change_references=true,
+  )
+  @pdflite.pdf_pad_after(decorated, [1])
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_pad_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 2)
+  let pages = document.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 2)
+  @test.assert_eq(
+    document.parse_rectangle(pages[1].mediabox),
+    document.parse_rectangle(pages[0].mediabox),
+  )
+  @test.assert_eq(pages[1].rotate, pages[0].rotate)
+  @test.assert_eq(pages[1].content, [])
+  @test.assert_eq(pages[1].resources, PdfDictionary([]))
+  @test.assert_eq(
+    document.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/Annots"),
+      pages[0].rest,
+    ),
+    Some(PdfArray([PdfInteger(123)])),
+  )
+  @test.assert_eq(
+    document.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/Annots"),
+      pages[1].rest,
+    ),
+    None,
+  )
+  @test.assert_eq(
+    document.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/Keep"),
+      pages[1].rest,
+    ),
+    Some(PdfInteger(7)),
+  )
+  let first_page_text = @utf8.decode_lossy(document.test_extract_text([1]))
+  fixture_acceptance_assert_contains_for_test(first_page_text, "Hello, World!")
+  let second_page_text = @utf8.decode_lossy(document.test_extract_text([2]))
+  @test.assert_eq(second_page_text.contains("Hello, World!"), false)
+}
+
+///|
 fn fixture_acceptance_add_cpdf_source_javascript_for_test(
   document : @pdflite.PdfDocument,
 ) -> (Int, Int, Int) raise {
@@ -4101,6 +4164,30 @@ async test "optional cpdf source hello fixture applies page geometry transforms"
         @pdflite.pdf_read_document_from_bytes(compressed),
       )
       fixture_acceptance_assert_cpdf_source_page_transform_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+        ),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source hello fixture pads blank page after source" {
+  match
+    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      let padded = fixture_acceptance_pad_source_hello_for_test(document)
+      fixture_acceptance_assert_cpdf_source_pad_for_test(padded)
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        padded,
+      )
+      fixture_acceptance_assert_cpdf_source_pad_for_test(
+        @pdflite.pdf_read_document_from_bytes(compressed),
+      )
+      fixture_acceptance_assert_cpdf_source_pad_for_test(
         @pdflite.pdf_read_document_from_bytes(
           fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
         ),
