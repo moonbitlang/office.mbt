@@ -4117,7 +4117,9 @@ fn fixture_acceptance_assert_cpdf_png_image_for_test(
   document : @pdflite.PdfDocument,
 ) -> Unit raise {
   @test.assert_eq(document.endpage(), 1)
-  let images_json = document.images_json([1]).stringify()
+  let images = document.images_json([1])
+  @test.assert_eq(@pdflite.pdf_image_images(false, document, [1]), images)
+  let images_json = images.stringify()
   fixture_acceptance_assert_contains_for_test(images_json, "\"Name\":\"/I1\"")
   fixture_acceptance_assert_contains_for_test(images_json, "\"Pages\":[1]")
   fixture_acceptance_assert_contains_for_test(images_json, "\"Width\":400")
@@ -4133,14 +4135,36 @@ fn fixture_acceptance_assert_cpdf_png_image_for_test(
   )
   let images_blob = @ascii.decode_lossy(document.images_json_blob([1]))
   fixture_acceptance_assert_contains_for_test(images_blob, "\"Name\":\"/I1\"")
-  let resolution_json = document
-    .image_resolution_json([1], 1000000.0)
-    .stringify()
+  @test.assert_eq(
+    @pdflite.pdf_image_images_json_blob(false, document, [1]),
+    document.images_json_blob([1]),
+  )
+  let resolution = document.image_resolution([1], 1000000.0)
+  @test.assert_eq(
+    @pdflite.pdf_image_resolution(false, document, [1], 1000000.0),
+    resolution,
+  )
+  @test.assert_eq(resolution.length(), 1)
+  @test.assert_eq(resolution[0].0, 1)
+  @test.assert_eq(resolution[0].1, "/I1")
+  @test.assert_eq(resolution[0].2, 400)
+  @test.assert_eq(resolution[0].3, 294)
+  @test.assert_eq(resolution[0].6 > 0, true)
+  let resolution_json_object = document.image_resolution_json([1], 1000000.0)
+  @test.assert_eq(
+    @pdflite.pdf_image_resolution_json(false, document, [1], 1000000.0),
+    resolution_json_object,
+  )
+  let resolution_json = resolution_json_object.stringify()
   fixture_acceptance_assert_contains_for_test(
     resolution_json, "\"XObject\":\"/I1\"",
   )
   fixture_acceptance_assert_contains_for_test(resolution_json, "\"W\":400")
   fixture_acceptance_assert_contains_for_test(resolution_json, "\"H\":294")
+  @test.assert_eq(
+    @pdflite.pdf_image_resolution_json_blob(false, document, [1], 1000000.0),
+    document.image_resolution_json_blob([1], 1000000.0),
+  )
   let image = fixture_acceptance_cpdf_png_image_object_for_test(document)
   match
     document.get_image_24bpp(document.pages_of_pagetree()[0].resources, image) {
@@ -4406,7 +4430,9 @@ fn fixture_acceptance_assert_cpdf_manual_images_for_test(
 ) -> Unit raise {
   @test.assert_eq(document.endpage(), 175)
   let all_pages = document.parse_pagespec("")
-  let images_json = document.images_json(all_pages).stringify()
+  let images = document.images_json(all_pages)
+  @test.assert_eq(@pdflite.pdf_image_images(false, document, all_pages), images)
+  let images_json = images.stringify()
   fixture_acceptance_assert_contains_for_test(images_json, "\"Object\":1477")
   fixture_acceptance_assert_contains_for_test(images_json, "\"Pages\":[128]")
   fixture_acceptance_assert_contains_for_test(images_json, "\"Width\":400")
@@ -4423,12 +4449,39 @@ fn fixture_acceptance_assert_cpdf_manual_images_for_test(
   let images_blob = @ascii.decode_lossy(document.images_json_blob(all_pages))
   fixture_acceptance_assert_contains_for_test(images_blob, "\"Width\":400")
   fixture_acceptance_assert_contains_for_test(images_blob, "\"Height\":294")
-  let resolution_json = document
-    .image_resolution_json(all_pages, 1000000.0)
-    .stringify()
+  @test.assert_eq(
+    @pdflite.pdf_image_images_json_blob(false, document, all_pages),
+    document.images_json_blob(all_pages),
+  )
+  let resolution = document.image_resolution(all_pages, 1000000.0)
+  @test.assert_eq(
+    @pdflite.pdf_image_resolution(false, document, all_pages, 1000000.0),
+    resolution,
+  )
+  let mut has_embedded_image_resolution = false
+  for entry in resolution {
+    if entry.0 == 128 && entry.2 == 400 && entry.3 == 294 && entry.6 == 1477 {
+      has_embedded_image_resolution = true
+    }
+  }
+  @test.assert_eq(has_embedded_image_resolution, true)
+  let resolution_json_object = document.image_resolution_json(
+    all_pages, 1000000.0,
+  )
+  @test.assert_eq(
+    @pdflite.pdf_image_resolution_json(false, document, all_pages, 1000000.0),
+    resolution_json_object,
+  )
+  let resolution_json = resolution_json_object.stringify()
   fixture_acceptance_assert_contains_for_test(resolution_json, "\"Page\":128")
   fixture_acceptance_assert_contains_for_test(resolution_json, "\"W\":400")
   fixture_acceptance_assert_contains_for_test(resolution_json, "\"H\":294")
+  @test.assert_eq(
+    @pdflite.pdf_image_resolution_json_blob(
+      false, document, all_pages, 1000000.0,
+    ),
+    document.image_resolution_json_blob(all_pages, 1000000.0),
+  )
   fixture_acceptance_assert_cpdf_manual_extracted_image_for_test(document)
 }
 

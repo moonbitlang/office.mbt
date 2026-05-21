@@ -5754,6 +5754,21 @@ Current backend snapshot:
   fixture_acceptance` reports 82/82 tests passing, `moon test --target native`
   reports 2254/2254 tests passing, and `moon check --target all --warn-list
   +73` reports the known warning baseline with 10 warnings and 0 errors.~~
+- [x] ~~Broaden the source-boundary image reporting slice: optional
+  `.repos/cpdf-source/manualimages/png.pdf` and
+  `.repos/cpdf-source/cpdfmanual.pdf` now gate cpdf-style image reporting
+  wrapper parity and tuple-level resolution output on real source images. The
+  gate verifies `pdf_image_images`, `pdf_image_images_json_blob`,
+  `pdf_image_resolution`, `pdf_image_resolution_json`, and
+  `pdf_image_resolution_json_blob` match the method APIs, pins the PNG
+  fixture's `/I1` 400x294 resolution tuple, and pins the manual's embedded
+  object `1477` on page 128 while retaining RGB24 extraction, compressed
+  rewrite/reread, and optional source-corpus behavior. `moon check --target
+  native fixture_acceptance --warn-list +73` passes, the two affected source
+  image fixture tests each report 1/1 test passing, `moon test --target native
+  fixture_acceptance` reports 82/82 tests passing, `moon test --target native`
+  reports 2254/2254 tests passing, and `moon check --target all --warn-list
+  +73` reports the known warning baseline with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
