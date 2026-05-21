@@ -60,6 +60,48 @@ fn markdown_fixture_find_last_bytes_for_test(
 }
 
 ///|
+fn markdown_fixture_bytes_start_with_at_for_test(
+  haystack : BytesView,
+  needle : BytesView,
+  start : Int,
+) -> Bool {
+  if start < 0 || start + needle.length() > haystack.length() {
+    false
+  } else {
+    for index in 0..<needle.length() {
+      if haystack[start + index] != needle[index] {
+        break false
+      }
+    } nobreak {
+      true
+    }
+  }
+}
+
+///|
+fn markdown_fixture_find_bytes_after_for_test(
+  haystack : BytesView,
+  needle : BytesView,
+  start : Int,
+) -> Int {
+  if needle.length() == 0 {
+    start
+  } else if start < 0 || haystack.length() < needle.length() {
+    -1
+  } else {
+    for position in start..<=(haystack.length() - needle.length()) {
+      if markdown_fixture_bytes_start_with_at_for_test(
+          haystack, needle, position,
+        ) {
+        break position
+      }
+    } nobreak {
+      -1
+    }
+  }
+}
+
+///|
 fn markdown_fixture_push_ascii_for_test(
   output : Array[Byte],
   text : String,
@@ -94,6 +136,78 @@ fn markdown_fixture_corrupt_startxref_pointer_for_test(
   for index in number_end..<bytes.length() {
     output.push(bytes[index])
   }
+  Bytes::from_array(output)
+}
+
+///|
+fn markdown_fixture_startxref_offset_for_test(bytes : Bytes) -> Int raise {
+  let marker = @ascii.encode("startxref")
+  let marker_position = markdown_fixture_find_last_bytes_for_test(bytes, marker)
+  if marker_position < 0 {
+    fail("expected startxref marker")
+  }
+  let mut number_start = marker_position + marker.length()
+  while number_start < bytes.length() &&
+        (
+          bytes[number_start] == b'\n' ||
+          bytes[number_start] == b'\r' ||
+          bytes[number_start] == b' ' ||
+          bytes[number_start] == b'\t'
+        ) {
+    number_start += 1
+  }
+  let mut number = 0
+  let mut current = number_start
+  while current < bytes.length() &&
+        bytes[current] >= b'0' &&
+        bytes[current] <= b'9' {
+    number = number * 10 + bytes[current].to_int() - b'0'.to_int()
+    current += 1
+  }
+  if current == number_start {
+    fail("expected startxref number")
+  }
+  number
+}
+
+///|
+fn markdown_fixture_corrupt_startxref_xref_header_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  let xref_offset = markdown_fixture_startxref_offset_for_test(bytes)
+  guard markdown_fixture_bytes_start_with_at_for_test(
+    bytes,
+    @ascii.encode("xref"),
+    xref_offset,
+  ) else {
+    fail("expected startxref to point at a classic xref table")
+  }
+  let output : Array[Byte] = []
+  for byte in bytes {
+    output.push(byte)
+  }
+  output[xref_offset] = b'y'
+  Bytes::from_array(output)
+}
+
+///|
+fn markdown_fixture_corrupt_startxref_trailer_keyword_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  let xref_offset = markdown_fixture_startxref_offset_for_test(bytes)
+  let trailer_position = markdown_fixture_find_bytes_after_for_test(
+    bytes,
+    @ascii.encode("trailer"),
+    xref_offset,
+  )
+  if trailer_position < 0 {
+    fail("expected classic xref trailer keyword after startxref target")
+  }
+  let output : Array[Byte] = []
+  for byte in bytes {
+    output.push(byte)
+  }
+  output[trailer_position] = b'u'
   Bytes::from_array(output)
 }
 
@@ -312,6 +426,54 @@ async test "pdf_bytes_to_markdown extracts optional cpdf source manual image PDF
           reconstructed, path,
         )
         @test.assert_eq(reconstructed, markdown, msg=path)
+      }
+    }
+  }
+  if checked > 0 {
+    @test.assert_eq(
+      checked,
+      markdown_cpdf_source_manual_image_pdf_paths_for_test().length(),
+    )
+    @test.assert_eq(textful > 0, true)
+  }
+}
+
+///|
+async test "pdf_bytes_to_markdown reconstructs optional cpdf source manual image PDF corpus with damaged classic xref metadata" {
+  let mut checked = 0
+  let mut textful = 0
+  for path in markdown_cpdf_source_manual_image_pdf_paths_for_test() {
+    match markdown_optional_fixture_bytes_for_test(path) {
+      None => ()
+      Some(bytes) => {
+        checked += 1
+        let markdown = @markdown.pdf_bytes_to_markdown(bytes)
+        markdown_fixture_assert_cpdf_manual_image_markdown_for_test(
+          markdown, path,
+        )
+        if markdown != "# Page 1\n\n\n" {
+          textful += 1
+        }
+        for
+          corrupted in [
+            markdown_fixture_corrupt_startxref_xref_header_for_test(bytes),
+            markdown_fixture_corrupt_startxref_trailer_keyword_for_test(bytes),
+          ] {
+          let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+            corrupted,
+          )
+          guard strict is Err(_) else {
+            fail(
+              "expected damaged classic xref metadata to require malformed reconstruction for " +
+              path,
+            )
+          }
+          let reconstructed = @markdown.pdf_bytes_to_markdown(corrupted)
+          markdown_fixture_assert_cpdf_manual_image_markdown_for_test(
+            reconstructed, path,
+          )
+          @test.assert_eq(reconstructed, markdown, msg=path)
+        }
       }
     }
   }

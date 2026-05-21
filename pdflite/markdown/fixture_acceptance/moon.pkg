@@ -1,4 +1,5 @@
 import {
+  "bobzhang/pdflite" @pdflite,
   "bobzhang/pdflite/markdown" @markdown,
   "moonbitlang/async",
   "moonbitlang/async/fs",
