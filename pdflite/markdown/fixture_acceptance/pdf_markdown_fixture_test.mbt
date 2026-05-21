@@ -243,6 +243,54 @@ fn markdown_fixture_corrupt_startxref_trailer_keyword_for_test(
 }
 
 ///|
+fn markdown_fixture_corrupt_startxref_xref_stream_token_for_test(
+  bytes : Bytes,
+  target : BytesView,
+  replacement : BytesView,
+  description : String,
+) -> Bytes raise {
+  let xref_offset = markdown_fixture_startxref_offset_for_test(bytes)
+  let position = markdown_fixture_find_bytes_after_for_test(
+    bytes, target, xref_offset,
+  )
+  if position < 0 {
+    fail("expected xref stream " + description + " at startxref target")
+  }
+  let output : Array[Byte] = []
+  for byte in bytes {
+    output.push(byte)
+  }
+  for index in 0..<replacement.length() {
+    output[position + index] = replacement[index]
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn markdown_fixture_corrupt_startxref_xref_stream_type_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  markdown_fixture_corrupt_startxref_xref_stream_token_for_test(
+    bytes,
+    @ascii.encode("/Type /XRef"),
+    @ascii.encode("/Type /Bad"),
+    "type",
+  )
+}
+
+///|
+fn markdown_fixture_corrupt_startxref_xref_stream_marker_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  markdown_fixture_corrupt_startxref_xref_stream_token_for_test(
+    bytes,
+    @ascii.encode("stream"),
+    @ascii.encode("stramx"),
+    "stream marker",
+  )
+}
+
+///|
 fn markdown_fixture_first_in_use_xref_row_start_for_test(
   bytes : Bytes,
 ) -> Int raise {
@@ -896,6 +944,59 @@ async test "pdf_bytes_to_markdown reconstructs optional cpdf source manual fixtu
       )
       @test.assert_eq(markdown.length() > 200000, true)
       @test.assert_eq(markdown_fixture_replacement_count_for_test(markdown), 0)
+    }
+  }
+}
+
+///|
+async test "pdf_bytes_to_markdown reconstructs optional cpdf source manual fixture with malformed xref stream metadata" {
+  match
+    markdown_optional_fixture_bytes_for_test(
+      ".repos/cpdf-source/cpdfmanual.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let markdown = @markdown.pdf_bytes_to_markdown(bytes)
+      markdown_fixture_assert_contains_for_test(markdown, "Coherent PDF")
+      markdown_fixture_assert_contains_for_test(markdown, "Command Line Tools")
+      markdown_fixture_assert_contains_for_test(
+        markdown, "Chapter 15: PDF and JSON",
+      )
+      markdown_fixture_assert_contains_for_test(
+        markdown, "Accessible PDFs with PDF/UA",
+      )
+      @test.assert_eq(markdown.length() > 200000, true)
+      @test.assert_eq(markdown_fixture_replacement_count_for_test(markdown), 0)
+      for
+        corrupted in [
+          markdown_fixture_corrupt_startxref_xref_stream_type_for_test(bytes),
+          markdown_fixture_corrupt_startxref_xref_stream_marker_for_test(bytes),
+        ] {
+        let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+          corrupted,
+        )
+        guard strict is Err(_) else {
+          fail(
+            "expected malformed xref stream metadata to require reconstruction",
+          )
+        }
+        let reconstructed = @markdown.pdf_bytes_to_markdown(corrupted)
+        markdown_fixture_assert_contains_for_test(reconstructed, "Coherent PDF")
+        markdown_fixture_assert_contains_for_test(
+          reconstructed, "Command Line Tools",
+        )
+        markdown_fixture_assert_contains_for_test(
+          reconstructed, "Chapter 15: PDF and JSON",
+        )
+        markdown_fixture_assert_contains_for_test(
+          reconstructed, "Accessible PDFs with PDF/UA",
+        )
+        @test.assert_eq(reconstructed, markdown)
+        @test.assert_eq(
+          markdown_fixture_replacement_count_for_test(reconstructed),
+          0,
+        )
+      }
     }
   }
 }
