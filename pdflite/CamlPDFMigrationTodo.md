@@ -5534,6 +5534,18 @@ Current backend snapshot:
   native fixture_acceptance` reports 66/66 tests passing, `moon test --target
   native` reports 2237/2237 tests passing, and `moon check --target all
   --warn-list +73` reports the known warning baseline with 0 errors.~~
+- [x] ~~Add the next source-boundary JavaScript slice: optional
+  `.repos/cpdf-source/hello.pdf` now gates cpdfjs-style detection and scrubbing
+  on a real source PDF after injecting `/JS` dictionaries, lowercase
+  `javascript:` URI actions, a `/Root /Names /JavaScript` name tree, and stream
+  dictionary markers. The gate verifies compressed rewrite/reread,
+  bad-`startxref` recovery, `pdf_remove_javascript`, name-tree removal, `/JS` and
+  JavaScript URI emptying, non-JavaScript URI preservation, and stream payload
+  preservation. `moon test --target native fixture_acceptance --filter
+  '*removes JavaScript markers*'` reports 1/1 test passing, `moon test --target
+  native fixture_acceptance` reports 67/67 tests passing, `moon test --target
+  native` reports 2238/2238 tests passing, and `moon check --target all
+  --warn-list +73` reports the known warning baseline with 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.

@@ -2090,6 +2090,180 @@ fn fixture_acceptance_lookup_required_for_test(
 }
 
 ///|
+fn fixture_acceptance_add_cpdf_source_javascript_for_test(
+  document : @pdflite.PdfDocument,
+) -> (Int, Int, Int) raise {
+  let key_js = fixture_acceptance_pdf_name_for_test("/JS")
+  let key_uri = fixture_acceptance_pdf_name_for_test("/URI")
+  let action_number = document.add_object(
+    PdfDictionary([
+      (key_js, PdfString(@ascii.encode("app.alert('source')"))),
+      (fixture_acceptance_pdf_name_for_test("/Keep"), PdfInteger(7)),
+    ]),
+  )
+  let uri_number = document.add_object(
+    PdfArray([
+      PdfDictionary([
+        (key_js, PdfString(@ascii.encode("nested alert"))),
+        (key_uri, PdfString(@ascii.encode("javascript:app.alert('uri')"))),
+      ]),
+      PdfDictionary([
+        (key_uri, PdfString(@ascii.encode("https://example.invalid"))),
+      ]),
+    ]),
+  )
+  let stream_number = document.add_object(
+    PdfStreamObject({
+      dictionary: PdfDictionary([
+        (key_js, PdfString(@ascii.encode("stream alert"))),
+      ]),
+      data: StreamGot(@ascii.encode("stream payload")),
+    }),
+  )
+  let javascript_tree = document.build_name_tree([
+    (
+      @ascii.encode("cpdf-source-script"),
+      PdfString(@ascii.encode("app.alert('tree')")),
+    ),
+  ])
+  document.replace_chain(
+    [
+      fixture_acceptance_pdf_name_for_test("/Root"),
+      fixture_acceptance_pdf_name_for_test("/Names"),
+      fixture_acceptance_pdf_name_for_test("/JavaScript"),
+    ],
+    javascript_tree,
+  )
+  (action_number, uri_number, stream_number)
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_javascript_for_test(
+  document : @pdflite.PdfDocument,
+  action_number : Int,
+  uri_number : Int,
+  stream_number : Int,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 1)
+  @test.assert_eq(document.contains_javascript(), true)
+  let key_root = fixture_acceptance_pdf_name_for_test("/Root")
+  let key_names = fixture_acceptance_pdf_name_for_test("/Names")
+  let key_javascript = fixture_acceptance_pdf_name_for_test("/JavaScript")
+  guard document.lookup_chain(document.trailer_dict(), [
+      key_root, key_names, key_javascript,
+    ])
+    is Some(javascript_tree) else {
+    fail("missing cpdf source JavaScript name tree")
+  }
+  @test.assert_eq(document.read_name_tree(javascript_tree), [
+    (
+      @ascii.encode("cpdf-source-script"),
+      PdfString(@ascii.encode("app.alert('tree')")),
+    ),
+  ])
+  let action = document.lookup_object_or_null(action_number)
+  @test.assert_eq(
+    fixture_acceptance_lookup_required_for_test(document, "/JS", action),
+    PdfString(@ascii.encode("app.alert('source')")),
+  )
+  @test.assert_eq(
+    fixture_acceptance_lookup_required_for_test(document, "/Keep", action),
+    PdfInteger(7),
+  )
+  guard document.lookup_object_or_null(uri_number)
+    is PdfArray([PdfDictionary(first_entries), PdfDictionary(second_entries)]) else {
+    fail("expected cpdf source JavaScript URI array")
+  }
+  let first_uri : @pdflite.PdfObject = PdfDictionary(first_entries)
+  let second_uri : @pdflite.PdfObject = PdfDictionary(second_entries)
+  @test.assert_eq(
+    fixture_acceptance_lookup_required_for_test(document, "/JS", first_uri),
+    PdfString(@ascii.encode("nested alert")),
+  )
+  @test.assert_eq(
+    fixture_acceptance_lookup_required_for_test(document, "/URI", first_uri),
+    PdfString(@ascii.encode("javascript:app.alert('uri')")),
+  )
+  @test.assert_eq(
+    fixture_acceptance_lookup_required_for_test(document, "/URI", second_uri),
+    PdfString(@ascii.encode("https://example.invalid")),
+  )
+  let stream_object = document.lookup_object_or_null(stream_number)
+  @test.assert_eq(stream_object.stream_bytes(), @ascii.encode("stream payload"))
+  guard stream_object is PdfStreamObject(stream) else {
+    fail("expected cpdf source JavaScript stream")
+  }
+  @test.assert_eq(
+    fixture_acceptance_lookup_required_for_test(
+      document,
+      "/JS",
+      stream.dictionary,
+    ),
+    PdfString(@ascii.encode("stream alert")),
+  )
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_javascript_removed_for_test(
+  document : @pdflite.PdfDocument,
+  action_number : Int,
+  uri_number : Int,
+  stream_number : Int,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 1)
+  @test.assert_eq(document.contains_javascript(), false)
+  let key_root = fixture_acceptance_pdf_name_for_test("/Root")
+  let key_names = fixture_acceptance_pdf_name_for_test("/Names")
+  let key_javascript = fixture_acceptance_pdf_name_for_test("/JavaScript")
+  @test.assert_eq(
+    document.lookup_chain(document.trailer_dict(), [
+      key_root, key_names, key_javascript,
+    ]),
+    None,
+  )
+  let action = document.lookup_object_or_null(action_number)
+  @test.assert_eq(
+    fixture_acceptance_lookup_required_for_test(document, "/JS", action),
+    PdfString(@ascii.encode("")),
+  )
+  @test.assert_eq(
+    fixture_acceptance_lookup_required_for_test(document, "/Keep", action),
+    PdfInteger(7),
+  )
+  guard document.lookup_object_or_null(uri_number)
+    is PdfArray([PdfDictionary(first_entries), PdfDictionary(second_entries)]) else {
+    fail("expected scrubbed cpdf source JavaScript URI array")
+  }
+  let first_uri : @pdflite.PdfObject = PdfDictionary(first_entries)
+  let second_uri : @pdflite.PdfObject = PdfDictionary(second_entries)
+  @test.assert_eq(
+    fixture_acceptance_lookup_required_for_test(document, "/JS", first_uri),
+    PdfString(@ascii.encode("")),
+  )
+  @test.assert_eq(
+    fixture_acceptance_lookup_required_for_test(document, "/URI", first_uri),
+    PdfString(@ascii.encode("")),
+  )
+  @test.assert_eq(
+    fixture_acceptance_lookup_required_for_test(document, "/URI", second_uri),
+    PdfString(@ascii.encode("https://example.invalid")),
+  )
+  let stream_object = document.lookup_object_or_null(stream_number)
+  @test.assert_eq(stream_object.stream_bytes(), @ascii.encode("stream payload"))
+  guard stream_object is PdfStreamObject(stream) else {
+    fail("expected scrubbed cpdf source JavaScript stream")
+  }
+  @test.assert_eq(
+    fixture_acceptance_lookup_required_for_test(
+      document,
+      "/JS",
+      stream.dictionary,
+    ),
+    PdfString(@ascii.encode("")),
+  )
+}
+
+///|
 fn fixture_acceptance_assert_cpdf_source_portfolio_entry_for_test(
   document : @pdflite.PdfDocument,
   object : @pdflite.PdfObject,
@@ -3590,6 +3764,48 @@ async test "optional cpdf source hello fixture builds portfolio from real payloa
       )
     }
     _ => ()
+  }
+}
+
+///|
+async test "optional cpdf source hello fixture removes JavaScript markers" {
+  match
+    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      let (action_number, uri_number, stream_number) = fixture_acceptance_add_cpdf_source_javascript_for_test(
+        document,
+      )
+      fixture_acceptance_assert_cpdf_source_javascript_for_test(
+        document, action_number, uri_number, stream_number,
+      )
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        document,
+      )
+      fixture_acceptance_assert_cpdf_source_javascript_for_test(
+        @pdflite.pdf_read_document_from_bytes(compressed),
+        action_number,
+        uri_number,
+        stream_number,
+      )
+      let recovered = @pdflite.pdf_read_document_from_bytes(
+        fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+      )
+      fixture_acceptance_assert_cpdf_source_javascript_for_test(
+        recovered, action_number, uri_number, stream_number,
+      )
+      @pdflite.pdf_remove_javascript(recovered)
+      fixture_acceptance_assert_cpdf_source_javascript_removed_for_test(
+        recovered, action_number, uri_number, stream_number,
+      )
+      fixture_acceptance_assert_cpdf_source_javascript_removed_for_test(
+        fixture_acceptance_reparse_compressed_for_test(recovered),
+        action_number,
+        uri_number,
+        stream_number,
+      )
+    }
   }
 }
 
