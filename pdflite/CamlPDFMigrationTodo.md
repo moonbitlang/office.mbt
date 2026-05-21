@@ -6916,6 +6916,23 @@ Current backend snapshot:
   reports no pending interface or formatting work, and `moon check --target all
   --warn-list +73` reports the known warning-73/main-package baseline with 7
   warnings and 0 errors.~~
+- [x] ~~Add the next source-corpus image draft slice: the native
+  `image/fixture_acceptance` package now gates optional
+  `.repos/cpdf-source/manualimages/png.pdf` through cpdf-style replacement-box
+  draft behavior. The gate verifies the real source PNG fixture decodes as a
+  `400x294` RGB24 image before drafting, runs `pdf_draft(None, true, [1],
+  document)`, checks that the `/I1` image XObject draw is removed, the drafted
+  page resource `/XObject` dictionary is emptied, the replacement unit-box
+  cross operator sequence is present, and image JSON no longer reports image
+  names or widths, then repeats those assertions after compressed rewrite/reread
+  plus bad-final-`startxref` reconstruction. `moon check --target native
+  image/fixture_acceptance --warn-list +73` passes, the focused cpdf source PNG
+  draft test reports 1/1 test passing, `moon test --target native
+  image/fixture_acceptance` reports 22/22 tests passing, and `moon test --target
+  native` reports 2316/2316 tests passing. `moon info && moon fmt` reports no
+  pending interface or formatting work, and `moon check --target all --warn-list
+  +73` reports the known warning-73/main-package baseline with 7 warnings and 0
+  errors.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.
