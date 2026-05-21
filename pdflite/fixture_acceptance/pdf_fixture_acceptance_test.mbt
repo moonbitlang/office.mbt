@@ -2738,6 +2738,53 @@ fn fixture_acceptance_assert_cpdf_sheet_png_image_document_for_test(
 }
 
 ///|
+fn fixture_acceptance_cpdf_font_entry_for_test(
+  entries : ArrayView[@pdflite.PdfFontListEntry],
+  basefont_fragment : String,
+) -> @pdflite.PdfFontListEntry raise {
+  for entry in entries {
+    if entry.basefont.contains(basefont_fragment) {
+      break entry
+    }
+  } nobreak {
+    fail("missing cpdf manual font " + basefont_fragment)
+  }
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_font_table_has_unicode_for_test(
+  document : @pdflite.PdfDocument,
+  font : @pdflite.PdfFontListEntry,
+) -> Unit raise {
+  let table = document.font_table(font.name, font.page)
+  @test.assert_eq(table.length() > 0, true)
+  let mut has_unicode = false
+  for row in table {
+    if row.unicode != "" && row.glyphnames != ".notdef" {
+      has_unicode = true
+    }
+  }
+  @test.assert_eq(has_unicode, true)
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_embedded_font_for_test(
+  document : @pdflite.PdfDocument,
+  fonts : ArrayView[@pdflite.PdfFontListEntry],
+  basefont_fragment : String,
+) -> Unit raise {
+  let font = fixture_acceptance_cpdf_font_entry_for_test(
+    fonts, basefont_fragment,
+  )
+  @test.assert_eq(font.subtype, "/Type1")
+  @test.assert_eq(font.encoding, "")
+  match document.extract_fontfile_bytes(font.page, font.name) {
+    Some(bytes) => @test.assert_eq(bytes.length() > 1000, true)
+    None => fail("missing embedded fontfile for " + font.basefont)
+  }
+}
+
+///|
 fn fixture_acceptance_assert_cpdf_manual_images_for_test(
   document : @pdflite.PdfDocument,
 ) -> Unit raise {
@@ -2763,6 +2810,43 @@ fn fixture_acceptance_assert_cpdf_manual_images_for_test(
     .stringify()
   fixture_acceptance_assert_contains_for_test(resolution_json, "\"W\":400")
   fixture_acceptance_assert_contains_for_test(resolution_json, "\"H\":294")
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_manual_embedded_fonts_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 175)
+  let all_pages = document.parse_pagespec("")
+  let fonts = document.list_fonts(all_pages)
+  @test.assert_eq(fonts.length() > 20, true)
+  fixture_acceptance_assert_cpdf_embedded_font_for_test(
+    document, fonts, "NimbusSanL-Bold",
+  )
+  fixture_acceptance_assert_cpdf_embedded_font_for_test(
+    document, fonts, "URWPalladioL-Roma",
+  )
+  fixture_acceptance_assert_cpdf_embedded_font_for_test(
+    document, fonts, "NimbusMonL-Regu",
+  )
+  let helvetica = fixture_acceptance_cpdf_font_entry_for_test(
+    fonts, "/Helvetica",
+  )
+  @test.assert_eq(
+    document.extract_fontfile_bytes(helvetica.page, helvetica.name),
+    None,
+  )
+  fixture_acceptance_assert_cpdf_font_table_has_unicode_for_test(
+    document, helvetica,
+  )
+  let missing = document.missing_fonts(all_pages)
+  @test.assert_eq(missing.length(), 0)
+  let fonts_json = document.fonts_json(all_pages).stringify()
+  fixture_acceptance_assert_contains_for_test(fonts_json, "NimbusSanL-Bold")
+  fixture_acceptance_assert_contains_for_test(fonts_json, "URWPalladioL-Roma")
+  fixture_acceptance_assert_contains_for_test(fonts_json, "NimbusMonL-Regu")
+  let missing_text = @ascii.decode_lossy(document.missing_fonts_text(all_pages))
+  @test.assert_eq(missing_text, "")
 }
 
 ///|
@@ -3363,6 +3447,28 @@ async test "optional cpdf source manual font fixture reports font tables" {
       fixture_acceptance_assert_cpdf_fonts_fixture_for_test(document)
       fixture_acceptance_assert_cpdf_fonts_fixture_for_test(
         fixture_acceptance_reparse_compressed_for_test(document),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source manual fixture reports embedded fonts" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/cpdfmanual.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_manual_embedded_fonts_for_test(document)
+      fixture_acceptance_assert_cpdf_manual_embedded_fonts_for_test(
+        fixture_acceptance_reparse_compressed_for_test(document),
+      )
+      fixture_acceptance_assert_cpdf_manual_embedded_fonts_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(bytes),
+        ),
       )
     }
   }

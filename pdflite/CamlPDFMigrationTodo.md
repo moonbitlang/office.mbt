@@ -5483,6 +5483,17 @@ Current backend snapshot:
   passing, `moon test --target native` reports 2234/2234 tests passing, and
   `moon check --target all --warn-list +73` reports the known warning baseline
   with 0 errors.~~
+- [x] ~~Add the next source-boundary font slice: optional
+  `.repos/cpdf-source/cpdfmanual.pdf` now gates cpdffont-style listing across
+  the real manual's embedded subset Type 1 fonts, decoded font-file extraction
+  for Nimbus/URW/monospace subset programs, Standard 14 font-table reporting,
+  Standard 14 non-extraction behavior, empty missing-font reporting, compressed
+  rewrite/reread, and bad-`startxref` recovery. `moon test --target native
+  fixture_acceptance --filter '*embedded fonts*'` reports 1/1 test passing,
+  `moon test --target native fixture_acceptance` reports 64/64 tests passing,
+  `moon test --target native` reports 2235/2235 tests passing, and `moon check
+  --target all --warn-list +73` reports the known warning baseline with 0
+  errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
