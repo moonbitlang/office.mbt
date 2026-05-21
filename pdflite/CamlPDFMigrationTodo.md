@@ -6277,6 +6277,25 @@ Current backend snapshot:
   reports no pending interface or formatting work, and `moon check --target all
   --warn-list +73` reports the known warning-73/main-package baseline with
   10 warnings and 0 errors.~~
+- [x] ~~Broaden the source-boundary ToUnicode `/UseCMap` variation slice:
+  optional `.repos/cpdf-source/hello.pdf` now gates a three-stream indirect
+  `/UseCMap` chain where the child ToUnicode CMap overrides inherited duplicate
+  mappings while inherited supplementary-plane and multi-codepoint mappings
+  still survive composition. The gate preserves the original Hello text,
+  verifies parsed page-content `/Tf` and `/Tj` operators, `list_fonts`,
+  `read_font`, descriptor ToUnicode bytes, direct `parse_cmap` output,
+  extracted codepoints, reverse single-codepoint lookup, overridden-entry
+  misses, multi-codepoint reverse misses, and `font_table`/wrapper rows for
+  supplementary, derived, inherited, and multi-codepoint entries, then repeats
+  the assertions through compressed rewrite/reread and bad-`startxref`
+  recovery. `moon check --target native fixture_acceptance --warn-list +73`
+  passes, `moon test --target native fixture_acceptance --filter 'optional cpdf
+  source hello fixture composes ToUnicode UseCMap variation streams'` reports
+  1/1 test passing, `moon test --target native fixture_acceptance` reports
+  106/106 tests passing, `moon test --target native` reports 2278/2278 tests
+  passing, `moon info && moon fmt` reports no pending interface or formatting
+  work, and `moon check --target all --warn-list +73` reports the known
+  warning-73/main-package baseline with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
-  CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
-  resource/glyph-program behavior, or broader real-world image corpus coverage.
+  CMap families, additional real-world ToUnicode/CMap fixtures when source
+  material is available, or broader real-world image corpus coverage.
