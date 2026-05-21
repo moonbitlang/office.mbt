@@ -2682,6 +2682,256 @@ fn fixture_acceptance_assert_cpdf_source_hello_text_removed_for_test(
 }
 
 ///|
+fn fixture_acceptance_cpdf_source_ocg_layer_for_test(text : String) -> Bytes {
+  @ascii.encode(text)
+}
+
+///|
+fn fixture_acceptance_cpdf_source_ocg_content_for_test() -> @pdflite.PdfOptionalContent {
+  let usage : @pdflite.PdfOcgUsage = {
+    creator_info: Some(
+      (
+        fixture_acceptance_cpdf_source_ocg_layer_for_test("fixture"),
+        fixture_acceptance_pdf_name_for_test("/Artwork"),
+      ),
+    ),
+    language: Some(
+      (
+        fixture_acceptance_cpdf_source_ocg_layer_for_test("en-US"),
+        Some(fixture_acceptance_pdf_name_for_test("/ON")),
+      ),
+    ),
+    export_state: Some(fixture_acceptance_pdf_name_for_test("/ON")),
+    zoom_min: Some(0.25),
+    zoom_max: Some(4.0),
+    print_subtype: Some(fixture_acceptance_pdf_name_for_test("/Watermark")),
+    print_state: Some(fixture_acceptance_pdf_name_for_test("/OFF")),
+    view_state: Some(fixture_acceptance_pdf_name_for_test("/ON")),
+    user: Some(
+      (
+        fixture_acceptance_pdf_name_for_test("/Ind"),
+        [
+          fixture_acceptance_cpdf_source_ocg_layer_for_test("Alice"),
+          fixture_acceptance_cpdf_source_ocg_layer_for_test("Bob"),
+        ],
+      ),
+    ),
+    page_element_subtype: Some(fixture_acceptance_pdf_name_for_test("/FG")),
+  }
+  {
+    ocgs: [
+      (
+        20,
+        {
+          name: fixture_acceptance_cpdf_source_ocg_layer_for_test(
+            "Source Layer",
+          ),
+          intent: [fixture_acceptance_pdf_name_for_test("/View")],
+          usage: None,
+        },
+      ),
+      (
+        21,
+        {
+          name: fixture_acceptance_cpdf_source_ocg_layer_for_test(
+            "Source Layer",
+          ),
+          intent: [fixture_acceptance_pdf_name_for_test("/Print")],
+          usage: None,
+        },
+      ),
+      (
+        22,
+        {
+          name: fixture_acceptance_cpdf_source_ocg_layer_for_test("Print Layer"),
+          intent: [
+            fixture_acceptance_pdf_name_for_test("/View"),
+            fixture_acceptance_pdf_name_for_test("/Print"),
+          ],
+          usage: Some(usage),
+        },
+      ),
+    ],
+    default_config: {
+      name: Some(
+        fixture_acceptance_cpdf_source_ocg_layer_for_test("Source Default"),
+      ),
+      creator: Some(
+        fixture_acceptance_cpdf_source_ocg_layer_for_test("MoonBit fixture"),
+      ),
+      base_state: OcgOff,
+      on: [20, 21],
+      off: [22],
+      intent: [
+        fixture_acceptance_pdf_name_for_test("/View"),
+        fixture_acceptance_pdf_name_for_test("/Print"),
+      ],
+      usage_applications: [
+        {
+          event: OcgPrint,
+          ocgs: [22],
+          category: [fixture_acceptance_pdf_name_for_test("/Print")],
+        },
+        {
+          event: OcgView,
+          ocgs: [20, 21],
+          category: [fixture_acceptance_pdf_name_for_test("/View")],
+        },
+      ],
+      order: Some([
+        (
+          Some(
+            fixture_acceptance_cpdf_source_ocg_layer_for_test("Source Layers"),
+          ),
+          [20, 21],
+        ),
+        (
+          Some(fixture_acceptance_cpdf_source_ocg_layer_for_test("Output")),
+          [22],
+        ),
+      ]),
+      list_mode: OcgVisiblePages,
+      radio_button_groups: Some([[20, 21], [22]]),
+      locked: [22],
+    },
+    configs: [
+      {
+        ..@pdflite.pdf_ocg_default_config(),
+        name: Some(
+          fixture_acceptance_cpdf_source_ocg_layer_for_test("Alternate Source"),
+        ),
+        base_state: OcgUnchanged,
+        on: [22],
+        off: [20, 21],
+        locked: [21],
+      },
+    ],
+  }
+}
+
+///|
+fn fixture_acceptance_add_cpdf_source_ocg_witness_for_test(
+  document : @pdflite.PdfDocument,
+) -> Int {
+  document.add_object(
+    PdfDictionary([
+      (fixture_acceptance_pdf_name_for_test("/Custom"), PdfIndirect(21)),
+    ]),
+  )
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_ocg_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+  let expected = fixture_acceptance_cpdf_source_ocg_content_for_test()
+  guard (try! document.read_optional_content_groups()) is Some(content) else {
+    fail("missing cpdf source optional content")
+  }
+  @test.assert_eq(content, expected)
+  let expected_names = [
+    fixture_acceptance_cpdf_source_ocg_layer_for_test("Source Layer"),
+    fixture_acceptance_cpdf_source_ocg_layer_for_test("Source Layer"),
+    fixture_acceptance_cpdf_source_ocg_layer_for_test("Print Layer"),
+  ]
+  @test.assert_eq(try! document.ocg_get_list(), expected_names)
+  @test.assert_eq(try! @pdflite.pdf_ocg_get_list(document), expected_names)
+  let json = try! document.ocg_list_json()
+  @test.assert_eq(try! @pdflite.pdf_ocg_list_json(document), json)
+  @test.assert_eq(try! @pdflite.pdf_ocg_read_json(json), Some(content))
+  let json_text = json.stringify()
+  fixture_acceptance_assert_contains_for_test(json_text, "Source Layer")
+  fixture_acceptance_assert_contains_for_test(json_text, "Print Layer")
+  fixture_acceptance_assert_contains_for_test(json_text, "/Watermark")
+  fixture_acceptance_assert_contains_for_test(json_text, "/VisiblePages")
+  @test.assert_eq(try! document.ocg_list_json_blob(), @utf8.encode(json_text))
+  @test.assert_eq(
+    try! @pdflite.pdf_ocg_list_json_blob(document),
+    @utf8.encode(json_text),
+  )
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_ocg_renamed_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+  let renamed = fixture_acceptance_cpdf_source_ocg_layer_for_test(
+    "Renamed Layer",
+  )
+  @test.assert_eq(try! document.ocg_get_list(), [
+    renamed,
+    renamed,
+    fixture_acceptance_cpdf_source_ocg_layer_for_test("Print Layer"),
+  ])
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_ocg_ordered_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+  guard (try! document.read_optional_content_groups()) is Some(content) else {
+    fail("missing ordered cpdf source optional content")
+  }
+  @test.assert_eq(
+    content.default_config.order,
+    Some([(None, [20]), (None, [21]), (None, [22])]),
+  )
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_ocg_coalesced_for_test(
+  document : @pdflite.PdfDocument,
+  witness_number : Int,
+) -> Unit raise {
+  fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+  guard (try! document.read_optional_content_groups()) is Some(content) else {
+    fail("missing coalesced cpdf source optional content")
+  }
+  @test.assert_eq(content.ocgs.length(), 2)
+  @test.assert_eq(content.ocgs[0].0, 20)
+  @test.assert_eq(
+    content.ocgs[0].1.name,
+    fixture_acceptance_cpdf_source_ocg_layer_for_test("Source Layer"),
+  )
+  @test.assert_eq(content.ocgs[1].0, 22)
+  @test.assert_eq(
+    content.ocgs[1].1.name,
+    fixture_acceptance_cpdf_source_ocg_layer_for_test("Print Layer"),
+  )
+  @test.assert_eq(content.default_config.on, [20])
+  @test.assert_eq(content.default_config.off, [22])
+  @test.assert_eq(content.default_config.usage_applications[0].ocgs, [22])
+  @test.assert_eq(content.default_config.usage_applications[1].ocgs, [20])
+  @test.assert_eq(
+    content.default_config.order,
+    Some([
+      (
+        Some(fixture_acceptance_cpdf_source_ocg_layer_for_test("Source Layers")),
+        [20],
+      ),
+      (Some(fixture_acceptance_cpdf_source_ocg_layer_for_test("Output")), [22]),
+    ]),
+  )
+  @test.assert_eq(
+    content.default_config.radio_button_groups,
+    Some([[20], [22]]),
+  )
+  @test.assert_eq(content.default_config.locked, [22])
+  @test.assert_eq(content.configs[0].off, [20])
+  @test.assert_eq(content.configs[0].locked, [20])
+  @test.assert_eq(
+    document
+    .lookup_object_or_null(witness_number)
+    .lookup_immediate(fixture_acceptance_pdf_name_for_test("/Custom")),
+    Some(PdfIndirect(20)),
+  )
+  @test.assert_eq(document.lookup_object_or_null(21), PdfNull)
+}
+
+///|
 fn fixture_acceptance_cpdf_source_redact_path_for_test() -> Array[
   (Double, Double),
 ] {
@@ -5424,6 +5674,79 @@ async test "optional cpdf source hello fixture removes JavaScript markers" {
         action_number,
         uri_number,
         stream_number,
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source hello fixture roundtrips optional content groups" {
+  match
+    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+      @test.assert_eq(try! document.read_optional_content_groups(), None)
+      @test.assert_eq(try! document.ocg_get_list(), [])
+      let witness_number = fixture_acceptance_add_cpdf_source_ocg_witness_for_test(
+        document,
+      )
+      let with_ocg = try! document.write_optional_content_groups(
+        fixture_acceptance_cpdf_source_ocg_content_for_test(),
+      )
+      fixture_acceptance_assert_cpdf_source_ocg_for_test(with_ocg)
+      fixture_acceptance_assert_cpdf_source_ocg_for_test(
+        fixture_acceptance_reparse_compressed_for_test(with_ocg),
+      )
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        with_ocg,
+      )
+      fixture_acceptance_assert_cpdf_source_ocg_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+        ),
+      )
+      let replaced = try! @pdflite.pdf_ocg_replace_json(
+        try! with_ocg.ocg_list_json(),
+        @pdflite.pdf_read_document_from_bytes(bytes),
+      )
+      fixture_acceptance_assert_cpdf_source_ocg_for_test(replaced)
+      let renamed = with_ocg.ocg_rename(
+        fixture_acceptance_cpdf_source_ocg_layer_for_test("Source Layer"),
+        fixture_acceptance_cpdf_source_ocg_layer_for_test("Renamed Layer"),
+      )
+      fixture_acceptance_assert_cpdf_source_ocg_renamed_for_test(renamed)
+      fixture_acceptance_assert_cpdf_source_ocg_renamed_for_test(
+        fixture_acceptance_reparse_compressed_for_test(renamed),
+      )
+      let wrapper_renamed = @pdflite.pdf_ocg_rename(
+        fixture_acceptance_cpdf_source_ocg_layer_for_test("Source Layer"),
+        fixture_acceptance_cpdf_source_ocg_layer_for_test("Renamed Layer"),
+        with_ocg,
+      )
+      fixture_acceptance_assert_cpdf_source_ocg_renamed_for_test(
+        wrapper_renamed,
+      )
+      let ordered = try! with_ocg.ocg_order_all()
+      fixture_acceptance_assert_cpdf_source_ocg_ordered_for_test(ordered)
+      fixture_acceptance_assert_cpdf_source_ocg_ordered_for_test(
+        try! @pdflite.pdf_ocg_order_all(with_ocg),
+      )
+      fixture_acceptance_assert_cpdf_source_ocg_ordered_for_test(
+        fixture_acceptance_reparse_compressed_for_test(ordered),
+      )
+      let coalesced = try! with_ocg.ocg_coalesce()
+      fixture_acceptance_assert_cpdf_source_ocg_coalesced_for_test(
+        coalesced, witness_number,
+      )
+      fixture_acceptance_assert_cpdf_source_ocg_coalesced_for_test(
+        try! @pdflite.pdf_ocg_coalesce(with_ocg),
+        witness_number,
+      )
+      fixture_acceptance_assert_cpdf_source_ocg_coalesced_for_test(
+        fixture_acceptance_reparse_compressed_for_test(coalesced),
+        witness_number,
       )
     }
   }

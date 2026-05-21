@@ -5704,6 +5704,25 @@ Current backend snapshot:
   `moon test --target native` reports 2250/2250 tests passing, and `moon check
   --target all --warn-list +73` reports the known warning baseline with 10
   warnings and 0 errors.~~
+- [x] ~~Add the next source-boundary optional-content slice: optional
+  `.repos/cpdf-source/hello.pdf` now gates cpdf-style optional-content group
+  writing, listing, JSON export/import, rename, order-all, and coalesce paths
+  on a real source PDF after injecting OCG catalog metadata. The gate verifies
+  original Hello text preservation, duplicate raw layer names, usage
+  dictionaries, usage-application dictionaries, UTF-8 JSON blob output,
+  replacement from exported JSON, compressed rewrite/reread, bad-`startxref`
+  recovery, wrapper parity, order-all output, duplicate layer coalescing,
+  duplicate object removal, and reference rewriting for an unrelated witness
+  dictionary. The slice also fixes `write_optional_content_groups` so auxiliary
+  usage/config objects are allocated after the explicit OCG object-number
+  range, preventing a later explicit OCG object from overwriting a just-created
+  usage dictionary. `moon test --target native pdf_ocg_test.mbt` reports 18/18
+  tests passing, `moon test --target native fixture_acceptance --filter
+  'optional cpdf source hello fixture roundtrips optional content groups'`
+  reports 1/1 test passing, `moon test --target native fixture_acceptance`
+  reports 80/80 tests passing, `moon test --target native` reports 2252/2252
+  tests passing, and `moon check --target all --warn-list +73` reports the
+  known warning baseline with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.

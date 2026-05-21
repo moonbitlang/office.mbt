@@ -704,6 +704,52 @@ test "PdfDocument write_optional_content_groups builds readable OCG data" {
 }
 
 ///|
+test "PdfDocument write_optional_content_groups reserves explicit OCG numbers before usage objects" {
+  let doc = ocg_catalog_document_for_test()
+  let usage : @pdflite.PdfOcgUsage = {
+    creator_info: Some(
+      (ocg_bytes_for_test("tool"), ocg_name_for_test("/Artwork")),
+    ),
+    language: Some((ocg_bytes_for_test("en-US"), None)),
+    export_state: Some(ocg_name_for_test("/ON")),
+    zoom_min: None,
+    zoom_max: None,
+    print_subtype: Some(ocg_name_for_test("/Watermark")),
+    print_state: Some(ocg_name_for_test("/OFF")),
+    view_state: Some(ocg_name_for_test("/ON")),
+    user: None,
+    page_element_subtype: Some(ocg_name_for_test("/FG")),
+  }
+  let content : @pdflite.PdfOptionalContent = {
+    ocgs: [
+      (
+        10,
+        {
+          name: ocg_bytes_for_test("Layer A"),
+          intent: [ocg_name_for_test("/View")],
+          usage: None,
+        },
+      ),
+      (
+        11,
+        {
+          name: ocg_bytes_for_test("Layer B"),
+          intent: [ocg_name_for_test("/Print")],
+          usage: Some(usage),
+        },
+      ),
+    ],
+    default_config: { ..@pdflite.pdf_ocg_default_config(), on: [10], off: [11] },
+    configs: [],
+  }
+  let updated = try! doc.write_optional_content_groups(content)
+  guard (try! updated.read_optional_content_groups()) is Some(read_back) else {
+    fail("expected written optional content")
+  }
+  @test.assert_eq(read_back, content)
+}
+
+///|
 test "PdfDocument write_optional_content_groups preserves trailer-root catalog entries" {
   let key_lang = ocg_name_for_test("/Lang")
   let key_page_mode = ocg_name_for_test("/PageMode")

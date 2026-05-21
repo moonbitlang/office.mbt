@@ -2558,6 +2558,16 @@ pub fn PdfDocument::write_optional_content_groups(
 ) -> PdfDocument raise PdfError {
   let root = self.pdf_ocg_root()
   let pdf = self.copy()
+  let original_max_object_number = pdf.objects.max_object_number()
+  let mut max_ocg_number = original_max_object_number
+  for entry in optional_content.ocgs {
+    if entry.0 > max_ocg_number {
+      max_ocg_number = entry.0
+    }
+  }
+  if max_ocg_number > original_max_object_number {
+    pdf.add_object_given_number(max_ocg_number, PdfNull)
+  }
   for entry in optional_content.ocgs {
     let (number, ocg) = entry
     pdf.add_object_given_number(number, pdf.pdf_ocg_write_ocg(ocg))
