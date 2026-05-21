@@ -1691,6 +1691,155 @@ fn fixture_acceptance_assert_cpdf_h1_struct_tree_for_test(
 }
 
 ///|
+fn fixture_acceptance_assert_cpdf_logo_boxes_and_transparency_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 1)
+  let pages = document.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  let logo_box : @pdflite.PdfRectangle = {
+    min_x: 0.0,
+    min_y: 0.0,
+    max_x: 56.693,
+    max_y: 56.693,
+  }
+  @test.assert_eq(document.parse_rectangle(pages[0].mediabox), logo_box)
+  guard document.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/BleedBox"),
+      pages[0].rest,
+    )
+    is Some(bleedbox) else {
+    fail("missing logo BleedBox")
+  }
+  @test.assert_eq(document.parse_rectangle(bleedbox), logo_box)
+  guard document.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/TrimBox"),
+      pages[0].rest,
+    )
+    is Some(trimbox) else {
+    fail("missing logo TrimBox")
+  }
+  @test.assert_eq(document.parse_rectangle(trimbox), logo_box)
+  guard document.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/Group"),
+      pages[0].rest,
+    )
+    is Some(group) else {
+    fail("missing logo transparency group")
+  }
+  @test.assert_eq(
+    document.lookup_direct(fixture_acceptance_pdf_name_for_test("/S"), group),
+    Some(PdfNameObject(fixture_acceptance_pdf_name_for_test("/Transparency"))),
+  )
+  @test.assert_eq(
+    document.lookup_direct(fixture_acceptance_pdf_name_for_test("/I"), group),
+    Some(PdfBoolean(true)),
+  )
+  @test.assert_eq(
+    document.lookup_direct(fixture_acceptance_pdf_name_for_test("/K"), group),
+    Some(PdfBoolean(false)),
+  )
+  guard document.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/ExtGState"),
+      pages[0].resources,
+    )
+    is Some(extgstate) else {
+    fail("missing logo ExtGState resources")
+  }
+  guard document.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/G0"),
+      extgstate,
+    )
+    is Some(g0) else {
+    fail("missing logo /G0 ExtGState")
+  }
+  @test.assert_eq(
+    document.lookup_direct(fixture_acceptance_pdf_name_for_test("/BM"), g0),
+    Some(PdfNameObject(fixture_acceptance_pdf_name_for_test("/Compatible"))),
+  )
+  guard document.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/G1"),
+      extgstate,
+    )
+    is Some(g1) else {
+    fail("missing logo /G1 ExtGState")
+  }
+  @test.assert_eq(
+    document.lookup_direct(fixture_acceptance_pdf_name_for_test("/BM"), g1),
+    Some(PdfNameObject(fixture_acceptance_pdf_name_for_test("/Normal"))),
+  )
+  let page_info_text = @ascii.decode_lossy(document.page_info_text([1]))
+  fixture_acceptance_assert_contains_for_test(
+    page_info_text, "MediaBox: 0.000000 0.000000 56.693000 56.693000\n",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    page_info_text, "BleedBox: 0.000000 0.000000 56.693000 56.693000\n",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    page_info_text, "TrimBox: 0.000000 0.000000 56.693000 56.693000\n",
+  )
+  let info_json = document.info_json().stringify()
+  fixture_acceptance_assert_contains_for_test(info_json, "\"BleedBox\":[0")
+  fixture_acceptance_assert_contains_for_test(info_json, "\"TrimBox\":[0")
+  fixture_acceptance_assert_contains_for_test(info_json, "56.693")
+}
+
+///|
+fn fixture_acceptance_content_ops_contain_gs_for_test(
+  ops : ArrayView[@pdflite.PdfContentOp],
+  name : @pdflite.PdfName,
+) -> Bool {
+  for op in ops {
+    match op {
+      Op_gs(op_name) if op_name == name => break true
+      _ => ()
+    }
+  } nobreak {
+    false
+  }
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_trans_extgstate_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 1)
+  @test.assert_eq(document.version(), (2, 0))
+  let pages = document.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  guard document.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/ExtGState"),
+      pages[0].resources,
+    )
+    is Some(extgstate) else {
+    fail("missing trans ExtGState resources")
+  }
+  guard document.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/G1"),
+      extgstate,
+    )
+    is Some(g1) else {
+    fail("missing trans /G1 ExtGState")
+  }
+  guard document.lookup_direct(fixture_acceptance_pdf_name_for_test("/ca"), g1)
+    is Some(alpha) else {
+    fail("missing trans fill alpha")
+  }
+  @test.assert_eq(document.get_number(alpha), 0.5)
+  let ops = document.parse_content_ops_with_resources(
+    pages[0].resources,
+    pages[0].content,
+  )
+  @test.assert_eq(
+    fixture_acceptance_content_ops_contain_gs_for_test(
+      ops,
+      fixture_acceptance_pdf_name_for_test("/G1"),
+    ),
+    true,
+  )
+}
+
+///|
 fn fixture_acceptance_assert_cpdf_manual_pagespec_for_test(
   document : @pdflite.PdfDocument,
 ) -> Unit raise {
@@ -2630,6 +2779,46 @@ async test "optional cpdf source logo fixture reports catalog view metadata" {
         fixture_acceptance_reparse_compressed_for_test(document),
       )
       fixture_acceptance_assert_cpdf_logo_catalog_view_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(bytes),
+        ),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source transparency fixtures preserve resources" {
+  match
+    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/logo.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_logo_boxes_and_transparency_for_test(
+        document,
+      )
+      fixture_acceptance_assert_cpdf_logo_boxes_and_transparency_for_test(
+        fixture_acceptance_reparse_compressed_for_test(document),
+      )
+      fixture_acceptance_assert_cpdf_logo_boxes_and_transparency_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(bytes),
+        ),
+      )
+    }
+  }
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/manualimages/trans.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_trans_extgstate_for_test(document)
+      fixture_acceptance_assert_cpdf_trans_extgstate_for_test(
+        fixture_acceptance_reparse_compressed_for_test(document),
+      )
+      fixture_acceptance_assert_cpdf_trans_extgstate_for_test(
         @pdflite.pdf_read_document_from_bytes(
           fixture_acceptance_corrupt_startxref_pointer_for_test(bytes),
         ),

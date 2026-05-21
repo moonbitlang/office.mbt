@@ -5440,6 +5440,17 @@ Current backend snapshot:
   native fixture_acceptance` reports 59/59 tests passing, `moon test --target
   native` reports 2230/2230 tests passing, and `moon check --target all
   --warn-list +73` reports the known warning baseline with 0 errors.~~
+- [x] ~~Add the next source-boundary transparency/resource slice: optional
+  `.repos/cpdf-source/logo.pdf` now gates real `/BleedBox` and `/TrimBox`,
+  transparency group, blend-mode `/ExtGState` resources, page-info/document-info
+  box reporting, compressed rewrite/reread, and bad-`startxref` recovery;
+  optional `.repos/cpdf-source/manualimages/trans.pdf` now gates real fill-alpha
+  `/ca 0.5` ExtGState resources and the content stream `/G1 gs` operator across
+  the same boundaries. `moon test --target native fixture_acceptance --filter
+  '*transparency fixtures*'` reports 1/1 test passing, `moon test --target
+  native fixture_acceptance` reports 60/60 tests passing, `moon test --target
+  native` reports 2231/2231 tests passing, and `moon check --target all
+  --warn-list +73` reports the known warning baseline with 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
