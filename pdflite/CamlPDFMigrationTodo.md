@@ -5410,6 +5410,16 @@ Current backend snapshot:
   fixture_acceptance --filter '*raw sheet PNG*'` reports 1/1 test passing,
   `moon test --target native fixture_acceptance` reports 56/56 tests passing,
   and `moon test --target native` reports 2227/2227 tests passing.~~
+- [x] ~~Add the next source-boundary page-label slice: optional
+  `.repos/cpdf-source/cpdfmanual.pdf` now gates the real lower-roman frontmatter
+  and decimal body `/PageLabels` tree, cpdf-style page-info label JSON/text,
+  add-text `%Label`/`%EndLabel` replacement values, compressed rewrite/reread,
+  and bad-`startxref` recovery for the 175-page manual. `moon test --target
+  native fixture_acceptance --filter '*page label fallbacks*'` reports 1/1 test
+  passing, `moon test --target native fixture_acceptance` reports 57/57 tests
+  passing, `moon test --target native` reports 2228/2228 tests passing, and
+  `moon check --target all --warn-list +73` reports the known warning baseline
+  with 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.

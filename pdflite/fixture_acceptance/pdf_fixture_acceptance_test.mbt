@@ -1770,6 +1770,70 @@ fn fixture_acceptance_assert_cpdf_manual_reports_for_test(
 }
 
 ///|
+fn fixture_acceptance_assert_cpdf_manual_page_labels_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 175)
+  let expected_labels : Array[@pdflite.PdfPageLabel] = [
+    {
+      label_style: PageLabelLowercaseRoman,
+      label_prefix: None,
+      start_page: 1,
+      start_value: 1,
+    },
+    {
+      label_style: PageLabelDecimalArabic,
+      label_prefix: None,
+      start_page: 19,
+      start_value: 1,
+    },
+  ]
+  @test.assert_eq(document.read_page_labels(), expected_labels)
+  let page_info_json = document.page_info_json([1, 19, 175]).stringify()
+  fixture_acceptance_assert_contains_for_test(page_info_json, "\"Page\":1")
+  fixture_acceptance_assert_contains_for_test(page_info_json, "\"Page\":19")
+  fixture_acceptance_assert_contains_for_test(page_info_json, "\"Page\":175")
+  fixture_acceptance_assert_contains_for_test(page_info_json, "\"Label\":\"i\"")
+  fixture_acceptance_assert_contains_for_test(page_info_json, "\"Label\":\"1\"")
+  fixture_acceptance_assert_contains_for_test(
+    page_info_json, "\"Label\":\"157\"",
+  )
+  let page_info_text = @ascii.decode_lossy(
+    document.page_info_text([1, 19, 175]),
+  )
+  fixture_acceptance_assert_contains_for_test(
+    page_info_text, "Page 1:\nLabel: i\n",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    page_info_text, "Page 19:\nLabel: 1\n",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    page_info_text, "Page 175:\nLabel: 157\n",
+  )
+  @test.assert_eq(document.addtext_page_label(1), "i")
+  @test.assert_eq(document.addtext_page_label(19), "1")
+  @test.assert_eq(document.addtext_page_label(175), "157")
+  let replacement_values = document.addtext_replacement_values(
+    document.read_bookmarks(preserve_actions=true),
+    19,
+    175,
+    "cpdfmanual.pdf",
+    42,
+    Some(5),
+  )
+  @test.assert_eq(replacement_values.page_label, "1")
+  @test.assert_eq(replacement_values.end_label, "157")
+  @test.assert_eq(
+    @pdflite.pdf_addtext_process_text_with_time(
+      @pdflite.pdf_strftime_dummy_time(),
+      "%Label|%EndLabel|%Page|%EndPage|%filename|%Bates",
+      @pdflite.pdf_addtext_replacement_pairs(replacement_values),
+    ),
+    "1|157|19|175|cpdfmanual.pdf|00060",
+  )
+}
+
+///|
 fn fixture_acceptance_assert_cpdf_manual_text_extraction_for_test(
   document : @pdflite.PdfDocument,
 ) -> Unit raise {
@@ -2712,6 +2776,28 @@ async test "optional cpdf source manual fixture reports info page details and co
       fixture_acceptance_assert_cpdf_manual_reports_for_test(
         @pdflite.pdf_read_document_from_bytes(rewritten),
         rewritten.length(),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source manual fixture reports page label fallbacks" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/cpdfmanual.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_manual_page_labels_for_test(document)
+      fixture_acceptance_assert_cpdf_manual_page_labels_for_test(
+        fixture_acceptance_reparse_compressed_for_test(document),
+      )
+      fixture_acceptance_assert_cpdf_manual_page_labels_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(bytes),
+        ),
       )
     }
   }
