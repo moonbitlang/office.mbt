@@ -5494,6 +5494,16 @@ Current backend snapshot:
   `moon test --target native` reports 2235/2235 tests passing, and `moon check
   --target all --warn-list +73` reports the known warning baseline with 0
   errors.~~
+- [x] ~~Add the next source-boundary image extraction slice: optional
+  `.repos/cpdf-source/cpdfmanual.pdf` now gates the real manual's embedded RGB
+  image on page 128/object 1477 through cpdfimage-style image JSON reporting,
+  image-resolution reporting, raw 24bpp extraction, decoded byte-count checks,
+  and stable pixel samples after compressed rewrite/reread. `moon test --target
+  native fixture_acceptance --filter '*embedded images*'` reports 1/1 test
+  passing, `moon test --target native fixture_acceptance` reports 64/64 tests
+  passing, `moon test --target native` reports 2235/2235 tests passing, and
+  `moon check --target all --warn-list +73` reports the known warning baseline
+  with 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.

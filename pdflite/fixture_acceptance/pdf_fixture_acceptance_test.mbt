@@ -2785,12 +2785,35 @@ fn fixture_acceptance_assert_cpdf_embedded_font_for_test(
 }
 
 ///|
+fn fixture_acceptance_assert_cpdf_manual_extracted_image_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  match document.get_image_24bpp(PdfDictionary([]), PdfIndirect(1477)) {
+    PdfRawImage(width, height, PdfBPP24, data) => {
+      @test.assert_eq(width, 400)
+      @test.assert_eq(height, 294)
+      @test.assert_eq(data.length(), 400 * 294 * 3)
+      @test.assert_eq(data[0].to_int(), 255)
+      @test.assert_eq(data[1].to_int(), 255)
+      @test.assert_eq(data[2].to_int(), 255)
+      let middle_pixel = (147 * 400 + 200) * 3
+      @test.assert_eq(data[middle_pixel].to_int(), 250)
+      @test.assert_eq(data[middle_pixel + 1].to_int(), 250)
+      @test.assert_eq(data[middle_pixel + 2].to_int(), 250)
+    }
+    _ => fail("expected cpdf manual embedded image to decode as 24bpp")
+  }
+}
+
+///|
 fn fixture_acceptance_assert_cpdf_manual_images_for_test(
   document : @pdflite.PdfDocument,
 ) -> Unit raise {
   @test.assert_eq(document.endpage(), 175)
   let all_pages = document.parse_pagespec("")
   let images_json = document.images_json(all_pages).stringify()
+  fixture_acceptance_assert_contains_for_test(images_json, "\"Object\":1477")
+  fixture_acceptance_assert_contains_for_test(images_json, "\"Pages\":[128]")
   fixture_acceptance_assert_contains_for_test(images_json, "\"Width\":400")
   fixture_acceptance_assert_contains_for_test(images_json, "\"Height\":294")
   fixture_acceptance_assert_contains_for_test(
@@ -2808,8 +2831,10 @@ fn fixture_acceptance_assert_cpdf_manual_images_for_test(
   let resolution_json = document
     .image_resolution_json(all_pages, 1000000.0)
     .stringify()
+  fixture_acceptance_assert_contains_for_test(resolution_json, "\"Page\":128")
   fixture_acceptance_assert_contains_for_test(resolution_json, "\"W\":400")
   fixture_acceptance_assert_contains_for_test(resolution_json, "\"H\":294")
+  fixture_acceptance_assert_cpdf_manual_extracted_image_for_test(document)
 }
 
 ///|
