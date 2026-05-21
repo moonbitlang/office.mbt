@@ -2077,6 +2077,101 @@ fn fixture_acceptance_assert_cpdf_source_attachments_removed_for_test(
 }
 
 ///|
+fn fixture_acceptance_assert_cpdf_manual_metadata_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 175)
+  @test.assert_eq(document.language(), Some(@ascii.encode("en-GB")))
+  @test.assert_eq(
+    document.info_utf8(fixture_acceptance_pdf_name_for_test("/Title")),
+    "cpdf source & metadata",
+  )
+  @test.assert_eq(
+    document.info_utf8(fixture_acceptance_pdf_name_for_test("/Author")),
+    "MoonBit port",
+  )
+  @test.assert_eq(
+    document.info_utf8(fixture_acceptance_pdf_name_for_test("/Creator")),
+    "LaTeX with hyperref",
+  )
+  @test.assert_eq(
+    document.info_utf8(fixture_acceptance_pdf_name_for_test("/Producer")),
+    "pdfTeX-1.40.29",
+  )
+  let metadata = match document.metadata() {
+    Some(metadata) => metadata
+    None => fail("missing cpdf manual metadata")
+  }
+  let metadata_text = @utf8.decode_lossy(metadata)
+  fixture_acceptance_assert_contains_for_test(
+    metadata_text, "<pdf:Producer>pdfTeX-1.40.29</pdf:Producer>",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    metadata_text, "<pdf:Creator>LaTeX with hyperref</pdf:Creator>",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    metadata_text, "<xap:CreatorTool>LaTeX with hyperref</xap:CreatorTool>",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    metadata_text, "<pdf:Title>cpdf source &amp; metadata</pdf:Title>",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    metadata_text, "<pdf:Author>MoonBit port</pdf:Author>",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    metadata_text, "2026-05-08T20:26:06+01:00",
+  )
+  let info_json = document.info_json().stringify()
+  fixture_acceptance_assert_contains_for_test(
+    info_json, "\"Title\":\"cpdf source & metadata\"",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    info_json, "\"Author\":\"MoonBit port\"",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    info_json, "\"Creator\":\"LaTeX with hyperref\"",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    info_json, "\"Producer\":\"pdfTeX-1.40.29\"",
+  )
+  let xmp_json = document.xmp_info_json().stringify()
+  fixture_acceptance_assert_contains_for_test(
+    xmp_json, "\"Language\":\"en-GB\"",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    xmp_json, "\"XMP pdf:Producer\":\"pdfTeX-1.40.29\"",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    xmp_json, "\"XMP pdf:Creator\":\"LaTeX with hyperref\"",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    xmp_json, "\"XMP xmp:CreatorTool\":\"LaTeX with hyperref\"",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    xmp_json, "\"XMP pdf:Title\":\"cpdf source &amp; metadata\"",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    xmp_json, "\"XMP pdf:Author\":\"MoonBit port\"",
+  )
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_manual_metadata_removed_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 175)
+  @test.assert_eq(document.language(), Some(@ascii.encode("en-GB")))
+  @test.assert_eq(document.metadata(), None)
+  let xmp_json = document.xmp_info_json().stringify()
+  fixture_acceptance_assert_contains_for_test(
+    xmp_json, "\"Language\":\"en-GB\"",
+  )
+  fixture_acceptance_assert_contains_for_test(xmp_json, "\"Subformats\":[]")
+  @test.assert_eq(xmp_json.contains("XMP pdf:Title"), false)
+  @test.assert_eq(xmp_json.contains("XMP pdf:Author"), false)
+}
+
+///|
 fn fixture_acceptance_assert_cpdf_manual_pagespec_for_test(
   document : @pdflite.PdfDocument,
 ) -> Unit raise {
@@ -3411,6 +3506,58 @@ async test "optional cpdf source manual fixture reports info page details and co
       fixture_acceptance_assert_cpdf_manual_reports_for_test(
         @pdflite.pdf_read_document_from_bytes(rewritten),
         rewritten.length(),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source manual fixture mutates metadata" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/cpdfmanual.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      @test.assert_eq(document.metadata(), None)
+      let title = @pdflite.pdf_pdfdocstring_of_utf8(
+        @utf8.encode("cpdf source & metadata"),
+      )
+      let author = @pdflite.pdf_pdfdocstring_of_utf8(
+        @utf8.encode("MoonBit port"),
+      )
+      let updated = document
+        .create_metadata()
+        .set_language(@ascii.encode("en-GB"))
+        .set_info_entry(
+          fixture_acceptance_pdf_name_for_test("/Title"),
+          PdfString(title),
+          4,
+          keep_version=true,
+          xmp_also=true,
+        )
+        .set_info_entry(
+          fixture_acceptance_pdf_name_for_test("/Author"),
+          PdfString(author),
+          4,
+          keep_version=true,
+          xmp_also=true,
+        )
+      fixture_acceptance_assert_cpdf_manual_metadata_for_test(updated)
+      fixture_acceptance_assert_cpdf_manual_metadata_for_test(
+        fixture_acceptance_reparse_compressed_for_test(updated),
+      )
+      let corrupt_startxref_bytes = fixture_acceptance_corrupt_startxref_pointer_for_test(
+        @pdflite.pdf_write_document_with_compressed_xref_stream(updated),
+      )
+      fixture_acceptance_assert_cpdf_manual_metadata_for_test(
+        @pdflite.pdf_read_document_from_bytes(corrupt_startxref_bytes),
+      )
+      let removed = updated.remove_all_metadata()
+      fixture_acceptance_assert_cpdf_manual_metadata_removed_for_test(removed)
+      fixture_acceptance_assert_cpdf_manual_metadata_removed_for_test(
+        fixture_acceptance_reparse_compressed_for_test(removed),
       )
     }
   }

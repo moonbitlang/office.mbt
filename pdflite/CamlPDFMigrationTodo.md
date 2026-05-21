@@ -5473,6 +5473,16 @@ Current backend snapshot:
   fixture_acceptance` reports 62/62 tests passing, `moon test --target native`
   reports 2233/2233 tests passing, and `moon check --target all --warn-list
   +73` reports the known warning baseline with 0 errors.~~
+- [x] ~~Add the next source-boundary metadata slice: optional
+  `.repos/cpdf-source/cpdfmanual.pdf` now gates cpdfmetadata-style XMP creation
+  from real `/Info` fields, catalog `/Lang` setting, `/Title` and `/Author`
+  `/Info` updates synchronized into XMP, compressed rewrite/reread,
+  bad-`startxref` recovery, and metadata removal/reread. `moon test --target
+  native fixture_acceptance --filter '*mutates metadata*'` reports 1/1 test
+  passing, `moon test --target native fixture_acceptance` reports 63/63 tests
+  passing, `moon test --target native` reports 2234/2234 tests passing, and
+  `moon check --target all --warn-list +73` reports the known warning baseline
+  with 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
