@@ -1865,6 +1865,172 @@ fn fixture_acceptance_assert_cpdf_source_trim_marks_for_test(
 }
 
 ///|
+fn fixture_acceptance_assert_cpdf_source_prefixed_logo_resources_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  let pages = document.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  guard document.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/ExtGState"),
+      pages[0].resources,
+    )
+    is Some(extgstate) else {
+    fail("missing stamped logo ExtGState resources")
+  }
+  guard document.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/aG0"),
+      extgstate,
+    )
+    is Some(g0) else {
+    fail("missing prefixed stamped logo /aG0 ExtGState")
+  }
+  @test.assert_eq(
+    document.lookup_direct(fixture_acceptance_pdf_name_for_test("/BM"), g0),
+    Some(PdfNameObject(fixture_acceptance_pdf_name_for_test("/Compatible"))),
+  )
+  guard document.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/aG1"),
+      extgstate,
+    )
+    is Some(g1) else {
+    fail("missing prefixed stamped logo /aG1 ExtGState")
+  }
+  @test.assert_eq(
+    document.lookup_direct(fixture_acceptance_pdf_name_for_test("/BM"), g1),
+    Some(PdfNameObject(fixture_acceptance_pdf_name_for_test("/Normal"))),
+  )
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_logo_rest_merged_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  let pages = document.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  let logo_box : @pdflite.PdfRectangle = {
+    min_x: 0.0,
+    min_y: 0.0,
+    max_x: 56.693,
+    max_y: 56.693,
+  }
+  guard document.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/BleedBox"),
+      pages[0].rest,
+    )
+    is Some(bleedbox) else {
+    fail("missing merged logo BleedBox")
+  }
+  @test.assert_eq(document.parse_rectangle(bleedbox), logo_box)
+  guard document.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/TrimBox"),
+      pages[0].rest,
+    )
+    is Some(trimbox) else {
+    fail("missing merged logo TrimBox")
+  }
+  @test.assert_eq(document.parse_rectangle(trimbox), logo_box)
+  guard document.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/Group"),
+      pages[0].rest,
+    )
+    is Some(group) else {
+    fail("missing merged logo transparency group")
+  }
+  @test.assert_eq(
+    document.lookup_direct(fixture_acceptance_pdf_name_for_test("/S"), group),
+    Some(PdfNameObject(fixture_acceptance_pdf_name_for_test("/Transparency"))),
+  )
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_stamp_for_test(
+  original : @pdflite.PdfDocument,
+  stamped : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(original.endpage(), 1)
+  @test.assert_eq(stamped.endpage(), 1)
+  let original_pages = original.pages_of_pagetree()
+  let stamped_pages = stamped.pages_of_pagetree()
+  @test.assert_eq(stamped_pages[0].mediabox, original_pages[0].mediabox)
+  @test.assert_eq(stamped_pages[0].rotate, original_pages[0].rotate)
+  fixture_acceptance_assert_cpdf_source_prefixed_logo_resources_for_test(
+    stamped,
+  )
+  fixture_acceptance_assert_cpdf_source_logo_rest_merged_for_test(stamped)
+  let text = @utf8.decode_lossy(stamped.test_extract_text([1]))
+  fixture_acceptance_assert_contains_for_test(text, "Hello, World!")
+  let ops = fixture_acceptance_page_content_ops_for_test(stamped)
+  fixture_acceptance_assert_content_op_for_test(
+    ops,
+    Op_Tj(@ascii.encode("Hello, World!")),
+  )
+  @test.assert_eq(
+    fixture_acceptance_content_ops_contain_translation_cm_for_test(
+      ops, 10.0, 20.0,
+    ),
+    true,
+  )
+  @test.assert_eq(
+    fixture_acceptance_content_ops_contain_gs_for_test(
+      ops,
+      fixture_acceptance_pdf_name_for_test("/aG0"),
+    ) ||
+    fixture_acceptance_content_ops_contain_gs_for_test(
+      ops,
+      fixture_acceptance_pdf_name_for_test("/aG1"),
+    ),
+    true,
+  )
+  @test.assert_eq(
+    fixture_acceptance_content_save_count_for_test(ops) >= 2,
+    true,
+  )
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_combine_for_test(
+  original : @pdflite.PdfDocument,
+  combined : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(original.endpage(), 1)
+  @test.assert_eq(combined.endpage(), 1)
+  let original_pages = original.pages_of_pagetree()
+  let combined_pages = combined.pages_of_pagetree()
+  @test.assert_eq(combined_pages[0].mediabox, original_pages[0].mediabox)
+  @test.assert_eq(combined_pages[0].rotate, original_pages[0].rotate)
+  fixture_acceptance_assert_cpdf_source_prefixed_logo_resources_for_test(
+    combined,
+  )
+  fixture_acceptance_assert_cpdf_source_logo_rest_merged_for_test(combined)
+  let text = @utf8.decode_lossy(combined.test_extract_text([1]))
+  fixture_acceptance_assert_contains_for_test(text, "Hello, World!")
+  let ops = fixture_acceptance_page_content_ops_for_test(combined)
+  fixture_acceptance_assert_content_op_for_test(
+    ops,
+    Op_Tj(@ascii.encode("Hello, World!")),
+  )
+  @test.assert_eq(
+    fixture_acceptance_content_ops_contain_scaled_cm_for_test(ops),
+    true,
+  )
+  @test.assert_eq(
+    fixture_acceptance_content_ops_contain_gs_for_test(
+      ops,
+      fixture_acceptance_pdf_name_for_test("/aG0"),
+    ) ||
+    fixture_acceptance_content_ops_contain_gs_for_test(
+      ops,
+      fixture_acceptance_pdf_name_for_test("/aG1"),
+    ),
+    true,
+  )
+  @test.assert_eq(
+    fixture_acceptance_content_save_count_for_test(ops) >= 2,
+    true,
+  )
+}
+
+///|
 fn fixture_acceptance_content_ops_contain_gs_for_test(
   ops : ArrayView[@pdflite.PdfContentOp],
   name : @pdflite.PdfName,
@@ -1918,6 +2084,63 @@ fn fixture_acceptance_content_op_count_for_test(
     }
   }
   count
+}
+
+///|
+fn fixture_acceptance_double_close_for_test(
+  actual : Double,
+  expected : Double,
+) -> Bool {
+  let difference = if actual > expected {
+    actual - expected
+  } else {
+    expected - actual
+  }
+  difference < 0.000001
+}
+
+///|
+fn fixture_acceptance_content_ops_contain_translation_cm_for_test(
+  ops : ArrayView[@pdflite.PdfContentOp],
+  x : Double,
+  y : Double,
+) -> Bool {
+  for op in ops {
+    match op {
+      Op_cm(matrix) =>
+        if fixture_acceptance_double_close_for_test(matrix.a, 1.0) &&
+          fixture_acceptance_double_close_for_test(matrix.b, 0.0) &&
+          fixture_acceptance_double_close_for_test(matrix.c, 0.0) &&
+          fixture_acceptance_double_close_for_test(matrix.d, 1.0) &&
+          fixture_acceptance_double_close_for_test(matrix.e, x) &&
+          fixture_acceptance_double_close_for_test(matrix.f, y) {
+          break true
+        }
+      _ => ()
+    }
+  } nobreak {
+    false
+  }
+}
+
+///|
+fn fixture_acceptance_content_ops_contain_scaled_cm_for_test(
+  ops : ArrayView[@pdflite.PdfContentOp],
+) -> Bool {
+  for op in ops {
+    match op {
+      Op_cm(matrix) =>
+        if matrix.a > 1.0 &&
+          fixture_acceptance_double_close_for_test(matrix.a, matrix.d) &&
+          fixture_acceptance_double_close_for_test(matrix.b, 0.0) &&
+          fixture_acceptance_double_close_for_test(matrix.c, 0.0) {
+          break true
+        }
+      _ => ()
+    }
+  } nobreak {
+    false
+  }
 }
 
 ///|
@@ -4624,6 +4847,61 @@ async test "optional cpdf source logo fixture draws page marks" {
         ),
       )
     }
+  }
+}
+
+///|
+async test "optional cpdf source fixtures stamp and combine pages" {
+  match
+    (
+      fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf"),
+      fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/logo.pdf"),
+    ) {
+    (Some(hello_bytes), Some(logo_bytes)) => {
+      let hello = @pdflite.pdf_read_document_from_bytes(hello_bytes)
+      let logo = @pdflite.pdf_read_document_from_bytes(logo_bytes)
+      fixture_acceptance_assert_cpdf_source_hello_text_for_test(hello)
+      fixture_acceptance_assert_cpdf_logo_boxes_and_transparency_for_test(logo)
+      let stamped = hello.stamp_pages(
+        [1],
+        logo,
+        position=PdfPositionBottomLeft(10.0, 20.0),
+      )
+      fixture_acceptance_assert_cpdf_source_stamp_for_test(hello, stamped)
+      let stamped_compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        stamped,
+      )
+      fixture_acceptance_assert_cpdf_source_stamp_for_test(
+        hello,
+        @pdflite.pdf_read_document_from_bytes(stamped_compressed),
+      )
+      fixture_acceptance_assert_cpdf_source_stamp_for_test(
+        hello,
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(
+            stamped_compressed,
+          ),
+        ),
+      )
+      let combined = @pdflite.pdf_combine_pages(hello, logo, scale_to_fit=true)
+      fixture_acceptance_assert_cpdf_source_combine_for_test(hello, combined)
+      let combined_compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        combined,
+      )
+      fixture_acceptance_assert_cpdf_source_combine_for_test(
+        hello,
+        @pdflite.pdf_read_document_from_bytes(combined_compressed),
+      )
+      fixture_acceptance_assert_cpdf_source_combine_for_test(
+        hello,
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(
+            combined_compressed,
+          ),
+        ),
+      )
+    }
+    _ => ()
   }
 }
 

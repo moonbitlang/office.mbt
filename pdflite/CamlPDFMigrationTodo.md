@@ -5692,6 +5692,18 @@ Current backend snapshot:
   passing, `moon test --target native` reports 2249/2249 tests passing, and
   `moon check --target all --warn-list +73` reports the known warning baseline
   with 10 warnings and 0 errors.~~
+- [x] ~~Add the next source-boundary cpdfpage stamp/combine slice: optional
+  `.repos/cpdf-source/hello.pdf` and `logo.pdf` now gate `stamp_pages` and
+  `combine_pages` against real source PDFs. The gate verifies base page
+  geometry/rotation preservation, Hello text preservation, prefixed logo
+  ExtGState resources, merged logo transparency rest/TrimBox/BleedBox data,
+  explicit stamp translation, scale-to-fit combine matrix, compressed
+  rewrite/reread, and bad-`startxref` recovery. `moon test --target native
+  fixture_acceptance --filter '*stamp and combine*'` reports 1/1 test passing,
+  `moon test --target native fixture_acceptance` reports 79/79 tests passing,
+  `moon test --target native` reports 2250/2250 tests passing, and `moon check
+  --target all --warn-list +73` reports the known warning baseline with 10
+  warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
