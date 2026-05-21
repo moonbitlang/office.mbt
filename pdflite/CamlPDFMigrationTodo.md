@@ -5769,6 +5769,20 @@ Current backend snapshot:
   fixture_acceptance` reports 82/82 tests passing, `moon test --target native`
   reports 2254/2254 tests passing, and `moon check --target all --warn-list
   +73` reports the known warning baseline with 10 warnings and 0 errors.~~
+- [x] ~~Broaden the source-boundary ToUnicode/content extraction slice:
+  optional `.repos/cpdf-source/cpdfmanual.pdf` now gates `pdf_test_extract_text`,
+  `pdf_content_entries_of_page`, and `pdf_page_content_json` wrapper parity on
+  real manual text pages. The gate pins selected-page UTF-8 extraction without
+  replacement/control leakage, page-2 glyph-content extraction through the
+  manual's embedded ToUnicode data including `©CoherentGraphicsLimited`, page
+  content JSON glyph output, compressed rewrite/reread, and bad-`startxref`
+  recovery. `moon check --target native fixture_acceptance --warn-list +73`
+  passes, `moon test --target native fixture_acceptance --filter 'optional cpdf
+  source manual fixture extracts selected text'` reports 1/1 test passing,
+  `moon test --target native fixture_acceptance` reports 82/82 tests passing,
+  `moon test --target native` reports 2254/2254 tests passing, and `moon check
+  --target all --warn-list +73` reports the known warning baseline with 10
+  warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.

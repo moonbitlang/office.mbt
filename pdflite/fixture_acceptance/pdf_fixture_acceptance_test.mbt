@@ -3758,7 +3758,13 @@ fn fixture_acceptance_assert_cpdf_manual_text_extraction_for_test(
   document : @pdflite.PdfDocument,
 ) -> Unit raise {
   @test.assert_eq(document.endpage(), 175)
-  let text = @utf8.decode_lossy(document.test_extract_text([1, 2, 19, 31, 33]))
+  let selected_pages = [1, 2, 19, 31, 33]
+  let extracted = document.test_extract_text(selected_pages)
+  @test.assert_eq(
+    @pdflite.pdf_test_extract_text(document, selected_pages),
+    extracted,
+  )
+  let text = @utf8.decode_lossy(extracted)
   fixture_acceptance_assert_contains_for_test(text, "CoherentPDF")
   fixture_acceptance_assert_contains_for_test(text, "©CoherentGraphicsLimited")
   fixture_acceptance_assert_contains_for_test(text, "PDFAssociation")
@@ -3771,6 +3777,36 @@ fn fixture_acceptance_assert_cpdf_manual_text_extraction_for_test(
   @test.assert_eq(text.length() > 2000, true)
   @test.assert_eq(fixture_acceptance_replacement_count_for_test(text), 0)
   @test.assert_eq(fixture_acceptance_raw_control_count_for_test(text), 0)
+  let pages = document.pages_of_pagetree()
+  let entries = document.content_entries_of_page(pages[1])
+  @test.assert_eq(
+    @pdflite.pdf_content_entries_of_page(document, pages[1]),
+    entries,
+  )
+  @test.assert_eq(entries.length() > 0, true)
+  let mut glyph_text = ""
+  for entry in entries {
+    match entry.object {
+      PdfContentGlyphObject(_, _, extracted_text) =>
+        glyph_text = glyph_text + extracted_text
+      _ => ()
+    }
+  }
+  fixture_acceptance_assert_contains_for_test(
+    glyph_text, "©CoherentGraphicsLimited",
+  )
+  @test.assert_eq(fixture_acceptance_replacement_count_for_test(glyph_text), 0)
+  @test.assert_eq(fixture_acceptance_raw_control_count_for_test(glyph_text), 0)
+  let content_json = document.page_content_json([2])
+  @test.assert_eq(@pdflite.pdf_page_content_json(document, [2]), content_json)
+  let content_json_text = content_json.stringify()
+  fixture_acceptance_assert_contains_for_test(content_json_text, "\"page\":2")
+  fixture_acceptance_assert_contains_for_test(
+    content_json_text, "\"obj\":\"glyph\"",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    content_json_text, "\"extracted text\"",
+  )
 }
 
 ///|
