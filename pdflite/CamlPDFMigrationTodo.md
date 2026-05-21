@@ -5952,6 +5952,27 @@ Current backend snapshot:
   reports 2262/2262 tests passing, `moon info && moon fmt` reports no pending
   interface or formatting work, and `moon check --target all --warn-list +73`
   reports the warning 73 baseline with 10 warnings and 0 errors.~~
+- [x] ~~Broaden the source-boundary predefined CMap slice: optional
+  `.repos/cpdf-source/hello.pdf` now gates cpdf-listed Adobe-GB1 and
+  Adobe-CNS1 direct-Unicode predefined CMaps on a real source PDF after
+  injecting Type0 CID-keyed fonts for `/UniGB-UTF16-H`, `/UniGB-UTF16-V`,
+  `/UniGB-UCS32-H`, `/UniGB-UCS32-V`, `/UniCNS-UCS2-H`, `/UniCNS-UCS2-V`,
+  `/UniCNS-UTF16-H`, and `/UniCNS-UTF16-V`. The gate preserves the original
+  Hello text, extracts injected GB and CNS BMP text through the source page
+  content path, verifies `list_fonts` and `read_font` expose each `/Type0`
+  `PdfFontCIDKeyed` resource with the expected predefined CMap, GB1/CNS1
+  CIDSystemInfo ordering, and fixed/variable code-width behavior, pins direct
+  `PdfTextExtractor::codepoints_of_text` and reverse `charcode_of_codepoint`
+  behavior for UTF-16, UCS-2, and UCS-32 byte streams including a CNS UTF-16
+  surrogate-pair path, and repeats the assertions through compressed
+  rewrite/reread and bad-`startxref` recovery. `moon check --target native
+  fixture_acceptance --warn-list +73` passes, `moon test --target native
+  fixture_acceptance --filter 'optional cpdf source hello fixture extracts GB
+  CNS predefined CMaps'` reports 1/1 test passing, `moon test --target native
+  fixture_acceptance` reports 91/91 tests passing, `moon test --target native`
+  reports 2263/2263 tests passing, `moon info && moon fmt` reports no pending
+  interface or formatting work, and `moon check --target all --warn-list +73`
+  reports the warning 73 baseline with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
