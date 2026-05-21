@@ -2090,6 +2090,127 @@ fn fixture_acceptance_lookup_required_for_test(
 }
 
 ///|
+fn fixture_acceptance_rect_object_for_test(
+  min_x : Double,
+  min_y : Double,
+  max_x : Double,
+  max_y : Double,
+) -> @pdflite.PdfObject {
+  PdfArray([PdfReal(min_x), PdfReal(min_y), PdfReal(max_x), PdfReal(max_y)])
+}
+
+///|
+fn fixture_acceptance_rect_for_test(
+  min_x : Double,
+  min_y : Double,
+  max_x : Double,
+  max_y : Double,
+) -> @pdflite.PdfRectangle {
+  { min_x, min_y, max_x, max_y }
+}
+
+///|
+fn fixture_acceptance_chop_source_hello_for_test(
+  document : @pdflite.PdfDocument,
+) -> @pdflite.PdfDocument raise {
+  let pages = document.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  let decorated_rest = pages[0].rest
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/CropBox"),
+      fixture_acceptance_rect_object_for_test(10.0, 20.0, 210.0, 420.0),
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/BleedBox"),
+      fixture_acceptance_rect_object_for_test(1.0, 2.0, 3.0, 4.0),
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/TrimBox"),
+      fixture_acceptance_rect_object_for_test(1.0, 2.0, 3.0, 4.0),
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/ArtBox"),
+      fixture_acceptance_rect_object_for_test(1.0, 2.0, 3.0, 4.0),
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/Annots"),
+      PdfArray([PdfInteger(99)]),
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/Keep"),
+      PdfInteger(7),
+    )
+  let decorated = document.change_pages(
+    [{ ..pages[0], rest: decorated_rest }],
+    change_references=true,
+  )
+  decorated.chop(2, 2, false, false, false, [1])
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_chop_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 4)
+  let pages = document.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 4)
+  let expected_boxes = [
+    fixture_acceptance_rect_for_test(10.0, 220.0, 110.0, 420.0),
+    fixture_acceptance_rect_for_test(110.0, 220.0, 210.0, 420.0),
+    fixture_acceptance_rect_for_test(10.0, 20.0, 110.0, 220.0),
+    fixture_acceptance_rect_for_test(110.0, 20.0, 210.0, 220.0),
+  ]
+  for index in 0..<pages.length() {
+    @test.assert_eq(
+      document.parse_rectangle(pages[index].mediabox),
+      expected_boxes[index],
+    )
+    @test.assert_eq(
+      document.lookup_direct(
+        fixture_acceptance_pdf_name_for_test("/CropBox"),
+        pages[index].rest,
+      ),
+      None,
+    )
+    @test.assert_eq(
+      document.lookup_direct(
+        fixture_acceptance_pdf_name_for_test("/BleedBox"),
+        pages[index].rest,
+      ),
+      None,
+    )
+    @test.assert_eq(
+      document.lookup_direct(
+        fixture_acceptance_pdf_name_for_test("/TrimBox"),
+        pages[index].rest,
+      ),
+      None,
+    )
+    @test.assert_eq(
+      document.lookup_direct(
+        fixture_acceptance_pdf_name_for_test("/ArtBox"),
+        pages[index].rest,
+      ),
+      None,
+    )
+    @test.assert_eq(
+      document.lookup_direct(
+        fixture_acceptance_pdf_name_for_test("/Annots"),
+        pages[index].rest,
+      ),
+      None,
+    )
+    @test.assert_eq(
+      document.lookup_direct(
+        fixture_acceptance_pdf_name_for_test("/Keep"),
+        pages[index].rest,
+      ),
+      Some(PdfInteger(7)),
+    )
+  }
+}
+
+///|
 fn fixture_acceptance_add_cpdf_source_javascript_for_test(
   document : @pdflite.PdfDocument,
 ) -> (Int, Int, Int) raise {
@@ -3712,6 +3833,30 @@ async test "optional cpdf source attachments preserve real source payloads" {
       )
     }
     _ => ()
+  }
+}
+
+///|
+async test "optional cpdf source hello fixture chops CropBox-backed page" {
+  match
+    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      let chopped = fixture_acceptance_chop_source_hello_for_test(document)
+      fixture_acceptance_assert_cpdf_source_chop_for_test(chopped)
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        chopped,
+      )
+      fixture_acceptance_assert_cpdf_source_chop_for_test(
+        @pdflite.pdf_read_document_from_bytes(compressed),
+      )
+      fixture_acceptance_assert_cpdf_source_chop_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+        ),
+      )
+    }
   }
 }
 

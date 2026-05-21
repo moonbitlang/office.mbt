@@ -5546,6 +5546,18 @@ Current backend snapshot:
   native fixture_acceptance` reports 67/67 tests passing, `moon test --target
   native` reports 2238/2238 tests passing, and `moon check --target all
   --warn-list +73` reports the known warning baseline with 0 errors.~~
+- [x] ~~Add the next source-boundary chop slice: optional
+  `.repos/cpdf-source/hello.pdf` now gates cpdfchop-style page splitting on a
+  real source PDF after decorating the source page with `/CropBox`, extra page
+  boxes, annotations, and a retained dictionary key. The gate verifies CropBox
+  preference, 2x2 page ordering, exact output `/MediaBox` rectangles,
+  `/CropBox`/`/BleedBox`/`/TrimBox`/`/ArtBox`/`/Annots` erasure, retained key
+  preservation, compressed rewrite/reread, and bad-`startxref` recovery. `moon
+  test --target native fixture_acceptance --filter '*chops CropBox-backed page*'`
+  reports 1/1 test passing, `moon test --target native fixture_acceptance`
+  reports 68/68 tests passing, `moon test --target native` reports 2239/2239
+  tests passing, and `moon check --target all --warn-list +73` reports the known
+  warning baseline with 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
