@@ -6503,6 +6503,26 @@ Current backend snapshot:
   moon fmt` reports no pending interface or formatting work, and `moon check
   --target all --warn-list +73` reports the known warning-73/main-package
   baseline with 10 warnings and 0 errors.~~
+- [x] ~~Add the next remaining format parity slice: optional
+  `.repos/cpdf-source/manualimages/*.pdf` now gates the Markdown/PDF-to-Markdown
+  boundary for malformed classic xref rows, complementing the existing
+  bad-`startxref`, damaged-`xref`-header, and damaged-`trailer` Markdown
+  coverage. The gate runs over every manual-image PDF in the source tree,
+  corrupts the first in-use xref row marker, offset, and generation fields plus
+  the first xref subsection object number and count, requires strict classic
+  reads to reject each corruption, reconstructs through `pdf_bytes_to_markdown`,
+  verifies reconstructed Markdown stays byte-for-byte equal to normal Markdown
+  per fixture, keeps the existing clean-output checks for raw control bytes and
+  replacement characters, and requires at least one textful source fixture.
+  `moon check --target native markdown/fixture_acceptance --warn-list +73`
+  passes, `moon test --target native markdown/fixture_acceptance --filter
+  'pdf_bytes_to_markdown reconstructs optional cpdf source manual image PDF
+  corpus with malformed classic xref rows'` reports 1/1 test passing, `moon
+  test --target native markdown/fixture_acceptance` reports 17/17 tests
+  passing, `moon test --target native` reports 2291/2291 tests passing, `moon
+  info && moon fmt` reports no pending interface or formatting work, and `moon
+  check --target all --warn-list +73` reports the known warning-73/main-package
+  baseline with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.

@@ -79,6 +79,26 @@ fn markdown_fixture_bytes_start_with_at_for_test(
 }
 
 ///|
+fn markdown_fixture_find_bytes_for_test(
+  haystack : BytesView,
+  needle : BytesView,
+) -> Int {
+  if needle.length() == 0 {
+    0
+  } else if haystack.length() < needle.length() {
+    -1
+  } else {
+    for start in 0..<=(haystack.length() - needle.length()) {
+      if markdown_fixture_bytes_start_with_at_for_test(haystack, needle, start) {
+        break start
+      }
+    } nobreak {
+      -1
+    }
+  }
+}
+
+///|
 fn markdown_fixture_find_bytes_after_for_test(
   haystack : BytesView,
   needle : BytesView,
@@ -208,6 +228,167 @@ fn markdown_fixture_corrupt_startxref_trailer_keyword_for_test(
     output.push(byte)
   }
   output[trailer_position] = b'u'
+  Bytes::from_array(output)
+}
+
+///|
+fn markdown_fixture_first_in_use_xref_row_start_for_test(
+  bytes : Bytes,
+) -> Int raise {
+  let free_row = @ascii.encode("0000000000 65535 f")
+  let free_row_position = markdown_fixture_find_bytes_for_test(bytes, free_row)
+  if free_row_position < 0 {
+    fail("expected classic xref free row")
+  }
+  let mut row_start = free_row_position + free_row.length()
+  while row_start < bytes.length() &&
+        bytes[row_start] != b'\n' &&
+        bytes[row_start] != b'\r' {
+    row_start += 1
+  }
+  while row_start < bytes.length() &&
+        (bytes[row_start] == b'\n' || bytes[row_start] == b'\r') {
+    row_start += 1
+  }
+  if row_start + 10 > bytes.length() {
+    fail("expected first in-use xref row")
+  }
+  row_start
+}
+
+///|
+fn markdown_fixture_corrupt_first_in_use_xref_marker_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  let row_start = markdown_fixture_first_in_use_xref_row_start_for_test(bytes)
+  let marker_position = row_start + 17
+  if marker_position >= bytes.length() {
+    fail("expected first in-use xref marker")
+  }
+  let output : Array[Byte] = []
+  for byte in bytes {
+    output.push(byte)
+  }
+  output[marker_position] = b'x'
+  Bytes::from_array(output)
+}
+
+///|
+fn markdown_fixture_corrupt_first_in_use_xref_offset_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  let row_start = markdown_fixture_first_in_use_xref_row_start_for_test(bytes)
+  let output : Array[Byte] = []
+  for byte in bytes {
+    output.push(byte)
+  }
+  for index in row_start..<(row_start + 10) {
+    output[index] = b'9'
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn markdown_fixture_corrupt_first_in_use_xref_generation_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  let row_start = markdown_fixture_first_in_use_xref_row_start_for_test(bytes)
+  if row_start + 16 > bytes.length() {
+    fail("expected first in-use xref generation")
+  }
+  let output : Array[Byte] = []
+  for byte in bytes {
+    output.push(byte)
+  }
+  for index in (row_start + 11)..<(row_start + 16) {
+    output[index] = b'x'
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn markdown_fixture_first_xref_subsection_spans_for_test(
+  bytes : Bytes,
+) -> (Int, Int, Int, Int) raise {
+  let header = @ascii.encode("xref")
+  let header_position = markdown_fixture_find_bytes_for_test(bytes, header)
+  if header_position < 0 {
+    fail("expected first classic xref header")
+  }
+  let mut first_start = header_position + header.length()
+  while first_start < bytes.length() &&
+        (
+          bytes[first_start] == b'\n' ||
+          bytes[first_start] == b'\r' ||
+          bytes[first_start] == b' ' ||
+          bytes[first_start] == b'\t'
+        ) {
+    first_start += 1
+  }
+  let mut first_end = first_start
+  while first_end < bytes.length() &&
+        bytes[first_end] >= b'0' &&
+        bytes[first_end] <= b'9' {
+    first_end += 1
+  }
+  if first_end == first_start {
+    fail("expected first classic xref subsection object number")
+  }
+  let mut count_start = first_end
+  while count_start < bytes.length() &&
+        (
+          bytes[count_start] == b'\n' ||
+          bytes[count_start] == b'\r' ||
+          bytes[count_start] == b' ' ||
+          bytes[count_start] == b'\t'
+        ) {
+    count_start += 1
+  }
+  let mut count_end = count_start
+  while count_end < bytes.length() &&
+        bytes[count_end] >= b'0' &&
+        bytes[count_end] <= b'9' {
+    count_end += 1
+  }
+  if count_end == count_start {
+    fail("expected first classic xref subsection count")
+  }
+  (first_start, first_end, count_start, count_end)
+}
+
+///|
+fn markdown_fixture_corrupt_first_xref_subsection_object_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  let (object_start, object_end, _, _) = markdown_fixture_first_xref_subsection_spans_for_test(
+    bytes,
+  )
+  let output : Array[Byte] = []
+  for index in 0..<object_start {
+    output.push(bytes[index])
+  }
+  markdown_fixture_push_ascii_for_test(output, "/Bad")
+  for index in object_end..<bytes.length() {
+    output.push(bytes[index])
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn markdown_fixture_corrupt_first_xref_subsection_count_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  let (_, _, count_start, count_end) = markdown_fixture_first_xref_subsection_spans_for_test(
+    bytes,
+  )
+  let output : Array[Byte] = []
+  for index in 0..<count_start {
+    output.push(bytes[index])
+  }
+  markdown_fixture_push_ascii_for_test(output, "/Bad")
+  for index in count_end..<bytes.length() {
+    output.push(bytes[index])
+  }
   Bytes::from_array(output)
 }
 
@@ -465,6 +646,61 @@ async test "pdf_bytes_to_markdown reconstructs optional cpdf source manual image
           guard strict is Err(_) else {
             fail(
               "expected damaged classic xref metadata to require malformed reconstruction for " +
+              path,
+            )
+          }
+          let reconstructed = @markdown.pdf_bytes_to_markdown(corrupted)
+          markdown_fixture_assert_cpdf_manual_image_markdown_for_test(
+            reconstructed, path,
+          )
+          @test.assert_eq(reconstructed, markdown, msg=path)
+        }
+      }
+    }
+  }
+  if checked > 0 {
+    @test.assert_eq(
+      checked,
+      markdown_cpdf_source_manual_image_pdf_paths_for_test().length(),
+    )
+    @test.assert_eq(textful > 0, true)
+  }
+}
+
+///|
+async test "pdf_bytes_to_markdown reconstructs optional cpdf source manual image PDF corpus with malformed classic xref rows" {
+  let mut checked = 0
+  let mut textful = 0
+  for path in markdown_cpdf_source_manual_image_pdf_paths_for_test() {
+    match markdown_optional_fixture_bytes_for_test(path) {
+      None => ()
+      Some(bytes) => {
+        checked += 1
+        let markdown = @markdown.pdf_bytes_to_markdown(bytes)
+        markdown_fixture_assert_cpdf_manual_image_markdown_for_test(
+          markdown, path,
+        )
+        if markdown != "# Page 1\n\n\n" {
+          textful += 1
+        }
+        for
+          corrupted in [
+            markdown_fixture_corrupt_first_in_use_xref_marker_for_test(bytes),
+            markdown_fixture_corrupt_first_in_use_xref_offset_for_test(bytes),
+            markdown_fixture_corrupt_first_in_use_xref_generation_for_test(
+              bytes,
+            ),
+            markdown_fixture_corrupt_first_xref_subsection_object_for_test(
+              bytes,
+            ),
+            markdown_fixture_corrupt_first_xref_subsection_count_for_test(bytes),
+          ] {
+          let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+            corrupted,
+          )
+          guard strict is Err(_) else {
+            fail(
+              "expected malformed classic xref row to require malformed reconstruction for " +
               path,
             )
           }
