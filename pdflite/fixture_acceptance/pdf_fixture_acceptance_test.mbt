@@ -973,6 +973,17 @@ fn fixture_acceptance_reparse_compressed_for_test(
 }
 
 ///|
+fn fixture_acceptance_all_pages_for_test(
+  document : @pdflite.PdfDocument,
+) -> Array[Int] raise {
+  let pages : Array[Int] = []
+  for page in 1..<=document.endpage() {
+    pages.push(page)
+  }
+  pages
+}
+
+///|
 fn fixture_acceptance_assert_reads_and_rewrites_for_test(
   bytes : Bytes,
   expected_pages : Int,
@@ -2815,6 +2826,69 @@ fn fixture_acceptance_assert_cpdf_source_attachments_removed_for_test(
   @test.assert_eq(document.endpage(), 1)
   @test.assert_eq(document.list_attached_files(), [])
   @test.assert_eq(document.size_attached_files(), 0)
+}
+
+///|
+fn fixture_acceptance_cpdf_source_texttopdf_fontpack_for_test() -> @pdflite.PdfFontPack raise {
+  @pdflite.pdf_fontpack_of_standard_font(
+    PdfFontStandard({ font: PdfHelvetica, encoding: PdfWinAnsiEncoding }),
+  )
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_readme_texttopdf_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage() >= 2, true)
+  let pages = document.pages_of_pagetree()
+  @test.assert_eq(pages.length(), document.endpage())
+  for index in 0..<pages.length() {
+    @test.assert_eq(
+      document.lookup_direct(
+        fixture_acceptance_pdf_name_for_test("/StructParents"),
+        pages[index].rest,
+      ),
+      Some(PdfInteger(index)),
+    )
+  }
+  let all_pages = fixture_acceptance_all_pages_for_test(document)
+  let extracted = document.test_extract_text(all_pages)
+  @test.assert_eq(
+    @pdflite.pdf_test_extract_text(document, all_pages),
+    extracted,
+  )
+  let text = @utf8.decode_lossy(extracted)
+  fixture_acceptance_assert_contains_for_test(
+    text, "Coherent PDF Command Line Tools",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    text, "CPDF is distributed under the AGPL",
+  )
+  fixture_acceptance_assert_contains_for_test(text, "opam install cpdf")
+  @test.assert_eq(fixture_acceptance_replacement_count_for_test(text), 0)
+  @test.assert_eq(fixture_acceptance_raw_control_count_for_test(text), 0)
+  let struct_text = @utf8.decode_lossy(document.struct_tree_text())
+  fixture_acceptance_assert_contains_for_test(struct_text, "StructTreeRoot\n")
+  let struct_json = document.extract_struct_tree().stringify()
+  @test.assert_eq(
+    @utf8.decode_lossy(document.struct_tree_json_blob()),
+    struct_json,
+  )
+  fixture_acceptance_assert_contains_for_test(
+    struct_json, "{\"N\":\"/StructTreeRoot\"}",
+  )
+  fixture_acceptance_assert_contains_for_test(struct_json, "{\"N\":\"/P\"}")
+  let mut marked_paragraphs = 0
+  for page in pages {
+    for op in document.parse_content_ops(page.content) {
+      match op {
+        Op_BDC(tag, _) if tag == fixture_acceptance_pdf_name_for_test("/P") =>
+          marked_paragraphs += 1
+        _ => ()
+      }
+    }
+  }
+  @test.assert_eq(marked_paragraphs >= 2, true)
 }
 
 ///|
@@ -10481,6 +10555,36 @@ async test "optional cpdf source attachments preserve real source payloads" {
       )
     }
     _ => ()
+  }
+}
+
+///|
+async test "optional cpdf source README typesets tagged text PDF" {
+  match
+    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/README.md") {
+    None => ()
+    Some(readme_payload) => {
+      let document = try! @pdflite.pdf_texttopdf_typeset(
+        fixture_acceptance_cpdf_source_texttopdf_fontpack_for_test(),
+        12.0,
+        @pdflite.paper_a4,
+        readme_payload,
+        process_struct_tree=true,
+        title=Some("cpdf source README"),
+      )
+      fixture_acceptance_assert_cpdf_source_readme_texttopdf_for_test(document)
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        document,
+      )
+      fixture_acceptance_assert_cpdf_source_readme_texttopdf_for_test(
+        @pdflite.pdf_read_document_from_bytes(compressed),
+      )
+      fixture_acceptance_assert_cpdf_source_readme_texttopdf_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+        ),
+      )
+    }
   }
 }
 

@@ -6325,6 +6325,23 @@ Current backend snapshot:
   passing, `moon info && moon fmt` reports no pending interface or formatting
   work, and `moon check --target all --warn-list +73` reports the known
   warning-73/main-package baseline with 10 warnings and 0 errors.~~
+- [x] ~~Add the next source-boundary `cpdftexttopdf` corpus slice: optional
+  `.repos/cpdf-source/README.md` now feeds the real source README bytes through
+  `pdf_texttopdf_typeset` using a Standard 14 Helvetica fontpack with
+  paragraph structure-tree tagging enabled. The gate verifies a generated
+  multi-page text PDF, per-page `/StructParents`, full-page extraction through
+  both method and wrapper APIs, stable README markers with no replacement or
+  raw-control characters, structure-tree text/JSON/blob output, paragraph
+  `/P` structure nodes, and marked-content `/P` BDC operators, then repeats the
+  same assertions through compressed xref-stream rewrite/reread and
+  bad-`startxref` recovery. `moon check --target native fixture_acceptance
+  --warn-list +73` passes, `moon test --target native fixture_acceptance
+  --filter 'optional cpdf source README typesets tagged text PDF'` reports 1/1
+  test passing, `moon test --target native fixture_acceptance` reports 109/109
+  tests passing, `moon test --target native` reports 2281/2281 tests passing,
+  `moon info && moon fmt` reports no pending interface or formatting work, and
+  `moon check --target all --warn-list +73` reports the known warning-73/main-
+  package baseline with 7 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, additional real-world ToUnicode/CMap fixtures when source
   material is available, or broader real-world image corpus coverage.
