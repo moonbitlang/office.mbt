@@ -164,6 +164,46 @@ fn markdown_cmd_find_last_bytes_for_test(
 }
 
 ///|
+fn markdown_cmd_bytes_start_with_at_for_test(
+  haystack : BytesView,
+  needle : BytesView,
+  start : Int,
+) -> Bool {
+  if start < 0 || start + needle.length() > haystack.length() {
+    false
+  } else {
+    for index in 0..<needle.length() {
+      if haystack[start + index] != needle[index] {
+        break false
+      }
+    } nobreak {
+      true
+    }
+  }
+}
+
+///|
+fn markdown_cmd_find_bytes_after_for_test(
+  haystack : BytesView,
+  needle : BytesView,
+  start : Int,
+) -> Int {
+  if needle.length() == 0 {
+    start
+  } else if start < 0 || haystack.length() < needle.length() {
+    -1
+  } else {
+    for position in start..<=(haystack.length() - needle.length()) {
+      if markdown_cmd_bytes_start_with_at_for_test(haystack, needle, position) {
+        break position
+      }
+    } nobreak {
+      -1
+    }
+  }
+}
+
+///|
 fn markdown_cmd_push_ascii_for_test(
   output : Array[Byte],
   text : String,
@@ -207,6 +247,88 @@ fn markdown_cmd_corrupt_startxref_pointer_for_test(
     output.push(bytes[index])
   }
   Bytes::from_array(output)
+}
+
+///|
+fn markdown_cmd_startxref_offset_for_test(bytes : Bytes) -> Int raise {
+  let marker = @ascii.encode("startxref")
+  let marker_position = markdown_cmd_find_last_bytes_for_test(bytes, marker)
+  if marker_position < 0 {
+    fail("expected startxref marker")
+  }
+  let mut number_start = marker_position + marker.length()
+  while number_start < bytes.length() &&
+        (
+          bytes[number_start] == b'\n' ||
+          bytes[number_start] == b'\r' ||
+          bytes[number_start] == b' ' ||
+          bytes[number_start] == b'\t'
+        ) {
+    number_start += 1
+  }
+  let mut number = 0
+  let mut current = number_start
+  while current < bytes.length() &&
+        bytes[current] >= b'0' &&
+        bytes[current] <= b'9' {
+    number = number * 10 + bytes[current].to_int() - b'0'.to_int()
+    current += 1
+  }
+  if current == number_start {
+    fail("expected startxref number")
+  }
+  number
+}
+
+///|
+fn markdown_cmd_corrupt_startxref_xref_stream_token_for_test(
+  bytes : Bytes,
+  target : BytesView,
+  replacement : BytesView,
+  description : String,
+) -> Bytes raise {
+  if target.length() != replacement.length() {
+    fail("replacement must preserve byte length")
+  }
+  let xref_offset = markdown_cmd_startxref_offset_for_test(bytes)
+  let position = markdown_cmd_find_bytes_after_for_test(
+    bytes, target, xref_offset,
+  )
+  if position < 0 {
+    fail("expected xref stream " + description + " at startxref target")
+  }
+  let output : Array[Byte] = []
+  for byte in bytes {
+    output.push(byte)
+  }
+  for index in 0..<replacement.length() {
+    output[position + index] = replacement[index]
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn markdown_cmd_corrupt_startxref_xref_stream_type_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  markdown_cmd_corrupt_startxref_xref_stream_token_for_test(
+    bytes,
+    @ascii.encode("/Type /XRef"),
+    @ascii.encode("/Type /Bad "),
+    "type",
+  )
+}
+
+///|
+fn markdown_cmd_corrupt_startxref_xref_stream_marker_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  markdown_cmd_corrupt_startxref_xref_stream_token_for_test(
+    bytes,
+    @ascii.encode("stream"),
+    @ascii.encode("stramx"),
+    "stream marker",
+  )
 }
 
 ///|
@@ -347,6 +469,63 @@ async test "markdown command reconstructs optional cpdf source manual fixture wi
     markdown_cmd_remove_if_exists_for_test(clean_output_path)
     markdown_cmd_remove_if_exists_for_test(corrupt_input_path)
     markdown_cmd_remove_if_exists_for_test(corrupt_output_path)
+  }
+}
+
+///|
+async test "markdown command reconstructs optional cpdf source manual fixture with malformed xref stream metadata" {
+  let input_path = markdown_cmd_repo_path_for_test(
+    ".repos/cpdf-source/cpdfmanual.pdf",
+  )
+  if @fs.exists(input_path) {
+    let clean_output_path = markdown_cmd_output_path_for_test(
+      "cpdf_source_manual_xref_metadata_clean",
+    )
+    markdown_cmd_remove_if_exists_for_test(clean_output_path)
+    markdown_cmd_convert_file(input_path, clean_output_path)
+    let clean_output = @utf8.decode_lossy(
+      @fs.read_file(clean_output_path).binary(),
+    )
+    let input_bytes = @fs.read_file(input_path).binary()
+    let mut case_index = 0
+    for
+      corrupted in [
+        markdown_cmd_corrupt_startxref_xref_stream_type_for_test(input_bytes),
+        markdown_cmd_corrupt_startxref_xref_stream_marker_for_test(input_bytes),
+      ] {
+      case_index += 1
+      let corrupt_input_path = markdown_cmd_output_path_for_test(
+        "cpdf_source_manual_xref_metadata_input_" + case_index.to_string(),
+      )
+      let corrupt_output_path = markdown_cmd_output_path_for_test(
+        "cpdf_source_manual_xref_metadata_" + case_index.to_string(),
+      )
+      markdown_cmd_remove_if_exists_for_test(corrupt_input_path)
+      markdown_cmd_remove_if_exists_for_test(corrupt_output_path)
+      @fs.write_file(corrupt_input_path, corrupted, create=0o644)
+      markdown_cmd_convert_file(corrupt_input_path, corrupt_output_path)
+      let corrupt_output = @utf8.decode_lossy(
+        @fs.read_file(corrupt_output_path).binary(),
+      )
+      markdown_cmd_assert_contains_for_test(corrupt_output, "Coherent PDF")
+      markdown_cmd_assert_contains_for_test(
+        corrupt_output, "Command Line Tools",
+      )
+      markdown_cmd_assert_contains_for_test(
+        corrupt_output, "Chapter 15: PDF and JSON",
+      )
+      markdown_cmd_assert_contains_for_test(
+        corrupt_output, "Accessible PDFs with PDF/UA",
+      )
+      @test.assert_eq(corrupt_output, clean_output)
+      @test.assert_eq(
+        markdown_cmd_replacement_count_for_test(corrupt_output),
+        0,
+      )
+      markdown_cmd_remove_if_exists_for_test(corrupt_input_path)
+      markdown_cmd_remove_if_exists_for_test(corrupt_output_path)
+    }
+    markdown_cmd_remove_if_exists_for_test(clean_output_path)
   }
 }
 
