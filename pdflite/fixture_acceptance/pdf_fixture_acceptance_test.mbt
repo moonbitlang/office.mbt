@@ -1837,6 +1837,34 @@ fn fixture_acceptance_content_ops_contain_for_test(
 }
 
 ///|
+fn fixture_acceptance_content_stroke_count_for_test(
+  ops : ArrayView[@pdflite.PdfContentOp],
+) -> Int {
+  let mut count = 0
+  for op in ops {
+    match op {
+      Op_S => count += 1
+      _ => ()
+    }
+  }
+  count
+}
+
+///|
+fn fixture_acceptance_content_save_count_for_test(
+  ops : ArrayView[@pdflite.PdfContentOp],
+) -> Int {
+  let mut count = 0
+  for op in ops {
+    match op {
+      Op_q => count += 1
+      _ => ()
+    }
+  }
+  count
+}
+
+///|
 fn fixture_acceptance_assert_content_op_for_test(
   ops : ArrayView[@pdflite.PdfContentOp],
   expected : @pdflite.PdfContentOp,
@@ -3767,6 +3795,43 @@ fn fixture_acceptance_assert_cpdf_xobject_content_for_test(
 }
 
 ///|
+fn fixture_acceptance_assert_cpdf_source_bounding_boxes_for_test(
+  original : @pdflite.PdfDocument,
+  boxed : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(original.endpage(), 1)
+  @test.assert_eq(boxed.endpage(), 1)
+  let original_pages = original.pages_of_pagetree()
+  let boxed_pages = boxed.pages_of_pagetree()
+  @test.assert_eq(boxed_pages[0].mediabox, original_pages[0].mediabox)
+  @test.assert_eq(boxed_pages[0].rotate, original_pages[0].rotate)
+  @test.assert_eq(boxed_pages[0].resources, original_pages[0].resources)
+  @test.assert_eq(boxed_pages[0].rest, original_pages[0].rest)
+  let original_entries = original.content_entries_of_page(original_pages[0])
+  @test.assert_eq(original_entries.length() > 0, true)
+  let boxed_entries = boxed.content_entries_of_page(boxed_pages[0])
+  @test.assert_eq(boxed_entries.length() >= original_entries.length() * 2, true)
+  let original_ops = fixture_acceptance_page_content_ops_for_test(original)
+  let boxed_ops = fixture_acceptance_page_content_ops_for_test(boxed)
+  @test.assert_eq(boxed_ops.length() > original_ops.length(), true)
+  @test.assert_eq(
+    fixture_acceptance_content_stroke_count_for_test(boxed_ops) >=
+    fixture_acceptance_content_stroke_count_for_test(original_ops) +
+    original_entries.length(),
+    true,
+  )
+  @test.assert_eq(
+    fixture_acceptance_content_save_count_for_test(boxed_ops) >
+    fixture_acceptance_content_save_count_for_test(original_ops),
+    true,
+  )
+  let content_json = boxed.page_content_json([1]).stringify()
+  fixture_acceptance_assert_contains_for_test(content_json, "\"page\":1")
+  fixture_acceptance_assert_contains_for_test(content_json, "\"obj\":\"path\"")
+  fixture_acceptance_assert_contains_for_test(content_json, "\"bbox\"")
+}
+
+///|
 fn fixture_acceptance_assert_cpdf_manual_image_content_corpus_for_test(
   document : @pdflite.PdfDocument,
 ) -> (Int, Int, Int) raise {
@@ -4605,6 +4670,75 @@ async test "optional cpdf source manual content fixtures export content JSON" {
       fixture_acceptance_assert_cpdf_xobject_content_for_test(document)
       fixture_acceptance_assert_cpdf_xobject_content_for_test(
         fixture_acceptance_reparse_compressed_for_test(document),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source manual fixtures show bounding box overlays" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/manualimages/text.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_text_content_for_test(document)
+      let boxed = document.show_bounding_boxes([1])
+      fixture_acceptance_assert_cpdf_text_content_for_test(boxed)
+      fixture_acceptance_assert_cpdf_source_bounding_boxes_for_test(
+        document, boxed,
+      )
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        boxed,
+      )
+      let reparsed = @pdflite.pdf_read_document_from_bytes(compressed)
+      fixture_acceptance_assert_cpdf_text_content_for_test(reparsed)
+      fixture_acceptance_assert_cpdf_source_bounding_boxes_for_test(
+        document, reparsed,
+      )
+      let recovered = @pdflite.pdf_read_document_from_bytes(
+        fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+      )
+      fixture_acceptance_assert_cpdf_text_content_for_test(recovered)
+      fixture_acceptance_assert_cpdf_source_bounding_boxes_for_test(
+        document, recovered,
+      )
+    }
+  }
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/manualimages/xobj.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_xobject_content_for_test(document)
+      let boxed = @pdflite.pdf_show_bounding_boxes(
+        document,
+        [1],
+        light=true,
+        fast=true,
+      )
+      fixture_acceptance_assert_cpdf_xobject_content_for_test(boxed)
+      fixture_acceptance_assert_cpdf_source_bounding_boxes_for_test(
+        document, boxed,
+      )
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        boxed,
+      )
+      let reparsed = @pdflite.pdf_read_document_from_bytes(compressed)
+      fixture_acceptance_assert_cpdf_xobject_content_for_test(reparsed)
+      fixture_acceptance_assert_cpdf_source_bounding_boxes_for_test(
+        document, reparsed,
+      )
+      let recovered = @pdflite.pdf_read_document_from_bytes(
+        fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+      )
+      fixture_acceptance_assert_cpdf_xobject_content_for_test(recovered)
+      fixture_acceptance_assert_cpdf_source_bounding_boxes_for_test(
+        document, recovered,
       )
     }
   }

@@ -5623,6 +5623,19 @@ Current backend snapshot:
   `moon test --target native` reports 2244/2244 tests passing, and `moon check
   --target all --warn-list +73` reports the known warning baseline with 10
   warnings and 0 errors.~~
+- [x] ~~Add the next source-boundary bounding-box overlay slice: optional
+  `.repos/cpdf-source/manualimages/text.pdf` and `xobj.pdf` now gate
+  cpdfredact-style `show_bounding_boxes` behavior on real manual fixtures. The
+  gate preserves original text/Form-XObject content assertions, runs both the
+  method and compatibility wrapper, verifies page geometry/resources/rest
+  preservation, checks that overlay path strokes and graphics-state saves are
+  added for the original recursive content entries, and repeats the assertions
+  after compressed rewrite/reread and bad-`startxref` recovery. `moon test
+  --target native fixture_acceptance --filter '*bounding box overlays*'`
+  reports 1/1 test passing, `moon test --target native fixture_acceptance`
+  reports 74/74 tests passing, `moon test --target native` reports 2245/2245
+  tests passing, and `moon check --target all --warn-list +73` reports the known
+  warning baseline with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
