@@ -6174,6 +6174,20 @@ Current backend snapshot:
   info && moon fmt` reports no pending interface or formatting work, and `moon
   check --target all --warn-list +73` reports the warning 73 baseline with 10
   warnings and 0 errors.~~
+- [x] ~~Broaden the source-boundary malformed classic xref recovery slice:
+  optional `.repos/cpdf-source/hello.pdf` now gates reconstruction across
+  first in-use row marker, offset, generation, first subsection object number,
+  and first subsection count corruption. Each case verifies strict classic
+  reading rejects the damaged table, fallback reconstruction resets
+  `first_xref()` to `0`, preserves the one-page source fixture, and survives a
+  compressed rewrite/reread. `moon check --target native fixture_acceptance
+  --warn-list +73` passes, `moon test --target native fixture_acceptance
+  --filter 'optional cpdf source hello fixture reconstructs malformed classic
+  xref table variants'` reports 1/1 test passing, `moon test --target native
+  fixture_acceptance` reports 100/100 tests passing, `moon test --target native`
+  reports 2272/2272 tests passing, `moon info && moon fmt` reports no pending
+  interface or formatting work, and `moon check --target all --warn-list +73`
+  reports the warning 73 baseline with 7 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.

@@ -1129,6 +1129,28 @@ fn fixture_acceptance_assert_classic_xref_count_reconstructs_for_test(
 }
 
 ///|
+fn fixture_acceptance_assert_classic_xref_table_variants_reconstruct_for_test(
+  bytes : Bytes,
+  expected_pages : Int,
+) -> Unit raise {
+  fixture_acceptance_assert_classic_xref_marker_reconstructs_for_test(
+    bytes, expected_pages,
+  )
+  fixture_acceptance_assert_classic_xref_offset_reconstructs_for_test(
+    bytes, expected_pages,
+  )
+  fixture_acceptance_assert_classic_xref_generation_reconstructs_for_test(
+    bytes, expected_pages,
+  )
+  fixture_acceptance_assert_classic_xref_object_reconstructs_for_test(
+    bytes, expected_pages,
+  )
+  fixture_acceptance_assert_classic_xref_count_reconstructs_for_test(
+    bytes, expected_pages,
+  )
+}
+
+///|
 fn fixture_acceptance_assert_xref_stream_widths_reconstructs_for_test(
   bytes : Bytes,
   expected_pages : Int,
@@ -9044,12 +9066,12 @@ async test "optional cpdf source hello fixture reconstructs bad startxref" {
 }
 
 ///|
-async test "optional cpdf source hello fixture reconstructs malformed classic xref row" {
+async test "optional cpdf source hello fixture reconstructs malformed classic xref table variants" {
   match
     fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) =>
-      fixture_acceptance_assert_classic_xref_marker_reconstructs_for_test(
+      fixture_acceptance_assert_classic_xref_table_variants_reconstruct_for_test(
         bytes, 1,
       )
   }
