@@ -6851,6 +6851,23 @@ Current backend snapshot:
   `moon info && moon fmt` reports no pending interface or formatting work, and
   `moon check --target all --warn-list +73` reports the known
   warning-73/main-package baseline with 10 warnings and 0 errors.~~
+- [x] ~~Add the next source-corpus font mutation slice: the native
+  `font/fixture_acceptance` package now gates cpdf-style embedded-font removal
+  and font copying across optional `.repos/cpdf-source/cpdfmanual.pdf` and
+  `.repos/cpdf-source/hello.pdf`. The gate checks both method and wrapper
+  surfaces (`remove_embedded_fonts`/`pdf_remove_fonts` and
+  `copy_font_from`/`pdf_copy_font`), verifies representative removed manual
+  fonts become missing while font-list/JSON/text reporting remains stable,
+  verifies copied `NimbusSanL-Bold` on the real Hello source page preserves
+  text extraction and embedded fontfile extraction, and repeats the assertions
+  after compressed rewrite/reread plus bad-final-`startxref` reconstruction.
+  `moon check --target native font/fixture_acceptance --warn-list +73` passes,
+  the focused source font mutation test reports 1/1 test passing, `moon test
+  --target native font/fixture_acceptance` reports 9/9 tests passing, and
+  `moon test --target native` reports 2312/2312 tests passing. `moon info &&
+  moon fmt` reports no pending interface or formatting work, and `moon check
+  --target all --warn-list +73` reports the known warning-73/main-package
+  baseline with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.

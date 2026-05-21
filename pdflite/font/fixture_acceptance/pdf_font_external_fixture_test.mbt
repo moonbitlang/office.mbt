@@ -685,6 +685,49 @@ fn font_external_assert_embedded_font_for_test(
 }
 
 ///|
+fn font_external_missing_font_entry_for_test(
+  entries : ArrayView[@pdflite.PdfMissingFontEntry],
+  basefont_fragment : String,
+) -> @pdflite.PdfMissingFontEntry raise {
+  for entry in entries {
+    if entry.basefont.contains(basefont_fragment) {
+      break entry
+    }
+  } nobreak {
+    fail("missing font row " + basefont_fragment)
+  }
+}
+
+///|
+fn font_external_assert_no_missing_font_for_test(
+  entries : ArrayView[@pdflite.PdfMissingFontEntry],
+  basefont_fragment : String,
+) -> Unit raise {
+  for entry in entries {
+    if entry.basefont.contains(basefont_fragment) {
+      fail("unexpected missing font row " + basefont_fragment)
+    }
+  }
+}
+
+///|
+fn font_external_assert_removed_embedded_font_for_test(
+  document : @pdflite.PdfDocument,
+  fonts : ArrayView[@pdflite.PdfFontListEntry],
+  missing : ArrayView[@pdflite.PdfMissingFontEntry],
+  basefont_fragment : String,
+) -> Unit raise {
+  let font = font_external_cpdf_font_entry_for_test(fonts, basefont_fragment)
+  @test.assert_eq(font.subtype, "/Type1")
+  @test.assert_eq(document.extract_fontfile_bytes(font.page, font.name), None)
+  let missing_entry = font_external_missing_font_entry_for_test(
+    missing, basefont_fragment,
+  )
+  @test.assert_eq(missing_entry.name, font.name)
+  @test.assert_eq(missing_entry.page, font.page)
+}
+
+///|
 fn font_external_assert_cpdf_manual_embedded_fonts_for_test(
   document : @pdflite.PdfDocument,
 ) -> Unit raise {
@@ -714,6 +757,60 @@ fn font_external_assert_cpdf_manual_embedded_fonts_for_test(
   font_external_assert_contains_for_test(fonts_json, "NimbusMonL-Regu")
   let missing_text = @ascii.decode_lossy(document.missing_fonts_text(all_pages))
   @test.assert_eq(missing_text, "")
+}
+
+///|
+fn font_external_assert_cpdf_manual_removed_embedded_fonts_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 175)
+  let all_pages = document.parse_pagespec("")
+  let fonts = document.list_fonts(all_pages)
+  @test.assert_eq(fonts.length() > 20, true)
+  let missing = document.missing_fonts(all_pages)
+  @test.assert_eq(missing.length() > 20, true)
+  font_external_assert_removed_embedded_font_for_test(
+    document, fonts, missing, "NimbusSanL-Bold",
+  )
+  font_external_assert_removed_embedded_font_for_test(
+    document, fonts, missing, "URWPalladioL-Roma",
+  )
+  font_external_assert_removed_embedded_font_for_test(
+    document, fonts, missing, "NimbusMonL-Regu",
+  )
+  let fonts_json = document.fonts_json(all_pages).stringify()
+  font_external_assert_contains_for_test(fonts_json, "NimbusSanL-Bold")
+  font_external_assert_contains_for_test(fonts_json, "URWPalladioL-Roma")
+  font_external_assert_contains_for_test(fonts_json, "NimbusMonL-Regu")
+  let missing_text = @ascii.decode_lossy(document.missing_fonts_text(all_pages))
+  font_external_assert_contains_for_test(missing_text, "NimbusSanL-Bold")
+  font_external_assert_contains_for_test(missing_text, "URWPalladioL-Roma")
+  font_external_assert_contains_for_test(missing_text, "NimbusMonL-Regu")
+}
+
+///|
+fn font_external_assert_cpdf_source_hello_copied_font_for_test(
+  document : @pdflite.PdfDocument,
+  basefont_fragment : String,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 1)
+  let text = @ascii.decode_lossy(document.test_extract_text([1]))
+  font_external_assert_contains_for_test(text, "Hello")
+  let fonts = document.list_fonts([1])
+  let copied = font_external_cpdf_font_entry_for_test(fonts, basefont_fragment)
+  @test.assert_eq(copied.page, 1)
+  @test.assert_eq(copied.name.contains(basefont_fragment), true)
+  @test.assert_eq(copied.subtype, "/Type1")
+  match document.extract_fontfile_bytes(copied.page, copied.name) {
+    Some(bytes) => @test.assert_eq(bytes.length() > 1000, true)
+    None => fail("missing copied fontfile for " + copied.basefont)
+  }
+  font_external_assert_no_missing_font_for_test(
+    document.missing_fonts([1]),
+    basefont_fragment,
+  )
+  let fonts_json = document.fonts_json([1]).stringify()
+  font_external_assert_contains_for_test(fonts_json, basefont_fragment)
 }
 
 ///|
@@ -767,6 +864,81 @@ fn font_external_assert_cpdf_source_fonts_fixture_for_test(
   font_external_assert_contains_for_test(
     missing_text, "1, /F2, /Type1, /Times-BoldItalic, /WinAnsiEncoding\n",
   )
+}
+
+///|
+async test "cpdf source font mutations remove and copy embedded fonts" {
+  match
+    font_external_fixture_bytes_for_test(".repos/cpdf-source/cpdfmanual.pdf") {
+    None => ()
+    Some(manual_bytes) =>
+      match
+        font_external_fixture_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+        None => ()
+        Some(hello_bytes) => {
+          let manual = @pdflite.pdf_read_document_from_bytes(manual_bytes)
+          let removed = manual.remove_embedded_fonts()
+          font_external_assert_cpdf_manual_removed_embedded_fonts_for_test(
+            removed,
+          )
+          font_external_assert_cpdf_manual_removed_embedded_fonts_for_test(
+            @pdflite.pdf_remove_fonts(manual),
+          )
+          font_external_assert_cpdf_manual_removed_embedded_fonts_for_test(
+            font_external_reparse_compressed_for_test(removed),
+          )
+          let removed_compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+            removed,
+          )
+          font_external_assert_cpdf_manual_removed_embedded_fonts_for_test(
+            @pdflite.pdf_read_document_from_bytes(
+              font_external_corrupt_startxref_pointer_for_test(
+                removed_compressed,
+              ),
+            ),
+          )
+          let hello = @pdflite.pdf_read_document_from_bytes(hello_bytes)
+          let source_font = font_external_cpdf_font_entry_for_test(
+            manual.list_fonts(manual.parse_pagespec("")),
+            "NimbusSanL-Bold",
+          )
+          let copied = hello.copy_font_from(
+            manual,
+            source_font.name,
+            source_font.page,
+            [1],
+          )
+          font_external_assert_cpdf_source_hello_copied_font_for_test(
+            copied, "NimbusSanL-Bold",
+          )
+          font_external_assert_cpdf_source_hello_copied_font_for_test(
+            @pdflite.pdf_copy_font(
+              manual,
+              source_font.name,
+              source_font.page,
+              [1],
+              hello,
+            ),
+            "NimbusSanL-Bold",
+          )
+          font_external_assert_cpdf_source_hello_copied_font_for_test(
+            font_external_reparse_compressed_for_test(copied),
+            "NimbusSanL-Bold",
+          )
+          let copied_compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+            copied,
+          )
+          font_external_assert_cpdf_source_hello_copied_font_for_test(
+            @pdflite.pdf_read_document_from_bytes(
+              font_external_corrupt_startxref_pointer_for_test(
+                copied_compressed,
+              ),
+            ),
+            "NimbusSanL-Bold",
+          )
+        }
+      }
+  }
 }
 
 ///|
