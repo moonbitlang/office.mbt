@@ -5894,6 +5894,25 @@ Current backend snapshot:
   fixture_acceptance` reports 87/87 tests passing, `moon test --target native`
   reports 2259/2259 tests passing, and `moon check --target all --warn-list
   +73` reports the warning 73 baseline with 10 warnings and 0 errors.~~
+- [x] ~~Broaden the source-boundary predefined CMap slice: optional
+  `.repos/cpdf-source/hello.pdf` now gates rare UniAKR predefined CMap behavior
+  on a real source PDF after injecting Type0 CID-keyed fonts for
+  `/UniAKR-UTF8-H`, `/UniAKR-UTF16-H`, and `/UniAKR-UTF32-H` with Adobe
+  Korea1 descendant font metadata. The gate preserves the original Hello text,
+  extracts injected Hangul text through the two-byte UniAKR UTF-16 page content
+  path, verifies `list_fonts` and `read_font` expose each `/Type0`
+  `PdfFontCIDKeyed` resource with the expected predefined CMap and
+  `uses_two_byte_codes` behavior, pins `PdfTextExtractor::codepoints_of_text`
+  and reverse `charcode_of_codepoint` behavior for UTF-8, UTF-16, and UTF-32
+  encoded Hangul byte streams, and repeats the assertions through compressed
+  rewrite/reread and bad-`startxref` recovery. `moon check --target native
+  fixture_acceptance --warn-list +73` passes, `moon test --target native
+  fixture_acceptance --filter 'optional cpdf source hello fixture extracts
+  UniAKR predefined CMaps'` reports 1/1 test passing, `moon test --target
+  native fixture_acceptance` reports 88/88 tests passing, `moon test --target
+  native` reports 2260/2260 tests passing, and `moon check --target all
+  --warn-list +73` reports the warning 73 baseline with 10 warnings and 0
+  errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
