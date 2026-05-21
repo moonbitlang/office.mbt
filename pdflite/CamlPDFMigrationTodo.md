@@ -5522,6 +5522,18 @@ Current backend snapshot:
   native fixture_acceptance` reports 65/65 tests passing, `moon test --target
   native` reports 2236/2236 tests passing, and `moon check --target all
   --warn-list +73` reports the known warning baseline with 0 errors.~~
+- [x] ~~Add the next source-boundary portfolio slice: optional
+  `.repos/cpdf-source/hello.pdf` now gates cpdfportfolio-style collection
+  construction from real `.repos/cpdf-source/README.md` and
+  `.repos/cpdf-source/Changes.txt` payloads, including `/EmbeddedFiles` name
+  tree keys, `/Collection /View /T`, `/FileSpec` basename strings,
+  `/AFRelationship` explicit/default values, embedded file stream payloads,
+  `/Params /ModDate`, size/length metadata, compressed rewrite/reread, and
+  bad-`startxref` recovery. `moon test --target native fixture_acceptance
+  --filter '*builds portfolio*'` reports 1/1 test passing, `moon test --target
+  native fixture_acceptance` reports 66/66 tests passing, `moon test --target
+  native` reports 2237/2237 tests passing, and `moon check --target all
+  --warn-list +73` reports the known warning baseline with 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.

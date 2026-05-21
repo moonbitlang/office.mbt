@@ -2077,6 +2077,139 @@ fn fixture_acceptance_assert_cpdf_source_attachments_removed_for_test(
 }
 
 ///|
+fn fixture_acceptance_lookup_required_for_test(
+  document : @pdflite.PdfDocument,
+  key : String,
+  object : @pdflite.PdfObject,
+) -> @pdflite.PdfObject raise {
+  match
+    document.lookup_direct(fixture_acceptance_pdf_name_for_test(key), object) {
+    Some(value) => value
+    None => fail("missing PDF dictionary key " + key)
+  }
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_portfolio_entry_for_test(
+  document : @pdflite.PdfDocument,
+  object : @pdflite.PdfObject,
+  basename : String,
+  description : String,
+  relationship : String,
+  payload : Bytes,
+  mod_date : Bytes,
+) -> Unit raise {
+  let file_spec = document.direct(object)
+  @test.assert_eq(
+    fixture_acceptance_lookup_required_for_test(document, "/Type", file_spec),
+    PdfNameObject(fixture_acceptance_pdf_name_for_test("/FileSpec")),
+  )
+  @test.assert_eq(
+    fixture_acceptance_lookup_required_for_test(document, "/Desc", file_spec),
+    PdfString(@utf8.encode(description)),
+  )
+  @test.assert_eq(
+    fixture_acceptance_lookup_required_for_test(document, "/F", file_spec),
+    PdfString(@utf8.encode(basename)),
+  )
+  @test.assert_eq(
+    fixture_acceptance_lookup_required_for_test(document, "/UF", file_spec),
+    PdfString(@utf8.encode(basename)),
+  )
+  @test.assert_eq(
+    fixture_acceptance_lookup_required_for_test(
+      document, "/AFRelationship", file_spec,
+    ),
+    PdfNameObject(fixture_acceptance_pdf_name_for_test(relationship)),
+  )
+  let ef = fixture_acceptance_lookup_required_for_test(
+    document, "/EF", file_spec,
+  )
+  let stream_reference = fixture_acceptance_lookup_required_for_test(
+    document, "/F", ef,
+  )
+  @test.assert_eq(
+    fixture_acceptance_lookup_required_for_test(document, "/UF", ef),
+    stream_reference,
+  )
+  let stream = document.direct(stream_reference)
+  @test.assert_eq(stream.stream_bytes(), payload)
+  guard stream is PdfStreamObject(stream_object) else {
+    fail("expected cpdf source portfolio embedded file stream")
+  }
+  @test.assert_eq(
+    fixture_acceptance_lookup_required_for_test(
+      document,
+      "/Length",
+      stream_object.dictionary,
+    ),
+    PdfInteger(payload.length()),
+  )
+  let params = fixture_acceptance_lookup_required_for_test(
+    document,
+    "/Params",
+    stream_object.dictionary,
+  )
+  @test.assert_eq(
+    fixture_acceptance_lookup_required_for_test(document, "/ModDate", params),
+    PdfString(mod_date),
+  )
+  @test.assert_eq(
+    fixture_acceptance_lookup_required_for_test(document, "/Size", params),
+    PdfInteger(payload.length()),
+  )
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_portfolio_for_test(
+  document : @pdflite.PdfDocument,
+  readme_payload : Bytes,
+  changes_payload : Bytes,
+  mod_date : Bytes,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 1)
+  let catalog = document.catalog()
+  let collection = fixture_acceptance_lookup_required_for_test(
+    document, "/Collection", catalog,
+  )
+  @test.assert_eq(
+    fixture_acceptance_lookup_required_for_test(document, "/View", collection),
+    PdfNameObject(fixture_acceptance_pdf_name_for_test("/T")),
+  )
+  let names = fixture_acceptance_lookup_required_for_test(
+    document, "/Names", catalog,
+  )
+  let embedded_files = fixture_acceptance_lookup_required_for_test(
+    document, "/EmbeddedFiles", names,
+  )
+  let entries = document.read_name_tree(embedded_files)
+  @test.assert_eq(entries.length(), 2)
+  @test.assert_eq(entries[0].0, @utf8.encode("0/.repos/cpdf-source/README.md"))
+  @test.assert_eq(
+    entries[1].0,
+    @utf8.encode("1/.repos/cpdf-source/Changes.txt"),
+  )
+  fixture_acceptance_assert_cpdf_source_portfolio_entry_for_test(
+    document,
+    entries[0].1,
+    "README.md",
+    "cpdf source README",
+    "/Source",
+    readme_payload,
+    mod_date,
+  )
+  fixture_acceptance_assert_cpdf_source_portfolio_entry_for_test(
+    document,
+    entries[1].1,
+    "Changes.txt",
+    "Changes.txt",
+    "/Unspecified",
+    changes_payload,
+    mod_date,
+  )
+}
+
+///|
 fn fixture_acceptance_assert_cpdf_source_presentation_for_test(
   document : @pdflite.PdfDocument,
 ) -> Unit raise {
@@ -3402,6 +3535,58 @@ async test "optional cpdf source attachments preserve real source payloads" {
       )
       fixture_acceptance_assert_cpdf_source_attachments_removed_for_test(
         fixture_acceptance_reparse_compressed_for_test(cleaned),
+      )
+    }
+    _ => ()
+  }
+}
+
+///|
+async test "optional cpdf source hello fixture builds portfolio from real payloads" {
+  match
+    (
+      fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf"),
+      fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/README.md"),
+      fixture_acceptance_optional_bytes_for_test(
+        ".repos/cpdf-source/Changes.txt",
+      ),
+    ) {
+    (Some(pdf_bytes), Some(readme_payload), Some(changes_payload)) => {
+      let mod_date = @ascii.encode("D:20240102030405")
+      let document = @pdflite.pdf_read_document_from_bytes(pdf_bytes)
+      let portfolio = document.portfolio(
+        [
+          @pdflite.pdf_portfolio_entry(
+            ".repos/cpdf-source/README.md",
+            readme_payload,
+            relationship=Some("Source"),
+            description=Some("cpdf source README"),
+          ),
+          @pdflite.pdf_portfolio_entry(
+            ".repos/cpdf-source/Changes.txt", changes_payload,
+          ),
+        ],
+        mod_date=Some(mod_date),
+      )
+      fixture_acceptance_assert_cpdf_source_portfolio_for_test(
+        portfolio, readme_payload, changes_payload, mod_date,
+      )
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        portfolio,
+      )
+      fixture_acceptance_assert_cpdf_source_portfolio_for_test(
+        @pdflite.pdf_read_document_from_bytes(compressed),
+        readme_payload,
+        changes_payload,
+        mod_date,
+      )
+      fixture_acceptance_assert_cpdf_source_portfolio_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+        ),
+        readme_payload,
+        changes_payload,
+        mod_date,
       )
     }
     _ => ()
