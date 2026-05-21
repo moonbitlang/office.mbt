@@ -5451,6 +5451,17 @@ Current backend snapshot:
   native fixture_acceptance` reports 60/60 tests passing, `moon test --target
   native` reports 2231/2231 tests passing, and `moon check --target all
   --warn-list +73` reports the known warning baseline with 0 errors.~~
+- [x] ~~Add the next source-boundary drawing-operator slice: optional
+  `.repos/cpdf-source/manualimages/{dash,capjoins,colfill,clip,textclip,matrix,pop,fontparams,stext,para,paras}.pdf`
+  now gate real cpdf drawing/text operator parameters, including line dash,
+  caps/joins/miter, RGB and gray color operators, clipping, text clipping,
+  matrix push/pop, font parameters, special text, and paragraph layout tokens
+  before compressed rewrite/reread and after bad-`startxref` recovery. `moon
+  test --target native fixture_acceptance --filter '*drawing fixtures*'`
+  reports 1/1 test passing, `moon test --target native fixture_acceptance`
+  reports 61/61 tests passing, `moon test --target native` reports 2232/2232
+  tests passing, and `moon check --target all --warn-list +73` reports the known
+  warning baseline with 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
