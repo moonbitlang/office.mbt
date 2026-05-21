@@ -5913,6 +5913,26 @@ Current backend snapshot:
   native` reports 2260/2260 tests passing, and `moon check --target all
   --warn-list +73` reports the warning 73 baseline with 10 warnings and 0
   errors.~~
+- [x] ~~Broaden the source-boundary Japan1 predefined CMap slice: optional
+  `.repos/cpdf-source/hello.pdf` now gates Adobe-Japan1 legacy/supplemental
+  predefined CMap behavior on a real source PDF after injecting Type0
+  CID-keyed fonts for `/90msp-RKSJ-H`, `/90msp-RKSJ-V`, and `/Hojo-EUC-V`
+  with Adobe Japan1 descendant font metadata. The gate preserves the original
+  Hello text, extracts injected vertical 90msp-RKSJ text through the source
+  page content path, verifies `list_fonts` and `read_font` expose each
+  `/Type0` `PdfFontCIDKeyed` resource with the expected predefined CMap and
+  mixed-byte `uses_two_byte_codes` behavior, pins
+  `PdfTextExtractor::codepoints_of_text` output for 90msp horizontal,
+  90msp vertical, and three-byte Hojo-EUC byte streams, verifies reverse
+  `charcode_of_codepoint` behavior for single-byte, two-byte, and three-byte
+  character codes, and repeats the assertions through compressed rewrite/reread
+  and bad-`startxref` recovery. `moon check --target native fixture_acceptance
+  --warn-list +73` passes, `moon test --target native fixture_acceptance
+  --filter 'optional cpdf source hello fixture extracts Japan1 predefined
+  CMaps'` reports 1/1 test passing, `moon test --target native
+  fixture_acceptance` reports 89/89 tests passing, `moon test --target native`
+  reports 2261/2261 tests passing, and `moon check --target all --warn-list
+  +73` reports the warning 73 baseline with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
