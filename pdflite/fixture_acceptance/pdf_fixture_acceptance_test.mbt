@@ -3307,6 +3307,101 @@ fn fixture_acceptance_assert_cpdf_png_image_for_test(
 }
 
 ///|
+fn fixture_acceptance_draft_substitute_ops_for_test() -> Array[
+  @pdflite.PdfContentOp,
+] {
+  [
+    Op_q,
+    Op_w(0.0),
+    Op_G(0.0),
+    Op_re(0.0, 0.0, 1.0, 1.0),
+    Op_m(0.0, 0.0),
+    Op_l(1.0, 1.0),
+    Op_m(0.0, 1.0),
+    Op_l(1.0, 0.0),
+    Op_S,
+    Op_Q,
+  ]
+}
+
+///|
+fn fixture_acceptance_content_ops_contain_sequence_for_test(
+  ops : ArrayView[@pdflite.PdfContentOp],
+  expected : ArrayView[@pdflite.PdfContentOp],
+) -> Bool {
+  if expected.length() == 0 {
+    true
+  } else if ops.length() < expected.length() {
+    false
+  } else {
+    for start in 0..<=(ops.length() - expected.length()) {
+      let mut matches = true
+      for offset in 0..<expected.length() {
+        if ops[start + offset] != expected[offset] {
+          matches = false
+        }
+      }
+      if matches {
+        break true
+      }
+    } nobreak {
+      false
+    }
+  }
+}
+
+///|
+fn fixture_acceptance_content_ops_contain_do_for_test(
+  ops : ArrayView[@pdflite.PdfContentOp],
+  name : @pdflite.PdfName,
+) -> Bool {
+  for op in ops {
+    match op {
+      Op_Do(op_name) if op_name == name => break true
+      _ => ()
+    }
+  } nobreak {
+    false
+  }
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_png_draft_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 1)
+  let image_name = fixture_acceptance_pdf_name_for_test("/I1")
+  let pages = document.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  guard document.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/XObject"),
+      pages[0].resources,
+    )
+    is Some(PdfDictionary(xobjects)) else {
+    fail("missing drafted PNG fixture XObject resources")
+  }
+  @test.assert_eq(xobjects.length(), 0)
+  let ops = document.parse_content_ops_with_resources(
+    pages[0].resources,
+    pages[0].content,
+  )
+  @test.assert_eq(
+    fixture_acceptance_content_ops_contain_do_for_test(ops, image_name),
+    false,
+  )
+  @test.assert_eq(
+    fixture_acceptance_content_ops_contain_sequence_for_test(
+      ops,
+      fixture_acceptance_draft_substitute_ops_for_test(),
+    ),
+    true,
+  )
+  let images_json = document.images_json([1]).stringify()
+  @test.assert_eq(images_json.contains("\"Name\""), false)
+  @test.assert_eq(images_json.contains("\"Width\""), false)
+}
+
+///|
 fn fixture_acceptance_assert_cpdf_sheet_png_image_document_for_test(
   document : @pdflite.PdfDocument,
 ) -> Unit raise {
@@ -4242,6 +4337,33 @@ async test "optional cpdf source PNG image fixture reports and extracts image" {
       fixture_acceptance_assert_cpdf_png_image_for_test(document)
       fixture_acceptance_assert_cpdf_png_image_for_test(
         fixture_acceptance_reparse_compressed_for_test(document),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source PNG image fixture drafts replacement boxes" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/manualimages/png.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_png_image_for_test(document)
+      let drafted = @pdflite.pdf_draft(None, true, [1], document)
+      fixture_acceptance_assert_cpdf_png_draft_for_test(drafted)
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        drafted,
+      )
+      fixture_acceptance_assert_cpdf_png_draft_for_test(
+        @pdflite.pdf_read_document_from_bytes(compressed),
+      )
+      fixture_acceptance_assert_cpdf_png_draft_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+        ),
       )
     }
   }

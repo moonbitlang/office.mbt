@@ -5582,6 +5582,20 @@ Current backend snapshot:
   native` reports 2241/2241 tests passing, and `moon check --target all
   --warn-list +73` reports the known warning baseline with 10 warnings and 0
   errors.~~
+- [x] ~~Add the next source-boundary draft slice: optional
+  `.repos/cpdf-source/manualimages/png.pdf` now gates cpdfdraft-style image
+  removal on a real FlateDecode/DeviceRGB source PDF. The gate verifies the
+  original `/I1` image before drafting, then runs `pdf_draft` through the
+  compatibility wrapper and checks that image XObject resources are emptied,
+  `/I1 Do` invocations are gone, cpdf's crossed-unit-box replacement operator
+  sequence is present, image JSON no longer reports image entries, compressed
+  rewrite/reread survives, and bad-`startxref` recovery preserves the drafted
+  shape. `moon test --target native fixture_acceptance --filter
+  '*drafts replacement boxes*'` reports 1/1 test passing, `moon test --target
+  native fixture_acceptance` reports 71/71 tests passing, `moon test --target
+  native` reports 2242/2242 tests passing, and `moon check --target all
+  --warn-list +73` reports the known warning baseline with 10 warnings and 0
+  errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
