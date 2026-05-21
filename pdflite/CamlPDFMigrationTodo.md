@@ -6792,6 +6792,23 @@ Current backend snapshot:
   interface or formatting work, and `moon check --target all --warn-list +73`
   reports the known warning-73/main-package baseline with 10 warnings and 0
   errors.~~
+- [x] ~~Add the next source-corpus draw/parser recovery slice: optional
+  `.repos/cpdf-source/manualimages/*.pdf` now gates cpdfdraw/content-operator
+  parsing after malformed-reader reconstruction. The draw fixture corrupts all
+  21 one-page manual-image PDFs when present with bad final `startxref`,
+  damaged classic `xref` headers, damaged `trailer` keywords, first in-use xref
+  row marker/offset/generation fields, and first subsection object/count
+  fields, requires strict classic reads to reject each corruption, verifies
+  public reconstruction resets `first_xref()` to `0`, parses non-empty page
+  content operators with no unknown operators, and rechecks the same draw
+  parsing after compressed-xref rewrite/reread. `moon check --target native
+  draw/fixture_acceptance --warn-list +73` passes, the focused draw recovery
+  test reports 1/1 test passing, `moon test --target native
+  draw/fixture_acceptance` reports 12/12 tests passing, and `moon test
+  --target native` reports 2308/2308 tests passing. `moon info && moon fmt`
+  reports no pending interface or formatting work, and `moon check --target all
+  --warn-list +73` reports the known warning-73/main-package baseline with 10
+  warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.
