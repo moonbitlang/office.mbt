@@ -5636,6 +5636,19 @@ Current backend snapshot:
   reports 74/74 tests passing, `moon test --target native` reports 2245/2245
   tests passing, and `moon check --target all --warn-list +73` reports the known
   warning baseline with 10 warnings and 0 errors.~~
+- [x] ~~Add the next source-boundary cpdftweak slice: optional
+  `.repos/cpdf-source/manualimages/clip.pdf` now gates `pdf_remove_clipping` on
+  a real clipping-path fixture, and `textclip.pdf` now gates
+  `reveal_hidden_text` on real text rendering-mode clipping. The gate verifies
+  original drawing operators, page geometry/resources/rest preservation, exact
+  removal of `W n` clipping setup pairs, removal of `Tr` text rendering-mode
+  operators while retaining text-showing operators and recursive content JSON,
+  compressed rewrite/reread, and bad-`startxref` recovery. `moon test --target
+  native fixture_acceptance --filter '*tweak fixtures*'` reports 1/1 test
+  passing, `moon test --target native fixture_acceptance` reports 75/75 tests
+  passing, `moon test --target native` reports 2246/2246 tests passing, and
+  `moon check --target all --warn-list +73` reports the known warning baseline
+  with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.

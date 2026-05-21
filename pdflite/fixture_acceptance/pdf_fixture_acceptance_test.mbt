@@ -1865,6 +1865,49 @@ fn fixture_acceptance_content_save_count_for_test(
 }
 
 ///|
+fn fixture_acceptance_content_clip_op_count_for_test(
+  ops : ArrayView[@pdflite.PdfContentOp],
+) -> Int {
+  let mut count = 0
+  for op in ops {
+    match op {
+      Op_W | Op_Wstar => count += 1
+      _ => ()
+    }
+  }
+  count
+}
+
+///|
+fn fixture_acceptance_content_clip_setup_count_for_test(
+  ops : ArrayView[@pdflite.PdfContentOp],
+) -> Int {
+  let mut count = 0
+  if ops.length() >= 2 {
+    for index in 0..<(ops.length() - 1) {
+      if ops[index] == Op_W && ops[index + 1] == Op_n {
+        count += 1
+      }
+    }
+  }
+  count
+}
+
+///|
+fn fixture_acceptance_content_text_rendering_mode_count_for_test(
+  ops : ArrayView[@pdflite.PdfContentOp],
+) -> Int {
+  let mut count = 0
+  for op in ops {
+    match op {
+      Op_Tr(_) => count += 1
+      _ => ()
+    }
+  }
+  count
+}
+
+///|
 fn fixture_acceptance_assert_content_op_for_test(
   ops : ArrayView[@pdflite.PdfContentOp],
   expected : @pdflite.PdfContentOp,
@@ -3795,6 +3838,85 @@ fn fixture_acceptance_assert_cpdf_xobject_content_for_test(
 }
 
 ///|
+fn fixture_acceptance_assert_cpdf_source_remove_clipping_for_test(
+  original : @pdflite.PdfDocument,
+  unclipped : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(original.endpage(), 1)
+  @test.assert_eq(unclipped.endpage(), 1)
+  let original_pages = original.pages_of_pagetree()
+  let unclipped_pages = unclipped.pages_of_pagetree()
+  @test.assert_eq(unclipped_pages[0].mediabox, original_pages[0].mediabox)
+  @test.assert_eq(unclipped_pages[0].rotate, original_pages[0].rotate)
+  @test.assert_eq(unclipped_pages[0].resources, original_pages[0].resources)
+  @test.assert_eq(unclipped_pages[0].rest, original_pages[0].rest)
+  let original_ops = fixture_acceptance_page_content_ops_for_test(original)
+  let unclipped_ops = fixture_acceptance_page_content_ops_for_test(unclipped)
+  @test.assert_eq(
+    fixture_acceptance_content_clip_setup_count_for_test(original_ops) > 0,
+    true,
+  )
+  @test.assert_eq(
+    fixture_acceptance_content_clip_setup_count_for_test(unclipped_ops),
+    0,
+  )
+  @test.assert_eq(
+    fixture_acceptance_content_clip_op_count_for_test(unclipped_ops) <
+    fixture_acceptance_content_clip_op_count_for_test(original_ops),
+    true,
+  )
+  fixture_acceptance_assert_content_op_for_test(unclipped_ops, Op_n)
+  fixture_acceptance_assert_content_op_for_test(unclipped_ops, Op_f)
+  let content_json = unclipped.page_content_json([1]).stringify()
+  fixture_acceptance_assert_contains_for_test(content_json, "\"page\":1")
+  fixture_acceptance_assert_contains_for_test(content_json, "\"obj\":\"path\"")
+  fixture_acceptance_assert_contains_for_test(content_json, "\"bbox\"")
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_reveal_hidden_text_for_test(
+  original : @pdflite.PdfDocument,
+  revealed : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(original.endpage(), 1)
+  @test.assert_eq(revealed.endpage(), 1)
+  let original_pages = original.pages_of_pagetree()
+  let revealed_pages = revealed.pages_of_pagetree()
+  @test.assert_eq(revealed_pages[0].mediabox, original_pages[0].mediabox)
+  @test.assert_eq(revealed_pages[0].rotate, original_pages[0].rotate)
+  @test.assert_eq(revealed_pages[0].resources, original_pages[0].resources)
+  @test.assert_eq(revealed_pages[0].rest, original_pages[0].rest)
+  let original_ops = fixture_acceptance_page_content_ops_for_test(original)
+  let revealed_ops = fixture_acceptance_page_content_ops_for_test(revealed)
+  @test.assert_eq(
+    fixture_acceptance_content_text_rendering_mode_count_for_test(original_ops) >
+    0,
+    true,
+  )
+  @test.assert_eq(
+    fixture_acceptance_content_text_rendering_mode_count_for_test(revealed_ops),
+    0,
+  )
+  fixture_acceptance_assert_content_op_for_test(
+    revealed_ops,
+    Op_Tj(@ascii.encode("This is")),
+  )
+  fixture_acceptance_assert_content_op_for_test(
+    revealed_ops,
+    Op_Tj(@ascii.encode("on multiple")),
+  )
+  fixture_acceptance_assert_content_op_for_test(
+    revealed_ops,
+    Op_Tj(@ascii.encode("lines")),
+  )
+  let (glyphs, _, paths) = fixture_acceptance_assert_cpdf_manual_image_content_corpus_for_test(
+    revealed,
+  )
+  @test.assert_eq(glyphs > 0, true)
+  @test.assert_eq(paths > 0, true)
+}
+
+///|
 fn fixture_acceptance_assert_cpdf_source_bounding_boxes_for_test(
   original : @pdflite.PdfDocument,
   boxed : @pdflite.PdfDocument,
@@ -4149,6 +4271,68 @@ async test "optional cpdf source drawing fixtures preserve operator parameters" 
       checked,
       fixture_acceptance_cpdf_draw_operator_paths_for_test.length(),
     )
+  }
+}
+
+///|
+async test "optional cpdf source tweak fixtures remove clipping and reveal text" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/manualimages/clip.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_draw_operator_fixture_for_test(
+        ".repos/cpdf-source/manualimages/clip.pdf", document,
+      )
+      let unclipped = @pdflite.pdf_remove_clipping(document, [1])
+      fixture_acceptance_assert_cpdf_source_remove_clipping_for_test(
+        document, unclipped,
+      )
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        unclipped,
+      )
+      fixture_acceptance_assert_cpdf_source_remove_clipping_for_test(
+        document,
+        @pdflite.pdf_read_document_from_bytes(compressed),
+      )
+      fixture_acceptance_assert_cpdf_source_remove_clipping_for_test(
+        document,
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+        ),
+      )
+    }
+  }
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/manualimages/textclip.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_draw_operator_fixture_for_test(
+        ".repos/cpdf-source/manualimages/textclip.pdf", document,
+      )
+      let revealed = document.reveal_hidden_text([1])
+      fixture_acceptance_assert_cpdf_source_reveal_hidden_text_for_test(
+        document, revealed,
+      )
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        revealed,
+      )
+      fixture_acceptance_assert_cpdf_source_reveal_hidden_text_for_test(
+        document,
+        @pdflite.pdf_read_document_from_bytes(compressed),
+      )
+      fixture_acceptance_assert_cpdf_source_reveal_hidden_text_for_test(
+        document,
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+        ),
+      )
+    }
   }
 }
 
