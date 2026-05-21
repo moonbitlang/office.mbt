@@ -6755,6 +6755,25 @@ Current backend snapshot:
   passing. `moon info` and `moon fmt` report no pending interface or
   formatting work, and `moon check --target all --warn-list +73` reports the
   known warning-73/main-package baseline with 10 warnings and 0 errors.~~
+- [x] ~~Add the next source-corpus Markdown command recovery slice: the native
+  `pdflite-markdown` command helper now converts optional
+  `.repos/cpdf-source/hello.pdf` and `.repos/cpdf-source/logo.pdf` through real
+  file input/output, checking textful `hello.pdf` extraction and image-heavy
+  `logo.pdf` page-structure extraction without raw control or replacement
+  characters. The command gate now also writes corrupted copies with bad final
+  `startxref`, damaged classic `xref` headers, damaged `trailer` keywords,
+  first in-use xref row marker/offset/generation fields, and first subsection
+  object/count fields, requires strict classic reads to reject each corruption,
+  converts the damaged files through the command helper, and compares each
+  recovered Markdown output byte-for-byte with clean command output. `moon
+  check --target native markdown/cmd --warn-list +73` passes with the known
+  main-package warning baseline, focused command tests for clean and malformed
+  top-level classic PDF corpus conversion each report 1/1 test passing, `moon
+  test --target native markdown/cmd` reports 19/19 tests passing, and `moon
+  test --target native` reports 2306/2306 tests passing. `moon info && moon
+  fmt` reports no pending interface or formatting work, and `moon check
+  --target all --warn-list +73` reports the known warning-73/main-package
+  baseline with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.
