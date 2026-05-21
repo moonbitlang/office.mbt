@@ -4864,9 +4864,10 @@ fn fixture_acceptance_cpdf_source_type3_tounicode_for_test() -> @pdflite.PdfObje
     "1 begincodespacerange\n" +
     "<00><FF>\n" +
     "endcodespacerange\n" +
-    "2 beginbfchar\n" +
+    "3 beginbfchar\n" +
     "<41><005A>\n" +
     "<42><0059>\n" +
+    "<43><2603>\n" +
     "endbfchar\n",
   )
   @pdflite.pdf_stream(
@@ -4894,9 +4895,43 @@ fn fixture_acceptance_cpdf_source_type3_mark_for_test() -> @pdflite.PdfObject ra
 }
 
 ///|
+fn fixture_acceptance_cpdf_source_type3_inline_dictionary_for_test() -> @pdflite.PdfObject {
+  PdfDictionary([
+    (fixture_acceptance_pdf_name_for_test("/W"), PdfInteger(2)),
+    (fixture_acceptance_pdf_name_for_test("/H"), PdfInteger(1)),
+    (
+      fixture_acceptance_pdf_name_for_test("/CS"),
+      PdfNameObject(fixture_acceptance_pdf_name_for_test("/GlyphGray")),
+    ),
+    (fixture_acceptance_pdf_name_for_test("/BPC"), PdfInteger(1)),
+  ])
+}
+
+///|
+fn fixture_acceptance_cpdf_source_type3_inline_data_for_test() -> @pdflite.PdfBytes raise {
+  @pdflite.pdf_bytes_of_int_array([0x80])
+}
+
+///|
+fn fixture_acceptance_cpdf_source_type3_resource_ops_for_test() -> Array[
+  @pdflite.PdfContentOp,
+] raise {
+  [
+    Op_d0(550.0, 0.0),
+    Op_Do(fixture_acceptance_pdf_name_for_test("/GlyphMark")),
+    Op_InlineImage(
+      fixture_acceptance_cpdf_source_type3_inline_dictionary_for_test(),
+      None,
+      fixture_acceptance_cpdf_source_type3_inline_data_for_test(),
+    ),
+  ]
+}
+
+///|
 fn fixture_acceptance_cpdf_source_type3_font_for_test(
   glyph_a : Int,
   glyph_b : Int,
+  glyph_c : Int,
   glyph_mark : Int,
   tounicode : Int,
 ) -> @pdflite.PdfObject {
@@ -4934,6 +4969,7 @@ fn fixture_acceptance_cpdf_source_type3_font_for_test(
       @pdflite.pdf_dictionary([
         (fixture_acceptance_pdf_name_for_test("/A"), PdfIndirect(glyph_a)),
         (fixture_acceptance_pdf_name_for_test("/B"), PdfIndirect(glyph_b)),
+        (fixture_acceptance_pdf_name_for_test("/C"), PdfIndirect(glyph_c)),
       ]),
     ),
     (
@@ -4942,6 +4978,15 @@ fn fixture_acceptance_cpdf_source_type3_font_for_test(
         (
           fixture_acceptance_pdf_name_for_test("/ProcSet"),
           PdfArray([PdfNameObject(fixture_acceptance_pdf_name_for_test("/PDF"))]),
+        ),
+        (
+          fixture_acceptance_pdf_name_for_test("/ColorSpace"),
+          @pdflite.pdf_dictionary([
+            (
+              fixture_acceptance_pdf_name_for_test("/GlyphGray"),
+              PdfNameObject(fixture_acceptance_pdf_name_for_test("/DeviceGray")),
+            ),
+          ]),
         ),
         (
           fixture_acceptance_pdf_name_for_test("/XObject"),
@@ -4955,11 +5000,12 @@ fn fixture_acceptance_cpdf_source_type3_font_for_test(
       ]),
     ),
     (fixture_acceptance_pdf_name_for_test("/FirstChar"), PdfInteger(65)),
-    (fixture_acceptance_pdf_name_for_test("/LastChar"), PdfInteger(66)),
+    (fixture_acceptance_pdf_name_for_test("/LastChar"), PdfInteger(67)),
     (
       fixture_acceptance_pdf_name_for_test("/Widths"),
-      PdfArray([PdfInteger(500), PdfInteger(600)]),
+      PdfArray([PdfInteger(500), PdfInteger(600), PdfInteger(550)]),
     ),
+    (fixture_acceptance_pdf_name_for_test("/MissingWidth"), PdfInteger(250)),
     (
       fixture_acceptance_pdf_name_for_test("/Encoding"),
       @pdflite.pdf_dictionary([
@@ -4969,6 +5015,7 @@ fn fixture_acceptance_cpdf_source_type3_font_for_test(
             PdfInteger(65),
             PdfNameObject(fixture_acceptance_pdf_name_for_test("/A")),
             PdfNameObject(fixture_acceptance_pdf_name_for_test("/B")),
+            PdfNameObject(fixture_acceptance_pdf_name_for_test("/C")),
           ]),
         ),
       ]),
@@ -5013,9 +5060,14 @@ fn fixture_acceptance_cpdf_source_hello_with_type3_for_test(
       Op_Do(fixture_acceptance_pdf_name_for_test("/GlyphMark")),
     ]),
   )
+  let glyph_c = output.add_object(
+    @pdflite.pdf_content_stream_of_ops(
+      fixture_acceptance_cpdf_source_type3_resource_ops_for_test(),
+    ),
+  )
   let font_number = output.add_object(
     fixture_acceptance_cpdf_source_type3_font_for_test(
-      glyph_a, glyph_b, glyph_mark, tounicode,
+      glyph_a, glyph_b, glyph_c, glyph_mark, tounicode,
     ),
   )
   let pages = output.pages_of_pagetree()
@@ -5037,7 +5089,7 @@ fn fixture_acceptance_cpdf_source_hello_with_type3_for_test(
     [
       Op_BT,
       Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceT3"), 24.0),
-      Op_Tj(@pdflite.pdf_bytes_of_int_array([65, 66])),
+      Op_Tj(@pdflite.pdf_bytes_of_int_array([65, 66, 67])),
       Op_ET,
     ],
     fast=true,
@@ -5079,7 +5131,10 @@ fn fixture_acceptance_assert_cpdf_source_type3_for_test(
 ) -> Unit raise {
   fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
   let text = @utf8.decode_lossy(document.test_extract_text([1]))
-  fixture_acceptance_assert_contains_for_test(text, "ZY")
+  let expected_text = @utf8.decode_lossy(
+    @pdflite.pdf_utf8_of_codepoints([0x5A, 0x59, 0x2603]),
+  )
+  fixture_acceptance_assert_contains_for_test(text, expected_text)
   let fonts = document.list_fonts([1])
   @test.assert_eq(@pdflite.pdf_list_fonts(document, [1]), fonts)
   let source_font = fixture_acceptance_cpdf_source_font_entry_for_test(
@@ -5110,6 +5165,7 @@ fn fixture_acceptance_assert_cpdf_source_type3_for_test(
   @test.assert_eq([ for charproc in type3_data.charprocs => charproc.0 ], [
     fixture_acceptance_pdf_name_for_test("/A"),
     fixture_acceptance_pdf_name_for_test("/B"),
+    fixture_acceptance_pdf_name_for_test("/C"),
   ])
   @test.assert_eq(
     document.parse_content_ops_with_resources(type3_data.resources, [
@@ -5125,6 +5181,26 @@ fn fixture_acceptance_assert_cpdf_source_type3_for_test(
       Op_d1(600.0, 0.0, 0.0, -10.0, 600.0, 700.0),
       Op_Do(fixture_acceptance_pdf_name_for_test("/GlyphMark")),
     ],
+  )
+  @test.assert_eq(
+    document.parse_content_ops_with_resources(type3_data.resources, [
+      document.direct(type3_data.charprocs[2].1),
+    ]),
+    fixture_acceptance_cpdf_source_type3_resource_ops_for_test(),
+  )
+  guard document.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/ColorSpace"),
+      type3_data.resources,
+    )
+    is Some(color_spaces) else {
+    fail("missing source Type3 ColorSpace resources")
+  }
+  @test.assert_eq(
+    document.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/GlyphGray"),
+      color_spaces,
+    ),
+    Some(PdfNameObject(fixture_acceptance_pdf_name_for_test("/DeviceGray"))),
   )
   guard document.lookup_direct(
       fixture_acceptance_pdf_name_for_test("/XObject"),
@@ -5147,10 +5223,11 @@ fn fixture_acceptance_assert_cpdf_source_type3_for_test(
   guard simple.fontmetrics is Some(metrics) else {
     fail("expected source Type3 font metrics")
   }
-  @test.assert_eq(metrics[64], 0.0)
+  @test.assert_eq(metrics[64], 250.0)
   @test.assert_eq(metrics[65], 500.0)
   @test.assert_eq(metrics[66], 600.0)
-  @test.assert_eq(metrics[67], 0.0)
+  @test.assert_eq(metrics[67], 550.0)
+  @test.assert_eq(metrics[68], 250.0)
   guard simple.fontdescriptor is Some(descriptor) else {
     fail("expected source Type3 descriptor carrying ToUnicode")
   }
@@ -5159,6 +5236,7 @@ fn fixture_acceptance_assert_cpdf_source_type3_for_test(
     Some([
       (65, @pdflite.pdf_bytes_of_int_array([0, 0x5A])),
       (66, @pdflite.pdf_bytes_of_int_array([0, 0x59])),
+      (67, @pdflite.pdf_bytes_of_int_array([0x26, 0x03])),
     ]),
   )
   let table = document.font_table("/SourceT3", 1)
@@ -5182,6 +5260,15 @@ fn fixture_acceptance_assert_cpdf_source_type3_for_test(
   @test.assert_eq(row_b.unicode, "0059")
   @test.assert_eq(row_b.utf8, "Y")
   @test.assert_eq(row_b.unicode_name, "LATIN CAPITAL LETTER Y")
+  let row_c = fixture_acceptance_cpdf_source_font_table_entry_for_test(
+    table, 67,
+  )
+  @test.assert_eq(row_c.unicode, "2603")
+  @test.assert_eq(
+    row_c.utf8,
+    @utf8.decode_lossy(@pdflite.pdf_utf8_of_codepoints([0x2603])),
+  )
+  @test.assert_eq(row_c.unicode_name, "SNOWMAN")
   @test.assert_eq(@pdflite.pdf_font_table(document, "/SourceT3", 1), table)
 }
 

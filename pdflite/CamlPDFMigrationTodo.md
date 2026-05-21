@@ -6136,6 +6136,25 @@ Current backend snapshot:
   info && moon fmt` reports no pending interface or formatting work, and `moon
   check --target all --warn-list +73` reports the warning 73 baseline with 10
   warnings and 0 errors.~~
+- [x] ~~Broaden the source-boundary Type3 glyph-program slice: optional
+  `.repos/cpdf-source/hello.pdf` now extends the injected Type3 font gate with
+  a third `/C` CharProc that consumes Type3 `/Resources` for both a nested
+  `/GlyphMark` Form XObject and a named inline-image `/ColorSpace` resource
+  (`/GlyphGray` -> `/DeviceGray`). The gate preserves the original Hello text,
+  verifies injected `/SourceT3` text now extracts `ZY` plus U+2603, verifies
+  `list_fonts` and `read_font` expose the `/Type3` font with `/A`/`/B`/`/C`
+  CharProc ordering, `/MissingWidth`, sparse metrics, Type3 resource
+  dictionaries, parsed `d0`/`d1` programs, parsed resource-consuming inline
+  image glyph content, fabricated descriptor ToUnicode bytes, font table rows,
+  and repeats the assertions through compressed rewrite/reread and
+  bad-`startxref` recovery. `moon check --target native fixture_acceptance
+  --warn-list +73` passes, `moon test --target native fixture_acceptance
+  --filter 'optional cpdf source hello fixture reads injected Type3 glyph
+  programs'` reports 1/1 test passing, `moon test --target native
+  fixture_acceptance` reports 99/99 tests passing, `moon test --target native`
+  reports 2271/2271 tests passing, `moon info && moon fmt` reports no pending
+  interface or formatting work, and `moon check --target all --warn-list +73`
+  reports the warning 73 baseline with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
