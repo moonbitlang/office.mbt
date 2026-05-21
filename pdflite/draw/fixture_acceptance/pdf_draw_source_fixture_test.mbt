@@ -685,6 +685,67 @@ fn draw_fixture_assert_bounding_boxes_for_test(
 }
 
 ///|
+fn draw_fixture_assert_cpdf_h1_struct_tree_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 1)
+  @test.assert_eq(document.version(), (2, 0))
+  @test.assert_eq(
+    document.catalog_item(draw_fixture_name_for_test("/StructTreeRoot")),
+    "True",
+  )
+  @test.assert_eq(
+    document.mark_info_item(draw_fixture_name_for_test("/Marked")),
+    false,
+  )
+  let info_json = document.info_json().stringify()
+  draw_fixture_assert_contains_for_test(info_json, "\"Version\":[2,0]")
+  draw_fixture_assert_contains_for_test(info_json, "\"Pages\":1")
+  draw_fixture_assert_contains_for_test(info_json, "\"Marked\":false")
+  let struct_text_bytes = document.struct_tree_text()
+  @test.assert_eq(
+    @pdflite.pdf_ua_print_struct_tree(document),
+    struct_text_bytes,
+  )
+  let struct_text = @utf8.decode_lossy(struct_text_bytes)
+  draw_fixture_assert_contains_for_test(struct_text, "StructTreeRoot\n")
+  draw_fixture_assert_contains_for_test(struct_text, "H1 (1)")
+  draw_fixture_assert_contains_for_test(struct_text, "P (1)")
+  let struct_json = document.extract_struct_tree()
+  @test.assert_eq(@pdflite.pdf_ua_extract_struct_tree(document), struct_json)
+  let struct_json_text = struct_json.stringify()
+  @test.assert_eq(
+    @utf8.decode_lossy(document.struct_tree_json_blob()),
+    struct_json_text,
+  )
+  @test.assert_eq(
+    @pdflite.pdf_ua_extract_struct_tree_json_blob(document),
+    document.struct_tree_json_blob(),
+  )
+  draw_fixture_assert_contains_for_test(
+    struct_json_text, "\"/CPDFJSONformatversion\"",
+  )
+  draw_fixture_assert_contains_for_test(
+    struct_json_text, "\"/CPDFJSONpageobjnumbers\"",
+  )
+  draw_fixture_assert_contains_for_test(struct_json_text, "\"/Type\"")
+  draw_fixture_assert_contains_for_test(
+    struct_json_text, "{\"N\":\"/StructTreeRoot\"}",
+  )
+  draw_fixture_assert_contains_for_test(struct_json_text, "{\"N\":\"/H1\"}")
+  draw_fixture_assert_contains_for_test(struct_json_text, "{\"N\":\"/P\"}")
+  let replaced = document.replace_struct_tree(struct_json)
+  @test.assert_eq(@utf8.decode_lossy(replaced.struct_tree_text()), struct_text)
+  let wrapper_replaced = @pdflite.pdf_ua_replace_struct_tree(
+    document, struct_json,
+  )
+  @test.assert_eq(
+    @utf8.decode_lossy(wrapper_replaced.struct_tree_text()),
+    struct_text,
+  )
+}
+
+///|
 fn draw_fixture_cpdf_source_manual_image_pdf_paths_for_test() -> Array[String] {
   [
     ".repos/cpdf-source/manualimages/bez.pdf", ".repos/cpdf-source/manualimages/capjoins.pdf",
@@ -919,6 +980,25 @@ async test "cpdf source manual fixtures show bounding box overlays" {
       )
       draw_fixture_assert_cpdf_xobject_content_for_test(recovered)
       draw_fixture_assert_bounding_boxes_for_test(document, recovered)
+    }
+  }
+}
+
+///|
+async test "cpdf source h1 fixture reports structure tree" {
+  match draw_fixture_bytes_for_test(".repos/cpdf-source/manualimages/h1.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      draw_fixture_assert_cpdf_h1_struct_tree_for_test(document)
+      draw_fixture_assert_cpdf_h1_struct_tree_for_test(
+        draw_fixture_reparse_compressed_for_test(document),
+      )
+      draw_fixture_assert_cpdf_h1_struct_tree_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          draw_fixture_corrupt_startxref_pointer_for_test(bytes),
+        ),
+      )
     }
   }
 }
