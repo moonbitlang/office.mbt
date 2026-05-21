@@ -6204,6 +6204,25 @@ Current backend snapshot:
   reports no pending interface or formatting work, and `moon check --target all
   --warn-list +73` reports the warning 73 baseline with 7 warnings and 0
   errors.~~
+- [x] ~~Broaden the source-boundary predefined CMap slice for Identity maps:
+  optional `.repos/cpdf-source/hello.pdf` now gates injected `/Identity-H` and
+  `/Identity-V` Type0 CID-keyed fonts on a real source PDF. The gate preserves
+  the original Hello text, verifies two-byte charcode segmentation through
+  extracted Identity-H text `0041 20AC 4E00` and Identity-V text `0042 4E8C`,
+  pins parsed page-content `/Tf` and `/Tj` operators, verifies `list_fonts`,
+  `read_font`, `PdfPredefinedCMap` encoding, `/CIDSystemInfo` ordering,
+  `uses_two_byte_codes`, `is_identity_h`, `is_identity_v`,
+  `content_is_vertical`, direct extractor codepoints, and the current
+  no-reverse-lookup behavior for Identity maps, then repeats the assertions
+  through compressed rewrite/reread and bad-`startxref` recovery. `moon check
+  --target native fixture_acceptance --warn-list +73` passes, `moon test
+  --target native fixture_acceptance --filter 'optional cpdf source hello
+  fixture extracts Identity predefined CMaps'` reports 1/1 test passing, `moon
+  test --target native fixture_acceptance` reports 102/102 tests passing, `moon
+  test --target native` reports 2274/2274 tests passing, `moon info && moon
+  fmt` reports no pending interface or formatting work, and `moon check
+  --target all --warn-list +73` reports the warning 73 baseline with 7 warnings
+  and 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.

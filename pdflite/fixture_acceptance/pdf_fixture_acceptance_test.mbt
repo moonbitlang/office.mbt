@@ -5931,6 +5931,165 @@ fn fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
 }
 
 ///|
+fn fixture_acceptance_cpdf_source_identity_h_text_for_test() -> @pdflite.PdfBytes raise {
+  @pdflite.pdf_bytes_of_int_array([0x00, 0x41, 0x20, 0xAC, 0x4E, 0x00])
+}
+
+///|
+fn fixture_acceptance_cpdf_source_identity_v_text_for_test() -> @pdflite.PdfBytes raise {
+  @pdflite.pdf_bytes_of_int_array([0x00, 0x42, 0x4E, 0x8C])
+}
+
+///|
+fn fixture_acceptance_cpdf_source_hello_with_identity_cmaps_for_test(
+  document : @pdflite.PdfDocument,
+) -> @pdflite.PdfDocument raise {
+  let output = document.copy()
+  let descendant_h = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
+      "/SourceIdentityHDescendant", "Identity",
+    ),
+  )
+  let descendant_v = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
+      "/SourceIdentityVDescendant", "Identity",
+    ),
+  )
+  let font_h = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
+      "/SourceIdentityHTop", "/Identity-H", descendant_h,
+    ),
+  )
+  let font_v = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
+      "/SourceIdentityVTop", "/Identity-V", descendant_v,
+    ),
+  )
+  let pages = output.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  let font_resources = fixture_acceptance_cpdf_source_page_fonts_for_test(
+      output,
+      pages[0].resources,
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/SourceIdentityH"),
+      PdfIndirect(font_h),
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/SourceIdentityV"),
+      PdfIndirect(font_v),
+    )
+  let resources = pages[0].resources.add_dict_entry(
+    fixture_acceptance_pdf_name_for_test("/Font"),
+    font_resources,
+  )
+  let page = { ..pages[0], resources, }
+  let updated_page = output.postpend_operators(
+    page,
+    [
+      Op_BT,
+      Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceIdentityH"), 12.0),
+      Op_Tj(fixture_acceptance_cpdf_source_identity_h_text_for_test()),
+      Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceIdentityV"), 12.0),
+      Op_Tj(fixture_acceptance_cpdf_source_identity_v_text_for_test()),
+      Op_ET,
+    ],
+    fast=true,
+  )
+  output.change_pages([updated_page], change_references=true)
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_identity_font_for_test(
+  document : @pdflite.PdfDocument,
+  name : String,
+  basefont : String,
+  encoding : String,
+  text : @pdflite.PdfBytes,
+  expected_codepoints : Array[Int],
+  vertical : Bool,
+) -> Unit raise {
+  let source_font = fixture_acceptance_cpdf_source_font_entry_for_test(
+    document.list_fonts([1]),
+    name,
+  )
+  @test.assert_eq(source_font.subtype, "/Type0")
+  @test.assert_eq(source_font.basefont, basefont)
+  @test.assert_eq(source_font.encoding, encoding)
+  let font = document.read_font(source_font.font)
+  @test.assert_eq(font.uses_two_byte_codes(), true)
+  @test.assert_eq(font.is_identity_h(), !vertical)
+  @test.assert_eq(font.is_identity_v(), vertical)
+  @test.assert_eq(font.content_is_vertical(), vertical)
+  guard font is PdfFontCIDKeyed(cid_font) else {
+    fail("expected source Identity predefined CID-keyed font")
+  }
+  @test.assert_eq(
+    cid_font.encoding,
+    PdfPredefinedCMap(fixture_acceptance_pdf_name_for_test(encoding)),
+  )
+  @test.assert_eq(
+    cid_font.composite.cid_system_info.ordering,
+    @ascii.encode("Identity"),
+  )
+  let extractor = document.text_extractor_of_font(source_font.font)
+  @test.assert_eq(extractor.codepoints_of_text(text), expected_codepoints)
+  @test.assert_eq(extractor.charcode_of_codepoint(expected_codepoints[0]), None)
+  @test.assert_eq(extractor.charcode_of_codepoint(0x1F600), None)
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_identity_cmaps_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+  let text = @utf8.decode_lossy(document.test_extract_text([1]))
+  fixture_acceptance_assert_contains_for_test(
+    text,
+    @utf8.decode_lossy(@pdflite.pdf_utf8_of_codepoints([0x41, 0x20AC, 0x4E00])),
+  )
+  fixture_acceptance_assert_contains_for_test(
+    text,
+    @utf8.decode_lossy(@pdflite.pdf_utf8_of_codepoints([0x42, 0x4E8C])),
+  )
+  let ops = fixture_acceptance_page_content_ops_for_test(document)
+  fixture_acceptance_assert_content_op_for_test(
+    ops,
+    Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceIdentityH"), 12.0),
+  )
+  fixture_acceptance_assert_content_op_for_test(
+    ops,
+    Op_Tj(fixture_acceptance_cpdf_source_identity_h_text_for_test()),
+  )
+  fixture_acceptance_assert_content_op_for_test(
+    ops,
+    Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceIdentityV"), 12.0),
+  )
+  fixture_acceptance_assert_content_op_for_test(
+    ops,
+    Op_Tj(fixture_acceptance_cpdf_source_identity_v_text_for_test()),
+  )
+  fixture_acceptance_assert_cpdf_source_identity_font_for_test(
+    document,
+    "/SourceIdentityH",
+    "/SourceIdentityHTop",
+    "/Identity-H",
+    fixture_acceptance_cpdf_source_identity_h_text_for_test(),
+    [0x41, 0x20AC, 0x4E00],
+    false,
+  )
+  fixture_acceptance_assert_cpdf_source_identity_font_for_test(
+    document,
+    "/SourceIdentityV",
+    "/SourceIdentityVTop",
+    "/Identity-V",
+    fixture_acceptance_cpdf_source_identity_v_text_for_test(),
+    [0x42, 0x4E8C],
+    true,
+  )
+}
+
+///|
 fn fixture_acceptance_cpdf_source_hello_with_uniakr_predefined_cmaps_for_test(
   document : @pdflite.PdfDocument,
 ) -> @pdflite.PdfDocument raise {
@@ -10185,6 +10344,33 @@ async test "optional cpdf source hello fixture composes ToUnicode UseCMap stream
         @pdflite.pdf_read_document_from_bytes(compressed),
       )
       fixture_acceptance_assert_cpdf_source_usecmap_tounicode_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+        ),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source hello fixture extracts Identity predefined CMaps" {
+  match
+    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+      let with_cmaps = fixture_acceptance_cpdf_source_hello_with_identity_cmaps_for_test(
+        document,
+      )
+      fixture_acceptance_assert_cpdf_source_identity_cmaps_for_test(with_cmaps)
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        with_cmaps,
+      )
+      fixture_acceptance_assert_cpdf_source_identity_cmaps_for_test(
+        @pdflite.pdf_read_document_from_bytes(compressed),
+      )
+      fixture_acceptance_assert_cpdf_source_identity_cmaps_for_test(
         @pdflite.pdf_read_document_from_bytes(
           fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
         ),
