@@ -6223,6 +6223,30 @@ fn fixture_acceptance_cpdf_source_hello_with_unijis_unicode_cmaps_for_test(
 }
 
 ///|
+fn fixture_acceptance_cpdf_source_hello_with_unijis_unicode_boundary_text_for_test(
+  document : @pdflite.PdfDocument,
+  font_name : String,
+  text : Array[Int],
+) -> @pdflite.PdfDocument raise {
+  let output = fixture_acceptance_cpdf_source_hello_with_unijis_unicode_cmaps_for_test(
+    document,
+  )
+  let pages = output.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  let updated_page = output.postpend_operators(
+    pages[0],
+    [
+      Op_BT,
+      Op_Tf(fixture_acceptance_pdf_name_for_test(font_name), 12.0),
+      Op_Tj(@pdflite.pdf_bytes_of_int_array(text)),
+      Op_ET,
+    ],
+    fast=true,
+  )
+  output.change_pages([updated_page], change_references=true)
+}
+
+///|
 fn fixture_acceptance_assert_cpdf_source_unijis_unicode_font_for_test(
   document : @pdflite.PdfDocument,
   name : String,
@@ -6272,6 +6296,86 @@ fn fixture_acceptance_assert_cpdf_source_unijis_unicode_font_for_test(
     Some(reverse_charcode),
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x110000), None)
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_unijis_utf8_cpdfcontent_boundary_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 1)
+  let text = [0x41, 0xE3, 0x81, 0x82, 0xF0, 0x9D, 0x84, 0x9E]
+  let ops = fixture_acceptance_page_content_ops_for_test(document)
+  fixture_acceptance_assert_content_op_for_test(
+    ops,
+    Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceUniJISUTF8H"), 12.0),
+  )
+  fixture_acceptance_assert_content_op_for_test(
+    ops,
+    Op_Tj(@pdflite.pdf_bytes_of_int_array(text)),
+  )
+  fixture_acceptance_assert_cpdf_source_unijis_unicode_font_for_test(
+    document,
+    "/SourceUniJISUTF8H",
+    "/SourceUniJISUTF8HTop",
+    "/UniJIS-UTF8-H",
+    text,
+    [0x41, 0x3042, 0x1D11E],
+    0x1D11E,
+    0xF09D849E,
+    false,
+    false,
+  )
+  let extracted_result = try? document.test_extract_text([1])
+  guard extracted_result is Err(InvalidUTF8) else {
+    fail(
+      "expected cpdfcontent-style UniJIS UTF8 extraction to fail on split bytes",
+    )
+  }
+  let json_result = try? document.page_content_json([1])
+  guard json_result is Err(InvalidUTF8) else {
+    fail("expected cpdfcontent-style UniJIS UTF8 JSON to fail on split bytes")
+  }
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_unijis_utf16_cpdfcontent_boundary_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 1)
+  let text = [0x30, 0x42, 0xD8, 0x34, 0xDD, 0x1E]
+  let ops = fixture_acceptance_page_content_ops_for_test(document)
+  fixture_acceptance_assert_content_op_for_test(
+    ops,
+    Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceUniJISUTF16H"), 12.0),
+  )
+  fixture_acceptance_assert_content_op_for_test(
+    ops,
+    Op_Tj(@pdflite.pdf_bytes_of_int_array(text)),
+  )
+  fixture_acceptance_assert_cpdf_source_unijis_unicode_font_for_test(
+    document,
+    "/SourceUniJISUTF16H",
+    "/SourceUniJISUTF16HTop",
+    "/UniJIS-UTF16-H",
+    text,
+    [0x3042, 0x1D11E],
+    0x1D11E,
+    0xD834DD1E,
+    true,
+    false,
+  )
+  let extracted_result = try? document.test_extract_text([1])
+  guard extracted_result is Err(InvalidUTF16BE) else {
+    fail(
+      "expected cpdfcontent-style UniJIS UTF16 extraction to fail on split surrogate",
+    )
+  }
+  let json_result = try? document.page_content_json([1])
+  guard json_result is Err(InvalidUTF16BE) else {
+    fail(
+      "expected cpdfcontent-style UniJIS UTF16 JSON to fail on split surrogate",
+    )
+  }
 }
 
 ///|
@@ -10625,6 +10729,58 @@ async test "optional cpdf source hello fixture extracts UniJIS Unicode predefine
       fixture_acceptance_assert_cpdf_source_unijis_unicode_cmaps_for_test(
         @pdflite.pdf_read_document_from_bytes(
           fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+        ),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source hello fixture pins UniJIS cpdfcontent Unicode boundary" {
+  match
+    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+      let with_utf8 = fixture_acceptance_cpdf_source_hello_with_unijis_unicode_boundary_text_for_test(
+        document,
+        "/SourceUniJISUTF8H",
+        [0x41, 0xE3, 0x81, 0x82, 0xF0, 0x9D, 0x84, 0x9E],
+      )
+      fixture_acceptance_assert_cpdf_source_unijis_utf8_cpdfcontent_boundary_for_test(
+        with_utf8,
+      )
+      let compressed_utf8 = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        with_utf8,
+      )
+      fixture_acceptance_assert_cpdf_source_unijis_utf8_cpdfcontent_boundary_for_test(
+        @pdflite.pdf_read_document_from_bytes(compressed_utf8),
+      )
+      fixture_acceptance_assert_cpdf_source_unijis_utf8_cpdfcontent_boundary_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(compressed_utf8),
+        ),
+      )
+      let with_utf16 = fixture_acceptance_cpdf_source_hello_with_unijis_unicode_boundary_text_for_test(
+        document,
+        "/SourceUniJISUTF16H",
+        [0x30, 0x42, 0xD8, 0x34, 0xDD, 0x1E],
+      )
+      fixture_acceptance_assert_cpdf_source_unijis_utf16_cpdfcontent_boundary_for_test(
+        with_utf16,
+      )
+      let compressed_utf16 = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        with_utf16,
+      )
+      fixture_acceptance_assert_cpdf_source_unijis_utf16_cpdfcontent_boundary_for_test(
+        @pdflite.pdf_read_document_from_bytes(compressed_utf16),
+      )
+      fixture_acceptance_assert_cpdf_source_unijis_utf16_cpdfcontent_boundary_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(
+            compressed_utf16,
+          ),
         ),
       )
     }
