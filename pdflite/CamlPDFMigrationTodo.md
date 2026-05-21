@@ -5812,6 +5812,21 @@ Current backend snapshot:
   --target native` reports 2254/2254 tests passing, and `moon check --target
   all --warn-list +73` reports the known warning baseline with 10 warnings and 0
   errors.~~
+- [x] ~~Broaden the source-boundary manual image text extraction slice:
+  optional `.repos/cpdf-source/manualimages/*.pdf` text-bearing fixtures now
+  gate exact `test_extract_text` and `pdf_test_extract_text` wrapper parity on
+  nine real source PDFs, covering font parameter, font, tagged H1, wrapped
+  line, paragraph, multi-paragraph, scaled text, plain text, and clipped text
+  fixtures. The gate pins the current cpdf-style extraction strings, verifies no
+  UTF-8 replacement/control leakage, and repeats the assertions through original
+  reads, compressed rewrite/reread, and bad-`startxref` recovery. `moon check
+  --target native fixture_acceptance --warn-list +73` passes, `moon test
+  --target native fixture_acceptance --filter 'optional cpdf source manual image
+  text fixtures extract exact text'` reports 1/1 test passing, `moon test
+  --target native fixture_acceptance` reports 83/83 tests passing, `moon test
+  --target native` reports 2255/2255 tests passing, and `moon check --target all
+  --warn-list +73` reports the warning 73 baseline with 7 warnings and 0
+  errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.

@@ -1616,6 +1616,15 @@ let fixture_acceptance_cpdf_draw_operator_paths_for_test : Array[String] = [
 ]
 
 ///|
+let fixture_acceptance_cpdf_manual_image_text_paths_for_test : Array[String] = [
+  ".repos/cpdf-source/manualimages/fontparams.pdf", ".repos/cpdf-source/manualimages/fonts.pdf",
+  ".repos/cpdf-source/manualimages/h1.pdf", ".repos/cpdf-source/manualimages/lines.pdf",
+  ".repos/cpdf-source/manualimages/para.pdf", ".repos/cpdf-source/manualimages/paras.pdf",
+  ".repos/cpdf-source/manualimages/stext.pdf", ".repos/cpdf-source/manualimages/text.pdf",
+  ".repos/cpdf-source/manualimages/textclip.pdf",
+]
+
+///|
 fn fixture_acceptance_cpdf_manual_image_expected_content_counts_for_test(
   path : String,
 ) -> (Int, Int, Int) raise {
@@ -1642,6 +1651,29 @@ fn fixture_acceptance_cpdf_manual_image_expected_content_counts_for_test(
     ".repos/cpdf-source/manualimages/trans.pdf" => (0, 0, 2)
     ".repos/cpdf-source/manualimages/xobj.pdf" => (0, 0, 2)
     _ => fail("unexpected cpdf manual image path: " + path)
+  }
+}
+
+///|
+fn fixture_acceptance_cpdf_manual_image_expected_text_for_test(
+  path : String,
+) -> String raise {
+  match path {
+    ".repos/cpdf-source/manualimages/fontparams.pdf" =>
+      "\nDifferent fonts and sizes"
+    ".repos/cpdf-source/manualimages/fonts.pdf" => "\nDifferent fonts and sizes"
+    ".repos/cpdf-source/manualimages/h1.pdf" =>
+      "\nThis is the headingThis is the firstparagraph, whichspreads over more thanone lineHere is the second,which also has multiplelines..."
+    ".repos/cpdf-source/manualimages/lines.pdf" => "\nThis ison multiplelines"
+    ".repos/cpdf-source/manualimages/para.pdf" =>
+      "\nThis is a paragraph ofwidth 200pt,left-justified, containingmore than one line..."
+    ".repos/cpdf-source/manualimages/paras.pdf" =>
+      "\nThis is the first paragraph, which isspread over multiple lines at thiswidth... And here is the second, alsotaking more than one line. Here is a little one."
+    ".repos/cpdf-source/manualimages/stext.pdf" => "\nPage 1"
+    ".repos/cpdf-source/manualimages/text.pdf" => "\nHello"
+    ".repos/cpdf-source/manualimages/textclip.pdf" =>
+      "\nThis ison multiplelines"
+    _ => fail("unexpected cpdf manual image text path: " + path)
   }
 }
 
@@ -5274,6 +5306,24 @@ fn fixture_acceptance_assert_cpdf_manual_image_content_corpus_for_test(
 }
 
 ///|
+fn fixture_acceptance_assert_cpdf_manual_image_text_for_test(
+  path : String,
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 1)
+  let pages = [1]
+  let extracted = document.test_extract_text(pages)
+  @test.assert_eq(@pdflite.pdf_test_extract_text(document, pages), extracted)
+  let text = @utf8.decode_lossy(extracted)
+  @test.assert_eq(
+    text,
+    fixture_acceptance_cpdf_manual_image_expected_text_for_test(path),
+  )
+  @test.assert_eq(fixture_acceptance_replacement_count_for_test(text), 0)
+  @test.assert_eq(fixture_acceptance_raw_control_count_for_test(text), 0)
+}
+
+///|
 async test "checked-in CamlPDF logo fixture reconstructs linearized bad startxref" {
   fixture_acceptance_assert_reconstructs_for_test(
     fixture_acceptance_bytes_for_test("fixtures/camlpdf/logo.pdf"),
@@ -6757,6 +6807,39 @@ async test "optional cpdf source manual image fixtures traverse content entries"
     @test.assert_eq(glyphs, 476)
     @test.assert_eq(images, 1)
     @test.assert_eq(paths, 18)
+  }
+}
+
+///|
+async test "optional cpdf source manual image text fixtures extract exact text" {
+  let mut checked = 0
+  for path in fixture_acceptance_cpdf_manual_image_text_paths_for_test {
+    match fixture_acceptance_optional_bytes_for_test(path) {
+      None => ()
+      Some(bytes) => {
+        checked += 1
+        let document = @pdflite.pdf_read_document_from_bytes(bytes)
+        fixture_acceptance_assert_cpdf_manual_image_text_for_test(
+          path, document,
+        )
+        fixture_acceptance_assert_cpdf_manual_image_text_for_test(
+          path,
+          fixture_acceptance_reparse_compressed_for_test(document),
+        )
+        fixture_acceptance_assert_cpdf_manual_image_text_for_test(
+          path,
+          @pdflite.pdf_read_document_from_bytes(
+            fixture_acceptance_corrupt_startxref_pointer_for_test(bytes),
+          ),
+        )
+      }
+    }
+  }
+  if checked > 0 {
+    @test.assert_eq(
+      checked,
+      fixture_acceptance_cpdf_manual_image_text_paths_for_test.length(),
+    )
   }
 }
 
