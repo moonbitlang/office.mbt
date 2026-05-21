@@ -2225,18 +2225,25 @@ fn fixture_acceptance_has_text_showing_op_for_test(
 }
 
 ///|
+fn fixture_acceptance_cpdf_source_hello_ops_for_test(
+  document : @pdflite.PdfDocument,
+) -> Array[@pdflite.PdfContentOp] raise {
+  let pages = document.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  document.parse_content_ops_with_resources(
+    pages[0].resources,
+    pages[0].content,
+  )
+}
+
+///|
 fn fixture_acceptance_assert_cpdf_source_hello_text_for_test(
   document : @pdflite.PdfDocument,
 ) -> Unit raise {
   @test.assert_eq(document.endpage(), 1)
   let text = @utf8.decode_lossy(document.test_extract_text([1]))
   fixture_acceptance_assert_contains_for_test(text, "Hello, World!")
-  let pages = document.pages_of_pagetree()
-  @test.assert_eq(pages.length(), 1)
-  let ops = document.parse_content_ops_with_resources(
-    pages[0].resources,
-    pages[0].content,
-  )
+  let ops = fixture_acceptance_cpdf_source_hello_ops_for_test(document)
   @test.assert_eq(fixture_acceptance_has_text_showing_op_for_test(ops), true)
 }
 
@@ -2247,14 +2254,28 @@ fn fixture_acceptance_assert_cpdf_source_hello_text_removed_for_test(
   @test.assert_eq(document.endpage(), 1)
   let text = @utf8.decode_lossy(document.test_extract_text([1]))
   @test.assert_eq(text.contains("Hello, World!"), false)
-  let pages = document.pages_of_pagetree()
-  @test.assert_eq(pages.length(), 1)
-  let ops = document.parse_content_ops_with_resources(
-    pages[0].resources,
-    pages[0].content,
-  )
+  let ops = fixture_acceptance_cpdf_source_hello_ops_for_test(document)
   @test.assert_eq(fixture_acceptance_has_text_showing_op_for_test(ops), false)
   @test.assert_eq(ops.length() > 0, true)
+}
+
+///|
+fn fixture_acceptance_cpdf_source_redact_path_for_test() -> Array[
+  (Double, Double),
+] {
+  [(0.0, 0.0), (72.0, 0.0), (72.0, 72.0), (0.0, 72.0)]
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_redact_stub_for_test(
+  document : @pdflite.PdfDocument,
+  expected_ops : Array[@pdflite.PdfContentOp],
+) -> Unit raise {
+  fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+  @test.assert_eq(
+    fixture_acceptance_cpdf_source_hello_ops_for_test(document),
+    expected_ops,
+  )
 }
 
 ///|
@@ -4191,6 +4212,47 @@ async test "optional cpdf source hello fixture pads blank page after source" {
         @pdflite.pdf_read_document_from_bytes(
           fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
         ),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source hello fixture preserves path redaction stub" {
+  match
+    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      let expected_ops = fixture_acceptance_cpdf_source_hello_ops_for_test(
+        document,
+      )
+      let original_pages = document.pages_of_pagetree()
+      let redacted = @pdflite.pdf_redact(
+        document,
+        fixture_acceptance_cpdf_source_redact_path_for_test(),
+        [1],
+      )
+      let redacted_pages = redacted.pages_of_pagetree()
+      @test.assert_eq(redacted_pages[0].mediabox, original_pages[0].mediabox)
+      @test.assert_eq(redacted_pages[0].rotate, original_pages[0].rotate)
+      @test.assert_eq(redacted_pages[0].resources, original_pages[0].resources)
+      @test.assert_eq(redacted_pages[0].rest, original_pages[0].rest)
+      fixture_acceptance_assert_cpdf_source_redact_stub_for_test(
+        redacted, expected_ops,
+      )
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        redacted,
+      )
+      fixture_acceptance_assert_cpdf_source_redact_stub_for_test(
+        @pdflite.pdf_read_document_from_bytes(compressed),
+        expected_ops,
+      )
+      fixture_acceptance_assert_cpdf_source_redact_stub_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+        ),
+        expected_ops,
       )
     }
   }

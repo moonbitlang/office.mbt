@@ -5610,6 +5610,19 @@ Current backend snapshot:
   test --target native` reports 2243/2243 tests passing, and `moon check
   --target all --warn-list +73` reports the known warning baseline with 10
   warnings and 0 errors.~~
+- [x] ~~Add the next source-boundary redaction slice: optional
+  `.repos/cpdf-source/hello.pdf` now gates cpdfredact's current path-redaction
+  stub/no-op behavior on a real text-bearing source PDF. The gate records the
+  original parsed content operators, runs `pdf_redact` through the compatibility
+  wrapper with a concrete path, verifies page geometry/resources/rest
+  preservation, confirms `Hello, World!` extraction and exact parsed-operator
+  preservation after redaction, then repeats the assertions after compressed
+  rewrite/reread and bad-`startxref` recovery. `moon test --target native
+  fixture_acceptance --filter '*path redaction stub*'` reports 1/1 test passing,
+  `moon test --target native fixture_acceptance` reports 73/73 tests passing,
+  `moon test --target native` reports 2244/2244 tests passing, and `moon check
+  --target all --warn-list +73` reports the known warning baseline with 10
+  warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
