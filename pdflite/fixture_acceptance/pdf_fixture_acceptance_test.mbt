@@ -566,6 +566,19 @@ fn fixture_acceptance_corrupt_xref_stream_index_entry_for_test(
 }
 
 ///|
+fn fixture_acceptance_corrupt_xref_stream_size_entry_for_test(
+  bytes : Bytes,
+  size_entry : BytesView,
+) -> Bytes raise {
+  fixture_acceptance_replace_bytes_after_with_padded_ascii_for_test(
+    bytes,
+    @ascii.encode("/Type /XRef"),
+    size_entry,
+    "/Size /Bad",
+  )
+}
+
+///|
 fn fixture_acceptance_corrupt_startxref_xref_stream_type_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
@@ -1222,6 +1235,25 @@ fn fixture_acceptance_assert_xref_stream_index_reconstructs_for_test(
     expected_pages,
     @ascii.encode("/Index [0 104]"),
   )
+}
+
+///|
+fn fixture_acceptance_assert_xref_stream_size_entry_tolerates_for_test(
+  bytes : Bytes,
+  expected_pages : Int,
+  size_entry : BytesView,
+) -> Unit raise {
+  let corrupted = fixture_acceptance_corrupt_xref_stream_size_entry_for_test(
+    bytes, size_entry,
+  )
+  let strict = @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+  @test.assert_eq(strict.first_xref() > 0, true)
+  @test.assert_eq(strict.endpage(), expected_pages)
+  let public = @pdflite.pdf_read_document_from_bytes(corrupted)
+  @test.assert_eq(public.first_xref() > 0, true)
+  @test.assert_eq(public.endpage(), expected_pages)
+  let reparsed = fixture_acceptance_reparse_compressed_for_test(strict)
+  @test.assert_eq(reparsed.endpage(), expected_pages)
 }
 
 ///|
@@ -12314,6 +12346,22 @@ async test "optional cpdf source manual fixture reconstructs malformed xref stre
         bytes,
         175,
         @ascii.encode("/Index [0 1844]"),
+      )
+  }
+}
+
+///|
+async test "optional cpdf source manual fixture tolerates malformed indexed xref stream size" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/cpdfmanual.pdf",
+    ) {
+    None => ()
+    Some(bytes) =>
+      fixture_acceptance_assert_xref_stream_size_entry_tolerates_for_test(
+        bytes,
+        175,
+        @ascii.encode("/Size 1844"),
       )
   }
 }

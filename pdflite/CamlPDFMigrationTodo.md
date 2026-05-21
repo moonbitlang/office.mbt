@@ -1759,6 +1759,21 @@ Current backend snapshot:
   rewrite/reread preservation. `moon test --target native fixture_acceptance`
   reports 22/22 tests passing; native full-suite validation reports 2167/2167
   tests passing.~~
+- [x] ~~Broaden optional `.repos/cpdf-source` cpdf manual xref-stream metadata
+  tolerance: `fixture_acceptance` now corrupts the 175-page manual's redundant
+  `/Size 1844` xref-stream entry to `/Size /Bad` while preserving its explicit
+  `/Index [0 1844]` ranges, verifies the strict reader still accepts the real
+  source fixture without falling back to reconstruction, verifies public reads
+  stay on the xref-stream path, and checks compressed rewrite/reread
+  preservation. `moon check --target native fixture_acceptance --warn-list
+  +73` passes, `moon test --target native fixture_acceptance --filter
+  'optional cpdf source manual fixture tolerates malformed indexed xref stream
+  size'` reports 1/1 test passing, `moon test --target native
+  fixture_acceptance` reports 107/107 tests passing, `moon test --target
+  native` reports 2279/2279 tests passing, `moon info && moon fmt` reports no
+  pending interface or formatting work, and `moon check --target all
+  --warn-list +73` reports the known warning-73/main-package baseline with
+  10 warnings and 0 errors.~~
 - [x] ~~Add an optional `.repos/cpdf-source/hello.pdf` source-corpus gate:
   `fixture_acceptance` now reads the unique top-level PDF 1.1 hello fixture,
   rewrites/rereads it with compressed xref streams, corrupts its final
