@@ -5402,6 +5402,14 @@ Current backend snapshot:
   cpdfcontent corpus gates. Full plain-Wasm `moon test --target wasm` remains
   explicitly not claimed because it still exceeds the runtime maximum
   function-size limit in `markdown.blackbox_test.wasm`.~~
+- [x] ~~Add the next raw source-asset image slice: optional
+  `.repos/cpdf-source/manualimages/sheet.png` now gates direct `pdf_read_png`
+  metadata parsing, `pdf_image_document_of_png_data` document construction,
+  cpdf-style image JSON reporting, compressed rewrite/reread, and 24bpp pixel
+  extraction for the real 400x294 RGB source PNG. `moon test --target native
+  fixture_acceptance --filter '*raw sheet PNG*'` reports 1/1 test passing,
+  `moon test --target native fixture_acceptance` reports 56/56 tests passing,
+  and `moon test --target native` reports 2227/2227 tests passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.

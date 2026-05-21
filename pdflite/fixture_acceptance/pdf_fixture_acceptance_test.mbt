@@ -2012,6 +2012,29 @@ fn fixture_acceptance_cpdf_png_image_object_for_test(
 }
 
 ///|
+fn fixture_acceptance_image_document_i0_for_test(
+  document : @pdflite.PdfDocument,
+) -> @pdflite.PdfObject raise {
+  let pages = document.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  guard document.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/XObject"),
+      pages[0].resources,
+    )
+    is Some(xobjects) else {
+    fail("missing image document XObject resources")
+  }
+  guard document.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/I0"),
+      xobjects,
+    )
+    is Some(image) else {
+    fail("missing image document /I0 image")
+  }
+  image
+}
+
+///|
 fn fixture_acceptance_assert_cpdf_png_image_for_test(
   document : @pdflite.PdfDocument,
 ) -> Unit raise {
@@ -2050,6 +2073,44 @@ fn fixture_acceptance_assert_cpdf_png_image_for_test(
     }
     _ =>
       fail("expected extracted PNG fixture image to decode as 24bpp raw data")
+  }
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_sheet_png_image_document_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 1)
+  let pages = document.pages_of_pagetree()
+  @test.assert_eq(document.parse_rectangle(pages[0].mediabox), {
+    min_x: 0.0,
+    min_y: 0.0,
+    max_x: 400.0,
+    max_y: 294.0,
+  })
+  let images_json = document.images_json([1]).stringify()
+  fixture_acceptance_assert_contains_for_test(images_json, "\"Name\":\"/I0\"")
+  fixture_acceptance_assert_contains_for_test(images_json, "\"Pages\":[1]")
+  fixture_acceptance_assert_contains_for_test(images_json, "\"Width\":400")
+  fixture_acceptance_assert_contains_for_test(images_json, "\"Height\":294")
+  fixture_acceptance_assert_contains_for_test(
+    images_json, "\"BitsPerComponent\":8",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    images_json, "\"Colourspace\":\"/DeviceRGB\"",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    images_json, "\"Filter\":\"/FlateDecode\"",
+  )
+  let image = fixture_acceptance_image_document_i0_for_test(document)
+  match
+    document.get_image_24bpp(document.pages_of_pagetree()[0].resources, image) {
+    PdfRawImage(width, height, PdfBPP24, data) => {
+      @test.assert_eq(width, 400)
+      @test.assert_eq(height, 294)
+      @test.assert_eq(data.length(), 400 * 294 * 3)
+    }
+    _ => fail("expected source sheet PNG image document to decode as 24bpp")
   }
 }
 
@@ -2489,6 +2550,29 @@ async test "optional cpdf source PNG image fixture reports and extracts image" {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
       fixture_acceptance_assert_cpdf_png_image_for_test(document)
       fixture_acceptance_assert_cpdf_png_image_for_test(
+        fixture_acceptance_reparse_compressed_for_test(document),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source raw sheet PNG creates image document" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/manualimages/sheet.png",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let png = @pdflite.pdf_read_png(bytes)
+      @test.assert_eq(png.width, 400)
+      @test.assert_eq(png.height, 294)
+      @test.assert_eq(png.bit_depth, 8)
+      @test.assert_eq(png.color_type, 2)
+      @test.assert_eq(png.idat.length() > 0, true)
+      let document = @pdflite.pdf_image_document_of_png_data(bytes)
+      fixture_acceptance_assert_cpdf_sheet_png_image_document_for_test(document)
+      fixture_acceptance_assert_cpdf_sheet_png_image_document_for_test(
         fixture_acceptance_reparse_compressed_for_test(document),
       )
     }
