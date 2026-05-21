@@ -5754,7 +5754,7 @@ Current backend snapshot:
   fixture_acceptance` reports 82/82 tests passing, `moon test --target native`
   reports 2254/2254 tests passing, and `moon check --target all --warn-list
   +73` reports the known warning baseline with 10 warnings and 0 errors.~~
-- [x] ~~Broaden the source-boundary image reporting slice: optional
+- [x] ~~Broaden the source-boundary inline-image reporting slice: optional
   `.repos/cpdf-source/manualimages/png.pdf` and
   `.repos/cpdf-source/cpdfmanual.pdf` now gate cpdf-style image reporting
   wrapper parity and tuple-level resolution output on real source images. The
@@ -5841,6 +5841,24 @@ Current backend snapshot:
   fixture_acceptance` reports 84/84 tests passing, `moon test --target native`
   reports 2256/2256 tests passing, and `moon check --target all --warn-list
   +73` reports the warning 73 baseline with 10 warnings and 0 errors.~~
+- [x] ~~Broaden the source-boundary image reporting slice: optional
+  `.repos/cpdf-source/hello.pdf` now gates cpdfimage-style inline image
+  reporting on a real source PDF after appending a small inline `/DeviceRGB`
+  image content stream. The gate verifies the original source fixture has no
+  images, preserves Hello text after the mutation, keeps default XObject-only
+  `images_json` and `image_resolution` output empty, pins `-inline` image JSON
+  fields for object `0`, dimensions, byte count, colour space, and filter, pins
+  inline DPI tuple output, checks `pdf_image_images`,
+  `pdf_image_images_json_blob`, `pdf_image_resolution`,
+  `pdf_image_resolution_json`, and `pdf_image_resolution_json_blob` wrapper
+  parity, and repeats the assertions through compressed rewrite/reread and
+  bad-`startxref` recovery. `moon check --target native fixture_acceptance
+  --warn-list +73` passes, `moon test --target native fixture_acceptance
+  --filter 'optional cpdf source hello fixture reports inline images'` reports
+  1/1 test passing, `moon test --target native fixture_acceptance` reports
+  85/85 tests passing, `moon test --target native` reports 2257/2257 tests
+  passing, and `moon check --target all --warn-list +73` reports the warning 73
+  baseline with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
