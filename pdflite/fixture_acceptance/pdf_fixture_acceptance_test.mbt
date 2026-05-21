@@ -1602,12 +1602,17 @@ let fixture_acceptance_cpdf_top_level_pdf_paths_for_test : Array[String] = [
 
 ///|
 let fixture_acceptance_cpdf_draw_operator_paths_for_test : Array[String] = [
-  ".repos/cpdf-source/manualimages/dash.pdf", ".repos/cpdf-source/manualimages/capjoins.pdf",
-  ".repos/cpdf-source/manualimages/colfill.pdf", ".repos/cpdf-source/manualimages/clip.pdf",
-  ".repos/cpdf-source/manualimages/textclip.pdf", ".repos/cpdf-source/manualimages/matrix.pdf",
-  ".repos/cpdf-source/manualimages/pop.pdf", ".repos/cpdf-source/manualimages/fontparams.pdf",
-  ".repos/cpdf-source/manualimages/stext.pdf", ".repos/cpdf-source/manualimages/para.pdf",
-  ".repos/cpdf-source/manualimages/paras.pdf",
+  ".repos/cpdf-source/manualimages/bez.pdf", ".repos/cpdf-source/manualimages/capjoins.pdf",
+  ".repos/cpdf-source/manualimages/clip.pdf", ".repos/cpdf-source/manualimages/colfill.pdf",
+  ".repos/cpdf-source/manualimages/dash.pdf", ".repos/cpdf-source/manualimages/fill.pdf",
+  ".repos/cpdf-source/manualimages/fontparams.pdf", ".repos/cpdf-source/manualimages/fonts.pdf",
+  ".repos/cpdf-source/manualimages/h1.pdf", ".repos/cpdf-source/manualimages/line.pdf",
+  ".repos/cpdf-source/manualimages/lines.pdf", ".repos/cpdf-source/manualimages/matrix.pdf",
+  ".repos/cpdf-source/manualimages/para.pdf", ".repos/cpdf-source/manualimages/paras.pdf",
+  ".repos/cpdf-source/manualimages/png.pdf", ".repos/cpdf-source/manualimages/pop.pdf",
+  ".repos/cpdf-source/manualimages/stext.pdf", ".repos/cpdf-source/manualimages/text.pdf",
+  ".repos/cpdf-source/manualimages/textclip.pdf", ".repos/cpdf-source/manualimages/trans.pdf",
+  ".repos/cpdf-source/manualimages/xobj.pdf",
 ]
 
 ///|
@@ -2305,6 +2310,14 @@ fn fixture_acceptance_assert_cpdf_draw_operator_fixture_for_test(
 ) -> Unit raise {
   let ops = fixture_acceptance_page_content_ops_for_test(document)
   match path {
+    ".repos/cpdf-source/manualimages/bez.pdf" => {
+      fixture_acceptance_assert_content_op_for_test(ops, Op_m(100.0, 100.0))
+      fixture_acceptance_assert_content_op_for_test(
+        ops,
+        Op_c(400.0, 600.0, 600.0, 400.0, 300.0, 300.0),
+      )
+      fixture_acceptance_assert_content_op_for_test(ops, Op_S)
+    }
     ".repos/cpdf-source/manualimages/dash.pdf" => {
       fixture_acceptance_assert_content_op_for_test(ops, Op_m(100.0, 100.0))
       fixture_acceptance_assert_content_op_for_test(ops, Op_w(20.0))
@@ -2337,6 +2350,20 @@ fn fixture_acceptance_assert_cpdf_draw_operator_fixture_for_test(
       fixture_acceptance_assert_content_op_for_test(ops, Op_m(400.0, 350.0))
       fixture_acceptance_assert_content_op_for_test(ops, Op_f)
     }
+    ".repos/cpdf-source/manualimages/fill.pdf" => {
+      fixture_acceptance_assert_content_op_for_test(ops, Op_m(100.0, 100.0))
+      fixture_acceptance_assert_content_op_for_test(ops, Op_l(400.0, 400.0))
+      fixture_acceptance_assert_content_op_for_test(ops, Op_l(400.0, 100.0))
+      fixture_acceptance_assert_content_op_for_test(ops, Op_h)
+      fixture_acceptance_assert_content_op_for_test(ops, Op_f)
+    }
+    ".repos/cpdf-source/manualimages/line.pdf" => {
+      fixture_acceptance_assert_content_op_for_test(ops, Op_m(100.0, 100.0))
+      fixture_acceptance_assert_content_op_for_test(ops, Op_l(400.0, 400.0))
+      fixture_acceptance_assert_content_op_for_test(ops, Op_l(400.0, 100.0))
+      fixture_acceptance_assert_content_op_for_test(ops, Op_h)
+      fixture_acceptance_assert_content_op_for_test(ops, Op_S)
+    }
     ".repos/cpdf-source/manualimages/textclip.pdf" => {
       fixture_acceptance_assert_content_op_for_test(ops, Op_Tr(7))
       fixture_acceptance_assert_content_op_for_test(
@@ -2367,6 +2394,16 @@ fn fixture_acceptance_assert_cpdf_draw_operator_fixture_for_test(
       fixture_acceptance_assert_content_op_for_test(ops, Op_Q)
       fixture_acceptance_assert_content_op_for_test(ops, Op_S)
     }
+    ".repos/cpdf-source/manualimages/png.pdf" => {
+      fixture_acceptance_assert_content_op_for_test(
+        ops,
+        Op_cm({ a: 400.0, b: 0.0, c: 0.0, d: 294.0, e: 0.0, f: 0.0 }),
+      )
+      fixture_acceptance_assert_content_op_for_test(
+        ops,
+        Op_Do(fixture_acceptance_pdf_name_for_test("/I1")),
+      )
+    }
     ".repos/cpdf-source/manualimages/pop.pdf" => {
       fixture_acceptance_assert_content_op_for_test(ops, Op_rg(1.0, 0.0, 0.0))
       fixture_acceptance_assert_content_op_for_test(ops, Op_q)
@@ -2396,6 +2433,93 @@ fn fixture_acceptance_assert_cpdf_draw_operator_fixture_for_test(
         Op_Tf(fixture_acceptance_pdf_name_for_test("/F2"), 36.0),
       )
     }
+    ".repos/cpdf-source/manualimages/fonts.pdf" => {
+      fixture_acceptance_assert_content_op_for_test(
+        ops,
+        Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 10.0, f: 20.0 }),
+      )
+      fixture_acceptance_assert_content_op_for_test(ops, Op_BT)
+      fixture_acceptance_assert_content_op_for_test(
+        ops,
+        Op_Tf(fixture_acceptance_pdf_name_for_test("/F1"), 72.0),
+      )
+      fixture_acceptance_assert_content_op_for_test(
+        ops,
+        Op_Tj(@ascii.encode("Different ")),
+      )
+      fixture_acceptance_assert_content_op_for_test(
+        ops,
+        Op_Tf(fixture_acceptance_pdf_name_for_test("/F2"), 72.0),
+      )
+      fixture_acceptance_assert_content_op_for_test(
+        ops,
+        Op_Tj(@ascii.encode("fonts")),
+      )
+      fixture_acceptance_assert_content_op_for_test(
+        ops,
+        Op_Tf(fixture_acceptance_pdf_name_for_test("/F2"), 36.0),
+      )
+      fixture_acceptance_assert_content_op_for_test(
+        ops,
+        Op_Tj(@ascii.encode(" and sizes")),
+      )
+      fixture_acceptance_assert_content_op_for_test(ops, Op_ET)
+    }
+    ".repos/cpdf-source/manualimages/h1.pdf" => {
+      fixture_acceptance_assert_content_op_for_test(
+        ops,
+        Op_BMC(fixture_acceptance_pdf_name_for_test("/Artifact")),
+      )
+      fixture_acceptance_assert_content_op_for_test(
+        ops,
+        Op_BDC(
+          fixture_acceptance_pdf_name_for_test("/H1"),
+          PdfDictionary([
+            (fixture_acceptance_pdf_name_for_test("/MCID"), PdfInteger(0)),
+          ]),
+        ),
+      )
+      fixture_acceptance_assert_content_op_for_test(
+        ops,
+        Op_Tj(@ascii.encode("This is the heading")),
+      )
+      fixture_acceptance_assert_content_op_for_test(
+        ops,
+        Op_Tj(@ascii.encode("paragraph,")),
+      )
+      fixture_acceptance_assert_content_op_for_test(
+        ops,
+        Op_Tj(@ascii.encode("lines...")),
+      )
+      @test.assert_eq(
+        fixture_acceptance_content_op_count_for_test(ops, Op_EMC),
+        5,
+      )
+    }
+    ".repos/cpdf-source/manualimages/lines.pdf" => {
+      fixture_acceptance_assert_content_op_for_test(
+        ops,
+        Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 100.0, f: 200.0 }),
+      )
+      fixture_acceptance_assert_content_op_for_test(ops, Op_TL(55.0))
+      fixture_acceptance_assert_content_op_for_test(
+        ops,
+        Op_Tf(fixture_acceptance_pdf_name_for_test("/F1"), 50.0),
+      )
+      fixture_acceptance_assert_content_op_for_test(
+        ops,
+        Op_Tj(@ascii.encode("This is")),
+      )
+      fixture_acceptance_assert_content_op_for_test(
+        ops,
+        Op_Tj(@ascii.encode("on multiple")),
+      )
+      fixture_acceptance_assert_content_op_for_test(
+        ops,
+        Op_Tj(@ascii.encode("lines")),
+      )
+      fixture_acceptance_assert_content_op_for_test(ops, Op_Tstar)
+    }
     ".repos/cpdf-source/manualimages/stext.pdf" => {
       fixture_acceptance_assert_content_op_for_test(
         ops,
@@ -2409,6 +2533,22 @@ fn fixture_acceptance_assert_cpdf_draw_operator_fixture_for_test(
       fixture_acceptance_assert_content_op_for_test(
         ops,
         Op_Tj(@ascii.encode("Page 1")),
+      )
+      fixture_acceptance_assert_content_op_for_test(ops, Op_ET)
+    }
+    ".repos/cpdf-source/manualimages/text.pdf" => {
+      fixture_acceptance_assert_content_op_for_test(
+        ops,
+        Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 50.0, f: 50.0 }),
+      )
+      fixture_acceptance_assert_content_op_for_test(ops, Op_BT)
+      fixture_acceptance_assert_content_op_for_test(
+        ops,
+        Op_Tf(fixture_acceptance_pdf_name_for_test("/F1"), 144.0),
+      )
+      fixture_acceptance_assert_content_op_for_test(
+        ops,
+        Op_Tj(@ascii.encode("Hello")),
       )
       fixture_acceptance_assert_content_op_for_test(ops, Op_ET)
     }
@@ -2444,6 +2584,30 @@ fn fixture_acceptance_assert_cpdf_draw_operator_fixture_for_test(
         Op_Tj(@ascii.encode("second,")),
       )
       fixture_acceptance_assert_content_op_for_test(ops, Op_Tstar)
+    }
+    ".repos/cpdf-source/manualimages/trans.pdf" => {
+      fixture_acceptance_assert_content_op_for_test(
+        ops,
+        Op_gs(fixture_acceptance_pdf_name_for_test("/G1")),
+      )
+      fixture_acceptance_assert_content_op_for_test(ops, Op_m(400.0, 300.0))
+      fixture_acceptance_assert_content_op_for_test(ops, Op_m(500.0, 300.0))
+      @test.assert_eq(
+        fixture_acceptance_content_op_count_for_test(ops, Op_f),
+        2,
+      )
+    }
+    ".repos/cpdf-source/manualimages/xobj.pdf" => {
+      let xobject_name = fixture_acceptance_pdf_name_for_test("/X1")
+      @test.assert_eq(
+        fixture_acceptance_content_op_count_for_test(ops, Op_Do(xobject_name)),
+        2,
+      )
+      fixture_acceptance_assert_content_op_for_test(ops, Op_RG(1.0, 0.0, 0.0))
+      fixture_acceptance_assert_content_op_for_test(
+        ops,
+        Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 20.0, f: 20.0 }),
+      )
     }
     _ => fail("unexpected cpdf draw operator fixture path: " + path)
   }
