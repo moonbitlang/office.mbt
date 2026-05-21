@@ -2077,6 +2077,55 @@ fn fixture_acceptance_assert_cpdf_source_attachments_removed_for_test(
 }
 
 ///|
+fn fixture_acceptance_assert_cpdf_source_presentation_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 1)
+  let pages = document.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  guard document.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/Trans"),
+      pages[0].rest,
+    )
+    is Some(PdfDictionary(trans_entries)) else {
+    fail("missing cpdf source presentation transition")
+  }
+  let trans : @pdflite.PdfObject = PdfDictionary(trans_entries)
+  @test.assert_eq(
+    document.lookup_direct(fixture_acceptance_pdf_name_for_test("/S"), trans),
+    Some(PdfNameObject(fixture_acceptance_pdf_name_for_test("/Split"))),
+  )
+  guard document.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/D"),
+      trans,
+    )
+    is Some(effect_duration) else {
+    fail("missing cpdf source presentation effect duration")
+  }
+  @test.assert_eq(document.get_number(effect_duration), 1.25)
+  @test.assert_eq(
+    document.lookup_direct(fixture_acceptance_pdf_name_for_test("/Dm"), trans),
+    Some(PdfNameObject(fixture_acceptance_pdf_name_for_test("/H"))),
+  )
+  @test.assert_eq(
+    document.lookup_direct(fixture_acceptance_pdf_name_for_test("/M"), trans),
+    Some(PdfNameObject(fixture_acceptance_pdf_name_for_test("/O"))),
+  )
+  @test.assert_eq(
+    document.lookup_direct(fixture_acceptance_pdf_name_for_test("/Di"), trans),
+    None,
+  )
+  guard document.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/Dur"),
+      pages[0].rest,
+    )
+    is Some(delay) else {
+    fail("missing cpdf source presentation page duration")
+  }
+  @test.assert_eq(document.get_number(delay), 2.0)
+}
+
+///|
 fn fixture_acceptance_assert_cpdf_manual_metadata_for_test(
   document : @pdflite.PdfDocument,
 ) -> Unit raise {
@@ -3356,6 +3405,38 @@ async test "optional cpdf source attachments preserve real source payloads" {
       )
     }
     _ => ()
+  }
+}
+
+///|
+async test "optional cpdf source hello fixture preserves presentation transitions" {
+  match
+    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      let updated = document.presentation(
+        [1],
+        Some("Split"),
+        Some(2.0),
+        true,
+        false,
+        90,
+        1.25,
+      )
+      fixture_acceptance_assert_cpdf_source_presentation_for_test(updated)
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        updated,
+      )
+      fixture_acceptance_assert_cpdf_source_presentation_for_test(
+        @pdflite.pdf_read_document_from_bytes(compressed),
+      )
+      fixture_acceptance_assert_cpdf_source_presentation_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+        ),
+      )
+    }
   }
 }
 

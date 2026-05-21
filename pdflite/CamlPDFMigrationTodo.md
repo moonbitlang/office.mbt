@@ -5513,6 +5513,15 @@ Current backend snapshot:
   --target native fixture_acceptance` reports 64/64 tests passing, `moon test
   --target native` reports 2235/2235 tests passing, and `moon check --target
   all --warn-list +73` reports the known warning baseline with 0 errors.~~
+- [x] ~~Add the next source-boundary presentation slice: optional
+  `.repos/cpdf-source/hello.pdf` now gates cpdfpresent-style `/Trans` page
+  transition dictionaries on a real source PDF, including `/Split`, `/D`,
+  `/Dm`, `/M`, `/Dur`, compressed rewrite/reread, and bad-`startxref`
+  recovery. `moon test --target native fixture_acceptance --filter
+  '*presentation transitions*'` reports 1/1 test passing, `moon test --target
+  native fixture_acceptance` reports 65/65 tests passing, `moon test --target
+  native` reports 2236/2236 tests passing, and `moon check --target all
+  --warn-list +73` reports the known warning baseline with 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
