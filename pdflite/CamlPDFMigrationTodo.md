@@ -6523,6 +6523,30 @@ Current backend snapshot:
   info && moon fmt` reports no pending interface or formatting work, and `moon
   check --target all --warn-list +73` reports the known warning-73/main-package
   baseline with 10 warnings and 0 errors.~~
+- [x] ~~Add the next remaining format parity slice: optional
+  `.repos/cpdf-source/hello.pdf` and `.repos/cpdf-source/logo.pdf` now gate the
+  Markdown/PDF-to-Markdown boundary for the top-level classic source corpus.
+  The gate covers clean extraction for textful `hello.pdf` and page-structure
+  extraction for image-heavy `logo.pdf`, hardens the Markdown bad-`startxref`
+  corruptor to accept PDF whitespace after the `startxref` keyword, corrupts
+  bad `startxref`, damaged classic `xref` headers, damaged `trailer` keywords,
+  first in-use xref row marker/offset/generation fields, and first xref
+  subsection object/count fields, requires strict classic reads to reject each
+  corruption, reconstructs through `pdf_bytes_to_markdown`, verifies
+  reconstructed Markdown stays byte-for-byte equal to normal Markdown per
+  fixture, keeps raw-control/replacement-character hygiene checks, and requires
+  at least one textful source fixture. `moon check --target native
+  markdown/fixture_acceptance --warn-list +73` passes, `moon test --target
+  native markdown/fixture_acceptance --filter 'pdf_bytes_to_markdown extracts
+  optional cpdf source top-level classic PDF corpus'` reports 1/1 test passing,
+  `moon test --target native markdown/fixture_acceptance --filter
+  'pdf_bytes_to_markdown reconstructs optional cpdf source top-level classic PDF
+  corpus with malformed xref metadata and rows'` reports 1/1 test passing,
+  `moon test --target native markdown/fixture_acceptance` reports 19/19 tests
+  passing, `moon test --target native` reports 2293/2293 tests passing, `moon
+  info && moon fmt` reports no pending interface or formatting work, and `moon
+  check --target all --warn-list +73` reports the known
+  warning-73/main-package baseline with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.

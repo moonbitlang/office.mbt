@@ -135,14 +135,25 @@ fn markdown_fixture_push_ascii_for_test(
 fn markdown_fixture_corrupt_startxref_pointer_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
-  let marker = @ascii.encode("startxref\n")
+  let marker = @ascii.encode("startxref")
   let marker_position = markdown_fixture_find_last_bytes_for_test(bytes, marker)
   if marker_position < 0 {
     fail("expected startxref marker")
   }
-  let number_start = marker_position + marker.length()
+  let mut number_start = marker_position + marker.length()
+  while number_start < bytes.length() &&
+        (
+          bytes[number_start] == b'\n' ||
+          bytes[number_start] == b'\r' ||
+          bytes[number_start] == b' ' ||
+          bytes[number_start] == b'\t'
+        ) {
+    number_start += 1
+  }
   let mut number_end = number_start
-  while number_end < bytes.length() && bytes[number_end] != b'\n' {
+  while number_end < bytes.length() &&
+        bytes[number_end] >= b'0' &&
+        bytes[number_end] <= b'9' {
     number_end += 1
   }
   let output : Array[Byte] = []
@@ -449,6 +460,11 @@ fn markdown_fixture_unique_cjk_unified_count_for_test(text : String) -> Int {
 }
 
 ///|
+fn markdown_cpdf_source_top_level_classic_pdf_paths_for_test() -> Array[String] {
+  [".repos/cpdf-source/hello.pdf", ".repos/cpdf-source/logo.pdf"]
+}
+
+///|
 fn markdown_cpdf_source_manual_image_pdf_paths_for_test() -> Array[String] {
   [
     ".repos/cpdf-source/manualimages/bez.pdf", ".repos/cpdf-source/manualimages/capjoins.pdf",
@@ -463,6 +479,31 @@ fn markdown_cpdf_source_manual_image_pdf_paths_for_test() -> Array[String] {
     ".repos/cpdf-source/manualimages/textclip.pdf", ".repos/cpdf-source/manualimages/trans.pdf",
     ".repos/cpdf-source/manualimages/xobj.pdf",
   ]
+}
+
+///|
+fn markdown_fixture_assert_cpdf_top_level_classic_markdown_for_test(
+  markdown : String,
+  path : String,
+) -> Unit raise {
+  markdown_fixture_assert_contains_for_test(markdown, "# Page 1")
+  match path {
+    ".repos/cpdf-source/hello.pdf" =>
+      markdown_fixture_assert_contains_for_test(markdown, "Hello, World!")
+    ".repos/cpdf-source/logo.pdf" =>
+      @test.assert_eq(markdown, "# Page 1\n\n\n", msg=path)
+    _ => fail("unexpected cpdf top-level classic PDF path: " + path)
+  }
+  @test.assert_eq(
+    markdown_fixture_raw_control_count_for_test(markdown),
+    0,
+    msg=path,
+  )
+  @test.assert_eq(
+    markdown_fixture_replacement_count_for_test(markdown),
+    0,
+    msg=path,
+  )
 }
 
 ///|
@@ -581,6 +622,92 @@ async test "pdf_bytes_to_markdown reconstructs optional cpdf source hello fixtur
       @test.assert_eq(markdown_fixture_raw_control_count_for_test(markdown), 0)
       @test.assert_eq(markdown_fixture_replacement_count_for_test(markdown), 0)
     }
+  }
+}
+
+///|
+async test "pdf_bytes_to_markdown extracts optional cpdf source top-level classic PDF corpus" {
+  let mut checked = 0
+  let mut textful = 0
+  for path in markdown_cpdf_source_top_level_classic_pdf_paths_for_test() {
+    match markdown_optional_fixture_bytes_for_test(path) {
+      None => ()
+      Some(bytes) => {
+        checked += 1
+        let markdown = @markdown.pdf_bytes_to_markdown(bytes)
+        markdown_fixture_assert_cpdf_top_level_classic_markdown_for_test(
+          markdown, path,
+        )
+        if markdown != "# Page 1\n\n\n" {
+          textful += 1
+        }
+      }
+    }
+  }
+  if checked > 0 {
+    @test.assert_eq(
+      checked,
+      markdown_cpdf_source_top_level_classic_pdf_paths_for_test().length(),
+    )
+    @test.assert_eq(textful > 0, true)
+  }
+}
+
+///|
+async test "pdf_bytes_to_markdown reconstructs optional cpdf source top-level classic PDF corpus with malformed xref metadata and rows" {
+  let mut checked = 0
+  let mut textful = 0
+  for path in markdown_cpdf_source_top_level_classic_pdf_paths_for_test() {
+    match markdown_optional_fixture_bytes_for_test(path) {
+      None => ()
+      Some(bytes) => {
+        checked += 1
+        let markdown = @markdown.pdf_bytes_to_markdown(bytes)
+        markdown_fixture_assert_cpdf_top_level_classic_markdown_for_test(
+          markdown, path,
+        )
+        if markdown != "# Page 1\n\n\n" {
+          textful += 1
+        }
+        for
+          corrupted in [
+            markdown_fixture_corrupt_startxref_pointer_for_test(bytes),
+            markdown_fixture_corrupt_startxref_xref_header_for_test(bytes),
+            markdown_fixture_corrupt_startxref_trailer_keyword_for_test(bytes),
+            markdown_fixture_corrupt_first_in_use_xref_marker_for_test(bytes),
+            markdown_fixture_corrupt_first_in_use_xref_offset_for_test(bytes),
+            markdown_fixture_corrupt_first_in_use_xref_generation_for_test(
+              bytes,
+            ),
+            markdown_fixture_corrupt_first_xref_subsection_object_for_test(
+              bytes,
+            ),
+            markdown_fixture_corrupt_first_xref_subsection_count_for_test(bytes),
+          ] {
+          let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+            corrupted,
+          )
+          guard strict is Err(_) else {
+            fail(
+              "expected malformed classic xref data to require malformed reconstruction for " +
+              path,
+            )
+          }
+          let reconstructed = @markdown.pdf_bytes_to_markdown(corrupted)
+          markdown_fixture_assert_cpdf_top_level_classic_markdown_for_test(
+            reconstructed, path,
+          )
+          @test.assert_eq(reconstructed, markdown, msg=path)
+        }
+      }
+    }
+  }
+  if checked > 0 {
+    @test.assert_eq(
+      checked,
+      markdown_cpdf_source_top_level_classic_pdf_paths_for_test().length(),
+    )
+    @test.assert_eq(textful > 0, true)
   }
 }
 
