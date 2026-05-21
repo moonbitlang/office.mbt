@@ -1774,6 +1774,20 @@ Current backend snapshot:
   pending interface or formatting work, and `moon check --target all
   --warn-list +73` reports the known warning-73/main-package baseline with
   10 warnings and 0 errors.~~
+- [x] ~~Broaden optional `.repos/cpdf-source` cpdf manual xref-stream metadata
+  recovery for combined damage: `fixture_acceptance` now corrupts both the
+  175-page manual's explicit `/Index [0 1844]` ranges and its `/Size 1844`
+  xref-stream entry, verifies strict reading fails with `XRefEntryExpected`,
+  reconstructs through the public physical-recovery reader, preserves all 175
+  pages, and checks compressed rewrite/reread preservation. `moon check
+  --target native fixture_acceptance --warn-list +73` passes, `moon test
+  --target native fixture_acceptance --filter 'optional cpdf source manual
+  fixture reconstructs malformed xref stream index and size'` reports 1/1 test
+  passing, `moon test --target native fixture_acceptance` reports 108/108 tests
+  passing, `moon test --target native` reports 2280/2280 tests passing, `moon
+  info && moon fmt` reports no pending interface or formatting work, and `moon
+  check --target all --warn-list +73` reports the known warning-73/main-package
+  baseline with 10 warnings and 0 errors.~~
 - [x] ~~Add an optional `.repos/cpdf-source/hello.pdf` source-corpus gate:
   `fixture_acceptance` now reads the unique top-level PDF 1.1 hello fixture,
   rewrites/rereads it with compressed xref streams, corrupts its final
