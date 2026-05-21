@@ -1705,6 +1705,11 @@ let fixture_acceptance_cpdf_top_level_pdf_paths_for_test : Array[String] = [
 ]
 
 ///|
+let fixture_acceptance_cpdf_top_level_classic_pdf_paths_for_test : Array[String] = [
+  ".repos/cpdf-source/hello.pdf", ".repos/cpdf-source/logo.pdf",
+]
+
+///|
 let fixture_acceptance_cpdf_draw_operator_paths_for_test : Array[String] = [
   ".repos/cpdf-source/manualimages/bez.pdf", ".repos/cpdf-source/manualimages/capjoins.pdf",
   ".repos/cpdf-source/manualimages/clip.pdf", ".repos/cpdf-source/manualimages/colfill.pdf",
@@ -10973,6 +10978,34 @@ async test "optional cpdf source top-level PDF corpus reads rewrites and reconst
       fixture_acceptance_cpdf_top_level_pdf_paths_for_test.length(),
     )
     @test.assert_eq(pages, 177)
+  }
+}
+
+///|
+async test "optional cpdf source top-level classic fixtures reconstruct damaged xref headers and trailers" {
+  let mut checked = 0
+  for path in fixture_acceptance_cpdf_top_level_classic_pdf_paths_for_test {
+    match fixture_acceptance_optional_bytes_for_test(path) {
+      None => ()
+      Some(bytes) => {
+        checked += 1
+        let expected_pages = fixture_acceptance_cpdf_top_level_expected_pages_for_test(
+          path,
+        )
+        fixture_acceptance_assert_xref_header_reconstructs_for_test(
+          bytes, expected_pages,
+        )
+        fixture_acceptance_assert_trailer_keyword_reconstructs_for_test(
+          bytes, expected_pages,
+        )
+      }
+    }
+  }
+  if checked > 0 {
+    @test.assert_eq(
+      checked,
+      fixture_acceptance_cpdf_top_level_classic_pdf_paths_for_test.length(),
+    )
   }
 }
 

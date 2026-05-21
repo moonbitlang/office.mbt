@@ -6434,6 +6434,22 @@ Current backend snapshot:
   info && moon fmt` reports no pending interface or formatting work, `moon check
   --target all --warn-list +73` reports the known warning-73/main-package
   baseline with 10 warnings and 0 errors, and `git diff --check` passes.~~
+- [x] ~~Add the next remaining format parity slice: optional
+  `.repos/cpdf-source/hello.pdf` and `.repos/cpdf-source/logo.pdf` now gate
+  top-level classic malformed recovery for damaged `xref` headers and damaged
+  `trailer` keywords. The gate complements the existing top-level bad
+  `startxref` and malformed classic xref-row coverage by requiring strict
+  classic reads to reject each corruption, fallback reconstruction to reset
+  `first_xref()` to `0`, page counts to survive, and compressed rewrite/reread
+  to preserve the recovered documents. `moon check --target native
+  fixture_acceptance --warn-list +73` passes, `moon test --target native
+  fixture_acceptance --filter 'optional cpdf source top-level classic fixtures
+  reconstruct damaged xref headers and trailers'` reports 1/1 test passing,
+  `moon test --target native fixture_acceptance` reports 115/115 tests passing,
+  `moon test --target native` reports 2287/2287 tests passing, `moon info &&
+  moon fmt` reports no pending interface or formatting work, `moon check
+  --target all --warn-list +73` reports the known warning-73/main-package
+  baseline with 10 warnings and 0 errors, and `git diff --check` passes.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.
