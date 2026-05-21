@@ -5876,6 +5876,24 @@ Current backend snapshot:
   test --target native` reports 2258/2258 tests passing, and `moon check
   --target all --warn-list +73` reports the warning 73 baseline with 10 warnings
   and 0 errors.~~
+- [x] ~~Broaden the source-boundary ToUnicode variation slice: optional
+  `.repos/cpdf-source/hello.pdf` now gates filtered `/ToUnicode` variation text
+  extraction on a real source PDF after injecting a Type1 font resource with a
+  Flate-compressed CMap containing surrogate-pair `bfchar`, array-form
+  multi-codepoint `bfrange`, and sequential `bfrange` mappings. The gate
+  preserves Hello text while extracting the injected Unicode sequence, pins the
+  descriptor's raw UTF-16BE ToUnicode bytes, verifies
+  `PdfTextExtractor::codepoints_of_text` output, reverse
+  `charcode_of_codepoint` behavior for single-codepoint and multi-codepoint
+  entries, `font_table`/`pdf_font_table` rows for non-BMP and multi-scalar
+  mappings, and repeats the assertions through compressed rewrite/reread and
+  bad-`startxref` recovery. `moon check --target native fixture_acceptance
+  --warn-list +73` passes, `moon test --target native fixture_acceptance
+  --filter 'optional cpdf source hello fixture extracts ToUnicode variation
+  text'` reports 1/1 test passing, `moon test --target native
+  fixture_acceptance` reports 87/87 tests passing, `moon test --target native`
+  reports 2259/2259 tests passing, and `moon check --target all --warn-list
+  +73` reports the warning 73 baseline with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.

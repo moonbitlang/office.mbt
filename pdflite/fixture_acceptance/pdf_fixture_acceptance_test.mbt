@@ -4920,6 +4920,159 @@ fn fixture_acceptance_assert_cpdf_source_type3_for_test(
 }
 
 ///|
+fn fixture_acceptance_cpdf_source_variation_cmap_for_test() -> @pdflite.PdfObject {
+  let cmap = @ascii.encode(
+    "1 begincodespacerange\n" +
+    "<00><FF>\n" +
+    "endcodespacerange\n" +
+    "1 beginbfchar\n" +
+    "<41><D834DD1E>\n" +
+    "endbfchar\n" +
+    "2 beginbfrange\n" +
+    "<42><44>[<0061><00620063><D83DDE00>]\n" +
+    "<45><46><0064>\n" +
+    "endbfrange\n",
+  )
+  let encoded = @pdflite.pdf_flate_encode(cmap)
+  @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (
+        fixture_acceptance_pdf_name_for_test("/Length"),
+        PdfInteger(encoded.length()),
+      ),
+      (
+        fixture_acceptance_pdf_name_for_test("/Filter"),
+        PdfNameObject(fixture_acceptance_pdf_name_for_test("/FlateDecode")),
+      ),
+    ]),
+    StreamGot(encoded),
+  )
+}
+
+///|
+fn fixture_acceptance_cpdf_source_variation_font_for_test(
+  tounicode : Int,
+) -> @pdflite.PdfObject {
+  @pdflite.pdf_dictionary([
+    (
+      fixture_acceptance_pdf_name_for_test("/Subtype"),
+      PdfNameObject(fixture_acceptance_pdf_name_for_test("/Type1")),
+    ),
+    (
+      fixture_acceptance_pdf_name_for_test("/BaseFont"),
+      PdfNameObject(fixture_acceptance_pdf_name_for_test("/SourceVariation")),
+    ),
+    (fixture_acceptance_pdf_name_for_test("/ToUnicode"), PdfIndirect(tounicode)),
+  ])
+}
+
+///|
+fn fixture_acceptance_cpdf_source_hello_with_variation_tounicode_for_test(
+  document : @pdflite.PdfDocument,
+) -> @pdflite.PdfDocument raise {
+  let output = document.copy()
+  let tounicode = output.add_object(
+    fixture_acceptance_cpdf_source_variation_cmap_for_test(),
+  )
+  let font_number = output.add_object(
+    fixture_acceptance_cpdf_source_variation_font_for_test(tounicode),
+  )
+  let pages = output.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  let font_resources = fixture_acceptance_cpdf_source_page_fonts_for_test(
+    output,
+    pages[0].resources,
+  ).add_dict_entry(
+    fixture_acceptance_pdf_name_for_test("/SourceVar"),
+    PdfIndirect(font_number),
+  )
+  let resources = pages[0].resources.add_dict_entry(
+    fixture_acceptance_pdf_name_for_test("/Font"),
+    font_resources,
+  )
+  let page = { ..pages[0], resources, }
+  let updated_page = output.postpend_operators(
+    page,
+    [
+      Op_BT,
+      Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceVar"), 12.0),
+      Op_Tj(@pdflite.pdf_bytes_of_int_array([65, 66, 67])),
+      Op_TJ(
+        PdfArray([
+          PdfString(@pdflite.pdf_bytes_of_int_array([68])),
+          PdfInteger(-20),
+          PdfString(@pdflite.pdf_bytes_of_int_array([69, 70, 71])),
+        ]),
+      ),
+      Op_ET,
+    ],
+    fast=true,
+  )
+  output.change_pages([updated_page], change_references=true)
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_variation_tounicode_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+  let expected_codepoints = [0x1D11E, 0x61, 0x62, 0x63, 0x1F600, 0x64, 0x65, 71]
+  let expected_text = @utf8.decode_lossy(
+    @pdflite.pdf_utf8_of_codepoints(expected_codepoints),
+  )
+  let text = @utf8.decode_lossy(document.test_extract_text([1]))
+  fixture_acceptance_assert_contains_for_test(text, expected_text)
+  let source_font = fixture_acceptance_cpdf_source_font_entry_for_test(
+    document.list_fonts([1]),
+    "/SourceVar",
+  )
+  @test.assert_eq(source_font.subtype, "/Type1")
+  @test.assert_eq(source_font.basefont, "/SourceVariation")
+  guard document.read_font(source_font.font) is PdfFontSimple(simple) else {
+    fail("expected source variation simple font")
+  }
+  guard simple.fontdescriptor is Some(descriptor) else {
+    fail("expected source variation descriptor carrying ToUnicode")
+  }
+  @test.assert_eq(
+    descriptor.tounicode,
+    Some([
+      (65, @pdflite.pdf_bytes_of_int_array([0xD8, 0x34, 0xDD, 0x1E])),
+      (66, @pdflite.pdf_bytes_of_int_array([0x00, 0x61])),
+      (67, @pdflite.pdf_bytes_of_int_array([0x00, 0x62, 0x00, 0x63])),
+      (68, @pdflite.pdf_bytes_of_int_array([0xD8, 0x3D, 0xDE, 0x00])),
+      (69, @pdflite.pdf_bytes_of_int_array([0x00, 0x64])),
+      (70, @pdflite.pdf_bytes_of_int_array([0x00, 0x65])),
+    ]),
+  )
+  let extractor = document.text_extractor_of_font(source_font.font)
+  @test.assert_eq(
+    extractor.codepoints_of_text(
+      @pdflite.pdf_bytes_of_int_array([65, 66, 67, 68, 69, 70, 71]),
+    ),
+    expected_codepoints,
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x1D11E), Some(65))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x61), Some(66))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x1F600), Some(68))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x62), None)
+  @test.assert_eq(extractor.charcode_of_codepoint(71), None)
+  let table = document.font_table("/SourceVar", 1)
+  let row_a = fixture_acceptance_cpdf_source_font_table_entry_for_test(
+    table, 65,
+  )
+  @test.assert_eq(row_a.unicode, "1D11E")
+  @test.assert_eq(row_a.unicode_name, "MUSICAL SYMBOL G CLEF")
+  let row_c = fixture_acceptance_cpdf_source_font_table_entry_for_test(
+    table, 67,
+  )
+  @test.assert_eq(row_c.unicode, "***multiple")
+  @test.assert_eq(row_c.utf8, "bc")
+  @test.assert_eq(row_c.unicode_name, "***multiple")
+  @test.assert_eq(@pdflite.pdf_font_table(document, "/SourceVar", 1), table)
+}
+
+///|
 fn fixture_acceptance_draft_substitute_ops_for_test() -> Array[
   @pdflite.PdfContentOp,
 ] {
@@ -6953,6 +7106,35 @@ async test "optional cpdf source hello fixture reads injected Type3 glyph progra
         @pdflite.pdf_read_document_from_bytes(compressed),
       )
       fixture_acceptance_assert_cpdf_source_type3_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+        ),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source hello fixture extracts ToUnicode variation text" {
+  match
+    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+      let with_variation = fixture_acceptance_cpdf_source_hello_with_variation_tounicode_for_test(
+        document,
+      )
+      fixture_acceptance_assert_cpdf_source_variation_tounicode_for_test(
+        with_variation,
+      )
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        with_variation,
+      )
+      fixture_acceptance_assert_cpdf_source_variation_tounicode_for_test(
+        @pdflite.pdf_read_document_from_bytes(compressed),
+      )
+      fixture_acceptance_assert_cpdf_source_variation_tounicode_for_test(
         @pdflite.pdf_read_document_from_bytes(
           fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
         ),
