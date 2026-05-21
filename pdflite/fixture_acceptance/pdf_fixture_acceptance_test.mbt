@@ -9078,6 +9078,18 @@ async test "optional cpdf source hello fixture reconstructs malformed classic xr
 }
 
 ///|
+async test "optional cpdf source logo fixture reconstructs malformed classic xref table variants" {
+  match
+    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/logo.pdf") {
+    None => ()
+    Some(bytes) =>
+      fixture_acceptance_assert_classic_xref_table_variants_reconstruct_for_test(
+        bytes, 1,
+      )
+  }
+}
+
+///|
 async test "optional cpdf source top-level PDF corpus reads rewrites and reconstructs" {
   let mut checked = 0
   let mut pages = 0

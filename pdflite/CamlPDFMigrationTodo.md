@@ -6188,6 +6188,22 @@ Current backend snapshot:
   reports 2272/2272 tests passing, `moon info && moon fmt` reports no pending
   interface or formatting work, and `moon check --target all --warn-list +73`
   reports the warning 73 baseline with 7 warnings and 0 errors.~~
+- [x] ~~Broaden the top-level source-logo malformed classic xref recovery
+  slice: optional `.repos/cpdf-source/logo.pdf` now gates the same five classic
+  xref table corruptions as the source hello fixture and checked-in CamlPDF logo
+  fixture: first in-use row marker, offset, generation, first subsection object
+  number, and first subsection count. Each variant verifies strict classic
+  reading rejects the damaged linearized source-logo table, fallback
+  reconstruction resets `first_xref()` to `0`, preserves the one-page fixture,
+  and survives compressed rewrite/reread. `moon check --target native
+  fixture_acceptance --warn-list +73` passes, `moon test --target native
+  fixture_acceptance --filter 'optional cpdf source logo fixture reconstructs
+  malformed classic xref table variants'` reports 1/1 test passing, `moon test
+  --target native fixture_acceptance` reports 101/101 tests passing, `moon test
+  --target native` reports 2273/2273 tests passing, `moon info && moon fmt`
+  reports no pending interface or formatting work, and `moon check --target all
+  --warn-list +73` reports the warning 73 baseline with 7 warnings and 0
+  errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
