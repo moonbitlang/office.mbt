@@ -6950,6 +6950,25 @@ Current backend snapshot:
   pending interface or formatting work, and `moon check --target all --warn-list
   +73` reports the known warning-73/main-package baseline with 7 warnings and 0
   errors.~~
+- [x] ~~Add the next source-corpus cpdfsqueeze slice: the native
+  `draw/fixture_acceptance` package now gates optional
+  `.repos/cpdf-source/manualimages/text.pdf` and
+  `.repos/cpdf-source/manualimages/xobj.pdf` through stream transcode and
+  squeeze workflows. The gate checks both function and method surfaces
+  (`decompress_pdf`/`PdfDocument::decompress`, `recompress_pdf`/
+  `PdfDocument::recompress`, and `squeeze`/`PdfDocument::squeeze`), verifies
+  decompression removes stream filters while preserving stream counts,
+  recompression preserves stream counts and does not increase filtered-stream
+  coverage, keeps text/path content JSON assertions valid after each stage, and
+  repeats squeezed-document assertions after compressed rewrite/reread plus
+  bad-final-`startxref` reconstruction. `moon check --target native
+  draw/fixture_acceptance --warn-list +73` passes, the focused cpdf source
+  squeeze test reports 1/1 test passing, `moon test --target native
+  draw/fixture_acceptance` reports 14/14 tests passing, and `moon test --target
+  native` reports 2318/2318 tests passing. `moon info && moon fmt` reports no
+  pending interface or formatting work, and `moon check --target all --warn-list
+  +73` reports the known warning-73/main-package baseline with 7 warnings and 0
+  errors.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.

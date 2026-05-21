@@ -526,6 +526,100 @@ fn draw_fixture_assert_cpdf_xobject_content_for_test(
 }
 
 ///|
+fn draw_fixture_stream_count_for_test(document : @pdflite.PdfDocument) -> Int {
+  let mut count = 0
+  for entry in document.parsed_object_entries() {
+    match entry.2 {
+      PdfStreamObject(_) => count += 1
+      _ => ()
+    }
+  }
+  count
+}
+
+///|
+fn draw_fixture_filtered_stream_count_for_test(
+  document : @pdflite.PdfDocument,
+) -> Int {
+  let key_filter = draw_fixture_name_for_test("/Filter")
+  let key_short_filter = draw_fixture_name_for_test("/F")
+  let mut count = 0
+  for entry in document.parsed_object_entries() {
+    match entry.2 {
+      PdfStreamObject(stream) =>
+        if stream.dictionary.lookup_immediate(key_filter) != None ||
+          stream.dictionary.lookup_immediate(key_short_filter) != None {
+          count += 1
+        }
+      _ => ()
+    }
+  }
+  count
+}
+
+///|
+fn draw_fixture_assert_decompressed_streams_for_test(
+  original : @pdflite.PdfDocument,
+  decompressed : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(decompressed.endpage(), original.endpage())
+  @test.assert_eq(
+    draw_fixture_stream_count_for_test(decompressed),
+    draw_fixture_stream_count_for_test(original),
+  )
+  @test.assert_eq(
+    draw_fixture_filtered_stream_count_for_test(original) > 0,
+    true,
+  )
+  @test.assert_eq(draw_fixture_filtered_stream_count_for_test(decompressed), 0)
+}
+
+///|
+fn draw_fixture_assert_recompressed_streams_for_test(
+  original : @pdflite.PdfDocument,
+  recompressed : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(recompressed.endpage(), original.endpage())
+  @test.assert_eq(
+    draw_fixture_stream_count_for_test(recompressed),
+    draw_fixture_stream_count_for_test(original),
+  )
+  @test.assert_eq(
+    draw_fixture_filtered_stream_count_for_test(recompressed) <=
+    draw_fixture_filtered_stream_count_for_test(original),
+    true,
+  )
+}
+
+///|
+fn draw_fixture_assert_squeezed_text_for_test(
+  original : @pdflite.PdfDocument,
+  squeezed : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(squeezed.endpage(), original.endpage())
+  @test.assert_eq(
+    draw_fixture_stream_count_for_test(squeezed) >=
+    draw_fixture_stream_count_for_test(original),
+    true,
+  )
+  draw_fixture_assert_cpdf_text_content_for_test(squeezed)
+}
+
+///|
+fn draw_fixture_assert_squeezed_xobject_for_test(
+  original : @pdflite.PdfDocument,
+  squeezed : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(squeezed.endpage(), original.endpage())
+  @test.assert_eq(
+    draw_fixture_stream_count_for_test(squeezed) >=
+    draw_fixture_stream_count_for_test(original),
+    true,
+  )
+  draw_fixture_assert_cpdf_xobject_content_for_test(squeezed)
+}
+
+///|
 fn draw_fixture_cpdf_source_manual_image_pdf_paths_for_test() -> Array[String] {
   [
     ".repos/cpdf-source/manualimages/bez.pdf", ".repos/cpdf-source/manualimages/capjoins.pdf",
@@ -644,6 +738,68 @@ async test "cpdf source manual content fixtures export content JSON" {
       draw_fixture_assert_cpdf_xobject_content_for_test(document)
       draw_fixture_assert_cpdf_xobject_content_for_test(
         draw_fixture_reparse_compressed_for_test(document),
+      )
+    }
+  }
+}
+
+///|
+async test "cpdf source squeeze fixtures transcode streams" {
+  match
+    draw_fixture_bytes_for_test(".repos/cpdf-source/manualimages/text.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      draw_fixture_assert_cpdf_text_content_for_test(document)
+      let decompressed = @pdflite.decompress_pdf(document)
+      draw_fixture_assert_decompressed_streams_for_test(document, decompressed)
+      draw_fixture_assert_cpdf_text_content_for_test(decompressed)
+      let recompressed = decompressed.recompress()
+      draw_fixture_assert_recompressed_streams_for_test(document, recompressed)
+      draw_fixture_assert_cpdf_text_content_for_test(recompressed)
+      let squeezed = document.squeeze()
+      draw_fixture_assert_squeezed_text_for_test(document, squeezed)
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        squeezed,
+      )
+      draw_fixture_assert_squeezed_text_for_test(
+        document,
+        @pdflite.pdf_read_document_from_bytes(compressed),
+      )
+      draw_fixture_assert_squeezed_text_for_test(
+        document,
+        @pdflite.pdf_read_document_from_bytes(
+          draw_fixture_corrupt_startxref_pointer_for_test(compressed),
+        ),
+      )
+    }
+  }
+  match
+    draw_fixture_bytes_for_test(".repos/cpdf-source/manualimages/xobj.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      draw_fixture_assert_cpdf_xobject_content_for_test(document)
+      let decompressed = document.decompress()
+      draw_fixture_assert_decompressed_streams_for_test(document, decompressed)
+      draw_fixture_assert_cpdf_xobject_content_for_test(decompressed)
+      let recompressed = @pdflite.recompress_pdf(decompressed)
+      draw_fixture_assert_recompressed_streams_for_test(document, recompressed)
+      draw_fixture_assert_cpdf_xobject_content_for_test(recompressed)
+      let squeezed = @pdflite.squeeze(document)
+      draw_fixture_assert_squeezed_xobject_for_test(document, squeezed)
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        squeezed,
+      )
+      draw_fixture_assert_squeezed_xobject_for_test(
+        document,
+        @pdflite.pdf_read_document_from_bytes(compressed),
+      )
+      draw_fixture_assert_squeezed_xobject_for_test(
+        document,
+        @pdflite.pdf_read_document_from_bytes(
+          draw_fixture_corrupt_startxref_pointer_for_test(compressed),
+        ),
       )
     }
   }
