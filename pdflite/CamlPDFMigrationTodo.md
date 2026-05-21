@@ -6649,6 +6649,22 @@ Current backend snapshot:
   plain-Wasm package-level validation remains separately tracked because the
   largest regression executables still need to be split or reduced before they
   fit the runtime's maximum-function-size limit.~~
+- [x] ~~Add the next source-corpus Markdown command recovery slice: the native
+  `pdflite-markdown` command helper now converts an optional
+  `.repos/cpdf-source/cpdfmanual.pdf` copy with a corrupted final `startxref`
+  pointer through real file input/output, compares the recovered Markdown
+  byte-for-byte with clean command output, preserves manual markers such as
+  `Coherent PDF`, `Command Line Tools`, `Chapter 15: PDF and JSON`, and
+  `Accessible PDFs with PDF/UA`, and verifies UTF-8 output without replacement
+  characters. `moon check --target native markdown/cmd --warn-list +73` passes
+  with the known main-package warning baseline, `moon test --target native
+  markdown/cmd --filter 'markdown command reconstructs optional cpdf source
+  manual fixture with bad startxref'` reports 1/1 test passing, `moon test
+  --target native markdown/cmd` reports 12/12 tests passing, `moon test
+  --target native` reports 2299/2299 tests passing, `moon info` and `moon fmt`
+  report no pending interface or formatting work, and `moon check --target all
+  --warn-list +73` reports the known warning-73/main-package baseline with 10
+  warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.

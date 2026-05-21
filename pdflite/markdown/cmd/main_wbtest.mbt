@@ -136,6 +136,80 @@ fn markdown_cmd_replacement_count_for_test(text : String) -> Int {
 }
 
 ///|
+fn markdown_cmd_find_last_bytes_for_test(
+  haystack : BytesView,
+  needle : BytesView,
+) -> Int {
+  if needle.length() == 0 {
+    haystack.length()
+  } else if haystack.length() < needle.length() {
+    -1
+  } else {
+    for start = haystack.length() - needle.length()
+        start >= 0
+        start = start - 1 {
+      let mut matched = true
+      for offset in 0..<needle.length() {
+        if haystack[start + offset] != needle[offset] {
+          matched = false
+        }
+      }
+      if matched {
+        break start
+      }
+    } nobreak {
+      -1
+    }
+  }
+}
+
+///|
+fn markdown_cmd_push_ascii_for_test(
+  output : Array[Byte],
+  text : String,
+) -> Unit {
+  for byte in @ascii.encode(text) {
+    output.push(byte)
+  }
+}
+
+///|
+fn markdown_cmd_corrupt_startxref_pointer_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  let marker = @ascii.encode("startxref")
+  let marker_position = markdown_cmd_find_last_bytes_for_test(bytes, marker)
+  if marker_position < 0 {
+    fail("expected startxref marker")
+  }
+  let mut number_start = marker_position + marker.length()
+  while number_start < bytes.length() &&
+        (
+          bytes[number_start] == b'\n' ||
+          bytes[number_start] == b'\r' ||
+          bytes[number_start] == b' ' ||
+          bytes[number_start] == b'\t'
+        ) {
+    number_start += 1
+  }
+  let mut number_end = number_start
+  while number_end < bytes.length() &&
+        bytes[number_end] >= b'0' &&
+        bytes[number_end] <= b'9' {
+    number_end += 1
+  }
+  let output : Array[Byte] = []
+  for index in 0..<number_start {
+    output.push(bytes[index])
+  }
+  markdown_cmd_push_ascii_for_test(output, (bytes.length() + 4096).to_string())
+  for index in number_end..<bytes.length() {
+    output.push(bytes[index])
+  }
+  Bytes::from_array(output)
+}
+
+///|
 fn markdown_cmd_unique_cjk_unified_count_for_test(text : String) -> Int {
   let lower = 0x4E00
   let upper = 0x9FFF
@@ -224,6 +298,55 @@ async test "markdown command converts optional cpdf source manual fixture" {
     @test.assert_eq(output.length() > 200000, true)
     @test.assert_eq(markdown_cmd_replacement_count_for_test(output), 0)
     markdown_cmd_remove_if_exists_for_test(output_path)
+  }
+}
+
+///|
+async test "markdown command reconstructs optional cpdf source manual fixture with bad startxref" {
+  let input_path = markdown_cmd_repo_path_for_test(
+    ".repos/cpdf-source/cpdfmanual.pdf",
+  )
+  if @fs.exists(input_path) {
+    let clean_output_path = markdown_cmd_output_path_for_test(
+      "cpdf_source_manual_clean",
+    )
+    let corrupt_input_path = markdown_cmd_output_path_for_test(
+      "cpdf_source_manual_bad_startxref_input",
+    )
+    let corrupt_output_path = markdown_cmd_output_path_for_test(
+      "cpdf_source_manual_bad_startxref",
+    )
+    markdown_cmd_remove_if_exists_for_test(clean_output_path)
+    markdown_cmd_remove_if_exists_for_test(corrupt_input_path)
+    markdown_cmd_remove_if_exists_for_test(corrupt_output_path)
+    markdown_cmd_convert_file(input_path, clean_output_path)
+    @fs.write_file(
+      corrupt_input_path,
+      markdown_cmd_corrupt_startxref_pointer_for_test(
+        @fs.read_file(input_path).binary(),
+      ),
+      create=0o644,
+    )
+    markdown_cmd_convert_file(corrupt_input_path, corrupt_output_path)
+    let clean_output = @utf8.decode_lossy(
+      @fs.read_file(clean_output_path).binary(),
+    )
+    let corrupt_output = @utf8.decode_lossy(
+      @fs.read_file(corrupt_output_path).binary(),
+    )
+    markdown_cmd_assert_contains_for_test(corrupt_output, "Coherent PDF")
+    markdown_cmd_assert_contains_for_test(corrupt_output, "Command Line Tools")
+    markdown_cmd_assert_contains_for_test(
+      corrupt_output, "Chapter 15: PDF and JSON",
+    )
+    markdown_cmd_assert_contains_for_test(
+      corrupt_output, "Accessible PDFs with PDF/UA",
+    )
+    @test.assert_eq(corrupt_output, clean_output)
+    @test.assert_eq(markdown_cmd_replacement_count_for_test(corrupt_output), 0)
+    markdown_cmd_remove_if_exists_for_test(clean_output_path)
+    markdown_cmd_remove_if_exists_for_test(corrupt_input_path)
+    markdown_cmd_remove_if_exists_for_test(corrupt_output_path)
   }
 }
 

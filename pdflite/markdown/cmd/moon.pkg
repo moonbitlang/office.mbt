@@ -10,6 +10,7 @@ import {
 import {
   "moonbitlang/async",
   "moonbitlang/async/fs",
+  "moonbitlang/core/encoding/ascii",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/env",
   "moonbitlang/core/test",
