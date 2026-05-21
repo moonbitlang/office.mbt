@@ -5649,6 +5649,20 @@ Current backend snapshot:
   passing, `moon test --target native` reports 2246/2246 tests passing, and
   `moon check --target all --warn-list +73` reports the known warning baseline
   with 10 warnings and 0 errors.~~
+- [x] ~~Add the next source-boundary cpdfsqueeze slice: optional
+  `.repos/cpdf-source/manualimages/text.pdf` and `xobj.pdf` now gate
+  `decompress_pdf`, `recompress_pdf`, and `squeeze` on real Flate-compressed
+  content streams and a real Form XObject fixture. The gate verifies stream
+  count preservation across decompression/recompression, complete removal of
+  supported `/Filter` and `/F` stream filter entries after decompression,
+  cpdf-style `only_if_smaller` recompression by allowing small streams to remain
+  unfiltered, page-data squeeze/reread behavior, preserved text/Form-XObject
+  content JSON, compressed rewrite/reread, and bad-`startxref` recovery. `moon
+  test --target native fixture_acceptance --filter '*squeeze fixtures*'` reports
+  1/1 test passing, `moon test --target native fixture_acceptance` reports 76/76
+  tests passing, `moon test --target native` reports 2247/2247 tests passing,
+  and `moon check --target all --warn-list +73` reports the known warning
+  baseline with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
