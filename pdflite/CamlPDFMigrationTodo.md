@@ -5679,6 +5679,19 @@ Current backend snapshot:
   --target native` reports 2248/2248 tests passing, and `moon check --target
   all --warn-list +73` reports the known warning baseline with 10 warnings and
   0 errors.~~
+- [x] ~~Add the next source-boundary cpdfpage marks slice: optional
+  `.repos/cpdf-source/logo.pdf` now gates `show_page_boxes` and `trim_marks`
+  against a real one-page cpdf fixture carrying `/MediaBox`, `/BleedBox`, and
+  `/TrimBox`. The gate verifies page geometry/resources/rest preservation,
+  retained transparency resources, cpdf show-box artifact markers, MediaBox red,
+  TrimBox orange dashed, and BleedBox pink dashed outline operators, cpdf
+  trim-mark artifact and CMYK stroke setup, allowance-based mark geometry,
+  compressed rewrite/reread, and bad-`startxref` recovery. `moon test --target
+  native fixture_acceptance --filter '*draws page marks*'` reports 1/1 test
+  passing, `moon test --target native fixture_acceptance` reports 78/78 tests
+  passing, `moon test --target native` reports 2249/2249 tests passing, and
+  `moon check --target all --warn-list +73` reports the known warning baseline
+  with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.

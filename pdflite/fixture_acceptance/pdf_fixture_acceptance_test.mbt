@@ -1795,6 +1795,76 @@ fn fixture_acceptance_assert_cpdf_logo_boxes_and_transparency_for_test(
 }
 
 ///|
+fn fixture_acceptance_assert_cpdf_source_show_page_boxes_for_test(
+  original : @pdflite.PdfDocument,
+  marked : @pdflite.PdfDocument,
+) -> Unit raise {
+  fixture_acceptance_assert_cpdf_source_same_page_shape_for_test(
+    original, marked,
+  )
+  fixture_acceptance_assert_cpdf_logo_boxes_and_transparency_for_test(marked)
+  let ops = fixture_acceptance_page_content_ops_for_test(marked)
+  fixture_acceptance_assert_content_op_for_test(
+    ops,
+    @pdflite.pdf_content_begin_artifact(),
+  )
+  fixture_acceptance_assert_content_op_for_test(
+    ops,
+    @pdflite.pdf_content_end_artifact(),
+  )
+  fixture_acceptance_assert_content_op_for_test(ops, Op_RG(1.0, 0.0, 0.0))
+  fixture_acceptance_assert_content_op_for_test(
+    ops,
+    Op_RG(1.0, 0.588235294118, 0.0),
+  )
+  fixture_acceptance_assert_content_op_for_test(
+    ops,
+    Op_RG(1.0, 0.0352941176471, 0.576470588235),
+  )
+  fixture_acceptance_assert_content_op_for_test(ops, Op_d([], 0.0))
+  fixture_acceptance_assert_content_op_for_test(ops, Op_d([3.0, 3.0], 0.0))
+  fixture_acceptance_assert_content_op_for_test(ops, Op_d([2.0, 2.0], 0.0))
+  @test.assert_eq(
+    fixture_acceptance_content_op_count_for_test(
+      ops,
+      Op_re(0.0, 0.0, 56.693, 56.693),
+    ) >=
+    3,
+    true,
+  )
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_trim_marks_for_test(
+  original : @pdflite.PdfDocument,
+  marked : @pdflite.PdfDocument,
+) -> Unit raise {
+  fixture_acceptance_assert_cpdf_source_same_page_shape_for_test(
+    original, marked,
+  )
+  fixture_acceptance_assert_cpdf_logo_boxes_and_transparency_for_test(marked)
+  let ops = fixture_acceptance_page_content_ops_for_test(marked)
+  fixture_acceptance_assert_content_op_for_test(ops, Op_K(1.0, 1.0, 1.0, 1.0))
+  fixture_acceptance_assert_content_op_for_test(ops, Op_w(1.0))
+  fixture_acceptance_assert_content_op_for_test(
+    ops,
+    @pdflite.pdf_content_begin_artifact(),
+  )
+  fixture_acceptance_assert_content_op_for_test(
+    ops,
+    @pdflite.pdf_content_end_artifact(),
+  )
+  fixture_acceptance_assert_content_op_for_test(ops, Op_m(0.0, 56.693))
+  fixture_acceptance_assert_content_op_for_test(ops, Op_l(-9.0, 56.693))
+  fixture_acceptance_assert_content_op_for_test(ops, Op_m(56.693, -9.0))
+  fixture_acceptance_assert_content_op_for_test(ops, Op_l(56.693, 0.0))
+  @test.assert_eq(
+    fixture_acceptance_content_op_count_for_test(ops, Op_s) >= 8,
+    true,
+  )
+}
+
+///|
 fn fixture_acceptance_content_ops_contain_gs_for_test(
   ops : ArrayView[@pdflite.PdfContentOp],
   name : @pdflite.PdfName,
@@ -4499,6 +4569,58 @@ async test "optional cpdf source transparency fixtures preserve resources" {
       fixture_acceptance_assert_cpdf_trans_extgstate_for_test(
         @pdflite.pdf_read_document_from_bytes(
           fixture_acceptance_corrupt_startxref_pointer_for_test(bytes),
+        ),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source logo fixture draws page marks" {
+  match
+    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/logo.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_logo_boxes_and_transparency_for_test(
+        document,
+      )
+      let shown = document.show_page_boxes([1])
+      fixture_acceptance_assert_cpdf_source_show_page_boxes_for_test(
+        document, shown,
+      )
+      let shown_compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        shown,
+      )
+      fixture_acceptance_assert_cpdf_source_show_page_boxes_for_test(
+        document,
+        @pdflite.pdf_read_document_from_bytes(shown_compressed),
+      )
+      fixture_acceptance_assert_cpdf_source_show_page_boxes_for_test(
+        document,
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(
+            shown_compressed,
+          ),
+        ),
+      )
+      let trimmed = @pdflite.pdf_trim_marks(document, [1])
+      fixture_acceptance_assert_cpdf_source_trim_marks_for_test(
+        document, trimmed,
+      )
+      let trimmed_compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        trimmed,
+      )
+      fixture_acceptance_assert_cpdf_source_trim_marks_for_test(
+        document,
+        @pdflite.pdf_read_document_from_bytes(trimmed_compressed),
+      )
+      fixture_acceptance_assert_cpdf_source_trim_marks_for_test(
+        document,
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(
+            trimmed_compressed,
+          ),
         ),
       )
     }
