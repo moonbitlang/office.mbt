@@ -1611,6 +1611,36 @@ let fixture_acceptance_cpdf_draw_operator_paths_for_test : Array[String] = [
 ]
 
 ///|
+fn fixture_acceptance_cpdf_manual_image_expected_content_counts_for_test(
+  path : String,
+) -> (Int, Int, Int) raise {
+  match path {
+    ".repos/cpdf-source/manualimages/bez.pdf" => (0, 0, 1)
+    ".repos/cpdf-source/manualimages/capjoins.pdf" => (0, 0, 1)
+    ".repos/cpdf-source/manualimages/clip.pdf" => (0, 0, 1)
+    ".repos/cpdf-source/manualimages/colfill.pdf" => (0, 0, 1)
+    ".repos/cpdf-source/manualimages/dash.pdf" => (0, 0, 1)
+    ".repos/cpdf-source/manualimages/fill.pdf" => (0, 0, 1)
+    ".repos/cpdf-source/manualimages/fontparams.pdf" => (25, 0, 0)
+    ".repos/cpdf-source/manualimages/fonts.pdf" => (25, 0, 0)
+    ".repos/cpdf-source/manualimages/h1.pdf" => (132, 0, 0)
+    ".repos/cpdf-source/manualimages/line.pdf" => (0, 0, 1)
+    ".repos/cpdf-source/manualimages/lines.pdf" => (23, 0, 0)
+    ".repos/cpdf-source/manualimages/matrix.pdf" => (0, 0, 3)
+    ".repos/cpdf-source/manualimages/para.pdf" => (81, 0, 0)
+    ".repos/cpdf-source/manualimages/paras.pdf" => (156, 0, 0)
+    ".repos/cpdf-source/manualimages/png.pdf" => (0, 1, 0)
+    ".repos/cpdf-source/manualimages/pop.pdf" => (0, 0, 3)
+    ".repos/cpdf-source/manualimages/stext.pdf" => (6, 0, 0)
+    ".repos/cpdf-source/manualimages/text.pdf" => (5, 0, 0)
+    ".repos/cpdf-source/manualimages/textclip.pdf" => (23, 0, 1)
+    ".repos/cpdf-source/manualimages/trans.pdf" => (0, 0, 2)
+    ".repos/cpdf-source/manualimages/xobj.pdf" => (0, 0, 2)
+    _ => fail("unexpected cpdf manual image path: " + path)
+  }
+}
+
+///|
 fn fixture_acceptance_cpdf_top_level_expected_pages_for_test(
   path : String,
 ) -> Int raise {
@@ -5047,6 +5077,10 @@ fn fixture_acceptance_assert_cpdf_manual_image_content_corpus_for_test(
   @test.assert_eq(document.endpage(), 1)
   let pages = document.pages_of_pagetree()
   let entries = document.content_entries_of_page(pages[0])
+  @test.assert_eq(
+    @pdflite.pdf_content_entries_of_page(document, pages[0]),
+    entries,
+  )
   @test.assert_eq(entries.length() > 0, true)
   let mut glyphs = 0
   let mut images = 0
@@ -5062,9 +5096,16 @@ fn fixture_acceptance_assert_cpdf_manual_image_content_corpus_for_test(
       _ => ()
     }
   }
-  let content_json = document.page_content_json([1]).stringify()
-  fixture_acceptance_assert_contains_for_test(content_json, "\"page\":1")
-  fixture_acceptance_assert_contains_for_test(content_json, "\"bbox\"")
+  let page_json = document.content_json_of_page(pages[0])
+  @test.assert_eq(
+    @pdflite.pdf_content_json_of_page(document, pages[0]),
+    page_json,
+  )
+  let content_json = document.page_content_json([1])
+  @test.assert_eq(@pdflite.pdf_page_content_json(document, [1]), content_json)
+  let content_json_text = content_json.stringify()
+  fixture_acceptance_assert_contains_for_test(content_json_text, "\"page\":1")
+  fixture_acceptance_assert_contains_for_test(content_json_text, "\"bbox\"")
   (glyphs, images, paths)
 }
 
@@ -6529,6 +6570,12 @@ async test "optional cpdf source manual image fixtures traverse content entries"
         let (rewritten_glyphs, rewritten_images, rewritten_paths) = fixture_acceptance_assert_cpdf_manual_image_content_corpus_for_test(
           fixture_acceptance_reparse_compressed_for_test(document),
         )
+        let (expected_glyphs, expected_images, expected_paths) = fixture_acceptance_cpdf_manual_image_expected_content_counts_for_test(
+          path,
+        )
+        @test.assert_eq(doc_glyphs, expected_glyphs)
+        @test.assert_eq(doc_images, expected_images)
+        @test.assert_eq(doc_paths, expected_paths)
         @test.assert_eq(rewritten_glyphs, doc_glyphs)
         @test.assert_eq(rewritten_images, doc_images)
         @test.assert_eq(rewritten_paths, doc_paths)
@@ -6543,9 +6590,9 @@ async test "optional cpdf source manual image fixtures traverse content entries"
       checked,
       fixture_acceptance_cpdf_manual_image_paths_for_test.length(),
     )
-    @test.assert_eq(glyphs > 0, true)
-    @test.assert_eq(images > 0, true)
-    @test.assert_eq(paths > 0, true)
+    @test.assert_eq(glyphs, 476)
+    @test.assert_eq(images, 1)
+    @test.assert_eq(paths, 18)
   }
 }
 

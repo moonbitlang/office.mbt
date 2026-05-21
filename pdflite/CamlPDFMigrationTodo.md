@@ -5783,6 +5783,21 @@ Current backend snapshot:
   `moon test --target native` reports 2254/2254 tests passing, and `moon check
   --target all --warn-list +73` reports the known warning baseline with 10
   warnings and 0 errors.~~
+- [x] ~~Broaden the source-boundary manual image content corpus slice:
+  optional `.repos/cpdf-source/manualimages/*.pdf` now pins per-fixture
+  cpdfcontent shape counts for all 21 checked-in manual image PDFs, covering
+  476 glyph entries, 1 image entry, and 18 path entries across text, clipping,
+  transparency, matrix, XObject, and raster-image fixtures. The shared corpus
+  helper now also gates `pdf_content_entries_of_page`,
+  `pdf_content_json_of_page`, and `pdf_page_content_json` wrapper parity for
+  each fixture and keeps compressed rewrite/reread count preservation. `moon
+  check --target native fixture_acceptance --warn-list +73` passes, `moon test
+  --target native fixture_acceptance --filter 'optional cpdf source manual image
+  fixtures traverse content entries'` reports 1/1 test passing, `moon test
+  --target native fixture_acceptance` reports 82/82 tests passing, `moon test
+  --target native` reports 2254/2254 tests passing, and `moon check --target
+  all --warn-list +73` reports the known warning baseline with 10 warnings and 0
+  errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
