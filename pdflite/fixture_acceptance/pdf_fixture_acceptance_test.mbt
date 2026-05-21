@@ -5339,6 +5339,189 @@ fn fixture_acceptance_assert_cpdf_source_variation_tounicode_for_test(
 }
 
 ///|
+fn fixture_acceptance_cpdf_source_parser_corner_cmap_for_test() -> @pdflite.PdfObject {
+  let cmap = @ascii.encode(
+    "% /Identity-H usecmap\n" +
+    "/WMode 1 def % /WMode 0 def\n" +
+    "2 beginbfchar\n" +
+    "<41>\n" +
+    "<00 5A>\n" +
+    "<4><006> % odd nibbles are padded\n" +
+    "endbfchar\n" +
+    "3 beginbfrange\n" +
+    "<43><45>[\n" +
+    "<0061>\n" +
+    "<00620063> % multi-codepoint mapping\n" +
+    "<D834 DD1E>\n" +
+    "]\n" +
+    "<46><47><0064>\n" +
+    "<48><49>[<0066> % <9999>\n" +
+    "<0067>]\n" +
+    "endbfrange\n" +
+    "1 beginbfchar <4A><03A9> endbfchar\n",
+  )
+  let encoded = @pdflite.pdf_flate_encode(cmap)
+  @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (
+        fixture_acceptance_pdf_name_for_test("/Length"),
+        PdfInteger(encoded.length()),
+      ),
+      (
+        fixture_acceptance_pdf_name_for_test("/Filter"),
+        PdfNameObject(fixture_acceptance_pdf_name_for_test("/FlateDecode")),
+      ),
+    ]),
+    StreamGot(encoded),
+  )
+}
+
+///|
+fn fixture_acceptance_cpdf_source_parser_corner_font_for_test(
+  tounicode : Int,
+) -> @pdflite.PdfObject {
+  @pdflite.pdf_dictionary([
+    (
+      fixture_acceptance_pdf_name_for_test("/Subtype"),
+      PdfNameObject(fixture_acceptance_pdf_name_for_test("/Type1")),
+    ),
+    (
+      fixture_acceptance_pdf_name_for_test("/BaseFont"),
+      PdfNameObject(fixture_acceptance_pdf_name_for_test("/SourceParserCorner")),
+    ),
+    (fixture_acceptance_pdf_name_for_test("/ToUnicode"), PdfIndirect(tounicode)),
+  ])
+}
+
+///|
+fn fixture_acceptance_cpdf_source_parser_corner_text_for_test() -> @pdflite.PdfBytes raise {
+  @pdflite.pdf_bytes_of_int_array([
+    0x41, 0x40, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4A, 0x4B,
+  ])
+}
+
+///|
+fn fixture_acceptance_cpdf_source_hello_with_parser_corner_tounicode_for_test(
+  document : @pdflite.PdfDocument,
+) -> @pdflite.PdfDocument raise {
+  let output = document.copy()
+  let tounicode = output.add_object(
+    fixture_acceptance_cpdf_source_parser_corner_cmap_for_test(),
+  )
+  let font_number = output.add_object(
+    fixture_acceptance_cpdf_source_parser_corner_font_for_test(tounicode),
+  )
+  let pages = output.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  let font_resources = fixture_acceptance_cpdf_source_page_fonts_for_test(
+    output,
+    pages[0].resources,
+  ).add_dict_entry(
+    fixture_acceptance_pdf_name_for_test("/SourceCorner"),
+    PdfIndirect(font_number),
+  )
+  let resources = pages[0].resources.add_dict_entry(
+    fixture_acceptance_pdf_name_for_test("/Font"),
+    font_resources,
+  )
+  let page = { ..pages[0], resources, }
+  let updated_page = output.postpend_operators(
+    page,
+    [
+      Op_BT,
+      Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceCorner"), 12.0),
+      Op_Tj(fixture_acceptance_cpdf_source_parser_corner_text_for_test()),
+      Op_ET,
+    ],
+    fast=true,
+  )
+  output.change_pages([updated_page], change_references=true)
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_parser_corner_tounicode_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+  let expected_codepoints = [
+    0x5A, 0x60, 0x61, 0x62, 0x63, 0x1D11E, 0x64, 0x65, 0x66, 0x67, 0x03A9, 0x4B,
+  ]
+  let expected_text = @utf8.decode_lossy(
+    @pdflite.pdf_utf8_of_codepoints(expected_codepoints),
+  )
+  fixture_acceptance_assert_contains_for_test(
+    @utf8.decode_lossy(document.test_extract_text([1])),
+    expected_text,
+  )
+  let ops = fixture_acceptance_page_content_ops_for_test(document)
+  fixture_acceptance_assert_content_op_for_test(
+    ops,
+    Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceCorner"), 12.0),
+  )
+  fixture_acceptance_assert_content_op_for_test(
+    ops,
+    Op_Tj(fixture_acceptance_cpdf_source_parser_corner_text_for_test()),
+  )
+  let source_font = fixture_acceptance_cpdf_source_font_entry_for_test(
+    document.list_fonts([1]),
+    "/SourceCorner",
+  )
+  @test.assert_eq(source_font.subtype, "/Type1")
+  @test.assert_eq(source_font.basefont, "/SourceParserCorner")
+  guard document.read_font(source_font.font) is PdfFontSimple(simple) else {
+    fail("expected source parser-corner simple font")
+  }
+  guard simple.fontdescriptor is Some(descriptor) else {
+    fail("expected source parser-corner descriptor carrying ToUnicode")
+  }
+  @test.assert_eq(
+    descriptor.tounicode,
+    Some([
+      (0x41, @pdflite.pdf_bytes_of_int_array([0x00, 0x5A])),
+      (0x40, @pdflite.pdf_bytes_of_int_array([0x00, 0x60])),
+      (0x43, @pdflite.pdf_bytes_of_int_array([0x00, 0x61])),
+      (0x44, @pdflite.pdf_bytes_of_int_array([0x00, 0x62, 0x00, 0x63])),
+      (0x45, @pdflite.pdf_bytes_of_int_array([0xD8, 0x34, 0xDD, 0x1E])),
+      (0x46, @pdflite.pdf_bytes_of_int_array([0x00, 0x64])),
+      (0x47, @pdflite.pdf_bytes_of_int_array([0x00, 0x65])),
+      (0x48, @pdflite.pdf_bytes_of_int_array([0x00, 0x66])),
+      (0x49, @pdflite.pdf_bytes_of_int_array([0x00, 0x67])),
+      (0x4A, @pdflite.pdf_bytes_of_int_array([0x03, 0xA9])),
+    ]),
+  )
+  let extractor = document.text_extractor_of_font(source_font.font)
+  @test.assert_eq(
+    extractor.codepoints_of_text(
+      fixture_acceptance_cpdf_source_parser_corner_text_for_test(),
+    ),
+    expected_codepoints,
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x5A), Some(0x41))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x60), Some(0x40))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x1D11E), Some(0x45))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x66), Some(0x48))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x03A9), Some(0x4A))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x62), None)
+  @test.assert_eq(extractor.charcode_of_codepoint(0x4B), None)
+  let table = document.font_table("/SourceCorner", 1)
+  let row_compact = fixture_acceptance_cpdf_source_font_table_entry_for_test(
+    table, 0x4A,
+  )
+  @test.assert_eq(row_compact.unicode, "03A9")
+  @test.assert_eq(row_compact.utf8, "Ω")
+  let row_multi = fixture_acceptance_cpdf_source_font_table_entry_for_test(
+    table, 0x44,
+  )
+  @test.assert_eq(row_multi.unicode, "***multiple")
+  @test.assert_eq(row_multi.utf8, "bc")
+  let row_supplementary = fixture_acceptance_cpdf_source_font_table_entry_for_test(
+    table, 0x45,
+  )
+  @test.assert_eq(row_supplementary.unicode, "1D11E")
+  @test.assert_eq(@pdflite.pdf_font_table(document, "/SourceCorner", 1), table)
+}
+
+///|
 fn fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
   basefont : String,
   ordering : String,
@@ -9587,6 +9770,35 @@ async test "optional cpdf source hello fixture extracts ToUnicode variation text
         @pdflite.pdf_read_document_from_bytes(compressed),
       )
       fixture_acceptance_assert_cpdf_source_variation_tounicode_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+        ),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source hello fixture extracts ToUnicode parser corners" {
+  match
+    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+      let with_corner = fixture_acceptance_cpdf_source_hello_with_parser_corner_tounicode_for_test(
+        document,
+      )
+      fixture_acceptance_assert_cpdf_source_parser_corner_tounicode_for_test(
+        with_corner,
+      )
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        with_corner,
+      )
+      fixture_acceptance_assert_cpdf_source_parser_corner_tounicode_for_test(
+        @pdflite.pdf_read_document_from_bytes(compressed),
+      )
+      fixture_acceptance_assert_cpdf_source_parser_corner_tounicode_for_test(
         @pdflite.pdf_read_document_from_bytes(
           fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
         ),

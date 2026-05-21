@@ -6115,6 +6115,27 @@ Current backend snapshot:
   tests passing, `moon info && moon fmt` reports no pending interface or
   formatting work, and `moon check --target all --warn-list +73` reports the
   warning 73 baseline with 10 warnings and 0 errors.~~
+- [x] ~~Broaden the source-boundary ToUnicode parser-corner slice: optional
+  `.repos/cpdf-source/hello.pdf` now gates a Flate-compressed Type1
+  `/ToUnicode` CMap on a real source PDF after injecting a font resource and
+  page content that exercise commented-out fake metadata, split `bfchar`
+  operands, odd-nibble hex strings, multiline `bfrange` arrays,
+  multi-codepoint entries, compact same-line `beginbfchar`/`endbfchar`, and
+  unmapped fallback bytes. The gate preserves the original Hello text, verifies
+  the injected text operators survive parsed page-content rereads, pins
+  extracted codepoints for BMP, supplementary-plane, multi-scalar, and fallback
+  mappings, verifies `list_fonts`, `read_font`, descriptor raw UTF-16BE
+  mappings, reverse `charcode_of_codepoint` lookups, and `font_table`/wrapper
+  rows for compact, multi-codepoint, and supplementary entries, then repeats
+  the assertions through compressed rewrite/reread and bad-`startxref`
+  recovery. `moon check --target native fixture_acceptance --warn-list +73`
+  passes, `moon test --target native fixture_acceptance --filter 'optional cpdf
+  source hello fixture extracts ToUnicode parser corners'` reports 1/1 test
+  passing, `moon test --target native fixture_acceptance` reports 99/99 tests
+  passing, `moon test --target native` reports 2271/2271 tests passing, `moon
+  info && moon fmt` reports no pending interface or formatting work, and `moon
+  check --target all --warn-list +73` reports the warning 73 baseline with 10
+  warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
