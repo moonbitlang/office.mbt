@@ -6704,6 +6704,383 @@ fn fixture_acceptance_assert_cpdf_source_gb1_legacy_cmaps_for_test(
 }
 
 ///|
+fn fixture_acceptance_cpdf_source_hello_with_cns1_legacy_cmaps_for_test(
+  document : @pdflite.PdfDocument,
+) -> @pdflite.PdfDocument raise {
+  let output = document.copy()
+  let descendant_eten_b5 = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
+      "/SourceETenB5Descendant", "CNS1",
+    ),
+  )
+  let descendant_b5pc = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
+      "/SourceB5pcDescendant", "CNS1",
+    ),
+  )
+  let descendant_hkscs = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
+      "/SourceHKscsB5Descendant", "CNS1",
+    ),
+  )
+  let descendant_etenms = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
+      "/SourceETenmsB5Descendant", "CNS1",
+    ),
+  )
+  let descendant_hkdla = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
+      "/SourceHKdlaB5Descendant", "CNS1",
+    ),
+  )
+  let descendant_hkdlb = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
+      "/SourceHKdlbB5Descendant", "CNS1",
+    ),
+  )
+  let descendant_hkgccs = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
+      "/SourceHKgccsB5Descendant", "CNS1",
+    ),
+  )
+  let descendant_hkm314 = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
+      "/SourceHKm314B5Descendant", "CNS1",
+    ),
+  )
+  let descendant_hkm471 = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
+      "/SourceHKm471B5Descendant", "CNS1",
+    ),
+  )
+  let descendant_cns_euc = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
+      "/SourceCNSEUCDescendant", "CNS1",
+    ),
+  )
+  let descendant_cns_euc_v = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
+      "/SourceCNSEUCVerticalDescendant", "CNS1",
+    ),
+  )
+  let font_eten_b5 = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
+      "/SourceETenB5Top", "/ETen-B5-H", descendant_eten_b5,
+    ),
+  )
+  let font_b5pc = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
+      "/SourceB5pcTop", "/B5pc-H", descendant_b5pc,
+    ),
+  )
+  let font_hkscs = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
+      "/SourceHKscsB5Top", "/HKscs-B5-H", descendant_hkscs,
+    ),
+  )
+  let font_etenms = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
+      "/SourceETenmsB5Top", "/ETenms-B5-H", descendant_etenms,
+    ),
+  )
+  let font_hkdla = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
+      "/SourceHKdlaB5Top", "/HKdla-B5-H", descendant_hkdla,
+    ),
+  )
+  let font_hkdlb = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
+      "/SourceHKdlbB5Top", "/HKdlb-B5-H", descendant_hkdlb,
+    ),
+  )
+  let font_hkgccs = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
+      "/SourceHKgccsB5Top", "/HKgccs-B5-H", descendant_hkgccs,
+    ),
+  )
+  let font_hkm314 = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
+      "/SourceHKm314B5Top", "/HKm314-B5-H", descendant_hkm314,
+    ),
+  )
+  let font_hkm471 = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
+      "/SourceHKm471B5Top", "/HKm471-B5-H", descendant_hkm471,
+    ),
+  )
+  let font_cns_euc = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
+      "/SourceCNSEUCTop", "/CNS-EUC-H", descendant_cns_euc,
+    ),
+  )
+  let font_cns_euc_v = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
+      "/SourceCNSEUCVerticalTop", "/CNS-EUC-V", descendant_cns_euc_v,
+    ),
+  )
+  let pages = output.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  let font_resources = fixture_acceptance_cpdf_source_page_fonts_for_test(
+      output,
+      pages[0].resources,
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/SourceETenB5"),
+      PdfIndirect(font_eten_b5),
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/SourceB5pc"),
+      PdfIndirect(font_b5pc),
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/SourceHKscsB5"),
+      PdfIndirect(font_hkscs),
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/SourceETenmsB5"),
+      PdfIndirect(font_etenms),
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/SourceHKdlaB5"),
+      PdfIndirect(font_hkdla),
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/SourceHKdlbB5"),
+      PdfIndirect(font_hkdlb),
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/SourceHKgccsB5"),
+      PdfIndirect(font_hkgccs),
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/SourceHKm314B5"),
+      PdfIndirect(font_hkm314),
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/SourceHKm471B5"),
+      PdfIndirect(font_hkm471),
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/SourceCNSEUC"),
+      PdfIndirect(font_cns_euc),
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/SourceCNSEUCV"),
+      PdfIndirect(font_cns_euc_v),
+    )
+  let resources = pages[0].resources.add_dict_entry(
+    fixture_acceptance_pdf_name_for_test("/Font"),
+    font_resources,
+  )
+  let page = { ..pages[0], resources, }
+  let updated_page = output.postpend_operators(
+    page,
+    [
+      Op_BT,
+      Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceETenB5"), 12.0),
+      Op_Tj(
+        @pdflite.pdf_bytes_of_int_array([
+          0x41, 0xA7, 0x41, 0xA6, 0x6E, 0xA4, 0x40, 0xA4, 0xA4, 0xA1, 0x40,
+        ]),
+      ),
+      Op_ET,
+    ],
+    fast=true,
+  )
+  output.change_pages([updated_page], change_references=true)
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_cns1_legacy_font_for_test(
+  document : @pdflite.PdfDocument,
+  name : String,
+  basefont : String,
+  encoding : String,
+  text : Array[Int],
+  expected_codepoints : Array[Int],
+  reverse_codepoint : Int,
+  reverse_charcode : Int,
+) -> @pdflite.PdfTextExtractor raise {
+  fixture_acceptance_assert_cpdf_source_gb_cns_predefined_font_for_test(
+    document,
+    name,
+    basefont,
+    encoding,
+    "CNS1",
+    @pdflite.pdf_bytes_of_int_array(text),
+    expected_codepoints,
+    reverse_codepoint,
+    reverse_charcode,
+    false,
+  )
+  fixture_acceptance_source_font_extractor_for_test(document, name)
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_cns1_legacy_cmaps_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+  let ops = fixture_acceptance_page_content_ops_for_test(document)
+  fixture_acceptance_assert_content_op_for_test(
+    ops,
+    Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceETenB5"), 12.0),
+  )
+  fixture_acceptance_assert_content_op_for_test(
+    ops,
+    Op_Tj(
+      @pdflite.pdf_bytes_of_int_array([
+        0x41, 0xA7, 0x41, 0xA6, 0x6E, 0xA4, 0x40, 0xA4, 0xA4, 0xA1, 0x40,
+      ]),
+    ),
+  )
+  let eten_b5 = fixture_acceptance_assert_cpdf_source_cns1_legacy_font_for_test(
+    document,
+    "/SourceETenB5",
+    "/SourceETenB5Top",
+    "/ETen-B5-H",
+    [0x41, 0xA7, 0x41, 0xA6, 0x6E, 0xA4, 0x40, 0xA4, 0xA4, 0xA1, 0x40],
+    [0x41, 0x4F60, 0x597D, 0x4E00, 0x4E2D, 0x3000],
+    0x4F60,
+    0xA741,
+  )
+  @test.assert_eq(eten_b5.charcode_of_codepoint(0x4E00), Some(0xA440))
+  @test.assert_eq(eten_b5.charcode_of_codepoint(0x4E2D), Some(0xA4A4))
+  @test.assert_eq(eten_b5.charcode_of_codepoint(0x20AC), None)
+  let b5pc = fixture_acceptance_assert_cpdf_source_cns1_legacy_font_for_test(
+    document,
+    "/SourceB5pc",
+    "/SourceB5pcTop",
+    "/B5pc-H",
+    [
+      0x41, 0x80, 0x83, 0xA0, 0xFD, 0xFE, 0xFF, 0xA1, 0x40, 0xA7, 0x41, 0xA6, 0x6E,
+      0xA1, 0x4B, 0xA1, 0x51,
+    ],
+    [
+      0x41, 0x005C, 0x83, 0x00A0, 0x00A9, 0x2122, 0x2026, 0x3000, 0x4F60, 0x597D,
+      0x22EF, 0xFE54,
+    ],
+    0x22EF,
+    0xA14B,
+  )
+  @test.assert_eq(b5pc.charcode_of_codepoint(0x005C), Some(0x5C))
+  @test.assert_eq(b5pc.charcode_of_codepoint(0x00A9), Some(0xFD))
+  @test.assert_eq(b5pc.charcode_of_codepoint(0xFE54), Some(0xA151))
+  @test.assert_eq(b5pc.charcode_of_codepoint(0x20AC), None)
+  let hkscs = fixture_acceptance_assert_cpdf_source_cns1_legacy_font_for_test(
+    document,
+    "/SourceHKscsB5",
+    "/SourceHKscsB5Top",
+    "/HKscs-B5-H",
+    [
+      0x41, 0x87, 0x40, 0x87, 0x45, 0x89, 0x43, 0xA1, 0x40, 0xA7, 0x41, 0xA6, 0x6E,
+      0xC6, 0xE4, 0xFE, 0xFE, 0x80,
+    ],
+    [
+      0x41, 0x43F0, 0x27267, 0x650A, 0x3000, 0x4F60, 0x597D, 0xFF3B, 0x79D4, 0x80,
+    ],
+    0x27267,
+    0x8745,
+  )
+  @test.assert_eq(hkscs.charcode_of_codepoint(0x43F0), Some(0x8740))
+  @test.assert_eq(hkscs.charcode_of_codepoint(0x650A), Some(0x8943))
+  @test.assert_eq(hkscs.charcode_of_codepoint(0x79D4), Some(0xFEFE))
+  @test.assert_eq(hkscs.charcode_of_codepoint(0x1F600), None)
+  let etenms = fixture_acceptance_assert_cpdf_source_cns1_legacy_font_for_test(
+    document,
+    "/SourceETenmsB5",
+    "/SourceETenmsB5Top",
+    "/ETenms-B5-H",
+    [0x41, 0xA1, 0xC2, 0xA2, 0x41, 0xC7, 0xFD, 0x80],
+    [0x41, 0x00AF, 0x2215, 0x0419, 0x80],
+    0x0419,
+    0xC7FD,
+  )
+  @test.assert_eq(etenms.charcode_of_codepoint(0x00AF), Some(0xA1C2))
+  @test.assert_eq(etenms.charcode_of_codepoint(0x2215), Some(0xA241))
+  @test.assert_eq(etenms.charcode_of_codepoint(0x1F600), None)
+  let hkdla = fixture_acceptance_assert_cpdf_source_cns1_legacy_font_for_test(
+    document,
+    "/SourceHKdlaB5",
+    "/SourceHKdlaB5Top",
+    "/HKdla-B5-H",
+    [0x41, 0xFA, 0x41, 0x80],
+    [0x41, 0x5F0D, 0x80],
+    0x5F0D,
+    0xFA41,
+  )
+  @test.assert_eq(hkdla.charcode_of_codepoint(0x1F600), None)
+  let hkdlb = fixture_acceptance_assert_cpdf_source_cns1_legacy_font_for_test(
+    document,
+    "/SourceHKdlbB5",
+    "/SourceHKdlbB5Top",
+    "/HKdlb-B5-H",
+    [0x41, 0x8E, 0x40, 0x80],
+    [0x41, 0x99C4, 0x80],
+    0x99C4,
+    0x8E40,
+  )
+  @test.assert_eq(hkdlb.charcode_of_codepoint(0x1F600), None)
+  let hkgccs = fixture_acceptance_assert_cpdf_source_cns1_legacy_font_for_test(
+    document,
+    "/SourceHKgccsB5",
+    "/SourceHKgccsB5Top",
+    "/HKgccs-B5-H",
+    [0x41, 0x8A, 0x43, 0x80],
+    [0x41, 0x20C42, 0x80],
+    0x20C42,
+    0x8A43,
+  )
+  @test.assert_eq(hkgccs.charcode_of_codepoint(0x1F600), None)
+  let hkm314 = fixture_acceptance_assert_cpdf_source_cns1_legacy_font_for_test(
+    document,
+    "/SourceHKm314B5",
+    "/SourceHKm314B5Top",
+    "/HKm314-B5-H",
+    [0x41, 0xC7, 0x40, 0x80],
+    [0x41, 0x4E21, 0x80],
+    0x4E21,
+    0xC740,
+  )
+  @test.assert_eq(hkm314.charcode_of_codepoint(0x1F600), None)
+  let hkm471 = fixture_acceptance_assert_cpdf_source_cns1_legacy_font_for_test(
+    document,
+    "/SourceHKm471B5",
+    "/SourceHKm471B5Top",
+    "/HKm471-B5-H",
+    [0x41, 0xFA, 0x40, 0x80],
+    [0x41, 0x4E21, 0x80],
+    0x4E21,
+    0xFA40,
+  )
+  @test.assert_eq(hkm471.charcode_of_codepoint(0x1F600), None)
+  let cns_euc = fixture_acceptance_assert_cpdf_source_cns1_legacy_font_for_test(
+    document,
+    "/SourceCNSEUC",
+    "/SourceCNSEUCTop",
+    "/CNS-EUC-H",
+    [0x20, 0x80, 0xA1, 0xA1, 0xA1, 0xAC, 0x8E, 0xA2, 0xA1, 0xA1],
+    [0x20, 0x80, 0x3000, 0x2026, 0x4E42],
+    0x4E42,
+    0x8EA2A1A1,
+  )
+  @test.assert_eq(cns_euc.charcode_of_codepoint(0x3000), Some(0xA1A1))
+  @test.assert_eq(cns_euc.charcode_of_codepoint(0x2026), Some(0xA1AC))
+  @test.assert_eq(cns_euc.charcode_of_codepoint(0x1F600), None)
+  let cns_euc_v = fixture_acceptance_assert_cpdf_source_cns1_legacy_font_for_test(
+    document,
+    "/SourceCNSEUCV",
+    "/SourceCNSEUCVerticalTop",
+    "/CNS-EUC-V",
+    [0xA1, 0xAC, 0x8E, 0xA1, 0xA1, 0xAC],
+    [0xFE19, 0xFE19],
+    0xFE19,
+    0xA1AC,
+  )
+  @test.assert_eq(cns_euc_v.charcode_of_codepoint(0x1F600), None)
+}
+
+///|
 fn fixture_acceptance_draft_substitute_ops_for_test() -> Array[
   @pdflite.PdfContentOp,
 ] {
@@ -8998,6 +9375,35 @@ async test "optional cpdf source hello fixture extracts GB1 legacy predefined CM
         @pdflite.pdf_read_document_from_bytes(compressed),
       )
       fixture_acceptance_assert_cpdf_source_gb1_legacy_cmaps_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+        ),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source hello fixture extracts CNS1 legacy predefined CMaps" {
+  match
+    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+      let with_cmaps = fixture_acceptance_cpdf_source_hello_with_cns1_legacy_cmaps_for_test(
+        document,
+      )
+      fixture_acceptance_assert_cpdf_source_cns1_legacy_cmaps_for_test(
+        with_cmaps,
+      )
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        with_cmaps,
+      )
+      fixture_acceptance_assert_cpdf_source_cns1_legacy_cmaps_for_test(
+        @pdflite.pdf_read_document_from_bytes(compressed),
+      )
+      fixture_acceptance_assert_cpdf_source_cns1_legacy_cmaps_for_test(
         @pdflite.pdf_read_document_from_bytes(
           fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
         ),

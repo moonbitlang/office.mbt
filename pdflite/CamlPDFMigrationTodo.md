@@ -6052,6 +6052,28 @@ Current backend snapshot:
   moon fmt` reports no pending interface or formatting work, and `moon check
   --target all --warn-list +73` reports the warning 73 baseline with 10
   warnings and 0 errors.~~
+- [x] ~~Broaden the source-boundary predefined CMap slice to CNS1 legacy and
+  variant families: optional `.repos/cpdf-source/hello.pdf` now gates
+  `/ETen-B5-H`, `/B5pc-H`, `/HKscs-B5-H`, `/ETenms-B5-H`, `/HKdla-B5-H`,
+  `/HKdlb-B5-H`, `/HKgccs-B5-H`, `/HKm314-B5-H`, `/HKm471-B5-H`,
+  `/CNS-EUC-H`, and `/CNS-EUC-V` on a real source PDF after injecting Type0
+  CID-keyed font resources. The gate preserves the original Hello text,
+  verifies the injected ETen-B5 text operator survives in the parsed source
+  page content stream, verifies `list_fonts` and `read_font` expose each
+  `/Type0` `PdfFontCIDKeyed` resource with CNS1 CIDSystemInfo ordering and
+  mixed-byte code behavior, pins `PdfTextExtractor` codepoint and reverse
+  `charcode_of_codepoint` behavior for Big5, B5pc, HKSCS, ETenms, Hong Kong
+  variant Big5, CNS-EUC horizontal, and CNS-EUC vertical byte streams, checks
+  unmapped reverse lookup paths, and repeats the assertions through compressed
+  rewrite/reread and bad-`startxref` recovery. `moon check --target native
+  fixture_acceptance --warn-list +73` passes, `moon test --target native
+  fixture_acceptance --filter 'optional cpdf source hello fixture extracts
+  CNS1 legacy predefined CMaps'` reports 1/1 test passing, `moon test --target
+  native fixture_acceptance` reports 96/96 tests passing, `moon test --target
+  native` reports 2268/2268 tests passing, `moon info && moon fmt` reports no
+  pending interface or formatting work, and `moon check --target all
+  --warn-list +73` reports the warning 73 baseline with 10 warnings and 0
+  errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
