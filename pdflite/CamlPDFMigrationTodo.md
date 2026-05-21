@@ -6415,6 +6415,25 @@ Current backend snapshot:
   pending interface or formatting work, and `moon check --target all --warn-list
   +73` reports the known warning-73/main-package baseline with 7 warnings and 0
   errors.~~
-- [ ] Add the next remaining format parity slice: remaining rare predefined
-  CMap families, additional real-world ToUnicode/CMap fixtures when source
-  material is available, or broader real-world image corpus coverage.
+- [x] ~~Add the next remaining format parity slice: optional
+  `.repos/cpdf-source/hello.pdf` now gates the supplemental Japan1 predefined
+  CMaps `/78-H`, `/78-V`, `/78-RKSJ-H`, `/78-RKSJ-V`, `/78ms-RKSJ-H`,
+  `/78ms-RKSJ-V`, `/90pv-RKSJ-V`, `/RKSJ-H`, `/RKSJ-V`, `/78-EUC-H`,
+  `/78-EUC-V`, `/Add-H`, `/Add-V`, `/Ext-H`, `/Ext-V`, `/Hojo-H`, `/Hojo-V`,
+  `/NWP-H`, and `/NWP-V`. The gate installs source-boundary Type 0 fonts over
+  the real top-level hello fixture, appends supplemental-map text runs to page
+  content, verifies font listing/read-font state, whole-page extraction,
+  per-font codepoint extraction including the 90pv vertical `0x80` backslash
+  mapping, reverse charcode lookup, undefined-codepoint fallbacks, compressed
+  xref-stream rewrite/reread, and bad-`startxref` recovery. `moon check
+  --target native fixture_acceptance --warn-list +73` passes, `moon test
+  --target native fixture_acceptance --filter 'optional cpdf source hello
+  fixture extracts supplemental Japan1 predefined CMaps'` reports 1/1 test
+  passing, `moon test --target native fixture_acceptance` reports 114/114 tests
+  passing, `moon test --target native` reports 2286/2286 tests passing, `moon
+  info && moon fmt` reports no pending interface or formatting work, `moon check
+  --target all --warn-list +73` reports the known warning-73/main-package
+  baseline with 10 warnings and 0 errors, and `git diff --check` passes.~~
+- [ ] Add the next remaining format parity slice: additional real-world
+  ToUnicode/CMap fixtures when source material is available, broader real-world
+  image corpus coverage, or another malformed recovery source-corpus edge.

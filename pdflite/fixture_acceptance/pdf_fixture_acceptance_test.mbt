@@ -8184,6 +8184,343 @@ fn fixture_acceptance_assert_cpdf_source_rare_japan1_cmaps_for_test(
 }
 
 ///|
+fn fixture_acceptance_cpdf_source_supplemental_japan1_cmap_cases_for_test() -> Array[
+  (
+    String,
+    String,
+    String,
+    String,
+    Array[Int],
+    Array[Int],
+    Array[Int],
+    Array[Int],
+    Int,
+    Int,
+    Bool,
+  ),
+] {
+  [
+    (
+      "/SourceJ78H",
+      "/Source78Top",
+      "/78-H",
+      "/Source78Descendant",
+      [0x21, 0x21, 0x24, 0x22],
+      [0x3000, 0x3042],
+      [0x21, 0x21, 0x24, 0x22],
+      [0x3000, 0x3042],
+      0x3042,
+      0x2422,
+      true,
+    ),
+    (
+      "/SourceJ78V",
+      "/Source78VerticalTop",
+      "/78-V",
+      "/Source78VerticalDescendant",
+      [0x21, 0x21, 0x24, 0x21],
+      [0x3000, 0x3041],
+      [0x21, 0x21, 0x24, 0x21],
+      [0x3000, 0x3041],
+      0x3041,
+      0x2421,
+      true,
+    ),
+    (
+      "/SourceJ78RKSJH",
+      "/Source78RKSJTop",
+      "/78-RKSJ-H",
+      "/Source78RKSJDescendant",
+      [0x81, 0x40, 0x82, 0xA0],
+      [0x3000, 0x3042],
+      [0x81, 0x40, 0x82, 0xA0],
+      [0x3000, 0x3042],
+      0x3042,
+      0x82A0,
+      false,
+    ),
+    (
+      "/SourceJ78RKSJV",
+      "/Source78RKSJVerticalTop",
+      "/78-RKSJ-V",
+      "/Source78RKSJVerticalDescendant",
+      [0x81, 0x40, 0x82, 0x9F],
+      [0x3000, 0x3041],
+      [0x81, 0x40, 0x82, 0x9F],
+      [0x3000, 0x3041],
+      0x3041,
+      0x829F,
+      false,
+    ),
+    (
+      "/SourceJ78msRKSJH",
+      "/Source78msRKSJTop",
+      "/78ms-RKSJ-H",
+      "/Source78msRKSJDescendant",
+      [0x81, 0x40, 0x82, 0xA0],
+      [0x3000, 0x3042],
+      [0x81, 0x40, 0x82, 0xA0],
+      [0x3000, 0x3042],
+      0x3042,
+      0x82A0,
+      false,
+    ),
+    (
+      "/SourceJ78msRKSJV",
+      "/Source78msRKSJVerticalTop",
+      "/78ms-RKSJ-V",
+      "/Source78msRKSJVerticalDescendant",
+      [0x81, 0x40, 0x82, 0x9F],
+      [0x3000, 0x3041],
+      [0x81, 0x40, 0x82, 0x9F],
+      [0x3000, 0x3041],
+      0x3041,
+      0x829F,
+      false,
+    ),
+    (
+      "/SourceJ90pvV",
+      "/Source90pvVerticalTop",
+      "/90pv-RKSJ-V",
+      "/Source90pvVerticalDescendant",
+      [0x81, 0x40, 0x82, 0x9F],
+      [0x3000, 0x3041],
+      [0x80, 0x81, 0x40, 0x82, 0x9F],
+      [0x005C, 0x3000, 0x3041],
+      0x005C,
+      0x80,
+      false,
+    ),
+    (
+      "/SourceJRKSJH",
+      "/SourceRKSJTop",
+      "/RKSJ-H",
+      "/SourceRKSJDescendant",
+      [0x81, 0x40, 0x82, 0xA0],
+      [0x3000, 0x3042],
+      [0x81, 0x40, 0x82, 0xA0],
+      [0x3000, 0x3042],
+      0x3042,
+      0x82A0,
+      false,
+    ),
+    (
+      "/SourceJRKSJV",
+      "/SourceRKSJVerticalTop",
+      "/RKSJ-V",
+      "/SourceRKSJVerticalDescendant",
+      [0x81, 0x40, 0x82, 0x9F],
+      [0x3000, 0x3041],
+      [0x81, 0x40, 0x82, 0x9F],
+      [0x3000, 0x3041],
+      0x3041,
+      0x829F,
+      false,
+    ),
+    (
+      "/SourceJ78EUCH",
+      "/Source78EUCTop",
+      "/78-EUC-H",
+      "/Source78EUCDescendant",
+      [0xA1, 0xA1, 0xA4, 0xA2],
+      [0x3000, 0x3042],
+      [0xA1, 0xA1, 0xA4, 0xA2],
+      [0x3000, 0x3042],
+      0x3042,
+      0xA4A2,
+      false,
+    ),
+    (
+      "/SourceJ78EUCV",
+      "/Source78EUCVerticalTop",
+      "/78-EUC-V",
+      "/Source78EUCVerticalDescendant",
+      [0xA1, 0xA1, 0xA4, 0xA1],
+      [0x3000, 0x3041],
+      [0xA1, 0xA1, 0xA4, 0xA1],
+      [0x3000, 0x3041],
+      0x3041,
+      0xA4A1,
+      false,
+    ),
+    (
+      "/SourceJAddHStd",
+      "/SourceAddTop",
+      "/Add-H",
+      "/SourceAddDescendant",
+      [0x28, 0x21, 0x24, 0x22],
+      [0x2500, 0x3042],
+      [0x28, 0x21, 0x24, 0x22],
+      [0x2500, 0x3042],
+      0x2500,
+      0x2821,
+      true,
+    ),
+    (
+      "/SourceJAddVStd",
+      "/SourceAddVerticalTop",
+      "/Add-V",
+      "/SourceAddVerticalDescendant",
+      [0x28, 0x21, 0x24, 0x21],
+      [0x2500, 0x3041],
+      [0x28, 0x21, 0x24, 0x21],
+      [0x2500, 0x3041],
+      0x3041,
+      0x2421,
+      true,
+    ),
+    (
+      "/SourceJExtHStd",
+      "/SourceExtTop",
+      "/Ext-H",
+      "/SourceExtDescendant",
+      [0x2C, 0x24, 0x24, 0x22],
+      [0x2500, 0x3042],
+      [0x2C, 0x24, 0x24, 0x22],
+      [0x2500, 0x3042],
+      0x3042,
+      0x2422,
+      true,
+    ),
+    (
+      "/SourceJExtVStd",
+      "/SourceExtVerticalTop",
+      "/Ext-V",
+      "/SourceExtVerticalDescendant",
+      [0x2C, 0x24, 0x24, 0x21],
+      [0x2500, 0x3041],
+      [0x2C, 0x24, 0x24, 0x21],
+      [0x2500, 0x3041],
+      0x3041,
+      0x2421,
+      true,
+    ),
+    (
+      "/SourceJHojoH",
+      "/SourceHojoTop",
+      "/Hojo-H",
+      "/SourceHojoDescendant",
+      [0x34, 0x2E],
+      [0x4EDD],
+      [0x34, 0x2E],
+      [0x4EDD],
+      0x4EDD,
+      0x342E,
+      true,
+    ),
+    (
+      "/SourceJHojoV",
+      "/SourceHojoVerticalTop",
+      "/Hojo-V",
+      "/SourceHojoVerticalDescendant",
+      [0x34, 0x2E],
+      [0x4EDD],
+      [0x34, 0x2E],
+      [0x4EDD],
+      0x4EDD,
+      0x342E,
+      true,
+    ),
+    (
+      "/SourceJNWPH",
+      "/SourceNWPTop",
+      "/NWP-H",
+      "/SourceNWPDescendant",
+      [0x2E, 0x21, 0x2C, 0x24, 0x24, 0x22],
+      [0xFF01, 0x2500, 0x3042],
+      [0x2E, 0x21, 0x2C, 0x24, 0x24, 0x22],
+      [0xFF01, 0x2500, 0x3042],
+      0x3042,
+      0x2422,
+      true,
+    ),
+    (
+      "/SourceJNWPV",
+      "/SourceNWPVerticalTop",
+      "/NWP-V",
+      "/SourceNWPVerticalDescendant",
+      [0x2E, 0x21, 0x24, 0x21],
+      [0xFF01, 0x3041],
+      [0x2E, 0x21, 0x24, 0x21],
+      [0xFF01, 0x3041],
+      0x3041,
+      0x2421,
+      true,
+    ),
+  ]
+}
+
+///|
+fn fixture_acceptance_cpdf_source_hello_with_supplemental_japan1_cmaps_for_test(
+  document : @pdflite.PdfDocument,
+) -> @pdflite.PdfDocument raise {
+  let output = document.copy()
+  let pages = output.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  let cases = fixture_acceptance_cpdf_source_supplemental_japan1_cmap_cases_for_test()
+  let mut font_resources = fixture_acceptance_cpdf_source_page_fonts_for_test(
+    output,
+    pages[0].resources,
+  )
+  let ops : Array[@pdflite.PdfContentOp] = [Op_BT]
+  for case in cases {
+    let descendant = output.add_object(
+      fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
+        case.3,
+        "Japan1",
+      ),
+    )
+    let font = output.add_object(
+      fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
+        case.1,
+        case.2,
+        descendant,
+      ),
+    )
+    font_resources = font_resources.add_dict_entry(
+      fixture_acceptance_pdf_name_for_test(case.0),
+      PdfIndirect(font),
+    )
+    ops.push(Op_Tf(fixture_acceptance_pdf_name_for_test(case.0), 12.0))
+    ops.push(Op_Tj(@pdflite.pdf_bytes_of_int_array(case.4)))
+  }
+  ops.push(Op_ET)
+  let resources = pages[0].resources.add_dict_entry(
+    fixture_acceptance_pdf_name_for_test("/Font"),
+    font_resources,
+  )
+  let page = { ..pages[0], resources, }
+  let updated_page = output.postpend_operators(page, ops, fast=true)
+  output.change_pages([updated_page], change_references=true)
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_supplemental_japan1_cmaps_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+  let extracted = @utf8.decode_lossy(document.test_extract_text([1]))
+  let cases = fixture_acceptance_cpdf_source_supplemental_japan1_cmap_cases_for_test()
+  for case in cases {
+    fixture_acceptance_assert_contains_for_test(
+      extracted,
+      @utf8.decode_lossy(@pdflite.pdf_utf8_of_codepoints(case.5)),
+    )
+    fixture_acceptance_assert_cpdf_source_japan1_predefined_font_for_test(
+      document,
+      case.0,
+      case.1,
+      case.2,
+      @pdflite.pdf_bytes_of_int_array(case.6),
+      case.7,
+      case.8,
+      case.9,
+      case.10,
+    )
+  }
+}
+
+///|
 fn fixture_acceptance_cpdf_source_hello_with_gb_cns_predefined_cmaps_for_test(
   document : @pdflite.PdfDocument,
 ) -> @pdflite.PdfDocument raise {
@@ -12146,6 +12483,35 @@ async test "optional cpdf source hello fixture extracts rare Japan1 predefined C
         @pdflite.pdf_read_document_from_bytes(compressed),
       )
       fixture_acceptance_assert_cpdf_source_rare_japan1_cmaps_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+        ),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source hello fixture extracts supplemental Japan1 predefined CMaps" {
+  match
+    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+      let with_cmaps = fixture_acceptance_cpdf_source_hello_with_supplemental_japan1_cmaps_for_test(
+        document,
+      )
+      fixture_acceptance_assert_cpdf_source_supplemental_japan1_cmaps_for_test(
+        with_cmaps,
+      )
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        with_cmaps,
+      )
+      fixture_acceptance_assert_cpdf_source_supplemental_japan1_cmaps_for_test(
+        @pdflite.pdf_read_document_from_bytes(compressed),
+      )
+      fixture_acceptance_assert_cpdf_source_supplemental_japan1_cmaps_for_test(
         @pdflite.pdf_read_document_from_bytes(
           fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
         ),
