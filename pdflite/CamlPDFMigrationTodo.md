@@ -6397,6 +6397,24 @@ Current backend snapshot:
   pending interface or formatting work, and `moon check --target all --warn-list
   +73` reports the known warning-73/main-package baseline with 7 warnings and 0
   errors.~~
+- [x] ~~Add the next remaining format parity slice: optional
+  `.repos/cpdf-source/hello.pdf` now gates the cpdfua-listed rare Japan1
+  predefined CMaps `/83pv-RKSJ-H`, `/90ms-RKSJ-V`, `/EUC-V`, `/V`,
+  `/Add-RKSJ-H`, `/Add-RKSJ-V`, `/Ext-RKSJ-H`, and `/Ext-RKSJ-V`. The gate
+  installs source-boundary Type 0 fonts over the real top-level hello fixture,
+  appends all rare-map text runs to page content, verifies font
+  listing/read-font state, whole-page extraction, per-font codepoint extraction,
+  reverse charcode lookup including the 83pv `0x80` backslash mapping,
+  undefined-codepoint fallbacks, compressed xref-stream rewrite/reread, and
+  bad-`startxref` recovery. `moon check --target native fixture_acceptance
+  --warn-list +73` passes, `moon test --target native fixture_acceptance
+  --filter 'optional cpdf source hello fixture extracts rare Japan1 predefined
+  CMaps'` reports 1/1 test passing, `moon test --target native
+  fixture_acceptance` reports 113/113 tests passing, `moon test --target
+  native` reports 2285/2285 tests passing, `moon info && moon fmt` reports no
+  pending interface or formatting work, and `moon check --target all --warn-list
+  +73` reports the known warning-73/main-package baseline with 7 warnings and 0
+  errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, additional real-world ToUnicode/CMap fixtures when source
   material is available, or broader real-world image corpus coverage.
