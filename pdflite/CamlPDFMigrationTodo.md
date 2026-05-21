@@ -6381,6 +6381,22 @@ Current backend snapshot:
   passing, `moon info && moon fmt` reports no pending interface or formatting
   work, and `moon check --target all --warn-list +73` reports the known
   warning-73/main-package baseline with 7 warnings and 0 errors.~~
+- [x] ~~Add the next remaining format parity slice: optional
+  `.repos/cpdf-source/hello.pdf` now gates the cpdfua-listed Korea1 horizontal
+  predefined CMaps `/KSC-EUC-H`, `/KSCpc-EUC-H`, `/KSCms-UHC-H`, and
+  `/KSCms-UHC-HW-H`. The gate installs source-boundary Type 0 fonts over the
+  real top-level hello fixture, verifies font listing/read-font state, mixed
+  byte extraction, reverse charcode lookups, Korean compatibility mappings,
+  undefined-codepoint fallbacks, page text extraction, compressed xref-stream
+  rewrite/reread, and bad-`startxref` recovery. `moon check --target native
+  fixture_acceptance --warn-list +73` passes, `moon test --target native
+  fixture_acceptance --filter 'optional cpdf source hello fixture extracts
+  Korea1 horizontal CMaps'` reports 1/1 test passing, `moon test --target
+  native fixture_acceptance` reports 112/112 tests passing, `moon test --target
+  native` reports 2284/2284 tests passing, `moon info && moon fmt` reports no
+  pending interface or formatting work, and `moon check --target all --warn-list
+  +73` reports the known warning-73/main-package baseline with 7 warnings and 0
+  errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, additional real-world ToUnicode/CMap fixtures when source
   material is available, or broader real-world image corpus coverage.

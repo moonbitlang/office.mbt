@@ -7337,6 +7337,188 @@ fn fixture_acceptance_assert_cpdf_source_uniks_predefined_cmaps_for_test(
 }
 
 ///|
+fn fixture_acceptance_cpdf_source_hello_with_korea1_horizontal_cmaps_for_test(
+  document : @pdflite.PdfDocument,
+) -> @pdflite.PdfDocument raise {
+  let output = document.copy()
+  let descendant_ksc_euc = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
+      "/SourceHorizontalKSCEUCDescendant", "Korea1",
+    ),
+  )
+  let descendant_kscpc_euc = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
+      "/SourceHorizontalKSCpcEUCDescendant", "Korea1",
+    ),
+  )
+  let descendant_uhc = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
+      "/SourceHorizontalKSCmsUHCDescendant", "Korea1",
+    ),
+  )
+  let descendant_uhc_hw = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
+      "/SourceHorizontalKSCmsUHCHWDescendant", "Korea1",
+    ),
+  )
+  let font_ksc_euc = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
+      "/SourceHorizontalKSCEUCTop", "/KSC-EUC-H", descendant_ksc_euc,
+    ),
+  )
+  let font_kscpc_euc = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
+      "/SourceHorizontalKSCpcEUCTop", "/KSCpc-EUC-H", descendant_kscpc_euc,
+    ),
+  )
+  let font_uhc = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
+      "/SourceHorizontalKSCmsUHCTop", "/KSCms-UHC-H", descendant_uhc,
+    ),
+  )
+  let font_uhc_hw = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
+      "/SourceHorizontalKSCmsUHCHWTop", "/KSCms-UHC-HW-H", descendant_uhc_hw,
+    ),
+  )
+  let pages = output.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  let font_resources = fixture_acceptance_cpdf_source_page_fonts_for_test(
+      output,
+      pages[0].resources,
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/SourceKSCH"),
+      PdfIndirect(font_ksc_euc),
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/SourceKSCpcH"),
+      PdfIndirect(font_kscpc_euc),
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/SourceUHCH"),
+      PdfIndirect(font_uhc),
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/SourceUHCHWH"),
+      PdfIndirect(font_uhc_hw),
+    )
+  let resources = pages[0].resources.add_dict_entry(
+    fixture_acceptance_pdf_name_for_test("/Font"),
+    font_resources,
+  )
+  let page = { ..pages[0], resources, }
+  let horizontal_text = @pdflite.pdf_bytes_of_int_array([0xB0, 0xA1, 0xC7, 0xD1])
+  let updated_page = output.postpend_operators(
+    page,
+    [
+      Op_BT,
+      Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceKSCH"), 12.0),
+      Op_Tj(horizontal_text),
+      Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceKSCpcH"), 12.0),
+      Op_Tj(horizontal_text),
+      Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceUHCH"), 12.0),
+      Op_Tj(horizontal_text),
+      Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceUHCHWH"), 12.0),
+      Op_Tj(@pdflite.pdf_bytes_of_int_array([0xB0, 0xA1, 0xA4, 0xD4])),
+      Op_ET,
+    ],
+    fast=true,
+  )
+  output.change_pages([updated_page], change_references=true)
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_korea1_horizontal_cmaps_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+  let extracted = @utf8.decode_lossy(document.test_extract_text([1]))
+  fixture_acceptance_assert_contains_for_test(
+    extracted,
+    @utf8.decode_lossy(@pdflite.pdf_utf8_of_codepoints([0xAC00, 0xD55C])),
+  )
+  fixture_acceptance_assert_cpdf_source_gb_cns_predefined_font_for_test(
+    document,
+    "/SourceKSCH",
+    "/SourceHorizontalKSCEUCTop",
+    "/KSC-EUC-H",
+    "Korea1",
+    @pdflite.pdf_bytes_of_int_array([
+      0x41, 0x7E, 0xA1, 0xA1, 0xB0, 0xA1, 0xC7, 0xD1, 0x80,
+    ]),
+    [0x41, 0x203E, 0x3000, 0xAC00, 0xD55C, 0x80],
+    0xD55C,
+    0xC7D1,
+    false,
+  )
+  let ksc_euc = fixture_acceptance_source_font_extractor_for_test(
+    document, "/SourceKSCH",
+  )
+  @test.assert_eq(ksc_euc.charcode_of_codepoint(0x4E0D), Some(0xDCF4))
+  @test.assert_eq(ksc_euc.charcode_of_codepoint(0x3164), None)
+  fixture_acceptance_assert_cpdf_source_gb_cns_predefined_font_for_test(
+    document,
+    "/SourceKSCpcH",
+    "/SourceHorizontalKSCpcEUCTop",
+    "/KSCpc-EUC-H",
+    "Korea1",
+    @pdflite.pdf_bytes_of_int_array([
+      0x41, 0x80, 0x81, 0x84, 0x9F, 0xFE, 0xFF, 0xA1, 0x41, 0xA1, 0x51, 0xA2, 0xE6,
+      0xA2, 0xEF, 0xB0, 0xA1, 0xC7, 0xD1,
+    ]),
+    [
+      0x41, 0x00A0, 0x20A9, 0xFF3F, 0x9F, 0x2122, 0x22EF, 0x300C, 0x28, 0x28, 0x31,
+      0x20DE, 0x5B, 0x31, 0x30, 0x5D, 0xAC00, 0xD55C,
+    ],
+    0x300C,
+    0xA141,
+    false,
+  )
+  let kscpc_euc = fixture_acceptance_source_font_extractor_for_test(
+    document, "/SourceKSCpcH",
+  )
+  @test.assert_eq(kscpc_euc.charcode_of_codepoint(0x20A9), Some(0x81))
+  @test.assert_eq(kscpc_euc.charcode_of_codepoint(0x22EF), Some(0xFF))
+  @test.assert_eq(kscpc_euc.charcode_of_codepoint(0x20DE), None)
+  fixture_acceptance_assert_cpdf_source_gb_cns_predefined_font_for_test(
+    document,
+    "/SourceUHCH",
+    "/SourceHorizontalKSCmsUHCTop",
+    "/KSCms-UHC-H",
+    "Korea1",
+    @pdflite.pdf_bytes_of_int_array([
+      0x41, 0xB0, 0xA1, 0xC7, 0xD1, 0xB1, 0xDB, 0x81, 0x41, 0xA4, 0xD4,
+    ]),
+    [0x41, 0xAC00, 0xD55C, 0xAE00, 0xAC02, 0x3164],
+    0xAC02,
+    0x8141,
+    false,
+  )
+  let uhc = fixture_acceptance_source_font_extractor_for_test(
+    document, "/SourceUHCH",
+  )
+  @test.assert_eq(
+    uhc.codepoints_of_text(@pdflite.pdf_bytes_of_int_array([0x81, 0x40])),
+    [0x8140],
+  )
+  @test.assert_eq(uhc.charcode_of_codepoint(0x3164), Some(0xA4D4))
+  @test.assert_eq(uhc.charcode_of_codepoint(0x1F600), None)
+  fixture_acceptance_assert_cpdf_source_gb_cns_predefined_font_for_test(
+    document,
+    "/SourceUHCHWH",
+    "/SourceHorizontalKSCmsUHCHWTop",
+    "/KSCms-UHC-HW-H",
+    "Korea1",
+    @pdflite.pdf_bytes_of_int_array([0xB0, 0xA1, 0xA4, 0xD4]),
+    [0xAC00, 0x3164],
+    0x3164,
+    0xA4D4,
+    false,
+  )
+}
+
+///|
 fn fixture_acceptance_cpdf_source_hello_with_korea1_vertical_cmaps_for_test(
   document : @pdflite.PdfDocument,
 ) -> @pdflite.PdfDocument raise {
@@ -11653,6 +11835,35 @@ async test "optional cpdf source hello fixture extracts UniKS predefined CMaps" 
         @pdflite.pdf_read_document_from_bytes(compressed),
       )
       fixture_acceptance_assert_cpdf_source_uniks_predefined_cmaps_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+        ),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source hello fixture extracts Korea1 horizontal CMaps" {
+  match
+    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+      let with_cmaps = fixture_acceptance_cpdf_source_hello_with_korea1_horizontal_cmaps_for_test(
+        document,
+      )
+      fixture_acceptance_assert_cpdf_source_korea1_horizontal_cmaps_for_test(
+        with_cmaps,
+      )
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        with_cmaps,
+      )
+      fixture_acceptance_assert_cpdf_source_korea1_horizontal_cmaps_for_test(
+        @pdflite.pdf_read_document_from_bytes(compressed),
+      )
+      fixture_acceptance_assert_cpdf_source_korea1_horizontal_cmaps_for_test(
         @pdflite.pdf_read_document_from_bytes(
           fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
         ),
