@@ -5985,6 +5985,194 @@ fn fixture_acceptance_assert_cpdf_source_japan1_predefined_cmaps_for_test(
 }
 
 ///|
+fn fixture_acceptance_cpdf_source_hello_with_japan1_base_cmaps_for_test(
+  document : @pdflite.PdfDocument,
+) -> @pdflite.PdfDocument raise {
+  let output = document.copy()
+  let descendant_90ms = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
+      "/Source90msDescendant", "Japan1",
+    ),
+  )
+  let descendant_90pv = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
+      "/Source90pvDescendant", "Japan1",
+    ),
+  )
+  let descendant_jis = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
+      "/SourceJISDescendant", "Japan1",
+    ),
+  )
+  let descendant_euc = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
+      "/SourceJapanEUCDescendant", "Japan1",
+    ),
+  )
+  let descendant_hojo_euc = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
+      "/SourceHojoEUCHDescendant", "Japan1",
+    ),
+  )
+  let font_90ms = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
+      "/Source90msTop", "/90ms-RKSJ-H", descendant_90ms,
+    ),
+  )
+  let font_90pv = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
+      "/Source90pvTop", "/90pv-RKSJ-H", descendant_90pv,
+    ),
+  )
+  let font_jis = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
+      "/SourceJISTop", "/H", descendant_jis,
+    ),
+  )
+  let font_euc = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
+      "/SourceJapanEUCTop", "/EUC-H", descendant_euc,
+    ),
+  )
+  let font_hojo_euc = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
+      "/SourceHojoEUCHTop", "/Hojo-EUC-H", descendant_hojo_euc,
+    ),
+  )
+  let pages = output.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  let font_resources = fixture_acceptance_cpdf_source_page_fonts_for_test(
+      output,
+      pages[0].resources,
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/SourceJ90msH"),
+      PdfIndirect(font_90ms),
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/SourceJ90pvH"),
+      PdfIndirect(font_90pv),
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/SourceJH"),
+      PdfIndirect(font_jis),
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/SourceJEUCH"),
+      PdfIndirect(font_euc),
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/SourceJHojoEUCH"),
+      PdfIndirect(font_hojo_euc),
+    )
+  let resources = pages[0].resources.add_dict_entry(
+    fixture_acceptance_pdf_name_for_test("/Font"),
+    font_resources,
+  )
+  let page = { ..pages[0], resources, }
+  let updated_page = output.postpend_operators(
+    page,
+    [
+      Op_BT,
+      Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceJ90msH"), 12.0),
+      Op_Tj(
+        @pdflite.pdf_bytes_of_int_array([0x41, 0xA6, 0x81, 0x40, 0x93, 0xF1]),
+      ),
+      Op_ET,
+    ],
+    fast=true,
+  )
+  output.change_pages([updated_page], change_references=true)
+}
+
+///|
+fn fixture_acceptance_source_font_extractor_for_test(
+  document : @pdflite.PdfDocument,
+  name : String,
+) -> @pdflite.PdfTextExtractor raise {
+  let source_font = fixture_acceptance_cpdf_source_font_entry_for_test(
+    document.list_fonts([1]),
+    name,
+  )
+  document.text_extractor_of_font(source_font.font)
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_japan1_base_cmaps_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+  let expected_text = @utf8.decode_lossy(
+    @pdflite.pdf_utf8_of_codepoints([0x41, 0xFF66, 0x3000, 0x4E8C]),
+  )
+  let text = @utf8.decode_lossy(document.test_extract_text([1]))
+  fixture_acceptance_assert_contains_for_test(text, expected_text)
+  fixture_acceptance_assert_cpdf_source_japan1_predefined_font_for_test(
+    document,
+    "/SourceJ90msH",
+    "/Source90msTop",
+    "/90ms-RKSJ-H",
+    @pdflite.pdf_bytes_of_int_array([0x41, 0xA6, 0x81, 0x40, 0x93, 0xF1]),
+    [0x41, 0xFF66, 0x3000, 0x4E8C],
+    0x4E8C,
+    0x93F1,
+    false,
+  )
+  let rksj = fixture_acceptance_source_font_extractor_for_test(
+    document, "/SourceJ90msH",
+  )
+  @test.assert_eq(rksj.charcode_of_codepoint(0x20AC), Some(0x80))
+  fixture_acceptance_assert_cpdf_source_japan1_predefined_font_for_test(
+    document,
+    "/SourceJ90pvH",
+    "/Source90pvTop",
+    "/90pv-RKSJ-H",
+    @pdflite.pdf_bytes_of_int_array([0x5C, 0x80, 0xA0, 0x81, 0x7C, 0x85, 0x91]),
+    [0x00A5, 0x005C, 0x00A0, 0x2212, 0xF860, 0x0030, 0x002E],
+    0x2212,
+    0x817C,
+    false,
+  )
+  let rksj_90pv = fixture_acceptance_source_font_extractor_for_test(
+    document, "/SourceJ90pvH",
+  )
+  @test.assert_eq(rksj_90pv.charcode_of_codepoint(0xF860), None)
+  fixture_acceptance_assert_cpdf_source_japan1_predefined_font_for_test(
+    document,
+    "/SourceJH",
+    "/SourceJISTop",
+    "/H",
+    @pdflite.pdf_bytes_of_int_array([0x21, 0x21, 0x24, 0x22]),
+    [0x3000, 0x3042],
+    0x3042,
+    0x2422,
+    true,
+  )
+  fixture_acceptance_assert_cpdf_source_japan1_predefined_font_for_test(
+    document,
+    "/SourceJEUCH",
+    "/SourceJapanEUCTop",
+    "/EUC-H",
+    @pdflite.pdf_bytes_of_int_array([0xA1, 0xA1, 0xA4, 0xA2]),
+    [0x3000, 0x3042],
+    0x3042,
+    0xA4A2,
+    false,
+  )
+  fixture_acceptance_assert_cpdf_source_japan1_predefined_font_for_test(
+    document,
+    "/SourceJHojoEUCH",
+    "/SourceHojoEUCHTop",
+    "/Hojo-EUC-H",
+    @pdflite.pdf_bytes_of_int_array([0x8F, 0xB4, 0xAE]),
+    [0x4EDD],
+    0x4EDD,
+    0x8FB4AE,
+    false,
+  )
+}
+
+///|
 fn fixture_acceptance_cpdf_source_hello_with_gb_cns_predefined_cmaps_for_test(
   document : @pdflite.PdfDocument,
 ) -> @pdflite.PdfDocument raise {
@@ -8492,6 +8680,35 @@ async test "optional cpdf source hello fixture extracts Japan1 predefined CMaps"
         @pdflite.pdf_read_document_from_bytes(compressed),
       )
       fixture_acceptance_assert_cpdf_source_japan1_predefined_cmaps_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+        ),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source hello fixture extracts Japan1 base predefined CMaps" {
+  match
+    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+      let with_cmaps = fixture_acceptance_cpdf_source_hello_with_japan1_base_cmaps_for_test(
+        document,
+      )
+      fixture_acceptance_assert_cpdf_source_japan1_base_cmaps_for_test(
+        with_cmaps,
+      )
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        with_cmaps,
+      )
+      fixture_acceptance_assert_cpdf_source_japan1_base_cmaps_for_test(
+        @pdflite.pdf_read_document_from_bytes(compressed),
+      )
+      fixture_acceptance_assert_cpdf_source_japan1_base_cmaps_for_test(
         @pdflite.pdf_read_document_from_bytes(
           fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
         ),
