@@ -6641,6 +6641,14 @@ Current backend snapshot:
   `moon fmt` report no pending interface or formatting work, and `moon check
   --target all --warn-list +73` reports the known warning-73/main-package
   baseline with 10 warnings and 0 errors.~~
+- [x] ~~Refresh portable backend validation after the latest optional
+  `.repos/cpdf-source` Markdown recovery gates: `moon test --target wasm-gc`
+  reports 2013/2013 tests passing, `moon test --target js` reports 2013/2013
+  tests passing, and `moon check --target all --warn-list +73` reports the
+  known warning-73/main-package baseline with 10 warnings and 0 errors. Full
+  plain-Wasm package-level validation remains separately tracked because the
+  largest regression executables still need to be split or reduced before they
+  fit the runtime's maximum-function-size limit.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.
