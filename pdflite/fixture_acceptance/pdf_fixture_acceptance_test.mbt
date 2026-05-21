@@ -3839,6 +3839,98 @@ fn fixture_acceptance_assert_cpdf_manual_bookmarks_for_test(
 }
 
 ///|
+fn fixture_acceptance_assert_cpdf_manual_bookmarks_open_to_level_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 175)
+  let bookmarks = document.read_bookmarks(preserve_actions=true)
+  @test.assert_eq(bookmarks.length(), 163)
+  let mut saw_child = false
+  for bookmark in bookmarks {
+    if bookmark.level > 0 {
+      @test.assert_eq(bookmark.is_open, false)
+      saw_child = true
+    }
+  }
+  @test.assert_eq(saw_child, true)
+  @test.assert_eq(bookmarks[0].level, 0)
+  @test.assert_eq(document.page_number_of_target(bookmarks[0].target), 19)
+  @test.assert_eq(bookmarks[0].is_open, true)
+  @test.assert_eq(bookmarks[21].level, 0)
+  @test.assert_eq(document.page_number_of_target(bookmarks[21].target), 31)
+  @test.assert_eq(bookmarks[21].is_open, true)
+  let bookmarks_json = document
+    .bookmarks_json(json_preserve_actions=true)
+    .stringify()
+  fixture_acceptance_assert_contains_for_test(
+    bookmarks_json, "\"text\":\"1 Basic Usage\"",
+  )
+  fixture_acceptance_assert_contains_for_test(bookmarks_json, "\"open\":true")
+  fixture_acceptance_assert_contains_for_test(bookmarks_json, "\"open\":false")
+  let listed = @ascii.decode_lossy(
+    document.list_bookmarks([19, 31, 33], encoding=PdfMetadataUTF8),
+  )
+  fixture_acceptance_assert_contains_for_test(
+    listed, "0 \"1 Basic Usage\" 19 open \"",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    listed, "0 \"2 Merging and Splitting\" 31 open \"",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    listed, "1 \"2.4 Splitting on Bookmarks\" 33 \"",
+  )
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_manual_title_bookmark_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 175)
+  let bookmarks = document.read_bookmarks(preserve_actions=true)
+  @test.assert_eq(bookmarks.length(), 164)
+  @test.assert_eq(bookmarks[0].level, 0)
+  @test.assert_eq(
+    @utf8.decode_lossy(@pdflite.pdf_utf8_of_pdfdocstring(bookmarks[0].text)),
+    "cpdfmanual.pdf",
+  )
+  @test.assert_eq(document.page_number_of_target(bookmarks[0].target), 1)
+  @test.assert_eq(bookmarks[0].is_open, false)
+  @test.assert_eq(bookmarks[0].colour, @pdflite.pdf_bookmark_black)
+  @test.assert_eq(bookmarks[0].flags, 0)
+  @test.assert_eq(bookmarks[1].level, 1)
+  @test.assert_eq(
+    @utf8.decode_lossy(@pdflite.pdf_utf8_of_pdfdocstring(bookmarks[1].text)),
+    "1 Basic Usage",
+  )
+  @test.assert_eq(document.page_number_of_target(bookmarks[1].target), 19)
+  @test.assert_eq(bookmarks[22].level, 1)
+  @test.assert_eq(document.page_number_of_target(bookmarks[22].target), 31)
+  for index in 1..<bookmarks.length() {
+    @test.assert_eq(bookmarks[index].level >= 1, true)
+  }
+  let bookmarks_json = document
+    .bookmarks_json(json_preserve_actions=true)
+    .stringify()
+  fixture_acceptance_assert_contains_for_test(
+    bookmarks_json, "\"text\":\"cpdfmanual.pdf\"",
+  )
+  fixture_acceptance_assert_contains_for_test(bookmarks_json, "\"page\":1")
+  fixture_acceptance_assert_contains_for_test(
+    bookmarks_json, "\"text\":\"1 Basic Usage\"",
+  )
+  let listed = @ascii.decode_lossy(
+    document.list_bookmarks([1, 19, 31, 33], encoding=PdfMetadataUTF8),
+  )
+  fixture_acceptance_assert_contains_for_test(
+    listed, "0 \"cpdfmanual.pdf\" 1 \"",
+  )
+  fixture_acceptance_assert_contains_for_test(listed, "1 \"1 Basic Usage\" 19")
+  fixture_acceptance_assert_contains_for_test(
+    listed, "1 \"2 Merging and Splitting\" 31",
+  )
+}
+
+///|
 fn fixture_acceptance_cpdf_toc_fontpack_for_test() -> @pdflite.PdfFontPack raise {
   @pdflite.pdf_fontpack_of_standard_font(
     PdfFontStandard({ font: PdfHelvetica, encoding: PdfWinAnsiEncoding }),
@@ -6392,6 +6484,61 @@ async test "optional cpdf source manual fixture lists bookmarks" {
       fixture_acceptance_assert_cpdf_manual_bookmarks_for_test(rebuilt)
       fixture_acceptance_assert_cpdf_manual_bookmarks_for_test(
         fixture_acceptance_reparse_compressed_for_test(rebuilt),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source manual fixture mutates bookmark open state and title" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/cpdfmanual.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      let opened = try! document.bookmarks_open_to_level(1)
+      fixture_acceptance_assert_cpdf_manual_bookmarks_open_to_level_for_test(
+        opened,
+      )
+      fixture_acceptance_assert_cpdf_manual_bookmarks_open_to_level_for_test(
+        try! @pdflite.pdf_bookmarks_open_to_level(1, document),
+      )
+      fixture_acceptance_assert_cpdf_manual_bookmarks_open_to_level_for_test(
+        fixture_acceptance_reparse_compressed_for_test(opened),
+      )
+      let opened_compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        opened,
+      )
+      fixture_acceptance_assert_cpdf_manual_bookmarks_open_to_level_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(
+            opened_compressed,
+          ),
+        ),
+      )
+      let titled = try! document.add_bookmark_title(
+        "/tmp/cpdfmanual.pdf", false,
+      )
+      fixture_acceptance_assert_cpdf_manual_title_bookmark_for_test(titled)
+      fixture_acceptance_assert_cpdf_manual_title_bookmark_for_test(
+        try! @pdflite.pdf_add_bookmark_title(
+          "/tmp/cpdfmanual.pdf", false, document,
+        ),
+      )
+      fixture_acceptance_assert_cpdf_manual_title_bookmark_for_test(
+        fixture_acceptance_reparse_compressed_for_test(titled),
+      )
+      let titled_compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        titled,
+      )
+      fixture_acceptance_assert_cpdf_manual_title_bookmark_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(
+            titled_compressed,
+          ),
+        ),
       )
     }
   }

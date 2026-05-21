@@ -5723,6 +5723,21 @@ Current backend snapshot:
   reports 80/80 tests passing, `moon test --target native` reports 2252/2252
   tests passing, and `moon check --target all --warn-list +73` reports the
   known warning baseline with 10 warnings and 0 errors.~~
+- [x] ~~Add the next source-boundary cpdfbookmarks mutation slice: optional
+  `.repos/cpdf-source/cpdfmanual.pdf` now gates `bookmarks_open_to_level` and
+  `add_bookmark_title` method/wrapper behavior on the real 163-entry manual
+  outline. The gate verifies top-level/child open-state rewriting, title
+  bookmark insertion from filename basename, decoded PDFDocString title
+  preservation across source UTF-16 and generated strings, original outline
+  indentation, page-target preservation, JSON/list output, compressed
+  rewrite/reread, and bad-`startxref` recovery. `moon check --target native
+  fixture_acceptance --warn-list +73` passes, `moon test --target native
+  fixture_acceptance --filter 'optional cpdf source manual fixture mutates
+  bookmark open state and title'` reports 1/1 test passing, `moon test --target
+  native fixture_acceptance` reports 81/81 tests passing, `moon test --target
+  native` reports 2253/2253 tests passing, and `moon check --target all
+  --warn-list +73` reports the known warning baseline with 10 warnings and 0
+  errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
