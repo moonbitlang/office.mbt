@@ -6899,6 +6899,23 @@ Current backend snapshot:
   && moon fmt` reports no pending interface or formatting work, and `moon check
   --target all --warn-list +73` reports the known warning-73/main-package
   baseline with 7 warnings and 0 errors.~~
+- [x] ~~Add the next source-corpus recursive image reporting slice: the native
+  `image/fixture_acceptance` package now gates optional
+  `.repos/cpdf-source/hello.pdf` through cpdf-style nested Form XObject image
+  reporting. The gate starts from the real source hello fixture, verifies it
+  has no image rows before injection, injects a Form XObject that owns a
+  `/SourceNestedImage` FlateDecode `/DeviceGray` Image XObject, checks
+  `images_json`/blob wrappers, `image_resolution`/JSON/blob wrappers, recursive
+  Form content/resource parsing, and direct `get_image_24bpp` extraction, then
+  repeats the checks after compressed rewrite/reread plus
+  bad-final-`startxref` reconstruction. `moon check --target native
+  image/fixture_acceptance --warn-list +73` passes, the focused cpdf source
+  hello nested-form-image test reports 1/1 test passing, `moon test --target
+  native image/fixture_acceptance` reports 21/21 tests passing, and `moon test
+  --target native` reports 2315/2315 tests passing. `moon info && moon fmt`
+  reports no pending interface or formatting work, and `moon check --target all
+  --warn-list +73` reports the known warning-73/main-package baseline with 7
+  warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.

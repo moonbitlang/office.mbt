@@ -695,6 +695,255 @@ fn image_external_assert_cpdf_source_inline_image_for_test(
 }
 
 ///|
+fn image_external_cpdf_source_nested_image_data_for_test() -> @pdflite.PdfBytes raise {
+  @pdflite.pdf_flate_encode(@pdflite.pdf_bytes_of_int_array([0, 64, 128, 255]))
+}
+
+///|
+fn image_external_cpdf_source_nested_image_for_test() -> @pdflite.PdfObject raise {
+  let data = image_external_cpdf_source_nested_image_data_for_test()
+  @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (
+        image_external_name_for_test("/Type"),
+        PdfNameObject(image_external_name_for_test("/XObject")),
+      ),
+      (
+        image_external_name_for_test("/Subtype"),
+        PdfNameObject(image_external_name_for_test("/Image")),
+      ),
+      (image_external_name_for_test("/Width"), PdfInteger(2)),
+      (image_external_name_for_test("/Height"), PdfInteger(2)),
+      (image_external_name_for_test("/BitsPerComponent"), PdfInteger(8)),
+      (
+        image_external_name_for_test("/ColorSpace"),
+        PdfNameObject(image_external_name_for_test("/DeviceGray")),
+      ),
+      (
+        image_external_name_for_test("/Filter"),
+        PdfNameObject(image_external_name_for_test("/FlateDecode")),
+      ),
+      (image_external_name_for_test("/Length"), PdfInteger(data.length())),
+    ]),
+    StreamGot(data),
+  )
+}
+
+///|
+fn image_external_cpdf_source_form_image_form_for_test(
+  image_number : Int,
+) -> @pdflite.PdfObject raise {
+  @pdflite.pdf_content_stream_of_ops([
+    Op_cm({ a: 72.0, b: 0.0, c: 0.0, d: 72.0, e: 72.0, f: 72.0 }),
+    Op_Do(image_external_name_for_test("/SourceNestedImage")),
+  ])
+  .add_dict_entry(
+    image_external_name_for_test("/Type"),
+    PdfNameObject(image_external_name_for_test("/XObject")),
+  )
+  .add_dict_entry(
+    image_external_name_for_test("/Subtype"),
+    PdfNameObject(image_external_name_for_test("/Form")),
+  )
+  .add_dict_entry(
+    image_external_name_for_test("/BBox"),
+    PdfArray([PdfInteger(0), PdfInteger(0), PdfInteger(72), PdfInteger(72)]),
+  )
+  .add_dict_entry(
+    image_external_name_for_test("/Resources"),
+    @pdflite.pdf_dictionary([
+      (
+        image_external_name_for_test("/XObject"),
+        @pdflite.pdf_dictionary([
+          (
+            image_external_name_for_test("/SourceNestedImage"),
+            PdfIndirect(image_number),
+          ),
+        ]),
+      ),
+    ]),
+  )
+}
+
+///|
+fn image_external_cpdf_source_page_xobjects_for_test(
+  document : @pdflite.PdfDocument,
+  resources : @pdflite.PdfObject,
+) -> @pdflite.PdfObject raise {
+  match
+    document.lookup_direct(image_external_name_for_test("/XObject"), resources) {
+    Some(PdfDictionary(entries)) => PdfDictionary(entries)
+    Some(_) => fail("expected source page XObject resources to be a dictionary")
+    None => @pdflite.pdf_dictionary([])
+  }
+}
+
+///|
+fn image_external_cpdf_source_hello_with_form_image_for_test(
+  document : @pdflite.PdfDocument,
+) -> @pdflite.PdfDocument raise {
+  let output = document.copy()
+  let image_number = output.add_object(
+    image_external_cpdf_source_nested_image_for_test(),
+  )
+  let form_number = output.add_object(
+    image_external_cpdf_source_form_image_form_for_test(image_number),
+  )
+  let pages = output.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  let xobjects = image_external_cpdf_source_page_xobjects_for_test(
+    output,
+    pages[0].resources,
+  ).add_dict_entry(
+    image_external_name_for_test("/SourceImageForm"),
+    PdfIndirect(form_number),
+  )
+  let resources = pages[0].resources.add_dict_entry(
+    image_external_name_for_test("/XObject"),
+    xobjects,
+  )
+  let page = { ..pages[0], resources, }
+  let updated_page = output.postpend_operators(
+    page,
+    [Op_q, Op_Do(image_external_name_for_test("/SourceImageForm")), Op_Q],
+    fast=true,
+  )
+  output.change_pages([updated_page], change_references=true)
+}
+
+///|
+fn image_external_cpdf_source_form_image_resources_for_test(
+  document : @pdflite.PdfDocument,
+) -> (@pdflite.PdfObject, @pdflite.PdfObject) raise {
+  let pages = document.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  guard document.lookup_direct(
+      image_external_name_for_test("/XObject"),
+      pages[0].resources,
+    )
+    is Some(page_xobjects) else {
+    fail("missing source page XObject resources")
+  }
+  guard document.lookup_direct(
+      image_external_name_for_test("/SourceImageForm"),
+      page_xobjects,
+    )
+    is Some(form) else {
+    fail("missing source nested image form")
+  }
+  guard document.lookup_direct(image_external_name_for_test("/Resources"), form)
+    is Some(form_resources) else {
+    fail("missing source nested image form resources")
+  }
+  (form, form_resources)
+}
+
+///|
+fn image_external_cpdf_source_nested_image_for_document_for_test(
+  document : @pdflite.PdfDocument,
+  form_resources : @pdflite.PdfObject,
+) -> @pdflite.PdfObject raise {
+  guard document.lookup_direct(
+      image_external_name_for_test("/XObject"),
+      form_resources,
+    )
+    is Some(form_xobjects) else {
+    fail("missing source nested form XObject resources")
+  }
+  guard document.lookup_direct(
+      image_external_name_for_test("/SourceNestedImage"),
+      form_xobjects,
+    )
+    is Some(image) else {
+    fail("missing source nested image XObject")
+  }
+  image
+}
+
+///|
+fn image_external_assert_cpdf_source_form_image_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  image_external_assert_cpdf_source_hello_text_for_test(document)
+  let images = document.images_json([1])
+  @test.assert_eq(@pdflite.pdf_image_images(false, document, [1]), images)
+  let images_json = images.stringify()
+  image_external_assert_contains_for_test(
+    images_json, "\"Name\":\"/SourceNestedImage\"",
+  )
+  image_external_assert_contains_for_test(images_json, "\"Pages\":[1]")
+  image_external_assert_contains_for_test(images_json, "\"Width\":2")
+  image_external_assert_contains_for_test(images_json, "\"Height\":2")
+  image_external_assert_contains_for_test(
+    images_json,
+    "\"Bytes\":" +
+    image_external_cpdf_source_nested_image_data_for_test().length().to_string(),
+  )
+  image_external_assert_contains_for_test(images_json, "\"BitsPerComponent\":8")
+  image_external_assert_contains_for_test(
+    images_json, "\"Colourspace\":\"/DeviceGray\"",
+  )
+  image_external_assert_contains_for_test(
+    images_json, "\"Filter\":\"/FlateDecode\"",
+  )
+  @test.assert_eq(
+    @pdflite.pdf_image_images_json_blob(false, document, [1]),
+    document.images_json_blob([1]),
+  )
+  let resolution = document.image_resolution([1], 1000000.0)
+  @test.assert_eq(
+    @pdflite.pdf_image_resolution(false, document, [1], 1000000.0),
+    resolution,
+  )
+  @test.assert_eq(resolution.length(), 1)
+  @test.assert_eq(resolution[0].0, 1)
+  @test.assert_eq(resolution[0].1, "/SourceNestedImage")
+  @test.assert_eq(resolution[0].2, 2)
+  @test.assert_eq(resolution[0].3, 2)
+  @test.assert_eq(resolution[0].4, 2.0)
+  @test.assert_eq(resolution[0].5, 2.0)
+  @test.assert_eq(resolution[0].6 > 0, true)
+  let resolution_json = document.image_resolution_json([1], 1000000.0)
+  @test.assert_eq(
+    @pdflite.pdf_image_resolution_json(false, document, [1], 1000000.0),
+    resolution_json,
+  )
+  let resolution_text = resolution_json.stringify()
+  image_external_assert_contains_for_test(
+    resolution_text, "\"XObject\":\"/SourceNestedImage\"",
+  )
+  image_external_assert_contains_for_test(resolution_text, "\"W\":2")
+  image_external_assert_contains_for_test(resolution_text, "\"H\":2")
+  image_external_assert_contains_for_test(resolution_text, "\"Xdpi\":2")
+  image_external_assert_contains_for_test(resolution_text, "\"Ydpi\":2")
+  @test.assert_eq(
+    @pdflite.pdf_image_resolution_json_blob(false, document, [1], 1000000.0),
+    document.image_resolution_json_blob([1], 1000000.0),
+  )
+  let (form, form_resources) = image_external_cpdf_source_form_image_resources_for_test(
+    document,
+  )
+  @test.assert_eq(
+    document.parse_content_ops_with_resources(form_resources, [form]),
+    [
+      Op_cm({ a: 72.0, b: 0.0, c: 0.0, d: 72.0, e: 72.0, f: 72.0 }),
+      Op_Do(image_external_name_for_test("/SourceNestedImage")),
+    ],
+  )
+  let image = image_external_cpdf_source_nested_image_for_document_for_test(
+    document, form_resources,
+  )
+  match document.get_image_24bpp(form_resources, image) {
+    PdfRawImage(width, height, PdfBPP24, data) => {
+      @test.assert_eq(width, 2)
+      @test.assert_eq(height, 2)
+      @test.assert_eq(data.length(), 2 * 2 * 3)
+    }
+    _ => fail("expected source nested image to decode as 24bpp raw data")
+  }
+}
+
+///|
 async test "external DCT image fixture extracts encoded JPEG XObject" {
   match
     image_external_images_from_fixture_for_test(
@@ -1188,6 +1437,41 @@ async test "cpdf source hello fixture reports inline image metadata" {
         fail("expected bad startxref to require malformed reconstruction")
       }
       image_external_assert_cpdf_source_inline_image_for_test(
+        @pdflite.pdf_read_document_from_bytes(corrupted),
+      )
+    }
+  }
+}
+
+///|
+async test "cpdf source hello fixture reports nested form image metadata" {
+  match image_external_fixture_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      image_external_assert_cpdf_source_hello_text_for_test(document)
+      @test.assert_eq(document.images_json([1]).stringify(), "[]")
+      @test.assert_eq(document.image_resolution([1], 1000000.0), [])
+      let with_form_image = image_external_cpdf_source_hello_with_form_image_for_test(
+        document,
+      )
+      image_external_assert_cpdf_source_form_image_for_test(with_form_image)
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        with_form_image,
+      )
+      image_external_assert_cpdf_source_form_image_for_test(
+        @pdflite.pdf_read_document_from_bytes(compressed),
+      )
+      let corrupted = image_external_corrupt_startxref_pointer_for_test(
+        compressed,
+      )
+      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+        corrupted,
+      )
+      guard strict is Err(_) else {
+        fail("expected bad startxref to require malformed reconstruction")
+      }
+      image_external_assert_cpdf_source_form_image_for_test(
         @pdflite.pdf_read_document_from_bytes(corrupted),
       )
     }
