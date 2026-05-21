@@ -7341,6 +7341,161 @@ fn fixture_acceptance_assert_cpdf_source_vertical_cmaps_for_test(
 }
 
 ///|
+fn fixture_acceptance_cpdf_source_matterhorn_cmap_failure_for_test(
+  name : String,
+  section : String,
+  error : String,
+  extra : String,
+) -> Json {
+  Json::object(
+    Map::of([
+      ("name", Json::string(name)),
+      ("section", Json::string(section)),
+      ("error", Json::string(error)),
+      ("extra", Json::string(extra)),
+    ]),
+  )
+}
+
+///|
+fn fixture_acceptance_cpdf_source_matterhorn_31_006_failure_for_test(
+  name : String,
+) -> Json {
+  fixture_acceptance_cpdf_source_matterhorn_cmap_failure_for_test(
+    "31-006", "UA1:7.21.3.3-1", "A CMap is neither listed as described in ISO 32000- 1:2008, 9.7.5.2, Table 118 nor is it embedded.",
+    name,
+  )
+}
+
+///|
+fn fixture_acceptance_cpdf_source_matterhorn_31_008_failure_for_test(
+  name : String,
+) -> Json {
+  fixture_acceptance_cpdf_source_matterhorn_cmap_failure_for_test(
+    "31-008", "UA1:7.21.3.3-2", "A CMap references another CMap which is not listed in ISO 32000-1:2008, 9.7.5.2, Table 118.",
+    name,
+  )
+}
+
+///|
+fn fixture_acceptance_cpdf_source_hello_with_matterhorn_cmap_typo_for_test(
+  document : @pdflite.PdfDocument,
+) -> @pdflite.PdfDocument raise {
+  let output = document.copy()
+  let typo_descendant = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
+      "/SourceMatterhornTypoDescendant", "Korea1",
+    ),
+  )
+  let corrected_descendant = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
+      "/SourceMatterhornCorrectedDescendant", "Korea1",
+    ),
+  )
+  let typo_font = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
+      "/SourceMatterhornTypoTop", "/KSCms-UHS-HW-V", typo_descendant,
+    ),
+  )
+  let corrected_font = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
+      "/SourceMatterhornCorrectedTop", "/KSCms-UHC-HW-V", corrected_descendant,
+    ),
+  )
+  ignore(
+    output.add_object(
+      PdfDictionary([
+        (
+          fixture_acceptance_pdf_name_for_test("/UseCMap"),
+          PdfNameObject(fixture_acceptance_pdf_name_for_test("/KSCms-UHS-HW-V")),
+        ),
+      ]),
+    ),
+  )
+  ignore(
+    output.add_object(
+      PdfDictionary([
+        (
+          fixture_acceptance_pdf_name_for_test("/UseCMap"),
+          PdfNameObject(fixture_acceptance_pdf_name_for_test("/KSCms-UHC-HW-V")),
+        ),
+      ]),
+    ),
+  )
+  let pages = output.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  let font_resources = fixture_acceptance_cpdf_source_page_fonts_for_test(
+      output,
+      pages[0].resources,
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/SourceCMapTypo"),
+      PdfIndirect(typo_font),
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/SourceCMapCorrected"),
+      PdfIndirect(corrected_font),
+    )
+  let resources = pages[0].resources.add_dict_entry(
+    fixture_acceptance_pdf_name_for_test("/Font"),
+    font_resources,
+  )
+  output.change_pages([{ ..pages[0], resources, }], change_references=true)
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_matterhorn_cmap_typo_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+  let typo_font = fixture_acceptance_cpdf_source_font_entry_for_test(
+    document.list_fonts([1]),
+    "/SourceCMapTypo",
+  )
+  @test.assert_eq(typo_font.subtype, "/Type0")
+  @test.assert_eq(typo_font.basefont, "/SourceMatterhornTypoTop")
+  @test.assert_eq(typo_font.encoding, "/KSCms-UHS-HW-V")
+  guard document.read_font(typo_font.font) is PdfFontCIDKeyed(typo_cid_font) else {
+    fail("expected source Matterhorn typo CID-keyed font")
+  }
+  @test.assert_eq(
+    typo_cid_font.composite.cid_system_info.ordering,
+    @ascii.encode("Korea1"),
+  )
+  let corrected_font = fixture_acceptance_cpdf_source_font_entry_for_test(
+    document.list_fonts([1]),
+    "/SourceCMapCorrected",
+  )
+  @test.assert_eq(corrected_font.subtype, "/Type0")
+  @test.assert_eq(corrected_font.basefont, "/SourceMatterhornCorrectedTop")
+  @test.assert_eq(corrected_font.encoding, "/KSCms-UHC-HW-V")
+  guard document.read_font(corrected_font.font)
+    is PdfFontCIDKeyed(corrected_cid_font) else {
+    fail("expected source Matterhorn corrected CID-keyed font")
+  }
+  @test.assert_eq(
+    corrected_cid_font.composite.cid_system_info.ordering,
+    @ascii.encode("Korea1"),
+  )
+  @test.assert_eq(
+    try! document.test_matterhorn_json("31-006"),
+    Json::array([
+      fixture_acceptance_cpdf_source_matterhorn_31_006_failure_for_test(
+        "/KSCms-UHC-HW-V",
+      ),
+    ]),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_ua_test_matterhorn_json(document, "31-008"),
+    Json::array([
+      fixture_acceptance_cpdf_source_matterhorn_31_008_failure_for_test(
+        "/KSCms-UHC-HW-V",
+      ),
+    ]),
+  )
+}
+
+///|
 fn fixture_acceptance_draft_substitute_ops_for_test() -> Array[
   @pdflite.PdfContentOp,
 ] {
@@ -9691,6 +9846,35 @@ async test "optional cpdf source hello fixture extracts vertical GB CNS predefin
         @pdflite.pdf_read_document_from_bytes(compressed),
       )
       fixture_acceptance_assert_cpdf_source_vertical_cmaps_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+        ),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source hello fixture preserves Matterhorn CMap typo" {
+  match
+    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+      let with_cmaps = fixture_acceptance_cpdf_source_hello_with_matterhorn_cmap_typo_for_test(
+        document,
+      )
+      fixture_acceptance_assert_cpdf_source_matterhorn_cmap_typo_for_test(
+        with_cmaps,
+      )
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        with_cmaps,
+      )
+      fixture_acceptance_assert_cpdf_source_matterhorn_cmap_typo_for_test(
+        @pdflite.pdf_read_document_from_bytes(compressed),
+      )
+      fixture_acceptance_assert_cpdf_source_matterhorn_cmap_typo_for_test(
         @pdflite.pdf_read_document_from_bytes(
           fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
         ),

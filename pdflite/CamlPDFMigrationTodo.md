@@ -6096,6 +6096,25 @@ Current backend snapshot:
   reports 2269/2269 tests passing, `moon info && moon fmt` reports no pending
   interface or formatting work, and `moon check --target all --warn-list +73`
   reports the warning 73 baseline with 10 warnings and 0 errors.~~
+- [x] ~~Broaden the source-boundary PDF/UA CMap-name slice: optional
+  `.repos/cpdf-source/hello.pdf` now gates the cpdfua source typo
+  `/KSCms-UHS-HW-V` on a real source PDF after injecting unused Type0
+  CID-keyed font resources and `/UseCMap` dictionaries for both the source typo
+  and the corrected-looking `/KSCms-UHC-HW-V` spelling. The gate preserves the
+  original Hello text, verifies `list_fonts` and `read_font` expose both
+  injected `/Type0` `PdfFontCIDKeyed` resources with Korea1 CIDSystemInfo
+  ordering, verifies Matterhorn `31-006` still accepts the source typo while
+  reporting only `/KSCms-UHC-HW-V` as an unlisted CMap, verifies the public
+  `pdf_ua_test_matterhorn_json` wrapper does the same for `31-008` `/UseCMap`
+  references, and repeats the assertions through compressed rewrite/reread and
+  bad-`startxref` recovery. `moon check --target native fixture_acceptance
+  --warn-list +73` passes, `moon test --target native fixture_acceptance
+  --filter 'optional cpdf source hello fixture preserves Matterhorn CMap typo'`
+  reports 1/1 test passing, `moon test --target native fixture_acceptance`
+  reports 98/98 tests passing, `moon test --target native` reports 2270/2270
+  tests passing, `moon info && moon fmt` reports no pending interface or
+  formatting work, and `moon check --target all --warn-list +73` reports the
+  warning 73 baseline with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
