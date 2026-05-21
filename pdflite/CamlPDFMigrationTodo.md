@@ -5827,6 +5827,20 @@ Current backend snapshot:
   --target native` reports 2255/2255 tests passing, and `moon check --target all
   --warn-list +73` reports the warning 73 baseline with 7 warnings and 0
   errors.~~
+- [x] ~~Broaden the source-boundary spot-colour slice: optional
+  `.repos/cpdf-source/hello.pdf` now gates cpdfspot-style `list_spot_colours`
+  and `pdf_list_spot_colours` wrapper parity on a real source PDF after
+  injecting direct and indirect top-level `/Separation` colour-space objects.
+  The gate verifies the original source fixture has no spot colours, preserves
+  Hello text after the mutation, pins direct and resolved indirect colourant
+  names in object-order scan order, and repeats the assertions through
+  compressed rewrite/reread and bad-`startxref` recovery. `moon check --target
+  native fixture_acceptance --warn-list +73` passes, `moon test --target native
+  fixture_acceptance --filter 'optional cpdf source hello fixture lists injected
+  spot colours'` reports 1/1 test passing, `moon test --target native
+  fixture_acceptance` reports 84/84 tests passing, `moon test --target native`
+  reports 2256/2256 tests passing, and `moon check --target all --warn-list
+  +73` reports the warning 73 baseline with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.

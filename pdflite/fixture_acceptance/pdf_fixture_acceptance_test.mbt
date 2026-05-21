@@ -2908,6 +2908,50 @@ fn fixture_acceptance_assert_cpdf_source_hello_text_removed_for_test(
 }
 
 ///|
+fn fixture_acceptance_cpdf_source_hello_with_spot_colours_for_test(
+  document : @pdflite.PdfDocument,
+) -> @pdflite.PdfDocument {
+  let output = document.copy()
+  let indirect_colourant = output.add_object(
+    PdfNameObject(fixture_acceptance_pdf_name_for_test("/SourceIndirectSpot")),
+  )
+  ignore(
+    output.add_object(
+      PdfArray([
+        PdfNameObject(fixture_acceptance_pdf_name_for_test("/Separation")),
+        PdfNameObject(fixture_acceptance_pdf_name_for_test("/SourceSpot")),
+        PdfNameObject(fixture_acceptance_pdf_name_for_test("/DeviceCMYK")),
+        PdfNull,
+      ]),
+    ),
+  )
+  ignore(
+    output.add_object(
+      PdfArray([
+        PdfNameObject(fixture_acceptance_pdf_name_for_test("/Separation")),
+        PdfIndirect(indirect_colourant),
+        PdfNameObject(fixture_acceptance_pdf_name_for_test("/DeviceGray")),
+        PdfNull,
+      ]),
+    ),
+  )
+  output
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_spot_colours_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+  let expected = [
+    fixture_acceptance_pdf_name_for_test("/SourceSpot"),
+    fixture_acceptance_pdf_name_for_test("/SourceIndirectSpot"),
+  ]
+  @test.assert_eq(document.list_spot_colours(), expected)
+  @test.assert_eq(@pdflite.pdf_list_spot_colours(document), expected)
+}
+
+///|
 fn fixture_acceptance_cpdf_source_ocg_layer_for_test(text : String) -> Bytes {
   @ascii.encode(text)
 }
@@ -6209,6 +6253,34 @@ async test "optional cpdf source hello fixture removes JavaScript markers" {
         action_number,
         uri_number,
         stream_number,
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source hello fixture lists injected spot colours" {
+  match
+    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+      @test.assert_eq(document.list_spot_colours(), [])
+      let with_spots = fixture_acceptance_cpdf_source_hello_with_spot_colours_for_test(
+        document,
+      )
+      fixture_acceptance_assert_cpdf_source_spot_colours_for_test(with_spots)
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        with_spots,
+      )
+      fixture_acceptance_assert_cpdf_source_spot_colours_for_test(
+        @pdflite.pdf_read_document_from_bytes(compressed),
+      )
+      fixture_acceptance_assert_cpdf_source_spot_colours_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+        ),
       )
     }
   }
