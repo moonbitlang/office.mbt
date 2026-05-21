@@ -5420,6 +5420,16 @@ Current backend snapshot:
   passing, `moon test --target native` reports 2228/2228 tests passing, and
   `moon check --target all --warn-list +73` reports the known warning baseline
   with 0 errors.~~
+- [x] ~~Add the next source-boundary catalog metadata slice: optional
+  `.repos/cpdf-source/logo.pdf` now gates the real `/PageMode /UseNone` and
+  `/OpenAction` XYZ destination through cpdf-style catalog item reporting,
+  OpenAction object/string/JSON output, document-info JSON, compressed
+  rewrite/reread, and bad-`startxref` recovery. `moon test --target native
+  fixture_acceptance --filter '*catalog view metadata*'` reports 1/1 test
+  passing, `moon test --target native fixture_acceptance` reports 58/58 tests
+  passing, `moon test --target native` reports 2229/2229 tests passing, and
+  `moon check --target all --warn-list +73` reports the known warning baseline
+  with 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.

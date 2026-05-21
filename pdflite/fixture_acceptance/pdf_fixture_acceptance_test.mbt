@@ -1613,6 +1613,39 @@ fn fixture_acceptance_cpdf_top_level_expected_pages_for_test(
 }
 
 ///|
+fn fixture_acceptance_assert_cpdf_logo_catalog_view_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 1)
+  @test.assert_eq(
+    document.catalog_item(fixture_acceptance_pdf_name_for_test("/PageMode")),
+    "UseNone",
+  )
+  let expected_open_action : @pdflite.PdfObject = PdfArray([
+    PdfInteger(1),
+    PdfNameObject(fixture_acceptance_pdf_name_for_test("/XYZ")),
+    PdfInteger(-32768),
+    PdfInteger(-32768),
+    PdfInteger(1),
+  ])
+  @test.assert_eq(document.open_action(), expected_open_action)
+  @test.assert_eq(document.open_action_string(), "[1 /XYZ -32768 -32768 1]")
+  let open_action_json = @ascii.decode_lossy(document.open_action_json_blob())
+  fixture_acceptance_assert_contains_for_test(open_action_json, "\"I\":1")
+  fixture_acceptance_assert_contains_for_test(
+    open_action_json, "\"N\":\"/XYZ\"",
+  )
+  fixture_acceptance_assert_contains_for_test(open_action_json, "\"I\":-32768")
+  let info_json = document.info_json().stringify()
+  fixture_acceptance_assert_contains_for_test(info_json, "\"Pages\":1")
+  fixture_acceptance_assert_contains_for_test(
+    info_json, "\"PageMode\":\"UseNone\"",
+  )
+  fixture_acceptance_assert_contains_for_test(info_json, "\"N\":\"/XYZ\"")
+  fixture_acceptance_assert_contains_for_test(info_json, "\"I\":-32768")
+}
+
+///|
 fn fixture_acceptance_assert_cpdf_manual_pagespec_for_test(
   document : @pdflite.PdfDocument,
 ) -> Unit raise {
@@ -2537,6 +2570,26 @@ async test "optional cpdf source top-level PDF corpus reads rewrites and reconst
       fixture_acceptance_cpdf_top_level_pdf_paths_for_test.length(),
     )
     @test.assert_eq(pages, 177)
+  }
+}
+
+///|
+async test "optional cpdf source logo fixture reports catalog view metadata" {
+  match
+    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/logo.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_logo_catalog_view_for_test(document)
+      fixture_acceptance_assert_cpdf_logo_catalog_view_for_test(
+        fixture_acceptance_reparse_compressed_for_test(document),
+      )
+      fixture_acceptance_assert_cpdf_logo_catalog_view_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(bytes),
+        ),
+      )
+    }
   }
 }
 
