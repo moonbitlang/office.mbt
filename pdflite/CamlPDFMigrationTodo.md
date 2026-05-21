@@ -6622,6 +6622,25 @@ Current backend snapshot:
   no pending interface or formatting work, and `moon check --target all
   --warn-list +73` reports the known warning-73/main-package baseline with 10
   warnings and 0 errors.~~
+- [x] ~~Add the next remaining format parity slice: optional
+  `.repos/cpdf-source/cpdfmanual.pdf` now gates the Markdown/PDF-to-Markdown
+  boundary for repairable malformed stream-length entries. The gate corrupts
+  the startxref-targeted xref stream's `/Length 4551` and the first `/ObjStm`
+  stream's `/Length 1526` entries to `/Length /Bad`, requires strict classic
+  reads to repair each document while preserving the full 175-page manual,
+  verifies `pdf_bytes_to_markdown` output stays byte-for-byte equal to the
+  normal manual extraction, preserves key manual markers such as `Coherent
+  PDF`, `Command Line Tools`, `Chapter 15: PDF and JSON`, and `Accessible PDFs
+  with PDF/UA`, and keeps replacement-character hygiene at zero. `moon check
+  --target native markdown/fixture_acceptance --warn-list +73` passes, `moon
+  test --target native markdown/fixture_acceptance --filter
+  'pdf_bytes_to_markdown repairs optional cpdf source manual fixture with
+  malformed stream length entries'` reports 1/1 test passing, `moon test
+  --target native markdown/fixture_acceptance` reports 24/24 tests passing,
+  `moon test --target native` reports 2298/2298 tests passing, `moon info` and
+  `moon fmt` report no pending interface or formatting work, and `moon check
+  --target all --warn-list +73` reports the known warning-73/main-package
+  baseline with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.

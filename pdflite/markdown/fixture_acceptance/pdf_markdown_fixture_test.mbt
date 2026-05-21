@@ -480,6 +480,19 @@ fn markdown_fixture_corrupt_xref_stream_decodeparms_entry_for_test(
 }
 
 ///|
+fn markdown_fixture_corrupt_xref_stream_length_entry_for_test(
+  bytes : Bytes,
+  length_entry : BytesView,
+) -> Bytes raise {
+  markdown_fixture_replace_bytes_after_with_padded_ascii_for_test(
+    bytes,
+    @ascii.encode("/Type /XRef"),
+    length_entry,
+    "/Length /Bad",
+  )
+}
+
+///|
 fn markdown_fixture_corrupt_xref_stream_filter_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
@@ -583,6 +596,18 @@ fn markdown_fixture_corrupt_first_object_stream_first_for_test(
     @ascii.encode("/Type /ObjStm"),
     @ascii.encode("/First 832"),
     "/First/Bad",
+  )
+}
+
+///|
+fn markdown_fixture_corrupt_first_object_stream_length_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  markdown_fixture_replace_bytes_after_with_padded_ascii_for_test(
+    bytes,
+    @ascii.encode("/Type /ObjStm"),
+    @ascii.encode("/Length 1526"),
+    "/Length /Bad",
   )
 }
 
@@ -1545,6 +1570,60 @@ async test "pdf_bytes_to_markdown reconstructs optional cpdf source manual fixtu
         markdown_fixture_replacement_count_for_test(repaired_markdown),
         0,
       )
+    }
+  }
+}
+
+///|
+async test "pdf_bytes_to_markdown repairs optional cpdf source manual fixture with malformed stream length entries" {
+  match
+    markdown_optional_fixture_bytes_for_test(
+      ".repos/cpdf-source/cpdfmanual.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let markdown = @markdown.pdf_bytes_to_markdown(bytes)
+      markdown_fixture_assert_contains_for_test(markdown, "Coherent PDF")
+      markdown_fixture_assert_contains_for_test(markdown, "Command Line Tools")
+      markdown_fixture_assert_contains_for_test(
+        markdown, "Chapter 15: PDF and JSON",
+      )
+      markdown_fixture_assert_contains_for_test(
+        markdown, "Accessible PDFs with PDF/UA",
+      )
+      @test.assert_eq(markdown.length() > 200000, true)
+      @test.assert_eq(markdown_fixture_replacement_count_for_test(markdown), 0)
+      for
+        corrupted in [
+          markdown_fixture_corrupt_xref_stream_length_entry_for_test(
+            bytes,
+            @ascii.encode("/Length 4551"),
+          ),
+          markdown_fixture_corrupt_first_object_stream_length_for_test(bytes),
+        ] {
+        let strict_repaired = @pdflite.pdf_read_classic_document_from_bytes(
+          corrupted,
+        )
+        @test.assert_eq(strict_repaired.endpage(), 175)
+        let repaired_markdown = @markdown.pdf_bytes_to_markdown(corrupted)
+        markdown_fixture_assert_contains_for_test(
+          repaired_markdown, "Coherent PDF",
+        )
+        markdown_fixture_assert_contains_for_test(
+          repaired_markdown, "Command Line Tools",
+        )
+        markdown_fixture_assert_contains_for_test(
+          repaired_markdown, "Chapter 15: PDF and JSON",
+        )
+        markdown_fixture_assert_contains_for_test(
+          repaired_markdown, "Accessible PDFs with PDF/UA",
+        )
+        @test.assert_eq(repaired_markdown, markdown)
+        @test.assert_eq(
+          markdown_fixture_replacement_count_for_test(repaired_markdown),
+          0,
+        )
+      }
     }
   }
 }
