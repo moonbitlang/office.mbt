@@ -5430,6 +5430,16 @@ Current backend snapshot:
   passing, `moon test --target native` reports 2229/2229 tests passing, and
   `moon check --target all --warn-list +73` reports the known warning baseline
   with 0 errors.~~
+- [x] ~~Add the next source-boundary PDF/UA structure-tree slice: optional
+  `.repos/cpdf-source/manualimages/h1.pdf` now gates the real PDF 2.0
+  `/StructTreeRoot` with one `H1` and two `P` elements through catalog
+  reporting, document-info JSON, cpdf-style structure text/CPDFJSON blobs,
+  structure-tree replacement round-tripping, compressed rewrite/reread, and
+  bad-`startxref` recovery. `moon test --target native fixture_acceptance
+  --filter '*structure tree*'` reports 1/1 test passing, `moon test --target
+  native fixture_acceptance` reports 59/59 tests passing, `moon test --target
+  native` reports 2230/2230 tests passing, and `moon check --target all
+  --warn-list +73` reports the known warning baseline with 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.

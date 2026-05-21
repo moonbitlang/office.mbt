@@ -1646,6 +1646,51 @@ fn fixture_acceptance_assert_cpdf_logo_catalog_view_for_test(
 }
 
 ///|
+fn fixture_acceptance_assert_cpdf_h1_struct_tree_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 1)
+  @test.assert_eq(document.version(), (2, 0))
+  @test.assert_eq(
+    document.catalog_item(
+      fixture_acceptance_pdf_name_for_test("/StructTreeRoot"),
+    ),
+    "True",
+  )
+  @test.assert_eq(
+    document.mark_info_item(fixture_acceptance_pdf_name_for_test("/Marked")),
+    false,
+  )
+  let info_json = document.info_json().stringify()
+  fixture_acceptance_assert_contains_for_test(info_json, "\"Version\":[2,0]")
+  fixture_acceptance_assert_contains_for_test(info_json, "\"Pages\":1")
+  fixture_acceptance_assert_contains_for_test(info_json, "\"Marked\":false")
+  let struct_text = @utf8.decode_lossy(document.struct_tree_text())
+  fixture_acceptance_assert_contains_for_test(struct_text, "StructTreeRoot\n")
+  fixture_acceptance_assert_contains_for_test(struct_text, "H1 (1)")
+  fixture_acceptance_assert_contains_for_test(struct_text, "P (1)")
+  let struct_json = document.extract_struct_tree().stringify()
+  @test.assert_eq(
+    @utf8.decode_lossy(document.struct_tree_json_blob()),
+    struct_json,
+  )
+  fixture_acceptance_assert_contains_for_test(
+    struct_json, "\"/CPDFJSONformatversion\"",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    struct_json, "\"/CPDFJSONpageobjnumbers\"",
+  )
+  fixture_acceptance_assert_contains_for_test(struct_json, "\"/Type\"")
+  fixture_acceptance_assert_contains_for_test(
+    struct_json, "{\"N\":\"/StructTreeRoot\"}",
+  )
+  fixture_acceptance_assert_contains_for_test(struct_json, "{\"N\":\"/H1\"}")
+  fixture_acceptance_assert_contains_for_test(struct_json, "{\"N\":\"/P\"}")
+  let replaced = document.replace_struct_tree(document.extract_struct_tree())
+  @test.assert_eq(@utf8.decode_lossy(replaced.struct_tree_text()), struct_text)
+}
+
+///|
 fn fixture_acceptance_assert_cpdf_manual_pagespec_for_test(
   document : @pdflite.PdfDocument,
 ) -> Unit raise {
@@ -2738,6 +2783,28 @@ async test "optional cpdf source manual content fixtures export content JSON" {
       fixture_acceptance_assert_cpdf_xobject_content_for_test(document)
       fixture_acceptance_assert_cpdf_xobject_content_for_test(
         fixture_acceptance_reparse_compressed_for_test(document),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source h1 fixture reports structure tree" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/manualimages/h1.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_h1_struct_tree_for_test(document)
+      fixture_acceptance_assert_cpdf_h1_struct_tree_for_test(
+        fixture_acceptance_reparse_compressed_for_test(document),
+      )
+      fixture_acceptance_assert_cpdf_h1_struct_tree_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(bytes),
+        ),
       )
     }
   }
