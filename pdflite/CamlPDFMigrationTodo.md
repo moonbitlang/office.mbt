@@ -5558,6 +5558,17 @@ Current backend snapshot:
   reports 68/68 tests passing, `moon test --target native` reports 2239/2239
   tests passing, and `moon check --target all --warn-list +73` reports the known
   warning baseline with 0 errors.~~
+- [x] ~~Add the next source-boundary remove-text slice: optional
+  `.repos/cpdf-source/hello.pdf` now gates cpdfremovetext-style
+  `pdf_remove_all_text` on a real text-bearing source PDF. The gate verifies
+  original `Hello, World!` extraction, presence of a source text-showing content
+  operator, removal of all text-showing operators, retained non-empty non-text
+  content structure, compressed rewrite/reread, and bad-`startxref` recovery.
+  `moon test --target native fixture_acceptance --filter '*removes all text*'`
+  reports 1/1 test passing, `moon test --target native fixture_acceptance`
+  reports 69/69 tests passing, `moon test --target native` reports 2240/2240
+  tests passing, and `moon check --target all --warn-list +73` reports the known
+  warning baseline with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.

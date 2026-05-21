@@ -2211,6 +2211,53 @@ fn fixture_acceptance_assert_cpdf_source_chop_for_test(
 }
 
 ///|
+fn fixture_acceptance_has_text_showing_op_for_test(
+  ops : ArrayView[@pdflite.PdfContentOp],
+) -> Bool {
+  for op in ops {
+    match op {
+      Op_Tj(_) | Op_TJ(_) | Op_quote(_) | Op_double_quote(_, _, _) => break true
+      _ => ()
+    }
+  } nobreak {
+    false
+  }
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_hello_text_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 1)
+  let text = @utf8.decode_lossy(document.test_extract_text([1]))
+  fixture_acceptance_assert_contains_for_test(text, "Hello, World!")
+  let pages = document.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  let ops = document.parse_content_ops_with_resources(
+    pages[0].resources,
+    pages[0].content,
+  )
+  @test.assert_eq(fixture_acceptance_has_text_showing_op_for_test(ops), true)
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_hello_text_removed_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 1)
+  let text = @utf8.decode_lossy(document.test_extract_text([1]))
+  @test.assert_eq(text.contains("Hello, World!"), false)
+  let pages = document.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  let ops = document.parse_content_ops_with_resources(
+    pages[0].resources,
+    pages[0].content,
+  )
+  @test.assert_eq(fixture_acceptance_has_text_showing_op_for_test(ops), false)
+  @test.assert_eq(ops.length() > 0, true)
+}
+
+///|
 fn fixture_acceptance_add_cpdf_source_javascript_for_test(
   document : @pdflite.PdfDocument,
 ) -> (Int, Int, Int) raise {
@@ -3852,6 +3899,33 @@ async test "optional cpdf source hello fixture chops CropBox-backed page" {
         @pdflite.pdf_read_document_from_bytes(compressed),
       )
       fixture_acceptance_assert_cpdf_source_chop_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+        ),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source hello fixture removes all text" {
+  match
+    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+      let stripped = @pdflite.pdf_remove_all_text(document, [1])
+      fixture_acceptance_assert_cpdf_source_hello_text_removed_for_test(
+        stripped,
+      )
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        stripped,
+      )
+      fixture_acceptance_assert_cpdf_source_hello_text_removed_for_test(
+        @pdflite.pdf_read_document_from_bytes(compressed),
+      )
+      fixture_acceptance_assert_cpdf_source_hello_text_removed_for_test(
         @pdflite.pdf_read_document_from_bytes(
           fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
         ),
