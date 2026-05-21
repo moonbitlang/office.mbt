@@ -77,6 +77,27 @@ fn image_external_find_last_bytes_for_test(
 }
 
 ///|
+fn image_external_find_bytes_after_for_test(
+  haystack : BytesView,
+  needle : BytesView,
+  start : Int,
+) -> Int {
+  if needle.length() == 0 {
+    start
+  } else if start < 0 || haystack.length() < needle.length() {
+    -1
+  } else {
+    for position in start..<=(haystack.length() - needle.length()) {
+      if image_external_bytes_start_with_at_for_test(haystack, needle, position) {
+        break position
+      }
+    } nobreak {
+      -1
+    }
+  }
+}
+
+///|
 fn image_external_push_ascii_for_test(
   output : Array[Byte],
   text : String,
@@ -111,6 +132,78 @@ fn image_external_corrupt_startxref_pointer_for_test(
   for index in number_end..<bytes.length() {
     output.push(bytes[index])
   }
+  Bytes::from_array(output)
+}
+
+///|
+fn image_external_startxref_offset_for_test(bytes : Bytes) -> Int raise {
+  let marker = @ascii.encode("startxref")
+  let marker_position = image_external_find_last_bytes_for_test(bytes, marker)
+  if marker_position < 0 {
+    fail("expected startxref marker")
+  }
+  let mut number_start = marker_position + marker.length()
+  while number_start < bytes.length() &&
+        (
+          bytes[number_start] == b'\n' ||
+          bytes[number_start] == b'\r' ||
+          bytes[number_start] == b' ' ||
+          bytes[number_start] == b'\t'
+        ) {
+    number_start += 1
+  }
+  let mut number = 0
+  let mut current = number_start
+  while current < bytes.length() &&
+        bytes[current] >= b'0' &&
+        bytes[current] <= b'9' {
+    number = number * 10 + bytes[current].to_int() - b'0'.to_int()
+    current += 1
+  }
+  if current == number_start {
+    fail("expected startxref number")
+  }
+  number
+}
+
+///|
+fn image_external_corrupt_startxref_xref_header_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  let xref_offset = image_external_startxref_offset_for_test(bytes)
+  guard image_external_bytes_start_with_at_for_test(
+    bytes,
+    @ascii.encode("xref"),
+    xref_offset,
+  ) else {
+    fail("expected startxref to point at a classic xref table")
+  }
+  let output : Array[Byte] = []
+  for byte in bytes {
+    output.push(byte)
+  }
+  output[xref_offset] = b'y'
+  Bytes::from_array(output)
+}
+
+///|
+fn image_external_corrupt_startxref_trailer_keyword_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  let xref_offset = image_external_startxref_offset_for_test(bytes)
+  let trailer_position = image_external_find_bytes_after_for_test(
+    bytes,
+    @ascii.encode("trailer"),
+    xref_offset,
+  )
+  if trailer_position < 0 {
+    fail("expected classic xref trailer keyword after startxref target")
+  }
+  let output : Array[Byte] = []
+  for byte in bytes {
+    output.push(byte)
+  }
+  output[trailer_position] = b'u'
   Bytes::from_array(output)
 }
 
@@ -434,6 +527,47 @@ async test "cpdf source manual image PDF corpus reconstructs malformed startxref
           image_external_reparse_compressed_for_test(recovered),
           path,
         )
+      }
+    }
+  }
+  if checked > 0 {
+    @test.assert_eq(
+      checked,
+      image_external_cpdf_source_manual_image_pdf_paths_for_test().length(),
+    )
+  }
+}
+
+///|
+async test "cpdf source manual image PDF corpus reconstructs damaged classic xref metadata" {
+  let mut checked = 0
+  for path in image_external_cpdf_source_manual_image_pdf_paths_for_test() {
+    match image_external_fixture_bytes_for_test(path) {
+      None => ()
+      Some(bytes) => {
+        checked += 1
+        for
+          corrupted in [
+            image_external_corrupt_startxref_xref_header_for_test(bytes),
+            image_external_corrupt_startxref_trailer_keyword_for_test(bytes),
+          ] {
+          let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+            corrupted,
+          )
+          guard strict is Err(_) else {
+            fail(
+              "expected damaged classic xref metadata to require malformed reconstruction for " +
+              path,
+            )
+          }
+          let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
+          @test.assert_eq(recovered.first_xref(), 0)
+          image_external_assert_cpdf_manual_image_page_for_test(recovered, path)
+          image_external_assert_cpdf_manual_image_page_for_test(
+            image_external_reparse_compressed_for_test(recovered),
+            path,
+          )
+        }
       }
     }
   }

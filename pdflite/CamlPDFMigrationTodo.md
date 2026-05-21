@@ -6450,6 +6450,22 @@ Current backend snapshot:
   moon fmt` reports no pending interface or formatting work, `moon check
   --target all --warn-list +73` reports the known warning-73/main-package
   baseline with 10 warnings and 0 errors, and `git diff --check` passes.~~
+- [x] ~~Add the next remaining format parity slice: optional
+  `.repos/cpdf-source/manualimages/*.pdf` now gates image-package source-corpus
+  recovery for damaged classic `xref` headers and damaged `trailer` keywords.
+  The gate runs over every manual-image PDF in the source tree, requires strict
+  classic reads to reject each corruption, reconstructs through the public
+  malformed reader, verifies `first_xref()` resets to `0`, parses non-empty page
+  content operators for the recovered document, and rechecks those content
+  operators after compressed rewrite/reread. `moon check --target native
+  image/fixture_acceptance --warn-list +73` passes, `moon test --target native
+  image/fixture_acceptance --filter 'cpdf source manual image PDF corpus
+  reconstructs damaged classic xref metadata'` reports 1/1 test passing, `moon
+  test --target native image/fixture_acceptance` reports 17/17 tests passing,
+  `moon test --target native` reports 2288/2288 tests passing, `moon info &&
+  moon fmt` reports no pending interface or formatting work, `moon check
+  --target all --warn-list +73` reports the known warning-73/main-package
+  baseline with 10 warnings and 0 errors, and `git diff --check` passes.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.
