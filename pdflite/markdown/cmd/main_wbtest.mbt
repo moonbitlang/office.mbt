@@ -308,6 +308,47 @@ fn markdown_cmd_corrupt_startxref_xref_stream_token_for_test(
 }
 
 ///|
+fn markdown_cmd_replace_xref_stream_entry_with_padded_ascii_for_test(
+  bytes : Bytes,
+  target : BytesView,
+  replacement_text : String,
+  description : String,
+) -> Bytes raise {
+  let replacement = @ascii.encode(replacement_text)
+  if replacement.length() > target.length() {
+    fail("replacement must fit xref stream " + description + " byte span")
+  }
+  let xref_offset = markdown_cmd_startxref_offset_for_test(bytes)
+  let anchor = @ascii.encode("/Type /XRef")
+  let anchor_position = markdown_cmd_find_bytes_after_for_test(
+    bytes, anchor, xref_offset,
+  )
+  if anchor_position < 0 {
+    fail("expected startxref-targeted xref stream")
+  }
+  let position = markdown_cmd_find_bytes_after_for_test(
+    bytes,
+    target,
+    anchor_position + anchor.length(),
+  )
+  if position < 0 {
+    fail("expected xref stream " + description + " entry")
+  }
+  let output : Array[Byte] = []
+  for byte in bytes {
+    output.push(byte)
+  }
+  for index in 0..<target.length() {
+    output[position + index] = if index < replacement.length() {
+      replacement[index]
+    } else {
+      b' '
+    }
+  }
+  Bytes::from_array(output)
+}
+
+///|
 fn markdown_cmd_corrupt_startxref_xref_stream_type_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
@@ -352,6 +393,39 @@ fn markdown_cmd_corrupt_startxref_xref_stream_endobj_for_test(
     @ascii.encode("endobj"),
     @ascii.encode("endobx"),
     "endobj marker",
+  )
+}
+
+///|
+fn markdown_cmd_corrupt_xref_stream_root_entry_for_test(
+  bytes : Bytes,
+  root_entry : BytesView,
+) -> Bytes raise {
+  markdown_cmd_replace_xref_stream_entry_with_padded_ascii_for_test(
+    bytes, root_entry, "/Root /Bad", "root",
+  )
+}
+
+///|
+fn markdown_cmd_corrupt_xref_stream_decodeparms_entry_for_test(
+  bytes : Bytes,
+  metadata_entry : BytesView,
+  replacement_text : String,
+) -> Bytes raise {
+  markdown_cmd_replace_xref_stream_entry_with_padded_ascii_for_test(
+    bytes, metadata_entry, replacement_text, "decode params",
+  )
+}
+
+///|
+fn markdown_cmd_corrupt_xref_stream_filter_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  markdown_cmd_corrupt_startxref_xref_stream_token_for_test(
+    bytes,
+    @ascii.encode("/Filter /FlateDecode"),
+    @ascii.encode("/Filter /NoSuchThing"),
+    "filter",
   )
 }
 
@@ -582,6 +656,75 @@ async test "markdown command reconstructs optional cpdf source manual fixture wi
       )
       let corrupt_output_path = markdown_cmd_output_path_for_test(
         "cpdf_source_manual_xref_terminators_" + case_index.to_string(),
+      )
+      markdown_cmd_remove_if_exists_for_test(corrupt_input_path)
+      markdown_cmd_remove_if_exists_for_test(corrupt_output_path)
+      @fs.write_file(corrupt_input_path, corrupted, create=0o644)
+      markdown_cmd_convert_file(corrupt_input_path, corrupt_output_path)
+      let corrupt_output = @utf8.decode_lossy(
+        @fs.read_file(corrupt_output_path).binary(),
+      )
+      markdown_cmd_assert_contains_for_test(corrupt_output, "Coherent PDF")
+      markdown_cmd_assert_contains_for_test(
+        corrupt_output, "Command Line Tools",
+      )
+      markdown_cmd_assert_contains_for_test(
+        corrupt_output, "Chapter 15: PDF and JSON",
+      )
+      markdown_cmd_assert_contains_for_test(
+        corrupt_output, "Accessible PDFs with PDF/UA",
+      )
+      @test.assert_eq(corrupt_output, clean_output)
+      @test.assert_eq(
+        markdown_cmd_replacement_count_for_test(corrupt_output),
+        0,
+      )
+      markdown_cmd_remove_if_exists_for_test(corrupt_input_path)
+      markdown_cmd_remove_if_exists_for_test(corrupt_output_path)
+    }
+    markdown_cmd_remove_if_exists_for_test(clean_output_path)
+  }
+}
+
+///|
+async test "markdown command reconstructs optional cpdf source manual fixture with malformed xref stream dictionary entries" {
+  let input_path = markdown_cmd_repo_path_for_test(
+    ".repos/cpdf-source/cpdfmanual.pdf",
+  )
+  if @fs.exists(input_path) {
+    let clean_output_path = markdown_cmd_output_path_for_test(
+      "cpdf_source_manual_xref_dictionary_clean",
+    )
+    markdown_cmd_remove_if_exists_for_test(clean_output_path)
+    markdown_cmd_convert_file(input_path, clean_output_path)
+    let clean_output = @utf8.decode_lossy(
+      @fs.read_file(clean_output_path).binary(),
+    )
+    let input_bytes = @fs.read_file(input_path).binary()
+    let manual_root_entry = @ascii.encode("/Root 1841 0 R")
+    let manual_id_entry = @ascii.encode(
+      "/ID [<CA2FED47397E566603B0A9A8E7328C79> <CA2FED47397E566603B0A9A8E7328C79>]",
+    )
+    let mut case_index = 0
+    for
+      corrupted in [
+        markdown_cmd_corrupt_xref_stream_root_entry_for_test(
+          input_bytes, manual_root_entry,
+        ),
+        markdown_cmd_corrupt_xref_stream_decodeparms_entry_for_test(
+          input_bytes, manual_id_entry, "/DecodeParms /Bad",
+        ),
+        markdown_cmd_corrupt_xref_stream_decodeparms_entry_for_test(
+          input_bytes, manual_id_entry, "/DecodeParms << /Predictor 9 >>",
+        ),
+        markdown_cmd_corrupt_xref_stream_filter_for_test(input_bytes),
+      ] {
+      case_index += 1
+      let corrupt_input_path = markdown_cmd_output_path_for_test(
+        "cpdf_source_manual_xref_dictionary_input_" + case_index.to_string(),
+      )
+      let corrupt_output_path = markdown_cmd_output_path_for_test(
+        "cpdf_source_manual_xref_dictionary_" + case_index.to_string(),
       )
       markdown_cmd_remove_if_exists_for_test(corrupt_input_path)
       markdown_cmd_remove_if_exists_for_test(corrupt_output_path)
