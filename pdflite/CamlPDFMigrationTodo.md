@@ -7022,6 +7022,25 @@ Current backend snapshot:
   2322/2322 tests passing. `moon info && moon fmt` reports no pending interface
   or formatting work, and `moon check --target all --warn-list +73` reports the
   known warning-73/main-package baseline with 10 warnings and 0 errors.~~
+- [x] ~~Add the next source-corpus page-spec/page-label slice: the new native
+  `page/fixture_acceptance` package now gates optional
+  `.repos/cpdf-source/cpdfmanual.pdf` through cpdf-style page selection and
+  page-label reporting. The page-spec gate verifies all-page parsing, explicit
+  ranges, reverse/end/not/duplicate selectors, odd/even selectors,
+  portrait/landscape filters, annotated-page bounds, `string_of_pagespec`, and
+  wrapper parity for `pdf_parse_pagespec` and `pdf_string_of_pagespec` after
+  compressed rewrite/reread. The page-label gate verifies the manual's roman
+  front-matter and decimal body labels, `read_page_labels` wrapper parity,
+  page-info JSON/text labels, add-text label/replacement wrappers, formatted
+  `%Label`/`%EndLabel` output, compressed rewrite/reread, and
+  bad-final-`startxref` reconstruction. `moon check --target native
+  page/fixture_acceptance --warn-list +73` passes, both focused cpdf source
+  manual page tests report 1/1 test passing, `moon test --target native
+  page/fixture_acceptance` reports 2/2 tests passing, and `moon test --target
+  native` reports 2324/2324 tests passing. `moon info && moon fmt` reports no
+  pending interface or formatting work, and `moon check --target all --warn-list
+  +73` reports the known warning-73/main-package baseline with 10 warnings and
+  0 errors.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.
