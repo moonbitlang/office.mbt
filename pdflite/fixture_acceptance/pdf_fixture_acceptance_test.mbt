@@ -7081,6 +7081,266 @@ fn fixture_acceptance_assert_cpdf_source_cns1_legacy_cmaps_for_test(
 }
 
 ///|
+fn fixture_acceptance_cpdf_source_vertical_cmap_cases_for_test() -> Array[
+  (String, String, String, String, String, Array[Int], Array[Int], Int, Int),
+] {
+  [
+    (
+      "/SourceVGBEUC",
+      "/SourceVerticalGBEUCTop",
+      "/GB-EUC-V",
+      "/SourceVerticalGBEUCDescendant",
+      "GB1",
+      [0xA1, 0xA2],
+      [0x3001],
+      0x3001,
+      0xA1A2,
+    ),
+    (
+      "/SourceVGBpcEUC",
+      "/SourceVerticalGBpcEUCTop",
+      "/GBpc-EUC-V",
+      "/SourceVerticalGBpcEUCDescendant",
+      "GB1",
+      [0xA1, 0xA2],
+      [0x3001],
+      0x3001,
+      0xA1A2,
+    ),
+    (
+      "/SourceVGBK",
+      "/SourceVerticalGBKTop",
+      "/GBK-EUC-V",
+      "/SourceVerticalGBKDescendant",
+      "GB1",
+      [0xA1, 0xA2],
+      [0x3001],
+      0x3001,
+      0xA1A2,
+    ),
+    (
+      "/SourceVGBKp",
+      "/SourceVerticalGBKpTop",
+      "/GBKp-EUC-V",
+      "/SourceVerticalGBKpDescendant",
+      "GB1",
+      [0xA1, 0xA2],
+      [0x3001],
+      0x3001,
+      0xA1A2,
+    ),
+    (
+      "/SourceVGBK2K",
+      "/SourceVerticalGBK2KTop",
+      "/GBK2K-V",
+      "/SourceVerticalGBK2KDescendant",
+      "GB1",
+      [0xA4, 0xC3],
+      [0x3064],
+      0x3064,
+      0xA4C3,
+    ),
+    (
+      "/SourceVB5",
+      "/SourceVerticalB5Top",
+      "/B5-V",
+      "/SourceVerticalB5Descendant",
+      "CNS1",
+      [0xA1, 0x4B],
+      [0xFE19],
+      0xFE19,
+      0xA14B,
+    ),
+    (
+      "/SourceVB5pc",
+      "/SourceVerticalB5pcTop",
+      "/B5pc-V",
+      "/SourceVerticalB5pcDescendant",
+      "CNS1",
+      [0xA1, 0x4B],
+      [0xFE19],
+      0xFE19,
+      0xA14B,
+    ),
+    (
+      "/SourceVETen",
+      "/SourceVerticalETenTop",
+      "/ETen-B5-V",
+      "/SourceVerticalETenDescendant",
+      "CNS1",
+      [0xA1, 0x4B],
+      [0xFE19],
+      0xFE19,
+      0xA14B,
+    ),
+    (
+      "/SourceVETenms",
+      "/SourceVerticalETenmsTop",
+      "/ETenms-B5-V",
+      "/SourceVerticalETenmsDescendant",
+      "CNS1",
+      [0xA1, 0x4C],
+      [0xFE30],
+      0xFE30,
+      0xA14C,
+    ),
+    (
+      "/SourceVHKdla",
+      "/SourceVerticalHKdlaTop",
+      "/HKdla-B5-V",
+      "/SourceVerticalHKdlaDescendant",
+      "CNS1",
+      [0xA1, 0x4B],
+      [0xFE19],
+      0xFE19,
+      0xA14B,
+    ),
+    (
+      "/SourceVHKdlb",
+      "/SourceVerticalHKdlbTop",
+      "/HKdlb-B5-V",
+      "/SourceVerticalHKdlbDescendant",
+      "CNS1",
+      [0xA1, 0x4B],
+      [0xFE19],
+      0xFE19,
+      0xA14B,
+    ),
+    (
+      "/SourceVHKgccs",
+      "/SourceVerticalHKgccsTop",
+      "/HKgccs-B5-V",
+      "/SourceVerticalHKgccsDescendant",
+      "CNS1",
+      [0xA1, 0x4B],
+      [0xFE19],
+      0xFE19,
+      0xA14B,
+    ),
+    (
+      "/SourceVHKm314",
+      "/SourceVerticalHKm314Top",
+      "/HKm314-B5-V",
+      "/SourceVerticalHKm314Descendant",
+      "CNS1",
+      [0xA1, 0x4B],
+      [0xFE19],
+      0xFE19,
+      0xA14B,
+    ),
+    (
+      "/SourceVHKm471",
+      "/SourceVerticalHKm471Top",
+      "/HKm471-B5-V",
+      "/SourceVerticalHKm471Descendant",
+      "CNS1",
+      [0xA1, 0x4B],
+      [0xFE19],
+      0xFE19,
+      0xA14B,
+    ),
+    (
+      "/SourceVHKscs",
+      "/SourceVerticalHKscsTop",
+      "/HKscs-B5-V",
+      "/SourceVerticalHKscsDescendant",
+      "CNS1",
+      [0xA1, 0x4B],
+      [0xFE19],
+      0xFE19,
+      0xA14B,
+    ),
+  ]
+}
+
+///|
+fn fixture_acceptance_cpdf_source_hello_with_vertical_cmaps_for_test(
+  document : @pdflite.PdfDocument,
+) -> @pdflite.PdfDocument raise {
+  let output = document.copy()
+  let pages = output.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  let cases = fixture_acceptance_cpdf_source_vertical_cmap_cases_for_test()
+  let mut font_resources = fixture_acceptance_cpdf_source_page_fonts_for_test(
+    output,
+    pages[0].resources,
+  )
+  for case in cases {
+    let descendant = output.add_object(
+      fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
+        case.3,
+        case.4,
+      ),
+    )
+    let font = output.add_object(
+      fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
+        case.1,
+        case.2,
+        descendant,
+      ),
+    )
+    font_resources = font_resources.add_dict_entry(
+      fixture_acceptance_pdf_name_for_test(case.0),
+      PdfIndirect(font),
+    )
+  }
+  let resources = pages[0].resources.add_dict_entry(
+    fixture_acceptance_pdf_name_for_test("/Font"),
+    font_resources,
+  )
+  let page = { ..pages[0], resources, }
+  let first = cases[0]
+  let updated_page = output.postpend_operators(
+    page,
+    [
+      Op_BT,
+      Op_Tf(fixture_acceptance_pdf_name_for_test(first.0), 12.0),
+      Op_Tj(@pdflite.pdf_bytes_of_int_array(first.5)),
+      Op_ET,
+    ],
+    fast=true,
+  )
+  output.change_pages([updated_page], change_references=true)
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_vertical_cmaps_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+  let cases = fixture_acceptance_cpdf_source_vertical_cmap_cases_for_test()
+  let first = cases[0]
+  let ops = fixture_acceptance_page_content_ops_for_test(document)
+  fixture_acceptance_assert_content_op_for_test(
+    ops,
+    Op_Tf(fixture_acceptance_pdf_name_for_test(first.0), 12.0),
+  )
+  fixture_acceptance_assert_content_op_for_test(
+    ops,
+    Op_Tj(@pdflite.pdf_bytes_of_int_array(first.5)),
+  )
+  for case in cases {
+    fixture_acceptance_assert_cpdf_source_gb_cns_predefined_font_for_test(
+      document,
+      case.0,
+      case.1,
+      case.2,
+      case.4,
+      @pdflite.pdf_bytes_of_int_array(case.5),
+      case.6,
+      case.7,
+      case.8,
+      false,
+    )
+    let extractor = fixture_acceptance_source_font_extractor_for_test(
+      document,
+      case.0,
+    )
+    @test.assert_eq(extractor.charcode_of_codepoint(0x1F600), None)
+  }
+}
+
+///|
 fn fixture_acceptance_draft_substitute_ops_for_test() -> Array[
   @pdflite.PdfContentOp,
 ] {
@@ -9404,6 +9664,33 @@ async test "optional cpdf source hello fixture extracts CNS1 legacy predefined C
         @pdflite.pdf_read_document_from_bytes(compressed),
       )
       fixture_acceptance_assert_cpdf_source_cns1_legacy_cmaps_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+        ),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source hello fixture extracts vertical GB CNS predefined CMaps" {
+  match
+    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+      let with_cmaps = fixture_acceptance_cpdf_source_hello_with_vertical_cmaps_for_test(
+        document,
+      )
+      fixture_acceptance_assert_cpdf_source_vertical_cmaps_for_test(with_cmaps)
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        with_cmaps,
+      )
+      fixture_acceptance_assert_cpdf_source_vertical_cmaps_for_test(
+        @pdflite.pdf_read_document_from_bytes(compressed),
+      )
+      fixture_acceptance_assert_cpdf_source_vertical_cmaps_for_test(
         @pdflite.pdf_read_document_from_bytes(
           fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
         ),

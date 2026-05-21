@@ -6074,6 +6074,28 @@ Current backend snapshot:
   pending interface or formatting work, and `moon check --target all
   --warn-list +73` reports the warning 73 baseline with 10 warnings and 0
   errors.~~
+- [x] ~~Broaden the source-boundary predefined CMap slice to vertical GB/CNS
+  families: optional `.repos/cpdf-source/hello.pdf` now gates `/GB-EUC-V`,
+  `/GBpc-EUC-V`, `/GBK-EUC-V`, `/GBKp-EUC-V`, `/GBK2K-V`, `/B5-V`,
+  `/B5pc-V`, `/ETen-B5-V`, `/ETenms-B5-V`, `/HKdla-B5-V`, `/HKdlb-B5-V`,
+  `/HKgccs-B5-V`, `/HKm314-B5-V`, `/HKm471-B5-V`, and `/HKscs-B5-V` on a real
+  source PDF after injecting Type0 CID-keyed font resources. The gate preserves
+  the original Hello text, verifies the injected vertical GB-EUC text operator
+  survives in the parsed source page content stream, verifies `list_fonts` and
+  `read_font` expose each `/Type0` `PdfFontCIDKeyed` resource with GB1/CNS1
+  CIDSystemInfo ordering and mixed-byte vertical code behavior, pins
+  `PdfTextExtractor` codepoint and reverse `charcode_of_codepoint` behavior for
+  GB1 vertical, GBK2K vertical, Big5 vertical, ETenms vertical, and Hong Kong
+  variant vertical byte streams, verifies unrelated emoji reverse lookup fails,
+  and repeats the assertions through compressed rewrite/reread and
+  bad-`startxref` recovery. `moon check --target native fixture_acceptance
+  --warn-list +73` passes, `moon test --target native fixture_acceptance
+  --filter 'optional cpdf source hello fixture extracts vertical GB CNS
+  predefined CMaps'` reports 1/1 test passing, `moon test --target native
+  fixture_acceptance` reports 97/97 tests passing, `moon test --target native`
+  reports 2269/2269 tests passing, `moon info && moon fmt` reports no pending
+  interface or formatting work, and `moon check --target all --warn-list +73`
+  reports the warning 73 baseline with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
