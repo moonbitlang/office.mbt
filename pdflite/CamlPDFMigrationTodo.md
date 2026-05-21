@@ -6819,6 +6819,23 @@ Current backend snapshot:
   current run still fails when instantiating
   `_build/wasm/debug/test/markdown/markdown.blackbox_test.wasm` because the
   generated module exceeds the runtime maximum function-size limit.~~
+- [x] ~~Add the next source-corpus font recovery slice: the native
+  `font/fixture_acceptance` package now gates optional
+  `.repos/cpdf-source/manualimages/fonts.pdf` through font-list, font-table,
+  JSON, font lookup, and missing-font reporting before and after compressed
+  rewrite/reread. The same package now also corrupts that real source fixture
+  with a bad final `startxref`, damaged classic `xref` header, damaged
+  `trailer` keyword, first in-use xref row marker/offset/generation fields,
+  and first subsection object/count fields, requires strict classic reading to
+  reject each damaged file, and verifies public reconstruction preserves the
+  same font behavior through compressed rewrite/reread. `moon check --target
+  native font/fixture_acceptance --warn-list +73` passes, the focused cpdf
+  source font tests report 2/2 tests passing, `moon test --target native
+  font/fixture_acceptance` reports 7/7 tests passing, and `moon test --target
+  native` reports 2310/2310 tests passing. `moon info && moon fmt` reports no
+  pending interface or formatting work, and `moon check --target all
+  --warn-list +73` reports the known warning-73/main-package baseline with 10
+  warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.

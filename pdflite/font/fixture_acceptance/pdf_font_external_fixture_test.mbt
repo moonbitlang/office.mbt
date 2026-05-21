@@ -150,6 +150,57 @@ fn font_external_find_last_bytes_for_test(
 }
 
 ///|
+fn font_external_find_bytes_for_test(
+  haystack : BytesView,
+  needle : BytesView,
+) -> Int {
+  if needle.length() == 0 {
+    0
+  } else if haystack.length() < needle.length() {
+    -1
+  } else {
+    for start in 0..<=(haystack.length() - needle.length()) {
+      if font_external_bytes_start_with_at_for_test(haystack, needle, start) {
+        break start
+      }
+    } nobreak {
+      -1
+    }
+  }
+}
+
+///|
+fn font_external_find_bytes_after_for_test(
+  haystack : BytesView,
+  needle : BytesView,
+  start : Int,
+) -> Int {
+  if needle.length() == 0 {
+    start
+  } else if start < 0 || haystack.length() < needle.length() {
+    -1
+  } else {
+    for position in start..<=(haystack.length() - needle.length()) {
+      if font_external_bytes_start_with_at_for_test(haystack, needle, position) {
+        break position
+      }
+    } nobreak {
+      -1
+    }
+  }
+}
+
+///|
+fn font_external_push_ascii_for_test(
+  output : Array[Byte],
+  text : String,
+) -> Unit {
+  for byte in @ascii.encode(text) {
+    output.push(byte)
+  }
+}
+
+///|
 fn font_external_corrupt_startxref_pointer_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
@@ -171,6 +222,239 @@ fn font_external_corrupt_startxref_pointer_for_test(
     output.push(byte)
   }
   for index in number_end..<bytes.length() {
+    output.push(bytes[index])
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn font_external_startxref_offset_for_test(bytes : Bytes) -> Int raise {
+  let marker = @ascii.encode("startxref")
+  let marker_position = font_external_find_last_bytes_for_test(bytes, marker)
+  if marker_position < 0 {
+    fail("expected startxref marker")
+  }
+  let mut number_start = marker_position + marker.length()
+  while number_start < bytes.length() &&
+        (
+          bytes[number_start] == b'\n' ||
+          bytes[number_start] == b'\r' ||
+          bytes[number_start] == b' ' ||
+          bytes[number_start] == b'\t'
+        ) {
+    number_start += 1
+  }
+  let mut number = 0
+  let mut current = number_start
+  while current < bytes.length() &&
+        bytes[current] >= b'0' &&
+        bytes[current] <= b'9' {
+    number = number * 10 + bytes[current].to_int() - b'0'.to_int()
+    current += 1
+  }
+  if current == number_start {
+    fail("expected startxref number")
+  }
+  number
+}
+
+///|
+fn font_external_corrupt_startxref_xref_header_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  let xref_offset = font_external_startxref_offset_for_test(bytes)
+  guard font_external_bytes_start_with_at_for_test(
+    bytes,
+    @ascii.encode("xref"),
+    xref_offset,
+  ) else {
+    fail("expected startxref to point at a classic xref table")
+  }
+  let output : Array[Byte] = []
+  for byte in bytes {
+    output.push(byte)
+  }
+  output[xref_offset] = b'y'
+  Bytes::from_array(output)
+}
+
+///|
+fn font_external_corrupt_startxref_trailer_keyword_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  let xref_offset = font_external_startxref_offset_for_test(bytes)
+  let trailer_position = font_external_find_bytes_after_for_test(
+    bytes,
+    @ascii.encode("trailer"),
+    xref_offset,
+  )
+  if trailer_position < 0 {
+    fail("expected classic xref trailer keyword after startxref target")
+  }
+  let output : Array[Byte] = []
+  for byte in bytes {
+    output.push(byte)
+  }
+  output[trailer_position] = b'u'
+  Bytes::from_array(output)
+}
+
+///|
+fn font_external_first_in_use_xref_row_start_for_test(
+  bytes : Bytes,
+) -> Int raise {
+  let free_row = @ascii.encode("0000000000 65535 f")
+  let free_row_position = font_external_find_bytes_for_test(bytes, free_row)
+  if free_row_position < 0 {
+    fail("expected classic xref free row")
+  }
+  let mut row_start = free_row_position + free_row.length()
+  while row_start < bytes.length() &&
+        bytes[row_start] != b'\n' &&
+        bytes[row_start] != b'\r' {
+    row_start += 1
+  }
+  while row_start < bytes.length() &&
+        (bytes[row_start] == b'\n' || bytes[row_start] == b'\r') {
+    row_start += 1
+  }
+  if row_start + 10 > bytes.length() {
+    fail("expected first in-use xref row")
+  }
+  row_start
+}
+
+///|
+fn font_external_corrupt_first_in_use_xref_marker_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  let row_start = font_external_first_in_use_xref_row_start_for_test(bytes)
+  let marker_position = row_start + 17
+  if marker_position >= bytes.length() {
+    fail("expected first in-use xref marker")
+  }
+  let output : Array[Byte] = []
+  for byte in bytes {
+    output.push(byte)
+  }
+  output[marker_position] = b'x'
+  Bytes::from_array(output)
+}
+
+///|
+fn font_external_corrupt_first_in_use_xref_offset_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  let row_start = font_external_first_in_use_xref_row_start_for_test(bytes)
+  let output : Array[Byte] = []
+  for byte in bytes {
+    output.push(byte)
+  }
+  for index in row_start..<(row_start + 10) {
+    output[index] = b'9'
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn font_external_corrupt_first_in_use_xref_generation_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  let row_start = font_external_first_in_use_xref_row_start_for_test(bytes)
+  if row_start + 16 > bytes.length() {
+    fail("expected first in-use xref generation")
+  }
+  let output : Array[Byte] = []
+  for byte in bytes {
+    output.push(byte)
+  }
+  for index in (row_start + 11)..<(row_start + 16) {
+    output[index] = b'x'
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn font_external_first_xref_subsection_spans_for_test(
+  bytes : Bytes,
+) -> (Int, Int, Int, Int) raise {
+  let header = @ascii.encode("xref")
+  let header_position = font_external_find_bytes_for_test(bytes, header)
+  if header_position < 0 {
+    fail("expected first classic xref header")
+  }
+  let mut first_start = header_position + header.length()
+  while first_start < bytes.length() &&
+        (
+          bytes[first_start] == b'\n' ||
+          bytes[first_start] == b'\r' ||
+          bytes[first_start] == b' ' ||
+          bytes[first_start] == b'\t'
+        ) {
+    first_start += 1
+  }
+  let mut first_end = first_start
+  while first_end < bytes.length() &&
+        bytes[first_end] >= b'0' &&
+        bytes[first_end] <= b'9' {
+    first_end += 1
+  }
+  if first_end == first_start {
+    fail("expected first classic xref subsection object number")
+  }
+  let mut count_start = first_end
+  while count_start < bytes.length() &&
+        (
+          bytes[count_start] == b'\n' ||
+          bytes[count_start] == b'\r' ||
+          bytes[count_start] == b' ' ||
+          bytes[count_start] == b'\t'
+        ) {
+    count_start += 1
+  }
+  let mut count_end = count_start
+  while count_end < bytes.length() &&
+        bytes[count_end] >= b'0' &&
+        bytes[count_end] <= b'9' {
+    count_end += 1
+  }
+  if count_end == count_start {
+    fail("expected first classic xref subsection count")
+  }
+  (first_start, first_end, count_start, count_end)
+}
+
+///|
+fn font_external_corrupt_first_xref_subsection_object_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  let (object_start, object_end, _, _) = font_external_first_xref_subsection_spans_for_test(
+    bytes,
+  )
+  let output : Array[Byte] = []
+  for index in 0..<object_start {
+    output.push(bytes[index])
+  }
+  font_external_push_ascii_for_test(output, "/Bad")
+  for index in object_end..<bytes.length() {
+    output.push(bytes[index])
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn font_external_corrupt_first_xref_subsection_count_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  let (_, _, count_start, count_end) = font_external_first_xref_subsection_spans_for_test(
+    bytes,
+  )
+  let output : Array[Byte] = []
+  for index in 0..<count_start {
+    output.push(bytes[index])
+  }
+  font_external_push_ascii_for_test(output, "/Bad")
+  for index in count_end..<bytes.length() {
     output.push(bytes[index])
   }
   Bytes::from_array(output)
@@ -334,6 +618,120 @@ fn font_external_assert_itext_logo_fixture_for_test(
   @test.assert_eq(extractor.codepoints_of_text(texts[3][:]), [69])
   @test.assert_eq(extractor.codepoints_of_text(texts[4][:]), [88])
   @test.assert_eq(extractor.codepoints_of_text(texts[5][:]), [84])
+}
+
+///|
+fn font_external_assert_contains_for_test(
+  haystack : String,
+  needle : String,
+) -> Unit raise {
+  guard haystack.contains(needle) else {
+    fail("expected text to contain " + needle)
+  }
+}
+
+///|
+fn font_external_assert_cpdf_source_fonts_fixture_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 1)
+  let fonts = document.list_fonts([1])
+  @test.assert_eq(fonts.length(), 2)
+  @test.assert_eq(fonts[0].name, "/F1")
+  @test.assert_eq(fonts[0].subtype, "/Type1")
+  @test.assert_eq(fonts[0].basefont, "/Times-Roman")
+  @test.assert_eq(fonts[0].encoding, "/WinAnsiEncoding")
+  @test.assert_eq(fonts[1].name, "/F2")
+  @test.assert_eq(fonts[1].subtype, "/Type1")
+  @test.assert_eq(fonts[1].basefont, "/Times-BoldItalic")
+  @test.assert_eq(fonts[1].encoding, "/WinAnsiEncoding")
+  let fonts_text = @ascii.decode_lossy(document.list_fonts_text([1]))
+  font_external_assert_contains_for_test(
+    fonts_text, "1 /F1 /Type1 /Times-Roman /WinAnsiEncoding\n",
+  )
+  font_external_assert_contains_for_test(
+    fonts_text, "1 /F2 /Type1 /Times-BoldItalic /WinAnsiEncoding\n",
+  )
+  let fonts_json = document.fonts_json([1]).stringify()
+  font_external_assert_contains_for_test(fonts_json, "\"name\":\"/F1\"")
+  font_external_assert_contains_for_test(
+    fonts_json, "\"basefont\":\"/Times-Roman\"",
+  )
+  font_external_assert_contains_for_test(fonts_json, "\"name\":\"/F2\"")
+  font_external_assert_contains_for_test(
+    fonts_json, "\"basefont\":\"/Times-BoldItalic\"",
+  )
+  let first_font = document.font_from_name("/F1", 1)
+  @test.assert_eq(first_font != PdfNull, true)
+  @test.assert_eq(document.font_from_name("/Missing", 1), PdfNull)
+  let font_table = @ascii.decode_lossy(document.font_table_text("/F1", 1))
+  font_external_assert_contains_for_test(
+    font_table, "65 = U+0041 (A - LATIN CAPITAL LETTER A) = A\n",
+  )
+  let missing = document.missing_fonts([1])
+  @test.assert_eq(missing.length(), 2)
+  @test.assert_eq(missing[0].name, "/F1")
+  @test.assert_eq(missing[0].basefont, "/Times-Roman")
+  @test.assert_eq(missing[1].name, "/F2")
+  @test.assert_eq(missing[1].basefont, "/Times-BoldItalic")
+  let missing_text = @ascii.decode_lossy(document.missing_fonts_text([1]))
+  font_external_assert_contains_for_test(
+    missing_text, "1, /F1, /Type1, /Times-Roman, /WinAnsiEncoding\n",
+  )
+  font_external_assert_contains_for_test(
+    missing_text, "1, /F2, /Type1, /Times-BoldItalic, /WinAnsiEncoding\n",
+  )
+}
+
+///|
+async test "cpdf source manual font fixture reports font tables" {
+  match
+    font_external_fixture_document_for_test(
+      ".repos/cpdf-source/manualimages/fonts.pdf",
+    ) {
+    None => ()
+    Some(document) => {
+      font_external_assert_cpdf_source_fonts_fixture_for_test(document)
+      font_external_assert_cpdf_source_fonts_fixture_for_test(
+        font_external_reparse_compressed_for_test(document),
+      )
+    }
+  }
+}
+
+///|
+async test "cpdf source manual font fixture reconstructs malformed classic xref data" {
+  match
+    font_external_fixture_bytes_for_test(
+      ".repos/cpdf-source/manualimages/fonts.pdf",
+    ) {
+    None => ()
+    Some(bytes) =>
+      for
+        corrupted in [
+          font_external_corrupt_startxref_pointer_for_test(bytes),
+          font_external_corrupt_startxref_xref_header_for_test(bytes),
+          font_external_corrupt_startxref_trailer_keyword_for_test(bytes),
+          font_external_corrupt_first_in_use_xref_marker_for_test(bytes),
+          font_external_corrupt_first_in_use_xref_offset_for_test(bytes),
+          font_external_corrupt_first_in_use_xref_generation_for_test(bytes),
+          font_external_corrupt_first_xref_subsection_object_for_test(bytes),
+          font_external_corrupt_first_xref_subsection_count_for_test(bytes),
+        ] {
+        let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+          corrupted,
+        )
+        guard strict is Err(_) else {
+          fail("expected malformed classic xref data to require reconstruction")
+        }
+        let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
+        @test.assert_eq(recovered.first_xref(), 0)
+        font_external_assert_cpdf_source_fonts_fixture_for_test(recovered)
+        font_external_assert_cpdf_source_fonts_fixture_for_test(
+          font_external_reparse_compressed_for_test(recovered),
+        )
+      }
+  }
 }
 
 ///|
