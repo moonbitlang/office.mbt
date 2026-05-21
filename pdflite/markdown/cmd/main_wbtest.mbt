@@ -1013,6 +1013,24 @@ fn markdown_cmd_assert_cpdf_top_level_classic_markdown_for_test(
 }
 
 ///|
+fn markdown_cmd_assert_cpdf_manual_image_markdown_for_test(
+  markdown : String,
+  path : String,
+) -> Unit raise {
+  markdown_cmd_assert_contains_for_test(markdown, "# Page 1")
+  @test.assert_eq(
+    markdown_cmd_raw_control_count_for_test(markdown),
+    0,
+    msg=path,
+  )
+  @test.assert_eq(
+    markdown_cmd_replacement_count_for_test(markdown),
+    0,
+    msg=path,
+  )
+}
+
+///|
 async test "markdown command converts generated Latin fixture to UTF-8 file" {
   let input_path = markdown_cmd_repo_path_for_test(
     "markdown/fixtures/pandoc_latin.pdf",
@@ -1437,21 +1455,98 @@ async test "markdown command converts optional cpdf source manual image PDF corp
       markdown_cmd_remove_if_exists_for_test(output_path)
       markdown_cmd_convert_file(input_path, output_path)
       let output = @utf8.decode_lossy(@fs.read_file(output_path).binary())
-      markdown_cmd_assert_contains_for_test(output, "# Page 1")
-      @test.assert_eq(
-        markdown_cmd_raw_control_count_for_test(output),
-        0,
-        msg=path,
-      )
-      @test.assert_eq(
-        markdown_cmd_replacement_count_for_test(output),
-        0,
-        msg=path,
-      )
+      markdown_cmd_assert_cpdf_manual_image_markdown_for_test(output, path)
       if output != "# Page 1\n\n\n" {
         textful += 1
       }
       markdown_cmd_remove_if_exists_for_test(output_path)
+    }
+  }
+  if checked > 0 {
+    @test.assert_eq(
+      checked,
+      markdown_cmd_cpdf_source_manual_image_pdf_paths_for_test().length(),
+    )
+    @test.assert_eq(textful > 0, true)
+  }
+}
+
+///|
+async test "markdown command reconstructs optional cpdf source manual image PDF corpus with malformed classic xref metadata and rows" {
+  let mut checked = 0
+  let mut textful = 0
+  for path in markdown_cmd_cpdf_source_manual_image_pdf_paths_for_test() {
+    let input_path = markdown_cmd_repo_path_for_test(path)
+    if @fs.exists(input_path) {
+      checked += 1
+      let clean_output_path = markdown_cmd_output_path_for_test(
+        "cpdf_source_manual_image_clean_" + checked.to_string(),
+      )
+      markdown_cmd_remove_if_exists_for_test(clean_output_path)
+      markdown_cmd_convert_file(input_path, clean_output_path)
+      let clean_output = @utf8.decode_lossy(
+        @fs.read_file(clean_output_path).binary(),
+      )
+      markdown_cmd_assert_cpdf_manual_image_markdown_for_test(
+        clean_output, path,
+      )
+      if clean_output != "# Page 1\n\n\n" {
+        textful += 1
+      }
+      let input_bytes = @fs.read_file(input_path).binary()
+      let mut case_index = 0
+      for
+        corrupted in [
+          markdown_cmd_corrupt_startxref_pointer_for_test(input_bytes),
+          markdown_cmd_corrupt_startxref_xref_header_for_test(input_bytes),
+          markdown_cmd_corrupt_startxref_trailer_keyword_for_test(input_bytes),
+          markdown_cmd_corrupt_first_in_use_xref_marker_for_test(input_bytes),
+          markdown_cmd_corrupt_first_in_use_xref_offset_for_test(input_bytes),
+          markdown_cmd_corrupt_first_in_use_xref_generation_for_test(
+            input_bytes,
+          ),
+          markdown_cmd_corrupt_first_xref_subsection_object_for_test(
+            input_bytes,
+          ),
+          markdown_cmd_corrupt_first_xref_subsection_count_for_test(input_bytes),
+        ] {
+        case_index += 1
+        let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+          corrupted,
+        )
+        guard strict is Err(_) else {
+          fail(
+            "expected malformed classic xref data to require malformed reconstruction for " +
+            path,
+          )
+        }
+        let corrupt_input_path = markdown_cmd_output_path_for_test(
+          "cpdf_source_manual_image_input_" +
+          checked.to_string() +
+          "_" +
+          case_index.to_string(),
+        )
+        let corrupt_output_path = markdown_cmd_output_path_for_test(
+          "cpdf_source_manual_image_recovered_" +
+          checked.to_string() +
+          "_" +
+          case_index.to_string(),
+        )
+        markdown_cmd_remove_if_exists_for_test(corrupt_input_path)
+        markdown_cmd_remove_if_exists_for_test(corrupt_output_path)
+        @fs.write_file(corrupt_input_path, corrupted, create=0o644)
+        markdown_cmd_convert_file(corrupt_input_path, corrupt_output_path)
+        let corrupt_output = @utf8.decode_lossy(
+          @fs.read_file(corrupt_output_path).binary(),
+        )
+        markdown_cmd_assert_cpdf_manual_image_markdown_for_test(
+          corrupt_output, path,
+        )
+        @test.assert_eq(corrupt_output, clean_output, msg=path)
+        markdown_cmd_remove_if_exists_for_test(corrupt_input_path)
+        markdown_cmd_remove_if_exists_for_test(corrupt_output_path)
+      }
+      markdown_cmd_remove_if_exists_for_test(clean_output_path)
     }
   }
   if checked > 0 {

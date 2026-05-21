@@ -6774,6 +6774,24 @@ Current backend snapshot:
   fmt` reports no pending interface or formatting work, and `moon check
   --target all --warn-list +73` reports the known warning-73/main-package
   baseline with 10 warnings and 0 errors.~~
+- [x] ~~Add the next source-corpus Markdown command recovery slice: the native
+  `pdflite-markdown` command helper now reconstructs the optional
+  `.repos/cpdf-source/manualimages/*.pdf` corpus through real file
+  input/output when classic xref data is malformed. The command gate writes
+  corrupted copies for all 21 one-page manual-image PDFs when present, covering
+  bad final `startxref`, damaged classic `xref` headers, damaged `trailer`
+  keywords, first in-use xref row marker/offset/generation fields, and first
+  subsection object/count fields, requires strict classic reads to reject each
+  corruption, compares recovered Markdown byte-for-byte with clean command
+  output, and keeps page-marker/raw-control/replacement-character hygiene
+  checks. `moon check --target native markdown/cmd --warn-list +73` passes
+  with the known main-package warning baseline, the focused command recovery
+  test reports 1/1 test passing, `moon test --target native markdown/cmd`
+  reports 20/20 tests passing, and `moon test --target native` reports
+  2307/2307 tests passing. `moon info && moon fmt` reports no pending
+  interface or formatting work, and `moon check --target all --warn-list +73`
+  reports the known warning-73/main-package baseline with 10 warnings and 0
+  errors.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.
