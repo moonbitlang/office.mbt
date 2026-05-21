@@ -2258,6 +2258,87 @@ fn fixture_acceptance_assert_cpdf_source_hello_text_removed_for_test(
 }
 
 ///|
+fn fixture_acceptance_page_transform_source_hello_for_test(
+  document : @pdflite.PdfDocument,
+) -> @pdflite.PdfDocument raise {
+  let pages = document.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  let decorated_rest = pages[0].rest
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/CropBox"),
+      fixture_acceptance_rect_object_for_test(10.0, 20.0, 210.0, 420.0),
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/Annots"),
+      PdfArray([
+        PdfDictionary([
+          (
+            fixture_acceptance_pdf_name_for_test("/Rect"),
+            fixture_acceptance_rect_object_for_test(1.0, 2.0, 3.0, 4.0),
+          ),
+        ]),
+      ]),
+    )
+  let decorated = document.change_pages(
+    [{ ..pages[0], rest: decorated_rest }],
+    change_references=true,
+  )
+  let rotated = @pdflite.pdf_rotate_pages(decorated, 90, [1])
+  let shifted = @pdflite.pdf_shift_pages(rotated, [1], [(12.0, 34.0)])
+  @pdflite.pdf_hard_box(
+    shifted,
+    [1],
+    fixture_acceptance_pdf_name_for_test("/CropBox"),
+  )
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_page_transform_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 1)
+  let pages = document.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  @test.assert_eq(pages[0].rotate, Rotate90)
+  guard document.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/CropBox"),
+      pages[0].rest,
+    )
+    is Some(crop_box) else {
+    fail("missing cpdf source transformed crop box")
+  }
+  @test.assert_eq(
+    document.parse_rectangle(crop_box),
+    fixture_acceptance_rect_for_test(10.0, 20.0, 210.0, 420.0),
+  )
+  guard document.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/Annots"),
+      pages[0].rest,
+    )
+    is Some(PdfArray([PdfDictionary(_) as annotation])) else {
+    fail("missing cpdf source transformed annotation")
+  }
+  @test.assert_eq(
+    document.parse_rectangle(
+      fixture_acceptance_lookup_required_for_test(document, "/Rect", annotation),
+    ),
+    fixture_acceptance_rect_for_test(13.0, 36.0, 15.0, 38.0),
+  )
+  let ops = document.parse_content_ops_with_resources(
+    pages[0].resources,
+    pages[0].content,
+  )
+  @test.assert_eq(ops.length() >= 5, true)
+  @test.assert_eq(ops[0], Op_re(10.0, 20.0, 200.0, 400.0))
+  @test.assert_eq(ops[1], Op_W)
+  @test.assert_eq(ops[2], Op_n)
+  @test.assert_eq(ops[3], Op_cm(@pdflite.transform_translate(12.0, 34.0)))
+  @test.assert_eq(fixture_acceptance_has_text_showing_op_for_test(ops), true)
+  let text = @utf8.decode_lossy(document.test_extract_text([1]))
+  fixture_acceptance_assert_contains_for_test(text, "Hello, World!")
+}
+
+///|
 fn fixture_acceptance_add_cpdf_source_javascript_for_test(
   document : @pdflite.PdfDocument,
 ) -> (Int, Int, Int) raise {
@@ -3899,6 +3980,32 @@ async test "optional cpdf source hello fixture chops CropBox-backed page" {
         @pdflite.pdf_read_document_from_bytes(compressed),
       )
       fixture_acceptance_assert_cpdf_source_chop_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+        ),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source hello fixture applies page geometry transforms" {
+  match
+    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      let transformed = fixture_acceptance_page_transform_source_hello_for_test(
+        document,
+      )
+      fixture_acceptance_assert_cpdf_source_page_transform_for_test(transformed)
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        transformed,
+      )
+      fixture_acceptance_assert_cpdf_source_page_transform_for_test(
+        @pdflite.pdf_read_document_from_bytes(compressed),
+      )
+      fixture_acceptance_assert_cpdf_source_page_transform_for_test(
         @pdflite.pdf_read_document_from_bytes(
           fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
         ),

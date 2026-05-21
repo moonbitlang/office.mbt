@@ -5569,6 +5569,19 @@ Current backend snapshot:
   reports 69/69 tests passing, `moon test --target native` reports 2240/2240
   tests passing, and `moon check --target all --warn-list +73` reports the known
   warning baseline with 10 warnings and 0 errors.~~
+- [x] ~~Add the next source-boundary page-transform slice: optional
+  `.repos/cpdf-source/hello.pdf` now gates cpdfpage-style rotate, shift, and
+  hard-box clipping through compatibility wrappers on a real source PDF. The
+  gate decorates the page with `/CropBox` and `/Annots`, then verifies `/Rotate`
+  persistence, exact CropBox geometry, shifted annotation rectangle geometry,
+  hard-box clipping operator prefix, shifted content matrix prefix, preserved
+  text extraction, compressed rewrite/reread, and bad-`startxref` recovery.
+  `moon test --target native fixture_acceptance --filter
+  '*page geometry transforms*'` reports 1/1 test passing, `moon test --target
+  native fixture_acceptance` reports 70/70 tests passing, `moon test --target
+  native` reports 2241/2241 tests passing, and `moon check --target all
+  --warn-list +73` reports the known warning baseline with 10 warnings and 0
+  errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
