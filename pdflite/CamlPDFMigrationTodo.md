@@ -5738,6 +5738,22 @@ Current backend snapshot:
   native` reports 2253/2253 tests passing, and `moon check --target all
   --warn-list +73` reports the known warning baseline with 10 warnings and 0
   errors.~~
+- [x] ~~Add the next source-boundary cpdffont mutation slice: optional
+  `.repos/cpdf-source/cpdfmanual.pdf` and `.repos/cpdf-source/hello.pdf` now
+  gate real embedded-font removal and cross-document font copy behavior. The
+  gate verifies `remove_embedded_fonts`/`pdf_remove_fonts` strip decoded
+  Nimbus/URW font-file extraction from the manual and report the stripped fonts
+  as missing, while `copy_font_from`/`pdf_copy_font` copies a real embedded
+  Nimbus font from the manual onto `hello.pdf`, preserves Hello text, exposes
+  the copied font resource under its basefont name, keeps its decoded font file
+  extractable, avoids a missing-font row for the copy, and survives compressed
+  rewrite/reread plus bad-`startxref` recovery. `moon check --target native
+  fixture_acceptance --warn-list +73` passes, `moon test --target native
+  fixture_acceptance --filter 'optional cpdf source font mutations remove and
+  copy embedded fonts'` reports 1/1 test passing, `moon test --target native
+  fixture_acceptance` reports 82/82 tests passing, `moon test --target native`
+  reports 2254/2254 tests passing, and `moon check --target all --warn-list
+  +73` reports the known warning baseline with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.

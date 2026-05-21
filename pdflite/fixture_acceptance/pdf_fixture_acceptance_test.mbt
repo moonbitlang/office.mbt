@@ -4335,6 +4335,51 @@ fn fixture_acceptance_assert_cpdf_embedded_font_for_test(
 }
 
 ///|
+fn fixture_acceptance_cpdf_missing_font_entry_for_test(
+  entries : ArrayView[@pdflite.PdfMissingFontEntry],
+  basefont_fragment : String,
+) -> @pdflite.PdfMissingFontEntry raise {
+  for entry in entries {
+    if entry.basefont.contains(basefont_fragment) {
+      break entry
+    }
+  } nobreak {
+    fail("missing cpdf manual missing-font row " + basefont_fragment)
+  }
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_no_missing_font_for_test(
+  entries : ArrayView[@pdflite.PdfMissingFontEntry],
+  basefont_fragment : String,
+) -> Unit raise {
+  for entry in entries {
+    if entry.basefont.contains(basefont_fragment) {
+      fail("unexpected missing font row " + basefont_fragment)
+    }
+  }
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_removed_embedded_font_for_test(
+  document : @pdflite.PdfDocument,
+  fonts : ArrayView[@pdflite.PdfFontListEntry],
+  missing : ArrayView[@pdflite.PdfMissingFontEntry],
+  basefont_fragment : String,
+) -> Unit raise {
+  let font = fixture_acceptance_cpdf_font_entry_for_test(
+    fonts, basefont_fragment,
+  )
+  @test.assert_eq(font.subtype, "/Type1")
+  @test.assert_eq(document.extract_fontfile_bytes(font.page, font.name), None)
+  let missing_entry = fixture_acceptance_cpdf_missing_font_entry_for_test(
+    missing, basefont_fragment,
+  )
+  @test.assert_eq(missing_entry.subtype, "/Type1")
+  @test.assert_eq(missing_entry.encoding, "Built-in")
+}
+
+///|
 fn fixture_acceptance_assert_cpdf_manual_extracted_image_for_test(
   document : @pdflite.PdfDocument,
 ) -> Unit raise {
@@ -4422,6 +4467,60 @@ fn fixture_acceptance_assert_cpdf_manual_embedded_fonts_for_test(
   fixture_acceptance_assert_contains_for_test(fonts_json, "NimbusMonL-Regu")
   let missing_text = @ascii.decode_lossy(document.missing_fonts_text(all_pages))
   @test.assert_eq(missing_text, "")
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_manual_removed_embedded_fonts_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 175)
+  let all_pages = document.parse_pagespec("")
+  let fonts = document.list_fonts(all_pages)
+  @test.assert_eq(fonts.length() > 20, true)
+  let missing = document.missing_fonts(all_pages)
+  @test.assert_eq(missing.length() > 20, true)
+  fixture_acceptance_assert_cpdf_removed_embedded_font_for_test(
+    document, fonts, missing, "NimbusSanL-Bold",
+  )
+  fixture_acceptance_assert_cpdf_removed_embedded_font_for_test(
+    document, fonts, missing, "URWPalladioL-Roma",
+  )
+  fixture_acceptance_assert_cpdf_removed_embedded_font_for_test(
+    document, fonts, missing, "NimbusMonL-Regu",
+  )
+  let fonts_json = document.fonts_json(all_pages).stringify()
+  fixture_acceptance_assert_contains_for_test(fonts_json, "NimbusSanL-Bold")
+  fixture_acceptance_assert_contains_for_test(fonts_json, "URWPalladioL-Roma")
+  fixture_acceptance_assert_contains_for_test(fonts_json, "NimbusMonL-Regu")
+  let missing_text = @ascii.decode_lossy(document.missing_fonts_text(all_pages))
+  fixture_acceptance_assert_contains_for_test(missing_text, "NimbusSanL-Bold")
+  fixture_acceptance_assert_contains_for_test(missing_text, "URWPalladioL-Roma")
+  fixture_acceptance_assert_contains_for_test(missing_text, "NimbusMonL-Regu")
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_hello_copied_font_for_test(
+  document : @pdflite.PdfDocument,
+  basefont_fragment : String,
+) -> Unit raise {
+  fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+  let fonts = document.list_fonts([1])
+  let copied = fixture_acceptance_cpdf_font_entry_for_test(
+    fonts, basefont_fragment,
+  )
+  @test.assert_eq(copied.page, 1)
+  @test.assert_eq(copied.name.contains(basefont_fragment), true)
+  @test.assert_eq(copied.subtype, "/Type1")
+  match document.extract_fontfile_bytes(copied.page, copied.name) {
+    Some(bytes) => @test.assert_eq(bytes.length() > 1000, true)
+    None => fail("missing copied fontfile for " + copied.basefont)
+  }
+  fixture_acceptance_assert_cpdf_no_missing_font_for_test(
+    document.missing_fonts([1]),
+    basefont_fragment,
+  )
+  let fonts_json = document.fonts_json([1]).stringify()
+  fixture_acceptance_assert_contains_for_test(fonts_json, basefont_fragment)
 }
 
 ///|
@@ -6042,6 +6141,85 @@ async test "optional cpdf source manual fixture reports embedded fonts" {
         ),
       )
     }
+  }
+}
+
+///|
+async test "optional cpdf source font mutations remove and copy embedded fonts" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/cpdfmanual.pdf",
+    ) {
+    None => ()
+    Some(manual_bytes) =>
+      match
+        fixture_acceptance_optional_bytes_for_test(
+          ".repos/cpdf-source/hello.pdf",
+        ) {
+        None => ()
+        Some(hello_bytes) => {
+          let manual = @pdflite.pdf_read_document_from_bytes(manual_bytes)
+          let removed = manual.remove_embedded_fonts()
+          fixture_acceptance_assert_cpdf_manual_removed_embedded_fonts_for_test(
+            removed,
+          )
+          fixture_acceptance_assert_cpdf_manual_removed_embedded_fonts_for_test(
+            @pdflite.pdf_remove_fonts(manual),
+          )
+          fixture_acceptance_assert_cpdf_manual_removed_embedded_fonts_for_test(
+            fixture_acceptance_reparse_compressed_for_test(removed),
+          )
+          let removed_compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+            removed,
+          )
+          fixture_acceptance_assert_cpdf_manual_removed_embedded_fonts_for_test(
+            @pdflite.pdf_read_document_from_bytes(
+              fixture_acceptance_corrupt_startxref_pointer_for_test(
+                removed_compressed,
+              ),
+            ),
+          )
+          let hello = @pdflite.pdf_read_document_from_bytes(hello_bytes)
+          let source_font = fixture_acceptance_cpdf_font_entry_for_test(
+            manual.list_fonts(manual.parse_pagespec("")),
+            "NimbusSanL-Bold",
+          )
+          let copied = hello.copy_font_from(
+            manual,
+            source_font.name,
+            source_font.page,
+            [1],
+          )
+          fixture_acceptance_assert_cpdf_source_hello_copied_font_for_test(
+            copied, "NimbusSanL-Bold",
+          )
+          fixture_acceptance_assert_cpdf_source_hello_copied_font_for_test(
+            @pdflite.pdf_copy_font(
+              manual,
+              source_font.name,
+              source_font.page,
+              [1],
+              hello,
+            ),
+            "NimbusSanL-Bold",
+          )
+          fixture_acceptance_assert_cpdf_source_hello_copied_font_for_test(
+            fixture_acceptance_reparse_compressed_for_test(copied),
+            "NimbusSanL-Bold",
+          )
+          let copied_compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+            copied,
+          )
+          fixture_acceptance_assert_cpdf_source_hello_copied_font_for_test(
+            @pdflite.pdf_read_document_from_bytes(
+              fixture_acceptance_corrupt_startxref_pointer_for_test(
+                copied_compressed,
+              ),
+            ),
+            "NimbusSanL-Bold",
+          )
+        }
+      }
   }
 }
 
