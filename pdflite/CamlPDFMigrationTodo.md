@@ -7041,6 +7041,22 @@ Current backend snapshot:
   pending interface or formatting work, and `moon check --target all --warn-list
   +73` reports the known warning-73/main-package baseline with 10 warnings and
   0 errors.~~
+- [x] ~~Add the next source-corpus manual text-extraction slice: the new native
+  `text/fixture_acceptance` package now gates optional
+  `.repos/cpdf-source/cpdfmanual.pdf` through cpdf-style selected-page text
+  extraction and page content reporting. The gate verifies selected pages
+  `[1, 2, 19, 31, 33]`, wrapper parity for `pdf_test_extract_text`,
+  `pdf_content_entries_of_page`, and `pdf_page_content_json`, manual text
+  markers including the Coherent Graphics copyright line and table-of-contents
+  headings, glyph-level extracted text on page 2, zero replacement characters
+  and raw controls, compressed rewrite/reread, and bad-final-`startxref`
+  reconstruction. `moon check --target native text/fixture_acceptance
+  --warn-list +73` passes, the focused cpdf source manual text test reports 1/1
+  test passing, `moon test --target native text/fixture_acceptance` reports 1/1
+  test passing, and `moon test --target native` reports 2325/2325 tests
+  passing. `moon info && moon fmt` reports no pending interface or formatting
+  work, and `moon check --target all --warn-list +73` reports the known
+  warning-73/main-package baseline with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.
