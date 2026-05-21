@@ -2397,8 +2397,10 @@ fn fixture_acceptance_assert_cpdf_manual_text_extraction_for_test(
   document : @pdflite.PdfDocument,
 ) -> Unit raise {
   @test.assert_eq(document.endpage(), 175)
-  let text = @utf8.decode_lossy(document.test_extract_text([1, 19, 31, 33]))
+  let text = @utf8.decode_lossy(document.test_extract_text([1, 2, 19, 31, 33]))
   fixture_acceptance_assert_contains_for_test(text, "CoherentPDF")
+  fixture_acceptance_assert_contains_for_test(text, "©CoherentGraphicsLimited")
+  fixture_acceptance_assert_contains_for_test(text, "PDFAssociation")
   fixture_acceptance_assert_contains_for_test(text, "CommandLineTools")
   fixture_acceptance_assert_contains_for_test(text, "Chapter1BasicUsage")
   fixture_acceptance_assert_contains_for_test(

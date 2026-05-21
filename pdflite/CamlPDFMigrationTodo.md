@@ -5504,6 +5504,15 @@ Current backend snapshot:
   passing, `moon test --target native` reports 2235/2235 tests passing, and
   `moon check --target all --warn-list +73` reports the known warning baseline
   with 0 errors.~~
+- [x] ~~Add the next source-boundary ToUnicode text slice: optional
+  `.repos/cpdf-source/cpdfmanual.pdf` now gates page-2 non-ASCII text extraction
+  through the real manual's embedded font ToUnicode data, including the
+  copyright sign and PDF Association text across compressed rewrite/reread and
+  bad-`startxref` recovery. `moon test --target native fixture_acceptance
+  --filter '*extracts selected text*'` reports 1/1 test passing, `moon test
+  --target native fixture_acceptance` reports 64/64 tests passing, `moon test
+  --target native` reports 2235/2235 tests passing, and `moon check --target
+  all --warn-list +73` reports the known warning baseline with 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
