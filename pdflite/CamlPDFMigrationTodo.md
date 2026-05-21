@@ -6155,6 +6155,25 @@ Current backend snapshot:
   reports 2271/2271 tests passing, `moon info && moon fmt` reports no pending
   interface or formatting work, and `moon check --target all --warn-list +73`
   reports the warning 73 baseline with 10 warnings and 0 errors.~~
+- [x] ~~Broaden the source-boundary ToUnicode stream-inheritance slice:
+  optional `.repos/cpdf-source/hello.pdf` now gates multi-hop indirect
+  `/UseCMap` composition on a real source PDF after injecting a Type1 font
+  whose Flate-compressed child `/ToUnicode` stream points at a base CMap stream,
+  which points at a grandbase CMap stream. The gate preserves the original
+  Hello text, verifies extracted injected `/SourceUseCMap` text honors child
+  mappings over inherited duplicate entries plus inherited fallback mappings,
+  verifies parsed page-content operators, `list_fonts`, `read_font`, composed
+  descriptor ToUnicode bytes, direct `parse_cmap` output, reverse
+  `charcode_of_codepoint` lookups, `font_table`/wrapper rows, and repeats the
+  assertions through compressed rewrite/reread and bad-`startxref` recovery.
+  `moon check --target native fixture_acceptance --warn-list +73` passes,
+  `moon test --target native fixture_acceptance --filter 'optional cpdf source
+  hello fixture composes ToUnicode UseCMap streams'` reports 1/1 test passing,
+  `moon test --target native fixture_acceptance` reports 100/100 tests
+  passing, `moon test --target native` reports 2272/2272 tests passing, `moon
+  info && moon fmt` reports no pending interface or formatting work, and `moon
+  check --target all --warn-list +73` reports the warning 73 baseline with 10
+  warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
