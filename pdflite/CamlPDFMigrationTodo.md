@@ -5933,6 +5933,25 @@ Current backend snapshot:
   fixture_acceptance` reports 89/89 tests passing, `moon test --target native`
   reports 2261/2261 tests passing, and `moon check --target all --warn-list
   +73` reports the warning 73 baseline with 10 warnings and 0 errors.~~
+- [x] ~~Broaden the source-boundary image corpus slice: optional
+  `.repos/cpdf-source/hello.pdf` now gates recursive Form XObject image
+  traversal on a real source PDF after injecting a Form XObject that owns a
+  `/SourceNestedImage` Image XObject. The gate preserves the original Hello
+  text, verifies `images_json`/`pdf_image_images` and JSON blob wrappers report
+  the nested image with width, height, byte count, bit depth, colourspace, and
+  filter metadata, verifies `image_resolution` and its JSON/blob wrappers
+  descend through the Form XObject and pin the reported DPI/object tuple,
+  confirms the Form content stream and resource dictionary parse back to the
+  injected `/Do` path, decodes the nested Flate/DeviceGray image through
+  `get_image_24bpp`, and repeats the assertions through compressed
+  rewrite/reread and bad-`startxref` recovery. `moon check --target native
+  fixture_acceptance --warn-list +73` passes, `moon test --target native
+  fixture_acceptance --filter 'optional cpdf source hello fixture reports
+  nested form images'` reports 1/1 test passing, `moon test --target native
+  fixture_acceptance` reports 90/90 tests passing, `moon test --target native`
+  reports 2262/2262 tests passing, `moon info && moon fmt` reports no pending
+  interface or formatting work, and `moon check --target all --warn-list +73`
+  reports the warning 73 baseline with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.

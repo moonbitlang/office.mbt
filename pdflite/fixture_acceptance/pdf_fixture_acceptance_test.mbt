@@ -4593,6 +4593,272 @@ fn fixture_acceptance_assert_cpdf_source_inline_image_for_test(
 }
 
 ///|
+fn fixture_acceptance_cpdf_source_nested_image_data_for_test() -> @pdflite.PdfBytes raise {
+  @pdflite.pdf_flate_encode(@pdflite.pdf_bytes_of_int_array([0, 64, 128, 255]))
+}
+
+///|
+fn fixture_acceptance_cpdf_source_nested_image_for_test() -> @pdflite.PdfObject raise {
+  let data = fixture_acceptance_cpdf_source_nested_image_data_for_test()
+  @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (
+        fixture_acceptance_pdf_name_for_test("/Type"),
+        PdfNameObject(fixture_acceptance_pdf_name_for_test("/XObject")),
+      ),
+      (
+        fixture_acceptance_pdf_name_for_test("/Subtype"),
+        PdfNameObject(fixture_acceptance_pdf_name_for_test("/Image")),
+      ),
+      (fixture_acceptance_pdf_name_for_test("/Width"), PdfInteger(2)),
+      (fixture_acceptance_pdf_name_for_test("/Height"), PdfInteger(2)),
+      (fixture_acceptance_pdf_name_for_test("/BitsPerComponent"), PdfInteger(8)),
+      (
+        fixture_acceptance_pdf_name_for_test("/ColorSpace"),
+        PdfNameObject(fixture_acceptance_pdf_name_for_test("/DeviceGray")),
+      ),
+      (
+        fixture_acceptance_pdf_name_for_test("/Filter"),
+        PdfNameObject(fixture_acceptance_pdf_name_for_test("/FlateDecode")),
+      ),
+      (
+        fixture_acceptance_pdf_name_for_test("/Length"),
+        PdfInteger(data.length()),
+      ),
+    ]),
+    StreamGot(data),
+  )
+}
+
+///|
+fn fixture_acceptance_cpdf_source_form_image_form_for_test(
+  image_number : Int,
+) -> @pdflite.PdfObject raise {
+  @pdflite.pdf_content_stream_of_ops([
+    Op_cm({ a: 72.0, b: 0.0, c: 0.0, d: 72.0, e: 72.0, f: 72.0 }),
+    Op_Do(fixture_acceptance_pdf_name_for_test("/SourceNestedImage")),
+  ])
+  .add_dict_entry(
+    fixture_acceptance_pdf_name_for_test("/Type"),
+    PdfNameObject(fixture_acceptance_pdf_name_for_test("/XObject")),
+  )
+  .add_dict_entry(
+    fixture_acceptance_pdf_name_for_test("/Subtype"),
+    PdfNameObject(fixture_acceptance_pdf_name_for_test("/Form")),
+  )
+  .add_dict_entry(
+    fixture_acceptance_pdf_name_for_test("/BBox"),
+    PdfArray([PdfInteger(0), PdfInteger(0), PdfInteger(72), PdfInteger(72)]),
+  )
+  .add_dict_entry(
+    fixture_acceptance_pdf_name_for_test("/Resources"),
+    @pdflite.pdf_dictionary([
+      (
+        fixture_acceptance_pdf_name_for_test("/XObject"),
+        @pdflite.pdf_dictionary([
+          (
+            fixture_acceptance_pdf_name_for_test("/SourceNestedImage"),
+            PdfIndirect(image_number),
+          ),
+        ]),
+      ),
+    ]),
+  )
+}
+
+///|
+fn fixture_acceptance_cpdf_source_page_xobjects_for_test(
+  document : @pdflite.PdfDocument,
+  resources : @pdflite.PdfObject,
+) -> @pdflite.PdfObject raise {
+  match
+    document.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/XObject"),
+      resources,
+    ) {
+    Some(PdfDictionary(entries)) => PdfDictionary(entries)
+    Some(_) => fail("expected source page XObject resources to be a dictionary")
+    None => @pdflite.pdf_dictionary([])
+  }
+}
+
+///|
+fn fixture_acceptance_cpdf_source_hello_with_form_image_for_test(
+  document : @pdflite.PdfDocument,
+) -> @pdflite.PdfDocument raise {
+  let output = document.copy()
+  let image_number = output.add_object(
+    fixture_acceptance_cpdf_source_nested_image_for_test(),
+  )
+  let form_number = output.add_object(
+    fixture_acceptance_cpdf_source_form_image_form_for_test(image_number),
+  )
+  let pages = output.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  let xobjects = fixture_acceptance_cpdf_source_page_xobjects_for_test(
+    output,
+    pages[0].resources,
+  ).add_dict_entry(
+    fixture_acceptance_pdf_name_for_test("/SourceImageForm"),
+    PdfIndirect(form_number),
+  )
+  let resources = pages[0].resources.add_dict_entry(
+    fixture_acceptance_pdf_name_for_test("/XObject"),
+    xobjects,
+  )
+  let page = { ..pages[0], resources, }
+  let updated_page = output.postpend_operators(
+    page,
+    [
+      Op_q,
+      Op_Do(fixture_acceptance_pdf_name_for_test("/SourceImageForm")),
+      Op_Q,
+    ],
+    fast=true,
+  )
+  output.change_pages([updated_page], change_references=true)
+}
+
+///|
+fn fixture_acceptance_cpdf_source_form_image_resources_for_test(
+  document : @pdflite.PdfDocument,
+) -> (@pdflite.PdfObject, @pdflite.PdfObject) raise {
+  let pages = document.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  guard document.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/XObject"),
+      pages[0].resources,
+    )
+    is Some(page_xobjects) else {
+    fail("missing source page XObject resources")
+  }
+  guard document.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/SourceImageForm"),
+      page_xobjects,
+    )
+    is Some(form) else {
+    fail("missing source nested image form")
+  }
+  guard document.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/Resources"),
+      form,
+    )
+    is Some(form_resources) else {
+    fail("missing source nested image form resources")
+  }
+  (form, form_resources)
+}
+
+///|
+fn fixture_acceptance_cpdf_source_nested_image_for_document_for_test(
+  document : @pdflite.PdfDocument,
+  form_resources : @pdflite.PdfObject,
+) -> @pdflite.PdfObject raise {
+  guard document.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/XObject"),
+      form_resources,
+    )
+    is Some(form_xobjects) else {
+    fail("missing source nested form XObject resources")
+  }
+  guard document.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/SourceNestedImage"),
+      form_xobjects,
+    )
+    is Some(image) else {
+    fail("missing source nested image XObject")
+  }
+  image
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_form_image_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+  let images = document.images_json([1])
+  @test.assert_eq(@pdflite.pdf_image_images(false, document, [1]), images)
+  let images_json = images.stringify()
+  fixture_acceptance_assert_contains_for_test(
+    images_json, "\"Name\":\"/SourceNestedImage\"",
+  )
+  fixture_acceptance_assert_contains_for_test(images_json, "\"Pages\":[1]")
+  fixture_acceptance_assert_contains_for_test(images_json, "\"Width\":2")
+  fixture_acceptance_assert_contains_for_test(images_json, "\"Height\":2")
+  fixture_acceptance_assert_contains_for_test(
+    images_json,
+    "\"Bytes\":" +
+    fixture_acceptance_cpdf_source_nested_image_data_for_test()
+    .length()
+    .to_string(),
+  )
+  fixture_acceptance_assert_contains_for_test(
+    images_json, "\"BitsPerComponent\":8",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    images_json, "\"Colourspace\":\"/DeviceGray\"",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    images_json, "\"Filter\":\"/FlateDecode\"",
+  )
+  @test.assert_eq(
+    @pdflite.pdf_image_images_json_blob(false, document, [1]),
+    document.images_json_blob([1]),
+  )
+  let resolution = document.image_resolution([1], 1000000.0)
+  @test.assert_eq(
+    @pdflite.pdf_image_resolution(false, document, [1], 1000000.0),
+    resolution,
+  )
+  @test.assert_eq(resolution.length(), 1)
+  @test.assert_eq(resolution[0].0, 1)
+  @test.assert_eq(resolution[0].1, "/SourceNestedImage")
+  @test.assert_eq(resolution[0].2, 2)
+  @test.assert_eq(resolution[0].3, 2)
+  @test.assert_eq(resolution[0].4, 2.0)
+  @test.assert_eq(resolution[0].5, 2.0)
+  @test.assert_eq(resolution[0].6 > 0, true)
+  let resolution_json = document.image_resolution_json([1], 1000000.0)
+  @test.assert_eq(
+    @pdflite.pdf_image_resolution_json(false, document, [1], 1000000.0),
+    resolution_json,
+  )
+  let resolution_text = resolution_json.stringify()
+  fixture_acceptance_assert_contains_for_test(
+    resolution_text, "\"XObject\":\"/SourceNestedImage\"",
+  )
+  fixture_acceptance_assert_contains_for_test(resolution_text, "\"W\":2")
+  fixture_acceptance_assert_contains_for_test(resolution_text, "\"H\":2")
+  fixture_acceptance_assert_contains_for_test(resolution_text, "\"Xdpi\":2")
+  fixture_acceptance_assert_contains_for_test(resolution_text, "\"Ydpi\":2")
+  @test.assert_eq(
+    @pdflite.pdf_image_resolution_json_blob(false, document, [1], 1000000.0),
+    document.image_resolution_json_blob([1], 1000000.0),
+  )
+  let (form, form_resources) = fixture_acceptance_cpdf_source_form_image_resources_for_test(
+    document,
+  )
+  @test.assert_eq(
+    document.parse_content_ops_with_resources(form_resources, [form]),
+    [
+      Op_cm({ a: 72.0, b: 0.0, c: 0.0, d: 72.0, e: 72.0, f: 72.0 }),
+      Op_Do(fixture_acceptance_pdf_name_for_test("/SourceNestedImage")),
+    ],
+  )
+  let image = fixture_acceptance_cpdf_source_nested_image_for_document_for_test(
+    document, form_resources,
+  )
+  match document.get_image_24bpp(form_resources, image) {
+    PdfRawImage(width, height, PdfBPP24, data) => {
+      @test.assert_eq(width, 2)
+      @test.assert_eq(height, 2)
+      @test.assert_eq(data.length(), 2 * 2 * 3)
+    }
+    _ => fail("expected source nested image to decode as 24bpp raw data")
+  }
+}
+
+///|
 fn fixture_acceptance_cpdf_source_type3_tounicode_for_test() -> @pdflite.PdfObject {
   let data = @ascii.encode(
     "1 begincodespacerange\n" +
@@ -7457,6 +7723,35 @@ async test "optional cpdf source hello fixture reports inline images" {
         @pdflite.pdf_read_document_from_bytes(compressed),
       )
       fixture_acceptance_assert_cpdf_source_inline_image_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+        ),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source hello fixture reports nested form images" {
+  match
+    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+      @test.assert_eq(document.images_json([1]).stringify(), "[]")
+      @test.assert_eq(document.image_resolution([1], 1000000.0), [])
+      let with_form_image = fixture_acceptance_cpdf_source_hello_with_form_image_for_test(
+        document,
+      )
+      fixture_acceptance_assert_cpdf_source_form_image_for_test(with_form_image)
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        with_form_image,
+      )
+      fixture_acceptance_assert_cpdf_source_form_image_for_test(
+        @pdflite.pdf_read_document_from_bytes(compressed),
+      )
+      fixture_acceptance_assert_cpdf_source_form_image_for_test(
         @pdflite.pdf_read_document_from_bytes(
           fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
         ),
