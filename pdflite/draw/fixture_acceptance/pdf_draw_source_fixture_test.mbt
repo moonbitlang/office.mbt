@@ -414,6 +414,34 @@ fn draw_fixture_count_op_for_test(
 }
 
 ///|
+fn draw_fixture_content_stroke_count_for_test(
+  ops : ArrayView[@pdflite.PdfContentOp],
+) -> Int {
+  let mut count = 0
+  for op in ops {
+    match op {
+      Op_S => count += 1
+      _ => ()
+    }
+  }
+  count
+}
+
+///|
+fn draw_fixture_content_save_count_for_test(
+  ops : ArrayView[@pdflite.PdfContentOp],
+) -> Int {
+  let mut count = 0
+  for op in ops {
+    match op {
+      Op_q => count += 1
+      _ => ()
+    }
+  }
+  count
+}
+
+///|
 fn draw_fixture_assert_no_unknown_ops_for_test(
   path : String,
   ops : ArrayView[@pdflite.PdfContentOp],
@@ -620,6 +648,43 @@ fn draw_fixture_assert_squeezed_xobject_for_test(
 }
 
 ///|
+fn draw_fixture_assert_bounding_boxes_for_test(
+  original : @pdflite.PdfDocument,
+  boxed : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(original.endpage(), 1)
+  @test.assert_eq(boxed.endpage(), 1)
+  let original_pages = original.pages_of_pagetree()
+  let boxed_pages = boxed.pages_of_pagetree()
+  @test.assert_eq(boxed_pages[0].mediabox, original_pages[0].mediabox)
+  @test.assert_eq(boxed_pages[0].rotate, original_pages[0].rotate)
+  @test.assert_eq(boxed_pages[0].resources, original_pages[0].resources)
+  @test.assert_eq(boxed_pages[0].rest, original_pages[0].rest)
+  let original_entries = original.content_entries_of_page(original_pages[0])
+  @test.assert_eq(original_entries.length() > 0, true)
+  let boxed_entries = boxed.content_entries_of_page(boxed_pages[0])
+  @test.assert_eq(boxed_entries.length() >= original_entries.length() * 2, true)
+  let original_ops = draw_fixture_page_ops_for_test(original)
+  let boxed_ops = draw_fixture_page_ops_for_test(boxed)
+  @test.assert_eq(boxed_ops.length() > original_ops.length(), true)
+  @test.assert_eq(
+    draw_fixture_content_stroke_count_for_test(boxed_ops) >=
+    draw_fixture_content_stroke_count_for_test(original_ops) +
+    original_entries.length(),
+    true,
+  )
+  @test.assert_eq(
+    draw_fixture_content_save_count_for_test(boxed_ops) >
+    draw_fixture_content_save_count_for_test(original_ops),
+    true,
+  )
+  let content_json = boxed.page_content_json([1]).stringify()
+  draw_fixture_assert_contains_for_test(content_json, "\"page\":1")
+  draw_fixture_assert_contains_for_test(content_json, "\"obj\":\"path\"")
+  draw_fixture_assert_contains_for_test(content_json, "\"bbox\"")
+}
+
+///|
 fn draw_fixture_cpdf_source_manual_image_pdf_paths_for_test() -> Array[String] {
   [
     ".repos/cpdf-source/manualimages/bez.pdf", ".repos/cpdf-source/manualimages/capjoins.pdf",
@@ -801,6 +866,59 @@ async test "cpdf source squeeze fixtures transcode streams" {
           draw_fixture_corrupt_startxref_pointer_for_test(compressed),
         ),
       )
+    }
+  }
+}
+
+///|
+async test "cpdf source manual fixtures show bounding box overlays" {
+  match
+    draw_fixture_bytes_for_test(".repos/cpdf-source/manualimages/text.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      draw_fixture_assert_cpdf_text_content_for_test(document)
+      let boxed = document.show_bounding_boxes([1])
+      draw_fixture_assert_cpdf_text_content_for_test(boxed)
+      draw_fixture_assert_bounding_boxes_for_test(document, boxed)
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        boxed,
+      )
+      let reparsed = @pdflite.pdf_read_document_from_bytes(compressed)
+      draw_fixture_assert_cpdf_text_content_for_test(reparsed)
+      draw_fixture_assert_bounding_boxes_for_test(document, reparsed)
+      let recovered = @pdflite.pdf_read_document_from_bytes(
+        draw_fixture_corrupt_startxref_pointer_for_test(compressed),
+      )
+      draw_fixture_assert_cpdf_text_content_for_test(recovered)
+      draw_fixture_assert_bounding_boxes_for_test(document, recovered)
+    }
+  }
+  match
+    draw_fixture_bytes_for_test(".repos/cpdf-source/manualimages/xobj.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      draw_fixture_assert_cpdf_xobject_content_for_test(document)
+      let boxed = @pdflite.pdf_show_bounding_boxes(
+        document,
+        [1],
+        light=true,
+        fast=true,
+      )
+      draw_fixture_assert_cpdf_xobject_content_for_test(boxed)
+      draw_fixture_assert_bounding_boxes_for_test(document, boxed)
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        boxed,
+      )
+      let reparsed = @pdflite.pdf_read_document_from_bytes(compressed)
+      draw_fixture_assert_cpdf_xobject_content_for_test(reparsed)
+      draw_fixture_assert_bounding_boxes_for_test(document, reparsed)
+      let recovered = @pdflite.pdf_read_document_from_bytes(
+        draw_fixture_corrupt_startxref_pointer_for_test(compressed),
+      )
+      draw_fixture_assert_cpdf_xobject_content_for_test(recovered)
+      draw_fixture_assert_bounding_boxes_for_test(document, recovered)
     }
   }
 }
