@@ -5558,6 +5558,122 @@ fn fixture_acceptance_assert_cpdf_source_uniakr_predefined_cmaps_for_test(
 }
 
 ///|
+fn fixture_acceptance_cpdf_source_hello_with_uniks_predefined_cmaps_for_test(
+  document : @pdflite.PdfDocument,
+) -> @pdflite.PdfDocument raise {
+  let output = document.copy()
+  let descendant_h = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
+      "/SourceUniKSUCS2Descendant", "Korea1",
+    ),
+  )
+  let descendant_v = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
+      "/SourceUniKSUCS2VerticalDescendant", "Korea1",
+    ),
+  )
+  let font_h = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
+      "/SourceUniKSUCS2Top", "/UniKS-UCS2-H", descendant_h,
+    ),
+  )
+  let font_v = output.add_object(
+    fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
+      "/SourceUniKSUCS2VerticalTop", "/UniKS-UCS2-V", descendant_v,
+    ),
+  )
+  let pages = output.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  let font_resources = fixture_acceptance_cpdf_source_page_fonts_for_test(
+      output,
+      pages[0].resources,
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/SourceKSUCS2H"),
+      PdfIndirect(font_h),
+    )
+    .add_dict_entry(
+      fixture_acceptance_pdf_name_for_test("/SourceKSUCS2V"),
+      PdfIndirect(font_v),
+    )
+  let resources = pages[0].resources.add_dict_entry(
+    fixture_acceptance_pdf_name_for_test("/Font"),
+    font_resources,
+  )
+  let page = { ..pages[0], resources, }
+  let updated_page = output.postpend_operators(
+    page,
+    [
+      Op_BT,
+      Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceKSUCS2H"), 12.0),
+      Op_Tj(@pdflite.pdf_bytes_of_int_array([0xAC, 0x00, 0xB0, 0x98])),
+      Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceKSUCS2V"), 12.0),
+      Op_Tj(@pdflite.pdf_bytes_of_int_array([0xAC, 0x00, 0xB0, 0x98])),
+      Op_ET,
+    ],
+    fast=true,
+  )
+  output.change_pages([updated_page], change_references=true)
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_uniks_predefined_font_for_test(
+  document : @pdflite.PdfDocument,
+  name : String,
+  basefont : String,
+  encoding : String,
+) -> Unit raise {
+  let source_font = fixture_acceptance_cpdf_source_font_entry_for_test(
+    document.list_fonts([1]),
+    name,
+  )
+  @test.assert_eq(source_font.subtype, "/Type0")
+  @test.assert_eq(source_font.basefont, basefont)
+  @test.assert_eq(source_font.encoding, encoding)
+  let font = document.read_font(source_font.font)
+  @test.assert_eq(font.uses_two_byte_codes(), true)
+  guard font is PdfFontCIDKeyed(cid_font) else {
+    fail("expected source UniKS predefined CID-keyed font")
+  }
+  @test.assert_eq(
+    cid_font.encoding,
+    PdfPredefinedCMap(fixture_acceptance_pdf_name_for_test(encoding)),
+  )
+  @test.assert_eq(
+    cid_font.composite.cid_system_info.ordering,
+    @ascii.encode("Korea1"),
+  )
+  let extractor = document.text_extractor_of_font(source_font.font)
+  @test.assert_eq(
+    extractor.codepoints_of_text(
+      @pdflite.pdf_bytes_of_int_array([0xAC, 0x00, 0xB0, 0x98]),
+    ),
+    [0xAC00, 0xB098],
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0xAC00), Some(0xAC00))
+  @test.assert_eq(extractor.charcode_of_codepoint(0xB098), Some(0xB098))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x1F600), None)
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_uniks_predefined_cmaps_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+  let expected_text = @utf8.decode_lossy(
+    @pdflite.pdf_utf8_of_codepoints([0xAC00, 0xB098]),
+  )
+  let text = @utf8.decode_lossy(document.test_extract_text([1]))
+  fixture_acceptance_assert_contains_for_test(text, expected_text)
+  fixture_acceptance_assert_cpdf_source_uniks_predefined_font_for_test(
+    document, "/SourceKSUCS2H", "/SourceUniKSUCS2Top", "/UniKS-UCS2-H",
+  )
+  fixture_acceptance_assert_cpdf_source_uniks_predefined_font_for_test(
+    document, "/SourceKSUCS2V", "/SourceUniKSUCS2VerticalTop", "/UniKS-UCS2-V",
+  )
+}
+
+///|
 fn fixture_acceptance_cpdf_source_hello_with_japan1_predefined_cmaps_for_test(
   document : @pdflite.PdfDocument,
 ) -> @pdflite.PdfDocument raise {
@@ -8137,6 +8253,35 @@ async test "optional cpdf source hello fixture extracts UniAKR predefined CMaps"
         @pdflite.pdf_read_document_from_bytes(compressed),
       )
       fixture_acceptance_assert_cpdf_source_uniakr_predefined_cmaps_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+        ),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source hello fixture extracts UniKS predefined CMaps" {
+  match
+    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+      let with_cmaps = fixture_acceptance_cpdf_source_hello_with_uniks_predefined_cmaps_for_test(
+        document,
+      )
+      fixture_acceptance_assert_cpdf_source_uniks_predefined_cmaps_for_test(
+        with_cmaps,
+      )
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        with_cmaps,
+      )
+      fixture_acceptance_assert_cpdf_source_uniks_predefined_cmaps_for_test(
+        @pdflite.pdf_read_document_from_bytes(compressed),
+      )
+      fixture_acceptance_assert_cpdf_source_uniks_predefined_cmaps_for_test(
         @pdflite.pdf_read_document_from_bytes(
           fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
         ),
