@@ -2188,6 +2188,34 @@ fn fixture_acceptance_assert_cpdf_xobject_content_for_test(
 }
 
 ///|
+fn fixture_acceptance_assert_cpdf_manual_image_content_corpus_for_test(
+  document : @pdflite.PdfDocument,
+) -> (Int, Int, Int) raise {
+  @test.assert_eq(document.endpage(), 1)
+  let pages = document.pages_of_pagetree()
+  let entries = document.content_entries_of_page(pages[0])
+  @test.assert_eq(entries.length() > 0, true)
+  let mut glyphs = 0
+  let mut images = 0
+  let mut paths = 0
+  for entry in entries {
+    match entry.object {
+      PdfContentGlyphObject(_, _, extracted_text) => {
+        glyphs += 1
+        @test.assert_eq(extracted_text.length() > 0, true)
+      }
+      PdfContentImageObject(_) => images += 1
+      PdfContentPathObject(_) => paths += 1
+      _ => ()
+    }
+  }
+  let content_json = document.page_content_json([1]).stringify()
+  fixture_acceptance_assert_contains_for_test(content_json, "\"page\":1")
+  fixture_acceptance_assert_contains_for_test(content_json, "\"bbox\"")
+  (glyphs, images, paths)
+}
+
+///|
 async test "checked-in CamlPDF logo fixture reconstructs linearized bad startxref" {
   fixture_acceptance_assert_reconstructs_for_test(
     fixture_acceptance_bytes_for_test("fixtures/camlpdf/logo.pdf"),
@@ -2511,6 +2539,44 @@ async test "optional cpdf source manual content fixtures export content JSON" {
         fixture_acceptance_reparse_compressed_for_test(document),
       )
     }
+  }
+}
+
+///|
+async test "optional cpdf source manual image fixtures traverse content entries" {
+  let mut checked = 0
+  let mut glyphs = 0
+  let mut images = 0
+  let mut paths = 0
+  for path in fixture_acceptance_cpdf_manual_image_paths_for_test {
+    match fixture_acceptance_optional_bytes_for_test(path) {
+      None => ()
+      Some(bytes) => {
+        checked += 1
+        let document = @pdflite.pdf_read_document_from_bytes(bytes)
+        let (doc_glyphs, doc_images, doc_paths) = fixture_acceptance_assert_cpdf_manual_image_content_corpus_for_test(
+          document,
+        )
+        let (rewritten_glyphs, rewritten_images, rewritten_paths) = fixture_acceptance_assert_cpdf_manual_image_content_corpus_for_test(
+          fixture_acceptance_reparse_compressed_for_test(document),
+        )
+        @test.assert_eq(rewritten_glyphs, doc_glyphs)
+        @test.assert_eq(rewritten_images, doc_images)
+        @test.assert_eq(rewritten_paths, doc_paths)
+        glyphs += doc_glyphs
+        images += doc_images
+        paths += doc_paths
+      }
+    }
+  }
+  if checked > 0 {
+    @test.assert_eq(
+      checked,
+      fixture_acceptance_cpdf_manual_image_paths_for_test.length(),
+    )
+    @test.assert_eq(glyphs > 0, true)
+    @test.assert_eq(images > 0, true)
+    @test.assert_eq(paths > 0, true)
   }
 }
 

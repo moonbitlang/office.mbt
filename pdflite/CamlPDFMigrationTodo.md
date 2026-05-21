@@ -5387,6 +5387,15 @@ Current backend snapshot:
   tests passing, `moon test --target native` reports 2225/2225 tests passing,
   and `moon check --target all --warn-list +73` reports the known warning
   baseline with 0 errors.~~
+- [x] ~~Add the next source-corpus `cpdfcontent` slice: every optional
+  `.repos/cpdf-source/manualimages/*.pdf` fixture now gates
+  `PdfDocument::content_entries_of_page` and page-content JSON traversal before
+  and after compressed rewrite/reread, requiring non-empty content entries for
+  each real one-page manual fixture and aggregate coverage of glyph, image, and
+  path objects. `moon test --target native fixture_acceptance --filter
+  '*traverse content entries*'` reports 1/1 test passing, `moon test --target
+  native fixture_acceptance` reports 55/55 tests passing, and `moon test
+  --target native` reports 2226/2226 tests passing.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.
