@@ -5462,6 +5462,17 @@ Current backend snapshot:
   reports 61/61 tests passing, `moon test --target native` reports 2232/2232
   tests passing, and `moon check --target all --warn-list +73` reports the known
   warning baseline with 0 errors.~~
+- [x] ~~Add the next source-boundary attachment slice: optional
+  `.repos/cpdf-source/hello.pdf` now gates `cpdfattach`-style document and
+  page attachments using real `.repos/cpdf-source/README.md` and
+  `.repos/cpdf-source/Changes.txt` payloads, including basename extraction,
+  descriptions, `/AFRelationship` names, payload-size accounting, compressed
+  rewrite/reread, bad-`startxref` recovery, and attachment removal/reread.
+  `moon test --target native fixture_acceptance --filter '*source
+  attachments*'` reports 1/1 test passing, `moon test --target native
+  fixture_acceptance` reports 62/62 tests passing, `moon test --target native`
+  reports 2233/2233 tests passing, and `moon check --target all --warn-list
+  +73` reports the known warning baseline with 0 errors.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or broader real-world image corpus coverage.

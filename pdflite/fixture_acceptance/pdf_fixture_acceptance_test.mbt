@@ -2038,6 +2038,45 @@ fn fixture_acceptance_assert_cpdf_trans_extgstate_for_test(
 }
 
 ///|
+fn fixture_acceptance_assert_cpdf_source_attachments_for_test(
+  document : @pdflite.PdfDocument,
+  readme_payload : Bytes,
+  changes_payload : Bytes,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 1)
+  let attachments = document.list_attached_files()
+  @test.assert_eq(attachments, [
+    {
+      name: "README.md",
+      pagenumber: 0,
+      data: Some(readme_payload),
+      description: Some("cpdf source README"),
+      relationship: Some("/Source"),
+    },
+    {
+      name: "Changes.txt",
+      pagenumber: 1,
+      data: Some(changes_payload),
+      description: Some("cpdf source changes"),
+      relationship: Some("/Supplement"),
+    },
+  ])
+  @test.assert_eq(
+    document.size_attached_files(),
+    readme_payload.length() + changes_payload.length(),
+  )
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_attachments_removed_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 1)
+  @test.assert_eq(document.list_attached_files(), [])
+  @test.assert_eq(document.size_attached_files(), 0)
+}
+
+///|
 fn fixture_acceptance_assert_cpdf_manual_pagespec_for_test(
   document : @pdflite.PdfDocument,
 ) -> Unit raise {
@@ -3055,6 +3094,62 @@ async test "optional cpdf source drawing fixtures preserve operator parameters" 
       checked,
       fixture_acceptance_cpdf_draw_operator_paths_for_test.length(),
     )
+  }
+}
+
+///|
+async test "optional cpdf source attachments preserve real source payloads" {
+  match
+    (
+      fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf"),
+      fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/README.md"),
+      fixture_acceptance_optional_bytes_for_test(
+        ".repos/cpdf-source/Changes.txt",
+      ),
+    ) {
+    (Some(pdf_bytes), Some(readme_payload), Some(changes_payload)) => {
+      let document = @pdflite.pdf_read_document_from_bytes(pdf_bytes)
+      let attached = document
+        .attach_file(
+          ".repos/cpdf-source/README.md",
+          readme_payload,
+          relationship=Some("Source"),
+          description=Some("cpdf source README"),
+        )
+        .attach_file(
+          ".repos/cpdf-source/Changes.txt",
+          changes_payload,
+          page_number=Some(1),
+          relationship=Some("/Supplement"),
+          description=Some("cpdf source changes"),
+        )
+      fixture_acceptance_assert_cpdf_source_attachments_for_test(
+        attached, readme_payload, changes_payload,
+      )
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        attached,
+      )
+      let compressed_document = @pdflite.pdf_read_document_from_bytes(
+        compressed,
+      )
+      fixture_acceptance_assert_cpdf_source_attachments_for_test(
+        compressed_document, readme_payload, changes_payload,
+      )
+      let recovered = @pdflite.pdf_read_document_from_bytes(
+        fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+      )
+      fixture_acceptance_assert_cpdf_source_attachments_for_test(
+        recovered, readme_payload, changes_payload,
+      )
+      let cleaned = recovered.remove_attached_files()
+      fixture_acceptance_assert_cpdf_source_attachments_removed_for_test(
+        cleaned,
+      )
+      fixture_acceptance_assert_cpdf_source_attachments_removed_for_test(
+        fixture_acceptance_reparse_compressed_for_test(cleaned),
+      )
+    }
+    _ => ()
   }
 }
 
