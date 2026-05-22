@@ -569,7 +569,15 @@ test "PdfDocument append_page_content prepends parsed bytes to selected pages" {
     tweak_bytes_for_test("BT ET"),
     before=true,
   )
+  let source_order = try! @pdflite.pdf_append_page_content_cpdf_order(
+    tweak_bytes_for_test("BT ET"),
+    true,
+    false,
+    [1],
+    document,
+  )
   let appended_pages = try! appended.pages_of_pagetree()
+  let source_order_pages = try! source_order.pages_of_pagetree()
 
   @test.assert_eq(tweak_content_ops_for_test(appended, appended_pages[0]), [
     Op_BT,
@@ -582,6 +590,10 @@ test "PdfDocument append_page_content prepends parsed bytes to selected pages" {
   @test.assert_eq(tweak_content_ops_for_test(document, original_pages[0]), [
     Op_S,
   ])
+  @test.assert_eq(
+    tweak_content_ops_for_test(source_order, source_order_pages[0]),
+    tweak_content_ops_for_test(appended, appended_pages[0]),
+  )
 }
 
 ///|
@@ -648,7 +660,14 @@ test "PdfDocument append_page_content_multiple applies one payload per page" {
     tweak_bytes_for_test("BT ET"),
     tweak_bytes_for_test("q Q"),
   ])
+  let source_order = try! @pdflite.pdf_append_page_content_multiple_cpdf_order(
+    [tweak_bytes_for_test("BT ET"), tweak_bytes_for_test("q Q")],
+    false,
+    false,
+    base,
+  )
   let appended_pages = try! appended.pages_of_pagetree()
+  let source_order_pages = try! source_order.pages_of_pagetree()
   @test.assert_eq(tweak_content_ops_for_test(appended, appended_pages[0]), [
     Op_BT,
     Op_ET,
@@ -657,6 +676,10 @@ test "PdfDocument append_page_content_multiple applies one payload per page" {
     Op_q,
     Op_Q,
   ])
+  @test.assert_eq(
+    tweak_content_ops_for_test(source_order, source_order_pages[1]),
+    tweak_content_ops_for_test(appended, appended_pages[1]),
+  )
 
   let mismatch : Result[@pdflite.PdfDocument, Error] = try? base.append_page_content_multiple([
       tweak_bytes_for_test("BT ET"),
@@ -677,7 +700,14 @@ test "PdfDocument append_page_content_multiple_ops applies one op list per page"
     [[Op_BT, Op_ET], [Op_q, Op_Q]],
     before=true,
   )
+  let source_order = try! @pdflite.pdf_append_page_content_multiple_ops_cpdf_order(
+    [[Op_BT, Op_ET], [Op_q, Op_Q]],
+    true,
+    false,
+    base,
+  )
   let appended_pages = try! appended.pages_of_pagetree()
+  let source_order_pages = try! source_order.pages_of_pagetree()
   @test.assert_eq(tweak_content_ops_for_test(appended, appended_pages[0]), [
     Op_BT,
     Op_ET,
@@ -686,6 +716,10 @@ test "PdfDocument append_page_content_multiple_ops applies one op list per page"
     Op_q,
     Op_Q,
   ])
+  @test.assert_eq(
+    tweak_content_ops_for_test(source_order, source_order_pages[0]),
+    tweak_content_ops_for_test(appended, appended_pages[0]),
+  )
 
   let mismatch : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_append_page_content_multiple_ops(
     base,

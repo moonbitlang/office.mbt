@@ -955,6 +955,18 @@ pub fn pdf_append_page_content(
 }
 
 ///|
+/// Compatibility wrapper matching cpdftweak's `append_page_content` argument order.
+pub fn pdf_append_page_content_cpdf_order(
+  content : BytesView,
+  before : Bool,
+  fast : Bool,
+  page_numbers : ArrayView[Int],
+  document : PdfDocument,
+) -> PdfDocument raise PdfError {
+  document.append_page_content(page_numbers, content, before~, fast~)
+}
+
+///|
 /// Append or prepend content operators to selected one-based pages.
 pub fn PdfDocument::append_page_content_ops(
   self : PdfDocument,
@@ -1032,6 +1044,18 @@ pub fn pdf_append_page_content_multiple(
 }
 
 ///|
+/// Compatibility wrapper matching cpdftweak's `append_page_content_multiple`
+/// argument order.
+pub fn pdf_append_page_content_multiple_cpdf_order(
+  contents : ArrayView[Bytes],
+  before : Bool,
+  fast : Bool,
+  document : PdfDocument,
+) -> PdfDocument raise PdfError {
+  document.append_page_content_multiple(contents, before~, fast~)
+}
+
+///|
 /// Append or prepend one content operator list per page.
 pub fn PdfDocument::append_page_content_multiple_ops(
   self : PdfDocument,
@@ -1063,6 +1087,18 @@ pub fn pdf_append_page_content_multiple_ops(
   op_lists : ArrayView[Array[PdfContentOp]],
   before? : Bool = false,
   fast? : Bool = false,
+) -> PdfDocument raise PdfError {
+  document.append_page_content_multiple_ops(op_lists, before~, fast~)
+}
+
+///|
+/// Compatibility wrapper matching cpdftweak's `append_page_content_multiple_ops`
+/// argument order.
+pub fn pdf_append_page_content_multiple_ops_cpdf_order(
+  op_lists : ArrayView[Array[PdfContentOp]],
+  before : Bool,
+  fast : Bool,
+  document : PdfDocument,
 ) -> PdfDocument raise PdfError {
   document.append_page_content_multiple_ops(op_lists, before~, fast~)
 }

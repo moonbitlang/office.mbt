@@ -206,9 +206,15 @@ pub fn pdf_annotations_of_page(PdfDocument, PdfPage) -> Array[PdfAnnotation] rai
 
 pub fn pdf_append_page_content(PdfDocument, ArrayView[Int], BytesView, before? : Bool, fast? : Bool) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_append_page_content_cpdf_order(BytesView, Bool, Bool, ArrayView[Int], PdfDocument) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_append_page_content_multiple(PdfDocument, ArrayView[Bytes], before? : Bool, fast? : Bool) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_append_page_content_multiple_cpdf_order(ArrayView[Bytes], Bool, Bool, PdfDocument) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_append_page_content_multiple_ops(PdfDocument, ArrayView[Array[PdfContentOp]], before? : Bool, fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_append_page_content_multiple_ops_cpdf_order(ArrayView[Array[PdfContentOp]], Bool, Bool, PdfDocument) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_append_page_content_ops(PdfDocument, ArrayView[Int], ArrayView[PdfContentOp], before? : Bool, fast? : Bool) -> PdfDocument raise @core.PdfError
 
