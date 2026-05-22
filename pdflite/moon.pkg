@@ -9,6 +9,7 @@ import {
   "moonbitlang/core/encoding/ascii",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/hashmap",
+  "moonbitlang/core/json",
   "moonbitlang/core/math",
   "moonbitlang/core/random",
   "moonbitlang/core/strconv",

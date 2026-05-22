@@ -3567,6 +3567,9 @@ fn fixture_acceptance_assert_cpdf_source_cpdfjson_for_test(
     @pdflite.pdf_json_of_document_blob(document, utf8=true, parse_content=true),
     blob,
   )
+  fixture_acceptance_assert_cpdf_source_hello_text_for_test(
+    @pdflite.pdf_document_of_json_blob(blob),
+  )
   let text = @utf8.decode_lossy(blob)
   fixture_acceptance_assert_contains_for_test(
     text, "\"/CPDFJSONformatversion\"",

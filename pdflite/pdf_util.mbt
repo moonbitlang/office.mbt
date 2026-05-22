@@ -1200,6 +1200,19 @@ pub fn pdf_document_of_json(json : Json) -> PdfDocument raise PdfError {
 }
 
 ///|
+/// Read a CPDFJSON document from UTF-8 JSON bytes.
+///
+/// This is the in-memory byte-input counterpart of cpdf's
+/// `Cpdfjson.of_input`.
+pub fn pdf_document_of_json_blob(
+  data : BytesView,
+) -> PdfDocument raise PdfError {
+  let text = @utf8.decode(data) catch { _ => raise BadText }
+  let json = @json.parse(text) catch { _ => raise BadText }
+  pdf_document_of_json(json)
+}
+
+///|
 fn pdf_util_int_array_contains(values : ArrayView[Int], value : Int) -> Bool {
   for item in values {
     if item == value {

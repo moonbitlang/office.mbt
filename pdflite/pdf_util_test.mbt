@@ -1043,6 +1043,46 @@ test "PdfDocument json_of_document_blob emits UTF-8 CPDFJSON bytes" {
 }
 
 ///|
+test "pdf_document_of_json_blob imports UTF-8 CPDFJSON bytes" {
+  let document = try! @pdflite.pdf_document_of_json(
+    util_cpdfjson_document_for_test(),
+  )
+  let blob = try! document.json_of_document_blob(parse_content=true)
+  let imported = try! @pdflite.pdf_document_of_json_blob(blob)
+  @test.assert_eq(imported.version(), (1, 7))
+  @test.assert_eq(imported.root(), 4)
+  @test.assert_eq(imported.object_numbers(), [1, 2, 3, 4])
+
+  guard imported.lookup_object_or_null(2) is PdfStreamObject(stream) else {
+    fail("expected imported content stream")
+  }
+  guard stream.data is StreamGot(data) else {
+    fail("expected imported stream data")
+  }
+  @test.assert_eq(try! @pdflite.pdf_parse_content_ops_from_bytes(data), [
+    Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 50.0, f: 770.0 }),
+    Op_BT,
+    Op_Tf(util_name_for_test("/F0"), 36.0),
+    Op_Tj(@ascii.encode("Hello")),
+    Op_ET,
+  ])
+
+  let invalid_utf8 : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_document_of_json_blob(
+    try! @pdflite.pdf_bytes_of_int_array([0xFF]),
+  )
+  guard invalid_utf8 is Err(@pdflite.PdfError::BadText) else {
+    fail("expected BadText for non-UTF8 CPDFJSON bytes")
+  }
+
+  let malformed_json : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_document_of_json_blob(
+    @utf8.encode("["),
+  )
+  guard malformed_json is Err(@pdflite.PdfError::BadText) else {
+    fail("expected BadText for malformed CPDFJSON bytes")
+  }
+}
+
+///|
 test "PdfDocument json_of_document parses content streams into operation arrays" {
   let document = try! @pdflite.pdf_document_of_json(
     util_cpdfjson_document_for_test(),
