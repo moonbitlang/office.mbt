@@ -395,7 +395,12 @@ test "PdfDocument reveal_hidden_text rewrites only selected pages" {
   let original_pages = try! document.pages_of_pagetree()
 
   let revealed = try! document.reveal_hidden_text([1])
+  let source_order = try! @pdflite.pdf_reveal_hidden_text_cpdf_order(
+    [1],
+    document,
+  )
   let revealed_pages = try! revealed.pages_of_pagetree()
+  let source_order_pages = try! source_order.pages_of_pagetree()
 
   @test.assert_eq(tweak_content_ops_for_test(revealed, revealed_pages[0]), [
     Op_BT,
@@ -414,6 +419,10 @@ test "PdfDocument reveal_hidden_text rewrites only selected pages" {
     Op_Tj(tweak_bytes_for_test("first")),
     Op_ET,
   ])
+  @test.assert_eq(
+    tweak_content_ops_for_test(source_order, source_order_pages[0]),
+    tweak_content_ops_for_test(revealed, revealed_pages[0]),
+  )
 }
 
 ///|

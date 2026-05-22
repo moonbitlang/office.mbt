@@ -842,6 +842,15 @@ pub fn pdf_reveal_hidden_text(
 }
 
 ///|
+/// Compatibility wrapper matching cpdftweak's `reveal_hidden_text` argument order.
+pub fn pdf_reveal_hidden_text_cpdf_order(
+  page_numbers : ArrayView[Int],
+  document : PdfDocument,
+) -> PdfDocument raise PdfError {
+  document.reveal_hidden_text(page_numbers)
+}
+
+///|
 /// Remove clipping-path setup sequences from parsed content operators.
 ///
 /// This ports `cpdftweak.ml`'s `remove_clipping_ops`: only the exact `W n`

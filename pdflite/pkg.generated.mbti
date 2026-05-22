@@ -1356,6 +1356,8 @@ pub fn pdf_restrict_angle(Double, Double) -> Double
 
 pub fn pdf_reveal_hidden_text(PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_reveal_hidden_text_cpdf_order(ArrayView[Int], PdfDocument) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_reveal_hidden_text_ops(ArrayView[PdfContentOp]) -> Array[PdfContentOp]
 
 pub fn pdf_reverse_table_of_encoding(PdfEncoding) -> Array[(@core.PdfName, Int)]

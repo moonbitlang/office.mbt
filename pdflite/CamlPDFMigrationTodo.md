@@ -44,9 +44,10 @@ Current estimate:
   pattern-matrix kernels, cpdf page
   hard-box/removal/shift/scale/scale-to-fit/upright/set-mediabox/copy-box
   helpers, page-info report wrappers, callback-first traversal aliases,
-  cpdftweak source-spelled colour/thin-line, append-content, dictionary entry,
-  object-spec, and native file-stream replacement aliases, cpdfutil string-key
-  dictionary rewrite wrappers, and source-order compatibility aliases,
+  cpdftweak source-spelled colour/thin-line, reveal-hidden-text,
+  append-content, dictionary entry, object-spec, and native file-stream
+  replacement aliases, cpdfutil string-key dictionary rewrite wrappers, and
+  source-order compatibility aliases,
   imposition make-space orchestration, border stamping, layout planning, and
   first public impose/twoup pipelines, and Markdown helper public APIs.
 
@@ -79,6 +80,16 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdftweak` source/API parity for reveal-hidden-text from
+  `.repos/cpdf-source/cpdftweak.mli`: added
+  `pdf_reveal_hidden_text_cpdf_order` matching cpdf's page-list-first argument
+  order while preserving the existing document-first wrapper. Coverage compares
+  the source-order alias against the existing selected-page rewrite behavior.
+  Validation on MoonBit 0.9.3: `moon check --target native --warn-list +73`
+  passes with the known `markdown/cmd` future notice; `moon test --target native
+  pdf_tweak_test.mbt` reports 27/27; `moon fmt`, `moon info`, and `moon check
+  --target all --warn-list +73` pass with only the existing `markdown/cmd`
+  future notice; full native `moon test --target native` reports 2407/2407.~~
 - [x] ~~Continue `cpdftweak` source/API parity for object-spec helpers from
   `.repos/cpdf-source/cpdftweak.mli`: added source-spelled `pdf_find_obj`,
   `pdf_replace_obj`, and `pdf_remove_obj` aliases over the existing
