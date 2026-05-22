@@ -127,6 +127,32 @@ fn annotation_fixture_assert_contains_for_test(
 }
 
 ///|
+fn annotation_fixture_assert_not_contains_for_test(
+  text : String,
+  fragment : String,
+) -> Unit raise {
+  @test.assert_eq(text.contains(fragment), false, msg="unexpected " + fragment)
+}
+
+///|
+fn annotation_fixture_assert_json_entry_count_for_test(
+  json : Json,
+  expected : Int,
+) -> Unit raise {
+  guard json is Array(entries) else { fail("expected annotation JSON array") }
+  @test.assert_eq(entries.length(), expected)
+}
+
+///|
+fn annotation_fixture_assert_json_entry_count_at_least_for_test(
+  json : Json,
+  minimum : Int,
+) -> Unit raise {
+  guard json is Array(entries) else { fail("expected annotation JSON array") }
+  @test.assert_eq(entries.length() >= minimum, true)
+}
+
+///|
 fn annotation_fixture_assert_cpdf_manual_annotations_for_test(
   document : @pdflite.PdfDocument,
 ) -> Unit raise {
@@ -158,6 +184,16 @@ fn annotation_fixture_assert_cpdf_manual_annotations_for_test(
 }
 
 ///|
+fn annotation_fixture_assert_cpdf_manual_annotation_import_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  annotation_fixture_assert_cpdf_manual_annotations_for_test(document)
+  annotation_fixture_assert_cpdf_manual_annotations_for_test(
+    annotation_fixture_reparse_compressed_for_test(document),
+  )
+}
+
+///|
 async test "cpdf source manual fixture exports annotation JSON" {
   match annotation_fixture_bytes_for_test(".repos/cpdf-source/cpdfmanual.pdf") {
     None => ()
@@ -181,6 +217,70 @@ async test "cpdf source manual fixture exports annotation JSON" {
       annotation_fixture_assert_cpdf_manual_annotations_for_test(recovered)
       annotation_fixture_assert_cpdf_manual_annotations_for_test(
         annotation_fixture_reparse_compressed_for_test(recovered),
+      )
+    }
+  }
+}
+
+///|
+async test "cpdf source manual fixture imports annotation JSON" {
+  match annotation_fixture_bytes_for_test(".repos/cpdf-source/cpdfmanual.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      let annotated = document.parse_pagespec("annotated")
+      @test.assert_eq(annotated.length() > 0, true)
+      let page = annotated[0]
+      let annotation_json = document.annotations_json([page])
+      annotation_fixture_assert_json_entry_count_at_least_for_test(
+        annotation_json, 2,
+      )
+      let removed = document.remove_annotations([page])
+      let removed_json = removed.annotations_json([page])
+      annotation_fixture_assert_json_entry_count_for_test(removed_json, 1)
+      let removed_json_text = removed_json.stringify()
+      annotation_fixture_assert_not_contains_for_test(
+        removed_json_text, "\"/Link\"",
+      )
+      annotation_fixture_assert_not_contains_for_test(
+        removed_json_text, "\"/Rect\"",
+      )
+
+      let imported = removed.set_annotations_json(annotation_json)
+      let imported_wrapper = @pdflite.pdf_set_annotations_json(
+        annotation_json, removed,
+      )
+      let copied = removed.copy_annotations_from(document, [page])
+      let copied_wrapper = @pdflite.pdf_copy_annotations(
+        [page],
+        document,
+        removed,
+      )
+      annotation_fixture_assert_cpdf_manual_annotation_import_for_test(imported)
+      annotation_fixture_assert_cpdf_manual_annotation_import_for_test(
+        imported_wrapper,
+      )
+      annotation_fixture_assert_cpdf_manual_annotation_import_for_test(copied)
+      annotation_fixture_assert_cpdf_manual_annotation_import_for_test(
+        copied_wrapper,
+      )
+
+      let imported_bytes = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        imported,
+      )
+      let corrupted = annotation_fixture_corrupt_startxref_pointer_for_test(
+        imported_bytes,
+      )
+      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+        corrupted,
+      )
+      guard strict is Err(_) else {
+        fail("expected bad startxref to require malformed reconstruction")
+      }
+      let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
+      @test.assert_eq(recovered.first_xref(), 0)
+      annotation_fixture_assert_cpdf_manual_annotation_import_for_test(
+        recovered,
       )
     }
   }
