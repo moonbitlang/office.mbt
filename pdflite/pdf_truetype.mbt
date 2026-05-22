@@ -385,6 +385,143 @@ pub fn pdf_truetype_loca_offsets(data : BytesView) -> Array[Int] raise PdfError 
 }
 
 ///|
+fn pdf_truetype_sorted_unique(values : ArrayView[Int]) -> Array[Int] {
+  let output : Array[Int] = []
+  for value in values {
+    output.push(value)
+  }
+  output.sort()
+  let unique : Array[Int] = []
+  for value in output {
+    if unique.length() == 0 || unique[unique.length() - 1] != value {
+      unique.push(value)
+    }
+  }
+  unique
+}
+
+///|
+fn pdf_truetype_validate_glyph_index(
+  loca_offsets : ArrayView[Int],
+  glyph_index : Int,
+) -> Unit raise PdfError {
+  if glyph_index < 0 || glyph_index + 1 >= loca_offsets.length() {
+    raise SoftError("Invalid TrueType glyph index")
+  }
+}
+
+///|
+fn pdf_truetype_composite_component_glyphs(
+  data : BytesView,
+  component_offset : Int,
+) -> Array[Int] raise PdfError {
+  let components : Array[Int] = []
+  let mut offset = component_offset
+  let mut more_components = true
+  while more_components {
+    let flags = pdf_truetype_required_u16(data, offset, "glyf table")
+    let glyph_index = pdf_truetype_required_u16(data, offset + 2, "glyf table")
+    components.push(glyph_index)
+    offset += 4
+    offset += if (flags & 0x0001) > 0 { 4 } else { 2 }
+    if (flags & 0x0008) > 0 {
+      offset += 2
+    } else if (flags & 0x0040) > 0 {
+      offset += 4
+    } else if (flags & 0x0080) > 0 {
+      offset += 8
+    }
+    more_components = (flags & 0x0020) > 0
+  }
+  components
+}
+
+///|
+fn pdf_truetype_expand_composite_glyphs_one(
+  data : BytesView,
+  glyf : PdfTrueTypeTableRecord,
+  loca_offsets : ArrayView[Int],
+  glyph_indices : ArrayView[Int],
+) -> Array[Int] raise PdfError {
+  let expanded : Array[Int] = []
+  for glyph_index in glyph_indices {
+    pdf_truetype_validate_glyph_index(loca_offsets, glyph_index)
+    expanded.push(glyph_index)
+    let glyph_offset = glyf.offset + loca_offsets[glyph_index]
+    let number_of_contours = pdf_truetype_required_i16(
+      data, glyph_offset, "glyf table",
+    )
+    if number_of_contours < 0 {
+      for
+        component in pdf_truetype_composite_component_glyphs(
+          data,
+          glyph_offset + 10,
+        ) {
+        expanded.push(component)
+      }
+    }
+  }
+  pdf_truetype_sorted_unique(expanded)
+}
+
+///|
+/// Expand glyph indices to include nested TrueType composite glyph components.
+///
+/// This ports the `expand_composites` helper used by `Cpdftruetype` before
+/// writing subset `loca` and `glyf` tables. Returned indices are sorted and
+/// deduplicated, matching the source `setify`/`sort` behavior.
+pub fn pdf_truetype_expand_composite_glyphs(
+  data : BytesView,
+  glyph_indices : ArrayView[Int],
+) -> Array[Int] raise PdfError {
+  let glyf = pdf_truetype_required_table(data, "glyf")
+  let loca_offsets = pdf_truetype_loca_offsets(data)
+  let mut current = pdf_truetype_sorted_unique(glyph_indices)
+  let mut done = false
+  while !done {
+    let expanded = pdf_truetype_expand_composite_glyphs_one(
+      data, glyf, loca_offsets, current,
+    )
+    if expanded == current {
+      done = true
+    } else {
+      current = expanded
+    }
+  }
+  current
+}
+
+///|
+pub(all) struct PdfTrueTypeGlyphByteRange {
+  glyph_index : Int
+  start_offset : Int
+  end_offset : Int
+} derive(Debug, Eq, ToJson)
+
+///|
+/// Return `glyf` byte ranges for glyphs after composite expansion.
+///
+/// Ranges are relative to the start of the `glyf` table, matching the source
+/// byterange calculation immediately before subset `glyf` table writing.
+pub fn pdf_truetype_glyph_byte_ranges(
+  data : BytesView,
+  glyph_indices : ArrayView[Int],
+) -> Array[PdfTrueTypeGlyphByteRange] raise PdfError {
+  let loca_offsets = pdf_truetype_loca_offsets(data)
+  let expanded = pdf_truetype_expand_composite_glyphs(data, glyph_indices)
+  let ranges : Array[PdfTrueTypeGlyphByteRange] = []
+  for glyph_index in expanded {
+    pdf_truetype_validate_glyph_index(loca_offsets, glyph_index)
+    ranges.push({
+      glyph_index,
+      start_offset: loca_offsets[glyph_index],
+      end_offset: loca_offsets[glyph_index + 1],
+    })
+  }
+  ranges
+}
+
+///|
 /// Return the TrueType metrics needed by `Cpdftruetype.parse`.
 ///
 /// This ports the table reads used before font subsetting proper: `/head`

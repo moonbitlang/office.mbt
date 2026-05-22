@@ -282,6 +282,51 @@ fn truetype_loca_long_table_for_test(offsets : ArrayView[Int]) -> Array[Int] {
 }
 
 ///|
+fn truetype_simple_glyph_for_test() -> Array[Int] {
+  let output : Array[Int] = []
+  truetype_push_i16_for_test(output, 1)
+  for _ in 0..<8 {
+    output.push(0)
+  }
+  output
+}
+
+///|
+fn truetype_composite_glyph_for_test(
+  components : ArrayView[(Int, Int, Int)],
+) -> Array[Int] {
+  let output : Array[Int] = []
+  truetype_push_i16_for_test(output, -1)
+  for _ in 0..<8 {
+    output.push(0)
+  }
+  for component in components {
+    let (flags, glyph_index, extra_bytes) = component
+    truetype_push_u16_for_test(output, flags)
+    truetype_push_u16_for_test(output, glyph_index)
+    for _ in 0..<extra_bytes {
+      output.push(0)
+    }
+  }
+  output
+}
+
+///|
+fn truetype_glyf_table_for_test(
+  glyphs : ArrayView[Array[Int]],
+) -> (Array[Int], Array[Int]) {
+  let glyf : Array[Int] = []
+  let offsets : Array[Int] = [0]
+  let mut offset = 0
+  for glyph in glyphs {
+    truetype_append_for_test(glyf, glyph)
+    offset += glyph.length()
+    offsets.push(offset)
+  }
+  (glyf, offsets)
+}
+
+///|
 test "pdf_truetype_cmaps returns cmap platform encoding pairs" {
   let font = truetype_bytes_for_test([
     0x00, 0x01, 0x00, 0x00, // scaler type
@@ -491,6 +536,81 @@ test "pdf_truetype_loca_offsets reports source errors" {
   guard missing_loca
     is Err(@pdflite.PdfError::SoftError("No loca table found in TrueType font")) else {
     fail("expected missing loca table to fail")
+  }
+}
+
+///|
+test "pdf_truetype_expand_composite_glyphs expands nested components" {
+  let simple = truetype_simple_glyph_for_test()
+  let composite_parent = truetype_composite_glyph_for_test([
+    (0x0021, 2, 4),
+    (0x0040, 3, 6),
+  ])
+  let composite_child = truetype_composite_glyph_for_test([(0, 0, 2)])
+  let (glyf, offsets) = truetype_glyf_table_for_test([
+    simple,
+    composite_parent,
+    composite_child,
+    truetype_simple_glyph_for_test(),
+  ])
+  let font = truetype_table_font_for_test([
+    ("head", truetype_head_table_for_test(1000, 0, 0, 1000, 1000, 1)),
+    ("maxp", truetype_maxp_table_for_test(4)),
+    ("loca", truetype_loca_long_table_for_test(offsets)),
+    ("glyf", glyf),
+  ])
+  @test.assert_eq(
+    try! @pdflite.pdf_truetype_expand_composite_glyphs(font, [1]),
+    [0, 1, 2, 3],
+  )
+  @test.assert_eq(try! @pdflite.pdf_truetype_glyph_byte_ranges(font, [1]), [
+    { glyph_index: 0, start_offset: 0, end_offset: 10 },
+    { glyph_index: 1, start_offset: 10, end_offset: 38 },
+    { glyph_index: 2, start_offset: 38, end_offset: 54 },
+    { glyph_index: 3, start_offset: 54, end_offset: 64 },
+  ])
+}
+
+///|
+test "pdf_truetype_expand_composite_glyphs sorts and validates glyph indices" {
+  let (glyf, offsets) = truetype_glyf_table_for_test([
+    truetype_simple_glyph_for_test(),
+    truetype_simple_glyph_for_test(),
+    truetype_simple_glyph_for_test(),
+  ])
+  let font = truetype_table_font_for_test([
+    ("head", truetype_head_table_for_test(1000, 0, 0, 1000, 1000, 1)),
+    ("maxp", truetype_maxp_table_for_test(3)),
+    ("loca", truetype_loca_long_table_for_test(offsets)),
+    ("glyf", glyf),
+  ])
+  @test.assert_eq(
+    try! @pdflite.pdf_truetype_expand_composite_glyphs(font, [2, 0, 2]),
+    [0, 2],
+  )
+  let invalid : Result[Array[Int], Error] = try? @pdflite.pdf_truetype_expand_composite_glyphs(
+    font,
+    [3],
+  )
+  guard invalid
+    is Err(@pdflite.PdfError::SoftError("Invalid TrueType glyph index")) else {
+    fail("expected invalid glyph index to fail")
+  }
+}
+
+///|
+test "pdf_truetype_expand_composite_glyphs requires glyf table" {
+  let missing_glyf : Result[Array[Int], Error] = try? @pdflite.pdf_truetype_expand_composite_glyphs(
+    truetype_table_font_for_test([
+      ("head", truetype_head_table_for_test(1000, 0, 0, 1000, 1000, 1)),
+      ("maxp", truetype_maxp_table_for_test(1)),
+      ("loca", truetype_loca_long_table_for_test([0, 10])),
+    ]),
+    [0],
+  )
+  guard missing_glyf
+    is Err(@pdflite.PdfError::SoftError("No glyf table found in TrueType font")) else {
+    fail("expected missing glyf table to fail")
   }
 }
 

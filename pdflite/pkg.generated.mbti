@@ -1574,6 +1574,10 @@ pub fn pdf_truetype_cmaps(BytesView) -> Array[(Int, Int)]
 
 pub fn pdf_truetype_descriptor_metrics(BytesView) -> PdfTrueTypeDescriptorMetrics raise @core.PdfError
 
+pub fn pdf_truetype_expand_composite_glyphs(BytesView, ArrayView[Int]) -> Array[Int] raise @core.PdfError
+
+pub fn pdf_truetype_glyph_byte_ranges(BytesView, ArrayView[Int]) -> Array[PdfTrueTypeGlyphByteRange] raise @core.PdfError
+
 pub fn pdf_truetype_loca_offsets(BytesView) -> Array[Int] raise @core.PdfError
 
 pub fn pdf_truetype_metrics(BytesView) -> PdfTrueTypeMetrics raise @core.PdfError
@@ -3926,6 +3930,12 @@ pub(all) struct PdfTrueTypeDescriptorMetrics {
   italicangle : Int
   nonsymbolic_flags : Int
   symbolic_flags : Int
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfTrueTypeGlyphByteRange {
+  glyph_index : Int
+  start_offset : Int
+  end_offset : Int
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfTrueTypeMetrics {
