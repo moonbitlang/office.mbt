@@ -44,7 +44,8 @@ Current estimate:
   transform/content/page-assembly/
   pattern-matrix kernels, cpdf page
   hard-box/removal/shift/scale/scale-to-fit/upright/set-mediabox/copy-box
-  helpers, page-info report wrappers, callback-first traversal aliases,
+  helpers, page-info report wrappers, pattern-matrix page rewrite wrapper,
+  callback-first traversal aliases,
   cpdftweak source-spelled colour/thin-line, reveal-hidden-text,
   append-content, dictionary entry, object-spec, and native file-stream
   replacement aliases, cpdfutil string-key dictionary rewrite wrappers, and
@@ -54,7 +55,7 @@ Current estimate:
 
 Current backend snapshot:
 
-- Native: full suite passes on MoonBit 0.9.3, currently 2407/2407 tests.
+- Native: full suite passes on MoonBit 0.9.3, currently 2408/2408 tests.
 - WasmGC and JavaScript: full portable non-native test suites pass on MoonBit
   0.9.3, currently 2063/2063 on each backend after the latest TrueType
   embedding integration.
@@ -81,6 +82,20 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfpage` source/API parity for
+  `change_pattern_matrices_page` from `.repos/cpdf-source/cpdfpage.mli`:
+  exposed the existing pattern-resource matrix rewrite kernel as public
+  `PdfDocument::change_pattern_matrices_page` plus top-level
+  `pdf_change_pattern_matrices_page` in cpdf's document/matrix/page order.
+  Coverage pins both public entry points against the existing cloned-pattern
+  matrix rewrite behavior. Validation on MoonBit 0.9.3: `moon check --target
+  native --warn-list +73` passes with the known `markdown/cmd` future notice;
+  `moon test --target native pdf_page_shift_test.mbt`,
+  `moon test --target wasm-gc pdf_page_shift_test.mbt`, and `moon test
+  --target js pdf_page_shift_test.mbt` report 5/5 each; `moon fmt`, `moon
+  info`, and `moon check --target all --warn-list +73` pass with only the
+  existing `markdown/cmd` future notice; full native `moon test --target
+  native` reports 2408/2408.~~
 - [x] ~~Continue `cpdfmetadata` source/API parity for string-key metadata
   helpers from `.repos/cpdf-source/cpdfmetadata.mli`: added cpdf-style
   slash-prefixed string wrappers for `/Info` UTF-8 lookup, XMP legacy-key

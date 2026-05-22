@@ -880,6 +880,26 @@ fn PdfDocument::pdf_impose_change_pattern_matrices_page(
 }
 
 ///|
+/// Rewrite pattern matrices used by a page after applying a page transform.
+pub fn PdfDocument::change_pattern_matrices_page(
+  self : PdfDocument,
+  matrix : TransformMatrix,
+  page : PdfPage,
+) -> PdfPage raise PdfError {
+  self.pdf_impose_change_pattern_matrices_page(matrix, page)
+}
+
+///|
+/// Compatibility wrapper matching cpdfpage's `change_pattern_matrices_page`.
+pub fn pdf_change_pattern_matrices_page(
+  document : PdfDocument,
+  matrix : TransformMatrix,
+  page : PdfPage,
+) -> PdfPage raise PdfError {
+  document.change_pattern_matrices_page(matrix, page)
+}
+
+///|
 #warnings("-unused_value")
 fn PdfDocument::pdf_impose_transform_content(
   self : PdfDocument,

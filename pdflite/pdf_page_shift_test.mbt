@@ -123,6 +123,81 @@ test "PdfDocument shift_pages transforms content annotations and pattern matrice
 }
 
 ///|
+test "change_pattern_matrices_page exposes cpdfpage pattern rewrite helper" {
+  let key_pattern = page_shift_name_for_test("/Pattern")
+  let key_matrix = page_shift_name_for_test("/Matrix")
+  let pattern_name = page_shift_name_for_test("/P1")
+  let old_matrix = @pdflite.transform_translate(1.0, 2.0)
+  let page = page_shift_page_for_test(
+    [Op_scnName(pattern_name, []), Op_S],
+    resources=PdfDictionary([
+      (
+        key_pattern,
+        PdfDictionary([
+          (
+            pattern_name,
+            PdfDictionary([
+              (key_matrix, @pdflite.pdf_object_of_matrix(old_matrix)),
+            ]),
+          ),
+        ]),
+      ),
+    ]),
+  )
+  let document = page_shift_document_for_test([page])
+  let matrix = @pdflite.transform_translate(10.0, 20.0)
+  let rewritten = try! document.change_pattern_matrices_page(matrix, page)
+  guard rewritten.resources.lookup_immediate(key_pattern)
+    is Some(PdfDictionary([(name, PdfIndirect(number))])) &&
+    name == pattern_name else {
+    fail("expected page pattern to be cloned through public method")
+  }
+  @test.assert_eq(
+    document.lookup_object_or_null(number).lookup_immediate(key_matrix),
+    Some(
+      @pdflite.pdf_object_of_matrix(
+        @pdflite.transform_matrix_compose(matrix, old_matrix),
+      ),
+    ),
+  )
+  let wrapper_page = page_shift_page_for_test(
+    [Op_SCNName(pattern_name, [])],
+    resources=PdfDictionary([
+      (
+        key_pattern,
+        PdfDictionary([
+          (
+            pattern_name,
+            PdfDictionary([
+              (key_matrix, @pdflite.pdf_object_of_matrix(old_matrix)),
+            ]),
+          ),
+        ]),
+      ),
+    ]),
+  )
+  let wrapper_document = page_shift_document_for_test([wrapper_page])
+  let wrapper_rewritten = try! @pdflite.pdf_change_pattern_matrices_page(
+    wrapper_document, matrix, wrapper_page,
+  )
+  guard wrapper_rewritten.resources.lookup_immediate(key_pattern)
+    is Some(PdfDictionary([(wrapper_name, PdfIndirect(wrapper_number))])) &&
+    wrapper_name == pattern_name else {
+    fail("expected page pattern to be cloned through cpdf wrapper")
+  }
+  @test.assert_eq(
+    wrapper_document
+    .lookup_object_or_null(wrapper_number)
+    .lookup_immediate(key_matrix),
+    Some(
+      @pdflite.pdf_object_of_matrix(
+        @pdflite.transform_matrix_compose(matrix, old_matrix),
+      ),
+    ),
+  )
+}
+
+///|
 test "PdfDocument shift_pages transforms open-action destinations" {
   let key_open_action = page_shift_name_for_test("/OpenAction")
   let xyz_name = page_shift_name_for_test("/XYZ")
