@@ -176,6 +176,30 @@ test "PdfDocument scale_contents transforms open-action destinations" {
       PdfNull,
     ]),
   )
+
+  let source_order = try! @pdflite.pdf_scale_contents_cpdf_order(
+    PdfPositionBottomLeft(0.0, 0.0),
+    3.0,
+    document,
+    [1],
+  )
+  let source_numbers = try! source_order.page_reference_numbers()
+  guard source_order
+    .lookup_object_or_null(source_order.root())
+    .lookup_immediate(key_open_action)
+    is Some(source_open_action) else {
+    fail("expected scaled document open action through cpdf-order wrapper")
+  }
+  @test.assert_eq(
+    source_order.direct(source_open_action),
+    PdfArray([
+      PdfIndirect(source_numbers[0]),
+      PdfNameObject(xyz_name),
+      PdfReal(3.0),
+      PdfReal(6.0),
+      PdfNull,
+    ]),
+  )
 }
 
 ///|

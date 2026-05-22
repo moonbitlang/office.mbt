@@ -310,6 +310,8 @@ pub fn pdf_change_bookmark(ArrayView[(Int, Int)], PdfBookmark) -> PdfBookmark
 
 pub fn pdf_change_boxes(PdfDocument, PdfPage, (Double, Double, Double, Double) -> (Double, Double, Double, Double)) -> PdfPage raise @core.PdfError
 
+pub fn pdf_change_boxes_cpdf_order((Double, Double, Double, Double) -> (Double, Double, Double, Double), PdfDocument, PdfPage) -> PdfPage raise @core.PdfError
+
 pub fn pdf_change_pages(Bool, PdfDocument, ArrayView[PdfPage], matrices? : ArrayView[(Int, @geometry.TransformMatrix)], changes? : ArrayView[(Int, Int)]) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_charcode_extractor_of_font(PdfDocument, PdfObject, debug? : Bool) -> ((Int) -> Int?) raise @core.PdfError
@@ -1334,6 +1336,8 @@ pub fn pdf_run_length_encode_view(BytesView) -> Bytes
 
 pub fn pdf_scale_contents(PdfDocument, ArrayView[Int], PdfPosition, Double, fast? : Bool) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_scale_contents_cpdf_order(PdfPosition, Double, PdfDocument, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_scale_pages(PdfDocument, ArrayView[Int], ArrayView[(Double, Double)], fast? : Bool) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_scale_pdf(ArrayView[(Double, Double)], PdfDocument, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
@@ -1353,6 +1357,8 @@ pub fn pdf_set_box(PdfDocument, ArrayView[Int], @core.PdfName, Double, Double, D
 pub fn pdf_set_box_string(String, Double, Double, Double, Double, PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_set_language(PdfDocument, BytesView) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_set_mediabox(ArrayView[(Double, Double, Double, Double)], PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_set_mediaboxes(PdfDocument, ArrayView[Int], ArrayView[(Double, Double, Double, Double)]) -> PdfDocument raise @core.PdfError
 
@@ -1383,6 +1389,8 @@ pub let pdf_shape_kappa : Double
 pub fn pdf_shape_rectangle(Double, Double, Double, Double) -> PdfPath
 
 pub fn pdf_shift_boxes(PdfDocument, ArrayView[Int], ArrayView[(Double, Double)]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_shift_boxes_cpdf_order(ArrayView[(Double, Double)], PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_shift_pages(PdfDocument, ArrayView[Int], ArrayView[(Double, Double)], fast? : Bool) -> PdfDocument raise @core.PdfError
 
@@ -1595,6 +1603,8 @@ pub fn pdf_ua_test_matterhorn_print(PdfDocument, String) -> Bytes raise @core.Pd
 pub fn pdf_unicode_data() -> Array[PdfUnicodeDataEntry] raise @core.PdfError
 
 pub fn pdf_unicode_data_source() -> Bytes raise @core.PdfError
+
+pub fn pdf_upright(ArrayView[Int], PdfDocument, fast? : Bool) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_upright_pages(PdfDocument, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
 
@@ -2960,6 +2970,7 @@ pub fn PdfDocument::set_box_string(Self, ArrayView[Int], String, Double, Double,
 pub fn PdfDocument::set_first_xref(Self, Int) -> Unit
 pub fn PdfDocument::set_info_entry(Self, @core.PdfName, PdfObject, Int, keep_version? : Bool, xmp_also? : Bool, xmp_just_set? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::set_language(Self, BytesView) -> Self raise @core.PdfError
+pub fn PdfDocument::set_mediabox(Self, ArrayView[Int], ArrayView[(Double, Double, Double, Double)]) -> Self raise @core.PdfError
 pub fn PdfDocument::set_mediaboxes(Self, ArrayView[Int], ArrayView[(Double, Double, Double, Double)]) -> Self raise @core.PdfError
 pub fn PdfDocument::set_metadata_date(Self, String) -> Self raise @core.PdfError
 pub fn PdfDocument::set_metadata_from_bytes(Self, BytesView, keep_version? : Bool) -> Self raise @core.PdfError
@@ -3015,6 +3026,7 @@ pub fn PdfDocument::trim_marks(Self, ArrayView[Int], fast? : Bool) -> Self raise
 pub fn PdfDocument::trim_structure_tree(Self, ArrayView[Int]) -> Unit raise @core.PdfError
 pub fn PdfDocument::twoup(Self, fast? : Bool, process_struct_tree? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::twoup_stack(Self, fast? : Bool, process_struct_tree? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::upright(Self, ArrayView[Int], fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::upright_pages(Self, ArrayView[Int], fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::version(Self) -> (Int, Int)
 pub fn PdfDocument::vflip_pdf(Self, ArrayView[Int], fast? : Bool) -> Self raise @core.PdfError

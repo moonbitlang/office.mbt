@@ -286,6 +286,20 @@ test "PdfDocument change_boxes transforms media and known page boxes" {
     max_x: 99.0,
     max_y: 199.0,
   })
+
+  let source_order = try! @pdflite.pdf_change_boxes_cpdf_order(
+    (min_x, min_y, max_x, max_y) => {
+      (min_x + 10.0, min_y + 20.0, max_x + 30.0, max_y + 40.0)
+    },
+    document,
+    pages[0],
+  )
+  @test.assert_eq(try! document.parse_rectangle(source_order.mediabox), {
+    min_x: 10.0,
+    min_y: 20.0,
+    max_x: 130.0,
+    max_y: 240.0,
+  })
 }
 
 ///|
@@ -353,6 +367,31 @@ test "PdfDocument set_mediaboxes uses page-indexed xywh boxes" {
     min_y: 20.0,
     max_x: 40.0,
     max_y: 60.0,
+  })
+
+  let method_alias = try! document.set_mediabox([2], [
+    (5.0, 6.0, 10.0, 20.0),
+    (2.0, 4.0, 6.0, 8.0),
+  ])
+  let method_pages = try! method_alias.pages_of_pagetree()
+  @test.assert_eq(try! method_alias.parse_rectangle(method_pages[1].mediabox), {
+    min_x: 2.0,
+    min_y: 4.0,
+    max_x: 8.0,
+    max_y: 12.0,
+  })
+
+  let source_order = try! @pdflite.pdf_set_mediabox(
+    [(1.0, 3.0, 5.0, 7.0), (0.0, 0.0, 1.0, 1.0)],
+    document,
+    [1],
+  )
+  let source_pages = try! source_order.pages_of_pagetree()
+  @test.assert_eq(try! source_order.parse_rectangle(source_pages[0].mediabox), {
+    min_x: 1.0,
+    min_y: 3.0,
+    max_x: 6.0,
+    max_y: 10.0,
   })
 }
 
@@ -565,6 +604,19 @@ test "PdfDocument shift_boxes shifts only selected page boxes" {
     min_y: 2.0,
     max_x: 101.0,
     max_y: 202.0,
+  })
+
+  let source_order = try! @pdflite.pdf_shift_boxes_cpdf_order(
+    [(2.0, 3.0), (4.0, 5.0)],
+    document,
+    [1],
+  )
+  let source_pages = try! source_order.pages_of_pagetree()
+  @test.assert_eq(try! source_order.parse_rectangle(source_pages[0].mediabox), {
+    min_x: 2.0,
+    min_y: 3.0,
+    max_x: 102.0,
+    max_y: 203.0,
   })
 }
 

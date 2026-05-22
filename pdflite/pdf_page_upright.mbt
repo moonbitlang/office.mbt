@@ -237,3 +237,23 @@ pub fn pdf_upright_pages(
 ) -> PdfDocument raise PdfError {
   document.upright_pages(page_numbers, fast~)
 }
+
+///|
+/// Compatibility alias for `PdfDocument::upright_pages`.
+pub fn PdfDocument::upright(
+  self : PdfDocument,
+  page_numbers : ArrayView[Int],
+  fast? : Bool = false,
+) -> PdfDocument raise PdfError {
+  self.upright_pages(page_numbers, fast~)
+}
+
+///|
+/// Compatibility wrapper matching cpdfpage's `upright` argument order.
+pub fn pdf_upright(
+  page_numbers : ArrayView[Int],
+  document : PdfDocument,
+  fast? : Bool = false,
+) -> PdfDocument raise PdfError {
+  document.upright_pages(page_numbers, fast~)
+}

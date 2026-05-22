@@ -118,12 +118,16 @@ test "PdfDocument upright_pages removes rotation and rectifies boxes" {
     rectification_matrix, rotation_matrix,
   )
   let upright = try! document.upright_pages([1])
+  let method_alias = try! document.upright([1])
   let pages = try! upright.pages_of_pagetree()
+  let alias_pages = try! method_alias.pages_of_pagetree()
   @test.assert_eq(pages[0].rotate, Rotate0)
+  @test.assert_eq(alias_pages[0].rotate, Rotate0)
   @test.assert_eq(
     pages[0].mediabox,
     try! document.transform_rect(rectification_matrix, rotated_mediabox),
   )
+  @test.assert_eq(alias_pages[0].mediabox, pages[0].mediabox)
   @test.assert_eq(
     pages[0].rest.lookup_immediate(key_crop),
     Some(
@@ -200,6 +204,13 @@ test "PdfDocument upright_pages rectifies non-zero origins and destinations" {
       PdfReal(10.0),
       PdfNull,
     ]),
+  )
+
+  let source_order = try! @pdflite.pdf_upright([1], document)
+  let source_pages = try! source_order.pages_of_pagetree()
+  @test.assert_eq(
+    source_pages[0].mediabox,
+    page_upright_rect_for_test(0.0, 0.0, 100.0, 100.0),
   )
 }
 

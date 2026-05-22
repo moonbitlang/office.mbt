@@ -36,9 +36,9 @@ Current estimate:
   encoding/cmap/ToUnicode validation, imposition
   transform/content/page-assembly/pattern-matrix kernels, cpdf page
   hard-box/removal/shift/scale/scale-to-fit/upright/set-mediabox/copy-box
-  helpers, imposition make-space orchestration, border stamping, layout
-  planning, and first public impose/twoup pipelines, and Markdown helper public
-  APIs.
+  helpers and source-order compatibility aliases, imposition make-space
+  orchestration, border stamping, layout planning, and first public
+  impose/twoup pipelines, and Markdown helper public APIs.
 
 Current backend snapshot:
 
@@ -69,6 +69,17 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port the `cpdfpage` source-order wrapper alias slice:
+  `pdf_set_mediabox`, `pdf_shift_boxes_cpdf_order`,
+  `pdf_change_boxes_cpdf_order`, `pdf_scale_contents_cpdf_order`, and
+  `pdf_upright` now expose cpdf-style argument ordering where existing
+  document-first wrappers could not match source order; `PdfDocument` also has
+  singular `set_mediabox` and `upright` method aliases. Coverage exercises the
+  aliases in the page-box, page-scale, and upright test files. Validation on
+  MoonBit 0.9.3 reports `moon check --target native --warn-list +73` passing
+  with only the existing `markdown/cmd` warning, targeted native tests at
+  `16/16`, `19/19`, and `4/4`, `moon check --target all --warn-list +73`
+  passing, and full native `moon test --target native` at 2369/2369.~~
 - [x] ~~Port the first `cpdfclip` polygon model slice:
   `PdfClipOperation`, `PdfClipVertex`, `PdfClipContour`, and `PdfClipPolygon`
   now cover cpdf/GPC operation codes, null polygons, box polygons, hole flags,

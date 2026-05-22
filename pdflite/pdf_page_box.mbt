@@ -516,6 +516,21 @@ pub fn pdf_change_boxes(
 }
 
 ///|
+/// Compatibility wrapper matching cpdfpage's `change_boxes` argument order.
+pub fn pdf_change_boxes_cpdf_order(
+  transform : (Double, Double, Double, Double) -> (
+    Double,
+    Double,
+    Double,
+    Double,
+  ),
+  document : PdfDocument,
+  page : PdfPage,
+) -> PdfPage raise PdfError {
+  document.change_boxes(page, transform)
+}
+
+///|
 /// Set `/MediaBox` on selected pages from a page-indexed `(x, y, width, height)`
 /// list.
 ///
@@ -549,11 +564,31 @@ pub fn PdfDocument::set_mediaboxes(
 }
 
 ///|
+/// Compatibility alias for `PdfDocument::set_mediaboxes`.
+pub fn PdfDocument::set_mediabox(
+  self : PdfDocument,
+  page_numbers : ArrayView[Int],
+  boxes : ArrayView[(Double, Double, Double, Double)],
+) -> PdfDocument raise PdfError {
+  self.set_mediaboxes(page_numbers, boxes)
+}
+
+///|
 /// Compatibility wrapper for `PdfDocument::set_mediaboxes`.
 pub fn pdf_set_mediaboxes(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
   boxes : ArrayView[(Double, Double, Double, Double)],
+) -> PdfDocument raise PdfError {
+  document.set_mediaboxes(page_numbers, boxes)
+}
+
+///|
+/// Compatibility wrapper matching cpdfpage's `set_mediabox` argument order.
+pub fn pdf_set_mediabox(
+  boxes : ArrayView[(Double, Double, Double, Double)],
+  document : PdfDocument,
+  page_numbers : ArrayView[Int],
 ) -> PdfDocument raise PdfError {
   document.set_mediaboxes(page_numbers, boxes)
 }
@@ -782,6 +817,16 @@ pub fn pdf_shift_boxes(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
   offsets : ArrayView[(Double, Double)],
+) -> PdfDocument raise PdfError {
+  document.shift_boxes(page_numbers, offsets)
+}
+
+///|
+/// Compatibility wrapper matching cpdfpage's `shift_boxes` argument order.
+pub fn pdf_shift_boxes_cpdf_order(
+  offsets : ArrayView[(Double, Double)],
+  document : PdfDocument,
+  page_numbers : ArrayView[Int],
 ) -> PdfDocument raise PdfError {
   document.shift_boxes(page_numbers, offsets)
 }

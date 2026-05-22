@@ -300,6 +300,18 @@ pub fn pdf_scale_contents(
 }
 
 ///|
+/// Compatibility wrapper matching cpdfpage's `scale_contents` argument order.
+pub fn pdf_scale_contents_cpdf_order(
+  position : PdfPosition,
+  scale : Double,
+  document : PdfDocument,
+  page_numbers : ArrayView[Int],
+  fast? : Bool = false,
+) -> PdfDocument raise PdfError {
+  document.scale_contents(page_numbers, position, scale, fast~)
+}
+
+///|
 /// Scale selected pages by per-page x/y factors, including boxes and content.
 ///
 /// This ports cpdf's `scale_pdf`: selected page boxes, content streams,
