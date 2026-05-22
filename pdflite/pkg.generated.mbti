@@ -1572,6 +1572,12 @@ pub fn pdf_truetype_cmap_glyphs(BytesView) -> Array[PdfTrueTypeCMapGlyph]
 
 pub fn pdf_truetype_cmaps(BytesView) -> Array[(Int, Int)]
 
+pub fn pdf_truetype_metrics(BytesView) -> PdfTrueTypeMetrics raise @core.PdfError
+
+pub fn pdf_truetype_table(BytesView, String) -> PdfTrueTypeTableRecord?
+
+pub fn pdf_truetype_tables(BytesView) -> Array[PdfTrueTypeTableRecord]
+
 pub fn pdf_twoup(PdfDocument, fast? : Bool, process_struct_tree? : Bool) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_twoup_stack(PdfDocument, fast? : Bool, process_struct_tree? : Bool) -> PdfDocument raise @core.PdfError
@@ -3905,6 +3911,26 @@ pub(all) struct PdfTristimulusPoint {
 pub(all) struct PdfTrueTypeCMapGlyph {
   codepoint : Int
   glyph_index : Int
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfTrueTypeMetrics {
+  units_per_em : Int
+  minx : Int
+  miny : Int
+  maxx : Int
+  maxy : Int
+  index_to_loc_format : Int
+  num_glyphs : Int
+  num_of_long_hor_metrics : Int
+  advance_widths : Array[Int]
+  max_width : Int
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfTrueTypeTableRecord {
+  tag : String
+  checksum : UInt
+  offset : Int
+  length : Int
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfType3Glyphs {

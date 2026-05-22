@@ -35,8 +35,8 @@ Current estimate:
   cpdfua Matterhorn content/role-map/XMP/viewer-preference/optional-content/
   media-clip/file-attachment/PrinterMark/reference-XObject/MCID Form XObject/
   Type0 CIDSystemInfo/CIDToGIDMap/CMap-name/WMode/font-file no-op/TrueType
-  encoding/cmap/ToUnicode validation, TrueType cmap glyph mapping foundation,
-  imposition
+  encoding/cmap/ToUnicode validation, TrueType cmap glyph mapping and
+  table/metric parsing foundations, imposition
   transform/content/page-assembly/pattern-matrix kernels, cpdf page
   hard-box/removal/shift/scale/scale-to-fit/upright/set-mediabox/copy-box
   helpers and source-order compatibility aliases, imposition make-space
@@ -45,9 +45,9 @@ Current estimate:
 
 Current backend snapshot:
 
-- Native: full suite passes on MoonBit 0.9.3, currently 2380/2380 tests.
+- Native: full suite passes on MoonBit 0.9.3, currently 2383/2383 tests.
 - WasmGC and JavaScript: full portable non-native test suites pass on MoonBit
-  0.9.3, currently 2040/2040 on each backend after the latest source-corpus
+  0.9.3, currently 2043/2043 on each backend after the latest source-corpus
   recovery gates.
 - Wasm: current plain-Wasm smoke validation passes at 41/41 tests after
   filtering root's heavy package-level test files and the Markdown package
@@ -72,6 +72,23 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port the `cpdftruetype` table and metric reader foundation needed by
+  later full TrueType parsing/subsetting: `PdfTrueTypeTableRecord`,
+  `PdfTrueTypeMetrics`, `pdf_truetype_tables`, `pdf_truetype_table`, and
+  `pdf_truetype_metrics` now expose the source table-directory pass including
+  checksums plus the `head`, `maxp`, optional `hhea`, and `hmtx` reads used
+  before width and glyph rewriting. The reader scales bounding boxes and max
+  advance width to PDF units with the source rounding rule, keeps raw advance
+  widths for later width calculation, preserves the source optional-`hhea`
+  zero-count behavior, and reports missing required tables with `SoftError`.
+  This does not complete
+  `Cpdftruetype.parse`, `loca`/`glyf` handling, OS/2/post metrics, composite
+  expansion, or font subsetting. Validation on MoonBit 0.9.3:
+  `moon check --target native --warn-list +73` passes with only the existing
+  `markdown/cmd` warning; `moon test --target native pdf_truetype_test.mbt`
+  reports 9/9; `moon check --target all --warn-list +73` passes; full backend
+  tests report native 2383/2383, wasm-gc 2043/2043, and js 2043/2043; and
+  `moon fmt`, `moon info`, and `git diff --check` are clean.~~
 - [x] ~~Port the `cpdftruetype` cmap glyph-mapping foundation needed by later
   TrueType subsetting: `PdfTrueTypeCMapGlyph`,
   `pdf_truetype_cmap_glyphs`, and `pdf_truetype_cmap_glyph` now decode the
