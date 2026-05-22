@@ -800,6 +800,10 @@ pub fn pdf_jpeg2000_dimensions(Bytes) -> (Int, Int) raise @core.PdfError
 
 pub fn pdf_jpeg2000_dimensions_view(BytesView) -> (Int, Int) raise @core.PdfError
 
+pub fn pdf_jpeg_backup_dimensions(Bytes) -> (Int, Int) raise @core.PdfError
+
+pub fn pdf_jpeg_backup_dimensions_view(BytesView) -> (Int, Int) raise @core.PdfError
+
 pub fn pdf_jpeg_dimensions(Bytes) -> (Int, Int) raise @core.PdfError
 
 pub fn pdf_jpeg_dimensions_view(BytesView) -> (Int, Int) raise @core.PdfError

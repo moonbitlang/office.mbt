@@ -7740,6 +7740,23 @@ Current backend snapshot:
   --target all --warn-list +73` passes with the known `markdown/cmd` future
   notice; `moon test --target native` reports 2361/2361; `moon info`, `moon
   fmt`, and `git diff --check` are clean.~~
+- [x] ~~Continue cpdfjpeg API parity with `.repos/cpdf-source`: added
+  `pdf_jpeg_backup_dimensions_view`, `pdf_jpeg_backup_dimensions`, and the
+  native async file wrapper `pdf_backup_jpeg_dimensions`. The core fallback
+  scans JPEG SOF markers directly, including progressive SOF2 data rejected by
+  cpdf's primary `jpeg_dimensions` parser, while the async wrapper preserves the
+  filename boundary and accepts `path_to_im` for cpdf API parity without
+  shelling out. Coverage pins progressive JFIF data, generic SOF scanning,
+  malformed fallback inputs, and the async filename wrapper; synthetic JPEG
+  fixtures now use bounded SOF lengths. Validation on MoonBit compiler 0.9.3:
+  `moon check --target native --warn-list +73` passes with the known
+  `markdown/cmd` future notice; `moon test --target native pdf_jpeg_test.mbt
+  --filter '*backup_dimensions*'` reports 2/2; `moon test --target native
+  async_io --filter '*backup dimensions*'` reports 1/1; `moon test --target
+  native pdf_jpeg_test.mbt` reports 9/9; `moon check --target all --warn-list
+  +73` passes with the known `markdown/cmd` future notice; `moon test --target
+  native` reports 2364/2364; `moon info`, `moon fmt`, and `git diff --check`
+  are clean.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

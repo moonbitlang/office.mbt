@@ -139,3 +139,116 @@ pub fn pdf_jpeg_dimensions_view(data : BytesView) -> (Int, Int) raise PdfError {
 pub fn pdf_jpeg_dimensions(data : PdfBytes) -> (Int, Int) raise PdfError {
   pdf_jpeg_dimensions_view(data)
 }
+
+///|
+fn pdf_jpeg_marker_without_segment_length(marker : Int) -> Bool {
+  marker == 0x01 || (marker >= 0xD0 && marker <= 0xD9)
+}
+
+///|
+fn pdf_jpeg_marker_has_dimensions(marker : Int) -> Bool {
+  match marker {
+    0xC0
+    | 0xC1
+    | 0xC2
+    | 0xC3
+    | 0xC5
+    | 0xC6
+    | 0xC7
+    | 0xC9
+    | 0xCA
+    | 0xCB
+    | 0xCD
+    | 0xCE
+    | 0xCF => true
+    _ => false
+  }
+}
+
+///|
+fn pdf_jpeg_next_marker(
+  data : BytesView,
+  index : Int,
+) -> (Int, Int) raise PdfError {
+  let mut cursor = index
+  while cursor < data.length() && data[cursor].to_int() != 0xFF {
+    cursor += 1
+  }
+  if cursor >= data.length() {
+    raise JPEGDimensionsExpected
+  }
+  while cursor < data.length() && data[cursor].to_int() == 0xFF {
+    cursor += 1
+  }
+  if cursor >= data.length() {
+    raise JPEGDimensionsExpected
+  }
+  (data[cursor].to_int(), cursor + 1)
+}
+
+///|
+fn pdf_jpeg_backup_dimensions_inner(
+  data : BytesView,
+) -> (Int, Int) raise PdfError {
+  if data.length() < 2 || data[0].to_int() != 0xFF || data[1].to_int() != 0xD8 {
+    raise BadJPEGHeader
+  }
+  let mut index = 2
+  while index < data.length() {
+    let (marker, segment_start) = pdf_jpeg_next_marker(data, index)
+    if marker == 0xD9 {
+      raise JPEGDimensionsExpected
+    }
+    if pdf_jpeg_marker_without_segment_length(marker) {
+      index = segment_start
+    } else {
+      let segment_length = pdf_jpeg_word_at(
+        data,
+        segment_start,
+        JPEGDimensionsExpected,
+      )
+      if segment_length < 2 {
+        raise InvalidJPEGBlock
+      }
+      if segment_start + segment_length > data.length() {
+        raise JPEGDimensionsExpected
+      }
+      if pdf_jpeg_marker_has_dimensions(marker) {
+        if segment_length < 7 {
+          raise JPEGDimensionsExpected
+        }
+        let height = pdf_jpeg_word_at(
+          data,
+          segment_start + 3,
+          JPEGDimensionsExpected,
+        )
+        let width = pdf_jpeg_word_at(
+          data,
+          segment_start + 5,
+          JPEGDimensionsExpected,
+        )
+        return (width, height)
+      }
+      index = segment_start + segment_length
+    }
+  }
+  raise JPEGDimensionsExpected
+}
+
+///|
+/// Return JPEG dimensions by scanning any SOF marker with width and height.
+///
+/// This is the pure byte parser used by the cpdfjpeg `backup_jpeg_dimensions`
+/// file wrapper. It accepts progressive JPEG SOF2 data that cpdf's primary
+/// `jpeg_dimensions` parser rejects.
+pub fn pdf_jpeg_backup_dimensions_view(
+  data : BytesView,
+) -> (Int, Int) raise PdfError {
+  pdf_jpeg_backup_dimensions_inner(data)
+}
+
+///|
+/// Return JPEG dimensions by scanning any SOF marker with width and height.
+pub fn pdf_jpeg_backup_dimensions(data : PdfBytes) -> (Int, Int) raise PdfError {
+  pdf_jpeg_backup_dimensions_view(data)
+}

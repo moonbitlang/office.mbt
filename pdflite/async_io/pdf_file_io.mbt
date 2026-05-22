@@ -162,6 +162,20 @@ pub async fn pdf_draw_control_add_jpeg_file(
 }
 
 ///|
+/// Compatibility wrapper matching cpdfjpeg's `backup_jpeg_dimensions`.
+///
+/// The original cpdf implementation shells out to ImageMagick. This native
+/// wrapper keeps the same file boundary but uses pdflite's SOF-marker scanner,
+/// so `path_to_im` is accepted for API parity and otherwise ignored.
+pub async fn pdf_backup_jpeg_dimensions(
+  filename : StringView,
+  path_to_im? : String = "",
+) -> (Int, Int) {
+  ignore(path_to_im)
+  @pdflite.pdf_jpeg_backup_dimensions_view(@fs.read_file(filename).binary())
+}
+
+///|
 /// Read a PNG file and append it as a draw-control image XObject.
 ///
 /// `spec` follows cpdf's `addpng` file form: `Name=/path/to/image.png`.

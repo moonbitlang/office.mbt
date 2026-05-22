@@ -126,7 +126,15 @@ fn pdf_async_io_png_rgb_for_test() -> (@pdflite.PdfBytes, @pdflite.PdfBytes) {
 fn pdf_async_io_jpeg_for_test() -> @pdflite.PdfBytes {
   pdf_async_io_bytes_for_test([
     0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x09, 0x4A, 0x46, 0x49, 0x46, 0x00, 0xAA, 0xBB,
-    0xFF, 0xC0, 0x00, 0x0B, 0x08, 0x01, 0x2C, 0x01, 0x90, 0x03, 0x01, 0xFF, 0xD9,
+    0xFF, 0xC0, 0x00, 0x09, 0x08, 0x01, 0x2C, 0x01, 0x90, 0x03, 0x01, 0xFF, 0xD9,
+  ])
+}
+
+///|
+fn pdf_async_io_progressive_jpeg_for_test() -> @pdflite.PdfBytes {
+  pdf_async_io_bytes_for_test([
+    0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x09, 0x4A, 0x46, 0x49, 0x46, 0x00, 0xAA, 0xBB,
+    0xFF, 0xC2, 0x00, 0x09, 0x08, 0x00, 0xF0, 0x01, 0x40, 0x03, 0x01, 0xFF, 0xD9,
   ])
 }
 
@@ -3209,6 +3217,18 @@ async test "async draw control image file wrappers read path specs" {
     Some(PdfInteger(300)),
   )
   @test.assert_eq(jp2_stream.data, StreamGot(jpeg2000))
+}
+
+///|
+async test "async cpdfjpeg backup dimensions reads progressive JPEG files" {
+  let path = pdf_async_io_test_path_for_test("backup_jpeg_dimensions")
+  pdf_async_io_remove_if_exists_for_test(path)
+  @fs.write_file(path, pdf_async_io_progressive_jpeg_for_test(), create=0o644)
+  @test.assert_eq(
+    try! pdf_backup_jpeg_dimensions(path, path_to_im="/usr/bin/convert"),
+    (320, 240),
+  )
+  pdf_async_io_remove_if_exists_for_test(path)
 }
 
 ///|
