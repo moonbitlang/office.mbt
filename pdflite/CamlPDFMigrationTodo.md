@@ -5517,6 +5517,23 @@ Current backend snapshot:
   native fixture_acceptance` reports 59/59 tests passing, `moon test --target
   native` reports 2230/2230 tests passing, and `moon check --target all
   --warn-list +73` reports the known warning baseline with 0 errors.~~
+- [x] ~~Broaden the source-boundary PDF/UA structure-tree lifecycle slice:
+  optional `.repos/cpdf-source/manualimages/h1.pdf` now also gates
+  `PdfDocument::remove_struct_tree`/`pdf_remove_struct_tree` and
+  `PdfDocument::mark_all_as_artifact`/`pdf_mark_all_as_artifact` against the
+  real PDF 2.0 structure-tree fixture. The gate verifies removal of
+  `/StructTreeRoot`, `/StructParent`, and `/StructParents`, empty
+  `struct_tree_text`, header-only extracted CPDFJSON, retained text-showing
+  operators with all structure marking operators stripped, artifact wrapping
+  after removal, compressed xref-stream rewrite/reread, and malformed
+  `startxref` public reconstruction of the marked output. `moon check --target
+  native fixture_acceptance --warn-list +73` passes, the focused H1
+  remove/artifact test reports 1/1 test passing, `moon test --target native
+  fixture_acceptance` reports 124/124 tests passing, and `moon test --target
+  native` reports 2349/2349 tests passing. `moon info && moon fmt` reports no
+  public API or formatting work, and `moon check --target all --warn-list +73`
+  reports the known warning-73/main-package baseline with 10 warnings and 0
+  errors.~~
 - [x] ~~Add the next source-boundary transparency/resource slice: optional
   `.repos/cpdf-source/logo.pdf` now gates real `/BleedBox` and `/TrimBox`,
   transparency group, blend-mode `/ExtGState` resources, page-info/document-info
@@ -7430,6 +7447,21 @@ Current backend snapshot:
   no pending formatting work, and `moon check --target all --warn-list +73`
   reports the known warning-73/main-package baseline with 10 warnings and 0
   errors.~~
+- [x] ~~Add the next cpdfpage source-corpus lifecycle slice: optional
+  `.repos/cpdf-source/manualimages/h1.pdf` now gates the real PDF/UA
+  structure-tree fixture through `remove_struct_tree`, `pdf_remove_struct_tree`,
+  `mark_all_as_artifact`, and `pdf_mark_all_as_artifact`. The gate checks
+  structure-entry removal, header-only structure extraction after removal,
+  visible text preservation, removal of original marked-content operators,
+  `/Artifact` wrapping after removal, compressed xref-stream rewrite/reread,
+  and malformed `startxref` public reconstruction. `moon check --target native
+  fixture_acceptance --warn-list +73` passes, the focused source H1
+  remove/artifact test reports 1/1 test passing, `moon test --target native
+  fixture_acceptance` reports 124/124 tests passing, and `moon test --target
+  native` reports 2349/2349 tests passing. `moon info && moon fmt` reports no
+  pending public API or formatting work, and `moon check --target all
+  --warn-list +73` reports the known warning-73/main-package baseline with 10
+  warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.

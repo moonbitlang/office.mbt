@@ -1877,6 +1877,80 @@ fn fixture_acceptance_assert_cpdf_h1_struct_tree_for_test(
 }
 
 ///|
+fn fixture_acceptance_assert_no_structure_marking_ops_for_test(
+  ops : ArrayView[@pdflite.PdfContentOp],
+) -> Unit raise {
+  for op in ops {
+    match op {
+      Op_MP(_) | Op_DP(_, _) | Op_BMC(_) | Op_BDC(_, _) | Op_EMC =>
+        fail("unexpected structure marking op: " + op.to_json().stringify())
+      _ => ()
+    }
+  }
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_h1_no_struct_tree_entries_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 1)
+  @test.assert_eq(document.version(), (2, 0))
+  @test.assert_eq(
+    document
+    .catalog()
+    .lookup_immediate(fixture_acceptance_pdf_name_for_test("/StructTreeRoot")),
+    None,
+  )
+  @test.assert_eq(
+    document.dict_entry_values(
+      fixture_acceptance_pdf_name_for_test("/StructParent"),
+    ),
+    [],
+  )
+  @test.assert_eq(
+    document.dict_entry_values(
+      fixture_acceptance_pdf_name_for_test("/StructParents"),
+    ),
+    [],
+  )
+  @test.assert_eq(document.struct_tree_text(), Bytes::new(0))
+  let struct_json = document.extract_struct_tree().stringify()
+  @test.assert_eq(struct_json.contains("\"/StructTreeRoot\""), false)
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_h1_struct_tree_removed_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  fixture_acceptance_assert_cpdf_h1_no_struct_tree_entries_for_test(document)
+  let ops = fixture_acceptance_page_content_ops_for_test(document)
+  fixture_acceptance_assert_no_structure_marking_ops_for_test(ops)
+  @test.assert_eq(fixture_acceptance_has_text_showing_op_for_test(ops), true)
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_h1_artifact_marked_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  fixture_acceptance_assert_cpdf_h1_no_struct_tree_entries_for_test(document)
+  let ops = fixture_acceptance_page_content_ops_for_test(document)
+  @test.assert_eq(
+    fixture_acceptance_content_op_count_for_test(
+      ops,
+      @pdflite.pdf_content_begin_artifact(),
+    ),
+    1,
+  )
+  @test.assert_eq(
+    fixture_acceptance_content_op_count_for_test(
+      ops,
+      @pdflite.pdf_content_end_artifact(),
+    ),
+    1,
+  )
+}
+
+///|
 fn fixture_acceptance_assert_cpdf_logo_boxes_and_transparency_for_test(
   document : @pdflite.PdfDocument,
 ) -> Unit raise {
@@ -14165,6 +14239,48 @@ async test "optional cpdf source h1 fixture reports structure tree" {
       fixture_acceptance_assert_cpdf_h1_struct_tree_for_test(
         @pdflite.pdf_read_document_from_bytes(
           fixture_acceptance_corrupt_startxref_pointer_for_test(bytes),
+        ),
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source h1 fixture removes structure tree and marks artifacts" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/manualimages/h1.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_h1_struct_tree_for_test(document)
+      let removed = document.remove_struct_tree()
+      fixture_acceptance_assert_cpdf_h1_struct_tree_removed_for_test(removed)
+      fixture_acceptance_assert_cpdf_h1_struct_tree_removed_for_test(
+        @pdflite.pdf_remove_struct_tree(document),
+      )
+      fixture_acceptance_assert_cpdf_h1_struct_tree_removed_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          @pdflite.pdf_write_document_with_compressed_xref_stream(removed),
+        ),
+      )
+      let marked = removed.mark_all_as_artifact()
+      fixture_acceptance_assert_cpdf_h1_artifact_marked_for_test(marked)
+      fixture_acceptance_assert_cpdf_h1_artifact_marked_for_test(
+        @pdflite.pdf_mark_all_as_artifact(removed),
+      )
+      let marked_compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        marked,
+      )
+      fixture_acceptance_assert_cpdf_h1_artifact_marked_for_test(
+        @pdflite.pdf_read_document_from_bytes(marked_compressed),
+      )
+      fixture_acceptance_assert_cpdf_h1_artifact_marked_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(
+            marked_compressed,
+          ),
         ),
       )
     }
