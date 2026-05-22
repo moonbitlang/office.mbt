@@ -482,6 +482,107 @@ fn pdf_async_io_name_for_test(text : String) -> @pdflite.PdfName {
 }
 
 ///|
+fn pdf_async_io_resource_dictionary_for_test(
+  entries : ArrayView[(String, @pdflite.PdfObject)],
+) -> @pdflite.PdfObject {
+  PdfDictionary(
+    [
+      for entry in entries => (pdf_async_io_name_for_test(entry.0), entry.1)
+    ],
+  )
+}
+
+///|
+fn pdf_async_io_font_file_stream_for_test(data : String) -> @pdflite.PdfObject {
+  let bytes = @ascii.encode(data)
+  @pdflite.pdf_stream(
+    PdfDictionary([
+      (pdf_async_io_name_for_test("/Length"), PdfInteger(bytes.length())),
+    ]),
+    StreamGot(bytes),
+  )
+}
+
+///|
+fn pdf_async_io_font_descriptor_with_file_for_test(
+  font_file_key : String,
+  font_file_number : Int,
+) -> @pdflite.PdfObject {
+  PdfDictionary([
+    (pdf_async_io_name_for_test(font_file_key), PdfIndirect(font_file_number)),
+    (pdf_async_io_name_for_test("/Flags"), PdfInteger(32)),
+  ])
+}
+
+///|
+fn pdf_async_io_font_for_test(
+  subtype : String,
+  basefont : String,
+  descriptor : @pdflite.PdfObject?,
+) -> @pdflite.PdfObject {
+  let entries : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = [
+    (
+      pdf_async_io_name_for_test("/Type"),
+      PdfNameObject(pdf_async_io_name_for_test("/Font")),
+    ),
+    (
+      pdf_async_io_name_for_test("/Subtype"),
+      PdfNameObject(pdf_async_io_name_for_test(subtype)),
+    ),
+    (
+      pdf_async_io_name_for_test("/BaseFont"),
+      PdfNameObject(pdf_async_io_name_for_test(basefont)),
+    ),
+  ]
+  match descriptor {
+    Some(value) =>
+      entries.push((pdf_async_io_name_for_test("/FontDescriptor"), value))
+    None => ()
+  }
+  PdfDictionary(entries)
+}
+
+///|
+fn pdf_async_io_font_extraction_document_for_test() -> @pdflite.PdfDocument {
+  let document = @pdflite.pdf_document_empty()
+  document.add_object_given_number(
+    80,
+    pdf_async_io_font_file_stream_for_test("embedded-font"),
+  )
+  document.add_object_given_number(
+    81,
+    pdf_async_io_font_descriptor_with_file_for_test("/FontFile2", 80),
+  )
+  document.add_object_given_number(
+    82,
+    pdf_async_io_font_for_test(
+      "/TrueType",
+      "/AsyncEmbedded",
+      Some(PdfIndirect(81)),
+    ),
+  )
+  document.add_object_given_number(
+    83,
+    pdf_async_io_font_for_test("/Type1", "/NoEmbeddedFile", None),
+  )
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: PdfDictionary([
+      (
+        pdf_async_io_name_for_test("/Font"),
+        pdf_async_io_resource_dictionary_for_test([
+          ("/F1", PdfIndirect(82)),
+          ("/FNo", PdfIndirect(83)),
+        ]),
+      ),
+    ]),
+  }
+  let page_root = try! document.add_pagetree([page])
+  ignore(try! document.add_root(page_root, []))
+  document
+}
+
+///|
 fn pdf_async_io_ascii_codepoints_for_test(text : String) -> Array[Int] {
   [
     for byte in @ascii.encode(text) => byte.to_int()
@@ -3135,6 +3236,36 @@ async test "async file wrappers load Standard 14 substitute font files" {
   @test.assert_eq(helvetica_name, "NimbusSans-Regular")
   @test.assert_eq(loaded_times, times_bytes)
   @test.assert_eq(times_name, "NimbusRoman-Bold")
+}
+
+///|
+async test "async file wrappers extract embedded font files" {
+  let document = pdf_async_io_font_extraction_document_for_test()
+  let output_path = pdf_async_io_test_path_for_test("fontfile")
+  let missing_path = pdf_async_io_test_path_for_test("fontfile_missing")
+  pdf_async_io_remove_if_exists_for_test(output_path)
+  pdf_async_io_remove_if_exists_for_test(missing_path)
+
+  try! pdf_extract_fontfile_to_file(document, 1, "/F1", output_path)
+  @test.assert_eq(
+    @fs.read_file(output_path).binary(),
+    @ascii.encode("embedded-font"),
+  )
+  let missing : Result[Unit, Error] = try? pdf_extract_fontfile_to_file(
+    document, 1, "/FNo", missing_path,
+  )
+  guard missing
+    is Err(
+      @pdflite.PdfError::SoftError(
+        "extract_fontfile: unsupported or unfound font"
+      )
+    ) else {
+    fail("expected unsupported or unfound font")
+  }
+  @test.assert_eq(@fs.exists(missing_path), false)
+
+  pdf_async_io_remove_if_exists_for_test(output_path)
+  pdf_async_io_remove_if_exists_for_test(missing_path)
 }
 
 ///|

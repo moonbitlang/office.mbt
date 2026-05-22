@@ -7610,6 +7610,19 @@ Current backend snapshot:
   `markdown/cmd` future notice; `moon test --target native` reports 2354/2354;
   `moon test --target wasm-gc` and `moon test --target js` report 2018/2018
   each; `moon test --target wasm` reports 41/41.~~
+- [x] ~~Continue cpdffont file-operation parity with
+  `.repos/cpdf-source/cpdffont.mli`: the native `async_io` package now exposes
+  `pdf_extract_fontfile_to_file`, the filesystem counterpart of cpdf's
+  `extract_fontfile`. The wrapper delegates font lookup and stream decoding to
+  the portable `PdfDocument::extract_fontfile_bytes` helper, writes the decoded
+  bytes to disk, and reports cpdf-style unsupported/unfound-font errors without
+  creating an output file. Validation on MoonBit 0.9.3:
+  `moon check --target native async_io --warn-list +73` passes, and
+  `moon test --target native async_io --filter '*extract embedded font files*'`
+  reports 1/1; `moon test --target native async_io` reports 91/91;
+  `moon check --target all --warn-list +73` passes with the known
+  `markdown/cmd` future notice; `moon test --target native` reports 2355/2355;
+  `moon info && moon fmt` and `git diff --check` are clean.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

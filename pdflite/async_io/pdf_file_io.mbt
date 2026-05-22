@@ -81,6 +81,25 @@ pub async fn pdf_load_standard_font_substitute_file(
 }
 
 ///|
+/// Extract an embedded font file and write it to disk.
+///
+/// This is the native filesystem counterpart of cpdffont's `extract_fontfile`.
+/// Font lookup and stream decoding are delegated to the core
+/// `PdfDocument::extract_fontfile_bytes` API.
+pub async fn pdf_extract_fontfile_to_file(
+  document : @pdflite.PdfDocument,
+  page_number : Int,
+  font_name : String,
+  path : StringView,
+  permission? : Int = 0o644,
+) -> Unit {
+  match document.extract_fontfile_bytes(page_number, font_name) {
+    Some(data) => @fs.write_file(path, data, create=permission)
+    None => @pdflite.pdf_error("extract_fontfile: unsupported or unfound font")
+  }
+}
+
+///|
 fn pdf_draw_control_image_file_spec_for_async_io(
   spec : StringView,
   command : String,
