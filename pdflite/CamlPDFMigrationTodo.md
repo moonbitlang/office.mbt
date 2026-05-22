@@ -7488,6 +7488,19 @@ Current backend snapshot:
   --warn-list +73` pass with no numbered diagnostics, aside from the tool's
   future main-package blackbox-test notice for `markdown/cmd`, and `moon test
   --target native` reports 2350/2350 tests passing.~~
+- [x] ~~Add an optional cpdf source UnicodeData table gate: fixture acceptance
+  now parses `.repos/cpdf-source/compressor/UnicodeData.txt`, compares its row
+  count and selected parsed rows against pdflite's embedded cpdf UnicodeData
+  table, and pins the first control row, Latin capital A, and final Plane 16
+  private-use row without doing brittle whole-table byte comparisons. The
+  focused UnicodeData fixture test reports 1/1 test passing, `moon check
+  --target native fixture_acceptance --warn-list +73` passes, `moon test
+  --target native fixture_acceptance` reports 125/125 tests passing, `moon
+  check --target native --warn-list +73` and `moon check --target all
+  --warn-list +73` pass aside from the known future main-package
+  blackbox-test notice for `markdown/cmd`, and `moon test --target native`
+  reports 2351/2351 tests passing. `moon info && moon fmt` reports no pending
+  public API or formatting work.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.

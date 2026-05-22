@@ -12535,6 +12535,53 @@ async test "optional cpdf source attachments preserve real source payloads" {
 }
 
 ///|
+fn fixture_acceptance_assert_unicode_data_row_matches_for_test(
+  actual : @pdflite.PdfUnicodeDataEntry,
+  expected : @pdflite.PdfUnicodeDataEntry,
+  index : Int,
+) -> Unit raise {
+  guard actual == expected else {
+    fail("UnicodeData row mismatch at " + index.to_string())
+  }
+}
+
+///|
+async test "optional cpdf source UnicodeData table matches embedded table" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/compressor/UnicodeData.txt",
+    ) {
+    None => ()
+    Some(source) => {
+      let source_rows = try! @pdflite.pdf_parse_unicode_data(source)
+      let embedded_rows = try! @pdflite.pdf_unicode_data()
+      @test.assert_eq(source_rows.length(), embedded_rows.length())
+      @test.assert_eq(source_rows.length(), 34626)
+      for index in [0, 65, source_rows.length() - 1] {
+        fixture_acceptance_assert_unicode_data_row_matches_for_test(
+          source_rows[index],
+          embedded_rows[index],
+          index,
+        )
+      }
+      @test.assert_eq(source_rows[0].code_value, "0000")
+      @test.assert_eq(source_rows[0].character_name, "<control>")
+      @test.assert_eq(source_rows[0].unicode_10_name, "NULL")
+      @test.assert_eq(source_rows[65].code_value, "0041")
+      @test.assert_eq(source_rows[65].character_name, "LATIN CAPITAL LETTER A")
+      @test.assert_eq(
+        source_rows[source_rows.length() - 1].code_value,
+        "10FFFD",
+      )
+      @test.assert_eq(
+        source_rows[source_rows.length() - 1].character_name,
+        "<Plane 16 Private Use, Last>",
+      )
+    }
+  }
+}
+
+///|
 async test "optional cpdf source README typesets tagged text PDF" {
   match
     fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/README.md") {
