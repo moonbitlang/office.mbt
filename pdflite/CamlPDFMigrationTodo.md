@@ -28,8 +28,8 @@ Current estimate:
   structured role-map output with fresh-structure-tree preservation,
   Form XObject stamping,
   composition reporting, core metadata APIs and cpdfmetadata string-key/source-
-  order wrappers, XMP metadata-date rewriting, XMP info synchronization, XMP
-  metadata creation, XMP RDF list extraction,
+  order/open-action destination wrappers, XMP metadata-date rewriting, XMP info
+  synchronization, XMP metadata creation, XMP RDF list extraction,
   XMP/document info JSON reporting, cpdfmetadata namespace/get-data/XML-tree
   helper parity, native metadata file set/write/extract wrappers, and XML
   entity/whitespace decoding, redaction annotation bounding-box overlays,
@@ -82,6 +82,22 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfmetadata` source/API parity for `set_open_action` from
+  `.repos/cpdf-source/cpdfmetadata.mli`: added cpdf-style PDF syntax string
+  destination parsing via the existing single-object parser, plus
+  `PdfDocument::set_open_action_string_destination`,
+  `pdf_set_open_action_string_destination`, and
+  `pdf_set_open_action_cpdf_order` wrappers while preserving the existing
+  `PdfObject`-based API. Coverage pins string destination page-reference
+  rewriting, top-level wrapper behavior, and malformed destination syntax
+  reporting against the existing open-action metadata helpers. Validation on
+  MoonBit 0.9.3: `moon check --target native --warn-list +73` passes with the
+  known `markdown/cmd` future notice; `moon test --target native
+  pdf_metadata_test.mbt`, `moon test --target wasm-gc pdf_metadata_test.mbt`,
+  and `moon test --target js pdf_metadata_test.mbt` report 21/21 each; `moon
+  fmt`, `moon info`, and `moon check --target all --warn-list +73` pass with
+  only the existing `markdown/cmd` future notice; full native `moon test
+  --target native` reports 2408/2408.~~
 - [x] ~~Continue `cpdfpage` source/API parity for whole-page redaction from
   `.repos/cpdf-source/cpdfpage.mli`: added `pdf_redact_pages_cpdf_order`
   matching cpdf's required `process_struct_tree`, document, and page-range

@@ -1446,6 +1446,10 @@ pub fn pdf_set_non_full_screen_page_mode(PdfDocument, String) -> PdfDocument rai
 
 pub fn pdf_set_open_action(PdfDocument, Bool, Int, destination? : PdfObject?) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_set_open_action_cpdf_order(PdfDocument, Bool, Int, destination? : String?) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_set_open_action_string_destination(PdfDocument, Bool, Int, destination? : String?) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_set_page_layout(PdfDocument, String) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_set_page_mode(PdfDocument, String) -> PdfDocument raise @core.PdfError
@@ -3114,6 +3118,7 @@ pub fn PdfDocument::set_metadata_date(Self, String) -> Self raise @core.PdfError
 pub fn PdfDocument::set_metadata_from_bytes(Self, BytesView, keep_version? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::set_non_full_screen_page_mode(Self, String) -> Self raise @core.PdfError
 pub fn PdfDocument::set_open_action(Self, Int, fit? : Bool, destination? : PdfObject?) -> Self raise @core.PdfError
+pub fn PdfDocument::set_open_action_string_destination(Self, Int, fit? : Bool, destination? : String?) -> Self raise @core.PdfError
 pub fn PdfDocument::set_page_box(Self, ArrayView[Int], @core.PdfName, Double, Double, Double, Double) -> Self raise @core.PdfError
 pub fn PdfDocument::set_page_layout(Self, String) -> Self raise @core.PdfError
 pub fn PdfDocument::set_page_mode(Self, String) -> Self raise @core.PdfError

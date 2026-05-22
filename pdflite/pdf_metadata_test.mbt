@@ -273,6 +273,63 @@ test "PdfDocument set_open_action writes fit xyz and custom destinations" {
       ]),
     ),
   )
+  let string_custom = try! doc.set_open_action_string_destination(
+    1,
+    destination=Some("[2 /FitH 12]"),
+  )
+  guard metadata_lookup_for_test(
+      string_custom,
+      metadata_catalog_for_test(string_custom),
+      "/OpenAction",
+    )
+    is Some(PdfDictionary(string_entries)) else {
+    fail("expected string custom OpenAction dictionary")
+  }
+  @test.assert_eq(
+    metadata_lookup_for_test(string_custom, PdfDictionary(string_entries), "/D"),
+    Some(
+      PdfArray([
+        PdfIndirect(page_refs[1]),
+        PdfNameObject(metadata_name_for_test("/FitH")),
+        PdfInteger(12),
+      ]),
+    ),
+  )
+  let string_wrapped = try! @pdflite.pdf_set_open_action_string_destination(
+    doc,
+    true,
+    1,
+    destination=Some("[2 /FitH 12]"),
+  )
+  @test.assert_eq(
+    try! string_wrapped.open_action(),
+    PdfArray([
+      PdfInteger(2),
+      PdfNameObject(metadata_name_for_test("/FitH")),
+      PdfInteger(12),
+    ]),
+  )
+  let cpdf_order_wrapped = try! @pdflite.pdf_set_open_action_cpdf_order(
+    doc,
+    true,
+    1,
+    destination=Some("[2 /FitH 12]"),
+  )
+  @test.assert_eq(
+    try! cpdf_order_wrapped.open_action(),
+    PdfArray([
+      PdfInteger(2),
+      PdfNameObject(metadata_name_for_test("/FitH")),
+      PdfInteger(12),
+    ]),
+  )
+  let bad_destination : Result[@pdflite.PdfDocument, Error] = try? doc.set_open_action_string_destination(
+    1,
+    destination=Some("/Fit"),
+  )
+  guard bad_destination is Err(@pdflite.PdfError::BadNumberArgument(_)) else {
+    fail("expected bad open-action destination syntax")
+  }
   let invalid : Result[@pdflite.PdfDocument, Error] = try? doc.set_open_action(
     3,
   )

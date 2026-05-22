@@ -719,6 +719,23 @@ fn PdfDocument::pdf_metadata_rewrite_destination_page(
 }
 
 ///|
+fn pdf_metadata_parse_open_action_destination(
+  destination : String,
+) -> PdfObject raise PdfError {
+  let parsed : Result[PdfObject, Error] = try? pdf_parse_object_from_bytes(
+    @ascii.encode(destination),
+  )
+  match parsed {
+    Ok(object) =>
+      match object {
+        PdfArray([PdfInteger(_), ..]) => object
+        _ => raise BadNumberArgument("Bad destination syntax")
+      }
+    Err(_) => raise BadNumberArgument("Bad destination syntax")
+  }
+}
+
+///|
 /// Set the catalog `/OpenAction` to a GoTo action.
 ///
 /// `page_number` is one-based. When `destination` is supplied and starts with a
@@ -761,6 +778,21 @@ pub fn PdfDocument::set_open_action(
     catalog.add_dict_entry(pdf_metadata_open_action(), open_action)
   })
   document
+}
+
+///|
+/// Set the catalog `/OpenAction` from cpdf-style PDF destination syntax.
+pub fn PdfDocument::set_open_action_string_destination(
+  self : PdfDocument,
+  page_number : Int,
+  fit? : Bool = true,
+  destination? : String? = None,
+) -> PdfDocument raise PdfError {
+  let destination_object = match destination {
+    Some(value) => Some(pdf_metadata_parse_open_action_destination(value))
+    None => None
+  }
+  self.set_open_action(page_number, fit~, destination=destination_object)
 }
 
 ///|
@@ -3265,6 +3297,33 @@ pub fn pdf_set_open_action(
   destination? : PdfObject? = None,
 ) -> PdfDocument raise PdfError {
   document.set_open_action(page_number, fit~, destination~)
+}
+
+///|
+/// Compatibility wrapper for cpdfmetadata's string destination syntax.
+pub fn pdf_set_open_action_string_destination(
+  document : PdfDocument,
+  fit : Bool,
+  page_number : Int,
+  destination? : String? = None,
+) -> PdfDocument raise PdfError {
+  document.set_open_action_string_destination(page_number, fit~, destination~)
+}
+
+///|
+/// Compatibility wrapper matching cpdfmetadata's string destination API.
+pub fn pdf_set_open_action_cpdf_order(
+  document : PdfDocument,
+  fit : Bool,
+  page_number : Int,
+  destination? : String? = None,
+) -> PdfDocument raise PdfError {
+  pdf_set_open_action_string_destination(
+    document,
+    fit,
+    page_number,
+    destination~,
+  )
 }
 
 ///|
