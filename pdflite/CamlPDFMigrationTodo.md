@@ -7501,6 +7501,20 @@ Current backend snapshot:
   blackbox-test notice for `markdown/cmd`, and `moon test --target native`
   reports 2351/2351 tests passing. `moon info && moon fmt` reports no pending
   public API or formatting work.~~
-- [ ] Add the next remaining format parity slice: additional real-world
-  ToUnicode/CMap fixtures when source material is available, broader real-world
-  image corpus coverage, or another malformed recovery source-corpus edge.
+- [x] ~~Add the next remaining format parity slice: the optional cpdf source
+  raw sheet PNG gate now decodes `.repos/cpdf-source/manualimages/sheet.png`
+  through the real PNG parser, Flate decoder, and PNG predictor path, pins
+  stable source pixels, and checks that `pdf_image_document_of_png_data` plus a
+  compressed PDF roundtrip extracts the same 24bpp pixels. The focused raw
+  sheet PNG fixture test reports 1/1 test passing, `moon check --target native
+  fixture_acceptance --warn-list +73` passes, `moon test --target native
+  fixture_acceptance` reports 125/125 tests passing, `moon check --target
+  native --warn-list +73` and `moon check --target all --warn-list +73` pass
+  aside from the known future main-package blackbox-test notice for
+  `markdown/cmd`, and `moon test --target native` reports 2351/2351 tests
+  passing on MoonBit 0.9.3. `moon info && moon fmt` reports no pending public
+  API or formatting work.~~
+- [ ] Run a compiler-0.9.3 backend readiness pass next: rerun the non-native
+  backend test/check slices that were previously deferred after native
+  stabilization, then update the remaining backend-validation items based on
+  actual failures rather than stale pre-upgrade assumptions.

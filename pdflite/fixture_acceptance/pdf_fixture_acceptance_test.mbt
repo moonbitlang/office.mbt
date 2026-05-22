@@ -10946,9 +10946,43 @@ fn fixture_acceptance_assert_cpdf_sheet_png_image_document_for_test(
       @test.assert_eq(width, 400)
       @test.assert_eq(height, 294)
       @test.assert_eq(data.length(), 400 * 294 * 3)
+      fixture_acceptance_assert_cpdf_sheet_png_pixels_for_test(data)
     }
     _ => fail("expected source sheet PNG image document to decode as 24bpp")
   }
+}
+
+///|
+fn fixture_acceptance_decode_cpdf_sheet_png_pixels_for_test(
+  bytes : Bytes,
+) -> Bytes raise {
+  let png = @pdflite.pdf_read_png(bytes)
+  @test.assert_eq(png.width, 400)
+  @test.assert_eq(png.height, 294)
+  @test.assert_eq(png.bit_depth, 8)
+  @test.assert_eq(png.color_type, 2)
+  @test.assert_eq(png.idat.length() > 0, true)
+  @pdflite.pdf_decode_predictor(
+    15,
+    3,
+    8,
+    400,
+    @pdflite.pdf_flate_decode(png.idat),
+  )
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_sheet_png_pixels_for_test(
+  data : BytesView,
+) -> Unit raise {
+  @test.assert_eq(data.length(), 400 * 294 * 3)
+  @test.assert_eq(data[0].to_int(), 255)
+  @test.assert_eq(data[1].to_int(), 255)
+  @test.assert_eq(data[2].to_int(), 255)
+  let middle_pixel = (147 * 400 + 200) * 3
+  @test.assert_eq(data[middle_pixel].to_int(), 250)
+  @test.assert_eq(data[middle_pixel + 1].to_int(), 250)
+  @test.assert_eq(data[middle_pixel + 2].to_int(), 250)
 }
 
 ///|
@@ -13960,12 +13994,9 @@ async test "optional cpdf source raw sheet PNG creates image document" {
     ) {
     None => ()
     Some(bytes) => {
-      let png = @pdflite.pdf_read_png(bytes)
-      @test.assert_eq(png.width, 400)
-      @test.assert_eq(png.height, 294)
-      @test.assert_eq(png.bit_depth, 8)
-      @test.assert_eq(png.color_type, 2)
-      @test.assert_eq(png.idat.length() > 0, true)
+      fixture_acceptance_assert_cpdf_sheet_png_pixels_for_test(
+        fixture_acceptance_decode_cpdf_sheet_png_pixels_for_test(bytes),
+      )
       let document = @pdflite.pdf_image_document_of_png_data(bytes)
       fixture_acceptance_assert_cpdf_sheet_png_image_document_for_test(document)
       fixture_acceptance_assert_cpdf_sheet_png_image_document_for_test(
