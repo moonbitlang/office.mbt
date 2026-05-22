@@ -327,7 +327,7 @@ test "PdfDocument ocg_get_list returns raw layer names" {
 test "PdfDocument ocg_list_json exports cpdf optional content shape" {
   let doc = ocg_document_with_content_for_test()
   let usage_json = Json::object(
-    Map::of([
+    Map([
       ("CreatorInfo-Creator", Json::string("tool")),
       ("CreatorInfo-Subtype", Json::string("/Artwork")),
       ("Language-Language", Json::string("en-US")),
@@ -344,14 +344,14 @@ test "PdfDocument ocg_list_json exports cpdf optional content shape" {
     ]),
   )
   let appdict_json = Json::object(
-    Map::of([
+    Map([
       ("Event", Json::string("/Print")),
       ("OCGs", Json::array([ocg_json_int_for_test(10)])),
       ("Category", Json::array([Json::string("/Print")])),
     ]),
   )
   let default_json = Json::object(
-    Map::of([
+    Map([
       ("Name", Json::string("Default")),
       ("Creator", Json::string("Author")),
       ("BaseState", Json::string("/OFF")),
@@ -363,7 +363,7 @@ test "PdfDocument ocg_list_json exports cpdf optional content shape" {
         "Order",
         Json::array([
           Json::object(
-            Map::of([
+            Map([
               ("Name", Json::string("Layers")),
               ("OCGs", Json::array([ocg_json_int_for_test(10)])),
             ]),
@@ -381,7 +381,7 @@ test "PdfDocument ocg_list_json exports cpdf optional content shape" {
     ]),
   )
   let config_json = Json::object(
-    Map::of([
+    Map([
       ("Name", Json::null()),
       ("Creator", Json::null()),
       ("BaseState", Json::string("/Unchanged")),
@@ -396,15 +396,15 @@ test "PdfDocument ocg_list_json exports cpdf optional content shape" {
     ]),
   )
   let expected = Json::object(
-    Map::of([
+    Map([
       (
         "OCGs",
         Json::object(
-          Map::of([
+          Map([
             (
               "10",
               Json::object(
-                Map::of([
+                Map([
                   ("Name", Json::string("Layer 1")),
                   (
                     "Intent",
@@ -483,7 +483,7 @@ test "pdf_ocg_read_json rejects malformed optional content JSON" {
   }
   let bad_default : Result[@pdflite.PdfOptionalContent?, Error] = try? @pdflite.pdf_ocg_read_json(
     Json::object(
-      Map::of([
+      Map([
         ("OCGs", Json::object(Map([]))),
         ("Default", Json::object(Map([]))),
         ("Configs", Json::array([])),

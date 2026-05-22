@@ -1412,20 +1412,20 @@ pub fn pdf_document_to_markdown(
 ) -> String raise {
   let document = pdf_markdown_readable_document(document)
   let pages = document.pages_of_pagetree()
-  let output = @buffer.new()
+  let output = Buffer()
   let font_cache = pdf_markdown_font_cache()
   for index in 0..<pages.length() {
     if index > 0 {
-      output.write_string("\n\n")
+      output.write_string_utf16le("\n\n")
     }
-    output.write_string("# Page ")
-    output.write_string((index + 1).to_string())
-    output.write_string("\n\n")
-    output.write_string(
+    output.write_string_utf16le("# Page ")
+    output.write_string_utf16le((index + 1).to_string())
+    output.write_string_utf16le("\n\n")
+    output.write_string_utf16le(
       pdf_markdown_page_text(document, pages[index], font_cache),
     )
   }
-  output.write_string("\n")
+  output.write_string_utf16le("\n")
   output.to_string()
 }
 

@@ -255,7 +255,7 @@ fn pdf_font_json_nullable_name(value : String) -> Json {
 ///|
 fn pdf_font_entry_json(entry : PdfFontListEntry) -> Json {
   Json::object(
-    Map::of([
+    Map([
       ("page", pdf_util_json_number(entry.page)),
       ("name", Json::string(entry.name)),
       ("subtype", pdf_font_json_nullable_name(entry.subtype)),

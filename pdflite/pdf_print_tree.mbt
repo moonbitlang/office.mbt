@@ -33,15 +33,15 @@ fn[T] pdf_print_tree_root_to_buffer(
   get_name : (T) -> String,
   get_children : (T) -> Array[T],
 ) -> Unit {
-  output.write_string(get_name(value))
-  output.write_string("\n")
+  output.write_string_utf16le(get_name(value))
+  output.write_string_utf16le("\n")
   let children = get_children(value)
   for index in 0..<children.length() {
     let is_last = index + 1 == children.length()
     let line = if is_last { "└── " } else { "├── " }
     let extra_indent = if is_last { "    " } else { "│   " }
-    output.write_string(indent)
-    output.write_string(line)
+    output.write_string_utf16le(indent)
+    output.write_string_utf16le(line)
     pdf_print_tree_root_to_buffer(
       output,
       indent + extra_indent,
@@ -61,7 +61,7 @@ pub fn[T] pdf_print_tree_to_buffer(
   get_children : (T) -> Array[T],
   line_prefix? : String = "",
 ) -> Unit {
-  output.write_string(line_prefix)
+  output.write_string_utf16le(line_prefix)
   pdf_print_tree_root_to_buffer(
     output, line_prefix, value, get_name, get_children,
   )

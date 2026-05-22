@@ -344,7 +344,7 @@ fn PdfDocument::pdf_bookmark_json_mark(
 ) -> Json raise PdfError {
   let page_number = self.page_number_of_target(bookmark.target)
   Json::object(
-    Map::of([
+    Map([
       ("level", pdf_util_json_number(bookmark.level)),
       ("text", Json::string(pdf_bookmark_json_text(bookmark.text))),
       ("page", pdf_util_json_number(page_number)),

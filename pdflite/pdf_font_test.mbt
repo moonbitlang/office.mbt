@@ -559,7 +559,7 @@ test "PdfDocument font listing renders text and JSON" {
   @test.assert_eq(wrapped_text, text)
   let expected = Json::array([
     Json::object(
-      Map::of([
+      Map([
         ("page", font_json_int_for_test(1)),
         ("name", Json::string("/F1")),
         ("subtype", Json::string("/Type1")),
@@ -568,7 +568,7 @@ test "PdfDocument font listing renders text and JSON" {
       ]),
     ),
     Json::object(
-      Map::of([
+      Map([
         ("page", font_json_int_for_test(1)),
         ("name", Json::string("/Fm1/F2")),
         ("subtype", Json::string("/TrueType")),
@@ -577,7 +577,7 @@ test "PdfDocument font listing renders text and JSON" {
       ]),
     ),
     Json::object(
-      Map::of([
+      Map([
         ("page", font_json_int_for_test(1)),
         ("name", Json::string("/Fm1/FmNested/F3")),
         ("subtype", Json::null()),

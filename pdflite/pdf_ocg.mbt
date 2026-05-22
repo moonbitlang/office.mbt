@@ -989,7 +989,7 @@ fn pdf_ocg_json_order(
     let (name, ocgs) = item
     output.push(
       Json::object(
-        Map::of([
+        Map([
           ("Name", pdf_ocg_json_optional_string(name)),
           ("OCGs", pdf_ocg_json_ints(ocgs)),
         ]),
@@ -1021,7 +1021,7 @@ fn pdf_ocg_json_radio_groups(groups : Array[Array[Int]]?) -> Json {
 ///|
 fn pdf_ocg_json_appdict(appdict : PdfOcgAppDict) -> Json raise PdfError {
   Json::object(
-    Map::of([
+    Map([
       ("Event", pdf_ocg_json_event(appdict.event)),
       ("OCGs", pdf_ocg_json_ints(appdict.ocgs)),
       ("Category", pdf_ocg_json_names(appdict.category)),
@@ -1043,7 +1043,7 @@ fn pdf_ocg_json_appdicts(
 ///|
 fn pdf_ocg_json_config(config : PdfOcgConfig) -> Json raise PdfError {
   Json::object(
-    Map::of([
+    Map([
       ("Name", pdf_ocg_json_optional_string(config.name)),
       ("Creator", pdf_ocg_json_optional_string(config.creator)),
       ("BaseState", pdf_ocg_json_state(config.base_state)),
@@ -1062,7 +1062,7 @@ fn pdf_ocg_json_config(config : PdfOcgConfig) -> Json raise PdfError {
 ///|
 fn pdf_ocg_json_usage(usage : PdfOcgUsage) -> Json raise PdfError {
   Json::object(
-    Map::of([
+    Map([
       (
         "CreatorInfo-Creator",
         match usage.creator_info {
@@ -1130,7 +1130,7 @@ fn pdf_ocg_json_optional_usage(usage : PdfOcgUsage?) -> Json raise PdfError {
 ///|
 fn pdf_ocg_json_ocg(ocg : PdfOcg) -> Json raise PdfError {
   Json::object(
-    Map::of([
+    Map([
       ("Name", pdf_ocg_json_string(ocg.name)),
       ("Intent", pdf_ocg_json_names(ocg.intent)),
       ("Usage", pdf_ocg_json_optional_usage(ocg.usage)),
@@ -1166,7 +1166,7 @@ pub fn PdfDocument::ocg_list_json(self : PdfDocument) -> Json raise PdfError {
     None => Json::null()
     Some(content) =>
       Json::object(
-        Map::of([
+        Map([
           ("OCGs", pdf_ocg_json_ocgs(content.ocgs)),
           ("Default", pdf_ocg_json_config(content.default_config)),
           ("Configs", pdf_ocg_json_configs(content.configs)),

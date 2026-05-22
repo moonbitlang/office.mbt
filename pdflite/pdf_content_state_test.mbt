@@ -78,10 +78,10 @@ test "cpdfcontent state exposes initial content states" {
     10.0, 20.0, 110.0, 220.0,
   )
   let dash_json = Json::object(
-    Map::of([("array", Json::array([])), ("phase", Json::number(0.0))]),
+    Map([("array", Json::array([])), ("phase", Json::number(0.0))]),
   )
   let path_expected = Json::object(
-    Map::of([
+    Map([
       ("clipping path", content_state_initial_clipping_json_for_test()),
       ("colourspace stroke", Json::string("DeviceGray")),
       ("colourspace non stroke", Json::string("DeviceGray")),
@@ -98,9 +98,7 @@ test "cpdfcontent state exposes initial content states" {
   @test.assert_eq(
     @pdflite.pdf_content_initial_clipping_state(10.0, 20.0, 110.0, 220.0).content_json(),
     Json::object(
-      Map::of([
-        ("clipping path", content_state_initial_clipping_json_for_test()),
-      ]),
+      Map([("clipping path", content_state_initial_clipping_json_for_test())]),
     ),
   )
   let glyph_state = @pdflite.pdf_content_initial_glyph_state(
@@ -127,7 +125,7 @@ test "cpdfcontent state derives JSON-facing states from operator state" {
   @test.assert_eq(
     clipping_state.content_json(),
     Json::object(
-      Map::of([("clipping path", content_state_clipping_json_for_test())]),
+      Map([("clipping path", content_state_clipping_json_for_test())]),
     ),
   )
   let path_state = @pdflite.pdf_content_initial_path_state(0.0, 0.0, 10.0, 10.0).content_with_clipping_path(
@@ -243,7 +241,7 @@ test "cpdfcontent state serializes path drawing state JSON" {
     rendering_intent: "/RelativeColorimetric",
   }
   let dash_json = Json::object(
-    Map::of([
+    Map([
       ("array", Json::array([Json::number(3.0), Json::number(1.5)])),
       ("phase", Json::number(0.25)),
     ]),
@@ -254,7 +252,7 @@ test "cpdfcontent state serializes path drawing state JSON" {
     dash_json,
   )
   let expected = Json::object(
-    Map::of([
+    Map([
       ("clipping path", content_state_clipping_json_for_test()),
       ("colourspace stroke", Json::string("DeviceRGB")),
       ("colourspace non stroke", Json::string("PatternWithBaseColourspace")),
@@ -284,7 +282,7 @@ test "cpdfcontent state serializes glyph and clipping-only state JSON" {
     clipping_path: [clipping_path],
   }
   let clipping_expected = Json::object(
-    Map::of([("clipping path", content_state_clipping_json_for_test())]),
+    Map([("clipping path", content_state_clipping_json_for_test())]),
   )
   @test.assert_eq(clipping_state.content_json(), clipping_expected)
   @test.assert_eq(
@@ -299,7 +297,7 @@ test "cpdfcontent state serializes glyph and clipping-only state JSON" {
     clipping_path: [clipping_path],
   }
   let glyph_expected = Json::object(
-    Map::of([
+    Map([
       ("rendering mode", content_state_json_int_for_test(3)),
       ("knockout", Json::boolean(true)),
       ("font", Json::string("/F1")),
@@ -325,7 +323,7 @@ test "cpdfcontent state serializes content object JSON" {
     (
       PdfContentGlyphObject(65, "A", "A"),
       Json::object(
-        Map::of([
+        Map([
           ("obj", Json::string("glyph")),
           ("charcode", content_state_json_int_for_test(65)),
           ("bytes", Json::string("A")),
@@ -336,7 +334,7 @@ test "cpdfcontent state serializes content object JSON" {
     (
       PdfContentInlineImageObject,
       Json::object(
-        Map::of([
+        Map([
           ("obj", Json::string("inline image")),
           ("inline image", Json::null()),
         ]),
@@ -345,18 +343,18 @@ test "cpdfcontent state serializes content object JSON" {
     (
       PdfContentImageObject("Im1"),
       Json::object(
-        Map::of([("obj", Json::string("image")), ("image", Json::string("Im1"))]),
+        Map([("obj", Json::string("image")), ("image", Json::string("Im1"))]),
       ),
     ),
     (
       PdfContentPathObject(drawn),
       Json::object(
-        Map::of([
+        Map([
           ("obj", Json::string("path")),
           (
             "path",
             Json::object(
-              Map::of([
+              Map([
                 ("winding", Json::string("non-zero")),
                 (
                   "subpaths",
@@ -385,10 +383,7 @@ test "cpdfcontent state serializes content object JSON" {
     (
       PdfContentShadingObject("Sh1"),
       Json::object(
-        Map::of([
-          ("obj", Json::string("shading")),
-          ("shading", Json::string("Sh1")),
-        ]),
+        Map([("obj", Json::string("shading")), ("shading", Json::string("Sh1"))]),
       ),
     ),
   ]
@@ -406,7 +401,7 @@ test "cpdfcontent state serializes content JSON entries" {
   }
   let state : @pdflite.PdfContentState = PdfContentStateClipping(clipping_state)
   let state_json = Json::object(
-    Map::of([("clipping path", content_state_clipping_json_for_test())]),
+    Map([("clipping path", content_state_clipping_json_for_test())]),
   )
   @test.assert_eq(state.content_json(), state_json)
   @test.assert_eq(@pdflite.pdf_content_state_content_json(state), state_json)
@@ -441,14 +436,11 @@ test "cpdfcontent state serializes content JSON entries" {
     bounding_box: bbox,
   }
   let entry_json = Json::object(
-    Map::of([
+    Map([
       (
         "object",
         Json::object(
-          Map::of([
-            ("obj", Json::string("image")),
-            ("image", Json::string("Im1")),
-          ]),
+          Map([("obj", Json::string("image")), ("image", Json::string("Im1"))]),
         ),
       ),
       ("state", state_json),

@@ -130,7 +130,7 @@ fn pdf_page_info_box_json(box : Array[Double]?) -> Json {
 ///|
 fn pdf_page_info_entry_json(entry : PdfPageInfoEntry) -> Json {
   Json::object(
-    Map::of([
+    Map([
       ("Page", pdf_util_json_number(entry.page_number)),
       ("Label", Json::string(entry.label)),
       ("MediaBox", pdf_page_info_box_json(entry.mediabox)),

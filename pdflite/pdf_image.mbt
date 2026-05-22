@@ -1514,7 +1514,7 @@ fn PdfDocument::pdf_image_collect_page_images(
 fn pdf_image_list_entry_json(entry : PdfImageListEntry) -> Json {
   entry.pages.sort()
   Json::object(
-    Map::of([
+    Map([
       ("Object", pdf_image_json_int(entry.object_number)),
       (
         "Pages",
@@ -1959,7 +1959,7 @@ fn pdf_image_resolution_entry_json(
   entry : (Int, String, Int, Int, Double, Double, Int),
 ) -> Json {
   Json::object(
-    Map::of([
+    Map([
       ("Object", pdf_image_json_int(entry.6)),
       ("Page", pdf_image_json_int(entry.0)),
       ("XObject", Json::string(entry.1)),

@@ -52,7 +52,7 @@ pub(all) struct PdfDrawnPath {
 ///|
 fn pdf_path_point_content_json(point : Point2) -> Json {
   Json::object(
-    Map::of([("x", Json::number(point.x)), ("y", Json::number(point.y))]),
+    Map([("x", Json::number(point.x)), ("y", Json::number(point.y))]),
   )
 }
 
@@ -62,7 +62,7 @@ pub fn PdfPathSegment::content_json(self : PdfPathSegment) -> Json {
   match self {
     PdfPathStraight(start, finish) =>
       Json::object(
-        Map::of([
+        Map([
           (
             "line",
             Json::array([
@@ -74,7 +74,7 @@ pub fn PdfPathSegment::content_json(self : PdfPathSegment) -> Json {
       )
     PdfPathBezier(start, control1, control2, finish) =>
       Json::object(
-        Map::of([
+        Map([
           (
             "bezier",
             Json::array([
@@ -101,7 +101,7 @@ pub fn pdf_path_segment_content_json(segment : PdfPathSegment) -> Json {
 /// The hole flag is intentionally not emitted, matching `cpdfcontent.ml`.
 pub fn PdfPathSubpath::content_json(self : PdfPathSubpath) -> Json {
   Json::object(
-    Map::of([
+    Map([
       ("closed", Json::boolean(self.closure == PdfPathClosed)),
       (
         "segments",
@@ -129,7 +129,7 @@ fn pdf_path_winding_rule_content_string(rule : PdfPathWindingRule) -> String {
 /// Return cpdfcontent's JSON shape for a drawn path.
 pub fn PdfDrawnPath::content_json(self : PdfDrawnPath) -> Json {
   Json::object(
-    Map::of([
+    Map([
       (
         "winding",
         Json::string(

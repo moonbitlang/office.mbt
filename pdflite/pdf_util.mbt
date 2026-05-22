@@ -163,16 +163,15 @@ fn PdfDocument::pdf_util_json_of_object(
   match object {
     PdfNull => Json::null()
     PdfBoolean(value) => Json::boolean(value)
-    PdfInteger(value) =>
-      Json::object(Map::of([("I", pdf_util_json_number(value))]))
-    PdfReal(value) => Json::object(Map::of([("F", Json::number(value))]))
+    PdfInteger(value) => Json::object(Map([("I", pdf_util_json_number(value))]))
+    PdfReal(value) => Json::object(Map([("F", Json::number(value))]))
     PdfString(bytes) =>
       if utf8 {
         let utf8_bytes = pdf_utf8_of_pdfdocstring(bytes) catch {
           _ => return Json::string(pdf_util_string_from_bytes(bytes))
         }
         Json::object(
-          Map::of([("U", Json::string(pdf_util_string_from_utf8(utf8_bytes)))]),
+          Map([("U", Json::string(pdf_util_string_from_utf8(utf8_bytes)))]),
         )
       } else if clean_strings {
         let simplified = pdf_simplify_utf16be(bytes) catch { _ => bytes }
@@ -181,9 +180,7 @@ fn PdfDocument::pdf_util_json_of_object(
         Json::string(pdf_util_string_from_bytes(bytes))
       }
     PdfNameObject(name) =>
-      Json::object(
-        Map::of([("N", Json::string(pdf_util_string_from_name(name)))]),
-      )
+      Json::object(Map([("N", Json::string(pdf_util_string_from_name(name)))]))
     PdfArray(values) => {
       let json_values : Array[Json] = []
       for value in values {
@@ -231,7 +228,7 @@ fn PdfDocument::pdf_util_json_of_object(
         Json::string(pdf_util_string_from_bytes(stream_data))
       }
       Json::object(
-        Map::of([
+        Map([
           (
             "S",
             Json::array([
@@ -382,12 +379,12 @@ fn pdf_util_json_op_floats(
 
 ///|
 fn pdf_util_json_float_object(value : Double) -> Json {
-  Json::object(Map::of([("F", Json::number(value))]))
+  Json::object(Map([("F", Json::number(value))]))
 }
 
 ///|
 fn pdf_util_json_int_object(value : Int) -> Json {
-  Json::object(Map::of([("I", pdf_util_json_number(value))]))
+  Json::object(Map([("I", pdf_util_json_number(value))]))
 }
 
 ///|
@@ -1352,7 +1349,7 @@ fn PdfDocument::pdf_util_json_of_parsed_content_stream(
         op_jsons.push(self.pdf_util_json_of_content_op(op, utf8))
       }
       Json::object(
-        Map::of([
+        Map([
           (
             "S",
             Json::array([

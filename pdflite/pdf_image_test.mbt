@@ -44,7 +44,7 @@ fn image_json_entry_for_test(
   mask_object_number : Int?,
 ) -> Json {
   Json::object(
-    Map::of([
+    Map([
       ("Object", image_json_int_for_test(object_number)),
       (
         "Pages",
@@ -78,7 +78,7 @@ fn image_resolution_json_entry_for_test(
   ydpi : Double,
 ) -> Json {
   Json::object(
-    Map::of([
+    Map([
       ("Object", image_json_int_for_test(object_number)),
       ("Page", image_json_int_for_test(page_number)),
       ("XObject", Json::string(xobject)),

@@ -54,17 +54,17 @@ fn annotation_json_int_for_test(value : Int) -> Json {
 
 ///|
 fn annotation_json_pdf_int_for_test(value : Int) -> Json {
-  Json::object(Map::of([("I", annotation_json_int_for_test(value))]))
+  Json::object(Map([("I", annotation_json_int_for_test(value))]))
 }
 
 ///|
 fn annotation_json_name_for_test(name : String) -> Json {
-  Json::object(Map::of([("N", Json::string(name))]))
+  Json::object(Map([("N", Json::string(name))]))
 }
 
 ///|
 fn annotation_json_text_for_test(text : String) -> Json {
-  Json::object(Map::of([("U", Json::string(text))]))
+  Json::object(Map([("U", Json::string(text))]))
 }
 
 ///|
@@ -72,9 +72,7 @@ fn annotation_json_header_for_test() -> Json {
   Json::array([
     annotation_json_int_for_test(-1),
     Json::object(
-      Map::of([
-        ("/CPDFJSONannotformatversion", annotation_json_pdf_int_for_test(1)),
-      ]),
+      Map([("/CPDFJSONannotformatversion", annotation_json_pdf_int_for_test(1))]),
     ),
   ])
 }
@@ -195,13 +193,13 @@ test "PdfDocument list_annotations renders selected non-empty old-style lines" {
 test "PdfDocument annotations_json exports cpdf annotation rows" {
   let document = annotation_json_helper_document_for_test()
   let expected_annotation = Json::object(
-    Map::of([
+    Map([
       ("/Contents", annotation_json_text_for_test("json")),
       ("/P", annotation_json_pdf_int_for_test(2)),
       (
         "/A",
         Json::object(
-          Map::of([
+          Map([
             (
               "/D",
               Json::array([
@@ -218,7 +216,7 @@ test "PdfDocument annotations_json exports cpdf annotation rows" {
     ]),
   )
   let expected_destination_annotation = Json::object(
-    Map::of([
+    Map([
       ("/Contents", annotation_json_text_for_test("dest")),
       (
         "/Dest",
@@ -230,7 +228,7 @@ test "PdfDocument annotations_json exports cpdf annotation rows" {
     ]),
   )
   let expected_extra = Json::object(
-    Map::of([("/Extra", annotation_json_text_for_test("kept"))]),
+    Map([("/Extra", annotation_json_text_for_test("kept"))]),
   )
   let expected = Json::array([
     annotation_json_header_for_test(),

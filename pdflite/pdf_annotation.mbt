@@ -968,10 +968,10 @@ fn pdf_annotation_json_format_header() -> Json {
   Json::array([
     pdf_util_json_number(-1),
     Json::object(
-      Map::of([
+      Map([
         (
           "/CPDFJSONannotformatversion",
-          Json::object(Map::of([("I", pdf_util_json_number(1))])),
+          Json::object(Map([("I", pdf_util_json_number(1))])),
         ),
       ]),
     ),

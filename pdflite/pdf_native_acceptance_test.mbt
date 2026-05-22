@@ -3202,7 +3202,7 @@ fn acceptance_matterhorn_cmap_typo_document_for_test() -> @pdflite.PdfDocument r
 ///|
 fn acceptance_matterhorn_31_006_cmap_failure_for_test(name : String) -> Json {
   Json::object(
-    Map::of([
+    Map([
       ("name", Json::string("31-006")),
       ("section", Json::string("UA1:7.21.3.3-1")),
       (
@@ -3219,7 +3219,7 @@ fn acceptance_matterhorn_31_006_cmap_failure_for_test(name : String) -> Json {
 ///|
 fn acceptance_matterhorn_31_008_cmap_failure_for_test(name : String) -> Json {
   Json::object(
-    Map::of([
+    Map([
       ("name", Json::string("31-008")),
       ("section", Json::string("UA1:7.21.3.3-2")),
       (

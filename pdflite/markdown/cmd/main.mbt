@@ -1,21 +1,17 @@
 ///|
 fn markdown_cmd_command() -> @argparse.Command {
-  @argparse.Command(
-    "pdflite-markdown",
-    about="Extract Markdown text from a PDF file.",
-    positionals=[
-      @argparse.PositionArg(
-        "input",
-        about="Input PDF path.",
-        num_args=@argparse.ValueRange::single(),
-      ),
-      @argparse.PositionArg(
-        "output",
-        about="Output Markdown path.",
-        num_args=@argparse.ValueRange::single(),
-      ),
-    ],
-  )
+  Command("pdflite-markdown", about="Extract Markdown text from a PDF file.", positionals=[
+    PositionArg(
+      "input",
+      about="Input PDF path.",
+      num_args=@argparse.ValueRange::single(),
+    ),
+    PositionArg(
+      "output",
+      about="Output Markdown path.",
+      num_args=@argparse.ValueRange::single(),
+    ),
+  ])
 }
 
 ///|

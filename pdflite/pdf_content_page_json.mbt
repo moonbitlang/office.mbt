@@ -173,7 +173,7 @@ pub fn PdfDocument::page_content_json(
     if pdf_content_page_contains(page_numbers, page_number) {
       output.push(
         Json::object(
-          Map::of([
+          Map([
             ("page", pdf_content_page_number_json(page_number)),
             ("contents", self.content_json_of_page(pages[index])),
           ]),

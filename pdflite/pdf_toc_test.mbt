@@ -661,7 +661,7 @@ test "PdfDocument toc_with_source handles cpdftoc font-source dispatch" {
   let pack = toc_standard_pack_for_test()
   let title = toc_bytes_for_test("Contents")
   let updated = try! document.toc_with_source(
-    @pdflite.PdfTocPreMadeFontPack(pack),
+    PdfTocPreMadeFontPack(pack),
     10.0,
     title,
   )
@@ -675,7 +675,7 @@ test "PdfDocument toc_with_source handles cpdftoc font-source dispatch" {
   )
   let wrapped = try! @pdflite.pdf_toc_with_source(
     document,
-    @pdflite.PdfTocPreMadeFontPack(pack),
+    PdfTocPreMadeFontPack(pack),
     10.0,
     title,
   )

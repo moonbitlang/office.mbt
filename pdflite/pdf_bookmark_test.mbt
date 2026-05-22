@@ -35,12 +35,12 @@ fn bookmark_json_int_for_test(value : Int) -> Json {
 
 ///|
 fn bookmark_json_pdf_int_for_test(value : Int) -> Json {
-  Json::object(Map::of([("I", bookmark_json_int_for_test(value))]))
+  Json::object(Map([("I", bookmark_json_int_for_test(value))]))
 }
 
 ///|
 fn bookmark_json_name_for_test(name : String) -> Json {
-  Json::object(Map::of([("N", Json::string(name))]))
+  Json::object(Map([("N", Json::string(name))]))
 }
 
 ///|
@@ -286,7 +286,7 @@ test "PdfDocument list_bookmarks escapes cpdf backslash titles" {
 test "PdfDocument bookmarks_json exports cpdf bookmark rows" {
   let document = try! bookmark_listing_document_for_test()
   let top_row = Json::object(
-    Map::of([
+    Map([
       ("level", bookmark_json_int_for_test(0)),
       ("text", Json::string("Top\nQuote\"")),
       ("page", bookmark_json_int_for_test(1)),
@@ -307,7 +307,7 @@ test "PdfDocument bookmarks_json exports cpdf bookmark rows" {
     ]),
   )
   let child_row = Json::object(
-    Map::of([
+    Map([
       ("level", bookmark_json_int_for_test(1)),
       ("text", Json::string("Child")),
       ("page", bookmark_json_int_for_test(2)),
@@ -317,8 +317,8 @@ test "PdfDocument bookmarks_json exports cpdf bookmark rows" {
         Json::array([
           bookmark_json_pdf_int_for_test(2),
           bookmark_json_name_for_test("/XYZ"),
-          Json::object(Map::of([("F", Json::number(1.0))])),
-          Json::object(Map::of([("F", Json::number(2.0))])),
+          Json::object(Map([("F", Json::number(1.0))])),
+          Json::object(Map([("F", Json::number(2.0))])),
           Json::null(),
         ]),
       ),
@@ -331,7 +331,7 @@ test "PdfDocument bookmarks_json exports cpdf bookmark rows" {
     ]),
   )
   let named_row = Json::object(
-    Map::of([
+    Map([
       ("level", bookmark_json_int_for_test(0)),
       ("text", Json::string("Named")),
       ("page", bookmark_json_int_for_test(0)),
@@ -505,7 +505,7 @@ test "PdfDocument parse_bookmark_json reads cpdf bookmark rows" {
   let page_refs = try! document.page_reference_numbers()
   let json = Json::array([
     Json::object(
-      Map::of([
+      Map([
         ("level", bookmark_json_int_for_test(0)),
         ("text", Json::string("Top")),
         ("page", bookmark_json_int_for_test(1)),
@@ -526,7 +526,7 @@ test "PdfDocument parse_bookmark_json reads cpdf bookmark rows" {
       ]),
     ),
     Json::object(
-      Map::of([
+      Map([
         ("level", bookmark_json_int_for_test(1)),
         ("text", Json::string("Child")),
         ("page", bookmark_json_int_for_test(2)),
@@ -536,9 +536,9 @@ test "PdfDocument parse_bookmark_json reads cpdf bookmark rows" {
           Json::array([
             bookmark_json_pdf_int_for_test(2),
             bookmark_json_name_for_test("/XYZ"),
-            Json::object(Map::of([("F", Json::number(10.0))])),
+            Json::object(Map([("F", Json::number(10.0))])),
             Json::null(),
-            Json::object(Map::of([("F", Json::number(2.0))])),
+            Json::object(Map([("F", Json::number(2.0))])),
           ]),
         ),
         (
@@ -550,7 +550,7 @@ test "PdfDocument parse_bookmark_json reads cpdf bookmark rows" {
       ]),
     ),
     Json::object(
-      Map::of([
+      Map([
         ("level", bookmark_json_int_for_test(0)),
         ("text", Json::string("Named")),
         ("page", bookmark_json_int_for_test(0)),
@@ -615,9 +615,7 @@ test "PdfDocument parse_bookmark_json rejects malformed rows" {
     fail("expected @pdflite.PdfError::SoftError for top-level object")
   }
   let malformed_row : Result[Array[@pdflite.PdfBookmark], Error] = try? document.parse_bookmark_json(
-    Json::array([
-      Json::object(Map::of([("level", bookmark_json_int_for_test(0))])),
-    ]),
+    Json::array([Json::object(Map([("level", bookmark_json_int_for_test(0))]))]),
   )
   guard malformed_row is Err(@pdflite.PdfError::SoftError(_)) else {
     fail("expected @pdflite.PdfError::SoftError for malformed row")

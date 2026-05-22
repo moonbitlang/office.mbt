@@ -1309,7 +1309,7 @@ fn pdf_ua_matterhorn_failure(
 ///|
 fn PdfUAMatterhornFailure::to_json(self : PdfUAMatterhornFailure) -> Json {
   Json::object(
-    Map::of([
+    Map([
       ("name", Json::string(self.name)),
       ("section", Json::string(self.section)),
       ("error", Json::string(self.error)),

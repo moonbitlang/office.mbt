@@ -312,18 +312,18 @@ test "PdfDocument json_of_object exposes cpdf single-object dictionary shape" {
     (key_number, PdfInteger(7)),
   ])
   let expected = Json::object(
-    Map::of([
+    Map([
       (
         "/Array",
         Json::array([
           Json::boolean(true),
           Json::null(),
-          Json::object(Map::of([("F", Json::number(1.5))])),
+          Json::object(Map([("F", Json::number(1.5))])),
           Json::number(8.0, repr="8"),
         ]),
       ),
-      ("/Name", Json::object(Map::of([("N", Json::string("/Value"))]))),
-      ("/Number", Json::object(Map::of([("I", Json::number(7.0, repr="7"))]))),
+      ("/Name", Json::object(Map([("N", Json::string("/Value"))]))),
+      ("/Number", Json::object(Map([("I", Json::number(7.0, repr="7"))]))),
     ]),
   )
 
@@ -340,15 +340,15 @@ test "PdfDocument json_of_object emits streams and utf8 string wrappers" {
     StreamGot(@ascii.encode("payload")),
   )
   let stream_expected = Json::object(
-    Map::of([
+    Map([
       (
         "S",
         Json::array([
           Json::object(
-            Map::of([
+            Map([
               (
                 "/Other",
-                Json::object(Map::of([("I", Json::number(1.0, repr="1"))])),
+                Json::object(Map([("I", Json::number(1.0, repr="1"))])),
               ),
             ]),
           ),
@@ -357,7 +357,7 @@ test "PdfDocument json_of_object emits streams and utf8 string wrappers" {
       ),
     ]),
   )
-  let utf8_expected = Json::object(Map::of([("U", Json::string("hello"))]))
+  let utf8_expected = Json::object(Map([("U", Json::string("hello"))]))
 
   @test.assert_eq(try! doc.json_of_object(stream), stream_expected)
   @test.assert_eq(
@@ -392,7 +392,7 @@ test "PdfDocument CPDFJSON output honors clean_strings option" {
       utf8=true,
       clean_strings=true,
     ),
-    Json::object(Map::of([("U", Json::string("AB"))])),
+    Json::object(Map([("U", Json::string("AB"))])),
   )
 
   let key_root = util_name_for_test("/Root")
@@ -449,7 +449,7 @@ test "PdfDocument CPDFJSON output honors no_stream_data option" {
   }
   @test.assert_eq(
     dict_entries.get("/Other"),
-    Some(Json::object(Map::of([("I", Json::number(1.0, repr="1"))]))),
+    Some(Json::object(Map([("I", Json::number(1.0, repr="1"))]))),
   )
 
   let document = try! @pdflite.pdf_document_of_json(
@@ -568,11 +568,11 @@ test "PdfDocument CPDFJSON parse_content decodes function streams" {
   @test.assert_eq(decoded_dict.get("/Filter"), None)
   @test.assert_eq(
     decoded_dict.get("/FunctionType"),
-    Some(Json::object(Map::of([("I", Json::number(4.0, repr="4"))]))),
+    Some(Json::object(Map([("I", Json::number(4.0, repr="4"))]))),
   )
   @test.assert_eq(
     decoded_dict.get("/Length"),
-    Some(Json::object(Map::of([("I", Json::number(5.0, repr="5"))]))),
+    Some(Json::object(Map([("I", Json::number(5.0, repr="5"))]))),
   )
 
   let key_function = util_name_for_test("/Function")
@@ -647,7 +647,7 @@ test "PdfDocument CPDFJSON document output honors decompress_streams option" {
   }
   @test.assert_eq(
     raw_dict.get("/Filter"),
-    Some(Json::object(Map::of([("N", Json::string("/ASCIIHexDecode"))]))),
+    Some(Json::object(Map([("N", Json::string("/ASCIIHexDecode"))]))),
   )
 
   let decompressed = try! doc.json_of_document(decompress_streams=true)
@@ -666,7 +666,7 @@ test "PdfDocument CPDFJSON document output honors decompress_streams option" {
   @test.assert_eq(decoded_dict.get("/Filter"), None)
   @test.assert_eq(
     decoded_dict.get("/Length"),
-    Some(Json::object(Map::of([("I", Json::number(2.0, repr="2"))]))),
+    Some(Json::object(Map([("I", Json::number(2.0, repr="2"))]))),
   )
 
   let elided = try! doc.json_of_document(
@@ -683,7 +683,7 @@ test "PdfDocument CPDFJSON document output honors decompress_streams option" {
   @test.assert_eq(elided_dict.get("/Filter"), None)
   @test.assert_eq(
     elided_dict.get("/Length"),
-    Some(Json::object(Map::of([("I", Json::number(2.0, repr="2"))]))),
+    Some(Json::object(Map([("I", Json::number(2.0, repr="2"))]))),
   )
 }
 
@@ -1316,7 +1316,7 @@ test "pdf_get_dict_entries escapes malformed string and name bytes" {
     try! @ascii.decode(@pdflite.pdf_write_hex_string(malformed_string)),
   )
   let name_json = Json::object(
-    Map::of([
+    Map([
       (
         "N",
         Json::string(

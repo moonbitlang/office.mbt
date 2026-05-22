@@ -139,7 +139,7 @@ test "cpdfcontent page JSON serializes selected page contents" {
   let selected = try! document.page_content_json([1])
   let expected = Json::array([
     Json::object(
-      Map::of([
+      Map([
         ("page", content_page_json_number_for_test(1)),
         ("contents", first_json),
       ]),
@@ -152,13 +152,13 @@ test "cpdfcontent page JSON serializes selected page contents" {
     try! document.page_content_json([2, 1]),
     Json::array([
       Json::object(
-        Map::of([
+        Map([
           ("page", content_page_json_number_for_test(1)),
           ("contents", first_json),
         ]),
       ),
       Json::object(
-        Map::of([
+        Map([
           ("page", content_page_json_number_for_test(2)),
           ("contents", second_json),
         ]),

@@ -53,7 +53,7 @@ test "PdfDocument page_info_json reports selected pages in source range order" {
   let document = try! page_info_document_for_test()
   let expected = Json::array([
     Json::object(
-      Map::of([
+      Map([
         ("Page", page_info_number_for_test(2)),
         ("Label", Json::string("A-8")),
         ("MediaBox", page_info_box_for_test([0.0, 0.0, 1.0, 2.0])),
@@ -66,7 +66,7 @@ test "PdfDocument page_info_json reports selected pages in source range order" {
       ]),
     ),
     Json::object(
-      Map::of([
+      Map([
         ("Page", page_info_number_for_test(1)),
         ("Label", Json::string("A-7")),
         ("MediaBox", page_info_box_for_test([0.0, 0.0, 1.0, 2.0])),

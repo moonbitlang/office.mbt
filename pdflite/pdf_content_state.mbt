@@ -441,7 +441,7 @@ pub fn PdfContentDashPattern::content_json(
   self : PdfContentDashPattern,
 ) -> Json {
   Json::object(
-    Map::of([
+    Map([
       ("array", Json::array([ for value in self.array => Json::number(value) ])),
       ("phase", Json::number(self.phase)),
     ]),
@@ -472,7 +472,7 @@ fn pdf_content_clipping_path_content_json(paths : ArrayView[PdfPath]) -> Json {
 /// Return cpdfcontent's JSON shape for path drawing state.
 pub fn PdfContentPathState::content_json(self : PdfContentPathState) -> Json {
   Json::object(
-    Map::of([
+    Map([
       (
         "clipping path",
         pdf_content_clipping_path_content_json(self.clipping_path),
@@ -502,7 +502,7 @@ pub fn PdfContentClippingState::content_json(
   self : PdfContentClippingState,
 ) -> Json {
   Json::object(
-    Map::of([
+    Map([
       (
         "clipping path",
         pdf_content_clipping_path_content_json(self.clipping_path),
@@ -523,7 +523,7 @@ pub fn pdf_content_clipping_state_content_json(
 /// Return cpdfcontent's JSON shape for glyph state.
 pub fn PdfContentGlyphState::content_json(self : PdfContentGlyphState) -> Json {
   Json::object(
-    Map::of([
+    Map([
       ("rendering mode", pdf_util_json_number(self.rendering_mode)),
       ("knockout", Json::boolean(self.knockout)),
       ("font", Json::string(self.font)),
@@ -550,7 +550,7 @@ pub fn PdfContentObject::content_json(self : PdfContentObject) -> Json {
   match self {
     PdfContentGlyphObject(charcode, bytes, extracted_text) =>
       Json::object(
-        Map::of([
+        Map([
           ("obj", Json::string("glyph")),
           ("charcode", pdf_util_json_number(charcode)),
           ("bytes", Json::string(bytes)),
@@ -559,25 +559,22 @@ pub fn PdfContentObject::content_json(self : PdfContentObject) -> Json {
       )
     PdfContentInlineImageObject =>
       Json::object(
-        Map::of([
+        Map([
           ("obj", Json::string("inline image")),
           ("inline image", Json::null()),
         ]),
       )
     PdfContentImageObject(name) =>
       Json::object(
-        Map::of([("obj", Json::string("image")), ("image", Json::string(name))]),
+        Map([("obj", Json::string("image")), ("image", Json::string(name))]),
       )
     PdfContentPathObject(path) =>
       Json::object(
-        Map::of([("obj", Json::string("path")), ("path", path.content_json())]),
+        Map([("obj", Json::string("path")), ("path", path.content_json())]),
       )
     PdfContentShadingObject(name) =>
       Json::object(
-        Map::of([
-          ("obj", Json::string("shading")),
-          ("shading", Json::string(name)),
-        ]),
+        Map([("obj", Json::string("shading")), ("shading", Json::string(name))]),
       )
   }
 }
@@ -633,7 +630,7 @@ pub fn pdf_content_bounding_box_content_json(
 /// Return cpdfcontent's JSON shape for one content-list entry.
 pub fn PdfContentJsonEntry::content_json(self : PdfContentJsonEntry) -> Json {
   Json::object(
-    Map::of([
+    Map([
       ("object", self.object.content_json()),
       ("state", self.state.content_json()),
       ("bbox", self.bounding_box.content_json()),

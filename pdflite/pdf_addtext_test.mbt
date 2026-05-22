@@ -1689,7 +1689,7 @@ test "PdfDocument addtexts_with_source uses first premade fontpack font" {
     "A",
     addtext_process_time_for_test(),
     [],
-    @pdflite.PdfAddTextPreMadeFontPack(pack),
+    PdfAddTextPreMadeFontPack(pack),
     addtext_name_for_test("/Helvetica"),
     10.0,
     1.0,
@@ -1748,7 +1748,7 @@ test "PdfDocument addtexts_with_source delegates existing named fonts" {
     "Aé☃",
     addtext_process_time_for_test(),
     [],
-    @pdflite.PdfAddTextExistingNamedFont,
+    PdfAddTextExistingNamedFont,
     basefont,
     10.0,
     1.0,
@@ -1792,7 +1792,7 @@ test "pdf_addtexts_with_source skips empty visible text before resolving sources
     "%URL[|https://example.test]",
     addtext_process_time_for_test(),
     [],
-    @pdflite.PdfAddTextPreMadeFontPack(empty_pack),
+    PdfAddTextPreMadeFontPack(empty_pack),
     addtext_name_for_test("/Helvetica"),
     10.0,
     1.0,
@@ -1814,7 +1814,7 @@ test "pdf_addtexts_with_source rejects empty premade fontpacks" {
     "A",
     addtext_process_time_for_test(),
     [],
-    @pdflite.PdfAddTextPreMadeFontPack(empty_pack),
+    PdfAddTextPreMadeFontPack(empty_pack),
     addtext_name_for_test("/Helvetica"),
     10.0,
     1.0,
@@ -2212,9 +2212,9 @@ test "pdf_addtext_url_annotation_references wrapper propagates measure errors" {
     document,
     "ab",
     urls,
-    fn(prefix) raise @pdflite.PdfError {
+    fn(prefix) raise PdfError {
       if prefix.length() == 2 {
-        raise @pdflite.PdfError::SoftError("measure failed")
+        raise SoftError("measure failed")
       }
       prefix.length().to_double()
     },

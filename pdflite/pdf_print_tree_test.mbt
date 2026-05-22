@@ -43,8 +43,8 @@ test "pdf_print_tree_to_string applies a line prefix to every line" {
 
 ///|
 test "pdf_print_tree_to_buffer appends cpdf tree layout to existing buffer" {
-  let output = @buffer.new()
-  output.write_string("before\n")
+  let output = Buffer()
+  output.write_string_utf16le("before\n")
   @pdflite.pdf_print_tree_to_buffer(
     output,
     0,

@@ -493,7 +493,7 @@ fn pdf_ua_struct_tree_header(page_object_numbers : ArrayView[Int]) -> Json {
   Json::array([
     pdf_util_json_number(0),
     Json::object(
-      Map::of([
+      Map([
         ("/CPDFJSONformatversion", pdf_util_json_number(1)),
         (
           "/CPDFJSONpageobjnumbers",

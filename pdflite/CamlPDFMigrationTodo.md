@@ -7473,6 +7473,21 @@ Current backend snapshot:
   warning-73/main-package baseline with 10 warnings and 0 errors, and
   `moon check --target all --warn-list +73` reporting the same 10-warning
   baseline with 0 errors.~~
+- [x] ~~Restore clean validation on the MoonBit `moonc v0.9.3+43fd170a1`
+  toolchain: migrated the module manifest from deprecated `moon.mod.json` to
+  `moon.mod`, replaced deprecated `Map::of(...)` construction with `Map(...)`,
+  switched buffer text writes to explicit `Buffer()` /
+  `write_string_utf16le(...)` calls where `Buffer.to_string()` semantics are
+  required, and removed the remaining redundant warning-73 annotations.
+  Focused coverage reports `moon test --target native
+  pdf_print_tree_test.mbt` at 3/3 tests passing, `moon test --target native
+  markdown` at 42/42 tests passing, add-text source-dispatch focused coverage
+  at 4/4 tests passing, add-text measurement focused coverage at 1/1 test
+  passing, and TOC source-dispatch focused coverage at 1/1 test passing.
+  `moon check --target native --warn-list +73` and `moon check --target all
+  --warn-list +73` pass with no numbered diagnostics, aside from the tool's
+  future main-package blackbox-test notice for `markdown/cmd`, and `moon test
+  --target native` reports 2350/2350 tests passing.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.

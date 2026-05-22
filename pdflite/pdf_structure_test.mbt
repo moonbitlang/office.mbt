@@ -196,7 +196,7 @@ test "PdfDocument extract_struct_tree exports cpdf-style object graph JSON" {
     Json::array([
       structure_json_int_for_test(0),
       Json::object(
-        Map::of([
+        Map([
           ("/CPDFJSONformatversion", structure_json_int_for_test(1)),
           (
             "/CPDFJSONpageobjnumbers",

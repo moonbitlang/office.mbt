@@ -11,7 +11,7 @@ fn ua_matterhorn_failure_for_test(
   extra : Json,
 ) -> Json {
   Json::object(
-    Map::of([
+    Map([
       ("name", Json::string(name)),
       ("section", Json::string(section)),
       ("error", Json::string(error)),

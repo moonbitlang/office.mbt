@@ -10671,7 +10671,7 @@ fn fixture_acceptance_cpdf_source_matterhorn_cmap_failure_for_test(
   extra : String,
 ) -> Json {
   Json::object(
-    Map::of([
+    Map([
       ("name", Json::string(name)),
       ("section", Json::string(section)),
       ("error", Json::string(error)),
