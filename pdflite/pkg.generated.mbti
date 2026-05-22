@@ -1582,6 +1582,8 @@ pub fn pdf_truetype_loca_offsets(BytesView) -> Array[Int] raise @core.PdfError
 
 pub fn pdf_truetype_metrics(BytesView) -> PdfTrueTypeMetrics raise @core.PdfError
 
+pub fn pdf_truetype_partition_subsets(PdfEncoding, ArrayView[Int]) -> PdfTrueTypeSubsetPartition
+
 pub fn pdf_truetype_subset_cmap_table(BytesView, ArrayView[Int]) -> PdfTrueTypeSubsetTable raise @core.PdfError
 
 pub fn pdf_truetype_subset_font(BytesView, ArrayView[Int], rewrite_cmap? : Bool) -> Bytes raise @core.PdfError
@@ -1595,6 +1597,10 @@ pub fn pdf_truetype_subset_loca_table(BytesView, ArrayView[Int]) -> Bytes raise 
 pub fn pdf_truetype_table(BytesView, String) -> PdfTrueTypeTableRecord?
 
 pub fn pdf_truetype_tables(BytesView) -> Array[PdfTrueTypeTableRecord]
+
+pub fn pdf_truetype_widths(BytesView, PdfEncoding, Int, Int, ArrayView[Int]) -> Array[Int] raise @core.PdfError
+
+pub fn pdf_truetype_widths_higher(BytesView, Int, Int, ArrayView[Int]) -> Array[Int] raise @core.PdfError
 
 pub fn pdf_twoup(PdfDocument, fast? : Bool, process_struct_tree? : Bool) -> PdfDocument raise @core.PdfError
 
@@ -3959,6 +3965,11 @@ pub(all) struct PdfTrueTypeMetrics {
   num_of_long_hor_metrics : Int
   advance_widths : Array[Int]
   max_width : Int
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfTrueTypeSubsetPartition {
+  main_subset : Array[Int]
+  higher_subsets : Array[Array[Int]]
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfTrueTypeSubsetTable {

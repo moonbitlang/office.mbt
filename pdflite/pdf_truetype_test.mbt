@@ -356,6 +356,22 @@ fn truetype_subset_font_fixture_for_test() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn truetype_width_font_for_test() -> @pdflite.PdfBytes {
+  truetype_table_font_for_test([
+    ("head", truetype_head_table_for_test(2000, 0, 0, 1000, 1000, 1)),
+    ("maxp", truetype_maxp_table_for_test(6)),
+    ("hhea", truetype_hhea_table_for_test(3)),
+    ("hmtx", truetype_hmtx_table_for_test([1000, 1500, 1800])),
+    (
+      "cmap",
+      truetype_cmap_table_for_test([
+        (3, 1, truetype_format6_subtable_for_test(65, [1, 5])),
+      ]),
+    ),
+  ])
+}
+
+///|
 test "pdf_truetype_cmaps returns cmap platform encoding pairs" {
   let font = truetype_bytes_for_test([
     0x00, 0x01, 0x00, 0x00, // scaler type
@@ -470,6 +486,69 @@ test "pdf_truetype_metrics mirrors source optional hhea default" {
     advance_widths: [],
     max_width: 0,
   })
+}
+
+///|
+test "pdf_truetype_widths maps encoding codes through cmap and hmtx" {
+  let font = truetype_width_font_for_test()
+  @test.assert_eq(
+    try! @pdflite.pdf_truetype_widths(font, PdfWinAnsiEncoding, 65, 67, [65, 66]),
+    [
+      750, // U+0041 maps to glyph 1, width 1500 at 2000 units/em.
+       900, // U+0042 maps beyond hmtx, so cpdf uses the final hmtx width.
+       0, // U+0043 is not in the main subset.
+    ],
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_truetype_widths(font, PdfWinAnsiEncoding, 67, 67, [67]),
+    [1000],
+  )
+  let reversed : Result[Array[Int], Error] = try? @pdflite.pdf_truetype_widths(
+    font,
+    PdfWinAnsiEncoding,
+    68,
+    67,
+    [68],
+  )
+  guard reversed is Err(@pdflite.PdfError::SoftError("lastchar < firstchar")) else {
+    fail("expected reversed character range to fail")
+  }
+}
+
+///|
+test "pdf_truetype_widths_higher uses positional subset codepoints" {
+  @test.assert_eq(
+    try! @pdflite.pdf_truetype_widths_higher(
+      truetype_width_font_for_test(),
+      33,
+      35,
+      [65, 66, 67],
+    ),
+    [750, 900, 1000],
+  )
+}
+
+///|
+test "pdf_truetype_partition_subsets mirrors source find_main" {
+  let partition = @pdflite.pdf_truetype_partition_subsets(PdfWinAnsiEncoding, [
+    65, 0x20AC, 66, 0x0100, 67,
+  ])
+  @test.assert_eq(partition.main_subset, [65, 66, 67])
+  @test.assert_eq(partition.higher_subsets, [[0x20AC, 0x0100]])
+
+  let values : Array[Int] = []
+  for index in 0..<225 {
+    values.push(300 + index)
+  }
+  let chunked = @pdflite.pdf_truetype_partition_subsets(
+    PdfImplicitInFontFile,
+    values,
+  )
+  let empty : Array[Int] = []
+  @test.assert_eq(chunked.main_subset, empty)
+  @test.assert_eq(chunked.higher_subsets.length(), 2)
+  @test.assert_eq(chunked.higher_subsets[0].length(), 224)
+  @test.assert_eq(chunked.higher_subsets[1], [524])
 }
 
 ///|

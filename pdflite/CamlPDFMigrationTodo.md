@@ -36,9 +36,10 @@ Current estimate:
   media-clip/file-attachment/PrinterMark/reference-XObject/MCID Form XObject/
   Type0 CIDSystemInfo/CIDToGIDMap/CMap-name/WMode/font-file no-op/TrueType
   encoding/cmap/ToUnicode validation, TrueType cmap glyph mapping plus
-  table/metric/descriptor/loca/composite-glyph parsing foundations and
-  subset `glyf`/`loca`/format-6 `cmap` table writers plus subset-font
-  table-directory assembly, imposition transform/content/page-assembly/
+  table/metric/descriptor/loca/composite-glyph parsing foundations,
+  subset `glyf`/`loca`/format-6 `cmap` table writers, subset-font
+  table-directory assembly, and width/subset partition helpers, imposition
+  transform/content/page-assembly/
   pattern-matrix kernels, cpdf page
   hard-box/removal/shift/scale/scale-to-fit/upright/set-mediabox/copy-box
   helpers and source-order compatibility aliases, imposition make-space
@@ -47,9 +48,9 @@ Current estimate:
 
 Current backend snapshot:
 
-- Native: full suite passes on MoonBit 0.9.3, currently 2395/2395 tests.
+- Native: full suite passes on MoonBit 0.9.3, currently 2398/2398 tests.
 - WasmGC and JavaScript: full portable non-native test suites pass on MoonBit
-  0.9.3, currently 2055/2055 on each backend after the latest source-corpus
+  0.9.3, currently 2058/2058 on each backend after the latest source-corpus
   recovery gates.
 - Wasm: current plain-Wasm smoke validation passes at 41/41 tests after
   filtering root's heavy package-level test files and the Markdown package
@@ -74,6 +75,21 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port the next `cpdftruetype` width/subset partition slice:
+  `PdfTrueTypeSubsetPartition`, `pdf_truetype_partition_subsets`,
+  `pdf_truetype_widths`, and `pdf_truetype_widths_higher` now cover the source
+  `find_main`, `calculate_widths`, and `calculate_width_higher` prerequisites.
+  The port preserves source ordering, chunks higher subsets at 224 codepoints,
+  maps selected-encoding PDF codes through glyph names to Unicode before cmap
+  lookup, emits zero widths for non-subset main codes, uses the final hmtx entry
+  for out-of-range glyph indexes, and preserves the source raw-first-hmtx
+  fallback for missing cmap mappings. This still does not complete ToUnicode
+  generation, the final parsed `Cpdftruetype.t` record surface, or full
+  `Cpdftruetype.parse`. Validation on MoonBit 0.9.3:
+  `moon test --target native pdf_truetype_test.mbt` reports 24/24;
+  `moon fmt`, `moon info`, and `moon check --target all --warn-list +73`
+  pass with only the existing `markdown/cmd` warning; full backend tests report
+  native 2398/2398, wasm-gc 2058/2058, and js 2058/2058.~~
 - [x] ~~Port the next `cpdftruetype` subset-font assembly slice:
   `pdf_truetype_subset_font` now wraps the already-ported `loca`, `glyf`, and
   format-6 `cmap` writers with source-style `subset_font` table-directory
