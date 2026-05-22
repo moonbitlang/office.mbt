@@ -7208,6 +7208,23 @@ Current backend snapshot:
   pending interface or formatting work, and `moon check --target all
   --warn-list +73` reports the known warning-73/main-package baseline with 7
   warnings and 0 errors.~~
+- [x] ~~Add the next source-corpus `Pdfpage.pdf_of_pages` slice: the native
+  `fixture_acceptance` package now also gates optional
+  `.repos/cpdf-source/cpdfmanual.pdf` through retained page extraction in
+  source order `[33, 19, 1, 175]`. The gate verifies that the non-retained path
+  drops page labels, while the retained/process-structure path preserves source
+  labels `15`, `1`, `i`, and `157`, keeps and retargets real manual bookmarks
+  such as `1 Basic Usage` and `2.4 Splitting on Bookmarks`, retains ancestor
+  bookmark context, preserves selected text extraction without replacement or
+  raw-control leakage, and survives compressed rewrite/reread plus bad-final-
+  `startxref` reconstruction with `first_xref() == 0`. `moon check --target
+  native fixture_acceptance --warn-list +73` passes, the focused retained-pages
+  test reports 1/1 test passing, `moon test --target native
+  fixture_acceptance` reports 117/117 tests passing, and `moon test --target
+  native` reports 2336/2336 tests passing. `moon info && moon fmt` reports no
+  pending interface or formatting work, and `moon check --target all
+  --warn-list +73` reports the known warning-73/main-package baseline with 7
+  warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.

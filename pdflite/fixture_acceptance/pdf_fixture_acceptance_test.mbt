@@ -4384,6 +4384,138 @@ fn fixture_acceptance_assert_cpdf_manual_page_labels_for_test(
 }
 
 ///|
+fn fixture_acceptance_bookmark_page_for_title_for_test(
+  document : @pdflite.PdfDocument,
+  title : String,
+) -> Int? raise {
+  for bookmark in document.read_bookmarks(preserve_actions=true) {
+    if @utf8.decode_lossy(@pdflite.pdf_utf8_of_pdfdocstring(bookmark.text)) ==
+      title {
+      break Some(document.page_number_of_target(bookmark.target))
+    }
+  } nobreak {
+    None
+  }
+}
+
+///|
+fn fixture_acceptance_has_bookmark_title_for_test(
+  document : @pdflite.PdfDocument,
+  title : String,
+) -> Bool raise {
+  for bookmark in document.read_bookmarks(preserve_actions=true) {
+    if @utf8.decode_lossy(@pdflite.pdf_utf8_of_pdfdocstring(bookmark.text)) ==
+      title {
+      break true
+    }
+  } nobreak {
+    false
+  }
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_manual_pdf_of_pages_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 4)
+  let expected_labels : Array[@pdflite.PdfPageLabel] = [
+    {
+      label_style: PageLabelDecimalArabic,
+      label_prefix: None,
+      start_page: 1,
+      start_value: 15,
+    },
+    {
+      label_style: PageLabelDecimalArabic,
+      label_prefix: None,
+      start_page: 2,
+      start_value: 1,
+    },
+    {
+      label_style: PageLabelLowercaseRoman,
+      label_prefix: None,
+      start_page: 3,
+      start_value: 1,
+    },
+    {
+      label_style: PageLabelDecimalArabic,
+      label_prefix: None,
+      start_page: 4,
+      start_value: 157,
+    },
+  ]
+  @test.assert_eq(document.read_page_labels(), expected_labels)
+  @test.assert_eq(
+    @pdflite.pdf_page_label_text_of_page_number(1, expected_labels),
+    Some(@ascii.encode("15")),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_page_label_text_of_page_number(2, expected_labels),
+    Some(@ascii.encode("1")),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_page_label_text_of_page_number(3, expected_labels),
+    Some(@ascii.encode("i")),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_page_label_text_of_page_number(4, expected_labels),
+    Some(@ascii.encode("157")),
+  )
+  let page_info_json = document.page_info_json([1, 2, 3, 4]).stringify()
+  fixture_acceptance_assert_contains_for_test(page_info_json, "\"Page\":1")
+  fixture_acceptance_assert_contains_for_test(page_info_json, "\"Page\":4")
+  fixture_acceptance_assert_contains_for_test(
+    page_info_json, "\"Label\":\"15\"",
+  )
+  fixture_acceptance_assert_contains_for_test(page_info_json, "\"Label\":\"1\"")
+  fixture_acceptance_assert_contains_for_test(page_info_json, "\"Label\":\"i\"")
+  fixture_acceptance_assert_contains_for_test(
+    page_info_json, "\"Label\":\"157\"",
+  )
+  @test.assert_eq(
+    fixture_acceptance_bookmark_page_for_title_for_test(
+      document, "1 Basic Usage",
+    ),
+    Some(2),
+  )
+  @test.assert_eq(
+    fixture_acceptance_bookmark_page_for_title_for_test(
+      document, "2.4 Splitting on Bookmarks",
+    ),
+    Some(1),
+  )
+  @test.assert_eq(
+    fixture_acceptance_has_bookmark_title_for_test(
+      document, "2 Merging and Splitting",
+    ),
+    true,
+  )
+  let bookmarks_json = document
+    .bookmarks_json(json_preserve_actions=true)
+    .stringify()
+  fixture_acceptance_assert_contains_for_test(
+    bookmarks_json, "\"text\":\"1 Basic Usage\"",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    bookmarks_json, "\"text\":\"2.4 Splitting on Bookmarks\"",
+  )
+  fixture_acceptance_assert_contains_for_test(bookmarks_json, "\"page\":1")
+  fixture_acceptance_assert_contains_for_test(bookmarks_json, "\"page\":2")
+  let extracted = document.test_extract_text([1, 2, 3, 4])
+  @test.assert_eq(
+    @pdflite.pdf_test_extract_text(document, [1, 2, 3, 4]),
+    extracted,
+  )
+  let text = @utf8.decode_lossy(extracted)
+  fixture_acceptance_assert_contains_for_test(text, "SplittingonBookmarks")
+  fixture_acceptance_assert_contains_for_test(text, "Chapter1BasicUsage")
+  fixture_acceptance_assert_contains_for_test(text, "CoherentPDF")
+  @test.assert_eq(text.length() > 1000, true)
+  @test.assert_eq(fixture_acceptance_replacement_count_for_test(text), 0)
+  @test.assert_eq(fixture_acceptance_raw_control_count_for_test(text), 0)
+}
+
+///|
 fn fixture_acceptance_cpdf_manual_addtext_fontpack_for_test() -> @pdflite.PdfFontPack {
   {
     fonts: [
@@ -13529,6 +13661,55 @@ async test "optional cpdf source manual fixture reports page label fallbacks" {
           fixture_acceptance_corrupt_startxref_pointer_for_test(bytes),
         ),
       )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source manual fixture extracts retained pages" {
+  let selected_pages = [33, 19, 1, 175]
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/cpdfmanual.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      let without_numbering = document.pdf_of_pages(selected_pages)
+      @test.assert_eq(without_numbering.endpage(), 4)
+      @test.assert_eq(without_numbering.read_page_labels(), [])
+      let extracted = document.pdf_of_pages(
+        selected_pages,
+        retain_numbering=true,
+        process_struct_tree=true,
+      )
+      fixture_acceptance_assert_cpdf_manual_pdf_of_pages_for_test(extracted)
+      fixture_acceptance_assert_cpdf_manual_pdf_of_pages_for_test(
+        @pdflite.pdf_of_pages(
+          document,
+          selected_pages,
+          retain_numbering=true,
+          process_struct_tree=true,
+        ),
+      )
+      fixture_acceptance_assert_cpdf_manual_pdf_of_pages_for_test(
+        fixture_acceptance_reparse_compressed_for_test(extracted),
+      )
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        extracted,
+      )
+      let corrupted = fixture_acceptance_corrupt_startxref_pointer_for_test(
+        compressed,
+      )
+      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+        corrupted,
+      )
+      guard strict is Err(_) else {
+        fail("expected retained page extraction to require reconstruction")
+      }
+      let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
+      @test.assert_eq(recovered.first_xref(), 0)
+      fixture_acceptance_assert_cpdf_manual_pdf_of_pages_for_test(recovered)
     }
   }
 }
