@@ -227,6 +227,61 @@ fn truetype_hmtx_table_for_test(widths : ArrayView[Int]) -> Array[Int] {
 }
 
 ///|
+fn truetype_os2_table_for_test(
+  version : Int,
+  avgwidth : Int,
+  ascent : Int,
+  descent : Int,
+  xheight : Int,
+  capheight : Int,
+) -> Array[Int] {
+  let output : Array[Int] = []
+  truetype_push_u16_for_test(output, version)
+  truetype_push_i16_for_test(output, avgwidth)
+  for _ in 0..<64 {
+    output.push(0)
+  }
+  truetype_push_i16_for_test(output, ascent)
+  truetype_push_i16_for_test(output, descent)
+  for _ in 0..<6 {
+    output.push(0)
+  }
+  for _ in 0..<8 {
+    output.push(0)
+  }
+  truetype_push_i16_for_test(output, xheight)
+  truetype_push_i16_for_test(output, capheight)
+  output
+}
+
+///|
+fn truetype_post_table_for_test(italic_angle : Int) -> Array[Int] {
+  let output : Array[Int] = []
+  truetype_push_u32_for_test(output, 0x00020000)
+  truetype_push_i16_for_test(output, italic_angle)
+  truetype_push_u16_for_test(output, 0)
+  output
+}
+
+///|
+fn truetype_loca_short_table_for_test(offsets : ArrayView[Int]) -> Array[Int] {
+  let output : Array[Int] = []
+  for offset in offsets {
+    truetype_push_u16_for_test(output, offset / 2)
+  }
+  output
+}
+
+///|
+fn truetype_loca_long_table_for_test(offsets : ArrayView[Int]) -> Array[Int] {
+  let output : Array[Int] = []
+  for offset in offsets {
+    truetype_push_u32_for_test(output, offset)
+  }
+  output
+}
+
+///|
 test "pdf_truetype_cmaps returns cmap platform encoding pairs" {
   let font = truetype_bytes_for_test([
     0x00, 0x01, 0x00, 0x00, // scaler type
@@ -341,6 +396,102 @@ test "pdf_truetype_metrics mirrors source optional hhea default" {
     advance_widths: [],
     max_width: 0,
   })
+}
+
+///|
+test "pdf_truetype_descriptor_metrics reads OS2 and post tables" {
+  let font = truetype_table_font_for_test([
+    ("head", truetype_head_table_for_test(2000, 0, 0, 1000, 1000, 0)),
+    ("OS/2", truetype_os2_table_for_test(2, 600, 1600, -400, 900, 1400)),
+    ("post", truetype_post_table_for_test(12)),
+  ])
+  @test.assert_eq(try! @pdflite.pdf_truetype_descriptor_metrics(font), {
+    ascent: 800,
+    descent: -200,
+    capheight: 700,
+    xheight: 450,
+    avgwidth: 300,
+    italicangle: 12,
+    nonsymbolic_flags: 96,
+    symbolic_flags: 68,
+  })
+
+  let no_post_font = truetype_table_font_for_test([
+    ("head", truetype_head_table_for_test(1000, 0, 0, 1000, 1000, 0)),
+    ("OS/2", truetype_os2_table_for_test(0, 500, 800, -200, 900, 700)),
+  ])
+  @test.assert_eq(try! @pdflite.pdf_truetype_descriptor_metrics(no_post_font), {
+    ascent: 800,
+    descent: -200,
+    capheight: 0,
+    xheight: 0,
+    avgwidth: 500,
+    italicangle: 0,
+    nonsymbolic_flags: 32,
+    symbolic_flags: 4,
+  })
+}
+
+///|
+test "pdf_truetype_descriptor_metrics requires OS2 like source parser" {
+  let missing_os2 : Result[@pdflite.PdfTrueTypeDescriptorMetrics, Error] = try? @pdflite.pdf_truetype_descriptor_metrics(
+    truetype_table_font_for_test([
+      ("head", truetype_head_table_for_test(1000, 0, 0, 1000, 1000, 0)),
+    ]),
+  )
+  guard missing_os2
+    is Err(@pdflite.PdfError::SoftError("No os/2 table found in truetype font")) else {
+    fail("expected missing OS/2 table to fail")
+  }
+}
+
+///|
+test "pdf_truetype_loca_offsets decodes short and long formats" {
+  let short_font = truetype_table_font_for_test([
+    ("head", truetype_head_table_for_test(1000, 0, 0, 1000, 1000, 0)),
+    ("maxp", truetype_maxp_table_for_test(3)),
+    ("loca", truetype_loca_short_table_for_test([0, 4, 4, 10])),
+  ])
+  @test.assert_eq(try! @pdflite.pdf_truetype_loca_offsets(short_font), [
+    0, 4, 4, 10,
+  ])
+
+  let long_font = truetype_table_font_for_test([
+    ("head", truetype_head_table_for_test(1000, 0, 0, 1000, 1000, 1)),
+    ("maxp", truetype_maxp_table_for_test(2)),
+    ("loca", truetype_loca_long_table_for_test([0, 7, 20])),
+  ])
+  @test.assert_eq(try! @pdflite.pdf_truetype_loca_offsets(long_font), [0, 7, 20])
+}
+
+///|
+test "pdf_truetype_loca_offsets reports source errors" {
+  let unknown_format : Result[Array[Int], Error] = try? @pdflite.pdf_truetype_loca_offsets(
+    truetype_table_font_for_test([
+      ("head", truetype_head_table_for_test(1000, 0, 0, 1000, 1000, 2)),
+      ("maxp", truetype_maxp_table_for_test(1)),
+      ("loca", truetype_loca_short_table_for_test([0, 2])),
+    ]),
+  )
+  guard unknown_format
+    is Err(
+      @pdflite.PdfError::SoftError(
+        "Unknown indexToLocFormat in read_loca_table"
+      )
+    ) else {
+    fail("expected unknown indexToLocFormat to fail")
+  }
+
+  let missing_loca : Result[Array[Int], Error] = try? @pdflite.pdf_truetype_loca_offsets(
+    truetype_table_font_for_test([
+      ("head", truetype_head_table_for_test(1000, 0, 0, 1000, 1000, 0)),
+      ("maxp", truetype_maxp_table_for_test(1)),
+    ]),
+  )
+  guard missing_loca
+    is Err(@pdflite.PdfError::SoftError("No loca table found in TrueType font")) else {
+    fail("expected missing loca table to fail")
+  }
 }
 
 ///|

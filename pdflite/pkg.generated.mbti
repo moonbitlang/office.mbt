@@ -1572,6 +1572,10 @@ pub fn pdf_truetype_cmap_glyphs(BytesView) -> Array[PdfTrueTypeCMapGlyph]
 
 pub fn pdf_truetype_cmaps(BytesView) -> Array[(Int, Int)]
 
+pub fn pdf_truetype_descriptor_metrics(BytesView) -> PdfTrueTypeDescriptorMetrics raise @core.PdfError
+
+pub fn pdf_truetype_loca_offsets(BytesView) -> Array[Int] raise @core.PdfError
+
 pub fn pdf_truetype_metrics(BytesView) -> PdfTrueTypeMetrics raise @core.PdfError
 
 pub fn pdf_truetype_table(BytesView, String) -> PdfTrueTypeTableRecord?
@@ -3911,6 +3915,17 @@ pub(all) struct PdfTristimulusPoint {
 pub(all) struct PdfTrueTypeCMapGlyph {
   codepoint : Int
   glyph_index : Int
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfTrueTypeDescriptorMetrics {
+  ascent : Int
+  descent : Int
+  capheight : Int
+  xheight : Int
+  avgwidth : Int
+  italicangle : Int
+  nonsymbolic_flags : Int
+  symbolic_flags : Int
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfTrueTypeMetrics {
