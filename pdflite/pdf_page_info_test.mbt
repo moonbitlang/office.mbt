@@ -85,11 +85,29 @@ test "PdfDocument page_info_json reports selected pages in source range order" {
     expected,
   )
   @test.assert_eq(
+    try! @pdflite.pdf_json_page_info(document, [2, 1], Inch),
+    expected,
+  )
+  @test.assert_eq(
     try! document.page_info_json_blob([2, 1], unit=Inch),
     @utf8.encode(expected.stringify()),
   )
   @test.assert_eq(
     try! @pdflite.pdf_output_page_info_json_blob(document, [2, 1], unit=Inch),
+    @utf8.encode(expected.stringify()),
+  )
+  @test.assert_eq(
+    try! document.output_page_info([2, 1], unit=Inch, json=true),
+    @utf8.encode(expected.stringify()),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_output_page_info(
+      Inch,
+      document,
+      [2, 1],
+      json=true,
+      raisejson=true,
+    ),
     @utf8.encode(expected.stringify()),
   )
 }
@@ -111,6 +129,11 @@ test "PdfDocument page_info_text renders cpdf plain page report" {
   @test.assert_eq(try! document.page_info_text([1]), expected)
   @test.assert_eq(
     try! @pdflite.pdf_output_page_info_text(document, [1]),
+    expected,
+  )
+  @test.assert_eq(try! document.output_page_info([1]), expected)
+  @test.assert_eq(
+    try! @pdflite.pdf_output_page_info(PdfPoint, document, [1]),
     expected,
   )
 }

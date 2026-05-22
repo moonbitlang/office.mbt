@@ -43,9 +43,9 @@ Current estimate:
   transform/content/page-assembly/
   pattern-matrix kernels, cpdf page
   hard-box/removal/shift/scale/scale-to-fit/upright/set-mediabox/copy-box
-  helpers and source-order compatibility aliases, imposition make-space
-  orchestration, border stamping, layout planning, and first public
-  impose/twoup pipelines, and Markdown helper public APIs.
+  helpers, page-info report wrappers, and source-order compatibility aliases,
+  imposition make-space orchestration, border stamping, layout planning, and
+  first public impose/twoup pipelines, and Markdown helper public APIs.
 
 Current backend snapshot:
 
@@ -76,6 +76,22 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfpage` source/API parity with the page-info reporting
+  surface from `.repos/cpdf-source/cpdfpage.mli`: added
+  `pdf_json_page_info`, `PdfDocument::output_page_info`, and
+  source-order `pdf_output_page_info` wrappers over the existing page-info
+  JSON/text implementation. The stdout-oriented source function is exposed as
+  deterministic bytes, matching the port's existing `print_fonts` and
+  `show_composition` pattern; `raisejson` is accepted for source-shape
+  compatibility while `json=true` returns JSON bytes directly. Coverage pins
+  the source-name JSON wrapper, JSON output bytes including the `raisejson`
+  compatibility flag, and plain-text output bytes. Validation on MoonBit 0.9.3:
+  `moon check --target native --warn-list +73` passes with the known
+  `markdown/cmd` future notice; `moon test --target native
+  pdf_page_info_test.mbt` reports 3/3; `moon fmt`, `moon info`, and
+  `moon check --target all --warn-list +73` pass with only the existing
+  `markdown/cmd` future notice; full native `moon test --target native`
+  reports 2403/2403.~~
 - [x] ~~Port the `cpdfembed` TrueType embedding integration:
   `PdfDocument::embed_truetype` and `pdf_embed_truetype` now mirror
   `Cpdfembed.embed_truetype` over the ported `pdf_truetype_parse` surface.

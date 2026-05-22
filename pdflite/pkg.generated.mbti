@@ -840,6 +840,8 @@ pub fn pdf_json_of_document_blob(PdfDocument, utf8? : Bool, parse_content? : Boo
 
 pub fn pdf_json_of_object(PdfDocument, PdfObject, utf8? : Bool, clean_strings? : Bool, no_stream_data? : Bool, parse_content? : Bool) -> Json raise @core.PdfError
 
+pub fn pdf_json_page_info(PdfDocument, ArrayView[Int], @geometry.PdfUnit) -> Json raise @core.PdfError
+
 pub fn pdf_language(PdfDocument) -> Bytes?
 
 pub fn pdf_lex_bytes(Bytes) -> Array[PdfLexeme] raise @core.PdfError
@@ -993,6 +995,8 @@ pub fn pdf_of_pages(PdfDocument, ArrayView[Int], retain_numbering? : Bool, proce
 pub fn pdf_optional_content_merge(ArrayView[PdfDocument]) -> PdfOptionalContent? raise @core.PdfError
 
 pub fn pdf_output_info_json_blob(PdfDocument, encoding? : PdfMetadataEncoding, unit? : @geometry.PdfUnit) -> Bytes raise @core.PdfError
+
+pub fn pdf_output_page_info(@geometry.PdfUnit, PdfDocument, ArrayView[Int], json? : Bool, raisejson? : Bool) -> Bytes raise @core.PdfError
 
 pub fn pdf_output_page_info_json_blob(PdfDocument, ArrayView[Int], unit? : @geometry.PdfUnit) -> Bytes raise @core.PdfError
 
@@ -2893,6 +2897,7 @@ pub fn PdfDocument::ocg_replace_json(Self, Json) -> Self raise @core.PdfError
 pub fn PdfDocument::open_action(Self) -> PdfObject raise @core.PdfError
 pub fn PdfDocument::open_action_json_blob(Self) -> Bytes raise @core.PdfError
 pub fn PdfDocument::open_action_string(Self) -> String raise @core.PdfError
+pub fn PdfDocument::output_page_info(Self, ArrayView[Int], unit? : @geometry.PdfUnit, json? : Bool, raisejson? : Bool) -> Bytes raise @core.PdfError
 pub fn PdfDocument::pad_after(Self, ArrayView[Int], pad_with? : Self?) -> Self raise @core.PdfError
 pub fn PdfDocument::pad_before(Self, ArrayView[Int], pad_with? : Self?) -> Self raise @core.PdfError
 pub fn PdfDocument::pad_to_multiple(Self, Int) -> Self raise @core.PdfError
