@@ -114,6 +114,17 @@ test "PdfDocument redact_pages empties selected pages and preserves geometry" {
   let wrapped_pages = try! wrapped.pages_of_pagetree()
   @test.assert_eq(page_redact_ops_for_test(wrapped, wrapped_pages[0]), [Op_S])
   @test.assert_eq(wrapped_pages[1].content, [])
+  let source_order = try! @pdflite.pdf_redact_pages_cpdf_order(
+    false,
+    document,
+    [1],
+  )
+  let source_order_pages = try! source_order.pages_of_pagetree()
+  @test.assert_eq(source_order_pages[0].content, [])
+  @test.assert_eq(
+    page_redact_ops_for_test(source_order, source_order_pages[1]),
+    [Op_BT],
+  )
 }
 
 ///|
@@ -136,6 +147,12 @@ test "PdfDocument redact_pages optionally trims redacted page structure" {
   let pages = try! trimmed.pages_of_pagetree()
   @test.assert_eq(pages[0].content, [])
   @test.assert_eq(page_redact_ops_for_test(trimmed, pages[1]), [Op_BT])
+  let wrapped = try! @pdflite.pdf_redact_pages_cpdf_order(
+    true,
+    page_redact_structure_doc_for_test(),
+    [1],
+  )
+  @test.assert_eq(wrapped.lookup_object_or_null(30), PdfNull)
 }
 
 ///|

@@ -57,3 +57,13 @@ pub fn pdf_redact_pages(
 ) -> PdfDocument raise PdfError {
   document.redact_pages(page_numbers, process_struct_tree~)
 }
+
+///|
+/// Compatibility wrapper matching cpdfpage's `redact` argument order.
+pub fn pdf_redact_pages_cpdf_order(
+  process_struct_tree : Bool,
+  document : PdfDocument,
+  page_numbers : ArrayView[Int],
+) -> PdfDocument raise PdfError {
+  document.redact_pages(page_numbers, process_struct_tree~)
+}

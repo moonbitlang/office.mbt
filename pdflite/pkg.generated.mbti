@@ -1304,6 +1304,8 @@ pub fn pdf_redact(PdfDocument, ArrayView[(Double, Double)], ArrayView[Int]) -> P
 
 pub fn pdf_redact_pages(PdfDocument, ArrayView[Int], process_struct_tree? : Bool) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_redact_pages_cpdf_order(Bool, PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_remove_added_text(PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_remove_added_text_ops(ArrayView[PdfContentOp]) -> Array[PdfContentOp]

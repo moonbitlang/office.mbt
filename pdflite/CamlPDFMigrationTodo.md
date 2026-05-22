@@ -44,9 +44,9 @@ Current estimate:
   transform/content/page-assembly/
   pattern-matrix kernels, cpdf page
   hard-box/removal/shift/scale/scale-to-fit/upright/set-mediabox/copy-box
-  helpers, page-info report wrappers, upright predicate source-order aliases,
-  pattern-matrix page rewrite wrapper, callback-first traversal aliases,
-  cpdftweak source-spelled colour/thin-line, reveal-hidden-text,
+  helpers, page-info report wrappers, upright predicate and page-redaction
+  source-order aliases, pattern-matrix page rewrite wrapper, callback-first
+  traversal aliases, cpdftweak source-spelled colour/thin-line, reveal-hidden-text,
   append-content, dictionary entry, object-spec, and native file-stream
   replacement aliases, cpdfutil string-key dictionary rewrite wrappers, and
   source-order compatibility aliases,
@@ -82,6 +82,19 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfpage` source/API parity for whole-page redaction from
+  `.repos/cpdf-source/cpdfpage.mli`: added `pdf_redact_pages_cpdf_order`
+  matching cpdf's required `process_struct_tree`, document, and page-range
+  order while preserving the existing document-first optional wrapper.
+  Coverage pins both non-structure and structure-trimming modes against the
+  existing `redact_pages` behavior. Validation on MoonBit 0.9.3: `moon check
+  --target native --warn-list +73` passes with the known `markdown/cmd` future
+  notice; `moon test --target native pdf_page_redact_test.mbt`, `moon test
+  --target wasm-gc pdf_page_redact_test.mbt`, and `moon test --target js
+  pdf_page_redact_test.mbt` report 3/3 each; `moon fmt`, `moon info`, and
+  `moon check --target all --warn-list +73` pass with only the existing
+  `markdown/cmd` future notice; full native `moon test --target native`
+  reports 2408/2408.~~
 - [x] ~~Continue `cpdfpage` source/API parity for the upright predicates from
   `.repos/cpdf-source/cpdfpage.mli`: added `pdf_allupright_cpdf_order` and
   `pdf_alluprightonly_cpdf_order` aliases matching cpdf's page-list-first
