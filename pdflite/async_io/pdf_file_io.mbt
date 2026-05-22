@@ -380,6 +380,103 @@ pub async fn pdf_attach_file_from_path(
 }
 
 ///|
+fn pdf_async_io_catalog_metadata_number(
+  document : @pdflite.PdfDocument,
+) -> Int? raise @pdflite.PdfError {
+  let root = match
+    document.lookup_direct(pdf_async_io_name("/Root"), document.trailer_dict()) {
+    Some(root) => root
+    None => raise SoftError("malformed file")
+  }
+  root.find_indirect(pdf_async_io_name("/Metadata"))
+}
+
+///|
+fn pdf_async_io_is_metadata_object(
+  document : @pdflite.PdfDocument,
+  object : @pdflite.PdfObject,
+) -> Bool {
+  match document.lookup_direct(pdf_async_io_name("/Type"), object) {
+    Some(PdfNameObject(name)) => name == pdf_async_io_name("/Metadata")
+    _ => false
+  }
+}
+
+///|
+fn pdf_async_io_metadata_stream_bytes(
+  document : @pdflite.PdfDocument,
+  object : @pdflite.PdfObject,
+) -> @pdflite.PdfBytes raise @pdflite.PdfError {
+  document.pdf_decode_stream(object).stream_bytes()
+}
+
+///|
+/// Set the catalog metadata XML stream from a file.
+///
+/// This is the native filesystem counterpart of cpdfmetadata's
+/// `set_metadata`: the file is read as bytes and delegated to the portable
+/// in-memory metadata setter.
+pub async fn pdf_set_metadata_from_file(
+  keep_version : Bool,
+  path : StringView,
+  document : @pdflite.PdfDocument,
+) -> @pdflite.PdfDocument {
+  document.set_metadata_from_bytes(@fs.read_file(path).binary(), keep_version~)
+}
+
+///|
+/// Write the catalog metadata XML stream to a file when one is present.
+///
+/// A document without catalog metadata is a no-op, matching cpdfmetadata's
+/// `print_metadata` behavior of emitting nothing when metadata is absent.
+pub async fn pdf_write_metadata_to_file(
+  document : @pdflite.PdfDocument,
+  path : StringView,
+  permission? : Int = 0o644,
+) -> Unit {
+  match document.metadata() {
+    Some(metadata) => @fs.write_file(path, metadata, create=permission)
+    None => ()
+  }
+}
+
+///|
+/// Extract every metadata stream to `directory`.
+///
+/// The catalog metadata object is written as `main.xml`, and other parsed
+/// `/Type /Metadata` stream objects are written as `obj<num>.xml`, matching
+/// cpdfmetadata's `extract_all_metadata` naming scheme.
+pub async fn pdf_extract_all_metadata_to_directory(
+  document : @pdflite.PdfDocument,
+  directory : StringView,
+  permission? : Int = 0o644,
+) -> Unit {
+  let main_number = pdf_async_io_catalog_metadata_number(document)
+  match main_number {
+    Some(number) =>
+      @fs.write_file(
+        pdf_async_io_join_path(directory, "main.xml"),
+        pdf_async_io_metadata_stream_bytes(
+          document,
+          document.lookup_object_or_null(number),
+        ),
+        create=permission,
+      )
+    None => ()
+  }
+  for entry in document.parsed_object_entries() {
+    if Some(entry.0) != main_number &&
+      pdf_async_io_is_metadata_object(document, entry.2) {
+      @fs.write_file(
+        pdf_async_io_join_path(directory, "obj" + entry.0.to_string() + ".xml"),
+        pdf_async_io_metadata_stream_bytes(document, entry.2),
+        create=permission,
+      )
+    }
+  }
+}
+
+///|
 /// Dump all listed attachments into `directory`.
 ///
 /// Attachment names are sanitized with the core cpdf-compatible filename

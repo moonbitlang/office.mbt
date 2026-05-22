@@ -3523,6 +3523,57 @@ async test "async file wrappers dump attached files to a directory" {
 }
 
 ///|
+async test "async metadata file wrappers set write and extract XML metadata" {
+  let directory = pdf_async_io_build_dir_for_test()
+  let input_path = directory + "/pdflite_metadata_input.xml"
+  let output_path = directory + "/pdflite_metadata_output.xml"
+  let main_path = directory + "/main.xml"
+  let payload = @ascii.encode("<xmp>catalog metadata</xmp>")
+  let stray_payload = @ascii.encode("<xmp>stray metadata</xmp>")
+  pdf_async_io_remove_if_exists_for_test(input_path)
+  pdf_async_io_remove_if_exists_for_test(output_path)
+  pdf_async_io_remove_if_exists_for_test(main_path)
+  @fs.write_file(input_path, payload, create=0o644)
+  let document = try! pdf_set_metadata_from_file(
+    false,
+    input_path,
+    try! @pdflite.pdf_minimum_valid_pdf(),
+  )
+  @test.assert_eq(try! document.metadata(), Some(payload))
+  @test.assert_eq(document.version(), (1, 4))
+  pdf_write_metadata_to_file(document, output_path)
+  @test.assert_eq(@fs.read_file(output_path).binary(), payload)
+
+  let with_stray = document.copy()
+  let encoded = @pdflite.pdf_flate_encode(stray_payload)
+  let stray_number = with_stray.add_object(
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (
+          pdf_async_io_name_for_test("/Type"),
+          PdfNameObject(pdf_async_io_name_for_test("/Metadata")),
+        ),
+        (
+          pdf_async_io_name_for_test("/Filter"),
+          PdfNameObject(pdf_async_io_name_for_test("/FlateDecode")),
+        ),
+        (pdf_async_io_name_for_test("/Length"), PdfInteger(encoded.length())),
+      ]),
+      StreamGot(encoded),
+    ),
+  )
+  let stray_path = directory + "/obj" + stray_number.to_string() + ".xml"
+  pdf_async_io_remove_if_exists_for_test(stray_path)
+  pdf_extract_all_metadata_to_directory(with_stray, directory)
+  @test.assert_eq(@fs.read_file(main_path).binary(), payload)
+  @test.assert_eq(@fs.read_file(stray_path).binary(), stray_payload)
+  pdf_async_io_remove_if_exists_for_test(input_path)
+  pdf_async_io_remove_if_exists_for_test(output_path)
+  pdf_async_io_remove_if_exists_for_test(main_path)
+  pdf_async_io_remove_if_exists_for_test(stray_path)
+}
+
+///|
 async test "async file wrappers fail dumping malformed attachment data" {
   let file_spec : @pdflite.PdfObject = PdfDictionary([
     (

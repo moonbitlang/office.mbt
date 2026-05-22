@@ -28,8 +28,8 @@ Current estimate:
   composition reporting, core metadata APIs, XMP metadata-date rewriting, XMP
   info synchronization, XMP metadata creation, XMP RDF list extraction,
   XMP/document info JSON reporting, cpdfmetadata namespace/get-data/XML-tree
-  helper parity and XML entity/whitespace decoding, redaction annotation
-  bounding-box overlays,
+  helper parity, native metadata file set/write/extract wrappers, and XML
+  entity/whitespace decoding, redaction annotation bounding-box overlays,
   cpdfua Matterhorn content/role-map/XMP/viewer-preference/optional-content/
   media-clip/file-attachment/PrinterMark/reference-XObject/MCID Form XObject/
   Type0 CIDSystemInfo/CIDToGIDMap/CMap-name/WMode/font-file no-op/TrueType
@@ -42,7 +42,7 @@ Current estimate:
 
 Current backend snapshot:
 
-- Native: full suite passes on MoonBit 0.9.3, currently 2353/2353 tests.
+- Native: full suite passes on MoonBit 0.9.3, currently 2354/2354 tests.
 - WasmGC and JavaScript: full portable non-native test suites pass on MoonBit
   0.9.3, currently 2018/2018 on each backend after the latest source-corpus
   recovery gates.
@@ -7582,6 +7582,23 @@ Current backend snapshot:
   `moon test --target wasm-gc` and `moon test --target js` report 2018/2018
   each; `moon test --target wasm` reports 41/41; `moon info`, `moon fmt`, and
   `git diff --check` are clean.~~
+- [x] ~~Continue cpdfmetadata file-operation parity in the native `async_io`
+  package: added `pdf_set_metadata_from_file`,
+  `pdf_write_metadata_to_file`, and
+  `pdf_extract_all_metadata_to_directory` wrappers around the portable metadata
+  core. The extraction wrapper follows cpdfmetadata's naming scheme by writing
+  the catalog metadata object to `main.xml` and other parsed `/Type /Metadata`
+  stream objects to `obj<num>.xml`, decoding supported stream filters before
+  writing. Coverage pins file-backed metadata setting, catalog metadata output,
+  and extraction of both the catalog stream and an additional Flate-compressed
+  metadata stream. Validation on MoonBit 0.9.3:
+  `moon check --target native async_io --warn-list +73` passes,
+  `moon test --target native async_io --filter '*metadata file wrappers*'`
+  reports 1/1, `moon test --target native async_io` reports 90/90,
+  `moon check --target all --warn-list +73` passes with the known
+  `markdown/cmd` future notice, and `moon test --target native` reports
+  2354/2354. This slice is native-only, so the portable wasm-gc/js/plain-wasm
+  counts remain unchanged.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
