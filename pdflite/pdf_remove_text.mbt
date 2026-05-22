@@ -157,6 +157,15 @@ pub fn pdf_remove_added_text(
 }
 
 ///|
+/// Compatibility wrapper matching cpdfremovetext's source-spelled `removetext`.
+pub fn pdf_removetext(
+  page_numbers : ArrayView[Int],
+  document : PdfDocument,
+) -> PdfDocument raise PdfError {
+  document.remove_added_text(page_numbers)
+}
+
+///|
 /// Remove all text-showing operators from selected one-based pages and their
 /// referenced Form XObjects.
 pub fn PdfDocument::remove_all_text(
@@ -186,6 +195,15 @@ pub fn PdfDocument::remove_all_text(
 pub fn pdf_remove_all_text(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
+) -> PdfDocument raise PdfError {
+  document.remove_all_text(page_numbers)
+}
+
+///|
+/// Compatibility wrapper matching cpdfremovetext's page-list-first order.
+pub fn pdf_remove_all_text_cpdf_order(
+  page_numbers : ArrayView[Int],
+  document : PdfDocument,
 ) -> PdfDocument raise PdfError {
   document.remove_all_text(page_numbers)
 }

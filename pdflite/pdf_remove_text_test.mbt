@@ -140,9 +140,15 @@ test "pdf_remove_added_text wrapper preserves source document" {
   }
   let document = try! base.change_pages([page])
   let stripped = try! @pdflite.pdf_remove_added_text(document, [1])
+  let source_order = try! @pdflite.pdf_removetext([1], document)
   let stripped_pages = try! stripped.pages_of_pagetree()
   @test.assert_eq(
     remove_text_content_ops_for_test(stripped, stripped_pages[0]),
+    [Op_Tj(remove_text_bytes_for_test("keep"))],
+  )
+  let source_order_pages = try! source_order.pages_of_pagetree()
+  @test.assert_eq(
+    remove_text_content_ops_for_test(source_order, source_order_pages[0]),
     [Op_Tj(remove_text_bytes_for_test("keep"))],
   )
   let original_pages = try! document.pages_of_pagetree()
@@ -220,9 +226,15 @@ test "pdf_remove_all_text wrapper preserves source document" {
   }
   let document = try! base.change_pages([page])
   let stripped = try! @pdflite.pdf_remove_all_text(document, [1])
+  let source_order = try! @pdflite.pdf_remove_all_text_cpdf_order([1], document)
   let stripped_pages = try! stripped.pages_of_pagetree()
   @test.assert_eq(
     remove_text_content_ops_for_test(stripped, stripped_pages[0]),
+    [Op_Tstar],
+  )
+  let source_order_pages = try! source_order.pages_of_pagetree()
+  @test.assert_eq(
+    remove_text_content_ops_for_test(source_order, source_order_pages[0]),
     [Op_Tstar],
   )
   let original_pages = try! document.pages_of_pagetree()

@@ -48,8 +48,8 @@ Current estimate:
   source-order aliases, pattern-matrix page rewrite wrapper, callback-first
   traversal aliases, cpdftweak source-spelled colour/thin-line, reveal-hidden-text,
   append-content, dictionary entry, object-spec, and native file-stream
-  replacement aliases, cpdfutil string-key dictionary rewrite wrappers, and
-  source-order compatibility aliases,
+  replacement aliases, cpdfremovetext source-spelled/page-list-first aliases,
+  cpdfutil string-key dictionary rewrite wrappers, and source-order compatibility aliases,
   imposition make-space orchestration, border stamping, layout planning, and
   first public impose/twoup pipelines, and Markdown helper public APIs.
 
@@ -82,6 +82,21 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfremovetext` source/API parity from
+  `.repos/cpdf-source/cpdfremovetext.mli`: added source-spelled
+  `pdf_removetext` for cpdf's `removetext` and
+  `pdf_remove_all_text_cpdf_order` for cpdf's page-list-first
+  `remove_all_text` while preserving the existing document-first wrappers.
+  Coverage compares both aliases against the existing selected-page removal
+  behavior and checks that source documents remain unchanged. Validation on
+  MoonBit 0.9.3: `moon check --target native --warn-list +73` passes with the
+  known `markdown/cmd` future notice; `moon test --target native
+  pdf_remove_text_test.mbt`, `moon test --target wasm-gc
+  pdf_remove_text_test.mbt`, and `moon test --target js
+  pdf_remove_text_test.mbt` report 7/7 each; `moon fmt`, `moon info`, and
+  `moon check --target all --warn-list +73` pass with only the existing
+  `markdown/cmd` future notice; full native `moon test --target native`
+  reports 2408/2408.~~
 - [x] ~~Continue `cpdfmetadata` source/API parity for `set_open_action` from
   `.repos/cpdf-source/cpdfmetadata.mli`: added cpdf-style PDF syntax string
   destination parsing via the existing single-object parser, plus

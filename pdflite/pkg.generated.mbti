@@ -1314,6 +1314,8 @@ pub fn pdf_remove_all_metadata(PdfDocument) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_remove_all_text(PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_remove_all_text_cpdf_order(ArrayView[Int], PdfDocument) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_remove_all_text_ops(ArrayView[PdfContentOp]) -> Array[PdfContentOp]
 
 pub fn pdf_remove_annotations(ArrayView[Int], PdfDocument) -> PdfDocument raise @core.PdfError
@@ -1357,6 +1359,8 @@ pub fn pdf_remove_page_labels(PdfDocument) -> PdfDocument raise @core.PdfError
 pub fn pdf_remove_struct_tree(PdfDocument) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_remove_trim_pdf(PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_removetext(ArrayView[Int], PdfDocument) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_renumber_documents(ArrayView[PdfDocument]) -> Array[PdfDocument] raise @core.PdfError
 
