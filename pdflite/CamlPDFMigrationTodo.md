@@ -7257,6 +7257,19 @@ Current backend snapshot:
   `moon info && moon fmt` reports no pending interface or formatting work, and
   `moon check --target all --warn-list +73` reports the known
   warning-73/main-package baseline with 10 warnings and 0 errors.~~
+- [x] ~~Add the next source-corpus Markdown manual-image text slice: the native
+  `markdown/fixture_acceptance` package now compares optional
+  `.repos/cpdf-source/manualimages` text fixtures against expected Markdown text
+  fragments, rewrites each fixture with compressed xref streams, corrupts the
+  rewritten `startxref` pointer, verifies strict classic parsing rejects the
+  damaged bytes, and confirms reconstructed Markdown remains byte-for-byte equal
+  to the clean conversion. `moon check --target native markdown/fixture_acceptance
+  --warn-list +73` passes, the focused source Markdown comparison test reports
+  1/1 test passing, `moon test --target native markdown/fixture_acceptance`
+  reports 25/25 tests passing, and `moon test --target native` reports
+  2339/2339 tests passing. `moon info && moon fmt` reports no pending interface
+  or formatting work, and `moon check --target all --warn-list +73` reports the
+  known warning-73/main-package baseline with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.

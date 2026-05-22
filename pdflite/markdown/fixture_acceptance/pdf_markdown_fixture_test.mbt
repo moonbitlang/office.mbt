@@ -902,6 +902,37 @@ fn markdown_cpdf_source_manual_image_pdf_paths_for_test() -> Array[String] {
 }
 
 ///|
+fn markdown_cpdf_source_manual_image_text_expectations_for_test() -> Array[
+  (String, Array[String]),
+] {
+  [
+    (
+      ".repos/cpdf-source/manualimages/fontparams.pdf",
+      ["Different fonts and sizes"],
+    ),
+    (".repos/cpdf-source/manualimages/fonts.pdf", ["Different fonts and sizes"]),
+    (
+      ".repos/cpdf-source/manualimages/h1.pdf",
+      ["This is the heading", "This is the first", "Here is the second"],
+    ),
+    (".repos/cpdf-source/manualimages/lines.pdf", ["This is", "multiple"]),
+    (
+      ".repos/cpdf-source/manualimages/para.pdf",
+      ["This is a paragraph", "width 200pt", "containing"],
+    ),
+    (
+      ".repos/cpdf-source/manualimages/paras.pdf",
+      [
+        "This is the first paragraph", "And here is the second", "Here is a little one",
+      ],
+    ),
+    (".repos/cpdf-source/manualimages/stext.pdf", ["Page 1"]),
+    (".repos/cpdf-source/manualimages/text.pdf", ["Hello"]),
+    (".repos/cpdf-source/manualimages/textclip.pdf", ["This is", "multiple"]),
+  ]
+}
+
+///|
 fn markdown_fixture_assert_cpdf_top_level_classic_markdown_for_test(
   markdown : String,
   path : String,
@@ -942,6 +973,20 @@ fn markdown_fixture_assert_cpdf_manual_image_markdown_for_test(
     0,
     msg=path,
   )
+}
+
+///|
+fn markdown_fixture_assert_cpdf_manual_image_text_for_test(
+  markdown : String,
+  path : String,
+  fragments : ArrayView[String],
+) -> Unit raise {
+  markdown_fixture_assert_cpdf_manual_image_markdown_for_test(markdown, path)
+  for fragment in fragments {
+    guard markdown.contains(fragment) else {
+      fail("expected " + path + " markdown to contain " + fragment)
+    }
+  }
 }
 
 ///|
@@ -1163,6 +1208,54 @@ async test "pdf_bytes_to_markdown extracts optional cpdf source manual image PDF
       markdown_cpdf_source_manual_image_pdf_paths_for_test().length(),
     )
     @test.assert_eq(textful > 0, true)
+  }
+}
+
+///|
+async test "pdf_bytes_to_markdown compares optional cpdf source manual image text fixtures" {
+  let expectations = markdown_cpdf_source_manual_image_text_expectations_for_test()
+  let mut checked = 0
+  for expectation in expectations {
+    let path = expectation.0
+    let fragments = expectation.1
+    match markdown_optional_fixture_bytes_for_test(path) {
+      None => ()
+      Some(bytes) => {
+        checked += 1
+        let markdown = @markdown.pdf_bytes_to_markdown(bytes)
+        markdown_fixture_assert_cpdf_manual_image_text_for_test(
+          markdown, path, fragments,
+        )
+        let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+          @pdflite.pdf_read_document_from_bytes(bytes),
+        )
+        let compressed_markdown = @markdown.pdf_bytes_to_markdown(compressed)
+        markdown_fixture_assert_cpdf_manual_image_text_for_test(
+          compressed_markdown, path, fragments,
+        )
+        @test.assert_eq(compressed_markdown, markdown, msg=path)
+        let corrupted = markdown_fixture_corrupt_startxref_pointer_for_test(
+          compressed,
+        )
+        let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+          corrupted,
+        )
+        guard strict is Err(_) else {
+          fail(
+            "expected compressed manual image text fixture to require reconstruction for " +
+            path,
+          )
+        }
+        let reconstructed = @markdown.pdf_bytes_to_markdown(corrupted)
+        markdown_fixture_assert_cpdf_manual_image_text_for_test(
+          reconstructed, path, fragments,
+        )
+        @test.assert_eq(reconstructed, markdown, msg=path)
+      }
+    }
+  }
+  if checked > 0 {
+    @test.assert_eq(checked, expectations.length())
   }
 }
 
