@@ -7318,6 +7318,22 @@ Current backend snapshot:
   `moon info && moon fmt` reports no pending interface or formatting work, and
   `moon check --target all --warn-list +73` reports the known
   warning-73/main-package baseline with 10 warnings and 0 errors.~~
+- [x] ~~Add the next cpdfremovetext source-corpus lifecycle slice: the native
+  `fixture_acceptance` package now also gates optional
+  `.repos/cpdf-source/cpdfmanual.pdf` through add-text stamping followed by
+  `remove_added_text` and `pdf_remove_added_text`. The gate reuses the real
+  manual add-text fixture, strips `/CPDFSTAMP` content from pages 1, 19, and
+  175, verifies the stamped text is gone while original manual text remains
+  extractable, pins cpdf-compatible URL-annotation retention, and checks
+  compressed rewrite/reread plus strict-reader rejection of a bad final
+  `startxref` followed by malformed reconstruction with `first_xref() == 0`.
+  `moon check --target native fixture_acceptance --warn-list +73` passes, the
+  focused cpdf source remove-added-text test reports 1/1 test passing, `moon
+  test --target native fixture_acceptance` reports 120/120 tests passing, and
+  `moon test --target native` reports 2343/2343 tests passing. `moon info &&
+  moon fmt` reports no pending interface or formatting work, and `moon check
+  --target all --warn-list +73` reports the known warning-73/main-package
+  baseline with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.

@@ -4503,6 +4503,14 @@ fn fixture_acceptance_assert_contains_for_test(
 }
 
 ///|
+fn fixture_acceptance_assert_not_contains_for_test(
+  text : String,
+  fragment : String,
+) -> Unit raise {
+  @test.assert_eq(text.contains(fragment), false, msg="unexpected " + fragment)
+}
+
+///|
 fn fixture_acceptance_replacement_count_for_test(text : String) -> Int {
   let mut count = 0
   for char in text {
@@ -4828,6 +4836,34 @@ fn fixture_acceptance_cpdf_manual_addtext_text_for_test() -> String {
 }
 
 ///|
+fn fixture_acceptance_cpdf_manual_stamped_for_test(
+  document : @pdflite.PdfDocument,
+) -> @pdflite.PdfDocument raise {
+  document.addtexts_with_source(
+    [1, 19, 175],
+    fixture_acceptance_cpdf_manual_addtext_text_for_test(),
+    @pdflite.pdf_strftime_dummy_time(),
+    document.read_bookmarks(preserve_actions=true),
+    PdfAddTextPreMadeFontPack(
+      fixture_acceptance_cpdf_manual_addtext_fontpack_for_test(),
+    ),
+    fixture_acceptance_pdf_name_for_test("/Helvetica"),
+    9.0,
+    1.1,
+    PdfContentRGB(0.1, 0.2, 0.3),
+    PdfPositionBottomLeft(18.0, 18.0),
+    filename="cpdfmanual.pdf",
+    bates=42,
+    bates_pad=Some(5),
+    opacity=0.5,
+    outline=true,
+    line_width=0.25,
+    url_border=true,
+    fast=true,
+  )
+}
+
+///|
 fn fixture_acceptance_content_ops_contain_tj_fragment_for_test(
   ops : ArrayView[@pdflite.PdfContentOp],
   fragment : String,
@@ -4988,6 +5024,59 @@ fn fixture_acceptance_assert_cpdf_manual_addtext_for_test(
   fixture_acceptance_assert_contains_for_test(text, "stamp:cpdfmanual.pdf")
   fixture_acceptance_assert_contains_for_test(text, "manual")
   @test.assert_eq(fixture_acceptance_replacement_count_for_test(text), 0)
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_manual_added_text_removed_page_for_test(
+  document : @pdflite.PdfDocument,
+  page_number : Int,
+) -> Unit raise {
+  let pages = document.pages_of_pagetree()
+  let page = pages[page_number - 1]
+  let ops = document.parse_content_ops_with_resources(
+    page.resources,
+    page.content,
+  )
+  fixture_acceptance_assert_no_content_op_for_test(
+    ops,
+    Op_BMC(fixture_acceptance_pdf_name_for_test("/CPDFSTAMP")),
+  )
+  @test.assert_eq(
+    fixture_acceptance_content_ops_contain_tj_fragment_for_test(
+      ops, "stamp:cpdfmanual.pdf",
+    ),
+    false,
+    msg="stamp text removed on page " + page_number.to_string(),
+  )
+  @test.assert_eq(
+    fixture_acceptance_page_has_uri_annotation_for_test(
+      document, page, "https://coherentpdf.com/cpdfmanual",
+    ),
+    true,
+    msg="cpdf removetext leaves URL annotations on page " +
+      page_number.to_string(),
+  )
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_manual_added_text_removed_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 175)
+  fixture_acceptance_assert_cpdf_manual_added_text_removed_page_for_test(
+    document, 1,
+  )
+  fixture_acceptance_assert_cpdf_manual_added_text_removed_page_for_test(
+    document, 19,
+  )
+  fixture_acceptance_assert_cpdf_manual_added_text_removed_page_for_test(
+    document, 175,
+  )
+  let text = @utf8.decode_lossy(document.test_extract_text([1, 19, 175]))
+  fixture_acceptance_assert_not_contains_for_test(text, "stamp:cpdfmanual.pdf")
+  @test.assert_eq(fixture_acceptance_replacement_count_for_test(text), 0)
+  @test.assert_eq(fixture_acceptance_raw_control_count_for_test(text), 0)
+  fixture_acceptance_assert_cpdf_manual_text_extraction_for_test(document)
 }
 
 ///|
@@ -14097,28 +14186,7 @@ async test "optional cpdf source manual fixture stamps addtext replacements" {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
-      let stamped = document.addtexts_with_source(
-        [1, 19, 175],
-        fixture_acceptance_cpdf_manual_addtext_text_for_test(),
-        @pdflite.pdf_strftime_dummy_time(),
-        document.read_bookmarks(preserve_actions=true),
-        PdfAddTextPreMadeFontPack(
-          fixture_acceptance_cpdf_manual_addtext_fontpack_for_test(),
-        ),
-        fixture_acceptance_pdf_name_for_test("/Helvetica"),
-        9.0,
-        1.1,
-        PdfContentRGB(0.1, 0.2, 0.3),
-        PdfPositionBottomLeft(18.0, 18.0),
-        filename="cpdfmanual.pdf",
-        bates=42,
-        bates_pad=Some(5),
-        opacity=0.5,
-        outline=true,
-        line_width=0.25,
-        url_border=true,
-        fast=true,
-      )
+      let stamped = fixture_acceptance_cpdf_manual_stamped_for_test(document)
       fixture_acceptance_assert_cpdf_manual_addtext_for_test(stamped)
       let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
         stamped,
@@ -14138,6 +14206,48 @@ async test "optional cpdf source manual fixture stamps addtext replacements" {
       let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
       @test.assert_eq(recovered.first_xref(), 0)
       fixture_acceptance_assert_cpdf_manual_addtext_for_test(recovered)
+    }
+  }
+}
+
+///|
+async test "optional cpdf source manual fixture removes stamped addtext" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/cpdfmanual.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      let stamped = fixture_acceptance_cpdf_manual_stamped_for_test(document)
+      fixture_acceptance_assert_cpdf_manual_addtext_for_test(stamped)
+      let stripped = stamped.remove_added_text([1, 19, 175])
+      fixture_acceptance_assert_cpdf_manual_added_text_removed_for_test(
+        stripped,
+      )
+      fixture_acceptance_assert_cpdf_manual_added_text_removed_for_test(
+        @pdflite.pdf_remove_added_text(stamped, [1, 19, 175]),
+      )
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        stripped,
+      )
+      fixture_acceptance_assert_cpdf_manual_added_text_removed_for_test(
+        @pdflite.pdf_read_document_from_bytes(compressed),
+      )
+      let corrupted = fixture_acceptance_corrupt_startxref_pointer_for_test(
+        compressed,
+      )
+      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+        corrupted,
+      )
+      guard strict is Err(_) else {
+        fail("expected bad startxref to require malformed reconstruction")
+      }
+      let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
+      @test.assert_eq(recovered.first_xref(), 0)
+      fixture_acceptance_assert_cpdf_manual_added_text_removed_for_test(
+        recovered,
+      )
     }
   }
 }
