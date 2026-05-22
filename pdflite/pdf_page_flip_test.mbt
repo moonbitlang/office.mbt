@@ -166,6 +166,13 @@ test "PdfDocument flip_pages_vertically transforms content annotations patterns 
       PdfNull,
     ]),
   )
+  let method_alias = try! document.vflip_pdf([1])
+  let alias_pages = try! method_alias.pages_of_pagetree()
+  @test.assert_eq(page_flip_ops_for_test(method_alias, alias_pages[0]), [
+    Op_cm(flip_matrix),
+    Op_scnName(pattern_name, []),
+    Op_S,
+  ])
 }
 
 ///|
@@ -189,6 +196,12 @@ test "PdfDocument flip_pages_horizontally transforms selected pages and wrapper"
     Op_S,
   ])
   @test.assert_eq(page_flip_ops_for_test(flipped, pages[1]), [Op_BT, Op_ET])
+  let method_alias = try! document.hflip_pdf([1])
+  let alias_pages = try! method_alias.pages_of_pagetree()
+  @test.assert_eq(page_flip_ops_for_test(method_alias, alias_pages[0]), [
+    Op_cm(horizontal_matrix),
+    Op_S,
+  ])
 }
 
 ///|

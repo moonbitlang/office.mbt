@@ -59,13 +59,23 @@ pub fn PdfDocument::flip_pages_vertically(
 }
 
 ///|
+/// Compatibility method using cpdfpage's `vflip_pdf` name.
+pub fn PdfDocument::vflip_pdf(
+  self : PdfDocument,
+  page_numbers : ArrayView[Int],
+  fast? : Bool = false,
+) -> PdfDocument raise PdfError {
+  self.flip_pages_vertically(page_numbers, fast~)
+}
+
+///|
 /// Compatibility wrapper for `PdfDocument::flip_pages_vertically`.
 pub fn pdf_vflip_pdf(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
   fast? : Bool = false,
 ) -> PdfDocument raise PdfError {
-  document.flip_pages_vertically(page_numbers, fast~)
+  document.vflip_pdf(page_numbers, fast~)
 }
 
 ///|
@@ -86,11 +96,21 @@ pub fn PdfDocument::flip_pages_horizontally(
 }
 
 ///|
+/// Compatibility method using cpdfpage's `hflip_pdf` name.
+pub fn PdfDocument::hflip_pdf(
+  self : PdfDocument,
+  page_numbers : ArrayView[Int],
+  fast? : Bool = false,
+) -> PdfDocument raise PdfError {
+  self.flip_pages_horizontally(page_numbers, fast~)
+}
+
+///|
 /// Compatibility wrapper for `PdfDocument::flip_pages_horizontally`.
 pub fn pdf_hflip_pdf(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
   fast? : Bool = false,
 ) -> PdfDocument raise PdfError {
-  document.flip_pages_horizontally(page_numbers, fast~)
+  document.hflip_pdf(page_numbers, fast~)
 }

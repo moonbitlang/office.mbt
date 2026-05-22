@@ -72,6 +72,14 @@ test "PdfDocument rotate_pages sets absolute page rotation" {
   let wrapped_pages = try! wrapped.pages_of_pagetree()
   @test.assert_eq(wrapped_pages[0].rotate, Rotate0)
   @test.assert_eq(wrapped_pages[1].rotate, Rotate180)
+  let cpdf_wrapped = try! @pdflite.pdf_rotate_pdf(270, document, [1])
+  let cpdf_pages = try! cpdf_wrapped.pages_of_pagetree()
+  @test.assert_eq(cpdf_pages[0].rotate, Rotate270)
+  @test.assert_eq(cpdf_pages[1].rotate, Rotate90)
+  let method_alias = try! document.rotate_pdf(90, [2])
+  let alias_pages = try! method_alias.pages_of_pagetree()
+  @test.assert_eq(alias_pages[0].rotate, Rotate0)
+  @test.assert_eq(alias_pages[1].rotate, Rotate90)
 }
 
 ///|
@@ -84,6 +92,10 @@ test "PdfDocument rotate_pages_by adds to existing page rotation" {
   let pages = try! rotated.pages_of_pagetree()
   @test.assert_eq(pages[0].rotate, Rotate180)
   @test.assert_eq(pages[1].rotate, Rotate0)
+  let cpdf_rotated = try! @pdflite.pdf_rotate_pdf_by(180, document, [1])
+  let cpdf_pages = try! cpdf_rotated.pages_of_pagetree()
+  @test.assert_eq(cpdf_pages[0].rotate, Rotate270)
+  @test.assert_eq(cpdf_pages[1].rotate, Rotate270)
 }
 
 ///|
@@ -232,6 +244,17 @@ test "PdfDocument rotate_contents transforms content annotations patterns and de
   guard rotate_content_ops_for_test(wrapped, wrapped_pages[1])
     is [Op_cm(_), Op_BT] else {
     fail("expected wrapper to rotate selected second page content")
+  }
+
+  let cpdf_wrapped = try! @pdflite.pdf_rotate_contents_cpdf_order(
+    180.0,
+    document,
+    [2],
+  )
+  let cpdf_pages = try! cpdf_wrapped.pages_of_pagetree()
+  guard rotate_content_ops_for_test(cpdf_wrapped, cpdf_pages[1])
+    is [Op_cm(_), Op_BT] else {
+    fail("expected cpdf-order rotate_contents wrapper to transform page two")
   }
 }
 

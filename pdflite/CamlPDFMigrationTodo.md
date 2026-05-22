@@ -7792,6 +7792,21 @@ Current backend snapshot:
   +73` passes with the known `markdown/cmd` future notice; `moon test --target
   native` reports 2369/2369; `moon info`, `moon fmt`, and `git diff --check`
   are clean.~~
+- [x] ~~Continue cpdfpage rotation/flip API parity with `.repos/cpdf-source`:
+  added source-name rotation aliases `PdfDocument::rotate_pdf`,
+  `PdfDocument::rotate_pdf_by`, cpdf-order wrappers `pdf_rotate_pdf` and
+  `pdf_rotate_pdf_by`, and a cpdf-order `pdf_rotate_contents_cpdf_order`
+  wrapper without breaking the existing document-first `pdf_rotate_contents`.
+  Added `PdfDocument::vflip_pdf` and `PdfDocument::hflip_pdf` method aliases
+  over the existing flip kernels. Coverage pins absolute rotation, relative
+  rotation, cpdf-order rotate-contents, and flip method aliases. Validation on
+  MoonBit compiler 0.9.3: `moon check --target native --warn-list +73` passes
+  with the known `markdown/cmd` future notice; `moon test --target native
+  pdf_page_rotate_test.mbt` reports 5/5; `moon test --target native
+  pdf_page_flip_test.mbt` reports 3/3; `moon check --target all --warn-list
+  +73` passes with the known `markdown/cmd` future notice; `moon test --target
+  native` reports 2369/2369; `moon info`, `moon fmt`, and `git diff --check`
+  are clean.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

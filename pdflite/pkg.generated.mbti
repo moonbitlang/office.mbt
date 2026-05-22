@@ -1312,9 +1312,15 @@ pub fn pdf_revisions_from_view(BytesView) -> Int raise @core.PdfError
 
 pub fn pdf_rotate_contents(PdfDocument, Double, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_rotate_contents_cpdf_order(Double, PdfDocument, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_rotate_pages(PdfDocument, Int, ArrayView[Int]) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_rotate_pages_by(PdfDocument, Int, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_rotate_pdf(Int, PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_rotate_pdf_by(Int, PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_run_length_decode(Bytes) -> Bytes
 
@@ -2754,6 +2760,7 @@ pub fn PdfDocument::hard_box(Self, ArrayView[Int], @core.PdfName, mediabox_if_mi
 pub fn PdfDocument::hard_box_string(Self, ArrayView[Int], String, mediabox_if_missing? : Bool, fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::has_page_box(Self, Int, @core.PdfName) -> Bool raise @core.PdfError
 pub fn PdfDocument::hasbox_string(Self, Int, String) -> Bool raise @core.PdfError
+pub fn PdfDocument::hflip_pdf(Self, ArrayView[Int], fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::image_bits_per_component(Self, PdfObject) -> PdfObject?
 pub fn PdfDocument::image_colour_space(Self, PdfObject, PdfObject) -> PdfColourSpace raise @core.PdfError
 pub fn PdfDocument::image_resolution(Self, ArrayView[Int], Double, inline? : Bool) -> Array[(Int, String, Int, Int, Double, Double, Int)] raise @core.PdfError
@@ -2934,6 +2941,8 @@ pub fn PdfDocument::root(Self) -> Int
 pub fn PdfDocument::rotate_contents(Self, Double, ArrayView[Int], fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::rotate_pages(Self, Int, ArrayView[Int]) -> Self raise @core.PdfError
 pub fn PdfDocument::rotate_pages_by(Self, Int, ArrayView[Int]) -> Self raise @core.PdfError
+pub fn PdfDocument::rotate_pdf(Self, Int, ArrayView[Int]) -> Self raise @core.PdfError
+pub fn PdfDocument::rotate_pdf_by(Self, Int, ArrayView[Int]) -> Self raise @core.PdfError
 pub fn PdfDocument::scale_contents(Self, ArrayView[Int], PdfPosition, Double, fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::scale_pages(Self, ArrayView[Int], ArrayView[(Double, Double)], fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::scale_pdf(Self, ArrayView[Int], ArrayView[(Double, Double)], fast? : Bool) -> Self raise @core.PdfError
@@ -3003,6 +3012,7 @@ pub fn PdfDocument::twoup(Self, fast? : Bool, process_struct_tree? : Bool) -> Se
 pub fn PdfDocument::twoup_stack(Self, fast? : Bool, process_struct_tree? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::upright_pages(Self, ArrayView[Int], fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::version(Self) -> (Int, Int)
+pub fn PdfDocument::vflip_pdf(Self, ArrayView[Int], fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::viewer_preference_item(Self, @core.PdfName) -> String
 pub fn PdfDocument::was_linearized(Self) -> Bool
 pub fn PdfDocument::what_encryption(Self) -> @crypt_core.PdfEncryptionMethod? raise @core.PdfError

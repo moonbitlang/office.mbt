@@ -67,6 +67,16 @@ pub fn PdfDocument::rotate_pages(
 }
 
 ///|
+/// Compatibility method using cpdfpage's `rotate_pdf` name.
+pub fn PdfDocument::rotate_pdf(
+  self : PdfDocument,
+  rotation : Int,
+  page_numbers : ArrayView[Int],
+) -> PdfDocument raise PdfError {
+  self.rotate_pages(rotation, page_numbers)
+}
+
+///|
 /// Add `rotation` degrees to selected page `/Rotate` entries.
 pub fn PdfDocument::rotate_pages_by(
   self : PdfDocument,
@@ -80,6 +90,16 @@ pub fn PdfDocument::rotate_pages_by(
     },
     "rotate_pages_by",
   )
+}
+
+///|
+/// Compatibility method using cpdfpage's `rotate_pdf_by` name.
+pub fn PdfDocument::rotate_pdf_by(
+  self : PdfDocument,
+  rotation : Int,
+  page_numbers : ArrayView[Int],
+) -> PdfDocument raise PdfError {
+  self.rotate_pages_by(rotation, page_numbers)
 }
 
 ///|
@@ -128,6 +148,16 @@ pub fn pdf_rotate_pages(
 }
 
 ///|
+/// Compatibility wrapper matching cpdfpage's `rotate_pdf` argument order.
+pub fn pdf_rotate_pdf(
+  rotation : Int,
+  document : PdfDocument,
+  page_numbers : ArrayView[Int],
+) -> PdfDocument raise PdfError {
+  document.rotate_pdf(rotation, page_numbers)
+}
+
+///|
 /// Compatibility wrapper for `PdfDocument::rotate_pages_by`.
 pub fn pdf_rotate_pages_by(
   document : PdfDocument,
@@ -138,10 +168,32 @@ pub fn pdf_rotate_pages_by(
 }
 
 ///|
+/// Compatibility wrapper matching cpdfpage's `rotate_pdf_by` argument order.
+pub fn pdf_rotate_pdf_by(
+  rotation : Int,
+  document : PdfDocument,
+  page_numbers : ArrayView[Int],
+) -> PdfDocument raise PdfError {
+  document.rotate_pdf_by(rotation, page_numbers)
+}
+
+///|
 /// Compatibility wrapper for `PdfDocument::rotate_contents`.
 pub fn pdf_rotate_contents(
   document : PdfDocument,
   rotation : Double,
+  page_numbers : ArrayView[Int],
+  fast? : Bool = false,
+) -> PdfDocument raise PdfError {
+  document.rotate_contents(rotation, page_numbers, fast~)
+}
+
+///|
+/// Compatibility wrapper preserving cpdfpage's `rotate_contents` argument
+/// order without changing the existing document-first `pdf_rotate_contents`.
+pub fn pdf_rotate_contents_cpdf_order(
+  rotation : Double,
+  document : PdfDocument,
   page_numbers : ArrayView[Int],
   fast? : Bool = false,
 ) -> PdfDocument raise PdfError {
