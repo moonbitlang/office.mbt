@@ -3224,6 +3224,196 @@ fn fixture_acceptance_rect_for_test(
 }
 
 ///|
+fn fixture_acceptance_assert_close_for_test(
+  actual : Double,
+  expected : Double,
+) -> Unit raise {
+  guard fixture_acceptance_double_close_for_test(actual, expected) else {
+    fail(
+      "expected " +
+      actual.to_string() +
+      " to be close to " +
+      expected.to_string(),
+    )
+  }
+}
+
+///|
+fn fixture_acceptance_clip_contour_area_for_test(
+  contour : @pdflite.PdfClipContour,
+) -> Double {
+  let mut area = 0.0
+  let vertices = contour.vertices
+  if vertices.length() >= 3 {
+    for index in 0..<vertices.length() {
+      let current = vertices[index]
+      let next = vertices[(index + 1) % vertices.length()]
+      area = area + current.x * next.y - next.x * current.y
+    }
+  }
+  let absolute = if area < 0.0 { -area } else { area }
+  absolute / 2.0
+}
+
+///|
+fn fixture_acceptance_clip_polygon_area_for_test(
+  polygon : @pdflite.PdfClipPolygon,
+) -> Double {
+  let mut area = 0.0
+  for contour in polygon.contours {
+    let contour_area = fixture_acceptance_clip_contour_area_for_test(contour)
+    if contour.hole {
+      area = area - contour_area
+    } else {
+      area = area + contour_area
+    }
+  }
+  area
+}
+
+///|
+fn fixture_acceptance_assert_clip_area_for_test(
+  polygon : @pdflite.PdfClipPolygon,
+  expected : Double,
+) -> Unit raise {
+  fixture_acceptance_assert_close_for_test(
+    fixture_acceptance_clip_polygon_area_for_test(polygon),
+    expected,
+  )
+}
+
+///|
+fn fixture_acceptance_assert_clip_bounds_for_test(
+  polygon : @pdflite.PdfClipPolygon,
+  min_x : Double,
+  max_x : Double,
+  min_y : Double,
+  max_y : Double,
+) -> Unit raise {
+  guard polygon.contours.length() > 0 else {
+    fail("expected non-empty clip polygon")
+  }
+  let first = polygon.contours[0].vertices[0]
+  let mut actual_min_x = first.x
+  let mut actual_max_x = first.x
+  let mut actual_min_y = first.y
+  let mut actual_max_y = first.y
+  for contour in polygon.contours {
+    for vertex in contour.vertices {
+      if vertex.x < actual_min_x {
+        actual_min_x = vertex.x
+      }
+      if vertex.x > actual_max_x {
+        actual_max_x = vertex.x
+      }
+      if vertex.y < actual_min_y {
+        actual_min_y = vertex.y
+      }
+      if vertex.y > actual_max_y {
+        actual_max_y = vertex.y
+      }
+    }
+  }
+  fixture_acceptance_assert_close_for_test(actual_min_x, min_x)
+  fixture_acceptance_assert_close_for_test(actual_max_x, max_x)
+  fixture_acceptance_assert_close_for_test(actual_min_y, min_y)
+  fixture_acceptance_assert_close_for_test(actual_max_y, max_y)
+}
+
+///|
+fn fixture_acceptance_clip_has_hole_for_test(
+  polygon : @pdflite.PdfClipPolygon,
+) -> Bool {
+  for contour in polygon.contours {
+    if contour.hole {
+      break true
+    }
+  } nobreak {
+    false
+  }
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_clip_polygons_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 1)
+  let page = document.pages_of_pagetree()[0]
+  let bounds = document.parse_rectangle(page.mediabox)
+  let width = bounds.max_x - bounds.min_x
+  let height = bounds.max_y - bounds.min_y
+  let inset_x = width / 4.0
+  let inset_y = height / 4.0
+  let inner_min_x = bounds.min_x + inset_x
+  let inner_max_x = bounds.max_x - inset_x
+  let inner_min_y = bounds.min_y + inset_y
+  let inner_max_y = bounds.max_y - inset_y
+  let page_area = width * height
+  let inner_area = (inner_max_x - inner_min_x) * (inner_max_y - inner_min_y)
+  let page_polygon = @pdflite.pdf_clip_polygon_of_box(
+    bounds.min_x,
+    bounds.max_x,
+    bounds.min_y,
+    bounds.max_y,
+  )
+  let inner_polygon = @pdflite.pdf_clip_polygon_of_box(
+    inner_min_x, inner_max_x, inner_min_y, inner_max_y,
+  )
+  let intersection = @pdflite.pdf_clip_polygon_clip(
+    PdfClipIntersection,
+    page_polygon,
+    inner_polygon,
+  )
+  @test.assert_eq(intersection.num_contours(), 1)
+  fixture_acceptance_assert_clip_bounds_for_test(
+    intersection, inner_min_x, inner_max_x, inner_min_y, inner_max_y,
+  )
+  fixture_acceptance_assert_clip_area_for_test(intersection, inner_area)
+  let difference = @pdflite.PdfClipDifference.clip_polygons(
+    page_polygon, inner_polygon,
+  )
+  @test.assert_eq(fixture_acceptance_clip_has_hole_for_test(difference), true)
+  fixture_acceptance_assert_clip_bounds_for_test(
+    difference,
+    bounds.min_x,
+    bounds.max_x,
+    bounds.min_y,
+    bounds.max_y,
+  )
+  fixture_acceptance_assert_clip_area_for_test(
+    difference,
+    page_area - inner_area,
+  )
+  let union = @pdflite.pdf_clip_polygon_clip(
+    PdfClipUnion,
+    page_polygon,
+    inner_polygon,
+  )
+  fixture_acceptance_assert_clip_bounds_for_test(
+    union,
+    bounds.min_x,
+    bounds.max_x,
+    bounds.min_y,
+    bounds.max_y,
+  )
+  fixture_acceptance_assert_clip_area_for_test(union, page_area)
+  let xor = @pdflite.pdf_clip_polygon_clip(
+    PdfClipExclusiveOr,
+    page_polygon,
+    inner_polygon,
+  )
+  @test.assert_eq(fixture_acceptance_clip_has_hole_for_test(xor), true)
+  fixture_acceptance_assert_clip_bounds_for_test(
+    xor,
+    bounds.min_x,
+    bounds.max_x,
+    bounds.min_y,
+    bounds.max_y,
+  )
+  fixture_acceptance_assert_clip_area_for_test(xor, page_area - inner_area)
+}
+
+///|
 fn fixture_acceptance_chop_source_hello_for_test(
   document : @pdflite.PdfDocument,
 ) -> @pdflite.PdfDocument raise {
@@ -12144,6 +12334,31 @@ async test "optional cpdf source hello fixture preserves path redaction stub" {
           fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
         ),
         expected_ops,
+      )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source clip fixture runs native polygon operations" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/manualimages/clip.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_source_clip_polygons_for_test(document)
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        document,
+      )
+      fixture_acceptance_assert_cpdf_source_clip_polygons_for_test(
+        @pdflite.pdf_read_document_from_bytes(compressed),
+      )
+      fixture_acceptance_assert_cpdf_source_clip_polygons_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(compressed),
+        ),
       )
     }
   }

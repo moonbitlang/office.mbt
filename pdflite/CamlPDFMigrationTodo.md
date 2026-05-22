@@ -7242,6 +7242,21 @@ Current backend snapshot:
   `moon info && moon fmt` reports no pending interface or formatting work, and
   `moon check --target all --warn-list +73` reports the known
   warning-73/main-package baseline with 10 warnings and 0 errors.~~
+- [x] ~~Add the next source-corpus `cpdfclip` native polygon slice: the native
+  `fixture_acceptance` package now also gates optional
+  `.repos/cpdf-source/manualimages/clip.pdf` through cpdf/GPC-style polygon
+  operations derived from the real fixture page box. The gate parses the source
+  `/MediaBox`, builds page and inset-box polygons, verifies native
+  intersection bounds/area, difference and exclusive-or hole handling plus
+  signed area, union area/bounds, the compatibility method wrapper, compressed
+  rewrite/reread, and bad-final-`startxref` reconstruction before rerunning the
+  same polygon assertions. `moon check --target native fixture_acceptance
+  --warn-list +73` passes, the focused source clip test reports 1/1 test
+  passing, `moon test --target native fixture_acceptance` reports 119/119 tests
+  passing, and `moon test --target native` reports 2338/2338 tests passing.
+  `moon info && moon fmt` reports no pending interface or formatting work, and
+  `moon check --target all --warn-list +73` reports the known
+  warning-73/main-package baseline with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.
