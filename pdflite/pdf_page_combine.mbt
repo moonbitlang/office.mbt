@@ -203,3 +203,22 @@ pub fn pdf_combine_pages(
     process_struct_tree~,
   )
 }
+
+///|
+/// Compatibility wrapper matching cpdfpage's `combine_pages` argument order.
+pub fn pdf_combine_pages_cpdf_order(
+  process_struct_tree : Bool,
+  fast : Bool,
+  under : PdfDocument,
+  overlay : PdfDocument,
+  scale_to_fit : Bool,
+  overlay_is_under : Bool,
+) -> PdfDocument raise PdfError {
+  under.combine_pages(
+    overlay,
+    fast~,
+    scale_to_fit~,
+    overlay_is_under~,
+    process_struct_tree~,
+  )
+}

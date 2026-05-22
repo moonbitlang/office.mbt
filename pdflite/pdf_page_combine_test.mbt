@@ -164,6 +164,18 @@ test "pdf_combine_pages can put a padded overlay under base pages" {
     Op_S,
     Op_Q,
   ])
+  let cpdf_combined = try! @pdflite.pdf_combine_pages_cpdf_order(
+    false, false, under, overlay, false, true,
+  )
+  let cpdf_pages = try! cpdf_combined.pages_of_pagetree()
+  @test.assert_eq(
+    combine_content_ops_for_test(cpdf_combined, cpdf_pages[0]),
+    combine_content_ops_for_test(combined, pages[0]),
+  )
+  @test.assert_eq(
+    combine_content_ops_for_test(cpdf_combined, cpdf_pages[1]),
+    combine_content_ops_for_test(combined, pages[1]),
+  )
 }
 
 ///|

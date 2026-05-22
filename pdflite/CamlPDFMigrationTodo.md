@@ -7807,6 +7807,21 @@ Current backend snapshot:
   +73` passes with the known `markdown/cmd` future notice; `moon test --target
   native` reports 2369/2369; `moon info`, `moon fmt`, and `git diff --check`
   are clean.~~
+- [x] ~~Continue cpdfpage stamp/combine API parity with `.repos/cpdf-source`:
+  added `PdfDocument::stamp_pages_string` for cpdf's string page-box names,
+  cpdf-order `pdf_stamp_cpdf_order`, and cpdf-order
+  `pdf_combine_pages_cpdf_order`. These wrappers preserve the existing
+  document-first MoonBit APIs while exposing cpdfpage's historical
+  `process_struct_tree`, `fast`, string box-name, `range`, overlay, and base
+  document ordering. Coverage pins cpdf-order stamping, string-box stamping,
+  and cpdf-order combine behavior against the existing verified kernels.
+  Validation on MoonBit compiler 0.9.3: `moon check --target native
+  --warn-list +73` passes with the known `markdown/cmd` future notice; `moon
+  test --target native pdf_page_stamp_test.mbt` reports 5/5; `moon test
+  --target native pdf_page_combine_test.mbt` reports 4/4; `moon check --target
+  all --warn-list +73` passes with the known `markdown/cmd` future notice;
+  `moon test --target native` reports 2369/2369; `moon info`, `moon fmt`, and
+  `git diff --check` are clean.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
