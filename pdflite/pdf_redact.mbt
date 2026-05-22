@@ -71,6 +71,16 @@ pub fn pdf_apply_redaction_type(
 }
 
 ///|
+/// Compatibility wrapper matching cpdfredact's `apply_type`.
+pub fn pdf_apply_type(
+  document : PdfDocument,
+  annotation_type : String,
+  page_numbers : ArrayView[Int],
+) -> Unit {
+  document.apply_redaction_type(annotation_type, page_numbers)
+}
+
+///|
 fn pdf_redact_annotation_box_ops(
   rectangle : PdfRectangle,
   light : Bool,

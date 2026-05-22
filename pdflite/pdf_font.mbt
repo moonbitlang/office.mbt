@@ -244,6 +244,30 @@ pub fn pdf_list_fonts_text(
 }
 
 ///|
+/// Return the bytes cpdf's `print_fonts` would print.
+pub fn PdfDocument::print_fonts(
+  self : PdfDocument,
+  page_numbers : ArrayView[Int],
+  json? : Bool = false,
+) -> PdfBytes raise PdfError {
+  if json {
+    self.fonts_json_blob(page_numbers)
+  } else {
+    self.list_fonts_text(page_numbers)
+  }
+}
+
+///|
+/// Compatibility wrapper matching cpdffont's `print_fonts`.
+pub fn pdf_print_fonts(
+  document : PdfDocument,
+  page_numbers : ArrayView[Int],
+  json? : Bool = false,
+) -> PdfBytes raise PdfError {
+  document.print_fonts(page_numbers, json~)
+}
+
+///|
 fn pdf_font_json_nullable_name(value : String) -> Json {
   if value == "" {
     Json::null()

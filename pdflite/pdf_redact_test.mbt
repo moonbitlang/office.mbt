@@ -154,6 +154,7 @@ test "redaction apply stubs leave documents untouched" {
   @pdflite.pdf_apply_redactions(document, [99])
   document.apply_redaction_type("Square", [99])
   @pdflite.pdf_apply_redaction_type(document, "Square", [99])
+  @pdflite.pdf_apply_type(document, "Square", [99])
   @test.assert_eq((try! document.pages_of_pagetree()).length(), 1)
 }
 

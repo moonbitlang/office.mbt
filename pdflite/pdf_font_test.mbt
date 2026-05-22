@@ -557,6 +557,8 @@ test "PdfDocument font listing renders text and JSON" {
     ),
   )
   @test.assert_eq(wrapped_text, text)
+  @test.assert_eq(try! doc.print_fonts([1]), text)
+  @test.assert_eq(try! @pdflite.pdf_print_fonts(doc, [1]), text)
   let expected = Json::array([
     Json::object(
       Map([
@@ -596,6 +598,14 @@ test "PdfDocument font listing renders text and JSON" {
   )
   @test.assert_eq(
     try! @pdflite.pdf_fonts_json_blob(doc, [1]),
+    @utf8.encode(expected.stringify()),
+  )
+  @test.assert_eq(
+    try! doc.print_fonts([1], json=true),
+    @utf8.encode(expected.stringify()),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_print_fonts(doc, [1], json=true),
     @utf8.encode(expected.stringify()),
   )
 }

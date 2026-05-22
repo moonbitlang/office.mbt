@@ -216,6 +216,8 @@ pub fn pdf_apply_redaction_type(PdfDocument, String, ArrayView[Int]) -> Unit
 
 pub fn pdf_apply_redactions(PdfDocument, ArrayView[Int]) -> Unit
 
+pub fn pdf_apply_type(PdfDocument, String, ArrayView[Int]) -> Unit
+
 pub fn pdf_array(ArrayView[PdfObject]) -> PdfObject
 
 pub fn pdf_ascii85_decode(Bytes) -> Bytes raise @core.PdfError
@@ -1117,6 +1119,8 @@ pub fn pdf_prepend_operators(PdfDocument, ArrayView[PdfContentOp], PdfPage, fast
 pub fn pdf_presentation(ArrayView[Int], String?, Double?, Bool, Bool, Int, Double, PdfDocument) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_print_dict_entry(PdfDocument, @core.PdfName) -> Array[Bytes] raise @core.PdfError
+
+pub fn pdf_print_fonts(PdfDocument, ArrayView[Int], json? : Bool) -> Bytes raise @core.PdfError
 
 pub fn pdf_print_function(PdfFunction) -> Unit
 
@@ -2812,6 +2816,7 @@ pub fn PdfDocument::portfolio(Self, ArrayView[PdfPortfolioEntry], mod_date? : By
 pub fn PdfDocument::postpend_operators(Self, PdfPage, ArrayView[PdfContentOp], fast? : Bool) -> PdfPage raise @core.PdfError
 pub fn PdfDocument::prepend_operators(Self, PdfPage, ArrayView[PdfContentOp], fast? : Bool) -> PdfPage raise @core.PdfError
 pub fn PdfDocument::presentation(Self, ArrayView[Int], String?, Double?, Bool, Bool, Int, Double) -> Self raise @core.PdfError
+pub fn PdfDocument::print_fonts(Self, ArrayView[Int], json? : Bool) -> Bytes raise @core.PdfError
 pub fn PdfDocument::process_pages(Self, ArrayView[Int], (Int, PdfPage) -> (PdfPage, Int, @geometry.TransformMatrix) raise @core.PdfError) -> Self raise @core.PdfError
 pub fn PdfDocument::process_xobjects(Self, PdfPage, (Self, PdfObject, ArrayView[PdfObject]) -> Array[PdfObject] raise @core.PdfError) -> Unit raise @core.PdfError
 pub fn PdfDocument::read_annotation(Self, PdfObject) -> PdfAnnotation raise @core.PdfError
