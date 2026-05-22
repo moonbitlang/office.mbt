@@ -35,7 +35,8 @@ Current estimate:
   cpdfua Matterhorn content/role-map/XMP/viewer-preference/optional-content/
   media-clip/file-attachment/PrinterMark/reference-XObject/MCID Form XObject/
   Type0 CIDSystemInfo/CIDToGIDMap/CMap-name/WMode/font-file no-op/TrueType
-  encoding/cmap/ToUnicode validation, imposition
+  encoding/cmap/ToUnicode validation, TrueType cmap glyph mapping foundation,
+  imposition
   transform/content/page-assembly/pattern-matrix kernels, cpdf page
   hard-box/removal/shift/scale/scale-to-fit/upright/set-mediabox/copy-box
   helpers and source-order compatibility aliases, imposition make-space
@@ -44,9 +45,9 @@ Current estimate:
 
 Current backend snapshot:
 
-- Native: full suite passes on MoonBit 0.9.3, currently 2377/2377 tests.
+- Native: full suite passes on MoonBit 0.9.3, currently 2380/2380 tests.
 - WasmGC and JavaScript: full portable non-native test suites pass on MoonBit
-  0.9.3, currently 2037/2037 on each backend after the latest source-corpus
+  0.9.3, currently 2040/2040 on each backend after the latest source-corpus
   recovery gates.
 - Wasm: current plain-Wasm smoke validation passes at 41/41 tests after
   filtering root's heavy package-level test files and the Markdown package
@@ -71,6 +72,20 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port the `cpdftruetype` cmap glyph-mapping foundation needed by later
+  TrueType subsetting: `PdfTrueTypeCMapGlyph`,
+  `pdf_truetype_cmap_glyphs`, and `pdf_truetype_cmap_glyph` now decode the
+  source-supported cmap formats 0, 4, and 6, including format-4
+  `idRangeOffset` glyph arrays, later-subtable replacement of earlier mappings,
+  and the source no-cmap fallback mapping byte codes `0..255` to matching glyph
+  indexes. This does not complete `Cpdftruetype.parse` or font-file
+  subsetting, but moves the actual cmap reader dependency into MoonBit with a
+  public inspection API. Validation on MoonBit 0.9.3: `moon check --target
+  native --warn-list +73` passes with only the existing `markdown/cmd`
+  warning; `moon test --target native pdf_truetype_test.mbt` reports 6/6;
+  `moon check --target all --warn-list +73` passes; full backend tests report
+  native 2380/2380, wasm-gc 2040/2040, and js 2040/2040; and `moon fmt`,
+  `moon info`, and `git diff --check` are clean.~~
 - [x] ~~Port the `cpdfimage.extract_images` file-emission slice:
   `PdfDocument::extract_images_files` and `pdf_image_extract_images_files`
   now emit cpdf-style files for selected page image XObjects, indirect soft
