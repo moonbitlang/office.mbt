@@ -19,6 +19,19 @@ pub(all) struct PdfFontPack {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Source-facing cpdf font source descriptor.
+///
+/// This mirrors `Cpdfembed.cpdffont`: callers may supply a prebuilt font pack,
+/// request TrueType embedding from bytes and an encoding, or reuse an existing
+/// named font resource. Full TrueType subsetting remains a separate porting
+/// slice; this enum preserves the source-facing choice shape.
+pub(all) enum PdfEmbedFontSource {
+  PdfEmbedPreMadeFontPack(PdfFontPack)
+  PdfEmbedInfo(PdfBytes, String, PdfEncoding)
+  PdfEmbedExistingNamedFont
+} derive(Debug, Eq, ToJson)
+
+///|
 /// Build a font pack for an already parsed standard font.
 ///
 /// Duplicate Unicode mappings follow OCaml `Hashtbl.add`/`find` behavior by
@@ -76,11 +89,23 @@ pub fn pdf_fontpack_get_char(
 }
 
 ///|
-/// Collate consecutive `(charcode, font_index, font)` runs by font index.
-pub fn pdf_fontpack_collate_runs(
-  runs : ArrayView[(Int, Int, PdfFont)],
-) -> Array[Array[(Int, Int, PdfFont)]] {
-  let output : Array[Array[(Int, Int, PdfFont)]] = []
+/// Compatibility wrapper matching cpdfembed's `get_char`.
+pub fn pdf_embed_get_char(
+  pack : PdfFontPack,
+  codepoint : Int,
+) -> (Int, Int, PdfFont)? {
+  pack.get_char(codepoint)
+}
+
+///|
+/// Collate consecutive triples by their middle value.
+///
+/// This is the generic cpdfembed `collate_runs` behavior. The fontpack-specific
+/// wrapper below keeps the older concrete API for existing callers.
+pub fn[A, B : Eq, C] pdf_embed_collate_runs(
+  runs : ArrayView[(A, B, C)],
+) -> Array[Array[(A, B, C)]] {
+  let output : Array[Array[(A, B, C)]] = []
   for run in runs {
     if output.length() == 0 {
       output.push([run])
@@ -94,6 +119,14 @@ pub fn pdf_fontpack_collate_runs(
     }
   }
   output
+}
+
+///|
+/// Collate consecutive `(charcode, font_index, font)` runs by font index.
+pub fn pdf_fontpack_collate_runs(
+  runs : ArrayView[(Int, Int, PdfFont)],
+) -> Array[Array[(Int, Int, PdfFont)]] {
+  pdf_embed_collate_runs(runs)
 }
 
 ///|

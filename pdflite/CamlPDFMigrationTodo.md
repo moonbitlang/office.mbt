@@ -42,7 +42,7 @@ Current estimate:
 
 Current backend snapshot:
 
-- Native: full suite passes on MoonBit 0.9.3, currently 2369/2369 tests.
+- Native: full suite passes on MoonBit 0.9.3, currently 2370/2370 tests.
 - WasmGC and JavaScript: full portable non-native test suites pass on MoonBit
   0.9.3, currently 2018/2018 on each backend after the latest source-corpus
   recovery gates.
@@ -69,6 +69,17 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfembed` source-surface parity with `.repos/cpdf-source`:
+  added `PdfEmbedFontSource` to preserve the source `cpdffont` choice shape,
+  `pdf_embed_get_char` as the cpdf-style fontpack lookup alias, and generic
+  `pdf_embed_collate_runs` over triples grouped by their middle value. The
+  existing concrete `pdf_fontpack_collate_runs` now delegates to the generic
+  helper. Full TrueType subsetting/embedding remains a separate implementation
+  slice. Validation on MoonBit 0.9.3: `moon check --target native --warn-list
+  +73` passes with only the existing `markdown/cmd` warning; `moon test
+  --target native pdf_embed_test.mbt` reports 6/6; `moon check --target all
+  --warn-list +73` passes; and full native `moon test --target native` reports
+  2370/2370.~~
 - [x] ~~Port the `cpdfpage` source-order wrapper alias slice:
   `pdf_set_mediabox`, `pdf_shift_boxes_cpdf_order`,
   `pdf_change_boxes_cpdf_order`, `pdf_scale_contents_cpdf_order`, and

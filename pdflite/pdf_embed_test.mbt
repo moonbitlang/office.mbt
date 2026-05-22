@@ -21,6 +21,7 @@ test "pdf_fontpack_of_standard_font maps Unicode codepoints to charcodes" {
   }
   @test.assert_eq(mapped_font, font)
   @test.assert_eq(@pdflite.pdf_fontpack_get_char(pack, 0x2603), None)
+  @test.assert_eq(@pdflite.pdf_embed_get_char(pack, 65), Some((65, 0, font)))
 }
 
 ///|
@@ -59,6 +60,39 @@ test "pdf_fontpack_collate_runs groups consecutive equal font numbers" {
     [(69, 0, first)],
   ])
   @test.assert_eq(@pdflite.pdf_fontpack_collate_runs([]), [])
+  @test.assert_eq(
+    @pdflite.pdf_embed_collate_runs([
+      ("A", "Latin", 1),
+      ("B", "Latin", 2),
+      ("Omega", "Greek", 3),
+      ("Snowman", "Symbol", 4),
+      ("Euro", "Symbol", 5),
+    ]),
+    [
+      [("A", "Latin", 1), ("B", "Latin", 2)],
+      [("Omega", "Greek", 3)],
+      [("Snowman", "Symbol", 4), ("Euro", "Symbol", 5)],
+    ],
+  )
+}
+
+///|
+test "PdfEmbedFontSource variants preserve cpdfembed font source shape" {
+  let font = embed_standard_font_for_test()
+  let pack = try! @pdflite.pdf_fontpack_of_standardfont(font)
+  let premade : @pdflite.PdfEmbedFontSource = PdfEmbedPreMadeFontPack(pack)
+  let embed : @pdflite.PdfEmbedFontSource = PdfEmbedInfo(
+    @ascii.encode("ttf"),
+    "NimbusSans",
+    PdfWinAnsiEncoding,
+  )
+  let existing : @pdflite.PdfEmbedFontSource = PdfEmbedExistingNamedFont
+  @test.assert_eq(premade, PdfEmbedPreMadeFontPack(pack))
+  @test.assert_eq(
+    embed,
+    PdfEmbedInfo(@ascii.encode("ttf"), "NimbusSans", PdfWinAnsiEncoding),
+  )
+  @test.assert_eq(existing, PdfEmbedExistingNamedFont)
 }
 
 ///|
