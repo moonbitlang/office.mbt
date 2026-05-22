@@ -7225,6 +7225,23 @@ Current backend snapshot:
   pending interface or formatting work, and `moon check --target all
   --warn-list +73` reports the known warning-73/main-package baseline with 7
   warnings and 0 errors.~~
+- [x] ~~Add the next source-corpus `cpdfxobject.stamp_as_xobject` slice: the
+  native `fixture_acceptance` package now also gates optional
+  `.repos/cpdf-source/hello.pdf` stamped with `.repos/cpdf-source/logo.pdf` as a
+  reusable Form XObject. The gate verifies the method and compatibility wrapper
+  return the same generated `CPDFXObj` name, preserve the base page box/rotation
+  and extracted `Hello, World!` text, embed a Form XObject with the overlay
+  bounding box and prefixed logo resources, retain `/aG0` and `/aG1`
+  transparency state resources in the form resources, decode deferred or
+  compressed form stream bytes before parsing content operators, and survive
+  compressed rewrite/reread plus bad-final-`startxref` reconstruction with
+  `first_xref() == 0`. `moon check --target native fixture_acceptance
+  --warn-list +73` passes, the focused Form XObject stamp test reports 1/1 test
+  passing, `moon test --target native fixture_acceptance` reports 118/118 tests
+  passing, and `moon test --target native` reports 2337/2337 tests passing.
+  `moon info && moon fmt` reports no pending interface or formatting work, and
+  `moon check --target all --warn-list +73` reports the known
+  warning-73/main-package baseline with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.

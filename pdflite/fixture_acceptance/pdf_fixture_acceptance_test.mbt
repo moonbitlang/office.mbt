@@ -2046,9 +2046,20 @@ fn fixture_acceptance_assert_cpdf_source_prefixed_logo_resources_for_test(
 ) -> Unit raise {
   let pages = document.pages_of_pagetree()
   @test.assert_eq(pages.length(), 1)
+  fixture_acceptance_assert_cpdf_source_prefixed_logo_resource_object_for_test(
+    document,
+    pages[0].resources,
+  )
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_prefixed_logo_resource_object_for_test(
+  document : @pdflite.PdfDocument,
+  resources : @pdflite.PdfObject,
+) -> Unit raise {
   guard document.lookup_direct(
       fixture_acceptance_pdf_name_for_test("/ExtGState"),
-      pages[0].resources,
+      resources,
     )
     is Some(extgstate) else {
     fail("missing stamped logo ExtGState resources")
@@ -2074,6 +2085,101 @@ fn fixture_acceptance_assert_cpdf_source_prefixed_logo_resources_for_test(
   @test.assert_eq(
     document.lookup_direct(fixture_acceptance_pdf_name_for_test("/BM"), g1),
     Some(PdfNameObject(fixture_acceptance_pdf_name_for_test("/Normal"))),
+  )
+}
+
+///|
+fn fixture_acceptance_form_xobject_for_test(
+  document : @pdflite.PdfDocument,
+  page : @pdflite.PdfPage,
+  name : @pdflite.PdfName,
+) -> @pdflite.PdfStream raise {
+  guard document.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/XObject"),
+      page.resources,
+    )
+    is Some(xobjects) else {
+    fail("expected page XObject resources")
+  }
+  guard xobjects.lookup_immediate(name) is Some(PdfIndirect(number)) else {
+    fail("expected named Form XObject resource")
+  }
+  guard document.lookup_object_or_null(number) is PdfStreamObject(stream) else {
+    fail("expected Form XObject stream")
+  }
+  stream
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_stamp_as_xobject_for_test(
+  original : @pdflite.PdfDocument,
+  overlay : @pdflite.PdfDocument,
+  stamped : @pdflite.PdfDocument,
+  name : @pdflite.PdfName,
+) -> Unit raise {
+  @test.assert_eq(original.endpage(), 1)
+  @test.assert_eq(overlay.endpage(), 1)
+  @test.assert_eq(stamped.endpage(), 1)
+  let original_pages = original.pages_of_pagetree()
+  let overlay_pages = overlay.pages_of_pagetree()
+  let stamped_pages = stamped.pages_of_pagetree()
+  @test.assert_eq(stamped_pages[0].mediabox, original_pages[0].mediabox)
+  @test.assert_eq(stamped_pages[0].rotate, original_pages[0].rotate)
+  @test.assert_eq(
+    @ascii.decode_lossy(name.bytes()).has_suffix("CPDFXObj"),
+    true,
+  )
+  let text = @utf8.decode_lossy(stamped.test_extract_text([1]))
+  fixture_acceptance_assert_contains_for_test(text, "Hello, World!")
+  let stream = fixture_acceptance_form_xobject_for_test(
+    stamped,
+    stamped_pages[0],
+    name,
+  )
+  @test.assert_eq(
+    stamped.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/Type"),
+      stream.dictionary,
+    ),
+    Some(PdfNameObject(fixture_acceptance_pdf_name_for_test("/XObject"))),
+  )
+  @test.assert_eq(
+    stamped.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/Subtype"),
+      stream.dictionary,
+    ),
+    Some(PdfNameObject(fixture_acceptance_pdf_name_for_test("/Form"))),
+  )
+  @test.assert_eq(
+    stamped.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/BBox"),
+      stream.dictionary,
+    ),
+    Some(overlay_pages[0].mediabox),
+  )
+  guard stamped.lookup_direct(
+      fixture_acceptance_pdf_name_for_test("/Resources"),
+      stream.dictionary,
+    )
+    is Some(form_resources) else {
+    fail("expected Form XObject resources")
+  }
+  fixture_acceptance_assert_cpdf_source_prefixed_logo_resource_object_for_test(
+    stamped, form_resources,
+  )
+  let data = stamped.pdf_decode_stream(PdfStreamObject(stream)).stream_bytes()
+  let ops = @pdflite.pdf_parse_content_ops_from_bytes(data)
+  @test.assert_eq(ops.length() > 0, true)
+  @test.assert_eq(
+    fixture_acceptance_content_ops_contain_gs_for_test(
+      ops,
+      fixture_acceptance_pdf_name_for_test("/aG0"),
+    ) ||
+    fixture_acceptance_content_ops_contain_gs_for_test(
+      ops,
+      fixture_acceptance_pdf_name_for_test("/aG1"),
+    ),
+    true,
   )
 }
 
@@ -11481,6 +11587,59 @@ async test "optional cpdf source fixtures stamp and combine pages" {
             combined_compressed,
           ),
         ),
+      )
+    }
+    _ => ()
+  }
+}
+
+///|
+async test "optional cpdf source fixtures stamp logo as Form XObject" {
+  match
+    (
+      fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf"),
+      fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/logo.pdf"),
+    ) {
+    (Some(hello_bytes), Some(logo_bytes)) => {
+      let hello = @pdflite.pdf_read_document_from_bytes(hello_bytes)
+      let logo = @pdflite.pdf_read_document_from_bytes(logo_bytes)
+      fixture_acceptance_assert_cpdf_source_hello_text_for_test(hello)
+      fixture_acceptance_assert_cpdf_logo_boxes_and_transparency_for_test(logo)
+      let (stamped, name) = hello.stamp_as_xobject([1], logo)
+      fixture_acceptance_assert_cpdf_source_stamp_as_xobject_for_test(
+        hello, logo, stamped, name,
+      )
+      let (wrapped, wrapped_name) = @pdflite.pdf_stamp_as_xobject(
+        hello,
+        [1],
+        logo,
+      )
+      @test.assert_eq(wrapped_name, name)
+      fixture_acceptance_assert_cpdf_source_stamp_as_xobject_for_test(
+        hello, logo, wrapped, wrapped_name,
+      )
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        stamped,
+      )
+      fixture_acceptance_assert_cpdf_source_stamp_as_xobject_for_test(
+        hello,
+        logo,
+        @pdflite.pdf_read_document_from_bytes(compressed),
+        name,
+      )
+      let corrupted = fixture_acceptance_corrupt_startxref_pointer_for_test(
+        compressed,
+      )
+      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+        corrupted,
+      )
+      guard strict is Err(_) else {
+        fail("expected Form XObject stamp to require reconstruction")
+      }
+      let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
+      @test.assert_eq(recovered.first_xref(), 0)
+      fixture_acceptance_assert_cpdf_source_stamp_as_xobject_for_test(
+        hello, logo, recovered, name,
       )
     }
     _ => ()
