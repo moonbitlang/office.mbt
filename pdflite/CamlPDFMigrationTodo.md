@@ -40,17 +40,18 @@ Current estimate:
 
 Current backend snapshot:
 
-- Native: full suite passing; the latest coverage pass leaves no uncovered
-  lines in `pdf_squeeze.mbt`, including stream compression, duplicate pruning,
-  page content stream normalization, and Form XObject normalization, with
-  historical defensive and edge-path coverage gaps still present in older files.
-- WasmGC and JavaScript: full non-native test suites pass, currently
-  2013/2013 on each backend after the latest source-corpus recovery gates.
-- Wasm: backend smoke suite passes with 497 tests after keeping the largest
-  corpus/text regression files on wasm-gc/js/native/llvm; full plain-Wasm suite
-  is still deferred because the generated package-level module exceeds the
-  runtime's maximum function-size limit.
-- LLVM: blocked by the current toolchain's missing LLVM stdlib bundle.
+- Native: full suite passes on MoonBit 0.9.3, currently 2351/2351 tests.
+- WasmGC and JavaScript: full portable non-native test suites pass on MoonBit
+  0.9.3, currently 2016/2016 on each backend after the latest source-corpus
+  recovery gates.
+- Wasm: full plain-Wasm validation is still deferred because generated
+  package-level test modules exceed the runtime's maximum function-size limit;
+  on MoonBit 0.9.3 this is observed in both `markdown.blackbox_test.wasm` for
+  `moon test --target wasm` and `pdflite.blackbox_test.wasm` for
+  `moon test --target wasm .`.
+- LLVM: still blocked by the current toolchain: `moon test --target llvm`
+  warns that LLVM is experimental and then fails because the LLVM core bundle
+  lacks `prelude/prelude.mi`.
 
 ## Tracking Rules
 
@@ -2120,7 +2121,20 @@ Current backend snapshot:
   known runtime maximum-function-size limit, now observed in
   `markdown.blackbox_test.wasm`, while `moon test --target wasm .` also exceeds
   the same limit in `pdflite.blackbox_test.wasm`.~~
-- [ ] Revisit all-backend validation after native parity is stable.
+- [x] ~~Refresh compiler-0.9.3 backend readiness after the latest native
+  cpdf-source parity gates: `moon test --target wasm-gc` and `moon test
+  --target js` each report 2016/2016 tests passing, `moon check --target all
+  --warn-list +73` completes with no errors aside from the known
+  `markdown/cmd` future main-package blackbox-test notice, full `moon test
+  --target wasm` still hits the runtime maximum-function-size limit in
+  `markdown.blackbox_test.wasm`, root-package `moon test --target wasm .`
+  hits the same limit in `pdflite.blackbox_test.wasm`, and `moon test --target
+  llvm` remains blocked by the installed toolchain's missing LLVM core bundle
+  (`prelude/prelude.mi`).~~
+- [x] ~~Revisit all-backend validation after native parity is stable: MoonBit
+  0.9.3 validates wasm-gc/js at 2016/2016 each and confirms the remaining
+  backend blockers are plain-Wasm generated-test function size and the missing
+  LLVM core bundle, not newly failing portable pdflite behavior.~~
 
 ## Big Picture Checklist
 
@@ -2284,7 +2298,10 @@ Current backend snapshot:
   for the same object number.~~
 - [ ] Broaden malformed xref-table/xref-stream/object-stream recovery with more
   real-world corpus cases.
-- [ ] Revisit all-backend validation after native feature parity is stable.
+- [x] ~~Revisit all-backend validation after native feature parity is stable:
+  MoonBit 0.9.3 validates wasm-gc/js at 2016/2016 each and confirms the
+  remaining backend blockers are plain-Wasm generated-test function size and
+  the missing LLVM core bundle, not newly failing portable pdflite behavior.~~
 - [ ] Tune remaining performance for large files, object streams, filters,
   image extraction, and non-ASCII text paths.
 - [x] ~~Object-stream embedded-object loading now groups compressed xref entries
@@ -7514,7 +7531,13 @@ Current backend snapshot:
   `markdown/cmd`, and `moon test --target native` reports 2351/2351 tests
   passing on MoonBit 0.9.3. `moon info && moon fmt` reports no pending public
   API or formatting work.~~
-- [ ] Run a compiler-0.9.3 backend readiness pass next: rerun the non-native
+- [x] ~~Run a compiler-0.9.3 backend readiness pass next: reran the non-native
   backend test/check slices that were previously deferred after native
-  stabilization, then update the remaining backend-validation items based on
-  actual failures rather than stale pre-upgrade assumptions.
+  stabilization. WasmGC and JavaScript are green at 2016/2016 each, all-target
+  checking passes with the known `markdown/cmd` future notice, plain Wasm is
+  still blocked by runtime maximum-function-size limits in generated test
+  modules, and LLVM remains blocked by the installed toolchain's missing LLVM
+  core bundle.~~
+- [ ] Reduce the generated plain-Wasm test modules enough for a meaningful
+  current smoke suite to instantiate under the runtime maximum-function-size
+  limit, without dropping source-corpus coverage from wasm-gc/js/native.
