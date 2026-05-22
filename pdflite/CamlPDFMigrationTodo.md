@@ -7057,6 +7057,27 @@ Current backend snapshot:
   passing. `moon info && moon fmt` reports no pending interface or formatting
   work, and `moon check --target all --warn-list +73` reports the known
   warning-73/main-package baseline with 10 warnings and 0 errors.~~
+- [x] ~~Add the next source-corpus metadata/composition slice: the new native
+  `metadata/fixture_acceptance` package now gates optional
+  `.repos/cpdf-source/cpdfmanual.pdf` through cpdf-style info, XMP, page-info,
+  and composition reporting plus metadata mutation/removal. The reporting gate
+  verifies the manual's PDF 1.7 page count, creator/producer fields, empty XMP
+  subformat/language output, page-info JSON/text for pages 1 and 175,
+  composition buckets and byte counts, compressed rewrite/reread, and wrapper
+  parity for `pdf_output_info_json_blob`, `pdf_output_xmp_info_json_blob`,
+  `pdf_page_info_json`, `pdf_output_page_info_text`, `pdf_composition`, and
+  `pdf_show_composition_json_blob`. The mutation gate creates XMP metadata,
+  sets language plus `/Title` and `/Author` through wrapper APIs, verifies
+  PDFDoc/XMP escaping and preserved source creator/producer fields, repeats
+  after compressed rewrite/reread and bad-final-`startxref` reconstruction, then
+  removes all metadata while preserving language reporting. `moon check --target
+  native metadata/fixture_acceptance --warn-list +73` passes, both focused cpdf
+  source metadata tests report 1/1 test passing, `moon test --target native
+  metadata/fixture_acceptance` reports 2/2 tests passing, and `moon test
+  --target native` reports 2327/2327 tests passing. `moon info && moon fmt`
+  reports no pending interface or formatting work, and `moon check --target all
+  --warn-list +73` reports the known warning-73/main-package baseline with 10
+  warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.
