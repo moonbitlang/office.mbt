@@ -6,6 +6,7 @@ import {
   "bobzhang/pdflite/geometry" @geometry,
   "bobzhang/pdflite/internal/number_set" @number_set,
   "moonbitlang/core/env",
+  "moonbitlang/core/buffer",
   "moonbitlang/core/encoding/ascii",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/hashmap",

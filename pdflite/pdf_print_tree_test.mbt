@@ -40,3 +40,20 @@ test "pdf_print_tree_to_string applies a line prefix to every line" {
     "> root\n> ├── left\n> │   └── leaf\n> └── right\n",
   )
 }
+
+///|
+test "pdf_print_tree_to_buffer appends cpdf tree layout to existing buffer" {
+  let output = @buffer.new()
+  output.write_string("before\n")
+  @pdflite.pdf_print_tree_to_buffer(
+    output,
+    0,
+    print_tree_name_for_test,
+    print_tree_children_for_test,
+    line_prefix="| ",
+  )
+  @test.assert_eq(
+    output.to_string(),
+    "before\n| root\n| ├── left\n| │   └── leaf\n| └── right\n",
+  )
+}

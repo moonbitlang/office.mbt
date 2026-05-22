@@ -26,6 +26,48 @@ fn[T] pdf_print_tree_root(
 }
 
 ///|
+fn[T] pdf_print_tree_root_to_buffer(
+  output : @buffer.Buffer,
+  indent : String,
+  value : T,
+  get_name : (T) -> String,
+  get_children : (T) -> Array[T],
+) -> Unit {
+  output.write_string(get_name(value))
+  output.write_string("\n")
+  let children = get_children(value)
+  for index in 0..<children.length() {
+    let is_last = index + 1 == children.length()
+    let line = if is_last { "└── " } else { "├── " }
+    let extra_indent = if is_last { "    " } else { "│   " }
+    output.write_string(indent)
+    output.write_string(line)
+    pdf_print_tree_root_to_buffer(
+      output,
+      indent + extra_indent,
+      children[index],
+      get_name,
+      get_children,
+    )
+  }
+}
+
+///|
+/// Render a tree to an existing buffer using cpdf's line-drawing layout.
+pub fn[T] pdf_print_tree_to_buffer(
+  output : @buffer.Buffer,
+  value : T,
+  get_name : (T) -> String,
+  get_children : (T) -> Array[T],
+  line_prefix? : String = "",
+) -> Unit {
+  output.write_string(line_prefix)
+  pdf_print_tree_root_to_buffer(
+    output, line_prefix, value, get_name, get_children,
+  )
+}
+
+///|
 /// Render a tree to a string using cpdf's line-drawing layout.
 ///
 /// `get_name` returns the label for a node, and `get_children` returns its

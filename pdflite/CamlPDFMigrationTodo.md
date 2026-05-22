@@ -7462,6 +7462,17 @@ Current backend snapshot:
   pending public API or formatting work, and `moon check --target all
   --warn-list +73` reports the known warning-73/main-package baseline with 10
   warnings and 0 errors.~~
+- [x] ~~Complete the remaining `cpdfprinttree` buffer-output surface: the root
+  package now exposes `pdf_print_tree_to_buffer`, mirroring
+  `Cpdfprinttree.to_buffer` by appending cpdf's tree-line rendering to an
+  existing `@buffer.Buffer` while preserving the existing `line_prefix`
+  behavior. Focused coverage pins append semantics and prefixed Unicode tree
+  lines, with `moon test --target native pdf_print_tree_test.mbt` reporting
+  3/3 tests passing, `moon test --target native` reporting 2350/2350 tests
+  passing, `moon check --target native --warn-list +73` reporting the known
+  warning-73/main-package baseline with 10 warnings and 0 errors, and
+  `moon check --target all --warn-list +73` reporting the same 10-warning
+  baseline with 0 errors.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.
