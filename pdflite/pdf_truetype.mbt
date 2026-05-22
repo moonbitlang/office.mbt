@@ -436,6 +436,36 @@ fn pdf_truetype_push_u32(
 }
 
 ///|
+fn pdf_truetype_push_u32_uint(
+  output : Array[Byte],
+  value : UInt,
+) -> Unit raise PdfError {
+  output.push(pdf_byte_of_int((value >> 24).reinterpret_as_int()))
+  output.push(pdf_byte_of_int(((value >> 16) & 0xFFU).reinterpret_as_int()))
+  output.push(pdf_byte_of_int(((value >> 8) & 0xFFU).reinterpret_as_int()))
+  output.push(pdf_byte_of_int((value & 0xFFU).reinterpret_as_int()))
+}
+
+///|
+fn pdf_truetype_push_tag(
+  output : Array[Byte],
+  tag : String,
+) -> Unit raise PdfError {
+  let bytes = @ascii.encode(tag)
+  for index in 0..<4 {
+    output.push(
+      pdf_byte_of_int(
+        if index < bytes.length() {
+          bytes[index].to_int()
+        } else {
+          32
+        },
+      ),
+    )
+  }
+}
+
+///|
 fn pdf_truetype_push_padding(
   output : Array[Byte],
   length : Int,
@@ -449,6 +479,34 @@ fn pdf_truetype_push_padding(
 fn pdf_truetype_index_to_loc_format(data : BytesView) -> Int raise PdfError {
   let head = pdf_truetype_required_table(data, "head")
   pdf_truetype_required_i16(data, head.offset + 50, "head table")
+}
+
+///|
+fn pdf_truetype_required_subset_table(tag : String) -> Bool {
+  tag == "head" ||
+  tag == "hhea" ||
+  tag == "loca" ||
+  tag == "cmap" ||
+  tag == "maxp" ||
+  tag == "cvt " ||
+  tag == "glyf" ||
+  tag == "prep" ||
+  tag == "hmtx" ||
+  tag == "fpgm"
+}
+
+///|
+fn pdf_truetype_power_two_leq(value : Int) -> Int {
+  let mut current = 1
+  while current * 2 <= value {
+    current *= 2
+  }
+  current
+}
+
+///|
+fn pdf_truetype_source_entry_selector(power_two : Int) -> Int {
+  @math.ln(power_two.to_double()).to_int()
 }
 
 ///|
@@ -757,6 +815,205 @@ pub fn pdf_truetype_subset_cmap_table(
   let length = 22 + glyph_indices.length() * 2
   pdf_truetype_push_padding(output, length)
   { length, bytes: Bytes::from_array(output) }
+}
+
+///|
+fn pdf_truetype_sorted_tables(
+  tables : ArrayView[PdfTrueTypeTableRecord],
+) -> Array[PdfTrueTypeTableRecord] {
+  let sorted : Array[PdfTrueTypeTableRecord] = []
+  for table in tables {
+    sorted.push(table)
+  }
+  sorted.sort_by(fn(left, right) { left.offset.compare(right.offset) })
+  sorted
+}
+
+///|
+fn pdf_truetype_subset_font_kept_tables(
+  sorted_tables : ArrayView[PdfTrueTypeTableRecord],
+) -> Array[PdfTrueTypeTableRecord] {
+  let kept : Array[PdfTrueTypeTableRecord] = []
+  let mut removed_data_before = 0
+  for index in 0..<sorted_tables.length() {
+    let table = sorted_tables[index]
+    if pdf_truetype_required_subset_table(table.tag) {
+      kept.push({
+        tag: table.tag,
+        checksum: table.checksum,
+        offset: table.offset - removed_data_before,
+        length: table.length,
+      })
+    } else if index < sorted_tables.length() - 1 {
+      removed_data_before += sorted_tables[index + 1].offset - table.offset
+    }
+  }
+  kept
+}
+
+///|
+fn pdf_truetype_table_padded_length(length : Int) -> Int {
+  length + pdf_truetype_table_padding(length)
+}
+
+///|
+fn pdf_truetype_subset_original_table_span(
+  data : BytesView,
+  sorted_tables : ArrayView[PdfTrueTypeTableRecord],
+  tag : String,
+) -> (Int, Int) raise PdfError {
+  for index in 0..<sorted_tables.length() {
+    let table = sorted_tables[index]
+    if table.tag == tag {
+      let length = if index < sorted_tables.length() - 1 {
+        sorted_tables[index + 1].offset - table.offset
+      } else {
+        data.length() - table.offset
+      }
+      if table.offset < 0 || length < 0 || table.offset + length > data.length() {
+        raise SoftError("Truncated TrueType " + tag + " table")
+      }
+      break (table.offset, length)
+    }
+  } nobreak {
+    raise SoftError("No " + tag + " table found in TrueType font")
+  }
+}
+
+///|
+fn pdf_truetype_subset_original_table(
+  data : BytesView,
+  sorted_tables : ArrayView[PdfTrueTypeTableRecord],
+  tag : String,
+  directory_length : Int,
+) -> PdfTrueTypeSubsetTable raise PdfError {
+  let (offset, length) = pdf_truetype_subset_original_table_span(
+    data, sorted_tables, tag,
+  )
+  { length: directory_length, bytes: data[offset:offset + length].to_owned() }
+}
+
+///|
+fn pdf_truetype_subset_font_table_payload(
+  data : BytesView,
+  sorted_tables : ArrayView[PdfTrueTypeTableRecord],
+  record : PdfTrueTypeTableRecord,
+  subset_codepoints : ArrayView[Int],
+  rewrite_cmap : Bool,
+) -> PdfTrueTypeSubsetTable raise PdfError {
+  if record.tag == "loca" {
+    {
+      length: record.length,
+      bytes: pdf_truetype_subset_loca_table(data, subset_codepoints),
+    }
+  } else if record.tag == "glyf" {
+    pdf_truetype_subset_glyf_table(data, subset_codepoints)
+  } else if record.tag == "cmap" && rewrite_cmap {
+    pdf_truetype_subset_cmap_table(data, subset_codepoints)
+  } else {
+    pdf_truetype_subset_original_table(
+      data,
+      sorted_tables,
+      record.tag,
+      record.length,
+    )
+  }
+}
+
+///|
+fn pdf_truetype_subset_font_directory(
+  data : BytesView,
+  sorted_tables : ArrayView[PdfTrueTypeTableRecord],
+  subset_codepoints : ArrayView[Int],
+  rewrite_cmap : Bool,
+) -> (Array[PdfTrueTypeTableRecord], Array[PdfTrueTypeSubsetTable]) raise PdfError {
+  let kept = pdf_truetype_subset_font_kept_tables(sorted_tables)
+  let header_size_reduction = 16 * (sorted_tables.length() - kept.length())
+  let records : Array[PdfTrueTypeTableRecord] = []
+  let payloads : Array[PdfTrueTypeSubsetTable] = []
+  let mut glyf_table_size_reduction = 0
+  let mut cmap_table_size_reduction = 0
+  for kept_record in kept {
+    let payload = pdf_truetype_subset_font_table_payload(
+      data, sorted_tables, kept_record, subset_codepoints, rewrite_cmap,
+    )
+    let mut table_length = kept_record.length
+    if kept_record.tag == "glyf" {
+      table_length = payload.length
+      glyf_table_size_reduction = pdf_truetype_table_padded_length(
+          kept_record.length,
+        ) -
+        payload.bytes.length()
+    } else if kept_record.tag == "cmap" && rewrite_cmap {
+      table_length = payload.length
+      cmap_table_size_reduction = pdf_truetype_table_padded_length(
+          kept_record.length,
+        ) -
+        payload.bytes.length()
+    }
+    let prior_table_reduction = if kept_record.tag == "glyf" {
+      cmap_table_size_reduction
+    } else if kept_record.tag == "cmap" {
+      glyf_table_size_reduction
+    } else {
+      glyf_table_size_reduction + cmap_table_size_reduction
+    }
+    records.push({
+      tag: kept_record.tag,
+      checksum: kept_record.checksum,
+      offset: kept_record.offset - header_size_reduction - prior_table_reduction,
+      length: table_length,
+    })
+    payloads.push(payload)
+  }
+  (records, payloads)
+}
+
+///|
+/// Build a cpdf-style subset TrueType font file.
+///
+/// This ports the `subset_font` table-directory assembly around the already
+/// ported `loca`, `glyf`, and format-6 `cmap` writers. Non-required TrueType
+/// tables are removed, source checksums are preserved, table offsets are
+/// adjusted by removed header/data spans and rewritten table sizes, and table
+/// payloads are written in source table-order. Set `rewrite_cmap=true` for the
+/// source `ImplicitInFontFile` higher-subset path; the default preserves the
+/// original cmap table like the main subset path.
+pub fn pdf_truetype_subset_font(
+  data : BytesView,
+  subset_codepoints : ArrayView[Int],
+  rewrite_cmap? : Bool = false,
+) -> PdfBytes raise PdfError {
+  let major = pdf_truetype_required_u16(data, 0, "font header")
+  let minor = pdf_truetype_required_u16(data, 2, "font header")
+  let sorted_tables = pdf_truetype_sorted_tables(pdf_truetype_tables(data))
+  let (records, payloads) = pdf_truetype_subset_font_directory(
+    data, sorted_tables, subset_codepoints, rewrite_cmap,
+  )
+  let output : Array[Byte] = []
+  let table_count = records.length()
+  let search_power = pdf_truetype_power_two_leq(table_count)
+  pdf_truetype_push_u16(output, major)
+  pdf_truetype_push_u16(output, minor)
+  pdf_truetype_push_u16(output, table_count)
+  pdf_truetype_push_u16(output, 16 * search_power)
+  pdf_truetype_push_u16(
+    output,
+    pdf_truetype_source_entry_selector(search_power),
+  )
+  pdf_truetype_push_u16(output, table_count * 16)
+  for record in records {
+    pdf_truetype_push_tag(output, record.tag)
+    pdf_truetype_push_u32_uint(output, record.checksum)
+    pdf_truetype_push_u32(output, record.offset)
+    pdf_truetype_push_u32(output, record.length)
+  }
+  for payload in payloads {
+    for byte in payload.bytes {
+      output.push(byte)
+    }
+  }
+  Bytes::from_array(output)
 }
 
 ///|

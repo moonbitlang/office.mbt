@@ -1584,6 +1584,8 @@ pub fn pdf_truetype_metrics(BytesView) -> PdfTrueTypeMetrics raise @core.PdfErro
 
 pub fn pdf_truetype_subset_cmap_table(BytesView, ArrayView[Int]) -> PdfTrueTypeSubsetTable raise @core.PdfError
 
+pub fn pdf_truetype_subset_font(BytesView, ArrayView[Int], rewrite_cmap? : Bool) -> Bytes raise @core.PdfError
+
 pub fn pdf_truetype_subset_glyf_table(BytesView, ArrayView[Int]) -> PdfTrueTypeSubsetTable raise @core.PdfError
 
 pub fn pdf_truetype_subset_glyph_indices(BytesView, ArrayView[Int]) -> Array[Int] raise @core.PdfError

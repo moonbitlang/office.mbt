@@ -335,6 +335,27 @@ fn truetype_glyf_table_for_test(
 }
 
 ///|
+fn truetype_subset_font_fixture_for_test() -> @pdflite.PdfBytes {
+  let (glyf, offsets) = truetype_glyf_table_for_test([
+    truetype_simple_glyph_for_test(),
+    truetype_simple_glyph_for_test(),
+  ])
+  truetype_table_font_for_test([
+    ("head", truetype_head_table_for_test(1000, 0, 0, 1000, 1000, 1)),
+    ("name", [0xAA, 0xBB, 0xCC, 0xDD, 0xEE]),
+    ("maxp", truetype_maxp_table_for_test(2)),
+    (
+      "cmap",
+      truetype_cmap_table_for_test([
+        (3, 1, truetype_format6_subtable_for_test(65, [1])),
+      ]),
+    ),
+    ("loca", truetype_loca_long_table_for_test(offsets)),
+    ("glyf", glyf),
+  ])
+}
+
+///|
 test "pdf_truetype_cmaps returns cmap platform encoding pairs" {
   let font = truetype_bytes_for_test([
     0x00, 0x01, 0x00, 0x00, // scaler type
@@ -747,6 +768,51 @@ test "pdf_truetype_subset_cmap_table writes source format 6 table" {
      0, 0, // missing U+0046 glyph
      0, 0, // padding
   ])
+}
+
+///|
+test "pdf_truetype_subset_font assembles source table directory" {
+  let subset = try! @pdflite.pdf_truetype_subset_font(
+    truetype_subset_font_fixture_for_test(),
+    [65],
+  )
+  @test.assert_eq(@pdflite.pdf_int_array_of_bytes(subset[0:12]), [
+    0, 1, 0, 0, // scaler type
+     0, 5, // numTables
+     0, 64, // searchRange = 16 * pow2lt 5
+     0, 1, // source entrySelector = int(ln 4)
+     0, 80, // source rangeShift = numTables * 16
+  ])
+  @test.assert_eq(@pdflite.pdf_truetype_tables(subset), [
+    { tag: "head", checksum: 0x10000036U, offset: 92, length: 54 },
+    { tag: "maxp", checksum: 0x10000006U, offset: 146, length: 6 },
+    { tag: "cmap", checksum: 0x10000018U, offset: 152, length: 24 },
+    { tag: "loca", checksum: 0x1000000CU, offset: 176, length: 12 },
+    { tag: "glyf", checksum: 0x10000014U, offset: 188, length: 20 },
+  ])
+  @test.assert_eq(@pdflite.pdf_truetype_table(subset, "name"), None)
+  @test.assert_eq(subset.length(), 208)
+  @test.assert_eq(@pdflite.pdf_truetype_cmap_glyph(subset, 65), Some(1))
+}
+
+///|
+test "pdf_truetype_subset_font rewrites implicit cmap and shifts later tables" {
+  let subset = try! @pdflite.pdf_truetype_subset_font(
+    truetype_subset_font_fixture_for_test(),
+    [65, 70],
+    rewrite_cmap=true,
+  )
+  @test.assert_eq(@pdflite.pdf_truetype_tables(subset), [
+    { tag: "head", checksum: 0x10000036U, offset: 92, length: 54 },
+    { tag: "maxp", checksum: 0x10000006U, offset: 146, length: 6 },
+    { tag: "cmap", checksum: 0x10000018U, offset: 152, length: 26 },
+    { tag: "loca", checksum: 0x1000000CU, offset: 180, length: 12 },
+    { tag: "glyf", checksum: 0x10000014U, offset: 192, length: 20 },
+  ])
+  @test.assert_eq(subset.length(), 212)
+  @test.assert_eq(@pdflite.pdf_truetype_cmap_glyph(subset, 33), Some(1))
+  @test.assert_eq(@pdflite.pdf_truetype_cmap_glyph(subset, 34), Some(0))
+  @test.assert_eq(@pdflite.pdf_truetype_cmap_glyph(subset, 65), None)
 }
 
 ///|
