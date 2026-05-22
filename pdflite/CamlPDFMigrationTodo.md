@@ -7114,6 +7114,25 @@ Current backend snapshot:
   moon fmt` reports no pending interface or formatting work, and `moon check
   --target all --warn-list +73` reports the known warning-73/main-package
   baseline with 10 warnings and 0 errors.~~
+- [x] ~~Add the next source-corpus table-of-contents slice: the new native
+  `toc/fixture_acceptance` package now gates optional
+  `.repos/cpdf-source/cpdfmanual.pdf` through cpdftoc-style codepoint scanning,
+  table-of-contents type-element construction, and generated title bookmark
+  insertion. The gate verifies the 175-page manual, its 163-entry source
+  outline tree, selected chapter bookmarks, required dot/title/page-number
+  codepoints, title/body/page-label text runs, destination names, generated
+  `Contents\nGenerated` bookmark text, target-page preservation, wrapper parity
+  for `pdf_read_bookmarks`, `pdf_toc_used_codepoints`,
+  `pdf_toc_type_elements`, `pdf_toc_add_bookmark`, and
+  `pdf_pagenumber_of_target`, plus compressed rewrite/reread and
+  bad-final-`startxref` reconstruction for the generated bookmark document.
+  `moon check --target native toc/fixture_acceptance --warn-list +73` passes,
+  the focused cpdf source TOC test reports 1/1 test passing, `moon test
+  --target native toc/fixture_acceptance` reports 1/1 test passing, and `moon
+  test --target native` reports 2331/2331 tests passing. `moon info && moon
+  fmt` reports no pending interface or formatting work, and `moon check
+  --target all --warn-list +73` reports the known warning-73/main-package
+  baseline with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.
