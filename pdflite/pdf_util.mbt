@@ -1814,6 +1814,29 @@ pub fn pdf_remove_dict_entry(
 }
 
 ///|
+/// Compatibility wrapper matching cpdfutil's string-key `remove_dict_entry`.
+pub fn PdfDocument::remove_dict_entry_string(
+  self : PdfDocument,
+  key : String,
+  search? : PdfObject? = None,
+) -> Unit {
+  self.remove_dict_entry_everywhere(
+    pdf_name_of_bytes(@ascii.encode(key)),
+    search~,
+  )
+}
+
+///|
+/// Compatibility wrapper matching cpdfutil's string-key `remove_dict_entry`.
+pub fn pdf_remove_dict_entry_string(
+  document : PdfDocument,
+  key : String,
+  search? : PdfObject? = None,
+) -> Unit {
+  document.remove_dict_entry_string(key, search~)
+}
+
+///|
 /// Compatibility wrapper for `PdfDocument::replace_dict_entry_everywhere`.
 pub fn pdf_replace_dict_entry(
   document : PdfDocument,
@@ -1822,6 +1845,32 @@ pub fn pdf_replace_dict_entry(
   search? : PdfObject? = None,
 ) -> Unit {
   document.replace_dict_entry_everywhere(key, value, search~)
+}
+
+///|
+/// Compatibility wrapper matching cpdfutil's string-key `replace_dict_entry`.
+pub fn PdfDocument::replace_dict_entry_string(
+  self : PdfDocument,
+  key : String,
+  value : PdfObject,
+  search? : PdfObject? = None,
+) -> Unit {
+  self.replace_dict_entry_everywhere(
+    pdf_name_of_bytes(@ascii.encode(key)),
+    value,
+    search~,
+  )
+}
+
+///|
+/// Compatibility wrapper matching cpdfutil's string-key `replace_dict_entry`.
+pub fn pdf_replace_dict_entry_string(
+  document : PdfDocument,
+  key : String,
+  value : PdfObject,
+  search? : PdfObject? = None,
+) -> Unit {
+  document.replace_dict_entry_string(key, value, search~)
 }
 
 ///|

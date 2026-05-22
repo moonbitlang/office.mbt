@@ -179,6 +179,52 @@ test "pdf_replace_dict_entry ignores missing keys and updates trailer" {
 }
 
 ///|
+test "cpdfutil string-key dictionary wrappers match source argument shape" {
+  let key_target = util_name_for_test("/Target")
+  let key_keep = util_name_for_test("/Keep")
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(10, PdfInteger(99))
+  doc.add_object_given_number(
+    1,
+    @pdflite.pdf_dictionary([
+      (key_target, PdfIndirect(10)),
+      (key_keep, PdfInteger(1)),
+    ]),
+  )
+  doc.set_trailer_dict(@pdflite.pdf_dictionary([(key_target, PdfInteger(2))]))
+
+  @pdflite.pdf_remove_dict_entry_string(
+    doc,
+    "/Target",
+    search=Some(PdfInteger(99)),
+  )
+
+  @test.assert_eq(
+    util_lookup_for_test(doc.lookup_object_or_null(1), key_target),
+    None,
+  )
+  @test.assert_eq(
+    util_lookup_for_test(doc.trailer_dict(), key_target),
+    Some(PdfInteger(2)),
+  )
+
+  doc.replace_dict_entry_string(
+    "/Target",
+    PdfString(@ascii.encode("updated")),
+    search=Some(PdfInteger(2)),
+  )
+
+  @test.assert_eq(
+    util_lookup_for_test(doc.trailer_dict(), key_target),
+    Some(PdfString(@ascii.encode("updated"))),
+  )
+  @test.assert_eq(
+    util_lookup_for_test(doc.lookup_object_or_null(1), key_keep),
+    Some(PdfInteger(1)),
+  )
+}
+
+///|
 test "PdfDocument dict_entry_values scans dictionaries arrays streams and trailer" {
   let key_target = util_name_for_test("/Target")
   let key_nested = util_name_for_test("/Nested")

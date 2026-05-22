@@ -43,13 +43,14 @@ Current estimate:
   transform/content/page-assembly/
   pattern-matrix kernels, cpdf page
   hard-box/removal/shift/scale/scale-to-fit/upright/set-mediabox/copy-box
-  helpers, page-info report wrappers, and source-order compatibility aliases,
-  imposition make-space orchestration, border stamping, layout planning, and
-  first public impose/twoup pipelines, and Markdown helper public APIs.
+  helpers, page-info report wrappers, cpdfutil string-key dictionary rewrite
+  wrappers, and source-order compatibility aliases, imposition make-space
+  orchestration, border stamping, layout planning, and first public
+  impose/twoup pipelines, and Markdown helper public APIs.
 
 Current backend snapshot:
 
-- Native: full suite passes on MoonBit 0.9.3, currently 2403/2403 tests.
+- Native: full suite passes on MoonBit 0.9.3, currently 2404/2404 tests.
 - WasmGC and JavaScript: full portable non-native test suites pass on MoonBit
   0.9.3, currently 2063/2063 on each backend after the latest TrueType
   embedding integration.
@@ -76,6 +77,20 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfutil` source/API parity with string-key dictionary rewrite
+  helpers from `.repos/cpdf-source/cpdfutil.mli`: added
+  `PdfDocument::remove_dict_entry_string`, `pdf_remove_dict_entry_string`,
+  `PdfDocument::replace_dict_entry_string`, and
+  `pdf_replace_dict_entry_string` over the existing recursive
+  parsed-object/trailer rewrite implementation. The wrappers preserve cpdf's
+  slash-prefixed string key shape while keeping the existing typed `PdfName`
+  APIs available. Coverage pins source-shape removal and replacement with
+  resolved `search` filters across object and trailer dictionaries. Validation
+  on MoonBit 0.9.3: `moon check --target native --warn-list +73` passes with
+  the known `markdown/cmd` future notice; `moon test --target native
+  pdf_util_test.mbt` reports 30/30; `moon fmt`, `moon info`, and `moon check
+  --target all --warn-list +73` pass with only the existing `markdown/cmd`
+  future notice; full native `moon test --target native` reports 2404/2404.~~
 - [x] ~~Continue `cpdfpage` source/API parity with the page-info reporting
   surface from `.repos/cpdf-source/cpdfpage.mli`: added
   `pdf_json_page_info`, `PdfDocument::output_page_info`, and
