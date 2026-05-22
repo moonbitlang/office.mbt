@@ -44,15 +44,15 @@ Current estimate:
   pattern-matrix kernels, cpdf page
   hard-box/removal/shift/scale/scale-to-fit/upright/set-mediabox/copy-box
   helpers, page-info report wrappers, callback-first traversal aliases,
-  cpdftweak source-spelled colour/thin-line and append-content aliases,
-  cpdfutil string-key dictionary rewrite wrappers, and source-order
-  compatibility aliases,
+  cpdftweak source-spelled colour/thin-line, append-content, and dictionary
+  entry reporting aliases, cpdfutil string-key dictionary rewrite wrappers, and
+  source-order compatibility aliases,
   imposition make-space orchestration, border stamping, layout planning, and
   first public impose/twoup pipelines, and Markdown helper public APIs.
 
 Current backend snapshot:
 
-- Native: full suite passes on MoonBit 0.9.3, currently 2404/2404 tests.
+- Native: full suite passes on MoonBit 0.9.3, currently 2406/2406 tests.
 - WasmGC and JavaScript: full portable non-native test suites pass on MoonBit
   0.9.3, currently 2063/2063 on each backend after the latest TrueType
   embedding integration.
@@ -79,6 +79,21 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdftweak` source/API parity for dictionary-entry reporting
+  from `.repos/cpdf-source/cpdftweak.mli`: added slash-prefixed string-key
+  `PdfDocument::dict_entry_rendered_values_string`,
+  `PdfDocument::dict_entries_json_string`, `pdf_print_dict_entry_string`, and
+  `pdf_get_dict_entries_string` helpers plus
+  `pdf_print_dict_entry_cpdf_order` and `pdf_get_dict_entries_cpdf_order`
+  aliases matching cpdf's `utf8, document, key` argument order while preserving
+  the existing typed `PdfName` APIs. Coverage compares the string-key methods
+  and source-order aliases against the existing rendered-value and JSON
+  dictionary-entry behavior. Validation on MoonBit 0.9.3: `moon check --target
+  native --warn-list +73` passes with the known `markdown/cmd` future notice;
+  `moon test --target native pdf_util_test.mbt` reports 32/32; `moon fmt`,
+  `moon info`, and `moon check --target all --warn-list +73` pass with only the
+  existing `markdown/cmd` future notice; full native `moon test --target
+  native` reports 2406/2406.~~
 - [x] ~~Continue `cpdftweak` source/API parity for append-content helpers from
   `.repos/cpdf-source/cpdftweak.mli`: added
   `pdf_append_page_content_cpdf_order`,

@@ -1719,6 +1719,30 @@ pub fn PdfDocument::dict_entries_json(
 }
 
 ///|
+fn pdf_util_source_key_name(key : String) -> PdfName {
+  pdf_name_of_bytes(@ascii.encode(key))
+}
+
+///|
+/// Render dictionary entry values for a cpdf-style slash-prefixed string key.
+pub fn PdfDocument::dict_entry_rendered_values_string(
+  self : PdfDocument,
+  key : String,
+) -> Array[PdfBytes] raise PdfError {
+  self.dict_entry_rendered_values(pdf_util_source_key_name(key))
+}
+
+///|
+/// Return dictionary entry values in cpdf-style JSON for a slash-prefixed key.
+pub fn PdfDocument::dict_entries_json_string(
+  self : PdfDocument,
+  key : String,
+  utf8? : Bool = false,
+) -> PdfBytes raise PdfError {
+  self.dict_entries_json(pdf_util_source_key_name(key), utf8~)
+}
+
+///|
 /// Compatibility wrapper for `PdfDocument::dict_entry_values`.
 pub fn pdf_dict_entry_values(
   document : PdfDocument,
@@ -1737,6 +1761,26 @@ pub fn pdf_print_dict_entry(
 }
 
 ///|
+/// Compatibility wrapper matching cpdftweak's string-key `print_dict_entry`.
+pub fn pdf_print_dict_entry_string(
+  document : PdfDocument,
+  key : String,
+) -> Array[PdfBytes] raise PdfError {
+  document.dict_entry_rendered_values_string(key)
+}
+
+///|
+/// Compatibility wrapper matching cpdftweak's `print_dict_entry` argument order.
+pub fn pdf_print_dict_entry_cpdf_order(
+  utf8 : Bool,
+  document : PdfDocument,
+  key : String,
+) -> Array[PdfBytes] raise PdfError {
+  ignore(utf8)
+  document.dict_entry_rendered_values_string(key)
+}
+
+///|
 /// Compatibility wrapper for `PdfDocument::dict_entries_json`.
 pub fn pdf_get_dict_entries(
   document : PdfDocument,
@@ -1744,6 +1788,26 @@ pub fn pdf_get_dict_entries(
   utf8? : Bool = false,
 ) -> PdfBytes raise PdfError {
   document.dict_entries_json(key, utf8~)
+}
+
+///|
+/// Compatibility wrapper matching cpdftweak's string-key `get_dict_entries`.
+pub fn pdf_get_dict_entries_string(
+  document : PdfDocument,
+  key : String,
+  utf8? : Bool = false,
+) -> PdfBytes raise PdfError {
+  document.dict_entries_json_string(key, utf8~)
+}
+
+///|
+/// Compatibility wrapper matching cpdftweak's `get_dict_entries` argument order.
+pub fn pdf_get_dict_entries_cpdf_order(
+  utf8 : Bool,
+  document : PdfDocument,
+  key : String,
+) -> PdfBytes raise PdfError {
+  document.dict_entries_json_string(key, utf8~)
 }
 
 ///|

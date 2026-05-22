@@ -291,6 +291,36 @@ test "pdf_print_dict_entry renders resolved values as PDF syntax" {
 }
 
 ///|
+test "cpdftweak print_dict_entry source-order wrapper accepts string keys" {
+  let key_target = util_name_for_test("/Target")
+  let key_value = util_name_for_test("/Value")
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(10, PdfNameObject(key_value))
+  doc.add_object_given_number(
+    1,
+    @pdflite.pdf_dictionary([(key_target, PdfIndirect(10))]),
+  )
+  doc.add_object_given_number(
+    2,
+    @pdflite.pdf_dictionary([(key_target, PdfString(@ascii.encode("plain")))]),
+  )
+
+  let expected = try! @pdflite.pdf_print_dict_entry(doc, key_target)
+  @test.assert_eq(
+    try! doc.dict_entry_rendered_values_string("/Target"),
+    expected,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_print_dict_entry_string(doc, "/Target"),
+    expected,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_print_dict_entry_cpdf_order(true, doc, "/Target"),
+    expected,
+  )
+}
+
+///|
 test "pdf_get_dict_entries renders cpdf style JSON wrappers" {
   let key_target = util_name_for_test("/Target")
   let key_other = util_name_for_test("/Other")
@@ -334,6 +364,30 @@ test "pdf_get_dict_entries renders cpdf style JSON wrappers" {
   @test.assert_eq(
     try! @pdflite.pdf_get_dict_entries(doc, key_target),
     @utf8.encode(expected.stringify()),
+  )
+}
+
+///|
+test "cpdftweak get_dict_entries source-order wrapper accepts string keys" {
+  let key_target = util_name_for_test("/Target")
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(
+    1,
+    @pdflite.pdf_dictionary([(key_target, PdfString(@ascii.encode("hello")))]),
+  )
+
+  let expected = try! @pdflite.pdf_get_dict_entries(doc, key_target, utf8=true)
+  @test.assert_eq(
+    try! doc.dict_entries_json_string("/Target", utf8=true),
+    expected,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_get_dict_entries_string(doc, "/Target", utf8=true),
+    expected,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_get_dict_entries_cpdf_order(true, doc, "/Target"),
+    expected,
   )
 }
 

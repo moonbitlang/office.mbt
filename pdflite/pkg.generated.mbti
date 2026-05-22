@@ -722,6 +722,10 @@ pub fn pdf_get_catalog_item(@core.PdfName, PdfDocument) -> String
 
 pub fn pdf_get_dict_entries(PdfDocument, @core.PdfName, utf8? : Bool) -> Bytes raise @core.PdfError
 
+pub fn pdf_get_dict_entries_cpdf_order(Bool, PdfDocument, String) -> Bytes raise @core.PdfError
+
+pub fn pdf_get_dict_entries_string(PdfDocument, String, utf8? : Bool) -> Bytes raise @core.PdfError
+
 pub fn pdf_get_image_24bpp(PdfDocument, PdfObject, PdfObject) -> PdfImage raise @core.PdfError
 
 pub fn pdf_get_info_utf8(PdfDocument, @core.PdfName) -> String
@@ -1179,6 +1183,10 @@ pub fn pdf_prepend_operators(PdfDocument, ArrayView[PdfContentOp], PdfPage, fast
 pub fn pdf_presentation(ArrayView[Int], String?, Double?, Bool, Bool, Int, Double, PdfDocument) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_print_dict_entry(PdfDocument, @core.PdfName) -> Array[Bytes] raise @core.PdfError
+
+pub fn pdf_print_dict_entry_cpdf_order(Bool, PdfDocument, String) -> Array[Bytes] raise @core.PdfError
+
+pub fn pdf_print_dict_entry_string(PdfDocument, String) -> Array[Bytes] raise @core.PdfError
 
 pub fn pdf_print_font_table(PdfDocument, String, Int) -> Bytes raise @core.PdfError
 
@@ -2817,7 +2825,9 @@ pub fn PdfDocument::decrypt_with_passwords(Self, user_password? : BytesView?, ow
 pub fn PdfDocument::decrypt_with_user_password(Self, BytesView, no_encrypt_metadata? : Bool) -> PdfDecryptionResult? raise @core.PdfError
 pub fn PdfDocument::determine_subformats(Self) -> Array[String] raise @core.PdfError
 pub fn PdfDocument::dict_entries_json(Self, @core.PdfName, utf8? : Bool) -> Bytes raise @core.PdfError
+pub fn PdfDocument::dict_entries_json_string(Self, String, utf8? : Bool) -> Bytes raise @core.PdfError
 pub fn PdfDocument::dict_entry_rendered_values(Self, @core.PdfName) -> Array[Bytes] raise @core.PdfError
+pub fn PdfDocument::dict_entry_rendered_values_string(Self, String) -> Array[Bytes] raise @core.PdfError
 pub fn PdfDocument::dict_entry_values(Self, @core.PdfName) -> Array[PdfObject]
 pub fn PdfDocument::direct(Self, PdfObject) -> PdfObject
 pub fn PdfDocument::draft(Self, @core.PdfName?, Bool, ArrayView[Int]) -> Self raise @core.PdfError
