@@ -44,8 +44,8 @@ Current estimate:
   transform/content/page-assembly/
   pattern-matrix kernels, cpdf page
   hard-box/removal/shift/scale/scale-to-fit/upright/set-mediabox/copy-box
-  helpers, page-info report wrappers, pattern-matrix page rewrite wrapper,
-  callback-first traversal aliases,
+  helpers, page-info report wrappers, upright predicate source-order aliases,
+  pattern-matrix page rewrite wrapper, callback-first traversal aliases,
   cpdftweak source-spelled colour/thin-line, reveal-hidden-text,
   append-content, dictionary entry, object-spec, and native file-stream
   replacement aliases, cpdfutil string-key dictionary rewrite wrappers, and
@@ -82,6 +82,20 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfpage` source/API parity for the upright predicates from
+  `.repos/cpdf-source/cpdfpage.mli`: added `pdf_allupright_cpdf_order` and
+  `pdf_alluprightonly_cpdf_order` aliases matching cpdf's page-list-first
+  argument order while preserving the existing document-first wrappers.
+  Coverage compares the aliases against the existing rotation/origin predicate
+  behavior, including the source-compatible distinction between `allupright`
+  and `alluprightonly`. Validation on MoonBit 0.9.3: `moon check --target
+  native --warn-list +73` passes with the known `markdown/cmd` future notice;
+  `moon test --target native pdf_page_upright_test.mbt`,
+  `moon test --target wasm-gc pdf_page_upright_test.mbt`, and `moon test
+  --target js pdf_page_upright_test.mbt` report 4/4 each; `moon fmt`, `moon
+  info`, and `moon check --target all --warn-list +73` pass with only the
+  existing `markdown/cmd` future notice; full native `moon test --target
+  native` reports 2408/2408.~~
 - [x] ~~Continue `cpdfpage` source/API parity for
   `change_pattern_matrices_page` from `.repos/cpdf-source/cpdfpage.mli`:
   exposed the existing pattern-resource matrix rewrite kernel as public

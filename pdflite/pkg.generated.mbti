@@ -196,7 +196,11 @@ pub fn pdf_addtexts_with_source(PdfDocument, ArrayView[Int], String, PdfStrftime
 
 pub fn pdf_allupright(PdfDocument, ArrayView[Int]) -> Bool raise @core.PdfError
 
+pub fn pdf_allupright_cpdf_order(ArrayView[Int], PdfDocument) -> Bool raise @core.PdfError
+
 pub fn pdf_alluprightonly(PdfDocument, ArrayView[Int]) -> Bool raise @core.PdfError
+
+pub fn pdf_alluprightonly_cpdf_order(ArrayView[Int], PdfDocument) -> Bool raise @core.PdfError
 
 pub fn pdf_annotation_make(PdfAnnotationSubtype, contents? : Bytes?, border? : PdfAnnotationBorder, rectangle? : PdfRectangle, colour? : PdfAnnotationColour?, subject? : Bytes?) -> PdfAnnotation
 

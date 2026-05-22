@@ -65,6 +65,15 @@ pub fn pdf_allupright(
 }
 
 ///|
+/// Compatibility wrapper matching cpdfpage's `allupright` argument order.
+pub fn pdf_allupright_cpdf_order(
+  page_numbers : ArrayView[Int],
+  document : PdfDocument,
+) -> Bool raise PdfError {
+  document.all_pages_upright(page_numbers)
+}
+
+///|
 /// Return whether selected pages have no page dictionary rotation.
 ///
 /// This ports cpdf's `alluprightonly`, which intentionally does not require a
@@ -90,6 +99,15 @@ pub fn PdfDocument::all_pages_upright_only(
 pub fn pdf_alluprightonly(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
+) -> Bool raise PdfError {
+  document.all_pages_upright_only(page_numbers)
+}
+
+///|
+/// Compatibility wrapper matching cpdfpage's `alluprightonly` argument order.
+pub fn pdf_alluprightonly_cpdf_order(
+  page_numbers : ArrayView[Int],
+  document : PdfDocument,
 ) -> Bool raise PdfError {
   document.all_pages_upright_only(page_numbers)
 }

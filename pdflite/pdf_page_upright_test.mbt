@@ -78,6 +78,19 @@ test "PdfDocument upright predicates mirror cpdf page checks" {
   @test.assert_eq(try! document.all_pages_upright_only([1, 3]), false)
   @test.assert_eq(try! @pdflite.pdf_allupright(document, [1]), true)
   @test.assert_eq(try! @pdflite.pdf_alluprightonly(document, [2]), true)
+  @test.assert_eq(try! @pdflite.pdf_allupright_cpdf_order([1], document), true)
+  @test.assert_eq(
+    try! @pdflite.pdf_allupright_cpdf_order([1, 2], document),
+    false,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_alluprightonly_cpdf_order([1, 2], document),
+    true,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_alluprightonly_cpdf_order([1, 3], document),
+    false,
+  )
 
   // cpdf's select_pages helper ignores invalid page numbers for these checks.
   @test.assert_eq(try! document.all_pages_upright([4]), true)
