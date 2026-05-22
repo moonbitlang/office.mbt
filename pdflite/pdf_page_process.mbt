@@ -54,6 +54,16 @@ pub fn pdf_process_pages(
 }
 
 ///|
+/// Compatibility wrapper matching cpdfpage's `process_pages` argument order.
+pub fn pdf_process_pages_cpdf_order(
+  process : (Int, PdfPage) -> (PdfPage, Int, TransformMatrix) raise PdfError,
+  document : PdfDocument,
+  page_numbers : ArrayView[Int],
+) -> PdfDocument raise PdfError {
+  document.process_pages(page_numbers, process)
+}
+
+///|
 /// Iterate over selected pages in document order.
 ///
 /// Page numbers outside the document are ignored.
@@ -77,6 +87,16 @@ pub fn pdf_iter_pages(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
   process : (Int, PdfPage) -> Unit raise PdfError,
+) -> Unit raise PdfError {
+  document.iter_pages(page_numbers, process)
+}
+
+///|
+/// Compatibility wrapper matching cpdfpage's `iter_pages` argument order.
+pub fn pdf_iter_pages_cpdf_order(
+  process : (Int, PdfPage) -> Unit raise PdfError,
+  document : PdfDocument,
+  page_numbers : ArrayView[Int],
 ) -> Unit raise PdfError {
   document.iter_pages(page_numbers, process)
 }
@@ -107,6 +127,16 @@ pub fn[T] pdf_map_pages(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
   process : (Int, PdfPage) -> T raise PdfError,
+) -> Array[T] raise PdfError {
+  document.map_pages(page_numbers, process)
+}
+
+///|
+/// Compatibility wrapper matching cpdfpage's `map_pages` argument order.
+pub fn[T] pdf_map_pages_cpdf_order(
+  process : (Int, PdfPage) -> T raise PdfError,
+  document : PdfDocument,
+  page_numbers : ArrayView[Int],
 ) -> Array[T] raise PdfError {
   document.map_pages(page_numbers, process)
 }

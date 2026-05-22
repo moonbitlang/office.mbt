@@ -1224,6 +1224,23 @@ test "PdfDocument process_pages rewrites selected pages and carries matrices" {
     (page, 2, @pdflite.transform_identity_matrix)
   })
   @test.assert_eq((try! wrapped.pages_of_pagetree()).length(), 2)
+  let source_order_seen : Array[Int] = []
+  let source_order = try! @pdflite.pdf_process_pages_cpdf_order(
+    (page_number, page) => {
+      source_order_seen.push(page_number)
+      (
+        { ..page, rotate: Rotate180 },
+        page_number,
+        @pdflite.transform_identity_matrix,
+      )
+    },
+    document,
+    [1],
+  )
+  @test.assert_eq(source_order_seen, [1])
+  let source_order_pages = try! source_order.pages_of_pagetree()
+  @test.assert_eq(source_order_pages[0].rotate, Rotate180)
+  @test.assert_eq(source_order_pages[1].rotate, Rotate0)
 }
 
 ///|
@@ -1242,6 +1259,16 @@ test "PdfDocument iter_pages and map_pages follow document order" {
     wrapped_iterated.push(page_number)
   })
   @test.assert_eq(wrapped_iterated, [2])
+  let source_order_iterated : Array[Int] = []
+  try! @pdflite.pdf_iter_pages_cpdf_order(
+    (page_number, page) => {
+      ignore(page)
+      source_order_iterated.push(page_number)
+    },
+    document,
+    [3, 2],
+  )
+  @test.assert_eq(source_order_iterated, [2, 3])
 
   let mapped = try! document.map_pages([3, 1, 9], (page_number, page) => {
     page_number * 100 + @pdflite.pdf_page_int_of_rotation(page.rotate)
@@ -1252,6 +1279,16 @@ test "PdfDocument iter_pages and map_pages follow document order" {
       page_number + @pdflite.pdf_page_int_of_rotation(page.rotate)
     }),
     [2],
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_map_pages_cpdf_order(
+      (page_number, page) => {
+        page_number * 10 + @pdflite.pdf_page_int_of_rotation(page.rotate)
+      },
+      document,
+      [2, 1],
+    ),
+    [10, 20],
   )
 }
 

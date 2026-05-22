@@ -820,6 +820,8 @@ pub fn pdf_is_xfa(PdfDocument) -> Bool
 
 pub fn pdf_iter_pages(PdfDocument, ArrayView[Int], (Int, PdfPage) -> Unit raise @core.PdfError) -> Unit raise @core.PdfError
 
+pub fn pdf_iter_pages_cpdf_order((Int, PdfPage) -> Unit raise @core.PdfError, PdfDocument, ArrayView[Int]) -> Unit raise @core.PdfError
+
 pub fn pdf_jpeg2000_dimensions(Bytes) -> (Int, Int) raise @core.PdfError
 
 pub fn pdf_jpeg2000_dimensions_view(BytesView) -> (Int, Int) raise @core.PdfError
@@ -875,6 +877,8 @@ pub fn pdf_make_hex_pdf_string(BytesView) -> Bytes
 pub fn pdf_make_pdf_string(BytesView) -> Bytes
 
 pub fn[T] pdf_map_pages(PdfDocument, ArrayView[Int], (Int, PdfPage) -> T raise @core.PdfError) -> Array[T] raise @core.PdfError
+
+pub fn[T] pdf_map_pages_cpdf_order((Int, PdfPage) -> T raise @core.PdfError, PdfDocument, ArrayView[Int]) -> Array[T] raise @core.PdfError
 
 pub fn pdf_mark_all_as_artifact(PdfDocument) -> PdfDocument raise @core.PdfError
 
@@ -1175,6 +1179,8 @@ pub fn[T] pdf_print_tree_to_buffer(@buffer.Buffer, T, (T) -> String, (T) -> Arra
 pub fn[T] pdf_print_tree_to_string(T, (T) -> String, (T) -> Array[T], line_prefix? : String) -> String
 
 pub fn pdf_process_pages(PdfDocument, ArrayView[Int], (Int, PdfPage) -> (PdfPage, Int, @geometry.TransformMatrix) raise @core.PdfError) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_process_pages_cpdf_order((Int, PdfPage) -> (PdfPage, Int, @geometry.TransformMatrix) raise @core.PdfError, PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_process_text(PdfStrftimeTime, String, ArrayView[(String, () -> String)]) -> String
 

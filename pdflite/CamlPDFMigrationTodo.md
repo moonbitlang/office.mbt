@@ -43,10 +43,11 @@ Current estimate:
   transform/content/page-assembly/
   pattern-matrix kernels, cpdf page
   hard-box/removal/shift/scale/scale-to-fit/upright/set-mediabox/copy-box
-  helpers, page-info report wrappers, cpdfutil string-key dictionary rewrite
-  wrappers, and source-order compatibility aliases, imposition make-space
-  orchestration, border stamping, layout planning, and first public
-  impose/twoup pipelines, and Markdown helper public APIs.
+  helpers, page-info report wrappers, callback-first traversal aliases,
+  cpdfutil string-key dictionary rewrite wrappers, and source-order
+  compatibility aliases, imposition make-space orchestration, border stamping,
+  layout planning, and first public impose/twoup pipelines, and Markdown helper
+  public APIs.
 
 Current backend snapshot:
 
@@ -77,6 +78,17 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfpage` source/API parity for callback-first traversal:
+  added `pdf_process_pages_cpdf_order`, `pdf_iter_pages_cpdf_order`, and
+  `pdf_map_pages_cpdf_order` aliases matching `.repos/cpdf-source/cpdfpage.mli`
+  while preserving the existing document-first MoonBit wrappers. Coverage pins
+  callback invocation, selected-page rewrite, and document-order iteration/map
+  results through the source-order aliases. Validation on MoonBit 0.9.3:
+  `moon check --target native --warn-list +73` passes with the known
+  `markdown/cmd` future notice; `moon test --target native pdf_page_test.mbt`
+  reports 82/82; `moon fmt`, `moon info`, and `moon check --target all
+  --warn-list +73` pass with only the existing `markdown/cmd` future notice;
+  full native `moon test --target native` reports 2404/2404.~~
 - [x] ~~Continue `cpdfutil` source/API parity with string-key dictionary rewrite
   helpers from `.repos/cpdf-source/cpdfutil.mli`: added
   `PdfDocument::remove_dict_entry_string`, `pdf_remove_dict_entry_string`,
