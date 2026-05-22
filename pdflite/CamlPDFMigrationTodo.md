@@ -7599,6 +7599,17 @@ Current backend snapshot:
   `markdown/cmd` future notice, and `moon test --target native` reports
   2354/2354. This slice is native-only, so the portable wasm-gc/js/plain-wasm
   counts remain unchanged.~~
+- [x] ~~Rebaseline the source-port suite after the compiler 0.9.3 upgrade with
+  a CMap parser performance fix: the compact-whitespace fallback now runs only
+  when CMap section markers are actually split by PDF whitespace, avoiding a
+  pathological one-line parse of large well-formed ToUnicode maps such as the
+  external Unicode CJK chart. Existing malformed/split-marker CMap tests still
+  pass, and the previously stuck `markdown/fixture_acceptance` Unicode CJK
+  fixture now completes. Validation on MoonBit 0.9.3:
+  `moon check --target all --warn-list +73` passes with the known
+  `markdown/cmd` future notice; `moon test --target native` reports 2354/2354;
+  `moon test --target wasm-gc` and `moon test --target js` report 2018/2018
+  each; `moon test --target wasm` reports 41/41.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

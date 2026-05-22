@@ -4605,20 +4605,92 @@ fn pdf_text_parse_cmap_codespace_sections(
 }
 
 ///|
+let pdf_text_cmap_split_begin_marker : PdfBytes = b"begin"
+
+///|
+let pdf_text_cmap_split_end_marker : PdfBytes = b"end"
+
+///|
+let pdf_text_cmap_split_suffixes : ReadOnlyArray[PdfBytes] = [
+  b"bfchar", b"bfrange", b"cidchar", b"cidrange", b"notdefchar", b"notdefrange",
+  b"codespacerange",
+]
+
+///|
+fn pdf_text_cmap_starts_with_at(
+  data : BytesView,
+  start : Int,
+  expected : BytesView,
+) -> Bool {
+  if start < 0 || start + expected.length() > data.length() {
+    false
+  } else {
+    for offset in 0..<expected.length() {
+      if data[start + offset] != expected[offset] {
+        break false
+      }
+    } nobreak {
+      true
+    }
+  }
+}
+
+///|
+fn pdf_text_cmap_has_split_marker_at(
+  data : BytesView,
+  start : Int,
+  prefix : BytesView,
+) -> Bool {
+  guard pdf_text_cmap_starts_with_at(data, start, prefix) else { return false }
+  let whitespace_start = start + prefix.length()
+  let mut suffix_start = whitespace_start
+  while suffix_start < data.length() &&
+        pdf_is_whitespace_byte(data[suffix_start].to_int()) {
+    suffix_start += 1
+  }
+  guard suffix_start > whitespace_start else { return false }
+  for suffix in pdf_text_cmap_split_suffixes {
+    if pdf_text_cmap_starts_with_at(data, suffix_start, suffix) {
+      return true
+    }
+  }
+  false
+}
+
+///|
+fn pdf_text_cmap_has_split_marker(data : BytesView) -> Bool {
+  for index in 0..<data.length() {
+    if pdf_text_cmap_has_split_marker_at(
+        data, index, pdf_text_cmap_split_begin_marker,
+      ) ||
+      pdf_text_cmap_has_split_marker_at(
+        data, index, pdf_text_cmap_split_end_marker,
+      ) {
+      return true
+    }
+  }
+  false
+}
+
+///|
 fn pdf_text_parse_cmap_cids(data : BytesView) -> Array[(Int, Int)]? {
   if pdf_text_cmap_contains_whitespace(data) {
     let parsed = pdf_text_parse_cmap_cid_sections(data)
-    let compact = pdf_text_cmap_without_whitespace(data)
-    let compact_parsed = pdf_text_parse_cmap_cid_sections(compact)
-    match (parsed, compact_parsed) {
-      (Some(original_entries), Some(compact_entries)) =>
-        if compact_entries.length() > original_entries.length() {
-          Some(compact_entries)
-        } else {
-          Some(original_entries)
-        }
-      (None, Some(compact_entries)) => Some(compact_entries)
-      _ => parsed
+    if pdf_text_cmap_has_split_marker(data) {
+      let compact = pdf_text_cmap_without_whitespace(data)
+      let compact_parsed = pdf_text_parse_cmap_cid_sections(compact)
+      match (parsed, compact_parsed) {
+        (Some(original_entries), Some(compact_entries)) =>
+          if compact_entries.length() > original_entries.length() {
+            Some(compact_entries)
+          } else {
+            Some(original_entries)
+          }
+        (None, Some(compact_entries)) => Some(compact_entries)
+        _ => parsed
+      }
+    } else {
+      parsed
     }
   } else {
     pdf_text_parse_cmap_cid_sections(data)
@@ -4629,17 +4701,21 @@ fn pdf_text_parse_cmap_cids(data : BytesView) -> Array[(Int, Int)]? {
 fn pdf_text_parse_cmap_notdefs(data : BytesView) -> Array[(Int, Int)]? {
   if pdf_text_cmap_contains_whitespace(data) {
     let parsed = pdf_text_parse_cmap_notdef_sections(data)
-    let compact = pdf_text_cmap_without_whitespace(data)
-    let compact_parsed = pdf_text_parse_cmap_notdef_sections(compact)
-    match (parsed, compact_parsed) {
-      (Some(original_entries), Some(compact_entries)) =>
-        if compact_entries.length() > original_entries.length() {
-          Some(compact_entries)
-        } else {
-          Some(original_entries)
-        }
-      (None, Some(compact_entries)) => Some(compact_entries)
-      _ => parsed
+    if pdf_text_cmap_has_split_marker(data) {
+      let compact = pdf_text_cmap_without_whitespace(data)
+      let compact_parsed = pdf_text_parse_cmap_notdef_sections(compact)
+      match (parsed, compact_parsed) {
+        (Some(original_entries), Some(compact_entries)) =>
+          if compact_entries.length() > original_entries.length() {
+            Some(compact_entries)
+          } else {
+            Some(original_entries)
+          }
+        (None, Some(compact_entries)) => Some(compact_entries)
+        _ => parsed
+      }
+    } else {
+      parsed
     }
   } else {
     pdf_text_parse_cmap_notdef_sections(data)
@@ -4650,17 +4726,21 @@ fn pdf_text_parse_cmap_notdefs(data : BytesView) -> Array[(Int, Int)]? {
 fn pdf_text_parse_cmap_codespaces(data : BytesView) -> Array[PdfCMapCodeSpace]? {
   if pdf_text_cmap_contains_whitespace(data) {
     let parsed = pdf_text_parse_cmap_codespace_sections(data)
-    let compact = pdf_text_cmap_without_whitespace(data)
-    let compact_parsed = pdf_text_parse_cmap_codespace_sections(compact)
-    match (parsed, compact_parsed) {
-      (Some(original_entries), Some(compact_entries)) =>
-        if compact_entries.length() > original_entries.length() {
-          Some(compact_entries)
-        } else {
-          Some(original_entries)
-        }
-      (None, Some(compact_entries)) => Some(compact_entries)
-      _ => parsed
+    if pdf_text_cmap_has_split_marker(data) {
+      let compact = pdf_text_cmap_without_whitespace(data)
+      let compact_parsed = pdf_text_parse_cmap_codespace_sections(compact)
+      match (parsed, compact_parsed) {
+        (Some(original_entries), Some(compact_entries)) =>
+          if compact_entries.length() > original_entries.length() {
+            Some(compact_entries)
+          } else {
+            Some(original_entries)
+          }
+        (None, Some(compact_entries)) => Some(compact_entries)
+        _ => parsed
+      }
+    } else {
+      parsed
     }
   } else {
     pdf_text_parse_cmap_codespace_sections(data)
@@ -4671,17 +4751,21 @@ fn pdf_text_parse_cmap_codespaces(data : BytesView) -> Array[PdfCMapCodeSpace]? 
 fn pdf_text_parse_tounicode(data : BytesView) -> Array[(Int, PdfBytes)]? {
   if pdf_text_cmap_contains_whitespace(data) {
     let parsed = pdf_text_parse_tounicode_sections(data)
-    let compact = pdf_text_cmap_without_whitespace(data)
-    let compact_parsed = pdf_text_parse_tounicode_sections(compact)
-    match (parsed, compact_parsed) {
-      (Some(original_entries), Some(compact_entries)) =>
-        if compact_entries.length() > original_entries.length() {
-          Some(compact_entries)
-        } else {
-          Some(original_entries)
-        }
-      (None, Some(compact_entries)) => Some(compact_entries)
-      _ => parsed
+    if pdf_text_cmap_has_split_marker(data) {
+      let compact = pdf_text_cmap_without_whitespace(data)
+      let compact_parsed = pdf_text_parse_tounicode_sections(compact)
+      match (parsed, compact_parsed) {
+        (Some(original_entries), Some(compact_entries)) =>
+          if compact_entries.length() > original_entries.length() {
+            Some(compact_entries)
+          } else {
+            Some(original_entries)
+          }
+        (None, Some(compact_entries)) => Some(compact_entries)
+        _ => parsed
+      }
+    } else {
+      parsed
     }
   } else {
     pdf_text_parse_tounicode_sections(data)
