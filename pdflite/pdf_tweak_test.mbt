@@ -183,7 +183,13 @@ test "PdfDocument black_text rewrites selected pages and form xobjects" {
     [1],
     @pdflite.pdf_content_black,
   )
+  let source_order = try! @pdflite.pdf_blacktext(
+    @pdflite.pdf_content_black,
+    [1],
+    document,
+  )
   let rewritten_pages = try! rewritten.pages_of_pagetree()
+  let source_order_pages = try! source_order.pages_of_pagetree()
 
   @test.assert_eq(tweak_content_ops_for_test(rewritten, rewritten_pages[0]), [
     Op_Do(form_name),
@@ -212,6 +218,10 @@ test "PdfDocument black_text rewrites selected pages and form xobjects" {
       Op_ET,
       Op_rg(1.0, 0.0, 0.0),
     ],
+  )
+  @test.assert_eq(
+    tweak_content_ops_for_test(source_order, source_order_pages[0]),
+    tweak_content_ops_for_test(rewritten, rewritten_pages[0]),
   )
 }
 
@@ -246,7 +256,13 @@ test "PdfDocument black_lines rewrites selected pages and form xobjects" {
     [1],
     PdfContentRGB(0.1, 0.2, 0.3),
   )
+  let source_order = try! @pdflite.pdf_blacklines(
+    PdfContentRGB(0.1, 0.2, 0.3),
+    [1],
+    document,
+  )
   let rewritten_pages = try! rewritten.pages_of_pagetree()
+  let source_order_pages = try! source_order.pages_of_pagetree()
 
   @test.assert_eq(tweak_content_ops_for_test(rewritten, rewritten_pages[0]), [
     Op_Do(form_name),
@@ -264,6 +280,10 @@ test "PdfDocument black_lines rewrites selected pages and form xobjects" {
   @test.assert_eq(
     try! rewritten.parse_content_ops([PdfStreamObject(form_stream)]),
     [Op_RG(0.1, 0.2, 0.3), Op_S],
+  )
+  @test.assert_eq(
+    tweak_content_ops_for_test(source_order, source_order_pages[0]),
+    tweak_content_ops_for_test(rewritten, rewritten_pages[0]),
   )
 }
 
@@ -298,7 +318,13 @@ test "PdfDocument black_fills rewrites selected pages and form xobjects" {
     [1],
     PdfContentGrey(0.25),
   )
+  let source_order = try! @pdflite.pdf_blackfills(
+    PdfContentGrey(0.25),
+    [1],
+    document,
+  )
   let rewritten_pages = try! rewritten.pages_of_pagetree()
+  let source_order_pages = try! source_order.pages_of_pagetree()
 
   @test.assert_eq(tweak_content_ops_for_test(rewritten, rewritten_pages[0]), [
     Op_Do(form_name),
@@ -316,6 +342,10 @@ test "PdfDocument black_fills rewrites selected pages and form xobjects" {
   @test.assert_eq(
     try! rewritten.parse_content_ops([PdfStreamObject(form_stream)]),
     [Op_g(0.25), Op_f],
+  )
+  @test.assert_eq(
+    tweak_content_ops_for_test(source_order, source_order_pages[0]),
+    tweak_content_ops_for_test(rewritten, rewritten_pages[0]),
   )
 }
 
@@ -1148,7 +1178,9 @@ test "PdfDocument thin_lines rewrites only selected pages" {
   let original_pages = try! document.pages_of_pagetree()
 
   let thinned = try! @pdflite.pdf_thin_lines(document, [2], 2.0)
+  let source_order = try! @pdflite.pdf_thinlines([2], 2.0, document)
   let thinned_pages = try! thinned.pages_of_pagetree()
+  let source_order_pages = try! source_order.pages_of_pagetree()
 
   @test.assert_eq(tweak_content_ops_for_test(thinned, thinned_pages[0]), [
     Op_w(0.25),
@@ -1163,4 +1195,8 @@ test "PdfDocument thin_lines rewrites only selected pages" {
     Op_w(0.25),
     Op_S,
   ])
+  @test.assert_eq(
+    tweak_content_ops_for_test(source_order, source_order_pages[1]),
+    tweak_content_ops_for_test(thinned, thinned_pages[1]),
+  )
 }

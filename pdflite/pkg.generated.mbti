@@ -252,6 +252,12 @@ pub fn pdf_black_text(PdfDocument, ArrayView[Int], PdfContentColour) -> PdfDocum
 
 pub fn pdf_black_text_ops(PdfContentColour, ArrayView[PdfContentOp]) -> Array[PdfContentOp]
 
+pub fn pdf_blackfills(PdfContentColour, ArrayView[Int], PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_blacklines(PdfContentColour, ArrayView[Int], PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_blacktext(PdfContentColour, ArrayView[Int], PdfDocument) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_blank_document(Double, Double, Int) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_blank_document_paper(@geometry.PaperSize, Int) -> PdfDocument raise @core.PdfError
@@ -1539,6 +1545,8 @@ pub fn pdf_texttopdf_typeset(PdfFontPack, Double, @geometry.PaperSize, BytesView
 pub fn pdf_thin_lines(PdfDocument, ArrayView[Int], Double) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_thin_lines_ops(PdfDocument, PdfObject, ArrayView[PdfContentOp], Double) -> Array[PdfContentOp] raise @core.PdfError
+
+pub fn pdf_thinlines(ArrayView[Int], Double, PdfDocument) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_toc_add_bookmark(PdfDocument, BytesView) -> PdfDocument raise @core.PdfError
 

@@ -663,6 +663,16 @@ pub fn pdf_black_text(
 }
 
 ///|
+/// Compatibility wrapper matching cpdftweak's `blacktext` name and order.
+pub fn pdf_blacktext(
+  colour : PdfContentColour,
+  page_numbers : ArrayView[Int],
+  document : PdfDocument,
+) -> PdfDocument raise PdfError {
+  document.black_text(page_numbers, colour)
+}
+
+///|
 /// Paint line strokes on selected one-based pages and Form XObjects with `colour`.
 pub fn PdfDocument::black_lines(
   self : PdfDocument,
@@ -702,6 +712,16 @@ pub fn pdf_black_lines(
 }
 
 ///|
+/// Compatibility wrapper matching cpdftweak's `blacklines` name and order.
+pub fn pdf_blacklines(
+  colour : PdfContentColour,
+  page_numbers : ArrayView[Int],
+  document : PdfDocument,
+) -> PdfDocument raise PdfError {
+  document.black_lines(page_numbers, colour)
+}
+
+///|
 /// Paint fills on selected one-based pages and Form XObjects with `colour`.
 pub fn PdfDocument::black_fills(
   self : PdfDocument,
@@ -736,6 +756,16 @@ pub fn pdf_black_fills(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
   colour : PdfContentColour,
+) -> PdfDocument raise PdfError {
+  document.black_fills(page_numbers, colour)
+}
+
+///|
+/// Compatibility wrapper matching cpdftweak's `blackfills` name and order.
+pub fn pdf_blackfills(
+  colour : PdfContentColour,
+  page_numbers : ArrayView[Int],
+  document : PdfDocument,
 ) -> PdfDocument raise PdfError {
   document.black_fills(page_numbers, colour)
 }
@@ -1291,6 +1321,16 @@ pub fn pdf_thin_lines(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
   width : Double,
+) -> PdfDocument raise PdfError {
+  document.thin_lines(page_numbers, width)
+}
+
+///|
+/// Compatibility wrapper matching cpdftweak's `thinlines` name and order.
+pub fn pdf_thinlines(
+  page_numbers : ArrayView[Int],
+  width : Double,
+  document : PdfDocument,
 ) -> PdfDocument raise PdfError {
   document.thin_lines(page_numbers, width)
 }

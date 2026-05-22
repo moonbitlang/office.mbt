@@ -44,10 +44,10 @@ Current estimate:
   pattern-matrix kernels, cpdf page
   hard-box/removal/shift/scale/scale-to-fit/upright/set-mediabox/copy-box
   helpers, page-info report wrappers, callback-first traversal aliases,
-  cpdfutil string-key dictionary rewrite wrappers, and source-order
-  compatibility aliases, imposition make-space orchestration, border stamping,
-  layout planning, and first public impose/twoup pipelines, and Markdown helper
-  public APIs.
+  cpdftweak source-spelled colour/thin-line aliases, cpdfutil string-key
+  dictionary rewrite wrappers, and source-order compatibility aliases,
+  imposition make-space orchestration, border stamping, layout planning, and
+  first public impose/twoup pipelines, and Markdown helper public APIs.
 
 Current backend snapshot:
 
@@ -78,6 +78,19 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdftweak` source/API parity for the source-spelled colour and
+  thin-line transformations from `.repos/cpdf-source/cpdftweak.mli`: added
+  `pdf_blacktext`, `pdf_blacklines`, `pdf_blackfills`, and `pdf_thinlines`
+  aliases matching cpdf's argument order while preserving the existing
+  document-first MoonBit APIs. Coverage compares the source-order aliases
+  against the already-ported `pdf_black_text`, `pdf_black_lines`,
+  `pdf_black_fills`, and `pdf_thin_lines` behavior over selected pages and Form
+  XObject-sensitive fixtures. Validation on MoonBit 0.9.3: `moon check
+  --target native --warn-list +73` passes with the known `markdown/cmd` future
+  notice; `moon test --target native pdf_tweak_test.mbt` reports 27/27; `moon
+  fmt`, `moon info`, and `moon check --target all --warn-list +73` pass with
+  only the existing `markdown/cmd` future notice; full native `moon test
+  --target native` reports 2404/2404.~~
 - [x] ~~Continue `cpdfpage` source/API parity for callback-first traversal:
   added `pdf_process_pages_cpdf_order`, `pdf_iter_pages_cpdf_order`, and
   `pdf_map_pages_cpdf_order` aliases matching `.repos/cpdf-source/cpdfpage.mli`
