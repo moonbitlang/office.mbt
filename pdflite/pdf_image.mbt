@@ -153,6 +153,21 @@ let pdf_image_pdfua2_namespace : PdfBytes = @ascii.encode(
 let pdf_image_jbig2_globals_object_number : Int = 10000
 
 ///|
+let pdf_image_debug_image_processing_enabled : Ref[Bool] = { val: false }
+
+///|
+/// Return cpdfimage's `debug_image_processing` flag.
+pub fn pdf_image_debug_image_processing() -> Bool {
+  pdf_image_debug_image_processing_enabled.val
+}
+
+///|
+/// Set cpdfimage's `debug_image_processing` flag.
+pub fn pdf_image_set_debug_image_processing(enabled : Bool) -> Unit {
+  pdf_image_debug_image_processing_enabled.val = enabled
+}
+
+///|
 fn pdf_image_image_mask_key() -> PdfName {
   pdf_image_image_mask_key_name
 }

@@ -625,6 +625,18 @@ test "PdfImage public variants preserve image payload metadata" {
 }
 
 ///|
+test "pdf_image_debug_image_processing stores cpdf debug flag" {
+  let original = @pdflite.pdf_image_debug_image_processing()
+  @pdflite.pdf_image_set_debug_image_processing(false)
+  @test.assert_eq(@pdflite.pdf_image_debug_image_processing(), false)
+  @pdflite.pdf_image_set_debug_image_processing(true)
+  @test.assert_eq(@pdflite.pdf_image_debug_image_processing(), true)
+  @pdflite.pdf_image_set_debug_image_processing(false)
+  @test.assert_eq(@pdflite.pdf_image_debug_image_processing(), false)
+  @pdflite.pdf_image_set_debug_image_processing(original)
+}
+
+///|
 test "pdf_image_object_of_jpeg_data builds DCT image XObject" {
   let jpeg = image_jpeg_for_document_test()
   let object = try! @pdflite.pdf_image_object_of_jpeg_data(jpeg)

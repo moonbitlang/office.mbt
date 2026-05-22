@@ -7716,6 +7716,18 @@ Current backend snapshot:
   all --warn-list +73` passes with the known `markdown/cmd` future notice;
   `moon test --target native` reports 2360/2360; `moon info`, `moon fmt`, and
   `git diff --check` are clean.~~
+- [x] ~~Continue cpdfimage API parity with `.repos/cpdf-source`: added
+  `pdf_image_debug_image_processing` and
+  `pdf_image_set_debug_image_processing` over a module-level Boolean flag,
+  mirroring cpdfimage's public `debug_image_processing : bool ref` without
+  exposing a raw mutable reference in the MoonBit API. Coverage pins false,
+  true, and restore behavior so later image-processing/extraction work can use
+  the same flag. Validation on MoonBit compiler 0.9.3: `moon check --target
+  native --warn-list +73` passes with the known `markdown/cmd` future notice;
+  `moon test --target native pdf_image_test.mbt --filter '*debug_image*'`
+  reports 1/1; `moon check --target all --warn-list +73` passes with the known
+  `markdown/cmd` future notice; `moon test --target native` reports 2361/2361;
+  `moon info`, `moon fmt`, and `git diff --check` are clean.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

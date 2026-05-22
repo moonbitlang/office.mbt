@@ -728,6 +728,8 @@ pub fn pdf_image_bpc(PdfDocument, PdfObject) -> PdfObject?
 
 pub fn pdf_image_colspace(PdfDocument, PdfObject, PdfObject) -> PdfColourSpace raise @core.PdfError
 
+pub fn pdf_image_debug_image_processing() -> Bool
+
 pub fn pdf_image_document_of_jbig2_data(BytesView, global? : BytesView?, process_struct_tree? : Bool, subformat? : PdfUASubformat?, title? : String?) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_image_document_of_jpeg2000_data(BytesView, process_struct_tree? : Bool, subformat? : PdfUASubformat?, title? : String?) -> PdfDocument raise @core.PdfError
@@ -765,6 +767,8 @@ pub fn pdf_image_resolution(Bool, PdfDocument, ArrayView[Int], Double) -> Array[
 pub fn pdf_image_resolution_json(Bool, PdfDocument, ArrayView[Int], Double) -> Json raise @core.PdfError
 
 pub fn pdf_image_resolution_json_blob(Bool, PdfDocument, ArrayView[Int], Double) -> Bytes raise @core.PdfError
+
+pub fn pdf_image_set_debug_image_processing(Bool) -> Unit
 
 pub fn pdf_impose(PdfDocument, Double, Double, fit? : Bool, columns? : Bool, rtl? : Bool, btt? : Bool, center? : Bool, margin? : Double, spacing? : Double, line_width? : Double, fast? : Bool, process_struct_tree? : Bool) -> PdfDocument raise @core.PdfError
 
