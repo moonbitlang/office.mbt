@@ -1048,7 +1048,11 @@ pub fn pdf_parse_coordinate_rectangle(PdfDocument, String) -> PdfCoordRectangle 
 
 pub fn pdf_parse_coordinate_rectangles(PdfDocument, String) -> Array[PdfCoordRectangle] raise @core.PdfError
 
+pub fn pdf_parse_coordinate_tuple(PdfDocument, String) -> (Double, Double) raise @core.PdfError
+
 pub fn pdf_parse_coordinates(PdfDocument, String) -> Array[@geometry.Point2] raise @core.PdfError
+
+pub fn pdf_parse_coordinates_tuple(PdfDocument, String) -> Array[(Double, Double)] raise @core.PdfError
 
 pub fn pdf_parse_draw_colour(String) -> PdfDrawColour raise @core.PdfError
 
@@ -2808,7 +2812,9 @@ pub fn PdfDocument::parse_content_view_with_resources(Self, PdfObject, BytesView
 pub fn PdfDocument::parse_coordinate(Self, String) -> @geometry.Point2 raise @core.PdfError
 pub fn PdfDocument::parse_coordinate_rectangle(Self, String) -> PdfCoordRectangle raise @core.PdfError
 pub fn PdfDocument::parse_coordinate_rectangles(Self, String) -> Array[PdfCoordRectangle] raise @core.PdfError
+pub fn PdfDocument::parse_coordinate_tuple(Self, String) -> (Double, Double) raise @core.PdfError
 pub fn PdfDocument::parse_coordinates(Self, String) -> Array[@geometry.Point2] raise @core.PdfError
+pub fn PdfDocument::parse_coordinates_tuple(Self, String) -> Array[(Double, Double)] raise @core.PdfError
 pub fn PdfDocument::parse_function(Self, PdfObject) -> PdfFunction raise @core.PdfError
 pub fn PdfDocument::parse_matrix(Self, @core.PdfName, PdfObject) -> @geometry.TransformMatrix raise @core.PdfError
 pub fn PdfDocument::parse_pagespec(Self, String) -> Array[Int] raise @core.PdfError

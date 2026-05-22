@@ -91,6 +91,16 @@ fn assert_point_for_coord_test(
 }
 
 ///|
+fn assert_coordinate_tuple_for_test(
+  actual : (Double, Double),
+  x : Double,
+  y : Double,
+) -> Unit raise {
+  assert_close_for_coord_test(actual.0, x)
+  assert_close_for_coord_test(actual.1, y)
+}
+
+///|
 fn assert_coord_rectangle_for_test(
   actual : @pdflite.PdfCoordRectangle,
   x : Double,
@@ -218,13 +228,33 @@ test "cpdf coord parses coordinates across document pages" {
     10.0,
     20.0,
   )
+  assert_coordinate_tuple_for_test(
+    try! document.parse_coordinate_tuple("10 20"),
+    10.0,
+    20.0,
+  )
+  assert_coordinate_tuple_for_test(
+    try! @pdflite.pdf_parse_coordinate_tuple(document, "10 20"),
+    10.0,
+    20.0,
+  )
   let scaled = try! document.parse_coordinates("* 10")
   @test.assert_eq(scaled.length(), 2)
   assert_point_for_coord_test(scaled[0], 20.0, 10.0)
   assert_point_for_coord_test(scaled[1], 20.0, 10.0)
+  let scaled_tuples = try! document.parse_coordinates_tuple("* 10")
+  @test.assert_eq(scaled_tuples.length(), 2)
+  assert_coordinate_tuple_for_test(scaled_tuples[0], 20.0, 10.0)
+  assert_coordinate_tuple_for_test(scaled_tuples[1], 20.0, 10.0)
   let scaled_suffix = try! document.parse_coordinates("10 *")
   assert_point_for_coord_test(scaled_suffix[0], 10.0, 5.0)
   assert_point_for_coord_test(scaled_suffix[1], 10.0, 5.0)
+  let scaled_suffix_tuples = try! @pdflite.pdf_parse_coordinates_tuple(
+    document, "10 *",
+  )
+  @test.assert_eq(scaled_suffix_tuples.length(), 2)
+  assert_coordinate_tuple_for_test(scaled_suffix_tuples[0], 10.0, 5.0)
+  assert_coordinate_tuple_for_test(scaled_suffix_tuples[1], 10.0, 5.0)
 }
 
 ///|

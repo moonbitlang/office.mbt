@@ -543,6 +543,29 @@ pub fn pdf_parse_coordinate(
 }
 
 ///|
+fn pdf_coord_point_tuple(point : Point2) -> (Double, Double) {
+  (point.x, point.y)
+}
+
+///|
+/// Return cpdfcoord's tuple-shaped `parse_coordinate` result.
+pub fn PdfDocument::parse_coordinate_tuple(
+  self : PdfDocument,
+  text : String,
+) -> (Double, Double) raise PdfError {
+  pdf_coord_point_tuple(self.parse_coordinate(text))
+}
+
+///|
+/// Compatibility wrapper matching cpdfcoord's tuple-shaped `parse_coordinate`.
+pub fn pdf_parse_coordinate_tuple(
+  document : PdfDocument,
+  text : String,
+) -> (Double, Double) raise PdfError {
+  document.parse_coordinate_tuple(text)
+}
+
+///|
 fn pdf_coord_preprocess_coordinates(text : String) -> String {
   if text.has_prefix("* ") {
     let rest = text.unsafe_substring(start=2, end=text.length())
@@ -578,6 +601,26 @@ pub fn pdf_parse_coordinates(
   text : String,
 ) -> Array[Point2] raise PdfError {
   document.parse_coordinates(text)
+}
+
+///|
+/// Return cpdfcoord's tuple-shaped `parse_coordinates` results.
+pub fn PdfDocument::parse_coordinates_tuple(
+  self : PdfDocument,
+  text : String,
+) -> Array[(Double, Double)] raise PdfError {
+  [
+    for point in self.parse_coordinates(text) => pdf_coord_point_tuple(point)
+  ]
+}
+
+///|
+/// Compatibility wrapper matching cpdfcoord's tuple-shaped `parse_coordinates`.
+pub fn pdf_parse_coordinates_tuple(
+  document : PdfDocument,
+  text : String,
+) -> Array[(Double, Double)] raise PdfError {
+  document.parse_coordinates_tuple(text)
 }
 
 ///|

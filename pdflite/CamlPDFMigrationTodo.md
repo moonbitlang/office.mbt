@@ -7728,6 +7728,18 @@ Current backend snapshot:
   reports 1/1; `moon check --target all --warn-list +73` passes with the known
   `markdown/cmd` future notice; `moon test --target native` reports 2361/2361;
   `moon info`, `moon fmt`, and `git diff --check` are clean.~~
+- [x] ~~Continue cpdfcoord API parity with `.repos/cpdf-source`: added
+  tuple-shaped `PdfDocument::parse_coordinate_tuple`,
+  `pdf_parse_coordinate_tuple`, `PdfDocument::parse_coordinates_tuple`, and
+  `pdf_parse_coordinates_tuple`, preserving the existing `Point2` APIs while
+  exposing cpdfcoord's `(float * float)` return shape. Coverage pins both method
+  and function wrappers across single-coordinate and per-page coordinate parsing.
+  Validation on MoonBit compiler 0.9.3: `moon check --target native --warn-list
+  +73` passes with the known `markdown/cmd` future notice; `moon test --target
+  native pdf_coord_test.mbt --filter '*coordinates*'` reports 1/1; `moon check
+  --target all --warn-list +73` passes with the known `markdown/cmd` future
+  notice; `moon test --target native` reports 2361/2361; `moon info`, `moon
+  fmt`, and `git diff --check` are clean.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
