@@ -372,6 +372,30 @@ fn truetype_width_font_for_test() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn truetype_parse_font_for_test() -> @pdflite.PdfBytes {
+  let (glyf, offsets) = truetype_glyf_table_for_test([
+    truetype_simple_glyph_for_test(),
+    truetype_simple_glyph_for_test(),
+  ])
+  truetype_table_font_for_test([
+    ("head", truetype_head_table_for_test(1000, -50, -20, 900, 1000, 1)),
+    ("maxp", truetype_maxp_table_for_test(2)),
+    ("hhea", truetype_hhea_table_for_test(2)),
+    ("hmtx", truetype_hmtx_table_for_test([1000, 1500])),
+    ("OS/2", truetype_os2_table_for_test(2, 500, 800, -200, 450, 700)),
+    ("post", truetype_post_table_for_test(11)),
+    (
+      "cmap",
+      truetype_cmap_table_for_test([
+        (3, 1, truetype_format6_subtable_for_test(65, [1])),
+      ]),
+    ),
+    ("loca", truetype_loca_long_table_for_test(offsets)),
+    ("glyf", glyf),
+  ])
+}
+
+///|
 test "pdf_truetype_cmaps returns cmap platform encoding pairs" {
   let font = truetype_bytes_for_test([
     0x00, 0x01, 0x00, 0x00, // scaler type
@@ -562,6 +586,67 @@ test "pdf_truetype_higher_tounicode maps higher subset codes" {
     ]),
   )
   @test.assert_eq(try! @pdflite.pdf_truetype_higher_tounicode([]), None)
+}
+
+///|
+test "pdf_truetype_parse builds main and higher subset records" {
+  let parsed = try! @pdflite.pdf_truetype_parse(
+    truetype_parse_font_for_test(),
+    PdfWinAnsiEncoding,
+    [65, 0x0100],
+  )
+  @test.assert_eq(parsed.length(), 2)
+  let main = parsed[0]
+  @test.assert_eq(main.flags, 96)
+  @test.assert_eq(main.minx, -50)
+  @test.assert_eq(main.maxx, 900)
+  @test.assert_eq(main.ascent, 800)
+  @test.assert_eq(main.descent, -200)
+  @test.assert_eq(main.capheight, 700)
+  @test.assert_eq(main.xheight, 450)
+  @test.assert_eq(main.avgwidth, 500)
+  @test.assert_eq(main.maxwidth, 1500)
+  @test.assert_eq(main.firstchar, 65)
+  @test.assert_eq(main.lastchar, 65)
+  @test.assert_eq(main.widths, [1500])
+  @test.assert_eq(main.subset, [65])
+  @test.assert_eq(main.tounicode, None)
+  @test.assert_eq(
+    @pdflite.pdf_truetype_cmap_glyph(main.subset_fontfile, 65),
+    Some(1),
+  )
+
+  let higher = parsed[1]
+  @test.assert_eq(higher.flags, 68)
+  @test.assert_eq(higher.firstchar, 33)
+  @test.assert_eq(higher.lastchar, 33)
+  @test.assert_eq(higher.widths, [1000])
+  @test.assert_eq(higher.subset, [0x0100])
+  @test.assert_eq(
+    higher.tounicode,
+    Some([(33, truetype_bytes_for_test([0x01, 0x00]))]),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_truetype_cmap_glyph(higher.subset_fontfile, 33),
+    Some(0),
+  )
+}
+
+///|
+test "pdf_truetype_parse refuses subsets with no main encoding characters" {
+  let parsed : Result[Array[@pdflite.PdfTrueTypeParsedSubset], Error] = try? @pdflite.pdf_truetype_parse(
+    truetype_parse_font_for_test(),
+    PdfImplicitInFontFile,
+    [0x0100],
+  )
+  guard parsed
+    is Err(
+      @pdflite.PdfError::SoftError(
+        "Cpdftruetype: Refusing to create font with no characters"
+      )
+    ) else {
+    fail("expected empty main TrueType subset to fail")
+  }
 }
 
 ///|

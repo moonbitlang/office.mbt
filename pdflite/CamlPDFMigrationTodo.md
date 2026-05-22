@@ -38,8 +38,9 @@ Current estimate:
   encoding/cmap/ToUnicode validation, TrueType cmap glyph mapping plus
   table/metric/descriptor/loca/composite-glyph parsing foundations,
   subset `glyf`/`loca`/format-6 `cmap` table writers, subset-font
-  table-directory assembly, width/subset partition helpers, and higher-subset
-  ToUnicode mapping, imposition transform/content/page-assembly/
+  table-directory assembly, width/subset partition helpers, higher-subset
+  ToUnicode mapping, and integrated parsed-subset orchestration, imposition
+  transform/content/page-assembly/
   pattern-matrix kernels, cpdf page
   hard-box/removal/shift/scale/scale-to-fit/upright/set-mediabox/copy-box
   helpers and source-order compatibility aliases, imposition make-space
@@ -48,9 +49,9 @@ Current estimate:
 
 Current backend snapshot:
 
-- Native: full suite passes on MoonBit 0.9.3, currently 2399/2399 tests.
+- Native: full suite passes on MoonBit 0.9.3, currently 2401/2401 tests.
 - WasmGC and JavaScript: full portable non-native test suites pass on MoonBit
-  0.9.3, currently 2059/2059 on each backend after the latest source-corpus
+  0.9.3, currently 2061/2061 on each backend after the latest source-corpus
   recovery gates.
 - Wasm: current plain-Wasm smoke validation passes at 41/41 tests after
   filtering root's heavy package-level test files and the Markdown package
@@ -75,6 +76,21 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port the integrated `cpdftruetype.parse` subset-record surface:
+  `PdfTrueTypeParsedSubset` and `pdf_truetype_parse` now assemble the source
+  `Cpdftruetype.t` fields from the already-ported table readers, descriptor
+  metrics, subset partitioning, width calculation, subset font-file generation,
+  and higher-subset ToUnicode helpers. The parser returns the main
+  non-symbolic subset first, followed by symbolic implicit-font-file higher
+  subsets, preserves cpdf first/last character semantics, and refuses subsets
+  with no main encoding characters using the source error text. This closes the
+  MoonBit cpdftruetype parser/subsetter surface; remaining work is downstream
+  integration/source-audit hardening rather than missing `cpdftruetype.ml`
+  helper prerequisites. Validation on MoonBit 0.9.3:
+  `moon test --target native pdf_truetype_test.mbt` reports 27/27;
+  `moon fmt`, `moon info`, and `moon check --target all --warn-list +73` pass
+  with only the existing `markdown/cmd` warning; full backend tests report
+  native 2401/2401, wasm-gc 2061/2061, and js 2061/2061.~~
 - [x] ~~Port the next `cpdftruetype` higher-subset ToUnicode slice:
   `pdf_truetype_higher_tounicode` now covers the source
   `seconds_tounicodes` helper, mapping each higher subset position to character
