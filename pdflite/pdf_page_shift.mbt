@@ -25,6 +25,29 @@ fn pdf_page_shift_validate_offsets(
 }
 
 ///|
+fn pdf_page_shift_validate_page_indexed_offsets(
+  context : String,
+  page_count : Int,
+  offsets : ArrayView[(Double, Double)],
+) -> Unit raise PdfError {
+  if offsets.length() != page_count {
+    raise BadPageSpecification(context + ": offset count must match page count")
+  }
+}
+
+///|
+fn pdf_page_shift_select_page_indexed_offsets(
+  page_numbers : ArrayView[Int],
+  offsets : ArrayView[(Double, Double)],
+) -> Array[(Double, Double)] {
+  let selected : Array[(Double, Double)] = []
+  for page_number in page_numbers {
+    selected.push(offsets[page_number - 1])
+  }
+  selected
+}
+
+///|
 fn PdfDocument::pdf_page_shift_page(
   self : PdfDocument,
   page : PdfPage,
@@ -81,4 +104,40 @@ pub fn pdf_shift_pages(
   fast? : Bool = false,
 ) -> PdfDocument raise PdfError {
   document.shift_pages(page_numbers, offsets, fast~)
+}
+
+///|
+/// Shift selected pages using cpdf's absolute page-indexed offset list.
+///
+/// This mirrors cpdfpage's `shift_pdf`: `offsets[page - 1]` is used for each
+/// selected page, while unselected pages are left untouched.
+pub fn PdfDocument::shift_pdf(
+  self : PdfDocument,
+  page_numbers : ArrayView[Int],
+  offsets : ArrayView[(Double, Double)],
+  fast? : Bool = false,
+) -> PdfDocument raise PdfError {
+  let pages = self.pages_of_pagetree()
+  pdf_page_box_validate_page_numbers(page_numbers, pages.length(), "shift_pdf")
+  pdf_page_shift_validate_page_indexed_offsets(
+    "shift_pdf",
+    pages.length(),
+    offsets,
+  )
+  self.shift_pages(
+    page_numbers,
+    pdf_page_shift_select_page_indexed_offsets(page_numbers, offsets),
+    fast~,
+  )
+}
+
+///|
+/// Compatibility wrapper matching cpdfpage's `shift_pdf` value argument order.
+pub fn pdf_shift_pdf(
+  offsets : ArrayView[(Double, Double)],
+  document : PdfDocument,
+  page_numbers : ArrayView[Int],
+  fast? : Bool = false,
+) -> PdfDocument raise PdfError {
+  document.shift_pdf(page_numbers, offsets, fast~)
 }

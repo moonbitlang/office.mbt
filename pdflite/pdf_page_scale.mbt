@@ -79,6 +79,32 @@ fn pdf_page_scale_validate_pairs(
 }
 
 ///|
+fn pdf_page_scale_validate_page_indexed_pairs(
+  context : String,
+  label : String,
+  page_count : Int,
+  values : ArrayView[(Double, Double)],
+) -> Unit raise PdfError {
+  if values.length() != page_count {
+    raise BadPageSpecification(
+      context + ": " + label + " count must match page count",
+    )
+  }
+}
+
+///|
+fn pdf_page_scale_select_page_indexed_pairs(
+  page_numbers : ArrayView[Int],
+  values : ArrayView[(Double, Double)],
+) -> Array[(Double, Double)] {
+  let selected : Array[(Double, Double)] = []
+  for page_number in page_numbers {
+    selected.push(values[page_number - 1])
+  }
+  selected
+}
+
+///|
 fn PdfDocument::pdf_page_scale_page_data(
   self : PdfDocument,
   page : PdfPage,
@@ -323,6 +349,43 @@ pub fn pdf_scale_pages(
 }
 
 ///|
+/// Scale selected pages using cpdf's absolute page-indexed scale list.
+///
+/// This mirrors cpdfpage's `scale_pdf`: `scales[page - 1]` is used for each
+/// selected page, and unselected pages are left untouched.
+pub fn PdfDocument::scale_pdf(
+  self : PdfDocument,
+  page_numbers : ArrayView[Int],
+  scales : ArrayView[(Double, Double)],
+  fast? : Bool = false,
+) -> PdfDocument raise PdfError {
+  let pages = self.pages_of_pagetree()
+  pdf_page_box_validate_page_numbers(page_numbers, pages.length(), "scale_pdf")
+  pdf_page_scale_validate_page_indexed_pairs(
+    "scale_pdf",
+    "scale",
+    pages.length(),
+    scales,
+  )
+  self.scale_pages(
+    page_numbers,
+    pdf_page_scale_select_page_indexed_pairs(page_numbers, scales),
+    fast~,
+  )
+}
+
+///|
+/// Compatibility wrapper matching cpdfpage's `scale_pdf` value argument order.
+pub fn pdf_scale_pdf(
+  scales : ArrayView[(Double, Double)],
+  document : PdfDocument,
+  page_numbers : ArrayView[Int],
+  fast? : Bool = false,
+) -> PdfDocument raise PdfError {
+  document.scale_pdf(page_numbers, scales, fast~)
+}
+
+///|
 /// Stretch selected pages to target sizes without preserving aspect ratio.
 ///
 /// This ports cpdfpage's `stretch`: the current `/CropBox` when present,
@@ -374,6 +437,40 @@ pub fn pdf_stretch_pages(
   fast? : Bool = false,
 ) -> PdfDocument raise PdfError {
   document.stretch_pages(page_numbers, sizes, fast~)
+}
+
+///|
+/// Stretch selected pages using cpdf's absolute page-indexed size list.
+pub fn PdfDocument::stretch(
+  self : PdfDocument,
+  page_numbers : ArrayView[Int],
+  sizes : ArrayView[(Double, Double)],
+  fast? : Bool = false,
+) -> PdfDocument raise PdfError {
+  let pages = self.pages_of_pagetree()
+  pdf_page_box_validate_page_numbers(page_numbers, pages.length(), "stretch")
+  pdf_page_scale_validate_page_indexed_pairs(
+    "stretch",
+    "size",
+    pages.length(),
+    sizes,
+  )
+  self.stretch_pages(
+    page_numbers,
+    pdf_page_scale_select_page_indexed_pairs(page_numbers, sizes),
+    fast~,
+  )
+}
+
+///|
+/// Compatibility wrapper matching cpdfpage's `stretch` value argument order.
+pub fn pdf_stretch(
+  sizes : ArrayView[(Double, Double)],
+  document : PdfDocument,
+  page_numbers : ArrayView[Int],
+  fast? : Bool = false,
+) -> PdfDocument raise PdfError {
+  document.stretch(page_numbers, sizes, fast~)
 }
 
 ///|
@@ -445,6 +542,51 @@ pub fn pdf_scale_to_fit_pages(
     input_scale~,
     fast~,
   )
+}
+
+///|
+/// Scale selected pages to fit using cpdf's absolute page-indexed size list.
+pub fn PdfDocument::scale_to_fit_pdf(
+  self : PdfDocument,
+  page_numbers : ArrayView[Int],
+  sizes : ArrayView[(Double, Double)],
+  position? : PdfPosition = PdfPositionCentre,
+  input_scale? : Double = 1.0,
+  fast? : Bool = false,
+) -> PdfDocument raise PdfError {
+  let pages = self.pages_of_pagetree()
+  pdf_page_box_validate_page_numbers(
+    page_numbers,
+    pages.length(),
+    "scale_to_fit_pdf",
+  )
+  pdf_page_scale_validate_page_indexed_pairs(
+    "scale_to_fit_pdf",
+    "size",
+    pages.length(),
+    sizes,
+  )
+  self.scale_to_fit_pages(
+    page_numbers,
+    pdf_page_scale_select_page_indexed_pairs(page_numbers, sizes),
+    position~,
+    input_scale~,
+    fast~,
+  )
+}
+
+///|
+/// Compatibility wrapper matching cpdfpage's `scale_to_fit_pdf` argument order.
+pub fn[T] pdf_scale_to_fit_pdf(
+  position : PdfPosition,
+  input_scale : Double,
+  sizes : ArrayView[(Double, Double)],
+  _op : T,
+  document : PdfDocument,
+  page_numbers : ArrayView[Int],
+  fast? : Bool = false,
+) -> PdfDocument raise PdfError {
+  document.scale_to_fit_pdf(page_numbers, sizes, position~, input_scale~, fast~)
 }
 
 ///|
@@ -544,6 +686,48 @@ pub fn pdf_scale_to_fit_rotate_pages(
 }
 
 ///|
+/// Conditionally rotate selected pages using cpdf's absolute page-indexed size
+/// list, then upright the same pages.
+pub fn PdfDocument::scale_to_fit_rotate(
+  self : PdfDocument,
+  page_numbers : ArrayView[Int],
+  sizes : ArrayView[(Double, Double)],
+  rotation : Int,
+  fast? : Bool = false,
+) -> PdfDocument raise PdfError {
+  let pages = self.pages_of_pagetree()
+  pdf_page_box_validate_page_numbers(
+    page_numbers,
+    pages.length(),
+    "scale_to_fit_rotate",
+  )
+  pdf_page_scale_validate_page_indexed_pairs(
+    "scale_to_fit_rotate",
+    "size",
+    pages.length(),
+    sizes,
+  )
+  self.scale_to_fit_rotate_pages(
+    page_numbers,
+    pdf_page_scale_select_page_indexed_pairs(page_numbers, sizes),
+    rotation,
+    fast~,
+  )
+}
+
+///|
+/// Compatibility wrapper matching cpdfpage's `scale_to_fit_rotate` order.
+pub fn pdf_scale_to_fit_rotate(
+  sizes : ArrayView[(Double, Double)],
+  rotation : Int,
+  document : PdfDocument,
+  page_numbers : ArrayView[Int],
+  fast? : Bool = false,
+) -> PdfDocument raise PdfError {
+  document.scale_to_fit_rotate(page_numbers, sizes, rotation, fast~)
+}
+
+///|
 fn pdf_page_scale_center_target_boxes(
   sizes : ArrayView[(Double, Double)],
 ) -> Array[(Double, Double, Double, Double)] {
@@ -615,4 +799,24 @@ pub fn pdf_center_to_fit_pages(
   sizes : ArrayView[(Double, Double)],
 ) -> PdfDocument raise PdfError {
   document.center_to_fit_pages(page_numbers, sizes)
+}
+
+///|
+/// Compatibility method using cpdfpage's `center_to_fit` name.
+pub fn PdfDocument::center_to_fit(
+  self : PdfDocument,
+  page_numbers : ArrayView[Int],
+  sizes : ArrayView[(Double, Double)],
+) -> PdfDocument raise PdfError {
+  self.center_to_fit_pages(page_numbers, sizes)
+}
+
+///|
+/// Compatibility wrapper matching cpdfpage's `center_to_fit` value order.
+pub fn pdf_center_to_fit(
+  sizes : ArrayView[(Double, Double)],
+  document : PdfDocument,
+  page_numbers : ArrayView[Int],
+) -> PdfDocument raise PdfError {
+  document.center_to_fit(page_numbers, sizes)
 }

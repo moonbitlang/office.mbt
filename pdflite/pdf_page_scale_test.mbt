@@ -272,6 +272,32 @@ test "PdfDocument scale_pages scales boxes content and destinations" {
 }
 
 ///|
+test "cpdf scale_pdf wrapper uses absolute page-indexed scales" {
+  let document = page_scale_document_for_test([
+    page_scale_page_for_test([Op_S], width=80.0, height=90.0),
+    page_scale_page_for_test([Op_BT, Op_ET], width=100.0, height=100.0),
+  ])
+  let scaled = try! @pdflite.pdf_scale_pdf([(9.0, 9.0), (2.0, 3.0)], document, [
+    2,
+  ])
+  let pages = try! scaled.pages_of_pagetree()
+  @test.assert_eq(
+    pages[0].mediabox,
+    page_scale_rect_for_test(0.0, 0.0, 80.0, 90.0),
+  )
+  @test.assert_eq(
+    pages[1].mediabox,
+    page_scale_rect_for_test(0.0, 0.0, 200.0, 300.0),
+  )
+  @test.assert_eq(page_scale_ops_for_test(scaled, pages[0]), [Op_S])
+  @test.assert_eq(page_scale_ops_for_test(scaled, pages[1]), [
+    Op_cm(@pdflite.transform_scale(@pdflite.point2(0.0, 0.0), 2.0, 3.0)),
+    Op_BT,
+    Op_ET,
+  ])
+}
+
+///|
 test "PdfDocument scale_pages validates scale counts and page range" {
   let document = page_scale_document_for_test([page_scale_page_for_test([Op_S])])
   let mismatch : Result[@pdflite.PdfDocument, Error] = try? document.scale_pages(
@@ -297,6 +323,20 @@ test "PdfDocument scale_pages validates scale counts and page range" {
       )
     ) else {
     fail("expected scale_pages to reject invalid pages")
+  }
+
+  let cpdf_mismatch : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_scale_pdf(
+    [],
+    document,
+    [1],
+  )
+  guard cpdf_mismatch
+    is Err(
+      @pdflite.PdfError::BadPageSpecification(
+        "scale_pdf: scale count must match page count"
+      )
+    ) else {
+    fail("expected cpdf scale_pdf count validation")
   }
 }
 
@@ -374,6 +414,33 @@ test "PdfDocument stretch_pages scales from cropbox without preserving aspect" {
 }
 
 ///|
+test "cpdf stretch wrapper uses absolute page-indexed sizes" {
+  let document = page_scale_document_for_test([
+    page_scale_page_for_test([Op_S], width=80.0, height=90.0),
+    page_scale_page_for_test([Op_BT], width=100.0, height=100.0),
+  ])
+  let stretched = try! @pdflite.pdf_stretch(
+    [(900.0, 900.0), (50.0, 200.0)],
+    document,
+    [2],
+  )
+  let pages = try! stretched.pages_of_pagetree()
+  @test.assert_eq(
+    pages[0].mediabox,
+    page_scale_rect_for_test(0.0, 0.0, 80.0, 90.0),
+  )
+  @test.assert_eq(
+    pages[1].mediabox,
+    page_scale_rect_for_test(0.0, 0.0, 50.0, 200.0),
+  )
+  @test.assert_eq(page_scale_ops_for_test(stretched, pages[0]), [Op_S])
+  @test.assert_eq(page_scale_ops_for_test(stretched, pages[1]), [
+    Op_cm(@pdflite.transform_scale(@pdflite.point2(0.0, 0.0), 0.5, 2.0)),
+    Op_BT,
+  ])
+}
+
+///|
 test "PdfDocument stretch_pages validates size counts page range and zero boxes" {
   let document = page_scale_document_for_test([page_scale_page_for_test([Op_S])])
   let mismatch : Result[@pdflite.PdfDocument, Error] = try? document.stretch_pages(
@@ -414,6 +481,20 @@ test "PdfDocument stretch_pages validates size counts page range and zero boxes"
       )
     ) else {
     fail("expected stretch_pages to reject zero-sized pages")
+  }
+
+  let cpdf_mismatch : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_stretch(
+    [],
+    document,
+    [1],
+  )
+  guard cpdf_mismatch
+    is Err(
+      @pdflite.PdfError::BadPageSpecification(
+        "stretch: size count must match page count"
+      )
+    ) else {
+    fail("expected cpdf stretch size count validation")
   }
 }
 
@@ -468,6 +549,35 @@ test "PdfDocument scale_to_fit_pages centers content and sets target boxes" {
 }
 
 ///|
+test "cpdf scale_to_fit_pdf wrapper uses absolute page-indexed sizes" {
+  let document = page_scale_document_for_test([
+    page_scale_page_for_test([Op_S], width=80.0, height=90.0),
+    page_scale_page_for_test([Op_BT], width=100.0, height=50.0),
+  ])
+  let fitted = try! @pdflite.pdf_scale_to_fit_pdf(
+    PdfPositionCentre,
+    1.0,
+    [(500.0, 500.0), (50.0, 100.0)],
+    (),
+    document,
+    [2],
+  )
+  let pages = try! fitted.pages_of_pagetree()
+  @test.assert_eq(
+    pages[0].mediabox,
+    page_scale_rect_for_test(0.0, 0.0, 80.0, 90.0),
+  )
+  @test.assert_eq(
+    pages[1].mediabox,
+    page_scale_rect_for_test(0.0, 0.0, 50.0, 100.0),
+  )
+  @test.assert_eq(page_scale_ops_for_test(fitted, pages[0]), [Op_S])
+  guard page_scale_ops_for_test(fitted, pages[1]) is [Op_cm(_), Op_BT] else {
+    fail("expected cpdf scale_to_fit_pdf to transform selected second page")
+  }
+}
+
+///|
 test "PdfDocument scale_to_fit_pages validates size counts and zero boxes" {
   let document = page_scale_document_for_test([page_scale_page_for_test([Op_S])])
   let mismatch : Result[@pdflite.PdfDocument, Error] = try? document.scale_to_fit_pages(
@@ -496,6 +606,23 @@ test "PdfDocument scale_to_fit_pages validates size counts and zero boxes" {
       )
     ) else {
     fail("expected scale_to_fit_pages to reject zero-sized pages")
+  }
+
+  let cpdf_mismatch : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_scale_to_fit_pdf(
+    PdfPositionCentre,
+    1.0,
+    [],
+    (),
+    document,
+    [1],
+  )
+  guard cpdf_mismatch
+    is Err(
+      @pdflite.PdfError::BadPageSpecification(
+        "scale_to_fit_pdf: size count must match page count"
+      )
+    ) else {
+    fail("expected cpdf scale_to_fit_pdf size count validation")
   }
 }
 
@@ -545,6 +672,37 @@ test "PdfDocument scale_to_fit_rotate_pages uprights selected pages even without
 }
 
 ///|
+test "cpdf scale_to_fit_rotate wrapper uses absolute page-indexed sizes" {
+  let document = page_scale_document_for_test([
+    page_scale_page_for_test([Op_S], width=200.0, height=100.0),
+    page_scale_page_for_test([Op_BT], width=100.0, height=200.0),
+  ])
+  let rotated = try! @pdflite.pdf_scale_to_fit_rotate(
+    [(100.0, 200.0), (300.0, 100.0)],
+    90,
+    document,
+    [2],
+  )
+  let expected = try! document.scale_to_fit_rotate_pages(
+    [2],
+    [(300.0, 100.0)],
+    90,
+  )
+  let rotated_pages = try! rotated.pages_of_pagetree()
+  let expected_pages = try! expected.pages_of_pagetree()
+  @test.assert_eq(
+    rotated_pages[0].mediabox,
+    page_scale_rect_for_test(0.0, 0.0, 200.0, 100.0),
+  )
+  @test.assert_eq(rotated_pages[1].mediabox, expected_pages[1].mediabox)
+  @test.assert_eq(rotated_pages[1].rotate, expected_pages[1].rotate)
+  @test.assert_eq(
+    page_scale_ops_for_test(rotated, rotated_pages[1]),
+    page_scale_ops_for_test(expected, expected_pages[1]),
+  )
+}
+
+///|
 test "PdfDocument scale_to_fit_rotate_pages validates page range and size count" {
   let document = page_scale_document_for_test([page_scale_page_for_test([Op_S])])
   let mismatch : Result[@pdflite.PdfDocument, Error] = try? document.scale_to_fit_rotate_pages(
@@ -573,6 +731,21 @@ test "PdfDocument scale_to_fit_rotate_pages validates page range and size count"
       )
     ) else {
     fail("expected scale_to_fit_rotate_pages to reject an out-of-range page")
+  }
+
+  let cpdf_mismatch : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_scale_to_fit_rotate(
+    [],
+    90,
+    document,
+    [1],
+  )
+  guard cpdf_mismatch
+    is Err(
+      @pdflite.PdfError::BadPageSpecification(
+        "scale_to_fit_rotate: size count must match page count"
+      )
+    ) else {
+    fail("expected cpdf scale_to_fit_rotate size count validation")
   }
 }
 
@@ -644,6 +817,16 @@ test "PdfDocument center_to_fit_pages wrapper uses first target for all offsets"
   let pages = try! centered.pages_of_pagetree()
   @test.assert_eq(
     pages[1].mediabox,
+    page_scale_rect_for_test(-50.0, -100.0, 350.0, 400.0),
+  )
+  let cpdf_centered = try! @pdflite.pdf_center_to_fit(
+    [(200.0, 300.0), (400.0, 500.0)],
+    document,
+    [2],
+  )
+  let cpdf_pages = try! cpdf_centered.pages_of_pagetree()
+  @test.assert_eq(
+    cpdf_pages[1].mediabox,
     page_scale_rect_for_test(-50.0, -100.0, 350.0, 400.0),
   )
 }

@@ -42,7 +42,7 @@ Current estimate:
 
 Current backend snapshot:
 
-- Native: full suite passes on MoonBit 0.9.3, currently 2354/2354 tests.
+- Native: full suite passes on MoonBit 0.9.3, currently 2369/2369 tests.
 - WasmGC and JavaScript: full portable non-native test suites pass on MoonBit
   0.9.3, currently 2018/2018 on each backend after the latest source-corpus
   recovery gates.
@@ -7774,6 +7774,24 @@ Current backend snapshot:
   '*box*'` reports 16/16; `moon check --target all --warn-list +73` passes with
   the known `markdown/cmd` future notice; `moon test --target native` reports
   2364/2364; `moon info`, `moon fmt`, and `git diff --check` are clean.~~
+- [x] ~~Continue cpdfpage transform API parity with `.repos/cpdf-source`: added
+  cpdf-order, absolute page-indexed wrappers for the existing page transform
+  kernels: `PdfDocument::shift_pdf`, `pdf_shift_pdf`,
+  `PdfDocument::scale_pdf`, `pdf_scale_pdf`, `PdfDocument::stretch`,
+  `pdf_stretch`, `PdfDocument::scale_to_fit_pdf`, `pdf_scale_to_fit_pdf`,
+  `PdfDocument::scale_to_fit_rotate`, `pdf_scale_to_fit_rotate`,
+  `PdfDocument::center_to_fit`, and `pdf_center_to_fit`. The wrappers preserve
+  cpdfpage's source behavior that transform lists are indexed by absolute page
+  number while selected pages determine which entries are applied. Coverage
+  pins cpdf-order shift, scale, stretch, scale-to-fit, scale-to-fit-rotate, and
+  center-to-fit aliases plus count validation. Validation on MoonBit compiler
+  0.9.3: `moon check --target native --warn-list +73` passes with the known
+  `markdown/cmd` future notice; `moon test --target native
+  pdf_page_shift_test.mbt` reports 4/4; `moon test --target native
+  pdf_page_scale_test.mbt` reports 19/19; `moon check --target all --warn-list
+  +73` passes with the known `markdown/cmd` future notice; `moon test --target
+  native` reports 2369/2369; `moon info`, `moon fmt`, and `git diff --check`
+  are clean.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

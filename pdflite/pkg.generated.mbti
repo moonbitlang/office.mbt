@@ -302,6 +302,8 @@ pub fn pdf_ccitt_g4_encode(Int, Int, Bytes) -> Bytes raise @core.PdfError
 
 pub fn pdf_ccitt_g4_encode_view(Int, Int, BytesView) -> Bytes raise @core.PdfError
 
+pub fn pdf_center_to_fit(ArrayView[(Double, Double)], PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_center_to_fit_pages(PdfDocument, ArrayView[Int], ArrayView[(Double, Double)]) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_change_bookmark(ArrayView[(Int, Int)], PdfBookmark) -> PdfBookmark
@@ -1326,7 +1328,13 @@ pub fn pdf_scale_contents(PdfDocument, ArrayView[Int], PdfPosition, Double, fast
 
 pub fn pdf_scale_pages(PdfDocument, ArrayView[Int], ArrayView[(Double, Double)], fast? : Bool) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_scale_pdf(ArrayView[(Double, Double)], PdfDocument, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_scale_to_fit_pages(PdfDocument, ArrayView[Int], ArrayView[(Double, Double)], position? : PdfPosition, input_scale? : Double, fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn[T] pdf_scale_to_fit_pdf(PdfPosition, Double, ArrayView[(Double, Double)], T, PdfDocument, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_scale_to_fit_rotate(ArrayView[(Double, Double)], Int, PdfDocument, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_scale_to_fit_rotate_pages(PdfDocument, ArrayView[Int], ArrayView[(Double, Double)], Int, fast? : Bool) -> PdfDocument raise @core.PdfError
 
@@ -1369,6 +1377,8 @@ pub fn pdf_shape_rectangle(Double, Double, Double, Double) -> PdfPath
 pub fn pdf_shift_boxes(PdfDocument, ArrayView[Int], ArrayView[(Double, Double)]) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_shift_pages(PdfDocument, ArrayView[Int], ArrayView[(Double, Double)], fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_shift_pdf(ArrayView[(Double, Double)], PdfDocument, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_shortest_unused_prefix(PdfDocument) -> String
 
@@ -1413,6 +1423,8 @@ pub fn pdf_standard_font_substitute_filenames(PdfStandardFont) -> Array[String]
 pub fn pdf_standard_font_substitute_font_name(PdfStandardFont) -> String
 
 pub fn pdf_stream(PdfObject, PdfStreamData) -> PdfObject
+
+pub fn pdf_stretch(ArrayView[(Double, Double)], PdfDocument, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_stretch_pages(PdfDocument, ArrayView[Int], ArrayView[(Double, Double)], fast? : Bool) -> PdfDocument raise @core.PdfError
 
@@ -2643,6 +2655,7 @@ pub fn PdfDocument::build_name_tree(Self, ArrayView[(Bytes, PdfObject)]) -> PdfO
 pub fn PdfDocument::build_number_tree(Self, ArrayView[(Int, PdfObject)]) -> PdfObject
 pub fn PdfDocument::catalog(Self) -> PdfObject raise @core.PdfError
 pub fn PdfDocument::catalog_item(Self, @core.PdfName) -> String
+pub fn PdfDocument::center_to_fit(Self, ArrayView[Int], ArrayView[(Double, Double)]) -> Self raise @core.PdfError
 pub fn PdfDocument::center_to_fit_pages(Self, ArrayView[Int], ArrayView[(Double, Double)]) -> Self raise @core.PdfError
 pub fn PdfDocument::change_boxes(Self, PdfPage, (Double, Double, Double, Double) -> (Double, Double, Double, Double)) -> PdfPage raise @core.PdfError
 pub fn PdfDocument::change_id(Self, String, () -> Double) -> Unit raise @core.PdfError
@@ -2923,7 +2936,10 @@ pub fn PdfDocument::rotate_pages(Self, Int, ArrayView[Int]) -> Self raise @core.
 pub fn PdfDocument::rotate_pages_by(Self, Int, ArrayView[Int]) -> Self raise @core.PdfError
 pub fn PdfDocument::scale_contents(Self, ArrayView[Int], PdfPosition, Double, fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::scale_pages(Self, ArrayView[Int], ArrayView[(Double, Double)], fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::scale_pdf(Self, ArrayView[Int], ArrayView[(Double, Double)], fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::scale_to_fit_pages(Self, ArrayView[Int], ArrayView[(Double, Double)], position? : PdfPosition, input_scale? : Double, fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::scale_to_fit_pdf(Self, ArrayView[Int], ArrayView[(Double, Double)], position? : PdfPosition, input_scale? : Double, fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::scale_to_fit_rotate(Self, ArrayView[Int], ArrayView[(Double, Double)], Int, fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::scale_to_fit_rotate_pages(Self, ArrayView[Int], ArrayView[(Double, Double)], Int, fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::select_object_numbers(Self, (PdfObject) -> Bool) -> Array[Int]
 pub fn PdfDocument::set_annotations_json(Self, Json) -> Self raise @core.PdfError
@@ -2947,6 +2963,7 @@ pub fn PdfDocument::set_viewer_preference(Self, @core.PdfName, PdfObject, Int, k
 pub fn PdfDocument::set_was_linearized(Self, Bool) -> Unit
 pub fn PdfDocument::shift_boxes(Self, ArrayView[Int], ArrayView[(Double, Double)]) -> Self raise @core.PdfError
 pub fn PdfDocument::shift_pages(Self, ArrayView[Int], ArrayView[(Double, Double)], fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::shift_pdf(Self, ArrayView[Int], ArrayView[(Double, Double)], fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::shortest_unused_prefix(Self) -> String
 pub fn PdfDocument::show_annotation_bounding_boxes(Self, ArrayView[Int], light? : Bool, fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::show_bounding_boxes(Self, ArrayView[Int], shape? : PdfRectangle?, light? : Bool, fast? : Bool) -> Self raise @core.PdfError
@@ -2956,6 +2973,7 @@ pub fn PdfDocument::squeeze(Self, page_data? : Bool) -> Self raise @core.PdfErro
 pub fn PdfDocument::stamp_as_xobject(Self, ArrayView[Int], Self) -> (Self, @core.PdfName) raise @core.PdfError
 pub fn PdfDocument::stamp_pages(Self, ArrayView[Int], Self, relative_to_box? : @core.PdfName, position? : PdfPosition, topline? : Bool, midline? : Bool, fast? : Bool, scale_to_fit? : Bool, is_over? : Bool, process_struct_tree? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::stream_object_entries(Self) -> Array[(Int, Int, PdfStream)]
+pub fn PdfDocument::stretch(Self, ArrayView[Int], ArrayView[(Double, Double)], fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::stretch_pages(Self, ArrayView[Int], ArrayView[(Double, Double)], fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::string_of_pagespec(Self, ArrayView[Int]) -> String raise @core.PdfError
 pub fn PdfDocument::struct_tree_json_blob(Self) -> Bytes raise @core.PdfError

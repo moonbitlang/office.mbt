@@ -164,6 +164,26 @@ test "PdfDocument shift_pages transforms open-action destinations" {
 }
 
 ///|
+test "cpdf shift_pdf wrapper uses absolute page-indexed offsets" {
+  let document = page_shift_document_for_test([
+    page_shift_page_for_test([Op_S]),
+    page_shift_page_for_test([Op_BT, Op_ET]),
+  ])
+  let shifted = try! @pdflite.pdf_shift_pdf(
+    [(100.0, 200.0), (10.0, 20.0)],
+    document,
+    [2],
+  )
+  let pages = try! shifted.pages_of_pagetree()
+  @test.assert_eq(page_shift_ops_for_test(shifted, pages[0]), [Op_S])
+  @test.assert_eq(page_shift_ops_for_test(shifted, pages[1]), [
+    Op_cm(@pdflite.transform_translate(10.0, 20.0)),
+    Op_BT,
+    Op_ET,
+  ])
+}
+
+///|
 test "PdfDocument shift_pages rejects invalid offset lists" {
   let document = page_shift_document_for_test([page_shift_page_for_test([Op_S])])
   let mismatch : Result[@pdflite.PdfDocument, Error] = try? document.shift_pages(
@@ -189,5 +209,19 @@ test "PdfDocument shift_pages rejects invalid offset lists" {
       )
     ) else {
     fail("expected page range validation")
+  }
+
+  let cpdf_mismatch : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_shift_pdf(
+    [],
+    document,
+    [1],
+  )
+  guard cpdf_mismatch
+    is Err(
+      @pdflite.PdfError::BadPageSpecification(
+        "shift_pdf: offset count must match page count"
+      )
+    ) else {
+    fail("expected cpdf shift_pdf offset count validation")
   }
 }
