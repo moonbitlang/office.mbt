@@ -44,15 +44,15 @@ Current estimate:
   pattern-matrix kernels, cpdf page
   hard-box/removal/shift/scale/scale-to-fit/upright/set-mediabox/copy-box
   helpers, page-info report wrappers, callback-first traversal aliases,
-  cpdftweak source-spelled colour/thin-line, append-content, and dictionary
-  entry reporting aliases, cpdfutil string-key dictionary rewrite wrappers, and
-  source-order compatibility aliases,
+  cpdftweak source-spelled colour/thin-line, append-content, dictionary entry,
+  object-spec, and native file-stream replacement aliases, cpdfutil string-key
+  dictionary rewrite wrappers, and source-order compatibility aliases,
   imposition make-space orchestration, border stamping, layout planning, and
   first public impose/twoup pipelines, and Markdown helper public APIs.
 
 Current backend snapshot:
 
-- Native: full suite passes on MoonBit 0.9.3, currently 2406/2406 tests.
+- Native: full suite passes on MoonBit 0.9.3, currently 2407/2407 tests.
 - WasmGC and JavaScript: full portable non-native test suites pass on MoonBit
   0.9.3, currently 2063/2063 on each backend after the latest TrueType
   embedding integration.
@@ -79,6 +79,20 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdftweak` source/API parity for object-spec helpers from
+  `.repos/cpdf-source/cpdftweak.mli`: added source-spelled `pdf_find_obj`,
+  `pdf_replace_obj`, and `pdf_remove_obj` aliases over the existing
+  object-spec finder/mutator APIs, plus native `async_io` `pdf_replace_stream`
+  matching cpdf's filename-based stream replacement contract. Coverage pins the
+  new aliases against existing object lookup/replacement/removal behavior and
+  validates file-backed stream replacement preserves non-`/Length` dictionary
+  entries while replacing stream bytes. Validation on MoonBit 0.9.3: `moon
+  check --target native --warn-list +73` passes with the known `markdown/cmd`
+  future notice; `moon test --target native pdf_tweak_test.mbt` reports 27/27;
+  `moon test --target native async_io` reports 95/95; `moon fmt`, `moon info`,
+  and `moon check --target all --warn-list +73` pass with only the existing
+  `markdown/cmd` future notice; full native `moon test --target native`
+  reports 2407/2407.~~
 - [x] ~~Continue `cpdftweak` source/API parity for dictionary-entry reporting
   from `.repos/cpdf-source/cpdftweak.mli`: added slash-prefixed string-key
   `PdfDocument::dict_entry_rendered_values_string`,

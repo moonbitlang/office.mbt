@@ -46,6 +46,18 @@ pub async fn pdf_is_linearized_file(path : StringView) -> Bool {
 }
 
 ///|
+/// Replace a stream object with bytes read from `filename`.
+///
+/// This is the native filesystem counterpart of cpdftweak's `replace_stream`.
+pub async fn pdf_replace_stream(
+  document : @pdflite.PdfDocument,
+  objspec : String,
+  filename : StringView,
+) -> Unit {
+  document.replace_stream_by_spec(objspec, @fs.read_file(filename).binary())
+}
+
+///|
 fn pdf_async_io_join_directory_file(
   directory : StringView,
   filename : String,

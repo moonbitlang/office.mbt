@@ -1146,6 +1146,15 @@ pub fn pdf_find_object(
 }
 
 ///|
+/// Compatibility wrapper matching cpdftweak's `find_obj` name.
+pub fn pdf_find_obj(
+  document : PdfDocument,
+  spec : String,
+) -> PdfObject raise PdfError {
+  document.find_object_by_spec(spec)
+}
+
+///|
 /// Replace an object using the cpdf object-spec grammar.
 pub fn PdfDocument::replace_object_by_spec(
   self : PdfDocument,
@@ -1191,6 +1200,16 @@ pub fn pdf_replace_object_by_spec(
 }
 
 ///|
+/// Compatibility wrapper matching cpdftweak's `replace_obj` name.
+pub fn pdf_replace_obj(
+  document : PdfDocument,
+  spec : String,
+  value : PdfObject,
+) -> Unit raise PdfError {
+  document.replace_object_by_spec(spec, value)
+}
+
+///|
 /// Remove an object by decimal object number string.
 pub fn PdfDocument::remove_object_by_spec(
   self : PdfDocument,
@@ -1202,6 +1221,15 @@ pub fn PdfDocument::remove_object_by_spec(
 ///|
 /// Compatibility wrapper for `PdfDocument::remove_object_by_spec`.
 pub fn pdf_remove_object_by_spec(
+  document : PdfDocument,
+  spec : String,
+) -> Unit raise PdfError {
+  document.remove_object_by_spec(spec)
+}
+
+///|
+/// Compatibility wrapper matching cpdftweak's `remove_obj` name.
+pub fn pdf_remove_obj(
   document : PdfDocument,
   spec : String,
 ) -> Unit raise PdfError {

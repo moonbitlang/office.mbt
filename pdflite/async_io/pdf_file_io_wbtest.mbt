@@ -3967,6 +3967,47 @@ async test "async metadata file wrappers set write and extract XML metadata" {
 }
 
 ///|
+async test "async cpdftweak replace_stream reads replacement files" {
+  let path = pdf_async_io_test_path_for_test("replace_stream_payload")
+  pdf_async_io_remove_if_exists_for_test(path)
+  let payload = @ascii.encode("new stream bytes")
+  @fs.write_file(path, payload, create=0o644)
+  let key_length = pdf_async_io_name_for_test("/Length")
+  let key_filter = pdf_async_io_name_for_test("/Filter")
+  let filter_name = pdf_async_io_name_for_test("/Dummy")
+  let document = @pdflite.pdf_document_empty()
+  document.add_object_given_number(
+    4,
+    @pdflite.pdf_stream(
+      PdfDictionary([
+        (key_length, PdfInteger(3)),
+        (key_filter, PdfNameObject(filter_name)),
+      ]),
+      StreamGot(@ascii.encode("old")),
+    ),
+  )
+
+  try! pdf_replace_stream(document, "4", path)
+
+  guard document.lookup_object_or_null(4) is PdfStreamObject(stream) else {
+    fail("expected stream object after replace_stream")
+  }
+  @test.assert_eq(
+    try! @pdflite.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
+    payload,
+  )
+  @test.assert_eq(
+    document.lookup_direct(key_length, PdfStreamObject(stream)),
+    Some(PdfInteger(payload.length())),
+  )
+  @test.assert_eq(
+    document.lookup_direct(key_filter, PdfStreamObject(stream)),
+    Some(PdfNameObject(filter_name)),
+  )
+  pdf_async_io_remove_if_exists_for_test(path)
+}
+
+///|
 async test "async file wrappers fail dumping malformed attachment data" {
   let file_spec : @pdflite.PdfObject = PdfDictionary([
     (

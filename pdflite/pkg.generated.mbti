@@ -676,6 +676,8 @@ pub fn pdf_expand_date(String) -> String
 
 pub fn pdf_extract_fontfile_bytes(PdfDocument, Int, String) -> Bytes? raise @core.PdfError
 
+pub fn pdf_find_obj(PdfDocument, String) -> PdfObject raise @core.PdfError
+
 pub fn pdf_find_object(PdfDocument, String) -> PdfObject raise @core.PdfError
 
 pub fn pdf_flate_decode(Bytes) -> Bytes raise @core.PdfError
@@ -1320,6 +1322,8 @@ pub fn pdf_remove_javascript(PdfDocument) -> Unit raise @core.PdfError
 
 pub fn pdf_remove_metadata(PdfDocument) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_remove_obj(PdfDocument, String) -> Unit raise @core.PdfError
+
 pub fn pdf_remove_object_by_spec(PdfDocument, String) -> Unit raise @core.PdfError
 
 pub fn pdf_remove_ocg(PdfDocument) -> PdfDocument raise @core.PdfError
@@ -1341,6 +1345,8 @@ pub fn pdf_renumber_parent_trees(ArrayView[PdfDocument]) -> Unit raise @core.Pdf
 pub fn pdf_replace_dict_entry(PdfDocument, @core.PdfName, PdfObject, search? : PdfObject?) -> Unit
 
 pub fn pdf_replace_dict_entry_string(PdfDocument, String, PdfObject, search? : PdfObject?) -> Unit
+
+pub fn pdf_replace_obj(PdfDocument, String, PdfObject) -> Unit raise @core.PdfError
 
 pub fn pdf_replace_object_by_spec(PdfDocument, String, PdfObject) -> Unit raise @core.PdfError
 

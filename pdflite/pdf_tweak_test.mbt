@@ -756,6 +756,10 @@ test "PdfDocument find_object_by_spec resolves trailer and object chains" {
     PdfInteger(42),
   )
   @test.assert_eq(
+    try! @pdflite.pdf_find_obj(doc, "/Root/Value"),
+    PdfInteger(42),
+  )
+  @test.assert_eq(
     try! doc.find_object_by_spec("2/Items/[1/Value"),
     PdfInteger(9),
   )
@@ -843,6 +847,8 @@ test "PdfDocument replace_object_by_spec updates chains objects and page specs" 
 
   try! @pdflite.pdf_replace_object_by_spec(doc, "/Root/Value", PdfInteger(99))
   @test.assert_eq(try! doc.find_object_by_spec("/Root/Value"), PdfInteger(99))
+  try! @pdflite.pdf_replace_obj(doc, "/Root/Value", PdfInteger(98))
+  @test.assert_eq(try! doc.find_object_by_spec("/Root/Value"), PdfInteger(98))
   try! doc.replace_object_by_spec("/Root/Child/Value", PdfInteger(10))
   @test.assert_eq(
     try! doc.find_object_by_spec("/Root/Child/Value"),
@@ -955,6 +961,9 @@ test "PdfDocument remove_object_by_spec removes decimal object numbers" {
 
   try! @pdflite.pdf_remove_object_by_spec(doc, "9")
   @test.assert_eq(doc.lookup_object_or_null(9), PdfNull)
+  doc.add_object_given_number(10, PdfInteger(10))
+  try! @pdflite.pdf_remove_obj(doc, "10")
+  @test.assert_eq(doc.lookup_object_or_null(10), PdfNull)
 
   let bad_spec : Result[Unit, Error] = try? doc.remove_object_by_spec("9/A")
   guard bad_spec is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
