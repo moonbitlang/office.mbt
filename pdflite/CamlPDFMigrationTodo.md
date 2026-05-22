@@ -22,6 +22,7 @@ Current estimate:
   marker insertion/removal helpers, PDF/UA structure-tree JSON
   import/export helpers, JPEG/JPEG2000, PNG, and JBIG2 image-to-PDF document
   assembly, image XObject JSON listing, image-resolution reporting,
+  cpdfimage single-image extraction file payloads/native write wrappers,
   cpdf draw-control colour parsing, role-map/auto-artifact state, and cpdfdraw
   structured role-map output with fresh-structure-tree preservation,
   Form XObject stamping,
@@ -42,7 +43,7 @@ Current estimate:
 
 Current backend snapshot:
 
-- Native: full suite passes on MoonBit 0.9.3, currently 2370/2370 tests.
+- Native: full suite passes on MoonBit 0.9.3, currently 2373/2373 tests.
 - WasmGC and JavaScript: full portable non-native test suites pass on MoonBit
   0.9.3, currently 2018/2018 on each backend after the latest source-corpus
   recovery gates.
@@ -69,6 +70,24 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port the `cpdfimage.extract_single_image` file-emission slice:
+  `PdfExtractedImageFile`, `PdfDocument::extract_single_image_files`, and
+  `pdf_image_extract_single_image_files` now return the cpdf-style files for
+  JPEG (`.jpg`), JPEG2000 (`.jpx`), JBIG2 (`.jbig2`, `.jbig2__N`, and
+  per-directory `N.jbig2global`), and decoded RGB PNM (`.pnm`) payloads.
+  Indirect `/SMask` streams are extracted with the `-smask` stem, injectable
+  output names use the existing cpdf guard, and native async I/O exposes
+  `pdf_extract_single_image_to_files` plus the source-order
+  `pdf_extract_single_image` wrapper. External PNM-to-PNG conversion and actual
+  ImageMagick mask composition remain deferred; requesting `merge_masks` with a
+  present mask reports the source-style missing ImageMagick `SoftError` after
+  writing the extracted files. Validation on MoonBit 0.9.3: `moon check
+  --target native --warn-list +73` passes with only the existing
+  `markdown/cmd` warning; focused native tests report 2/2 for
+  `pdf_image_test.mbt --filter '*extract_single_image_files*'` and 1/1 for
+  `async_io --filter '*extract single image*'`; `moon check --target all
+  --warn-list +73` passes; `moon test --target native` reports 2373/2373; and
+  `moon fmt`, `moon info`, and `git diff --check` are clean.~~
 - [x] ~~Continue `cpdfembed` source-surface parity with `.repos/cpdf-source`:
   added `PdfEmbedFontSource` to preserve the source `cpdffont` choice shape,
   `pdf_embed_get_char` as the cpdf-style fontpack lookup alias, and generic

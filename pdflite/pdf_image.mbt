@@ -415,6 +415,13 @@ pub(all) enum PdfImage {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// One file that cpdf-style image extraction would write.
+pub(all) struct PdfExtractedImageFile {
+  path : String
+  data : PdfBytes
+} derive(Debug, Eq, ToJson)
+
+///|
 /// Build a PDF image XObject for JPEG data.
 pub fn pdf_image_object_of_jpeg_data(
   data : BytesView,
@@ -3234,4 +3241,215 @@ pub fn pdf_get_image_24bpp(
   image : PdfObject,
 ) -> PdfImage raise PdfError {
   document.get_image_24bpp(resources, image)
+}
+
+///|
+priv struct PdfImageExtractionJbig2Global {
+  object_number : Int
+  serial : Int
+}
+
+///|
+priv struct PdfImageExtractionState {
+  next_jbig2_serial : Ref[Int]
+  globals : Array[PdfImageExtractionJbig2Global]
+}
+
+///|
+fn PdfImageExtractionState::jbig2_serial(
+  self : PdfImageExtractionState,
+  object_number : Int,
+) -> Int? {
+  for entry in self.globals {
+    if entry.object_number == object_number {
+      break Some(entry.serial)
+    }
+  } nobreak {
+    None
+  }
+}
+
+///|
+fn PdfImageExtractionState::add_jbig2_global(
+  self : PdfImageExtractionState,
+  object_number : Int,
+) -> Int {
+  self.next_jbig2_serial.val += 1
+  let serial = self.next_jbig2_serial.val
+  self.globals.push({ object_number, serial })
+  serial
+}
+
+///|
+fn pdf_image_append_bytes(output : Array[Byte], bytes : BytesView) -> Unit {
+  for byte in bytes {
+    output.push(byte)
+  }
+}
+
+///|
+fn pdf_image_pnm_24bpp_bytes(
+  width : Int,
+  height : Int,
+  data : PdfBytes,
+) -> PdfBytes {
+  let output : Array[Byte] = []
+  pdf_image_append_bytes(output, b"P6 ")
+  pdf_image_append_bytes(output, @ascii.encode(width.to_string()))
+  pdf_image_append_bytes(output, b" ")
+  pdf_image_append_bytes(output, @ascii.encode(height.to_string()))
+  pdf_image_append_bytes(output, b" 255\n")
+  pdf_image_append_bytes(output, data)
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_image_path_separator(code_unit : UInt16) -> Bool {
+  let value = code_unit.to_int()
+  value == 47 || value == 92
+}
+
+///|
+fn pdf_image_dirname(path : String) -> String {
+  let mut separator = -1
+  for index in 0..<path.length() {
+    if pdf_image_path_separator(path.at(index)) {
+      separator = index
+    }
+  }
+  if separator < 0 {
+    "."
+  } else if separator == 0 {
+    path[:1].to_owned()
+  } else {
+    path[:separator].to_owned()
+  }
+}
+
+///|
+fn pdf_image_join_directory_file(
+  directory : String,
+  filename : String,
+) -> String {
+  if directory == "." {
+    "./" + filename
+  } else if directory.length() == 0 {
+    filename
+  } else {
+    let last = directory.at(directory.length() - 1).to_int()
+    if last == 47 || last == 92 {
+      directory + filename
+    } else {
+      directory + "/" + filename
+    }
+  }
+}
+
+///|
+fn PdfDocument::pdf_image_jbig2_global_data(
+  self : PdfDocument,
+  object_number : Int,
+) -> PdfBytes? raise PdfError {
+  match self.pdf_decode_stream_until_unknown(PdfIndirect(object_number)) {
+    PdfStreamObject(stream) => Some(pdf_stream_data_bytes(stream.data))
+    _ => None
+  }
+}
+
+///|
+fn PdfDocument::pdf_image_extracted_files_of_image(
+  self : PdfDocument,
+  resources : PdfObject,
+  name : String,
+  image : PdfObject,
+  state : PdfImageExtractionState,
+) -> Array[PdfExtractedImageFile] raise PdfError {
+  pdf_check_injectible(name)
+  match self.get_image_24bpp(resources, image) {
+    PdfJPEG(data, _) => [{ path: name + ".jpg", data }]
+    PdfJPEG2000(data, _) => [{ path: name + ".jpx", data }]
+    PdfJBIG2(data, _, None) => [{ path: name + ".jbig2", data }]
+    PdfJBIG2(data, _, Some(global_number)) =>
+      match state.jbig2_serial(global_number) {
+        Some(serial) => [{ path: name + ".jbig2__" + serial.to_string(), data }]
+        None =>
+          match self.pdf_image_jbig2_global_data(global_number) {
+            Some(global_data) => {
+              let serial = state.add_jbig2_global(global_number)
+              [
+                {
+                  path: pdf_image_join_directory_file(
+                    pdf_image_dirname(name),
+                    serial.to_string() + ".jbig2global",
+                  ),
+                  data: global_data,
+                },
+                { path: name + ".jbig2__" + serial.to_string(), data },
+              ]
+            }
+            None => []
+          }
+      }
+    PdfRawImage(width, height, PdfBPP24, data) =>
+      [
+        {
+          path: name + ".pnm",
+          data: pdf_image_pnm_24bpp_bytes(width, height, data),
+        },
+      ]
+    PdfRawImage(_, _, _, _) => []
+  }
+}
+
+///|
+/// Return the files cpdfimage's `extract_single_image` would write.
+///
+/// Encoded JPEG, JPEG2000, and JBIG2 images keep their encoded payloads.
+/// Other supported images are decoded through `get_image_24bpp` and emitted as
+/// binary PNM (`P6`) RGB files. An indirect `/SMask` is emitted with the
+/// `-smask` stem, matching cpdf's single-image extraction path.
+pub fn PdfDocument::extract_single_image_files(
+  self : PdfDocument,
+  object_number : Int,
+  stem : String,
+) -> Array[PdfExtractedImageFile] raise PdfError {
+  let state : PdfImageExtractionState = {
+    next_jbig2_serial: { val: 0 },
+    globals: [],
+  }
+  let files = self.pdf_image_extracted_files_of_image(
+    PdfDictionary([]),
+    stem,
+    PdfIndirect(object_number),
+    state,
+  )
+  let image = self.direct(PdfIndirect(object_number))
+  match image {
+    PdfStreamObject(_) =>
+      match image.lookup_immediate(pdf_image_smask_key()) {
+        Some(PdfIndirect(mask_number)) =>
+          for
+            file in self.pdf_image_extracted_files_of_image(
+              PdfDictionary([]),
+              stem + "-smask",
+              PdfIndirect(mask_number),
+              state,
+            ) {
+            files.push(file)
+          }
+        _ => ()
+      }
+    _ => ()
+  }
+  files
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::extract_single_image_files`.
+pub fn pdf_image_extract_single_image_files(
+  document : PdfDocument,
+  object_number : Int,
+  stem : String,
+) -> Array[PdfExtractedImageFile] raise PdfError {
+  document.extract_single_image_files(object_number, stem)
 }

@@ -3300,6 +3300,108 @@ async test "async file wrappers extract embedded font files" {
 }
 
 ///|
+async test "async file wrappers extract single image files" {
+  let stem = pdf_async_io_test_path_for_test("single_image")
+  let alias_stem = pdf_async_io_test_path_for_test("single_image_alias")
+  let merge_stem = pdf_async_io_test_path_for_test("single_image_merge")
+  let image_path = stem + ".jpg"
+  let mask_path = stem + "-smask.pnm"
+  let alias_path = alias_stem + ".jpg"
+  let alias_mask_path = alias_stem + "-smask.pnm"
+  let merge_path = merge_stem + ".jpg"
+  let merge_mask_path = merge_stem + "-smask.pnm"
+  for
+    path in [
+      image_path, mask_path, alias_path, alias_mask_path, merge_path, merge_mask_path,
+    ] {
+    pdf_async_io_remove_if_exists_for_test(path)
+  }
+
+  let document = @pdflite.pdf_document_empty()
+  document.add_object_given_number(
+    11,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (pdf_async_io_name_for_test("/Width"), PdfInteger(1)),
+        (pdf_async_io_name_for_test("/Height"), PdfInteger(1)),
+        (
+          pdf_async_io_name_for_test("/ColorSpace"),
+          PdfNameObject(pdf_async_io_name_for_test("/DeviceGray")),
+        ),
+        (pdf_async_io_name_for_test("/BitsPerComponent"), PdfInteger(8)),
+      ]),
+      StreamGot(pdf_async_io_bytes_for_test([64])),
+    ),
+  )
+  document.add_object_given_number(
+    10,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (pdf_async_io_name_for_test("/Width"), PdfInteger(1)),
+        (pdf_async_io_name_for_test("/Height"), PdfInteger(1)),
+        (
+          pdf_async_io_name_for_test("/Filter"),
+          PdfNameObject(pdf_async_io_name_for_test("/DCTDecode")),
+        ),
+        (pdf_async_io_name_for_test("/SMask"), PdfIndirect(11)),
+      ]),
+      StreamGot(@ascii.encode("jpg")),
+    ),
+  )
+
+  let paths = try! pdf_extract_single_image_to_files(document, 10, stem)
+  @test.assert_eq(paths, [image_path, mask_path])
+  @test.assert_eq(@fs.read_file(image_path).binary(), @ascii.encode("jpg"))
+  let expected_mask : Array[Byte] = []
+  pdf_async_io_append_bytes_for_test(
+    expected_mask,
+    @ascii.encode("P6 1 1 255\n"),
+  )
+  pdf_async_io_append_bytes_for_test(
+    expected_mask,
+    pdf_async_io_bytes_for_test([64, 64, 64]),
+  )
+  @test.assert_eq(
+    @fs.read_file(mask_path).binary(),
+    Bytes::from_array(expected_mask),
+  )
+
+  try! pdf_extract_single_image(
+    false,
+    PdfMetadataUTF8,
+    document,
+    10,
+    alias_stem,
+  )
+  @test.assert_eq(@fs.read_file(alias_path).binary(), @ascii.encode("jpg"))
+  @test.assert_eq(@fs.exists(alias_mask_path), true)
+
+  let merge : Result[Array[String], Error] = try? pdf_extract_single_image_to_files(
+    document,
+    10,
+    merge_stem,
+    merge_masks=true,
+  )
+  guard merge
+    is Err(
+      @pdflite.PdfError::SoftError(
+        "combine_image_and_mask: imagemagick not found"
+      )
+    ) else {
+    fail("expected ImageMagick merge error")
+  }
+  @test.assert_eq(@fs.exists(merge_path), true)
+  @test.assert_eq(@fs.exists(merge_mask_path), true)
+
+  for
+    path in [
+      image_path, mask_path, alias_path, alias_mask_path, merge_path, merge_mask_path,
+    ] {
+    pdf_async_io_remove_if_exists_for_test(path)
+  }
+}
+
+///|
 async test "async draw control image file wrappers reject malformed specs" {
   let document = @pdflite.pdf_document_empty()
   let control = @pdflite.pdf_draw_control_new()

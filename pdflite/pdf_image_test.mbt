@@ -1814,6 +1814,117 @@ test "PdfDocument get_image_24bpp handles filter arrays and deferred image data"
 }
 
 ///|
+test "PdfDocument extract_single_image_files emits cpdf payload names" {
+  let doc = @pdflite.pdf_document_empty()
+  let mask_data = image_bytes_for_test([128])
+  doc.add_object_given_number(
+    11,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (image_name_for_test("/Width"), PdfInteger(1)),
+        (image_name_for_test("/Height"), PdfInteger(1)),
+        (
+          image_name_for_test("/ColorSpace"),
+          PdfNameObject(image_name_for_test("/DeviceGray")),
+        ),
+        (image_name_for_test("/BitsPerComponent"), PdfInteger(8)),
+      ]),
+      StreamGot(mask_data),
+    ),
+  )
+  let image_data = image_bytes_for_test([1, 2, 3, 4, 5, 6])
+  doc.add_object_given_number(
+    10,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (image_name_for_test("/Width"), PdfInteger(2)),
+        (image_name_for_test("/Height"), PdfInteger(1)),
+        (
+          image_name_for_test("/ColorSpace"),
+          PdfNameObject(image_name_for_test("/DeviceRGB")),
+        ),
+        (image_name_for_test("/BitsPerComponent"), PdfInteger(8)),
+        (image_name_for_test("/SMask"), PdfIndirect(11)),
+      ]),
+      StreamGot(image_data),
+    ),
+  )
+  let files = try! doc.extract_single_image_files(10, "extract/out")
+  @test.assert_eq(
+    try! @pdflite.pdf_image_extract_single_image_files(doc, 10, "extract/out"),
+    files,
+  )
+  @test.assert_eq(files.length(), 2)
+  @test.assert_eq(files[0].path, "extract/out.pnm")
+  let expected_image : Array[Byte] = []
+  image_append_bytes_for_test(expected_image, @ascii.encode("P6 2 1 255\n"))
+  image_append_bytes_for_test(expected_image, image_data)
+  @test.assert_eq(files[0].data, Bytes::from_array(expected_image))
+  @test.assert_eq(files[1].path, "extract/out-smask.pnm")
+  let expected_mask : Array[Byte] = []
+  image_append_bytes_for_test(expected_mask, @ascii.encode("P6 1 1 255\n"))
+  image_append_bytes_for_test(
+    expected_mask,
+    image_bytes_for_test([128, 128, 128]),
+  )
+  @test.assert_eq(files[1].data, Bytes::from_array(expected_mask))
+}
+
+///|
+test "PdfDocument extract_single_image_files preserves encoded image streams" {
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(
+    20,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (image_name_for_test("/Width"), PdfInteger(1)),
+        (image_name_for_test("/Height"), PdfInteger(1)),
+        (
+          image_name_for_test("/Filter"),
+          PdfNameObject(image_name_for_test("/DCTDecode")),
+        ),
+      ]),
+      StreamGot(@ascii.encode("jpg")),
+    ),
+  )
+  @test.assert_eq(try! doc.extract_single_image_files(20, "one"), [
+    { path: "one.jpg", data: @ascii.encode("jpg") },
+  ])
+
+  doc.add_object_given_number(
+    30,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([(image_name_for_test("/Length"), PdfInteger(7))]),
+      StreamGot(@ascii.encode("globals")),
+    ),
+  )
+  doc.add_object_given_number(
+    31,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (image_name_for_test("/Width"), PdfInteger(1)),
+        (image_name_for_test("/Height"), PdfInteger(1)),
+        (
+          image_name_for_test("/Filter"),
+          PdfNameObject(image_name_for_test("/JBIG2Decode")),
+        ),
+        (
+          image_name_for_test("/DecodeParms"),
+          @pdflite.pdf_dictionary([
+            (image_name_for_test("/JBIG2Globals"), PdfIndirect(30)),
+          ]),
+        ),
+      ]),
+      StreamGot(@ascii.encode("jbig")),
+    ),
+  )
+  @test.assert_eq(try! doc.extract_single_image_files(31, "dir/image"), [
+    { path: "dir/1.jbig2global", data: @ascii.encode("globals") },
+    { path: "dir/image.jbig2__1", data: @ascii.encode("jbig") },
+  ])
+}
+
+///|
 test "PdfDocument get_image_24bpp validates malformed image dictionary values" {
   let doc = @pdflite.pdf_document_empty()
   let empty_resources = @pdflite.pdf_dictionary([])
