@@ -355,6 +355,76 @@ fn metadata_fixture_assert_cpdf_manual_metadata_removed_for_test(
 }
 
 ///|
+fn metadata_fixture_assert_cpdf_manual_catalog_actions_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 175)
+  @test.assert_eq(document.version(), (1, 7))
+  @test.assert_eq(
+    document.catalog_item(metadata_fixture_pdf_name_for_test("/PageLayout")),
+    "TwoPageRight",
+  )
+  @test.assert_eq(
+    @pdflite.pdf_get_catalog_item(
+      metadata_fixture_pdf_name_for_test("/PageLayout"),
+      document,
+    ),
+    "TwoPageRight",
+  )
+  @test.assert_eq(
+    document.catalog_item(metadata_fixture_pdf_name_for_test("/PageMode")),
+    "FullScreen",
+  )
+  @test.assert_eq(
+    document.viewer_preference_item(
+      metadata_fixture_pdf_name_for_test("/NonFullScreenPageMode"),
+    ),
+    "UseOutlines",
+  )
+  @test.assert_eq(
+    @pdflite.pdf_get_viewer_pref_item(
+      metadata_fixture_pdf_name_for_test("/DisplayDocTitle"),
+      document,
+    ),
+    "true",
+  )
+  @test.assert_eq(
+    document.open_action(),
+    PdfArray([
+      PdfInteger(175),
+      PdfNameObject(metadata_fixture_pdf_name_for_test("/XYZ")),
+      PdfNull,
+      PdfNull,
+      PdfNull,
+    ]),
+  )
+  @test.assert_eq(document.open_action_string(), "[175 /XYZ null null null]")
+  @test.assert_eq(
+    @pdflite.pdf_get_open_action_string(document),
+    "[175 /XYZ null null null]",
+  )
+  let open_action_json = @ascii.decode_lossy(document.open_action_json_blob())
+  metadata_fixture_assert_contains_for_test(open_action_json, "\"I\":175")
+  metadata_fixture_assert_contains_for_test(open_action_json, "\"N\":\"/XYZ\"")
+  metadata_fixture_assert_contains_for_test(open_action_json, "null")
+  let info_json_text = document.info_json().stringify()
+  metadata_fixture_assert_contains_for_test(
+    info_json_text, "\"PageLayout\":\"TwoPageRight\"",
+  )
+  metadata_fixture_assert_contains_for_test(
+    info_json_text, "\"PageMode\":\"FullScreen\"",
+  )
+  metadata_fixture_assert_contains_for_test(
+    info_json_text, "\"DisplayDocTitle\":true",
+  )
+  metadata_fixture_assert_contains_for_test(
+    info_json_text, "\"NonFullPageScreenMode\":\"UseOutlines\"",
+  )
+  metadata_fixture_assert_contains_for_test(info_json_text, "\"I\":175")
+  metadata_fixture_assert_contains_for_test(info_json_text, "\"N\":\"/XYZ\"")
+}
+
+///|
 async test "cpdf source manual fixture reports info page details and composition" {
   match metadata_fixture_bytes_for_test(".repos/cpdf-source/cpdfmanual.pdf") {
     None => ()
@@ -371,6 +441,54 @@ async test "cpdf source manual fixture reports info page details and composition
         @pdflite.pdf_read_document_from_bytes(rewritten),
         rewritten.length(),
       )
+    }
+  }
+}
+
+///|
+async test "cpdf source manual fixture mutates catalog view and open action" {
+  match metadata_fixture_bytes_for_test(".repos/cpdf-source/cpdfmanual.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      @test.assert_eq(document.endpage(), 175)
+      let with_view = try! @pdflite.pdf_set_open_action(
+        try! @pdflite.pdf_set_viewer_preference(
+          metadata_fixture_pdf_name_for_test("/DisplayDocTitle"),
+          PdfBoolean(true),
+          4,
+          try! @pdflite.pdf_set_non_full_screen_page_mode(
+            try! @pdflite.pdf_set_page_mode(
+              try! @pdflite.pdf_set_page_layout(document, "TwoPageRight"),
+              "FullScreen",
+            ),
+            "UseOutlines",
+          ),
+        ),
+        false,
+        175,
+      )
+      metadata_fixture_assert_cpdf_manual_catalog_actions_for_test(with_view)
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        with_view,
+      )
+      metadata_fixture_assert_cpdf_manual_catalog_actions_for_test(
+        @pdflite.pdf_read_document_from_bytes(compressed),
+      )
+      let corrupted = metadata_fixture_corrupt_startxref_pointer_for_test(
+        compressed,
+      )
+      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+        corrupted,
+      )
+      guard strict is Err(_) else {
+        fail(
+          "expected cpdf manual catalog view recovery to require reconstruction",
+        )
+      }
+      let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
+      @test.assert_eq(recovered.first_xref(), 0)
+      metadata_fixture_assert_cpdf_manual_catalog_actions_for_test(recovered)
     }
   }
 }

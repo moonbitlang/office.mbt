@@ -1548,6 +1548,16 @@ fn pdf_metadata_expand_date(date : String) -> String {
 }
 
 ///|
+/// Expand cpdf's metadata date alias.
+///
+/// This mirrors `Cpdfmetadata.expand_date`: `"now"` becomes a PDF date string
+/// and all other inputs are returned unchanged. Setting
+/// `CPDF_REPRODUCIBLE_DATES=true` uses the deterministic dummy timestamp.
+pub fn pdf_expand_date(date : String) -> String {
+  pdf_metadata_expand_date(date)
+}
+
+///|
 fn pdf_metadata_replace_all(
   text : String,
   old : String,

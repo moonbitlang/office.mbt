@@ -639,6 +639,8 @@ pub fn pdf_error(String) -> Unit raise @core.PdfError
 
 pub fn pdf_eval_function(PdfFunction, ArrayView[Double]) -> Array[Double] raise @core.PdfError
 
+pub fn pdf_expand_date(String) -> String
+
 pub fn pdf_extract_fontfile_bytes(PdfDocument, Int, String) -> Bytes? raise @core.PdfError
 
 pub fn pdf_find_object(PdfDocument, String) -> PdfObject raise @core.PdfError

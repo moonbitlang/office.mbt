@@ -626,6 +626,11 @@ test "PdfDocument set_metadata_date rewrites XMP metadata date fields" {
 test "PdfDocument set_metadata_date expands reproducible now" {
   let previous = @env.get_env_var("CPDF_REPRODUCIBLE_DATES")
   @env.set_env_var("CPDF_REPRODUCIBLE_DATES", "true")
+  @test.assert_eq(@pdflite.pdf_expand_date("now"), "D:39000101000000")
+  @test.assert_eq(
+    @pdflite.pdf_expand_date("D:20260522112233"),
+    "D:20260522112233",
+  )
   let doc = try! @pdflite.pdf_minimum_valid_pdf()
   let xmp_text =
     #|<x:xmpmeta xmlns:xmp="http://ns.adobe.com/xap/1.0/">

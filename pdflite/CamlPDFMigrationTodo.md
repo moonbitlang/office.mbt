@@ -7284,6 +7284,23 @@ Current backend snapshot:
   passing. `moon info && moon fmt` reports no pending interface or formatting
   work, and `moon check --target all --warn-list +73` reports the known
   warning-73/main-package baseline with 10 warnings and 0 errors.~~
+- [x] ~~Add the next cpdfmetadata source/API parity slice: the root package now
+  exposes the public `pdf_expand_date` compatibility helper corresponding to
+  `Cpdfmetadata.expand_date`, including reproducible `"now"` coverage in
+  `pdf_metadata_test.mbt`, and the native `metadata/fixture_acceptance` package
+  now gates `.repos/cpdf-source/cpdfmanual.pdf` through catalog view/open-action
+  mutation. The source gate verifies page layout, full-screen page mode,
+  non-full-screen viewer preferences, display-title viewer preferences,
+  cpdf-style open-action object/string/JSON reporting, compressed xref-stream
+  rewrite/reread, and bad-final-`startxref` reconstruction. `moon check --target
+  native --warn-list +73` and `moon check --target native
+  metadata/fixture_acceptance --warn-list +73` pass with the known warning
+  baseline, both focused metadata tests report 1/1 passing,
+  `moon test --target native metadata/fixture_acceptance` reports 3/3 tests
+  passing, and `moon test --target native` reports 2341/2341 tests passing.
+  `moon info && moon fmt` updates the expected `pkg.generated.mbti` API entry,
+  and `moon check --target all --warn-list +73` reports the known
+  warning-73/main-package baseline with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.
