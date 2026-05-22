@@ -11,6 +11,11 @@ fn pdf_metadata_name(text : String) -> PdfName {
 }
 
 ///|
+fn pdf_metadata_source_key_name(key : String) -> PdfName {
+  pdf_name_of_bytes(@ascii.encode(key))
+}
+
+///|
 let pdf_metadata_root_name : PdfName = pdf_metadata_name("/Root")
 
 ///|
@@ -550,6 +555,25 @@ pub fn PdfDocument::set_info_entry(
 }
 
 ///|
+/// Set or replace one `/Info` entry from cpdf's string-key tuple form.
+pub fn PdfDocument::set_info_entry_string(
+  self : PdfDocument,
+  entry : (String, PdfObject, Int),
+  keep_version? : Bool = false,
+  xmp_also? : Bool = false,
+  xmp_just_set? : Bool = false,
+) -> PdfDocument raise PdfError {
+  self.set_info_entry(
+    pdf_metadata_source_key_name(entry.0),
+    entry.1,
+    entry.2,
+    keep_version~,
+    xmp_also~,
+    xmp_just_set~,
+  )
+}
+
+///|
 /// Return one `/Info` dictionary entry as a UTF-8 string.
 pub fn PdfDocument::info_utf8(self : PdfDocument, key : PdfName) -> String {
   let info = match
@@ -565,6 +589,15 @@ pub fn PdfDocument::info_utf8(self : PdfDocument, key : PdfName) -> String {
     Some(PdfBoolean(value)) => pdf_metadata_bool_string(value)
     _ => if key == pdf_metadata_trapped() { "False" } else { "" }
   }
+}
+
+///|
+/// Return one cpdf-style slash-prefixed string-key `/Info` entry as UTF-8.
+pub fn PdfDocument::info_utf8_string(
+  self : PdfDocument,
+  key : String,
+) -> String {
+  self.info_utf8(pdf_metadata_source_key_name(key))
 }
 
 ///|
@@ -590,6 +623,19 @@ pub fn PdfDocument::set_viewer_preference(
   })
   document.pdf_metadata_bump_minor(version, keep_version)
   document
+}
+
+///|
+/// Set one `/ViewerPreferences` entry from cpdf's string-key tuple form.
+pub fn PdfDocument::set_viewer_preference_string(
+  self : PdfDocument,
+  entry : (String, PdfObject, Int),
+) -> PdfDocument raise PdfError {
+  self.set_viewer_preference(
+    pdf_metadata_source_key_name(entry.0),
+    entry.1,
+    entry.2,
+  )
 }
 
 ///|
@@ -736,6 +782,15 @@ pub fn PdfDocument::catalog_item(self : PdfDocument, key : PdfName) -> String {
 }
 
 ///|
+/// Return a catalog item for a cpdf-style slash-prefixed string key.
+pub fn PdfDocument::catalog_item_string(
+  self : PdfDocument,
+  key : String,
+) -> String {
+  self.catalog_item(pdf_metadata_source_key_name(key))
+}
+
+///|
 /// Return a viewer-preference item in cpdf's text-reporting form.
 pub fn PdfDocument::viewer_preference_item(
   self : PdfDocument,
@@ -758,6 +813,15 @@ pub fn PdfDocument::viewer_preference_item(
         None => ""
       }
   }
+}
+
+///|
+/// Return a viewer-preference item for a cpdf-style slash-prefixed string key.
+pub fn PdfDocument::viewer_preference_item_string(
+  self : PdfDocument,
+  key : String,
+) -> String {
+  self.viewer_preference_item(pdf_metadata_source_key_name(key))
 }
 
 ///|
@@ -2665,6 +2729,12 @@ pub fn PdfDocument::xmp_info(self : PdfDocument, key : PdfName) -> String {
 }
 
 ///|
+/// Return XMP metadata corresponding to a cpdf-style slash-prefixed string key.
+pub fn PdfDocument::xmp_info_string(self : PdfDocument, key : String) -> String {
+  self.xmp_info(pdf_metadata_source_key_name(key))
+}
+
+///|
 /// Determine PDF/A, PDF/E, PDF/UA, PDF/VT, and PDF/X subformat markers.
 ///
 /// This ports cpdf's in-memory subformat detection. It recognizes simple XMP
@@ -2909,6 +2979,15 @@ pub fn PdfDocument::language(self : PdfDocument) -> PdfBytes? {
 }
 
 ///|
+/// Return the catalog `/Lang` value as text for cpdf-style string APIs.
+pub fn PdfDocument::language_string(self : PdfDocument) -> String? {
+  match self.language() {
+    Some(value) => Some(@utf8.decode_lossy(value))
+    None => None
+  }
+}
+
+///|
 /// Set the catalog `/Lang` value.
 pub fn PdfDocument::set_language(
   self : PdfDocument,
@@ -2919,6 +2998,15 @@ pub fn PdfDocument::set_language(
     catalog.add_dict_entry(pdf_metadata_lang(), PdfString(language.to_owned()))
   })
   document
+}
+
+///|
+/// Set the catalog `/Lang` value from a cpdf-style string.
+pub fn PdfDocument::set_language_string(
+  self : PdfDocument,
+  language : String,
+) -> PdfDocument raise PdfError {
+  self.set_language(@utf8.encode(language))
 }
 
 ///|
@@ -3067,15 +3155,49 @@ pub fn pdf_set_pdf_info(
 }
 
 ///|
+/// Compatibility wrapper matching cpdfmetadata's string-key tuple form.
+pub fn pdf_set_pdf_info_cpdf_order(
+  entry : (String, PdfObject, Int),
+  document : PdfDocument,
+  xmp_also? : Bool = false,
+  xmp_just_set? : Bool = false,
+) -> PdfDocument raise PdfError {
+  document.set_info_entry_string(entry, xmp_also~, xmp_just_set~)
+}
+
+///|
+/// Compatibility wrapper matching cpdfmetadata's string-key tuple form.
+pub fn pdf_set_pdf_info_string(
+  entry : (String, PdfObject, Int),
+  document : PdfDocument,
+  xmp_also? : Bool = false,
+  xmp_just_set? : Bool = false,
+) -> PdfDocument raise PdfError {
+  pdf_set_pdf_info_cpdf_order(entry, document, xmp_also~, xmp_just_set~)
+}
+
+///|
 /// Compatibility wrapper for `PdfDocument::info_utf8`.
 pub fn pdf_get_info_utf8(document : PdfDocument, key : PdfName) -> String {
   document.info_utf8(key)
 }
 
 ///|
+/// Compatibility wrapper matching cpdfmetadata's string-key `get_info_utf8`.
+pub fn pdf_get_info_utf8_string(document : PdfDocument, key : String) -> String {
+  document.info_utf8_string(key)
+}
+
+///|
 /// Compatibility wrapper for `PdfDocument::xmp_info`.
 pub fn pdf_get_xmp_info(document : PdfDocument, key : PdfName) -> String {
   document.xmp_info(key)
+}
+
+///|
+/// Compatibility wrapper matching cpdfmetadata's string-key `get_xmp_info`.
+pub fn pdf_get_xmp_info_string(document : PdfDocument, key : String) -> String {
+  document.xmp_info_string(key)
 }
 
 ///|
@@ -3087,6 +3209,24 @@ pub fn pdf_set_viewer_preference(
   document : PdfDocument,
 ) -> PdfDocument raise PdfError {
   document.set_viewer_preference(key, value, version)
+}
+
+///|
+/// Compatibility wrapper matching cpdfmetadata's string-key tuple form.
+pub fn pdf_set_viewer_preference_cpdf_order(
+  entry : (String, PdfObject, Int),
+  document : PdfDocument,
+) -> PdfDocument raise PdfError {
+  document.set_viewer_preference_string(entry)
+}
+
+///|
+/// Compatibility wrapper matching cpdfmetadata's string-key tuple form.
+pub fn pdf_set_viewer_preference_string(
+  entry : (String, PdfObject, Int),
+  document : PdfDocument,
+) -> PdfDocument raise PdfError {
+  pdf_set_viewer_preference_cpdf_order(entry, document)
 }
 
 ///|
@@ -3134,12 +3274,48 @@ pub fn pdf_get_catalog_item(key : PdfName, document : PdfDocument) -> String {
 }
 
 ///|
+/// Compatibility wrapper matching cpdfmetadata's string-key `get_catalog_item`.
+pub fn pdf_get_catalog_item_string(
+  key : String,
+  document : PdfDocument,
+) -> String {
+  document.catalog_item_string(key)
+}
+
+///|
+/// Compatibility wrapper matching cpdfmetadata's `get_catalog_item`.
+pub fn pdf_get_catalog_item_cpdf_order(
+  key : String,
+  document : PdfDocument,
+) -> String {
+  document.catalog_item_string(key)
+}
+
+///|
 /// Compatibility wrapper for `PdfDocument::viewer_preference_item`.
 pub fn pdf_get_viewer_pref_item(
   key : PdfName,
   document : PdfDocument,
 ) -> String {
   document.viewer_preference_item(key)
+}
+
+///|
+/// Compatibility wrapper matching cpdfmetadata's string-key `get_viewer_pref_item`.
+pub fn pdf_get_viewer_pref_item_string(
+  key : String,
+  document : PdfDocument,
+) -> String {
+  document.viewer_preference_item_string(key)
+}
+
+///|
+/// Compatibility wrapper matching cpdfmetadata's `get_viewer_pref_item`.
+pub fn pdf_get_viewer_pref_item_cpdf_order(
+  key : String,
+  document : PdfDocument,
+) -> String {
+  document.viewer_preference_item_string(key)
 }
 
 ///|
@@ -3216,12 +3392,27 @@ pub fn pdf_language(document : PdfDocument) -> PdfBytes? {
 }
 
 ///|
+/// Compatibility wrapper returning `/Lang` as cpdf-style text.
+pub fn pdf_language_string(document : PdfDocument) -> String? {
+  document.language_string()
+}
+
+///|
 /// Compatibility wrapper for `PdfDocument::set_language`.
 pub fn pdf_set_language(
   document : PdfDocument,
   language : BytesView,
 ) -> PdfDocument raise PdfError {
   document.set_language(language)
+}
+
+///|
+/// Compatibility wrapper setting `/Lang` from cpdf-style text.
+pub fn pdf_set_language_string(
+  document : PdfDocument,
+  language : String,
+) -> PdfDocument raise PdfError {
+  document.set_language_string(language)
 }
 
 ///|

@@ -101,7 +101,12 @@ test "PdfDocument set_info_entry stores PDF info and decodes UTF8" {
   let updated = try! doc.set_info_entry(key_title, PdfString(title), 4)
   @test.assert_eq(updated.version(), (1, 4))
   @test.assert_eq(updated.info_utf8(key_title), "Résumé")
+  @test.assert_eq(updated.info_utf8_string("/Title"), "Résumé")
   @test.assert_eq(@pdflite.pdf_get_info_utf8(updated, key_title), "Résumé")
+  @test.assert_eq(
+    @pdflite.pdf_get_info_utf8_string(updated, "/Title"),
+    "Résumé",
+  )
   @test.assert_eq(
     updated.info_utf8(metadata_name_for_test("/Trapped")),
     "False",
@@ -153,8 +158,40 @@ test "PdfDocument viewer preferences and catalog items use cpdf strings" {
     "OneColumn",
   )
   @test.assert_eq(
+    @pdflite.pdf_get_catalog_item_string("/PageLayout", wrapped),
+    "OneColumn",
+  )
+  @test.assert_eq(
+    @pdflite.pdf_get_catalog_item_cpdf_order("/PageLayout", wrapped),
+    "OneColumn",
+  )
+  @test.assert_eq(
     @pdflite.pdf_get_viewer_pref_item(key_hide_toolbar, wrapped),
     "false",
+  )
+  @test.assert_eq(
+    @pdflite.pdf_get_viewer_pref_item_string("/HideToolbar", wrapped),
+    "false",
+  )
+  @test.assert_eq(
+    @pdflite.pdf_get_viewer_pref_item_cpdf_order("/HideToolbar", wrapped),
+    "false",
+  )
+  let tuple_wrapped = try! @pdflite.pdf_set_viewer_preference_cpdf_order(
+    ("/HideToolbar", PdfBoolean(true), 4),
+    doc,
+  )
+  @test.assert_eq(
+    tuple_wrapped.viewer_preference_item_string("/HideToolbar"),
+    "true",
+  )
+  let tuple_alias = try! @pdflite.pdf_set_viewer_preference_string(
+    ("/HideMenubar", PdfBoolean(true), 4),
+    tuple_wrapped,
+  )
+  @test.assert_eq(
+    tuple_alias.viewer_preference_item_string("/HideMenubar"),
+    "true",
   )
   let invalid : Result[@pdflite.PdfDocument, Error] = try? doc.set_page_layout(
     "Rows",
@@ -501,9 +538,13 @@ test "PdfDocument info_json reports document fields and page boxes" {
 test "PdfDocument language getter and setter preserve original document" {
   let doc = try! @pdflite.pdf_minimum_valid_pdf()
   @test.assert_eq(doc.language(), None)
+  @test.assert_eq(doc.language_string(), None)
   let updated = try! doc.set_language(@ascii.encode("en-US"))
   @test.assert_eq(updated.language(), Some(@ascii.encode("en-US")))
+  @test.assert_eq(updated.language_string(), Some("en-US"))
   @test.assert_eq(doc.language(), None)
+  let wrapped = try! @pdflite.pdf_set_language_string(doc, "fr-FR")
+  @test.assert_eq(@pdflite.pdf_language_string(wrapped), Some("fr-FR"))
 }
 
 ///|
@@ -804,12 +845,17 @@ test "PdfDocument xmp_info returns legacy Info-key equivalents" {
     with_metadata.xmp_info(metadata_name_for_test("/Title")),
     "Adobe Title",
   )
+  @test.assert_eq(with_metadata.xmp_info_string("/Title"), "Adobe Title")
   @test.assert_eq(
     with_metadata.xmp_info(metadata_name_for_test("/Creator")),
     "fallback tool",
   )
   @test.assert_eq(
     @pdflite.pdf_get_xmp_info(with_metadata, metadata_name_for_test("/ModDate")),
+    "2026-05-17T00:00:00Z",
+  )
+  @test.assert_eq(
+    @pdflite.pdf_get_xmp_info_string(with_metadata, "/ModDate"),
     "2026-05-17T00:00:00Z",
   )
   @test.assert_eq(
@@ -1137,10 +1183,23 @@ test "pdf metadata compatibility wrappers keep cpdf argument order" {
     @pdflite.pdf_get_info_utf8(with_info, key_producer),
     "pdflite",
   )
+  let with_title = try! @pdflite.pdf_set_pdf_info_cpdf_order(
+    ("/Title", PdfString(@ascii.encode("Tuple title")), 4),
+    with_info,
+  )
+  @test.assert_eq(
+    @pdflite.pdf_get_info_utf8_string(with_title, "/Title"),
+    "Tuple title",
+  )
+  let with_author = try! @pdflite.pdf_set_pdf_info_string(
+    ("/Author", PdfString(@ascii.encode("Tuple author")), 4),
+    with_title,
+  )
+  @test.assert_eq(with_author.info_utf8_string("/Author"), "Tuple author")
   let with_metadata = try! @pdflite.pdf_set_metadata_from_bytes(
     false,
     @ascii.encode("<m/>"),
-    with_info,
+    with_author,
   )
   @test.assert_eq(
     try! @pdflite.pdf_get_metadata(with_metadata),

@@ -27,8 +27,9 @@ Current estimate:
   cpdf draw-control colour parsing, role-map/auto-artifact state, and cpdfdraw
   structured role-map output with fresh-structure-tree preservation,
   Form XObject stamping,
-  composition reporting, core metadata APIs, XMP metadata-date rewriting, XMP
-  info synchronization, XMP metadata creation, XMP RDF list extraction,
+  composition reporting, core metadata APIs and cpdfmetadata string-key/source-
+  order wrappers, XMP metadata-date rewriting, XMP info synchronization, XMP
+  metadata creation, XMP RDF list extraction,
   XMP/document info JSON reporting, cpdfmetadata namespace/get-data/XML-tree
   helper parity, native metadata file set/write/extract wrappers, and XML
   entity/whitespace decoding, redaction annotation bounding-box overlays,
@@ -80,6 +81,19 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfmetadata` source/API parity for string-key metadata
+  helpers from `.repos/cpdf-source/cpdfmetadata.mli`: added cpdf-style
+  slash-prefixed string wrappers for `/Info` UTF-8 lookup, XMP legacy-key
+  lookup, catalog and viewer-preference reports, `/Lang` get/set, plus tuple
+  string-key aliases for `set_pdf_info` and `set_viewer_preference` while
+  preserving the existing typed `PdfName` APIs. Coverage pins the string
+  methods, top-level wrappers, and source-order aliases against the existing
+  metadata behavior. Validation on MoonBit 0.9.3: `moon check --target native
+  --warn-list +73` passes with the known `markdown/cmd` future notice; `moon
+  test --target native pdf_metadata_test.mbt` reports 21/21; `moon fmt`, `moon
+  info`, and `moon check --target all --warn-list +73` pass with only the
+  existing `markdown/cmd` future notice; full native `moon test --target
+  native` reports 2407/2407.~~
 - [x] ~~Continue `cpdftweak` source/API parity for reveal-hidden-text from
   `.repos/cpdf-source/cpdftweak.mli`: added
   `pdf_reveal_hidden_text_cpdf_order` matching cpdf's page-list-first argument
