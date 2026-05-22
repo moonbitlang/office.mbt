@@ -794,6 +794,8 @@ pub fn pdf_jpeg_dimensions(Bytes) -> (Int, Int) raise @core.PdfError
 
 pub fn pdf_jpeg_dimensions_view(BytesView) -> (Int, Int) raise @core.PdfError
 
+pub fn pdf_json_fonts(PdfDocument, ArrayView[Int]) -> Json raise @core.PdfError
+
 pub fn pdf_json_of_document(PdfDocument, utf8? : Bool, parse_content? : Bool, clean_strings? : Bool, no_stream_data? : Bool, decompress_streams? : Bool) -> Json raise @core.PdfError
 
 pub fn pdf_json_of_document_blob(PdfDocument, utf8? : Bool, parse_content? : Bool, clean_strings? : Bool, no_stream_data? : Bool, decompress_streams? : Bool) -> Bytes raise @core.PdfError
@@ -897,6 +899,8 @@ pub let pdf_metadata_xmp_namespace : String
 pub fn pdf_minimum_valid_pdf() -> PdfDocument raise @core.PdfError
 
 pub fn pdf_missing_fonts(PdfDocument, ArrayView[Int]) -> Array[PdfMissingFontEntry] raise @core.PdfError
+
+pub fn pdf_missing_fonts_return(PdfDocument, ArrayView[Int]) -> Array[(Int, String, String, String, String)] raise @core.PdfError
 
 pub fn pdf_missing_fonts_text(PdfDocument, ArrayView[Int]) -> Bytes raise @core.PdfError
 
@@ -1059,6 +1063,10 @@ pub fn pdf_parse_pagespec(PdfDocument, String) -> Array[Int] raise @core.PdfErro
 pub fn pdf_parse_pagespec_for_count(Int, String) -> Array[Int] raise @core.PdfError
 
 pub fn pdf_parse_pagespec_without_pdf(String) -> Array[Int] raise @core.PdfError
+
+pub fn pdf_parse_rectangle(PdfDocument, String) -> (Double, Double, Double, Double) raise @core.PdfError
+
+pub fn pdf_parse_rectangles(PdfDocument, String) -> Array[(Double, Double, Double, Double)] raise @core.PdfError
 
 pub fn pdf_parse_single_lexeme_object(ArrayView[PdfLexeme]) -> PdfObject raise @core.PdfError
 
@@ -2740,6 +2748,7 @@ pub fn PdfDocument::merge_name_trees_no_clash(Self, ArrayView[PdfObject]) -> Pdf
 pub fn PdfDocument::merge_number_trees_no_clash(Self, ArrayView[PdfObject]) -> PdfObject
 pub fn PdfDocument::metadata(Self) -> Bytes? raise @core.PdfError
 pub fn PdfDocument::missing_fonts(Self, ArrayView[Int]) -> Array[PdfMissingFontEntry] raise @core.PdfError
+pub fn PdfDocument::missing_fonts_return(Self, ArrayView[Int]) -> Array[(Int, String, String, String, String)] raise @core.PdfError
 pub fn PdfDocument::missing_fonts_text(Self, ArrayView[Int]) -> Bytes raise @core.PdfError
 pub fn PdfDocument::name_tree_lookup(Self, BytesView, PdfObject) -> PdfObject?
 pub fn PdfDocument::name_tree_lookup_object(Self, PdfObject, PdfObject) -> PdfObject?

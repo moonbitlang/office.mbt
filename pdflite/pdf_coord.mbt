@@ -460,6 +460,22 @@ pub fn pdf_parse_coordinate_rectangle(
 }
 
 ///|
+fn pdf_coord_rectangle_tuple(
+  rectangle : PdfCoordRectangle,
+) -> (Double, Double, Double, Double) {
+  (rectangle.x, rectangle.y, rectangle.width, rectangle.height)
+}
+
+///|
+/// Compatibility wrapper matching cpdfcoord's `parse_rectangle`.
+pub fn pdf_parse_rectangle(
+  document : PdfDocument,
+  text : String,
+) -> (Double, Double, Double, Double) raise PdfError {
+  pdf_coord_rectangle_tuple(document.parse_coordinate_rectangle(text))
+}
+
+///|
 pub fn PdfDocument::parse_coordinate_rectangles(
   self : PdfDocument,
   text : String,
@@ -491,6 +507,19 @@ pub fn pdf_parse_coordinate_rectangles(
   text : String,
 ) -> Array[PdfCoordRectangle] raise PdfError {
   document.parse_coordinate_rectangles(text)
+}
+
+///|
+/// Compatibility wrapper matching cpdfcoord's `parse_rectangles`.
+pub fn pdf_parse_rectangles(
+  document : PdfDocument,
+  text : String,
+) -> Array[(Double, Double, Double, Double)] raise PdfError {
+  [
+    for rectangle in document.parse_coordinate_rectangles(text) => {
+      pdf_coord_rectangle_tuple(rectangle)
+    }
+  ]
 }
 
 ///|

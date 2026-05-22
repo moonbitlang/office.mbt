@@ -589,6 +589,7 @@ test "PdfDocument font listing renders text and JSON" {
   let json = try! doc.fonts_json([1])
   @test.assert_eq(json, expected)
   @test.assert_eq(try! @pdflite.pdf_fonts_json(doc, [1]), expected)
+  @test.assert_eq(try! @pdflite.pdf_json_fonts(doc, [1]), expected)
   @test.assert_eq(
     try! doc.fonts_json_blob([1]),
     @utf8.encode(expected.stringify()),
@@ -605,6 +606,16 @@ test "PdfDocument missing_fonts reports page and descendant fonts" {
   let missing = try! doc.missing_fonts([1])
   let wrapped = try! @pdflite.pdf_missing_fonts(doc, [1])
   @test.assert_eq(wrapped, missing)
+  let expected_return = [
+    (1, "/F1", "/Type1", "/MissingOne", "Built-in"),
+    (1, "/F4", "/CIDFontType2", "/CIDMissing", "Built-in"),
+    (1, "/F5", "/Type1", "/DescriptorMissing", "/MacRomanEncoding"),
+  ]
+  @test.assert_eq(try! doc.missing_fonts_return([1]), expected_return)
+  @test.assert_eq(
+    try! @pdflite.pdf_missing_fonts_return(doc, [1]),
+    expected_return,
+  )
   @test.assert_eq(missing.length(), 3)
   @test.assert_eq(missing[0].page, 1)
   @test.assert_eq(missing[0].name, "/F1")

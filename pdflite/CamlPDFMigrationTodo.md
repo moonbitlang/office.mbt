@@ -7637,6 +7637,21 @@ Current backend snapshot:
   passes with the known `markdown/cmd` future notice; `moon test --target
   native` reports 2359/2359; `moon info`, `moon fmt`, and `git diff --check`
   are clean.~~
+- [x] ~~Continue cpdffont/cpdfcoord API parity with
+  `.repos/cpdf-source`: added `pdf_json_fonts`,
+  `PdfDocument::missing_fonts_return`, `pdf_missing_fonts_return`,
+  `pdf_parse_rectangle`, and `pdf_parse_rectangles`. These wrappers preserve
+  the existing richer MoonBit record APIs while exposing cpdf's direct function
+  names and tuple-shaped return rows for missing fonts and coordinate
+  rectangles. Coverage pins the font JSON alias, cpdf's missing-font tuple
+  order, single-rectangle default-page parsing, and per-page rectangle parsing.
+  Validation on MoonBit 0.9.3: `moon check --target native --warn-list +73`
+  passes with the known `markdown/cmd` future notice; `moon test --target
+  native pdf_font_test.mbt --filter '*font*'` reports 9/9; `moon test --target
+  native pdf_coord_test.mbt --filter '*coord*'` reports 7/7; `moon check
+  --target all --warn-list +73` passes with the known `markdown/cmd` future
+  notice; `moon test --target native` reports 2359/2359; `moon info`,
+  `moon fmt`, and `git diff --check` are clean.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

@@ -288,6 +288,15 @@ pub fn pdf_fonts_json(
 }
 
 ///|
+/// Compatibility wrapper matching cpdffont's `json_fonts`.
+pub fn pdf_json_fonts(
+  document : PdfDocument,
+  page_numbers : ArrayView[Int],
+) -> Json raise PdfError {
+  document.fonts_json(page_numbers)
+}
+
+///|
 /// Return cpdf's JSON font listing as UTF-8 JSON bytes.
 pub fn PdfDocument::fonts_json_blob(
   self : PdfDocument,
@@ -931,6 +940,35 @@ pub fn pdf_missing_fonts(
   page_numbers : ArrayView[Int],
 ) -> Array[PdfMissingFontEntry] raise PdfError {
   document.missing_fonts(page_numbers)
+}
+
+///|
+fn pdf_missing_font_entry_tuple(
+  entry : PdfMissingFontEntry,
+) -> (Int, String, String, String, String) {
+  (entry.page, entry.name, entry.subtype, entry.basefont, entry.encoding)
+}
+
+///|
+/// Return cpdffont's `missing_fonts_return` tuple rows.
+pub fn PdfDocument::missing_fonts_return(
+  self : PdfDocument,
+  page_numbers : ArrayView[Int],
+) -> Array[(Int, String, String, String, String)] raise PdfError {
+  [
+    for entry in self.missing_fonts(page_numbers) => {
+      pdf_missing_font_entry_tuple(entry)
+    }
+  ]
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::missing_fonts_return`.
+pub fn pdf_missing_fonts_return(
+  document : PdfDocument,
+  page_numbers : ArrayView[Int],
+) -> Array[(Int, String, String, String, String)] raise PdfError {
+  document.missing_fonts_return(page_numbers)
 }
 
 ///|

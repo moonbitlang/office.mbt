@@ -197,6 +197,14 @@ test "cpdf coord reads alternate page boxes and rectangle wrapper" {
   )
   @test.assert_eq(rectangles.length(), 1)
   assert_coord_rectangle_for_test(rectangles[0], 1.0, 2.0, 10.0, 20.0)
+  @test.assert_eq(
+    try! @pdflite.pdf_parse_rectangle(document, "?10 20 30 40"),
+    (10.0, 20.0, 20.0, 20.0),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_parse_rectangles(document, "?AMINX AMINY AMAXX AMAXY"),
+    [(1.0, 2.0, 10.0, 20.0)],
+  )
 }
 
 ///|
