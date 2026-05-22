@@ -7343,6 +7343,21 @@ Current backend snapshot:
   moon fmt` reports no pending interface or formatting work, and `moon check
   --target all --warn-list +73` reports the known warning-73/main-package
   baseline with 10 warnings and 0 errors.~~
+- [x] ~~Add the next `cpdfimpose` source-corpus lifecycle slice: the native
+  `fixture_acceptance` package now gates optional `.repos/cpdf-source/hello.pdf`
+  through a two-page source document, `PdfDocument::impose`/`pdf_impose`,
+  `PdfDocument::twoup`/`pdf_twoup`, and
+  `PdfDocument::twoup_stack`/`pdf_twoup_stack`. The gate checks two-up sheet
+  geometry, transformed content stream placement, `/CPDFSTAMP` border marking,
+  retained text extraction quality, compressed xref-stream rewrite/reread, and
+  malformed-`startxref` public reconstruction with `first_xref() == 0`.
+  `moon check --target native fixture_acceptance --warn-list +73` passes, the
+  focused cpdf source imposition test reports 1/1 test passing, `moon test
+  --target native fixture_acceptance` reports 122/122 tests passing, and `moon
+  test --target native` reports 2345/2345 tests passing. `moon info && moon
+  fmt` reports no pending interface or formatting work, and `moon check
+  --target all --warn-list +73` reports the known warning-73/main-package
+  baseline with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.

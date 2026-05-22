@@ -3564,6 +3564,81 @@ fn fixture_acceptance_assert_cpdf_source_hello_text_removed_for_test(
 }
 
 ///|
+fn fixture_acceptance_assert_cpdf_source_impose_text_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 1)
+  let text = @utf8.decode_lossy(document.test_extract_text([1]))
+  fixture_acceptance_assert_contains_for_test(text, "Hello, World!")
+  @test.assert_eq(fixture_acceptance_replacement_count_for_test(text), 0)
+  @test.assert_eq(fixture_acceptance_raw_control_count_for_test(text), 0)
+  let ops = fixture_acceptance_page_content_ops_for_test(document)
+  @test.assert_eq(
+    fixture_acceptance_tj_fragment_count_for_test(ops, "Hello, World!") >= 2,
+    true,
+  )
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_impose_sheet_for_test(
+  source : @pdflite.PdfDocument,
+  imposed : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(source.endpage(), 2)
+  fixture_acceptance_assert_cpdf_source_impose_text_for_test(imposed)
+  let source_pages = source.pages_of_pagetree()
+  let imposed_pages = imposed.pages_of_pagetree()
+  let source_box = source.parse_rectangle(source_pages[0].mediabox)
+  let imposed_box = imposed.parse_rectangle(imposed_pages[0].mediabox)
+  let source_width = source_box.max_x - source_box.min_x
+  let source_height = source_box.max_y - source_box.min_y
+  fixture_acceptance_assert_close_for_test(imposed_box.min_x, 0.0)
+  fixture_acceptance_assert_close_for_test(imposed_box.min_y, 0.0)
+  fixture_acceptance_assert_close_for_test(
+    imposed_box.max_x - imposed_box.min_x,
+    source_width * 2.0,
+  )
+  fixture_acceptance_assert_close_for_test(
+    imposed_box.max_y - imposed_box.min_y,
+    source_height,
+  )
+  let ops = fixture_acceptance_page_content_ops_for_test(imposed)
+  @test.assert_eq(
+    fixture_acceptance_content_ops_contain_translation_cm_for_test(
+      ops, 0.0, 0.0,
+    ),
+    true,
+  )
+  @test.assert_eq(
+    fixture_acceptance_content_ops_contain_translation_cm_for_test(
+      ops, source_width, 0.0,
+    ),
+    true,
+  )
+  fixture_acceptance_assert_content_op_for_test(
+    ops,
+    Op_BMC(fixture_acceptance_pdf_name_for_test("/CPDFSTAMP")),
+  )
+}
+
+///|
+fn fixture_acceptance_assert_cpdf_source_twoup_for_test(
+  source : @pdflite.PdfDocument,
+  output : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(source.endpage(), 2)
+  fixture_acceptance_assert_cpdf_source_impose_text_for_test(output)
+  let source_pages = source.pages_of_pagetree()
+  let output_pages = output.pages_of_pagetree()
+  let source_box = source.parse_rectangle(source_pages[0].mediabox)
+  let output_box = output.parse_rectangle(output_pages[0].mediabox)
+  fixture_acceptance_assert_close_for_test(output_box.min_x, source_box.min_x)
+  fixture_acceptance_assert_close_for_test(output_box.min_y, source_box.min_y)
+  fixture_acceptance_assert_close_for_test(output_box.max_x, source_box.max_x)
+  fixture_acceptance_assert_close_for_test(output_box.max_y, source_box.max_y)
+}
+
+///|
 fn fixture_acceptance_cpdf_source_hello_with_spot_colours_for_test(
   document : @pdflite.PdfDocument,
 ) -> @pdflite.PdfDocument {
@@ -4905,6 +4980,32 @@ fn fixture_acceptance_content_ops_contain_tj_fragment_for_test(
   } nobreak {
     false
   }
+}
+
+///|
+fn fixture_acceptance_tj_fragment_count_for_test(
+  ops : ArrayView[@pdflite.PdfContentOp],
+  fragment : String,
+) -> Int {
+  let mut count = 0
+  for op in ops {
+    match op {
+      Op_Tj(bytes) =>
+        if @ascii.decode_lossy(bytes).contains(fragment) {
+          count += 1
+        }
+      Op_quote(bytes) =>
+        if @ascii.decode_lossy(bytes).contains(fragment) {
+          count += 1
+        }
+      Op_double_quote(_, _, bytes) =>
+        if @ascii.decode_lossy(bytes).contains(fragment) {
+          count += 1
+        }
+      _ => ()
+    }
+  }
+  count
 }
 
 ///|
@@ -11887,6 +11988,71 @@ async test "optional cpdf source fixtures stamp and combine pages" {
       )
     }
     _ => ()
+  }
+}
+
+///|
+async test "optional cpdf source hello fixture imposes two-up sheets" {
+  match
+    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    None => ()
+    Some(bytes) => {
+      let hello = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_source_hello_text_for_test(hello)
+      let source = @pdflite.pdf_merge_documents([hello, hello], [[1], [1]])
+      @test.assert_eq(source.endpage(), 2)
+      let imposed = source.impose(2.0, 1.0, line_width=0.5)
+      fixture_acceptance_assert_cpdf_source_impose_sheet_for_test(
+        source, imposed,
+      )
+      fixture_acceptance_assert_cpdf_source_impose_sheet_for_test(
+        source,
+        @pdflite.pdf_impose(source, 2.0, 1.0, line_width=0.5),
+      )
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        imposed,
+      )
+      fixture_acceptance_assert_cpdf_source_impose_sheet_for_test(
+        source,
+        @pdflite.pdf_read_document_from_bytes(compressed),
+      )
+      let corrupted = fixture_acceptance_corrupt_startxref_pointer_for_test(
+        compressed,
+      )
+      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+        corrupted,
+      )
+      guard strict is Err(_) else {
+        fail("expected imposed sheet to require malformed reconstruction")
+      }
+      let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
+      @test.assert_eq(recovered.first_xref(), 0)
+      fixture_acceptance_assert_cpdf_source_impose_sheet_for_test(
+        source, recovered,
+      )
+      let twoup = source.twoup()
+      fixture_acceptance_assert_cpdf_source_twoup_for_test(source, twoup)
+      fixture_acceptance_assert_cpdf_source_twoup_for_test(
+        source,
+        @pdflite.pdf_twoup(source),
+      )
+      fixture_acceptance_assert_cpdf_source_twoup_for_test(
+        source,
+        @pdflite.pdf_read_document_from_bytes(
+          @pdflite.pdf_write_document_with_compressed_xref_stream(twoup),
+        ),
+      )
+      let stacked = source.twoup_stack()
+      fixture_acceptance_assert_cpdf_source_impose_text_for_test(stacked)
+      fixture_acceptance_assert_cpdf_source_impose_text_for_test(
+        @pdflite.pdf_twoup_stack(source),
+      )
+      fixture_acceptance_assert_cpdf_source_impose_text_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          @pdflite.pdf_write_document_with_compressed_xref_stream(stacked),
+        ),
+      )
+    }
   }
 }
 
