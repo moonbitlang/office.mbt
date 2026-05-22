@@ -7623,6 +7623,20 @@ Current backend snapshot:
   `moon check --target all --warn-list +73` passes with the known
   `markdown/cmd` future notice; `moon test --target native` reports 2355/2355;
   `moon info && moon fmt` and `git diff --check` are clean.~~
+- [x] ~~Continue cpdfimage API parity with
+  `.repos/cpdf-source/cpdfimage.mli`: added portable
+  `pdf_image_obj_of_jpeg_data`, `pdf_image_obj_of_png_data`,
+  `pdf_image_obj_of_jbig2_data`, and `pdf_image_obj_of_jpeg2000_data`
+  wrappers. These expose cpdf's `(PdfObject, extra_objects)` constructor shape
+  while delegating to the existing image XObject builders, preserve PNG alpha
+  mask insertion through the supplied document, and preserve the JBIG2 globals
+  extra object contract at object number 10000. Validation on MoonBit 0.9.3:
+  `moon check --target native --warn-list +73` passes with the known
+  `markdown/cmd` future notice; `moon test --target native pdf_image_test.mbt
+  --filter '*obj_of*'` reports 4/4; `moon check --target all --warn-list +73`
+  passes with the known `markdown/cmd` future notice; `moon test --target
+  native` reports 2359/2359; `moon info`, `moon fmt`, and `git diff --check`
+  are clean.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

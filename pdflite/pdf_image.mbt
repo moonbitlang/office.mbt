@@ -421,6 +421,16 @@ pub fn pdf_image_object_of_jpeg_data(
 }
 
 ///|
+/// Compatibility wrapper matching cpdfimage's `obj_of_jpeg_data` result shape.
+pub fn pdf_image_obj_of_jpeg_data(
+  data : BytesView,
+  path_to_im? : String = "",
+) -> (PdfObject, Array[(Int, PdfObject)]) raise PdfError {
+  ignore(path_to_im)
+  (pdf_image_object_of_jpeg_data(data), [])
+}
+
+///|
 /// Build a PDF image XObject for JPEG2000 data.
 pub fn pdf_image_object_of_jpeg2000_data(
   data : BytesView,
@@ -437,6 +447,14 @@ pub fn pdf_image_object_of_jpeg2000_data(
     ]),
     StreamGot(payload),
   )
+}
+
+///|
+/// Compatibility wrapper matching cpdfimage's `obj_of_jpeg2000_data` result shape.
+pub fn pdf_image_obj_of_jpeg2000_data(
+  data : BytesView,
+) -> (PdfObject, Array[(Int, PdfObject)]) raise PdfError {
+  (pdf_image_object_of_jpeg2000_data(data), [])
 }
 
 ///|
@@ -574,6 +592,15 @@ pub fn pdf_image_object_of_png_data(
 }
 
 ///|
+/// Compatibility wrapper matching cpdfimage's `obj_of_png_data` result shape.
+pub fn pdf_image_obj_of_png_data(
+  document : PdfDocument,
+  data : BytesView,
+) -> (PdfObject, Array[(Int, PdfObject)]) raise PdfError {
+  (document.pdf_image_object_of_png_data(data), [])
+}
+
+///|
 fn pdf_image_jbig2_u32_at(data : BytesView, offset : Int) -> Int raise PdfError {
   if offset < 0 || offset + 4 > data.length() {
     raise EndOfInput
@@ -643,6 +670,15 @@ pub fn pdf_image_object_of_jbig2_data(
     None => ()
   }
   (pdf_stream(PdfDictionary(entries), StreamGot(payload)), extra)
+}
+
+///|
+/// Compatibility wrapper matching cpdfimage's `obj_of_jbig2_data`.
+pub fn pdf_image_obj_of_jbig2_data(
+  data : BytesView,
+  global? : BytesView? = None,
+) -> (PdfObject, Array[(Int, PdfObject)]) raise PdfError {
+  pdf_image_object_of_jbig2_data(data, global~)
 }
 
 ///|

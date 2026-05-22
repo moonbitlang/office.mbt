@@ -663,6 +663,17 @@ test "pdf_image_object_of_jpeg_data builds DCT image XObject" {
 }
 
 ///|
+test "pdf_image_obj_of_jpeg_data returns cpdf tuple shape" {
+  let jpeg = image_jpeg_for_document_test()
+  let (object, extra) = try! @pdflite.pdf_image_obj_of_jpeg_data(
+    jpeg,
+    path_to_im="/usr/bin/convert",
+  )
+  @test.assert_eq(extra.length(), 0)
+  @test.assert_eq(object, try! @pdflite.pdf_image_object_of_jpeg_data(jpeg))
+}
+
+///|
 test "pdf_image_object_of_jpeg2000_data builds JPX image XObject" {
   let jpeg2000 = image_jpeg2000_for_document_test()
   let object = try! @pdflite.pdf_image_object_of_jpeg2000_data(jpeg2000)
@@ -694,6 +705,17 @@ test "pdf_image_object_of_jpeg2000_data builds JPX image XObject" {
     None,
   )
   @test.assert_eq(stream.data, StreamGot(jpeg2000))
+}
+
+///|
+test "pdf_image_obj_of_jpeg2000_data returns cpdf tuple shape" {
+  let jpeg2000 = image_jpeg2000_for_document_test()
+  let (object, extra) = try! @pdflite.pdf_image_obj_of_jpeg2000_data(jpeg2000)
+  @test.assert_eq(extra.length(), 0)
+  @test.assert_eq(
+    object,
+    try! @pdflite.pdf_image_object_of_jpeg2000_data(jpeg2000),
+  )
 }
 
 ///|
@@ -780,6 +802,26 @@ test "pdf_image_object_of_png_data builds RGB Flate image XObject" {
     PdfInteger(2),
   )
   @test.assert_eq(stream.data, StreamGot(idat))
+}
+
+///|
+test "pdf_image_obj_of_png_data returns cpdf tuple shape" {
+  let document = @pdflite.pdf_document_empty()
+  let (object, extra) = try! @pdflite.pdf_image_obj_of_png_data(
+    document,
+    image_png_rgba_for_test(),
+  )
+  @test.assert_eq(extra.length(), 0)
+  guard object is PdfStreamObject(stream) else {
+    fail("expected PNG stream object")
+  }
+  let smask_reference = try! image_lookup_for_test(stream.dictionary, "/SMask")
+  guard smask_reference is PdfIndirect(smask_number) else {
+    fail("expected alpha SMask reference")
+  }
+  guard document.lookup_object_or_null(smask_number) is PdfStreamObject(_) else {
+    fail("expected PNG wrapper to add alpha mask to document")
+  }
 }
 
 ///|
@@ -954,6 +996,24 @@ test "pdf_image_object_of_jbig2_data returns globals extra object" {
     try! image_lookup_for_test(decodeparms, "/JBIG2Globals"),
     PdfIndirect(10000),
   )
+}
+
+///|
+test "pdf_image_obj_of_jbig2_data returns cpdf tuple shape" {
+  let data = image_jbig2_for_document_test()
+  let globals = @ascii.encode("wrapper-jbig2-globals")
+  let (object, extra) = try! @pdflite.pdf_image_obj_of_jbig2_data(
+    data,
+    global=Some(globals),
+  )
+  let (expected, expected_extra) = try! @pdflite.pdf_image_object_of_jbig2_data(
+    data,
+    global=Some(globals),
+  )
+  @test.assert_eq(object, expected)
+  @test.assert_eq(extra, expected_extra)
+  @test.assert_eq(extra.length(), 1)
+  @test.assert_eq(extra[0].0, 10000)
 }
 
 ///|
