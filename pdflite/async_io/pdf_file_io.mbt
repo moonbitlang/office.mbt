@@ -81,6 +81,15 @@ pub async fn pdf_load_standard_font_substitute_file(
 }
 
 ///|
+/// Compatibility wrapper matching cpdfembed's `load_substitute`.
+pub async fn pdf_load_substitute(
+  directory : StringView,
+  font : @pdflite.PdfStandardFont,
+) -> (@pdflite.PdfBytes, String) {
+  pdf_load_standard_font_substitute_file(directory, font)
+}
+
+///|
 /// Extract an embedded font file and write it to disk.
 ///
 /// This is the native filesystem counterpart of cpdffont's `extract_fontfile`.

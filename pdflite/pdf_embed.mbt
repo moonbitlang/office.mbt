@@ -38,6 +38,14 @@ pub fn pdf_fontpack_of_standard_font(
 }
 
 ///|
+/// Compatibility wrapper matching cpdfembed's `fontpack_of_standardfont`.
+pub fn pdf_fontpack_of_standardfont(
+  font : PdfFont,
+) -> PdfFontPack raise PdfError {
+  pdf_fontpack_of_standard_font(font)
+}
+
+///|
 /// Look up one Unicode codepoint in a font pack.
 ///
 /// Returns `(charcode, font_index, font)` when the codepoint can be represented.

@@ -2991,6 +2991,16 @@ pub fn pdf_addtext_process_text_with_time(
 }
 
 ///|
+/// Compatibility wrapper matching cpdfaddtext's `process_text`.
+pub fn pdf_process_text(
+  time : PdfStrftimeTime,
+  text : String,
+  replacements : ArrayView[(String, () -> String)],
+) -> String {
+  pdf_addtext_process_text_with_time(time, text, replacements)
+}
+
+///|
 fn pdf_addtext_decode_lossy(bytes : Array[Byte]) -> String {
   @utf8.decode_lossy(Bytes::from_array(bytes))
 }

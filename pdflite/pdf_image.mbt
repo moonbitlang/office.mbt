@@ -877,6 +877,33 @@ pub fn pdf_image_document_of_object(
 }
 
 ///|
+/// Compatibility wrapper matching cpdfimage's `image_of_input`.
+///
+/// The input side is represented by a byte view instead of `Pdfio.input`;
+/// `object_of_data` receives the document so PNG masks and similar side objects
+/// can be added through the same document before the page is built.
+pub fn pdf_image_of_input(
+  data : BytesView,
+  object_of_data : (PdfDocument, BytesView) -> (
+    PdfObject,
+    Array[(Int, PdfObject)],
+  ) raise PdfError,
+  process_struct_tree? : Bool = false,
+  subformat? : PdfUASubformat? = None,
+  title? : String? = None,
+) -> PdfDocument raise PdfError {
+  let document = pdf_document_empty()
+  let (image, extra_objects) = object_of_data(document, data)
+  for extra in extra_objects {
+    document.add_object_given_number(extra.0, extra.1)
+  }
+  document.pdf_image_add_image_page(
+    image, process_struct_tree, subformat, title,
+  )
+  document
+}
+
+///|
 /// Build a single-page PDF document from JPEG data.
 pub fn pdf_image_document_of_jpeg_data(
   data : BytesView,

@@ -3188,6 +3188,15 @@ test "pdf_addtext_process_text_with_time applies replacements before strftime" {
     "page 7 on 2023-09-03",
   )
   @test.assert_eq(page_calls.val, 1)
+  @test.assert_eq(
+    @pdflite.pdf_process_text(
+      addtext_process_time_for_test(),
+      "page %Page on %Date",
+      replacements,
+    ),
+    "page 7 on 2023-09-03",
+  )
+  @test.assert_eq(page_calls.val, 2)
 }
 
 ///|

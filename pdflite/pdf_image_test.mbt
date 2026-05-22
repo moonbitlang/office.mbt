@@ -1146,6 +1146,50 @@ test "pdf_image_document_of_jpeg_data creates structured image page" {
 }
 
 ///|
+test "pdf_image_of_input builds document through cpdf object callback" {
+  let document = try! @pdflite.pdf_image_of_input(
+    image_jpeg_for_document_test(),
+    fn(_, data) raise @pdflite.PdfError {
+      @pdflite.pdf_image_obj_of_jpeg_data(data)
+    },
+    process_struct_tree=true,
+    title=Some("Callback image"),
+  )
+  let pages = try! document.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  @test.assert_eq(
+    pages[0].mediabox,
+    PdfArray([PdfReal(0.0), PdfReal(0.0), PdfReal(400.0), PdfReal(300.0)]),
+  )
+  let xobjects = try! image_lookup_for_test(pages[0].resources, "/XObject")
+  let (_, image_object) = try! image_lookup_indirect_object_for_test(
+    document, xobjects, "/I0",
+  )
+  guard image_object is PdfStreamObject(image_stream) else {
+    fail("expected page image stream")
+  }
+  @test.assert_eq(
+    try! image_lookup_for_test(image_stream.dictionary, "/Filter"),
+    PdfNameObject(image_name_for_test("/DCTDecode")),
+  )
+  let catalog = try! document.catalog()
+  let (_, struct_root) = try! image_lookup_indirect_object_for_test(
+    document, catalog, "/StructTreeRoot",
+  )
+  let root_k = try! image_lookup_for_test(struct_root, "/K")
+  guard root_k is PdfArray([PdfIndirect(figure_number)]) else {
+    fail("expected image figure in StructTreeRoot /K")
+  }
+  @test.assert_eq(
+    try! image_lookup_for_test(
+      document.lookup_object_or_null(figure_number),
+      "/Alt",
+    ),
+    PdfString(@utf8.encode("Callback image")),
+  )
+}
+
+///|
 test "pdf_image_document_of_jpeg_data creates PDF/UA-2 document wrapper" {
   let document = try! @pdflite.pdf_image_document_of_jpeg_data(
     image_jpeg_for_document_test(),

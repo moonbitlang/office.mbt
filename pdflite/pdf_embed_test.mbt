@@ -12,7 +12,9 @@ fn embed_bold_font_for_test() -> @pdflite.PdfFont {
 test "pdf_fontpack_of_standard_font maps Unicode codepoints to charcodes" {
   let font = embed_standard_font_for_test()
   let pack = try! @pdflite.pdf_fontpack_of_standard_font(font)
+  let cpdf_pack = try! @pdflite.pdf_fontpack_of_standardfont(font)
   @test.assert_eq(pack.fonts, [font])
+  @test.assert_eq(cpdf_pack, pack)
   @test.assert_eq(pack.entries.length(), 256)
   guard pack.get_char(65) is Some((65, 0, mapped_font)) else {
     fail("expected capital A mapping")

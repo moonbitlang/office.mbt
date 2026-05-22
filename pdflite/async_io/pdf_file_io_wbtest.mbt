@@ -3230,12 +3230,15 @@ async test "async file wrappers load Standard 14 substitute font files" {
     directory + "/",
     PdfTimesBold,
   )
+  let (loaded_alias, alias_name) = pdf_load_substitute(directory, PdfHelvetica)
   pdf_async_io_remove_if_exists_for_test(helvetica_path)
   pdf_async_io_remove_if_exists_for_test(times_path)
   @test.assert_eq(loaded_helvetica, helvetica_bytes)
   @test.assert_eq(helvetica_name, "NimbusSans-Regular")
   @test.assert_eq(loaded_times, times_bytes)
   @test.assert_eq(times_name, "NimbusRoman-Bold")
+  @test.assert_eq(loaded_alias, helvetica_bytes)
+  @test.assert_eq(alias_name, "NimbusSans-Regular")
 }
 
 ///|

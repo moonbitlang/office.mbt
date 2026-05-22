@@ -7681,6 +7681,26 @@ Current backend snapshot:
   --target all --warn-list +73` passes with the known `markdown/cmd` future
   notice; `moon test --target native` reports 2359/2359; `moon info`,
   `moon fmt`, and `git diff --check` are clean.~~
+- [x] ~~Continue cpdfaddtext/cpdfembed/cpdfimage API parity with
+  `.repos/cpdf-source`: added `pdf_process_text`,
+  `pdf_fontpack_of_standardfont`, native `pdf_load_substitute`, and
+  `pdf_image_of_input`. The add-text wrapper exposes cpdfaddtext's replacement
+  plus strftime pass under its cpdf name; the embed wrappers preserve
+  cpdfembed's Standard 14 fontpack and substitute-font loading names; the image
+  wrapper ports cpdfimage's generic input-to-single-page-document builder using
+  a `BytesView` input boundary and the existing `(image, extra_objects)`
+  callback shape. Coverage pins the add-text alias, fontpack alias, native
+  substitute loader alias, and image callback document construction including
+  structure-tree alt text. Validation on MoonBit compiler 0.9.3: `moon check
+  --target native --warn-list +73` passes with the known `markdown/cmd` future
+  notice; `moon test --target native pdf_addtext_test.mbt --filter
+  '*process_text*'` reports 3/3; `moon test --target native pdf_embed_test.mbt
+  --filter '*fontpack*'` reports 2/2; `moon test --target native
+  pdf_image_test.mbt --filter '*image_of_input*'` reports 1/1; `moon test
+  --target native async_io --filter '*substitute*'` reports 1/1; `moon check
+  --target all --warn-list +73` passes with the known `markdown/cmd` future
+  notice; `moon test --target native` reports 2360/2360; `moon info`,
+  `moon fmt`, and `git diff --check` are clean.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
