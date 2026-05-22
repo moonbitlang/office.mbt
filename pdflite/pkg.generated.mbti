@@ -838,23 +838,43 @@ pub fn pdf_merge_pdfs(Bool, Bool, ArrayView[String], ArrayView[PdfDocument], Arr
 
 pub fn pdf_merge_structure_trees(PdfDocument, ArrayView[PdfDocument], add_toplevel_document? : Bool) -> Int? raise @core.PdfError
 
+pub let pdf_metadata_adobe : String
+
 pub let pdf_metadata_adobe_namespace : String
+
+pub let pdf_metadata_dc : String
 
 pub let pdf_metadata_dc_namespace : String
 
 pub fn pdf_metadata_encode_output(PdfMetadataEncoding, BytesView) -> Bytes raise @core.PdfError
 
+pub fn pdf_metadata_get_data_for_bytes(String, String, BytesView) -> String?
+
+pub let pdf_metadata_pdfaid : String
+
 pub let pdf_metadata_pdfaid_namespace : String
+
+pub let pdf_metadata_pdfe : String
 
 pub let pdf_metadata_pdfe_namespace : String
 
+pub let pdf_metadata_pdfuaid : String
+
 pub let pdf_metadata_pdfuaid_namespace : String
+
+pub let pdf_metadata_pdfvtid : String
 
 pub let pdf_metadata_pdfvtid_namespace : String
 
+pub let pdf_metadata_pdfxid : String
+
 pub let pdf_metadata_pdfxid_namespace : String
 
+pub let pdf_metadata_rdf : String
+
 pub let pdf_metadata_rdf_namespace : String
+
+pub let pdf_metadata_xmp : String
 
 pub let pdf_metadata_xmp_namespace : String
 

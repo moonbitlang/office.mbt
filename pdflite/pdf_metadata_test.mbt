@@ -839,6 +839,81 @@ test "PdfDocument xmp_info returns legacy Info-key equivalents" {
 }
 
 ///|
+test "pdf_metadata_get_data_for_bytes mirrors cpdfmetadata lookup" {
+  @test.assert_eq(
+    @pdflite.pdf_metadata_adobe, @pdflite.pdf_metadata_adobe_namespace,
+  )
+  @test.assert_eq(
+    @pdflite.pdf_metadata_xmp, @pdflite.pdf_metadata_xmp_namespace,
+  )
+  @test.assert_eq(@pdflite.pdf_metadata_dc, @pdflite.pdf_metadata_dc_namespace)
+  @test.assert_eq(
+    @pdflite.pdf_metadata_rdf, @pdflite.pdf_metadata_rdf_namespace,
+  )
+  @test.assert_eq(
+    @pdflite.pdf_metadata_pdfaid, @pdflite.pdf_metadata_pdfaid_namespace,
+  )
+  @test.assert_eq(
+    @pdflite.pdf_metadata_pdfxid, @pdflite.pdf_metadata_pdfxid_namespace,
+  )
+  @test.assert_eq(
+    @pdflite.pdf_metadata_pdfe, @pdflite.pdf_metadata_pdfe_namespace,
+  )
+  @test.assert_eq(
+    @pdflite.pdf_metadata_pdfuaid, @pdflite.pdf_metadata_pdfuaid_namespace,
+  )
+  @test.assert_eq(
+    @pdflite.pdf_metadata_pdfvtid, @pdflite.pdf_metadata_pdfvtid_namespace,
+  )
+  let xmp_text =
+    #|<x:xmpmeta xmlns:x="adobe:ns:meta/"
+    #| xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    #| xmlns:altpdf="http://ns.adobe.com/pdf/1.3/"
+    #| xmlns:altxmp="http://ns.adobe.com/xap/1.0/"
+    #| xmlns:dc="http://purl.org/dc/elements/1.1/"
+    #| xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
+    #| <rdf:Description pdfaid:part='2' altxmp:CreatorTool="MoonBit &amp; cpdf &#x2B; XML &#43;">
+    #|  <altpdf:Producer>pdflite</altpdf:Producer>
+    #|  <dc:subject><rdf:Bag>
+    #|    <rdf:li>alpha &lt;one&gt;</rdf:li>
+    #|    <rdf:li>beta &#x32;</rdf:li>
+    #|  </rdf:Bag></dc:subject>
+    #| </rdf:Description>
+    #|</x:xmpmeta>
+  let metadata = @ascii.encode(xmp_text)
+  @test.assert_eq(
+    @pdflite.pdf_metadata_get_data_for_bytes(
+      @pdflite.pdf_metadata_xmp, "CreatorTool", metadata,
+    ),
+    Some("MoonBit & cpdf + XML +"),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_metadata_get_data_for_bytes(
+      @pdflite.pdf_metadata_adobe, "Producer", metadata,
+    ),
+    Some("pdflite"),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_metadata_get_data_for_bytes(
+      @pdflite.pdf_metadata_pdfaid, "part", metadata,
+    ),
+    Some("2"),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_metadata_get_data_for_bytes(
+      @pdflite.pdf_metadata_dc, "subject", metadata,
+    ),
+    Some("alpha <one>, beta 2"),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_metadata_get_data_for_bytes(
+      @pdflite.pdf_metadata_pdfuaid, "part", metadata,
+    ),
+    None,
+  )
+}
+
+///|
 test "PdfDocument xmp_info_json reports cpdf XMP fields" {
   let empty = try! @pdflite.pdf_minimum_valid_pdf()
   let empty_expected : Json = { "Language": null, "Subformats": [] }

@@ -27,7 +27,8 @@ Current estimate:
   Form XObject stamping,
   composition reporting, core metadata APIs, XMP metadata-date rewriting, XMP
   info synchronization, XMP metadata creation, XMP RDF list extraction,
-  XMP/document info JSON reporting, redaction annotation bounding-box overlays,
+  XMP/document info JSON reporting, cpdfmetadata namespace/get-data helper
+  parity and XML entity decoding, redaction annotation bounding-box overlays,
   cpdfua Matterhorn content/role-map/XMP/viewer-preference/optional-content/
   media-clip/file-attachment/PrinterMark/reference-XObject/MCID Form XObject/
   Type0 CIDSystemInfo/CIDToGIDMap/CMap-name/WMode/font-file no-op/TrueType
@@ -40,9 +41,9 @@ Current estimate:
 
 Current backend snapshot:
 
-- Native: full suite passes on MoonBit 0.9.3, currently 2351/2351 tests.
+- Native: full suite passes on MoonBit 0.9.3, currently 2352/2352 tests.
 - WasmGC and JavaScript: full portable non-native test suites pass on MoonBit
-  0.9.3, currently 2016/2016 on each backend after the latest source-corpus
+  0.9.3, currently 2017/2017 on each backend after the latest source-corpus
   recovery gates.
 - Wasm: current plain-Wasm smoke validation passes at 41/41 tests after
   filtering root's heavy package-level test files and the Markdown package
@@ -7554,6 +7555,17 @@ Current backend snapshot:
   only for plain Wasm, full `moon test --target wasm` now reports 41/41 tests
   passing, `moon test --target wasm-gc` and `moon test --target js` remain
   2016/2016 each, and `moon test --target native` remains 2351/2351.~~
+- [x] ~~Continue source-port hardening with another small cpdf-source API parity
+  gap: added cpdfmetadata namespace aliases and a tree-free
+  `pdf_metadata_get_data_for_bytes` helper over in-memory XMP bytes, matching
+  cpdf's namespace/local-name lookup across alternate prefixes, attributes,
+  element text, RDF lists, named XML entities, and numeric XML entities. Updated
+  the source-corpus metadata fixture expectations to decoded XMP JSON values.
+  Validation on MoonBit 0.9.3: `moon check --target all --warn-list +73`
+  passes with the known `markdown/cmd` future notice; `moon test --target
+  native` reports 2352/2352; `moon test --target wasm-gc` and `moon test
+  --target js` report 2017/2017 each; `moon test --target wasm` reports 41/41;
+  `moon info`, `moon fmt`, and `git diff --check` are clean.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

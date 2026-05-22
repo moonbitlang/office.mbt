@@ -264,6 +264,42 @@ pub let pdf_metadata_pdfuaid_namespace : String = "http://www.aiim.org/pdfua/ns/
 pub let pdf_metadata_pdfvtid_namespace : String = "http://www.npes.org/pdfvt/ns/id/"
 
 ///|
+/// Alias matching cpdfmetadata's `adobe` namespace constant.
+pub let pdf_metadata_adobe : String = pdf_metadata_adobe_namespace
+
+///|
+/// Alias matching cpdfmetadata's `xmp` namespace constant.
+pub let pdf_metadata_xmp : String = pdf_metadata_xmp_namespace
+
+///|
+/// Alias matching cpdfmetadata's `dc` namespace constant.
+pub let pdf_metadata_dc : String = pdf_metadata_dc_namespace
+
+///|
+/// Alias matching cpdfmetadata's `rdf` namespace constant.
+pub let pdf_metadata_rdf : String = pdf_metadata_rdf_namespace
+
+///|
+/// Alias matching cpdfmetadata's `pdfaid` namespace constant.
+pub let pdf_metadata_pdfaid : String = pdf_metadata_pdfaid_namespace
+
+///|
+/// Alias matching cpdfmetadata's `pdfxid` namespace constant.
+pub let pdf_metadata_pdfxid : String = pdf_metadata_pdfxid_namespace
+
+///|
+/// Alias matching cpdfmetadata's `pdfe` namespace constant.
+pub let pdf_metadata_pdfe : String = pdf_metadata_pdfe_namespace
+
+///|
+/// Alias matching cpdfmetadata's `pdfuaid` namespace constant.
+pub let pdf_metadata_pdfuaid : String = pdf_metadata_pdfuaid_namespace
+
+///|
+/// Alias matching cpdfmetadata's `pdfvtid` namespace constant.
+pub let pdf_metadata_pdfvtid : String = pdf_metadata_pdfvtid_namespace
+
+///|
 let pdf_metadata_xmp_template : String =
   #|<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
   #|<x:xmpmeta xmlns:x="adobe:ns:meta/">
@@ -834,10 +870,111 @@ fn pdf_metadata_trim_xml_text(value : BytesView) -> BytesView {
 }
 
 ///|
-fn pdf_metadata_decode_xml_text(value : BytesView) -> String? {
-  let text = @utf8.decode(pdf_metadata_trim_xml_text(value)) catch {
-    _ => return None
+fn pdf_metadata_xml_entity_digit(byte : Byte, base : Int) -> Int? {
+  let value = byte.to_int()
+  if value >= 48 && value <= 57 {
+    let digit = value - 48
+    if digit < base {
+      Some(digit)
+    } else {
+      None
+    }
+  } else if base == 16 && value >= 65 && value <= 70 {
+    Some(value - 55)
+  } else if base == 16 && value >= 97 && value <= 102 {
+    Some(value - 87)
+  } else {
+    None
   }
+}
+
+///|
+fn pdf_metadata_xml_entity_codepoint(entity : BytesView) -> Int? {
+  if entity.length() == 3 && pdf_metadata_view_matches_at(entity, 0, b"amp") {
+    Some(38)
+  } else if entity.length() == 2 &&
+    pdf_metadata_view_matches_at(entity, 0, b"lt") {
+    Some(60)
+  } else if entity.length() == 2 &&
+    pdf_metadata_view_matches_at(entity, 0, b"gt") {
+    Some(62)
+  } else if entity.length() == 4 &&
+    pdf_metadata_view_matches_at(entity, 0, b"quot") {
+    Some(34)
+  } else if entity.length() == 4 &&
+    pdf_metadata_view_matches_at(entity, 0, b"apos") {
+    Some(39)
+  } else if entity.length() >= 2 && entity[0].to_int() == 35 {
+    let mut index = 1
+    let mut base = 10
+    if index < entity.length() &&
+      (entity[index].to_int() == 120 || entity[index].to_int() == 88) {
+      base = 16
+      index += 1
+    }
+    if index >= entity.length() {
+      return None
+    }
+    let mut codepoint = 0
+    while index < entity.length() {
+      match pdf_metadata_xml_entity_digit(entity[index], base) {
+        Some(digit) => codepoint = codepoint * base + digit
+        None => return None
+      }
+      if codepoint > 0x10FFFF {
+        return None
+      }
+      index += 1
+    }
+    if codepoint >= 0xD800 && codepoint <= 0xDFFF {
+      None
+    } else {
+      Some(codepoint)
+    }
+  } else {
+    None
+  }
+}
+
+///|
+fn pdf_metadata_push_xml_codepoint(
+  output : Array[Byte],
+  codepoint : Int,
+) -> Bool {
+  let encoded = pdf_utf8_of_codepoints([codepoint]) catch { _ => return false }
+  for byte in encoded {
+    output.push(byte)
+  }
+  true
+}
+
+///|
+fn pdf_metadata_decode_xml_text(value : BytesView) -> String? {
+  let trimmed = pdf_metadata_trim_xml_text(value)
+  let output : Array[Byte] = []
+  let mut index = 0
+  while index < trimmed.length() {
+    if trimmed[index].to_int() == 38 {
+      let semicolon = pdf_metadata_find_byte(trimmed, index + 1, 59)
+      if semicolon > index {
+        match pdf_metadata_xml_entity_codepoint(trimmed[index + 1:semicolon]) {
+          Some(codepoint) if pdf_metadata_push_xml_codepoint(output, codepoint) =>
+            index = semicolon + 1
+          _ => {
+            output.push(trimmed[index])
+            index += 1
+          }
+        }
+      } else {
+        output.push(trimmed[index])
+        index += 1
+      }
+    } else {
+      output.push(trimmed[index])
+      index += 1
+    }
+  }
+  let text = @utf8.decode(Bytes::from_array(output)) catch { _ => return None }
   Some(text)
 }
 
@@ -1131,6 +1268,23 @@ fn pdf_metadata_get_xmp_data(
   } nobreak {
     None
   }
+}
+
+///|
+/// Return the first XMP metadata value matching an XML namespace URI and local
+/// name. This is the tree-free counterpart of cpdfmetadata's `get_data_for`,
+/// covering namespace aliases, attributes, simple element text, and RDF lists.
+pub fn pdf_metadata_get_data_for_bytes(
+  xml_namespace : String,
+  name : String,
+  metadata : BytesView,
+) -> String? {
+  pdf_metadata_get_xmp_data(
+    metadata,
+    xml_namespace,
+    pdf_metadata_namespace_fallback_prefix(xml_namespace),
+    name,
+  )
 }
 
 ///|

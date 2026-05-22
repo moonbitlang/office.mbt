@@ -4627,7 +4627,7 @@ fn fixture_acceptance_assert_cpdf_manual_metadata_for_test(
     xmp_json, "\"XMP xmp:CreatorTool\":\"LaTeX with hyperref\"",
   )
   fixture_acceptance_assert_contains_for_test(
-    xmp_json, "\"XMP pdf:Title\":\"cpdf source &amp; metadata\"",
+    xmp_json, "\"XMP pdf:Title\":\"cpdf source & metadata\"",
   )
   fixture_acceptance_assert_contains_for_test(
     xmp_json, "\"XMP pdf:Author\":\"MoonBit port\"",
