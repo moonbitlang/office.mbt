@@ -758,6 +758,8 @@ pub fn pdf_image_document_of_object(PdfObject, process_struct_tree? : Bool, subf
 
 pub fn pdf_image_document_of_png_data(BytesView, process_struct_tree? : Bool, subformat? : PdfUASubformat?, title? : String?) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_image_extract_images_files(Bool, PdfMetadataEncoding, Bool, Bool, PdfDocument, ArrayView[Int], String) -> Array[PdfExtractedImageFile] raise @core.PdfError
+
 pub fn pdf_image_extract_single_image_files(PdfDocument, Int, String) -> Array[PdfExtractedImageFile] raise @core.PdfError
 
 pub fn pdf_image_images(Bool, PdfDocument, ArrayView[Int]) -> Json raise @core.PdfError
@@ -2763,6 +2765,7 @@ pub fn PdfDocument::endpage(Self) -> Int raise @core.PdfError
 pub fn PdfDocument::endpage_fast(Self) -> Int raise @core.PdfError
 pub fn PdfDocument::event_log(Self) -> Array[(Int, PdfObjectEvent)]
 pub fn PdfDocument::extract_fontfile_bytes(Self, Int, String) -> Bytes? raise @core.PdfError
+pub fn PdfDocument::extract_images_files(Self, ArrayView[Int], String, encoding? : PdfMetadataEncoding, inline? : Bool, dedup? : Bool, dedup_per_page? : Bool) -> Array[PdfExtractedImageFile] raise @core.PdfError
 pub fn PdfDocument::extract_single_image_files(Self, Int, String) -> Array[PdfExtractedImageFile] raise @core.PdfError
 pub fn PdfDocument::extract_struct_tree(Self) -> Json raise @core.PdfError
 pub fn PdfDocument::find_object_by_spec(Self, String) -> PdfObject raise @core.PdfError

@@ -3402,6 +3402,135 @@ async test "async file wrappers extract single image files" {
 }
 
 ///|
+async test "async file wrappers extract page image files" {
+  let prefix = pdf_async_io_build_dir_for_test() +
+    "/pdflite_async_io_images_" +
+    @env.now().to_string()
+  let stem = prefix + "_img-%"
+  let alias_stem = prefix + "_alias-%"
+  let merge_stem = prefix + "_merge-%"
+  let image_path = prefix + "_img-0-p1.jpg"
+  let mask_path = prefix + "_img-1-smask-p1.pnm"
+  let alias_path = prefix + "_alias-0-p1.jpg"
+  let alias_mask_path = prefix + "_alias-1-smask-p1.pnm"
+  let merge_path = prefix + "_merge-0-p1.jpg"
+  let merge_mask_path = prefix + "_merge-1-smask-p1.pnm"
+  for
+    path in [
+      image_path, mask_path, alias_path, alias_mask_path, merge_path, merge_mask_path,
+    ] {
+    pdf_async_io_remove_if_exists_for_test(path)
+  }
+
+  let document = @pdflite.pdf_document_empty()
+  document.add_object_given_number(
+    11,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (
+          pdf_async_io_name_for_test("/Subtype"),
+          PdfNameObject(pdf_async_io_name_for_test("/Image")),
+        ),
+        (pdf_async_io_name_for_test("/Width"), PdfInteger(1)),
+        (pdf_async_io_name_for_test("/Height"), PdfInteger(1)),
+        (
+          pdf_async_io_name_for_test("/ColorSpace"),
+          PdfNameObject(pdf_async_io_name_for_test("/DeviceGray")),
+        ),
+        (pdf_async_io_name_for_test("/BitsPerComponent"), PdfInteger(8)),
+      ]),
+      StreamGot(pdf_async_io_bytes_for_test([64])),
+    ),
+  )
+  document.add_object_given_number(
+    10,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (
+          pdf_async_io_name_for_test("/Subtype"),
+          PdfNameObject(pdf_async_io_name_for_test("/Image")),
+        ),
+        (pdf_async_io_name_for_test("/Width"), PdfInteger(1)),
+        (pdf_async_io_name_for_test("/Height"), PdfInteger(1)),
+        (
+          pdf_async_io_name_for_test("/Filter"),
+          PdfNameObject(pdf_async_io_name_for_test("/DCTDecode")),
+        ),
+        (pdf_async_io_name_for_test("/SMask"), PdfIndirect(11)),
+      ]),
+      StreamGot(@ascii.encode("jpg")),
+    ),
+  )
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: @pdflite.pdf_dictionary([
+      (
+        pdf_async_io_name_for_test("/XObject"),
+        @pdflite.pdf_dictionary([
+          (pdf_async_io_name_for_test("/Im1"), PdfIndirect(10)),
+        ]),
+      ),
+    ]),
+  }
+  let page_root = try! document.add_pagetree([page])
+  ignore(try! document.add_root(page_root, []))
+
+  let paths = try! pdf_extract_images_to_files(document, [1], stem)
+  @test.assert_eq(paths, [image_path, mask_path])
+  @test.assert_eq(@fs.read_file(image_path).binary(), @ascii.encode("jpg"))
+  let expected_mask : Array[Byte] = []
+  pdf_async_io_append_bytes_for_test(
+    expected_mask,
+    @ascii.encode("P6 1 1 255\n"),
+  )
+  pdf_async_io_append_bytes_for_test(
+    expected_mask,
+    pdf_async_io_bytes_for_test([64, 64, 64]),
+  )
+  @test.assert_eq(
+    @fs.read_file(mask_path).binary(),
+    Bytes::from_array(expected_mask),
+  )
+
+  try! pdf_extract_images(
+    false,
+    false,
+    PdfMetadataUTF8,
+    false,
+    false,
+    document,
+    [1],
+    alias_stem,
+  )
+  @test.assert_eq(@fs.read_file(alias_path).binary(), @ascii.encode("jpg"))
+  @test.assert_eq(@fs.exists(alias_mask_path), true)
+
+  let merge : Result[Array[String], Error] = try? pdf_extract_images_to_files(
+    document,
+    [1],
+    merge_stem,
+    merge_masks=true,
+  )
+  guard merge
+    is Err(
+      @pdflite.PdfError::SoftError(
+        "combine_image_and_mask: imagemagick not found"
+      )
+    ) else {
+    fail("expected ImageMagick merge error")
+  }
+  @test.assert_eq(@fs.exists(merge_path), true)
+  @test.assert_eq(@fs.exists(merge_mask_path), true)
+
+  for
+    path in [
+      image_path, mask_path, alias_path, alias_mask_path, merge_path, merge_mask_path,
+    ] {
+    pdf_async_io_remove_if_exists_for_test(path)
+  }
+}
+
+///|
 async test "async draw control image file wrappers reject malformed specs" {
   let document = @pdflite.pdf_document_empty()
   let control = @pdflite.pdf_draw_control_new()

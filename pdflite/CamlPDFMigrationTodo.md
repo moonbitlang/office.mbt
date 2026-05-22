@@ -22,7 +22,8 @@ Current estimate:
   marker insertion/removal helpers, PDF/UA structure-tree JSON
   import/export helpers, JPEG/JPEG2000, PNG, and JBIG2 image-to-PDF document
   assembly, image XObject JSON listing, image-resolution reporting,
-  cpdfimage single-image extraction file payloads/native write wrappers,
+  cpdfimage single-image and multi-image extraction file payloads/native write
+  wrappers,
   cpdf draw-control colour parsing, role-map/auto-artifact state, and cpdfdraw
   structured role-map output with fresh-structure-tree preservation,
   Form XObject stamping,
@@ -43,9 +44,9 @@ Current estimate:
 
 Current backend snapshot:
 
-- Native: full suite passes on MoonBit 0.9.3, currently 2373/2373 tests.
+- Native: full suite passes on MoonBit 0.9.3, currently 2377/2377 tests.
 - WasmGC and JavaScript: full portable non-native test suites pass on MoonBit
-  0.9.3, currently 2018/2018 on each backend after the latest source-corpus
+  0.9.3, currently 2037/2037 on each backend after the latest source-corpus
   recovery gates.
 - Wasm: current plain-Wasm smoke validation passes at 41/41 tests after
   filtering root's heavy package-level test files and the Markdown package
@@ -70,6 +71,22 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port the `cpdfimage.extract_images` file-emission slice:
+  `PdfDocument::extract_images_files` and `pdf_image_extract_images_files`
+  now emit cpdf-style files for selected page image XObjects, indirect soft
+  masks, recursively nested Form XObject images, optional inline images, JBIG2
+  globals, cpdf filename expansion, and cpdf's global/per-page indirect-image
+  deduplication modes. Native async I/O exposes
+  `pdf_extract_images_to_files` plus the source-order `pdf_extract_images`
+  wrapper; external PNM-to-PNG conversion and ImageMagick mask composition
+  remain deferred with the same source-style missing ImageMagick `SoftError`
+  after files are written. Validation on MoonBit 0.9.3: `moon check --target
+  native --warn-list +73` passes with only the existing `markdown/cmd`
+  warning; focused native tests report 3/3 for
+  `pdf_image_test.mbt --filter '*extract_images_files*'` and 2/2 for
+  `async_io --filter '*extract *image*'`; `moon check --target all --warn-list
+  +73` passes; full native `moon test --target native` reports 2377/2377; and
+  `moon fmt`, `moon info`, and `git diff --check` are clean.~~
 - [x] ~~Port the `cpdfimage.extract_single_image` file-emission slice:
   `PdfExtractedImageFile`, `PdfDocument::extract_single_image_files`, and
   `pdf_image_extract_single_image_files` now return the cpdf-style files for
