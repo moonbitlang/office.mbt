@@ -3261,6 +3261,238 @@ async test "async file wrappers attach files from paths" {
 }
 
 ///|
+fn pdf_async_io_assert_cpdf_source_attachment_for_test(
+  document : @pdflite.PdfDocument,
+  payload : @pdflite.PdfBytes,
+  version : (Int, Int),
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 1)
+  @test.assert_eq(document.version(), version)
+  @test.assert_eq(try! document.list_attached_files(), [
+    {
+      name: "README.md",
+      pagenumber: 0,
+      data: Some(payload),
+      description: Some("cpdf source README"),
+      relationship: Some("/Source"),
+    },
+  ])
+  @test.assert_eq(try! document.size_attached_files(), payload.length())
+}
+
+///|
+fn pdf_async_io_assert_cpdf_source_portfolio_entry_for_test(
+  document : @pdflite.PdfDocument,
+  file_spec : @pdflite.PdfObject,
+  basename : String,
+  payload : @pdflite.PdfBytes,
+  mod_date : @pdflite.PdfBytes,
+) -> Unit raise {
+  @test.assert_eq(
+    document.lookup_direct(pdf_async_io_name_for_test("/F"), file_spec),
+    Some(PdfString(@ascii.encode(basename))),
+  )
+  @test.assert_eq(
+    document.lookup_direct(pdf_async_io_name_for_test("/UF"), file_spec),
+    Some(PdfString(@ascii.encode(basename))),
+  )
+  guard document.lookup_direct(pdf_async_io_name_for_test("/EF"), file_spec)
+    is Some(ef) else {
+    fail("expected cpdf source portfolio EF dictionary")
+  }
+  guard document.lookup_direct(pdf_async_io_name_for_test("/F"), ef)
+    is Some(stream) else {
+    fail("expected cpdf source portfolio embedded file stream")
+  }
+  @test.assert_eq(try! stream.stream_bytes(), payload)
+  guard stream is PdfStreamObject(stream_object) else {
+    fail("expected cpdf source portfolio stream object")
+  }
+  guard document.lookup_direct(
+      pdf_async_io_name_for_test("/Params"),
+      stream_object.dictionary,
+    )
+    is Some(params) else {
+    fail("expected cpdf source portfolio stream params")
+  }
+  @test.assert_eq(
+    document.lookup_direct(pdf_async_io_name_for_test("/ModDate"), params),
+    Some(PdfString(mod_date)),
+  )
+  @test.assert_eq(
+    document.lookup_direct(pdf_async_io_name_for_test("/Size"), params),
+    Some(PdfInteger(payload.length())),
+  )
+}
+
+///|
+fn pdf_async_io_assert_cpdf_source_portfolio_for_test(
+  document : @pdflite.PdfDocument,
+  readme_path : String,
+  readme_payload : @pdflite.PdfBytes,
+  changes_path : String,
+  changes_payload : @pdflite.PdfBytes,
+  mod_date : @pdflite.PdfBytes,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 1)
+  let catalog = document.catalog()
+  guard document.lookup_direct(pdf_async_io_name_for_test("/Names"), catalog)
+    is Some(names) else {
+    fail("expected cpdf source portfolio Names dictionary")
+  }
+  guard document.lookup_direct(
+      pdf_async_io_name_for_test("/EmbeddedFiles"),
+      names,
+    )
+    is Some(tree) else {
+    fail("expected cpdf source portfolio EmbeddedFiles name tree")
+  }
+  let entries = document.read_name_tree(tree)
+  @test.assert_eq(entries.length(), 2)
+  @test.assert_eq(entries[0].0, @ascii.encode("0/" + readme_path))
+  @test.assert_eq(entries[1].0, @ascii.encode("1/" + changes_path))
+  let readme_spec = document.direct(entries[0].1)
+  @test.assert_eq(
+    document.lookup_direct(pdf_async_io_name_for_test("/Desc"), readme_spec),
+    Some(PdfString(@ascii.encode("cpdf source README"))),
+  )
+  @test.assert_eq(
+    document.lookup_direct(
+      pdf_async_io_name_for_test("/AFRelationship"),
+      readme_spec,
+    ),
+    Some(PdfNameObject(pdf_async_io_name_for_test("/Source"))),
+  )
+  pdf_async_io_assert_cpdf_source_portfolio_entry_for_test(
+    document, readme_spec, "README.md", readme_payload, mod_date,
+  )
+  let changes_spec = document.direct(entries[1].1)
+  pdf_async_io_assert_cpdf_source_portfolio_entry_for_test(
+    document, changes_spec, "Changes.txt", changes_payload, mod_date,
+  )
+  guard document.lookup_direct(
+      pdf_async_io_name_for_test("/Collection"),
+      catalog,
+    )
+    is Some(collection) else {
+    fail("expected cpdf source portfolio collection")
+  }
+  @test.assert_eq(
+    document.lookup_direct(pdf_async_io_name_for_test("/View"), collection),
+    Some(PdfNameObject(pdf_async_io_name_for_test("/T"))),
+  )
+}
+
+///|
+async test "async file wrappers attach and portfolio cpdf source files" {
+  let hello_path = pdf_async_io_repo_path_for_test(
+    ".repos/cpdf-source/hello.pdf",
+  )
+  let readme_path = pdf_async_io_repo_path_for_test(
+    ".repos/cpdf-source/README.md",
+  )
+  let changes_path = pdf_async_io_repo_path_for_test(
+    ".repos/cpdf-source/Changes.txt",
+  )
+  if @fs.exists(hello_path) &&
+    @fs.exists(readme_path) &&
+    @fs.exists(changes_path) {
+    let readme_payload = @fs.read_file(readme_path).binary()
+    let changes_payload = @fs.read_file(changes_path).binary()
+    let base = pdf_read_document_from_file(hello_path)
+    @test.assert_eq(try! base.endpage(), 1)
+    @test.assert_eq(
+      @ascii.decode_lossy(try! base.test_extract_text([1])).contains(
+        "Hello, World!",
+      ),
+      true,
+    )
+
+    let attached = try! pdf_attach_file_from_path(
+      base,
+      readme_path,
+      relationship=Some("Source"),
+      description=Some("cpdf source README"),
+    )
+    pdf_async_io_assert_cpdf_source_attachment_for_test(
+      attached,
+      readme_payload,
+      (1, 4),
+    )
+    let attached_path = pdf_async_io_test_path_for_test(
+      "cpdf_source_attachment",
+    )
+    pdf_async_io_remove_if_exists_for_test(attached_path)
+    pdf_write_document_to_file_with_compressed_xref_stream(
+      attached, attached_path,
+    )
+    let attached_reparsed = pdf_read_document_from_file(attached_path)
+    pdf_async_io_remove_if_exists_for_test(attached_path)
+    pdf_async_io_assert_cpdf_source_attachment_for_test(
+      attached_reparsed,
+      readme_payload,
+      (1, 5),
+    )
+
+    let dumped_path = pdf_async_io_build_dir_for_test() + "/README.md"
+    pdf_async_io_remove_if_exists_for_test(dumped_path)
+    pdf_dump_attached_files_to_directory(
+      attached_reparsed,
+      pdf_async_io_build_dir_for_test(),
+    )
+    @test.assert_eq(@fs.read_file(dumped_path).binary(), readme_payload)
+    pdf_async_io_remove_if_exists_for_test(dumped_path)
+
+    let mod_date = @ascii.encode("D:20240102030405")
+    let portfolio = try! pdf_portfolio_from_files(
+      base,
+      [
+        pdf_portfolio_file_entry(
+          readme_path,
+          relationship=Some("Source"),
+          description=Some("cpdf source README"),
+        ),
+        pdf_portfolio_file_entry(changes_path),
+      ],
+      mod_date=Some(mod_date),
+    )
+    pdf_async_io_assert_cpdf_source_portfolio_for_test(
+      portfolio, readme_path, readme_payload, changes_path, changes_payload, mod_date,
+    )
+    let portfolio_path = pdf_async_io_test_path_for_test(
+      "cpdf_source_portfolio",
+    )
+    let recovered_path = pdf_async_io_test_path_for_test(
+      "cpdf_source_portfolio_recovered",
+    )
+    pdf_async_io_remove_if_exists_for_test(portfolio_path)
+    pdf_async_io_remove_if_exists_for_test(recovered_path)
+    pdf_write_document_to_file_with_compressed_xref_stream(
+      portfolio, portfolio_path,
+    )
+    let portfolio_reparsed = pdf_read_document_from_file(portfolio_path)
+    pdf_async_io_assert_cpdf_source_portfolio_for_test(
+      portfolio_reparsed, readme_path, readme_payload, changes_path, changes_payload,
+      mod_date,
+    )
+    @fs.write_file(
+      recovered_path,
+      pdf_async_io_corrupt_final_startxref_pointer_for_test(
+        @fs.read_file(portfolio_path).binary(),
+      ),
+      create=0o644,
+    )
+    let recovered = pdf_read_document_from_file(recovered_path)
+    @test.assert_eq(recovered.first_xref(), 0)
+    pdf_async_io_assert_cpdf_source_portfolio_for_test(
+      recovered, readme_path, readme_payload, changes_path, changes_payload, mod_date,
+    )
+    pdf_async_io_remove_if_exists_for_test(portfolio_path)
+    pdf_async_io_remove_if_exists_for_test(recovered_path)
+  }
+}
+
+///|
 async test "async file wrappers dump attached files to a directory" {
   let directory = pdf_async_io_build_dir_for_test()
   let document_output = directory + "/doc.txt"

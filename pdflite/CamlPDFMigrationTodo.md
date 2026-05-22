@@ -7270,6 +7270,20 @@ Current backend snapshot:
   2339/2339 tests passing. `moon info && moon fmt` reports no pending interface
   or formatting work, and `moon check --target all --warn-list +73` reports the
   known warning-73/main-package baseline with 10 warnings and 0 errors.~~
+- [x] ~~Add the next source-corpus async attach/portfolio file-wrapper slice:
+  the native `async_io` package now gates `.repos/cpdf-source/hello.pdf`,
+  `README.md`, and `Changes.txt` through `pdf_attach_file_from_path`,
+  `pdf_dump_attached_files_to_directory`, and `pdf_portfolio_from_files`. The
+  gate verifies source text extraction, document-level attachment metadata and
+  dumped bytes, portfolio embedded-file name trees and payload streams,
+  compressed xref-stream file write/read, and bad-final-`startxref` file
+  reconstruction preserving the portfolio payloads. `moon check --target native
+  async_io --warn-list +73` passes, the focused source async attach/portfolio
+  test reports 1/1 test passing, `moon test --target native async_io` reports
+  89/89 tests passing, and `moon test --target native` reports 2340/2340 tests
+  passing. `moon info && moon fmt` reports no pending interface or formatting
+  work, and `moon check --target all --warn-list +73` reports the known
+  warning-73/main-package baseline with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.
