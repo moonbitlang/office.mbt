@@ -842,6 +842,8 @@ pub let pdf_metadata_adobe : String
 
 pub let pdf_metadata_adobe_namespace : String
 
+pub fn pdf_metadata_bytes_of_xmltree(PdfMetadataXmlDocument) -> Bytes
+
 pub let pdf_metadata_dc : String
 
 pub let pdf_metadata_dc_namespace : String
@@ -873,6 +875,12 @@ pub let pdf_metadata_pdfxid_namespace : String
 pub let pdf_metadata_rdf : String
 
 pub let pdf_metadata_rdf_namespace : String
+
+pub fn pdf_metadata_string_of_xmltree(PdfMetadataXmlTree) -> String
+
+pub fn pdf_metadata_xmltree_get_data_for(String, String, PdfMetadataXmlTree) -> String?
+
+pub fn pdf_metadata_xmltree_of_bytes(BytesView) -> PdfMetadataXmlDocument raise @core.PdfError
 
 pub let pdf_metadata_xmp : String
 
@@ -3309,6 +3317,32 @@ pub(all) enum PdfMetadataEncoding {
   PdfMetadataRaw
   PdfMetadataUTF8
   PdfMetadataStripped
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfMetadataXmlAttribute {
+  name : PdfMetadataXmlName
+  value : String
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfMetadataXmlDocument {
+  dtd : String?
+  tree : PdfMetadataXmlTree
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfMetadataXmlName {
+  uri : String
+  local_name : String
+  prefix : String?
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfMetadataXmlTag {
+  name : PdfMetadataXmlName
+  attributes : Array[PdfMetadataXmlAttribute]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfMetadataXmlTree {
+  PdfMetadataXmlElement(PdfMetadataXmlTag, Array[PdfMetadataXmlTree])
+  PdfMetadataXmlData(String)
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfMissingFontEntry {

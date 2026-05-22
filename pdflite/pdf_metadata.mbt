@@ -300,6 +300,43 @@ pub let pdf_metadata_pdfuaid : String = pdf_metadata_pdfuaid_namespace
 pub let pdf_metadata_pdfvtid : String = pdf_metadata_pdfvtid_namespace
 
 ///|
+pub(all) struct PdfMetadataXmlName {
+  uri : String
+  local_name : String
+  prefix : String?
+} derive(Debug, Eq, ToJson)
+
+///|
+pub(all) struct PdfMetadataXmlAttribute {
+  name : PdfMetadataXmlName
+  value : String
+} derive(Debug, Eq, ToJson)
+
+///|
+pub(all) struct PdfMetadataXmlTag {
+  name : PdfMetadataXmlName
+  attributes : Array[PdfMetadataXmlAttribute]
+} derive(Debug, Eq, ToJson)
+
+///|
+pub(all) enum PdfMetadataXmlTree {
+  PdfMetadataXmlElement(PdfMetadataXmlTag, Array[PdfMetadataXmlTree])
+  PdfMetadataXmlData(String)
+} derive(Debug, Eq, ToJson)
+
+///|
+pub(all) struct PdfMetadataXmlDocument {
+  dtd : String?
+  tree : PdfMetadataXmlTree
+} derive(Debug, Eq, ToJson)
+
+///|
+let pdf_metadata_xml_uri : String = "http://www.w3.org/XML/1998/namespace"
+
+///|
+let pdf_metadata_xmlns_uri : String = "http://www.w3.org/2000/xmlns/"
+
+///|
 let pdf_metadata_xmp_template : String =
   #|<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
   #|<x:xmpmeta xmlns:x="adobe:ns:meta/">
@@ -949,33 +986,467 @@ fn pdf_metadata_push_xml_codepoint(
 }
 
 ///|
+fn pdf_metadata_xml_codepoint_is_space(codepoint : Int) -> Bool {
+  codepoint == 9 || codepoint == 10 || codepoint == 13 || codepoint == 32
+}
+
+///|
 fn pdf_metadata_decode_xml_text(value : BytesView) -> String? {
   let trimmed = pdf_metadata_trim_xml_text(value)
   let output : Array[Byte] = []
+  let mut pending_space = false
   let mut index = 0
   while index < trimmed.length() {
     if trimmed[index].to_int() == 38 {
       let semicolon = pdf_metadata_find_byte(trimmed, index + 1, 59)
       if semicolon > index {
         match pdf_metadata_xml_entity_codepoint(trimmed[index + 1:semicolon]) {
-          Some(codepoint) if pdf_metadata_push_xml_codepoint(output, codepoint) =>
-            index = semicolon + 1
+          Some(codepoint) =>
+            if pdf_metadata_xml_codepoint_is_space(codepoint) {
+              if output.length() > 0 {
+                pending_space = true
+              }
+              index = semicolon + 1
+            } else {
+              if pending_space {
+                output.push(32)
+                pending_space = false
+              }
+              if pdf_metadata_push_xml_codepoint(output, codepoint) {
+                index = semicolon + 1
+              } else {
+                output.push(trimmed[index])
+                index += 1
+              }
+            }
           _ => {
+            if pending_space {
+              output.push(32)
+              pending_space = false
+            }
             output.push(trimmed[index])
             index += 1
           }
         }
       } else {
+        if pending_space {
+          output.push(32)
+          pending_space = false
+        }
         output.push(trimmed[index])
         index += 1
       }
+    } else if pdf_metadata_is_xml_space(trimmed[index]) {
+      if output.length() > 0 {
+        pending_space = true
+      }
+      index += 1
     } else {
+      if pending_space {
+        output.push(32)
+        pending_space = false
+      }
       output.push(trimmed[index])
       index += 1
     }
   }
   let text = @utf8.decode(Bytes::from_array(output)) catch { _ => return None }
   Some(text)
+}
+
+///|
+fn pdf_metadata_xml_decode_name(value : BytesView) -> String raise PdfError {
+  @utf8.decode(value) catch {
+    _ => raise InvalidUTF8
+  }
+}
+
+///|
+fn pdf_metadata_xml_is_name_boundary(byte : Byte) -> Bool {
+  let value = byte.to_int()
+  value == 9 ||
+  value == 10 ||
+  value == 13 ||
+  value == 32 ||
+  value == 47 ||
+  value == 61 ||
+  value == 62
+}
+
+///|
+fn pdf_metadata_xml_skip_space(data : BytesView, start : Int) -> Int {
+  let mut index = start
+  while index < data.length() && pdf_metadata_is_xml_space(data[index]) {
+    index += 1
+  }
+  index
+}
+
+///|
+fn pdf_metadata_xml_read_name(
+  data : BytesView,
+  start : Int,
+) -> (Bytes, Int) raise PdfError {
+  let mut index = start
+  while index < data.length() && !pdf_metadata_xml_is_name_boundary(data[index]) {
+    index += 1
+  }
+  guard index > start else { raise BadText }
+  (data[start:index].to_owned(), index)
+}
+
+///|
+fn pdf_metadata_xml_uri_lookup(
+  context : ArrayView[(String, String)],
+  prefix : String,
+) -> String? {
+  for index = context.length() - 1; index >= 0; index = index - 1 {
+    if context[index].0 == prefix {
+      break Some(context[index].1)
+    }
+  } nobreak {
+    None
+  }
+}
+
+///|
+fn pdf_metadata_xml_resolve_name(
+  qname : BytesView,
+  is_attribute : Bool,
+  context : ArrayView[(String, String)],
+) -> PdfMetadataXmlName raise PdfError {
+  let colon = pdf_metadata_find_byte(qname, 0, 58)
+  if colon >= 0 {
+    let prefix = pdf_metadata_xml_decode_name(qname[:colon])
+    let local_name = pdf_metadata_xml_decode_name(qname[colon + 1:])
+    let uri = if prefix == "xml" {
+      pdf_metadata_xml_uri
+    } else if prefix == "xmlns" {
+      pdf_metadata_xmlns_uri
+    } else {
+      match pdf_metadata_xml_uri_lookup(context, prefix) {
+        Some(uri) => uri
+        None => raise BadText
+      }
+    }
+    { uri, local_name, prefix: Some(prefix) }
+  } else {
+    let local_name = pdf_metadata_xml_decode_name(qname)
+    let uri = if is_attribute {
+      if local_name == "xmlns" {
+        pdf_metadata_xmlns_uri
+      } else {
+        ""
+      }
+    } else {
+      match pdf_metadata_xml_uri_lookup(context, "") {
+        Some(uri) => uri
+        None => ""
+      }
+    }
+    { uri, local_name, prefix: None }
+  }
+}
+
+///|
+fn pdf_metadata_xml_parse_raw_attributes(
+  data : BytesView,
+  start : Int,
+) -> Array[(Bytes, String)] raise PdfError {
+  let attributes : Array[(Bytes, String)] = []
+  let mut index = start
+  while index < data.length() {
+    index = pdf_metadata_xml_skip_space(data, index)
+    if index >= data.length() {
+      break
+    }
+    let (name, after_name) = pdf_metadata_xml_read_name(data, index)
+    index = pdf_metadata_xml_skip_space(data, after_name)
+    guard index < data.length() && data[index].to_int() == 61 else {
+      raise BadText
+    }
+    index = pdf_metadata_xml_skip_space(data, index + 1)
+    guard index < data.length() &&
+      (data[index].to_int() == 34 || data[index].to_int() == 39) else {
+      raise BadText
+    }
+    let quote = data[index].to_int()
+    let value_start = index + 1
+    let value_end = pdf_metadata_find_byte(data, value_start, quote)
+    guard value_end >= 0 else { raise BadText }
+    let value = match
+      pdf_metadata_decode_xml_text(data[value_start:value_end]) {
+      Some(value) => value
+      None => raise InvalidUTF8
+    }
+    attributes.push((name, value))
+    index = value_end + 1
+  }
+  attributes
+}
+
+///|
+fn pdf_metadata_xml_context_with_attributes(
+  context : ArrayView[(String, String)],
+  attributes : ArrayView[(Bytes, String)],
+) -> Array[(String, String)] raise PdfError {
+  let output = context.to_owned()
+  for attribute in attributes {
+    let name = attribute.0[:]
+    if name.length() == 5 && pdf_metadata_view_matches_at(name, 0, b"xmlns") {
+      output.push(("", attribute.1))
+    } else if name.length() > 6 &&
+      pdf_metadata_view_matches_at(name, 0, b"xmlns:") {
+      output.push((pdf_metadata_xml_decode_name(name[6:]), attribute.1))
+    }
+  }
+  output
+}
+
+///|
+fn pdf_metadata_xml_tag_from_raw(
+  name : BytesView,
+  attributes : ArrayView[(Bytes, String)],
+  context : ArrayView[(String, String)],
+) -> PdfMetadataXmlTag raise PdfError {
+  let resolved_attributes : Array[PdfMetadataXmlAttribute] = []
+  for attribute in attributes {
+    resolved_attributes.push({
+      name: pdf_metadata_xml_resolve_name(attribute.0[:], true, context),
+      value: attribute.1,
+    })
+  }
+  {
+    name: pdf_metadata_xml_resolve_name(name, false, context),
+    attributes: resolved_attributes,
+  }
+}
+
+///|
+fn pdf_metadata_xml_find_tag_end(
+  data : BytesView,
+  start : Int,
+) -> Int raise PdfError {
+  let mut index = start
+  let mut quote = 0
+  while index < data.length() {
+    let value = data[index].to_int()
+    if quote != 0 {
+      if value == quote {
+        quote = 0
+      }
+    } else if value == 34 || value == 39 {
+      quote = value
+    } else if value == 62 {
+      return index
+    }
+    index += 1
+  }
+  raise BadText
+}
+
+///|
+fn pdf_metadata_xml_is_self_closing_tag(data : BytesView, end : Int) -> Bool {
+  let mut index = end - 1
+  while index >= 0 && pdf_metadata_is_xml_space(data[index]) {
+    index -= 1
+  }
+  index >= 0 && data[index].to_int() == 47
+}
+
+///|
+fn pdf_metadata_xml_parse_start_tag(
+  data : BytesView,
+  start : Int,
+  context : ArrayView[(String, String)],
+) -> (String, PdfMetadataXmlTag, Array[(String, String)], Bool, Int) raise PdfError {
+  guard start < data.length() && data[start].to_int() == 60 else {
+    raise BadText
+  }
+  let tag_end = pdf_metadata_xml_find_tag_end(data, start + 1)
+  let self_closing = pdf_metadata_xml_is_self_closing_tag(data, tag_end)
+  let body_end = if self_closing {
+    let mut index = tag_end - 1
+    while index >= start + 1 && pdf_metadata_is_xml_space(data[index]) {
+      index -= 1
+    }
+    index
+  } else {
+    tag_end
+  }
+  guard body_end > start else { raise BadText }
+  let body = data[start + 1:body_end]
+  let body_start = pdf_metadata_xml_skip_space(body, 0)
+  let (qname, after_name) = pdf_metadata_xml_read_name(body, body_start)
+  let raw_attributes = pdf_metadata_xml_parse_raw_attributes(body, after_name)
+  let next_context = pdf_metadata_xml_context_with_attributes(
+    context, raw_attributes,
+  )
+  let tag = pdf_metadata_xml_tag_from_raw(
+    qname[:],
+    raw_attributes,
+    next_context,
+  )
+  (
+    pdf_metadata_xml_decode_name(qname[:]),
+    tag,
+    next_context,
+    self_closing,
+    tag_end + 1,
+  )
+}
+
+///|
+fn pdf_metadata_xml_parse_close_tag(
+  data : BytesView,
+  start : Int,
+) -> (String, Int) raise PdfError {
+  guard start + 1 < data.length() &&
+    data[start].to_int() == 60 &&
+    data[start + 1].to_int() == 47 else {
+    raise BadText
+  }
+  let end = pdf_metadata_find_byte(data, start + 2, 62)
+  guard end >= 0 else { raise BadText }
+  let name = match pdf_metadata_decode_xml_text(data[start + 2:end]) {
+    Some(name) => name
+    None => raise InvalidUTF8
+  }
+  (name, end + 1)
+}
+
+///|
+fn pdf_metadata_xml_skip_processing_instruction(
+  data : BytesView,
+  start : Int,
+) -> Int raise PdfError {
+  let end = pdf_metadata_find_bytes_from(data, start + 2, b"?>")
+  guard end >= 0 else { raise BadText }
+  end + 2
+}
+
+///|
+fn pdf_metadata_xml_skip_comment(
+  data : BytesView,
+  start : Int,
+) -> Int raise PdfError {
+  let end = pdf_metadata_find_bytes_from(data, start + 4, b"-->")
+  guard end >= 0 else { raise BadText }
+  end + 3
+}
+
+///|
+fn pdf_metadata_xml_skip_misc(
+  data : BytesView,
+  start : Int,
+) -> Int raise PdfError {
+  let mut index = start
+  let mut done = false
+  while !done {
+    index = pdf_metadata_xml_skip_space(data, index)
+    if index + 1 < data.length() &&
+      pdf_metadata_view_matches_at(data, index, b"<?") {
+      index = pdf_metadata_xml_skip_processing_instruction(data, index)
+    } else if index + 3 < data.length() &&
+      pdf_metadata_view_matches_at(data, index, b"<!--") {
+      index = pdf_metadata_xml_skip_comment(data, index)
+    } else {
+      done = true
+    }
+  }
+  index
+}
+
+///|
+fn pdf_metadata_xml_parse_dtd(
+  data : BytesView,
+  start : Int,
+) -> (String?, Int) raise PdfError {
+  let index = pdf_metadata_xml_skip_misc(data, start)
+  if index + 8 < data.length() &&
+    pdf_metadata_view_matches_at(data, index, b"<!DOCTYPE") {
+    let end = pdf_metadata_xml_find_tag_end(data, index + 2)
+    let text = @utf8.decode(data[index:end + 1]) catch {
+      _ => raise InvalidUTF8
+    }
+    (Some(text), end + 1)
+  } else {
+    (None, index)
+  }
+}
+
+///|
+fn pdf_metadata_xml_parse_element(
+  data : BytesView,
+  start : Int,
+  context : ArrayView[(String, String)],
+) -> (PdfMetadataXmlTree, Int) raise PdfError {
+  let (qualified_name, tag, child_context, self_closing, after_tag) = pdf_metadata_xml_parse_start_tag(
+    data, start, context,
+  )
+  if self_closing {
+    (PdfMetadataXmlElement(tag, []), after_tag)
+  } else {
+    let children : Array[PdfMetadataXmlTree] = []
+    let mut index = after_tag
+    let mut closed = false
+    while !closed {
+      guard index < data.length() else { raise BadText }
+      if pdf_metadata_view_matches_at(data, index, b"</") {
+        let (close_name, after_close) = pdf_metadata_xml_parse_close_tag(
+          data, index,
+        )
+        guard close_name == qualified_name else { raise BadText }
+        index = after_close
+        closed = true
+      } else if pdf_metadata_view_matches_at(data, index, b"<!--") {
+        index = pdf_metadata_xml_skip_comment(data, index)
+      } else if pdf_metadata_view_matches_at(data, index, b"<?") {
+        index = pdf_metadata_xml_skip_processing_instruction(data, index)
+      } else if data[index].to_int() == 60 {
+        let (child, after_child) = pdf_metadata_xml_parse_element(
+          data, index, child_context,
+        )
+        children.push(child)
+        index = after_child
+      } else {
+        let next_tag = pdf_metadata_find_byte(data, index, 60)
+        let data_end = if next_tag >= 0 { next_tag } else { data.length() }
+        match pdf_metadata_decode_xml_text(data[index:data_end]) {
+          Some(text) if text != "" => children.push(PdfMetadataXmlData(text))
+          Some(_) => ()
+          None => raise InvalidUTF8
+        }
+        index = data_end
+      }
+    }
+    (PdfMetadataXmlElement(tag, children), index)
+  }
+}
+
+///|
+/// Parse metadata XML bytes into a cpdfmetadata-style XML tree.
+///
+/// This parser is intentionally scoped to the XML/XMP subset used by PDF
+/// metadata: elements, attributes, namespaces, comments, processing
+/// instructions, optional DTD text, text data, and predefined or numeric XML
+/// entities.
+pub fn pdf_metadata_xmltree_of_bytes(
+  metadata : BytesView,
+) -> PdfMetadataXmlDocument raise PdfError {
+  let (dtd, after_dtd) = pdf_metadata_xml_parse_dtd(metadata, 0)
+  let root_start = pdf_metadata_xml_skip_misc(metadata, after_dtd)
+  guard root_start < metadata.length() && metadata[root_start].to_int() == 60 else {
+    raise BadText
+  }
+  let (tree, after_tree) = pdf_metadata_xml_parse_element(
+    metadata,
+    root_start,
+    [],
+  )
+  let end = pdf_metadata_xml_skip_misc(metadata, after_tree)
+  guard end == metadata.length() else { raise BadText }
+  { dtd, tree }
 }
 
 ///|
@@ -1042,12 +1513,12 @@ fn pdf_metadata_add_unique(values : Array[String], value : String) -> Unit {
 ///|
 fn pdf_metadata_namespace_prefixes(
   data : BytesView,
-  xml_namespace : String,
+  xml_uri : String,
   fallback : String,
 ) -> Array[String] {
   let prefixes : Array[String] = []
   pdf_metadata_add_unique(prefixes, fallback)
-  let namespace_bytes = @ascii.encode(xml_namespace)
+  let namespace_bytes = @ascii.encode(xml_uri)
   let xmlns = [120, 109, 108, 110, 115, 58]
   let mut search_start = 0
   while search_start < data.length() {
@@ -1249,13 +1720,11 @@ fn pdf_metadata_extract_xmp_element(
 ///|
 fn pdf_metadata_get_xmp_data(
   data : BytesView,
-  xml_namespace : String,
+  xml_uri : String,
   fallback_prefix : String,
   name : String,
 ) -> String? {
-  let prefixes = pdf_metadata_namespace_prefixes(
-    data, xml_namespace, fallback_prefix,
-  )
+  let prefixes = pdf_metadata_namespace_prefixes(data, xml_uri, fallback_prefix)
   for prefix in prefixes {
     match pdf_metadata_extract_xmp_attribute(data, prefix, name) {
       Some(value) => break Some(value)
@@ -1275,16 +1744,233 @@ fn pdf_metadata_get_xmp_data(
 /// name. This is the tree-free counterpart of cpdfmetadata's `get_data_for`,
 /// covering namespace aliases, attributes, simple element text, and RDF lists.
 pub fn pdf_metadata_get_data_for_bytes(
-  xml_namespace : String,
+  xml_uri : String,
   name : String,
   metadata : BytesView,
 ) -> String? {
   pdf_metadata_get_xmp_data(
     metadata,
-    xml_namespace,
-    pdf_metadata_namespace_fallback_prefix(xml_namespace),
+    xml_uri,
+    pdf_metadata_namespace_fallback_prefix(xml_uri),
     name,
   )
+}
+
+///|
+fn pdf_metadata_xml_string_of_name(name : PdfMetadataXmlName) -> String {
+  "NAME |" + name.uri + "| |" + name.local_name + "|"
+}
+
+///|
+fn pdf_metadata_xml_string_of_attribute(
+  attribute : PdfMetadataXmlAttribute,
+) -> String {
+  "ATTRNAME |" +
+  attribute.name.uri +
+  "| |" +
+  attribute.name.local_name +
+  "|, STR {" +
+  attribute.value +
+  "}"
+}
+
+///|
+fn pdf_metadata_xml_string_of_attributes(
+  attributes : ArrayView[PdfMetadataXmlAttribute],
+) -> String {
+  let mut output = ""
+  for attribute in attributes {
+    output = output + " " + pdf_metadata_xml_string_of_attribute(attribute)
+  }
+  output
+}
+
+///|
+fn pdf_metadata_xml_string_of_trees(
+  trees : ArrayView[PdfMetadataXmlTree],
+) -> String {
+  let mut output = ""
+  for tree in trees {
+    output = output + " " + pdf_metadata_string_of_xmltree(tree)
+  }
+  output
+}
+
+///|
+/// Return cpdfmetadata's debug string representation for an XML tree.
+pub fn pdf_metadata_string_of_xmltree(tree : PdfMetadataXmlTree) -> String {
+  match tree {
+    PdfMetadataXmlData(data) => "D {" + data + "}"
+    PdfMetadataXmlElement(tag, children) =>
+      "E (" +
+      pdf_metadata_xml_string_of_name(tag.name) +
+      ", ATTRIBUTES {" +
+      pdf_metadata_xml_string_of_attributes(tag.attributes) +
+      "}, " +
+      pdf_metadata_xml_string_of_trees(children) +
+      ")"
+  }
+}
+
+///|
+fn pdf_metadata_xml_collect_list_items(tree : PdfMetadataXmlTree) -> String {
+  match tree {
+    PdfMetadataXmlElement(tag, children) =>
+      if tag.name.uri == pdf_metadata_rdf_namespace &&
+        (
+          tag.name.local_name == "Alt" ||
+          tag.name.local_name == "Seq" ||
+          tag.name.local_name == "Bag"
+        ) {
+        let values : Array[String] = []
+        for child in children {
+          match child {
+            PdfMetadataXmlElement(li_tag, [PdfMetadataXmlData(data)]) =>
+              if li_tag.name.uri == pdf_metadata_rdf_namespace &&
+                li_tag.name.local_name == "li" {
+                values.push(data)
+              }
+            _ => ()
+          }
+        }
+        pdf_metadata_combine_list_items(values)
+      } else {
+        ""
+      }
+    _ => ""
+  }
+}
+
+///|
+fn pdf_metadata_xml_collect_list_items_all(
+  trees : ArrayView[PdfMetadataXmlTree],
+) -> String? {
+  for tree in trees {
+    match tree {
+      PdfMetadataXmlElement(_, _) =>
+        break Some(pdf_metadata_xml_collect_list_items(tree))
+      _ => ()
+    }
+  } nobreak {
+    None
+  }
+}
+
+///|
+fn pdf_metadata_xmltree_attribute_data_for(
+  uri : String,
+  name : String,
+  attributes : ArrayView[PdfMetadataXmlAttribute],
+) -> String? {
+  for attribute in attributes {
+    if attribute.name.uri == uri && attribute.name.local_name == name {
+      break Some(attribute.value)
+    }
+  } nobreak {
+    None
+  }
+}
+
+///|
+/// Return the first XML-tree value matching a namespace URI and local name,
+/// following cpdfmetadata's `get_data_for` tree traversal.
+pub fn pdf_metadata_xmltree_get_data_for(
+  xml_uri : String,
+  name : String,
+  tree : PdfMetadataXmlTree,
+) -> String? {
+  match tree {
+    PdfMetadataXmlData(_) => None
+    PdfMetadataXmlElement(tag, children) =>
+      if children.length() == 0 {
+        pdf_metadata_xmltree_attribute_data_for(xml_uri, name, tag.attributes)
+      } else if tag.name.uri == xml_uri && tag.name.local_name == name {
+        match children {
+          [PdfMetadataXmlData(data)] => Some(data)
+          _ => pdf_metadata_xml_collect_list_items_all(children)
+        }
+      } else {
+        for child in children {
+          match pdf_metadata_xmltree_get_data_for(xml_uri, name, child) {
+            Some(value) => break Some(value)
+            None => ()
+          }
+        } nobreak {
+          None
+        }
+      }
+  }
+}
+
+///|
+fn pdf_metadata_xml_escaped_text(text : String) -> String {
+  text
+  .replace(old="&", new="&amp;")
+  .replace(old="<", new="&lt;")
+  .replace(old=">", new="&gt;")
+}
+
+///|
+fn pdf_metadata_xml_escaped_attribute(text : String) -> String {
+  pdf_metadata_xml_escaped_text(text)
+  .replace(old="\"", new="&quot;")
+  .replace(old="'", new="&apos;")
+}
+
+///|
+fn pdf_metadata_xml_qualified_name(name : PdfMetadataXmlName) -> String {
+  match name.prefix {
+    Some(prefix) if prefix != "" => prefix + ":" + name.local_name
+    _ => name.local_name
+  }
+}
+
+///|
+fn pdf_metadata_xmltree_push_bytes(
+  output : Array[String],
+  tree : PdfMetadataXmlTree,
+) -> Unit {
+  match tree {
+    PdfMetadataXmlData(data) => output.push(pdf_metadata_xml_escaped_text(data))
+    PdfMetadataXmlElement(tag, children) => {
+      output.push("<")
+      output.push(pdf_metadata_xml_qualified_name(tag.name))
+      for attribute in tag.attributes {
+        output.push(" ")
+        output.push(pdf_metadata_xml_qualified_name(attribute.name))
+        output.push("=\"")
+        output.push(pdf_metadata_xml_escaped_attribute(attribute.value))
+        output.push("\"")
+      }
+      if children.length() == 0 {
+        output.push("/>")
+      } else {
+        output.push(">")
+        for child in children {
+          pdf_metadata_xmltree_push_bytes(output, child)
+        }
+        output.push("</")
+        output.push(pdf_metadata_xml_qualified_name(tag.name))
+        output.push(">")
+      }
+    }
+  }
+}
+
+///|
+/// Serialize a metadata XML-tree document to UTF-8 XML bytes.
+///
+/// Like cpdfmetadata's `bytes_of_xmltree`, this omits an XML declaration.
+pub fn pdf_metadata_bytes_of_xmltree(
+  document : PdfMetadataXmlDocument,
+) -> PdfBytes {
+  let output : Array[String] = []
+  match document.dtd {
+    Some(dtd) if dtd != "" => output.push(dtd)
+    _ => ()
+  }
+  pdf_metadata_xmltree_push_bytes(output, document.tree)
+  @utf8.encode(output.join(""))
 }
 
 ///|
@@ -1568,15 +2254,13 @@ fn pdf_metadata_rewrite_xmp_element_prefix(
 ///|
 fn pdf_metadata_rewrite_xmp_field(
   data : BytesView,
-  xml_namespace : String,
+  xml_uri : String,
   fallback_prefix : String,
   field : String,
   replacement : String,
 ) -> PdfBytes {
   let mut output = data.to_owned()
-  let prefixes = pdf_metadata_namespace_prefixes(
-    data, xml_namespace, fallback_prefix,
-  )
+  let prefixes = pdf_metadata_namespace_prefixes(data, xml_uri, fallback_prefix)
   for prefix in prefixes {
     let (rewritten, _) = pdf_metadata_rewrite_xmp_element_prefix(
       output, prefix, field, replacement,
@@ -1884,22 +2568,22 @@ fn pdf_metadata_push_if_some(values : Array[String], value : String?) -> Unit {
 }
 
 ///|
-fn pdf_metadata_namespace_fallback_prefix(xml_namespace : String) -> String {
-  if xml_namespace == pdf_metadata_adobe_namespace {
+fn pdf_metadata_namespace_fallback_prefix(xml_uri : String) -> String {
+  if xml_uri == pdf_metadata_adobe_namespace {
     "pdf"
-  } else if xml_namespace == pdf_metadata_xmp_namespace {
+  } else if xml_uri == pdf_metadata_xmp_namespace {
     "xmp"
-  } else if xml_namespace == pdf_metadata_dc_namespace {
+  } else if xml_uri == pdf_metadata_dc_namespace {
     "dc"
-  } else if xml_namespace == pdf_metadata_pdfuaid_namespace {
+  } else if xml_uri == pdf_metadata_pdfuaid_namespace {
     "pdfuaid"
-  } else if xml_namespace == pdf_metadata_pdfe_namespace {
+  } else if xml_uri == pdf_metadata_pdfe_namespace {
     "pdfe"
-  } else if xml_namespace == pdf_metadata_pdfaid_namespace {
+  } else if xml_uri == pdf_metadata_pdfaid_namespace {
     "pdfaid"
-  } else if xml_namespace == pdf_metadata_pdfxid_namespace {
+  } else if xml_uri == pdf_metadata_pdfxid_namespace {
     "pdfxid"
-  } else if xml_namespace == pdf_metadata_pdfvtid_namespace {
+  } else if xml_uri == pdf_metadata_pdfvtid_namespace {
     "pdfvtid"
   } else {
     ""

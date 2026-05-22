@@ -27,8 +27,9 @@ Current estimate:
   Form XObject stamping,
   composition reporting, core metadata APIs, XMP metadata-date rewriting, XMP
   info synchronization, XMP metadata creation, XMP RDF list extraction,
-  XMP/document info JSON reporting, cpdfmetadata namespace/get-data helper
-  parity and XML entity decoding, redaction annotation bounding-box overlays,
+  XMP/document info JSON reporting, cpdfmetadata namespace/get-data/XML-tree
+  helper parity and XML entity/whitespace decoding, redaction annotation
+  bounding-box overlays,
   cpdfua Matterhorn content/role-map/XMP/viewer-preference/optional-content/
   media-clip/file-attachment/PrinterMark/reference-XObject/MCID Form XObject/
   Type0 CIDSystemInfo/CIDToGIDMap/CMap-name/WMode/font-file no-op/TrueType
@@ -41,9 +42,9 @@ Current estimate:
 
 Current backend snapshot:
 
-- Native: full suite passes on MoonBit 0.9.3, currently 2352/2352 tests.
+- Native: full suite passes on MoonBit 0.9.3, currently 2353/2353 tests.
 - WasmGC and JavaScript: full portable non-native test suites pass on MoonBit
-  0.9.3, currently 2017/2017 on each backend after the latest source-corpus
+  0.9.3, currently 2018/2018 on each backend after the latest source-corpus
   recovery gates.
 - Wasm: current plain-Wasm smoke validation passes at 41/41 tests after
   filtering root's heavy package-level test files and the Markdown package
@@ -7566,6 +7567,21 @@ Current backend snapshot:
   native` reports 2352/2352; `moon test --target wasm-gc` and `moon test
   --target js` report 2017/2017 each; `moon test --target wasm` reports 41/41;
   `moon info`, `moon fmt`, and `git diff --check` are clean.~~
+- [x] ~~Continue cpdfmetadata API parity with the XML-tree helpers from
+  `.repos/cpdf-source/cpdfmetadata.mli`: added public XML name/tag/attribute/
+  tree/document types plus `pdf_metadata_xmltree_of_bytes`,
+  `pdf_metadata_string_of_xmltree`, `pdf_metadata_xmltree_get_data_for`, and
+  `pdf_metadata_bytes_of_xmltree`. The parser resolves namespace declarations,
+  skips comments and processing instructions, preserves optional DTD text,
+  normalizes XML whitespace like `Cpdfxmlm` with `strip:true`, decodes named and
+  numeric entities, and mirrors cpdf's attribute/text/RDF-list lookup behavior.
+  Coverage pins attribute lookup, RDF Bag list collection, debug string output,
+  and serialization without an XML declaration. Validation on MoonBit 0.9.3:
+  `moon check --target all --warn-list +73` passes with the known
+  `markdown/cmd` future notice; `moon test --target native` reports 2353/2353;
+  `moon test --target wasm-gc` and `moon test --target js` report 2018/2018
+  each; `moon test --target wasm` reports 41/41; `moon info`, `moon fmt`, and
+  `git diff --check` are clean.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

@@ -914,6 +914,70 @@ test "pdf_metadata_get_data_for_bytes mirrors cpdfmetadata lookup" {
 }
 
 ///|
+test "pdf_metadata XML tree helpers mirror cpdfmetadata lookup" {
+  let xmp_text =
+    #|<?xml version="1.0"?>
+    #|<!-- ignored by the tree parser -->
+    #|<x:xmpmeta xmlns:x="adobe:ns:meta/"
+    #| xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    #| xmlns:dc="http://purl.org/dc/elements/1.1/"
+    #| xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
+    #| <rdf:Description pdfaid:part='  2  '/>
+    #| <dc:subject><rdf:Bag>
+    #|  <rdf:li>alpha &lt;one&gt;</rdf:li>
+    #|  <rdf:li>beta   &#50;</rdf:li>
+    #| </rdf:Bag></dc:subject>
+    #|</x:xmpmeta>
+  let document = try! @pdflite.pdf_metadata_xmltree_of_bytes(
+    @ascii.encode(xmp_text),
+  )
+  guard document.tree is PdfMetadataXmlElement(root_tag, children) else {
+    fail("expected XML element root")
+  }
+  @test.assert_eq(root_tag.name.uri, "adobe:ns:meta/")
+  @test.assert_eq(root_tag.name.local_name, "xmpmeta")
+  @test.assert_eq(root_tag.name.prefix, Some("x"))
+  @test.assert_eq(children.length(), 2)
+  @test.assert_eq(
+    @pdflite.pdf_metadata_xmltree_get_data_for(
+      @pdflite.pdf_metadata_pdfaid,
+      "part",
+      document.tree,
+    ),
+    Some("2"),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_metadata_xmltree_get_data_for(
+      @pdflite.pdf_metadata_dc,
+      "subject",
+      document.tree,
+    ),
+    Some("alpha <one>, beta 2"),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_metadata_xmltree_get_data_for(
+      @pdflite.pdf_metadata_pdfuaid,
+      "part",
+      document.tree,
+    ),
+    None,
+  )
+  let debug = @pdflite.pdf_metadata_string_of_xmltree(document.tree)
+  @test.assert_eq(debug.contains("NAME |adobe:ns:meta/| |xmpmeta|"), true)
+  @test.assert_eq(
+    debug.contains("ATTRNAME |http://www.aiim.org/pdfa/ns/id/| |part|, STR {2}"),
+    true,
+  )
+  let serialized = try! @utf8.decode(
+    @pdflite.pdf_metadata_bytes_of_xmltree(document),
+  )
+  @test.assert_eq(serialized.contains("<x:xmpmeta"), true)
+  @test.assert_eq(serialized.contains("xmlns:pdfaid="), true)
+  @test.assert_eq(serialized.contains("pdfaid:part=\"2\""), true)
+  @test.assert_eq(serialized.contains("alpha &lt;one&gt;"), true)
+}
+
+///|
 test "PdfDocument xmp_info_json reports cpdf XMP fields" {
   let empty = try! @pdflite.pdf_minimum_valid_pdf()
   let empty_expected : Json = { "Language": null, "Subformats": [] }
