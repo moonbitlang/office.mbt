@@ -463,6 +463,10 @@ test "PdfDocument parse_bookmark_text reads cpdf plain text bookmarks" {
     try! @pdflite.pdf_parse_bookmark_text(true, source, document),
     expected,
   )
+  @test.assert_eq(
+    try! @pdflite.pdf_parse_bookmark_file(true, document, source),
+    expected,
+  )
   let updated = try! @pdflite.pdf_add_bookmarks_from_text(
     true, source, document,
   )

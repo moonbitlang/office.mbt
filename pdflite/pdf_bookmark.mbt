@@ -1087,6 +1087,16 @@ pub fn pdf_parse_bookmark_text(
 }
 
 ///|
+/// Compatibility wrapper matching cpdfbookmarks' plain `parse_bookmark_file`.
+pub fn pdf_parse_bookmark_file(
+  verify : Bool,
+  document : PdfDocument,
+  data : BytesView,
+) -> Array[PdfBookmark] raise PdfError {
+  document.parse_bookmark_text(data, verify~)
+}
+
+///|
 /// Compatibility wrapper for `PdfDocument::add_bookmarks_from_text`.
 pub fn pdf_add_bookmarks_from_text(
   verify : Bool,

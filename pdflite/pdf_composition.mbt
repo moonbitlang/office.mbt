@@ -420,6 +420,64 @@ pub fn PdfDocument::composition_json_blob(
 }
 
 ///|
+fn pdf_composition_push_utf8(output : Array[Byte], text : String) -> Unit {
+  for byte in @utf8.encode(text) {
+    output.push(byte)
+  }
+}
+
+///|
+fn pdf_composition_percent_text(percent : Double) -> String {
+  let rounded = (percent * 100.0).round().to_int()
+  let negative = rounded < 0
+  let magnitude = if negative { -rounded } else { rounded }
+  let whole = magnitude / 100
+  let fraction = magnitude % 100
+  let fraction_text = if fraction < 10 {
+    "0" + fraction.to_string()
+  } else {
+    fraction.to_string()
+  }
+  (if negative { "-" } else { "" }) + whole.to_string() + "." + fraction_text
+}
+
+///|
+fn pdf_composition_push_text_entry(
+  output : Array[Byte],
+  entry : PdfCompositionEntry,
+) -> Unit {
+  pdf_composition_push_utf8(output, entry.label)
+  pdf_composition_push_utf8(output, ": ")
+  pdf_composition_push_utf8(output, entry.bytes.to_string())
+  pdf_composition_push_utf8(output, " bytes (")
+  pdf_composition_push_utf8(output, pdf_composition_percent_text(entry.percent))
+  pdf_composition_push_utf8(output, "%)\n")
+}
+
+///|
+/// Return the text that cpdf's `show_composition` prints when `json=false`.
+pub fn PdfDocument::composition_text(
+  self : PdfDocument,
+  file_size : Int,
+) -> PdfBytes raise PdfError {
+  let output : Array[Byte] = []
+  for entry in self.composition(file_size) {
+    pdf_composition_push_text_entry(output, entry)
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_composition_bytes_with_newline(bytes : BytesView) -> PdfBytes {
+  let output : Array[Byte] = []
+  for byte in bytes {
+    output.push(byte)
+  }
+  output.push(10)
+  Bytes::from_array(output)
+}
+
+///|
 /// Compatibility wrapper for `PdfDocument::composition`.
 pub fn pdf_composition(
   document : PdfDocument,
@@ -435,4 +493,20 @@ pub fn pdf_show_composition_json_blob(
   document : PdfDocument,
 ) -> PdfBytes raise PdfError {
   document.composition_json_blob(file_size)
+}
+
+///|
+/// Return the bytes cpdf's `show_composition` would print.
+pub fn pdf_show_composition(
+  file_size : Int,
+  json : Bool,
+  document : PdfDocument,
+) -> PdfBytes raise PdfError {
+  if json {
+    pdf_composition_bytes_with_newline(
+      document.composition_json_blob(file_size),
+    )
+  } else {
+    document.composition_text(file_size)
+  }
 }

@@ -232,6 +232,27 @@ test "PdfDocument composition_json_blob uses cpdf row shape" {
     try! @pdflite.pdf_show_composition_json_blob(100, doc),
     @utf8.encode(expected.stringify()),
   )
+  @test.assert_eq(
+    try! doc.composition_text(100),
+    @ascii.encode(
+      "Images: 0 bytes (0.00%)\n" +
+      "Fonts: 0 bytes (0.00%)\n" +
+      "Content streams: 0 bytes (0.00%)\n" +
+      "Structure Info: 0 bytes (0.00%)\n" +
+      "Attached Files: 0 bytes (0.00%)\n" +
+      "XRef Table: 40 bytes (40.00%)\n" +
+      "Piece Info: 0 bytes (0.00%)\n" +
+      "Unclassified: 60 bytes (60.00%)\n",
+    ),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_show_composition(100, false, doc),
+    try! doc.composition_text(100),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_show_composition(100, true, doc),
+    @utf8.encode(expected.stringify() + "\n"),
+  )
 }
 
 ///|

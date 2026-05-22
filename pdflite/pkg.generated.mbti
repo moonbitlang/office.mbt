@@ -1016,6 +1016,8 @@ pub fn pdf_pagenumber_of_target(PdfDocument, PdfDestination) -> Int raise @core.
 
 pub fn pdf_pages_of_pagetree(PdfDocument) -> Array[PdfPage] raise @core.PdfError
 
+pub fn pdf_parse_bookmark_file(Bool, PdfDocument, BytesView) -> Array[PdfBookmark] raise @core.PdfError
+
 pub fn pdf_parse_bookmark_json(Bool, Json, PdfDocument) -> Array[PdfBookmark] raise @core.PdfError
 
 pub fn pdf_parse_bookmark_text(Bool, BytesView, PdfDocument) -> Array[PdfBookmark] raise @core.PdfError
@@ -1341,6 +1343,8 @@ pub fn pdf_show_annotation_bounding_boxes(PdfDocument, ArrayView[Int], light? : 
 pub fn pdf_show_bounding_boxes(PdfDocument, ArrayView[Int], shape? : PdfRectangle?, light? : Bool, fast? : Bool) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_show_boxes(PdfDocument, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_show_composition(Int, Bool, PdfDocument) -> Bytes raise @core.PdfError
 
 pub fn pdf_show_composition_json_blob(Int, PdfDocument) -> Bytes raise @core.PdfError
 
@@ -2619,6 +2623,7 @@ pub fn PdfDocument::combine_pdf_rests(Self, PdfObject, PdfObject) -> PdfObject
 pub fn PdfDocument::composition(Self, Int) -> Array[PdfCompositionEntry] raise @core.PdfError
 pub fn PdfDocument::composition_json(Self, Int) -> Json raise @core.PdfError
 pub fn PdfDocument::composition_json_blob(Self, Int) -> Bytes raise @core.PdfError
+pub fn PdfDocument::composition_text(Self, Int) -> Bytes raise @core.PdfError
 pub fn PdfDocument::contains_javascript(Self) -> Bool
 pub fn PdfDocument::content_apply_extgstate_alpha_op(Self, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState
 pub fn PdfDocument::content_apply_extgstate_compositing_op(Self, PdfContentOperatorState, PdfObject) -> PdfContentOperatorState

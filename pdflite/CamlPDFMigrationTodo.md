@@ -7652,6 +7652,21 @@ Current backend snapshot:
   --target all --warn-list +73` passes with the known `markdown/cmd` future
   notice; `moon test --target native` reports 2359/2359; `moon info`,
   `moon fmt`, and `git diff --check` are clean.~~
+- [x] ~~Continue cpdfbookmarks/cpdfcomposition API parity with
+  `.repos/cpdf-source`: added `pdf_parse_bookmark_file` with cpdf's
+  `(verify, document, input-bytes)` argument order, plus
+  `PdfDocument::composition_text` and `pdf_show_composition`. The composition
+  wrapper returns the bytes cpdf would print: line-oriented text for
+  `json=false`, and JSON bytes plus a trailing newline for `json=true`.
+  Coverage pins the bookmark-file alias against the existing verified text
+  parser and the exact composition text rows/JSON newline behavior. Validation
+  on MoonBit 0.9.3: `moon check --target native --warn-list +73` passes with
+  the known `markdown/cmd` future notice; `moon test --target native
+  pdf_bookmark_test.mbt --filter '*parse_bookmark*'` reports 4/4; `moon test
+  --target native pdf_composition_test.mbt --filter '*composition*'` reports
+  3/3; `moon check --target all --warn-list +73` passes with the known
+  `markdown/cmd` future notice; `moon test --target native` reports
+  2359/2359; `moon info`, `moon fmt`, and `git diff --check` are clean.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
