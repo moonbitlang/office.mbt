@@ -2811,6 +2811,15 @@ Current backend snapshot:
   pdf_debug_test.mbt` at 3/3, `pdf_print_tree_test.mbt` at 2/2,
   `pdf_strftime_test.mbt` at 3/3, and `pdf_strftime_native_test.mbt` at 2/2;
   native full-suite validation reports 1717/1717 tests passing.~~
+- [x] ~~Optional `.repos/cpdf-source` debug-object dump gate now runs
+  `PdfDocument::debug_objects` and `pdf_debug_objects` against the 175-page
+  `cpdfmanual.pdf` fixture, pinning trailer/root/catalog/pages spelling plus
+  real catalog/page object markers through direct read, compressed xref-stream
+  rewrite/reread, and malformed-startxref public reconstruction. Focused
+  native validation reports `moon test --target native fixture_acceptance
+  --filter '*debug objects*'` at 1/1 tests passing; package validation reports
+  `moon test --target native fixture_acceptance` at 121/121 tests passing;
+  native full-suite validation reports 2344/2344 tests passing.~~
 - [x] ~~Standalone `cpdfjson.ml` single-object output slice now exposes
   `PdfDocument::json_of_object` and `pdf_json_of_object`, covering CPDFJSON
   dictionary, array, stream, name, integer, real, indirect, boolean, null, and

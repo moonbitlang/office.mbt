@@ -4624,6 +4624,24 @@ fn fixture_acceptance_assert_cpdf_manual_reports_for_test(
 }
 
 ///|
+fn fixture_acceptance_assert_cpdf_manual_debug_objects_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(document.endpage(), 175)
+  let dump = document.debug_objects()
+  @test.assert_eq(@pdflite.pdf_debug_objects(document), dump)
+  let text = @utf8.decode_lossy(dump)
+  fixture_acceptance_assert_contains_for_test(text, "Trailerdict: <<")
+  fixture_acceptance_assert_contains_for_test(text, "Root: ")
+  fixture_acceptance_assert_contains_for_test(text, "Catalog: <<")
+  fixture_acceptance_assert_contains_for_test(text, "Pages: <<")
+  fixture_acceptance_assert_contains_for_test(text, " 0 obj:\n\n")
+  fixture_acceptance_assert_contains_for_test(text, "/Type /Catalog")
+  fixture_acceptance_assert_contains_for_test(text, "/Type /Pages")
+  fixture_acceptance_assert_contains_for_test(text, "/Type /Page")
+}
+
+///|
 fn fixture_acceptance_assert_cpdf_manual_page_labels_for_test(
   document : @pdflite.PdfDocument,
 ) -> Unit raise {
@@ -14050,6 +14068,38 @@ async test "optional cpdf source manual fixture reports info page details and co
         @pdflite.pdf_read_document_from_bytes(rewritten),
         rewritten.length(),
       )
+    }
+  }
+}
+
+///|
+async test "optional cpdf source manual fixture dumps debug objects" {
+  match
+    fixture_acceptance_optional_bytes_for_test(
+      ".repos/cpdf-source/cpdfmanual.pdf",
+    ) {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_manual_debug_objects_for_test(document)
+      fixture_acceptance_assert_cpdf_manual_debug_objects_for_test(
+        fixture_acceptance_reparse_compressed_for_test(document),
+      )
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        document,
+      )
+      let corrupted = fixture_acceptance_corrupt_startxref_pointer_for_test(
+        compressed,
+      )
+      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+        corrupted,
+      )
+      guard strict is Err(_) else {
+        fail("expected bad startxref to require malformed reconstruction")
+      }
+      let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
+      @test.assert_eq(recovered.first_xref(), 0)
+      fixture_acceptance_assert_cpdf_manual_debug_objects_for_test(recovered)
     }
   }
 }
