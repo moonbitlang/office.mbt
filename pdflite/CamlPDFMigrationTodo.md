@@ -7701,6 +7701,21 @@ Current backend snapshot:
   --target all --warn-list +73` passes with the known `markdown/cmd` future
   notice; `moon test --target native` reports 2360/2360; `moon info`,
   `moon fmt`, and `git diff --check` are clean.~~
+- [x] ~~Continue cpdffont API parity with `.repos/cpdf-source`: added
+  `PdfDocument::print_font_table`, `pdf_print_font_table`, and native
+  `pdf_extract_fontfile`. The font-table wrappers expose cpdffont's
+  stdout-oriented `print_font_table` as deterministic bytes over the existing
+  `font_table_text` port, while the native filesystem alias preserves
+  cpdffont's `(page, font, filename, document)` argument order over the existing
+  `pdf_extract_fontfile_to_file` writer. Coverage pins the font-table bytes
+  aliases and the cpdf-order extraction alias. Validation on MoonBit compiler
+  0.9.3: `moon check --target native --warn-list +73` passes with the known
+  `markdown/cmd` future notice; `moon test --target native pdf_font_test.mbt
+  --filter '*font_table*'` reports 1/1; `moon test --target native async_io
+  --filter '*extract embedded font files*'` reports 1/1; `moon check --target
+  all --warn-list +73` passes with the known `markdown/cmd` future notice;
+  `moon test --target native` reports 2360/2360; `moon info`, `moon fmt`, and
+  `git diff --check` are clean.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

@@ -3245,13 +3245,20 @@ async test "async file wrappers load Standard 14 substitute font files" {
 async test "async file wrappers extract embedded font files" {
   let document = pdf_async_io_font_extraction_document_for_test()
   let output_path = pdf_async_io_test_path_for_test("fontfile")
+  let alias_path = pdf_async_io_test_path_for_test("fontfile_alias")
   let missing_path = pdf_async_io_test_path_for_test("fontfile_missing")
   pdf_async_io_remove_if_exists_for_test(output_path)
+  pdf_async_io_remove_if_exists_for_test(alias_path)
   pdf_async_io_remove_if_exists_for_test(missing_path)
 
   try! pdf_extract_fontfile_to_file(document, 1, "/F1", output_path)
+  try! pdf_extract_fontfile(1, "/F1", alias_path, document)
   @test.assert_eq(
     @fs.read_file(output_path).binary(),
+    @ascii.encode("embedded-font"),
+  )
+  @test.assert_eq(
+    @fs.read_file(alias_path).binary(),
     @ascii.encode("embedded-font"),
   )
   let missing : Result[Unit, Error] = try? pdf_extract_fontfile_to_file(
@@ -3268,6 +3275,7 @@ async test "async file wrappers extract embedded font files" {
   @test.assert_eq(@fs.exists(missing_path), false)
 
   pdf_async_io_remove_if_exists_for_test(output_path)
+  pdf_async_io_remove_if_exists_for_test(alias_path)
   pdf_async_io_remove_if_exists_for_test(missing_path)
 }
 

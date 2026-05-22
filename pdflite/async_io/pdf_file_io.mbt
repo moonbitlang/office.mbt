@@ -109,6 +109,24 @@ pub async fn pdf_extract_fontfile_to_file(
 }
 
 ///|
+/// Compatibility wrapper matching cpdffont's `extract_fontfile` argument order.
+pub async fn pdf_extract_fontfile(
+  page_number : Int,
+  font_name : String,
+  path : StringView,
+  document : @pdflite.PdfDocument,
+  permission? : Int = 0o644,
+) -> Unit {
+  pdf_extract_fontfile_to_file(
+    document,
+    page_number,
+    font_name,
+    path,
+    permission~,
+  )
+}
+
+///|
 fn pdf_draw_control_image_file_spec_for_async_io(
   spec : StringView,
   command : String,

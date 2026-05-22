@@ -650,6 +650,26 @@ pub fn pdf_font_table_text(
 }
 
 ///|
+/// Return the bytes cpdf's `print_font_table` would print.
+pub fn PdfDocument::print_font_table(
+  self : PdfDocument,
+  font_name : String,
+  page_number : Int,
+) -> PdfBytes raise PdfError {
+  self.font_table_text(font_name, page_number)
+}
+
+///|
+/// Compatibility wrapper matching cpdffont's `print_font_table`.
+pub fn pdf_print_font_table(
+  document : PdfDocument,
+  font_name : String,
+  page_number : Int,
+) -> PdfBytes raise PdfError {
+  document.print_font_table(font_name, page_number)
+}
+
+///|
 /// Return the object number referenced by an embedded font-file marker.
 pub fn PdfFontFile::object_number(self : PdfFontFile) -> Int {
   match self {
