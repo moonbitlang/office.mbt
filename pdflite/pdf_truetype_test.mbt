@@ -552,6 +552,19 @@ test "pdf_truetype_partition_subsets mirrors source find_main" {
 }
 
 ///|
+test "pdf_truetype_higher_tounicode maps higher subset codes" {
+  @test.assert_eq(
+    try! @pdflite.pdf_truetype_higher_tounicode([0x41, 0x20AC, 0x1D11E]),
+    Some([
+      (33, truetype_bytes_for_test([0x00, 0x41])),
+      (34, truetype_bytes_for_test([0x20, 0xAC])),
+      (35, truetype_bytes_for_test([0xD8, 0x34, 0xDD, 0x1E])),
+    ]),
+  )
+  @test.assert_eq(try! @pdflite.pdf_truetype_higher_tounicode([]), None)
+}
+
+///|
 test "pdf_truetype_descriptor_metrics reads OS2 and post tables" {
   let font = truetype_table_font_for_test([
     ("head", truetype_head_table_for_test(2000, 0, 0, 1000, 1000, 0)),

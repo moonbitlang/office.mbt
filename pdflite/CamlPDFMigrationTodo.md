@@ -38,8 +38,8 @@ Current estimate:
   encoding/cmap/ToUnicode validation, TrueType cmap glyph mapping plus
   table/metric/descriptor/loca/composite-glyph parsing foundations,
   subset `glyf`/`loca`/format-6 `cmap` table writers, subset-font
-  table-directory assembly, and width/subset partition helpers, imposition
-  transform/content/page-assembly/
+  table-directory assembly, width/subset partition helpers, and higher-subset
+  ToUnicode mapping, imposition transform/content/page-assembly/
   pattern-matrix kernels, cpdf page
   hard-box/removal/shift/scale/scale-to-fit/upright/set-mediabox/copy-box
   helpers and source-order compatibility aliases, imposition make-space
@@ -48,9 +48,9 @@ Current estimate:
 
 Current backend snapshot:
 
-- Native: full suite passes on MoonBit 0.9.3, currently 2398/2398 tests.
+- Native: full suite passes on MoonBit 0.9.3, currently 2399/2399 tests.
 - WasmGC and JavaScript: full portable non-native test suites pass on MoonBit
-  0.9.3, currently 2058/2058 on each backend after the latest source-corpus
+  0.9.3, currently 2059/2059 on each backend after the latest source-corpus
   recovery gates.
 - Wasm: current plain-Wasm smoke validation passes at 41/41 tests after
   filtering root's heavy package-level test files and the Markdown package
@@ -75,6 +75,18 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port the next `cpdftruetype` higher-subset ToUnicode slice:
+  `pdf_truetype_higher_tounicode` now covers the source
+  `seconds_tounicodes` helper, mapping each higher subset position to character
+  codes starting at `33` and storing UTF-16BE bytes without the PDF Unicode
+  string BOM. Coverage includes BMP and supplementary-plane codepoints plus
+  the empty-subset `None` case. This still does not complete the final parsed
+  `Cpdftruetype.t` record surface or full `Cpdftruetype.parse`. Validation on
+  MoonBit 0.9.3: `moon test --target native pdf_truetype_test.mbt` reports
+  25/25; `moon fmt`, `moon info`, and
+  `moon check --target all --warn-list +73` pass with only the existing
+  `markdown/cmd` warning; full backend tests report native 2399/2399,
+  wasm-gc 2059/2059, and js 2059/2059.~~
 - [x] ~~Port the next `cpdftruetype` width/subset partition slice:
   `PdfTrueTypeSubsetPartition`, `pdf_truetype_partition_subsets`,
   `pdf_truetype_widths`, and `pdf_truetype_widths_higher` now cover the source

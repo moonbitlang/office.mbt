@@ -883,6 +883,35 @@ pub fn pdf_truetype_widths_higher(
 }
 
 ///|
+fn pdf_truetype_utf16be_without_bom(codepoint : Int) -> PdfBytes raise PdfError {
+  let bytes = pdf_utf16be_of_codepoints([codepoint])
+  bytes[2:].to_owned()
+}
+
+///|
+/// Build the ToUnicode entries used by cpdf's implicit higher TrueType subsets.
+///
+/// Source character codes start at `33` and each maps positionally to the
+/// matching Unicode scalar from `subset_codepoints`. The stored bytes are
+/// UTF-16BE without the PDF Unicode string BOM, matching
+/// `Cpdftruetype.seconds_tounicodes`.
+pub fn pdf_truetype_higher_tounicode(
+  subset_codepoints : ArrayView[Int],
+) -> Array[(Int, PdfBytes)]? raise PdfError {
+  if subset_codepoints.length() == 0 {
+    None
+  } else {
+    let entries : Array[(Int, PdfBytes)] = []
+    for index in 0..<subset_codepoints.length() {
+      entries.push(
+        (33 + index, pdf_truetype_utf16be_without_bom(subset_codepoints[index])),
+      )
+    }
+    Some(entries)
+  }
+}
+
+///|
 fn pdf_truetype_base_subset_glyph_indices(
   data : BytesView,
   subset_codepoints : ArrayView[Int],

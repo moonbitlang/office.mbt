@@ -1578,6 +1578,8 @@ pub fn pdf_truetype_expand_composite_glyphs(BytesView, ArrayView[Int]) -> Array[
 
 pub fn pdf_truetype_glyph_byte_ranges(BytesView, ArrayView[Int]) -> Array[PdfTrueTypeGlyphByteRange] raise @core.PdfError
 
+pub fn pdf_truetype_higher_tounicode(ArrayView[Int]) -> Array[(Int, Bytes)]? raise @core.PdfError
+
 pub fn pdf_truetype_loca_offsets(BytesView) -> Array[Int] raise @core.PdfError
 
 pub fn pdf_truetype_metrics(BytesView) -> PdfTrueTypeMetrics raise @core.PdfError
