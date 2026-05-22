@@ -7078,6 +7078,22 @@ Current backend snapshot:
   reports no pending interface or formatting work, and `moon check --target all
   --warn-list +73` reports the known warning-73/main-package baseline with 10
   warnings and 0 errors.~~
+- [x] ~~Add the next source-corpus annotation JSON slice: the new native
+  `annotation/fixture_acceptance` package now gates optional
+  `.repos/cpdf-source/cpdfmanual.pdf` through cpdf-style annotation JSON export
+  on the first annotated manual page. The gate verifies annotated page-spec
+  discovery, `/CPDFJSONannotformatversion`, `/Subtype`, `/Link`, `/Rect`, and
+  `/A` JSON markers, method/blob/wrapper parity for `annotations_json`,
+  `annotations_json_blob`, and `pdf_get_annotations_json`, compressed
+  rewrite/reread, strict-reader rejection of a bad final `startxref`, malformed
+  reconstruction with `first_xref() == 0`, and recovered compressed
+  rewrite/reread. `moon check --target native annotation/fixture_acceptance
+  --warn-list +73` passes, the focused cpdf source annotation test reports 1/1
+  test passing, `moon test --target native annotation/fixture_acceptance`
+  reports 1/1 test passing, and `moon test --target native` reports 2328/2328
+  tests passing. `moon info && moon fmt` reports no pending interface or
+  formatting work, and `moon check --target all --warn-list +73` reports the
+  known warning-73/main-package baseline with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.
