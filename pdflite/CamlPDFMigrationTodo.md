@@ -7094,6 +7094,26 @@ Current backend snapshot:
   tests passing. `moon info && moon fmt` reports no pending interface or
   formatting work, and `moon check --target all --warn-list +73` reports the
   known warning-73/main-package baseline with 10 warnings and 0 errors.~~
+- [x] ~~Add the next source-corpus bookmark slice: the new native
+  `bookmark/fixture_acceptance` package now gates optional
+  `.repos/cpdf-source/cpdfmanual.pdf` through cpdf-style bookmark listing,
+  JSON export, remove-and-rebuild, open-state mutation, and generated title
+  bookmark insertion. The listing/rebuild gate verifies the 163-entry manual
+  outline tree, top-level target pages, JSON/listed chapter markers, wrapper
+  parity for `pdf_read_bookmarks`, `pdf_get_bookmarks_json`,
+  `pdf_list_bookmarks`, `pdf_remove_bookmarks`, and `pdf_add_bookmarks`, and
+  compressed rewrite/reread. The mutation gate verifies
+  `bookmarks_open_to_level` plus `pdf_bookmarks_open_to_level`, generated
+  `/tmp/cpdfmanual.pdf` title bookmarks plus `pdf_add_bookmark_title`,
+  `pdf_pagenumber_of_target` parity, compressed rewrite/reread, and
+  bad-final-`startxref` reconstruction for both mutated documents. `moon check
+  --target native bookmark/fixture_acceptance --warn-list +73` passes, both
+  focused cpdf source bookmark tests report 1/1 test passing, `moon test
+  --target native bookmark/fixture_acceptance` reports 2/2 tests passing, and
+  `moon test --target native` reports 2330/2330 tests passing. `moon info &&
+  moon fmt` reports no pending interface or formatting work, and `moon check
+  --target all --warn-list +73` reports the known warning-73/main-package
+  baseline with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.
