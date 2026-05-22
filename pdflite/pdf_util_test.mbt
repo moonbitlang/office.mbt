@@ -1026,6 +1026,23 @@ test "PdfDocument json_of_document emits cpdf top-level arrays and round trips" 
 }
 
 ///|
+test "PdfDocument json_of_document_blob emits UTF-8 CPDFJSON bytes" {
+  let document = try! @pdflite.pdf_document_of_json(
+    util_cpdfjson_document_for_test(),
+  )
+  let exported = try! document.json_of_document(parse_content=true)
+  let expected = @utf8.encode(exported.stringify())
+  @test.assert_eq(
+    try! document.json_of_document_blob(parse_content=true),
+    expected,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_json_of_document_blob(document, parse_content=true),
+    expected,
+  )
+}
+
+///|
 test "PdfDocument json_of_document parses content streams into operation arrays" {
   let document = try! @pdflite.pdf_document_of_json(
     util_cpdfjson_document_for_test(),

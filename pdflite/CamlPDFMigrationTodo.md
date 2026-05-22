@@ -2918,6 +2918,24 @@ Current backend snapshot:
   unchanged. Native focused validation reports `moon test --target native
   --package bobzhang/pdflite --file pdf_util_test.mbt` at 27/27 tests passing;
   native full-suite validation reports 2140/2140 tests passing.~~
+- [x] ~~Standalone `cpdfjson.ml` full-document byte-output slice now exposes
+  `PdfDocument::json_of_document_blob` and `pdf_json_of_document_blob` as the
+  side-effect-free counterpart of `Cpdfjson.to_output`, preserving all
+  `json_of_document` flags while returning UTF-8 CPDFJSON bytes. Coverage pins
+  wrapper parity on synthetic parsed-content documents and gates optional
+  `.repos/cpdf-source/hello.pdf` through UTF-8 parsed CPDFJSON output,
+  operation-token spelling, `Hello, World!` round-trip import, compressed
+  xref-stream rewrite/reread, and malformed-`startxref` public reconstruction.
+  `moon check --target native --warn-list +73` passes with the known warning
+  baseline, focused validation reports `moon test --target native
+  pdf_util_test.mbt --filter '*json_of_document_blob*'` at 1/1 and `moon test
+  --target native fixture_acceptance --filter '*CPDFJSON document output*'` at
+  1/1 tests passing, `moon test --target native fixture_acceptance` reports
+  123/123 tests passing, and `moon test --target native` reports 2347/2347
+  tests passing. `moon info` updates `pkg.generated.mbti` with the two
+  intended public entries, `moon fmt` reports no pending formatting work, and
+  `moon check --target all --warn-list +73` reports the known warning-73/main
+  package baseline with 10 warnings and 0 errors.~~
 - [x] ~~Standalone `cpdfjs.ml` JavaScript scrub/detect slice exposes
   `PdfDocument::contains_javascript`, `remove_javascript`, and compatibility
   wrappers, covering cpdf's string-only `/S /JavaScript` detection, lowercase
@@ -7358,6 +7376,22 @@ Current backend snapshot:
   fmt` reports no pending interface or formatting work, and `moon check
   --target all --warn-list +73` reports the known warning-73/main-package
   baseline with 10 warnings and 0 errors.~~
+- [x] ~~Add the next `cpdfjson` source/API parity slice: the root package now
+  exposes `PdfDocument::json_of_document_blob` and
+  `pdf_json_of_document_blob`, mirroring `Cpdfjson.to_output` as UTF-8 bytes
+  while reusing the existing full-document CPDFJSON encoder. Optional
+  `.repos/cpdf-source/hello.pdf` now gates parsed UTF-8 document output,
+  wrapper parity, operation-token spelling, `Hello, World!` import
+  round-trips, compressed xref-stream rewrite/reread, and malformed
+  `startxref` public reconstruction. `moon check --target native --warn-list
+  +73` passes, the focused root CPDFJSON blob test reports 1/1 test passing,
+  the focused source CPDFJSON gate reports 1/1 test passing, `moon test
+  --target native fixture_acceptance` reports 123/123 tests passing, and `moon
+  test --target native` reports 2347/2347 tests passing. `moon info` updates
+  `pkg.generated.mbti` with the two intended public entries, `moon fmt` reports
+  no pending formatting work, and `moon check --target all --warn-list +73`
+  reports the known warning-73/main-package baseline with 10 warnings and 0
+  errors.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.

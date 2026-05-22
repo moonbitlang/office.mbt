@@ -785,6 +785,8 @@ pub fn pdf_jpeg_dimensions_view(BytesView) -> (Int, Int) raise @core.PdfError
 
 pub fn pdf_json_of_document(PdfDocument, utf8? : Bool, parse_content? : Bool, clean_strings? : Bool, no_stream_data? : Bool, decompress_streams? : Bool) -> Json raise @core.PdfError
 
+pub fn pdf_json_of_document_blob(PdfDocument, utf8? : Bool, parse_content? : Bool, clean_strings? : Bool, no_stream_data? : Bool, decompress_streams? : Bool) -> Bytes raise @core.PdfError
+
 pub fn pdf_json_of_object(PdfDocument, PdfObject, utf8? : Bool, clean_strings? : Bool, no_stream_data? : Bool, parse_content? : Bool) -> Json raise @core.PdfError
 
 pub fn pdf_language(PdfDocument) -> Bytes?
@@ -2671,6 +2673,7 @@ pub fn PdfDocument::iter_objects_with_generation(Self, (Int, Int, PdfObject) -> 
 pub fn PdfDocument::iter_pages(Self, ArrayView[Int], (Int, PdfPage) -> Unit raise @core.PdfError) -> Unit raise @core.PdfError
 pub fn PdfDocument::iter_stream(Self, (PdfObject) -> Unit raise) -> Unit raise
 pub fn PdfDocument::json_of_document(Self, utf8? : Bool, parse_content? : Bool, clean_strings? : Bool, no_stream_data? : Bool, decompress_streams? : Bool) -> Json raise @core.PdfError
+pub fn PdfDocument::json_of_document_blob(Self, utf8? : Bool, parse_content? : Bool, clean_strings? : Bool, no_stream_data? : Bool, decompress_streams? : Bool) -> Bytes raise @core.PdfError
 pub fn PdfDocument::json_of_object(Self, PdfObject, utf8? : Bool, clean_strings? : Bool, no_stream_data? : Bool, parse_content? : Bool) -> Json raise @core.PdfError
 pub fn PdfDocument::language(Self) -> Bytes?
 pub fn PdfDocument::list_annotations(Self, ArrayView[Int], encoding? : PdfMetadataEncoding) -> Bytes raise @core.PdfError

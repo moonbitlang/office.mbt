@@ -3552,6 +3552,46 @@ fn fixture_acceptance_assert_cpdf_source_hello_text_for_test(
 }
 
 ///|
+fn fixture_acceptance_assert_cpdf_source_cpdfjson_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
+  let json = document.json_of_document(utf8=true, parse_content=true)
+  @test.assert_eq(
+    @pdflite.pdf_json_of_document(document, utf8=true, parse_content=true),
+    json,
+  )
+  let blob = document.json_of_document_blob(utf8=true, parse_content=true)
+  @test.assert_eq(blob, @utf8.encode(json.stringify()))
+  @test.assert_eq(
+    @pdflite.pdf_json_of_document_blob(document, utf8=true, parse_content=true),
+    blob,
+  )
+  let text = @utf8.decode_lossy(blob)
+  fixture_acceptance_assert_contains_for_test(
+    text, "\"/CPDFJSONformatversion\"",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    text, "\"/CPDFJSONcontentparsed\":true",
+  )
+  fixture_acceptance_assert_contains_for_test(
+    text, "\"/CPDFJSONstreamdataincluded\":true",
+  )
+  fixture_acceptance_assert_contains_for_test(text, "\"cm\"")
+  fixture_acceptance_assert_contains_for_test(text, "\"Tf\"")
+  fixture_acceptance_assert_contains_for_test(text, "\"Tj\"")
+  fixture_acceptance_assert_contains_for_test(text, "\"Hello, World!\"")
+  fixture_acceptance_assert_cpdf_source_hello_text_for_test(
+    @pdflite.pdf_document_of_json(json),
+  )
+  fixture_acceptance_assert_cpdf_source_hello_text_for_test(
+    @pdflite.pdf_document_of_json(
+      @pdflite.pdf_json_of_document(document, utf8=true, parse_content=true),
+    ),
+  )
+}
+
+///|
 fn fixture_acceptance_assert_cpdf_source_hello_text_removed_for_test(
   document : @pdflite.PdfDocument,
 ) -> Unit raise {
@@ -11752,6 +11792,26 @@ async test "optional cpdf source hello fixture reconstructs malformed classic xr
       fixture_acceptance_assert_classic_xref_table_variants_reconstruct_for_test(
         bytes, 1,
       )
+  }
+}
+
+///|
+async test "optional cpdf source hello fixture roundtrips CPDFJSON document output" {
+  match
+    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      fixture_acceptance_assert_cpdf_source_cpdfjson_for_test(document)
+      fixture_acceptance_assert_cpdf_source_cpdfjson_for_test(
+        fixture_acceptance_reparse_compressed_for_test(document),
+      )
+      fixture_acceptance_assert_cpdf_source_cpdfjson_for_test(
+        @pdflite.pdf_read_document_from_bytes(
+          fixture_acceptance_corrupt_startxref_pointer_for_test(bytes),
+        ),
+      )
+    }
   }
 }
 

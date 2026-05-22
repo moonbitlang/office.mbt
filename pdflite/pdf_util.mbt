@@ -1516,6 +1516,29 @@ pub fn PdfDocument::json_of_document(
 }
 
 ///|
+/// Render full-document CPDFJSON as UTF-8 bytes.
+///
+/// This is the side-effect-free byte-output counterpart of cpdf's
+/// `Cpdfjson.to_output`.
+pub fn PdfDocument::json_of_document_blob(
+  self : PdfDocument,
+  utf8? : Bool = false,
+  parse_content? : Bool = false,
+  clean_strings? : Bool = false,
+  no_stream_data? : Bool = false,
+  decompress_streams? : Bool = false,
+) -> PdfBytes raise PdfError {
+  let json = self.json_of_document(
+    utf8~,
+    parse_content~,
+    clean_strings~,
+    no_stream_data~,
+    decompress_streams~,
+  )
+  @utf8.encode(json.stringify())
+}
+
+///|
 fn PdfDocument::pdf_util_collect_dict_entry_values(
   self : PdfDocument,
   object : PdfObject,
@@ -1743,6 +1766,25 @@ pub fn pdf_json_of_document(
   decompress_streams? : Bool = false,
 ) -> Json raise PdfError {
   document.json_of_document(
+    utf8~,
+    parse_content~,
+    clean_strings~,
+    no_stream_data~,
+    decompress_streams~,
+  )
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::json_of_document_blob`.
+pub fn pdf_json_of_document_blob(
+  document : PdfDocument,
+  utf8? : Bool = false,
+  parse_content? : Bool = false,
+  clean_strings? : Bool = false,
+  no_stream_data? : Bool = false,
+  decompress_streams? : Bool = false,
+) -> PdfBytes raise PdfError {
+  document.json_of_document_blob(
     utf8~,
     parse_content~,
     clean_strings~,
