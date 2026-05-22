@@ -84,6 +84,19 @@ test "PdfDocument hard_box prepends crop clipping operators" {
     Op_n,
     Op_S,
   ])
+
+  let clipped_string = try! @pdflite.pdf_hard_box_string(
+    document,
+    [1],
+    "/CropBox",
+  )
+  let string_pages = try! clipped_string.pages_of_pagetree()
+  @test.assert_eq(page_box_ops_for_test(clipped_string, string_pages[0]), [
+    Op_re(10.0, 20.0, 80.0, 130.0),
+    Op_W,
+    Op_n,
+    Op_S,
+  ])
 }
 
 ///|
@@ -125,6 +138,11 @@ test "PdfDocument has_page_box mirrors cpdf hasbox" {
 
   @test.assert_eq(try! document.has_page_box(1, key_crop), true)
   @test.assert_eq(try! @pdflite.pdf_hasbox(document, 2, key_trim), false)
+  @test.assert_eq(try! document.hasbox_string(1, "/CropBox"), true)
+  @test.assert_eq(
+    try! @pdflite.pdf_hasbox_string(document, 2, "/TrimBox"),
+    false,
+  )
   @test.assert_eq(try! document.has_page_box(1, key_media), false)
 
   let bad_page : Result[Bool, Error] = try? document.has_page_box(3, key_crop)
@@ -166,6 +184,19 @@ test "PdfDocument copy_page_box copies selected boxes and wrappers" {
     media_pages[1].rest.lookup_immediate(key_trim),
     Some(page_box_rect_for_test(0.0, 0.0, 100.0, 200.0)),
   )
+
+  let copied_string = try! @pdflite.pdf_copy_box(
+    "/CropBox",
+    "/MediaBox",
+    false,
+    document,
+    [1],
+  )
+  let string_pages = try! copied_string.pages_of_pagetree()
+  @test.assert_eq(
+    try! copied_string.parse_rectangle(string_pages[0].mediabox),
+    { min_x: 10.0, min_y: 20.0, max_x: 90.0, max_y: 150.0 },
+  )
 }
 
 ///|
@@ -186,6 +217,18 @@ test "PdfDocument copy_page_box handles missing sources like cpdf" {
   let fallback_pages = try! fallback.pages_of_pagetree()
   @test.assert_eq(
     fallback_pages[1].rest.lookup_immediate(key_bleed),
+    Some(page_box_rect_for_test(0.0, 0.0, 100.0, 200.0)),
+  )
+
+  let fallback_string = try! document.copy_box(
+    [2],
+    "/TrimBox",
+    "/BleedBox",
+    mediabox_if_missing=true,
+  )
+  let fallback_string_pages = try! fallback_string.pages_of_pagetree()
+  @test.assert_eq(
+    fallback_string_pages[1].rest.lookup_immediate(key_bleed),
     Some(page_box_rect_for_test(0.0, 0.0, 100.0, 200.0)),
   )
 
@@ -374,6 +417,18 @@ test "PdfDocument crop_pages sets selected page-indexed boxes" {
     Some(page_box_rect_for_test(5.0, 6.0, 12.0, 14.0)),
   )
   @test.assert_eq(wrapped_pages[1].rest.lookup_immediate(key_bleed), None)
+
+  let string_wrapped = try! @pdflite.pdf_crop_pdf_string(
+    [(5.0, 6.0, 7.0, 8.0), (0.0, 0.0, 1.0, 1.0)],
+    document,
+    [1],
+    box_name="/BleedBox",
+  )
+  let string_pages = try! string_wrapped.pages_of_pagetree()
+  @test.assert_eq(
+    string_pages[0].rest.lookup_immediate(key_bleed),
+    Some(page_box_rect_for_test(5.0, 6.0, 12.0, 14.0)),
+  )
 }
 
 ///|
@@ -434,6 +489,21 @@ test "PdfDocument set_page_box sets fixed named page box" {
     Some(page_box_rect_for_test(1.0, 2.0, 4.0, 5.0)),
   )
   @test.assert_eq(wrapped_pages[1].rest.lookup_immediate(key_bleed), None)
+
+  let string_wrapped = try! @pdflite.pdf_set_box_string(
+    "/BleedBox",
+    2.0,
+    5.0,
+    3.0,
+    6.0,
+    document,
+    [1],
+  )
+  let string_pages = try! string_wrapped.pages_of_pagetree()
+  @test.assert_eq(
+    string_pages[0].rest.lookup_immediate(key_bleed),
+    Some(page_box_rect_for_test(2.0, 3.0, 5.0, 6.0)),
+  )
 }
 
 ///|

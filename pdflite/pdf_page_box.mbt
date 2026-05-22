@@ -30,6 +30,11 @@ fn pdf_page_box_name_text(name : PdfName) -> String {
 }
 
 ///|
+fn pdf_page_box_name_of_string(text : String) -> PdfName {
+  pdf_page_name(text)
+}
+
+///|
 fn pdf_page_box_contains_page(
   page_numbers : ArrayView[Int],
   page_number : Int,
@@ -325,6 +330,35 @@ pub fn pdf_hard_box(
 }
 
 ///|
+/// Compatibility wrapper using cpdfpage's string page-box names.
+pub fn PdfDocument::hard_box_string(
+  self : PdfDocument,
+  page_numbers : ArrayView[Int],
+  box_name : String,
+  mediabox_if_missing? : Bool = false,
+  fast? : Bool = false,
+) -> PdfDocument raise PdfError {
+  self.hard_box(
+    page_numbers,
+    pdf_page_box_name_of_string(box_name),
+    mediabox_if_missing~,
+    fast~,
+  )
+}
+
+///|
+/// Compatibility wrapper using cpdfpage's string page-box names.
+pub fn pdf_hard_box_string(
+  document : PdfDocument,
+  page_numbers : ArrayView[Int],
+  box_name : String,
+  mediabox_if_missing? : Bool = false,
+  fast? : Bool = false,
+) -> PdfDocument raise PdfError {
+  document.hard_box_string(page_numbers, box_name, mediabox_if_missing~, fast~)
+}
+
+///|
 /// Return whether a 1-based page has a named non-media page box.
 ///
 /// This mirrors cpdf's `hasbox`: invalid page numbers raise, and the check is
@@ -356,6 +390,26 @@ pub fn pdf_hasbox(
 }
 
 ///|
+/// Compatibility wrapper using cpdfpage's string page-box names.
+pub fn PdfDocument::hasbox_string(
+  self : PdfDocument,
+  page_number : Int,
+  box_name : String,
+) -> Bool raise PdfError {
+  self.has_page_box(page_number, pdf_page_box_name_of_string(box_name))
+}
+
+///|
+/// Compatibility wrapper using cpdfpage's string page-box names.
+pub fn pdf_hasbox_string(
+  document : PdfDocument,
+  page_number : Int,
+  box_name : String,
+) -> Bool raise PdfError {
+  document.hasbox_string(page_number, box_name)
+}
+
+///|
 /// Copy one page-box value to another on selected pages.
 ///
 /// Missing source boxes leave the page unchanged unless `mediabox_if_missing`
@@ -382,6 +436,35 @@ pub fn pdf_copy_page_box(
   mediabox_if_missing? : Bool = false,
 ) -> PdfDocument raise PdfError {
   document.copy_page_box(page_numbers, from_box, to_box, mediabox_if_missing~)
+}
+
+///|
+/// Compatibility wrapper using cpdfpage's string page-box names.
+pub fn PdfDocument::copy_box(
+  self : PdfDocument,
+  page_numbers : ArrayView[Int],
+  from_box : String,
+  to_box : String,
+  mediabox_if_missing? : Bool = false,
+) -> PdfDocument raise PdfError {
+  self.copy_page_box(
+    page_numbers,
+    pdf_page_box_name_of_string(from_box),
+    pdf_page_box_name_of_string(to_box),
+    mediabox_if_missing~,
+  )
+}
+
+///|
+/// Compatibility wrapper matching cpdfpage's `copy_box` argument order.
+pub fn pdf_copy_box(
+  from_box : String,
+  to_box : String,
+  mediabox_if_missing : Bool,
+  document : PdfDocument,
+  page_numbers : ArrayView[Int],
+) -> PdfDocument raise PdfError {
+  document.copy_box(page_numbers, from_box, to_box, mediabox_if_missing~)
 }
 
 ///|
@@ -521,6 +604,32 @@ pub fn pdf_crop_pdf(
 }
 
 ///|
+/// Compatibility wrapper using cpdfpage's string page-box names.
+pub fn PdfDocument::crop_pdf_string(
+  self : PdfDocument,
+  page_numbers : ArrayView[Int],
+  boxes : ArrayView[(Double, Double, Double, Double)],
+  box_name? : String = "/CropBox",
+) -> PdfDocument raise PdfError {
+  self.crop_pages(
+    page_numbers,
+    boxes,
+    box_name=pdf_page_box_name_of_string(box_name),
+  )
+}
+
+///|
+/// Compatibility wrapper matching cpdfpage's `crop_pdf` value argument order.
+pub fn pdf_crop_pdf_string(
+  boxes : ArrayView[(Double, Double, Double, Double)],
+  document : PdfDocument,
+  page_numbers : ArrayView[Int],
+  box_name? : String = "/CropBox",
+) -> PdfDocument raise PdfError {
+  document.crop_pdf_string(page_numbers, boxes, box_name~)
+}
+
+///|
 /// Set a fixed named page box on selected pages.
 ///
 /// The scalar argument order mirrors cpdf's historical `setBox`:
@@ -551,6 +660,41 @@ pub fn pdf_set_box(
   max_y : Double,
 ) -> PdfDocument raise PdfError {
   document.set_page_box(page_numbers, box_name, min_x, max_x, min_y, max_y)
+}
+
+///|
+/// Compatibility wrapper using cpdfpage's string page-box names.
+pub fn PdfDocument::set_box_string(
+  self : PdfDocument,
+  page_numbers : ArrayView[Int],
+  box_name : String,
+  min_x : Double,
+  max_x : Double,
+  min_y : Double,
+  max_y : Double,
+) -> PdfDocument raise PdfError {
+  self.set_page_box(
+    page_numbers,
+    pdf_page_box_name_of_string(box_name),
+    min_x,
+    max_x,
+    min_y,
+    max_y,
+  )
+}
+
+///|
+/// Compatibility wrapper matching cpdfpage's `setBox` scalar argument order.
+pub fn pdf_set_box_string(
+  box_name : String,
+  min_x : Double,
+  max_x : Double,
+  min_y : Double,
+  max_y : Double,
+  document : PdfDocument,
+  page_numbers : ArrayView[Int],
+) -> PdfDocument raise PdfError {
+  document.set_box_string(page_numbers, box_name, min_x, max_x, min_y, max_y)
 }
 
 ///|

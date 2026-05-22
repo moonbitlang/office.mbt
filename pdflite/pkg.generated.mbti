@@ -522,6 +522,8 @@ pub fn pdf_content_width_of_charcode(PdfFont, Int) -> (Double, Double, Double)
 
 pub fn pdf_copy_annotations(ArrayView[Int], PdfDocument, PdfDocument) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_copy_box(String, String, Bool, PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_copy_font(PdfDocument, String, Int, ArrayView[Int], PdfDocument) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_copy_id(Bool, PdfDocument, PdfDocument) -> PdfDocument raise @core.PdfError
@@ -531,6 +533,8 @@ pub fn pdf_copy_page_box(PdfDocument, ArrayView[Int], @core.PdfName, @core.PdfNa
 pub fn pdf_create_metadata(PdfDocument) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_crop_pdf(PdfDocument, ArrayView[Int], ArrayView[(Double, Double, Double, Double)], box_name? : @core.PdfName) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_crop_pdf_string(ArrayView[(Double, Double, Double, Double)], PdfDocument, ArrayView[Int], box_name? : String) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_css_colour_value(String) -> Int?
 
@@ -718,9 +722,13 @@ pub fn pdf_glyphnames_of_text(PdfTextExtractor, BytesView) -> Array[@core.PdfNam
 
 pub fn pdf_hard_box(PdfDocument, ArrayView[Int], @core.PdfName, mediabox_if_missing? : Bool, fast? : Bool) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_hard_box_string(PdfDocument, ArrayView[Int], String, mediabox_if_missing? : Bool, fast? : Bool) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_hard_error(String) -> Unit raise @core.PdfError
 
 pub fn pdf_hasbox(PdfDocument, Int, @core.PdfName) -> Bool raise @core.PdfError
+
+pub fn pdf_hasbox_string(PdfDocument, Int, String) -> Bool raise @core.PdfError
 
 pub fn pdf_hflip_pdf(PdfDocument, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
 
@@ -1325,6 +1333,8 @@ pub fn pdf_scale_to_fit_rotate_pages(PdfDocument, ArrayView[Int], ArrayView[(Dou
 pub fn pdf_set_annotations_json(Json, PdfDocument) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_set_box(PdfDocument, ArrayView[Int], @core.PdfName, Double, Double, Double, Double) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_set_box_string(String, Double, Double, Double, Double, PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_set_language(PdfDocument, BytesView) -> PdfDocument raise @core.PdfError
 
@@ -2683,11 +2693,13 @@ pub fn PdfDocument::content_shading_entry_from_resources(Self, PdfContentOperato
 pub fn PdfDocument::contents_of_name_tree(Self, PdfObject) -> Array[(PdfObject, PdfObject)]
 pub fn PdfDocument::copy(Self) -> Self
 pub fn PdfDocument::copy_annotations_from(Self, Self, ArrayView[Int]) -> Self raise @core.PdfError
+pub fn PdfDocument::copy_box(Self, ArrayView[Int], String, String, mediabox_if_missing? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::copy_font_from(Self, Self, String, Int, ArrayView[Int]) -> Self raise @core.PdfError
 pub fn PdfDocument::copy_id_from(Self, Self, keep_version? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::copy_page_box(Self, ArrayView[Int], @core.PdfName, @core.PdfName, mediabox_if_missing? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::create_metadata(Self) -> Self raise @core.PdfError
 pub fn PdfDocument::crop_pages(Self, ArrayView[Int], ArrayView[(Double, Double, Double, Double)], box_name? : @core.PdfName) -> Self raise @core.PdfError
+pub fn PdfDocument::crop_pdf_string(Self, ArrayView[Int], ArrayView[(Double, Double, Double, Double)], box_name? : String) -> Self raise @core.PdfError
 pub fn PdfDocument::debug_objects(Self) -> Bytes raise @core.PdfError
 pub fn PdfDocument::decompress(Self) -> Self raise @core.PdfError
 pub fn PdfDocument::decrypt_single_stream(Self, Int, Int, PdfObject, user_password? : BytesView?, owner_password? : BytesView?, no_encrypt_metadata? : Bool) -> PdfObject? raise @core.PdfError
@@ -2726,7 +2738,9 @@ pub fn PdfDocument::get_annotations(Self, encoding? : PdfMetadataEncoding) -> Ar
 pub fn PdfDocument::get_image_24bpp(Self, PdfObject, PdfObject) -> PdfImage raise @core.PdfError
 pub fn PdfDocument::get_number(Self, PdfObject) -> Double raise @core.PdfError
 pub fn PdfDocument::hard_box(Self, ArrayView[Int], @core.PdfName, mediabox_if_missing? : Bool, fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::hard_box_string(Self, ArrayView[Int], String, mediabox_if_missing? : Bool, fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::has_page_box(Self, Int, @core.PdfName) -> Bool raise @core.PdfError
+pub fn PdfDocument::hasbox_string(Self, Int, String) -> Bool raise @core.PdfError
 pub fn PdfDocument::image_bits_per_component(Self, PdfObject) -> PdfObject?
 pub fn PdfDocument::image_colour_space(Self, PdfObject, PdfObject) -> PdfColourSpace raise @core.PdfError
 pub fn PdfDocument::image_resolution(Self, ArrayView[Int], Double, inline? : Bool) -> Array[(Int, String, Int, Int, Double, Double, Int)] raise @core.PdfError
@@ -2913,6 +2927,7 @@ pub fn PdfDocument::scale_to_fit_pages(Self, ArrayView[Int], ArrayView[(Double, 
 pub fn PdfDocument::scale_to_fit_rotate_pages(Self, ArrayView[Int], ArrayView[(Double, Double)], Int, fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::select_object_numbers(Self, (PdfObject) -> Bool) -> Array[Int]
 pub fn PdfDocument::set_annotations_json(Self, Json) -> Self raise @core.PdfError
+pub fn PdfDocument::set_box_string(Self, ArrayView[Int], String, Double, Double, Double, Double) -> Self raise @core.PdfError
 pub fn PdfDocument::set_first_xref(Self, Int) -> Unit
 pub fn PdfDocument::set_info_entry(Self, @core.PdfName, PdfObject, Int, keep_version? : Bool, xmp_also? : Bool, xmp_just_set? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::set_language(Self, BytesView) -> Self raise @core.PdfError

@@ -7757,6 +7757,23 @@ Current backend snapshot:
   +73` passes with the known `markdown/cmd` future notice; `moon test --target
   native` reports 2364/2364; `moon info`, `moon fmt`, and `git diff --check`
   are clean.~~
+- [x] ~~Continue cpdfpage API parity with `.repos/cpdf-source`: added string
+  page-box compatibility wrappers over the existing typed `PdfName` page-box
+  implementation: `PdfDocument::hard_box_string`, `pdf_hard_box_string`,
+  `PdfDocument::hasbox_string`, `pdf_hasbox_string`,
+  `PdfDocument::copy_box`, cpdf-order `pdf_copy_box`,
+  `PdfDocument::crop_pdf_string`, cpdf-order `pdf_crop_pdf_string`,
+  `PdfDocument::set_box_string`, and cpdf-order `pdf_set_box_string`. These
+  preserve the typed internal API while exposing cpdfpage's string box-name
+  calling shape for `/CropBox`, `/MediaBox`, `/TrimBox`, `/BleedBox`, and
+  related names. Coverage pins string hard-box clipping, hasbox checks,
+  copy-box media fallback and cpdf argument order, crop custom-box strings, and
+  setBox-style scalar ordering. Validation on MoonBit compiler 0.9.3: `moon
+  check --target native --warn-list +73` passes with the known `markdown/cmd`
+  future notice; `moon test --target native pdf_page_box_test.mbt --filter
+  '*box*'` reports 16/16; `moon check --target all --warn-list +73` passes with
+  the known `markdown/cmd` future notice; `moon test --target native` reports
+  2364/2364; `moon info`, `moon fmt`, and `git diff --check` are clean.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
