@@ -630,6 +630,8 @@ pub fn[A, B : Eq, C] pdf_embed_collate_runs(ArrayView[(A, B, C)]) -> Array[Array
 
 pub fn pdf_embed_get_char(PdfFontPack, Int) -> (Int, Int, PdfFont)?
 
+pub fn pdf_embed_truetype(PdfDocument, BytesView, String, ArrayView[Int], PdfEncoding) -> PdfFontPack raise @core.PdfError
+
 pub fn pdf_encode_filter_bytes(@core.PdfName, Bytes) -> Bytes raise @core.PdfError
 
 pub fn pdf_encode_filter_bytes_with_flate_level(@core.PdfName, Bytes, Int) -> Bytes raise @core.PdfError
@@ -2793,6 +2795,7 @@ pub fn PdfDocument::direct(Self, PdfObject) -> PdfObject
 pub fn PdfDocument::draft(Self, @core.PdfName?, Bool, ArrayView[Int]) -> Self raise @core.PdfError
 pub fn PdfDocument::draw(Self, ArrayView[Int], ArrayView[PdfDrawOp], struct_tree? : Bool, fast? : Bool, underneath? : Bool, filename? : String, bates? : Int, bates_pad? : Int?, time? : PdfStrftimeTime?, add_artifacts? : Bool, role_map? : String) -> Self raise @core.PdfError
 pub fn PdfDocument::draw_special_text_context(Self, Int, filename? : String, bates? : Int, bates_pad? : Int?, time? : PdfStrftimeTime?) -> PdfDrawSpecialTextContext raise @core.PdfError
+pub fn PdfDocument::embed_truetype(Self, BytesView, String, ArrayView[Int], PdfEncoding) -> PdfFontPack raise @core.PdfError
 pub fn PdfDocument::encrypt_128bit(Self, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission], file_id? : BytesView) -> Self raise @core.PdfError
 pub fn PdfDocument::encrypt_128bit_aesv2_with_iv_provider(Self, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission], (Int, Int, Int) -> Bytes raise @core.PdfError, encrypt_metadata? : Bool, file_id? : BytesView) -> Self raise @core.PdfError
 pub fn PdfDocument::encrypt_128bit_r4(Self, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission], encrypt_metadata? : Bool, file_id? : BytesView) -> Self raise @core.PdfError

@@ -16,8 +16,8 @@ Current estimate:
   text/font extraction, cryptography and primitive crypto, page-tree, writer,
   native async file I/O, codec, page-label, function, optional-content, and
   content-stream, annotation, native secure-random, bookmark, image, structure,
-  renumbering, standard font-pack embedding, text-to-PDF instruction
-  conversion, basic and tagged text-to-PDF document assembly, PDF/UA
+  renumbering, standard and TrueType font-pack embedding, text-to-PDF
+  instruction conversion, basic and tagged text-to-PDF document assembly, PDF/UA
   text-to-PDF subformat shaping, blank PDF/UA creation helpers, PDF/UA XMP
   marker insertion/removal helpers, PDF/UA structure-tree JSON
   import/export helpers, JPEG/JPEG2000, PNG, and JBIG2 image-to-PDF document
@@ -49,10 +49,10 @@ Current estimate:
 
 Current backend snapshot:
 
-- Native: full suite passes on MoonBit 0.9.3, currently 2401/2401 tests.
+- Native: full suite passes on MoonBit 0.9.3, currently 2403/2403 tests.
 - WasmGC and JavaScript: full portable non-native test suites pass on MoonBit
-  0.9.3, currently 2061/2061 on each backend after the latest source-corpus
-  recovery gates.
+  0.9.3, currently 2063/2063 on each backend after the latest TrueType
+  embedding integration.
 - Wasm: current plain-Wasm smoke validation passes at 41/41 tests after
   filtering root's heavy package-level test files and the Markdown package
   generated test module from plain Wasm while retaining them on
@@ -76,6 +76,24 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port the `cpdfembed` TrueType embedding integration:
+  `PdfDocument::embed_truetype` and `pdf_embed_truetype` now mirror
+  `Cpdfembed.embed_truetype` over the ported `pdf_truetype_parse` surface.
+  Empty codepoint lists return an empty font pack without parsing invalid font
+  bytes, non-empty inputs add one `/FontFile2` stream per parsed subset with
+  `/Length` and `/Length1`, construct cpdf-style TrueType simple fonts with
+  descriptor metrics, subset-prefix base font names, widths, font metrics, and
+  higher-subset `/ToUnicode`, and build the font-pack codepoint lookup table
+  through the same text-extractor reverse lookup used by standard font packs.
+  Focused coverage pins the empty-codepoint guard, a synthetic TrueType split
+  across a main WinAnsi character and a higher Unicode character, descriptor
+  metadata, stream dictionaries, font-pack lookup entries, and writer
+  compatibility for the generated `/ToUnicode` font. Validation on MoonBit
+  0.9.3: `moon test --target native pdf_embed_test.mbt` reports 8/8;
+  `moon fmt`, `moon info`, and `moon check --target all --warn-list +73` pass
+  with only the existing `markdown/cmd` future notice; full backend tests
+  report native 2403/2403, wasm-gc 2063/2063, js 2063/2063, and plain-wasm
+  smoke 41/41.~~
 - [x] ~~Port the integrated `cpdftruetype.parse` subset-record surface:
   `PdfTrueTypeParsedSubset` and `pdf_truetype_parse` now assemble the source
   `Cpdftruetype.t` fields from the already-ported table readers, descriptor
