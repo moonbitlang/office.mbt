@@ -44,11 +44,12 @@ Current backend snapshot:
 - WasmGC and JavaScript: full portable non-native test suites pass on MoonBit
   0.9.3, currently 2016/2016 on each backend after the latest source-corpus
   recovery gates.
-- Wasm: full plain-Wasm validation is still deferred because generated
-  package-level test modules exceed the runtime's maximum function-size limit;
-  on MoonBit 0.9.3 this is observed in both `markdown.blackbox_test.wasm` for
-  `moon test --target wasm` and `pdflite.blackbox_test.wasm` for
-  `moon test --target wasm .`.
+- Wasm: current plain-Wasm smoke validation passes at 41/41 tests after
+  filtering root's heavy package-level test files and the Markdown package
+  generated test module from plain Wasm while retaining them on
+  wasm-gc/js/native/llvm; broader plain-Wasm root/Markdown test validation is
+  still deferred because those generated modules exceed the runtime's maximum
+  function-size limit.
 - LLVM: still blocked by the current toolchain: `moon test --target llvm`
   warns that LLVM is experimental and then fails because the LLVM core bundle
   lacks `prelude/prelude.mi`.
@@ -4783,9 +4784,17 @@ Current backend snapshot:
 - [x] ~~Plain Wasm backend smoke validation passes with 497 tests after
   excluding the largest corpus/text regression files from plain Wasm while
   retaining them on wasm-gc, JavaScript, native, and future LLVM.~~
-- [ ] Split or otherwise reduce the largest regression suites so full
-  plain-Wasm package-level tests can instantiate under the runtime's maximum
-  function-size limit without target exclusions.
+- [x] ~~Split or otherwise reduce the largest regression suites so the current
+  plain-Wasm package-level smoke tests can instantiate under the runtime's
+  maximum function-size limit: root's heavy package-level test files and the
+  Markdown package generated test module are now filtered out only for plain
+  Wasm, while wasm-gc/js/native/llvm retain the full root and Markdown
+  coverage. `moon check --target wasm . --warn-list +73` passes, `moon test
+  --target wasm .` reports 2/2 root README smoke tests passing, and full `moon
+  test --target wasm` reports 41/41 tests passing.~~
+- [ ] Further split root and Markdown tests into smaller packages or target
+  groups if broader plain-Wasm behavioral coverage becomes required beyond the
+  current smoke suite.
 - [ ] Revisit LLVM backend validation once the installed MoonBit toolchain has
   the LLVM stdlib bundle available.
 - [x] ~~Checked-in CamlPDF fixture PDFs read, multi-page text-extract,
@@ -7538,6 +7547,13 @@ Current backend snapshot:
   still blocked by runtime maximum-function-size limits in generated test
   modules, and LLVM remains blocked by the installed toolchain's missing LLVM
   core bundle.~~
-- [ ] Reduce the generated plain-Wasm test modules enough for a meaningful
+- [x] ~~Reduce the generated plain-Wasm test modules enough for a meaningful
   current smoke suite to instantiate under the runtime maximum-function-size
-  limit, without dropping source-corpus coverage from wasm-gc/js/native.
+  limit, without dropping source-corpus coverage from wasm-gc/js/native: root's
+  heavy test files and the Markdown package-level test module are filtered out
+  only for plain Wasm, full `moon test --target wasm` now reports 41/41 tests
+  passing, `moon test --target wasm-gc` and `moon test --target js` remain
+  2016/2016 each, and `moon test --target native` remains 2351/2351.~~
+- [ ] Continue source-port hardening with either another real-world malformed
+  recovery fixture, another small cpdf-source API parity gap, or a performance
+  slice that affects large source-corpus reads.

@@ -1,5 +1,5 @@
 import {
-  "bobzhang/pdflite" @pdflite,
+  "bobzhang/pdflite",
   "moonbitlang/core/buffer",
   "moonbitlang/core/encoding/ascii",
   "moonbitlang/core/hashmap",
@@ -7,8 +7,8 @@ import {
 }
 
 import {
-  "bobzhang/pdflite" @pdflite,
-  "bobzhang/pdflite/markdown" @markdown,
+  "bobzhang/pdflite",
+  "bobzhang/pdflite/markdown",
   "moonbitlang/core/encoding/ascii",
   "moonbitlang/core/test",
 } for "test"
@@ -17,3 +17,12 @@ import {
   "moonbitlang/core/encoding/ascii",
   "moonbitlang/core/test",
 } for "wbtest"
+
+supported_targets = "+wasm-gc +js +native +llvm"
+
+options(
+  targets: {
+    "pdf_markdown_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
+    "pdf_markdown_wbtest.mbt": [ "wasm-gc", "js", "native", "llvm" ],
+  },
+)
