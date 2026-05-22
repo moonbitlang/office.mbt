@@ -1582,6 +1582,14 @@ pub fn pdf_truetype_loca_offsets(BytesView) -> Array[Int] raise @core.PdfError
 
 pub fn pdf_truetype_metrics(BytesView) -> PdfTrueTypeMetrics raise @core.PdfError
 
+pub fn pdf_truetype_subset_cmap_table(BytesView, ArrayView[Int]) -> PdfTrueTypeSubsetTable raise @core.PdfError
+
+pub fn pdf_truetype_subset_glyf_table(BytesView, ArrayView[Int]) -> PdfTrueTypeSubsetTable raise @core.PdfError
+
+pub fn pdf_truetype_subset_glyph_indices(BytesView, ArrayView[Int]) -> Array[Int] raise @core.PdfError
+
+pub fn pdf_truetype_subset_loca_table(BytesView, ArrayView[Int]) -> Bytes raise @core.PdfError
+
 pub fn pdf_truetype_table(BytesView, String) -> PdfTrueTypeTableRecord?
 
 pub fn pdf_truetype_tables(BytesView) -> Array[PdfTrueTypeTableRecord]
@@ -3950,6 +3958,11 @@ pub(all) struct PdfTrueTypeMetrics {
   advance_widths : Array[Int]
   max_width : Int
 } derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfTrueTypeSubsetTable {
+  length : Int
+  bytes : Bytes
+} derive(Eq, @debug.Debug)
 
 pub(all) struct PdfTrueTypeTableRecord {
   tag : String

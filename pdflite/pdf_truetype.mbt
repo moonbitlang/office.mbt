@@ -401,12 +401,74 @@ fn pdf_truetype_sorted_unique(values : ArrayView[Int]) -> Array[Int] {
 }
 
 ///|
+fn pdf_truetype_table_padding(length : Int) -> Int {
+  if length % 4 == 0 {
+    0
+  } else {
+    4 - length % 4
+  }
+}
+
+///|
+fn pdf_truetype_push_u16(
+  output : Array[Byte],
+  value : Int,
+) -> Unit raise PdfError {
+  if value < 0 || value > 0xFFFF {
+    raise SoftError("TrueType unsigned 16-bit value out of range")
+  }
+  output.push(pdf_byte_of_int((value >> 8) & 0xFF))
+  output.push(pdf_byte_of_int(value & 0xFF))
+}
+
+///|
+fn pdf_truetype_push_u32(
+  output : Array[Byte],
+  value : Int,
+) -> Unit raise PdfError {
+  if value < 0 {
+    raise SoftError("TrueType unsigned 32-bit value out of range")
+  }
+  output.push(pdf_byte_of_int((value >> 24) & 0xFF))
+  output.push(pdf_byte_of_int((value >> 16) & 0xFF))
+  output.push(pdf_byte_of_int((value >> 8) & 0xFF))
+  output.push(pdf_byte_of_int(value & 0xFF))
+}
+
+///|
+fn pdf_truetype_push_padding(
+  output : Array[Byte],
+  length : Int,
+) -> Unit raise PdfError {
+  for _ in 0..<pdf_truetype_table_padding(length) {
+    output.push(pdf_byte_of_int(0))
+  }
+}
+
+///|
+fn pdf_truetype_index_to_loc_format(data : BytesView) -> Int raise PdfError {
+  let head = pdf_truetype_required_table(data, "head")
+  pdf_truetype_required_i16(data, head.offset + 50, "head table")
+}
+
+///|
 fn pdf_truetype_validate_glyph_index(
   loca_offsets : ArrayView[Int],
   glyph_index : Int,
 ) -> Unit raise PdfError {
   if glyph_index < 0 || glyph_index + 1 >= loca_offsets.length() {
     raise SoftError("Invalid TrueType glyph index")
+  }
+}
+
+///|
+fn pdf_truetype_validate_loca_range(
+  loca_offsets : ArrayView[Int],
+  glyph_index : Int,
+) -> Unit raise PdfError {
+  pdf_truetype_validate_glyph_index(loca_offsets, glyph_index)
+  if loca_offsets[glyph_index + 1] < loca_offsets[glyph_index] {
+    raise SoftError("Invalid TrueType loca offsets")
   }
 }
 
@@ -511,7 +573,7 @@ pub fn pdf_truetype_glyph_byte_ranges(
   let expanded = pdf_truetype_expand_composite_glyphs(data, glyph_indices)
   let ranges : Array[PdfTrueTypeGlyphByteRange] = []
   for glyph_index in expanded {
-    pdf_truetype_validate_glyph_index(loca_offsets, glyph_index)
+    pdf_truetype_validate_loca_range(loca_offsets, glyph_index)
     ranges.push({
       glyph_index,
       start_offset: loca_offsets[glyph_index],
@@ -519,6 +581,182 @@ pub fn pdf_truetype_glyph_byte_ranges(
     })
   }
   ranges
+}
+
+///|
+pub(all) struct PdfTrueTypeSubsetTable {
+  length : Int
+  bytes : PdfBytes
+} derive(Debug, Eq)
+
+///|
+fn pdf_truetype_cmap_glyph_from_entries(
+  entries : ArrayView[PdfTrueTypeCMapGlyph],
+  codepoint : Int,
+) -> Int? {
+  for entry in entries {
+    if entry.codepoint == codepoint {
+      break Some(entry.glyph_index)
+    }
+  } nobreak {
+    None
+  }
+}
+
+///|
+fn pdf_truetype_base_subset_glyph_indices(
+  data : BytesView,
+  subset_codepoints : ArrayView[Int],
+) -> Array[Int] {
+  let cmap_entries = pdf_truetype_cmap_glyphs(data)
+  let glyph_indices : Array[Int] = [0]
+  for codepoint in subset_codepoints {
+    match pdf_truetype_cmap_glyph_from_entries(cmap_entries, codepoint) {
+      Some(glyph_index) => glyph_indices.push(glyph_index)
+      None => ()
+    }
+  }
+  pdf_truetype_sorted_unique(glyph_indices)
+}
+
+///|
+/// Return the glyph indices used by a TrueType Unicode subset.
+///
+/// This mirrors the glyph collection inside the source `write_loca_table` and
+/// `write_glyf_table` helpers: `.notdef` glyph `0` is always included, missing
+/// Unicode mappings are ignored, and composite glyph components are expanded
+/// recursively before the sorted/deduplicated glyph-index set is returned.
+pub fn pdf_truetype_subset_glyph_indices(
+  data : BytesView,
+  subset_codepoints : ArrayView[Int],
+) -> Array[Int] raise PdfError {
+  pdf_truetype_expand_composite_glyphs(
+    data,
+    pdf_truetype_base_subset_glyph_indices(data, subset_codepoints),
+  )
+}
+
+///|
+fn pdf_truetype_subset_loca_write_entry(
+  output : Array[Byte],
+  index_to_loc_format : Int,
+  position : Int,
+) -> Unit raise PdfError {
+  match index_to_loc_format {
+    0 => pdf_truetype_push_u16(output, position / 2)
+    1 => pdf_truetype_push_u32(output, position)
+    _ => raise SoftError("Unknown indexToLocFormat in write_loca_table")
+  }
+}
+
+///|
+/// Write a padded subset `loca` table for the given Unicode subset.
+///
+/// The original glyph indices are preserved: entries for skipped glyph IDs are
+/// written as zero-length ranges pointing at the next selected glyph offset,
+/// matching `Cpdftruetype.write_loca_table`.
+pub fn pdf_truetype_subset_loca_table(
+  data : BytesView,
+  subset_codepoints : ArrayView[Int],
+) -> PdfBytes raise PdfError {
+  let index_to_loc_format = pdf_truetype_index_to_loc_format(data)
+  let loca_offsets = pdf_truetype_loca_offsets(data)
+  let glyph_indices = pdf_truetype_subset_glyph_indices(data, subset_codepoints)
+  let pairs : Array[(Int, Int)] = []
+  let mut position = 0
+  for glyph_index in glyph_indices {
+    pdf_truetype_validate_loca_range(loca_offsets, glyph_index)
+    pairs.push((glyph_index, position))
+    position += loca_offsets[glyph_index + 1] - loca_offsets[glyph_index]
+  }
+  pairs.push((loca_offsets.length() - 1, position))
+  let output : Array[Byte] = []
+  for index in 0..<pairs.length() {
+    let (glyph_index, offset) = pairs[index]
+    if index != pairs.length() - 1 {
+      pdf_truetype_subset_loca_write_entry(output, index_to_loc_format, offset)
+      let (next_glyph_index, next_offset) = pairs[index + 1]
+      for _ in 0..<(next_glyph_index - glyph_index - 1) {
+        pdf_truetype_subset_loca_write_entry(
+          output, index_to_loc_format, next_offset,
+        )
+      }
+    } else {
+      pdf_truetype_subset_loca_write_entry(output, index_to_loc_format, offset)
+    }
+  }
+  pdf_truetype_push_padding(output, output.length())
+  Bytes::from_array(output)
+}
+
+///|
+/// Write a padded subset `glyf` table for the given Unicode subset.
+///
+/// The returned `length` is the unpadded table length for the TrueType table
+/// directory; `bytes` contains the padded table payload actually written to the
+/// font file.
+pub fn pdf_truetype_subset_glyf_table(
+  data : BytesView,
+  subset_codepoints : ArrayView[Int],
+) -> PdfTrueTypeSubsetTable raise PdfError {
+  let glyf = pdf_truetype_required_table(data, "glyf")
+  let ranges = pdf_truetype_glyph_byte_ranges(
+    data,
+    pdf_truetype_base_subset_glyph_indices(data, subset_codepoints),
+  )
+  let output : Array[Byte] = []
+  let mut length = 0
+  for range in ranges {
+    if glyf.offset + range.end_offset > data.length() {
+      raise SoftError("Truncated TrueType glyf table")
+    }
+    for offset in range.start_offset..<range.end_offset {
+      output.push(data[glyf.offset + offset])
+    }
+    length += range.end_offset - range.start_offset
+  }
+  pdf_truetype_push_padding(output, length)
+  { length, bytes: Bytes::from_array(output) }
+}
+
+///|
+/// Write the format-6 cmap table used by cpdf for implicit-font-file subsets.
+///
+/// Character codes start at `33`; each Unicode value in `subset_codepoints`
+/// contributes its original glyph index, or `0` if the original cmap has no
+/// mapping. The returned bytes are padded, while `length` is the unpadded table
+/// length for directory metadata.
+pub fn pdf_truetype_subset_cmap_table(
+  data : BytesView,
+  subset_codepoints : ArrayView[Int],
+) -> PdfTrueTypeSubsetTable raise PdfError {
+  let cmap_entries = pdf_truetype_cmap_glyphs(data)
+  let glyph_indices : Array[Int] = []
+  for codepoint in subset_codepoints {
+    glyph_indices.push(
+      match pdf_truetype_cmap_glyph_from_entries(cmap_entries, codepoint) {
+        Some(glyph_index) => glyph_index
+        None => 0
+      },
+    )
+  }
+  let output : Array[Byte] = []
+  pdf_truetype_push_u16(output, 0)
+  pdf_truetype_push_u16(output, 1)
+  pdf_truetype_push_u16(output, 1)
+  pdf_truetype_push_u16(output, 0)
+  pdf_truetype_push_u32(output, 12)
+  pdf_truetype_push_u16(output, 6)
+  pdf_truetype_push_u16(output, 10 + glyph_indices.length() * 2)
+  pdf_truetype_push_u16(output, 0)
+  pdf_truetype_push_u16(output, 33)
+  pdf_truetype_push_u16(output, glyph_indices.length())
+  for glyph_index in glyph_indices {
+    pdf_truetype_push_u16(output, pdf_truetype_normalize_u16(glyph_index))
+  }
+  let length = 22 + glyph_indices.length() * 2
+  pdf_truetype_push_padding(output, length)
+  { length, bytes: Bytes::from_array(output) }
 }
 
 ///|

@@ -36,7 +36,8 @@ Current estimate:
   media-clip/file-attachment/PrinterMark/reference-XObject/MCID Form XObject/
   Type0 CIDSystemInfo/CIDToGIDMap/CMap-name/WMode/font-file no-op/TrueType
   encoding/cmap/ToUnicode validation, TrueType cmap glyph mapping plus
-  table/metric/descriptor/loca/composite-glyph parsing foundations, imposition
+  table/metric/descriptor/loca/composite-glyph parsing foundations and
+  subset `glyf`/`loca`/format-6 `cmap` table writers, imposition
   transform/content/page-assembly/pattern-matrix kernels, cpdf page
   hard-box/removal/shift/scale/scale-to-fit/upright/set-mediabox/copy-box
   helpers and source-order compatibility aliases, imposition make-space
@@ -45,9 +46,9 @@ Current estimate:
 
 Current backend snapshot:
 
-- Native: full suite passes on MoonBit 0.9.3, currently 2390/2390 tests.
+- Native: full suite passes on MoonBit 0.9.3, currently 2393/2393 tests.
 - WasmGC and JavaScript: full portable non-native test suites pass on MoonBit
-  0.9.3, currently 2050/2050 on each backend after the latest source-corpus
+  0.9.3, currently 2053/2053 on each backend after the latest source-corpus
   recovery gates.
 - Wasm: current plain-Wasm smoke validation passes at 41/41 tests after
   filtering root's heavy package-level test files and the Markdown package
@@ -72,6 +73,25 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Port the next `cpdftruetype` subset-table writer slice:
+  `PdfTrueTypeSubsetTable`, `pdf_truetype_subset_glyph_indices`,
+  `pdf_truetype_subset_loca_table`, `pdf_truetype_subset_glyf_table`, and
+  `pdf_truetype_subset_cmap_table` now cover the source
+  `write_loca_table`, `write_glyf_table`, and implicit-font-file
+  `write_cmap_table` prerequisites. The port includes `.notdef` glyph
+  retention, Unicode-subset-to-glyph lookup with missing mappings ignored or
+  written as glyph `0` for format-6 cmaps, recursive composite expansion,
+  original glyph-index preservation through rewritten `loca` gaps, short and
+  long `loca` emission, selected `glyf` byte copying, unpadded table lengths,
+  and 4-byte table padding. This still does not complete the full
+  `subset_font` table-directory rebuild, header offset/size-reduction pass,
+  width calculation from selected encodings, `tounicode` generation, or full
+  `Cpdftruetype.parse`. Validation on MoonBit 0.9.3:
+  `moon check --target native --warn-list +73` passes with only the existing
+  `markdown/cmd` warning; `moon test --target native pdf_truetype_test.mbt`
+  reports 19/19; `moon info` and `moon check --target all --warn-list +73`
+  pass; full backend tests report native 2393/2393, wasm-gc 2053/2053, and js
+  2053/2053.~~
 - [x] ~~Port the `cpdftruetype` composite-glyph expansion prerequisite:
   `pdf_truetype_expand_composite_glyphs`, `PdfTrueTypeGlyphByteRange`, and
   `pdf_truetype_glyph_byte_ranges` now mirror the source

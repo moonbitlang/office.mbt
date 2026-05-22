@@ -79,7 +79,27 @@ fn truetype_table_font_for_test(
 fn truetype_cmap_font_for_test(
   subtables : ArrayView[(Int, Int, Array[Int])],
 ) -> @pdflite.PdfBytes {
+  let cmap = truetype_cmap_table_for_test(subtables)
   let cmap_offset = 28
+
+  let output : Array[Int] = []
+  truetype_push_u32_for_test(output, 0x00010000)
+  truetype_push_u16_for_test(output, 1)
+  truetype_push_u16_for_test(output, 0)
+  truetype_push_u16_for_test(output, 0)
+  truetype_push_u16_for_test(output, 0)
+  truetype_append_for_test(output, [0x63, 0x6D, 0x61, 0x70])
+  truetype_push_u32_for_test(output, 0)
+  truetype_push_u32_for_test(output, cmap_offset)
+  truetype_push_u32_for_test(output, cmap.length())
+  truetype_append_for_test(output, cmap)
+  truetype_bytes_for_test(output)
+}
+
+///|
+fn truetype_cmap_table_for_test(
+  subtables : ArrayView[(Int, Int, Array[Int])],
+) -> Array[Int] {
   let cmap_header_length = 4 + subtables.length() * 8
   let cmap : Array[Int] = []
   truetype_push_u16_for_test(cmap, 0)
@@ -96,19 +116,7 @@ fn truetype_cmap_font_for_test(
     let (_, _, subtable) = record
     truetype_append_for_test(cmap, subtable)
   }
-
-  let output : Array[Int] = []
-  truetype_push_u32_for_test(output, 0x00010000)
-  truetype_push_u16_for_test(output, 1)
-  truetype_push_u16_for_test(output, 0)
-  truetype_push_u16_for_test(output, 0)
-  truetype_push_u16_for_test(output, 0)
-  truetype_append_for_test(output, [0x63, 0x6D, 0x61, 0x70])
-  truetype_push_u32_for_test(output, 0)
-  truetype_push_u32_for_test(output, cmap_offset)
-  truetype_push_u32_for_test(output, cmap.length())
-  truetype_append_for_test(output, cmap)
-  truetype_bytes_for_test(output)
+  cmap
 }
 
 ///|
@@ -612,6 +620,133 @@ test "pdf_truetype_expand_composite_glyphs requires glyf table" {
     is Err(@pdflite.PdfError::SoftError("No glyf table found in TrueType font")) else {
     fail("expected missing glyf table to fail")
   }
+}
+
+///|
+test "pdf_truetype_subset_glyf_table copies notdef subset glyphs and composites" {
+  let simple = truetype_simple_glyph_for_test()
+  let composite = truetype_composite_glyph_for_test([(0, 2, 2)])
+  let glyph2 : Array[Int] = []
+  truetype_append_for_test(glyph2, truetype_simple_glyph_for_test())
+  glyph2.push(0xAB)
+  let glyph3 = truetype_simple_glyph_for_test()
+  let (glyf, offsets) = truetype_glyf_table_for_test([
+    simple, composite, glyph2, glyph3,
+  ])
+  let font = truetype_table_font_for_test([
+    ("head", truetype_head_table_for_test(1000, 0, 0, 1000, 1000, 1)),
+    ("maxp", truetype_maxp_table_for_test(4)),
+    (
+      "cmap",
+      truetype_cmap_table_for_test([
+        (3, 1, truetype_format6_subtable_for_test(65, [1, 3])),
+      ]),
+    ),
+    ("loca", truetype_loca_long_table_for_test(offsets)),
+    ("glyf", glyf),
+  ])
+  @test.assert_eq(try! @pdflite.pdf_truetype_subset_glyph_indices(font, [65]), [
+    0, 1, 2,
+  ])
+  let table = try! @pdflite.pdf_truetype_subset_glyf_table(font, [65])
+  let expected : Array[Int] = []
+  truetype_append_for_test(expected, simple)
+  truetype_append_for_test(expected, composite)
+  truetype_append_for_test(expected, glyph2)
+  truetype_append_for_test(expected, [0, 0, 0])
+  @test.assert_eq(table.length, 37)
+  @test.assert_eq(@pdflite.pdf_int_array_of_bytes(table.bytes), expected)
+}
+
+///|
+test "pdf_truetype_subset_loca_table rewrites gaps and short entries" {
+  let simple = truetype_simple_glyph_for_test()
+  let composite = truetype_composite_glyph_for_test([(0, 2, 2)])
+  let glyph2 : Array[Int] = []
+  truetype_append_for_test(glyph2, truetype_simple_glyph_for_test())
+  glyph2.push(0xAB)
+  let (long_glyf, long_offsets) = truetype_glyf_table_for_test([
+    simple,
+    composite,
+    glyph2,
+    truetype_simple_glyph_for_test(),
+  ])
+  let long_font = truetype_table_font_for_test([
+    ("head", truetype_head_table_for_test(1000, 0, 0, 1000, 1000, 1)),
+    ("maxp", truetype_maxp_table_for_test(4)),
+    (
+      "cmap",
+      truetype_cmap_table_for_test([
+        (3, 1, truetype_format6_subtable_for_test(65, [1])),
+      ]),
+    ),
+    ("loca", truetype_loca_long_table_for_test(long_offsets)),
+    ("glyf", long_glyf),
+  ])
+  @test.assert_eq(
+    @pdflite.pdf_int_array_of_bytes(
+      try! @pdflite.pdf_truetype_subset_loca_table(long_font, [65]),
+    ),
+    [
+      0, 0, 0, 0, // glyph 0
+       0, 0, 0, 10, // glyph 1
+       0, 0, 0, 26, // glyph 2
+       0, 0, 0, 37, // skipped glyph 3
+       0, 0, 0, 37, // sentinel
+    ],
+  )
+
+  let (short_glyf, short_offsets) = truetype_glyf_table_for_test([
+    truetype_simple_glyph_for_test(),
+    truetype_simple_glyph_for_test(),
+  ])
+  let short_font = truetype_table_font_for_test([
+    ("head", truetype_head_table_for_test(1000, 0, 0, 1000, 1000, 0)),
+    ("maxp", truetype_maxp_table_for_test(2)),
+    (
+      "cmap",
+      truetype_cmap_table_for_test([
+        (3, 1, truetype_format6_subtable_for_test(65, [1])),
+      ]),
+    ),
+    ("loca", truetype_loca_short_table_for_test(short_offsets)),
+    ("glyf", short_glyf),
+  ])
+  @test.assert_eq(
+    @pdflite.pdf_int_array_of_bytes(
+      try! @pdflite.pdf_truetype_subset_loca_table(short_font, [65]),
+    ),
+    [
+      0, 0, // glyph 0
+       0, 5, // glyph 1
+       0, 10, // sentinel
+       0, 0, // padding
+    ],
+  )
+}
+
+///|
+test "pdf_truetype_subset_cmap_table writes source format 6 table" {
+  let font = truetype_cmap_font_for_test([
+    (3, 1, truetype_format6_subtable_for_test(65, [7, 8])),
+  ])
+  let table = try! @pdflite.pdf_truetype_subset_cmap_table(font, [65, 70])
+  @test.assert_eq(table.length, 26)
+  @test.assert_eq(@pdflite.pdf_int_array_of_bytes(table.bytes), [
+    0, 0, // table version
+     0, 1, // one encoding table
+     0, 1, // platform ID
+     0, 0, // platform encoding ID
+     0, 0, 0, 12, // subtable offset
+     0, 6, // format
+     0, 14, // subtable length
+     0, 0, // language
+     0, 33, // first character code
+     0, 2, // entry count
+     0, 7, // U+0041 glyph
+     0, 0, // missing U+0046 glyph
+     0, 0, // padding
+  ])
 }
 
 ///|
