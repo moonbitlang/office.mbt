@@ -7151,6 +7151,26 @@ Current backend snapshot:
   reports no pending interface or formatting work, and `moon check --target all
   --warn-list +73` reports the known warning-73/main-package baseline with 10
   warnings and 0 errors.~~
+- [x] ~~Add the next source-corpus ToUnicode/CMap variation slice: the native
+  `text/fixture_acceptance` package now also gates optional
+  `.repos/cpdf-source/hello.pdf` through a cpdf-style `/ToUnicode` `UseCMap`
+  variation chain. The gate synthesizes inherited grandbase/base/child CMap
+  streams with child overrides, supplementary-plane text, multi-codepoint
+  values, inherited Omega/Z mappings, and mixed uncompressed plus
+  Flate-compressed CMap streams, then attaches the chain to a source-page Type1
+  font. It verifies extracted text, content operators, font listing,
+  descriptor ToUnicode maps, `parse_cmap` plus `pdf_parse_cmap` wrapper parity,
+  text-extractor reverse lookup behavior including intentionally unmapped
+  inherited values, `font_table` plus `pdf_font_table` wrapper parity,
+  compressed rewrite/reread, strict-reader rejection of a bad final
+  `startxref`, and malformed reconstruction with `first_xref() == 0`. `moon
+  check --target native text/fixture_acceptance --warn-list +73` passes, the
+  focused cpdf source CMap variation test reports 1/1 test passing, `moon test
+  --target native text/fixture_acceptance` reports 3/3 tests passing, and
+  `moon test --target native` reports 2333/2333 tests passing. `moon info &&
+  moon fmt` reports no pending interface or formatting work, and `moon check
+  --target all --warn-list +73` reports the known warning-73/main-package
+  baseline with 10 warnings and 0 errors.~~
 - [ ] Add the next remaining format parity slice: additional real-world
   ToUnicode/CMap fixtures when source material is available, broader real-world
   image corpus coverage, or another malformed recovery source-corpus edge.

@@ -334,3 +334,247 @@ async test "cpdf source hello fixture composes ToUnicode UseCMap chain" {
     }
   }
 }
+
+///|
+fn text_fixture_usecmap_variation_grandbase_cmap_for_test() -> @pdflite.PdfObject raise {
+  text_fixture_usecmap_stream_for_test(
+    @ascii.encode(
+      "1 begincodespacerange\n" +
+      "<00><FF>\n" +
+      "endcodespacerange\n" +
+      "3 beginbfchar\n" +
+      "<41><D834DD1E>\n" +
+      "<42><0058>\n" +
+      "<43><00620063>\n" +
+      "endbfchar\n",
+    ),
+    None,
+    false,
+  )
+}
+
+///|
+fn text_fixture_usecmap_variation_base_cmap_for_test(
+  usecmap : Int,
+) -> @pdflite.PdfObject raise {
+  text_fixture_usecmap_stream_for_test(
+    @ascii.encode(
+      "2 beginbfchar\n" + "<44><0052>\n" + "<45><005A>\n" + "endbfchar\n",
+    ),
+    Some(usecmap),
+    false,
+  )
+}
+
+///|
+fn text_fixture_usecmap_variation_child_cmap_for_test(
+  usecmap : Int,
+) -> @pdflite.PdfObject raise {
+  text_fixture_usecmap_stream_for_test(
+    @ascii.encode(
+      "2 beginbfchar\n" + "<42><0059>\n" + "<44><03A9>\n" + "endbfchar\n",
+    ),
+    Some(usecmap),
+    true,
+  )
+}
+
+///|
+fn text_fixture_usecmap_variation_tounicode_for_test() -> Array[
+  (Int, @pdflite.PdfBytes),
+] raise {
+  [
+    (0x42, @pdflite.pdf_bytes_of_int_array([0x00, 0x59])),
+    (0x44, @pdflite.pdf_bytes_of_int_array([0x03, 0xA9])),
+    (0x45, @pdflite.pdf_bytes_of_int_array([0x00, 0x5A])),
+    (0x41, @pdflite.pdf_bytes_of_int_array([0xD8, 0x34, 0xDD, 0x1E])),
+    (0x43, @pdflite.pdf_bytes_of_int_array([0x00, 0x62, 0x00, 0x63])),
+  ]
+}
+
+///|
+fn text_fixture_usecmap_variation_text_for_test() -> @pdflite.PdfBytes raise {
+  @pdflite.pdf_bytes_of_int_array([0x41, 0x42, 0x43, 0x44, 0x45, 0x46])
+}
+
+///|
+fn text_fixture_usecmap_variation_font_for_test(
+  tounicode : Int,
+) -> @pdflite.PdfObject {
+  @pdflite.pdf_dictionary([
+    (
+      text_fixture_name_for_test("/Subtype"),
+      PdfNameObject(text_fixture_name_for_test("/Type1")),
+    ),
+    (
+      text_fixture_name_for_test("/BaseFont"),
+      PdfNameObject(text_fixture_name_for_test("/SourceUseCMapVariation")),
+    ),
+    (text_fixture_name_for_test("/ToUnicode"), PdfIndirect(tounicode)),
+  ])
+}
+
+///|
+fn text_fixture_hello_with_usecmap_variation_tounicode_for_test(
+  document : @pdflite.PdfDocument,
+) -> @pdflite.PdfDocument raise {
+  let output = document.copy()
+  let grandbase = output.add_object(
+    text_fixture_usecmap_variation_grandbase_cmap_for_test(),
+  )
+  let base = output.add_object(
+    text_fixture_usecmap_variation_base_cmap_for_test(grandbase),
+  )
+  let child = output.add_object(
+    text_fixture_usecmap_variation_child_cmap_for_test(base),
+  )
+  let font_number = output.add_object(
+    text_fixture_usecmap_variation_font_for_test(child),
+  )
+  let pages = output.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  let font_resources = text_fixture_source_page_fonts_for_test(
+    output,
+    pages[0].resources,
+  ).add_dict_entry(
+    text_fixture_name_for_test("/SourceUseCMapVar"),
+    PdfIndirect(font_number),
+  )
+  let resources = pages[0].resources.add_dict_entry(
+    text_fixture_name_for_test("/Font"),
+    font_resources,
+  )
+  let page = { ..pages[0], resources, }
+  let updated_page = output.postpend_operators(
+    page,
+    [
+      Op_BT,
+      Op_Tf(text_fixture_name_for_test("/SourceUseCMapVar"), 12.0),
+      Op_Tj(text_fixture_usecmap_variation_text_for_test()),
+      Op_ET,
+    ],
+    fast=true,
+  )
+  output.change_pages([updated_page], change_references=true)
+}
+
+///|
+fn text_fixture_assert_usecmap_variation_tounicode_for_test(
+  document : @pdflite.PdfDocument,
+) -> Unit raise {
+  text_fixture_assert_hello_text_for_test(document)
+  let expected_codepoints = [0x1D11E, 0x59, 0x62, 0x63, 0x03A9, 0x5A, 0x46]
+  let expected_text = @utf8.decode_lossy(
+    @pdflite.pdf_utf8_of_codepoints(expected_codepoints),
+  )
+  text_fixture_assert_contains_for_test(
+    @utf8.decode_lossy(document.test_extract_text([1])),
+    expected_text,
+  )
+  let ops = text_fixture_hello_ops_for_test(document)
+  text_fixture_assert_op_for_test(
+    ops,
+    Op_Tf(text_fixture_name_for_test("/SourceUseCMapVar"), 12.0),
+  )
+  text_fixture_assert_op_for_test(
+    ops,
+    Op_Tj(text_fixture_usecmap_variation_text_for_test()),
+  )
+  let source_font = text_fixture_source_font_entry_for_test(
+    document.list_fonts([1]),
+    "/SourceUseCMapVar",
+  )
+  @test.assert_eq(source_font.subtype, "/Type1")
+  @test.assert_eq(source_font.basefont, "/SourceUseCMapVariation")
+  guard document.read_font(source_font.font) is PdfFontSimple(simple) else {
+    fail("expected source UseCMap variation simple font")
+  }
+  guard simple.fontdescriptor is Some(descriptor) else {
+    fail("expected source UseCMap variation descriptor carrying ToUnicode")
+  }
+  let expected_map = text_fixture_usecmap_variation_tounicode_for_test()
+  @test.assert_eq(descriptor.tounicode, Some(expected_map))
+  guard document.lookup_direct(
+      text_fixture_name_for_test("/ToUnicode"),
+      document.direct(source_font.font),
+    )
+    is Some(tounicode) else {
+    fail("missing source UseCMap variation ToUnicode stream")
+  }
+  @test.assert_eq(document.parse_cmap(tounicode).map, expected_map)
+  @test.assert_eq(
+    @pdflite.pdf_parse_cmap(document, tounicode).map,
+    expected_map,
+  )
+  let extractor = document.text_extractor_of_font(source_font.font)
+  @test.assert_eq(
+    extractor.codepoints_of_text(text_fixture_usecmap_variation_text_for_test()),
+    expected_codepoints,
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x1D11E), Some(0x41))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x59), Some(0x42))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x03A9), Some(0x44))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x5A), Some(0x45))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x58), None)
+  @test.assert_eq(extractor.charcode_of_codepoint(0x52), None)
+  @test.assert_eq(extractor.charcode_of_codepoint(0x62), None)
+  @test.assert_eq(extractor.charcode_of_codepoint(0x46), None)
+  let table = document.font_table("/SourceUseCMapVar", 1)
+  let row_supplementary = text_fixture_source_font_table_entry_for_test(
+    table, 0x41,
+  )
+  @test.assert_eq(row_supplementary.unicode, "1D11E")
+  @test.assert_eq(row_supplementary.unicode_name, "MUSICAL SYMBOL G CLEF")
+  let row_override = text_fixture_source_font_table_entry_for_test(table, 0x42)
+  @test.assert_eq(row_override.unicode, "0059")
+  @test.assert_eq(row_override.utf8, "Y")
+  let row_multi = text_fixture_source_font_table_entry_for_test(table, 0x43)
+  @test.assert_eq(row_multi.unicode, "***multiple")
+  @test.assert_eq(row_multi.utf8, "bc")
+  @test.assert_eq(row_multi.unicode_name, "***multiple")
+  let row_omega = text_fixture_source_font_table_entry_for_test(table, 0x44)
+  @test.assert_eq(row_omega.unicode, "03A9")
+  @test.assert_eq(
+    row_omega.utf8,
+    @utf8.decode_lossy(@pdflite.pdf_utf8_of_codepoints([0x03A9])),
+  )
+  let row_inherited = text_fixture_source_font_table_entry_for_test(table, 0x45)
+  @test.assert_eq(row_inherited.unicode, "005A")
+  @test.assert_eq(row_inherited.utf8, "Z")
+  @test.assert_eq(
+    @pdflite.pdf_font_table(document, "/SourceUseCMapVar", 1),
+    table,
+  )
+}
+
+///|
+async test "cpdf source hello fixture composes ToUnicode UseCMap variation chain" {
+  match text_fixture_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    None => ()
+    Some(bytes) => {
+      let document = @pdflite.pdf_read_document_from_bytes(bytes)
+      let with_variation = text_fixture_hello_with_usecmap_variation_tounicode_for_test(
+        document,
+      )
+      text_fixture_assert_usecmap_variation_tounicode_for_test(with_variation)
+      let compressed = @pdflite.pdf_write_document_with_compressed_xref_stream(
+        with_variation,
+      )
+      text_fixture_assert_usecmap_variation_tounicode_for_test(
+        @pdflite.pdf_read_document_from_bytes(compressed),
+      )
+      let corrupted = text_fixture_corrupt_startxref_pointer_for_test(
+        compressed,
+      )
+      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+        corrupted,
+      )
+      guard strict is Err(_) else {
+        fail("expected bad startxref to require malformed reconstruction")
+      }
+      let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
+      @test.assert_eq(recovered.first_xref(), 0)
+      text_fixture_assert_usecmap_variation_tounicode_for_test(recovered)
+    }
+  }
+}
