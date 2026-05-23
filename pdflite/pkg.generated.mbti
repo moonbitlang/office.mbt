@@ -284,6 +284,8 @@ pub fn pdf_append_page_content_multiple_ops_cpdf_order(ArrayView[Array[PdfConten
 
 pub fn pdf_append_page_content_ops(PdfDocument, ArrayView[Int], ArrayView[PdfContentOp], before? : Bool, fast? : Bool) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_apply(PdfDocument, ArrayView[Int]) -> Unit
+
 pub fn pdf_apply_redaction_type(PdfDocument, String, ArrayView[Int]) -> Unit
 
 pub fn pdf_apply_redactions(PdfDocument, ArrayView[Int]) -> Unit

@@ -152,6 +152,7 @@ test "redaction apply stubs leave documents untouched" {
   let document = try! @pdflite.pdf_blank_document(200.0, 100.0, 1)
   document.apply_redactions([99])
   @pdflite.pdf_apply_redactions(document, [99])
+  @pdflite.pdf_apply(document, [99])
   document.apply_redaction_type("Square", [99])
   @pdflite.pdf_apply_redaction_type(document, "Square", [99])
   @pdflite.pdf_apply_type(document, "Square", [99])

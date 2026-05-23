@@ -48,8 +48,8 @@ Current estimate:
   synchronization, XMP metadata creation, XMP RDF list extraction,
   XMP/document info JSON reporting, cpdfmetadata namespace/get-data/XML-tree
   helper parity, native metadata file set/write/extract wrappers, and XML
-  entity/whitespace decoding, redaction annotation bounding-box overlays and
-  cpdfredact source-order bounding-box wrapper,
+  entity/whitespace decoding, redaction annotation bounding-box overlays,
+  cpdfredact apply alias and source-order bounding-box wrapper,
   cpdfua Matterhorn content/role-map/XMP/viewer-preference/optional-content/
   media-clip/file-attachment/PrinterMark/reference-XObject/MCID Form XObject/
   Type0 CIDSystemInfo/CIDToGIDMap/CMap-name/WMode/font-file no-op/TrueType
@@ -103,6 +103,18 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfredact` source/API parity from
+  `.repos/cpdf-source/cpdfredact.mli`: added source-spelled `pdf_apply` as the
+  compatibility entry point for cpdfredact's no-op `apply`, delegating to the
+  established `apply_redactions`/`pdf_apply_redactions` implementation.
+  Coverage folds the alias into the existing redaction apply stub test.
+  Validation on MoonBit 0.9.3: `moon check --target native --warn-list +73`
+  passes with the known `markdown/cmd` future notice; `moon test --target
+  native pdf_redact_test.mbt`, `moon test --target wasm-gc pdf_redact_test.mbt`,
+  and `moon test --target js pdf_redact_test.mbt` report 5/5 each; `moon fmt`,
+  `moon info`, and `moon check --target all --warn-list +73` pass with only the
+  existing `markdown/cmd` future notice; full `moon test --target native`
+  reports 2414/2414.~~
 - [x] ~~Continue `cpdfprinttree` source/API parity from
   `.repos/cpdf-source/cpdfprinttree.mli`: added module-spelled
   `pdf_printtree_to_buffer` and `pdf_printtree_to_string` aliases over the

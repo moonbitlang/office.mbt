@@ -47,6 +47,12 @@ pub fn pdf_apply_redactions(
 }
 
 ///|
+/// Compatibility wrapper matching cpdfredact's `apply`.
+pub fn pdf_apply(document : PdfDocument, page_numbers : ArrayView[Int]) -> Unit {
+  document.apply_redactions(page_numbers)
+}
+
+///|
 /// Apply annotations of `annotation_type` as if they were redactions.
 ///
 /// This mirrors the current cpdf stub, which intentionally performs no work.
