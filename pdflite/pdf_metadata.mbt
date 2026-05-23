@@ -1591,6 +1591,14 @@ pub fn pdf_metadata_xmltree_of_bytes(
 }
 
 ///|
+/// Source-spelled compatibility alias for cpdfmetadata's `xmltree_of_bytes`.
+pub fn pdf_xmltree_of_bytes(
+  metadata : BytesView,
+) -> PdfMetadataXmlDocument raise PdfError {
+  pdf_metadata_xmltree_of_bytes(metadata)
+}
+
+///|
 fn pdf_metadata_find_byte(data : BytesView, start : Int, byte : Int) -> Int {
   for position = start; position < data.length(); position = position + 1 {
     if data[position].to_int() == byte {
@@ -1954,6 +1962,12 @@ pub fn pdf_metadata_string_of_xmltree(tree : PdfMetadataXmlTree) -> String {
 }
 
 ///|
+/// Source-spelled compatibility alias for cpdfmetadata's `string_of_xmltree`.
+pub fn pdf_string_of_xmltree(tree : PdfMetadataXmlTree) -> String {
+  pdf_metadata_string_of_xmltree(tree)
+}
+
+///|
 fn pdf_metadata_xml_collect_list_items(tree : PdfMetadataXmlTree) -> String {
   match tree {
     PdfMetadataXmlElement(tag, children) =>
@@ -2044,6 +2058,16 @@ pub fn pdf_metadata_xmltree_get_data_for(
 }
 
 ///|
+/// Source-spelled compatibility alias for cpdfmetadata's `get_data_for`.
+pub fn pdf_get_data_for(
+  xml_uri : String,
+  name : String,
+  tree : PdfMetadataXmlTree,
+) -> String? {
+  pdf_metadata_xmltree_get_data_for(xml_uri, name, tree)
+}
+
+///|
 fn pdf_metadata_xml_escaped_text(text : String) -> String {
   text
   .replace(old="&", new="&amp;")
@@ -2112,6 +2136,12 @@ pub fn pdf_metadata_bytes_of_xmltree(
   }
   pdf_metadata_xmltree_push_bytes(output, document.tree)
   @utf8.encode(output.join(""))
+}
+
+///|
+/// Source-spelled compatibility alias for cpdfmetadata's `bytes_of_xmltree`.
+pub fn pdf_bytes_of_xmltree(document : PdfMetadataXmlDocument) -> PdfBytes {
+  pdf_metadata_bytes_of_xmltree(document)
 }
 
 ///|

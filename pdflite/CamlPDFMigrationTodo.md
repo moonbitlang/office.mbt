@@ -48,7 +48,8 @@ Current estimate:
   order/open-action destination wrappers, XMP metadata-date rewriting, XMP info
   synchronization, XMP metadata creation, XMP RDF list extraction,
   XMP/document info JSON reporting, cpdfmetadata source-spelled encode-output
-  alias, namespace aliases, and namespace/get-data/XML-tree helper parity,
+  and XML-tree aliases, namespace aliases, and namespace/get-data/XML-tree
+  helper parity,
   native metadata file set/write/extract wrappers, and XML
   entity/whitespace decoding, redaction annotation bounding-box overlays,
   cpdfredact apply alias and source-order bounding-box wrapper,
@@ -106,6 +107,20 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfmetadata` source/API parity from
+  `.repos/cpdf-source/cpdfmetadata.mli`: added source-spelled XML-tree helper
+  aliases `pdf_xmltree_of_bytes`, `pdf_get_data_for`,
+  `pdf_string_of_xmltree`, and `pdf_bytes_of_xmltree` over the established
+  `pdf_metadata_*` parser, lookup, debug-string, and serializer APIs. Coverage
+  folds the aliases into the existing cpdfmetadata XML-tree helper test.
+  Validation on MoonBit 0.9.3: `moon check --target native --warn-list +73`
+  passes with the known `markdown/cmd` future notice; `moon test --target
+  native pdf_metadata_test.mbt --filter '*XML tree*'`, `moon test --target
+  wasm-gc pdf_metadata_test.mbt --filter '*XML tree*'`, and `moon test --target
+  js pdf_metadata_test.mbt --filter '*XML tree*'` report 1/1 each; `moon fmt`,
+  `moon info`, and `moon check --target all --warn-list +73` pass with only the
+  existing `markdown/cmd` future notice; full `moon test --target native`
+  reports 2414/2414.~~
 - [x] ~~Continue `cpdfmetadata` source/API parity from
   `.repos/cpdf-source/cpdfmetadata.mli`: added source-spelled namespace
   aliases `pdf_adobe`, `pdf_xmp`, `pdf_dc`, `pdf_rdf`, `pdf_pdfaid`,

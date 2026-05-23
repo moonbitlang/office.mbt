@@ -1051,6 +1051,9 @@ test "pdf_metadata XML tree helpers mirror cpdfmetadata lookup" {
   let document = try! @pdflite.pdf_metadata_xmltree_of_bytes(
     @ascii.encode(xmp_text),
   )
+  let source_document = try! @pdflite.pdf_xmltree_of_bytes(
+    @ascii.encode(xmp_text),
+  )
   guard document.tree is PdfMetadataXmlElement(root_tag, children) else {
     fail("expected XML element root")
   }
@@ -1064,6 +1067,10 @@ test "pdf_metadata XML tree helpers mirror cpdfmetadata lookup" {
       "part",
       document.tree,
     ),
+    Some("2"),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_get_data_for(@pdflite.pdf_pdfaid, "part", source_document.tree),
     Some("2"),
   )
   @test.assert_eq(
@@ -1083,12 +1090,17 @@ test "pdf_metadata XML tree helpers mirror cpdfmetadata lookup" {
     None,
   )
   let debug = @pdflite.pdf_metadata_string_of_xmltree(document.tree)
+  @test.assert_eq(@pdflite.pdf_string_of_xmltree(source_document.tree), debug)
   @test.assert_eq(debug.contains("NAME |adobe:ns:meta/| |xmpmeta|"), true)
   @test.assert_eq(
     debug.contains("ATTRNAME |http://www.aiim.org/pdfa/ns/id/| |part|, STR {2}"),
     true,
   )
   let serialized = try! @utf8.decode(
+    @pdflite.pdf_metadata_bytes_of_xmltree(document),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_bytes_of_xmltree(source_document),
     @pdflite.pdf_metadata_bytes_of_xmltree(document),
   )
   @test.assert_eq(serialized.contains("<x:xmpmeta"), true)
