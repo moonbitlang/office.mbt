@@ -62,6 +62,17 @@ pub fn pdf_content_json_of_ops(
 }
 
 ///|
+/// Source-spelled compatibility wrapper for cpdfcontent's `to_json`.
+pub fn pdf_content_to_json(
+  document : PdfDocument,
+  mediabox : PdfRectangle,
+  resources : PdfObject,
+  ops : ArrayView[PdfContentOp],
+) -> Json raise PdfError {
+  document.content_json_of_ops(mediabox, resources, ops)
+}
+
+///|
 /// Walk content entries, call `predicate` for each one, and return the original ops.
 pub fn PdfDocument::content_filter(
   self : PdfDocument,

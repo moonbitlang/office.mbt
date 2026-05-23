@@ -626,6 +626,8 @@ pub fn pdf_content_text_layout_of_bytes(PdfFont, BytesView, PdfContentTextLayout
 
 pub fn pdf_content_text_layout_of_tj_array(PdfFont, ArrayView[PdfObject], PdfContentTextLayout) -> PdfContentTextLayoutResult
 
+pub fn pdf_content_to_json(PdfDocument, PdfRectangle, PdfObject, ArrayView[PdfContentOp]) -> Json raise @core.PdfError
+
 pub fn pdf_content_width_of_charcode(PdfFont, Int) -> (Double, Double, Double)
 
 pub fn pdf_copy_annotations(ArrayView[Int], PdfDocument, PdfDocument) -> PdfDocument raise @core.PdfError

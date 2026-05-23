@@ -18,7 +18,8 @@ Current estimate:
   native async file I/O, codec, page-label, function, optional-content,
   cpdfocg source-spelled listing wrapper and native JSON-file replacement
   wrapper, and
-  content-stream, annotation and cpdfannot JSON source-order wrappers,
+  content-stream, cpdfcontent source-spelled to-json wrapper, annotation and
+  cpdfannot JSON source-order wrappers,
   cpdfdebug source-spelled object-dump wrapper, cpdfspot stdout-style listing
   output wrapper, cpdfattach source-spelled sanitizer, source-order file-attach,
   and native dump-attached-files wrappers, cpdfstrftime source-spelled dummy
@@ -98,6 +99,19 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfcontent` source/API parity from
+  `.repos/cpdf-source/cpdfcontent.mli`: added `pdf_content_to_json`, a
+  source-spelled wrapper for cpdfcontent's `to_json` shape over the existing
+  operator JSON serialization path. Coverage compares the alias with
+  `PdfDocument::content_json_of_ops` and `pdf_content_json_of_ops` on parsed
+  page content. Validation on MoonBit 0.9.3: `moon check --target native
+  --warn-list +73` passes with the known `markdown/cmd` future notice; `moon
+  test --target native pdf_content_page_json_test.mbt`, `moon test --target
+  wasm-gc pdf_content_page_json_test.mbt`, and `moon test --target js
+  pdf_content_page_json_test.mbt` report 2/2 each; `moon fmt`, `moon info`, and
+  `moon check --target all --warn-list +73` pass with only the existing
+  `markdown/cmd` future notice; full `moon test --target native` reports
+  2414/2414.~~
 - [x] ~~Continue `cpdftype` source/API parity from
   `.repos/cpdf-source/cpdftype.mli`: added source-spelled helper aliases
   `pdf_type_to_string`, `pdf_type_width_of_string`, `pdf_type_add_artifacts`,

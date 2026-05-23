@@ -109,6 +109,15 @@ test "cpdfcontent page JSON serializes selected page contents" {
     ),
     first_json,
   )
+  @test.assert_eq(
+    try! @pdflite.pdf_content_to_json(
+      document,
+      mediabox,
+      pages[0].resources,
+      ops,
+    ),
+    first_json,
+  )
   let seen : Array[@pdflite.PdfContentObject] = []
   @test.assert_eq(
     try! document.content_filter(mediabox, pages[0].resources, ops, entry => {
