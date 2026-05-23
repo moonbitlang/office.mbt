@@ -48,9 +48,9 @@ Current estimate:
   composition reporting, core metadata APIs and cpdfmetadata string-key/source-
   order/open-action destination wrappers, XMP metadata-date rewriting, XMP info
   synchronization, XMP metadata creation, XMP RDF list extraction,
-  XMP/document info JSON reporting, cpdfmetadata source-spelled encode-output
-  and XML-tree aliases, namespace aliases, and namespace/get-data/XML-tree
-  helper parity,
+  XMP/document info JSON reporting, cpdfmetadata source-spelled encode-output,
+  print-metadata, and XML-tree aliases, namespace aliases, and namespace/get-
+  data/XML-tree helper parity,
   native metadata file set/write/extract wrappers, and XML
   entity/whitespace decoding, redaction annotation bounding-box overlays,
   cpdfredact apply alias and source-order bounding-box wrapper,
@@ -108,6 +108,20 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfmetadata` source/API parity from
+  `.repos/cpdf-source/cpdfmetadata.mli`: added source-spelled
+  `pdf_print_metadata`, returning the exact metadata bytes cpdfmetadata's
+  `print_metadata` would write to stdout, or empty bytes when the catalog has
+  no metadata stream. Coverage folds the wrapper into the existing metadata
+  compatibility-wrapper test for both present and removed metadata. Validation
+  on MoonBit 0.9.3: `moon check --target native --warn-list +73` passes with
+  the known `markdown/cmd` future notice; `moon test --target native
+  pdf_metadata_test.mbt --filter '*compatibility wrappers*'`, `moon test
+  --target wasm-gc pdf_metadata_test.mbt --filter '*compatibility wrappers*'`,
+  and `moon test --target js pdf_metadata_test.mbt --filter '*compatibility
+  wrappers*'` report 1/1 each; `moon fmt`, `moon info`, and `moon check
+  --target all --warn-list +73` pass with only the existing `markdown/cmd`
+  future notice; full `moon test --target native` reports 2414/2414.~~
 - [x] ~~Continue `cpdfaddtext` source/API parity from
   `.repos/cpdf-source/cpdfaddtext.mli`: added source-spelled
   `pdf_addrectangle` over the established `PdfDocument::addtext_rectangle`

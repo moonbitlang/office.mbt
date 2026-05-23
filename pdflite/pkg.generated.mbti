@@ -1402,6 +1402,8 @@ pub fn pdf_print_fonts(PdfDocument, ArrayView[Int], json? : Bool) -> Bytes raise
 
 pub fn pdf_print_function(PdfFunction) -> Unit
 
+pub fn pdf_print_metadata(PdfDocument) -> Bytes raise @core.PdfError
+
 pub fn pdf_print_pdf_objs(PdfDocument) -> Bytes raise @core.PdfError
 
 pub fn[T] pdf_print_tree_to_buffer(@buffer.Buffer, T, (T) -> String, (T) -> Array[T], line_prefix? : String) -> Unit

@@ -1292,10 +1292,20 @@ test "pdf metadata compatibility wrappers keep cpdf argument order" {
     Some(@ascii.encode("<m/>")),
   )
   @test.assert_eq(
+    try! @pdflite.pdf_print_metadata(with_metadata),
+    @ascii.encode("<m/>"),
+  )
+  @test.assert_eq(
     try! @pdflite.pdf_get_metadata(
       try! @pdflite.pdf_remove_metadata(with_metadata),
     ),
     None,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_print_metadata(
+      try! @pdflite.pdf_remove_metadata(with_metadata),
+    ),
+    Bytes::new(0),
   )
   let all_removed = try! @pdflite.pdf_remove_all_metadata(with_metadata)
   @test.assert_eq(try! all_removed.metadata(), None)

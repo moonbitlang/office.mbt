@@ -3566,6 +3566,15 @@ pub fn pdf_get_metadata(document : PdfDocument) -> PdfBytes? raise PdfError {
 }
 
 ///|
+/// Return the bytes cpdfmetadata's `print_metadata` would write to stdout.
+pub fn pdf_print_metadata(document : PdfDocument) -> PdfBytes raise PdfError {
+  match document.metadata() {
+    Some(data) => data
+    None => Bytes::new(0)
+  }
+}
+
+///|
 /// Compatibility wrapper for `PdfDocument::set_metadata_date`.
 pub fn pdf_set_metadata_date(
   document : PdfDocument,
