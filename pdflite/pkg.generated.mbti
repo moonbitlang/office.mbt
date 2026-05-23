@@ -678,6 +678,8 @@ pub fn pdf_decode_stream(PdfObject) -> PdfObject raise @core.PdfError
 
 pub fn pdf_decode_stream_onestage(PdfObject) -> PdfObject raise @core.PdfError
 
+pub fn pdf_decompress_pdf(PdfDocument) -> PdfDocument raise @core.PdfError
+
 pub let pdf_default_version : PdfVersion
 
 pub fn pdf_determine_subformats(PdfDocument) -> Array[String] raise @core.PdfError
@@ -1456,6 +1458,8 @@ pub fn pdf_read_primitive_document_from_bytes(Bytes) -> PdfDocument raise @core.
 
 pub fn pdf_read_primitive_document_from_view(BytesView) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_recompress_pdf(PdfDocument) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_rectangle(Double, Double, Double, Double) -> PdfPath
 
 pub fn pdf_rectify_boxes(PdfDocument, PdfPage, fast? : Bool) -> PdfPage raise @core.PdfError
@@ -1709,6 +1713,8 @@ pub fn pdf_simplify_utf16be(BytesView) -> Bytes raise @core.PdfError
 pub fn pdf_size_attached_files(PdfDocument) -> Int raise @core.PdfError
 
 pub fn pdf_soft_error(String) -> Unit raise @core.PdfError
+
+pub fn pdf_squeeze(PdfDocument, page_data? : Bool) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_stamp(PdfDocument, ArrayView[Int], PdfDocument, relative_to_box? : @core.PdfName, position? : PdfPosition, topline? : Bool, midline? : Bool, fast? : Bool, scale_to_fit? : Bool, is_over? : Bool, process_struct_tree? : Bool) -> PdfDocument raise @core.PdfError
 

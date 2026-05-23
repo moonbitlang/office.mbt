@@ -174,10 +174,15 @@ test "recompress_pdf transcodes older lossless filters through Flate" {
   document.add_object_given_number(7, ascii_hex)
 
   let recompressed = try! @pdflite.recompress_pdf(document)
+  let prefixed = try! @pdflite.pdf_recompress_pdf(document)
 
   @test.assert_eq(
     squeeze_filter_for_test(recompressed, 7),
     Some(PdfNameObject(squeeze_name_for_test("/FlateDecode"))),
+  )
+  @test.assert_eq(
+    prefixed.lookup_object_or_null(7),
+    recompressed.lookup_object_or_null(7),
   )
   @test.assert_eq(
     squeeze_stream_bytes_for_test(try! recompressed.decompress(), 7),
@@ -320,8 +325,13 @@ test "PdfDocument decompress removes supported stream filters" {
   document.add_object_given_number(3, flate)
 
   let decompressed = try! @pdflite.decompress_pdf(document)
+  let prefixed = try! @pdflite.pdf_decompress_pdf(document)
 
   @test.assert_eq(squeeze_filter_for_test(decompressed, 3), None)
+  @test.assert_eq(
+    prefixed.lookup_object_or_null(3),
+    decompressed.lookup_object_or_null(3),
+  )
   @test.assert_eq(squeeze_stream_bytes_for_test(decompressed, 3), Some(data))
   @test.assert_eq(document.lookup_object_or_null(3), flate)
 }
@@ -408,10 +418,15 @@ test "squeeze reaches duplicate-object fixed point" {
   document.add_object_given_number(6, PdfArray([PdfIndirect(2)]))
 
   let squeezed = try! @pdflite.squeeze(document, page_data=false)
+  let prefixed = try! @pdflite.pdf_squeeze(document, page_data=false)
 
   @test.assert_eq(squeezed.lookup_object_or_null(5), PdfNull)
   @test.assert_eq(squeezed.lookup_object_or_null(2), PdfNull)
   @test.assert_eq(squeezed.lookup_object_or_null(6), PdfArray([PdfIndirect(1)]))
+  @test.assert_eq(
+    prefixed.lookup_object_or_null(6),
+    squeezed.lookup_object_or_null(6),
+  )
 }
 
 ///|

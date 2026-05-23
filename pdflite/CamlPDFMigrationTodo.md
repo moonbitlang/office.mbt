@@ -65,8 +65,9 @@ Current estimate:
   source-order aliases, pattern-matrix page rewrite wrapper, callback-first
   traversal aliases, cpdftweak source-spelled colour/thin-line,
   reveal-hidden-text, append-content, dictionary entry, object-spec, and native
-  file-stream replacement aliases, cpdfremovetext source-spelled/page-list-first
-  aliases, cpdfutil string-key dictionary rewrite wrappers, and source-order
+  file-stream replacement aliases, cpdfsqueeze `pdf_`-prefixed source aliases,
+  cpdfremovetext source-spelled/page-list-first aliases, cpdfutil string-key
+  dictionary rewrite wrappers, and source-order
   compatibility aliases, cpdftype source-spelled helper aliases, imposition
   make-space orchestration, border stamping, layout planning, and first public
   impose/twoup pipelines, and Markdown helper public APIs.
@@ -100,6 +101,19 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfsqueeze` source/API parity from
+  `.repos/cpdf-source/cpdfsqueeze.mli`: added `pdf_recompress_pdf`,
+  `pdf_decompress_pdf`, and `pdf_squeeze` aliases over the existing source
+  squeeze implementations so callers have consistent `pdf_`-prefixed entry
+  points. Coverage compares the prefixed aliases with the established
+  `recompress_pdf`, `decompress_pdf`, and `squeeze` paths. Validation on
+  MoonBit 0.9.3: `moon check --target native --warn-list +73` passes with the
+  known `markdown/cmd` future notice; `moon test --target native
+  pdf_squeeze_test.mbt`, `moon test --target wasm-gc pdf_squeeze_test.mbt`, and
+  `moon test --target js pdf_squeeze_test.mbt` report 19/19 each; `moon fmt`,
+  `moon info`, and `moon check --target all --warn-list +73` pass with only the
+  existing `markdown/cmd` future notice; full `moon test --target native`
+  reports 2414/2414.~~
 - [x] ~~Continue `cpdfaddtext` source/API parity from
   `.repos/cpdf-source/cpdfaddtext.mli`: added source-spelled
   `pdf_colour_op` and `pdf_colour_op_stroke` wrappers over the existing

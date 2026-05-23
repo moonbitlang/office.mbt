@@ -469,6 +469,12 @@ pub fn recompress_pdf(document : PdfDocument) -> PdfDocument raise PdfError {
 }
 
 ///|
+/// `pdf_`-prefixed compatibility alias for cpdfsqueeze's `recompress_pdf`.
+pub fn pdf_recompress_pdf(document : PdfDocument) -> PdfDocument raise PdfError {
+  recompress_pdf(document)
+}
+
+///|
 /// Decode supported filter stages from every parsed stream in the document.
 ///
 /// Encrypted documents are left unchanged. Unsupported filters are preserved
@@ -487,6 +493,12 @@ pub fn PdfDocument::decompress(
 /// Compatibility wrapper for `PdfDocument::decompress`.
 pub fn decompress_pdf(document : PdfDocument) -> PdfDocument raise PdfError {
   document.decompress()
+}
+
+///|
+/// `pdf_`-prefixed compatibility alias for cpdfsqueeze's `decompress_pdf`.
+pub fn pdf_decompress_pdf(document : PdfDocument) -> PdfDocument raise PdfError {
+  decompress_pdf(document)
 }
 
 ///|
@@ -519,4 +531,13 @@ pub fn squeeze(
   page_data? : Bool = true,
 ) -> PdfDocument raise PdfError {
   document.squeeze(page_data~)
+}
+
+///|
+/// `pdf_`-prefixed compatibility alias for cpdfsqueeze's `squeeze`.
+pub fn pdf_squeeze(
+  document : PdfDocument,
+  page_data? : Bool = true,
+) -> PdfDocument raise PdfError {
+  squeeze(document, page_data~)
 }
