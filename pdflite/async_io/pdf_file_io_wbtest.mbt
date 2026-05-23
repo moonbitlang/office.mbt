@@ -3913,6 +3913,17 @@ async test "async file wrappers dump attached files to a directory" {
   )
   pdf_async_io_remove_if_exists_for_test(document_output)
   pdf_async_io_remove_if_exists_for_test(page_output)
+  pdf_dump_attached_files(with_both, directory)
+  @test.assert_eq(
+    @fs.read_file(document_output).binary(),
+    @ascii.encode("document attachment"),
+  )
+  @test.assert_eq(
+    @fs.read_file(page_output).binary(),
+    @ascii.encode("page attachment"),
+  )
+  pdf_async_io_remove_if_exists_for_test(document_output)
+  pdf_async_io_remove_if_exists_for_test(page_output)
 }
 
 ///|

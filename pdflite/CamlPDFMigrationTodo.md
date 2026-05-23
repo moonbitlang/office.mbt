@@ -19,9 +19,9 @@ Current estimate:
   cpdfocg source-spelled listing wrapper, and
   content-stream, annotation and cpdfannot JSON source-order wrappers,
   cpdfdebug source-spelled object-dump wrapper, cpdfspot stdout-style listing
-  output wrapper, cpdfattach source-spelled sanitizer and source-order
-  file-attach wrapper, cpdfstrftime source-spelled dummy value, cpdfclip
-  source-spelled polygon/debug/native clip wrappers,
+  output wrapper, cpdfattach source-spelled sanitizer, source-order file-attach,
+  and native dump-attached-files wrappers, cpdfstrftime source-spelled dummy
+  value, cpdfclip source-spelled polygon/debug/native clip wrappers,
   native secure-random, bookmark, image, structure,
   renumbering, standard and TrueType font-pack embedding, text-to-PDF
   instruction conversion, basic and tagged text-to-PDF document assembly, PDF/UA
@@ -91,6 +91,18 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue native `cpdfattach` source/API parity from
+  `.repos/cpdf-source/cpdfattach.mli`: added async `pdf_dump_attached_files` as
+  the source-spelled alias over `pdf_dump_attached_files_to_directory`,
+  preserving cpdf's document/directory argument order and the existing filename
+  sanitization/write behavior. Coverage now exercises both native dump entry
+  points against document-level and page-level attachments. Validation on
+  MoonBit 0.9.3: `moon check --target native --warn-list +73 async_io` passes;
+  `moon test --target native async_io --filter '*dump attached files*'` reports
+  1/1; `moon fmt`, `moon info`, `moon check --target all --warn-list +73`, and
+  `moon test --target native async_io` report clean results with the known
+  `markdown/cmd` future notice on the all-target check; full native `moon test
+  --target native` reports 2411/2411.~~
 - [x] ~~Continue `cpdfspot` source/API parity from
   `.repos/cpdf-source/cpdfspot.mli`: added
   `PdfDocument::list_spot_colours_blob` and `pdf_list_spot_colours_blob` as the

@@ -736,6 +736,16 @@ pub async fn pdf_dump_attached_files_to_directory(
 }
 
 ///|
+/// Compatibility wrapper matching cpdfattach's `dump_attached_files` name.
+pub async fn pdf_dump_attached_files(
+  document : @pdflite.PdfDocument,
+  directory : StringView,
+  permission? : Int = 0o644,
+) -> Unit {
+  pdf_dump_attached_files_to_directory(document, directory, permission~)
+}
+
+///|
 /// Encrypt with 128-bit ARC4 revision 3, serialize, and write to a file.
 pub async fn pdf_write_encrypted_128bit_document_to_file(
   document : @pdflite.PdfDocument,
