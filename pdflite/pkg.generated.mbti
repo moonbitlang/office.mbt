@@ -450,6 +450,10 @@ pub fn pdf_codepoints_of_utf16be(BytesView) -> Array[Int] raise @core.PdfError
 
 pub fn pdf_codepoints_of_utf8(BytesView) -> Array[Int] raise @core.PdfError
 
+pub fn pdf_colour_op(PdfContentColour) -> PdfContentOp
+
+pub fn pdf_colour_op_stroke(PdfContentColour) -> PdfContentOp
+
 pub fn pdf_colour_space_components(PdfDocument, PdfObject, PdfObject) -> Int raise @core.PdfError
 
 pub fn pdf_colour_space_content_json(PdfColourSpace) -> Json

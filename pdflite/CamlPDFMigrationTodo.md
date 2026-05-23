@@ -14,7 +14,8 @@ Current estimate:
   remain. Covered the byte, object, document, reader, lexeme, lookup/tree,
   colour-space and cpdfcolours source-spelled table alias, transform,
   destination, merge-helper, standard-font, Flate, and
-  text/font extraction, cryptography and primitive crypto, page-tree, writer,
+  text/font extraction, cpdfaddtext source-spelled colour operator aliases,
+  cryptography and primitive crypto, page-tree, writer,
   native async file I/O, codec, page-label, function, optional-content,
   cpdfocg source-spelled listing wrapper and native JSON-file replacement
   wrapper, and
@@ -99,6 +100,18 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfaddtext` source/API parity from
+  `.repos/cpdf-source/cpdfaddtext.mli`: added source-spelled
+  `pdf_colour_op` and `pdf_colour_op_stroke` wrappers over the existing
+  add-text fill/stroke colour operator helpers. Coverage folds the aliases into
+  the existing fill and stroke colour mapping tests. Validation on MoonBit
+  0.9.3: `moon check --target native --warn-list +73` passes with the known
+  `markdown/cmd` future notice; `moon test --target native
+  pdf_addtext_test.mbt`, `moon test --target wasm-gc pdf_addtext_test.mbt`,
+  and `moon test --target js pdf_addtext_test.mbt` report 117/117 each; `moon
+  fmt`, `moon info`, and `moon check --target all --warn-list +73` pass with
+  only the existing `markdown/cmd` future notice; full `moon test --target
+  native` reports 2414/2414.~~
 - [x] ~~Continue `cpdfcontent` source/API parity from
   `.repos/cpdf-source/cpdfcontent.mli`: added `pdf_content_to_json`, a
   source-spelled wrapper for cpdfcontent's `to_json` shape over the existing

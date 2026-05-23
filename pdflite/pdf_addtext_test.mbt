@@ -203,6 +203,7 @@ test "pdf_addtext_colour_op maps fill colours to content operators" {
     @pdflite.pdf_addtext_colour_op(PdfContentGrey(0.25)),
     Op_g(0.25),
   )
+  @test.assert_eq(@pdflite.pdf_colour_op(PdfContentGrey(0.25)), Op_g(0.25))
   @test.assert_eq(
     @pdflite.pdf_addtext_colour_op(PdfContentRGB(0.1, 0.2, 0.3)),
     Op_rg(0.1, 0.2, 0.3),
@@ -217,6 +218,10 @@ test "pdf_addtext_colour_op maps fill colours to content operators" {
 test "pdf_addtext_colour_op_stroke maps stroke colours to content operators" {
   @test.assert_eq(
     @pdflite.pdf_addtext_colour_op_stroke(PdfContentGrey(0.75)),
+    Op_G(0.75),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_colour_op_stroke(PdfContentGrey(0.75)),
     Op_G(0.75),
   )
   @test.assert_eq(

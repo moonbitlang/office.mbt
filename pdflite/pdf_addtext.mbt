@@ -256,9 +256,21 @@ pub fn pdf_addtext_colour_op(colour : PdfContentColour) -> PdfContentOp {
 }
 
 ///|
+/// Source-spelled compatibility wrapper for cpdfaddtext's `colour_op`.
+pub fn pdf_colour_op(colour : PdfContentColour) -> PdfContentOp {
+  pdf_addtext_colour_op(colour)
+}
+
+///|
 /// Build the cpdf add-text stroke colour operator.
 pub fn pdf_addtext_colour_op_stroke(colour : PdfContentColour) -> PdfContentOp {
   colour.pdf_tweak_stroke_op()
+}
+
+///|
+/// Source-spelled compatibility wrapper for cpdfaddtext's `colour_op_stroke`.
+pub fn pdf_colour_op_stroke(colour : PdfContentColour) -> PdfContentOp {
+  pdf_addtext_colour_op_stroke(colour)
 }
 
 ///|
