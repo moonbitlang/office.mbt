@@ -56,23 +56,24 @@ Current estimate:
   ToUnicode mapping, and integrated parsed-subset orchestration, imposition
   transform/content/page-assembly/
   pattern-matrix kernels, cpdfpagespec source-spelled invert-range alias,
-  cpdf chop source-order aliases, cpdfpad source-spelled aliases, cpdf page
-  hard-box/removal/shift/scale/scale-to-fit/upright/set-mediabox/copy-box
-  helpers, page-info report wrappers, upright predicate and page-redaction
-  source-order aliases, pattern-matrix page rewrite wrapper, callback-first
-  traversal aliases, cpdftweak source-spelled colour/thin-line, reveal-hidden-text,
-  append-content, dictionary entry, object-spec, and native file-stream
-  replacement aliases, cpdfremovetext source-spelled/page-list-first aliases,
-  cpdfutil string-key dictionary rewrite wrappers, and source-order compatibility aliases,
-  imposition make-space orchestration, border stamping, layout planning, and
-  first public impose/twoup pipelines, and Markdown helper public APIs.
+  cpdf chop source-order aliases, cpdfpad source-spelled aliases, cpdfdraft
+  source string wrapper, cpdf page hard-box/removal/shift/scale/scale-to-fit/
+  upright/set-mediabox/copy-box helpers, page-info report wrappers, upright
+  predicate and page-redaction source-order aliases, pattern-matrix page rewrite
+  wrapper, callback-first traversal aliases, cpdftweak source-spelled colour/
+  thin-line, reveal-hidden-text, append-content, dictionary entry, object-spec,
+  and native file-stream replacement aliases, cpdfremovetext source-spelled/
+  page-list-first aliases, cpdfutil string-key dictionary rewrite wrappers, and
+  source-order compatibility aliases, imposition make-space orchestration,
+  border stamping, layout planning, and first public impose/twoup pipelines, and
+  Markdown helper public APIs.
 
 Current backend snapshot:
 
-- Native: full suite passes on MoonBit 0.9.3, currently 2412/2412 tests.
+- Native: full suite passes on MoonBit 0.9.3, currently 2413/2413 tests.
 - WasmGC and JavaScript: full portable non-native test suites pass on MoonBit
-  0.9.3, currently 2063/2063 on each backend after the latest TrueType
-  embedding integration.
+  0.9.3, currently 2071/2071 on each backend after the latest source/API parity
+  wrappers.
 - Wasm: current plain-Wasm smoke validation passes at 41/41 tests after
   filtering root's heavy package-level test files and the Markdown package
   generated test module from plain Wasm while retaining them on
@@ -96,6 +97,21 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfdraft` source/API parity from
+  `.repos/cpdf-source/cpdfdraft.mli`: added `pdf_draft_string`, a
+  source-style wrapper for `draft` that accepts cpdf's `string option`
+  `only_remove` argument and converts it through the existing PDF-name path
+  before delegating to `PdfDocument::draft`. Coverage compares the new string
+  wrapper with the existing `PdfName` wrapper for targeted image removal,
+  retained non-target images, and retained XObject resources. Validation on
+  MoonBit 0.9.3: `moon check --target native --warn-list +73` passes with the
+  known `markdown/cmd` future notice; `moon test --target native
+  pdf_draft_test.mbt`, `moon test --target wasm-gc pdf_draft_test.mbt`, and
+  `moon test --target js pdf_draft_test.mbt` report 13/13 each; `moon fmt`,
+  `moon info`, and `moon check --target all --warn-list +73` pass with only the
+  existing `markdown/cmd` future notice; full `moon test --target native`
+  reports 2413/2413, full `moon test --target wasm-gc` reports 2071/2071, and
+  full `moon test --target js` reports 2071/2071.~~
 - [x] ~~Continue `cpdfpad` source/API parity from
   `.repos/cpdf-source/cpdfpad.mli`: added source-spelled wrappers
   `pdf_padbefore`, `pdf_padafter`, and `pdf_padmultiple` over the existing

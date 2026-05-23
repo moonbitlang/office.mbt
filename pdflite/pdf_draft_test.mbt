@@ -322,6 +322,59 @@ test "pdf_draft wrapper leaves unselected pages unchanged" {
 }
 
 ///|
+test "pdf_draft_string accepts source string image names" {
+  let first_name = draft_name_for_test("/Im1")
+  let second_name = draft_name_for_test("/Im2")
+  let inline = draft_inline_image_for_test()
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: draft_resources_for_test([
+      (first_name, PdfIndirect(7)),
+      (second_name, PdfIndirect(8)),
+    ]),
+    content: [
+      try! @pdflite.pdf_content_stream_of_ops([
+        Op_Do(first_name),
+        Op_Do(second_name),
+        inline,
+      ]),
+    ],
+  }
+  let named_doc = @pdflite.pdf_document_empty()
+  named_doc.add_object_given_number(7, draft_image_object_for_test())
+  named_doc.add_object_given_number(8, draft_image_object_for_test())
+  let named = try! @pdflite.pdf_draft(
+    Some(first_name),
+    true,
+    [1],
+    draft_document_for_test(named_doc, [page]),
+  )
+  let string_doc = @pdflite.pdf_document_empty()
+  string_doc.add_object_given_number(7, draft_image_object_for_test())
+  string_doc.add_object_given_number(8, draft_image_object_for_test())
+  let string_named = try! @pdflite.pdf_draft_string(
+    Some("/Im1"),
+    true,
+    [1],
+    draft_document_for_test(string_doc, [page]),
+  )
+  let named_pages = try! named.pages_of_pagetree()
+  let string_pages = try! string_named.pages_of_pagetree()
+  @test.assert_eq(
+    try! string_named.parse_content_ops(string_pages[0].content),
+    try! named.parse_content_ops(named_pages[0].content),
+  )
+  @test.assert_eq(
+    try! draft_xobject_entries_for_test(string_named, string_pages[0].resources),
+    try! draft_xobject_entries_for_test(named, named_pages[0].resources),
+  )
+  @test.assert_eq(string_named.lookup_object_or_null(7), PdfNull)
+  guard string_named.lookup_object_or_null(8) is PdfStreamObject(_) else {
+    fail("expected non-target image to remain")
+  }
+}
+
+///|
 test "PdfDocument draft keeps missing and non-image xobject draws" {
   let plain_name = draft_name_for_test("/Plain")
   let missing_name = draft_name_for_test("/Missing")

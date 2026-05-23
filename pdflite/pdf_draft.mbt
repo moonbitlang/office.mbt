@@ -379,3 +379,18 @@ pub fn pdf_draft(
 ) -> PdfDocument raise PdfError {
   document.draft(only_remove, boxes, page_numbers)
 }
+
+///|
+/// Compatibility wrapper matching cpdfdraft's string `only_remove` argument.
+pub fn pdf_draft_string(
+  only_remove : String?,
+  boxes : Bool,
+  page_numbers : ArrayView[Int],
+  document : PdfDocument,
+) -> PdfDocument raise PdfError {
+  let only_remove_name = match only_remove {
+    Some(name) => Some(pdf_draft_name(name))
+    None => None
+  }
+  document.draft(only_remove_name, boxes, page_numbers)
+}

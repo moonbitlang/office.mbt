@@ -694,6 +694,8 @@ pub fn pdf_document_of_parsed_indirect_objects(ArrayView[PdfParsedIndirectObject
 
 pub fn pdf_draft(@core.PdfName?, Bool, ArrayView[Int], PdfDocument) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_draft_string(String?, Bool, ArrayView[Int], PdfDocument) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_draw(PdfDocument, ArrayView[Int], ArrayView[PdfDrawOp], struct_tree? : Bool, fast? : Bool, underneath? : Bool, filename? : String, bates? : Int, bates_pad? : Int?, time? : PdfStrftimeTime?, add_artifacts? : Bool, role_map? : String) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_draw_colour_of_string(String) -> PdfDrawColour
