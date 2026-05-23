@@ -300,6 +300,14 @@ pub fn[A, B : Eq, C] pdf_embed_collate_runs(
 }
 
 ///|
+/// Source-spelled compatibility wrapper for cpdfembed's `collate_runs`.
+pub fn[A, B : Eq, C] pdf_collate_runs(
+  runs : ArrayView[(A, B, C)],
+) -> Array[Array[(A, B, C)]] {
+  pdf_embed_collate_runs(runs)
+}
+
+///|
 /// Collate consecutive `(charcode, font_index, font)` runs by font index.
 pub fn pdf_fontpack_collate_runs(
   runs : ArrayView[(Int, Int, PdfFont)],

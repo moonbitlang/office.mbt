@@ -27,7 +27,8 @@ Current estimate:
   value, cpdfclip source-spelled polygon/debug/native clip wrappers,
   native secure-random, bookmark and cpdfbookmarks source-spelled
   name-of-spec alias, image, structure,
-  renumbering, standard and TrueType font-pack embedding, text-to-PDF
+  renumbering, standard and TrueType font-pack embedding, cpdfembed
+  source-spelled run-collation alias, text-to-PDF
   instruction conversion, basic and tagged text-to-PDF document assembly, PDF/UA
   text-to-PDF subformat shaping, blank PDF/UA creation helpers, PDF/UA XMP
   marker insertion/removal helpers, PDF/UA structure-tree JSON
@@ -101,6 +102,17 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfembed` source/API parity from
+  `.repos/cpdf-source/cpdfembed.mli`: added `pdf_collate_runs`, a
+  source-spelled wrapper over the existing generic `pdf_embed_collate_runs`
+  implementation. Coverage compares the alias with the established grouping
+  behavior on mixed run keys. Validation on MoonBit 0.9.3: `moon check
+  --target native --warn-list +73` passes with the known `markdown/cmd` future
+  notice; `moon test --target native pdf_embed_test.mbt`, `moon test --target
+  wasm-gc pdf_embed_test.mbt`, and `moon test --target js pdf_embed_test.mbt`
+  report 8/8 each; `moon fmt`, `moon info`, and `moon check --target all
+  --warn-list +73` pass with only the existing `markdown/cmd` future notice;
+  full `moon test --target native` reports 2414/2414.~~
 - [x] ~~Continue `cpdfsqueeze` source/API parity from
   `.repos/cpdf-source/cpdfsqueeze.mli`: added `pdf_recompress_pdf`,
   `pdf_decompress_pdf`, and `pdf_squeeze` aliases over the existing source

@@ -450,6 +450,8 @@ pub fn pdf_codepoints_of_utf16be(BytesView) -> Array[Int] raise @core.PdfError
 
 pub fn pdf_codepoints_of_utf8(BytesView) -> Array[Int] raise @core.PdfError
 
+pub fn[A, B : Eq, C] pdf_collate_runs(ArrayView[(A, B, C)]) -> Array[Array[(A, B, C)]]
+
 pub fn pdf_colour_op(PdfContentColour) -> PdfContentOp
 
 pub fn pdf_colour_op_stroke(PdfContentColour) -> PdfContentOp

@@ -460,6 +460,14 @@ test "pdf_fontpack_collate_runs groups consecutive equal font numbers" {
       [("Snowman", "Symbol", 4), ("Euro", "Symbol", 5)],
     ],
   )
+  @test.assert_eq(
+    @pdflite.pdf_collate_runs([
+      ("A", "Latin", 1),
+      ("B", "Latin", 2),
+      ("Omega", "Greek", 3),
+    ]),
+    [[("A", "Latin", 1), ("B", "Latin", 2)], [("Omega", "Greek", 3)]],
+  )
 }
 
 ///|
