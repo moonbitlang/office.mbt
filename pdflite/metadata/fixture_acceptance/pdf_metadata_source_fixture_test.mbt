@@ -162,6 +162,17 @@ fn metadata_fixture_assert_cpdf_manual_reports_for_test(
   metadata_fixture_assert_contains_for_test(
     info_json_text, "\"Producer\":\"pdfTeX-1.40.29\"",
   )
+  let info_text_blob = document.info_blob()
+  @test.assert_eq(@pdflite.pdf_output_info(document), info_text_blob)
+  let info_text = @utf8.decode_lossy(info_text_blob)
+  metadata_fixture_assert_contains_for_test(info_text, "Version: 1.7\n")
+  metadata_fixture_assert_contains_for_test(info_text, "Pages: 175\n")
+  metadata_fixture_assert_contains_for_test(
+    info_text, "Creator: LaTeX with hyperref\n",
+  )
+  metadata_fixture_assert_contains_for_test(
+    info_text, "Producer: pdfTeX-1.40.29\n",
+  )
   let xmp_json = document.xmp_info_json()
   @test.assert_eq(
     @pdflite.pdf_output_xmp_info_json_blob(document),
@@ -170,6 +181,12 @@ fn metadata_fixture_assert_cpdf_manual_reports_for_test(
   let xmp_json_text = xmp_json.stringify()
   metadata_fixture_assert_contains_for_test(xmp_json_text, "\"Subformats\":[]")
   metadata_fixture_assert_contains_for_test(xmp_json_text, "\"Language\":null")
+  let xmp_text_blob = document.xmp_info_blob()
+  @test.assert_eq(@pdflite.pdf_output_xmp_info(document), xmp_text_blob)
+  let xmp_text = @utf8.decode_lossy(xmp_text_blob)
+  metadata_fixture_assert_contains_for_test(
+    xmp_text, "Subformats: \nLanguage: \n",
+  )
   let page_info_json = document.page_info_json([1, 175])
   @test.assert_eq(
     @pdflite.pdf_page_info_json(document, [1, 175]),
@@ -305,6 +322,19 @@ fn metadata_fixture_assert_cpdf_manual_metadata_for_test(
   metadata_fixture_assert_contains_for_test(
     info_json_text, "\"Producer\":\"pdfTeX-1.40.29\"",
   )
+  let info_text_blob = document.info_blob()
+  @test.assert_eq(@pdflite.pdf_output_info(document), info_text_blob)
+  let info_text = @utf8.decode_lossy(info_text_blob)
+  metadata_fixture_assert_contains_for_test(
+    info_text, "Title: cpdf source & metadata\n",
+  )
+  metadata_fixture_assert_contains_for_test(info_text, "Author: MoonBit port\n")
+  metadata_fixture_assert_contains_for_test(
+    info_text, "Creator: LaTeX with hyperref\n",
+  )
+  metadata_fixture_assert_contains_for_test(
+    info_text, "Producer: pdfTeX-1.40.29\n",
+  )
   let xmp_json = document.xmp_info_json()
   @test.assert_eq(
     @pdflite.pdf_output_xmp_info_json_blob(document),
@@ -329,6 +359,22 @@ fn metadata_fixture_assert_cpdf_manual_metadata_for_test(
   metadata_fixture_assert_contains_for_test(
     xmp_json_text, "\"XMP pdf:Author\":\"MoonBit port\"",
   )
+  let xmp_text_blob = document.xmp_info_blob()
+  @test.assert_eq(@pdflite.pdf_output_xmp_info(document), xmp_text_blob)
+  let xmp_text = @utf8.decode_lossy(xmp_text_blob)
+  metadata_fixture_assert_contains_for_test(xmp_text, "Language: \"en-GB\"\n")
+  metadata_fixture_assert_contains_for_test(
+    xmp_text, "XMP pdf:Producer: pdfTeX-1.40.29\n",
+  )
+  metadata_fixture_assert_contains_for_test(
+    xmp_text, "XMP pdf:Creator: LaTeX with hyperref\n",
+  )
+  metadata_fixture_assert_contains_for_test(
+    xmp_text, "XMP pdf:Title: cpdf source & metadata\n",
+  )
+  metadata_fixture_assert_contains_for_test(
+    xmp_text, "XMP pdf:Author: MoonBit port\n",
+  )
 }
 
 ///|
@@ -352,6 +398,14 @@ fn metadata_fixture_assert_cpdf_manual_metadata_removed_for_test(
   metadata_fixture_assert_contains_for_test(xmp_json_text, "\"Subformats\":[]")
   @test.assert_eq(xmp_json_text.contains("XMP pdf:Title"), false)
   @test.assert_eq(xmp_json_text.contains("XMP pdf:Author"), false)
+  let xmp_text_blob = document.xmp_info_blob()
+  @test.assert_eq(@pdflite.pdf_output_xmp_info(document), xmp_text_blob)
+  let xmp_text = @utf8.decode_lossy(xmp_text_blob)
+  metadata_fixture_assert_contains_for_test(
+    xmp_text, "Subformats: \nLanguage: \"en-GB\"\n",
+  )
+  @test.assert_eq(xmp_text.contains("XMP pdf:Title"), false)
+  @test.assert_eq(xmp_text.contains("XMP pdf:Author"), false)
 }
 
 ///|
@@ -422,6 +476,20 @@ fn metadata_fixture_assert_cpdf_manual_catalog_actions_for_test(
   )
   metadata_fixture_assert_contains_for_test(info_json_text, "\"I\":175")
   metadata_fixture_assert_contains_for_test(info_json_text, "\"N\":\"/XYZ\"")
+  let info_text = @utf8.decode_lossy(document.info_blob())
+  metadata_fixture_assert_contains_for_test(
+    info_text, "PageLayout: TwoPageRight\n",
+  )
+  metadata_fixture_assert_contains_for_test(info_text, "PageMode: FullScreen\n")
+  metadata_fixture_assert_contains_for_test(
+    info_text, "DisplayDocTitle: true\n",
+  )
+  metadata_fixture_assert_contains_for_test(
+    info_text, "NonFullScreenPageMode: UseOutlines\n",
+  )
+  metadata_fixture_assert_contains_for_test(
+    info_text, "OpenAction: [175 /XYZ null null null]\n",
+  )
 }
 
 ///|

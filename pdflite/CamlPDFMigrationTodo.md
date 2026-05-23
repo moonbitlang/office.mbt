@@ -108,6 +108,20 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Harden the metadata source-corpus acceptance gate for the new
+  cpdfmetadata text-output wrappers: the optional
+  `.repos/cpdf-source/cpdfmanual.pdf` fixture now exercises `info_blob`,
+  `xmp_info_blob`, `pdf_output_info`, and `pdf_output_xmp_info` alongside the
+  existing JSON reporting checks. Coverage includes the original manual
+  creator/producer report, empty XMP text headers, metadata mutation with
+  title/author/language/XMP text fields, metadata removal preserving language
+  headers without stale XMP fields, and catalog action/viewer-preference text
+  reporting. Validation on MoonBit 0.9.3: `moon check --target native
+  metadata/fixture_acceptance --warn-list +73` passes; `moon test --target
+  native metadata/fixture_acceptance` reports 3/3; `moon fmt && moon info` are
+  clean; `moon check --target all --warn-list +73` passes with the known
+  `markdown/cmd` future notice; full `moon test --target native` reports
+  2414/2414.~~
 - [x] ~~Continue `cpdfmetadata` source/API parity from
   `.repos/cpdf-source/cpdfmetadata.mli`: added `PdfDocument::info_blob` and
   source-spelled `pdf_output_info` for cpdfmetadata's stdout-style
