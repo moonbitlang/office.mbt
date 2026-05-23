@@ -30,9 +30,9 @@ Current estimate:
   text-to-PDF subformat shaping, blank PDF/UA creation helpers, PDF/UA XMP
   marker insertion/removal helpers, PDF/UA structure-tree JSON
   import/export helpers, JPEG/JPEG2000, PNG, and JBIG2 image-to-PDF document
-  assembly, image XObject JSON listing and cpdfimage source-spelled images
-  alias/debug flag, image-resolution reporting, cpdfimage single-image and
-  multi-image extraction file payloads/native write wrappers,
+  assembly, image XObject JSON listing, cpdfimage source-spelled images
+  alias/debug flag/object helpers, image-resolution reporting, cpdfimage
+  single-image and multi-image extraction file payloads/native write wrappers,
   cpdf draw-control colour parsing, source-spelled parse-colour alias,
   path/paint, marked-content, graphics-state/matrix, XObject, image-data,
   media/text, paragraph, and font-state callback command aliases,
@@ -96,6 +96,22 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfimage` source/API parity from
+  `.repos/cpdf-source/cpdfimage.mli`: added source-spelled tuple-shape object
+  helpers `pdf_obj_of_jpeg_data`, `pdf_obj_of_png_data`,
+  `pdf_obj_of_jbig2_data`, and `pdf_obj_of_jpeg2000_data` over the existing
+  `pdf_image_obj_of_*` wrappers. This preserves the shorter cpdf helper names
+  while keeping the already-ported object construction and JBIG2 globals
+  behavior as the single implementation. Coverage compares all four aliases
+  with the existing tuple wrappers, including PNG alpha-mask document mutation
+  and JBIG2 globals extra-object output. Validation on MoonBit 0.9.3: `moon
+  check --target native --warn-list +73` passes with the known `markdown/cmd`
+  future notice; `moon test --target native pdf_image_test.mbt --filter
+  '*obj_of*'`, `moon test --target wasm-gc pdf_image_test.mbt --filter
+  '*obj_of*'`, and `moon test --target js pdf_image_test.mbt --filter
+  '*obj_of*'` report 4/4 each; `moon fmt`, `moon info`, and `moon check
+  --target all --warn-list +73` pass with only the existing `markdown/cmd`
+  future notice; full native `moon test --target native` reports 2412/2412.~~
 - [x] ~~Continue `cpdfimage` source/API parity from
   `.repos/cpdf-source/cpdfimage.mli`: added source-spelled
   `pdf_debug_image_processing` and `pdf_set_debug_image_processing` over the

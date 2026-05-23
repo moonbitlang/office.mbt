@@ -1124,6 +1124,14 @@ pub let pdf_no_more : Int
 
 pub fn pdf_nullpoly() -> PdfClipPolygon
 
+pub fn pdf_obj_of_jbig2_data(BytesView, global? : BytesView?) -> (PdfObject, Array[(Int, PdfObject)]) raise @core.PdfError
+
+pub fn pdf_obj_of_jpeg2000_data(BytesView) -> (PdfObject, Array[(Int, PdfObject)]) raise @core.PdfError
+
+pub fn pdf_obj_of_jpeg_data(BytesView, path_to_im? : String) -> (PdfObject, Array[(Int, PdfObject)]) raise @core.PdfError
+
+pub fn pdf_obj_of_png_data(PdfDocument, BytesView) -> (PdfObject, Array[(Int, PdfObject)]) raise @core.PdfError
+
 pub fn pdf_object_entry(PdfObjectData, generation? : Int) -> PdfObjectEntry
 
 pub fn pdf_object_map_empty() -> PdfObjectMap

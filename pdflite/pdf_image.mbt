@@ -466,6 +466,15 @@ pub fn pdf_image_obj_of_jpeg_data(
 }
 
 ///|
+/// Source-spelled cpdfimage `obj_of_jpeg_data` wrapper.
+pub fn pdf_obj_of_jpeg_data(
+  data : BytesView,
+  path_to_im? : String = "",
+) -> (PdfObject, Array[(Int, PdfObject)]) raise PdfError {
+  pdf_image_obj_of_jpeg_data(data, path_to_im~)
+}
+
+///|
 /// Build a PDF image XObject for JPEG2000 data.
 pub fn pdf_image_object_of_jpeg2000_data(
   data : BytesView,
@@ -490,6 +499,14 @@ pub fn pdf_image_obj_of_jpeg2000_data(
   data : BytesView,
 ) -> (PdfObject, Array[(Int, PdfObject)]) raise PdfError {
   (pdf_image_object_of_jpeg2000_data(data), [])
+}
+
+///|
+/// Source-spelled cpdfimage `obj_of_jpeg2000_data` wrapper.
+pub fn pdf_obj_of_jpeg2000_data(
+  data : BytesView,
+) -> (PdfObject, Array[(Int, PdfObject)]) raise PdfError {
+  pdf_image_obj_of_jpeg2000_data(data)
 }
 
 ///|
@@ -636,6 +653,15 @@ pub fn pdf_image_obj_of_png_data(
 }
 
 ///|
+/// Source-spelled cpdfimage `obj_of_png_data` wrapper.
+pub fn pdf_obj_of_png_data(
+  document : PdfDocument,
+  data : BytesView,
+) -> (PdfObject, Array[(Int, PdfObject)]) raise PdfError {
+  pdf_image_obj_of_png_data(document, data)
+}
+
+///|
 fn pdf_image_jbig2_u32_at(data : BytesView, offset : Int) -> Int raise PdfError {
   if offset < 0 || offset + 4 > data.length() {
     raise EndOfInput
@@ -714,6 +740,15 @@ pub fn pdf_image_obj_of_jbig2_data(
   global? : BytesView? = None,
 ) -> (PdfObject, Array[(Int, PdfObject)]) raise PdfError {
   pdf_image_object_of_jbig2_data(data, global~)
+}
+
+///|
+/// Source-spelled cpdfimage `obj_of_jbig2_data` wrapper.
+pub fn pdf_obj_of_jbig2_data(
+  data : BytesView,
+  global? : BytesView? = None,
+) -> (PdfObject, Array[(Int, PdfObject)]) raise PdfError {
+  pdf_image_obj_of_jbig2_data(data, global~)
 }
 
 ///|

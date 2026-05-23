@@ -691,6 +691,10 @@ test "pdf_image_obj_of_jpeg_data returns cpdf tuple shape" {
   )
   @test.assert_eq(extra.length(), 0)
   @test.assert_eq(object, try! @pdflite.pdf_image_object_of_jpeg_data(jpeg))
+  @test.assert_eq(
+    try! @pdflite.pdf_obj_of_jpeg_data(jpeg, path_to_im="/usr/bin/convert"),
+    (object, extra),
+  )
 }
 
 ///|
@@ -735,6 +739,10 @@ test "pdf_image_obj_of_jpeg2000_data returns cpdf tuple shape" {
   @test.assert_eq(
     object,
     try! @pdflite.pdf_image_object_of_jpeg2000_data(jpeg2000),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_obj_of_jpeg2000_data(jpeg2000),
+    (object, extra),
   )
 }
 
@@ -841,6 +849,26 @@ test "pdf_image_obj_of_png_data returns cpdf tuple shape" {
   }
   guard document.lookup_object_or_null(smask_number) is PdfStreamObject(_) else {
     fail("expected PNG wrapper to add alpha mask to document")
+  }
+  let source_document = @pdflite.pdf_document_empty()
+  let source_tuple = try! @pdflite.pdf_obj_of_png_data(
+    source_document,
+    image_png_rgba_for_test(),
+  )
+  @test.assert_eq(source_tuple.1.length(), 0)
+  guard source_tuple.0 is PdfStreamObject(source_stream) else {
+    fail("expected PNG stream object through source-spelled alias")
+  }
+  let source_smask = try! image_lookup_for_test(
+    source_stream.dictionary,
+    "/SMask",
+  )
+  guard source_smask is PdfIndirect(source_smask_number) else {
+    fail("expected alias alpha SMask reference")
+  }
+  guard source_document.lookup_object_or_null(source_smask_number)
+    is PdfStreamObject(_) else {
+    fail("expected alias PNG wrapper to add alpha mask to document")
   }
 }
 
@@ -1034,6 +1062,10 @@ test "pdf_image_obj_of_jbig2_data returns cpdf tuple shape" {
   @test.assert_eq(extra, expected_extra)
   @test.assert_eq(extra.length(), 1)
   @test.assert_eq(extra[0].0, 10000)
+  @test.assert_eq(
+    try! @pdflite.pdf_obj_of_jbig2_data(data, global=Some(globals)),
+    (object, extra),
+  )
 }
 
 ///|
