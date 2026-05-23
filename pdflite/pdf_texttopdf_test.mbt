@@ -299,6 +299,8 @@ test "pdf_texttopdf_typeset can build paragraph structure tree" {
 test "pdf_ua_subformat_of_string parses CamlPDF PDF/UA names" {
   @test.assert_eq(try! @pdflite.pdf_ua_subformat_of_string("PDF/UA-1"), PdfUA1)
   @test.assert_eq(try! @pdflite.pdf_ua_subformat_of_string("PDF/UA-2"), PdfUA2)
+  @test.assert_eq(try! @pdflite.pdf_subformat_of_string("PDF/UA-1"), PdfUA1)
+  @test.assert_eq(try! @pdflite.pdf_subformat_of_string("PDF/UA-2"), PdfUA2)
   let unknown : Result[@pdflite.PdfUASubformat, Error] = try? @pdflite.pdf_ua_subformat_of_string(
     "PDF/A-1",
   )

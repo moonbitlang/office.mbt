@@ -1816,6 +1816,8 @@ pub fn pdf_strokefill(PdfDrawControl) -> Unit raise @core.PdfError
 
 pub fn pdf_strokefillevenodd(PdfDrawControl) -> Unit raise @core.PdfError
 
+pub fn pdf_subformat_of_string(String) -> PdfUASubformat raise @core.PdfError
+
 pub fn pdf_table_of_encoding(PdfEncoding) -> Array[(Int, @core.PdfName)]
 
 pub fn pdf_target_of_pagenumber(PdfDocument, Int) -> PdfDestination raise @core.PdfError

@@ -50,10 +50,11 @@ Current estimate:
   helper parity, native metadata file set/write/extract wrappers, and XML
   entity/whitespace decoding, redaction annotation bounding-box overlays,
   cpdfredact apply alias and source-order bounding-box wrapper,
-  cpdfua Matterhorn content/role-map/XMP/viewer-preference/optional-content/
-  media-clip/file-attachment/PrinterMark/reference-XObject/MCID Form XObject/
-  Type0 CIDSystemInfo/CIDToGIDMap/CMap-name/WMode/font-file no-op/TrueType
-  encoding/cmap/ToUnicode validation, TrueType cmap glyph mapping plus
+  cpdfua subformat parser alias and Matterhorn content/role-map/XMP/
+  viewer-preference/optional-content/media-clip/file-attachment/PrinterMark/
+  reference-XObject/MCID Form XObject/Type0 CIDSystemInfo/CIDToGIDMap/CMap-name/
+  WMode/font-file no-op/TrueType encoding/cmap/ToUnicode validation,
+  TrueType cmap glyph mapping plus
   table/metric/descriptor/loca/composite-glyph parsing foundations,
   subset `glyf`/`loca`/format-6 `cmap` table writers, subset-font
   table-directory assembly, width/subset partition helpers, higher-subset
@@ -103,6 +104,19 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfua` source/API parity from
+  `.repos/cpdf-source/cpdfua.mli`: added source-spelled
+  `pdf_subformat_of_string` over the established `pdf_ua_subformat_of_string`
+  parser for cpdf's `PDF/UA-1` and `PDF/UA-2` names. Coverage checks both names
+  through the new alias in the existing text-to-PDF subformat parser test.
+  Validation on MoonBit 0.9.3: `moon check --target native --warn-list +73`
+  passes with the known `markdown/cmd` future notice; `moon test --target
+  native pdf_texttopdf_test.mbt --filter '*subformat*'`, `moon test --target
+  wasm-gc pdf_texttopdf_test.mbt --filter '*subformat*'`, and `moon test
+  --target js pdf_texttopdf_test.mbt --filter '*subformat*'` report 2/2 each;
+  `moon fmt`, `moon info`, and `moon check --target all --warn-list +73` pass
+  with only the existing `markdown/cmd` future notice; full `moon test
+  --target native` reports 2414/2414.~~
 - [x] ~~Continue `cpdfredact` source/API parity from
   `.repos/cpdf-source/cpdfredact.mli`: added source-spelled `pdf_apply` as the
   compatibility entry point for cpdfredact's no-op `apply`, delegating to the

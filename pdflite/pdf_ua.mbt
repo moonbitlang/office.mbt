@@ -18,6 +18,12 @@ pub fn pdf_ua_subformat_of_string(
 }
 
 ///|
+/// Source-spelled compatibility alias for cpdfua's `subformat_of_string`.
+pub fn pdf_subformat_of_string(text : String) -> PdfUASubformat raise PdfError {
+  pdf_ua_subformat_of_string(text)
+}
+
+///|
 fn pdf_ua_name(text : String) -> PdfName {
   pdf_name_of_bytes(@ascii.encode(text))
 }
