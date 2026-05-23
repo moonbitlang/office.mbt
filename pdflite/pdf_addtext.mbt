@@ -2683,6 +2683,35 @@ pub fn pdf_addtext_rectangle(
 }
 
 ///|
+/// Source-spelled compatibility wrapper matching cpdfaddtext's `addrectangle`.
+pub fn pdf_addrectangle(
+  fast : Bool,
+  coord : String,
+  colour : PdfContentColour,
+  outline : Bool,
+  line_width : Double,
+  opacity : Double,
+  position : PdfPosition,
+  relative_to_box : String,
+  underneath : Bool,
+  page_numbers : ArrayView[Int],
+  document : PdfDocument,
+) -> PdfDocument raise PdfError {
+  document.addtext_rectangle(
+    page_numbers,
+    coord,
+    colour,
+    position,
+    relative_to_box=pdf_page_box_name_of_string(relative_to_box),
+    outline~,
+    line_width~,
+    opacity~,
+    underneath~,
+    fast~,
+  )
+}
+
+///|
 fn pdf_addtext_vertical_justification(
   rotation : PdfAddTextRotation,
   justification : PdfAddTextJustification,
