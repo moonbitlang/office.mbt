@@ -588,6 +588,47 @@ test "PdfDocument info_json reports document fields and page boxes" {
     try! @pdflite.pdf_output_info_json_blob(reported, unit=Inch),
     @utf8.encode((try! reported.info_json(unit=Inch)).stringify()),
   )
+  let open_action_text = try! reported.open_action_string()
+  let expected_report = @utf8.encode(
+    "Version: 1.7\n" +
+    "Pages: 2\n" +
+    "Title: Résumé ☃\n" +
+    "Author: Ada\n" +
+    "Subject: Metadata\n" +
+    "Keywords: pdf,test\n" +
+    "Creator: pdflite-test\n" +
+    "Producer: pdflite\n" +
+    "Created: D:20260517010203Z\n" +
+    "Modified: D:20260518040506Z\n" +
+    "Trapped: True\n" +
+    "PageMode: UseOutlines\n" +
+    "PageLayout: SinglePage\n" +
+    "OpenAction: " +
+    open_action_text +
+    "\n" +
+    "HideToolbar: true\n" +
+    "HideMenubar: \n" +
+    "HideWindowUI: \n" +
+    "FitWindow: \n" +
+    "CenterWindow: \n" +
+    "DisplayDocTitle: false\n" +
+    "NonFullScreenPageMode: UseThumbs\n" +
+    "AcroForm: True\n" +
+    "XFA: True\n" +
+    "Marked: True\n" +
+    "UserProperties: True\n" +
+    "Suspects: False\n" +
+    "MediaBox: 0.000000 0.000000 1.000000 2.000000\n" +
+    "CropBox: various\n" +
+    "BleedBox: \n" +
+    "TrimBox: 0.000000 0.000000 0.500000 1.000000\n" +
+    "ArtBox: \n",
+  )
+  @test.assert_eq(try! reported.info_blob(unit=Inch), expected_report)
+  @test.assert_eq(
+    try! @pdflite.pdf_output_info(reported, unit=Inch),
+    expected_report,
+  )
   let stripped_report = try! reported.info_json(
     encoding=PdfMetadataStripped,
     unit=Inch,
@@ -597,6 +638,10 @@ test "PdfDocument info_json reports document fields and page boxes" {
       @test.assert_eq(entries.get("Title"), Some(Json::string("Rsum ")))
     _ => fail("expected JSON object")
   }
+  let stripped_text = try! @utf8.decode(
+    try! reported.info_blob(encoding=PdfMetadataStripped, unit=Inch),
+  )
+  @test.assert_eq(stripped_text.contains("Title: Rsum \n"), true)
 }
 
 ///|

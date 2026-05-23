@@ -1202,6 +1202,8 @@ pub fn pdf_of_pages(PdfDocument, ArrayView[Int], retain_numbering? : Bool, proce
 
 pub fn pdf_optional_content_merge(ArrayView[PdfDocument]) -> PdfOptionalContent? raise @core.PdfError
 
+pub fn pdf_output_info(PdfDocument, encoding? : PdfMetadataEncoding, unit? : @geometry.PdfUnit) -> Bytes raise @core.PdfError
+
 pub fn pdf_output_info_json_blob(PdfDocument, encoding? : PdfMetadataEncoding, unit? : @geometry.PdfUnit) -> Bytes raise @core.PdfError
 
 pub fn pdf_output_page_info(@geometry.PdfUnit, PdfDocument, ArrayView[Int], json? : Bool, raisejson? : Bool) -> Bytes raise @core.PdfError
@@ -3201,6 +3203,7 @@ pub fn PdfDocument::images_json(Self, ArrayView[Int], inline? : Bool) -> Json ra
 pub fn PdfDocument::images_json_blob(Self, ArrayView[Int], inline? : Bool) -> Bytes raise @core.PdfError
 pub fn PdfDocument::impose(Self, Double, Double, fit? : Bool, columns? : Bool, rtl? : Bool, btt? : Bool, center? : Bool, margin? : Double, spacing? : Double, line_width? : Double, fast? : Bool, process_struct_tree? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::indirect_number(Self, @core.PdfName, PdfObject) -> Int?
+pub fn PdfDocument::info_blob(Self, encoding? : PdfMetadataEncoding, unit? : @geometry.PdfUnit) -> Bytes raise @core.PdfError
 pub fn PdfDocument::info_json(Self, encoding? : PdfMetadataEncoding, unit? : @geometry.PdfUnit) -> Json raise @core.PdfError
 pub fn PdfDocument::info_json_blob(Self, encoding? : PdfMetadataEncoding, unit? : @geometry.PdfUnit) -> Bytes raise @core.PdfError
 pub fn PdfDocument::info_utf8(Self, @core.PdfName) -> String
