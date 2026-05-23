@@ -18,7 +18,8 @@ Current estimate:
   native async file I/O, codec, page-label, function, optional-content and
   cpdfocg source-spelled listing wrapper, and
   content-stream, annotation and cpdfannot JSON source-order wrappers,
-  cpdfdebug source-spelled object-dump wrapper,
+  cpdfdebug source-spelled object-dump wrapper, cpdfstrftime source-spelled
+  dummy value,
   native secure-random, bookmark, image, structure,
   renumbering, standard and TrueType font-pack embedding, text-to-PDF
   instruction conversion, basic and tagged text-to-PDF document assembly, PDF/UA
@@ -87,6 +88,20 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfstrftime` source/API parity from
+  `.repos/cpdf-source/cpdfstrftime.mli`: added source-spelled public
+  `pdf_dummy` value for cpdf's dummy time record while preserving
+  `pdf_strftime_dummy_time`, native `pdf_current_time`, and native
+  `pdf_strftime`. Coverage compares `pdf_dummy` with the existing dummy-time
+  function inside the cpdf strftime quirk tests. Validation on MoonBit 0.9.3:
+  `moon check --target native --warn-list +73` passes with the known
+  `markdown/cmd` future notice; `moon test --target native
+  pdf_strftime_test.mbt`, `moon test --target wasm-gc pdf_strftime_test.mbt`,
+  and `moon test --target js pdf_strftime_test.mbt` report 3/3 each; `moon
+  test --target native pdf_strftime_native_test.mbt` reports 2/2; `moon fmt`,
+  `moon info`, and `moon check --target all --warn-list +73` pass with only
+  the existing `markdown/cmd` future notice; full native `moon test --target
+  native` reports 2408/2408.~~
 - [x] ~~Continue standalone utility source/API parity from
   `.repos/cpdf-source/cpdfcolours.mli` and `.repos/cpdf-source/cpdfdebug.mli`:
   added source-spelled `pdf_colours` over the established 148-entry CSS colour

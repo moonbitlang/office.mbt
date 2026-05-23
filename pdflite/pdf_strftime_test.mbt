@@ -27,6 +27,7 @@ test "pdf_strftime_with_time formats cpdf supported fields" {
 ///|
 test "pdf_strftime_with_time preserves cpdf source quirks" {
   let dummy = @pdflite.pdf_strftime_dummy_time()
+  @test.assert_eq(@pdflite.pdf_dummy, dummy)
   @test.assert_eq(
     @pdflite.pdf_strftime_with_time(dummy, "%Y:%j:%I"),
     "3900:000:00",

@@ -652,6 +652,8 @@ pub fn pdf_drawops_to_content_ops_with_document_context(PdfDrawRenderState, PdfD
 
 pub fn pdf_drawops_to_content_ops_with_state(PdfDrawRenderState, ArrayView[PdfDrawOp]) -> Array[PdfContentOp] raise @core.PdfError
 
+pub let pdf_dummy : PdfStrftimeTime
+
 pub fn[A, B : Eq, C] pdf_embed_collate_runs(ArrayView[(A, B, C)]) -> Array[Array[(A, B, C)]]
 
 pub fn pdf_embed_get_char(PdfFontPack, Int) -> (Int, Int, PdfFont)?

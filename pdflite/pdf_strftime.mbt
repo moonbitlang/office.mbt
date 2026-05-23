@@ -16,19 +16,23 @@ pub(all) struct PdfStrftimeTime {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Source-spelled cpdf dummy strftime time value.
+pub let pdf_dummy : PdfStrftimeTime = {
+  tm_sec: 0,
+  tm_min: 0,
+  tm_hour: 0,
+  tm_mday: 1,
+  tm_mon: 0,
+  tm_year: 2000,
+  tm_wday: 0,
+  tm_yday: 0,
+  tm_isdst: false,
+}
+
+///|
 /// Dummy cpdf strftime time value.
 pub fn pdf_strftime_dummy_time() -> PdfStrftimeTime {
-  {
-    tm_sec: 0,
-    tm_min: 0,
-    tm_hour: 0,
-    tm_mday: 1,
-    tm_mon: 0,
-    tm_year: 2000,
-    tm_wday: 0,
-    tm_yday: 0,
-    tm_isdst: false,
-  }
+  pdf_dummy
 }
 
 ///|
