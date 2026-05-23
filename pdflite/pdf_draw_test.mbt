@@ -1495,6 +1495,20 @@ test "pdf draw control media and text-state helpers append cpdf draw ops" {
     PdfDrawNewline,
   ]
   @test.assert_eq(control.ops(), expected)
+
+  let alias_control = @pdflite.pdf_draw_control_new()
+  try! @pdflite.pdf_addimage(alias_control, "Im0")
+  try! @pdflite.pdf_addnewpage(alias_control)
+  try! @pdflite.pdf_addopacity(alias_control, 0.5)
+  try! @pdflite.pdf_addsopacity(alias_control, 0.25)
+  try! @pdflite.pdf_addleading(alias_control, 12.0)
+  try! @pdflite.pdf_addcharspace(alias_control, 1.0)
+  try! @pdflite.pdf_addwordspace(alias_control, 2.0)
+  try! @pdflite.pdf_addtextscale(alias_control, 90.0)
+  try! @pdflite.pdf_addrendermode(alias_control, 3)
+  try! @pdflite.pdf_addrise(alias_control, 4.0)
+  try! @pdflite.pdf_addnewline(alias_control)
+  @test.assert_eq(alias_control.ops(), expected)
 }
 
 ///|
@@ -1603,6 +1617,16 @@ test "pdf draw control text helpers add fontpack once and font text ops" {
     ]),
   ]
   @test.assert_eq(control.ops(), expected)
+
+  let alias_control = @pdflite.pdf_draw_control_new()
+  @pdflite.pdf_setfontname(alias_control, "F0")
+  @pdflite.pdf_setfontsize(alias_control, 10.0)
+  alias_control.set_fontpack(Some(pack))
+  @pdflite.pdf_addbt(alias_control)
+  try! @pdflite.pdf_addtext(alias_control, "hello")
+  try! @pdflite.pdf_addspecialtext(alias_control, "world")
+  try! @pdflite.pdf_addet(alias_control)
+  @test.assert_eq(alias_control.ops(), expected)
 }
 
 ///|
@@ -1624,6 +1648,19 @@ test "pdf draw control default fontpack helper appends once" {
     PdfDrawFontPack("Body", first, []),
     PdfDrawFontPack("Other", second, []),
   ])
+
+  let alias_control = @pdflite.pdf_draw_control_new()
+  alias_control.set_fontpack(Some(first))
+  try! @pdflite.pdf_add_default_fontpack(alias_control, "Body")
+  try! @pdflite.pdf_add_default_fontpack(alias_control, "Ignored")
+  @test.assert_eq(alias_control.ops(), [PdfDrawFontPack("Body", first, [])])
+
+  alias_control.set_fontpack(Some(second))
+  try! @pdflite.pdf_add_default_fontpack(alias_control, "Other")
+  @test.assert_eq(alias_control.ops(), [
+    PdfDrawFontPack("Body", first, []),
+    PdfDrawFontPack("Other", second, []),
+  ])
 }
 
 ///|
@@ -1632,14 +1669,20 @@ test "pdf draw control exposes font state readers" {
   @test.assert_eq(control.font_name(), "Times-Roman")
   @test.assert_eq(control.font_size(), 12.0)
   @test.assert_eq(control.paragraph_indent(), None)
+  @test.assert_eq(@pdflite.pdf_getfontname(control), "Times-Roman")
+  @test.assert_eq(@pdflite.pdf_getfontsize(control), 12.0)
+  @test.assert_eq(@pdflite.pdf_getindent(control), None)
   @test.assert_eq(control.fontpack_initialized(), false)
 
-  control.set_font_name("Body")
-  control.set_font_size(9.5)
+  @pdflite.pdf_setfontname(control, "Body")
+  @pdflite.pdf_setfontsize(control, 9.5)
   control.set_paragraph_indent(Some(4.0))
   @test.assert_eq(control.font_name(), "Body")
   @test.assert_eq(control.font_size(), 9.5)
   @test.assert_eq(control.paragraph_indent(), Some(4.0))
+  @test.assert_eq(@pdflite.pdf_getfontname(control), "Body")
+  @test.assert_eq(@pdflite.pdf_getfontsize(control), 9.5)
+  @test.assert_eq(@pdflite.pdf_getindent(control), Some(4.0))
 
   let pack : @pdflite.PdfFontPack = { fonts: [], entries: [] }
   control.set_fontpack(Some(pack))
@@ -1671,6 +1714,16 @@ test "pdf draw control paragraph helpers parse justification width and escaped n
     ]),
   ]
   @test.assert_eq(control.ops(), expected)
+
+  let alias_control = @pdflite.pdf_draw_control_new()
+  @pdflite.pdf_setfontname(alias_control, "F1")
+  @pdflite.pdf_setfontsize(alias_control, 8.0)
+  alias_control.set_paragraph_indent(Some(3.0))
+  @pdflite.pdf_addbt(alias_control)
+  try! @pdflite.pdf_addpara(alias_control, document, "L200=One")
+  try! @pdflite.pdf_addparas(alias_control, document, "C100=One\\nTwo\\n")
+  try! @pdflite.pdf_addet(alias_control)
+  @test.assert_eq(alias_control.ops(), expected)
 }
 
 ///|

@@ -66,6 +66,8 @@ pub fn pdf_add_bookmarks_from_json(Bool, Json, PdfDocument) -> PdfDocument raise
 
 pub fn pdf_add_bookmarks_from_text(Bool, BytesView, PdfDocument) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_add_default_fontpack(PdfDrawControl, String) -> Unit raise @core.PdfError
+
 pub fn pdf_add_page_labels(PdfDocument, Bool, PdfPageLabelStyle, Bytes?, Int, ArrayView[Int]) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_add_page_labels_json(PdfDocument, Json) -> PdfDocument raise @core.PdfError
@@ -82,17 +84,47 @@ pub fn pdf_addbezier13(PdfDrawControl, String) -> Unit raise @core.PdfError
 
 pub fn pdf_addbezier23(PdfDrawControl, String) -> Unit raise @core.PdfError
 
+pub fn pdf_addbt(PdfDrawControl) -> Unit
+
+pub fn pdf_addcharspace(PdfDrawControl, Double) -> Unit raise @core.PdfError
+
 pub fn pdf_addcircle(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_addet(PdfDrawControl) -> Unit raise @core.PdfError
+
+pub fn pdf_addimage(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_addleading(PdfDrawControl, Double) -> Unit raise @core.PdfError
 
 pub fn pdf_addline(PdfDrawControl, PdfDocument, String) -> Unit raise @core.PdfError
 
 pub fn pdf_addnamespace(PdfDrawControl, String) -> Unit raise @core.PdfError
 
+pub fn pdf_addnewline(PdfDrawControl) -> Unit raise @core.PdfError
+
+pub fn pdf_addnewpage(PdfDrawControl) -> Unit raise @core.PdfError
+
+pub fn pdf_addopacity(PdfDrawControl, Double) -> Unit raise @core.PdfError
+
+pub fn pdf_addpara(PdfDrawControl, PdfDocument, String) -> Unit raise @core.PdfError
+
+pub fn pdf_addparas(PdfDrawControl, PdfDocument, String) -> Unit raise @core.PdfError
+
 pub fn pdf_addrect(PdfDrawControl, PdfDocument, String) -> Unit raise @core.PdfError
+
+pub fn pdf_addrendermode(PdfDrawControl, Int) -> Unit raise @core.PdfError
+
+pub fn pdf_addrise(PdfDrawControl, Double) -> Unit raise @core.PdfError
+
+pub fn pdf_addsopacity(PdfDrawControl, Double) -> Unit raise @core.PdfError
+
+pub fn pdf_addspecialtext(PdfDrawControl, String) -> Unit raise @core.PdfError
 
 pub fn pdf_addstag(PdfDrawControl, String) -> Unit raise @core.PdfError
 
 pub fn pdf_addtag(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_addtext(PdfDrawControl, String) -> Unit raise @core.PdfError
 
 pub fn pdf_addtext_allocate_font_names(PdfObject, PdfFontPack?) -> (@core.PdfName, PdfObject, Array[@core.PdfName]) raise @core.PdfError
 
@@ -212,7 +244,11 @@ pub fn pdf_addtexts_with_font(PdfDocument, ArrayView[Int], String, PdfStrftimeTi
 
 pub fn pdf_addtexts_with_source(PdfDocument, ArrayView[Int], String, PdfStrftimeTime, ArrayView[PdfBookmark], PdfAddTextFontSource, @core.PdfName, Double, Double, PdfContentColour, PdfPosition, filename? : String, bates? : Int, bates_pad? : Int?, relative_to_box? : @core.PdfName, shift? : String, opacity? : Double, justification? : PdfAddTextJustification, rotation? : PdfAddTextRotation, midline? : Bool, topline? : Bool, outline? : Bool, line_width? : Double, underneath? : Bool, fast? : Bool, raw? : Bool, url_border? : Bool) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_addtextscale(PdfDrawControl, Double) -> Unit raise @core.PdfError
+
 pub fn pdf_addto(PdfDrawControl, PdfDocument, String) -> Unit raise @core.PdfError
+
+pub fn pdf_addwordspace(PdfDrawControl, Double) -> Unit raise @core.PdfError
 
 pub fn pdf_allupright(PdfDocument, ArrayView[Int]) -> Bool raise @core.PdfError
 
@@ -827,6 +863,12 @@ pub fn pdf_get_viewer_pref_item_string(String, PdfDocument) -> String
 pub fn pdf_get_xmp_info(PdfDocument, @core.PdfName) -> String
 
 pub fn pdf_get_xmp_info_string(PdfDocument, String) -> String
+
+pub fn pdf_getfontname(PdfDrawControl) -> String
+
+pub fn pdf_getfontsize(PdfDrawControl) -> Double
+
+pub fn pdf_getindent(PdfDrawControl) -> Double?
 
 pub fn pdf_glyphnames_of_text(PdfTextExtractor, BytesView) -> Array[@core.PdfName] raise @core.PdfError
 
@@ -1575,6 +1617,10 @@ pub fn pdf_setcap(PdfDrawControl, String) -> Unit raise @core.PdfError
 pub fn pdf_setdash(PdfDrawControl, String) -> Unit raise @core.PdfError
 
 pub fn pdf_setfill(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_setfontname(PdfDrawControl, String) -> Unit
+
+pub fn pdf_setfontsize(PdfDrawControl, Double) -> Unit
 
 pub fn pdf_setjoin(PdfDrawControl, String) -> Unit raise @core.PdfError
 

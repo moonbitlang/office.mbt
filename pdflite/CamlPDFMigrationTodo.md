@@ -34,8 +34,9 @@ Current estimate:
   alias, image-resolution reporting, cpdfimage single-image and multi-image
   extraction file payloads/native write wrappers,
   cpdf draw-control colour parsing, source-spelled parse-colour alias,
-  path/paint, marked-content, graphics-state/matrix, and XObject command
-  aliases, role-map/auto-artifact state, and cpdfdraw
+  path/paint, marked-content, graphics-state/matrix, XObject, media/text,
+  paragraph, and font-state callback command aliases, role-map/auto-artifact
+  state, and cpdfdraw
   structured role-map output with fresh-structure-tree preservation,
   Form XObject stamping, cpdfshape source-spelled aliases,
   composition reporting, core metadata APIs and cpdfmetadata string-key/source-
@@ -95,6 +96,30 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfdrawcontrol` source/API parity from
+  `.repos/cpdf-source/cpdfdrawcontrol.mli`: added source-spelled explicit-state
+  wrappers for media/text-state commands (`pdf_addimage`, `pdf_addopacity`,
+  `pdf_addsopacity`, `pdf_addbt`, `pdf_addet`, `pdf_addnewpage`,
+  `pdf_addleading`, `pdf_addcharspace`, `pdf_addwordspace`,
+  `pdf_addtextscale`, `pdf_addrendermode`, `pdf_addrise`, and
+  `pdf_addnewline`), font callback-style state (`pdf_getfontname`,
+  `pdf_setfontname`, `pdf_getfontsize`, `pdf_setfontsize`, and
+  `pdf_getindent`), and text/paragraph helpers (`pdf_add_default_fontpack`,
+  `pdf_addtext`, `pdf_addspecialtext`, `pdf_addpara`, and `pdf_addparas`) over
+  the existing `PdfDrawControl` methods. This continues preserving cpdf's
+  command spellings while keeping MoonBit's explicit draw-control state.
+  Coverage compares wrapper-built media/text-state, font-pack, direct text,
+  special-text, font-reader, and paragraph output with the method path.
+  Validation on MoonBit 0.9.3: `moon check --target native --warn-list +73`
+  passes with the known `markdown/cmd` future notice; focused native
+  `pdf_draw_test.mbt` filters for `*media and text-state*`, `*text helpers add
+  fontpack*`, `*default fontpack*`, `*font state readers*`, and `*paragraph
+  helpers*` each report 1/1; `moon test --target wasm-gc pdf_draw_test.mbt
+  --filter '*draw control*'` and `moon test --target js pdf_draw_test.mbt
+  --filter '*draw control*'` report 16/16 each; `moon fmt`, `moon info`, and
+  `moon check --target all --warn-list +73` pass with only the existing
+  `markdown/cmd` future notice; full native `moon test --target native`
+  reports 2412/2412.~~
 - [x] ~~Continue `cpdfdrawcontrol` source/API parity from
   `.repos/cpdf-source/cpdfdrawcontrol.mli`: added source-spelled explicit-state
   wrappers for marked-content/state (`pdf_setstroke`, `pdf_setfill`,
