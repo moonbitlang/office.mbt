@@ -8925,6 +8925,19 @@ Current backend snapshot:
   --warn-list +73` passes with the known `markdown/cmd` future notice; `moon
   test --target native` reports 2416/2416; `moon info`, `moon fmt`, and `git
   diff --check` are clean.~~
+- [x] ~~Continue source-port hardening with another small cpdf-source API parity
+  gap: the root package now exposes source-spelled compatibility wrappers
+  `PdfDocument::json_to_output`/`pdf_json_to_output` for cpdfjson's
+  `to_output`, and `pdf_unicodedata_source`/`pdf_unicodedata` for
+  cpdfunicodedata's `unicodedata_source` and `unicodedata`. Coverage pins each
+  wrapper against the existing byte-output JSON and embedded UnicodeData
+  providers. Validation on MoonBit compiler 0.9.3: `moon check --target native
+  --warn-list +73` passes with the known `markdown/cmd` future notice; `moon
+  test --target native pdf_unicode_data_test.mbt` reports 5/5; `moon test
+  --target native pdf_util_test.mbt --filter '*json_of_document_blob*'` reports
+  1/1; `moon check --target all --warn-list +73` passes with the known
+  `markdown/cmd` future notice; `moon test --target native` reports
+  2416/2416.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

@@ -2421,3 +2421,9 @@ pub fn pdf_unicode_data_source() -> PdfBytes raise PdfError {
   pdf_unicode_data_source_validate(data)
   data
 }
+
+///|
+/// Source-spelled compatibility wrapper for cpdfunicodedata's `unicodedata_source`.
+pub fn pdf_unicodedata_source() -> PdfBytes raise PdfError {
+  pdf_unicode_data_source()
+}

@@ -1136,8 +1136,13 @@ test "PdfDocument json_of_document_blob emits UTF-8 CPDFJSON bytes" {
     try! document.json_of_document_blob(parse_content=true),
     expected,
   )
+  @test.assert_eq(try! document.json_to_output(parse_content=true), expected)
   @test.assert_eq(
     try! @pdflite.pdf_json_of_document_blob(document, parse_content=true),
+    expected,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_json_to_output(document, parse_content=true),
     expected,
   )
 }

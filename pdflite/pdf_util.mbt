@@ -1549,6 +1549,28 @@ pub fn PdfDocument::json_of_document_blob(
 }
 
 ///|
+/// Source-spelled compatibility wrapper for cpdfjson's `to_output`.
+///
+/// The OCaml API writes to an output sink; this wrapper returns the same
+/// UTF-8 bytes that would be written, while preserving cpdf's flag order.
+pub fn PdfDocument::json_to_output(
+  self : PdfDocument,
+  utf8? : Bool = false,
+  parse_content? : Bool = false,
+  no_stream_data? : Bool = false,
+  decompress_streams? : Bool = false,
+  clean_strings? : Bool = false,
+) -> PdfBytes raise PdfError {
+  self.json_of_document_blob(
+    utf8~,
+    parse_content~,
+    clean_strings~,
+    no_stream_data~,
+    decompress_streams~,
+  )
+}
+
+///|
 fn PdfDocument::pdf_util_collect_dict_entry_values(
   self : PdfDocument,
   object : PdfObject,
@@ -1864,6 +1886,25 @@ pub fn pdf_json_of_document_blob(
     clean_strings~,
     no_stream_data~,
     decompress_streams~,
+  )
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::json_to_output`.
+pub fn pdf_json_to_output(
+  document : PdfDocument,
+  utf8? : Bool = false,
+  parse_content? : Bool = false,
+  no_stream_data? : Bool = false,
+  decompress_streams? : Bool = false,
+  clean_strings? : Bool = false,
+) -> PdfBytes raise PdfError {
+  document.json_to_output(
+    utf8~,
+    parse_content~,
+    no_stream_data~,
+    decompress_streams~,
+    clean_strings~,
   )
 }
 

@@ -53,10 +53,12 @@ test "pdf_parse_flate_unicode_data mirrors cpdf compressed source path" {
 ///|
 test "pdf_unicode_data exposes cpdf embedded UnicodeData table" {
   let source = try! @pdflite.pdf_unicode_data_source()
+  @test.assert_eq(try! @pdflite.pdf_unicodedata_source(), source)
   @test.assert_eq(source.length(), 272286)
   @test.assert_eq(source[0].to_int(), 0x78)
   @test.assert_eq(source[1].to_int(), 0x01)
   let rows = try! @pdflite.pdf_unicode_data()
+  @test.assert_eq(try! @pdflite.pdf_unicodedata(), rows)
   @test.assert_eq(rows.length(), 34626)
   @test.assert_eq(rows[0].code_value, "0000")
   @test.assert_eq(rows[0].character_name, "<control>")

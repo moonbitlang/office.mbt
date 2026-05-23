@@ -133,6 +133,12 @@ pub fn pdf_unicode_data() -> Array[PdfUnicodeDataEntry] raise PdfError {
 }
 
 ///|
+/// Source-spelled compatibility wrapper for cpdfunicodedata's `unicodedata`.
+pub fn pdf_unicodedata() -> Array[PdfUnicodeDataEntry] raise PdfError {
+  pdf_unicode_data()
+}
+
+///|
 fn pdf_unicode_data_hex_digit(value : Byte) -> Int? {
   match value.to_int() {
     digit if digit >= 0x30 && digit <= 0x39 => Some(digit - 0x30)

@@ -1026,6 +1026,8 @@ pub fn pdf_json_of_object(PdfDocument, PdfObject, utf8? : Bool, clean_strings? :
 
 pub fn pdf_json_page_info(PdfDocument, ArrayView[Int], @geometry.PdfUnit) -> Json raise @core.PdfError
 
+pub fn pdf_json_to_output(PdfDocument, utf8? : Bool, parse_content? : Bool, no_stream_data? : Bool, decompress_streams? : Bool, clean_strings? : Bool) -> Bytes raise @core.PdfError
+
 pub let pdf_kappa : Double
 
 pub fn pdf_language(PdfDocument) -> Bytes?
@@ -2009,6 +2011,10 @@ pub fn pdf_ua_test_matterhorn_print(PdfDocument, String) -> Bytes raise @core.Pd
 pub fn pdf_unicode_data() -> Array[PdfUnicodeDataEntry] raise @core.PdfError
 
 pub fn pdf_unicode_data_source() -> Bytes raise @core.PdfError
+
+pub fn pdf_unicodedata() -> Array[PdfUnicodeDataEntry] raise @core.PdfError
+
+pub fn pdf_unicodedata_source() -> Bytes raise @core.PdfError
 
 pub fn pdf_upright(ArrayView[Int], PdfDocument, fast? : Bool) -> PdfDocument raise @core.PdfError
 
@@ -3224,6 +3230,7 @@ pub fn PdfDocument::iter_stream(Self, (PdfObject) -> Unit raise) -> Unit raise
 pub fn PdfDocument::json_of_document(Self, utf8? : Bool, parse_content? : Bool, clean_strings? : Bool, no_stream_data? : Bool, decompress_streams? : Bool) -> Json raise @core.PdfError
 pub fn PdfDocument::json_of_document_blob(Self, utf8? : Bool, parse_content? : Bool, clean_strings? : Bool, no_stream_data? : Bool, decompress_streams? : Bool) -> Bytes raise @core.PdfError
 pub fn PdfDocument::json_of_object(Self, PdfObject, utf8? : Bool, clean_strings? : Bool, no_stream_data? : Bool, parse_content? : Bool) -> Json raise @core.PdfError
+pub fn PdfDocument::json_to_output(Self, utf8? : Bool, parse_content? : Bool, no_stream_data? : Bool, decompress_streams? : Bool, clean_strings? : Bool) -> Bytes raise @core.PdfError
 pub fn PdfDocument::language(Self) -> Bytes?
 pub fn PdfDocument::language_string(Self) -> String?
 pub fn PdfDocument::list_annotations(Self, ArrayView[Int], encoding? : PdfMetadataEncoding) -> Bytes raise @core.PdfError
