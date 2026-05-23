@@ -45,7 +45,24 @@ pub fn PdfDocument::list_spot_colours(self : PdfDocument) -> Array[PdfName] {
 }
 
 ///|
+/// Return the bytes cpdf's `list_spot_colours` would print to stdout.
+pub fn PdfDocument::list_spot_colours_blob(self : PdfDocument) -> PdfBytes {
+  let output : Array[Byte] = []
+  for name in self.list_spot_colours() {
+    pdf_writer_push_view(output, name.bytes())
+    output.push(10)
+  }
+  Bytes::from_array(output)
+}
+
+///|
 /// Compatibility wrapper for `PdfDocument::list_spot_colours`.
 pub fn pdf_list_spot_colours(document : PdfDocument) -> Array[PdfName] {
   document.list_spot_colours()
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::list_spot_colours_blob`.
+pub fn pdf_list_spot_colours_blob(document : PdfDocument) -> PdfBytes {
+  document.list_spot_colours_blob()
 }

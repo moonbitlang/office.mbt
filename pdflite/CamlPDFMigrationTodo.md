@@ -18,9 +18,10 @@ Current estimate:
   native async file I/O, codec, page-label, function, optional-content and
   cpdfocg source-spelled listing wrapper, and
   content-stream, annotation and cpdfannot JSON source-order wrappers,
-  cpdfdebug source-spelled object-dump wrapper, cpdfattach source-spelled
-  sanitizer and source-order file-attach wrapper, cpdfstrftime source-spelled
-  dummy value, cpdfclip source-spelled polygon/debug/native clip wrappers,
+  cpdfdebug source-spelled object-dump wrapper, cpdfspot stdout-style listing
+  output wrapper, cpdfattach source-spelled sanitizer and source-order
+  file-attach wrapper, cpdfstrftime source-spelled dummy value, cpdfclip
+  source-spelled polygon/debug/native clip wrappers,
   native secure-random, bookmark, image, structure,
   renumbering, standard and TrueType font-pack embedding, text-to-PDF
   instruction conversion, basic and tagged text-to-PDF document assembly, PDF/UA
@@ -63,7 +64,7 @@ Current estimate:
 
 Current backend snapshot:
 
-- Native: full suite passes on MoonBit 0.9.3, currently 2410/2410 tests.
+- Native: full suite passes on MoonBit 0.9.3, currently 2411/2411 tests.
 - WasmGC and JavaScript: full portable non-native test suites pass on MoonBit
   0.9.3, currently 2063/2063 on each backend after the latest TrueType
   embedding integration.
@@ -90,6 +91,20 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfspot` source/API parity from
+  `.repos/cpdf-source/cpdfspot.mli`: added
+  `PdfDocument::list_spot_colours_blob` and `pdf_list_spot_colours_blob` as the
+  deterministic byte output cpdf's stdout-oriented `list_spot_colours` would
+  print, preserving one raw PDF name per line while keeping the existing
+  structured `list_spot_colours` APIs intact. Coverage pins direct and wrapper
+  output bytes plus the empty-document output. Validation on MoonBit 0.9.3:
+  `moon check --target native --warn-list +73` passes with the known
+  `markdown/cmd` future notice; `moon test --target native
+  pdf_spot_test.mbt`, `moon test --target wasm-gc pdf_spot_test.mbt`, and
+  `moon test --target js pdf_spot_test.mbt` report 3/3 each; `moon fmt`, `moon
+  info`, and `moon check --target all --warn-list +73` pass with only the
+  existing `markdown/cmd` future notice; full native `moon test --target native`
+  reports 2411/2411.~~
 - [x] ~~Continue `cpdfattach` source/API parity from
   `.repos/cpdf-source/cpdfattach.mli`: added source-spelled
   `pdf_remove_unsafe_characters` over the existing cpdf filename sanitizer and

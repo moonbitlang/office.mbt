@@ -926,6 +926,8 @@ pub fn pdf_list_fonts_text(PdfDocument, ArrayView[Int]) -> Bytes raise @core.Pdf
 
 pub fn pdf_list_spot_colours(PdfDocument) -> Array[@core.PdfName]
 
+pub fn pdf_list_spot_colours_blob(PdfDocument) -> Bytes
+
 pub fn pdf_lzw_decode(Bytes, early_change? : Int) -> Bytes raise @core.PdfError
 
 pub fn pdf_lzw_decode_view(BytesView, early_change? : Int) -> Bytes raise @core.PdfError
@@ -2987,6 +2989,7 @@ pub fn PdfDocument::list_bookmarks(Self, ArrayView[Int], encoding? : PdfMetadata
 pub fn PdfDocument::list_fonts(Self, ArrayView[Int]) -> Array[PdfFontListEntry] raise @core.PdfError
 pub fn PdfDocument::list_fonts_text(Self, ArrayView[Int]) -> Bytes raise @core.PdfError
 pub fn PdfDocument::list_spot_colours(Self) -> Array[@core.PdfName]
+pub fn PdfDocument::list_spot_colours_blob(Self) -> Bytes
 pub fn PdfDocument::lookup_chain(Self, PdfObject, ArrayView[@core.PdfName]) -> PdfObject?
 pub fn PdfDocument::lookup_direct(Self, @core.PdfName, PdfObject) -> PdfObject?
 pub fn PdfDocument::lookup_direct_or_array(Self, @core.PdfName, PdfObject) -> PdfObject?
