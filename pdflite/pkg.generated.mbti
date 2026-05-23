@@ -94,6 +94,10 @@ pub fn pdf_addet(PdfDrawControl) -> Unit raise @core.PdfError
 
 pub fn pdf_addimage(PdfDrawControl, String) -> Unit raise @core.PdfError
 
+pub fn pdf_addjpeg(PdfDrawControl, String, BytesView, path_to_im? : String) -> Unit raise @core.PdfError
+
+pub fn pdf_addjpeg2000(PdfDrawControl, String, BytesView) -> Unit raise @core.PdfError
+
 pub fn pdf_addleading(PdfDrawControl, Double) -> Unit raise @core.PdfError
 
 pub fn pdf_addline(PdfDrawControl, PdfDocument, String) -> Unit raise @core.PdfError
@@ -109,6 +113,8 @@ pub fn pdf_addopacity(PdfDrawControl, Double) -> Unit raise @core.PdfError
 pub fn pdf_addpara(PdfDrawControl, PdfDocument, String) -> Unit raise @core.PdfError
 
 pub fn pdf_addparas(PdfDrawControl, PdfDocument, String) -> Unit raise @core.PdfError
+
+pub fn pdf_addpng(PdfDrawControl, PdfDocument, String, BytesView) -> Unit raise @core.PdfError
 
 pub fn pdf_addrect(PdfDrawControl, PdfDocument, String) -> Unit raise @core.PdfError
 

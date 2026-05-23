@@ -494,6 +494,42 @@ pub fn PdfDrawControl::add_jpeg2000_data(
 }
 
 ///|
+/// Source-spelled cpdfdrawcontrol `addjpeg` for supplied image bytes.
+///
+/// `path_to_im` is accepted for source API parity with cpdf's ImageMagick
+/// fallback hook and is otherwise ignored by pdflite's in-process parser.
+pub fn pdf_addjpeg(
+  control : PdfDrawControl,
+  name : String,
+  data : BytesView,
+  path_to_im? : String = "",
+) -> Unit raise PdfError {
+  ignore(path_to_im)
+  control.add_jpeg_data(name, data)
+}
+
+///|
+/// Source-spelled cpdfdrawcontrol `addpng` for supplied image bytes.
+pub fn pdf_addpng(
+  control : PdfDrawControl,
+  document : PdfDocument,
+  name : String,
+  data : BytesView,
+) -> Unit raise PdfError {
+  control.add_png_data(document, name, data)
+}
+
+///|
+/// Source-spelled cpdfdrawcontrol `addjpeg2000` for supplied image bytes.
+pub fn pdf_addjpeg2000(
+  control : PdfDrawControl,
+  name : String,
+  data : BytesView,
+) -> Unit raise PdfError {
+  control.add_jpeg2000_data(name, data)
+}
+
+///|
 pub fn PdfDrawControl::add_new_page(
   self : PdfDrawControl,
 ) -> Unit raise PdfError {

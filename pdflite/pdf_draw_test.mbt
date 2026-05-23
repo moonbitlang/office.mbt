@@ -1566,6 +1566,12 @@ test "pdf draw control image data helpers append image XObjects" {
     Some(PdfInteger(300)),
   )
   @test.assert_eq(jp2_stream.data, StreamGot(jpeg2000))
+
+  let alias_control = @pdflite.pdf_draw_control_new()
+  try! @pdflite.pdf_addjpeg(alias_control, "J0", jpeg)
+  try! @pdflite.pdf_addpng(alias_control, document, "P0", png)
+  try! @pdflite.pdf_addjpeg2000(alias_control, "JP0", jpeg2000)
+  @test.assert_eq(alias_control.ops(), ops)
 }
 
 ///|
@@ -1593,6 +1599,33 @@ test "pdf draw control image data helpers propagate parser errors" {
   )
   guard bad_jp2 is Err(@pdflite.PdfError::BadJPEG2000Header) else {
     fail("expected BadJPEG2000Header")
+  }
+
+  let alias_control = @pdflite.pdf_draw_control_new()
+  let bad_alias_jpeg : Result[Unit, Error] = try? @pdflite.pdf_addjpeg(
+    alias_control,
+    "Bad",
+    draw_bytes_for_test([0xFF, 0xD8, 0xFF, 0xDB]),
+  )
+  guard bad_alias_jpeg is Err(@pdflite.PdfError::BadJPEGHeader) else {
+    fail("expected BadJPEGHeader through addjpeg wrapper")
+  }
+  let bad_alias_png : Result[Unit, Error] = try? @pdflite.pdf_addpng(
+    alias_control,
+    document,
+    "Bad",
+    draw_bytes_for_test([0x89, 0x50]),
+  )
+  guard bad_alias_png is Err(@pdflite.PdfError::BadPNG(_)) else {
+    fail("expected BadPNG through addpng wrapper")
+  }
+  let bad_alias_jp2 : Result[Unit, Error] = try? @pdflite.pdf_addjpeg2000(
+    alias_control,
+    "Bad",
+    draw_bytes_for_test([0x00, 0x00, 0x00, 0x0C, 0x6A]),
+  )
+  guard bad_alias_jp2 is Err(@pdflite.PdfError::BadJPEG2000Header) else {
+    fail("expected BadJPEG2000Header through addjpeg2000 wrapper")
   }
 }
 
