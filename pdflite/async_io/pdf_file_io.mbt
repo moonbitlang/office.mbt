@@ -58,6 +58,21 @@ pub async fn pdf_replace_stream(
 }
 
 ///|
+/// Replace catalog optional-content groups from a cpdf OCG JSON file.
+pub async fn pdf_ocg_replace(
+  filename : StringView,
+  document : @pdflite.PdfDocument,
+) -> @pdflite.PdfDocument {
+  let text = @utf8.decode(@fs.read_file(filename).binary()) catch {
+    _ => raise @pdflite.PdfError::SoftError("ocg_replace: malformed JSON")
+  }
+  let json = @json.parse(text) catch {
+    _ => raise @pdflite.PdfError::SoftError("ocg_replace: malformed JSON")
+  }
+  @pdflite.pdf_ocg_replace_json(json, document)
+}
+
+///|
 fn pdf_async_io_join_directory_file(
   directory : StringView,
   filename : String,

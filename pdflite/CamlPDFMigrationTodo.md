@@ -15,8 +15,9 @@ Current estimate:
   colour-space and cpdfcolours source-spelled table alias, transform,
   destination, merge-helper, standard-font, Flate, and
   text/font extraction, cryptography and primitive crypto, page-tree, writer,
-  native async file I/O, codec, page-label, function, optional-content and
-  cpdfocg source-spelled listing wrapper, and
+  native async file I/O, codec, page-label, function, optional-content,
+  cpdfocg source-spelled listing wrapper and native JSON-file replacement
+  wrapper, and
   content-stream, annotation and cpdfannot JSON source-order wrappers,
   cpdfdebug source-spelled object-dump wrapper, cpdfspot stdout-style listing
   output wrapper, cpdfattach source-spelled sanitizer, source-order file-attach,
@@ -92,6 +93,18 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue native `cpdfocg` source/API parity from
+  `.repos/cpdf-source/cpdfocg.mli`: added async `pdf_ocg_replace` as the
+  source-spelled file-boundary wrapper for cpdf's `ocg_replace`, preserving the
+  filename/document argument order while delegating parsed optional-content JSON
+  to the existing pure `pdf_ocg_replace_json` implementation. Coverage writes a
+  cpdf OCG JSON listing to disk, replaces a clean catalog from that file, and
+  checks that `null` JSON leaves existing optional content unchanged. Validation
+  on MoonBit 0.9.3: `moon check --target native --warn-list +73 async_io`
+  passes; `moon test --target native async_io --filter '*cpdfocg replace*'`
+  reports 1/1; `moon test --target native async_io` reports 96/96; `moon fmt`,
+  `moon info`, and `moon check --target all --warn-list +73` pass with only the
+  existing `markdown/cmd` future notice.~~
 - [x] ~~Continue `cpdfbookmarks` source/API parity from
   `.repos/cpdf-source/cpdfbookmarks.mli`: added source-spelled
   `pdf_name_of_spec` over the existing `PdfDocument::bookmark_name_of_spec`

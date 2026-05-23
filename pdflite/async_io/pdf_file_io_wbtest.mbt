@@ -490,6 +490,48 @@ fn pdf_async_io_name_for_test(text : String) -> @pdflite.PdfName {
 }
 
 ///|
+fn pdf_async_io_ocg_catalog_for_test() -> @pdflite.PdfDocument {
+  let key_root = pdf_async_io_name_for_test("/Root")
+  let key_type = pdf_async_io_name_for_test("/Type")
+  let type_catalog = pdf_async_io_name_for_test("/Catalog")
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_root(1)
+  doc.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(1))]))
+  doc.add_object_given_number(
+    1,
+    PdfDictionary([(key_type, PdfNameObject(type_catalog))]),
+  )
+  doc
+}
+
+///|
+fn pdf_async_io_ocg_content_for_test(
+  number : Int,
+  name : String,
+) -> @pdflite.PdfOptionalContent {
+  let name_bytes = @ascii.encode(name)
+  {
+    ocgs: [
+      (
+        number,
+        {
+          name: name_bytes,
+          intent: [pdf_async_io_name_for_test("/View")],
+          usage: None,
+        },
+      ),
+    ],
+    default_config: {
+      ..@pdflite.pdf_ocg_default_config(),
+      name: Some(@ascii.encode("Default")),
+      on: [number],
+      order: Some([(Some(name_bytes), [number])]),
+    },
+    configs: [],
+  }
+}
+
+///|
 fn pdf_async_io_resource_dictionary_for_test(
   entries : ArrayView[(String, @pdflite.PdfObject)],
 ) -> @pdflite.PdfObject {
@@ -3924,6 +3966,27 @@ async test "async file wrappers dump attached files to a directory" {
   )
   pdf_async_io_remove_if_exists_for_test(document_output)
   pdf_async_io_remove_if_exists_for_test(page_output)
+}
+
+///|
+async test "async cpdfocg replace reads optional-content JSON files" {
+  let path = pdf_async_io_test_path_for_test("ocg_replace")
+  let null_path = pdf_async_io_test_path_for_test("ocg_replace_null")
+  pdf_async_io_remove_if_exists_for_test(path)
+  pdf_async_io_remove_if_exists_for_test(null_path)
+  let content = pdf_async_io_ocg_content_for_test(10, "Layer 1")
+  let source = try! pdf_async_io_ocg_catalog_for_test().write_optional_content_groups(
+    content,
+  )
+  @fs.write_file(path, try! source.ocg_list_json_blob(), create=0o644)
+  let replaced = try! pdf_ocg_replace(path, pdf_async_io_ocg_catalog_for_test())
+  @test.assert_eq(try! replaced.read_optional_content_groups(), Some(content))
+
+  @fs.write_file(null_path, @ascii.encode("null"), create=0o644)
+  let unchanged = try! pdf_ocg_replace(null_path, source)
+  @test.assert_eq(try! unchanged.read_optional_content_groups(), Some(content))
+  pdf_async_io_remove_if_exists_for_test(path)
+  pdf_async_io_remove_if_exists_for_test(null_path)
 }
 
 ///|

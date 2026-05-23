@@ -1,12 +1,14 @@
 import {
-  "bobzhang/pdflite" @pdflite,
+  "bobzhang/pdflite",
   "moonbitlang/core/encoding/ascii",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/json",
   "moonbitlang/async/fs",
   "moonbitlang/async/io",
 }
 
 import {
-  "bobzhang/pdflite" @pdflite,
+  "bobzhang/pdflite",
   "moonbitlang/core/test",
   "moonbitlang/core/encoding/ascii",
   "moonbitlang/core/env",
