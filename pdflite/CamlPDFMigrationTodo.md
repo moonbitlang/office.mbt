@@ -8973,6 +8973,19 @@ Current backend snapshot:
   `moon check --target all --warn-list +73` passes with the known
   `markdown/cmd` future notice; `moon test --target native` reports
   2417/2417.~~
+- [x] ~~Continue source-port hardening with another real-world malformed
+  recovery fixture: the optional 175-page `.repos/cpdf-source/cpdfmanual.pdf`
+  gate now mutates the first `/ObjStm` dictionary from direct
+  `/Filter /FlateDecode` metadata to short `/F /Fl` plus
+  `/DP << /Predictor 9 >>`, preserving the byte length while exercising
+  unsupported object-stream DecodeParms predictors. Strict parsing raises
+  `PredictorNotSupported(9)`, public parsing reconstructs with `first_xref = 0`,
+  and compressed rewrite/reread preserves the manual's 175 pages. Validation on
+  MoonBit compiler 0.9.3: `moon check --target native --warn-list +73` passes
+  with the known `markdown/cmd` future notice; the focused gate reports 1/1;
+  `moon test --target native fixture_acceptance` reports 127/127; `moon check
+  --target all --warn-list +73` passes with the known `markdown/cmd` future
+  notice; `moon test --target native` reports 2418/2418.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
