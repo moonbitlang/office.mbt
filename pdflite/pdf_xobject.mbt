@@ -261,3 +261,14 @@ pub fn pdf_stamp_as_xobject(
 ) -> (PdfDocument, PdfName) raise PdfError {
   document.stamp_as_xobject(range, overlay)
 }
+
+///|
+/// Compatibility wrapper matching cpdfxobject's string resource-name result.
+pub fn pdf_stamp_as_xobject_string(
+  document : PdfDocument,
+  range : ArrayView[Int],
+  overlay : PdfDocument,
+) -> (PdfDocument, String) raise PdfError {
+  let (stamped, name) = document.stamp_as_xobject(range, overlay)
+  (stamped, @ascii.decode_lossy(name.bytes()))
+}

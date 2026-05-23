@@ -184,6 +184,29 @@ test "PdfDocument stamp_as_xobject preserves bookmarks and trailer ID" {
 }
 
 ///|
+test "pdf_stamp_as_xobject_string returns source string resource name" {
+  let (stamped, name) = try! @pdflite.pdf_stamp_as_xobject_string(
+    xobject_base_document_for_test(),
+    [1],
+    xobject_overlay_document_for_test(),
+  )
+  @test.assert_eq(name, "/bCPDFXObj")
+  let pages = try! stamped.pages_of_pagetree()
+  guard xobject_lookup_for_test(stamped, pages[0].resources, "/XObject")
+    is Some(xobjects) else {
+    fail("expected XObject resource dictionary")
+  }
+  guard xobjects.lookup_immediate(xobject_name_for_test(name))
+    is Some(PdfIndirect(_)) else {
+    fail("expected named Form XObject reference")
+  }
+  @test.assert_eq(
+    xobject_lookup_for_test(stamped, pages[1].resources, "/XObject"),
+    None,
+  )
+}
+
+///|
 test "PdfDocument stamp_as_xobject rejects empty overlay documents" {
   let result : Result[(@pdflite.PdfDocument, @pdflite.PdfName), Error] = try? xobject_base_document_for_test().stamp_as_xobject(
     [1],

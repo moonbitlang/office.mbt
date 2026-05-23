@@ -1708,6 +1708,8 @@ pub fn pdf_stamp(PdfDocument, ArrayView[Int], PdfDocument, relative_to_box? : @c
 
 pub fn pdf_stamp_as_xobject(PdfDocument, ArrayView[Int], PdfDocument) -> (PdfDocument, @core.PdfName) raise @core.PdfError
 
+pub fn pdf_stamp_as_xobject_string(PdfDocument, ArrayView[Int], PdfDocument) -> (PdfDocument, String) raise @core.PdfError
+
 pub fn pdf_stamp_cpdf_order(Bool, String, PdfPosition, Bool, Bool, Bool, Bool, Bool, ArrayView[Int], PdfDocument, PdfDocument) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_standard14_afm_data(PdfStandardFont) -> PdfAfmData
