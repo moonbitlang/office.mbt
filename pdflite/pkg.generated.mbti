@@ -1904,6 +1904,8 @@ pub fn pdf_twoup(PdfDocument, fast? : Bool, process_struct_tree? : Bool) -> PdfD
 
 pub fn pdf_twoup_stack(PdfDocument, fast? : Bool, process_struct_tree? : Bool) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_type_add_artifacts(ArrayView[PdfContentOp]) -> Array[PdfContentOp]
+
 pub fn pdf_type_font_widths(PdfFont, Double) -> Array[Double] raise @core.PdfError
 
 pub fn pdf_type_layout(Double, Double, @geometry.PaperSize, ArrayView[PdfTypeElement]) -> Array[PdfTypeElement] raise @core.PdfError
@@ -1912,9 +1914,15 @@ pub fn pdf_type_paginate(Double, Double, @geometry.PaperSize, ArrayView[PdfTypeE
 
 pub fn pdf_type_split_text(Double, ArrayView[Double], BytesView) -> (Bytes, Bool, Bytes) raise @core.PdfError
 
+pub fn pdf_type_to_string(ArrayView[PdfTypeElement]) -> Bytes
+
 pub fn pdf_type_typeset(PdfDocument, Bool, Double, Double, Double, Double, @geometry.PaperSize, ArrayView[PdfTypeElement]) -> PdfTypeTypesetResult raise @core.PdfError
 
+pub fn pdf_type_typeset_cpdf_order(Bool, Double, Double, Double, Double, @geometry.PaperSize, PdfDocument, ArrayView[PdfTypeElement]) -> PdfTypeTypesetResult raise @core.PdfError
+
 pub fn pdf_type_width_of_bytes(ArrayView[Double], BytesView) -> Double raise @core.PdfError
+
+pub fn pdf_type_width_of_string(ArrayView[Double], BytesView) -> Double raise @core.PdfError
 
 pub fn pdf_ua_create_pdfua1(String, @geometry.PaperSize, Int) -> PdfDocument raise @core.PdfError
 

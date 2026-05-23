@@ -65,9 +65,9 @@ Current estimate:
   reveal-hidden-text, append-content, dictionary entry, object-spec, and native
   file-stream replacement aliases, cpdfremovetext source-spelled/page-list-first
   aliases, cpdfutil string-key dictionary rewrite wrappers, and source-order
-  compatibility aliases, imposition make-space orchestration, border stamping,
-  layout planning, and first public impose/twoup pipelines, and Markdown helper
-  public APIs.
+  compatibility aliases, cpdftype source-spelled helper aliases, imposition
+  make-space orchestration, border stamping, layout planning, and first public
+  impose/twoup pipelines, and Markdown helper public APIs.
 
 Current backend snapshot:
 
@@ -98,6 +98,20 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdftype` source/API parity from
+  `.repos/cpdf-source/cpdftype.mli`: added source-spelled helper aliases
+  `pdf_type_to_string`, `pdf_type_width_of_string`, `pdf_type_add_artifacts`,
+  and `pdf_type_typeset_cpdf_order` over the already-ported element debug
+  rendering, byte-width, artifact-marking, and typeset pipelines. Coverage folds
+  the aliases into the existing cpdftype tests by comparing them with the
+  established implementation paths and cpdf argument-order wrapper behavior.
+  Validation on MoonBit 0.9.3: `moon check --target native --warn-list +73`
+  passes with the known `markdown/cmd` future notice; `moon test --target native
+  pdf_type_test.mbt`, `moon test --target wasm-gc pdf_type_test.mbt`, and `moon
+  test --target js pdf_type_test.mbt` report 11/11 each; `moon fmt`, `moon
+  info`, and `moon check --target all --warn-list +73` pass with only the
+  existing `markdown/cmd` future notice; full `moon test --target native`
+  reports 2414/2414.~~
 - [x] ~~Continue `cpdfxobject` source/API parity from
   `.repos/cpdf-source/cpdfxobject.mli`: added `pdf_stamp_as_xobject_string`,
   a source-style wrapper for `stamp_as_xobject` that returns cpdf's string

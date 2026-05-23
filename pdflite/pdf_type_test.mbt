@@ -131,18 +131,27 @@ test "pdf_string_of_type_element preserves cpdftype debug spellings" {
 
 ///|
 test "pdf_string_of_type keeps CamlPDF leading newline format" {
+  let elements : Array[@pdflite.PdfTypeElement] = [
+    PdfTypeText(@ascii.encode("A")),
+    PdfTypeNewLine,
+    PdfTypeNewPage,
+    PdfTypeBeginDocument,
+    PdfTypeEndDest,
+    PdfTypeEndTag,
+  ]
   @test.assert_eq(
-    @pdflite.pdf_string_of_type([
-      PdfTypeText(@ascii.encode("A")),
-      PdfTypeNewLine,
-      PdfTypeNewPage,
-      PdfTypeBeginDocument,
-      PdfTypeEndDest,
-      PdfTypeEndTag,
-    ]),
+    @pdflite.pdf_string_of_type(elements),
     @ascii.encode("\nA\nNewLine\nNewPage\nBeginDocument\nEndDest\nEndTag"),
   )
+  @test.assert_eq(
+    @pdflite.pdf_type_to_string(elements),
+    @pdflite.pdf_string_of_type(elements),
+  )
   @test.assert_eq(@pdflite.pdf_string_of_type([]), @ascii.encode(""))
+  @test.assert_eq(
+    @pdflite.pdf_type_add_artifacts([Op_Tj(@ascii.encode("artifact"))]),
+    @pdflite.pdf_content_add_artifacts([Op_Tj(@ascii.encode("artifact"))]),
+  )
 }
 
 ///|
@@ -156,6 +165,13 @@ test "pdf_type_font_widths scales standard font charcode widths" {
   @test.assert_eq(widths[65], 8.004)
   @test.assert_eq(
     try! @pdflite.pdf_type_width_of_bytes(
+      widths,
+      type_bytes_for_test([65, 32, 65]),
+    ),
+    19.344,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_type_width_of_string(
       widths,
       type_bytes_for_test([65, 32, 65]),
     ),
@@ -331,24 +347,30 @@ test "pdf_type_typeset reuses fonts across explicit page breaks" {
   let document = @pdflite.pdf_document_empty()
   let font = type_standard_font_for_test()
   let paper = @pdflite.paper_size_make(PdfPoint, 100.0, 100.0)
+  let elements : Array[@pdflite.PdfTypeElement] = [
+    PdfTypeFont("body", font, 10.0),
+    PdfTypeBeginDocument,
+    PdfTypeText(@ascii.encode("A")),
+    PdfTypeNewPage,
+    PdfTypeText(@ascii.encode("B")),
+  ]
   let result = try! @pdflite.pdf_type_typeset(
-    document,
+    document, false, 10.0, 0.0, 20.0, 10.0, paper, elements,
+  )
+  let source_order = try! @pdflite.pdf_type_typeset_cpdf_order(
     false,
     10.0,
     0.0,
     20.0,
     10.0,
     paper,
-    [
-      PdfTypeFont("body", font, 10.0),
-      PdfTypeBeginDocument,
-      PdfTypeText(@ascii.encode("A")),
-      PdfTypeNewPage,
-      PdfTypeText(@ascii.encode("B")),
-    ],
+    @pdflite.pdf_document_empty(),
+    elements,
   )
   @test.assert_eq(result.pages.length(), 2)
+  @test.assert_eq(source_order.pages.length(), result.pages.length())
   @test.assert_eq(result.pages[0].resources, result.pages[1].resources)
+  @test.assert_eq(source_order.pages[0].resources, result.pages[0].resources)
   @test.assert_eq(try! type_page_ops_for_test(result.pages[1]), [
     Op_Tf(type_name_for_test("/F1"), 10.0),
     Op_q,
@@ -358,6 +380,10 @@ test "pdf_type_typeset reuses fonts across explicit page breaks" {
     Op_ET,
     Op_Q,
   ])
+  @test.assert_eq(
+    try! type_page_ops_for_test(source_order.pages[1]),
+    try! type_page_ops_for_test(result.pages[1]),
+  )
 }
 
 ///|

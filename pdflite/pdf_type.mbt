@@ -101,6 +101,12 @@ pub fn pdf_string_of_type(elements : ArrayView[PdfTypeElement]) -> PdfBytes {
 }
 
 ///|
+/// Source-spelled compatibility alias for cpdftype's `to_string`.
+pub fn pdf_type_to_string(elements : ArrayView[PdfTypeElement]) -> PdfBytes {
+  pdf_string_of_type(elements)
+}
+
+///|
 /// Build a cpdftype-style width table for one-byte PDF text charcodes.
 ///
 /// Widths are returned in user units for the requested font size. This ports the
@@ -148,6 +154,23 @@ pub fn pdf_type_width_of_bytes(
     width += widths[code]
   }
   width
+}
+
+///|
+/// Source-spelled compatibility alias for cpdftype's byte-string width helper.
+pub fn pdf_type_width_of_string(
+  widths : ArrayView[Double],
+  text : BytesView,
+) -> Double raise PdfError {
+  pdf_type_width_of_bytes(widths, text)
+}
+
+///|
+/// Source-spelled compatibility alias for cpdftype's `add_artifacts`.
+pub fn pdf_type_add_artifacts(
+  ops : ArrayView[PdfContentOp],
+) -> Array[PdfContentOp] {
+  pdf_content_add_artifacts(ops)
 }
 
 ///|
@@ -708,6 +731,23 @@ pub fn pdf_type_typeset(
   tmargin : Double,
   bmargin : Double,
   paper : PaperSize,
+  elements : ArrayView[PdfTypeElement],
+) -> PdfTypeTypesetResult raise PdfError {
+  document.pdf_type_typeset(
+    process_struct_tree, lmargin, rmargin, tmargin, bmargin, paper, elements,
+  )
+}
+
+///|
+/// Compatibility wrapper matching cpdftype's `typeset` argument order.
+pub fn pdf_type_typeset_cpdf_order(
+  process_struct_tree : Bool,
+  lmargin : Double,
+  rmargin : Double,
+  tmargin : Double,
+  bmargin : Double,
+  paper : PaperSize,
+  document : PdfDocument,
   elements : ArrayView[PdfTypeElement],
 ) -> PdfTypeTypesetResult raise PdfError {
   document.pdf_type_typeset(
