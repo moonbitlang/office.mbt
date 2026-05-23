@@ -108,6 +108,10 @@ test "native cpdf clip intersects overlapping boxes" {
   let left = @pdflite.pdf_clip_polygon_of_box(0.0, 10.0, 0.0, 10.0)
   let right = @pdflite.pdf_clip_polygon_of_box(5.0, 15.0, 5.0, 15.0)
   let result = @pdflite.pdf_clip_polygon_clip(PdfClipIntersection, left, right)
+  @test.assert_eq(
+    try! @pdflite.pdf_gpcml_clippolygon(PdfClipIntersection, left, right),
+    result,
+  )
 
   @test.assert_eq(result.num_contours(), 1)
   let contour = result.contours[0]

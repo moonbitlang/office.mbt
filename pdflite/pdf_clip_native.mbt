@@ -179,3 +179,14 @@ pub fn PdfClipOperation::clip_polygons(
 ) -> PdfClipPolygon raise PdfError {
   pdf_clip_polygon_clip(self, subject, clip)
 }
+
+///|
+/// Source-spelled compatibility wrapper for cpdfclip's native clip operation.
+#cfg(target="native")
+pub fn pdf_gpcml_clippolygon(
+  operation : PdfClipOperation,
+  subject : PdfClipPolygon,
+  clip : PdfClipPolygon,
+) -> PdfClipPolygon raise PdfError {
+  pdf_clip_polygon_clip(operation, subject, clip)
+}

@@ -36,10 +36,15 @@ test "cpdf clip exposes GPC operation codes" {
 ///|
 test "cpdf clip builds null and box polygons" {
   let empty = @pdflite.pdf_clip_null_polygon()
+  @test.assert_eq(@pdflite.pdf_nullpoly(), empty)
   @test.assert_eq(empty.num_contours(), 0)
   @test.assert_eq(empty.contours.length(), 0)
 
   let polygon = @pdflite.pdf_clip_polygon_of_box(10.0, 20.0, 30.0, 40.0)
+  @test.assert_eq(
+    @pdflite.pdf_gpc_polygon_of_box(10.0, 20.0, 30.0, 40.0),
+    polygon,
+  )
   @test.assert_eq(polygon.num_contours(), 1)
   let contour = polygon.contours[0]
   @test.assert_eq(contour.hole, false)
@@ -66,6 +71,10 @@ test "cpdf clip make polygon preserves hole flags and copies vertices" {
     @pdflite.pdf_clip_vertex(3.0, 7.0),
   ]
   let polygon = @pdflite.pdf_clip_make_polygon([false, true], [exterior, hole])
+  @test.assert_eq(
+    try! @pdflite.pdf_make_gpcpolygon([false, true], [exterior, hole]),
+    polygon,
+  )
   exterior[0] = @pdflite.pdf_clip_vertex(99.0, 99.0)
 
   @test.assert_eq(polygon.num_contours(), 2)
@@ -92,4 +101,20 @@ test "cpdf clip polygon serializes to JSON literal shape" {
     "contours": [{ "hole": false, "vertices": [{ "x": 1.0, "y": 2.0 }] }],
   }
   @test.assert_eq(polygon.to_json(), expected)
+}
+
+///|
+test "cpdf clip source-spelled debug printer returns printed polygon text" {
+  let polygon = @pdflite.pdf_gpc_polygon_of_box(1.0, 2.5, -3.0, 4.25)
+  @test.assert_eq(
+    @pdflite.pdf_gpcml_printpolygon(polygon),
+    @ascii.encode(
+      "Contours: 1\n" +
+      "  Contour with 4 vertices and hole 0\n" +
+      "    {x = 1.000000, y = -3.000000}\n" +
+      "    {x = 2.500000, y = -3.000000}\n" +
+      "    {x = 2.500000, y = 4.250000}\n" +
+      "    {x = 1.000000, y = 4.250000}\n",
+    ),
+  )
 }

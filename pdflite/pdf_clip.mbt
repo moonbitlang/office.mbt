@@ -62,6 +62,12 @@ pub fn pdf_clip_null_polygon() -> PdfClipPolygon {
 }
 
 ///|
+/// Source-spelled compatibility wrapper for cpdfclip's null GPC polygon.
+pub fn pdf_nullpoly() -> PdfClipPolygon {
+  pdf_clip_null_polygon()
+}
+
+///|
 /// Number of contours in this polygon.
 pub fn PdfClipPolygon::num_contours(self : PdfClipPolygon) -> Int {
   self.contours.length()
@@ -113,6 +119,17 @@ pub fn pdf_clip_polygon_of_box(
 }
 
 ///|
+/// Source-spelled compatibility wrapper for cpdfclip's rectangle polygon.
+pub fn pdf_gpc_polygon_of_box(
+  xmin : Double,
+  xmax : Double,
+  ymin : Double,
+  ymax : Double,
+) -> PdfClipPolygon {
+  pdf_clip_polygon_of_box(xmin, xmax, ymin, ymax)
+}
+
+///|
 /// Build a cpdf/GPC polygon from parallel hole flags and vertex arrays.
 ///
 /// Raises `PdfError::BadNumberArgument` when the inputs have different lengths.
@@ -128,4 +145,64 @@ pub fn pdf_clip_make_polygon(
     contours.push(pdf_clip_contour(holes[index], vertex_arrays[index]))
   }
   pdf_clip_polygon(contours)
+}
+
+///|
+/// Source-spelled compatibility wrapper for cpdfclip's polygon builder.
+pub fn pdf_make_gpcpolygon(
+  holes : ArrayView[Bool],
+  vertex_arrays : ArrayView[Array[PdfClipVertex]],
+) -> PdfClipPolygon raise PdfError {
+  pdf_clip_make_polygon(holes, vertex_arrays)
+}
+
+///|
+fn pdf_clip_float_text(value : Double) -> String {
+  let scaled = (value * 1000000.0).round().to_int()
+  let negative = scaled < 0
+  let magnitude = if negative { -scaled } else { scaled }
+  let whole = magnitude / 1000000
+  let fraction = magnitude % 1000000
+  let mut fraction_text = fraction.to_string()
+  while fraction_text.length() < 6 {
+    fraction_text = "0" + fraction_text
+  }
+  (if negative { "-" } else { "" }) + whole.to_string() + "." + fraction_text
+}
+
+///|
+fn pdf_gpcml_printvertex(output : Array[Byte], vertex : PdfClipVertex) -> Unit {
+  pdf_writer_push_ascii(output, "    {x = ")
+  pdf_writer_push_ascii(output, pdf_clip_float_text(vertex.x))
+  pdf_writer_push_ascii(output, ", y = ")
+  pdf_writer_push_ascii(output, pdf_clip_float_text(vertex.y))
+  pdf_writer_push_ascii(output, "}\n")
+}
+
+///|
+fn pdf_gpcml_printcontour(
+  output : Array[Byte],
+  contour : PdfClipContour,
+) -> Unit {
+  pdf_writer_push_ascii(output, "  Contour with ")
+  pdf_writer_push_ascii(output, contour.vertices.length().to_string())
+  pdf_writer_push_ascii(output, " vertices and hole ")
+  pdf_writer_push_ascii(output, contour.hole_flag().to_string())
+  pdf_writer_push_byte(output, 10)
+  for vertex in contour.vertices {
+    pdf_gpcml_printvertex(output, vertex)
+  }
+}
+
+///|
+/// Return the text cpdfclip's debug polygon printer writes to stdout.
+pub fn pdf_gpcml_printpolygon(polygon : PdfClipPolygon) -> PdfBytes {
+  let output : Array[Byte] = []
+  pdf_writer_push_ascii(output, "Contours: ")
+  pdf_writer_push_ascii(output, polygon.contours.length().to_string())
+  pdf_writer_push_byte(output, 10)
+  for contour in polygon.contours {
+    pdf_gpcml_printcontour(output, contour)
+  }
+  Bytes::from_array(output)
 }

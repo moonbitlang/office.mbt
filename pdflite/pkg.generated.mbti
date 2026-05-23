@@ -780,6 +780,10 @@ pub fn pdf_get_xmp_info_string(PdfDocument, String) -> String
 
 pub fn pdf_glyphnames_of_text(PdfTextExtractor, BytesView) -> Array[@core.PdfName] raise @core.PdfError
 
+pub fn pdf_gpc_polygon_of_box(Double, Double, Double, Double) -> PdfClipPolygon
+
+pub fn pdf_gpcml_printpolygon(PdfClipPolygon) -> Bytes
+
 pub fn pdf_hard_box(PdfDocument, ArrayView[Int], @core.PdfName, mediabox_if_missing? : Bool, fast? : Bool) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_hard_box_string(PdfDocument, ArrayView[Int], String, mediabox_if_missing? : Bool, fast? : Bool) -> PdfDocument raise @core.PdfError
@@ -926,6 +930,8 @@ pub fn pdf_lzw_decode_view(BytesView, early_change? : Int) -> Bytes raise @core.
 
 pub fn pdf_make_font(@core.PdfName, PdfEncoding) -> PdfObject raise @core.PdfError
 
+pub fn pdf_make_gpcpolygon(ArrayView[Bool], ArrayView[Array[PdfClipVertex]]) -> PdfClipPolygon raise @core.PdfError
+
 pub fn pdf_make_hex_pdf_string(BytesView) -> Bytes
 
 pub fn pdf_make_pdf_string(BytesView) -> Bytes
@@ -1009,6 +1015,8 @@ pub fn pdf_name_of_colour_space(PdfColourSpace) -> @core.PdfName?
 pub fn pdf_name_of_view(BytesView) -> @core.PdfName
 
 pub let pdf_no_more : Int
+
+pub fn pdf_nullpoly() -> PdfClipPolygon
 
 pub fn pdf_object_entry(PdfObjectData, generation? : Int) -> PdfObjectEntry
 

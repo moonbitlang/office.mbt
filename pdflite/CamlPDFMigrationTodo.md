@@ -19,7 +19,7 @@ Current estimate:
   cpdfocg source-spelled listing wrapper, and
   content-stream, annotation and cpdfannot JSON source-order wrappers,
   cpdfdebug source-spelled object-dump wrapper, cpdfstrftime source-spelled
-  dummy value,
+  dummy value, cpdfclip source-spelled polygon/debug/native clip wrappers,
   native secure-random, bookmark, image, structure,
   renumbering, standard and TrueType font-pack embedding, text-to-PDF
   instruction conversion, basic and tagged text-to-PDF document assembly, PDF/UA
@@ -62,7 +62,7 @@ Current estimate:
 
 Current backend snapshot:
 
-- Native: full suite passes on MoonBit 0.9.3, currently 2408/2408 tests.
+- Native: full suite passes on MoonBit 0.9.3, currently 2409/2409 tests.
 - WasmGC and JavaScript: full portable non-native test suites pass on MoonBit
   0.9.3, currently 2063/2063 on each backend after the latest TrueType
   embedding integration.
@@ -89,6 +89,22 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfclip` source/API parity from
+  `.repos/cpdf-source/cpdfclip.mli`: added source-spelled wrappers
+  `pdf_nullpoly`, `pdf_gpc_polygon_of_box`, `pdf_make_gpcpolygon`,
+  `pdf_gpcml_printpolygon`, and native `pdf_gpcml_clippolygon` over the
+  existing `pdf_clip_*` polygon model and GPC bridge. The debug printer returns
+  the bytes cpdf writes to stdout, preserving contour/hole headings and
+  six-decimal vertex formatting. Coverage compares the source-spelled null,
+  box, make-polygon, and native clip wrappers with the existing APIs and pins
+  printed polygon text. Validation on MoonBit 0.9.3: `moon check --target
+  native --warn-list +73` passes with the known `markdown/cmd` future notice;
+  `moon test --target native pdf_clip_test.mbt`, `moon test --target wasm-gc
+  pdf_clip_test.mbt`, and `moon test --target js pdf_clip_test.mbt` report
+  6/6 each; `moon test --target native pdf_clip_native_test.mbt` reports 5/5;
+  `moon fmt`, `moon info`, and `moon check --target all --warn-list +73` pass
+  with only the existing `markdown/cmd` future notice; full native `moon test
+  --target native` reports 2409/2409.~~
 - [x] ~~Continue `cpdfpagespec` source/API parity from
   `.repos/cpdf-source/cpdfpagespec.mli`: added source-spelled
   `pdf_invert_range` as an alias over the existing `pdf_invert_page_range`
