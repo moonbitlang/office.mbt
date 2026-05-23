@@ -1307,6 +1307,24 @@ test "pdf draw control collects main text push and xobject frames in order" {
     PdfDrawFormXObject(1.0, 2.0, 30.0, 40.0, "XO", [PdfDrawLine(3.0, 4.0)]),
   ]
   @test.assert_eq(control.ops(), expected)
+
+  let document = @pdflite.pdf_document_empty()
+  let alias_control = @pdflite.pdf_draw_control_new()
+  try! @pdflite.pdf_addrect(alias_control, document, "0 0 10 20")
+  alias_control.begin_text_section()
+  try! alias_control.add_op(PdfDrawFont("F0", 12.0))
+  try! alias_control.add_op(PdfDrawText("hello"))
+  try! alias_control.end_text_section()
+  @pdflite.pdf_push(alias_control)
+  try! @pdflite.pdf_setfill(alias_control, "red")
+  try! @pdflite.pdf_fill(alias_control)
+  try! @pdflite.pdf_pop(alias_control)
+  try! @pdflite.pdf_xobjbbox(alias_control, document, "1 2 30 40")
+  @pdflite.pdf_startxobj(alias_control, "XO")
+  try! @pdflite.pdf_addline(alias_control, document, "3 4")
+  try! @pdflite.pdf_endxobj(alias_control)
+  @test.assert_eq(alias_control.ops(), expected)
+
   @test.assert_eq(
     @pdflite.pdf_string_of_drawops(control.ops()),
     " Rect TextSection ( Font F0  Text) Qq ( SetFill Fill) FormXObject ( Line)",
@@ -1414,6 +1432,38 @@ test "pdf draw control command helpers append cpdf draw ops" {
     PdfDrawUse("XO"),
   ]
   @test.assert_eq(control.ops(), expected)
+
+  let alias_control = @pdflite.pdf_draw_control_new()
+  @test.assert_eq(alias_control.auto_artifacts(), true)
+  @pdflite.pdf_autoartifacts(alias_control, false)
+  @test.assert_eq(alias_control.auto_artifacts(), false)
+  @pdflite.pdf_setrolemap(alias_control, "/H1 /H")
+  @test.assert_eq(alias_control.role_map(), "/H1 /H")
+  try! @pdflite.pdf_setstroke(alias_control, "red")
+  try! @pdflite.pdf_setfill(alias_control, "not-a-colour")
+  try! @pdflite.pdf_addtag(alias_control, "Span")
+  try! @pdflite.pdf_addstag(alias_control, "P")
+  try! @pdflite.pdf_endtag(alias_control)
+  try! @pdflite.pdf_endstag(alias_control)
+  try! @pdflite.pdf_autotags(alias_control, false)
+  try! @pdflite.pdf_artifact(alias_control)
+  try! @pdflite.pdf_endartifact(alias_control)
+  try! @pdflite.pdf_addnamespace(alias_control, "NS")
+  try! @pdflite.pdf_eltinfo(alias_control, "K", PdfNull)
+  try! @pdflite.pdf_endeltinfo(alias_control, "K")
+  try! @pdflite.pdf_setthickness(alias_control, "2.5")
+  try! @pdflite.pdf_setcap(alias_control, "square")
+  try! @pdflite.pdf_setjoin(alias_control, "bevel")
+  try! @pdflite.pdf_setmiter(alias_control, "4.5")
+  try! @pdflite.pdf_setdash(alias_control, "1 2 3")
+  try! @pdflite.pdf_setmatrix(alias_control, "1 2 3 4 5 6")
+  try! @pdflite.pdf_setmtranslate(alias_control, "7 8")
+  try! @pdflite.pdf_setmrotate(alias_control, "0 0 0.5")
+  try! @pdflite.pdf_setmscale(alias_control, "1 2 3 4")
+  try! @pdflite.pdf_setmshearx(alias_control, "1 2 0.25")
+  try! @pdflite.pdf_setmsheary(alias_control, "1 2 0.75")
+  try! @pdflite.pdf_usexobj(alias_control, "XO")
+  @test.assert_eq(alias_control.ops(), expected)
 }
 
 ///|

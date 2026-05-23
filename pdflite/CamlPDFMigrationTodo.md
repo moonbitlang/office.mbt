@@ -33,8 +33,9 @@ Current estimate:
   assembly, image XObject JSON listing and cpdfimage source-spelled images
   alias, image-resolution reporting, cpdfimage single-image and multi-image
   extraction file payloads/native write wrappers,
-  cpdf draw-control colour parsing, source-spelled parse-colour alias, and
-  path/paint command aliases, role-map/auto-artifact state, and cpdfdraw
+  cpdf draw-control colour parsing, source-spelled parse-colour alias,
+  path/paint, marked-content, graphics-state/matrix, and XObject command
+  aliases, role-map/auto-artifact state, and cpdfdraw
   structured role-map output with fresh-structure-tree preservation,
   Form XObject stamping, cpdfshape source-spelled aliases,
   composition reporting, core metadata APIs and cpdfmetadata string-key/source-
@@ -94,6 +95,28 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfdrawcontrol` source/API parity from
+  `.repos/cpdf-source/cpdfdrawcontrol.mli`: added source-spelled explicit-state
+  wrappers for marked-content/state (`pdf_setstroke`, `pdf_setfill`,
+  `pdf_addtag`, `pdf_addstag`, `pdf_endtag`, `pdf_endstag`, `pdf_autotags`,
+  `pdf_eltinfo`, `pdf_endeltinfo`, `pdf_addnamespace`, `pdf_setrolemap`,
+  `pdf_artifact`, `pdf_endartifact`, and `pdf_autoartifacts`), line/matrix
+  state (`pdf_setthickness`, `pdf_setcap`, `pdf_setjoin`, `pdf_setmiter`,
+  `pdf_setdash`, `pdf_setmatrix`, `pdf_setmtranslate`, `pdf_setmrotate`,
+  `pdf_setmscale`, `pdf_setmshearx`, and `pdf_setmsheary`), and frame/XObject
+  commands (`pdf_push`, `pdf_pop`, `pdf_xobjbbox`, `pdf_startxobj`,
+  `pdf_endxobj`, and `pdf_usexobj`) over the existing `PdfDrawControl`
+  methods. This keeps cpdf's command spellings while preserving MoonBit's
+  explicit draw-control state. Coverage compares the wrappers with method-built
+  command, pushed-frame, and Form XObject output. Validation on MoonBit 0.9.3:
+  `moon check --target native --warn-list +73` passes with the known
+  `markdown/cmd` future notice; `moon test --target native
+  pdf_draw_test.mbt --filter '*command helpers*'` reports 2/2 and `moon test
+  --target native pdf_draw_test.mbt --filter '*collects main text push and
+  xobject*'` reports 1/1; the same focused tests report 2/2 and 1/1 on both
+  wasm-gc and js; `moon fmt`, `moon info`, and `moon check --target all
+  --warn-list +73` pass with only the existing `markdown/cmd` future notice;
+  full native `moon test --target native` reports 2412/2412.~~
 - [x] ~~Continue `cpdfdrawcontrol` source/API parity from
   `.repos/cpdf-source/cpdfdrawcontrol.mli`: added source-spelled explicit-state
   wrappers for the path and paint command helpers (`pdf_addrect`,

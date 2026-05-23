@@ -86,7 +86,13 @@ pub fn pdf_addcircle(PdfDrawControl, String) -> Unit raise @core.PdfError
 
 pub fn pdf_addline(PdfDrawControl, PdfDocument, String) -> Unit raise @core.PdfError
 
+pub fn pdf_addnamespace(PdfDrawControl, String) -> Unit raise @core.PdfError
+
 pub fn pdf_addrect(PdfDrawControl, PdfDocument, String) -> Unit raise @core.PdfError
+
+pub fn pdf_addstag(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_addtag(PdfDrawControl, String) -> Unit raise @core.PdfError
 
 pub fn pdf_addtext_allocate_font_names(PdfObject, PdfFontPack?) -> (@core.PdfName, PdfObject, Array[@core.PdfName]) raise @core.PdfError
 
@@ -244,6 +250,8 @@ pub fn pdf_apply_type(PdfDocument, String, ArrayView[Int]) -> Unit
 
 pub fn pdf_array(ArrayView[PdfObject]) -> PdfObject
 
+pub fn pdf_artifact(PdfDrawControl) -> Unit raise @core.PdfError
+
 pub fn pdf_ascii85_decode(Bytes) -> Bytes raise @core.PdfError
 
 pub fn pdf_ascii85_decode_view(BytesView) -> Bytes raise @core.PdfError
@@ -265,6 +273,10 @@ pub fn pdf_attach_file(PdfDocument, String, BytesView, keep_version? : Bool, pag
 pub fn pdf_attach_file_cpdf_order(Bool, Int?, PdfDocument, String?, String?, String, BytesView) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_attachment_remove_unsafe_characters(String) -> String raise @core.PdfError
+
+pub fn pdf_autoartifacts(PdfDrawControl, Bool) -> Unit
+
+pub fn pdf_autotags(PdfDrawControl, Bool) -> Unit raise @core.PdfError
 
 pub fn pdf_black_fills(PdfDocument, ArrayView[Int], PdfContentColour) -> PdfDocument raise @core.PdfError
 
@@ -676,6 +688,8 @@ pub fn pdf_drawops_to_content_ops_with_state(PdfDrawRenderState, ArrayView[PdfDr
 
 pub let pdf_dummy : PdfStrftimeTime
 
+pub fn pdf_eltinfo(PdfDrawControl, String, PdfObject) -> Unit raise @core.PdfError
+
 pub fn[A, B : Eq, C] pdf_embed_collate_runs(ArrayView[(A, B, C)]) -> Array[Array[(A, B, C)]]
 
 pub fn pdf_embed_get_char(PdfFontPack, Int) -> (Int, Int, PdfFont)?
@@ -702,9 +716,19 @@ pub fn pdf_encode_stream_with_filter_and_predictor(@core.PdfName, Int, Int, Int,
 
 pub fn pdf_encoding_of_name(@core.PdfName) -> PdfEncoding?
 
+pub fn pdf_endartifact(PdfDrawControl) -> Unit raise @core.PdfError
+
+pub fn pdf_endeltinfo(PdfDrawControl, String) -> Unit raise @core.PdfError
+
 pub fn pdf_endpage(PdfDocument) -> Int raise @core.PdfError
 
 pub fn pdf_endpage_fast(PdfDocument) -> Int raise @core.PdfError
+
+pub fn pdf_endstag(PdfDrawControl) -> Unit raise @core.PdfError
+
+pub fn pdf_endtag(PdfDrawControl) -> Unit raise @core.PdfError
+
+pub fn pdf_endxobj(PdfDrawControl) -> Unit raise @core.PdfError
 
 pub fn pdf_error(String) -> Unit raise @core.PdfError
 
@@ -1254,6 +1278,8 @@ pub fn pdf_pdfdocstring_of_utf8(BytesView) -> Bytes raise @core.PdfError
 
 pub fn pdf_permissions_of_p(Int) -> Array[@crypt_core.PdfPermission]
 
+pub fn pdf_pop(PdfDrawControl) -> Unit raise @core.PdfError
+
 pub fn pdf_portfolio(PdfDocument, ArrayView[PdfPortfolioEntry], mod_date? : Bytes?) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_portfolio_entry(String, BytesView, relationship? : String?, description? : String?) -> PdfPortfolioEntry
@@ -1301,6 +1327,8 @@ pub fn pdf_progress_line_no_end(String) -> Unit
 pub fn pdf_progress_output() -> String
 
 pub fn pdf_progress_page(Int) -> Unit
+
+pub fn pdf_push(PdfDrawControl) -> Unit
 
 pub fn pdf_read_afm(BytesView) -> PdfAfmData raise @core.PdfError
 
@@ -1542,6 +1570,34 @@ pub fn pdf_set_viewer_preference_cpdf_order((String, PdfObject, Int), PdfDocumen
 
 pub fn pdf_set_viewer_preference_string((String, PdfObject, Int), PdfDocument) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_setcap(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_setdash(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_setfill(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_setjoin(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_setmatrix(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_setmiter(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_setmrotate(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_setmscale(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_setmshearx(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_setmsheary(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_setmtranslate(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_setrolemap(PdfDrawControl, String) -> Unit
+
+pub fn pdf_setstroke(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_setthickness(PdfDrawControl, String) -> Unit raise @core.PdfError
+
 pub fn pdf_shape_circle(Double, Double, Double) -> PdfPath
 
 pub let pdf_shape_kappa : Double
@@ -1601,6 +1657,8 @@ pub fn pdf_standard_font_of_pdf_name(@core.PdfName) -> PdfStandardFont?
 pub fn pdf_standard_font_substitute_filenames(PdfStandardFont) -> Array[String]
 
 pub fn pdf_standard_font_substitute_font_name(PdfStandardFont) -> String
+
+pub fn pdf_startxobj(PdfDrawControl, String) -> Unit
 
 pub fn pdf_stream(PdfObject, PdfStreamData) -> PdfObject
 
@@ -1816,6 +1874,8 @@ pub fn pdf_upright(ArrayView[Int], PdfDocument, fast? : Bool) -> PdfDocument rai
 
 pub fn pdf_upright_pages(PdfDocument, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_usexobj(PdfDrawControl, String) -> Unit raise @core.PdfError
+
 pub fn pdf_utf16be_of_codepoints(ArrayView[Int]) -> Bytes raise @core.PdfError
 
 pub fn pdf_utf8_of_codepoints(ArrayView[Int]) -> Bytes raise @core.PdfError
@@ -1879,6 +1939,8 @@ pub fn pdf_write_ocg(PdfDocument, PdfOptionalContent) -> PdfDocument raise @core
 pub fn pdf_write_page_labels(PdfDocument, ArrayView[PdfPageLabel]) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_write_real(Double) -> Bytes raise @core.PdfError
+
+pub fn pdf_xobjbbox(PdfDrawControl, PdfDocument, String) -> Unit raise @core.PdfError
 
 pub fn point2(Double, Double) -> @geometry.Point2
 

@@ -1180,3 +1180,254 @@ pub fn pdf_clipevenodd(control : PdfDrawControl) -> Unit raise PdfError {
 pub fn pdf_closepath(control : PdfDrawControl) -> Unit raise PdfError {
   control.close_path()
 }
+
+///|
+/// Source-spelled cpdfdrawcontrol `setstroke` over explicit draw state.
+pub fn pdf_setstroke(
+  control : PdfDrawControl,
+  text : String,
+) -> Unit raise PdfError {
+  control.set_stroke(text)
+}
+
+///|
+/// Source-spelled cpdfdrawcontrol `setfill` over explicit draw state.
+pub fn pdf_setfill(
+  control : PdfDrawControl,
+  text : String,
+) -> Unit raise PdfError {
+  control.set_fill(text)
+}
+
+///|
+/// Source-spelled cpdfdrawcontrol `addtag` over explicit draw state.
+pub fn pdf_addtag(
+  control : PdfDrawControl,
+  tag : String,
+) -> Unit raise PdfError {
+  control.add_tag(tag)
+}
+
+///|
+/// Source-spelled cpdfdrawcontrol `addstag` over explicit draw state.
+pub fn pdf_addstag(
+  control : PdfDrawControl,
+  tag : String,
+) -> Unit raise PdfError {
+  control.add_structure_tag(tag)
+}
+
+///|
+/// Source-spelled cpdfdrawcontrol `endtag` over explicit draw state.
+pub fn pdf_endtag(control : PdfDrawControl) -> Unit raise PdfError {
+  control.end_tag()
+}
+
+///|
+/// Source-spelled cpdfdrawcontrol `endstag` over explicit draw state.
+pub fn pdf_endstag(control : PdfDrawControl) -> Unit raise PdfError {
+  control.end_structure_tag()
+}
+
+///|
+/// Source-spelled cpdfdrawcontrol `autotags` over explicit draw state.
+pub fn pdf_autotags(
+  control : PdfDrawControl,
+  enabled : Bool,
+) -> Unit raise PdfError {
+  control.set_auto_tag(enabled)
+}
+
+///|
+/// Source-spelled cpdfdrawcontrol `eltinfo` over explicit draw state.
+pub fn pdf_eltinfo(
+  control : PdfDrawControl,
+  key : String,
+  value : PdfObject,
+) -> Unit raise PdfError {
+  control.add_element_info(key, value)
+}
+
+///|
+/// Source-spelled cpdfdrawcontrol `endeltinfo` over explicit draw state.
+pub fn pdf_endeltinfo(
+  control : PdfDrawControl,
+  key : String,
+) -> Unit raise PdfError {
+  control.end_element_info(key)
+}
+
+///|
+/// Source-spelled cpdfdrawcontrol `addnamespace` over explicit draw state.
+pub fn pdf_addnamespace(
+  control : PdfDrawControl,
+  namespace_name : String,
+) -> Unit raise PdfError {
+  control.add_namespace(namespace_name)
+}
+
+///|
+/// Source-spelled cpdfdrawcontrol `setrolemap` over explicit draw state.
+pub fn pdf_setrolemap(control : PdfDrawControl, role_map : String) -> Unit {
+  control.set_role_map(role_map)
+}
+
+///|
+/// Source-spelled cpdfdrawcontrol `artifact` over explicit draw state.
+pub fn pdf_artifact(control : PdfDrawControl) -> Unit raise PdfError {
+  control.begin_artifact()
+}
+
+///|
+/// Source-spelled cpdfdrawcontrol `endartifact` over explicit draw state.
+pub fn pdf_endartifact(control : PdfDrawControl) -> Unit raise PdfError {
+  control.end_artifact()
+}
+
+///|
+/// Source-spelled cpdfdrawcontrol `autoartifacts` over explicit draw state.
+pub fn pdf_autoartifacts(control : PdfDrawControl, enabled : Bool) -> Unit {
+  control.set_auto_artifacts(enabled)
+}
+
+///|
+/// Source-spelled cpdfdrawcontrol `setthickness` over explicit draw state.
+pub fn pdf_setthickness(
+  control : PdfDrawControl,
+  text : String,
+) -> Unit raise PdfError {
+  control.set_line_thickness(text)
+}
+
+///|
+/// Source-spelled cpdfdrawcontrol `setcap` over explicit draw state.
+pub fn pdf_setcap(
+  control : PdfDrawControl,
+  text : String,
+) -> Unit raise PdfError {
+  control.set_line_cap(text)
+}
+
+///|
+/// Source-spelled cpdfdrawcontrol `setjoin` over explicit draw state.
+pub fn pdf_setjoin(
+  control : PdfDrawControl,
+  text : String,
+) -> Unit raise PdfError {
+  control.set_line_join(text)
+}
+
+///|
+/// Source-spelled cpdfdrawcontrol `setmiter` over explicit draw state.
+pub fn pdf_setmiter(
+  control : PdfDrawControl,
+  text : String,
+) -> Unit raise PdfError {
+  control.set_miter_limit(text)
+}
+
+///|
+/// Source-spelled cpdfdrawcontrol `setdash` over explicit draw state.
+pub fn pdf_setdash(
+  control : PdfDrawControl,
+  text : String,
+) -> Unit raise PdfError {
+  control.set_dash_pattern(text)
+}
+
+///|
+/// Source-spelled cpdfdrawcontrol `push` over explicit draw state.
+pub fn pdf_push(control : PdfDrawControl) -> Unit {
+  control.push_group()
+}
+
+///|
+/// Source-spelled cpdfdrawcontrol `pop` over explicit draw state.
+pub fn pdf_pop(control : PdfDrawControl) -> Unit raise PdfError {
+  control.pop_group()
+}
+
+///|
+/// Source-spelled cpdfdrawcontrol `setmatrix` over explicit draw state.
+pub fn pdf_setmatrix(
+  control : PdfDrawControl,
+  text : String,
+) -> Unit raise PdfError {
+  control.set_matrix(text)
+}
+
+///|
+/// Source-spelled cpdfdrawcontrol `setmtranslate` over explicit draw state.
+pub fn pdf_setmtranslate(
+  control : PdfDrawControl,
+  text : String,
+) -> Unit raise PdfError {
+  control.matrix_translate(text)
+}
+
+///|
+/// Source-spelled cpdfdrawcontrol `setmrotate` over explicit draw state.
+pub fn pdf_setmrotate(
+  control : PdfDrawControl,
+  text : String,
+) -> Unit raise PdfError {
+  control.matrix_rotate(text)
+}
+
+///|
+/// Source-spelled cpdfdrawcontrol `setmscale` over explicit draw state.
+pub fn pdf_setmscale(
+  control : PdfDrawControl,
+  text : String,
+) -> Unit raise PdfError {
+  control.matrix_scale(text)
+}
+
+///|
+/// Source-spelled cpdfdrawcontrol `setmshearx` over explicit draw state.
+pub fn pdf_setmshearx(
+  control : PdfDrawControl,
+  text : String,
+) -> Unit raise PdfError {
+  control.matrix_shear_x(text)
+}
+
+///|
+/// Source-spelled cpdfdrawcontrol `setmsheary` over explicit draw state.
+pub fn pdf_setmsheary(
+  control : PdfDrawControl,
+  text : String,
+) -> Unit raise PdfError {
+  control.matrix_shear_y(text)
+}
+
+///|
+/// Source-spelled cpdfdrawcontrol `xobjbbox` over explicit draw state.
+pub fn pdf_xobjbbox(
+  control : PdfDrawControl,
+  document : PdfDocument,
+  text : String,
+) -> Unit raise PdfError {
+  control.set_xobject_bbox_from_string(document, text)
+}
+
+///|
+/// Source-spelled cpdfdrawcontrol `startxobj` over explicit draw state.
+pub fn pdf_startxobj(control : PdfDrawControl, name : String) -> Unit {
+  control.start_xobject(name)
+}
+
+///|
+/// Source-spelled cpdfdrawcontrol `endxobj` over explicit draw state.
+pub fn pdf_endxobj(control : PdfDrawControl) -> Unit raise PdfError {
+  control.end_xobject()
+}
+
+///|
+/// Source-spelled cpdfdrawcontrol `usexobj` over explicit draw state.
+pub fn pdf_usexobj(
+  control : PdfDrawControl,
+  name : String,
+) -> Unit raise PdfError {
+  control.use_xobject(name)
+}
