@@ -76,6 +76,18 @@ pub fn pdf_add_prefix(PdfDocument, String) -> Unit raise @core.PdfError
 
 pub fn pdf_add_root(Int, ArrayView[(@core.PdfName, PdfObject)], PdfDocument) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_addbezier(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_addbezier13(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_addbezier23(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_addcircle(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_addline(PdfDrawControl, PdfDocument, String) -> Unit raise @core.PdfError
+
+pub fn pdf_addrect(PdfDrawControl, PdfDocument, String) -> Unit raise @core.PdfError
+
 pub fn pdf_addtext_allocate_font_names(PdfObject, PdfFontPack?) -> (@core.PdfName, PdfObject, Array[@core.PdfName]) raise @core.PdfError
 
 pub fn pdf_addtext_apply_justification_offset(PdfAddTextRotation, Double, Double, Double) -> (Double, Double)
@@ -193,6 +205,8 @@ pub fn pdf_addtext_width_of_text(PdfFont, BytesView) -> Double
 pub fn pdf_addtexts_with_font(PdfDocument, ArrayView[Int], String, PdfStrftimeTime, ArrayView[PdfBookmark], PdfFont?, PdfFontPack?, @core.PdfName, Double, Double, PdfContentColour, PdfPosition, filename? : String, bates? : Int, bates_pad? : Int?, relative_to_box? : @core.PdfName, shift? : String, opacity? : Double, justification? : PdfAddTextJustification, rotation? : PdfAddTextRotation, midline? : Bool, topline? : Bool, outline? : Bool, line_width? : Double, underneath? : Bool, fast? : Bool, raw? : Bool, url_border? : Bool) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_addtexts_with_source(PdfDocument, ArrayView[Int], String, PdfStrftimeTime, ArrayView[PdfBookmark], PdfAddTextFontSource, @core.PdfName, Double, Double, PdfContentColour, PdfPosition, filename? : String, bates? : Int, bates_pad? : Int?, relative_to_box? : @core.PdfName, shift? : String, opacity? : Double, justification? : PdfAddTextJustification, rotation? : PdfAddTextRotation, midline? : Bool, topline? : Bool, outline? : Bool, line_width? : Double, underneath? : Bool, fast? : Bool, raw? : Bool, url_border? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_addto(PdfDrawControl, PdfDocument, String) -> Unit raise @core.PdfError
 
 pub fn pdf_allupright(PdfDocument, ArrayView[Int]) -> Bool raise @core.PdfError
 
@@ -352,6 +366,8 @@ pub fn pdf_circle(Double, Double, Double) -> PdfPath
 
 pub fn pdf_clear_progress_output() -> Unit
 
+pub fn pdf_clip(PdfDrawControl) -> Unit raise @core.PdfError
+
 pub fn pdf_clip_contour(Bool, ArrayView[PdfClipVertex]) -> PdfClipContour
 
 pub fn pdf_clip_make_polygon(ArrayView[Bool], ArrayView[Array[PdfClipVertex]]) -> PdfClipPolygon raise @core.PdfError
@@ -363,6 +379,10 @@ pub fn pdf_clip_polygon(ArrayView[PdfClipContour]) -> PdfClipPolygon
 pub fn pdf_clip_polygon_of_box(Double, Double, Double, Double) -> PdfClipPolygon
 
 pub fn pdf_clip_vertex(Double, Double) -> PdfClipVertex
+
+pub fn pdf_clipevenodd(PdfDrawControl) -> Unit raise @core.PdfError
+
+pub fn pdf_closepath(PdfDrawControl) -> Unit raise @core.PdfError
 
 pub fn pdf_codepoint_of_pdfdocencoding_byte(Int) -> Int raise @core.PdfError
 
@@ -693,6 +713,10 @@ pub fn pdf_eval_function(PdfFunction, ArrayView[Double]) -> Array[Double] raise 
 pub fn pdf_expand_date(String) -> String
 
 pub fn pdf_extract_fontfile_bytes(PdfDocument, Int, String) -> Bytes? raise @core.PdfError
+
+pub fn pdf_fill(PdfDrawControl) -> Unit raise @core.PdfError
+
+pub fn pdf_fillevenodd(PdfDrawControl) -> Unit raise @core.PdfError
 
 pub fn pdf_find_obj(PdfDocument, String) -> PdfObject raise @core.PdfError
 
@@ -1633,6 +1657,12 @@ pub fn pdf_string_of_standard_font(PdfStandardFont) -> String
 pub fn pdf_string_of_type(ArrayView[PdfTypeElement]) -> Bytes
 
 pub fn pdf_string_of_type_element(PdfTypeElement) -> Bytes
+
+pub fn pdf_stroke(PdfDrawControl) -> Unit raise @core.PdfError
+
+pub fn pdf_strokefill(PdfDrawControl) -> Unit raise @core.PdfError
+
+pub fn pdf_strokefillevenodd(PdfDrawControl) -> Unit raise @core.PdfError
 
 pub fn pdf_table_of_encoding(PdfEncoding) -> Array[(Int, @core.PdfName)]
 

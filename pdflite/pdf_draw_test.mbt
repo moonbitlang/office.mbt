@@ -1755,13 +1755,33 @@ test "pdf draw control path and paint helpers append cpdf draw ops" {
     PdfDrawClosePath,
   ]
   @test.assert_eq(control.ops(), expected)
+
+  let alias_control = @pdflite.pdf_draw_control_new()
+  try! @pdflite.pdf_addrect(alias_control, document, "1 2 3 4")
+  try! @pdflite.pdf_addto(alias_control, document, "5 6")
+  try! @pdflite.pdf_addline(alias_control, document, "7 8")
+  try! @pdflite.pdf_addbezier(alias_control, "1 2 3 4 5 6")
+  try! @pdflite.pdf_addbezier23(alias_control, "7 8 9 10")
+  try! @pdflite.pdf_addbezier13(alias_control, "11 12 13 14")
+  try! @pdflite.pdf_stroke(alias_control)
+  try! @pdflite.pdf_fill(alias_control)
+  try! @pdflite.pdf_fillevenodd(alias_control)
+  try! @pdflite.pdf_strokefill(alias_control)
+  try! @pdflite.pdf_strokefillevenodd(alias_control)
+  try! @pdflite.pdf_clip(alias_control)
+  try! @pdflite.pdf_clipevenodd(alias_control)
+  try! @pdflite.pdf_closepath(alias_control)
+  @test.assert_eq(alias_control.ops(), expected)
 }
 
 ///|
 test "pdf draw control circle helper expands to move and bezier ops" {
   let control = @pdflite.pdf_draw_control_new()
   try! control.add_circle("10 20 5")
+  let alias_control = @pdflite.pdf_draw_control_new()
+  try! @pdflite.pdf_addcircle(alias_control, "10 20 5")
   let ops = control.ops()
+  @test.assert_eq(alias_control.ops(), ops)
   @test.assert_eq(ops.length(), 5)
   @test.assert_eq(ops[0], PdfDrawTo(15.0, 20.0))
   guard ops[1] is PdfDrawBezier(_, _, _, _, _, _) else {

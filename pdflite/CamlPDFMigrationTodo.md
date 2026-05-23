@@ -33,9 +33,9 @@ Current estimate:
   assembly, image XObject JSON listing and cpdfimage source-spelled images
   alias, image-resolution reporting, cpdfimage single-image and multi-image
   extraction file payloads/native write wrappers,
-  cpdf draw-control colour parsing and source-spelled parse-colour alias,
-  role-map/auto-artifact state, and cpdfdraw structured role-map output with
-  fresh-structure-tree preservation,
+  cpdf draw-control colour parsing, source-spelled parse-colour alias, and
+  path/paint command aliases, role-map/auto-artifact state, and cpdfdraw
+  structured role-map output with fresh-structure-tree preservation,
   Form XObject stamping, cpdfshape source-spelled aliases,
   composition reporting, core metadata APIs and cpdfmetadata string-key/source-
   order/open-action destination wrappers, XMP metadata-date rewriting, XMP info
@@ -94,6 +94,25 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfdrawcontrol` source/API parity from
+  `.repos/cpdf-source/cpdfdrawcontrol.mli`: added source-spelled explicit-state
+  wrappers for the path and paint command helpers (`pdf_addrect`,
+  `pdf_addto`, `pdf_addline`, `pdf_addbezier`, `pdf_addbezier23`,
+  `pdf_addbezier13`, `pdf_addcircle`, `pdf_stroke`, `pdf_fill`,
+  `pdf_fillevenodd`, `pdf_strokefill`, `pdf_strokefillevenodd`, `pdf_clip`,
+  `pdf_clipevenodd`, and `pdf_closepath`) over the existing
+  `PdfDrawControl` methods. This preserves cpdf command names while keeping
+  MoonBit's explicit draw-control state instead of cpdf's module-global
+  mutable stack. Coverage compares the source-spelled wrappers with the method
+  path for path/paint ops and circle expansion. Validation on MoonBit 0.9.3:
+  `moon check --target native --warn-list +73` passes with the known
+  `markdown/cmd` future notice; `moon test --target native
+  pdf_draw_test.mbt --filter '*path*'`, `moon test --target wasm-gc
+  pdf_draw_test.mbt --filter '*path*'`, and `moon test --target js
+  pdf_draw_test.mbt --filter '*path*'` report 2/2 each; `moon fmt`,
+  `moon info`, and `moon check --target all --warn-list +73` pass with only the
+  existing `markdown/cmd` future notice; full native `moon test --target native`
+  reports 2412/2412.~~
 - [x] ~~Continue `cpdfimage` source/API parity from
   `.repos/cpdf-source/cpdfimage.mli`: added source-spelled `pdf_images` over
   the existing `PdfDocument::images_json`/`pdf_image_images` implementation,
