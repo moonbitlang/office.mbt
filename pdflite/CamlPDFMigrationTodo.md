@@ -48,9 +48,9 @@ Current estimate:
   composition reporting, core metadata APIs and cpdfmetadata string-key/source-
   order/open-action destination wrappers, XMP metadata-date rewriting, XMP info
   synchronization, XMP metadata creation, XMP RDF list extraction,
-  XMP/document info JSON reporting, cpdfmetadata source-spelled encode-output,
-  print-metadata, and XML-tree aliases, namespace aliases, and namespace/get-
-  data/XML-tree helper parity,
+  XMP text-output reporting, XMP/document info JSON reporting, cpdfmetadata
+  source-spelled encode-output, print-metadata, and XML-tree aliases, namespace
+  aliases, and namespace/get-data/XML-tree helper parity,
   native metadata file set/write/extract wrappers/source aliases, and XML
   entity/whitespace decoding, redaction annotation bounding-box overlays,
   cpdfredact apply alias and source-order bounding-box wrapper,
@@ -108,6 +108,23 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfmetadata` source/API parity from
+  `.repos/cpdf-source/cpdfmetadata.mli`: added `PdfDocument::xmp_info_blob` and
+  source-spelled `pdf_output_xmp_info` for cpdfmetadata's stdout-style
+  `output_xmp_info` report. The wrapper preserves the source field order,
+  `Subformats` comma formatting, quoted `/Lang` output, XML-tree based XMP
+  lookup, and malformed-XMP field suppression while returning UTF-8 bytes for
+  library callers. Coverage extends the existing XMP report test across empty
+  metadata, populated PDF/UA/XMP metadata, RDF list collapsing, and wrapper
+  parity. Validation on MoonBit 0.9.3: `moon check --target native --warn-list
+  +73` passes with the known `markdown/cmd` future notice; `moon test --target
+  native pdf_metadata_test.mbt --filter '*xmp_info*'`, `moon test --target
+  wasm-gc pdf_metadata_test.mbt --filter '*xmp_info*'`, and `moon test --target
+  js pdf_metadata_test.mbt --filter '*xmp_info*'` each report 2/2; `moon test
+  --target native pdf_metadata_test.mbt` reports 21/21; `moon fmt && moon info`
+  are clean; `moon check --target all --warn-list +73` passes with the known
+  `markdown/cmd` future notice; full `moon test --target native` reports
+  2414/2414.~~
 - [x] ~~Continue native `cpdfmetadata` source/API parity in the `async_io`
   package: added source-spelled `pdf_set_metadata` and
   `pdf_extract_all_metadata` aliases over the existing

@@ -2160,6 +2160,19 @@ fn pdf_metadata_json_string_array(values : ArrayView[String]) -> Json {
 }
 
 ///|
+fn pdf_metadata_combine_with_commas(values : ArrayView[String]) -> String {
+  let mut output = ""
+  for value in values {
+    if output == "" {
+      output = value
+    } else {
+      output = output + ", " + value
+    }
+  }
+  output.trim().to_owned()
+}
+
+///|
 fn pdf_metadata_unit_number(value : Double, unit : PdfUnit) -> Double {
   match unit {
     PdfPoint => value
@@ -2326,6 +2339,23 @@ fn pdf_metadata_add_xmp_report_field(
       field.2,
     ) {
     Some(value) => output.set(field.0, Json::string(value))
+    None => ()
+  }
+}
+
+///|
+fn pdf_metadata_add_xmp_report_line(
+  output : Array[String],
+  tree : PdfMetadataXmlTree,
+  field : (String, String, String),
+) -> Unit {
+  match pdf_metadata_xmltree_get_data_for(field.1, field.2, tree) {
+    Some(value) => {
+      output.push(field.0)
+      output.push(": ")
+      output.push(value)
+      output.push("\n")
+    }
     None => ()
   }
 }
@@ -3073,6 +3103,38 @@ pub fn PdfDocument::xmp_info_json_blob(
 }
 
 ///|
+/// Return cpdf-style XMP metadata report fields as stdout-style UTF-8 bytes.
+pub fn PdfDocument::xmp_info_blob(
+  self : PdfDocument,
+) -> PdfBytes raise PdfError {
+  let output : Array[String] = []
+  output.push("Subformats: ")
+  output.push(pdf_metadata_combine_with_commas(self.determine_subformats()))
+  output.push("\nLanguage: ")
+  match self.language() {
+    Some(language) => {
+      output.push("\"")
+      output.push(@utf8.decode_lossy(language))
+      output.push("\"")
+    }
+    None => ()
+  }
+  output.push("\n")
+  match self.metadata() {
+    Some(metadata) => {
+      let document = pdf_metadata_xmltree_of_bytes(metadata) catch {
+        _ => return @utf8.encode(output.join(""))
+      }
+      for field in pdf_metadata_xmp_report_fields {
+        pdf_metadata_add_xmp_report_line(output, document.tree, field)
+      }
+    }
+    None => ()
+  }
+  @utf8.encode(output.join(""))
+}
+
+///|
 /// Return the catalog `/Lang` value, if present.
 pub fn PdfDocument::language(self : PdfDocument) -> PdfBytes? {
   match
@@ -3517,6 +3579,18 @@ pub fn pdf_output_xmp_info_json_blob(
   document : PdfDocument,
 ) -> PdfBytes raise PdfError {
   document.xmp_info_json_blob()
+}
+
+///|
+/// Compatibility wrapper for `PdfDocument::xmp_info_blob`.
+pub fn pdf_output_xmp_info(
+  document : PdfDocument,
+  encoding? : PdfMetadataEncoding = PdfMetadataUTF8,
+  unit? : PdfUnit = PdfPoint,
+) -> PdfBytes raise PdfError {
+  ignore(encoding)
+  ignore(unit)
+  document.xmp_info_blob()
 }
 
 ///|

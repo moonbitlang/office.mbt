@@ -1210,6 +1210,8 @@ pub fn pdf_output_page_info_json_blob(PdfDocument, ArrayView[Int], unit? : @geom
 
 pub fn pdf_output_page_info_text(PdfDocument, ArrayView[Int], unit? : @geometry.PdfUnit) -> Bytes raise @core.PdfError
 
+pub fn pdf_output_xmp_info(PdfDocument, encoding? : PdfMetadataEncoding, unit? : @geometry.PdfUnit) -> Bytes raise @core.PdfError
+
 pub fn pdf_output_xmp_info_json_blob(PdfDocument) -> Bytes raise @core.PdfError
 
 pub fn pdf_p_of_permissions(ArrayView[@crypt_core.PdfPermission]) -> Int
@@ -3466,6 +3468,7 @@ pub fn PdfDocument::write_font(Self, PdfFont, objnum? : Int?) -> Int raise @core
 pub fn PdfDocument::write_optional_content_groups(Self, PdfOptionalContent) -> Self raise @core.PdfError
 pub fn PdfDocument::write_page_labels(Self, ArrayView[PdfPageLabel]) -> Self raise @core.PdfError
 pub fn PdfDocument::xmp_info(Self, @core.PdfName) -> String
+pub fn PdfDocument::xmp_info_blob(Self) -> Bytes raise @core.PdfError
 pub fn PdfDocument::xmp_info_json(Self) -> Json raise @core.PdfError
 pub fn PdfDocument::xmp_info_json_blob(Self) -> Bytes raise @core.PdfError
 pub fn PdfDocument::xmp_info_string(Self, String) -> String

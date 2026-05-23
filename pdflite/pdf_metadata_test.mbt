@@ -1114,8 +1114,11 @@ test "PdfDocument xmp_info_json reports cpdf XMP fields" {
   let empty = try! @pdflite.pdf_minimum_valid_pdf()
   let empty_expected : Json = { "Language": null, "Subformats": [] }
   @test.assert_eq(try! empty.xmp_info_json(), empty_expected)
+  let empty_report = @utf8.encode("Subformats: \nLanguage: \n")
+  @test.assert_eq(try! empty.xmp_info_blob(), empty_report)
   let metadata_text =
-    #|<x:xmpmeta xmlns:pdf="http://ns.adobe.com/pdf/1.3/"
+    #|<x:xmpmeta xmlns:x="adobe:ns:meta/"
+    #| xmlns:pdf="http://ns.adobe.com/pdf/1.3/"
     #| xmlns:xmp="http://ns.adobe.com/xap/1.0/"
     #| xmlns:dc="http://purl.org/dc/elements/1.1/"
     #| xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -1144,6 +1147,19 @@ test "PdfDocument xmp_info_json reports cpdf XMP fields" {
   @test.assert_eq(
     try! @pdflite.pdf_output_xmp_info_json_blob(with_metadata),
     @utf8.encode((try! with_metadata.xmp_info_json()).stringify()),
+  )
+  let expected_report = @utf8.encode(
+    "Subformats: PDF/UA-1\n" +
+    "Language: \"en-US\"\n" +
+    "XMP pdf:Title: PDF Title\n" +
+    "XMP xmp:MetadataDate: 2026-05-17T00:00:00Z\n" +
+    "XMP dc:title: First, Second\n" +
+    "PDF/UA pdfuaid:amd: 1\n",
+  )
+  @test.assert_eq(try! with_metadata.xmp_info_blob(), expected_report)
+  @test.assert_eq(
+    try! @pdflite.pdf_output_xmp_info(with_metadata),
+    expected_report,
   )
 }
 
