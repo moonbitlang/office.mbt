@@ -346,6 +346,8 @@ pub fn pdf_chop_hv(PdfDocument, Bool, Double, Bool, ArrayView[Int]) -> PdfDocume
 
 pub fn pdf_chop_hv_cpdf_order(Bool, Double, Bool, PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_circle(Double, Double, Double) -> PdfPath
+
 pub fn pdf_clear_progress_output() -> Unit
 
 pub fn pdf_clip_contour(Bool, ArrayView[PdfClipVertex]) -> PdfClipContour
@@ -886,6 +888,8 @@ pub fn pdf_json_of_object(PdfDocument, PdfObject, utf8? : Bool, clean_strings? :
 
 pub fn pdf_json_page_info(PdfDocument, ArrayView[Int], @geometry.PdfUnit) -> Json raise @core.PdfError
 
+pub let pdf_kappa : Double
+
 pub fn pdf_language(PdfDocument) -> Bytes?
 
 pub fn pdf_language_string(PdfDocument) -> String?
@@ -1301,6 +1305,8 @@ pub fn pdf_read_png_view(BytesView) -> PdfPNG raise @core.PdfError
 pub fn pdf_read_primitive_document_from_bytes(Bytes) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_read_primitive_document_from_view(BytesView) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_rectangle(Double, Double, Double, Double) -> PdfPath
 
 pub fn pdf_rectify_boxes(PdfDocument, PdfPage, fast? : Bool) -> PdfPage raise @core.PdfError
 

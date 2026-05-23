@@ -422,6 +422,10 @@ pub fn pdf_path_content_bounding_box(
 pub let pdf_shape_kappa : Double = (2.0.sqrt() - 1.0) / 3.0 * 4.0
 
 ///|
+/// Source-spelled compatibility alias for cpdfshape's `kappa`.
+pub let pdf_kappa : Double = pdf_shape_kappa
+
+///|
 fn pdf_shape_mod_float(value : Double, modulus : Double) -> Double {
   value - (value / modulus).floor() * modulus
 }
@@ -568,6 +572,16 @@ pub fn pdf_shape_circle(
 }
 
 ///|
+/// Source-spelled compatibility alias for cpdfshape's `circle`.
+pub fn pdf_circle(
+  center_x : Double,
+  center_y : Double,
+  radius : Double,
+) -> PdfPath {
+  pdf_shape_circle(center_x, center_y, radius)
+}
+
+///|
 /// Build a cpdf-style rectangle path from a top-left point, width, and height.
 pub fn pdf_shape_rectangle(
   x : Double,
@@ -583,4 +597,15 @@ pub fn pdf_shape_rectangle(
       PdfPathStraight(point2(x, y + height), point2(x, y)),
     ]),
   ])
+}
+
+///|
+/// Source-spelled compatibility alias for cpdfshape's `rectangle`.
+pub fn pdf_rectangle(
+  x : Double,
+  y : Double,
+  width : Double,
+  height : Double,
+) -> PdfPath {
+  pdf_shape_rectangle(x, y, width, height)
 }

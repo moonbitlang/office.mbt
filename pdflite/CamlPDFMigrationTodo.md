@@ -28,7 +28,7 @@ Current estimate:
   wrappers,
   cpdf draw-control colour parsing, role-map/auto-artifact state, and cpdfdraw
   structured role-map output with fresh-structure-tree preservation,
-  Form XObject stamping,
+  Form XObject stamping, cpdfshape source-spelled aliases,
   composition reporting, core metadata APIs and cpdfmetadata string-key/source-
   order/open-action destination wrappers, XMP metadata-date rewriting, XMP info
   synchronization, XMP metadata creation, XMP RDF list extraction,
@@ -85,6 +85,19 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfshape` source/API parity from
+  `.repos/cpdf-source/cpdfshape.mli`: added source-spelled `pdf_kappa`,
+  `pdf_circle`, and `pdf_rectangle` aliases over the existing cpdf shape
+  kernels while preserving `pdf_shape_kappa`, `pdf_shape_circle`, and
+  `pdf_shape_rectangle`. Coverage checks the aliases against the established
+  kappa value and generated path structures. Validation on MoonBit 0.9.3: `moon
+  check --target native --warn-list +73` passes with the known `markdown/cmd`
+  future notice; `moon test --target native pdf_shape_test.mbt`, `moon test
+  --target wasm-gc pdf_shape_test.mbt`, and `moon test --target js
+  pdf_shape_test.mbt` report 8/8 each; `moon fmt`, `moon info`, and `moon
+  check --target all --warn-list +73` pass with only the existing
+  `markdown/cmd` future notice; full native `moon test --target native`
+  reports 2408/2408.~~
 - [x] ~~Continue `cpdfocg` source/API parity from
   `.repos/cpdf-source/cpdfocg.mli`: added source-spelled `pdf_ocg_list`
   matching cpdf's json/document order while returning the bytes cpdf would

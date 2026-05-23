@@ -67,6 +67,7 @@ fn assert_content_bbox_for_shape_test(
 ///|
 test "cpdf shape exposes kappa and restricts angles" {
   assert_close_for_shape_test(@pdflite.pdf_shape_kappa, 0.5522847498307936)
+  assert_close_for_shape_test(@pdflite.pdf_kappa, @pdflite.pdf_shape_kappa)
   assert_close_for_shape_test(
     @pdflite.pdf_restrict_angle(@math.PI / 2.0, 0.2),
     0.0,
@@ -89,6 +90,7 @@ test "cpdf shape restrict angle preserves source edge semantics" {
 ///|
 test "cpdf shape builds rectangle paths" {
   let path = @pdflite.pdf_shape_rectangle(10.0, 20.0, 30.0, 40.0)
+  @test.assert_eq(@pdflite.pdf_rectangle(10.0, 20.0, 30.0, 40.0), path)
   @test.assert_eq(path.winding_rule, PdfPathEvenOdd)
   @test.assert_eq(path.subpaths.length(), 1)
   let subpath = path.subpaths[0]
@@ -114,6 +116,7 @@ test "cpdf shape builds rectangle paths" {
 ///|
 test "cpdf shape builds connected circle paths" {
   let path = @pdflite.pdf_shape_circle(10.0, 20.0, 5.0)
+  @test.assert_eq(@pdflite.pdf_circle(10.0, 20.0, 5.0), path)
   @test.assert_eq(path.winding_rule, PdfPathNonZero)
   @test.assert_eq(path.subpaths.length(), 1)
   let subpath = path.subpaths[0]
