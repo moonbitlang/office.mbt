@@ -27,6 +27,10 @@ test "cpdf colour parser reads CSS names and numeric forms" {
     PdfContentRGB(1.0, 0.0, 0.0),
   )
   @test.assert_eq(
+    try! @pdflite.pdf_parse_colour("Red"),
+    PdfContentRGB(1.0, 0.0, 0.0),
+  )
+  @test.assert_eq(
     try! @pdflite.pdf_parse_content_colour("0.25"),
     PdfContentGrey(0.25),
   )

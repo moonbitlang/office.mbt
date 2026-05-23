@@ -33,8 +33,9 @@ Current estimate:
   assembly, image XObject JSON listing, image-resolution reporting,
   cpdfimage single-image and multi-image extraction file payloads/native write
   wrappers,
-  cpdf draw-control colour parsing, role-map/auto-artifact state, and cpdfdraw
-  structured role-map output with fresh-structure-tree preservation,
+  cpdf draw-control colour parsing and source-spelled parse-colour alias,
+  role-map/auto-artifact state, and cpdfdraw structured role-map output with
+  fresh-structure-tree preservation,
   Form XObject stamping, cpdfshape source-spelled aliases,
   composition reporting, core metadata APIs and cpdfmetadata string-key/source-
   order/open-action destination wrappers, XMP metadata-date rewriting, XMP info
@@ -66,7 +67,7 @@ Current estimate:
 
 Current backend snapshot:
 
-- Native: full suite passes on MoonBit 0.9.3, currently 2411/2411 tests.
+- Native: full suite passes on MoonBit 0.9.3, currently 2412/2412 tests.
 - WasmGC and JavaScript: full portable non-native test suites pass on MoonBit
   0.9.3, currently 2063/2063 on each backend after the latest TrueType
   embedding integration.
@@ -93,6 +94,20 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfdrawcontrol` source/API parity from
+  `.repos/cpdf-source/cpdfdrawcontrol.mli`: added source-spelled
+  `pdf_parse_colour` over the existing `pdf_parse_content_colour` parser,
+  matching cpdfdrawcontrol's `parse_colour` return shape as the add-text/content
+  colour enum rather than the draw-layer `NoCol` sentinel wrapper. Coverage
+  ties the alias to the CSS/numeric colour parser. Validation on MoonBit 0.9.3:
+  `moon check --target native --warn-list +73` passes with the known
+  `markdown/cmd` future notice; `moon test --target native
+  pdf_colour_test.mbt --filter '*colour parser*'`, `moon test --target wasm-gc
+  pdf_colour_test.mbt --filter '*colour parser*'`, and `moon test --target js
+  pdf_colour_test.mbt --filter '*colour parser*'` report 2/2 each; `moon fmt`,
+  `moon info`, and `moon check --target all --warn-list +73` pass with only the
+  existing `markdown/cmd` future notice; full native `moon test --target native`
+  reports 2412/2412.~~
 - [x] ~~Continue native `cpdfocg` source/API parity from
   `.repos/cpdf-source/cpdfocg.mli`: added async `pdf_ocg_replace` as the
   source-spelled file-boundary wrapper for cpdf's `ocg_replace`, preserving the

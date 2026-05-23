@@ -253,3 +253,9 @@ pub fn pdf_parse_content_colour(
       }
   }
 }
+
+///|
+/// Source-spelled compatibility wrapper for cpdfdrawcontrol's `parse_colour`.
+pub fn pdf_parse_colour(text : String) -> PdfContentColour raise PdfError {
+  pdf_parse_content_colour(text)
+}
