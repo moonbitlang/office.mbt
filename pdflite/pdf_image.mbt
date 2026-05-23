@@ -1666,6 +1666,16 @@ pub fn pdf_image_images(
 }
 
 ///|
+/// Source-spelled compatibility wrapper for cpdfimage's `images`.
+pub fn pdf_images(
+  inline : Bool,
+  document : PdfDocument,
+  page_numbers : ArrayView[Int],
+) -> Json raise PdfError {
+  document.images_json(page_numbers, inline~)
+}
+
+///|
 /// Compatibility wrapper for `PdfDocument::images_json_blob`.
 pub fn pdf_image_images_json_blob(
   inline : Bool,

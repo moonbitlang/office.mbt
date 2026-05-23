@@ -848,6 +848,8 @@ pub fn pdf_image_resolution_json_blob(Bool, PdfDocument, ArrayView[Int], Double)
 
 pub fn pdf_image_set_debug_image_processing(Bool) -> Unit
 
+pub fn pdf_images(Bool, PdfDocument, ArrayView[Int]) -> Json raise @core.PdfError
+
 pub fn pdf_impose(PdfDocument, Double, Double, fit? : Bool, columns? : Bool, rtl? : Bool, btt? : Bool, center? : Bool, margin? : Double, spacing? : Double, line_width? : Double, fast? : Bool, process_struct_tree? : Bool) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_int_array_of_bytes(BytesView) -> Array[Int]

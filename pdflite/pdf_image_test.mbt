@@ -385,6 +385,7 @@ test "PdfDocument images_json lists image xobjects and soft masks" {
   ])
   @test.assert_eq(try! doc.images_json([1]), expected)
   @test.assert_eq(try! @pdflite.pdf_image_images(false, doc, [1]), expected)
+  @test.assert_eq(try! @pdflite.pdf_images(false, doc, [1]), expected)
   @test.assert_eq(
     try! doc.images_json_blob([1]),
     @utf8.encode(expected.stringify()),

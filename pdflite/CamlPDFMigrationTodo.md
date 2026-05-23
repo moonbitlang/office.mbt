@@ -30,9 +30,9 @@ Current estimate:
   text-to-PDF subformat shaping, blank PDF/UA creation helpers, PDF/UA XMP
   marker insertion/removal helpers, PDF/UA structure-tree JSON
   import/export helpers, JPEG/JPEG2000, PNG, and JBIG2 image-to-PDF document
-  assembly, image XObject JSON listing, image-resolution reporting,
-  cpdfimage single-image and multi-image extraction file payloads/native write
-  wrappers,
+  assembly, image XObject JSON listing and cpdfimage source-spelled images
+  alias, image-resolution reporting, cpdfimage single-image and multi-image
+  extraction file payloads/native write wrappers,
   cpdf draw-control colour parsing and source-spelled parse-colour alias,
   role-map/auto-artifact state, and cpdfdraw structured role-map output with
   fresh-structure-tree preservation,
@@ -94,6 +94,19 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfimage` source/API parity from
+  `.repos/cpdf-source/cpdfimage.mli`: added source-spelled `pdf_images` over
+  the existing `PdfDocument::images_json`/`pdf_image_images` implementation,
+  preserving cpdf's inline/document/page-list argument order and returning the
+  same image XObject JSON rows. Coverage ties the source-spelled alias to the
+  existing image listing fixture. Validation on MoonBit 0.9.3: `moon check
+  --target native --warn-list +73` passes with the known `markdown/cmd` future
+  notice; `moon test --target native pdf_image_test.mbt --filter
+  '*images_json*'`, `moon test --target wasm-gc pdf_image_test.mbt --filter
+  '*images_json*'`, and `moon test --target js pdf_image_test.mbt --filter
+  '*images_json*'` report 2/2 each; `moon fmt`, `moon info`, and `moon check
+  --target all --warn-list +73` pass with only the existing `markdown/cmd`
+  future notice; full native `moon test --target native` reports 2412/2412.~~
 - [x] ~~Continue `cpdfdrawcontrol` source/API parity from
   `.repos/cpdf-source/cpdfdrawcontrol.mli`: added source-spelled
   `pdf_parse_colour` over the existing `pdf_parse_content_colour` parser,
