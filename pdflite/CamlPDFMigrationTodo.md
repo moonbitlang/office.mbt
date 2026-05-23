@@ -51,7 +51,7 @@ Current estimate:
   XMP/document info JSON reporting, cpdfmetadata source-spelled encode-output,
   print-metadata, and XML-tree aliases, namespace aliases, and namespace/get-
   data/XML-tree helper parity,
-  native metadata file set/write/extract wrappers, and XML
+  native metadata file set/write/extract wrappers/source aliases, and XML
   entity/whitespace decoding, redaction annotation bounding-box overlays,
   cpdfredact apply alias and source-order bounding-box wrapper,
   cpdfua subformat parser alias and Matterhorn content/role-map/XMP/
@@ -108,6 +108,19 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue native `cpdfmetadata` source/API parity in the `async_io`
+  package: added source-spelled `pdf_set_metadata` and
+  `pdf_extract_all_metadata` aliases over the existing
+  `pdf_set_metadata_from_file` and
+  `pdf_extract_all_metadata_to_directory` native filesystem wrappers. Coverage
+  extends the existing async metadata file-wrapper test to exercise both source
+  names while preserving catalog `main.xml` and stray `obj<num>.xml` extraction
+  behavior. Validation on MoonBit 0.9.3: `moon check --target native async_io
+  --warn-list +73` passes; `moon test --target native async_io --filter
+  '*metadata file wrappers*'` reports 1/1; `moon test --target native
+  async_io` reports 96/96; `moon fmt`, `moon info`, and `moon check --target
+  all --warn-list +73` pass with only the existing `markdown/cmd` future
+  notice; full `moon test --target native` reports 2414/2414.~~
 - [x] ~~Continue `cpdfmetadata` source/API parity from
   `.repos/cpdf-source/cpdfmetadata.mli`: added source-spelled
   `pdf_print_metadata`, returning the exact metadata bytes cpdfmetadata's

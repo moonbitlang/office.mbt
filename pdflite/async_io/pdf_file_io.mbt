@@ -676,6 +676,16 @@ pub async fn pdf_set_metadata_from_file(
 }
 
 ///|
+/// Source-spelled alias matching cpdfmetadata's `set_metadata`.
+pub async fn pdf_set_metadata(
+  keep_version : Bool,
+  path : StringView,
+  document : @pdflite.PdfDocument,
+) -> @pdflite.PdfDocument {
+  pdf_set_metadata_from_file(keep_version, path, document)
+}
+
+///|
 /// Write the catalog metadata XML stream to a file when one is present.
 ///
 /// A document without catalog metadata is a no-op, matching cpdfmetadata's
@@ -725,6 +735,16 @@ pub async fn pdf_extract_all_metadata_to_directory(
       )
     }
   }
+}
+
+///|
+/// Source-spelled alias matching cpdfmetadata's `extract_all_metadata`.
+pub async fn pdf_extract_all_metadata(
+  document : @pdflite.PdfDocument,
+  directory : StringView,
+  permission? : Int = 0o644,
+) -> Unit {
+  pdf_extract_all_metadata_to_directory(document, directory, permission~)
 }
 
 ///|

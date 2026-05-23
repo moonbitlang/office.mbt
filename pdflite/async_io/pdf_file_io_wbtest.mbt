@@ -4006,7 +4006,13 @@ async test "async metadata file wrappers set write and extract XML metadata" {
     input_path,
     try! @pdflite.pdf_minimum_valid_pdf(),
   )
+  let source_named = try! pdf_set_metadata(
+    false,
+    input_path,
+    try! @pdflite.pdf_minimum_valid_pdf(),
+  )
   @test.assert_eq(try! document.metadata(), Some(payload))
+  @test.assert_eq(try! source_named.metadata(), Some(payload))
   @test.assert_eq(document.version(), (1, 4))
   pdf_write_metadata_to_file(document, output_path)
   @test.assert_eq(@fs.read_file(output_path).binary(), payload)
@@ -4032,6 +4038,11 @@ async test "async metadata file wrappers set write and extract XML metadata" {
   let stray_path = directory + "/obj" + stray_number.to_string() + ".xml"
   pdf_async_io_remove_if_exists_for_test(stray_path)
   pdf_extract_all_metadata_to_directory(with_stray, directory)
+  @test.assert_eq(@fs.read_file(main_path).binary(), payload)
+  @test.assert_eq(@fs.read_file(stray_path).binary(), stray_payload)
+  pdf_async_io_remove_if_exists_for_test(main_path)
+  pdf_async_io_remove_if_exists_for_test(stray_path)
+  pdf_extract_all_metadata(with_stray, directory)
   @test.assert_eq(@fs.read_file(main_path).binary(), payload)
   @test.assert_eq(@fs.read_file(stray_path).binary(), stray_payload)
   pdf_async_io_remove_if_exists_for_test(input_path)
