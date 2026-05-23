@@ -2984,6 +2984,14 @@ Current backend snapshot:
   marker. Focused native validation reports `moon test --target native
   fixture_acceptance` at 41/41 tests passing; native full-suite validation
   reports 2197/2197 tests passing.~~
+- [x] ~~Broaden optional `.repos/cpdf-source` cpdf manual object-stream
+  DecodeParms recovery: `fixture_acceptance` now mutates the first `/ObjStm`
+  dictionary to keep `/Filter /FlateDecode` and `/Length` intact while adding a
+  malformed short `/DP` value, requiring strict `PredictorExpected`, public
+  reconstruction, and compressed rewrite/reread preservation for the 175-page
+  manual. Focused native validation reports the new gate at 1/1 tests passing;
+  `moon test --target native fixture_acceptance` reports 126/126; native
+  full-suite validation reports 2416/2416 tests passing.~~
 - [ ] Add further malformed xref-table/xref-stream/object-stream recovery cases
   from real-world PDFs.
 - [x] ~~Add a native reader-boundary gate for the next available predefined CMap
@@ -8905,6 +8913,18 @@ Current backend snapshot:
   all --warn-list +73` passes with the known `markdown/cmd` future notice;
   `moon test --target native` reports 2369/2369; `moon info`, `moon fmt`, and
   `git diff --check` are clean.~~
+- [x] ~~Continue source-port hardening with another real-world malformed
+  recovery fixture: the native `fixture_acceptance` package now corrupts the
+  175-page `.repos/cpdf-source/cpdfmanual.pdf` first object stream by adding a
+  malformed short `/DP` decode-parameter value while preserving the object
+  stream's `/Length` and Flate filter. The gate confirms strict parsing raises
+  `PredictorExpected`, public parsing reconstructs with `first_xref = 0`, and
+  compressed rewrite/reread preserves the manual's page count. Validation on
+  MoonBit compiler 0.9.3: the focused gate reports 1/1; `moon test --target
+  native fixture_acceptance` reports 126/126; `moon check --target all
+  --warn-list +73` passes with the known `markdown/cmd` future notice; `moon
+  test --target native` reports 2416/2416; `moon info`, `moon fmt`, and `git
+  diff --check` are clean.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
