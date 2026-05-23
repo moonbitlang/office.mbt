@@ -31,7 +31,8 @@ Current estimate:
   renumbering, standard and TrueType font-pack embedding, cpdfembed
   source-spelled run-collation alias, text-to-PDF
   instruction conversion, basic and tagged text-to-PDF document assembly, PDF/UA
-  text-to-PDF subformat shaping, blank PDF/UA creation helpers, PDF/UA XMP
+  text-to-PDF subformat shaping, cpdftexttopdf source-order typeset wrapper,
+  blank PDF/UA creation helpers, PDF/UA XMP
   marker insertion/removal helpers, PDF/UA structure-tree JSON
   import/export helpers, JPEG/JPEG2000, PNG, and JBIG2 image-to-PDF document
   assembly, image XObject JSON listing, cpdfimage source-spelled images
@@ -104,6 +105,20 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdftexttopdf` source/API parity from
+  `.repos/cpdf-source/cpdftexttopdf.mli`: added
+  `pdf_texttopdf_typeset_cpdf_order` over the established
+  `pdf_texttopdf_typeset` document assembly path, preserving cpdf's required
+  argument order without introducing an ambiguous global `pdf_typeset` alias
+  that would collide conceptually with `cpdftype.typeset`. Coverage compares
+  page content operators from the source-order wrapper with the existing
+  text-to-PDF wrapper. Validation on MoonBit 0.9.3: `moon check --target native
+  --warn-list +73` passes with the known `markdown/cmd` future notice; `moon
+  test --target native pdf_texttopdf_test.mbt`, `moon test --target wasm-gc
+  pdf_texttopdf_test.mbt`, and `moon test --target js pdf_texttopdf_test.mbt`
+  report 12/12 each; `moon fmt`, `moon info`, and `moon check --target all
+  --warn-list +73` pass with only the existing `markdown/cmd` future notice;
+  full `moon test --target native` reports 2414/2414.~~
 - [x] ~~Continue `cpdfua` source/API parity from
   `.repos/cpdf-source/cpdfua.mli`: added source-spelled
   `pdf_subformat_of_string` over the established `pdf_ua_subformat_of_string`

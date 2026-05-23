@@ -163,11 +163,13 @@ test "pdf_texttopdf_tag_paragraphs wraps blank-line paragraphs" {
 ///|
 test "pdf_texttopdf_typeset creates a standalone text document" {
   let paper = @pdflite.paper_size_make(PdfPoint, 100.0, 100.0)
+  let fontpack = texttopdf_standard_pack_for_test()
+  let text = @ascii.encode("Hi")
   let document = try! @pdflite.pdf_texttopdf_typeset(
-    texttopdf_standard_pack_for_test(),
-    10.0,
-    paper,
-    @ascii.encode("Hi"),
+    fontpack, 10.0, paper, text,
+  )
+  let source_order = try! @pdflite.pdf_texttopdf_typeset_cpdf_order(
+    false, paper, fontpack, 10.0, text,
   )
   @test.assert_eq(document.root() > 0, true)
   let catalog = try! document.catalog()
@@ -193,6 +195,12 @@ test "pdf_texttopdf_typeset creates a standalone text document" {
   }
   @test.assert_eq(font_ops >= 1, true)
   @test.assert_eq(found_text, true)
+  let source_pages = try! source_order.pages_of_pagetree()
+  @test.assert_eq(source_pages.length(), pages.length())
+  @test.assert_eq(
+    try! texttopdf_page_ops_for_test(source_order, source_pages[0]),
+    ops,
+  )
 }
 
 ///|

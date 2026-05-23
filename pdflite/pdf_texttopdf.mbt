@@ -515,3 +515,26 @@ pub fn pdf_texttopdf_typeset(
   }
   document
 }
+
+///|
+/// Compatibility wrapper matching cpdftexttopdf's `typeset` required argument
+/// order.
+pub fn pdf_texttopdf_typeset_cpdf_order(
+  process_struct_tree : Bool,
+  paper : PaperSize,
+  fontpack : PdfFontPack,
+  font_size : Double,
+  text : BytesView,
+  subformat? : PdfUASubformat? = None,
+  title? : String? = None,
+) -> PdfDocument raise PdfError {
+  pdf_texttopdf_typeset(
+    fontpack,
+    font_size,
+    paper,
+    text,
+    process_struct_tree~,
+    subformat~,
+    title~,
+  )
+}

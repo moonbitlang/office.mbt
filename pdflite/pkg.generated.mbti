@@ -1834,6 +1834,8 @@ pub fn pdf_texttopdf_tag_paragraphs(ArrayView[PdfTypeElement]) -> Array[PdfTypeE
 
 pub fn pdf_texttopdf_typeset(PdfFontPack, Double, @geometry.PaperSize, BytesView, process_struct_tree? : Bool, subformat? : PdfUASubformat?, title? : String?) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_texttopdf_typeset_cpdf_order(Bool, @geometry.PaperSize, PdfFontPack, Double, BytesView, subformat? : PdfUASubformat?, title? : String?) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_thin_lines(PdfDocument, ArrayView[Int], Double) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_thin_lines_ops(PdfDocument, PdfObject, ArrayView[PdfContentOp], Double) -> Array[PdfContentOp] raise @core.PdfError
