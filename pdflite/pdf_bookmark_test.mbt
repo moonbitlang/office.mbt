@@ -391,6 +391,20 @@ test "PdfDocument bookmark_name_of_spec expands cpdf filename fields" {
     "sec-07-base-7-01-002-TopQuote-TopQ",
   )
   @test.assert_eq(
+    try! @pdflite.pdf_name_of_spec(
+      PdfMetadataUTF8,
+      bookmarks,
+      document,
+      0,
+      spec,
+      7,
+      "base",
+      1,
+      2,
+    ),
+    "sec-07-base-7-01-002-TopQuote-TopQ",
+  )
+  @test.assert_eq(
     try! document.bookmark_name_of_spec(
       PdfMetadataUTF8,
       bookmarks,

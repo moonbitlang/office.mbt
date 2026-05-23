@@ -22,7 +22,8 @@ Current estimate:
   output wrapper, cpdfattach source-spelled sanitizer, source-order file-attach,
   and native dump-attached-files wrappers, cpdfstrftime source-spelled dummy
   value, cpdfclip source-spelled polygon/debug/native clip wrappers,
-  native secure-random, bookmark, image, structure,
+  native secure-random, bookmark and cpdfbookmarks source-spelled
+  name-of-spec alias, image, structure,
   renumbering, standard and TrueType font-pack embedding, text-to-PDF
   instruction conversion, basic and tagged text-to-PDF document assembly, PDF/UA
   text-to-PDF subformat shaping, blank PDF/UA creation helpers, PDF/UA XMP
@@ -91,6 +92,22 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfbookmarks` source/API parity from
+  `.repos/cpdf-source/cpdfbookmarks.mli`: added source-spelled
+  `pdf_name_of_spec` over the existing `PdfDocument::bookmark_name_of_spec`
+  and `pdf_bookmark_name_of_spec` implementation, preserving cpdf's
+  encoding/bookmarks/document/splitlevel/spec/sequence/filename/start/end
+  argument order for bookmark-driven output filename expansion. Coverage ties
+  the source-spelled alias to the existing percent and `@...@` expansion test.
+  Validation on MoonBit 0.9.3: `moon check --target native --warn-list +73`
+  passes with the known `markdown/cmd` future notice; `moon test --target native
+  pdf_bookmark_test.mbt --filter '*bookmark_name_of_spec*'`, `moon test
+  --target wasm-gc pdf_bookmark_test.mbt --filter '*bookmark_name_of_spec*'`,
+  and `moon test --target js pdf_bookmark_test.mbt --filter
+  '*bookmark_name_of_spec*'` report 1/1 each; `moon fmt`, `moon info`, and
+  `moon check --target all --warn-list +73` pass with only the existing
+  `markdown/cmd` future notice; full native `moon test --target native` reports
+  2411/2411.~~
 - [x] ~~Continue native `cpdfattach` source/API parity from
   `.repos/cpdf-source/cpdfattach.mli`: added async `pdf_dump_attached_files` as
   the source-spelled alias over `pdf_dump_attached_files_to_directory`,

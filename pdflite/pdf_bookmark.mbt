@@ -739,6 +739,24 @@ pub fn pdf_bookmark_name_of_spec(
 }
 
 ///|
+/// Source-spelled compatibility wrapper for cpdfbookmarks' `name_of_spec`.
+pub fn pdf_name_of_spec(
+  encoding : PdfMetadataEncoding,
+  bookmarks : ArrayView[PdfBookmark],
+  document : PdfDocument,
+  split_level : Int,
+  spec : String,
+  sequence : Int,
+  filename : String,
+  start_page : Int,
+  end_page : Int,
+) -> String raise PdfError {
+  document.bookmark_name_of_spec(
+    encoding, bookmarks, split_level, spec, sequence, filename, start_page, end_page,
+  )
+}
+
+///|
 fn pdf_bookmark_import_is_whitespace(value : Int) -> Bool {
   pdf_is_whitespace_byte(value)
 }

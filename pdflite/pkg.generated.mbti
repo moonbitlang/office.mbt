@@ -1016,6 +1016,8 @@ pub fn pdf_name_of_bytes(Bytes) -> @core.PdfName
 
 pub fn pdf_name_of_colour_space(PdfColourSpace) -> @core.PdfName?
 
+pub fn pdf_name_of_spec(PdfMetadataEncoding, ArrayView[PdfBookmark], PdfDocument, Int, String, Int, String, Int, Int) -> String raise @core.PdfError
+
 pub fn pdf_name_of_view(BytesView) -> @core.PdfName
 
 pub let pdf_no_more : Int
