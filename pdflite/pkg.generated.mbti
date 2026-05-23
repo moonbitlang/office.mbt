@@ -340,7 +340,11 @@ pub fn pdf_check_injectible(String) -> Unit raise @core.PdfError
 
 pub fn pdf_chop(PdfDocument, Int, Int, Bool, Bool, Bool, ArrayView[Int]) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_chop_cpdf_order(Int, Int, Bool, Bool, Bool, PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_chop_hv(PdfDocument, Bool, Double, Bool, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_chop_hv_cpdf_order(Bool, Double, Bool, PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_clear_progress_output() -> Unit
 

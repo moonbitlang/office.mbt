@@ -42,7 +42,7 @@ Current estimate:
   table-directory assembly, width/subset partition helpers, higher-subset
   ToUnicode mapping, and integrated parsed-subset orchestration, imposition
   transform/content/page-assembly/
-  pattern-matrix kernels, cpdf page
+  pattern-matrix kernels, cpdf chop source-order aliases, cpdf page
   hard-box/removal/shift/scale/scale-to-fit/upright/set-mediabox/copy-box
   helpers, page-info report wrappers, upright predicate and page-redaction
   source-order aliases, pattern-matrix page rewrite wrapper, callback-first
@@ -82,6 +82,19 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfchop` source/API parity from
+  `.repos/cpdf-source/cpdfchop.mli`: added `pdf_chop_cpdf_order` and
+  `pdf_chop_hv_cpdf_order` matching cpdf's x/y/columns/btt/rtl/document/range
+  and is_h/line/columns/document/range argument order while preserving the
+  existing document-first wrappers. Coverage compares both aliases against the
+  existing split behavior and checks that the source document remains
+  unchanged. Validation on MoonBit 0.9.3: `moon check --target native
+  --warn-list +73` passes with the known `markdown/cmd` future notice; `moon
+  test --target native pdf_chop_test.mbt`, `moon test --target wasm-gc
+  pdf_chop_test.mbt`, and `moon test --target js pdf_chop_test.mbt` report 5/5
+  each; `moon fmt`, `moon info`, and `moon check --target all --warn-list +73`
+  pass with only the existing `markdown/cmd` future notice; full native `moon
+  test --target native` reports 2408/2408.~~
 - [x] ~~Continue `cpdfremovetext` source/API parity from
   `.repos/cpdf-source/cpdfremovetext.mli`: added source-spelled
   `pdf_removetext` for cpdf's `removetext` and

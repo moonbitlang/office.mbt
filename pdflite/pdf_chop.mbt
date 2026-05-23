@@ -378,12 +378,38 @@ pub fn pdf_chop(
 }
 
 ///|
+/// Compatibility wrapper matching cpdfchop's source argument order.
+pub fn pdf_chop_cpdf_order(
+  x : Int,
+  y : Int,
+  columns : Bool,
+  btt : Bool,
+  rtl : Bool,
+  document : PdfDocument,
+  page_numbers : ArrayView[Int],
+) -> PdfDocument raise PdfError {
+  document.chop(x, y, columns, btt, rtl, page_numbers)
+}
+
+///|
 /// Compatibility wrapper for `PdfDocument::chop_hv`.
 pub fn pdf_chop_hv(
   document : PdfDocument,
   is_h : Bool,
   line : Double,
   columns : Bool,
+  page_numbers : ArrayView[Int],
+) -> PdfDocument raise PdfError {
+  document.chop_hv(is_h, line, columns, page_numbers)
+}
+
+///|
+/// Compatibility wrapper matching cpdfchop's source argument order.
+pub fn pdf_chop_hv_cpdf_order(
+  is_h : Bool,
+  line : Double,
+  columns : Bool,
+  document : PdfDocument,
   page_numbers : ArrayView[Int],
 ) -> PdfDocument raise PdfError {
   document.chop_hv(is_h, line, columns, page_numbers)

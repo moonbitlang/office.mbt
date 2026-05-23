@@ -121,25 +121,46 @@ test "PdfDocument chop_hv splits horizontally and vertically" {
     chop_rect_for_test(30.0, 0.0, 100.0, 100.0),
     chop_rect_for_test(0.0, 0.0, 30.0, 100.0),
   ])
+  let source_order = try! @pdflite.pdf_chop_hv_cpdf_order(
+    false,
+    30.0,
+    true,
+    chop_document_for_test([page]),
+    [1],
+  )
+  @test.assert_eq(chop_mediaboxes_for_test(source_order), [
+    chop_rect_for_test(30.0, 0.0, 100.0, 100.0),
+    chop_rect_for_test(0.0, 0.0, 30.0, 100.0),
+  ])
 }
 
 ///|
 test "pdf_chop wrapper keeps unselected pages unchanged" {
   let first = chop_page_for_test(0.0, 0.0, 10.0, 10.0)
   let second = chop_page_for_test(0.0, 0.0, 20.0, 10.0)
-  let chopped = try! @pdflite.pdf_chop(
-    chop_document_for_test([first, second]),
+  let document = chop_document_for_test([first, second])
+  let chopped = try! @pdflite.pdf_chop(document, 2, 1, false, false, false, [2])
+  let source_order = try! @pdflite.pdf_chop_cpdf_order(
     2,
     1,
     false,
     false,
     false,
+    document,
     [2],
   )
   @test.assert_eq(chop_mediaboxes_for_test(chopped), [
     chop_rect_for_test(0.0, 0.0, 10.0, 10.0),
     chop_rect_for_test(0.0, 0.0, 10.0, 10.0),
     chop_rect_for_test(10.0, 0.0, 20.0, 10.0),
+  ])
+  @test.assert_eq(
+    chop_mediaboxes_for_test(source_order),
+    chop_mediaboxes_for_test(chopped),
+  )
+  @test.assert_eq(chop_mediaboxes_for_test(document), [
+    chop_rect_for_test(0.0, 0.0, 10.0, 10.0),
+    chop_rect_for_test(0.0, 0.0, 20.0, 10.0),
   ])
 }
 
