@@ -256,6 +256,8 @@ pub fn pdf_addto(PdfDrawControl, PdfDocument, String) -> Unit raise @core.PdfErr
 
 pub fn pdf_addwordspace(PdfDrawControl, Double) -> Unit raise @core.PdfError
 
+pub let pdf_adobe : String
+
 pub fn pdf_allupright(PdfDocument, ArrayView[Int]) -> Bool raise @core.PdfError
 
 pub fn pdf_allupright_cpdf_order(ArrayView[Int], PdfDocument) -> Bool raise @core.PdfError
@@ -665,6 +667,8 @@ pub fn pdf_date_of_object(PdfObject) -> @date.PdfDate raise @core.PdfError
 pub fn pdf_date_of_string(String) -> @date.PdfDate raise @core.PdfError
 
 pub fn pdf_date_of_view(BytesView) -> @date.PdfDate raise @core.PdfError
+
+pub let pdf_dc : String
 
 pub fn pdf_debug_image_processing() -> Bool
 
@@ -1348,6 +1352,8 @@ pub fn pdf_path_subpath_content_json(PdfPathSubpath) -> Json
 
 pub fn pdf_path_transform(PdfPath, @geometry.TransformMatrix) -> PdfPath
 
+pub let pdf_pdfaid : String
+
 pub fn pdf_pdfdocencoding_byte_of_codepoint(Int) -> Byte?
 
 pub fn pdf_pdfdocencoding_of_codepoints(ArrayView[Int]) -> Bytes?
@@ -1355,6 +1361,14 @@ pub fn pdf_pdfdocencoding_of_codepoints(ArrayView[Int]) -> Bytes?
 pub fn pdf_pdfdocstring_of_codepoints(ArrayView[Int]) -> Bytes raise @core.PdfError
 
 pub fn pdf_pdfdocstring_of_utf8(BytesView) -> Bytes raise @core.PdfError
+
+pub let pdf_pdfe : String
+
+pub let pdf_pdfuaid : String
+
+pub let pdf_pdfvtid : String
+
+pub let pdf_pdfxid : String
 
 pub fn pdf_permissions_of_p(Int) -> Array[@crypt_core.PdfPermission]
 
@@ -1413,6 +1427,8 @@ pub fn pdf_progress_output() -> String
 pub fn pdf_progress_page(Int) -> Unit
 
 pub fn pdf_push(PdfDrawControl) -> Unit
+
+pub let pdf_rdf : String
 
 pub fn pdf_read_afm(BytesView) -> PdfAfmData raise @core.PdfError
 
@@ -2047,6 +2063,8 @@ pub fn pdf_write_ocg(PdfDocument, PdfOptionalContent) -> PdfDocument raise @core
 pub fn pdf_write_page_labels(PdfDocument, ArrayView[PdfPageLabel]) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_write_real(Double) -> Bytes raise @core.PdfError
+
+pub let pdf_xmp : String
 
 pub fn pdf_xobjbbox(PdfDrawControl, PdfDocument, String) -> Unit raise @core.PdfError
 

@@ -954,28 +954,37 @@ test "pdf_metadata_get_data_for_bytes mirrors cpdfmetadata lookup" {
   @test.assert_eq(
     @pdflite.pdf_metadata_adobe, @pdflite.pdf_metadata_adobe_namespace,
   )
+  @test.assert_eq(@pdflite.pdf_adobe, @pdflite.pdf_metadata_adobe_namespace)
   @test.assert_eq(
     @pdflite.pdf_metadata_xmp, @pdflite.pdf_metadata_xmp_namespace,
   )
+  @test.assert_eq(@pdflite.pdf_xmp, @pdflite.pdf_metadata_xmp_namespace)
   @test.assert_eq(@pdflite.pdf_metadata_dc, @pdflite.pdf_metadata_dc_namespace)
+  @test.assert_eq(@pdflite.pdf_dc, @pdflite.pdf_metadata_dc_namespace)
   @test.assert_eq(
     @pdflite.pdf_metadata_rdf, @pdflite.pdf_metadata_rdf_namespace,
   )
+  @test.assert_eq(@pdflite.pdf_rdf, @pdflite.pdf_metadata_rdf_namespace)
   @test.assert_eq(
     @pdflite.pdf_metadata_pdfaid, @pdflite.pdf_metadata_pdfaid_namespace,
   )
+  @test.assert_eq(@pdflite.pdf_pdfaid, @pdflite.pdf_metadata_pdfaid_namespace)
   @test.assert_eq(
     @pdflite.pdf_metadata_pdfxid, @pdflite.pdf_metadata_pdfxid_namespace,
   )
+  @test.assert_eq(@pdflite.pdf_pdfxid, @pdflite.pdf_metadata_pdfxid_namespace)
   @test.assert_eq(
     @pdflite.pdf_metadata_pdfe, @pdflite.pdf_metadata_pdfe_namespace,
   )
+  @test.assert_eq(@pdflite.pdf_pdfe, @pdflite.pdf_metadata_pdfe_namespace)
   @test.assert_eq(
     @pdflite.pdf_metadata_pdfuaid, @pdflite.pdf_metadata_pdfuaid_namespace,
   )
+  @test.assert_eq(@pdflite.pdf_pdfuaid, @pdflite.pdf_metadata_pdfuaid_namespace)
   @test.assert_eq(
     @pdflite.pdf_metadata_pdfvtid, @pdflite.pdf_metadata_pdfvtid_namespace,
   )
+  @test.assert_eq(@pdflite.pdf_pdfvtid, @pdflite.pdf_metadata_pdfvtid_namespace)
   let xmp_text =
     #|<x:xmpmeta xmlns:x="adobe:ns:meta/"
     #| xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
