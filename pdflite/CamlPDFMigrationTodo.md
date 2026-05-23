@@ -15,7 +15,8 @@ Current estimate:
   colour-space, transform, destination, merge-helper, standard-font, Flate, and
   text/font extraction, cryptography and primitive crypto, page-tree, writer,
   native async file I/O, codec, page-label, function, optional-content, and
-  content-stream, annotation, native secure-random, bookmark, image, structure,
+  content-stream, annotation and cpdfannot JSON source-order wrappers,
+  native secure-random, bookmark, image, structure,
   renumbering, standard and TrueType font-pack embedding, text-to-PDF
   instruction conversion, basic and tagged text-to-PDF document assembly, PDF/UA
   text-to-PDF subformat shaping, blank PDF/UA creation helpers, PDF/UA XMP
@@ -83,6 +84,20 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfannot` source/API parity from
+  `.repos/cpdf-source/cpdfannot.mli`: added
+  `pdf_get_annotations_json_cpdf_order` and
+  `pdf_set_annotations_json_cpdf_order` matching cpdf's document-first JSON
+  export/import order while preserving the existing range/json-first wrappers.
+  Coverage compares both source-order aliases against the existing annotation
+  JSON export and import behavior. Validation on MoonBit 0.9.3: `moon check
+  --target native --warn-list +73` passes with the known `markdown/cmd` future
+  notice; `moon test --target native pdf_annotation_test.mbt`, `moon test
+  --target wasm-gc pdf_annotation_test.mbt`, and `moon test --target js
+  pdf_annotation_test.mbt` report 14/14 each; `moon fmt`, `moon info`, and
+  `moon check --target all --warn-list +73` pass with only the existing
+  `markdown/cmd` future notice; full native `moon test --target native`
+  reports 2408/2408.~~
 - [x] ~~Continue `cpdfredact` source/API parity from
   `.repos/cpdf-source/cpdfredact.mli`: added
   `pdf_show_bounding_boxes_cpdf_order` matching cpdf's

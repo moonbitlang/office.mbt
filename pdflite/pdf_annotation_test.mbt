@@ -250,6 +250,10 @@ test "PdfDocument annotations_json exports cpdf annotation rows" {
     @utf8.encode(expected.stringify()),
   )
   @test.assert_eq(
+    try! @pdflite.pdf_get_annotations_json_cpdf_order(document, [2]),
+    @utf8.encode(expected.stringify()),
+  )
+  @test.assert_eq(
     try! document.annotations_json([1]),
     Json::array([annotation_json_header_for_test()]),
   )
@@ -274,6 +278,9 @@ test "PdfDocument set_annotations_json imports cpdf annotation rows" {
   let json = try! source.annotations_json([2])
   let imported = try! target.set_annotations_json(json)
   let wrapper = try! @pdflite.pdf_set_annotations_json(json, target)
+  let source_order_wrapper = try! @pdflite.pdf_set_annotations_json_cpdf_order(
+    target, json,
+  )
   let copied = try! target.copy_annotations_from(source, [2])
   let copied_wrapper = try! @pdflite.pdf_copy_annotations([2], source, target)
   let expected_annotations = [
@@ -294,6 +301,10 @@ test "PdfDocument set_annotations_json imports cpdf annotation rows" {
   )
   @test.assert_eq(
     try! wrapper.get_annotations(encoding=PdfMetadataRaw),
+    expected_annotations,
+  )
+  @test.assert_eq(
+    try! source_order_wrapper.get_annotations(encoding=PdfMetadataRaw),
     expected_annotations,
   )
   @test.assert_eq(

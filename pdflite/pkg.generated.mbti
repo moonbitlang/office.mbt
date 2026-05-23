@@ -728,6 +728,8 @@ pub fn pdf_get_annotations(PdfMetadataEncoding, PdfDocument) -> Array[(Int, Byte
 
 pub fn pdf_get_annotations_json(ArrayView[Int], PdfDocument) -> Bytes raise @core.PdfError
 
+pub fn pdf_get_annotations_json_cpdf_order(PdfDocument, ArrayView[Int]) -> Bytes raise @core.PdfError
+
 pub fn pdf_get_bookmarks_json(Bool, PdfDocument) -> Bytes raise @core.PdfError
 
 pub fn pdf_get_catalog_item(@core.PdfName, PdfDocument) -> String
@@ -1433,6 +1435,8 @@ pub fn pdf_scale_to_fit_rotate(ArrayView[(Double, Double)], Int, PdfDocument, Ar
 pub fn pdf_scale_to_fit_rotate_pages(PdfDocument, ArrayView[Int], ArrayView[(Double, Double)], Int, fast? : Bool) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_set_annotations_json(Json, PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_set_annotations_json_cpdf_order(PdfDocument, Json) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_set_box(PdfDocument, ArrayView[Int], @core.PdfName, Double, Double, Double, Double) -> PdfDocument raise @core.PdfError
 

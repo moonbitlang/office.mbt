@@ -1048,6 +1048,15 @@ pub fn pdf_get_annotations_json(
 }
 
 ///|
+/// Compatibility wrapper matching cpdfannot's `get_annotations_json` order.
+pub fn pdf_get_annotations_json_cpdf_order(
+  document : PdfDocument,
+  page_numbers : ArrayView[Int],
+) -> PdfBytes raise PdfError {
+  document.annotations_json_blob(page_numbers)
+}
+
+///|
 priv struct PdfAnnotationJsonImportRow {
   page_number : Int
   object_number : Int
@@ -1306,6 +1315,15 @@ pub fn PdfDocument::set_annotations_json(
 pub fn pdf_set_annotations_json(
   json : Json,
   document : PdfDocument,
+) -> PdfDocument raise PdfError {
+  document.set_annotations_json(json)
+}
+
+///|
+/// Compatibility wrapper matching cpdfannot's `set_annotations_json` order.
+pub fn pdf_set_annotations_json_cpdf_order(
+  document : PdfDocument,
+  json : Json,
 ) -> PdfDocument raise PdfError {
   document.set_annotations_json(json)
 }
