@@ -82,6 +82,15 @@ test "PdfDocument pad_after can insert another document once per selected page" 
   let pad_with = pad_doc_for_test([100.0, 200.0])
   let padded = try! document.pad_after([1], pad_with=Some(pad_with))
   @test.assert_eq(pad_widths_for_test(padded), [10.0, 100.0, 200.0, 20.0])
+  let source_wrapper = try! @pdflite.pdf_padafter(
+    [1],
+    document,
+    pad_with=Some(pad_with),
+  )
+  @test.assert_eq(
+    pad_widths_for_test(source_wrapper),
+    pad_widths_for_test(padded),
+  )
 }
 
 ///|
@@ -96,6 +105,15 @@ test "PdfDocument pad_before can insert another document before each unique sele
     pad_with=Some(pad_with),
   )
   @test.assert_eq(pad_widths_for_test(wrapper), pad_widths_for_test(padded))
+  let source_wrapper = try! @pdflite.pdf_padbefore(
+    [2, 2],
+    document,
+    pad_with=Some(pad_with),
+  )
+  @test.assert_eq(
+    pad_widths_for_test(source_wrapper),
+    pad_widths_for_test(padded),
+  )
 }
 
 ///|
@@ -121,6 +139,11 @@ test "PdfDocument pad_to_multiple appends or prepends blanks" {
   @test.assert_eq(pad_widths_for_test(appended), [10.0, 20.0, 30.0, 30.0])
   let prepended = try! document.pad_to_multiple(-4)
   @test.assert_eq(pad_widths_for_test(prepended), [30.0, 10.0, 20.0, 30.0])
+  let source_appended = try! @pdflite.pdf_padmultiple(4, document)
+  @test.assert_eq(
+    pad_widths_for_test(source_appended),
+    pad_widths_for_test(appended),
+  )
 }
 
 ///|

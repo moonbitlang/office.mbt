@@ -56,7 +56,7 @@ Current estimate:
   ToUnicode mapping, and integrated parsed-subset orchestration, imposition
   transform/content/page-assembly/
   pattern-matrix kernels, cpdfpagespec source-spelled invert-range alias,
-  cpdf chop source-order aliases, cpdf page
+  cpdf chop source-order aliases, cpdfpad source-spelled aliases, cpdf page
   hard-box/removal/shift/scale/scale-to-fit/upright/set-mediabox/copy-box
   helpers, page-info report wrappers, upright predicate and page-redaction
   source-order aliases, pattern-matrix page rewrite wrapper, callback-first
@@ -96,6 +96,20 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfpad` source/API parity from
+  `.repos/cpdf-source/cpdfpad.mli`: added source-spelled wrappers
+  `pdf_padbefore`, `pdf_padafter`, and `pdf_padmultiple` over the existing
+  `PdfDocument::pad_before`, `pad_after`, and `pad_to_multiple` paths, using
+  cpdf's page-list-first and multiple-first argument order. Coverage compares
+  the source-spelled wrappers with the established method/wrapper behavior for
+  document-backed before/after padding and multiple padding. Validation on
+  MoonBit 0.9.3: `moon check --target native --warn-list +73` passes with the
+  known `markdown/cmd` future notice; `moon test --target native
+  pdf_pad_test.mbt`, `moon test --target wasm-gc pdf_pad_test.mbt`, and `moon
+  test --target js pdf_pad_test.mbt` report 8/8 each; `moon fmt`, `moon info`,
+  and `moon check --target all --warn-list +73` pass with only the existing
+  `markdown/cmd` future notice; full native `moon test --target native`
+  reports 2412/2412.~~
 - [x] ~~Continue `cpdfimage` source/API parity from
   `.repos/cpdf-source/cpdfimage.mli`: added source-spelled tuple-shape object
   helpers `pdf_obj_of_jpeg_data`, `pdf_obj_of_png_data`,

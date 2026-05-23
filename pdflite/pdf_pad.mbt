@@ -226,6 +226,16 @@ pub fn pdf_pad_after(
 }
 
 ///|
+/// Source-spelled cpdfpad `padafter` wrapper with cpdf argument order.
+pub fn pdf_padafter(
+  page_numbers : ArrayView[Int],
+  document : PdfDocument,
+  pad_with? : PdfDocument? = None,
+) -> PdfDocument raise PdfError {
+  document.pad_after(page_numbers, pad_with~)
+}
+
+///|
 /// Insert blank pages or pages from `pad_with` before selected one-based pages.
 pub fn PdfDocument::pad_before(
   self : PdfDocument,
@@ -240,6 +250,16 @@ pub fn PdfDocument::pad_before(
 pub fn pdf_pad_before(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
+  pad_with? : PdfDocument? = None,
+) -> PdfDocument raise PdfError {
+  document.pad_before(page_numbers, pad_with~)
+}
+
+///|
+/// Source-spelled cpdfpad `padbefore` wrapper with cpdf argument order.
+pub fn pdf_padbefore(
+  page_numbers : ArrayView[Int],
+  document : PdfDocument,
   pad_with? : PdfDocument? = None,
 ) -> PdfDocument raise PdfError {
   document.pad_before(page_numbers, pad_with~)
@@ -307,6 +327,15 @@ pub fn PdfDocument::pad_to_multiple(
 pub fn pdf_pad_to_multiple(
   document : PdfDocument,
   multiple : Int,
+) -> PdfDocument raise PdfError {
+  document.pad_to_multiple(multiple)
+}
+
+///|
+/// Source-spelled cpdfpad `padmultiple` wrapper with cpdf argument order.
+pub fn pdf_padmultiple(
+  multiple : Int,
+  document : PdfDocument,
 ) -> PdfDocument raise PdfError {
   document.pad_to_multiple(multiple)
 }

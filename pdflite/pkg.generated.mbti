@@ -1194,6 +1194,12 @@ pub fn pdf_pad_before(PdfDocument, ArrayView[Int], pad_with? : PdfDocument?) -> 
 
 pub fn pdf_pad_to_multiple(PdfDocument, Int) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_padafter(ArrayView[Int], PdfDocument, pad_with? : PdfDocument?) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_padbefore(ArrayView[Int], PdfDocument, pad_with? : PdfDocument?) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_padmultiple(Int, PdfDocument) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_page_blank(@geometry.PaperSize) -> PdfPage
 
 pub fn pdf_page_content_json(PdfDocument, ArrayView[Int]) -> Json raise @core.PdfError
