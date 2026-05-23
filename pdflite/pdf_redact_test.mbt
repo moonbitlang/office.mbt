@@ -259,6 +259,18 @@ test "PdfDocument show_bounding_boxes draws page content rectangles" {
     redact_concat_ops_for_test([Op_q, ..source_ops, Op_Q], expected_box),
   )
   @test.assert_eq(redact_content_ops_for_test(boxed, boxed_pages[1]), [])
+  let source_order = try! @pdflite.pdf_show_bounding_boxes_cpdf_order(
+    false,
+    None,
+    false,
+    document,
+    [1],
+  )
+  let source_order_page = (try! source_order.pages_of_pagetree())[0]
+  @test.assert_eq(
+    redact_content_ops_for_test(source_order, source_order_page),
+    redact_content_ops_for_test(boxed, boxed_pages[0]),
+  )
   let filtered = try! @pdflite.pdf_show_bounding_boxes(
     document,
     [1],
@@ -270,5 +282,19 @@ test "PdfDocument show_bounding_boxes draws page content rectangles" {
   @test.assert_eq(
     redact_content_ops_for_test(filtered, filtered_page),
     source_ops,
+  )
+  let filtered_source_order = try! @pdflite.pdf_show_bounding_boxes_cpdf_order(
+    true,
+    Some({ min_x: 0.0, min_y: 0.0, max_x: 5.0, max_y: 5.0 }),
+    true,
+    document,
+    [1],
+  )
+  let filtered_source_order_page = (try! filtered_source_order.pages_of_pagetree())[0]
+  @test.assert_eq(
+    redact_content_ops_for_test(
+      filtered_source_order, filtered_source_order_page,
+    ),
+    redact_content_ops_for_test(filtered, filtered_page),
   )
 }

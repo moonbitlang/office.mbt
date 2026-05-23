@@ -32,7 +32,8 @@ Current estimate:
   synchronization, XMP metadata creation, XMP RDF list extraction,
   XMP/document info JSON reporting, cpdfmetadata namespace/get-data/XML-tree
   helper parity, native metadata file set/write/extract wrappers, and XML
-  entity/whitespace decoding, redaction annotation bounding-box overlays,
+  entity/whitespace decoding, redaction annotation bounding-box overlays and
+  cpdfredact source-order bounding-box wrapper,
   cpdfua Matterhorn content/role-map/XMP/viewer-preference/optional-content/
   media-clip/file-attachment/PrinterMark/reference-XObject/MCID Form XObject/
   Type0 CIDSystemInfo/CIDToGIDMap/CMap-name/WMode/font-file no-op/TrueType
@@ -82,6 +83,19 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfredact` source/API parity from
+  `.repos/cpdf-source/cpdfredact.mli`: added
+  `pdf_show_bounding_boxes_cpdf_order` matching cpdf's
+  fast/shape/light/document/range argument order while preserving the existing
+  document-first optional wrapper. Coverage compares the source-order alias
+  against the existing bounding-box overlay behavior, including shape/light/fast
+  forwarding. Validation on MoonBit 0.9.3: `moon check --target native
+  --warn-list +73` passes with the known `markdown/cmd` future notice; `moon
+  test --target native pdf_redact_test.mbt`, `moon test --target wasm-gc
+  pdf_redact_test.mbt`, and `moon test --target js pdf_redact_test.mbt` report
+  5/5 each; `moon fmt`, `moon info`, and `moon check --target all --warn-list
+  +73` pass with only the existing `markdown/cmd` future notice; full native
+  `moon test --target native` reports 2408/2408.~~
 - [x] ~~Continue `cpdfchop` source/API parity from
   `.repos/cpdf-source/cpdfchop.mli`: added `pdf_chop_cpdf_order` and
   `pdf_chop_hv_cpdf_order` matching cpdf's x/y/columns/btt/rtl/document/range

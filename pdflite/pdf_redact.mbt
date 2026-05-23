@@ -316,3 +316,15 @@ pub fn pdf_show_bounding_boxes(
 ) -> PdfDocument raise PdfError {
   document.show_bounding_boxes(page_numbers, shape~, light~, fast~)
 }
+
+///|
+/// Compatibility wrapper matching cpdfredact's `show_bounding_boxes` order.
+pub fn pdf_show_bounding_boxes_cpdf_order(
+  fast : Bool,
+  shape : PdfRectangle?,
+  light : Bool,
+  document : PdfDocument,
+  page_numbers : ArrayView[Int],
+) -> PdfDocument raise PdfError {
+  document.show_bounding_boxes(page_numbers, shape~, light~, fast~)
+}
