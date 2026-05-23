@@ -12,11 +12,13 @@ Current estimate:
   breadth: 85-90%.
 - Warning 74 public documentation cleanup: complete; 0 native diagnostics
   remain. Covered the byte, object, document, reader, lexeme, lookup/tree,
-  colour-space, transform, destination, merge-helper, standard-font, Flate, and
+  colour-space and cpdfcolours source-spelled table alias, transform,
+  destination, merge-helper, standard-font, Flate, and
   text/font extraction, cryptography and primitive crypto, page-tree, writer,
   native async file I/O, codec, page-label, function, optional-content and
   cpdfocg source-spelled listing wrapper, and
   content-stream, annotation and cpdfannot JSON source-order wrappers,
+  cpdfdebug source-spelled object-dump wrapper,
   native secure-random, bookmark, image, structure,
   renumbering, standard and TrueType font-pack embedding, text-to-PDF
   instruction conversion, basic and tagged text-to-PDF document assembly, PDF/UA
@@ -85,6 +87,21 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue standalone utility source/API parity from
+  `.repos/cpdf-source/cpdfcolours.mli` and `.repos/cpdf-source/cpdfdebug.mli`:
+  added source-spelled `pdf_colours` over the established 148-entry CSS colour
+  table and `pdf_print_pdf_objs` over the existing byte-oriented cpdf object
+  dump wrapper. Coverage compares `pdf_colours` with `pdf_css_colours` and
+  `pdf_print_pdf_objs` with `pdf_debug_objects`. Validation on MoonBit 0.9.3:
+  `moon check --target native --warn-list +73` passes with the known
+  `markdown/cmd` future notice; `moon test --target native
+  pdf_colour_test.mbt`, `moon test --target wasm-gc pdf_colour_test.mbt`, and
+  `moon test --target js pdf_colour_test.mbt` report 4/4 each; `moon test
+  --target native pdf_debug_test.mbt`, `moon test --target wasm-gc
+  pdf_debug_test.mbt`, and `moon test --target js pdf_debug_test.mbt` report
+  3/3 each; `moon fmt`, `moon info`, and `moon check --target all --warn-list
+  +73` pass with only the existing `markdown/cmd` future notice; full native
+  `moon test --target native` reports 2408/2408.~~
 - [x] ~~Continue `cpdfshape` source/API parity from
   `.repos/cpdf-source/cpdfshape.mli`: added source-spelled `pdf_kappa`,
   `pdf_circle`, and `pdf_rectangle` aliases over the existing cpdf shape

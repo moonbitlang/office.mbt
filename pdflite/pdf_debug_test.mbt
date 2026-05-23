@@ -63,6 +63,10 @@ test "pdf_debug_objects reports missing trailer root and keeps object dump" {
       "(hi)\n",
     ),
   )
+  @test.assert_eq(
+    try! @pdflite.pdf_print_pdf_objs(document),
+    try! @pdflite.pdf_debug_objects(document),
+  )
 }
 
 ///|

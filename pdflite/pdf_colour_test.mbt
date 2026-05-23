@@ -1,6 +1,7 @@
 ///|
 test "cpdf colours exposes the complete CSS colour table" {
   let colours = @pdflite.pdf_css_colours()
+  @test.assert_eq(@pdflite.pdf_colours(), colours)
   @test.assert_eq(colours.length(), 148)
   @test.assert_eq(colours[0], ("aliceblue", 0xF0F8FF))
   @test.assert_eq(colours[colours.length() - 1], ("yellowgreen", 0x9ACD32))

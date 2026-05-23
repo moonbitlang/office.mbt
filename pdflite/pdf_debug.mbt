@@ -77,3 +77,9 @@ pub fn PdfDocument::debug_objects(
 pub fn pdf_debug_objects(document : PdfDocument) -> PdfBytes raise PdfError {
   document.debug_objects()
 }
+
+///|
+/// Source-spelled compatibility wrapper for cpdfdebug's printed object dump.
+pub fn pdf_print_pdf_objs(document : PdfDocument) -> PdfBytes raise PdfError {
+  document.debug_objects()
+}

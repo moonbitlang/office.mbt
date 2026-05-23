@@ -382,6 +382,8 @@ pub fn pdf_colour_space_of_device_name(@core.PdfName) -> PdfColourSpace?
 
 pub fn pdf_colour_space_of_object(PdfObject) -> PdfColourSpace?
 
+pub fn pdf_colours() -> Array[(String, Int)]
+
 pub fn pdf_combine_pages(PdfDocument, PdfDocument, fast? : Bool, scale_to_fit? : Bool, overlay_is_under? : Bool, process_struct_tree? : Bool) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_combine_pages_cpdf_order(Bool, Bool, PdfDocument, PdfDocument, Bool, Bool) -> PdfDocument raise @core.PdfError
@@ -1227,6 +1229,8 @@ pub fn pdf_print_font_table(PdfDocument, String, Int) -> Bytes raise @core.PdfEr
 pub fn pdf_print_fonts(PdfDocument, ArrayView[Int], json? : Bool) -> Bytes raise @core.PdfError
 
 pub fn pdf_print_function(PdfFunction) -> Unit
+
+pub fn pdf_print_pdf_objs(PdfDocument) -> Bytes raise @core.PdfError
 
 pub fn[T] pdf_print_tree_to_buffer(@buffer.Buffer, T, (T) -> String, (T) -> Array[T], line_prefix? : String) -> Unit
 

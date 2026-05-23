@@ -154,6 +154,12 @@ pub fn pdf_css_colours() -> Array[(String, Int)] {
 }
 
 ///|
+/// Source-spelled compatibility alias for cpdfcolours' colour table.
+pub fn pdf_colours() -> Array[(String, Int)] {
+  pdf_css_colours()
+}
+
+///|
 /// Look up a CSS color by name using cpdf's lowercase color table.
 pub fn pdf_css_colour_value(name : String) -> Int? {
   let lower = name.to_lower()
