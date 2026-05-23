@@ -656,6 +656,8 @@ pub fn pdf_date_of_string(String) -> @date.PdfDate raise @core.PdfError
 
 pub fn pdf_date_of_view(BytesView) -> @date.PdfDate raise @core.PdfError
 
+pub fn pdf_debug_image_processing() -> Bool
+
 pub fn pdf_debug_objects(PdfDocument) -> Bytes raise @core.PdfError
 
 pub fn pdf_decode_filter_bytes(@core.PdfName, Bytes) -> Bytes raise @core.PdfError
@@ -1577,6 +1579,8 @@ pub fn pdf_set_annotations_json_cpdf_order(PdfDocument, Json) -> PdfDocument rai
 pub fn pdf_set_box(PdfDocument, ArrayView[Int], @core.PdfName, Double, Double, Double, Double) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_set_box_string(String, Double, Double, Double, Double, PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_set_debug_image_processing(Bool) -> Unit
 
 pub fn pdf_set_language(PdfDocument, BytesView) -> PdfDocument raise @core.PdfError
 

@@ -31,8 +31,8 @@ Current estimate:
   marker insertion/removal helpers, PDF/UA structure-tree JSON
   import/export helpers, JPEG/JPEG2000, PNG, and JBIG2 image-to-PDF document
   assembly, image XObject JSON listing and cpdfimage source-spelled images
-  alias, image-resolution reporting, cpdfimage single-image and multi-image
-  extraction file payloads/native write wrappers,
+  alias/debug flag, image-resolution reporting, cpdfimage single-image and
+  multi-image extraction file payloads/native write wrappers,
   cpdf draw-control colour parsing, source-spelled parse-colour alias,
   path/paint, marked-content, graphics-state/matrix, XObject, image-data,
   media/text, paragraph, and font-state callback command aliases,
@@ -96,6 +96,21 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfimage` source/API parity from
+  `.repos/cpdf-source/cpdfimage.mli`: added source-spelled
+  `pdf_debug_image_processing` and `pdf_set_debug_image_processing` over the
+  existing `pdf_image_debug_image_processing` module flag. This preserves the
+  shorter cpdf flag name while keeping the MoonBit API as explicit get/set
+  functions rather than exposing a raw mutable reference. Coverage pins both
+  naming surfaces against the same stored state and restore behavior.
+  Validation on MoonBit 0.9.3: `moon check --target native --warn-list +73`
+  passes with the known `markdown/cmd` future notice; `moon test --target
+  native pdf_image_test.mbt --filter '*debug_image*'`, `moon test --target
+  wasm-gc pdf_image_test.mbt --filter '*debug_image*'`, and `moon test
+  --target js pdf_image_test.mbt --filter '*debug_image*'` report 1/1 each;
+  `moon fmt`, `moon info`, and `moon check --target all --warn-list +73` pass
+  with only the existing `markdown/cmd` future notice; full native `moon test
+  --target native` reports 2412/2412.~~
 - [x] ~~Continue `cpdfdrawcontrol` source/API parity from
   `.repos/cpdf-source/cpdfdrawcontrol.mli`: added source-spelled explicit-state
   image-data wrappers `pdf_addjpeg`, `pdf_addpng`, and `pdf_addjpeg2000` over

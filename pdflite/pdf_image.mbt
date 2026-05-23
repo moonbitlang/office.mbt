@@ -168,6 +168,19 @@ pub fn pdf_image_set_debug_image_processing(enabled : Bool) -> Unit {
 }
 
 ///|
+/// Source-spelled cpdfimage `debug_image_processing` flag reader.
+pub fn pdf_debug_image_processing() -> Bool {
+  pdf_image_debug_image_processing()
+}
+
+///|
+/// Set cpdfimage's `debug_image_processing` flag through the source-spelled
+/// compatibility surface.
+pub fn pdf_set_debug_image_processing(enabled : Bool) -> Unit {
+  pdf_image_set_debug_image_processing(enabled)
+}
+
+///|
 fn pdf_image_image_mask_key() -> PdfName {
   pdf_image_image_mask_key_name
 }
