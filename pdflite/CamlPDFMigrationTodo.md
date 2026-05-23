@@ -19,8 +19,9 @@ Current estimate:
   native async file I/O, codec, page-label, function, optional-content,
   cpdfocg source-spelled listing wrapper and native JSON-file replacement
   wrapper, and
-  content-stream, cpdfcontent source-spelled to-json wrapper, annotation and
-  cpdfannot JSON source-order wrappers,
+  content-stream, cpdfcontent source-spelled to-json wrapper,
+  cpdfprinttree module-spelled aliases, annotation and cpdfannot JSON
+  source-order wrappers,
   cpdfdebug source-spelled object-dump wrapper, cpdfspot stdout-style listing
   output wrapper, cpdfattach source-spelled sanitizer, source-order file-attach,
   and native dump-attached-files wrappers, cpdfstrftime source-spelled dummy
@@ -102,6 +103,19 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfprinttree` source/API parity from
+  `.repos/cpdf-source/cpdfprinttree.mli`: added module-spelled
+  `pdf_printtree_to_buffer` and `pdf_printtree_to_string` aliases over the
+  established `pdf_print_tree_to_buffer` and `pdf_print_tree_to_string`
+  renderers. Coverage checks both aliases against the existing cpdf tree
+  layout and buffer behavior. Validation on MoonBit 0.9.3: `moon check
+  --target native --warn-list +73` passes with the known `markdown/cmd` future
+  notice; `moon test --target native pdf_print_tree_test.mbt`, `moon test
+  --target wasm-gc pdf_print_tree_test.mbt`, and `moon test --target js
+  pdf_print_tree_test.mbt` report 3/3 each; `moon fmt`, `moon info`, and `moon
+  check --target all --warn-list +73` pass with only the existing
+  `markdown/cmd` future notice; full `moon test --target native` reports
+  2414/2414.~~
 - [x] ~~Continue `cpdfembed` source/API parity from
   `.repos/cpdf-source/cpdfembed.mli`: added `pdf_collate_runs`, a
   source-spelled wrapper over the existing generic `pdf_embed_collate_runs`

@@ -1384,6 +1384,10 @@ pub fn[T] pdf_print_tree_to_buffer(@buffer.Buffer, T, (T) -> String, (T) -> Arra
 
 pub fn[T] pdf_print_tree_to_string(T, (T) -> String, (T) -> Array[T], line_prefix? : String) -> String
 
+pub fn[T] pdf_printtree_to_buffer(@buffer.Buffer, T, (T) -> String, (T) -> Array[T], line_prefix? : String) -> Unit
+
+pub fn[T] pdf_printtree_to_string(T, (T) -> String, (T) -> Array[T], line_prefix? : String) -> String
+
 pub fn pdf_process_pages(PdfDocument, ArrayView[Int], (Int, PdfPage) -> (PdfPage, Int, @geometry.TransformMatrix) raise @core.PdfError) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_process_pages_cpdf_order((Int, PdfPage) -> (PdfPage, Int, @geometry.TransformMatrix) raise @core.PdfError, PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
