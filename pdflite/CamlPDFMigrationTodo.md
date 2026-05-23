@@ -18,7 +18,8 @@ Current estimate:
   native async file I/O, codec, page-label, function, optional-content and
   cpdfocg source-spelled listing wrapper, and
   content-stream, annotation and cpdfannot JSON source-order wrappers,
-  cpdfdebug source-spelled object-dump wrapper, cpdfstrftime source-spelled
+  cpdfdebug source-spelled object-dump wrapper, cpdfattach source-spelled
+  sanitizer and source-order file-attach wrapper, cpdfstrftime source-spelled
   dummy value, cpdfclip source-spelled polygon/debug/native clip wrappers,
   native secure-random, bookmark, image, structure,
   renumbering, standard and TrueType font-pack embedding, text-to-PDF
@@ -62,7 +63,7 @@ Current estimate:
 
 Current backend snapshot:
 
-- Native: full suite passes on MoonBit 0.9.3, currently 2409/2409 tests.
+- Native: full suite passes on MoonBit 0.9.3, currently 2410/2410 tests.
 - WasmGC and JavaScript: full portable non-native test suites pass on MoonBit
   0.9.3, currently 2063/2063 on each backend after the latest TrueType
   embedding integration.
@@ -89,6 +90,21 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfattach` source/API parity from
+  `.repos/cpdf-source/cpdfattach.mli`: added source-spelled
+  `pdf_remove_unsafe_characters` over the existing cpdf filename sanitizer and
+  `pdf_attach_file_cpdf_order` over the in-memory attachment path matching
+  cpdf's keepversion/topage/pdf/relationship/description/filename order while
+  keeping native filesystem reads in `async_io/pdf_attach_file_from_path`.
+  Coverage compares the sanitizer alias and pins the source-order wrapper for
+  page-level attachments with relationship/description metadata. Validation on
+  MoonBit 0.9.3: `moon check --target native --warn-list +73` passes with the
+  known `markdown/cmd` future notice; `moon test --target native
+  pdf_attach_test.mbt`, `moon test --target wasm-gc pdf_attach_test.mbt`, and
+  `moon test --target js pdf_attach_test.mbt` report 14/14 each; `moon fmt`,
+  `moon info`, and `moon check --target all --warn-list +73` pass with only the
+  existing `markdown/cmd` future notice; full native `moon test --target native`
+  reports 2410/2410.~~
 - [x] ~~Continue `cpdfclip` source/API parity from
   `.repos/cpdf-source/cpdfclip.mli`: added source-spelled wrappers
   `pdf_nullpoly`, `pdf_gpc_polygon_of_box`, `pdf_make_gpcpolygon`,

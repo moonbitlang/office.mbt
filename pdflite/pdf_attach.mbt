@@ -279,6 +279,12 @@ pub fn pdf_attachment_remove_unsafe_characters(
 }
 
 ///|
+/// Source-spelled compatibility alias for cpdfattach's filename sanitizer.
+pub fn pdf_remove_unsafe_characters(text : String) -> String raise PdfError {
+  pdf_attachment_remove_unsafe_characters(text)
+}
+
+///|
 fn pdf_attach_embedded_file_stream(data : PdfBytes) -> PdfObject {
   pdf_stream(
     PdfDictionary([
@@ -475,6 +481,30 @@ pub fn pdf_attach_file(
   page_number? : Int? = None,
   relationship? : String? = None,
   description? : String? = None,
+) -> PdfDocument raise PdfError {
+  document.attach_file(
+    filename,
+    data,
+    keep_version~,
+    page_number~,
+    relationship~,
+    description~,
+  )
+}
+
+///|
+/// Source-order compatibility wrapper for cpdfattach's in-memory attach path.
+///
+/// The OCaml source also has a filesystem path branch; native filesystem reads
+/// live in `async_io/pdf_attach_file_from_path`.
+pub fn pdf_attach_file_cpdf_order(
+  keep_version : Bool,
+  page_number : Int?,
+  document : PdfDocument,
+  relationship : String?,
+  description : String?,
+  filename : String,
+  data : BytesView,
 ) -> PdfDocument raise PdfError {
   document.attach_file(
     filename,

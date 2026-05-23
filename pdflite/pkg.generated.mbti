@@ -248,6 +248,8 @@ pub fn pdf_ascii_hex_encode_view(BytesView) -> Bytes
 
 pub fn pdf_attach_file(PdfDocument, String, BytesView, keep_version? : Bool, page_number? : Int?, relationship? : String?, description? : String?) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_attach_file_cpdf_order(Bool, Int?, PdfDocument, String?, String?, String, BytesView) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_attachment_remove_unsafe_characters(String) -> String raise @core.PdfError
 
 pub fn pdf_black_fills(PdfDocument, ArrayView[Int], PdfContentColour) -> PdfDocument raise @core.PdfError
@@ -1389,6 +1391,8 @@ pub fn pdf_remove_page_labels(PdfDocument) -> PdfDocument raise @core.PdfError
 pub fn pdf_remove_struct_tree(PdfDocument) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_remove_trim_pdf(PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_remove_unsafe_characters(String) -> String raise @core.PdfError
 
 pub fn pdf_removetext(ArrayView[Int], PdfDocument) -> PdfDocument raise @core.PdfError
 

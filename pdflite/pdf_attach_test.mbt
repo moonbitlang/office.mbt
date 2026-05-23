@@ -177,6 +177,29 @@ test "pdf_attach_file wrapper can keep the original PDF version" {
 }
 
 ///|
+test "pdf_attach_file_cpdf_order preserves source argument order" {
+  let payload = @ascii.encode("payload")
+  let document = try! @pdflite.pdf_attach_file_cpdf_order(
+    false,
+    Some(1),
+    attach_blank_document_for_test(),
+    Some("Data"),
+    Some("Page note"),
+    "folder/page-note.bin",
+    payload,
+  )
+  @test.assert_eq(try! document.list_attached_files(), [
+    {
+      name: "page-note.bin",
+      pagenumber: 1,
+      data: Some(payload),
+      description: Some("Page note"),
+      relationship: Some("/Data"),
+    },
+  ])
+}
+
+///|
 test "PdfDocument attach_file preserves other name trees and accepts slash relationships" {
   let original = attach_blank_document_for_test()
   let javascript_tree = original.build_name_tree([
@@ -360,6 +383,10 @@ test "pdf_attachment_remove_unsafe_characters mirrors cpdf filtering" {
       ".a/b?c<d>e\\f:g*h|i\"j^k+l=m" + e_acute,
     ),
     ".abcdefghijklm" + e_acute,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_remove_unsafe_characters("a/b?c"),
+    try! @pdflite.pdf_attachment_remove_unsafe_characters("a/b?c"),
   )
 }
 
