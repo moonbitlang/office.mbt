@@ -1586,6 +1586,8 @@ pub fn pdf_replace_obj(PdfDocument, String, PdfObject) -> Unit raise @core.PdfEr
 
 pub fn pdf_replace_object_by_spec(PdfDocument, String, PdfObject) -> Unit raise @core.PdfError
 
+pub fn pdf_replace_pairs(ArrayView[PdfBookmark], PdfDocument, Int, String, Int, Int?, Int) -> Array[(String, () -> String)] raise @core.PdfError
+
 pub fn pdf_replace_stream_by_spec(PdfDocument, String, BytesView) -> Unit raise @core.PdfError
 
 pub fn pdf_restrict_angle(Double, Double) -> Double

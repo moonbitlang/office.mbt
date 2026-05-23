@@ -3578,6 +3578,39 @@ test "pdf_addtext_replacement_values wrapper matches method" {
 }
 
 ///|
+test "pdf_replace_pairs wrapper matches derived replacement pairs" {
+  let document = try! @pdflite.pdf_blank_document(10.0, 10.0, 2)
+  let values = try! document.addtext_replacement_values(
+    [],
+    2,
+    2,
+    "input.pdf",
+    10,
+    Some(3),
+  )
+  let expected = @pdflite.pdf_addtext_process_text_with_time(
+    addtext_process_time_for_test(),
+    "%Page|%EndPage|%Label|%Bates",
+    @pdflite.pdf_addtext_replacement_pairs(values),
+  )
+  let actual = @pdflite.pdf_addtext_process_text_with_time(
+    addtext_process_time_for_test(),
+    "%Page|%EndPage|%Label|%Bates",
+    try! @pdflite.pdf_replace_pairs(
+      [],
+      document,
+      2,
+      "input.pdf",
+      10,
+      Some(3),
+      2,
+    ),
+  )
+  @test.assert_eq(actual, expected)
+  @test.assert_eq(actual, "2|2|2|011")
+}
+
+///|
 test "pdf_addtext_cap_height prefers simple font descriptors" {
   @test.assert_eq(
     @pdflite.pdf_addtext_cap_height(

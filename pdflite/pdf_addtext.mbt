@@ -3395,6 +3395,26 @@ pub fn pdf_addtext_replacement_values(
 }
 
 ///|
+/// Source-spelled compatibility wrapper matching cpdfaddtext's `replace_pairs`.
+///
+/// The OCaml API receives precomputed page-reference lookup state and the page
+/// record; this wrapper derives the same page-local values from `document`.
+pub fn pdf_replace_pairs(
+  bookmarks : ArrayView[PdfBookmark],
+  document : PdfDocument,
+  end_page : Int,
+  filename : String,
+  bates : Int,
+  bates_pad : Int?,
+  page_number : Int,
+) -> Array[(String, () -> String)] raise PdfError {
+  let values = document.addtext_replacement_values(
+    bookmarks, page_number, end_page, filename, bates, bates_pad,
+  )
+  pdf_addtext_replacement_pairs(values)
+}
+
+///|
 fn pdf_addtext_afm_header_value(data : PdfAfmData, key : String) -> String? {
   let key_bytes = @ascii.encode(key)
   for entry in data.headers {

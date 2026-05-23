@@ -8938,6 +8938,18 @@ Current backend snapshot:
   1/1; `moon check --target all --warn-list +73` passes with the known
   `markdown/cmd` future notice; `moon test --target native` reports
   2416/2416.~~
+- [x] ~~Continue source-port hardening with another small cpdf-source API parity
+  gap: the root package now exposes `pdf_replace_pairs`, a source-spelled
+  compatibility wrapper for cpdfaddtext's `replace_pairs` that derives the
+  page-label, bookmark, Bates, filename, and page-count callbacks from the
+  existing `PdfDocument::addtext_replacement_values` and
+  `pdf_addtext_replacement_pairs` implementation. Coverage pins wrapper parity
+  and the concrete `%Page|%EndPage|%Label|%Bates` expansion. Validation on
+  MoonBit compiler 0.9.3: `moon check --target native --warn-list +73` passes
+  with the known `markdown/cmd` future notice; `moon test --target native
+  pdf_addtext_test.mbt --filter '*replace_pairs*'` reports 1/1; `moon check
+  --target all --warn-list +73` passes with the known `markdown/cmd` future
+  notice; `moon test --target native` reports 2417/2417.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
