@@ -68,7 +68,15 @@ test "pdf_metadata_encode_output preserves raw utf8 and stripped forms" {
     @utf8.encode("A ☃ B"),
   )
   @test.assert_eq(
+    try! @pdflite.pdf_encode_output(PdfMetadataUTF8, snowman),
+    @utf8.encode("A ☃ B"),
+  )
+  @test.assert_eq(
     try! @pdflite.pdf_metadata_encode_output(PdfMetadataStripped, snowman),
+    @ascii.encode("A  B"),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_encode_output(PdfMetadataStripped, snowman),
     @ascii.encode("A  B"),
   )
 }

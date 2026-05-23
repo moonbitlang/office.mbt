@@ -762,6 +762,8 @@ pub fn pdf_encode_filter_view(@core.PdfName, BytesView) -> Bytes raise @core.Pdf
 
 pub fn pdf_encode_filter_view_with_flate_level(@core.PdfName, BytesView, Int) -> Bytes raise @core.PdfError
 
+pub fn pdf_encode_output(PdfMetadataEncoding, BytesView) -> Bytes raise @core.PdfError
+
 pub fn pdf_encode_predictor(Int, Int, Int, Int, Bytes) -> Bytes raise @core.PdfError
 
 pub fn pdf_encode_predictor_view(Int, Int, Int, Int, BytesView) -> Bytes raise @core.PdfError

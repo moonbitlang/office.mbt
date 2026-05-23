@@ -422,6 +422,15 @@ pub fn pdf_metadata_encode_output(
 }
 
 ///|
+/// Source-spelled compatibility alias for cpdfmetadata's `encode_output`.
+pub fn pdf_encode_output(
+  encoding : PdfMetadataEncoding,
+  bytes : BytesView,
+) -> PdfBytes raise PdfError {
+  pdf_metadata_encode_output(encoding, bytes)
+}
+
+///|
 fn PdfDocument::pdf_metadata_bump_minor(
   self : PdfDocument,
   version : Int,

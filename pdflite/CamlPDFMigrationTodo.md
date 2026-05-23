@@ -47,8 +47,9 @@ Current estimate:
   composition reporting, core metadata APIs and cpdfmetadata string-key/source-
   order/open-action destination wrappers, XMP metadata-date rewriting, XMP info
   synchronization, XMP metadata creation, XMP RDF list extraction,
-  XMP/document info JSON reporting, cpdfmetadata namespace/get-data/XML-tree
-  helper parity, native metadata file set/write/extract wrappers, and XML
+  XMP/document info JSON reporting, cpdfmetadata source-spelled encode-output
+  alias and namespace/get-data/XML-tree helper parity, native metadata file
+  set/write/extract wrappers, and XML
   entity/whitespace decoding, redaction annotation bounding-box overlays,
   cpdfredact apply alias and source-order bounding-box wrapper,
   cpdfua subformat parser alias and Matterhorn content/role-map/XMP/
@@ -105,6 +106,19 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfmetadata` source/API parity from
+  `.repos/cpdf-source/cpdfmetadata.mli`: added source-spelled
+  `pdf_encode_output` over the existing `pdf_metadata_encode_output` byte
+  encoder for Raw, UTF8, and Stripped metadata/report output. Coverage compares
+  the alias against the established UTF8 and Stripped branches in the metadata
+  encoder test. Validation on MoonBit 0.9.3: `moon check --target native
+  --warn-list +73` passes with the known `markdown/cmd` future notice; `moon
+  test --target native pdf_metadata_test.mbt --filter '*encode_output*'`,
+  `moon test --target wasm-gc pdf_metadata_test.mbt --filter
+  '*encode_output*'`, and `moon test --target js pdf_metadata_test.mbt --filter
+  '*encode_output*'` report 1/1 each; `moon fmt`, `moon info`, and `moon check
+  --target all --warn-list +73` pass with only the existing `markdown/cmd`
+  future notice; full `moon test --target native` reports 2414/2414.~~
 - [x] ~~Continue `cpdftexttopdf` source/API parity from
   `.repos/cpdf-source/cpdftexttopdf.mli`: added
   `pdf_texttopdf_typeset_cpdf_order` over the established
