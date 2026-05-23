@@ -138,6 +138,51 @@ let pdf_addtext_ca_stroke_key_name : PdfName = pdf_name_of_bytes(
 )
 
 ///|
+let pdf_addtext_subtype_key_name : PdfName = pdf_name_of_bytes(
+  @ascii.encode("/Subtype"),
+)
+
+///|
+let pdf_addtext_link_name : PdfName = pdf_name_of_bytes(@ascii.encode("/Link"))
+
+///|
+let pdf_addtext_quadpoints_key_name : PdfName = pdf_name_of_bytes(
+  @ascii.encode("/QuadPoints"),
+)
+
+///|
+let pdf_addtext_rect_key_name : PdfName = pdf_name_of_bytes(
+  @ascii.encode("/Rect"),
+)
+
+///|
+let pdf_addtext_bs_key_name : PdfName = pdf_name_of_bytes(@ascii.encode("/BS"))
+
+///|
+let pdf_addtext_w_key_name : PdfName = pdf_name_of_bytes(@ascii.encode("/W"))
+
+///|
+let pdf_addtext_a_key_name : PdfName = pdf_name_of_bytes(@ascii.encode("/A"))
+
+///|
+let pdf_addtext_uri_key_name : PdfName = pdf_name_of_bytes(
+  @ascii.encode("/URI"),
+)
+
+///|
+let pdf_addtext_type_key_name : PdfName = pdf_name_of_bytes(
+  @ascii.encode("/Type"),
+)
+
+///|
+let pdf_addtext_action_name : PdfName = pdf_name_of_bytes(
+  @ascii.encode("/Action"),
+)
+
+///|
+let pdf_addtext_s_key_name : PdfName = pdf_name_of_bytes(@ascii.encode("/S"))
+
+///|
 fn pdf_addtext_cpdf_stamp() -> PdfName {
   pdf_addtext_cpdf_stamp_name
 }
@@ -2267,11 +2312,6 @@ pub fn pdf_addtext_width_of_existing_font_resource(
 }
 
 ///|
-fn pdf_addtext_name(text : String) -> PdfName {
-  pdf_name_of_bytes(@ascii.encode(text))
-}
-
-///|
 /// Build cpdf's URL link annotation object for add-text markup.
 pub fn pdf_addtext_url_annotation(
   p0 : Point2,
@@ -2283,9 +2323,9 @@ pub fn pdf_addtext_url_annotation(
   url_border : Bool,
 ) -> PdfObject {
   PdfDictionary([
-    (pdf_addtext_name("/Subtype"), PdfNameObject(pdf_addtext_name("/Link"))),
+    (pdf_addtext_subtype_key_name, PdfNameObject(pdf_addtext_link_name)),
     (
-      pdf_addtext_name("/QuadPoints"),
+      pdf_addtext_quadpoints_key_name,
       PdfArray([
         PdfReal(p0.x),
         PdfReal(p0.y),
@@ -2298,7 +2338,7 @@ pub fn pdf_addtext_url_annotation(
       ]),
     ),
     (
-      pdf_addtext_name("/Rect"),
+      pdf_addtext_rect_key_name,
       PdfArray([
         PdfReal(rectangle.min_x),
         PdfReal(rectangle.min_y),
@@ -2307,17 +2347,17 @@ pub fn pdf_addtext_url_annotation(
       ]),
     ),
     (
-      pdf_addtext_name("/BS"),
+      pdf_addtext_bs_key_name,
       PdfDictionary([
-        (pdf_addtext_name("/W"), PdfInteger(if url_border { 1 } else { 0 })),
+        (pdf_addtext_w_key_name, PdfInteger(if url_border { 1 } else { 0 })),
       ]),
     ),
     (
-      pdf_addtext_name("/A"),
+      pdf_addtext_a_key_name,
       PdfDictionary([
-        (pdf_addtext_name("/URI"), PdfString(@utf8.encode(url))),
-        (pdf_addtext_name("/Type"), PdfNameObject(pdf_addtext_name("/Action"))),
-        (pdf_addtext_name("/S"), PdfNameObject(pdf_addtext_name("/URI"))),
+        (pdf_addtext_uri_key_name, PdfString(@utf8.encode(url))),
+        (pdf_addtext_type_key_name, PdfNameObject(pdf_addtext_action_name)),
+        (pdf_addtext_s_key_name, PdfNameObject(pdf_addtext_uri_key_name)),
       ]),
     ),
   ])

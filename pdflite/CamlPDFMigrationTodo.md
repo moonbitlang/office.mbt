@@ -8950,6 +8950,17 @@ Current backend snapshot:
   pdf_addtext_test.mbt --filter '*replace_pairs*'` reports 1/1; `moon check
   --target all --warn-list +73` passes with the known `markdown/cmd` future
   notice; `moon test --target native` reports 2417/2417.~~
+- [x] ~~Continue source-port hardening with a small add-text performance slice:
+  URL link annotation construction now reuses cached stable `PdfName` values
+  for `/Subtype`, `/Link`, `/QuadPoints`, `/Rect`, `/BS`, `/W`, `/A`, `/URI`,
+  `/Type`, `/Action`, and `/S` instead of rebuilding ASCII names for every URL
+  span. The change is private and leaves `pkg.generated.mbti` unchanged.
+  Validation on MoonBit compiler 0.9.3: `moon check --target native
+  --warn-list +73` passes with the known `markdown/cmd` future notice; `moon
+  test --target native pdf_addtext_test.mbt --filter '*url_annotation*'`
+  reports 8/8; `moon check --target all --warn-list +73` passes with the known
+  `markdown/cmd` future notice; `moon test --target native` reports
+  2417/2417.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
