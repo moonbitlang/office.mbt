@@ -899,3 +899,50 @@ pub fn pdf_toc_with_source(
 ) -> PdfDocument raise PdfError {
   document.toc_with_source(source, font_size, title, bookmark~, dotleader~)
 }
+
+///|
+/// Source-spelled high-level cpdftoc wrapper for non-structured TOC output.
+///
+/// The structured/PDF-UA table-of-contents path still needs full source-tree
+/// preservation, so this wrapper rejects that mode instead of dropping existing
+/// structure entries.
+pub fn PdfDocument::typeset_table_of_contents(
+  self : PdfDocument,
+  source : PdfTocFontSource,
+  font_size : Double,
+  title : BytesView,
+  bookmark : Bool,
+  dotleader : Bool,
+  process_struct_tree : Bool,
+  subformat? : PdfUASubformat? = None,
+) -> PdfDocument raise PdfError {
+  if process_struct_tree || subformat != None {
+    raise SoftError(
+      "typeset_table_of_contents: structured TOC output is not implemented",
+    )
+  }
+  self.toc_with_source(source, font_size, title, bookmark~, dotleader~)
+}
+
+///|
+/// Compatibility wrapper matching cpdftoc's `typeset_table_of_contents` name.
+pub fn pdf_typeset_table_of_contents(
+  source : PdfTocFontSource,
+  font_size : Double,
+  title : BytesView,
+  bookmark : Bool,
+  dotleader : Bool,
+  process_struct_tree : Bool,
+  document : PdfDocument,
+  subformat? : PdfUASubformat? = None,
+) -> PdfDocument raise PdfError {
+  document.typeset_table_of_contents(
+    source,
+    font_size,
+    title,
+    bookmark,
+    dotleader,
+    process_struct_tree,
+    subformat~,
+  )
+}

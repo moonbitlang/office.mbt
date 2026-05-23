@@ -1980,6 +1980,8 @@ pub fn pdf_type_width_of_bytes(ArrayView[Double], BytesView) -> Double raise @co
 
 pub fn pdf_type_width_of_string(ArrayView[Double], BytesView) -> Double raise @core.PdfError
 
+pub fn pdf_typeset_table_of_contents(PdfTocFontSource, Double, BytesView, Bool, Bool, Bool, PdfDocument, subformat? : PdfUASubformat?) -> PdfDocument raise @core.PdfError
+
 pub fn pdf_ua_create_pdfua1(String, @geometry.PaperSize, Int) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_ua_create_pdfua2(String, @geometry.PaperSize, Int) -> PdfDocument raise @core.PdfError
@@ -3457,6 +3459,7 @@ pub fn PdfDocument::trim_marks(Self, ArrayView[Int], fast? : Bool) -> Self raise
 pub fn PdfDocument::trim_structure_tree(Self, ArrayView[Int]) -> Unit raise @core.PdfError
 pub fn PdfDocument::twoup(Self, fast? : Bool, process_struct_tree? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::twoup_stack(Self, fast? : Bool, process_struct_tree? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::typeset_table_of_contents(Self, PdfTocFontSource, Double, BytesView, Bool, Bool, Bool, subformat? : PdfUASubformat?) -> Self raise @core.PdfError
 pub fn PdfDocument::upright(Self, ArrayView[Int], fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::upright_pages(Self, ArrayView[Int], fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::version(Self) -> (Int, Int)

@@ -697,3 +697,88 @@ test "PdfDocument toc_with_source handles cpdftoc font-source dispatch" {
     fail("expected existing named font rejection")
   }
 }
+
+///|
+test "pdf_typeset_table_of_contents preserves cpdftoc argument order" {
+  let base = try! @pdflite.pdf_blank_document(100.0, 100.0, 2)
+  let page_refs = try! base.page_reference_numbers()
+  let source_bookmark : @pdflite.PdfBookmark = {
+    level: 0,
+    text: toc_pdfdoc_for_test("Second"),
+    target: DestFit(TargetPageObject(page_refs[1])),
+    is_open: true,
+    colour: @pdflite.pdf_bookmark_black,
+    flags: 0,
+  }
+  let document = try! base.add_bookmarks([source_bookmark])
+  let pack = toc_standard_pack_for_test()
+  let title = toc_bytes_for_test("Contents")
+  let from_method = try! document.typeset_table_of_contents(
+    PdfTocPreMadeFontPack(pack),
+    10.0,
+    title,
+    true,
+    true,
+    false,
+  )
+  let wrapped = try! @pdflite.pdf_typeset_table_of_contents(
+    PdfTocPreMadeFontPack(pack),
+    10.0,
+    title,
+    true,
+    true,
+    false,
+    document,
+  )
+  let method_pages = try! from_method.pages_of_pagetree()
+  let wrapped_pages = try! wrapped.pages_of_pagetree()
+  @test.assert_eq(wrapped_pages.length(), method_pages.length())
+  let method_bookmarks = try! from_method.read_bookmarks(preserve_actions=true)
+  let wrapped_bookmarks = try! wrapped.read_bookmarks(preserve_actions=true)
+  @test.assert_eq(wrapped_bookmarks.length(), method_bookmarks.length())
+  @test.assert_eq(wrapped_bookmarks[0].text, method_bookmarks[0].text)
+  @test.assert_eq(
+    try! wrapped.page_number_of_target(wrapped_bookmarks[0].target),
+    try! from_method.page_number_of_target(method_bookmarks[0].target),
+  )
+  @test.assert_eq(wrapped_bookmarks[1].text, method_bookmarks[1].text)
+  @test.assert_eq(
+    try! wrapped.page_number_of_target(wrapped_bookmarks[1].target),
+    try! from_method.page_number_of_target(method_bookmarks[1].target),
+  )
+
+  let structured : Result[@pdflite.PdfDocument, Error] = try? document.typeset_table_of_contents(
+    PdfTocPreMadeFontPack(pack),
+    10.0,
+    title,
+    false,
+    false,
+    true,
+  )
+  guard structured
+    is Err(
+      @pdflite.PdfError::SoftError(
+        "typeset_table_of_contents: structured TOC output is not implemented"
+      )
+    ) else {
+    fail("expected structured TOC rejection")
+  }
+  let pdfua : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_typeset_table_of_contents(
+    PdfTocPreMadeFontPack(pack),
+    10.0,
+    title,
+    false,
+    false,
+    false,
+    document,
+    subformat=Some(PdfUA1),
+  )
+  guard pdfua
+    is Err(
+      @pdflite.PdfError::SoftError(
+        "typeset_table_of_contents: structured TOC output is not implemented"
+      )
+    ) else {
+    fail("expected PDF/UA TOC rejection")
+  }
+}

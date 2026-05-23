@@ -108,6 +108,23 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdftoc` source/API parity from
+  `.repos/cpdf-source/cpdftoc.mli`: added source-spelled
+  `PdfDocument::typeset_table_of_contents` and
+  `pdf_typeset_table_of_contents` over the existing non-structured TOC
+  pipeline, preserving cpdf's required argument order for font source, size,
+  title, bookmark flag, dot-leader flag, structure flag, and document. The
+  wrapper keeps the deferred structured/PDF-UA TOC mode explicit by rejecting
+  it instead of replacing existing structure trees. Coverage compares the
+  method and source-spelled wrapper across generated TOC pages, generated TOC
+  bookmark targets, existing bookmark retargeting, dot leaders, and structured
+  mode/PDF-UA rejection. Validation on MoonBit 0.9.3: `moon check --target
+  native . --warn-list +73` passes; `moon test --target native
+  pdf_toc_test.mbt`, `moon test --target wasm-gc pdf_toc_test.mbt`, and
+  `moon test --target js pdf_toc_test.mbt` each report 16/16; `moon fmt` and
+  `moon info` are clean; `moon check --target all --warn-list +73` passes with
+  the known `markdown/cmd` future notice; full `moon test --target native`
+  reports 2415/2415.~~
 - [x] ~~Harden the metadata source-corpus acceptance gate for the new
   cpdfmetadata text-output wrappers: the optional
   `.repos/cpdf-source/cpdfmanual.pdf` fixture now exercises `info_blob`,
