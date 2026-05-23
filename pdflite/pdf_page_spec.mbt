@@ -153,6 +153,12 @@ pub fn pdf_invert_page_range(
 }
 
 ///|
+/// Source-spelled compatibility alias for cpdfpagespec's `invert_range`.
+pub fn pdf_invert_range(end_page : Int, range : ArrayView[Int]) -> Array[Int] {
+  pdf_pagespec_invert_range(end_page, range)
+}
+
+///|
 fn pdf_pagespec_duplicate_range(
   count : Int,
   range : ArrayView[Int],

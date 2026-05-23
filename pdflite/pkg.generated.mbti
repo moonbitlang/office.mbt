@@ -848,6 +848,8 @@ pub fn pdf_int_array_of_bytes(BytesView) -> Array[Int]
 
 pub fn pdf_invert_page_range(Int, ArrayView[Int]) -> Array[Int]
 
+pub fn pdf_invert_range(Int, ArrayView[Int]) -> Array[Int]
+
 pub fn pdf_is_delimiter_byte(Int) -> Bool
 
 pub fn pdf_is_identity_h(PdfFont) -> Bool

@@ -86,6 +86,13 @@ test "cpdf pagespec applies odd even not duplicate and bounds filtering" {
     try! @pdflite.pdf_parse_pagespec_for_count(10, "NOT1-8even"),
     [1, 3, 5, 7, 9, 10],
   )
+  @test.assert_eq(@pdflite.pdf_invert_range(10, [2, 4, 6, 8]), [
+    1, 3, 5, 7, 9, 10,
+  ])
+  @test.assert_eq(
+    @pdflite.pdf_invert_range(10, [2, 4, 6, 8]),
+    @pdflite.pdf_invert_page_range(10, [2, 4, 6, 8]),
+  )
   @test.assert_eq(try! @pdflite.pdf_parse_pagespec_for_count(10, "2DUP1-3"), [
     1, 1, 2, 2, 3, 3,
   ])

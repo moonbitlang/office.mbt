@@ -48,7 +48,8 @@ Current estimate:
   table-directory assembly, width/subset partition helpers, higher-subset
   ToUnicode mapping, and integrated parsed-subset orchestration, imposition
   transform/content/page-assembly/
-  pattern-matrix kernels, cpdf chop source-order aliases, cpdf page
+  pattern-matrix kernels, cpdfpagespec source-spelled invert-range alias,
+  cpdf chop source-order aliases, cpdf page
   hard-box/removal/shift/scale/scale-to-fit/upright/set-mediabox/copy-box
   helpers, page-info report wrappers, upright predicate and page-redaction
   source-order aliases, pattern-matrix page rewrite wrapper, callback-first
@@ -88,6 +89,18 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfpagespec` source/API parity from
+  `.repos/cpdf-source/cpdfpagespec.mli`: added source-spelled
+  `pdf_invert_range` as an alias over the existing `pdf_invert_page_range`
+  implementation. Coverage checks the source-spelled alias against the expected
+  inverted page list and the established compatibility wrapper. Validation on
+  MoonBit 0.9.3: `moon check --target native --warn-list +73` passes with the
+  known `markdown/cmd` future notice; `moon test --target native
+  pdf_page_spec_test.mbt`, `moon test --target wasm-gc
+  pdf_page_spec_test.mbt`, and `moon test --target js pdf_page_spec_test.mbt`
+  report 7/7 each; `moon fmt`, `moon info`, and `moon check --target all
+  --warn-list +73` pass with only the existing `markdown/cmd` future notice;
+  full native `moon test --target native` reports 2408/2408.~~
 - [x] ~~Continue `cpdfstrftime` source/API parity from
   `.repos/cpdf-source/cpdfstrftime.mli`: added source-spelled public
   `pdf_dummy` value for cpdf's dummy time record while preserving
