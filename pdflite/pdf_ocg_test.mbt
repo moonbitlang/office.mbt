@@ -320,7 +320,16 @@ test "PdfDocument ocg_get_list returns raw layer names" {
   @test.assert_eq(try! @pdflite.pdf_ocg_get_list(doc), [
     ocg_bytes_for_test("Layer 1"),
   ])
+  @test.assert_eq(try! doc.ocg_list(false), ocg_bytes_for_test("Layer 1\n"))
+  @test.assert_eq(
+    try! @pdflite.pdf_ocg_list(false, doc),
+    ocg_bytes_for_test("Layer 1\n"),
+  )
   @test.assert_eq(try! ocg_catalog_document_for_test().ocg_get_list(), [])
+  @test.assert_eq(
+    try! @pdflite.pdf_ocg_list(false, ocg_catalog_document_for_test()),
+    Bytes::new(0),
+  )
 }
 
 ///|
@@ -425,6 +434,10 @@ test "PdfDocument ocg_list_json exports cpdf optional content shape" {
   @test.assert_eq(try! @pdflite.pdf_ocg_list_json(doc), expected)
   @test.assert_eq(
     try! @pdflite.pdf_ocg_list_json_blob(doc),
+    @utf8.encode(expected.stringify()),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_ocg_list(true, doc),
     @utf8.encode(expected.stringify()),
   )
   @test.assert_eq(

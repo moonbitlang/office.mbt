@@ -14,7 +14,8 @@ Current estimate:
   remain. Covered the byte, object, document, reader, lexeme, lookup/tree,
   colour-space, transform, destination, merge-helper, standard-font, Flate, and
   text/font extraction, cryptography and primitive crypto, page-tree, writer,
-  native async file I/O, codec, page-label, function, optional-content, and
+  native async file I/O, codec, page-label, function, optional-content and
+  cpdfocg source-spelled listing wrapper, and
   content-stream, annotation and cpdfannot JSON source-order wrappers,
   native secure-random, bookmark, image, structure,
   renumbering, standard and TrueType font-pack embedding, text-to-PDF
@@ -84,6 +85,18 @@ Current backend snapshot:
 
 ## Current Priority Checklist
 
+- [x] ~~Continue `cpdfocg` source/API parity from
+  `.repos/cpdf-source/cpdfocg.mli`: added source-spelled `pdf_ocg_list`
+  matching cpdf's json/document order while returning the bytes cpdf would
+  print through the existing optional-content listing paths. Coverage pins both
+  plain-text layer-name output and JSON forwarding, including the empty
+  no-OCG case. Validation on MoonBit 0.9.3: `moon check --target native
+  --warn-list +73` passes with the known `markdown/cmd` future notice; `moon
+  test --target native pdf_ocg_test.mbt`, `moon test --target wasm-gc
+  pdf_ocg_test.mbt`, and `moon test --target js pdf_ocg_test.mbt` report 18/18
+  each; `moon fmt`, `moon info`, and `moon check --target all --warn-list +73`
+  pass with only the existing `markdown/cmd` future notice; full native `moon
+  test --target native` reports 2408/2408.~~
 - [x] ~~Continue `cpdfannot` source/API parity from
   `.repos/cpdf-source/cpdfannot.mli`: added
   `pdf_get_annotations_json_cpdf_order` and

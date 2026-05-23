@@ -1198,6 +1198,33 @@ pub fn pdf_ocg_list_json_blob(
 }
 
 ///|
+/// Return cpdf's optional-content group listing output.
+pub fn PdfDocument::ocg_list(
+  self : PdfDocument,
+  json : Bool,
+) -> PdfBytes raise PdfError {
+  if json {
+    self.ocg_list_json_blob()
+  } else {
+    let output : Array[Byte] = []
+    for name in self.ocg_get_list() {
+      pdf_writer_push_view(output, pdf_utf8_of_pdfdocstring(name))
+      output.push(10)
+    }
+    Bytes::from_array(output)
+  }
+}
+
+///|
+/// Compatibility wrapper matching cpdfocg's `ocg_list`.
+pub fn pdf_ocg_list(
+  json : Bool,
+  document : PdfDocument,
+) -> PdfBytes raise PdfError {
+  document.ocg_list(json)
+}
+
+///|
 fn pdf_ocg_read_json_field(
   entries : Map[String, Json],
   key : String,
