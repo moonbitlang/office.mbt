@@ -8961,6 +8961,18 @@ Current backend snapshot:
   reports 8/8; `moon check --target all --warn-list +73` passes with the known
   `markdown/cmd` future notice; `moon test --target native` reports
   2417/2417.~~
+- [x] ~~Continue source-port hardening with a small encrypted-stream
+  performance slice: the crypt stream-policy path now reuses a cached
+  `/Length` `PdfName` when checking identity crypt filters, matching the
+  existing cached `/Filter`, `/DecodeParms`, `/Name`, and `/Type` keys and
+  avoiding one remaining stable ASCII name rebuild in encrypted stream
+  dictionary checks. The change is private and leaves `pkg.generated.mbti`
+  unchanged. Validation on MoonBit compiler 0.9.3: `moon check --target native
+  --warn-list +73` passes with the known `markdown/cmd` future notice; `moon
+  test --target native pdf_crypt_test.mbt --filter '*stream*'` reports 9/9;
+  `moon check --target all --warn-list +73` passes with the known
+  `markdown/cmd` future notice; `moon test --target native` reports
+  2417/2417.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

@@ -1,6 +1,11 @@
 ///|
+let pdf_crypt_stream_length_key_name : PdfName = pdf_name_of_bytes(
+  @ascii.encode("/Length"),
+)
+
+///|
 fn pdf_crypt_stream_length_key() -> PdfName {
-  pdf_name_of_bytes(@ascii.encode("/Length"))
+  pdf_crypt_stream_length_key_name
 }
 
 ///|
