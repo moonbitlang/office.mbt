@@ -469,11 +469,10 @@ pub fn PdfDocument::composition_text(
 
 ///|
 fn pdf_composition_bytes_with_newline(bytes : BytesView) -> PdfBytes {
-  let output : Array[Byte] = []
-  for byte in bytes {
-    output.push(byte)
+  let output = Array::make(bytes.length() + 1, b'\n')
+  for i in 0..<bytes.length() {
+    output[i] = bytes[i]
   }
-  output.push(10)
   Bytes::from_array(output)
 }
 

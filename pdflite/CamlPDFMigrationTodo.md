@@ -9203,6 +9203,16 @@ Current backend snapshot:
   native pdf_page_test.mbt` reports 82/82; `moon check --target all --warn-list
   +73` passes with the known notice; `moon test --target native` reports
   2428/2428.~~
+- [x] ~~Continue source-port hardening with a composition JSON wrapper
+  performance slice: `pdf_composition_bytes_with_newline` now allocates the
+  exact JSON byte length plus one newline byte and fills the borrowed JSON bytes
+  by index instead of growing the output array, preserving `pdf_show_composition`
+  JSON/newline output and the plain-text composition wrapper behavior.
+  Validation on MoonBit compiler 0.9.3: `moon check --target native --warn-list
+  +73` passes with the known notice; focused composition JSON tests report 1/1;
+  `moon test --target native pdf_composition_test.mbt` reports 3/3; `moon check
+  --target all --warn-list +73` passes with the known notice; `moon test
+  --target native` reports 2428/2428.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
