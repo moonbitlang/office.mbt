@@ -176,8 +176,9 @@ pub fn pdf_ascii85_encode(data : PdfBytes) -> PdfBytes {
 fn pdf_ascii85_decode_group(
   digits : ArrayView[Int],
   output : Array[Byte],
+  position : Int,
   output_length : Int,
-) -> Unit raise PdfError {
+) -> Int raise PdfError {
   let mut word : UInt64 = 0
   for digit in digits {
     word = word * 85 + digit.to_uint64()
@@ -185,25 +186,32 @@ fn pdf_ascii85_decode_group(
   if word > pdf_ascii85_max_word {
     raise InvalidASCII85Data
   }
+  let mut current = position
   if output_length >= 1 {
-    output.push((word / 16777216).to_byte())
+    output[current] = (word / 16777216).to_byte()
+    current += 1
   }
   if output_length >= 2 {
-    output.push((word / 65536 % 256).to_byte())
+    output[current] = (word / 65536 % 256).to_byte()
+    current += 1
   }
   if output_length >= 3 {
-    output.push((word / 256 % 256).to_byte())
+    output[current] = (word / 256 % 256).to_byte()
+    current += 1
   }
   if output_length >= 4 {
-    output.push((word % 256).to_byte())
+    output[current] = (word % 256).to_byte()
+    current += 1
   }
+  current
 }
 
 ///|
 fn pdf_ascii85_finish_partial(
   digits : Array[Int],
   output : Array[Byte],
-) -> Unit raise PdfError {
+  position : Int,
+) -> Int raise PdfError {
   if digits.length() == 1 {
     raise InvalidASCII85Data
   } else if digits.length() > 1 {
@@ -211,7 +219,9 @@ fn pdf_ascii85_finish_partial(
     while digits.length() < 5 {
       digits.push(84)
     }
-    pdf_ascii85_decode_group(digits, output, output_length)
+    pdf_ascii85_decode_group(digits, output, position, output_length)
+  } else {
+    position
   }
 }
 
@@ -221,7 +231,8 @@ fn pdf_ascii85_finish_partial(
 /// Whitespace is ignored. Missing terminators, malformed partial groups,
 /// invalid `z` placement, and overflowing groups raise `PdfError::InvalidASCII85Data`.
 pub fn pdf_ascii85_decode_view(data : BytesView) -> PdfBytes raise PdfError {
-  let output : Array[Byte] = []
+  let output = Array::make(data.length() * 4, b'\x00')
+  let mut position = 0
   let mut digits : Array[Int] = []
   let mut done = false
   for byte in data {
@@ -230,21 +241,21 @@ pub fn pdf_ascii85_decode_view(data : BytesView) -> PdfBytes raise PdfError {
       if pdf_is_whitespace_byte(value) {
         ()
       } else if byte == pdf_ascii85_terminator {
-        pdf_ascii85_finish_partial(digits, output)
+        position = pdf_ascii85_finish_partial(digits, output, position)
         done = true
       } else if byte == pdf_ascii85_zero {
         if digits.length() == 0 {
-          output.push(0)
-          output.push(0)
-          output.push(0)
-          output.push(0)
+          for _ in 0..<4 {
+            output[position] = b'\x00'
+            position += 1
+          }
         } else {
           raise InvalidASCII85Data
         }
       } else if value >= 33 && value <= 117 {
         digits.push(value - 33)
         if digits.length() == 5 {
-          pdf_ascii85_decode_group(digits, output, 4)
+          position = pdf_ascii85_decode_group(digits, output, position, 4)
           digits = []
         }
       } else {
@@ -255,7 +266,7 @@ pub fn pdf_ascii85_decode_view(data : BytesView) -> PdfBytes raise PdfError {
   if !done {
     raise InvalidASCII85Data
   }
-  Bytes::from_array(output)
+  Bytes::from_array(output[:position])
 }
 
 ///|

@@ -202,6 +202,10 @@ test "pdf_ascii85_decode expands zero and partial chunks" {
     try! @pdflite.pdf_ascii85_decode(codec_ascii_for_test("z~>")),
     codec_bytes_for_test([0, 0, 0, 0]),
   )
+  @test.assert_eq(
+    try! @pdflite.pdf_ascii85_decode(codec_ascii_for_test("~>")),
+    codec_bytes_for_test([]),
+  )
 }
 
 ///|
