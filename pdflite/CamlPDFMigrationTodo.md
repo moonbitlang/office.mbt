@@ -9023,6 +9023,15 @@ Current backend snapshot:
   fixture_acceptance` reports 135/135; `moon check --target all --warn-list
   +73` passes with the known notice; `moon test --target native` reports
   2426/2426.~~
+- [x] ~~Continue source-port hardening with checked-in xref-stream
+  repair/tolerance gates: the CamlPDF introduction fixture now corrupts the
+  startxref-targeted xref stream's indexed `/Size` entry and direct `/Length`
+  entry, preserving the 10-page output through strict and public parser
+  tolerance/repair plus compressed rewrite/reread. Validation on MoonBit
+  compiler 0.9.3: focused checked-in CamlPDF introduction xref-stream gates
+  report 12/12; `moon test --target native fixture_acceptance` reports 137/137;
+  `moon check --target all --warn-list +73` passes with the known notice; `moon
+  test --target native` reports 2428/2428.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

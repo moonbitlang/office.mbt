@@ -11988,6 +11988,17 @@ async test "checked-in CamlPDF introduction fixture reconstructs malformed xref 
 }
 
 ///|
+async test "checked-in CamlPDF introduction fixture tolerates malformed indexed xref stream size" {
+  fixture_acceptance_assert_xref_stream_size_entry_tolerates_for_test(
+    fixture_acceptance_bytes_for_test(
+      "fixtures/camlpdf/introduction_to_camlpdf.pdf",
+    ),
+    10,
+    @ascii.encode("/Size 104\n"),
+  )
+}
+
+///|
 async test "checked-in CamlPDF introduction fixture reconstructs malformed xref stream DecodeParms" {
   fixture_acceptance_assert_xref_stream_decodeparms_reconstructs_for_test(
     fixture_acceptance_bytes_for_test(
@@ -12061,6 +12072,17 @@ async test "checked-in CamlPDF introduction fixture reconstructs malformed xref 
     ),
     10,
     @ascii.encode("/Root 101 0 R"),
+  )
+}
+
+///|
+async test "checked-in CamlPDF introduction fixture repairs malformed xref stream length" {
+  fixture_acceptance_assert_xref_stream_length_entry_repairs_for_test(
+    fixture_acceptance_bytes_for_test(
+      "fixtures/camlpdf/introduction_to_camlpdf.pdf",
+    ),
+    10,
+    @ascii.encode("/Length 271 "),
   )
 }
 
