@@ -90,11 +90,21 @@ pub fn pdf_string_of_type_element(element : PdfTypeElement) -> PdfBytes {
 ///|
 /// Render a cpdftype element stream using CamlPDF's leading-newline format.
 pub fn pdf_string_of_type(elements : ArrayView[PdfTypeElement]) -> PdfBytes {
-  let output : Array[Byte] = []
-  for element in elements {
-    output.push(10)
-    for byte in pdf_string_of_type_element(element) {
-      output.push(byte)
+  let rendered = Array::make(elements.length(), pdf_type_ascii(""))
+  let mut output_length = 0
+  for i = 0; i < elements.length(); i = i + 1 {
+    let element_bytes = pdf_string_of_type_element(elements[i])
+    rendered[i] = element_bytes
+    output_length += 1 + element_bytes.length()
+  }
+  let output = Array::make(output_length, b'\x00')
+  let mut position = 0
+  for element_bytes in rendered {
+    output[position] = 10
+    position += 1
+    for byte in element_bytes {
+      output[position] = byte
+      position += 1
     }
   }
   Bytes::from_array(output)

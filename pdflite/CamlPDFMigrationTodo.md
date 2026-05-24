@@ -9171,6 +9171,16 @@ Current backend snapshot:
   reports 11/11; `moon check --target all --warn-list +73` passes with the
   known notice after a transient rebuilt-core artifact race; `moon test --target
   native` reports 2428/2428.~~
+- [x] ~~Continue source-port hardening with a cpdftype debug-rendering
+  performance slice: `pdf_string_of_type` now renders each element once to
+  precompute the exact leading-newline output length, allocates one output byte
+  buffer, and fills newline markers and element bytes by index instead of
+  growing the byte array, preserving the CamlPDF stream spelling and empty
+  output. Validation on MoonBit compiler 0.9.3: `moon check --target native
+  --warn-list +73` passes with the known notice; focused string-rendering tests
+  report 2/2; `moon test --target native pdf_type_test.mbt` reports 11/11;
+  `moon check --target all --warn-list +73` passes with the known notice; `moon
+  test --target native` reports 2428/2428.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
