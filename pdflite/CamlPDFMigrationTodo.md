@@ -9181,6 +9181,16 @@ Current backend snapshot:
   report 2/2; `moon test --target native pdf_type_test.mbt` reports 11/11;
   `moon check --target all --warn-list +73` passes with the known notice; `moon
   test --target native` reports 2428/2428.~~
+- [x] ~~Continue source-port hardening with an object unique-key performance
+  slice: `pdf_object_unique_key_candidate` now encodes the prefix and numeric
+  suffix once, allocates the exact slash-prefixed key length, and fills the
+  candidate name bytes by index instead of growing the output array, preserving
+  CamlPDF scan order, empty-prefix names, stream dictionary lookup, and
+  non-dictionary errors. Validation on MoonBit compiler 0.9.3: `moon check
+  --target native --warn-list +73` passes with the known notice; focused
+  `unique_key` tests report 4/4; `moon test --target native pdf_object_test.mbt`
+  reports 12/12; `moon check --target all --warn-list +73` passes with the
+  known notice; `moon test --target native` reports 2428/2428.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

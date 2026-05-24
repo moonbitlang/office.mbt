@@ -475,12 +475,21 @@ fn dict_add_entries(
 
 ///|
 fn pdf_object_unique_key_candidate(prefix : String, index : Int) -> PdfName {
-  let output : Array[Byte] = [47]
-  for byte in @ascii.encode(prefix) {
-    output.push(byte)
+  let prefix_bytes = @ascii.encode(prefix)
+  let index_bytes = @ascii.encode(index.to_string())
+  let output = Array::make(
+    1 + prefix_bytes.length() + index_bytes.length(),
+    b'\x00',
+  )
+  output[0] = 47
+  let mut position = 1
+  for byte in prefix_bytes {
+    output[position] = byte
+    position += 1
   }
-  for byte in @ascii.encode(index.to_string()) {
-    output.push(byte)
+  for byte in index_bytes {
+    output[position] = byte
+    position += 1
   }
   pdf_name_of_bytes(Bytes::from_array(output))
 }
