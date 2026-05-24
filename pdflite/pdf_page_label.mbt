@@ -574,15 +574,25 @@ pub fn pdf_page_label_text_of_single(
   label : PdfPageLabel,
 ) -> PdfBytes {
   let real_number = page_number - (label.start_page - label.start_value)
-  let output : Array[Byte] = []
+  let number_bytes = pdf_page_label_number_bytes(real_number, label.label_style)
+  let prefix_length = match label.label_prefix {
+    Some(prefix) => prefix.length()
+    None => 0
+  }
+  let output = Array::make(prefix_length + number_bytes.length(), b'\x00')
+  let mut position = 0
   match label.label_prefix {
-    Some(prefix) => pdf_page_label_push_bytes(output, prefix)
+    Some(prefix) =>
+      for byte in prefix {
+        output[position] = byte
+        position += 1
+      }
     None => ()
   }
-  pdf_page_label_push_bytes(
-    output,
-    pdf_page_label_number_bytes(real_number, label.label_style),
-  )
+  for byte in number_bytes {
+    output[position] = byte
+    position += 1
+  }
   Bytes::from_array(output)
 }
 
