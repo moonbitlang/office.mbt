@@ -8999,6 +8999,18 @@ Current backend snapshot:
   `moon check --target all --warn-list +73` passes with the known
   `markdown/cmd` future notice; `moon test --target native` reports
   2420/2420.~~
+- [x] ~~Continue source-port hardening with checked-in malformed xref-stream
+  recovery gates: the CamlPDF introduction fixture now corrupts the
+  startxref-targeted xref stream's `/Type /XRef`, `stream`, `endstream`,
+  `endobj`, and `/Root` metadata, requiring strict failure, public
+  reconstruction with `first_xref = 0`, and preserved 10-page output after
+  compressed rewrite/reread. Validation on MoonBit
+  compiler 0.9.3: `moon check --target native --warn-list +73` passes with the
+  known `markdown/cmd` future notice; focused checked-in CamlPDF introduction
+  malformed xref-stream gates report 8/8; `moon test --target native
+  fixture_acceptance` reports 133/133; `moon check --target all --warn-list
+  +73` passes with the known notice; `moon test --target native` reports
+  2424/2424.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

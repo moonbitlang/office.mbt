@@ -11972,6 +11972,53 @@ async test "checked-in CamlPDF introduction fixture reconstructs malformed xref 
 }
 
 ///|
+async test "checked-in CamlPDF introduction fixture reconstructs malformed xref stream type" {
+  fixture_acceptance_assert_xref_stream_type_reconstructs_for_test(
+    fixture_acceptance_bytes_for_test(
+      "fixtures/camlpdf/introduction_to_camlpdf.pdf",
+    ),
+    10,
+  )
+}
+
+///|
+async test "checked-in CamlPDF introduction fixture reconstructs malformed xref stream marker" {
+  fixture_acceptance_assert_xref_stream_marker_reconstructs_for_test(
+    fixture_acceptance_bytes_for_test(
+      "fixtures/camlpdf/introduction_to_camlpdf.pdf",
+    ),
+    10,
+  )
+}
+
+///|
+async test "checked-in CamlPDF introduction fixture reconstructs malformed xref stream terminators" {
+  fixture_acceptance_assert_xref_stream_endstream_reconstructs_for_test(
+    fixture_acceptance_bytes_for_test(
+      "fixtures/camlpdf/introduction_to_camlpdf.pdf",
+    ),
+    10,
+  )
+  fixture_acceptance_assert_xref_stream_endobj_reconstructs_for_test(
+    fixture_acceptance_bytes_for_test(
+      "fixtures/camlpdf/introduction_to_camlpdf.pdf",
+    ),
+    10,
+  )
+}
+
+///|
+async test "checked-in CamlPDF introduction fixture reconstructs malformed xref stream root" {
+  fixture_acceptance_assert_xref_stream_root_entry_reconstructs_for_test(
+    fixture_acceptance_bytes_for_test(
+      "fixtures/camlpdf/introduction_to_camlpdf.pdf",
+    ),
+    10,
+    @ascii.encode("/Root 101 0 R"),
+  )
+}
+
+///|
 async test "checked-in CamlPDF introduction fixture reconstructs xref stream bad startxref" {
   fixture_acceptance_assert_reconstructs_for_test(
     fixture_acceptance_bytes_for_test(
