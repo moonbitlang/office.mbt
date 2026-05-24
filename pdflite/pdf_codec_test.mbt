@@ -919,6 +919,10 @@ test "pdf_encode_predictor emits tiff predictor 2 rows" {
 ///|
 test "pdf_decode_predictor decodes png row filters" {
   @test.assert_eq(
+    try! @pdflite.pdf_decode_predictor(10, 1, 8, 3, codec_bytes_for_test([])),
+    codec_bytes_for_test([]),
+  )
+  @test.assert_eq(
     try! @pdflite.pdf_decode_predictor(
       15,
       1,
