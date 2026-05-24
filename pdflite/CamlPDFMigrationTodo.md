@@ -9223,6 +9223,16 @@ Current backend snapshot:
   report 1/1; `moon test --target native pdf_toc_test.mbt` reports 16/16; `moon
   check --target all --warn-list +73` passes with the known notice; `moon test
   --target native` reports 2428/2428.~~
+- [x] ~~Continue source-port hardening with a page-label letter performance
+  slice: `pdf_page_label_letters` now allocates the exact repeated-letter label
+  length and fills it with the computed uppercase/lowercase byte instead of
+  growing the output array, preserving uppercase and lowercase letter labels,
+  prefixed visible labels, roman labels, and prefix-only labels. Validation on
+  MoonBit compiler 0.9.3: `moon check --target native --warn-list +73` passes
+  with the known notice; focused visible-label tests report 1/1; `moon test
+  --target native pdf_page_label_test.mbt` reports 25/25; `moon check --target
+  all --warn-list +73` passes with the known notice; `moon test --target native`
+  reports 2428/2428.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

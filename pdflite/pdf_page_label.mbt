@@ -535,16 +535,15 @@ fn pdf_page_label_lowercase(bytes : PdfBytes) -> PdfBytes {
 
 ///|
 fn pdf_page_label_letters(number : Int, lowercase : Bool) -> PdfBytes {
-  let output : Array[Byte] = []
   if number > 0 {
     let letter = (number - 1) % 26
     let count = (number - 1) / 26 + 1
     let base = if lowercase { 97 } else { 65 }
-    for _ in 0..<count {
-      output.push((base + letter).to_byte())
-    }
+    let output = Array::make(count, (base + letter).to_byte())
+    Bytes::from_array(output)
+  } else {
+    []
   }
-  Bytes::from_array(output)
 }
 
 ///|
