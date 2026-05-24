@@ -1460,6 +1460,11 @@ pub fn pdf_decode_predictor(
 }
 
 ///|
+fn pdf_encode_png_encoded_length(data : BytesView, scanline_width : Int) -> Int {
+  data.length() / scanline_width * (scanline_width + 1)
+}
+
+///|
 fn pdf_encode_png_sub_predictor(
   colors : Int,
   bits_per_component : Int,
@@ -1472,10 +1477,15 @@ fn pdf_encode_png_sub_predictor(
   let bytes_per_pixel = pdf_predictor_bytes_per_pixel(
     colors, bits_per_component,
   )
-  let output : Array[Byte] = []
+  let output = Array::make(
+    pdf_encode_png_encoded_length(data, scanline_width),
+    b'\x00',
+  )
+  let mut position = 0
   for row in 0..<(data.length() / scanline_width) {
-    pdf_encode_png_push_scanline(
+    position = pdf_encode_png_push_scanline(
       output,
+      position,
       1,
       data,
       row * scanline_width,
@@ -1483,7 +1493,7 @@ fn pdf_encode_png_sub_predictor(
       bytes_per_pixel,
     )
   }
-  Bytes::from_array(output)
+  Bytes::from_array(output[:position])
 }
 
 ///|
@@ -1499,10 +1509,15 @@ fn pdf_encode_png_up_predictor(
   let bytes_per_pixel = pdf_predictor_bytes_per_pixel(
     colors, bits_per_component,
   )
-  let output : Array[Byte] = []
+  let output = Array::make(
+    pdf_encode_png_encoded_length(data, scanline_width),
+    b'\x00',
+  )
+  let mut position = 0
   for row in 0..<(data.length() / scanline_width) {
-    pdf_encode_png_push_scanline(
+    position = pdf_encode_png_push_scanline(
       output,
+      position,
       2,
       data,
       row * scanline_width,
@@ -1510,7 +1525,7 @@ fn pdf_encode_png_up_predictor(
       bytes_per_pixel,
     )
   }
-  Bytes::from_array(output)
+  Bytes::from_array(output[:position])
 }
 
 ///|
@@ -1550,21 +1565,26 @@ fn pdf_encode_png_predictor_value(
 ///|
 fn pdf_encode_png_push_scanline(
   output : Array[Byte],
+  position : Int,
   predictor : Int,
   data : BytesView,
   row_start : Int,
   scanline_width : Int,
   bytes_per_pixel : Int,
-) -> Unit raise PdfError {
-  output.push(predictor.to_byte())
+) -> Int raise PdfError {
+  let mut current = position
+  output[current] = predictor.to_byte()
+  current += 1
   for i in 0..<scanline_width {
     let predicted = pdf_encode_png_predictor_value(
       predictor, data, row_start, i, scanline_width, bytes_per_pixel,
     )
-    output.push(
-      pdf_predictor_wrapping_byte(data[row_start + i].to_int() - predicted),
+    output[current] = pdf_predictor_wrapping_byte(
+      data[row_start + i].to_int() - predicted,
     )
+    current += 1
   }
+  current
 }
 
 ///|
@@ -1602,10 +1622,15 @@ fn pdf_encode_png_tagged_predictor(
   let bytes_per_pixel = pdf_predictor_bytes_per_pixel(
     colors, bits_per_component,
   )
-  let output : Array[Byte] = []
+  let output = Array::make(
+    pdf_encode_png_encoded_length(data, scanline_width),
+    b'\x00',
+  )
+  let mut position = 0
   for row in 0..<(data.length() / scanline_width) {
-    pdf_encode_png_push_scanline(
+    position = pdf_encode_png_push_scanline(
       output,
+      position,
       predictor,
       data,
       row * scanline_width,
@@ -1613,7 +1638,7 @@ fn pdf_encode_png_tagged_predictor(
       bytes_per_pixel,
     )
   }
-  Bytes::from_array(output)
+  Bytes::from_array(output[:position])
 }
 
 ///|
@@ -1629,7 +1654,11 @@ fn pdf_encode_png_optimum_predictor(
   let bytes_per_pixel = pdf_predictor_bytes_per_pixel(
     colors, bits_per_component,
   )
-  let output : Array[Byte] = []
+  let output = Array::make(
+    pdf_encode_png_encoded_length(data, scanline_width),
+    b'\x00',
+  )
+  let mut position = 0
   for row in 0..<(data.length() / scanline_width) {
     let row_start = row * scanline_width
     let mut best_predictor = 0
@@ -1645,11 +1674,11 @@ fn pdf_encode_png_optimum_predictor(
         best_score = score
       }
     }
-    pdf_encode_png_push_scanline(
-      output, best_predictor, data, row_start, scanline_width, bytes_per_pixel,
+    position = pdf_encode_png_push_scanline(
+      output, position, best_predictor, data, row_start, scanline_width, bytes_per_pixel,
     )
   }
-  Bytes::from_array(output)
+  Bytes::from_array(output[:position])
 }
 
 ///|

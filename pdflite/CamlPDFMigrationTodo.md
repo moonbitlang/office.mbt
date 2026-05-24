@@ -9110,6 +9110,16 @@ Current backend snapshot:
   predictor tests report 16/16; `moon test --target native pdf_codec_test.mbt`
   reports 82/82; `moon check --target all --warn-list +73` passes with the
   known notice; `moon test --target native` reports 2428/2428.~~
+- [x] ~~Continue source-port hardening with a PNG predictor encode performance
+  slice: fixed PNG predictors and optimum predictor selection now allocate exact
+  row-tagged output buffers, and `pdf_encode_png_push_scanline` writes each
+  predictor byte and encoded scanline by index instead of growing the output
+  array, preserving fixed/optimum PNG filters, byte-delta wrapping, ignored
+  partial trailing rows, and empty input. Validation on MoonBit compiler 0.9.3:
+  `moon check --target native --warn-list +73` passes with the known notice;
+  focused predictor tests report 16/16; `moon test --target native
+  pdf_codec_test.mbt` reports 82/82; `moon check --target all --warn-list +73`
+  passes with the known notice; `moon test --target native` reports 2428/2428.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

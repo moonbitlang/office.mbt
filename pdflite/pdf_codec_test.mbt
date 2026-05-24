@@ -1126,6 +1126,10 @@ test "pdf predictor view APIs read borrowed slices" {
 
 ///|
 test "pdf_encode_predictor emits png sub and up rows" {
+  @test.assert_eq(
+    try! @pdflite.pdf_encode_predictor(15, 1, 8, 3, codec_bytes_for_test([])),
+    codec_bytes_for_test([]),
+  )
   let none = try! @pdflite.pdf_encode_predictor(
     10,
     1,
