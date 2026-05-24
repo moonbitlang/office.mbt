@@ -96,23 +96,28 @@ let pdf_ascii85_max_word : UInt64 = 4294967295
 ///|
 fn pdf_ascii85_encode_word(
   output : Array[Byte],
+  position : Int,
   word : UInt64,
   output_length : Int,
   compress_zero : Bool,
-) -> Unit {
+) -> Int {
+  let mut current = position
   if compress_zero && word == 0 {
-    output.push(pdf_ascii85_zero)
+    output[current] = pdf_ascii85_zero
+    current += 1
   } else {
-    let digits : Array[Byte] = []
+    let digits = Array::make(5, b'!')
     let mut value = word
-    for _ in 0..<5 {
-      digits.push(((value % 85).to_int() + 33).to_byte())
+    for index in 0..<5 {
+      digits[index] = ((value % 85).to_int() + 33).to_byte()
       value = value / 85
     }
     for i in 0..<output_length {
-      output.push(digits[4 - i])
+      output[current] = digits[4 - i]
+      current += 1
     }
   }
+  current
 }
 
 ///|
@@ -135,18 +140,25 @@ fn pdf_ascii85_word_from_view(
 /// Four zero bytes are compressed as `z`, partial final groups are shortened,
 /// and the result ends with `~>`.
 pub fn pdf_ascii85_encode_view(data : BytesView) -> PdfBytes {
-  let output : Array[Byte] = []
+  let output = Array::make((data.length() + 3) / 4 * 5 + 2, b' ')
+  let mut position = 0
   let mut index = 0
   while index < data.length() {
     let remaining = data.length() - index
     let count = if remaining < 4 { remaining } else { 4 }
     let word = pdf_ascii85_word_from_view(data, index, count)
-    pdf_ascii85_encode_word(output, word, count + 1, count == 4)
+    position = pdf_ascii85_encode_word(
+      output,
+      position,
+      word,
+      count + 1,
+      count == 4,
+    )
     index += count
   }
-  output.push(pdf_ascii85_terminator)
-  output.push(62)
-  Bytes::from_array(output)
+  output[position] = pdf_ascii85_terminator
+  output[position + 1] = b'>'
+  Bytes::from_array(output[:position + 2])
 }
 
 ///|

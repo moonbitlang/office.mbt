@@ -178,6 +178,10 @@ test "pdf_ascii85_encode renders full partial and zero chunks" {
     @pdflite.pdf_ascii85_encode(codec_bytes_for_test([0, 0, 0, 0])),
     codec_ascii_for_test("z~>"),
   )
+  @test.assert_eq(
+    @pdflite.pdf_ascii85_encode(Bytes::new(0)),
+    codec_ascii_for_test("~>"),
+  )
 }
 
 ///|

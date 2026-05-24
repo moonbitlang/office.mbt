@@ -9062,6 +9062,15 @@ Current backend snapshot:
   report 5/5; `moon test --target native pdf_codec_test.mbt` reports 82/82;
   `moon check --target all --warn-list +73` passes with the known notice; `moon
   test --target native` reports 2428/2428.~~
+- [x] ~~Continue source-port hardening with an ASCII85 codec performance slice:
+  `pdf_ascii85_encode_view` now allocates one upper-bound output buffer, fills
+  full/partial/zero-compressed ASCII85 groups by index, and returns the written
+  prefix instead of growing a byte array per output group, preserving full,
+  partial, zero-compressed, and empty `~>` outputs. Validation on MoonBit
+  compiler 0.9.3: `moon check --target native --warn-list +73` passes with the
+  known notice; focused ASCII85 tests report 5/5; `moon test --target native
+  pdf_codec_test.mbt` reports 82/82; `moon check --target all --warn-list +73`
+  passes with the known notice; `moon test --target native` reports 2428/2428.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
