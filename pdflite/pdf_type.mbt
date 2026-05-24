@@ -184,7 +184,8 @@ pub fn pdf_type_split_text(
   widths : ArrayView[Double],
   text : BytesView,
 ) -> (PdfBytes, Bool, PdfBytes) raise PdfError {
-  let output : Array[Byte] = []
+  let output = Array::make(text.length(), b'\x00')
+  let mut output_position = 0
   let mut position = 0
   let mut remaining_space = space_left
   while position < text.length() {
@@ -195,12 +196,14 @@ pub fn pdf_type_split_text(
     let word_end = position
     let word = text[word_start:word_end]
     let word_width = pdf_type_width_of_bytes(widths, word)
-    if output.length() == 0 || word_width < remaining_space {
+    if output_position == 0 || word_width < remaining_space {
       for byte in word {
-        output.push(byte)
+        output[output_position] = byte
+        output_position += 1
       }
       if word_end < text.length() {
-        output.push(b' ')
+        output[output_position] = b' '
+        output_position += 1
         let space_width = pdf_type_width_of_bytes(
           widths,
           pdf_type_ascii(" ")[:],
@@ -212,10 +215,18 @@ pub fn pdf_type_split_text(
         position = word_end
       }
     } else {
-      return (Bytes::from_array(output), true, text[word_start:].to_owned())
+      return (
+        Bytes::from_array(output[:output_position]),
+        true,
+        text[word_start:].to_owned(),
+      )
     }
   }
-  (Bytes::from_array(output), false, text[position:].to_owned())
+  (
+    Bytes::from_array(output[:output_position]),
+    false,
+    text[position:].to_owned(),
+  )
 }
 
 ///|

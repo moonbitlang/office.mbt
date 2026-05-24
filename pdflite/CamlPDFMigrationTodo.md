@@ -9160,6 +9160,17 @@ Current backend snapshot:
   1/1; `moon test --target native pdf_writer_test.mbt` reports 28/28; `moon
   check --target all --warn-list +73` passes with the known notice; `moon test
   --target native` reports 2428/2428.~~
+- [x] ~~Continue source-port hardening with a cpdftype split-text performance
+  slice: `pdf_type_split_text` now allocates one bounded output buffer sized to
+  the borrowed input text, fills emitted word and separator bytes by index, and
+  returns the written prefix instead of growing the line output array, preserving
+  first-word overflow, retained separator, full-line, short-width-table, and
+  empty-rest behavior. Validation on MoonBit compiler 0.9.3: `moon check
+  --target native --warn-list +73` passes with the known notice; focused
+  split-text tests report 1/1; `moon test --target native pdf_type_test.mbt`
+  reports 11/11; `moon check --target all --warn-list +73` passes with the
+  known notice after a transient rebuilt-core artifact race; `moon test --target
+  native` reports 2428/2428.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
