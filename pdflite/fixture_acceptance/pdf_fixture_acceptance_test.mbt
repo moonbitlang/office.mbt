@@ -868,11 +868,8 @@ fn fixture_acceptance_first_object_stream_endobj_position_for_test(
 fn fixture_acceptance_corrupt_first_object_stream_count_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
-  fixture_acceptance_replace_bytes_after_with_padded_ascii_for_test(
-    bytes,
-    @ascii.encode("/Type /ObjStm"),
-    @ascii.encode("/N 100"),
-    "/N/Bad",
+  fixture_acceptance_corrupt_first_object_stream_numeric_entry_for_test(
+    bytes, "/N", "/N/Ba",
   )
 }
 
@@ -880,11 +877,8 @@ fn fixture_acceptance_corrupt_first_object_stream_count_for_test(
 fn fixture_acceptance_corrupt_first_object_stream_first_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
-  fixture_acceptance_replace_bytes_after_with_padded_ascii_for_test(
-    bytes,
-    @ascii.encode("/Type /ObjStm"),
-    @ascii.encode("/First 832"),
-    "/First/Bad",
+  fixture_acceptance_corrupt_first_object_stream_numeric_entry_for_test(
+    bytes, "/First", "/First/Bad",
   )
 }
 
@@ -892,12 +886,64 @@ fn fixture_acceptance_corrupt_first_object_stream_first_for_test(
 fn fixture_acceptance_corrupt_first_object_stream_length_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
-  fixture_acceptance_replace_bytes_after_with_padded_ascii_for_test(
-    bytes,
-    @ascii.encode("/Type /ObjStm"),
-    @ascii.encode("/Length 1526"),
-    "/Length /Bad",
+  fixture_acceptance_corrupt_first_object_stream_numeric_entry_for_test(
+    bytes, "/Length", "/Length /Bad",
   )
+}
+
+///|
+fn fixture_acceptance_corrupt_first_object_stream_numeric_entry_for_test(
+  bytes : Bytes,
+  key_text : String,
+  replacement_text : String,
+) -> Bytes raise {
+  let anchor = @ascii.encode("/Type /ObjStm")
+  let anchor_position = fixture_acceptance_find_bytes_for_test(bytes, anchor)
+  if anchor_position < 0 {
+    fail("expected first object stream")
+  }
+  let stream_position = fixture_acceptance_first_object_stream_stream_position_for_test(
+    bytes,
+  )
+  let key = @ascii.encode(key_text)
+  let key_position = fixture_acceptance_find_bytes_after_for_test(
+    bytes,
+    key,
+    anchor_position + anchor.length(),
+  )
+  if key_position < 0 || key_position >= stream_position {
+    fail("expected first object stream " + key_text)
+  }
+  let mut span_end = fixture_acceptance_skip_pdf_whitespace_for_test(
+    bytes,
+    key_position + key.length(),
+  )
+  let number_start = span_end
+  while span_end < stream_position &&
+        bytes[span_end] >= b'0' &&
+        bytes[span_end] <= b'9' {
+    span_end += 1
+  }
+  if span_end == number_start {
+    fail("expected numeric first object stream " + key_text)
+  }
+  let span_length = span_end - key_position
+  let replacement = @ascii.encode(replacement_text)
+  if replacement.length() > span_length {
+    fail("replacement must fit first object stream numeric entry")
+  }
+  let output : Array[Byte] = []
+  for byte in bytes {
+    output.push(byte)
+  }
+  for index in 0..<span_length {
+    output[key_position + index] = if index < replacement.length() {
+      replacement[index]
+    } else {
+      b' '
+    }
+  }
+  Bytes::from_array(output)
 }
 
 ///|
@@ -12021,6 +12067,26 @@ async test "checked-in CamlPDF introduction fixture reconstructs malformed xref 
 ///|
 async test "checked-in CamlPDF introduction fixture reconstructs xref stream bad startxref" {
   fixture_acceptance_assert_reconstructs_for_test(
+    fixture_acceptance_bytes_for_test(
+      "fixtures/camlpdf/introduction_to_camlpdf.pdf",
+    ),
+    10,
+  )
+}
+
+///|
+async test "checked-in CamlPDF introduction fixture repairs malformed object stream length" {
+  fixture_acceptance_assert_object_stream_length_repairs_for_test(
+    fixture_acceptance_bytes_for_test(
+      "fixtures/camlpdf/introduction_to_camlpdf.pdf",
+    ),
+    10,
+  )
+}
+
+///|
+async test "checked-in CamlPDF introduction fixture repairs malformed object stream endstream" {
+  fixture_acceptance_assert_object_stream_endstream_repairs_for_test(
     fixture_acceptance_bytes_for_test(
       "fixtures/camlpdf/introduction_to_camlpdf.pdf",
     ),

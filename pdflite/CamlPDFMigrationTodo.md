@@ -9011,6 +9011,18 @@ Current backend snapshot:
   fixture_acceptance` reports 133/133; `moon check --target all --warn-list
   +73` passes with the known notice; `moon test --target native` reports
   2424/2424.~~
+- [x] ~~Continue source-port hardening with checked-in malformed object-stream
+  repair gates: the CamlPDF introduction fixture now corrupts the first
+  `/ObjStm` direct `/Length` entry and physical `endstream` marker while
+  preserving the 10-page output through strict parser repair and compressed
+  rewrite/reread. The object-stream `/N`, `/First`, and `/Length` mutators are
+  now value-independent and still gate the optional cpdf manual object-stream
+  cases. Validation on MoonBit compiler 0.9.3: focused checked-in CamlPDF
+  introduction object-stream repair gates report 2/2; focused optional cpdf
+  manual object-stream gates report 9/9; `moon test --target native
+  fixture_acceptance` reports 135/135; `moon check --target all --warn-list
+  +73` passes with the known notice; `moon test --target native` reports
+  2426/2426.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
