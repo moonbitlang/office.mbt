@@ -9213,6 +9213,16 @@ Current backend snapshot:
   `moon test --target native pdf_composition_test.mbt` reports 3/3; `moon check
   --target all --warn-list +73` passes with the known notice; `moon test
   --target native` reports 2428/2428.~~
+- [x] ~~Continue source-port hardening with a TOC title newline performance
+  slice: `pdf_toc_title_real_newlines` now allocates one bounded output buffer
+  sized to the borrowed title bytes, fills literal bytes and converted newline
+  bytes by index, and returns the written prefix instead of growing the output
+  array, preserving cpdf's literal `\n` title escaping and trailing split-title
+  behavior. Validation on MoonBit compiler 0.9.3: `moon check --target native
+  --warn-list +73` passes with the known notice; focused TOC newline tests
+  report 1/1; `moon test --target native pdf_toc_test.mbt` reports 16/16; `moon
+  check --target all --warn-list +73` passes with the known notice; `moon test
+  --target native` reports 2428/2428.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
