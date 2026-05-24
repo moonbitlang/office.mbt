@@ -9254,6 +9254,16 @@ Current backend snapshot:
   pdf_page_label_test.mbt` reports 25/25; `moon check --target all --warn-list
   +73` passes with the known notice; `moon test --target native` reports
   2428/2428.~~
+- [x] ~~Continue source-port hardening with a page-label diagnostic rendering
+  performance slice: `pdf_string_of_page_label` now pre-encodes each static and
+  dynamic field, allocates the exact diagnostic output length, and fills fields
+  by index with newline slots preinitialized instead of growing the output array,
+  preserving `None` prefixes, raw prefix bytes, style names, start pages, and
+  start values. Validation on MoonBit compiler 0.9.3: `moon check --target
+  native --warn-list +73` passes with the known notice; focused diagnostic tests
+  report 1/1; `moon test --target native pdf_page_label_test.mbt` reports 25/25;
+  `moon check --target all --warn-list +73` passes with the known notice; `moon
+  test --target native` reports 2428/2428.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

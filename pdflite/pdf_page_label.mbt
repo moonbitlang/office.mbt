@@ -155,22 +155,45 @@ pub fn pdf_page_label_style_of_string(
 ///|
 /// Format a page-label range as a diagnostic byte string.
 pub fn pdf_string_of_page_label(label : PdfPageLabel) -> PdfBytes {
-  let output : Array[Byte] = []
-  pdf_writer_push_ascii(output, "labelstyle: ")
-  pdf_writer_push_ascii(output, label.label_style.debug_name())
-  pdf_writer_push_byte(output, 10)
-  pdf_writer_push_ascii(output, "labelprefix: ")
-  match label.label_prefix {
-    Some(prefix) => pdf_writer_push_view(output, prefix)
-    None => pdf_writer_push_ascii(output, "None")
+  let labelstyle_key = pdf_page_label_ascii_bytes("labelstyle: ")
+  let labelstyle_value = pdf_page_label_ascii_bytes(
+    label.label_style.debug_name(),
+  )
+  let labelprefix_key = pdf_page_label_ascii_bytes("labelprefix: ")
+  let labelprefix_value = match label.label_prefix {
+    Some(prefix) => prefix
+    None => pdf_page_label_ascii_bytes("None")
   }
-  pdf_writer_push_byte(output, 10)
-  pdf_writer_push_ascii(output, "startpage: ")
-  pdf_writer_push_ascii(output, label.start_page.to_string())
-  pdf_writer_push_byte(output, 10)
-  pdf_writer_push_ascii(output, "startvalue: ")
-  pdf_writer_push_ascii(output, label.start_value.to_string())
-  pdf_writer_push_byte(output, 10)
+  let startpage_key = pdf_page_label_ascii_bytes("startpage: ")
+  let startpage_value = pdf_page_label_ascii_bytes(label.start_page.to_string())
+  let startvalue_key = pdf_page_label_ascii_bytes("startvalue: ")
+  let startvalue_value = pdf_page_label_ascii_bytes(
+    label.start_value.to_string(),
+  )
+  let output = Array::make(
+    labelstyle_key.length() +
+    labelstyle_value.length() +
+    labelprefix_key.length() +
+    labelprefix_value.length() +
+    startpage_key.length() +
+    startpage_value.length() +
+    startvalue_key.length() +
+    startvalue_value.length() +
+    4,
+    b'\n',
+  )
+  let mut position = 0
+  position = pdf_page_label_copy_bytes(output, position, labelstyle_key)
+  position = pdf_page_label_copy_bytes(output, position, labelstyle_value)
+  position += 1
+  position = pdf_page_label_copy_bytes(output, position, labelprefix_key)
+  position = pdf_page_label_copy_bytes(output, position, labelprefix_value)
+  position += 1
+  position = pdf_page_label_copy_bytes(output, position, startpage_key)
+  position = pdf_page_label_copy_bytes(output, position, startpage_value)
+  position += 1
+  position = pdf_page_label_copy_bytes(output, position, startvalue_key)
+  ignore(pdf_page_label_copy_bytes(output, position, startvalue_value))
   Bytes::from_array(output)
 }
 
@@ -469,6 +492,20 @@ fn pdf_page_label_push_bytes(output : Array[Byte], bytes : PdfBytes) -> Unit {
   for byte in bytes {
     output.push(byte)
   }
+}
+
+///|
+fn pdf_page_label_copy_bytes(
+  output : Array[Byte],
+  position : Int,
+  bytes : PdfBytes,
+) -> Int {
+  let mut position = position
+  for byte in bytes {
+    output[position] = byte
+    position += 1
+  }
+  position
 }
 
 ///|
