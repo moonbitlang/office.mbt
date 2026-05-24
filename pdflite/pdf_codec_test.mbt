@@ -2936,6 +2936,10 @@ test "pdf_run_length_encode emits literal repeat and eod chunks" {
     @pdflite.pdf_run_length_encode(codec_ascii_for_test("ABCZZZZ")),
     codec_bytes_for_test([2, 65, 66, 67, 253, 90, 128]),
   )
+  @test.assert_eq(
+    @pdflite.pdf_run_length_encode(codec_bytes_for_test([])),
+    codec_bytes_for_test([128]),
+  )
 }
 
 ///|

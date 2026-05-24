@@ -2578,14 +2578,21 @@ pub fn pdf_encode_stream_with_encoding(
 ///|
 fn pdf_run_length_flush_literal(
   output : Array[Byte],
-  literal : ArrayView[Byte],
-) -> Unit {
-  if literal.length() > 0 {
-    output.push((literal.length() - 1).to_byte())
-    for byte in literal {
-      output.push(byte)
+  position : Int,
+  data : BytesView,
+  start : Int,
+  length : Int,
+) -> Int {
+  let mut current = position
+  if length > 0 {
+    output[current] = (length - 1).to_byte()
+    current += 1
+    for i in 0..<length {
+      output[current] = data[start + i]
+      current += 1
     }
   }
+  current
 }
 
 ///|
@@ -2594,8 +2601,13 @@ fn pdf_run_length_flush_literal(
 /// Literal runs and repeated-byte runs are emitted with the standard `128`
 /// end-of-data marker.
 pub fn pdf_run_length_encode_view(data : BytesView) -> PdfBytes {
-  let output : Array[Byte] = []
-  let mut literal : Array[Byte] = []
+  let output = Array::make(
+    data.length() + (data.length() + 127) / 128 + 1,
+    b'\x00',
+  )
+  let mut position = 0
+  let mut literal_start = 0
+  let mut literal_length = 0
   let mut index = 0
   while index < data.length() {
     let value = data[index]
@@ -2606,25 +2618,34 @@ pub fn pdf_run_length_encode_view(data : BytesView) -> PdfBytes {
       run_length += 1
     }
     if run_length >= 3 {
-      pdf_run_length_flush_literal(output, literal)
-      literal = []
-      output.push((257 - run_length).to_byte())
-      output.push(value)
+      position = pdf_run_length_flush_literal(
+        output, position, data, literal_start, literal_length,
+      )
+      literal_length = 0
+      output[position] = (257 - run_length).to_byte()
+      output[position + 1] = value
+      position += 2
       index += run_length
     } else {
-      if literal.length() + run_length > 128 {
-        pdf_run_length_flush_literal(output, literal)
-        literal = []
+      if literal_length == 0 {
+        literal_start = index
       }
-      for _ in 0..<run_length {
-        literal.push(value)
+      if literal_length + run_length > 128 {
+        position = pdf_run_length_flush_literal(
+          output, position, data, literal_start, literal_length,
+        )
+        literal_start = index
+        literal_length = 0
       }
+      literal_length += run_length
       index += run_length
     }
   }
-  pdf_run_length_flush_literal(output, literal)
-  output.push(128)
-  Bytes::from_array(output)
+  position = pdf_run_length_flush_literal(
+    output, position, data, literal_start, literal_length,
+  )
+  output[position] = 128
+  Bytes::from_array(output[:position + 1])
 }
 
 ///|

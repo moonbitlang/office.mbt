@@ -9081,6 +9081,15 @@ Current backend snapshot:
   --target native pdf_codec_test.mbt` reports 82/82; `moon check --target all
   --warn-list +73` passes with the known notice; `moon test --target native`
   reports 2428/2428.~~
+- [x] ~~Continue source-port hardening with a RunLength codec performance slice:
+  `pdf_run_length_encode_view` now allocates the worst-case encoded byte buffer,
+  flushes literal chunks from the borrowed input by index, writes repeated runs
+  and the `128` EOD marker in place, and returns the written prefix instead of
+  growing output and literal arrays. Validation on MoonBit compiler 0.9.3:
+  `moon check --target native --warn-list +73` passes with the known notice;
+  focused RunLength tests report 5/5; `moon test --target native
+  pdf_codec_test.mbt` reports 82/82; `moon check --target all --warn-list +73`
+  passes with the known notice; `moon test --target native` reports 2428/2428.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
