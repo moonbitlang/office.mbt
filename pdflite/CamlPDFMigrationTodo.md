@@ -9131,6 +9131,15 @@ Current backend snapshot:
   --target native pdf_codec_test.mbt` reports 82/82; `moon check --target all
   --warn-list +73` passes with the known notice; `moon test --target native`
   reports 2428/2428.~~
+- [x] ~~Continue source-port hardening with a writer hex-string performance
+  slice: `pdf_write_hex_string` now allocates the exact `<...>` byte length and
+  fills lowercase hex pairs by index instead of growing a byte array through the
+  private writer helper, while preserving lowercase output and the empty `<>`
+  case. Validation on MoonBit compiler 0.9.3: `moon check --target native
+  --warn-list +73` passes with the known notice; focused writer hex-string tests
+  report 1/1; `moon test --target native pdf_writer_test.mbt` reports 28/28;
+  `moon check --target all --warn-list +73` passes with the known notice; `moon
+  test --target native` reports 2428/2428.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

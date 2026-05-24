@@ -177,21 +177,17 @@ pub fn pdf_make_pdf_string(bytes : BytesView) -> PdfBytes {
 }
 
 ///|
-fn pdf_write_hex_string_to(output : Array[Byte], bytes : BytesView) -> Unit {
-  pdf_writer_push_byte(output, 60)
-  for byte in bytes {
-    let value = byte.to_int()
-    output.push(pdf_writer_lower_hex_digit(value / 16))
-    output.push(pdf_writer_lower_hex_digit(value % 16))
-  }
-  pdf_writer_push_byte(output, 62)
-}
-
-///|
 /// Serialize bytes as a lowercase hexadecimal PDF string.
 pub fn pdf_write_hex_string(bytes : BytesView) -> PdfBytes {
-  let output : Array[Byte] = []
-  pdf_write_hex_string_to(output, bytes)
+  let output = Array::make(bytes.length() * 2 + 2, b'>')
+  output[0] = b'<'
+  let mut position = 1
+  for byte in bytes {
+    let value = byte.to_int()
+    output[position] = pdf_writer_lower_hex_digit(value / 16)
+    output[position + 1] = pdf_writer_lower_hex_digit(value % 16)
+    position += 2
+  }
   Bytes::from_array(output)
 }
 
