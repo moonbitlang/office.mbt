@@ -2655,13 +2655,45 @@ pub fn pdf_run_length_encode(data : PdfBytes) -> PdfBytes {
 }
 
 ///|
+fn pdf_run_length_decoded_length(data : BytesView) -> Int {
+  let mut length = 0
+  let mut index = 0
+  let mut done = false
+  while !done && index < data.length() {
+    let control = data[index].to_int()
+    index += 1
+    if control < 128 {
+      let wanted = control + 1
+      let available = if index + wanted > data.length() {
+        data.length() - index
+      } else {
+        wanted
+      }
+      length += available
+      index += available
+    } else if control > 128 {
+      if index < data.length() {
+        length += 257 - control
+        index += 1
+      } else {
+        done = true
+      }
+    } else {
+      done = true
+    }
+  }
+  length
+}
+
+///|
 /// Decode PDF RunLengthDecode data.
 ///
 /// Decoding stops at the `128` end marker or end of input. Truncated trailing
 /// runs are decoded as far as bytes are available, matching the tolerant reader
 /// behavior used by CamlPDF.
 pub fn pdf_run_length_decode_view(data : BytesView) -> PdfBytes {
-  let output : Array[Byte] = []
+  let output = Array::make(pdf_run_length_decoded_length(data), b'\x00')
+  let mut position = 0
   let mut index = 0
   let mut done = false
   while !done && index < data.length() {
@@ -2675,7 +2707,8 @@ pub fn pdf_run_length_decode_view(data : BytesView) -> PdfBytes {
         wanted
       }
       for i in 0..<available {
-        output.push(data[index + i])
+        output[position] = data[index + i]
+        position += 1
       }
       index += available
     } else if control > 128 {
@@ -2683,7 +2716,8 @@ pub fn pdf_run_length_decode_view(data : BytesView) -> PdfBytes {
         let value = data[index]
         index += 1
         for _ in 0..<(257 - control) {
-          output.push(value)
+          output[position] = value
+          position += 1
         }
       } else {
         done = true
@@ -2692,7 +2726,7 @@ pub fn pdf_run_length_decode_view(data : BytesView) -> PdfBytes {
       done = true
     }
   }
-  Bytes::from_array(output)
+  Bytes::from_array(output[:position])
 }
 
 ///|

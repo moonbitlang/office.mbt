@@ -2928,6 +2928,10 @@ test "pdf_run_length_decode expands literal and repeat chunks" {
     ),
     codec_ascii_for_test("ABCZZZZ"),
   )
+  @test.assert_eq(
+    @pdflite.pdf_run_length_decode(codec_bytes_for_test([128])),
+    codec_bytes_for_test([]),
+  )
 }
 
 ///|
