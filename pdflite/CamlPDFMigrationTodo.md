@@ -8986,6 +8986,19 @@ Current backend snapshot:
   `moon test --target native fixture_acceptance` reports 127/127; `moon check
   --target all --warn-list +73` passes with the known `markdown/cmd` future
   notice; `moon test --target native` reports 2418/2418.~~
+- [x] ~~Continue source-port hardening with checked-in malformed classic xref
+  recovery gates: the CamlPDF logo fixture now corrupts the startxref-targeted
+  `xref` header and `trailer` keyword, requiring strict failure, public
+  reconstruction with `first_xref = 0`, and preserved 1-page output. The
+  object-stream DecodeParms predictor mutator is now length-independent and
+  still gates the optional cpdf manual predictor case. Validation on MoonBit
+  compiler 0.9.3: `moon check --target native --warn-list +73` passes with the
+  known `markdown/cmd` future notice; focused logo header and trailer gates
+  each report 1/1; focused unsupported object-stream DecodeParms predictor gate
+  reports 1/1; `moon test --target native fixture_acceptance` reports 129/129;
+  `moon check --target all --warn-list +73` passes with the known
+  `markdown/cmd` future notice; `moon test --target native` reports
+  2420/2420.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

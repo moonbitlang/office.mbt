@@ -928,12 +928,55 @@ fn fixture_acceptance_corrupt_first_object_stream_decodeparms_for_test(
 fn fixture_acceptance_corrupt_first_object_stream_decodeparms_predictor_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
-  fixture_acceptance_replace_bytes_after_for_test(
+  let anchor = @ascii.encode("/Type /ObjStm")
+  let anchor_position = fixture_acceptance_find_bytes_for_test(bytes, anchor)
+  if anchor_position < 0 {
+    fail("expected first object stream")
+  }
+  let stream_position = fixture_acceptance_first_object_stream_stream_position_for_test(
     bytes,
-    @ascii.encode("/Type /ObjStm"),
-    @ascii.encode("/Length 1526      \n/Filter /FlateDecode"),
-    @ascii.encode("/Length 1526/DP<</Predictor 9>>/F/Fl   "),
   )
+  let length_key = @ascii.encode("/Length")
+  let length_position = fixture_acceptance_find_bytes_after_for_test(
+    bytes,
+    length_key,
+    anchor_position + anchor.length(),
+  )
+  if length_position < 0 || length_position >= stream_position {
+    fail("expected first object stream length")
+  }
+  let filter = @ascii.encode("/Filter /FlateDecode")
+  let filter_position = fixture_acceptance_find_bytes_after_for_test(
+    bytes,
+    filter,
+    length_position + length_key.length(),
+  )
+  if filter_position < 0 || filter_position >= stream_position {
+    fail("expected first object stream Flate filter")
+  }
+  let span_end = filter_position + filter.length()
+  let span_length = span_end - length_position
+  let length = fixture_acceptance_direct_length_before_for_test(
+    bytes, anchor_position, stream_position, "first object stream",
+  )
+  let replacement = @ascii.encode(
+    "/Length " + length.to_string() + "/DP<</Predictor 9>>/F/Fl",
+  )
+  if replacement.length() > span_length {
+    fail("replacement must fit first object stream dictionary span")
+  }
+  let output : Array[Byte] = []
+  for byte in bytes {
+    output.push(byte)
+  }
+  for index in 0..<span_length {
+    output[length_position + index] = if index < replacement.length() {
+      replacement[index]
+    } else {
+      b' '
+    }
+  }
+  Bytes::from_array(output)
 }
 
 ///|
@@ -11817,6 +11860,22 @@ fn fixture_acceptance_assert_cpdf_manual_image_text_for_test(
 ///|
 async test "checked-in CamlPDF logo fixture reconstructs linearized bad startxref" {
   fixture_acceptance_assert_reconstructs_for_test(
+    fixture_acceptance_bytes_for_test("fixtures/camlpdf/logo.pdf"),
+    1,
+  )
+}
+
+///|
+async test "checked-in CamlPDF logo fixture reconstructs malformed xref header" {
+  fixture_acceptance_assert_xref_header_reconstructs_for_test(
+    fixture_acceptance_bytes_for_test("fixtures/camlpdf/logo.pdf"),
+    1,
+  )
+}
+
+///|
+async test "checked-in CamlPDF logo fixture reconstructs malformed trailer keyword" {
+  fixture_acceptance_assert_trailer_keyword_reconstructs_for_test(
     fixture_acceptance_bytes_for_test("fixtures/camlpdf/logo.pdf"),
     1,
   )
