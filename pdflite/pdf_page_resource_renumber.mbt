@@ -1,13 +1,21 @@
 ///|
 fn pdf_page_prefixed_name(prefix : String, name : PdfName) -> PdfName {
-  let output : Array[Byte] = [47]
-  for byte in @ascii.encode(prefix) {
-    output.push(byte)
-  }
+  let prefix_bytes = @ascii.encode(prefix)
   let bytes = name.bytes()
   let start = if bytes.length() > 0 && bytes[0].to_int() == 47 { 1 } else { 0 }
+  let output = Array::make(
+    1 + prefix_bytes.length() + bytes.length() - start,
+    b'\x00',
+  )
+  output[0] = 47
+  let mut position = 1
+  for byte in prefix_bytes {
+    output[position] = byte
+    position += 1
+  }
   for i in start..<bytes.length() {
-    output.push(bytes[i])
+    output[position] = bytes[i]
+    position += 1
   }
   pdf_name_of_bytes(Bytes::from_array(output))
 }

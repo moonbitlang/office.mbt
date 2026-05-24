@@ -9191,6 +9191,18 @@ Current backend snapshot:
   `unique_key` tests report 4/4; `moon test --target native pdf_object_test.mbt`
   reports 12/12; `moon check --target all --warn-list +73` passes with the
   known notice; `moon test --target native` reports 2428/2428.~~
+- [x] ~~Continue source-port hardening with a page resource prefix performance
+  slice: `pdf_page_prefixed_name` now encodes the prefix once, allocates the
+  exact slash-prefixed resource name length, and fills prefix and normalized
+  resource-name bytes by index instead of growing the output array, preserving
+  content operator rewrites, inline image color-space handling, add-prefix
+  resource dictionaries, and renumbered duplicate-page resources. Validation on
+  MoonBit compiler 0.9.3: `moon check --target native --warn-list +73` passes
+  with the known notice; focused page prefix helpers report 1/1, add-prefix
+  tests report 4/4, and renumber-pages tests report 2/2; `moon test --target
+  native pdf_page_test.mbt` reports 82/82; `moon check --target all --warn-list
+  +73` passes with the known notice; `moon test --target native` reports
+  2428/2428.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
