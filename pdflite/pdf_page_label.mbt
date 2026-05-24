@@ -521,13 +521,14 @@ fn pdf_page_label_roman_upper(number : Int) -> PdfBytes {
 
 ///|
 fn pdf_page_label_lowercase(bytes : PdfBytes) -> PdfBytes {
-  let output : Array[Byte] = []
-  for byte in bytes {
+  let output = Array::make(bytes.length(), b'\x00')
+  for i in 0..<bytes.length() {
+    let byte = bytes[i]
     let value = byte.to_int()
     if value >= 65 && value <= 90 {
-      output.push((value + 32).to_byte())
+      output[i] = (value + 32).to_byte()
     } else {
-      output.push(byte)
+      output[i] = byte
     }
   }
   Bytes::from_array(output)
