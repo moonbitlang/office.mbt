@@ -29,7 +29,17 @@ test "PdfBytes concatenate read-only byte views at ownership boundary" {
     @pdflite.pdf_bytes_to_array(combined).map(byte => byte.to_int()),
     [0x25, 0x50, 0x46, 0xFF],
   )
+  @test.assert_eq(
+    @pdflite.pdf_bytes_to_array(
+      @pdflite.pdf_bytes_concat_views([first[:0], first, second[:0], second]),
+    ).map(byte => byte.to_int()),
+    [0x25, 0x50, 0x44, 0x46, 0xFF],
+  )
   @test.assert_eq(@pdflite.pdf_bytes_concat_views([]), Bytes::new(0))
+  @test.assert_eq(
+    @pdflite.pdf_bytes_concat_views([first[:0], second[:0]]),
+    Bytes::new(0),
+  )
 }
 
 ///|

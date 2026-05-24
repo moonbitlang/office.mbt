@@ -197,10 +197,19 @@ pub fn pdf_bytes_make(
 ///|
 /// Concatenates byte views into one owned PDF byte sequence.
 pub fn pdf_bytes_concat_views(parts : ArrayView[BytesView]) -> PdfBytes {
-  let output : Array[Byte] = []
+  let mut length = 0
+  for part in parts {
+    length += part.length()
+  }
+  if length == 0 {
+    return Bytes::new(0)
+  }
+  let output = Array::make(length, b' ')
+  let mut position = 0
   for part in parts {
     for byte in part {
-      output.push(byte)
+      output[position] = byte
+      position += 1
     }
   }
   Bytes::from_array(output)

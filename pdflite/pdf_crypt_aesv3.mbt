@@ -1,12 +1,6 @@
 ///|
 fn pdf_crypt_concat_bytes(parts : ArrayView[BytesView]) -> PdfBytes {
-  let output : Array[Byte] = []
-  for part in parts {
-    for byte in part {
-      output.push(byte)
-    }
-  }
-  Bytes::from_array(output)
+  pdf_bytes_concat_views(parts)
 }
 
 ///|
