@@ -152,6 +152,10 @@ test "pdf_ascii_hex_decode pads odd final nibble before terminator" {
     try! @pdflite.pdf_ascii_hex_decode(codec_ascii_for_test("6>")),
     codec_bytes_for_test([96]),
   )
+  @test.assert_eq(
+    try! @pdflite.pdf_ascii_hex_decode(codec_ascii_for_test(">")),
+    codec_bytes_for_test([]),
+  )
 }
 
 ///|

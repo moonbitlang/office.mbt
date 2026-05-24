@@ -46,7 +46,8 @@ pub fn pdf_ascii_hex_encode(data : PdfBytes) -> PdfBytes {
 /// Whitespace is ignored and a trailing odd nibble is padded with zero when the
 /// `>` marker is reached. Invalid hex digits raise `PdfError::InvalidHexEscape`.
 pub fn pdf_ascii_hex_decode_view(data : BytesView) -> PdfBytes raise PdfError {
-  let output : Array[Byte] = []
+  let output = Array::make((data.length() + 1) / 2, b'\x00')
+  let mut position = 0
   let mut high : Int? = None
   let mut done = false
   for byte in data {
@@ -56,7 +57,10 @@ pub fn pdf_ascii_hex_decode_view(data : BytesView) -> PdfBytes raise PdfError {
         ()
       } else if value == 62 {
         match high {
-          Some(high_nibble) => output.push((high_nibble * 16).to_byte())
+          Some(high_nibble) => {
+            output[position] = (high_nibble * 16).to_byte()
+            position += 1
+          }
           None => ()
         }
         done = true
@@ -65,7 +69,8 @@ pub fn pdf_ascii_hex_decode_view(data : BytesView) -> PdfBytes raise PdfError {
           Some(nibble) =>
             match high {
               Some(high_nibble) => {
-                output.push((high_nibble * 16 + nibble).to_byte())
+                output[position] = (high_nibble * 16 + nibble).to_byte()
+                position += 1
                 high = None
               }
               None => high = Some(nibble)
@@ -75,7 +80,7 @@ pub fn pdf_ascii_hex_decode_view(data : BytesView) -> PdfBytes raise PdfError {
       }
     }
   }
-  Bytes::from_array(output)
+  Bytes::from_array(output[:position])
 }
 
 ///|
