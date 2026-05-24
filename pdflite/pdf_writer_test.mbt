@@ -180,6 +180,10 @@ test "pdf_write_name renders PDF names with escapes" {
       68,
     ]),
   )
+  @test.assert_eq(
+    @pdflite.pdf_write_name(writer_name_for_test([])),
+    writer_bytes_for_test([47]),
+  )
 }
 
 ///|
