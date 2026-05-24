@@ -9140,6 +9140,16 @@ Current backend snapshot:
   report 1/1; `moon test --target native pdf_writer_test.mbt` reports 28/28;
   `moon check --target all --warn-list +73` passes with the known notice; `moon
   test --target native` reports 2428/2428.~~
+- [x] ~~Continue source-port hardening with a writer literal-string performance
+  slice: `pdf_write_literal_string` now precomputes escaped literal-string
+  length, allocates one exact output buffer, and fills delimiter, short escape,
+  printable, and octal-escaped bytes by index instead of growing the public API
+  output array, preserving alias behavior and the empty `()` case. Validation on
+  MoonBit compiler 0.9.3: `moon check --target native --warn-list +73` passes
+  with the known notice; focused writer literal-string tests report 1/1; `moon
+  test --target native pdf_writer_test.mbt` reports 28/28; `moon check --target
+  all --warn-list +73` passes with the known notice; `moon test --target native`
+  reports 2428/2428.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
