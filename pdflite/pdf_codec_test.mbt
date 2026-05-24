@@ -111,6 +111,10 @@ test "pdf_ascii_hex_encode renders uppercase hex with terminator" {
     @pdflite.pdf_ascii_hex_encode(codec_bytes_for_test([0, 15, 160, 255])),
     codec_ascii_for_test("000FA0FF>"),
   )
+  @test.assert_eq(
+    @pdflite.pdf_ascii_hex_encode(Bytes::new(0)),
+    codec_ascii_for_test(">"),
+  )
 }
 
 ///|

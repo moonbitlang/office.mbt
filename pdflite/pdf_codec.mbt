@@ -23,13 +23,14 @@ fn pdf_ascii_hex_value(value : Int) -> Int? {
 /// The returned bytes are uppercase hexadecimal pairs followed by the `>`
 /// end-of-data marker.
 pub fn pdf_ascii_hex_encode_view(data : BytesView) -> PdfBytes {
-  let output : Array[Byte] = []
+  let output = Array::make(data.length() * 2 + 1, b'>')
+  let mut position = 0
   for byte in data {
     let value = byte.to_int()
-    output.push(pdf_ascii_hex_digit(value / 16))
-    output.push(pdf_ascii_hex_digit(value % 16))
+    output[position] = pdf_ascii_hex_digit(value / 16)
+    output[position + 1] = pdf_ascii_hex_digit(value % 16)
+    position += 2
   }
-  output.push(62)
   Bytes::from_array(output)
 }
 

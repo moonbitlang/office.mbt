@@ -9053,6 +9053,15 @@ Current backend snapshot:
   whitebox and public crypt filters report 9/9 and 11/11; `moon check --target
   all --warn-list +73` passes with the known notice; `moon test --target
   native` reports 2428/2428.~~
+- [x] ~~Continue source-port hardening with an ASCIIHex codec performance slice:
+  `pdf_ascii_hex_encode_view` now allocates the exact `2 * input + 1`
+  terminator-sized output and fills it by index instead of growing a byte array
+  per encoded nibble, preserving uppercase hex output and the terminator-only
+  empty input case. Validation on MoonBit compiler 0.9.3: `moon check --target
+  native --warn-list +73` passes with the known notice; focused ASCIIHex tests
+  report 5/5; `moon test --target native pdf_codec_test.mbt` reports 82/82;
+  `moon check --target all --warn-list +73` passes with the known notice; `moon
+  test --target native` reports 2428/2428.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
