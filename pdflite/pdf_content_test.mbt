@@ -1519,6 +1519,21 @@ test "pdf_content_concat_streams inserts whitespace between split bytes" {
     content_bytes_for_test("q Q BT"),
   )
   @test.assert_eq(@pdflite.pdf_content_concat_streams([]), Bytes::new(0))
+  @test.assert_eq(
+    @pdflite.pdf_content_concat_streams([
+      Bytes::new(0),
+      content_bytes_for_test("q"),
+    ]),
+    content_bytes_for_test("q"),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_content_concat_streams([
+      content_bytes_for_test("q"),
+      Bytes::new(0),
+      content_bytes_for_test("Q"),
+    ]),
+    content_bytes_for_test("q  Q"),
+  )
 }
 
 ///|
@@ -1533,6 +1548,18 @@ test "pdf_content_concat_stream_views inserts whitespace between borrowed slices
       third[2:third.length() - 2],
     ]),
     content_bytes_for_test("q Q BT"),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_content_concat_stream_views([first[:0], first[2:]]),
+    content_bytes_for_test("q"),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_content_concat_stream_views([
+      first[2:],
+      second[:0],
+      second[:second.length() - 2],
+    ]),
+    content_bytes_for_test("q  Q"),
   )
 }
 

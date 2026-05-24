@@ -634,12 +634,35 @@ pub fn pdf_content_stream_of_ops(
 pub fn pdf_content_concat_stream_views(
   streams : ArrayView[BytesView],
 ) -> PdfBytes {
-  let output : Array[Byte] = []
+  let mut length = 0
+  let mut has_output = false
   for stream in streams {
-    if output.length() > 0 {
-      output.push(32)
+    if has_output {
+      length += 1
     }
-    pdf_content_push_view(output, stream)
+    length += stream.length()
+    if stream.length() > 0 {
+      has_output = true
+    }
+  }
+  if length == 0 {
+    return Bytes::new(0)
+  }
+  let output = Array::make(length, b' ')
+  let mut position = 0
+  has_output = false
+  for stream in streams {
+    if has_output {
+      output[position] = b' '
+      position += 1
+    }
+    for byte in stream {
+      output[position] = byte
+      position += 1
+    }
+    if stream.length() > 0 {
+      has_output = true
+    }
   }
   Bytes::from_array(output)
 }
@@ -647,12 +670,35 @@ pub fn pdf_content_concat_stream_views(
 ///|
 /// Concatenate already-decoded content streams with a single space between them.
 pub fn pdf_content_concat_streams(streams : ArrayView[PdfBytes]) -> PdfBytes {
-  let output : Array[Byte] = []
+  let mut length = 0
+  let mut has_output = false
   for stream in streams {
-    if output.length() > 0 {
-      output.push(32)
+    if has_output {
+      length += 1
     }
-    pdf_content_push_view(output, stream)
+    length += stream.length()
+    if stream.length() > 0 {
+      has_output = true
+    }
+  }
+  if length == 0 {
+    return Bytes::new(0)
+  }
+  let output = Array::make(length, b' ')
+  let mut position = 0
+  has_output = false
+  for stream in streams {
+    if has_output {
+      output[position] = b' '
+      position += 1
+    }
+    for byte in stream {
+      output[position] = byte
+      position += 1
+    }
+    if stream.length() > 0 {
+      has_output = true
+    }
   }
   Bytes::from_array(output)
 }
