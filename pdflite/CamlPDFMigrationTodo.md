@@ -9807,14 +9807,14 @@ Current backend snapshot:
   --target native` reports 2429/2429.~~
 - [x] ~~Continue source-port hardening with a font-table text output
   performance slice: `PdfDocument::font_table_text` now computes font table
-  entries once, counts each cpdf encoding-table row exactly, and creates the
-  output array with that capacity before preserving the existing row renderer,
-  keeping code, Unicode, UTF-8, Unicode-name, glyph-name, wrapper output, and
-  invalid-page behavior stable. Validation on MoonBit compiler 0.9.3: `moon
+  entries once, counts each cpdf encoding-table row exactly, allocates that
+  output length, and fills code, Unicode, UTF-8, Unicode-name, and glyph-name
+  fields by index instead of growing the output array, keeping wrapper output
+  and invalid-page behavior stable. Validation on MoonBit compiler 0.9.3: `moon
   check --target native --warn-list +73` passes with the known notice; focused
   font-table tests report 1/1; `moon test --target native pdf_font_test.mbt`
   reports 9/9; `moon check --target all --warn-list +73` passes with the known
-  notice; `moon test --target native` reports 2428/2428.~~
+  notice; `moon test --target native` reports 2429/2429.~~
 - [x] ~~Continue source-port hardening with a font-table code-byte allocation
   slice: `pdf_font_table_text_bytes` now returns the exact one- or two-byte
   sequence directly instead of growing a temporary array, preserving single-byte

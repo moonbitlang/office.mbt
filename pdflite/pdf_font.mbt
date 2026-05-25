@@ -198,13 +198,6 @@ pub fn pdf_list_fonts(
 }
 
 ///|
-fn pdf_font_push_utf8(output : Array[Byte], text : String) -> Unit {
-  for byte in @utf8.encode(text) {
-    output.push(byte)
-  }
-}
-
-///|
 fn pdf_font_write_utf8(
   output : Array[Byte],
   position : Int,
@@ -658,20 +651,26 @@ pub fn pdf_font_table(
 }
 
 ///|
-fn pdf_font_push_table_line(
+fn pdf_font_write_table_line(
   output : Array[Byte],
+  position : Int,
   entry : PdfFontTableEntry,
-) -> Unit {
-  pdf_font_push_utf8(output, entry.code.to_string())
-  pdf_font_push_utf8(output, " = U+")
-  pdf_font_push_utf8(output, entry.unicode)
-  pdf_font_push_utf8(output, " (")
-  pdf_font_push_utf8(output, entry.utf8)
-  pdf_font_push_utf8(output, " - ")
-  pdf_font_push_utf8(output, entry.unicode_name)
-  pdf_font_push_utf8(output, ") = ")
-  pdf_font_push_utf8(output, entry.glyphnames)
-  output.push(10)
+) -> Int {
+  let mut current = pdf_font_write_utf8(
+    output,
+    position,
+    entry.code.to_string(),
+  )
+  current = pdf_font_write_utf8(output, current, " = U+")
+  current = pdf_font_write_utf8(output, current, entry.unicode)
+  current = pdf_font_write_utf8(output, current, " (")
+  current = pdf_font_write_utf8(output, current, entry.utf8)
+  current = pdf_font_write_utf8(output, current, " - ")
+  current = pdf_font_write_utf8(output, current, entry.unicode_name)
+  current = pdf_font_write_utf8(output, current, ") = ")
+  current = pdf_font_write_utf8(output, current, entry.glyphnames)
+  output[current] = 10
+  current + 1
 }
 
 ///|
@@ -701,11 +700,10 @@ pub fn PdfDocument::font_table_text(
   page_number : Int,
 ) -> PdfBytes raise PdfError {
   let entries = self.font_table(font_name, page_number)
-  let output : Array[Byte] = Array::new(
-    capacity=pdf_font_table_text_length(entries),
-  )
+  let output = Array::make(pdf_font_table_text_length(entries), b'\x00')
+  let mut position = 0
   for entry in entries {
-    pdf_font_push_table_line(output, entry)
+    position = pdf_font_write_table_line(output, position, entry)
   }
   Bytes::from_array(output)
 }
