@@ -9376,6 +9376,17 @@ Current backend snapshot:
   focused debug-object dump tests report 1/1; `moon test --target native
   pdf_debug_test.mbt` reports 3/3; `moon check --target all --warn-list +73`
   passes with the known notice; `moon test --target native` reports 2428/2428.~~
+- [x] ~~Continue source-port hardening with a font-listing text output
+  performance slice: `PdfDocument::list_fonts_text` now computes font entries
+  once, counts each cpdf plain-text row exactly, and creates the output array
+  with that capacity before preserving the existing row renderer, keeping page
+  numbers, resource paths, subtype/basefont/encoding fields, JSON-mode output,
+  wrapper output, and invalid-page behavior stable. Validation on MoonBit
+  compiler 0.9.3: `moon check --target native --warn-list +73` passes with the
+  known notice; focused font listing tests report 1/1; `moon test --target
+  native pdf_font_test.mbt` reports 9/9; `moon check --target all --warn-list
+  +73` passes with the known notice; `moon test --target native` reports
+  2428/2428.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

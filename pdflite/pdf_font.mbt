@@ -222,13 +222,40 @@ fn pdf_font_push_listing_line(
 }
 
 ///|
+fn pdf_font_utf8_length(text : String) -> Int {
+  @utf8.encode(text).length()
+}
+
+///|
+fn pdf_font_listing_line_length(entry : PdfFontListEntry) -> Int {
+  pdf_font_utf8_length(entry.page.to_string()) +
+  pdf_font_utf8_length(entry.name) +
+  pdf_font_utf8_length(entry.subtype) +
+  pdf_font_utf8_length(entry.basefont) +
+  pdf_font_utf8_length(entry.encoding) +
+  5
+}
+
+///|
+fn pdf_font_listing_text_length(entries : ArrayView[PdfFontListEntry]) -> Int {
+  let mut length = 0
+  for entry in entries {
+    length += pdf_font_listing_line_length(entry)
+  }
+  length
+}
+
+///|
 /// Render cpdf's plain-text font listing for selected pages.
 pub fn PdfDocument::list_fonts_text(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
 ) -> PdfBytes raise PdfError {
-  let output : Array[Byte] = []
-  for entry in self.list_fonts(page_numbers) {
+  let entries = self.list_fonts(page_numbers)
+  let output : Array[Byte] = Array::new(
+    capacity=pdf_font_listing_text_length(entries),
+  )
+  for entry in entries {
     pdf_font_push_listing_line(output, entry)
   }
   Bytes::from_array(output)
