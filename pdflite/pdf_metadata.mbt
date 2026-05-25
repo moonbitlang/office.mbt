@@ -2461,7 +2461,9 @@ fn pdf_metadata_rewrite_xmp_element_prefix(
   let open_pattern = @ascii.encode("<" + prefix + ":" + field)
   let close_pattern = @ascii.encode("</" + prefix + ":" + field + ">")
   let replacement_bytes = pdf_metadata_xml_text(replacement)
-  let output : Array[Byte] = []
+  let output : Array[Byte] = Array::new(
+    capacity=data.length() + replacement_bytes.length() + close_pattern.length(),
+  )
   let mut changed = false
   let mut search_start = 0
   while search_start < data.length() {
