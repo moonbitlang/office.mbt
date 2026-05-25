@@ -9765,6 +9765,17 @@ Current backend snapshot:
   pdf_ua_matterhorn_test.mbt` reports 48/48; `moon check --target all
   --warn-list +73` passes with the known notice; `moon test --target native`
   reports 2429/2429.~~
+- [x] ~~Continue source-port hardening with a PDF/UA structure-tree text-output
+  performance slice: `PdfDocument::struct_tree_text` now prunes the tree once,
+  precomputes the recursive UTF-8 tree-rendering length, allocates that output
+  size, and fills role-mapped names, page-number suffixes, branch glyphs, and
+  indents by index instead of growing the output array, preserving wrapper
+  output and empty-tree behavior. Validation on MoonBit compiler 0.9.3: `moon
+  check --target native --warn-list +73` passes with the known notice; focused
+  structure-tree text tests report 1/1; `moon test --target native
+  pdf_structure_test.mbt` reports 12/12; `moon check --target all --warn-list
+  +73` passes with the known notice; `moon test --target native` reports
+  2429/2429.~~
 - [x] ~~Continue source-port hardening with a cpdfcontent test-extraction
   output performance slice: `PdfDocument::test_extract_text` now materializes
   each selected page's extracted glyph text once, counts the exact output length

@@ -214,20 +214,6 @@ fn pdf_ua_display_doc_title_key() -> PdfName {
 }
 
 ///|
-fn pdf_ua_push_ascii(output : Array[Byte], text : String) -> Unit {
-  for byte in @ascii.encode(text) {
-    output.push(byte)
-  }
-}
-
-///|
-fn pdf_ua_push_utf8(output : Array[Byte], text : String) -> Unit {
-  for byte in @utf8.encode(text) {
-    output.push(byte)
-  }
-}
-
-///|
 fn pdf_ua_ascii_length(text : String) -> Int {
   @ascii.encode(text).length()
 }
@@ -978,51 +964,118 @@ fn pdf_ua_remove_empty_struct_tree_text_nodes(
 }
 
 ///|
-fn pdf_ua_push_struct_tree_text_name(
-  output : Array[Byte],
+fn pdf_ua_struct_tree_text_name_length(
   node : PdfUAStructTreeTextNode,
   page_lookup : @hashmap.HashMap[Int, Int],
-) -> Unit {
+) -> Int {
   let bytes = node.name.bytes()
   let start = if bytes.length() > 0 { 1 } else { 0 }
+  let mut length = bytes.length() - start
+  match node.page_ref {
+    Some(page_ref) =>
+      match page_lookup.get(page_ref) {
+        Some(page_number) if page_number > 0 =>
+          length += pdf_ua_ascii_length(" (") +
+            pdf_ua_ascii_length(page_number.to_string()) +
+            pdf_ua_ascii_length(")")
+        _ => ()
+      }
+    None => ()
+  }
+  length
+}
+
+///|
+fn pdf_ua_write_struct_tree_text_name(
+  output : Array[Byte],
+  position : Int,
+  node : PdfUAStructTreeTextNode,
+  page_lookup : @hashmap.HashMap[Int, Int],
+) -> Int {
+  let bytes = node.name.bytes()
+  let start = if bytes.length() > 0 { 1 } else { 0 }
+  let mut current = position
   for i in start..<bytes.length() {
-    output.push(bytes[i])
+    output[current] = bytes[i]
+    current += 1
   }
   match node.page_ref {
     Some(page_ref) =>
       match page_lookup.get(page_ref) {
         Some(page_number) if page_number > 0 => {
-          pdf_ua_push_ascii(output, " (")
-          pdf_ua_push_ascii(output, page_number.to_string())
-          pdf_ua_push_ascii(output, ")")
+          current = pdf_ua_write_ascii(output, current, " (")
+          current = pdf_ua_write_ascii(output, current, page_number.to_string())
+          current = pdf_ua_write_ascii(output, current, ")")
         }
         _ => ()
       }
     None => ()
   }
+  current
 }
 
 ///|
-fn pdf_ua_push_struct_tree_text_root(
-  output : Array[Byte],
+fn pdf_ua_struct_tree_text_root_length(
   node : PdfUAStructTreeTextNode,
   indent : String,
   page_lookup : @hashmap.HashMap[Int, Int],
-) -> Unit {
-  pdf_ua_push_struct_tree_text_name(output, node, page_lookup)
-  output.push(10)
+) -> Int {
+  let mut length = pdf_ua_struct_tree_text_name_length(node, page_lookup) + 1
   for index in 0..<node.children.length() {
     let is_last = index == node.children.length() - 1
-    pdf_ua_push_utf8(output, indent)
-    pdf_ua_push_utf8(output, if is_last { "└── " } else { "├── " })
+    length += pdf_ua_utf8_length(indent)
+    length += pdf_ua_utf8_length(
+      if is_last {
+        "└── "
+      } else {
+        "├── "
+      },
+    )
     let extra_indent = if is_last { "    " } else { "│   " }
-    pdf_ua_push_struct_tree_text_root(
-      output,
+    length += pdf_ua_struct_tree_text_root_length(
       node.children[index],
       indent + extra_indent,
       page_lookup,
     )
   }
+  length
+}
+
+///|
+fn pdf_ua_write_struct_tree_text_root(
+  output : Array[Byte],
+  position : Int,
+  node : PdfUAStructTreeTextNode,
+  indent : String,
+  page_lookup : @hashmap.HashMap[Int, Int],
+) -> Int {
+  let mut current = pdf_ua_write_struct_tree_text_name(
+    output, position, node, page_lookup,
+  )
+  output[current] = 10
+  current += 1
+  for index in 0..<node.children.length() {
+    let is_last = index == node.children.length() - 1
+    current = pdf_ua_write_utf8(output, current, indent)
+    current = pdf_ua_write_utf8(
+      output,
+      current,
+      if is_last {
+        "└── "
+      } else {
+        "├── "
+      },
+    )
+    let extra_indent = if is_last { "    " } else { "│   " }
+    current = pdf_ua_write_struct_tree_text_root(
+      output,
+      current,
+      node.children[index],
+      indent + extra_indent,
+      page_lookup,
+    )
+  }
+  current
 }
 
 ///|
@@ -1191,12 +1244,13 @@ pub fn PdfDocument::struct_tree_text(
     Bytes::new(0)
   } else {
     let pruned = pdf_ua_remove_empty_struct_tree_text_nodes(tree)
-    let output : Array[Byte] = []
-    pdf_ua_push_struct_tree_text_root(
-      output,
-      pruned,
-      "",
-      pdf_ua_page_lookup(self.page_reference_numbers()),
+    let page_lookup = pdf_ua_page_lookup(self.page_reference_numbers())
+    let output = Array::make(
+      pdf_ua_struct_tree_text_root_length(pruned, "", page_lookup),
+      b'\x00',
+    )
+    let _ = pdf_ua_write_struct_tree_text_root(
+      output, 0, pruned, "", page_lookup,
     )
     Bytes::from_array(output)
   }
