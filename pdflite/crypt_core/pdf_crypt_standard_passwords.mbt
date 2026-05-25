@@ -20,13 +20,13 @@ pub fn pdf_password_padding() -> @core.PdfBytes {
 /// shorter inputs are filled with the standard PDF padding sequence.
 pub fn pdf_pad_password(password : BytesView) -> @core.PdfBytes {
   let padding = pdf_password_padding_fixed()
-  let output : Array[Byte] = []
+  let output = Array::make(32, b'\x00')
   let copied = if password.length() < 32 { password.length() } else { 32 }
   for index in 0..<copied {
-    output.push(password[index])
+    output[index] = password[index]
   }
   for index in copied..<32 {
-    output.push(padding[index - copied])
+    output[index] = padding[index - copied]
   }
   Bytes::from_array(output)
 }

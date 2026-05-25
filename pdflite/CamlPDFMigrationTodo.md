@@ -9248,6 +9248,19 @@ Current backend snapshot:
   pdf_clip_native_test.mbt` reports 5/5; `moon check --target all --warn-list
   +73` passes with the known notice; `moon test --target native` reports
   2429/2429; `moon info && moon fmt` are clean with no `.mbti` changes.~~
+- [x] ~~Continue source-port hardening with a standard-security password
+  padding performance slice: `pdf_pad_password` now allocates the exact
+  32-byte password buffer and fills password and PDF-padding bytes by index
+  instead of growing the output array, preserving short-password padding,
+  32-byte truncation, standard file-key derivation, and public password
+  authentication/decryption behavior. Validation on MoonBit compiler 0.9.3:
+  `moon check --target native --warn-list +73` passes with the known notice;
+  focused password-padding and standard file-key tests report 2/2; `moon test
+  --target native pdf_crypt_wbtest.mbt` reports 26/26; `moon test --target
+  native pdf_crypt_test.mbt` reports 43/43; `moon check --target all
+  --warn-list +73` passes with the known notice; `moon test --target native`
+  reports 2429/2429; `moon info && moon fmt` are clean with no `.mbti`
+  changes.~~
 - [x] ~~Continue source-port hardening with an AESV3 ISO hash-repeat
   performance slice: `pdf_aesv3_shamix_repeat` now allocates the exact
   repeated-input byte length and fills each repeated view by index instead of
