@@ -11328,30 +11328,43 @@ pub fn pdf_is_unicode_string(bytes : BytesView) -> Bool {
 }
 
 ///|
-fn pdf_text_push_utf16be_unit(
+fn pdf_text_write_utf16be_unit(
   output : Array[Byte],
+  position : Int,
   value : Int,
-) -> Unit raise PdfError {
-  output.push(pdf_byte_of_int((value >> 8) & 0xFF))
-  output.push(pdf_byte_of_int(value & 0xFF))
+) -> Int raise PdfError {
+  output[position] = pdf_byte_of_int((value >> 8) & 0xFF)
+  output[position + 1] = pdf_byte_of_int(value & 0xFF)
+  position + 2
 }
 
 ///|
-fn pdf_text_push_utf16be_codepoint(
-  output : Array[Byte],
-  codepoint : Int,
-) -> Unit raise PdfError {
-  if codepoint < 0 ||
-    codepoint > 0x10FFFF ||
-    (codepoint >= 0xD800 && codepoint <= 0xDFFF) {
-    raise InvalidUnicodeCodepoint(codepoint)
-  }
+fn pdf_text_utf16be_codepoint_length(codepoint : Int) -> Int raise PdfError {
+  pdf_text_check_unicode_codepoint(codepoint)
   if codepoint < 0x10000 {
-    pdf_text_push_utf16be_unit(output, codepoint)
+    2
+  } else {
+    4
+  }
+}
+
+///|
+fn pdf_text_write_utf16be_codepoint(
+  output : Array[Byte],
+  position : Int,
+  codepoint : Int,
+) -> Int raise PdfError {
+  pdf_text_check_unicode_codepoint(codepoint)
+  if codepoint < 0x10000 {
+    pdf_text_write_utf16be_unit(output, position, codepoint)
   } else {
     let shifted = codepoint - 0x10000
-    pdf_text_push_utf16be_unit(output, 0xD800 | (shifted >> 10))
-    pdf_text_push_utf16be_unit(output, 0xDC00 | (shifted & 0x3FF))
+    let current = pdf_text_write_utf16be_unit(
+      output,
+      position,
+      0xD800 | (shifted >> 10),
+    )
+    pdf_text_write_utf16be_unit(output, current, 0xDC00 | (shifted & 0x3FF))
   }
 }
 
@@ -11363,11 +11376,16 @@ fn pdf_text_push_utf16be_codepoint(
 pub fn pdf_utf16be_of_codepoints(
   codepoints : ArrayView[Int],
 ) -> PdfBytes raise PdfError {
-  let output : Array[Byte] = []
-  output.push(pdf_byte_of_int(0xFE))
-  output.push(pdf_byte_of_int(0xFF))
+  let mut length = 2
   for codepoint in codepoints {
-    pdf_text_push_utf16be_codepoint(output, codepoint)
+    length += pdf_text_utf16be_codepoint_length(codepoint)
+  }
+  let output = Array::make(length, b'\x00')
+  output[0] = pdf_byte_of_int(0xFE)
+  output[1] = pdf_byte_of_int(0xFF)
+  let mut position = 2
+  for codepoint in codepoints {
+    position = pdf_text_write_utf16be_codepoint(output, position, codepoint)
   }
   Bytes::from_array(output)
 }
@@ -11416,6 +11434,48 @@ fn pdf_text_check_unicode_codepoint(codepoint : Int) -> Unit raise PdfError {
 }
 
 ///|
+fn pdf_text_utf8_codepoint_length(codepoint : Int) -> Int raise PdfError {
+  pdf_text_check_unicode_codepoint(codepoint)
+  if codepoint <= 0x7F {
+    1
+  } else if codepoint <= 0x7FF {
+    2
+  } else if codepoint <= 0xFFFF {
+    3
+  } else {
+    4
+  }
+}
+
+///|
+fn pdf_text_write_utf8_codepoint(
+  output : Array[Byte],
+  position : Int,
+  codepoint : Int,
+) -> Int raise PdfError {
+  pdf_text_check_unicode_codepoint(codepoint)
+  if codepoint <= 0x7F {
+    output[position] = pdf_byte_of_int(codepoint)
+    position + 1
+  } else if codepoint <= 0x7FF {
+    output[position] = pdf_byte_of_int((codepoint >> 6) | 0xC0)
+    output[position + 1] = pdf_byte_of_int((codepoint & 0x3F) | 0x80)
+    position + 2
+  } else if codepoint <= 0xFFFF {
+    output[position] = pdf_byte_of_int((codepoint >> 12) | 0xE0)
+    output[position + 1] = pdf_byte_of_int(((codepoint >> 6) & 0x3F) | 0x80)
+    output[position + 2] = pdf_byte_of_int((codepoint & 0x3F) | 0x80)
+    position + 3
+  } else {
+    output[position] = pdf_byte_of_int((codepoint >> 18) | 0xF0)
+    output[position + 1] = pdf_byte_of_int(((codepoint >> 12) & 0x3F) | 0x80)
+    output[position + 2] = pdf_byte_of_int(((codepoint >> 6) & 0x3F) | 0x80)
+    output[position + 3] = pdf_byte_of_int((codepoint & 0x3F) | 0x80)
+    position + 4
+  }
+}
+
+///|
 /// Encode Unicode scalar values as UTF-8 bytes.
 ///
 /// Invalid scalar values, including surrogate codepoints, raise
@@ -11423,24 +11483,14 @@ fn pdf_text_check_unicode_codepoint(codepoint : Int) -> Unit raise PdfError {
 pub fn pdf_utf8_of_codepoints(
   codepoints : ArrayView[Int],
 ) -> PdfBytes raise PdfError {
-  let output : Array[Byte] = []
+  let mut length = 0
   for codepoint in codepoints {
-    pdf_text_check_unicode_codepoint(codepoint)
-    if codepoint <= 0x7F {
-      output.push(pdf_byte_of_int(codepoint))
-    } else if codepoint <= 0x7FF {
-      output.push(pdf_byte_of_int((codepoint >> 6) | 0xC0))
-      output.push(pdf_byte_of_int((codepoint & 0x3F) | 0x80))
-    } else if codepoint <= 0xFFFF {
-      output.push(pdf_byte_of_int((codepoint >> 12) | 0xE0))
-      output.push(pdf_byte_of_int(((codepoint >> 6) & 0x3F) | 0x80))
-      output.push(pdf_byte_of_int((codepoint & 0x3F) | 0x80))
-    } else {
-      output.push(pdf_byte_of_int((codepoint >> 18) | 0xF0))
-      output.push(pdf_byte_of_int(((codepoint >> 12) & 0x3F) | 0x80))
-      output.push(pdf_byte_of_int(((codepoint >> 6) & 0x3F) | 0x80))
-      output.push(pdf_byte_of_int((codepoint & 0x3F) | 0x80))
-    }
+    length += pdf_text_utf8_codepoint_length(codepoint)
+  }
+  let output = Array::make(length, b'\x00')
+  let mut position = 0
+  for codepoint in codepoints {
+    position = pdf_text_write_utf8_codepoint(output, position, codepoint)
   }
   Bytes::from_array(output)
 }

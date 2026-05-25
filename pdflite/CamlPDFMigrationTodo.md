@@ -81,7 +81,7 @@ Current estimate:
 
 Current backend snapshot:
 
-- Native: full suite passes on MoonBit 0.9.3, currently 2428/2428 tests.
+- Native: full suite passes on MoonBit 0.9.3, currently 2430/2430 tests.
 - WasmGC and JavaScript: full portable non-native test suites pass on MoonBit
   0.9.3, currently 2072/2072 on each backend after the latest source/API parity
   wrappers.
@@ -9798,6 +9798,18 @@ Current backend snapshot:
   0.9.3: `moon check --target native --warn-list +73` passes with the known
   notice; focused ToUnicode font-writing tests report 1/1; `moon test --target
   native pdf_text_test.mbt` reports 152/152; `moon check --target all
+  --warn-list +73` passes with the known notice; `moon test --target native`
+  reports 2430/2430.~~
+- [x] ~~Continue source-port hardening with a Unicode scalar encoder
+  performance slice: `pdf_utf16be_of_codepoints` and
+  `pdf_utf8_of_codepoints` now validate codepoints while precomputing exact
+  encoded byte lengths, allocate that output size, and fill UTF-16BE
+  BOM/surrogate pairs and UTF-8 scalar bytes by index instead of growing output
+  arrays, preserving PDF Unicode strings, UTF-8 round-trips, PDFDocString
+  fallback behavior, and invalid-scalar errors. Validation on MoonBit compiler
+  0.9.3: `moon check --target native --warn-list +73` passes with the known
+  notice; focused Unicode encoder tests report 1/1, 1/1, and 1/1; `moon test
+  --target native pdf_text_test.mbt` reports 152/152; `moon check --target all
   --warn-list +73` passes with the known notice; `moon test --target native`
   reports 2430/2430.~~
 - [x] ~~Continue source-port hardening with a cpdfcontent test-extraction
