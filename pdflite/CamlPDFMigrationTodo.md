@@ -10046,6 +10046,16 @@ Current backend snapshot:
   `moon test --target native pdf_toc_test.mbt` reports 16/16; `moon check
   --target all --warn-list +73` passes with the known notice; `moon test
   --target native` reports 2431/2431.~~
+- [x] ~~Continue source-port hardening with a TOC title-splitting allocation
+  slice: `pdf_toc_split_title` now tracks byte slice boundaries around cpdf's
+  literal `\n` markers and copies exact `BytesView` slices instead of growing a
+  per-line byte array, preserving leading, trailing, and adjacent empty title
+  lines plus raw byte behavior before UTF-8 conversion. Validation on MoonBit
+  compiler 0.9.3: `moon check --target native --warn-list +73` passes with the
+  known notice; focused TOC title-split tests report 1/1; `moon test --target
+  native pdf_toc_test.mbt` reports 16/16; `moon check --target all --warn-list
+  +73` passes with the known notice; `moon test --target native` reports
+  2431/2431.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

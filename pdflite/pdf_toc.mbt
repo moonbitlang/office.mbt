@@ -300,21 +300,20 @@ fn pdf_toc_cropbox_pages(
 /// conversion and preserves leading, trailing, and adjacent empty title lines.
 pub fn pdf_toc_split_title(title : BytesView) -> Array[PdfBytes] {
   let lines : Array[PdfBytes] = []
-  let mut current : Array[Byte] = []
+  let mut line_start = 0
   let mut index = 0
   while index < title.length() {
     if title[index] == b'\\' &&
       index + 1 < title.length() &&
       title[index + 1] == b'n' {
-      lines.push(Bytes::from_array(current))
-      current = []
+      lines.push(pdf_bytes_of_view(title[line_start:index]))
       index += 2
+      line_start = index
     } else {
-      current.push(title[index])
       index += 1
     }
   }
-  lines.push(Bytes::from_array(current))
+  lines.push(pdf_bytes_of_view(title[line_start:]))
   lines
 }
 
