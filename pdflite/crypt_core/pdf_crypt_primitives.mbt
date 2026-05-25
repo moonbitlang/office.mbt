@@ -425,13 +425,6 @@ fn pdf_aes_remove_padding(data : BytesView) -> @core.PdfBytes {
 }
 
 ///|
-fn pdf_aes_append_block(output : Array[Byte], block : FixedArray[Byte]) -> Unit {
-  for byte in block {
-    output.push(byte)
-  }
-}
-
-///|
 /// Decrypt AES-CBC data whose first block is the IV.
 ///
 /// Data shorter than or equal to one block decrypts to empty bytes. Block
@@ -504,9 +497,13 @@ pub fn pdf_aes_cbc_encrypt_with_iv(
 ) -> @core.PdfBytes raise @core.PdfError {
   let cooked_key = pdf_aes_encrypt_key(key)
   let mut previous_ciphertext = pdf_aes_block(iv)
-  let output : Array[Byte] = []
-  pdf_aes_append_block(output, previous_ciphertext)
-  for block in pdf_aes_padded_blocks(data) {
+  let blocks = pdf_aes_padded_blocks(data)
+  let output = Array::make((blocks.length() + 1) * 16, b'\x00')
+  for index in 0..<16 {
+    output[index] = previous_ciphertext[index]
+  }
+  let mut output_position = 16
+  for block in blocks {
     let plaintext = FixedArray::make(16, b'\x00')
     for index in 0..<16 {
       plaintext[index] = (block[index].to_int() ^
@@ -516,7 +513,10 @@ pub fn pdf_aes_cbc_encrypt_with_iv(
     @rijndael.camlpdf_caml_aes_encrypt(
       cooked_key, 0, plaintext, 0, ciphertext, 0,
     )
-    pdf_aes_append_block(output, ciphertext)
+    for index in 0..<16 {
+      output[output_position + index] = ciphertext[index]
+    }
+    output_position += 16
     previous_ciphertext = ciphertext
   }
   Bytes::from_array(output)
