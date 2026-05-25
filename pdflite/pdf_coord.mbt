@@ -42,20 +42,40 @@ fn pdf_coord_is_unit_pair(first : Int, second : Int) -> Bool {
 }
 
 ///|
-fn pdf_coord_space_units(text : String) -> String {
-  let bytes = @utf8.encode(text)
-  let output : Array[Byte] = []
+fn pdf_coord_spaced_units_length(bytes : BytesView) -> Int {
+  let mut length = 0
   let mut index = 0
   while index < bytes.length() {
     if index + 1 < bytes.length() &&
       pdf_coord_is_unit_pair(bytes[index].to_int(), bytes[index + 1].to_int()) {
-      output.push(32)
-      output.push(bytes[index])
-      output.push(bytes[index + 1])
-      output.push(32)
+      length += 4
       index += 2
     } else {
-      output.push(bytes[index])
+      length += 1
+      index += 1
+    }
+  }
+  length
+}
+
+///|
+fn pdf_coord_space_units(text : String) -> String {
+  let bytes = @utf8.encode(text)
+  let output = Array::make(pdf_coord_spaced_units_length(bytes), b'\x00')
+  let mut index = 0
+  let mut position = 0
+  while index < bytes.length() {
+    if index + 1 < bytes.length() &&
+      pdf_coord_is_unit_pair(bytes[index].to_int(), bytes[index + 1].to_int()) {
+      output[position] = b' '
+      output[position + 1] = bytes[index]
+      output[position + 2] = bytes[index + 1]
+      output[position + 3] = b' '
+      position += 4
+      index += 2
+    } else {
+      output[position] = bytes[index]
+      position += 1
       index += 1
     }
   }

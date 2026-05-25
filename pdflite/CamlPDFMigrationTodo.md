@@ -9223,6 +9223,18 @@ Current backend snapshot:
   report 1/1; `moon test --target native pdf_toc_test.mbt` reports 16/16; `moon
   check --target all --warn-list +73` passes with the known notice; `moon test
   --target native` reports 2428/2428.~~
+- [x] ~~Continue source-port hardening with a coordinate unit-token spacing
+  performance slice: `pdf_coord_space_units` now scans compact coordinate text
+  once for the exact spaced byte length, allocates a fixed buffer, and fills
+  literal bytes and inserted unit separators by index instead of growing the
+  output array, preserving `mm`/`cm`/`in`/`pt` parsing, compact adjacent unit
+  suffixes, paper-size tokens, arithmetic, and coordinate rectangle behavior.
+  Validation on MoonBit compiler 0.9.3: `moon check --target native
+  --warn-list +73` passes with the known notice; focused coordinate unit tests
+  report 2/2; `moon test --target native pdf_coord_test.mbt` reports 7/7; `moon
+  check --target all --warn-list +73` passes with the known notice; `moon test
+  --target native` reports 2429/2429; `moon info && moon fmt` are clean with no
+  `.mbti` changes.~~
 - [x] ~~Continue source-port hardening with a PNG IDAT concatenation
   performance slice: `pdf_png_concat` now precomputes the total compressed
   payload length for all IDAT chunks, allocates one exact output buffer, and
