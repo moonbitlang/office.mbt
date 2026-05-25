@@ -9754,6 +9754,17 @@ Current backend snapshot:
   native pdf_create_test.mbt` reports 7/7; `moon check --target all --warn-list
   +73` passes with the known notice; `moon test --target native` reports
   2429/2429.~~
+- [x] ~~Continue source-port hardening with a PDF/UA Matterhorn text-output
+  performance slice: `PdfDocument::test_matterhorn_text` now materializes
+  Matterhorn failures once, precomputes the exact cpdf-style failure-line byte
+  length, allocates that output size, and fills ASCII/UTF-8 fields plus optional
+  JSON extras by index instead of growing the output array, preserving wrapper
+  output and Unicode error text. Validation on MoonBit compiler 0.9.3: `moon
+  check --target native --warn-list +73` passes with the known notice; focused
+  Matterhorn text tests report 1/1 and 1/1; `moon test --target native
+  pdf_ua_matterhorn_test.mbt` reports 48/48; `moon check --target all
+  --warn-list +73` passes with the known notice; `moon test --target native`
+  reports 2429/2429.~~
 - [x] ~~Continue source-port hardening with a cpdfcontent test-extraction
   output performance slice: `PdfDocument::test_extract_text` now materializes
   each selected page's extracted glyph text once, counts the exact output length

@@ -4436,22 +4436,59 @@ pub fn PdfDocument::test_matterhorn_json(
 }
 
 ///|
-fn pdf_ua_matterhorn_push_text_failure(
-  output : Array[Byte],
+fn pdf_ua_matterhorn_text_failure_length(
   failure : PdfUAMatterhornFailure,
-) -> Unit {
-  pdf_ua_push_ascii(output, failure.name)
-  output.push(32)
-  pdf_ua_push_ascii(output, failure.section)
-  output.push(32)
-  pdf_ua_push_utf8(output, failure.error)
-  output.push(32)
+) -> Int {
+  let mut length = pdf_ua_ascii_length(failure.name) +
+    1 +
+    pdf_ua_ascii_length(failure.section) +
+    1 +
+    pdf_ua_utf8_length(failure.error) +
+    1
   if failure.extra != Json::null() {
-    output.push(40)
-    pdf_ua_push_utf8(output, failure.extra.stringify())
-    output.push(41)
+    length += 1 + pdf_ua_utf8_length(failure.extra.stringify()) + 1
   }
-  output.push(10)
+  length + 1
+}
+
+///|
+fn pdf_ua_matterhorn_write_space(output : Array[Byte], position : Int) -> Int {
+  output[position] = 32
+  position + 1
+}
+
+///|
+fn pdf_ua_matterhorn_write_text_failure(
+  output : Array[Byte],
+  position : Int,
+  failure : PdfUAMatterhornFailure,
+) -> Int {
+  let mut current = pdf_ua_write_ascii(output, position, failure.name)
+  current = pdf_ua_matterhorn_write_space(output, current)
+  current = pdf_ua_write_ascii(output, current, failure.section)
+  current = pdf_ua_matterhorn_write_space(output, current)
+  current = pdf_ua_write_utf8(output, current, failure.error)
+  current = pdf_ua_matterhorn_write_space(output, current)
+  if failure.extra != Json::null() {
+    output[current] = 40
+    current += 1
+    current = pdf_ua_write_utf8(output, current, failure.extra.stringify())
+    output[current] = 41
+    current += 1
+  }
+  output[current] = 10
+  current + 1
+}
+
+///|
+fn pdf_ua_matterhorn_text_length(
+  failures : ArrayView[PdfUAMatterhornFailure],
+) -> Int {
+  let mut length = 0
+  for failure in failures {
+    length += pdf_ua_matterhorn_text_failure_length(failure)
+  }
+  length
 }
 
 ///|
@@ -4460,9 +4497,11 @@ pub fn PdfDocument::test_matterhorn_text(
   self : PdfDocument,
   test_name : String,
 ) -> PdfBytes raise PdfError {
-  let output : Array[Byte] = []
-  for failure in self.pdf_ua_matterhorn_failures(test_name) {
-    pdf_ua_matterhorn_push_text_failure(output, failure)
+  let failures = self.pdf_ua_matterhorn_failures(test_name)
+  let output = Array::make(pdf_ua_matterhorn_text_length(failures), b'\x00')
+  let mut position = 0
+  for failure in failures {
+    position = pdf_ua_matterhorn_write_text_failure(output, position, failure)
   }
   Bytes::from_array(output)
 }

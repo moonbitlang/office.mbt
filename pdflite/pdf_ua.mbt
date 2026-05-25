@@ -233,6 +233,11 @@ fn pdf_ua_ascii_length(text : String) -> Int {
 }
 
 ///|
+fn pdf_ua_utf8_length(text : String) -> Int {
+  @utf8.encode(text).length()
+}
+
+///|
 fn pdf_ua_xml_escaped_utf8_length(text : String) -> Int {
   let mut length = 0
   for byte in @utf8.encode(text) {
@@ -256,6 +261,20 @@ fn pdf_ua_write_ascii(
 ) -> Int {
   let mut current = position
   for byte in @ascii.encode(text) {
+    output[current] = byte
+    current += 1
+  }
+  current
+}
+
+///|
+fn pdf_ua_write_utf8(
+  output : Array[Byte],
+  position : Int,
+  text : String,
+) -> Int {
+  let mut current = position
+  for byte in @utf8.encode(text) {
     output[current] = byte
     current += 1
   }
