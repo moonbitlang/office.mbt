@@ -188,25 +188,49 @@ pub fn pdf_string_of_bookmark(
 fn pdf_bookmark_listing_escape_codepoints(
   codepoints : ArrayView[Int],
 ) -> Array[Int] {
-  let output : Array[Int] = []
+  let output = Array::make(
+    pdf_bookmark_listing_escape_codepoints_length(codepoints),
+    0,
+  )
+  let mut position = 0
   for codepoint in codepoints {
     match codepoint {
       34 => {
-        output.push(92)
-        output.push(34)
+        output[position] = 92
+        output[position + 1] = 34
+        position += 2
       }
       92 => {
-        output.push(92)
-        output.push(92)
+        output[position] = 92
+        output[position + 1] = 92
+        position += 2
       }
       10 => {
-        output.push(92)
-        output.push(110)
+        output[position] = 92
+        output[position + 1] = 110
+        position += 2
       }
-      _ => output.push(codepoint)
+      _ => {
+        output[position] = codepoint
+        position += 1
+      }
     }
   }
   output
+}
+
+///|
+fn pdf_bookmark_listing_escape_codepoints_length(
+  codepoints : ArrayView[Int],
+) -> Int {
+  let mut length = 0
+  for codepoint in codepoints {
+    match codepoint {
+      34 | 92 | 10 => length += 2
+      _ => length += 1
+    }
+  }
+  length
 }
 
 ///|

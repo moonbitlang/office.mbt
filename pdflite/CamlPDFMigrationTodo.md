@@ -9223,6 +9223,17 @@ Current backend snapshot:
   report 1/1; `moon test --target native pdf_toc_test.mbt` reports 16/16; `moon
   check --target all --warn-list +73` passes with the known notice; `moon test
   --target native` reports 2428/2428.~~
+- [x] ~~Continue source-port hardening with a bookmark listing escape
+  performance slice: `pdf_bookmark_listing_escape_codepoints` now computes the
+  exact escaped codepoint count, allocates once, and fills quote, backslash, and
+  newline escapes by index instead of growing the output array, preserving
+  selected-page text listings, JSON listing output, raw/UTF-8/stripped text
+  processing, and destination rendering. Validation on MoonBit compiler 0.9.3:
+  `moon check --target native --warn-list +73` passes with the known notice;
+  focused bookmark listing tests report 1/1; `moon test --target native
+  pdf_bookmark_test.mbt` reports 27/27; `moon check --target all --warn-list
+  +73` passes with the known notice; `moon test --target native` reports
+  2428/2428.~~
 - [x] ~~Continue source-port hardening with a bookmark import escape-fixup
   performance slice: `pdf_bookmark_import_fixup_text` now computes the exact
   decoded title byte length, allocates once, and fills recognized `\\`, `\"`,
