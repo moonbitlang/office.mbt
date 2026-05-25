@@ -283,6 +283,36 @@ test "PdfDocument list_bookmarks escapes cpdf backslash titles" {
 }
 
 ///|
+test "PdfDocument list_bookmarks strips non-ASCII bookmark title bytes" {
+  let document = try! @pdflite.pdf_blank_document(100.0, 100.0, 1)
+  let page_refs = try! document.page_reference_numbers()
+  let text = try! @pdflite.pdf_pdfdocstring_of_utf8(
+    @utf8.encode("Résumé\nQuote\""),
+  )
+  let bookmarked = try! document.add_bookmarks([
+    {
+      level: 0,
+      text,
+      target: DestFit(TargetPageObject(page_refs[0])),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+  ])
+  let expected = bookmark_join_bytes_for_test([
+    @ascii.encode("0 \"Rsum\\nQuote\\\"\" 1 \""),
+    try! @pdflite.pdf_write_object(
+      PdfArray([PdfInteger(1), PdfNameObject(bookmark_name_for_test("/Fit"))]),
+    ),
+    @ascii.encode("\"\n"),
+  ])
+  @test.assert_eq(
+    try! bookmarked.list_bookmarks([1], encoding=PdfMetadataStripped),
+    expected,
+  )
+}
+
+///|
 test "PdfDocument bookmarks_json exports cpdf bookmark rows" {
   let document = try! bookmark_listing_document_for_test()
   let top_row = Json::object(

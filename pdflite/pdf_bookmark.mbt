@@ -234,6 +234,37 @@ fn pdf_bookmark_listing_escape_codepoints_length(
 }
 
 ///|
+fn pdf_bookmark_listing_stripped_codepoints_length(
+  codepoints : ArrayView[Int],
+) -> Int {
+  let mut length = 0
+  for codepoint in codepoints {
+    if codepoint <= 127 {
+      length += 1
+    }
+  }
+  length
+}
+
+///|
+fn pdf_bookmark_listing_stripped_codepoints(
+  codepoints : ArrayView[Int],
+) -> PdfBytes raise PdfError {
+  let output = Array::make(
+    pdf_bookmark_listing_stripped_codepoints_length(codepoints),
+    b'\x00',
+  )
+  let mut position = 0
+  for codepoint in codepoints {
+    if codepoint <= 127 {
+      output[position] = pdf_byte_of_int(codepoint)
+      position += 1
+    }
+  }
+  Bytes::from_array(output)
+}
+
+///|
 fn pdf_bookmark_listing_process_text(
   encoding : PdfMetadataEncoding,
   text : BytesView,
@@ -247,16 +278,10 @@ fn pdf_bookmark_listing_process_text(
       pdf_utf8_of_codepoints(escaped)
     }
     PdfMetadataStripped => {
-      let output : Array[Byte] = []
       let escaped = pdf_bookmark_listing_escape_codepoints(
         pdf_codepoints_of_pdfdocstring(text),
       )
-      for codepoint in escaped {
-        if codepoint <= 127 {
-          output.push(pdf_byte_of_int(codepoint))
-        }
-      }
-      Bytes::from_array(output)
+      pdf_bookmark_listing_stripped_codepoints(escaped)
     }
   }
 }
