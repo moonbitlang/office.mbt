@@ -687,18 +687,30 @@ fn PdfDrawRenderState::text_ops_and_width_with_cache(
 }
 
 ///|
+fn pdf_draw_decode_lossy_view(bytes : BytesView) -> String {
+  let output = Array::make(bytes.length(), b'\x00')
+  for index, byte in bytes {
+    output[index] = byte
+  }
+  @utf8.decode_lossy(Bytes::from_array(output))
+}
+
+///|
 fn pdf_draw_split_on_space(text : String) -> Array[String] {
+  let bytes = @utf8.encode(text)
   let parts : Array[String] = []
-  let mut current : Array[Byte] = []
-  for byte in @utf8.encode(text) {
-    if byte == b' ' {
-      parts.push(@utf8.decode_lossy(Bytes::from_array(current)))
-      current = []
+  let mut part_start = 0
+  let mut index = 0
+  while index < bytes.length() {
+    if bytes[index] == b' ' {
+      parts.push(pdf_draw_decode_lossy_view(bytes[part_start:index]))
+      index += 1
+      part_start = index
     } else {
-      current.push(byte)
+      index += 1
     }
   }
-  parts.push(@utf8.decode_lossy(Bytes::from_array(current)))
+  parts.push(pdf_draw_decode_lossy_view(bytes[part_start:]))
   parts
 }
 
