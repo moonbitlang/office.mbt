@@ -9223,6 +9223,20 @@ Current backend snapshot:
   report 1/1; `moon test --target native pdf_toc_test.mbt` reports 16/16; `moon
   check --target all --warn-list +73` passes with the known notice; `moon test
   --target native` reports 2428/2428.~~
+- [x] ~~Continue source-port hardening with an AESV3 fixed-block encryption
+  performance slice: `pdf_aesv3_cbc_encrypt_no_padding_with_iv` now allocates
+  ciphertext output exactly to the checked input length and fills encrypted
+  blocks by index, and `pdf_aesv3_permissions_entry` now assembles the fixed
+  16-byte `/Perms` AES block in place instead of growing a byte array,
+  preserving partial-block errors, R5 fixture key derivation, deterministic
+  AESV3 encryption dictionary output, metadata exclusion, and password
+  round-trips. Validation on MoonBit compiler 0.9.3: `moon check --target
+  native --warn-list +73` passes with the known notice; focused AESV3 tests
+  report 3/3; `moon test --target native pdf_crypt_wbtest.mbt` reports 26/26;
+  `moon test --target native pdf_crypt_test.mbt` reports 43/43; `moon check
+  --target all --warn-list +73` passes with the known notice; `moon test
+  --target native` reports 2429/2429; `moon info && moon fmt` are clean with no
+  `.mbti` changes.~~
 - [x] ~~Continue source-port hardening with a coordinate unit-token spacing
   performance slice: `pdf_coord_space_units` now scans compact coordinate text
   once for the exact spaced byte length, allocates a fixed buffer, and fills

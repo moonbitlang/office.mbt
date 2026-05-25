@@ -12,19 +12,19 @@ fn pdf_aesv3_cbc_encrypt_no_padding_with_iv(
   guard data.length() % 16 == 0 else {
     raise InvalidCryptoDataLength(data.length())
   }
-  let output : Array[Byte] = []
+  let output = Array::make(data.length(), b'\x00')
   let mut previous = pdf_crypt_chop_view(pdf_crypt_iv_name, iv, 16)
   let mut position = 0
+  let mut output_position = 0
   while position < data.length() {
-    let block : Array[Byte] = []
+    let block = Array::make(16, b'\x00')
     for index in 0..<16 {
-      block.push(
-        (data[position + index].to_int() ^ previous[index].to_int()).to_byte(),
-      )
+      block[index] = (data[position + index].to_int() ^ previous[index].to_int()).to_byte()
     }
     previous = @crypt_core.pdf_aes_encrypt_block(key, Bytes::from_array(block))
     for byte in previous {
-      output.push(byte)
+      output[output_position] = byte
+      output_position += 1
     }
     position += 16
   }
@@ -177,24 +177,29 @@ fn pdf_aesv3_permissions_entry(
   encrypt_metadata : Bool,
   padding : BytesView,
 ) -> PdfBytes raise PdfError {
-  let block : Array[Byte] = []
+  let block = Array::make(16, b'\x00')
+  let mut position = 0
   for shift in [0, 8, 16, 24] {
-    block.push(@crypt_core.pdf_crypt_low_byte(permissions, shift))
+    block[position] = @crypt_core.pdf_crypt_low_byte(permissions, shift)
+    position += 1
   }
   for _ in 0..<4 {
-    block.push((255).to_byte())
+    block[position] = (255).to_byte()
+    position += 1
   }
-  block.push(if encrypt_metadata { b'T' } else { b'F' })
-  block.push(b'a')
-  block.push(b'd')
-  block.push(b'b')
+  block[position] = if encrypt_metadata { b'T' } else { b'F' }
+  block[position + 1] = b'a'
+  block[position + 2] = b'd'
+  block[position + 3] = b'b'
+  position += 4
   for
     byte in pdf_crypt_chop_view(
       pdf_aesv3_random_field_key(PdfAesV3PermissionsPadding),
       padding,
       4,
     ) {
-    block.push(byte)
+    block[position] = byte
+    position += 1
   }
   @crypt_core.pdf_aes_encrypt_block(file_key, Bytes::from_array(block))
 }
