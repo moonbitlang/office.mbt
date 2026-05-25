@@ -9776,6 +9776,19 @@ Current backend snapshot:
   pdf_structure_test.mbt` reports 12/12; `moon check --target all --warn-list
   +73` passes with the known notice; `moon test --target native` reports
   2429/2429.~~
+- [x] ~~Continue source-port hardening with a content-stream serialization
+  performance slice: `pdf_content_bytes_of_ops` now renders each operator
+  payload once, preserves the old length-based inter-operator separator rule,
+  precomputes the exact full content-stream byte length, and fills the final
+  stream buffer by index instead of growing it; inline-image payloads now also
+  precompute their exact `/BI ... ID ... EI` byte length. Validation on MoonBit
+  compiler 0.9.3: `moon check --target native --warn-list +73` passes with the
+  known notice; focused content serialization tests report 1/1 for hello-style
+  bytes, compressed inline images, filtered inline images, marked text,
+  comprehensive operator coverage, and empty unknown spacing; `moon test
+  --target native pdf_content_test.mbt` reports 59/59; `moon check --target all
+  --warn-list +73` passes with the known notice; `moon test --target native`
+  reports 2430/2430.~~
 - [x] ~~Continue source-port hardening with a cpdfcontent test-extraction
   output performance slice: `PdfDocument::test_extract_text` now materializes
   each selected page's extracted glyph text once, counts the exact output length

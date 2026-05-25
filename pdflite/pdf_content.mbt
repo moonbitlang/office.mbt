@@ -201,13 +201,6 @@ pub fn pdf_content_add_artifacts(
 }
 
 ///|
-fn pdf_content_push_view(output : Array[Byte], view : BytesView) -> Unit {
-  for byte in view {
-    output.push(byte)
-  }
-}
-
-///|
 fn pdf_content_copy_view(
   output : Array[Byte],
   position : Int,
@@ -219,32 +212,6 @@ fn pdf_content_copy_view(
     position += 1
   }
   position
-}
-
-///|
-fn pdf_content_push_object(
-  output : Array[Byte],
-  object : PdfObject,
-) -> Unit raise PdfError {
-  pdf_content_push_view(output, pdf_write_object(object))
-}
-
-///|
-fn pdf_content_push_section(
-  output : Array[Byte],
-  operands : ArrayView[PdfObject],
-  operator : BytesView,
-) -> Unit raise PdfError {
-  for operand in operands {
-    if output.length() > 0 {
-      output.push(32)
-    }
-    pdf_content_push_object(output, operand)
-  }
-  if output.length() > 0 {
-    output.push(32)
-  }
-  pdf_content_push_view(output, operator)
 }
 
 ///|
@@ -531,24 +498,29 @@ fn pdf_content_op_section(op : PdfContentOp) -> (Array[PdfObject], PdfBytes) {
 }
 
 ///|
-fn pdf_content_push_inline_image_entry(
-  output : Array[Byte],
+fn pdf_content_inline_image_entry_bytes(
   key : PdfName,
   value : PdfObject,
-) -> Unit raise PdfError {
-  output.push(32)
-  pdf_content_push_object(output, PdfNameObject(key))
-  output.push(32)
-  pdf_content_push_object(output, value)
+) -> PdfBytes raise PdfError {
+  let key_bytes = pdf_write_object(PdfNameObject(key))
+  let value_bytes = pdf_write_object(value)
+  let output = Array::make(
+    1 + key_bytes.length() + 1 + value_bytes.length(),
+    b' ',
+  )
+  let mut position = 1
+  position = pdf_content_copy_view(output, position, key_bytes)
+  position += 1
+  let _ = pdf_content_copy_view(output, position, value_bytes)
+  Bytes::from_array(output)
 }
 
 ///|
-fn pdf_content_push_inline_image(
-  output : Array[Byte],
+fn pdf_content_inline_image_bytes(
   dictionary : PdfObject,
   decode_parms : PdfObject?,
   data : PdfBytes,
-) -> Unit raise PdfError {
+) -> PdfBytes raise PdfError {
   let compress_inline_image = pdf_content_inline_filter_is_empty(dictionary)
   let (render_data, render_decode_parms, render_extra_entries) = if compress_inline_image {
     let encoded = pdf_flate_encode(data)
@@ -566,10 +538,7 @@ fn pdf_content_push_inline_image(
   } else {
     (data, decode_parms, [])
   }
-  if output.length() > 0 {
-    output.push(32)
-  }
-  pdf_content_push_view(output, pdf_content_ascii("BI"))
+  let rendered_entries : Array[PdfBytes] = []
   match dictionary {
     PdfDictionary(entries) =>
       for entry in entries {
@@ -583,27 +552,58 @@ fn pdf_content_push_inline_image(
             key != pdf_content_length_name() &&
             key != pdf_content_inline_l_name()
           ) {
-          pdf_content_push_inline_image_entry(output, key, value)
+          rendered_entries.push(
+            pdf_content_inline_image_entry_bytes(key, value),
+          )
         }
       }
     _ => raise DictionaryExpected
   }
   for entry in render_extra_entries {
     let (key, value) = entry
-    pdf_content_push_inline_image_entry(output, key, value)
+    rendered_entries.push(pdf_content_inline_image_entry_bytes(key, value))
   }
   match render_decode_parms {
     Some(value) =>
-      pdf_content_push_inline_image_entry(
-        output,
-        pdf_content_inline_dp_name(),
-        value,
+      rendered_entries.push(
+        pdf_content_inline_image_entry_bytes(
+          pdf_content_inline_dp_name(),
+          value,
+        ),
       )
     None => ()
   }
-  pdf_content_push_view(output, pdf_content_ascii(" ID "))
-  pdf_content_push_view(output, render_data)
-  pdf_content_push_view(output, pdf_content_ascii(" EI"))
+  let data_marker = pdf_content_ascii(" ID ")
+  let end_marker = pdf_content_ascii(" EI")
+  let mut length = pdf_content_inline_image_begin_operator.length()
+  for entry in rendered_entries {
+    length += entry.length()
+  }
+  length += data_marker.length() + render_data.length() + end_marker.length()
+  let output = Array::make(length, b'\x00')
+  let mut position = pdf_content_copy_view(
+    output, 0, pdf_content_inline_image_begin_operator,
+  )
+  for entry in rendered_entries {
+    position = pdf_content_copy_view(output, position, entry)
+  }
+  position = pdf_content_copy_view(output, position, data_marker)
+  position = pdf_content_copy_view(output, position, render_data)
+  let _ = pdf_content_copy_view(output, position, end_marker)
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_content_op_bytes(op : PdfContentOp) -> PdfBytes raise PdfError {
+  match op {
+    Op_InlineImage(dictionary, decode_parms, data) =>
+      pdf_content_inline_image_bytes(dictionary, decode_parms, data)
+    Op_Unknown(bytes) => bytes
+    _ => {
+      let (operands, operator) = pdf_content_op_section(op)
+      pdf_content_section_bytes(operands, operator)
+    }
+  }
 }
 
 ///|
@@ -616,22 +616,25 @@ fn pdf_content_push_inline_image(
 pub fn pdf_content_bytes_of_ops(
   ops : ArrayView[PdfContentOp],
 ) -> PdfBytes raise PdfError {
-  let output : Array[Byte] = []
+  let rendered : Array[(PdfBytes, Bool)] = []
+  let mut length = 0
   for op in ops {
-    match op {
-      Op_InlineImage(dictionary, decode_parms, data) =>
-        pdf_content_push_inline_image(output, dictionary, decode_parms, data)
-      Op_Unknown(bytes) => {
-        if output.length() > 0 {
-          output.push(32)
-        }
-        pdf_content_push_view(output, bytes)
-      }
-      _ => {
-        let (operands, operator) = pdf_content_op_section(op)
-        pdf_content_push_section(output, operands, operator)
-      }
+    let bytes = pdf_content_op_bytes(op)
+    let has_separator = length > 0
+    if has_separator {
+      length += 1
     }
+    length += bytes.length()
+    rendered.push((bytes, has_separator))
+  }
+  let output = Array::make(length, b' ')
+  let mut position = 0
+  for entry in rendered {
+    if entry.1 {
+      output[position] = 32
+      position += 1
+    }
+    position = pdf_content_copy_view(output, position, entry.0)
   }
   Bytes::from_array(output)
 }

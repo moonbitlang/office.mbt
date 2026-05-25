@@ -294,6 +294,23 @@ test "pdf_content_bytes_of_op renders one content operator" {
 }
 
 ///|
+test "pdf_content_bytes_of_ops preserves empty unknown spacing" {
+  @test.assert_eq(try! @pdflite.pdf_content_bytes_of_ops([]), Bytes::new(0))
+  @test.assert_eq(
+    try! @pdflite.pdf_content_bytes_of_ops([Op_Unknown(Bytes::new(0)), Op_Q]),
+    content_bytes_for_test("Q"),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_content_bytes_of_ops([
+      Op_q,
+      Op_Unknown(Bytes::new(0)),
+      Op_Q,
+    ]),
+    content_bytes_for_test("q  Q"),
+  )
+}
+
+///|
 test "pdf_parse_content_ops_from_bytes parses hello-style content bytes" {
   @test.assert_eq(
     try! @pdflite.pdf_parse_content_ops_from_bytes(
