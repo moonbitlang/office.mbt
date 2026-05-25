@@ -186,61 +186,83 @@ fn pdf_page_info_box_text(box : Array[Double]?) -> String {
 }
 
 ///|
-fn pdf_page_info_push_utf8(output : Array[Byte], text : String) -> Unit {
+fn pdf_page_info_write_utf8(
+  output : Array[Byte],
+  position : Int,
+  text : String,
+) -> Int {
+  let mut current = position
   for byte in @utf8.encode(text) {
-    output.push(byte)
+    output[current] = byte
+    current += 1
   }
+  current
 }
 
 ///|
-fn pdf_page_info_push_line(
+fn pdf_page_info_write_line(
   output : Array[Byte],
+  position : Int,
   key : String,
   value : String,
-) -> Unit {
-  pdf_page_info_push_utf8(output, key)
-  pdf_page_info_push_utf8(output, value)
-  output.push(10)
+) -> Int {
+  let mut current = pdf_page_info_write_utf8(output, position, key)
+  current = pdf_page_info_write_utf8(output, current, value)
+  output[current] = 10
+  current + 1
 }
 
 ///|
-fn pdf_page_info_push_entry(
+fn pdf_page_info_write_entry(
   output : Array[Byte],
+  position : Int,
   entry : PdfPageInfoEntry,
-) -> Unit {
-  pdf_page_info_push_utf8(
+) -> Int {
+  let mut current = pdf_page_info_write_utf8(
     output,
+    position,
     "Page " + entry.page_number.to_string() + ":\n",
   )
-  pdf_page_info_push_line(output, "Label: ", entry.label)
-  pdf_page_info_push_line(
+  current = pdf_page_info_write_line(output, current, "Label: ", entry.label)
+  current = pdf_page_info_write_line(
     output,
+    current,
     "MediaBox: ",
     pdf_page_info_box_text(entry.mediabox),
   )
-  pdf_page_info_push_line(
+  current = pdf_page_info_write_line(
     output,
+    current,
     "CropBox: ",
     pdf_page_info_box_text(entry.cropbox),
   )
-  pdf_page_info_push_line(
+  current = pdf_page_info_write_line(
     output,
+    current,
     "BleedBox: ",
     pdf_page_info_box_text(entry.bleedbox),
   )
-  pdf_page_info_push_line(
+  current = pdf_page_info_write_line(
     output,
+    current,
     "TrimBox: ",
     pdf_page_info_box_text(entry.trimbox),
   )
-  pdf_page_info_push_line(
+  current = pdf_page_info_write_line(
     output,
+    current,
     "ArtBox: ",
     pdf_page_info_box_text(entry.artbox),
   )
-  pdf_page_info_push_line(output, "Rotation: ", entry.rotation.to_string())
-  pdf_page_info_push_line(
+  current = pdf_page_info_write_line(
     output,
+    current,
+    "Rotation: ",
+    entry.rotation.to_string(),
+  )
+  pdf_page_info_write_line(
+    output,
+    current,
     "Annotations: ",
     entry.annotations.to_string(),
   )
@@ -292,11 +314,10 @@ pub fn PdfDocument::page_info_text(
   unit? : PdfUnit = PdfPoint,
 ) -> PdfBytes raise PdfError {
   let entries = self.pdf_page_info_entries(page_numbers, unit)
-  let output : Array[Byte] = Array::new(
-    capacity=pdf_page_info_text_length(entries),
-  )
+  let output = Array::make(pdf_page_info_text_length(entries), b'\x00')
+  let mut position = 0
   for entry in entries {
-    pdf_page_info_push_entry(output, entry)
+    position = pdf_page_info_write_entry(output, position, entry)
   }
   Bytes::from_array(output)
 }
