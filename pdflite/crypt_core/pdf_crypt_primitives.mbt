@@ -467,26 +467,6 @@ pub fn pdf_aes_cbc_decrypt(
 }
 
 ///|
-fn pdf_aes_padded_blocks(data : BytesView) -> Array[FixedArray[Byte]] {
-  let blocks : Array[FixedArray[Byte]] = []
-  let full_blocks = data.length() / 16
-  for block_index in 0..<full_blocks {
-    blocks.push(
-      pdf_crypto_fixed_array(data[block_index * 16:(block_index + 1) * 16]),
-    )
-  }
-  let overflow = data.length() % 16
-  let padding = 16 - overflow
-  let last = FixedArray::make(16, padding.to_byte())
-  let start = full_blocks * 16
-  for index in 0..<overflow {
-    last[index] = data[start + index]
-  }
-  blocks.push(last)
-  blocks
-}
-
-///|
 /// Encrypt bytes with AES-CBC and an explicit IV.
 ///
 /// PKCS-style padding is added and the returned bytes include the IV as the
@@ -498,16 +478,18 @@ pub fn pdf_aes_cbc_encrypt_with_iv(
 ) -> @core.PdfBytes raise @core.PdfError {
   let cooked_key = pdf_aes_encrypt_key(key)
   let mut previous_ciphertext = pdf_aes_block(iv)
-  let blocks = pdf_aes_padded_blocks(data)
-  let output = Array::make((blocks.length() + 1) * 16, b'\x00')
+  let full_blocks = data.length() / 16
+  let overflow = data.length() % 16
+  let output = Array::make((full_blocks + 2) * 16, b'\x00')
   for index in 0..<16 {
     output[index] = previous_ciphertext[index]
   }
   let mut output_position = 16
-  for block in blocks {
+  for block_index in 0..<full_blocks {
+    let block_start = block_index * 16
     let plaintext = FixedArray::make(16, b'\x00')
     for index in 0..<16 {
-      plaintext[index] = (block[index].to_int() ^
+      plaintext[index] = (data[block_start + index].to_int() ^
       previous_ciphertext[index].to_int()).to_byte()
     }
     let ciphertext = FixedArray::make(16, b'\x00')
@@ -519,6 +501,22 @@ pub fn pdf_aes_cbc_encrypt_with_iv(
     }
     output_position += 16
     previous_ciphertext = ciphertext
+  }
+  let padding = 16 - overflow
+  let final_start = full_blocks * 16
+  let plaintext = FixedArray::make(16, b'\x00')
+  for index in 0..<16 {
+    let value = if index < overflow {
+      data[final_start + index]
+    } else {
+      padding.to_byte()
+    }
+    plaintext[index] = (value.to_int() ^ previous_ciphertext[index].to_int()).to_byte()
+  }
+  let ciphertext = FixedArray::make(16, b'\x00')
+  @rijndael.camlpdf_caml_aes_encrypt(cooked_key, 0, plaintext, 0, ciphertext, 0)
+  for index in 0..<16 {
+    output[output_position + index] = ciphertext[index]
   }
   Bytes::from_array(output)
 }
