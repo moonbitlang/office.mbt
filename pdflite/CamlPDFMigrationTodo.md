@@ -9294,6 +9294,16 @@ Current backend snapshot:
   tests report 1/1; `moon test --target native pdf_page_info_test.mbt` reports
   3/3; `moon check --target all --warn-list +73` passes with the known notice;
   `moon test --target native` reports 2428/2428.~~
+- [x] ~~Continue source-port hardening with a spot-colour listing output
+  performance slice: `PdfDocument::list_spot_colours_blob` now materializes the
+  spot-colour names once, counts the exact stdout byte length, and fills a
+  newline-initialized output buffer by index instead of growing the array,
+  preserving cpdf's top-level separation scan order, wrapper output, and empty
+  document output. Validation on MoonBit compiler 0.9.3: `moon check --target
+  native --warn-list +73` passes with the known notice; focused spot-colour blob
+  tests report 1/1; `moon test --target native pdf_spot_test.mbt` reports 3/3;
+  `moon check --target all --warn-list +73` passes with the known notice; `moon
+  test --target native` reports 2428/2428.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

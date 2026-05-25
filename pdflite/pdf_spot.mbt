@@ -47,10 +47,19 @@ pub fn PdfDocument::list_spot_colours(self : PdfDocument) -> Array[PdfName] {
 ///|
 /// Return the bytes cpdf's `list_spot_colours` would print to stdout.
 pub fn PdfDocument::list_spot_colours_blob(self : PdfDocument) -> PdfBytes {
-  let output : Array[Byte] = []
-  for name in self.list_spot_colours() {
-    pdf_writer_push_view(output, name.bytes())
-    output.push(10)
+  let names = self.list_spot_colours()
+  let mut output_length = 0
+  for name in names {
+    output_length += name.bytes().length() + 1
+  }
+  let output = Array::make(output_length, b'\n')
+  let mut position = 0
+  for name in names {
+    for byte in name.bytes() {
+      output[position] = byte
+      position += 1
+    }
+    position += 1
   }
   Bytes::from_array(output)
 }
