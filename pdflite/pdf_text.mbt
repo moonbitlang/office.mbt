@@ -1474,7 +1474,7 @@ fn pdf_text_predefined_unicode_table_charcode(
       match
         pdf_text_predefined_cid_range_charcode_of_cid(charcode_ranges, cid) {
         Some(code) => found = pdf_text_lower_packed_charcode(found, code)
-        None => return None
+        None => ()
       }
     }
   }
