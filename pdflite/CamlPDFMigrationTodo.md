@@ -9285,6 +9285,15 @@ Current backend snapshot:
   --target native pdf_metadata_test.mbt` reports 21/21; `moon check --target all
   --warn-list +73` passes with the known notice; `moon test --target native`
   reports 2428/2428.~~
+- [x] ~~Continue source-port hardening with a page-info text-report
+  performance slice: `PdfDocument::page_info_text` now computes page-info
+  entries once, precomputes the exact rendered report length, and creates the
+  output array with that capacity before preserving the existing cpdf-style line
+  emission path. Validation on MoonBit compiler 0.9.3: `moon check --target
+  native --warn-list +73` passes with the known notice; focused page-info text
+  tests report 1/1; `moon test --target native pdf_page_info_test.mbt` reports
+  3/3; `moon check --target all --warn-list +73` passes with the known notice;
+  `moon test --target native` reports 2428/2428.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

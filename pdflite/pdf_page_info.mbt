@@ -247,14 +247,55 @@ fn pdf_page_info_push_entry(
 }
 
 ///|
+fn pdf_page_info_utf8_length(text : String) -> Int {
+  @utf8.encode(text).length()
+}
+
+///|
+fn pdf_page_info_line_length(key : String, value : String) -> Int {
+  pdf_page_info_utf8_length(key) + pdf_page_info_utf8_length(value) + 1
+}
+
+///|
+fn pdf_page_info_entry_text_length(entry : PdfPageInfoEntry) -> Int {
+  pdf_page_info_utf8_length("Page " + entry.page_number.to_string() + ":\n") +
+  pdf_page_info_line_length("Label: ", entry.label) +
+  pdf_page_info_line_length(
+    "MediaBox: ",
+    pdf_page_info_box_text(entry.mediabox),
+  ) +
+  pdf_page_info_line_length("CropBox: ", pdf_page_info_box_text(entry.cropbox)) +
+  pdf_page_info_line_length(
+    "BleedBox: ",
+    pdf_page_info_box_text(entry.bleedbox),
+  ) +
+  pdf_page_info_line_length("TrimBox: ", pdf_page_info_box_text(entry.trimbox)) +
+  pdf_page_info_line_length("ArtBox: ", pdf_page_info_box_text(entry.artbox)) +
+  pdf_page_info_line_length("Rotation: ", entry.rotation.to_string()) +
+  pdf_page_info_line_length("Annotations: ", entry.annotations.to_string())
+}
+
+///|
+fn pdf_page_info_text_length(entries : ArrayView[PdfPageInfoEntry]) -> Int {
+  let mut length = 0
+  for entry in entries {
+    length += pdf_page_info_entry_text_length(entry)
+  }
+  length
+}
+
+///|
 /// Render cpdf's plain-text page-info report for selected pages.
 pub fn PdfDocument::page_info_text(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
   unit? : PdfUnit = PdfPoint,
 ) -> PdfBytes raise PdfError {
-  let output : Array[Byte] = []
-  for entry in self.pdf_page_info_entries(page_numbers, unit) {
+  let entries = self.pdf_page_info_entries(page_numbers, unit)
+  let output : Array[Byte] = Array::new(
+    capacity=pdf_page_info_text_length(entries),
+  )
+  for entry in entries {
     pdf_page_info_push_entry(output, entry)
   }
   Bytes::from_array(output)
