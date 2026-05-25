@@ -3124,8 +3124,12 @@ pub fn pdf_process_text(
 }
 
 ///|
-fn pdf_addtext_decode_lossy(bytes : Array[Byte]) -> String {
-  @utf8.decode_lossy(Bytes::from_array(bytes))
+fn pdf_addtext_decode_lossy_view(bytes : BytesView) -> String {
+  let output = Array::make(bytes.length(), b'\x00')
+  for index, byte in bytes {
+    output[index] = byte
+  }
+  @utf8.decode_lossy(Bytes::from_array(output))
 }
 
 ///|
@@ -3136,29 +3140,25 @@ fn pdf_addtext_decode_lossy(bytes : Array[Byte]) -> String {
 pub fn pdf_addtext_split_at_newline(text : String) -> Array[String] {
   let bytes = @utf8.encode(text)
   let lines : Array[String] = []
-  let mut current : Array[Byte] = []
+  let mut line_start = 0
   let mut index = 0
   while index < bytes.length() {
     if index + 2 < bytes.length() &&
       bytes[index].to_int() == 92 &&
       bytes[index + 1].to_int() == 92 &&
       bytes[index + 2].to_int() == 110 {
-      current.push(bytes[index])
-      current.push(bytes[index + 1])
-      current.push(bytes[index + 2])
       index += 3
     } else if index + 1 < bytes.length() &&
       bytes[index].to_int() == 92 &&
       bytes[index + 1].to_int() == 110 {
-      lines.push(pdf_addtext_decode_lossy(current))
-      current = []
+      lines.push(pdf_addtext_decode_lossy_view(bytes[line_start:index]))
       index += 2
+      line_start = index
     } else {
-      current.push(bytes[index])
       index += 1
     }
   }
-  lines.push(pdf_addtext_decode_lossy(current))
+  lines.push(pdf_addtext_decode_lossy_view(bytes[line_start:]))
   lines
 }
 
@@ -3257,7 +3257,7 @@ pub fn pdf_addtext_unescape_string(text : String) -> String raise PdfError {
       index += 1
     }
   }
-  pdf_addtext_decode_lossy(output)
+  @utf8.decode_lossy(Bytes::from_array(output))
 }
 
 ///|

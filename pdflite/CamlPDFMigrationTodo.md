@@ -9912,6 +9912,16 @@ Current backend snapshot:
   1/1; `moon test --target native pdf_addtext_test.mbt` reports 118/118; `moon
   check --target all --warn-list +73` passes with the known notice; `moon test
   --target native` reports 2430/2430.~~
+- [x] ~~Continue source-port hardening with an add-text line splitting output
+  performance slice: `pdf_addtext_split_at_newline` now tracks line slice
+  boundaries through cpdf's literal `\n` markers and decodes exact copied
+  slices instead of growing a per-line byte buffer, preserving doubled
+  backslash `\\n` text, ordinary newline characters, trailing empty lines, and
+  UTF-8 text. Validation on MoonBit compiler 0.9.3: `moon check --target native
+  --warn-list +73` passes with the known notice; focused line-splitting tests
+  report 1/1; `moon test --target native pdf_addtext_test.mbt` reports
+  118/118; `moon check --target all --warn-list +73` passes with the known
+  notice; `moon test --target native` reports 2430/2430.~~
 - [x] ~~Continue source-port hardening with a cpdfcontent test-extraction
   output performance slice: `PdfDocument::test_extract_text` now materializes
   each selected page's extracted glyph text once, counts the exact output length
