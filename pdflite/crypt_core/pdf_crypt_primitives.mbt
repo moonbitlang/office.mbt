@@ -446,9 +446,10 @@ pub fn pdf_aes_cbc_decrypt(
     raise InvalidCryptoDataLength(data.length())
   }
   let cooked_key = pdf_aes_decrypt_key(key)
-  let output : Array[Byte] = []
+  let output = Array::make(data.length() - 16, b'\x00')
   let mut previous_ciphertext = pdf_aes_block(data[:16])
   let mut position = 16
+  let mut output_position = 0
   while position < data.length() {
     let ciphertext = pdf_aes_block(data[position:position + 16])
     let plaintext = FixedArray::make(16, b'\x00')
@@ -456,12 +457,12 @@ pub fn pdf_aes_cbc_decrypt(
       cooked_key, 0, ciphertext, 0, plaintext, 0,
     )
     for index in 0..<16 {
-      output.push(
-        (plaintext[index].to_int() ^ previous_ciphertext[index].to_int()).to_byte(),
-      )
+      output[output_position + index] = (plaintext[index].to_int() ^
+      previous_ciphertext[index].to_int()).to_byte()
     }
     previous_ciphertext = ciphertext
     position += 16
+    output_position += 16
   }
   let decrypted = Bytes::from_array(output)
   if remove_padding {

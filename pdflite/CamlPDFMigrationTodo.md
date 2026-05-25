@@ -9330,6 +9330,20 @@ Current backend snapshot:
   check --target all --warn-list +73` passes with the known notice; `moon test
   --target native` reports 2429/2429; `moon info && moon fmt` are clean with no
   `.mbti` changes.~~
+- [x] ~~Continue source-port hardening with an AES-CBC decrypt performance
+  slice: `pdf_aes_cbc_decrypt` now allocates the exact pre-padding plaintext
+  length from the IV-prefixed ciphertext and fills decrypted blocks by index
+  instead of growing the output array, preserving IV-only empty output,
+  padding removal, invalid-length errors, AESV2/AESV3 object decrypt, and
+  public crypt/decrypt behavior. Validation on MoonBit compiler 0.9.3: `moon
+  check --target native --warn-list +73` passes with the known notice; focused
+  AES-CBC tests report 1/1; `moon test --target native
+  crypt_core/pdf_crypt_primitives_wbtest.mbt` reports 10/10; `moon test
+  --target native pdf_crypt_wbtest.mbt` reports 26/26; `moon test --target
+  native pdf_crypt_test.mbt` reports 43/43; `moon check --target all
+  --warn-list +73` passes with the known notice; `moon test --target native`
+  reports 2429/2429; `moon info && moon fmt` are clean with no `.mbti`
+  changes.~~
 - [x] ~~Continue source-port hardening with an AESV3 ISO hash-repeat
   performance slice: `pdf_aesv3_shamix_repeat` now allocates the exact
   repeated-input byte length and fills each repeated view by index instead of
