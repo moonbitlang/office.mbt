@@ -453,6 +453,35 @@ test "pdf draw paragraph renders selected fontpack text" {
 }
 
 ///|
+test "pdf draw paragraph merges adjacent word and space text ops" {
+  let document = @pdflite.pdf_document_empty()
+  let state = @pdflite.pdf_draw_render_state_new()
+  let font = draw_standard_font_for_test(PdfHelvetica)
+  let pack = try! @pdflite.pdf_fontpack_of_standard_font(font)
+  let f1 = draw_name_for_test("/F1")
+  let ops = try! @pdflite.pdf_drawops_to_content_ops_with_document(
+    state,
+    document,
+    [
+      PdfDrawTextSection([
+        PdfDrawFontPack("Body", pack, []),
+        PdfDrawFont("Body", 10.0),
+        PdfDrawPara(None, PdfDrawLeft, 200.0, ["A B"]),
+      ]),
+    ],
+  )
+  @test.assert_eq(ops, [
+    Op_BT,
+    Op_Tstar,
+    Op_Td(-0.0, 0.0),
+    Op_Tf(f1, 10.0),
+    Op_Tj(draw_bytes_for_test([65, 160, 66])),
+    Op_Td(0.0, 0.0),
+    Op_ET,
+  ])
+}
+
+///|
 test "pdf draw paragraph wraps lines and cleans duplicate text ops" {
   let document = @pdflite.pdf_document_empty()
   let state = @pdflite.pdf_draw_render_state_new()

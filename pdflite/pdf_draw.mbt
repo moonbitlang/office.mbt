@@ -733,16 +733,27 @@ fn pdf_draw_merge_adjacent_tjs(
   while index < ops.length() {
     match ops[index] {
       Op_Tj(_) => {
-        let bytes : Array[Byte] = []
+        let run_start = index
+        let mut total_length = 0
         while index < ops.length() {
           match ops[index] {
             Op_Tj(text) => {
-              for byte in text {
-                bytes.push(byte)
-              }
+              total_length += text.length()
               index += 1
             }
             _ => break
+          }
+        }
+        let bytes = Array::make(total_length, b'\x00')
+        let mut position = 0
+        for op_index in run_start..<index {
+          match ops[op_index] {
+            Op_Tj(text) =>
+              for byte in text {
+                bytes[position] = byte
+                position += 1
+              }
+            _ => ()
           }
         }
         output.push(Op_Tj(Bytes::from_array(bytes)))

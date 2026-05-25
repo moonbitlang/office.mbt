@@ -9933,6 +9933,17 @@ Current backend snapshot:
   native pdf_draw_test.mbt` reports 56/56; `moon check --target all
   --warn-list +73` passes with the known notice; `moon test --target native`
   reports 2430/2430.~~
+- [x] ~~Continue source-port hardening with a draw adjacent-text merge
+  performance slice: `pdf_draw_merge_adjacent_tjs` now scans each contiguous
+  `Tj` run for the exact combined byte length, allocates that output once, and
+  copies fragment bytes by index instead of growing a temporary byte array,
+  preserving paragraph cleanup, duplicate-font removal, standard-font space
+  bytes, and merged emitted text operations. Validation on MoonBit compiler
+  0.9.3: `moon check --target native --warn-list +73` passes with the known
+  notice; focused adjacent text merge tests report 1/1; `moon test --target
+  native pdf_draw_test.mbt` reports 57/57; `moon check --target all
+  --warn-list +73` passes with the known notice; `moon test --target native`
+  reports 2431/2431.~~
 - [x] ~~Continue source-port hardening with a cpdfcontent test-extraction
   output performance slice: `PdfDocument::test_extract_text` now materializes
   each selected page's extracted glyph text once, counts the exact output length
