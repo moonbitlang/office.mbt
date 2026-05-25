@@ -3559,6 +3559,25 @@ fn pdf_addtext_utf8_string(bytes : BytesView) -> String raise PdfError {
 }
 
 ///|
+fn pdf_addtext_url_visible_length(bytes : BytesView) -> Int raise PdfError {
+  let mut index = 0
+  let mut length = 0
+  while index < bytes.length() {
+    if pdf_addtext_is_url_marker(bytes, index) {
+      let text_start = index + 5
+      let pipe = pdf_addtext_require_byte(bytes, text_start, 124)
+      let close = pdf_addtext_require_byte(bytes, pipe + 1, 93)
+      length += pipe - text_start
+      index = close + 1
+    } else {
+      length += 1
+      index += 1
+    }
+  }
+  length
+}
+
+///|
 /// Strip cpdf add-text `%URL[text|url]` markup from one line.
 ///
 /// The returned URL spans use byte offsets in the stripped visible text, as in
@@ -3567,7 +3586,7 @@ pub fn pdf_addtext_get_urls_line(
   line : String,
 ) -> PdfAddTextUrlLine raise PdfError {
   let bytes = @utf8.encode(line)
-  let output : Array[Byte] = []
+  let output = Array::make(pdf_addtext_url_visible_length(bytes), b'\x00')
   let urls : Array[PdfAddTextUrl] = []
   let mut index = 0
   let mut position = 0
@@ -3576,17 +3595,17 @@ pub fn pdf_addtext_get_urls_line(
       let text_start = index + 5
       let pipe = pdf_addtext_require_byte(bytes, text_start, 124)
       let close = pdf_addtext_require_byte(bytes, pipe + 1, 93)
+      let start = position
       for byte in bytes[text_start:pipe] {
-        output.push(byte)
+        output[position] = byte
+        position += 1
       }
       let url = pdf_addtext_utf8_string(bytes[pipe + 1:close])
-      let start = position
-      let end = position + pipe - text_start
+      let end = position
       urls.push({ url, start, end })
-      position = end
       index = close + 1
     } else {
-      output.push(bytes[index])
+      output[position] = bytes[index]
       position += 1
       index += 1
     }
