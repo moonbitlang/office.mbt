@@ -1060,13 +1060,37 @@ fn pdf_missing_font_push_text(
 }
 
 ///|
+fn pdf_missing_font_text_length(entry : PdfMissingFontEntry) -> Int {
+  pdf_font_utf8_length(entry.page.to_string()) +
+  pdf_font_utf8_length(entry.name) +
+  pdf_font_utf8_length(entry.subtype) +
+  pdf_font_utf8_length(entry.basefont) +
+  pdf_font_utf8_length(entry.encoding) +
+  9
+}
+
+///|
+fn pdf_missing_fonts_text_length(
+  entries : ArrayView[PdfMissingFontEntry],
+) -> Int {
+  let mut length = 0
+  for entry in entries {
+    length += pdf_missing_font_text_length(entry)
+  }
+  length
+}
+
+///|
 /// Render cpdf's plain-text missing-font report for selected pages.
 pub fn PdfDocument::missing_fonts_text(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
 ) -> PdfBytes raise PdfError {
-  let output : Array[Byte] = []
-  for entry in self.missing_fonts(page_numbers) {
+  let entries = self.missing_fonts(page_numbers)
+  let output : Array[Byte] = Array::new(
+    capacity=pdf_missing_fonts_text_length(entries),
+  )
+  for entry in entries {
     pdf_missing_font_push_text(output, entry)
   }
   Bytes::from_array(output)
