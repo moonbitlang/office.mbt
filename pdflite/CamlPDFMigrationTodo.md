@@ -9264,6 +9264,17 @@ Current backend snapshot:
   report 1/1; `moon test --target native pdf_page_label_test.mbt` reports 25/25;
   `moon check --target all --warn-list +73` passes with the known notice; `moon
   test --target native` reports 2428/2428.~~
+- [x] ~~Continue source-port hardening with a merge name-suffix performance
+  slice: `pdf_merge_append_ascii_suffix` now encodes the ASCII suffix once,
+  allocates the exact original-name plus suffix byte length, and fills both
+  segments by index instead of growing the output array, preserving colliding
+  string destinations, catalog destinations, non-destination name trees, and
+  repeated-name per-inclusion destination rewrites. Validation on MoonBit
+  compiler 0.9.3: `moon check --target native --warn-list +73` passes with the
+  known notice; focused merge destination/name-tree tests report 4/4; `moon test
+  --target native pdf_merge_test.mbt` reports 33/33; `moon check --target all
+  --warn-list +73` passes with the known notice; `moon test --target native`
+  reports 2428/2428.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

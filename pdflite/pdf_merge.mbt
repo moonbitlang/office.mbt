@@ -1017,12 +1017,16 @@ fn pdf_merge_name_dictionary_entries(
 
 ///|
 fn pdf_merge_append_ascii_suffix(name : PdfBytes, suffix : String) -> PdfBytes {
-  let output : Array[Byte] = []
-  for byte in name[:] {
-    output.push(byte)
+  let suffix_bytes = @ascii.encode(suffix)
+  let output = Array::make(name.length() + suffix_bytes.length(), b'\x00')
+  let mut position = 0
+  for byte in name {
+    output[position] = byte
+    position += 1
   }
-  for byte in @ascii.encode(suffix)[:] {
-    output.push(byte)
+  for byte in suffix_bytes {
+    output[position] = byte
+    position += 1
   }
   Bytes::from_array(output)
 }
