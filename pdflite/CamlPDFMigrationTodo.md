@@ -9304,6 +9304,17 @@ Current backend snapshot:
   tests report 1/1; `moon test --target native pdf_spot_test.mbt` reports 3/3;
   `moon check --target all --warn-list +73` passes with the known notice; `moon
   test --target native` reports 2428/2428.~~
+- [x] ~~Continue source-port hardening with a bookmark diagnostic rendering
+  performance slice: `pdf_string_of_bookmark` now pre-encodes the level/open
+  fields, renders the destination object once, and assembles the line through
+  the shared exact-length byte concatenation helper instead of growing an output
+  array, preserving raw title bytes, destination object spelling, open state,
+  and trailing newline. Validation on MoonBit compiler 0.9.3: `moon check
+  --target native --warn-list +73` passes with the known notice; focused
+  bookmark diagnostic tests report 1/1; `moon test --target native
+  pdf_bookmark_test.mbt` reports 27/27; `moon check --target all --warn-list
+  +73` passes with the known notice; `moon test --target native` reports
+  2428/2428.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

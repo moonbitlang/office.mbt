@@ -171,19 +171,17 @@ pub let pdf_bookmark_black : PdfBookmarkColour = {
 pub fn pdf_string_of_bookmark(
   bookmark : PdfBookmark,
 ) -> PdfBytes raise PdfError {
-  let output : Array[Byte] = []
-  pdf_writer_push_ascii(output, bookmark.level.to_string())
-  pdf_writer_push_byte(output, 32)
-  pdf_writer_push_view(output, bookmark.text)
-  pdf_writer_push_byte(output, 32)
-  pdf_writer_push_view(
-    output,
+  let space = @ascii.encode(" ")
+  pdf_bytes_concat_views([
+    @ascii.encode(bookmark.level.to_string()),
+    space,
+    bookmark.text,
+    space,
     pdf_write_object(pdf_object_of_destination(bookmark.target)),
-  )
-  pdf_writer_push_byte(output, 32)
-  pdf_writer_push_ascii(output, if bookmark.is_open { "true" } else { "false" })
-  pdf_writer_push_byte(output, 10)
-  Bytes::from_array(output)
+    space,
+    @ascii.encode(if bookmark.is_open { "true" } else { "false" }),
+    @ascii.encode("\n"),
+  ])
 }
 
 ///|
