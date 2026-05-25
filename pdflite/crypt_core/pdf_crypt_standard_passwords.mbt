@@ -41,6 +41,20 @@ pub fn pdf_crypt_low_byte(value : Int, shift : Int) -> Byte {
 }
 
 ///|
+fn pdf_crypt_copy_view(
+  output : Array[Byte],
+  position : Int,
+  data : BytesView,
+) -> Int {
+  let mut current = position
+  for byte in data {
+    output[current] = byte
+    current += 1
+  }
+  current
+}
+
+///|
 fn pdf_crypt_push_view(output : Array[Byte], data : BytesView) -> Unit {
   for byte in data {
     output.push(byte)
@@ -62,9 +76,21 @@ pub fn pdf_encryption_file_key(
   key_length_bits : Int,
 ) -> @core.PdfBytes {
   let padded_password = pdf_pad_password(password)
-  let digest_input : Array[Byte] = []
-  pdf_crypt_push_view(digest_input, padded_password)
-  pdf_crypt_push_view(digest_input, owner_entry)
+  let metadata_marker_length = if revision >= 4 && no_encrypt_metadata {
+    4
+  } else {
+    0
+  }
+  let digest_input = Array::make(
+    padded_password.length() +
+    owner_entry.length() +
+    4 +
+    file_id.length() +
+    metadata_marker_length,
+    b'\x00',
+  )
+  let mut position = pdf_crypt_copy_view(digest_input, 0, padded_password)
+  position = pdf_crypt_copy_view(digest_input, position, owner_entry)
   let permissions_bytes : FixedArray[Byte] = [
     pdf_crypt_low_byte(permissions, 0),
     pdf_crypt_low_byte(permissions, 8),
@@ -72,13 +98,15 @@ pub fn pdf_encryption_file_key(
     pdf_crypt_low_byte(permissions, 24),
   ]
   for byte in permissions_bytes {
-    digest_input.push(byte)
+    digest_input[position] = byte
+    position += 1
   }
-  pdf_crypt_push_view(digest_input, file_id)
+  position = pdf_crypt_copy_view(digest_input, position, file_id)
   if revision >= 4 && no_encrypt_metadata {
     let no_metadata_marker : FixedArray[Byte] = [0xff, 0xff, 0xff, 0xff]
     for byte in no_metadata_marker {
-      digest_input.push(byte)
+      digest_input[position] = byte
+      position += 1
     }
   }
   let key_length = key_length_bits / 8
