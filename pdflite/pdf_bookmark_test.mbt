@@ -538,6 +538,12 @@ test "PdfDocument parse_bookmark_text validates plain text structure" {
   guard malformed is Err(@pdflite.PdfError::SoftError(_)) else {
     fail("expected @pdflite.PdfError::SoftError for malformed line")
   }
+  let unterminated : Result[Array[@pdflite.PdfBookmark], Error] = try? document.parse_bookmark_text(
+    @ascii.encode("0 \"Missing end 1\n"),
+  )
+  guard unterminated is Err(@pdflite.PdfError::SoftError(_)) else {
+    fail("expected @pdflite.PdfError::SoftError for unterminated string")
+  }
   @test.assert_eq(
     (try! document.parse_bookmark_text(
       @ascii.encode("0 \"Top\" 1\n2 \"Allowed\" 1\n"),
