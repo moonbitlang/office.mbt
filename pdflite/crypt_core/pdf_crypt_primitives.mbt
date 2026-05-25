@@ -227,6 +227,19 @@ fn pdf_sha512_push_u64_be(output : Array[Byte], value : UInt64) -> Unit {
 }
 
 ///|
+fn pdf_sha512_write_u64_be(
+  output : Array[Byte],
+  position : Int,
+  value : UInt64,
+) -> Unit {
+  let mut offset = position
+  for shift in [56, 48, 40, 32, 24, 16, 8, 0] {
+    output[offset] = ((value >> shift) & 0xff).to_byte()
+    offset += 1
+  }
+}
+
+///|
 fn pdf_sha512_padded(data : BytesView) -> @core.PdfBytes {
   let bit_length = data.length().to_uint64() * 8
   let padded_length = (data.length() + 1 + 16 + 127) / 128 * 128
@@ -305,9 +318,9 @@ fn pdf_sha512_digest_with_state(
     pdf_sha512_process_block(padded[offset:offset + 128], state)
     offset += 128
   }
-  let output : Array[Byte] = []
+  let output = Array::make(output_words * 8, b'\x00')
   for index in 0..<output_words {
-    pdf_sha512_push_u64_be(output, state[index])
+    pdf_sha512_write_u64_be(output, index * 8, state[index])
   }
   Bytes::from_array(output)
 }
