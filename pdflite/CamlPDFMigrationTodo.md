@@ -9383,6 +9383,21 @@ Current backend snapshot:
   check --target all --warn-list +73` passes with the known notice; `moon test
   --target native` reports 2429/2429; `moon info && moon fmt` are clean with no
   `.mbti` changes.~~
+- [x] ~~Continue source-port hardening with an MD5 padded-message performance
+  slice: `pdf_md5_digest` now computes the padded block length up front,
+  allocates one zero-filled message buffer, copies input bytes by index, and
+  writes the `0x80` marker plus little-endian length trailer in place instead
+  of growing the message array. This preserves RFC 1321 vectors,
+  standard-security file-key derivation, object-key derivation, and public
+  crypt/decrypt behavior. Validation on MoonBit compiler 0.9.3: `moon check
+  --target native --warn-list +73` passes with the known notice; focused MD5
+  vector tests report 1/1; `moon test --target native
+  crypt_core/pdf_crypt_primitives_wbtest.mbt` reports 10/10; `moon test
+  --target native pdf_crypt_wbtest.mbt` reports 26/26; `moon test --target
+  native pdf_crypt_test.mbt` reports 43/43; `moon check --target all
+  --warn-list +73` passes with the known notice; `moon test --target native`
+  reports 2429/2429; `moon info && moon fmt` are clean with no `.mbti`
+  changes.~~
 - [x] ~~Continue source-port hardening with an AESV3 ISO hash-repeat
   performance slice: `pdf_aesv3_shamix_repeat` now allocates the exact
   repeated-input byte length and fills each repeated view by index instead of

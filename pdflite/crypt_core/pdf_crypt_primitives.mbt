@@ -86,21 +86,22 @@ let pdf_md5_constants : FixedArray[UInt] = [
 ///|
 /// Return the MD5 digest of `data`.
 pub fn pdf_md5_digest(data : BytesView) -> @core.PdfBytes {
-  let message : Array[Byte] = []
-  for byte in data {
-    message.push(byte)
+  let padded_length = (data.length() + 1 + 8 + 63) / 64 * 64
+  let message = Array::make(padded_length, b'\x00')
+  for index in 0..<data.length() {
+    message[index] = data[index]
   }
   let bit_length_low = data.length().reinterpret_as_uint() << 3
   let bit_length_high = data.length().reinterpret_as_uint() >> 29
-  message.push(0x80)
-  while message.length() % 64 != 56 {
-    message.push(0)
+  message[data.length()] = 0x80
+  let mut length_position = padded_length - 8
+  for shift in [0, 8, 16, 24] {
+    message[length_position] = pdf_md5_low_byte(bit_length_low, shift)
+    length_position += 1
   }
   for shift in [0, 8, 16, 24] {
-    message.push(pdf_md5_low_byte(bit_length_low, shift))
-  }
-  for shift in [0, 8, 16, 24] {
-    message.push(pdf_md5_low_byte(bit_length_high, shift))
+    message[length_position] = pdf_md5_low_byte(bit_length_high, shift)
+    length_position += 1
   }
   let mut a0 : UInt = 0x67452301
   let mut b0 : UInt = 0xefcdab89
