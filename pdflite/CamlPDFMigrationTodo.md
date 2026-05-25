@@ -9317,6 +9317,19 @@ Current backend snapshot:
   --warn-list +73` passes with the known notice; `moon test --target native`
   reports 2429/2429; `moon info && moon fmt` are clean with no `.mbti`
   changes.~~
+- [x] ~~Continue source-port hardening with an object-key derivation
+  performance slice: `pdf_encryption_object_key` now allocates the exact
+  derived key length and copies the MD5 prefix by index instead of growing the
+  result array, preserving Algorithm 3.1 object-key vectors, ARC4 object crypt,
+  AESV2 salt handling, and public crypt/decrypt behavior. Validation on
+  MoonBit compiler 0.9.3: `moon check --target native --warn-list +73` passes
+  with the known notice; focused object-key and ARC4-object tests report 2/2;
+  `moon test --target native crypt_core/pdf_crypt_primitives_wbtest.mbt`
+  reports 10/10; `moon test --target native pdf_crypt_wbtest.mbt` reports
+  26/26; `moon test --target native pdf_crypt_test.mbt` reports 43/43; `moon
+  check --target all --warn-list +73` passes with the known notice; `moon test
+  --target native` reports 2429/2429; `moon info && moon fmt` are clean with no
+  `.mbti` changes.~~
 - [x] ~~Continue source-port hardening with an AESV3 ISO hash-repeat
   performance slice: `pdf_aesv3_shamix_repeat` now allocates the exact
   repeated-input byte length and fills each repeated view by index instead of

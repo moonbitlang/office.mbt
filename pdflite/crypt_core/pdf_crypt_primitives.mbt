@@ -615,9 +615,9 @@ pub fn pdf_encryption_object_key(
   let digest = md5.finalize()
   let requested_length = key_length_bits / 8 + 5
   let length = if requested_length < 16 { requested_length } else { 16 }
-  let output : Array[Byte] = []
+  let output = Array::make(length, b'\x00')
   for index in 0..<length {
-    output.push(digest[index])
+    output[index] = digest[index]
   }
   Bytes::from_array(output)
 }
