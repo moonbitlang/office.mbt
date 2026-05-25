@@ -9355,6 +9355,17 @@ Current backend snapshot:
   listing tests report 1/1; `moon test --target native pdf_ocg_test.mbt`
   reports 18/18; `moon check --target all --warn-list +73` passes with the
   known notice; `moon test --target native` reports 2428/2428.~~
+- [x] ~~Continue source-port hardening with an annotation listing output
+  performance slice: `PdfDocument::list_annotations` now materializes the
+  selected non-empty annotation rows once, counts each cpdf old-style listing
+  line, and preallocates the output array before preserving the existing line
+  renderer, keeping selected page output, wrapper output, empty `/Contents`
+  suppression, and invalid page errors stable. Validation on MoonBit compiler
+  0.9.3: `moon check --target native --warn-list +73` passes with the known
+  notice; focused annotation listing tests report 1/1; `moon test --target
+  native pdf_annotation_test.mbt` reports 14/14; `moon check --target all
+  --warn-list +73` passes with the known notice; `moon test --target native`
+  reports 2428/2428.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

@@ -729,6 +729,18 @@ fn pdf_annotation_push_listing_line(
 }
 
 ///|
+fn pdf_annotation_listing_line_length(
+  page_number : Int,
+  contents : BytesView,
+) -> Int {
+  @ascii.encode("Page ").length() +
+  @ascii.encode(page_number.to_string()).length() +
+  @ascii.encode(": ").length() +
+  contents.length() +
+  1
+}
+
+///|
 /// Return old-style annotation contents as `(page_number, contents)` pairs.
 ///
 /// Every annotation entry contributes one pair. Annotations without `/Contents`
@@ -778,7 +790,8 @@ pub fn PdfDocument::list_annotations(
     pages.length(),
     "list_annotations",
   )
-  let output : Array[Byte] = []
+  let rows : Array[(Int, PdfBytes)] = []
+  let mut output_length = 0
   for index, page in pages {
     let page_number = index + 1
     if pdf_page_box_contains_page(page_numbers, page_number) {
@@ -789,12 +802,19 @@ pub fn PdfDocument::list_annotations(
               encoding, annotation,
             )
             if contents.length() > 0 {
-              pdf_annotation_push_listing_line(output, page_number, contents)
+              output_length += pdf_annotation_listing_line_length(
+                page_number, contents,
+              )
+              rows.push((page_number, contents))
             }
           }
         _ => ()
       }
     }
+  }
+  let output : Array[Byte] = Array::new(capacity=output_length)
+  for row in rows {
+    pdf_annotation_push_listing_line(output, row.0, row.1)
   }
   Bytes::from_array(output)
 }
