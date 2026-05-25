@@ -3039,6 +3039,20 @@ fn pdf_addtext_bytes_match_at(
 }
 
 ///|
+fn pdf_addtext_copy_view(
+  output : Array[Byte],
+  position : Int,
+  view : BytesView,
+) -> Int {
+  let mut position = position
+  for byte in view {
+    output[position] = byte
+    position += 1
+  }
+  position
+}
+
+///|
 fn pdf_addtext_replace_all_lazy(
   text : String,
   search : String,
@@ -3049,19 +3063,35 @@ fn pdf_addtext_replace_all_lazy(
     text
   } else {
     let text_bytes = @utf8.encode(text)
-    let output : Array[Byte] = []
+    let replacements : Array[(Int, Int, PdfBytes)] = []
     let mut index = 0
+    let mut length = text_bytes.length()
     while index < text_bytes.length() {
       if pdf_addtext_bytes_match_at(text_bytes, index, search_bytes) {
-        for byte in @utf8.encode(replacement()) {
-          output.push(byte)
-        }
+        let replacement_bytes = @utf8.encode(replacement())
+        replacements.push(
+          (index, index + search_bytes.length(), replacement_bytes),
+        )
+        length = length - search_bytes.length() + replacement_bytes.length()
         index += search_bytes.length()
       } else {
-        output.push(text_bytes[index])
         index += 1
       }
     }
+    guard replacements.length() > 0 else { return text }
+    let output = Array::make(length, b'\x00')
+    let mut source_index = 0
+    let mut position = 0
+    for entry in replacements {
+      position = pdf_addtext_copy_view(
+        output,
+        position,
+        text_bytes[source_index:entry.0],
+      )
+      position = pdf_addtext_copy_view(output, position, entry.2)
+      source_index = entry.1
+    }
+    let _ = pdf_addtext_copy_view(output, position, text_bytes[source_index:])
     @utf8.decode_lossy(Bytes::from_array(output))
   }
 }

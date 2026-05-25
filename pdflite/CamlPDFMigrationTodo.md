@@ -9900,6 +9900,18 @@ Current backend snapshot:
   1/1 and 1/1; `moon test --target native pdf_addtext_test.mbt` reports
   118/118; `moon check --target all --warn-list +73` passes with the known
   notice; `moon test --target native` reports 2430/2430.~~
+- [x] ~~Continue source-port hardening with an add-text lazy replacement
+  output performance slice: `pdf_addtext_replace_all_lazy` now scans matches
+  once, evaluates replacement callbacks only for matched markers, caches the
+  encoded replacement bytes, computes the exact final byte length, and copies
+  source spans plus replacements by index instead of growing the output array.
+  This preserves replacement order, absent-marker laziness, empty-marker
+  suppression, UTF-8 output, and the subsequent cpdf strftime pass. Validation
+  on MoonBit compiler 0.9.3: `moon check --target native --warn-list +73`
+  passes with the known notice; focused replacement tests report 1/1, 1/1, and
+  1/1; `moon test --target native pdf_addtext_test.mbt` reports 118/118; `moon
+  check --target all --warn-list +73` passes with the known notice; `moon test
+  --target native` reports 2430/2430.~~
 - [x] ~~Continue source-port hardening with a cpdfcontent test-extraction
   output performance slice: `PdfDocument::test_extract_text` now materializes
   each selected page's extracted glyph text once, counts the exact output length
