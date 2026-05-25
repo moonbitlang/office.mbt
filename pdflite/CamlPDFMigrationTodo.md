@@ -9889,6 +9889,17 @@ Current backend snapshot:
   report 1/1; `moon test --target native pdf_addtext_test.mbt` reports
   118/118; `moon check --target all --warn-list +73` passes with the known
   notice; `moon test --target native` reports 2430/2430.~~
+- [x] ~~Continue source-port hardening with an add-text escape decoding output
+  performance slice: `pdf_addtext_unescape_string` now validates and counts
+  the decoded byte length before allocating an exact output buffer, then fills
+  octal escapes, doubled backslashes, dropped-backslash escapes, and literal
+  `\n` bytes by index instead of growing a temporary array. This preserves
+  cpdf-compatible escape decoding, lossy UTF-8 recovery, and invalid octal
+  errors. Validation on MoonBit compiler 0.9.3: `moon check --target native
+  --warn-list +73` passes with the known notice; focused unescape tests report
+  1/1 and 1/1; `moon test --target native pdf_addtext_test.mbt` reports
+  118/118; `moon check --target all --warn-list +73` passes with the known
+  notice; `moon test --target native` reports 2430/2430.~~
 - [x] ~~Continue source-port hardening with a cpdfcontent test-extraction
   output performance slice: `PdfDocument::test_extract_text` now materializes
   each selected page's extracted glyph text once, counts the exact output length
