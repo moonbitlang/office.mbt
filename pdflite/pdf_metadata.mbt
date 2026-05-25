@@ -435,10 +435,19 @@ fn pdf_metadata_bool_string(value : Bool) -> String {
 
 ///|
 fn pdf_metadata_ascii_codepoints(bytes : BytesView) -> PdfBytes raise PdfError {
-  let output : Array[Byte] = []
-  for codepoint in pdf_codepoints_of_pdfdocstring(bytes) {
+  let codepoints = pdf_codepoints_of_pdfdocstring(bytes)
+  let mut output_length = 0
+  for codepoint in codepoints {
     if codepoint <= 127 {
-      output.push(pdf_byte_of_int(codepoint))
+      output_length += 1
+    }
+  }
+  let output = Array::make(output_length, b'\x00')
+  let mut position = 0
+  for codepoint in codepoints {
+    if codepoint <= 127 {
+      output[position] = pdf_byte_of_int(codepoint)
+      position += 1
     }
   }
   Bytes::from_array(output)

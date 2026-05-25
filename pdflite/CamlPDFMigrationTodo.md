@@ -81,7 +81,7 @@ Current estimate:
 
 Current backend snapshot:
 
-- Native: full suite passes on MoonBit 0.9.3, currently 2414/2414 tests.
+- Native: full suite passes on MoonBit 0.9.3, currently 2428/2428 tests.
 - WasmGC and JavaScript: full portable non-native test suites pass on MoonBit
   0.9.3, currently 2072/2072 on each backend after the latest source/API parity
   wrappers.
@@ -9273,6 +9273,16 @@ Current backend snapshot:
   compiler 0.9.3: `moon check --target native --warn-list +73` passes with the
   known notice; focused merge destination/name-tree tests report 4/4; `moon test
   --target native pdf_merge_test.mbt` reports 33/33; `moon check --target all
+  --warn-list +73` passes with the known notice; `moon test --target native`
+  reports 2428/2428.~~
+- [x] ~~Continue source-port hardening with a metadata stripped-output
+  performance slice: `pdf_metadata_ascii_codepoints` now decodes PDFDocString
+  codepoints once, counts ASCII survivors, allocates the exact stripped byte
+  length, and fills by index instead of growing the output array, preserving
+  raw, UTF-8, stripped, and source-spelled alias output. Validation on MoonBit
+  compiler 0.9.3: `moon check --target native --warn-list +73` passes with the
+  known notice; focused metadata encode-output tests report 1/1; `moon test
+  --target native pdf_metadata_test.mbt` reports 21/21; `moon check --target all
   --warn-list +73` passes with the known notice; `moon test --target native`
   reports 2428/2428.~~
 - [ ] Continue source-port hardening with either another real-world malformed
