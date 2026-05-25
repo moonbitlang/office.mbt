@@ -9767,14 +9767,14 @@ Current backend snapshot:
 - [x] ~~Continue source-port hardening with an annotation listing output
   performance slice: `PdfDocument::list_annotations` now materializes the
   selected non-empty annotation rows once, counts each cpdf old-style listing
-  line, and preallocates the output array before preserving the existing line
-  renderer, keeping selected page output, wrapper output, empty `/Contents`
-  suppression, and invalid page errors stable. Validation on MoonBit compiler
-  0.9.3: `moon check --target native --warn-list +73` passes with the known
-  notice; focused annotation listing tests report 1/1; `moon test --target
-  native pdf_annotation_test.mbt` reports 14/14; `moon check --target all
-  --warn-list +73` passes with the known notice; `moon test --target native`
-  reports 2428/2428.~~
+  line, allocates that exact output length, and fills each listing line by
+  index instead of growing the output array, keeping selected page output,
+  wrapper output, empty `/Contents` suppression, and invalid page errors stable.
+  Validation on MoonBit compiler 0.9.3: `moon check --target native
+  --warn-list +73` passes with the known notice; focused annotation listing
+  tests report 1/1; `moon test --target native pdf_annotation_test.mbt` reports
+  14/14; `moon check --target all --warn-list +73` passes with the known notice;
+  `moon test --target native` reports 2429/2429.~~
 - [x] ~~Continue source-port hardening with a debug-object dump output
   performance slice: `PdfDocument::debug_objects` now renders trailer/catalog/
   page/object chunks once and concatenates them with an exact-size copy instead

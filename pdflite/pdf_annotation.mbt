@@ -716,16 +716,47 @@ fn PdfDocument::pdf_annotation_contents_text(
 }
 
 ///|
-fn pdf_annotation_push_listing_line(
+fn pdf_annotation_write_listing_view(
   output : Array[Byte],
+  position : Int,
+  data : BytesView,
+) -> Int {
+  let mut current = position
+  for byte in data {
+    output[current] = byte
+    current += 1
+  }
+  current
+}
+
+///|
+fn pdf_annotation_write_listing_ascii(
+  output : Array[Byte],
+  position : Int,
+  text : String,
+) -> Int {
+  pdf_annotation_write_listing_view(output, position, @ascii.encode(text))
+}
+
+///|
+fn pdf_annotation_write_listing_line(
+  output : Array[Byte],
+  position : Int,
   page_number : Int,
   contents : BytesView,
-) -> Unit {
-  pdf_writer_push_ascii(output, "Page ")
-  pdf_writer_push_ascii(output, page_number.to_string())
-  pdf_writer_push_ascii(output, ": ")
-  pdf_writer_push_view(output, contents)
-  pdf_writer_push_byte(output, 10)
+) -> Int {
+  let mut current = pdf_annotation_write_listing_ascii(
+    output, position, "Page ",
+  )
+  current = pdf_annotation_write_listing_ascii(
+    output,
+    current,
+    page_number.to_string(),
+  )
+  current = pdf_annotation_write_listing_ascii(output, current, ": ")
+  current = pdf_annotation_write_listing_view(output, current, contents)
+  output[current] = 10
+  current + 1
 }
 
 ///|
@@ -812,9 +843,10 @@ pub fn PdfDocument::list_annotations(
       }
     }
   }
-  let output : Array[Byte] = Array::new(capacity=output_length)
+  let output = Array::make(output_length, b'\x00')
+  let mut position = 0
   for row in rows {
-    pdf_annotation_push_listing_line(output, row.0, row.1)
+    position = pdf_annotation_write_listing_line(output, position, row.0, row.1)
   }
   Bytes::from_array(output)
 }
