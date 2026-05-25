@@ -653,14 +653,36 @@ fn pdf_font_push_table_line(
 }
 
 ///|
+fn pdf_font_table_line_length(entry : PdfFontTableEntry) -> Int {
+  pdf_font_utf8_length(entry.code.to_string()) +
+  pdf_font_utf8_length(entry.unicode) +
+  pdf_font_utf8_length(entry.utf8) +
+  pdf_font_utf8_length(entry.unicode_name) +
+  pdf_font_utf8_length(entry.glyphnames) +
+  15
+}
+
+///|
+fn pdf_font_table_text_length(entries : ArrayView[PdfFontTableEntry]) -> Int {
+  let mut length = 0
+  for entry in entries {
+    length += pdf_font_table_line_length(entry)
+  }
+  length
+}
+
+///|
 /// Render cpdf's plain-text font encoding table for one named page font.
 pub fn PdfDocument::font_table_text(
   self : PdfDocument,
   font_name : String,
   page_number : Int,
 ) -> PdfBytes raise PdfError {
-  let output : Array[Byte] = []
-  for entry in self.font_table(font_name, page_number) {
+  let entries = self.font_table(font_name, page_number)
+  let output : Array[Byte] = Array::new(
+    capacity=pdf_font_table_text_length(entries),
+  )
+  for entry in entries {
     pdf_font_push_table_line(output, entry)
   }
   Bytes::from_array(output)

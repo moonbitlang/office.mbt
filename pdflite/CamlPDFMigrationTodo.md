@@ -9397,6 +9397,16 @@ Current backend snapshot:
   text tests report 1/1; `moon test --target native pdf_font_test.mbt` reports
   9/9; `moon check --target all --warn-list +73` passes with the known notice;
   `moon test --target native` reports 2428/2428.~~
+- [x] ~~Continue source-port hardening with a font-table text output
+  performance slice: `PdfDocument::font_table_text` now computes font table
+  entries once, counts each cpdf encoding-table row exactly, and creates the
+  output array with that capacity before preserving the existing row renderer,
+  keeping code, Unicode, UTF-8, Unicode-name, glyph-name, wrapper output, and
+  invalid-page behavior stable. Validation on MoonBit compiler 0.9.3: `moon
+  check --target native --warn-list +73` passes with the known notice; focused
+  font-table tests report 1/1; `moon test --target native pdf_font_test.mbt`
+  reports 9/9; `moon check --target all --warn-list +73` passes with the known
+  notice; `moon test --target native` reports 2428/2428.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
