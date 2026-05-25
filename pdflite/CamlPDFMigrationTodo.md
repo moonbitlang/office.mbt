@@ -9835,6 +9835,17 @@ Current backend snapshot:
   pdf_space_test.mbt` reports 22/22; `moon check --target all --warn-list +73`
   passes with the known notice; `moon test --target native` reports
   2430/2430.~~
+- [x] ~~Continue source-port hardening with a PDFDocEncoding output
+  performance slice: `pdf_pdfdocencoding_of_codepoints` now allocates exactly
+  one output byte per input codepoint and fills representable PDFDocEncoding
+  bytes by index instead of growing an output array, preserving the `None`
+  result for unrepresentable scalars and the UTF-16BE fallback policy in
+  `pdf_pdfdocstring_of_codepoints`. Validation on MoonBit compiler 0.9.3:
+  `moon check --target native --warn-list +73` passes with the known notice;
+  focused PDFDocEncoding tests report 1/1; `moon test --target native
+  pdf_text_test.mbt` reports 152/152; `moon check --target all --warn-list +73`
+  passes with the known notice; `moon test --target native` reports
+  2430/2430.~~
 - [x] ~~Continue source-port hardening with a cpdfcontent test-extraction
   output performance slice: `PdfDocument::test_extract_text` now materializes
   each selected page's extracted glyph text once, counts the exact output length

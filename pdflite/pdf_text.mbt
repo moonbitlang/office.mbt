@@ -11679,15 +11679,14 @@ pub fn pdf_pdfdocencoding_byte_of_codepoint(codepoint : Int) -> Byte? {
 pub fn pdf_pdfdocencoding_of_codepoints(
   codepoints : ArrayView[Int],
 ) -> PdfBytes? {
-  let output : Array[Byte] = []
-  for codepoint in codepoints {
-    match pdf_pdfdocencoding_byte_of_codepoint(codepoint) {
-      Some(byte) => output.push(byte)
-      None => break None
+  let output = Array::make(codepoints.length(), b'\x00')
+  for index in 0..<codepoints.length() {
+    match pdf_pdfdocencoding_byte_of_codepoint(codepoints[index]) {
+      Some(byte) => output[index] = byte
+      None => return None
     }
-  } nobreak {
-    Some(Bytes::from_array(output))
   }
+  Some(Bytes::from_array(output))
 }
 
 ///|
