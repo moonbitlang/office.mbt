@@ -232,10 +232,16 @@ pub fn pdf_bytes_of_int_array(
 pub fn pdf_bytes_of_int_arrays(
   values : ArrayView[ArrayView[Int]],
 ) -> PdfBytes raise PdfError {
-  let output : Array[Byte] = []
+  let mut length = 0
+  for array in values {
+    length += array.length()
+  }
+  let output = Array::make(length, b'\x00')
+  let mut position = 0
   for array in values {
     for value in array {
-      output.push(pdf_byte_of_int(value))
+      output[position] = pdf_byte_of_int(value)
+      position += 1
     }
   }
   Bytes::from_array(output)
@@ -250,9 +256,9 @@ pub fn pdf_bytes_map_int(
   bytes : BytesView,
   f : (Int) -> Int,
 ) -> PdfBytes raise PdfError {
-  let output : Array[Byte] = []
-  for byte in bytes {
-    output.push(pdf_byte_of_int(f(byte.to_int())))
+  let output = Array::make(bytes.length(), b'\x00')
+  for index in 0..<bytes.length() {
+    output[index] = pdf_byte_of_int(f(bytes[index].to_int()))
   }
   Bytes::from_array(output)
 }

@@ -9223,6 +9223,18 @@ Current backend snapshot:
   report 1/1; `moon test --target native pdf_toc_test.mbt` reports 16/16; `moon
   check --target all --warn-list +73` passes with the known notice; `moon test
   --target native` reports 2428/2428.~~
+- [x] ~~Continue source-port hardening with a core PdfBytes compatibility
+  conversion performance slice: `pdf_bytes_of_int_arrays` now precomputes the
+  flattened byte length and fills a fixed output buffer by index, and
+  `pdf_bytes_map_int` now allocates exactly one byte per borrowed input byte
+  before applying the checked mapping, preserving sliced-view ownership,
+  immutable source behavior, compatibility aliases, and `InvalidByte` errors.
+  Validation on MoonBit compiler 0.9.3: `moon check --target native
+  --warn-list +73` passes with the known notice; focused PdfBytes conversion
+  and map tests report 2/2; `moon test --target native pdflite_test.mbt`
+  reports 9/9; `moon check --target all --warn-list +73` passes with the known
+  notice; `moon test --target native` reports 2429/2429; `moon info && moon fmt`
+  are clean with no `.mbti` changes.~~
 - [x] ~~Continue source-port hardening with a content unknown-operator fallback
   performance slice: `pdf_content_section_unknown` now renders malformed or
   unknown operator operands once, computes the exact section length including
