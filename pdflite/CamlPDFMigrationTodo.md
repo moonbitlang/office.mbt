@@ -9223,6 +9223,19 @@ Current backend snapshot:
   report 1/1; `moon test --target native pdf_toc_test.mbt` reports 16/16; `moon
   check --target all --warn-list +73` passes with the known notice; `moon test
   --target native` reports 2428/2428.~~
+- [x] ~~Continue source-port hardening with a native clip polygon encoding
+  performance slice: `pdf_clip_encode_polygon` now precomputes the exact native
+  GPC bridge payload length from contour and vertex counts, allocates one
+  buffer, and writes little-endian contour headers and vertex coordinates by
+  index instead of growing the byte array, preserving source-spelled GPC
+  wrappers, operation-code mapping, disjoint/intersecting/union clip results,
+  and malformed native payload checks. Validation on MoonBit compiler 0.9.3:
+  `moon check --target native --warn-list +73` passes with the known notice;
+  focused native clip tests report 2/2; `moon test --target native
+  pdf_clip_test.mbt` reports 6/6; `moon test --target native
+  pdf_clip_native_test.mbt` reports 5/5; `moon check --target all --warn-list
+  +73` passes with the known notice; `moon test --target native` reports
+  2429/2429; `moon info && moon fmt` are clean with no `.mbti` changes.~~
 - [x] ~~Continue source-port hardening with an AESV3 ISO hash-repeat
   performance slice: `pdf_aesv3_shamix_repeat` now allocates the exact
   repeated-input byte length and fills each repeated view by index instead of

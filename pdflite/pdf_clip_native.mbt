@@ -16,38 +16,70 @@ fn pdf_clip_raise_bad_native_encoding() -> Unit raise PdfError {
 
 ///|
 #cfg(target="native")
-fn pdf_clip_push_i32_le(
+fn pdf_clip_write_i32_le(
   output : Array[Byte],
+  position : Int,
   value : Int,
-) -> Unit raise PdfError {
+) -> Int raise PdfError {
   if value < 0 {
     pdf_clip_raise_bad_native_encoding()
   }
-  output.push((value & 0xff).to_byte())
-  output.push(((value >> 8) & 0xff).to_byte())
-  output.push(((value >> 16) & 0xff).to_byte())
-  output.push(((value >> 24) & 0xff).to_byte())
+  output[position] = (value & 0xff).to_byte()
+  output[position + 1] = ((value >> 8) & 0xff).to_byte()
+  output[position + 2] = ((value >> 16) & 0xff).to_byte()
+  output[position + 3] = ((value >> 24) & 0xff).to_byte()
+  position + 4
 }
 
 ///|
 #cfg(target="native")
-fn pdf_clip_push_u64_le(output : Array[Byte], value : UInt64) -> Unit {
+fn pdf_clip_write_u64_le(
+  output : Array[Byte],
+  position : Int,
+  value : UInt64,
+) -> Int {
+  let mut position = position
   for byte in value.to_le_bytes() {
-    output.push(byte)
+    output[position] = byte
+    position += 1
   }
+  position
+}
+
+///|
+#cfg(target="native")
+fn pdf_clip_encoded_polygon_length(polygon : PdfClipPolygon) -> Int {
+  let mut length = 4
+  for contour in polygon.contours {
+    length += 8 + contour.vertices.length() * 16
+  }
+  length
 }
 
 ///|
 #cfg(target="native")
 fn pdf_clip_encode_polygon(polygon : PdfClipPolygon) -> PdfBytes raise PdfError {
-  let output : Array[Byte] = []
-  pdf_clip_push_i32_le(output, polygon.contours.length())
+  let output = Array::make(pdf_clip_encoded_polygon_length(polygon), b'\x00')
+  let mut position = 0
+  position = pdf_clip_write_i32_le(output, position, polygon.contours.length())
   for contour in polygon.contours {
-    pdf_clip_push_i32_le(output, contour.hole_flag())
-    pdf_clip_push_i32_le(output, contour.vertices.length())
+    position = pdf_clip_write_i32_le(output, position, contour.hole_flag())
+    position = pdf_clip_write_i32_le(
+      output,
+      position,
+      contour.vertices.length(),
+    )
     for vertex in contour.vertices {
-      pdf_clip_push_u64_le(output, vertex.x.reinterpret_as_uint64())
-      pdf_clip_push_u64_le(output, vertex.y.reinterpret_as_uint64())
+      position = pdf_clip_write_u64_le(
+        output,
+        position,
+        vertex.x.reinterpret_as_uint64(),
+      )
+      position = pdf_clip_write_u64_le(
+        output,
+        position,
+        vertex.y.reinterpret_as_uint64(),
+      )
     }
   }
   Bytes::from_array(output)
