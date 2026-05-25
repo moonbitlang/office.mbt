@@ -9812,6 +9812,17 @@ Current backend snapshot:
   --target native pdf_text_test.mbt` reports 152/152; `moon check --target all
   --warn-list +73` passes with the known notice; `moon test --target native`
   reports 2430/2430.~~
+- [x] ~~Continue source-port hardening with a bookmark listing output
+  performance slice: `PdfDocument::list_bookmarks` now renders each cpdf
+  plain-text bookmark row once, precomputes the exact final listing length, and
+  fills the result buffer by index instead of growing it line by line,
+  preserving selected-page listings, escaped titles, stripped-title output,
+  JSON-mode behavior, wrapper output, and invalid-page errors. Validation on
+  MoonBit compiler 0.9.3: `moon check --target native --warn-list +73` passes
+  with the known notice; focused bookmark listing tests report 1/1, 1/1, and
+  1/1; `moon test --target native pdf_bookmark_test.mbt` reports 28/28; `moon
+  check --target all --warn-list +73` passes with the known notice; `moon test
+  --target native` reports 2430/2430.~~
 - [x] ~~Continue source-port hardening with a cpdfcontent test-extraction
   output performance slice: `PdfDocument::test_extract_text` now materializes
   each selected page's extracted glyph text once, counts the exact output length

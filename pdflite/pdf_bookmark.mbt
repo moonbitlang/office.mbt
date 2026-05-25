@@ -347,32 +347,85 @@ fn PdfDocument::pdf_bookmark_listing_in_range(
 }
 
 ///|
+priv struct PdfBookmarkListingTextLine {
+  level : PdfBytes
+  text : PdfBytes
+  page : PdfBytes
+  target : PdfBytes
+  is_open : Bool
+}
+
+///|
+fn pdf_bookmark_copy_view(
+  output : Array[Byte],
+  position : Int,
+  bytes : BytesView,
+) -> Int {
+  let mut position = position
+  for byte in bytes {
+    output[position] = byte
+    position += 1
+  }
+  position
+}
+
+///|
+fn pdf_bookmark_copy_ascii(
+  output : Array[Byte],
+  position : Int,
+  text : String,
+) -> Int {
+  pdf_bookmark_copy_view(output, position, @ascii.encode(text))
+}
+
+///|
+fn PdfBookmarkListingTextLine::byte_length(
+  self : PdfBookmarkListingTextLine,
+) -> Int {
+  let open_length = if self.is_open { 5 } else { 0 }
+  self.level.length() +
+  self.text.length() +
+  self.page.length() +
+  self.target.length() +
+  8 +
+  open_length
+}
+
+///|
+fn PdfBookmarkListingTextLine::write_to(
+  self : PdfBookmarkListingTextLine,
+  output : Array[Byte],
+  position : Int,
+) -> Int {
+  let mut position = pdf_bookmark_copy_view(output, position, self.level)
+  position = pdf_bookmark_copy_ascii(output, position, " \"")
+  position = pdf_bookmark_copy_view(output, position, self.text)
+  position = pdf_bookmark_copy_ascii(output, position, "\" ")
+  position = pdf_bookmark_copy_view(output, position, self.page)
+  if self.is_open {
+    position = pdf_bookmark_copy_ascii(output, position, " open")
+  }
+  position = pdf_bookmark_copy_ascii(output, position, " \"")
+  position = pdf_bookmark_copy_view(output, position, self.target)
+  pdf_bookmark_copy_ascii(output, position, "\"\n")
+}
+
+///|
 fn PdfDocument::pdf_bookmark_listing_text_line(
   self : PdfDocument,
-  output : Array[Byte],
   bookmark : PdfBookmark,
   encoding : PdfMetadataEncoding,
-) -> Unit raise PdfError {
+) -> PdfBookmarkListingTextLine raise PdfError {
   let page_number = self.page_number_of_target(bookmark.target)
-  pdf_writer_push_ascii(output, bookmark.level.to_string())
-  pdf_writer_push_ascii(output, " \"")
-  pdf_writer_push_view(
-    output,
-    pdf_bookmark_listing_process_text(encoding, bookmark.text),
-  )
-  pdf_writer_push_ascii(output, "\" ")
-  pdf_writer_push_ascii(output, page_number.to_string())
-  if bookmark.is_open {
-    pdf_writer_push_ascii(output, " open")
-  }
-  pdf_writer_push_ascii(output, " \"")
-  pdf_writer_push_view(
-    output,
-    pdf_write_object(
+  {
+    level: @ascii.encode(bookmark.level.to_string()),
+    text: pdf_bookmark_listing_process_text(encoding, bookmark.text),
+    page: @ascii.encode(page_number.to_string()),
+    target: pdf_write_object(
       pdf_bookmark_listing_target_object(bookmark.target, page_number),
     ),
-  )
-  pdf_writer_push_ascii(output, "\"\n")
+    is_open: bookmark.is_open,
+  }
 }
 
 ///|
@@ -466,9 +519,17 @@ pub fn PdfDocument::list_bookmarks(
   if json {
     @utf8.encode(self.pdf_bookmark_listing_json(bookmarks).stringify())
   } else {
-    let output : Array[Byte] = []
+    let lines : Array[PdfBookmarkListingTextLine] = []
+    let mut length = 0
     for bookmark in bookmarks {
-      self.pdf_bookmark_listing_text_line(output, bookmark, encoding)
+      let line = self.pdf_bookmark_listing_text_line(bookmark, encoding)
+      length += line.byte_length()
+      lines.push(line)
+    }
+    let output = Array::make(length, b'\x00')
+    let mut position = 0
+    for line in lines {
+      position = line.write_to(output, position)
     }
     Bytes::from_array(output)
   }
