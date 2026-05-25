@@ -9223,6 +9223,16 @@ Current backend snapshot:
   report 1/1; `moon test --target native pdf_toc_test.mbt` reports 16/16; `moon
   check --target all --warn-list +73` passes with the known notice; `moon test
   --target native` reports 2428/2428.~~
+- [x] ~~Continue source-port hardening with a page-label uppercase-roman
+  performance slice: `pdf_page_label_roman_upper` now computes the exact roman
+  label byte length, allocates once, and fills uppercase roman pairs by index
+  instead of growing the output array, preserving thousands, subtractive pairs,
+  prefixed visible labels, lowercase conversion, letter labels, and prefix-only
+  labels. Validation on MoonBit compiler 0.9.3: `moon check --target native
+  --warn-list +73` passes with the known notice; focused visible-label tests
+  report 1/1; `moon test --target native pdf_page_label_test.mbt` reports
+  25/25; `moon check --target all --warn-list +73` passes with the known
+  notice; `moon test --target native` reports 2428/2428.~~
 - [x] ~~Continue source-port hardening with a page-label letter performance
   slice: `pdf_page_label_letters` now allocates the exact repeated-letter label
   length and fills it with the computed uppercase/lowercase byte instead of

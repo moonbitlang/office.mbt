@@ -625,6 +625,12 @@ test "pdf_page_label_text_of_page_number renders label bytes" {
       start_page: 14,
       start_value: 27,
     },
+    {
+      label_style: PageLabelUppercaseRoman,
+      label_prefix: Some(page_label_bytes_for_test("roman-")),
+      start_page: 15,
+      start_value: 944,
+    },
   ]
   @test.assert_eq(
     @pdflite.pdf_page_label_text_of_page_number(4, labels),
@@ -649,6 +655,10 @@ test "pdf_page_label_text_of_page_number renders label bytes" {
   @test.assert_eq(
     @pdflite.pdf_page_label_text_of_page_number(14, labels),
     Some(page_label_bytes_for_test("aa")),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_page_label_text_of_page_number(15, labels),
+    Some(page_label_bytes_for_test("roman-CMXLIV")),
   )
   @test.assert_eq(@pdflite.pdf_page_label_text_of_page_number(1, []), None)
 }

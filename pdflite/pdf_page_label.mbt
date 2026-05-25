@@ -488,13 +488,6 @@ pub fn pdf_add_page_labels_json(
 }
 
 ///|
-fn pdf_page_label_push_bytes(output : Array[Byte], bytes : PdfBytes) -> Unit {
-  for byte in bytes {
-    output.push(byte)
-  }
-}
-
-///|
 fn pdf_page_label_copy_bytes(
   output : Array[Byte],
   position : Int,
@@ -514,39 +507,90 @@ fn pdf_page_label_ascii_bytes(text : String) -> PdfBytes {
 }
 
 ///|
-fn pdf_page_label_roman_pair(value : Int) -> (Int, String) {
-  match value {
-    0 => (900, "CM")
-    1 => (500, "D")
-    2 => (400, "CD")
-    3 | 4 | 5 => (100, "C")
-    6 => (90, "XC")
-    7 => (50, "L")
-    8 => (40, "XL")
-    9 | 10 | 11 => (10, "X")
-    12 => (9, "IX")
-    13 => (5, "V")
-    14 => (4, "IV")
-    _ => (1, "I")
+fn pdf_page_label_roman_pair(pair_index : Int) -> (Int, Byte, Byte?) {
+  match pair_index {
+    0 => (900, b'C', Some(b'M'))
+    1 => (500, b'D', None)
+    2 => (400, b'C', Some(b'D'))
+    3 | 4 | 5 => (100, b'C', None)
+    6 => (90, b'X', Some(b'C'))
+    7 => (50, b'L', None)
+    8 => (40, b'X', Some(b'L'))
+    9 | 10 | 11 => (10, b'X', None)
+    12 => (9, b'I', Some(b'X'))
+    13 => (5, b'V', None)
+    14 => (4, b'I', Some(b'V'))
+    _ => (1, b'I', None)
   }
 }
 
 ///|
+fn pdf_page_label_roman_pair_length(pair_index : Int) -> Int {
+  let (_, _, suffix) = pdf_page_label_roman_pair(pair_index)
+  match suffix {
+    Some(_) => 2
+    None => 1
+  }
+}
+
+///|
+fn pdf_page_label_copy_roman_pair(
+  output : Array[Byte],
+  position : Int,
+  pair_index : Int,
+) -> Int {
+  let (_, prefix, suffix) = pdf_page_label_roman_pair(pair_index)
+  output[position] = prefix
+  match suffix {
+    Some(byte) => {
+      output[position + 1] = byte
+      position + 2
+    }
+    None => position + 1
+  }
+}
+
+///|
+fn pdf_page_label_roman_upper_length(number : Int) -> Int {
+  let mut length = 0
+  let mut remaining = number
+  if remaining >= 1000 {
+    length += remaining / 1000
+    remaining = remaining % 1000
+  }
+  if remaining > 0 {
+    let mut pair_index = 0
+    while pair_index < 18 {
+      let (value, _, _) = pdf_page_label_roman_pair(pair_index)
+      if remaining >= value {
+        length += pdf_page_label_roman_pair_length(pair_index)
+        remaining -= value
+      } else {
+        pair_index += 1
+      }
+    }
+  }
+  length
+}
+
+///|
 fn pdf_page_label_roman_upper(number : Int) -> PdfBytes {
-  let output : Array[Byte] = []
+  let output = Array::make(pdf_page_label_roman_upper_length(number), b'\x00')
+  let mut position = 0
   let mut remaining = number
   if remaining >= 1000 {
     for _ in 0..<(remaining / 1000) {
-      pdf_page_label_push_bytes(output, pdf_page_label_ascii_bytes("M"))
+      output[position] = b'M'
+      position += 1
     }
     remaining = remaining % 1000
   }
   if remaining > 0 {
     let mut pair_index = 0
     while pair_index < 18 {
-      let (value, text) = pdf_page_label_roman_pair(pair_index)
+      let (value, _, _) = pdf_page_label_roman_pair(pair_index)
       if remaining >= value {
-        pdf_page_label_push_bytes(output, pdf_page_label_ascii_bytes(text))
+        position = pdf_page_label_copy_roman_pair(output, position, pair_index)
         remaining -= value
       } else {
         pair_index += 1
