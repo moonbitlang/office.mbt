@@ -455,13 +455,40 @@ fn pdf_composition_push_text_entry(
 }
 
 ///|
+fn pdf_composition_utf8_length(text : String) -> Int {
+  @utf8.encode(text).length()
+}
+
+///|
+fn pdf_composition_text_entry_length(entry : PdfCompositionEntry) -> Int {
+  pdf_composition_utf8_length(entry.label) +
+  pdf_composition_utf8_length(": ") +
+  pdf_composition_utf8_length(entry.bytes.to_string()) +
+  pdf_composition_utf8_length(" bytes (") +
+  pdf_composition_utf8_length(pdf_composition_percent_text(entry.percent)) +
+  pdf_composition_utf8_length("%)\n")
+}
+
+///|
+fn pdf_composition_text_length(entries : ArrayView[PdfCompositionEntry]) -> Int {
+  let mut length = 0
+  for entry in entries {
+    length += pdf_composition_text_entry_length(entry)
+  }
+  length
+}
+
+///|
 /// Return the text that cpdf's `show_composition` prints when `json=false`.
 pub fn PdfDocument::composition_text(
   self : PdfDocument,
   file_size : Int,
 ) -> PdfBytes raise PdfError {
-  let output : Array[Byte] = []
-  for entry in self.composition(file_size) {
+  let entries = self.composition(file_size)
+  let output : Array[Byte] = Array::new(
+    capacity=pdf_composition_text_length(entries),
+  )
+  for entry in entries {
     pdf_composition_push_text_entry(output, entry)
   }
   Bytes::from_array(output)

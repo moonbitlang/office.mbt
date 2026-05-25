@@ -9315,6 +9315,15 @@ Current backend snapshot:
   pdf_bookmark_test.mbt` reports 27/27; `moon check --target all --warn-list
   +73` passes with the known notice; `moon test --target native` reports
   2428/2428.~~
+- [x] ~~Continue source-port hardening with a composition text-report
+  performance slice: `PdfDocument::composition_text` now computes composition
+  entries once, precomputes the exact rendered text length, and creates the
+  output array with that capacity before preserving the existing cpdf-style row
+  emission path. Validation on MoonBit compiler 0.9.3: `moon check --target
+  native --warn-list +73` passes with the known notice; focused composition text
+  tests report 1/1; `moon test --target native pdf_composition_test.mbt` reports
+  3/3; `moon check --target all --warn-list +73` passes with the known notice;
+  `moon test --target native` reports 2428/2428.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
