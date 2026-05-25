@@ -139,12 +139,14 @@ pub fn pdf_md5_digest(data : BytesView) -> @core.PdfBytes {
     c0 += c
     d0 += d
   }
-  let output : Array[Byte] = []
+  let output = Array::make(16, b'\x00')
+  let mut output_position = 0
   for value in [a0, b0, c0, d0] {
-    output.push(pdf_md5_low_byte(value, 0))
-    output.push(pdf_md5_low_byte(value, 8))
-    output.push(pdf_md5_low_byte(value, 16))
-    output.push(pdf_md5_low_byte(value, 24))
+    output[output_position] = pdf_md5_low_byte(value, 0)
+    output[output_position + 1] = pdf_md5_low_byte(value, 8)
+    output[output_position + 2] = pdf_md5_low_byte(value, 16)
+    output[output_position + 3] = pdf_md5_low_byte(value, 24)
+    output_position += 4
   }
   Bytes::from_array(output)
 }
