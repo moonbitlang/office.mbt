@@ -10056,6 +10056,16 @@ Current backend snapshot:
   native pdf_toc_test.mbt` reports 16/16; `moon check --target all --warn-list
   +73` passes with the known notice; `moon test --target native` reports
   2431/2431.~~
+- [x] ~~Continue source-port hardening with a TOC title newline conversion
+  allocation slice: `pdf_toc_title_real_newlines` now first counts the exact
+  converted byte length for cpdf's literal `\n` markers, allocates that output
+  length, and fills bytes by index without a trailing slice, preserving
+  doubled-backslash behavior, ordinary bytes, and TOC bookmark text conversion.
+  Validation on MoonBit compiler 0.9.3: `moon check --target native
+  --warn-list +73` passes with the known notice; focused TOC newline conversion
+  tests report 1/1; `moon test --target native pdf_toc_test.mbt` reports
+  16/16; `moon check --target all --warn-list +73` passes with the known
+  notice; `moon test --target native` reports 2431/2431.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

@@ -320,9 +320,21 @@ pub fn pdf_toc_split_title(title : BytesView) -> Array[PdfBytes] {
 ///|
 /// Replace literal `\n` byte pairs in a TOC title with real line-feed bytes.
 pub fn pdf_toc_title_real_newlines(title : BytesView) -> PdfBytes {
-  let output = Array::make(title.length(), b'\x00')
-  let mut position = 0
+  let mut length = 0
   let mut index = 0
+  while index < title.length() {
+    length += 1
+    if title[index] == b'\\' &&
+      index + 1 < title.length() &&
+      title[index + 1] == b'n' {
+      index += 2
+    } else {
+      index += 1
+    }
+  }
+  let output = Array::make(length, b'\x00')
+  let mut position = 0
+  index = 0
   while index < title.length() {
     if title[index] == b'\\' &&
       index + 1 < title.length() &&
@@ -336,7 +348,7 @@ pub fn pdf_toc_title_real_newlines(title : BytesView) -> PdfBytes {
       index += 1
     }
   }
-  Bytes::from_array(output[:position])
+  Bytes::from_array(output)
 }
 
 ///|
