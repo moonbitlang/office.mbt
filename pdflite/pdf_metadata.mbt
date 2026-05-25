@@ -1143,7 +1143,7 @@ fn pdf_metadata_xml_codepoint_is_space(codepoint : Int) -> Bool {
 ///|
 fn pdf_metadata_decode_xml_text(value : BytesView) -> String? {
   let trimmed = pdf_metadata_trim_xml_text(value)
-  let output : Array[Byte] = []
+  let output : Array[Byte] = Array::new(capacity=trimmed.length())
   let mut pending_space = false
   let mut index = 0
   while index < trimmed.length() {

@@ -9223,6 +9223,16 @@ Current backend snapshot:
   report 1/1; `moon test --target native pdf_toc_test.mbt` reports 16/16; `moon
   check --target all --warn-list +73` passes with the known notice; `moon test
   --target native` reports 2428/2428.~~
+- [x] ~~Continue source-port hardening with a metadata XML text decoding
+  performance slice: `pdf_metadata_decode_xml_text` now preallocates its output
+  byte buffer to the trimmed XML text length before entity decoding and
+  whitespace folding, preserving `&amp;`/numeric entity decoding, invalid entity
+  fallback, collapsed XML spaces, XMP legacy Info lookups, and XML tree data
+  extraction. Validation on MoonBit compiler 0.9.3: `moon check --target native
+  --warn-list +73` passes with the known notice; focused XMP/XML metadata tests
+  report 2/2; `moon test --target native pdf_metadata_test.mbt` reports 21/21;
+  `moon check --target all --warn-list +73` passes with the known notice; `moon
+  test --target native` reports 2429/2429.~~
 - [x] ~~Continue source-port hardening with a bookmark filename-spec
   performance slice: `pdf_bookmark_name_spec_process_at_fields` now computes the
   exact expanded byte length, allocates once, and fills literal and expanded
