@@ -744,9 +744,9 @@ fn pdf_addtext_fontpack_text_ops(
     if font_index < 0 || font_index >= unique_fontnames.length() {
       raise SoftError("bad add-text fontpack font name list")
     }
-    let bytes : Array[Byte] = []
-    for triple in run {
-      bytes.push(pdf_byte_of_int(triple.0))
+    let bytes = Array::make(run.length(), b'\x00')
+    for index, triple in run {
+      bytes[index] = pdf_byte_of_int(triple.0)
     }
     ops.push(Op_Tf(unique_fontnames[font_index], font_size))
     ops.push(Op_Tj(Bytes::from_array(bytes)))
