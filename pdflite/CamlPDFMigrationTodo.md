@@ -9223,6 +9223,17 @@ Current backend snapshot:
   report 1/1; `moon test --target native pdf_toc_test.mbt` reports 16/16; `moon
   check --target all --warn-list +73` passes with the known notice; `moon test
   --target native` reports 2428/2428.~~
+- [x] ~~Continue source-port hardening with a content RunLength decode
+  performance slice: `pdf_content_run_length_decode_view_prefix` now scans the
+  encoded prefix for exact decoded length and consumed byte count, allocates
+  once, and fills literal/repeated runs by index instead of growing the output
+  array, preserving inline image RunLength decoding, filter-array handling, EOD
+  consumption, and truncated-stream errors. Validation on MoonBit compiler
+  0.9.3: `moon check --target native --warn-list +73` passes with the known
+  notice; focused RunLength content tests report 2/2; `moon test --target
+  native pdf_content_test.mbt` reports 58/58; `moon check --target all
+  --warn-list +73` passes with the known notice; `moon test --target native`
+  reports 2429/2429.~~
 - [x] ~~Continue source-port hardening with a metadata XMP element rewrite
   performance slice: `pdf_metadata_rewrite_xmp_element_prefix` now preallocates
   the rewritten packet buffer from the source packet plus replacement and close

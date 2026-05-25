@@ -1650,7 +1650,39 @@ fn pdf_content_read_run_length_inline_image_data(
 fn pdf_content_run_length_decode_view_prefix(
   data : BytesView,
 ) -> (PdfBytes, Int) raise PdfError {
-  let output : Array[Byte] = []
+  let (output_length, consumed) = pdf_content_run_length_decoded_prefix_length(
+    data,
+  )
+  let output = Array::make(output_length, b'\x00')
+  let mut output_index = 0
+  let mut index = 0
+  while output_index < output_length {
+    let control = data[index].to_int()
+    index += 1
+    if control < 128 {
+      let wanted = control + 1
+      for i in 0..<wanted {
+        output[output_index] = data[index + i]
+        output_index += 1
+      }
+      index += wanted
+    } else {
+      let value = data[index]
+      index += 1
+      for _ in 0..<(257 - control) {
+        output[output_index] = value
+        output_index += 1
+      }
+    }
+  }
+  (Bytes::from_array(output), consumed)
+}
+
+///|
+fn pdf_content_run_length_decoded_prefix_length(
+  data : BytesView,
+) -> (Int, Int) raise PdfError {
+  let mut output_length = 0
   let mut index = 0
   while index < data.length() {
     let control = data[index].to_int()
@@ -1660,21 +1692,16 @@ fn pdf_content_run_length_decode_view_prefix(
       if index + wanted > data.length() {
         raise ParseEndStreamExpected
       }
-      for i in 0..<wanted {
-        output.push(data[index + i])
-      }
+      output_length += wanted
       index += wanted
     } else if control > 128 {
       if index >= data.length() {
         raise ParseEndStreamExpected
       }
-      let value = data[index]
       index += 1
-      for _ in 0..<(257 - control) {
-        output.push(value)
-      }
+      output_length += 257 - control
     } else {
-      return (Bytes::from_array(output), index)
+      return (output_length, index)
     }
   }
   raise ParseEndStreamExpected
