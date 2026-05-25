@@ -10036,6 +10036,16 @@ Current backend snapshot:
   1/1; `moon test --target native pdf_font_test.mbt` reports 9/9; `moon check
   --target all --warn-list +73` passes with the known notice; `moon test
   --target native` reports 2428/2428.~~
+- [x] ~~Continue source-port hardening with a TOC fontpack text-run allocation
+  slice: `pdf_toc_push_font_text_runs` now allocates each collated fontpack
+  text run to the exact run length and fills charcode bytes by index instead of
+  growing a temporary byte array, preserving font switching, skipped missing
+  glyphs, invalid charcode errors, and emitted `PdfTypeText` runs. Validation
+  on MoonBit compiler 0.9.3: `moon check --target native --warn-list +73`
+  passes with the known notice; focused TOC font-run tests report 1/1 and 1/1;
+  `moon test --target native pdf_toc_test.mbt` reports 16/16; `moon check
+  --target all --warn-list +73` passes with the known notice; `moon test
+  --target native` reports 2431/2431.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

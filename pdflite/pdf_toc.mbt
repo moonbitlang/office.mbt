@@ -27,11 +27,11 @@ fn pdf_toc_push_font_text_runs(
   for run in pdf_fontpack_collate_runs(runs) {
     if run.length() > 0 {
       let (_, font_index, font) = run[0]
-      let text : Array[Byte] = []
-      for item in run {
+      let text = Array::make(run.length(), b'\x00')
+      for index, item in run {
         let (charcode, _, _) = item
         guard charcode >= 0 && charcode < 256 else { raise BadText }
-        text.push(charcode.to_byte())
+        text[index] = charcode.to_byte()
       }
       output.push(
         PdfTypeFont(pdf_toc_type_font_id(font_index), font, font_size),
