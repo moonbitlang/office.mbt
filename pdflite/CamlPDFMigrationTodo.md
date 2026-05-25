@@ -9223,6 +9223,16 @@ Current backend snapshot:
   report 1/1; `moon test --target native pdf_toc_test.mbt` reports 16/16; `moon
   check --target all --warn-list +73` passes with the known notice; `moon test
   --target native` reports 2428/2428.~~
+- [x] ~~Continue source-port hardening with a bookmark JSON page-selection
+  performance slice: `PdfDocument::bookmarks_json` now allocates the exact
+  all-pages selection length and fills page numbers by index instead of growing
+  the array, preserving full-document bookmark JSON rows, selected target
+  rewriting, colour/flag output, and JSON blob rendering. Validation on MoonBit
+  compiler 0.9.3: `moon check --target native --warn-list +73` passes with the
+  known notice; focused bookmark JSON tests report 1/1; `moon test --target
+  native pdf_bookmark_test.mbt` reports 28/28; `moon check --target all
+  --warn-list +73` passes with the known notice; `moon test --target native`
+  reports 2429/2429.~~
 - [x] ~~Continue source-port hardening with a bookmark quoted-field parser
   performance slice: `pdf_bookmark_import_parse_quoted` now scans quoted fields
   for exact payload length before allocating, then fills escaped byte pairs by

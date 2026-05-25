@@ -481,9 +481,9 @@ pub fn PdfDocument::bookmarks_json(
   json_preserve_actions? : Bool = false,
 ) -> Json raise PdfError {
   let end_page = self.endpage()
-  let page_numbers : Array[Int] = []
-  for page_number in 1..<=end_page {
-    page_numbers.push(page_number)
+  let page_numbers = Array::make(end_page, 0)
+  for index in 0..<end_page {
+    page_numbers[index] = index + 1
   }
   let bookmarks = self.pdf_bookmark_listing_bookmarks(
     page_numbers, json_preserve_actions,
