@@ -171,27 +171,64 @@ fn pdf_clip_float_text(value : Double) -> String {
 }
 
 ///|
-fn pdf_gpcml_printvertex(output : Array[Byte], vertex : PdfClipVertex) -> Unit {
-  pdf_writer_push_ascii(output, "    {x = ")
-  pdf_writer_push_ascii(output, pdf_clip_float_text(vertex.x))
-  pdf_writer_push_ascii(output, ", y = ")
-  pdf_writer_push_ascii(output, pdf_clip_float_text(vertex.y))
-  pdf_writer_push_ascii(output, "}\n")
+fn pdf_gpcml_write_ascii(
+  output : Array[Byte],
+  position : Int,
+  text : String,
+) -> Int {
+  let mut current = position
+  for byte in @ascii.encode(text) {
+    output[current] = byte
+    current += 1
+  }
+  current
 }
 
 ///|
-fn pdf_gpcml_printcontour(
+fn pdf_gpcml_write_vertex(
   output : Array[Byte],
+  position : Int,
+  vertex : PdfClipVertex,
+) -> Int {
+  let mut current = pdf_gpcml_write_ascii(output, position, "    {x = ")
+  current = pdf_gpcml_write_ascii(
+    output,
+    current,
+    pdf_clip_float_text(vertex.x),
+  )
+  current = pdf_gpcml_write_ascii(output, current, ", y = ")
+  current = pdf_gpcml_write_ascii(
+    output,
+    current,
+    pdf_clip_float_text(vertex.y),
+  )
+  pdf_gpcml_write_ascii(output, current, "}\n")
+}
+
+///|
+fn pdf_gpcml_write_contour(
+  output : Array[Byte],
+  position : Int,
   contour : PdfClipContour,
-) -> Unit {
-  pdf_writer_push_ascii(output, "  Contour with ")
-  pdf_writer_push_ascii(output, contour.vertices.length().to_string())
-  pdf_writer_push_ascii(output, " vertices and hole ")
-  pdf_writer_push_ascii(output, contour.hole_flag().to_string())
-  pdf_writer_push_byte(output, 10)
+) -> Int {
+  let mut current = pdf_gpcml_write_ascii(output, position, "  Contour with ")
+  current = pdf_gpcml_write_ascii(
+    output,
+    current,
+    contour.vertices.length().to_string(),
+  )
+  current = pdf_gpcml_write_ascii(output, current, " vertices and hole ")
+  current = pdf_gpcml_write_ascii(
+    output,
+    current,
+    contour.hole_flag().to_string(),
+  )
+  output[current] = 10
+  current += 1
   for vertex in contour.vertices {
-    pdf_gpcml_printvertex(output, vertex)
+    current = pdf_gpcml_write_vertex(output, current, vertex)
   }
+  current
 }
 
 ///|
@@ -235,14 +272,17 @@ fn pdf_gpcml_polygon_text_length(polygon : PdfClipPolygon) -> Int {
 ///|
 /// Return the text cpdfclip's debug polygon printer writes to stdout.
 pub fn pdf_gpcml_printpolygon(polygon : PdfClipPolygon) -> PdfBytes {
-  let output : Array[Byte] = Array::new(
-    capacity=pdf_gpcml_polygon_text_length(polygon),
+  let output = Array::make(pdf_gpcml_polygon_text_length(polygon), b'\x00')
+  let mut position = pdf_gpcml_write_ascii(output, 0, "Contours: ")
+  position = pdf_gpcml_write_ascii(
+    output,
+    position,
+    polygon.contours.length().to_string(),
   )
-  pdf_writer_push_ascii(output, "Contours: ")
-  pdf_writer_push_ascii(output, polygon.contours.length().to_string())
-  pdf_writer_push_byte(output, 10)
+  output[position] = 10
+  position += 1
   for contour in polygon.contours {
-    pdf_gpcml_printcontour(output, contour)
+    position = pdf_gpcml_write_contour(output, position, contour)
   }
   Bytes::from_array(output)
 }

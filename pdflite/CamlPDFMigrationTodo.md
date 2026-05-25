@@ -9736,14 +9736,14 @@ Current backend snapshot:
   `moon test --target native` reports 2429/2429.~~
 - [x] ~~Continue source-port hardening with a cpdfclip debug-output
   performance slice: `pdf_gpcml_printpolygon` now precomputes the exact
-  stdout-style polygon text length and creates the output array with that
-  capacity before preserving the existing contour and vertex print helpers,
+  stdout-style polygon text length, allocates that output size, and fills the
+  contour and vertex debug lines by index instead of growing the output array,
   keeping contour counts, hole flags, fixed-six coordinates, and trailing
   newlines byte-for-byte stable. Validation on MoonBit compiler 0.9.3: `moon
   check --target native --warn-list +73` passes with the known notice; focused
   clip debug-output tests report 1/1; `moon test --target native
   pdf_clip_test.mbt` reports 6/6; `moon check --target all --warn-list +73`
-  passes with the known notice; `moon test --target native` reports 2428/2428.~~
+  passes with the known notice; `moon test --target native` reports 2429/2429.~~
 - [x] ~~Continue source-port hardening with a cpdfcontent test-extraction
   output performance slice: `PdfDocument::test_extract_text` now materializes
   each selected page's extracted glyph text once, counts the exact output length
