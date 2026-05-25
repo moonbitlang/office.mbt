@@ -1206,10 +1206,21 @@ pub fn PdfDocument::ocg_list(
   if json {
     self.ocg_list_json_blob()
   } else {
-    let output : Array[Byte] = []
+    let names : Array[PdfBytes] = []
+    let mut output_length = 0
     for name in self.ocg_get_list() {
-      pdf_writer_push_view(output, pdf_utf8_of_pdfdocstring(name))
-      output.push(10)
+      let text = pdf_utf8_of_pdfdocstring(name)
+      output_length += text.length() + 1
+      names.push(text)
+    }
+    let output = Array::make(output_length, b'\n')
+    let mut position = 0
+    for name in names {
+      for byte in name {
+        output[position] = byte
+        position += 1
+      }
+      position += 1
     }
     Bytes::from_array(output)
   }

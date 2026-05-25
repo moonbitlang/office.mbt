@@ -9345,6 +9345,16 @@ Current backend snapshot:
   tests report 1/1; `moon test --target native pdf_content_page_json_test.mbt`
   reports 2/2; `moon check --target all --warn-list +73` passes with the known
   notice; `moon test --target native` reports 2428/2428.~~
+- [x] ~~Continue source-port hardening with a cpdfocg plain-listing output
+  performance slice: `PdfDocument::ocg_list(false)` now decodes each optional
+  content group name once, counts the exact newline-terminated text length, and
+  fills a newline-initialized buffer by index instead of growing the output
+  array, preserving raw layer listing order, wrapper output, JSON-mode behavior,
+  and empty catalog output. Validation on MoonBit compiler 0.9.3: `moon check
+  --target native --warn-list +73` passes with the known notice; focused OCG
+  listing tests report 1/1; `moon test --target native pdf_ocg_test.mbt`
+  reports 18/18; `moon check --target all --warn-list +73` passes with the
+  known notice; `moon test --target native` reports 2428/2428.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
