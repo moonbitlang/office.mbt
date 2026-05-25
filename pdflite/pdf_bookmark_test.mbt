@@ -438,7 +438,7 @@ test "PdfDocument parse_bookmark_text reads cpdf plain text bookmarks" {
   let page_refs = try! document.page_reference_numbers()
   let source = @ascii.encode(
     "0 \"Top\\nQuote\\\"Slash\\\\\" 1 open \"[1 /Fit]\"\n" +
-    "1 \"Child\" 2 \"[1 /XYZ 10 null 2]\"\n" +
+    "1 \"Child\\q\" 2 \"[1 /XYZ 10 null 2]\"\n" +
     "0 \"Named\" 0 \"(chapter)\"\n\n",
   )
   let expected : Array[@pdflite.PdfBookmark] = [
@@ -452,7 +452,7 @@ test "PdfDocument parse_bookmark_text reads cpdf plain text bookmarks" {
     },
     {
       level: 1,
-      text: bookmark_bytes_for_test("Child"),
+      text: bookmark_bytes_for_test("Child\\q"),
       target: DestXYZ(
         TargetPageObject(page_refs[1]),
         Some(10.0),
