@@ -9398,6 +9398,19 @@ Current backend snapshot:
   --warn-list +73` passes with the known notice; `moon test --target native`
   reports 2429/2429; `moon info && moon fmt` are clean with no `.mbti`
   changes.~~
+- [x] ~~Continue source-port hardening with an ARC4 state initialization
+  performance slice: `pdf_arc4_crypt` now allocates the fixed 256-entry ARC4
+  permutation state and fills it by index instead of growing the state array,
+  preserving standard ARC4 vectors, symmetric decrypt-by-reapply behavior,
+  empty-key errors, object encryption, and public crypt/decrypt behavior.
+  Validation on MoonBit compiler 0.9.3: `moon check --target native
+  --warn-list +73` passes with the known notice; focused ARC4 tests report
+  3/3; `moon test --target native crypt_core/pdf_crypt_primitives_wbtest.mbt`
+  reports 10/10; `moon test --target native pdf_crypt_wbtest.mbt` reports
+  26/26; `moon test --target native pdf_crypt_test.mbt` reports 43/43; `moon
+  check --target all --warn-list +73` passes with the known notice; `moon test
+  --target native` reports 2429/2429; `moon info && moon fmt` are clean with no
+  `.mbti` changes.~~
 - [x] ~~Continue source-port hardening with an AESV3 ISO hash-repeat
   performance slice: `pdf_aesv3_shamix_repeat` now allocates the exact
   repeated-input byte length and fills each repeated view by index instead of

@@ -20,9 +20,9 @@ pub fn pdf_arc4_crypt(
   data : BytesView,
 ) -> @core.PdfBytes raise @core.PdfError {
   guard key.length() > 0 else { raise CryptoKeyExpected }
-  let state : Array[Int] = []
+  let state = Array::make(256, 0)
   for value in 0..<256 {
-    state.push(value)
+    state[value] = value
   }
   let mut j = 0
   for i in 0..<256 {
