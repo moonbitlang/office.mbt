@@ -55,13 +55,6 @@ fn pdf_crypt_copy_view(
 }
 
 ///|
-fn pdf_crypt_push_view(output : Array[Byte], data : BytesView) -> Unit {
-  for byte in data {
-    output.push(byte)
-  }
-}
-
-///|
 /// Derive the standard-security file key from a user password.
 ///
 /// This implements revisions 2-4 key derivation. AESV3 uses wrapped file keys
@@ -147,18 +140,19 @@ pub fn pdf_make_user_password_entry(
   if revision == 2 {
     pdf_arc4_crypt(key, pdf_password_padding())
   } else {
-    let digest_input : Array[Byte] = []
-    pdf_crypt_push_view(digest_input, pdf_password_padding())
-    pdf_crypt_push_view(digest_input, file_id)
+    let padding = pdf_password_padding()
+    let digest_input = Array::make(padding.length() + file_id.length(), b'\x00')
+    let position = pdf_crypt_copy_view(digest_input, 0, padding)
+    let _ = pdf_crypt_copy_view(digest_input, position, file_id)
     let digest = pdf_md5_digest(Bytes::from_array(digest_input))
     let mut encrypted = pdf_arc4_crypt(key, digest)
     for iteration in 1..<20 {
       let iteration_key = pdf_key_xor_iteration(key, iteration)
       encrypted = pdf_arc4_crypt(iteration_key, encrypted)
     }
-    let output : Array[Byte] = [ for byte in encrypted => byte ]
-    for _ in 0..<16 {
-      output.push(0)
+    let output = Array::make(encrypted.length() + 16, b'\x00')
+    for index in 0..<encrypted.length() {
+      output[index] = encrypted[index]
     }
     Bytes::from_array(output)
   }
