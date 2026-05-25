@@ -1087,20 +1087,26 @@ pub fn pdf_missing_fonts_return(
 }
 
 ///|
-fn pdf_missing_font_push_text(
+fn pdf_missing_font_write_text(
   output : Array[Byte],
+  position : Int,
   entry : PdfMissingFontEntry,
-) -> Unit {
-  pdf_font_push_utf8(output, entry.page.to_string())
-  pdf_font_push_utf8(output, ", ")
-  pdf_font_push_utf8(output, entry.name)
-  pdf_font_push_utf8(output, ", ")
-  pdf_font_push_utf8(output, entry.subtype)
-  pdf_font_push_utf8(output, ", ")
-  pdf_font_push_utf8(output, entry.basefont)
-  pdf_font_push_utf8(output, ", ")
-  pdf_font_push_utf8(output, entry.encoding)
-  output.push(10)
+) -> Int {
+  let mut current = pdf_font_write_utf8(
+    output,
+    position,
+    entry.page.to_string(),
+  )
+  current = pdf_font_write_utf8(output, current, ", ")
+  current = pdf_font_write_utf8(output, current, entry.name)
+  current = pdf_font_write_utf8(output, current, ", ")
+  current = pdf_font_write_utf8(output, current, entry.subtype)
+  current = pdf_font_write_utf8(output, current, ", ")
+  current = pdf_font_write_utf8(output, current, entry.basefont)
+  current = pdf_font_write_utf8(output, current, ", ")
+  current = pdf_font_write_utf8(output, current, entry.encoding)
+  output[current] = 10
+  current + 1
 }
 
 ///|
@@ -1131,11 +1137,10 @@ pub fn PdfDocument::missing_fonts_text(
   page_numbers : ArrayView[Int],
 ) -> PdfBytes raise PdfError {
   let entries = self.missing_fonts(page_numbers)
-  let output : Array[Byte] = Array::new(
-    capacity=pdf_missing_fonts_text_length(entries),
-  )
+  let output = Array::make(pdf_missing_fonts_text_length(entries), b'\x00')
+  let mut position = 0
   for entry in entries {
-    pdf_missing_font_push_text(output, entry)
+    position = pdf_missing_font_write_text(output, position, entry)
   }
   Bytes::from_array(output)
 }
