@@ -228,49 +228,127 @@ fn pdf_ua_push_utf8(output : Array[Byte], text : String) -> Unit {
 }
 
 ///|
-fn pdf_ua_push_xml_escaped_utf8(output : Array[Byte], text : String) -> Unit {
+fn pdf_ua_ascii_length(text : String) -> Int {
+  @ascii.encode(text).length()
+}
+
+///|
+fn pdf_ua_xml_escaped_utf8_length(text : String) -> Int {
+  let mut length = 0
   for byte in @utf8.encode(text) {
-    match byte.to_int() {
-      34 => pdf_ua_push_ascii(output, "&quot;")
-      38 => pdf_ua_push_ascii(output, "&amp;")
-      39 => pdf_ua_push_ascii(output, "&apos;")
-      60 => pdf_ua_push_ascii(output, "&lt;")
-      62 => pdf_ua_push_ascii(output, "&gt;")
-      _ => output.push(byte)
+    length += match byte.to_int() {
+      34 => pdf_ua_ascii_length("&quot;")
+      38 => pdf_ua_ascii_length("&amp;")
+      39 => pdf_ua_ascii_length("&apos;")
+      60 => pdf_ua_ascii_length("&lt;")
+      62 => pdf_ua_ascii_length("&gt;")
+      _ => 1
     }
   }
+  length
 }
 
 ///|
-fn pdf_ua_push_pdfua_marker(
+fn pdf_ua_write_ascii(
   output : Array[Byte],
-  subformat : PdfUASubformat,
-) -> Unit {
+  position : Int,
+  text : String,
+) -> Int {
+  let mut current = position
+  for byte in @ascii.encode(text) {
+    output[current] = byte
+    current += 1
+  }
+  current
+}
+
+///|
+fn pdf_ua_write_xml_escaped_utf8(
+  output : Array[Byte],
+  position : Int,
+  text : String,
+) -> Int {
+  let mut current = position
+  for byte in @utf8.encode(text) {
+    current = match byte.to_int() {
+      34 => pdf_ua_write_ascii(output, current, "&quot;")
+      38 => pdf_ua_write_ascii(output, current, "&amp;")
+      39 => pdf_ua_write_ascii(output, current, "&apos;")
+      60 => pdf_ua_write_ascii(output, current, "&lt;")
+      62 => pdf_ua_write_ascii(output, current, "&gt;")
+      _ => {
+        output[current] = byte
+        current + 1
+      }
+    }
+  }
+  current
+}
+
+///|
+fn pdf_ua_pdfua_marker_length(subformat : PdfUASubformat) -> Int {
   match subformat {
-    PdfUA1 => pdf_ua_push_ascii(output, "<pdfuaid:part>1</pdfuaid:part>\n")
+    PdfUA1 => pdf_ua_ascii_length("<pdfuaid:part>1</pdfuaid:part>\n")
+    PdfUA2 =>
+      pdf_ua_ascii_length("<pdfuaid:part>2</pdfuaid:part>\n") +
+      pdf_ua_ascii_length("<pdfuaid:rev>2024</pdfuaid:rev>\n")
+  }
+}
+
+///|
+fn pdf_ua_write_pdfua_marker(
+  output : Array[Byte],
+  position : Int,
+  subformat : PdfUASubformat,
+) -> Int {
+  match subformat {
+    PdfUA1 =>
+      pdf_ua_write_ascii(output, position, "<pdfuaid:part>1</pdfuaid:part>\n")
     PdfUA2 => {
-      pdf_ua_push_ascii(output, "<pdfuaid:part>2</pdfuaid:part>\n")
-      pdf_ua_push_ascii(output, "<pdfuaid:rev>2024</pdfuaid:rev>\n")
+      let mut current = pdf_ua_write_ascii(
+        output, position, "<pdfuaid:part>2</pdfuaid:part>\n",
+      )
+      current = pdf_ua_write_ascii(
+        output, current, "<pdfuaid:rev>2024</pdfuaid:rev>\n",
+      )
+      current
     }
   }
 }
 
 ///|
-fn pdf_ua_push_pdfua_marker_part(
+fn pdf_ua_pdfua_marker_part_length(part : String, revision : Int?) -> Int {
+  let mut length = pdf_ua_ascii_length("<pdfuaid:part>") +
+    pdf_ua_ascii_length(part) +
+    pdf_ua_ascii_length("</pdfuaid:part>\n")
+  match revision {
+    Some(year) =>
+      length += pdf_ua_ascii_length("<pdfuaid:rev>") +
+        pdf_ua_ascii_length(year.to_string()) +
+        pdf_ua_ascii_length("</pdfuaid:rev>\n")
+    None => ()
+  }
+  length
+}
+
+///|
+fn pdf_ua_write_pdfua_marker_part(
   output : Array[Byte],
+  position : Int,
   part : String,
   revision : Int?,
-) -> Unit {
-  pdf_ua_push_ascii(output, "<pdfuaid:part>")
-  pdf_ua_push_ascii(output, part)
-  pdf_ua_push_ascii(output, "</pdfuaid:part>\n")
+) -> Int {
+  let mut current = pdf_ua_write_ascii(output, position, "<pdfuaid:part>")
+  current = pdf_ua_write_ascii(output, current, part)
+  current = pdf_ua_write_ascii(output, current, "</pdfuaid:part>\n")
   match revision {
     Some(year) => {
-      pdf_ua_push_ascii(output, "<pdfuaid:rev>")
-      pdf_ua_push_ascii(output, year.to_string())
-      pdf_ua_push_ascii(output, "</pdfuaid:rev>\n")
+      current = pdf_ua_write_ascii(output, current, "<pdfuaid:rev>")
+      current = pdf_ua_write_ascii(output, current, year.to_string())
+      current = pdf_ua_write_ascii(output, current, "</pdfuaid:rev>\n")
+      current
     }
-    None => ()
+    None => current
   }
 }
 
@@ -284,6 +362,27 @@ fn pdf_ua_qualified_name(prefix : String, name : String) -> String {
 }
 
 ///|
+fn pdf_ua_marker_description_length(
+  rdf_description : String,
+  rdf_about : String,
+  part : String,
+  revision : Int?,
+) -> Int {
+  pdf_ua_ascii_length("<") +
+  pdf_ua_ascii_length(rdf_description) +
+  pdf_ua_ascii_length(" ") +
+  pdf_ua_ascii_length(rdf_about) +
+  pdf_ua_ascii_length("=\"\" ") +
+  pdf_ua_ascii_length("xmlns:pdfuaid=\"") +
+  pdf_ua_ascii_length(pdf_metadata_pdfuaid_namespace) +
+  pdf_ua_ascii_length("\">\n") +
+  pdf_ua_pdfua_marker_part_length(part, revision) +
+  pdf_ua_ascii_length("</") +
+  pdf_ua_ascii_length(rdf_description) +
+  pdf_ua_ascii_length(">\n")
+}
+
+///|
 fn pdf_ua_marker_description_bytes(
   rdf_prefix : String,
   part : String,
@@ -291,14 +390,49 @@ fn pdf_ua_marker_description_bytes(
 ) -> PdfBytes {
   let rdf_description = pdf_ua_qualified_name(rdf_prefix, "Description")
   let rdf_about = pdf_ua_qualified_name(rdf_prefix, "about")
-  let output : Array[Byte] = []
-  pdf_ua_push_ascii(output, "<" + rdf_description + " " + rdf_about + "=\"\" ")
-  pdf_ua_push_ascii(output, "xmlns:pdfuaid=\"")
-  pdf_ua_push_ascii(output, pdf_metadata_pdfuaid_namespace)
-  pdf_ua_push_ascii(output, "\">\n")
-  pdf_ua_push_pdfua_marker_part(output, part, revision)
-  pdf_ua_push_ascii(output, "</" + rdf_description + ">\n")
+  let output = Array::make(
+    pdf_ua_marker_description_length(rdf_description, rdf_about, part, revision),
+    b'\x00',
+  )
+  let mut position = pdf_ua_write_ascii(output, 0, "<")
+  position = pdf_ua_write_ascii(output, position, rdf_description)
+  position = pdf_ua_write_ascii(output, position, " ")
+  position = pdf_ua_write_ascii(output, position, rdf_about)
+  position = pdf_ua_write_ascii(output, position, "=\"\" ")
+  position = pdf_ua_write_ascii(output, position, "xmlns:pdfuaid=\"")
+  position = pdf_ua_write_ascii(
+    output, position, pdf_metadata_pdfuaid_namespace,
+  )
+  position = pdf_ua_write_ascii(output, position, "\">\n")
+  position = pdf_ua_write_pdfua_marker_part(output, position, part, revision)
+  position = pdf_ua_write_ascii(output, position, "</")
+  position = pdf_ua_write_ascii(output, position, rdf_description)
+  let _ = pdf_ua_write_ascii(output, position, ">\n")
   Bytes::from_array(output)
+}
+
+///|
+fn pdf_ua_metadata_length(subformat : PdfUASubformat, title : String) -> Int {
+  pdf_ua_ascii_length(
+    "<?xpacket begin=\"\" id=\"W5M0MpCehiHzreSzNTczkc9d\"?>\n",
+  ) +
+  pdf_ua_ascii_length("<x:xmpmeta xmlns:x=\"adobe:ns:meta/\">\n") +
+  pdf_ua_ascii_length(
+    "<rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">\n",
+  ) +
+  pdf_ua_ascii_length(
+    "<rdf:Description rdf:about=\"\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\">\n",
+  ) +
+  pdf_ua_ascii_length("<dc:title><rdf:Alt><rdf:li xml:lang=\"x-default\">") +
+  pdf_ua_xml_escaped_utf8_length(title) +
+  pdf_ua_ascii_length("</rdf:li></rdf:Alt></dc:title>\n</rdf:Description>\n") +
+  pdf_ua_ascii_length("<rdf:Description rdf:about=\"\" xmlns:pdfuaid=\"") +
+  pdf_ua_ascii_length(pdf_metadata_pdfuaid_namespace) +
+  pdf_ua_ascii_length("\">\n") +
+  pdf_ua_pdfua_marker_length(subformat) +
+  pdf_ua_ascii_length(
+    "</rdf:Description>\n</rdf:RDF>\n</x:xmpmeta>\n<?xpacket end=\"w\"?>",
+  )
 }
 
 ///|
@@ -306,30 +440,36 @@ fn pdf_ua_metadata_bytes(
   subformat : PdfUASubformat,
   title : String,
 ) -> PdfBytes {
-  let output : Array[Byte] = []
-  pdf_ua_push_ascii(
-    output, "<?xpacket begin=\"\" id=\"W5M0MpCehiHzreSzNTczkc9d\"?>\n",
+  let output = Array::make(pdf_ua_metadata_length(subformat, title), b'\x00')
+  let mut position = pdf_ua_write_ascii(
+    output, 0, "<?xpacket begin=\"\" id=\"W5M0MpCehiHzreSzNTczkc9d\"?>\n",
   )
-  pdf_ua_push_ascii(output, "<x:xmpmeta xmlns:x=\"adobe:ns:meta/\">\n")
-  pdf_ua_push_ascii(
-    output, "<rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">\n",
+  position = pdf_ua_write_ascii(
+    output, position, "<x:xmpmeta xmlns:x=\"adobe:ns:meta/\">\n",
   )
-  pdf_ua_push_ascii(
-    output, "<rdf:Description rdf:about=\"\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\">\n",
+  position = pdf_ua_write_ascii(
+    output, position, "<rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">\n",
   )
-  pdf_ua_push_ascii(
-    output, "<dc:title><rdf:Alt><rdf:li xml:lang=\"x-default\">",
+  position = pdf_ua_write_ascii(
+    output, position, "<rdf:Description rdf:about=\"\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\">\n",
   )
-  pdf_ua_push_xml_escaped_utf8(output, title)
-  pdf_ua_push_ascii(
-    output, "</rdf:li></rdf:Alt></dc:title>\n</rdf:Description>\n",
+  position = pdf_ua_write_ascii(
+    output, position, "<dc:title><rdf:Alt><rdf:li xml:lang=\"x-default\">",
   )
-  pdf_ua_push_ascii(
-    output, "<rdf:Description rdf:about=\"\" xmlns:pdfuaid=\"http://www.aiim.org/pdfua/ns/id/\">\n",
+  position = pdf_ua_write_xml_escaped_utf8(output, position, title)
+  position = pdf_ua_write_ascii(
+    output, position, "</rdf:li></rdf:Alt></dc:title>\n</rdf:Description>\n",
   )
-  pdf_ua_push_pdfua_marker(output, subformat)
-  pdf_ua_push_ascii(
-    output, "</rdf:Description>\n</rdf:RDF>\n</x:xmpmeta>\n<?xpacket end=\"w\"?>",
+  position = pdf_ua_write_ascii(
+    output, position, "<rdf:Description rdf:about=\"\" xmlns:pdfuaid=\"",
+  )
+  position = pdf_ua_write_ascii(
+    output, position, pdf_metadata_pdfuaid_namespace,
+  )
+  position = pdf_ua_write_ascii(output, position, "\">\n")
+  position = pdf_ua_write_pdfua_marker(output, position, subformat)
+  let _ = pdf_ua_write_ascii(
+    output, position, "</rdf:Description>\n</rdf:RDF>\n</x:xmpmeta>\n<?xpacket end=\"w\"?>",
   )
   Bytes::from_array(output)
 }

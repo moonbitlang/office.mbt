@@ -9744,6 +9744,16 @@ Current backend snapshot:
   clip debug-output tests report 1/1; `moon test --target native
   pdf_clip_test.mbt` reports 6/6; `moon check --target all --warn-list +73`
   passes with the known notice; `moon test --target native` reports 2429/2429.~~
+- [x] ~~Continue source-port hardening with a PDF/UA metadata construction
+  performance slice: PDF/UA marker-description insertion and blank-document XMP
+  metadata creation now precompute exact XML/marker output lengths, allocate
+  that output size, and fill escaped titles and PDF/UA-1/2 markers by index
+  instead of growing byte arrays, preserving marker insertion/removal and title
+  escaping behavior. Validation on MoonBit compiler 0.9.3: `moon check --target
+  native --warn-list +73` passes with the known notice; `moon test --target
+  native pdf_create_test.mbt` reports 7/7; `moon check --target all --warn-list
+  +73` passes with the known notice; `moon test --target native` reports
+  2429/2429.~~
 - [x] ~~Continue source-port hardening with a cpdfcontent test-extraction
   output performance slice: `PdfDocument::test_extract_text` now materializes
   each selected page's extracted glyph text once, counts the exact output length
