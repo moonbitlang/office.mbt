@@ -9366,6 +9366,16 @@ Current backend snapshot:
   native pdf_annotation_test.mbt` reports 14/14; `moon check --target all
   --warn-list +73` passes with the known notice; `moon test --target native`
   reports 2428/2428.~~
+- [x] ~~Continue source-port hardening with a debug-object dump output
+  performance slice: `PdfDocument::debug_objects` now renders trailer/catalog/
+  page/object chunks once and concatenates them with an exact-size copy instead
+  of growing a single output array, preserving trailer root reporting,
+  no-catalog/no-pages diagnostics, object order, source-spelled wrapper output,
+  and byte-oriented PDF object spelling. Validation on MoonBit compiler 0.9.3:
+  `moon check --target native --warn-list +73` passes with the known notice;
+  focused debug-object dump tests report 1/1; `moon test --target native
+  pdf_debug_test.mbt` reports 3/3; `moon check --target all --warn-list +73`
+  passes with the known notice; `moon test --target native` reports 2428/2428.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

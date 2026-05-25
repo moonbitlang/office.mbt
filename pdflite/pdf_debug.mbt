@@ -20,22 +20,32 @@ fn pdf_debug_pages_key() -> PdfName {
 }
 
 ///|
-fn pdf_debug_push_object(
-  output : Array[Byte],
-  object : PdfObject,
-) -> Unit raise PdfError {
-  pdf_writer_push_view(output, pdf_string_of_pdf(object))
+fn pdf_debug_concat_chunks(chunks : ArrayView[PdfBytes]) -> PdfBytes {
+  let mut output_length = 0
+  for chunk in chunks {
+    output_length += chunk.length()
+  }
+  let output = Array::make(output_length, b'\x00')
+  let mut position = 0
+  for chunk in chunks {
+    for byte in chunk {
+      output[position] = byte
+      position += 1
+    }
+  }
+  Bytes::from_array(output)
 }
 
 ///|
-fn pdf_debug_push_object_line(
-  output : Array[Byte],
+fn pdf_debug_object_line(
   prefix : String,
   object : PdfObject,
-) -> Unit raise PdfError {
-  pdf_writer_push_ascii(output, prefix)
-  pdf_debug_push_object(output, object)
-  pdf_writer_push_byte(output, 10)
+) -> PdfBytes raise PdfError {
+  pdf_bytes_concat_views([
+    @ascii.encode(prefix),
+    pdf_string_of_pdf(object),
+    @ascii.encode("\n"),
+  ])
 }
 
 ///|
@@ -47,29 +57,26 @@ fn pdf_debug_push_object_line(
 pub fn PdfDocument::debug_objects(
   self : PdfDocument,
 ) -> PdfBytes raise PdfError {
-  let output : Array[Byte] = []
-  pdf_debug_push_object_line(output, "Trailerdict: ", self.trailer_dict())
-  pdf_writer_push_ascii(output, "Root: ")
-  pdf_writer_push_ascii(output, self.root().to_string())
-  pdf_writer_push_byte(output, 10)
+  let chunks : Array[PdfBytes] = []
+  chunks.push(pdf_debug_object_line("Trailerdict: ", self.trailer_dict()))
+  chunks.push(@ascii.encode("Root: " + self.root().to_string() + "\n"))
   match self.lookup_direct(pdf_debug_root_key(), self.trailer_dict()) {
     Some(catalog) => {
-      pdf_debug_push_object_line(output, "Catalog: ", catalog)
+      chunks.push(pdf_debug_object_line("Catalog: ", catalog))
       match self.lookup_direct(pdf_debug_pages_key(), catalog) {
-        Some(pages) => pdf_debug_push_object_line(output, "Pages: ", pages)
-        None => pdf_writer_push_ascii(output, "no catalog\n")
+        Some(pages) => chunks.push(pdf_debug_object_line("Pages: ", pages))
+        None => chunks.push(@ascii.encode("no catalog\n"))
       }
     }
-    None => pdf_writer_push_ascii(output, "No catalog!\n")
+    None => chunks.push(@ascii.encode("No catalog!\n"))
   }
   for entry in self.parsed_object_entries() {
     let (number, _, object) = entry
-    pdf_writer_push_ascii(output, number.to_string())
-    pdf_writer_push_ascii(output, " 0 obj:\n\n")
-    pdf_debug_push_object(output, object)
-    pdf_writer_push_byte(output, 10)
+    chunks.push(@ascii.encode(number.to_string() + " 0 obj:\n\n"))
+    chunks.push(pdf_string_of_pdf(object))
+    chunks.push(@ascii.encode("\n"))
   }
-  Bytes::from_array(output)
+  pdf_debug_concat_chunks(chunks)
 }
 
 ///|
