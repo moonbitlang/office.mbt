@@ -103,15 +103,30 @@ pub fn pdf_content_filter(
 }
 
 ///|
-fn pdf_content_push_extracted_text(
-  output : Array[Byte],
-  entry : PdfContentJsonEntry,
-) -> Unit {
-  match entry.object {
-    PdfContentGlyphObject(_, _, extracted_text) =>
-      pdf_content_push_view(output, @utf8.encode(extracted_text))
-    _ => ()
+fn pdf_content_extracted_text_of_entries(
+  entries : ArrayView[PdfContentJsonEntry],
+) -> PdfBytes {
+  let chunks : Array[PdfBytes] = []
+  let mut output_length = 0
+  for entry in entries {
+    match entry.object {
+      PdfContentGlyphObject(_, _, extracted_text) => {
+        let chunk = @utf8.encode(extracted_text)
+        output_length += chunk.length()
+        chunks.push(chunk)
+      }
+      _ => ()
+    }
   }
+  let output = Array::make(output_length, b'\x00')
+  let mut position = 0
+  for chunk in chunks {
+    for byte in chunk {
+      output[position] = byte
+      position += 1
+    }
+  }
+  Bytes::from_array(output)
 }
 
 ///|
@@ -126,14 +141,27 @@ pub fn PdfDocument::test_extract_text(
     pages.length(),
     "test_extract_text",
   )
-  let output : Array[Byte] = []
+  let page_texts : Array[PdfBytes] = []
+  let mut output_length = pages.length()
   for index in 0..<pages.length() {
-    output.push(10)
     let page_number = index + 1
     if pdf_content_page_contains(page_numbers, page_number) {
-      for entry in self.content_entries_of_page(pages[index]) {
-        pdf_content_push_extracted_text(output, entry)
-      }
+      let text = pdf_content_extracted_text_of_entries(
+        self.content_entries_of_page(pages[index]),
+      )
+      output_length += text.length()
+      page_texts.push(text)
+    } else {
+      page_texts.push(Bytes::new(0))
+    }
+  }
+  let output = Array::make(output_length, b'\n')
+  let mut position = 0
+  for text in page_texts {
+    position += 1
+    for byte in text {
+      output[position] = byte
+      position += 1
     }
   }
   Bytes::from_array(output)

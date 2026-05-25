@@ -9334,6 +9334,17 @@ Current backend snapshot:
   clip debug-output tests report 1/1; `moon test --target native
   pdf_clip_test.mbt` reports 6/6; `moon check --target all --warn-list +73`
   passes with the known notice; `moon test --target native` reports 2428/2428.~~
+- [x] ~~Continue source-port hardening with a cpdfcontent test-extraction
+  output performance slice: `PdfDocument::test_extract_text` now materializes
+  each selected page's extracted glyph text once, counts the exact output length
+  including cpdf's one leading newline per page, and fills a
+  newline-initialized buffer by index instead of growing the output array,
+  preserving selected-page output, wrapper output, empty selections, and invalid
+  page errors. Validation on MoonBit compiler 0.9.3: `moon check --target
+  native --warn-list +73` passes with the known notice; focused extraction
+  tests report 1/1; `moon test --target native pdf_content_page_json_test.mbt`
+  reports 2/2; `moon check --target all --warn-list +73` passes with the known
+  notice; `moon test --target native` reports 2428/2428.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
