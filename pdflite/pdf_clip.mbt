@@ -195,9 +195,49 @@ fn pdf_gpcml_printcontour(
 }
 
 ///|
+fn pdf_gpcml_text_length(text : String) -> Int {
+  @ascii.encode(text).length()
+}
+
+///|
+fn pdf_gpcml_vertex_text_length(vertex : PdfClipVertex) -> Int {
+  pdf_gpcml_text_length("    {x = ") +
+  pdf_gpcml_text_length(pdf_clip_float_text(vertex.x)) +
+  pdf_gpcml_text_length(", y = ") +
+  pdf_gpcml_text_length(pdf_clip_float_text(vertex.y)) +
+  pdf_gpcml_text_length("}\n")
+}
+
+///|
+fn pdf_gpcml_contour_text_length(contour : PdfClipContour) -> Int {
+  let mut length = pdf_gpcml_text_length("  Contour with ") +
+    pdf_gpcml_text_length(contour.vertices.length().to_string()) +
+    pdf_gpcml_text_length(" vertices and hole ") +
+    pdf_gpcml_text_length(contour.hole_flag().to_string()) +
+    1
+  for vertex in contour.vertices {
+    length += pdf_gpcml_vertex_text_length(vertex)
+  }
+  length
+}
+
+///|
+fn pdf_gpcml_polygon_text_length(polygon : PdfClipPolygon) -> Int {
+  let mut length = pdf_gpcml_text_length("Contours: ") +
+    pdf_gpcml_text_length(polygon.contours.length().to_string()) +
+    1
+  for contour in polygon.contours {
+    length += pdf_gpcml_contour_text_length(contour)
+  }
+  length
+}
+
+///|
 /// Return the text cpdfclip's debug polygon printer writes to stdout.
 pub fn pdf_gpcml_printpolygon(polygon : PdfClipPolygon) -> PdfBytes {
-  let output : Array[Byte] = []
+  let output : Array[Byte] = Array::new(
+    capacity=pdf_gpcml_polygon_text_length(polygon),
+  )
   pdf_writer_push_ascii(output, "Contours: ")
   pdf_writer_push_ascii(output, polygon.contours.length().to_string())
   pdf_writer_push_byte(output, 10)

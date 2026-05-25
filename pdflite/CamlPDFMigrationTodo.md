@@ -9324,6 +9324,16 @@ Current backend snapshot:
   tests report 1/1; `moon test --target native pdf_composition_test.mbt` reports
   3/3; `moon check --target all --warn-list +73` passes with the known notice;
   `moon test --target native` reports 2428/2428.~~
+- [x] ~~Continue source-port hardening with a cpdfclip debug-output
+  performance slice: `pdf_gpcml_printpolygon` now precomputes the exact
+  stdout-style polygon text length and creates the output array with that
+  capacity before preserving the existing contour and vertex print helpers,
+  keeping contour counts, hole flags, fixed-six coordinates, and trailing
+  newlines byte-for-byte stable. Validation on MoonBit compiler 0.9.3: `moon
+  check --target native --warn-list +73` passes with the known notice; focused
+  clip debug-output tests report 1/1; `moon test --target native
+  pdf_clip_test.mbt` reports 6/6; `moon check --target all --warn-list +73`
+  passes with the known notice; `moon test --target native` reports 2428/2428.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
