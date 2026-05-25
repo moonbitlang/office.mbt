@@ -460,6 +460,19 @@ test "PdfDocument bookmark_name_of_spec expands cpdf filename fields" {
   guard broad is Err(@pdflite.PdfError::SoftError(_)) else {
     fail("expected @pdflite.PdfError::SoftError")
   }
+  let bad_prefix : Result[String, Error] = try? document.bookmark_name_of_spec(
+    PdfMetadataUTF8,
+    bookmarks,
+    0,
+    "@b@",
+    7,
+    "base",
+    1,
+    2,
+  )
+  guard bad_prefix is Err(@pdflite.PdfError::SoftError(_)) else {
+    fail("expected @pdflite.PdfError::SoftError")
+  }
 }
 
 ///|

@@ -9223,6 +9223,17 @@ Current backend snapshot:
   report 1/1; `moon test --target native pdf_toc_test.mbt` reports 16/16; `moon
   check --target all --warn-list +73` passes with the known notice; `moon test
   --target native` reports 2428/2428.~~
+- [x] ~~Continue source-port hardening with a bookmark filename-spec
+  performance slice: `pdf_bookmark_name_spec_process_at_fields` now computes the
+  exact expanded byte length, allocates once, and fills literal and expanded
+  `@F`, `@N`, `@S`, `@E`, `@B`, and `@b` fields by index instead of growing the
+  output array, preserving percent expansion, padded page numbers, bookmark name
+  prefix extraction, broad-width errors, and malformed `@b` errors. Validation
+  on MoonBit compiler 0.9.3: `moon check --target native --warn-list +73`
+  passes with the known notice; focused filename-spec tests report 1/1; `moon
+  test --target native pdf_bookmark_test.mbt` reports 28/28; `moon check
+  --target all --warn-list +73` passes with the known notice; `moon test
+  --target native` reports 2429/2429.~~
 - [x] ~~Continue source-port hardening with a bookmark JSON page-selection
   performance slice: `PdfDocument::bookmarks_json` now allocates the exact
   all-pages selection length and fills page numbers by index instead of growing
