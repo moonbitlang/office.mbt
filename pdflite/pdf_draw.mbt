@@ -676,9 +676,9 @@ fn PdfDrawRenderState::text_ops_and_width_with_cache(
       self.current_fontpack_identifier,
       font_index,
     )
-    let bytes : Array[Byte] = []
-    for triple in run {
-      bytes.push(pdf_byte_of_int(triple.0))
+    let bytes = Array::make(run.length(), b'\x00')
+    for index, triple in run {
+      bytes[index] = pdf_byte_of_int(triple.0)
     }
     output.push(Op_Tf(resource_name, self.font_size))
     output.push(Op_Tj(Bytes::from_array(bytes)))

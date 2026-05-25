@@ -9922,6 +9922,17 @@ Current backend snapshot:
   report 1/1; `moon test --target native pdf_addtext_test.mbt` reports
   118/118; `moon check --target all --warn-list +73` passes with the known
   notice; `moon test --target native` reports 2430/2430.~~
+- [x] ~~Continue source-port hardening with a draw fontpack run-byte
+  performance slice: `PdfDrawRenderState::text_ops_and_width_with_cache` now
+  allocates each fontpack `Tj` run to the exact run length and fills charcode
+  bytes by index instead of growing a temporary byte array, preserving
+  document-aware fontpack resource names, font switching, emitted text runs,
+  skipped missing glyphs, and measured text width. Validation on MoonBit
+  compiler 0.9.3: `moon check --target native --warn-list +73` passes with the
+  known notice; focused draw fontpack run tests report 1/1; `moon test --target
+  native pdf_draw_test.mbt` reports 56/56; `moon check --target all
+  --warn-list +73` passes with the known notice; `moon test --target native`
+  reports 2430/2430.~~
 - [x] ~~Continue source-port hardening with a cpdfcontent test-extraction
   output performance slice: `PdfDocument::test_extract_text` now materializes
   each selected page's extracted glyph text once, counts the exact output length
