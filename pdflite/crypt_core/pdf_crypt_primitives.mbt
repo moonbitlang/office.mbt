@@ -29,15 +29,17 @@ pub fn pdf_arc4_crypt(
     j = (j + state[i] + key[i % key.length()].to_int()) % 256
     pdf_arc4_swap(state, i, j)
   }
-  let output : Array[Byte] = []
+  let output = Array::make(data.length(), b'\x00')
   let mut i = 0
   j = 0
+  let mut output_position = 0
   for byte in data {
     i = (i + 1) % 256
     j = (j + state[i]) % 256
     pdf_arc4_swap(state, i, j)
     let stream_byte = state[(state[i] + state[j]) % 256]
-    output.push((byte.to_int() ^ stream_byte).to_byte())
+    output[output_position] = (byte.to_int() ^ stream_byte).to_byte()
+    output_position += 1
   }
   Bytes::from_array(output)
 }
