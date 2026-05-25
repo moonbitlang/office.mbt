@@ -9789,6 +9789,17 @@ Current backend snapshot:
   --target native pdf_content_test.mbt` reports 59/59; `moon check --target all
   --warn-list +73` passes with the known notice; `moon test --target native`
   reports 2430/2430.~~
+- [x] ~~Continue source-port hardening with a TrueType `/ToUnicode` CMap
+  writing performance slice: `PdfDocument::pdf_text_write_tounicode` now sorts
+  entries once, precomputes the exact preamble/count/bfrange/postamble byte
+  length, and fills CMap text plus hex-encoded Unicode bytes by index instead
+  of growing the output array, preserving generated stream bytes, `/Length`,
+  read-back mappings, and extractor behavior. Validation on MoonBit compiler
+  0.9.3: `moon check --target native --warn-list +73` passes with the known
+  notice; focused ToUnicode font-writing tests report 1/1; `moon test --target
+  native pdf_text_test.mbt` reports 152/152; `moon check --target all
+  --warn-list +73` passes with the known notice; `moon test --target native`
+  reports 2430/2430.~~
 - [x] ~~Continue source-port hardening with a cpdfcontent test-extraction
   output performance slice: `PdfDocument::test_extract_text` now materializes
   each selected page's extracted glyph text once, counts the exact output length
