@@ -328,10 +328,22 @@ pub fn pdf_addtext_charcodes_of_utf8(
   text : String,
 ) -> PdfBytes raise PdfError {
   let extractor = pdf_charcode_extractor_of_font_real(font)
-  let output : Array[Byte] = []
-  for codepoint in pdf_codepoints_of_utf8(@utf8.encode(text)) {
+  let codepoints = pdf_codepoints_of_utf8(@utf8.encode(text))
+  let mut length = 0
+  for codepoint in codepoints {
     match extractor(codepoint) {
-      Some(charcode) => output.push(pdf_byte_of_int(charcode))
+      Some(_) => length += 1
+      None => ()
+    }
+  }
+  let output = Array::make(length, b'\x00')
+  let mut position = 0
+  for codepoint in codepoints {
+    match extractor(codepoint) {
+      Some(charcode) => {
+        output[position] = pdf_byte_of_int(charcode)
+        position += 1
+      }
       None => ()
     }
   }

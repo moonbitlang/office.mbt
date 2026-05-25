@@ -9858,6 +9858,16 @@ Current backend snapshot:
   pdf_text_test.mbt` reports 152/152; `moon check --target all --warn-list +73`
   passes with the known notice; `moon test --target native` reports
   2430/2430.~~
+- [x] ~~Continue source-port hardening with an add-text charcode output
+  performance slice: `pdf_addtext_charcodes_of_utf8` now decodes input UTF-8
+  once, counts representable font codepoints, allocates the exact charcode byte
+  length, and fills by index instead of growing the output array, preserving
+  emitted standard-font bytes and cpdf-compatible skipping of missing glyphs.
+  Validation on MoonBit compiler 0.9.3: `moon check --target native
+  --warn-list +73` passes with the known notice; focused add-text charcode
+  tests report 1/1 and 1/1; `moon test --target native pdf_addtext_test.mbt`
+  reports 118/118; `moon check --target all --warn-list +73` passes with the
+  known notice; `moon test --target native` reports 2430/2430.~~
 - [x] ~~Continue source-port hardening with a cpdfcontent test-extraction
   output performance slice: `PdfDocument::test_extract_text` now materializes
   each selected page's extracted glyph text once, counts the exact output length
