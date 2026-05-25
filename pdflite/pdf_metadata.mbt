@@ -1124,15 +1124,18 @@ fn pdf_metadata_xml_entity_codepoint(entity : BytesView) -> Int? {
 }
 
 ///|
-fn pdf_metadata_push_xml_codepoint(
+fn pdf_metadata_write_xml_codepoint(
   output : Array[Byte],
+  position : Int,
   codepoint : Int,
-) -> Bool {
-  let encoded = pdf_utf8_of_codepoints([codepoint]) catch { _ => return false }
+) -> Int? {
+  let encoded = pdf_utf8_of_codepoints([codepoint]) catch { _ => return None }
+  let mut current = position
   for byte in encoded {
-    output.push(byte)
+    output[current] = byte
+    current += 1
   }
-  true
+  Some(current)
 }
 
 ///|
@@ -1143,7 +1146,8 @@ fn pdf_metadata_xml_codepoint_is_space(codepoint : Int) -> Bool {
 ///|
 fn pdf_metadata_decode_xml_text(value : BytesView) -> String? {
   let trimmed = pdf_metadata_trim_xml_text(value)
-  let output : Array[Byte] = Array::new(capacity=trimmed.length())
+  let output = Array::make(trimmed.length(), b'\x00')
+  let mut output_position = 0
   let mut pending_space = false
   let mut index = 0
   while index < trimmed.length() {
@@ -1153,54 +1157,71 @@ fn pdf_metadata_decode_xml_text(value : BytesView) -> String? {
         match pdf_metadata_xml_entity_codepoint(trimmed[index + 1:semicolon]) {
           Some(codepoint) =>
             if pdf_metadata_xml_codepoint_is_space(codepoint) {
-              if output.length() > 0 {
+              if output_position > 0 {
                 pending_space = true
               }
               index = semicolon + 1
             } else {
               if pending_space {
-                output.push(32)
+                output[output_position] = 32
+                output_position += 1
                 pending_space = false
               }
-              if pdf_metadata_push_xml_codepoint(output, codepoint) {
-                index = semicolon + 1
-              } else {
-                output.push(trimmed[index])
-                index += 1
+              match
+                pdf_metadata_write_xml_codepoint(
+                  output, output_position, codepoint,
+                ) {
+                Some(position) => {
+                  output_position = position
+                  index = semicolon + 1
+                }
+                None => {
+                  output[output_position] = trimmed[index]
+                  output_position += 1
+                  index += 1
+                }
               }
             }
           _ => {
             if pending_space {
-              output.push(32)
+              output[output_position] = 32
+              output_position += 1
               pending_space = false
             }
-            output.push(trimmed[index])
+            output[output_position] = trimmed[index]
+            output_position += 1
             index += 1
           }
         }
       } else {
         if pending_space {
-          output.push(32)
+          output[output_position] = 32
+          output_position += 1
           pending_space = false
         }
-        output.push(trimmed[index])
+        output[output_position] = trimmed[index]
+        output_position += 1
         index += 1
       }
     } else if pdf_metadata_is_xml_space(trimmed[index]) {
-      if output.length() > 0 {
+      if output_position > 0 {
         pending_space = true
       }
       index += 1
     } else {
       if pending_space {
-        output.push(32)
+        output[output_position] = 32
+        output_position += 1
         pending_space = false
       }
-      output.push(trimmed[index])
+      output[output_position] = trimmed[index]
+      output_position += 1
       index += 1
     }
   }
-  let text = @utf8.decode(Bytes::from_array(output)) catch { _ => return None }
+  let text = @utf8.decode(Bytes::from_array(output[:output_position])) catch {
+    _ => return None
+  }
   Some(text)
 }
 
