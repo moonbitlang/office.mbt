@@ -715,16 +715,6 @@ fn pdf_space_indexed_find(
 }
 
 ///|
-fn pdf_space_push_byte_component(output : Array[Byte], value : Int) -> Bool {
-  if value < 0 || value > 255 {
-    false
-  } else {
-    output.push(value.to_byte())
-    true
-  }
-}
-
-///|
 fn pdf_space_indexed_lookup_bytes(
   table : ArrayView[(Int, Array[Int])],
 ) -> (Int, PdfBytes)? {
@@ -740,23 +730,22 @@ fn pdf_space_indexed_lookup_bytes(
     }
   }
   guard valid else { return None }
-  let output : Array[Byte] = []
+  let output = Array::make((hival + 1) * components, b'\x00')
+  let mut position = 0
   for index in 0..<=hival {
     match pdf_space_indexed_find(table, index) {
       Some(values) =>
         for value in values {
-          if !pdf_space_push_byte_component(output, value) {
-            valid = false
+          if value < 0 || value > 255 {
+            return None
           }
+          output[position] = value.to_byte()
+          position += 1
         }
-      None => valid = false
+      None => return None
     }
   }
-  if valid {
-    Some((hival, Bytes::from_array(output)))
-  } else {
-    None
-  }
+  Some((hival, Bytes::from_array(output)))
 }
 
 ///|

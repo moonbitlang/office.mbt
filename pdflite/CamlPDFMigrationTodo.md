@@ -9823,6 +9823,18 @@ Current backend snapshot:
   1/1; `moon test --target native pdf_bookmark_test.mbt` reports 28/28; `moon
   check --target all --warn-list +73` passes with the known notice; `moon test
   --target native` reports 2430/2430.~~
+- [x] ~~Continue source-port hardening with an Indexed colour-space lookup
+  performance slice: `pdf_space_indexed_lookup_bytes` now validates table
+  shape and component byte ranges while allocating the exact lookup table size
+  from `hival` and `components`, then fills the lookup bytes by index instead
+  of growing an output array, preserving supported `PdfIndexed`
+  serialization, unsupported sparse/invalid tables, and read/write colour-space
+  behavior. Validation on MoonBit compiler 0.9.3: `moon check --target native
+  --warn-list +73` passes with the known notice; focused Indexed
+  colour-space object tests report 1/1 and 1/1; `moon test --target native
+  pdf_space_test.mbt` reports 22/22; `moon check --target all --warn-list +73`
+  passes with the known notice; `moon test --target native` reports
+  2430/2430.~~
 - [x] ~~Continue source-port hardening with a cpdfcontent test-extraction
   output performance slice: `PdfDocument::test_extract_text` now materializes
   each selected page's extracted glyph text once, counts the exact output length
