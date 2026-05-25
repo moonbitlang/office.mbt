@@ -494,12 +494,11 @@ fn pdf_font_table_text_bytes(
   font : PdfFont,
   code : Int,
 ) -> PdfBytes raise PdfError {
-  let bytes : Array[Byte] = []
   if font.uses_two_byte_codes() {
-    bytes.push(pdf_byte_of_int(0))
+    Bytes::from_array([pdf_byte_of_int(0), pdf_byte_of_int(code)])
+  } else {
+    Bytes::from_array([pdf_byte_of_int(code)])
   }
-  bytes.push(pdf_byte_of_int(code))
-  Bytes::from_array(bytes)
 }
 
 ///|
