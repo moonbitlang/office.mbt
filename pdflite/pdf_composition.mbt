@@ -420,10 +420,17 @@ pub fn PdfDocument::composition_json_blob(
 }
 
 ///|
-fn pdf_composition_push_utf8(output : Array[Byte], text : String) -> Unit {
+fn pdf_composition_write_utf8(
+  output : Array[Byte],
+  position : Int,
+  text : String,
+) -> Int {
+  let mut current = position
   for byte in @utf8.encode(text) {
-    output.push(byte)
+    output[current] = byte
+    current += 1
   }
+  current
 }
 
 ///|
@@ -442,16 +449,21 @@ fn pdf_composition_percent_text(percent : Double) -> String {
 }
 
 ///|
-fn pdf_composition_push_text_entry(
+fn pdf_composition_write_text_entry(
   output : Array[Byte],
+  position : Int,
   entry : PdfCompositionEntry,
-) -> Unit {
-  pdf_composition_push_utf8(output, entry.label)
-  pdf_composition_push_utf8(output, ": ")
-  pdf_composition_push_utf8(output, entry.bytes.to_string())
-  pdf_composition_push_utf8(output, " bytes (")
-  pdf_composition_push_utf8(output, pdf_composition_percent_text(entry.percent))
-  pdf_composition_push_utf8(output, "%)\n")
+) -> Int {
+  let mut current = pdf_composition_write_utf8(output, position, entry.label)
+  current = pdf_composition_write_utf8(output, current, ": ")
+  current = pdf_composition_write_utf8(output, current, entry.bytes.to_string())
+  current = pdf_composition_write_utf8(output, current, " bytes (")
+  current = pdf_composition_write_utf8(
+    output,
+    current,
+    pdf_composition_percent_text(entry.percent),
+  )
+  pdf_composition_write_utf8(output, current, "%)\n")
 }
 
 ///|
@@ -485,11 +497,10 @@ pub fn PdfDocument::composition_text(
   file_size : Int,
 ) -> PdfBytes raise PdfError {
   let entries = self.composition(file_size)
-  let output : Array[Byte] = Array::new(
-    capacity=pdf_composition_text_length(entries),
-  )
+  let output = Array::make(pdf_composition_text_length(entries), b'\x00')
+  let mut position = 0
   for entry in entries {
-    pdf_composition_push_text_entry(output, entry)
+    position = pdf_composition_write_text_entry(output, position, entry)
   }
   Bytes::from_array(output)
 }
