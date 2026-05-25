@@ -42,10 +42,12 @@ fn pdf_aesv3_shamix_mod3(data : BytesView) -> Int {
 
 ///|
 fn pdf_aesv3_shamix_repeat(data : BytesView, count : Int) -> PdfBytes {
-  let output : Array[Byte] = Array::new(capacity=data.length() * count)
+  let output = Array::make(data.length() * count, b'\x00')
+  let mut position = 0
   for _ in 0..<count {
     for byte in data {
-      output.push(byte)
+      output[position] = byte
+      position += 1
     }
   }
   Bytes::from_array(output)

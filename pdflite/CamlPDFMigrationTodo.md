@@ -9223,6 +9223,18 @@ Current backend snapshot:
   report 1/1; `moon test --target native pdf_toc_test.mbt` reports 16/16; `moon
   check --target all --warn-list +73` passes with the known notice; `moon test
   --target native` reports 2428/2428.~~
+- [x] ~~Continue source-port hardening with an AESV3 ISO hash-repeat
+  performance slice: `pdf_aesv3_shamix_repeat` now allocates the exact
+  repeated-input byte length and fills each repeated view by index instead of
+  growing a byte array with only reserved capacity, preserving ISO/R6 AESV3 hash
+  iteration, password authentication, encrypted output dictionaries, and
+  recrypt round-trips. Validation on MoonBit compiler 0.9.3: `moon check
+  --target native --warn-list +73` passes with the known notice; focused
+  AESV3 ISO/R6 tests report 3/3; `moon test --target native
+  pdf_crypt_wbtest.mbt` reports 26/26; `moon test --target native
+  pdf_crypt_test.mbt` reports 43/43; `moon check --target all --warn-list +73`
+  passes with the known notice; `moon test --target native` reports 2429/2429;
+  `moon info && moon fmt` are clean with no `.mbti` changes.~~
 - [x] ~~Continue source-port hardening with an AESV3 fixed-block encryption
   performance slice: `pdf_aesv3_cbc_encrypt_no_padding_with_iv` now allocates
   ciphertext output exactly to the checked input length and fills encrypted
