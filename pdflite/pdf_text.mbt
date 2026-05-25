@@ -1474,7 +1474,7 @@ fn pdf_text_predefined_unicode_table_charcode(
       match
         pdf_text_predefined_cid_range_charcode_of_cid(charcode_ranges, cid) {
         Some(code) => found = pdf_text_lower_packed_charcode(found, code)
-        None => ()
+        None => return None
       }
     }
   }
@@ -3486,8 +3486,23 @@ fn pdf_text_parse_hex_bytes(
   stop : Int,
 ) -> PdfBytes? {
   guard stop >= start else { return None }
-  let output : Array[Byte] = []
+  let mut digit_count = 0
+  let mut scan = start
+  while scan < stop {
+    let value = line[scan].to_int()
+    if pdf_is_whitespace_byte(value) {
+      ()
+    } else {
+      match pdf_text_hex_digit_value(line[scan]) {
+        Some(_) => digit_count += 1
+        None => return None
+      }
+    }
+    scan += 1
+  }
+  let output = Array::make((digit_count + 1) / 2, b'\x00')
   let mut high : Int? = None
+  let mut position = 0
   let mut index = start
   while index < stop {
     let value = line[index].to_int()
@@ -3498,19 +3513,19 @@ fn pdf_text_parse_hex_bytes(
         Some(nibble) =>
           match high {
             Some(high_nibble) => {
-              output.push((high_nibble * 16 + nibble).to_byte())
+              output[position] = (high_nibble * 16 + nibble).to_byte()
+              position += 1
               high = None
             }
             None => high = Some(nibble)
           }
-        None => return None
+        None => ()
       }
     }
     index += 1
   }
-  match high {
-    Some(high_nibble) => output.push((high_nibble * 16).to_byte())
-    None => ()
+  if high is Some(high_nibble) {
+    output[position] = (high_nibble * 16).to_byte()
   }
   Some(Bytes::from_array(output))
 }
@@ -3824,15 +3839,13 @@ fn pdf_text_cmap_section_line_views(line : BytesView) -> Array[BytesView] {
 }
 
 ///|
-fn pdf_text_cmap_line_without_comment(line : BytesView) -> PdfBytes {
-  let output : Array[Byte] = []
+fn pdf_text_cmap_comment_start(line : BytesView) -> Int {
   let mut in_literal = false
   let mut escaped = false
   let mut literal_depth = 0
-  for byte in line {
-    let value = byte.to_int()
+  for index in 0..<line.length() {
+    let value = line[index].to_int()
     if in_literal {
-      output.push(byte)
       if escaped {
         escaped = false
       } else if value == 92 {
@@ -3847,15 +3860,22 @@ fn pdf_text_cmap_line_without_comment(line : BytesView) -> PdfBytes {
         }
       }
     } else if value == 37 {
-      break
-    } else {
-      output.push(byte)
-      if value == 40 {
-        in_literal = true
-        literal_depth = 1
-        escaped = false
-      }
+      return index
+    } else if value == 40 {
+      in_literal = true
+      literal_depth = 1
+      escaped = false
     }
+  }
+  line.length()
+}
+
+///|
+fn pdf_text_cmap_line_without_comment(line : BytesView) -> PdfBytes {
+  let stop = pdf_text_cmap_comment_start(line)
+  let output = Array::make(stop, b'\x00')
+  for index in 0..<stop {
+    output[index] = line[index]
   }
   Bytes::from_array(output)
 }
@@ -4316,10 +4336,18 @@ fn pdf_text_cmap_contains_whitespace(data : BytesView) -> Bool {
 
 ///|
 fn pdf_text_cmap_without_whitespace(data : BytesView) -> PdfBytes {
-  let output : Array[Byte] = []
+  let mut length = 0
   for byte in data {
     if !pdf_is_whitespace_byte(byte.to_int()) {
-      output.push(byte)
+      length += 1
+    }
+  }
+  let output = Array::make(length, b'\x00')
+  let mut position = 0
+  for byte in data {
+    if !pdf_is_whitespace_byte(byte.to_int()) {
+      output[position] = byte
+      position += 1
     }
   }
   Bytes::from_array(output)

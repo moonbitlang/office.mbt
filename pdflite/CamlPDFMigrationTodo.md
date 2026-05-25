@@ -9846,6 +9846,18 @@ Current backend snapshot:
   pdf_text_test.mbt` reports 152/152; `moon check --target all --warn-list +73`
   passes with the known notice; `moon test --target native` reports
   2430/2430.~~
+- [x] ~~Continue source-port hardening with a CMap parser byte-output
+  performance slice: ToUnicode/CMap hex payload parsing, comment stripping,
+  and whitespace compaction now precompute exact output lengths and fill
+  temporary byte buffers by index instead of growing arrays, preserving
+  whitespace-tolerant hex strings, odd-nibble padding, PDF comment handling
+  outside literal strings, escaped literal percent signs, and whitespace-split
+  CMap markers. Validation on MoonBit compiler 0.9.3: `moon check --target
+  native --warn-list +73` passes with the known notice; focused CMap parser
+  tests report 1/1, 1/1, 1/1, 1/1, and 1/1; `moon test --target native
+  pdf_text_test.mbt` reports 152/152; `moon check --target all --warn-list +73`
+  passes with the known notice; `moon test --target native` reports
+  2430/2430.~~
 - [x] ~~Continue source-port hardening with a cpdfcontent test-extraction
   output performance slice: `PdfDocument::test_extract_text` now materializes
   each selected page's extracted glyph text once, counts the exact output length
