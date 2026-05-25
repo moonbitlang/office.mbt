@@ -9223,6 +9223,17 @@ Current backend snapshot:
   report 1/1; `moon test --target native pdf_toc_test.mbt` reports 16/16; `moon
   check --target all --warn-list +73` passes with the known notice; `moon test
   --target native` reports 2428/2428.~~
+- [x] ~~Continue source-port hardening with a PNG IDAT concatenation
+  performance slice: `pdf_png_concat` now precomputes the total compressed
+  payload length for all IDAT chunks, allocates one exact output buffer, and
+  fills each chunk by index instead of growing the byte array, preserving
+  split-IDAT parsing, decoded image bytes, PNG image XObject construction, and
+  unsupported palette/interlace errors. Validation on MoonBit compiler 0.9.3:
+  `moon check --target native --warn-list +73` passes with the known notice;
+  focused PNG IDAT tests report 1/1; `moon test --target native
+  pdf_image_test.mbt` reports 55/55; `moon check --target all --warn-list +73`
+  passes with the known notice; `moon test --target native` reports 2429/2429;
+  `moon info && moon fmt` are clean with no `.mbti` changes.~~
 - [x] ~~Continue source-port hardening with a core PdfBytes compatibility
   conversion performance slice: `pdf_bytes_of_int_arrays` now precomputes the
   flattened byte length and fills a fixed output buffer by index, and

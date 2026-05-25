@@ -45,10 +45,16 @@ fn ByteCursor::pdf_png_read_chunk(
 
 ///|
 fn pdf_png_concat(chunks : ArrayView[PdfBytes]) -> PdfBytes {
-  let output : Array[Byte] = []
+  let mut length = 0
+  for chunk in chunks {
+    length += chunk.length()
+  }
+  let output = Array::make(length, b'\x00')
+  let mut position = 0
   for chunk in chunks {
     for index in 0..<chunk.length() {
-      output.push(chunk[index])
+      output[position] = chunk[index]
+      position += 1
     }
   }
   Bytes::from_array(output)
