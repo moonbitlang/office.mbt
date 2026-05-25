@@ -208,6 +208,20 @@ fn pdf_content_push_view(output : Array[Byte], view : BytesView) -> Unit {
 }
 
 ///|
+fn pdf_content_copy_view(
+  output : Array[Byte],
+  position : Int,
+  view : BytesView,
+) -> Int {
+  let mut position = position
+  for byte in view {
+    output[position] = byte
+    position += 1
+  }
+  position
+}
+
+///|
 fn pdf_content_push_object(
   output : Array[Byte],
   object : PdfObject,
@@ -231,6 +245,40 @@ fn pdf_content_push_section(
     output.push(32)
   }
   pdf_content_push_view(output, operator)
+}
+
+///|
+fn pdf_content_section_bytes(
+  operands : ArrayView[PdfObject],
+  operator : BytesView,
+) -> PdfBytes raise PdfError {
+  let rendered_operands : Array[PdfBytes] = Array::new(
+    capacity=operands.length(),
+  )
+  let mut length = operator.length()
+  for operand in operands {
+    let bytes = pdf_write_object(operand)
+    length += bytes.length()
+    rendered_operands.push(bytes)
+  }
+  if operands.length() > 0 {
+    length += operands.length()
+  }
+  let output = Array::make(length, b' ')
+  let mut position = 0
+  for operand in rendered_operands {
+    if position > 0 {
+      output[position] = b' '
+      position += 1
+    }
+    position = pdf_content_copy_view(output, position, operand)
+  }
+  if position > 0 {
+    output[position] = b' '
+    position += 1
+  }
+  position = pdf_content_copy_view(output, position, operator)
+  Bytes::from_array(output[:position])
 }
 
 ///|
@@ -2147,9 +2195,7 @@ fn pdf_content_section_unknown(
   operands : ArrayView[PdfObject],
   operator : BytesView,
 ) -> PdfContentOp raise PdfError {
-  let output : Array[Byte] = []
-  pdf_content_push_section(output, operands, operator)
-  Op_Unknown(Bytes::from_array(output))
+  Op_Unknown(pdf_content_section_bytes(operands, operator))
 }
 
 ///|
