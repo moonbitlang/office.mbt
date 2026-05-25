@@ -537,7 +537,7 @@ pub fn pdf_aes_ecb_decrypt(
     raise InvalidCryptoDataLength(data.length())
   }
   let cooked_key = pdf_aes_decrypt_key(key)
-  let output : Array[Byte] = []
+  let output = Array::make(data.length(), b'\x00')
   let mut position = 0
   while position < data.length() {
     let ciphertext = pdf_aes_block(data[position:position + 16])
@@ -545,7 +545,9 @@ pub fn pdf_aes_ecb_decrypt(
     @rijndael.camlpdf_caml_aes_decrypt(
       cooked_key, 0, ciphertext, 0, plaintext, 0,
     )
-    pdf_aes_append_block(output, plaintext)
+    for index in 0..<16 {
+      output[position + index] = plaintext[index]
+    }
     position += 16
   }
   let decrypted = Bytes::from_array(output)
