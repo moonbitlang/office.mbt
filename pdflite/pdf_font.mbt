@@ -205,20 +205,44 @@ fn pdf_font_push_utf8(output : Array[Byte], text : String) -> Unit {
 }
 
 ///|
-fn pdf_font_push_listing_line(
+fn pdf_font_write_utf8(
   output : Array[Byte],
+  position : Int,
+  text : String,
+) -> Int {
+  let mut current = position
+  for byte in @utf8.encode(text) {
+    output[current] = byte
+    current += 1
+  }
+  current
+}
+
+///|
+fn pdf_font_write_listing_line(
+  output : Array[Byte],
+  position : Int,
   entry : PdfFontListEntry,
-) -> Unit {
-  pdf_font_push_utf8(output, entry.page.to_string())
-  output.push(32)
-  pdf_font_push_utf8(output, entry.name)
-  output.push(32)
-  pdf_font_push_utf8(output, entry.subtype)
-  output.push(32)
-  pdf_font_push_utf8(output, entry.basefont)
-  output.push(32)
-  pdf_font_push_utf8(output, entry.encoding)
-  output.push(10)
+) -> Int {
+  let mut current = pdf_font_write_utf8(
+    output,
+    position,
+    entry.page.to_string(),
+  )
+  output[current] = 32
+  current += 1
+  current = pdf_font_write_utf8(output, current, entry.name)
+  output[current] = 32
+  current += 1
+  current = pdf_font_write_utf8(output, current, entry.subtype)
+  output[current] = 32
+  current += 1
+  current = pdf_font_write_utf8(output, current, entry.basefont)
+  output[current] = 32
+  current += 1
+  current = pdf_font_write_utf8(output, current, entry.encoding)
+  output[current] = 10
+  current + 1
 }
 
 ///|
@@ -252,11 +276,10 @@ pub fn PdfDocument::list_fonts_text(
   page_numbers : ArrayView[Int],
 ) -> PdfBytes raise PdfError {
   let entries = self.list_fonts(page_numbers)
-  let output : Array[Byte] = Array::new(
-    capacity=pdf_font_listing_text_length(entries),
-  )
+  let output = Array::make(pdf_font_listing_text_length(entries), b'\x00')
+  let mut position = 0
   for entry in entries {
-    pdf_font_push_listing_line(output, entry)
+    position = pdf_font_write_listing_line(output, position, entry)
   }
   Bytes::from_array(output)
 }
