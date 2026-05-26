@@ -550,10 +550,11 @@ pub fn PdfDocument::set_mediaboxes(
     "set_mediaboxes",
   )
   pdf_page_box_validate_xywh_boxes(boxes, pages.length())
-  let rewritten : Array[PdfPage] = []
+  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
-    if pdf_page_box_contains_page(page_numbers, page_number) {
+    if selected_pages.contains(page_number) {
       rewritten.push(
         self.pdf_page_set_mediabox_page(page_number, pages[index], boxes),
       )
@@ -614,10 +615,11 @@ pub fn PdfDocument::crop_pages(
     pages.length(),
     "crop_pages",
   )
-  let rewritten : Array[PdfPage] = []
+  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
-    if pdf_page_box_contains_page(page_numbers, page_number) {
+    if selected_pages.contains(page_number) {
       rewritten.push(
         self.pdf_page_crop_page(page_number, pages[index], boxes, box_name),
       )
@@ -750,10 +752,11 @@ pub fn PdfDocument::shift_boxes(
     "shift_boxes",
   )
   pdf_page_box_validate_offsets(offsets, pages.length())
-  let rewritten : Array[PdfPage] = []
+  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
-    if pdf_page_box_contains_page(page_numbers, page_number) {
+    if selected_pages.contains(page_number) {
       let offset = offsets[page_number - 1]
       rewritten.push(
         self.change_boxes(pages[index], (min_x, min_y, max_x, max_y) => {

@@ -10431,6 +10431,15 @@ Current backend snapshot:
   wasm-gc pdf_page_shift_test.mbt pdf_page_upright_test.mbt`, and `moon test
   --target js pdf_page_shift_test.mbt pdf_page_upright_test.mbt` each report
   9/9.~~
+- [x] ~~Continue source-port hardening with page-box indexed selection tuning:
+  set-mediabox, crop, and shift-box paths now build one `PdfNumberSet` per
+  operation and preallocate rewritten page arrays from the page-tree size,
+  avoiding repeated selected-page scans while preserving page-indexed box/offset
+  lookup semantics. Validation on MoonBit compiler 0.9.3: `moon check --target
+  native --warn-list +73` passes with the known notice; `moon test --target
+  native pdf_page_box_test.mbt`, `moon test --target wasm-gc
+  pdf_page_box_test.mbt`, and `moon test --target js pdf_page_box_test.mbt`
+  each report 16/16.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
