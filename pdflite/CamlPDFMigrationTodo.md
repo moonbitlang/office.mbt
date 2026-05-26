@@ -10343,6 +10343,19 @@ Current backend snapshot:
   '*object stream*'` reports 5/5; `moon check --target all --warn-list +73`
   passes with the known notice; `moon test --target native .` reports
   2010/2010; `moon info` and `moon fmt` completed with no `.mbti` diff.~~
+- [x] ~~Continue source-port hardening with content-stream work-buffer
+  allocation slice: `pdf_content_add_artifacts`, inline-image serialization,
+  `pdf_content_bytes_of_ops`, and `pdf_parse_content_ops_from_view_with_context`
+  now preallocate their primary work arrays from input sizes or bounded parser
+  estimates instead of growing from zero, reducing allocator churn across text
+  extraction, redaction, stamping, image handling, and source-corpus content
+  stream reads without changing public APIs. Validation on MoonBit compiler
+  0.9.3: `moon check --target native --warn-list +73` passes with the known
+  notice; `moon test --target native pdf_content_test.mbt`, `moon test --target
+  wasm-gc pdf_content_test.mbt`, and `moon test --target js
+  pdf_content_test.mbt` each report 59/59; `moon check --target all --warn-list
+  +73` passes with the known notice; `moon test --target native .` reports
+  2010/2010.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

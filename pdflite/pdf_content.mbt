@@ -160,7 +160,7 @@ pub fn pdf_content_end_artifact() -> PdfContentOp {
 pub fn pdf_content_add_artifacts(
   ops : ArrayView[PdfContentOp],
 ) -> Array[PdfContentOp] {
-  let output : Array[PdfContentOp] = []
+  let output : Array[PdfContentOp] = Array::new(capacity=ops.length() + 2)
   let mut in_content = false
   let mut in_artifact = false
   for op in ops {
@@ -538,9 +538,18 @@ fn pdf_content_inline_image_bytes(
   } else {
     (data, decode_parms, [])
   }
-  let rendered_entries : Array[PdfBytes] = []
   match dictionary {
-    PdfDictionary(entries) =>
+    PdfDictionary(entries) => {
+      let decode_parms_entry_count = if render_decode_parms is Some(_) {
+        1
+      } else {
+        0
+      }
+      let rendered_entries : Array[PdfBytes] = Array::new(
+        capacity=entries.length() +
+          render_extra_entries.length() +
+          decode_parms_entry_count,
+      )
       for entry in entries {
         let (key, value) = entry
         if !compress_inline_image ||
@@ -557,40 +566,43 @@ fn pdf_content_inline_image_bytes(
           )
         }
       }
+      for entry in render_extra_entries {
+        let (key, value) = entry
+        rendered_entries.push(pdf_content_inline_image_entry_bytes(key, value))
+      }
+      match render_decode_parms {
+        Some(value) =>
+          rendered_entries.push(
+            pdf_content_inline_image_entry_bytes(
+              pdf_content_inline_dp_name(),
+              value,
+            ),
+          )
+        None => ()
+      }
+      let data_marker = pdf_content_ascii(" ID ")
+      let end_marker = pdf_content_ascii(" EI")
+      let mut length = pdf_content_inline_image_begin_operator.length()
+      for entry in rendered_entries {
+        length += entry.length()
+      }
+      length += data_marker.length() +
+        render_data.length() +
+        end_marker.length()
+      let output = Array::make(length, b'\x00')
+      let mut position = pdf_content_copy_view(
+        output, 0, pdf_content_inline_image_begin_operator,
+      )
+      for entry in rendered_entries {
+        position = pdf_content_copy_view(output, position, entry)
+      }
+      position = pdf_content_copy_view(output, position, data_marker)
+      position = pdf_content_copy_view(output, position, render_data)
+      let _ = pdf_content_copy_view(output, position, end_marker)
+      Bytes::from_array(output)
+    }
     _ => raise DictionaryExpected
   }
-  for entry in render_extra_entries {
-    let (key, value) = entry
-    rendered_entries.push(pdf_content_inline_image_entry_bytes(key, value))
-  }
-  match render_decode_parms {
-    Some(value) =>
-      rendered_entries.push(
-        pdf_content_inline_image_entry_bytes(
-          pdf_content_inline_dp_name(),
-          value,
-        ),
-      )
-    None => ()
-  }
-  let data_marker = pdf_content_ascii(" ID ")
-  let end_marker = pdf_content_ascii(" EI")
-  let mut length = pdf_content_inline_image_begin_operator.length()
-  for entry in rendered_entries {
-    length += entry.length()
-  }
-  length += data_marker.length() + render_data.length() + end_marker.length()
-  let output = Array::make(length, b'\x00')
-  let mut position = pdf_content_copy_view(
-    output, 0, pdf_content_inline_image_begin_operator,
-  )
-  for entry in rendered_entries {
-    position = pdf_content_copy_view(output, position, entry)
-  }
-  position = pdf_content_copy_view(output, position, data_marker)
-  position = pdf_content_copy_view(output, position, render_data)
-  let _ = pdf_content_copy_view(output, position, end_marker)
-  Bytes::from_array(output)
 }
 
 ///|
@@ -616,7 +628,7 @@ fn pdf_content_op_bytes(op : PdfContentOp) -> PdfBytes raise PdfError {
 pub fn pdf_content_bytes_of_ops(
   ops : ArrayView[PdfContentOp],
 ) -> PdfBytes raise PdfError {
-  let rendered : Array[(PdfBytes, Bool)] = []
+  let rendered : Array[(PdfBytes, Bool)] = Array::new(capacity=ops.length())
   let mut length = 0
   for op in ops {
     let bytes = pdf_content_op_bytes(op)
@@ -2643,8 +2655,9 @@ fn pdf_parse_content_ops_from_view_with_context(
   resources : PdfObject,
 ) -> Array[PdfContentOp] raise PdfError {
   let cursor = byte_cursor_of_view(data)
-  let ops : Array[PdfContentOp] = []
-  let operands : Array[PdfObject] = []
+  let op_capacity = pdf_content_parse_ops_capacity(data)
+  let ops : Array[PdfContentOp] = Array::new(capacity=op_capacity)
+  let operands : Array[PdfObject] = Array::new(capacity=8)
   let mut done = false
   while !done {
     match pdf_content_lex_next(cursor) {
@@ -2665,4 +2678,16 @@ fn pdf_parse_content_ops_from_view_with_context(
     raise ContentOperatorExpected
   }
   ops
+}
+
+///|
+fn pdf_content_parse_ops_capacity(data : BytesView) -> Int {
+  let estimated = data.length() / 12
+  if estimated < 4 {
+    4
+  } else if estimated > 4096 {
+    4096
+  } else {
+    estimated
+  }
 }
