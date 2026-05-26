@@ -10098,6 +10098,16 @@ Current backend snapshot:
   pdf_image_test.mbt` reports 55/55; `moon check --target all --warn-list +73`
   passes with the known notice; `moon test --target native` reports
   2431/2431.~~
+- [x] ~~Continue source-port hardening with a packed RGB image RGB24 output
+  allocation slice: `pdf_image_rgb_packed_bpp_as_rgb24` now allocates the exact
+  `width * height * 3` output length and fills decoded RGB samples by index
+  instead of growing a temporary array, preserving packed DeviceRGB/CalRGB
+  1/2/4bpp samples and `get_image_24bpp` output. Validation on MoonBit compiler
+  0.9.3: `moon check --target native --warn-list +73` passes with the known
+  notice; focused packed RGB image tests report 1/1; `moon test --target native
+  pdf_image_test.mbt` reports 55/55; `moon check --target all --warn-list +73`
+  passes with the known notice; `moon test --target native` reports
+  2431/2431.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

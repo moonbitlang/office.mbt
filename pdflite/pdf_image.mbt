@@ -2687,7 +2687,8 @@ fn pdf_image_rgb_packed_bpp_as_rgb24(
   )
   pdf_image_require_size(data, bytes_per_row * height)
   let max_sample = (1 << bits_per_component) - 1
-  let output : Array[Byte] = []
+  let output = Array::make(width * height * 3, b'\x00')
+  let mut position = 0
   for row in 0..<height {
     let row_offset = row * bytes_per_row
     for column in 0..<width {
@@ -2698,7 +2699,8 @@ fn pdf_image_rgb_packed_bpp_as_rgb24(
           column * 3 + component,
           bits_per_component,
         )
-        output.push((sample * 255 / max_sample).to_byte())
+        output[position] = (sample * 255 / max_sample).to_byte()
+        position += 1
       }
     }
   }
