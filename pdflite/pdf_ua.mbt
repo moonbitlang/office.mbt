@@ -268,6 +268,20 @@ fn pdf_ua_write_utf8(
 }
 
 ///|
+fn pdf_ua_write_view(
+  output : Array[Byte],
+  position : Int,
+  bytes : BytesView,
+) -> Int {
+  let mut position = position
+  for byte in bytes {
+    output[position] = byte
+    position += 1
+  }
+  position
+}
+
+///|
 fn pdf_ua_write_xml_escaped_utf8(
   output : Array[Byte],
   position : Int,
@@ -604,10 +618,10 @@ fn pdf_ua_insert_marker_description(
   match pdf_ua_find_rdf_open_tag(data) {
     Some((insert_at, rdf_prefix)) => {
       let marker = pdf_ua_marker_description_bytes(rdf_prefix, part, revision)
-      let output : Array[Byte] = []
-      pdf_metadata_push_view(output, data[:insert_at])
-      pdf_metadata_push_view(output, marker)
-      pdf_metadata_push_view(output, data[insert_at:])
+      let output = Array::make(data.length() + marker.length(), b'\x00')
+      let mut position = pdf_ua_write_view(output, 0, data[:insert_at])
+      position = pdf_ua_write_view(output, position, marker)
+      let _ = pdf_ua_write_view(output, position, data[insert_at:])
       Bytes::from_array(output)
     }
     None =>

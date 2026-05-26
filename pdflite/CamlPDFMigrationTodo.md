@@ -10171,6 +10171,17 @@ Current backend snapshot:
   pdf_image_test.mbt` reports 56/56; `moon check --target all --warn-list +73`
   passes with the known notice; `moon test --target native` reports
   2432/2432.~~
+- [x] ~~Continue source-port hardening with PDF/UA marker insertion allocation
+  slice: `pdf_ua_insert_marker_description` now allocates the exact rewritten
+  metadata length and copies the original RDF prefix, generated marker
+  description, and original suffix by index instead of growing a temporary
+  array, preserving PDF/UA marking on existing metadata streams and generated
+  Matterhorn metadata acceptance. Validation on MoonBit compiler 0.9.3: `moon
+  check --target native --warn-list +73` passes with the known notice; `moon
+  test --target native pdf_create_test.mbt` reports 7/7; focused Matterhorn
+  PDF/UA metadata acceptance reports 1/1; `moon check --target all --warn-list
+  +73` passes with the known notice; `moon test --target native` reports
+  2432/2432.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
