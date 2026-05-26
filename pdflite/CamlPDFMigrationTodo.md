@@ -10440,6 +10440,15 @@ Current backend snapshot:
   native pdf_page_box_test.mbt`, `moon test --target wasm-gc
   pdf_page_box_test.mbt`, and `moon test --target js pdf_page_box_test.mbt`
   each report 16/16.~~
+- [x] ~~Continue source-port hardening with stamp/redact selection tuning:
+  stamp and whole-page redact paths now build one `PdfNumberSet` per operation
+  and preallocate rewritten page arrays from the page count, avoiding repeated
+  selected-page scans in page-wide rewrite loops. Validation on MoonBit
+  compiler 0.9.3: `moon check --target native --warn-list +73` passes with the
+  known notice; `moon test --target native pdf_page_stamp_test.mbt
+  pdf_page_redact_test.mbt`, `moon test --target wasm-gc
+  pdf_page_stamp_test.mbt pdf_page_redact_test.mbt`, and `moon test --target js
+  pdf_page_stamp_test.mbt pdf_page_redact_test.mbt` each report 8/8.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

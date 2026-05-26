@@ -30,10 +30,11 @@ pub fn PdfDocument::redact_pages(
     pages.length(),
     "redact_pages",
   )
-  let rewritten : Array[PdfPage] = []
+  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
   for index, page in pages {
     let page_number = index + 1
-    if pdf_page_box_contains_page(page_numbers, page_number) {
+    if selected_pages.contains(page_number) {
       rewritten.push(self.pdf_page_redact_page(page))
     } else {
       rewritten.push(page)
