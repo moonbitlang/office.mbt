@@ -10389,6 +10389,16 @@ Current backend snapshot:
   known notice; `moon test --target native pdf_document_test.mbt`, `moon test
   --target wasm-gc pdf_document_test.mbt`, and `moon test --target js
   pdf_document_test.mbt` each report 23/23.~~
+- [x] ~~Continue source-port hardening with page cleanup/content allocation
+  slice: page-object discovery, nested deleted-page reference nullification,
+  unreferenced-object removal staging, and merged page-content stream decoding
+  now reserve from known object, array, dictionary, and content-list sizes. This
+  reduces allocator churn in page cleanup, extraction/change-pages cleanup, and
+  content-stream merge passes without changing public APIs. Validation on
+  MoonBit compiler 0.9.3: `moon check --target native --warn-list +73` passes
+  with the known notice; `moon test --target native pdf_page_test.mbt`, `moon
+  test --target wasm-gc pdf_page_test.mbt`, and `moon test --target js
+  pdf_page_test.mbt` each report 82/82.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
