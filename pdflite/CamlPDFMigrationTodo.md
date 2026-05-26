@@ -10289,6 +10289,16 @@ Current backend snapshot:
   pdf_parser_test.mbt` reports 11/11; `moon check --target all --warn-list +73`
   passes with the known notice; `moon test --target native .` reports
   2010/2010; `moon info` and `moon fmt` completed with no `.mbti` diff.~~
+- [x] ~~Continue source-port hardening with small codec work-buffer allocation
+  slice: `pdf_ascii85_decode_view` now keeps its partial-group digit buffer at
+  fixed capacity 5, and `pdf_lzw_decode_code` now gives its expansion stack and
+  final output array bounded capacities instead of relying on empty-array
+  growth, preserving malformed ASCII85 checks and LZW expansion guards.
+  Validation on MoonBit compiler 0.9.3: `moon check --target native --warn-list
+  +73` passes with the known notice; `moon test --target native
+  pdf_codec_test.mbt` reports 82/82; `moon check --target all --warn-list +73`
+  passes with the known notice; `moon test --target native .` reports
+  2010/2010; `moon info` and `moon fmt` completed with no `.mbti` diff.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

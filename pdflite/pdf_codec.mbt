@@ -233,7 +233,7 @@ fn pdf_ascii85_finish_partial(
 pub fn pdf_ascii85_decode_view(data : BytesView) -> PdfBytes raise PdfError {
   let output = Array::make(data.length() * 4, b'\x00')
   let mut position = 0
-  let mut digits : Array[Int] = []
+  let mut digits : Array[Int] = Array::new(capacity=5)
   let mut done = false
   for byte in data {
     if !done {
@@ -256,7 +256,7 @@ pub fn pdf_ascii85_decode_view(data : BytesView) -> PdfBytes raise PdfError {
         digits.push(value - 33)
         if digits.length() == 5 {
           position = pdf_ascii85_decode_group(digits, output, position, 4)
-          digits = []
+          digits = Array::new(capacity=5)
         }
       } else {
         raise InvalidASCII85Data
@@ -298,7 +298,7 @@ fn pdf_lzw_decode_code(
   if code < 0 || code >= next_code || code >= prefix_code.length() {
     raise InvalidLZWData
   }
-  let stack : Array[Int] = []
+  let stack : Array[Int] = Array::new(capacity=16)
   let mut current = code
   let mut depth = 0
   while current > 255 {
@@ -312,7 +312,8 @@ fn pdf_lzw_decode_code(
   if current < 0 || current > 255 {
     raise InvalidLZWData
   }
-  let output : Array[Int] = [current]
+  let output : Array[Int] = Array::new(capacity=stack.length() + 1)
+  output.push(current)
   if stack.length() > 0 {
     for i = stack.length() - 1; i >= 0; i = i - 1 {
       output.push(stack[i])
