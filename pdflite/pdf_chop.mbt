@@ -210,20 +210,6 @@ fn pdf_chop_page_boxes(
 }
 
 ///|
-fn pdf_chop_contains_page(
-  page_numbers : ArrayView[Int],
-  page_number : Int,
-) -> Bool {
-  for selected in page_numbers {
-    if selected == page_number {
-      break true
-    }
-  } nobreak {
-    false
-  }
-}
-
-///|
 fn pdf_chop_validate_page_numbers(
   page_numbers : ArrayView[Int],
   end_page : Int,
@@ -248,13 +234,13 @@ fn pdf_chop_validate_grid(x : Int, y : Int) -> Unit raise PdfError {
 ///|
 fn pdf_chop_change_table(
   original_count : Int,
-  page_numbers : ArrayView[Int],
+  selected_pages : @number_set.PdfNumberSet,
   pieces_per_selected_page : Int,
 ) -> Array[(Int, Int)] {
-  let changes : Array[(Int, Int)] = []
+  let changes : Array[(Int, Int)] = Array::new(capacity=original_count)
   let mut next_page = 1
   for old_page in 1..<=original_count {
-    if pdf_chop_contains_page(page_numbers, old_page) {
+    if selected_pages.contains(old_page) {
       for new_page in next_page..<(next_page + pieces_per_selected_page) {
         changes.push((old_page, new_page))
       }
@@ -282,10 +268,14 @@ fn PdfDocument::pdf_chop_inner(
   let end_page = self.endpage()
   pdf_chop_validate_page_numbers(page_numbers, end_page, context)
   let pages = self.pages_of_pagetree()
-  let output : Array[PdfPage] = []
+  let pieces = if x == 0 || y == 0 { 2 } else { x * y }
+  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let output : Array[PdfPage] = Array::new(
+    capacity=pages.length() + page_numbers.length() * (pieces - 1),
+  )
   for index in 0..<pages.length() {
     let page_number = index + 1
-    if pdf_chop_contains_page(page_numbers, page_number) {
+    if selected_pages.contains(page_number) {
       for
         chopped in pdf_chop_page_boxes(
           self,
@@ -303,11 +293,10 @@ fn PdfDocument::pdf_chop_inner(
       output.push(pages[index])
     }
   }
-  let pieces = if x == 0 || y == 0 { 2 } else { x * y }
   self.change_pages(
     output,
     change_references=true,
-    changes=pdf_chop_change_table(pages.length(), page_numbers, pieces),
+    changes=pdf_chop_change_table(pages.length(), selected_pages, pieces),
   )
 }
 

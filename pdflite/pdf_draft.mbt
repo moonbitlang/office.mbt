@@ -326,20 +326,6 @@ fn pdf_draft_validate_page_numbers(
 }
 
 ///|
-fn pdf_draft_contains_page(
-  page_numbers : ArrayView[Int],
-  page_number : Int,
-) -> Bool {
-  for selected in page_numbers {
-    if selected == page_number {
-      break true
-    }
-  } nobreak {
-    false
-  }
-}
-
-///|
 /// Remove image XObjects and inline images from selected pages.
 ///
 /// When `only_remove` is present, only matching image XObject invocations are
@@ -355,10 +341,11 @@ pub fn PdfDocument::draft(
   pdf_draft_validate_page_numbers(page_numbers, end_page)
   let document = self.copy()
   let pages = document.pages_of_pagetree()
-  let rewritten : Array[PdfPage] = []
+  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
-    if pdf_draft_contains_page(page_numbers, page_number) {
+    if selected_pages.contains(page_number) {
       rewritten.push(document.pdf_draft_page(pages[index], only_remove, boxes))
     } else {
       rewritten.push(pages[index])

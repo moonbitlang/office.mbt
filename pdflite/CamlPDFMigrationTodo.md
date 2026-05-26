@@ -10478,6 +10478,16 @@ Current backend snapshot:
   pdf_content_page_json_test.mbt`, `moon test --target wasm-gc
   pdf_content_page_json_test.mbt`, and `moon test --target js
   pdf_content_page_json_test.mbt` each report 2/2.~~
+- [x] ~~Continue source-port hardening with chop/draft selection tuning:
+  chop page expansion, chop destination change-table construction, and draft
+  page rewriting now use one `PdfNumberSet` per operation instead of private
+  linear page-membership helpers, with generated page/rewrite arrays
+  preallocated from known page and selection counts. Validation on MoonBit
+  compiler 0.9.3: `moon check --target native --warn-list +73` passes with the
+  known notice; `moon test --target native pdf_chop_test.mbt
+  pdf_draft_test.mbt`, `moon test --target wasm-gc pdf_chop_test.mbt
+  pdf_draft_test.mbt`, and `moon test --target js pdf_chop_test.mbt
+  pdf_draft_test.mbt` each report 18/18.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
