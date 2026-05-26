@@ -163,11 +163,12 @@ pub fn PdfDocument::presentation(
   effect_duration : Double,
 ) -> PdfDocument raise PdfError {
   let pages = self.pages_of_pagetree()
-  let rewritten : Array[PdfPage] = []
+  let selected_pages = @number_set.pdf_number_set(range)
+  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
     let page = pages[index]
-    if range.contains(page_number) {
+    if selected_pages.contains(page_number) {
       rewritten.push(
         page.change_presentation_effect(
           transition, delay, horizontal, inward, direction, effect_duration,

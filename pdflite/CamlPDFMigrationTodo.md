@@ -10488,6 +10488,15 @@ Current backend snapshot:
   pdf_draft_test.mbt`, `moon test --target wasm-gc pdf_chop_test.mbt
   pdf_draft_test.mbt`, and `moon test --target js pdf_chop_test.mbt
   pdf_draft_test.mbt` each report 18/18.~~
+- [x] ~~Continue source-port hardening with xobject/presentation selection
+  tuning: page-as-XObject insertion and presentation transition rewrites now
+  build one `PdfNumberSet` per operation and preallocate rewritten page arrays
+  from page count while preserving the existing out-of-range ignore behavior.
+  Validation on MoonBit compiler 0.9.3: `moon check --target native --warn-list
+  +73` passes with the known notice; `moon test --target native
+  pdf_xobject_test.mbt pdf_presentation_test.mbt`, `moon test --target wasm-gc
+  pdf_xobject_test.mbt pdf_presentation_test.mbt`, and `moon test --target js
+  pdf_xobject_test.mbt pdf_presentation_test.mbt` each report 10/10.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
