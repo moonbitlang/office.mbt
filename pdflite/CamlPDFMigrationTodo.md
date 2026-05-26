@@ -10497,6 +10497,16 @@ Current backend snapshot:
   pdf_xobject_test.mbt pdf_presentation_test.mbt`, `moon test --target wasm-gc
   pdf_xobject_test.mbt pdf_presentation_test.mbt`, and `moon test --target js
   pdf_xobject_test.mbt pdf_presentation_test.mbt` each report 10/10.~~
+- [x] ~~Continue source-port hardening with tweak/redact selection tuning:
+  tweak colour, hidden-text, clipping, page-content append, and thin-line
+  rewrites plus redaction bounding-box overlay paths now build one
+  `PdfNumberSet` per operation, preallocate page/operator-list arrays from page
+  count, and remove the shared private linear selected-page helper. Validation
+  on MoonBit compiler 0.9.3: `moon check --target native --warn-list +73`
+  passes with the known notice; `moon test --target native pdf_tweak_test.mbt
+  pdf_redact_test.mbt`, `moon test --target wasm-gc pdf_tweak_test.mbt
+  pdf_redact_test.mbt`, and `moon test --target js pdf_tweak_test.mbt
+  pdf_redact_test.mbt` each report 32/32.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

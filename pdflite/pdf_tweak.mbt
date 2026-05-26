@@ -1,18 +1,4 @@
 ///|
-fn pdf_tweak_page_selected(
-  page_numbers : ArrayView[Int],
-  page_number : Int,
-) -> Bool {
-  for selected in page_numbers {
-    if selected == page_number {
-      break true
-    }
-  } nobreak {
-    false
-  }
-}
-
-///|
 fn pdf_tweak_name(text : String) -> PdfName {
   pdf_name_of_bytes(@ascii.encode(text))
 }
@@ -632,11 +618,12 @@ pub fn PdfDocument::black_text(
 ) -> PdfDocument raise PdfError {
   let document = self.copy()
   let pages = document.pages_of_pagetree()
-  let rewritten : Array[PdfPage] = []
+  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
     let page = pages[index]
-    if pdf_tweak_page_selected(page_numbers, page_number) {
+    if selected_pages.contains(page_number) {
       document.process_xobjects(page, fn(
         doc,
         resources,
@@ -681,11 +668,12 @@ pub fn PdfDocument::black_lines(
 ) -> PdfDocument raise PdfError {
   let document = self.copy()
   let pages = document.pages_of_pagetree()
-  let rewritten : Array[PdfPage] = []
+  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
     let page = pages[index]
-    if pdf_tweak_page_selected(page_numbers, page_number) {
+    if selected_pages.contains(page_number) {
       document.process_xobjects(page, fn(
         doc,
         resources,
@@ -730,11 +718,12 @@ pub fn PdfDocument::black_fills(
 ) -> PdfDocument raise PdfError {
   let document = self.copy()
   let pages = document.pages_of_pagetree()
-  let rewritten : Array[PdfPage] = []
+  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
     let page = pages[index]
-    if pdf_tweak_page_selected(page_numbers, page_number) {
+    if selected_pages.contains(page_number) {
       document.process_xobjects(page, fn(
         doc,
         resources,
@@ -818,11 +807,12 @@ pub fn PdfDocument::reveal_hidden_text(
 ) -> PdfDocument raise PdfError {
   let document = self.copy()
   let pages = document.pages_of_pagetree()
-  let rewritten : Array[PdfPage] = []
+  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
     let page = pages[index]
-    if pdf_tweak_page_selected(page_numbers, page_number) {
+    if selected_pages.contains(page_number) {
       document.process_xobjects(page, pdf_tweak_reveal_hidden_text_xobject)
       rewritten.push(document.pdf_tweak_reveal_hidden_text_page(page))
     } else {
@@ -899,11 +889,12 @@ pub fn PdfDocument::remove_clipping(
 ) -> PdfDocument raise PdfError {
   let document = self.copy()
   let pages = document.pages_of_pagetree()
-  let rewritten : Array[PdfPage] = []
+  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
     let page = pages[index]
-    if pdf_tweak_page_selected(page_numbers, page_number) {
+    if selected_pages.contains(page_number) {
       document.process_xobjects(page, pdf_tweak_remove_clipping_xobject)
       rewritten.push(document.pdf_tweak_remove_clipping_page(page))
     } else {
@@ -936,11 +927,12 @@ pub fn PdfDocument::append_page_content(
 ) -> PdfDocument raise PdfError {
   let document = self.copy()
   let pages = document.pages_of_pagetree()
-  let rewritten : Array[PdfPage] = []
+  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
     let page = pages[index]
-    if pdf_tweak_page_selected(page_numbers, page_number) {
+    if selected_pages.contains(page_number) {
       rewritten.push(
         document.pdf_tweak_append_page_content_page(page, content, before, fast),
       )
@@ -986,11 +978,12 @@ pub fn PdfDocument::append_page_content_ops(
 ) -> PdfDocument raise PdfError {
   let document = self.copy()
   let pages = document.pages_of_pagetree()
-  let rewritten : Array[PdfPage] = []
+  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
     let page = pages[index]
-    if pdf_tweak_page_selected(page_numbers, page_number) {
+    if selected_pages.contains(page_number) {
       rewritten.push(
         document.pdf_tweak_append_page_content_ops_page(page, ops, before, fast),
       )
@@ -1375,11 +1368,12 @@ pub fn PdfDocument::thin_lines(
 ) -> PdfDocument raise PdfError {
   let document = self.copy()
   let pages = document.pages_of_pagetree()
-  let rewritten : Array[PdfPage] = []
+  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
     let page = pages[index]
-    if pdf_tweak_page_selected(page_numbers, page_number) {
+    if selected_pages.contains(page_number) {
       rewritten.push(document.pdf_tweak_thin_lines_page(page, width))
     } else {
       rewritten.push(page)

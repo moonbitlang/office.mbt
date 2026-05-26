@@ -254,10 +254,13 @@ pub fn PdfDocument::show_annotation_bounding_boxes(
   fast? : Bool = false,
 ) -> PdfDocument raise PdfError {
   let pages = self.pages_of_pagetree()
-  let op_lists : Array[Array[PdfContentOp]] = []
+  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let op_lists : Array[Array[PdfContentOp]] = Array::new(
+    capacity=pages.length(),
+  )
   for index in 0..<pages.length() {
     let page_number = index + 1
-    if pdf_tweak_page_selected(page_numbers, page_number) {
+    if selected_pages.contains(page_number) {
       op_lists.push(
         pdf_redact_annotation_page_box_ops(
           self.annotations_of_page(pages[index]),
@@ -297,10 +300,13 @@ pub fn PdfDocument::show_bounding_boxes(
     fast~,
   )
   let pages = document.pages_of_pagetree()
-  let op_lists : Array[Array[PdfContentOp]] = []
+  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let op_lists : Array[Array[PdfContentOp]] = Array::new(
+    capacity=pages.length(),
+  )
   for index in 0..<pages.length() {
     let page_number = index + 1
-    if pdf_tweak_page_selected(page_numbers, page_number) {
+    if selected_pages.contains(page_number) {
       op_lists.push(
         document.pdf_redact_page_content_box_ops(pages[index], shape, light),
       )
