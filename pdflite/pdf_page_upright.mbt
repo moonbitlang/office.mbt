@@ -230,11 +230,14 @@ pub fn PdfDocument::upright_pages(
   if self.pdf_page_upright_all_upright(page_numbers, pages) {
     self
   } else {
-    let rewritten : Array[PdfPage] = []
-    let matrices : Array[(Int, TransformMatrix)] = []
+    let selected_pages = @number_set.pdf_number_set(page_numbers)
+    let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
+    let matrices : Array[(Int, TransformMatrix)] = Array::new(
+      capacity=page_numbers.length(),
+    )
     for index in 0..<pages.length() {
       let page_number = index + 1
-      if pdf_page_box_contains_page(page_numbers, page_number) {
+      if selected_pages.contains(page_number) {
         let (page, matrix) = self.pdf_page_upright_page(pages[index], fast)
         rewritten.push(page)
         matrices.push((page_number, matrix))

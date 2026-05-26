@@ -10421,6 +10421,16 @@ Current backend snapshot:
   pdf_page_scale_test.mbt`, `moon test --target wasm-gc
   pdf_page_scale_test.mbt`, and `moon test --target js
   pdf_page_scale_test.mbt` each report 19/19.~~
+- [x] ~~Continue source-port hardening with page shift/upright selection
+  tuning: shift page offsets now use one first-index lookup map per operation,
+  upright page membership now uses a `PdfNumberSet`, and both paths preallocate
+  rewritten page/matrix or selected offset arrays from known page/selection
+  counts. Validation on MoonBit compiler 0.9.3: `moon check --target native
+  --warn-list +73` passes with the known notice; `moon test --target native
+  pdf_page_shift_test.mbt pdf_page_upright_test.mbt`, `moon test --target
+  wasm-gc pdf_page_shift_test.mbt pdf_page_upright_test.mbt`, and `moon test
+  --target js pdf_page_shift_test.mbt pdf_page_upright_test.mbt` each report
+  9/9.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

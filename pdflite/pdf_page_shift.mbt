@@ -1,15 +1,14 @@
 ///|
-fn pdf_page_shift_offset_index(
+fn pdf_page_shift_offset_index_map(
   page_numbers : ArrayView[Int],
-  page_number : Int,
-) -> Int? {
+) -> @hashmap.HashMap[Int, Int] {
+  let indexes : @hashmap.HashMap[Int, Int] = HashMap([])
   for index in 0..<page_numbers.length() {
-    if page_numbers[index] == page_number {
-      break Some(index)
+    if !indexes.contains(page_numbers[index]) {
+      indexes[page_numbers[index]] = index
     }
-  } nobreak {
-    None
   }
+  indexes
 }
 
 ///|
@@ -40,7 +39,9 @@ fn pdf_page_shift_select_page_indexed_offsets(
   page_numbers : ArrayView[Int],
   offsets : ArrayView[(Double, Double)],
 ) -> Array[(Double, Double)] {
-  let selected : Array[(Double, Double)] = []
+  let selected : Array[(Double, Double)] = Array::new(
+    capacity=page_numbers.length(),
+  )
   for page_number in page_numbers {
     selected.push(offsets[page_number - 1])
   }
@@ -78,11 +79,14 @@ pub fn PdfDocument::shift_pages(
   )
   pdf_page_shift_validate_offsets(page_numbers, offsets)
   let pages = self.pages_of_pagetree()
-  let rewritten : Array[PdfPage] = []
-  let matrices : Array[(Int, TransformMatrix)] = []
+  let page_indexes = pdf_page_shift_offset_index_map(page_numbers)
+  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
+  let matrices : Array[(Int, TransformMatrix)] = Array::new(
+    capacity=page_numbers.length(),
+  )
   for index in 0..<pages.length() {
     let page_number = index + 1
-    match pdf_page_shift_offset_index(page_numbers, page_number) {
+    match page_indexes.get(page_number) {
       Some(offset_index) => {
         let offset = offsets[offset_index]
         let matrix = transform_translate(offset.0, offset.1)
