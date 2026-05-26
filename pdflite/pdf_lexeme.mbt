@@ -336,26 +336,91 @@ fn ByteCursor::read_pdf_octal_escape(
 fn ByteCursor::read_pdf_string_escape_into(
   self : ByteCursor,
   bytes : Array[Byte],
-) -> Unit raise PdfError {
+  position : Int,
+) -> Int raise PdfError {
   let escaped = self.input_byte()
   match escaped {
-    110 => bytes.push((10).to_byte())
-    114 => bytes.push((13).to_byte())
-    116 => bytes.push((9).to_byte())
-    98 => bytes.push((8).to_byte())
-    102 => bytes.push((12).to_byte())
+    110 => pdf_lexeme_write_byte_at(bytes, position, (10).to_byte())
+    114 => pdf_lexeme_write_byte_at(bytes, position, (13).to_byte())
+    116 => pdf_lexeme_write_byte_at(bytes, position, (9).to_byte())
+    98 => pdf_lexeme_write_byte_at(bytes, position, (8).to_byte())
+    102 => pdf_lexeme_write_byte_at(bytes, position, (12).to_byte())
     13 => {
       let next = self.input_byte()
       if next != 10 && next != pdf_no_more {
         self.rewind()
       }
+      position
     }
-    10 => ()
+    10 => position
     value if pdf_is_octal_digit_byte(value) =>
-      bytes.push(self.read_pdf_octal_escape(value))
+      pdf_lexeme_write_byte_at(
+        bytes,
+        position,
+        self.read_pdf_octal_escape(value),
+      )
     value if value == pdf_no_more => raise EndOfInput
-    value => bytes.push(value.to_byte())
+    value => pdf_lexeme_write_byte_at(bytes, position, value.to_byte())
   }
+}
+
+///|
+fn pdf_lexeme_write_byte_at(
+  output : Array[Byte],
+  position : Int,
+  value : Byte,
+) -> Int {
+  output[position] = value
+  position + 1
+}
+
+///|
+fn ByteCursor::pdf_literal_string_output_capacity(self : ByteCursor) -> Int {
+  let mut index = self.absolute_position()
+  let mut capacity = 0
+  let mut depth = 1
+  while index < self.data.length() && depth > 0 {
+    let value = self.data[index].to_int()
+    index += 1
+    match value {
+      40 => {
+        depth += 1
+        capacity += 1
+      }
+      41 => {
+        depth -= 1
+        if depth > 0 {
+          capacity += 1
+        }
+      }
+      92 =>
+        if index < self.data.length() {
+          let escaped = self.data[index].to_int()
+          index += 1
+          match escaped {
+            13 =>
+              if index < self.data.length() && self.data[index].to_int() == 10 {
+                index += 1
+              }
+            10 => ()
+            value if pdf_is_octal_digit_byte(value) => {
+              if index < self.data.length() &&
+                pdf_is_octal_digit_byte(self.data[index].to_int()) {
+                index += 1
+                if index < self.data.length() &&
+                  pdf_is_octal_digit_byte(self.data[index].to_int()) {
+                  index += 1
+                }
+              }
+              capacity += 1
+            }
+            _ => capacity += 1
+          }
+        }
+      _ => capacity += 1
+    }
+  }
+  capacity
 }
 
 ///|
@@ -372,27 +437,29 @@ pub fn ByteCursor::lex_pdf_literal_string(
     LexNone
   } else {
     self.nudge()
-    let bytes : Array[Byte] = []
+    let bytes = Array::make(self.pdf_literal_string_output_capacity(), b'\x00')
+    let mut position = 0
     let mut depth = 1
     while depth > 0 {
       let value = self.input_byte()
       match value {
         40 => {
           depth += 1
-          bytes.push((40).to_byte())
+          position = pdf_lexeme_write_byte_at(bytes, position, (40).to_byte())
         }
         41 => {
           depth -= 1
           if depth > 0 {
-            bytes.push((41).to_byte())
+            position = pdf_lexeme_write_byte_at(bytes, position, (41).to_byte())
           }
         }
-        92 => self.read_pdf_string_escape_into(bytes)
+        92 => position = self.read_pdf_string_escape_into(bytes, position)
         value if value == pdf_no_more => raise EndOfInput
-        value => bytes.push(value.to_byte())
+        value =>
+          position = pdf_lexeme_write_byte_at(bytes, position, value.to_byte())
       }
     }
-    LexString(Bytes::from_array(bytes))
+    LexString(Bytes::from_array(bytes[:position]))
   }
 }
 
@@ -408,6 +475,23 @@ fn ByteCursor::input_next_pdf_hex_byte(self : ByteCursor) -> Int {
     }
   }
   result
+}
+
+///|
+fn ByteCursor::pdf_hex_string_output_capacity(self : ByteCursor) -> Int {
+  let mut index = self.absolute_position()
+  let mut digits = 0
+  let mut done = false
+  while index < self.data.length() && !done {
+    let value = self.data[index].to_int()
+    index += 1
+    if value == 62 {
+      done = true
+    } else if pdf_is_not_whitespace_byte(value) {
+      digits += 1
+    }
+  }
+  (digits + 1) / 2
 }
 
 ///|
@@ -428,7 +512,8 @@ pub fn ByteCursor::lex_pdf_hex_string(
     LexNone
   } else {
     self.nudge()
-    let bytes : Array[Byte] = []
+    let bytes = Array::make(self.pdf_hex_string_output_capacity(), b'\x00')
+    let mut position = 0
     let mut done = false
     while !done {
       let high = self.input_next_pdf_hex_byte()
@@ -441,12 +526,21 @@ pub fn ByteCursor::lex_pdf_hex_string(
         } else {
           match (pdf_hex_value(high), low) {
             (Some(high), 62) => {
-              bytes.push((high * 16).to_byte())
+              position = pdf_lexeme_write_byte_at(
+                bytes,
+                position,
+                (high * 16).to_byte(),
+              )
               done = true
             }
             (Some(high), low) =>
               match pdf_hex_value(low) {
-                Some(low) => bytes.push((high * 16 + low).to_byte())
+                Some(low) =>
+                  position = pdf_lexeme_write_byte_at(
+                    bytes,
+                    position,
+                    (high * 16 + low).to_byte(),
+                  )
                 None => raise InvalidHexEscape
               }
             _ => raise InvalidHexEscape
@@ -454,7 +548,7 @@ pub fn ByteCursor::lex_pdf_hex_string(
         }
       }
     }
-    LexString(Bytes::from_array(bytes))
+    LexString(Bytes::from_array(bytes[:position]))
   }
 }
 
