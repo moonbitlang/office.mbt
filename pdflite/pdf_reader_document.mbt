@@ -42,6 +42,7 @@ fn pdf_read_classic_document_from_view_at_revision(
   let version = cursor.read_pdf_header()
   let xref_position = pdf_read_startxref_position(cursor.data)
   let xrefs : Array[PdfClassicXRefEntry] = []
+  let xref_seen = @number_set.pdf_number_set([])
   let mut trailer = PdfDictionary([])
   let xref_stream_refs : Array[(Int, Int)] = []
   let mut current_xref = xref_position
@@ -58,7 +59,11 @@ fn pdf_read_classic_document_from_view_at_revision(
       revision, current_revision,
     )
     if read_section {
-      pdf_classic_xrefs_add_newer_first(xrefs, section.entries)
+      pdf_classic_xrefs_add_newer_first_with_seen(
+        xrefs,
+        xref_seen,
+        section.entries,
+      )
       match section.stream_object_number {
         Some(number) => xref_stream_refs.push((number, current_xref))
         None => ()
@@ -73,7 +78,11 @@ fn pdf_read_classic_document_from_view_at_revision(
         Some(xref_stream_position) => {
           cursor.seek_pdf_absolute(xref_stream_position)
           let stream_section = cursor.read_pdf_xref_stream_section()
-          pdf_classic_xrefs_add_newer_first(xrefs, stream_section.entries)
+          pdf_classic_xrefs_add_newer_first_with_seen(
+            xrefs,
+            xref_seen,
+            stream_section.entries,
+          )
           xref_stream_refs.push(
             (stream_section.stream_object_number.unwrap(), xref_stream_position),
           )

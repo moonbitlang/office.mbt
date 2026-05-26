@@ -136,14 +136,11 @@ fn PdfClassicXRefIndex::lookup(
 }
 
 ///|
-fn pdf_classic_xrefs_add_newer_first(
+fn pdf_classic_xrefs_add_newer_first_with_seen(
   target : Array[PdfClassicXRefEntry],
+  seen : @number_set.PdfNumberSet,
   entries : ArrayView[PdfClassicXRefEntry],
 ) -> Unit {
-  let seen = @number_set.pdf_number_set([])
-  for xref in target {
-    seen.add(xref.object_number)
-  }
   for entry in entries {
     if !seen.contains(entry.object_number) {
       target.push(entry)

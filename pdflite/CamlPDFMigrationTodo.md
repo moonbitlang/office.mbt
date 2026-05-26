@@ -10367,6 +10367,17 @@ Current backend snapshot:
   passes with the known notice; `moon test --target native pdf_writer_test.mbt`,
   `moon test --target wasm-gc pdf_writer_test.mbt`, and `moon test --target js
   pdf_writer_test.mbt` each report 28/28.~~
+- [x] ~~Continue source-port hardening with classic xref accumulation tuning:
+  incremental classic/xref-stream reader paths and reconstructed xref
+  collection now carry a shared `PdfNumberSet` while folding newer-first xref
+  sections, avoiding repeated scans of the growing accumulated xref list while
+  preserving newest-entry precedence and deleted-entry behavior. Validation on
+  MoonBit compiler 0.9.3: `moon check --target native --warn-list +73` passes
+  with the known notice; `moon test --target native pdflite_wbtest.mbt --filter
+  '*xref helpers*'` reports 1/1; `moon test --target native
+  pdf_reader_test.mbt --filter '*classic*'`, `moon test --target wasm-gc
+  pdf_reader_test.mbt --filter '*classic*'`, and `moon test --target js
+  pdf_reader_test.mbt --filter '*classic*'` each report 38/38.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

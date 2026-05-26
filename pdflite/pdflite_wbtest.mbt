@@ -882,7 +882,8 @@ test "private reader xref helpers report malformed inputs" {
       object_stream: None,
     },
   ]
-  pdf_classic_xrefs_add_newer_first(xref_target, [
+  let seen_xrefs = @number_set.pdf_number_set([2])
+  pdf_classic_xrefs_add_newer_first_with_seen(xref_target, seen_xrefs, [
     {
       object_number: 2,
       offset: 99,

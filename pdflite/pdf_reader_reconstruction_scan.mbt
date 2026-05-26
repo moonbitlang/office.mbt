@@ -413,8 +413,13 @@ fn pdf_reconstructed_xref_stream_entries(
   sections : ArrayView[PdfXRefSection],
 ) -> Array[PdfClassicXRefEntry] {
   let xrefs : Array[PdfClassicXRefEntry] = []
+  let seen = @number_set.pdf_number_set([])
   for index = sections.length() - 1; index >= 0; index = index - 1 {
-    pdf_classic_xrefs_add_newer_first(xrefs, sections[index].entries)
+    pdf_classic_xrefs_add_newer_first_with_seen(
+      xrefs,
+      seen,
+      sections[index].entries,
+    )
   }
   xrefs
 }
@@ -424,8 +429,13 @@ fn pdf_reconstructed_classic_xref_entries(
   sections : ArrayView[(Int, PdfXRefSection)],
 ) -> Array[PdfClassicXRefEntry] {
   let xrefs : Array[PdfClassicXRefEntry] = []
+  let seen = @number_set.pdf_number_set([])
   for index = sections.length() - 1; index >= 0; index = index - 1 {
-    pdf_classic_xrefs_add_newer_first(xrefs, sections[index].1.entries)
+    pdf_classic_xrefs_add_newer_first_with_seen(
+      xrefs,
+      seen,
+      sections[index].1.entries,
+    )
   }
   xrefs
 }
