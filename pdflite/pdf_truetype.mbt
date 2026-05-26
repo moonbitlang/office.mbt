@@ -436,6 +436,36 @@ fn pdf_truetype_push_u32(
 }
 
 ///|
+fn pdf_truetype_write_u16_at(
+  output : Array[Byte],
+  position : Int,
+  value : Int,
+) -> Int raise PdfError {
+  if value < 0 || value > 0xFFFF {
+    raise SoftError("TrueType unsigned 16-bit value out of range")
+  }
+  output[position] = pdf_byte_of_int((value >> 8) & 0xFF)
+  output[position + 1] = pdf_byte_of_int(value & 0xFF)
+  position + 2
+}
+
+///|
+fn pdf_truetype_write_u32_at(
+  output : Array[Byte],
+  position : Int,
+  value : Int,
+) -> Int raise PdfError {
+  if value < 0 {
+    raise SoftError("TrueType unsigned 32-bit value out of range")
+  }
+  output[position] = pdf_byte_of_int((value >> 24) & 0xFF)
+  output[position + 1] = pdf_byte_of_int((value >> 16) & 0xFF)
+  output[position + 2] = pdf_byte_of_int((value >> 8) & 0xFF)
+  output[position + 3] = pdf_byte_of_int(value & 0xFF)
+  position + 4
+}
+
+///|
 fn pdf_truetype_push_u32_uint(
   output : Array[Byte],
   value : UInt,
@@ -947,12 +977,24 @@ pub fn pdf_truetype_subset_glyph_indices(
 ///|
 fn pdf_truetype_subset_loca_write_entry(
   output : Array[Byte],
+  output_position : Int,
   index_to_loc_format : Int,
   position : Int,
-) -> Unit raise PdfError {
+) -> Int raise PdfError {
   match index_to_loc_format {
-    0 => pdf_truetype_push_u16(output, position / 2)
-    1 => pdf_truetype_push_u32(output, position)
+    0 => pdf_truetype_write_u16_at(output, output_position, position / 2)
+    1 => pdf_truetype_write_u32_at(output, output_position, position)
+    _ => raise SoftError("Unknown indexToLocFormat in write_loca_table")
+  }
+}
+
+///|
+fn pdf_truetype_subset_loca_entry_width(
+  index_to_loc_format : Int,
+) -> Int raise PdfError {
+  match index_to_loc_format {
+    0 => 2
+    1 => 4
     _ => raise SoftError("Unknown indexToLocFormat in write_loca_table")
   }
 }
@@ -978,22 +1020,31 @@ pub fn pdf_truetype_subset_loca_table(
     position += loca_offsets[glyph_index + 1] - loca_offsets[glyph_index]
   }
   pairs.push((loca_offsets.length() - 1, position))
-  let output : Array[Byte] = []
+  let unpadded_length = loca_offsets.length() *
+    pdf_truetype_subset_loca_entry_width(index_to_loc_format)
+  let output = Array::make(
+    unpadded_length + pdf_truetype_table_padding(unpadded_length),
+    b'\x00',
+  )
+  let mut output_position = 0
   for index in 0..<pairs.length() {
     let (glyph_index, offset) = pairs[index]
     if index != pairs.length() - 1 {
-      pdf_truetype_subset_loca_write_entry(output, index_to_loc_format, offset)
+      output_position = pdf_truetype_subset_loca_write_entry(
+        output, output_position, index_to_loc_format, offset,
+      )
       let (next_glyph_index, next_offset) = pairs[index + 1]
       for _ in 0..<(next_glyph_index - glyph_index - 1) {
-        pdf_truetype_subset_loca_write_entry(
-          output, index_to_loc_format, next_offset,
+        output_position = pdf_truetype_subset_loca_write_entry(
+          output, output_position, index_to_loc_format, next_offset,
         )
       }
     } else {
-      pdf_truetype_subset_loca_write_entry(output, index_to_loc_format, offset)
+      output_position = pdf_truetype_subset_loca_write_entry(
+        output, output_position, index_to_loc_format, offset,
+      )
     }
   }
-  pdf_truetype_push_padding(output, output.length())
   Bytes::from_array(output)
 }
 

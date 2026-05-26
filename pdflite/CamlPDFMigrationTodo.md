@@ -10211,6 +10211,16 @@ Current backend snapshot:
   `moon test --target native pdf_truetype_test.mbt` reports 27/27; `moon check
   --target all --warn-list +73` passes with the known notice; `moon test
   --target native` reports 2432/2432.~~
+- [x] ~~Continue source-port hardening with TrueType subset loca table
+  allocation slice: `pdf_truetype_subset_loca_table` now allocates the exact
+  padded `loca` table length from the source offset count and entry width, then
+  writes long/short entries by index instead of growing a temporary array,
+  preserving skipped-glyph zero-length ranges and subset-font table assembly.
+  Validation on MoonBit compiler 0.9.3: `moon check --target native --warn-list
+  +73` passes with the known notice; focused `subset_loca` tests report 1/1;
+  `moon test --target native pdf_truetype_test.mbt` reports 27/27; `moon check
+  --target all --warn-list +73` passes with the known notice; `moon test
+  --target native` reports 2432/2432.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
