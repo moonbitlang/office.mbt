@@ -10411,6 +10411,16 @@ Current backend snapshot:
   pdf_page_rotate_test.mbt pdf_page_flip_test.mbt`, and `moon test --target js
   pdf_page_test.mbt pdf_page_box_test.mbt pdf_page_rotate_test.mbt
   pdf_page_flip_test.mbt` each report 106/106.~~
+- [x] ~~Continue source-port hardening with page scale selection tuning:
+  scale, stretch, scale-to-fit, scale-to-fit-rotate, and center-to-fit helper
+  paths now use one first-index lookup map per operation for selected
+  page-specific values and preallocate rewritten page, matrix, selected
+  page-indexed value, target-box, and offset arrays from known page/selection
+  counts. Validation on MoonBit compiler 0.9.3: `moon check --target native
+  --warn-list +73` passes with the known notice; `moon test --target native
+  pdf_page_scale_test.mbt`, `moon test --target wasm-gc
+  pdf_page_scale_test.mbt`, and `moon test --target js
+  pdf_page_scale_test.mbt` each report 19/19.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

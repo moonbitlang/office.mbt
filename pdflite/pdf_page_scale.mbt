@@ -55,17 +55,16 @@ fn PdfDocument::pdf_page_scale_page(
 }
 
 ///|
-fn pdf_page_scale_pair_index(
+fn pdf_page_scale_pair_index_map(
   page_numbers : ArrayView[Int],
-  page_number : Int,
-) -> Int? {
+) -> @hashmap.HashMap[Int, Int] {
+  let indexes : @hashmap.HashMap[Int, Int] = HashMap([])
   for index in 0..<page_numbers.length() {
-    if page_numbers[index] == page_number {
-      break Some(index)
+    if !indexes.contains(page_numbers[index]) {
+      indexes[page_numbers[index]] = index
     }
-  } nobreak {
-    None
   }
+  indexes
 }
 
 ///|
@@ -97,7 +96,9 @@ fn pdf_page_scale_select_page_indexed_pairs(
   page_numbers : ArrayView[Int],
   values : ArrayView[(Double, Double)],
 ) -> Array[(Double, Double)] {
-  let selected : Array[(Double, Double)] = []
+  let selected : Array[(Double, Double)] = Array::new(
+    capacity=page_numbers.length(),
+  )
   for page_number in page_numbers {
     selected.push(values[page_number - 1])
   }
@@ -272,11 +273,14 @@ pub fn PdfDocument::scale_contents(
     "scale_contents",
   )
   let pages = self.pages_of_pagetree()
-  let rewritten : Array[PdfPage] = []
-  let matrices : Array[(Int, TransformMatrix)] = []
+  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
+  let matrices : Array[(Int, TransformMatrix)] = Array::new(
+    capacity=page_numbers.length(),
+  )
   for index in 0..<pages.length() {
     let page_number = index + 1
-    if pdf_page_box_contains_page(page_numbers, page_number) {
+    if selected_pages.contains(page_number) {
       let matrix = self.pdf_page_scale_matrix(pages[index], position, scale)
       rewritten.push(self.pdf_page_scale_page(pages[index], matrix, fast))
       matrices.push((page_number, matrix))
@@ -330,11 +334,14 @@ pub fn PdfDocument::scale_pages(
   )
   pdf_page_scale_validate_pairs(page_numbers, scales)
   let pages = self.pages_of_pagetree()
-  let rewritten : Array[PdfPage] = []
-  let matrices : Array[(Int, TransformMatrix)] = []
+  let page_indexes = pdf_page_scale_pair_index_map(page_numbers)
+  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
+  let matrices : Array[(Int, TransformMatrix)] = Array::new(
+    capacity=page_numbers.length(),
+  )
   for index in 0..<pages.length() {
     let page_number = index + 1
-    match pdf_page_scale_pair_index(page_numbers, page_number) {
+    match page_indexes.get(page_number) {
       Some(scale_index) => {
         let scale = scales[scale_index]
         let matrix = transform_scale(point2(0.0, 0.0), scale.0, scale.1)
@@ -421,11 +428,14 @@ pub fn PdfDocument::stretch_pages(
     )
   }
   let pages = self.pages_of_pagetree()
-  let rewritten : Array[PdfPage] = []
-  let matrices : Array[(Int, TransformMatrix)] = []
+  let page_indexes = pdf_page_scale_pair_index_map(page_numbers)
+  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
+  let matrices : Array[(Int, TransformMatrix)] = Array::new(
+    capacity=page_numbers.length(),
+  )
   for index in 0..<pages.length() {
     let page_number = index + 1
-    match pdf_page_scale_pair_index(page_numbers, page_number) {
+    match page_indexes.get(page_number) {
       Some(size_index) => {
         let size = sizes[size_index]
         let matrix = self.pdf_page_stretch_matrix(pages[index], size.0, size.1)
@@ -506,11 +516,14 @@ pub fn PdfDocument::scale_to_fit_pages(
     )
   }
   let pages = self.pages_of_pagetree()
-  let rewritten : Array[PdfPage] = []
-  let matrices : Array[(Int, TransformMatrix)] = []
+  let page_indexes = pdf_page_scale_pair_index_map(page_numbers)
+  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
+  let matrices : Array[(Int, TransformMatrix)] = Array::new(
+    capacity=page_numbers.length(),
+  )
   for index in 0..<pages.length() {
     let page_number = index + 1
-    match pdf_page_scale_pair_index(page_numbers, page_number) {
+    match page_indexes.get(page_number) {
       Some(size_index) => {
         let size = sizes[size_index]
         let matrix = self.pdf_page_scale_to_fit_matrix(
@@ -663,10 +676,11 @@ pub fn PdfDocument::scale_to_fit_rotate_pages(
     )
   }
   let pages = self.pages_of_pagetree()
-  let rewritten : Array[PdfPage] = []
+  let page_indexes = pdf_page_scale_pair_index_map(page_numbers)
+  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
-    match pdf_page_scale_pair_index(page_numbers, page_number) {
+    match page_indexes.get(page_number) {
       Some(size_index) => {
         let size = sizes[size_index]
         rewritten.push(
@@ -743,7 +757,9 @@ pub fn pdf_scale_to_fit_rotate(
 fn pdf_page_scale_center_target_boxes(
   sizes : ArrayView[(Double, Double)],
 ) -> Array[(Double, Double, Double, Double)] {
-  let boxes : Array[(Double, Double, Double, Double)] = []
+  let boxes : Array[(Double, Double, Double, Double)] = Array::new(
+    capacity=sizes.length(),
+  )
   for size in sizes {
     boxes.push((0.0, 0.0, size.0, size.1))
   }
@@ -756,8 +772,9 @@ fn PdfDocument::pdf_page_scale_center_offsets(
   target_width : Double,
   target_height : Double,
 ) -> Array[(Double, Double)] raise PdfError {
-  let offsets : Array[(Double, Double)] = []
-  for page in self.pages_of_pagetree() {
+  let pages = self.pages_of_pagetree()
+  let offsets : Array[(Double, Double)] = Array::new(capacity=pages.length())
+  for page in pages {
     let bounds = self.pdf_page_scale_bounds(page)
     offsets.push(
       (
