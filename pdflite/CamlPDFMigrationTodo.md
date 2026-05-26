@@ -10449,6 +10449,15 @@ Current backend snapshot:
   pdf_page_redact_test.mbt`, `moon test --target wasm-gc
   pdf_page_stamp_test.mbt pdf_page_redact_test.mbt`, and `moon test --target js
   pdf_page_stamp_test.mbt pdf_page_redact_test.mbt` each report 8/8.~~
+- [x] ~~Continue source-port hardening with annotation/font selection tuning:
+  annotation listing, annotation JSON export, annotation removal, font listing,
+  font copy, and missing-font report paths now build one `PdfNumberSet` per
+  operation, with full-page rewrite arrays preallocated from the page count.
+  Validation on MoonBit compiler 0.9.3: `moon check --target native --warn-list
+  +73` passes with the known notice; `moon test --target native
+  pdf_annotation_test.mbt pdf_font_test.mbt`, `moon test --target wasm-gc
+  pdf_annotation_test.mbt pdf_font_test.mbt`, and `moon test --target js
+  pdf_annotation_test.mbt pdf_font_test.mbt` each report 23/23.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

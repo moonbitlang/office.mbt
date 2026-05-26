@@ -821,11 +821,12 @@ pub fn PdfDocument::list_annotations(
     pages.length(),
     "list_annotations",
   )
+  let selected_pages = @number_set.pdf_number_set(page_numbers)
   let rows : Array[(Int, PdfBytes)] = []
   let mut output_length = 0
   for index, page in pages {
     let page_number = index + 1
-    if pdf_page_box_contains_page(page_numbers, page_number) {
+    if selected_pages.contains(page_number) {
       match self.lookup_direct(pdf_annotation_annots_key(), page.rest) {
         Some(PdfArray(annotations)) =>
           for annotation in annotations {
@@ -1050,12 +1051,13 @@ pub fn PdfDocument::annotations_json(
   )
   let page_reference_numbers = self.page_reference_numbers()
   let page_number_lookup = pdf_page_number_lookup(page_reference_numbers)
+  let selected_pages = @number_set.pdf_number_set(page_numbers)
   let entries : Array[Json] = [pdf_annotation_json_format_header()]
   let extra_roots : Array[PdfObject] = []
   let annotation_numbers : Array[Int] = []
   for index, page in pages {
     let page_number = index + 1
-    if pdf_page_box_contains_page(page_numbers, page_number) {
+    if selected_pages.contains(page_number) {
       entries.append(
         self.pdf_annotation_json_page(
           page_number_lookup, page, page_number, extra_roots, annotation_numbers,
@@ -1412,10 +1414,11 @@ pub fn PdfDocument::remove_annotations(
     pages.length(),
     "remove_annotations",
   )
-  let rewritten : Array[PdfPage] = []
+  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
   for index, page in pages {
     let page_number = index + 1
-    if pdf_page_box_contains_page(page_numbers, page_number) {
+    if selected_pages.contains(page_number) {
       rewritten.push({
         ..page,
         rest: page.rest.remove_dict_entry(pdf_annotation_annots_key()),

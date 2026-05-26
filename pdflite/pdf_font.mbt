@@ -170,11 +170,12 @@ pub fn PdfDocument::list_fonts(
 ) -> Array[PdfFontListEntry] raise PdfError {
   let pages = self.pages_of_pagetree()
   pdf_page_box_validate_page_numbers(page_numbers, pages.length(), "list_fonts")
+  let selected_pages = @number_set.pdf_number_set(page_numbers)
   let output : Array[PdfFontListEntry] = []
   let seen_xobjects : Array[Int] = []
   for index, page in pages {
     let page_number = index + 1
-    if pdf_page_box_contains_page(page_numbers, page_number) {
+    if selected_pages.contains(page_number) {
       output.append(
         self.pdf_font_list_resources(
           page_number,
@@ -901,10 +902,11 @@ pub fn PdfDocument::copy_font_from(
   target_pdf.pdf_font_copy_referenced_objects_from(source_pdf, font)
   let pages = target_pdf.pages_of_pagetree()
   pdf_page_box_validate_page_numbers(page_numbers, pages.length(), "copy_font")
-  let rewritten : Array[PdfPage] = []
+  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
   for index, page in pages {
     let page_number = index + 1
-    if pdf_page_box_contains_page(page_numbers, page_number) {
+    if selected_pages.contains(page_number) {
       rewritten.push(
         target_pdf.pdf_font_add_to_page_resources(page, resource_name, font),
       )
@@ -1036,10 +1038,11 @@ pub fn PdfDocument::missing_fonts(
     pages.length(),
     "missing_fonts",
   )
+  let selected_pages = @number_set.pdf_number_set(page_numbers)
   let output : Array[PdfMissingFontEntry] = []
   for index, page in pages {
     let page_number = index + 1
-    if pdf_page_box_contains_page(page_numbers, page_number) {
+    if selected_pages.contains(page_number) {
       output.append(self.pdf_missing_fonts_on_page(page_number, page.resources))
     }
   }
