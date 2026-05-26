@@ -10266,6 +10266,17 @@ Current backend snapshot:
   completed with no `.mbti` diff. The module-wide native suite was not rerun
   after the immediately preceding attempt blocked in the unrelated markdown
   fixture compile.~~
+- [x] ~~Continue source-port hardening with LZW decoder output capacity slice:
+  `pdf_lzw_decode_view_prefix` and `pdf_lzw_decode_view` now create decoded
+  byte arrays with a bounded initial capacity based on compressed input length
+  instead of starting from zero capacity, preserving clear-code, EOD, malformed
+  code, and inline-image prefix behavior. Validation on MoonBit compiler 0.9.3:
+  `moon check --target native --warn-list +73` passes with the known notice;
+  focused `pdf_codec_test.mbt --filter '*lzw*'` reports 9/9; focused
+  `pdflite_wbtest.mbt --filter '*LZW*'` reports 1/1; `moon test --target
+  native pdf_codec_test.mbt` reports 82/82; `moon check --target all --warn-list
+  +73` passes with the known notice; `moon test --target native .` reports
+  2010/2010; `moon info` and `moon fmt` completed with no `.mbti` diff.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

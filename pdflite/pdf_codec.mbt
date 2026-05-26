@@ -366,7 +366,7 @@ fn pdf_lzw_decode_view_prefix(
   let prefix_code = Array::make(8192, 0)
   let append_character = Array::make(8192, 0)
   let bits = bitstream_of_view(data)
-  let output : Array[Byte] = []
+  let output : Array[Byte] = Array::new(capacity=data.length())
   let mut code_length = 9
   let mut next_code = 258
   let mut old_code = 256
@@ -452,7 +452,7 @@ pub fn pdf_lzw_decode_view(
   let prefix_code = Array::make(8192, 0)
   let append_character = Array::make(8192, 0)
   let bits = bitstream_of_view(data)
-  let output : Array[Byte] = []
+  let output : Array[Byte] = Array::new(capacity=data.length())
   let mut code_length = 9
   let mut next_code = 258
   let mut old_code = 256
