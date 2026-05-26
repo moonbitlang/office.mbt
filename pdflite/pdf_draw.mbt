@@ -1772,13 +1772,13 @@ fn PdfDocument::pdf_draw_page_resource_numbers(
 ///|
 fn PdfDocument::pdf_draw_minimum_resource_number(
   self : PdfDocument,
-  page_numbers : ArrayView[Int],
+  selected_pages : @number_set.PdfNumberSet,
 ) -> Int raise PdfError {
   let pages = self.pages_of_pagetree()
   let mut maximum = -1
   for index in 0..<pages.length() {
     let page_number = index + 1
-    if pdf_page_box_contains_page(page_numbers, page_number) {
+    if selected_pages.contains(page_number) {
       for number in self.pdf_draw_page_resource_numbers(pages[index].resources) {
         if number > maximum {
           maximum = number
@@ -1913,7 +1913,7 @@ fn pdf_draw_single_page_ops(
 fn PdfDocument::pdf_draw_render_page_ops(
   self : PdfDocument,
   state : PdfDrawRenderState,
-  page_numbers : ArrayView[Int],
+  selected_pages : @number_set.PdfNumberSet,
   drawops : ArrayView[PdfDrawOp],
   filename : String,
   bates : Int,
@@ -1925,7 +1925,7 @@ fn PdfDocument::pdf_draw_render_page_ops(
   if pdf_drawops_contain_special_text(drawops) {
     for index in 0..<pages.length() {
       let page_number = index + 1
-      if pdf_page_box_contains_page(page_numbers, page_number) {
+      if selected_pages.contains(page_number) {
         state.set_structure_page_number(page_number)
         per_page[index] = pdf_draw_single_page_ops(
           self, state, drawops, page_number, filename, bates, bates_pad, time,
@@ -1938,7 +1938,7 @@ fn PdfDocument::pdf_draw_render_page_ops(
     )
     for index in 0..<pages.length() {
       let page_number = index + 1
-      if pdf_page_box_contains_page(page_numbers, page_number) {
+      if selected_pages.contains(page_number) {
         per_page[index] = content_ops
       }
     }
@@ -1962,19 +1962,20 @@ fn PdfDocument::pdf_draw_apply_chunk(
   add_artifacts : Bool,
 ) -> PdfDocument raise PdfError {
   state.set_structure_tree_enabled(struct_tree)
+  let selected_pages = @number_set.pdf_number_set(page_numbers)
   state.set_minimum_resource_number(
-    self.pdf_draw_minimum_resource_number(page_numbers),
+    self.pdf_draw_minimum_resource_number(selected_pages),
   )
   let per_page = self.pdf_draw_render_page_ops(
-    state, page_numbers, drawops, filename, bates, bates_pad, time,
+    state, selected_pages, drawops, filename, bates, bates_pad, time,
   )
   let draw_resources = state.resources()
   let pages = self.pages_of_pagetree()
-  let rewritten : Array[PdfPage] = []
+  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
     let page = pages[index]
-    if pdf_page_box_contains_page(page_numbers, page_number) {
+    if selected_pages.contains(page_number) {
       let content_ops = pdf_draw_artifact_ops(
         per_page[index],
         add_artifacts || struct_tree,

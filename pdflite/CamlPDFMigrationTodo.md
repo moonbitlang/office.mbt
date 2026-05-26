@@ -10458,6 +10458,17 @@ Current backend snapshot:
   pdf_annotation_test.mbt pdf_font_test.mbt`, `moon test --target wasm-gc
   pdf_annotation_test.mbt pdf_font_test.mbt`, and `moon test --target js
   pdf_annotation_test.mbt pdf_font_test.mbt` each report 23/23.~~
+- [x] ~~Continue source-port hardening with draw/bookmark selection cleanup:
+  draw resource-number scanning, per-page draw rendering, draw page rewriting,
+  and bookmark listing now share one `PdfNumberSet` per operation, draw page
+  rewrites preallocate from page count, and the old private linear page
+  membership helper was removed after all callers migrated. Validation on
+  MoonBit compiler 0.9.3: `moon check --target native --warn-list +73` passes
+  with the known notice; `moon test --target native pdf_draw_test.mbt
+  pdf_bookmark_test.mbt pdf_page_box_test.mbt`, `moon test --target wasm-gc
+  pdf_draw_test.mbt pdf_bookmark_test.mbt pdf_page_box_test.mbt`, and `moon test
+  --target js pdf_draw_test.mbt pdf_bookmark_test.mbt pdf_page_box_test.mbt`
+  each report 101/101.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

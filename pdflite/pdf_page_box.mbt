@@ -35,20 +35,6 @@ fn pdf_page_box_name_of_string(text : String) -> PdfName {
 }
 
 ///|
-fn pdf_page_box_contains_page(
-  page_numbers : ArrayView[Int],
-  page_number : Int,
-) -> Bool {
-  for selected in page_numbers {
-    if selected == page_number {
-      break true
-    }
-  } nobreak {
-    false
-  }
-}
-
-///|
 fn pdf_page_box_validate_page_numbers(
   page_numbers : ArrayView[Int],
   end_page : Int,

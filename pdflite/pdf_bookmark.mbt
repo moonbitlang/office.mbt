@@ -329,7 +329,7 @@ fn pdf_bookmark_listing_target_object(
 fn PdfDocument::pdf_bookmark_listing_in_range(
   self : PdfDocument,
   bookmark : PdfBookmark,
-  page_numbers : ArrayView[Int],
+  selected_pages : @number_set.PdfNumberSet,
   range_is_all : Bool,
 ) -> Bool raise PdfError {
   if range_is_all || bookmark.target == DestNull {
@@ -337,11 +337,7 @@ fn PdfDocument::pdf_bookmark_listing_in_range(
   } else {
     match bookmark.target {
       DestNamed(_) | DestString(_) => true
-      _ =>
-        pdf_page_box_contains_page(
-          page_numbers,
-          self.page_number_of_target(bookmark.target),
-        )
+      _ => selected_pages.contains(self.page_number_of_target(bookmark.target))
     }
   }
 }
@@ -490,10 +486,13 @@ fn PdfDocument::pdf_bookmark_listing_bookmarks(
   let end_page = self.endpage()
   pdf_page_box_validate_page_numbers(page_numbers, end_page, "list_bookmarks")
   let range_is_all = pdf_bookmark_listing_is_all_pages(page_numbers, end_page)
+  let selected_pages = @number_set.pdf_number_set(page_numbers)
   let bookmarks = self.read_bookmarks(preserve_actions~)
   let output : Array[PdfBookmark] = []
   for bookmark in bookmarks {
-    if self.pdf_bookmark_listing_in_range(bookmark, page_numbers, range_is_all) {
+    if self.pdf_bookmark_listing_in_range(
+        bookmark, selected_pages, range_is_all,
+      ) {
       output.push(bookmark)
     }
   }
