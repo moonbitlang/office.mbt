@@ -10129,6 +10129,17 @@ Current backend snapshot:
   native pdf_image_test.mbt` reports 55/55; `moon check --target all
   --warn-list +73` passes with the known notice; `moon test --target native`
   reports 2431/2431.~~
+- [x] ~~Continue source-port hardening with Separation CMYK image output
+  allocation slice: `pdf_image_separation_cmyk_8bpp_as_rgb24` now allocates the
+  exact `pixels * 3` RGB output length and fills tint-function RGB triples by
+  index instead of growing a temporary array, preserving Type 2 and Type 4
+  tint functions, decoded Separation image data, malformed tint errors, and
+  `get_image_24bpp` output. Validation on MoonBit compiler 0.9.3: `moon check
+  --target native --warn-list +73` passes with the known notice; focused
+  Separation tint tests report 1/1, 1/1, 1/1, and 1/1; `moon test --target
+  native pdf_image_test.mbt` reports 55/55; `moon check --target all
+  --warn-list +73` passes with the known notice; `moon test --target native`
+  reports 2431/2431.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

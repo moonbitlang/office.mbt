@@ -3106,7 +3106,8 @@ fn PdfDocument::pdf_image_separation_cmyk_8bpp_as_rgb24(
   let pixels = width * height
   pdf_image_require_size(data, pixels)
   let tint_function = self.parse_function(tint)
-  let output : Array[Byte] = []
+  let output = Array::make(pixels * 3, b'\x00')
+  let mut position = 0
   for index in 0..<pixels {
     let values = tint_function.eval([data[index].to_double() / 255.0])
     if values.length() != 4 {
@@ -3117,9 +3118,10 @@ fn PdfDocument::pdf_image_separation_cmyk_8bpp_as_rgb24(
     let y = (values[1] * 255.0).to_int()
     let k = (values[3] * 255.0).to_int()
     let (red, green, blue) = pdf_image_rgb_of_cmyk(c, m, y, k)
-    output.push(pdf_byte_of_int(red))
-    output.push(pdf_byte_of_int(green))
-    output.push(pdf_byte_of_int(blue))
+    output[position] = pdf_byte_of_int(red)
+    output[position + 1] = pdf_byte_of_int(green)
+    output[position + 2] = pdf_byte_of_int(blue)
+    position += 3
   }
   Bytes::from_array(output)
 }
