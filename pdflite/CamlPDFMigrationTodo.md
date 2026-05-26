@@ -10201,6 +10201,16 @@ Current backend snapshot:
   known notice; `moon test --target native pdf_jpeg_test.mbt` reports 9/9;
   `moon check --target all --warn-list +73` passes with the known notice; `moon
   test --target native` reports 2432/2432.~~
+- [x] ~~Continue source-port hardening with TrueType subset glyf table
+  allocation slice: `pdf_truetype_subset_glyf_table` now validates and totals
+  selected glyph ranges first, allocates the exact padded `glyf` table length,
+  and copies glyph bytes by index instead of growing a temporary array,
+  preserving composite glyph expansion, padding, and subset-font table offsets.
+  Validation on MoonBit compiler 0.9.3: `moon check --target native --warn-list
+  +73` passes with the known notice; focused `subset_glyf` tests report 1/1;
+  `moon test --target native pdf_truetype_test.mbt` reports 27/27; `moon check
+  --target all --warn-list +73` passes with the known notice; `moon test
+  --target native` reports 2432/2432.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

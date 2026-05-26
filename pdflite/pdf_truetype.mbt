@@ -1012,18 +1012,21 @@ pub fn pdf_truetype_subset_glyf_table(
     data,
     pdf_truetype_base_subset_glyph_indices(data, subset_codepoints),
   )
-  let output : Array[Byte] = []
   let mut length = 0
   for range in ranges {
     if glyf.offset + range.end_offset > data.length() {
       raise SoftError("Truncated TrueType glyf table")
     }
-    for offset in range.start_offset..<range.end_offset {
-      output.push(data[glyf.offset + offset])
-    }
     length += range.end_offset - range.start_offset
   }
-  pdf_truetype_push_padding(output, length)
+  let output = Array::make(length + pdf_truetype_table_padding(length), b'\x00')
+  let mut position = 0
+  for range in ranges {
+    for offset in range.start_offset..<range.end_offset {
+      output[position] = data[glyf.offset + offset]
+      position += 1
+    }
+  }
   { length, bytes: Bytes::from_array(output) }
 }
 
