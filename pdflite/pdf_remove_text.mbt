@@ -12,20 +12,6 @@ fn pdf_remove_text_stamp() -> PdfName {
 }
 
 ///|
-fn pdf_remove_text_page_selected(
-  page_numbers : ArrayView[Int],
-  page_number : Int,
-) -> Bool {
-  for selected in page_numbers {
-    if selected == page_number {
-      break true
-    }
-  } nobreak {
-    false
-  }
-}
-
-///|
 fn pdf_remove_text_is_stamp_bmc(op : PdfContentOp) -> Bool {
   match op {
     Op_BMC(tag) => tag == pdf_remove_text_stamp()
@@ -134,11 +120,12 @@ pub fn PdfDocument::remove_added_text(
   page_numbers : ArrayView[Int],
 ) -> PdfDocument raise PdfError {
   let pages = self.pages_of_pagetree()
-  let rewritten : Array[PdfPage] = []
+  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
     let page = pages[index]
-    if pdf_remove_text_page_selected(page_numbers, page_number) {
+    if selected_pages.contains(page_number) {
       rewritten.push(self.pdf_remove_text_page(page, pdf_remove_added_text_ops))
     } else {
       rewritten.push(page)
@@ -174,11 +161,12 @@ pub fn PdfDocument::remove_all_text(
 ) -> PdfDocument raise PdfError {
   let document = self.copy()
   let pages = document.pages_of_pagetree()
-  let rewritten : Array[PdfPage] = []
+  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
     let page = pages[index]
-    if pdf_remove_text_page_selected(page_numbers, page_number) {
+    if selected_pages.contains(page_number) {
       document.process_xobjects(page, pdf_remove_text_all_text_xobject)
       rewritten.push(
         document.pdf_remove_text_page(page, pdf_remove_all_text_ops),
