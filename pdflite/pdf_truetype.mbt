@@ -496,16 +496,6 @@ fn pdf_truetype_push_tag(
 }
 
 ///|
-fn pdf_truetype_push_padding(
-  output : Array[Byte],
-  length : Int,
-) -> Unit raise PdfError {
-  for _ in 0..<pdf_truetype_table_padding(length) {
-    output.push(pdf_byte_of_int(0))
-  }
-}
-
-///|
 fn pdf_truetype_index_to_loc_format(data : BytesView) -> Int raise PdfError {
   let head = pdf_truetype_required_table(data, "head")
   pdf_truetype_required_i16(data, head.offset + 50, "head table")
@@ -1102,22 +1092,29 @@ pub fn pdf_truetype_subset_cmap_table(
       },
     )
   }
-  let output : Array[Byte] = []
-  pdf_truetype_push_u16(output, 0)
-  pdf_truetype_push_u16(output, 1)
-  pdf_truetype_push_u16(output, 1)
-  pdf_truetype_push_u16(output, 0)
-  pdf_truetype_push_u32(output, 12)
-  pdf_truetype_push_u16(output, 6)
-  pdf_truetype_push_u16(output, 10 + glyph_indices.length() * 2)
-  pdf_truetype_push_u16(output, 0)
-  pdf_truetype_push_u16(output, 33)
-  pdf_truetype_push_u16(output, glyph_indices.length())
-  for glyph_index in glyph_indices {
-    pdf_truetype_push_u16(output, pdf_truetype_normalize_u16(glyph_index))
-  }
   let length = 22 + glyph_indices.length() * 2
-  pdf_truetype_push_padding(output, length)
+  let output = Array::make(length + pdf_truetype_table_padding(length), b'\x00')
+  let mut position = pdf_truetype_write_u16_at(output, 0, 0)
+  position = pdf_truetype_write_u16_at(output, position, 1)
+  position = pdf_truetype_write_u16_at(output, position, 1)
+  position = pdf_truetype_write_u16_at(output, position, 0)
+  position = pdf_truetype_write_u32_at(output, position, 12)
+  position = pdf_truetype_write_u16_at(output, position, 6)
+  position = pdf_truetype_write_u16_at(
+    output,
+    position,
+    10 + glyph_indices.length() * 2,
+  )
+  position = pdf_truetype_write_u16_at(output, position, 0)
+  position = pdf_truetype_write_u16_at(output, position, 33)
+  position = pdf_truetype_write_u16_at(output, position, glyph_indices.length())
+  for glyph_index in glyph_indices {
+    position = pdf_truetype_write_u16_at(
+      output,
+      position,
+      pdf_truetype_normalize_u16(glyph_index),
+    )
+  }
   { length, bytes: Bytes::from_array(output) }
 }
 

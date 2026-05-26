@@ -10221,6 +10221,16 @@ Current backend snapshot:
   `moon test --target native pdf_truetype_test.mbt` reports 27/27; `moon check
   --target all --warn-list +73` passes with the known notice; `moon test
   --target native` reports 2432/2432.~~
+- [x] ~~Continue source-port hardening with TrueType subset cmap table
+  allocation slice: `pdf_truetype_subset_cmap_table` now allocates the exact
+  padded format-6 `cmap` table length and writes the table header plus glyph
+  entries by index instead of growing a temporary array, preserving
+  implicit-font-file cmap rewriting and later table offset shifts. Validation
+  on MoonBit compiler 0.9.3: `moon check --target native --warn-list +73`
+  passes with the known notice; focused `subset_cmap` tests report 1/1; `moon
+  test --target native pdf_truetype_test.mbt` reports 27/27; `moon check
+  --target all --warn-list +73` passes with the known notice; `moon test
+  --target native` reports 2432/2432.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
