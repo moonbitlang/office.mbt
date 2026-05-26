@@ -73,7 +73,7 @@ fn pdf_xref_stream_int_array(
 ) -> Array[Int]? raise PdfError {
   match dictionary.lookup_immediate(key) {
     Some(PdfArray(values)) => {
-      let output : Array[Int] = []
+      let output : Array[Int] = Array::new(capacity=values.length())
       for value in values {
         match value {
           PdfInteger(number) => output.push(number)
@@ -107,7 +107,7 @@ fn pdf_xref_stream_index_pairs(
       if values.length() % 2 != 0 {
         raise XRefEntryExpected
       }
-      let pairs : Array[(Int, Int)] = []
+      let pairs : Array[(Int, Int)] = Array::new(capacity=values.length() / 2)
       for i = 0; i < values.length(); i = i + 2 {
         let start = values[i]
         let length = values[i + 1]
@@ -124,6 +124,22 @@ fn pdf_xref_stream_index_pairs(
         _ => raise XRefEntryExpected
       }
   }
+}
+
+///|
+fn pdf_xref_stream_entry_capacity(
+  index_pairs : ArrayView[(Int, Int)],
+) -> Int raise PdfError {
+  let mut capacity = 0
+  for pair in index_pairs {
+    let count = pair.1
+    let next = capacity + count
+    if next < capacity {
+      raise XRefEntryExpected
+    }
+    capacity = next
+  }
+  capacity
 }
 
 ///|
@@ -169,7 +185,9 @@ fn pdf_xref_stream_entries(
   index_pairs : ArrayView[(Int, Int)],
 ) -> Array[PdfClassicXRefEntry] raise PdfError {
   let (w0, w1, w2) = widths
-  let entries : Array[PdfClassicXRefEntry] = []
+  let entries : Array[PdfClassicXRefEntry] = Array::new(
+    capacity=pdf_xref_stream_entry_capacity(index_pairs),
+  )
   let mut position = 0
   for pair in index_pairs {
     let (start_object, count) = pair

@@ -10319,6 +10319,18 @@ Current backend snapshot:
   4/4; `moon check --target all --warn-list +73` passes with the known notice;
   `moon test --target native .` reports 2010/2010; `moon info` and `moon fmt`
   completed with no `.mbti` diff.~~
+- [x] ~~Continue source-port hardening with xref-stream collection allocation
+  slice: `pdf_xref_stream_int_array`, `pdf_xref_stream_index_pairs`, and
+  `pdf_xref_stream_entries` now allocate result arrays from exact `/W`,
+  `/Index`, and decoded-entry counts instead of starting from zero, preserving
+  malformed width/index checks, default-index streams, skipped unknown entry
+  types, and decoded xref stream behavior. Validation on MoonBit compiler
+  0.9.3: `moon check --target native --warn-list +73` passes with the known
+  notice; focused `pdflite_wbtest.mbt --filter '*xref stream*'` reports 1/1;
+  focused `pdf_reader_test.mbt --filter '*xref stream*'` reports 33/33; `moon
+  check --target all --warn-list +73` passes with the known notice; `moon test
+  --target native .` reports 2010/2010; `moon info` and `moon fmt` completed
+  with no `.mbti` diff.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
