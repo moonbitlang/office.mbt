@@ -253,6 +253,31 @@ pub fn ByteCursor::lex_pdf_number(self : ByteCursor) -> PdfLexeme {
 }
 
 ///|
+fn ByteCursor::pdf_name_output_capacity(self : ByteCursor) -> Int {
+  let mut index = self.absolute_position()
+  let mut capacity = 1
+  let mut done = false
+  while index < self.data.length() && !done {
+    let value = self.data[index].to_int()
+    if pdf_is_whitespace_or_delimiter_byte(value) {
+      done = true
+    } else {
+      index += 1
+      capacity += 1
+      if value == 35 {
+        if index < self.data.length() {
+          index += 1
+        }
+        if index < self.data.length() {
+          index += 1
+        }
+      }
+    }
+  }
+  capacity
+}
+
+///|
 /// Lex a PDF name object.
 ///
 /// Names start with `/` and keep the slash in the stored bytes. `#xx` hex
@@ -263,7 +288,8 @@ pub fn ByteCursor::lex_pdf_name(self : ByteCursor) -> PdfLexeme raise PdfError {
     LexNone
   } else {
     self.nudge()
-    let bytes : Array[Byte] = [47]
+    let bytes = Array::make(self.pdf_name_output_capacity(), b'\x00')
+    let mut position = pdf_lexeme_write_byte_at(bytes, 0, (47).to_byte())
     let mut done = false
     while !done {
       let value = self.peek_byte()
@@ -275,15 +301,20 @@ pub fn ByteCursor::lex_pdf_name(self : ByteCursor) -> PdfLexeme raise PdfError {
           let high = self.input_byte()
           let low = self.input_byte()
           match (pdf_hex_value(high), pdf_hex_value(low)) {
-            (Some(high), Some(low)) => bytes.push((high * 16 + low).to_byte())
+            (Some(high), Some(low)) =>
+              position = pdf_lexeme_write_byte_at(
+                bytes,
+                position,
+                (high * 16 + low).to_byte(),
+              )
             _ => raise InvalidHexEscape
           }
         } else {
-          bytes.push(value.to_byte())
+          position = pdf_lexeme_write_byte_at(bytes, position, value.to_byte())
         }
       }
     }
-    LexName(pdf_name_of_bytes(Bytes::from_array(bytes)))
+    LexName(pdf_name_of_bytes(Bytes::from_array(bytes[:position])))
   }
 }
 

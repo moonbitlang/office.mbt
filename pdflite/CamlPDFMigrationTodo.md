@@ -10254,6 +10254,18 @@ Current backend snapshot:
   diff. The module-wide `moon test --target native` run was attempted but
   interrupted after the markdown fixture `tcc` compile stayed active for
   roughly seven minutes.~~
+- [x] ~~Continue source-port hardening with lexeme name allocation slice:
+  `lex_pdf_name` now pre-scans the current name token, allocates a bounded
+  output buffer once, and writes the slash, raw bytes, and decoded `#xx`
+  escapes by index instead of growing a temporary array, preserving delimiter
+  stopping and malformed hex escape errors. Validation on MoonBit compiler
+  0.9.3: `moon check --target native --warn-list +73` passes with the known
+  notice; `moon test --target native pdf_lexeme_test.mbt` reports 17/17;
+  `moon check --target all --warn-list +73` passes with the known notice;
+  `moon test --target native .` reports 2010/2010; `moon info` and `moon fmt`
+  completed with no `.mbti` diff. The module-wide native suite was not rerun
+  after the immediately preceding attempt blocked in the unrelated markdown
+  fixture compile.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
