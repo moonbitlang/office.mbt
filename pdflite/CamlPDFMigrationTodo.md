@@ -10299,6 +10299,16 @@ Current backend snapshot:
   pdf_codec_test.mbt` reports 82/82; `moon check --target all --warn-list +73`
   passes with the known notice; `moon test --target native .` reports
   2010/2010; `moon info` and `moon fmt` completed with no `.mbti` diff.~~
+- [x] ~~Continue source-port hardening with line-view collection allocation
+  slice: `ByteCursor::read_line_views` now pre-counts the remaining line views
+  and creates its borrowed-view result array with that capacity instead of
+  growing from zero, preserving LF, CR, CRLF, final unterminated line, and
+  cursor-consumption behavior. Validation on MoonBit compiler 0.9.3: `moon
+  check --target native --warn-list +73` passes with the known notice; `moon
+  test --target native byte_cursor_test.mbt` reports 19/19; `moon check
+  --target all --warn-list +73` passes with the known notice; `moon test
+  --target native .` reports 2010/2010; `moon info` and `moon fmt` completed
+  with no `.mbti` diff.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
