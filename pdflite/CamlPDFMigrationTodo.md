@@ -10277,6 +10277,18 @@ Current backend snapshot:
   native pdf_codec_test.mbt` reports 82/82; `moon check --target all --warn-list
   +73` passes with the known notice; `moon test --target native .` reports
   2010/2010; `moon info` and `moon fmt` completed with no `.mbti` diff.~~
+- [x] ~~Continue source-port hardening with parser collection allocation slice:
+  `pdf_parse_array_at`, `pdf_parse_dictionary_at`, `pdf_parse_lexemes`,
+  `pdf_parse_indirect_objects`, and `pdf_parse_indirect_object_segments` now
+  create result arrays with bounded capacity hints derived from the current
+  lexeme span or indirect-object token density instead of starting from zero
+  capacity, preserving malformed dictionary recovery, truncated arrays, nested
+  objects, indirect-reference collapsing, and partial indirect-object segment
+  handling. Validation on MoonBit compiler 0.9.3: `moon check --target native
+  --warn-list +73` passes with the known notice; `moon test --target native
+  pdf_parser_test.mbt` reports 11/11; `moon check --target all --warn-list +73`
+  passes with the known notice; `moon test --target native .` reports
+  2010/2010; `moon info` and `moon fmt` completed with no `.mbti` diff.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

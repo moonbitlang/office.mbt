@@ -42,11 +42,64 @@ fn pdf_lexeme_indirect_object_header_at(
 }
 
 ///|
+fn pdf_parse_array_capacity(lexemes : ArrayView[PdfLexeme], index : Int) -> Int {
+  let mut current = index
+  let mut array_depth = 0
+  let mut dictionary_depth = 0
+  while current < lexemes.length() {
+    match lexemes[current] {
+      LexLeftSquare => array_depth += 1
+      LexRightSquare =>
+        if array_depth == 0 && dictionary_depth == 0 {
+          break current - index
+        } else if array_depth > 0 {
+          array_depth -= 1
+        }
+      LexLeftDict => dictionary_depth += 1
+      LexRightDict => if dictionary_depth > 0 { dictionary_depth -= 1 }
+      _ => ()
+    }
+    current += 1
+  } nobreak {
+    current - index
+  }
+}
+
+///|
+fn pdf_parse_dictionary_capacity(
+  lexemes : ArrayView[PdfLexeme],
+  index : Int,
+) -> Int {
+  let mut current = index
+  let mut array_depth = 0
+  let mut dictionary_depth = 0
+  while current < lexemes.length() {
+    match lexemes[current] {
+      LexLeftSquare => array_depth += 1
+      LexRightSquare => if array_depth > 0 { array_depth -= 1 }
+      LexLeftDict => dictionary_depth += 1
+      LexRightDict =>
+        if array_depth == 0 && dictionary_depth == 0 {
+          break (current - index + 1) / 2
+        } else if dictionary_depth > 0 {
+          dictionary_depth -= 1
+        }
+      _ => ()
+    }
+    current += 1
+  } nobreak {
+    (current - index + 1) / 2
+  }
+}
+
+///|
 fn pdf_parse_array_at(
   lexemes : ArrayView[PdfLexeme],
   index : Int,
 ) -> (PdfObject, Int) raise PdfError {
-  let values : Array[PdfObject] = []
+  let values : Array[PdfObject] = Array::new(
+    capacity=pdf_parse_array_capacity(lexemes, index),
+  )
   let mut current = index
   let mut done = false
   while !done && current < lexemes.length() {
@@ -91,7 +144,9 @@ fn pdf_parse_dictionary_at(
   lexemes : ArrayView[PdfLexeme],
   index : Int,
 ) -> (PdfObject, Int) raise PdfError {
-  let entries : Array[(PdfName, PdfObject)] = []
+  let entries : Array[(PdfName, PdfObject)] = Array::new(
+    capacity=pdf_parse_dictionary_capacity(lexemes, index),
+  )
   let mut current = index
   let mut malformed = false
   let mut done = false
@@ -187,7 +242,7 @@ fn pdf_parse_value_at(
 pub fn pdf_parse_lexemes(
   lexemes : ArrayView[PdfLexeme],
 ) -> Array[PdfObject] raise PdfError {
-  let objects : Array[PdfObject] = []
+  let objects : Array[PdfObject] = Array::new(capacity=lexemes.length())
   let mut current = 0
   while current < lexemes.length() {
     current = pdf_skip_comments(lexemes, current)
@@ -336,7 +391,9 @@ pub fn pdf_parse_indirect_object_from_view(
 pub fn pdf_parse_indirect_objects(
   lexemes : ArrayView[PdfLexeme],
 ) -> Array[PdfParsedIndirectObject] raise PdfError {
-  let objects : Array[PdfParsedIndirectObject] = []
+  let objects : Array[PdfParsedIndirectObject] = Array::new(
+    capacity=(lexemes.length() + 3) / 4,
+  )
   let mut current = 0
   while current < lexemes.length() {
     current = pdf_skip_comments(lexemes, current)
@@ -353,7 +410,9 @@ pub fn pdf_parse_indirect_objects(
 fn pdf_parse_indirect_object_segments(
   lexemes : ArrayView[PdfLexeme],
 ) -> (Array[PdfParsedIndirectObject], PdfParsedIndirectObject?) raise PdfError {
-  let objects : Array[PdfParsedIndirectObject] = []
+  let objects : Array[PdfParsedIndirectObject] = Array::new(
+    capacity=(lexemes.length() + 3) / 4,
+  )
   let mut prefix : PdfParsedIndirectObject? = None
   let mut current = 0
   let mut done = false
