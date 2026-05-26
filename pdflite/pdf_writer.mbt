@@ -749,8 +749,11 @@ fn pdf_writer_write_document_objects(
   output : Array[Byte],
   document : PdfDocument,
 ) -> Array[(Int, Int, Int)] raise PdfError {
-  let xrefs : Array[(Int, Int, Int)] = []
-  for number in document.object_numbers() {
+  let object_numbers = document.object_numbers()
+  let xrefs : Array[(Int, Int, Int)] = Array::new(
+    capacity=object_numbers.length(),
+  )
+  for number in object_numbers {
     match document.objects.get_entry(number).unwrap() {
       { data: ObjectParsed(object), generation }
       | { data: ObjectParsedAlreadyDecrypted(object), generation } => {
@@ -910,10 +913,12 @@ fn pdf_writer_int_array_contains(values : ArrayView[Int], value : Int) -> Bool {
 
 ///|
 fn pdf_writer_changed_object_numbers(document : PdfDocument) -> Array[Int] {
-  let numbers : Array[Int] = [0]
+  let log = document.event_log()
+  let numbers : Array[Int] = Array::new(capacity=log.length() + 1)
+  numbers.push(0)
   let seen : @hashmap.HashMap[Int, Bool] = HashMap([])
   seen[0] = true
-  for item in document.event_log() {
+  for item in log {
     let (number, _) = item
     if number > 0 && !seen.contains(number) {
       seen[number] = true
@@ -930,7 +935,7 @@ fn pdf_writer_write_document_objects_for_numbers(
   document : PdfDocument,
   numbers : ArrayView[Int],
 ) -> Array[(Int, Int, Int)] raise PdfError {
-  let xrefs : Array[(Int, Int, Int)] = []
+  let xrefs : Array[(Int, Int, Int)] = Array::new(capacity=numbers.length())
   for number in numbers {
     if number > 0 {
       match document.objects.get_entry(number) {
@@ -1057,7 +1062,7 @@ pub fn pdf_write_document_incremental_update(
   document : PdfDocument,
 ) -> PdfBytes raise PdfError {
   let previous_xref = pdf_read_startxref_position(original)
-  let output : Array[Byte] = []
+  let output : Array[Byte] = Array::new(capacity=original.length() + 1)
   for byte in original {
     output.push(byte)
   }
@@ -1111,7 +1116,7 @@ fn pdf_writer_xref_stream_data(
   xref_stream_number : Int,
   xref_stream_offset : Int,
 ) -> PdfBytes {
-  let output : Array[Byte] = []
+  let output : Array[Byte] = Array::new(capacity=size * 7)
   let mut xref_index = 0
   for number in 0..<size {
     if number == 0 {
@@ -1153,7 +1158,7 @@ fn pdf_writer_xref_stream_data_for_numbers(
   xref_stream_number : Int,
   xref_stream_offset : Int,
 ) -> PdfBytes {
-  let output : Array[Byte] = []
+  let output : Array[Byte] = Array::new(capacity=entry_numbers.length() * 7)
   let mut xref_index = 0
   for number in entry_numbers {
     if number == 0 {
@@ -1179,7 +1184,7 @@ fn pdf_writer_xref_stream_data_for_numbers(
 fn pdf_writer_xref_stream_index_pairs(
   entry_numbers : ArrayView[Int],
 ) -> Array[(Int, Int)] {
-  let pairs : Array[(Int, Int)] = []
+  let pairs : Array[(Int, Int)] = Array::new(capacity=entry_numbers.length())
   let mut run_start = -1
   let mut run_length = 0
   for number in entry_numbers {
@@ -1204,7 +1209,7 @@ fn pdf_writer_xref_stream_index_pairs(
 fn pdf_writer_xref_stream_index_object(
   pairs : ArrayView[(Int, Int)],
 ) -> PdfObject {
-  let values : Array[PdfObject] = []
+  let values : Array[PdfObject] = Array::new(capacity=pairs.length() * 2)
   for pair in pairs {
     let (start, length) = pair
     values.push(PdfInteger(start))
@@ -1298,7 +1303,7 @@ fn pdf_write_document_incremental_update_with_xref_stream_filter(
   filter : PdfName?,
 ) -> PdfBytes raise PdfError {
   let previous_xref = pdf_read_startxref_position(original)
-  let output : Array[Byte] = []
+  let output : Array[Byte] = Array::new(capacity=original.length() + 1)
   for byte in original {
     output.push(byte)
   }

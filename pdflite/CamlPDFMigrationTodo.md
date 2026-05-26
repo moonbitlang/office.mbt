@@ -10356,6 +10356,17 @@ Current backend snapshot:
   pdf_content_test.mbt` each report 59/59; `moon check --target all --warn-list
   +73` passes with the known notice; `moon test --target native .` reports
   2010/2010.~~
+- [x] ~~Continue source-port hardening with writer xref-buffer allocation
+  slice: full and incremental object-write xref arrays now preallocate from
+  known object/change counts, incremental classic and xref-stream writes
+  reserve the copied original bytes up front, xref-stream data buffers allocate
+  their exact 7-byte entry width, and xref stream `/Index` arrays allocate from
+  known run counts. This reduces allocator churn on large document writes and
+  incremental updates without changing emitted bytes or public APIs. Validation
+  on MoonBit compiler 0.9.3: `moon check --target native --warn-list +73`
+  passes with the known notice; `moon test --target native pdf_writer_test.mbt`,
+  `moon test --target wasm-gc pdf_writer_test.mbt`, and `moon test --target js
+  pdf_writer_test.mbt` each report 28/28.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
