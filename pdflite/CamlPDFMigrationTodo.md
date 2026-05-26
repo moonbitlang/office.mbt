@@ -10140,6 +10140,16 @@ Current backend snapshot:
   native pdf_image_test.mbt` reports 55/55; `moon check --target all
   --warn-list +73` passes with the known notice; `moon test --target native`
   reports 2431/2431.~~
+- [x] ~~Continue source-port hardening with PNG alpha split output allocation
+  slice: `PdfPNG::pdf_image_split_alpha` now allocates exact colour and mask
+  byte buffers after predictor decode and fills them by index instead of
+  growing temporary arrays, preserving alpha `/SMask` construction, image
+  document alpha preservation, malformed alpha data handling, and 16-bit alpha
+  rejection. Validation on MoonBit compiler 0.9.3: `moon check --target native
+  --warn-list +73` passes with the known notice; focused alpha PNG tests report
+  1/1, 1/1, and 1/1; `moon test --target native pdf_image_test.mbt` reports
+  55/55; `moon check --target all --warn-list +73` passes with the known
+  notice; `moon test --target native` reports 2431/2431.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

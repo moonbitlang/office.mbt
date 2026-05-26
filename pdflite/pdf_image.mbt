@@ -578,13 +578,18 @@ fn PdfPNG::pdf_image_split_alpha(
   if decoded.length() % stride != 0 {
     raise BadPNG("obj_of_png_data/split_mask: malformed alpha data")
   }
-  let colors : Array[Byte] = []
-  let mask : Array[Byte] = []
+  let pixels = decoded.length() / stride
+  let colors = Array::make(pixels * components, b'\x00')
+  let mask = Array::make(pixels, b'\x00')
+  let mut color_position = 0
+  let mut mask_position = 0
   for offset = 0; offset < decoded.length(); offset = offset + stride {
     for component in 0..<components {
-      colors.push(decoded[offset + component])
+      colors[color_position] = decoded[offset + component]
+      color_position += 1
     }
-    mask.push(decoded[offset + components])
+    mask[mask_position] = decoded[offset + components]
+    mask_position += 1
   }
   (
     pdf_flate_encode(Bytes::from_array(colors)),
