@@ -3567,8 +3567,8 @@ fn PdfImageExtractionRunState::next_serial(
 ///|
 fn pdf_image_replace_percent_objnum(stem : String) -> String {
   let input = @utf8.encode(stem)
-  let output : Array[Byte] = []
   let pattern = b"%objnum"
+  let mut output_length = input.length()
   let mut index = 0
   while index < input.length() {
     let mut matched = index + pattern.length() <= input.length()
@@ -3581,11 +3581,33 @@ fn pdf_image_replace_percent_objnum(stem : String) -> String {
       }
     }
     if matched {
-      output.push(64)
-      output.push(83)
+      output_length = output_length - pattern.length() + 2
       index += pattern.length()
     } else {
-      output.push(input[index])
+      index += 1
+    }
+  }
+  let output = Array::make(output_length, b'\x00')
+  let mut position = 0
+  index = 0
+  while index < input.length() {
+    let mut matched = index + pattern.length() <= input.length()
+    if matched {
+      for pattern_index in 0..<pattern.length() {
+        if input[index + pattern_index] != pattern[pattern_index] {
+          matched = false
+          break
+        }
+      }
+    }
+    if matched {
+      output[position] = 64
+      output[position + 1] = 83
+      position += 2
+      index += pattern.length()
+    } else {
+      output[position] = input[index]
+      position += 1
       index += 1
     }
   }

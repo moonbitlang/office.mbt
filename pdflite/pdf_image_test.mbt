@@ -2223,6 +2223,45 @@ test "PdfDocument extract_images_files honors global and per-page dedup" {
 }
 
 ///|
+test "PdfDocument extract_images_files expands object number stem marker" {
+  let doc = @pdflite.pdf_document_empty()
+  let jpeg_data = @ascii.encode("jpg")
+  doc.add_object_given_number(
+    10,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (
+          image_name_for_test("/Subtype"),
+          PdfNameObject(image_name_for_test("/Image")),
+        ),
+        (image_name_for_test("/Width"), PdfInteger(1)),
+        (image_name_for_test("/Height"), PdfInteger(1)),
+        (
+          image_name_for_test("/Filter"),
+          PdfNameObject(image_name_for_test("/DCTDecode")),
+        ),
+        (image_name_for_test("/Length"), PdfInteger(jpeg_data.length())),
+      ]),
+      StreamGot(jpeg_data),
+    ),
+  )
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: @pdflite.pdf_dictionary([
+      (
+        image_name_for_test("/XObject"),
+        @pdflite.pdf_dictionary([(image_name_for_test("/A"), PdfIndirect(10))]),
+      ),
+    ]),
+  }
+  let page_root = try! doc.add_pagetree([page])
+  ignore(try! doc.add_root(page_root, []))
+  @test.assert_eq(try! doc.extract_images_files([1], "obj-%objnum@-%"), [
+    { path: "obj-10-0-p1.jpg", data: jpeg_data },
+  ])
+}
+
+///|
 test "PdfDocument extract_images_files optionally emits inline images" {
   let doc = @pdflite.pdf_document_empty()
   let inline_dict = @pdflite.pdf_dictionary([

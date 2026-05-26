@@ -10160,6 +10160,17 @@ Current backend snapshot:
   pdf_image_test.mbt` reports 55/55; `moon check --target all --warn-list +73`
   passes with the known notice; `moon test --target native` reports
   2431/2431.~~
+- [x] ~~Continue source-port hardening with image extraction object-number
+  filename replacement allocation slice: `pdf_image_replace_percent_objnum` now
+  counts `%objnum` markers first, allocates the exact rewritten byte length, and
+  fills the `@S` bookmark-name placeholder replacement by index instead of
+  growing a temporary array, preserving extraction filename sequencing and
+  indirect image object-number expansion. Validation on MoonBit compiler 0.9.3:
+  `moon check --target native --warn-list +73` passes with the known notice;
+  focused `%objnum` extraction-name tests report 1/1; `moon test --target native
+  pdf_image_test.mbt` reports 56/56; `moon check --target all --warn-list +73`
+  passes with the known notice; `moon test --target native` reports
+  2432/2432.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
