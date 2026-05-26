@@ -10150,6 +10150,16 @@ Current backend snapshot:
   1/1, 1/1, and 1/1; `moon test --target native pdf_image_test.mbt` reports
   55/55; `moon check --target all --warn-list +73` passes with the known
   notice; `moon test --target native` reports 2431/2431.~~
+- [x] ~~Continue source-port hardening with PNM image export output allocation
+  slice: `pdf_image_pnm_24bpp_bytes` now pre-encodes width/height, allocates
+  the exact P6 header plus raw data length, and copies each byte span by index
+  instead of growing a temporary array, preserving inline-image PNM extraction
+  paths and emitted image bytes. Validation on MoonBit compiler 0.9.3: `moon
+  check --target native --warn-list +73` passes with the known notice; focused
+  inline PNM extraction tests report 1/1; `moon test --target native
+  pdf_image_test.mbt` reports 55/55; `moon check --target all --warn-list +73`
+  passes with the known notice; `moon test --target native` reports
+  2431/2431.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

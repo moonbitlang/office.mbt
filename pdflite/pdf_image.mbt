@@ -3384,10 +3384,17 @@ fn PdfImageExtractionState::add_jbig2_global(
 }
 
 ///|
-fn pdf_image_append_bytes(output : Array[Byte], bytes : BytesView) -> Unit {
+fn pdf_image_copy_view(
+  output : Array[Byte],
+  position : Int,
+  bytes : BytesView,
+) -> Int {
+  let mut next = position
   for byte in bytes {
-    output.push(byte)
+    output[next] = byte
+    next += 1
   }
+  next
 }
 
 ///|
@@ -3396,13 +3403,18 @@ fn pdf_image_pnm_24bpp_bytes(
   height : Int,
   data : PdfBytes,
 ) -> PdfBytes {
-  let output : Array[Byte] = []
-  pdf_image_append_bytes(output, b"P6 ")
-  pdf_image_append_bytes(output, @ascii.encode(width.to_string()))
-  pdf_image_append_bytes(output, b" ")
-  pdf_image_append_bytes(output, @ascii.encode(height.to_string()))
-  pdf_image_append_bytes(output, b" 255\n")
-  pdf_image_append_bytes(output, data)
+  let width_bytes = @ascii.encode(width.to_string())
+  let height_bytes = @ascii.encode(height.to_string())
+  let output = Array::make(
+    3 + width_bytes.length() + 1 + height_bytes.length() + 5 + data.length(),
+    b'\x00',
+  )
+  let mut position = pdf_image_copy_view(output, 0, b"P6 ")
+  position = pdf_image_copy_view(output, position, width_bytes)
+  position = pdf_image_copy_view(output, position, b" ")
+  position = pdf_image_copy_view(output, position, height_bytes)
+  position = pdf_image_copy_view(output, position, b" 255\n")
+  let _ = pdf_image_copy_view(output, position, data)
   Bytes::from_array(output)
 }
 
