@@ -26,11 +26,14 @@ fn PdfDocument::pdf_page_flip_pages(
 ) -> PdfDocument raise PdfError {
   pdf_page_box_validate_page_numbers(page_numbers, self.endpage(), context)
   let pages = self.pages_of_pagetree()
-  let rewritten : Array[PdfPage] = []
-  let matrices : Array[(Int, TransformMatrix)] = []
+  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
+  let matrices : Array[(Int, TransformMatrix)] = Array::new(
+    capacity=page_numbers.length(),
+  )
   for index in 0..<pages.length() {
     let page_number = index + 1
-    if pdf_page_box_contains_page(page_numbers, page_number) {
+    if selected_pages.contains(page_number) {
       let matrix = matrix_of_page(pages[index])
       rewritten.push(self.pdf_page_scale_page(pages[index], matrix, fast))
       matrices.push((page_number, matrix))

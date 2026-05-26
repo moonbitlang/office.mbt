@@ -10399,6 +10399,18 @@ Current backend snapshot:
   with the known notice; `moon test --target native pdf_page_test.mbt`, `moon
   test --target wasm-gc pdf_page_test.mbt`, and `moon test --target js
   pdf_page_test.mbt` each report 82/82.~~
+- [x] ~~Continue source-port hardening with page-selection membership tuning:
+  common page callback helpers, page-box rewrites, rotation, content rotation,
+  and flip paths now build a `PdfNumberSet` once per operation and preallocate
+  rewritten page/matrix arrays from known page or selection counts, avoiding
+  repeated selected-page scans across whole-document page operations. Validation
+  on MoonBit compiler 0.9.3: `moon check --target native --warn-list +73`
+  passes with the known notice; `moon test --target native pdf_page_test.mbt
+  pdf_page_box_test.mbt pdf_page_rotate_test.mbt pdf_page_flip_test.mbt`, `moon
+  test --target wasm-gc pdf_page_test.mbt pdf_page_box_test.mbt
+  pdf_page_rotate_test.mbt pdf_page_flip_test.mbt`, and `moon test --target js
+  pdf_page_test.mbt pdf_page_box_test.mbt pdf_page_rotate_test.mbt
+  pdf_page_flip_test.mbt` each report 106/106.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

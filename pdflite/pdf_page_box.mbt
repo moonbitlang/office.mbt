@@ -72,10 +72,11 @@ fn PdfDocument::pdf_page_box_rewrite_pages(
 ) -> PdfDocument raise PdfError {
   let pages = self.pages_of_pagetree()
   pdf_page_box_validate_page_numbers(page_numbers, pages.length(), context)
-  let rewritten : Array[PdfPage] = []
+  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
-    if pdf_page_box_contains_page(page_numbers, page_number) {
+    if selected_pages.contains(page_number) {
       rewritten.push(rewrite(self, page_number, pages[index]))
     } else {
       rewritten.push(pages[index])

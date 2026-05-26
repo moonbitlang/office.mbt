@@ -7,11 +7,12 @@ fn PdfDocument::pdf_page_rotate_rewrite(
 ) -> PdfDocument raise PdfError {
   pdf_page_box_validate_page_numbers(page_numbers, self.endpage(), label)
   let pages = self.pages_of_pagetree()
-  let rewritten : Array[PdfPage] = []
+  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
     let page = pages[index]
-    if pdf_page_box_contains_page(page_numbers, page_number) {
+    if selected_pages.contains(page_number) {
       rewritten.push({ ..page, rotate: rotate(page) })
     } else {
       rewritten.push(page)
@@ -120,11 +121,14 @@ pub fn PdfDocument::rotate_contents(
     "rotate_contents",
   )
   let pages = self.pages_of_pagetree()
-  let rewritten : Array[PdfPage] = []
-  let matrices : Array[(Int, TransformMatrix)] = []
+  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
+  let matrices : Array[(Int, TransformMatrix)] = Array::new(
+    capacity=page_numbers.length(),
+  )
   for index in 0..<pages.length() {
     let page_number = index + 1
-    if pdf_page_box_contains_page(page_numbers, page_number) {
+    if selected_pages.contains(page_number) {
       let matrix = self.pdf_page_rotate_contents_matrix(pages[index], rotation)
       rewritten.push(
         self.pdf_page_rotate_contents_page(pages[index], matrix, fast),

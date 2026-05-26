@@ -1,18 +1,4 @@
 ///|
-fn pdf_page_process_selected(
-  page_numbers : ArrayView[Int],
-  page_number : Int,
-) -> Bool {
-  for selected in page_numbers {
-    if selected == page_number {
-      break true
-    }
-  } nobreak {
-    false
-  }
-}
-
-///|
 /// Apply a cpdf-style page callback to selected pages.
 ///
 /// The callback returns the replacement page, the page serial whose destinations
@@ -24,11 +10,14 @@ pub fn PdfDocument::process_pages(
   process : (Int, PdfPage) -> (PdfPage, Int, TransformMatrix) raise PdfError,
 ) -> PdfDocument raise PdfError {
   let pages = self.pages_of_pagetree()
-  let rewritten : Array[PdfPage] = []
-  let matrices : Array[(Int, TransformMatrix)] = []
+  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
+  let matrices : Array[(Int, TransformMatrix)] = Array::new(
+    capacity=pages.length(),
+  )
   for index in 0..<pages.length() {
     let page_number = index + 1
-    if pdf_page_process_selected(page_numbers, page_number) {
+    if selected_pages.contains(page_number) {
       pdf_progress_page(page_number)
       let (page, matrix_page, matrix) = process(page_number, pages[index])
       pdf_progress_endpage()
@@ -73,9 +62,10 @@ pub fn PdfDocument::iter_pages(
   process : (Int, PdfPage) -> Unit raise PdfError,
 ) -> Unit raise PdfError {
   let pages = self.pages_of_pagetree()
+  let selected_pages = @number_set.pdf_number_set(page_numbers)
   for index in 0..<pages.length() {
     let page_number = index + 1
-    if pdf_page_process_selected(page_numbers, page_number) {
+    if selected_pages.contains(page_number) {
       process(page_number, pages[index])
     }
   }
@@ -111,10 +101,11 @@ pub fn[T] PdfDocument::map_pages(
   process : (Int, PdfPage) -> T raise PdfError,
 ) -> Array[T] raise PdfError {
   let pages = self.pages_of_pagetree()
-  let output : Array[T] = []
+  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let output : Array[T] = Array::new(capacity=page_numbers.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
-    if pdf_page_process_selected(page_numbers, page_number) {
+    if selected_pages.contains(page_number) {
       output.push(process(page_number, pages[index]))
     }
   }
