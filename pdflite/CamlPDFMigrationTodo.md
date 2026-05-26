@@ -10182,6 +10182,16 @@ Current backend snapshot:
   PDF/UA metadata acceptance reports 1/1; `moon check --target all --warn-list
   +73` passes with the known notice; `moon test --target native` reports
   2432/2432.~~
+- [x] ~~Continue source-port hardening with PDF/UA marker removal allocation
+  slice: `pdf_ua_remove_xml_element_prefix` now scans removable marker element
+  byte ranges first, allocates the exact stripped metadata length, and copies
+  retained spans by index instead of growing a temporary array, preserving
+  `mark_pdfua2` replacement and `remove_pdfua_mark` deletion behavior.
+  Validation on MoonBit compiler 0.9.3: `moon check --target native --warn-list
+  +73` passes with the known notice; focused `remove_pdfua_mark` tests report
+  1/1; `moon test --target native pdf_create_test.mbt` reports 7/7; `moon check
+  --target all --warn-list +73` passes with the known notice; `moon test
+  --target native` reports 2432/2432.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

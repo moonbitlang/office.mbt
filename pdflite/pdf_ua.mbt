@@ -514,31 +514,26 @@ fn pdf_ua_remove_xml_element_prefix(
 ) -> (PdfBytes, Bool) {
   let open_pattern = @ascii.encode("<" + prefix + ":" + field)
   let close_pattern = @ascii.encode("</" + prefix + ":" + field + ">")
-  let output : Array[Byte] = []
-  let mut changed = false
+  let removals : Array[(Int, Int)] = []
   let mut search_start = 0
   while search_start < data.length() {
     let tag_start = pdf_metadata_find_bytes_from(
       data, search_start, open_pattern,
     )
     if tag_start < 0 {
-      pdf_metadata_push_view(output, data[search_start:])
       search_start = data.length()
     } else {
       let name_end = tag_start + open_pattern.length()
       if name_end >= data.length() ||
         !pdf_metadata_xml_tag_boundary(data[name_end]) {
-        pdf_metadata_push_view(output, data[search_start:name_end])
         search_start = name_end
       } else {
         let tag_end = pdf_metadata_find_byte(data, name_end, 62)
         if tag_end < 0 {
-          pdf_metadata_push_view(output, data[search_start:])
           search_start = data.length()
         } else if pdf_ua_xml_tag_is_self_closing(data, tag_start, tag_end) {
-          pdf_metadata_push_view(output, data[search_start:tag_start])
           search_start = tag_end + 1
-          changed = true
+          removals.push((tag_start, search_start))
         } else {
           let value_end = pdf_metadata_find_bytes_from(
             data,
@@ -546,18 +541,32 @@ fn pdf_ua_remove_xml_element_prefix(
             close_pattern,
           )
           if value_end < 0 {
-            pdf_metadata_push_view(output, data[search_start:])
             search_start = data.length()
           } else {
-            pdf_metadata_push_view(output, data[search_start:tag_start])
             search_start = value_end + close_pattern.length()
-            changed = true
+            removals.push((tag_start, search_start))
           }
         }
       }
     }
   }
-  if changed {
+  if removals.length() > 0 {
+    let mut output_length = data.length()
+    for removal in removals {
+      output_length -= removal.1 - removal.0
+    }
+    let output = Array::make(output_length, b'\x00')
+    let mut output_position = 0
+    let mut data_position = 0
+    for removal in removals {
+      output_position = pdf_ua_write_view(
+        output,
+        output_position,
+        data[data_position:removal.0],
+      )
+      data_position = removal.1
+    }
+    let _ = pdf_ua_write_view(output, output_position, data[data_position:])
     (Bytes::from_array(output), true)
   } else {
     (data.to_owned(), false)
