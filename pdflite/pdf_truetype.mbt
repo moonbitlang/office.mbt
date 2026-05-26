@@ -410,32 +410,6 @@ fn pdf_truetype_table_padding(length : Int) -> Int {
 }
 
 ///|
-fn pdf_truetype_push_u16(
-  output : Array[Byte],
-  value : Int,
-) -> Unit raise PdfError {
-  if value < 0 || value > 0xFFFF {
-    raise SoftError("TrueType unsigned 16-bit value out of range")
-  }
-  output.push(pdf_byte_of_int((value >> 8) & 0xFF))
-  output.push(pdf_byte_of_int(value & 0xFF))
-}
-
-///|
-fn pdf_truetype_push_u32(
-  output : Array[Byte],
-  value : Int,
-) -> Unit raise PdfError {
-  if value < 0 {
-    raise SoftError("TrueType unsigned 32-bit value out of range")
-  }
-  output.push(pdf_byte_of_int((value >> 24) & 0xFF))
-  output.push(pdf_byte_of_int((value >> 16) & 0xFF))
-  output.push(pdf_byte_of_int((value >> 8) & 0xFF))
-  output.push(pdf_byte_of_int(value & 0xFF))
-}
-
-///|
 fn pdf_truetype_write_u16_at(
   output : Array[Byte],
   position : Int,
@@ -466,33 +440,53 @@ fn pdf_truetype_write_u32_at(
 }
 
 ///|
-fn pdf_truetype_push_u32_uint(
+fn pdf_truetype_write_u32_uint_at(
   output : Array[Byte],
+  position : Int,
   value : UInt,
-) -> Unit raise PdfError {
-  output.push(pdf_byte_of_int((value >> 24).reinterpret_as_int()))
-  output.push(pdf_byte_of_int(((value >> 16) & 0xFFU).reinterpret_as_int()))
-  output.push(pdf_byte_of_int(((value >> 8) & 0xFFU).reinterpret_as_int()))
-  output.push(pdf_byte_of_int((value & 0xFFU).reinterpret_as_int()))
+) -> Int raise PdfError {
+  output[position] = pdf_byte_of_int((value >> 24).reinterpret_as_int())
+  output[position + 1] = pdf_byte_of_int(
+    ((value >> 16) & 0xFFU).reinterpret_as_int(),
+  )
+  output[position + 2] = pdf_byte_of_int(
+    ((value >> 8) & 0xFFU).reinterpret_as_int(),
+  )
+  output[position + 3] = pdf_byte_of_int((value & 0xFFU).reinterpret_as_int())
+  position + 4
 }
 
 ///|
-fn pdf_truetype_push_tag(
+fn pdf_truetype_write_tag_at(
   output : Array[Byte],
+  position : Int,
   tag : String,
-) -> Unit raise PdfError {
+) -> Int raise PdfError {
   let bytes = @ascii.encode(tag)
   for index in 0..<4 {
-    output.push(
-      pdf_byte_of_int(
-        if index < bytes.length() {
-          bytes[index].to_int()
-        } else {
-          32
-        },
-      ),
+    output[position + index] = pdf_byte_of_int(
+      if index < bytes.length() {
+        bytes[index].to_int()
+      } else {
+        32
+      },
     )
   }
+  position + 4
+}
+
+///|
+fn pdf_truetype_write_view_at(
+  output : Array[Byte],
+  position : Int,
+  bytes : BytesView,
+) -> Int {
+  let mut position = position
+  for byte in bytes {
+    output[position] = byte
+    position += 1
+  }
+  position
 }
 
 ///|
@@ -1291,28 +1285,31 @@ pub fn pdf_truetype_subset_font(
   let (records, payloads) = pdf_truetype_subset_font_directory(
     data, sorted_tables, subset_codepoints, rewrite_cmap,
   )
-  let output : Array[Byte] = []
   let table_count = records.length()
   let search_power = pdf_truetype_power_two_leq(table_count)
-  pdf_truetype_push_u16(output, major)
-  pdf_truetype_push_u16(output, minor)
-  pdf_truetype_push_u16(output, table_count)
-  pdf_truetype_push_u16(output, 16 * search_power)
-  pdf_truetype_push_u16(
+  let mut output_length = 12 + table_count * 16
+  for payload in payloads {
+    output_length += payload.bytes.length()
+  }
+  let output = Array::make(output_length, b'\x00')
+  let mut position = pdf_truetype_write_u16_at(output, 0, major)
+  position = pdf_truetype_write_u16_at(output, position, minor)
+  position = pdf_truetype_write_u16_at(output, position, table_count)
+  position = pdf_truetype_write_u16_at(output, position, 16 * search_power)
+  position = pdf_truetype_write_u16_at(
     output,
+    position,
     pdf_truetype_source_entry_selector(search_power),
   )
-  pdf_truetype_push_u16(output, table_count * 16)
+  position = pdf_truetype_write_u16_at(output, position, table_count * 16)
   for record in records {
-    pdf_truetype_push_tag(output, record.tag)
-    pdf_truetype_push_u32_uint(output, record.checksum)
-    pdf_truetype_push_u32(output, record.offset)
-    pdf_truetype_push_u32(output, record.length)
+    position = pdf_truetype_write_tag_at(output, position, record.tag)
+    position = pdf_truetype_write_u32_uint_at(output, position, record.checksum)
+    position = pdf_truetype_write_u32_at(output, position, record.offset)
+    position = pdf_truetype_write_u32_at(output, position, record.length)
   }
   for payload in payloads {
-    for byte in payload.bytes {
-      output.push(byte)
-    }
+    position = pdf_truetype_write_view_at(output, position, payload.bytes)
   }
   Bytes::from_array(output)
 }

@@ -10231,6 +10231,16 @@ Current backend snapshot:
   test --target native pdf_truetype_test.mbt` reports 27/27; `moon check
   --target all --warn-list +73` passes with the known notice; `moon test
   --target native` reports 2432/2432.~~
+- [x] ~~Continue source-port hardening with TrueType subset font assembly
+  allocation slice: `pdf_truetype_subset_font` now totals the rewritten table
+  directory plus padded payload sizes first, allocates the exact subset font
+  length, and writes the header, table records, checksums, offsets, lengths,
+  and payload bytes by index instead of growing a temporary array. Validation
+  on MoonBit compiler 0.9.3: `moon check --target native --warn-list +73`
+  passes with the known notice; focused `subset_font` tests report 2/2; `moon
+  test --target native pdf_truetype_test.mbt` reports 27/27; `moon check
+  --target all --warn-list +73` passes with the known notice; `moon test
+  --target native` reports 2432/2432.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
