@@ -10192,6 +10192,15 @@ Current backend snapshot:
   1/1; `moon test --target native pdf_create_test.mbt` reports 7/7; `moon check
   --target all --warn-list +73` passes with the known notice; `moon test
   --target native` reports 2432/2432.~~
+- [x] ~~Continue source-port hardening with JPEG cursor read allocation slice:
+  `ByteCursor::read_jpeg_data` now scans the remaining borrowed view for the
+  EOI marker, then reads the exact EOI-inclusive byte span once instead of
+  growing a temporary output array, preserving stuffed-byte handling, cursor
+  advancement, and EOF behavior on malformed JPEG data. Validation on MoonBit
+  compiler 0.9.3: `moon check --target native --warn-list +73` passes with the
+  known notice; `moon test --target native pdf_jpeg_test.mbt` reports 9/9;
+  `moon check --target all --warn-list +73` passes with the known notice; `moon
+  test --target native` reports 2432/2432.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
