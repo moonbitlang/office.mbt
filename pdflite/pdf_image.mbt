@@ -2541,12 +2541,14 @@ fn pdf_image_gray_8bpp_as_rgb24(
 ) -> PdfBytes raise PdfError {
   let pixels = width * height
   pdf_image_require_size(data, pixels)
-  let output : Array[Byte] = []
+  let output = Array::make(pixels * 3, b'\x00')
+  let mut position = 0
   for index in 0..<pixels {
     let value = data[index]
-    output.push(value)
-    output.push(value)
-    output.push(value)
+    output[position] = value
+    output[position + 1] = value
+    output[position + 2] = value
+    position += 3
   }
   Bytes::from_array(output)
 }
@@ -2559,7 +2561,8 @@ fn pdf_image_cmyk_8bpp_as_rgb24(
 ) -> PdfBytes raise PdfError {
   let pixels = width * height
   pdf_image_require_size(data, pixels * 4)
-  let output : Array[Byte] = []
+  let output = Array::make(pixels * 3, b'\x00')
+  let mut position = 0
   for index in 0..<pixels {
     let offset = index * 4
     let (red, green, blue) = pdf_image_rgb_of_cmyk(
@@ -2568,9 +2571,10 @@ fn pdf_image_cmyk_8bpp_as_rgb24(
       data[offset + 2].to_int(),
       data[offset + 3].to_int(),
     )
-    output.push(pdf_byte_of_int(red))
-    output.push(pdf_byte_of_int(green))
-    output.push(pdf_byte_of_int(blue))
+    output[position] = pdf_byte_of_int(red)
+    output[position + 1] = pdf_byte_of_int(green)
+    output[position + 2] = pdf_byte_of_int(blue)
+    position += 3
   }
   Bytes::from_array(output)
 }
