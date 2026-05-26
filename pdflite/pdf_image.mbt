@@ -2587,16 +2587,18 @@ fn pdf_image_1bpp_as_rgb24(
 ) -> PdfBytes raise PdfError {
   let bytes_per_row = (width + 7) / 8
   pdf_image_require_size(data, bytes_per_row * height)
-  let output : Array[Byte] = []
+  let output = Array::make(width * height * 3, b'\x00')
+  let mut position = 0
   for row in 0..<height {
     let row_offset = row * bytes_per_row
     for column in 0..<width {
       let byte = data[row_offset + column / 8].to_int()
       let bit = (byte >> (7 - column % 8)) & 1
       let value : Byte = if bit == 1 { 255 } else { 0 }
-      output.push(value)
-      output.push(value)
-      output.push(value)
+      output[position] = value
+      output[position + 1] = value
+      output[position + 2] = value
+      position += 3
     }
   }
   Bytes::from_array(output)
@@ -2636,7 +2638,8 @@ fn pdf_image_gray_packed_bpp_as_rgb24(
   let bytes_per_row = pdf_image_packed_bytes_per_row(width, bits_per_component)
   pdf_image_require_size(data, bytes_per_row * height)
   let max_sample = (1 << bits_per_component) - 1
-  let output : Array[Byte] = []
+  let output = Array::make(width * height * 3, b'\x00')
+  let mut position = 0
   for row in 0..<height {
     let row_offset = row * bytes_per_row
     for column in 0..<width {
@@ -2644,9 +2647,10 @@ fn pdf_image_gray_packed_bpp_as_rgb24(
         data, row_offset, column, bits_per_component,
       )
       let value = (sample * 255 / max_sample).to_byte()
-      output.push(value)
-      output.push(value)
-      output.push(value)
+      output[position] = value
+      output[position + 1] = value
+      output[position + 2] = value
+      position += 3
     }
   }
   Bytes::from_array(output)
