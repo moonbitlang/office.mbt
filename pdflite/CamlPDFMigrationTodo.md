@@ -10309,6 +10309,16 @@ Current backend snapshot:
   --target all --warn-list +73` passes with the known notice; `moon test
   --target native .` reports 2010/2010; `moon info` and `moon fmt` completed
   with no `.mbti` diff.~~
+- [x] ~~Continue source-port hardening with reader whitespace-token allocation
+  slice: `pdf_split_whitespace_tokens` now pre-counts whitespace-separated
+  tokens for the current byte view and creates its borrowed-token result array
+  with that exact capacity instead of growing from zero, preserving tokenized
+  classic xref row parsing and malformed-row handling. Validation on MoonBit
+  compiler 0.9.3: `moon check --target native --warn-list +73` passes with the
+  known notice; focused `pdf_reader_test.mbt --filter '*xref rows*'` reports
+  4/4; `moon check --target all --warn-list +73` passes with the known notice;
+  `moon test --target native .` reports 2010/2010; `moon info` and `moon fmt`
+  completed with no `.mbti` diff.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

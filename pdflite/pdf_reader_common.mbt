@@ -106,8 +106,29 @@ fn pdf_parse_ascii_int_view(view : BytesView) -> Int raise PdfError {
 }
 
 ///|
+fn pdf_count_whitespace_tokens(view : BytesView) -> Int {
+  let mut count = 0
+  let mut index = 0
+  while index < view.length() {
+    while index < view.length() && pdf_is_whitespace_byte(view[index].to_int()) {
+      index += 1
+    }
+    let start = index
+    while index < view.length() && !pdf_is_whitespace_byte(view[index].to_int()) {
+      index += 1
+    }
+    if start < index {
+      count += 1
+    }
+  }
+  count
+}
+
+///|
 fn pdf_split_whitespace_tokens(view : BytesView) -> Array[BytesView] {
-  let tokens : Array[BytesView] = []
+  let tokens : Array[BytesView] = Array::new(
+    capacity=pdf_count_whitespace_tokens(view),
+  )
   let mut index = 0
   while index < view.length() {
     while index < view.length() && pdf_is_whitespace_byte(view[index].to_int()) {
