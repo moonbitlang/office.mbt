@@ -10331,6 +10331,18 @@ Current backend snapshot:
   check --target all --warn-list +73` passes with the known notice; `moon test
   --target native .` reports 2010/2010; `moon info` and `moon fmt` completed
   with no `.mbti` diff.~~
+- [x] ~~Continue source-port hardening with object-stream offset allocation
+  slice: `pdf_object_stream_number_offsets` now allocates object-number/offset
+  pairs from the declared `/N` count, and `pdf_object_stream_end_offsets` now
+  allocates its sortable offset-index list from the parsed pair count instead
+  of growing from zero, preserving malformed object-stream header checks,
+  duplicate offsets, stream object members, and embedded object loading.
+  Validation on MoonBit compiler 0.9.3: `moon check --target native --warn-list
+  +73` passes with the known notice; focused `pdflite_wbtest.mbt --filter
+  '*object stream*'` reports 1/1; focused `pdf_reader_test.mbt --filter
+  '*object stream*'` reports 5/5; `moon check --target all --warn-list +73`
+  passes with the known notice; `moon test --target native .` reports
+  2010/2010; `moon info` and `moon fmt` completed with no `.mbti` diff.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

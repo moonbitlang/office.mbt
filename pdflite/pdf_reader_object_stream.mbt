@@ -23,7 +23,7 @@ fn pdf_object_stream_number_offsets(
   if values.length() < count * 2 {
     raise XRefEntryExpected
   }
-  let pairs : Array[(Int, Int)] = []
+  let pairs : Array[(Int, Int)] = Array::new(capacity=count)
   for i in 0..<count {
     match (values[i * 2], values[i * 2 + 1]) {
       (PdfInteger(object_number), PdfInteger(offset)) if object_number > 0 &&
@@ -41,7 +41,7 @@ fn pdf_object_stream_end_offsets(
   first : Int,
 ) -> Array[Int] {
   let default_end = data_length - first
-  let sorted : Array[(Int, Int)] = []
+  let sorted : Array[(Int, Int)] = Array::new(capacity=pairs.length())
   for index = 0; index < pairs.length(); index = index + 1 {
     sorted.push((pairs[index].1, index))
   }
