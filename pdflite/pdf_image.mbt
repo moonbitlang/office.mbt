@@ -2752,21 +2752,24 @@ fn pdf_image_indexed_lookup(
 ///|
 fn pdf_image_rgb_indexed_value(
   output : Array[Byte],
+  position : Int,
   table : ArrayView[(Int, Array[Int])],
   index : Int,
-) -> Unit raise PdfError {
+) -> Int raise PdfError {
   let values = pdf_image_indexed_lookup(table, index, 3)
-  output.push(pdf_byte_of_int(values[0]))
-  output.push(pdf_byte_of_int(values[1]))
-  output.push(pdf_byte_of_int(values[2]))
+  output[position] = pdf_byte_of_int(values[0])
+  output[position + 1] = pdf_byte_of_int(values[1])
+  output[position + 2] = pdf_byte_of_int(values[2])
+  position + 3
 }
 
 ///|
 fn pdf_image_cmyk_indexed_value(
   output : Array[Byte],
+  position : Int,
   table : ArrayView[(Int, Array[Int])],
   index : Int,
-) -> Unit raise PdfError {
+) -> Int raise PdfError {
   let values = pdf_image_indexed_lookup(table, index, 4)
   let (red, green, blue) = pdf_image_rgb_of_cmyk(
     values[0],
@@ -2774,9 +2777,10 @@ fn pdf_image_cmyk_indexed_value(
     values[2],
     values[3],
   )
-  output.push(pdf_byte_of_int(red))
-  output.push(pdf_byte_of_int(green))
-  output.push(pdf_byte_of_int(blue))
+  output[position] = pdf_byte_of_int(red)
+  output[position + 1] = pdf_byte_of_int(green)
+  output[position + 2] = pdf_byte_of_int(blue)
+  position + 3
 }
 
 ///|
@@ -2856,9 +2860,15 @@ fn pdf_image_indexed_8bpp_as_rgb24(
 ) -> PdfBytes raise PdfError {
   let pixels = width * height
   pdf_image_require_size(data, pixels)
-  let output : Array[Byte] = []
+  let output = Array::make(pixels * 3, b'\x00')
+  let mut position = 0
   for index in 0..<pixels {
-    pdf_image_rgb_indexed_value(output, table, data[index].to_int())
+    position = pdf_image_rgb_indexed_value(
+      output,
+      position,
+      table,
+      data[index].to_int(),
+    )
   }
   Bytes::from_array(output)
 }
@@ -2952,9 +2962,15 @@ fn pdf_image_cmyk_indexed_8bpp_as_rgb24(
 ) -> PdfBytes raise PdfError {
   let pixels = width * height
   pdf_image_require_size(data, pixels)
-  let output : Array[Byte] = []
+  let output = Array::make(pixels * 3, b'\x00')
+  let mut position = 0
   for index in 0..<pixels {
-    pdf_image_cmyk_indexed_value(output, table, data[index].to_int())
+    position = pdf_image_cmyk_indexed_value(
+      output,
+      position,
+      table,
+      data[index].to_int(),
+    )
   }
   Bytes::from_array(output)
 }
@@ -2969,14 +2985,15 @@ fn pdf_image_indexed_packed_bpp_as_rgb24(
 ) -> PdfBytes raise PdfError {
   let bytes_per_row = pdf_image_packed_bytes_per_row(width, bits_per_component)
   pdf_image_require_size(data, bytes_per_row * height)
-  let output : Array[Byte] = []
+  let output = Array::make(width * height * 3, b'\x00')
+  let mut position = 0
   for row in 0..<height {
     let row_offset = row * bytes_per_row
     for column in 0..<width {
       let index = pdf_image_packed_sample(
         data, row_offset, column, bits_per_component,
       )
-      pdf_image_rgb_indexed_value(output, table, index)
+      position = pdf_image_rgb_indexed_value(output, position, table, index)
     }
   }
   Bytes::from_array(output)
@@ -3022,14 +3039,15 @@ fn pdf_image_cmyk_indexed_packed_bpp_as_rgb24(
 ) -> PdfBytes raise PdfError {
   let bytes_per_row = pdf_image_packed_bytes_per_row(width, bits_per_component)
   pdf_image_require_size(data, bytes_per_row * height)
-  let output : Array[Byte] = []
+  let output = Array::make(width * height * 3, b'\x00')
+  let mut position = 0
   for row in 0..<height {
     let row_offset = row * bytes_per_row
     for column in 0..<width {
       let index = pdf_image_packed_sample(
         data, row_offset, column, bits_per_component,
       )
-      pdf_image_cmyk_indexed_value(output, table, index)
+      position = pdf_image_cmyk_indexed_value(output, position, table, index)
     }
   }
   Bytes::from_array(output)

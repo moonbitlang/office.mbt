@@ -10108,6 +10108,17 @@ Current backend snapshot:
   pdf_image_test.mbt` reports 55/55; `moon check --target all --warn-list +73`
   passes with the known notice; `moon test --target native` reports
   2431/2431.~~
+- [x] ~~Continue source-port hardening with indexed RGB/CMYK image output
+  allocation slice: indexed RGB and CMYK 8bpp/packed conversion paths now
+  allocate exact `pixels * 3` RGB output buffers and write table-derived
+  component triples by index instead of growing temporary arrays, preserving
+  Indexed DeviceRGB/DeviceCMYK lookup tables, packed sample extraction, Decode
+  handling, and `get_image_24bpp` output. Validation on MoonBit compiler 0.9.3:
+  `moon check --target native --warn-list +73` passes with the known notice;
+  focused indexed image-table tests report 1/1; `moon test --target native
+  pdf_image_test.mbt` reports 55/55; `moon check --target all --warn-list +73`
+  passes with the known notice; `moon test --target native` reports
+  2431/2431.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
