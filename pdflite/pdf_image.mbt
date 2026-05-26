@@ -2445,9 +2445,9 @@ fn pdf_image_decode_interpolate(
 
 ///|
 fn pdf_image_apply_1bpp_decode(data : BytesView) -> PdfBytes {
-  let output : Array[Byte] = []
-  for value in data {
-    output.push((value.to_int() ^ 0xFF).to_byte())
+  let output = Array::make(data.length(), b'\x00')
+  for index, value in data {
+    output[index] = (value.to_int() ^ 0xFF).to_byte()
   }
   Bytes::from_array(output)
 }
@@ -2458,17 +2458,15 @@ fn pdf_image_apply_8bpp_decode(
   values : ArrayView[Double],
 ) -> PdfBytes raise PdfError {
   let components = values.length() / 2
-  let output : Array[Byte] = []
+  let output = Array::make(data.length(), b'\x00')
   for index in 0..<data.length() {
     let component = index % components
-    output.push(
-      pdf_byte_of_int(
-        pdf_image_decode_interpolate(
-          values[component * 2],
-          values[component * 2 + 1],
-          data[index].to_int(),
-          8,
-        ),
+    output[index] = pdf_byte_of_int(
+      pdf_image_decode_interpolate(
+        values[component * 2],
+        values[component * 2 + 1],
+        data[index].to_int(),
+        8,
       ),
     )
   }
