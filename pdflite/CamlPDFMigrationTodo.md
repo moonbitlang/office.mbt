@@ -10378,6 +10378,17 @@ Current backend snapshot:
   pdf_reader_test.mbt --filter '*classic*'`, `moon test --target wasm-gc
   pdf_reader_test.mbt --filter '*classic*'`, and `moon test --target js
   pdf_reader_test.mbt --filter '*classic*'` each report 38/38.~~
+- [x] ~~Continue source-port hardening with object traversal allocation slice:
+  `PdfObjects::parsed_entries` and `PdfDocument::select_object_numbers` now
+  reserve from known object-table counts, and `PdfObjects::stream_entries`
+  scans object entries directly instead of materializing an intermediate parsed
+  entries array. This reduces allocator churn in object-selection, stream
+  iteration, decompression, recrypt, squeeze, utility export, and other
+  document-wide passes without changing public APIs. Validation on MoonBit
+  compiler 0.9.3: `moon check --target native --warn-list +73` passes with the
+  known notice; `moon test --target native pdf_document_test.mbt`, `moon test
+  --target wasm-gc pdf_document_test.mbt`, and `moon test --target js
+  pdf_document_test.mbt` each report 23/23.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
