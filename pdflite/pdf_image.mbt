@@ -2836,19 +2836,21 @@ fn pdf_image_rgb_of_xyz(
 ///|
 fn pdf_image_lab_indexed_value(
   output : Array[Byte],
+  position : Int,
   table : ArrayView[(Int, Array[Int])],
   index : Int,
   white : PdfTristimulusPoint,
-) -> Unit raise PdfError {
+) -> Int raise PdfError {
   let values = pdf_image_indexed_lookup(table, index, 3)
   let lightness = (values[0] - 127).to_double() / 255.0
   let a = (values[1] - 127).to_double() / 255.0
   let b = (values[2] - 127).to_double() / 255.0
   let (x, y, z) = pdf_image_xyz_of_lab(lightness, a, b, white)
   let (red, green, blue) = pdf_image_rgb_of_xyz(x, y, z)
-  output.push(pdf_byte_of_int((red * 255.0).to_int()))
-  output.push(pdf_byte_of_int((green * 255.0).to_int()))
-  output.push(pdf_byte_of_int((blue * 255.0).to_int()))
+  output[position] = pdf_byte_of_int((red * 255.0).to_int())
+  output[position + 1] = pdf_byte_of_int((green * 255.0).to_int())
+  output[position + 2] = pdf_byte_of_int((blue * 255.0).to_int())
+  position + 3
 }
 
 ///|
@@ -2883,9 +2885,16 @@ fn pdf_image_lab_indexed_8bpp_as_rgb24(
 ) -> PdfBytes raise PdfError {
   let pixels = width * height
   pdf_image_require_size(data, pixels)
-  let output : Array[Byte] = []
+  let output = Array::make(pixels * 3, b'\x00')
+  let mut position = 0
   for index in 0..<pixels {
-    pdf_image_lab_indexed_value(output, table, data[index].to_int(), white)
+    position = pdf_image_lab_indexed_value(
+      output,
+      position,
+      table,
+      data[index].to_int(),
+      white,
+    )
   }
   Bytes::from_array(output)
 }
@@ -2901,14 +2910,17 @@ fn pdf_image_lab_indexed_packed_bpp_as_rgb24(
 ) -> PdfBytes raise PdfError {
   let bytes_per_row = pdf_image_packed_bytes_per_row(width, bits_per_component)
   pdf_image_require_size(data, bytes_per_row * height)
-  let output : Array[Byte] = []
+  let output = Array::make(width * height * 3, b'\x00')
+  let mut position = 0
   for row in 0..<height {
     let row_offset = row * bytes_per_row
     for column in 0..<width {
       let index = pdf_image_packed_sample(
         data, row_offset, column, bits_per_component,
       )
-      pdf_image_lab_indexed_value(output, table, index, white)
+      position = pdf_image_lab_indexed_value(
+        output, position, table, index, white,
+      )
     }
   }
   Bytes::from_array(output)
