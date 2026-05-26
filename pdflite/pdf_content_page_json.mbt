@@ -1,18 +1,4 @@
 ///|
-fn pdf_content_page_contains(
-  page_numbers : ArrayView[Int],
-  page_number : Int,
-) -> Bool {
-  for selected in page_numbers {
-    if selected == page_number {
-      break true
-    }
-  } nobreak {
-    false
-  }
-}
-
-///|
 fn pdf_content_page_number_json(page_number : Int) -> Json {
   Json::number(page_number.to_double(), repr=page_number.to_string())
 }
@@ -141,11 +127,12 @@ pub fn PdfDocument::test_extract_text(
     pages.length(),
     "test_extract_text",
   )
-  let page_texts : Array[PdfBytes] = []
+  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let page_texts : Array[PdfBytes] = Array::new(capacity=pages.length())
   let mut output_length = pages.length()
   for index in 0..<pages.length() {
     let page_number = index + 1
-    if pdf_content_page_contains(page_numbers, page_number) {
+    if selected_pages.contains(page_number) {
       let text = pdf_content_extracted_text_of_entries(
         self.content_entries_of_page(pages[index]),
       )
@@ -206,10 +193,11 @@ pub fn PdfDocument::page_content_json(
     pages.length(),
     "page_content_json",
   )
-  let output : Array[Json] = []
+  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let output : Array[Json] = Array::new(capacity=page_numbers.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
-    if pdf_content_page_contains(page_numbers, page_number) {
+    if selected_pages.contains(page_number) {
       output.push(
         Json::object(
           Map([

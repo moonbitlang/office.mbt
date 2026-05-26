@@ -10469,6 +10469,15 @@ Current backend snapshot:
   pdf_draw_test.mbt pdf_bookmark_test.mbt pdf_page_box_test.mbt`, and `moon test
   --target js pdf_draw_test.mbt pdf_bookmark_test.mbt pdf_page_box_test.mbt`
   each report 101/101.~~
+- [x] ~~Continue source-port hardening with content page-selection tuning:
+  `test_extract_text` and `page_content_json` now build one `PdfNumberSet` per
+  operation, preallocate selected page text/JSON arrays from known page or
+  selection counts, and no longer keep a private linear page-membership helper.
+  Validation on MoonBit compiler 0.9.3: `moon check --target native --warn-list
+  +73` passes with the known notice; `moon test --target native
+  pdf_content_page_json_test.mbt`, `moon test --target wasm-gc
+  pdf_content_page_json_test.mbt`, and `moon test --target js
+  pdf_content_page_json_test.mbt` each report 2/2.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
