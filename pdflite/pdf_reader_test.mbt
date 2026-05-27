@@ -95,7 +95,9 @@ fn reader_png_none_predictor_rows_for_test(
   columns : Int,
 ) -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
-  for row_start = 0; row_start < data.length(); row_start = row_start + columns {
+  let row_count = (data.length() + columns - 1) / columns
+  for row in 0..<row_count {
+    let row_start = row * columns
     output.push(0)
     let row_end = if row_start + columns > data.length() {
       data.length()
@@ -333,7 +335,7 @@ fn reader_classic_pdf_without_trailer_after_xref() -> @pdflite.PdfBytes {
   let xref_offset = output.length()
   reader_push_ascii(output, "xref\n0 1\n0000000000 65535 f \n")
   let digits = @ascii.encode(xref_offset.to_string())
-  for i = 0; i < digits.length(); i = i + 1 {
+  for i in 0..<digits.length() {
     output[xref_digits_position + 10 - digits.length() + i] = digits[i]
   }
   Bytes::from_array(output)

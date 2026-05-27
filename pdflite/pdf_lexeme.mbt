@@ -147,7 +147,7 @@ fn pdf_number_view_without_double_minus(view : BytesView) -> BytesView {
 
 ///|
 fn pdf_number_view_has_real_marker(view : BytesView) -> Bool {
-  for i = 0; i < view.length(); i = i + 1 {
+  for i in 0..<view.length() {
     let value = view[i].to_int()
     if value == 46 || value == 69 || value == 101 {
       break true
@@ -603,7 +603,7 @@ fn ByteCursor::matches_pdf_ascii_at(
   if position < 0 || position + values.length() > self.data.length() {
     false
   } else {
-    for i = 0; i < values.length(); i = i + 1 {
+    for i in 0..<values.length() {
       if self.data[position + i].to_int() != values[i] {
         break false
       }
