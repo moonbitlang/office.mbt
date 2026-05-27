@@ -10582,6 +10582,18 @@ Current backend snapshot:
   with the known notice; `moon test --target native pdf_image_test.mbt
   image/fixture_acceptance` reports 78/78; the same focused suite on `wasm-gc`
   and `js` reports 56/56 on each backend.~~
+- [x] ~~Continue source-port hardening with content parsing/operator allocation
+  tuning: extracted-text chunk buffering, raw content-stream reads, numeric
+  operand parsing, inline TJ-array normalization, ExtGState dash arrays,
+  text-show glyph entries, and content JSON operator-entry collectors now
+  preallocate from entry, stream, operand, glyph, or operator counts while
+  preserving cpdf output ordering. Validation on MoonBit compiler 0.9.3:
+  `moon check --target native --warn-list +73` passes with the known notice;
+  `moon test --target native pdf_content_test.mbt pdf_content_page_json_test.mbt
+  pdf_content_operator_state_test.mbt pdf_content_state_test.mbt
+  pdf_content_path_machine_test.mbt pdf_content_text_test.mbt
+  pdf_content_shading_test.mbt`, and the same focused suite on `wasm-gc` and
+  `js`, each report 127/127.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

@@ -575,7 +575,7 @@ fn PdfDocument::content_extgstate_dash_array(
 ) -> Array[Double] raise PdfError {
   match self.direct(object) {
     PdfArray(values) => {
-      let output : Array[Double] = []
+      let output : Array[Double] = Array::new(capacity=values.length())
       for value in values {
         output.push(self.get_number(value))
       }
@@ -1139,7 +1139,9 @@ pub fn PdfContentOperatorState::content_apply_text_show_op(
 ) -> PdfContentOperatorTextResult raise PdfError {
   let text_result = self.text_state.content_apply_text_op(font, self.ctm, op)
   let state = { ..self, text_state: text_result.text_state }
-  let entries : Array[PdfContentJsonEntry] = []
+  let entries : Array[PdfContentJsonEntry] = Array::new(
+    capacity=text_result.glyphs.length(),
+  )
   for glyph in text_result.glyphs {
     entries.push(state.content_text_glyph_entry(font, glyph))
   }
@@ -1823,7 +1825,7 @@ pub fn PdfDocument::content_entries_of_ops(
     mediabox.max_x,
     mediabox.max_y,
   )
-  let entries : Array[PdfContentJsonEntry] = []
+  let entries : Array[PdfContentJsonEntry] = Array::new(capacity=ops.length())
   for op in ops {
     let result = self.content_apply_resource_op(state, resources, op)
     entries.append(result.entries)
@@ -1887,7 +1889,7 @@ fn PdfDocument::content_entries_of_ops_recursive_from_state(
   ops : ArrayView[PdfContentOp],
 ) -> PdfContentOperatorResourceResult raise PdfError {
   let mut state = initial
-  let entries : Array[PdfContentJsonEntry] = []
+  let entries : Array[PdfContentJsonEntry] = Array::new(capacity=ops.length())
   for op in ops {
     match op {
       Op_Do(name) =>

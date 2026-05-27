@@ -92,7 +92,7 @@ pub fn pdf_content_filter(
 fn pdf_content_extracted_text_of_entries(
   entries : ArrayView[PdfContentJsonEntry],
 ) -> PdfBytes {
-  let chunks : Array[PdfBytes] = []
+  let chunks : Array[PdfBytes] = Array::new(capacity=entries.length())
   let mut output_length = 0
   for entry in entries {
     match entry.object {
