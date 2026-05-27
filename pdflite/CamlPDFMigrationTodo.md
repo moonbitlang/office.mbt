@@ -10562,6 +10562,16 @@ Current backend snapshot:
   --target native pdf_composition_test.mbt pdf_debug_test.mbt`, `moon test
   --target wasm-gc pdf_composition_test.mbt pdf_debug_test.mbt`, and `moon test
   --target js pdf_composition_test.mbt pdf_debug_test.mbt` each report 6/6.~~
+- [x] ~~Continue source-port hardening with coordinate/content-text allocation
+  tuning: coordinate tokenization, unit-number parsing, per-page coordinate
+  rectangle/point parsing, two-byte charcode decoding, content text font-cache
+  updates, and Tj/TJ glyph layout now preallocate from byte, token, page,
+  cache, charcode, or TJ-element counts. Validation on MoonBit compiler 0.9.3:
+  `moon check --target native --warn-list +73` passes with the known notice;
+  `moon test --target native pdf_coord_test.mbt pdf_content_text_test.mbt`,
+  `moon test --target wasm-gc pdf_coord_test.mbt pdf_content_text_test.mbt`,
+  and `moon test --target js pdf_coord_test.mbt pdf_content_text_test.mbt`
+  each report 20/20.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

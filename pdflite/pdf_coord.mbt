@@ -123,7 +123,7 @@ fn pdf_coord_number_end(bytes : BytesView, start : Int) -> Int {
 ///|
 fn pdf_coord_tokenize(text : String) -> Array[PdfCoordToken] {
   let bytes = @utf8.encode(pdf_coord_space_units(text))
-  let tokens : Array[PdfCoordToken] = []
+  let tokens : Array[PdfCoordToken] = Array::new(capacity=bytes.length())
   let mut index = 0
   while index < bytes.length() {
     let value = bytes[index].to_int()
@@ -337,7 +337,7 @@ fn pdf_coord_parse_units_tokens(
   source : String,
   tokens : ArrayView[PdfCoordToken],
 ) -> Array[Double] raise PdfError {
-  let numbers : Array[Double] = []
+  let numbers : Array[Double] = Array::new(capacity=tokens.length())
   let mut index = 0
   let mut done = false
   while index < tokens.length() && !done {
@@ -505,8 +505,9 @@ pub fn PdfDocument::parse_coordinate_rectangles(
   } else {
     (text, false)
   }
-  let output : Array[PdfCoordRectangle] = []
-  for page in self.pages_of_pagetree() {
+  let pages = self.pages_of_pagetree()
+  let output : Array[PdfCoordRectangle] = Array::new(capacity=pages.length())
+  for page in pages {
     let values = self.parse_units_string(page, source)
     match values {
       [x, y, width, height] =>
@@ -604,8 +605,9 @@ pub fn PdfDocument::parse_coordinates(
   text : String,
 ) -> Array[Point2] raise PdfError {
   let source = pdf_coord_preprocess_coordinates(text)
-  let output : Array[Point2] = []
-  for page in self.pages_of_pagetree() {
+  let pages = self.pages_of_pagetree()
+  let output : Array[Point2] = Array::new(capacity=pages.length())
+  for page in pages {
     let values = self.parse_units_string(page, source)
     match values {
       [x, y] => output.push(point2(x, y))

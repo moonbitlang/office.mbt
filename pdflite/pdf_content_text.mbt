@@ -3,7 +3,7 @@ fn pdf_content_two_byte_charcodes_or_empty(bytes : BytesView) -> Array[Int] {
   if bytes.length() % 2 != 0 {
     []
   } else {
-    let output : Array[Int] = []
+    let output : Array[Int] = Array::new(capacity=bytes.length() / 2)
     let mut index = 0
     while index < bytes.length() {
       let high = bytes[index].to_int()
@@ -299,7 +299,9 @@ fn pdf_content_text_font_cache_with(
   name : String,
   font : PdfFont,
 ) -> Array[PdfContentTextFontCacheEntry] {
-  let output : Array[PdfContentTextFontCacheEntry] = []
+  let output : Array[PdfContentTextFontCacheEntry] = Array::new(
+    capacity=cache.length() + 1,
+  )
   let mut found = false
   for entry in cache {
     if entry.name == name {
@@ -719,9 +721,12 @@ pub fn PdfFont::content_text_layout_of_bytes(
   let ascent = extra_metrics.0 / divisor
   let descent = extra_metrics.1 / divisor
   let vertical = self.content_is_vertical()
-  let glyphs : Array[PdfContentTextGlyphPlacement] = []
+  let charcodes = self.content_charcodes_of_bytes(text)
+  let glyphs : Array[PdfContentTextGlyphPlacement] = Array::new(
+    capacity=charcodes.length(),
+  )
   let mut text_matrix = layout.text_matrix
-  for charcode in self.content_charcodes_of_bytes(text) {
+  for charcode in charcodes {
     let current_layout = { ..layout, text_matrix, }
     let width_data = self.content_width_of_charcode(charcode)
     let width = width_data.0 / divisor
@@ -791,7 +796,9 @@ pub fn PdfFont::content_text_layout_of_tj_array(
   elements : ArrayView[PdfObject],
   layout : PdfContentTextLayout,
 ) -> PdfContentTextLayoutResult {
-  let glyphs : Array[PdfContentTextGlyphPlacement] = []
+  let glyphs : Array[PdfContentTextGlyphPlacement] = Array::new(
+    capacity=elements.length(),
+  )
   let vertical = self.content_is_vertical()
   let mut text_matrix = layout.text_matrix
   for element in elements {
