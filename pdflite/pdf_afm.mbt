@@ -106,7 +106,7 @@ fn pdf_afm_section_lines(
   start_marker : String,
   end_marker : String,
 ) -> Array[BytesView] {
-  let output : Array[BytesView] = []
+  let output : Array[BytesView] = Array::new(capacity=lines.length())
   let mut collecting = false
   let mut done = false
   for line in lines {
@@ -188,7 +188,9 @@ fn pdf_afm_kern(
 /// `PdfError::NumberExpected` for malformed metric sections.
 pub fn pdf_read_afm(data : BytesView) -> PdfAfmData raise PdfError {
   let lines = byte_cursor_of_view(data).read_line_views()
-  let headers : Array[(PdfBytes, PdfBytes)] = []
+  let headers : Array[(PdfBytes, PdfBytes)] = Array::new(
+    capacity=lines.length(),
+  )
   for line in lines {
     if pdf_afm_line_starts_with_ascii(line, "C ") {
       break
@@ -198,14 +200,23 @@ pub fn pdf_read_afm(data : BytesView) -> PdfAfmData raise PdfError {
       None => ()
     }
   }
-  let raw_metrics : Array[(PdfBytes, Int, Int)] = []
-  for line in pdf_afm_section_lines(lines, "StartCharMetrics", "EndCharMetrics") {
+  let metric_lines = pdf_afm_section_lines(
+    lines, "StartCharMetrics", "EndCharMetrics",
+  )
+  let raw_metrics : Array[(PdfBytes, Int, Int)] = Array::new(
+    capacity=metric_lines.length(),
+  )
+  for line in metric_lines {
     if pdf_afm_trim_line_end(line).length() >= 5 {
       raw_metrics.push(pdf_afm_char_metric(line))
     }
   }
-  let char_metrics : Array[(Int, Int)] = []
-  let char_name_widths : Array[(PdfBytes, Int)] = []
+  let char_metrics : Array[(Int, Int)] = Array::new(
+    capacity=raw_metrics.length(),
+  )
+  let char_name_widths : Array[(PdfBytes, Int)] = Array::new(
+    capacity=raw_metrics.length(),
+  )
   for metric in raw_metrics {
     let (name, char_number, width) = metric
     if char_number > -1 {
@@ -213,8 +224,11 @@ pub fn pdf_read_afm(data : BytesView) -> PdfAfmData raise PdfError {
     }
     char_name_widths.push((name, width))
   }
-  let kerns : Array[(Int, Int, Int)] = []
-  for line in pdf_afm_section_lines(lines, "StartKernPairs", "EndKernPairs") {
+  let kern_lines = pdf_afm_section_lines(
+    lines, "StartKernPairs", "EndKernPairs",
+  )
+  let kerns : Array[(Int, Int, Int)] = Array::new(capacity=kern_lines.length())
+  for line in kern_lines {
     if pdf_afm_trim_line_end(line).length() >= 5 {
       match pdf_afm_kern(line, raw_metrics) {
         Some(kern) => kerns.push(kern)

@@ -10655,6 +10655,15 @@ Current backend snapshot:
   pdf_text_test.mbt pdf_text_wbtest.mbt text/fixture_acceptance
   pdf_image_test.mbt image/fixture_acceptance` reports 411/411; the same
   focused suite on `wasm-gc` and `js` reports 385/385 on each backend.~~
+- [x] ~~Continue source-port hardening with AFM parser allocation tuning:
+  section-line extraction, header rows, raw character metric rows,
+  character-number widths, glyph-name widths, and kerning rows now preallocate
+  from total line, metric-line, raw-metric, or kern-line counts while
+  preserving byte-oriented glyph names and kerning lookup behavior. Validation
+  on MoonBit compiler 0.9.3: `moon check --target native --warn-list +73`
+  passes with the known notice; `moon test --target native pdf_afm_test.mbt
+  pdf_text_test.mbt pdf_addtext_test.mbt`, and the same focused suite on
+  `wasm-gc` and `js`, each report 273/273.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
