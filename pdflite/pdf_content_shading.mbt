@@ -67,11 +67,14 @@ let pdf_content_shading_pattern_type_name : PdfName = pdf_content_shading_name(
 )
 
 ///|
+/// Placeholder for a tiling pattern; detailed tiling-paint payloads are not
+/// expanded by the content reader yet.
 pub(all) enum PdfContentTiling {
   PdfContentTiling
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Function-based shading dictionary data.
 pub(all) struct PdfContentFunctionShading {
   funshading_domain : (Double, Double, Double, Double)
   funshading_matrix : TransformMatrix
@@ -79,6 +82,7 @@ pub(all) struct PdfContentFunctionShading {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Radial shading dictionary data.
 pub(all) struct PdfContentRadialShading {
   radialshading_coords : (Double, Double, Double, Double, Double, Double)
   radialshading_domain : (Double, Double)
@@ -87,6 +91,7 @@ pub(all) struct PdfContentRadialShading {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Axial shading dictionary data.
 pub(all) struct PdfContentAxialShading {
   axialshading_coords : (Double, Double, Double, Double)
   axialshading_domain : (Double, Double)
@@ -95,6 +100,7 @@ pub(all) struct PdfContentAxialShading {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Parsed shading kind selected from `/ShadingType`.
 pub(all) enum PdfContentShadingKind {
   PdfContentFunctionShading(PdfContentFunctionShading)
   PdfContentAxialShading(PdfContentAxialShading)
@@ -106,6 +112,8 @@ pub(all) enum PdfContentShadingKind {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Parsed shading with shared colour-space, matrix, graphics-state, and
+/// antialias metadata.
 pub(all) struct PdfContentShading {
   shading_colourspace : PdfObject
   shading_background : PdfObject?
@@ -117,6 +125,8 @@ pub(all) struct PdfContentShading {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Parsed pattern resource, either a tiling-pattern placeholder or a shading
+/// pattern.
 pub(all) enum PdfContentPattern {
   PdfContentColouredTilingPattern(PdfContentTiling)
   PdfContentUncolouredTilingPattern(PdfContentTiling)
@@ -239,6 +249,7 @@ fn PdfDocument::pdf_content_shading_extend(
 }
 
 ///|
+/// Read a `/ShadingType 1` function-based shading dictionary.
 pub fn PdfDocument::content_read_function_shading(
   self : PdfDocument,
   shading : PdfObject,
@@ -255,6 +266,7 @@ pub fn PdfDocument::content_read_function_shading(
 }
 
 ///|
+/// Read a `/ShadingType 3` radial shading dictionary.
 pub fn PdfDocument::content_read_radial_shading(
   self : PdfDocument,
   shading : PdfObject,
@@ -268,6 +280,7 @@ pub fn PdfDocument::content_read_radial_shading(
 }
 
 ///|
+/// Read a `/ShadingType 2` axial shading dictionary.
 pub fn PdfDocument::content_read_axial_shading(
   self : PdfDocument,
   shading : PdfObject,
@@ -281,6 +294,8 @@ pub fn PdfDocument::content_read_axial_shading(
 }
 
 ///|
+/// Read a shading dictionary and preserve the surrounding pattern matrix and
+/// graphics-state dictionary supplied by the caller.
 pub fn PdfDocument::content_read_shading(
   self : PdfDocument,
   shading_matrix : TransformMatrix,
@@ -320,6 +335,7 @@ pub fn PdfDocument::content_read_shading(
 }
 
 ///|
+/// Read a tiling pattern as the current placeholder representation.
 pub fn pdf_content_read_tiling_pattern(
   _pattern : PdfObject,
 ) -> PdfContentPattern {
@@ -327,6 +343,7 @@ pub fn pdf_content_read_tiling_pattern(
 }
 
 ///|
+/// Read a `/PatternType 2` shading pattern dictionary.
 pub fn PdfDocument::content_read_shading_pattern(
   self : PdfDocument,
   pattern : PdfObject,
@@ -347,6 +364,7 @@ pub fn PdfDocument::content_read_shading_pattern(
 }
 
 ///|
+/// Look up and read a named pattern resource.
 pub fn PdfDocument::content_read_pattern(
   self : PdfDocument,
   resources : PdfObject,
@@ -371,6 +389,7 @@ pub fn PdfDocument::content_read_pattern(
 }
 
 ///|
+/// Function wrapper for `PdfDocument::content_read_pattern`.
 pub fn pdf_content_read_pattern(
   document : PdfDocument,
   resources : PdfObject,
