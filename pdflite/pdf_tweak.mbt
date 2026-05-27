@@ -1020,7 +1020,7 @@ pub fn PdfDocument::append_page_content_multiple(
   let document = self.copy()
   let pages = document.pages_of_pagetree()
   pdf_tweak_validate_page_count(contents.length(), pages.length())
-  let rewritten : Array[PdfPage] = []
+  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     rewritten.push(
       document.pdf_tweak_append_page_content_page(
@@ -1068,7 +1068,7 @@ pub fn PdfDocument::append_page_content_multiple_ops(
   let document = self.copy()
   let pages = document.pages_of_pagetree()
   pdf_tweak_validate_page_count(op_lists.length(), pages.length())
-  let rewritten : Array[PdfPage] = []
+  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     rewritten.push(
       document.pdf_tweak_append_page_content_ops_page(

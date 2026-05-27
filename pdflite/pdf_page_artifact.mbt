@@ -97,8 +97,9 @@ pub fn PdfDocument::remove_struct_tree(
   document.remove_dict_entry_everywhere(pdf_structure_struct_tree_root_key())
   document.remove_dict_entry_everywhere(pdf_page_struct_parent_key())
   document.remove_dict_entry_everywhere(pdf_page_struct_parents_key())
-  let rewritten : Array[PdfPage] = []
-  for page in document.pages_of_pagetree() {
+  let pages = document.pages_of_pagetree()
+  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
+  for page in pages {
     rewritten.push(document.pdf_page_remove_struct_tree_page(page))
   }
   document.change_pages(rewritten, change_references=true)
@@ -118,8 +119,9 @@ pub fn PdfDocument::mark_all_as_artifact(
   self : PdfDocument,
 ) -> PdfDocument raise PdfError {
   let document = self.copy()
-  let rewritten : Array[PdfPage] = []
-  for page in document.pages_of_pagetree() {
+  let pages = document.pages_of_pagetree()
+  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
+  for page in pages {
     rewritten.push(document.pdf_page_mark_all_as_artifact_page(page))
   }
   document.change_pages(rewritten, change_references=true)

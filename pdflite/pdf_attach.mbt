@@ -714,7 +714,7 @@ pub fn PdfDocument::remove_attached_files(
 ) -> PdfDocument raise PdfError {
   let document = self.copy()
   let pages = document.pages_of_pagetree()
-  let rewritten : Array[PdfPage] = []
+  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
   for page in pages {
     rewritten.push(document.pdf_attach_remove_from_page(page))
   }

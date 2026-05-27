@@ -10525,6 +10525,15 @@ Current backend snapshot:
   with the known notice; `moon test --target native pdf_addtext_test.mbt`,
   `moon test --target wasm-gc pdf_addtext_test.mbt`, and `moon test --target
   js pdf_addtext_test.mbt` each report 118/118.~~
+- [x] ~~Continue source-port hardening with remaining page-rewrite allocation
+  tuning: attachment removal, annotation JSON import, structure/artifact page
+  cleanup, multi-page content append, and util precombine now preallocate
+  rewritten page arrays from page count, leaving no zero-capacity `PdfPage`
+  rewrite arrays in root MoonBit files. Validation on MoonBit compiler 0.9.3:
+  `moon check --target native --warn-list +73` passes with the known notice;
+  `moon test --target native pdf_attach_test.mbt pdf_annotation_test.mbt
+  pdf_page_artifact_test.mbt pdf_tweak_test.mbt pdf_util_test.mbt`, `moon test
+  --target wasm-gc ...`, and `moon test --target js ...` each report 91/91.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

@@ -1316,7 +1316,7 @@ fn PdfDocument::pdf_annotation_json_import_pages(
   } else {
     let page_reference_numbers = self.page_reference_numbers()
     let pages = self.pages_of_pagetree()
-    let rewritten : Array[PdfPage] = []
+    let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
     for index, page in pages {
       let page_number = index + 1
       let imported = self.pdf_annotation_json_import_rows_for_page(
