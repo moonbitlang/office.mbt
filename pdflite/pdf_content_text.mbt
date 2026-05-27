@@ -225,6 +225,7 @@ pub fn pdf_content_is_vertical(font : PdfFont) -> Bool {
 }
 
 ///|
+/// Cached font resource resolved while interpreting text operators.
 pub(all) struct PdfContentTextFontCacheEntry {
   name : String
   font : PdfFont
@@ -249,6 +250,7 @@ pub(all) struct PdfContentTextState {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Result of applying a text operator to the current text state.
 pub(all) struct PdfContentTextOpResult {
   text_state : PdfContentTextState
   glyphs : Array[PdfContentTextGlyphPlacement]
@@ -281,6 +283,7 @@ pub fn pdf_content_initial_text_state() -> PdfContentTextState {
 }
 
 ///|
+/// Return a previously resolved font resource by resource name.
 pub fn PdfContentTextState::content_cached_font(
   self : PdfContentTextState,
   name : String,
@@ -318,6 +321,7 @@ fn pdf_content_text_font_cache_with(
 }
 
 ///|
+/// Cache a resolved font resource and make it the current text font.
 pub fn PdfContentTextState::content_cache_font(
   self : PdfContentTextState,
   name : String,
