@@ -125,9 +125,12 @@ fn PdfDocument::pdf_squeeze_skip_duplicate_candidate(
 fn PdfDocument::pdf_squeeze_duplicate_object_changes(
   self : PdfDocument,
 ) -> Array[(Int, Int)] raise PdfError {
-  let unique : Array[PdfSqueezeDuplicateCandidate] = []
-  let changes : Array[(Int, Int)] = []
-  for entry in self.parsed_object_entries() {
+  let entries = self.parsed_object_entries()
+  let unique : Array[PdfSqueezeDuplicateCandidate] = Array::new(
+    capacity=entries.length(),
+  )
+  let changes : Array[(Int, Int)] = Array::new(capacity=entries.length())
+  for entry in entries {
     let (number, _, object) = entry
     let candidate = pdf_squeeze_duplicate_candidate(number, object)
     if !self.pdf_squeeze_skip_duplicate_candidate(candidate.object) {
@@ -192,9 +195,9 @@ fn PdfDocument::pdf_squeeze_content_stream_numbers(
   self : PdfDocument,
   page_number : Int,
 ) -> Array[Int] {
-  let numbers : Array[Int] = []
   let page = self.lookup_object_or_null(page_number)
   let contents = self.pdf_page_content_list(self.pdf_page_content_object(page))
+  let numbers : Array[Int] = Array::new(capacity=contents.length())
   for content in contents {
     match content {
       PdfIndirect(number) => numbers.push(number)
@@ -209,7 +212,7 @@ fn PdfDocument::pdf_squeeze_all_page_content_numbers(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
 ) -> Array[Int] {
-  let numbers : Array[Int] = []
+  let numbers : Array[Int] = Array::new(capacity=page_numbers.length())
   for page_number in page_numbers {
     for number in self.pdf_squeeze_content_stream_numbers(page_number) {
       numbers.push(number)

@@ -10778,6 +10778,21 @@ Current backend snapshot:
   pdf_native_acceptance_test.mbt` reports 229/229; the focused suite without
   native acceptance on `wasm-gc` and `js` reports 137/137 on each backend;
   `moon test --target native .` reports 2010/2010.~~
+- [x] ~~Continue source-port hardening with document renumber/squeeze/dedupe
+  allocation tuning: renumbered object-entry tables, compact-renumber change
+  tables, multi-document renumber outputs, per-document merge change tables,
+  squeeze duplicate-candidate/change lists, squeeze page-content reference
+  lists, duplicate stream change lists, and per-length canonical stream buckets
+  now preallocate from object, document, parsed-entry, page, content, or change
+  counts while preserving object-number validation, duplicate canonical order,
+  reference rewrites, trailer rewrites, and stream deduplication behavior.
+  Validation on MoonBit compiler 0.9.3: `moon check --target native
+  --warn-list +73` and `moon check --target all --warn-list +73` pass with
+  the known notice; `moon test --target native pdf_document_test.mbt
+  pdf_squeeze_test.mbt pdf_squeeze_wbtest.mbt pdf_dedupe_wbtest.mbt
+  pdf_merge_test.mbt pdf_native_acceptance_test.mbt` reports 171/171; the
+  focused suite without native acceptance on `wasm-gc` and `js` reports 79/79
+  on each backend; `moon test --target native .` reports 2010/2010.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
