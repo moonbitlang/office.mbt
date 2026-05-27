@@ -10629,6 +10629,19 @@ Current backend snapshot:
   pdf_addtext_test.mbt pdf_draw_test.mbt text/fixture_acceptance` reports
   179/179; the same focused suite on `wasm-gc` and `js` reports 175/175 on
   each backend.~~
+- [x] ~~Continue source-port hardening with text/CMap allocation tuning:
+  parsed-CMap charcode extraction, Type 1 charset parsing, simple-font metrics,
+  encoding differences, CID width arrays, default vertical widths, CMap section
+  and hex-group parsing, ToUnicode bfrange entries, inherited CMap composition,
+  encoding tables, Unicode glyphname decoding, predefined/fixed charcode
+  extraction, and Unicode codepoint extraction now preallocate from byte,
+  object-array, table, range, current/inherited, or input-text counts while
+  preserving source-compatible mapping order. Validation on MoonBit compiler
+  0.9.3: `moon check --target native --warn-list +73` passes with the known
+  notice; `moon test --target native pdf_text_test.mbt pdf_text_wbtest.mbt
+  text/fixture_acceptance pdf_embed_test.mbt pdf_addtext_test.mbt
+  pdf_draw_test.mbt` reports 341/341; the same focused suite on `wasm-gc` and
+  `js` reports 337/337 on each backend.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

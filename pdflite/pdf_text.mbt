@@ -2247,7 +2247,7 @@ fn pdf_text_parsed_cmap_charcodes_of_text(
       None => return [ for byte in text => byte.to_int() ]
     }
   }
-  let output : Array[Int] = []
+  let output : Array[Int] = Array::new(capacity=text.length())
   let mut index = 0
   while index < text.length() {
     let next = match pdf_text_parsed_cmap_next_charcode(parsed, text, index) {
@@ -2705,7 +2705,7 @@ fn PdfDocument::pdf_text_optional_integer(
 ///|
 fn pdf_text_parse_charset(bytes : BytesView) -> Array[PdfName] raise PdfError {
   let cursor = byte_cursor_of_view(bytes)
-  let names : Array[PdfName] = []
+  let names : Array[PdfName] = Array::new(capacity=bytes.length())
   let mut done = false
   while !done {
     cursor.drop_pdf_whitespace()
@@ -2864,7 +2864,7 @@ pub fn PdfDocument::read_font_metrics(
         raise FontWidthsExpected
       }
       let missingwidth = self.pdf_text_font_missing_width(descriptor)
-      let metrics : Array[Double] = []
+      let metrics : Array[Double] = Array::new(capacity=256)
       for _ in 0..<firstchar {
         metrics.push(missingwidth)
       }
@@ -3038,7 +3038,9 @@ fn PdfDocument::read_encoding_differences(
 ) -> Array[PdfEncodingDifference] raise PdfError {
   match self.direct(differences) {
     PdfArray(values) => {
-      let output : Array[PdfEncodingDifference] = []
+      let output : Array[PdfEncodingDifference] = Array::new(
+        capacity=values.length(),
+      )
       let mut next_code : Int? = None
       for value in values {
         match self.direct(value) {
@@ -3228,7 +3230,7 @@ fn PdfDocument::pdf_text_read_cid_widths(
   self : PdfDocument,
   values : ArrayView[PdfObject],
 ) -> Array[(Int, Double)] raise PdfError {
-  let output : Array[(Int, Double)] = []
+  let output : Array[(Int, Double)] = Array::new(capacity=values.length())
   let mut index = 0
   while index < values.length() {
     match self.direct(values[index]) {
@@ -3273,7 +3275,9 @@ fn PdfDocument::pdf_text_read_cid_widths2(
   self : PdfDocument,
   values : ArrayView[PdfObject],
 ) -> Array[(Int, PdfCIDVerticalWidth)] raise PdfError {
-  let output : Array[(Int, PdfCIDVerticalWidth)] = []
+  let output : Array[(Int, PdfCIDVerticalWidth)] = Array::new(
+    capacity=values.length(),
+  )
   let mut index = 0
   while index < values.length() {
     match self.direct(values[index]) {
@@ -3381,7 +3385,7 @@ fn PdfDocument::pdf_text_cid_default_width2(
 ) -> Array[Double] raise PdfError {
   match self.lookup_direct(pdf_text_dw2_key_name, dictionary) {
     Some(PdfArray(values)) => {
-      let output : Array[Double] = []
+      let output : Array[Double] = Array::new(capacity=values.length())
       for value in values {
         output.push(self.pdf_text_cid_number(value, CIDWidths2Expected))
       }
@@ -3820,7 +3824,7 @@ fn pdf_text_cmap_end_marker(line : BytesView, start : Int) -> (Int, Int)? {
 
 ///|
 fn pdf_text_cmap_section_line_views(line : BytesView) -> Array[BytesView] {
-  let views : Array[BytesView] = []
+  let views : Array[BytesView] = Array::new(capacity=line.length())
   let mut start = 0
   while start < line.length() {
     match pdf_text_cmap_end_marker(line, start) {
@@ -3882,7 +3886,7 @@ fn pdf_text_cmap_line_without_comment(line : BytesView) -> PdfBytes {
 
 ///|
 fn pdf_text_parse_cmap_hex_groups(line : BytesView) -> Array[PdfBytes]? {
-  let groups : Array[PdfBytes] = []
+  let groups : Array[PdfBytes] = Array::new(capacity=line.length() / 2)
   let mut index = 0
   while index < line.length() {
     index = pdf_text_skip_cmap_whitespace(line, index)
@@ -3985,7 +3989,7 @@ fn pdf_text_index_of_byte(line : BytesView, target : Int, start : Int) -> Int? {
 fn pdf_text_tounicode_bfrange_inline_entries(
   line : BytesView,
 ) -> Array[(Int, PdfBytes)]? {
-  let entries : Array[(Int, PdfBytes)] = []
+  let entries : Array[(Int, PdfBytes)] = Array::new(capacity=line.length())
   let mut index = 0
   while index < line.length() {
     match pdf_text_parse_cmap_hex_group_at(line, index) {
@@ -4081,7 +4085,7 @@ fn pdf_text_tounicode_bfrange_array_entries(
   guard first <= last && unicodes.length() == last - first + 1 else {
     return None
   }
-  let entries : Array[(Int, PdfBytes)] = []
+  let entries : Array[(Int, PdfBytes)] = Array::new(capacity=unicodes.length())
   for index in 0..<unicodes.length() {
     entries.push((first + index, unicodes[index]))
   }
@@ -4258,7 +4262,9 @@ fn pdf_text_append_tounicode_bfrange_entry(
               } else {
                 match pdf_text_parse_cmap_hex_group_at(line, value_start) {
                   Some((unicode, after_unicode)) => {
-                    let line_entries : Array[(Int, PdfBytes)] = []
+                    let line_entries : Array[(Int, PdfBytes)] = Array::new(
+                      capacity=last - first + 1,
+                    )
                     for code in first..<=last {
                       match
                         pdf_text_add_to_big_endian_bytes(unicode, code - first) {
@@ -4852,7 +4858,9 @@ fn pdf_text_compose_tounicode_entries(
   current : ArrayView[(Int, PdfBytes)],
   inherited : ArrayView[(Int, PdfBytes)],
 ) -> Array[(Int, PdfBytes)] {
-  let output : Array[(Int, PdfBytes)] = []
+  let output : Array[(Int, PdfBytes)] = Array::new(
+    capacity=current.length() + inherited.length(),
+  )
   let seen : @hashmap.HashMap[Int, Bool] = HashMap([])
   for entry in current {
     output.push(entry)
@@ -4872,7 +4880,9 @@ fn pdf_text_compose_cid_entries(
   current : ArrayView[(Int, Int)],
   inherited : ArrayView[(Int, Int)],
 ) -> Array[(Int, Int)] {
-  let output : Array[(Int, Int)] = []
+  let output : Array[(Int, Int)] = Array::new(
+    capacity=current.length() + inherited.length(),
+  )
   let seen : @hashmap.HashMap[Int, Bool] = HashMap([])
   for entry in current {
     output.push(entry)
@@ -4892,7 +4902,9 @@ fn pdf_text_compose_codespaces(
   current : ArrayView[PdfCMapCodeSpace],
   inherited : ArrayView[PdfCMapCodeSpace],
 ) -> Array[PdfCMapCodeSpace] {
-  let output : Array[PdfCMapCodeSpace] = []
+  let output : Array[PdfCMapCodeSpace] = Array::new(
+    capacity=current.length() + inherited.length(),
+  )
   for entry in current {
     output.push(entry)
   }
@@ -6309,7 +6321,7 @@ fn PdfEncoding::pdf_text_glyphname_of_charcode(
 /// Only codes with a known glyph name are emitted. The table is ordered by
 /// increasing one-byte character code.
 pub fn PdfEncoding::table(self : PdfEncoding) -> Array[(Int, PdfName)] {
-  let output : Array[(Int, PdfName)] = []
+  let output : Array[(Int, PdfName)] = Array::new(capacity=256)
   for code in 0..<256 {
     match self.pdf_text_glyphname_of_charcode(code) {
       Some(name) => output.push((code, name))
@@ -9418,7 +9430,7 @@ fn pdf_text_uni_glyphname_codepoints(base : BytesView) -> Array[Int]? {
     (base.length() - 4) % 4 == 0 else {
     return None
   }
-  let output : Array[Int] = []
+  let output : Array[Int] = Array::new(capacity=(base.length() - 4) / 4)
   let mut index = 4
   while index < base.length() {
     match pdf_text_parse_hex_codepoint(base, index, index + 4) {
@@ -10503,7 +10515,7 @@ fn pdf_text_predefined_mixed_byte_charcodes(
   name : PdfName,
   text : BytesView,
 ) -> Array[Int] raise PdfError {
-  let output : Array[Int] = []
+  let output : Array[Int] = Array::new(capacity=text.length())
   let shift_jis = pdf_text_predefined_cmap_uses_shift_jis_charcodes(name)
   let b5pc = pdf_text_predefined_cmap_uses_b5pc_charcodes(name)
   let cns1_b5 = pdf_text_predefined_cmap_uses_cns1_b5_charcodes(name)
@@ -10574,7 +10586,7 @@ fn pdf_text_predefined_cmap_charcodes_of_text(
   text : BytesView,
 ) -> Array[Int] raise PdfError {
   if pdf_text_predefined_cmap_uses_utf8_charcodes(name) {
-    let output : Array[Int] = []
+    let output : Array[Int] = Array::new(capacity=text.length())
     let mut index = 0
     while index < text.length() {
       index = pdf_text_push_utf8_charcode(output, text, index)
@@ -10582,7 +10594,7 @@ fn pdf_text_predefined_cmap_charcodes_of_text(
     output
   } else if pdf_text_predefined_cmap_uses_utf16_charcodes(name) {
     guard text.length() % 2 == 0 else { raise BadText }
-    let output : Array[Int] = []
+    let output : Array[Int] = Array::new(capacity=text.length() / 2)
     let mut index = 0
     while index < text.length() {
       index = pdf_text_push_utf16_charcode(output, text, index)
@@ -10590,7 +10602,7 @@ fn pdf_text_predefined_cmap_charcodes_of_text(
     output
   } else if pdf_text_predefined_cmap_uses_utf32_charcodes(name) {
     guard text.length() % 4 == 0 else { raise BadText }
-    let output : Array[Int] = []
+    let output : Array[Int] = Array::new(capacity=text.length() / 4)
     let mut index = 0
     while index < text.length() {
       index = pdf_text_push_utf32_charcode(output, text, index)
@@ -10599,7 +10611,7 @@ fn pdf_text_predefined_cmap_charcodes_of_text(
   } else if pdf_text_predefined_cmap_uses_mixed_byte_charcodes(name) {
     pdf_text_predefined_mixed_byte_charcodes(name, text)
   } else {
-    let output : Array[Int] = []
+    let output : Array[Int] = Array::new(capacity=text.length())
     if name == pdf_text_identity_h_name ||
       name == pdf_text_identity_v_name ||
       pdf_text_predefined_cmap_uses_two_byte_charcodes(name) {
@@ -10640,7 +10652,7 @@ fn PdfFont::pdf_text_fixed_or_single_byte_charcodes_of_text(
   self : PdfFont,
   text : BytesView,
 ) -> Array[Int] raise PdfError {
-  let output : Array[Int] = []
+  let output : Array[Int] = Array::new(capacity=text.length())
   if self.uses_two_byte_codes() {
     guard text.length() % 2 == 0 else { raise BadText }
     let mut index = 0
@@ -10680,7 +10692,7 @@ fn PdfTextExtractor::pdf_text_external_cmap_codepoints_of_text(
   text : BytesView,
 ) -> Array[Int] raise PdfError {
   let lookup = pdf_text_external_cmap_lookup(parsed)
-  let output : Array[Int] = []
+  let output : Array[Int] = Array::new(capacity=text.length())
   for code in pdf_text_parsed_cmap_charcodes_of_text(parsed, text) {
     let codepoints = match
       pdf_text_external_cmap_codepoints_from_lookup(font, parsed, lookup, code) {
@@ -10701,7 +10713,7 @@ fn PdfTextExtractor::pdf_text_tounicode_codepoints_of_text(
   text : BytesView,
 ) -> Array[Int] raise PdfError {
   let lookup = pdf_text_tounicode_codepoints_lookup_map(tounicode)
-  let output : Array[Int] = []
+  let output : Array[Int] = Array::new(capacity=text.length())
   for code in self.font.pdf_text_charcodes_of_text(text) {
     match lookup.get(code) {
       Some(codepoints) =>
@@ -10719,7 +10731,7 @@ fn PdfTextExtractor::pdf_text_regular_codepoints_of_text(
   self : PdfTextExtractor,
   text : BytesView,
 ) -> Array[Int] raise PdfError {
-  let output : Array[Int] = []
+  let output : Array[Int] = Array::new(capacity=text.length())
   for code in self.font.pdf_text_charcodes_of_text(text) {
     for codepoint in self.pdf_text_glyph_of_charcode(code).codepoints {
       output.push(codepoint)
