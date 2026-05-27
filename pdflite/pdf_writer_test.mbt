@@ -91,7 +91,7 @@ fn writer_bytes_start_with_at(
   needle : @pdflite.PdfBytes,
   start : Int,
 ) -> Bool {
-  for i = 0; i < needle.length(); i = i + 1 {
+  for i in 0..<needle.length() {
     if haystack[start + i] != needle[i] {
       break false
     }
@@ -110,9 +110,8 @@ fn writer_find_bytes(
   } else if haystack.length() < needle.length() {
     -1
   } else {
-    for start = 0
-        start <= haystack.length() - needle.length()
-        start = start + 1 {
+    let max_start = haystack.length() - needle.length()
+    for start in 0..<=max_start {
       if writer_bytes_start_with_at(haystack, needle, start) {
         break start
       }
@@ -135,9 +134,8 @@ fn writer_find_bytes_from(
     start_at > haystack.length() - needle.length() {
     -1
   } else {
-    for start = start_at
-        start <= haystack.length() - needle.length()
-        start = start + 1 {
+    let max_start = haystack.length() - needle.length()
+    for start in start_at..<=max_start {
       if writer_bytes_start_with_at(haystack, needle, start) {
         break start
       }

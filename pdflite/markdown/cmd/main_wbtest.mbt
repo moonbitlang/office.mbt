@@ -145,9 +145,9 @@ fn markdown_cmd_find_last_bytes_for_test(
   } else if haystack.length() < needle.length() {
     -1
   } else {
-    for start = haystack.length() - needle.length()
-        start >= 0
-        start = start - 1 {
+    let max_start = haystack.length() - needle.length()
+    for offset in 0..<=max_start {
+      let start = max_start - offset
       let mut matched = true
       for offset in 0..<needle.length() {
         if haystack[start + offset] != needle[offset] {

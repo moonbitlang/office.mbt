@@ -59,9 +59,8 @@ fn acceptance_find_bytes_for_test(
   } else if haystack.length() < needle.length() {
     -1
   } else {
-    for start = 0
-        start <= haystack.length() - needle.length()
-        start = start + 1 {
+    let max_start = haystack.length() - needle.length()
+    for start in 0..<=max_start {
       if acceptance_bytes_start_with_at_for_test(haystack, needle, start) {
         break start
       }
@@ -81,9 +80,9 @@ fn acceptance_find_last_bytes_for_test(
   } else if haystack.length() < needle.length() {
     -1
   } else {
-    for start = haystack.length() - needle.length()
-        start >= 0
-        start = start - 1 {
+    let max_start = haystack.length() - needle.length()
+    for offset in 0..<=max_start {
+      let start = max_start - offset
       if acceptance_bytes_start_with_at_for_test(haystack, needle, start) {
         break start
       }

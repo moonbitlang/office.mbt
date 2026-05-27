@@ -137,9 +137,9 @@ fn font_external_find_last_bytes_for_test(
   } else if haystack.length() < needle.length() {
     -1
   } else {
-    for start = haystack.length() - needle.length()
-        start >= 0
-        start = start - 1 {
+    let max_start = haystack.length() - needle.length()
+    for offset in 0..<=max_start {
+      let start = max_start - offset
       if font_external_bytes_start_with_at_for_test(haystack, needle, start) {
         break start
       }

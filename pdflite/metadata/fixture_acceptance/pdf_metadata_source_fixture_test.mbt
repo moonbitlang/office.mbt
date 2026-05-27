@@ -44,9 +44,9 @@ fn metadata_fixture_find_last_bytes_for_test(
   } else if haystack.length() < needle.length() {
     -1
   } else {
-    for start = haystack.length() - needle.length()
-        start >= 0
-        start = start - 1 {
+    let max_start = haystack.length() - needle.length()
+    for offset in 0..<=max_start {
+      let start = max_start - offset
       if metadata_fixture_bytes_start_with_at_for_test(haystack, needle, start) {
         break start
       }
