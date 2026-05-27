@@ -144,7 +144,7 @@ async test "pdflite info json reports fixture metadata" {
   }
   let text = pdflite_cmd_info_json_text(report)
   let json = try! @json.parse(text)
-  guard json is Json::Object(entries) else { fail("expected JSON object") }
+  guard json is Object(entries) else { fail("expected JSON object") }
   @test.assert_eq(entries.get("version"), Some(Json::string("1.4")))
   @test.assert_eq(entries.get("pages"), Some(Json::number(1, repr="1")))
   @test.assert_eq(entries.get("encrypted"), Some(Json::boolean(false)))
