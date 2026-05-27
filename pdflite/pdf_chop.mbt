@@ -91,9 +91,11 @@ fn pdf_chop_page_with_box(
 
 ///|
 fn pdf_chop_index_order(count : Int, reverse : Bool) -> Array[Int] {
-  [
-    for index in 0..<count => if reverse { count - index - 1 } else { index }
-  ]
+  let output : Array[Int] = Array::new(capacity=count)
+  for index in 0..<count {
+    output.push(if reverse { count - index - 1 } else { index })
+  }
+  output
 }
 
 ///|
@@ -108,7 +110,7 @@ fn pdf_chop_grid_pages(
 ) -> Array[PdfPage] raise PdfError {
   let width = (bounds.max_x - bounds.min_x) / x.to_double()
   let height = (bounds.max_y - bounds.min_y) / y.to_double()
-  let pages : Array[PdfPage] = []
+  let pages : Array[PdfPage] = Array::new(capacity=x * y)
   let x_order = pdf_chop_index_order(x, rtl)
   let y_order = pdf_chop_index_order(y, !btt)
   if columns {
@@ -153,11 +155,15 @@ fn pdf_chop_pair_pages(
   second : PdfPage,
   columns : Bool,
 ) -> Array[PdfPage] {
+  let pages : Array[PdfPage] = Array::new(capacity=2)
   if columns {
-    [second, first]
+    pages.push(second)
+    pages.push(first)
   } else {
-    [first, second]
+    pages.push(first)
+    pages.push(second)
   }
+  pages
 }
 
 ///|
@@ -232,12 +238,29 @@ fn pdf_chop_validate_grid(x : Int, y : Int) -> Unit raise PdfError {
 }
 
 ///|
+fn pdf_chop_selected_page_count(
+  original_count : Int,
+  selected_pages : @number_set.PdfNumberSet,
+) -> Int {
+  let mut count = 0
+  for page_number in 1..<=original_count {
+    if selected_pages.contains(page_number) {
+      count += 1
+    }
+  }
+  count
+}
+
+///|
 fn pdf_chop_change_table(
   original_count : Int,
   selected_pages : @number_set.PdfNumberSet,
+  selected_count : Int,
   pieces_per_selected_page : Int,
 ) -> Array[(Int, Int)] {
-  let changes : Array[(Int, Int)] = Array::new(capacity=original_count)
+  let changes : Array[(Int, Int)] = Array::new(
+    capacity=original_count + selected_count * (pieces_per_selected_page - 1),
+  )
   let mut next_page = 1
   for old_page in 1..<=original_count {
     if selected_pages.contains(old_page) {
@@ -270,8 +293,12 @@ fn PdfDocument::pdf_chop_inner(
   let pages = self.pages_of_pagetree()
   let pieces = if x == 0 || y == 0 { 2 } else { x * y }
   let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let selected_count = pdf_chop_selected_page_count(
+    pages.length(),
+    selected_pages,
+  )
   let output : Array[PdfPage] = Array::new(
-    capacity=pages.length() + page_numbers.length() * (pieces - 1),
+    capacity=pages.length() + selected_count * (pieces - 1),
   )
   for index in 0..<pages.length() {
     let page_number = index + 1
@@ -296,7 +323,12 @@ fn PdfDocument::pdf_chop_inner(
   self.change_pages(
     output,
     change_references=true,
-    changes=pdf_chop_change_table(pages.length(), selected_pages, pieces),
+    changes=pdf_chop_change_table(
+      pages.length(),
+      selected_pages,
+      selected_count,
+      pieces,
+    ),
   )
 }
 

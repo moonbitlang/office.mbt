@@ -17,7 +17,10 @@ fn pdf_pad_sorted_page_numbers(
   end_page : Int,
   context : String,
 ) -> Array[Int] raise PdfError {
-  let sorted = [ for page_number in page_numbers => page_number ]
+  let sorted : Array[Int] = Array::new(capacity=page_numbers.length())
+  for page_number in page_numbers {
+    sorted.push(page_number)
+  }
   sorted.sort()
   for page_number in sorted {
     if page_number < 1 || page_number > end_page {
@@ -36,7 +39,7 @@ fn pdf_pad_unique_sorted_page_numbers(
   context : String,
 ) -> Array[Int] raise PdfError {
   let sorted = pdf_pad_sorted_page_numbers(page_numbers, end_page, context)
-  let unique : Array[Int] = []
+  let unique : Array[Int] = Array::new(capacity=sorted.length())
   for page_number in sorted {
     if unique.length() == 0 || unique[unique.length() - 1] != page_number {
       unique.push(page_number)
@@ -50,15 +53,11 @@ fn pdf_pad_insert_positions(
   page_numbers : ArrayView[Int],
   before : Bool,
 ) -> Array[Int] {
-  [
-    for page_number in page_numbers => {
-      if before {
-        page_number - 1
-      } else {
-        page_number
-      }
-    }
-  ]
+  let output : Array[Int] = Array::new(capacity=page_numbers.length())
+  for page_number in page_numbers {
+    output.push(if before { page_number - 1 } else { page_number })
+  }
+  output
 }
 
 ///|
@@ -78,7 +77,7 @@ fn pdf_pad_blank_pages(
   positions : ArrayView[Int],
   before : Bool,
 ) -> Array[PdfPage] raise PdfError {
-  let output : Array[PdfPage] = []
+  let output : Array[PdfPage] = Array::new(capacity=positions.length())
   for position in positions {
     let page_index = if before { position } else { position - 1 }
     output.push(pdf_pad_blank_page(pages[page_index]))
@@ -87,12 +86,25 @@ fn pdf_pad_blank_pages(
 }
 
 ///|
+fn pdf_pad_inserted_page_count(
+  inserted_pages : ArrayView[Array[PdfPage]],
+) -> Int {
+  let mut count = 0
+  for inserted in inserted_pages {
+    count += inserted.length()
+  }
+  count
+}
+
+///|
 fn pdf_pad_insert_pages(
   pages : ArrayView[PdfPage],
   positions : ArrayView[Int],
   inserted_pages : ArrayView[Array[PdfPage]],
 ) -> Array[PdfPage] {
-  let output : Array[PdfPage] = []
+  let output : Array[PdfPage] = Array::new(
+    capacity=pages.length() + pdf_pad_inserted_page_count(inserted_pages),
+  )
   let mut insertion = 0
   while insertion < positions.length() && positions[insertion] == 0 {
     for page in inserted_pages[insertion] {
@@ -118,7 +130,7 @@ fn pdf_pad_change_table(
   original_count : Int,
   positions : ArrayView[Int],
 ) -> Array[(Int, Int)] {
-  let changes : Array[(Int, Int)] = []
+  let changes : Array[(Int, Int)] = Array::new(capacity=original_count)
   let mut insertion = 0
   for old_page in 1..<=original_count {
     while insertion < positions.length() && positions[insertion] < old_page {
@@ -131,7 +143,9 @@ fn pdf_pad_change_table(
 
 ///|
 fn pdf_pad_page_number_range(count : Int) -> Array[Int] {
-  let output : Array[Int] = []
+  let output : Array[Int] = Array::new(
+    capacity=if count > 0 { count } else { 0 },
+  )
   for page_number in 1..<=count {
     output.push(page_number)
   }
@@ -150,7 +164,14 @@ fn PdfDocument::pdf_pad_with_blank_pages(
   let positions = pdf_pad_insert_positions(sorted, before)
   let pages = self.pages_of_pagetree()
   let blank_pages = pdf_pad_blank_pages(pages, positions, before)
-  let inserted = [ for page in blank_pages => [page] ]
+  let inserted : Array[Array[PdfPage]] = Array::new(
+    capacity=blank_pages.length(),
+  )
+  for page in blank_pages {
+    let single : Array[PdfPage] = Array::new(capacity=1)
+    single.push(page)
+    inserted.push(single)
+  }
   self.change_pages(
     pdf_pad_insert_pages(pages, positions, inserted),
     change_references=true,
@@ -177,8 +198,8 @@ fn PdfDocument::pdf_pad_with_document(
     pdf_pad_page_number_range(pad_end_page),
   ])
   let pages = merged.pages_of_pagetree()
-  let original_pages : Array[PdfPage] = []
-  let pad_pages : Array[PdfPage] = []
+  let original_pages : Array[PdfPage] = Array::new(capacity=end_page)
+  let pad_pages : Array[PdfPage] = Array::new(capacity=pad_end_page)
   for index in 0..<pages.length() {
     if index < end_page {
       original_pages.push(pages[index])
@@ -186,7 +207,14 @@ fn PdfDocument::pdf_pad_with_document(
       pad_pages.push(pages[index])
     }
   }
-  let inserted = [ for _ in positions => [ for page in pad_pages => page ] ]
+  let inserted : Array[Array[PdfPage]] = Array::new(capacity=positions.length())
+  for _ in positions {
+    let copy : Array[PdfPage] = Array::new(capacity=pad_pages.length())
+    for page in pad_pages {
+      copy.push(page)
+    }
+    inserted.push(copy)
+  }
   merged.change_pages(pdf_pad_insert_pages(original_pages, positions, inserted))
 }
 
@@ -300,22 +328,37 @@ pub fn PdfDocument::pad_to_multiple(
       self
     } else {
       let blank = pdf_pad_multiple_blank_page(pages[pages.length() - 1])
-      let blanks = [ for _ in 0..<pages_to_add => blank ]
-      let padded = if prepend {
-        [..blanks, ..pages]
-      } else {
-        [..pages, ..blanks]
+      let blanks : Array[PdfPage] = Array::new(capacity=pages_to_add)
+      for _ in 0..<pages_to_add {
+        blanks.push(blank)
       }
-      let changes = if prepend {
-        [
-          for old_page in 1..<=pages.length() => {
-            (old_page, old_page + pages_to_add)
-          }
-        ]
+      let padded : Array[PdfPage] = Array::new(
+        capacity=pages.length() + blanks.length(),
+      )
+      if prepend {
+        for page in blanks {
+          padded.push(page)
+        }
+        for page in pages {
+          padded.push(page)
+        }
       } else {
-        [
-          for old_page in 1..<=pages.length() => (old_page, old_page)
-        ]
+        for page in pages {
+          padded.push(page)
+        }
+        for page in blanks {
+          padded.push(page)
+        }
+      }
+      let changes : Array[(Int, Int)] = Array::new(capacity=pages.length())
+      if prepend {
+        for old_page in 1..<=pages.length() {
+          changes.push((old_page, old_page + pages_to_add))
+        }
+      } else {
+        for old_page in 1..<=pages.length() {
+          changes.push((old_page, old_page))
+        }
       }
       self.change_pages(padded, change_references=true, changes~)
     }

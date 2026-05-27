@@ -10716,6 +10716,23 @@ Current backend snapshot:
   pdf_native_acceptance_test.mbt` reports 277/277; the same focused suite
   without native acceptance on `wasm-gc` and `js` reports 185/185 on each
   backend.~~
+- [x] ~~Continue source-port hardening with page selection and insertion
+  allocation tuning: page-spec tokenization, forward/reverse ranges, duplicate
+  and odd/even filters, comma split flattening, portrait/landscape/annotation
+  filters, valid-page filtering, range formatting, pad page-number sorting,
+  unique filtering, insertion positions, blank/document insertion page groups,
+  pad-to-multiple output/change tables, chop index orders, grid/pair outputs,
+  selected-page counts, output pages, and chop change tables now preallocate
+  from token, page, selection, insertion, grid, or range counts. `NOT` page
+  selection inversion now marks selected pages in a boolean table, preserving
+  duplicate/out-of-range handling while avoiding the previous range-by-range
+  scan on large documents. Validation on MoonBit compiler 0.9.3: `moon check
+  --target native --warn-list +73` and `moon check --target all --warn-list
+  +73` pass with the known notice; `moon test --target native
+  pdf_page_spec_test.mbt pdf_pad_test.mbt pdf_chop_test.mbt pdf_merge_test.mbt
+  pdf_page_test.mbt pdf_page_wbtest.mbt` reports 157/157; the same focused
+  suite on `wasm-gc` and `js` reports 157/157 on each backend; `moon test
+  --target native .` reports 2010/2010.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

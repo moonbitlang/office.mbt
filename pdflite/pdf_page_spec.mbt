@@ -76,7 +76,7 @@ fn pdf_pagespec_tokenize(
   context : PdfPageSpecContext,
 ) -> Array[PdfPageSpecToken] raise PdfError {
   let bytes = @utf8.encode(text)
-  let tokens : Array[PdfPageSpecToken] = []
+  let tokens : Array[PdfPageSpecToken] = Array::new(capacity=bytes.length())
   let mut index = 0
   while index < bytes.length() {
     let value = bytes[index].to_int()
@@ -102,7 +102,13 @@ fn pdf_pagespec_tokenize(
 
 ///|
 fn pdf_pagespec_range(start : Int, finish : Int) -> Array[Int] {
-  let output : Array[Int] = []
+  let output : Array[Int] = Array::new(
+    capacity=if start <= finish {
+      finish - start + 1
+    } else {
+      start - finish + 1
+    },
+  )
   if start <= finish {
     let mut page = start
     while page <= finish {
@@ -129,15 +135,50 @@ fn pdf_pagespec_invert_range(
   end_page : Int,
   range : ArrayView[Int],
 ) -> Array[Int] {
-  let output : Array[Int] = []
-  for page in 1..<=end_page {
-    let mut found = false
+  if end_page <= 0 {
+    []
+  } else {
+    let selected_pages = Array::make(end_page + 1, false)
     for selected in range {
-      if selected == page {
-        found = true
+      if selected >= 1 && selected <= end_page {
+        selected_pages[selected] = true
       }
     }
-    if !found {
+    let output : Array[Int] = Array::new(capacity=end_page)
+    for page in 1..<=end_page {
+      if !selected_pages[page] {
+        output.push(page)
+      }
+    }
+    output
+  }
+}
+
+///|
+fn pdf_pagespec_count_commas(tokens : ArrayView[PdfPageSpecToken]) -> Int {
+  let mut count = 0
+  for token in tokens {
+    if token is PageSpecComma {
+      count += 1
+    }
+  }
+  count
+}
+
+///|
+fn pdf_pagespec_sum_lengths(parts : ArrayView[Array[Int]]) -> Int {
+  let mut length = 0
+  for part in parts {
+    length += part.length()
+  }
+  length
+}
+
+///|
+fn pdf_pagespec_flatten(parts : ArrayView[Array[Int]]) -> Array[Int] {
+  let output : Array[Int] = Array::new(capacity=pdf_pagespec_sum_lengths(parts))
+  for part in parts {
+    for page in part {
       output.push(page)
     }
   }
@@ -163,7 +204,7 @@ fn pdf_pagespec_duplicate_range(
   count : Int,
   range : ArrayView[Int],
 ) -> Array[Int] {
-  let output : Array[Int] = []
+  let output : Array[Int] = Array::new(capacity=count * range.length())
   for page in range {
     for _ in 0..<count {
       output.push(page)
@@ -174,7 +215,7 @@ fn pdf_pagespec_duplicate_range(
 
 ///|
 fn pdf_pagespec_filter_odd(range : ArrayView[Int]) -> Array[Int] {
-  let output : Array[Int] = []
+  let output : Array[Int] = Array::new(capacity=range.length())
   for page in range {
     if page % 2 != 0 {
       output.push(page)
@@ -185,7 +226,7 @@ fn pdf_pagespec_filter_odd(range : ArrayView[Int]) -> Array[Int] {
 
 ///|
 fn pdf_pagespec_filter_even(range : ArrayView[Int]) -> Array[Int] {
-  let output : Array[Int] = []
+  let output : Array[Int] = Array::new(capacity=range.length())
   for page in range {
     if page % 2 == 0 {
       output.push(page)
@@ -217,30 +258,24 @@ fn pdf_pagespec_token_number(
 }
 
 ///|
-fn pdf_pagespec_has_comma(tokens : ArrayView[PdfPageSpecToken]) -> Bool {
-  for token in tokens {
-    if token is PageSpecComma {
-      break true
-    }
-  } nobreak {
-    false
-  }
-}
-
-///|
 fn pdf_pagespec_split_commas(
   tokens : ArrayView[PdfPageSpecToken],
   context : PdfPageSpecContext,
+  comma_count : Int,
 ) -> Array[Array[PdfPageSpecToken]] raise PdfError {
-  let parts : Array[Array[PdfPageSpecToken]] = []
-  let mut current : Array[PdfPageSpecToken] = []
+  let parts : Array[Array[PdfPageSpecToken]] = Array::new(
+    capacity=comma_count + 1,
+  )
+  let mut current : Array[PdfPageSpecToken] = Array::new(
+    capacity=tokens.length(),
+  )
   for token in tokens {
     if token is PageSpecComma {
       if current.length() == 0 {
         context.bad()
       }
       parts.push(current)
-      current = []
+      current = Array::new(capacity=tokens.length())
     } else {
       current.push(token)
     }
@@ -261,7 +296,7 @@ fn PdfPageSpecContext::select_dimensions(
   match self.document {
     Some(document) => {
       let pages = document.pages_of_pagetree()
-      let output : Array[Int] = []
+      let output : Array[Int] = Array::new(capacity=candidates.length())
       for page_number in candidates {
         if page_number >= 1 && page_number <= pages.length() {
           let page = pages[page_number - 1]
@@ -290,7 +325,7 @@ fn PdfPageSpecContext::select_annotated(
   match self.document {
     Some(document) => {
       let pages = document.pages_of_pagetree()
-      let output : Array[Int] = []
+      let output : Array[Int] = Array::new(capacity=candidates.length())
       for page_number in candidates {
         if page_number >= 1 && page_number <= pages.length() {
           let page = pages[page_number - 1]
@@ -318,14 +353,13 @@ fn PdfPageSpecContext::parse_tokens(
   if tokens.length() == 0 {
     self.bad()
   }
-  if pdf_pagespec_has_comma(tokens) {
-    let output : Array[Int] = []
-    for part in pdf_pagespec_split_commas(tokens, self) {
-      for page in self.parse_tokens(part) {
-        output.push(page)
-      }
+  let comma_count = pdf_pagespec_count_commas(tokens)
+  if comma_count > 0 {
+    let parts : Array[Array[Int]] = Array::new(capacity=comma_count + 1)
+    for part in pdf_pagespec_split_commas(tokens, self, comma_count) {
+      parts.push(self.parse_tokens(part))
     }
-    output
+    pdf_pagespec_flatten(parts)
   } else if tokens.length() == 1 {
     match tokens[0] {
       PageSpecWord("all") => pdf_pagespec_all_pages(self.end_page)
@@ -567,7 +601,7 @@ fn PdfPageSpecContext::filter_valid_pages(
   self : PdfPageSpecContext,
   pages : ArrayView[Int],
 ) -> Array[Int] {
-  let output : Array[Int] = []
+  let output : Array[Int] = Array::new(capacity=pages.length())
   for page in pages {
     if page > 0 && page <= self.end_page {
       output.push(page)
@@ -741,7 +775,7 @@ pub fn pdf_string_of_pagespec_for_count(
     } else if pdf_pagespec_same_values(sorted, pdf_pagespec_all_pages(end_page)) {
       "all"
     } else {
-      let ranges : Array[(Int, Int)] = []
+      let ranges : Array[(Int, Int)] = Array::new(capacity=sorted.length())
       let mut start = sorted[0]
       let mut previous = sorted[0]
       for index in 1..<sorted.length() {
