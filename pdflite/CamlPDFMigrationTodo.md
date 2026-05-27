@@ -10664,6 +10664,16 @@ Current backend snapshot:
   passes with the known notice; `moon test --target native pdf_afm_test.mbt
   pdf_text_test.mbt pdf_addtext_test.mbt`, and the same focused suite on
   `wasm-gc` and `js`, each report 273/273.~~
+- [x] ~~Continue source-port hardening with flate allocation tuning: Huffman
+  construction nodes and traversal stack, fixed Huffman length tables, raw
+  decode output, match tokens, code-length tokens, dynamic-header lengths, and
+  zlib encode output buffers now preallocate from frequency, compressed byte,
+  input byte, length-table, literal/distance-header, block-count, or trailer
+  size hints while preserving compressed byte selection and decode behavior.
+  Validation on MoonBit compiler 0.9.3: `moon check --target native
+  --warn-list +73` passes with the known notice; `moon test --target native
+  flate pdf_codec_test.mbt pdf_reader_test.mbt` reports 226/226; the same
+  focused suite on `wasm-gc` and `js` reports 224/224 on each backend.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

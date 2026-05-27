@@ -184,7 +184,9 @@ fn pdf_flate_huffman_code_lengths(
   max_bits : Int,
 ) -> Array[Int] raise @core.PdfError {
   let lengths : Array[Int] = Array::make(frequencies.length(), 0)
-  let nodes : Array[FlateHuffmanTreeNode] = []
+  let nodes : Array[FlateHuffmanTreeNode] = Array::new(
+    capacity=frequencies.length() * 2,
+  )
   for symbol, frequency in frequencies {
     if frequency < 0 {
       raise InvalidFlateData
@@ -226,7 +228,8 @@ fn pdf_flate_huffman_code_lengths(
     active -= 1
   }
   let root = pdf_flate_pick_huffman_node(nodes)
-  let stack : Array[(Int, Int)] = [(root, 0)]
+  let stack : Array[(Int, Int)] = Array::new(capacity=nodes.length())
+  stack.push((root, 0))
   while stack.length() > 0 {
     let (node_index, depth) = stack.pop().unwrap()
     let node = nodes[node_index]
@@ -355,7 +358,7 @@ fn pdf_flate_decode_symbol(
 
 ///|
 fn pdf_flate_fixed_literal_lengths() -> Array[Int] {
-  let lengths : Array[Int] = []
+  let lengths : Array[Int] = Array::new(capacity=288)
   for i in 0..<=287 {
     if i <= 143 {
       lengths.push(8)
@@ -372,7 +375,7 @@ fn pdf_flate_fixed_literal_lengths() -> Array[Int] {
 
 ///|
 fn pdf_flate_fixed_distance_lengths() -> Array[Int] {
-  let lengths : Array[Int] = []
+  let lengths : Array[Int] = Array::new(capacity=32)
   for _ in 0..<=31 {
     lengths.push(5)
   }
@@ -515,7 +518,7 @@ fn pdf_deflate_decode_raw_prefix(
   bytes : BytesView,
 ) -> (@core.PdfBytes, Int) raise @core.PdfError {
   let reader = FlateBitReader::new(bytes)
-  let output : Array[Byte] = []
+  let output : Array[Byte] = Array::new(capacity=bytes.length())
   let mut finished = false
   while !finished {
     let final_block = reader.read_bits(1)
@@ -864,7 +867,7 @@ fn pdf_flate_match_tokens(
   data : BytesView,
   max_probes : Int,
 ) -> Array[PdfFlateToken] {
-  let tokens : Array[PdfFlateToken] = []
+  let tokens : Array[PdfFlateToken] = Array::new(capacity=data.length())
   let last_by_prefix : Array[Int] = Array::make(65536, -1)
   let previous_by_position : Array[Int] = Array::make(data.length(), -1)
   let mut index = 0
@@ -965,7 +968,9 @@ fn pdf_flate_push_code_length_token(
 fn pdf_flate_code_length_tokens(
   lengths : ArrayView[Int],
 ) -> Array[PdfFlateCodeLengthToken] {
-  let tokens : Array[PdfFlateCodeLengthToken] = []
+  let tokens : Array[PdfFlateCodeLengthToken] = Array::new(
+    capacity=lengths.length(),
+  )
   let mut index = 0
   while index < lengths.length() {
     let value = lengths[index]
@@ -1157,7 +1162,9 @@ fn pdf_flate_push_dynamic_match_block(
   )
   let literal_count = pdf_flate_trim_length_count(literal_lengths, 257)
   let distance_count = pdf_flate_trim_length_count(distance_lengths, 1)
-  let header_lengths : Array[Int] = []
+  let header_lengths : Array[Int] = Array::new(
+    capacity=literal_count + distance_count,
+  )
   for length in literal_lengths[:literal_count] {
     header_lengths.push(length)
   }
@@ -1231,8 +1238,13 @@ fn pdf_flate_header_for_level(level : Int) -> Array[Byte] raise @core.PdfError {
 }
 
 ///|
-fn pdf_flate_output_with_header(header : ArrayView[Byte]) -> Array[Byte] {
-  let output : Array[Byte] = []
+fn pdf_flate_output_with_header(
+  header : ArrayView[Byte],
+  body_capacity_hint? : Int = 0,
+) -> Array[Byte] {
+  let output : Array[Byte] = Array::new(
+    capacity=header.length() + body_capacity_hint,
+  )
   for byte in header {
     output.push(byte)
   }
@@ -1244,7 +1256,15 @@ fn pdf_flate_encode_stored_view_with_header(
   data : BytesView,
   header : ArrayView[Byte],
 ) -> @core.PdfBytes {
-  let output = pdf_flate_output_with_header(header)
+  let block_count = if data.length() == 0 {
+    1
+  } else {
+    (data.length() + 65534) / 65535
+  }
+  let output = pdf_flate_output_with_header(
+    header,
+    body_capacity_hint=data.length() + block_count * 5 + 4,
+  )
   if data.length() == 0 {
     pdf_flate_push_stored_block(output, data, 0, 0, true)
   } else {
@@ -1271,7 +1291,10 @@ fn pdf_flate_encode_fixed_literal_view_with_header(
   data : BytesView,
   header : ArrayView[Byte],
 ) -> @core.PdfBytes {
-  let output = pdf_flate_output_with_header(header)
+  let output = pdf_flate_output_with_header(
+    header,
+    body_capacity_hint=data.length() + 8,
+  )
   pdf_flate_push_fixed_literal_block(output, data, true)
   pdf_flate_push_adler32(output, data)
   Bytes::from_array(output)
@@ -1282,7 +1305,10 @@ fn pdf_flate_encode_fixed_repeat_view_with_header(
   data : BytesView,
   header : ArrayView[Byte],
 ) -> @core.PdfBytes raise @core.PdfError {
-  let output = pdf_flate_output_with_header(header)
+  let output = pdf_flate_output_with_header(
+    header,
+    body_capacity_hint=data.length() + 8,
+  )
   pdf_flate_push_fixed_repeat_block(output, data, true)
   pdf_flate_push_adler32(output, data)
   Bytes::from_array(output)
@@ -1294,7 +1320,10 @@ fn pdf_flate_encode_fixed_match_view_with_header(
   header : ArrayView[Byte],
   max_probes : Int,
 ) -> @core.PdfBytes raise @core.PdfError {
-  let output = pdf_flate_output_with_header(header)
+  let output = pdf_flate_output_with_header(
+    header,
+    body_capacity_hint=data.length() + 8,
+  )
   pdf_flate_push_fixed_match_block(output, data, true, max_probes)
   pdf_flate_push_adler32(output, data)
   Bytes::from_array(output)
@@ -1306,7 +1335,10 @@ fn pdf_flate_encode_dynamic_match_view_with_header(
   header : ArrayView[Byte],
   max_probes : Int,
 ) -> @core.PdfBytes raise @core.PdfError {
-  let output = pdf_flate_output_with_header(header)
+  let output = pdf_flate_output_with_header(
+    header,
+    body_capacity_hint=data.length() + 8,
+  )
   pdf_flate_push_dynamic_match_block(output, data, true, max_probes)
   pdf_flate_push_adler32(output, data)
   Bytes::from_array(output)
