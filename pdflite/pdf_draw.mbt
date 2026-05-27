@@ -701,7 +701,7 @@ fn pdf_draw_decode_lossy_view(bytes : BytesView) -> String {
 ///|
 fn pdf_draw_split_on_space(text : String) -> Array[String] {
   let bytes = @utf8.encode(text)
-  let parts : Array[String] = []
+  let parts : Array[String] = Array::new(capacity=bytes.length())
   let mut part_start = 0
   let mut index = 0
   while index < bytes.length() {
@@ -843,8 +843,10 @@ fn PdfDrawRenderState::format_paragraph(
   let (space_ops, space_width) = self.text_ops_and_width_with_cache(
     " ", width_cache,
   )
-  let output : Array[PdfContentOp] = []
-  let mut line_ops : Array[PdfContentOp] = []
+  let output : Array[PdfContentOp] = Array::new(capacity=words.length() * 2)
+  let mut line_ops : Array[PdfContentOp] = Array::new(
+    capacity=words.length() * 2,
+  )
   let mut remaining = width
   let mut first_line = true
   let mut first_loop = true
@@ -1766,7 +1768,7 @@ fn PdfDocument::pdf_draw_page_resource_numbers(
   self : PdfDocument,
   resources : PdfObject,
 ) -> Array[Int] {
-  let output : Array[Int] = []
+  let output : Array[Int] = Array::new(capacity=3)
   for
     key in [
       pdf_draw_xobject_key(),

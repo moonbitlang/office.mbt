@@ -3733,9 +3733,9 @@ fn pdf_text_parse_cmap_cid_system_value(
 ///|
 fn pdf_text_parse_cmap_cid_system_info(data : BytesView) -> PdfCIDSystemInfo? {
   let cursor = byte_cursor_of_view(data)
-  let registries : Array[PdfBytes] = []
-  let orderings : Array[PdfBytes] = []
-  let supplements : Array[Int] = []
+  let registries : Array[PdfBytes] = Array::new(capacity=1)
+  let orderings : Array[PdfBytes] = Array::new(capacity=1)
+  let supplements : Array[Int] = Array::new(capacity=1)
   let mut seen_cid_system_info = false
   let mut expect_value : PdfTextCMapCIDSystemInfoKey? = None
   for line in cursor.read_line_views() {
@@ -4364,7 +4364,7 @@ fn pdf_text_parse_tounicode_sections(
   data : BytesView,
 ) -> Array[(Int, PdfBytes)]? {
   let cursor = byte_cursor_of_view(data)
-  let entries : Array[(Int, PdfBytes)] = []
+  let entries : Array[(Int, PdfBytes)] = Array::new(capacity=data.length() / 4)
   let mut section = PdfTextToUnicodeNone
   let mut pending_bfchar_source : PdfBytes? = None
   let mut pending_bfrange_array : PdfTextCMapBFRangeArray? = None
@@ -4512,7 +4512,7 @@ fn pdf_text_push_cmap_codespace_entries(
 ///|
 fn pdf_text_parse_cmap_cid_sections(data : BytesView) -> Array[(Int, Int)]? {
   let cursor = byte_cursor_of_view(data)
-  let entries : Array[(Int, Int)] = []
+  let entries : Array[(Int, Int)] = Array::new(capacity=data.length() / 4)
   let mut section = PdfTextCMapNone
   for raw_line in cursor.read_line_views() {
     let uncommented = pdf_text_cmap_line_without_comment(raw_line)
@@ -4558,7 +4558,7 @@ fn pdf_text_parse_cmap_cid_sections(data : BytesView) -> Array[(Int, Int)]? {
 ///|
 fn pdf_text_parse_cmap_notdef_sections(data : BytesView) -> Array[(Int, Int)]? {
   let cursor = byte_cursor_of_view(data)
-  let entries : Array[(Int, Int)] = []
+  let entries : Array[(Int, Int)] = Array::new(capacity=data.length() / 4)
   let mut section = PdfTextCMapNone
   for raw_line in cursor.read_line_views() {
     let uncommented = pdf_text_cmap_line_without_comment(raw_line)
@@ -4607,7 +4607,7 @@ fn pdf_text_parse_cmap_codespace_sections(
   data : BytesView,
 ) -> Array[PdfCMapCodeSpace]? {
   let cursor = byte_cursor_of_view(data)
-  let entries : Array[PdfCMapCodeSpace] = []
+  let entries : Array[PdfCMapCodeSpace] = Array::new(capacity=data.length() / 4)
   let mut section = PdfTextCMapNone
   for raw_line in cursor.read_line_views() {
     let uncommented = pdf_text_cmap_line_without_comment(raw_line)
@@ -10873,7 +10873,9 @@ pub fn PdfDocument::write_encoding(
 ) -> Int raise PdfError {
   match encoding {
     PdfCustomEncoding(PdfImplicitInFontFile, differences) => {
-      let values : Array[PdfObject] = []
+      let values : Array[PdfObject] = Array::new(
+        capacity=differences.length() * 2,
+      )
       for difference in differences {
         values.push(PdfInteger(difference.code))
         values.push(PdfNameObject(difference.name))

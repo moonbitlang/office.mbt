@@ -706,7 +706,12 @@ pub fn pdf_image_object_of_jbig2_data(
     (pdf_image_width_key(), PdfInteger(width)),
     (pdf_image_height_key(), PdfInteger(height)),
   ]
-  let extra : Array[(Int, PdfObject)] = []
+  let extra : Array[(Int, PdfObject)] = Array::new(
+    capacity=match global {
+      Some(_) => 1
+      None => 0
+    },
+  )
   match global {
     Some(global) => {
       let global_payload = global.to_owned()
@@ -856,7 +861,9 @@ fn pdf_image_content_ops(
   width : Int,
   height : Int,
 ) -> Array[PdfContentOp] {
-  let output : Array[PdfContentOp] = []
+  let output : Array[PdfContentOp] = Array::new(
+    capacity=if structinfo { 4 } else { 2 },
+  )
   if structinfo {
     output.push(
       Op_BDC(
@@ -2225,7 +2232,7 @@ fn PdfDocument::pdf_image_decode_values(
   match
     self.lookup_direct_or_else(pdf_image_decode_key(), pdf_image_d_key(), image) {
     Some(PdfArray(values)) => {
-      let output : Array[Double] = []
+      let output : Array[Double] = Array::new(capacity=values.length())
       for value in values {
         output.push(self.get_number(value))
       }
@@ -2238,7 +2245,7 @@ fn PdfDocument::pdf_image_decode_values(
 
 ///|
 fn pdf_image_decode_identity_components(components : Int) -> Array[Double] {
-  let values : Array[Double] = []
+  let values : Array[Double] = Array::new(capacity=components * 2)
   for _ in 0..<components {
     values.push(0.0)
     values.push(1.0)
@@ -3549,7 +3556,7 @@ fn PdfImageExtractionRunState::claim_images(
   if !dedup && !dedup_per_page {
     images.to_owned()
   } else {
-    let claimed : Array[PdfObject] = []
+    let claimed : Array[PdfObject] = Array::new(capacity=images.length())
     for image in images {
       match image {
         PdfIndirect(number) if self.written.contains(number) => ()

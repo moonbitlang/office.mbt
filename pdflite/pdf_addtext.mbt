@@ -3666,7 +3666,7 @@ pub fn pdf_addtext_get_urls_line(
 ) -> PdfAddTextUrlLine raise PdfError {
   let bytes = @utf8.encode(line)
   let output = Array::make(pdf_addtext_url_visible_length(bytes), b'\x00')
-  let urls : Array[PdfAddTextUrl] = []
+  let urls : Array[PdfAddTextUrl] = Array::new(capacity=bytes.length() / 5)
   let mut index = 0
   let mut position = 0
   while index < bytes.length() {

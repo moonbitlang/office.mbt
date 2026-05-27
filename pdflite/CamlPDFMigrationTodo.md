@@ -10642,6 +10642,19 @@ Current backend snapshot:
   text/fixture_acceptance pdf_embed_test.mbt pdf_addtext_test.mbt
   pdf_draw_test.mbt` reports 341/341; the same focused suite on `wasm-gc` and
   `js` reports 337/337 on each backend.~~
+- [x] ~~Continue source-port hardening with sparse parser/resource allocation
+  tuning: draw-control word/newline splitting, draw paragraph assembly and page
+  resource-number collection, add-text URL extraction, CMap CID-system and
+  section parsing, encoding dictionary writes, image JBIG2 global objects,
+  image page content operators, image decode arrays, identity decode defaults,
+  and extraction dedup claims now preallocate from byte, word, resource,
+  marker, CMap-data, difference, optional-global, component, or image counts
+  while preserving source-compatible ordering. Validation on MoonBit compiler
+  0.9.3: `moon check --target native --warn-list +73` passes with the known
+  notice; `moon test --target native pdf_draw_test.mbt pdf_addtext_test.mbt
+  pdf_text_test.mbt pdf_text_wbtest.mbt text/fixture_acceptance
+  pdf_image_test.mbt image/fixture_acceptance` reports 411/411; the same
+  focused suite on `wasm-gc` and `js` reports 385/385 on each backend.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

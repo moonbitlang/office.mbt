@@ -114,7 +114,7 @@ pub fn PdfDrawControl::add_op(
 ///|
 fn pdf_draw_control_split_on_spaces(text : String) -> Array[String] {
   let bytes = @utf8.encode(text)
-  let parts : Array[String] = []
+  let parts : Array[String] = Array::new(capacity=bytes.length())
   let mut start = 0
   for index in 0..<bytes.length() {
     if bytes[index].to_int() == 32 {
@@ -788,7 +788,7 @@ fn pdf_draw_control_parse_para_spec(
 ///|
 fn pdf_draw_control_split_escaped_newlines(text : String) -> Array[String] {
   let bytes = @utf8.encode(text)
-  let parts : Array[String] = []
+  let parts : Array[String] = Array::new(capacity=bytes.length())
   let mut start = 0
   let mut index = 0
   while index < bytes.length() {
