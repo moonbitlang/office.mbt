@@ -381,7 +381,9 @@ pub fn pdf_addtext_width_of_fontpack(
   font_size : Double,
   text : String,
 ) -> Double raise PdfError {
-  let width_tables : Array[Array[Double]] = []
+  let width_tables : Array[Array[Double]] = Array::new(
+    capacity=fontpack.fonts.length(),
+  )
   for font in fontpack.fonts {
     width_tables.push(pdf_type_font_widths(font, font_size))
   }
@@ -471,7 +473,7 @@ pub fn PdfDocument::addtext_line_widths(
   let text_width = self.addtext_calc_textwidth(
     page, font, fontpack, fontname, font_size, text,
   )
-  let widths : Array[Double] = []
+  let widths : Array[Double] = Array::new(capacity=expanded_lines.length())
   for line in expanded_lines {
     widths.push(
       self.addtext_calc_textwidth(
@@ -716,14 +718,17 @@ fn pdf_addtext_fontpack_text_ops(
   font_size : Double,
   text : String,
 ) -> Array[PdfContentOp] raise PdfError {
-  let triples : Array[(Int, Int, PdfFont)] = []
-  for codepoint in pdf_codepoints_of_utf8(@utf8.encode(text)) {
+  let codepoints = pdf_codepoints_of_utf8(@utf8.encode(text))
+  let triples : Array[(Int, Int, PdfFont)] = Array::new(
+    capacity=codepoints.length(),
+  )
+  for codepoint in codepoints {
     match fontpack.get_char(codepoint) {
       Some(triple) => triples.push(triple)
       None => ()
     }
   }
-  let ops : Array[PdfContentOp] = []
+  let ops : Array[PdfContentOp] = Array::new(capacity=triples.length() * 2)
   for run in pdf_fontpack_collate_runs(triples) {
     guard run.length() > 0 else { continue }
     let font_index = run[0].1
@@ -1147,7 +1152,10 @@ pub fn pdf_addtext_allocate_font_names(
 ) -> (PdfName, PdfObject, Array[PdfName]) raise PdfError {
   let unique_fontname = fontdict.unique_key("F")
   let mut updated = fontdict
-  let unique_fontnames : Array[PdfName] = []
+  let unique_fontnames : Array[PdfName] = match fontpack {
+    Some(pack) => Array::new(capacity=pack.fonts.length())
+    None => []
+  }
   match fontpack {
     Some(pack) =>
       for _ in pack.fonts {

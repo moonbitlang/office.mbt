@@ -11433,7 +11433,7 @@ fn pdf_text_utf16be_unit(bytes : BytesView, index : Int) -> Int raise PdfError {
 pub fn pdf_codepoints_of_utf16be(
   bytes : BytesView,
 ) -> Array[Int] raise PdfError {
-  let codepoints : Array[Int] = []
+  let codepoints : Array[Int] = Array::new(capacity=bytes.length() / 2)
   let mut index = 0
   while index < bytes.length() {
     let w1 = pdf_text_utf16be_unit(bytes, index)
@@ -11546,7 +11546,7 @@ fn pdf_text_push_utf8_codepoint(
 /// surrogate or out-of-range scalar values raise `PdfError::InvalidUTF8` or
 /// `PdfError::InvalidUnicodeCodepoint`.
 pub fn pdf_codepoints_of_utf8(bytes : BytesView) -> Array[Int] raise PdfError {
-  let output : Array[Int] = []
+  let output : Array[Int] = Array::new(capacity=bytes.length())
   let mut index = 0
   while index < bytes.length() {
     let first = bytes[index].to_int()
@@ -11672,7 +11672,7 @@ pub fn pdf_codepoint_of_pdfdocencoding_byte(value : Int) -> Int raise PdfError {
 pub fn pdf_codepoints_of_pdfdocencoding(
   bytes : BytesView,
 ) -> Array[Int] raise PdfError {
-  let codepoints : Array[Int] = []
+  let codepoints : Array[Int] = Array::new(capacity=bytes.length())
   for byte in bytes {
     codepoints.push(pdf_codepoint_of_pdfdocencoding_byte(byte.to_int()))
   }

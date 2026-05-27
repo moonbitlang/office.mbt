@@ -10605,6 +10605,18 @@ Current backend snapshot:
   native pdf_draw_test.mbt draw/fixture_acceptance pdf_embed_test.mbt
   pdf_addtext_test.mbt` reports 201/201; the same focused suite on `wasm-gc`
   and `js` reports 183/183 on each backend.~~
+- [x] ~~Continue source-port hardening with shared fontpack/text allocation
+  tuning: TrueType fontpack entry construction, standard-font fontpack
+  construction, UTF-8/PDFDocEncoding/UTF-16BE codepoint decoding, add-text
+  fontpack width-table construction, expanded-line widths, fontpack text-op
+  rendering, and font resource-name allocation now preallocate from subset,
+  font, byte, line, codepoint, or generated-name counts while preserving
+  source-compatible text and fontpack lookup behavior. Validation on MoonBit
+  compiler 0.9.3: `moon check --target native --warn-list +73` passes with the
+  known notice; `moon test --target native pdf_text_test.mbt pdf_text_wbtest.mbt
+  text/fixture_acceptance pdf_embed_test.mbt pdf_addtext_test.mbt
+  pdf_draw_test.mbt` reports 341/341; the same focused suite on `wasm-gc` and
+  `js` reports 337/337 on each backend.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

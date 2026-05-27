@@ -149,7 +149,11 @@ fn PdfDocument::pdf_embed_make_single_truetype_font(
 fn pdf_embed_make_fontpack_entries(
   subsets_and_fonts : ArrayView[(Array[Int], PdfFont)],
 ) -> Array[PdfFontPackEntry] {
-  let entries : Array[PdfFontPackEntry] = []
+  let mut entry_capacity = 0
+  for entry in subsets_and_fonts {
+    entry_capacity += entry.0.length()
+  }
+  let entries : Array[PdfFontPackEntry] = Array::new(capacity=entry_capacity)
   for index in 0..<subsets_and_fonts.length() {
     let (subset, font) = subsets_and_fonts[index]
     let extractor = font.text_extractor()
@@ -182,7 +186,9 @@ pub fn PdfDocument::embed_truetype(
     pdf_embed_empty_fontpack()
   } else {
     let parsed = pdf_truetype_parse(fontfile, encoding, codepoints)
-    let subsets_and_fonts : Array[(Array[Int], PdfFont)] = []
+    let subsets_and_fonts : Array[(Array[Int], PdfFont)] = Array::new(
+      capacity=parsed.length(),
+    )
     for subset in parsed {
       subsets_and_fonts.push(
         self.pdf_embed_make_single_truetype_font(subset, fontname, encoding),
@@ -218,7 +224,7 @@ pub fn pdf_fontpack_of_standard_font(
   font : PdfFont,
 ) -> PdfFontPack raise PdfError {
   let extractor = font.text_extractor()
-  let entries : Array[PdfFontPackEntry] = []
+  let entries : Array[PdfFontPackEntry] = Array::new(capacity=256)
   for code in 0..<256 {
     let bytes : FixedArray[Byte] = [code.to_byte()]
     let codepoints = extractor.codepoints_of_text(Bytes::from_array(bytes))
