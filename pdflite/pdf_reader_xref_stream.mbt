@@ -108,7 +108,8 @@ fn pdf_xref_stream_index_pairs(
         raise XRefEntryExpected
       }
       let pairs : Array[(Int, Int)] = Array::new(capacity=values.length() / 2)
-      for i = 0; i < values.length(); i = i + 2 {
+      for pair_index in 0..<(values.length() / 2) {
+        let i = pair_index * 2
         let start = values[i]
         let length = values[i + 1]
         if start < 0 || length < 0 {

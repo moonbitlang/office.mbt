@@ -42,7 +42,7 @@ fn pdf_object_stream_end_offsets(
 ) -> Array[Int] {
   let default_end = data_length - first
   let sorted : Array[(Int, Int)] = Array::new(capacity=pairs.length())
-  for index = 0; index < pairs.length(); index = index + 1 {
+  for index in 0..<pairs.length() {
     sorted.push((pairs[index].1, index))
   }
   sorted.sort_by(fn(left, right) { left.0.compare(right.0) })

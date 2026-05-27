@@ -445,7 +445,7 @@ pub fn PdfObject::lookup_immediate(
 ) -> PdfObject? {
   match self.dictionary_view() {
     Some(entries) =>
-      for i = 0; i < entries.length(); i = i + 1 {
+      for i in 0..<entries.length() {
         let (name, value) = entries[i]
         if name == key {
           break Some(value)
@@ -485,11 +485,11 @@ fn dict_add_entries(
   let output : Array[(PdfName, PdfObject)] = Array::new(
     capacity=entries.length() + 1,
   )
-  for i = 0; i < entries.length(); i = i + 1 {
+  for i in 0..<entries.length() {
     let (name, old_value) = entries[i]
     if name == key {
       output.push((key, value))
-      for j = i + 1; j < entries.length(); j = j + 1 {
+      for j in (i + 1)..<entries.length() {
         output.push(entries[j])
       }
       break output
@@ -501,7 +501,8 @@ fn dict_add_entries(
       capacity=entries.length() + 1,
     )
     reversed.push((key, value))
-    for i = entries.length() - 1; i >= 0; i = i - 1 {
+    for offset in 0..<entries.length() {
+      let i = entries.length() - 1 - offset
       reversed.push(entries[i])
     }
     reversed
@@ -576,11 +577,11 @@ fn dict_replace_entries(
   let output : Array[(PdfName, PdfObject)] = Array::new(
     capacity=entries.length(),
   )
-  for i = 0; i < entries.length(); i = i + 1 {
+  for i in 0..<entries.length() {
     let (name, old_value) = entries[i]
     if name == key {
       output.push((key, value))
-      for j = i + 1; j < entries.length(); j = j + 1 {
+      for j in (i + 1)..<entries.length() {
         output.push(entries[j])
       }
       break output

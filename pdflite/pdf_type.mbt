@@ -92,7 +92,7 @@ pub fn pdf_string_of_type_element(element : PdfTypeElement) -> PdfBytes {
 pub fn pdf_string_of_type(elements : ArrayView[PdfTypeElement]) -> PdfBytes {
   let rendered = Array::make(elements.length(), pdf_type_ascii(""))
   let mut output_length = 0
-  for i = 0; i < elements.length(); i = i + 1 {
+  for i in 0..<elements.length() {
     let element_bytes = pdf_string_of_type_element(elements[i])
     rendered[i] = element_bytes
     output_length += 1 + element_bytes.length()

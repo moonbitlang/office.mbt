@@ -75,7 +75,7 @@ pub fn PdfDocument::lookup_direct(
 ) -> PdfObject? {
   match self.direct(object).dictionary_view() {
     Some(entries) =>
-      for i = 0; i < entries.length(); i = i + 1 {
+      for i in 0..<entries.length() {
         let (name, value) = entries[i]
         if name == key {
           let direct_value = self.direct(value)
@@ -465,7 +465,7 @@ pub fn PdfDocument::lookup_chain(
   keys : ArrayView[PdfName],
 ) -> PdfObject? {
   let mut current = start
-  for i = 0; i < keys.length(); i = i + 1 {
+  for i in 0..<keys.length() {
     match self.lookup_direct_or_array(keys[i], current) {
       Some(next) => current = next
       None => break None
