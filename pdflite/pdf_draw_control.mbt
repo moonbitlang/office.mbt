@@ -295,6 +295,7 @@ pub fn PdfDrawControl::auto_artifacts(self : PdfDrawControl) -> Bool {
 }
 
 ///|
+/// Append a line-thickness operation parsed from a cpdf draw-control argument.
 pub fn PdfDrawControl::set_line_thickness(
   self : PdfDrawControl,
   text : String,
@@ -306,6 +307,7 @@ pub fn PdfDrawControl::set_line_thickness(
 }
 
 ///|
+/// Append a line-cap operation parsed from a cpdf draw-control argument.
 pub fn PdfDrawControl::set_line_cap(
   self : PdfDrawControl,
   text : String,
@@ -320,6 +322,7 @@ pub fn PdfDrawControl::set_line_cap(
 }
 
 ///|
+/// Append a line-join operation parsed from a cpdf draw-control argument.
 pub fn PdfDrawControl::set_line_join(
   self : PdfDrawControl,
   text : String,
@@ -334,6 +337,7 @@ pub fn PdfDrawControl::set_line_join(
 }
 
 ///|
+/// Append a miter-limit operation parsed from a cpdf draw-control argument.
 pub fn PdfDrawControl::set_miter_limit(
   self : PdfDrawControl,
   text : String,
@@ -345,6 +349,7 @@ pub fn PdfDrawControl::set_miter_limit(
 }
 
 ///|
+/// Append a dash-pattern operation parsed from a cpdf draw-control argument.
 pub fn PdfDrawControl::set_dash_pattern(
   self : PdfDrawControl,
   text : String,
@@ -362,6 +367,7 @@ pub fn PdfDrawControl::set_dash_pattern(
 }
 
 ///|
+/// Append an explicit transformation matrix parsed from six numbers.
 pub fn PdfDrawControl::set_matrix(
   self : PdfDrawControl,
   text : String,
@@ -382,6 +388,7 @@ pub fn PdfDrawControl::set_matrix(
 }
 
 ///|
+/// Append a translation matrix operation parsed from a cpdf argument.
 pub fn PdfDrawControl::matrix_translate(
   self : PdfDrawControl,
   text : String,
@@ -393,6 +400,7 @@ pub fn PdfDrawControl::matrix_translate(
 }
 
 ///|
+/// Append a rotation matrix operation parsed from a cpdf argument.
 pub fn PdfDrawControl::matrix_rotate(
   self : PdfDrawControl,
   text : String,
@@ -406,6 +414,7 @@ pub fn PdfDrawControl::matrix_rotate(
 }
 
 ///|
+/// Append a scale matrix operation parsed from a cpdf argument.
 pub fn PdfDrawControl::matrix_scale(
   self : PdfDrawControl,
   text : String,
@@ -421,6 +430,7 @@ pub fn PdfDrawControl::matrix_scale(
 }
 
 ///|
+/// Append an X-shear matrix operation parsed from a cpdf argument.
 pub fn PdfDrawControl::matrix_shear_x(
   self : PdfDrawControl,
   text : String,
@@ -434,6 +444,7 @@ pub fn PdfDrawControl::matrix_shear_x(
 }
 
 ///|
+/// Append a Y-shear matrix operation parsed from a cpdf argument.
 pub fn PdfDrawControl::matrix_shear_y(
   self : PdfDrawControl,
   text : String,
@@ -447,6 +458,7 @@ pub fn PdfDrawControl::matrix_shear_y(
 }
 
 ///|
+/// Append a reference to a previously defined XObject.
 pub fn PdfDrawControl::use_xobject(
   self : PdfDrawControl,
   name : String,
@@ -455,6 +467,7 @@ pub fn PdfDrawControl::use_xobject(
 }
 
 ///|
+/// Append an image-resource reference by name.
 pub fn PdfDrawControl::add_image(
   self : PdfDrawControl,
   name : String,
