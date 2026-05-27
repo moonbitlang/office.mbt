@@ -8,7 +8,7 @@ stdout, stderr, and process exit codes.
 
 ```mooncram
 $ "$PDFLITE_CLI" --version
-pdflite 0.1.32
+pdflite 0.1.34
 ```
 
 ## Help
