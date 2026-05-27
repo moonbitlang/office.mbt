@@ -6,7 +6,7 @@ fn pdf_page_select_pages(
   if page_numbers.length() == 0 {
     raise PageTreeExpected
   }
-  let selected : Array[PdfPage] = []
+  let selected : Array[PdfPage] = Array::new(capacity=page_numbers.length())
   for page_number in page_numbers {
     if page_number < 1 || page_number > pages.length() {
       raise PageTreeExpected
@@ -24,7 +24,7 @@ fn pdf_page_select_numbers(
   if page_numbers.length() == 0 {
     raise PageTreeExpected
   }
-  let selected : Array[Int] = []
+  let selected : Array[Int] = Array::new(capacity=page_numbers.length())
   for page_number in page_numbers {
     if page_number < 1 || page_number > numbers.length() {
       raise PageTreeExpected
@@ -56,18 +56,19 @@ fn PdfDocument::pdf_page_annotation_numbers(
     Some(value) => value
     None => PdfNull
   }
-  let numbers : Array[Int] = []
   match annots_object {
-    PdfArray(items) =>
+    PdfArray(items) => {
+      let numbers : Array[Int] = Array::new(capacity=items.length())
       for item in items {
         match item {
           PdfIndirect(number) => numbers.push(number)
           _ => ()
         }
       }
-    _ => ()
+      numbers
+    }
+    _ => []
   }
-  numbers
 }
 
 ///|
@@ -119,16 +120,20 @@ fn PdfDocument::pdf_page_fixup_duplicate_annots(
   self : PdfDocument,
 ) -> Unit raise PdfError {
   let page_numbers = self.page_reference_numbers()
-  let existing_annots : Array[Array[Int]] = []
+  let existing_annots : Array[Array[Int]] = Array::new(
+    capacity=page_numbers.length(),
+  )
   for page_number in page_numbers {
     existing_annots.push(
       self.pdf_page_annotation_numbers(self.lookup_object_or_null(page_number)),
     )
   }
   let seen = @number_set.pdf_number_set([])
-  let new_annots : Array[Array[Int]] = []
+  let new_annots : Array[Array[Int]] = Array::new(
+    capacity=existing_annots.length(),
+  )
   for annots in existing_annots {
-    let page_annots : Array[Int] = []
+    let page_annots : Array[Int] = Array::new(capacity=annots.length())
     for annotation_number in annots {
       if seen.contains(annotation_number) {
         page_annots.push(
@@ -184,8 +189,11 @@ fn PdfDocument::pdf_page_live_destinations(
   self : PdfDocument,
   dests_tree : PdfObject,
 ) -> Array[(PdfBytes, PdfObject)] {
-  let output : Array[(PdfBytes, PdfObject)] = []
-  for entry in self.read_name_tree(dests_tree) {
+  let entries = self.read_name_tree(dests_tree)
+  let output : Array[(PdfBytes, PdfObject)] = Array::new(
+    capacity=entries.length(),
+  )
+  for entry in entries {
     let (_, destination) = entry
     if !self.pdf_page_destination_was_nulled(destination) {
       output.push(entry)
@@ -201,7 +209,9 @@ fn PdfDocument::pdf_page_live_catalog_destinations(
 ) -> PdfObject {
   match dests {
     PdfDictionary(entries) => {
-      let output : Array[(PdfName, PdfObject)] = []
+      let output : Array[(PdfName, PdfObject)] = Array::new(
+        capacity=entries.length(),
+      )
       for entry in entries {
         let (_, destination) = entry
         if !self.pdf_page_destination_was_nulled(destination) {
@@ -313,7 +323,8 @@ fn PdfDocument::pdf_page_tree_nodes_not_pages_inner(
     _ =>
       match self.lookup_direct(pdf_page_kids_key(), node) {
         Some(PdfArray(kids)) => {
-          let nodes : Array[Int] = [node_number]
+          let nodes : Array[Int] = Array::new(capacity=kids.length() + 1)
+          nodes.push(node_number)
           for kid in kids {
             match kid {
               PdfIndirect(number) =>
@@ -362,7 +373,7 @@ fn PdfDocument::pdf_page_reference_numbers_unordered_inner(
     _ =>
       match self.lookup_direct(pdf_page_kids_key(), node) {
         Some(PdfArray(kids)) => {
-          let numbers : Array[Int] = []
+          let numbers : Array[Int] = Array::new(capacity=kids.length())
           for kid in kids {
             match kid {
               PdfIndirect(number) =>
@@ -415,7 +426,7 @@ fn pdf_page_rewrite_first_kid(
   old_number : Int,
   new_number : Int,
 ) -> (Array[PdfObject], Bool) {
-  let output : Array[PdfObject] = []
+  let output : Array[PdfObject] = Array::new(capacity=kids.length())
   let mut rewritten = false
   for kid in kids {
     match kid {
@@ -659,7 +670,7 @@ fn pdf_page_deleted_numbers(
   active_page_numbers : ArrayView[Int],
 ) -> Array[Int] {
   let active_pages = @number_set.pdf_number_set(active_page_numbers)
-  let deleted : Array[Int] = []
+  let deleted : Array[Int] = Array::new(capacity=all_page_numbers.length())
   for number in all_page_numbers {
     if !active_pages.contains(number) {
       deleted.push(number)

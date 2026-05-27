@@ -36,14 +36,16 @@ fn pdf_page_renumber_object_with_map(
   match object {
     PdfIndirect(number) => PdfIndirect(changes.changed_reference(number))
     PdfArray(items) => {
-      let output : Array[PdfObject] = []
+      let output : Array[PdfObject] = Array::new(capacity=items.length())
       for item in items {
         output.push(pdf_page_renumber_object_with_map(item, changes))
       }
       PdfArray(output)
     }
     PdfDictionary(entries) => {
-      let output : Array[(PdfName, PdfObject)] = []
+      let output : Array[(PdfName, PdfObject)] = Array::new(
+        capacity=entries.length(),
+      )
       for entry in entries {
         let (key, value) = entry
         output.push((key, pdf_page_renumber_object_with_map(value, changes)))
@@ -107,7 +109,7 @@ fn pdf_page_reference_changes(
   if old_numbers.length() != new_numbers.length() {
     raise PageTreeExpected
   }
-  let changes : Array[(Int, Int)] = []
+  let changes : Array[(Int, Int)] = Array::new(capacity=old_numbers.length())
   for i in 0..<old_numbers.length() {
     changes.push((old_numbers[i], new_numbers[i]))
   }
@@ -120,7 +122,7 @@ fn pdf_page_reference_changes_from_serials(
   new_numbers : ArrayView[Int],
   changes : ArrayView[(Int, Int)],
 ) -> Array[(Int, Int)] raise PdfError {
-  let output : Array[(Int, Int)] = []
+  let output : Array[(Int, Int)] = Array::new(capacity=changes.length())
   for change in changes {
     let (old_page, new_page) = change
     if old_page < 1 ||

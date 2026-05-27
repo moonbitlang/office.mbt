@@ -10763,6 +10763,21 @@ Current backend snapshot:
   reports 229/229; the focused suite without native acceptance on `wasm-gc`
   and `js` reports 137/137 on each backend; `moon test --target native .`
   reports 2010/2010.~~
+- [x] ~~Continue source-port hardening with page extraction and reference
+  renumbering allocation tuning: selected page/object-number lists, annotation
+  number scans, duplicate-annotation tables, live name-tree and catalog
+  destinations, page-tree node/reference scans, first-kid rewrite outputs,
+  deleted-page lists, recursive reference-renumbered arrays/dictionaries, and
+  page-reference change tables now preallocate from page, annotation, name-tree,
+  dictionary, kids, object, or change counts while preserving extraction,
+  duplicate-page repair, annotation-link repair, destination pruning, and
+  reference-renumbering behavior. Validation on MoonBit compiler 0.9.3:
+  `moon check --target native --warn-list +73` and `moon check --target all
+  --warn-list +73` pass with the known notice; `moon test --target native
+  pdf_page_test.mbt pdf_page_wbtest.mbt pdf_merge_test.mbt
+  pdf_native_acceptance_test.mbt` reports 229/229; the focused suite without
+  native acceptance on `wasm-gc` and `js` reports 137/137 on each backend;
+  `moon test --target native .` reports 2010/2010.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
