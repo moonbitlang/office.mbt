@@ -18,10 +18,10 @@ flowchart LR
 ```moonbit check
 ///|
 test "paper sizes and units are explicit" {
-  if @geometry.paper_a4.unit() != @geometry.Millimetre {
+  if @geometry.paper_a4.unit() != Millimetre {
     fail("A4 is stored in millimetres")
   }
-  if @geometry.unit_points(1.0, @geometry.Inch) != 72.0 {
+  if @geometry.unit_points(1.0, Inch) != 72.0 {
     fail("one inch is 72 PDF points")
   }
   let landscape = @geometry.paper_a4.landscape()

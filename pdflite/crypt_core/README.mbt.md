@@ -35,14 +35,11 @@ test "arc4 primitive is symmetric" {
 test "digest and permission helpers expose PDF primitives" {
   let data = try! @core.pdf_bytes_of_int_array([97, 98, 99])
   inspect(@crypt_core.pdf_md5_digest(data).length(), content="16")
-  let mask = @crypt_core.pdf_p_of_permissions([
-    @crypt_core.PdfNoPrint,
-    @crypt_core.PdfNoCopy,
-  ])
+  let mask = @crypt_core.pdf_p_of_permissions([PdfNoPrint, PdfNoCopy])
   let permissions = @crypt_core.pdf_permissions_of_p(mask)
   let mut saw_copy = false
   for permission in permissions {
-    if permission == @crypt_core.PdfNoCopy {
+    if permission == PdfNoCopy {
       saw_copy = true
     }
   }
