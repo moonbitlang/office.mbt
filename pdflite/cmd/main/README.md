@@ -23,10 +23,13 @@ _build/native/release/build/cmd/main/main.exe validate fixtures/camlpdf/logo.pdf
 _build/native/release/build/cmd/main/main.exe rewrite fixtures/camlpdf/logo.pdf _build/logo-roundtrip.pdf
 ```
 
-The black-box CLI documentation tests live in `tests/scrut` and run with:
+The black-box CLI documentation tests live in `tests/cram` and run with:
 
 ```sh
-moon run --target native scripts/check_scrut_cli.mbtx
+moon run --target native --release --build-only cmd/main
+PDFLITE_CLI="$PWD/_build/native/release/build/cmd/main/main.exe" \
+PDFLITE_LOGO_PDF="$PWD/fixtures/camlpdf/logo.pdf" \
+moon cram test tests/cram
 ```
 
 ## Package Notes

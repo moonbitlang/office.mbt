@@ -71,27 +71,20 @@ jobs:
           moon version --all
           moon update
 
-      - name: Set up DotSlash
-        uses: facebook/install-dotslash@latest
-
-      - name: Set up Scrut
-        env:
-          SCRUT_VERSION: v0.4.3
-        run: |
-          curl --proto '=https' --tlsv1.2 -LsSf \
-            "https://github.com/facebookincubator/scrut/releases/download/${SCRUT_VERSION}/scrut" \
-            > scrut
-          chmod +x scrut
-          echo "SCRUT_BIN=$PWD/scrut" >> "$GITHUB_ENV"
-
       - name: Check native target
         run: moon check --target native --warn-list "$MOON_WARN_LIST"
 
       - name: Test native target
         run: moon test --target native
 
+      - name: Build native CLI
+        run: moon run --target native --release --build-only cmd/main
+
       - name: Test native CLI documentation
-        run: moon run --target native scripts/check_scrut_cli.mbtx
+        env:
+          PDFLITE_CLI: ${{ github.workspace }}/_build/native/release/build/cmd/main/main.exe
+          PDFLITE_LOGO_PDF: ${{ github.workspace }}/fixtures/camlpdf/logo.pdf
+        run: moon cram test tests/cram
 
   backend-check:
     name: Backend Check (${{ matrix.moonbit-version }})

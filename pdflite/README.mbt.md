@@ -41,10 +41,13 @@ _build/native/release/build/cmd/main/main.exe validate fixtures/camlpdf/logo.pdf
 _build/native/release/build/cmd/main/main.exe rewrite fixtures/camlpdf/logo.pdf _build/logo-roundtrip.pdf
 ```
 
-Black-box CLI documentation tests live in `tests/scrut` and run with:
+Black-box CLI documentation tests live in `tests/cram` and run with:
 
 ```sh
-moon run --target native scripts/check_scrut_cli.mbtx
+moon run --target native --release --build-only cmd/main
+PDFLITE_CLI="$PWD/_build/native/release/build/cmd/main/main.exe" \
+PDFLITE_LOGO_PDF="$PWD/fixtures/camlpdf/logo.pdf" \
+moon cram test tests/cram
 ```
 
 ## Release Check
@@ -62,7 +65,7 @@ moon run --target native scripts/release_check.mbtx -- --full-native-tests --pub
 ```
 
 The script runs `moon info`, `moon fmt --check`, all-target checking, focused
-native CLI tests, Scrut CLI documentation tests, the checked-in fixture
+native CLI tests, Moon Cram CLI documentation tests, the checked-in fixture
 round-trip matrix, the large fixture rewrite smoke test, and `moon package`.
 
 ## What This Package Owns

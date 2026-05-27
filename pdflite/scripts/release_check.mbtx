@@ -1,5 +1,6 @@
 import {
   "moonbitlang/async",
+  "moonbitlang/async/fs",
   "moonbitlang/async/io",
   "moonbitlang/async/process",
   "moonbitlang/async/stdio",
@@ -83,8 +84,12 @@ fn release_check_steps(
     },
     { name: "test native CLI package", args: ["test", "--target", "native", "cmd/main"] },
     {
+      name: "build native CLI",
+      args: ["run", "--target", "native", "--release", "--build-only", "cmd/main"],
+    },
+    {
       name: "test native CLI documentation",
-      args: ["run", "--target", "native", "scripts/check_scrut_cli.mbtx"],
+      args: ["cram", "test", "tests/cram"],
     },
     {
       name: "test checked-in fixture roundtrip matrix",
@@ -127,8 +132,45 @@ async fn run_release_check_step(step : ReleaseCheckStep) -> Int {
   eprintln("$ moon " + step.args.join(" "))
   if step.name == "publish dry run" {
     return run_release_check_publish_dry_run_step(step)
+  } else if step.name == "test native CLI documentation" {
+    return run_release_check_cram_cli_step(step)
   }
   let code = @process.run("moon", step.args)
+  if code != 0 {
+    eprintln(
+      "release_check: " +
+      step.name +
+      " failed with exit code " +
+      code.to_string(),
+    )
+  }
+  code
+}
+
+///|
+async fn run_release_check_cram_cli_step(step : ReleaseCheckStep) -> Int {
+  let cwd = match @env.current_dir() {
+    Some(value) => value
+    None => {
+      eprintln("release_check: failed to resolve current working directory")
+      return 1
+    }
+  }
+  let cli_path = cwd + "/_build/native/release/build/cmd/main/main.exe"
+  if !@fs.exists(cli_path) {
+    eprintln("release_check: native CLI binary was not built: " + cli_path)
+    return 1
+  }
+  let fixture_path = cwd + "/fixtures/camlpdf/logo.pdf"
+  if !@fs.exists(fixture_path) {
+    eprintln("release_check: PDF fixture does not exist: " + fixture_path)
+    return 1
+  }
+  let code = @process.run(
+    "moon",
+    step.args,
+    extra_env={"PDFLITE_CLI": cli_path, "PDFLITE_LOGO_PDF": fixture_path},
+  )
   if code != 0 {
     eprintln(
       "release_check: " +
