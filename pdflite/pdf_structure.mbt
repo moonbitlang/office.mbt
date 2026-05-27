@@ -125,7 +125,7 @@ fn PdfDocument::pdf_structure_filter_k_items_in_set(
   items : ArrayView[PdfObject],
   deleted_pages : @number_set.PdfNumberSet,
 ) -> Array[PdfObject]? {
-  let output : Array[PdfObject] = []
+  let output : Array[PdfObject] = Array::new(capacity=items.length())
   let mut changed = false
   for item in items {
     if self.pdf_structure_k_item_survives_in_set(item, deleted_pages) {
@@ -211,7 +211,7 @@ fn pdf_structure_apply_parent_tree_changes(
   changes : ArrayView[(Int, Int)],
 ) -> Array[(Int, PdfObject)] {
   let change_map = pdf_merge_parent_tree_change_map(changes)
-  let output : Array[(Int, PdfObject)] = []
+  let output : Array[(Int, PdfObject)] = Array::new(capacity=entries.length())
   for entry in entries {
     let (old_key, value) = entry
     match pdf_structure_changed_parent_tree_key(change_map, old_key) {
@@ -276,12 +276,16 @@ pub fn pdf_renumber_parent_trees(
   documents : ArrayView[PdfDocument],
 ) -> Unit raise PdfError {
   if documents.length() > 1 {
-    let all_changes : Array[Array[(Int, Int)]] = []
-    let all_entries : Array[Array[(Int, PdfObject)]] = []
+    let all_changes : Array[Array[(Int, Int)]] = Array::new(
+      capacity=documents.length(),
+    )
+    let all_entries : Array[Array[(Int, PdfObject)]] = Array::new(
+      capacity=documents.length(),
+    )
     let mut next_key = 0
     for document in documents {
       let entries = document.pdf_structure_root_parent_tree_entries()
-      let changes : Array[(Int, Int)] = []
+      let changes : Array[(Int, Int)] = Array::new(capacity=entries.length())
       for entry in entries {
         let (old_key, _) = entry
         changes.push((old_key, next_key))
@@ -315,9 +319,10 @@ fn PdfDocument::pdf_structure_trim_deleted_pages(
     let mut changed = true
     while changed {
       changed = false
-      let deletions : Array[Int] = []
+      let object_numbers = self.object_numbers()
+      let deletions : Array[Int] = Array::new(capacity=object_numbers.length())
       let deletion_seen = @number_set.pdf_number_set([])
-      for object_number in self.object_numbers() {
+      for object_number in object_numbers {
         if self.pdf_structure_object_has_deleted_page_in_set(
             self.lookup_object_or_null(object_number),
             deleted_pages,
@@ -333,8 +338,11 @@ fn PdfDocument::pdf_structure_trim_deleted_pages(
           changed = true
         }
       }
-      let replacements : Array[(Int, PdfObject)] = []
-      for object_number in self.object_numbers() {
+      let object_numbers = self.object_numbers()
+      let replacements : Array[(Int, PdfObject)] = Array::new(
+        capacity=object_numbers.length(),
+      )
+      for object_number in object_numbers {
         let object = self.lookup_object_or_null(object_number)
         match
           self.pdf_structure_filtered_k_value_in_set(object, deleted_pages) {
@@ -405,7 +413,9 @@ fn PdfDocument::pdf_structure_merged_parent_tree_entries(
   self : PdfDocument,
   structure_tree_roots : ArrayView[PdfObject],
 ) -> Array[(Int, PdfObject)] {
-  let entries : Array[(Int, PdfObject)] = []
+  let entries : Array[(Int, PdfObject)] = Array::new(
+    capacity=structure_tree_roots.length(),
+  )
   for root in structure_tree_roots {
     for entry in self.pdf_merge_structure_parent_tree_entries(root) {
       entries.push(entry)

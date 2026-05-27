@@ -10793,6 +10793,20 @@ Current backend snapshot:
   pdf_merge_test.mbt pdf_native_acceptance_test.mbt` reports 171/171; the
   focused suite without native acceptance on `wasm-gc` and `js` reports 79/79
   on each backend; `moon test --target native .` reports 2010/2010.~~
+- [x] ~~Continue source-port hardening with structure-tree allocation tuning:
+  filtered `/K` child arrays, parent-tree change application outputs,
+  per-document parent-tree change/entry tables, trim-structure deletion and
+  replacement tables, and merged parent-tree entry accumulation now preallocate
+  from child, parent-entry, document, object-number, or structure-root counts
+  while preserving deleted-page pruning, fixed-point structure trimming,
+  parent-tree key renumbering, metadata replacement, and merge behavior.
+  Validation on MoonBit compiler 0.9.3: `moon check --target native
+  --warn-list +73` and `moon check --target all --warn-list +73` pass with
+  the known notice; `moon test --target native pdf_structure_test.mbt
+  pdf_page_test.mbt pdf_merge_test.mbt pdf_native_acceptance_test.mbt` reports
+  219/219; the focused suite without native acceptance on `wasm-gc` and `js`
+  reports 127/127 on each backend; `moon test --target native .` reports
+  2010/2010.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
