@@ -10733,6 +10733,22 @@ Current backend snapshot:
   pdf_page_test.mbt pdf_page_wbtest.mbt` reports 157/157; the same focused
   suite on `wasm-gc` and `js` reports 157/157 on each backend; `moon test
   --target native .` reports 2010/2010.~~
+- [x] ~~Continue source-port hardening with core object and CPDFJSON utility
+  allocation tuning: object deep-copy arrays/dictionaries, public object
+  array/dictionary constructors, one-level array/dictionary recursion,
+  dictionary add/replace/remove entry builders, JSON object arrays,
+  content-operation float and operand arrays, parsed content stream operation
+  arrays, JSON-to-object arrays/dictionaries, top-level CPDFJSON import object
+  tables, reachable-object scans, document JSON entries, and dictionary-entry
+  reporting outputs now preallocate from object, entry, operand, operation,
+  reachable, or item counts while preserving historical dictionary ordering and
+  CPDFJSON shapes. Validation on MoonBit compiler 0.9.3: `moon check --target
+  native --warn-list +73` and `moon check --target all --warn-list +73` pass
+  with the known notice; `moon test --target native pdf_object_test.mbt
+  pdf_util_test.mbt pdflite_wbtest.mbt pdf_writer_wbtest.mbt
+  pdf_reader_wbtest.mbt` reports 94/94; the same focused suite on `wasm-gc`
+  and `js` reports 94/94 on each backend; `moon test --target native .`
+  reports 2010/2010.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

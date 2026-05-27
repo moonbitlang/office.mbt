@@ -133,9 +133,22 @@ fn PdfStreamData::deep_copy(self : PdfStreamData) -> PdfStreamData {
 ///|
 fn PdfObject::deep_copy(self : PdfObject) -> PdfObject {
   match self {
-    PdfArray(values) => PdfArray([ for value in values => value.deep_copy() ])
-    PdfDictionary(entries) =>
-      PdfDictionary([ for entry in entries => (entry.0, entry.1.deep_copy()) ])
+    PdfArray(values) => {
+      let output : Array[PdfObject] = Array::new(capacity=values.length())
+      for value in values {
+        output.push(value.deep_copy())
+      }
+      PdfArray(output)
+    }
+    PdfDictionary(entries) => {
+      let output : Array[(PdfName, PdfObject)] = Array::new(
+        capacity=entries.length(),
+      )
+      for entry in entries {
+        output.push((entry.0, entry.1.deep_copy()))
+      }
+      PdfDictionary(output)
+    }
     PdfStreamObject(stream) =>
       PdfStreamObject({
         dictionary: stream.dictionary.deep_copy(),
@@ -151,7 +164,11 @@ fn PdfObject::deep_copy(self : PdfObject) -> PdfObject {
 /// The outer array is newly allocated, but the contained `PdfObject` values are
 /// copied by value rather than deep-copied.
 pub fn pdf_array(values : ArrayView[PdfObject]) -> PdfObject {
-  PdfArray([ for value in values => value ])
+  let output : Array[PdfObject] = Array::new(capacity=values.length())
+  for value in values {
+    output.push(value)
+  }
+  PdfArray(output)
 }
 
 ///|
@@ -161,7 +178,13 @@ pub fn pdf_array(values : ArrayView[PdfObject]) -> PdfObject {
 /// normalized by this constructor; lookup helpers return the first matching
 /// entry.
 pub fn pdf_dictionary(entries : ArrayView[(PdfName, PdfObject)]) -> PdfObject {
-  PdfDictionary([ for entry in entries => entry ])
+  let output : Array[(PdfName, PdfObject)] = Array::new(
+    capacity=entries.length(),
+  )
+  for entry in entries {
+    output.push(entry)
+  }
+  PdfDictionary(output)
 }
 
 ///|
@@ -174,7 +197,11 @@ pub fn pdf_recurse_array(
   transform : (PdfObject) -> PdfObject,
   values : ArrayView[PdfObject],
 ) -> PdfObject {
-  PdfArray([ for value in values => transform(value) ])
+  let output : Array[PdfObject] = Array::new(capacity=values.length())
+  for value in values {
+    output.push(transform(value))
+  }
+  PdfArray(output)
 }
 
 ///|
@@ -188,9 +215,12 @@ pub fn pdf_recurse_dict(
   entries : ArrayView[(PdfName, PdfObject)],
   preserve_order? : Bool = false,
 ) -> PdfObject {
-  let transformed : Array[(PdfName, PdfObject)] = [
-    for entry in entries => (entry.0, transform(entry.1))
-  ]
+  let transformed : Array[(PdfName, PdfObject)] = Array::new(
+    capacity=entries.length(),
+  )
+  for entry in entries {
+    transformed.push((entry.0, transform(entry.1)))
+  }
   if preserve_order {
     PdfDictionary(transformed)
   } else {
@@ -452,7 +482,9 @@ fn dict_add_entries(
   key : PdfName,
   value : PdfObject,
 ) -> Array[(PdfName, PdfObject)] {
-  let output : Array[(PdfName, PdfObject)] = []
+  let output : Array[(PdfName, PdfObject)] = Array::new(
+    capacity=entries.length() + 1,
+  )
   for i = 0; i < entries.length(); i = i + 1 {
     let (name, old_value) = entries[i]
     if name == key {
@@ -465,7 +497,10 @@ fn dict_add_entries(
       output.push((name, old_value))
     }
   } nobreak {
-    let reversed : Array[(PdfName, PdfObject)] = [(key, value)]
+    let reversed : Array[(PdfName, PdfObject)] = Array::new(
+      capacity=entries.length() + 1,
+    )
+    reversed.push((key, value))
     for i = entries.length() - 1; i >= 0; i = i - 1 {
       reversed.push(entries[i])
     }
@@ -538,7 +573,9 @@ fn dict_replace_entries(
   key : PdfName,
   value : PdfObject,
 ) -> Array[(PdfName, PdfObject)] raise PdfError {
-  let output : Array[(PdfName, PdfObject)] = []
+  let output : Array[(PdfName, PdfObject)] = Array::new(
+    capacity=entries.length(),
+  )
   for i = 0; i < entries.length(); i = i + 1 {
     let (name, old_value) = entries[i]
     if name == key {
@@ -560,7 +597,9 @@ fn dict_remove_entries(
   entries : ArrayView[(PdfName, PdfObject)],
   key : PdfName,
 ) -> Array[(PdfName, PdfObject)] {
-  let output : Array[(PdfName, PdfObject)] = []
+  let output : Array[(PdfName, PdfObject)] = Array::new(
+    capacity=entries.length(),
+  )
   for entry in entries {
     let (name, value) = entry
     if name != key {

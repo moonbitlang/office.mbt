@@ -182,7 +182,7 @@ fn PdfDocument::pdf_util_json_of_object(
     PdfNameObject(name) =>
       Json::object(Map([("N", Json::string(pdf_util_string_from_name(name)))]))
     PdfArray(values) => {
-      let json_values : Array[Json] = []
+      let json_values : Array[Json] = Array::new(capacity=values.length())
       for value in values {
         json_values.push(
           self.pdf_util_json_of_object(
@@ -356,7 +356,7 @@ fn pdf_util_json_op_bytes(json : Json) -> PdfBytes raise PdfError {
 fn pdf_util_json_op_float_array(json : Json) -> Array[Double] raise PdfError {
   match json {
     Array(values) => {
-      let output : Array[Double] = []
+      let output : Array[Double] = Array::new(capacity=values.length())
       for value in values {
         output.push(pdf_util_json_op_float(value))
       }
@@ -370,7 +370,7 @@ fn pdf_util_json_op_float_array(json : Json) -> Array[Double] raise PdfError {
 fn pdf_util_json_op_floats(
   values : ArrayView[Json],
 ) -> Array[Double] raise PdfError {
-  let output : Array[Double] = []
+  let output : Array[Double] = Array::new(capacity=values.length())
   for value in values {
     output.push(pdf_util_json_op_float(value))
   }
@@ -389,14 +389,16 @@ fn pdf_util_json_int_object(value : Int) -> Json {
 
 ///|
 fn pdf_util_json_float_objects(values : ArrayView[Double]) -> Array[Json] {
-  [
-    for value in values => pdf_util_json_float_object(value)
-  ]
+  let output : Array[Json] = Array::new(capacity=values.length())
+  for value in values {
+    output.push(pdf_util_json_float_object(value))
+  }
+  output
 }
 
 ///|
 fn pdf_util_json_op_items(items : ArrayView[Json], operator : String) -> Json {
-  let output : Array[Json] = []
+  let output : Array[Json] = Array::new(capacity=items.length() + 1)
   for item in items {
     output.push(item)
   }
@@ -907,7 +909,7 @@ fn pdf_util_stream_of_json_ops(
   dictionary_json : Json,
   op_jsons : ArrayView[Json],
 ) -> PdfObject raise PdfError {
-  let ops : Array[PdfContentOp] = []
+  let ops : Array[PdfContentOp] = Array::new(capacity=op_jsons.length())
   for op_json in op_jsons {
     ops.push(pdf_util_content_op_of_json(op_json))
   }
@@ -951,7 +953,9 @@ fn pdf_util_object_of_json_object(
       _ => ()
     }
   }
-  let output : Array[(PdfName, PdfObject)] = []
+  let output : Array[(PdfName, PdfObject)] = Array::new(
+    capacity=entries.length(),
+  )
   for entry in entries {
     output.push(
       (pdf_util_name_from_json_text(entry.0), pdf_object_of_json(entry.1)),
@@ -975,7 +979,7 @@ pub fn pdf_object_of_json(json : Json) -> PdfObject raise PdfError {
     Number(value, repr=_) => PdfIndirect(pdf_util_json_integral_number(value))
     String(text) => PdfString(pdf_util_pdf_string_from_json_text(text))
     Array(values) => {
-      let output : Array[PdfObject] = []
+      let output : Array[PdfObject] = Array::new(capacity=values.length())
       for value in values {
         output.push(pdf_object_of_json(value))
       }
@@ -1172,7 +1176,7 @@ pub fn pdf_document_of_json(json : Json) -> PdfDocument raise PdfError {
   }
   let params : Ref[PdfObject] = { val: PdfNull }
   let trailer : Ref[PdfObject] = { val: PdfNull }
-  let objects : Array[(Int, PdfObject)] = []
+  let objects : Array[(Int, PdfObject)] = Array::new(capacity=items.length())
   for item in items {
     pdf_util_cpdfjson_read_item(item, params, trailer, objects)
   }
@@ -1317,9 +1321,10 @@ fn PdfDocument::pdf_util_collect_content_stream_numbers(
 fn PdfDocument::pdf_util_content_stream_numbers(
   self : PdfDocument,
 ) -> Array[Int] {
-  let numbers : Array[Int] = []
+  let object_numbers = self.object_numbers()
+  let numbers : Array[Int] = Array::new(capacity=object_numbers.length())
   self.pdf_util_collect_content_stream_numbers(self.trailer_dict(), numbers)
-  for number in self.object_numbers() {
+  for number in object_numbers {
     self.pdf_util_collect_content_stream_numbers(
       self.lookup_object_or_null(number),
       numbers,
@@ -1344,7 +1349,7 @@ fn PdfDocument::pdf_util_json_of_parsed_content_stream(
       let dictionary = decoded.dictionary
         .remove_dict_entry(pdf_object_length_name())
         .remove_dict_entry(pdf_util_cpdfjson_filter_key())
-      let op_jsons : Array[Json] = []
+      let op_jsons : Array[Json] = Array::new(capacity=ops.length())
       for op in ops {
         op_jsons.push(self.pdf_util_json_of_content_op(op, utf8))
       }
@@ -1442,8 +1447,9 @@ fn PdfDocument::pdf_util_reachable_document_object_numbers(
   for number in self.referenced_object_numbers(self.trailer_dict()) {
     referenced[number] = true
   }
-  let numbers : Array[Int] = []
-  for number in self.object_numbers() {
+  let object_numbers = self.object_numbers()
+  let numbers : Array[Int] = Array::new(capacity=object_numbers.length())
+  for number in object_numbers {
     if referenced.contains(number) {
       numbers.push(number)
     }
@@ -1480,7 +1486,10 @@ pub fn PdfDocument::json_of_document(
   } else {
     self
   }
-  let entries : Array[Json] = []
+  let reachable_numbers = document.pdf_util_reachable_document_object_numbers()
+  let entries : Array[Json] = Array::new(
+    capacity=reachable_numbers.length() + 2,
+  )
   entries.push(
     pdf_util_document_json_entry(
       -1,
@@ -1507,7 +1516,7 @@ pub fn PdfDocument::json_of_document(
   } else {
     []
   }
-  for number in document.pdf_util_reachable_document_object_numbers() {
+  for number in reachable_numbers {
     let object = document.lookup_object_or_null(number)
     let object_json = if pdf_util_int_array_contains(
         content_stream_numbers, number,
@@ -1697,8 +1706,9 @@ pub fn PdfDocument::dict_entry_values(
   self : PdfDocument,
   key : PdfName,
 ) -> Array[PdfObject] {
-  let output : Array[PdfObject] = []
-  for number in self.object_numbers() {
+  let object_numbers = self.object_numbers()
+  let output : Array[PdfObject] = Array::new(capacity=object_numbers.length())
+  for number in object_numbers {
     self.pdf_util_collect_dict_entry_values(
       self.lookup_object_or_null(number),
       key,
@@ -1717,8 +1727,9 @@ pub fn PdfDocument::dict_entry_rendered_values(
   self : PdfDocument,
   key : PdfName,
 ) -> Array[PdfBytes] raise PdfError {
-  let rendered : Array[PdfBytes] = []
-  for value in self.dict_entry_values(key) {
+  let values = self.dict_entry_values(key)
+  let rendered : Array[PdfBytes] = Array::new(capacity=values.length())
+  for value in values {
     rendered.push(pdf_write_object(value))
   }
   rendered
@@ -1731,8 +1742,9 @@ pub fn PdfDocument::dict_entries_json(
   key : PdfName,
   utf8? : Bool = false,
 ) -> PdfBytes raise PdfError {
-  let values : Array[Json] = []
-  for value in self.dict_entry_values(key) {
+  let entry_values = self.dict_entry_values(key)
+  let values : Array[Json] = Array::new(capacity=entry_values.length())
+  for value in entry_values {
     values.push(
       self.pdf_util_json_of_object(value, utf8, false, false, false, false),
     )
