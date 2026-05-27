@@ -186,6 +186,7 @@ fn pdf_pagespec_flatten(parts : ArrayView[Array[Int]]) -> Array[Int] {
 }
 
 ///|
+/// Return pages in `1..=end_page` that are not present in `range`.
 pub fn pdf_invert_page_range(
   end_page : Int,
   range : ArrayView[Int],
@@ -678,6 +679,7 @@ fn PdfPageSpecContext::parse_inner(
 }
 
 ///|
+/// Parse a cpdf page specification against a document with `end_page` pages.
 pub fn pdf_parse_pagespec_for_count(
   end_page : Int,
   spec : String,
@@ -689,6 +691,7 @@ pub fn pdf_parse_pagespec_for_count(
 }
 
 ///|
+/// Parse a cpdf page specification without a concrete PDF document.
 pub fn pdf_parse_pagespec_without_pdf(
   spec : String,
 ) -> Array[Int] raise PdfError {
@@ -696,6 +699,7 @@ pub fn pdf_parse_pagespec_without_pdf(
 }
 
 ///|
+/// Parse a cpdf page specification against this document.
 pub fn PdfDocument::parse_pagespec(
   self : PdfDocument,
   spec : String,
@@ -708,6 +712,7 @@ pub fn PdfDocument::parse_pagespec(
 }
 
 ///|
+/// Source-spelled wrapper for `PdfDocument::parse_pagespec`.
 pub fn pdf_parse_pagespec(
   document : PdfDocument,
   spec : String,
@@ -751,6 +756,7 @@ fn pdf_pagespec_join_ranges(ranges : ArrayView[(Int, Int)]) -> String {
 }
 
 ///|
+/// Format selected pages as a compact cpdf page specification.
 pub fn pdf_string_of_pagespec_for_count(
   end_page : Int,
   pages : ArrayView[Int],
@@ -795,6 +801,7 @@ pub fn pdf_string_of_pagespec_for_count(
 }
 
 ///|
+/// Format selected document pages as a compact cpdf page specification.
 pub fn PdfDocument::string_of_pagespec(
   self : PdfDocument,
   pages : ArrayView[Int],
@@ -803,6 +810,7 @@ pub fn PdfDocument::string_of_pagespec(
 }
 
 ///|
+/// Source-spelled wrapper for `PdfDocument::string_of_pagespec`.
 pub fn pdf_string_of_pagespec(
   document : PdfDocument,
   pages : ArrayView[Int],
