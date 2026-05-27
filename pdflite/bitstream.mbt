@@ -231,7 +231,8 @@ pub fn BitWriter::put_value_int(
   if width < 0 || width > 31 {
     raise InvalidBitCount(width)
   }
-  for shift = width - 1; shift >= 0; shift = shift - 1 {
+  for offset in 0..<width {
+    let shift = width - 1 - offset
     self.put_bit((value >> shift) & 1)
   }
 }
@@ -248,7 +249,8 @@ pub fn BitWriter::put_value_int64(
   if width < 0 || width > 32 {
     raise InvalidBitCount(width)
   }
-  for shift = width - 1; shift >= 0; shift = shift - 1 {
+  for offset in 0..<width {
+    let shift = width - 1 - offset
     self.put_bit_unchecked(((value >> shift) & 1).to_int())
   }
 }

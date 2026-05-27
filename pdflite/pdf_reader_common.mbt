@@ -26,7 +26,7 @@ fn pdf_view_matches_ascii_at(
   if position < 0 || position + values.length() > view.length() {
     false
   } else {
-    for i = 0; i < values.length(); i = i + 1 {
+    for i in 0..<values.length() {
       if view[position + i].to_int() != values[i] {
         break false
       }
@@ -48,7 +48,9 @@ fn pdf_find_last_ascii(view : BytesView, values : ArrayView[Int]) -> Int {
   } else if view.length() < values.length() {
     -1
   } else {
-    for start = view.length() - values.length(); start >= 0; start = start - 1 {
+    let max_start = view.length() - values.length()
+    for offset in 0..<=max_start {
+      let start = max_start - offset
       if pdf_view_matches_ascii_at(view, start, values) {
         break start
       }
@@ -74,14 +76,17 @@ fn pdf_find_ascii_from(
   start : Int,
   values : ArrayView[Int],
 ) -> Int {
-  for position = start
-      position <= view.length() - values.length()
-      position = position + 1 {
-    if pdf_view_matches_ascii_at(view, position, values) {
-      break position
-    }
-  } nobreak {
+  let max_start = view.length() - values.length()
+  if start > max_start {
     -1
+  } else {
+    for position in start..<=max_start {
+      if pdf_view_matches_ascii_at(view, position, values) {
+        break position
+      }
+    } nobreak {
+      -1
+    }
   }
 }
 

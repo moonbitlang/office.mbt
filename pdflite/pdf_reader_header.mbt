@@ -52,7 +52,7 @@ pub fn ByteCursor::read_pdf_header(
   } else {
     1024
   }
-  for position = 0; position <= max_probe; position = position + 1 {
+  for position in 0..<=max_probe {
     match self.pdf_header_at(position) {
       Some(version) => {
         self.set_offset(position)
