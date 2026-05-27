@@ -1684,7 +1684,9 @@ pub fn PdfDocument::images_json(
 ) -> Json raise PdfError {
   let pages = self.pages_of_pagetree()
   pdf_page_box_validate_page_numbers(page_numbers, pages.length(), "images")
-  let entries : Array[PdfImageListEntry] = []
+  let entries : Array[PdfImageListEntry] = Array::new(
+    capacity=page_numbers.length(),
+  )
   let form_numbers : @hashmap.HashMap[Int, Bool] = HashMap([])
   for page_number in page_numbers {
     self.pdf_image_collect_page_images(
@@ -1886,9 +1888,11 @@ fn PdfDocument::pdf_image_resolution_candidates(
   self : PdfDocument,
   resources : PdfObject,
 ) -> Array[PdfImageResolutionCandidate] raise PdfError {
-  let candidates : Array[PdfImageResolutionCandidate] = []
   match self.lookup_direct(pdf_image_xobject_key(), resources) {
-    Some(PdfDictionary(xobjects)) =>
+    Some(PdfDictionary(xobjects)) => {
+      let candidates : Array[PdfImageResolutionCandidate] = Array::new(
+        capacity=xobjects.length(),
+      )
       for entry in xobjects {
         let object_number = match entry.1 {
           PdfIndirect(number) => number
@@ -1934,9 +1938,10 @@ fn PdfDocument::pdf_image_resolution_candidates(
           _ => ()
         }
       }
-    _ => ()
+      candidates
+    }
+    _ => []
   }
-  candidates
 }
 
 ///|
@@ -2063,7 +2068,9 @@ pub fn PdfDocument::image_resolution(
 ) -> Array[(Int, String, Int, Int, Double, Double, Int)] raise PdfError {
   let pages = self.pages_of_pagetree()
   pdf_page_box_validate_page_numbers(page_numbers, pages.length(), "images")
-  let results : Array[PdfImageResolutionEntry] = []
+  let results : Array[PdfImageResolutionEntry] = Array::new(
+    capacity=page_numbers.length(),
+  )
   for page_number in page_numbers {
     let page = pages[page_number - 1]
     let candidates = self.pdf_image_resolution_candidates(page.resources)
@@ -2080,7 +2087,9 @@ pub fn PdfDocument::image_resolution(
       )
     }
   }
-  let filtered : Array[PdfImageResolutionEntry] = []
+  let filtered : Array[PdfImageResolutionEntry] = Array::new(
+    capacity=results.length(),
+  )
   for entry in results {
     if entry.xdpi < dpi || entry.ydpi < dpi {
       filtered.push(entry)
@@ -3651,8 +3660,10 @@ fn PdfDocument::pdf_image_extract_named_images(
   encoding : PdfMetadataEncoding,
   state : PdfImageExtractionRunState,
 ) -> (Array[PdfExtractedImageFile], Array[String]) raise PdfError {
-  let files : Array[PdfExtractedImageFile] = []
-  let names : Array[String] = []
+  let files : Array[PdfExtractedImageFile] = Array::new(
+    capacity=images.length(),
+  )
+  let names : Array[String] = Array::new(capacity=images.length())
   for image in images {
     let name = self.pdf_image_extraction_name(
       encoding, stem, page_number, image, state,
@@ -3676,10 +3687,10 @@ fn PdfDocument::pdf_image_partition_xobjects(
   self : PdfDocument,
   resources : PdfObject,
 ) -> (Array[PdfObject], Array[PdfObject]) {
-  let images : Array[PdfObject] = []
-  let forms : Array[PdfObject] = []
   match self.lookup_direct(pdf_image_xobject_key(), resources) {
-    Some(PdfDictionary(xobjects)) =>
+    Some(PdfDictionary(xobjects)) => {
+      let images : Array[PdfObject] = Array::new(capacity=xobjects.length())
+      let forms : Array[PdfObject] = Array::new(capacity=xobjects.length())
       for entry in xobjects {
         match self.lookup_direct(pdf_image_subtype_key(), entry.1) {
           Some(PdfNameObject(subtype)) if subtype == pdf_image_image_name() =>
@@ -3689,9 +3700,10 @@ fn PdfDocument::pdf_image_partition_xobjects(
           _ => ()
         }
       }
-    _ => ()
+      (images, forms)
+    }
+    _ => ([], [])
   }
-  (images, forms)
 }
 
 ///|
@@ -3722,7 +3734,9 @@ fn PdfDocument::pdf_image_extract_form_xobject_files(
   }
   let resources = self.pdf_image_form_resources(form)
   let (images, forms) = self.pdf_image_partition_xobjects(resources)
-  let files : Array[PdfExtractedImageFile] = []
+  let files : Array[PdfExtractedImageFile] = Array::new(
+    capacity=forms.length() + images.length(),
+  )
   for child_form in forms {
     for
       file in self.pdf_image_extract_form_xobject_files(
@@ -3758,8 +3772,8 @@ fn PdfDocument::pdf_image_extract_inline_image_files(
   encoding : PdfMetadataEncoding,
   state : PdfImageExtractionRunState,
 ) -> Array[PdfExtractedImageFile] raise PdfError {
-  let files : Array[PdfExtractedImageFile] = []
   let ops = self.parse_content_ops_with_resources(resources, content)
+  let files : Array[PdfExtractedImageFile] = Array::new(capacity=ops.length())
   for op in ops {
     match op {
       Op_InlineImage(dictionary, _, data) => {
@@ -3870,7 +3884,9 @@ pub fn PdfDocument::extract_images_files(
     written: [],
     jbig2: { next_jbig2_serial: { val: 0 }, globals: [] },
   }
-  let files : Array[PdfExtractedImageFile] = []
+  let files : Array[PdfExtractedImageFile] = Array::new(
+    capacity=page_numbers.length(),
+  )
   let mut selected_page_number = 1
   for page_number in page_numbers {
     if dedup_per_page {

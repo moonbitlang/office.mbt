@@ -10572,6 +10572,16 @@ Current backend snapshot:
   `moon test --target wasm-gc pdf_coord_test.mbt pdf_content_text_test.mbt`,
   and `moon test --target js pdf_coord_test.mbt pdf_content_text_test.mbt`
   each report 20/20.~~
+- [x] ~~Continue source-port hardening with image listing/resolution/extraction
+  allocation tuning: image JSON collection, resolution candidate/result
+  buffers, XObject image/form partitioning, named image extraction, recursive
+  form-image extraction, inline-image extraction, and selected-page extraction
+  now preallocate from selected-page, XObject, parsed-op, or claimed-image
+  counts while preserving cpdf ordering and dedup behavior. Validation on
+  MoonBit compiler 0.9.3: `moon check --target native --warn-list +73` passes
+  with the known notice; `moon test --target native pdf_image_test.mbt
+  image/fixture_acceptance` reports 78/78; the same focused suite on `wasm-gc`
+  and `js` reports 56/56 on each backend.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
