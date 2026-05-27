@@ -81,6 +81,7 @@ jobs:
         run: moon run --target native --release --build-only cmd/main
 
       - name: Test native CLI documentation
+        if: matrix.moonbit-version == 'nightly'
         env:
           PDFLITE_CLI: ${{ github.workspace }}/_build/native/release/build/cmd/main/main.exe
           PDFLITE_LOGO_PDF: ${{ github.workspace }}/fixtures/camlpdf/logo.pdf

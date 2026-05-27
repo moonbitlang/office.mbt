@@ -23,7 +23,8 @@ _build/native/release/build/cmd/main/main.exe validate fixtures/camlpdf/logo.pdf
 _build/native/release/build/cmd/main/main.exe rewrite fixtures/camlpdf/logo.pdf _build/logo-roundtrip.pdf
 ```
 
-The black-box CLI documentation tests live in `tests/cram` and run with:
+The black-box CLI documentation tests live in `tests/cram`. Moon Cram is
+currently available in MoonBit nightly, so run them with a nightly toolchain:
 
 ```sh
 moon run --target native --release --build-only cmd/main
