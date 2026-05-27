@@ -315,7 +315,8 @@ fn pdf_lzw_decode_code(
   let output : Array[Int] = Array::new(capacity=stack.length() + 1)
   output.push(current)
   if stack.length() > 0 {
-    for i = stack.length() - 1; i >= 0; i = i - 1 {
+    for offset in 0..<stack.length() {
+      let i = stack.length() - 1 - offset
       output.push(stack[i])
     }
   }

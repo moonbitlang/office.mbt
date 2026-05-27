@@ -107,7 +107,8 @@ pub fn pdf_md5_digest(data : BytesView) -> @core.PdfBytes {
   let mut b0 : UInt = 0xefcdab89
   let mut c0 : UInt = 0x98badcfe
   let mut d0 : UInt = 0x10325476
-  for offset = 0; offset < message.length(); offset = offset + 64 {
+  for block in 0..<(message.length() / 64) {
+    let offset = block * 64
     let words = FixedArray::make(16, 0U)
     for index in 0..<16 {
       words[index] = pdf_md5_word_from_message(message, offset + index * 4)

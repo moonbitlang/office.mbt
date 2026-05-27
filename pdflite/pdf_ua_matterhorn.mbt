@@ -2901,7 +2901,7 @@ fn pdf_ua_matterhorn_xml_tag_local_name(
       }
       guard name_end > name_start else { return None }
       let mut local_start = name_start
-      for position = name_start; position < name_end; position = position + 1 {
+      for position in name_start..<name_end {
         if data[position].to_int() == 58 {
           local_start = position + 1
         }
@@ -3001,7 +3001,8 @@ fn PdfDocument::pdf_ua_matterhorn_check_25_001(
     ]) {
     Some(PdfArray(xfa)) => {
       let configs : Array[PdfObject] = []
-      for index = 0; index + 1 < xfa.length(); index = index + 2 {
+      for pair in 0..<(xfa.length() / 2) {
+        let index = pair * 2
         if pdf_ua_matterhorn_xfa_config_key(xfa[index]) {
           configs.push(xfa[index + 1])
         }

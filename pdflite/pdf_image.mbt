@@ -583,7 +583,8 @@ fn PdfPNG::pdf_image_split_alpha(
   let mask = Array::make(pixels, b'\x00')
   let mut color_position = 0
   let mut mask_position = 0
-  for offset = 0; offset < decoded.length(); offset = offset + stride {
+  for pixel in 0..<pixels {
+    let offset = pixel * stride
     for component in 0..<components {
       colors[color_position] = decoded[offset + component]
       color_position += 1
