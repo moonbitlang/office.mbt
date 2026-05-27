@@ -800,6 +800,8 @@ pub fn pdf_endxobj(PdfDrawControl) -> Unit raise @core.PdfError
 
 pub fn pdf_error(String) -> Unit raise @core.PdfError
 
+pub fn pdf_error_summary(@core.PdfError) -> String
+
 pub fn pdf_eval_function(PdfFunction, ArrayView[Double]) -> Array[Double] raise @core.PdfError
 
 pub fn pdf_expand_date(String) -> String

@@ -89,5 +89,5 @@ pdflite: cannot read 'missing.pdf':
 ```scrut
 $ set +e; printf 'not a pdf' > bad.pdf; "$PDFLITE_CLI" info bad.pdf > bad.out 2> bad.err; code=$?; set -e; printf 'exit=%s\n' "$code"; sed -n '1p' bad.err; test ! -s bad.out
 exit=1
-pdflite: cannot parse PDF 'bad.pdf': RootExpected
+pdflite: cannot parse PDF 'bad.pdf': missing or invalid PDF catalog root (RootExpected)
 ```

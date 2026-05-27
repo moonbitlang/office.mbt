@@ -17,3 +17,19 @@ test "pdf_soft_error and pdf_hard_error raise distinct cpdf errors" {
     fail("expected HardError")
   }
 }
+
+///|
+test "pdf_error_summary explains common parser errors" {
+  @test.assert_eq(
+    @pdflite.pdf_error_summary(@pdflite.PdfError::RootExpected),
+    "missing or invalid PDF catalog root (RootExpected)",
+  )
+  @test.assert_eq(
+    @pdflite.pdf_error_summary(@pdflite.PdfError::StartXRefExpected),
+    "missing or invalid startxref marker (StartXRefExpected)",
+  )
+  @test.assert_eq(
+    @pdflite.pdf_error_summary(@pdflite.PdfError::SoftError("recoverable")),
+    "recoverable",
+  )
+}
