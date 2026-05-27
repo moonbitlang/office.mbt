@@ -1286,7 +1286,8 @@ fn pdf_metadata_xml_uri_lookup(
   context : ArrayView[(String, String)],
   prefix : String,
 ) -> String? {
-  for index = context.length() - 1; index >= 0; index = index - 1 {
+  for offset in 0..<context.length() {
+    let index = context.length() - 1 - offset
     if context[index].0 == prefix {
       break Some(context[index].1)
     }
@@ -1641,7 +1642,7 @@ pub fn pdf_xmltree_of_bytes(
 
 ///|
 fn pdf_metadata_find_byte(data : BytesView, start : Int, byte : Int) -> Int {
-  for position = start; position < data.length(); position = position + 1 {
+  for position in start..<data.length() {
     if data[position].to_int() == byte {
       break position
     }
@@ -1659,7 +1660,7 @@ fn pdf_metadata_view_matches_at(
   if position < 0 || position + pattern.length() > data.length() {
     false
   } else {
-    for index = 0; index < pattern.length(); index = index + 1 {
+    for index in 0..<pattern.length() {
       if data[position + index] != pattern[index] {
         break false
       }
@@ -1681,9 +1682,7 @@ fn pdf_metadata_find_bytes_from(
     start > data.length() - pattern.length() {
     -1
   } else {
-    for position = start
-        position <= data.length() - pattern.length()
-        position = position + 1 {
+    for position in start..<=(data.length() - pattern.length()) {
       if pdf_metadata_view_matches_at(data, position, pattern) {
         break position
       }
@@ -2854,7 +2853,8 @@ fn PdfDocument::pdf_metadata_fallback_pdfx(self : PdfDocument) -> String? {
 ///|
 fn pdf_metadata_reverse_strings(values : ArrayView[String]) -> Array[String] {
   let output : Array[String] = []
-  for index = values.length() - 1; index >= 0; index = index - 1 {
+  for offset in 0..<values.length() {
+    let index = values.length() - 1 - offset
     output.push(values[index])
   }
   output
