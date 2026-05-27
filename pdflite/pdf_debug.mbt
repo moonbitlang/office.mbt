@@ -57,7 +57,10 @@ fn pdf_debug_object_line(
 pub fn PdfDocument::debug_objects(
   self : PdfDocument,
 ) -> PdfBytes raise PdfError {
-  let chunks : Array[PdfBytes] = []
+  let object_entries = self.parsed_object_entries()
+  let chunks : Array[PdfBytes] = Array::new(
+    capacity=object_entries.length() * 3 + 4,
+  )
   chunks.push(pdf_debug_object_line("Trailerdict: ", self.trailer_dict()))
   chunks.push(@ascii.encode("Root: " + self.root().to_string() + "\n"))
   match self.lookup_direct(pdf_debug_root_key(), self.trailer_dict()) {
@@ -70,7 +73,7 @@ pub fn PdfDocument::debug_objects(
     }
     None => chunks.push(@ascii.encode("No catalog!\n"))
   }
-  for entry in self.parsed_object_entries() {
+  for entry in object_entries {
     let (number, _, object) = entry
     chunks.push(@ascii.encode(number.to_string() + " 0 obj:\n\n"))
     chunks.push(pdf_string_of_pdf(object))

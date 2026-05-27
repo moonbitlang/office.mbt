@@ -10553,6 +10553,15 @@ Current backend snapshot:
   pdf_font_test.mbt bookmark/fixture_acceptance font/fixture_acceptance`
   reports 48/48; the same focused suite on `wasm-gc` and `js` reports 37/37
   on each backend.~~
+- [x] ~~Continue source-port hardening with composition/debug allocation
+  tuning: composition object-bucket scans, duplicate-number filtering,
+  composition JSON rows, and cpdfdebug-style object-dump chunk collection now
+  preallocate from parsed-object or row counts instead of growing the main
+  result arrays from zero. Validation on MoonBit compiler 0.9.3: `moon check
+  --target native --warn-list +73` passes with the known notice; `moon test
+  --target native pdf_composition_test.mbt pdf_debug_test.mbt`, `moon test
+  --target wasm-gc pdf_composition_test.mbt pdf_debug_test.mbt`, and `moon test
+  --target js pdf_composition_test.mbt pdf_debug_test.mbt` each report 6/6.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

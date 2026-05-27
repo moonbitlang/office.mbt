@@ -140,8 +140,9 @@ fn PdfDocument::pdf_composition_piece_info(
   self : PdfDocument,
   marked : @hashmap.HashMap[Int, Bool],
 ) -> Array[Int] {
-  let output : Array[Int] = []
-  for entry in self.parsed_object_entries() {
+  let entries = self.parsed_object_entries()
+  let output : Array[Int] = Array::new(capacity=entries.length())
+  for entry in entries {
     match self.lookup_direct(pdf_composition_piece_info(), entry.2) {
       Some(piece_info) =>
         pdf_composition_mark_references(self, marked, output, piece_info)
@@ -158,7 +159,7 @@ fn PdfDocument::pdf_composition_images(
   number : Int,
   object : PdfObject,
 ) -> Array[Int] {
-  let output : Array[Int] = []
+  let output : Array[Int] = Array::new(capacity=1)
   if !marked.contains(number) {
     match self.lookup_direct(pdf_composition_subtype(), object) {
       Some(PdfNameObject(name)) if name == pdf_composition_image() =>
@@ -176,7 +177,7 @@ fn PdfDocument::pdf_composition_fonts(
   number : Int,
   object : PdfObject,
 ) -> Array[Int] {
-  let output : Array[Int] = []
+  let output : Array[Int] = Array::new(capacity=1)
   if !marked.contains(number) {
     match self.lookup_direct(pdf_composition_type(), object) {
       Some(PdfNameObject(name)) if name == pdf_composition_font() =>
@@ -217,7 +218,7 @@ fn PdfDocument::pdf_composition_content_streams(
   number : Int,
   object : PdfObject,
 ) -> Array[Int] {
-  let output : Array[Int] = []
+  let output : Array[Int] = Array::new(capacity=1)
   if !marked.contains(number) {
     match self.lookup_direct(pdf_composition_type(), object) {
       Some(PdfNameObject(name)) if name == pdf_composition_page() =>
@@ -247,10 +248,11 @@ fn PdfDocument::pdf_composition_find_objects(
   self : PdfDocument,
 ) -> (Array[Int], Array[Int], Array[Int], Array[Int], Array[Int]) raise PdfError {
   let marked : @hashmap.HashMap[Int, Bool] = HashMap([])
-  let images : Array[Int] = []
-  let fonts : Array[Int] = []
-  let content_streams : Array[Int] = []
-  for entry in self.parsed_object_entries() {
+  let entries = self.parsed_object_entries()
+  let images : Array[Int] = Array::new(capacity=entries.length())
+  let fonts : Array[Int] = Array::new(capacity=entries.length())
+  let content_streams : Array[Int] = Array::new(capacity=entries.length())
+  for entry in entries {
     if !marked.contains(entry.0) {
       images.append(self.pdf_composition_images(marked, entry.0, entry.2))
       content_streams.append(
@@ -275,7 +277,7 @@ fn PdfDocument::pdf_composition_object_size(
 ///|
 fn pdf_composition_unique_numbers(numbers : ArrayView[Int]) -> Array[Int] {
   let seen : @hashmap.HashMap[Int, Bool] = HashMap([])
-  let output : Array[Int] = []
+  let output : Array[Int] = Array::new(capacity=numbers.length())
   for number in numbers {
     if !seen.contains(number) {
       seen[number] = true
@@ -403,8 +405,9 @@ pub fn PdfDocument::composition_json(
   self : PdfDocument,
   file_size : Int,
 ) -> Json raise PdfError {
-  let values : Array[Json] = []
-  for entry in self.composition(file_size) {
+  let entries = self.composition(file_size)
+  let values : Array[Json] = Array::new(capacity=entries.length())
+  for entry in entries {
     values.push(entry.to_json())
   }
   Json::array(values)
