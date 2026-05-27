@@ -1,4 +1,6 @@
 ///|
+/// Saved graphics/text interpreter frame pushed by PDF `q`/`Q` graphics-state
+/// operators while walking a content stream.
 pub(all) struct PdfContentOperatorFrame {
   ctm : TransformMatrix
   partial_path : PdfContentPartialPath
@@ -30,6 +32,9 @@ pub(all) struct PdfContentOperatorFrame {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Mutable interpreter state for cpdfcontent-style content stream analysis.
+/// It tracks graphics state, text state, marked-content context, Type 3 font
+/// metrics, and the saved graphics-state stack.
 pub(all) struct PdfContentOperatorState {
   ctm : TransformMatrix
   partial_path : PdfContentPartialPath
@@ -62,18 +67,23 @@ pub(all) struct PdfContentOperatorState {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Result of applying a text-related content operator.
 pub(all) struct PdfContentOperatorTextResult {
   state : PdfContentOperatorState
   entries : Array[PdfContentJsonEntry]
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Result of applying an operator that can emit resource or graphics-state
+/// JSON entries while updating interpreter state.
 pub(all) struct PdfContentOperatorResourceResult {
   state : PdfContentOperatorState
   entries : Array[PdfContentJsonEntry]
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Active marked-content scope captured from `BMC`, `BDC`, `MP`, and `DP`
+/// operators.
 pub(all) struct PdfContentMarkedContent {
   tag : String
   properties : PdfObject?
@@ -207,12 +217,15 @@ fn pdf_content_extgstate_tk_key() -> PdfName {
 }
 
 ///|
+/// Type 3 font `d0` width declaration captured from a character procedure.
 pub(all) struct PdfContentType3D0 {
   width_x : Double
   width_y : Double
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Type 3 font `d1` width and bounding-box declaration captured from a
+/// character procedure.
 pub(all) struct PdfContentType3D1 {
   width_x : Double
   width_y : Double
