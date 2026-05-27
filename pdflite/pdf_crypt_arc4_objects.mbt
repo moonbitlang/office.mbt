@@ -104,7 +104,7 @@ fn pdf_arc4_crypt_pdf_object(
   file_key : BytesView,
   key_length_bits : Int,
   object : PdfObject,
-  no_encrypt_metadata? : Bool = false,
+  no_encrypt_metadata : Bool,
 ) -> PdfObject raise PdfError {
   pdf_arc4_crypt_pdf_object_with_stream_policy(
     object_number, generation, file_key, key_length_bits, object, no_encrypt_metadata,

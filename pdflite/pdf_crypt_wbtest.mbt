@@ -854,6 +854,7 @@ test "PdfDocument AESV2 encrypt preserves parser-private object states" {
     key,
     128,
     fn(_, _, index) { crypt_wb_iv_for_test(index) },
+    false,
   )
   @test.assert_eq(encrypted.objects.get_entry(1), doc.objects.get_entry(1))
   @test.assert_eq(encrypted.objects.get_entry(2), doc.objects.get_entry(2))
@@ -877,7 +878,7 @@ test "PdfDocument AESV2 decrypt preserves parser-private object states" {
       ObjectToParseFromObjectStream({ object_stream_number: 7, index: 0 }),
     ),
   )
-  let decrypted = try! doc.aesv2_decrypt_parsed_objects(key, 128)
+  let decrypted = try! doc.aesv2_decrypt_parsed_objects(key, 128, false, 0)
   @test.assert_eq(decrypted.objects.get_entry(1), doc.objects.get_entry(1))
   @test.assert_eq(decrypted.objects.get_entry(2), doc.objects.get_entry(2))
   @test.assert_eq(decrypted.objects.get_entry(3), doc.objects.get_entry(3))
@@ -901,15 +902,17 @@ test "PdfDocument AESV3 encrypt recurses and preserves parser-private object sta
       ObjectToParseFromObjectStream({ object_stream_number: 7, index: 0 }),
     ),
   )
-  let encrypted = try! doc.aesv3_encrypt_parsed_objects_with_iv_provider(key, fn(
-    _,
-    _,
-    index,
-  ) {
-    crypt_wb_iv_for_test(index)
-  })
+  let encrypted = try! doc.aesv3_encrypt_parsed_objects_with_iv_provider(
+    key,
+    fn(_, _, index) { crypt_wb_iv_for_test(index) },
+    false,
+  )
   @test.assert_eq(
-    try! pdf_aesv3_decrypt_pdf_object(key, encrypted.lookup_object_or_null(1)),
+    try! pdf_aesv3_decrypt_pdf_object(
+      key,
+      encrypted.lookup_object_or_null(1),
+      false,
+    ),
     PdfString(@ascii.encode("secret")),
   )
   @test.assert_eq(encrypted.objects.get_entry(2), doc.objects.get_entry(2))
@@ -934,7 +937,7 @@ test "PdfDocument AESV3 decrypt preserves parser-private object states" {
       ObjectToParseFromObjectStream({ object_stream_number: 7, index: 0 }),
     ),
   )
-  let decrypted = try! doc.aesv3_decrypt_parsed_objects(key)
+  let decrypted = try! doc.aesv3_decrypt_parsed_objects(key, false, 0)
   @test.assert_eq(decrypted.objects.get_entry(1), doc.objects.get_entry(1))
   @test.assert_eq(decrypted.objects.get_entry(2), doc.objects.get_entry(2))
   @test.assert_eq(decrypted.objects.get_entry(3), doc.objects.get_entry(3))
@@ -995,9 +998,10 @@ test "private document decrypt supports ISO AESV3 object crypt with a file key" 
     file_key,
     secret,
     fn(index) { crypt_wb_iv_for_test(index) },
+    false,
   )
   doc.add_object_given_number(1, encrypted)
-  let decrypted = try! doc.decrypt_with_file_key(values, file_key)
+  let decrypted = try! doc.decrypt_with_file_key(values, file_key, false)
   @test.assert_eq(decrypted.document.lookup_object_or_null(1), secret)
 }
 

@@ -138,7 +138,7 @@ test "PdfDocument ARC4 crypt preserves parser-private object states" {
       ObjectToParseFromObjectStream({ object_stream_number: 7, index: 0 }),
     ),
   )
-  let encrypted = try! doc.arc4_crypt_parsed_objects(key, 40)
+  let encrypted = try! doc.arc4_crypt_parsed_objects(key, 40, false, 0)
   @test.assert_eq(encrypted.objects.get_entry(1), doc.objects.get_entry(1))
   @test.assert_eq(encrypted.objects.get_entry(2), doc.objects.get_entry(2))
   @test.assert_eq(encrypted.objects.get_entry(3), doc.objects.get_entry(3))

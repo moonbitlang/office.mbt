@@ -18,7 +18,7 @@ pub fn PdfDocument::decrypt_with_user_password(
         Some(key) => key
         None => return None
       }
-      Some(self.decrypt_with_file_key(values, file_key, no_encrypt_metadata~))
+      Some(self.decrypt_with_file_key(values, file_key, no_encrypt_metadata))
     }
   }
 }
@@ -43,7 +43,7 @@ pub fn PdfDocument::decrypt_with_owner_password(
         Some(key) => key
         None => return None
       }
-      Some(self.decrypt_with_file_key(values, file_key, no_encrypt_metadata~))
+      Some(self.decrypt_with_file_key(values, file_key, no_encrypt_metadata))
     }
   }
 }

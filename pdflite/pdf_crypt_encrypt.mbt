@@ -12,14 +12,7 @@ pub fn PdfDocument::encrypt_40bit(
   file_id? : BytesView = [],
 ) -> PdfDocument raise PdfError {
   self.encrypt_arc4_standard(
-    user_password,
-    owner_password,
-    denied_permissions,
-    1,
-    2,
-    40,
-    false,
-    file_id~,
+    user_password, owner_password, denied_permissions, 1, 2, 40, false, file_id,
   )
 }
 
@@ -37,14 +30,7 @@ pub fn PdfDocument::encrypt_128bit(
   file_id? : BytesView = [],
 ) -> PdfDocument raise PdfError {
   self.encrypt_arc4_standard(
-    user_password,
-    owner_password,
-    denied_permissions,
-    2,
-    3,
-    128,
-    true,
-    file_id~,
+    user_password, owner_password, denied_permissions, 2, 3, 128, true, file_id,
   )
 }
 
@@ -74,9 +60,7 @@ pub fn PdfDocument::encrypt_128bit_r4(
     no_encrypt_metadata, user_password, 4, owner_entry, permissions, id, 128,
   )
   let encrypted = document.arc4_crypt_parsed_objects(
-    file_key,
-    128,
-    no_encrypt_metadata~,
+    file_key, 128, no_encrypt_metadata, 0,
   )
   let std_cf = pdf_crypt_std_cf_name
   let encrypt_dictionary : PdfObject = PdfDictionary([
@@ -141,10 +125,7 @@ pub fn PdfDocument::encrypt_128bit_aesv2_with_iv_provider(
     no_encrypt_metadata, user_password, 4, owner_entry, permissions, id, 128,
   )
   let encrypted = document.aesv2_encrypt_parsed_objects_with_iv_provider(
-    file_key,
-    128,
-    iv_provider,
-    no_encrypt_metadata~,
+    file_key, 128, iv_provider, no_encrypt_metadata,
   )
   let std_cf = pdf_crypt_std_cf_name
   let encrypt_dictionary : PdfObject = PdfDictionary([
@@ -251,9 +232,7 @@ pub fn PdfDocument::encrypt_256bit_aesv3_with_providers(
     file_key, permissions, encrypt_metadata, permissions_padding,
   )
   let encrypted = document.aesv3_encrypt_parsed_objects_with_iv_provider(
-    file_key,
-    iv_provider,
-    no_encrypt_metadata~,
+    file_key, iv_provider, no_encrypt_metadata,
   )
   let encrypt_dictionary = pdf_crypt_saved_aesv3_dictionary({
     crypt_type: PdfCryptAESV3(iso),
@@ -312,7 +291,7 @@ fn PdfDocument::encrypt_arc4_standard(
   revision : Int,
   key_length_bits : Int,
   write_length : Bool,
-  file_id? : BytesView = [],
+  file_id : BytesView,
 ) -> PdfDocument raise PdfError {
   let (document, id) = self.with_file_id(file_id~)
   let permissions = pdf_p_of_permissions(denied_permissions)
@@ -325,7 +304,9 @@ fn PdfDocument::encrypt_arc4_standard(
   let file_key = @crypt_core.pdf_encryption_file_key(
     false, user_password, revision, owner_entry, permissions, id, key_length_bits,
   )
-  let encrypted = document.arc4_crypt_parsed_objects(file_key, key_length_bits)
+  let encrypted = document.arc4_crypt_parsed_objects(
+    file_key, key_length_bits, false, 0,
+  )
   let entries : Array[(PdfName, PdfObject)] = [
     (pdf_crypt_filter_name, PdfNameObject(pdf_crypt_standard_name)),
     (pdf_crypt_v_name, PdfInteger(version)),

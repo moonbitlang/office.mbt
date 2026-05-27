@@ -14,7 +14,7 @@ fn PdfDocument::decrypt_with_file_key(
   self : PdfDocument,
   values : PdfEncryptionValues,
   file_key : PdfBytes,
-  no_encrypt_metadata? : Bool = false,
+  no_encrypt_metadata : Bool,
 ) -> PdfDecryptionResult raise PdfError {
   let no_encrypt_metadata = values.effective_no_encrypt_metadata(
     no_encrypt_metadata,
@@ -24,8 +24,8 @@ fn PdfDocument::decrypt_with_file_key(
       let output = self.arc4_crypt_parsed_objects(
         file_key,
         key_length_bits,
-        no_encrypt_metadata~,
-        skip_object_number=self.encryption_object_number(),
+        no_encrypt_metadata,
+        self.encryption_object_number(),
       )
       output.finish_decrypted_copy(values)
       {
@@ -37,8 +37,8 @@ fn PdfDocument::decrypt_with_file_key(
       let output = self.aesv2_decrypt_parsed_objects(
         file_key,
         128,
-        no_encrypt_metadata~,
-        skip_object_number=self.encryption_object_number(),
+        no_encrypt_metadata,
+        self.encryption_object_number(),
       )
       output.finish_decrypted_copy(values)
       {
@@ -49,8 +49,8 @@ fn PdfDocument::decrypt_with_file_key(
     PdfCryptAESV3(_) => {
       let output = self.aesv3_decrypt_parsed_objects(
         file_key,
-        no_encrypt_metadata~,
-        skip_object_number=self.encryption_object_number(),
+        no_encrypt_metadata,
+        self.encryption_object_number(),
       )
       output.finish_decrypted_copy(values)
       {
@@ -66,7 +66,7 @@ fn PdfEncryptionValues::file_key_for_available_password(
   self : PdfEncryptionValues,
   user_password : BytesView?,
   owner_password : BytesView?,
-  no_encrypt_metadata? : Bool = false,
+  no_encrypt_metadata : Bool,
 ) -> PdfBytes? raise PdfError {
   match user_password {
     Some(password) =>
@@ -95,7 +95,7 @@ fn PdfEncryptionValues::decrypt_single_stream_with_file_key(
   generation : Int,
   stream : PdfObject,
   file_key : BytesView,
-  no_encrypt_metadata? : Bool = false,
+  no_encrypt_metadata : Bool,
 ) -> PdfObject raise PdfError {
   let no_encrypt_metadata = self.effective_no_encrypt_metadata(
     no_encrypt_metadata,
@@ -103,24 +103,14 @@ fn PdfEncryptionValues::decrypt_single_stream_with_file_key(
   match self.crypt_type {
     PdfCryptARC4(key_length_bits, _) =>
       pdf_arc4_crypt_pdf_object(
-        object_number,
-        generation,
-        file_key,
-        key_length_bits,
-        stream,
-        no_encrypt_metadata~,
+        object_number, generation, file_key, key_length_bits, stream, no_encrypt_metadata,
       )
     PdfCryptAESV2 =>
       pdf_aesv2_decrypt_pdf_object(
-        object_number,
-        generation,
-        file_key,
-        128,
-        stream,
-        no_encrypt_metadata~,
+        object_number, generation, file_key, 128, stream, no_encrypt_metadata,
       )
     PdfCryptAESV3(_) =>
-      pdf_aesv3_decrypt_pdf_object(file_key, stream, no_encrypt_metadata~)
+      pdf_aesv3_decrypt_pdf_object(file_key, stream, no_encrypt_metadata)
   }
 }
 
@@ -145,18 +135,12 @@ pub fn PdfDocument::decrypt_single_stream(
     let values = self.encryption_values()
     match
       values.file_key_for_available_password(
-        user_password,
-        owner_password,
-        no_encrypt_metadata~,
+        user_password, owner_password, no_encrypt_metadata,
       ) {
       Some(file_key) =>
         Some(
           values.decrypt_single_stream_with_file_key(
-            object_number,
-            generation,
-            stream,
-            file_key,
-            no_encrypt_metadata~,
+            object_number, generation, stream, file_key, no_encrypt_metadata,
           ),
         )
       None => None
@@ -182,12 +166,10 @@ pub fn PdfDocument::decrypt_with_passwords(
     let values = self.encryption_values()
     match
       values.file_key_for_available_password(
-        user_password,
-        owner_password,
-        no_encrypt_metadata~,
+        user_password, owner_password, no_encrypt_metadata,
       ) {
       Some(file_key) =>
-        Some(self.decrypt_with_file_key(values, file_key, no_encrypt_metadata~))
+        Some(self.decrypt_with_file_key(values, file_key, no_encrypt_metadata))
       None => None
     }
   }

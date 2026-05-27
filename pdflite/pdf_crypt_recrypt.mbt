@@ -43,7 +43,8 @@ fn PdfDocument::recrypt_arc4_with_file_key(
   let encrypted = document.arc4_crypt_parsed_objects(
     file_key,
     key_length_bits,
-    no_encrypt_metadata=!values.encrypt_metadata,
+    !values.encrypt_metadata,
+    0,
   )
   encrypted.set_saved_encryption(None)
   let encrypt_dictionary = pdf_crypt_saved_arc4_dictionary(
@@ -72,7 +73,7 @@ fn PdfDocument::recrypt_aesv2_with_file_key(
     file_key,
     128,
     iv_provider,
-    no_encrypt_metadata=!values.encrypt_metadata,
+    !values.encrypt_metadata,
   )
   encrypted.set_saved_encryption(None)
   let encrypt_dictionary = pdf_crypt_saved_aesv2_dictionary(values)
@@ -98,7 +99,7 @@ fn PdfDocument::recrypt_aesv3_with_file_key(
   let encrypted = document.aesv3_encrypt_parsed_objects_with_iv_provider(
     file_key,
     iv_provider,
-    no_encrypt_metadata=!values.encrypt_metadata,
+    !values.encrypt_metadata,
   )
   encrypted.set_saved_encryption(None)
   let encrypt_dictionary = pdf_crypt_saved_aesv3_dictionary(values)

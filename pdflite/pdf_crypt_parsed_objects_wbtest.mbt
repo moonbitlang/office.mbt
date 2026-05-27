@@ -31,9 +31,7 @@ fn crypt_parsed_arc4_crypt_object_for_test(
   let doc = pdf_document_empty()
   doc.add_object_given_number(object_number, object, generation~)
   let crypted = doc.arc4_crypt_parsed_objects(
-    file_key,
-    key_length_bits,
-    no_encrypt_metadata~,
+    file_key, key_length_bits, no_encrypt_metadata, 0,
   )
   crypted.lookup_object_or_null(object_number)
 }
@@ -407,6 +405,7 @@ test "PdfDocument AESV2 parsed-object encryption recurses through object data" {
     file_key,
     128,
     fn(_, _, index) { crypt_parsed_aes_iv_for_test(index) },
+    false,
   )
   let encrypted = encrypted_doc.lookup_object_or_null(12)
   @test.assert_eq(
@@ -430,7 +429,7 @@ test "PdfDocument AESV2 parsed-object encryption recurses through object data" {
     ]),
   )
   let decrypted_doc = try! encrypted_doc.aesv2_decrypt_parsed_objects(
-    file_key, 128,
+    file_key, 128, false, 0,
   )
   @test.assert_eq(decrypted_doc.lookup_object_or_null(12), object)
 }
@@ -460,7 +459,7 @@ test "PdfDocument AESV2 parsed-object encryption skips metadata streams" {
       calls.val += 1
       crypt_parsed_aes_iv_for_test(index)
     },
-    no_encrypt_metadata=true,
+    true,
   )
   @test.assert_eq(encrypted_doc.lookup_object_or_null(12), metadata_stream)
   @test.assert_eq(calls.val, 0)
@@ -508,7 +507,7 @@ test "PdfDocument AESV2 parsed-object decrypt recurses through object data" {
   ])
   let doc = pdf_document_empty()
   doc.add_object_given_number(12, encrypted)
-  let decrypted = try! doc.aesv2_decrypt_parsed_objects(file_key, 128)
+  let decrypted = try! doc.aesv2_decrypt_parsed_objects(file_key, 128, false, 0)
   @test.assert_eq(decrypted.lookup_object_or_null(12), object)
 
   let key_length = pdf_name_of_bytes(@ascii.encode("/Length"))
@@ -530,7 +529,7 @@ test "PdfDocument AESV2 parsed-object decrypt recurses through object data" {
   let stream_doc = pdf_document_empty()
   stream_doc.add_object_given_number(12, encrypted_stream)
   let decrypted_stream_doc = try! stream_doc.aesv2_decrypt_parsed_objects(
-    file_key, 128,
+    file_key, 128, false, 0,
   )
   @test.assert_eq(decrypted_stream_doc.lookup_object_or_null(12), plain_stream)
   let key_type = crypt_parsed_name_for_test("/Type")
@@ -546,9 +545,7 @@ test "PdfDocument AESV2 parsed-object decrypt recurses through object data" {
   let metadata_doc = pdf_document_empty()
   metadata_doc.add_object_given_number(12, metadata_stream)
   let decrypted_metadata_doc = try! metadata_doc.aesv2_decrypt_parsed_objects(
-    file_key,
-    128,
-    no_encrypt_metadata=true,
+    file_key, 128, true, 0,
   )
   @test.assert_eq(
     decrypted_metadata_doc.lookup_object_or_null(12),
@@ -565,7 +562,7 @@ test "PdfDocument AESV2 parsed-object decrypt recurses through object data" {
   let crypt_doc = pdf_document_empty()
   crypt_doc.add_object_given_number(12, crypt_stream)
   let decrypted_crypt_doc = try! crypt_doc.aesv2_decrypt_parsed_objects(
-    file_key, 128,
+    file_key, 128, false, 0,
   )
   @test.assert_eq(decrypted_crypt_doc.lookup_object_or_null(12), crypt_stream)
 }
@@ -591,8 +588,11 @@ test "PdfDocument AESV3 parsed-object encryption round trips object data" {
   let encrypted = try! doc.aesv3_encrypt_parsed_objects_with_iv_provider(
     file_key,
     fn(_, _, index) { crypt_parsed_aes_iv_for_test(index) },
+    false,
   )
-  let decrypted = try! encrypted.aesv3_decrypt_parsed_objects(file_key)
+  let decrypted = try! encrypted.aesv3_decrypt_parsed_objects(
+    file_key, false, 0,
+  )
   @test.assert_eq(decrypted.lookup_object_or_null(12), object)
 }
 
@@ -635,7 +635,7 @@ test "PdfDocument AESV3 parsed-object decrypt recurses through object data" {
   ])
   let doc = pdf_document_empty()
   doc.add_object_given_number(12, encrypted)
-  let decrypted = try! doc.aesv3_decrypt_parsed_objects(file_key)
+  let decrypted = try! doc.aesv3_decrypt_parsed_objects(file_key, false, 0)
   @test.assert_eq(decrypted.lookup_object_or_null(12), object)
 
   let key_length = pdf_name_of_bytes(@ascii.encode("/Length"))
@@ -657,7 +657,7 @@ test "PdfDocument AESV3 parsed-object decrypt recurses through object data" {
   let stream_doc = pdf_document_empty()
   stream_doc.add_object_given_number(13, encrypted_stream)
   let decrypted_stream_doc = try! stream_doc.aesv3_decrypt_parsed_objects(
-    file_key,
+    file_key, false, 0,
   )
   @test.assert_eq(decrypted_stream_doc.lookup_object_or_null(13), plain_stream)
   let metadata_stream = crypt_parsed_stream_for_test(
@@ -674,8 +674,7 @@ test "PdfDocument AESV3 parsed-object decrypt recurses through object data" {
   let metadata_doc = pdf_document_empty()
   metadata_doc.add_object_given_number(14, metadata_stream)
   let decrypted_metadata_doc = try! metadata_doc.aesv3_decrypt_parsed_objects(
-    file_key,
-    no_encrypt_metadata=true,
+    file_key, true, 0,
   )
   @test.assert_eq(
     decrypted_metadata_doc.lookup_object_or_null(14),
@@ -694,11 +693,7 @@ test "PdfDocument arc4_crypt_parsed_objects encrypts parsed objects in a copy" {
     PdfString(@ascii.encode("hello")),
     generation=1,
   )
-  let encrypted = try! doc.arc4_crypt_parsed_objects(
-    key,
-    40,
-    skip_object_number=2,
-  )
+  let encrypted = try! doc.arc4_crypt_parsed_objects(key, 40, false, 2)
   @test.assert_eq(
     encrypted.lookup_object_or_null(1),
     try! crypt_parsed_arc4_crypt_object_for_test(
@@ -728,7 +723,7 @@ test "PdfDocument arc4_crypt_parsed_objects encrypts parsed objects in a copy" {
     PdfString(@ascii.encode("hello")),
   )
   @test.assert_eq(
-    (try! encrypted.arc4_crypt_parsed_objects(key, 40, skip_object_number=2)).lookup_object_or_null(
+    (try! encrypted.arc4_crypt_parsed_objects(key, 40, false, 2)).lookup_object_or_null(
       1,
     ),
     PdfString(@ascii.encode("hello")),
