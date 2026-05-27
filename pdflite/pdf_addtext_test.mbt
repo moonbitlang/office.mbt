@@ -29,6 +29,18 @@ fn addtext_assert_pair_close_for_test(
 }
 
 ///|
+fn addtext_assert_rotation_offset_for_test(
+  position : @pdflite.PdfPosition,
+  rotation : @pdflite.PdfAddTextRotation,
+  expected : (Double, Double),
+) -> Unit raise {
+  addtext_assert_pair_close_for_test(
+    @pdflite.pdf_addtext_rotation_offsets(position, rotation, 40.0),
+    expected,
+  )
+}
+
+///|
 fn addtext_assert_point_close_for_test(
   actual : @pdflite.Point2,
   expected : @pdflite.Point2,
@@ -492,46 +504,52 @@ test "pdf_addtext_rotation_radians mirrors cpdf addtext rotation mapping" {
 
 ///|
 test "pdf_addtext_rotation_offsets follows cpdf position table" {
-  @test.assert_eq(
-    @pdflite.pdf_addtext_rotation_offsets(
-      PdfPositionTopRight(0.0, 0.0),
-      PdfAddTextRot90,
-      40.0,
-    ),
-    (40.0, 0.0),
-  )
-  @test.assert_eq(
-    @pdflite.pdf_addtext_rotation_offsets(
-      PdfPositionTopRight(0.0, 0.0),
-      PdfAddTextRot270,
-      40.0,
-    ),
-    (40.0, -40.0),
-  )
-  @test.assert_eq(
-    @pdflite.pdf_addtext_rotation_offsets(
-      PdfPositionCentre,
-      PdfAddTextRot270,
-      40.0,
-    ),
-    (20.0, -20.0),
-  )
-  @test.assert_eq(
-    @pdflite.pdf_addtext_rotation_offsets(
-      PdfPositionBottomLeft(0.0, 0.0),
-      PdfAddTextRot90,
-      40.0,
-    ),
-    (0.0, 40.0),
-  )
-  @test.assert_eq(
-    @pdflite.pdf_addtext_rotation_offsets(
-      PdfPositionDiagonal,
-      PdfAddTextRot180,
-      40.0,
-    ),
-    (0.0, 0.0),
-  )
+  let cases : Array[
+    (@pdflite.PdfPosition, @pdflite.PdfAddTextRotation, (Double, Double)),
+  ] = [
+    (PdfPositionTopLeft(0.0, 0.0), PdfAddTextRot0, (0.0, 0.0)),
+    (PdfPositionTopLeft(0.0, 0.0), PdfAddTextRot90, (0.0, 0.0)),
+    (PdfPositionTopLeft(0.0, 0.0), PdfAddTextRot180, (40.0, 0.0)),
+    (PdfPositionTopLeft(0.0, 0.0), PdfAddTextRot270, (0.0, -40.0)),
+    (PdfPositionTop(0.0), PdfAddTextRot0, (0.0, 0.0)),
+    (PdfPositionTop(0.0), PdfAddTextRot90, (20.0, 0.0)),
+    (PdfPositionTop(0.0), PdfAddTextRot180, (40.0, 0.0)),
+    (PdfPositionTop(0.0), PdfAddTextRot270, (20.0, -40.0)),
+    (PdfPositionTopRight(0.0, 0.0), PdfAddTextRot0, (0.0, 0.0)),
+    (PdfPositionTopRight(0.0, 0.0), PdfAddTextRot90, (40.0, 0.0)),
+    (PdfPositionTopRight(0.0, 0.0), PdfAddTextRot180, (40.0, 0.0)),
+    (PdfPositionTopRight(0.0, 0.0), PdfAddTextRot270, (40.0, -40.0)),
+    (PdfPositionRight(0.0), PdfAddTextRot0, (0.0, 0.0)),
+    (PdfPositionPosRight(0.0, 0.0), PdfAddTextRot90, (40.0, 20.0)),
+    (PdfPositionRight(0.0), PdfAddTextRot180, (40.0, 0.0)),
+    (PdfPositionPosRight(0.0, 0.0), PdfAddTextRot270, (40.0, -20.0)),
+    (PdfPositionBottomRight(0.0, 0.0), PdfAddTextRot0, (0.0, 0.0)),
+    (PdfPositionBottomRight(0.0, 0.0), PdfAddTextRot90, (40.0, 40.0)),
+    (PdfPositionBottomRight(0.0, 0.0), PdfAddTextRot180, (40.0, 0.0)),
+    (PdfPositionBottomRight(0.0, 0.0), PdfAddTextRot270, (40.0, 0.0)),
+    (PdfPositionBottom(0.0), PdfAddTextRot0, (0.0, 0.0)),
+    (PdfPositionBottom(0.0), PdfAddTextRot90, (20.0, 40.0)),
+    (PdfPositionBottom(0.0), PdfAddTextRot180, (40.0, 0.0)),
+    (PdfPositionBottom(0.0), PdfAddTextRot270, (20.0, 0.0)),
+    (PdfPositionBottomLeft(0.0, 0.0), PdfAddTextRot0, (0.0, 0.0)),
+    (PdfPositionBottomLeft(0.0, 0.0), PdfAddTextRot90, (0.0, 40.0)),
+    (PdfPositionBottomLeft(0.0, 0.0), PdfAddTextRot180, (40.0, 0.0)),
+    (PdfPositionBottomLeft(0.0, 0.0), PdfAddTextRot270, (0.0, 0.0)),
+    (PdfPositionLeft(0.0), PdfAddTextRot0, (0.0, 0.0)),
+    (PdfPositionPosLeft(0.0, 0.0), PdfAddTextRot90, (0.0, 20.0)),
+    (PdfPositionLeft(0.0), PdfAddTextRot180, (40.0, 0.0)),
+    (PdfPositionPosLeft(0.0, 0.0), PdfAddTextRot270, (0.0, -20.0)),
+    (PdfPositionCentre, PdfAddTextRot0, (0.0, 0.0)),
+    (PdfPositionPosCentre(0.0, 0.0), PdfAddTextRot90, (20.0, 20.0)),
+    (PdfPositionCentre, PdfAddTextRot180, (40.0, 0.0)),
+    (PdfPositionPosCentre(0.0, 0.0), PdfAddTextRot270, (20.0, -20.0)),
+    (PdfPositionDiagonal, PdfAddTextRot180, (0.0, 0.0)),
+    (PdfPositionReverseDiagonal, PdfAddTextRot270, (0.0, 0.0)),
+  ]
+  for item in cases {
+    let (position, rotation, expected) = item
+    addtext_assert_rotation_offset_for_test(position, rotation, expected)
+  }
 }
 
 ///|
@@ -2786,6 +2804,12 @@ test "pdf_addtext_measurement_bytes follows cpdf selected-font modes" {
         true,
         "A☃B",
       ),
+    ),
+    [65, 226, 152, 131, 66],
+  )
+  @test.assert_eq(
+    @pdflite.pdf_int_array_of_bytes(
+      try! @pdflite.pdf_addtext_measurement_bytes(None, None, false, "A☃B"),
     ),
     [65, 226, 152, 131, 66],
   )
