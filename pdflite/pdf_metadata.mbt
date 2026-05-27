@@ -1,4 +1,5 @@
 ///|
+/// Encoding policy used when reading PDF information dictionary metadata.
 pub(all) enum PdfMetadataEncoding {
   PdfMetadataRaw
   PdfMetadataUTF8
@@ -236,18 +237,23 @@ fn pdf_metadata_artbox() -> PdfName {
 }
 
 ///|
+/// Adobe PDF XMP namespace URI.
 pub let pdf_metadata_adobe_namespace : String = "http://ns.adobe.com/pdf/1.3/"
 
 ///|
+/// Adobe XMP namespace URI.
 pub let pdf_metadata_xmp_namespace : String = "http://ns.adobe.com/xap/1.0/"
 
 ///|
+/// Dublin Core metadata namespace URI.
 pub let pdf_metadata_dc_namespace : String = "http://purl.org/dc/elements/1.1/"
 
 ///|
+/// RDF syntax namespace URI used by XMP metadata.
 pub let pdf_metadata_rdf_namespace : String = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
 
 ///|
+/// PDF/A identification namespace URI.
 pub let pdf_metadata_pdfaid_namespace : String = "http://www.aiim.org/pdfa/ns/id/"
 
 ///|
@@ -257,15 +263,19 @@ let pdf_metadata_pdfaid_wrong_iso_namespace : String = "http://www.aiim.org/pdfa
 let pdf_metadata_pdfaid_wrong_acrobat_namespace : String = "http://www.aiim.org/pdfa/ns/id.html"
 
 ///|
+/// PDF/X identification namespace URI.
 pub let pdf_metadata_pdfxid_namespace : String = "http://www.npes.org/pdfx/ns/id/"
 
 ///|
+/// PDF/E identification namespace URI.
 pub let pdf_metadata_pdfe_namespace : String = "http://www.aiim.org/pdfe/ns/id/"
 
 ///|
+/// PDF/UA identification namespace URI.
 pub let pdf_metadata_pdfuaid_namespace : String = "http://www.aiim.org/pdfua/ns/id/"
 
 ///|
+/// PDF/VT identification namespace URI.
 pub let pdf_metadata_pdfvtid_namespace : String = "http://www.npes.org/pdfvt/ns/id/"
 
 ///|
@@ -341,6 +351,7 @@ pub let pdf_metadata_pdfvtid : String = pdf_metadata_pdfvtid_namespace
 pub let pdf_pdfvtid : String = pdf_metadata_pdfvtid_namespace
 
 ///|
+/// Qualified XML name used by the metadata XML tree parser.
 pub(all) struct PdfMetadataXmlName {
   uri : String
   local_name : String
@@ -348,24 +359,28 @@ pub(all) struct PdfMetadataXmlName {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// XML attribute used by the metadata XML tree parser.
 pub(all) struct PdfMetadataXmlAttribute {
   name : PdfMetadataXmlName
   value : String
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// XML element tag name and attributes used by metadata trees.
 pub(all) struct PdfMetadataXmlTag {
   name : PdfMetadataXmlName
   attributes : Array[PdfMetadataXmlAttribute]
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Minimal XML tree representation used for XMP metadata.
 pub(all) enum PdfMetadataXmlTree {
   PdfMetadataXmlElement(PdfMetadataXmlTag, Array[PdfMetadataXmlTree])
   PdfMetadataXmlData(String)
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Parsed XML metadata document with an optional DTD fragment.
 pub(all) struct PdfMetadataXmlDocument {
   dtd : String?
   tree : PdfMetadataXmlTree
