@@ -119,7 +119,7 @@ fn PdfDocument::pdf_page_prefix_content_ops(
   prefix : String,
   ops : ArrayView[PdfContentOp],
 ) -> Array[PdfContentOp] raise PdfError {
-  let output : Array[PdfContentOp] = []
+  let output : Array[PdfContentOp] = Array::new(capacity=ops.length())
   for op in ops {
     output.push(self.pdf_page_prefix_content_op(prefix, op))
   }
@@ -134,18 +134,38 @@ fn PdfDocument::pdf_page_prefix_resource_dictionary(
 ) -> PdfObject raise PdfError {
   let mut output = resources
   for resource_key in pdf_page_resource_keys() {
-    let new_entries : Array[(PdfName, PdfObject)] = []
     match self.lookup_direct(resource_key, resources) {
-      Some(PdfDictionary(entries)) =>
+      Some(PdfDictionary(entries)) => {
+        let new_entries : Array[(PdfName, PdfObject)] = Array::new(
+          capacity=entries.length(),
+        )
         for entry in entries {
           let (name, value) = entry
           new_entries.push((pdf_page_prefixed_name(prefix, name), value))
         }
-      _ => ()
+        output = output.add_dict_entry(resource_key, PdfDictionary(new_entries))
+      }
+      _ => output = output.add_dict_entry(resource_key, PdfDictionary([]))
     }
-    output = output.add_dict_entry(resource_key, PdfDictionary(new_entries))
   }
   output
+}
+
+///|
+fn PdfDocument::pdf_page_resource_entry_count(
+  self : PdfDocument,
+  pages : ArrayView[PdfPage],
+) -> Int {
+  let mut count = 0
+  for resource_key in pdf_page_resource_keys() {
+    for page in pages {
+      match self.lookup_direct(resource_key, page.resources) {
+        Some(PdfDictionary(entries)) => count += entries.length()
+        _ => ()
+      }
+    }
+  }
+  count
 }
 
 ///|
@@ -153,7 +173,9 @@ fn PdfDocument::pdf_page_renumber_resource_changes(
   self : PdfDocument,
   pages : ArrayView[PdfPage],
 ) -> Array[(PdfName, Int, PdfName, PdfName)] {
-  let changes : Array[(PdfName, Int, PdfName, PdfName)] = []
+  let changes : Array[(PdfName, Int, PdfName, PdfName)] = Array::new(
+    capacity=self.pdf_page_resource_entry_count(pages),
+  )
   let mut serial = 1
   for resource_key in pdf_page_resource_keys() {
     for page_index in 0..<pages.length() {
@@ -350,7 +372,7 @@ fn PdfDocument::pdf_page_renumber_content_ops(
   page_number : Int,
   ops : ArrayView[PdfContentOp],
 ) -> Array[PdfContentOp] raise PdfError {
-  let output : Array[PdfContentOp] = []
+  let output : Array[PdfContentOp] = Array::new(capacity=ops.length())
   for op in ops {
     output.push(self.pdf_page_renumber_content_op(changes, page_number, op))
   }
@@ -366,9 +388,11 @@ fn PdfDocument::pdf_page_renumber_resource_dictionary(
 ) -> PdfObject raise PdfError {
   let mut output = resources
   for resource_key in pdf_page_resource_keys() {
-    let new_entries : Array[(PdfName, PdfObject)] = []
     match self.lookup_direct(resource_key, resources) {
-      Some(PdfDictionary(entries)) =>
+      Some(PdfDictionary(entries)) => {
+        let new_entries : Array[(PdfName, PdfObject)] = Array::new(
+          capacity=entries.length(),
+        )
         for entry in entries {
           let (old_name, value) = entry
           new_entries.push(
@@ -380,9 +404,10 @@ fn PdfDocument::pdf_page_renumber_resource_dictionary(
             ),
           )
         }
-      _ => ()
+        output = output.add_dict_entry(resource_key, PdfDictionary(new_entries))
+      }
+      _ => output = output.add_dict_entry(resource_key, PdfDictionary([]))
     }
-    output = output.add_dict_entry(resource_key, PdfDictionary(new_entries))
   }
   output
 }
@@ -401,7 +426,7 @@ pub fn PdfDocument::renumber_pages(
     []
   } else {
     let changes = self.pdf_page_renumber_resource_changes(pages)
-    let output : Array[PdfPage] = []
+    let output : Array[PdfPage] = Array::new(capacity=pages.length())
     for page_index in 0..<pages.length() {
       let page = pages[page_index]
       let page_number = page_index + 1

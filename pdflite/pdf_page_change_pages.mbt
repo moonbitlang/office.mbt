@@ -145,7 +145,9 @@ fn PdfDocument::pdf_page_transform_catalog_destinations_object(
   let lookup = pdf_page_matrix_lookup(matrices, page_reference_numbers)
   match dests {
     PdfDictionary(entries) => {
-      let output : Array[(PdfName, PdfObject)] = []
+      let output : Array[(PdfName, PdfObject)] = Array::new(
+        capacity=entries.length(),
+      )
       let mut changed = false
       for entry in entries {
         let (key, destination) = entry
@@ -252,9 +254,12 @@ fn PdfDocument::pdf_page_transform_name_tree_destination_entries(
   page_reference_numbers : ArrayView[Int],
 ) -> Array[(PdfBytes, PdfObject)]? {
   let lookup = pdf_page_matrix_lookup(matrices, page_reference_numbers)
-  let output : Array[(PdfBytes, PdfObject)] = []
+  let entries = self.read_name_tree(dests_tree)
+  let output : Array[(PdfBytes, PdfObject)] = Array::new(
+    capacity=entries.length(),
+  )
   let mut changed = false
-  for entry in self.read_name_tree(dests_tree) {
+  for entry in entries {
     let (key, destination) = entry
     try {
       match
@@ -369,7 +374,7 @@ fn PdfDocument::pdf_page_transform_bookmarks_for_matrices(
 ) -> PdfDocument raise PdfError {
   let bookmarks = self.read_bookmarks(preserve_actions=true)
   let lookup = pdf_page_matrix_lookup(matrices, page_reference_numbers)
-  let output : Array[PdfBookmark] = []
+  let output : Array[PdfBookmark] = Array::new(capacity=bookmarks.length())
   let mut changed = false
   for bookmark in bookmarks {
     let target = match
