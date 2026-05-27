@@ -153,7 +153,7 @@ fn text_fixture_assert_cpdf_manual_text_extraction_for_test(
   document : @pdflite.PdfDocument,
 ) -> Unit raise {
   @test.assert_eq(document.endpage(), 175)
-  let selected_pages = [1, 2, 19, 31, 33]
+  let selected_pages : ReadOnlyArray[Int] = [1, 2, 19, 31, 33]
   let extracted = document.test_extract_text(selected_pages)
   @test.assert_eq(
     @pdflite.pdf_test_extract_text(document, selected_pages),

@@ -433,7 +433,7 @@ test "pdf_embed_truetype builds font pack and embedded font streams" {
 test "pdf_fontpack_collate_runs groups consecutive equal font numbers" {
   let first = embed_standard_font_for_test()
   let second = embed_bold_font_for_test()
-  let runs = [
+  let runs : ReadOnlyArray[(Int, Int, @pdflite.PdfFont)] = [
     (65, 0, first),
     (66, 0, first),
     (67, 1, second),

@@ -201,7 +201,7 @@ test "pdf_impose_add_border appends cpdf stamp rectangle" {
   ])
   let bordered = try! document.pdf_impose_add_border(2.0, false)
   let pages = try! bordered.pages_of_pagetree()
-  let border_ops = [
+  let border_ops : ReadOnlyArray[PdfContentOp] = [
     pdf_content_begin_artifact(),
     Op_q,
     Op_BMC(impose_name_for_test("/CPDFSTAMP")),
@@ -622,7 +622,9 @@ test "pdf_impose_transforms rejects invalid grids and margins" {
 test "pdf_impose_transform_content wraps fast and parsed content like cpdf" {
   let document = pdf_document_empty()
   let matrix = transform_translate(10.0, 20.0)
-  let source = [try! impose_content_stream_for_test([Op_BT, Op_ET])]
+  let source : ReadOnlyArray[PdfObject] = [
+    try! impose_content_stream_for_test([Op_BT, Op_ET]),
+  ]
   let fast = try! document.pdf_impose_transform_content(
     PdfDictionary([]),
     matrix,
@@ -638,7 +640,9 @@ test "pdf_impose_transform_content wraps fast and parsed content like cpdf" {
     Op_Q,
   ])
 
-  let unbalanced = [try! impose_content_stream_for_test([Op_q, Op_BT])]
+  let unbalanced : ReadOnlyArray[PdfObject] = [
+    try! impose_content_stream_for_test([Op_q, Op_BT]),
+  ]
   let parsed = try! document.pdf_impose_transform_content(
     PdfDictionary([]),
     matrix,

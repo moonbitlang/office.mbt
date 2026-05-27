@@ -124,7 +124,11 @@ test "PdfDocument redact_path preserves content and validates selected pages" {
     },
     pages[1],
   ])
-  let path = [(0.0, 0.0), (10.0, 10.0), (20.0, 0.0)]
+  let path : ReadOnlyArray[(Double, Double)] = [
+    (0.0, 0.0),
+    (10.0, 10.0),
+    (20.0, 0.0),
+  ]
   let redacted = try! document.redact_path(path, [1])
   let wrapper = try! @pdflite.pdf_redact(document, path, [1])
   let redacted_pages = try! redacted.pages_of_pagetree()

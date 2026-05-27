@@ -210,7 +210,7 @@ fn toc_fixture_assert_cpdf_manual_toc_elements_for_test(
   @test.assert_eq(original_bookmarks.length(), 163)
   let title = @ascii.encode("Contents\\nGenerated")
   let pack = toc_fixture_fontpack_for_test()
-  let toc_bookmarks = [
+  let toc_bookmarks : ReadOnlyArray[@pdflite.PdfBookmark] = [
     original_bookmarks[0],
     original_bookmarks[21],
     original_bookmarks[25],

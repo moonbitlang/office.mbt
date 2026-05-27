@@ -3700,7 +3700,7 @@ fn fixture_acceptance_assert_cpdf_source_chop_for_test(
   @test.assert_eq(document.endpage(), 4)
   let pages = document.pages_of_pagetree()
   @test.assert_eq(pages.length(), 4)
-  let expected_boxes = [
+  let expected_boxes : ReadOnlyArray[@pdflite.PdfRectangle] = [
     fixture_acceptance_rect_for_test(10.0, 220.0, 110.0, 420.0),
     fixture_acceptance_rect_for_test(110.0, 220.0, 210.0, 420.0),
     fixture_acceptance_rect_for_test(10.0, 20.0, 110.0, 220.0),
@@ -5488,7 +5488,7 @@ fn fixture_acceptance_assert_cpdf_manual_text_extraction_for_test(
   document : @pdflite.PdfDocument,
 ) -> Unit raise {
   @test.assert_eq(document.endpage(), 175)
-  let selected_pages = [1, 2, 19, 31, 33]
+  let selected_pages : ReadOnlyArray[Int] = [1, 2, 19, 31, 33]
   let extracted = document.test_extract_text(selected_pages)
   @test.assert_eq(
     @pdflite.pdf_test_extract_text(document, selected_pages),
@@ -5748,7 +5748,7 @@ fn fixture_acceptance_assert_cpdf_manual_toc_for_test(
   @test.assert_eq(original_bookmarks.length(), 163)
   let title = @ascii.encode("Contents\\nGenerated")
   let pack = fixture_acceptance_cpdf_toc_fontpack_for_test()
-  let toc_bookmarks = [
+  let toc_bookmarks : ReadOnlyArray[@pdflite.PdfBookmark] = [
     original_bookmarks[0],
     original_bookmarks[21],
     original_bookmarks[25],
@@ -8257,7 +8257,7 @@ fn fixture_acceptance_assert_cpdf_source_uniakr_predefined_cmaps_for_test(
 fn fixture_acceptance_assert_cpdf_source_uniakr_utf8_cpdfcontent_boundary_for_test(
   document : @pdflite.PdfDocument,
 ) -> Unit raise {
-  let text = [0xEA, 0xB0, 0x80, 0xEB, 0x82, 0x98]
+  let text : ReadOnlyArray[Int] = [0xEA, 0xB0, 0x80, 0xEB, 0x82, 0x98]
   let ops = fixture_acceptance_page_content_ops_for_test(document)
   fixture_acceptance_assert_content_op_for_test(
     ops,
@@ -8293,7 +8293,9 @@ fn fixture_acceptance_assert_cpdf_source_uniakr_utf8_cpdfcontent_boundary_for_te
 fn fixture_acceptance_assert_cpdf_source_uniakr_utf32_cpdfcontent_boundary_for_test(
   document : @pdflite.PdfDocument,
 ) -> Unit raise {
-  let text = [0x00, 0x00, 0xAC, 0x00, 0x00, 0x00, 0xB0, 0x98]
+  let text : ReadOnlyArray[Int] = [
+    0x00, 0x00, 0xAC, 0x00, 0x00, 0x00, 0xB0, 0x98,
+  ]
   let ops = fixture_acceptance_page_content_ops_for_test(document)
   fixture_acceptance_assert_content_op_for_test(
     ops,
@@ -9929,7 +9931,9 @@ fn fixture_acceptance_assert_cpdf_source_gb_cns_predefined_cmaps_for_test(
 fn fixture_acceptance_assert_cpdf_source_gb_ucs32_cpdfcontent_boundary_for_test(
   document : @pdflite.PdfDocument,
 ) -> Unit raise {
-  let text = [0x00, 0x00, 0x4E, 0x00, 0x00, 0x00, 0x56, 0xFD]
+  let text : ReadOnlyArray[Int] = [
+    0x00, 0x00, 0x4E, 0x00, 0x00, 0x00, 0x56, 0xFD,
+  ]
   let ops = fixture_acceptance_page_content_ops_for_test(document)
   fixture_acceptance_assert_content_op_for_test(
     ops,
@@ -11891,7 +11895,7 @@ fn fixture_acceptance_assert_cpdf_manual_image_text_for_test(
   document : @pdflite.PdfDocument,
 ) -> Unit raise {
   @test.assert_eq(document.endpage(), 1)
-  let pages = [1]
+  let pages : ReadOnlyArray[Int] = [1]
   let extracted = document.test_extract_text(pages)
   @test.assert_eq(@pdflite.pdf_test_extract_text(document, pages), extracted)
   let text = @utf8.decode_lossy(extracted)
@@ -14876,7 +14880,7 @@ async test "optional cpdf source manual fixture reports page label fallbacks" {
 
 ///|
 async test "optional cpdf source manual fixture extracts retained pages" {
-  let selected_pages = [33, 19, 1, 175]
+  let selected_pages : ReadOnlyArray[Int] = [33, 19, 1, 175]
   match
     fixture_acceptance_optional_bytes_for_test(
       ".repos/cpdf-source/cpdfmanual.pdf",

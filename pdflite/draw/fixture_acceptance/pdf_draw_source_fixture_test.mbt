@@ -898,7 +898,7 @@ fn draw_fixture_assert_manual_text_for_test(
   document : @pdflite.PdfDocument,
 ) -> Unit raise {
   @test.assert_eq(document.endpage(), 1)
-  let pages = [1]
+  let pages : ReadOnlyArray[Int] = [1]
   let extracted = document.test_extract_text(pages)
   @test.assert_eq(@pdflite.pdf_test_extract_text(document, pages), extracted)
   let text = @utf8.decode_lossy(extracted)
