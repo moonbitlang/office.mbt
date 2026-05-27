@@ -113,6 +113,7 @@ fn pdf_truetype_collect_cmap_records(
 }
 
 ///|
+/// TrueType table-directory record.
 pub(all) struct PdfTrueTypeTableRecord {
   tag : String
   checksum : UInt
@@ -164,6 +165,7 @@ pub fn pdf_truetype_table(
 }
 
 ///|
+/// Core metrics extracted from TrueType `head`, `hhea`, `hmtx`, and `maxp`.
 pub(all) struct PdfTrueTypeMetrics {
   units_per_em : Int
   minx : Int
@@ -261,6 +263,7 @@ fn pdf_truetype_flags(symbolic : Bool, italic_angle : Int) -> Int {
 }
 
 ///|
+/// Font descriptor metrics derived from TrueType tables.
 pub(all) struct PdfTrueTypeDescriptorMetrics {
   ascent : Int
   descent : Int
@@ -626,6 +629,7 @@ pub fn pdf_truetype_expand_composite_glyphs(
 }
 
 ///|
+/// Byte range for one glyph inside the TrueType `glyf` table.
 pub(all) struct PdfTrueTypeGlyphByteRange {
   glyph_index : Int
   start_offset : Int
@@ -656,6 +660,7 @@ pub fn pdf_truetype_glyph_byte_ranges(
 }
 
 ///|
+/// Rebuilt subset-table bytes and their unpadded logical length.
 pub(all) struct PdfTrueTypeSubsetTable {
   length : Int
   bytes : PdfBytes
@@ -1381,6 +1386,7 @@ pub fn pdf_truetype_metrics(
 }
 
 ///|
+/// Mapping from a Unicode codepoint to a TrueType glyph index.
 pub(all) struct PdfTrueTypeCMapGlyph {
   codepoint : Int
   glyph_index : Int
