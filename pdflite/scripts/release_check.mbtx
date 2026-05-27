@@ -16,6 +16,9 @@ priv struct ReleaseCheckStep {
 }
 
 ///|
+let release_check_warn_list = "+a-31-32-38-39@73@74"
+
+///|
 fn release_check_command() -> @argparse.Command {
   @argparse.Command(
     "release_check",
@@ -80,7 +83,7 @@ fn release_check_steps(
     { name: "check formatting", args: ["fmt", "--check"] },
     {
       name: "check all targets",
-      args: ["check", "--target", "all", "--warn-list", "+a-31-32-38-39"],
+      args: ["check", "--target", "all", "--warn-list", release_check_warn_list],
     },
     { name: "test native CLI package", args: ["test", "--target", "native", "cmd/main"] },
     {
