@@ -555,6 +555,7 @@ pub fn pdf_addjpeg2000(
 }
 
 ///|
+/// Append a new-page operation to the current frame.
 pub fn PdfDrawControl::add_new_page(
   self : PdfDrawControl,
 ) -> Unit raise PdfError {
@@ -562,6 +563,7 @@ pub fn PdfDrawControl::add_new_page(
 }
 
 ///|
+/// Append a fill-opacity operation.
 pub fn PdfDrawControl::add_opacity(
   self : PdfDrawControl,
   opacity : Double,
@@ -570,6 +572,7 @@ pub fn PdfDrawControl::add_opacity(
 }
 
 ///|
+/// Append a stroke-opacity operation.
 pub fn PdfDrawControl::add_stroke_opacity(
   self : PdfDrawControl,
   opacity : Double,
@@ -578,6 +581,7 @@ pub fn PdfDrawControl::add_stroke_opacity(
 }
 
 ///|
+/// Append a text-leading operation.
 pub fn PdfDrawControl::add_leading(
   self : PdfDrawControl,
   leading : Double,
@@ -586,6 +590,7 @@ pub fn PdfDrawControl::add_leading(
 }
 
 ///|
+/// Append a character-spacing operation.
 pub fn PdfDrawControl::add_char_space(
   self : PdfDrawControl,
   spacing : Double,
@@ -594,6 +599,7 @@ pub fn PdfDrawControl::add_char_space(
 }
 
 ///|
+/// Append a word-spacing operation.
 pub fn PdfDrawControl::add_word_space(
   self : PdfDrawControl,
   spacing : Double,
@@ -602,6 +608,7 @@ pub fn PdfDrawControl::add_word_space(
 }
 
 ///|
+/// Append a horizontal text-scale operation.
 pub fn PdfDrawControl::add_text_scale(
   self : PdfDrawControl,
   scale : Double,
@@ -610,6 +617,7 @@ pub fn PdfDrawControl::add_text_scale(
 }
 
 ///|
+/// Append a text rendering-mode operation.
 pub fn PdfDrawControl::add_render_mode(
   self : PdfDrawControl,
   mode : Int,
@@ -618,6 +626,7 @@ pub fn PdfDrawControl::add_render_mode(
 }
 
 ///|
+/// Append a text-rise operation.
 pub fn PdfDrawControl::add_rise(
   self : PdfDrawControl,
   rise : Double,
@@ -626,6 +635,7 @@ pub fn PdfDrawControl::add_rise(
 }
 
 ///|
+/// Append a text-newline operation.
 pub fn PdfDrawControl::add_newline(
   self : PdfDrawControl,
 ) -> Unit raise PdfError {
@@ -633,6 +643,7 @@ pub fn PdfDrawControl::add_newline(
 }
 
 ///|
+/// Set the font name used by subsequent text operations.
 pub fn PdfDrawControl::set_font_name(
   self : PdfDrawControl,
   font_name : String,
@@ -650,6 +661,7 @@ pub fn PdfDrawControl::font_name(self : PdfDrawControl) -> String {
 }
 
 ///|
+/// Set the font size used by subsequent text operations.
 pub fn PdfDrawControl::set_font_size(
   self : PdfDrawControl,
   font_size : Double,
@@ -667,6 +679,7 @@ pub fn PdfDrawControl::font_size(self : PdfDrawControl) -> Double {
 }
 
 ///|
+/// Set the font name and size used by subsequent text operations.
 pub fn PdfDrawControl::set_font(
   self : PdfDrawControl,
   font_name : String,
@@ -677,6 +690,7 @@ pub fn PdfDrawControl::set_font(
 }
 
 ///|
+/// Set the optional font pack emitted before subsequent text operations.
 pub fn PdfDrawControl::set_fontpack(
   self : PdfDrawControl,
   fontpack : PdfFontPack?,
@@ -695,6 +709,7 @@ pub fn PdfDrawControl::fontpack_initialized(self : PdfDrawControl) -> Bool {
 }
 
 ///|
+/// Set the paragraph indent used by paragraph text helpers.
 pub fn PdfDrawControl::set_paragraph_indent(
   self : PdfDrawControl,
   indent : Double?,
@@ -747,6 +762,7 @@ fn PdfDrawControl::add_current_font(
 }
 
 ///|
+/// Append literal text inside the current text section.
 pub fn PdfDrawControl::add_text(
   self : PdfDrawControl,
   text : String,
@@ -758,6 +774,7 @@ pub fn PdfDrawControl::add_text(
 }
 
 ///|
+/// Append special text inside the current text section.
 pub fn PdfDrawControl::add_special_text(
   self : PdfDrawControl,
   text : String,
