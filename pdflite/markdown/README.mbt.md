@@ -54,7 +54,7 @@ test "extract text from an in-memory PDF" {
   }
   let page_root = try! doc.add_pagetree([page])
   ignore(try! doc.add_root(page_root, []))
-  let markdown = try! pdf_document_to_markdown(doc)
+  let markdown = try! @markdown.pdf_document_to_markdown(doc)
   if !markdown.contains("Hello from pdflite") {
     fail("expected extracted text in Markdown output")
   }
