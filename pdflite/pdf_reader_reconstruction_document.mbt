@@ -406,10 +406,7 @@ fn pdf_read_reconstructed_document_from_view(
   }
   document.set_trailer_and_root(
     document.select_reconstructed_trailer(
-      pdf_read_reconstructed_trailers(
-        data,
-        include_xref_streams=include_xref_stream_trailers,
-      ),
+      pdf_read_reconstructed_trailers(data, include_xref_stream_trailers),
     ),
   )
   if include_xref_stream_trailers && document.is_encrypted() {
@@ -463,10 +460,7 @@ fn pdf_read_probe_page_tree_or_reconstruct(
     Some(_) => document
     None =>
       pdf_read_reconstruct_valid_page_tree_or_original(
-        data,
-        document,
-        user_password~,
-        owner_password~,
+        data, document, user_password, owner_password,
       )
   }
 }
@@ -474,8 +468,8 @@ fn pdf_read_probe_page_tree_or_reconstruct(
 ///|
 fn pdf_read_reconstruction_validation_document(
   document : PdfDocument,
-  user_password? : BytesView? = None,
-  owner_password? : BytesView? = None,
+  user_password : BytesView?,
+  owner_password : BytesView?,
 ) -> PdfDocument {
   if document.is_encrypted() {
     let decrypted : Result[PdfDecryptionResult?, Error] = try? document.decrypt_with_passwords(
@@ -495,8 +489,8 @@ fn pdf_read_reconstruction_validation_document(
 fn pdf_read_reconstruct_valid_page_tree_or_original(
   data : BytesView,
   document : PdfDocument,
-  user_password? : BytesView? = None,
-  owner_password? : BytesView? = None,
+  user_password : BytesView?,
+  owner_password : BytesView?,
 ) -> PdfDocument {
   let reconstructed = pdf_read_reconstructed_document_from_view(
     data,
@@ -508,9 +502,7 @@ fn pdf_read_reconstruct_valid_page_tree_or_original(
   }
   try {
     let validation = pdf_read_reconstruction_validation_document(
-      reconstructed,
-      user_password~,
-      owner_password~,
+      reconstructed, user_password, owner_password,
     )
     ignore(validation.endpage())
     reconstructed

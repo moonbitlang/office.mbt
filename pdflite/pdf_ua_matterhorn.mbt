@@ -1301,7 +1301,7 @@ fn pdf_ua_matterhorn_implemented_tests() -> Array[PdfUAMatterhornTest] {
 ///|
 fn pdf_ua_matterhorn_failure(
   check : PdfUAMatterhornTest,
-  extra? : Json = Json::null(),
+  extra : Json,
 ) -> PdfUAMatterhornFailure {
   { name: check.name, error: check.error, section: check.section, extra }
 }
@@ -4337,7 +4337,7 @@ fn PdfDocument::pdf_ua_matterhorn_run_test(
     _ => None
   }
   match result {
-    Some(extra) => Some(pdf_ua_matterhorn_failure(check, extra~))
+    Some(extra) => Some(pdf_ua_matterhorn_failure(check, extra))
     None => None
   }
 }
@@ -4348,7 +4348,7 @@ fn PdfDocument::pdf_ua_matterhorn_circular_rolemap_failure(
 ) -> PdfUAMatterhornFailure? {
   match self.pdf_ua_matterhorn_check_02_003() {
     Some(extra) =>
-      Some(pdf_ua_matterhorn_failure(pdf_ua_matterhorn_test_02_003(), extra~))
+      Some(pdf_ua_matterhorn_failure(pdf_ua_matterhorn_test_02_003(), extra))
     None => None
   }
 }

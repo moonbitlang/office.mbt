@@ -301,7 +301,7 @@ fn ByteCursor::read_reconstructed_xref_stream_trailer_at(
 ///|
 fn pdf_read_reconstructed_trailers(
   data : BytesView,
-  include_xref_streams? : Bool = true,
+  include_xref_streams : Bool,
 ) -> Array[PdfObject] {
   let trailers : Array[PdfObject] = Array::new(capacity=1)
   let cursor = byte_cursor_of_view(data)

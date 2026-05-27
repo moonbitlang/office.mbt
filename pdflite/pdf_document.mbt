@@ -371,7 +371,7 @@ fn PdfObjects::load_object_given_number(
   self : PdfObjects,
   number : Int,
   object : PdfObject,
-  generation? : Int = 0,
+  generation : Int,
 ) -> Unit {
   self.set_entry(number, pdf_object_entry(ObjectParsed(object), generation~))
 }
@@ -665,7 +665,7 @@ fn PdfDocument::load_object_given_number(
   object : PdfObject,
   generation? : Int = 0,
 ) -> Unit {
-  self.objects.load_object_given_number(number, object, generation~)
+  self.objects.load_object_given_number(number, object, generation)
 }
 
 ///|
