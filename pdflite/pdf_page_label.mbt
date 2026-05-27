@@ -216,15 +216,18 @@ pub fn pdf_page_label_complete(
   if labels.length() == 0 {
     [pdf_page_label_basic]
   } else if labels[0].start_page > 1 {
-    let output : Array[PdfPageLabel] = [pdf_page_label_basic]
+    let output : Array[PdfPageLabel] = Array::new(capacity=labels.length() + 1)
+    output.push(pdf_page_label_basic)
     for label in labels {
       output.push(label)
     }
     output
   } else {
-    [
-      for label in labels => label
-    ]
+    let output : Array[PdfPageLabel] = Array::new(capacity=labels.length())
+    for label in labels {
+      output.push(label)
+    }
+    output
   }
 }
 
@@ -256,8 +259,10 @@ pub fn pdf_page_label_add_label(
   label : PdfPageLabel,
   range_end_page : Int,
 ) -> Array[PdfPageLabel] {
-  let before_or_during_or_equal : Array[PdfPageLabel] = []
-  let after : Array[PdfPageLabel] = []
+  let before_or_during_or_equal : Array[PdfPageLabel] = Array::new(
+    capacity=labels.length(),
+  )
+  let after : Array[PdfPageLabel] = Array::new(capacity=labels.length())
   for existing in labels {
     if existing.start_page <= range_end_page {
       before_or_during_or_equal.push(existing)
@@ -265,13 +270,17 @@ pub fn pdf_page_label_add_label(
       after.push(existing)
     }
   }
-  let before_or_during : Array[PdfPageLabel] = []
+  let before_or_during : Array[PdfPageLabel] = Array::new(
+    capacity=before_or_during_or_equal.length(),
+  )
   for existing in before_or_during_or_equal {
     if existing.start_page != label.start_page {
       before_or_during.push(existing)
     }
   }
-  let before : Array[PdfPageLabel] = []
+  let before : Array[PdfPageLabel] = Array::new(
+    capacity=before_or_during.length() + 1,
+  )
   for existing in before_or_during {
     if !(existing.start_page > label.start_page &&
       existing.start_page <= range_end_page) {
@@ -298,7 +307,7 @@ pub fn pdf_page_label_add_label(
 fn pdf_page_label_range_extents(
   page_numbers : ArrayView[Int],
 ) -> Array[(Int, Int)] {
-  let ranges : Array[(Int, Int)] = []
+  let ranges : Array[(Int, Int)] = Array::new(capacity=page_numbers.length())
   if page_numbers.length() > 0 {
     let mut start = page_numbers[0]
     let mut previous = page_numbers[0]
@@ -330,7 +339,7 @@ fn pdf_page_label_has_page_one(labels : ArrayView[PdfPageLabel]) -> Bool {
 
 ///|
 fn pdf_page_label_start_additions(ranges : ArrayView[(Int, Int)]) -> Array[Int] {
-  let additions : Array[Int] = []
+  let additions : Array[Int] = Array::new(capacity=ranges.length())
   let mut so_far = 0
   for range in ranges {
     let (start_page, end_page) = range
@@ -344,7 +353,7 @@ fn pdf_page_label_start_additions(ranges : ArrayView[(Int, Int)]) -> Array[Int] 
 fn pdf_page_label_with_basic_if_needed(
   labels : ArrayView[PdfPageLabel],
 ) -> Array[PdfPageLabel] {
-  let output : Array[PdfPageLabel] = []
+  let output : Array[PdfPageLabel] = Array::new(capacity=labels.length() + 1)
   if !pdf_page_label_has_page_one(labels) {
     output.push(pdf_page_label_basic)
   }
@@ -747,7 +756,7 @@ pub fn pdf_page_label_text_of_page_number(
 pub fn pdf_page_label_coalesce(
   labels : ArrayView[PdfPageLabel],
 ) -> Array[PdfPageLabel] {
-  let output : Array[PdfPageLabel] = []
+  let output : Array[PdfPageLabel] = Array::new(capacity=labels.length())
   let mut index = 0
   while index < labels.length() {
     let label = labels[index]
@@ -780,7 +789,11 @@ pub fn pdf_page_label_merge(
   if pdfs.length() != ranges.length() {
     raise PageTreeExpected
   }
-  let labels : Array[PdfPageLabel] = []
+  let mut total_pages = 0
+  for range in ranges {
+    total_pages += range.length()
+  }
+  let labels : Array[PdfPageLabel] = Array::new(capacity=total_pages)
   let mut merged_page = 1
   for index in 0..<pdfs.length() {
     let source_labels = pdf_page_label_complete(pdfs[index].read_page_labels())
@@ -832,15 +845,29 @@ fn PdfDocument::pdf_page_label_raw_entries(
   self : PdfDocument,
   tree : PdfObject,
 ) -> Array[(PdfObject, PdfObject)] raise PdfError {
-  let output : Array[(PdfObject, PdfObject)] = []
-  match
-    self.lookup_direct_or_else(pdf_tree_names_key(), pdf_tree_nums_key(), tree) {
+  let direct = self.lookup_direct_or_else(
+    pdf_tree_names_key(),
+    pdf_tree_nums_key(),
+    tree,
+  )
+  let kids_object = self.lookup_direct(pdf_tree_kids_key(), tree)
+  let output : Array[(PdfObject, PdfObject)] = Array::new(
+    capacity=match direct {
+      Some(PdfArray(items)) => items.length() / 2
+      _ =>
+        match kids_object {
+          Some(PdfArray(kids)) => kids.length()
+          _ => 0
+        }
+    },
+  )
+  match direct {
     Some(PdfArray(items)) =>
       for i in 0..<(items.length() / 2) {
         output.push((items[i * 2], items[i * 2 + 1]))
       }
     _ =>
-      match self.lookup_direct(pdf_tree_kids_key(), tree) {
+      match kids_object {
         Some(PdfArray(kids)) =>
           for kid in kids {
             for entry in self.pdf_page_label_raw_entries(kid) {
@@ -882,7 +909,7 @@ fn PdfDocument::pdf_page_label_of_range(
 
 ///|
 fn pdf_page_label_object(label : PdfPageLabel) -> PdfObject {
-  let entries : Array[(PdfName, PdfObject)] = []
+  let entries : Array[(PdfName, PdfObject)] = Array::new(capacity=3)
   match pdf_page_label_style_object(label.label_style) {
     Some(style) => entries.push((pdf_page_label_style_key(), style))
     None => ()
@@ -918,12 +945,16 @@ pub fn PdfDocument::read_page_labels(
 ) -> Array[PdfPageLabel] raise PdfError {
   let root = self.pdf_page_label_catalog()
   match self.lookup_direct(pdf_page_label_page_labels_key(), root) {
-    Some(label_tree) =>
-      [
-        for entry in self.pdf_page_label_raw_entries(label_tree) => {
-          self.pdf_page_label_of_range(entry.0, entry.1)
-        }
-      ]
+    Some(label_tree) => {
+      let raw_entries = self.pdf_page_label_raw_entries(label_tree)
+      let output : Array[PdfPageLabel] = Array::new(
+        capacity=raw_entries.length(),
+      )
+      for entry in raw_entries {
+        output.push(self.pdf_page_label_of_range(entry.0, entry.1))
+      }
+      output
+    }
     None => []
   }
 }
@@ -989,7 +1020,7 @@ pub fn PdfDocument::write_page_labels(
   } else {
     let root = self.pdf_page_label_catalog()
     let pdf = self.copy()
-    let entries : Array[(Int, PdfObject)] = []
+    let entries : Array[(Int, PdfObject)] = Array::new(capacity=labels.length())
     for label in labels {
       entries.push((label.start_page - 1, pdf_page_label_object(label)))
     }

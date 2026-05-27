@@ -14,7 +14,9 @@ fn pdf_page_rest_entries(
 ) -> Array[(PdfName, PdfObject)] raise PdfError {
   match rest {
     PdfDictionary(entries) => {
-      let output : Array[(PdfName, PdfObject)] = []
+      let output : Array[(PdfName, PdfObject)] = Array::new(
+        capacity=entries.length(),
+      )
       for entry in entries {
         let (key, _) = entry
         if !pdf_page_is_reserved_key(key) {
@@ -31,7 +33,9 @@ fn pdf_page_rest_entries(
 fn pdf_page_rest_object_from_page(page : PdfObject) -> PdfObject raise PdfError {
   match page {
     PdfDictionary(entries) => {
-      let rest : Array[(PdfName, PdfObject)] = []
+      let rest : Array[(PdfName, PdfObject)] = Array::new(
+        capacity=entries.length(),
+      )
       for entry in entries {
         let (key, _) = entry
         if !pdf_page_is_reserved_key(key) {
@@ -49,7 +53,7 @@ fn PdfDocument::pdf_page_content_references(
   self : PdfDocument,
   content : ArrayView[PdfObject],
 ) -> Array[PdfObject] {
-  let refs : Array[PdfObject] = []
+  let refs : Array[PdfObject] = Array::new(capacity=content.length())
   for object in content {
     match object {
       PdfIndirect(_) => refs.push(object)
@@ -65,12 +69,14 @@ fn PdfDocument::pdf_page_object(
   page : PdfPage,
   parent : Int,
 ) -> PdfObject raise PdfError {
-  let entries : Array[(PdfName, PdfObject)] = [
-    (pdf_page_type_key(), PdfNameObject(pdf_page_type_page())),
-    (pdf_page_parent_key(), PdfIndirect(parent)),
-    (pdf_page_resources_key(), page.resources),
-    (pdf_page_mediabox_key(), page.mediabox),
-  ]
+  let rest_entries = pdf_page_rest_entries(page.rest)
+  let entries : Array[(PdfName, PdfObject)] = Array::new(
+    capacity=6 + rest_entries.length(),
+  )
+  entries.push((pdf_page_type_key(), PdfNameObject(pdf_page_type_page())))
+  entries.push((pdf_page_parent_key(), PdfIndirect(parent)))
+  entries.push((pdf_page_resources_key(), page.resources))
+  entries.push((pdf_page_mediabox_key(), page.mediabox))
   match pdf_page_int_of_rotation(page.rotate) {
     0 => ()
     value => entries.push((pdf_page_rotate_key(), PdfInteger(value)))
@@ -79,7 +85,7 @@ fn PdfDocument::pdf_page_object(
   if content_refs.length() > 0 {
     entries.push((pdf_page_contents_key(), PdfArray(content_refs)))
   }
-  for entry in pdf_page_rest_entries(page.rest) {
+  for entry in rest_entries {
     entries.push(entry)
   }
   PdfDictionary(entries)
@@ -91,7 +97,7 @@ fn pdf_page_slice(
   start : Int,
   stop : Int,
 ) -> Array[PdfPage] {
-  let output : Array[PdfPage] = []
+  let output : Array[PdfPage] = Array::new(capacity=stop - start)
   for i in start..<stop {
     output.push(pages[i])
   }
@@ -104,14 +110,16 @@ fn pdf_page_pages_node_object(
   count : Int,
   parent : Int,
 ) -> PdfObject {
-  let entries : Array[(PdfName, PdfObject)] = [
-    (pdf_page_type_key(), PdfNameObject(pdf_page_type_pages())),
-    (
-      pdf_page_kids_key(),
-      PdfArray([ for number in kids => PdfIndirect(number) ]),
-    ),
-    (pdf_page_count_key(), PdfInteger(count)),
-  ]
+  let kid_refs : Array[PdfObject] = Array::new(capacity=kids.length())
+  for number in kids {
+    kid_refs.push(PdfIndirect(number))
+  }
+  let entries : Array[(PdfName, PdfObject)] = Array::new(
+    capacity=if parent == 0 { 3 } else { 4 },
+  )
+  entries.push((pdf_page_type_key(), PdfNameObject(pdf_page_type_pages())))
+  entries.push((pdf_page_kids_key(), PdfArray(kid_refs)))
+  entries.push((pdf_page_count_key(), PdfInteger(count)))
   if parent != 0 {
     entries.push((pdf_page_parent_key(), PdfIndirect(parent)))
   }
@@ -126,7 +134,7 @@ fn PdfDocument::pdf_page_add_pagetree_node(
   node_number : Int,
 ) -> Unit raise PdfError {
   if pages.length() < 10 {
-    let page_numbers : Array[Int] = []
+    let page_numbers : Array[Int] = Array::new(capacity=pages.length())
     for page in pages {
       page_numbers.push(
         self.add_object(self.pdf_page_object(page, node_number)),
@@ -146,7 +154,8 @@ fn PdfDocument::pdf_page_add_pagetree_node(
       node_number,
       left_number,
     )
-    let kid_numbers : Array[Int] = [left_number]
+    let kid_numbers : Array[Int] = Array::new(capacity=middle_count + 2)
+    kid_numbers.push(left_number)
     for i in left_count..<middle_end {
       kid_numbers.push(
         self.add_object(self.pdf_page_object(pages[i], node_number)),
@@ -198,7 +207,9 @@ fn pdf_page_root_entries_without_catalog_keys(
   match object {
     PdfNull => []
     PdfDictionary(entries) => {
-      let output : Array[(PdfName, PdfObject)] = []
+      let output : Array[(PdfName, PdfObject)] = Array::new(
+        capacity=entries.length(),
+      )
       for entry in entries {
         let (key, _) = entry
         if key != pdf_page_type_key() && key != pdf_page_pages_key() {
@@ -320,7 +331,7 @@ fn PdfDocument::pdf_pages_of_branch(
   let rotate = self.pdf_page_inherited_rotation(node, inherited_rotate)
   match self.lookup_direct(pdf_page_kids_key(), node) {
     Some(PdfArray(kids)) => {
-      let pages : Array[PdfPage] = []
+      let pages : Array[PdfPage] = Array::new(capacity=kids.length())
       for kid in kids {
         for
           page in self.pdf_pages_of_node(
@@ -453,7 +464,13 @@ fn PdfDocument::pdf_page_content_list(
   self : PdfDocument,
   contents : PdfObject?,
 ) -> Array[PdfObject] {
-  let output : Array[PdfObject] = []
+  let output : Array[PdfObject] = Array::new(
+    capacity=match contents {
+      Some(PdfArray(items)) => items.length()
+      Some(_) => 1
+      None => 0
+    },
+  )
   match contents {
     None => ()
     Some(PdfArray(items)) =>

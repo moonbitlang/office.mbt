@@ -10701,6 +10701,21 @@ Current backend snapshot:
   fixture_acceptance` reports 414/414; `moon test --target wasm-gc
   pdf_reader_test.mbt pdf_reader_wbtest.mbt pdflite_wbtest.mbt
   fixture_acceptance` and the same focused suite on `js` each report 185/185.~~
+- [x] ~~Continue source-port hardening with page-tree and page-label allocation
+  tuning: page rest dictionaries, content references, page dictionaries,
+  page slices, `/Kids` references, page-tree node child lists, catalog extras,
+  content stream lists, branch page traversal, page-label completion, range
+  edits, range extents, additions, coalescing, merge accumulation, raw label
+  tree reads, label dictionaries, label parsing output, and label write entries
+  now preallocate from page, entry, content, child, range, label, or selected
+  page counts while preserving inherited page attributes and page-label
+  numbering behavior. Validation on MoonBit compiler 0.9.3: `moon check
+  --target native --warn-list +73` passes with the known notice; `moon test
+  --target native pdf_page_test.mbt pdf_page_wbtest.mbt pdf_page_label_test.mbt
+  pdf_page_spec_test.mbt pdf_merge_test.mbt pdf_toc_test.mbt
+  pdf_native_acceptance_test.mbt` reports 277/277; the same focused suite
+  without native acceptance on `wasm-gc` and `js` reports 185/185 on each
+  backend.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
