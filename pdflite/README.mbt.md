@@ -36,6 +36,8 @@ For example:
 
 ```sh
 _build/native/release/build/cmd/main/main.exe info fixtures/camlpdf/logo.pdf
+_build/native/release/build/cmd/main/main.exe info --json fixtures/camlpdf/logo.pdf
+_build/native/release/build/cmd/main/main.exe validate fixtures/camlpdf/logo.pdf
 _build/native/release/build/cmd/main/main.exe rewrite fixtures/camlpdf/logo.pdf _build/logo-roundtrip.pdf
 ```
 
@@ -44,6 +46,24 @@ Black-box CLI documentation tests live in `tests/scrut` and run with:
 ```sh
 moon run --target native scripts/check_scrut_cli.mbtx
 ```
+
+## Release Check
+
+Before publishing, run the executable release checklist:
+
+```sh
+moon run --target native scripts/release_check.mbtx
+```
+
+For the slower full native suite and registry dry run:
+
+```sh
+moon run --target native scripts/release_check.mbtx -- --full-native-tests --publish-dry-run
+```
+
+The script runs `moon info`, `moon fmt --check`, all-target checking, focused
+native CLI tests, Scrut CLI documentation tests, the checked-in fixture
+round-trip matrix, and `moon package`.
 
 ## What This Package Owns
 

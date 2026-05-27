@@ -1,0 +1,131 @@
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/process",
+  "moonbitlang/async/stdio",
+  "moonbitlang/core/argparse",
+  "moonbitlang/core/env",
+  "moonbitlang/x/sys",
+}
+
+///|
+priv struct ReleaseCheckStep {
+  name : String
+  args : Array[String]
+}
+
+///|
+fn release_check_command() -> @argparse.Command {
+  @argparse.Command(
+    "release_check",
+    about="Run pdflite release verification commands.",
+    disable_help_subcommand=true,
+    flags=[
+      @argparse.FlagArg(
+        "full-native-tests",
+        about="Run the full native test suite in addition to focused release checks.",
+      ),
+      @argparse.FlagArg(
+        "publish-dry-run",
+        about="Run moon publish --dry-run after packaging.",
+      ),
+    ],
+  )
+}
+
+///|
+async fn main {
+  let all_args = @env.args()
+  let args = if all_args.is_empty() { all_args[:] } else { all_args[1:] }
+  let parse_result = try? release_check_command().parse(argv=args, env={})
+  let matches = match parse_result {
+    Ok(value) => value
+    Err(error) => {
+      eprintln(error.to_string())
+      @sys.exit(2)
+      return
+    }
+  }
+  let full_native_tests = matches.flags.get("full-native-tests").unwrap_or(false)
+  let publish_dry_run = matches.flags.get("publish-dry-run").unwrap_or(false)
+  let code = run_release_check(full_native_tests, publish_dry_run)
+  if code != 0 {
+    @sys.exit(code)
+  }
+}
+
+///|
+async fn run_release_check(
+  full_native_tests : Bool,
+  publish_dry_run : Bool,
+) -> Int {
+  let steps = release_check_steps(full_native_tests, publish_dry_run)
+  for step in steps {
+    let code = run_release_check_step(step)
+    if code != 0 {
+      return code
+    }
+  }
+  0
+}
+
+///|
+fn release_check_steps(
+  full_native_tests : Bool,
+  publish_dry_run : Bool,
+) -> Array[ReleaseCheckStep] {
+  let steps : Array[ReleaseCheckStep] = [
+    { name: "update public interfaces", args: ["info"] },
+    { name: "check formatting", args: ["fmt", "--check"] },
+    {
+      name: "check all targets",
+      args: ["check", "--target", "all", "--warn-list", "+a-31-32-38-39"],
+    },
+    { name: "test native CLI package", args: ["test", "--target", "native", "cmd/main"] },
+    {
+      name: "test native CLI documentation",
+      args: ["run", "--target", "native", "scripts/check_scrut_cli.mbtx"],
+    },
+    {
+      name: "test checked-in fixture roundtrip matrix",
+      args: [
+        "test",
+        "--target",
+        "native",
+        "fixture_acceptance",
+        "--filter",
+        "checked-in PDF fixture matrix roundtrips through writer modes",
+      ],
+    },
+  ]
+  if full_native_tests {
+    steps.push({
+      name: "test full native suite",
+      args: ["test", "--target", "native"],
+    })
+  }
+  steps.push({ name: "package", args: ["package"] })
+  if publish_dry_run {
+    steps.push({ name: "publish dry run", args: ["publish", "--dry-run"] })
+  }
+  steps
+}
+
+///|
+async fn run_release_check_step(step : ReleaseCheckStep) -> Int {
+  eprintln("$ moon " + step.args.join(" "))
+  let code = @process.run("moon", step.args)
+  if code != 0 {
+    eprintln(
+      "release_check: " +
+      step.name +
+      " failed with exit code " +
+      code.to_string(),
+    )
+  }
+  code
+}
+
+///|
+async fn eprintln(message : String) -> Unit {
+  @stdio.stderr.write(message + "\n")
+}

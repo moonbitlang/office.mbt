@@ -18,6 +18,8 @@ Example commands:
 
 ```sh
 _build/native/release/build/cmd/main/main.exe info fixtures/camlpdf/logo.pdf
+_build/native/release/build/cmd/main/main.exe info --json fixtures/camlpdf/logo.pdf
+_build/native/release/build/cmd/main/main.exe validate fixtures/camlpdf/logo.pdf
 _build/native/release/build/cmd/main/main.exe rewrite fixtures/camlpdf/logo.pdf _build/logo-roundtrip.pdf
 ```
 
@@ -31,6 +33,10 @@ moon run --target native scripts/check_scrut_cli.mbtx
 
 - `info` parses a PDF and prints path, version, page count, object count, and
   whether the file is encrypted.
-- `rewrite` parses a PDF and writes it back through the library writer.
+- `info --json` prints the same metadata as a JSON object for scripts.
+- `validate` parses a PDF, rewrites it in memory, and verifies the rewritten
+  bytes can be parsed.
+- `rewrite` parses a PDF, writes it back through the library writer, and
+  verifies the rewritten bytes before writing the output file.
 - Argument parsing, help, version text, and parse errors are owned by the
   declarative argparse command spec.
