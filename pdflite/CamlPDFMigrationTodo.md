@@ -10543,6 +10543,16 @@ Current backend snapshot:
   passes with the known notice; `moon test --target native pdf_attach_test.mbt
   pdf_annotation_test.mbt annotation/fixture_acceptance` reports 30/30; the
   same focused suite on `wasm-gc` and `js` reports 28/28 on each backend.~~
+- [x] ~~Continue source-port hardening with bookmark/font listing allocation
+  tuning: bookmark JSON/text filtering, page-pruned bookmark selection, font
+  resource listing, nested XObject font traversal, and missing-font reports now
+  preallocate from bookmark, selected-page, font-resource, or XObject counts
+  instead of growing the main result arrays from zero. Validation on MoonBit
+  compiler 0.9.3: `moon check --target native --warn-list +73` passes with the
+  known notice; `moon test --target native pdf_bookmark_test.mbt
+  pdf_font_test.mbt bookmark/fixture_acceptance font/fixture_acceptance`
+  reports 48/48; the same focused suite on `wasm-gc` and `js` reports 37/37
+  on each backend.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

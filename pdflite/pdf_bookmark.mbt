@@ -470,7 +470,7 @@ fn PdfDocument::pdf_bookmark_listing_json(
   self : PdfDocument,
   bookmarks : ArrayView[PdfBookmark],
 ) -> Json raise PdfError {
-  let output : Array[Json] = []
+  let output : Array[Json] = Array::new(capacity=bookmarks.length())
   for bookmark in bookmarks {
     output.push(self.pdf_bookmark_json_mark(bookmark))
   }
@@ -488,7 +488,7 @@ fn PdfDocument::pdf_bookmark_listing_bookmarks(
   let range_is_all = pdf_bookmark_listing_is_all_pages(page_numbers, end_page)
   let selected_pages = @number_set.pdf_number_set(page_numbers)
   let bookmarks = self.read_bookmarks(preserve_actions~)
-  let output : Array[PdfBookmark] = []
+  let output : Array[PdfBookmark] = Array::new(capacity=bookmarks.length())
   for bookmark in bookmarks {
     if self.pdf_bookmark_listing_in_range(
         bookmark, selected_pages, range_is_all,
@@ -518,7 +518,9 @@ pub fn PdfDocument::list_bookmarks(
   if json {
     @utf8.encode(self.pdf_bookmark_listing_json(bookmarks).stringify())
   } else {
-    let lines : Array[PdfBookmarkListingTextLine] = []
+    let lines : Array[PdfBookmarkListingTextLine] = Array::new(
+      capacity=bookmarks.length(),
+    )
     let mut length = 0
     for bookmark in bookmarks {
       let line = self.pdf_bookmark_listing_text_line(bookmark, encoding)
@@ -1975,7 +1977,7 @@ fn PdfDocument::pdf_bookmarks_for_pages(
       pdf_bookmark_mark_ancestors(bookmarks, keep, index)
     }
   }
-  let output : Array[PdfBookmark] = []
+  let output : Array[PdfBookmark] = Array::new(capacity=bookmarks.length())
   for index in 0..<bookmarks.length() {
     if keep[index] {
       output.push(bookmarks[index])
