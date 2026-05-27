@@ -1,10 +1,10 @@
 import {
-  "bobzhang/pdflite/core" @core,
+  "bobzhang/pdflite/core",
   "moonbitlang/core/encoding/ascii",
 }
 
 import {
-  "bobzhang/pdflite/core" @core,
+  "bobzhang/pdflite/core",
   "moonbitlang/core/encoding/ascii",
   "moonbitlang/core/test",
 } for "wbtest"

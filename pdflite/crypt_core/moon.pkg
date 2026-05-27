@@ -1,11 +1,11 @@
 import {
-  "bobzhang/pdflite/core" @core,
+  "bobzhang/pdflite/core",
   "illusory0x0/rijndael/rijndael",
   "moonbitlang/x/crypto",
 }
 
 import {
-  "bobzhang/pdflite/core" @core,
+  "bobzhang/pdflite/core",
   "moonbitlang/core/encoding/ascii",
   "moonbitlang/core/test",
 } for "wbtest"
