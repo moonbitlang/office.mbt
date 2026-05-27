@@ -10617,6 +10617,18 @@ Current backend snapshot:
   text/fixture_acceptance pdf_embed_test.mbt pdf_addtext_test.mbt
   pdf_draw_test.mbt` reports 341/341; the same focused suite on `wasm-gc` and
   `js` reports 337/337 on each backend.~~
+- [x] ~~Continue source-port hardening with add-text orchestration allocation
+  tuning: prepared-line measurement bytes, per-page used-codepoint scans,
+  fontpack object writes, URL annotation references, lazy replacement spans,
+  escaped-newline splitting, bookmark branch searches, replacement bookmark
+  values, expanded replacement lines, and used-codepoint output now preallocate
+  from expanded-line, selected-page, font, URL, text/search, byte, bookmark, or
+  line counts while preserving cpdf add-text ordering and replacement
+  semantics. Validation on MoonBit compiler 0.9.3: `moon check --target native
+  --warn-list +73` passes with the known notice; `moon test --target native
+  pdf_addtext_test.mbt pdf_draw_test.mbt text/fixture_acceptance` reports
+  179/179; the same focused suite on `wasm-gc` and `js` reports 175/175 on
+  each backend.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

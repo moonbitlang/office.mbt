@@ -586,7 +586,9 @@ pub fn PdfDocument::addtext_prepare_line(
     raw,
     parsed.text,
   )
-  let expanded_line_bytes : Array[PdfBytes] = []
+  let expanded_line_bytes : Array[PdfBytes] = Array::new(
+    capacity=expanded_lines.length(),
+  )
   for line in expanded_lines {
     expanded_line_bytes.push(
       self.pdf_addtext_measurement_bytes_for_page(
@@ -1881,7 +1883,9 @@ fn PdfDocument::pdf_addtext_used_codepoints_for_pages(
   bates : Int,
   bates_pad : Int?,
 ) -> Array[Int] raise PdfError {
-  let used : Array[Int] = []
+  let used : Array[Int] = Array::new(
+    capacity=page_numbers.length() * lines.length(),
+  )
   for page_number in page_numbers {
     let values = self.addtext_replacement_values(
       bookmarks,
@@ -1908,7 +1912,10 @@ fn PdfDocument::pdf_addtext_write_fontpack_objects(
   self : PdfDocument,
   fontpack : PdfFontPack?,
 ) -> Array[Int] raise PdfError {
-  let objects : Array[Int] = []
+  let objects : Array[Int] = match fontpack {
+    Some(pack) => Array::new(capacity=pack.fonts.length())
+    None => []
+  }
   match fontpack {
     Some(fontpack) =>
       for font in fontpack.fonts {
@@ -2491,7 +2498,7 @@ pub fn PdfDocument::addtext_url_annotation_references(
   url_border : Bool,
 ) -> Array[PdfObject] raise PdfError {
   let height = pdf_addtext_url_annotation_height(font, fontname, font_size)
-  let annotations : Array[PdfObject] = []
+  let annotations : Array[PdfObject] = Array::new(capacity=urls.length())
   for url in urls {
     let (start_width, end_width) = pdf_addtext_url_annotation_widths_with_measure(
       text, url, measure,
@@ -3059,7 +3066,9 @@ fn pdf_addtext_replace_all_lazy(
     text
   } else {
     let text_bytes = @utf8.encode(text)
-    let replacements : Array[(Int, Int, PdfBytes)] = []
+    let replacements : Array[(Int, Int, PdfBytes)] = Array::new(
+      capacity=text_bytes.length() / search_bytes.length(),
+    )
     let mut index = 0
     let mut length = text_bytes.length()
     while index < text_bytes.length() {
@@ -3135,7 +3144,7 @@ fn pdf_addtext_decode_lossy_view(bytes : BytesView) -> String {
 /// `split_at_newline` helper.
 pub fn pdf_addtext_split_at_newline(text : String) -> Array[String] {
   let bytes = @utf8.encode(text)
-  let lines : Array[String] = []
+  let lines : Array[String] = Array::new(capacity=bytes.length())
   let mut line_start = 0
   let mut index = 0
   while index < bytes.length() {
@@ -3419,7 +3428,7 @@ pub fn PdfDocument::addtext_bookmark_for_page(
   level : Int,
   page_number : Int,
 ) -> String raise PdfError {
-  let before : Array[PdfBookmark] = []
+  let before : Array[PdfBookmark] = Array::new(capacity=bookmarks.length())
   for bookmark in bookmarks {
     if self.page_number_of_target(bookmark.target) <= page_number {
       before.push(bookmark)
@@ -3427,7 +3436,7 @@ pub fn PdfDocument::addtext_bookmark_for_page(
       break
     }
   }
-  let branch : Array[PdfBookmark] = []
+  let branch : Array[PdfBookmark] = Array::new(capacity=before.length())
   let mut before_index = before.length()
   while before_index > 0 {
     before_index -= 1
@@ -3438,7 +3447,7 @@ pub fn PdfDocument::addtext_bookmark_for_page(
       break
     }
   }
-  let pickfrom : Array[PdfBookmark] = []
+  let pickfrom : Array[PdfBookmark] = Array::new(capacity=branch.length())
   let mut branch_index = branch.length()
   while branch_index > 0 {
     branch_index -= 1
@@ -3482,7 +3491,7 @@ pub fn PdfDocument::addtext_replacement_values(
   bates : Int,
   bates_pad : Int?,
 ) -> PdfAddTextReplacementValues raise PdfError {
-  let bookmark_values : Array[String] = []
+  let bookmark_values : Array[String] = Array::new(capacity=5)
   for level in 0..<5 {
     bookmark_values.push(
       self.addtext_bookmark_for_page(bookmarks, level, page_number),
@@ -3693,7 +3702,7 @@ pub fn pdf_addtext_expand_lines_with_time(
   lines : ArrayView[String],
   replacements : ArrayView[(String, () -> String)],
 ) -> Array[String] raise PdfError {
-  let output : Array[String] = []
+  let output : Array[String] = Array::new(capacity=lines.length())
   for line in lines {
     let processed = pdf_addtext_process_text_with_time(time, line, replacements)
     output.push(pdf_addtext_get_urls_line(processed).text)
@@ -3723,7 +3732,7 @@ fn pdf_addtext_codepoints_contains(
 pub fn pdf_addtext_used_codepoints(
   lines : ArrayView[String],
 ) -> Array[Int] raise PdfError {
-  let used : Array[Int] = []
+  let used : Array[Int] = Array::new(capacity=lines.length())
   for line in lines {
     for codepoint in pdf_codepoints_of_utf8(@utf8.encode(line)) {
       if !pdf_addtext_codepoints_contains(used, codepoint) {
