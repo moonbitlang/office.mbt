@@ -433,15 +433,8 @@ fn pdf_read_reconstructed_or_raise(
   data : BytesView,
   original_error : PdfError,
   include_xref_stream_trailers? : Bool = false,
-  user_password? : BytesView? = None,
-  owner_password? : BytesView? = None,
 ) -> PdfDocument raise PdfError {
-  pdf_read_reconstructed_document_from_view(
-    data,
-    include_xref_stream_trailers~,
-    user_password~,
-    owner_password~,
-  ) catch {
+  pdf_read_reconstructed_document_from_view(data, include_xref_stream_trailers~) catch {
     _ => raise original_error
   }
 }

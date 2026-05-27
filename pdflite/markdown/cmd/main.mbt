@@ -40,7 +40,9 @@ fn markdown_cmd_parse_args(argv? : ArrayView[String]) -> (String, String) raise 
 
 ///|
 async fn main {
-  let (input_path, output_path) = markdown_cmd_parse_args()
+  let all_args = @env.args()
+  let args = if all_args.is_empty() { all_args[:] } else { all_args[1:] }
+  let (input_path, output_path) = markdown_cmd_parse_args(argv=args)
   markdown_cmd_convert_file(input_path, output_path)
 }
 

@@ -381,12 +381,8 @@ fn PdfObjects::load_object_given_number_already_decrypted(
   self : PdfObjects,
   number : Int,
   object : PdfObject,
-  generation? : Int = 0,
 ) -> Unit {
-  self.set_entry(
-    number,
-    pdf_object_entry(ObjectParsedAlreadyDecrypted(object), generation~),
-  )
+  self.set_entry(number, pdf_object_entry(ObjectParsedAlreadyDecrypted(object)))
 }
 
 ///|
@@ -677,13 +673,8 @@ fn PdfDocument::load_object_given_number_already_decrypted(
   self : PdfDocument,
   number : Int,
   object : PdfObject,
-  generation? : Int = 0,
 ) -> Unit {
-  self.objects.load_object_given_number_already_decrypted(
-    number,
-    object,
-    generation~,
-  )
+  self.objects.load_object_given_number_already_decrypted(number, object)
 }
 
 ///|

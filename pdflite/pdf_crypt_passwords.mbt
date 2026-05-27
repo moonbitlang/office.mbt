@@ -22,17 +22,13 @@ fn PdfEncryptionValues::password_settings(
 /// Authenticate a user password against parsed encryption values.
 ///
 /// `password` is the raw PDF password byte sequence. AESV3 and earlier
-/// revisions use their respective standard-security algorithms. The optional
-/// metadata flag can force the revision-4 no-metadata key derivation path.
+/// revisions use their respective standard-security algorithms.
 #warnings("-unused_value")
 fn PdfEncryptionValues::authenticate_user_password(
   self : PdfEncryptionValues,
   password : BytesView,
-  no_encrypt_metadata? : Bool = false,
 ) -> Bool raise PdfError {
-  let no_encrypt_metadata = self.effective_no_encrypt_metadata(
-    no_encrypt_metadata,
-  )
+  let no_encrypt_metadata = self.effective_no_encrypt_metadata(false)
   match self.crypt_type {
     PdfCryptAESV3(iso) =>
       pdf_authenticate_user_password_aesv3(iso, password, self.user_entry)
@@ -119,11 +115,8 @@ fn PdfEncryptionValues::file_key_for_user_password(
 fn PdfEncryptionValues::authenticate_owner_password(
   self : PdfEncryptionValues,
   password : BytesView,
-  no_encrypt_metadata? : Bool = false,
 ) -> Bool raise PdfError {
-  let no_encrypt_metadata = self.effective_no_encrypt_metadata(
-    no_encrypt_metadata,
-  )
+  let no_encrypt_metadata = self.effective_no_encrypt_metadata(false)
   match self.crypt_type {
     PdfCryptAESV3(iso) =>
       pdf_authenticate_owner_password_aesv3(

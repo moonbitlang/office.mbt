@@ -157,10 +157,9 @@ fn crypt_wb_aesv3_r5_permissions_for_test() -> PdfBytes {
 fn crypt_wb_aesv3_values_for_test(
   user_entry : BytesView,
   owner_entry : BytesView,
-  iso? : Bool = false,
 ) -> PdfEncryptionValues {
   {
-    crypt_type: PdfCryptAESV3(iso),
+    crypt_type: PdfCryptAESV3(false),
     user_entry: user_entry.to_owned(),
     owner_entry: owner_entry.to_owned(),
     permissions: -3904,

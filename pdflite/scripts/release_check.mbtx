@@ -16,7 +16,7 @@ priv struct ReleaseCheckStep {
 }
 
 ///|
-let release_check_warn_list = "+a-31-32-38-39@65@73@74@75"
+let release_check_warn_list = "+a-32-38-39@65@73@74@75"
 
 ///|
 fn release_check_command() -> @argparse.Command {

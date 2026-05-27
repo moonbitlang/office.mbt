@@ -217,11 +217,9 @@ fn ByteCursor::read_reconstructed_indirect_scan_candidate_at_current(
 fn ByteCursor::read_reconstructed_indirect_object_at_current(
   self : ByteCursor,
   xrefs : ArrayView[PdfClassicXRefEntry],
-  xref_index? : PdfClassicXRefIndex? = None,
 ) -> PdfParsedIndirectObject raise PdfError {
   let (object, _) = self.read_reconstructed_indirect_scan_candidate_at_current(
     xrefs,
-    xref_index~,
   )
   object
 }

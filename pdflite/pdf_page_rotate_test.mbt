@@ -39,11 +39,10 @@ fn rotate_content_page_for_test(
   ops : ArrayView[@pdflite.PdfContentOp],
   rest? : @pdflite.PdfObject = PdfDictionary([]),
   resources? : @pdflite.PdfObject = PdfDictionary([]),
-  mediabox? : @pdflite.PdfObject = rotate_rect_for_test(0.0, 0.0, 100.0, 100.0),
 ) -> @pdflite.PdfPage {
   {
     content: [rotate_stream_for_test(ops)],
-    mediabox,
+    mediabox: rotate_rect_for_test(0.0, 0.0, 100.0, 100.0),
     resources,
     rotate: Rotate0,
     rest,

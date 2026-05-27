@@ -24,13 +24,10 @@ fn page_marks_stream_for_test(
 fn page_marks_page_for_test(
   ops : ArrayView[@pdflite.PdfContentOp],
   rest? : @pdflite.PdfObject = PdfDictionary([]),
-  mediabox? : @pdflite.PdfObject = page_marks_rect_for_test(
-    0.0, 0.0, 100.0, 100.0,
-  ),
 ) -> @pdflite.PdfPage {
   {
     content: [page_marks_stream_for_test(ops)],
-    mediabox,
+    mediabox: page_marks_rect_for_test(0.0, 0.0, 100.0, 100.0),
     resources: PdfDictionary([]),
     rotate: Rotate0,
     rest,

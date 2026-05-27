@@ -228,7 +228,6 @@ fn crypt_aesv3_r5_document_with_object_for_test(
   minor : Int,
   object_number : Int,
   object : @pdflite.PdfObject,
-  permissions? : Int = -3904,
   encrypt_metadata? : Bool = true,
 ) -> @pdflite.PdfDocument raise {
   let doc = crypt_minimal_catalog_document_for_test(major, minor)
@@ -236,7 +235,7 @@ fn crypt_aesv3_r5_document_with_object_for_test(
   let encrypted = try! doc.encrypt_256bit_aesv3_with_providers(
     @ascii.encode("user"),
     @ascii.encode("owner"),
-    @pdflite.pdf_permissions_of_p(permissions),
+    @pdflite.pdf_permissions_of_p(-3904),
     crypt_aesv3_r5_random_for_test,
     fn(encrypted_object_number, generation, index) {
       crypt_aes_document_iv_for_test(encrypted_object_number, generation, index)
@@ -266,7 +265,6 @@ fn crypt_aesv3_r6_document_with_object_for_test(
   minor : Int,
   object_number : Int,
   object : @pdflite.PdfObject,
-  encrypt_metadata? : Bool = true,
 ) -> @pdflite.PdfDocument raise {
   let doc = crypt_minimal_catalog_document_for_test(major, minor)
   doc.add_object_given_number(object_number, object)
@@ -279,7 +277,6 @@ fn crypt_aesv3_r6_document_with_object_for_test(
       crypt_aes_document_iv_for_test(object_number, generation, index)
     },
     iso=true,
-    encrypt_metadata~,
     file_id=@ascii.encode("doc-id"),
   )
 }

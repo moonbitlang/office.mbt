@@ -43,41 +43,37 @@ fn PdfDocument::arc4_crypt_parsed_objects(
 /// AESV2-encrypt all parsed objects in a copied document.
 ///
 /// The IV provider receives object number, generation, and per-object IV index.
-/// `skip_object_number` leaves the encryption dictionary unencrypted.
 fn PdfDocument::aesv2_encrypt_parsed_objects_with_iv_provider(
   self : PdfDocument,
   file_key : BytesView,
   key_length_bits : Int,
   iv_provider : (Int, Int, Int) -> PdfBytes raise PdfError,
   no_encrypt_metadata? : Bool = false,
-  skip_object_number? : Int = 0,
 ) -> PdfDocument raise PdfError {
   let output = self.copy()
   for number in output.object_numbers() {
-    if number != skip_object_number {
-      let entry = output.objects.get_entry(number).unwrap()
-      match entry.data {
-        ObjectParsed(object) =>
-          output.objects.set_entry(number, {
-            data: ObjectParsed(
-              pdf_aesv2_encrypt_pdf_object_with_iv_provider(
-                number,
-                entry.generation,
-                file_key,
-                key_length_bits,
-                object,
-                fn(index) raise PdfError {
-                  iv_provider(number, entry.generation, index)
-                },
-                no_encrypt_metadata~,
-              ),
+    let entry = output.objects.get_entry(number).unwrap()
+    match entry.data {
+      ObjectParsed(object) =>
+        output.objects.set_entry(number, {
+          data: ObjectParsed(
+            pdf_aesv2_encrypt_pdf_object_with_iv_provider(
+              number,
+              entry.generation,
+              file_key,
+              key_length_bits,
+              object,
+              fn(index) raise PdfError {
+                iv_provider(number, entry.generation, index)
+              },
+              no_encrypt_metadata~,
             ),
-            generation: entry.generation,
-          })
-        ObjectParsedAlreadyDecrypted(_)
-        | ObjectToParse
-        | ObjectToParseFromObjectStream(_) => ()
-      }
+          ),
+          generation: entry.generation,
+        })
+      ObjectParsedAlreadyDecrypted(_)
+      | ObjectToParse
+      | ObjectToParseFromObjectStream(_) => ()
     }
   }
   output
@@ -128,37 +124,33 @@ fn PdfDocument::aesv2_decrypt_parsed_objects(
 /// AESV3-encrypt all parsed objects in a copied document.
 ///
 /// The IV provider receives object number, generation, and per-object IV index.
-/// `skip_object_number` leaves the encryption dictionary unencrypted.
 fn PdfDocument::aesv3_encrypt_parsed_objects_with_iv_provider(
   self : PdfDocument,
   file_key : BytesView,
   iv_provider : (Int, Int, Int) -> PdfBytes raise PdfError,
   no_encrypt_metadata? : Bool = false,
-  skip_object_number? : Int = 0,
 ) -> PdfDocument raise PdfError {
   let output = self.copy()
   for number in output.object_numbers() {
-    if number != skip_object_number {
-      let entry = output.objects.get_entry(number).unwrap()
-      match entry.data {
-        ObjectParsed(object) =>
-          output.objects.set_entry(number, {
-            data: ObjectParsed(
-              pdf_aesv3_encrypt_pdf_object_with_iv_provider(
-                file_key,
-                object,
-                fn(index) raise PdfError {
-                  iv_provider(number, entry.generation, index)
-                },
-                no_encrypt_metadata~,
-              ),
+    let entry = output.objects.get_entry(number).unwrap()
+    match entry.data {
+      ObjectParsed(object) =>
+        output.objects.set_entry(number, {
+          data: ObjectParsed(
+            pdf_aesv3_encrypt_pdf_object_with_iv_provider(
+              file_key,
+              object,
+              fn(index) raise PdfError {
+                iv_provider(number, entry.generation, index)
+              },
+              no_encrypt_metadata~,
             ),
-            generation: entry.generation,
-          })
-        ObjectParsedAlreadyDecrypted(_)
-        | ObjectToParse
-        | ObjectToParseFromObjectStream(_) => ()
-      }
+          ),
+          generation: entry.generation,
+        })
+      ObjectParsedAlreadyDecrypted(_)
+      | ObjectToParse
+      | ObjectToParseFromObjectStream(_) => ()
     }
   }
   output
