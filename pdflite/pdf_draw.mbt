@@ -18,6 +18,7 @@ pub(all) enum PdfDrawJustification {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// External graphics-state resource allocated while rendering draw operations.
 pub(all) struct PdfDrawExtGStateResource {
   kind : PdfName
   value : Double
@@ -25,6 +26,7 @@ pub(all) struct PdfDrawExtGStateResource {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// XObject resource tracked while rendering draw operations.
 pub(all) struct PdfDrawXObjectResource {
   source_name : String
   resource_name : PdfName
@@ -32,6 +34,7 @@ pub(all) struct PdfDrawXObjectResource {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Font resource tracked while rendering draw operations.
 pub(all) struct PdfDrawFontResource {
   identifier : String
   font_index : Int
@@ -40,12 +43,14 @@ pub(all) struct PdfDrawFontResource {
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Current font-pack binding used by draw rendering state.
 pub(all) struct PdfDrawFontPackState {
   identifier : String
   fontpack : PdfFontPack
 } derive(Debug, Eq, ToJson)
 
 ///|
+/// Tagged-PDF structure-tree event emitted while rendering draw operations.
 pub(all) enum PdfDrawStructureData {
   PdfDrawStructureMCID(String, Int, Int)
   PdfDrawStructureBeginTree(String)
@@ -286,6 +291,7 @@ fn pdf_draw_stroke_alpha_key() -> PdfName {
 }
 
 ///|
+/// Build a fresh draw render state with default resource caches.
 pub fn pdf_draw_render_state_new() -> PdfDrawRenderState {
   {
     resource_number: 0,
