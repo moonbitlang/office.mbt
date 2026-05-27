@@ -305,7 +305,7 @@ fn pdf_read_reconstructed_trailers(
 ) -> Array[PdfObject] {
   let trailers : Array[PdfObject] = Array::new(capacity=1)
   let cursor = byte_cursor_of_view(data)
-  for position = 0; position < data.length(); position = position + 1 {
+  for position in 0..<data.length() {
     if pdf_view_matches_ascii_at(data, position, [
         116, 114, 97, 105, 108, 101, 114,
       ]) {
@@ -436,7 +436,8 @@ fn pdf_reconstructed_xref_stream_entries(
     capacity=pdf_reconstructed_xref_stream_entry_capacity(sections),
   )
   let seen = @number_set.pdf_number_set([])
-  for index = sections.length() - 1; index >= 0; index = index - 1 {
+  for offset in 0..<sections.length() {
+    let index = sections.length() - 1 - offset
     pdf_classic_xrefs_add_newer_first_with_seen(
       xrefs,
       seen,
@@ -454,7 +455,8 @@ fn pdf_reconstructed_classic_xref_entries(
     capacity=pdf_reconstructed_classic_xref_entry_capacity(sections),
   )
   let seen = @number_set.pdf_number_set([])
-  for index = sections.length() - 1; index >= 0; index = index - 1 {
+  for offset in 0..<sections.length() {
+    let index = sections.length() - 1 - offset
     pdf_classic_xrefs_add_newer_first_with_seen(
       xrefs,
       seen,

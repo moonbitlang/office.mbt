@@ -300,7 +300,8 @@ fn PdfDocument::select_reconstructed_trailer(
   self : PdfDocument,
   trailers : ArrayView[PdfObject],
 ) -> PdfObject raise PdfError {
-  for index = trailers.length() - 1; index >= 0; index = index - 1 {
+  for offset in 0..<trailers.length() {
+    let index = trailers.length() - 1 - offset
     let trailer = trailers[index]
     match trailer.lookup_immediate(pdf_reader_root_name()) {
       Some(PdfIndirect(root)) =>
