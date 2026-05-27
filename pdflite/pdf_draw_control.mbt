@@ -8,6 +8,7 @@ let pdf_draw_control_text_frame = "_TEXT"
 let pdf_draw_control_push_frame = "_PUSH"
 
 ///|
+/// Named frame of draw operations used by `PdfDrawControl` while nesting.
 pub(all) struct PdfDrawControlFrame {
   name : String
   ops : Array[PdfDrawOp]
@@ -176,6 +177,7 @@ pub fn PdfDrawControl::set_fill(
 }
 
 ///|
+/// Append a marked-content tag operation to the current frame.
 pub fn PdfDrawControl::add_tag(
   self : PdfDrawControl,
   tag : String,
@@ -184,6 +186,7 @@ pub fn PdfDrawControl::add_tag(
 }
 
 ///|
+/// Append a structure-tag begin operation to the current frame.
 pub fn PdfDrawControl::add_structure_tag(
   self : PdfDrawControl,
   tag : String,
@@ -192,11 +195,13 @@ pub fn PdfDrawControl::add_structure_tag(
 }
 
 ///|
+/// Append a marked-content tag end operation to the current frame.
 pub fn PdfDrawControl::end_tag(self : PdfDrawControl) -> Unit raise PdfError {
   self.add_op(PdfDrawEndTag)
 }
 
 ///|
+/// Append a structure-tag end operation to the current frame.
 pub fn PdfDrawControl::end_structure_tag(
   self : PdfDrawControl,
 ) -> Unit raise PdfError {
@@ -204,6 +209,7 @@ pub fn PdfDrawControl::end_structure_tag(
 }
 
 ///|
+/// Append an automatic-structure-tag toggle operation.
 pub fn PdfDrawControl::set_auto_tag(
   self : PdfDrawControl,
   enabled : Bool,
@@ -212,6 +218,7 @@ pub fn PdfDrawControl::set_auto_tag(
 }
 
 ///|
+/// Append an artifact begin operation for structured PDF output.
 pub fn PdfDrawControl::begin_artifact(
   self : PdfDrawControl,
 ) -> Unit raise PdfError {
@@ -219,6 +226,7 @@ pub fn PdfDrawControl::begin_artifact(
 }
 
 ///|
+/// Append an artifact end operation for structured PDF output.
 pub fn PdfDrawControl::end_artifact(
   self : PdfDrawControl,
 ) -> Unit raise PdfError {
@@ -226,6 +234,7 @@ pub fn PdfDrawControl::end_artifact(
 }
 
 ///|
+/// Append a structure namespace declaration.
 pub fn PdfDrawControl::add_namespace(
   self : PdfDrawControl,
   namespace_name : String,
@@ -234,6 +243,7 @@ pub fn PdfDrawControl::add_namespace(
 }
 
 ///|
+/// Append structure element metadata for `key`.
 pub fn PdfDrawControl::add_element_info(
   self : PdfDrawControl,
   key : String,
@@ -243,6 +253,7 @@ pub fn PdfDrawControl::add_element_info(
 }
 
 ///|
+/// Append the end marker for structure element metadata keyed by `key`.
 pub fn PdfDrawControl::end_element_info(
   self : PdfDrawControl,
   key : String,
