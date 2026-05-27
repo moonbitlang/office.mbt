@@ -19,15 +19,17 @@ flowchart LR
 ///|
 test "date strings round trip" {
   let input = "D:20240515112233+08'00'"
-  let date = try! pdf_date_of_string(input)
-  inspect(try! pdf_string_of_date(date), content=input)
+  let date = try! @date.pdf_date_of_string(input)
+  inspect(try! @date.pdf_string_of_date(date), content=input)
 }
 ```
 
 ```moonbit check
 ///|
 test "bad date syntax raises shared PdfError" {
-  let result : Result[PdfDate, Error] = try? pdf_date_of_string("not a date")
+  let result : Result[@date.PdfDate, Error] = try? @date.pdf_date_of_string(
+    "not a date",
+  )
   guard result is Err(@core.PdfError::BadDate) else {
     fail("expected BadDate for malformed PDF date text")
   }

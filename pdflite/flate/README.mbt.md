@@ -21,8 +21,8 @@ test "flate round trips bytes" {
   let input = try! @core.pdf_bytes_of_int_array([
     104, 101, 108, 108, 111, 32, 112, 100, 102,
   ])
-  let encoded = pdf_flate_encode(input)
-  let decoded = try! pdf_flate_decode(encoded)
+  let encoded = @flate.pdf_flate_encode(input)
+  let decoded = try! @flate.pdf_flate_decode(encoded)
   if @core.pdf_int_array_of_bytes(decoded) !=
     [104, 101, 108, 108, 111, 32, 112, 100, 102] {
     fail("expected decoded bytes to match the original input")
@@ -34,8 +34,8 @@ test "flate round trips bytes" {
 ///|
 test "prefix decoder reports consumed compressed bytes" {
   let input = try! @core.pdf_bytes_of_int_array([65, 65, 65, 65, 65])
-  let encoded = pdf_flate_encode(input)
-  let (decoded, consumed) = try! pdf_flate_decode_view_prefix(encoded)
+  let encoded = @flate.pdf_flate_encode(input)
+  let (decoded, consumed) = try! @flate.pdf_flate_decode_view_prefix(encoded)
   if decoded != input || consumed != encoded.length() {
     fail("expected prefix decoder to consume the single encoded stream")
   }

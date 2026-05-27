@@ -18,11 +18,11 @@ flowchart LR
 ```moonbit check
 ///|
 test "number set pushes only unseen values" {
-  let seen = pdf_number_set([2, 4])
+  let seen = @number_set.pdf_number_set([2, 4])
   let output : Array[Int] = []
-  pdf_push_unique_number(output, seen, 2)
-  pdf_push_unique_number(output, seen, 5)
-  pdf_push_unique_number(output, seen, 5)
+  @number_set.pdf_push_unique_number(output, seen, 2)
+  @number_set.pdf_push_unique_number(output, seen, 5)
+  @number_set.pdf_push_unique_number(output, seen, 5)
   if output != [5] {
     fail("expected only the first unseen number to be pushed")
   }

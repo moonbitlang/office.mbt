@@ -19,20 +19,20 @@ flowchart LR
 ```moonbit check
 ///|
 test "byte helpers preserve raw PDF bytes" {
-  let bytes = try! pdf_bytes_of_int_array([37, 80, 68, 70])
-  if pdf_int_array_of_bytes(bytes) != [37, 80, 68, 70] {
+  let bytes = try! @core.pdf_bytes_of_int_array([37, 80, 68, 70])
+  if @core.pdf_int_array_of_bytes(bytes) != [37, 80, 68, 70] {
     fail("expected raw PDF header bytes to be preserved")
   }
-  inspect(pdf_is_whitespace_byte(32), content="true")
-  inspect(pdf_is_delimiter_byte(47), content="true")
+  inspect(@core.pdf_is_whitespace_byte(32), content="true")
+  inspect(@core.pdf_is_delimiter_byte(47), content="true")
 }
 ```
 
 ```moonbit check
 ///|
 test "byte validation raises PdfError" {
-  let result : Result[Byte, Error] = try? pdf_byte_of_int(300)
-  guard result is Err(PdfError::InvalidByte(300)) else {
+  let result : Result[Byte, Error] = try? @core.pdf_byte_of_int(300)
+  guard result is Err(@core.PdfError::InvalidByte(300)) else {
     fail("expected InvalidByte for values outside 0..=255")
   }
 }

@@ -22,8 +22,8 @@ flowchart LR
 test "arc4 primitive is symmetric" {
   let key = try! @core.pdf_bytes_of_int_array([1, 2, 3, 4, 5])
   let plain = try! @core.pdf_bytes_of_int_array([80, 68, 70])
-  let cipher = try! pdf_arc4_crypt(key, plain)
-  let roundtrip = try! pdf_arc4_crypt(key, cipher)
+  let cipher = try! @crypt_core.pdf_arc4_crypt(key, plain)
+  let roundtrip = try! @crypt_core.pdf_arc4_crypt(key, cipher)
   if @core.pdf_int_array_of_bytes(roundtrip) != [80, 68, 70] {
     fail("expected ARC4 to decrypt back to the original bytes")
   }
@@ -34,12 +34,15 @@ test "arc4 primitive is symmetric" {
 ///|
 test "digest and permission helpers expose PDF primitives" {
   let data = try! @core.pdf_bytes_of_int_array([97, 98, 99])
-  inspect(pdf_md5_digest(data).length(), content="16")
-  let mask = pdf_p_of_permissions([PdfNoPrint, PdfNoCopy])
-  let permissions = pdf_permissions_of_p(mask)
+  inspect(@crypt_core.pdf_md5_digest(data).length(), content="16")
+  let mask = @crypt_core.pdf_p_of_permissions([
+    @crypt_core.PdfNoPrint,
+    @crypt_core.PdfNoCopy,
+  ])
+  let permissions = @crypt_core.pdf_permissions_of_p(mask)
   let mut saw_copy = false
   for permission in permissions {
-    if permission == PdfNoCopy {
+    if permission == @crypt_core.PdfNoCopy {
       saw_copy = true
     }
   }

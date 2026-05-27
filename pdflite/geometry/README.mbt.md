@@ -18,13 +18,13 @@ flowchart LR
 ```moonbit check
 ///|
 test "paper sizes and units are explicit" {
-  if paper_a4.unit() != Millimetre {
+  if @geometry.paper_a4.unit() != @geometry.Millimetre {
     fail("A4 is stored in millimetres")
   }
-  if unit_points(1.0, Inch) != 72.0 {
+  if @geometry.unit_points(1.0, @geometry.Inch) != 72.0 {
     fail("one inch is 72 PDF points")
   }
-  let landscape = paper_a4.landscape()
+  let landscape = @geometry.paper_a4.landscape()
   if landscape.width() != 297.0 || landscape.height() != 210.0 {
     fail("landscape swaps paper width and height")
   }
@@ -34,12 +34,16 @@ test "paper sizes and units are explicit" {
 ```moonbit check
 ///|
 test "transforms apply to points and render as PDF matrices" {
-  let moved = transform_translate(5.0, -10.0).apply(point2(10.0, 20.0))
+  let moved = @geometry.transform_translate(5.0, -10.0).apply(
+    @geometry.point2(10.0, 20.0),
+  )
   if moved.x != 15.0 || moved.y != 10.0 {
     fail("translation should move the point")
   }
   inspect(
-    transform_string_of_matrix(transform_translate(5.0, -10.0)),
+    @geometry.transform_string_of_matrix(
+      @geometry.transform_translate(5.0, -10.0),
+    ),
     content="1, 0, 0, 1, 5, -10",
   )
 }

@@ -23,9 +23,9 @@ async fn readme_round_trip_minimum_pdf(path : String) -> Unit {
     @fs.remove(path)
   }
   let document = try! @pdflite.pdf_minimum_valid_pdf()
-  pdf_write_document_to_file(document, path)
-  inspect(pdf_revisions_from_file(path), content="1")
-  let parsed = pdf_read_document_from_file(path)
+  @async_io.pdf_write_document_to_file(document, path)
+  inspect(@async_io.pdf_revisions_from_file(path), content="1")
+  let parsed = @async_io.pdf_read_document_from_file(path)
   inspect(try! parsed.endpage(), content="1")
   @fs.remove(path)
 }
