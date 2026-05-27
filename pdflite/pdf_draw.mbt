@@ -653,9 +653,12 @@ fn PdfDrawRenderState::text_ops_and_width_with_cache(
   if self.current_fontpack_identifier == "" {
     raise SoftError("FontPack not selected")
   }
-  let triples : Array[(Int, Int, PdfFont)] = []
+  let codepoints = pdf_codepoints_of_utf8(@utf8.encode(text))
+  let triples : Array[(Int, Int, PdfFont)] = Array::new(
+    capacity=codepoints.length(),
+  )
   let mut width = 0.0
-  for codepoint in pdf_codepoints_of_utf8(@utf8.encode(text)) {
+  for codepoint in codepoints {
     match self.current_fontpack.get_char(codepoint) {
       Some((charcode, font_index, font)) => {
         let widths = width_cache.widths(font_index, font)
@@ -668,7 +671,7 @@ fn PdfDrawRenderState::text_ops_and_width_with_cache(
       None => ()
     }
   }
-  let output : Array[PdfContentOp] = []
+  let output : Array[PdfContentOp] = Array::new(capacity=triples.length() * 2)
   for run in pdf_fontpack_collate_runs(triples) {
     guard run.length() > 0 else { continue }
     let font_index = run[0].1
@@ -718,7 +721,7 @@ fn pdf_draw_split_on_space(text : String) -> Array[String] {
 fn pdf_draw_remove_duplicate_tfs(
   ops : ArrayView[PdfContentOp],
 ) -> Array[PdfContentOp] {
-  let output : Array[PdfContentOp] = []
+  let output : Array[PdfContentOp] = Array::new(capacity=ops.length())
   let mut previous : PdfName? = None
   for op in ops {
     match op {
@@ -740,7 +743,7 @@ fn pdf_draw_remove_duplicate_tfs(
 fn pdf_draw_merge_adjacent_tjs(
   ops : ArrayView[PdfContentOp],
 ) -> Array[PdfContentOp] {
-  let output : Array[PdfContentOp] = []
+  let output : Array[PdfContentOp] = Array::new(capacity=ops.length())
   let mut index = 0
   while index < ops.length() {
     match ops[index] {
@@ -796,7 +799,7 @@ fn PdfDrawRenderState::justify_paragraph_line(
   remaining : Double,
 ) -> Array[PdfContentOp] {
   ignore(self)
-  let output : Array[PdfContentOp] = []
+  let output : Array[PdfContentOp] = Array::new(capacity=ops.length() + 2)
   match justification {
     PdfDrawLeft => {
       if first_line {
@@ -830,8 +833,11 @@ fn PdfDrawRenderState::format_paragraph(
   text : String,
 ) -> Array[PdfContentOp] raise PdfError {
   let width_cache = pdf_draw_font_width_cache_new(self.font_size)
-  let words : Array[(Array[PdfContentOp], Double)] = []
-  for word in pdf_draw_split_on_space(text) {
+  let split_words = pdf_draw_split_on_space(text)
+  let words : Array[(Array[PdfContentOp], Double)] = Array::new(
+    capacity=split_words.length(),
+  )
+  for word in split_words {
     words.push(self.text_ops_and_width_with_cache(word, width_cache))
   }
   let (space_ops, space_width) = self.text_ops_and_width_with_cache(
@@ -887,7 +893,7 @@ fn PdfDrawRenderState::paragraph_ops(
   width : Double,
   paragraphs : ArrayView[String],
 ) -> Array[PdfContentOp] raise PdfError {
-  let output : Array[PdfContentOp] = []
+  let output : Array[PdfContentOp] = Array::new(capacity=paragraphs.length())
   let mut first = true
   for paragraph in paragraphs {
     if !first {
@@ -917,7 +923,9 @@ fn PdfDrawRenderState::paragraph_ops(
 fn pdf_draw_copy_xobject_resources(
   resources : ArrayView[PdfDrawXObjectResource],
 ) -> Array[PdfDrawXObjectResource] {
-  let output : Array[PdfDrawXObjectResource] = []
+  let output : Array[PdfDrawXObjectResource] = Array::new(
+    capacity=resources.length(),
+  )
   for entry in resources {
     output.push(entry)
   }
@@ -928,7 +936,9 @@ fn pdf_draw_copy_xobject_resources(
 fn pdf_draw_copy_font_resources(
   resources : ArrayView[PdfDrawFontResource],
 ) -> Array[PdfDrawFontResource] {
-  let output : Array[PdfDrawFontResource] = []
+  let output : Array[PdfDrawFontResource] = Array::new(
+    capacity=resources.length(),
+  )
   for entry in resources {
     output.push(entry)
   }
@@ -939,7 +949,9 @@ fn pdf_draw_copy_font_resources(
 fn pdf_draw_copy_fontpacks(
   fontpacks : ArrayView[PdfDrawFontPackState],
 ) -> Array[PdfDrawFontPackState] {
-  let output : Array[PdfDrawFontPackState] = []
+  let output : Array[PdfDrawFontPackState] = Array::new(
+    capacity=fontpacks.length(),
+  )
   for entry in fontpacks {
     output.push(entry)
   }
@@ -948,7 +960,7 @@ fn pdf_draw_copy_fontpacks(
 
 ///|
 fn pdf_draw_copy_page_names(names : ArrayView[PdfName]) -> Array[PdfName] {
-  let output : Array[PdfName] = []
+  let output : Array[PdfName] = Array::new(capacity=names.length())
   for name in names {
     output.push(name)
   }
@@ -1007,13 +1019,17 @@ fn pdf_draw_resource_is_used(
 ///|
 /// Return the resource dictionary needed by the operations rendered so far.
 pub fn PdfDrawRenderState::resources(self : PdfDrawRenderState) -> PdfObject {
-  let states : Array[(PdfName, PdfObject)] = []
+  let states : Array[(PdfName, PdfObject)] = Array::new(
+    capacity=self.extgstates.length(),
+  )
   for entry in self.extgstates {
     states.push(
       (entry.name, PdfDictionary([(entry.kind, PdfReal(entry.value))])),
     )
   }
-  let xobjects : Array[(PdfName, PdfObject)] = []
+  let xobjects : Array[(PdfName, PdfObject)] = Array::new(
+    capacity=self.xobjects.length() + self.form_xobjects.length(),
+  )
   for entry in self.xobjects {
     if pdf_draw_resource_is_used(self.page_names, entry.resource_name) {
       xobjects.push((entry.resource_name, PdfIndirect(entry.object_number)))
@@ -1024,13 +1040,15 @@ pub fn PdfDrawRenderState::resources(self : PdfDrawRenderState) -> PdfObject {
       xobjects.push((entry.resource_name, PdfIndirect(entry.object_number)))
     }
   }
-  let fonts : Array[(PdfName, PdfObject)] = []
+  let fonts : Array[(PdfName, PdfObject)] = Array::new(
+    capacity=self.fonts.length(),
+  )
   for entry in self.fonts {
     if pdf_draw_resource_is_used(self.page_names, entry.resource_name) {
       fonts.push((entry.resource_name, PdfIndirect(entry.object_number)))
     }
   }
-  let resources : Array[(PdfName, PdfObject)] = []
+  let resources : Array[(PdfName, PdfObject)] = Array::new(capacity=3)
   if xobjects.length() > 0 {
     resources.push((pdf_draw_xobject_key(), PdfDictionary(xobjects)))
   }
@@ -1608,7 +1626,7 @@ fn pdf_drawops_to_content_ops_internal(
   context : PdfDrawSpecialTextContext?,
   ops : ArrayView[PdfDrawOp],
 ) -> Array[PdfContentOp] raise PdfError {
-  let output : Array[PdfContentOp] = []
+  let output : Array[PdfContentOp] = Array::new(capacity=ops.length())
   for op in ops {
     for content_op in op.to_content_ops_internal(state, document, context) {
       output.push(content_op)
@@ -1819,7 +1837,7 @@ fn pdf_drawops_contain_special_text(ops : ArrayView[PdfDrawOp]) -> Bool {
 fn pdf_draw_fixup_manual_artifacts(
   ops : ArrayView[PdfContentOp],
 ) -> Array[PdfContentOp] {
-  let output : Array[PdfContentOp] = []
+  let output : Array[PdfContentOp] = Array::new(capacity=ops.length())
   for op in ops {
     match op {
       Op_BMC(name) if name == pdf_draw_begin_artifact() =>
@@ -2068,7 +2086,9 @@ fn PdfDrawStructureBuildContext::remove_element_info(
   self : PdfDrawStructureBuildContext,
   key : String,
 ) -> Unit {
-  let output : Array[(String, PdfObject)] = []
+  let output : Array[(String, PdfObject)] = Array::new(
+    capacity=self.element_info.length(),
+  )
   for entry in self.element_info {
     if entry.0 != key {
       output.push(entry)
@@ -2100,7 +2120,9 @@ fn pdf_draw_make_structure_tree_items(
   page_object_numbers : ArrayView[Int],
   expect_end_tree : Bool,
 ) -> Array[PdfDrawStructureNode] raise PdfError {
-  let output : Array[PdfDrawStructureNode] = []
+  let output : Array[PdfDrawStructureNode] = Array::new(
+    capacity=data.length() - index.val,
+  )
   while index.val < data.length() {
     match data[index.val] {
       PdfDrawStructureMCID(kind, page_number, mcid) => {
@@ -2267,7 +2289,9 @@ fn PdfDocument::pdf_draw_write_structure_node(
           parent_map.add(page_object_number, object_number)
         None => ()
       }
-      let entries : Array[(PdfName, PdfObject)] = []
+      let entries : Array[(PdfName, PdfObject)] = Array::new(
+        capacity=item.alt.length() + 4,
+      )
       for entry in item.alt {
         entries.push((pdf_draw_name("/" + entry.0), entry.1))
       }
@@ -2285,7 +2309,9 @@ fn PdfDocument::pdf_draw_write_structure_node(
       }
       entries.push((pdf_draw_s_key(), PdfNameObject(pdf_draw_name(item.kind))))
       entries.push((pdf_draw_p_key(), PdfIndirect(parent_object_number)))
-      let children : Array[PdfObject] = []
+      let children : Array[PdfObject] = Array::new(
+        capacity=item.children.length(),
+      )
       for child in item.children {
         children.push(
           self.pdf_draw_write_structure_node(
@@ -2310,7 +2336,7 @@ fn PdfDocument::pdf_draw_write_structure_tree(
   let namespaces = pdf_draw_namespace_map_new()
   let parent_map = pdf_draw_parent_map_new()
   let root_object_number = self.add_object(PdfNull)
-  let children : Array[PdfObject] = []
+  let children : Array[PdfObject] = Array::new(capacity=tree.length())
   for node in tree {
     children.push(
       self.pdf_draw_write_structure_node(

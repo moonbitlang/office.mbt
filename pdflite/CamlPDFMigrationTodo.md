@@ -10594,6 +10594,17 @@ Current backend snapshot:
   pdf_content_path_machine_test.mbt pdf_content_text_test.mbt
   pdf_content_shading_test.mbt`, and the same focused suite on `wasm-gc` and
   `js`, each report 127/127.~~
+- [x] ~~Continue source-port hardening with draw/resource allocation tuning:
+  draw-control float parsing, fontpack run collation, fontpack text rendering,
+  text-op cleanup, paragraph justification, nested-resource copies, resource
+  dictionary assembly, draw-op flattening, manual artifact fixup, and structure
+  tree node writing now preallocate from parsed part, run, codepoint, operator,
+  paragraph, resource, metadata, child, or tree counts while preserving draw
+  output ordering. Validation on MoonBit compiler 0.9.3: `moon check --target
+  native --warn-list +73` passes with the known notice; `moon test --target
+  native pdf_draw_test.mbt draw/fixture_acceptance pdf_embed_test.mbt
+  pdf_addtext_test.mbt` reports 201/201; the same focused suite on `wasm-gc`
+  and `js` reports 183/183 on each backend.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

@@ -283,7 +283,7 @@ pub fn pdf_embed_get_char(
 pub fn[A, B : Eq, C] pdf_embed_collate_runs(
   runs : ArrayView[(A, B, C)],
 ) -> Array[Array[(A, B, C)]] {
-  let output : Array[Array[(A, B, C)]] = []
+  let output : Array[Array[(A, B, C)]] = Array::new(capacity=runs.length())
   for run in runs {
     if output.length() == 0 {
       output.push([run])
