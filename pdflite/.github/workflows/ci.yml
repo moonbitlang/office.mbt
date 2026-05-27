@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 env:
-  MOON_WARN_LIST: "+a-31-32-38-39@73@74"
+  MOON_WARN_LIST: "+a-31-32-38-39@65@73@74@75"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
