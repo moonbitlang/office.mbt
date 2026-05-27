@@ -417,6 +417,8 @@ fn pdf_coord_parse_units_tokens(
 }
 
 ///|
+/// Parse a coordinate expression with page-relative units and variables for the
+/// supplied page.
 pub fn PdfDocument::parse_units_string(
   self : PdfDocument,
   page : PdfPage,
@@ -426,6 +428,7 @@ pub fn PdfDocument::parse_units_string(
 }
 
 ///|
+/// Function wrapper for `PdfDocument::parse_units_string`.
 pub fn pdf_parse_units_string(
   document : PdfDocument,
   page : PdfPage,
@@ -450,6 +453,8 @@ fn pdf_coord_rectangle(
 }
 
 ///|
+/// Parse one coordinate rectangle. A leading `?` treats the third and fourth
+/// numbers as absolute upper-right coordinates.
 pub fn PdfDocument::parse_coordinate_rectangle(
   self : PdfDocument,
   text : String,
@@ -472,6 +477,7 @@ pub fn PdfDocument::parse_coordinate_rectangle(
 }
 
 ///|
+/// Function wrapper for `PdfDocument::parse_coordinate_rectangle`.
 pub fn pdf_parse_coordinate_rectangle(
   document : PdfDocument,
   text : String,
@@ -496,6 +502,7 @@ pub fn pdf_parse_rectangle(
 }
 
 ///|
+/// Parse one coordinate rectangle per page in the document.
 pub fn PdfDocument::parse_coordinate_rectangles(
   self : PdfDocument,
   text : String,
@@ -523,6 +530,7 @@ pub fn PdfDocument::parse_coordinate_rectangles(
 }
 
 ///|
+/// Function wrapper for `PdfDocument::parse_coordinate_rectangles`.
 pub fn pdf_parse_coordinate_rectangles(
   document : PdfDocument,
   text : String,
@@ -544,6 +552,7 @@ pub fn pdf_parse_rectangles(
 }
 
 ///|
+/// Parse one coordinate pair using the default A4 page context.
 pub fn PdfDocument::parse_coordinate(
   self : PdfDocument,
   text : String,
@@ -556,6 +565,7 @@ pub fn PdfDocument::parse_coordinate(
 }
 
 ///|
+/// Function wrapper for `PdfDocument::parse_coordinate`.
 pub fn pdf_parse_coordinate(
   document : PdfDocument,
   text : String,
@@ -600,6 +610,7 @@ fn pdf_coord_preprocess_coordinates(text : String) -> String {
 }
 
 ///|
+/// Parse one coordinate pair per page in the document.
 pub fn PdfDocument::parse_coordinates(
   self : PdfDocument,
   text : String,
@@ -618,6 +629,7 @@ pub fn PdfDocument::parse_coordinates(
 }
 
 ///|
+/// Function wrapper for `PdfDocument::parse_coordinates`.
 pub fn pdf_parse_coordinates(
   document : PdfDocument,
   text : String,
@@ -646,6 +658,8 @@ pub fn pdf_parse_coordinates_tuple(
 }
 
 ///|
+/// Parse a single numeric coordinate expression using the default A4 page
+/// context.
 pub fn PdfDocument::parse_single_number(
   self : PdfDocument,
   text : String,
@@ -658,6 +672,7 @@ pub fn PdfDocument::parse_single_number(
 }
 
 ///|
+/// Function wrapper for `PdfDocument::parse_single_number`.
 pub fn pdf_parse_single_number(
   document : PdfDocument,
   text : String,
