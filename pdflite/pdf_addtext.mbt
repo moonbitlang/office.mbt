@@ -213,20 +213,6 @@ fn pdf_addtext_ca_stroke_key() -> PdfName {
 }
 
 ///|
-fn pdf_addtext_page_selected(
-  page_numbers : ArrayView[Int],
-  page_number : Int,
-) -> Bool {
-  for selected in page_numbers {
-    if selected == page_number {
-      break true
-    }
-  } nobreak {
-    false
-  }
-}
-
-///|
 fn pdf_addtext_validate_page_numbers(
   page_numbers : ArrayView[Int],
   end_page : Int,
@@ -1742,11 +1728,12 @@ pub fn PdfDocument::addtext_pages_with_font(
       "addtext_pages_with_font",
     )
     let shifts = self.parse_coordinates(shift)
-    let rewritten : Array[PdfPage] = []
+    let selected_pages = @number_set.pdf_number_set(page_numbers)
+    let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
     for index in 0..<pages.length() {
       let page_number = index + 1
       let page = pages[index]
-      if pdf_addtext_page_selected(page_numbers, page_number) {
+      if selected_pages.contains(page_number) {
         let values = self.addtext_replacement_values(
           bookmarks,
           page_number,
@@ -2687,11 +2674,12 @@ pub fn PdfDocument::addtext_rectangle(
     pages.length(),
     "addtext_rectangle",
   )
-  let rewritten : Array[PdfPage] = []
+  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
     let page = pages[index]
-    if pdf_addtext_page_selected(page_numbers, page_number) {
+    if selected_pages.contains(page_number) {
       rewritten.push(
         self.pdf_addtext_rectangle_page(
           page, coord, colour, position, relative_to_box, outline, line_width, opacity,

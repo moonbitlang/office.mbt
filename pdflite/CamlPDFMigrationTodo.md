@@ -10516,6 +10516,15 @@ Current backend snapshot:
   --target native pdf_remove_text_test.mbt`, `moon test --target wasm-gc
   pdf_remove_text_test.mbt`, and `moon test --target js
   pdf_remove_text_test.mbt` each report 7/7.~~
+- [x] ~~Continue source-port hardening with add-text selection tuning:
+  selected-font add-text stamping and rectangle stamping now build one
+  `PdfNumberSet` per operation, preallocate rewritten page arrays from page
+  count, and remove the last private linear selected-page helper while keeping
+  existing page-number validation and empty-selection behavior. Validation on
+  MoonBit compiler 0.9.3: `moon check --target native --warn-list +73` passes
+  with the known notice; `moon test --target native pdf_addtext_test.mbt`,
+  `moon test --target wasm-gc pdf_addtext_test.mbt`, and `moon test --target
+  js pdf_addtext_test.mbt` each report 118/118.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
