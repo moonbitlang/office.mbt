@@ -118,7 +118,7 @@ fn pdf_write_name_to(output : Array[Byte], name : PdfName) -> Unit {
   if bytes.length() > 0 && bytes[0].to_int() == 47 {
     start = 1
   }
-  for i = start; i < bytes.length(); i = i + 1 {
+  for i in start..<bytes.length() {
     let value = bytes[i].to_int()
     if value < 33 || value > 126 || pdf_is_delimiter_byte(value) || value == 35 {
       pdf_writer_push_hex_escape(output, value)
@@ -140,7 +140,7 @@ fn pdf_write_name_start(bytes : BytesView) -> Int {
 ///|
 fn pdf_write_name_length(bytes : BytesView, start : Int) -> Int {
   let mut length = 1
-  for i = start; i < bytes.length(); i = i + 1 {
+  for i in start..<bytes.length() {
     let value = bytes[i].to_int()
     if value < 33 || value > 126 || pdf_is_delimiter_byte(value) || value == 35 {
       length += 3
@@ -173,7 +173,7 @@ pub fn pdf_write_name(name : PdfName) -> PdfBytes {
   let output = Array::make(pdf_write_name_length(bytes, start), b'\x00')
   output[0] = b'/'
   let mut position = 1
-  for i = start; i < bytes.length(); i = i + 1 {
+  for i in start..<bytes.length() {
     let value = bytes[i].to_int()
     if value < 33 || value > 126 || pdf_is_delimiter_byte(value) || value == 35 {
       position = pdf_writer_hex_escape_at(output, position, value)
@@ -296,7 +296,7 @@ pub fn pdf_make_hex_pdf_string(bytes : BytesView) -> PdfBytes {
 
 ///|
 fn pdf_writer_exponent_marker(text : BytesView) -> Int {
-  for i = 0; i < text.length(); i = i + 1 {
+  for i in 0..<text.length() {
     let value = text[i].to_int()
     if value == 69 || value == 101 {
       break i
@@ -345,7 +345,7 @@ fn pdf_writer_push_digits(
   start : Int,
   end : Int,
 ) -> Unit {
-  for i = start; i < end; i = i + 1 {
+  for i in start..<end {
     output.push(digits[i])
   }
 }
@@ -453,7 +453,7 @@ fn pdf_writer_push_scientific_real(
   let digits : Array[Byte] = []
   let mut fractional_digits = 0
   let mut seen_decimal = false
-  for i = mantissa_start; i < exponent_at; i = i + 1 {
+  for i in mantissa_start..<exponent_at {
     let value = text[i].to_int()
     if value == 46 {
       seen_decimal = true
@@ -634,7 +634,7 @@ fn pdf_write_object_to(
     PdfNameObject(name) => pdf_write_name_to(output, name)
     PdfArray(values) => {
       pdf_writer_push_byte(output, 91)
-      for i = 0; i < values.length(); i = i + 1 {
+      for i in 0..<values.length() {
         if i > 0 {
           pdf_writer_push_byte(output, 32)
         }
@@ -880,7 +880,7 @@ fn pdf_writer_push_classic_xref_and_trailer(
   pdf_writer_push_byte(output, 10)
   pdf_writer_push_ascii(output, "0000000000 65535 f \n")
   let mut xref_index = 0
-  for number = 1; number < size; number = number + 1 {
+  for number in 1..<size {
     if xref_index < xrefs.length() && xrefs[xref_index].0 == number {
       let (_, offset, generation) = xrefs[xref_index]
       pdf_writer_push_padded_decimal(output, offset, 10)
