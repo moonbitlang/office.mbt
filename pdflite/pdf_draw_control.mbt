@@ -850,6 +850,7 @@ fn pdf_draw_control_split_escaped_newlines(text : String) -> Array[String] {
 }
 
 ///|
+/// Append one paragraph text operation parsed from a cpdf paragraph spec.
 pub fn PdfDrawControl::add_para(
   self : PdfDrawControl,
   document : PdfDocument,
@@ -865,6 +866,7 @@ pub fn PdfDrawControl::add_para(
 }
 
 ///|
+/// Append a multi-line paragraph operation parsed from a cpdf paragraph spec.
 pub fn PdfDrawControl::add_paras(
   self : PdfDrawControl,
   document : PdfDocument,
@@ -887,6 +889,7 @@ pub fn PdfDrawControl::add_paras(
 }
 
 ///|
+/// Append a rectangle path operation parsed from document coordinates.
 pub fn PdfDrawControl::add_rect(
   self : PdfDrawControl,
   document : PdfDocument,
@@ -897,6 +900,7 @@ pub fn PdfDrawControl::add_rect(
 }
 
 ///|
+/// Append a path move operation parsed from document coordinates.
 pub fn PdfDrawControl::add_to(
   self : PdfDrawControl,
   document : PdfDocument,
@@ -907,6 +911,7 @@ pub fn PdfDrawControl::add_to(
 }
 
 ///|
+/// Append a straight line segment parsed from document coordinates.
 pub fn PdfDrawControl::add_line(
   self : PdfDrawControl,
   document : PdfDocument,
@@ -917,6 +922,7 @@ pub fn PdfDrawControl::add_line(
 }
 
 ///|
+/// Append a cubic Bezier segment parsed from six numbers.
 pub fn PdfDrawControl::add_bezier(
   self : PdfDrawControl,
   text : String,
@@ -937,6 +943,7 @@ pub fn PdfDrawControl::add_bezier(
 }
 
 ///|
+/// Append a Bezier segment with the first control point inferred.
 pub fn PdfDrawControl::add_bezier23(
   self : PdfDrawControl,
   text : String,
@@ -948,6 +955,7 @@ pub fn PdfDrawControl::add_bezier23(
 }
 
 ///|
+/// Append a Bezier segment with the second control point inferred.
 pub fn PdfDrawControl::add_bezier13(
   self : PdfDrawControl,
   text : String,
@@ -959,6 +967,7 @@ pub fn PdfDrawControl::add_bezier13(
 }
 
 ///|
+/// Append a circular path approximation parsed from center and radius.
 pub fn PdfDrawControl::add_circle(
   self : PdfDrawControl,
   text : String,
@@ -992,16 +1001,19 @@ pub fn PdfDrawControl::add_circle(
 }
 
 ///|
+/// Append a stroke operation for the current path.
 pub fn PdfDrawControl::stroke(self : PdfDrawControl) -> Unit raise PdfError {
   self.add_op(PdfDrawStroke)
 }
 
 ///|
+/// Append a fill operation for the current path.
 pub fn PdfDrawControl::fill(self : PdfDrawControl) -> Unit raise PdfError {
   self.add_op(PdfDrawFill)
 }
 
 ///|
+/// Append an even-odd fill operation for the current path.
 pub fn PdfDrawControl::fill_even_odd(
   self : PdfDrawControl,
 ) -> Unit raise PdfError {
@@ -1009,6 +1021,7 @@ pub fn PdfDrawControl::fill_even_odd(
 }
 
 ///|
+/// Append a fill-and-stroke operation for the current path.
 pub fn PdfDrawControl::stroke_fill(
   self : PdfDrawControl,
 ) -> Unit raise PdfError {
@@ -1016,6 +1029,7 @@ pub fn PdfDrawControl::stroke_fill(
 }
 
 ///|
+/// Append an even-odd fill-and-stroke operation for the current path.
 pub fn PdfDrawControl::stroke_fill_even_odd(
   self : PdfDrawControl,
 ) -> Unit raise PdfError {
@@ -1023,11 +1037,13 @@ pub fn PdfDrawControl::stroke_fill_even_odd(
 }
 
 ///|
+/// Append a clip operation using the current path.
 pub fn PdfDrawControl::clip(self : PdfDrawControl) -> Unit raise PdfError {
   self.add_op(PdfDrawClip)
 }
 
 ///|
+/// Append an even-odd clip operation using the current path.
 pub fn PdfDrawControl::clip_even_odd(
   self : PdfDrawControl,
 ) -> Unit raise PdfError {
@@ -1035,6 +1051,7 @@ pub fn PdfDrawControl::clip_even_odd(
 }
 
 ///|
+/// Append a close-path operation.
 pub fn PdfDrawControl::close_path(self : PdfDrawControl) -> Unit raise PdfError {
   self.add_op(PdfDrawClosePath)
 }
