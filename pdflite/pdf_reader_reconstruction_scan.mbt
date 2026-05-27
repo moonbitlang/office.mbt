@@ -230,7 +230,7 @@ fn ByteCursor::read_reconstructed_indirect_object_at_current(
 fn pdf_read_reconstructed_xrefs(
   data : BytesView,
 ) -> Array[PdfClassicXRefEntry] raise PdfError {
-  let xrefs : Array[PdfClassicXRefEntry] = []
+  let xrefs : Array[PdfClassicXRefEntry] = Array::new(capacity=16)
   let cursor = byte_cursor_of_view(data)
   let xref_index = pdf_classic_xref_index(xrefs)
   let mut position = 0
@@ -305,7 +305,7 @@ fn pdf_read_reconstructed_trailers(
   data : BytesView,
   include_xref_streams? : Bool = true,
 ) -> Array[PdfObject] {
-  let trailers : Array[PdfObject] = []
+  let trailers : Array[PdfObject] = Array::new(capacity=1)
   let cursor = byte_cursor_of_view(data)
   for position = 0; position < data.length(); position = position + 1 {
     if pdf_view_matches_ascii_at(data, position, [
@@ -357,7 +357,7 @@ fn ByteCursor::read_reconstructed_classic_xref_section_at(
 fn pdf_read_reconstructed_classic_xref_sections(
   data : BytesView,
 ) -> Array[(Int, PdfXRefSection)] {
-  let sections : Array[(Int, PdfXRefSection)] = []
+  let sections : Array[(Int, PdfXRefSection)] = Array::new(capacity=1)
   let cursor = byte_cursor_of_view(data)
   let mut position = 0
   while position < data.length() {
@@ -383,7 +383,7 @@ fn pdf_read_reconstructed_classic_xref_sections(
 fn pdf_read_reconstructed_xref_stream_sections(
   data : BytesView,
 ) -> Array[PdfXRefSection] {
-  let sections : Array[PdfXRefSection] = []
+  let sections : Array[PdfXRefSection] = Array::new(capacity=1)
   let cursor = byte_cursor_of_view(data)
   let mut position = 0
   while position < data.length() {
@@ -409,10 +409,34 @@ fn pdf_read_reconstructed_xref_stream_sections(
 }
 
 ///|
+fn pdf_reconstructed_xref_stream_entry_capacity(
+  sections : ArrayView[PdfXRefSection],
+) -> Int {
+  let mut count = 0
+  for section in sections {
+    count += section.entries.length()
+  }
+  count
+}
+
+///|
+fn pdf_reconstructed_classic_xref_entry_capacity(
+  sections : ArrayView[(Int, PdfXRefSection)],
+) -> Int {
+  let mut count = 0
+  for section in sections {
+    count += section.1.entries.length()
+  }
+  count
+}
+
+///|
 fn pdf_reconstructed_xref_stream_entries(
   sections : ArrayView[PdfXRefSection],
 ) -> Array[PdfClassicXRefEntry] {
-  let xrefs : Array[PdfClassicXRefEntry] = []
+  let xrefs : Array[PdfClassicXRefEntry] = Array::new(
+    capacity=pdf_reconstructed_xref_stream_entry_capacity(sections),
+  )
   let seen = @number_set.pdf_number_set([])
   for index = sections.length() - 1; index >= 0; index = index - 1 {
     pdf_classic_xrefs_add_newer_first_with_seen(
@@ -428,7 +452,9 @@ fn pdf_reconstructed_xref_stream_entries(
 fn pdf_reconstructed_classic_xref_entries(
   sections : ArrayView[(Int, PdfXRefSection)],
 ) -> Array[PdfClassicXRefEntry] {
-  let xrefs : Array[PdfClassicXRefEntry] = []
+  let xrefs : Array[PdfClassicXRefEntry] = Array::new(
+    capacity=pdf_reconstructed_classic_xref_entry_capacity(sections),
+  )
   let seen = @number_set.pdf_number_set([])
   for index = sections.length() - 1; index >= 0; index = index - 1 {
     pdf_classic_xrefs_add_newer_first_with_seen(
@@ -444,7 +470,7 @@ fn pdf_reconstructed_classic_xref_entries(
 fn pdf_reconstructed_xref_stream_refs(
   sections : ArrayView[PdfXRefSection],
 ) -> Array[(Int, Int)] {
-  let refs : Array[(Int, Int)] = []
+  let refs : Array[(Int, Int)] = Array::new(capacity=sections.length())
   for section in sections {
     refs.push(
       (

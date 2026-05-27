@@ -10687,6 +10687,20 @@ Current backend snapshot:
   pdf_attach_test.mbt pdf_structure_test.mbt pdf_structure_wbtest.mbt
   pdf_dest_test.mbt pdf_page_label_test.mbt`, and the same focused suite on
   `wasm-gc` and `js`, each report 226/226.~~
+- [x] ~~Continue source-port hardening with xref/object-stream allocation
+  tuning: object-stream member end offsets now use sized integer arrays,
+  compressed xref grouping pre-counts entries per `/ObjStm`, reconstructed
+  object scans and trailer/section scans start with small expected capacities,
+  reconstructed xref aggregation preallocates from section entry counts, xref
+  stream refs preallocate from section counts, and reconstruction coverage
+  preallocates from classic plus xref-stream section counts while preserving
+  malformed-reader recovery and object-stream loading behavior. Validation on
+  MoonBit compiler 0.9.3: `moon check --target native --warn-list +73` passes
+  with the known notice; `moon test --target native pdf_reader_test.mbt
+  pdf_reader_wbtest.mbt pdflite_wbtest.mbt pdf_native_acceptance_test.mbt
+  fixture_acceptance` reports 414/414; `moon test --target wasm-gc
+  pdf_reader_test.mbt pdf_reader_wbtest.mbt pdflite_wbtest.mbt
+  fixture_acceptance` and the same focused suite on `js` each report 185/185.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.

@@ -237,7 +237,9 @@ fn pdf_reconstructed_xref_coverage(
   classic_sections : ArrayView[(Int, PdfXRefSection)],
   xref_stream_sections : ArrayView[PdfXRefSection],
 ) -> PdfReconstructedXRefCoverage {
-  let covered : Array[(Int, @number_set.PdfNumberSet)] = []
+  let covered : Array[(Int, @number_set.PdfNumberSet)] = Array::new(
+    capacity=classic_sections.length() + xref_stream_sections.length(),
+  )
   let trailer_roots = pdf_reconstructed_trailer_root_numbers(
     classic_sections, xref_stream_sections,
   )
