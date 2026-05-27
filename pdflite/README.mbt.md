@@ -103,13 +103,13 @@ Create a minimum valid document, serialize it, and read it back:
 ```moonbit check
 ///|
 test "minimum document round trip" {
-  let document = try! pdf_minimum_valid_pdf()
-  let bytes = try! pdf_write_document(document)
-  let version = try! pdf_read_header_from_bytes(bytes)
+  let document = try! @pdflite.pdf_minimum_valid_pdf()
+  let bytes = try! @pdflite.pdf_write_document(document)
+  let version = try! @pdflite.pdf_read_header_from_bytes(bytes)
   if version.major != 1 || version.minor != 0 {
     fail("expected a PDF 1.0 header")
   }
-  let parsed = try! pdf_read_document_from_bytes(bytes)
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(bytes)
   inspect(try! parsed.endpage(), content="1")
 }
 ```
@@ -119,10 +119,13 @@ Write byte-preserving PDF names. Names are bytes, not MoonBit Unicode strings:
 ```moonbit check
 ///|
 test "name writer escapes delimiter bytes" {
-  let name = pdf_name_of_bytes(try! pdf_bytes_of_int_array([47, 65, 32, 66]))
-  @test.assert_eq(pdf_int_array_of_bytes(pdf_write_name(name)), [
-    47, 65, 35, 50, 48, 66,
-  ])
+  let name = @pdflite.pdf_name_of_bytes(
+    try! @pdflite.pdf_bytes_of_int_array([47, 65, 32, 66]),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_int_array_of_bytes(@pdflite.pdf_write_name(name)),
+    [47, 65, 35, 50, 48, 66],
+  )
 }
 ```
 

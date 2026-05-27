@@ -291,7 +291,7 @@ test "PdfDocument stamp_pages rejects invalid page ranges and empty overlays" {
   )
   guard bad_page
     is Err(
-      PdfError::BadPageSpecification(
+      @pdflite.PdfError::BadPageSpecification(
         "stamp_pages: range contains pages not present in pdf"
       )
     ) else {

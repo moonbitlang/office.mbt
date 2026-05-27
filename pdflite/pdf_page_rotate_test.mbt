@@ -105,7 +105,7 @@ test "PdfDocument rotate_pages validates rotation and page range" {
     45,
     [1],
   )
-  guard bad_rotation is Err(PdfError::PageRotationExpected(45)) else {
+  guard bad_rotation is Err(@pdflite.PdfError::PageRotationExpected(45)) else {
     fail("expected PageRotationExpected for non-right-angle rotation")
   }
   let bad_page : Result[@pdflite.PdfDocument, Error] = try? document.rotate_pages_by(
@@ -114,7 +114,7 @@ test "PdfDocument rotate_pages validates rotation and page range" {
   )
   guard bad_page
     is Err(
-      PdfError::BadPageSpecification(
+      @pdflite.PdfError::BadPageSpecification(
         "rotate_pages_by: range contains pages not present in pdf"
       )
     ) else {

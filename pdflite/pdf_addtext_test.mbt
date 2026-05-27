@@ -2235,7 +2235,7 @@ test "pdf_addtext_url_annotation_references wrapper propagates measure errors" {
     document,
     "ab",
     urls,
-    fn(prefix) raise PdfError {
+    fn(prefix) raise @pdflite.PdfError {
       if prefix.length() == 2 {
         raise SoftError("measure failed")
       }
