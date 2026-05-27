@@ -507,7 +507,7 @@ fn PdfDocument::pdf_annotation_number_array(
 ) -> Array[Int] raise PdfError {
   match self.direct(object) {
     PdfArray(items) => {
-      let output : Array[Int] = []
+      let output : Array[Int] = Array::new(capacity=items.length())
       for item in items {
         output.push(self.get_number(item).to_int())
       }
@@ -595,7 +595,9 @@ fn pdf_annotation_is_record_key(key : PdfName) -> Bool {
 fn pdf_annotation_rest(annotation : PdfObject) -> PdfObject raise PdfError {
   match annotation {
     PdfDictionary(entries) => {
-      let output : Array[(PdfName, PdfObject)] = []
+      let output : Array[(PdfName, PdfObject)] = Array::new(
+        capacity=entries.length(),
+      )
       for entry in entries {
         let (key, _) = entry
         if !pdf_annotation_is_record_key(key) {
@@ -673,7 +675,7 @@ pub fn PdfDocument::annotations_of_page(
 ) -> Array[PdfAnnotation] raise PdfError {
   match self.lookup_direct(pdf_annotation_annots_key(), page.rest) {
     Some(PdfArray(annotations)) => {
-      let popup_parents : Array[Int] = []
+      let popup_parents : Array[Int] = Array::new(capacity=annotations.length())
       for annotation in annotations {
         match self.pdf_annotation_popup_parent(annotation) {
           Some(parent) => popup_parents.push(parent)
@@ -681,7 +683,9 @@ pub fn PdfDocument::annotations_of_page(
         }
       }
       let popup_parent_set = @number_set.pdf_number_set(popup_parents)
-      let output : Array[PdfAnnotation] = []
+      let output : Array[PdfAnnotation] = Array::new(
+        capacity=annotations.length(),
+      )
       for annotation in annotations {
         match annotation {
           PdfIndirect(number) if popup_parent_set.contains(number) => ()
@@ -781,7 +785,7 @@ pub fn PdfDocument::get_annotations(
   encoding? : PdfMetadataEncoding = PdfMetadataUTF8,
 ) -> Array[(Int, PdfBytes)] raise PdfError {
   let pages = self.pages_of_pagetree()
-  let output : Array[(Int, PdfBytes)] = []
+  let output : Array[(Int, PdfBytes)] = Array::new(capacity=pages.length())
   for index, page in pages {
     match self.lookup_direct(pdf_annotation_annots_key(), page.rest) {
       Some(PdfArray(annotations)) =>
@@ -822,7 +826,7 @@ pub fn PdfDocument::list_annotations(
     "list_annotations",
   )
   let selected_pages = @number_set.pdf_number_set(page_numbers)
-  let rows : Array[(Int, PdfBytes)] = []
+  let rows : Array[(Int, PdfBytes)] = Array::new(capacity=page_numbers.length())
   let mut output_length = 0
   for index, page in pages {
     let page_number = index + 1
@@ -988,9 +992,9 @@ fn PdfDocument::pdf_annotation_json_page(
   extra_roots : Array[PdfObject],
   annotation_numbers : Array[Int],
 ) -> Array[Json] raise PdfError {
-  let output : Array[Json] = []
   match self.lookup_direct(pdf_annotation_annots_key(), page.rest) {
-    Some(PdfArray(annotations)) =>
+    Some(PdfArray(annotations)) => {
+      let output : Array[Json] = Array::new(capacity=annotations.length())
       for annotation_ref in annotations {
         match annotation_ref {
           PdfIndirect(object_number) => {
@@ -1011,9 +1015,10 @@ fn PdfDocument::pdf_annotation_json_page(
           _ => ()
         }
       }
-    _ => ()
+      output
+    }
+    _ => []
   }
-  output
 }
 
 ///|
@@ -1052,9 +1057,14 @@ pub fn PdfDocument::annotations_json(
   let page_reference_numbers = self.page_reference_numbers()
   let page_number_lookup = pdf_page_number_lookup(page_reference_numbers)
   let selected_pages = @number_set.pdf_number_set(page_numbers)
-  let entries : Array[Json] = [pdf_annotation_json_format_header()]
-  let extra_roots : Array[PdfObject] = []
-  let annotation_numbers : Array[Int] = []
+  let entries : Array[Json] = Array::new(capacity=page_numbers.length() + 1)
+  entries.push(pdf_annotation_json_format_header())
+  let extra_roots : Array[PdfObject] = Array::new(
+    capacity=page_numbers.length(),
+  )
+  let annotation_numbers : Array[Int] = Array::new(
+    capacity=page_numbers.length(),
+  )
   for index, page in pages {
     let page_number = index + 1
     if selected_pages.contains(page_number) {
@@ -1141,8 +1151,10 @@ fn pdf_annotation_json_import_data(
     _ => raise SoftError("Bad Annotations JSON file")
   }
   let max_object_number : Ref[Int] = { val: 0 }
-  let extras : Array[(Int, PdfObject)] = []
-  let annotations : Array[PdfAnnotationJsonImportRow] = []
+  let extras : Array[(Int, PdfObject)] = Array::new(capacity=entries.length())
+  let annotations : Array[PdfAnnotationJsonImportRow] = Array::new(
+    capacity=entries.length(),
+  )
   for entry in entries {
     match entry {
       Array([number_json, object_json]) => {
@@ -1183,8 +1195,11 @@ fn PdfDocument::pdf_annotation_json_import_renumbered(
   if max_object_number <= 0 {
     self.copy()
   } else {
-    let changes : Array[(Int, Int)] = []
-    for index, number in self.object_numbers() {
+    let object_numbers = self.object_numbers()
+    let changes : Array[(Int, Int)] = Array::new(
+      capacity=object_numbers.length(),
+    )
+    for index, number in object_numbers {
       changes.push((number, max_object_number + index + 1))
     }
     self.renumber_objects(changes)
@@ -1290,7 +1305,7 @@ fn PdfDocument::pdf_annotation_json_import_rows_for_page(
   rows : ArrayView[PdfAnnotationJsonImportRow],
   page_number : Int,
 ) -> Array[PdfObject] raise PdfError {
-  let imported : Array[PdfObject] = []
+  let imported : Array[PdfObject] = Array::new(capacity=rows.length())
   for row in rows {
     if row.page_number == page_number {
       self.add_object_given_number(

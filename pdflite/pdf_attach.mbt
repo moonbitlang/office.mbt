@@ -267,8 +267,9 @@ fn pdf_attach_is_unsafe_filename_codepoint(codepoint : Int) -> Bool {
 pub fn pdf_attachment_remove_unsafe_characters(
   text : String,
 ) -> String raise PdfError {
-  let output : Array[Int] = []
-  for codepoint in pdf_codepoints_of_utf8(@utf8.encode(text)) {
+  let codepoints = pdf_codepoints_of_utf8(@utf8.encode(text))
+  let output : Array[Int] = Array::new(capacity=codepoints.length())
+  for codepoint in codepoints {
     if !pdf_attach_is_unsafe_filename_codepoint(codepoint) {
       output.push(codepoint)
     }
@@ -588,13 +589,16 @@ fn PdfDocument::pdf_attach_file_spec_relationship(
 fn PdfDocument::pdf_attach_document_attachments(
   self : PdfDocument,
 ) -> Array[PdfAttachment] raise PdfError {
-  let output : Array[PdfAttachment] = []
   let catalog = self.catalog()
   match self.lookup_direct(pdf_attach_names_key(), catalog) {
     Some(names) =>
       match self.lookup_direct(pdf_attach_embedded_files_key(), names) {
-        Some(tree) =>
-          for entry in self.read_name_tree(tree) {
+        Some(tree) => {
+          let entries = self.read_name_tree(tree)
+          let output : Array[PdfAttachment] = Array::new(
+            capacity=entries.length(),
+          )
+          for entry in entries {
             let file_spec = self.direct(entry.1)
             let data = match self.pdf_attach_file_spec_data(file_spec) {
               Some(bytes) => Some(bytes)
@@ -608,11 +612,12 @@ fn PdfDocument::pdf_attach_document_attachments(
               relationship: self.pdf_attach_file_spec_relationship(file_spec),
             })
           }
-        None => ()
+          output
+        }
+        None => []
       }
-    None => ()
+    None => []
   }
-  output
 }
 
 ///|
@@ -630,8 +635,8 @@ fn PdfDocument::pdf_attach_is_file_attachment_annotation(
 fn PdfDocument::pdf_attach_page_attachments(
   self : PdfDocument,
 ) -> Array[PdfAttachment] raise PdfError {
-  let output : Array[PdfAttachment] = []
   let pages = self.pages_of_pagetree()
+  let output : Array[PdfAttachment] = Array::new(capacity=pages.length())
   for index, page in pages {
     match self.lookup_direct(pdf_attach_annots_key(), page.rest) {
       Some(PdfArray(annotations)) =>
@@ -688,15 +693,17 @@ fn PdfDocument::pdf_attach_remove_from_page(
   self : PdfDocument,
   page : PdfPage,
 ) -> PdfPage raise PdfError {
-  let kept : Array[PdfObject] = []
-  match self.lookup_direct(pdf_attach_annots_key(), page.rest) {
-    Some(PdfArray(annotations)) =>
+  let kept = match self.lookup_direct(pdf_attach_annots_key(), page.rest) {
+    Some(PdfArray(annotations)) => {
+      let kept : Array[PdfObject] = Array::new(capacity=annotations.length())
       for annotation in annotations {
         if !self.pdf_attach_is_file_attachment_annotation(annotation) {
           kept.push(annotation)
         }
       }
-    _ => ()
+      kept
+    }
+    _ => []
   }
   {
     ..page,

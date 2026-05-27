@@ -10534,6 +10534,15 @@ Current backend snapshot:
   `moon test --target native pdf_attach_test.mbt pdf_annotation_test.mbt
   pdf_page_artifact_test.mbt pdf_tweak_test.mbt pdf_util_test.mbt`, `moon test
   --target wasm-gc ...`, and `moon test --target js ...` each report 91/91.~~
+- [x] ~~Continue source-port hardening with attachment/annotation collection
+  allocation tuning: unsafe filename filtering, embedded/page attachment
+  listing and removal, annotation array/rest parsing, old-style annotation
+  listing, annotation JSON export/import, object renumbering, and per-page JSON
+  import now preallocate from exact or conservative source counts. Validation
+  on MoonBit compiler 0.9.3: `moon check --target native --warn-list +73`
+  passes with the known notice; `moon test --target native pdf_attach_test.mbt
+  pdf_annotation_test.mbt annotation/fixture_acceptance` reports 30/30; the
+  same focused suite on `wasm-gc` and `js` reports 28/28 on each backend.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
