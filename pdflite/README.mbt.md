@@ -21,6 +21,30 @@ Use this package when callers need a complete in-memory PDF document. Use the
 subpackages for narrower concerns such as byte primitives, transforms, Flate,
 dates, low-level cryptography, async file IO, or Markdown extraction.
 
+## Native CLI
+
+The native CLI wrapper lives in `cmd/main` and uses
+`moonbitlang/core/argparse` for help, version text, subcommands, and parse
+errors. Build it from this repository with:
+
+```sh
+moon run --target native --release --build-only cmd/main
+```
+
+The executable is written to `_build/native/release/build/cmd/main/main.exe`.
+For example:
+
+```sh
+_build/native/release/build/cmd/main/main.exe info fixtures/camlpdf/logo.pdf
+_build/native/release/build/cmd/main/main.exe rewrite fixtures/camlpdf/logo.pdf _build/logo-roundtrip.pdf
+```
+
+Black-box CLI documentation tests live in `tests/scrut` and run with:
+
+```sh
+moon run --target native scripts/check_scrut_cli.mbtx
+```
+
 ## What This Package Owns
 
 - The public `PdfDocument` representation and its object table.

@@ -3,3 +3,5 @@ _build/
 .mooncakes/
 .moonagent/
 .repos/
+scripts/.mooncakes/
+scripts/_build/
