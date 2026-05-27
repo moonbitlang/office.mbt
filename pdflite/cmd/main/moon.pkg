@@ -6,6 +6,7 @@ import {
   "moonbitlang/core/argparse",
   "moonbitlang/core/debug",
   "moonbitlang/core/env",
+  "moonbitlang/core/json",
   "moonbitlang/x/sys",
 }
 
@@ -16,6 +17,7 @@ import {
   "moonbitlang/core/argparse",
   "moonbitlang/core/debug",
   "moonbitlang/core/env",
+  "moonbitlang/core/json",
   "moonbitlang/core/test",
 } for "wbtest"
 

@@ -32,8 +32,9 @@ test "pdflite command renders argparse help" {
       #|Inspect and rewrite PDF files.
       #|
       #|Commands:
-      #|  info     Print basic metadata for one PDF file.
-      #|  rewrite  Parse and write a PDF file.
+      #|  info      Print basic metadata for one PDF file.
+      #|  rewrite   Parse, write, and verify a PDF file.
+      #|  validate  Parse and round-trip a PDF without writing a file.
       #|
       #|Options:
       #|  -h, --help     Show help information.
@@ -46,10 +47,21 @@ test "pdflite command renders argparse help" {
 ///|
 test "pdflite command parses info subcommand" {
   let parsed = try! pdflite_cmd_parse_args(["info", "input.pdf"])
-  guard parsed is PdfliteCmdInfo(input_path) else {
+  guard parsed is PdfliteCmdInfo(input_path, json) else {
     fail("expected info subcommand")
   }
   @test.assert_eq(input_path, "input.pdf")
+  @test.assert_eq(json, false)
+}
+
+///|
+test "pdflite command parses info json flag" {
+  let parsed = try! pdflite_cmd_parse_args(["info", "--json", "input.pdf"])
+  guard parsed is PdfliteCmdInfo(input_path, json) else {
+    fail("expected info subcommand")
+  }
+  @test.assert_eq(input_path, "input.pdf")
+  @test.assert_eq(json, true)
 }
 
 ///|
@@ -62,6 +74,15 @@ test "pdflite command parses rewrite subcommand" {
   }
   @test.assert_eq(input_path, "input.pdf")
   @test.assert_eq(output_path, "output.pdf")
+}
+
+///|
+test "pdflite command parses validate subcommand" {
+  let parsed = try! pdflite_cmd_parse_args(["validate", "input.pdf"])
+  guard parsed is PdfliteCmdValidate(input_path) else {
+    fail("expected validate subcommand")
+  }
+  @test.assert_eq(input_path, "input.pdf")
 }
 
 ///|
@@ -78,8 +99,9 @@ test "pdflite command reports missing subcommand with argparse help" {
           #|Inspect and rewrite PDF files.
           #|
           #|Commands:
-          #|  info     Print basic metadata for one PDF file.
-          #|  rewrite  Parse and write a PDF file.
+          #|  info      Print basic metadata for one PDF file.
+          #|  rewrite   Parse, write, and verify a PDF file.
+          #|  validate  Parse and round-trip a PDF without writing a file.
           #|
           #|Options:
           #|  -h, --help     Show help information.
@@ -99,10 +121,33 @@ async test "pdflite info reports fixture metadata" {
   let document = try! @pdflite.pdf_read_document_from_bytes(
     @fs.read_file(input).binary(),
   )
-  let text = pdflite_cmd_info_text(input, document, try! document.endpage())
+  let report = match pdflite_cmd_info_report(input, document) {
+    Ok(value) => value
+    Err(message) => fail(message)
+  }
+  let text = pdflite_cmd_info_text(report)
   @test.assert_eq(text.contains("version: 1.4\n"), true)
   @test.assert_eq(text.contains("pages: 1\n"), true)
   @test.assert_eq(text.contains("encrypted: false\n"), true)
+}
+
+///|
+#cfg(target="native")
+async test "pdflite info json reports fixture metadata" {
+  let input = pdflite_cmd_repo_path_for_test("fixtures/camlpdf/logo.pdf")
+  let document = try! @pdflite.pdf_read_document_from_bytes(
+    @fs.read_file(input).binary(),
+  )
+  let report = match pdflite_cmd_info_report(input, document) {
+    Ok(value) => value
+    Err(message) => fail(message)
+  }
+  let text = pdflite_cmd_info_json_text(report)
+  let json = try! @json.parse(text)
+  guard json is Json::Object(entries) else { fail("expected JSON object") }
+  @test.assert_eq(entries.get("version"), Some(Json::string("1.4")))
+  @test.assert_eq(entries.get("pages"), Some(Json::number(1, repr="1")))
+  @test.assert_eq(entries.get("encrypted"), Some(Json::boolean(false)))
 }
 
 ///|
@@ -118,4 +163,20 @@ async test "pdflite rewrite creates a readable PDF" {
   )
   inspect(try! rewritten.endpage(), content="1")
   pdflite_cmd_remove_if_exists_for_test(output)
+}
+
+///|
+#cfg(target="native")
+async test "pdflite validate checks rewrite bytes" {
+  let input = pdflite_cmd_repo_path_for_test("fixtures/camlpdf/logo.pdf")
+  let document = match pdflite_cmd_read_document(input) {
+    Ok(value) => value
+    Err(message) => fail(message)
+  }
+  let output = match pdflite_cmd_write_document_bytes(document, input) {
+    Ok(value) => value
+    Err(message) => fail(message)
+  }
+  let result = pdflite_cmd_verify_rewritten_bytes(output, input)
+  guard result is Ok(_) else { fail("expected rewritten bytes to validate") }
 }
