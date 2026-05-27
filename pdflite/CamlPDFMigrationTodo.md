@@ -10674,6 +10674,19 @@ Current backend snapshot:
   --warn-list +73` passes with the known notice; `moon test --target native
   flate pdf_codec_test.mbt pdf_reader_test.mbt` reports 226/226; the same
   focused suite on `wasm-gc` and `js` reports 224/224 on each backend.~~
+- [x] ~~Continue source-port hardening with name/number-tree allocation tuning:
+  raw entry collection, direct array-pair conversion, nested contents traversal,
+  sort and dedup copies, typed read parsing, compatibility number-key output,
+  tree-build leaf arrays, child arrays, dictionary entries, number-key
+  conversion, and merge accumulation now preallocate from direct-pair, child,
+  entry, range, group, or tree counts while preserving duplicate collapse,
+  `/Limits`, and nested lookup behavior. Validation on MoonBit compiler 0.9.3:
+  `moon check --target native --warn-list +73` passes with the known notice;
+  `moon test --target native pdf_tree_test.mbt pdf_merge_test.mbt
+  pdf_page_test.mbt pdf_page_wbtest.mbt pdf_portfolio_test.mbt
+  pdf_attach_test.mbt pdf_structure_test.mbt pdf_structure_wbtest.mbt
+  pdf_dest_test.mbt pdf_page_label_test.mbt`, and the same focused suite on
+  `wasm-gc` and `js`, each report 226/226.~~
 - [ ] Continue source-port hardening with either another real-world malformed
   recovery fixture, another small cpdf-source API parity gap, or a performance
   slice that affects large source-corpus reads.
