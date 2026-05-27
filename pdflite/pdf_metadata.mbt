@@ -1398,7 +1398,7 @@ fn pdf_metadata_xml_tag_from_raw(
   let resolved_attributes : Array[PdfMetadataXmlAttribute] = []
   for attribute in attributes {
     resolved_attributes.push({
-      name: pdf_metadata_xml_resolve_name(attribute.0[:], true, context),
+      name: pdf_metadata_xml_resolve_name(attribute.0, true, context),
       value: attribute.1,
     })
   }
@@ -1468,13 +1468,9 @@ fn pdf_metadata_xml_parse_start_tag(
   let next_context = pdf_metadata_xml_context_with_attributes(
     context, raw_attributes,
   )
-  let tag = pdf_metadata_xml_tag_from_raw(
-    qname[:],
-    raw_attributes,
-    next_context,
-  )
+  let tag = pdf_metadata_xml_tag_from_raw(qname, raw_attributes, next_context)
   (
-    pdf_metadata_xml_decode_name(qname[:]),
+    pdf_metadata_xml_decode_name(qname),
     tag,
     next_context,
     self_closing,

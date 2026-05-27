@@ -89,7 +89,7 @@ fn pdf_content_afm_header_value(data : PdfAfmData, key : String) -> BytesView? {
   let key_bytes = @ascii.encode(key)
   for entry in data.headers {
     if pdf_afm_view_equals(entry.0, key_bytes) {
-      break Some(entry.1[:])
+      break Some(entry.1)
     }
   } nobreak {
     None

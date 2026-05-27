@@ -214,10 +214,7 @@ pub fn pdf_type_split_text(
       if word_end < text.length() {
         output[output_position] = b' '
         output_position += 1
-        let space_width = pdf_type_width_of_bytes(
-          widths,
-          pdf_type_ascii(" ")[:],
-        )
+        let space_width = pdf_type_width_of_bytes(widths, pdf_type_ascii(" "))
         remaining_space = remaining_space - word_width - space_width
         position = word_end + 1
       } else {
