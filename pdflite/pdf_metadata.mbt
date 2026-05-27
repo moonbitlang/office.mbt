@@ -1709,7 +1709,7 @@ fn pdf_metadata_namespace_prefixes(
   let prefixes : Array[String] = []
   pdf_metadata_add_unique(prefixes, fallback)
   let namespace_bytes = @ascii.encode(xml_uri)
-  let xmlns = [120, 109, 108, 110, 115, 58]
+  let xmlns : ReadOnlyArray[Int] = [120, 109, 108, 110, 115, 58]
   let mut search_start = 0
   while search_start < data.length() {
     let namespace_start = pdf_metadata_find_bytes_from(
