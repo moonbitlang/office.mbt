@@ -1057,11 +1057,12 @@ fn PdfDocument::pdf_impose_transforms(
   let mut cent_extra_x = 0.0
   let mut cent_extra_y = 0.0
   if columns {
-    for col = 0; col < x; col = col + 1 {
+    for col in 0..<x {
       if center && remaining < y && cent_extra_y == 0.0 {
         cent_extra_y = -(height * (y - remaining).to_double()) / 2.0
       }
-      for row = y - 1; row >= 0; row = row - 1 {
+      for row_offset in 0..<y {
+        let row = y - 1 - row_offset
         let original_row = row
         let (ordered_row, ordered_col) = pdf_impose_order(
           row, col, x, y, rtl, btt,
@@ -1093,11 +1094,12 @@ fn PdfDocument::pdf_impose_transforms(
       }
     }
   } else {
-    for row = y - 1; row >= 0; row = row - 1 {
+    for row_offset in 0..<y {
+      let row = y - 1 - row_offset
       if center && remaining < x && cent_extra_x == 0.0 {
         cent_extra_x = width * (x - remaining).to_double() / 2.0
       }
-      for col = 0; col < x; col = col + 1 {
+      for col in 0..<x {
         let original_col = col
         let (ordered_row, ordered_col) = pdf_impose_order(
           row, col, x, y, rtl, btt,
