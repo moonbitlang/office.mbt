@@ -8,7 +8,7 @@ stdout, stderr, and process exit codes.
 
 ```scrut
 $ "$PDFLITE_CLI" --version
-pdflite 0.1.29
+pdflite 0.1.30
 ```
 
 ## Help

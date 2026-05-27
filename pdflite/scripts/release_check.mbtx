@@ -1,5 +1,6 @@
 import {
   "moonbitlang/async",
+  "moonbitlang/async/io",
   "moonbitlang/async/process",
   "moonbitlang/async/stdio",
   "moonbitlang/core/argparse",
@@ -124,6 +125,9 @@ fn release_check_steps(
 ///|
 async fn run_release_check_step(step : ReleaseCheckStep) -> Int {
   eprintln("$ moon " + step.args.join(" "))
+  if step.name == "publish dry run" {
+    return run_release_check_publish_dry_run_step(step)
+  }
   let code = @process.run("moon", step.args)
   if code != 0 {
     eprintln(
@@ -134,6 +138,34 @@ async fn run_release_check_step(step : ReleaseCheckStep) -> Int {
     )
   }
   code
+}
+
+///|
+async fn run_release_check_publish_dry_run_step(step : ReleaseCheckStep) -> Int {
+  let (code, output) = @process.collect_output_merged("moon", step.args)
+  let text = output.text() catch { _ => "" }
+  let accepted = text.contains("Server status: 202 Accepted") &&
+    text.contains("Dry run completed successfully")
+  if accepted {
+    eprintln("release_check: publish dry run accepted by server")
+    0
+  } else if code == 0 {
+    if text.length() > 0 {
+      @stdio.stderr.write(text)
+    }
+    0
+  } else {
+    if text.length() > 0 {
+      @stdio.stderr.write(text)
+    }
+    eprintln(
+      "release_check: " +
+      step.name +
+      " failed with exit code " +
+      code.to_string(),
+    )
+    code
+  }
 }
 
 ///|
