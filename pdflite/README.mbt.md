@@ -63,7 +63,7 @@ moon run --target native scripts/release_check.mbtx -- --full-native-tests --pub
 
 The script runs `moon info`, `moon fmt --check`, all-target checking, focused
 native CLI tests, Scrut CLI documentation tests, the checked-in fixture
-round-trip matrix, and `moon package`.
+round-trip matrix, the large fixture rewrite smoke test, and `moon package`.
 
 ## What This Package Owns
 

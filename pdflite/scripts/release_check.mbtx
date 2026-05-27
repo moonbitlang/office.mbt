@@ -96,6 +96,17 @@ fn release_check_steps(
         "checked-in PDF fixture matrix roundtrips through writer modes",
       ],
     },
+    {
+      name: "test large fixture rewrite smoke",
+      args: [
+        "test",
+        "--target",
+        "native",
+        "fixture_acceptance",
+        "--filter",
+        "large checked-in PDF fixture rewrites within sane size bounds",
+      ],
+    },
   ]
   if full_native_tests {
     steps.push({
