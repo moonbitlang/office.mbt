@@ -12,7 +12,7 @@ fn artifact_stream_for_test(
 
 ///|
 fn artifact_resources_for_test(
-  xobjects? : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)] = [],
+  xobjects : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)],
 ) -> @pdflite.PdfObject {
   if xobjects.length() == 0 {
     @pdflite.pdf_dictionary([])
@@ -138,9 +138,7 @@ test "PdfDocument remove_struct_tree rewrites referenced form xobjects" {
   let source = try! artifact_document_for_test([
     try! artifact_page_for_test(
       [Op_Do(xobject_name)],
-      resources=artifact_resources_for_test(xobjects=[
-        (xobject_name, PdfIndirect(20)),
-      ]),
+      resources=artifact_resources_for_test([(xobject_name, PdfIndirect(20))]),
     ),
   ])
   source.add_object_given_number(20, form)
@@ -191,9 +189,7 @@ test "PdfDocument mark_all_as_artifact rewrites referenced form xobjects" {
   let source = try! artifact_document_for_test([
     try! artifact_page_for_test(
       [Op_Do(xobject_name)],
-      resources=artifact_resources_for_test(xobjects=[
-        (xobject_name, PdfIndirect(20)),
-      ]),
+      resources=artifact_resources_for_test([(xobject_name, PdfIndirect(20))]),
     ),
   ])
   source.add_object_given_number(20, form)

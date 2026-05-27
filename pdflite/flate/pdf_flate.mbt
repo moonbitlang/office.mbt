@@ -1240,7 +1240,7 @@ fn pdf_flate_header_for_level(level : Int) -> Array[Byte] raise @core.PdfError {
 ///|
 fn pdf_flate_output_with_header(
   header : ArrayView[Byte],
-  body_capacity_hint? : Int = 0,
+  body_capacity_hint : Int,
 ) -> Array[Byte] {
   let output : Array[Byte] = Array::new(
     capacity=header.length() + body_capacity_hint,
@@ -1263,7 +1263,7 @@ fn pdf_flate_encode_stored_view_with_header(
   }
   let output = pdf_flate_output_with_header(
     header,
-    body_capacity_hint=data.length() + block_count * 5 + 4,
+    data.length() + block_count * 5 + 4,
   )
   if data.length() == 0 {
     pdf_flate_push_stored_block(output, data, 0, 0, true)
@@ -1291,10 +1291,7 @@ fn pdf_flate_encode_fixed_literal_view_with_header(
   data : BytesView,
   header : ArrayView[Byte],
 ) -> @core.PdfBytes {
-  let output = pdf_flate_output_with_header(
-    header,
-    body_capacity_hint=data.length() + 8,
-  )
+  let output = pdf_flate_output_with_header(header, data.length() + 8)
   pdf_flate_push_fixed_literal_block(output, data, true)
   pdf_flate_push_adler32(output, data)
   Bytes::from_array(output)
@@ -1305,10 +1302,7 @@ fn pdf_flate_encode_fixed_repeat_view_with_header(
   data : BytesView,
   header : ArrayView[Byte],
 ) -> @core.PdfBytes raise @core.PdfError {
-  let output = pdf_flate_output_with_header(
-    header,
-    body_capacity_hint=data.length() + 8,
-  )
+  let output = pdf_flate_output_with_header(header, data.length() + 8)
   pdf_flate_push_fixed_repeat_block(output, data, true)
   pdf_flate_push_adler32(output, data)
   Bytes::from_array(output)
@@ -1320,10 +1314,7 @@ fn pdf_flate_encode_fixed_match_view_with_header(
   header : ArrayView[Byte],
   max_probes : Int,
 ) -> @core.PdfBytes raise @core.PdfError {
-  let output = pdf_flate_output_with_header(
-    header,
-    body_capacity_hint=data.length() + 8,
-  )
+  let output = pdf_flate_output_with_header(header, data.length() + 8)
   pdf_flate_push_fixed_match_block(output, data, true, max_probes)
   pdf_flate_push_adler32(output, data)
   Bytes::from_array(output)
@@ -1335,10 +1326,7 @@ fn pdf_flate_encode_dynamic_match_view_with_header(
   header : ArrayView[Byte],
   max_probes : Int,
 ) -> @core.PdfBytes raise @core.PdfError {
-  let output = pdf_flate_output_with_header(
-    header,
-    body_capacity_hint=data.length() + 8,
-  )
+  let output = pdf_flate_output_with_header(header, data.length() + 8)
   pdf_flate_push_dynamic_match_block(output, data, true, max_probes)
   pdf_flate_push_adler32(output, data)
   Bytes::from_array(output)

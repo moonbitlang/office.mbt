@@ -711,7 +711,7 @@ fn ua_matterhorn_document_for_test(
 ///|
 fn ua_matterhorn_document_with_metadata_for_test(
   metadata : BytesView,
-  root_extras? : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)] = [],
+  root_extras : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)],
 ) -> @pdflite.PdfDocument {
   let document = ua_matterhorn_document_for_test([], root_extras~)
   try! document.set_metadata_from_bytes(metadata)
@@ -1924,7 +1924,7 @@ test "PdfDocument test_matterhorn_json detects missing XMP fields" {
     #|</x:xmpmeta>
   let document = ua_matterhorn_document_with_metadata_for_test(
     @ascii.encode(metadata),
-    root_extras=[ua_matterhorn_display_doc_title_for_test(true)],
+    [ua_matterhorn_display_doc_title_for_test(true)],
   )
   @test.assert_eq(try! document.test_matterhorn_json("06-001"), Json::array([]))
   @test.assert_eq(

@@ -196,7 +196,7 @@ fn ByteCursor::read_reconstructed_indirect_scan_candidate_at_current(
     let length_result : Result[Int, Error] = try? self.resolve_classic_stream_length(
       object.object,
       xrefs,
-      xref_index~,
+      xref_index,
     )
     let stream = match length_result {
       Ok(length) =>

@@ -64,7 +64,7 @@ fn ByteCursor::resolve_classic_stream_length(
   self : ByteCursor,
   object : PdfObject,
   xrefs : ArrayView[PdfClassicXRefEntry],
-  xref_index? : PdfClassicXRefIndex? = None,
+  xref_index : PdfClassicXRefIndex?,
 ) -> Int raise PdfError {
   match object.lookup_immediate(pdf_length_name()) {
     Some(PdfInteger(length)) if length >= 0 => length
@@ -119,7 +119,7 @@ fn ByteCursor::read_first_indirect_object_at_current(
     let length_result : Result[Int, Error] = try? self.resolve_classic_stream_length(
       object.object,
       xrefs,
-      xref_index~,
+      xref_index,
     )
     match length_result {
       Ok(length) =>

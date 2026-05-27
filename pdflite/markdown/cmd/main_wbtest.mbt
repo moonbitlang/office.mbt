@@ -57,7 +57,7 @@ test "markdown command renders argparse help" {
 
 ///|
 test "markdown command parses required input and output paths" {
-  let (input_path, output_path) = try! markdown_cmd_parse_args(argv=[
+  let (input_path, output_path) = try! markdown_cmd_parse_args([
     "input.pdf", "output.md",
   ])
   @test.assert_eq(input_path, "input.pdf")
@@ -66,7 +66,7 @@ test "markdown command parses required input and output paths" {
 
 ///|
 test "markdown command reports missing positional arguments with argparse help" {
-  try markdown_cmd_parse_args(argv=[]) catch {
+  try markdown_cmd_parse_args([]) catch {
     err =>
       inspect(
         err.to_string(),
@@ -93,7 +93,7 @@ test "markdown command reports missing positional arguments with argparse help" 
 
 ///|
 test "markdown command rejects extra positional arguments" {
-  try markdown_cmd_parse_args(argv=["input.pdf", "output.md", "extra"]) catch {
+  try markdown_cmd_parse_args(["input.pdf", "output.md", "extra"]) catch {
     err => {
       let message = err.to_string()
       markdown_cmd_assert_contains_for_test(message, "unexpected value 'extra'")

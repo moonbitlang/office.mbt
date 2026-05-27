@@ -26,12 +26,9 @@ fn markdown_cmd_single_value(
 }
 
 ///|
-fn markdown_cmd_parse_args(argv? : ArrayView[String]) -> (String, String) raise {
+fn markdown_cmd_parse_args(argv : ArrayView[String]) -> (String, String) raise {
   let command = markdown_cmd_command()
-  let matches = match argv {
-    Some(argv) => command.parse(argv~, env={})
-    None => command.parse()
-  }
+  let matches = command.parse(argv~, env={})
   (
     markdown_cmd_single_value(matches, "input"),
     markdown_cmd_single_value(matches, "output"),
@@ -42,7 +39,7 @@ fn markdown_cmd_parse_args(argv? : ArrayView[String]) -> (String, String) raise 
 async fn main {
   let all_args = @env.args()
   let args = if all_args.is_empty() { all_args[:] } else { all_args[1:] }
-  let (input_path, output_path) = markdown_cmd_parse_args(argv=args)
+  let (input_path, output_path) = markdown_cmd_parse_args(args)
   markdown_cmd_convert_file(input_path, output_path)
 }
 
