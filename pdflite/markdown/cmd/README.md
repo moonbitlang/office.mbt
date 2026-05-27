@@ -16,9 +16,9 @@ flowchart LR
   Extract --> Write["@fs.write_file"]
 ```
 
-## Checked Examples
+## Example
 
-```moonbit check
+```moonbit
 ///|
 #cfg(target="native")
 async test "command conversion writes markdown" {
@@ -61,8 +61,8 @@ async test "command conversion writes markdown" {
 
 ## Verification Notes
 
-- README examples are native-only and should be validated with
-  `moon test --target native markdown/cmd/README.mbt.md`.
+- Command behavior is covered by `main_wbtest.mbt`; validate it with
+  `moon test --target native markdown/cmd`.
 - Prefer testing the library package for extraction semantics and this package
   for file/argument behavior.
 - Run `moon run --target native markdown/cmd <input.pdf> <output.md>` manually
