@@ -24,7 +24,7 @@ pub fn byte_cursor_of_bytes(Bytes, source? : String) -> ByteCursor
 
 pub fn byte_cursor_of_view(BytesView, source? : String) -> ByteCursor
 
-pub fn byte_output_new(initial_size? : Int) -> ByteOutput raise @core.PdfError
+pub fn byte_output_new(initial_size? : Int) -> @core.ByteOutput raise @core.PdfError
 
 pub fn decompress_pdf(PdfDocument) -> PdfDocument raise @core.PdfError
 
@@ -2251,23 +2251,6 @@ pub fn ByteCursor::source(Self) -> String
 pub fn ByteCursor::to_bytes(Self) -> Bytes
 pub fn ByteCursor::view(Self) -> BytesView
 
-pub struct ByteOutput {
-  data : Array[Byte]
-  mut position : Int
-  mut written_length : Int
-} derive(Eq, ToJson, @debug.Debug)
-pub fn ByteOutput::length(Self) -> Int
-pub fn ByteOutput::position(Self) -> Int
-pub fn ByteOutput::seek(Self, Int) -> Unit raise @core.PdfError
-pub fn ByteOutput::to_bytes(Self) -> Bytes
-pub fn ByteOutput::write_ascii(Self, String) -> Unit raise @core.PdfError
-pub fn ByteOutput::write_byte(Self, Int) -> Unit raise @core.PdfError
-pub fn ByteOutput::write_byte_at(Self, Int, Int) -> Unit raise @core.PdfError
-pub fn ByteOutput::write_repeated_byte(Self, Int, value? : Int) -> Unit raise @core.PdfError
-pub fn ByteOutput::write_view(Self, BytesView) -> Unit raise @core.PdfError
-pub fn ByteOutput::write_view_at(Self, Int, BytesView) -> Unit raise @core.PdfError
-pub fn ByteOutput::write_view_slice(Self, BytesView, Int, Int) -> Unit raise @core.PdfError
-
 pub(all) struct ObjectStreamReference {
   object_stream_number : Int
   index : Int
@@ -4489,6 +4472,8 @@ pub fn ToGet::length(Self) -> Int
 pub fn ToGet::position(Self) -> Int
 
 // Type aliases
+pub using @core {type ByteOutput}
+
 pub using @geometry {type PaperSize}
 
 pub using @crypt_core {type PdfAesV3RandomField}

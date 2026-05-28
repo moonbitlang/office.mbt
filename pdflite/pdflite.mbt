@@ -8,6 +8,7 @@ pub using @core {
   type PdfError,
   type PdfBytes,
   type PdfName,
+  type ByteOutput,
   pdf_byte_of_int,
   pdf_bytes_of_array_view,
   pdf_bytes_of_view,
@@ -31,6 +32,7 @@ pub using @core {
   pdf_is_not_whitespace_byte,
   pdf_is_delimiter_byte,
   pdf_is_whitespace_or_delimiter_byte,
+  byte_output_new,
 }
 
 ///|
