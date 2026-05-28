@@ -1,4 +1,8 @@
 ///|
+/// Copy the trailer `/ID` from `source` onto this document.
+///
+/// The original document is left unchanged. When `keep_version` is false, PDF
+/// 1.x outputs are bumped to at least 1.1, matching cpdf.
 pub fn PdfDocument::copy_id_from(
   self : PdfDocument,
   source : PdfDocument,

@@ -106,8 +106,3 @@ fn pdf_metadata_known_name(
     raise BadNumberArgument(error_prefix + value)
   }
 }
-
-///|
-/// Copy the trailer `/ID` from `source` onto this document.
-///
-/// The original document is left unchanged. When `keep_version` is false, PDF
