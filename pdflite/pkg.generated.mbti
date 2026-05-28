@@ -12,7 +12,7 @@ import {
 }
 
 // Values
-pub fn bit_writer_new() -> BitWriter
+pub fn bit_writer_new() -> @core.BitWriter
 
 pub fn bitstream_of_bytes(Bytes, source? : String) -> BitStream
 
@@ -2184,19 +2184,6 @@ pub struct BitStreamPosition {
   bit_mask : Int
   bits_read : Int
 } derive(Eq, ToJson, @debug.Debug)
-
-pub struct BitWriter {
-  mut current_byte : Int
-  mut bit_index : Int
-  bytes : Array[Byte]
-} derive(Eq, ToJson, @debug.Debug)
-pub fn BitWriter::align(Self) -> Unit
-pub fn BitWriter::append_aligned(Self, Self) -> Self
-pub fn BitWriter::bit_length(Self) -> Int
-pub fn BitWriter::put_bit(Self, Int) -> Unit raise @core.PdfError
-pub fn BitWriter::put_value_int(Self, Int, Int) -> Unit raise @core.PdfError
-pub fn BitWriter::put_value_int64(Self, Int, Int64) -> Unit raise @core.PdfError
-pub fn BitWriter::to_bytes(Self) -> Bytes
 
 pub struct ByteCursor {
   data : BytesView
@@ -4472,6 +4459,8 @@ pub fn ToGet::length(Self) -> Int
 pub fn ToGet::position(Self) -> Int
 
 // Type aliases
+pub using @core {type BitWriter}
+
 pub using @core {type ByteOutput}
 
 pub using @geometry {type PaperSize}

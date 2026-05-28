@@ -9,6 +9,7 @@ pub using @core {
   type PdfBytes,
   type PdfName,
   type ByteOutput,
+  type BitWriter,
   pdf_byte_of_int,
   pdf_bytes_of_array_view,
   pdf_bytes_of_view,
@@ -33,6 +34,7 @@ pub using @core {
   pdf_is_delimiter_byte,
   pdf_is_whitespace_or_delimiter_byte,
   byte_output_new,
+  bit_writer_new,
 }
 
 ///|

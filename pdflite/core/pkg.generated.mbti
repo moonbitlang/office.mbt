@@ -6,6 +6,8 @@ import {
 }
 
 // Values
+pub fn bit_writer_new() -> BitWriter
+
 pub fn byte_output_new(initial_size? : Int) -> ByteOutput raise PdfError
 
 pub fn pdf_byte_of_int(Int) -> Byte raise PdfError
@@ -171,6 +173,19 @@ pub(all) suberror PdfError {
 } derive(Eq, ToJson, @debug.Debug)
 
 // Types and methods
+pub struct BitWriter {
+  mut current_byte : Int
+  mut bit_index : Int
+  bytes : Array[Byte]
+} derive(Eq, ToJson, @debug.Debug)
+pub fn BitWriter::align(Self) -> Unit
+pub fn BitWriter::append_aligned(Self, Self) -> Self
+pub fn BitWriter::bit_length(Self) -> Int
+pub fn BitWriter::put_bit(Self, Int) -> Unit raise PdfError
+pub fn BitWriter::put_value_int(Self, Int, Int) -> Unit raise PdfError
+pub fn BitWriter::put_value_int64(Self, Int, Int64) -> Unit raise PdfError
+pub fn BitWriter::to_bytes(Self) -> Bytes
+
 pub struct ByteOutput {
   data : Array[Byte]
   mut position : Int
