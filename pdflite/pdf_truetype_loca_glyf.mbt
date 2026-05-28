@@ -48,20 +48,6 @@ fn pdf_truetype_index_to_loc_format(data : BytesView) -> Int raise PdfError {
 }
 
 ///|
-fn pdf_truetype_required_subset_table(tag : String) -> Bool {
-  tag == "head" ||
-  tag == "hhea" ||
-  tag == "loca" ||
-  tag == "cmap" ||
-  tag == "maxp" ||
-  tag == "cvt " ||
-  tag == "glyf" ||
-  tag == "prep" ||
-  tag == "hmtx" ||
-  tag == "fpgm"
-}
-
-///|
 fn pdf_truetype_validate_glyph_index(
   loca_offsets : ArrayView[Int],
   glyph_index : Int,
