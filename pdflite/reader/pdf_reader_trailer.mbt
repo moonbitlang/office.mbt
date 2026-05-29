@@ -1,4 +1,25 @@
 ///|
+/// Read a classic `trailer << ... >>` dictionary from the current cursor.
+pub fn pdf_cursor_read_trailer_dictionary(
+  cursor : @core.ByteCursor,
+) -> @syntax.PdfObject raise @core.PdfError {
+  @syntax.pdf_cursor_drop_whitespace(cursor)
+  pdf_cursor_consume_ascii(
+    cursor,
+    [116, 114, 97, 105, 108, 101, 114],
+    TrailerExpected,
+  )
+  @syntax.pdf_cursor_drop_whitespace(cursor)
+  let object = @syntax.pdf_parse_single_lexeme_object(
+    @syntax.pdf_cursor_lex_tokens(cursor),
+  )
+  match object {
+    PdfDictionary(_) => object
+    _ => raise TrailerExpected
+  }
+}
+
+///|
 /// Read a non-negative `/Prev` trailer offset, if present.
 pub fn pdf_trailer_prev_position(
   trailer : @syntax.PdfObject,

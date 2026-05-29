@@ -4,7 +4,7 @@ fn pdf_cursor_read_reconstructed_trailer_at(
   position : Int,
 ) -> PdfObject raise PdfError {
   cursor.seek_absolute(position)
-  pdf_cursor_read_trailer_dictionary(cursor)
+  @reader.pdf_cursor_read_trailer_dictionary(cursor)
 }
 
 ///|

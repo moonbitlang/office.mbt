@@ -16,6 +16,39 @@ fn test_trailer_name(name : @core.PdfName) -> @syntax.PdfObject {
 }
 
 ///|
+test "cursor reads classic trailer dictionary" {
+  let cursor = @core.byte_cursor_of_bytes(
+    @ascii.encode(" \ntrailer << /Root 1 0 R /Size 2 >> startxref"),
+  )
+  let trailer = try! @reader.pdf_cursor_read_trailer_dictionary(cursor)
+  @test.assert_eq(
+    trailer.lookup_immediate(@reader.pdf_reader_root_name()),
+    Some(PdfIndirect(1)),
+  )
+  @test.assert_eq(
+    trailer.lookup_immediate(@reader.pdf_reader_size_name()),
+    Some(PdfInteger(2)),
+  )
+}
+
+///|
+test "cursor trailer dictionary rejects malformed input" {
+  let missing_marker : Result[@syntax.PdfObject, Error] = try? @reader.pdf_cursor_read_trailer_dictionary(
+    @core.byte_cursor_of_bytes(@ascii.encode("xref")),
+  )
+  guard missing_marker is Err(@core.PdfError::TrailerExpected) else {
+    fail("expected TrailerExpected")
+  }
+
+  let not_dictionary : Result[@syntax.PdfObject, Error] = try? @reader.pdf_cursor_read_trailer_dictionary(
+    @core.byte_cursor_of_bytes(@ascii.encode("trailer 7")),
+  )
+  guard not_dictionary is Err(@core.PdfError::TrailerExpected) else {
+    fail("expected TrailerExpected")
+  }
+}
+
+///|
 test "trailer helpers parse prev and xref stream offsets" {
   let trailer = test_trailer_dictionary([
     (@reader.pdf_reader_prev_name(), test_trailer_integer(42)),
