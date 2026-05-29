@@ -86,7 +86,9 @@ jobs:
           PDFLITE_CLI: ${{ github.workspace }}/_build/native/release/build/cmd/main/main.exe
           PDFLITE_LOGO_PDF: ${{ github.workspace }}/fixtures/camlpdf/logo.pdf
         run: |
-          cd "$RUNNER_TEMP"
+          mkdir -p "$RUNNER_TEMP/moon-cram-project"
+          printf 'name = "pdflite/cram"\nversion = "0.1.0"\n' > "$RUNNER_TEMP/moon-cram-project/moon.mod"
+          cd "$RUNNER_TEMP/moon-cram-project"
           timeout 180s moon cram test --log-level debug --shell /bin/bash --timeout-seconds 120 "${GITHUB_WORKSPACE}/tests/cram/cli.md"
 
   backend-check:
