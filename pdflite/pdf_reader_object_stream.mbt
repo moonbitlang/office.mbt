@@ -115,65 +115,6 @@ fn PdfDocument::read_object_stream_context_with_passwords(
 }
 
 ///|
-fn pdf_reader_object_stream_group_counts(
-  xrefs : ArrayView[PdfClassicXRefEntry],
-) -> (@hashmap.HashMap[Int, Int], Int) {
-  let counts : @hashmap.HashMap[Int, Int] = HashMap([])
-  let mut group_count = 0
-  for xref in xrefs {
-    match xref.object_stream {
-      Some(reference) =>
-        if xref.in_use && xref.object_number != 0 {
-          let object_stream_number = reference.object_stream_number
-          match counts.get(object_stream_number) {
-            Some(count) => counts[object_stream_number] = count + 1
-            None => {
-              counts[object_stream_number] = 1
-              group_count += 1
-            }
-          }
-        }
-      None => ()
-    }
-  }
-  (counts, group_count)
-}
-
-///|
-fn pdf_reader_object_stream_groups(
-  xrefs : ArrayView[PdfClassicXRefEntry],
-) -> Array[(Int, Array[(PdfClassicXRefEntry, ObjectStreamReference)])] {
-  let (counts, group_count) = pdf_reader_object_stream_group_counts(xrefs)
-  let groups : Array[(Int, Array[(PdfClassicXRefEntry, ObjectStreamReference)])] = Array::new(
-    capacity=group_count,
-  )
-  let indexes : @hashmap.HashMap[Int, Int] = HashMap([])
-  for xref in xrefs {
-    match xref.object_stream {
-      Some(reference) =>
-        if xref.in_use && xref.object_number != 0 {
-          match indexes.get(reference.object_stream_number) {
-            Some(index) => groups[index].1.push((xref, reference))
-            None => {
-              indexes[reference.object_stream_number] = groups.length()
-              let entries : Array[(PdfClassicXRefEntry, ObjectStreamReference)] = Array::new(
-                capacity=match counts.get(reference.object_stream_number) {
-                  Some(count) => count
-                  None => 1
-                },
-              )
-              entries.push((xref, reference))
-              groups.push((reference.object_stream_number, entries))
-            }
-          }
-        }
-      None => ()
-    }
-  }
-  groups
-}
-
-///|
 fn PdfDocument::load_embedded_objects_from_context(
   self : PdfDocument,
   xrefs : ArrayView[(PdfClassicXRefEntry, ObjectStreamReference)],

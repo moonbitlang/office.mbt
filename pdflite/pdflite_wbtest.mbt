@@ -566,7 +566,7 @@ test "private object stream helpers cover malformed object streams" {
       object_stream: Some({ object_stream_number: 7, index: 1 }),
     },
   ]
-  let grouped_xrefs = pdf_reader_object_stream_groups([
+  let grouped_xrefs = @reader.pdf_reader_object_stream_groups([
     {
       object_number: 0,
       offset: 0,

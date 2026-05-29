@@ -80,7 +80,7 @@ fn PdfDocument::load_reconstructed_xref_stream_embedded_objects(
   self : PdfDocument,
   xrefs : ArrayView[PdfClassicXRefEntry],
 ) -> Unit {
-  for group in pdf_reader_object_stream_groups(xrefs) {
+  for group in @reader.pdf_reader_object_stream_groups(xrefs) {
     let object_stream_number = group.0
     let context_result : Result[PdfObjectStreamContext, Error] = try? self.read_object_stream_context(
       object_stream_number,
@@ -142,7 +142,7 @@ fn PdfDocument::load_reconstructed_xref_stream_embedded_objects_with_passwords(
   user_password : BytesView?,
   owner_password : BytesView?,
 ) -> Unit {
-  for group in pdf_reader_object_stream_groups(xrefs) {
+  for group in @reader.pdf_reader_object_stream_groups(xrefs) {
     let object_stream_number = group.0
     let context_result : Result[(PdfObjectStreamContext, Bool), Error] = try? self.read_object_stream_context_with_passwords(
       object_stream_number, user_password, owner_password,

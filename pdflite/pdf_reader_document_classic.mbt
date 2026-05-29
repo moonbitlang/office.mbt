@@ -134,7 +134,7 @@ fn pdf_read_classic_document_from_view_at_revision(
         }
     }
   }
-  for group in pdf_reader_object_stream_groups(xrefs) {
+  for group in @reader.pdf_reader_object_stream_groups(xrefs) {
     let object_stream_number = group.0
     let (context, already_decrypted) = document.read_object_stream_context_with_passwords(
       object_stream_number, user_password, owner_password,

@@ -55,3 +55,47 @@ test "object stream end offsets preserve duplicate starts" {
     [12, 12],
   )
 }
+
+///|
+fn reader_object_stream_xref_for_test(
+  object_number : Int,
+  object_stream_number : Int,
+  index : Int,
+  in_use? : Bool = true,
+) -> @reader.PdfClassicXRefEntry {
+  {
+    object_number,
+    offset: 0,
+    generation: 0,
+    in_use,
+    object_stream: Some({ object_stream_number, index }),
+  }
+}
+
+///|
+test "object stream groups keep active compressed entries by stream" {
+  let groups = @reader.pdf_reader_object_stream_groups([
+    reader_object_stream_xref_for_test(0, 7, 0),
+    reader_object_stream_xref_for_test(2, 7, 0),
+    reader_object_stream_xref_for_test(4, 9, 0, in_use=false),
+    reader_object_stream_xref_for_test(3, 7, 1),
+    reader_object_stream_xref_for_test(5, 9, 0),
+    {
+      object_number: 6,
+      offset: 0,
+      generation: 0,
+      in_use: true,
+      object_stream: None,
+    },
+  ])
+  @test.assert_eq(groups.length(), 2)
+  @test.assert_eq(groups[0].0, 7)
+  @test.assert_eq(groups[0].1.length(), 2)
+  @test.assert_eq(groups[0].1[0].0.object_number, 2)
+  @test.assert_eq(groups[0].1[0].1.index, 0)
+  @test.assert_eq(groups[0].1[1].0.object_number, 3)
+  @test.assert_eq(groups[0].1[1].1.index, 1)
+  @test.assert_eq(groups[1].0, 9)
+  @test.assert_eq(groups[1].1.length(), 1)
+  @test.assert_eq(groups[1].1[0].0.object_number, 5)
+}

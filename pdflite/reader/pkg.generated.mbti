@@ -53,6 +53,8 @@ pub fn pdf_reader_name(String) -> @core.PdfName
 
 pub fn pdf_reader_object_is_xref_stream(@syntax.PdfObject) -> Bool
 
+pub fn pdf_reader_object_stream_groups(ArrayView[PdfClassicXRefEntry]) -> Array[(Int, Array[(PdfClassicXRefEntry, ObjectStreamReference)])]
+
 pub fn pdf_reader_objstm_name() -> @core.PdfName
 
 pub fn pdf_reader_prev_name() -> @core.PdfName
