@@ -676,6 +676,8 @@ pub fn pdf_cursor_lex_hex_string(ByteCursor) -> PdfLexeme raise @core.PdfError
 
 pub fn pdf_cursor_lex_keyword(ByteCursor) -> PdfLexeme raise @core.PdfError
 
+pub fn pdf_cursor_lex_literal_string(ByteCursor) -> PdfLexeme raise @core.PdfError
+
 pub fn pdf_cursor_lex_name(ByteCursor) -> PdfLexeme raise @core.PdfError
 
 pub fn pdf_cursor_lex_number(ByteCursor) -> PdfLexeme
@@ -2225,7 +2227,6 @@ pub fn ByteCursor::ignore_until(Self, (Int) -> Bool, eof_is_delimiter? : Bool) -
 pub fn ByteCursor::input_byte(Self) -> Int
 pub fn ByteCursor::input_pdf_error(Self, String) -> String
 pub fn ByteCursor::length(Self) -> Int
-pub fn ByteCursor::lex_pdf_literal_string(Self) -> PdfLexeme raise @core.PdfError
 pub fn ByteCursor::nudge(Self) -> Unit
 pub fn ByteCursor::peek(Self) -> Byte?
 pub fn ByteCursor::peek_byte(Self) -> Int

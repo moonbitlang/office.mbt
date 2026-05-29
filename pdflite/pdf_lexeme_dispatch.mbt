@@ -47,7 +47,7 @@ pub fn pdf_cursor_lex_token(cursor : ByteCursor) -> PdfLexeme raise PdfError {
     47 => pdf_cursor_lex_name(cursor)
     value if pdf_is_number_start_byte(value) => pdf_cursor_lex_number(cursor)
     91 | 93 => pdf_cursor_lex_delimiter(cursor)
-    40 => cursor.lex_pdf_literal_string()
+    40 => pdf_cursor_lex_literal_string(cursor)
     60 =>
       if pdf_cursor_matches_ascii_at(cursor, position, [60, 60]) {
         pdf_cursor_lex_delimiter(cursor)

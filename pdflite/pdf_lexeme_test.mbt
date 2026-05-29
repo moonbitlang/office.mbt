@@ -232,20 +232,20 @@ test "ByteCursor lexes PDF comments and leaves newline for whitespace scan" {
 }
 
 ///|
-test "ByteCursor lexes PDF literal strings as bytes" {
+test "pdf_cursor_lex_literal_string lexes PDF literal strings as bytes" {
   let cursor = @pdflite.byte_cursor_of_bytes(
     lexeme_bytes_for_test([
       40, 65, 92, 110, 66, 92, 48, 53, 51, 92, 40, 67, 92, 41, 41, 32, 40, 120, 40,
       121, 41, 122, 41,
     ]),
   )
-  let first = try! cursor.lex_pdf_literal_string()
+  let first = try! @pdflite.pdf_cursor_lex_literal_string(cursor)
   guard first is LexString(first_bytes) else { fail("expected LexString") }
   @test.assert_eq(first_bytes.to_array().map(byte => byte.to_int()), [
     65, 10, 66, 43, 40, 67, 41,
   ])
   @pdflite.pdf_cursor_drop_whitespace(cursor)
-  let second = try! cursor.lex_pdf_literal_string()
+  let second = try! @pdflite.pdf_cursor_lex_literal_string(cursor)
   guard second is LexString(second_bytes) else {
     fail("expected second LexString")
   }
@@ -257,7 +257,7 @@ test "ByteCursor lexes PDF literal strings as bytes" {
       40, 92, 114, 92, 116, 92, 98, 92, 102, 92, 53, 65, 92, 53, 51, 65, 41,
     ]),
   )
-  let escaped = try! escapes.lex_pdf_literal_string()
+  let escaped = try! @pdflite.pdf_cursor_lex_literal_string(escapes)
   guard escaped is LexString(escaped_bytes) else {
     fail("expected escaped LexString")
   }
@@ -267,38 +267,46 @@ test "ByteCursor lexes PDF literal strings as bytes" {
 }
 
 ///|
-test "ByteCursor treats backslash newline in PDF literal strings as continuation" {
+test "pdf_cursor_lex_literal_string treats backslash newline as continuation" {
   let cursor = @pdflite.byte_cursor_of_bytes(
     lexeme_bytes_for_test([40, 65, 92, 13, 10, 66, 41]),
   )
-  let lexeme = try! cursor.lex_pdf_literal_string()
+  let lexeme = try! @pdflite.pdf_cursor_lex_literal_string(cursor)
   guard lexeme is LexString(bytes) else { fail("expected LexString") }
   @test.assert_eq(bytes.to_array().map(byte => byte.to_int()), [65, 66])
   let carriage_return = @pdflite.byte_cursor_of_bytes(
     lexeme_bytes_for_test([40, 65, 92, 13, 66, 41]),
   )
-  let lexeme = try! carriage_return.lex_pdf_literal_string()
+  let lexeme = try! @pdflite.pdf_cursor_lex_literal_string(carriage_return)
   guard lexeme is LexString(bytes) else { fail("expected LexString") }
   @test.assert_eq(bytes.to_array().map(byte => byte.to_int()), [65, 66])
   let line_feed = @pdflite.byte_cursor_of_bytes(
     lexeme_bytes_for_test([40, 65, 92, 10, 66, 41]),
   )
-  let lexeme = try! line_feed.lex_pdf_literal_string()
+  let lexeme = try! @pdflite.pdf_cursor_lex_literal_string(line_feed)
   guard lexeme is LexString(bytes) else { fail("expected LexString") }
   @test.assert_eq(bytes.to_array().map(byte => byte.to_int()), [65, 66])
   @test.assert_eq(
-    try! @pdflite.byte_cursor_of_bytes(lexeme_bytes_for_test([65])).lex_pdf_literal_string(),
+    try! @pdflite.pdf_cursor_lex_literal_string(
+      @pdflite.byte_cursor_of_bytes(lexeme_bytes_for_test([65])),
+    ),
     LexNone,
   )
-  let missing_escaped : Result[@pdflite.PdfLexeme, Error] = try? @pdflite.byte_cursor_of_bytes(
+  let missing_escaped_cursor = @pdflite.byte_cursor_of_bytes(
     lexeme_bytes_for_test([40, 65, 92]),
-  ).lex_pdf_literal_string()
+  )
+  let missing_escaped : Result[@pdflite.PdfLexeme, Error] = try? @pdflite.pdf_cursor_lex_literal_string(
+    missing_escaped_cursor,
+  )
   guard missing_escaped is Err(@pdflite.PdfError::EndOfInput) else {
     fail("expected @pdflite.PdfError::EndOfInput")
   }
-  let unterminated : Result[@pdflite.PdfLexeme, Error] = try? @pdflite.byte_cursor_of_bytes(
+  let unterminated_cursor = @pdflite.byte_cursor_of_bytes(
     lexeme_bytes_for_test([40, 65]),
-  ).lex_pdf_literal_string()
+  )
+  let unterminated : Result[@pdflite.PdfLexeme, Error] = try? @pdflite.pdf_cursor_lex_literal_string(
+    unterminated_cursor,
+  )
   guard unterminated is Err(@pdflite.PdfError::EndOfInput) else {
     fail("expected @pdflite.PdfError::EndOfInput")
   }
