@@ -7,14 +7,6 @@ priv struct PdfXRefSection {
 }
 
 ///|
-fn ByteCursor::seek_pdf_absolute(
-  self : ByteCursor,
-  position : Int,
-) -> Unit raise PdfError {
-  self.seek_absolute(position)
-}
-
-///|
 fn pdf_view_matches_ascii_at(
   view : BytesView,
   position : Int,

@@ -817,7 +817,7 @@ test "parser prefix helper reports malformed indirect prefixes" {
 ///|
 test "private reader byte-view helpers cover boundary cases" {
   let cursor = byte_cursor_of_bytes(@ascii.encode("abc"))
-  let bad_seek : Result[Unit, Error] = try? cursor.seek_pdf_absolute(-1)
+  let bad_seek : Result[Unit, Error] = try? cursor.seek_absolute(-1)
   guard bad_seek is Err(PdfError::InvalidCursorPosition(-1)) else {
     fail("expected PdfError::InvalidCursorPosition")
   }

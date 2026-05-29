@@ -94,13 +94,13 @@ fn ByteCursor::finish_pdf_stream_object_with_length(
     raise EndOfInput
   }
   let stream_data = if defer_stream_data {
-    self.seek_pdf_absolute(self.absolute_position() + length)
+    self.seek_absolute(self.absolute_position() + length)
     StreamToGet(stream_to_get(self.deep_copy(), data_position, length))
   } else {
     StreamGot(self.read_bytes(length))
   }
   if !pdf_reader_stream_end_marker_at(self.view(), self.absolute_position()) {
-    self.seek_pdf_absolute(stream_keyword_position)
+    self.seek_absolute(stream_keyword_position)
     self.finish_pdf_malformed_stream_object(prefix)
   } else {
     self.consume_pdf_stream_line_break()
@@ -163,7 +163,7 @@ fn ByteCursor::finish_pdf_malformed_stream_object(
   let stream_data = self
     .view_at_absolute(data_start, data_end - data_start)
     .to_owned()
-  self.seek_pdf_absolute(endstream + 9)
+  self.seek_absolute(endstream + 9)
   self.drop_pdf_whitespace()
   self.consume_pdf_ascii([101, 110, 100, 111, 98, 106], ParseEndObjectExpected)
   {
@@ -193,7 +193,7 @@ fn ByteCursor::finish_pdf_object_stream_member_with_length(
   }
   let stream_data = self.read_bytes(length)
   if !pdf_reader_stream_end_marker_at(self.view(), self.absolute_position()) {
-    self.seek_pdf_absolute(stream_keyword_position)
+    self.seek_absolute(stream_keyword_position)
     self.finish_pdf_malformed_object_stream_member(prefix)
   } else {
     self.consume_pdf_stream_line_break()
@@ -231,7 +231,7 @@ fn ByteCursor::finish_pdf_malformed_object_stream_member(
   let stream_data = self
     .view_at_absolute(data_start, data_end - data_start)
     .to_owned()
-  self.seek_pdf_absolute(endstream + 9)
+  self.seek_absolute(endstream + 9)
   {
     number: prefix.number,
     generation: prefix.generation,
@@ -256,7 +256,7 @@ fn ByteCursor::finish_pdf_object_stream_member(
     Ok(length) =>
       self.finish_pdf_object_stream_member_with_length(prefix, length) catch {
         _ => {
-          self.seek_pdf_absolute(stream_position)
+          self.seek_absolute(stream_position)
           self.finish_pdf_malformed_object_stream_member(prefix)
         }
       }

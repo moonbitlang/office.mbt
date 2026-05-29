@@ -17,7 +17,7 @@ fn PdfDocument::load_reconstructed_xref_stream_plain_objects(
           xref.object_number != 0 &&
           !xref_stream_ref_set.contains(xref.object_number, xref.offset) {
           try {
-            cursor.seek_pdf_absolute(xref.offset)
+            cursor.seek_absolute(xref.offset)
             let parsed = cursor.read_first_indirect_object_at_current(
               xrefs,
               xref_index=Some(xref_index),
@@ -49,7 +49,7 @@ fn PdfDocument::load_reconstructed_classic_xref_plain_objects(
   for xref in xrefs {
     if xref.in_use && xref.object_number != 0 {
       try {
-        cursor.seek_pdf_absolute(xref.offset)
+        cursor.seek_absolute(xref.offset)
         let parsed = cursor.read_first_indirect_object_at_current(
           xrefs,
           xref_index=Some(xref_index),

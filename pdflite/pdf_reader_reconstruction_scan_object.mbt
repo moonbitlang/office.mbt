@@ -4,7 +4,7 @@ fn ByteCursor::read_reconstructed_object_at(
   position : Int,
   xrefs : ArrayView[PdfClassicXRefEntry],
 ) -> PdfParsedIndirectObject raise PdfError {
-  self.seek_pdf_absolute(position)
+  self.seek_absolute(position)
   self.read_reconstructed_indirect_object_at_current(xrefs)
 }
 
@@ -27,7 +27,7 @@ fn ByteCursor::lex_reconstructed_indirect_object_tokens_at_current(
     match tokens {
       Ok(tokens) => {
         output = tokens
-        self.seek_pdf_absolute(start + cursor.absolute_position())
+        self.seek_absolute(start + cursor.absolute_position())
         found = true
         done = true
       }

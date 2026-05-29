@@ -11,11 +11,11 @@ fn pdf_reader_validate_xref_metadata_for_reconstruction(
     if depth >= 1024 {
       raise XRefExpected
     }
-    cursor.seek_pdf_absolute(current_xref)
+    cursor.seek_absolute(current_xref)
     let section = cursor.read_pdf_xref_section()
     match pdf_trailer_xref_stream_position(section.trailer) {
       Some(xref_stream_position) => {
-        cursor.seek_pdf_absolute(xref_stream_position)
+        cursor.seek_absolute(xref_stream_position)
         ignore(cursor.read_pdf_xref_stream_section())
       }
       None => ()
@@ -39,7 +39,7 @@ fn pdf_reader_startxref_root_uses_object_stream(
 ) -> Bool raise PdfError {
   let cursor = byte_cursor_of_view(data)
   ignore(cursor.read_pdf_header())
-  cursor.seek_pdf_absolute(pdf_read_startxref_position(cursor.view()))
+  cursor.seek_absolute(pdf_read_startxref_position(cursor.view()))
   let section = cursor.read_pdf_xref_section()
   let root = match section.trailer.lookup_immediate(pdf_reader_root_name()) {
     Some(PdfIndirect(root)) => root
@@ -74,7 +74,7 @@ fn pdf_reader_startxref_object_stream_root_unusable(
 ) -> Bool raise PdfError {
   let cursor = byte_cursor_of_view(data)
   ignore(cursor.read_pdf_header())
-  cursor.seek_pdf_absolute(pdf_read_startxref_position(cursor.view()))
+  cursor.seek_absolute(pdf_read_startxref_position(cursor.view()))
   let section = cursor.read_pdf_xref_section()
   match section.trailer.lookup_immediate(pdf_reader_root_name()) {
     Some(PdfIndirect(root)) =>
@@ -93,7 +93,7 @@ fn pdf_reader_startxref_object_stream_root_unusable(
                     None => {
                       let object_stream_xref = entry
                       let xref_index = pdf_classic_xref_index(section.entries)
-                      cursor.seek_pdf_absolute(object_stream_xref.offset)
+                      cursor.seek_absolute(object_stream_xref.offset)
                       let parsed = cursor.read_first_indirect_object_at_current(
                         section.entries,
                         xref_index=Some(xref_index),
@@ -154,7 +154,7 @@ fn pdf_reader_startxref_uses_xref_stream(
 ) -> Bool raise PdfError {
   let cursor = byte_cursor_of_view(data)
   ignore(cursor.read_pdf_header())
-  cursor.seek_pdf_absolute(pdf_read_startxref_position(cursor.view()))
+  cursor.seek_absolute(pdf_read_startxref_position(cursor.view()))
   let section = cursor.read_pdf_xref_section()
   section.stream_object_number is Some(_)
 }
@@ -174,7 +174,7 @@ fn pdf_reader_startxref_has_xref_stream_prefix(
 ) -> Bool raise PdfError {
   let cursor = byte_cursor_of_view(data)
   ignore(cursor.read_pdf_header())
-  cursor.seek_pdf_absolute(pdf_read_startxref_position(cursor.view()))
+  cursor.seek_absolute(pdf_read_startxref_position(cursor.view()))
   let parsed = cursor.read_reconstructed_indirect_prefix_at_current()
   match parsed.object {
     PdfDictionary(_) as dictionary => pdf_reader_xref_stream_type_ok(dictionary)

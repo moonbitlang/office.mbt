@@ -3,7 +3,7 @@ fn ByteCursor::read_reconstructed_xref_stream_section_at(
   self : ByteCursor,
   position : Int,
 ) -> (PdfXRefSection, Int) raise PdfError {
-  self.seek_pdf_absolute(position)
+  self.seek_absolute(position)
   let section = self.read_pdf_xref_stream_section()
   (section, self.absolute_position())
 }
@@ -13,7 +13,7 @@ fn ByteCursor::read_reconstructed_classic_xref_section_at(
   self : ByteCursor,
   position : Int,
 ) -> (PdfXRefSection, Int) raise PdfError {
-  self.seek_pdf_absolute(position)
+  self.seek_absolute(position)
   let section = self.read_pdf_xref_section()
   guard section.stream_object_number is None else { raise XRefExpected }
   (section, self.absolute_position())

@@ -36,7 +36,7 @@ fn pdf_reconstructed_classic_xref_entry_is_verified(
   } else {
     let cursor = byte_cursor_of_view(data)
     try {
-      cursor.seek_pdf_absolute(xref.offset)
+      cursor.seek_absolute(xref.offset)
       let parsed = cursor.read_first_indirect_object_at_current(
         entries,
         xref_index=Some(xref_index),

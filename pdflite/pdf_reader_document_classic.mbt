@@ -52,7 +52,7 @@ fn pdf_read_classic_document_from_view_at_revision(
     if depth >= 1024 {
       raise XRefExpected
     }
-    cursor.seek_pdf_absolute(current_xref)
+    cursor.seek_absolute(current_xref)
     let section = cursor.read_pdf_xref_section()
     let current_revision = depth + 1
     let read_section = pdf_reader_revision_reads_section(
@@ -76,7 +76,7 @@ fn pdf_read_classic_document_from_view_at_revision(
     if read_section {
       match pdf_trailer_xref_stream_position(current_trailer) {
         Some(xref_stream_position) => {
-          cursor.seek_pdf_absolute(xref_stream_position)
+          cursor.seek_absolute(xref_stream_position)
           let stream_section = cursor.read_pdf_xref_stream_section()
           pdf_classic_xrefs_add_newer_first_with_seen(
             xrefs,
@@ -114,7 +114,7 @@ fn pdf_read_classic_document_from_view_at_revision(
         if xref.in_use &&
           xref.object_number != 0 &&
           !xref_stream_ref_set.contains(xref.object_number, xref.offset) {
-          cursor.seek_pdf_absolute(xref.offset)
+          cursor.seek_absolute(xref.offset)
           let parsed = cursor.read_first_indirect_object_at_current(
             xrefs,
             xref_index=Some(xref_index),

@@ -76,9 +76,9 @@ fn ByteCursor::resolve_classic_stream_length(
       match xref {
         Some(xref) => {
           let saved_position = self.absolute_position()
-          self.seek_pdf_absolute(xref.offset)
+          self.seek_absolute(xref.offset)
           let parsed_result : Result[(PdfParsedIndirectObject, Bool), Error] = try? self.read_first_indirect_object_segment_at_current()
-          self.seek_pdf_absolute(saved_position)
+          self.seek_absolute(saved_position)
           let (parsed, complete) = match parsed_result {
             Ok(parsed) => parsed
             Err(_) => raise StreamLengthExpected

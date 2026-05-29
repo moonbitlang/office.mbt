@@ -44,7 +44,7 @@ pub fn pdf_revisions_from_view(data : BytesView) -> Int raise PdfError {
     if revisions >= 1024 {
       raise XRefExpected
     }
-    cursor.seek_pdf_absolute(current_xref)
+    cursor.seek_absolute(current_xref)
     let section = cursor.read_pdf_xref_section()
     revisions += 1
     match pdf_trailer_prev_position(section.trailer) {
