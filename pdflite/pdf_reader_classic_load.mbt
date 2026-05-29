@@ -73,10 +73,5 @@ fn PdfDocument::load_classic_xrefs(
 ) -> Unit raise PdfError {
   self.load_classic_plain_xref_objects(cursor, xrefs, xref_stream_refs)
   self.load_classic_object_stream_entries(xrefs, user_password, owner_password)
-  self.set_trailer_dict(
-    @reader.pdf_reader_sanitize_trailer(
-      self.trailer_dict(),
-      self.objects.max_object_number() + 1,
-    ),
-  )
+  self.sanitize_reader_trailer()
 }

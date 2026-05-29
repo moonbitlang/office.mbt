@@ -27,10 +27,5 @@ fn PdfDocument::load_reconstructed_plan(
       owner_password,
     )
   }
-  self.set_trailer_dict(
-    @reader.pdf_reader_sanitize_trailer(
-      self.trailer_dict(),
-      self.objects.max_object_number() + 1,
-    ),
-  )
+  self.sanitize_reader_trailer()
 }
