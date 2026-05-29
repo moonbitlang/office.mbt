@@ -132,7 +132,7 @@ fn pdf_content_lex_next(cursor : ByteCursor) -> PdfContentLexeme raise PdfError 
   match value {
     value if value == pdf_no_more => ContentEnd
     37 => {
-      ignore(cursor.lex_pdf_comment())
+      ignore(pdf_cursor_lex_comment(cursor))
       ContentComment
     }
     47 | 40 | 91 | 60 => ContentOperand(pdf_content_read_object(cursor))

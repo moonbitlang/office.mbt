@@ -42,9 +42,9 @@ pub fn pdf_cursor_lex_token(cursor : ByteCursor) -> PdfLexeme raise PdfError {
   let value = cursor.peek_byte()
   match value {
     value if value == pdf_no_more => StopLexing
-    37 => cursor.lex_pdf_comment()
+    37 => pdf_cursor_lex_comment(cursor)
     116 | 102 => pdf_cursor_lex_bool(cursor)
-    47 => cursor.lex_pdf_name()
+    47 => pdf_cursor_lex_name(cursor)
     value if pdf_is_number_start_byte(value) => pdf_cursor_lex_number(cursor)
     91 | 93 => pdf_cursor_lex_delimiter(cursor)
     40 => cursor.lex_pdf_literal_string()

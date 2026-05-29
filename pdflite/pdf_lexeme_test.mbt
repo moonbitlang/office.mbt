@@ -178,20 +178,22 @@ test "ByteCursor lexes PDF names as bytes including slash and hex escapes" {
       47, 67,
     ]),
   )
-  let first = try! cursor.lex_pdf_name()
+  let first = try! @pdflite.pdf_cursor_lex_name(cursor)
   guard first is LexName(name) else { fail("expected LexName") }
   @test.assert_eq(name.bytes().to_array().map(byte => byte.to_int()), [
     47, 65, 32, 66, 65, 97, 175, 175,
   ])
   @test.assert_eq(cursor.peek_byte(), 32)
   @pdflite.pdf_cursor_drop_whitespace(cursor)
-  let second = try! cursor.lex_pdf_name()
+  let second = try! @pdflite.pdf_cursor_lex_name(cursor)
   guard second is LexName(second_name) else { fail("expected second LexName") }
   @test.assert_eq(second_name.bytes().to_array().map(byte => byte.to_int()), [
     47, 67,
   ])
   @test.assert_eq(
-    try! @pdflite.byte_cursor_of_bytes(lexeme_bytes_for_test([65])).lex_pdf_name(),
+    try! @pdflite.pdf_cursor_lex_name(
+      @pdflite.byte_cursor_of_bytes(lexeme_bytes_for_test([65])),
+    ),
     LexNone,
   )
 }
@@ -201,7 +203,9 @@ test "ByteCursor reports malformed PDF name hex escapes" {
   let cursor = @pdflite.byte_cursor_of_bytes(
     lexeme_bytes_for_test([47, 65, 35, 90, 90]),
   )
-  let result : Result[@pdflite.PdfLexeme, Error] = try? cursor.lex_pdf_name()
+  let result : Result[@pdflite.PdfLexeme, Error] = try? @pdflite.pdf_cursor_lex_name(
+    cursor,
+  )
   guard result is Err(@pdflite.PdfError::InvalidHexEscape) else {
     fail("expected @pdflite.PdfError::InvalidHexEscape")
   }
@@ -213,14 +217,16 @@ test "ByteCursor lexes PDF comments and leaves newline for whitespace scan" {
     lexeme_bytes_for_test([37, 65, 66, 13, 10, 49]),
   )
   @test.assert_eq(
-    cursor.lex_pdf_comment(),
+    @pdflite.pdf_cursor_lex_comment(cursor),
     LexComment(lexeme_bytes_for_test([])),
   )
   @test.assert_eq(cursor.peek_byte(), 13)
   @pdflite.pdf_cursor_drop_whitespace(cursor)
   @test.assert_eq(@pdflite.pdf_cursor_lex_number(cursor), LexInt(1))
   @test.assert_eq(
-    @pdflite.byte_cursor_of_bytes(lexeme_bytes_for_test([65])).lex_pdf_comment(),
+    @pdflite.pdf_cursor_lex_comment(
+      @pdflite.byte_cursor_of_bytes(lexeme_bytes_for_test([65])),
+    ),
     LexNone,
   )
 }
