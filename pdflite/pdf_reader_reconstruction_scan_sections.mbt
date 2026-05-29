@@ -53,7 +53,7 @@ fn pdf_read_reconstructed_xref_stream_sections(
   let cursor = byte_cursor_of_view(data)
   let mut position = 0
   while position < data.length() {
-    if pdf_reader_reconstruction_indirect_header_at(data, position) {
+    if @reader.pdf_reader_reconstruction_indirect_header_at(data, position) {
       let parsed : Result[(PdfXRefSection, Int), Error] = try? pdf_cursor_read_reconstructed_xref_stream_section_at(
         cursor, position,
       )
@@ -63,7 +63,7 @@ fn pdf_read_reconstructed_xref_stream_sections(
           position = next_position
         }
         Err(_) =>
-          position = pdf_reader_reconstruction_skip_malformed_object(
+          position = @reader.pdf_reader_reconstruction_skip_malformed_object(
             data, position,
           ).unwrap()
       }

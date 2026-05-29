@@ -44,7 +44,7 @@ fn pdf_read_reconstructed_trailers(
         Err(_) => ()
       }
     } else if include_xref_streams &&
-      pdf_reader_reconstruction_indirect_header_at(data, position) {
+      @reader.pdf_reader_reconstruction_indirect_header_at(data, position) {
       let trailer : Result[PdfObject, Error] = try? pdf_cursor_read_reconstructed_xref_stream_trailer_at(
         cursor, position,
       )

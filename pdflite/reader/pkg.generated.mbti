@@ -55,6 +55,10 @@ pub fn pdf_reader_objstm_name() -> @core.PdfName
 
 pub fn pdf_reader_prev_name() -> @core.PdfName
 
+pub fn pdf_reader_reconstruction_indirect_header_at(BytesView, Int) -> Bool
+
+pub fn pdf_reader_reconstruction_skip_malformed_object(BytesView, Int) -> Int?
+
 pub fn pdf_reader_root_name() -> @core.PdfName
 
 pub fn pdf_reader_sanitize_trailer(@syntax.PdfObject, Int) -> @syntax.PdfObject raise @core.PdfError

@@ -15,6 +15,12 @@ options(
     "pdf_reader_header_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
     "pdf_reader_names_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
     "pdf_reader_object_stream_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
+    "pdf_reader_reconstruction_scan_test.mbt": [
+      "wasm-gc",
+      "js",
+      "native",
+      "llvm",
+    ],
     "pdf_reader_trailer_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
     "pdf_reader_xref_classic_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
     "pdf_reader_xref_model_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],

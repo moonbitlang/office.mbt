@@ -7,7 +7,7 @@ fn pdf_read_reconstructed_xrefs(
   let xref_index = pdf_classic_xref_index(xrefs)
   let mut position = 0
   while position < data.length() {
-    if pdf_reader_reconstruction_indirect_header_at(data, position) {
+    if @reader.pdf_reader_reconstruction_indirect_header_at(data, position) {
       cursor.seek_absolute(position)
       let parsed : Result[(PdfParsedIndirectObject, Int?), Error] = try? pdf_cursor_read_reconstructed_indirect_scan_candidate_at_current(
         cursor,
@@ -35,7 +35,7 @@ fn pdf_read_reconstructed_xrefs(
           }
         }
         Err(_) =>
-          position = pdf_reader_reconstruction_skip_malformed_object(
+          position = @reader.pdf_reader_reconstruction_skip_malformed_object(
             data, position,
           ).unwrap()
       }

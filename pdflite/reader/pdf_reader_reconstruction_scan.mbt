@@ -1,7 +1,8 @@
 ///|
 fn pdf_reader_skip_digits(data : BytesView, position : Int) -> Int {
   let mut current = position
-  while current < data.length() && pdf_is_digit_byte(data[current].to_int()) {
+  while current < data.length() &&
+        @core.pdf_is_digit_byte(data[current].to_int()) {
     current += 1
   }
   current
@@ -13,12 +14,12 @@ fn pdf_reader_skip_required_whitespace(
   position : Int,
 ) -> Int? {
   if position >= data.length() ||
-    !pdf_is_whitespace_byte(data[position].to_int()) {
+    !@core.pdf_is_whitespace_byte(data[position].to_int()) {
     None
   } else {
     let mut current = position
     while current < data.length() &&
-          pdf_is_whitespace_byte(data[current].to_int()) {
+          @core.pdf_is_whitespace_byte(data[current].to_int()) {
       current += 1
     }
     Some(current)
@@ -26,13 +27,14 @@ fn pdf_reader_skip_required_whitespace(
 }
 
 ///|
-fn pdf_reader_reconstruction_indirect_header_at(
+/// Return whether `position` starts a plausible indirect-object header.
+pub fn pdf_reader_reconstruction_indirect_header_at(
   data : BytesView,
   position : Int,
 ) -> Bool {
   if position < 0 ||
     position >= data.length() ||
-    !pdf_is_digit_byte(data[position].to_int()) {
+    !@core.pdf_is_digit_byte(data[position].to_int()) {
     false
   } else {
     let after_object_number = pdf_reader_skip_digits(data, position)
@@ -42,10 +44,12 @@ fn pdf_reader_reconstruction_indirect_header_at(
         match pdf_reader_skip_required_whitespace(data, after_generation) {
           Some(keyword_start) => {
             let after_keyword = keyword_start + 3
-            pdf_view_matches_ascii_at(data, keyword_start, [111, 98, 106]) &&
+            @core.pdf_view_matches_ascii_at(data, keyword_start, [111, 98, 106]) &&
             (
               after_keyword >= data.length() ||
-              pdf_is_whitespace_or_delimiter_byte(data[after_keyword].to_int())
+              @core.pdf_is_whitespace_or_delimiter_byte(
+                data[after_keyword].to_int(),
+              )
             )
           }
           None => false
@@ -59,7 +63,8 @@ fn pdf_reader_reconstruction_indirect_header_at(
 ///|
 fn pdf_reader_line_end(data : BytesView, position : Int) -> Int {
   let mut current = position
-  while current < data.length() && !pdf_is_newline_byte(data[current].to_int()) {
+  while current < data.length() &&
+        !@core.pdf_is_newline_byte(data[current].to_int()) {
     current += 1
   }
   current
@@ -85,22 +90,23 @@ fn pdf_reader_trimmed_line_starts_or_ends_with_endobj(
   line_end : Int,
 ) -> Bool {
   let mut start = line_start
-  while start < line_end && pdf_is_whitespace_byte(data[start].to_int()) {
+  while start < line_end && @core.pdf_is_whitespace_byte(data[start].to_int()) {
     start += 1
   }
   let mut end = line_end
-  while end > start && pdf_is_whitespace_byte(data[end - 1].to_int()) {
+  while end > start && @core.pdf_is_whitespace_byte(data[end - 1].to_int()) {
     end -= 1
   }
   end - start >= 6 &&
   (
-    pdf_view_matches_ascii_at(data, start, [101, 110, 100, 111, 98, 106]) ||
-    pdf_view_matches_ascii_at(data, end - 6, [101, 110, 100, 111, 98, 106])
+    @core.pdf_view_matches_ascii_at(data, start, [101, 110, 100, 111, 98, 106]) ||
+    @core.pdf_view_matches_ascii_at(data, end - 6, [101, 110, 100, 111, 98, 106])
   )
 }
 
 ///|
-fn pdf_reader_reconstruction_skip_malformed_object(
+/// Return the next scan position after a malformed indirect object candidate.
+pub fn pdf_reader_reconstruction_skip_malformed_object(
   data : BytesView,
   position : Int,
 ) -> Int? {
