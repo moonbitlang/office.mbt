@@ -1,0 +1,35 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pdflite/writer"
+
+import {
+  "bobzhang/pdflite/crypt_core",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn pdf_write_encryption(@crypt_core.PdfEncryptionMethod, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission]) -> PdfWriteEncryption
+
+// Errors
+
+// Types and methods
+pub(all) struct PdfWriteEncryption {
+  encryption_method : @crypt_core.PdfEncryptionMethod
+  user_password : Bytes
+  owner_password : Bytes
+  denied_permissions : Array[@crypt_core.PdfPermission]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfWriteMode {
+  PdfWriteClassic
+  PdfWriteXRefStream
+  PdfWriteCompressedXRefStream
+} derive(Eq, ToJson, @debug.Debug)
+
+// Type aliases
+pub type PdfBytes = Bytes
+
+pub using @crypt_core {type PdfEncryptionMethod}
+
+pub using @crypt_core {type PdfPermission}
+
+// Traits
