@@ -16,39 +16,8 @@ fn pdf_read_reconstructed_document_from_view(
     include_xref_stream_trailers,
     pdf_reader_reconstruction_callbacks(),
   )
-  document.load_reconstructed_classic_xref_plain_objects(
-    data,
-    plan.classic_xrefs,
-  )
-  document.load_reconstructed_object_xrefs(
-    data,
-    plan.object_xrefs,
-    plan.xref_coverage,
-  )
-  if include_xref_stream_trailers {
-    document.load_reconstructed_xref_stream_objects(
-      data,
-      plan.xref_stream_sections,
-    )
-    document.load_reconstructed_physical_object_stream_members()
-  }
-  document.set_trailer_and_root(
-    document.select_reconstructed_trailer(plan.trailers),
-  )
-  if include_xref_stream_trailers && document.is_encrypted() {
-    document.load_reconstructed_xref_stream_embedded_objects_with_passwords(
-      @reader.pdf_reader_reconstruction_xref_stream_entries(
-        plan.xref_stream_sections,
-      ),
-      user_password,
-      owner_password,
-    )
-  }
-  document.set_trailer_dict(
-    @reader.pdf_reader_sanitize_trailer(
-      document.trailer_dict(),
-      document.objects.max_object_number() + 1,
-    ),
+  document.load_reconstructed_plan(
+    data, plan, include_xref_stream_trailers, user_password, owner_password,
   )
   document
 }
