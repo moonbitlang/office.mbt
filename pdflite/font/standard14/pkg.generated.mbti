@@ -9,6 +9,12 @@ import {
 // Values
 pub fn pdf_standard14_afm_data(PdfStandardFont) -> @afm.PdfAfmData
 
+pub fn pdf_standard14_kern(@afm.PdfAfmData, Int, Int) -> Int
+
+pub fn pdf_standard14_width_of_charcode(@afm.PdfAfmData, Int) -> Int
+
+pub fn pdf_standard14_width_of_glyphname(@afm.PdfAfmData, BytesView) -> Int
+
 pub fn pdf_standard_font_of_name(String) -> PdfStandardFont?
 
 pub fn pdf_string_of_standard_font(PdfStandardFont) -> String
