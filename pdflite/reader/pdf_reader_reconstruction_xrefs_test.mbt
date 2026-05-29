@@ -27,6 +27,45 @@ fn reader_reconstruction_verify_xref_for_test(
 }
 
 ///|
+fn reader_reconstruction_object_xref_parser_for_test(
+  cursor : @core.ByteCursor,
+  position : Int,
+  _xrefs : ArrayView[@reader.PdfClassicXRefEntry],
+  _xref_index : @reader.PdfClassicXRefIndex,
+) -> (@reader.PdfClassicXRefEntry?, Int?) raise @core.PdfError {
+  cursor.seek_absolute(position)
+  (
+    Some(reader_reconstruction_xref_entry_for_test(1, position)),
+    Some(position + 18),
+  )
+}
+
+///|
+fn reader_reconstruction_object_xref_skip_parser_for_test(
+  cursor : @core.ByteCursor,
+  position : Int,
+  _xrefs : ArrayView[@reader.PdfClassicXRefEntry],
+  _xref_index : @reader.PdfClassicXRefIndex,
+) -> (@reader.PdfClassicXRefEntry?, Int?) raise @core.PdfError {
+  cursor.seek_absolute(position)
+  if position == 0 {
+    raise XRefExpected
+  }
+  (Some(reader_reconstruction_xref_entry_for_test(2, position)), None)
+}
+
+///|
+fn reader_reconstruction_object_xref_none_parser_for_test(
+  cursor : @core.ByteCursor,
+  position : Int,
+  _xrefs : ArrayView[@reader.PdfClassicXRefEntry],
+  _xref_index : @reader.PdfClassicXRefIndex,
+) -> (@reader.PdfClassicXRefEntry?, Int?) raise @core.PdfError {
+  cursor.seek_absolute(position)
+  (None, Some(position + 18))
+}
+
+///|
 test "reconstructed xref stream entries keep newest section entries first" {
   let older = reader_reconstruction_xref_section_for_test([
     reader_reconstruction_xref_entry_for_test(1, 10),
@@ -59,6 +98,34 @@ test "reconstructed classic xref entries keep newest section entries first" {
   ])
   @test.assert_eq([ for xref in xrefs => xref.object_number ], [5, 6, 4])
   @test.assert_eq([ for xref in xrefs => xref.offset ], [500, 600, 40])
+}
+
+///|
+test "reconstructed object xref scanner records parsed candidates" {
+  let xrefs = @reader.pdf_reader_reconstruction_object_xrefs(
+    b"1 0 obj\n<< >>\nendobj\n", reader_reconstruction_object_xref_parser_for_test,
+  )
+  @test.assert_eq(xrefs.length(), 1)
+  @test.assert_eq(xrefs[0].object_number, 1)
+  @test.assert_eq(xrefs[0].offset, 0)
+}
+
+///|
+test "reconstructed object xref scanner skips malformed candidates" {
+  let xrefs = @reader.pdf_reader_reconstruction_object_xrefs(
+    b"1 0 obj\nbad\nendobj\n2 0 obj\nok\nendobj\n", reader_reconstruction_object_xref_skip_parser_for_test,
+  )
+  @test.assert_eq(xrefs.length(), 1)
+  @test.assert_eq(xrefs[0].object_number, 2)
+  @test.assert_eq(xrefs[0].offset > 0, true)
+}
+
+///|
+test "reconstructed object xref scanner ignores empty candidates" {
+  let xrefs = @reader.pdf_reader_reconstruction_object_xrefs(
+    b"1 0 obj\n<< >>\nendobj\n", reader_reconstruction_object_xref_none_parser_for_test,
+  )
+  @test.assert_eq(xrefs.length(), 0)
 }
 
 ///|

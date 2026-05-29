@@ -78,6 +78,59 @@ pub fn pdf_reader_reconstruction_xref_stream_refs(
 }
 
 ///|
+/// Scan a byte view for physically reconstructable indirect-object xref entries.
+///
+/// The caller supplies `read_xref_at_current` because turning a candidate
+/// indirect object into an xref entry depends on higher-level object parsing
+/// and stream-length recovery outside this package.
+pub fn pdf_reader_reconstruction_object_xrefs(
+  data : BytesView,
+  read_xref_at_current : (
+    @core.ByteCursor,
+    Int,
+    ArrayView[PdfClassicXRefEntry],
+    PdfClassicXRefIndex,
+  ) -> (PdfClassicXRefEntry?, Int?) raise @core.PdfError,
+) -> Array[PdfClassicXRefEntry] raise @core.PdfError {
+  let xrefs : Array[PdfClassicXRefEntry] = Array::new(capacity=16)
+  let cursor = @core.byte_cursor_of_view(data)
+  let xref_index = pdf_classic_xref_index(xrefs)
+  let mut position = 0
+  while position < data.length() {
+    if pdf_reader_reconstruction_indirect_header_at(data, position) {
+      cursor.seek_absolute(position)
+      let parsed : Result[(PdfClassicXRefEntry?, Int?), Error] = try? read_xref_at_current(
+        cursor, position, xrefs, xref_index,
+      )
+      match parsed {
+        Ok((xref, next_position)) => {
+          match xref {
+            Some(xref) => {
+              xrefs.push(xref)
+              if !xref_index.entries.contains(xref.object_number) {
+                xref_index.entries[xref.object_number] = xref
+              }
+            }
+            None => ()
+          }
+          match next_position {
+            Some(next) if next > position => position = next
+            _ => position += 1
+          }
+        }
+        Err(_) =>
+          position = pdf_reader_reconstruction_skip_malformed_object(
+            data, position,
+          ).unwrap()
+      }
+    } else {
+      position += 1
+    }
+  }
+  xrefs
+}
+
+///|
 /// Coverage map used to avoid loading objects already owned by reconstructed xref sections.
 pub(all) struct PdfReconstructedXRefCoverage {
   sections : Array[(Int, @core.PdfNumberSet)]
