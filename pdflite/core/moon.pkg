@@ -2,3 +2,16 @@ import {
   "moonbitlang/core/encoding/ascii",
   "moonbitlang/core/debug",
 }
+
+import {
+  "moonbitlang/core/test",
+} for "test"
+
+options(
+  targets: {
+    "bitstream_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
+    "byte_cursor_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
+    "byte_output_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
+    "pdf_error_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
+  },
+)

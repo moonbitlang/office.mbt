@@ -1,19 +1,17 @@
 ///|
-fn pdf_bytes_for_bitstream_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
-  try! @pdflite.pdf_bytes_of_int_array(values)
+fn pdf_bytes_for_bitstream_test(values : ArrayView[Int]) -> @core.PdfBytes {
+  try! @core.pdf_bytes_of_int_array(values)
 }
 
 ///|
-fn pdf_bytes_to_ints_for_bitstream_test(
-  bytes : @pdflite.PdfBytes,
-) -> Array[Int] {
-  @pdflite.pdf_bytes_to_array(bytes).map(byte => byte.to_int())
+fn pdf_bytes_to_ints_for_bitstream_test(bytes : @core.PdfBytes) -> Array[Int] {
+  @core.pdf_bytes_to_array(bytes).map(byte => byte.to_int())
 }
 
 ///|
 test "BitStream reads bits most significant bit first" {
   let bytes = pdf_bytes_for_bitstream_test([0b1010_0001, 0b0110_0000])
-  let stream = @pdflite.bitstream_of_bytes(bytes)
+  let stream = @core.bitstream_of_bytes(bytes)
   @test.assert_eq(try! stream.get_bit_int(), 1)
   @test.assert_eq(try! stream.get_bit_int(), 0)
   @test.assert_eq(try! stream.get_bit_int(), 1)
@@ -26,21 +24,19 @@ test "BitStream reads bits most significant bit first" {
 ///|
 test "BitStream reads 32-bit values into Int64" {
   let bytes = pdf_bytes_for_bitstream_test([0x80, 0x00, 0x00, 0x01])
-  let stream = @pdflite.bitstream_of_bytes(bytes)
+  let stream = @core.bitstream_of_bytes(bytes)
   @test.assert_eq(try! stream.get_value_int64(32), 0x8000_0001)
   @test.assert_eq(stream.bits_read(), 32)
   let bad_count : Result[Int64, Error] = try? stream.get_value_int64(33)
-  guard bad_count is Err(@pdflite.PdfError::InvalidBitCount(33)) else {
-    fail(
-      "expected @pdflite.PdfError::InvalidBitCount for oversized 32-bit read",
-    )
+  guard bad_count is Err(@core.PdfError::InvalidBitCount(33)) else {
+    fail("expected @core.PdfError::InvalidBitCount for oversized 32-bit read")
   }
 }
 
 ///|
 test "BitStream can align to the next byte boundary" {
   let bytes = pdf_bytes_for_bitstream_test([0b1010_0001, 0b0110_0000])
-  let stream = @pdflite.bitstream_of_bytes(bytes)
+  let stream = @core.bitstream_of_bytes(bytes)
   @test.assert_eq(try! stream.get_value_int(3), 0b101)
   stream.align()
   @test.assert_eq(stream.bits_read(), 8)
@@ -50,7 +46,7 @@ test "BitStream can align to the next byte boundary" {
 ///|
 test "BitStream positions can be saved and restored" {
   let bytes = pdf_bytes_for_bitstream_test([0b1010_0001])
-  let stream = @pdflite.bitstream_of_bytes(bytes)
+  let stream = @core.bitstream_of_bytes(bytes)
   @test.assert_eq(try! stream.get_value_int(3), 0b101)
   let mark = stream.position()
   @test.assert_eq(try! stream.get_value_int(3), 0b000)
@@ -61,21 +57,21 @@ test "BitStream positions can be saved and restored" {
 ///|
 test "BitStream reports checked read errors" {
   let bytes = pdf_bytes_for_bitstream_test([0b0000_0000])
-  let stream = @pdflite.bitstream_of_bytes(bytes)
+  let stream = @core.bitstream_of_bytes(bytes)
   @test.assert_eq(try! stream.get_value_int(8), 0)
   let eof : Result[Bool, Error] = try? stream.get_bit()
-  guard eof is Err(@pdflite.PdfError::EndOfInput) else {
-    fail("expected @pdflite.PdfError::EndOfInput after all bits are consumed")
+  guard eof is Err(@core.PdfError::EndOfInput) else {
+    fail("expected @core.PdfError::EndOfInput after all bits are consumed")
   }
   let bad_count : Result[Int, Error] = try? stream.get_value_int(32)
-  guard bad_count is Err(@pdflite.PdfError::InvalidBitCount(32)) else {
-    fail("expected @pdflite.PdfError::InvalidBitCount for oversized read width")
+  guard bad_count is Err(@core.PdfError::InvalidBitCount(32)) else {
+    fail("expected @core.PdfError::InvalidBitCount for oversized read width")
   }
 }
 
 ///|
 test "BitWriter writes bits most significant bit first" {
-  let writer = @pdflite.bit_writer_new()
+  let writer = @core.bit_writer_new()
   writer.put_bit(1)
   writer.put_bit(0)
   writer.put_bit(1)
@@ -88,7 +84,7 @@ test "BitWriter writes bits most significant bit first" {
 
 ///|
 test "BitWriter writes multi-bit values across byte boundaries" {
-  let writer = @pdflite.bit_writer_new()
+  let writer = @core.bit_writer_new()
   writer.put_value_int(4, 0b1010)
   writer.put_value_int(4, 0b0001)
   writer.put_value_int(3, 0b011)
@@ -100,25 +96,23 @@ test "BitWriter writes multi-bit values across byte boundaries" {
 
 ///|
 test "BitWriter writes 32-bit Int64 values" {
-  let writer = @pdflite.bit_writer_new()
+  let writer = @core.bit_writer_new()
   writer.put_value_int64(32, 0x8000_0001)
   @test.assert_eq(writer.bit_length(), 32)
   @test.assert_eq(pdf_bytes_to_ints_for_bitstream_test(writer.to_bytes()), [
     0x80, 0x00, 0x00, 0x01,
   ])
   let bad_count : Result[Unit, Error] = try? writer.put_value_int64(33, 0)
-  guard bad_count is Err(@pdflite.PdfError::InvalidBitCount(33)) else {
-    fail(
-      "expected @pdflite.PdfError::InvalidBitCount for oversized 32-bit write",
-    )
+  guard bad_count is Err(@core.PdfError::InvalidBitCount(33)) else {
+    fail("expected @core.PdfError::InvalidBitCount for oversized 32-bit write")
   }
 }
 
 ///|
 test "BitWriter append_aligned pads first stream and preserves inputs" {
-  let first = @pdflite.bit_writer_new()
+  let first = @core.bit_writer_new()
   first.put_value_int(3, 0b101)
-  let second = @pdflite.bit_writer_new()
+  let second = @core.bit_writer_new()
   second.put_value_int(2, 0b11)
   let appended = first.append_aligned(second)
   @test.assert_eq(first.bit_length(), 3)
@@ -131,9 +125,9 @@ test "BitWriter append_aligned pads first stream and preserves inputs" {
 
 ///|
 test "BitWriter append_aligned avoids extra padding for byte-aligned input" {
-  let first = @pdflite.bit_writer_new()
+  let first = @core.bit_writer_new()
   first.put_value_int(8, 0xAB)
-  let second = @pdflite.bit_writer_new()
+  let second = @core.bit_writer_new()
   second.put_value_int(4, 0xC)
   let appended = first.append_aligned(second)
   @test.assert_eq(appended.bit_length(), 12)
@@ -144,9 +138,9 @@ test "BitWriter append_aligned avoids extra padding for byte-aligned input" {
 
 ///|
 test "BitWriter append_aligned copies complete bytes from second stream" {
-  let first = @pdflite.bit_writer_new()
+  let first = @core.bit_writer_new()
   first.put_value_int(4, 0xA)
-  let second = @pdflite.bit_writer_new()
+  let second = @core.bit_writer_new()
   second.put_value_int(8, 0xBC)
   second.put_value_int(4, 0xD)
   let appended = first.append_aligned(second)
@@ -158,15 +152,13 @@ test "BitWriter append_aligned copies complete bytes from second stream" {
 
 ///|
 test "BitWriter reports checked write errors" {
-  let writer = @pdflite.bit_writer_new()
+  let writer = @core.bit_writer_new()
   let bad_bit : Result[Unit, Error] = try? writer.put_bit(2)
-  guard bad_bit is Err(@pdflite.PdfError::InvalidBit(2)) else {
-    fail("expected @pdflite.PdfError::InvalidBit for values outside 0 or 1")
+  guard bad_bit is Err(@core.PdfError::InvalidBit(2)) else {
+    fail("expected @core.PdfError::InvalidBit for values outside 0 or 1")
   }
   let bad_count : Result[Unit, Error] = try? writer.put_value_int(32, 0)
-  guard bad_count is Err(@pdflite.PdfError::InvalidBitCount(32)) else {
-    fail(
-      "expected @pdflite.PdfError::InvalidBitCount for oversized write width",
-    )
+  guard bad_count is Err(@core.PdfError::InvalidBitCount(32)) else {
+    fail("expected @core.PdfError::InvalidBitCount for oversized write width")
   }
 }
