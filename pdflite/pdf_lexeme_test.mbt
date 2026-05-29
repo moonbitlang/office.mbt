@@ -365,12 +365,12 @@ test "ByteCursor lexes PDF keywords and rewinds malformed endobj suffixes" {
       32, 82, 32, 101, 110, 100, 115, 116, 114, 101, 97, 109,
     ]),
   )
-  @test.assert_eq(try! cursor.lex_pdf_keyword(), LexNull)
-  @test.assert_eq(try! cursor.lex_pdf_keyword(), LexObj)
-  @test.assert_eq(try! cursor.lex_pdf_keyword(), LexEndObj)
+  @test.assert_eq(try! @pdflite.pdf_cursor_lex_keyword(cursor), LexNull)
+  @test.assert_eq(try! @pdflite.pdf_cursor_lex_keyword(cursor), LexObj)
+  @test.assert_eq(try! @pdflite.pdf_cursor_lex_keyword(cursor), LexEndObj)
   @test.assert_eq(@pdflite.pdf_cursor_lex_number(cursor), LexInt(5))
-  @test.assert_eq(try! cursor.lex_pdf_keyword(), LexR)
-  @test.assert_eq(try! cursor.lex_pdf_keyword(), LexEndStream)
+  @test.assert_eq(try! @pdflite.pdf_cursor_lex_keyword(cursor), LexR)
+  @test.assert_eq(try! @pdflite.pdf_cursor_lex_keyword(cursor), LexEndStream)
 }
 
 ///|

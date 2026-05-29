@@ -38,12 +38,10 @@ fn pdf_cursor_matches_ascii_at(
 /// Recognized keywords include `obj`, `endobj`, `R`, `null`, and `endstream`.
 /// If a token begins with `endobj` followed by extra bytes, only `endobj` is
 /// consumed so the suffix can be lexed by later calls.
-pub fn ByteCursor::lex_pdf_keyword(
-  self : ByteCursor,
-) -> PdfLexeme raise PdfError {
-  pdf_cursor_drop_whitespace(self)
-  let start = self.position()
-  let view = pdf_cursor_read_until_whitespace_or_delimiter(self)
+pub fn pdf_cursor_lex_keyword(cursor : ByteCursor) -> PdfLexeme raise PdfError {
+  pdf_cursor_drop_whitespace(cursor)
+  let start = cursor.position()
+  let view = pdf_cursor_read_until_whitespace_or_delimiter(cursor)
   match view {
     [111, 98, 106] => LexObj
     [101, 110, 100, 111, 98, 106] => LexEndObj
@@ -51,7 +49,7 @@ pub fn ByteCursor::lex_pdf_keyword(
     [110, 117, 108, 108] => LexNull
     [101, 110, 100, 115, 116, 114, 101, 97, 109] => LexEndStream
     view if pdf_view_starts_with_endobj(view) => {
-      self.seek(start + 6)
+      cursor.seek(start + 6)
       LexEndObj
     }
     _ => LexNone

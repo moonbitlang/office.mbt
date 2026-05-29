@@ -65,7 +65,7 @@ pub fn pdf_cursor_lex_token(cursor : ByteCursor) -> PdfLexeme raise PdfError {
       StopLexing
     73 => StopLexing
     value if pdf_is_lowercase_keyword_start_byte(value) =>
-      cursor.lex_pdf_keyword()
+      pdf_cursor_lex_keyword(cursor)
     _ => LexNone
   }
 }
