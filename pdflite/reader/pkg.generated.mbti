@@ -23,6 +23,10 @@ pub let pdf_default_version : PdfVersion
 
 pub fn pdf_length_name() -> @core.PdfName
 
+pub fn pdf_object_stream_end_offsets(ArrayView[(Int, Int)], Int, Int) -> Array[Int]
+
+pub fn pdf_object_stream_number_offsets(BytesView, Int, Int) -> Array[(Int, Int)] raise @core.PdfError
+
 pub fn pdf_read_header_from_bytes(Bytes) -> PdfVersion raise @core.PdfError
 
 pub fn pdf_read_header_from_cursor(@core.ByteCursor) -> PdfVersion raise @core.PdfError

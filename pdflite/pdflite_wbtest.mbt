@@ -479,7 +479,7 @@ test "private object stream helpers cover malformed object streams" {
     fail("expected PdfError::XRefEntryExpected")
   }
 
-  let bad_first : Result[Array[(Int, Int)], Error] = try? pdf_object_stream_number_offsets(
+  let bad_first : Result[Array[(Int, Int)], Error] = try? @reader.pdf_object_stream_number_offsets(
     @ascii.encode("1 0"),
     4,
     1,
@@ -488,7 +488,7 @@ test "private object stream helpers cover malformed object streams" {
     fail("expected PdfError::StreamDataExpected")
   }
 
-  let short_header : Result[Array[(Int, Int)], Error] = try? pdf_object_stream_number_offsets(
+  let short_header : Result[Array[(Int, Int)], Error] = try? @reader.pdf_object_stream_number_offsets(
     @ascii.encode("2 "),
     2,
     1,
@@ -497,7 +497,7 @@ test "private object stream helpers cover malformed object streams" {
     fail("expected PdfError::XRefEntryExpected")
   }
 
-  let malformed_pair : Result[Array[(Int, Int)], Error] = try? pdf_object_stream_number_offsets(
+  let malformed_pair : Result[Array[(Int, Int)], Error] = try? @reader.pdf_object_stream_number_offsets(
     @ascii.encode("/Name 0 "),
     8,
     1,
@@ -507,12 +507,17 @@ test "private object stream helpers cover malformed object streams" {
   }
 
   @test.assert_eq(
-    pdf_object_stream_end_offsets([(2, 4), (3, 0), (4, 4), (5, 8)], 20, 8),
+    @reader.pdf_object_stream_end_offsets(
+      [(2, 4), (3, 0), (4, 4), (5, 8)],
+      20,
+      8,
+    ),
     [8, 4, 8, 12],
   )
-  @test.assert_eq(pdf_object_stream_end_offsets([(2, 0), (3, 100)], 20, 8), [
-    12, 12,
-  ])
+  @test.assert_eq(
+    @reader.pdf_object_stream_end_offsets([(2, 0), (3, 100)], 20, 8),
+    [12, 12],
+  )
 
   let doc = pdf_document_empty()
   let valid_stream = pdf_stream(
