@@ -114,6 +114,13 @@ pub(all) struct PdfCalculatedPosition {
   rotation : Double
 } derive(Eq, ToJson, @debug.Debug)
 
+pub(all) struct PdfCoordRectangle {
+  x : Double
+  y : Double
+  width : Double
+  height : Double
+} derive(Eq, ToJson, @debug.Debug)
+
 pub(all) enum PdfPosition {
   PdfPositionPosCentre(Double, Double)
   PdfPositionPosLeft(Double, Double)

@@ -107,6 +107,7 @@ pub using @syntax {
 pub using @geometry {
   type PdfUnit,
   type PaperSize,
+  type PdfCoordRectangle,
   type Point2,
   type PdfCalculatedPosition,
   type PdfPosition,

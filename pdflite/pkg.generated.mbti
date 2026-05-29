@@ -1354,9 +1354,9 @@ pub fn pdf_parse_content_ops_from_view(BytesView) -> Array[@content.PdfContentOp
 
 pub fn pdf_parse_coordinate(PdfDocument, String) -> @geometry.Point2 raise @core.PdfError
 
-pub fn pdf_parse_coordinate_rectangle(PdfDocument, String) -> PdfCoordRectangle raise @core.PdfError
+pub fn pdf_parse_coordinate_rectangle(PdfDocument, String) -> @geometry.PdfCoordRectangle raise @core.PdfError
 
-pub fn pdf_parse_coordinate_rectangles(PdfDocument, String) -> Array[PdfCoordRectangle] raise @core.PdfError
+pub fn pdf_parse_coordinate_rectangles(PdfDocument, String) -> Array[@geometry.PdfCoordRectangle] raise @core.PdfError
 
 pub fn pdf_parse_coordinate_tuple(PdfDocument, String) -> (Double, Double) raise @core.PdfError
 
@@ -2871,13 +2871,6 @@ pub(all) struct PdfContentType3D1 {
   ury : Double
 } derive(Eq, ToJson, @debug.Debug)
 
-pub(all) struct PdfCoordRectangle {
-  x : Double
-  y : Double
-  width : Double
-  height : Double
-} derive(Eq, ToJson, @debug.Debug)
-
 pub(all) struct PdfDecryptionResult {
   document : PdfDocument
   denied_permissions : Array[@crypt_core.PdfPermission]
@@ -3166,8 +3159,8 @@ pub fn PdfDocument::parse_content_ops(Self, ArrayView[@syntax.PdfObject]) -> Arr
 pub fn PdfDocument::parse_content_ops_with_resources(Self, @syntax.PdfObject, ArrayView[@syntax.PdfObject]) -> Array[@content.PdfContentOp] raise @core.PdfError
 pub fn PdfDocument::parse_content_view_with_resources(Self, @syntax.PdfObject, BytesView) -> Array[@content.PdfContentOp] raise @core.PdfError
 pub fn PdfDocument::parse_coordinate(Self, String) -> @geometry.Point2 raise @core.PdfError
-pub fn PdfDocument::parse_coordinate_rectangle(Self, String) -> PdfCoordRectangle raise @core.PdfError
-pub fn PdfDocument::parse_coordinate_rectangles(Self, String) -> Array[PdfCoordRectangle] raise @core.PdfError
+pub fn PdfDocument::parse_coordinate_rectangle(Self, String) -> @geometry.PdfCoordRectangle raise @core.PdfError
+pub fn PdfDocument::parse_coordinate_rectangles(Self, String) -> Array[@geometry.PdfCoordRectangle] raise @core.PdfError
 pub fn PdfDocument::parse_coordinate_tuple(Self, String) -> (Double, Double) raise @core.PdfError
 pub fn PdfDocument::parse_coordinates(Self, String) -> Array[@geometry.Point2] raise @core.PdfError
 pub fn PdfDocument::parse_coordinates_tuple(Self, String) -> Array[(Double, Double)] raise @core.PdfError
@@ -3365,7 +3358,7 @@ pub(all) enum PdfDrawColour {
 
 pub struct PdfDrawControl {
   frames : Array[PdfDrawControlFrame]
-  mut xobject_bbox : PdfCoordRectangle
+  mut xobject_bbox : @geometry.PdfCoordRectangle
   mut font_name : String
   mut font_size : Double
   mut fontpack : PdfFontPack?
@@ -3451,7 +3444,7 @@ pub fn PdfDrawControl::set_miter_limit(Self, String) -> Unit raise @core.PdfErro
 pub fn PdfDrawControl::set_paragraph_indent(Self, Double?) -> Unit
 pub fn PdfDrawControl::set_role_map(Self, String) -> Unit
 pub fn PdfDrawControl::set_stroke(Self, String) -> Unit raise @core.PdfError
-pub fn PdfDrawControl::set_xobject_bbox(Self, PdfCoordRectangle) -> Unit
+pub fn PdfDrawControl::set_xobject_bbox(Self, @geometry.PdfCoordRectangle) -> Unit
 pub fn PdfDrawControl::set_xobject_bbox_from_string(Self, PdfDocument, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::start_xobject(Self, String) -> Unit
 pub fn PdfDrawControl::stroke(Self) -> Unit raise @core.PdfError
@@ -4276,6 +4269,8 @@ pub using @reader {type PdfClassicXRefEntry}
 pub using @reader {type PdfClassicXRefIndex}
 
 pub using @content {type PdfContentOp}
+
+pub using @geometry {type PdfCoordRectangle}
 
 pub using @core {type PdfCryptType}
 
