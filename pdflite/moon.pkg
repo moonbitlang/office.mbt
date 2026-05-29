@@ -62,6 +62,12 @@ options(
     "pdf_lookup_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
     "pdf_merge_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
     "pdf_metadata_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
+    "pdf_native_acceptance_cases_test.mbt": [
+      "wasm-gc",
+      "js",
+      "native",
+      "llvm",
+    ],
     "pdf_native_acceptance_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
     "pdf_ocg_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
     "pdf_page_box_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
