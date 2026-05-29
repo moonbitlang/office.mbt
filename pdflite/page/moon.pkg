@@ -1,0 +1,9 @@
+import {
+  "bobzhang/pdflite/core",
+  "bobzhang/pdflite/geometry",
+  "bobzhang/pdflite/syntax",
+}
+
+import {
+  "moonbitlang/core/test",
+} for "test"

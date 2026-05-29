@@ -55,8 +55,8 @@ pub fn pdf_page_rectangle_of_paper(paper : PaperSize) -> PdfObject {
   PdfArray([
     PdfReal(0.0),
     PdfReal(0.0),
-    PdfReal(unit_points(paper.width(), paper.unit())),
-    PdfReal(unit_points(paper.height(), paper.unit())),
+    PdfReal(@geometry.unit_points(paper.width(), paper.unit())),
+    PdfReal(@geometry.unit_points(paper.height(), paper.unit())),
   ])
 }
 

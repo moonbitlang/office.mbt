@@ -162,6 +162,17 @@ pub using @geometry {
 }
 
 ///|
+pub using @page {
+  type PdfPage,
+  type PdfPageRotation,
+  pdf_page_int_of_rotation,
+  pdf_page_rotation_of_int,
+  pdf_page_rectangle_of_paper,
+  pdf_page_custom,
+  pdf_page_blank,
+}
+
+///|
 pub using @crypt_core {
   type PdfPermission,
   type PdfEncryptionMethod,
