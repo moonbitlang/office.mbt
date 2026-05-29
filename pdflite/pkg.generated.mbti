@@ -656,6 +656,8 @@ pub fn pdf_copy_id(Bool, PdfDocument, PdfDocument) -> PdfDocument raise @core.Pd
 
 pub fn pdf_copy_page_box(PdfDocument, ArrayView[Int], @core.PdfName, @core.PdfName, mediabox_if_missing? : Bool) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_count_whitespace_tokens(BytesView) -> Int
+
 pub fn pdf_create_metadata(PdfDocument) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_crop_pdf(PdfDocument, ArrayView[Int], ArrayView[(Double, Double, Double, Double)], box_name? : @core.PdfName) -> PdfDocument raise @core.PdfError
@@ -841,6 +843,10 @@ pub fn pdf_extract_fontfile_bytes(PdfDocument, Int, String) -> Bytes? raise @cor
 pub fn pdf_fill(PdfDrawControl) -> Unit raise @core.PdfError
 
 pub fn pdf_fillevenodd(PdfDrawControl) -> Unit raise @core.PdfError
+
+pub fn pdf_find_ascii_from(BytesView, Int, ArrayView[Int]) -> Int
+
+pub fn pdf_find_last_ascii(BytesView, ArrayView[Int]) -> Int
 
 pub fn pdf_find_obj(PdfDocument, String) -> @syntax.PdfObject raise @core.PdfError
 
@@ -1311,6 +1317,8 @@ pub fn pdf_page_rotation_of_int(Int) -> PdfPageRotation raise @core.PdfError
 pub fn pdf_pagenumber_of_target(PdfDocument, PdfDestination) -> Int raise @core.PdfError
 
 pub fn pdf_pages_of_pagetree(PdfDocument) -> Array[PdfPage] raise @core.PdfError
+
+pub fn pdf_parse_ascii_int_view(BytesView) -> Int raise @core.PdfError
 
 pub fn pdf_parse_bookmark_file(Bool, PdfDocument, BytesView) -> Array[PdfBookmark] raise @core.PdfError
 
@@ -1792,6 +1800,8 @@ pub fn pdf_size_attached_files(PdfDocument) -> Int raise @core.PdfError
 
 pub fn pdf_soft_error(String) -> Unit raise @core.PdfError
 
+pub fn pdf_split_whitespace_tokens(BytesView) -> Array[BytesView]
+
 pub fn pdf_squeeze(PdfDocument, page_data? : Bool) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_stamp(PdfDocument, ArrayView[Int], PdfDocument, relative_to_box? : @core.PdfName, position? : PdfPosition, topline? : Bool, midline? : Bool, fast? : Bool, scale_to_fit? : Bool, is_over? : Bool, process_struct_tree? : Bool) -> PdfDocument raise @core.PdfError
@@ -1823,6 +1833,8 @@ pub fn pdf_standard_font_substitute_filenames(PdfStandardFont) -> Array[String]
 pub fn pdf_standard_font_substitute_font_name(PdfStandardFont) -> String
 
 pub fn pdf_startxobj(PdfDrawControl, String) -> Unit
+
+pub fn pdf_startxref_search_view(BytesView) -> BytesView
 
 pub fn pdf_stream(@syntax.PdfObject, @syntax.PdfStreamData) -> @syntax.PdfObject
 
@@ -2067,6 +2079,10 @@ pub fn pdf_utf8_of_codepoints(ArrayView[Int]) -> Bytes raise @core.PdfError
 pub fn pdf_utf8_of_pdfdocstring(BytesView) -> Bytes raise @core.PdfError
 
 pub fn pdf_vflip_pdf(PdfDocument, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_view_equals_ascii(BytesView, ArrayView[Int]) -> Bool
+
+pub fn pdf_view_matches_ascii_at(BytesView, Int, ArrayView[Int]) -> Bool
 
 pub fn pdf_write_colour_space(PdfDocument, PdfColourSpace) -> @syntax.PdfObject
 

@@ -11,6 +11,7 @@ import {
 options(
   targets: {
     "bitstream_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
+    "pdf_byte_view_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
     "byte_cursor_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
     "byte_output_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
     "pdf_error_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],

@@ -47,9 +47,15 @@ pub fn pdf_bytes_to_array(Bytes) -> Array[Byte]
 
 pub fn pdf_bytes_to_fixed_array(Bytes) -> FixedArray[Byte]
 
+pub fn pdf_count_whitespace_tokens(BytesView) -> Int
+
 pub fn pdf_error(String) -> Unit raise PdfError
 
 pub fn pdf_error_summary(PdfError) -> String
+
+pub fn pdf_find_ascii_from(BytesView, Int, ArrayView[Int]) -> Int
+
+pub fn pdf_find_last_ascii(BytesView, ArrayView[Int]) -> Int
 
 pub fn pdf_hard_error(String) -> Unit raise PdfError
 
@@ -75,13 +81,23 @@ pub let pdf_no_more : Int
 
 pub fn pdf_number_set(ArrayView[Int]) -> PdfNumberSet
 
+pub fn pdf_parse_ascii_int_view(BytesView) -> Int raise PdfError
+
 pub fn pdf_push_unique_number(Array[Int], PdfNumberSet, Int) -> Unit
 
 pub fn pdf_soft_error(String) -> Unit raise PdfError
 
+pub fn pdf_split_whitespace_tokens(BytesView) -> Array[BytesView]
+
+pub fn pdf_startxref_search_view(BytesView) -> BytesView
+
 pub fn pdf_string_of_int_array(ArrayView[Int]) -> Bytes raise PdfError
 
 pub fn pdf_string_of_int_arrays(ArrayView[ArrayView[Int]]) -> Bytes raise PdfError
+
+pub fn pdf_view_equals_ascii(BytesView, ArrayView[Int]) -> Bool
+
+pub fn pdf_view_matches_ascii_at(BytesView, Int, ArrayView[Int]) -> Bool
 
 // Errors
 pub(all) suberror PdfError {
