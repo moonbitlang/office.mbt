@@ -154,7 +154,7 @@ fn pdf_cursor_read_classic_xref_entries(
   cursor : ByteCursor,
 ) -> Array[PdfClassicXRefEntry] raise PdfError {
   pdf_cursor_drop_whitespace(cursor)
-  cursor.consume_pdf_ascii([120, 114, 101, 102], XRefExpected)
+  pdf_cursor_consume_ascii(cursor, [120, 114, 101, 102], XRefExpected)
   let entries : Array[PdfClassicXRefEntry] = []
   let mut object_number = 0
   let mut done = false

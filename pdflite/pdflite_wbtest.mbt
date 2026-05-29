@@ -1065,7 +1065,8 @@ test "private reader xref helpers report malformed inputs" {
   }
 
   let mismatch = byte_cursor_of_bytes(@ascii.encode("abc"))
-  let mismatch_result : Result[Unit, Error] = try? mismatch.consume_pdf_ascii(
+  let mismatch_result : Result[Unit, Error] = try? pdf_cursor_consume_ascii(
+    mismatch,
     [120],
     XRefExpected,
   )

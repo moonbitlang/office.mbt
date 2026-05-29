@@ -17,7 +17,11 @@ fn pdf_cursor_read_trailer_dictionary(
   cursor : ByteCursor,
 ) -> PdfObject raise PdfError {
   pdf_cursor_drop_whitespace(cursor)
-  cursor.consume_pdf_ascii([116, 114, 97, 105, 108, 101, 114], TrailerExpected)
+  pdf_cursor_consume_ascii(
+    cursor,
+    [116, 114, 97, 105, 108, 101, 114],
+    TrailerExpected,
+  )
   pdf_cursor_drop_whitespace(cursor)
   let object = pdf_parse_single_lexeme_object(pdf_cursor_lex_tokens(cursor))
   match object {
