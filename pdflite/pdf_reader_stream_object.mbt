@@ -1,11 +1,6 @@
 ///|
-fn pdf_length_name() -> PdfName {
-  pdf_length_key_name
-}
-
-///|
 fn pdf_stream_length(object : PdfObject) -> Int raise PdfError {
-  match object.lookup_immediate(pdf_length_name()) {
+  match object.lookup_immediate(@reader.pdf_length_name()) {
     Some(PdfInteger(length)) if length >= 0 => length
     _ => raise StreamLengthExpected
   }
@@ -174,7 +169,7 @@ fn pdf_cursor_finish_malformed_stream_object(
     generation: prefix.generation,
     object: pdf_stream(
       prefix.object.add_dict_entry(
-        pdf_length_name(),
+        @reader.pdf_length_name(),
         PdfInteger(stream_data.length()),
       ),
       StreamGot(stream_data),
@@ -249,7 +244,7 @@ fn pdf_cursor_finish_malformed_object_stream_member(
     generation: prefix.generation,
     object: pdf_stream(
       prefix.object.add_dict_entry(
-        pdf_length_name(),
+        @reader.pdf_length_name(),
         PdfInteger(stream_data.length()),
       ),
       StreamGot(stream_data),

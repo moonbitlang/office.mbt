@@ -21,6 +21,8 @@ pub fn pdf_cursor_read_classic_xref_entries(@core.ByteCursor) -> Array[PdfClassi
 
 pub let pdf_default_version : PdfVersion
 
+pub fn pdf_length_name() -> @core.PdfName
+
 pub fn pdf_read_header_from_bytes(Bytes) -> PdfVersion raise @core.PdfError
 
 pub fn pdf_read_header_from_cursor(@core.ByteCursor) -> PdfVersion raise @core.PdfError
@@ -28,6 +30,40 @@ pub fn pdf_read_header_from_cursor(@core.ByteCursor) -> PdfVersion raise @core.P
 pub fn pdf_read_header_from_view(BytesView) -> PdfVersion raise @core.PdfError
 
 pub fn pdf_read_startxref_position(BytesView) -> Int raise @core.PdfError
+
+pub fn pdf_reader_decodeparms_name() -> @core.PdfName
+
+pub fn pdf_reader_filter_name() -> @core.PdfName
+
+pub fn pdf_reader_first_name() -> @core.PdfName
+
+pub fn pdf_reader_index_name() -> @core.PdfName
+
+pub fn pdf_reader_linearized_name() -> @core.PdfName
+
+pub fn pdf_reader_n_name() -> @core.PdfName
+
+pub fn pdf_reader_name(String) -> @core.PdfName
+
+pub fn pdf_reader_objstm_name() -> @core.PdfName
+
+pub fn pdf_reader_prev_name() -> @core.PdfName
+
+pub fn pdf_reader_root_name() -> @core.PdfName
+
+pub fn pdf_reader_short_decodeparms_name() -> @core.PdfName
+
+pub fn pdf_reader_short_filter_name() -> @core.PdfName
+
+pub fn pdf_reader_size_name() -> @core.PdfName
+
+pub fn pdf_reader_type_name() -> @core.PdfName
+
+pub fn pdf_reader_w_name() -> @core.PdfName
+
+pub fn pdf_reader_xref_name() -> @core.PdfName
+
+pub fn pdf_reader_xrefstm_name() -> @core.PdfName
 
 pub fn pdf_xref_stream_entries(BytesView, (Int, Int, Int), ArrayView[(Int, Int)]) -> Array[PdfClassicXRefEntry] raise @core.PdfError
 

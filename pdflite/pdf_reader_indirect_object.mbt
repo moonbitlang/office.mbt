@@ -66,7 +66,7 @@ fn pdf_cursor_resolve_classic_stream_length(
   xrefs : ArrayView[PdfClassicXRefEntry],
   xref_index : PdfClassicXRefIndex?,
 ) -> Int raise PdfError {
-  match object.lookup_immediate(pdf_length_name()) {
+  match object.lookup_immediate(@reader.pdf_length_name()) {
     Some(PdfInteger(length)) if length >= 0 => length
     Some(PdfIndirect(number)) => {
       let xref = match xref_index {

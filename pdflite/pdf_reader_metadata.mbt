@@ -2,7 +2,7 @@
 fn pdf_read_linearized_marker(cursor : ByteCursor) -> Bool raise PdfError {
   ignore(pdf_read_header_from_cursor(cursor))
   let parsed = pdf_cursor_read_plain_indirect_object_at_current(cursor)
-  match parsed.object.lookup_immediate(pdf_reader_linearized_name()) {
+  match parsed.object.lookup_immediate(@reader.pdf_reader_linearized_name()) {
     Some(PdfInteger(_)) | Some(PdfReal(_)) => true
     _ => false
   }

@@ -10,13 +10,13 @@ fn pdf_reconstructed_trailer_root_numbers(
 ) -> @core.PdfNumberSet {
   let roots = @core.pdf_number_set([])
   for item in classic_sections {
-    match item.1.trailer.lookup_immediate(pdf_reader_root_name()) {
+    match item.1.trailer.lookup_immediate(@reader.pdf_reader_root_name()) {
       Some(PdfIndirect(root)) => roots.add(root)
       _ => ()
     }
   }
   for section in xref_stream_sections {
-    match section.trailer.lookup_immediate(pdf_reader_root_name()) {
+    match section.trailer.lookup_immediate(@reader.pdf_reader_root_name()) {
       Some(PdfIndirect(root)) => roots.add(root)
       _ => ()
     }

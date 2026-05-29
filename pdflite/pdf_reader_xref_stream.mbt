@@ -39,22 +39,22 @@ fn pdf_reader_stream_dictionary_without_xref_keys(
   dictionary : PdfObject,
 ) -> PdfObject raise PdfError {
   dictionary
-  .remove_dict_entry(pdf_reader_type_name())
-  .remove_dict_entry(pdf_reader_w_name())
-  .remove_dict_entry(pdf_reader_index_name())
-  .remove_dict_entry(pdf_length_name())
-  .remove_dict_entry(pdf_reader_filter_name())
-  .remove_dict_entry(pdf_reader_short_filter_name())
-  .remove_dict_entry(pdf_reader_decodeparms_name())
-  .remove_dict_entry(pdf_reader_short_decodeparms_name())
+  .remove_dict_entry(@reader.pdf_reader_type_name())
+  .remove_dict_entry(@reader.pdf_reader_w_name())
+  .remove_dict_entry(@reader.pdf_reader_index_name())
+  .remove_dict_entry(@reader.pdf_length_name())
+  .remove_dict_entry(@reader.pdf_reader_filter_name())
+  .remove_dict_entry(@reader.pdf_reader_short_filter_name())
+  .remove_dict_entry(@reader.pdf_reader_decodeparms_name())
+  .remove_dict_entry(@reader.pdf_reader_short_decodeparms_name())
 }
 
 ///|
 fn pdf_reader_xref_stream_type_ok(dictionary : PdfObject) -> Bool {
-  match dictionary.lookup_immediate(pdf_reader_type_name()) {
-    Some(PdfNameObject(name)) => name == pdf_reader_xref_name()
+  match dictionary.lookup_immediate(@reader.pdf_reader_type_name()) {
+    Some(PdfNameObject(name)) => name == @reader.pdf_reader_xref_name()
     Some(_) => false
-    None => dictionary.lookup_immediate(pdf_reader_w_name()) != None
+    None => dictionary.lookup_immediate(@reader.pdf_reader_w_name()) != None
   }
 }
 
@@ -91,7 +91,7 @@ fn pdf_xref_stream_int_array(
 fn pdf_xref_stream_widths(
   dictionary : PdfObject,
 ) -> (Int, Int, Int) raise PdfError {
-  match pdf_xref_stream_int_array(dictionary, pdf_reader_w_name()) {
+  match pdf_xref_stream_int_array(dictionary, @reader.pdf_reader_w_name()) {
     Some([w0, w1, w2]) if w0 >= 0 && w1 >= 0 && w2 >= 0 && w0 + w1 + w2 > 0 =>
       (w0, w1, w2)
     _ => raise XRefEntryExpected
@@ -102,7 +102,7 @@ fn pdf_xref_stream_widths(
 fn pdf_xref_stream_index_pairs(
   dictionary : PdfObject,
 ) -> Array[(Int, Int)] raise PdfError {
-  match pdf_xref_stream_int_array(dictionary, pdf_reader_index_name()) {
+  match pdf_xref_stream_int_array(dictionary, @reader.pdf_reader_index_name()) {
     Some(values) => {
       if values.length() % 2 != 0 {
         raise XRefEntryExpected
@@ -120,7 +120,7 @@ fn pdf_xref_stream_index_pairs(
       pairs
     }
     None =>
-      match dictionary.lookup_immediate(pdf_reader_size_name()) {
+      match dictionary.lookup_immediate(@reader.pdf_reader_size_name()) {
         Some(PdfInteger(size)) if size >= 0 => [(0, size)]
         _ => raise XRefEntryExpected
       }

@@ -6,7 +6,7 @@ fn PdfDocument::select_reconstructed_trailer(
   for offset in 0..<trailers.length() {
     let index = trailers.length() - 1 - offset
     let trailer = trailers[index]
-    match trailer.lookup_immediate(pdf_reader_root_name()) {
+    match trailer.lookup_immediate(@reader.pdf_reader_root_name()) {
       Some(PdfIndirect(root)) =>
         match self.lookup_object_or_null(root) {
           PdfDictionary(_) => break trailer
@@ -34,7 +34,9 @@ fn PdfDocument::infer_reconstructed_catalog_trailer(
           Some(PdfNameObject(pdf_page_type_catalog())) &&
           object.lookup_immediate(pdf_page_pages_key()) is Some(_) {
           break Some(
-            PdfDictionary([(pdf_reader_root_name(), PdfIndirect(number))]),
+            PdfDictionary([
+              (@reader.pdf_reader_root_name(), PdfIndirect(number)),
+            ]),
           )
         }
       _ => ()
@@ -50,7 +52,7 @@ fn PdfDocument::set_trailer_and_root(
   trailer : PdfObject,
 ) -> Unit raise PdfError {
   self.set_trailer_dict(trailer)
-  match trailer.lookup_immediate(pdf_reader_root_name()) {
+  match trailer.lookup_immediate(@reader.pdf_reader_root_name()) {
     Some(PdfIndirect(root)) => self.set_root(root)
     _ => raise RootExpected
   }

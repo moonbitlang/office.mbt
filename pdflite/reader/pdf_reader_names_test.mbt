@@ -1,0 +1,62 @@
+///|
+test "reader names use canonical spellings" {
+  @test.assert_eq(
+    @reader.pdf_reader_type_name(),
+    @reader.pdf_reader_name("/Type"),
+  )
+  @test.assert_eq(
+    @reader.pdf_reader_xref_name(),
+    @reader.pdf_reader_name("/XRef"),
+  )
+  @test.assert_eq(
+    @reader.pdf_reader_objstm_name(),
+    @reader.pdf_reader_name("/ObjStm"),
+  )
+  @test.assert_eq(@reader.pdf_reader_w_name(), @reader.pdf_reader_name("/W"))
+  @test.assert_eq(
+    @reader.pdf_reader_index_name(),
+    @reader.pdf_reader_name("/Index"),
+  )
+  @test.assert_eq(
+    @reader.pdf_reader_size_name(),
+    @reader.pdf_reader_name("/Size"),
+  )
+  @test.assert_eq(@reader.pdf_reader_n_name(), @reader.pdf_reader_name("/N"))
+  @test.assert_eq(
+    @reader.pdf_reader_first_name(),
+    @reader.pdf_reader_name("/First"),
+  )
+  @test.assert_eq(
+    @reader.pdf_reader_linearized_name(),
+    @reader.pdf_reader_name("/Linearized"),
+  )
+  @test.assert_eq(
+    @reader.pdf_reader_filter_name(),
+    @reader.pdf_reader_name("/Filter"),
+  )
+  @test.assert_eq(
+    @reader.pdf_reader_short_filter_name(),
+    @reader.pdf_reader_name("/F"),
+  )
+  @test.assert_eq(
+    @reader.pdf_reader_decodeparms_name(),
+    @reader.pdf_reader_name("/DecodeParms"),
+  )
+  @test.assert_eq(
+    @reader.pdf_reader_short_decodeparms_name(),
+    @reader.pdf_reader_name("/DP"),
+  )
+  @test.assert_eq(
+    @reader.pdf_reader_root_name(),
+    @reader.pdf_reader_name("/Root"),
+  )
+  @test.assert_eq(
+    @reader.pdf_reader_prev_name(),
+    @reader.pdf_reader_name("/Prev"),
+  )
+  @test.assert_eq(
+    @reader.pdf_reader_xrefstm_name(),
+    @reader.pdf_reader_name("/XRefStm"),
+  )
+  @test.assert_eq(@reader.pdf_length_name(), @reader.pdf_reader_name("/Length"))
+}

@@ -82,19 +82,20 @@ fn PdfDocument::read_object_stream_context_from_object(
 ) -> PdfObjectStreamContext raise PdfError {
   match object_stream_object {
     PdfStreamObject(stream) => {
-      match stream.dictionary.lookup_immediate(pdf_reader_type_name()) {
-        Some(PdfNameObject(name)) if name == pdf_reader_objstm_name() => ()
+      match stream.dictionary.lookup_immediate(@reader.pdf_reader_type_name()) {
+        Some(PdfNameObject(name)) if name == @reader.pdf_reader_objstm_name() =>
+          ()
         Some(_) => raise XRefEntryExpected
         None => ()
       }
       let decoded_stream = self.pdf_decode_stream_value_direct(stream)
       let count = self.pdf_object_stream_required_int(
         decoded_stream.dictionary,
-        pdf_reader_n_name(),
+        @reader.pdf_reader_n_name(),
       )
       let first = self.pdf_object_stream_required_int(
         decoded_stream.dictionary,
-        pdf_reader_first_name(),
+        @reader.pdf_reader_first_name(),
       )
       let data = @syntax.pdf_stream_data_bytes(decoded_stream.data)
       let pairs = pdf_object_stream_number_offsets(data, first, count)

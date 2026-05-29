@@ -364,17 +364,19 @@ test "incremental writer rejects changed deferred objects" {
 
 ///|
 test "private xref stream helpers cover malformed and deferred entries" {
-  let key_w = pdf_reader_name("/W")
-  let key_index = pdf_reader_name("/Index")
+  let key_w = @reader.pdf_reader_name("/W")
+  let key_index = @reader.pdf_reader_name("/Index")
   let negative_xrefstm : Result[Int?, Error] = try? pdf_trailer_xref_stream_position(
-    PdfDictionary([(pdf_reader_xrefstm_name(), PdfInteger(-1))]),
+    PdfDictionary([(@reader.pdf_reader_xrefstm_name(), PdfInteger(-1))]),
   )
   guard negative_xrefstm is Err(PdfError::XRefExpected) else {
     fail("expected PdfError::XRefExpected")
   }
 
   let malformed_array_value : Result[Array[Int]?, Error] = try? pdf_xref_stream_int_array(
-    PdfDictionary([(key_w, PdfArray([PdfNameObject(pdf_reader_name("/Name"))]))]),
+    PdfDictionary([
+      (key_w, PdfArray([PdfNameObject(@reader.pdf_reader_name("/Name"))])),
+    ]),
     key_w,
   )
   guard malformed_array_value is Err(PdfError::XRefEntryExpected) else {
@@ -464,10 +466,10 @@ test "private xref stream helpers cover malformed and deferred entries" {
 
 ///|
 test "private object stream helpers cover malformed object streams" {
-  let key_type = pdf_reader_name("/Type")
-  let key_n = pdf_reader_name("/N")
-  let key_first = pdf_reader_name("/First")
-  let key_length = pdf_reader_name("/Length")
+  let key_type = @reader.pdf_reader_name("/Type")
+  let key_n = @reader.pdf_reader_name("/N")
+  let key_first = @reader.pdf_reader_name("/First")
+  let key_length = @reader.pdf_reader_name("/Length")
 
   let missing_required : Result[Int, Error] = try? pdf_document_empty().pdf_object_stream_required_int(
     PdfDictionary([]),
@@ -515,7 +517,7 @@ test "private object stream helpers cover malformed object streams" {
   let doc = pdf_document_empty()
   let valid_stream = pdf_stream(
     PdfDictionary([
-      (key_type, PdfNameObject(pdf_reader_name("/ObjStm"))),
+      (key_type, PdfNameObject(@reader.pdf_reader_name("/ObjStm"))),
       (key_n, PdfInteger(2)),
       (key_first, PdfInteger(8)),
       (key_length, PdfInteger(17)),
@@ -660,7 +662,7 @@ test "private object stream helpers cover malformed object streams" {
     8,
     pdf_stream(
       PdfDictionary([
-        (key_type, PdfNameObject(pdf_reader_name("/Page"))),
+        (key_type, PdfNameObject(@reader.pdf_reader_name("/Page"))),
         (key_n, PdfInteger(1)),
         (key_first, PdfInteger(4)),
         (key_length, PdfInteger(8)),
@@ -696,7 +698,7 @@ test "private object stream helpers cover malformed object streams" {
     9,
     pdf_stream(
       PdfDictionary([
-        (key_type, PdfNameObject(pdf_reader_name("/ObjStm"))),
+        (key_type, PdfNameObject(@reader.pdf_reader_name("/ObjStm"))),
         (key_n, PdfInteger(1)),
         (key_first, PdfInteger(5)),
         (key_length, PdfInteger(9)),
