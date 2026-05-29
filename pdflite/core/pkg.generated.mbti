@@ -8,6 +8,10 @@ import {
 // Values
 pub fn bit_writer_new() -> BitWriter
 
+pub fn byte_cursor_of_bytes(Bytes, source? : String) -> ByteCursor
+
+pub fn byte_cursor_of_view(BytesView, source? : String) -> ByteCursor
+
 pub fn byte_output_new(initial_size? : Int) -> ByteOutput raise PdfError
 
 pub fn pdf_byte_of_int(Int) -> Byte raise PdfError
@@ -51,6 +55,8 @@ pub fn pdf_is_whitespace_or_delimiter_byte(Int) -> Bool
 pub fn pdf_name_of_bytes(Bytes) -> PdfName
 
 pub fn pdf_name_of_view(BytesView) -> PdfName
+
+pub let pdf_no_more : Int
 
 pub fn pdf_string_of_int_array(ArrayView[Int]) -> Bytes raise PdfError
 
@@ -185,6 +191,50 @@ pub fn BitWriter::put_bit(Self, Int) -> Unit raise PdfError
 pub fn BitWriter::put_value_int(Self, Int, Int) -> Unit raise PdfError
 pub fn BitWriter::put_value_int64(Self, Int, Int64) -> Unit raise PdfError
 pub fn BitWriter::to_bytes(Self) -> Bytes
+
+pub struct ByteCursor {
+  data : BytesView
+  mut position : Int
+  mut offset : Int
+  source : String
+} derive(Eq, ToJson, @debug.Debug)
+pub fn ByteCursor::absolute_position(Self) -> Int
+pub fn ByteCursor::byte_at_absolute(Self, Int) -> Byte?
+pub fn ByteCursor::byte_int_at_absolute(Self, Int) -> Int
+pub fn ByteCursor::deep_copy(Self) -> Self
+pub fn ByteCursor::ignore_until(Self, (Int) -> Bool, eof_is_delimiter? : Bool) -> Unit raise PdfError
+pub fn ByteCursor::input_byte(Self) -> Int
+pub fn ByteCursor::input_pdf_error(Self, String) -> String
+pub fn ByteCursor::length(Self) -> Int
+pub fn ByteCursor::nudge(Self) -> Unit
+pub fn ByteCursor::peek(Self) -> Byte?
+pub fn ByteCursor::peek_byte(Self) -> Int
+pub fn ByteCursor::peek_bytes(Self, Int) -> Bytes raise PdfError
+pub fn ByteCursor::peek_view(Self, Int) -> BytesView raise PdfError
+pub fn ByteCursor::position(Self) -> Int
+pub fn ByteCursor::read_byte(Self) -> Byte?
+pub fn ByteCursor::read_byte_back(Self) -> Byte?
+pub fn ByteCursor::read_bytes(Self, Int) -> Bytes raise PdfError
+pub fn ByteCursor::read_bytes_at(Self, Int, Int) -> Bytes raise PdfError
+pub fn ByteCursor::read_line(Self) -> Bytes raise PdfError
+pub fn ByteCursor::read_line_view(Self) -> BytesView raise PdfError
+pub fn ByteCursor::read_line_views(Self) -> Array[BytesView]
+pub fn ByteCursor::read_lines(Self) -> Array[Bytes]
+pub fn ByteCursor::read_remaining_bytes(Self) -> Bytes
+pub fn ByteCursor::read_until_view(Self, (Int) -> Bool, eof_is_delimiter? : Bool) -> BytesView raise PdfError
+pub fn ByteCursor::read_view(Self, Int) -> BytesView raise PdfError
+pub fn ByteCursor::read_view_at(Self, Int, Int) -> BytesView raise PdfError
+pub fn ByteCursor::remaining_length(Self) -> Int
+pub fn ByteCursor::remaining_view(Self) -> BytesView
+pub fn ByteCursor::rewind(Self) -> Unit raise PdfError
+pub fn ByteCursor::seek(Self, Int) -> Unit raise PdfError
+pub fn ByteCursor::seek_absolute(Self, Int) -> Unit raise PdfError
+pub fn ByteCursor::set_offset(Self, Int) -> Unit raise PdfError
+pub fn ByteCursor::source(Self) -> String
+pub fn ByteCursor::to_bytes(Self) -> Bytes
+pub fn ByteCursor::view(Self) -> BytesView
+pub fn ByteCursor::view_at(Self, Int, Int) -> BytesView raise PdfError
+pub fn ByteCursor::view_at_absolute(Self, Int, Int) -> BytesView raise PdfError
 
 pub struct ByteOutput {
   data : Array[Byte]

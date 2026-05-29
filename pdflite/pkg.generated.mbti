@@ -16,13 +16,13 @@ pub fn bit_writer_new() -> @core.BitWriter
 
 pub fn bitstream_of_bytes(Bytes, source? : String) -> BitStream
 
-pub fn bitstream_of_cursor(ByteCursor) -> BitStream
+pub fn bitstream_of_cursor(@core.ByteCursor) -> BitStream
 
 pub fn bitstream_of_view(BytesView, source? : String) -> BitStream
 
-pub fn byte_cursor_of_bytes(Bytes, source? : String) -> ByteCursor
+pub fn byte_cursor_of_bytes(Bytes, source? : String) -> @core.ByteCursor
 
-pub fn byte_cursor_of_view(BytesView, source? : String) -> ByteCursor
+pub fn byte_cursor_of_view(BytesView, source? : String) -> @core.ByteCursor
 
 pub fn byte_output_new(initial_size? : Int) -> @core.ByteOutput raise @core.PdfError
 
@@ -664,33 +664,33 @@ pub fn pdf_css_colour_value(String) -> Int?
 
 pub fn pdf_css_colours() -> Array[(String, Int)]
 
-pub fn pdf_cursor_drop_whitespace(ByteCursor) -> Unit
+pub fn pdf_cursor_drop_whitespace(@core.ByteCursor) -> Unit
 
-pub fn pdf_cursor_lex_bool(ByteCursor) -> PdfLexeme
+pub fn pdf_cursor_lex_bool(@core.ByteCursor) -> PdfLexeme
 
-pub fn pdf_cursor_lex_comment(ByteCursor) -> PdfLexeme
+pub fn pdf_cursor_lex_comment(@core.ByteCursor) -> PdfLexeme
 
-pub fn pdf_cursor_lex_delimiter(ByteCursor) -> PdfLexeme
+pub fn pdf_cursor_lex_delimiter(@core.ByteCursor) -> PdfLexeme
 
-pub fn pdf_cursor_lex_hex_string(ByteCursor) -> PdfLexeme raise @core.PdfError
+pub fn pdf_cursor_lex_hex_string(@core.ByteCursor) -> PdfLexeme raise @core.PdfError
 
-pub fn pdf_cursor_lex_keyword(ByteCursor) -> PdfLexeme raise @core.PdfError
+pub fn pdf_cursor_lex_keyword(@core.ByteCursor) -> PdfLexeme raise @core.PdfError
 
-pub fn pdf_cursor_lex_literal_string(ByteCursor) -> PdfLexeme raise @core.PdfError
+pub fn pdf_cursor_lex_literal_string(@core.ByteCursor) -> PdfLexeme raise @core.PdfError
 
-pub fn pdf_cursor_lex_name(ByteCursor) -> PdfLexeme raise @core.PdfError
+pub fn pdf_cursor_lex_name(@core.ByteCursor) -> PdfLexeme raise @core.PdfError
 
-pub fn pdf_cursor_lex_number(ByteCursor) -> PdfLexeme
+pub fn pdf_cursor_lex_number(@core.ByteCursor) -> PdfLexeme
 
-pub fn pdf_cursor_lex_token(ByteCursor) -> PdfLexeme raise @core.PdfError
+pub fn pdf_cursor_lex_token(@core.ByteCursor) -> PdfLexeme raise @core.PdfError
 
-pub fn pdf_cursor_lex_tokens(ByteCursor) -> Array[PdfLexeme] raise @core.PdfError
+pub fn pdf_cursor_lex_tokens(@core.ByteCursor) -> Array[PdfLexeme] raise @core.PdfError
 
-pub fn pdf_cursor_read_jpeg_data(ByteCursor) -> Bytes raise @core.PdfError
+pub fn pdf_cursor_read_jpeg_data(@core.ByteCursor) -> Bytes raise @core.PdfError
 
-pub fn pdf_cursor_read_regular_token_view(ByteCursor) -> BytesView
+pub fn pdf_cursor_read_regular_token_view(@core.ByteCursor) -> BytesView
 
-pub fn pdf_cursor_read_until_whitespace_or_delimiter(ByteCursor) -> BytesView
+pub fn pdf_cursor_read_until_whitespace_or_delimiter(@core.ByteCursor) -> BytesView
 
 pub fn pdf_date_of_bytes(Bytes) -> @date.PdfDate raise @core.PdfError
 
@@ -906,7 +906,7 @@ pub fn pdf_get_info_utf8(PdfDocument, @core.PdfName) -> String
 
 pub fn pdf_get_info_utf8_string(PdfDocument, String) -> String
 
-pub fn pdf_get_jpeg_data(ByteCursor) -> Bytes raise @core.PdfError
+pub fn pdf_get_jpeg_data(@core.ByteCursor) -> Bytes raise @core.PdfError
 
 pub fn pdf_get_mark_info_item(@core.PdfName, PdfDocument) -> Bool
 
@@ -1510,7 +1510,7 @@ pub fn pdf_read_font(PdfDocument, PdfObject) -> PdfFont raise @core.PdfError
 
 pub fn pdf_read_header_from_bytes(Bytes) -> PdfVersion raise @core.PdfError
 
-pub fn pdf_read_header_from_cursor(ByteCursor) -> PdfVersion raise @core.PdfError
+pub fn pdf_read_header_from_cursor(@core.ByteCursor) -> PdfVersion raise @core.PdfError
 
 pub fn pdf_read_header_from_view(BytesView) -> PdfVersion raise @core.PdfError
 
@@ -2132,7 +2132,7 @@ pub fn recompress_pdf(PdfDocument) -> PdfDocument raise @core.PdfError
 
 pub fn squeeze(PdfDocument, page_data? : Bool) -> PdfDocument raise @core.PdfError
 
-pub fn stream_to_get(ByteCursor, Int, Int) -> ToGet
+pub fn stream_to_get(@core.ByteCursor, Int, Int) -> ToGet
 
 pub fn transform_append(ArrayView[@geometry.TransformOp], ArrayView[@geometry.TransformOp]) -> Array[@geometry.TransformOp]
 
@@ -2194,7 +2194,7 @@ pub fn unit_points(Double, @geometry.PdfUnit) -> Double
 
 // Types and methods
 pub struct BitStream {
-  input : ByteCursor
+  input : @core.ByteCursor
   mut current_byte : Int
   mut bit_mask : Int
   mut bits_read : Int
@@ -2214,50 +2214,6 @@ pub struct BitStreamPosition {
   bit_mask : Int
   bits_read : Int
 } derive(Eq, ToJson, @debug.Debug)
-
-pub struct ByteCursor {
-  data : BytesView
-  mut position : Int
-  mut offset : Int
-  source : String
-} derive(Eq, ToJson, @debug.Debug)
-pub fn ByteCursor::absolute_position(Self) -> Int
-pub fn ByteCursor::byte_at_absolute(Self, Int) -> Byte?
-pub fn ByteCursor::byte_int_at_absolute(Self, Int) -> Int
-pub fn ByteCursor::deep_copy(Self) -> Self
-pub fn ByteCursor::ignore_until(Self, (Int) -> Bool, eof_is_delimiter? : Bool) -> Unit raise @core.PdfError
-pub fn ByteCursor::input_byte(Self) -> Int
-pub fn ByteCursor::input_pdf_error(Self, String) -> String
-pub fn ByteCursor::length(Self) -> Int
-pub fn ByteCursor::nudge(Self) -> Unit
-pub fn ByteCursor::peek(Self) -> Byte?
-pub fn ByteCursor::peek_byte(Self) -> Int
-pub fn ByteCursor::peek_bytes(Self, Int) -> Bytes raise @core.PdfError
-pub fn ByteCursor::peek_view(Self, Int) -> BytesView raise @core.PdfError
-pub fn ByteCursor::position(Self) -> Int
-pub fn ByteCursor::read_byte(Self) -> Byte?
-pub fn ByteCursor::read_byte_back(Self) -> Byte?
-pub fn ByteCursor::read_bytes(Self, Int) -> Bytes raise @core.PdfError
-pub fn ByteCursor::read_bytes_at(Self, Int, Int) -> Bytes raise @core.PdfError
-pub fn ByteCursor::read_line(Self) -> Bytes raise @core.PdfError
-pub fn ByteCursor::read_line_view(Self) -> BytesView raise @core.PdfError
-pub fn ByteCursor::read_line_views(Self) -> Array[BytesView]
-pub fn ByteCursor::read_lines(Self) -> Array[Bytes]
-pub fn ByteCursor::read_remaining_bytes(Self) -> Bytes
-pub fn ByteCursor::read_until_view(Self, (Int) -> Bool, eof_is_delimiter? : Bool) -> BytesView raise @core.PdfError
-pub fn ByteCursor::read_view(Self, Int) -> BytesView raise @core.PdfError
-pub fn ByteCursor::read_view_at(Self, Int, Int) -> BytesView raise @core.PdfError
-pub fn ByteCursor::remaining_length(Self) -> Int
-pub fn ByteCursor::remaining_view(Self) -> BytesView
-pub fn ByteCursor::rewind(Self) -> Unit raise @core.PdfError
-pub fn ByteCursor::seek(Self, Int) -> Unit raise @core.PdfError
-pub fn ByteCursor::seek_absolute(Self, Int) -> Unit raise @core.PdfError
-pub fn ByteCursor::set_offset(Self, Int) -> Unit raise @core.PdfError
-pub fn ByteCursor::source(Self) -> String
-pub fn ByteCursor::to_bytes(Self) -> Bytes
-pub fn ByteCursor::view(Self) -> BytesView
-pub fn ByteCursor::view_at(Self, Int, Int) -> BytesView raise @core.PdfError
-pub fn ByteCursor::view_at_absolute(Self, Int, Int) -> BytesView raise @core.PdfError
 
 pub(all) struct ObjectStreamReference {
   object_stream_number : Int
@@ -4469,18 +4425,20 @@ pub(all) enum PdfWriteMode {
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct ToGet {
-  input : ByteCursor
+  input : @core.ByteCursor
   position : Int
   length : Int
   crypt : PdfStreamDataCrypt
 } derive(Eq, ToJson, @debug.Debug)
 pub fn ToGet::crypt(Self) -> PdfStreamDataCrypt
-pub fn ToGet::input(Self) -> ByteCursor
+pub fn ToGet::input(Self) -> @core.ByteCursor
 pub fn ToGet::length(Self) -> Int
 pub fn ToGet::position(Self) -> Int
 
 // Type aliases
 pub using @core {type BitWriter}
+
+pub using @core {type ByteCursor}
 
 pub using @core {type ByteOutput}
 
