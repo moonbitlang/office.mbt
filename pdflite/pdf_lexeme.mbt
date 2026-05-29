@@ -16,7 +16,6 @@ pub(all) enum PdfLexeme {
   LexRightSquare
   LexLeftDict
   LexRightDict
-  LexStream(PdfStreamData)
   LexEndStream
   LexObj
   LexEndObj

@@ -58,12 +58,6 @@ test "PdfLexeme token shape stores byte-oriented names and strings" {
   )
   @test.assert_eq(@pdflite.pdf_lexeme_debug_name(LexInt(42)), "LexInt")
   @test.assert_eq(@pdflite.pdf_lexeme_debug_name(LexReal(1.5)), "LexReal")
-  @test.assert_eq(
-    @pdflite.pdf_lexeme_debug_name(
-      LexStream(StreamGot(lexeme_bytes_for_test([]))),
-    ),
-    "LexStream",
-  )
   @test.assert_eq(@pdflite.pdf_lexeme_debug_name(LexEndStream), "LexEndStream")
   @test.assert_eq(@pdflite.pdf_lexeme_debug_name(LexObj), "LexObj")
   @test.assert_eq(@pdflite.pdf_lexeme_debug_name(LexEndObj), "LexEndObj")

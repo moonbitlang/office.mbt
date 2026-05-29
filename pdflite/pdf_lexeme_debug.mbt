@@ -12,7 +12,6 @@ pub fn pdf_lexeme_debug_name(lexeme : PdfLexeme) -> String {
     LexRightSquare => "LexRightSquare"
     LexLeftDict => "LexLeftDict"
     LexRightDict => "LexRightDict"
-    LexStream(_) => "LexStream"
     LexEndStream => "LexEndStream"
     LexObj => "LexObj"
     LexEndObj => "LexEndObj"
