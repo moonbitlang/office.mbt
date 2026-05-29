@@ -35,6 +35,8 @@ pub let paper_uslegal : PaperSize
 
 pub let paper_usletter : PaperSize
 
+pub fn pdf_calculate_position(Bool, Double, PdfRectangle, PdfPosition) -> PdfCalculatedPosition
+
 pub fn point2(Double, Double) -> Point2
 
 pub fn transform_append(ArrayView[TransformOp], ArrayView[TransformOp]) -> Array[TransformOp]
@@ -105,6 +107,29 @@ pub fn PaperSize::height(Self) -> Double
 pub fn PaperSize::landscape(Self) -> Self
 pub fn PaperSize::unit(Self) -> PdfUnit
 pub fn PaperSize::width(Self) -> Double
+
+pub(all) struct PdfCalculatedPosition {
+  x : Double
+  y : Double
+  rotation : Double
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfPosition {
+  PdfPositionPosCentre(Double, Double)
+  PdfPositionPosLeft(Double, Double)
+  PdfPositionPosRight(Double, Double)
+  PdfPositionTop(Double)
+  PdfPositionTopLeft(Double, Double)
+  PdfPositionTopRight(Double, Double)
+  PdfPositionLeft(Double)
+  PdfPositionBottomLeft(Double, Double)
+  PdfPositionBottom(Double)
+  PdfPositionBottomRight(Double, Double)
+  PdfPositionRight(Double)
+  PdfPositionDiagonal
+  PdfPositionReverseDiagonal
+  PdfPositionCentre
+} derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfRectangle {
   min_x : Double
