@@ -14,11 +14,11 @@ import {
 // Values
 pub fn bit_writer_new() -> @core.BitWriter
 
-pub fn bitstream_of_bytes(Bytes, source? : String) -> BitStream
+pub fn bitstream_of_bytes(Bytes, source? : String) -> @core.BitStream
 
-pub fn bitstream_of_cursor(@core.ByteCursor) -> BitStream
+pub fn bitstream_of_cursor(@core.ByteCursor) -> @core.BitStream
 
-pub fn bitstream_of_view(BytesView, source? : String) -> BitStream
+pub fn bitstream_of_view(BytesView, source? : String) -> @core.BitStream
 
 pub fn byte_cursor_of_bytes(Bytes, source? : String) -> @core.ByteCursor
 
@@ -2193,28 +2193,6 @@ pub fn unit_points(Double, @geometry.PdfUnit) -> Double
 // Errors
 
 // Types and methods
-pub struct BitStream {
-  input : @core.ByteCursor
-  mut current_byte : Int
-  mut bit_mask : Int
-  mut bits_read : Int
-} derive(Eq, ToJson, @debug.Debug)
-pub fn BitStream::align(Self) -> Unit
-pub fn BitStream::bits_read(Self) -> Int
-pub fn BitStream::get_bit(Self) -> Bool raise @core.PdfError
-pub fn BitStream::get_bit_int(Self) -> Int raise @core.PdfError
-pub fn BitStream::get_value_int(Self, Int) -> Int raise @core.PdfError
-pub fn BitStream::get_value_int64(Self, Int) -> Int64 raise @core.PdfError
-pub fn BitStream::position(Self) -> BitStreamPosition
-pub fn BitStream::seek(Self, BitStreamPosition) -> Unit
-
-pub struct BitStreamPosition {
-  input_position : Int
-  current_byte : Int
-  bit_mask : Int
-  bits_read : Int
-} derive(Eq, ToJson, @debug.Debug)
-
 pub(all) struct ObjectStreamReference {
   object_stream_number : Int
   index : Int
@@ -4436,6 +4414,10 @@ pub fn ToGet::length(Self) -> Int
 pub fn ToGet::position(Self) -> Int
 
 // Type aliases
+pub using @core {type BitStream}
+
+pub using @core {type BitStreamPosition}
+
 pub using @core {type BitWriter}
 
 pub using @core {type ByteCursor}
