@@ -4,7 +4,7 @@
 /// Recognizes `[`, `]`, `<<`, and `>>`. A single `<` or `>` is left unread and
 /// returns `LexNone`.
 pub fn ByteCursor::lex_pdf_delimiter(self : ByteCursor) -> PdfLexeme {
-  self.drop_pdf_whitespace()
+  pdf_cursor_drop_whitespace(self)
   let position = self.absolute_position()
   match self.peek_byte() {
     91 => {
@@ -37,7 +37,7 @@ pub fn ByteCursor::lex_pdf_delimiter(self : ByteCursor) -> PdfLexeme {
 /// `StopLexing` at end of input and at markers that terminate object scanning,
 /// such as `startxref` or inline image data boundaries.
 pub fn ByteCursor::lex_pdf_token(self : ByteCursor) -> PdfLexeme raise PdfError {
-  self.drop_pdf_whitespace()
+  pdf_cursor_drop_whitespace(self)
   let position = self.absolute_position()
   let value = self.peek_byte()
   match value {

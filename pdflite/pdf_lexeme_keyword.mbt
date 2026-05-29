@@ -41,9 +41,9 @@ fn ByteCursor::matches_pdf_ascii_at(
 pub fn ByteCursor::lex_pdf_keyword(
   self : ByteCursor,
 ) -> PdfLexeme raise PdfError {
-  self.drop_pdf_whitespace()
+  pdf_cursor_drop_whitespace(self)
   let start = self.position()
-  let view = self.read_until_pdf_whitespace_or_delimiter()
+  let view = pdf_cursor_read_until_whitespace_or_delimiter(self)
   match view {
     [111, 98, 106] => LexObj
     [101, 110, 100, 111, 98, 106] => LexEndObj

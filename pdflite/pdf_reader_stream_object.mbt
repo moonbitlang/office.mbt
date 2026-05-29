@@ -104,12 +104,12 @@ fn ByteCursor::finish_pdf_stream_object_with_length(
     self.finish_pdf_malformed_stream_object(prefix)
   } else {
     self.consume_pdf_stream_line_break()
-    self.drop_pdf_whitespace()
+    pdf_cursor_drop_whitespace(self)
     self.consume_pdf_ascii(
       [101, 110, 100, 115, 116, 114, 101, 97, 109],
       ParseEndStreamExpected,
     )
-    self.drop_pdf_whitespace()
+    pdf_cursor_drop_whitespace(self)
     self.consume_pdf_ascii(
       [101, 110, 100, 111, 98, 106],
       ParseEndObjectExpected,
@@ -164,7 +164,7 @@ fn ByteCursor::finish_pdf_malformed_stream_object(
     .view_at_absolute(data_start, data_end - data_start)
     .to_owned()
   self.seek_absolute(endstream + 9)
-  self.drop_pdf_whitespace()
+  pdf_cursor_drop_whitespace(self)
   self.consume_pdf_ascii([101, 110, 100, 111, 98, 106], ParseEndObjectExpected)
   {
     number: prefix.number,
@@ -197,7 +197,7 @@ fn ByteCursor::finish_pdf_object_stream_member_with_length(
     self.finish_pdf_malformed_object_stream_member(prefix)
   } else {
     self.consume_pdf_stream_line_break()
-    self.drop_pdf_whitespace()
+    pdf_cursor_drop_whitespace(self)
     self.consume_pdf_ascii(
       [101, 110, 100, 115, 116, 114, 101, 97, 109],
       ParseEndStreamExpected,

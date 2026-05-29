@@ -16,9 +16,9 @@ fn ByteCursor::read_pdf_xref_section(
 fn ByteCursor::read_pdf_trailer_dictionary(
   self : ByteCursor,
 ) -> PdfObject raise PdfError {
-  self.drop_pdf_whitespace()
+  pdf_cursor_drop_whitespace(self)
   self.consume_pdf_ascii([116, 114, 97, 105, 108, 101, 114], TrailerExpected)
-  self.drop_pdf_whitespace()
+  pdf_cursor_drop_whitespace(self)
   let object = pdf_parse_single_lexeme_object(self.lex_pdf_tokens())
   match object {
     PdfDictionary(_) => object

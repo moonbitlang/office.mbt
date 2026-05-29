@@ -127,7 +127,7 @@ fn pdf_content_operator_or_literal(view : BytesView) -> PdfContentLexeme {
 
 ///|
 fn pdf_content_lex_next(cursor : ByteCursor) -> PdfContentLexeme raise PdfError {
-  cursor.drop_pdf_whitespace()
+  pdf_cursor_drop_whitespace(cursor)
   let value = cursor.peek_byte()
   match value {
     value if value == pdf_no_more => ContentEnd
@@ -139,7 +139,9 @@ fn pdf_content_lex_next(cursor : ByteCursor) -> PdfContentLexeme raise PdfError 
     value if pdf_is_number_start_byte(value) =>
       ContentOperand(pdf_content_read_object(cursor))
     116 | 102 | 110 =>
-      pdf_content_operator_or_literal(cursor.read_pdf_regular_token_view())
-    _ => ContentOperator(cursor.read_pdf_regular_token_view())
+      pdf_content_operator_or_literal(
+        pdf_cursor_read_regular_token_view(cursor),
+      )
+    _ => ContentOperator(pdf_cursor_read_regular_token_view(cursor))
   }
 }

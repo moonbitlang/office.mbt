@@ -664,6 +664,12 @@ pub fn pdf_css_colour_value(String) -> Int?
 
 pub fn pdf_css_colours() -> Array[(String, Int)]
 
+pub fn pdf_cursor_drop_whitespace(ByteCursor) -> Unit
+
+pub fn pdf_cursor_read_regular_token_view(ByteCursor) -> BytesView
+
+pub fn pdf_cursor_read_until_whitespace_or_delimiter(ByteCursor) -> BytesView
+
 pub fn pdf_date_of_bytes(Bytes) -> @date.PdfDate raise @core.PdfError
 
 pub fn pdf_date_of_object(PdfObject) -> @date.PdfDate raise @core.PdfError
@@ -2197,7 +2203,6 @@ pub fn ByteCursor::absolute_position(Self) -> Int
 pub fn ByteCursor::byte_at_absolute(Self, Int) -> Byte?
 pub fn ByteCursor::byte_int_at_absolute(Self, Int) -> Int
 pub fn ByteCursor::deep_copy(Self) -> Self
-pub fn ByteCursor::drop_pdf_whitespace(Self) -> Unit
 pub fn ByteCursor::ignore_until(Self, (Int) -> Bool, eof_is_delimiter? : Bool) -> Unit raise @core.PdfError
 pub fn ByteCursor::input_byte(Self) -> Int
 pub fn ByteCursor::input_pdf_error(Self, String) -> String
@@ -2227,9 +2232,7 @@ pub fn ByteCursor::read_line(Self) -> Bytes raise @core.PdfError
 pub fn ByteCursor::read_line_view(Self) -> BytesView raise @core.PdfError
 pub fn ByteCursor::read_line_views(Self) -> Array[BytesView]
 pub fn ByteCursor::read_lines(Self) -> Array[Bytes]
-pub fn ByteCursor::read_pdf_regular_token_view(Self) -> BytesView
 pub fn ByteCursor::read_remaining_bytes(Self) -> Bytes
-pub fn ByteCursor::read_until_pdf_whitespace_or_delimiter(Self) -> BytesView
 pub fn ByteCursor::read_until_view(Self, (Int) -> Bool, eof_is_delimiter? : Bool) -> BytesView raise @core.PdfError
 pub fn ByteCursor::read_view(Self, Int) -> BytesView raise @core.PdfError
 pub fn ByteCursor::read_view_at(Self, Int, Int) -> BytesView raise @core.PdfError

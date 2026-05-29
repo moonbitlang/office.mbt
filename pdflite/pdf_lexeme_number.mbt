@@ -84,7 +84,7 @@ fn pdf_number_view_real(view : BytesView) -> PdfLexeme {
 /// The cursor first reads one regular token. Non-boolean tokens produce
 /// `LexNone`.
 pub fn ByteCursor::lex_pdf_bool(self : ByteCursor) -> PdfLexeme {
-  let view = self.read_pdf_regular_token_view()
+  let view = pdf_cursor_read_regular_token_view(self)
   match view {
     [116, 114, 117, 101] => LexBool(true)
     [102, 97, 108, 115, 101] => LexBool(false)
@@ -100,7 +100,7 @@ pub fn ByteCursor::lex_pdf_bool(self : ByteCursor) -> PdfLexeme {
 /// compatibly by dropping one minus sign.
 pub fn ByteCursor::lex_pdf_number(self : ByteCursor) -> PdfLexeme {
   let view = pdf_number_view_without_double_minus(
-    self.read_pdf_regular_token_view(),
+    pdf_cursor_read_regular_token_view(self),
   )
   if view.length() == 0 {
     LexNone

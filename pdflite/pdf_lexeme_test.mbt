@@ -25,21 +25,21 @@ test "PDF byte predicates match CamlPDF whitespace and delimiters" {
 }
 
 ///|
-test "ByteCursor drops PDF whitespace and leaves delimiter untouched" {
+test "pdf_cursor_drop_whitespace leaves delimiter untouched" {
   let cursor = @pdflite.byte_cursor_of_bytes(
     lexeme_bytes_for_test([32, 10, 47, 78, 97, 109, 101]),
   )
-  cursor.drop_pdf_whitespace()
+  @pdflite.pdf_cursor_drop_whitespace(cursor)
   @test.assert_eq(cursor.position(), 2)
   @test.assert_eq(cursor.peek_byte(), 47)
 }
 
 ///|
-test "ByteCursor reads regular token views without consuming delimiter" {
+test "pdf_cursor_read_regular_token_view leaves delimiter untouched" {
   let cursor = @pdflite.byte_cursor_of_bytes(
     lexeme_bytes_for_test([32, 65, 66, 67, 47, 68]),
   )
-  let view = cursor.read_pdf_regular_token_view()
+  let view = @pdflite.pdf_cursor_read_regular_token_view(cursor)
   @test.assert_eq(lexeme_view_to_ints_for_test(view), [65, 66, 67])
   @test.assert_eq(cursor.peek_byte(), 47)
   @test.assert_eq(cursor.position(), 4)
@@ -167,7 +167,7 @@ test "ByteCursor lexes PDF names as bytes including slash and hex escapes" {
     47, 65, 32, 66, 65, 97, 175, 175,
   ])
   @test.assert_eq(cursor.peek_byte(), 32)
-  cursor.drop_pdf_whitespace()
+  @pdflite.pdf_cursor_drop_whitespace(cursor)
   let second = try! cursor.lex_pdf_name()
   guard second is LexName(second_name) else { fail("expected second LexName") }
   @test.assert_eq(second_name.bytes().to_array().map(byte => byte.to_int()), [
@@ -200,7 +200,7 @@ test "ByteCursor lexes PDF comments and leaves newline for whitespace scan" {
     LexComment(lexeme_bytes_for_test([])),
   )
   @test.assert_eq(cursor.peek_byte(), 13)
-  cursor.drop_pdf_whitespace()
+  @pdflite.pdf_cursor_drop_whitespace(cursor)
   @test.assert_eq(cursor.lex_pdf_number(), LexInt(1))
   @test.assert_eq(
     @pdflite.byte_cursor_of_bytes(lexeme_bytes_for_test([65])).lex_pdf_comment(),
@@ -221,7 +221,7 @@ test "ByteCursor lexes PDF literal strings as bytes" {
   @test.assert_eq(first_bytes.to_array().map(byte => byte.to_int()), [
     65, 10, 66, 43, 40, 67, 41,
   ])
-  cursor.drop_pdf_whitespace()
+  @pdflite.pdf_cursor_drop_whitespace(cursor)
   let second = try! cursor.lex_pdf_literal_string()
   guard second is LexString(second_bytes) else {
     fail("expected second LexString")

@@ -197,7 +197,7 @@ fn pdf_colour_lexemes(text : String) -> Array[PdfLexeme] raise PdfError {
   while !done {
     match cursor.lex_pdf_token() {
       StopLexing => {
-        cursor.drop_pdf_whitespace()
+        pdf_cursor_drop_whitespace(cursor)
         if cursor.peek_byte() != pdf_no_more {
           pdf_colour_bad()
         }

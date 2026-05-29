@@ -153,13 +153,13 @@ fn pdf_classic_xrefs_add_newer_first_with_seen(
 fn ByteCursor::read_pdf_classic_xref_entries(
   self : ByteCursor,
 ) -> Array[PdfClassicXRefEntry] raise PdfError {
-  self.drop_pdf_whitespace()
+  pdf_cursor_drop_whitespace(self)
   self.consume_pdf_ascii([120, 114, 101, 102], XRefExpected)
   let entries : Array[PdfClassicXRefEntry] = []
   let mut object_number = 0
   let mut done = false
   while !done {
-    self.drop_pdf_whitespace()
+    pdf_cursor_drop_whitespace(self)
     let position = self.absolute_position()
     if self.matches_pdf_ascii_at(position, [116, 114, 97, 105, 108, 101, 114]) {
       done = true

@@ -110,7 +110,7 @@ fn pdf_text_parse_charset(bytes : BytesView) -> Array[PdfName] raise PdfError {
   let names : Array[PdfName] = Array::new(capacity=bytes.length())
   let mut done = false
   while !done {
-    cursor.drop_pdf_whitespace()
+    pdf_cursor_drop_whitespace(cursor)
     match cursor.lex_pdf_name() {
       LexName(name) =>
         if name == pdf_text_slash_name {
