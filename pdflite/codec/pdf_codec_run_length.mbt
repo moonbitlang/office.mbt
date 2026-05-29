@@ -23,7 +23,7 @@ fn pdf_run_length_flush_literal(
 ///
 /// Literal runs and repeated-byte runs are emitted with the standard `128`
 /// end-of-data marker.
-pub fn pdf_run_length_encode_view(data : BytesView) -> PdfBytes {
+pub fn pdf_run_length_encode_view(data : BytesView) -> @core.PdfBytes {
   let output = Array::make(
     data.length() + (data.length() + 127) / 128 + 1,
     b'\x00',
@@ -73,7 +73,7 @@ pub fn pdf_run_length_encode_view(data : BytesView) -> PdfBytes {
 
 ///|
 /// Owned-byte wrapper for `pdf_run_length_encode_view`.
-pub fn pdf_run_length_encode(data : PdfBytes) -> PdfBytes {
+pub fn pdf_run_length_encode(data : @core.PdfBytes) -> @core.PdfBytes {
   pdf_run_length_encode_view(data)
 }
 
@@ -114,7 +114,7 @@ fn pdf_run_length_decoded_length(data : BytesView) -> Int {
 /// Decoding stops at the `128` end marker or end of input. Truncated trailing
 /// runs are decoded as far as bytes are available, matching the tolerant reader
 /// behavior used by CamlPDF.
-pub fn pdf_run_length_decode_view(data : BytesView) -> PdfBytes {
+pub fn pdf_run_length_decode_view(data : BytesView) -> @core.PdfBytes {
   let output = Array::make(pdf_run_length_decoded_length(data), b'\x00')
   let mut position = 0
   let mut index = 0
@@ -154,6 +154,6 @@ pub fn pdf_run_length_decode_view(data : BytesView) -> PdfBytes {
 
 ///|
 /// Owned-byte wrapper for `pdf_run_length_decode_view`.
-pub fn pdf_run_length_decode(data : PdfBytes) -> PdfBytes {
+pub fn pdf_run_length_decode(data : @core.PdfBytes) -> @core.PdfBytes {
   pdf_run_length_decode_view(data)
 }

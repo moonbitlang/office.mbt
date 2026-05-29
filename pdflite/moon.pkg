@@ -1,4 +1,5 @@
 import {
+  "bobzhang/pdflite/codec",
   "bobzhang/pdflite/core",
   "bobzhang/pdflite/crypt_core",
   "bobzhang/pdflite/date",

@@ -22,7 +22,7 @@ fn pdf_ascii_hex_value(value : Int) -> Int? {
 ///
 /// The returned bytes are uppercase hexadecimal pairs followed by the `>`
 /// end-of-data marker.
-pub fn pdf_ascii_hex_encode_view(data : BytesView) -> PdfBytes {
+pub fn pdf_ascii_hex_encode_view(data : BytesView) -> @core.PdfBytes {
   let output = Array::make(data.length() * 2 + 1, b'>')
   let mut position = 0
   for byte in data {
@@ -36,7 +36,7 @@ pub fn pdf_ascii_hex_encode_view(data : BytesView) -> PdfBytes {
 
 ///|
 /// Owned-byte wrapper for `pdf_ascii_hex_encode_view`.
-pub fn pdf_ascii_hex_encode(data : PdfBytes) -> PdfBytes {
+pub fn pdf_ascii_hex_encode(data : @core.PdfBytes) -> @core.PdfBytes {
   pdf_ascii_hex_encode_view(data)
 }
 
@@ -44,8 +44,10 @@ pub fn pdf_ascii_hex_encode(data : PdfBytes) -> PdfBytes {
 /// Decode PDF ASCIIHexDecode data.
 ///
 /// Whitespace is ignored and a trailing odd nibble is padded with zero when the
-/// `>` marker is reached. Invalid hex digits raise `PdfError::InvalidHexEscape`.
-pub fn pdf_ascii_hex_decode_view(data : BytesView) -> PdfBytes raise PdfError {
+/// `>` marker is reached. Invalid hex digits raise `@core.PdfError::InvalidHexEscape`.
+pub fn pdf_ascii_hex_decode_view(
+  data : BytesView,
+) -> @core.PdfBytes raise @core.PdfError {
   let output = Array::make((data.length() + 1) / 2, b'\x00')
   let mut position = 0
   let mut high : Int? = None
@@ -53,7 +55,7 @@ pub fn pdf_ascii_hex_decode_view(data : BytesView) -> PdfBytes raise PdfError {
   for byte in data {
     if !done {
       let value = byte.to_int()
-      if pdf_is_whitespace_byte(value) {
+      if @core.pdf_is_whitespace_byte(value) {
         ()
       } else if value == 62 {
         match high {
@@ -85,7 +87,9 @@ pub fn pdf_ascii_hex_decode_view(data : BytesView) -> PdfBytes raise PdfError {
 
 ///|
 /// Owned-byte wrapper for `pdf_ascii_hex_decode_view`.
-pub fn pdf_ascii_hex_decode(data : PdfBytes) -> PdfBytes raise PdfError {
+pub fn pdf_ascii_hex_decode(
+  data : @core.PdfBytes,
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_ascii_hex_decode_view(data)
 }
 
@@ -144,7 +148,7 @@ fn pdf_ascii85_word_from_view(
 ///
 /// Four zero bytes are compressed as `z`, partial final groups are shortened,
 /// and the result ends with `~>`.
-pub fn pdf_ascii85_encode_view(data : BytesView) -> PdfBytes {
+pub fn pdf_ascii85_encode_view(data : BytesView) -> @core.PdfBytes {
   let output = Array::make((data.length() + 3) / 4 * 5 + 2, b' ')
   let mut position = 0
   let mut index = 0
@@ -168,7 +172,7 @@ pub fn pdf_ascii85_encode_view(data : BytesView) -> PdfBytes {
 
 ///|
 /// Owned-byte wrapper for `pdf_ascii85_encode_view`.
-pub fn pdf_ascii85_encode(data : PdfBytes) -> PdfBytes {
+pub fn pdf_ascii85_encode(data : @core.PdfBytes) -> @core.PdfBytes {
   pdf_ascii85_encode_view(data)
 }
 
@@ -178,7 +182,7 @@ fn pdf_ascii85_decode_group(
   output : Array[Byte],
   position : Int,
   output_length : Int,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   let mut word : UInt64 = 0
   for digit in digits {
     word = word * 85 + digit.to_uint64()
@@ -211,7 +215,7 @@ fn pdf_ascii85_finish_partial(
   digits : Array[Int],
   output : Array[Byte],
   position : Int,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   if digits.length() == 1 {
     raise InvalidASCII85Data
   } else if digits.length() > 1 {
@@ -229,8 +233,10 @@ fn pdf_ascii85_finish_partial(
 /// Decode PDF ASCII85Decode data.
 ///
 /// Whitespace is ignored. Missing terminators, malformed partial groups,
-/// invalid `z` placement, and overflowing groups raise `PdfError::InvalidASCII85Data`.
-pub fn pdf_ascii85_decode_view(data : BytesView) -> PdfBytes raise PdfError {
+/// invalid `z` placement, and overflowing groups raise `@core.PdfError::InvalidASCII85Data`.
+pub fn pdf_ascii85_decode_view(
+  data : BytesView,
+) -> @core.PdfBytes raise @core.PdfError {
   let output = Array::make(data.length() * 4, b'\x00')
   let mut position = 0
   let mut digits : Array[Int] = Array::new(capacity=5)
@@ -238,7 +244,7 @@ pub fn pdf_ascii85_decode_view(data : BytesView) -> PdfBytes raise PdfError {
   for byte in data {
     if !done {
       let value = byte.to_int()
-      if pdf_is_whitespace_byte(value) {
+      if @core.pdf_is_whitespace_byte(value) {
         ()
       } else if byte == pdf_ascii85_terminator {
         position = pdf_ascii85_finish_partial(digits, output, position)
@@ -271,6 +277,8 @@ pub fn pdf_ascii85_decode_view(data : BytesView) -> PdfBytes raise PdfError {
 
 ///|
 /// Owned-byte wrapper for `pdf_ascii85_decode_view`.
-pub fn pdf_ascii85_decode(data : PdfBytes) -> PdfBytes raise PdfError {
+pub fn pdf_ascii85_decode(
+  data : @core.PdfBytes,
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_ascii85_decode_view(data)
 }

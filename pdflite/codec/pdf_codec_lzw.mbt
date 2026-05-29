@@ -1,8 +1,8 @@
 ///|
 fn pdf_lzw_next_code(
-  bits : BitStream,
+  bits : @core.BitStream,
   code_length : Int,
-) -> Int? raise PdfError {
+) -> Int? raise @core.PdfError {
   try bits.get_value_int(code_length) catch {
     EndOfInput => None
     _ => raise InvalidLZWData
@@ -17,7 +17,7 @@ fn pdf_lzw_decode_code(
   prefix_code : Array[Int],
   append_character : Array[Int],
   next_code : Int,
-) -> Array[Int] raise PdfError {
+) -> Array[Int] raise @core.PdfError {
   if code < 0 || code >= next_code || code >= prefix_code.length() {
     raise InvalidLZWData
   }
@@ -48,9 +48,9 @@ fn pdf_lzw_decode_code(
 
 ///|
 fn pdf_lzw_read_non_clear_code(
-  bits : BitStream,
+  bits : @core.BitStream,
   code_length : Int,
-) -> Int? raise PdfError {
+) -> Int? raise @core.PdfError {
   let mut code = 256
   while code == 256 {
     match pdf_lzw_next_code(bits, code_length) {
@@ -66,7 +66,7 @@ fn pdf_lzw_read_non_clear_code(
 fn pdf_lzw_output_literal(
   output : Array[Byte],
   code : Int,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   if code < 0 || code > 255 {
     raise InvalidLZWData
   }
@@ -74,7 +74,7 @@ fn pdf_lzw_output_literal(
 }
 
 ///|
-fn pdf_lzw_consumed_bytes(bits : BitStream) -> Int {
+fn pdf_lzw_consumed_bytes(bits : @core.BitStream) -> Int {
   let count = bits.bits_read()
   if count % 8 == 0 {
     count / 8
@@ -84,13 +84,18 @@ fn pdf_lzw_consumed_bytes(bits : BitStream) -> Int {
 }
 
 ///|
-fn pdf_lzw_decode_view_prefix(
+/// Decode the first complete LZW stream prefix and return decoded bytes plus
+/// the number of encoded bytes consumed.
+///
+/// This is used by inline-image parsing, where the encoded data is followed by
+/// the content-stream `EI` marker rather than a separate length field.
+pub fn pdf_lzw_decode_view_prefix(
   data : BytesView,
   early_change? : Int = 1,
-) -> (PdfBytes, Int) raise PdfError {
+) -> (@core.PdfBytes, Int) raise @core.PdfError {
   let prefix_code = Array::make(8192, 0)
   let append_character = Array::make(8192, 0)
-  let bits = bitstream_of_view(data)
+  let bits = @core.bitstream_of_view(data)
   let output : Array[Byte] = Array::new(capacity=data.length())
   let mut code_length = 9
   let mut next_code = 258
@@ -169,14 +174,14 @@ fn pdf_lzw_decode_view_prefix(
 /// Decode PDF LZW data from a byte view.
 ///
 /// `early_change` controls when code width grows; PDF streams default to `1`.
-/// Malformed codes or bitstream errors raise `PdfError::InvalidLZWData`.
+/// Malformed codes or bitstream errors raise `@core.PdfError::InvalidLZWData`.
 pub fn pdf_lzw_decode_view(
   data : BytesView,
   early_change? : Int = 1,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let prefix_code = Array::make(8192, 0)
   let append_character = Array::make(8192, 0)
-  let bits = bitstream_of_view(data)
+  let bits = @core.bitstream_of_view(data)
   let output : Array[Byte] = Array::new(capacity=data.length())
   let mut code_length = 9
   let mut next_code = 258
@@ -245,8 +250,8 @@ pub fn pdf_lzw_decode_view(
 ///|
 /// Owned-byte wrapper for `pdf_lzw_decode_view`.
 pub fn pdf_lzw_decode(
-  data : PdfBytes,
+  data : @core.PdfBytes,
   early_change? : Int = 1,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_lzw_decode_view(data, early_change~)
 }

@@ -1111,6 +1111,8 @@ pub fn pdf_lzw_decode(Bytes, early_change? : Int) -> Bytes raise @core.PdfError
 
 pub fn pdf_lzw_decode_view(BytesView, early_change? : Int) -> Bytes raise @core.PdfError
 
+pub fn pdf_lzw_decode_view_prefix(BytesView, early_change? : Int) -> (Bytes, Int) raise @core.PdfError
+
 pub fn pdf_make_font(@core.PdfName, PdfEncoding) -> @syntax.PdfObject raise @core.PdfError
 
 pub fn pdf_make_gpcpolygon(ArrayView[Bool], ArrayView[Array[PdfClipVertex]]) -> PdfClipPolygon raise @core.PdfError

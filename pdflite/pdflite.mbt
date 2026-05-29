@@ -186,6 +186,25 @@ pub using @flate {
 }
 
 ///|
+pub using @codec {
+  pdf_ascii_hex_encode_view,
+  pdf_ascii_hex_encode,
+  pdf_ascii_hex_decode_view,
+  pdf_ascii_hex_decode,
+  pdf_ascii85_encode_view,
+  pdf_ascii85_encode,
+  pdf_ascii85_decode_view,
+  pdf_ascii85_decode,
+  pdf_lzw_decode_view_prefix,
+  pdf_lzw_decode_view,
+  pdf_lzw_decode,
+  pdf_run_length_encode_view,
+  pdf_run_length_encode,
+  pdf_run_length_decode_view,
+  pdf_run_length_decode,
+}
+
+///|
 pub using @afm {type PdfAfmData, pdf_read_afm}
 
 ///|
