@@ -10,8 +10,8 @@ pub(all) enum PdfLexeme {
   LexBool(Bool)
   LexInt(Int)
   LexReal(Double)
-  LexString(PdfBytes)
-  LexName(PdfName)
+  LexString(@core.PdfBytes)
+  LexName(@core.PdfName)
   LexLeftSquare
   LexRightSquare
   LexLeftDict
@@ -20,7 +20,7 @@ pub(all) enum PdfLexeme {
   LexObj
   LexEndObj
   LexR
-  LexComment(PdfBytes)
+  LexComment(@core.PdfBytes)
   StopLexing
   LexNone
 } derive(Debug, Eq, ToJson)

@@ -51,6 +51,30 @@ pub using @core {
 }
 
 ///|
+pub using @syntax {
+  type PdfLexeme,
+  pdf_cursor_drop_whitespace,
+  pdf_cursor_read_until_whitespace_or_delimiter,
+  pdf_cursor_read_regular_token_view,
+  pdf_cursor_lex_bool,
+  pdf_cursor_lex_number,
+  pdf_cursor_lex_name,
+  pdf_cursor_lex_comment,
+  pdf_cursor_lex_hex_string,
+  pdf_cursor_lex_keyword,
+  pdf_cursor_lex_literal_string,
+  pdf_cursor_lex_delimiter,
+  pdf_cursor_lex_token,
+  pdf_cursor_lex_tokens,
+  pdf_lex_single_view,
+  pdf_lex_view,
+  pdf_lex_bytes,
+  pdf_lexeme_debug_name,
+  pdf_string_of_lexeme,
+  pdf_string_of_lexemes,
+}
+
+///|
 pub using @geometry {
   type PdfUnit,
   type PaperSize,

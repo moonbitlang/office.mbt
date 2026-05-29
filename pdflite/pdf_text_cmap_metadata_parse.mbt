@@ -43,8 +43,8 @@ fn pdf_text_parse_cmap_name_token(token : BytesView) -> PdfName? {
       guard index + 2 < token.length() else { return None }
       match
         (
-          pdf_hex_value(token[index + 1].to_int()),
-          pdf_hex_value(token[index + 2].to_int()),
+          @syntax.pdf_hex_value(token[index + 1].to_int()),
+          @syntax.pdf_hex_value(token[index + 2].to_int()),
         ) {
         (Some(high), Some(low)) => {
           bytes.push((high * 16 + low).to_byte())

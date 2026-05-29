@@ -42,8 +42,8 @@ fn pdf_cursor_read_plain_indirect_object_at_current(
 ///|
 fn pdf_cursor_stopped_at_stream_candidate(cursor : ByteCursor) -> Bool {
   let position = cursor.absolute_position()
-  pdf_cursor_matches_ascii_at(cursor, position, [115]) &&
-  !pdf_cursor_matches_ascii_at(cursor, position, [
+  @syntax.pdf_cursor_matches_ascii_at(cursor, position, [115]) &&
+  !@syntax.pdf_cursor_matches_ascii_at(cursor, position, [
     115, 116, 97, 114, 116, 120, 114, 101, 102,
   ])
 }

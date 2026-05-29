@@ -136,7 +136,7 @@ fn pdf_content_lex_next(cursor : ByteCursor) -> PdfContentLexeme raise PdfError 
       ContentComment
     }
     47 | 40 | 91 | 60 => ContentOperand(pdf_content_read_object(cursor))
-    value if pdf_is_number_start_byte(value) =>
+    value if @syntax.pdf_is_number_start_byte(value) =>
       ContentOperand(pdf_content_read_object(cursor))
     116 | 102 | 110 =>
       pdf_content_operator_or_literal(

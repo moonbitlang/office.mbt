@@ -20,7 +20,8 @@ fn pdf_number_view_has_real_marker(view : BytesView) -> Bool {
 }
 
 ///|
-fn pdf_number_view_int(view : BytesView) -> Int? {
+/// Parse an integer token view, returning `None` when the view is not an integer.
+pub fn pdf_number_view_int(view : BytesView) -> Int? {
   if view.length() == 0 {
     None
   } else {
@@ -83,7 +84,7 @@ fn pdf_number_view_real(view : BytesView) -> PdfLexeme {
 ///
 /// The cursor first reads one regular token. Non-boolean tokens produce
 /// `LexNone`.
-pub fn pdf_cursor_lex_bool(cursor : ByteCursor) -> PdfLexeme {
+pub fn pdf_cursor_lex_bool(cursor : @core.ByteCursor) -> PdfLexeme {
   let view = pdf_cursor_read_regular_token_view(cursor)
   match view {
     [116, 114, 117, 101] => LexBool(true)
@@ -98,7 +99,7 @@ pub fn pdf_cursor_lex_bool(cursor : ByteCursor) -> PdfLexeme {
 /// Integers are limited to MoonBit `Int` range; oversized integer-looking
 /// tokens fall back to real-number parsing. A leading doubled minus is accepted
 /// compatibly by dropping one minus sign.
-pub fn pdf_cursor_lex_number(cursor : ByteCursor) -> PdfLexeme {
+pub fn pdf_cursor_lex_number(cursor : @core.ByteCursor) -> PdfLexeme {
   let view = pdf_number_view_without_double_minus(
     pdf_cursor_read_regular_token_view(cursor),
   )

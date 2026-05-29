@@ -851,9 +851,9 @@ test "private reader byte-view helpers cover boundary cases" {
     try! pdf_parse_ascii_int_view(@ascii.encode("2147483647")),
     2147483647,
   )
-  @test.assert_eq(pdf_number_view_int(Bytes::new(0)), None)
-  @test.assert_eq(pdf_number_view_int(@ascii.encode("+")), None)
-  @test.assert_eq(pdf_number_view_int(@ascii.encode("-")), None)
+  @test.assert_eq(@syntax.pdf_number_view_int(Bytes::new(0)), None)
+  @test.assert_eq(@syntax.pdf_number_view_int(@ascii.encode("+")), None)
+  @test.assert_eq(@syntax.pdf_number_view_int(@ascii.encode("-")), None)
 }
 
 ///|

@@ -18,7 +18,7 @@ fn pdf_cursor_consume_ascii(
   error : PdfError,
 ) -> Unit raise PdfError {
   let position = cursor.absolute_position()
-  if pdf_cursor_matches_ascii_at(cursor, position, values) {
+  if @syntax.pdf_cursor_matches_ascii_at(cursor, position, values) {
     cursor.seek_absolute(position + values.length())
   } else {
     raise error

@@ -1,11 +1,11 @@
 ///|
-fn pdf_cursor_name_output_capacity(cursor : ByteCursor) -> Int {
+fn pdf_cursor_name_output_capacity(cursor : @core.ByteCursor) -> Int {
   let mut index = cursor.absolute_position()
   let mut capacity = 1
   let mut done = false
   while index < cursor.length() && !done {
     let value = cursor.byte_int_at_absolute(index)
-    if pdf_is_whitespace_or_delimiter_byte(value) {
+    if @core.pdf_is_whitespace_or_delimiter_byte(value) {
       done = true
     } else {
       index += 1
@@ -27,9 +27,11 @@ fn pdf_cursor_name_output_capacity(cursor : ByteCursor) -> Int {
 /// Lex a PDF name object.
 ///
 /// Names start with `/` and keep the slash in the stored bytes. `#xx` hex
-/// escapes are decoded into raw bytes. Invalid escapes raise `PdfError::InvalidHexEscape`;
+/// escapes are decoded into raw bytes. Invalid escapes raise `@core.PdfError::InvalidHexEscape`;
 /// non-name input returns `LexNone` without consuming it.
-pub fn pdf_cursor_lex_name(cursor : ByteCursor) -> PdfLexeme raise PdfError {
+pub fn pdf_cursor_lex_name(
+  cursor : @core.ByteCursor,
+) -> PdfLexeme raise @core.PdfError {
   if cursor.peek_byte() != 47 {
     LexNone
   } else {
@@ -39,7 +41,8 @@ pub fn pdf_cursor_lex_name(cursor : ByteCursor) -> PdfLexeme raise PdfError {
     let mut done = false
     while !done {
       let value = cursor.peek_byte()
-      if value == pdf_no_more || pdf_is_whitespace_or_delimiter_byte(value) {
+      if value == @core.pdf_no_more ||
+        @core.pdf_is_whitespace_or_delimiter_byte(value) {
         done = true
       } else {
         cursor.nudge()
@@ -60,7 +63,7 @@ pub fn pdf_cursor_lex_name(cursor : ByteCursor) -> PdfLexeme raise PdfError {
         }
       }
     }
-    LexName(pdf_name_of_bytes(Bytes::from_array(bytes[:position])))
+    LexName(@core.pdf_name_of_bytes(Bytes::from_array(bytes[:position])))
   }
 }
 
@@ -70,7 +73,7 @@ pub fn pdf_cursor_lex_name(cursor : ByteCursor) -> PdfLexeme raise PdfError {
 /// A comment starts with `%` and runs up to but not including the next newline.
 /// The comment text is intentionally not retained; this returns an empty
 /// `LexComment` payload. Non-comment input returns `LexNone`.
-pub fn pdf_cursor_lex_comment(cursor : ByteCursor) -> PdfLexeme {
+pub fn pdf_cursor_lex_comment(cursor : @core.ByteCursor) -> PdfLexeme {
   if cursor.peek_byte() != 37 {
     LexNone
   } else {
@@ -78,7 +81,7 @@ pub fn pdf_cursor_lex_comment(cursor : ByteCursor) -> PdfLexeme {
     let mut done = false
     while !done {
       let value = cursor.peek_byte()
-      if value == pdf_no_more || pdf_is_newline_byte(value) {
+      if value == @core.pdf_no_more || @core.pdf_is_newline_byte(value) {
         done = true
       } else {
         cursor.nudge()

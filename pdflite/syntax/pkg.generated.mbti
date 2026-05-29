@@ -1,0 +1,82 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pdflite/syntax"
+
+import {
+  "bobzhang/pdflite/core",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn pdf_cursor_drop_whitespace(@core.ByteCursor) -> Unit
+
+pub fn pdf_cursor_lex_bool(@core.ByteCursor) -> PdfLexeme
+
+pub fn pdf_cursor_lex_comment(@core.ByteCursor) -> PdfLexeme
+
+pub fn pdf_cursor_lex_delimiter(@core.ByteCursor) -> PdfLexeme
+
+pub fn pdf_cursor_lex_hex_string(@core.ByteCursor) -> PdfLexeme raise @core.PdfError
+
+pub fn pdf_cursor_lex_keyword(@core.ByteCursor) -> PdfLexeme raise @core.PdfError
+
+pub fn pdf_cursor_lex_literal_string(@core.ByteCursor) -> PdfLexeme raise @core.PdfError
+
+pub fn pdf_cursor_lex_name(@core.ByteCursor) -> PdfLexeme raise @core.PdfError
+
+pub fn pdf_cursor_lex_number(@core.ByteCursor) -> PdfLexeme
+
+pub fn pdf_cursor_lex_token(@core.ByteCursor) -> PdfLexeme raise @core.PdfError
+
+pub fn pdf_cursor_lex_tokens(@core.ByteCursor) -> Array[PdfLexeme] raise @core.PdfError
+
+pub fn pdf_cursor_matches_ascii_at(@core.ByteCursor, Int, ArrayView[Int]) -> Bool
+
+pub fn pdf_cursor_read_regular_token_view(@core.ByteCursor) -> BytesView
+
+pub fn pdf_cursor_read_until_whitespace_or_delimiter(@core.ByteCursor) -> BytesView
+
+pub fn pdf_hex_value(Int) -> Int?
+
+pub fn pdf_is_number_start_byte(Int) -> Bool
+
+pub fn pdf_lex_bytes(Bytes) -> Array[PdfLexeme] raise @core.PdfError
+
+pub fn pdf_lex_single_view(BytesView) -> PdfLexeme raise @core.PdfError
+
+pub fn pdf_lex_view(BytesView) -> Array[PdfLexeme] raise @core.PdfError
+
+pub fn pdf_lexeme_debug_name(PdfLexeme) -> String
+
+pub fn pdf_number_view_int(BytesView) -> Int?
+
+pub fn pdf_string_of_lexeme(PdfLexeme) -> String
+
+pub fn pdf_string_of_lexemes(ArrayView[PdfLexeme]) -> String
+
+// Errors
+
+// Types and methods
+pub(all) enum PdfLexeme {
+  LexNull
+  LexBool(Bool)
+  LexInt(Int)
+  LexReal(Double)
+  LexString(Bytes)
+  LexName(@core.PdfName)
+  LexLeftSquare
+  LexRightSquare
+  LexLeftDict
+  LexRightDict
+  LexEndStream
+  LexObj
+  LexEndObj
+  LexR
+  LexComment(Bytes)
+  StopLexing
+  LexNone
+} derive(Eq, ToJson, @debug.Debug)
+
+// Type aliases
+
+// Traits
+

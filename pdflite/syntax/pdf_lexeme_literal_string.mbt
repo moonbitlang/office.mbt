@@ -1,8 +1,8 @@
 ///|
 fn pdf_cursor_read_octal_escape(
-  cursor : ByteCursor,
+  cursor : @core.ByteCursor,
   first : Int,
-) -> Byte raise PdfError {
+) -> Byte raise @core.PdfError {
   let mut value = first - 48
   let second = cursor.input_byte()
   if pdf_is_octal_digit_byte(second) {
@@ -10,21 +10,21 @@ fn pdf_cursor_read_octal_escape(
     let third = cursor.input_byte()
     if pdf_is_octal_digit_byte(third) {
       value = value * 8 + third - 48
-    } else if third != pdf_no_more {
+    } else if third != @core.pdf_no_more {
       cursor.rewind()
     }
-  } else if second != pdf_no_more {
+  } else if second != @core.pdf_no_more {
     cursor.rewind()
   }
-  pdf_byte_of_int(value)
+  @core.pdf_byte_of_int(value)
 }
 
 ///|
 fn pdf_cursor_read_string_escape_into(
-  cursor : ByteCursor,
+  cursor : @core.ByteCursor,
   bytes : Array[Byte],
   position : Int,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   let escaped = cursor.input_byte()
   match escaped {
     110 => pdf_lexeme_write_byte_at(bytes, position, (10).to_byte())
@@ -34,7 +34,7 @@ fn pdf_cursor_read_string_escape_into(
     102 => pdf_lexeme_write_byte_at(bytes, position, (12).to_byte())
     13 => {
       let next = cursor.input_byte()
-      if next != 10 && next != pdf_no_more {
+      if next != 10 && next != @core.pdf_no_more {
         cursor.rewind()
       }
       position
@@ -46,13 +46,13 @@ fn pdf_cursor_read_string_escape_into(
         position,
         pdf_cursor_read_octal_escape(cursor, value),
       )
-    value if value == pdf_no_more => raise EndOfInput
+    value if value == @core.pdf_no_more => raise EndOfInput
     value => pdf_lexeme_write_byte_at(bytes, position, value.to_byte())
   }
 }
 
 ///|
-fn pdf_cursor_literal_string_output_capacity(cursor : ByteCursor) -> Int {
+fn pdf_cursor_literal_string_output_capacity(cursor : @core.ByteCursor) -> Int {
   let mut index = cursor.absolute_position()
   let mut capacity = 0
   let mut depth = 1
@@ -107,10 +107,10 @@ fn pdf_cursor_literal_string_output_capacity(cursor : ByteCursor) -> Int {
 /// Literal strings are enclosed in parentheses, may contain balanced nested
 /// parentheses, and support the PDF backslash escapes for control characters,
 /// octal bytes, escaped parentheses, and line continuation. Unterminated strings
-/// raise `PdfError::EndOfInput`.
+/// raise `@core.PdfError::EndOfInput`.
 pub fn pdf_cursor_lex_literal_string(
-  cursor : ByteCursor,
-) -> PdfLexeme raise PdfError {
+  cursor : @core.ByteCursor,
+) -> PdfLexeme raise @core.PdfError {
   if cursor.peek_byte() != 40 {
     LexNone
   } else {
@@ -136,7 +136,7 @@ pub fn pdf_cursor_lex_literal_string(
         }
         92 =>
           position = pdf_cursor_read_string_escape_into(cursor, bytes, position)
-        value if value == pdf_no_more => raise EndOfInput
+        value if value == @core.pdf_no_more => raise EndOfInput
         value =>
           position = pdf_lexeme_write_byte_at(bytes, position, value.to_byte())
       }

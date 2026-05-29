@@ -161,7 +161,7 @@ fn pdf_cursor_read_classic_xref_entries(
   while !done {
     pdf_cursor_drop_whitespace(cursor)
     let position = cursor.absolute_position()
-    if pdf_cursor_matches_ascii_at(cursor, position, [
+    if @syntax.pdf_cursor_matches_ascii_at(cursor, position, [
         116, 114, 97, 105, 108, 101, 114,
       ]) {
       done = true

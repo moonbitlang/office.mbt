@@ -10,8 +10,9 @@ fn pdf_view_starts_with_endobj(view : BytesView) -> Bool {
 }
 
 ///|
-fn pdf_cursor_matches_ascii_at(
-  cursor : ByteCursor,
+/// Check whether `cursor` contains the ASCII byte sequence at an absolute position.
+pub fn pdf_cursor_matches_ascii_at(
+  cursor : @core.ByteCursor,
   position : Int,
   values : ArrayView[Int],
 ) -> Bool {
@@ -38,7 +39,9 @@ fn pdf_cursor_matches_ascii_at(
 /// Recognized keywords include `obj`, `endobj`, `R`, `null`, and `endstream`.
 /// If a token begins with `endobj` followed by extra bytes, only `endobj` is
 /// consumed so the suffix can be lexed by later calls.
-pub fn pdf_cursor_lex_keyword(cursor : ByteCursor) -> PdfLexeme raise PdfError {
+pub fn pdf_cursor_lex_keyword(
+  cursor : @core.ByteCursor,
+) -> PdfLexeme raise @core.PdfError {
   pdf_cursor_drop_whitespace(cursor)
   let start = cursor.position()
   let view = pdf_cursor_read_until_whitespace_or_delimiter(cursor)
@@ -57,7 +60,8 @@ pub fn pdf_cursor_lex_keyword(cursor : ByteCursor) -> PdfLexeme raise PdfError {
 }
 
 ///|
-fn pdf_is_number_start_byte(value : Int) -> Bool {
+/// Return whether a byte can start a PDF numeric token.
+pub fn pdf_is_number_start_byte(value : Int) -> Bool {
   (value >= 48 && value <= 57) || value == 43 || value == 45 || value == 46
 }
 

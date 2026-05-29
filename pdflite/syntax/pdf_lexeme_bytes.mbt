@@ -1,5 +1,6 @@
 ///|
-fn pdf_hex_value(value : Int) -> Int? {
+/// Return the integer value of one ASCII hex digit, or `None` for non-hex bytes.
+pub fn pdf_hex_value(value : Int) -> Int? {
   if value >= 48 && value <= 57 {
     Some(value - 48)
   } else if value >= 65 && value <= 70 {
