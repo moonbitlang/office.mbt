@@ -282,6 +282,9 @@ pub using @path {
 }
 
 ///|
+pub using @portfolio {type PdfPortfolioEntry, pdf_portfolio_entry}
+
+///|
 pub using @afm {type PdfAfmData, pdf_read_afm}
 
 ///|

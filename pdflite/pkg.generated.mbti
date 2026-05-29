@@ -11,6 +11,7 @@ import {
   "bobzhang/pdflite/font/afm",
   "bobzhang/pdflite/geometry",
   "bobzhang/pdflite/page",
+  "bobzhang/pdflite/portfolio",
   "bobzhang/pdflite/reader",
   "bobzhang/pdflite/shape",
   "bobzhang/pdflite/syntax",
@@ -1446,9 +1447,9 @@ pub fn pdf_permissions_of_p(Int) -> Array[@crypt_core.PdfPermission]
 
 pub fn pdf_pop(PdfDrawControl) -> Unit raise @core.PdfError
 
-pub fn pdf_portfolio(PdfDocument, ArrayView[PdfPortfolioEntry], mod_date? : Bytes?) -> PdfDocument raise @core.PdfError
+pub fn pdf_portfolio(PdfDocument, ArrayView[@portfolio.PdfPortfolioEntry], mod_date? : Bytes?) -> PdfDocument raise @core.PdfError
 
-pub fn pdf_portfolio_entry(String, BytesView, relationship? : String?, description? : String?) -> PdfPortfolioEntry
+pub fn pdf_portfolio_entry(String, BytesView, relationship? : String?, description? : String?) -> @portfolio.PdfPortfolioEntry
 
 pub fn pdf_postpend_operators(PdfDocument, ArrayView[@content.PdfContentOp], @page.PdfPage, fast? : Bool) -> @page.PdfPage raise @core.PdfError
 
@@ -3097,7 +3098,7 @@ pub fn PdfDocument::pdf_object_of_function(Self, PdfFunction) -> @syntax.PdfObje
 pub fn PdfDocument::pdf_of_pages(Self, ArrayView[Int], retain_numbering? : Bool, process_struct_tree? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::pdf_type_typeset(Self, Bool, Double, Double, Double, Double, @geometry.PaperSize, ArrayView[PdfTypeElement]) -> PdfTypeTypesetResult raise @core.PdfError
 pub fn PdfDocument::permissions(Self) -> Array[@crypt_core.PdfPermission] raise @core.PdfError
-pub fn PdfDocument::portfolio(Self, ArrayView[PdfPortfolioEntry], mod_date? : Bytes?) -> Self raise @core.PdfError
+pub fn PdfDocument::portfolio(Self, ArrayView[@portfolio.PdfPortfolioEntry], mod_date? : Bytes?) -> Self raise @core.PdfError
 pub fn PdfDocument::postpend_operators(Self, @page.PdfPage, ArrayView[@content.PdfContentOp], fast? : Bool) -> @page.PdfPage raise @core.PdfError
 pub fn PdfDocument::prepend_operators(Self, @page.PdfPage, ArrayView[@content.PdfContentOp], fast? : Bool) -> @page.PdfPage raise @core.PdfError
 pub fn PdfDocument::presentation(Self, ArrayView[Int], String?, Double?, Bool, Bool, Int, Double) -> Self raise @core.PdfError
@@ -3825,13 +3826,6 @@ pub(all) enum PdfPixelLayout {
   PdfBPP48
 } derive(Eq, ToJson, @debug.Debug)
 
-pub(all) struct PdfPortfolioEntry {
-  filename : String
-  data : Bytes
-  relationship : String?
-  description : String?
-} derive(Eq, ToJson, @debug.Debug)
-
 pub(all) struct PdfSampledFunction {
   size : Array[Int]
   order : Int
@@ -4183,6 +4177,8 @@ pub using @shape {type PdfPathSubpath}
 pub using @shape {type PdfPathWindingRule}
 
 pub using @crypt_core {type PdfPermission}
+
+pub using @portfolio {type PdfPortfolioEntry}
 
 pub using @geometry {type PdfPosition}
 
