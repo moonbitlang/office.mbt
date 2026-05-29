@@ -91,7 +91,7 @@ fn pdf_redact_annotation_box_ops(
   rectangle : PdfRectangle,
   light : Bool,
 ) -> Array[PdfContentOp] {
-  let stroke_colour = if light {
+  let stroke_colour : PdfContentOp = if light {
     Op_RG(1.0, 1.0, 0.5)
   } else {
     Op_RG(1.0, 1.0, 0.0)

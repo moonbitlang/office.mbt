@@ -1,0 +1,112 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pdflite/content"
+
+import {
+  "bobzhang/pdflite/core",
+  "bobzhang/pdflite/geometry",
+  "bobzhang/pdflite/syntax",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn pdf_content_add_artifacts(ArrayView[PdfContentOp]) -> Array[PdfContentOp]
+
+pub fn pdf_content_begin_artifact() -> PdfContentOp
+
+pub fn pdf_content_end_artifact() -> PdfContentOp
+
+pub fn pdf_content_parse_known_section(ArrayView[@syntax.PdfObject], BytesView) -> PdfContentOp? raise @core.PdfError
+
+// Errors
+
+// Types and methods
+pub(all) enum PdfContentOp {
+  Op_w(Double)
+  Op_J(Int)
+  Op_j(Int)
+  Op_M(Double)
+  Op_d(Array[Double], Double)
+  Op_ri(@core.PdfName)
+  Op_i(Double)
+  Op_q
+  Op_Q
+  Op_cm(@geometry.TransformMatrix)
+  Op_m(Double, Double)
+  Op_l(Double, Double)
+  Op_c(Double, Double, Double, Double, Double, Double)
+  Op_v(Double, Double, Double, Double)
+  Op_y(Double, Double, Double, Double)
+  Op_h
+  Op_re(Double, Double, Double, Double)
+  Op_S
+  Op_s
+  Op_f
+  Op_F
+  Op_fstar
+  Op_B
+  Op_Bstar
+  Op_b
+  Op_bstar
+  Op_n
+  Op_W
+  Op_Wstar
+  Op_BT
+  Op_ET
+  Op_Tc(Double)
+  Op_Tw(Double)
+  Op_Tz(Double)
+  Op_TL(Double)
+  Op_Tf(@core.PdfName, Double)
+  Op_Tr(Int)
+  Op_Ts(Double)
+  Op_Td(Double, Double)
+  Op_TD(Double, Double)
+  Op_Tm(@geometry.TransformMatrix)
+  Op_Tstar
+  Op_Tj(Bytes)
+  Op_TJ(@syntax.PdfObject)
+  Op_quote(Bytes)
+  Op_double_quote(Double, Double, Bytes)
+  Op_d0(Double, Double)
+  Op_d1(Double, Double, Double, Double, Double, Double)
+  Op_G(Double)
+  Op_g(Double)
+  Op_RG(Double, Double, Double)
+  Op_rg(Double, Double, Double)
+  Op_K(Double, Double, Double, Double)
+  Op_k(Double, Double, Double, Double)
+  Op_gs(@core.PdfName)
+  Op_CS(@core.PdfName)
+  Op_cs(@core.PdfName)
+  Op_SC(Array[Double])
+  Op_sc(Array[Double])
+  Op_SCN(Array[Double])
+  Op_scn(Array[Double])
+  Op_SCNName(@core.PdfName, Array[Double])
+  Op_scnName(@core.PdfName, Array[Double])
+  Op_sh(@core.PdfName)
+  Op_Do(@core.PdfName)
+  Op_InlineImage(@syntax.PdfObject, @syntax.PdfObject?, Bytes)
+  Op_MP(@core.PdfName)
+  Op_DP(@core.PdfName, @syntax.PdfObject)
+  Op_BMC(@core.PdfName)
+  Op_BDC(@core.PdfName, @syntax.PdfObject)
+  Op_EMC
+  Op_BX
+  Op_EX
+  Op_Unknown(Bytes)
+} derive(Eq, ToJson, @debug.Debug)
+
+// Type aliases
+pub type PdfBytes = Bytes
+
+pub using @core {type PdfError}
+
+pub using @core {type PdfName}
+
+pub using @syntax {type PdfObject}
+
+pub using @geometry {type TransformMatrix}
+
+// Traits
+

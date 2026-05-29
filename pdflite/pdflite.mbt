@@ -211,6 +211,14 @@ pub using @codec {
 }
 
 ///|
+pub using @content {
+  type PdfContentOp,
+  pdf_content_begin_artifact,
+  pdf_content_end_artifact,
+  pdf_content_add_artifacts,
+}
+
+///|
 pub using @afm {type PdfAfmData, pdf_read_afm}
 
 ///|

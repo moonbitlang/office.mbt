@@ -1,5 +1,8 @@
 ///|
-fn pdf_content_parse_known_section(
+/// Parse a recognized PDF content operator from already parsed operands.
+///
+/// Unknown operators return `None` so callers can preserve their raw bytes.
+pub fn pdf_content_parse_known_section(
   operands : ArrayView[PdfObject],
   operator : BytesView,
 ) -> PdfContentOp? raise PdfError {

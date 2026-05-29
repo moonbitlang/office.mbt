@@ -1,0 +1,12 @@
+import {
+  "bobzhang/pdflite/core",
+  "bobzhang/pdflite/geometry",
+  "bobzhang/pdflite/syntax",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/encoding/ascii",
+  "moonbitlang/core/json",
+}
+
+import {
+  "moonbitlang/core/test",
+} for "wbtest"

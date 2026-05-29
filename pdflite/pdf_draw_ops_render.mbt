@@ -84,7 +84,7 @@ fn PdfDrawOp::to_content_ops_internal(
     PdfDrawImage(source_name) =>
       match state {
         Some(state) => {
-          let ops = [Op_Do(state.image_resource_name(source_name))]
+          let ops = [@content.Op_Do(state.image_resource_name(source_name))]
           if state.structure_tree_enabled && state.auto_tag {
             state.structure_tagged_ops("/Figure", ops)
           } else {

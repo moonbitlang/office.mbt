@@ -174,14 +174,6 @@ fn pdf_content_tj_array_from_operand(object : PdfObject) -> PdfObject? {
 }
 
 ///|
-fn pdf_content_section_unknown(
-  operands : ArrayView[PdfObject],
-  operator : BytesView,
-) -> PdfContentOp raise PdfError {
-  Op_Unknown(pdf_content_section_bytes(operands, operator))
-}
-
-///|
 fn pdf_content_matrix_from_operands(
   operands : ArrayView[PdfObject],
 ) -> TransformMatrix? {

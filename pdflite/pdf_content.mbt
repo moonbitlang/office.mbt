@@ -3,10 +3,18 @@ fn pdf_content_parse_section(
   operands : ArrayView[PdfObject],
   operator : BytesView,
 ) -> PdfContentOp raise PdfError {
-  match pdf_content_parse_known_section(operands, operator) {
+  match @content.pdf_content_parse_known_section(operands, operator) {
     Some(op) => op
     None => pdf_content_section_unknown(operands, operator)
   }
+}
+
+///|
+fn pdf_content_section_unknown(
+  operands : ArrayView[PdfObject],
+  operator : BytesView,
+) -> PdfContentOp raise PdfError {
+  Op_Unknown(pdf_content_section_bytes(operands, operator))
 }
 
 ///|

@@ -10,6 +10,7 @@ import {
 
 import {
   "bobzhang/pdflite",
+  "bobzhang/pdflite/content",
   "bobzhang/pdflite/syntax",
   "moonbitlang/core/test",
   "moonbitlang/core/encoding/ascii",
