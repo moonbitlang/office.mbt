@@ -52,7 +52,7 @@ pub fn pdf_cursor_lex_token(cursor : ByteCursor) -> PdfLexeme raise PdfError {
       if pdf_cursor_matches_ascii_at(cursor, position, [60, 60]) {
         pdf_cursor_lex_delimiter(cursor)
       } else {
-        cursor.lex_pdf_hex_string()
+        pdf_cursor_lex_hex_string(cursor)
       }
     62 => pdf_cursor_lex_delimiter(cursor)
     82 => {

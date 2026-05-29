@@ -309,36 +309,40 @@ test "ByteCursor lexes PDF hex strings and rejects malformed hex" {
   let cursor = @pdflite.byte_cursor_of_bytes(
     lexeme_bytes_for_test([60, 32, 52, 49, 32, 50, 62]),
   )
-  let lexeme = try! cursor.lex_pdf_hex_string()
+  let lexeme = try! @pdflite.pdf_cursor_lex_hex_string(cursor)
   guard lexeme is LexString(bytes) else { fail("expected LexString") }
   @test.assert_eq(bytes.to_array().map(byte => byte.to_int()), [65, 32])
 
   let malformed = @pdflite.byte_cursor_of_bytes(
     lexeme_bytes_for_test([60, 52, 90, 62]),
   )
-  let result : Result[@pdflite.PdfLexeme, Error] = try? malformed.lex_pdf_hex_string()
+  let result : Result[@pdflite.PdfLexeme, Error] = try? @pdflite.pdf_cursor_lex_hex_string(
+    malformed,
+  )
   guard result is Err(@pdflite.PdfError::InvalidHexEscape) else {
     fail("expected @pdflite.PdfError::InvalidHexEscape")
   }
 
   let dict = @pdflite.byte_cursor_of_bytes(lexeme_bytes_for_test([60, 60]))
-  @test.assert_eq(try! dict.lex_pdf_hex_string(), LexNone)
+  @test.assert_eq(try! @pdflite.pdf_cursor_lex_hex_string(dict), LexNone)
   @test.assert_eq(dict.peek_byte(), 60)
 
   let empty = @pdflite.byte_cursor_of_bytes(lexeme_bytes_for_test([60]))
   @test.assert_eq(
-    try! empty.lex_pdf_hex_string(),
+    try! @pdflite.pdf_cursor_lex_hex_string(empty),
     LexString(lexeme_bytes_for_test([])),
   )
   let dangling = @pdflite.byte_cursor_of_bytes(lexeme_bytes_for_test([60, 52]))
   @test.assert_eq(
-    try! dangling.lex_pdf_hex_string(),
+    try! @pdflite.pdf_cursor_lex_hex_string(dangling),
     LexString(lexeme_bytes_for_test([])),
   )
   let bad_high = @pdflite.byte_cursor_of_bytes(
     lexeme_bytes_for_test([60, 90, 62]),
   )
-  let result : Result[@pdflite.PdfLexeme, Error] = try? bad_high.lex_pdf_hex_string()
+  let result : Result[@pdflite.PdfLexeme, Error] = try? @pdflite.pdf_cursor_lex_hex_string(
+    bad_high,
+  )
   guard result is Err(@pdflite.PdfError::InvalidHexEscape) else {
     fail("expected @pdflite.PdfError::InvalidHexEscape")
   }
