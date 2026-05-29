@@ -83,6 +83,19 @@ fn page_wb_name_tree_entries_from_catalog(
 }
 
 ///|
+test "page-label private helpers preserve non-uppercase bytes and root guards" {
+  @test.assert_eq(
+    pdf_page_label_lowercase(@ascii.encode("A1Z!")),
+    @ascii.encode("a1z!"),
+  )
+  let doc = pdf_document_empty()
+  let result : Result[Bool, Error] = try? doc.pdf_page_label_has_labels()
+  guard result is Err(PdfError::RootExpected) else {
+    fail("expected PdfError::RootExpected")
+  }
+}
+
+///|
 test "private page tree readers cover guard branches" {
   let doc = pdf_document_empty()
   @test.assert_eq(pdf_page_int_of_rotation(Rotate180), 180)

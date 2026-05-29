@@ -53,3 +53,36 @@ test "structure parent tree change helpers ignore unmatched keys" {
     [],
   )
 }
+
+///|
+test "private structure survival helpers cover direct cases" {
+  let key_pg = pdf_structure_pg_key()
+  let doc = pdf_document_empty()
+  doc.add_object_given_number(
+    50,
+    PdfDictionary([
+      (key_pg, PdfIndirect(2)),
+      (pdf_structure_k_key(), PdfInteger(0)),
+    ]),
+  )
+  let deleted_pages = @core.pdf_number_set([2])
+  @test.assert_eq(
+    doc.pdf_structure_object_has_deleted_page_in_set(
+      PdfIndirect(50),
+      deleted_pages,
+    ),
+    true,
+  )
+  @test.assert_eq(
+    doc.pdf_structure_indirect_survives_in_set(50, deleted_pages),
+    false,
+  )
+  @test.assert_eq(
+    doc.pdf_structure_k_item_survives_in_set(PdfInteger(1), deleted_pages),
+    true,
+  )
+  @test.assert_eq(
+    doc.pdf_structure_filtered_k_value_in_set(PdfInteger(1), deleted_pages),
+    None,
+  )
+}
