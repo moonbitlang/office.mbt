@@ -1,3 +1,4 @@
 import {
+  "bobzhang/pdflite/font/afm",
   "moonbitlang/core/encoding/ascii",
 }

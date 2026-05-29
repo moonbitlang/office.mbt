@@ -1,13 +1,7 @@
 ///|
 /// Returns the Adobe Font Metrics data for this standard font.
 pub fn PdfStandardFont::afm_data(self : PdfStandardFont) -> PdfAfmData {
-  let data = @standard14.pdf_standard14_afm_data(self.to_standard14_data_font())
-  {
-    headers: data.headers,
-    char_metrics: data.char_metrics,
-    kerns: data.kerns,
-    char_name_widths: data.char_name_widths,
-  }
+  @standard14.pdf_standard14_afm_data(self.to_standard14_data_font())
 }
 
 ///|
@@ -89,7 +83,7 @@ fn pdf_standard14_width_of_glyphname(
   let requested = pdf_standard14_glyph_width_name(name)
   for entry in widths {
     let (candidate, width) = entry
-    if pdf_afm_view_equals(candidate, requested) {
+    if @afm.pdf_afm_view_equals(candidate, requested) {
       break width
     }
   } nobreak {

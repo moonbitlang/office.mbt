@@ -17,7 +17,7 @@ fn pdf_content_descriptor_extra_metrics(
 fn pdf_content_afm_header_value(data : PdfAfmData, key : String) -> BytesView? {
   let key_bytes = @ascii.encode(key)
   for entry in data.headers {
-    if pdf_afm_view_equals(entry.0, key_bytes) {
+    if @afm.pdf_afm_view_equals(entry.0, key_bytes) {
       break Some(entry.1)
     }
   } nobreak {
@@ -27,7 +27,7 @@ fn pdf_content_afm_header_value(data : PdfAfmData, key : String) -> BytesView? {
 
 ///|
 fn pdf_content_afm_parse_int(value : BytesView) -> Int? {
-  let parsed : Result[Int, Error] = try? pdf_afm_parse_int(value)
+  let parsed : Result[Int, Error] = try? @afm.pdf_afm_parse_int(value)
   match parsed {
     Ok(number) => Some(number)
     Err(_) => None

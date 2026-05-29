@@ -1,15 +1,5 @@
 ///|
-/// Byte sequence used by generated AFM table data.
-pub type PdfBytes = Bytes
-
-///|
-/// Adobe Font Metrics data for a built-in Standard 14 font face.
-pub(all) struct PdfAfmData {
-  headers : Array[(PdfBytes, PdfBytes)]
-  char_metrics : Array[(Int, Int)]
-  kerns : Array[(Int, Int, Int)]
-  char_name_widths : Array[(PdfBytes, Int)]
-} derive(Debug, Eq, ToJson)
+pub using @afm {type PdfAfmData, type PdfBytes}
 
 ///|
 /// The built-in PDF standard 14 font faces.

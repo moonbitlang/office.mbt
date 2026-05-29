@@ -1,4 +1,7 @@
 ///|
+pub using @core {type PdfBytes, type PdfError}
+
+///|
 /// Parsed Adobe Font Metrics data used by standard-font helpers.
 ///
 /// Headers preserve raw key/value bytes. Character metrics store character
@@ -12,7 +15,8 @@ pub(all) struct PdfAfmData {
 } derive(Debug, Eq, ToJson)
 
 ///|
-fn pdf_afm_view_equals(left : BytesView, right : BytesView) -> Bool {
+/// Return whether two byte views contain the same bytes.
+pub fn pdf_afm_view_equals(left : BytesView, right : BytesView) -> Bool {
   if left.length() != right.length() {
     false
   } else {
@@ -53,7 +57,8 @@ fn pdf_afm_trim_line_end(line : BytesView) -> BytesView {
 }
 
 ///|
-fn pdf_afm_parse_int(token : BytesView) -> Int raise PdfError {
+/// Parse a signed AFM integer token.
+pub fn pdf_afm_parse_int(token : BytesView) -> Int raise PdfError {
   if token.length() == 0 {
     raise NumberExpected
   }
@@ -71,7 +76,7 @@ fn pdf_afm_parse_int(token : BytesView) -> Int raise PdfError {
   let mut value = 0
   while index < token.length() {
     let byte = token[index].to_int()
-    if !pdf_is_digit_byte(byte) {
+    if !@core.pdf_is_digit_byte(byte) {
       raise NumberExpected
     }
     value = value * 10 + byte - 0x30
@@ -85,7 +90,7 @@ fn pdf_afm_header_entry(line : BytesView) -> (PdfBytes, PdfBytes)? {
   let trimmed = pdf_afm_trim_line_end(line)
   let mut index = 0
   while index < trimmed.length() &&
-        !pdf_is_whitespace_byte(trimmed[index].to_int()) {
+        !@core.pdf_is_whitespace_byte(trimmed[index].to_int()) {
     index += 1
   }
   if index == 0 {
@@ -93,7 +98,7 @@ fn pdf_afm_header_entry(line : BytesView) -> (PdfBytes, PdfBytes)? {
   } else {
     let key = trimmed[:index].to_owned()
     while index < trimmed.length() &&
-          pdf_is_whitespace_byte(trimmed[index].to_int()) {
+          @core.pdf_is_whitespace_byte(trimmed[index].to_int()) {
       index += 1
     }
     Some((key, trimmed[index:].to_owned()))
@@ -127,7 +132,7 @@ fn pdf_afm_section_lines(
 
 ///|
 fn pdf_afm_char_metric(line : BytesView) -> (PdfBytes, Int, Int) raise PdfError {
-  let tokens = pdf_split_whitespace_tokens(line)
+  let tokens = @core.pdf_split_whitespace_tokens(line)
   if tokens.length() >= 7 &&
     pdf_afm_view_equals_ascii(tokens[0], "C") &&
     pdf_afm_view_equals_ascii(tokens[2], ";") &&
@@ -165,7 +170,7 @@ fn pdf_afm_kern(
   line : BytesView,
   metrics : ArrayView[(PdfBytes, Int, Int)],
 ) -> (Int, Int, Int)? raise PdfError {
-  let tokens = pdf_split_whitespace_tokens(line)
+  let tokens = @core.pdf_split_whitespace_tokens(line)
   if tokens.length() >= 4 && pdf_afm_view_equals_ascii(tokens[0], "KPX") {
     let first = pdf_afm_lookup_char_number(metrics, tokens[1])
     let second = pdf_afm_lookup_char_number(metrics, tokens[2])
@@ -187,7 +192,7 @@ fn pdf_afm_kern(
 /// and kerning pairs. Raises `PdfError::AfmExpected` or
 /// `PdfError::NumberExpected` for malformed metric sections.
 pub fn pdf_read_afm(data : BytesView) -> PdfAfmData raise PdfError {
-  let lines = byte_cursor_of_view(data).read_line_views()
+  let lines = @core.byte_cursor_of_view(data).read_line_views()
   let headers : Array[(PdfBytes, PdfBytes)] = Array::new(
     capacity=lines.length(),
   )

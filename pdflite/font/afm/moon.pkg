@@ -1,0 +1,12 @@
+import {
+  "bobzhang/pdflite/core",
+  "moonbitlang/core/encoding/ascii",
+}
+
+import {
+  "moonbitlang/core/test",
+} for "wbtest"
+
+options(
+  targets: { "pdf_afm_wbtest.mbt": [ "wasm-gc", "js", "native", "llvm" ] },
+)

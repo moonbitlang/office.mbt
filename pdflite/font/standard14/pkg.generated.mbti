@@ -2,22 +2,16 @@
 package "bobzhang/pdflite/font/standard14"
 
 import {
+  "bobzhang/pdflite/font/afm",
   "moonbitlang/core/debug",
 }
 
 // Values
-pub fn pdf_standard14_afm_data(PdfStandardFont) -> PdfAfmData
+pub fn pdf_standard14_afm_data(PdfStandardFont) -> @afm.PdfAfmData
 
 // Errors
 
 // Types and methods
-pub(all) struct PdfAfmData {
-  headers : Array[(Bytes, Bytes)]
-  char_metrics : Array[(Int, Int)]
-  kerns : Array[(Int, Int, Int)]
-  char_name_widths : Array[(Bytes, Int)]
-} derive(Eq, ToJson, @debug.Debug)
-
 pub(all) enum PdfStandardFont {
   PdfTimesRoman
   PdfTimesBold
@@ -34,9 +28,11 @@ pub(all) enum PdfStandardFont {
   PdfSymbol
   PdfZapfDingbats
 } derive(Eq, ToJson, @debug.Debug)
-pub fn PdfStandardFont::afm_data(Self) -> PdfAfmData
+pub fn PdfStandardFont::afm_data(Self) -> @afm.PdfAfmData
 
 // Type aliases
+pub using @afm {type PdfAfmData}
+
 pub type PdfBytes = Bytes
 
 // Traits

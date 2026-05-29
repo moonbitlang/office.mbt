@@ -5,6 +5,7 @@ import {
   "bobzhang/pdflite/core",
   "bobzhang/pdflite/crypt_core",
   "bobzhang/pdflite/date",
+  "bobzhang/pdflite/font/afm",
   "bobzhang/pdflite/geometry",
   "bobzhang/pdflite/reader",
   "bobzhang/pdflite/syntax",
@@ -1496,7 +1497,7 @@ pub fn pdf_push(PdfDrawControl) -> Unit
 
 pub let pdf_rdf : String
 
-pub fn pdf_read_afm(BytesView) -> PdfAfmData raise @core.PdfError
+pub fn pdf_read_afm(BytesView) -> @afm.PdfAfmData raise @core.PdfError
 
 pub fn pdf_read_bookmarks(PdfDocument, preserve_actions? : Bool) -> Array[PdfBookmark] raise @core.PdfError
 
@@ -1824,7 +1825,7 @@ pub fn pdf_stamp_as_xobject_string(PdfDocument, ArrayView[Int], PdfDocument) -> 
 
 pub fn pdf_stamp_cpdf_order(Bool, String, PdfPosition, Bool, Bool, Bool, Bool, Bool, ArrayView[Int], PdfDocument, PdfDocument) -> PdfDocument raise @core.PdfError
 
-pub fn pdf_standard14_afm_data(PdfStandardFont) -> PdfAfmData
+pub fn pdf_standard14_afm_data(PdfStandardFont) -> @afm.PdfAfmData
 
 pub fn pdf_standard14_baseline_adjustment(PdfStandardFont) -> Int
 
@@ -2307,13 +2308,6 @@ pub(all) struct PdfAddTextUrlAnnotationGeometry {
 pub(all) struct PdfAddTextUrlLine {
   text : String
   urls : Array[PdfAddTextUrl]
-} derive(Eq, ToJson, @debug.Debug)
-
-pub(all) struct PdfAfmData {
-  headers : Array[(Bytes, Bytes)]
-  char_metrics : Array[(Int, Int)]
-  kerns : Array[(Int, Int, Int)]
-  char_name_widths : Array[(Bytes, Int)]
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfAnnotation {
@@ -4138,7 +4132,7 @@ pub(all) enum PdfStandardFont {
   PdfSymbol
   PdfZapfDingbats
 } derive(Eq, ToJson, @debug.Debug)
-pub fn PdfStandardFont::afm_data(Self) -> PdfAfmData
+pub fn PdfStandardFont::afm_data(Self) -> @afm.PdfAfmData
 pub fn PdfStandardFont::baseline_adjustment(Self) -> Int
 pub fn PdfStandardFont::flags(Self) -> Int
 pub fn PdfStandardFont::name(Self) -> String
@@ -4374,6 +4368,8 @@ pub using @reader {type ObjectStreamReference}
 pub using @geometry {type PaperSize}
 
 pub using @crypt_core {type PdfAesV3RandomField}
+
+pub using @afm {type PdfAfmData}
 
 pub type PdfBytes = Bytes
 

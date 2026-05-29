@@ -186,6 +186,9 @@ pub using @flate {
 }
 
 ///|
+pub using @afm {type PdfAfmData, pdf_read_afm}
+
+///|
 pub using @reader {
   type PdfVersion,
   type ObjectStreamReference,
