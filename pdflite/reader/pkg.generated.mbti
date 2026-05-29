@@ -65,6 +65,8 @@ pub fn pdf_reader_reconstruction_indirect_header_at(BytesView, Int) -> Bool
 
 pub fn pdf_reader_reconstruction_skip_malformed_object(BytesView, Int) -> Int?
 
+pub fn pdf_reader_reconstruction_xref_coverage(BytesView, ArrayView[(Int, PdfXRefSection)], ArrayView[PdfXRefSection], (BytesView, ArrayView[PdfClassicXRefEntry], PdfClassicXRefIndex, PdfClassicXRefEntry) -> Bool) -> PdfReconstructedXRefCoverage
+
 pub fn pdf_reader_reconstruction_xref_stream_entries(ArrayView[PdfXRefSection]) -> Array[PdfClassicXRefEntry]
 
 pub fn pdf_reader_reconstruction_xref_stream_refs(ArrayView[PdfXRefSection]) -> Array[(Int, Int)]
@@ -138,6 +140,11 @@ pub struct PdfReaderXRefStreamRefSet {
   values : @hashmap.HashMap[Int, @core.PdfNumberSet]
 }
 pub fn PdfReaderXRefStreamRefSet::contains(Self, Int, Int) -> Bool
+
+pub(all) struct PdfReconstructedXRefCoverage {
+  sections : Array[(Int, @core.PdfNumberSet)]
+}
+pub fn PdfReconstructedXRefCoverage::contains(Self, Int, Int) -> Bool
 
 pub(all) struct PdfVersion {
   major : Int

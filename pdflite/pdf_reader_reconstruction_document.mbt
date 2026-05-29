@@ -17,8 +17,8 @@ fn pdf_read_reconstructed_document_from_view(
   } else {
     []
   }
-  let xref_coverage = pdf_reconstructed_xref_coverage(
-    data, classic_xref_sections, xref_stream_sections,
+  let xref_coverage = @reader.pdf_reader_reconstruction_xref_coverage(
+    data, classic_xref_sections, xref_stream_sections, pdf_reconstructed_classic_xref_entry_is_verified,
   )
   let classic_xrefs = @reader.pdf_reader_reconstruction_classic_xref_entries(
     classic_xref_sections,

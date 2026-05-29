@@ -98,23 +98,6 @@ test "private object-stream member parser rejects non-dictionary streams" {
 }
 
 ///|
-test "private reconstructed coverage ignores xref sections without offsets" {
-  let coverage = pdf_reconstructed_xref_coverage(
-    reader_wbtest_bytes("%PDF-1.5\n"),
-    [],
-    [
-      {
-        entries: [],
-        trailer: PdfNull,
-        stream_object_number: Some(7),
-        stream_object_offset: None,
-      },
-    ],
-  )
-  @test.assert_eq(coverage.contains(7, 0), false)
-}
-
-///|
 test "private object-stream root reconstruction guard rejects missing trailer roots" {
   @test.assert_eq(
     pdf_reader_startxref_root_uses_object_stream(

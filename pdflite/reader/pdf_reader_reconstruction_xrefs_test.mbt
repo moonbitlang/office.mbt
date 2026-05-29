@@ -9,15 +9,21 @@ fn reader_reconstruction_xref_entry_for_test(
 ///|
 fn reader_reconstruction_xref_section_for_test(
   entries : Array[@reader.PdfClassicXRefEntry],
+  trailer? : @syntax.PdfObject = PdfDictionary([]),
   stream_object_number? : Int? = None,
   stream_object_offset? : Int? = None,
 ) -> @reader.PdfXRefSection {
-  {
-    entries,
-    trailer: PdfDictionary([]),
-    stream_object_number,
-    stream_object_offset,
-  }
+  { entries, trailer, stream_object_number, stream_object_offset }
+}
+
+///|
+fn reader_reconstruction_verify_xref_for_test(
+  _data : BytesView,
+  _entries : ArrayView[@reader.PdfClassicXRefEntry],
+  _xref_index : @reader.PdfClassicXRefIndex,
+  _xref : @reader.PdfClassicXRefEntry,
+) -> Bool {
+  true
 }
 
 ///|
@@ -70,4 +76,51 @@ test "reconstructed xref stream refs keep object numbers and offsets" {
     ),
   ])
   @test.assert_eq(refs, [(7, 70), (9, 90)])
+}
+
+///|
+test "reconstructed xref coverage ignores xref stream sections without offsets" {
+  let coverage = @reader.pdf_reader_reconstruction_xref_coverage(
+    b"%PDF-1.5\n",
+    [],
+    [
+      reader_reconstruction_xref_section_for_test(
+        [],
+        stream_object_number=Some(7),
+        stream_object_offset=None,
+      ),
+    ],
+    reader_reconstruction_verify_xref_for_test,
+  )
+  @test.assert_eq(coverage.contains(7, 0), false)
+}
+
+///|
+test "reconstructed xref coverage skips free trailer root entries" {
+  let root_entry : @reader.PdfClassicXRefEntry = {
+    object_number: 3,
+    offset: 30,
+    generation: 0,
+    in_use: false,
+    object_stream: None,
+  }
+  let ordinary_free : @reader.PdfClassicXRefEntry = {
+    object_number: 4,
+    offset: 40,
+    generation: 0,
+    in_use: false,
+    object_stream: None,
+  }
+  let section = reader_reconstruction_xref_section_for_test(
+    [root_entry, ordinary_free],
+    trailer=PdfDictionary([(@reader.pdf_reader_root_name(), PdfIndirect(3))]),
+  )
+  let coverage = @reader.pdf_reader_reconstruction_xref_coverage(
+    b"%PDF-1.4\n",
+    [(100, section)],
+    [],
+    reader_reconstruction_verify_xref_for_test,
+  )
+  @test.assert_eq(coverage.contains(3, 30), false)
+  @test.assert_eq(coverage.contains(4, 40), true)
 }
