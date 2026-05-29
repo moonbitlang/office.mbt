@@ -120,6 +120,29 @@ test "reconstructed document ignores streams that become invalid after xref reco
 }
 
 ///|
+test "private reconstructed document loads through reader reconstruction plan" {
+  let parsed = try! pdf_read_reconstructed_document_from_view(
+    reader_wbtest_bytes(
+      "%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n<< /Root 1 0 R /Size 2 >>\n",
+    ),
+    include_xref_stream_trailers=false,
+  )
+  @test.assert_eq(parsed.version(), (1, 4))
+  @test.assert_eq(parsed.first_xref(), 0)
+  @test.assert_eq(parsed.root(), 1)
+  @test.assert_eq(parsed.object_numbers(), [1])
+  @test.assert_eq(
+    parsed.lookup_object_or_null(1),
+    PdfDictionary([
+      (
+        pdf_name_of_bytes(reader_wbtest_bytes("/Type")),
+        PdfNameObject(pdf_name_of_bytes(reader_wbtest_bytes("/Catalog"))),
+      ),
+    ]),
+  )
+}
+
+///|
 test "private reconstructed classic xref reader rejects xref streams" {
   let cursor = byte_cursor_of_view(
     reader_wbtest_bytes(

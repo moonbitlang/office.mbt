@@ -20,28 +20,11 @@ fn pdf_read_reconstructed_document_from_view(
     data,
     plan.classic_xrefs,
   )
-  for xref in plan.object_xrefs {
-    let parsed_result : Result[PdfParsedIndirectObject, Error] = try? pdf_cursor_read_reconstructed_object_at(
-      cursor,
-      xref.offset,
-      plan.object_xrefs,
-    )
-    match parsed_result {
-      Ok(parsed) =>
-        if parsed.number > 0 &&
-          parsed.number == xref.object_number &&
-          parsed.generation == xref.generation &&
-          !plan.xref_coverage.contains(parsed.number, xref.offset) &&
-          !@reader.pdf_reader_object_is_xref_stream(parsed.object) {
-          document.load_object_given_number(
-            parsed.number,
-            parsed.object,
-            generation=parsed.generation,
-          )
-        }
-      Err(_) => ()
-    }
-  }
+  document.load_reconstructed_object_xrefs(
+    data,
+    plan.object_xrefs,
+    plan.xref_coverage,
+  )
   if include_xref_stream_trailers {
     document.load_reconstructed_xref_stream_objects(
       data,

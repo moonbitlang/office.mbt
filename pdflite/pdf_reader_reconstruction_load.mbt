@@ -76,6 +76,38 @@ fn PdfDocument::load_reconstructed_classic_xref_plain_objects(
 }
 
 ///|
+fn PdfDocument::load_reconstructed_object_xrefs(
+  self : PdfDocument,
+  data : BytesView,
+  xrefs : ArrayView[PdfClassicXRefEntry],
+  xref_coverage : @reader.PdfReconstructedXRefCoverage,
+) -> Unit {
+  let cursor = byte_cursor_of_view(data)
+  for xref in xrefs {
+    let parsed_result : Result[PdfParsedIndirectObject, Error] = try? pdf_cursor_read_reconstructed_object_at(
+      cursor,
+      xref.offset,
+      xrefs,
+    )
+    match parsed_result {
+      Ok(parsed) =>
+        if parsed.number > 0 &&
+          parsed.number == xref.object_number &&
+          parsed.generation == xref.generation &&
+          !xref_coverage.contains(parsed.number, xref.offset) &&
+          !@reader.pdf_reader_object_is_xref_stream(parsed.object) {
+          self.load_object_given_number(
+            parsed.number,
+            parsed.object,
+            generation=parsed.generation,
+          )
+        }
+      Err(_) => ()
+    }
+  }
+}
+
+///|
 fn PdfDocument::load_reconstructed_xref_stream_embedded_objects(
   self : PdfDocument,
   xrefs : ArrayView[PdfClassicXRefEntry],
