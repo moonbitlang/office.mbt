@@ -10,6 +10,7 @@ import {
   "bobzhang/pdflite/date",
   "bobzhang/pdflite/font/afm",
   "bobzhang/pdflite/geometry",
+  "bobzhang/pdflite/ocg",
   "bobzhang/pdflite/page",
   "bobzhang/pdflite/portfolio",
   "bobzhang/pdflite/reader",
@@ -1241,7 +1242,7 @@ pub fn pdf_objects_of_entries(ArrayView[(Int, PdfObjectEntry)]) -> PdfObjects
 
 pub fn pdf_ocg_coalesce(PdfDocument) -> PdfDocument raise @core.PdfError
 
-pub fn pdf_ocg_default_config() -> PdfOcgConfig
+pub fn pdf_ocg_default_config() -> @ocg.PdfOcgConfig
 
 pub fn pdf_ocg_get_list(PdfDocument) -> Array[Bytes] raise @core.PdfError
 
@@ -1253,7 +1254,7 @@ pub fn pdf_ocg_list_json_blob(PdfDocument) -> Bytes raise @core.PdfError
 
 pub fn pdf_ocg_order_all(PdfDocument) -> PdfDocument raise @core.PdfError
 
-pub fn pdf_ocg_read_json(Json) -> PdfOptionalContent? raise @core.PdfError
+pub fn pdf_ocg_read_json(Json) -> @ocg.PdfOptionalContent? raise @core.PdfError
 
 pub fn pdf_ocg_rename(Bytes, Bytes, PdfDocument) -> PdfDocument
 
@@ -1261,7 +1262,7 @@ pub fn pdf_ocg_replace_json(Json, PdfDocument) -> PdfDocument raise @core.PdfErr
 
 pub fn pdf_of_pages(PdfDocument, ArrayView[Int], retain_numbering? : Bool, process_struct_tree? : Bool) -> PdfDocument raise @core.PdfError
 
-pub fn pdf_optional_content_merge(ArrayView[PdfDocument]) -> PdfOptionalContent? raise @core.PdfError
+pub fn pdf_optional_content_merge(ArrayView[PdfDocument]) -> @ocg.PdfOptionalContent? raise @core.PdfError
 
 pub fn pdf_output_info(PdfDocument, encoding? : PdfMetadataEncoding, unit? : @geometry.PdfUnit) -> Bytes raise @core.PdfError
 
@@ -1549,7 +1550,7 @@ pub fn pdf_read_name_tree(PdfDocument, @syntax.PdfObject) -> Array[(Bytes, @synt
 
 pub fn pdf_read_number_tree(PdfDocument, @syntax.PdfObject) -> Array[(Bytes, @syntax.PdfObject)]
 
-pub fn pdf_read_ocg(PdfDocument) -> PdfOptionalContent? raise @core.PdfError
+pub fn pdf_read_ocg(PdfDocument) -> @ocg.PdfOptionalContent? raise @core.PdfError
 
 pub fn pdf_read_page_labels(PdfDocument) -> Array[PdfPageLabel] raise @core.PdfError
 
@@ -2155,7 +2156,7 @@ pub fn pdf_write_name(@core.PdfName) -> Bytes
 
 pub fn pdf_write_object(@syntax.PdfObject) -> Bytes raise @core.PdfError
 
-pub fn pdf_write_ocg(PdfDocument, PdfOptionalContent) -> PdfDocument raise @core.PdfError
+pub fn pdf_write_ocg(PdfDocument, @ocg.PdfOptionalContent) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_write_page_labels(PdfDocument, ArrayView[PdfPageLabel]) -> PdfDocument raise @core.PdfError
 
@@ -3118,7 +3119,7 @@ pub fn PdfDocument::read_font_descriptor(Self, @syntax.PdfObject) -> PdfFontDesc
 pub fn PdfDocument::read_font_metrics(Self, @syntax.PdfObject) -> Array[Double]? raise @core.PdfError
 pub fn PdfDocument::read_name_tree(Self, @syntax.PdfObject) -> Array[(Bytes, @syntax.PdfObject)]
 pub fn PdfDocument::read_number_tree(Self, @syntax.PdfObject) -> Array[(Int, @syntax.PdfObject)]
-pub fn PdfDocument::read_optional_content_groups(Self) -> PdfOptionalContent? raise @core.PdfError
+pub fn PdfDocument::read_optional_content_groups(Self) -> @ocg.PdfOptionalContent? raise @core.PdfError
 pub fn PdfDocument::read_page_labels(Self) -> Array[PdfPageLabel] raise @core.PdfError
 pub fn PdfDocument::read_simple_font(Self, @syntax.PdfObject) -> PdfSimpleFont raise @core.PdfError
 pub fn PdfDocument::read_standard14_font(Self, @syntax.PdfObject) -> PdfStandardFontData raise @core.PdfError
@@ -3260,7 +3261,7 @@ pub fn PdfDocument::what_encryption(Self) -> @crypt_core.PdfEncryptionMethod? ra
 pub fn PdfDocument::write_colour_space(Self, PdfColourSpace) -> @syntax.PdfObject
 pub fn PdfDocument::write_encoding(Self, PdfEncoding) -> Int raise @core.PdfError
 pub fn PdfDocument::write_font(Self, PdfFont, objnum? : Int?) -> Int raise @core.PdfError
-pub fn PdfDocument::write_optional_content_groups(Self, PdfOptionalContent) -> Self raise @core.PdfError
+pub fn PdfDocument::write_optional_content_groups(Self, @ocg.PdfOptionalContent) -> Self raise @core.PdfError
 pub fn PdfDocument::write_page_labels(Self, ArrayView[PdfPageLabel]) -> Self raise @core.PdfError
 pub fn PdfDocument::xmp_info(Self, @core.PdfName) -> String
 pub fn PdfDocument::xmp_info_blob(Self) -> Bytes raise @core.PdfError
@@ -3720,68 +3721,6 @@ pub fn PdfObjects::remove_object(Self, Int) -> Unit
 pub fn PdfObjects::set_entry(Self, Int, PdfObjectEntry) -> Unit
 pub fn PdfObjects::stream_entries(Self) -> Array[(Int, Int, @syntax.PdfStream)]
 
-pub(all) struct PdfOcg {
-  name : Bytes
-  intent : Array[@core.PdfName]
-  usage : PdfOcgUsage?
-} derive(Eq, ToJson, @debug.Debug)
-
-pub(all) struct PdfOcgAppDict {
-  event : PdfOcgEvent
-  ocgs : Array[Int]
-  category : Array[@core.PdfName]
-} derive(Eq, ToJson, @debug.Debug)
-
-pub(all) struct PdfOcgConfig {
-  name : Bytes?
-  creator : Bytes?
-  base_state : PdfOcgState
-  on : Array[Int]
-  off : Array[Int]
-  intent : Array[@core.PdfName]
-  usage_applications : Array[PdfOcgAppDict]
-  order : Array[(Bytes?, Array[Int])]?
-  list_mode : PdfOcgListMode
-  radio_button_groups : Array[Array[Int]]?
-  locked : Array[Int]
-} derive(Eq, ToJson, @debug.Debug)
-
-pub(all) enum PdfOcgEvent {
-  OcgView
-  OcgPrint
-  OcgExport
-} derive(Eq, ToJson, @debug.Debug)
-
-pub(all) enum PdfOcgListMode {
-  OcgAllPages
-  OcgVisiblePages
-} derive(Eq, ToJson, @debug.Debug)
-
-pub(all) enum PdfOcgState {
-  OcgOn
-  OcgOff
-  OcgUnchanged
-} derive(Eq, ToJson, @debug.Debug)
-
-pub(all) struct PdfOcgUsage {
-  creator_info : (Bytes, @core.PdfName)?
-  language : (Bytes, @core.PdfName?)?
-  export_state : @core.PdfName?
-  zoom_min : Double?
-  zoom_max : Double?
-  print_subtype : @core.PdfName?
-  print_state : @core.PdfName?
-  view_state : @core.PdfName?
-  user : (@core.PdfName, Array[Bytes])?
-  page_element_subtype : @core.PdfName?
-} derive(Eq, ToJson, @debug.Debug)
-
-pub(all) struct PdfOptionalContent {
-  ocgs : Array[(Int, PdfOcg)]
-  default_config : PdfOcgConfig
-  configs : Array[PdfOcgConfig]
-} derive(Eq, ToJson, @debug.Debug)
-
 pub(all) struct PdfPNG {
   width : Int
   height : Int
@@ -4158,6 +4097,22 @@ pub using @core {type PdfName}
 
 pub using @syntax {type PdfObject}
 
+pub using @ocg {type PdfOcg}
+
+pub using @ocg {type PdfOcgAppDict}
+
+pub using @ocg {type PdfOcgConfig}
+
+pub using @ocg {type PdfOcgEvent}
+
+pub using @ocg {type PdfOcgListMode}
+
+pub using @ocg {type PdfOcgState}
+
+pub using @ocg {type PdfOcgUsage}
+
+pub using @ocg {type PdfOptionalContent}
+
 pub using @page {type PdfPage}
 
 pub using @page {type PdfPageRotation}
@@ -4207,4 +4162,3 @@ pub using @geometry {type TransformMatrix}
 pub using @geometry {type TransformOp}
 
 // Traits
-

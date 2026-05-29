@@ -27,10 +27,10 @@ pub fn pdf_optional_content_merge(
     let mut has_radio_button_groups = false
     let mut name : PdfBytes? = None
     let mut creator : PdfBytes? = None
-    let mut base_state = OcgOn
+    let mut base_state : PdfOcgState = OcgOn
     let mut intent : Array[PdfName] = []
     let mut usage_applications : Array[PdfOcgAppDict] = []
-    let mut list_mode = OcgAllPages
+    let mut list_mode : PdfOcgListMode = OcgAllPages
     let mut locked : Array[Int] = []
     for content in contents {
       for entry in content.ocgs {

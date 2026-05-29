@@ -3,7 +3,8 @@ fn PdfDocument::pdf_ocg_read_appdict(
   self : PdfDocument,
   appdict : PdfObject,
 ) -> PdfOcgAppDict {
-  let event = match self.lookup_direct(pdf_ocg_event_key(), appdict) {
+  let event : PdfOcgEvent = match
+    self.lookup_direct(pdf_ocg_event_key(), appdict) {
     Some(PdfNameObject(name)) if name == pdf_ocg_print_name() => OcgPrint
     Some(PdfNameObject(name)) if name == pdf_ocg_export_name() => OcgExport
     _ => OcgView
@@ -75,7 +76,8 @@ fn PdfDocument::pdf_ocg_read_config(
     Some(PdfString(value)) => Some(value)
     _ => None
   }
-  let base_state = match self.lookup_direct(pdf_ocg_base_state_key(), config) {
+  let base_state : PdfOcgState = match
+    self.lookup_direct(pdf_ocg_base_state_key(), config) {
     Some(PdfNameObject(name)) if name == pdf_ocg_off_name() => OcgOff
     Some(PdfNameObject(name)) if name == pdf_ocg_unchanged_name() =>
       OcgUnchanged
@@ -104,7 +106,8 @@ fn PdfDocument::pdf_ocg_read_config(
     Some(object) => Some(self.pdf_ocg_read_order(object))
     None => None
   }
-  let list_mode = match self.lookup_direct(pdf_ocg_list_mode_key(), config) {
+  let list_mode : PdfOcgListMode = match
+    self.lookup_direct(pdf_ocg_list_mode_key(), config) {
     Some(PdfNameObject(name)) if name == pdf_ocg_visible_pages_name() =>
       OcgVisiblePages
     _ => OcgAllPages

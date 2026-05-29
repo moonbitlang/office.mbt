@@ -95,6 +95,11 @@ pub(all) struct PdfOptionalContent {
 } derive(Debug, Eq, ToJson)
 
 ///|
+fn pdf_ocg_default_view_name() -> PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode("/View"))
+}
+
+///|
 /// Return the PDF default optional-content configuration used when none is set.
 ///
 /// The default has base state `OcgOn`, `/Intent /View`, no explicit on/off
@@ -106,7 +111,7 @@ pub fn pdf_ocg_default_config() -> PdfOcgConfig {
     base_state: OcgOn,
     on: [],
     off: [],
-    intent: [pdf_ocg_view_name()],
+    intent: [pdf_ocg_default_view_name()],
     usage_applications: [],
     order: None,
     list_mode: OcgAllPages,

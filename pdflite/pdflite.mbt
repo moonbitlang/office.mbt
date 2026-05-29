@@ -285,6 +285,19 @@ pub using @path {
 pub using @portfolio {type PdfPortfolioEntry, pdf_portfolio_entry}
 
 ///|
+pub using @ocg {
+  type PdfOcg,
+  type PdfOcgAppDict,
+  type PdfOcgConfig,
+  type PdfOcgEvent,
+  type PdfOcgListMode,
+  type PdfOcgState,
+  type PdfOcgUsage,
+  type PdfOptionalContent,
+  pdf_ocg_default_config,
+}
+
+///|
 pub using @afm {type PdfAfmData, pdf_read_afm}
 
 ///|
