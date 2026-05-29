@@ -7,6 +7,7 @@ import {
   "bobzhang/pdflite/reader",
   "bobzhang/pdflite/syntax",
   "bobzhang/pdflite/text/cmapdata",
+  "bobzhang/pdflite/text/unicodedata",
   "moonbitlang/core/env",
   "moonbitlang/core/buffer",
   "moonbitlang/core/debug",
