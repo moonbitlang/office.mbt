@@ -26,9 +26,11 @@ pub fn PdfDocument::parse_content_ops_with_resources(
   let raw_streams = self.pdf_content_raw_streams(streams)
   pdf_parse_content_ops_from_view_with_context(
     pdf_content_concat_streams(raw_streams),
-    Some(fn(colour_space) raise PdfError {
-      self.colour_space_components(resources, colour_space)
-    }),
+    pdf_content_parse_context(
+      Some(fn(colour_space) raise PdfError {
+        self.colour_space_components(resources, colour_space)
+      }),
+    ),
   )
 }
 
@@ -56,9 +58,11 @@ pub fn PdfDocument::parse_content_view_with_resources(
 ) -> Array[PdfContentOp] raise PdfError {
   pdf_parse_content_ops_from_view_with_context(
     data,
-    Some(fn(colour_space) raise PdfError {
-      self.colour_space_components(resources, colour_space)
-    }),
+    pdf_content_parse_context(
+      Some(fn(colour_space) raise PdfError {
+        self.colour_space_components(resources, colour_space)
+      }),
+    ),
   )
 }
 

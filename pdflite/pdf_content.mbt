@@ -26,13 +26,16 @@ pub fn pdf_parse_content_ops_from_bytes(
 pub fn pdf_parse_content_ops_from_view(
   data : BytesView,
 ) -> Array[PdfContentOp] raise PdfError {
-  pdf_parse_content_ops_from_view_with_context(data, None)
+  pdf_parse_content_ops_from_view_with_context(
+    data,
+    pdf_content_parse_context(None),
+  )
 }
 
 ///|
 fn pdf_parse_content_ops_from_view_with_context(
   data : BytesView,
-  colour_space_components : PdfContentColourSpaceComponents?,
+  context : PdfContentParseContext,
 ) -> Array[PdfContentOp] raise PdfError {
   let cursor = byte_cursor_of_view(data)
   let op_capacity = pdf_content_parse_ops_capacity(data)
@@ -47,9 +50,7 @@ fn pdf_parse_content_ops_from_view_with_context(
       ContentOperator(operator) =>
         if operator == pdf_content_inline_image_begin_operator &&
           operands.length() == 0 {
-          ops.push(
-            pdf_content_read_inline_image(cursor, colour_space_components),
-          )
+          ops.push(pdf_content_read_inline_image(cursor, context))
         } else {
           ops.push(pdf_content_parse_section(operands, operator))
           operands.clear()
@@ -71,5 +72,15 @@ fn pdf_content_parse_ops_capacity(data : BytesView) -> Int {
     4096
   } else {
     estimated
+  }
+}
+
+///|
+fn pdf_content_parse_context(
+  colour_space_components : PdfContentColourSpaceComponents?,
+) -> PdfContentParseContext {
+  {
+    decode_stream: pdf_decode_stream_until_unknown_value,
+    colour_space_components,
   }
 }

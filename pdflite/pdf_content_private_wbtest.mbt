@@ -487,7 +487,10 @@ test "private content helpers cover malformed operand fallbacks" {
     ]),
   )
   @test.assert_eq(
-    pdf_content_read_inline_image(flate_with_decode_parms, None),
+    pdf_content_read_inline_image(
+      flate_with_decode_parms,
+      pdf_content_parse_context(None),
+    ),
     Op_InlineImage(
       PdfDictionary([
         (wbtest_content_name("/W"), PdfInteger(1)),
@@ -509,7 +512,10 @@ test "private content helpers cover malformed operand fallbacks" {
     ]),
   )
   @test.assert_eq(
-    pdf_content_read_inline_image(lzw_with_decode_parms, None),
+    pdf_content_read_inline_image(
+      lzw_with_decode_parms,
+      pdf_content_parse_context(None),
+    ),
     Op_InlineImage(
       PdfDictionary([
         (wbtest_content_name("/W"), PdfInteger(1)),
@@ -531,7 +537,7 @@ test "private content helpers cover malformed operand fallbacks" {
   }
   let bad_inline : Result[PdfContentOp, Error] = try? pdf_content_read_inline_image(
     byte_cursor_of_bytes(@ascii.encode("1 ID data EI")),
-    None,
+    pdf_content_parse_context(None),
   )
   guard bad_inline is Err(PdfError::ContentOperandExpected) else {
     fail("expected PdfError::ContentOperandExpected")

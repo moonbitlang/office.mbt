@@ -1,5 +1,6 @@
 ///|
 fn pdf_content_decode_inline_image_data(
+  context : PdfContentParseContext,
   dictionary : PdfObject,
   decode_parms : PdfObject?,
   encoded : PdfBytes,
@@ -13,7 +14,7 @@ fn pdf_content_decode_inline_image_data(
     pdf_content_length_name(),
     PdfInteger(encoded.length()),
   )
-  let decoded = pdf_decode_stream_until_unknown_value({
+  let decoded = (context.decode_stream)({
     dictionary: stream_dictionary,
     data: StreamGot(encoded),
   })

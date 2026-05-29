@@ -1,7 +1,7 @@
 ///|
 fn pdf_content_read_inline_image(
   cursor : ByteCursor,
-  colour_space_components : PdfContentColourSpaceComponents?,
+  context : PdfContentParseContext,
 ) -> PdfContentOp raise PdfError {
   let entries : Array[(PdfName, PdfObject)] = []
   let mut decode_parms : PdfObject? = None
@@ -53,7 +53,7 @@ fn pdf_content_read_inline_image(
               cursor, filter,
             )
             let (decoded_dictionary, decoded) = pdf_content_decode_inline_image_data(
-              dictionary, decode_parms, encoded,
+              context, dictionary, decode_parms, encoded,
             )
             Op_InlineImage(decoded_dictionary, None, decoded)
           }
@@ -69,7 +69,7 @@ fn pdf_content_read_inline_image(
         } else {
           let encoded = pdf_content_read_run_length_inline_image_data(cursor)
           let (decoded_dictionary, decoded) = pdf_content_decode_inline_image_data(
-            dictionary, decode_parms, encoded,
+            context, dictionary, decode_parms, encoded,
           )
           Op_InlineImage(decoded_dictionary, None, decoded)
         }
@@ -84,7 +84,7 @@ fn pdf_content_read_inline_image(
         } else {
           let encoded = pdf_content_read_flate_inline_image_data(cursor)
           let (decoded_dictionary, decoded) = pdf_content_decode_inline_image_data(
-            dictionary, decode_parms, encoded,
+            context, dictionary, decode_parms, encoded,
           )
           Op_InlineImage(decoded_dictionary, None, decoded)
         }
@@ -101,7 +101,7 @@ fn pdf_content_read_inline_image(
             cursor, dictionary, decode_parms,
           )
           let (decoded_dictionary, decoded) = pdf_content_decode_inline_image_data(
-            dictionary, decode_parms, encoded,
+            context, dictionary, decode_parms, encoded,
           )
           Op_InlineImage(decoded_dictionary, None, decoded)
         }
@@ -111,7 +111,8 @@ fn pdf_content_read_inline_image(
           decode_parms,
           match
             pdf_content_inline_image_data_length(
-              colour_space_components, dictionary,
+              context.colour_space_components,
+              dictionary,
             ) {
             Some(length) =>
               pdf_content_read_sized_inline_image_data(cursor, length)

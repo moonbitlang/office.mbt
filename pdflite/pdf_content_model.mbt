@@ -99,6 +99,15 @@ enum PdfContentInlineTextFilter {
 type PdfContentColourSpaceComponents = (PdfObject) -> Int raise PdfError
 
 ///|
+type PdfContentStreamDecoder = (PdfStream) -> PdfStream raise PdfError
+
+///|
+priv struct PdfContentParseContext {
+  decode_stream : PdfContentStreamDecoder
+  colour_space_components : PdfContentColourSpaceComponents?
+}
+
+///|
 fn pdf_content_ascii(text : String) -> PdfBytes {
   @ascii.encode(text)
 }
