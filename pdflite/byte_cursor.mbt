@@ -92,6 +92,18 @@ pub fn ByteCursor::absolute_position(self : ByteCursor) -> Int {
 }
 
 ///|
+/// Moves the cursor to an absolute position in the underlying byte view.
+pub fn ByteCursor::seek_absolute(
+  self : ByteCursor,
+  position : Int,
+) -> Unit raise PdfError {
+  if position < 0 || position > self.data.length() {
+    raise InvalidCursorPosition(position)
+  }
+  self.position = position
+}
+
+///|
 /// Returns the number of unread bytes remaining from the absolute cursor
 /// position.
 pub fn ByteCursor::remaining_length(self : ByteCursor) -> Int {
@@ -135,6 +147,18 @@ pub fn ByteCursor::seek(
     raise InvalidCursorPosition(position)
   }
   self.position = absolute
+}
+
+///|
+/// Returns a cursor copy with the same input, source label, offset, and
+/// position.
+pub fn ByteCursor::deep_copy(self : ByteCursor) -> ByteCursor {
+  {
+    data: self.data,
+    position: self.position,
+    offset: self.offset,
+    source: self.source,
+  }
 }
 
 ///|

@@ -18,24 +18,49 @@ fn pdf_is_digit_byte(value : Int) -> Bool {
 
 ///|
 fn ByteCursor::pdf_header_at(self : ByteCursor, position : Int) -> PdfVersion? {
-  if position < 0 || position + 7 >= self.data.length() {
-    None
-  } else if self.data[position].to_int() == 37 &&
-    self.data[position + 1].to_int() == 80 &&
-    self.data[position + 2].to_int() == 68 &&
-    self.data[position + 3].to_int() == 70 &&
-    self.data[position + 4].to_int() == 45 &&
-    self.data[position + 6].to_int() == 46 {
-    let major = self.data[position + 5].to_int()
-    let minor = self.data[position + 7].to_int()
-    if pdf_is_digit_byte(major) && pdf_is_digit_byte(minor) {
-      Some({ major: major - 48, minor: minor - 48 })
-    } else {
-      None
-    }
-  } else {
-    None
+  let header : Result[BytesView, Error] = try? self.view_at_absolute(
+    position, 8,
+  )
+  match header {
+    Ok(header) =>
+      if header[0].to_int() == 37 &&
+        header[1].to_int() == 80 &&
+        header[2].to_int() == 68 &&
+        header[3].to_int() == 70 &&
+        header[4].to_int() == 45 &&
+        header[6].to_int() == 46 {
+        let major = header[5].to_int()
+        let minor = header[7].to_int()
+        if pdf_is_digit_byte(major) && pdf_is_digit_byte(minor) {
+          Some({ major: major - 48, minor: minor - 48 })
+        } else {
+          None
+        }
+      } else {
+        None
+      }
+    Err(_) => None
   }
+}
+
+///|
+fn pdf_header_probe_length(length : Int) -> Int {
+  if length < 1024 {
+    length
+  } else {
+    1024
+  }
+}
+
+///|
+fn ByteCursor::finish_pdf_header_at(
+  self : ByteCursor,
+  position : Int,
+  version : PdfVersion,
+) -> PdfVersion raise PdfError {
+  self.set_offset(position)
+  self.seek_absolute(position + 8)
+  version
 }
 
 ///|
@@ -47,18 +72,10 @@ fn ByteCursor::pdf_header_at(self : ByteCursor, position : Int) -> PdfVersion? {
 pub fn ByteCursor::read_pdf_header(
   self : ByteCursor,
 ) -> PdfVersion raise PdfError {
-  let max_probe = if self.data.length() < 1024 {
-    self.data.length()
-  } else {
-    1024
-  }
+  let max_probe = pdf_header_probe_length(self.length())
   for position in 0..<=max_probe {
     match self.pdf_header_at(position) {
-      Some(version) => {
-        self.set_offset(position)
-        self.position = position + 8
-        break version
-      }
+      Some(version) => break self.finish_pdf_header_at(position, version)
       None => ()
     }
   } nobreak {

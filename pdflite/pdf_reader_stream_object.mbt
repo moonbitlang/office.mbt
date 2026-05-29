@@ -19,7 +19,7 @@ fn ByteCursor::consume_pdf_ascii(
 ) -> Unit raise PdfError {
   let position = self.absolute_position()
   if self.matches_pdf_ascii_at(position, values) {
-    self.seek(position + values.length())
+    self.seek_absolute(position + values.length())
   } else {
     raise error
   }
@@ -90,7 +90,7 @@ fn ByteCursor::finish_pdf_stream_object_with_length(
   self.consume_pdf_ascii([115, 116, 114, 101, 97, 109], ParseStreamExpected)
   self.consume_pdf_stream_start_line_break()
   let data_position = self.position()
-  if self.absolute_position() + length > self.data.length() {
+  if self.absolute_position() + length > self.length() {
     raise EndOfInput
   }
   let stream_data = if defer_stream_data {
@@ -99,7 +99,7 @@ fn ByteCursor::finish_pdf_stream_object_with_length(
   } else {
     StreamGot(self.read_bytes(length))
   }
-  if !pdf_reader_stream_end_marker_at(self.data[:], self.absolute_position()) {
+  if !pdf_reader_stream_end_marker_at(self.view(), self.absolute_position()) {
     self.seek_pdf_absolute(stream_keyword_position)
     self.finish_pdf_malformed_stream_object(prefix)
   } else {
@@ -150,17 +150,19 @@ fn ByteCursor::finish_pdf_malformed_stream_object(
   self.consume_pdf_ascii([115, 116, 114, 101, 97, 109], ParseStreamExpected)
   self.consume_pdf_stream_start_line_break()
   let data_start = self.absolute_position()
-  let endstream = pdf_find_ascii_from(self.data, data_start, [
+  let endstream = pdf_find_ascii_from(self.view(), data_start, [
     101, 110, 100, 115, 116, 114, 101, 97, 109,
   ])
   if endstream < 0 {
     raise ParseEndStreamExpected
   }
   let data_end = pdf_reader_stream_data_end_before_marker(
-    self.data[:],
+    self.view(),
     endstream,
   )
-  let stream_data = self.data[data_start:data_end].to_owned()
+  let stream_data = self
+    .view_at_absolute(data_start, data_end - data_start)
+    .to_owned()
   self.seek_pdf_absolute(endstream + 9)
   self.drop_pdf_whitespace()
   self.consume_pdf_ascii([101, 110, 100, 111, 98, 106], ParseEndObjectExpected)
@@ -186,11 +188,11 @@ fn ByteCursor::finish_pdf_object_stream_member_with_length(
   let stream_keyword_position = self.absolute_position()
   self.consume_pdf_ascii([115, 116, 114, 101, 97, 109], ParseStreamExpected)
   self.consume_pdf_stream_start_line_break()
-  if self.absolute_position() + length > self.data.length() {
+  if self.absolute_position() + length > self.length() {
     raise EndOfInput
   }
   let stream_data = self.read_bytes(length)
-  if !pdf_reader_stream_end_marker_at(self.data[:], self.absolute_position()) {
+  if !pdf_reader_stream_end_marker_at(self.view(), self.absolute_position()) {
     self.seek_pdf_absolute(stream_keyword_position)
     self.finish_pdf_malformed_object_stream_member(prefix)
   } else {
@@ -216,17 +218,19 @@ fn ByteCursor::finish_pdf_malformed_object_stream_member(
   self.consume_pdf_ascii([115, 116, 114, 101, 97, 109], ParseStreamExpected)
   self.consume_pdf_stream_start_line_break()
   let data_start = self.absolute_position()
-  let endstream = pdf_find_ascii_from(self.data, data_start, [
+  let endstream = pdf_find_ascii_from(self.view(), data_start, [
     101, 110, 100, 115, 116, 114, 101, 97, 109,
   ])
   if endstream < 0 {
     raise ParseEndStreamExpected
   }
   let data_end = pdf_reader_stream_data_end_before_marker(
-    self.data[:],
+    self.view(),
     endstream,
   )
-  let stream_data = self.data[data_start:data_end].to_owned()
+  let stream_data = self
+    .view_at_absolute(data_start, data_end - data_start)
+    .to_owned()
   self.seek_pdf_absolute(endstream + 9)
   {
     number: prefix.number,

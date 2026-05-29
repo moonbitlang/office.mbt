@@ -2192,6 +2192,7 @@ pub struct ByteCursor {
   source : String
 } derive(Eq, ToJson, @debug.Debug)
 pub fn ByteCursor::absolute_position(Self) -> Int
+pub fn ByteCursor::deep_copy(Self) -> Self
 pub fn ByteCursor::drop_pdf_whitespace(Self) -> Unit
 pub fn ByteCursor::ignore_until(Self, (Int) -> Bool, eof_is_delimiter? : Bool) -> Unit raise @core.PdfError
 pub fn ByteCursor::input_byte(Self) -> Int
@@ -2233,10 +2234,13 @@ pub fn ByteCursor::remaining_length(Self) -> Int
 pub fn ByteCursor::remaining_view(Self) -> BytesView
 pub fn ByteCursor::rewind(Self) -> Unit raise @core.PdfError
 pub fn ByteCursor::seek(Self, Int) -> Unit raise @core.PdfError
+pub fn ByteCursor::seek_absolute(Self, Int) -> Unit raise @core.PdfError
 pub fn ByteCursor::set_offset(Self, Int) -> Unit raise @core.PdfError
 pub fn ByteCursor::source(Self) -> String
 pub fn ByteCursor::to_bytes(Self) -> Bytes
 pub fn ByteCursor::view(Self) -> BytesView
+pub fn ByteCursor::view_at(Self, Int, Int) -> BytesView raise @core.PdfError
+pub fn ByteCursor::view_at_absolute(Self, Int, Int) -> BytesView raise @core.PdfError
 
 pub(all) struct ObjectStreamReference {
   object_stream_number : Int

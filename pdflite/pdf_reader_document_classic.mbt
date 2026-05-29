@@ -40,7 +40,7 @@ fn pdf_read_classic_document_from_view_at_revision(
   let was_linearized = pdf_read_was_linearized(data)
   let cursor = byte_cursor_of_view(data)
   let version = cursor.read_pdf_header()
-  let xref_position = pdf_read_startxref_position(cursor.data)
+  let xref_position = pdf_read_startxref_position(cursor.view())
   let xrefs : Array[PdfClassicXRefEntry] = []
   let xref_seen = @number_set.pdf_number_set([])
   let mut trailer = PdfDictionary([])

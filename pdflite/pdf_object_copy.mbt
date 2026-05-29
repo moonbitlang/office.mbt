@@ -4,16 +4,6 @@ fn pdf_bytes_physical_copy(bytes : PdfBytes) -> PdfBytes {
 }
 
 ///|
-fn ByteCursor::deep_copy(self : ByteCursor) -> ByteCursor {
-  {
-    data: self.data,
-    position: self.position,
-    offset: self.offset,
-    source: self.source,
-  }
-}
-
-///|
 fn PdfStreamDataCrypt::deep_copy(
   self : PdfStreamDataCrypt,
 ) -> PdfStreamDataCrypt {

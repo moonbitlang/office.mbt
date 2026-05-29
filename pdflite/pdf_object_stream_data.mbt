@@ -49,19 +49,10 @@ fn PdfStreamDataCrypt::decrypt(
 ///|
 fn pdf_stream_to_get_raw_view(to_get : ToGet) -> BytesView raise PdfError {
   let input = to_get.input()
-  let start = to_get.position() + input.offset
-  let length = to_get.length()
-  if start < 0 {
+  if to_get.position() < 0 {
     raise InvalidCursorPosition(to_get.position())
   }
-  if length < 0 {
-    raise InvalidReadLength(length)
-  }
-  let end = start + length
-  if end > input.data.length() {
-    raise EndOfInput
-  }
-  input.data[start:end]
+  input.view_at(to_get.position(), to_get.length())
 }
 
 ///|

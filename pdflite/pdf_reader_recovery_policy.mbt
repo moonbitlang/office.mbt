@@ -4,7 +4,7 @@ fn pdf_reader_validate_xref_metadata_for_reconstruction(
 ) -> Unit raise PdfError {
   let cursor = byte_cursor_of_view(data)
   ignore(cursor.read_pdf_header())
-  let mut current_xref = pdf_read_startxref_position(cursor.data)
+  let mut current_xref = pdf_read_startxref_position(cursor.view())
   let mut done = false
   let mut depth = 0
   while !done {
@@ -39,7 +39,7 @@ fn pdf_reader_startxref_root_uses_object_stream(
 ) -> Bool raise PdfError {
   let cursor = byte_cursor_of_view(data)
   ignore(cursor.read_pdf_header())
-  cursor.seek_pdf_absolute(pdf_read_startxref_position(cursor.data))
+  cursor.seek_pdf_absolute(pdf_read_startxref_position(cursor.view()))
   let section = cursor.read_pdf_xref_section()
   let root = match section.trailer.lookup_immediate(pdf_reader_root_name()) {
     Some(PdfIndirect(root)) => root
@@ -74,7 +74,7 @@ fn pdf_reader_startxref_object_stream_root_unusable(
 ) -> Bool raise PdfError {
   let cursor = byte_cursor_of_view(data)
   ignore(cursor.read_pdf_header())
-  cursor.seek_pdf_absolute(pdf_read_startxref_position(cursor.data))
+  cursor.seek_pdf_absolute(pdf_read_startxref_position(cursor.view()))
   let section = cursor.read_pdf_xref_section()
   match section.trailer.lookup_immediate(pdf_reader_root_name()) {
     Some(PdfIndirect(root)) =>
@@ -154,7 +154,7 @@ fn pdf_reader_startxref_uses_xref_stream(
 ) -> Bool raise PdfError {
   let cursor = byte_cursor_of_view(data)
   ignore(cursor.read_pdf_header())
-  cursor.seek_pdf_absolute(pdf_read_startxref_position(cursor.data))
+  cursor.seek_pdf_absolute(pdf_read_startxref_position(cursor.view()))
   let section = cursor.read_pdf_xref_section()
   section.stream_object_number is Some(_)
 }
@@ -174,7 +174,7 @@ fn pdf_reader_startxref_has_xref_stream_prefix(
 ) -> Bool raise PdfError {
   let cursor = byte_cursor_of_view(data)
   ignore(cursor.read_pdf_header())
-  cursor.seek_pdf_absolute(pdf_read_startxref_position(cursor.data))
+  cursor.seek_pdf_absolute(pdf_read_startxref_position(cursor.view()))
   let parsed = cursor.read_reconstructed_indirect_prefix_at_current()
   match parsed.object {
     PdfDictionary(_) as dictionary => pdf_reader_xref_stream_type_ok(dictionary)

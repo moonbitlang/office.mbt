@@ -29,6 +29,42 @@ pub fn ByteCursor::peek_bytes(
 }
 
 ///|
+/// Returns a read-only view at an absolute position without advancing.
+pub fn ByteCursor::view_at_absolute(
+  self : ByteCursor,
+  position : Int,
+  length : Int,
+) -> BytesView raise PdfError {
+  if position < 0 {
+    raise InvalidCursorPosition(position)
+  }
+  if length < 0 {
+    raise InvalidReadLength(length)
+  }
+  let end = position + length
+  if end < position {
+    raise InvalidReadLength(length)
+  }
+  if end > self.data.length() {
+    raise EndOfInput
+  }
+  self.data[position:end]
+}
+
+///|
+/// Returns a read-only view at a logical position without advancing.
+pub fn ByteCursor::view_at(
+  self : ByteCursor,
+  position : Int,
+  length : Int,
+) -> BytesView raise PdfError {
+  if position < 0 {
+    raise InvalidCursorPosition(position)
+  }
+  self.view_at_absolute(position + self.offset, length)
+}
+
+///|
 /// Advances the cursor by one byte, ignoring the value read.
 pub fn ByteCursor::nudge(self : ByteCursor) -> Unit {
   ignore(self.input_byte())

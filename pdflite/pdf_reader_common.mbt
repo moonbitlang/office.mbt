@@ -11,10 +11,7 @@ fn ByteCursor::seek_pdf_absolute(
   self : ByteCursor,
   position : Int,
 ) -> Unit raise PdfError {
-  if position < 0 || position > self.data.length() {
-    raise InvalidCursorPosition(position)
-  }
-  self.position = position
+  self.seek_absolute(position)
 }
 
 ///|

@@ -18,11 +18,11 @@ fn ByteCursor::lex_reconstructed_indirect_object_tokens_at_current(
   let mut found = false
   let mut output : Array[PdfLexeme] = []
   while !done {
-    let endobj = pdf_find_ascii_from(self.data, search, [
+    let endobj = pdf_find_ascii_from(self.view(), search, [
       101, 110, 100, 111, 98, 106,
     ])
-    let end = if endobj < 0 { self.data.length() } else { endobj + 6 }
-    let cursor = byte_cursor_of_view(self.data[start:end])
+    let end = if endobj < 0 { self.length() } else { endobj + 6 }
+    let cursor = byte_cursor_of_view(self.view_at_absolute(start, end - start))
     let tokens : Result[Array[PdfLexeme], Error] = try? cursor.lex_pdf_tokens()
     match tokens {
       Ok(tokens) => {
