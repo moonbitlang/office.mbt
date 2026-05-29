@@ -1,24 +1,4 @@
 ///|
-/// One codepoint-to-font mapping in a cpdf-style font pack.
-pub(all) struct PdfFontPackEntry {
-  codepoint : Int
-  font_index : Int
-  charcode : Int
-} derive(Debug, Eq, ToJson)
-
-///|
-/// A cpdf-style font pack.
-///
-/// The pack stores the fonts that can be selected while typesetting text and a
-/// Unicode codepoint lookup table returning the font index and one-byte
-/// character code. This ports the source-level `cpdfembed.ml` abstraction
-/// without committing the public API to a hash-table representation.
-pub(all) struct PdfFontPack {
-  fonts : Array[PdfFont]
-  entries : Array[PdfFontPackEntry]
-} derive(Debug, Eq, ToJson)
-
-///|
 /// Source-facing cpdf font source descriptor.
 ///
 /// This mirrors `Cpdfembed.cpdffont`: callers may supply a prebuilt font pack,
@@ -49,11 +29,6 @@ fn pdf_embed_basename() -> String {
   pdf_embed_font_number.val += 1
   let code = pdf_embed_font_number.val + 65
   "AAAAA" + @ascii.decode_lossy(Bytes::from_array([code.to_byte()]))
-}
-
-///|
-fn pdf_embed_empty_fontpack() -> PdfFontPack {
-  { fonts: [], entries: [] }
 }
 
 ///|
@@ -183,7 +158,7 @@ pub fn PdfDocument::embed_truetype(
   encoding : PdfEncoding,
 ) -> PdfFontPack raise PdfError {
   if codepoints.length() == 0 {
-    pdf_embed_empty_fontpack()
+    pdf_fontpack_empty()
   } else {
     let parsed = pdf_truetype_parse(fontfile, encoding, codepoints)
     let subsets_and_fonts : Array[(Array[Int], PdfFont)] = Array::new(

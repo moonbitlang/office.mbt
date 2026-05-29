@@ -1,4 +1,29 @@
 ///|
+/// One codepoint-to-font mapping in a cpdf-style font pack.
+pub(all) struct PdfFontPackEntry {
+  codepoint : Int
+  font_index : Int
+  charcode : Int
+} derive(Debug, Eq, ToJson)
+
+///|
+/// A cpdf-style font pack.
+///
+/// The pack stores the fonts that can be selected while typesetting text and a
+/// Unicode codepoint lookup table returning the font index and one-byte
+/// character code. This ports the source-level `cpdfembed.ml` abstraction
+/// without committing the public API to a hash-table representation.
+pub(all) struct PdfFontPack {
+  fonts : Array[PdfFont]
+  entries : Array[PdfFontPackEntry]
+} derive(Debug, Eq, ToJson)
+
+///|
+fn pdf_fontpack_empty() -> PdfFontPack {
+  { fonts: [], entries: [] }
+}
+
+///|
 /// Build a font pack for an already parsed standard font.
 ///
 /// Duplicate Unicode mappings follow OCaml `Hashtbl.add`/`find` behavior by
