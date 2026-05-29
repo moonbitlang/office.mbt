@@ -1,5 +1,5 @@
 ///|
-let pdflite_cmd_version = "0.1.34"
+let pdflite_cmd_version = "0.1.36"
 
 ///|
 let pdflite_cmd_exit_ok = 0
