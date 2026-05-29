@@ -686,6 +686,8 @@ pub fn pdf_cursor_lex_token(ByteCursor) -> PdfLexeme raise @core.PdfError
 
 pub fn pdf_cursor_lex_tokens(ByteCursor) -> Array[PdfLexeme] raise @core.PdfError
 
+pub fn pdf_cursor_read_jpeg_data(ByteCursor) -> Bytes raise @core.PdfError
+
 pub fn pdf_cursor_read_regular_token_view(ByteCursor) -> BytesView
 
 pub fn pdf_cursor_read_until_whitespace_or_delimiter(ByteCursor) -> BytesView
@@ -2237,7 +2239,6 @@ pub fn ByteCursor::read_byte(Self) -> Byte?
 pub fn ByteCursor::read_byte_back(Self) -> Byte?
 pub fn ByteCursor::read_bytes(Self, Int) -> Bytes raise @core.PdfError
 pub fn ByteCursor::read_bytes_at(Self, Int, Int) -> Bytes raise @core.PdfError
-pub fn ByteCursor::read_jpeg_data(Self) -> Bytes raise @core.PdfError
 pub fn ByteCursor::read_line(Self) -> Bytes raise @core.PdfError
 pub fn ByteCursor::read_line_view(Self) -> BytesView raise @core.PdfError
 pub fn ByteCursor::read_line_views(Self) -> Array[BytesView]

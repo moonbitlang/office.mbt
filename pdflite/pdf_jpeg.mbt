@@ -16,11 +16,13 @@ fn pdf_jpeg_eoi_length(data : BytesView) -> Int? {
 ///
 /// The returned bytes include the terminal `0xFF 0xD9` marker. Raises
 /// `PdfError::EndOfInput` if the marker is not found before EOF.
-pub fn ByteCursor::read_jpeg_data(self : ByteCursor) -> PdfBytes raise PdfError {
-  match pdf_jpeg_eoi_length(self.remaining_view()) {
-    Some(length) => self.read_bytes(length)
+pub fn pdf_cursor_read_jpeg_data(
+  cursor : ByteCursor,
+) -> PdfBytes raise PdfError {
+  match pdf_jpeg_eoi_length(cursor.remaining_view()) {
+    Some(length) => cursor.read_bytes(length)
     None => {
-      let _ = self.read_view(self.remaining_length())
+      let _ = cursor.read_view(cursor.remaining_length())
       raise EndOfInput
     }
   }
@@ -28,10 +30,8 @@ pub fn ByteCursor::read_jpeg_data(self : ByteCursor) -> PdfBytes raise PdfError 
 
 ///|
 /// Reads JPEG data from a cursor through the EOI marker.
-///
-/// This is the standalone form of `ByteCursor::read_jpeg_data`.
 pub fn pdf_get_jpeg_data(input : ByteCursor) -> PdfBytes raise PdfError {
-  input.read_jpeg_data()
+  pdf_cursor_read_jpeg_data(input)
 }
 
 ///|
