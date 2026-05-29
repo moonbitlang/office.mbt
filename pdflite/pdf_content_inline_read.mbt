@@ -1,8 +1,7 @@
 ///|
 fn pdf_content_read_inline_image(
   cursor : ByteCursor,
-  document : PdfDocument?,
-  resources : PdfObject,
+  colour_space_components : PdfContentColourSpaceComponents?,
 ) -> PdfContentOp raise PdfError {
   let entries : Array[(PdfName, PdfObject)] = []
   let mut decode_parms : PdfObject? = None
@@ -112,7 +111,7 @@ fn pdf_content_read_inline_image(
           decode_parms,
           match
             pdf_content_inline_image_data_length(
-              document, resources, dictionary,
+              colour_space_components, dictionary,
             ) {
             Some(length) =>
               pdf_content_read_sized_inline_image_data(cursor, length)

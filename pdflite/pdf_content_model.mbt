@@ -96,6 +96,9 @@ enum PdfContentInlineTextFilter {
 } derive(Debug, Eq)
 
 ///|
+type PdfContentColourSpaceComponents = (PdfObject) -> Int raise PdfError
+
+///|
 fn pdf_content_ascii(text : String) -> PdfBytes {
   @ascii.encode(text)
 }

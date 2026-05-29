@@ -26,14 +26,13 @@ pub fn pdf_parse_content_ops_from_bytes(
 pub fn pdf_parse_content_ops_from_view(
   data : BytesView,
 ) -> Array[PdfContentOp] raise PdfError {
-  pdf_parse_content_ops_from_view_with_context(data, None, PdfDictionary([]))
+  pdf_parse_content_ops_from_view_with_context(data, None)
 }
 
 ///|
 fn pdf_parse_content_ops_from_view_with_context(
   data : BytesView,
-  document : PdfDocument?,
-  resources : PdfObject,
+  colour_space_components : PdfContentColourSpaceComponents?,
 ) -> Array[PdfContentOp] raise PdfError {
   let cursor = byte_cursor_of_view(data)
   let op_capacity = pdf_content_parse_ops_capacity(data)
@@ -48,7 +47,9 @@ fn pdf_parse_content_ops_from_view_with_context(
       ContentOperator(operator) =>
         if operator == pdf_content_inline_image_begin_operator &&
           operands.length() == 0 {
-          ops.push(pdf_content_read_inline_image(cursor, document, resources))
+          ops.push(
+            pdf_content_read_inline_image(cursor, colour_space_components),
+          )
         } else {
           ops.push(pdf_content_parse_section(operands, operator))
           operands.clear()

@@ -245,8 +245,7 @@ fn pdf_content_inline_image_mask(dictionary : PdfObject) -> Bool {
 
 ///|
 fn pdf_content_inline_components(
-  document : PdfDocument?,
-  resources : PdfObject,
+  colour_space_components : PdfContentColourSpaceComponents?,
   dictionary : PdfObject,
 ) -> Int? raise PdfError {
   match
@@ -264,18 +263,14 @@ fn pdf_content_inline_components(
         name == pdf_content_inline_device_cmyk_name {
         Some(4)
       } else {
-        match document {
-          Some(document) =>
-            Some(
-              document.colour_space_components(resources, PdfNameObject(name)),
-            )
+        match colour_space_components {
+          Some(components) => Some(components(PdfNameObject(name)))
           None => None
         }
       }
     Some(colour_space) =>
-      match document {
-        Some(document) =>
-          Some(document.colour_space_components(resources, colour_space))
+      match colour_space_components {
+        Some(components) => Some(components(colour_space))
         None => None
       }
     None if pdf_content_inline_image_mask(dictionary) => Some(1)
@@ -312,8 +307,7 @@ fn pdf_content_inline_filter_is_empty(dictionary : PdfObject) -> Bool {
 
 ///|
 fn pdf_content_inline_image_data_length(
-  document : PdfDocument?,
-  resources : PdfObject,
+  colour_space_components : PdfContentColourSpaceComponents?,
   dictionary : PdfObject,
 ) -> Int? raise PdfError {
   if !pdf_content_inline_filter_is_empty(dictionary) {
@@ -330,7 +324,7 @@ fn pdf_content_inline_image_data_length(
             dictionary, pdf_content_inline_h_key_name, pdf_content_inline_height_key_name,
           ),
           pdf_content_inline_bits_per_component(dictionary),
-          pdf_content_inline_components(document, resources, dictionary),
+          pdf_content_inline_components(colour_space_components, dictionary),
         ) {
         (Some(width), Some(height), Some(bits), Some(components)) => {
           let row_bits = width * components * bits

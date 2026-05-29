@@ -110,7 +110,6 @@ test "private content helpers cover malformed operand fallbacks" {
   @test.assert_eq(
     pdf_content_inline_image_data_length(
       None,
-      PdfDictionary([]),
       PdfDictionary([
         (wbtest_content_name("/W"), PdfInteger(1)),
         (wbtest_content_name("/H"), PdfInteger(1)),
@@ -126,7 +125,6 @@ test "private content helpers cover malformed operand fallbacks" {
   @test.assert_eq(
     pdf_content_inline_image_data_length(
       None,
-      PdfDictionary([]),
       PdfDictionary([
         (wbtest_content_name("/W"), PdfInteger(1)),
         (wbtest_content_name("/H"), PdfInteger(1)),
@@ -139,7 +137,6 @@ test "private content helpers cover malformed operand fallbacks" {
   @test.assert_eq(
     pdf_content_inline_image_data_length(
       None,
-      PdfDictionary([]),
       PdfDictionary([
         (wbtest_content_name("/W"), PdfInteger(1)),
         (wbtest_content_name("/H"), PdfInteger(1)),
@@ -490,11 +487,7 @@ test "private content helpers cover malformed operand fallbacks" {
     ]),
   )
   @test.assert_eq(
-    pdf_content_read_inline_image(
-      flate_with_decode_parms,
-      None,
-      PdfDictionary([]),
-    ),
+    pdf_content_read_inline_image(flate_with_decode_parms, None),
     Op_InlineImage(
       PdfDictionary([
         (wbtest_content_name("/W"), PdfInteger(1)),
@@ -516,11 +509,7 @@ test "private content helpers cover malformed operand fallbacks" {
     ]),
   )
   @test.assert_eq(
-    pdf_content_read_inline_image(
-      lzw_with_decode_parms,
-      None,
-      PdfDictionary([]),
-    ),
+    pdf_content_read_inline_image(lzw_with_decode_parms, None),
     Op_InlineImage(
       PdfDictionary([
         (wbtest_content_name("/W"), PdfInteger(1)),
@@ -543,7 +532,6 @@ test "private content helpers cover malformed operand fallbacks" {
   let bad_inline : Result[PdfContentOp, Error] = try? pdf_content_read_inline_image(
     byte_cursor_of_bytes(@ascii.encode("1 ID data EI")),
     None,
-    PdfDictionary([]),
   )
   guard bad_inline is Err(PdfError::ContentOperandExpected) else {
     fail("expected PdfError::ContentOperandExpected")
