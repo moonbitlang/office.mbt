@@ -1,6 +1,5 @@
-// Whitebox tests run within the package scope.
-// Use them to validate internal helpers or invariants.
-// Keep them focused; public behavior belongs in `_test.mbt`.
+// Whitebox tests for text extraction, CMap, and glyph internals.
+// Public text behavior belongs in `_test.mbt` files.
 
 ///|
 fn wbtest_text_bytes(values : ArrayView[Int]) -> PdfBytes {

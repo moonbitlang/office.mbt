@@ -238,6 +238,6 @@ options(
     "pdf_text_agl_sequence_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
     "pdf_text_agl_sequence_wbtest.mbt": [ "wasm-gc", "js", "native", "llvm" ],
     "pdf_text_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
-    "pdflite_wbtest.mbt": [ "wasm-gc", "js", "native", "llvm" ],
+    "pdf_text_private_wbtest.mbt": [ "wasm-gc", "js", "native", "llvm" ],
   },
 )
