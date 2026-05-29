@@ -118,7 +118,7 @@ options(
     "pdf_presentation_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
     "pdf_print_tree_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
     "pdf_reader_wbtest.mbt": [ "wasm-gc", "js", "native", "llvm" ],
-    "pdf_reader_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
+    "pdf_reader_classic_xref_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
     "pdf_redact_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
     "pdf_reference_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
     "pdf_remove_text_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
