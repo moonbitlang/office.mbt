@@ -20,7 +20,7 @@ fn pdf_read_reconstructed_document_from_view(
   let xref_coverage = pdf_reconstructed_xref_coverage(
     data, classic_xref_sections, xref_stream_sections,
   )
-  let classic_xrefs = pdf_reconstructed_classic_xref_entries(
+  let classic_xrefs = @reader.pdf_reader_reconstruction_classic_xref_entries(
     classic_xref_sections,
   )
   document.load_reconstructed_classic_xref_plain_objects(data, classic_xrefs)
@@ -58,7 +58,9 @@ fn pdf_read_reconstructed_document_from_view(
   )
   if include_xref_stream_trailers && document.is_encrypted() {
     document.load_reconstructed_xref_stream_embedded_objects_with_passwords(
-      pdf_reconstructed_xref_stream_entries(xref_stream_sections),
+      @reader.pdf_reader_reconstruction_xref_stream_entries(
+        xref_stream_sections,
+      ),
       user_password,
       owner_password,
     )

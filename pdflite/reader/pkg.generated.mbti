@@ -57,9 +57,15 @@ pub fn pdf_reader_objstm_name() -> @core.PdfName
 
 pub fn pdf_reader_prev_name() -> @core.PdfName
 
+pub fn pdf_reader_reconstruction_classic_xref_entries(ArrayView[(Int, PdfXRefSection)]) -> Array[PdfClassicXRefEntry]
+
 pub fn pdf_reader_reconstruction_indirect_header_at(BytesView, Int) -> Bool
 
 pub fn pdf_reader_reconstruction_skip_malformed_object(BytesView, Int) -> Int?
+
+pub fn pdf_reader_reconstruction_xref_stream_entries(ArrayView[PdfXRefSection]) -> Array[PdfClassicXRefEntry]
+
+pub fn pdf_reader_reconstruction_xref_stream_refs(ArrayView[PdfXRefSection]) -> Array[(Int, Int)]
 
 pub fn pdf_reader_root_name() -> @core.PdfName
 

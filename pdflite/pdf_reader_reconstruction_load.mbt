@@ -6,7 +6,9 @@ fn PdfDocument::load_reconstructed_xref_stream_plain_objects(
   xrefs : ArrayView[PdfClassicXRefEntry],
 ) -> Unit {
   let cursor = byte_cursor_of_view(data)
-  let xref_stream_refs = pdf_reconstructed_xref_stream_refs(sections)
+  let xref_stream_refs = @reader.pdf_reader_reconstruction_xref_stream_refs(
+    sections,
+  )
   let xref_stream_ref_set = @reader.pdf_reader_xref_stream_ref_set(
     xref_stream_refs,
   )
@@ -179,7 +181,7 @@ fn PdfDocument::load_reconstructed_xref_stream_objects(
   data : BytesView,
   sections : ArrayView[PdfXRefSection],
 ) -> Unit {
-  let xrefs = pdf_reconstructed_xref_stream_entries(sections)
+  let xrefs = @reader.pdf_reader_reconstruction_xref_stream_entries(sections)
   self.load_reconstructed_xref_stream_plain_objects(data, sections, xrefs)
   self.load_reconstructed_xref_stream_embedded_objects(xrefs)
 }
