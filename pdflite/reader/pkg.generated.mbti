@@ -45,6 +45,8 @@ pub fn pdf_reader_n_name() -> @core.PdfName
 
 pub fn pdf_reader_name(String) -> @core.PdfName
 
+pub fn pdf_reader_object_is_xref_stream(@syntax.PdfObject) -> Bool
+
 pub fn pdf_reader_objstm_name() -> @core.PdfName
 
 pub fn pdf_reader_prev_name() -> @core.PdfName
@@ -57,11 +59,15 @@ pub fn pdf_reader_short_filter_name() -> @core.PdfName
 
 pub fn pdf_reader_size_name() -> @core.PdfName
 
+pub fn pdf_reader_stream_dictionary_without_xref_keys(@syntax.PdfObject) -> @syntax.PdfObject raise @core.PdfError
+
 pub fn pdf_reader_type_name() -> @core.PdfName
 
 pub fn pdf_reader_w_name() -> @core.PdfName
 
 pub fn pdf_reader_xref_name() -> @core.PdfName
+
+pub fn pdf_reader_xref_stream_type_ok(@syntax.PdfObject) -> Bool
 
 pub fn pdf_reader_xrefstm_name() -> @core.PdfName
 
@@ -69,9 +75,15 @@ pub fn pdf_xref_stream_entries(BytesView, (Int, Int, Int), ArrayView[(Int, Int)]
 
 pub fn pdf_xref_stream_entry_capacity(ArrayView[(Int, Int)]) -> Int raise @core.PdfError
 
+pub fn pdf_xref_stream_index_pairs(@syntax.PdfObject) -> Array[(Int, Int)] raise @core.PdfError
+
+pub fn pdf_xref_stream_int_array(@syntax.PdfObject, @core.PdfName) -> Array[Int]? raise @core.PdfError
+
 pub fn pdf_xref_stream_read_entry(BytesView, Int, Int, Int, Int) -> (Int, Int, Int, Int) raise @core.PdfError
 
 pub fn pdf_xref_stream_read_field(BytesView, Int, Int) -> (Int, Int) raise @core.PdfError
+
+pub fn pdf_xref_stream_widths(@syntax.PdfObject) -> (Int, Int, Int) raise @core.PdfError
 
 pub fn pdf_xref_token_in_use(BytesView) -> Bool raise @core.PdfError
 

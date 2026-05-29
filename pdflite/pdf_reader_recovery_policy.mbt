@@ -179,7 +179,8 @@ fn pdf_reader_startxref_has_xref_stream_prefix(
   cursor.seek_absolute(pdf_read_startxref_position(cursor.view()))
   let parsed = pdf_cursor_read_reconstructed_indirect_prefix_at_current(cursor)
   match parsed.object {
-    PdfDictionary(_) as dictionary => pdf_reader_xref_stream_type_ok(dictionary)
+    PdfDictionary(_) as dictionary =>
+      @reader.pdf_reader_xref_stream_type_ok(dictionary)
     _ => false
   }
 }

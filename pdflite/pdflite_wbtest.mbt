@@ -373,7 +373,7 @@ test "private xref stream helpers cover malformed and deferred entries" {
     fail("expected PdfError::XRefExpected")
   }
 
-  let malformed_array_value : Result[Array[Int]?, Error] = try? pdf_xref_stream_int_array(
+  let malformed_array_value : Result[Array[Int]?, Error] = try? @reader.pdf_xref_stream_int_array(
     PdfDictionary([
       (key_w, PdfArray([PdfNameObject(@reader.pdf_reader_name("/Name"))])),
     ]),
@@ -383,7 +383,7 @@ test "private xref stream helpers cover malformed and deferred entries" {
     fail("expected PdfError::XRefEntryExpected")
   }
 
-  let malformed_non_array : Result[Array[Int]?, Error] = try? pdf_xref_stream_int_array(
+  let malformed_non_array : Result[Array[Int]?, Error] = try? @reader.pdf_xref_stream_int_array(
     PdfDictionary([(key_w, PdfInteger(1))]),
     key_w,
   )
@@ -391,28 +391,28 @@ test "private xref stream helpers cover malformed and deferred entries" {
     fail("expected PdfError::XRefEntryExpected")
   }
 
-  let malformed_widths : Result[(Int, Int, Int), Error] = try? pdf_xref_stream_widths(
+  let malformed_widths : Result[(Int, Int, Int), Error] = try? @reader.pdf_xref_stream_widths(
     PdfDictionary([(key_w, PdfArray([PdfInteger(1), PdfInteger(2)]))]),
   )
   guard malformed_widths is Err(PdfError::XRefEntryExpected) else {
     fail("expected PdfError::XRefEntryExpected")
   }
 
-  let odd_index : Result[Array[(Int, Int)], Error] = try? pdf_xref_stream_index_pairs(
+  let odd_index : Result[Array[(Int, Int)], Error] = try? @reader.pdf_xref_stream_index_pairs(
     PdfDictionary([(key_index, PdfArray([PdfInteger(0)]))]),
   )
   guard odd_index is Err(PdfError::XRefEntryExpected) else {
     fail("expected PdfError::XRefEntryExpected")
   }
 
-  let negative_index : Result[Array[(Int, Int)], Error] = try? pdf_xref_stream_index_pairs(
+  let negative_index : Result[Array[(Int, Int)], Error] = try? @reader.pdf_xref_stream_index_pairs(
     PdfDictionary([(key_index, PdfArray([PdfInteger(0), PdfInteger(-1)]))]),
   )
   guard negative_index is Err(PdfError::XRefEntryExpected) else {
     fail("expected PdfError::XRefEntryExpected")
   }
 
-  let missing_size : Result[Array[(Int, Int)], Error] = try? pdf_xref_stream_index_pairs(
+  let missing_size : Result[Array[(Int, Int)], Error] = try? @reader.pdf_xref_stream_index_pairs(
     PdfDictionary([]),
   )
   guard missing_size is Err(PdfError::XRefEntryExpected) else {

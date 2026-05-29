@@ -37,7 +37,7 @@ fn pdf_read_reconstructed_document_from_view(
           parsed.number == xref.object_number &&
           parsed.generation == xref.generation &&
           !xref_coverage.contains(parsed.number, xref.offset) &&
-          !pdf_reader_object_is_xref_stream(parsed.object) {
+          !@reader.pdf_reader_object_is_xref_stream(parsed.object) {
           document.load_object_given_number(
             parsed.number,
             parsed.object,
