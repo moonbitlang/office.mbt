@@ -1,6 +1,6 @@
 name = "bobzhang/pdflite"
 
-version = "0.1.34"
+version = "0.1.35"
 
 import {
   "moonbitlang/async@0.17.0",
