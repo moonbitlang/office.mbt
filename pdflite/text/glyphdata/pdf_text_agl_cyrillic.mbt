@@ -1,6 +1,6 @@
 ///|
-fn pdf_text_codepoint_of_cyrillic_glyphname(name : PdfName) -> Int? {
-  match pdf_text_string_of_name(name) {
+fn pdf_text_codepoint_of_cyrillic_glyphname(name : String) -> Int? {
+  match name {
     "/Abrevecyrillic" => Some(0x04D0)
     "/Acyrillic" => Some(0x0410)
     "/Adieresiscyrillic" => Some(0x04D2)

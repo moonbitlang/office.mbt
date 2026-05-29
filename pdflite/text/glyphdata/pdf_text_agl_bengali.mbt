@@ -1,6 +1,6 @@
 ///|
-fn pdf_text_codepoint_of_bengali_glyphname(name : PdfName) -> Int? {
-  match pdf_text_string_of_name(name) {
+fn pdf_text_codepoint_of_bengali_glyphname(name : String) -> Int? {
+  match name {
     "/aabengali" => Some(0x0986)
     "/aavowelsignbengali" => Some(0x09BE)
     "/abengali" => Some(0x0985)

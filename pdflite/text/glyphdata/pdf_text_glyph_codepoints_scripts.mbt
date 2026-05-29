@@ -1,6 +1,6 @@
 ///|
-fn pdf_text_codepoint_of_armenian_glyphname(name : PdfName) -> Int? {
-  match pdf_text_string_of_name(name) {
+fn pdf_text_codepoint_of_armenian_glyphname(name : String) -> Int? {
+  match name {
     "/Aybarmenian" => Some(0x0531)
     "/Benarmenian" => Some(0x0532)
     "/Caarmenian" => Some(0x053E)
@@ -91,8 +91,8 @@ fn pdf_text_codepoint_of_armenian_glyphname(name : PdfName) -> Int? {
 }
 
 ///|
-fn pdf_text_codepoint_of_devanagari_glyphname(name : PdfName) -> Int? {
-  match pdf_text_string_of_name(name) {
+fn pdf_text_codepoint_of_devanagari_glyphname(name : String) -> Int? {
+  match name {
     "/aadeva" => Some(0x0906)
     "/aavowelsigndeva" => Some(0x093E)
     "/abbreviationsigndeva" => Some(0x0970)
@@ -202,8 +202,8 @@ fn pdf_text_codepoint_of_devanagari_glyphname(name : PdfName) -> Int? {
 }
 
 ///|
-fn pdf_text_codepoint_of_thai_glyphname(name : PdfName) -> Int? {
-  match pdf_text_string_of_name(name) {
+fn pdf_text_codepoint_of_thai_glyphname(name : String) -> Int? {
+  match name {
     "/angkhankhuthai" => Some(0x0E5A)
     "/bahtthai" => Some(0x0E3F)
     "/bobaimaithai" => Some(0x0E1A)

@@ -1,6 +1,6 @@
 ///|
-fn pdf_text_codepoint_of_basic_latin_glyphname(name : PdfName) -> Int? {
-  match pdf_text_string_of_name(name) {
+fn pdf_text_codepoint_of_basic_latin_glyphname(name : String) -> Int? {
+  match name {
     "/A" => Some(65)
     "/B" => Some(66)
     "/C" => Some(67)
@@ -88,8 +88,8 @@ fn pdf_text_codepoint_of_basic_latin_glyphname(name : PdfName) -> Int? {
 }
 
 ///|
-fn pdf_text_codepoint_of_digit_glyphname(name : PdfName) -> Int? {
-  match pdf_text_string_of_name(name) {
+fn pdf_text_codepoint_of_digit_glyphname(name : String) -> Int? {
+  match name {
     "/zero" => Some(48)
     "/one" => Some(49)
     "/two" => Some(50)
@@ -142,8 +142,8 @@ fn pdf_text_codepoint_of_digit_glyphname(name : PdfName) -> Int? {
 }
 
 ///|
-fn pdf_text_codepoint_of_punctuation_glyphname(name : PdfName) -> Int? {
-  match pdf_text_string_of_name(name) {
+fn pdf_text_codepoint_of_punctuation_glyphname(name : String) -> Int? {
+  match name {
     "/space" => Some(32)
     "/blank" => Some(0x2423)
     "/controlHT" => Some(9)
@@ -352,8 +352,8 @@ fn pdf_text_codepoint_of_punctuation_glyphname(name : PdfName) -> Int? {
 }
 
 ///|
-fn pdf_text_codepoint_of_ipa_extension_glyphname(name : PdfName) -> Int? {
-  match pdf_text_string_of_name(name) {
+fn pdf_text_codepoint_of_ipa_extension_glyphname(name : String) -> Int? {
+  match name {
     "/Gsmallhook" => Some(0x029B)
     "/Rsmallinverted" => Some(0x0281)
     "/ascript" => Some(0x0251)
@@ -439,8 +439,8 @@ fn pdf_text_codepoint_of_ipa_extension_glyphname(name : PdfName) -> Int? {
 }
 
 ///|
-fn pdf_text_codepoint_of_spacing_modifier_glyphname(name : PdfName) -> Int? {
-  match pdf_text_string_of_name(name) {
+fn pdf_text_codepoint_of_spacing_modifier_glyphname(name : String) -> Int? {
+  match name {
     "/Rsmallinvertedsuperior" => Some(0x02B6)
     "/acutelowmod" => Some(0x02CF)
     "/afii57929" => Some(0x02BC)
@@ -495,8 +495,8 @@ fn pdf_text_codepoint_of_spacing_modifier_glyphname(name : PdfName) -> Int? {
 }
 
 ///|
-fn pdf_text_codepoint_of_combining_mark_glyphname(name : PdfName) -> Int? {
-  match pdf_text_string_of_name(name) {
+fn pdf_text_codepoint_of_combining_mark_glyphname(name : String) -> Int? {
+  match name {
     "/acutebelowcmb" => Some(0x0317)
     "/acutecmb" => Some(0x0301)
     "/acutecomb" => Some(0x0301)
@@ -578,8 +578,8 @@ fn pdf_text_codepoint_of_combining_mark_glyphname(name : PdfName) -> Int? {
 }
 
 ///|
-fn pdf_text_codepoint_of_currency_letterlike_glyphname(name : PdfName) -> Int? {
-  match pdf_text_string_of_name(name) {
+fn pdf_text_codepoint_of_currency_letterlike_glyphname(name : String) -> Int? {
+  match name {
     "/afii08941" => Some(0x20A4)
     "/afii57636" => Some(0x20AA)
     "/colonsign" => Some(0x20A1)
@@ -611,8 +611,8 @@ fn pdf_text_codepoint_of_currency_letterlike_glyphname(name : PdfName) -> Int? {
 }
 
 ///|
-fn pdf_text_codepoint_of_arrow_glyphname(name : PdfName) -> Int? {
-  match pdf_text_string_of_name(name) {
+fn pdf_text_codepoint_of_arrow_glyphname(name : String) -> Int? {
+  match name {
     "/arrowdashdown" => Some(0x21E3)
     "/arrowdashleft" => Some(0x21E0)
     "/arrowdashright" => Some(0x21E2)
@@ -648,8 +648,8 @@ fn pdf_text_codepoint_of_arrow_glyphname(name : PdfName) -> Int? {
 }
 
 ///|
-fn pdf_text_codepoint_of_greek_glyphname(name : PdfName) -> Int? {
-  match pdf_text_string_of_name(name) {
+fn pdf_text_codepoint_of_greek_glyphname(name : String) -> Int? {
+  match name {
     "/Alphatonos" => Some(0x0386)
     "/Deicoptic" => Some(0x03EE)
     "/Deltagreek" => Some(0x0394)

@@ -1,6 +1,6 @@
 ///|
-fn pdf_text_codepoint_of_presentation_form_glyphname(name : PdfName) -> Int? {
-  match pdf_text_string_of_name(name) {
+fn pdf_text_codepoint_of_presentation_form_glyphname(name : String) -> Int? {
+  match name {
     "/anglebracketleftvertical" => Some(0xFE3F)
     "/anglebracketrightvertical" => Some(0xFE40)
     "/asterisksmall" => Some(0xFE61)

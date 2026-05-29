@@ -1,6 +1,6 @@
 ///|
-fn pdf_text_codepoint_of_hebrew_glyphname(name : PdfName) -> Int? {
-  match pdf_text_string_of_name(name) {
+fn pdf_text_codepoint_of_hebrew_glyphname(name : String) -> Int? {
+  match name {
     "/afii57645" => Some(0x05BE)
     "/afii57658" => Some(0x05C3)
     "/afii57664" => Some(0x05D0)

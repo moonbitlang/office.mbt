@@ -1,6 +1,6 @@
 ///|
-fn pdf_text_codepoint_of_math_glyphname(name : PdfName) -> Int? {
-  match pdf_text_string_of_name(name) {
+fn pdf_text_codepoint_of_math_glyphname(name : String) -> Int? {
+  match name {
     "/allequal" => Some(0x224C)
     "/approaches" => Some(0x2250)
     "/approxequalorimage" => Some(0x2252)
@@ -73,8 +73,8 @@ fn pdf_text_codepoint_of_math_glyphname(name : PdfName) -> Int? {
 }
 
 ///|
-fn pdf_text_codepoint_of_number_form_glyphname(name : PdfName) -> Int? {
-  match pdf_text_string_of_name(name) {
+fn pdf_text_codepoint_of_number_form_glyphname(name : String) -> Int? {
+  match name {
     "/Oneroman" => Some(0x2160)
     "/Tworoman" => Some(0x2161)
     "/Threeroman" => Some(0x2162)
@@ -104,8 +104,8 @@ fn pdf_text_codepoint_of_number_form_glyphname(name : PdfName) -> Int? {
 }
 
 ///|
-fn pdf_text_codepoint_of_technical_glyphname(name : PdfName) -> Int? {
-  match pdf_text_string_of_name(name) {
+fn pdf_text_codepoint_of_technical_glyphname(name : String) -> Int? {
+  match name {
     "/arc" => Some(0x2312)
     "/clear" => Some(0x2327)
     "/control" => Some(0x2303)
@@ -124,8 +124,8 @@ fn pdf_text_codepoint_of_technical_glyphname(name : PdfName) -> Int? {
 }
 
 ///|
-fn pdf_text_codepoint_of_enclosed_alnum_glyphname(name : PdfName) -> Int? {
-  match pdf_text_string_of_name(name) {
+fn pdf_text_codepoint_of_enclosed_alnum_glyphname(name : String) -> Int? {
+  match name {
     "/Acircle" => Some(0x24B6)
     "/Bcircle" => Some(0x24B7)
     "/Ccircle" => Some(0x24B8)

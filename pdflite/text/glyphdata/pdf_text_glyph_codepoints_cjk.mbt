@@ -1,6 +1,6 @@
 ///|
-fn pdf_text_codepoint_of_cjk_symbol_glyphname(name : PdfName) -> Int? {
-  match pdf_text_string_of_name(name) {
+fn pdf_text_codepoint_of_cjk_symbol_glyphname(name : String) -> Int? {
+  match name {
     "/anglebracketleft" => Some(0x3008)
     "/anglebracketright" => Some(0x3009)
     "/blacklenticularbracketleft" => Some(0x3010)
@@ -47,8 +47,8 @@ fn pdf_text_codepoint_of_cjk_symbol_glyphname(name : PdfName) -> Int? {
 }
 
 ///|
-fn pdf_text_codepoint_of_hiragana_glyphname(name : PdfName) -> Int? {
-  match pdf_text_string_of_name(name) {
+fn pdf_text_codepoint_of_hiragana_glyphname(name : String) -> Int? {
+  match name {
     "/ahiragana" => Some(0x3042)
     "/asmallhiragana" => Some(0x3041)
     "/bahiragana" => Some(0x3070)
@@ -142,8 +142,8 @@ fn pdf_text_codepoint_of_hiragana_glyphname(name : PdfName) -> Int? {
 }
 
 ///|
-fn pdf_text_codepoint_of_katakana_glyphname(name : PdfName) -> Int? {
-  match pdf_text_string_of_name(name) {
+fn pdf_text_codepoint_of_katakana_glyphname(name : String) -> Int? {
+  match name {
     "/akatakana" => Some(0x30A2)
     "/asmallkatakana" => Some(0x30A1)
     "/bakatakana" => Some(0x30D0)
@@ -243,8 +243,8 @@ fn pdf_text_codepoint_of_katakana_glyphname(name : PdfName) -> Int? {
 }
 
 ///|
-fn pdf_text_codepoint_of_bopomofo_glyphname(name : PdfName) -> Int? {
-  match pdf_text_string_of_name(name) {
+fn pdf_text_codepoint_of_bopomofo_glyphname(name : String) -> Int? {
+  match name {
     "/abopomofo" => Some(0x311A)
     "/aibopomofo" => Some(0x311E)
     "/anbopomofo" => Some(0x3122)
@@ -287,8 +287,8 @@ fn pdf_text_codepoint_of_bopomofo_glyphname(name : PdfName) -> Int? {
 }
 
 ///|
-fn pdf_text_codepoint_of_hangul_compat_jamo_glyphname(name : PdfName) -> Int? {
-  match pdf_text_string_of_name(name) {
+fn pdf_text_codepoint_of_hangul_compat_jamo_glyphname(name : String) -> Int? {
+  match name {
     "/aekorean" => Some(0x3150)
     "/akorean" => Some(0x314F)
     "/araeaekorean" => Some(0x318E)
@@ -388,8 +388,8 @@ fn pdf_text_codepoint_of_hangul_compat_jamo_glyphname(name : PdfName) -> Int? {
 }
 
 ///|
-fn pdf_text_codepoint_of_enclosed_cjk_glyphname(name : PdfName) -> Int? {
-  match pdf_text_string_of_name(name) {
+fn pdf_text_codepoint_of_enclosed_cjk_glyphname(name : String) -> Int? {
+  match name {
     "/chieuchacirclekorean" => Some(0x3277)
     "/chieuchaparenkorean" => Some(0x3217)
     "/chieuchcirclekorean" => Some(0x3269)
