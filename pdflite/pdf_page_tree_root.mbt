@@ -31,7 +31,7 @@ pub fn PdfDocument::add_root(
   page_root_number : Int,
   extras : ArrayView[(PdfName, PdfObject)],
 ) -> Int raise PdfError {
-  let mut root = PdfDictionary([
+  let mut root = @syntax.PdfDictionary([
     (pdf_page_type_key(), PdfNameObject(pdf_page_type_catalog())),
     (pdf_page_pages_key(), PdfIndirect(page_root_number)),
   ])

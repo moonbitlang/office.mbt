@@ -56,7 +56,7 @@ fn PdfDocument::pdf_page_merged_content_stream(
     match self.direct(content) {
       PdfStreamObject(stream) =>
         decoded_streams.push(
-          pdf_stream_data_bytes(
+          @syntax.pdf_stream_data_bytes(
             self.pdf_decode_stream_value_direct(stream).data,
           ),
         )

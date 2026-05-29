@@ -146,7 +146,7 @@ fn PdfDocument::pdf_texttopdf_add_structure_tree(
   let namespace_object = match subformat {
     Some(PdfUA2) =>
       Some(
-        PdfIndirect(
+        @syntax.PdfIndirect(
           self.add_object(
             PdfDictionary([
               (
@@ -196,7 +196,7 @@ fn PdfDocument::pdf_texttopdf_add_structure_tree(
         ]),
       )
       root_entries.push((pdf_texttopdf_namespaces_key(), PdfArray([ns_object])))
-      PdfIndirect(document_number)
+      @syntax.PdfIndirect(document_number)
     }
     _ => PdfArray(structure_elements)
   }

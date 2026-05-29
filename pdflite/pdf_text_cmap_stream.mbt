@@ -102,7 +102,7 @@ fn PdfDocument::pdf_text_decoded_cmap_stream_data_direct(
         None => stream
         Some(_) => self.pdf_decode_stream_value_direct(stream)
       }
-      pdf_stream_data_bytes(decoded.data)
+      @syntax.pdf_stream_data_bytes(decoded.data)
     }
     _ => raise CMapEncodingExpected
   }

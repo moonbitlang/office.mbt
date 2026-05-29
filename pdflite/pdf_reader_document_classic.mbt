@@ -43,7 +43,7 @@ fn pdf_read_classic_document_from_view_at_revision(
   let xref_position = pdf_read_startxref_position(cursor.view())
   let xrefs : Array[PdfClassicXRefEntry] = []
   let xref_seen = @core.pdf_number_set([])
-  let mut trailer = PdfDictionary([])
+  let mut trailer = @syntax.PdfDictionary([])
   let xref_stream_refs : Array[(Int, Int)] = []
   let mut current_xref = xref_position
   let mut done = false

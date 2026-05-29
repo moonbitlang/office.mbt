@@ -9,7 +9,7 @@ fn pdf_util_stream_of_json_ops(
   }
   let stream_data = pdf_content_bytes_of_ops(ops)
   let dictionary = pdf_object_of_json(dictionary_json).add_dict_entry(
-    pdf_object_length_name(),
+    @syntax.pdf_object_length_name(),
     PdfInteger(stream_data.length()),
   )
   pdf_stream(dictionary, StreamGot(stream_data))

@@ -671,7 +671,7 @@ test "pdf_impose_pages_core combines pages and transforms annotations" {
   let key_second = impose_name_for_test("/Second")
   let first_font = impose_name_for_test("/F1")
   let second_xobject = impose_name_for_test("/Im1")
-  let direct_annotation = PdfDictionary([
+  let direct_annotation = @syntax.PdfDictionary([
     (
       key_rect,
       PdfArray([PdfInteger(0), PdfInteger(0), PdfInteger(10), PdfInteger(10)]),

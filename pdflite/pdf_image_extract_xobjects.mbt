@@ -191,7 +191,7 @@ fn PdfDocument::pdf_image_extract_smask_files(
     PdfStreamObject(_) =>
       match self.direct(image).lookup_immediate(pdf_image_smask_key()) {
         Some(PdfIndirect(mask_number)) => {
-          let mask = PdfIndirect(mask_number)
+          let mask = @syntax.PdfIndirect(mask_number)
           let (files, _) = self.pdf_image_extract_named_images(
             PdfDictionary([]),
             [mask],

@@ -61,7 +61,7 @@ fn PdfDocument::replace_chain_in_object(
               value,
             )
             self.add_object_given_number(number, updated)
-            PdfIndirect(number)
+            @syntax.PdfIndirect(number)
           }
           Some(child) =>
             self.replace_chain_in_object(child, chain, chain_index + 1, value)

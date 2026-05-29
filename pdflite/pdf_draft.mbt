@@ -196,7 +196,7 @@ fn PdfDocument::pdf_draft_form_xobject(
       )
       match rewritten_stream {
         PdfStreamObject(stream) => {
-          let data = PdfStreamObject(stream).stream_bytes()
+          let data = @syntax.PdfStreamObject(stream).stream_bytes()
           PdfStreamObject({
             dictionary: pdf_draft_stream_dictionary(
               original_stream.dictionary,

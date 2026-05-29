@@ -45,7 +45,7 @@ fn pdf_decode_stream_onestage_value(
   stream : PdfStream,
 ) -> PdfStream raise PdfError {
   pdf_stream_dictionary_length(stream.dictionary)
-  let data = pdf_stream_data_bytes(stream.data)
+  let data = @syntax.pdf_stream_data_bytes(stream.data)
   match pdf_stream_first_filter(stream.dictionary) {
     None => {
       let dictionary = pdf_stream_replace_length(
@@ -87,7 +87,7 @@ fn PdfDocument::pdf_decode_stream_onestage_value_direct(
   stream : PdfStream,
 ) -> PdfStream raise PdfError {
   self.pdf_stream_dictionary_length_direct(stream.dictionary)
-  let data = pdf_stream_data_bytes(stream.data)
+  let data = @syntax.pdf_stream_data_bytes(stream.data)
   match self.pdf_stream_first_filter_entry_direct(stream.dictionary) {
     None => {
       let dictionary = pdf_stream_replace_length(

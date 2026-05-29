@@ -3,7 +3,7 @@ fn pdf_add_filter_to_dictionary(
   dictionary : PdfObject,
   filter : PdfName,
 ) -> PdfObject raise PdfError {
-  let filter_object = PdfNameObject(filter)
+  let filter_object = @syntax.PdfNameObject(filter)
   match dictionary.lookup_immediate(pdf_filter_key()) {
     None => dictionary.add_dict_entry(pdf_filter_key(), filter_object)
     Some(PdfNameObject(existing)) =>
@@ -34,7 +34,7 @@ pub fn pdf_encode_stream_with_filter(
 ) -> PdfObject raise PdfError {
   match object {
     PdfStreamObject(stream) => {
-      let data = pdf_stream_data_bytes(stream.data)
+      let data = @syntax.pdf_stream_data_bytes(stream.data)
       let encoded = match flate_level {
         Some(level) =>
           pdf_encode_filter_bytes_with_flate_level(filter, data, level)
@@ -118,7 +118,7 @@ fn pdf_encode_stream_with_ccitt(
 ) -> PdfObject raise PdfError {
   match object {
     PdfStreamObject(stream) => {
-      let data = pdf_stream_data_bytes(stream.data)
+      let data = @syntax.pdf_stream_data_bytes(stream.data)
       let encoded = if k < 0 {
         pdf_ccitt_encode_g4_view(data, columns, rows)
       } else {
@@ -162,7 +162,7 @@ pub fn pdf_encode_stream_with_filter_and_predictor(
 ) -> PdfObject raise PdfError {
   match object {
     PdfStreamObject(stream) => {
-      let data = pdf_stream_data_bytes(stream.data)
+      let data = @syntax.pdf_stream_data_bytes(stream.data)
       let predicted = pdf_encode_predictor(
         predictor, colors, bits_per_component, columns, data,
       )

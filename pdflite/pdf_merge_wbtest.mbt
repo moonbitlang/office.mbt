@@ -200,7 +200,7 @@ test "private merge structure helpers cover direct variants" {
 
   let struct_parent = pdf_merge_struct_parent_key()
   let struct_parents = pdf_merge_struct_parents_key()
-  let original = PdfDictionary([
+  let original = @syntax.PdfDictionary([
     (struct_parent, PdfInteger(9)),
     (struct_parents, PdfNameObject(pdf_merge_name("/Bad"))),
   ])
@@ -260,7 +260,7 @@ test "private merge structure helpers cover direct variants" {
     PdfInteger(1),
   )
 
-  let root_with_lexicon = PdfDictionary([
+  let root_with_lexicon = @syntax.PdfDictionary([
     (
       pdf_merge_pronunciation_lexicon_key(),
       PdfArray([PdfString(@ascii.encode("lex"))]),

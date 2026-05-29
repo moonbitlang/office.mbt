@@ -66,7 +66,7 @@ fn PdfDocument::pdf_content_raw_streams(
     match self.direct(stream_ref) {
       PdfStreamObject(stream) =>
         raw_streams.push(
-          pdf_stream_data_bytes(
+          @syntax.pdf_stream_data_bytes(
             self.pdf_decode_stream_value_direct(stream).data,
           ),
         )

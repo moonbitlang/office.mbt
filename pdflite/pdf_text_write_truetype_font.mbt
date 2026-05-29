@@ -43,7 +43,7 @@ fn PdfDocument::pdf_text_make_true_type_font(
     Some(number) => number
     None => raise FontWriteUnsupported
   }
-  let fontdescriptor = PdfDictionary([
+  let fontdescriptor = @syntax.PdfDictionary([
     (pdf_text_type_key_name, PdfNameObject(pdf_text_font_descriptor_key_name)),
     (pdf_text_font_name_key_name, PdfNameObject(basefont)),
     (pdf_text_flags_key_name, PdfInteger(descriptor.flags)),
@@ -79,7 +79,7 @@ fn PdfDocument::pdf_text_make_true_type_font(
       [
         (
           pdf_text_tounicode_key_name,
-          PdfIndirect(self.pdf_text_write_tounicode(tounicode)),
+          @syntax.PdfIndirect(self.pdf_text_write_tounicode(tounicode)),
         ),
       ]
     None => {

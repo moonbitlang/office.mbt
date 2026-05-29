@@ -106,7 +106,7 @@ test "private page tree readers cover guard branches" {
     fail("expected root dictionary")
   }
 
-  let direct_child = PdfDictionary([
+  let direct_child = @syntax.PdfDictionary([
     (pdf_page_type_key(), PdfNameObject(pdf_page_type_page())),
   ])
   @test.assert_eq(try! doc.pdf_page_direct_child(direct_child), direct_child)
@@ -416,11 +416,11 @@ test "private page destination transforms cover unchanged branches" {
     ),
     None,
   )
-  let action = PdfDictionary([
+  let action = @syntax.PdfDictionary([
     (pdf_dest_s_key(), PdfNameObject(pdf_dest_goto_name())),
     (pdf_dest_d_key(), destination),
   ])
-  let coordinate_action = PdfDictionary([
+  let coordinate_action = @syntax.PdfDictionary([
     (pdf_dest_s_key(), PdfNameObject(pdf_dest_goto_name())),
     (pdf_dest_d_key(), page_wb_xyz_destination(page_numbers[0], 1, 2)),
   ])
@@ -552,7 +552,7 @@ test "private page link and open-action transforms cover fallback branches" {
     .lookup_immediate(pdf_page_open_action_key()),
     Some(destination),
   )
-  let action = PdfDictionary([
+  let action = @syntax.PdfDictionary([
     (pdf_dest_s_key(), PdfNameObject(pdf_dest_goto_name())),
     (pdf_dest_d_key(), page_wb_xyz_destination(page_numbers[0], 1, 2)),
   ])
@@ -704,7 +704,9 @@ test "private page selection annotation and destination helpers cover fallbacks"
     ),
     [7],
   )
-  let annotation = PdfDictionary([(pdf_page_popup_key(), PdfIndirect(99))])
+  let annotation = @syntax.PdfDictionary([
+    (pdf_page_popup_key(), PdfIndirect(99)),
+  ])
   @test.assert_eq(
     try! pdf_page_fixup_annotation_link(annotation, pdf_page_popup_key(), [1], [
       2,
@@ -1299,7 +1301,7 @@ test "private page prefix helpers cover direct and fallback operators" {
   @test.assert_eq(pdf_page_next_prefix(""), "a")
 
   let doc = pdf_document_empty()
-  let inline_direct = PdfDictionary([
+  let inline_direct = @syntax.PdfDictionary([
     (pdf_page_name("/CS"), PdfNameObject(pdf_page_name("/RGB"))),
   ])
   @test.assert_eq(
@@ -1345,7 +1347,7 @@ test "private materialized page inheritance keeps partial attributes" {
     PdfDictionary([(pdf_page_resources_key(), PdfIndirect(2))]),
   )
   let target = pdf_document_empty()
-  let original_page = PdfDictionary([
+  let original_page = @syntax.PdfDictionary([
     (pdf_page_type_key(), PdfNameObject(pdf_page_type_page())),
     (pdf_page_mediabox_key(), pdf_page_rectangle_of_paper(paper_a4)),
   ])
@@ -1389,7 +1391,7 @@ test "private page resource renumber helpers cover optional misses" {
   }
 
   let doc = pdf_document_empty()
-  let inline_direct = PdfDictionary([
+  let inline_direct = @syntax.PdfDictionary([
     (pdf_page_name("/CS"), PdfNameObject(pdf_page_name("/RGB"))),
   ])
   @test.assert_eq(

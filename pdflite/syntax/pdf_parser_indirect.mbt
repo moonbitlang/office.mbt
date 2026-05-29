@@ -10,7 +10,7 @@ pub(all) struct PdfParsedIndirectObject {
 fn pdf_parse_indirect_object_at(
   lexemes : ArrayView[PdfLexeme],
   index : Int,
-) -> (PdfParsedIndirectObject, Int) raise PdfError {
+) -> (PdfParsedIndirectObject, Int) raise @core.PdfError {
   let (object, next, complete) = pdf_parse_indirect_object_segment_at(
     lexemes, index,
   )
@@ -19,10 +19,11 @@ fn pdf_parse_indirect_object_at(
 }
 
 ///|
-fn pdf_parse_indirect_object_segment_at(
+/// Parse an indirect-object segment and report whether `endobj` was consumed.
+pub fn pdf_parse_indirect_object_segment_at(
   lexemes : ArrayView[PdfLexeme],
   index : Int,
-) -> (PdfParsedIndirectObject, Int, Bool) raise PdfError {
+) -> (PdfParsedIndirectObject, Int, Bool) raise @core.PdfError {
   let first = pdf_skip_comments(lexemes, index)
   if first + 2 >= lexemes.length() {
     raise ParseIndirectObjectExpected
@@ -47,9 +48,10 @@ fn pdf_parse_indirect_object_segment_at(
 }
 
 ///|
-fn pdf_parse_indirect_object_prefix_lexemes(
+/// Parse an indirect-object prefix, tolerating a missing trailing `endobj`.
+pub fn pdf_parse_indirect_object_prefix_lexemes(
   lexemes : ArrayView[PdfLexeme],
-) -> PdfParsedIndirectObject raise PdfError {
+) -> PdfParsedIndirectObject raise @core.PdfError {
   let first = pdf_skip_comments(lexemes, 0)
   if first + 2 >= lexemes.length() {
     raise ParseIndirectObjectExpected
@@ -73,11 +75,11 @@ fn pdf_parse_indirect_object_prefix_lexemes(
 ///|
 /// Parses one indirect object from lexemes.
 ///
-/// Raises `PdfError::ParseIndirectObjectExpected` if the input does not start
+/// Raises `@core.PdfError::ParseIndirectObjectExpected` if the input does not start
 /// with an indirect object header.
 pub fn pdf_parse_indirect_object_lexemes(
   lexemes : ArrayView[PdfLexeme],
-) -> PdfParsedIndirectObject raise PdfError {
+) -> PdfParsedIndirectObject raise @core.PdfError {
   let (object, _) = pdf_parse_indirect_object_at(lexemes, 0)
   object
 }
@@ -85,8 +87,8 @@ pub fn pdf_parse_indirect_object_lexemes(
 ///|
 /// Parses one indirect object from owned PDF bytes.
 pub fn pdf_parse_indirect_object_from_bytes(
-  data : PdfBytes,
-) -> PdfParsedIndirectObject raise PdfError {
+  data : @core.PdfBytes,
+) -> PdfParsedIndirectObject raise @core.PdfError {
   pdf_parse_indirect_object_from_view(data)
 }
 
@@ -94,18 +96,18 @@ pub fn pdf_parse_indirect_object_from_bytes(
 /// Parses one indirect object from a byte view.
 pub fn pdf_parse_indirect_object_from_view(
   data : BytesView,
-) -> PdfParsedIndirectObject raise PdfError {
+) -> PdfParsedIndirectObject raise @core.PdfError {
   pdf_parse_indirect_object_lexemes(pdf_lex_view(data))
 }
 
 ///|
 /// Parses every complete indirect object from a lexeme sequence.
 ///
-/// Raises `PdfError::ParseIndirectObjectExpected` when an expected indirect
+/// Raises `@core.PdfError::ParseIndirectObjectExpected` when an expected indirect
 /// object header is malformed.
 pub fn pdf_parse_indirect_objects(
   lexemes : ArrayView[PdfLexeme],
-) -> Array[PdfParsedIndirectObject] raise PdfError {
+) -> Array[PdfParsedIndirectObject] raise @core.PdfError {
   let objects : Array[PdfParsedIndirectObject] = Array::new(
     capacity=(lexemes.length() + 3) / 4,
   )
@@ -122,9 +124,10 @@ pub fn pdf_parse_indirect_objects(
 }
 
 ///|
-fn pdf_parse_indirect_object_segments(
+/// Parse complete indirect-object segments and return a trailing prefix if present.
+pub fn pdf_parse_indirect_object_segments(
   lexemes : ArrayView[PdfLexeme],
-) -> (Array[PdfParsedIndirectObject], PdfParsedIndirectObject?) raise PdfError {
+) -> (Array[PdfParsedIndirectObject], PdfParsedIndirectObject?) raise @core.PdfError {
   let objects : Array[PdfParsedIndirectObject] = Array::new(
     capacity=(lexemes.length() + 3) / 4,
   )

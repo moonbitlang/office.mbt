@@ -27,7 +27,8 @@ fn pdf_lexeme_indirect_reference_number(
 }
 
 ///|
-fn pdf_lexeme_indirect_object_header_at(
+/// Return whether lexemes at `index` start an indirect-object header.
+pub fn pdf_lexeme_indirect_object_header_at(
   lexemes : ArrayView[PdfLexeme],
   index : Int,
 ) -> Bool {
@@ -96,7 +97,7 @@ fn pdf_parse_dictionary_capacity(
 fn pdf_parse_array_at(
   lexemes : ArrayView[PdfLexeme],
   index : Int,
-) -> (PdfObject, Int) raise PdfError {
+) -> (PdfObject, Int) raise @core.PdfError {
   let values : Array[PdfObject] = Array::new(
     capacity=pdf_parse_array_capacity(lexemes, index),
   )
@@ -143,8 +144,8 @@ fn pdf_skip_dictionary_tail(lexemes : ArrayView[PdfLexeme], index : Int) -> Int 
 fn pdf_parse_dictionary_at(
   lexemes : ArrayView[PdfLexeme],
   index : Int,
-) -> (PdfObject, Int) raise PdfError {
-  let entries : Array[(PdfName, PdfObject)] = Array::new(
+) -> (PdfObject, Int) raise @core.PdfError {
+  let entries : Array[(@core.PdfName, PdfObject)] = Array::new(
     capacity=pdf_parse_dictionary_capacity(lexemes, index),
   )
   let mut current = index
@@ -212,7 +213,7 @@ fn pdf_parse_dictionary_at(
 fn pdf_parse_value_at(
   lexemes : ArrayView[PdfLexeme],
   index : Int,
-) -> (PdfObject, Int) raise PdfError {
+) -> (PdfObject, Int) raise @core.PdfError {
   let current = pdf_skip_comments(lexemes, index)
   if current >= lexemes.length() {
     raise ParseObjectExpected

@@ -1,13 +1,13 @@
 ///|
 /// Return the source cursor used by a deferred stream slice.
-pub fn ToGet::input(self : ToGet) -> ByteCursor {
+pub fn ToGet::input(self : ToGet) -> @core.ByteCursor {
   self.input
 }
 
 ///|
 /// Return the start position of a deferred stream slice.
 ///
-/// The value is interpreted relative to the `ByteCursor`'s offset when the
+/// The value is interpreted relative to the `@core.ByteCursor`'s offset when the
 /// stream is materialized.
 pub fn ToGet::position(self : ToGet) -> Int {
   self.position

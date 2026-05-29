@@ -33,7 +33,9 @@ fn PdfDocument::pdf_space_indexed_lookup_data(
     PdfString(data) => Some(data)
     PdfStreamObject(stream) =>
       Some(
-        pdf_stream_data_view(self.pdf_decode_stream_value_direct(stream).data),
+        @syntax.pdf_stream_data_view(
+          self.pdf_decode_stream_value_direct(stream).data,
+        ),
       )
     _ => None
   }

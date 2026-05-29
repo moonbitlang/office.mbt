@@ -11,7 +11,7 @@ fn PdfDocument::pdf_addtext_opacity_resources(
       None => PdfDictionary([])
     }
     let name = extgstate.unique_key("gs")
-    let opacity_dictionary = PdfDictionary([
+    let opacity_dictionary = @syntax.PdfDictionary([
       (pdf_addtext_ca_key(), PdfReal(opacity)),
       (pdf_addtext_ca_stroke_key(), PdfReal(opacity)),
     ])

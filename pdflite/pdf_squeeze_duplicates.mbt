@@ -12,7 +12,7 @@ fn pdf_squeeze_materialized_object(
     PdfStreamObject(stream) =>
       PdfStreamObject({
         dictionary: stream.dictionary,
-        data: StreamGot(pdf_stream_data_bytes(stream.data)),
+        data: StreamGot(@syntax.pdf_stream_data_bytes(stream.data)),
       })
     _ => object
   }

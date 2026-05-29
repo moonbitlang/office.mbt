@@ -4,7 +4,7 @@ fn PdfDocument::pdf_image_jbig2_global_data(
   object_number : Int,
 ) -> PdfBytes? raise PdfError {
   match self.pdf_decode_stream_until_unknown(PdfIndirect(object_number)) {
-    PdfStreamObject(stream) => Some(pdf_stream_data_bytes(stream.data))
+    PdfStreamObject(stream) => Some(@syntax.pdf_stream_data_bytes(stream.data))
     _ => None
   }
 }

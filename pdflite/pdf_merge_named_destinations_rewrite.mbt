@@ -29,7 +29,7 @@ fn pdf_merge_rewrite_destination_callsite_object(
           ),
         )
       }
-      let rewritten = PdfDictionary(output)
+      let rewritten = @syntax.PdfDictionary(output)
       let rewritten = match rewritten.lookup_immediate(pdf_merge_dest_key()) {
         Some(PdfString(name)) =>
           rewritten.add_dict_entry(

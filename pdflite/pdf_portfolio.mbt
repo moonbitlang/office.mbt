@@ -14,7 +14,7 @@ pub fn PdfDocument::portfolio(
     Some(date) => date
     None => pdf_portfolio_current_mod_date()
   }
-  let embedded_files = PdfIndirect(
+  let embedded_files = @syntax.PdfIndirect(
     document.add_object(
       document.build_name_tree(
         document.pdf_portfolio_name_tree_entries(entries, resolved_mod_date),

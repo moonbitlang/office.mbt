@@ -1,5 +1,6 @@
 import {
   "bobzhang/pdflite",
+  "bobzhang/pdflite/syntax",
   "moonbitlang/core/buffer",
   "moonbitlang/core/encoding/ascii",
   "moonbitlang/core/hashmap",
@@ -9,11 +10,13 @@ import {
 import {
   "bobzhang/pdflite",
   "bobzhang/pdflite/markdown",
+  "bobzhang/pdflite/syntax",
   "moonbitlang/core/encoding/ascii",
   "moonbitlang/core/test",
 } for "test"
 
 import {
+  "bobzhang/pdflite/syntax",
   "moonbitlang/core/encoding/ascii",
   "moonbitlang/core/test",
 } for "wbtest"

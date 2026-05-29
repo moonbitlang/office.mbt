@@ -116,7 +116,7 @@ fn PdfDocument::pdf_util_json_of_object(
       let stream_data_json = if no_stream_data && !decode_function_stream {
         Json::string("<<stream data elided>>")
       } else {
-        let stream_data = PdfStreamObject(output_stream).stream_bytes()
+        let stream_data = @syntax.PdfStreamObject(output_stream).stream_bytes()
         Json::string(pdf_util_string_from_bytes(stream_data))
       }
       Json::object(
@@ -190,7 +190,7 @@ fn pdf_util_stream_of_json_data(
 ) -> PdfObject raise PdfError {
   let stream_data = pdf_util_pdf_string_from_json_text(data)
   let dictionary = pdf_object_of_json(dictionary_json).add_dict_entry(
-    pdf_object_length_name(),
+    @syntax.pdf_object_length_name(),
     PdfInteger(stream_data.length()),
   )
   pdf_stream(dictionary, StreamGot(stream_data))

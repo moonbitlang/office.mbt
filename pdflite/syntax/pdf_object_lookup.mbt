@@ -6,7 +6,7 @@
 /// Other objects return `None`.
 pub fn PdfObject::dictionary_view(
   self : PdfObject,
-) -> ArrayView[(PdfName, PdfObject)]? {
+) -> ArrayView[(@core.PdfName, PdfObject)]? {
   match self {
     PdfDictionary(entries) => Some(entries)
     PdfStreamObject(stream) =>
@@ -26,7 +26,7 @@ pub fn PdfObject::dictionary_view(
 /// lookup helpers when indirect references should be resolved.
 pub fn PdfObject::lookup_immediate(
   self : PdfObject,
-  key : PdfName,
+  key : @core.PdfName,
 ) -> PdfObject? {
   match self.dictionary_view() {
     Some(entries) =>
@@ -46,11 +46,11 @@ pub fn PdfObject::lookup_immediate(
 /// Return the object number of an immediate indirect dictionary entry.
 ///
 /// Only plain dictionaries are accepted. Missing keys and non-indirect values
-/// return `None`; non-dictionary inputs raise `PdfError::DictionaryExpected`.
+/// return `None`; non-dictionary inputs raise `@core.PdfError::DictionaryExpected`.
 pub fn PdfObject::find_indirect(
   self : PdfObject,
-  key : PdfName,
-) -> Int? raise PdfError {
+  key : @core.PdfName,
+) -> Int? raise @core.PdfError {
   match self {
     PdfDictionary(_) =>
       match self.lookup_immediate(key) {

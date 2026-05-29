@@ -49,7 +49,7 @@ fn pdf_cursor_lex_reconstructed_indirect_object_tokens_at_current(
 fn pdf_cursor_read_reconstructed_indirect_prefix_at_current(
   cursor : ByteCursor,
 ) -> PdfParsedIndirectObject raise PdfError {
-  let (object, _, _) = pdf_parse_indirect_object_segment_at(
+  let (object, _, _) = @syntax.pdf_parse_indirect_object_segment_at(
     pdf_cursor_lex_reconstructed_indirect_object_tokens_at_current(cursor),
     0,
   )
@@ -62,7 +62,7 @@ fn pdf_cursor_read_reconstructed_indirect_scan_candidate_at_current(
   xrefs : ArrayView[PdfClassicXRefEntry],
   xref_index? : PdfClassicXRefIndex? = None,
 ) -> (PdfParsedIndirectObject, Int?) raise PdfError {
-  let (object, _, complete) = pdf_parse_indirect_object_segment_at(
+  let (object, _, complete) = @syntax.pdf_parse_indirect_object_segment_at(
     pdf_cursor_lex_reconstructed_indirect_object_tokens_at_current(cursor),
     0,
   )

@@ -6,7 +6,7 @@
 /// This lets the reader keep large stream bodies lazy until a caller requests
 /// their bytes.
 pub(all) struct ToGet {
-  input : ByteCursor
+  input : @core.ByteCursor
   position : Int
   length : Int
   crypt : PdfStreamDataCrypt
@@ -19,7 +19,7 @@ pub(all) struct ToGet {
 /// deferred slice of an input buffer, optionally with stream decryption metadata
 /// that is applied when the data is read.
 pub(all) enum PdfStreamData {
-  StreamGot(PdfBytes)
+  StreamGot(@core.PdfBytes)
   StreamToGet(ToGet)
 } derive(Debug, Eq, ToJson)
 
@@ -31,9 +31,9 @@ pub(all) enum PdfStreamData {
 /// and key length; AES-V3 stores the already derived file key.
 pub(all) enum PdfStreamDataCrypt {
   PdfStreamDataNoCrypt
-  PdfStreamDataArc4Decrypt(Int, Int, PdfBytes, Int)
-  PdfStreamDataAesV2Decrypt(Int, Int, PdfBytes, Int)
-  PdfStreamDataAesV3Decrypt(PdfBytes)
+  PdfStreamDataArc4Decrypt(Int, Int, @core.PdfBytes, Int)
+  PdfStreamDataAesV2Decrypt(Int, Int, @core.PdfBytes, Int)
+  PdfStreamDataAesV3Decrypt(@core.PdfBytes)
 } derive(Debug, Eq, ToJson)
 
 ///|
@@ -58,10 +58,10 @@ pub(all) enum PdfObject {
   PdfBoolean(Bool)
   PdfInteger(Int)
   PdfReal(Double)
-  PdfString(PdfBytes)
-  PdfNameObject(PdfName)
+  PdfString(@core.PdfBytes)
+  PdfNameObject(@core.PdfName)
   PdfArray(Array[PdfObject])
-  PdfDictionary(Array[(PdfName, PdfObject)])
+  PdfDictionary(Array[(@core.PdfName, PdfObject)])
   PdfStreamObject(PdfStream)
   PdfIndirect(Int)
 } derive(Debug, Eq, ToJson)

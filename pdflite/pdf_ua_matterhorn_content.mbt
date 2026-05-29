@@ -28,7 +28,7 @@ fn PdfDocument::pdf_ua_matterhorn_all_ops(
   let output : Array[Array[PdfContentOp]] = []
   if xobjects {
     for entry in self.stream_object_entries() {
-      let stream = PdfStreamObject(entry.2)
+      let stream = @syntax.PdfStreamObject(entry.2)
       if pdf_ua_matterhorn_is_form_stream(self, stream) {
         let resources = self.pdf_ua_matterhorn_stream_resources(stream)
         output.push(self.parse_content_ops_with_resources(resources, [stream]))

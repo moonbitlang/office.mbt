@@ -17,7 +17,7 @@ fn pdf_content_decode_inline_image_data(
     dictionary: stream_dictionary,
     data: StreamGot(encoded),
   })
-  let decoded_data = pdf_stream_data_bytes(decoded.data)
+  let decoded_data = @syntax.pdf_stream_data_bytes(decoded.data)
   if pdf_stream_has_filter_value(decoded) {
     (
       decoded.dictionary

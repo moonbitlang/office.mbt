@@ -97,7 +97,7 @@ fn PdfPage::change_presentation_effect(
   effect_duration : Double,
 ) -> PdfPage raise PdfError {
   let mut transdict = match transition {
-    None => PdfDictionary([])
+    None => @syntax.PdfDictionary([])
     Some(name) =>
       PdfDictionary([
         (

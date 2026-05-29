@@ -7,8 +7,8 @@ fn PdfDocument::pdf_image_add_structure_tree(
   let structure_root_number = self.add_object(PdfNull)
   let figure_number = self.add_object(PdfNull)
   let parent_tree_number = self.add_object(PdfNull)
-  let figure_reference = PdfIndirect(figure_number)
-  let parent_tree = PdfDictionary([
+  let figure_reference = @syntax.PdfIndirect(figure_number)
+  let parent_tree = @syntax.PdfDictionary([
     (
       pdf_image_nums_key(),
       PdfArray([PdfInteger(1), PdfArray([figure_reference])]),
@@ -17,7 +17,7 @@ fn PdfDocument::pdf_image_add_structure_tree(
   self.add_object_given_number(parent_tree_number, parent_tree)
   match subformat {
     Some(PdfUA2) => {
-      let ns_object = PdfIndirect(
+      let ns_object = @syntax.PdfIndirect(
         self.add_object(
           PdfDictionary([
             (pdf_image_ns_key(), PdfString(pdf_image_pdfua2_namespace)),

@@ -1268,7 +1268,7 @@ test "cpdfcontent operator state applies marked content operators" {
   )
   let span = content_operator_name_for_test("/Span")
   let artifact = content_operator_name_for_test("/Artifact")
-  let properties = @pdflite.PdfDictionary([
+  let properties = @syntax.PdfDictionary([
     (content_operator_name_for_test("/MCID"), PdfInteger(7)),
   ])
   let point = initial.content_apply_marked_content_op(Op_MP(span))

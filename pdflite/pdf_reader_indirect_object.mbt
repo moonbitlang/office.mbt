@@ -21,7 +21,7 @@ fn pdf_cursor_lex_first_indirect_object_tokens(
 fn pdf_cursor_read_plain_indirect_object_at_current(
   cursor : ByteCursor,
 ) -> PdfParsedIndirectObject raise PdfError {
-  let (objects, prefix) = pdf_parse_indirect_object_segments(
+  let (objects, prefix) = @syntax.pdf_parse_indirect_object_segments(
     pdf_cursor_lex_first_indirect_object_tokens(cursor),
   )
   if objects.length() > 0 {
@@ -52,7 +52,7 @@ fn pdf_cursor_stopped_at_stream_candidate(cursor : ByteCursor) -> Bool {
 fn pdf_cursor_read_first_indirect_object_segment_at_current(
   cursor : ByteCursor,
 ) -> (PdfParsedIndirectObject, Bool) raise PdfError {
-  let (object, _, complete) = pdf_parse_indirect_object_segment_at(
+  let (object, _, complete) = @syntax.pdf_parse_indirect_object_segment_at(
     pdf_cursor_lex_first_indirect_object_tokens(cursor),
     0,
   )
@@ -109,7 +109,7 @@ fn pdf_cursor_read_first_indirect_object_at_current(
   xrefs : ArrayView[PdfClassicXRefEntry],
   xref_index? : PdfClassicXRefIndex? = None,
 ) -> PdfParsedIndirectObject raise PdfError {
-  let (object, _, complete) = pdf_parse_indirect_object_segment_at(
+  let (object, _, complete) = @syntax.pdf_parse_indirect_object_segment_at(
     pdf_cursor_lex_first_indirect_object_tokens(cursor),
     0,
   )

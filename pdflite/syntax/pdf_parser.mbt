@@ -5,7 +5,7 @@
 /// indirect-reference triples are collapsed into `PdfIndirect` objects.
 pub fn pdf_parse_lexemes(
   lexemes : ArrayView[PdfLexeme],
-) -> Array[PdfObject] raise PdfError {
+) -> Array[PdfObject] raise @core.PdfError {
   let objects : Array[PdfObject] = Array::new(capacity=lexemes.length())
   let mut current = 0
   while current < lexemes.length() {
@@ -22,11 +22,11 @@ pub fn pdf_parse_lexemes(
 ///|
 /// Parses exactly one top-level PDF object from lexemes.
 ///
-/// Raises `PdfError::ParseSingleObjectExpected` if the input contains zero or
+/// Raises `@core.PdfError::ParseSingleObjectExpected` if the input contains zero or
 /// more than one object.
 pub fn pdf_parse_single_lexeme_object(
   lexemes : ArrayView[PdfLexeme],
-) -> PdfObject raise PdfError {
+) -> PdfObject raise @core.PdfError {
   let objects = pdf_parse_lexemes(lexemes)
   if objects.length() == 1 {
     objects[0]
@@ -37,12 +37,16 @@ pub fn pdf_parse_single_lexeme_object(
 
 ///|
 /// Lexes and parses exactly one PDF object from a byte view.
-pub fn pdf_parse_object_from_view(data : BytesView) -> PdfObject raise PdfError {
+pub fn pdf_parse_object_from_view(
+  data : BytesView,
+) -> PdfObject raise @core.PdfError {
   pdf_parse_single_lexeme_object(pdf_lex_view(data))
 }
 
 ///|
 /// Lexes and parses exactly one PDF object from owned PDF bytes.
-pub fn pdf_parse_object_from_bytes(data : PdfBytes) -> PdfObject raise PdfError {
+pub fn pdf_parse_object_from_bytes(
+  data : @core.PdfBytes,
+) -> PdfObject raise @core.PdfError {
   pdf_parse_object_from_view(data)
 }

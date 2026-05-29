@@ -129,10 +129,10 @@ fn PdfDocument::pdf_util_json_of_parsed_content_stream(
   match object {
     PdfStreamObject(stream) => {
       let decoded = self.pdf_decode_stream_until_unknown_value_direct(stream)
-      let data = pdf_stream_data_bytes(decoded.data)
+      let data = @syntax.pdf_stream_data_bytes(decoded.data)
       let ops = pdf_parse_content_ops_from_bytes(data)
       let dictionary = decoded.dictionary
-        .remove_dict_entry(pdf_object_length_name())
+        .remove_dict_entry(@syntax.pdf_object_length_name())
         .remove_dict_entry(pdf_util_cpdfjson_filter_key())
       let op_jsons : Array[Json] = Array::new(capacity=ops.length())
       for op in ops {

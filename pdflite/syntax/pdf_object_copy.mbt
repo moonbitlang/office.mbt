@@ -1,10 +1,11 @@
 ///|
-fn pdf_bytes_physical_copy(bytes : PdfBytes) -> PdfBytes {
+fn pdf_bytes_physical_copy(bytes : @core.PdfBytes) -> @core.PdfBytes {
   Bytes::makei(bytes.length(), i => bytes[i])
 }
 
 ///|
-fn PdfStreamDataCrypt::deep_copy(
+/// Deep-copy stream-decryption metadata.
+pub fn PdfStreamDataCrypt::deep_copy(
   self : PdfStreamDataCrypt,
 ) -> PdfStreamDataCrypt {
   match self {
@@ -39,7 +40,8 @@ fn PdfStreamDataCrypt::deep_copy(
 }
 
 ///|
-fn PdfStreamData::deep_copy(self : PdfStreamData) -> PdfStreamData {
+/// Deep-copy stream storage, including deferred cursor metadata.
+pub fn PdfStreamData::deep_copy(self : PdfStreamData) -> PdfStreamData {
   match self {
     StreamGot(bytes) => StreamGot(pdf_bytes_physical_copy(bytes))
     StreamToGet(to_get) =>
@@ -53,7 +55,8 @@ fn PdfStreamData::deep_copy(self : PdfStreamData) -> PdfStreamData {
 }
 
 ///|
-fn PdfObject::deep_copy(self : PdfObject) -> PdfObject {
+/// Deep-copy a PDF object tree.
+pub fn PdfObject::deep_copy(self : PdfObject) -> PdfObject {
   match self {
     PdfArray(values) => {
       let output : Array[PdfObject] = Array::new(capacity=values.length())
@@ -63,7 +66,7 @@ fn PdfObject::deep_copy(self : PdfObject) -> PdfObject {
       PdfArray(output)
     }
     PdfDictionary(entries) => {
-      let output : Array[(PdfName, PdfObject)] = Array::new(
+      let output : Array[(@core.PdfName, PdfObject)] = Array::new(
         capacity=entries.length(),
       )
       for entry in entries {

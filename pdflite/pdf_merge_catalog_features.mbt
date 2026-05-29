@@ -31,7 +31,7 @@ fn pdf_merge_acroforms(
       }
     }
     Some(
-      PdfDictionary(builder.entries).add_dict_entry(
+      @syntax.PdfDictionary(builder.entries).add_dict_entry(
         pdf_merge_fields_key(),
         PdfArray(fields),
       ),

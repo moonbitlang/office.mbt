@@ -74,7 +74,7 @@ fn pdf_arc4_crypt_pdf_object_with_stream_policy(
               }),
             })
           _ => {
-            let data = pdf_stream_data_bytes(stream.data)
+            let data = @syntax.pdf_stream_data_bytes(stream.data)
             let encrypted_data = @crypt_core.pdf_arc4_crypt_object(
               object_number, generation, file_key, key_length_bits, data,
             )

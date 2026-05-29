@@ -718,21 +718,21 @@ test "private object stream helpers cover malformed object streams" {
 ///|
 test "private stream data materialization reports invalid deferred slices" {
   let cursor = byte_cursor_of_bytes(@ascii.encode("abc"))
-  let bad_position : Result[BytesView, Error] = try? pdf_stream_data_view(
+  let bad_position : Result[BytesView, Error] = try? @syntax.pdf_stream_data_view(
     StreamToGet(stream_to_get(cursor, -1, 1)),
   )
   guard bad_position is Err(PdfError::InvalidCursorPosition(-1)) else {
     fail("expected PdfError::InvalidCursorPosition")
   }
 
-  let bad_length : Result[BytesView, Error] = try? pdf_stream_data_view(
+  let bad_length : Result[BytesView, Error] = try? @syntax.pdf_stream_data_view(
     StreamToGet(stream_to_get(cursor, 0, -1)),
   )
   guard bad_length is Err(PdfError::InvalidReadLength(-1)) else {
     fail("expected PdfError::InvalidReadLength")
   }
 
-  let too_long : Result[BytesView, Error] = try? pdf_stream_data_view(
+  let too_long : Result[BytesView, Error] = try? @syntax.pdf_stream_data_view(
     StreamToGet(stream_to_get(cursor, 2, 2)),
   )
   guard too_long is Err(PdfError::EndOfInput) else {
@@ -743,7 +743,7 @@ test "private stream data materialization reports invalid deferred slices" {
 ///|
 test "private stream data no-crypt decrypt returns bytes" {
   let source = @ascii.encode("abc")
-  let copied = PdfStreamDataNoCrypt.decrypt(source)
+  let copied = @syntax.PdfStreamDataNoCrypt.decrypt(source)
   @test.assert_eq(copied, source)
 }
 
@@ -770,7 +770,7 @@ test "private writer stream dictionary uses materialized deferred length" {
   @test.assert_eq(
     pdf_write_stream_dictionary(
       stream_value,
-      pdf_stream_data_view(stream_value.data).length(),
+      @syntax.pdf_stream_data_view(stream_value.data).length(),
     ),
     PdfDictionary([(pdf_name_of_bytes(@ascii.encode("/Length")), PdfInteger(1))]),
   )
@@ -779,14 +779,20 @@ test "private writer stream dictionary uses materialized deferred length" {
 ///|
 test "parser prefix helper reports malformed indirect prefixes" {
   @test.assert_eq(
-    pdf_lexeme_indirect_object_header_at([LexInt(1), LexInt(0), LexObj], 0),
+    @syntax.pdf_lexeme_indirect_object_header_at(
+      [LexInt(1), LexInt(0), LexObj],
+      0,
+    ),
     true,
   )
   @test.assert_eq(
-    pdf_lexeme_indirect_object_header_at([LexInt(1), LexInt(0), LexNull], 0),
+    @syntax.pdf_lexeme_indirect_object_header_at(
+      [LexInt(1), LexInt(0), LexNull],
+      0,
+    ),
     false,
   )
-  let too_short : Result[PdfParsedIndirectObject, Error] = try? pdf_parse_indirect_object_prefix_lexemes([
+  let too_short : Result[PdfParsedIndirectObject, Error] = try? @syntax.pdf_parse_indirect_object_prefix_lexemes([
       LexInt(1),
       LexInt(0),
     ],
@@ -794,7 +800,7 @@ test "parser prefix helper reports malformed indirect prefixes" {
   guard too_short is Err(PdfError::ParseIndirectObjectExpected) else {
     fail("expected PdfError::ParseIndirectObjectExpected")
   }
-  let bad_header : Result[PdfParsedIndirectObject, Error] = try? pdf_parse_indirect_object_prefix_lexemes([
+  let bad_header : Result[PdfParsedIndirectObject, Error] = try? @syntax.pdf_parse_indirect_object_prefix_lexemes([
       LexInt(1),
       LexInt(0),
       LexNull,
@@ -804,7 +810,7 @@ test "parser prefix helper reports malformed indirect prefixes" {
     fail("expected PdfError::ParseIndirectObjectExpected")
   }
   @test.assert_eq(
-    try! pdf_parse_indirect_object_prefix_lexemes([
+    try! @syntax.pdf_parse_indirect_object_prefix_lexemes([
       LexInt(2),
       LexInt(0),
       LexObj,
@@ -1918,9 +1924,9 @@ test "private content helpers cover malformed operand fallbacks" {
 
 ///|
 test "private codec dictionary and predictor guards report malformed inputs" {
-  let empty = PdfDictionary([])
+  let empty = @syntax.PdfDictionary([])
   @test.assert_eq(pdf_remove_first_filter_entry(empty, pdf_filter_key()), empty)
-  let bad_filter = PdfDictionary([(pdf_filter_key(), PdfInteger(1))])
+  let bad_filter = @syntax.PdfDictionary([(pdf_filter_key(), PdfInteger(1))])
   let bad_filter_result : Result[PdfObject, Error] = try? pdf_remove_first_filter_entry(
     bad_filter,
     pdf_filter_key(),
@@ -1928,7 +1934,9 @@ test "private codec dictionary and predictor guards report malformed inputs" {
   guard bad_filter_result is Err(PdfError::FilterExpected) else {
     fail("expected PdfError::FilterExpected")
   }
-  let bad_decodeparms = PdfDictionary([(pdf_decodeparms_key(), PdfInteger(1))])
+  let bad_decodeparms = @syntax.PdfDictionary([
+    (pdf_decodeparms_key(), PdfInteger(1)),
+  ])
   let bad_decodeparms_result : Result[PdfObject, Error] = try? pdf_remove_first_decodeparms_entry(
     bad_decodeparms,
     pdf_decodeparms_key(),
@@ -3048,7 +3056,7 @@ test "private text stream helpers treat malformed ToUnicode streams as absent" {
   }
 
   let doc = pdf_document_empty()
-  let font = PdfDictionary([
+  let font = @syntax.PdfDictionary([
     (wbtest_text_name("/ToUnicode"), unsupported_filter),
   ])
   @test.assert_eq(doc.pdf_text_tounicode_of_font(font), None)

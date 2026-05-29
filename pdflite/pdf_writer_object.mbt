@@ -51,7 +51,7 @@ fn pdf_write_object_to(
       pdf_writer_push_ascii(output, " >>")
     }
     PdfStreamObject(stream) => {
-      let bytes = pdf_stream_data_view(stream.data)
+      let bytes = @syntax.pdf_stream_data_view(stream.data)
       pdf_write_object_to(
         output,
         pdf_write_stream_dictionary(stream, bytes.length()),

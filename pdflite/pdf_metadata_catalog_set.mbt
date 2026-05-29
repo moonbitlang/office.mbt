@@ -167,7 +167,7 @@ pub fn PdfDocument::set_open_action(
         ])
       }
   }
-  let open_action = PdfDictionary([
+  let open_action = @syntax.PdfDictionary([
     (pdf_metadata_d(), destination),
     (pdf_metadata_s(), PdfNameObject(pdf_metadata_goto())),
   ])

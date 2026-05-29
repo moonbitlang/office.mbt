@@ -18,7 +18,7 @@ pub fn PdfDocument::ocg_rename(
           (Some(PdfNameObject(kind)), Some(PdfString(name))) =>
             if kind == pdf_ocg_ocg_name() && name == old_name {
               PdfDictionary(
-                dict_add_entries(
+                @syntax.dict_add_entries(
                   entries,
                   pdf_ocg_name_key(),
                   PdfString(new_name),

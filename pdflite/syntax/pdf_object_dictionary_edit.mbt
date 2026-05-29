@@ -1,10 +1,11 @@
 ///|
-fn dict_add_entries(
-  entries : ArrayView[(PdfName, PdfObject)],
-  key : PdfName,
+/// Add or replace a dictionary entry while preserving historical insertion order.
+pub fn dict_add_entries(
+  entries : ArrayView[(@core.PdfName, PdfObject)],
+  key : @core.PdfName,
   value : PdfObject,
-) -> Array[(PdfName, PdfObject)] {
-  let output : Array[(PdfName, PdfObject)] = Array::new(
+) -> Array[(@core.PdfName, PdfObject)] {
+  let output : Array[(@core.PdfName, PdfObject)] = Array::new(
     capacity=entries.length() + 1,
   )
   for i in 0..<entries.length() {
@@ -19,7 +20,7 @@ fn dict_add_entries(
       output.push((name, old_value))
     }
   } nobreak {
-    let reversed : Array[(PdfName, PdfObject)] = Array::new(
+    let reversed : Array[(@core.PdfName, PdfObject)] = Array::new(
       capacity=entries.length() + 1,
     )
     reversed.push((key, value))
@@ -32,7 +33,10 @@ fn dict_add_entries(
 }
 
 ///|
-fn pdf_object_unique_key_candidate(prefix : String, index : Int) -> PdfName {
+fn pdf_object_unique_key_candidate(
+  prefix : String,
+  index : Int,
+) -> @core.PdfName {
   let prefix_bytes = @ascii.encode(prefix)
   let index_bytes = @ascii.encode(index.to_string())
   let output = Array::make(
@@ -49,13 +53,13 @@ fn pdf_object_unique_key_candidate(prefix : String, index : Int) -> PdfName {
     output[position] = byte
     position += 1
   }
-  pdf_name_of_bytes(Bytes::from_array(output))
+  @core.pdf_name_of_bytes(Bytes::from_array(output))
 }
 
 ///|
 fn pdf_object_dictionary_has_key(
-  entries : ArrayView[(PdfName, PdfObject)],
-  key : PdfName,
+  entries : ArrayView[(@core.PdfName, PdfObject)],
+  key : @core.PdfName,
 ) -> Bool {
   for entry in entries {
     if entry.0 == key {
@@ -71,11 +75,11 @@ fn pdf_object_dictionary_has_key(
 ///
 /// The scan starts at `n = 0` and increments until the name is absent from the
 /// dictionary or stream dictionary. Non-dictionary-like objects raise
-/// `PdfError::DictionaryExpected`.
+/// `@core.PdfError::DictionaryExpected`.
 pub fn PdfObject::unique_key(
   self : PdfObject,
   prefix : String,
-) -> PdfName raise PdfError {
+) -> @core.PdfName raise @core.PdfError {
   match self.dictionary_view() {
     Some(entries) => {
       let mut index = 0
@@ -92,11 +96,11 @@ pub fn PdfObject::unique_key(
 
 ///|
 fn dict_replace_entries(
-  entries : ArrayView[(PdfName, PdfObject)],
-  key : PdfName,
+  entries : ArrayView[(@core.PdfName, PdfObject)],
+  key : @core.PdfName,
   value : PdfObject,
-) -> Array[(PdfName, PdfObject)] raise PdfError {
-  let output : Array[(PdfName, PdfObject)] = Array::new(
+) -> Array[(@core.PdfName, PdfObject)] raise @core.PdfError {
+  let output : Array[(@core.PdfName, PdfObject)] = Array::new(
     capacity=entries.length(),
   )
   for i in 0..<entries.length() {
@@ -117,10 +121,10 @@ fn dict_replace_entries(
 
 ///|
 fn dict_remove_entries(
-  entries : ArrayView[(PdfName, PdfObject)],
-  key : PdfName,
-) -> Array[(PdfName, PdfObject)] {
-  let output : Array[(PdfName, PdfObject)] = Array::new(
+  entries : ArrayView[(@core.PdfName, PdfObject)],
+  key : @core.PdfName,
+) -> Array[(@core.PdfName, PdfObject)] {
+  let output : Array[(@core.PdfName, PdfObject)] = Array::new(
     capacity=entries.length(),
   )
   for entry in entries {
@@ -141,9 +145,9 @@ fn dict_remove_entries(
 /// stream dictionary and return the same stream object.
 pub fn PdfObject::add_dict_entry(
   self : PdfObject,
-  key : PdfName,
+  key : @core.PdfName,
   value : PdfObject,
-) -> PdfObject raise PdfError {
+) -> PdfObject raise @core.PdfError {
   match self {
     PdfNull => PdfDictionary([(key, value)])
     PdfDictionary(entries) =>
@@ -160,12 +164,12 @@ pub fn PdfObject::add_dict_entry(
 /// Replace an existing dictionary entry.
 ///
 /// The key must already exist in a plain dictionary or stream dictionary.
-/// Missing keys and non-dictionary inputs raise `PdfError::DictionaryKeyNotFound`.
+/// Missing keys and non-dictionary inputs raise `@core.PdfError::DictionaryKeyNotFound`.
 pub fn PdfObject::replace_dict_entry(
   self : PdfObject,
-  key : PdfName,
+  key : @core.PdfName,
   value : PdfObject,
-) -> PdfObject raise PdfError {
+) -> PdfObject raise @core.PdfError {
   match self {
     PdfDictionary(entries) =>
       PdfDictionary(dict_replace_entries(entries, key, value))
@@ -182,11 +186,11 @@ pub fn PdfObject::replace_dict_entry(
 ///
 /// Missing keys are ignored for dictionaries. Stream objects mutate their stream
 /// dictionary and return the same stream object. Non-dictionary inputs raise
-/// `PdfError::DictionaryExpected`.
+/// `@core.PdfError::DictionaryExpected`.
 pub fn PdfObject::remove_dict_entry(
   self : PdfObject,
-  key : PdfName,
-) -> PdfObject raise PdfError {
+  key : @core.PdfName,
+) -> PdfObject raise @core.PdfError {
   match self {
     PdfDictionary(entries) => PdfDictionary(dict_remove_entries(entries, key))
     PdfStreamObject(stream) => {

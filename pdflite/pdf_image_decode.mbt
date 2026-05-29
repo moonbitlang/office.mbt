@@ -27,7 +27,7 @@ pub fn PdfDocument::get_image_24bpp(
     pdf_image_h_key(),
     decoded_stream.dictionary,
   )
-  let data = pdf_stream_data_bytes(decoded_stream.data)
+  let data = @syntax.pdf_stream_data_bytes(decoded_stream.data)
   match decoded {
     PdfImageDctStream(_) =>
       PdfJPEG(

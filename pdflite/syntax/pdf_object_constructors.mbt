@@ -17,8 +17,10 @@ pub fn pdf_array(values : ArrayView[PdfObject]) -> PdfObject {
 /// Entry order is preserved exactly as supplied. Duplicate keys are not
 /// normalized by this constructor; lookup helpers return the first matching
 /// entry.
-pub fn pdf_dictionary(entries : ArrayView[(PdfName, PdfObject)]) -> PdfObject {
-  let output : Array[(PdfName, PdfObject)] = Array::new(
+pub fn pdf_dictionary(
+  entries : ArrayView[(@core.PdfName, PdfObject)],
+) -> PdfObject {
+  let output : Array[(@core.PdfName, PdfObject)] = Array::new(
     capacity=entries.length(),
   )
   for entry in entries {
@@ -52,10 +54,10 @@ pub fn pdf_recurse_array(
 /// incoming order must be retained.
 pub fn pdf_recurse_dict(
   transform : (PdfObject) -> PdfObject,
-  entries : ArrayView[(PdfName, PdfObject)],
+  entries : ArrayView[(@core.PdfName, PdfObject)],
   preserve_order? : Bool = false,
 ) -> PdfObject {
-  let transformed : Array[(PdfName, PdfObject)] = Array::new(
+  let transformed : Array[(@core.PdfName, PdfObject)] = Array::new(
     capacity=entries.length(),
   )
   for entry in entries {
@@ -83,6 +85,10 @@ pub fn pdf_stream(dictionary : PdfObject, data : PdfStreamData) -> PdfObject {
 ///
 /// The returned value references `input` and reads `length` bytes starting at
 /// `position` when materialized.
-pub fn stream_to_get(input : ByteCursor, position : Int, length : Int) -> ToGet {
+pub fn stream_to_get(
+  input : @core.ByteCursor,
+  position : Int,
+  length : Int,
+) -> ToGet {
   { input, position, length, crypt: PdfStreamDataNoCrypt }
 }

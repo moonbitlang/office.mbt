@@ -43,7 +43,7 @@ pub fn PdfDocument::font_from_name(
     PdfNull
   } else {
     let mut resources = pages[page_number - 1].resources
-    let mut found = PdfNull
+    let mut found = @syntax.PdfNull
     let mut failed = false
     for index, segment in segments {
       if !failed {

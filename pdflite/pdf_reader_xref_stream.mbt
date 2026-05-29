@@ -257,7 +257,7 @@ fn pdf_cursor_read_xref_stream_section(
   let decoded_stream = pdf_decode_stream_value(stream)
   let widths = pdf_xref_stream_widths(decoded_stream.dictionary)
   let index_pairs = pdf_xref_stream_index_pairs(decoded_stream.dictionary)
-  let data = pdf_stream_data_bytes(decoded_stream.data)
+  let data = @syntax.pdf_stream_data_bytes(decoded_stream.data)
   {
     entries: pdf_xref_stream_entries(data, widths, index_pairs),
     trailer: pdf_reader_stream_dictionary_without_xref_keys(

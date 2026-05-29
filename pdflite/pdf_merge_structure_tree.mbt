@@ -127,7 +127,7 @@ fn PdfDocument::pdf_merge_structure_tree_root(
               (pdf_merge_k_key(), pdf_structure_k_object(kids)),
             ]),
           )
-          PdfIndirect(top_level_number)
+          @syntax.PdfIndirect(top_level_number)
         }
         None => pdf_structure_k_object(kids)
       }

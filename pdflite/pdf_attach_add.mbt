@@ -122,7 +122,7 @@ fn PdfDocument::pdf_attach_add_page_file(
     None => []
   }
   let bounds = self.parse_rectangle(page.mediabox)
-  let annotation = PdfDictionary([
+  let annotation = @syntax.PdfDictionary([
     (pdf_attach_fs_key(), PdfIndirect(file_spec_number)),
     (pdf_attach_subtype_key(), PdfNameObject(pdf_attach_file_attachment())),
     (pdf_attach_contents_key(), PdfString(basename_bytes)),

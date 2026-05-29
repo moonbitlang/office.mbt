@@ -100,7 +100,9 @@ fn pdf_cursor_finish_stream_object_with_length(
   }
   let stream_data = if defer_stream_data {
     cursor.seek_absolute(cursor.absolute_position() + length)
-    StreamToGet(stream_to_get(cursor.deep_copy(), data_position, length))
+    @syntax.StreamToGet(
+      stream_to_get(cursor.deep_copy(), data_position, length),
+    )
   } else {
     StreamGot(cursor.read_bytes(length))
   }
@@ -329,7 +331,7 @@ pub fn pdf_parse_stream_object_from_view(
   data : BytesView,
 ) -> PdfParsedIndirectObject raise PdfError {
   let cursor = byte_cursor_of_view(data)
-  let prefix = pdf_parse_indirect_object_prefix_lexemes(
+  let prefix = @syntax.pdf_parse_indirect_object_prefix_lexemes(
     pdf_cursor_lex_tokens(cursor),
   )
   pdf_cursor_finish_stream_object(cursor, prefix)

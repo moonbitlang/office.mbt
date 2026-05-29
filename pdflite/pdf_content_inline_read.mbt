@@ -26,7 +26,7 @@ fn pdf_content_read_inline_image(
       _ => raise ContentOperandExpected
     }
   }
-  let dictionary = PdfDictionary(entries)
+  let dictionary = @syntax.PdfDictionary(entries)
   if pdf_content_inline_image_uses_dct(dictionary) {
     Op_InlineImage(
       dictionary,

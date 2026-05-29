@@ -149,7 +149,7 @@ fn PdfDocument::pdf_ua_matterhorn_xfa_config_stream_data(
         None => stream
         Some(_) => self.pdf_decode_stream_until_unknown_value_direct(stream)
       }
-      Some(pdf_stream_data_bytes(decoded.data))
+      Some(@syntax.pdf_stream_data_bytes(decoded.data))
     }
     _ => None
   }

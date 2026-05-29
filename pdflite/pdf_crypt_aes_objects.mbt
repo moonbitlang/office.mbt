@@ -58,7 +58,7 @@ fn pdf_aes_encrypt_pdf_object_with_data_encryptor(
           encrypt_data,
           no_encrypt_metadata,
         )
-        let data = pdf_stream_data_bytes(stream.data)
+        let data = @syntax.pdf_stream_data_bytes(stream.data)
         let iv = pdf_aes_next_iv(iv_provider, iv_index)
         let encrypted_data = encrypt_data(data, iv)
         PdfStreamObject({
@@ -182,7 +182,7 @@ fn pdf_aes_decrypt_pdf_object_with_key(
               }),
             })
           _ => {
-            let data = pdf_stream_data_bytes(stream.data)
+            let data = @syntax.pdf_stream_data_bytes(stream.data)
             let decrypted_data = @crypt_core.pdf_aes_cbc_decrypt(key, data)
             PdfStreamObject({
               dictionary: dictionary.add_dict_entry(

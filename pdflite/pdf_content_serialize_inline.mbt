@@ -31,7 +31,7 @@ fn pdf_content_inline_image_bytes(
       [
         (
           pdf_content_inline_f_name(),
-          PdfNameObject(pdf_content_inline_fl_name()),
+          @syntax.PdfNameObject(pdf_content_inline_fl_name()),
         ),
         (pdf_content_inline_l_name(), PdfInteger(encoded.length())),
       ],

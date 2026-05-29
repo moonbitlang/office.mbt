@@ -155,9 +155,7 @@ test "PdfObject stream_bytes materializes owned and deferred stream data" {
     try! deferred_stream.stream_bytes(),
     try! @pdflite.pdf_bytes_of_int_array([71, 72]),
   )
-  let non_stream : Result[@pdflite.PdfBytes, Error] = try? @pdflite.PdfInteger(
-    1,
-  ).stream_bytes()
+  let non_stream : Result[@pdflite.PdfBytes, Error] = try? @syntax.PdfInteger(1).stream_bytes()
   guard non_stream is Err(@pdflite.PdfError::ParseStreamExpected) else {
     fail("expected @pdflite.PdfError::ParseStreamExpected")
   }
@@ -254,7 +252,7 @@ test "PdfObject unique_key reads stream dictionaries" {
 
 ///|
 test "PdfObject unique_key reports non-dictionary objects" {
-  let result : Result[@pdflite.PdfName, Error] = try? @pdflite.PdfInteger(1).unique_key(
+  let result : Result[@pdflite.PdfName, Error] = try? @syntax.PdfInteger(1).unique_key(
     "gs",
   )
   guard result is Err(@pdflite.PdfError::DictionaryExpected) else {
@@ -277,7 +275,7 @@ test "PdfObject dictionary replace and remove report checked errors" {
     missing_key == name_b else {
     fail("expected @pdflite.PdfError::DictionaryKeyNotFound")
   }
-  let not_dict_replace : Result[@pdflite.PdfObject, Error] = try? @pdflite.PdfInteger(
+  let not_dict_replace : Result[@pdflite.PdfObject, Error] = try? @syntax.PdfInteger(
     1,
   ).replace_dict_entry(name_a, PdfInteger(2))
   guard not_dict_replace
@@ -287,13 +285,13 @@ test "PdfObject dictionary replace and remove report checked errors" {
   }
   let removed = try! dict.remove_dict_entry(name_a)
   @test.assert_eq(removed.lookup_immediate(name_a), None)
-  let not_dict_add : Result[@pdflite.PdfObject, Error] = try? @pdflite.PdfInteger(
+  let not_dict_add : Result[@pdflite.PdfObject, Error] = try? @syntax.PdfInteger(
     1,
   ).add_dict_entry(name_a, PdfInteger(2))
   guard not_dict_add is Err(@pdflite.PdfError::DictionaryExpected) else {
     fail("expected @pdflite.PdfError::DictionaryExpected")
   }
-  let not_dict : Result[@pdflite.PdfObject, Error] = try? @pdflite.PdfInteger(1).remove_dict_entry(
+  let not_dict : Result[@pdflite.PdfObject, Error] = try? @syntax.PdfInteger(1).remove_dict_entry(
     name_a,
   )
   guard not_dict is Err(@pdflite.PdfError::DictionaryExpected) else {
@@ -304,7 +302,7 @@ test "PdfObject dictionary replace and remove report checked errors" {
 ///|
 test "PdfObject stream dictionary helpers mutate stream dictionaries" {
   let name_length = object_name_for_test([47, 76, 101, 110, 103, 116, 104])
-  let stream_data = @pdflite.StreamGot(
+  let stream_data = @syntax.StreamGot(
     try! @pdflite.pdf_bytes_of_int_array([65, 66]),
   )
   let stream = @pdflite.pdf_stream(PdfNull, stream_data)

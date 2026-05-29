@@ -96,7 +96,7 @@ fn PdfDocument::read_object_stream_context_from_object(
         decoded_stream.dictionary,
         pdf_reader_first_name(),
       )
-      let data = pdf_stream_data_bytes(decoded_stream.data)
+      let data = @syntax.pdf_stream_data_bytes(decoded_stream.data)
       let pairs = pdf_object_stream_number_offsets(data, first, count)
       let end_offsets = pdf_object_stream_end_offsets(
         pairs,
