@@ -26,7 +26,8 @@ fn pdf_read_reconstructed_document_from_view(
   document.load_reconstructed_classic_xref_plain_objects(data, classic_xrefs)
   let reconstructed_xrefs = pdf_read_reconstructed_xrefs(data)
   for xref in reconstructed_xrefs {
-    let parsed_result : Result[PdfParsedIndirectObject, Error] = try? cursor.read_reconstructed_object_at(
+    let parsed_result : Result[PdfParsedIndirectObject, Error] = try? pdf_cursor_read_reconstructed_object_at(
+      cursor,
       xref.offset,
       reconstructed_xrefs,
     )

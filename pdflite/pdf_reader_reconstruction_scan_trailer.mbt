@@ -13,7 +13,7 @@ fn ByteCursor::read_reconstructed_xref_stream_trailer_at(
   position : Int,
 ) -> PdfObject raise PdfError {
   self.seek_absolute(position)
-  let parsed = self.read_reconstructed_indirect_prefix_at_current()
+  let parsed = pdf_cursor_read_reconstructed_indirect_prefix_at_current(self)
   match parsed.object {
     PdfDictionary(_) as dictionary =>
       if pdf_reader_xref_stream_type_ok(dictionary) {

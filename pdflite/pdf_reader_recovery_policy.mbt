@@ -176,7 +176,7 @@ fn pdf_reader_startxref_has_xref_stream_prefix(
   let cursor = byte_cursor_of_view(data)
   ignore(pdf_read_header_from_cursor(cursor))
   cursor.seek_absolute(pdf_read_startxref_position(cursor.view()))
-  let parsed = cursor.read_reconstructed_indirect_prefix_at_current()
+  let parsed = pdf_cursor_read_reconstructed_indirect_prefix_at_current(cursor)
   match parsed.object {
     PdfDictionary(_) as dictionary => pdf_reader_xref_stream_type_ok(dictionary)
     _ => false

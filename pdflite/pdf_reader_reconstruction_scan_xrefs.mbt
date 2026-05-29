@@ -9,7 +9,8 @@ fn pdf_read_reconstructed_xrefs(
   while position < data.length() {
     if pdf_reader_reconstruction_indirect_header_at(data, position) {
       cursor.seek_absolute(position)
-      let parsed : Result[(PdfParsedIndirectObject, Int?), Error] = try? cursor.read_reconstructed_indirect_scan_candidate_at_current(
+      let parsed : Result[(PdfParsedIndirectObject, Int?), Error] = try? pdf_cursor_read_reconstructed_indirect_scan_candidate_at_current(
+        cursor,
         xrefs,
         xref_index=Some(xref_index),
       )

@@ -946,13 +946,15 @@ test "private reader xref helpers report malformed inputs" {
   )
 
   let empty_prefix = byte_cursor_of_bytes(Bytes::new(0))
-  let empty_prefix_result : Result[PdfParsedIndirectObject, Error] = try? empty_prefix.read_reconstructed_indirect_prefix_at_current()
+  let empty_prefix_result : Result[PdfParsedIndirectObject, Error] = try? pdf_cursor_read_reconstructed_indirect_prefix_at_current(
+    empty_prefix,
+  )
   guard empty_prefix_result is Err(PdfError::ParseIndirectObjectExpected) else {
     fail("expected PdfError::ParseIndirectObjectExpected")
   }
   let incomplete_scan = byte_cursor_of_bytes(@ascii.encode("3 0 obj\n42\n"))
-  let (incomplete_candidate, incomplete_next) = try! incomplete_scan.read_reconstructed_indirect_scan_candidate_at_current(
-    empty_xrefs,
+  let (incomplete_candidate, incomplete_next) = try! pdf_cursor_read_reconstructed_indirect_scan_candidate_at_current(
+    incomplete_scan, empty_xrefs,
   )
   @test.assert_eq(incomplete_candidate, {
     number: 3,
@@ -1029,7 +1031,8 @@ test "private reader xref helpers report malformed inputs" {
   let bad_resolved_length_cursor = byte_cursor_of_view(bad_resolved_length)
   let objects_with_bad_resolved_length : Array[PdfParsedIndirectObject] = []
   for xref in bad_resolved_length_xrefs {
-    let parsed : Result[PdfParsedIndirectObject, Error] = try? bad_resolved_length_cursor.read_reconstructed_object_at(
+    let parsed : Result[PdfParsedIndirectObject, Error] = try? pdf_cursor_read_reconstructed_object_at(
+      bad_resolved_length_cursor,
       xref.offset,
       bad_resolved_length_xrefs,
     )
