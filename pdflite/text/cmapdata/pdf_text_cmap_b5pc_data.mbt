@@ -1,6 +1,7 @@
 ///|
 // Generated from the Adobe B5pc-UCS2 CMap, including its B5pc-UCS2C base.
 // Duplicate Unicode scalars in reverse lookup use the lowest B5pc character code.
+
 ///|
 /// Generated predefined CMap lookup data.
 pub let pdf_text_b5pc_codepoint_table : Array[(Int, Int)] = [
@@ -13631,6 +13632,7 @@ pub let pdf_text_b5pc_codepoint_table : Array[(Int, Int)] = [
 
 ///|
 // Reverse lookup table sorted by Unicode scalar.
+
 ///|
 /// Generated predefined CMap lookup data.
 pub let pdf_text_b5pc_charcode_table : Array[(Int, Int)] = [

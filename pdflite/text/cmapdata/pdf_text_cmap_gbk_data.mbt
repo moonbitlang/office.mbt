@@ -1,6 +1,7 @@
 ///|
 // Generated from the Adobe GBK-EUC-UCS2 CMap distributed with Poppler.
 // The GBK-EUC single-byte charcodes 0x00..0x80 and 0xFF are handled in pdf_text.mbt.
+
 ///|
 /// Generated predefined CMap lookup data.
 pub let pdf_text_gbk_codepoint_table : Array[(Int, Int)] = [
@@ -23948,6 +23949,7 @@ pub let pdf_text_gbk_codepoint_table : Array[(Int, Int)] = [
 
 ///|
 // Reverse lookup table sorted by Unicode scalar; the Adobe GBK-EUC-UCS2 map has no duplicate scalars.
+
 ///|
 /// Generated predefined CMap lookup data.
 pub let pdf_text_gbk_charcode_table : Array[(Int, Int)] = [

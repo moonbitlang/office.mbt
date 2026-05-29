@@ -1,6 +1,7 @@
 ///|
 // Generated from the Adobe GBpc-EUC-UCS2 CMap, including its GBpc-EUC-UCS2C base.
 // Some character codes map to multiple Unicode scalars.
+
 ///|
 /// Generated predefined CMap lookup data.
 pub let pdf_text_gbpc_euc_codepoints_table : Array[(Int, Array[Int])] = [
@@ -7651,6 +7652,7 @@ pub let pdf_text_gbpc_euc_codepoints_table : Array[(Int, Array[Int])] = [
 ///|
 // Reverse lookup table for single-scalar mappings, sorted by Unicode scalar.
 // Duplicate Unicode scalars use the lowest GBpc-EUC character code.
+
 ///|
 /// Generated predefined CMap lookup data.
 pub let pdf_text_gbpc_euc_charcode_table : Array[(Int, Int)] = [

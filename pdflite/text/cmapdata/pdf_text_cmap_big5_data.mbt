@@ -1,5 +1,6 @@
 ///|
 // Generated from the Big5 mapping used by Python codecs; checked against system iconv anchors.
+
 ///|
 /// Generated predefined CMap lookup data.
 pub let pdf_text_big5_codepoint_table : Array[(Int, Int)] = [
@@ -13717,6 +13718,7 @@ pub let pdf_text_big5_codepoint_table : Array[(Int, Int)] = [
 
 ///|
 // Reverse lookup table sorted by Unicode scalar; duplicate scalars use the lowest Big5 character code.
+
 ///|
 /// Generated predefined CMap lookup data.
 pub let pdf_text_big5_charcode_table : Array[(Int, Int)] = [

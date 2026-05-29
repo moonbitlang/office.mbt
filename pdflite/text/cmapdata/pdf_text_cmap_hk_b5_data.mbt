@@ -1,6 +1,7 @@
 ///|
 // Generated from Adobe-CNS1 cidToUnicode and Hong Kong Big5 CMaps.
 // CID range tables are sorted by character code and map to Adobe-CNS1 CIDs.
+
 ///|
 /// Generated predefined CMap lookup data.
 pub let pdf_text_cns1_unicode_table : Array[Int] = [
@@ -1927,6 +1928,7 @@ pub let pdf_text_cns1_unicode_table : Array[Int] = [
 
 ///|
 // Generated from the Adobe HKdla-B5-H CMap.
+
 ///|
 /// Generated predefined CMap lookup data.
 pub let pdf_text_hkdla_b5_cid_ranges : Array[(Int, Int, Int)] = [
@@ -2956,6 +2958,7 @@ pub let pdf_text_hkdla_b5_cid_ranges : Array[(Int, Int, Int)] = [
 
 ///|
 // Generated from the Adobe HKdlb-B5-H CMap.
+
 ///|
 /// Generated predefined CMap lookup data.
 pub let pdf_text_hkdlb_b5_cid_ranges : Array[(Int, Int, Int)] = [
@@ -3870,6 +3873,7 @@ pub let pdf_text_hkdlb_b5_cid_ranges : Array[(Int, Int, Int)] = [
 
 ///|
 // Generated from the Adobe HKgccs-B5-H CMap.
+
 ///|
 /// Generated predefined CMap lookup data.
 pub let pdf_text_hkgccs_b5_cid_ranges : Array[(Int, Int, Int)] = [
@@ -4429,6 +4433,7 @@ pub let pdf_text_hkgccs_b5_cid_ranges : Array[(Int, Int, Int)] = [
 
 ///|
 // Generated from the Adobe HKm314-B5-H CMap.
+
 ///|
 /// Generated predefined CMap lookup data.
 pub let pdf_text_hkm314_b5_cid_ranges : Array[(Int, Int, Int)] = [
@@ -4978,6 +4983,7 @@ pub let pdf_text_hkm314_b5_cid_ranges : Array[(Int, Int, Int)] = [
 
 ///|
 // Generated from the Adobe HKm471-B5-H CMap.
+
 ///|
 /// Generated predefined CMap lookup data.
 pub let pdf_text_hkm471_b5_cid_ranges : Array[(Int, Int, Int)] = [

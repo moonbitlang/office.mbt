@@ -1,6 +1,7 @@
 ///|
 // Generated from Adobe-GB1 cidToUnicode and the GBK2K-H CMap.
 // Four-byte character codes are packed into MoonBit signed Int values.
+
 ///|
 /// Generated predefined CMap lookup data.
 pub let pdf_text_gb1_unicode_table : Array[Int] = [
@@ -3037,6 +3038,7 @@ pub let pdf_text_gb1_unicode_table : Array[Int] = [
 
 ///|
 // Generated from the Adobe GBK2K-H CMap.
+
 ///|
 /// Generated predefined CMap lookup data.
 pub let pdf_text_gbk2k_cid_ranges : Array[(Int, Int, Int)] = [
