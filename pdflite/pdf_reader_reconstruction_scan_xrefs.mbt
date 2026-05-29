@@ -25,12 +25,3 @@ fn pdf_cursor_read_reconstructed_xref_at_current(
     (None, next_position)
   }
 }
-
-///|
-fn pdf_read_reconstructed_xrefs(
-  data : BytesView,
-) -> Array[PdfClassicXRefEntry] raise PdfError {
-  @reader.pdf_reader_reconstruction_object_xrefs(
-    data, pdf_cursor_read_reconstructed_xref_at_current,
-  )
-}

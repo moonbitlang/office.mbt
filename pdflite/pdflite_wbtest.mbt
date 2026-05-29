@@ -975,8 +975,9 @@ test "private reader xref helpers report malformed inputs" {
     object: PdfInteger(42),
   })
   @test.assert_eq(incomplete_next, None)
-  let incomplete_xrefs = try! pdf_read_reconstructed_xrefs(
+  let incomplete_xrefs = try! @reader.pdf_reader_reconstruction_object_xrefs(
     @ascii.encode("3 0 obj\n42\n"),
+    pdf_cursor_read_reconstructed_xref_at_current,
   )
   @test.assert_eq(incomplete_xrefs.length(), 1)
   @test.assert_eq(incomplete_xrefs[0].object_number, 3)
@@ -996,7 +997,9 @@ test "private reader xref helpers report malformed inputs" {
     ),
     true,
   )
-  let noisy_xrefs = try! pdf_read_reconstructed_xrefs(noisy_digits)
+  let noisy_xrefs = try! @reader.pdf_reader_reconstruction_object_xrefs(
+    noisy_digits, pdf_cursor_read_reconstructed_xref_at_current,
+  )
   @test.assert_eq(noisy_xrefs.length(), 1)
   @test.assert_eq(noisy_xrefs[0].object_number, 4)
   @test.assert_eq(noisy_xrefs[0].offset, valid_header)
@@ -1051,8 +1054,8 @@ test "private reader xref helpers report malformed inputs" {
   let bad_resolved_length = @ascii.encode(
     "1 0 obj\n<< /Length 2 0 R >>\nstream\nHi\nendstream\nendobj\n2 0 obj\n999999\nendobj\n",
   )
-  let bad_resolved_length_xrefs = try! pdf_read_reconstructed_xrefs(
-    bad_resolved_length,
+  let bad_resolved_length_xrefs = try! @reader.pdf_reader_reconstruction_object_xrefs(
+    bad_resolved_length, pdf_cursor_read_reconstructed_xref_at_current,
   )
   let bad_resolved_length_cursor = byte_cursor_of_view(bad_resolved_length)
   let objects_with_bad_resolved_length : Array[PdfParsedIndirectObject] = []

@@ -27,6 +27,12 @@ options(
       "native",
       "llvm",
     ],
+    "pdf_reader_reconstruction_plan_test.mbt": [
+      "wasm-gc",
+      "js",
+      "native",
+      "llvm",
+    ],
     "pdf_reader_reconstruction_trailers_test.mbt": [
       "wasm-gc",
       "js",

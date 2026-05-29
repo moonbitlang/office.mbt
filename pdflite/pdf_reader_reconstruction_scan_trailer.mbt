@@ -24,13 +24,3 @@ fn pdf_cursor_read_reconstructed_xref_stream_trailer_at(
     _ => raise XRefExpected
   }
 }
-
-///|
-fn pdf_read_reconstructed_trailers(
-  data : BytesView,
-  include_xref_streams : Bool,
-) -> Array[PdfObject] {
-  @reader.pdf_reader_reconstruction_trailers(
-    data, include_xref_streams, pdf_cursor_read_reconstructed_trailer_at, pdf_cursor_read_reconstructed_xref_stream_trailer_at,
-  )
-}

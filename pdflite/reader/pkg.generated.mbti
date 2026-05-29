@@ -67,6 +67,8 @@ pub fn pdf_reader_reconstruction_indirect_header_at(BytesView, Int) -> Bool
 
 pub fn pdf_reader_reconstruction_object_xrefs(BytesView, (@core.ByteCursor, Int, ArrayView[PdfClassicXRefEntry], PdfClassicXRefIndex) -> (PdfClassicXRefEntry?, Int?) raise @core.PdfError) -> Array[PdfClassicXRefEntry] raise @core.PdfError
 
+pub fn pdf_reader_reconstruction_plan(BytesView, Bool, (@core.ByteCursor, Int) -> (PdfXRefSection, Int) raise @core.PdfError, (@core.ByteCursor, Int) -> (PdfXRefSection, Int) raise @core.PdfError, (@core.ByteCursor, Int, ArrayView[PdfClassicXRefEntry], PdfClassicXRefIndex) -> (PdfClassicXRefEntry?, Int?) raise @core.PdfError, (@core.ByteCursor, Int) -> @syntax.PdfObject raise @core.PdfError, (@core.ByteCursor, Int) -> @syntax.PdfObject raise @core.PdfError, (BytesView, ArrayView[PdfClassicXRefEntry], PdfClassicXRefIndex, PdfClassicXRefEntry) -> Bool) -> PdfReaderReconstructionPlan raise @core.PdfError
+
 pub fn pdf_reader_reconstruction_skip_malformed_object(BytesView, Int) -> Int?
 
 pub fn pdf_reader_reconstruction_trailers(BytesView, Bool, (@core.ByteCursor, Int) -> @syntax.PdfObject raise @core.PdfError, (@core.ByteCursor, Int) -> @syntax.PdfObject raise @core.PdfError) -> Array[@syntax.PdfObject]
@@ -143,6 +145,15 @@ pub(all) struct PdfClassicXRefIndex {
   entries : @hashmap.HashMap[Int, PdfClassicXRefEntry]
 }
 pub fn PdfClassicXRefIndex::lookup(Self, Int) -> PdfClassicXRefEntry?
+
+pub(all) struct PdfReaderReconstructionPlan {
+  classic_xref_sections : Array[(Int, PdfXRefSection)]
+  xref_stream_sections : Array[PdfXRefSection]
+  xref_coverage : PdfReconstructedXRefCoverage
+  classic_xrefs : Array[PdfClassicXRefEntry]
+  object_xrefs : Array[PdfClassicXRefEntry]
+  trailers : Array[@syntax.PdfObject]
+}
 
 pub struct PdfReaderXRefStreamRefSet {
   values : @hashmap.HashMap[Int, @core.PdfNumberSet]
