@@ -6,6 +6,7 @@ import {
   "bobzhang/pdflite/crypt_core",
   "bobzhang/pdflite/date",
   "bobzhang/pdflite/geometry",
+  "bobzhang/pdflite/reader",
   "bobzhang/pdflite/syntax",
   "moonbitlang/core/buffer",
   "moonbitlang/core/debug",
@@ -721,7 +722,7 @@ pub fn pdf_decode_stream_onestage(@syntax.PdfObject) -> @syntax.PdfObject raise 
 
 pub fn pdf_decompress_pdf(PdfDocument) -> PdfDocument raise @core.PdfError
 
-pub let pdf_default_version : PdfVersion
+pub let pdf_default_version : @reader.PdfVersion
 
 pub fn pdf_determine_subformats(PdfDocument) -> Array[String] raise @core.PdfError
 
@@ -739,7 +740,7 @@ pub fn pdf_document_of_json(Json) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_document_of_json_blob(BytesView) -> PdfDocument raise @core.PdfError
 
-pub fn pdf_document_of_parsed_indirect_objects(ArrayView[@syntax.PdfParsedIndirectObject], version? : PdfVersion) -> PdfDocument
+pub fn pdf_document_of_parsed_indirect_objects(ArrayView[@syntax.PdfParsedIndirectObject], version? : @reader.PdfVersion) -> PdfDocument
 
 pub fn pdf_draft(@core.PdfName?, Bool, ArrayView[Int], PdfDocument) -> PdfDocument raise @core.PdfError
 
@@ -1014,6 +1015,8 @@ pub fn pdf_invert_page_range(Int, ArrayView[Int]) -> Array[Int]
 pub fn pdf_invert_range(Int, ArrayView[Int]) -> Array[Int]
 
 pub fn pdf_is_delimiter_byte(Int) -> Bool
+
+pub fn pdf_is_digit_byte(Int) -> Bool
 
 pub fn pdf_is_identity_h(PdfFont) -> Bool
 
@@ -1509,11 +1512,11 @@ pub fn pdf_read_document_revision_from_view_with_passwords(BytesView, Int, user_
 
 pub fn pdf_read_font(PdfDocument, @syntax.PdfObject) -> PdfFont raise @core.PdfError
 
-pub fn pdf_read_header_from_bytes(Bytes) -> PdfVersion raise @core.PdfError
+pub fn pdf_read_header_from_bytes(Bytes) -> @reader.PdfVersion raise @core.PdfError
 
-pub fn pdf_read_header_from_cursor(@core.ByteCursor) -> PdfVersion raise @core.PdfError
+pub fn pdf_read_header_from_cursor(@core.ByteCursor) -> @reader.PdfVersion raise @core.PdfError
 
-pub fn pdf_read_header_from_view(BytesView) -> PdfVersion raise @core.PdfError
+pub fn pdf_read_header_from_view(BytesView) -> @reader.PdfVersion raise @core.PdfError
 
 pub fn pdf_read_name_tree(PdfDocument, @syntax.PdfObject) -> Array[(Bytes, @syntax.PdfObject)]
 
@@ -4319,11 +4322,6 @@ pub(all) struct PdfUnicodeDataEntry {
   titlecase_mapping : String
 } derive(Eq, ToJson, @debug.Debug)
 
-pub(all) struct PdfVersion {
-  major : Int
-  minor : Int
-} derive(Eq, ToJson, @debug.Debug)
-
 pub(all) struct PdfWriteEncryption {
   encryption_method : @crypt_core.PdfEncryptionMethod
   user_password : Bytes
@@ -4379,6 +4377,8 @@ pub using @syntax {type PdfStreamData}
 pub using @syntax {type PdfStreamDataCrypt}
 
 pub using @geometry {type PdfUnit}
+
+pub using @reader {type PdfVersion}
 
 pub using @geometry {type Point2}
 

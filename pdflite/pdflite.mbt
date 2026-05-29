@@ -42,6 +42,7 @@ pub using @core {
   pdf_name_of_bytes,
   pdf_name_of_view,
   pdf_is_whitespace_byte,
+  pdf_is_digit_byte,
   pdf_is_newline_byte,
   pdf_is_not_whitespace_byte,
   pdf_is_delimiter_byte,
@@ -174,4 +175,13 @@ pub using @flate {
   pdf_flate_encode,
   pdf_flate_decode_view,
   pdf_flate_decode,
+}
+
+///|
+pub using @reader {
+  type PdfVersion,
+  pdf_default_version,
+  pdf_read_header_from_cursor,
+  pdf_read_header_from_view,
+  pdf_read_header_from_bytes,
 }

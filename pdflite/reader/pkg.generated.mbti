@@ -1,0 +1,29 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pdflite/reader"
+
+import {
+  "bobzhang/pdflite/core",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub let pdf_default_version : PdfVersion
+
+pub fn pdf_read_header_from_bytes(Bytes) -> PdfVersion raise @core.PdfError
+
+pub fn pdf_read_header_from_cursor(@core.ByteCursor) -> PdfVersion raise @core.PdfError
+
+pub fn pdf_read_header_from_view(BytesView) -> PdfVersion raise @core.PdfError
+
+// Errors
+
+// Types and methods
+pub(all) struct PdfVersion {
+  major : Int
+  minor : Int
+} derive(Eq, ToJson, @debug.Debug)
+
+// Type aliases
+
+// Traits
+

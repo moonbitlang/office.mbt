@@ -23,6 +23,12 @@ pub fn pdf_is_not_whitespace_byte(value : Int) -> Bool {
 }
 
 ///|
+/// Return whether a byte is an ASCII digit.
+pub fn pdf_is_digit_byte(value : Int) -> Bool {
+  value >= 48 && value <= 57
+}
+
+///|
 /// Return whether a byte is a PDF token delimiter.
 ///
 /// Delimiters are parentheses, slash, angle brackets, square brackets, braces,

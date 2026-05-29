@@ -1,0 +1,14 @@
+import {
+  "bobzhang/pdflite/core",
+  "moonbitlang/core/debug",
+}
+
+import {
+  "moonbitlang/core/test",
+} for "test"
+
+options(
+  targets: {
+    "pdf_reader_header_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
+  },
+)
