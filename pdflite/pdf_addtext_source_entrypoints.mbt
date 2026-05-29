@@ -1,86 +1,27 @@
 ///|
-fn pdf_addtext_append_unique_codepoints(
-  used : Array[Int],
-  codepoints : ArrayView[Int],
-) -> Unit {
-  for codepoint in codepoints {
-    if !pdf_addtext_codepoints_contains(used, codepoint) {
-      used.push(codepoint)
-    }
-  }
-}
-
-///|
-fn PdfDocument::pdf_addtext_used_codepoints_for_pages(
-  self : PdfDocument,
-  pages : ArrayView[PdfPage],
-  page_numbers : ArrayView[Int],
-  lines : ArrayView[String],
-  time : PdfStrftimeTime,
-  bookmarks : ArrayView[PdfBookmark],
-  filename : String,
-  bates : Int,
-  bates_pad : Int?,
-) -> Array[Int] raise PdfError {
-  let used : Array[Int] = Array::new(
-    capacity=page_numbers.length() * lines.length(),
-  )
-  for page_number in page_numbers {
-    let values = self.addtext_replacement_values(
-      bookmarks,
-      page_number,
-      pages.length(),
-      filename,
-      bates,
-      bates_pad,
-    )
-    let replacement_pairs = pdf_addtext_replacement_pairs(values)
-    let expanded = pdf_addtext_expand_lines_with_time(
-      time, lines, replacement_pairs,
-    )
-    pdf_addtext_append_unique_codepoints(
-      used,
-      pdf_addtext_used_codepoints(expanded),
-    )
-  }
-  used
-}
-
-///|
-fn PdfDocument::pdf_addtext_write_fontpack_objects(
-  self : PdfDocument,
-  fontpack : PdfFontPack?,
-) -> Array[Int] raise PdfError {
-  let objects : Array[Int] = match fontpack {
-    Some(pack) => Array::new(capacity=pack.fonts.length())
-    None => []
-  }
-  match fontpack {
-    Some(fontpack) =>
-      for font in fontpack.fonts {
-        objects.push(self.write_font(font))
+fn pdf_addtext_resolve_font_source(
+  source : PdfAddTextFontSource,
+) -> (PdfFont?, PdfFontPack?) raise PdfError {
+  match source {
+    PdfAddTextPreMadeFontPack(pack) =>
+      if pack.fonts.length() == 0 {
+        raise SoftError("addtexts: fontpack is empty")
+      } else {
+        (Some(pack.fonts[0]), None)
       }
-    None => ()
+    PdfAddTextExistingNamedFont => (None, None)
   }
-  objects
 }
 
 ///|
-/// Add cpdf add-text to selected pages with deterministic time and resolved fonts.
-///
-/// This ports the outer source-level `addtexts` orchestration once callers have
-/// already chosen an existing font, parsed font, or font pack. It prepares the
-/// input text lines, skips empty visible output before writing fonts, writes
-/// selected/fontpack font objects, and delegates page rewriting to
-/// `addtext_pages_with_font`.
-pub fn PdfDocument::addtexts_with_font(
+/// Add cpdf add-text to selected pages from a non-embedding font source.
+pub fn PdfDocument::addtexts_with_source(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
   text : String,
   time : PdfStrftimeTime,
   bookmarks : ArrayView[PdfBookmark],
-  font : PdfFont?,
-  fontpack : PdfFontPack?,
+  font_source : PdfAddTextFontSource,
   fontname : PdfName,
   font_size : Double,
   line_spacing : Double,
@@ -110,7 +51,7 @@ pub fn PdfDocument::addtexts_with_font(
     pdf_addtext_validate_page_numbers(
       page_numbers,
       pages.length(),
-      "addtexts_with_font",
+      "addtexts_with_source",
     )
     let lines = pdf_addtext_lines_for_rotation(text, rotation)
     let used = self.pdf_addtext_used_codepoints_for_pages(
@@ -119,23 +60,15 @@ pub fn PdfDocument::addtexts_with_font(
     if used.length() == 0 {
       self
     } else {
-      let font_object = match fontpack {
-        Some(_) => None
-        None => self.addtext_selected_font_object(font)
-      }
-      let fontpack_font_objects = self.pdf_addtext_write_fontpack_objects(
-        fontpack,
-      )
-      self.addtext_pages_with_font(
+      let (font, fontpack) = pdf_addtext_resolve_font_source(font_source)
+      self.addtexts_with_font(
         page_numbers,
-        lines,
+        text,
         time,
         bookmarks,
         font,
         fontpack,
         fontname,
-        font_object,
-        fontpack_font_objects,
         font_size,
         line_spacing,
         colour,
@@ -162,15 +95,14 @@ pub fn PdfDocument::addtexts_with_font(
 }
 
 ///|
-/// Compatibility wrapper for `PdfDocument::addtexts_with_font`.
-pub fn pdf_addtexts_with_font(
+/// Compatibility wrapper for `PdfDocument::addtexts_with_source`.
+pub fn pdf_addtexts_with_source(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
   text : String,
   time : PdfStrftimeTime,
   bookmarks : ArrayView[PdfBookmark],
-  font : PdfFont?,
-  fontpack : PdfFontPack?,
+  font_source : PdfAddTextFontSource,
   fontname : PdfName,
   font_size : Double,
   line_spacing : Double,
@@ -193,13 +125,12 @@ pub fn pdf_addtexts_with_font(
   raw? : Bool = false,
   url_border? : Bool = false,
 ) -> PdfDocument raise PdfError {
-  document.addtexts_with_font(
+  document.addtexts_with_source(
     page_numbers,
     text,
     time,
     bookmarks,
-    font,
-    fontpack,
+    font_source,
     fontname,
     font_size,
     line_spacing,
