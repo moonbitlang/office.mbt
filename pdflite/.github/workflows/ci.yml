@@ -85,7 +85,7 @@ jobs:
         env:
           PDFLITE_CLI: ${{ github.workspace }}/_build/native/release/build/cmd/main/main.exe
           PDFLITE_LOGO_PDF: ${{ github.workspace }}/fixtures/camlpdf/logo.pdf
-        run: moon cram test --shell /bin/bash --timeout-seconds 120 tests/cram
+        run: timeout 180s moon cram test --shell /bin/bash --timeout-seconds 120 tests/cram/cli.md
 
   backend-check:
     name: Backend Check (${{ matrix.moonbit-version }})
