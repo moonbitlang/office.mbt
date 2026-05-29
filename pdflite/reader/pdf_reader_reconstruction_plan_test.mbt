@@ -102,12 +102,23 @@ fn reader_reconstruction_plan_verify_for_test(
 }
 
 ///|
+fn reader_reconstruction_plan_callbacks_for_test() -> @reader.PdfReaderReconstructionCallbacks {
+  {
+    read_classic_xref_section_at: reader_reconstruction_plan_classic_section_for_test,
+    read_xref_stream_section_at: reader_reconstruction_plan_xref_stream_section_for_test,
+    read_object_xref_at_current: reader_reconstruction_plan_object_xref_for_test,
+    read_trailer_at: reader_reconstruction_plan_trailer_for_test,
+    read_xref_stream_trailer_at: reader_reconstruction_plan_xref_stream_trailer_for_test,
+    verify_classic_xref_entry: reader_reconstruction_plan_verify_for_test,
+  }
+}
+
+///|
 test "reconstruction plan gathers classic object and trailer scan outputs" {
   let plan = @reader.pdf_reader_reconstruction_plan(
-    b"xref\ntrailer\n1 0 obj\n<< >>\nendobj\n", false, reader_reconstruction_plan_classic_section_for_test,
-    reader_reconstruction_plan_xref_stream_section_for_test, reader_reconstruction_plan_object_xref_for_test,
-    reader_reconstruction_plan_trailer_for_test, reader_reconstruction_plan_xref_stream_trailer_for_test,
-    reader_reconstruction_plan_verify_for_test,
+    b"xref\ntrailer\n1 0 obj\n<< >>\nendobj\n",
+    false,
+    reader_reconstruction_plan_callbacks_for_test(),
   )
   @test.assert_eq(plan.classic_xref_sections.length(), 1)
   @test.assert_eq(plan.xref_stream_sections.length(), 0)
@@ -121,16 +132,14 @@ test "reconstruction plan gathers classic object and trailer scan outputs" {
 ///|
 test "reconstruction plan gates xref stream scans" {
   let without_streams = @reader.pdf_reader_reconstruction_plan(
-    b"1 0 obj\n<< /Type /XRef >>\nendobj\n", false, reader_reconstruction_plan_classic_section_for_test,
-    reader_reconstruction_plan_xref_stream_section_for_test, reader_reconstruction_plan_object_xref_for_test,
-    reader_reconstruction_plan_trailer_for_test, reader_reconstruction_plan_xref_stream_trailer_for_test,
-    reader_reconstruction_plan_verify_for_test,
+    b"1 0 obj\n<< /Type /XRef >>\nendobj\n",
+    false,
+    reader_reconstruction_plan_callbacks_for_test(),
   )
   let with_streams = @reader.pdf_reader_reconstruction_plan(
-    b"1 0 obj\n<< /Type /XRef >>\nendobj\n", true, reader_reconstruction_plan_classic_section_for_test,
-    reader_reconstruction_plan_xref_stream_section_for_test, reader_reconstruction_plan_object_xref_for_test,
-    reader_reconstruction_plan_trailer_for_test, reader_reconstruction_plan_xref_stream_trailer_for_test,
-    reader_reconstruction_plan_verify_for_test,
+    b"1 0 obj\n<< /Type /XRef >>\nendobj\n",
+    true,
+    reader_reconstruction_plan_callbacks_for_test(),
   )
   @test.assert_eq(without_streams.xref_stream_sections.length(), 0)
   @test.assert_eq(without_streams.trailers.length(), 0)

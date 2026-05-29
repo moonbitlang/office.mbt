@@ -67,7 +67,7 @@ pub fn pdf_reader_reconstruction_indirect_header_at(BytesView, Int) -> Bool
 
 pub fn pdf_reader_reconstruction_object_xrefs(BytesView, (@core.ByteCursor, Int, ArrayView[PdfClassicXRefEntry], PdfClassicXRefIndex) -> (PdfClassicXRefEntry?, Int?) raise @core.PdfError) -> Array[PdfClassicXRefEntry] raise @core.PdfError
 
-pub fn pdf_reader_reconstruction_plan(BytesView, Bool, (@core.ByteCursor, Int) -> (PdfXRefSection, Int) raise @core.PdfError, (@core.ByteCursor, Int) -> (PdfXRefSection, Int) raise @core.PdfError, (@core.ByteCursor, Int, ArrayView[PdfClassicXRefEntry], PdfClassicXRefIndex) -> (PdfClassicXRefEntry?, Int?) raise @core.PdfError, (@core.ByteCursor, Int) -> @syntax.PdfObject raise @core.PdfError, (@core.ByteCursor, Int) -> @syntax.PdfObject raise @core.PdfError, (BytesView, ArrayView[PdfClassicXRefEntry], PdfClassicXRefIndex, PdfClassicXRefEntry) -> Bool) -> PdfReaderReconstructionPlan raise @core.PdfError
+pub fn pdf_reader_reconstruction_plan(BytesView, Bool, PdfReaderReconstructionCallbacks) -> PdfReaderReconstructionPlan raise @core.PdfError
 
 pub fn pdf_reader_reconstruction_skip_malformed_object(BytesView, Int) -> Int?
 
@@ -145,6 +145,15 @@ pub(all) struct PdfClassicXRefIndex {
   entries : @hashmap.HashMap[Int, PdfClassicXRefEntry]
 }
 pub fn PdfClassicXRefIndex::lookup(Self, Int) -> PdfClassicXRefEntry?
+
+pub(all) struct PdfReaderReconstructionCallbacks {
+  read_classic_xref_section_at : (@core.ByteCursor, Int) -> (PdfXRefSection, Int) raise @core.PdfError
+  read_xref_stream_section_at : (@core.ByteCursor, Int) -> (PdfXRefSection, Int) raise @core.PdfError
+  read_object_xref_at_current : (@core.ByteCursor, Int, ArrayView[PdfClassicXRefEntry], PdfClassicXRefIndex) -> (PdfClassicXRefEntry?, Int?) raise @core.PdfError
+  read_trailer_at : (@core.ByteCursor, Int) -> @syntax.PdfObject raise @core.PdfError
+  read_xref_stream_trailer_at : (@core.ByteCursor, Int) -> @syntax.PdfObject raise @core.PdfError
+  verify_classic_xref_entry : (BytesView, ArrayView[PdfClassicXRefEntry], PdfClassicXRefIndex, PdfClassicXRefEntry) -> Bool
+}
 
 pub(all) struct PdfReaderReconstructionPlan {
   classic_xref_sections : Array[(Int, PdfXRefSection)]

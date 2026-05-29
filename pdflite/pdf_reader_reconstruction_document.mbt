@@ -12,10 +12,9 @@ fn pdf_read_reconstructed_document_from_view(
   document.set_first_xref(0)
   document.set_was_linearized(pdf_read_was_linearized(data))
   let plan = @reader.pdf_reader_reconstruction_plan(
-    data, include_xref_stream_trailers, pdf_cursor_read_reconstructed_classic_xref_section_at,
-    pdf_cursor_read_reconstructed_xref_stream_section_at, pdf_cursor_read_reconstructed_xref_at_current,
-    pdf_cursor_read_reconstructed_trailer_at, pdf_cursor_read_reconstructed_xref_stream_trailer_at,
-    pdf_reconstructed_classic_xref_entry_is_verified,
+    data,
+    include_xref_stream_trailers,
+    pdf_reader_reconstruction_callbacks(),
   )
   document.load_reconstructed_classic_xref_plain_objects(
     data,
