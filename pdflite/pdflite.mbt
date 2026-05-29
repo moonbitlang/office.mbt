@@ -108,6 +108,7 @@ pub using @geometry {
   type PdfUnit,
   type PaperSize,
   type Point2,
+  type PdfRectangle,
   type TransformOp,
   type TransformMatrix,
   type TransformDecomposition,

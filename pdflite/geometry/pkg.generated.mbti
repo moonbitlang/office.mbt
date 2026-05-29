@@ -106,6 +106,13 @@ pub fn PaperSize::landscape(Self) -> Self
 pub fn PaperSize::unit(Self) -> PdfUnit
 pub fn PaperSize::width(Self) -> Double
 
+pub(all) struct PdfRectangle {
+  min_x : Double
+  min_y : Double
+  max_x : Double
+  max_y : Double
+} derive(Eq, ToJson, @debug.Debug)
+
 pub(all) enum PdfUnit {
   PdfPoint
   Inch

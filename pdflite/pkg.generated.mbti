@@ -158,7 +158,7 @@ pub fn pdf_addtext_colour_op(PdfContentColour) -> @content.PdfContentOp
 
 pub fn pdf_addtext_colour_op_stroke(PdfContentColour) -> @content.PdfContentOp
 
-pub fn pdf_addtext_diagonal_offsets(PdfRectangle, PdfPosition, PdfAddTextRotation, Double, Double, Double, Double) -> (Double, Double)
+pub fn pdf_addtext_diagonal_offsets(@geometry.PdfRectangle, PdfPosition, PdfAddTextRotation, Double, Double, Double, Double) -> (Double, Double)
 
 pub fn pdf_addtext_effective_encoding(PdfFont?) -> PdfEncoding
 
@@ -182,7 +182,7 @@ pub fn pdf_addtext_line_advance(PdfAddTextRotation, Double, Double) -> (Double, 
 
 pub fn pdf_addtext_line_page(PdfDocument, PdfPage, PdfStrftimeTime, ArrayView[String], ArrayView[(String, () -> String)], PdfFont?, PdfFontPack?, @core.PdfName, @syntax.PdfObject?, ArrayView[Int], Double, String, PdfContentColour, PdfPosition, relative_to_box? : @core.PdfName, horizontal_offset? : Double, vertical_offset? : Double, shift_x? : Double, shift_y? : Double, opacity? : Double, justification? : PdfAddTextJustification, rotation? : PdfAddTextRotation, outline? : Bool, line_width? : Double, underneath? : Bool, fast? : Bool, raw? : Bool, url_border? : Bool) -> PdfPage raise @core.PdfError
 
-pub fn pdf_addtext_line_placement(PdfRectangle, PdfPosition, PdfAddTextRotation, Double, Double, Double, Double, PdfAddTextJustification) -> PdfAddTextLinePlacement
+pub fn pdf_addtext_line_placement(@geometry.PdfRectangle, PdfPosition, PdfAddTextRotation, Double, Double, Double, Double, PdfAddTextJustification) -> PdfAddTextLinePlacement
 
 pub fn pdf_addtext_line_widths(PdfDocument, PdfPage, PdfFont?, PdfFontPack?, @core.PdfName, Double, BytesView, ArrayView[Bytes]) -> PdfAddTextLineWidths raise @core.PdfError
 
@@ -212,7 +212,7 @@ pub fn pdf_addtext_rectangle(PdfDocument, ArrayView[Int], String, PdfContentColo
 
 pub fn pdf_addtext_rectangle_ops(Double, Double, Double, Double, PdfContentColour, Bool, Double, @core.PdfName?) -> Array[@content.PdfContentOp]
 
-pub fn pdf_addtext_rectangle_origin(PdfRectangle, PdfPosition, Double, Double) -> (Double, Double)
+pub fn pdf_addtext_rectangle_origin(@geometry.PdfRectangle, PdfPosition, Double, Double) -> (Double, Double)
 
 pub fn pdf_addtext_replacement_pairs(PdfAddTextReplacementValues) -> Array[(String, () -> String)]
 
@@ -232,7 +232,7 @@ pub fn pdf_addtext_text_ops(PdfFont?, PdfFontPack?, Double, Double, Double, Doub
 
 pub fn pdf_addtext_unescape_string(String) -> String raise @core.PdfError
 
-pub fn pdf_addtext_url_annotation(@geometry.Point2, @geometry.Point2, @geometry.Point2, @geometry.Point2, PdfRectangle, String, Bool) -> @syntax.PdfObject
+pub fn pdf_addtext_url_annotation(@geometry.Point2, @geometry.Point2, @geometry.Point2, @geometry.Point2, @geometry.PdfRectangle, String, Bool) -> @syntax.PdfObject
 
 pub fn pdf_addtext_url_annotation_geometry(@geometry.Point2, Double, Double, Double, Double, @geometry.Point2, Double, Double, Double, Double) -> PdfAddTextUrlAnnotationGeometry
 
@@ -272,7 +272,7 @@ pub fn pdf_alluprightonly(PdfDocument, ArrayView[Int]) -> Bool raise @core.PdfEr
 
 pub fn pdf_alluprightonly_cpdf_order(ArrayView[Int], PdfDocument) -> Bool raise @core.PdfError
 
-pub fn pdf_annotation_make(PdfAnnotationSubtype, contents? : Bytes?, border? : PdfAnnotationBorder, rectangle? : PdfRectangle, colour? : PdfAnnotationColour?, subject? : Bytes?) -> PdfAnnotation
+pub fn pdf_annotation_make(PdfAnnotationSubtype, contents? : Bytes?, border? : PdfAnnotationBorder, rectangle? : @geometry.PdfRectangle, colour? : PdfAnnotationColour?, subject? : Bytes?) -> PdfAnnotation
 
 pub fn pdf_annotation_make_border(Double, vertical_radius? : Double, horizontal_radius? : Double, style? : PdfAnnotationStyle, dash_array? : ArrayView[Int]) -> PdfAnnotationBorder
 
@@ -390,7 +390,7 @@ pub fn pdf_bytes_to_array(Bytes) -> Array[Byte]
 
 pub fn pdf_bytes_to_fixed_array(Bytes) -> FixedArray[Byte]
 
-pub fn pdf_calculate_position(Bool, Double, PdfRectangle, PdfPosition) -> PdfCalculatedPosition
+pub fn pdf_calculate_position(Bool, Double, @geometry.PdfRectangle, PdfPosition) -> PdfCalculatedPosition
 
 pub fn pdf_ccitt_encode(Int, Int, Bytes) -> Bytes raise @core.PdfError
 
@@ -572,15 +572,15 @@ pub fn pdf_content_dash_pattern_content_json(PdfContentDashPattern) -> Json
 
 pub fn pdf_content_end_artifact() -> @content.PdfContentOp
 
-pub fn pdf_content_entries_of_ops(PdfDocument, PdfRectangle, @syntax.PdfObject, ArrayView[@content.PdfContentOp]) -> Array[PdfContentJsonEntry] raise @core.PdfError
+pub fn pdf_content_entries_of_ops(PdfDocument, @geometry.PdfRectangle, @syntax.PdfObject, ArrayView[@content.PdfContentOp]) -> Array[PdfContentJsonEntry] raise @core.PdfError
 
-pub fn pdf_content_entries_of_ops_recursive(PdfDocument, PdfRectangle, @syntax.PdfObject, ArrayView[@content.PdfContentOp]) -> Array[PdfContentJsonEntry] raise @core.PdfError
+pub fn pdf_content_entries_of_ops_recursive(PdfDocument, @geometry.PdfRectangle, @syntax.PdfObject, ArrayView[@content.PdfContentOp]) -> Array[PdfContentJsonEntry] raise @core.PdfError
 
 pub fn pdf_content_entries_of_page(PdfDocument, PdfPage) -> Array[PdfContentJsonEntry] raise @core.PdfError
 
 pub fn pdf_content_extra_metrics(PdfFont) -> (Double, Double)
 
-pub fn pdf_content_filter(PdfDocument, (PdfContentJsonEntry) -> Bool, PdfRectangle, @syntax.PdfObject, ArrayView[@content.PdfContentOp]) -> Array[@content.PdfContentOp] raise @core.PdfError
+pub fn pdf_content_filter(PdfDocument, (PdfContentJsonEntry) -> Bool, @geometry.PdfRectangle, @syntax.PdfObject, ArrayView[@content.PdfContentOp]) -> Array[@content.PdfContentOp] raise @core.PdfError
 
 pub fn pdf_content_form_xobject_enter_state(PdfDocument, PdfContentOperatorState, @syntax.PdfObject, @core.PdfName) -> PdfContentOperatorState? raise @core.PdfError
 
@@ -618,7 +618,7 @@ pub fn pdf_content_json_entries_content_json(ArrayView[PdfContentJsonEntry]) -> 
 
 pub fn pdf_content_json_entry_content_json(PdfContentJsonEntry) -> Json
 
-pub fn pdf_content_json_of_ops(PdfDocument, PdfRectangle, @syntax.PdfObject, ArrayView[@content.PdfContentOp]) -> Json raise @core.PdfError
+pub fn pdf_content_json_of_ops(PdfDocument, @geometry.PdfRectangle, @syntax.PdfObject, ArrayView[@content.PdfContentOp]) -> Json raise @core.PdfError
 
 pub fn pdf_content_json_of_page(PdfDocument, PdfPage) -> Json raise @core.PdfError
 
@@ -636,7 +636,7 @@ pub fn pdf_content_read_pattern(PdfDocument, @syntax.PdfObject, @core.PdfName) -
 
 pub fn pdf_content_read_tiling_pattern(@syntax.PdfObject) -> PdfContentPattern
 
-pub fn pdf_content_shading_entry(PdfContentOperatorState, @core.PdfName, PdfRectangle?) -> PdfContentJsonEntry?
+pub fn pdf_content_shading_entry(PdfContentOperatorState, @core.PdfName, @geometry.PdfRectangle?) -> PdfContentJsonEntry?
 
 pub fn pdf_content_shading_entry_from_resources(PdfDocument, PdfContentOperatorState, @syntax.PdfObject, @core.PdfName) -> PdfContentJsonEntry?
 
@@ -650,7 +650,7 @@ pub fn pdf_content_text_layout_of_bytes(PdfFont, BytesView, PdfContentTextLayout
 
 pub fn pdf_content_text_layout_of_tj_array(PdfFont, ArrayView[@syntax.PdfObject], PdfContentTextLayout) -> PdfContentTextLayoutResult
 
-pub fn pdf_content_to_json(PdfDocument, PdfRectangle, @syntax.PdfObject, ArrayView[@content.PdfContentOp]) -> Json raise @core.PdfError
+pub fn pdf_content_to_json(PdfDocument, @geometry.PdfRectangle, @syntax.PdfObject, ArrayView[@content.PdfContentOp]) -> Json raise @core.PdfError
 
 pub fn pdf_content_width_of_charcode(PdfFont, Int) -> (Double, Double, Double)
 
@@ -1406,11 +1406,11 @@ pub fn pdf_parse_unicode_data(BytesView) -> Array[PdfUnicodeDataEntry] raise @co
 
 pub fn pdf_parse_units_string(PdfDocument, PdfPage, String) -> Array[Double] raise @core.PdfError
 
-pub fn pdf_path_bounds(PdfPath) -> PdfRectangle
+pub fn pdf_path_bounds(PdfPath) -> @geometry.PdfRectangle
 
 pub fn pdf_path_content_bounding_box(PdfPath, @geometry.TransformMatrix, Double, Bool) -> PdfContentBoundingBox?
 
-pub fn pdf_path_segment_bounds(PdfPathSegment) -> PdfRectangle
+pub fn pdf_path_segment_bounds(PdfPathSegment) -> @geometry.PdfRectangle
 
 pub fn pdf_path_segment_content_json(PdfPathSegment) -> Json
 
@@ -1800,9 +1800,9 @@ pub fn pdf_shortest_unused_prefix(PdfDocument) -> String
 
 pub fn pdf_show_annotation_bounding_boxes(PdfDocument, ArrayView[Int], light? : Bool, fast? : Bool) -> PdfDocument raise @core.PdfError
 
-pub fn pdf_show_bounding_boxes(PdfDocument, ArrayView[Int], shape? : PdfRectangle?, light? : Bool, fast? : Bool) -> PdfDocument raise @core.PdfError
+pub fn pdf_show_bounding_boxes(PdfDocument, ArrayView[Int], shape? : @geometry.PdfRectangle?, light? : Bool, fast? : Bool) -> PdfDocument raise @core.PdfError
 
-pub fn pdf_show_bounding_boxes_cpdf_order(Bool, PdfRectangle?, Bool, PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+pub fn pdf_show_bounding_boxes_cpdf_order(Bool, @geometry.PdfRectangle?, Bool, PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_show_boxes(PdfDocument, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
 
@@ -2305,7 +2305,7 @@ pub(all) struct PdfAddTextUrlAnnotationGeometry {
   p1 : @geometry.Point2
   p2 : @geometry.Point2
   p3 : @geometry.Point2
-  rectangle : PdfRectangle
+  rectangle : @geometry.PdfRectangle
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfAddTextUrlLine {
@@ -2317,7 +2317,7 @@ pub(all) struct PdfAnnotation {
   subtype : PdfAnnotationSubtype
   contents : Bytes?
   subject : Bytes?
-  rectangle : PdfRectangle
+  rectangle : @geometry.PdfRectangle
   border : PdfAnnotationBorder
   colour : PdfAnnotationColour?
   rest : @syntax.PdfObject
@@ -2717,7 +2717,7 @@ pub fn PdfContentOperatorState::content_apply_type3_metrics_op(Self, @content.Pd
 pub fn PdfContentOperatorState::content_image_entry(Self, @core.PdfName) -> PdfContentJsonEntry
 pub fn PdfContentOperatorState::content_inline_image_entry(Self) -> PdfContentJsonEntry
 pub fn PdfContentOperatorState::content_path_entry(Self, Bool) -> PdfContentJsonEntry?
-pub fn PdfContentOperatorState::content_shading_entry(Self, @core.PdfName, PdfRectangle?) -> PdfContentJsonEntry?
+pub fn PdfContentOperatorState::content_shading_entry(Self, @core.PdfName, @geometry.PdfRectangle?) -> PdfContentJsonEntry?
 pub fn PdfContentOperatorState::content_text_glyph_entry(Self, PdfFont, PdfContentTextGlyphPlacement) -> PdfContentJsonEntry raise @core.PdfError
 pub fn PdfContentOperatorState::content_unit_square_bounding_box(Self) -> PdfContentBoundingBox
 
@@ -3004,15 +3004,15 @@ pub fn PdfDocument::content_apply_extgstate_transfer_op(Self, PdfContentOperator
 pub fn PdfDocument::content_apply_font_resource_op(Self, PdfContentOperatorState, @syntax.PdfObject, @core.PdfName, Double) -> PdfContentOperatorState raise @core.PdfError
 pub fn PdfDocument::content_apply_resource_op(Self, PdfContentOperatorState, @syntax.PdfObject, @content.PdfContentOp) -> PdfContentOperatorResourceResult raise @core.PdfError
 pub fn PdfDocument::content_apply_text_resource_op(Self, PdfContentOperatorState, @syntax.PdfObject, @content.PdfContentOp) -> PdfContentOperatorTextResult raise @core.PdfError
-pub fn PdfDocument::content_entries_of_ops(Self, PdfRectangle, @syntax.PdfObject, ArrayView[@content.PdfContentOp]) -> Array[PdfContentJsonEntry] raise @core.PdfError
-pub fn PdfDocument::content_entries_of_ops_recursive(Self, PdfRectangle, @syntax.PdfObject, ArrayView[@content.PdfContentOp]) -> Array[PdfContentJsonEntry] raise @core.PdfError
+pub fn PdfDocument::content_entries_of_ops(Self, @geometry.PdfRectangle, @syntax.PdfObject, ArrayView[@content.PdfContentOp]) -> Array[PdfContentJsonEntry] raise @core.PdfError
+pub fn PdfDocument::content_entries_of_ops_recursive(Self, @geometry.PdfRectangle, @syntax.PdfObject, ArrayView[@content.PdfContentOp]) -> Array[PdfContentJsonEntry] raise @core.PdfError
 pub fn PdfDocument::content_entries_of_page(Self, PdfPage) -> Array[PdfContentJsonEntry] raise @core.PdfError
-pub fn PdfDocument::content_filter(Self, PdfRectangle, @syntax.PdfObject, ArrayView[@content.PdfContentOp], (PdfContentJsonEntry) -> Bool) -> Array[@content.PdfContentOp] raise @core.PdfError
+pub fn PdfDocument::content_filter(Self, @geometry.PdfRectangle, @syntax.PdfObject, ArrayView[@content.PdfContentOp], (PdfContentJsonEntry) -> Bool) -> Array[@content.PdfContentOp] raise @core.PdfError
 pub fn PdfDocument::content_form_xobject_enter_state(Self, PdfContentOperatorState, @syntax.PdfObject, @core.PdfName) -> PdfContentOperatorState? raise @core.PdfError
 pub fn PdfDocument::content_form_xobject_ops(Self, @syntax.PdfObject, @core.PdfName) -> Array[@content.PdfContentOp]? raise @core.PdfError
 pub fn PdfDocument::content_form_xobject_resources(Self, @syntax.PdfObject, @core.PdfName) -> @syntax.PdfObject? raise @core.PdfError
 pub fn PdfDocument::content_image_entry_from_resources(Self, PdfContentOperatorState, @syntax.PdfObject, @core.PdfName) -> PdfContentJsonEntry? raise @core.PdfError
-pub fn PdfDocument::content_json_of_ops(Self, PdfRectangle, @syntax.PdfObject, ArrayView[@content.PdfContentOp]) -> Json raise @core.PdfError
+pub fn PdfDocument::content_json_of_ops(Self, @geometry.PdfRectangle, @syntax.PdfObject, ArrayView[@content.PdfContentOp]) -> Json raise @core.PdfError
 pub fn PdfDocument::content_json_of_page(Self, PdfPage) -> Json raise @core.PdfError
 pub fn PdfDocument::content_read_axial_shading(Self, @syntax.PdfObject) -> PdfContentShadingKind raise @core.PdfError
 pub fn PdfDocument::content_read_function_shading(Self, @syntax.PdfObject) -> PdfContentShadingKind raise @core.PdfError
@@ -3180,7 +3180,7 @@ pub fn PdfDocument::parse_coordinates_tuple(Self, String) -> Array[(Double, Doub
 pub fn PdfDocument::parse_function(Self, @syntax.PdfObject) -> PdfFunction raise @core.PdfError
 pub fn PdfDocument::parse_matrix(Self, @core.PdfName, @syntax.PdfObject) -> @geometry.TransformMatrix raise @core.PdfError
 pub fn PdfDocument::parse_pagespec(Self, String) -> Array[Int] raise @core.PdfError
-pub fn PdfDocument::parse_rectangle(Self, @syntax.PdfObject) -> PdfRectangle raise @core.PdfError
+pub fn PdfDocument::parse_rectangle(Self, @syntax.PdfObject) -> @geometry.PdfRectangle raise @core.PdfError
 pub fn PdfDocument::parse_single_number(Self, String) -> Double raise @core.PdfError
 pub fn PdfDocument::parse_units_string(Self, PdfPage, String) -> Array[Double] raise @core.PdfError
 pub fn PdfDocument::parsed_object_entries(Self) -> Array[(Int, Int, @syntax.PdfObject)]
@@ -3306,7 +3306,7 @@ pub fn PdfDocument::shift_pages(Self, ArrayView[Int], ArrayView[(Double, Double)
 pub fn PdfDocument::shift_pdf(Self, ArrayView[Int], ArrayView[(Double, Double)], fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::shortest_unused_prefix(Self) -> String
 pub fn PdfDocument::show_annotation_bounding_boxes(Self, ArrayView[Int], light? : Bool, fast? : Bool) -> Self raise @core.PdfError
-pub fn PdfDocument::show_bounding_boxes(Self, ArrayView[Int], shape? : PdfRectangle?, light? : Bool, fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::show_bounding_boxes(Self, ArrayView[Int], shape? : @geometry.PdfRectangle?, light? : Bool, fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::show_page_boxes(Self, ArrayView[Int], fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::size_attached_files(Self) -> Int raise @core.PdfError
 pub fn PdfDocument::squeeze(Self, page_data? : Bool) -> Self raise @core.PdfError
@@ -3659,7 +3659,7 @@ pub(all) struct PdfFontDescriptor {
   avgwidth : Double
   maxwidth : Double
   flags : Int
-  fontbbox : PdfRectangle
+  fontbbox : @geometry.PdfRectangle
   italicangle : Double
   capheight : Double
   xheight : Double
@@ -3939,7 +3939,7 @@ pub(all) struct PdfPath {
   winding_rule : PdfPathWindingRule
   subpaths : Array[PdfPathSubpath]
 } derive(Eq, ToJson, @debug.Debug)
-pub fn PdfPath::bounds(Self) -> PdfRectangle
+pub fn PdfPath::bounds(Self) -> @geometry.PdfRectangle
 pub fn PdfPath::content_bounding_box(Self, @geometry.TransformMatrix, Double, Bool) -> PdfContentBoundingBox?
 pub fn PdfPath::transform(Self, @geometry.TransformMatrix) -> Self
 
@@ -3957,7 +3957,7 @@ pub(all) enum PdfPathSegment {
   PdfPathStraight(@geometry.Point2, @geometry.Point2)
   PdfPathBezier(@geometry.Point2, @geometry.Point2, @geometry.Point2, @geometry.Point2)
 } derive(Eq, ToJson, @debug.Debug)
-pub fn PdfPathSegment::bounds(Self) -> PdfRectangle
+pub fn PdfPathSegment::bounds(Self) -> @geometry.PdfRectangle
 pub fn PdfPathSegment::content_json(Self) -> Json
 pub fn PdfPathSegment::transform(Self, @geometry.TransformMatrix) -> Self
 
@@ -4002,13 +4002,6 @@ pub(all) enum PdfPosition {
   PdfPositionDiagonal
   PdfPositionReverseDiagonal
   PdfPositionCentre
-} derive(Eq, ToJson, @debug.Debug)
-
-pub(all) struct PdfRectangle {
-  min_x : Double
-  min_y : Double
-  max_x : Double
-  max_y : Double
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfSampledFunction {
@@ -4217,7 +4210,7 @@ pub(all) struct PdfTrueTypeTableRecord {
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfType3Glyphs {
-  fontbbox : PdfRectangle
+  fontbbox : @geometry.PdfRectangle
   fontmatrix : @geometry.TransformMatrix
   charprocs : Array[(@core.PdfName, @syntax.PdfObject)]
   resources : @syntax.PdfObject
@@ -4322,6 +4315,8 @@ pub using @syntax {type PdfObject}
 pub using @syntax {type PdfParsedIndirectObject}
 
 pub using @crypt_core {type PdfPermission}
+
+pub using @geometry {type PdfRectangle}
 
 pub using @syntax {type PdfStream}
 
