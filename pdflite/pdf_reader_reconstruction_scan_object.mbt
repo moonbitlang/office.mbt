@@ -66,8 +66,9 @@ fn ByteCursor::read_reconstructed_indirect_scan_candidate_at_current(
   )
   if complete {
     (object, Some(self.absolute_position()))
-  } else if self.stopped_at_pdf_stream_candidate() {
-    let length_result : Result[Int, Error] = try? self.resolve_classic_stream_length(
+  } else if pdf_cursor_stopped_at_stream_candidate(self) {
+    let length_result : Result[Int, Error] = try? pdf_cursor_resolve_classic_stream_length(
+      self,
       object.object,
       xrefs,
       xref_index,

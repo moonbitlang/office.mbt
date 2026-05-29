@@ -912,20 +912,24 @@ test "private reader xref helpers report malformed inputs" {
   @test.assert_eq(xref_stream_ref_set.contains(8, 100), false)
 
   let no_object = byte_cursor_of_bytes(@ascii.encode("notobject"))
-  let no_object_result : Result[PdfParsedIndirectObject, Error] = try? no_object.read_first_indirect_object_at_current(
-    empty_xrefs,
+  let no_object_result : Result[PdfParsedIndirectObject, Error] = try? pdf_cursor_read_first_indirect_object_at_current(
+    no_object, empty_xrefs,
   )
   guard no_object_result is Err(PdfError::ParseIndirectObjectExpected) else {
     fail("expected PdfError::ParseIndirectObjectExpected")
   }
 
   let no_plain_object = byte_cursor_of_bytes(@ascii.encode("notobject"))
-  let no_plain_object_result : Result[PdfParsedIndirectObject, Error] = try? no_plain_object.read_plain_indirect_object_at_current()
+  let no_plain_object_result : Result[PdfParsedIndirectObject, Error] = try? pdf_cursor_read_plain_indirect_object_at_current(
+    no_plain_object,
+  )
   guard no_plain_object_result is Err(PdfError::ParseIndirectObjectExpected) else {
     fail("expected PdfError::ParseIndirectObjectExpected")
   }
   @test.assert_eq(
-    try! byte_cursor_of_bytes(@ascii.encode("2 0 obj\n42\n")).read_plain_indirect_object_at_current(),
+    try! pdf_cursor_read_plain_indirect_object_at_current(
+      byte_cursor_of_bytes(@ascii.encode("2 0 obj\n42\n")),
+    ),
     { number: 2, generation: 0, object: PdfInteger(42) },
   )
   let adjacent_source = @ascii.encode(
@@ -933,7 +937,7 @@ test "private reader xref helpers report malformed inputs" {
   )
   let adjacent = byte_cursor_of_bytes(adjacent_source)
   @test.assert_eq(
-    try! adjacent.read_first_indirect_object_at_current(empty_xrefs),
+    try! pdf_cursor_read_first_indirect_object_at_current(adjacent, empty_xrefs),
     { number: 2, generation: 0, object: PdfInteger(42) },
   )
   @test.assert_eq(

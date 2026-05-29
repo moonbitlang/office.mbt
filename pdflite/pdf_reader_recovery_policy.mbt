@@ -94,7 +94,8 @@ fn pdf_reader_startxref_object_stream_root_unusable(
                       let object_stream_xref = entry
                       let xref_index = pdf_classic_xref_index(section.entries)
                       cursor.seek_absolute(object_stream_xref.offset)
-                      let parsed = cursor.read_first_indirect_object_at_current(
+                      let parsed = pdf_cursor_read_first_indirect_object_at_current(
+                        cursor,
                         section.entries,
                         xref_index=Some(xref_index),
                       )

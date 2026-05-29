@@ -249,7 +249,7 @@ fn pdf_cursor_read_xref_stream_section(
   if !pdf_is_digit_byte(cursor.peek_byte()) {
     raise XRefExpected
   }
-  let parsed = cursor.read_first_indirect_object_at_current([])
+  let parsed = pdf_cursor_read_first_indirect_object_at_current(cursor, [])
   guard parsed.object is PdfStreamObject(stream) else { raise XRefExpected }
   if !pdf_reader_xref_stream_type_ok(stream.dictionary) {
     raise XRefExpected

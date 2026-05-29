@@ -115,7 +115,8 @@ fn pdf_read_classic_document_from_view_at_revision(
           xref.object_number != 0 &&
           !xref_stream_ref_set.contains(xref.object_number, xref.offset) {
           cursor.seek_absolute(xref.offset)
-          let parsed = cursor.read_first_indirect_object_at_current(
+          let parsed = pdf_cursor_read_first_indirect_object_at_current(
+            cursor,
             xrefs,
             xref_index=Some(xref_index),
           )

@@ -1,11 +1,11 @@
 ///|
-fn ByteCursor::lex_first_pdf_indirect_object_tokens(
-  self : ByteCursor,
+fn pdf_cursor_lex_first_indirect_object_tokens(
+  cursor : ByteCursor,
 ) -> Array[PdfLexeme] raise PdfError {
   let tokens : Array[PdfLexeme] = []
   let mut done = false
   while !done {
-    match pdf_cursor_lex_token(self) {
+    match pdf_cursor_lex_token(cursor) {
       StopLexing | LexNone => done = true
       LexEndObj as token => {
         tokens.push(token)
@@ -18,18 +18,18 @@ fn ByteCursor::lex_first_pdf_indirect_object_tokens(
 }
 
 ///|
-fn ByteCursor::read_plain_indirect_object_at_current(
-  self : ByteCursor,
+fn pdf_cursor_read_plain_indirect_object_at_current(
+  cursor : ByteCursor,
 ) -> PdfParsedIndirectObject raise PdfError {
   let (objects, prefix) = pdf_parse_indirect_object_segments(
-    self.lex_first_pdf_indirect_object_tokens(),
+    pdf_cursor_lex_first_indirect_object_tokens(cursor),
   )
   if objects.length() > 0 {
     objects[0]
   } else {
     match prefix {
       Some(prefix) =>
-        if self.stopped_at_pdf_stream_candidate() {
+        if pdf_cursor_stopped_at_stream_candidate(cursor) {
           raise StreamLengthExpected
         } else {
           prefix
@@ -40,28 +40,28 @@ fn ByteCursor::read_plain_indirect_object_at_current(
 }
 
 ///|
-fn ByteCursor::stopped_at_pdf_stream_candidate(self : ByteCursor) -> Bool {
-  let position = self.absolute_position()
-  pdf_cursor_matches_ascii_at(self, position, [115]) &&
-  !pdf_cursor_matches_ascii_at(self, position, [
+fn pdf_cursor_stopped_at_stream_candidate(cursor : ByteCursor) -> Bool {
+  let position = cursor.absolute_position()
+  pdf_cursor_matches_ascii_at(cursor, position, [115]) &&
+  !pdf_cursor_matches_ascii_at(cursor, position, [
     115, 116, 97, 114, 116, 120, 114, 101, 102,
   ])
 }
 
 ///|
-fn ByteCursor::read_first_indirect_object_segment_at_current(
-  self : ByteCursor,
+fn pdf_cursor_read_first_indirect_object_segment_at_current(
+  cursor : ByteCursor,
 ) -> (PdfParsedIndirectObject, Bool) raise PdfError {
   let (object, _, complete) = pdf_parse_indirect_object_segment_at(
-    self.lex_first_pdf_indirect_object_tokens(),
+    pdf_cursor_lex_first_indirect_object_tokens(cursor),
     0,
   )
   (object, complete)
 }
 
 ///|
-fn ByteCursor::resolve_classic_stream_length(
-  self : ByteCursor,
+fn pdf_cursor_resolve_classic_stream_length(
+  cursor : ByteCursor,
   object : PdfObject,
   xrefs : ArrayView[PdfClassicXRefEntry],
   xref_index : PdfClassicXRefIndex?,
@@ -75,10 +75,12 @@ fn ByteCursor::resolve_classic_stream_length(
       }
       match xref {
         Some(xref) => {
-          let saved_position = self.absolute_position()
-          self.seek_absolute(xref.offset)
-          let parsed_result : Result[(PdfParsedIndirectObject, Bool), Error] = try? self.read_first_indirect_object_segment_at_current()
-          self.seek_absolute(saved_position)
+          let saved_position = cursor.absolute_position()
+          cursor.seek_absolute(xref.offset)
+          let parsed_result : Result[(PdfParsedIndirectObject, Bool), Error] = try? pdf_cursor_read_first_indirect_object_segment_at_current(
+            cursor,
+          )
+          cursor.seek_absolute(saved_position)
           let (parsed, complete) = match parsed_result {
             Ok(parsed) => parsed
             Err(_) => raise StreamLengthExpected
@@ -102,21 +104,22 @@ fn ByteCursor::resolve_classic_stream_length(
 }
 
 ///|
-fn ByteCursor::read_first_indirect_object_at_current(
-  self : ByteCursor,
+fn pdf_cursor_read_first_indirect_object_at_current(
+  cursor : ByteCursor,
   xrefs : ArrayView[PdfClassicXRefEntry],
   xref_index? : PdfClassicXRefIndex? = None,
 ) -> PdfParsedIndirectObject raise PdfError {
   let (object, _, complete) = pdf_parse_indirect_object_segment_at(
-    self.lex_first_pdf_indirect_object_tokens(),
+    pdf_cursor_lex_first_indirect_object_tokens(cursor),
     0,
   )
   if complete {
     object
-  } else if !self.stopped_at_pdf_stream_candidate() {
+  } else if !pdf_cursor_stopped_at_stream_candidate(cursor) {
     object
   } else {
-    let length_result : Result[Int, Error] = try? self.resolve_classic_stream_length(
+    let length_result : Result[Int, Error] = try? pdf_cursor_resolve_classic_stream_length(
+      cursor,
       object.object,
       xrefs,
       xref_index,
@@ -124,12 +127,12 @@ fn ByteCursor::read_first_indirect_object_at_current(
     match length_result {
       Ok(length) =>
         pdf_cursor_finish_stream_object_with_length(
-          self,
+          cursor,
           object,
           length,
           defer_stream_data=true,
         )
-      Err(_) => pdf_cursor_finish_malformed_stream_object(self, object)
+      Err(_) => pdf_cursor_finish_malformed_stream_object(cursor, object)
     }
   }
 }

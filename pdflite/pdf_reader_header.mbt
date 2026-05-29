@@ -144,7 +144,7 @@ pub fn pdf_read_primitive_document_from_view(
     }
     match prefix {
       Some(prefix) =>
-        if cursor.stopped_at_pdf_stream_candidate() {
+        if pdf_cursor_stopped_at_stream_candidate(cursor) {
           let stream = pdf_cursor_finish_stream_object(cursor, prefix)
           document.load_object_given_number(
             stream.number,

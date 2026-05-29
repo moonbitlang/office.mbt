@@ -294,7 +294,7 @@ fn pdf_parse_object_stream_member_from_view(
 ) -> PdfObject raise PdfError {
   let cursor = byte_cursor_of_view(data)
   let object = pdf_parse_single_lexeme_object(pdf_cursor_lex_tokens(cursor))
-  if cursor.stopped_at_pdf_stream_candidate() {
+  if pdf_cursor_stopped_at_stream_candidate(cursor) {
     match object {
       PdfDictionary(_) =>
         pdf_cursor_finish_object_stream_member(cursor, {
