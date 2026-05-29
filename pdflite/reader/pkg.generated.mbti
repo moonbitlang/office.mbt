@@ -29,6 +29,14 @@ pub fn pdf_read_header_from_view(BytesView) -> PdfVersion raise @core.PdfError
 
 pub fn pdf_read_startxref_position(BytesView) -> Int raise @core.PdfError
 
+pub fn pdf_xref_stream_entries(BytesView, (Int, Int, Int), ArrayView[(Int, Int)]) -> Array[PdfClassicXRefEntry] raise @core.PdfError
+
+pub fn pdf_xref_stream_entry_capacity(ArrayView[(Int, Int)]) -> Int raise @core.PdfError
+
+pub fn pdf_xref_stream_read_entry(BytesView, Int, Int, Int, Int) -> (Int, Int, Int, Int) raise @core.PdfError
+
+pub fn pdf_xref_stream_read_field(BytesView, Int, Int) -> (Int, Int) raise @core.PdfError
+
 pub fn pdf_xref_token_in_use(BytesView) -> Bool raise @core.PdfError
 
 // Errors

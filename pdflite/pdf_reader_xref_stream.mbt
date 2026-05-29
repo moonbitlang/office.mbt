@@ -128,120 +128,6 @@ fn pdf_xref_stream_index_pairs(
 }
 
 ///|
-fn pdf_xref_stream_entry_capacity(
-  index_pairs : ArrayView[(Int, Int)],
-) -> Int raise PdfError {
-  let mut capacity = 0
-  for pair in index_pairs {
-    let count = pair.1
-    let next = capacity + count
-    if next < capacity {
-      raise XRefEntryExpected
-    }
-    capacity = next
-  }
-  capacity
-}
-
-///|
-fn pdf_xref_stream_read_field(
-  data : BytesView,
-  position : Int,
-  width : Int,
-) -> (Int, Int) raise PdfError {
-  if width == 0 {
-    (0, position)
-  } else if position < 0 || position + width > data.length() {
-    raise XRefEntryExpected
-  } else {
-    let mut value = 0
-    for i in position..<(position + width) {
-      value = value * 256 + data[i].to_int()
-    }
-    (value, position + width)
-  }
-}
-
-///|
-fn pdf_xref_stream_read_entry(
-  data : BytesView,
-  position : Int,
-  w0 : Int,
-  w1 : Int,
-  w2 : Int,
-) -> (Int, Int, Int, Int) raise PdfError {
-  let (raw_kind, after_kind) = pdf_xref_stream_read_field(data, position, w0)
-  let (field2, after_field2) = pdf_xref_stream_read_field(data, after_kind, w1)
-  let (field3, after_field3) = pdf_xref_stream_read_field(
-    data, after_field2, w2,
-  )
-  let kind = if w0 == 0 { 1 } else { raw_kind }
-  (kind, field2, field3, after_field3)
-}
-
-///|
-fn pdf_xref_stream_entries(
-  data : BytesView,
-  widths : (Int, Int, Int),
-  index_pairs : ArrayView[(Int, Int)],
-) -> Array[PdfClassicXRefEntry] raise PdfError {
-  let (w0, w1, w2) = widths
-  let entries : Array[PdfClassicXRefEntry] = Array::new(
-    capacity=pdf_xref_stream_entry_capacity(index_pairs),
-  )
-  let mut position = 0
-  for pair in index_pairs {
-    let (start_object, count) = pair
-    for offset in 0..<count {
-      let object_number = start_object + offset
-      let (kind, field2, field3, next_position) = pdf_xref_stream_read_entry(
-        data, position, w0, w1, w2,
-      )
-      position = next_position
-      match kind {
-        0 =>
-          entries.push({
-            object_number,
-            offset: field2,
-            generation: field3,
-            in_use: false,
-            object_stream: None,
-          })
-        1 =>
-          entries.push({
-            object_number,
-            offset: field2,
-            generation: field3,
-            in_use: true,
-            object_stream: None,
-          })
-        // Object-stream entries hide older xrefs and are loaded after their
-        // containing object stream has been parsed as a plain entry.
-        2 =>
-          entries.push({
-            object_number,
-            offset: field2,
-            generation: field3,
-            in_use: true,
-            object_stream: Some({ object_stream_number: field2, index: field3 }),
-          })
-        // Unknown entry types are retained as non-loadable markers so a newer
-        // xref stream can still hide older or physically reconstructed objects.
-        _ =>
-          entries.push({
-            object_number,
-            offset: field2,
-            generation: field3,
-            in_use: false,
-            object_stream: None,
-          })
-      }
-    }
-  }
-  entries
-}
-
-///|
 fn pdf_cursor_read_xref_stream_section(
   cursor : ByteCursor,
 ) -> PdfXRefSection raise PdfError {
@@ -259,7 +145,7 @@ fn pdf_cursor_read_xref_stream_section(
   let index_pairs = pdf_xref_stream_index_pairs(decoded_stream.dictionary)
   let data = @syntax.pdf_stream_data_bytes(decoded_stream.data)
   {
-    entries: pdf_xref_stream_entries(data, widths, index_pairs),
+    entries: @reader.pdf_xref_stream_entries(data, widths, index_pairs),
     trailer: pdf_reader_stream_dictionary_without_xref_keys(
       decoded_stream.dictionary,
     ),

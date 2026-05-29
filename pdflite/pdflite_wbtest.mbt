@@ -418,10 +418,10 @@ test "private xref stream helpers cover malformed and deferred entries" {
   }
 
   @test.assert_eq(
-    try! pdf_xref_stream_read_field(@ascii.encode("ab"), 0, 0),
+    try! @reader.pdf_xref_stream_read_field(@ascii.encode("ab"), 0, 0),
     (0, 0),
   )
-  let short_field : Result[(Int, Int), Error] = try? pdf_xref_stream_read_field(
+  let short_field : Result[(Int, Int), Error] = try? @reader.pdf_xref_stream_read_field(
     @ascii.encode("a"),
     0,
     2,
@@ -430,7 +430,7 @@ test "private xref stream helpers cover malformed and deferred entries" {
     fail("expected PdfError::XRefEntryExpected")
   }
 
-  let default_kind_entries = try! pdf_xref_stream_entries(
+  let default_kind_entries = try! @reader.pdf_xref_stream_entries(
     Bytes::from_array([9, 0, 8, 1]),
     (0, 1, 1),
     [(5, 2)],
@@ -441,7 +441,7 @@ test "private xref stream helpers cover malformed and deferred entries" {
   @test.assert_eq(default_kind_entries[0].generation, 0)
   @test.assert_eq(default_kind_entries[0].in_use, true)
 
-  let deferred_entries = try! pdf_xref_stream_entries(
+  let deferred_entries = try! @reader.pdf_xref_stream_entries(
     Bytes::from_array([2, 7, 0, 9, 0, 0]),
     (1, 1, 1),
     [(3, 2)],
