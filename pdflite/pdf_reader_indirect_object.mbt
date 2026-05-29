@@ -123,12 +123,13 @@ fn ByteCursor::read_first_indirect_object_at_current(
     )
     match length_result {
       Ok(length) =>
-        self.finish_pdf_stream_object_with_length(
+        pdf_cursor_finish_stream_object_with_length(
+          self,
           object,
           length,
           defer_stream_data=true,
         )
-      Err(_) => self.finish_pdf_malformed_stream_object(object)
+      Err(_) => pdf_cursor_finish_malformed_stream_object(self, object)
     }
   }
 }

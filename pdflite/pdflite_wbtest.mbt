@@ -1054,11 +1054,9 @@ test "private reader xref helpers report malformed inputs" {
     1,
   )
   let malformed_stream = byte_cursor_of_bytes(@ascii.encode("stream\nabc"))
-  let malformed_stream_result : Result[PdfParsedIndirectObject, Error] = try? malformed_stream.finish_pdf_malformed_stream_object({
-      number: 1,
-      generation: 0,
-      object: PdfDictionary([]),
-    },
+  let malformed_stream_result : Result[PdfParsedIndirectObject, Error] = try? pdf_cursor_finish_malformed_stream_object(
+    malformed_stream,
+    { number: 1, generation: 0, object: PdfDictionary([]) },
   )
   guard malformed_stream_result is Err(PdfError::ParseEndStreamExpected) else {
     fail("expected PdfError::ParseEndStreamExpected")

@@ -74,12 +74,13 @@ fn ByteCursor::read_reconstructed_indirect_scan_candidate_at_current(
     )
     let stream = match length_result {
       Ok(length) =>
-        self.finish_pdf_stream_object_with_length(
+        pdf_cursor_finish_stream_object_with_length(
+          self,
           object,
           length,
           defer_stream_data=true,
         )
-      Err(_) => self.finish_pdf_malformed_stream_object(object)
+      Err(_) => pdf_cursor_finish_malformed_stream_object(self, object)
     }
     (stream, Some(self.absolute_position()))
   } else {

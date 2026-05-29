@@ -68,55 +68,56 @@ fn pdf_reader_stream_end_marker_at(data : BytesView, position : Int) -> Bool {
 }
 
 ///|
-fn ByteCursor::finish_pdf_stream_object(
-  self : ByteCursor,
+fn pdf_cursor_finish_stream_object(
+  cursor : ByteCursor,
   prefix : PdfParsedIndirectObject,
 ) -> PdfParsedIndirectObject raise PdfError {
   let length_result : Result[Int, Error] = try? pdf_stream_length(prefix.object)
   match length_result {
-    Ok(length) => self.finish_pdf_stream_object_with_length(prefix, length)
-    Err(_) => self.finish_pdf_malformed_stream_object(prefix)
+    Ok(length) =>
+      pdf_cursor_finish_stream_object_with_length(cursor, prefix, length)
+    Err(_) => pdf_cursor_finish_malformed_stream_object(cursor, prefix)
   }
 }
 
 ///|
-fn ByteCursor::finish_pdf_stream_object_with_length(
-  self : ByteCursor,
+fn pdf_cursor_finish_stream_object_with_length(
+  cursor : ByteCursor,
   prefix : PdfParsedIndirectObject,
   length : Int,
   defer_stream_data? : Bool = false,
 ) -> PdfParsedIndirectObject raise PdfError {
-  let stream_keyword_position = self.absolute_position()
+  let stream_keyword_position = cursor.absolute_position()
   pdf_cursor_consume_ascii(
-    self,
+    cursor,
     [115, 116, 114, 101, 97, 109],
     ParseStreamExpected,
   )
-  pdf_cursor_consume_stream_start_line_break(self)
-  let data_position = self.position()
-  if self.absolute_position() + length > self.length() {
+  pdf_cursor_consume_stream_start_line_break(cursor)
+  let data_position = cursor.position()
+  if cursor.absolute_position() + length > cursor.length() {
     raise EndOfInput
   }
   let stream_data = if defer_stream_data {
-    self.seek_absolute(self.absolute_position() + length)
-    StreamToGet(stream_to_get(self.deep_copy(), data_position, length))
+    cursor.seek_absolute(cursor.absolute_position() + length)
+    StreamToGet(stream_to_get(cursor.deep_copy(), data_position, length))
   } else {
-    StreamGot(self.read_bytes(length))
+    StreamGot(cursor.read_bytes(length))
   }
-  if !pdf_reader_stream_end_marker_at(self.view(), self.absolute_position()) {
-    self.seek_absolute(stream_keyword_position)
-    self.finish_pdf_malformed_stream_object(prefix)
+  if !pdf_reader_stream_end_marker_at(cursor.view(), cursor.absolute_position()) {
+    cursor.seek_absolute(stream_keyword_position)
+    pdf_cursor_finish_malformed_stream_object(cursor, prefix)
   } else {
-    pdf_cursor_consume_stream_line_break(self)
-    pdf_cursor_drop_whitespace(self)
+    pdf_cursor_consume_stream_line_break(cursor)
+    pdf_cursor_drop_whitespace(cursor)
     pdf_cursor_consume_ascii(
-      self,
+      cursor,
       [101, 110, 100, 115, 116, 114, 101, 97, 109],
       ParseEndStreamExpected,
     )
-    pdf_cursor_drop_whitespace(self)
+    pdf_cursor_drop_whitespace(cursor)
     pdf_cursor_consume_ascii(
-      self,
+      cursor,
       [101, 110, 100, 111, 98, 106],
       ParseEndObjectExpected,
     )
@@ -149,34 +150,34 @@ fn pdf_reader_stream_data_end_before_marker(
 }
 
 ///|
-fn ByteCursor::finish_pdf_malformed_stream_object(
-  self : ByteCursor,
+fn pdf_cursor_finish_malformed_stream_object(
+  cursor : ByteCursor,
   prefix : PdfParsedIndirectObject,
 ) -> PdfParsedIndirectObject raise PdfError {
   pdf_cursor_consume_ascii(
-    self,
+    cursor,
     [115, 116, 114, 101, 97, 109],
     ParseStreamExpected,
   )
-  pdf_cursor_consume_stream_start_line_break(self)
-  let data_start = self.absolute_position()
-  let endstream = pdf_find_ascii_from(self.view(), data_start, [
+  pdf_cursor_consume_stream_start_line_break(cursor)
+  let data_start = cursor.absolute_position()
+  let endstream = pdf_find_ascii_from(cursor.view(), data_start, [
     101, 110, 100, 115, 116, 114, 101, 97, 109,
   ])
   if endstream < 0 {
     raise ParseEndStreamExpected
   }
   let data_end = pdf_reader_stream_data_end_before_marker(
-    self.view(),
+    cursor.view(),
     endstream,
   )
-  let stream_data = self
+  let stream_data = cursor
     .view_at_absolute(data_start, data_end - data_start)
     .to_owned()
-  self.seek_absolute(endstream + 9)
-  pdf_cursor_drop_whitespace(self)
+  cursor.seek_absolute(endstream + 9)
+  pdf_cursor_drop_whitespace(cursor)
   pdf_cursor_consume_ascii(
-    self,
+    cursor,
     [101, 110, 100, 111, 98, 106],
     ParseEndObjectExpected,
   )
@@ -194,30 +195,30 @@ fn ByteCursor::finish_pdf_malformed_stream_object(
 }
 
 ///|
-fn ByteCursor::finish_pdf_object_stream_member_with_length(
-  self : ByteCursor,
+fn pdf_cursor_finish_object_stream_member_with_length(
+  cursor : ByteCursor,
   prefix : PdfParsedIndirectObject,
   length : Int,
 ) -> PdfParsedIndirectObject raise PdfError {
-  let stream_keyword_position = self.absolute_position()
+  let stream_keyword_position = cursor.absolute_position()
   pdf_cursor_consume_ascii(
-    self,
+    cursor,
     [115, 116, 114, 101, 97, 109],
     ParseStreamExpected,
   )
-  pdf_cursor_consume_stream_start_line_break(self)
-  if self.absolute_position() + length > self.length() {
+  pdf_cursor_consume_stream_start_line_break(cursor)
+  if cursor.absolute_position() + length > cursor.length() {
     raise EndOfInput
   }
-  let stream_data = self.read_bytes(length)
-  if !pdf_reader_stream_end_marker_at(self.view(), self.absolute_position()) {
-    self.seek_absolute(stream_keyword_position)
-    self.finish_pdf_malformed_object_stream_member(prefix)
+  let stream_data = cursor.read_bytes(length)
+  if !pdf_reader_stream_end_marker_at(cursor.view(), cursor.absolute_position()) {
+    cursor.seek_absolute(stream_keyword_position)
+    pdf_cursor_finish_malformed_object_stream_member(cursor, prefix)
   } else {
-    pdf_cursor_consume_stream_line_break(self)
-    pdf_cursor_drop_whitespace(self)
+    pdf_cursor_consume_stream_line_break(cursor)
+    pdf_cursor_drop_whitespace(cursor)
     pdf_cursor_consume_ascii(
-      self,
+      cursor,
       [101, 110, 100, 115, 116, 114, 101, 97, 109],
       ParseEndStreamExpected,
     )
@@ -230,31 +231,31 @@ fn ByteCursor::finish_pdf_object_stream_member_with_length(
 }
 
 ///|
-fn ByteCursor::finish_pdf_malformed_object_stream_member(
-  self : ByteCursor,
+fn pdf_cursor_finish_malformed_object_stream_member(
+  cursor : ByteCursor,
   prefix : PdfParsedIndirectObject,
 ) -> PdfParsedIndirectObject raise PdfError {
   pdf_cursor_consume_ascii(
-    self,
+    cursor,
     [115, 116, 114, 101, 97, 109],
     ParseStreamExpected,
   )
-  pdf_cursor_consume_stream_start_line_break(self)
-  let data_start = self.absolute_position()
-  let endstream = pdf_find_ascii_from(self.view(), data_start, [
+  pdf_cursor_consume_stream_start_line_break(cursor)
+  let data_start = cursor.absolute_position()
+  let endstream = pdf_find_ascii_from(cursor.view(), data_start, [
     101, 110, 100, 115, 116, 114, 101, 97, 109,
   ])
   if endstream < 0 {
     raise ParseEndStreamExpected
   }
   let data_end = pdf_reader_stream_data_end_before_marker(
-    self.view(),
+    cursor.view(),
     endstream,
   )
-  let stream_data = self
+  let stream_data = cursor
     .view_at_absolute(data_start, data_end - data_start)
     .to_owned()
-  self.seek_absolute(endstream + 9)
+  cursor.seek_absolute(endstream + 9)
   {
     number: prefix.number,
     generation: prefix.generation,
@@ -269,21 +270,21 @@ fn ByteCursor::finish_pdf_malformed_object_stream_member(
 }
 
 ///|
-fn ByteCursor::finish_pdf_object_stream_member(
-  self : ByteCursor,
+fn pdf_cursor_finish_object_stream_member(
+  cursor : ByteCursor,
   prefix : PdfParsedIndirectObject,
 ) -> PdfParsedIndirectObject raise PdfError {
-  let stream_position = self.absolute_position()
+  let stream_position = cursor.absolute_position()
   let length_result : Result[Int, Error] = try? pdf_stream_length(prefix.object)
   match length_result {
     Ok(length) =>
-      self.finish_pdf_object_stream_member_with_length(prefix, length) catch {
+      pdf_cursor_finish_object_stream_member_with_length(cursor, prefix, length) catch {
         _ => {
-          self.seek_absolute(stream_position)
-          self.finish_pdf_malformed_object_stream_member(prefix)
+          cursor.seek_absolute(stream_position)
+          pdf_cursor_finish_malformed_object_stream_member(cursor, prefix)
         }
       }
-    Err(_) => self.finish_pdf_malformed_object_stream_member(prefix)
+    Err(_) => pdf_cursor_finish_malformed_object_stream_member(cursor, prefix)
   }
 }
 
@@ -296,7 +297,7 @@ fn pdf_parse_object_stream_member_from_view(
   if cursor.stopped_at_pdf_stream_candidate() {
     match object {
       PdfDictionary(_) =>
-        cursor.finish_pdf_object_stream_member({
+        pdf_cursor_finish_object_stream_member(cursor, {
           number: 0,
           generation: 0,
           object,
@@ -331,5 +332,5 @@ pub fn pdf_parse_stream_object_from_view(
   let prefix = pdf_parse_indirect_object_prefix_lexemes(
     pdf_cursor_lex_tokens(cursor),
   )
-  cursor.finish_pdf_stream_object(prefix)
+  pdf_cursor_finish_stream_object(cursor, prefix)
 }
