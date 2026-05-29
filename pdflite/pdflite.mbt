@@ -173,6 +173,17 @@ pub using @page {
 }
 
 ///|
+pub using @annotation {
+  type PdfAnnotation,
+  type PdfAnnotationBorder,
+  type PdfAnnotationColour,
+  type PdfAnnotationStyle,
+  type PdfAnnotationSubtype,
+  pdf_annotation_make,
+  pdf_annotation_make_border,
+}
+
+///|
 pub using @shape {
   type PdfDrawnPath,
   type PdfPath,

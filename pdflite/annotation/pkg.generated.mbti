@@ -1,0 +1,90 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pdflite/annotation"
+
+import {
+  "bobzhang/pdflite/core",
+  "bobzhang/pdflite/geometry",
+  "bobzhang/pdflite/syntax",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn pdf_annotation_make(PdfAnnotationSubtype, contents? : Bytes?, border? : PdfAnnotationBorder, rectangle? : @geometry.PdfRectangle, colour? : PdfAnnotationColour?, subject? : Bytes?) -> PdfAnnotation
+
+pub fn pdf_annotation_make_border(Double, vertical_radius? : Double, horizontal_radius? : Double, style? : PdfAnnotationStyle, dash_array? : ArrayView[Int]) -> PdfAnnotationBorder
+
+// Errors
+
+// Types and methods
+pub(all) struct PdfAnnotation {
+  subtype : PdfAnnotationSubtype
+  contents : Bytes?
+  subject : Bytes?
+  rectangle : @geometry.PdfRectangle
+  border : PdfAnnotationBorder
+  colour : PdfAnnotationColour?
+  rest : @syntax.PdfObject
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfAnnotationBorder {
+  width : Double
+  vertical_radius : Double
+  horizontal_radius : Double
+  style : PdfAnnotationStyle
+  dash_array : Array[Int]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfAnnotationColour {
+  red : Int
+  green : Int
+  blue : Int
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfAnnotationStyle {
+  AnnotationNoStyle
+  AnnotationSolid
+  AnnotationDashed
+  AnnotationBeveled
+  AnnotationInset
+  AnnotationUnderlineStyle
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfAnnotationSubtype {
+  AnnotationText
+  AnnotationLink
+  AnnotationFreeText
+  AnnotationLine
+  AnnotationSquare
+  AnnotationCircle
+  AnnotationPolygon
+  AnnotationPolyLine
+  AnnotationHighlight
+  AnnotationUnderline
+  AnnotationSquiggly
+  AnnotationStrikeOut
+  AnnotationStamp
+  AnnotationCaret
+  AnnotationInk
+  AnnotationPopup(PdfAnnotation)
+  AnnotationFileAttachment
+  AnnotationSound
+  AnnotationMovie
+  AnnotationWidget
+  AnnotationScreen
+  AnnotationPrinterMark
+  AnnotationTrapNet
+  AnnotationWatermark
+  AnnotationThreeDee
+  AnnotationUnknown(@core.PdfName)
+} derive(Eq, ToJson, @debug.Debug)
+
+// Type aliases
+pub type PdfBytes = Bytes
+
+pub using @core {type PdfName}
+
+pub using @syntax {type PdfObject}
+
+pub using @geometry {type PdfRectangle}
+
+// Traits

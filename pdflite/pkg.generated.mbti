@@ -2,6 +2,7 @@
 package "bobzhang/pdflite"
 
 import {
+  "bobzhang/pdflite/annotation",
   "bobzhang/pdflite/content",
   "bobzhang/pdflite/core",
   "bobzhang/pdflite/crypt_core",
@@ -62,7 +63,7 @@ pub let paper_uslegal : @geometry.PaperSize
 
 pub let paper_usletter : @geometry.PaperSize
 
-pub fn pdf_add_annotation(PdfDocument, @page.PdfPage, PdfAnnotation) -> @page.PdfPage raise @core.PdfError
+pub fn pdf_add_annotation(PdfDocument, @page.PdfPage, @annotation.PdfAnnotation) -> @page.PdfPage raise @core.PdfError
 
 pub fn pdf_add_bookmark_title(String, Bool, PdfDocument) -> PdfDocument raise @core.PdfError
 
@@ -274,11 +275,11 @@ pub fn pdf_alluprightonly(PdfDocument, ArrayView[Int]) -> Bool raise @core.PdfEr
 
 pub fn pdf_alluprightonly_cpdf_order(ArrayView[Int], PdfDocument) -> Bool raise @core.PdfError
 
-pub fn pdf_annotation_make(PdfAnnotationSubtype, contents? : Bytes?, border? : PdfAnnotationBorder, rectangle? : @geometry.PdfRectangle, colour? : PdfAnnotationColour?, subject? : Bytes?) -> PdfAnnotation
+pub fn pdf_annotation_make(@annotation.PdfAnnotationSubtype, contents? : Bytes?, border? : @annotation.PdfAnnotationBorder, rectangle? : @geometry.PdfRectangle, colour? : @annotation.PdfAnnotationColour?, subject? : Bytes?) -> @annotation.PdfAnnotation
 
-pub fn pdf_annotation_make_border(Double, vertical_radius? : Double, horizontal_radius? : Double, style? : PdfAnnotationStyle, dash_array? : ArrayView[Int]) -> PdfAnnotationBorder
+pub fn pdf_annotation_make_border(Double, vertical_radius? : Double, horizontal_radius? : Double, style? : @annotation.PdfAnnotationStyle, dash_array? : ArrayView[Int]) -> @annotation.PdfAnnotationBorder
 
-pub fn pdf_annotations_of_page(PdfDocument, @page.PdfPage) -> Array[PdfAnnotation] raise @core.PdfError
+pub fn pdf_annotations_of_page(PdfDocument, @page.PdfPage) -> Array[@annotation.PdfAnnotation] raise @core.PdfError
 
 pub fn pdf_append_page_content(PdfDocument, ArrayView[Int], BytesView, before? : Bool, fast? : Bool) -> PdfDocument raise @core.PdfError
 
@@ -2315,68 +2316,6 @@ pub(all) struct PdfAddTextUrlLine {
   urls : Array[PdfAddTextUrl]
 } derive(Eq, ToJson, @debug.Debug)
 
-pub(all) struct PdfAnnotation {
-  subtype : PdfAnnotationSubtype
-  contents : Bytes?
-  subject : Bytes?
-  rectangle : @geometry.PdfRectangle
-  border : PdfAnnotationBorder
-  colour : PdfAnnotationColour?
-  rest : @syntax.PdfObject
-} derive(Eq, ToJson, @debug.Debug)
-
-pub(all) struct PdfAnnotationBorder {
-  width : Double
-  vertical_radius : Double
-  horizontal_radius : Double
-  style : PdfAnnotationStyle
-  dash_array : Array[Int]
-} derive(Eq, ToJson, @debug.Debug)
-
-pub(all) struct PdfAnnotationColour {
-  red : Int
-  green : Int
-  blue : Int
-} derive(Eq, ToJson, @debug.Debug)
-
-pub(all) enum PdfAnnotationStyle {
-  AnnotationNoStyle
-  AnnotationSolid
-  AnnotationDashed
-  AnnotationBeveled
-  AnnotationInset
-  AnnotationUnderlineStyle
-} derive(Eq, ToJson, @debug.Debug)
-
-pub(all) enum PdfAnnotationSubtype {
-  AnnotationText
-  AnnotationLink
-  AnnotationFreeText
-  AnnotationLine
-  AnnotationSquare
-  AnnotationCircle
-  AnnotationPolygon
-  AnnotationPolyLine
-  AnnotationHighlight
-  AnnotationUnderline
-  AnnotationSquiggly
-  AnnotationStrikeOut
-  AnnotationStamp
-  AnnotationCaret
-  AnnotationInk
-  AnnotationPopup(PdfAnnotation)
-  AnnotationFileAttachment
-  AnnotationSound
-  AnnotationMovie
-  AnnotationWidget
-  AnnotationScreen
-  AnnotationPrinterMark
-  AnnotationTrapNet
-  AnnotationWatermark
-  AnnotationThreeDee
-  AnnotationUnknown(@core.PdfName)
-} derive(Eq, ToJson, @debug.Debug)
-
 pub(all) struct PdfAttachment {
   name : String
   pagenumber : Int
@@ -2904,7 +2843,7 @@ pub struct PdfDocument {
   mut first_xref : Int
   mut revision_read : Int
 } derive(Eq, ToJson, @debug.Debug)
-pub fn PdfDocument::add_annotation(Self, @page.PdfPage, PdfAnnotation) -> @page.PdfPage raise @core.PdfError
+pub fn PdfDocument::add_annotation(Self, @page.PdfPage, @annotation.PdfAnnotation) -> @page.PdfPage raise @core.PdfError
 pub fn PdfDocument::add_bookmark_title(Self, String, Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::add_bookmarks(Self, ArrayView[PdfBookmark]) -> Self raise @core.PdfError
 pub fn PdfDocument::add_bookmarks_from_json(Self, Json, verify? : Bool) -> Self raise @core.PdfError
@@ -2940,7 +2879,7 @@ pub fn PdfDocument::all_pages_upright(Self, ArrayView[Int]) -> Bool raise @core.
 pub fn PdfDocument::all_pages_upright_only(Self, ArrayView[Int]) -> Bool raise @core.PdfError
 pub fn PdfDocument::annotations_json(Self, ArrayView[Int]) -> Json raise @core.PdfError
 pub fn PdfDocument::annotations_json_blob(Self, ArrayView[Int]) -> Bytes raise @core.PdfError
-pub fn PdfDocument::annotations_of_page(Self, @page.PdfPage) -> Array[PdfAnnotation] raise @core.PdfError
+pub fn PdfDocument::annotations_of_page(Self, @page.PdfPage) -> Array[@annotation.PdfAnnotation] raise @core.PdfError
 pub fn PdfDocument::append_page_content(Self, ArrayView[Int], BytesView, before? : Bool, fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::append_page_content_multiple(Self, ArrayView[Bytes], before? : Bool, fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::append_page_content_multiple_ops(Self, ArrayView[Array[@content.PdfContentOp]], before? : Bool, fast? : Bool) -> Self raise @core.PdfError
@@ -3189,7 +3128,7 @@ pub fn PdfDocument::print_font_table(Self, String, Int) -> Bytes raise @core.Pdf
 pub fn PdfDocument::print_fonts(Self, ArrayView[Int], json? : Bool) -> Bytes raise @core.PdfError
 pub fn PdfDocument::process_pages(Self, ArrayView[Int], (Int, @page.PdfPage) -> (@page.PdfPage, Int, @geometry.TransformMatrix) raise @core.PdfError) -> Self raise @core.PdfError
 pub fn PdfDocument::process_xobjects(Self, @page.PdfPage, (Self, @syntax.PdfObject, ArrayView[@syntax.PdfObject]) -> Array[@syntax.PdfObject] raise @core.PdfError) -> Unit raise @core.PdfError
-pub fn PdfDocument::read_annotation(Self, @syntax.PdfObject) -> PdfAnnotation raise @core.PdfError
+pub fn PdfDocument::read_annotation(Self, @syntax.PdfObject) -> @annotation.PdfAnnotation raise @core.PdfError
 pub fn PdfDocument::read_bookmarks(Self, preserve_actions? : Bool) -> Array[PdfBookmark] raise @core.PdfError
 pub fn PdfDocument::read_cid_system_info(Self, @syntax.PdfObject) -> PdfCIDSystemInfo raise @core.PdfError
 pub fn PdfDocument::read_cidkeyed_font(Self, @syntax.PdfObject) -> PdfCIDKeyedFont raise @core.PdfError
@@ -4201,6 +4140,16 @@ pub using @geometry {type PaperSize}
 pub using @crypt_core {type PdfAesV3RandomField}
 
 pub using @afm {type PdfAfmData}
+
+pub using @annotation {type PdfAnnotation}
+
+pub using @annotation {type PdfAnnotationBorder}
+
+pub using @annotation {type PdfAnnotationColour}
+
+pub using @annotation {type PdfAnnotationStyle}
+
+pub using @annotation {type PdfAnnotationSubtype}
 
 pub type PdfBytes = Bytes
 

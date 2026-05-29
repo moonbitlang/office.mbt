@@ -126,7 +126,7 @@ fn PdfDocument::pdf_annotation_border(
             style: AnnotationNoStyle,
             dash_array: self.pdf_annotation_number_array(dash_array),
           }
-        _ => pdf_annotation_default_border()
+        _ => pdf_annotation_make_border(1.0)
       }
   }
 }
