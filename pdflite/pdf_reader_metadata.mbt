@@ -1,9 +1,7 @@
 ///|
-fn ByteCursor::read_pdf_linearized_marker(
-  self : ByteCursor,
-) -> Bool raise PdfError {
-  ignore(pdf_read_header_from_cursor(self))
-  let parsed = self.read_plain_indirect_object_at_current()
+fn pdf_read_linearized_marker(cursor : ByteCursor) -> Bool raise PdfError {
+  ignore(pdf_read_header_from_cursor(cursor))
+  let parsed = cursor.read_plain_indirect_object_at_current()
   match parsed.object.lookup_immediate(pdf_reader_linearized_name()) {
     Some(PdfInteger(_)) | Some(PdfReal(_)) => true
     _ => false
@@ -12,7 +10,9 @@ fn ByteCursor::read_pdf_linearized_marker(
 
 ///|
 fn pdf_read_was_linearized(data : BytesView) -> Bool {
-  let result : Result[Bool, Error] = try? byte_cursor_of_view(data).read_pdf_linearized_marker()
+  let result : Result[Bool, Error] = try? pdf_read_linearized_marker(
+    byte_cursor_of_view(data),
+  )
   match result {
     Ok(value) => value
     Err(_) => false
