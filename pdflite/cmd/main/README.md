@@ -30,7 +30,7 @@ currently available in MoonBit nightly, so run them with a nightly toolchain:
 moon run --target native --release --build-only cmd/main
 PDFLITE_CLI="$PWD/_build/native/release/build/cmd/main/main.exe" \
 PDFLITE_LOGO_PDF="$PWD/fixtures/camlpdf/logo.pdf" \
-moon cram test tests/cram
+moon cram test --shell /bin/bash --timeout-seconds 120 tests/cram
 ```
 
 ## Package Notes
