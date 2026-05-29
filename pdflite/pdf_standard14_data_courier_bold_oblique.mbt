@@ -11,39 +11,39 @@
 // or obligation to support the use of the AFM files.
 
 ///|
-fn pdf_standard14_courier_afm_data() -> PdfAfmData {
+fn pdf_standard14_courier_bold_oblique_afm_data() -> PdfAfmData {
   {
     headers: [
       pdf_standard14_afm_header("StartFontMetrics", "4.1"),
       pdf_standard14_afm_header(
-        "Comment", "Copyright (c) 1989, 1990, 1991, 1992, 1993, 1997 Adobe Systems Incorporated.  All Rights Reserved.",
+        "Comment", "Copyright (c) 1989, 1990, 1991, 1993, 1997 Adobe Systems Incorporated.  All Rights Reserved.",
       ),
       pdf_standard14_afm_header(
-        "Comment", "Creation Date: Thu May  1 17:27:09 1997",
+        "Comment", "Creation Date: Mon Jun 23 16:28:46 1997",
       ),
-      pdf_standard14_afm_header("Comment", "UniqueID 43050"),
-      pdf_standard14_afm_header("Comment", "VMusage 39754 50779"),
-      pdf_standard14_afm_header("FontName", "Courier"),
-      pdf_standard14_afm_header("FullName", "Courier"),
+      pdf_standard14_afm_header("Comment", "UniqueID 43049"),
+      pdf_standard14_afm_header("Comment", "VMusage 17529 79244"),
+      pdf_standard14_afm_header("FontName", "Courier-BoldOblique"),
+      pdf_standard14_afm_header("FullName", "Courier Bold Oblique"),
       pdf_standard14_afm_header("FamilyName", "Courier"),
-      pdf_standard14_afm_header("Weight", "Medium"),
-      pdf_standard14_afm_header("ItalicAngle", "0"),
+      pdf_standard14_afm_header("Weight", "Bold"),
+      pdf_standard14_afm_header("ItalicAngle", "-12"),
       pdf_standard14_afm_header("IsFixedPitch", "true"),
       pdf_standard14_afm_header("CharacterSet", "ExtendedRoman"),
-      pdf_standard14_afm_header("FontBBox", "-23 -250 715 805 "),
+      pdf_standard14_afm_header("FontBBox", "-57 -250 869 801 "),
       pdf_standard14_afm_header("UnderlinePosition", "-100"),
       pdf_standard14_afm_header("UnderlineThickness", "50"),
       pdf_standard14_afm_header("Version", "003.000"),
       pdf_standard14_afm_header(
-        "Notice", "Copyright (c) 1989, 1990, 1991, 1992, 1993, 1997 Adobe Systems Incorporated.  All Rights Reserved.",
+        "Notice", "Copyright (c) 1989, 1990, 1991, 1993, 1997 Adobe Systems Incorporated.  All Rights Reserved.",
       ),
       pdf_standard14_afm_header("EncodingScheme", "AdobeStandardEncoding"),
       pdf_standard14_afm_header("CapHeight", "562"),
-      pdf_standard14_afm_header("XHeight", "426"),
+      pdf_standard14_afm_header("XHeight", "439"),
       pdf_standard14_afm_header("Ascender", "629"),
       pdf_standard14_afm_header("Descender", "-157"),
-      pdf_standard14_afm_header("StdHW", "51"),
-      pdf_standard14_afm_header("StdVW", "51"),
+      pdf_standard14_afm_header("StdHW", "84"),
+      pdf_standard14_afm_header("StdVW", "106"),
       pdf_standard14_afm_header("StartCharMetrics", "315"),
     ],
     char_metrics: [

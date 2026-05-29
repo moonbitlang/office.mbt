@@ -11,7 +11,7 @@
 // or obligation to support the use of the AFM files.
 
 ///|
-fn pdf_standard14_courier_afm_data() -> PdfAfmData {
+fn pdf_standard14_courier_oblique_afm_data() -> PdfAfmData {
   {
     headers: [
       pdf_standard14_afm_header("StartFontMetrics", "4.1"),
@@ -19,18 +19,18 @@ fn pdf_standard14_courier_afm_data() -> PdfAfmData {
         "Comment", "Copyright (c) 1989, 1990, 1991, 1992, 1993, 1997 Adobe Systems Incorporated.  All Rights Reserved.",
       ),
       pdf_standard14_afm_header(
-        "Comment", "Creation Date: Thu May  1 17:27:09 1997",
+        "Comment", "Creation Date: Thu May  1 17:37:52 1997",
       ),
-      pdf_standard14_afm_header("Comment", "UniqueID 43050"),
-      pdf_standard14_afm_header("Comment", "VMusage 39754 50779"),
-      pdf_standard14_afm_header("FontName", "Courier"),
-      pdf_standard14_afm_header("FullName", "Courier"),
+      pdf_standard14_afm_header("Comment", "UniqueID 43051"),
+      pdf_standard14_afm_header("Comment", "VMusage 16248 75829"),
+      pdf_standard14_afm_header("FontName", "Courier-Oblique"),
+      pdf_standard14_afm_header("FullName", "Courier Oblique"),
       pdf_standard14_afm_header("FamilyName", "Courier"),
       pdf_standard14_afm_header("Weight", "Medium"),
-      pdf_standard14_afm_header("ItalicAngle", "0"),
+      pdf_standard14_afm_header("ItalicAngle", "-12"),
       pdf_standard14_afm_header("IsFixedPitch", "true"),
       pdf_standard14_afm_header("CharacterSet", "ExtendedRoman"),
-      pdf_standard14_afm_header("FontBBox", "-23 -250 715 805 "),
+      pdf_standard14_afm_header("FontBBox", "-27 -250 849 805 "),
       pdf_standard14_afm_header("UnderlinePosition", "-100"),
       pdf_standard14_afm_header("UnderlineThickness", "50"),
       pdf_standard14_afm_header("Version", "003.000"),

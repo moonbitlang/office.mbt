@@ -11,7 +11,7 @@
 // or obligation to support the use of the AFM files.
 
 ///|
-fn pdf_standard14_helvetica_afm_data() -> PdfAfmData {
+fn pdf_standard14_helvetica_oblique_afm_data() -> PdfAfmData {
   {
     headers: [
       pdf_standard14_afm_header("StartFontMetrics", "4.1"),
@@ -19,18 +19,18 @@ fn pdf_standard14_helvetica_afm_data() -> PdfAfmData {
         "Comment", "Copyright (c) 1985, 1987, 1989, 1990, 1997 Adobe Systems Incorporated.  All Rights Reserved.",
       ),
       pdf_standard14_afm_header(
-        "Comment", "Creation Date: Thu May  1 12:38:23 1997",
+        "Comment", "Creation Date: Thu May  1 12:44:31 1997",
       ),
-      pdf_standard14_afm_header("Comment", "UniqueID 43054"),
-      pdf_standard14_afm_header("Comment", "VMusage 37069 48094"),
-      pdf_standard14_afm_header("FontName", "Helvetica"),
-      pdf_standard14_afm_header("FullName", "Helvetica"),
+      pdf_standard14_afm_header("Comment", "UniqueID 43055"),
+      pdf_standard14_afm_header("Comment", "VMusage 14960 69346"),
+      pdf_standard14_afm_header("FontName", "Helvetica-Oblique"),
+      pdf_standard14_afm_header("FullName", "Helvetica Oblique"),
       pdf_standard14_afm_header("FamilyName", "Helvetica"),
       pdf_standard14_afm_header("Weight", "Medium"),
-      pdf_standard14_afm_header("ItalicAngle", "0"),
+      pdf_standard14_afm_header("ItalicAngle", "-12"),
       pdf_standard14_afm_header("IsFixedPitch", "false"),
       pdf_standard14_afm_header("CharacterSet", "ExtendedRoman"),
-      pdf_standard14_afm_header("FontBBox", "-166 -225 1000 931 "),
+      pdf_standard14_afm_header("FontBBox", "-170 -225 1116 931 "),
       pdf_standard14_afm_header("UnderlinePosition", "-100"),
       pdf_standard14_afm_header("UnderlineThickness", "50"),
       pdf_standard14_afm_header("Version", "002.000"),
