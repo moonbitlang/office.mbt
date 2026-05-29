@@ -1,6 +1,8 @@
 ///|
 // Generated from the GB2312 mapping used by Python codecs; checked against system iconv anchors.
-let pdf_text_gb_euc_codepoint_table : Array[(Int, Int)] = [
+///|
+/// Generated predefined CMap lookup data.
+pub let pdf_text_gb_euc_codepoint_table : Array[(Int, Int)] = [
   (0xA1A1, 0x3000),
   (0xA1A2, 0x3001),
   (0xA1A3, 0x3002),
@@ -7450,7 +7452,9 @@ let pdf_text_gb_euc_codepoint_table : Array[(Int, Int)] = [
 
 ///|
 // Reverse lookup table sorted by Unicode scalar, then GB-EUC character code.
-let pdf_text_gb_euc_charcode_table : Array[(Int, Int)] = [
+///|
+/// Generated predefined CMap lookup data.
+pub let pdf_text_gb_euc_charcode_table : Array[(Int, Int)] = [
   (0x00A4, 0xA1E8),
   (0x00A7, 0xA1EC),
   (0x00A8, 0xA1A7),

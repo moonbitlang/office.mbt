@@ -109,13 +109,15 @@ test "private text glyph helpers cover fallback and CID ToUnicode branches" {
   @test.assert_eq(pdf_text_cns1_codepoint_of_cid(-1), None)
   @test.assert_eq(pdf_text_cns1_codepoint_of_cid(0), None)
   @test.assert_eq(
-    pdf_text_cns1_codepoint_of_cid(pdf_text_cns1_unicode_table.length()),
+    pdf_text_cns1_codepoint_of_cid(
+      @cmapdata.pdf_text_cns1_unicode_table.length(),
+    ),
     None,
   )
   @test.assert_eq(pdf_text_gb1_codepoint_of_cid(-1), None)
   @test.assert_eq(pdf_text_gb1_codepoint_of_cid(0), None)
   @test.assert_eq(
-    pdf_text_gb1_codepoint_of_cid(pdf_text_gb1_unicode_table.length()),
+    pdf_text_gb1_codepoint_of_cid(@cmapdata.pdf_text_gb1_unicode_table.length()),
     None,
   )
   @test.assert_eq(

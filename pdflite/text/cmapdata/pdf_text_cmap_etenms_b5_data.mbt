@@ -1,6 +1,8 @@
 ///|
 // Generated from the Adobe ETenms-B5-H CMap, including its ETen-B5-H base.
-let pdf_text_etenms_b5_cid_ranges : Array[(Int, Int, Int)] = [
+///|
+/// Generated predefined CMap lookup data.
+pub let pdf_text_etenms_b5_cid_ranges : Array[(Int, Int, Int)] = [
   (0x0020, 0x007E, 1),
   (0xA140, 0xA158, 99),
   (0xA159, 0xA15C, 13743),

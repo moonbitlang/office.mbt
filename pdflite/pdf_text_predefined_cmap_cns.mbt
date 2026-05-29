@@ -1,9 +1,9 @@
 ///|
 fn pdf_text_cns1_codepoint_of_cid(cid : Int) -> Int? {
-  guard cid >= 0 && cid < pdf_text_cns1_unicode_table.length() else {
+  guard cid >= 0 && cid < @cmapdata.pdf_text_cns1_unicode_table.length() else {
     return None
   }
-  let codepoint = pdf_text_cns1_unicode_table[cid]
+  let codepoint = @cmapdata.pdf_text_cns1_unicode_table[cid]
   if codepoint == 0 {
     None
   } else {
@@ -13,10 +13,10 @@ fn pdf_text_cns1_codepoint_of_cid(cid : Int) -> Int? {
 
 ///|
 fn pdf_text_gb1_codepoint_of_cid(cid : Int) -> Int? {
-  guard cid >= 0 && cid < pdf_text_gb1_unicode_table.length() else {
+  guard cid >= 0 && cid < @cmapdata.pdf_text_gb1_unicode_table.length() else {
     return None
   }
-  let codepoint = pdf_text_gb1_unicode_table[cid]
+  let codepoint = @cmapdata.pdf_text_gb1_unicode_table[cid]
   if codepoint == 0 {
     None
   } else {
@@ -52,7 +52,7 @@ fn pdf_text_predefined_cns1_charcode(
   codepoint : Int,
 ) -> Int? {
   pdf_text_predefined_unicode_table_charcode(
-    pdf_text_cns1_unicode_table, ranges, codepoint,
+    @cmapdata.pdf_text_cns1_unicode_table, ranges, codepoint,
   )
 }
 

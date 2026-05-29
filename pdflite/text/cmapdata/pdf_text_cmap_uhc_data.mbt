@@ -1,6 +1,8 @@
 ///|
 // Generated from the CP949/UHC mapping used by Python codecs; checked against system iconv anchors.
-let pdf_text_uhc_codepoint_table : Array[(Int, Int)] = [
+///|
+/// Generated predefined CMap lookup data.
+pub let pdf_text_uhc_codepoint_table : Array[(Int, Int)] = [
   (0x8141, 0xAC02),
   (0x8142, 0xAC03),
   (0x8143, 0xAC05),
@@ -17053,7 +17055,9 @@ let pdf_text_uhc_codepoint_table : Array[(Int, Int)] = [
 
 ///|
 // Reverse lookup table sorted by Unicode scalar; duplicate scalars use the lowest UHC character code.
-let pdf_text_uhc_charcode_table : Array[(Int, Int)] = [
+///|
+/// Generated predefined CMap lookup data.
+pub let pdf_text_uhc_charcode_table : Array[(Int, Int)] = [
   (0x00A1, 0xA2AE),
   (0x00A4, 0xA2B4),
   (0x00A7, 0xA1D7),

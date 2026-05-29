@@ -1,7 +1,9 @@
 ///|
 // Generated from the Adobe KSCpc-EUC-UCS2 CMap, including its KSCpc-EUC-UCS2C base.
 // Some character codes map to multiple Unicode scalars.
-let pdf_text_kscpc_euc_codepoints_table : Array[(Int, Array[Int])] = [
+///|
+/// Generated predefined CMap lookup data.
+pub let pdf_text_kscpc_euc_codepoints_table : Array[(Int, Array[Int])] = [
   (0x0000, [0x0000]),
   (0x0001, [0x0001]),
   (0x0002, [0x0002]),
@@ -9388,7 +9390,9 @@ let pdf_text_kscpc_euc_codepoints_table : Array[(Int, Array[Int])] = [
 ///|
 // Reverse lookup table for single-scalar mappings, sorted by Unicode scalar.
 // Duplicate Unicode scalars use the lowest KSCpc-EUC character code.
-let pdf_text_kscpc_euc_charcode_table : Array[(Int, Int)] = [
+///|
+/// Generated predefined CMap lookup data.
+pub let pdf_text_kscpc_euc_charcode_table : Array[(Int, Int)] = [
   (0x0000, 0x0000),
   (0x0001, 0x0001),
   (0x0002, 0x0002),

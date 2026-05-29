@@ -4,7 +4,8 @@
 // The CID-to-Unicode table only includes CIDs reachable from the supported CMaps below.
 
 ///|
-let pdf_text_japan1_codepoint_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_codepoint_ranges : Array[(Int, Int, Int)] = [
   (0x000001, 0x00003C, 0x0020),
   (0x00003D, 0x00003D, 0x00A5),
   (0x00003E, 0x00005C, 0x005D),
@@ -7130,7 +7131,8 @@ let pdf_text_japan1_codepoint_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_codepoint_sequence_table : Array[(Int, Array[Int])] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_codepoint_sequence_table : Array[(Int, Array[Int])] = [
   (0x0000E6, [0x0030, 0xFE00]),
   (0x000278, [0x0030, 0xFE00]),
   (0x00046D, [0x9022, 0xE0100]),
@@ -7478,7 +7480,8 @@ let pdf_text_japan1_codepoint_sequence_table : Array[(Int, Array[Int])] = [
 ]
 
 ///|
-let pdf_text_japan1_90ms_rksj_codepoint_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_90ms_rksj_codepoint_ranges : Array[(Int, Int, Int)] = [
   (0x000000, 0x00007F, 0x0000),
   (0x000080, 0x000080, 0x20AC),
   (0x0000A0, 0x0000A0, 0xF8F0),
@@ -14615,12 +14618,14 @@ let pdf_text_japan1_90ms_rksj_codepoint_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_90ms_rksj_codepoint_sequence_table : Array[
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_90ms_rksj_codepoint_sequence_table : Array[
   (Int, Array[Int]),
 ] = []
 
 ///|
-let pdf_text_japan1_90ms_rksj_charcode_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_90ms_rksj_charcode_ranges : Array[(Int, Int, Int)] = [
   (0x000000, 0x00007F, 0x000000),
   (0x0000A7, 0x0000A7, 0x008198),
   (0x0000A8, 0x0000A8, 0x00814E),
@@ -21388,7 +21393,8 @@ let pdf_text_japan1_90ms_rksj_charcode_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_90pv_rksj_codepoint_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_90pv_rksj_codepoint_ranges : Array[(Int, Int, Int)] = [
   (0x000000, 0x00005B, 0x0000),
   (0x00005C, 0x00005C, 0x00A5),
   (0x00005D, 0x00007F, 0x005D),
@@ -27908,7 +27914,8 @@ let pdf_text_japan1_90pv_rksj_codepoint_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_90pv_rksj_codepoint_sequence_table : Array[
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_90pv_rksj_codepoint_sequence_table : Array[
   (Int, Array[Int]),
 ] = [
   (0x008591, [0xF860, 0x0030, 0x002E]),
@@ -27932,7 +27939,8 @@ let pdf_text_japan1_90pv_rksj_codepoint_sequence_table : Array[
 ]
 
 ///|
-let pdf_text_japan1_90pv_rksj_charcode_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_90pv_rksj_charcode_ranges : Array[(Int, Int, Int)] = [
   (0x000000, 0x00005B, 0x000000),
   (0x00005C, 0x00005C, 0x000080),
   (0x00005D, 0x00007F, 0x00005D),
@@ -34420,7 +34428,8 @@ let pdf_text_japan1_90pv_rksj_charcode_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_h_cid_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_h_cid_ranges : Array[(Int, Int, Int)] = [
   (0x002121, 0x00217E, 633),
   (0x002221, 0x00222E, 727),
   (0x00223A, 0x002241, 741),
@@ -34542,7 +34551,8 @@ let pdf_text_japan1_h_cid_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_v_cid_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_v_cid_ranges : Array[(Int, Int, Int)] = [
   (0x002121, 0x002121, 633),
   (0x002122, 0x002123, 7887),
   (0x002124, 0x002130, 636),
@@ -34715,7 +34725,8 @@ let pdf_text_japan1_v_cid_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_78_h_cid_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_78_h_cid_ranges : Array[(Int, Int, Int)] = [
   (0x002121, 0x00217E, 633),
   (0x002221, 0x00222E, 727),
   (0x002330, 0x002339, 780),
@@ -35342,7 +35353,8 @@ let pdf_text_japan1_78_h_cid_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_78_v_cid_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_78_v_cid_ranges : Array[(Int, Int, Int)] = [
   (0x002121, 0x002121, 633),
   (0x002122, 0x002123, 7887),
   (0x002124, 0x002130, 636),
@@ -36020,7 +36032,8 @@ let pdf_text_japan1_78_v_cid_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_78_euc_h_cid_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_78_euc_h_cid_ranges : Array[(Int, Int, Int)] = [
   (0x000020, 0x00007E, 231),
   (0x008EA0, 0x008EDF, 326),
   (0x00A1A1, 0x00A1FE, 633),
@@ -36649,7 +36662,8 @@ let pdf_text_japan1_78_euc_h_cid_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_78_euc_v_cid_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_78_euc_v_cid_ranges : Array[(Int, Int, Int)] = [
   (0x000020, 0x00007E, 231),
   (0x008EA0, 0x008EDF, 326),
   (0x00A1A1, 0x00A1A1, 633),
@@ -37329,7 +37343,8 @@ let pdf_text_japan1_78_euc_v_cid_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_78_rksj_h_cid_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_78_rksj_h_cid_ranges : Array[(Int, Int, Int)] = [
   (0x000020, 0x00007E, 231),
   (0x0000A0, 0x0000DF, 326),
   (0x008140, 0x00817E, 633),
@@ -37959,7 +37974,8 @@ let pdf_text_japan1_78_rksj_h_cid_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_78_rksj_v_cid_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_78_rksj_v_cid_ranges : Array[(Int, Int, Int)] = [
   (0x000020, 0x00007E, 231),
   (0x0000A0, 0x0000DF, 326),
   (0x008140, 0x008140, 633),
@@ -38640,7 +38656,8 @@ let pdf_text_japan1_78_rksj_v_cid_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_78ms_rksj_h_cid_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_78ms_rksj_h_cid_ranges : Array[(Int, Int, Int)] = [
   (0x000020, 0x00007D, 231),
   (0x00007E, 0x00007E, 631),
   (0x0000A0, 0x0000DF, 326),
@@ -39357,7 +39374,8 @@ let pdf_text_japan1_78ms_rksj_h_cid_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_78ms_rksj_v_cid_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_78ms_rksj_v_cid_ranges : Array[(Int, Int, Int)] = [
   (0x000020, 0x00007D, 231),
   (0x00007E, 0x00007E, 631),
   (0x0000A0, 0x0000DF, 326),
@@ -40132,7 +40150,8 @@ let pdf_text_japan1_78ms_rksj_v_cid_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_83pv_rksj_h_cid_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_83pv_rksj_h_cid_ranges : Array[(Int, Int, Int)] = [
   (0x000020, 0x00007E, 1),
   (0x000080, 0x000080, 97),
   (0x0000A0, 0x0000DF, 326),
@@ -40358,7 +40377,8 @@ let pdf_text_japan1_83pv_rksj_h_cid_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_90ms_rksj_h_cid_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_90ms_rksj_h_cid_ranges : Array[(Int, Int, Int)] = [
   (0x000020, 0x00007D, 231),
   (0x00007E, 0x00007E, 631),
   (0x0000A0, 0x0000DF, 326),
@@ -40533,7 +40553,8 @@ let pdf_text_japan1_90ms_rksj_h_cid_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_90ms_rksj_v_cid_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_90ms_rksj_v_cid_ranges : Array[(Int, Int, Int)] = [
   (0x000020, 0x00007D, 231),
   (0x00007E, 0x00007E, 631),
   (0x0000A0, 0x0000DF, 326),
@@ -40766,7 +40787,8 @@ let pdf_text_japan1_90ms_rksj_v_cid_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_90msp_rksj_h_cid_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_90msp_rksj_h_cid_ranges : Array[(Int, Int, Int)] = [
   (0x000020, 0x00007E, 1),
   (0x0000A0, 0x0000DF, 326),
   (0x008140, 0x00817E, 633),
@@ -40940,7 +40962,8 @@ let pdf_text_japan1_90msp_rksj_h_cid_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_90msp_rksj_v_cid_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_90msp_rksj_v_cid_ranges : Array[(Int, Int, Int)] = [
   (0x000020, 0x00007E, 1),
   (0x0000A0, 0x0000DF, 326),
   (0x008140, 0x008140, 633),
@@ -41172,7 +41195,8 @@ let pdf_text_japan1_90msp_rksj_v_cid_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_90pv_rksj_h_cid_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_90pv_rksj_h_cid_ranges : Array[(Int, Int, Int)] = [
   (0x000020, 0x00007E, 1),
   (0x000080, 0x000080, 97),
   (0x0000A0, 0x0000DF, 326),
@@ -41439,7 +41463,8 @@ let pdf_text_japan1_90pv_rksj_h_cid_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_90pv_rksj_v_cid_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_90pv_rksj_v_cid_ranges : Array[(Int, Int, Int)] = [
   (0x000020, 0x00007E, 1),
   (0x000080, 0x000080, 97),
   (0x0000A0, 0x0000DF, 326),
@@ -41755,7 +41780,8 @@ let pdf_text_japan1_90pv_rksj_v_cid_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_add_h_cid_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_add_h_cid_ranges : Array[(Int, Int, Int)] = [
   (0x002121, 0x00217E, 633),
   (0x002221, 0x00222E, 727),
   (0x00223A, 0x002241, 741),
@@ -42390,7 +42416,8 @@ let pdf_text_japan1_add_h_cid_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_add_v_cid_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_add_v_cid_ranges : Array[(Int, Int, Int)] = [
   (0x002121, 0x002121, 633),
   (0x002122, 0x002123, 7887),
   (0x002124, 0x002124, 8268),
@@ -43091,7 +43118,8 @@ let pdf_text_japan1_add_v_cid_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_add_rksj_h_cid_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_add_rksj_h_cid_ranges : Array[(Int, Int, Int)] = [
   (0x000020, 0x00007E, 231),
   (0x0000A0, 0x0000DF, 326),
   (0x008140, 0x00817E, 633),
@@ -43730,7 +43758,8 @@ let pdf_text_japan1_add_rksj_h_cid_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_add_rksj_v_cid_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_add_rksj_v_cid_ranges : Array[(Int, Int, Int)] = [
   (0x000020, 0x00007E, 231),
   (0x0000A0, 0x0000DF, 326),
   (0x008140, 0x008140, 633),
@@ -44435,7 +44464,8 @@ let pdf_text_japan1_add_rksj_v_cid_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_euc_h_cid_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_euc_h_cid_ranges : Array[(Int, Int, Int)] = [
   (0x000020, 0x00007E, 231),
   (0x008EA0, 0x008EDF, 326),
   (0x00A1A1, 0x00A1FE, 633),
@@ -44559,7 +44589,8 @@ let pdf_text_japan1_euc_h_cid_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_euc_v_cid_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_euc_v_cid_ranges : Array[(Int, Int, Int)] = [
   (0x000020, 0x00007E, 231),
   (0x008EA0, 0x008EDF, 326),
   (0x00A1A1, 0x00A1A1, 633),
@@ -44734,7 +44765,8 @@ let pdf_text_japan1_euc_v_cid_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_ext_h_cid_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_ext_h_cid_ranges : Array[(Int, Int, Int)] = [
   (0x002121, 0x002168, 633),
   (0x002169, 0x002169, 7478),
   (0x00216A, 0x00217E, 706),
@@ -45399,7 +45431,8 @@ let pdf_text_japan1_ext_h_cid_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_ext_v_cid_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_ext_v_cid_ranges : Array[(Int, Int, Int)] = [
   (0x002121, 0x002121, 633),
   (0x002122, 0x002123, 7887),
   (0x002124, 0x002124, 8268),
@@ -46126,7 +46159,8 @@ let pdf_text_japan1_ext_v_cid_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_ext_rksj_h_cid_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_ext_rksj_h_cid_ranges : Array[(Int, Int, Int)] = [
   (0x000020, 0x00007E, 231),
   (0x0000A0, 0x0000DF, 326),
   (0x008140, 0x00817E, 633),
@@ -46795,7 +46829,8 @@ let pdf_text_japan1_ext_rksj_h_cid_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_ext_rksj_v_cid_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_ext_rksj_v_cid_ranges : Array[(Int, Int, Int)] = [
   (0x000020, 0x00007E, 231),
   (0x0000A0, 0x0000DF, 326),
   (0x008140, 0x008140, 633),
@@ -47526,7 +47561,8 @@ let pdf_text_japan1_ext_rksj_v_cid_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_hojo_h_cid_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_hojo_h_cid_ranges : Array[(Int, Int, Int)] = [
   (0x00222F, 0x002239, 1),
   (0x002242, 0x002244, 12),
   (0x00226B, 0x002271, 15),
@@ -47614,7 +47650,8 @@ let pdf_text_japan1_hojo_h_cid_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_hojo_v_cid_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_hojo_v_cid_ranges : Array[(Int, Int, Int)] = [
   (0x00222F, 0x002239, 1),
   (0x002242, 0x002244, 12),
   (0x00226B, 0x002271, 15),
@@ -47702,7 +47739,8 @@ let pdf_text_japan1_hojo_v_cid_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_hojo_euc_h_cid_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_hojo_euc_h_cid_ranges : Array[(Int, Int, Int)] = [
   (0x8FA2AF, 0x8FA2B9, 1),
   (0x8FA2C2, 0x8FA2C4, 12),
   (0x8FA2EB, 0x8FA2F1, 15),
@@ -47790,7 +47828,8 @@ let pdf_text_japan1_hojo_euc_h_cid_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_hojo_euc_v_cid_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_hojo_euc_v_cid_ranges : Array[(Int, Int, Int)] = [
   (0x8FA2AF, 0x8FA2B9, 1),
   (0x8FA2C2, 0x8FA2C4, 12),
   (0x8FA2EB, 0x8FA2F1, 15),
@@ -47878,7 +47917,8 @@ let pdf_text_japan1_hojo_euc_v_cid_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_nwp_h_cid_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_nwp_h_cid_ranges : Array[(Int, Int, Int)] = [
   (0x002121, 0x002168, 633),
   (0x002169, 0x002169, 7478),
   (0x00216A, 0x00217E, 706),
@@ -48641,7 +48681,8 @@ let pdf_text_japan1_nwp_h_cid_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_nwp_v_cid_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_nwp_v_cid_ranges : Array[(Int, Int, Int)] = [
   (0x002121, 0x002121, 633),
   (0x002122, 0x002123, 7887),
   (0x002124, 0x002124, 8268),
@@ -49461,7 +49502,8 @@ let pdf_text_japan1_nwp_v_cid_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_rksj_h_cid_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_rksj_h_cid_ranges : Array[(Int, Int, Int)] = [
   (0x000020, 0x00007E, 231),
   (0x0000A0, 0x0000DF, 326),
   (0x008140, 0x00817E, 633),
@@ -49587,7 +49629,8 @@ let pdf_text_japan1_rksj_h_cid_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_japan1_rksj_v_cid_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_japan1_rksj_v_cid_ranges : Array[(Int, Int, Int)] = [
   (0x000020, 0x00007E, 231),
   (0x0000A0, 0x0000DF, 326),
   (0x008140, 0x008140, 633),

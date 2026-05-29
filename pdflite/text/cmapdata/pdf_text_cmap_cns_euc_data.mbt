@@ -5,7 +5,8 @@
 // shorter two-byte CNS-EUC forms before duplicate four-byte forms.
 
 ///|
-let pdf_text_cns_euc_h_cid_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_cns_euc_h_cid_ranges : Array[(Int, Int, Int)] = [
   (0x20, 0x7E, 13648),
   (0xA1A1, 0xA1FE, 99),
   (0xA2A1, 0xA2FE, 193),
@@ -404,7 +405,8 @@ let pdf_text_cns_euc_h_cid_ranges : Array[(Int, Int, Int)] = [
 ]
 
 ///|
-let pdf_text_cns_euc_v_cid_ranges : Array[(Int, Int, Int)] = [
+/// Generated predefined CMap lookup data.
+pub let pdf_text_cns_euc_v_cid_ranges : Array[(Int, Int, Int)] = [
   (0x20, 0x7E, 13648),
   (0xA1A1, 0xA1AB, 99),
   (0xA1AC, 0xA1AC, 13646),

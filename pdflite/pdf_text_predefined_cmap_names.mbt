@@ -103,9 +103,9 @@ fn pdf_text_predefined_cns_euc_cid_ranges(
     return None
   }
   if pdf_text_predefined_cmap_is_vertical(name) {
-    Some(pdf_text_cns_euc_v_cid_ranges)
+    Some(@cmapdata.pdf_text_cns_euc_v_cid_ranges)
   } else {
-    Some(pdf_text_cns_euc_h_cid_ranges)
+    Some(@cmapdata.pdf_text_cns_euc_h_cid_ranges)
   }
 }
 
@@ -116,17 +116,17 @@ fn pdf_text_predefined_cns1_b5_cid_ranges(
   let text = pdf_text_string_of_name(name)
   guard pdf_text_predefined_cmap_has_text_orientation(text) else { return None }
   if text.contains("ETenms-B5") {
-    Some(pdf_text_etenms_b5_cid_ranges)
+    Some(@cmapdata.pdf_text_etenms_b5_cid_ranges)
   } else if text.contains("HKdla-B5") {
-    Some(pdf_text_hkdla_b5_cid_ranges)
+    Some(@cmapdata.pdf_text_hkdla_b5_cid_ranges)
   } else if text.contains("HKdlb-B5") {
-    Some(pdf_text_hkdlb_b5_cid_ranges)
+    Some(@cmapdata.pdf_text_hkdlb_b5_cid_ranges)
   } else if text.contains("HKgccs-B5") {
-    Some(pdf_text_hkgccs_b5_cid_ranges)
+    Some(@cmapdata.pdf_text_hkgccs_b5_cid_ranges)
   } else if text.contains("HKm314-B5") {
-    Some(pdf_text_hkm314_b5_cid_ranges)
+    Some(@cmapdata.pdf_text_hkm314_b5_cid_ranges)
   } else if text.contains("HKm471-B5") {
-    Some(pdf_text_hkm471_b5_cid_ranges)
+    Some(@cmapdata.pdf_text_hkm471_b5_cid_ranges)
   } else {
     None
   }
