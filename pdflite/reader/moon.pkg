@@ -23,6 +23,12 @@ options(
       "native",
       "llvm",
     ],
+    "pdf_reader_xref_stream_refs_test.mbt": [
+      "wasm-gc",
+      "js",
+      "native",
+      "llvm",
+    ],
     "pdf_reader_xref_stream_entries_test.mbt": [
       "wasm-gc",
       "js",

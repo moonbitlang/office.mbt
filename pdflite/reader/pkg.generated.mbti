@@ -71,6 +71,8 @@ pub fn pdf_reader_w_name() -> @core.PdfName
 
 pub fn pdf_reader_xref_name() -> @core.PdfName
 
+pub fn pdf_reader_xref_stream_ref_set(ArrayView[(Int, Int)]) -> PdfReaderXRefStreamRefSet
+
 pub fn pdf_reader_xref_stream_type_ok(@syntax.PdfObject) -> Bool
 
 pub fn pdf_reader_xrefstm_name() -> @core.PdfName
@@ -111,6 +113,11 @@ pub(all) struct PdfClassicXRefIndex {
   entries : @hashmap.HashMap[Int, PdfClassicXRefEntry]
 }
 pub fn PdfClassicXRefIndex::lookup(Self, Int) -> PdfClassicXRefEntry?
+
+pub struct PdfReaderXRefStreamRefSet {
+  values : @hashmap.HashMap[Int, @core.PdfNumberSet]
+}
+pub fn PdfReaderXRefStreamRefSet::contains(Self, Int, Int) -> Bool
 
 pub(all) struct PdfVersion {
   major : Int

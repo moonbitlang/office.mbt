@@ -105,7 +105,9 @@ fn pdf_read_classic_document_from_view_at_revision(
     None => ()
   }
   document.set_trailer_and_root(trailer)
-  let xref_stream_ref_set = pdf_reader_xref_stream_ref_set(xref_stream_refs)
+  let xref_stream_ref_set = @reader.pdf_reader_xref_stream_ref_set(
+    xref_stream_refs,
+  )
   let xref_index = pdf_classic_xref_index(xrefs)
   for xref in xrefs {
     match xref.object_stream {

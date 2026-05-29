@@ -914,7 +914,7 @@ test "private reader xref helpers report malformed inputs" {
   ])
   @test.assert_eq([ for xref in xref_target => xref.object_number ], [2, 3])
   @test.assert_eq([ for xref in xref_target => xref.offset ], [20, 30])
-  let xref_stream_ref_set = pdf_reader_xref_stream_ref_set([
+  let xref_stream_ref_set = @reader.pdf_reader_xref_stream_ref_set([
     (5, 100),
     (5, 200),
     (7, 100),

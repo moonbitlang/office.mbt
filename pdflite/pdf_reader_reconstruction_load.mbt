@@ -7,7 +7,9 @@ fn PdfDocument::load_reconstructed_xref_stream_plain_objects(
 ) -> Unit {
   let cursor = byte_cursor_of_view(data)
   let xref_stream_refs = pdf_reconstructed_xref_stream_refs(sections)
-  let xref_stream_ref_set = pdf_reader_xref_stream_ref_set(xref_stream_refs)
+  let xref_stream_ref_set = @reader.pdf_reader_xref_stream_ref_set(
+    xref_stream_refs,
+  )
   let xref_index = pdf_classic_xref_index(xrefs)
   for xref in xrefs {
     match xref.object_stream {

@@ -1,40 +1,4 @@
 ///|
-priv struct PdfReaderXRefStreamRefSet {
-  values : @hashmap.HashMap[Int, @core.PdfNumberSet]
-}
-
-///|
-fn pdf_reader_xref_stream_ref_set(
-  refs : ArrayView[(Int, Int)],
-) -> PdfReaderXRefStreamRefSet {
-  let values : @hashmap.HashMap[Int, @core.PdfNumberSet] = HashMap([])
-  for item in refs {
-    let (object_number, offset) = item
-    match values.get(object_number) {
-      Some(offsets) => offsets.add(offset)
-      None => {
-        let offsets = @core.pdf_number_set([])
-        offsets.add(offset)
-        values[object_number] = offsets
-      }
-    }
-  }
-  { values, }
-}
-
-///|
-fn PdfReaderXRefStreamRefSet::contains(
-  self : PdfReaderXRefStreamRefSet,
-  object_number : Int,
-  offset : Int,
-) -> Bool {
-  match self.values.get(object_number) {
-    Some(offsets) => offsets.contains(offset)
-    None => false
-  }
-}
-
-///|
 fn pdf_cursor_read_xref_stream_section(
   cursor : ByteCursor,
 ) -> PdfXRefSection raise PdfError {
