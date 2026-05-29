@@ -143,8 +143,8 @@ test "private reconstructed classic xref reader rejects xref streams" {
       "7 0 obj\n<< /Type /XRef /Size 1 /W [1 4 2] /Length 7 >>\nstream\n\\u{0}\\u{0}\\u{0}\\u{0}\\u{0}\\u{255}\\u{255}\nendstream\nendobj",
     ),
   )
-  let result : Result[(PdfXRefSection, Int), Error] = try? cursor.read_reconstructed_classic_xref_section_at(
-    0,
+  let result : Result[(PdfXRefSection, Int), Error] = try? pdf_cursor_read_reconstructed_classic_xref_section_at(
+    cursor, 0,
   )
   guard result is Err(PdfError::XRefExpected) else {
     fail("expected PdfError::XRefExpected")

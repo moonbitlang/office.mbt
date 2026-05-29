@@ -1,22 +1,22 @@
 ///|
-fn ByteCursor::read_reconstructed_xref_stream_section_at(
-  self : ByteCursor,
+fn pdf_cursor_read_reconstructed_xref_stream_section_at(
+  cursor : ByteCursor,
   position : Int,
 ) -> (PdfXRefSection, Int) raise PdfError {
-  self.seek_absolute(position)
-  let section = pdf_cursor_read_xref_stream_section(self)
-  (section, self.absolute_position())
+  cursor.seek_absolute(position)
+  let section = pdf_cursor_read_xref_stream_section(cursor)
+  (section, cursor.absolute_position())
 }
 
 ///|
-fn ByteCursor::read_reconstructed_classic_xref_section_at(
-  self : ByteCursor,
+fn pdf_cursor_read_reconstructed_classic_xref_section_at(
+  cursor : ByteCursor,
   position : Int,
 ) -> (PdfXRefSection, Int) raise PdfError {
-  self.seek_absolute(position)
-  let section = pdf_cursor_read_xref_section(self)
+  cursor.seek_absolute(position)
+  let section = pdf_cursor_read_xref_section(cursor)
   guard section.stream_object_number is None else { raise XRefExpected }
-  (section, self.absolute_position())
+  (section, cursor.absolute_position())
 }
 
 ///|
@@ -28,8 +28,8 @@ fn pdf_read_reconstructed_classic_xref_sections(
   let mut position = 0
   while position < data.length() {
     if pdf_view_matches_ascii_at(data, position, [120, 114, 101, 102]) {
-      let parsed : Result[(PdfXRefSection, Int), Error] = try? cursor.read_reconstructed_classic_xref_section_at(
-        position,
+      let parsed : Result[(PdfXRefSection, Int), Error] = try? pdf_cursor_read_reconstructed_classic_xref_section_at(
+        cursor, position,
       )
       match parsed {
         Ok((section, next_position)) => {
@@ -54,8 +54,8 @@ fn pdf_read_reconstructed_xref_stream_sections(
   let mut position = 0
   while position < data.length() {
     if pdf_reader_reconstruction_indirect_header_at(data, position) {
-      let parsed : Result[(PdfXRefSection, Int), Error] = try? cursor.read_reconstructed_xref_stream_section_at(
-        position,
+      let parsed : Result[(PdfXRefSection, Int), Error] = try? pdf_cursor_read_reconstructed_xref_stream_section_at(
+        cursor, position,
       )
       match parsed {
         Ok((section, next_position)) => {

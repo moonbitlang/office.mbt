@@ -1,19 +1,19 @@
 ///|
-fn ByteCursor::read_reconstructed_trailer_at(
-  self : ByteCursor,
+fn pdf_cursor_read_reconstructed_trailer_at(
+  cursor : ByteCursor,
   position : Int,
 ) -> PdfObject raise PdfError {
-  self.seek_absolute(position)
-  pdf_cursor_read_trailer_dictionary(self)
+  cursor.seek_absolute(position)
+  pdf_cursor_read_trailer_dictionary(cursor)
 }
 
 ///|
-fn ByteCursor::read_reconstructed_xref_stream_trailer_at(
-  self : ByteCursor,
+fn pdf_cursor_read_reconstructed_xref_stream_trailer_at(
+  cursor : ByteCursor,
   position : Int,
 ) -> PdfObject raise PdfError {
-  self.seek_absolute(position)
-  let parsed = pdf_cursor_read_reconstructed_indirect_prefix_at_current(self)
+  cursor.seek_absolute(position)
+  let parsed = pdf_cursor_read_reconstructed_indirect_prefix_at_current(cursor)
   match parsed.object {
     PdfDictionary(_) as dictionary =>
       if pdf_reader_xref_stream_type_ok(dictionary) {
@@ -36,8 +36,8 @@ fn pdf_read_reconstructed_trailers(
     if pdf_view_matches_ascii_at(data, position, [
         116, 114, 97, 105, 108, 101, 114,
       ]) {
-      let trailer : Result[PdfObject, Error] = try? cursor.read_reconstructed_trailer_at(
-        position,
+      let trailer : Result[PdfObject, Error] = try? pdf_cursor_read_reconstructed_trailer_at(
+        cursor, position,
       )
       match trailer {
         Ok(object) => trailers.push(object)
@@ -45,8 +45,8 @@ fn pdf_read_reconstructed_trailers(
       }
     } else if include_xref_streams &&
       pdf_reader_reconstruction_indirect_header_at(data, position) {
-      let trailer : Result[PdfObject, Error] = try? cursor.read_reconstructed_xref_stream_trailer_at(
-        position,
+      let trailer : Result[PdfObject, Error] = try? pdf_cursor_read_reconstructed_xref_stream_trailer_at(
+        cursor, position,
       )
       match trailer {
         Ok(object) => trailers.push(object)
