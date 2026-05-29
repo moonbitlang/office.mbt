@@ -27,6 +27,28 @@ fn PdfStandardFont::to_standard14_data_font(
 }
 
 ///|
+fn pdf_standard_font_from_standard14_data_font(
+  font : @standard14.PdfStandardFont,
+) -> PdfStandardFont {
+  match font {
+    PdfTimesRoman => PdfTimesRoman
+    PdfTimesBold => PdfTimesBold
+    PdfTimesItalic => PdfTimesItalic
+    PdfTimesBoldItalic => PdfTimesBoldItalic
+    PdfHelvetica => PdfHelvetica
+    PdfHelveticaBold => PdfHelveticaBold
+    PdfHelveticaOblique => PdfHelveticaOblique
+    PdfHelveticaBoldOblique => PdfHelveticaBoldOblique
+    PdfCourier => PdfCourier
+    PdfCourierBold => PdfCourierBold
+    PdfCourierOblique => PdfCourierOblique
+    PdfCourierBoldOblique => PdfCourierBoldOblique
+    PdfSymbol => PdfSymbol
+    PdfZapfDingbats => PdfZapfDingbats
+  }
+}
+
+///|
 /// Returns the Adobe Font Metrics data for a standard font.
 pub fn pdf_standard14_afm_data(font : PdfStandardFont) -> PdfAfmData {
   font.afm_data()
