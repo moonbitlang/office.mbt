@@ -1,0 +1,43 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pdflite/font/standard14"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn pdf_standard14_afm_data(PdfStandardFont) -> PdfAfmData
+
+// Errors
+
+// Types and methods
+pub(all) struct PdfAfmData {
+  headers : Array[(Bytes, Bytes)]
+  char_metrics : Array[(Int, Int)]
+  kerns : Array[(Int, Int, Int)]
+  char_name_widths : Array[(Bytes, Int)]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfStandardFont {
+  PdfTimesRoman
+  PdfTimesBold
+  PdfTimesItalic
+  PdfTimesBoldItalic
+  PdfHelvetica
+  PdfHelveticaBold
+  PdfHelveticaOblique
+  PdfHelveticaBoldOblique
+  PdfCourier
+  PdfCourierBold
+  PdfCourierOblique
+  PdfCourierBoldOblique
+  PdfSymbol
+  PdfZapfDingbats
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfStandardFont::afm_data(Self) -> PdfAfmData
+
+// Type aliases
+pub type PdfBytes = Bytes
+
+// Traits
+

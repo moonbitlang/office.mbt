@@ -1,7 +1,35 @@
 ///|
 /// Returns the Adobe Font Metrics data for this standard font.
 pub fn PdfStandardFont::afm_data(self : PdfStandardFont) -> PdfAfmData {
-  pdf_standard14_afm_data_of_font(self)
+  let data = @standard14.pdf_standard14_afm_data(self.to_standard14_data_font())
+  {
+    headers: data.headers,
+    char_metrics: data.char_metrics,
+    kerns: data.kerns,
+    char_name_widths: data.char_name_widths,
+  }
+}
+
+///|
+fn PdfStandardFont::to_standard14_data_font(
+  self : PdfStandardFont,
+) -> @standard14.PdfStandardFont {
+  match self {
+    PdfTimesRoman => PdfTimesRoman
+    PdfTimesBold => PdfTimesBold
+    PdfTimesItalic => PdfTimesItalic
+    PdfTimesBoldItalic => PdfTimesBoldItalic
+    PdfHelvetica => PdfHelvetica
+    PdfHelveticaBold => PdfHelveticaBold
+    PdfHelveticaOblique => PdfHelveticaOblique
+    PdfHelveticaBoldOblique => PdfHelveticaBoldOblique
+    PdfCourier => PdfCourier
+    PdfCourierBold => PdfCourierBold
+    PdfCourierOblique => PdfCourierOblique
+    PdfCourierBoldOblique => PdfCourierBoldOblique
+    PdfSymbol => PdfSymbol
+    PdfZapfDingbats => PdfZapfDingbats
+  }
 }
 
 ///|

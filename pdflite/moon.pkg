@@ -3,6 +3,7 @@ import {
   "bobzhang/pdflite/crypt_core",
   "bobzhang/pdflite/date",
   "bobzhang/pdflite/flate",
+  "bobzhang/pdflite/font/standard14",
   "bobzhang/pdflite/geometry",
   "bobzhang/pdflite/reader",
   "bobzhang/pdflite/syntax",
