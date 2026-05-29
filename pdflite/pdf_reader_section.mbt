@@ -4,7 +4,7 @@ fn pdf_cursor_read_xref_section(
 ) -> PdfXRefSection raise PdfError {
   let position = cursor.absolute_position()
   if pdf_cursor_matches_ascii_at(cursor, position, [120, 114, 101, 102]) {
-    let entries = cursor.read_pdf_classic_xref_entries()
+    let entries = pdf_cursor_read_classic_xref_entries(cursor)
     let trailer = pdf_cursor_read_trailer_dictionary(cursor)
     { entries, trailer, stream_object_number: None, stream_object_offset: None }
   } else {

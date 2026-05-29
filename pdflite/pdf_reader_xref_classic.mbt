@@ -150,25 +150,25 @@ fn pdf_classic_xrefs_add_newer_first_with_seen(
 }
 
 ///|
-fn ByteCursor::read_pdf_classic_xref_entries(
-  self : ByteCursor,
+fn pdf_cursor_read_classic_xref_entries(
+  cursor : ByteCursor,
 ) -> Array[PdfClassicXRefEntry] raise PdfError {
-  pdf_cursor_drop_whitespace(self)
-  self.consume_pdf_ascii([120, 114, 101, 102], XRefExpected)
+  pdf_cursor_drop_whitespace(cursor)
+  cursor.consume_pdf_ascii([120, 114, 101, 102], XRefExpected)
   let entries : Array[PdfClassicXRefEntry] = []
   let mut object_number = 0
   let mut done = false
   while !done {
-    pdf_cursor_drop_whitespace(self)
-    let position = self.absolute_position()
-    if pdf_cursor_matches_ascii_at(self, position, [
+    pdf_cursor_drop_whitespace(cursor)
+    let position = cursor.absolute_position()
+    if pdf_cursor_matches_ascii_at(cursor, position, [
         116, 114, 97, 105, 108, 101, 114,
       ]) {
       done = true
-    } else if self.peek_byte() == pdf_no_more {
+    } else if cursor.peek_byte() == pdf_no_more {
       raise TrailerExpected
     } else {
-      let line = self.read_line_view()
+      let line = cursor.read_line_view()
       let tokens = pdf_split_whitespace_tokens(line)
       match pdf_xref_fixed_width_entry(line, object_number) {
         Some(entry) => {
