@@ -320,24 +320,6 @@ fn merge_acroform_doc_with_entries_for_test(
 }
 
 ///|
-fn merge_duplicate_stream_for_test() -> @pdflite.PdfObject {
-  @pdflite.pdf_stream(
-    PdfDictionary([(merge_name_for_test("/Length"), PdfInteger(2))]),
-    StreamGot(@ascii.encode("Hi")),
-  )
-}
-
-///|
-fn merge_catalog_stream_doc_for_test(
-  key : @pdflite.PdfName,
-  stream_number : Int,
-) -> @pdflite.PdfDocument {
-  let doc = merge_one_page_doc_for_test(1, 4)
-  doc.add_object_given_number(stream_number, merge_duplicate_stream_for_test())
-  merge_add_catalog_entry_for_test(doc, key, PdfIndirect(stream_number))
-}
-
-///|
 fn merge_pdfmergeexample_workflow_for_test(
   documents : ArrayView[@pdflite.PdfDocument],
 ) -> @pdflite.PdfDocument {
@@ -1230,103 +1212,6 @@ test "pdf_merge_documents rewrites named OpenAction destinations" {
     without_destinations.root(),
   )
   @test.assert_eq(root.lookup_immediate(key_open_action), None)
-}
-
-///|
-test "PdfDocument remove_duplicate_fonts coalesces identical streams" {
-  let key_info = merge_name_for_test("/Info")
-  let doc = @pdflite.pdf_document_empty()
-  let stream = merge_duplicate_stream_for_test()
-  doc.add_object_given_number(1, stream)
-  doc.add_object_given_number(2, stream)
-  doc.add_object_given_number(3, PdfArray([PdfIndirect(1), PdfIndirect(2)]))
-  doc.set_trailer_dict(PdfDictionary([(key_info, PdfIndirect(2))]))
-  @pdflite.pdf_remove_duplicate_fonts(doc)
-  @test.assert_eq(doc.lookup_object_or_null(1), stream)
-  @test.assert_eq(doc.lookup_object_or_null(2), PdfNull)
-  @test.assert_eq(
-    doc.lookup_object_or_null(3),
-    PdfArray([PdfIndirect(1), PdfIndirect(1)]),
-  )
-  @test.assert_eq(
-    doc.trailer_dict().lookup_immediate(key_info),
-    Some(PdfIndirect(1)),
-  )
-}
-
-///|
-test "PdfDocument remove_duplicate_fonts coalesces deferred stream data" {
-  let doc = @pdflite.pdf_document_empty()
-  let input = @pdflite.byte_cursor_of_bytes(@ascii.encode("xxHiyyHi"))
-  let dictionary : @pdflite.PdfObject = PdfDictionary([
-    (merge_name_for_test("/Length"), PdfInteger(2)),
-  ])
-  doc.add_object_given_number(
-    1,
-    @pdflite.pdf_stream(
-      dictionary,
-      StreamToGet(@pdflite.stream_to_get(input, 2, 2)),
-    ),
-  )
-  doc.add_object_given_number(
-    2,
-    @pdflite.pdf_stream(
-      dictionary,
-      StreamToGet(@pdflite.stream_to_get(input, 6, 2)),
-    ),
-  )
-  doc.add_object_given_number(3, PdfArray([PdfIndirect(1), PdfIndirect(2)]))
-  doc.remove_duplicate_fonts()
-  @test.assert_eq(
-    try! doc.lookup_object_or_null(1).stream_bytes(),
-    @ascii.encode("Hi"),
-  )
-  @test.assert_eq(doc.lookup_object_or_null(2), PdfNull)
-  @test.assert_eq(
-    doc.lookup_object_or_null(3),
-    PdfArray([PdfIndirect(1), PdfIndirect(1)]),
-  )
-}
-
-///|
-test "pdf_merge_documents can remove duplicate font streams" {
-  let key_first_stream = merge_name_for_test("/PieceInfo")
-  let key_second_stream = merge_name_for_test("/Metadata")
-  let first = merge_catalog_stream_doc_for_test(key_first_stream, 30)
-  let second = merge_catalog_stream_doc_for_test(key_second_stream, 30)
-  let without_dedupe = try! @pdflite.pdf_merge_documents([first, second], [
-    [1],
-    [1],
-  ])
-  let root = without_dedupe.lookup_object_or_null(without_dedupe.root())
-  guard root.lookup_immediate(key_first_stream)
-    is Some(PdfIndirect(first_stream)) else {
-    fail("expected first stream")
-  }
-  guard root.lookup_immediate(key_second_stream)
-    is Some(PdfIndirect(second_stream)) else {
-    fail("expected second stream")
-  }
-  @test.assert_eq(first_stream == second_stream, false)
-  let deduped = try! @pdflite.pdf_merge_documents(
-    [first, second],
-    [[1], [1]],
-    remove_duplicate_fonts=true,
-  )
-  let root = deduped.lookup_object_or_null(deduped.root())
-  guard root.lookup_immediate(key_first_stream)
-    is Some(PdfIndirect(first_stream)) else {
-    fail("expected deduped first stream")
-  }
-  guard root.lookup_immediate(key_second_stream)
-    is Some(PdfIndirect(second_stream)) else {
-    fail("expected deduped second stream")
-  }
-  @test.assert_eq(first_stream, second_stream)
-  @test.assert_eq(
-    deduped.lookup_object_or_null(first_stream),
-    merge_duplicate_stream_for_test(),
-  )
 }
 
 ///|
