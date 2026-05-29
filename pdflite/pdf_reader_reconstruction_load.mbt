@@ -1,58 +1,58 @@
 ///|
+fn pdf_reconstructed_plain_xref_should_load(
+  xref : PdfClassicXRefEntry,
+  xref_stream_ref_set : @reader.PdfReaderXRefStreamRefSet?,
+  skip_object_stream_entries : Bool,
+) -> Bool {
+  if !xref.in_use || xref.object_number == 0 {
+    false
+  } else {
+    let object_stream_ok = !skip_object_stream_entries ||
+      xref.object_stream is None
+    let xref_stream_ok = match xref_stream_ref_set {
+      Some(refs) => !refs.contains(xref.object_number, xref.offset)
+      None => true
+    }
+    object_stream_ok && xref_stream_ok
+  }
+}
+
+///|
 fn PdfDocument::load_reconstructed_xref_stream_plain_objects(
   self : PdfDocument,
   data : BytesView,
   sections : ArrayView[PdfXRefSection],
   xrefs : ArrayView[PdfClassicXRefEntry],
 ) -> Unit {
-  let cursor = byte_cursor_of_view(data)
   let xref_stream_refs = @reader.pdf_reader_reconstruction_xref_stream_refs(
     sections,
   )
   let xref_stream_ref_set = @reader.pdf_reader_xref_stream_ref_set(
     xref_stream_refs,
   )
-  let xref_index = pdf_classic_xref_index(xrefs)
-  for xref in xrefs {
-    match xref.object_stream {
-      Some(_) => ()
-      None =>
-        if xref.in_use &&
-          xref.object_number != 0 &&
-          !xref_stream_ref_set.contains(xref.object_number, xref.offset) {
-          try {
-            cursor.seek_absolute(xref.offset)
-            let parsed = pdf_cursor_read_first_indirect_object_at_current(
-              cursor,
-              xrefs,
-              xref_index=Some(xref_index),
-            )
-            if parsed.number == xref.object_number &&
-              parsed.generation == xref.generation {
-              self.load_object_given_number(
-                parsed.number,
-                parsed.object,
-                generation=parsed.generation,
-              )
-            }
-          } catch {
-            _ => ()
-          }
-        }
-    }
-  }
+  self.load_reconstructed_plain_xref_objects(
+    data,
+    xrefs,
+    Some(xref_stream_ref_set),
+    true,
+  )
 }
 
 ///|
-fn PdfDocument::load_reconstructed_classic_xref_plain_objects(
+fn PdfDocument::load_reconstructed_plain_xref_objects(
   self : PdfDocument,
   data : BytesView,
   xrefs : ArrayView[PdfClassicXRefEntry],
+  xref_stream_ref_set : @reader.PdfReaderXRefStreamRefSet?,
+  skip_object_stream_entries : Bool,
 ) -> Unit {
-  let cursor = byte_cursor_of_view(data)
   let xref_index = pdf_classic_xref_index(xrefs)
+  let cursor = byte_cursor_of_view(data)
   for xref in xrefs {
-    if xref.in_use && xref.object_number != 0 {
+    let should_load = pdf_reconstructed_plain_xref_should_load(
+      xref, xref_stream_ref_set, skip_object_stream_entries,
+    )
+    if should_load {
       try {
         cursor.seek_absolute(xref.offset)
         let parsed = pdf_cursor_read_first_indirect_object_at_current(
@@ -73,6 +73,15 @@ fn PdfDocument::load_reconstructed_classic_xref_plain_objects(
       }
     }
   }
+}
+
+///|
+fn PdfDocument::load_reconstructed_classic_xref_plain_objects(
+  self : PdfDocument,
+  data : BytesView,
+  xrefs : ArrayView[PdfClassicXRefEntry],
+) -> Unit {
+  self.load_reconstructed_plain_xref_objects(data, xrefs, None, false)
 }
 
 ///|
