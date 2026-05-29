@@ -4,7 +4,7 @@ fn ByteCursor::read_reconstructed_trailer_at(
   position : Int,
 ) -> PdfObject raise PdfError {
   self.seek_absolute(position)
-  self.read_pdf_trailer_dictionary()
+  pdf_cursor_read_trailer_dictionary(self)
 }
 
 ///|

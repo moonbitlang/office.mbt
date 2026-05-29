@@ -53,7 +53,7 @@ fn pdf_read_classic_document_from_view_at_revision(
       raise XRefExpected
     }
     cursor.seek_absolute(current_xref)
-    let section = cursor.read_pdf_xref_section()
+    let section = pdf_cursor_read_xref_section(cursor)
     let current_revision = depth + 1
     let read_section = pdf_reader_revision_reads_section(
       revision, current_revision,
