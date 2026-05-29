@@ -105,52 +105,8 @@ fn pdf_read_classic_document_from_view_at_revision(
     None => ()
   }
   document.set_trailer_and_root(trailer)
-  let xref_stream_ref_set = @reader.pdf_reader_xref_stream_ref_set(
-    xref_stream_refs,
-  )
-  let xref_index = pdf_classic_xref_index(xrefs)
-  for xref in xrefs {
-    match xref.object_stream {
-      Some(_) => ()
-      None =>
-        if xref.in_use &&
-          xref.object_number != 0 &&
-          !xref_stream_ref_set.contains(xref.object_number, xref.offset) {
-          cursor.seek_absolute(xref.offset)
-          let parsed = pdf_cursor_read_first_indirect_object_at_current(
-            cursor,
-            xrefs,
-            xref_index=Some(xref_index),
-          )
-          if parsed.number != xref.object_number ||
-            parsed.generation != xref.generation {
-            raise XRefEntryExpected
-          }
-          document.load_object_given_number(
-            parsed.number,
-            parsed.object,
-            generation=parsed.generation,
-          )
-        }
-    }
-  }
-  for group in @reader.pdf_reader_object_stream_groups(xrefs) {
-    let object_stream_number = group.0
-    let (context, already_decrypted) = document.read_object_stream_context_with_passwords(
-      object_stream_number, user_password, owner_password,
-    )
-    document.load_embedded_objects_from_context(
-      group.1,
-      object_stream_number,
-      context,
-      already_decrypted,
-    )
-  }
-  document.set_trailer_dict(
-    @reader.pdf_reader_sanitize_trailer(
-      document.trailer_dict(),
-      document.objects.max_object_number() + 1,
-    ),
+  document.load_classic_xrefs(
+    cursor, xrefs, xref_stream_refs, user_password, owner_password,
   )
   document
 }
