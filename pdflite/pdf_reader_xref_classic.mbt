@@ -1,13 +1,4 @@
 ///|
-struct PdfClassicXRefEntry {
-  object_number : Int
-  offset : Int
-  generation : Int
-  in_use : Bool
-  object_stream : ObjectStreamReference?
-} derive(Debug, Eq, ToJson)
-
-///|
 fn pdf_xref_malformed_zero_offset_in_use_free(
   tokens : ArrayView[BytesView],
 ) -> Bool {
@@ -92,60 +83,6 @@ fn pdf_xref_token_in_use(token : BytesView) -> Bool raise PdfError {
     110 => true
     102 => false
     _ => raise XRefEntryExpected
-  }
-}
-
-///|
-fn pdf_classic_xref_lookup(
-  xrefs : ArrayView[PdfClassicXRefEntry],
-  object_number : Int,
-) -> PdfClassicXRefEntry? {
-  for xref in xrefs {
-    if xref.in_use && xref.object_number == object_number {
-      break Some(xref)
-    }
-  } nobreak {
-    None
-  }
-}
-
-///|
-priv struct PdfClassicXRefIndex {
-  entries : @hashmap.HashMap[Int, PdfClassicXRefEntry]
-}
-
-///|
-fn pdf_classic_xref_index(
-  xrefs : ArrayView[PdfClassicXRefEntry],
-) -> PdfClassicXRefIndex {
-  let entries : @hashmap.HashMap[Int, PdfClassicXRefEntry] = HashMap([])
-  for xref in xrefs {
-    if xref.in_use && !entries.contains(xref.object_number) {
-      entries[xref.object_number] = xref
-    }
-  }
-  { entries, }
-}
-
-///|
-fn PdfClassicXRefIndex::lookup(
-  self : PdfClassicXRefIndex,
-  object_number : Int,
-) -> PdfClassicXRefEntry? {
-  self.entries.get(object_number)
-}
-
-///|
-fn pdf_classic_xrefs_add_newer_first_with_seen(
-  target : Array[PdfClassicXRefEntry],
-  seen : @core.PdfNumberSet,
-  entries : ArrayView[PdfClassicXRefEntry],
-) -> Unit {
-  for entry in entries {
-    if !seen.contains(entry.object_number) {
-      target.push(entry)
-      seen.add(entry.object_number)
-    }
   }
 }
 

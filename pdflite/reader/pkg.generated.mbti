@@ -3,10 +3,18 @@ package "bobzhang/pdflite/reader"
 
 import {
   "bobzhang/pdflite/core",
+  "bobzhang/pdflite/syntax",
   "moonbitlang/core/debug",
+  "moonbitlang/core/hashmap",
 }
 
 // Values
+pub fn pdf_classic_xref_index(ArrayView[PdfClassicXRefEntry]) -> PdfClassicXRefIndex
+
+pub fn pdf_classic_xref_lookup(ArrayView[PdfClassicXRefEntry], Int) -> PdfClassicXRefEntry?
+
+pub fn pdf_classic_xrefs_add_newer_first_with_seen(Array[PdfClassicXRefEntry], @core.PdfNumberSet, ArrayView[PdfClassicXRefEntry]) -> Unit
+
 pub let pdf_default_version : PdfVersion
 
 pub fn pdf_read_header_from_bytes(Bytes) -> PdfVersion raise @core.PdfError
@@ -18,10 +26,35 @@ pub fn pdf_read_header_from_view(BytesView) -> PdfVersion raise @core.PdfError
 // Errors
 
 // Types and methods
+pub(all) struct ObjectStreamReference {
+  object_stream_number : Int
+  index : Int
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfClassicXRefEntry {
+  object_number : Int
+  offset : Int
+  generation : Int
+  in_use : Bool
+  object_stream : ObjectStreamReference?
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfClassicXRefIndex {
+  entries : @hashmap.HashMap[Int, PdfClassicXRefEntry]
+}
+pub fn PdfClassicXRefIndex::lookup(Self, Int) -> PdfClassicXRefEntry?
+
 pub(all) struct PdfVersion {
   major : Int
   minor : Int
 } derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfXRefSection {
+  entries : Array[PdfClassicXRefEntry]
+  trailer : @syntax.PdfObject
+  stream_object_number : Int?
+  stream_object_offset : Int?
+}
 
 // Type aliases
 

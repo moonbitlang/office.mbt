@@ -1,14 +1,4 @@
 ///|
-/// Location of an object stored inside a PDF object stream.
-///
-/// `object_stream_number` is the containing object stream number, and `index`
-/// is the zero-based entry index inside that stream.
-pub(all) struct ObjectStreamReference {
-  object_stream_number : Int
-  index : Int
-} derive(Debug, Eq, ToJson)
-
-///|
 /// Loading state for one entry in the document object table.
 ///
 /// Parsed variants hold objects that are ready to use. `ObjectToParse` marks an

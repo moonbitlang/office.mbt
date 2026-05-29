@@ -428,6 +428,12 @@ pub fn pdf_chop_hv_cpdf_order(Bool, Double, Bool, PdfDocument, ArrayView[Int]) -
 
 pub fn pdf_circle(Double, Double, Double) -> PdfPath
 
+pub fn pdf_classic_xref_index(ArrayView[@reader.PdfClassicXRefEntry]) -> @reader.PdfClassicXRefIndex
+
+pub fn pdf_classic_xref_lookup(ArrayView[@reader.PdfClassicXRefEntry], Int) -> @reader.PdfClassicXRefEntry?
+
+pub fn pdf_classic_xrefs_add_newer_first_with_seen(Array[@reader.PdfClassicXRefEntry], @core.PdfNumberSet, ArrayView[@reader.PdfClassicXRefEntry]) -> Unit
+
 pub fn pdf_clear_progress_output() -> Unit
 
 pub fn pdf_clip(PdfDrawControl) -> Unit raise @core.PdfError
@@ -2213,11 +2219,6 @@ pub fn unit_points(Double, @geometry.PdfUnit) -> Double
 // Errors
 
 // Types and methods
-pub(all) struct ObjectStreamReference {
-  object_stream_number : Int
-  index : Int
-} derive(Eq, ToJson, @debug.Debug)
-
 pub(all) enum PdfAddTextFontSource {
   PdfAddTextPreMadeFontPack(PdfFontPack)
   PdfAddTextExistingNamedFont
@@ -2487,8 +2488,6 @@ pub(all) enum PdfCalculatorOp {
   PdfCalculatorXor
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfCalculatorOp::debug_name(Self) -> String
-
-type PdfClassicXRefEntry derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfClipContour {
   hole : Bool
@@ -3850,7 +3849,7 @@ pub(all) enum PdfObjectData {
   ObjectParsed(@syntax.PdfObject)
   ObjectParsedAlreadyDecrypted(@syntax.PdfObject)
   ObjectToParse
-  ObjectToParseFromObjectStream(ObjectStreamReference)
+  ObjectToParseFromObjectStream(@reader.ObjectStreamReference)
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfObjectEntry {
@@ -4362,11 +4361,17 @@ pub using @core {type ByteCursor}
 
 pub using @core {type ByteOutput}
 
+pub using @reader {type ObjectStreamReference}
+
 pub using @geometry {type PaperSize}
 
 pub using @crypt_core {type PdfAesV3RandomField}
 
 pub type PdfBytes = Bytes
+
+pub using @reader {type PdfClassicXRefEntry}
+
+pub using @reader {type PdfClassicXRefIndex}
 
 pub using @core {type PdfCryptType}
 
@@ -4395,6 +4400,8 @@ pub using @syntax {type PdfStreamDataCrypt}
 pub using @geometry {type PdfUnit}
 
 pub using @reader {type PdfVersion}
+
+pub using @reader {type PdfXRefSection}
 
 pub using @geometry {type Point2}
 

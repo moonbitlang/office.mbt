@@ -17,7 +17,7 @@ fn pdf_read_reconstructed_xrefs(
       match parsed {
         Ok((object, next_position)) => {
           if object.number > 0 {
-            let xref = {
+            let xref : PdfClassicXRefEntry = {
               object_number: object.number,
               offset: position,
               generation: object.generation,
