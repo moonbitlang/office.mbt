@@ -12,20 +12,6 @@ fn pdf_stream_length(object : PdfObject) -> Int raise PdfError {
 }
 
 ///|
-fn pdf_cursor_consume_ascii(
-  cursor : ByteCursor,
-  values : ArrayView[Int],
-  error : PdfError,
-) -> Unit raise PdfError {
-  let position = cursor.absolute_position()
-  if @syntax.pdf_cursor_matches_ascii_at(cursor, position, values) {
-    cursor.seek_absolute(position + values.length())
-  } else {
-    raise error
-  }
-}
-
-///|
 fn pdf_cursor_consume_stream_line_break(cursor : ByteCursor) -> Unit {
   let value = cursor.peek_byte()
   if value == 13 {

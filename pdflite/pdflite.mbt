@@ -199,4 +199,8 @@ pub using @reader {
   pdf_classic_xref_lookup,
   pdf_classic_xref_index,
   pdf_classic_xrefs_add_newer_first_with_seen,
+  pdf_cursor_consume_ascii,
+  pdf_read_startxref_position,
+  pdf_xref_token_in_use,
+  pdf_cursor_read_classic_xref_entries,
 }

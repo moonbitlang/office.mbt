@@ -674,6 +674,8 @@ pub fn pdf_css_colour_value(String) -> Int?
 
 pub fn pdf_css_colours() -> Array[(String, Int)]
 
+pub fn pdf_cursor_consume_ascii(@core.ByteCursor, ArrayView[Int], @core.PdfError) -> Unit raise @core.PdfError
+
 pub fn pdf_cursor_drop_whitespace(@core.ByteCursor) -> Unit
 
 pub fn pdf_cursor_lex_bool(@core.ByteCursor) -> @syntax.PdfLexeme
@@ -695,6 +697,8 @@ pub fn pdf_cursor_lex_number(@core.ByteCursor) -> @syntax.PdfLexeme
 pub fn pdf_cursor_lex_token(@core.ByteCursor) -> @syntax.PdfLexeme raise @core.PdfError
 
 pub fn pdf_cursor_lex_tokens(@core.ByteCursor) -> Array[@syntax.PdfLexeme] raise @core.PdfError
+
+pub fn pdf_cursor_read_classic_xref_entries(@core.ByteCursor) -> Array[@reader.PdfClassicXRefEntry] raise @core.PdfError
 
 pub fn pdf_cursor_read_jpeg_data(@core.ByteCursor) -> Bytes raise @core.PdfError
 
@@ -1548,6 +1552,8 @@ pub fn pdf_read_primitive_document_from_bytes(Bytes) -> PdfDocument raise @core.
 
 pub fn pdf_read_primitive_document_from_view(BytesView) -> PdfDocument raise @core.PdfError
 
+pub fn pdf_read_startxref_position(BytesView) -> Int raise @core.PdfError
+
 pub fn pdf_recompress_pdf(PdfDocument) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_rectangle(Double, Double, Double, Double) -> PdfPath
@@ -2151,6 +2157,8 @@ pub fn pdf_xmltree_of_bytes(BytesView) -> PdfMetadataXmlDocument raise @core.Pdf
 pub let pdf_xmp : String
 
 pub fn pdf_xobjbbox(PdfDrawControl, PdfDocument, String) -> Unit raise @core.PdfError
+
+pub fn pdf_xref_token_in_use(BytesView) -> Bool raise @core.PdfError
 
 pub fn point2(Double, Double) -> @geometry.Point2
 

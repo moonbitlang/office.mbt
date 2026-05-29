@@ -2,6 +2,7 @@ import {
   "bobzhang/pdflite/core",
   "bobzhang/pdflite/syntax",
   "moonbitlang/core/debug",
+  "moonbitlang/core/encoding/ascii",
   "moonbitlang/core/hashmap",
 }
 
@@ -12,6 +13,7 @@ import {
 options(
   targets: {
     "pdf_reader_header_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
+    "pdf_reader_xref_classic_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
     "pdf_reader_xref_model_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
   },
 )

@@ -15,6 +15,10 @@ pub fn pdf_classic_xref_lookup(ArrayView[PdfClassicXRefEntry], Int) -> PdfClassi
 
 pub fn pdf_classic_xrefs_add_newer_first_with_seen(Array[PdfClassicXRefEntry], @core.PdfNumberSet, ArrayView[PdfClassicXRefEntry]) -> Unit
 
+pub fn pdf_cursor_consume_ascii(@core.ByteCursor, ArrayView[Int], @core.PdfError) -> Unit raise @core.PdfError
+
+pub fn pdf_cursor_read_classic_xref_entries(@core.ByteCursor) -> Array[PdfClassicXRefEntry] raise @core.PdfError
+
 pub let pdf_default_version : PdfVersion
 
 pub fn pdf_read_header_from_bytes(Bytes) -> PdfVersion raise @core.PdfError
@@ -22,6 +26,10 @@ pub fn pdf_read_header_from_bytes(Bytes) -> PdfVersion raise @core.PdfError
 pub fn pdf_read_header_from_cursor(@core.ByteCursor) -> PdfVersion raise @core.PdfError
 
 pub fn pdf_read_header_from_view(BytesView) -> PdfVersion raise @core.PdfError
+
+pub fn pdf_read_startxref_position(BytesView) -> Int raise @core.PdfError
+
+pub fn pdf_xref_token_in_use(BytesView) -> Bool raise @core.PdfError
 
 // Errors
 
