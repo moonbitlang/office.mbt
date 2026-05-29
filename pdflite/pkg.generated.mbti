@@ -666,7 +666,11 @@ pub fn pdf_css_colours() -> Array[(String, Int)]
 
 pub fn pdf_cursor_drop_whitespace(ByteCursor) -> Unit
 
+pub fn pdf_cursor_lex_bool(ByteCursor) -> PdfLexeme
+
 pub fn pdf_cursor_lex_delimiter(ByteCursor) -> PdfLexeme
+
+pub fn pdf_cursor_lex_number(ByteCursor) -> PdfLexeme
 
 pub fn pdf_cursor_lex_token(ByteCursor) -> PdfLexeme raise @core.PdfError
 
@@ -2213,13 +2217,11 @@ pub fn ByteCursor::ignore_until(Self, (Int) -> Bool, eof_is_delimiter? : Bool) -
 pub fn ByteCursor::input_byte(Self) -> Int
 pub fn ByteCursor::input_pdf_error(Self, String) -> String
 pub fn ByteCursor::length(Self) -> Int
-pub fn ByteCursor::lex_pdf_bool(Self) -> PdfLexeme
 pub fn ByteCursor::lex_pdf_comment(Self) -> PdfLexeme
 pub fn ByteCursor::lex_pdf_hex_string(Self) -> PdfLexeme raise @core.PdfError
 pub fn ByteCursor::lex_pdf_keyword(Self) -> PdfLexeme raise @core.PdfError
 pub fn ByteCursor::lex_pdf_literal_string(Self) -> PdfLexeme raise @core.PdfError
 pub fn ByteCursor::lex_pdf_name(Self) -> PdfLexeme raise @core.PdfError
-pub fn ByteCursor::lex_pdf_number(Self) -> PdfLexeme
 pub fn ByteCursor::nudge(Self) -> Unit
 pub fn ByteCursor::peek(Self) -> Byte?
 pub fn ByteCursor::peek_byte(Self) -> Int

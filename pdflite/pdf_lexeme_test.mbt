@@ -90,65 +90,82 @@ test "pdf_string_of_lexeme mirrors CamlPDF debug token rendering" {
 }
 
 ///|
-test "ByteCursor lexes PDF booleans and numbers" {
+test "pdf_cursor_lex_bool and pdf_cursor_lex_number parse booleans and numbers" {
   let cursor = @pdflite.byte_cursor_of_bytes(
     lexeme_bytes_for_test([
       116, 114, 117, 101, 32, 45, 52, 50, 32, 46, 53, 32, 45, 45, 50,
     ]),
   )
-  @test.assert_eq(cursor.lex_pdf_bool(), LexBool(true))
-  @test.assert_eq(cursor.lex_pdf_number(), LexInt(-42))
-  @test.assert_eq(cursor.lex_pdf_number(), LexReal(0.5))
-  @test.assert_eq(cursor.lex_pdf_number(), LexInt(-2))
+  @test.assert_eq(@pdflite.pdf_cursor_lex_bool(cursor), LexBool(true))
+  @test.assert_eq(@pdflite.pdf_cursor_lex_number(cursor), LexInt(-42))
+  @test.assert_eq(@pdflite.pdf_cursor_lex_number(cursor), LexReal(0.5))
+  @test.assert_eq(@pdflite.pdf_cursor_lex_number(cursor), LexInt(-2))
   @test.assert_eq(
-    @pdflite.byte_cursor_of_bytes(lexeme_bytes_for_test([43, 49, 55])).lex_pdf_number(),
+    @pdflite.pdf_cursor_lex_number(
+      @pdflite.byte_cursor_of_bytes(lexeme_bytes_for_test([43, 49, 55])),
+    ),
     LexInt(17),
   )
   @test.assert_eq(
-    @pdflite.byte_cursor_of_bytes(
-      lexeme_bytes_for_test([45, 50, 49, 52, 55, 52, 56, 51, 54, 52, 56]),
-    ).lex_pdf_number(),
+    @pdflite.pdf_cursor_lex_number(
+      @pdflite.byte_cursor_of_bytes(
+        lexeme_bytes_for_test([45, 50, 49, 52, 55, 52, 56, 51, 54, 52, 56]),
+      ),
+    ),
     LexInt(-2147483648),
   )
   @test.assert_eq(
-    @pdflite.byte_cursor_of_bytes(
-      lexeme_bytes_for_test([50, 49, 52, 55, 52, 56, 51, 54, 52, 55]),
-    ).lex_pdf_number(),
+    @pdflite.pdf_cursor_lex_number(
+      @pdflite.byte_cursor_of_bytes(
+        lexeme_bytes_for_test([50, 49, 52, 55, 52, 56, 51, 54, 52, 55]),
+      ),
+    ),
     LexInt(2147483647),
   )
   let false_cursor = @pdflite.byte_cursor_of_bytes(
     lexeme_bytes_for_test([102, 97, 108, 115, 101]),
   )
-  @test.assert_eq(false_cursor.lex_pdf_bool(), LexBool(false))
+  @test.assert_eq(@pdflite.pdf_cursor_lex_bool(false_cursor), LexBool(false))
   @test.assert_eq(
-    @pdflite.byte_cursor_of_bytes(lexeme_bytes_for_test([])).lex_pdf_number(),
+    @pdflite.pdf_cursor_lex_number(
+      @pdflite.byte_cursor_of_bytes(lexeme_bytes_for_test([])),
+    ),
     LexNone,
   )
   @test.assert_eq(
-    @pdflite.byte_cursor_of_bytes(lexeme_bytes_for_test([255])).lex_pdf_number(),
+    @pdflite.pdf_cursor_lex_number(
+      @pdflite.byte_cursor_of_bytes(lexeme_bytes_for_test([255])),
+    ),
     LexNone,
   )
   @test.assert_eq(
-    @pdflite.byte_cursor_of_bytes(lexeme_bytes_for_test([46])).lex_pdf_number(),
+    @pdflite.pdf_cursor_lex_number(
+      @pdflite.byte_cursor_of_bytes(lexeme_bytes_for_test([46])),
+    ),
     LexNone,
   )
   @test.assert_eq(
-    @pdflite.byte_cursor_of_bytes(lexeme_bytes_for_test([49, 65])).lex_pdf_number(),
+    @pdflite.pdf_cursor_lex_number(
+      @pdflite.byte_cursor_of_bytes(lexeme_bytes_for_test([49, 65])),
+    ),
     LexNone,
   )
-  let huge_integer = @pdflite.byte_cursor_of_bytes(
+  let huge_integer_cursor = @pdflite.byte_cursor_of_bytes(
     lexeme_bytes_for_test([
       57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57,
       57, 57, 57, 57, 57, 57,
     ]),
-  ).lex_pdf_number()
+  )
+  let huge_integer = @pdflite.pdf_cursor_lex_number(huge_integer_cursor)
   guard huge_integer is LexReal(_) else {
     fail("expected oversized integer to fall back to LexReal")
   }
   @test.assert_eq(
-    @pdflite.byte_cursor_of_bytes(
-      lexeme_bytes_for_test([109, 97, 121, 98, 101]),
-    ).lex_pdf_bool(),
+    @pdflite.pdf_cursor_lex_bool(
+      @pdflite.byte_cursor_of_bytes(
+        lexeme_bytes_for_test([109, 97, 121, 98, 101]),
+      ),
+    ),
     LexNone,
   )
 }
@@ -201,7 +218,7 @@ test "ByteCursor lexes PDF comments and leaves newline for whitespace scan" {
   )
   @test.assert_eq(cursor.peek_byte(), 13)
   @pdflite.pdf_cursor_drop_whitespace(cursor)
-  @test.assert_eq(cursor.lex_pdf_number(), LexInt(1))
+  @test.assert_eq(@pdflite.pdf_cursor_lex_number(cursor), LexInt(1))
   @test.assert_eq(
     @pdflite.byte_cursor_of_bytes(lexeme_bytes_for_test([65])).lex_pdf_comment(),
     LexNone,
@@ -345,7 +362,7 @@ test "ByteCursor lexes PDF keywords and rewinds malformed endobj suffixes" {
   @test.assert_eq(try! cursor.lex_pdf_keyword(), LexNull)
   @test.assert_eq(try! cursor.lex_pdf_keyword(), LexObj)
   @test.assert_eq(try! cursor.lex_pdf_keyword(), LexEndObj)
-  @test.assert_eq(cursor.lex_pdf_number(), LexInt(5))
+  @test.assert_eq(@pdflite.pdf_cursor_lex_number(cursor), LexInt(5))
   @test.assert_eq(try! cursor.lex_pdf_keyword(), LexR)
   @test.assert_eq(try! cursor.lex_pdf_keyword(), LexEndStream)
 }

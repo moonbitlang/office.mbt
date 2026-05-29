@@ -83,8 +83,8 @@ fn pdf_number_view_real(view : BytesView) -> PdfLexeme {
 ///
 /// The cursor first reads one regular token. Non-boolean tokens produce
 /// `LexNone`.
-pub fn ByteCursor::lex_pdf_bool(self : ByteCursor) -> PdfLexeme {
-  let view = pdf_cursor_read_regular_token_view(self)
+pub fn pdf_cursor_lex_bool(cursor : ByteCursor) -> PdfLexeme {
+  let view = pdf_cursor_read_regular_token_view(cursor)
   match view {
     [116, 114, 117, 101] => LexBool(true)
     [102, 97, 108, 115, 101] => LexBool(false)
@@ -98,9 +98,9 @@ pub fn ByteCursor::lex_pdf_bool(self : ByteCursor) -> PdfLexeme {
 /// Integers are limited to MoonBit `Int` range; oversized integer-looking
 /// tokens fall back to real-number parsing. A leading doubled minus is accepted
 /// compatibly by dropping one minus sign.
-pub fn ByteCursor::lex_pdf_number(self : ByteCursor) -> PdfLexeme {
+pub fn pdf_cursor_lex_number(cursor : ByteCursor) -> PdfLexeme {
   let view = pdf_number_view_without_double_minus(
-    pdf_cursor_read_regular_token_view(self),
+    pdf_cursor_read_regular_token_view(cursor),
   )
   if view.length() == 0 {
     LexNone

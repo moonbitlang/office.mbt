@@ -43,9 +43,9 @@ pub fn pdf_cursor_lex_token(cursor : ByteCursor) -> PdfLexeme raise PdfError {
   match value {
     value if value == pdf_no_more => StopLexing
     37 => cursor.lex_pdf_comment()
-    116 | 102 => cursor.lex_pdf_bool()
+    116 | 102 => pdf_cursor_lex_bool(cursor)
     47 => cursor.lex_pdf_name()
-    value if pdf_is_number_start_byte(value) => cursor.lex_pdf_number()
+    value if pdf_is_number_start_byte(value) => pdf_cursor_lex_number(cursor)
     91 | 93 => pdf_cursor_lex_delimiter(cursor)
     40 => cursor.lex_pdf_literal_string()
     60 =>
