@@ -242,14 +242,14 @@ fn pdf_xref_stream_entries(
 }
 
 ///|
-fn ByteCursor::read_pdf_xref_stream_section(
-  self : ByteCursor,
+fn pdf_cursor_read_xref_stream_section(
+  cursor : ByteCursor,
 ) -> PdfXRefSection raise PdfError {
-  let stream_object_offset = self.absolute_position()
-  if !pdf_is_digit_byte(self.peek_byte()) {
+  let stream_object_offset = cursor.absolute_position()
+  if !pdf_is_digit_byte(cursor.peek_byte()) {
     raise XRefExpected
   }
-  let parsed = self.read_first_indirect_object_at_current([])
+  let parsed = cursor.read_first_indirect_object_at_current([])
   guard parsed.object is PdfStreamObject(stream) else { raise XRefExpected }
   if !pdf_reader_xref_stream_type_ok(stream.dictionary) {
     raise XRefExpected

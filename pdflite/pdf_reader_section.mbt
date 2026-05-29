@@ -8,7 +8,7 @@ fn pdf_cursor_read_xref_section(
     let trailer = pdf_cursor_read_trailer_dictionary(cursor)
     { entries, trailer, stream_object_number: None, stream_object_offset: None }
   } else {
-    cursor.read_pdf_xref_stream_section()
+    pdf_cursor_read_xref_stream_section(cursor)
   }
 }
 

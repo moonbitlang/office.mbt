@@ -77,7 +77,7 @@ fn pdf_read_classic_document_from_view_at_revision(
       match pdf_trailer_xref_stream_position(current_trailer) {
         Some(xref_stream_position) => {
           cursor.seek_absolute(xref_stream_position)
-          let stream_section = cursor.read_pdf_xref_stream_section()
+          let stream_section = pdf_cursor_read_xref_stream_section(cursor)
           pdf_classic_xrefs_add_newer_first_with_seen(
             xrefs,
             xref_seen,

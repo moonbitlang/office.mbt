@@ -16,7 +16,7 @@ fn pdf_reader_validate_xref_metadata_for_reconstruction(
     match pdf_trailer_xref_stream_position(section.trailer) {
       Some(xref_stream_position) => {
         cursor.seek_absolute(xref_stream_position)
-        ignore(cursor.read_pdf_xref_stream_section())
+        ignore(pdf_cursor_read_xref_stream_section(cursor))
       }
       None => ()
     }
