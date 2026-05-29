@@ -71,3 +71,25 @@ pub fn pdf_standard14_stemv_of_standard_font(font : PdfStandardFont) -> Int {
 pub fn pdf_standard14_flags_of_standard_font(font : PdfStandardFont) -> Int {
   font.flags()
 }
+
+///|
+/// Return cpdf's substitute font file candidates for a Standard 14 font.
+///
+/// This is the pure table from `cpdfembed.ml`'s `load_substitute`; callers that
+/// need bytes can resolve these filenames relative to their own filesystem
+/// boundary.
+pub fn pdf_standard_font_substitute_filenames(
+  font : PdfStandardFont,
+) -> Array[String] {
+  @standard14.pdf_standard_font_substitute_filenames(
+    font.to_standard14_data_font(),
+  )
+}
+
+///|
+/// Return cpdf's substitute font name for a Standard 14 font.
+pub fn pdf_standard_font_substitute_font_name(font : PdfStandardFont) -> String {
+  @standard14.pdf_standard_font_substitute_font_name(
+    font.to_standard14_data_font(),
+  )
+}
