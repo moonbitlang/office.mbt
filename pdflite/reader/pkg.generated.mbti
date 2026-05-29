@@ -67,6 +67,8 @@ pub fn pdf_reader_reconstruction_indirect_header_at(BytesView, Int) -> Bool
 
 pub fn pdf_reader_reconstruction_skip_malformed_object(BytesView, Int) -> Int?
 
+pub fn pdf_reader_reconstruction_trailers(BytesView, Bool, (@core.ByteCursor, Int) -> @syntax.PdfObject raise @core.PdfError, (@core.ByteCursor, Int) -> @syntax.PdfObject raise @core.PdfError) -> Array[@syntax.PdfObject]
+
 pub fn pdf_reader_reconstruction_xref_coverage(BytesView, ArrayView[(Int, PdfXRefSection)], ArrayView[PdfXRefSection], (BytesView, ArrayView[PdfClassicXRefEntry], PdfClassicXRefIndex, PdfClassicXRefEntry) -> Bool) -> PdfReconstructedXRefCoverage
 
 pub fn pdf_reader_reconstruction_xref_stream_entries(ArrayView[PdfXRefSection]) -> Array[PdfClassicXRefEntry]
