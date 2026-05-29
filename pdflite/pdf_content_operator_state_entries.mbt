@@ -23,7 +23,8 @@ pub fn PdfContentOperatorState::content_path_entry(
   stroking : Bool,
 ) -> PdfContentJsonEntry? {
   match
-    self.path.path.content_bounding_box(
+    pdf_path_content_bounding_box(
+      self.path.path,
       self.ctm,
       self.path_state.line_width,
       stroking,
@@ -70,7 +71,8 @@ fn PdfContentOperatorState::content_unbounded_shading_bounding_box(
   if self.clipping_path.length() == 0 {
     None
   } else {
-    self.clipping_path[0].content_bounding_box(
+    pdf_path_content_bounding_box(
+      self.clipping_path[0],
       self.ctm,
       self.path_state.line_width,
       false,

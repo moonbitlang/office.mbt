@@ -34,7 +34,7 @@ fn pdf_shape_transform_point(
 ) -> Point2 {
   let x = point.x * radius
   let y = point.y * radius
-  point2(
+  @geometry.point2(
     center_x + x * @math.cos(angle) - y * @math.sin(angle),
     center_y + x * @math.sin(angle) + y * @math.cos(angle),
   )
@@ -53,28 +53,28 @@ fn pdf_shape_quarter(
       center_y,
       radius,
       angle,
-      point2(1.0, 0.0),
+      @geometry.point2(1.0, 0.0),
     ),
     pdf_shape_transform_point(
       center_x,
       center_y,
       radius,
       angle,
-      point2(1.0, pdf_shape_kappa),
+      @geometry.point2(1.0, pdf_shape_kappa),
     ),
     pdf_shape_transform_point(
       center_x,
       center_y,
       radius,
       angle,
-      point2(pdf_shape_kappa, 1.0),
+      @geometry.point2(pdf_shape_kappa, 1.0),
     ),
     pdf_shape_transform_point(
       center_x,
       center_y,
       radius,
       angle,
-      point2(0.0, 1.0),
+      @geometry.point2(0.0, 1.0),
     ),
   )
 }
@@ -172,10 +172,16 @@ pub fn pdf_shape_rectangle(
 ) -> PdfPath {
   pdf_path(PdfPathEvenOdd, [
     pdf_path_subpath(PdfPathNotHole, PdfPathClosed, [
-      PdfPathStraight(point2(x, y), point2(x + width, y)),
-      PdfPathStraight(point2(x + width, y), point2(x + width, y + height)),
-      PdfPathStraight(point2(x + width, y + height), point2(x, y + height)),
-      PdfPathStraight(point2(x, y + height), point2(x, y)),
+      PdfPathStraight(@geometry.point2(x, y), @geometry.point2(x + width, y)),
+      PdfPathStraight(
+        @geometry.point2(x + width, y),
+        @geometry.point2(x + width, y + height),
+      ),
+      PdfPathStraight(
+        @geometry.point2(x + width, y + height),
+        @geometry.point2(x, y + height),
+      ),
+      PdfPathStraight(@geometry.point2(x, y + height), @geometry.point2(x, y)),
     ]),
   ])
 }

@@ -109,7 +109,8 @@ pub fn pdf_path_bounds(path : PdfPath) -> PdfRectangle {
 }
 
 ///|
-fn PdfPath::pdf_path_bounds_optional(self : PdfPath) -> PdfRectangle? {
+/// Return the bounds of a path, or `None` when it has no drawable segments.
+pub fn PdfPath::pdf_path_bounds_optional(self : PdfPath) -> PdfRectangle? {
   let mut found = false
   let mut bounds = pdf_path_empty_bounds()
   for subpath in self.subpaths {

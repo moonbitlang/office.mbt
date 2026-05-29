@@ -141,12 +141,12 @@ test "cpdf shape builds connected circle paths" {
 
 ///|
 test "cpdfcontent path geometry computes segment and path bounds" {
-  let straight = @pdflite.PdfPathStraight(
+  let straight : @pdflite.PdfPathSegment = PdfPathStraight(
     @pdflite.point2(3.0, 4.0),
     @pdflite.point2(-1.0, 8.0),
   )
   assert_rectangle_for_shape_test(straight.bounds(), -1.0, 4.0, 3.0, 8.0)
-  let bezier = @pdflite.PdfPathBezier(
+  let bezier : @pdflite.PdfPathSegment = PdfPathBezier(
     @pdflite.point2(10.0, 0.0),
     @pdflite.point2(-5.0, 20.0),
     @pdflite.point2(2.0, -3.0),
@@ -178,7 +178,7 @@ test "cpdfcontent path geometry computes segment and path bounds" {
 ///|
 test "cpdfcontent path geometry transforms segments and paths" {
   let matrix = @pdflite.transform_translate(10.0, -2.0)
-  let segment = @pdflite.PdfPathBezier(
+  let segment : @pdflite.PdfPathSegment = PdfPathBezier(
     @pdflite.point2(1.0, 2.0),
     @pdflite.point2(3.0, 4.0),
     @pdflite.point2(5.0, 6.0),
@@ -232,7 +232,8 @@ test "cpdfcontent path geometry emits content bounding box quads" {
       },
     ],
   }
-  guard path.content_bounding_box(
+  guard @pdflite.pdf_path_content_bounding_box(
+      path,
       @pdflite.transform_translate(10.0, 20.0),
       1.0,
       false,
@@ -257,18 +258,20 @@ test "cpdfcontent path geometry emits content bounding box quads" {
   )
   let empty : @pdflite.PdfPath = { winding_rule: PdfPathEvenOdd, subpaths: [] }
   @test.assert_eq(
-    empty.content_bounding_box(@pdflite.transform_identity_matrix, 1.0, false),
+    @pdflite.pdf_path_content_bounding_box(
+      empty, @pdflite.transform_identity_matrix, 1.0, false,
+    ),
     None,
   )
 }
 
 ///|
 test "cpdfcontent path geometry serializes drawn path content JSON" {
-  let straight = @pdflite.PdfPathStraight(
+  let straight : @pdflite.PdfPathSegment = PdfPathStraight(
     @pdflite.point2(1.0, 2.0),
     @pdflite.point2(3.0, 4.0),
   )
-  let bezier = @pdflite.PdfPathBezier(
+  let bezier : @pdflite.PdfPathSegment = PdfPathBezier(
     @pdflite.point2(5.0, 6.0),
     @pdflite.point2(7.0, 8.0),
     @pdflite.point2(9.0, 10.0),

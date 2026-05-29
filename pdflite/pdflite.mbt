@@ -173,6 +173,31 @@ pub using @page {
 }
 
 ///|
+pub using @shape {
+  type PdfDrawnPath,
+  type PdfPath,
+  type PdfPathClosure,
+  type PdfPathHole,
+  type PdfPathSegment,
+  type PdfPathSubpath,
+  type PdfPathWindingRule,
+  pdf_shape_kappa,
+  pdf_kappa,
+  pdf_restrict_angle,
+  pdf_shape_circle,
+  pdf_circle,
+  pdf_shape_rectangle,
+  pdf_rectangle,
+  pdf_path_segment_bounds,
+  pdf_path_bounds,
+  pdf_path_segment_transform,
+  pdf_path_transform,
+  pdf_path_segment_content_json,
+  pdf_path_subpath_content_json,
+  pdf_drawn_path_content_json,
+}
+
+///|
 pub using @crypt_core {
   type PdfPermission,
   type PdfEncryptionMethod,

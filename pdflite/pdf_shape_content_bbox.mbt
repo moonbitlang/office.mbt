@@ -36,13 +36,13 @@ fn pdf_path_stroke_expand_bounds(
 /// The path is first transformed by the current transformation matrix. When
 /// `stroking` is true, the transformed line-width vector expands the box by
 /// half its absolute x/y displacement, matching `emit_path_bounding_box`.
-pub fn PdfPath::content_bounding_box(
-  self : PdfPath,
+pub fn pdf_path_content_bounding_box(
+  path : PdfPath,
   ctm : TransformMatrix,
   line_width : Double,
   stroking : Bool,
 ) -> PdfContentBoundingBox? {
-  match self.transform(ctm).pdf_path_bounds_optional() {
+  match path.transform(ctm).pdf_path_bounds_optional() {
     Some(bounds) => {
       let bounds = if stroking {
         pdf_path_stroke_expand_bounds(bounds, ctm, line_width)
@@ -53,15 +53,4 @@ pub fn PdfPath::content_bounding_box(
     }
     None => None
   }
-}
-
-///|
-/// Compatibility wrapper for `PdfPath::content_bounding_box`.
-pub fn pdf_path_content_bounding_box(
-  path : PdfPath,
-  ctm : TransformMatrix,
-  line_width : Double,
-  stroking : Bool,
-) -> PdfContentBoundingBox? {
-  path.content_bounding_box(ctm, line_width, stroking)
 }

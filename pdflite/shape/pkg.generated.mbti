@@ -1,0 +1,93 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pdflite/shape"
+
+import {
+  "bobzhang/pdflite/geometry",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn pdf_circle(Double, Double, Double) -> PdfPath
+
+pub fn pdf_drawn_path_content_json(PdfDrawnPath) -> Json
+
+pub let pdf_kappa : Double
+
+pub fn pdf_path_bounds(PdfPath) -> @geometry.PdfRectangle
+
+pub fn pdf_path_segment_bounds(PdfPathSegment) -> @geometry.PdfRectangle
+
+pub fn pdf_path_segment_content_json(PdfPathSegment) -> Json
+
+pub fn pdf_path_segment_transform(PdfPathSegment, @geometry.TransformMatrix) -> PdfPathSegment
+
+pub fn pdf_path_subpath_content_json(PdfPathSubpath) -> Json
+
+pub fn pdf_path_transform(PdfPath, @geometry.TransformMatrix) -> PdfPath
+
+pub fn pdf_rectangle(Double, Double, Double, Double) -> PdfPath
+
+pub fn pdf_restrict_angle(Double, Double) -> Double
+
+pub fn pdf_shape_circle(Double, Double, Double) -> PdfPath
+
+pub let pdf_shape_kappa : Double
+
+pub fn pdf_shape_rectangle(Double, Double, Double, Double) -> PdfPath
+
+// Errors
+
+// Types and methods
+pub(all) struct PdfDrawnPath {
+  stroked : Bool
+  filled : Bool
+  path : PdfPath
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfDrawnPath::content_json(Self) -> Json
+
+pub(all) struct PdfPath {
+  winding_rule : PdfPathWindingRule
+  subpaths : Array[PdfPathSubpath]
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfPath::bounds(Self) -> @geometry.PdfRectangle
+pub fn PdfPath::pdf_path_bounds_optional(Self) -> @geometry.PdfRectangle?
+pub fn PdfPath::transform(Self, @geometry.TransformMatrix) -> Self
+
+pub(all) enum PdfPathClosure {
+  PdfPathClosed
+  PdfPathOpen
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfPathHole {
+  PdfPathHole
+  PdfPathNotHole
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfPathSegment {
+  PdfPathStraight(@geometry.Point2, @geometry.Point2)
+  PdfPathBezier(@geometry.Point2, @geometry.Point2, @geometry.Point2, @geometry.Point2)
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfPathSegment::bounds(Self) -> @geometry.PdfRectangle
+pub fn PdfPathSegment::content_json(Self) -> Json
+pub fn PdfPathSegment::transform(Self, @geometry.TransformMatrix) -> Self
+
+pub(all) struct PdfPathSubpath {
+  hole : PdfPathHole
+  closure : PdfPathClosure
+  segments : Array[PdfPathSegment]
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfPathSubpath::content_json(Self) -> Json
+
+pub(all) enum PdfPathWindingRule {
+  PdfPathEvenOdd
+  PdfPathNonZero
+} derive(Eq, ToJson, @debug.Debug)
+
+// Type aliases
+pub using @geometry {type PdfRectangle}
+
+pub using @geometry {type Point2}
+
+pub using @geometry {type TransformMatrix}
+
+// Traits
