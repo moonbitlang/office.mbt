@@ -30,16 +30,14 @@ fn pdf_png_u32_to_int(value : UInt, context : String) -> Int raise PdfError {
 }
 
 ///|
-fn ByteCursor::pdf_png_read_chunk(
-  self : ByteCursor,
-) -> (UInt, PdfBytes) raise PdfError {
+fn pdf_png_read_chunk(cursor : ByteCursor) -> (UInt, PdfBytes) raise PdfError {
   let length = pdf_png_u32_to_int(
-    self.read_u32_be(),
+    byte_cursor_read_u32_be(cursor),
     "read_png: chunk too large",
   )
-  let chunk_type = self.read_u32_be()
-  let chunk_data = self.read_bytes(length)
-  ignore(self.read_u32_be())
+  let chunk_type = byte_cursor_read_u32_be(cursor)
+  let chunk_data = cursor.read_bytes(length)
+  ignore(byte_cursor_read_u32_be(cursor))
   (chunk_type, chunk_data)
 }
 
@@ -64,17 +62,17 @@ fn pdf_png_concat(chunks : ArrayView[PdfBytes]) -> PdfBytes {
 fn pdf_read_png_view_inner(data : BytesView) -> PdfPNG raise PdfError {
   let cursor = byte_cursor_of_view(data, source="png")
   try! cursor.seek(8)
-  let (first_chunk_type, first_chunk_data) = cursor.pdf_png_read_chunk()
+  let (first_chunk_type, first_chunk_data) = pdf_png_read_chunk(cursor)
   if first_chunk_type != pdf_png_ihdr_chunk_type {
     raise BadPNG("read_png: first table not IHDR")
   }
   let header = byte_cursor_of_view(first_chunk_data, source="png IHDR")
   let width = pdf_png_u32_to_int(
-    header.read_u32_be(),
+    byte_cursor_read_u32_be(header),
     "read_png: width too large",
   )
   let height = pdf_png_u32_to_int(
-    header.read_u32_be(),
+    byte_cursor_read_u32_be(header),
     "read_png: height too large",
   )
   let bit_depth = match header.read_byte() {
@@ -106,7 +104,7 @@ fn pdf_read_png_view_inner(data : BytesView) -> PdfPNG raise PdfError {
   let idat_chunks : Array[PdfBytes] = []
   let mut done = false
   while !done {
-    try cursor.pdf_png_read_chunk() catch {
+    try pdf_png_read_chunk(cursor) catch {
       _ => done = true
     } noraise {
       (chunk_type, chunk_data) =>

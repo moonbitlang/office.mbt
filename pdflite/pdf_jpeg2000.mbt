@@ -11,20 +11,20 @@ let pdf_jpeg2000_signature_magic : UInt = 0x0D0A870AU
 let pdf_jpeg2000_image_header_box : UInt = 0x69686472U
 
 ///|
-fn ByteCursor::read_u32_be(self : ByteCursor) -> UInt raise PdfError {
-  let a = match self.read_byte() {
+fn byte_cursor_read_u32_be(cursor : ByteCursor) -> UInt raise PdfError {
+  let a = match cursor.read_byte() {
     Some(byte) => byte.to_uint()
     None => raise EndOfInput
   }
-  let b = match self.read_byte() {
+  let b = match cursor.read_byte() {
     Some(byte) => byte.to_uint()
     None => raise EndOfInput
   }
-  let c = match self.read_byte() {
+  let c = match cursor.read_byte() {
     Some(byte) => byte.to_uint()
     None => raise EndOfInput
   }
-  let d = match self.read_byte() {
+  let d = match cursor.read_byte() {
     Some(byte) => byte.to_uint()
     None => raise EndOfInput
   }
@@ -37,18 +37,18 @@ fn pdf_jpeg2000_dimension_word_to_int(value : UInt) -> Int {
 }
 
 ///|
-fn ByteCursor::jpeg2000_dimensions_inner(
-  self : ByteCursor,
+fn pdf_jpeg2000_dimensions_inner(
+  cursor : ByteCursor,
 ) -> (Int, Int) raise PdfError {
-  let signature_length = self.read_u32_be() catch {
+  let signature_length = byte_cursor_read_u32_be(cursor) catch {
     EndOfInput => raise BadJPEG2000Header
     error => raise error
   }
-  let signature_type = self.read_u32_be() catch {
+  let signature_type = byte_cursor_read_u32_be(cursor) catch {
     EndOfInput => raise BadJPEG2000Header
     error => raise error
   }
-  let signature_magic = self.read_u32_be() catch {
+  let signature_magic = byte_cursor_read_u32_be(cursor) catch {
     EndOfInput => raise BadJPEG2000Header
     error => raise error
   }
@@ -58,16 +58,16 @@ fn ByteCursor::jpeg2000_dimensions_inner(
     raise BadJPEG2000Header
   }
   while true {
-    let box = self.read_u32_be() catch {
+    let box = byte_cursor_read_u32_be(cursor) catch {
       EndOfInput => raise JPEG2000DimensionsExpected
       error => raise error
     }
     if box == pdf_jpeg2000_image_header_box {
-      let height : UInt = self.read_u32_be() catch {
+      let height : UInt = byte_cursor_read_u32_be(cursor) catch {
         EndOfInput => raise JPEG2000DimensionsExpected
         error => raise error
       }
-      let width : UInt = self.read_u32_be() catch {
+      let width : UInt = byte_cursor_read_u32_be(cursor) catch {
         EndOfInput => raise JPEG2000DimensionsExpected
         error => raise error
       }
@@ -76,7 +76,7 @@ fn ByteCursor::jpeg2000_dimensions_inner(
         pdf_jpeg2000_dimension_word_to_int(height),
       )
     }
-    self.seek(self.position() - 3) catch {
+    cursor.seek(cursor.position() - 3) catch {
       _ => raise JPEG2000DimensionsExpected
     }
   }
@@ -90,7 +90,7 @@ fn ByteCursor::jpeg2000_dimensions_inner(
 pub fn pdf_jpeg2000_dimensions_view(
   data : BytesView,
 ) -> (Int, Int) raise PdfError {
-  byte_cursor_of_view(data, source="jpeg2000").jpeg2000_dimensions_inner()
+  pdf_jpeg2000_dimensions_inner(byte_cursor_of_view(data, source="jpeg2000"))
 }
 
 ///|
