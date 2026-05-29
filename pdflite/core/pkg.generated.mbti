@@ -46,6 +46,12 @@ pub fn pdf_bytes_to_array(Bytes) -> Array[Byte]
 
 pub fn pdf_bytes_to_fixed_array(Bytes) -> FixedArray[Byte]
 
+pub fn pdf_error(String) -> Unit raise PdfError
+
+pub fn pdf_error_summary(PdfError) -> String
+
+pub fn pdf_hard_error(String) -> Unit raise PdfError
+
 pub fn pdf_int_array_of_bytes(BytesView) -> Array[Int]
 
 pub fn pdf_is_delimiter_byte(Int) -> Bool
@@ -63,6 +69,8 @@ pub fn pdf_name_of_bytes(Bytes) -> PdfName
 pub fn pdf_name_of_view(BytesView) -> PdfName
 
 pub let pdf_no_more : Int
+
+pub fn pdf_soft_error(String) -> Unit raise PdfError
 
 pub fn pdf_string_of_int_array(ArrayView[Int]) -> Bytes raise PdfError
 
