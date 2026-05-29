@@ -3,7 +3,7 @@ fn pdf_reader_validate_xref_metadata_for_reconstruction(
   data : BytesView,
 ) -> Unit raise PdfError {
   let cursor = byte_cursor_of_view(data)
-  ignore(cursor.read_pdf_header())
+  ignore(pdf_read_header_from_cursor(cursor))
   let mut current_xref = pdf_read_startxref_position(cursor.view())
   let mut done = false
   let mut depth = 0
@@ -38,7 +38,7 @@ fn pdf_reader_startxref_root_uses_object_stream(
   data : BytesView,
 ) -> Bool raise PdfError {
   let cursor = byte_cursor_of_view(data)
-  ignore(cursor.read_pdf_header())
+  ignore(pdf_read_header_from_cursor(cursor))
   cursor.seek_absolute(pdf_read_startxref_position(cursor.view()))
   let section = cursor.read_pdf_xref_section()
   let root = match section.trailer.lookup_immediate(pdf_reader_root_name()) {
@@ -73,7 +73,7 @@ fn pdf_reader_startxref_object_stream_root_unusable(
   data : BytesView,
 ) -> Bool raise PdfError {
   let cursor = byte_cursor_of_view(data)
-  ignore(cursor.read_pdf_header())
+  ignore(pdf_read_header_from_cursor(cursor))
   cursor.seek_absolute(pdf_read_startxref_position(cursor.view()))
   let section = cursor.read_pdf_xref_section()
   match section.trailer.lookup_immediate(pdf_reader_root_name()) {
@@ -153,7 +153,7 @@ fn pdf_reader_startxref_uses_xref_stream(
   data : BytesView,
 ) -> Bool raise PdfError {
   let cursor = byte_cursor_of_view(data)
-  ignore(cursor.read_pdf_header())
+  ignore(pdf_read_header_from_cursor(cursor))
   cursor.seek_absolute(pdf_read_startxref_position(cursor.view()))
   let section = cursor.read_pdf_xref_section()
   section.stream_object_number is Some(_)
@@ -173,7 +173,7 @@ fn pdf_reader_startxref_has_xref_stream_prefix(
   data : BytesView,
 ) -> Bool raise PdfError {
   let cursor = byte_cursor_of_view(data)
-  ignore(cursor.read_pdf_header())
+  ignore(pdf_read_header_from_cursor(cursor))
   cursor.seek_absolute(pdf_read_startxref_position(cursor.view()))
   let parsed = cursor.read_reconstructed_indirect_prefix_at_current()
   match parsed.object {

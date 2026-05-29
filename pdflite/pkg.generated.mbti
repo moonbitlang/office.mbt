@@ -1482,6 +1482,8 @@ pub fn pdf_read_font(PdfDocument, PdfObject) -> PdfFont raise @core.PdfError
 
 pub fn pdf_read_header_from_bytes(Bytes) -> PdfVersion raise @core.PdfError
 
+pub fn pdf_read_header_from_cursor(ByteCursor) -> PdfVersion raise @core.PdfError
+
 pub fn pdf_read_header_from_view(BytesView) -> PdfVersion raise @core.PdfError
 
 pub fn pdf_read_name_tree(PdfDocument, PdfObject) -> Array[(Bytes, PdfObject)]
@@ -2225,7 +2227,6 @@ pub fn ByteCursor::read_line(Self) -> Bytes raise @core.PdfError
 pub fn ByteCursor::read_line_view(Self) -> BytesView raise @core.PdfError
 pub fn ByteCursor::read_line_views(Self) -> Array[BytesView]
 pub fn ByteCursor::read_lines(Self) -> Array[Bytes]
-pub fn ByteCursor::read_pdf_header(Self) -> PdfVersion raise @core.PdfError
 pub fn ByteCursor::read_pdf_regular_token_view(Self) -> BytesView
 pub fn ByteCursor::read_remaining_bytes(Self) -> Bytes
 pub fn ByteCursor::read_until_pdf_whitespace_or_delimiter(Self) -> BytesView

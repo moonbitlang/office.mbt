@@ -2545,11 +2545,14 @@ fn reader_classic_catalog_pdf_with_prev_xref_bad_startxref() -> @pdflite.PdfByte
 }
 
 ///|
-test "ByteCursor read_pdf_header finds header and sets input offset" {
+test "pdf_read_header_from_cursor finds header and sets input offset" {
   let cursor = @pdflite.byte_cursor_of_bytes(
     reader_bytes_for_test([0, 1, 2, 37, 80, 68, 70, 45, 49, 46, 55, 10, 65]),
   )
-  @test.assert_eq(try! cursor.read_pdf_header(), { major: 1, minor: 7 })
+  @test.assert_eq(try! @pdflite.pdf_read_header_from_cursor(cursor), {
+    major: 1,
+    minor: 7,
+  })
   @test.assert_eq(cursor.absolute_position(), 11)
   @test.assert_eq(cursor.position(), 8)
   @test.assert_eq(cursor.peek_byte(), 10)

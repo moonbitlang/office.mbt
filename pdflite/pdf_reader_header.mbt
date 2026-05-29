@@ -17,8 +17,8 @@ fn pdf_is_digit_byte(value : Int) -> Bool {
 }
 
 ///|
-fn ByteCursor::pdf_header_at(self : ByteCursor, position : Int) -> PdfVersion? {
-  let header : Result[BytesView, Error] = try? self.view_at_absolute(
+fn pdf_header_at(cursor : ByteCursor, position : Int) -> PdfVersion? {
+  let header : Result[BytesView, Error] = try? cursor.view_at_absolute(
     position, 8,
   )
   match header {
@@ -53,13 +53,13 @@ fn pdf_header_probe_length(length : Int) -> Int {
 }
 
 ///|
-fn ByteCursor::finish_pdf_header_at(
-  self : ByteCursor,
+fn pdf_finish_header_at(
+  cursor : ByteCursor,
   position : Int,
   version : PdfVersion,
 ) -> PdfVersion raise PdfError {
-  self.set_offset(position)
-  self.seek_absolute(position + 8)
+  cursor.set_offset(position)
+  cursor.seek_absolute(position + 8)
   version
 }
 
@@ -69,13 +69,13 @@ fn ByteCursor::finish_pdf_header_at(
 /// The reader probes the first 1024 bytes for `%PDF-x.y`. When found, the cursor
 /// offset is set to the header position and the cursor advances past the header.
 /// If no header is found, `pdf_default_version` is returned.
-pub fn ByteCursor::read_pdf_header(
-  self : ByteCursor,
+pub fn pdf_read_header_from_cursor(
+  cursor : ByteCursor,
 ) -> PdfVersion raise PdfError {
-  let max_probe = pdf_header_probe_length(self.length())
+  let max_probe = pdf_header_probe_length(cursor.length())
   for position in 0..<=max_probe {
-    match self.pdf_header_at(position) {
-      Some(version) => break self.finish_pdf_header_at(position, version)
+    match pdf_header_at(cursor, position) {
+      Some(version) => break pdf_finish_header_at(cursor, position, version)
       None => ()
     }
   } nobreak {
@@ -86,7 +86,7 @@ pub fn ByteCursor::read_pdf_header(
 ///|
 /// Read a PDF header version from a borrowed byte view.
 pub fn pdf_read_header_from_view(data : BytesView) -> PdfVersion raise PdfError {
-  byte_cursor_of_view(data).read_pdf_header()
+  pdf_read_header_from_cursor(byte_cursor_of_view(data))
 }
 
 ///|
@@ -127,7 +127,7 @@ pub fn pdf_read_primitive_document_from_view(
   data : BytesView,
 ) -> PdfDocument raise PdfError {
   let cursor = byte_cursor_of_view(data)
-  let version = cursor.read_pdf_header()
+  let version = pdf_read_header_from_cursor(cursor)
   let document = pdf_document_empty()
   document.set_version(version.major, version.minor)
   let mut done = false
