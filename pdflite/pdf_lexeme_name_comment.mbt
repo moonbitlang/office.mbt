@@ -3,18 +3,18 @@ fn ByteCursor::pdf_name_output_capacity(self : ByteCursor) -> Int {
   let mut index = self.absolute_position()
   let mut capacity = 1
   let mut done = false
-  while index < self.data.length() && !done {
-    let value = self.data[index].to_int()
+  while index < self.length() && !done {
+    let value = self.byte_int_at_absolute(index)
     if pdf_is_whitespace_or_delimiter_byte(value) {
       done = true
     } else {
       index += 1
       capacity += 1
       if value == 35 {
-        if index < self.data.length() {
+        if index < self.length() {
           index += 1
         }
-        if index < self.data.length() {
+        if index < self.length() {
           index += 1
         }
       }

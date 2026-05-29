@@ -56,8 +56,8 @@ fn ByteCursor::pdf_literal_string_output_capacity(self : ByteCursor) -> Int {
   let mut index = self.absolute_position()
   let mut capacity = 0
   let mut depth = 1
-  while index < self.data.length() && depth > 0 {
-    let value = self.data[index].to_int()
+  while index < self.length() && depth > 0 {
+    let value = self.byte_int_at_absolute(index)
     index += 1
     match value {
       40 => {
@@ -71,21 +71,21 @@ fn ByteCursor::pdf_literal_string_output_capacity(self : ByteCursor) -> Int {
         }
       }
       92 =>
-        if index < self.data.length() {
-          let escaped = self.data[index].to_int()
+        if index < self.length() {
+          let escaped = self.byte_int_at_absolute(index)
           index += 1
           match escaped {
             13 =>
-              if index < self.data.length() && self.data[index].to_int() == 10 {
+              if index < self.length() && self.byte_int_at_absolute(index) == 10 {
                 index += 1
               }
             10 => ()
             value if pdf_is_octal_digit_byte(value) => {
-              if index < self.data.length() &&
-                pdf_is_octal_digit_byte(self.data[index].to_int()) {
+              if index < self.length() &&
+                pdf_is_octal_digit_byte(self.byte_int_at_absolute(index)) {
                 index += 1
-                if index < self.data.length() &&
-                  pdf_is_octal_digit_byte(self.data[index].to_int()) {
+                if index < self.length() &&
+                  pdf_is_octal_digit_byte(self.byte_int_at_absolute(index)) {
                   index += 1
                 }
               }

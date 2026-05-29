@@ -17,8 +17,8 @@ fn ByteCursor::pdf_hex_string_output_capacity(self : ByteCursor) -> Int {
   let mut index = self.absolute_position()
   let mut digits = 0
   let mut done = false
-  while index < self.data.length() && !done {
-    let value = self.data[index].to_int()
+  while index < self.length() && !done {
+    let value = self.byte_int_at_absolute(index)
     index += 1
     if value == 62 {
       done = true
@@ -39,11 +39,7 @@ pub fn ByteCursor::lex_pdf_hex_string(
   self : ByteCursor,
 ) -> PdfLexeme raise PdfError {
   let position = self.absolute_position()
-  if self.peek_byte() != 60 ||
-    (
-      position + 1 < self.data.length() &&
-      self.data[position + 1].to_int() == 60
-    ) {
+  if self.peek_byte() != 60 || self.byte_int_at_absolute(position + 1) == 60 {
     LexNone
   } else {
     self.nudge()

@@ -15,16 +15,12 @@ pub fn ByteCursor::lex_pdf_delimiter(self : ByteCursor) -> PdfLexeme {
       self.nudge()
       LexRightSquare
     }
-    value if value == 60 &&
-      position + 1 < self.data.length() &&
-      self.data[position + 1].to_int() == 60 => {
+    value if value == 60 && self.byte_int_at_absolute(position + 1) == 60 => {
       self.nudge()
       self.nudge()
       LexLeftDict
     }
-    value if value == 62 &&
-      position + 1 < self.data.length() &&
-      self.data[position + 1].to_int() == 62 => {
+    value if value == 62 && self.byte_int_at_absolute(position + 1) == 62 => {
       self.nudge()
       self.nudge()
       LexRightDict

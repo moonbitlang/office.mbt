@@ -15,16 +15,20 @@ fn ByteCursor::matches_pdf_ascii_at(
   position : Int,
   values : ArrayView[Int],
 ) -> Bool {
-  if position < 0 || position + values.length() > self.data.length() {
-    false
-  } else {
-    for i in 0..<values.length() {
-      if self.data[position + i].to_int() != values[i] {
-        break false
+  let view_result : Result[BytesView, Error] = try? self.view_at_absolute(
+    position,
+    values.length(),
+  )
+  match view_result {
+    Ok(view) =>
+      for i in 0..<values.length() {
+        if view[i].to_int() != values[i] {
+          break false
+        }
+      } nobreak {
+        true
       }
-    } nobreak {
-      true
-    }
+    Err(_) => false
   }
 }
 

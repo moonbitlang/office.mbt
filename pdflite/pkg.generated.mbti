@@ -2192,6 +2192,8 @@ pub struct ByteCursor {
   source : String
 } derive(Eq, ToJson, @debug.Debug)
 pub fn ByteCursor::absolute_position(Self) -> Int
+pub fn ByteCursor::byte_at_absolute(Self, Int) -> Byte?
+pub fn ByteCursor::byte_int_at_absolute(Self, Int) -> Int
 pub fn ByteCursor::deep_copy(Self) -> Self
 pub fn ByteCursor::drop_pdf_whitespace(Self) -> Unit
 pub fn ByteCursor::ignore_until(Self, (Int) -> Bool, eof_is_delimiter? : Bool) -> Unit raise @core.PdfError

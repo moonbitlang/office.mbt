@@ -92,6 +92,30 @@ pub fn ByteCursor::absolute_position(self : ByteCursor) -> Int {
 }
 
 ///|
+/// Returns the byte at an absolute input position without advancing.
+pub fn ByteCursor::byte_at_absolute(self : ByteCursor, position : Int) -> Byte? {
+  if position < 0 || position >= self.data.length() {
+    None
+  } else {
+    Some(self.data[position])
+  }
+}
+
+///|
+/// Returns the byte at an absolute input position as an integer.
+///
+/// Returns `pdf_no_more` when `position` is outside the underlying byte view.
+pub fn ByteCursor::byte_int_at_absolute(
+  self : ByteCursor,
+  position : Int,
+) -> Int {
+  match self.byte_at_absolute(position) {
+    Some(byte) => byte.to_int()
+    None => pdf_no_more
+  }
+}
+
+///|
 /// Moves the cursor to an absolute position in the underlying byte view.
 pub fn ByteCursor::seek_absolute(
   self : ByteCursor,
