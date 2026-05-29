@@ -10,24 +10,36 @@ pub fn PdfContentPartialPath::content_apply_path_op(
 ) -> PdfContentPathOpResult {
   match op {
     Op_m(x, y) =>
-      pdf_content_path_empty_result(self.content_move_to(point2(x, y)))
+      pdf_content_path_empty_result(
+        self.content_move_to(@geometry.point2(x, y)),
+      )
     Op_l(x, y) =>
-      pdf_content_path_empty_result(self.content_line_to(point2(x, y)))
+      pdf_content_path_empty_result(
+        self.content_line_to(@geometry.point2(x, y)),
+      )
     Op_c(a, b, c, d, e, f) =>
       pdf_content_path_empty_result(
-        self.content_curve_to(point2(a, b), point2(c, d), point2(e, f)),
+        self.content_curve_to(
+          @geometry.point2(a, b),
+          @geometry.point2(c, d),
+          @geometry.point2(e, f),
+        ),
       )
     Op_v(a, b, c, d) => {
       let next = match self {
         PdfContentPartialPath(state) =>
-          self.content_curve_to(state.current_point, point2(a, b), point2(c, d))
+          self.content_curve_to(
+            state.current_point,
+            @geometry.point2(a, b),
+            @geometry.point2(c, d),
+          )
         PdfContentNoPartialPath => self
       }
       pdf_content_path_empty_result(next)
     }
     Op_y(a, b, c, d) => {
-      let finish = point2(c, d)
-      let next = self.content_curve_to(point2(a, b), finish, finish)
+      let finish = @geometry.point2(c, d)
+      let next = self.content_curve_to(@geometry.point2(a, b), finish, finish)
       pdf_content_path_empty_result(next)
     }
     Op_h => pdf_content_path_empty_result(self.content_close_path())

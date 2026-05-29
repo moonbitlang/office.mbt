@@ -4,6 +4,7 @@ package "bobzhang/pdflite"
 import {
   "bobzhang/pdflite/annotation",
   "bobzhang/pdflite/content",
+  "bobzhang/pdflite/content/path",
   "bobzhang/pdflite/core",
   "bobzhang/pdflite/crypt_core",
   "bobzhang/pdflite/date",
@@ -497,7 +498,7 @@ pub fn pdf_contains_javascript(PdfDocument) -> Bool
 
 pub fn pdf_content_add_artifacts(ArrayView[@content.PdfContentOp]) -> Array[@content.PdfContentOp]
 
-pub fn pdf_content_apply_clipping_op(PdfContentPartialPath, ArrayView[@shape.PdfPath], @content.PdfContentOp) -> PdfContentClippingOpResult
+pub fn pdf_content_apply_clipping_op(@path.PdfContentPartialPath, ArrayView[@shape.PdfPath], @content.PdfContentOp) -> @path.PdfContentClippingOpResult
 
 pub fn pdf_content_apply_core_op(PdfContentOperatorState, @content.PdfContentOp) -> PdfContentOperatorState
 
@@ -531,7 +532,7 @@ pub fn pdf_content_apply_graphics_state_op(PdfContentOperatorState, @content.Pdf
 
 pub fn pdf_content_apply_marked_content_op(PdfContentOperatorState, @content.PdfContentOp) -> PdfContentOperatorState
 
-pub fn pdf_content_apply_path_op(PdfContentPartialPath, @content.PdfContentOp) -> PdfContentPathOpResult
+pub fn pdf_content_apply_path_op(@path.PdfContentPartialPath, @content.PdfContentOp) -> @path.PdfContentPathOpResult
 
 pub fn pdf_content_apply_path_state_op(PdfContentPathState, @content.PdfContentOp) -> PdfContentPathState
 
@@ -625,7 +626,7 @@ pub fn pdf_content_json_of_ops(PdfDocument, @geometry.PdfRectangle, @syntax.PdfO
 
 pub fn pdf_content_json_of_page(PdfDocument, @page.PdfPage) -> Json raise @core.PdfError
 
-pub fn pdf_content_no_partial_path() -> PdfContentPartialPath
+pub fn pdf_content_no_partial_path() -> @path.PdfContentPartialPath
 
 pub fn pdf_content_object_content_json(PdfContentObject) -> Json
 
@@ -2508,11 +2509,6 @@ pub(all) struct PdfContentBoundingBox {
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfContentBoundingBox::content_json(Self) -> Json
 
-pub(all) struct PdfContentClippingOpResult {
-  partial_path : PdfContentPartialPath
-  clipping_path : Array[@shape.PdfPath]
-} derive(Eq, ToJson, @debug.Debug)
-
 pub(all) struct PdfContentClippingState {
   clipping_path : Array[@shape.PdfPath]
 } derive(Eq, ToJson, @debug.Debug)
@@ -2580,7 +2576,7 @@ pub fn PdfContentObject::content_json(Self) -> Json
 
 pub(all) struct PdfContentOperatorFrame {
   ctm : @geometry.TransformMatrix
-  partial_path : PdfContentPartialPath
+  partial_path : @path.PdfContentPartialPath
   clipping_path : Array[@shape.PdfPath]
   path : @shape.PdfDrawnPath
   path_state : PdfContentPathState
@@ -2615,7 +2611,7 @@ pub(all) struct PdfContentOperatorResourceResult {
 
 pub(all) struct PdfContentOperatorState {
   ctm : @geometry.TransformMatrix
-  partial_path : PdfContentPartialPath
+  partial_path : @path.PdfContentPartialPath
   clipping_path : Array[@shape.PdfPath]
   path : @shape.PdfDrawnPath
   path_state : PdfContentPathState
@@ -2659,25 +2655,6 @@ pub fn PdfContentOperatorState::content_unit_square_bounding_box(Self) -> PdfCon
 pub(all) struct PdfContentOperatorTextResult {
   state : PdfContentOperatorState
   entries : Array[PdfContentJsonEntry]
-} derive(Eq, ToJson, @debug.Debug)
-
-pub(all) enum PdfContentPartialPath {
-  PdfContentNoPartialPath
-  PdfContentPartialPath(PdfContentPartialPathState)
-} derive(Eq, ToJson, @debug.Debug)
-pub fn PdfContentPartialPath::content_apply_clipping_op(Self, ArrayView[@shape.PdfPath], @content.PdfContentOp) -> PdfContentClippingOpResult
-pub fn PdfContentPartialPath::content_apply_path_op(Self, @content.PdfContentOp) -> PdfContentPathOpResult
-
-pub(all) struct PdfContentPartialPathState {
-  start_point : @geometry.Point2
-  current_point : @geometry.Point2
-  segments : Array[@shape.PdfPathSegment]
-  subpaths : Array[@shape.PdfPathSubpath]
-} derive(Eq, ToJson, @debug.Debug)
-
-pub(all) struct PdfContentPathOpResult {
-  partial_path : PdfContentPartialPath
-  drawn_path : @shape.PdfDrawnPath?
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfContentPathState {
@@ -4159,7 +4136,15 @@ pub using @reader {type PdfClassicXRefEntry}
 
 pub using @reader {type PdfClassicXRefIndex}
 
+pub using @path {type PdfContentClippingOpResult}
+
 pub using @content {type PdfContentOp}
+
+pub using @path {type PdfContentPartialPath}
+
+pub using @path {type PdfContentPartialPathState}
+
+pub using @path {type PdfContentPathOpResult}
 
 pub using @geometry {type PdfCoordRectangle}
 

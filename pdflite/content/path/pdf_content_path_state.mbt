@@ -188,10 +188,10 @@ fn PdfContentPartialPath::content_rectangle(
   height : Double,
 ) -> PdfContentPartialPath {
   self
-  .content_move_to(point2(x, y))
-  .content_line_to(point2(x + width, y))
-  .content_line_to(point2(x + width, y + height))
-  .content_line_to(point2(x, y + height))
+  .content_move_to(@geometry.point2(x, y))
+  .content_line_to(@geometry.point2(x + width, y))
+  .content_line_to(@geometry.point2(x + width, y + height))
+  .content_line_to(@geometry.point2(x, y + height))
   .content_close_path()
 }
 
