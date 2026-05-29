@@ -13,14 +13,14 @@ fn pdf_reader_validate_xref_metadata_for_reconstruction(
     }
     cursor.seek_absolute(current_xref)
     let section = pdf_cursor_read_xref_section(cursor)
-    match pdf_trailer_xref_stream_position(section.trailer) {
+    match @reader.pdf_trailer_xref_stream_position(section.trailer) {
       Some(xref_stream_position) => {
         cursor.seek_absolute(xref_stream_position)
         ignore(pdf_cursor_read_xref_stream_section(cursor))
       }
       None => ()
     }
-    match pdf_trailer_prev_position(section.trailer) {
+    match @reader.pdf_trailer_prev_position(section.trailer) {
       Some(previous) => current_xref = previous
       None => done = true
     }

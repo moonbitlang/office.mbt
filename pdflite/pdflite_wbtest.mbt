@@ -366,7 +366,7 @@ test "incremental writer rejects changed deferred objects" {
 test "private xref stream helpers cover malformed and deferred entries" {
   let key_w = @reader.pdf_reader_name("/W")
   let key_index = @reader.pdf_reader_name("/Index")
-  let negative_xrefstm : Result[Int?, Error] = try? pdf_trailer_xref_stream_position(
+  let negative_xrefstm : Result[Int?, Error] = try? @reader.pdf_trailer_xref_stream_position(
     PdfDictionary([(@reader.pdf_reader_xrefstm_name(), PdfInteger(-1))]),
   )
   guard negative_xrefstm is Err(PdfError::XRefExpected) else {

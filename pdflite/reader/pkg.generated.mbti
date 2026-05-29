@@ -57,6 +57,8 @@ pub fn pdf_reader_prev_name() -> @core.PdfName
 
 pub fn pdf_reader_root_name() -> @core.PdfName
 
+pub fn pdf_reader_sanitize_trailer(@syntax.PdfObject, Int) -> @syntax.PdfObject raise @core.PdfError
+
 pub fn pdf_reader_short_decodeparms_name() -> @core.PdfName
 
 pub fn pdf_reader_short_filter_name() -> @core.PdfName
@@ -76,6 +78,10 @@ pub fn pdf_reader_xref_stream_ref_set(ArrayView[(Int, Int)]) -> PdfReaderXRefStr
 pub fn pdf_reader_xref_stream_type_ok(@syntax.PdfObject) -> Bool
 
 pub fn pdf_reader_xrefstm_name() -> @core.PdfName
+
+pub fn pdf_trailer_prev_position(@syntax.PdfObject) -> Int? raise @core.PdfError
+
+pub fn pdf_trailer_xref_stream_position(@syntax.PdfObject) -> Int? raise @core.PdfError
 
 pub fn pdf_xref_stream_entries(BytesView, (Int, Int, Int), ArrayView[(Int, Int)]) -> Array[PdfClassicXRefEntry] raise @core.PdfError
 

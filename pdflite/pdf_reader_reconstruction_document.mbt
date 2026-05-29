@@ -64,7 +64,7 @@ fn pdf_read_reconstructed_document_from_view(
     )
   }
   document.set_trailer_dict(
-    pdf_reader_sanitize_trailer(
+    @reader.pdf_reader_sanitize_trailer(
       document.trailer_dict(),
       document.objects.max_object_number() + 1,
     ),

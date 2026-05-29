@@ -74,7 +74,7 @@ fn pdf_read_classic_document_from_view_at_revision(
       trailer = current_trailer
     }
     if read_section {
-      match pdf_trailer_xref_stream_position(current_trailer) {
+      match @reader.pdf_trailer_xref_stream_position(current_trailer) {
         Some(xref_stream_position) => {
           cursor.seek_absolute(xref_stream_position)
           let stream_section = pdf_cursor_read_xref_stream_section(cursor)
@@ -90,7 +90,7 @@ fn pdf_read_classic_document_from_view_at_revision(
         None => ()
       }
     }
-    match pdf_trailer_prev_position(current_trailer) {
+    match @reader.pdf_trailer_prev_position(current_trailer) {
       Some(previous) => current_xref = previous
       None => if read_section { done = true } else { raise BadRevision }
     }
@@ -147,7 +147,7 @@ fn pdf_read_classic_document_from_view_at_revision(
     )
   }
   document.set_trailer_dict(
-    pdf_reader_sanitize_trailer(
+    @reader.pdf_reader_sanitize_trailer(
       document.trailer_dict(),
       document.objects.max_object_number() + 1,
     ),
