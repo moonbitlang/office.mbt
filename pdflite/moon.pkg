@@ -8,6 +8,7 @@ import {
   "bobzhang/pdflite/reader",
   "bobzhang/pdflite/syntax",
   "bobzhang/pdflite/text/cmapdata",
+  "bobzhang/pdflite/text/encodingdata",
   "bobzhang/pdflite/text/glyphdata",
   "bobzhang/pdflite/text/unicodedata",
   "moonbitlang/core/env",
