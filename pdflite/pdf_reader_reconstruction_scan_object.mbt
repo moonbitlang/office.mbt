@@ -23,7 +23,9 @@ fn ByteCursor::lex_reconstructed_indirect_object_tokens_at_current(
     ])
     let end = if endobj < 0 { self.length() } else { endobj + 6 }
     let cursor = byte_cursor_of_view(self.view_at_absolute(start, end - start))
-    let tokens : Result[Array[PdfLexeme], Error] = try? cursor.lex_pdf_tokens()
+    let tokens : Result[Array[PdfLexeme], Error] = try? pdf_cursor_lex_tokens(
+      cursor,
+    )
     match tokens {
       Ok(tokens) => {
         output = tokens

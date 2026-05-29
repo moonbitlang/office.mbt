@@ -3,26 +3,26 @@
 ///
 /// Recognizes `[`, `]`, `<<`, and `>>`. A single `<` or `>` is left unread and
 /// returns `LexNone`.
-pub fn ByteCursor::lex_pdf_delimiter(self : ByteCursor) -> PdfLexeme {
-  pdf_cursor_drop_whitespace(self)
-  let position = self.absolute_position()
-  match self.peek_byte() {
+pub fn pdf_cursor_lex_delimiter(cursor : ByteCursor) -> PdfLexeme {
+  pdf_cursor_drop_whitespace(cursor)
+  let position = cursor.absolute_position()
+  match cursor.peek_byte() {
     91 => {
-      self.nudge()
+      cursor.nudge()
       LexLeftSquare
     }
     93 => {
-      self.nudge()
+      cursor.nudge()
       LexRightSquare
     }
-    value if value == 60 && self.byte_int_at_absolute(position + 1) == 60 => {
-      self.nudge()
-      self.nudge()
+    value if value == 60 && cursor.byte_int_at_absolute(position + 1) == 60 => {
+      cursor.nudge()
+      cursor.nudge()
       LexLeftDict
     }
-    value if value == 62 && self.byte_int_at_absolute(position + 1) == 62 => {
-      self.nudge()
-      self.nudge()
+    value if value == 62 && cursor.byte_int_at_absolute(position + 1) == 62 => {
+      cursor.nudge()
+      cursor.nudge()
       LexRightDict
     }
     _ => LexNone
@@ -36,27 +36,27 @@ pub fn ByteCursor::lex_pdf_delimiter(self : ByteCursor) -> PdfLexeme {
 /// delimiters, names, literal and hex strings, and selected keywords. It returns
 /// `StopLexing` at end of input and at markers that terminate object scanning,
 /// such as `startxref` or inline image data boundaries.
-pub fn ByteCursor::lex_pdf_token(self : ByteCursor) -> PdfLexeme raise PdfError {
-  pdf_cursor_drop_whitespace(self)
-  let position = self.absolute_position()
-  let value = self.peek_byte()
+pub fn pdf_cursor_lex_token(cursor : ByteCursor) -> PdfLexeme raise PdfError {
+  pdf_cursor_drop_whitespace(cursor)
+  let position = cursor.absolute_position()
+  let value = cursor.peek_byte()
   match value {
     value if value == pdf_no_more => StopLexing
-    37 => self.lex_pdf_comment()
-    116 | 102 => self.lex_pdf_bool()
-    47 => self.lex_pdf_name()
-    value if pdf_is_number_start_byte(value) => self.lex_pdf_number()
-    91 | 93 => self.lex_pdf_delimiter()
-    40 => self.lex_pdf_literal_string()
+    37 => cursor.lex_pdf_comment()
+    116 | 102 => cursor.lex_pdf_bool()
+    47 => cursor.lex_pdf_name()
+    value if pdf_is_number_start_byte(value) => cursor.lex_pdf_number()
+    91 | 93 => pdf_cursor_lex_delimiter(cursor)
+    40 => cursor.lex_pdf_literal_string()
     60 =>
-      if self.matches_pdf_ascii_at(position, [60, 60]) {
-        self.lex_pdf_delimiter()
+      if pdf_cursor_matches_ascii_at(cursor, position, [60, 60]) {
+        pdf_cursor_lex_delimiter(cursor)
       } else {
-        self.lex_pdf_hex_string()
+        cursor.lex_pdf_hex_string()
       }
-    62 => self.lex_pdf_delimiter()
+    62 => pdf_cursor_lex_delimiter(cursor)
     82 => {
-      self.nudge()
+      cursor.nudge()
       LexR
     }
     115 =>
@@ -65,7 +65,7 @@ pub fn ByteCursor::lex_pdf_token(self : ByteCursor) -> PdfLexeme raise PdfError 
       StopLexing
     73 => StopLexing
     value if pdf_is_lowercase_keyword_start_byte(value) =>
-      self.lex_pdf_keyword()
+      cursor.lex_pdf_keyword()
     _ => LexNone
   }
 }
@@ -75,13 +75,13 @@ pub fn ByteCursor::lex_pdf_token(self : ByteCursor) -> PdfLexeme raise PdfError 
 ///
 /// `StopLexing` and `LexNone` terminate scanning and are not included in the
 /// returned token array.
-pub fn ByteCursor::lex_pdf_tokens(
-  self : ByteCursor,
+pub fn pdf_cursor_lex_tokens(
+  cursor : ByteCursor,
 ) -> Array[PdfLexeme] raise PdfError {
   let tokens : Array[PdfLexeme] = []
   let mut done = false
   while !done {
-    match self.lex_pdf_token() {
+    match pdf_cursor_lex_token(cursor) {
       StopLexing | LexNone => done = true
       token => tokens.push(token)
     }
@@ -92,13 +92,13 @@ pub fn ByteCursor::lex_pdf_tokens(
 ///|
 /// Lex a single token from a borrowed byte view.
 pub fn pdf_lex_single_view(data : BytesView) -> PdfLexeme raise PdfError {
-  byte_cursor_of_view(data).lex_pdf_token()
+  pdf_cursor_lex_token(byte_cursor_of_view(data))
 }
 
 ///|
 /// Lex all tokens from a borrowed byte view.
 pub fn pdf_lex_view(data : BytesView) -> Array[PdfLexeme] raise PdfError {
-  byte_cursor_of_view(data).lex_pdf_tokens()
+  pdf_cursor_lex_tokens(byte_cursor_of_view(data))
 }
 
 ///|

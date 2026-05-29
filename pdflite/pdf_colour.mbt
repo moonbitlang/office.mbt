@@ -195,7 +195,7 @@ fn pdf_colour_lexemes(text : String) -> Array[PdfLexeme] raise PdfError {
   let tokens : Array[PdfLexeme] = []
   let mut done = false
   while !done {
-    match cursor.lex_pdf_token() {
+    match pdf_cursor_lex_token(cursor) {
       StopLexing => {
         pdf_cursor_drop_whitespace(cursor)
         if cursor.peek_byte() != pdf_no_more {

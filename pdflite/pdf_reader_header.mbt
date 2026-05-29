@@ -133,7 +133,7 @@ pub fn pdf_read_primitive_document_from_view(
   let mut done = false
   while !done {
     let (objects, prefix) = pdf_parse_indirect_object_segments(
-      cursor.lex_pdf_tokens(),
+      pdf_cursor_lex_tokens(cursor),
     )
     for parsed in objects {
       document.load_object_given_number(

@@ -322,15 +322,15 @@ test "ByteCursor lexes PDF hex strings and rejects malformed hex" {
 }
 
 ///|
-test "ByteCursor lexes PDF delimiters without consuming single angle starts" {
+test "pdf_cursor_lex_delimiter leaves single angle starts unread" {
   let cursor = @pdflite.byte_cursor_of_bytes(
     lexeme_bytes_for_test([32, 91, 32, 93, 32, 60, 60, 32, 62, 62, 32, 60]),
   )
-  @test.assert_eq(cursor.lex_pdf_delimiter(), LexLeftSquare)
-  @test.assert_eq(cursor.lex_pdf_delimiter(), LexRightSquare)
-  @test.assert_eq(cursor.lex_pdf_delimiter(), LexLeftDict)
-  @test.assert_eq(cursor.lex_pdf_delimiter(), LexRightDict)
-  @test.assert_eq(cursor.lex_pdf_delimiter(), LexNone)
+  @test.assert_eq(@pdflite.pdf_cursor_lex_delimiter(cursor), LexLeftSquare)
+  @test.assert_eq(@pdflite.pdf_cursor_lex_delimiter(cursor), LexRightSquare)
+  @test.assert_eq(@pdflite.pdf_cursor_lex_delimiter(cursor), LexLeftDict)
+  @test.assert_eq(@pdflite.pdf_cursor_lex_delimiter(cursor), LexRightDict)
+  @test.assert_eq(@pdflite.pdf_cursor_lex_delimiter(cursor), LexNone)
   @test.assert_eq(cursor.peek_byte(), 60)
 }
 
@@ -351,7 +351,7 @@ test "ByteCursor lexes PDF keywords and rewinds malformed endobj suffixes" {
 }
 
 ///|
-test "ByteCursor lex_pdf_tokens scans primitive PDF object syntax" {
+test "pdf_lex_view scans primitive PDF object syntax" {
   let tokens = try! @pdflite.pdf_lex_bytes(
     lexeme_bytes_for_test([
       37, 99, 10, 60, 60, 32, 47, 84, 121, 112, 101, 32, 47, 80, 97, 103, 101, 32,
@@ -378,17 +378,17 @@ test "pdf_lex_view and pdf_lex_single_view lex borrowed byte slices" {
 }
 
 ///|
-test "ByteCursor lex_pdf_token dispatches booleans hex strings and stop markers" {
+test "pdf_cursor_lex_token dispatches booleans hex strings and stop markers" {
   let cursor = @pdflite.byte_cursor_of_bytes(
     lexeme_bytes_for_test([
       102, 97, 108, 115, 101, 32, 60, 52, 49, 62, 32, 115, 105, 122, 101, 32, 73,
     ]),
   )
-  @test.assert_eq(try! cursor.lex_pdf_token(), LexBool(false))
-  let hex = try! cursor.lex_pdf_token()
+  @test.assert_eq(try! @pdflite.pdf_cursor_lex_token(cursor), LexBool(false))
+  let hex = try! @pdflite.pdf_cursor_lex_token(cursor)
   guard hex is LexString(bytes) else { fail("expected LexString") }
   @test.assert_eq(bytes, lexeme_bytes_for_test([65]))
-  @test.assert_eq(try! cursor.lex_pdf_token(), StopLexing)
+  @test.assert_eq(try! @pdflite.pdf_cursor_lex_token(cursor), StopLexing)
   try! cursor.seek(16)
-  @test.assert_eq(try! cursor.lex_pdf_token(), StopLexing)
+  @test.assert_eq(try! @pdflite.pdf_cursor_lex_token(cursor), StopLexing)
 }

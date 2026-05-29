@@ -90,7 +90,7 @@ fn pdf_content_read_complex_object(
     _ => ()
   }
   while array_depth > 0 || dict_depth > 0 {
-    let token = cursor.lex_pdf_token()
+    let token = pdf_cursor_lex_token(cursor)
     match token {
       StopLexing | LexNone => raise ParseObjectExpected
       LexLeftSquare => array_depth += 1
@@ -106,7 +106,7 @@ fn pdf_content_read_complex_object(
 
 ///|
 fn pdf_content_read_object(cursor : ByteCursor) -> PdfObject raise PdfError {
-  let token = cursor.lex_pdf_token()
+  let token = pdf_cursor_lex_token(cursor)
   match token {
     StopLexing | LexNone => raise ParseObjectExpected
     LexLeftSquare | LexLeftDict =>

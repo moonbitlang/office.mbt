@@ -161,7 +161,9 @@ fn ByteCursor::read_pdf_classic_xref_entries(
   while !done {
     pdf_cursor_drop_whitespace(self)
     let position = self.absolute_position()
-    if self.matches_pdf_ascii_at(position, [116, 114, 97, 105, 108, 101, 114]) {
+    if pdf_cursor_matches_ascii_at(self, position, [
+        116, 114, 97, 105, 108, 101, 114,
+      ]) {
       done = true
     } else if self.peek_byte() == pdf_no_more {
       raise TrailerExpected

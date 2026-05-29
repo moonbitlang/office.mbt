@@ -10,12 +10,12 @@ fn pdf_view_starts_with_endobj(view : BytesView) -> Bool {
 }
 
 ///|
-fn ByteCursor::matches_pdf_ascii_at(
-  self : ByteCursor,
+fn pdf_cursor_matches_ascii_at(
+  cursor : ByteCursor,
   position : Int,
   values : ArrayView[Int],
 ) -> Bool {
-  let view_result : Result[BytesView, Error] = try? self.view_at_absolute(
+  let view_result : Result[BytesView, Error] = try? cursor.view_at_absolute(
     position,
     values.length(),
   )

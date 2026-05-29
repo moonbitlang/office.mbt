@@ -18,7 +18,7 @@ fn ByteCursor::consume_pdf_ascii(
   error : PdfError,
 ) -> Unit raise PdfError {
   let position = self.absolute_position()
-  if self.matches_pdf_ascii_at(position, values) {
+  if pdf_cursor_matches_ascii_at(self, position, values) {
     self.seek_absolute(position + values.length())
   } else {
     raise error
@@ -269,7 +269,7 @@ fn pdf_parse_object_stream_member_from_view(
   data : BytesView,
 ) -> PdfObject raise PdfError {
   let cursor = byte_cursor_of_view(data)
-  let object = pdf_parse_single_lexeme_object(cursor.lex_pdf_tokens())
+  let object = pdf_parse_single_lexeme_object(pdf_cursor_lex_tokens(cursor))
   if cursor.stopped_at_pdf_stream_candidate() {
     match object {
       PdfDictionary(_) =>
@@ -305,6 +305,8 @@ pub fn pdf_parse_stream_object_from_view(
   data : BytesView,
 ) -> PdfParsedIndirectObject raise PdfError {
   let cursor = byte_cursor_of_view(data)
-  let prefix = pdf_parse_indirect_object_prefix_lexemes(cursor.lex_pdf_tokens())
+  let prefix = pdf_parse_indirect_object_prefix_lexemes(
+    pdf_cursor_lex_tokens(cursor),
+  )
   cursor.finish_pdf_stream_object(prefix)
 }

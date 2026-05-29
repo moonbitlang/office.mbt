@@ -5,7 +5,7 @@ fn ByteCursor::lex_first_pdf_indirect_object_tokens(
   let tokens : Array[PdfLexeme] = []
   let mut done = false
   while !done {
-    match self.lex_pdf_token() {
+    match pdf_cursor_lex_token(self) {
       StopLexing | LexNone => done = true
       LexEndObj as token => {
         tokens.push(token)
@@ -42,8 +42,8 @@ fn ByteCursor::read_plain_indirect_object_at_current(
 ///|
 fn ByteCursor::stopped_at_pdf_stream_candidate(self : ByteCursor) -> Bool {
   let position = self.absolute_position()
-  self.matches_pdf_ascii_at(position, [115]) &&
-  !self.matches_pdf_ascii_at(position, [
+  pdf_cursor_matches_ascii_at(self, position, [115]) &&
+  !pdf_cursor_matches_ascii_at(self, position, [
     115, 116, 97, 114, 116, 120, 114, 101, 102,
   ])
 }
