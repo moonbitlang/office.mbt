@@ -4,7 +4,6 @@ import {
   "bobzhang/pdflite/date",
   "bobzhang/pdflite/flate",
   "bobzhang/pdflite/geometry",
-  "bobzhang/pdflite/internal/number_set",
   "moonbitlang/core/env",
   "moonbitlang/core/buffer",
   "moonbitlang/core/debug",

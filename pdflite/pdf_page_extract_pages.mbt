@@ -88,7 +88,7 @@ fn pdf_page_deleted_numbers(
   all_page_numbers : ArrayView[Int],
   active_page_numbers : ArrayView[Int],
 ) -> Array[Int] {
-  let active_pages = @number_set.pdf_number_set(active_page_numbers)
+  let active_pages = @core.pdf_number_set(active_page_numbers)
   let deleted : Array[Int] = Array::new(capacity=all_page_numbers.length())
   for number in all_page_numbers {
     if !active_pages.contains(number) {

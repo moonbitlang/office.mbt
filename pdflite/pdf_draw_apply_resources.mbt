@@ -50,7 +50,7 @@ fn PdfDocument::pdf_draw_page_resource_numbers(
 ///|
 fn PdfDocument::pdf_draw_minimum_resource_number(
   self : PdfDocument,
-  selected_pages : @number_set.PdfNumberSet,
+  selected_pages : @core.PdfNumberSet,
 ) -> Int raise PdfError {
   let pages = self.pages_of_pagetree()
   let mut maximum = -1

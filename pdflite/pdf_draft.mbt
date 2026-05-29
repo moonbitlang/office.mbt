@@ -341,7 +341,7 @@ pub fn PdfDocument::draft(
   pdf_draft_validate_page_numbers(page_numbers, end_page)
   let document = self.copy()
   let pages = document.pages_of_pagetree()
-  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let selected_pages = @core.pdf_number_set(page_numbers)
   let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1

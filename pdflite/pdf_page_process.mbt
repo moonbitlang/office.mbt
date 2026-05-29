@@ -10,7 +10,7 @@ pub fn PdfDocument::process_pages(
   process : (Int, PdfPage) -> (PdfPage, Int, TransformMatrix) raise PdfError,
 ) -> PdfDocument raise PdfError {
   let pages = self.pages_of_pagetree()
-  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let selected_pages = @core.pdf_number_set(page_numbers)
   let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
   let matrices : Array[(Int, TransformMatrix)] = Array::new(
     capacity=pages.length(),
@@ -62,7 +62,7 @@ pub fn PdfDocument::iter_pages(
   process : (Int, PdfPage) -> Unit raise PdfError,
 ) -> Unit raise PdfError {
   let pages = self.pages_of_pagetree()
-  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let selected_pages = @core.pdf_number_set(page_numbers)
   for index in 0..<pages.length() {
     let page_number = index + 1
     if selected_pages.contains(page_number) {
@@ -101,7 +101,7 @@ pub fn[T] PdfDocument::map_pages(
   process : (Int, PdfPage) -> T raise PdfError,
 ) -> Array[T] raise PdfError {
   let pages = self.pages_of_pagetree()
-  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let selected_pages = @core.pdf_number_set(page_numbers)
   let output : Array[T] = Array::new(capacity=page_numbers.length())
   for index in 0..<pages.length() {
     let page_number = index + 1

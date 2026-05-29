@@ -1,14 +1,14 @@
 ///|
 priv struct PdfReconstructedXRefCoverage {
-  sections : Array[(Int, @number_set.PdfNumberSet)]
+  sections : Array[(Int, @core.PdfNumberSet)]
 }
 
 ///|
 fn pdf_reconstructed_trailer_root_numbers(
   classic_sections : ArrayView[(Int, PdfXRefSection)],
   xref_stream_sections : ArrayView[PdfXRefSection],
-) -> @number_set.PdfNumberSet {
-  let roots = @number_set.pdf_number_set([])
+) -> @core.PdfNumberSet {
+  let roots = @core.pdf_number_set([])
   for item in classic_sections {
     match item.1.trailer.lookup_immediate(pdf_reader_root_name()) {
       Some(PdfIndirect(root)) => roots.add(root)
@@ -56,7 +56,7 @@ fn pdf_reconstructed_xref_coverage(
   classic_sections : ArrayView[(Int, PdfXRefSection)],
   xref_stream_sections : ArrayView[PdfXRefSection],
 ) -> PdfReconstructedXRefCoverage {
-  let covered : Array[(Int, @number_set.PdfNumberSet)] = Array::new(
+  let covered : Array[(Int, @core.PdfNumberSet)] = Array::new(
     capacity=classic_sections.length() + xref_stream_sections.length(),
   )
   let trailer_roots = pdf_reconstructed_trailer_root_numbers(
@@ -64,7 +64,7 @@ fn pdf_reconstructed_xref_coverage(
   )
   for item in classic_sections {
     let (offset, section) = item
-    let numbers = @number_set.pdf_number_set([])
+    let numbers = @core.pdf_number_set([])
     let xref_index = pdf_classic_xref_index(section.entries)
     for xref in section.entries {
       if xref.object_number > 0 &&
@@ -83,7 +83,7 @@ fn pdf_reconstructed_xref_coverage(
   for section in xref_stream_sections {
     match section.stream_object_offset {
       Some(offset) => {
-        let numbers = @number_set.pdf_number_set([])
+        let numbers = @core.pdf_number_set([])
         for xref in section.entries {
           if xref.object_number > 0 &&
             (xref.in_use || !trailer_roots.contains(xref.object_number)) {

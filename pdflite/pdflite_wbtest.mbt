@@ -4,16 +4,16 @@
 
 ///|
 test "private PDF number set deduplicates membership and additions" {
-  let numbers = @number_set.pdf_number_set([1, 1])
+  let numbers = @core.pdf_number_set([1, 1])
   @test.assert_eq(numbers.contains(1), true)
   @test.assert_eq(numbers.contains(2), false)
   numbers.add(2)
   numbers.add(2)
   @test.assert_eq(numbers.contains(2), true)
   let output : Array[Int] = []
-  @number_set.pdf_push_unique_number(output, numbers, 2)
-  @number_set.pdf_push_unique_number(output, numbers, 3)
-  @number_set.pdf_push_unique_number(output, numbers, 3)
+  @core.pdf_push_unique_number(output, numbers, 2)
+  @core.pdf_push_unique_number(output, numbers, 3)
+  @core.pdf_push_unique_number(output, numbers, 3)
   @test.assert_eq(output, [3])
 }
 
@@ -882,7 +882,7 @@ test "private reader xref helpers report malformed inputs" {
       object_stream: None,
     },
   ]
-  let seen_xrefs = @number_set.pdf_number_set([2])
+  let seen_xrefs = @core.pdf_number_set([2])
   pdf_classic_xrefs_add_newer_first_with_seen(xref_target, seen_xrefs, [
     {
       object_number: 2,
@@ -1188,7 +1188,7 @@ test "private structure survival helpers cover direct cases" {
       (pdf_structure_k_key(), PdfInteger(0)),
     ]),
   )
-  let deleted_pages = @number_set.pdf_number_set([2])
+  let deleted_pages = @core.pdf_number_set([2])
   @test.assert_eq(
     doc.pdf_structure_object_has_deleted_page_in_set(
       PdfIndirect(50),

@@ -56,7 +56,7 @@ fn PdfDocument::pdf_draw_apply_chunk(
   add_artifacts : Bool,
 ) -> PdfDocument raise PdfError {
   state.set_structure_tree_enabled(struct_tree)
-  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let selected_pages = @core.pdf_number_set(page_numbers)
   state.set_minimum_resource_number(
     self.pdf_draw_minimum_resource_number(selected_pages),
   )

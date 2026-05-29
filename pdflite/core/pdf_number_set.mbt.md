@@ -1,9 +1,8 @@
-# pdflite/internal/number_set
+# pdflite/core number sets
 
-`bobzhang/pdflite/internal/number_set` is a small mutable helper for tracking
-object numbers during reconstruction, page cleanup, and xref processing. It is
-internal because callers should normally work with document or page APIs rather
-than managing object-number sets directly.
+`PdfNumberSet` is a small mutable helper for tracking object numbers during
+reconstruction, page cleanup, and xref processing. It lives in `core` because it
+is a foundation data structure with no dependency on document or feature code.
 
 ```mermaid
 flowchart LR
@@ -18,11 +17,11 @@ flowchart LR
 ```moonbit check
 ///|
 test "number set pushes only unseen values" {
-  let seen = @number_set.pdf_number_set([2, 4])
+  let seen = @core.pdf_number_set([2, 4])
   let output : Array[Int] = []
-  @number_set.pdf_push_unique_number(output, seen, 2)
-  @number_set.pdf_push_unique_number(output, seen, 5)
-  @number_set.pdf_push_unique_number(output, seen, 5)
+  @core.pdf_push_unique_number(output, seen, 2)
+  @core.pdf_push_unique_number(output, seen, 5)
+  @core.pdf_push_unique_number(output, seen, 5)
   if output != [5] {
     fail("expected only the first unseen number to be pushed")
   }
@@ -39,8 +38,8 @@ test "number set pushes only unseen values" {
 
 ## Pedantic Boundaries
 
-- This is an internal package. It should remain a low-level helper for
-  algorithms that need object-number de-duplication.
+- This is a low-level foundation helper for algorithms that need object-number
+  de-duplication.
 - It owns set membership, not ordering policy. Ordering is determined by the
   caller's traversal and the output array passed to `pdf_push_unique_number`.
 - Mutability is intentional: `PdfNumberSet` is a stateful visited-number set,
@@ -50,8 +49,8 @@ test "number set pushes only unseen values" {
 
 ## Verification Notes
 
-- README examples are blackbox tests for the internal package API.
+- README examples are blackbox tests for the core package API.
 - Tests should cover duplicate suppression and mutation of the visited set.
-- Run `moon test internal/number_set/README.mbt.md` after editing this file.
+- Run `moon test core/pdf_number_set.mbt.md` after editing this file.
 - Run `moon info` before review; this README should not change
-  `internal/number_set/pkg.generated.mbti`.
+  `core/pkg.generated.mbti`.

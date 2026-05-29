@@ -117,7 +117,7 @@ pub fn PdfDocument::list_fonts(
 ) -> Array[PdfFontListEntry] raise PdfError {
   let pages = self.pages_of_pagetree()
   pdf_page_box_validate_page_numbers(page_numbers, pages.length(), "list_fonts")
-  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let selected_pages = @core.pdf_number_set(page_numbers)
   let output : Array[PdfFontListEntry] = Array::new(
     capacity=page_numbers.length(),
   )

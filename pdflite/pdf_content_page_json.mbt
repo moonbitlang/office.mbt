@@ -127,7 +127,7 @@ pub fn PdfDocument::test_extract_text(
     pages.length(),
     "test_extract_text",
   )
-  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let selected_pages = @core.pdf_number_set(page_numbers)
   let page_texts : Array[PdfBytes] = Array::new(capacity=pages.length())
   let mut output_length = pages.length()
   for index in 0..<pages.length() {
@@ -193,7 +193,7 @@ pub fn PdfDocument::page_content_json(
     pages.length(),
     "page_content_json",
   )
-  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let selected_pages = @core.pdf_number_set(page_numbers)
   let output : Array[Json] = Array::new(capacity=page_numbers.length())
   for index in 0..<pages.length() {
     let page_number = index + 1

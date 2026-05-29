@@ -230,7 +230,7 @@ pub fn PdfDocument::upright_pages(
   if self.pdf_page_upright_all_upright(page_numbers, pages) {
     self
   } else {
-    let selected_pages = @number_set.pdf_number_set(page_numbers)
+    let selected_pages = @core.pdf_number_set(page_numbers)
     let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
     let matrices : Array[(Int, TransformMatrix)] = Array::new(
       capacity=page_numbers.length(),

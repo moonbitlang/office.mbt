@@ -311,7 +311,7 @@ test "private page object entry rewriting covers parser states" {
     ),
     pdf_object_entry(ObjectToParse),
   )
-  let deleted_pages = @number_set.pdf_number_set([1])
+  let deleted_pages = @core.pdf_number_set([1])
   @test.assert_eq(
     pdf_page_nullify_entry(
       pdf_object_entry(ObjectParsedAlreadyDecrypted(PdfIndirect(1))),

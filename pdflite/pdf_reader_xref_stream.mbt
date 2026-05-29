@@ -1,19 +1,19 @@
 ///|
 priv struct PdfReaderXRefStreamRefSet {
-  values : @hashmap.HashMap[Int, @number_set.PdfNumberSet]
+  values : @hashmap.HashMap[Int, @core.PdfNumberSet]
 }
 
 ///|
 fn pdf_reader_xref_stream_ref_set(
   refs : ArrayView[(Int, Int)],
 ) -> PdfReaderXRefStreamRefSet {
-  let values : @hashmap.HashMap[Int, @number_set.PdfNumberSet] = HashMap([])
+  let values : @hashmap.HashMap[Int, @core.PdfNumberSet] = HashMap([])
   for item in refs {
     let (object_number, offset) = item
     match values.get(object_number) {
       Some(offsets) => offsets.add(offset)
       None => {
-        let offsets = @number_set.pdf_number_set([])
+        let offsets = @core.pdf_number_set([])
         offsets.add(offset)
         values[object_number] = offsets
       }

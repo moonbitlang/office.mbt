@@ -47,7 +47,7 @@ fn pdf_draw_single_page_ops(
 fn PdfDocument::pdf_draw_render_page_ops(
   self : PdfDocument,
   state : PdfDrawRenderState,
-  selected_pages : @number_set.PdfNumberSet,
+  selected_pages : @core.PdfNumberSet,
   drawops : ArrayView[PdfDrawOp],
   filename : String,
   bates : Int,

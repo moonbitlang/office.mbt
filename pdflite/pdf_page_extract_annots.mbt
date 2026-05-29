@@ -81,7 +81,7 @@ fn PdfDocument::pdf_page_fixup_duplicate_annots(
       self.pdf_page_annotation_numbers(self.lookup_object_or_null(page_number)),
     )
   }
-  let seen = @number_set.pdf_number_set([])
+  let seen = @core.pdf_number_set([])
   let new_annots : Array[Array[Int]] = Array::new(
     capacity=existing_annots.length(),
   )

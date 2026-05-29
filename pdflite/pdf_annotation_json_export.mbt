@@ -188,7 +188,7 @@ pub fn PdfDocument::annotations_json(
   )
   let page_reference_numbers = self.page_reference_numbers()
   let page_number_lookup = pdf_page_number_lookup(page_reference_numbers)
-  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let selected_pages = @core.pdf_number_set(page_numbers)
   let entries : Array[Json] = Array::new(capacity=page_numbers.length() + 1)
   entries.push(pdf_annotation_json_format_header())
   let extra_roots : Array[PdfObject] = Array::new(

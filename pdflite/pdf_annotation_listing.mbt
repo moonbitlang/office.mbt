@@ -116,7 +116,7 @@ pub fn PdfDocument::list_annotations(
     pages.length(),
     "list_annotations",
   )
-  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let selected_pages = @core.pdf_number_set(page_numbers)
   let rows : Array[(Int, PdfBytes)] = Array::new(capacity=page_numbers.length())
   let mut output_length = 0
   for index, page in pages {

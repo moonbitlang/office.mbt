@@ -195,7 +195,7 @@ fn pdf_chop_validate_grid(x : Int, y : Int) -> Unit raise PdfError {
 ///|
 fn pdf_chop_selected_page_count(
   original_count : Int,
-  selected_pages : @number_set.PdfNumberSet,
+  selected_pages : @core.PdfNumberSet,
 ) -> Int {
   let mut count = 0
   for page_number in 1..<=original_count {
@@ -209,7 +209,7 @@ fn pdf_chop_selected_page_count(
 ///|
 fn pdf_chop_change_table(
   original_count : Int,
-  selected_pages : @number_set.PdfNumberSet,
+  selected_pages : @core.PdfNumberSet,
   selected_count : Int,
   pieces_per_selected_page : Int,
 ) -> Array[(Int, Int)] {
@@ -247,7 +247,7 @@ fn PdfDocument::pdf_chop_inner(
   pdf_chop_validate_page_numbers(page_numbers, end_page, context)
   let pages = self.pages_of_pagetree()
   let pieces = if x == 0 || y == 0 { 2 } else { x * y }
-  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let selected_pages = @core.pdf_number_set(page_numbers)
   let selected_count = pdf_chop_selected_page_count(
     pages.length(),
     selected_pages,

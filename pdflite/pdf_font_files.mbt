@@ -161,7 +161,7 @@ pub fn PdfDocument::copy_font_from(
   target_pdf.pdf_font_copy_referenced_objects_from(source_pdf, font)
   let pages = target_pdf.pages_of_pagetree()
   pdf_page_box_validate_page_numbers(page_numbers, pages.length(), "copy_font")
-  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let selected_pages = @core.pdf_number_set(page_numbers)
   let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
   for index, page in pages {
     let page_number = index + 1

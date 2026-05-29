@@ -110,7 +110,7 @@ pub fn PdfDocument::missing_fonts(
     pages.length(),
     "missing_fonts",
   )
-  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let selected_pages = @core.pdf_number_set(page_numbers)
   let output : Array[PdfMissingFontEntry] = Array::new(
     capacity=page_numbers.length(),
   )

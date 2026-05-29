@@ -55,7 +55,7 @@ pub fn PdfDocument::append_page_content(
 ) -> PdfDocument raise PdfError {
   let document = self.copy()
   let pages = document.pages_of_pagetree()
-  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let selected_pages = @core.pdf_number_set(page_numbers)
   let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
@@ -106,7 +106,7 @@ pub fn PdfDocument::append_page_content_ops(
 ) -> PdfDocument raise PdfError {
   let document = self.copy()
   let pages = document.pages_of_pagetree()
-  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let selected_pages = @core.pdf_number_set(page_numbers)
   let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1

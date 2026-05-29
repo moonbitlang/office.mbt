@@ -27,7 +27,7 @@ fn pdf_reconstructed_xref_stream_entries(
   let xrefs : Array[PdfClassicXRefEntry] = Array::new(
     capacity=pdf_reconstructed_xref_stream_entry_capacity(sections),
   )
-  let seen = @number_set.pdf_number_set([])
+  let seen = @core.pdf_number_set([])
   for offset in 0..<sections.length() {
     let index = sections.length() - 1 - offset
     pdf_classic_xrefs_add_newer_first_with_seen(
@@ -46,7 +46,7 @@ fn pdf_reconstructed_classic_xref_entries(
   let xrefs : Array[PdfClassicXRefEntry] = Array::new(
     capacity=pdf_reconstructed_classic_xref_entry_capacity(sections),
   )
-  let seen = @number_set.pdf_number_set([])
+  let seen = @core.pdf_number_set([])
   for offset in 0..<sections.length() {
     let index = sections.length() - 1 - offset
     pdf_classic_xrefs_add_newer_first_with_seen(

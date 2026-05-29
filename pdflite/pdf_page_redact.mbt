@@ -30,7 +30,7 @@ pub fn PdfDocument::redact_pages(
     pages.length(),
     "redact_pages",
   )
-  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let selected_pages = @core.pdf_number_set(page_numbers)
   let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
   for index, page in pages {
     let page_number = index + 1

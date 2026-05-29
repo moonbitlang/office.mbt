@@ -138,7 +138,7 @@ fn PdfClassicXRefIndex::lookup(
 ///|
 fn pdf_classic_xrefs_add_newer_first_with_seen(
   target : Array[PdfClassicXRefEntry],
-  seen : @number_set.PdfNumberSet,
+  seen : @core.PdfNumberSet,
   entries : ArrayView[PdfClassicXRefEntry],
 ) -> Unit {
   for entry in entries {

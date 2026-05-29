@@ -3,6 +3,7 @@ package "bobzhang/pdflite/core"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/hashmap",
 }
 
 // Values
@@ -69,6 +70,10 @@ pub fn pdf_name_of_bytes(Bytes) -> PdfName
 pub fn pdf_name_of_view(BytesView) -> PdfName
 
 pub let pdf_no_more : Int
+
+pub fn pdf_number_set(ArrayView[Int]) -> PdfNumberSet
+
+pub fn pdf_push_unique_number(Array[Int], PdfNumberSet, Int) -> Unit
 
 pub fn pdf_soft_error(String) -> Unit raise PdfError
 
@@ -299,6 +304,12 @@ pub(all) struct PdfName(Bytes) derive(Eq, ToJson, @debug.Debug)
 pub fn PdfName::byte_length(Self) -> Int
 pub fn PdfName::bytes(Self) -> Bytes
 pub fn PdfName::view(Self) -> BytesView
+
+pub struct PdfNumberSet {
+  values : @hashmap.HashMap[Int, Bool]
+}
+pub fn PdfNumberSet::add(Self, Int) -> Unit
+pub fn PdfNumberSet::contains(Self, Int) -> Bool
 
 // Type aliases
 pub type PdfBytes = Bytes

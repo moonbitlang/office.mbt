@@ -1,6 +1,7 @@
 import {
   "moonbitlang/core/encoding/ascii",
   "moonbitlang/core/debug",
+  "moonbitlang/core/hashmap",
 }
 
 import {
@@ -13,5 +14,6 @@ options(
     "byte_cursor_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
     "byte_output_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
     "pdf_error_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
+    "pdf_number_set.mbt.md": [ "wasm-gc", "js", "native", "llvm" ],
   },
 )

@@ -26,7 +26,7 @@ fn PdfDocument::pdf_page_flip_pages(
 ) -> PdfDocument raise PdfError {
   pdf_page_box_validate_page_numbers(page_numbers, self.endpage(), context)
   let pages = self.pages_of_pagetree()
-  let selected_pages = @number_set.pdf_number_set(page_numbers)
+  let selected_pages = @core.pdf_number_set(page_numbers)
   let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
   let matrices : Array[(Int, TransformMatrix)] = Array::new(
     capacity=page_numbers.length(),
