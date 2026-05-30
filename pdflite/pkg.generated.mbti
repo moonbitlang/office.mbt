@@ -2132,8 +2132,6 @@ pub fn pdf_write_encrypted_aesv3_document_with_providers(PdfDocument, BytesView,
 
 pub fn pdf_write_encrypted_aesv3_iso_document_with_providers(PdfDocument, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission], (@crypt_core.PdfAesV3RandomField, Int) -> Bytes raise @core.PdfError, (Int, Int, Int) -> Bytes raise @core.PdfError, encrypt_metadata? : Bool, mode? : @writer.PdfWriteMode, file_id? : BytesView) -> Bytes raise @core.PdfError
 
-pub fn pdf_write_encryption(@crypt_core.PdfEncryptionMethod, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission]) -> @writer.PdfWriteEncryption
-
 pub fn pdf_write_font(PdfDocument, PdfFont, objnum? : Int?) -> Int raise @core.PdfError
 
 pub fn pdf_write_hex_string(BytesView) -> Bytes
@@ -3832,10 +3830,6 @@ pub using @destination {type PdfTargetPage}
 pub using @geometry {type PdfUnit}
 
 pub using @reader {type PdfVersion}
-
-pub using @writer {type PdfWriteEncryption}
-
-pub using @writer {type PdfWriteMode}
 
 pub using @reader {type PdfXRefSection}
 

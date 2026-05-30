@@ -3,7 +3,7 @@
 pub fn pdf_write_document_incremental_update_with_mode(
   original : PdfBytes,
   document : PdfDocument,
-  mode : PdfWriteMode,
+  mode : @writer.PdfWriteMode,
 ) -> PdfBytes raise PdfError {
   match mode {
     PdfWriteClassic => pdf_write_document_incremental_update(original, document)
@@ -25,7 +25,7 @@ pub fn pdf_write_document_incremental_update_with_generated_id(
   original : PdfBytes,
   document : PdfDocument,
   path : String,
-  mode? : PdfWriteMode = PdfWriteClassic,
+  mode? : @writer.PdfWriteMode = PdfWriteClassic,
 ) -> PdfBytes raise PdfError {
   pdf_write_document_incremental_update_with_mode(
     original,
@@ -38,7 +38,7 @@ pub fn pdf_write_document_incremental_update_with_generated_id(
 /// Serialize a complete document using the selected xref representation.
 pub fn pdf_write_document_with_mode(
   document : PdfDocument,
-  mode : PdfWriteMode,
+  mode : @writer.PdfWriteMode,
 ) -> PdfBytes raise PdfError {
   match mode {
     PdfWriteClassic => pdf_write_document(document)
@@ -55,7 +55,7 @@ pub fn pdf_write_document_with_mode(
 pub fn pdf_write_document_with_generated_id(
   document : PdfDocument,
   path : String,
-  mode? : PdfWriteMode = PdfWriteClassic,
+  mode? : @writer.PdfWriteMode = PdfWriteClassic,
 ) -> PdfBytes raise PdfError {
   pdf_write_document_with_mode(document.copy_with_current_id(path), mode)
 }

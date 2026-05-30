@@ -401,10 +401,3 @@ pub using @reader {
   pdf_xref_token_in_use,
   pdf_cursor_read_classic_xref_entries,
 }
-
-///|
-pub using @writer {
-  type PdfWriteEncryption,
-  type PdfWriteMode,
-  pdf_write_encryption,
-}

@@ -164,7 +164,7 @@ pub fn pdf_write_encrypted_aesv2_document(
   owner_password : BytesView,
   denied_permissions : ArrayView[PdfPermission],
   encrypt_metadata? : Bool = true,
-  mode? : PdfWriteMode = PdfWriteClassic,
+  mode? : @writer.PdfWriteMode = PdfWriteClassic,
   file_id? : BytesView = [],
 ) -> PdfBytes raise PdfError {
   pdf_write_document_with_mode(
@@ -191,7 +191,7 @@ pub fn pdf_write_encrypted_aesv3_document(
   denied_permissions : ArrayView[PdfPermission],
   iso? : Bool = false,
   encrypt_metadata? : Bool = true,
-  mode? : PdfWriteMode = PdfWriteClassic,
+  mode? : @writer.PdfWriteMode = PdfWriteClassic,
   file_id? : BytesView = [],
 ) -> PdfBytes raise PdfError {
   pdf_write_document_with_mode(
@@ -215,7 +215,7 @@ pub fn pdf_write_encrypted_aesv3_iso_document(
   owner_password : BytesView,
   denied_permissions : ArrayView[PdfPermission],
   encrypt_metadata? : Bool = true,
-  mode? : PdfWriteMode = PdfWriteClassic,
+  mode? : @writer.PdfWriteMode = PdfWriteClassic,
   file_id? : BytesView = [],
 ) -> PdfBytes raise PdfError {
   pdf_write_encrypted_aesv3_document(

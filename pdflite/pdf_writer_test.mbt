@@ -1032,7 +1032,7 @@ test "pdf_write_document_options dispatches encryption methods" {
   let arc4_40 = @pdflite.pdf_write_document_options(
     try! writer_secret_document_for_test("options-40"),
     encryption=Some(
-      @pdflite.pdf_write_encryption(PdfEncryption40Bit, user, owner, denied),
+      @writer.pdf_write_encryption(PdfEncryption40Bit, user, owner, denied),
     ),
     file_id=writer_ascii_for_test("options-40-id"),
   )
@@ -1043,7 +1043,7 @@ test "pdf_write_document_options dispatches encryption methods" {
   let arc4_128 = @pdflite.pdf_write_document_options(
     try! writer_secret_document_for_test("options-128"),
     encryption=Some(
-      @pdflite.pdf_write_encryption(PdfEncryption128Bit, user, owner, denied),
+      @writer.pdf_write_encryption(PdfEncryption128Bit, user, owner, denied),
     ),
     mode=PdfWriteXRefStream,
     file_id=writer_ascii_for_test("options-128-id"),
@@ -1062,7 +1062,7 @@ test "pdf_write_document_options dispatches encryption methods" {
   let aesv2 = @pdflite.pdf_write_document_options(
     try! writer_secret_document_for_test("options-aesv2"),
     encryption=Some(
-      @pdflite.pdf_write_encryption(PdfEncryptionAES128(false), user, owner, [
+      @writer.pdf_write_encryption(PdfEncryptionAES128(false), user, owner, [
         PdfNoCopy,
       ]),
     ),
@@ -1084,7 +1084,7 @@ test "pdf_write_document_options dispatches encryption methods" {
   let aesv3 = @pdflite.pdf_write_document_options(
     try! writer_secret_document_for_test("options-aesv3"),
     encryption=Some(
-      @pdflite.pdf_write_encryption(PdfEncryptionAES256(true), user, owner, [
+      @writer.pdf_write_encryption(PdfEncryptionAES256(true), user, owner, [
         PdfNoExtract,
       ]),
     ),
@@ -1110,12 +1110,9 @@ test "pdf_write_document_options dispatches encryption methods" {
   let aesv3_iso = @pdflite.pdf_write_document_options(
     try! writer_secret_document_for_test("options-aesv3-iso"),
     encryption=Some(
-      @pdflite.pdf_write_encryption(
-        PdfEncryptionAES256ISO(false),
-        user,
-        owner,
-        [PdfNoAssemble],
-      ),
+      @writer.pdf_write_encryption(PdfEncryptionAES256ISO(false), user, owner, [
+        PdfNoAssemble,
+      ]),
     ),
     file_id=writer_ascii_for_test("options-aesv3-iso-id"),
     aes_iv_provider=Some(
@@ -1139,12 +1136,7 @@ test "pdf_write_document_options dispatches encryption methods" {
   let already_encrypted = @pdflite.pdf_write_document_options(
     try! writer_secret_document_for_test("options-already"),
     encryption=Some(
-      @pdflite.pdf_write_encryption(
-        PdfEncryptionAlreadyEncrypted,
-        user,
-        owner,
-        [],
-      ),
+      @writer.pdf_write_encryption(PdfEncryptionAlreadyEncrypted, user, owner, []),
     ),
   )
   @test.assert_eq(
@@ -1162,7 +1154,7 @@ test "pdf_write_document_options reports missing AES providers" {
   let aesv2_missing_iv : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_write_document_options(
     try! writer_secret_document_for_test("options-missing-iv"),
     encryption=Some(
-      @pdflite.pdf_write_encryption(PdfEncryptionAES128(true), user, owner, []),
+      @writer.pdf_write_encryption(PdfEncryptionAES128(true), user, owner, []),
     ),
   )
   guard aesv2_missing_iv is Err(_) else {
@@ -1172,7 +1164,7 @@ test "pdf_write_document_options reports missing AES providers" {
   let aesv3_missing_random : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_write_document_options(
     try! writer_secret_document_for_test("options-missing-random"),
     encryption=Some(
-      @pdflite.pdf_write_encryption(PdfEncryptionAES256(true), user, owner, []),
+      @writer.pdf_write_encryption(PdfEncryptionAES256(true), user, owner, []),
     ),
     aes_iv_provider=Some(
       @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
