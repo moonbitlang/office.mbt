@@ -1,6 +1,6 @@
 ///|
-fn draft_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn draft_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -52,7 +52,7 @@ fn draft_image_object_for_test() -> @syntax.PdfObject {
 
 ///|
 fn draft_subtyped_dictionary_for_test(
-  subtype : @pdflite.PdfName,
+  subtype : @core.PdfName,
 ) -> @syntax.PdfObject {
   @syntax.pdf_dictionary([
     (draft_name_for_test("/Subtype"), PdfNameObject(subtype)),
@@ -61,7 +61,7 @@ fn draft_subtyped_dictionary_for_test(
 
 ///|
 fn draft_resources_for_test(
-  entries : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
+  entries : ArrayView[(@core.PdfName, @syntax.PdfObject)],
 ) -> @syntax.PdfObject {
   @syntax.pdf_dictionary([
     (draft_name_for_test("/XObject"), @syntax.pdf_dictionary(entries)),
@@ -106,7 +106,7 @@ fn draft_lookup_for_test(
 fn draft_xobject_entries_for_test(
   doc : @pdflite.PdfDocument,
   resources : @syntax.PdfObject,
-) -> Array[(@pdflite.PdfName, @syntax.PdfObject)] raise {
+) -> Array[(@core.PdfName, @syntax.PdfObject)] raise {
   match draft_lookup_for_test(doc, "/XObject", resources) {
     PdfDictionary(entries) => entries
     _ => fail("expected XObject dictionary")
@@ -488,7 +488,7 @@ test "PdfDocument draft rejects malformed xobject resources" {
     doc,
     [page],
   ).draft(None, true, [1])
-  guard result is Err(@pdflite.PdfError::DictionaryExpected) else {
+  guard result is Err(@core.PdfError::DictionaryExpected) else {
     fail("expected DictionaryExpected")
   }
 }
@@ -510,7 +510,7 @@ test "PdfDocument draft rejects non-stream form xobjects" {
     doc,
     [page],
   ).draft(None, true, [1])
-  guard result is Err(@pdflite.PdfError::ParseStreamExpected) else {
+  guard result is Err(@core.PdfError::ParseStreamExpected) else {
     fail("expected ParseStreamExpected")
   }
 }
@@ -524,7 +524,7 @@ test "PdfDocument draft rejects page ranges outside the document" {
   )
   guard result
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "draft: range contains pages not present in pdf"
       )
     ) else {

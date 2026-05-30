@@ -25,7 +25,7 @@ fn pdf_coord_parse_units_tokens(
   page : @page.PdfPage,
   source : String,
   tokens : ArrayView[PdfCoordToken],
-) -> Array[Double] raise PdfError {
+) -> Array[Double] raise @core.PdfError {
   let numbers : Array[Double] = Array::new(capacity=tokens.length())
   let mut index = 0
   let mut done = false
@@ -112,7 +112,7 @@ pub fn PdfDocument::parse_units_string(
   self : PdfDocument,
   page : @page.PdfPage,
   text : String,
-) -> Array[Double] raise PdfError {
+) -> Array[Double] raise @core.PdfError {
   pdf_coord_parse_units_tokens(self, page, text, pdf_coord_tokenize(text))
 }
 
@@ -122,6 +122,6 @@ pub fn pdf_parse_units_string(
   document : PdfDocument,
   page : @page.PdfPage,
   text : String,
-) -> Array[Double] raise PdfError {
+) -> Array[Double] raise @core.PdfError {
   document.parse_units_string(page, text)
 }

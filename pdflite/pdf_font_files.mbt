@@ -72,7 +72,7 @@ pub fn PdfDocument::extract_fontfile_bytes(
   self : PdfDocument,
   page_number : Int,
   font_name : String,
-) -> PdfBytes? raise PdfError {
+) -> @core.PdfBytes? raise @core.PdfError {
   let font = self.font_from_name(font_name, page_number)
   if font == PdfNull {
     None
@@ -91,7 +91,7 @@ pub fn pdf_extract_fontfile_bytes(
   document : PdfDocument,
   page_number : Int,
   font_name : String,
-) -> PdfBytes? raise PdfError {
+) -> @core.PdfBytes? raise @core.PdfError {
   document.extract_fontfile_bytes(page_number, font_name)
 }
 
@@ -110,7 +110,7 @@ fn PdfDocument::pdf_font_copy_referenced_objects_from(
 fn PdfDocument::pdf_font_resource_dictionary_or_empty(
   self : PdfDocument,
   resources : @syntax.PdfObject,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   match self.lookup_direct(pdf_page_font_resource_name, resources) {
     Some(PdfDictionary(_) as fonts) => fonts
     Some(_) => raise DictionaryExpected
@@ -122,9 +122,9 @@ fn PdfDocument::pdf_font_resource_dictionary_or_empty(
 fn PdfDocument::pdf_font_add_to_page_resources(
   self : PdfDocument,
   page : @page.PdfPage,
-  resource_name : PdfName,
+  resource_name : @core.PdfName,
   font : @syntax.PdfObject,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   let fonts = self.pdf_font_resource_dictionary_or_empty(page.resources)
   let updated_fonts = fonts.add_dict_entry(resource_name, font)
   {
@@ -148,7 +148,7 @@ pub fn PdfDocument::copy_font_from(
   font_name : String,
   font_page : Int,
   page_numbers : ArrayView[Int],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let renumbered = pdf_renumber_documents([source, self])
   let source_pdf = renumbered[0]
   let target_pdf = renumbered[1]
@@ -156,7 +156,7 @@ pub fn PdfDocument::copy_font_from(
   let resource_name = match
     source_pdf.lookup_direct(pdf_text_base_font_key_name, font) {
     Some(PdfNameObject(name)) => name
-    _ => pdf_name_of_bytes(b"/CopyFontAddedNoName")
+    _ => @core.pdf_name_of_bytes(b"/CopyFontAddedNoName")
   }
   target_pdf.pdf_font_copy_referenced_objects_from(source_pdf, font)
   let pages = target_pdf.pages_of_pagetree()
@@ -184,6 +184,6 @@ pub fn pdf_copy_font(
   font_page : Int,
   page_numbers : ArrayView[Int],
   target : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   target.copy_font_from(source, font_name, font_page, page_numbers)
 }

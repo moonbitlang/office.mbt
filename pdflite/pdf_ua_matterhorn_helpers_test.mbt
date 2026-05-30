@@ -1,6 +1,6 @@
 ///|
-fn ua_matterhorn_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn ua_matterhorn_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -693,7 +693,7 @@ fn ua_matterhorn_serialized_object_extra_for_test(
 fn ua_matterhorn_document_for_test(
   ops : ArrayView[@content.PdfContentOp],
   resources? : @syntax.PdfObject = PdfDictionary([]),
-  root_extras? : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)] = [],
+  root_extras? : ArrayView[(@core.PdfName, @syntax.PdfObject)] = [],
   rest? : @syntax.PdfObject = PdfDictionary([]),
 ) -> @pdflite.PdfDocument {
   let doc = @pdflite.pdf_document_empty()
@@ -711,7 +711,7 @@ fn ua_matterhorn_document_for_test(
 ///|
 fn ua_matterhorn_document_with_metadata_for_test(
   metadata : BytesView,
-  root_extras : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
+  root_extras : ArrayView[(@core.PdfName, @syntax.PdfObject)],
 ) -> @pdflite.PdfDocument {
   let document = ua_matterhorn_document_for_test([], root_extras~)
   try! document.set_metadata_from_bytes(metadata)
@@ -730,7 +730,7 @@ fn ua_matterhorn_decryption_result_for_test(
 ///|
 fn ua_matterhorn_rolemap_for_test(
   entries : ArrayView[(String, String)],
-) -> (@pdflite.PdfName, @syntax.PdfObject) {
+) -> (@core.PdfName, @syntax.PdfObject) {
   (
     ua_matterhorn_name_for_test("/StructTreeRoot"),
     PdfDictionary([
@@ -753,8 +753,8 @@ fn ua_matterhorn_rolemap_for_test(
 
 ///|
 fn ua_matterhorn_ocproperties_for_test(
-  entries : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
-) -> (@pdflite.PdfName, @syntax.PdfObject) {
+  entries : ArrayView[(@core.PdfName, @syntax.PdfObject)],
+) -> (@core.PdfName, @syntax.PdfObject) {
   (
     ua_matterhorn_name_for_test("/OCProperties"),
     PdfDictionary([ for entry in entries => entry ]),
@@ -764,7 +764,7 @@ fn ua_matterhorn_ocproperties_for_test(
 ///|
 fn ua_matterhorn_display_doc_title_for_test(
   value : Bool,
-) -> (@pdflite.PdfName, @syntax.PdfObject) {
+) -> (@core.PdfName, @syntax.PdfObject) {
   (
     ua_matterhorn_name_for_test("/ViewerPreferences"),
     PdfDictionary([
@@ -778,7 +778,7 @@ fn ua_matterhorn_file_spec_for_test(
   f : String?,
   uf : String?,
 ) -> @syntax.PdfObject {
-  let entries : Array[(@pdflite.PdfName, @syntax.PdfObject)] = [
+  let entries : Array[(@core.PdfName, @syntax.PdfObject)] = [
     (
       ua_matterhorn_name_for_test("/Type"),
       PdfNameObject(ua_matterhorn_name_for_test("/Filespec")),
@@ -804,7 +804,7 @@ fn ua_matterhorn_file_spec_for_test(
 ///|
 fn ua_matterhorn_embedded_files_root_for_test(
   file_spec : @syntax.PdfObject,
-) -> Array[(@pdflite.PdfName, @syntax.PdfObject)] {
+) -> Array[(@core.PdfName, @syntax.PdfObject)] {
   [
     (
       ua_matterhorn_name_for_test("/Names"),
@@ -827,7 +827,7 @@ fn ua_matterhorn_embedded_files_root_for_test(
 fn ua_matterhorn_file_attachment_annotation_for_test(
   file_spec : @syntax.PdfObject?,
 ) -> @syntax.PdfObject {
-  let entries : Array[(@pdflite.PdfName, @syntax.PdfObject)] = [
+  let entries : Array[(@core.PdfName, @syntax.PdfObject)] = [
     (
       ua_matterhorn_name_for_test("/Subtype"),
       PdfNameObject(ua_matterhorn_name_for_test("/FileAttachment")),
@@ -843,9 +843,9 @@ fn ua_matterhorn_file_attachment_annotation_for_test(
 ///|
 fn ua_matterhorn_annotation_for_test(
   subtype : String,
-  extras? : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)] = [],
+  extras? : ArrayView[(@core.PdfName, @syntax.PdfObject)] = [],
 ) -> @syntax.PdfObject {
-  let entries : Array[(@pdflite.PdfName, @syntax.PdfObject)] = [
+  let entries : Array[(@core.PdfName, @syntax.PdfObject)] = [
     (
       ua_matterhorn_name_for_test("/Subtype"),
       PdfNameObject(ua_matterhorn_name_for_test(subtype)),
@@ -864,9 +864,9 @@ fn ua_matterhorn_annotation_for_test(
 ///|
 fn ua_matterhorn_structure_element_for_test(
   kind : String,
-  extras? : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)] = [],
+  extras? : ArrayView[(@core.PdfName, @syntax.PdfObject)] = [],
 ) -> @syntax.PdfObject {
-  let entries : Array[(@pdflite.PdfName, @syntax.PdfObject)] = [
+  let entries : Array[(@core.PdfName, @syntax.PdfObject)] = [
     (
       ua_matterhorn_name_for_test("/S"),
       PdfNameObject(ua_matterhorn_name_for_test(kind)),
@@ -881,7 +881,7 @@ fn ua_matterhorn_structure_element_for_test(
 ///|
 fn ua_matterhorn_struct_parent_tree_root_for_test(
   entries : ArrayView[(Int, @syntax.PdfObject)],
-) -> Array[(@pdflite.PdfName, @syntax.PdfObject)] {
+) -> Array[(@core.PdfName, @syntax.PdfObject)] {
   let tree_doc = @pdflite.pdf_document_empty()
   [
     (
@@ -899,9 +899,9 @@ fn ua_matterhorn_struct_parent_tree_root_for_test(
 ///|
 fn ua_matterhorn_struct_tree_root_for_test(
   children : ArrayView[@syntax.PdfObject],
-  extras? : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)] = [],
-) -> Array[(@pdflite.PdfName, @syntax.PdfObject)] {
-  let entries : Array[(@pdflite.PdfName, @syntax.PdfObject)] = [
+  extras? : ArrayView[(@core.PdfName, @syntax.PdfObject)] = [],
+) -> Array[(@core.PdfName, @syntax.PdfObject)] {
+  let entries : Array[(@core.PdfName, @syntax.PdfObject)] = [
     (
       ua_matterhorn_name_for_test("/K"),
       PdfArray([ for child in children => child ]),
@@ -918,7 +918,7 @@ fn ua_matterhorn_page_rest_with_annots_for_test(
   annotations : ArrayView[@syntax.PdfObject],
   tabs? : @syntax.PdfObject? = None,
 ) -> @syntax.PdfObject {
-  let entries : Array[(@pdflite.PdfName, @syntax.PdfObject)] = [
+  let entries : Array[(@core.PdfName, @syntax.PdfObject)] = [
     (
       ua_matterhorn_name_for_test("/Annots"),
       PdfArray([ for annotation in annotations => annotation ]),
@@ -941,7 +941,7 @@ fn ua_matterhorn_xfa_config_stream_for_test(
 ///|
 fn ua_matterhorn_xfa_root_for_test(
   xfa : @syntax.PdfObject,
-) -> Array[(@pdflite.PdfName, @syntax.PdfObject)] {
+) -> Array[(@core.PdfName, @syntax.PdfObject)] {
   [
     (
       ua_matterhorn_name_for_test("/AcroForm"),
@@ -953,7 +953,7 @@ fn ua_matterhorn_xfa_root_for_test(
 ///|
 fn ua_matterhorn_xfa_config_root_for_test(
   config : @syntax.PdfObject,
-) -> Array[(@pdflite.PdfName, @syntax.PdfObject)] {
+) -> Array[(@core.PdfName, @syntax.PdfObject)] {
   ua_matterhorn_xfa_root_for_test(
     PdfArray([PdfString(@ascii.encode("config")), config]),
   )
@@ -973,7 +973,7 @@ fn ua_matterhorn_form_stream_for_test(
 
 ///|
 fn ua_matterhorn_xobject_resources_for_test(
-  entries : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
+  entries : ArrayView[(@core.PdfName, @syntax.PdfObject)],
 ) -> @syntax.PdfObject {
   PdfDictionary([
     (
@@ -1037,7 +1037,7 @@ fn ua_matterhorn_cmap_stream_for_test(
   dictionary_wmode : Int?,
   stream_wmode : Int?,
 ) -> @syntax.PdfObject {
-  let dictionary_entries : Array[(@pdflite.PdfName, @syntax.PdfObject)] = []
+  let dictionary_entries : Array[(@core.PdfName, @syntax.PdfObject)] = []
   match dictionary_wmode {
     Some(wmode) =>
       dictionary_entries.push(
@@ -1076,7 +1076,7 @@ fn ua_matterhorn_cid_font_for_test(
 fn ua_matterhorn_cid_font_type2_for_test(
   cid_to_gid_map : @syntax.PdfObject?,
 ) -> @syntax.PdfObject {
-  let entries : Array[(@pdflite.PdfName, @syntax.PdfObject)] = [
+  let entries : Array[(@core.PdfName, @syntax.PdfObject)] = [
     (
       ua_matterhorn_name_for_test("/Subtype"),
       PdfNameObject(ua_matterhorn_name_for_test("/CIDFontType2")),
@@ -1096,9 +1096,9 @@ fn ua_matterhorn_font_for_test(
   basefont : String,
   encoding : String?,
   descriptor : @syntax.PdfObject?,
-  extras? : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)] = [],
+  extras? : ArrayView[(@core.PdfName, @syntax.PdfObject)] = [],
 ) -> @syntax.PdfObject {
-  let entries : Array[(@pdflite.PdfName, @syntax.PdfObject)] = [
+  let entries : Array[(@core.PdfName, @syntax.PdfObject)] = [
     (
       ua_matterhorn_name_for_test("/Type"),
       PdfNameObject(ua_matterhorn_name_for_test("/Font")),
@@ -1168,7 +1168,7 @@ fn ua_matterhorn_type0_font_for_test(
 
 ///|
 fn ua_matterhorn_font_descriptor_for_test(flags : Int?) -> @syntax.PdfObject {
-  let entries : Array[(@pdflite.PdfName, @syntax.PdfObject)] = []
+  let entries : Array[(@core.PdfName, @syntax.PdfObject)] = []
   match flags {
     Some(value) =>
       entries.push((ua_matterhorn_name_for_test("/Flags"), PdfInteger(value)))
@@ -1180,9 +1180,9 @@ fn ua_matterhorn_font_descriptor_for_test(flags : Int?) -> @syntax.PdfObject {
 ///|
 fn ua_matterhorn_font_descriptor_with_file_for_test(
   flags : Int?,
-  fontfile : @pdflite.PdfBytes,
+  fontfile : @core.PdfBytes,
 ) -> @syntax.PdfObject {
-  let entries : Array[(@pdflite.PdfName, @syntax.PdfObject)] = [
+  let entries : Array[(@core.PdfName, @syntax.PdfObject)] = [
     (
       ua_matterhorn_name_for_test("/FontFile2"),
       @syntax.pdf_stream(PdfDictionary([]), StreamGot(fontfile)),
@@ -1201,7 +1201,7 @@ fn ua_matterhorn_truetype_font_for_test(
   flags : Int?,
   encoding : @syntax.PdfObject?,
 ) -> @syntax.PdfObject {
-  let entries : Array[(@pdflite.PdfName, @syntax.PdfObject)] = [
+  let entries : Array[(@core.PdfName, @syntax.PdfObject)] = [
     (
       ua_matterhorn_name_for_test("/Subtype"),
       PdfNameObject(ua_matterhorn_name_for_test("/TrueType")),
@@ -1223,9 +1223,9 @@ fn ua_matterhorn_truetype_font_for_test(
 fn ua_matterhorn_truetype_font_with_file_for_test(
   flags : Int?,
   encoding : @syntax.PdfObject?,
-  fontfile : @pdflite.PdfBytes,
+  fontfile : @core.PdfBytes,
 ) -> @syntax.PdfObject {
-  let entries : Array[(@pdflite.PdfName, @syntax.PdfObject)] = [
+  let entries : Array[(@core.PdfName, @syntax.PdfObject)] = [
     (
       ua_matterhorn_name_for_test("/Subtype"),
       PdfNameObject(ua_matterhorn_name_for_test("/TrueType")),
@@ -1245,7 +1245,7 @@ fn ua_matterhorn_truetype_font_with_file_for_test(
 
 ///|
 fn ua_matterhorn_encoding_dictionary_for_test(
-  entries : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
+  entries : ArrayView[(@core.PdfName, @syntax.PdfObject)],
 ) -> @syntax.PdfObject {
   PdfDictionary([ for entry in entries => entry ])
 }
@@ -1267,7 +1267,7 @@ fn ua_matterhorn_push_u32_for_test(output : Array[Byte], value : Int) -> Unit {
 ///|
 fn ua_matterhorn_truetype_cmap_font_for_test(
   records : ArrayView[(Int, Int)],
-) -> @pdflite.PdfBytes {
+) -> @core.PdfBytes {
   let output : Array[Byte] = []
   ua_matterhorn_push_u32_for_test(output, 0x00010000)
   ua_matterhorn_push_u16_for_test(output, 1)

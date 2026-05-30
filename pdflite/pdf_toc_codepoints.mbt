@@ -9,7 +9,7 @@ pub fn pdf_toc_of_utf8(
   fontpack : PdfFontPack,
   font_size : Double,
   text : BytesView,
-) -> Array[PdfTypeElement] raise PdfError {
+) -> Array[PdfTypeElement] raise @core.PdfError {
   let mapped : Array[(Int, Int, PdfFont)] = []
   for codepoint in pdf_codepoints_of_utf8(text) {
     match fontpack.get_char(codepoint) {
@@ -51,7 +51,7 @@ fn pdf_toc_append_unique_codepoints(
 fn pdf_toc_append_utf8_codepoints(
   output : Array[Int],
   text : BytesView,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   pdf_toc_append_unique_codepoints(output, pdf_codepoints_of_utf8(text))
 }
 
@@ -59,7 +59,7 @@ fn pdf_toc_append_utf8_codepoints(
 fn pdf_toc_append_pdfdocstring_codepoints(
   output : Array[Int],
   text : BytesView,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   pdf_toc_append_utf8_codepoints(output, pdf_utf8_of_pdfdocstring(text))
 }
 
@@ -67,7 +67,7 @@ fn pdf_toc_append_pdfdocstring_codepoints(
 fn pdf_toc_page_label_text(
   page_number : Int,
   labels : ArrayView[@label.PdfPageLabel],
-) -> PdfBytes {
+) -> @core.PdfBytes {
   if page_number < 1 {
     pdf_toc_ascii(page_number.to_string())
   } else {
@@ -89,7 +89,7 @@ pub fn PdfDocument::toc_used_codepoints(
   labels : ArrayView[@label.PdfPageLabel],
   title : BytesView,
   bookmarks : ArrayView[@bookmark.PdfBookmark],
-) -> Array[Int] raise PdfError {
+) -> Array[Int] raise @core.PdfError {
   let used : Array[Int] = [46]
   pdf_toc_append_utf8_codepoints(used, title)
   for bookmark in bookmarks {
@@ -110,7 +110,7 @@ pub fn pdf_toc_used_codepoints(
   labels : ArrayView[@label.PdfPageLabel],
   title : BytesView,
   bookmarks : ArrayView[@bookmark.PdfBookmark],
-) -> Array[Int] raise PdfError {
+) -> Array[Int] raise @core.PdfError {
   document.toc_used_codepoints(labels, title, bookmarks)
 }
 
@@ -121,6 +121,6 @@ pub fn pdf_toc_of_pdfdocencoding(
   fontpack : PdfFontPack,
   font_size : Double,
   text : BytesView,
-) -> Array[PdfTypeElement] raise PdfError {
+) -> Array[PdfTypeElement] raise @core.PdfError {
   pdf_toc_of_utf8(fontpack, font_size, pdf_utf8_of_pdfdocstring(text))
 }

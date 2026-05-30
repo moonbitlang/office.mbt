@@ -142,10 +142,10 @@ pub fn PdfDocument::add_page_labels(
   self : PdfDocument,
   progress : Bool,
   style : @label.PdfPageLabelStyle,
-  prefix : PdfBytes?,
+  prefix : @core.PdfBytes?,
   start_value : Int,
   page_numbers : ArrayView[Int],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let ranges = pdf_page_label_range_extents(page_numbers)
   if ranges.length() == 0 {
     raise BadPageSpecification("empty page label range")
@@ -177,9 +177,9 @@ pub fn pdf_add_page_labels(
   document : PdfDocument,
   progress : Bool,
   style : @label.PdfPageLabelStyle,
-  prefix : PdfBytes?,
+  prefix : @core.PdfBytes?,
   start_value : Int,
   page_numbers : ArrayView[Int],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.add_page_labels(progress, style, prefix, start_value, page_numbers)
 }

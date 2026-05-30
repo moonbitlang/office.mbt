@@ -1,11 +1,11 @@
 ///|
 fn PdfDocument::pdf_image_lookup_int_or_default(
   self : PdfDocument,
-  first_key : PdfName,
-  second_key : PdfName,
+  first_key : @core.PdfName,
+  second_key : @core.PdfName,
   image : @syntax.PdfObject,
   default : Int,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   match self.lookup_direct_or_else(first_key, second_key, image) {
     Some(value) => self.get_number(value).to_int()
     None => default
@@ -28,7 +28,7 @@ fn PdfDocument::pdf_image_stream_length(
 fn PdfDocument::pdf_image_bits_per_component_number(
   self : PdfDocument,
   image : @syntax.PdfObject,
-) -> Int? raise PdfError {
+) -> Int? raise @core.PdfError {
   match self.image_bits_per_component(image) {
     Some(PdfInteger(value)) => Some(value)
     Some(_) => raise NumberExpected
@@ -58,7 +58,10 @@ fn pdf_image_single_filter_object(
 }
 
 ///|
-fn pdf_image_filter_is_name(filter : @syntax.PdfObject, name : PdfName) -> Bool {
+fn pdf_image_filter_is_name(
+  filter : @syntax.PdfObject,
+  name : @core.PdfName,
+) -> Bool {
   match filter {
     PdfNameObject(filter_name) => filter_name == name
     PdfArray([PdfNameObject(filter_name)]) => filter_name == name
@@ -121,7 +124,7 @@ fn PdfDocument::pdf_image_decodeparms_has_jbig2_globals(
 fn PdfDocument::pdf_image_filter_name(
   self : PdfDocument,
   image : @syntax.PdfObject,
-) -> String? raise PdfError {
+) -> String? raise @core.PdfError {
   match
     self.lookup_direct_or_else(pdf_image_filter_key(), pdf_image_f_key(), image) {
     Some(filter) if pdf_image_filter_is_name(

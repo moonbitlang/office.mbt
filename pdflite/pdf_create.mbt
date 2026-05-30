@@ -17,7 +17,7 @@ fn pdf_create_blank_document_with_id_time(
   paper : @geometry.PaperSize,
   page_count : Int,
   get_time : () -> Double,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let document = pdf_document_empty()
   let page_root_number = document.add_pagetree(
     pdf_create_blank_pages(paper, page_count),
@@ -38,7 +38,7 @@ pub fn pdf_blank_document(
   width : Double,
   height : Double,
   page_count : Int,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   pdf_create_blank_document_with_id_time(
     @geometry.paper_size_make(PdfPoint, width, height),
     page_count,
@@ -51,7 +51,7 @@ pub fn pdf_blank_document(
 pub fn pdf_blank_document_paper(
   paper : @geometry.PaperSize,
   page_count : Int,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   pdf_create_blank_document_with_id_time(
     paper, page_count, pdf_create_now_as_double,
   )

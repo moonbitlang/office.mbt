@@ -7,7 +7,7 @@ fn PdfDocument::pdf_image_extract_named_images(
   page_number : Int,
   encoding : @metadata.PdfMetadataEncoding,
   state : PdfImageExtractionRunState,
-) -> (Array[PdfExtractedImageFile], Array[String]) raise PdfError {
+) -> (Array[PdfExtractedImageFile], Array[String]) raise @core.PdfError {
   let files : Array[PdfExtractedImageFile] = Array::new(
     capacity=images.length(),
   )
@@ -80,7 +80,7 @@ fn PdfDocument::pdf_image_extract_form_xobject_files(
   dedup_per_page : Bool,
   state : PdfImageExtractionRunState,
   depth : Int,
-) -> Array[PdfExtractedImageFile] raise PdfError {
+) -> Array[PdfExtractedImageFile] raise @core.PdfError {
   if depth > 1024 {
     raise SoftError("extract_images: form XObject recursion too deep")
   }
@@ -123,7 +123,7 @@ fn PdfDocument::pdf_image_extract_inline_image_files(
   page_number : Int,
   encoding : @metadata.PdfMetadataEncoding,
   state : PdfImageExtractionRunState,
-) -> Array[PdfExtractedImageFile] raise PdfError {
+) -> Array[PdfExtractedImageFile] raise @core.PdfError {
   let ops = self.parse_content_ops_with_resources(resources, content)
   let files : Array[PdfExtractedImageFile] = Array::new(capacity=ops.length())
   for op in ops {
@@ -171,7 +171,7 @@ fn PdfDocument::pdf_image_extract_inline_form_files(
   page_number : Int,
   encoding : @metadata.PdfMetadataEncoding,
   state : PdfImageExtractionRunState,
-) -> Array[PdfExtractedImageFile] raise PdfError {
+) -> Array[PdfExtractedImageFile] raise @core.PdfError {
   self.pdf_image_extract_inline_image_files(
     self.pdf_image_form_resources(form),
     [form],
@@ -190,7 +190,7 @@ fn PdfDocument::pdf_image_extract_smask_files(
   page_number : Int,
   encoding : @metadata.PdfMetadataEncoding,
   state : PdfImageExtractionRunState,
-) -> Array[PdfExtractedImageFile] raise PdfError {
+) -> Array[PdfExtractedImageFile] raise @core.PdfError {
   match self.direct(image) {
     PdfStreamObject(_) =>
       match self.direct(image).lookup_immediate(pdf_image_smask_key()) {

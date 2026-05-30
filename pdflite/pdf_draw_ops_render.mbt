@@ -4,7 +4,7 @@ fn PdfDrawOp::to_content_ops_internal(
   state : PdfDrawRenderState?,
   document : PdfDocument?,
   special_text_context : PdfDrawSpecialTextContext?,
-) -> Array[@content.PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise @core.PdfError {
   match self {
     PdfDrawQq(ops) => {
       let output : Array[@content.PdfContentOp] = [Op_q]

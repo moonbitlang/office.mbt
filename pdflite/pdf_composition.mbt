@@ -6,7 +6,7 @@
 pub fn PdfDocument::composition(
   self : PdfDocument,
   file_size : Int,
-) -> Array[@composition.PdfCompositionEntry] raise PdfError {
+) -> Array[@composition.PdfCompositionEntry] raise @core.PdfError {
   if file_size <= 0 {
     raise BadNumberArgument("file_size must be positive")
   }
@@ -58,7 +58,7 @@ pub fn PdfDocument::composition(
 pub fn PdfDocument::composition_json(
   self : PdfDocument,
   file_size : Int,
-) -> Json raise PdfError {
+) -> Json raise @core.PdfError {
   let entries = self.composition(file_size)
   let values : Array[Json] = Array::new(capacity=entries.length())
   for entry in entries {
@@ -72,7 +72,7 @@ pub fn PdfDocument::composition_json(
 pub fn PdfDocument::composition_json_blob(
   self : PdfDocument,
   file_size : Int,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   @utf8.encode(self.composition_json(file_size).stringify())
 }
 
@@ -81,7 +81,7 @@ pub fn PdfDocument::composition_json_blob(
 pub fn PdfDocument::composition_text(
   self : PdfDocument,
   file_size : Int,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   @composition.pdf_composition_text_of_entries(self.composition(file_size))
 }
 
@@ -90,7 +90,7 @@ pub fn PdfDocument::composition_text(
 pub fn pdf_composition(
   document : PdfDocument,
   file_size : Int,
-) -> Array[@composition.PdfCompositionEntry] raise PdfError {
+) -> Array[@composition.PdfCompositionEntry] raise @core.PdfError {
   document.composition(file_size)
 }
 
@@ -99,7 +99,7 @@ pub fn pdf_composition(
 pub fn pdf_show_composition_json_blob(
   file_size : Int,
   document : PdfDocument,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   document.composition_json_blob(file_size)
 }
 
@@ -109,7 +109,7 @@ pub fn pdf_show_composition(
   file_size : Int,
   json : Bool,
   document : PdfDocument,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   if json {
     @composition.pdf_composition_bytes_with_newline(
       document.composition_json_blob(file_size),

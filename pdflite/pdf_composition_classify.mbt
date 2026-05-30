@@ -16,7 +16,7 @@ fn pdf_composition_mark_references(
   marked : @hashmap.HashMap[Int, Bool],
   output : Array[Int],
   object : @syntax.PdfObject,
-  no_follow_entries? : ArrayView[PdfName] = [],
+  no_follow_entries? : ArrayView[@core.PdfName] = [],
 ) -> Unit {
   for number in document.referenced_object_numbers(object, no_follow_entries~) {
     pdf_composition_mark_unseen(marked, output, number)
@@ -27,7 +27,7 @@ fn pdf_composition_mark_references(
 fn PdfDocument::pdf_composition_structure_info(
   self : PdfDocument,
   marked : @hashmap.HashMap[Int, Bool],
-) -> Array[Int] raise PdfError {
+) -> Array[Int] raise @core.PdfError {
   let output : Array[Int] = []
   match self.catalog().lookup_immediate(pdf_composition_struct_tree_root()) {
     Some(struct_tree_root) =>
@@ -150,7 +150,7 @@ fn PdfDocument::pdf_composition_content_streams(
 ///|
 fn PdfDocument::pdf_composition_find_objects(
   self : PdfDocument,
-) -> (Array[Int], Array[Int], Array[Int], Array[Int], Array[Int]) raise PdfError {
+) -> (Array[Int], Array[Int], Array[Int], Array[Int], Array[Int]) raise @core.PdfError {
   let marked : @hashmap.HashMap[Int, Bool] = HashMap([])
   let entries = self.parsed_object_entries()
   let images : Array[Int] = Array::new(capacity=entries.length())

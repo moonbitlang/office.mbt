@@ -343,8 +343,8 @@ test "private word-space push ignores empty output" {
 }
 
 ///|
-fn markdown_wbtest_name(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn markdown_wbtest_name(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|

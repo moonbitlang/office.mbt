@@ -42,7 +42,7 @@ fn PdfDocument::pdf_impose_preprocess(
   spacing : Double,
   line_width : Double,
   fast : Bool,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let end_page = self.endpage()
   let all_pages = pdf_impose_all_pages(end_page)
   self
@@ -135,7 +135,7 @@ fn PdfDocument::pdf_impose_make_space(
   fit : Bool,
   spacing : Double,
   fast : Bool,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let end_page = self.endpage()
   let all_pages = pdf_impose_all_pages(end_page)
   let boxed = self.hard_box(all_pages, pdf_page_mediabox_key(), fast~)

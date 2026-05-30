@@ -25,7 +25,7 @@ fn pdf_fun_interpolate(
 fn pdf_fun_clamp_values(
   values : ArrayView[Double],
   range : ArrayView[Double],
-) -> Array[Double] raise PdfError {
+) -> Array[Double] raise @core.PdfError {
   if range.length() != values.length() * 2 {
     raise BadFunctionEvaluation("range arity mismatch")
   }
@@ -48,7 +48,7 @@ fn PdfSampledFunction::encoded_inputs(
   self : PdfSampledFunction,
   function : PdfFunction,
   clamped_inputs : ArrayView[Double],
-) -> Array[Double] raise PdfError {
+) -> Array[Double] raise @core.PdfError {
   if self.size.length() != clamped_inputs.length() ||
     self.encode.length() != clamped_inputs.length() * 2 {
     raise BadFunctionEvaluation("sampled input arity mismatch")
@@ -77,7 +77,7 @@ fn PdfSampledFunction::read_table(
   self : PdfSampledFunction,
   indices : ArrayView[Int],
   output_count : Int,
-) -> Array[Double] raise PdfError {
+) -> Array[Double] raise @core.PdfError {
   if self.size.length() != indices.length() {
     raise BadFunctionEvaluation("sampled table arity mismatch")
   }
@@ -103,7 +103,7 @@ fn PdfSampledFunction::eval_sampled(
   self : PdfSampledFunction,
   function : PdfFunction,
   clamped_inputs : ArrayView[Double],
-) -> Array[Double] raise PdfError {
+) -> Array[Double] raise @core.PdfError {
   let range = match function.range {
     Some(range) => range
     None => raise BadFunctionEvaluation("sampled function missing range")
@@ -145,7 +145,7 @@ fn PdfStitchingFunction::eval_stitching(
   self : PdfStitchingFunction,
   function : PdfFunction,
   clamped_inputs : ArrayView[Double],
-) -> Array[Double] raise PdfError {
+) -> Array[Double] raise @core.PdfError {
   if clamped_inputs.length() != 1 || function.domain.length() != 2 {
     raise BadFunctionEvaluation("stitching function arity mismatch")
   }
@@ -181,7 +181,7 @@ fn PdfStitchingFunction::eval_stitching(
 fn PdfFunction::clamped_inputs(
   self : PdfFunction,
   inputs : ArrayView[Double],
-) -> Array[Double] raise PdfError {
+) -> Array[Double] raise @core.PdfError {
   if self.domain.length() != inputs.length() * 2 {
     raise BadFunctionEvaluation("domain arity mismatch")
   }
@@ -202,13 +202,13 @@ fn PdfFunction::clamped_inputs(
 /// Evaluate a PDF function for the supplied inputs.
 ///
 /// Inputs are clamped to `domain` before dispatch. The evaluated output is
-/// clamped to `range` when one is present. Raises `PdfError::BadFunctionEvaluation` when
+/// clamped to `range` when one is present. Raises `@core.PdfError::BadFunctionEvaluation` when
 /// arities, sampled-table indexes, calculator stack types, or child stitching
 /// bounds are invalid.
 pub fn PdfFunction::eval(
   self : PdfFunction,
   inputs : ArrayView[Double],
-) -> Array[Double] raise PdfError {
+) -> Array[Double] raise @core.PdfError {
   let clamped_inputs = self.clamped_inputs(inputs)
   let output = match self.func {
     PdfFunctionSampled(sampled) => sampled.eval_sampled(self, clamped_inputs)
@@ -238,7 +238,7 @@ pub fn PdfFunction::eval(
 pub fn pdf_eval_function(
   function : PdfFunction,
   inputs : ArrayView[Double],
-) -> Array[Double] raise PdfError {
+) -> Array[Double] raise @core.PdfError {
   function.eval(inputs)
 }
 

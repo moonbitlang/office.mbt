@@ -4,7 +4,7 @@
 pub fn PdfDocument::lookup_chain(
   self : PdfDocument,
   start : @syntax.PdfObject,
-  keys : ArrayView[PdfName],
+  keys : ArrayView[@core.PdfName],
 ) -> @syntax.PdfObject? {
   let mut current = start
   for i in 0..<keys.length() {

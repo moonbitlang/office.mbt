@@ -1,6 +1,6 @@
 ///|
-fn addtext_resource_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn addtext_resource_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -187,7 +187,7 @@ test "pdf_addtext_fontpack_resource_dictionary installs embedded font references
     [10, 11],
   )
   guard result
-    is Err(@pdflite.PdfError::SoftError("bad add-text fontpack resource list")) else {
+    is Err(@core.PdfError::SoftError("bad add-text fontpack resource list")) else {
     fail("expected SoftError for mismatched fontpack resource lists")
   }
 }
@@ -274,7 +274,7 @@ test "PdfDocument addtext_selected_font_object propagates writer errors" {
   let result : Result[@syntax.PdfObject?, Error] = try? document.addtext_selected_font_object(
     Some(addtext_resource_simple_font_for_test(700.0)),
   )
-  guard result is Err(@pdflite.PdfError::FontWriteUnsupported) else {
+  guard result is Err(@core.PdfError::FontWriteUnsupported) else {
     fail("expected unsupported selected font error")
   }
 }

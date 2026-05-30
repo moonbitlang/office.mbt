@@ -17,7 +17,7 @@ fn pdf_page_stamp_all_but_last(
 ///|
 fn PdfDocument::pdf_page_stamp_overlay_first_page(
   self : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let pages = self.pages_of_pagetree()
   guard pages.length() > 0 else { raise SoftError("empty PDF") }
   self.change_pages([pages[0]], change_references=true, changes=[(1, 1)])
@@ -29,7 +29,7 @@ pub fn PdfDocument::stamp_pages(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
   overlay : PdfDocument,
-  relative_to_box? : PdfName = pdf_page_mediabox_key(),
+  relative_to_box? : @core.PdfName = pdf_page_mediabox_key(),
   position? : @geometry.PdfPosition = PdfPositionBottomLeft(0.0, 0.0),
   topline? : Bool = false,
   midline? : Bool = false,
@@ -37,7 +37,7 @@ pub fn PdfDocument::stamp_pages(
   scale_to_fit? : Bool = false,
   is_over? : Bool = true,
   process_struct_tree? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let overlay = if process_struct_tree {
     overlay.remove_struct_tree().mark_all_as_artifact()
   } else {

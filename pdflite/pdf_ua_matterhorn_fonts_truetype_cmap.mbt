@@ -2,7 +2,7 @@
 fn PdfDocument::pdf_ua_matterhorn_truetype_fontfile(
   self : PdfDocument,
   object : @syntax.PdfObject,
-) -> PdfBytes? raise PdfError {
+) -> @core.PdfBytes? raise @core.PdfError {
   match
     self.lookup_chain(object, [
       pdf_text_font_descriptor_key_name, pdf_text_font_file2_key_name,
@@ -23,7 +23,7 @@ fn PdfDocument::pdf_ua_matterhorn_truetype_fontfile(
 fn PdfDocument::pdf_ua_matterhorn_truetype_cmaps(
   self : PdfDocument,
   object : @syntax.PdfObject,
-) -> Array[(Int, Int)]? raise PdfError {
+) -> Array[(Int, Int)]? raise @core.PdfError {
   match self.pdf_ua_matterhorn_truetype_fontfile(object) {
     Some(fontfile) => Some(pdf_truetype_cmaps(fontfile))
     None => None
@@ -60,7 +60,7 @@ fn pdf_ua_matterhorn_cmap_extra(cmap : (Int, Int)) -> Json {
 // non-symbolic cmap entry.
 fn PdfDocument::pdf_ua_matterhorn_check_31_017(
   self : PdfDocument,
-) -> Json? raise PdfError {
+) -> Json? raise @core.PdfError {
   for entry in self.parsed_object_entries() {
     if self.pdf_ua_matterhorn_is_truetype(entry.2) &&
       !self.pdf_ua_matterhorn_is_non_symbolic(entry.2) {
@@ -81,7 +81,7 @@ fn PdfDocument::pdf_ua_matterhorn_check_31_017(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_31_023(
   self : PdfDocument,
-) -> Json? raise PdfError {
+) -> Json? raise @core.PdfError {
   for entry in self.parsed_object_entries() {
     if self.pdf_ua_matterhorn_is_non_symbolic_truetype(entry.2) &&
       self.lookup_chain(entry.2, [
@@ -113,7 +113,7 @@ fn PdfDocument::pdf_ua_matterhorn_check_31_024(self : PdfDocument) -> Json? {
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_31_025(
   self : PdfDocument,
-) -> Json? raise PdfError {
+) -> Json? raise @core.PdfError {
   for entry in self.parsed_object_entries() {
     if self.pdf_ua_matterhorn_is_truetype(entry.2) &&
       !self.pdf_ua_matterhorn_is_non_symbolic(entry.2) {
@@ -129,7 +129,7 @@ fn PdfDocument::pdf_ua_matterhorn_check_31_025(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_31_026(
   self : PdfDocument,
-) -> Json? raise PdfError {
+) -> Json? raise @core.PdfError {
   for entry in self.parsed_object_entries() {
     if self.pdf_ua_matterhorn_is_truetype(entry.2) &&
       !self.pdf_ua_matterhorn_is_non_symbolic(entry.2) {

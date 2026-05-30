@@ -15,7 +15,7 @@ fn pdf_page_shift_offset_index_map(
 fn pdf_page_shift_validate_offsets(
   page_numbers : ArrayView[Int],
   offsets : ArrayView[(Double, Double)],
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   if page_numbers.length() != offsets.length() {
     raise BadPageSpecification(
       "shift_pages: offset count must match page count",
@@ -28,7 +28,7 @@ fn pdf_page_shift_validate_page_indexed_offsets(
   context : String,
   page_count : Int,
   offsets : ArrayView[(Double, Double)],
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   if offsets.length() != page_count {
     raise BadPageSpecification(context + ": offset count must match page count")
   }
@@ -54,7 +54,7 @@ fn PdfDocument::pdf_page_shift_page(
   page : @page.PdfPage,
   matrix : @geometry.TransformMatrix,
   fast : Bool,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   let page = self.pdf_impose_change_pattern_matrices_page(matrix, page)
   self.transform_annotations(matrix, page.rest)
   self.prepend_operators(page, [Op_cm(matrix)], fast~)
@@ -71,7 +71,7 @@ pub fn PdfDocument::shift_pages(
   page_numbers : ArrayView[Int],
   offsets : ArrayView[(Double, Double)],
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   pdf_page_box_validate_page_numbers(
     page_numbers,
     self.endpage(),
@@ -106,7 +106,7 @@ pub fn pdf_shift_pages(
   page_numbers : ArrayView[Int],
   offsets : ArrayView[(Double, Double)],
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.shift_pages(page_numbers, offsets, fast~)
 }
 
@@ -120,7 +120,7 @@ pub fn PdfDocument::shift_pdf(
   page_numbers : ArrayView[Int],
   offsets : ArrayView[(Double, Double)],
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let pages = self.pages_of_pagetree()
   pdf_page_box_validate_page_numbers(page_numbers, pages.length(), "shift_pdf")
   pdf_page_shift_validate_page_indexed_offsets(
@@ -142,6 +142,6 @@ pub fn pdf_shift_pdf(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.shift_pdf(page_numbers, offsets, fast~)
 }

@@ -52,7 +52,7 @@ pub fn PdfDocument::is_cidkeyed_font(
 pub fn PdfDocument::read_standard14_font(
   self : PdfDocument,
   font : @syntax.PdfObject,
-) -> PdfStandardFontData raise PdfError {
+) -> PdfStandardFontData raise @core.PdfError {
   match self.lookup_direct(pdf_text_base_font_key_name, font) {
     Some(PdfNameObject(base_font)) =>
       match pdf_standard_font_of_pdf_name(base_font) {
@@ -73,7 +73,7 @@ pub fn PdfDocument::read_standard14_font(
 pub fn PdfDocument::read_font(
   self : PdfDocument,
   font : @syntax.PdfObject,
-) -> PdfFont raise PdfError {
+) -> PdfFont raise @core.PdfError {
   let read = if self.is_standard14_font(font) {
     PdfFontStandard(self.read_standard14_font(font))
   } else if self.is_simple_font(font) {
@@ -91,7 +91,7 @@ pub fn PdfDocument::read_font(
 pub fn pdf_read_font(
   document : PdfDocument,
   font : @syntax.PdfObject,
-) -> PdfFont raise PdfError {
+) -> PdfFont raise @core.PdfError {
   document.read_font(font)
 }
 
@@ -100,7 +100,7 @@ pub fn pdf_read_font(
 pub fn PdfDocument::text_extractor_of_font(
   self : PdfDocument,
   font : @syntax.PdfObject,
-) -> PdfTextExtractor raise PdfError {
+) -> PdfTextExtractor raise @core.PdfError {
   self.read_font(font).text_extractor()
 }
 
@@ -109,6 +109,6 @@ pub fn PdfDocument::text_extractor_of_font(
 pub fn pdf_text_extractor_of_font(
   document : PdfDocument,
   font : @syntax.PdfObject,
-) -> PdfTextExtractor raise PdfError {
+) -> PdfTextExtractor raise @core.PdfError {
   document.text_extractor_of_font(font)
 }

@@ -3,7 +3,7 @@ fn pdf_predictor_scanline_width(
   colors : Int,
   bits_per_component : Int,
   columns : Int,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   if colors <= 0 || bits_per_component <= 0 || columns <= 0 {
     raise PredictorExpected
   }
@@ -14,7 +14,7 @@ fn pdf_predictor_scanline_width(
 fn pdf_predictor_bytes_per_pixel(
   colors : Int,
   bits_per_component : Int,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   if colors <= 0 || bits_per_component <= 0 {
     raise PredictorExpected
   }

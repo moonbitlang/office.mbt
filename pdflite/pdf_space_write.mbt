@@ -27,7 +27,7 @@ fn pdf_space_indexed_find(
 ///|
 fn pdf_space_indexed_lookup_bytes(
   table : ArrayView[(Int, Array[Int])],
-) -> (Int, PdfBytes)? {
+) -> (Int, @core.PdfBytes)? {
   guard table.length() > 0 else { return None }
   let components = table[0].1.length()
   let mut hival = table[0].0

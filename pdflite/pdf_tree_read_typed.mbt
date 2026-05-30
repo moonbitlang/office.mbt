@@ -7,9 +7,9 @@
 pub fn PdfDocument::read_name_tree(
   self : PdfDocument,
   tree : @syntax.PdfObject,
-) -> Array[(PdfBytes, @syntax.PdfObject)] {
+) -> Array[(@core.PdfBytes, @syntax.PdfObject)] {
   let raw_entries = pdf_tree_raw_entries(self, tree)
-  let parsed : Array[(PdfBytes, @syntax.PdfObject)] = Array::new(
+  let parsed : Array[(@core.PdfBytes, @syntax.PdfObject)] = Array::new(
     capacity=raw_entries.length(),
   )
   let mut malformed = false
@@ -31,7 +31,7 @@ pub fn PdfDocument::read_name_tree(
 pub fn pdf_read_name_tree(
   document : PdfDocument,
   tree : @syntax.PdfObject,
-) -> Array[(PdfBytes, @syntax.PdfObject)] {
+) -> Array[(@core.PdfBytes, @syntax.PdfObject)] {
   document.read_name_tree(tree)
 }
 
@@ -67,13 +67,13 @@ pub fn PdfDocument::read_number_tree(
 /// Compatibility wrapper that returns number-tree keys as decimal ASCII bytes.
 ///
 /// This mirrors APIs that represent both name and number tree keys as
-/// `PdfBytes`; each integer key is encoded with `Int::to_string`.
+/// `@core.PdfBytes`; each integer key is encoded with `Int::to_string`.
 pub fn pdf_read_number_tree(
   document : PdfDocument,
   tree : @syntax.PdfObject,
-) -> Array[(PdfBytes, @syntax.PdfObject)] {
+) -> Array[(@core.PdfBytes, @syntax.PdfObject)] {
   let number_entries = document.read_number_tree(tree)
-  let output : Array[(PdfBytes, @syntax.PdfObject)] = Array::new(
+  let output : Array[(@core.PdfBytes, @syntax.PdfObject)] = Array::new(
     capacity=number_entries.length(),
   )
   for entry in number_entries {

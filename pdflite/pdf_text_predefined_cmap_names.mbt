@@ -1,5 +1,7 @@
 ///|
-fn pdf_text_predefined_cmap_uses_two_byte_charcodes(name : PdfName) -> Bool {
+fn pdf_text_predefined_cmap_uses_two_byte_charcodes(
+  name : @core.PdfName,
+) -> Bool {
   let text = pdf_text_string_of_name(name)
   (
     (text.contains("-UCS2-") || text.contains("-UTF16-")) &&
@@ -14,18 +16,22 @@ fn pdf_text_predefined_cmap_has_text_orientation(text : String) -> Bool {
 }
 
 ///|
-fn pdf_text_predefined_cmap_is_vertical(name : PdfName) -> Bool {
+fn pdf_text_predefined_cmap_is_vertical(name : @core.PdfName) -> Bool {
   pdf_text_string_of_name(name).has_suffix("-V")
 }
 
 ///|
-fn pdf_text_predefined_cmap_uses_shift_jis_charcodes(name : PdfName) -> Bool {
+fn pdf_text_predefined_cmap_uses_shift_jis_charcodes(
+  name : @core.PdfName,
+) -> Bool {
   let text = pdf_text_string_of_name(name)
   pdf_text_predefined_cmap_has_text_orientation(text) && text.contains("RKSJ")
 }
 
 ///|
-fn pdf_text_predefined_cmap_uses_hojo_euc_charcodes(name : PdfName) -> Bool {
+fn pdf_text_predefined_cmap_uses_hojo_euc_charcodes(
+  name : @core.PdfName,
+) -> Bool {
   let text = pdf_text_string_of_name(name)
   pdf_text_predefined_cmap_has_text_orientation(text) &&
   text.contains("Hojo-EUC")
@@ -33,7 +39,7 @@ fn pdf_text_predefined_cmap_uses_hojo_euc_charcodes(name : PdfName) -> Bool {
 
 ///|
 fn pdf_text_predefined_cmap_uses_japan1_two_byte_charcodes(
-  name : PdfName,
+  name : @core.PdfName,
 ) -> Bool {
   let text = pdf_text_string_of_name(name)
   pdf_text_predefined_cmap_has_text_orientation(text) &&
@@ -43,53 +49,57 @@ fn pdf_text_predefined_cmap_uses_japan1_two_byte_charcodes(
 }
 
 ///|
-fn pdf_text_predefined_cmap_uses_ucs2_charcodes(name : PdfName) -> Bool {
+fn pdf_text_predefined_cmap_uses_ucs2_charcodes(name : @core.PdfName) -> Bool {
   let text = pdf_text_string_of_name(name)
   pdf_text_predefined_cmap_has_text_orientation(text) && text.contains("-UCS2-")
 }
 
 ///|
-fn pdf_text_predefined_cmap_uses_utf8_charcodes(name : PdfName) -> Bool {
+fn pdf_text_predefined_cmap_uses_utf8_charcodes(name : @core.PdfName) -> Bool {
   let text = pdf_text_string_of_name(name)
   pdf_text_predefined_cmap_has_text_orientation(text) && text.contains("-UTF8-")
 }
 
 ///|
-fn pdf_text_predefined_cmap_uses_utf16_charcodes(name : PdfName) -> Bool {
+fn pdf_text_predefined_cmap_uses_utf16_charcodes(name : @core.PdfName) -> Bool {
   let text = pdf_text_string_of_name(name)
   pdf_text_predefined_cmap_has_text_orientation(text) &&
   text.contains("-UTF16-")
 }
 
 ///|
-fn pdf_text_predefined_cmap_uses_utf32_charcodes(name : PdfName) -> Bool {
+fn pdf_text_predefined_cmap_uses_utf32_charcodes(name : @core.PdfName) -> Bool {
   let text = pdf_text_string_of_name(name)
   pdf_text_predefined_cmap_has_text_orientation(text) &&
   (text.contains("-UTF32-") || text.contains("-UCS32-"))
 }
 
 ///|
-fn pdf_text_predefined_cmap_uses_gb_euc_charcodes(name : PdfName) -> Bool {
+fn pdf_text_predefined_cmap_uses_gb_euc_charcodes(name : @core.PdfName) -> Bool {
   let text = pdf_text_string_of_name(name)
   pdf_text_predefined_cmap_has_text_orientation(text) && text.contains("GB-EUC")
 }
 
 ///|
-fn pdf_text_predefined_cmap_uses_gbpc_euc_charcodes(name : PdfName) -> Bool {
+fn pdf_text_predefined_cmap_uses_gbpc_euc_charcodes(
+  name : @core.PdfName,
+) -> Bool {
   let text = pdf_text_string_of_name(name)
   pdf_text_predefined_cmap_has_text_orientation(text) &&
   text.contains("GBpc-EUC")
 }
 
 ///|
-fn pdf_text_predefined_cmap_uses_hkscs_charcodes(name : PdfName) -> Bool {
+fn pdf_text_predefined_cmap_uses_hkscs_charcodes(name : @core.PdfName) -> Bool {
   let text = pdf_text_string_of_name(name)
   pdf_text_predefined_cmap_has_text_orientation(text) &&
   text.contains("HKscs-B5")
 }
 
 ///|
-fn pdf_text_predefined_cmap_uses_cns_euc_charcodes(name : PdfName) -> Bool {
+fn pdf_text_predefined_cmap_uses_cns_euc_charcodes(
+  name : @core.PdfName,
+) -> Bool {
   let text = pdf_text_string_of_name(name)
   pdf_text_predefined_cmap_has_text_orientation(text) &&
   text.contains("CNS-EUC")
@@ -97,7 +107,7 @@ fn pdf_text_predefined_cmap_uses_cns_euc_charcodes(name : PdfName) -> Bool {
 
 ///|
 fn pdf_text_predefined_cns_euc_cid_ranges(
-  name : PdfName,
+  name : @core.PdfName,
 ) -> Array[(Int, Int, Int)]? {
   guard pdf_text_predefined_cmap_uses_cns_euc_charcodes(name) else {
     return None
@@ -111,7 +121,7 @@ fn pdf_text_predefined_cns_euc_cid_ranges(
 
 ///|
 fn pdf_text_predefined_cns1_b5_cid_ranges(
-  name : PdfName,
+  name : @core.PdfName,
 ) -> Array[(Int, Int, Int)]? {
   let text = pdf_text_string_of_name(name)
   guard pdf_text_predefined_cmap_has_text_orientation(text) else { return None }
@@ -133,7 +143,9 @@ fn pdf_text_predefined_cns1_b5_cid_ranges(
 }
 
 ///|
-fn pdf_text_predefined_cmap_uses_cns1_b5_charcodes(name : PdfName) -> Bool {
+fn pdf_text_predefined_cmap_uses_cns1_b5_charcodes(
+  name : @core.PdfName,
+) -> Bool {
   match pdf_text_predefined_cns1_b5_cid_ranges(name) {
     Some(_) => true
     None => false
@@ -141,52 +153,58 @@ fn pdf_text_predefined_cmap_uses_cns1_b5_charcodes(name : PdfName) -> Bool {
 }
 
 ///|
-fn pdf_text_predefined_cmap_uses_big5_charcodes(name : PdfName) -> Bool {
+fn pdf_text_predefined_cmap_uses_big5_charcodes(name : @core.PdfName) -> Bool {
   let text = pdf_text_string_of_name(name)
   pdf_text_predefined_cmap_has_text_orientation(text) && text.contains("B5")
 }
 
 ///|
-fn pdf_text_predefined_cmap_uses_b5pc_charcodes(name : PdfName) -> Bool {
+fn pdf_text_predefined_cmap_uses_b5pc_charcodes(name : @core.PdfName) -> Bool {
   let text = pdf_text_string_of_name(name)
   pdf_text_predefined_cmap_has_text_orientation(text) && text.contains("B5pc")
 }
 
 ///|
-fn pdf_text_predefined_cmap_uses_uhc_charcodes(name : PdfName) -> Bool {
+fn pdf_text_predefined_cmap_uses_uhc_charcodes(name : @core.PdfName) -> Bool {
   let text = pdf_text_string_of_name(name)
   pdf_text_predefined_cmap_has_text_orientation(text) && text.contains("UHC")
 }
 
 ///|
-fn pdf_text_predefined_cmap_uses_ksc_euc_charcodes(name : PdfName) -> Bool {
+fn pdf_text_predefined_cmap_uses_ksc_euc_charcodes(
+  name : @core.PdfName,
+) -> Bool {
   let text = pdf_text_string_of_name(name)
   pdf_text_predefined_cmap_has_text_orientation(text) &&
   text.contains("KSC-EUC")
 }
 
 ///|
-fn pdf_text_predefined_cmap_uses_kscpc_euc_charcodes(name : PdfName) -> Bool {
+fn pdf_text_predefined_cmap_uses_kscpc_euc_charcodes(
+  name : @core.PdfName,
+) -> Bool {
   let text = pdf_text_string_of_name(name)
   pdf_text_predefined_cmap_has_text_orientation(text) &&
   text.contains("KSCpc-EUC")
 }
 
 ///|
-fn pdf_text_predefined_cmap_uses_gbk2k_charcodes(name : PdfName) -> Bool {
+fn pdf_text_predefined_cmap_uses_gbk2k_charcodes(name : @core.PdfName) -> Bool {
   let text = pdf_text_string_of_name(name)
   pdf_text_predefined_cmap_has_text_orientation(text) && text.contains("GBK2K")
 }
 
 ///|
-fn pdf_text_predefined_cmap_uses_gbk_charcodes(name : PdfName) -> Bool {
+fn pdf_text_predefined_cmap_uses_gbk_charcodes(name : @core.PdfName) -> Bool {
   let text = pdf_text_string_of_name(name)
   pdf_text_predefined_cmap_has_text_orientation(text) &&
   (text.contains("GBK-EUC") || text.contains("GBKp-EUC"))
 }
 
 ///|
-fn pdf_text_predefined_cmap_uses_mixed_byte_charcodes(name : PdfName) -> Bool {
+fn pdf_text_predefined_cmap_uses_mixed_byte_charcodes(
+  name : @core.PdfName,
+) -> Bool {
   let text = pdf_text_string_of_name(name)
   pdf_text_predefined_cmap_has_text_orientation(text) &&
   (

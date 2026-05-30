@@ -16,7 +16,7 @@ fn pdf_portfolio_basename(path : String) -> String {
 }
 
 ///|
-fn pdf_portfolio_relationship_name(relationship : String?) -> PdfName {
+fn pdf_portfolio_relationship_name(relationship : String?) -> @core.PdfName {
   match relationship {
     Some(text) => pdf_portfolio_name("/" + text)
     None => pdf_portfolio_unspecified_relationship()
@@ -102,7 +102,7 @@ fn pdf_portfolio_date_text_from_unix_millis(milliseconds : UInt64) -> String {
 }
 
 ///|
-fn pdf_portfolio_current_mod_date() -> PdfBytes {
+fn pdf_portfolio_current_mod_date() -> @core.PdfBytes {
   let text = match @env.get_env_var("CPDF_REPRODUCIBLE_DATES") {
     Some("true") =>
       @date.pdf_strftime_with_time(

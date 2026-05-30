@@ -28,14 +28,14 @@ fn PdfDocument::pdf_image_list_add_image(
   self : PdfDocument,
   resources : @syntax.PdfObject,
   page_number : Int,
-  name : PdfName,
+  name : @core.PdfName,
   image : @syntax.PdfObject,
   object_number : Int,
   data_length : Int,
   inline : Bool,
   entries : Array[PdfImageListEntry],
   form_numbers : @hashmap.HashMap[Int, Bool],
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let existing = pdf_image_list_find_entry(entries, object_number)
   if existing >= 0 {
     pdf_image_add_unique_page(entries[existing].pages, page_number)

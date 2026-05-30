@@ -1,6 +1,6 @@
 ///|
-fn page_content_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn page_content_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -18,7 +18,7 @@ fn page_content_raw_stream_for_test(text : String) -> @syntax.PdfObject {
 fn page_content_prefix_resources_for_test(
   names : ArrayView[String],
 ) -> @syntax.PdfObject {
-  let font_entries : Array[(@pdflite.PdfName, @syntax.PdfObject)] = []
+  let font_entries : Array[(@core.PdfName, @syntax.PdfObject)] = []
   for name in names {
     font_entries.push((page_content_name_for_test(name), PdfDictionary([])))
   }
@@ -254,8 +254,8 @@ test "PdfDocument merge_content_streams rejects non-stream content arrays" {
   )
   doc.add_object_given_number(2, page_content_raw_stream_for_test("BT ET"))
   let result : Result[Unit, Error] = try? doc.merge_content_streams()
-  guard result is Err(@pdflite.PdfError::ParseStreamExpected) else {
-    fail("expected @pdflite.PdfError::ParseStreamExpected")
+  guard result is Err(@core.PdfError::ParseStreamExpected) else {
+    fail("expected @core.PdfError::ParseStreamExpected")
   }
 }
 

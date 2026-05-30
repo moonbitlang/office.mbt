@@ -1,8 +1,8 @@
 ///|
 fn pdf_ccitt_encode_read_run(
-  input : BitStream,
+  input : @core.BitStream,
   max_columns : Int,
-) -> (Bool, Int) raise PdfError {
+) -> (Bool, Int) raise @core.PdfError {
   if max_columns <= 0 {
     raise InvalidCCITTData
   }
@@ -26,7 +26,7 @@ fn pdf_ccitt_encode_g3_1d_view(
   data : BytesView,
   columns : Int,
   rows : Int,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   if columns <= 0 || rows < 0 {
     raise InvalidCCITTData
   }
@@ -34,8 +34,8 @@ fn pdf_ccitt_encode_g3_1d_view(
   if rows > 0 && row_bytes > data.length() / rows {
     raise InvalidCCITTData
   }
-  let input = bitstream_of_view(data)
-  let output = bit_writer_new()
+  let input = @core.bitstream_of_view(data)
+  let output = @core.bit_writer_new()
   let mut rows_left = rows
   let mut columns_left = columns
   while rows_left > 0 {
@@ -61,7 +61,7 @@ fn pdf_ccitt_line_from_data(
   data : BytesView,
   columns : Int,
   row : Int,
-) -> Array[Int] raise PdfError {
+) -> Array[Int] raise @core.PdfError {
   let row_bytes = (columns - 1) / 8 + 1
   let row_start = row * row_bytes
   if row_start + row_bytes > data.length() {
@@ -81,7 +81,7 @@ fn pdf_ccitt_encode_g4_view(
   data : BytesView,
   columns : Int,
   rows : Int,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   if columns <= 0 || rows < 0 {
     raise InvalidCCITTData
   }
@@ -89,7 +89,7 @@ fn pdf_ccitt_encode_g4_view(
   if rows > 0 && row_bytes > data.length() / rows {
     raise InvalidCCITTData
   }
-  let output = bit_writer_new()
+  let output = @core.bit_writer_new()
   let whiteval = 1
   let blackval = 0
   let mut reference = pdf_ccitt_blank_line(columns, whiteval)

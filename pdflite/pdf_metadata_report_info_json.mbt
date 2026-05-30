@@ -4,7 +4,7 @@ pub fn PdfDocument::info_json(
   self : PdfDocument,
   encoding? : @metadata.PdfMetadataEncoding = PdfMetadataUTF8,
   unit? : @geometry.PdfUnit = PdfPoint,
-) -> Json raise PdfError {
+) -> Json raise @core.PdfError {
   let output : Map[String, Json] = Map([])
   let (major, minor) = self.version()
   let pages = self.pages_of_pagetree()
@@ -13,7 +13,7 @@ pub fn PdfDocument::info_json(
     Json::array([pdf_util_json_number(major), pdf_util_json_number(minor)]),
   )
   output.set("Pages", pdf_util_json_number(pages.length()))
-  let info_fields : Array[(String, PdfName)] = [
+  let info_fields : Array[(String, @core.PdfName)] = [
     ("Title", pdf_metadata_name("/Title")),
     ("Author", pdf_metadata_name("/Author")),
     ("Subject", pdf_metadata_name("/Subject")),
@@ -57,7 +57,7 @@ pub fn PdfDocument::info_json(
       false,
     ),
   )
-  let viewer_bool_fields : Array[(String, PdfName)] = [
+  let viewer_bool_fields : Array[(String, @core.PdfName)] = [
     ("HideToolbar", pdf_metadata_name("/HideToolbar")),
     ("HideMenubar", pdf_metadata_name("/HideMenubar")),
     ("HideWindowUI", pdf_metadata_name("/HideWindowUI")),
@@ -103,6 +103,6 @@ pub fn PdfDocument::info_json_blob(
   self : PdfDocument,
   encoding? : @metadata.PdfMetadataEncoding = PdfMetadataUTF8,
   unit? : @geometry.PdfUnit = PdfPoint,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   @utf8.encode(self.info_json(encoding~, unit~).stringify())
 }

@@ -1,9 +1,9 @@
 ///|
 fn pdf_content_read_inline_image_data(
-  cursor : ByteCursor,
-) -> PdfBytes raise PdfError {
+  cursor : @core.ByteCursor,
+) -> @core.PdfBytes raise @core.PdfError {
   match cursor.peek_byte() {
-    value if pdf_is_whitespace_byte(value) => cursor.nudge()
+    value if @core.pdf_is_whitespace_byte(value) => cursor.nudge()
     _ => ()
   }
   let view = cursor.remaining_view()
@@ -14,13 +14,13 @@ fn pdf_content_read_inline_image_data(
   while !found && index + 1 < view.length() {
     let is_marker = view[index].to_int() == 69 && view[index + 1].to_int() == 73
     let before_ok = index == 0 ||
-      pdf_is_whitespace_byte(view[index - 1].to_int())
+      @core.pdf_is_whitespace_byte(view[index - 1].to_int())
     let after_index = index + 2
     let after_ok = after_index >= view.length() ||
-      pdf_is_whitespace_byte(view[after_index].to_int())
+      @core.pdf_is_whitespace_byte(view[after_index].to_int())
     if is_marker && before_ok && after_ok {
       found = true
-      if index > 0 && pdf_is_whitespace_byte(view[index - 1].to_int()) {
+      if index > 0 && @core.pdf_is_whitespace_byte(view[index - 1].to_int()) {
         data_length = index - 1
         skip_before_marker = 1
       } else {

@@ -1,5 +1,7 @@
 ///|
-fn pdf_read_linearized_marker(cursor : ByteCursor) -> Bool raise PdfError {
+fn pdf_read_linearized_marker(
+  cursor : @core.ByteCursor,
+) -> Bool raise @core.PdfError {
   ignore(@reader.pdf_read_header_from_cursor(cursor))
   let parsed = pdf_cursor_read_plain_indirect_object_at_current(cursor)
   match parsed.object.lookup_immediate(@reader.pdf_reader_linearized_name()) {
@@ -11,7 +13,7 @@ fn pdf_read_linearized_marker(cursor : ByteCursor) -> Bool raise PdfError {
 ///|
 fn pdf_read_was_linearized(data : BytesView) -> Bool {
   let result : Result[Bool, Error] = try? pdf_read_linearized_marker(
-    byte_cursor_of_view(data),
+    @core.byte_cursor_of_view(data),
   )
   match result {
     Ok(value) => value
@@ -34,8 +36,8 @@ pub fn pdf_is_linearized(data : BytesView) -> Bool {
 /// Revision `1` is the newest revision referenced by `startxref`; larger numbers
 /// walk backward through older revisions. Linearized hint-table revisions are
 /// excluded from the returned count.
-pub fn pdf_revisions_from_view(data : BytesView) -> Int raise PdfError {
-  let cursor = byte_cursor_of_view(data)
+pub fn pdf_revisions_from_view(data : BytesView) -> Int raise @core.PdfError {
+  let cursor = @core.byte_cursor_of_view(data)
   ignore(@reader.pdf_read_header_from_cursor(cursor))
   let mut current_xref = @reader.pdf_read_startxref_position(data)
   let mut revisions = 0
@@ -61,6 +63,8 @@ pub fn pdf_revisions_from_view(data : BytesView) -> Int raise PdfError {
 
 ///|
 /// Count document revisions from owned PDF bytes.
-pub fn pdf_revisions_from_bytes(data : PdfBytes) -> Int raise PdfError {
+pub fn pdf_revisions_from_bytes(
+  data : @core.PdfBytes,
+) -> Int raise @core.PdfError {
   pdf_revisions_from_view(data)
 }

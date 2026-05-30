@@ -1,7 +1,7 @@
 ///|
 fn pdf_ccitt_first_decodeparms(
   dictionary : @syntax.PdfObject,
-) -> @syntax.PdfObject? raise PdfError {
+) -> @syntax.PdfObject? raise @core.PdfError {
   match pdf_decodeparms_value(dictionary) {
     None | Some(PdfNull) | Some(PdfArray([])) | Some(PdfArray([PdfNull, ..])) =>
       None
@@ -15,7 +15,7 @@ fn pdf_ccitt_first_decodeparms(
 fn PdfDocument::pdf_ccitt_first_decodeparms_direct(
   self : PdfDocument,
   dictionary : @syntax.PdfObject,
-) -> @syntax.PdfObject? raise PdfError {
+) -> @syntax.PdfObject? raise @core.PdfError {
   match self.pdf_decodeparms_value_direct(dictionary) {
     None | Some(PdfNull) | Some(PdfArray([])) => None
     Some(PdfDictionary(_) as value) => Some(value)
@@ -32,9 +32,9 @@ fn PdfDocument::pdf_ccitt_first_decodeparms_direct(
 ///|
 fn pdf_ccitt_decodeparms_int(
   dictionary : @syntax.PdfObject,
-  key : PdfName,
+  key : @core.PdfName,
   default : Int,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   match dictionary.lookup_immediate(key) {
     None => default
     Some(PdfInteger(value)) => value
@@ -46,9 +46,9 @@ fn pdf_ccitt_decodeparms_int(
 fn PdfDocument::pdf_ccitt_decodeparms_int_direct(
   self : PdfDocument,
   dictionary : @syntax.PdfObject,
-  key : PdfName,
+  key : @core.PdfName,
   default : Int,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   match self.lookup_direct(key, dictionary) {
     None => default
     Some(PdfInteger(value)) => value
@@ -59,9 +59,9 @@ fn PdfDocument::pdf_ccitt_decodeparms_int_direct(
 ///|
 fn pdf_ccitt_decodeparms_bool(
   dictionary : @syntax.PdfObject,
-  key : PdfName,
+  key : @core.PdfName,
   default : Bool,
-) -> Bool raise PdfError {
+) -> Bool raise @core.PdfError {
   match dictionary.lookup_immediate(key) {
     None => default
     Some(PdfBoolean(value)) => value
@@ -73,9 +73,9 @@ fn pdf_ccitt_decodeparms_bool(
 fn PdfDocument::pdf_ccitt_decodeparms_bool_direct(
   self : PdfDocument,
   dictionary : @syntax.PdfObject,
-  key : PdfName,
+  key : @core.PdfName,
   default : Bool,
-) -> Bool raise PdfError {
+) -> Bool raise @core.PdfError {
   match self.lookup_direct(key, dictionary) {
     None => default
     Some(PdfBoolean(value)) => value
@@ -86,7 +86,7 @@ fn PdfDocument::pdf_ccitt_decodeparms_bool_direct(
 ///|
 fn pdf_ccitt_params(
   dictionary : @syntax.PdfObject,
-) -> PdfCCITTParams raise PdfError {
+) -> PdfCCITTParams raise @core.PdfError {
   let defaults = pdf_ccitt_default_params()
   match pdf_ccitt_first_decodeparms(dictionary) {
     None => defaults
@@ -136,7 +136,7 @@ fn pdf_ccitt_params(
 fn PdfDocument::pdf_ccitt_params_direct(
   self : PdfDocument,
   dictionary : @syntax.PdfObject,
-) -> PdfCCITTParams raise PdfError {
+) -> PdfCCITTParams raise @core.PdfError {
   let defaults = pdf_ccitt_default_params()
   match self.pdf_ccitt_first_decodeparms_direct(dictionary) {
     None => defaults

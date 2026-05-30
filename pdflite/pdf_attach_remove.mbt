@@ -2,7 +2,7 @@
 fn PdfDocument::pdf_attach_remove_from_page(
   self : PdfDocument,
   page : @page.PdfPage,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   let kept = match self.lookup_direct(pdf_attach_annots_key(), page.rest) {
     Some(PdfArray(annotations)) => {
       let kept : Array[@syntax.PdfObject] = Array::new(
@@ -30,7 +30,7 @@ fn PdfDocument::pdf_attach_remove_from_page(
 /// preserved.
 pub fn PdfDocument::remove_attached_files(
   self : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let document = self.copy()
   let pages = document.pages_of_pagetree()
   let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
@@ -52,6 +52,6 @@ pub fn PdfDocument::remove_attached_files(
 /// Compatibility wrapper for `PdfDocument::remove_attached_files`.
 pub fn pdf_remove_attached_files(
   document : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.remove_attached_files()
 }

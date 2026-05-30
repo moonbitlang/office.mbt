@@ -1,10 +1,10 @@
 ///|
-fn pdf_ua_matterhorn_name_text(name : PdfName) -> String {
+fn pdf_ua_matterhorn_name_text(name : @core.PdfName) -> String {
   @ascii.decode_lossy(name.bytes())
 }
 
 ///|
-fn pdf_ua_matterhorn_standard_structure_types_2008() -> Array[PdfName] {
+fn pdf_ua_matterhorn_standard_structure_types_2008() -> Array[@core.PdfName] {
   [
     pdf_ua_name("/Document"),
     pdf_ua_name("/Part"),
@@ -59,14 +59,14 @@ fn pdf_ua_matterhorn_standard_structure_types_2008() -> Array[PdfName] {
 }
 
 ///|
-fn pdf_ua_matterhorn_standard_structure_type(name : PdfName) -> Bool {
+fn pdf_ua_matterhorn_standard_structure_type(name : @core.PdfName) -> Bool {
   pdf_ua_matterhorn_standard_structure_types_2008().contains(name)
 }
 
 ///|
 fn PdfUAStructTreeRoleMap::pdf_ua_matterhorn_role_is_circular(
   self : PdfUAStructTreeRoleMap,
-  name : PdfName,
+  name : @core.PdfName,
 ) -> Bool {
   let mut current = name
   let mut remaining = self.entries.length()
@@ -100,7 +100,7 @@ fn PdfUAStructTreeRoleMap::pdf_ua_matterhorn_has_circular_mapping(
 ///|
 fn PdfUAStructTreeRoleMap::pdf_ua_matterhorn_role_terminates_at_standard(
   self : PdfUAStructTreeRoleMap,
-  name : PdfName,
+  name : @core.PdfName,
 ) -> Bool {
   let mut current = name
   let mut remaining = self.entries.length()

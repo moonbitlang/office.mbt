@@ -19,7 +19,7 @@ fn pdf_image_gray_8bpp_as_rgb24(
   width : Int,
   height : Int,
   data : BytesView,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let pixels = width * height
   pdf_image_require_size(data, pixels)
   let output = Array::make(pixels * 3, b'\x00')
@@ -39,7 +39,7 @@ fn pdf_image_cmyk_8bpp_as_rgb24(
   width : Int,
   height : Int,
   data : BytesView,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let pixels = width * height
   pdf_image_require_size(data, pixels * 4)
   let output = Array::make(pixels * 3, b'\x00')
@@ -52,9 +52,9 @@ fn pdf_image_cmyk_8bpp_as_rgb24(
       data[offset + 2].to_int(),
       data[offset + 3].to_int(),
     )
-    output[position] = pdf_byte_of_int(red)
-    output[position + 1] = pdf_byte_of_int(green)
-    output[position + 2] = pdf_byte_of_int(blue)
+    output[position] = @core.pdf_byte_of_int(red)
+    output[position + 1] = @core.pdf_byte_of_int(green)
+    output[position + 2] = @core.pdf_byte_of_int(blue)
     position += 3
   }
   Bytes::from_array(output)
@@ -65,7 +65,7 @@ fn pdf_image_1bpp_as_rgb24(
   width : Int,
   height : Int,
   data : BytesView,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let bytes_per_row = (width + 7) / 8
   pdf_image_require_size(data, bytes_per_row * height)
   let output = Array::make(width * height * 3, b'\x00')
@@ -115,7 +115,7 @@ fn pdf_image_gray_packed_bpp_as_rgb24(
   height : Int,
   bits_per_component : Int,
   data : BytesView,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let bytes_per_row = pdf_image_packed_bytes_per_row(width, bits_per_component)
   pdf_image_require_size(data, bytes_per_row * height)
   let max_sample = (1 << bits_per_component) - 1
@@ -142,7 +142,7 @@ fn pdf_image_gray_2bpp_as_rgb24(
   width : Int,
   height : Int,
   data : BytesView,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_image_gray_packed_bpp_as_rgb24(width, height, 2, data)
 }
 
@@ -151,7 +151,7 @@ fn pdf_image_gray_4bpp_as_rgb24(
   width : Int,
   height : Int,
   data : BytesView,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_image_gray_packed_bpp_as_rgb24(width, height, 4, data)
 }
 
@@ -161,7 +161,7 @@ fn pdf_image_rgb_packed_bpp_as_rgb24(
   height : Int,
   bits_per_component : Int,
   data : BytesView,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let samples_per_row = width * 3
   let bytes_per_row = pdf_image_packed_bytes_per_row(
     samples_per_row, bits_per_component,
@@ -193,7 +193,7 @@ fn pdf_image_rgb_1bpp_as_rgb24(
   width : Int,
   height : Int,
   data : BytesView,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_image_rgb_packed_bpp_as_rgb24(width, height, 1, data)
 }
 
@@ -202,7 +202,7 @@ fn pdf_image_rgb_2bpp_as_rgb24(
   width : Int,
   height : Int,
   data : BytesView,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_image_rgb_packed_bpp_as_rgb24(width, height, 2, data)
 }
 
@@ -211,6 +211,6 @@ fn pdf_image_rgb_4bpp_as_rgb24(
   width : Int,
   height : Int,
   data : BytesView,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_image_rgb_packed_bpp_as_rgb24(width, height, 4, data)
 }

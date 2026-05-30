@@ -28,11 +28,11 @@ fn pdf_util_json_op_items(items : ArrayView[Json], operator : String) -> Json {
 }
 
 ///|
-fn pdf_util_json_name_object(name : PdfName) -> Json raise PdfError {
+fn pdf_util_json_name_object(name : @core.PdfName) -> Json raise @core.PdfError {
   Json::string(pdf_util_string_from_name(name))
 }
 
 ///|
-fn pdf_util_json_op_string(bytes : PdfBytes) -> Json raise PdfError {
+fn pdf_util_json_op_string(bytes : @core.PdfBytes) -> Json raise @core.PdfError {
   Json::string(pdf_util_string_from_bytes(bytes))
 }

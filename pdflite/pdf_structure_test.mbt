@@ -1,6 +1,6 @@
 ///|
-fn structure_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn structure_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -288,7 +288,7 @@ test "PdfDocument replace_struct_tree imports new negative objects" {
   let bad : Result[@pdflite.PdfDocument, Error] = try? doc.replace_struct_tree(
     Json::null(),
   )
-  guard bad is Err(@pdflite.PdfError::SoftError(_)) else {
+  guard bad is Err(@core.PdfError::SoftError(_)) else {
     fail("expected malformed structure-tree JSON to raise SoftError")
   }
 }

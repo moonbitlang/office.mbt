@@ -10,7 +10,7 @@ pub fn PdfDocument::scale_contents(
   position : @geometry.PdfPosition,
   scale : Double,
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   pdf_page_box_validate_page_numbers(
     page_numbers,
     self.endpage(),
@@ -43,7 +43,7 @@ pub fn pdf_scale_contents(
   position : @geometry.PdfPosition,
   scale : Double,
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.scale_contents(page_numbers, position, scale, fast~)
 }
 
@@ -55,6 +55,6 @@ pub fn pdf_scale_contents_cpdf_order(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.scale_contents(page_numbers, position, scale, fast~)
 }

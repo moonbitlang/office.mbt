@@ -140,7 +140,7 @@ pub fn PdfDocument::page_info_text(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
   unit? : @geometry.PdfUnit = PdfPoint,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let entries = self.pdf_page_info_entries(page_numbers, unit)
   let output = Array::make(pdf_page_info_text_length(entries), b'\x00')
   let mut position = 0

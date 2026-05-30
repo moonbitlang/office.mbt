@@ -1,5 +1,6 @@
 import {
   "bobzhang/pdflite",
+  "bobzhang/pdflite/core",
   "moonbitlang/async",
   "moonbitlang/async/fs",
   "moonbitlang/async/stdio",
@@ -11,6 +12,7 @@ import {
 
 import {
   "bobzhang/pdflite",
+  "bobzhang/pdflite/core",
   "moonbitlang/async",
   "moonbitlang/async/fs",
   "moonbitlang/core/argparse",

@@ -44,7 +44,7 @@ fn PdfDocument::pdf_destination_page_number_with_lookup(
   self : PdfDocument,
   destination : @destination.PdfDestination,
   page_numbers : PdfPageNumberLookup,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   match destination {
     DestNamed(_) | DestString(_) => {
       let resolved = self.read_destination(
@@ -88,7 +88,7 @@ fn PdfDocument::pdf_destination_page_number(
   self : PdfDocument,
   destination : @destination.PdfDestination,
   page_reference_numbers : ArrayView[Int],
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   self.pdf_destination_page_number_with_lookup(
     destination,
     pdf_page_number_lookup(page_reference_numbers),

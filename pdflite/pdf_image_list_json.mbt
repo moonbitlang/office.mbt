@@ -31,7 +31,7 @@ pub fn PdfDocument::images_json(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
   inline? : Bool = false,
-) -> Json raise PdfError {
+) -> Json raise @core.PdfError {
   let pages = self.pages_of_pagetree()
   pdf_page_box_validate_page_numbers(page_numbers, pages.length(), "images")
   let entries : Array[PdfImageListEntry] = Array::new(
@@ -56,7 +56,7 @@ pub fn PdfDocument::images_json_blob(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
   inline? : Bool = false,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   @utf8.encode(self.images_json(page_numbers, inline~).stringify())
 }
 
@@ -66,7 +66,7 @@ pub fn pdf_image_images(
   inline : Bool,
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> Json raise PdfError {
+) -> Json raise @core.PdfError {
   document.images_json(page_numbers, inline~)
 }
 
@@ -76,7 +76,7 @@ pub fn pdf_images(
   inline : Bool,
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> Json raise PdfError {
+) -> Json raise @core.PdfError {
   document.images_json(page_numbers, inline~)
 }
 
@@ -86,6 +86,6 @@ pub fn pdf_image_images_json_blob(
   inline : Bool,
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   document.images_json_blob(page_numbers, inline~)
 }

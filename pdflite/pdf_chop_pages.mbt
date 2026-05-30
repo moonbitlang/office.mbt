@@ -12,7 +12,7 @@ fn pdf_chop_rectangle_object(
 fn pdf_chop_box(
   document : PdfDocument,
   page : @page.PdfPage,
-) -> @geometry.PdfRectangle raise PdfError {
+) -> @geometry.PdfRectangle raise @core.PdfError {
   match document.lookup_direct(pdf_chop_cropbox_key(), page.rest) {
     Some(cropbox) => document.parse_rectangle(cropbox)
     None => document.parse_rectangle(page.mediabox)
@@ -22,7 +22,7 @@ fn pdf_chop_box(
 ///|
 fn pdf_chop_erase_boxes(
   rest : @syntax.PdfObject,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   rest
   .remove_dict_entry(pdf_chop_cropbox_key())
   .remove_dict_entry(pdf_chop_bleedbox_key())
@@ -38,7 +38,7 @@ fn pdf_chop_page_with_box(
   min_y : Double,
   max_x : Double,
   max_y : Double,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   {
     ..page,
     mediabox: pdf_chop_rectangle_object(min_x, min_y, max_x, max_y),
@@ -64,7 +64,7 @@ fn pdf_chop_grid_pages(
   columns : Bool,
   btt : Bool,
   rtl : Bool,
-) -> Array[@page.PdfPage] raise PdfError {
+) -> Array[@page.PdfPage] raise @core.PdfError {
   let width = (bounds.max_x - bounds.min_x) / x.to_double()
   let height = (bounds.max_y - bounds.min_y) / y.to_double()
   let pages : Array[@page.PdfPage] = Array::new(capacity=x * y)
@@ -133,7 +133,7 @@ fn pdf_chop_page_boxes(
   columns : Bool,
   btt : Bool,
   rtl : Bool,
-) -> Array[@page.PdfPage] raise PdfError {
+) -> Array[@page.PdfPage] raise @core.PdfError {
   let bounds = pdf_chop_box(document, page)
   if x == 0 {
     let top = pdf_chop_page_with_box(
@@ -177,7 +177,7 @@ fn pdf_chop_validate_page_numbers(
   page_numbers : ArrayView[Int],
   end_page : Int,
   context : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   for page_number in page_numbers {
     if page_number < 1 || page_number > end_page {
       raise BadPageSpecification(
@@ -188,7 +188,7 @@ fn pdf_chop_validate_page_numbers(
 }
 
 ///|
-fn pdf_chop_validate_grid(x : Int, y : Int) -> Unit raise PdfError {
+fn pdf_chop_validate_grid(x : Int, y : Int) -> Unit raise @core.PdfError {
   if x <= 0 || y <= 0 {
     raise BadNumberArgument("chop: x and y must be positive")
   }
@@ -244,7 +244,7 @@ fn PdfDocument::pdf_chop_inner(
   rtl : Bool,
   page_numbers : ArrayView[Int],
   context : String,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let end_page = self.endpage()
   pdf_chop_validate_page_numbers(page_numbers, end_page, context)
   let pages = self.pages_of_pagetree()

@@ -20,7 +20,9 @@ fn pdf_image_json_string_or_null(value : String?) -> Json {
 }
 
 ///|
-fn pdf_image_name_to_string(name : PdfName) -> String raise PdfError {
+fn pdf_image_name_to_string(
+  name : @core.PdfName,
+) -> String raise @core.PdfError {
   @ascii.decode(name.bytes()) catch {
     _ =>
       @ascii.decode(pdf_write_object(PdfNameObject(name))) catch {

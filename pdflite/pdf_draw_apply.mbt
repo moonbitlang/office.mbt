@@ -24,7 +24,7 @@ pub fn PdfDocument::draw(
   time? : @date.PdfStrftimeTime? = None,
   add_artifacts? : Bool = false,
   role_map? : String = "",
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   pdf_page_box_validate_page_numbers(page_numbers, self.endpage(), "draw")
   let write_structure_tree = struct_tree &&
     self.pdf_draw_has_fresh_structure_tree()
@@ -86,7 +86,7 @@ pub fn pdf_draw(
   time? : @date.PdfStrftimeTime? = None,
   add_artifacts? : Bool = false,
   role_map? : String = "",
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.draw(
     page_numbers,
     drawops,

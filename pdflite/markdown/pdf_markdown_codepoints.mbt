@@ -95,7 +95,7 @@ fn pdf_markdown_codepoints_of_glyphs(
 ///|
 fn pdf_markdown_extracted_codepoints(
   extractor : @pdflite.PdfTextExtractor?,
-  text : @pdflite.PdfBytes,
+  text : @core.PdfBytes,
 ) -> Array[Int] raise {
   let output : Array[Int] = []
   match extractor {
@@ -115,7 +115,7 @@ fn pdf_markdown_extracted_codepoints(
 fn pdf_markdown_push_extracted_text(
   output : Array[Int],
   extractor : @pdflite.PdfTextExtractor?,
-  text : @pdflite.PdfBytes,
+  text : @core.PdfBytes,
 ) -> Unit raise {
   pdf_markdown_append_codepoints(
     output,

@@ -16,8 +16,8 @@ fn pdf_content_copy_view(
 fn pdf_content_section_bytes(
   operands : ArrayView[@syntax.PdfObject],
   operator : BytesView,
-) -> PdfBytes raise PdfError {
-  let rendered_operands : Array[PdfBytes] = Array::new(
+) -> @core.PdfBytes raise @core.PdfError {
+  let rendered_operands : Array[@core.PdfBytes] = Array::new(
     capacity=operands.length(),
   )
   let mut length = operator.length()

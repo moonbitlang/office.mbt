@@ -4,7 +4,7 @@
 /// `PdfTypeText` stores raw one-byte PDF charcodes, matching the OCaml
 /// `char list` representation rather than Unicode text.
 pub(all) enum PdfTypeElement {
-  PdfTypeText(PdfBytes)
+  PdfTypeText(@core.PdfBytes)
   PdfTypeHGlue(Double)
   PdfTypeVGlue(Double)
   PdfTypeNewLine

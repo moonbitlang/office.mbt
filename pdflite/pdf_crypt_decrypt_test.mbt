@@ -1,8 +1,8 @@
 ///|
 fn crypt_decrypt_model_bytes_for_test(
   values : ArrayView[Int],
-) -> @pdflite.PdfBytes {
-  try! @pdflite.pdf_bytes_of_int_array(values)
+) -> @core.PdfBytes {
+  try! @core.pdf_bytes_of_int_array(values)
 }
 
 ///|
@@ -10,7 +10,7 @@ fn crypt_decrypt_aesv3_encrypt_data_for_test(
   file_key : BytesView,
   data : BytesView,
   iv : BytesView,
-) -> @pdflite.PdfBytes raise {
+) -> @core.PdfBytes raise {
   guard file_key == crypt_decrypt_aesv3_r5_file_key_for_test() else {
     fail("expected AESV3 R5 file key fixture")
   }
@@ -31,7 +31,7 @@ fn crypt_decrypt_aesv3_encrypt_data_for_test(
 }
 
 ///|
-fn crypt_decrypt_aesv3_r5_user_entry_for_test() -> @pdflite.PdfBytes {
+fn crypt_decrypt_aesv3_r5_user_entry_for_test() -> @core.PdfBytes {
   crypt_decrypt_model_bytes_for_test([
     0xad, 0x7c, 0x98, 0xe2, 0x51, 0xcb, 0x1c, 0x7b, 0x3e, 0x28, 0x30, 0xb6, 0xf0,
     0xbe, 0xcb, 0xd8, 0x35, 0x2a, 0x6a, 0xb7, 0x12, 0x23, 0x2d, 0x6e, 0x82, 0xf2,
@@ -41,7 +41,7 @@ fn crypt_decrypt_aesv3_r5_user_entry_for_test() -> @pdflite.PdfBytes {
 }
 
 ///|
-fn crypt_decrypt_aesv3_r5_owner_entry_for_test() -> @pdflite.PdfBytes {
+fn crypt_decrypt_aesv3_r5_owner_entry_for_test() -> @core.PdfBytes {
   crypt_decrypt_model_bytes_for_test([
     0xf9, 0x90, 0x4f, 0x90, 0x02, 0x10, 0x0b, 0x3e, 0xba, 0x57, 0x69, 0x0b, 0x67,
     0x32, 0x30, 0xde, 0xfc, 0xcd, 0x12, 0x39, 0x9f, 0x8d, 0xa1, 0xa8, 0x73, 0x41,
@@ -51,12 +51,12 @@ fn crypt_decrypt_aesv3_r5_owner_entry_for_test() -> @pdflite.PdfBytes {
 }
 
 ///|
-fn crypt_decrypt_aesv3_r5_file_key_for_test() -> @pdflite.PdfBytes {
+fn crypt_decrypt_aesv3_r5_file_key_for_test() -> @core.PdfBytes {
   crypt_decrypt_model_bytes_for_test([ for value in 0..<32 => value ])
 }
 
 ///|
-fn crypt_decrypt_aesv3_r5_user_encryption_key_for_test() -> @pdflite.PdfBytes {
+fn crypt_decrypt_aesv3_r5_user_encryption_key_for_test() -> @core.PdfBytes {
   crypt_decrypt_model_bytes_for_test([
     0xe4, 0x35, 0xfd, 0x1c, 0x68, 0x70, 0xfc, 0x3b, 0x50, 0x7f, 0x7c, 0x3d, 0x30,
     0xd0, 0x2e, 0x06, 0xb7, 0x60, 0x68, 0x50, 0x81, 0x95, 0xc1, 0x29, 0x87, 0x9c,
@@ -65,7 +65,7 @@ fn crypt_decrypt_aesv3_r5_user_encryption_key_for_test() -> @pdflite.PdfBytes {
 }
 
 ///|
-fn crypt_decrypt_aesv3_r5_owner_encryption_key_for_test() -> @pdflite.PdfBytes {
+fn crypt_decrypt_aesv3_r5_owner_encryption_key_for_test() -> @core.PdfBytes {
   crypt_decrypt_model_bytes_for_test([
     0x93, 0x8a, 0x69, 0x29, 0xac, 0xa0, 0x6a, 0x79, 0x47, 0xde, 0x9d, 0xc4, 0x68,
     0x29, 0x04, 0xca, 0xda, 0x26, 0xbf, 0x1b, 0xb2, 0x8e, 0xc9, 0xc8, 0x2b, 0x83,
@@ -74,7 +74,7 @@ fn crypt_decrypt_aesv3_r5_owner_encryption_key_for_test() -> @pdflite.PdfBytes {
 }
 
 ///|
-fn crypt_decrypt_aesv3_r5_permissions_for_test() -> @pdflite.PdfBytes {
+fn crypt_decrypt_aesv3_r5_permissions_for_test() -> @core.PdfBytes {
   crypt_decrypt_model_bytes_for_test([
     0x61, 0x58, 0xb9, 0xdd, 0xf6, 0x26, 0xa8, 0xfa, 0x36, 0x68, 0x20, 0xad, 0x7e,
     0xd7, 0xde, 0x4d,
@@ -86,7 +86,7 @@ fn crypt_decrypt_aesv3_r5_permissions_for_test() -> @pdflite.PdfBytes {
 fn crypt_decrypt_aesv3_r5_random_for_test(
   field : @crypt_core.PdfAesV3RandomField,
   _length : Int,
-) -> @pdflite.PdfBytes raise @pdflite.PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   match field {
     PdfAesV3FileKey => crypt_decrypt_aesv3_r5_file_key_for_test()
     PdfAesV3UserValidationSalt =>
@@ -110,14 +110,14 @@ fn crypt_decrypt_aesv3_r5_random_for_test(
 }
 
 ///|
-fn crypt_decrypt_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn crypt_decrypt_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
 fn crypt_decrypt_stream_for_test(
-  entries : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
-  data : @pdflite.PdfBytes,
+  entries : ArrayView[(@core.PdfName, @syntax.PdfObject)],
+  data : @core.PdfBytes,
 ) -> @syntax.PdfObject {
   PdfStreamObject({
     dictionary: PdfDictionary([ for entry in entries => entry ]),
@@ -127,12 +127,12 @@ fn crypt_decrypt_stream_for_test(
 
 ///|
 fn crypt_decrypt_standard_encrypt_dictionary_values_for_test(
-  entries : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
-  owner_entry : @pdflite.PdfBytes,
-  user_entry : @pdflite.PdfBytes,
+  entries : ArrayView[(@core.PdfName, @syntax.PdfObject)],
+  owner_entry : @core.PdfBytes,
+  user_entry : @core.PdfBytes,
   permissions : Int,
 ) -> @syntax.PdfObject {
-  let output : Array[(@pdflite.PdfName, @syntax.PdfObject)] = [
+  let output : Array[(@core.PdfName, @syntax.PdfObject)] = [
     (
       crypt_decrypt_name_for_test("/Filter"),
       PdfNameObject(crypt_decrypt_name_for_test("/Standard")),

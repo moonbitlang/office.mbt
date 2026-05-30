@@ -1,6 +1,6 @@
 ///|
-fn content_operator_ext_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn content_operator_ext_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -116,7 +116,7 @@ test "cpdfcontent operator state applies ExtGState dash parameters" {
       ),
     ]),
   )
-  guard bad_phase is Err(@pdflite.PdfError::NumberExpected) else {
+  guard bad_phase is Err(@core.PdfError::NumberExpected) else {
     fail("expected NumberExpected for malformed ExtGState dash phase")
   }
   let bad_dash : Result[@pdflite.PdfContentOperatorState, Error] = try? doc.content_apply_extgstate_dash_op(
@@ -133,7 +133,7 @@ test "cpdfcontent operator state applies ExtGState dash parameters" {
       ),
     ]),
   )
-  guard bad_dash is Err(@pdflite.PdfError::NumberExpected) else {
+  guard bad_dash is Err(@core.PdfError::NumberExpected) else {
     fail("expected NumberExpected for malformed ExtGState dash array")
   }
 }
@@ -204,7 +204,7 @@ test "cpdfcontent operator state applies ExtGState font parameters" {
       (font_key, PdfArray([PdfIndirect(9), PdfInteger(10)])),
     ]),
   )
-  guard bad_font is Err(@pdflite.PdfError::FontTypeExpected) else {
+  guard bad_font is Err(@core.PdfError::FontTypeExpected) else {
     fail("expected FontTypeExpected for malformed ExtGState font object")
   }
 }

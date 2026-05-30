@@ -1,11 +1,11 @@
 ///|
-fn type_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
-  try! @pdflite.pdf_bytes_of_int_array(values)
+fn type_bytes_for_test(values : ArrayView[Int]) -> @core.PdfBytes {
+  try! @core.pdf_bytes_of_int_array(values)
 }
 
 ///|
-fn type_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn type_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -202,14 +202,14 @@ test "pdf_type helpers reject unsupported fonts and short width tables" {
     type_simple_font_without_metrics_for_test(),
     12.0,
   )
-  guard missing_metrics is Err(@pdflite.PdfError::FontWidthExpected) else {
+  guard missing_metrics is Err(@core.PdfError::FontWidthExpected) else {
     fail("expected missing simple font metrics to fail")
   }
   let short_widths : Result[Double, Error] = try? @pdflite.pdf_type_width_of_bytes(
     [1.0, 2.0],
     type_bytes_for_test([0, 2]),
   )
-  guard short_widths is Err(@pdflite.PdfError::FontWidthExpected) else {
+  guard short_widths is Err(@core.PdfError::FontWidthExpected) else {
     fail("expected short width table to fail")
   }
 }

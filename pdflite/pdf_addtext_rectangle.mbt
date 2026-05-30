@@ -20,8 +20,8 @@ pub fn pdf_addtext_rectangle_origin(
 fn PdfDocument::pdf_addtext_rectangle_bounds(
   self : PdfDocument,
   page : @page.PdfPage,
-  relative_to_box : PdfName,
-) -> @geometry.PdfRectangle raise PdfError {
+  relative_to_box : @core.PdfName,
+) -> @geometry.PdfRectangle raise @core.PdfError {
   if relative_to_box == pdf_page_mediabox_key() {
     self.parse_rectangle(page.mediabox)
   } else {
@@ -37,7 +37,7 @@ fn PdfDocument::pdf_addtext_rectangle_dimensions(
   self : PdfDocument,
   page : @page.PdfPage,
   coord : String,
-) -> (Double, Double) raise PdfError {
+) -> (Double, Double) raise @core.PdfError {
   match self.parse_units_string(page, coord) {
     [width, height] => (width, height)
     _ => raise SoftError("bad coordinate specification")
@@ -51,13 +51,13 @@ fn PdfDocument::pdf_addtext_rectangle_page(
   coord : String,
   colour : @colour.PdfContentColour,
   position : @geometry.PdfPosition,
-  relative_to_box : PdfName,
+  relative_to_box : @core.PdfName,
   outline : Bool,
   line_width : Double,
   opacity : Double,
   underneath : Bool,
   fast : Bool,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   let (resources, extgstate_name) = self.pdf_addtext_opacity_resources(
     page.resources,
     opacity,
@@ -88,13 +88,13 @@ pub fn PdfDocument::addtext_rectangle(
   coord : String,
   colour : @colour.PdfContentColour,
   position : @geometry.PdfPosition,
-  relative_to_box? : PdfName = pdf_page_mediabox_key(),
+  relative_to_box? : @core.PdfName = pdf_page_mediabox_key(),
   outline? : Bool = false,
   line_width? : Double = 1.0,
   opacity? : Double = 1.0,
   underneath? : Bool = false,
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let pages = self.pages_of_pagetree()
   pdf_addtext_validate_page_numbers(
     page_numbers,
@@ -128,13 +128,13 @@ pub fn pdf_addtext_rectangle(
   coord : String,
   colour : @colour.PdfContentColour,
   position : @geometry.PdfPosition,
-  relative_to_box? : PdfName = pdf_page_mediabox_key(),
+  relative_to_box? : @core.PdfName = pdf_page_mediabox_key(),
   outline? : Bool = false,
   line_width? : Double = 1.0,
   opacity? : Double = 1.0,
   underneath? : Bool = false,
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.addtext_rectangle(
     page_numbers,
     coord,
@@ -163,7 +163,7 @@ pub fn pdf_addrectangle(
   underneath : Bool,
   page_numbers : ArrayView[Int],
   document : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.addtext_rectangle(
     page_numbers,
     coord,

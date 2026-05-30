@@ -2,7 +2,7 @@
 fn PdfDocument::pdf_page_redact_page(
   self : PdfDocument,
   page : @page.PdfPage,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   ignore(self)
   {
     ..page,
@@ -23,7 +23,7 @@ pub fn PdfDocument::redact_pages(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
   process_struct_tree? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let pages = self.pages_of_pagetree()
   pdf_page_box_validate_page_numbers(
     page_numbers,
@@ -55,7 +55,7 @@ pub fn pdf_redact_pages(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
   process_struct_tree? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.redact_pages(page_numbers, process_struct_tree~)
 }
 
@@ -65,6 +65,6 @@ pub fn pdf_redact_pages_cpdf_order(
   process_struct_tree : Bool,
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.redact_pages(page_numbers, process_struct_tree~)
 }

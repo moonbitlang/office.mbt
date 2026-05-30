@@ -29,7 +29,7 @@ pub fn PdfDocument::transform_destination(
   self : PdfDocument,
   matrix : @geometry.TransformMatrix,
   destination : @destination.PdfDestination,
-) -> @destination.PdfDestination raise PdfError {
+) -> @destination.PdfDestination raise @core.PdfError {
   match destination {
     DestFitH(TargetPageObject(_) as target, Some(top)) => {
       let point = pdf_dest_transform_point(matrix, 0.0, top)
@@ -97,6 +97,6 @@ pub fn pdf_transform_destination(
   document : PdfDocument,
   matrix : @geometry.TransformMatrix,
   destination : @destination.PdfDestination,
-) -> @destination.PdfDestination raise PdfError {
+) -> @destination.PdfDestination raise @core.PdfError {
   document.transform_destination(matrix, destination)
 }

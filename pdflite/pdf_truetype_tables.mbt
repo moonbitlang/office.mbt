@@ -47,7 +47,7 @@ pub fn pdf_truetype_table(
 fn pdf_truetype_required_table(
   data : BytesView,
   tag : String,
-) -> @truetype.PdfTrueTypeTableRecord raise PdfError {
+) -> @truetype.PdfTrueTypeTableRecord raise @core.PdfError {
   match pdf_truetype_table(data, tag) {
     Some(record) => record
     None => raise SoftError("No " + tag + " table found in TrueType font")
@@ -59,7 +59,7 @@ fn pdf_truetype_required_u16(
   data : BytesView,
   offset : Int,
   label : String,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   match pdf_truetype_read_u16(data, offset) {
     Some(value) => value
     None => raise SoftError("Truncated TrueType " + label)
@@ -71,7 +71,7 @@ fn pdf_truetype_required_i16(
   data : BytesView,
   offset : Int,
   label : String,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   match pdf_truetype_read_i16(data, offset) {
     Some(value) => value
     None => raise SoftError("Truncated TrueType " + label)
@@ -83,7 +83,7 @@ fn pdf_truetype_required_u32_as_int(
   data : BytesView,
   offset : Int,
   label : String,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   match pdf_truetype_read_u32_as_int(data, offset) {
     Some(value) => value
     None => raise SoftError("Truncated TrueType " + label)

@@ -1,9 +1,9 @@
 ///|
 fn pdf_content_read_flate_inline_image_data(
-  cursor : ByteCursor,
-) -> PdfBytes raise PdfError {
+  cursor : @core.ByteCursor,
+) -> @core.PdfBytes raise @core.PdfError {
   match cursor.peek_byte() {
-    value if pdf_is_whitespace_byte(value) => cursor.nudge()
+    value if @core.pdf_is_whitespace_byte(value) => cursor.nudge()
     _ => ()
   }
   let (_, length) = @flate.pdf_flate_decode_view_prefix(cursor.remaining_view())
@@ -14,10 +14,10 @@ fn pdf_content_read_flate_inline_image_data(
 
 ///|
 fn pdf_content_read_flate_inline_image_decoded(
-  cursor : ByteCursor,
-) -> PdfBytes raise PdfError {
+  cursor : @core.ByteCursor,
+) -> @core.PdfBytes raise @core.PdfError {
   match cursor.peek_byte() {
-    value if pdf_is_whitespace_byte(value) => cursor.nudge()
+    value if @core.pdf_is_whitespace_byte(value) => cursor.nudge()
     _ => ()
   }
   let (decoded, length) = @flate.pdf_flate_decode_view_prefix(
@@ -30,12 +30,12 @@ fn pdf_content_read_flate_inline_image_decoded(
 
 ///|
 fn pdf_content_read_lzw_inline_image_data(
-  cursor : ByteCursor,
+  cursor : @core.ByteCursor,
   dictionary : @syntax.PdfObject,
   decode_parms : @syntax.PdfObject?,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   match cursor.peek_byte() {
-    value if pdf_is_whitespace_byte(value) => cursor.nudge()
+    value if @core.pdf_is_whitespace_byte(value) => cursor.nudge()
     _ => ()
   }
   let with_decode_parms = match decode_parms {
@@ -54,10 +54,10 @@ fn pdf_content_read_lzw_inline_image_data(
 
 ///|
 fn pdf_content_read_lzw_inline_image_decoded(
-  cursor : ByteCursor,
-) -> PdfBytes raise PdfError {
+  cursor : @core.ByteCursor,
+) -> @core.PdfBytes raise @core.PdfError {
   match cursor.peek_byte() {
-    value if pdf_is_whitespace_byte(value) => cursor.nudge()
+    value if @core.pdf_is_whitespace_byte(value) => cursor.nudge()
     _ => ()
   }
   let (decoded, length) = @codec.pdf_lzw_decode_view_prefix(

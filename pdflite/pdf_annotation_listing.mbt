@@ -3,7 +3,7 @@ fn PdfDocument::pdf_annotation_contents_text(
   self : PdfDocument,
   encoding : @metadata.PdfMetadataEncoding,
   annotation : @syntax.PdfObject,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   match self.lookup_direct(pdf_annotation_contents_key(), annotation) {
     Some(PdfString(contents)) => pdf_metadata_encode_output(encoding, contents)
     _ => []
@@ -74,9 +74,11 @@ fn pdf_annotation_listing_line_length(
 pub fn PdfDocument::get_annotations(
   self : PdfDocument,
   encoding? : @metadata.PdfMetadataEncoding = PdfMetadataUTF8,
-) -> Array[(Int, PdfBytes)] raise PdfError {
+) -> Array[(Int, @core.PdfBytes)] raise @core.PdfError {
   let pages = self.pages_of_pagetree()
-  let output : Array[(Int, PdfBytes)] = Array::new(capacity=pages.length())
+  let output : Array[(Int, @core.PdfBytes)] = Array::new(
+    capacity=pages.length(),
+  )
   for index, page in pages {
     match self.lookup_direct(pdf_annotation_annots_key(), page.rest) {
       Some(PdfArray(annotations)) =>
@@ -96,7 +98,7 @@ pub fn PdfDocument::get_annotations(
 pub fn pdf_get_annotations(
   encoding : @metadata.PdfMetadataEncoding,
   document : PdfDocument,
-) -> Array[(Int, PdfBytes)] raise PdfError {
+) -> Array[(Int, @core.PdfBytes)] raise @core.PdfError {
   document.get_annotations(encoding~)
 }
 
@@ -109,7 +111,7 @@ pub fn PdfDocument::list_annotations(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
   encoding? : @metadata.PdfMetadataEncoding = PdfMetadataUTF8,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let pages = self.pages_of_pagetree()
   pdf_page_box_validate_page_numbers(
     page_numbers,
@@ -117,7 +119,9 @@ pub fn PdfDocument::list_annotations(
     "list_annotations",
   )
   let selected_pages = @core.pdf_number_set(page_numbers)
-  let rows : Array[(Int, PdfBytes)] = Array::new(capacity=page_numbers.length())
+  let rows : Array[(Int, @core.PdfBytes)] = Array::new(
+    capacity=page_numbers.length(),
+  )
   let mut output_length = 0
   for index, page in pages {
     let page_number = index + 1
@@ -153,6 +157,6 @@ pub fn pdf_list_annotations(
   page_numbers : ArrayView[Int],
   encoding : @metadata.PdfMetadataEncoding,
   document : PdfDocument,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   document.list_annotations(page_numbers, encoding~)
 }

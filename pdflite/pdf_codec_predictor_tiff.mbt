@@ -4,7 +4,7 @@ fn pdf_decode_tiff_predictor(
   bits_per_component : Int,
   columns : Int,
   data : BytesView,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   if bits_per_component != 8 {
     raise PredictorNotSupported(2)
   }
@@ -33,7 +33,7 @@ fn pdf_encode_tiff_predictor(
   bits_per_component : Int,
   columns : Int,
   data : BytesView,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   if bits_per_component != 8 {
     raise PredictorNotSupported(2)
   }

@@ -53,7 +53,7 @@ pub async fn pdf_extract_single_image_to_files(
     paths.push(file.path)
   }
   if merge_masks && pdf_async_io_extracted_image_has_smask(stem_text, files) {
-    @pdflite.pdf_error("combine_image_and_mask: imagemagick not found")
+    @core.pdf_error("combine_image_and_mask: imagemagick not found")
   }
   paths
 }
@@ -123,7 +123,7 @@ pub async fn pdf_extract_images_to_files(
     paths.push(file.path)
   }
   if merge_masks && pdf_async_io_extracted_image_has_any_smask(files) {
-    @pdflite.pdf_error("combine_image_and_mask: imagemagick not found")
+    @core.pdf_error("combine_image_and_mask: imagemagick not found")
   }
   paths
 }

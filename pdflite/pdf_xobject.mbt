@@ -1,84 +1,86 @@
 ///|
-fn pdf_xobject_name(text : String) -> PdfName {
-  pdf_name_of_bytes(@ascii.encode(text))
+fn pdf_xobject_name(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
-let pdf_xobject_type_key_name : PdfName = pdf_xobject_name("/Type")
+let pdf_xobject_type_key_name : @core.PdfName = pdf_xobject_name("/Type")
 
 ///|
-fn pdf_xobject_type_key() -> PdfName {
+fn pdf_xobject_type_key() -> @core.PdfName {
   pdf_xobject_type_key_name
 }
 
 ///|
-let pdf_xobject_xobject_name : PdfName = pdf_xobject_name("/XObject")
+let pdf_xobject_xobject_name : @core.PdfName = pdf_xobject_name("/XObject")
 
 ///|
-fn pdf_xobject_xobject() -> PdfName {
+fn pdf_xobject_xobject() -> @core.PdfName {
   pdf_xobject_xobject_name
 }
 
 ///|
-let pdf_xobject_subtype_key_name : PdfName = pdf_xobject_name("/Subtype")
+let pdf_xobject_subtype_key_name : @core.PdfName = pdf_xobject_name("/Subtype")
 
 ///|
-fn pdf_xobject_subtype_key() -> PdfName {
+fn pdf_xobject_subtype_key() -> @core.PdfName {
   pdf_xobject_subtype_key_name
 }
 
 ///|
-let pdf_xobject_form_name : PdfName = pdf_xobject_name("/Form")
+let pdf_xobject_form_name : @core.PdfName = pdf_xobject_name("/Form")
 
 ///|
-fn pdf_xobject_form() -> PdfName {
+fn pdf_xobject_form() -> @core.PdfName {
   pdf_xobject_form_name
 }
 
 ///|
-let pdf_xobject_bbox_key_name : PdfName = pdf_xobject_name("/BBox")
+let pdf_xobject_bbox_key_name : @core.PdfName = pdf_xobject_name("/BBox")
 
 ///|
-fn pdf_xobject_bbox_key() -> PdfName {
+fn pdf_xobject_bbox_key() -> @core.PdfName {
   pdf_xobject_bbox_key_name
 }
 
 ///|
-let pdf_xobject_matrix_key_name : PdfName = pdf_xobject_name("/Matrix")
+let pdf_xobject_matrix_key_name : @core.PdfName = pdf_xobject_name("/Matrix")
 
 ///|
-fn pdf_xobject_matrix_key() -> PdfName {
+fn pdf_xobject_matrix_key() -> @core.PdfName {
   pdf_xobject_matrix_key_name
 }
 
 ///|
-let pdf_xobject_resources_key_name : PdfName = pdf_xobject_name("/Resources")
+let pdf_xobject_resources_key_name : @core.PdfName = pdf_xobject_name(
+  "/Resources",
+)
 
 ///|
-fn pdf_xobject_resources_key() -> PdfName {
+fn pdf_xobject_resources_key() -> @core.PdfName {
   pdf_xobject_resources_key_name
 }
 
 ///|
-let pdf_xobject_length_key_name : PdfName = pdf_xobject_name("/Length")
+let pdf_xobject_length_key_name : @core.PdfName = pdf_xobject_name("/Length")
 
 ///|
-fn pdf_xobject_length_key() -> PdfName {
+fn pdf_xobject_length_key() -> @core.PdfName {
   pdf_xobject_length_key_name
 }
 
 ///|
-let pdf_xobject_id_key_name : PdfName = pdf_xobject_name("/ID")
+let pdf_xobject_id_key_name : @core.PdfName = pdf_xobject_name("/ID")
 
 ///|
-fn pdf_xobject_id_key() -> PdfName {
+fn pdf_xobject_id_key() -> @core.PdfName {
   pdf_xobject_id_key_name
 }
 
 ///|
 fn pdf_xobject_all_page_range(
   document : PdfDocument,
-) -> Array[Int] raise PdfError {
+) -> Array[Int] raise @core.PdfError {
   let count = document.pages_of_pagetree().length()
   [
     for page_number in 1..<=count => page_number
@@ -105,7 +107,7 @@ fn pdf_xobject_all_but_last_page(
 fn PdfDocument::pdf_xobject_form_object_of_page(
   self : PdfDocument,
   page : @page.PdfPage,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   let ops = self.parse_content_ops_with_resources(page.resources, page.content)
   let data = pdf_content_bytes_of_ops(ops)
   @syntax.pdf_stream(
@@ -124,9 +126,9 @@ fn PdfDocument::pdf_xobject_form_object_of_page(
 fn PdfDocument::pdf_xobject_add_to_page(
   self : PdfDocument,
   page : @page.PdfPage,
-  name : PdfName,
+  name : @core.PdfName,
   object_number : Int,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   let xobjects = match
     self.lookup_direct(pdf_xobject_xobject(), page.resources) {
     Some(value) => value
@@ -144,8 +146,8 @@ fn PdfDocument::pdf_xobject_add_page_as_xobject(
   self : PdfDocument,
   range : ArrayView[Int],
   page : @page.PdfPage,
-  name : PdfName,
-) -> PdfDocument raise PdfError {
+  name : @core.PdfName,
+) -> PdfDocument raise @core.PdfError {
   let pdf = self.copy()
   let xobject_number = pdf.add_object(pdf.pdf_xobject_form_object_of_page(page))
   let pages = pdf.pages_of_pagetree()
@@ -174,7 +176,7 @@ fn PdfDocument::pdf_xobject_add_page_as_xobject(
 fn PdfDocument::pdf_xobject_copy_trailer_id_from(
   self : PdfDocument,
   source : PdfDocument,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   match source.lookup_direct(pdf_xobject_id_key(), source.trailer_dict()) {
     Some(id) =>
       self.set_trailer_dict(
@@ -189,7 +191,7 @@ fn pdf_xobject_retained_bookmarks(
   bookmarks : ArrayView[@bookmark.PdfBookmark],
   old_page_numbers : ArrayView[Int],
   new_page_numbers : ArrayView[Int],
-) -> Array[@bookmark.PdfBookmark] raise PdfError {
+) -> Array[@bookmark.PdfBookmark] raise @core.PdfError {
   let change_map = pdf_page_reference_map(
     pdf_page_reference_changes(old_page_numbers, new_page_numbers),
   )
@@ -211,7 +213,7 @@ pub fn PdfDocument::stamp_as_xobject(
   self : PdfDocument,
   range : ArrayView[Int],
   overlay : PdfDocument,
-) -> (PdfDocument, PdfName) raise PdfError {
+) -> (PdfDocument, @core.PdfName) raise @core.PdfError {
   let prefix = self.shortest_unused_prefix()
   let overlay = overlay.copy()
   overlay.add_prefix(prefix)
@@ -261,7 +263,7 @@ pub fn pdf_stamp_as_xobject(
   document : PdfDocument,
   range : ArrayView[Int],
   overlay : PdfDocument,
-) -> (PdfDocument, PdfName) raise PdfError {
+) -> (PdfDocument, @core.PdfName) raise @core.PdfError {
   document.stamp_as_xobject(range, overlay)
 }
 
@@ -271,7 +273,7 @@ pub fn pdf_stamp_as_xobject_string(
   document : PdfDocument,
   range : ArrayView[Int],
   overlay : PdfDocument,
-) -> (PdfDocument, String) raise PdfError {
+) -> (PdfDocument, String) raise @core.PdfError {
   let (stamped, name) = document.stamp_as_xobject(range, overlay)
   (stamped, @ascii.decode_lossy(name.bytes()))
 }

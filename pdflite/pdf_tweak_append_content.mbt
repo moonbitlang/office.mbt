@@ -5,7 +5,7 @@ fn PdfDocument::pdf_tweak_append_page_content_ops_page(
   ops : ArrayView[@content.PdfContentOp],
   before : Bool,
   fast : Bool,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   if ops.length() == 0 {
     page
   } else if before {
@@ -22,7 +22,7 @@ fn PdfDocument::pdf_tweak_append_page_content_page(
   content : BytesView,
   before : Bool,
   fast : Bool,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   if content.length() == 0 {
     page
   } else {
@@ -35,7 +35,7 @@ fn PdfDocument::pdf_tweak_append_page_content_page(
 fn pdf_tweak_validate_page_count(
   length : Int,
   page_count : Int,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   if length != page_count {
     raise BadPageSpecification("append_page_content_multiple")
   }
@@ -52,7 +52,7 @@ pub fn PdfDocument::append_page_content(
   content : BytesView,
   before? : Bool = false,
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let document = self.copy()
   let pages = document.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(page_numbers)
@@ -79,7 +79,7 @@ pub fn pdf_append_page_content(
   content : BytesView,
   before? : Bool = false,
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.append_page_content(page_numbers, content, before~, fast~)
 }
 
@@ -91,7 +91,7 @@ pub fn pdf_append_page_content_cpdf_order(
   fast : Bool,
   page_numbers : ArrayView[Int],
   document : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.append_page_content(page_numbers, content, before~, fast~)
 }
 
@@ -103,7 +103,7 @@ pub fn PdfDocument::append_page_content_ops(
   ops : ArrayView[@content.PdfContentOp],
   before? : Bool = false,
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let document = self.copy()
   let pages = document.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(page_numbers)
@@ -130,7 +130,7 @@ pub fn pdf_append_page_content_ops(
   ops : ArrayView[@content.PdfContentOp],
   before? : Bool = false,
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.append_page_content_ops(page_numbers, ops, before~, fast~)
 }
 
@@ -144,7 +144,7 @@ pub fn PdfDocument::append_page_content_multiple(
   contents : ArrayView[Bytes],
   before? : Bool = false,
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let document = self.copy()
   let pages = document.pages_of_pagetree()
   pdf_tweak_validate_page_count(contents.length(), pages.length())
@@ -169,7 +169,7 @@ pub fn pdf_append_page_content_multiple(
   contents : ArrayView[Bytes],
   before? : Bool = false,
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.append_page_content_multiple(contents, before~, fast~)
 }
 
@@ -181,7 +181,7 @@ pub fn pdf_append_page_content_multiple_cpdf_order(
   before : Bool,
   fast : Bool,
   document : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.append_page_content_multiple(contents, before~, fast~)
 }
 
@@ -192,7 +192,7 @@ pub fn PdfDocument::append_page_content_multiple_ops(
   op_lists : ArrayView[Array[@content.PdfContentOp]],
   before? : Bool = false,
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let document = self.copy()
   let pages = document.pages_of_pagetree()
   pdf_tweak_validate_page_count(op_lists.length(), pages.length())
@@ -217,7 +217,7 @@ pub fn pdf_append_page_content_multiple_ops(
   op_lists : ArrayView[Array[@content.PdfContentOp]],
   before? : Bool = false,
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.append_page_content_multiple_ops(op_lists, before~, fast~)
 }
 
@@ -229,6 +229,6 @@ pub fn pdf_append_page_content_multiple_ops_cpdf_order(
   before : Bool,
   fast : Bool,
   document : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.append_page_content_multiple_ops(op_lists, before~, fast~)
 }

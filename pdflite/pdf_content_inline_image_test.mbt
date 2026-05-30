@@ -1,17 +1,17 @@
 ///|
-fn content_inline_bytes_for_test(text : String) -> @pdflite.PdfBytes {
+fn content_inline_bytes_for_test(text : String) -> @core.PdfBytes {
   @ascii.encode(text)
 }
 
 ///|
-fn content_inline_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn content_inline_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
 fn content_inline_concat_for_test(
-  parts : ArrayView[@pdflite.PdfBytes],
-) -> @pdflite.PdfBytes {
+  parts : ArrayView[@core.PdfBytes],
+) -> @core.PdfBytes {
   let output : Array[Byte] = []
   for part in parts {
     for byte in part {
@@ -23,9 +23,9 @@ fn content_inline_concat_for_test(
 
 ///|
 fn content_inline_compressed_render_for_test(
-  prefix : @pdflite.PdfBytes,
-  data : @pdflite.PdfBytes,
-) -> @pdflite.PdfBytes {
+  prefix : @core.PdfBytes,
+  data : @core.PdfBytes,
+) -> @core.PdfBytes {
   let encoded = @flate.pdf_flate_encode(data)
   content_inline_concat_for_test([
     prefix,
@@ -41,8 +41,8 @@ fn content_inline_compressed_render_for_test(
 fn content_inline_lzw_codes_for_test(
   codes : ArrayView[Int],
   early_change : Int,
-) -> @pdflite.PdfBytes {
-  let writer = @pdflite.bit_writer_new()
+) -> @core.PdfBytes {
+  let writer = @core.bit_writer_new()
   let mut code_length = 9
   let mut next_code = 258
   let mut old_code = 256
@@ -121,7 +121,7 @@ test "pdf_content_bytes_of_ops renders simple inline images" {
 
 ///|
 test "pdf_content_bytes_of_ops preserves filtered inline image data" {
-  let jpeg_data = try! @pdflite.pdf_bytes_of_int_array([0xFF, 0xD8, 0xFF, 0xD9])
+  let jpeg_data = try! @core.pdf_bytes_of_int_array([0xFF, 0xD8, 0xFF, 0xD9])
   let rendered = try! @pdflite.pdf_content_bytes_of_ops([
     Op_InlineImage(
       PdfDictionary([
@@ -331,7 +331,7 @@ test "pdf_parse_content_ops_from_bytes reads ASCII85 inline images through termi
         (content_inline_name_for_test("/BPC"), PdfInteger(8)),
       ]),
       None,
-      try! @pdflite.pdf_bytes_of_int_array([0, 41, 129]),
+      try! @core.pdf_bytes_of_int_array([0, 41, 129]),
     ),
     Op_Q,
   ])
@@ -645,7 +645,7 @@ test "pdf_parse_content_ops_from_bytes parses inline image comments" {
 
 ///|
 test "pdf_parse_content_ops_from_bytes reads DCT inline images through EOI" {
-  let jpeg_data = try! @pdflite.pdf_bytes_of_int_array([
+  let jpeg_data = try! @core.pdf_bytes_of_int_array([
     0xFF, 0xD8, 65, 32, 69, 73, 32, 66, 0xFF, 0xD9,
   ])
   let data = content_inline_concat_for_test([
@@ -672,7 +672,7 @@ test "pdf_parse_content_ops_from_bytes reads DCT inline images through EOI" {
 
 ///|
 test "pdf_parse_content_ops_from_bytes reads DCTDecode inline image arrays" {
-  let jpeg_data = try! @pdflite.pdf_bytes_of_int_array([0xFF, 0xD8, 0xFF, 0xD9])
+  let jpeg_data = try! @core.pdf_bytes_of_int_array([0xFF, 0xD8, 0xFF, 0xD9])
   let data = content_inline_concat_for_test([
     content_inline_bytes_for_test("BI /W 1 /H 1 /Filter [ /DCTDecode ] ID "),
     jpeg_data,
@@ -696,7 +696,7 @@ test "pdf_parse_content_ops_from_bytes reads DCTDecode inline image arrays" {
 
 ///|
 test "pdf_parse_content_ops_from_bytes reads DCT inline image arrays" {
-  let jpeg_data = try! @pdflite.pdf_bytes_of_int_array([0xFF, 0xD8, 0xFF, 0xD9])
+  let jpeg_data = try! @core.pdf_bytes_of_int_array([0xFF, 0xD8, 0xFF, 0xD9])
   let data = content_inline_concat_for_test([
     content_inline_bytes_for_test("BI /W 1 /H 1 /Filter [ /DCT ] ID "),
     jpeg_data,
@@ -720,7 +720,7 @@ test "pdf_parse_content_ops_from_bytes reads DCT inline image arrays" {
 
 ///|
 test "pdf_parse_content_ops_from_bytes reads DCT first inline image arrays" {
-  let jpeg_data = try! @pdflite.pdf_bytes_of_int_array([
+  let jpeg_data = try! @core.pdf_bytes_of_int_array([
     0xFF, 0xD8, 65, 32, 69, 73, 32, 66, 0xFF, 0xD9,
   ])
   let data = content_inline_concat_for_test([
@@ -750,7 +750,7 @@ test "pdf_parse_content_ops_from_bytes reads DCT first inline image arrays" {
 
 ///|
 test "pdf_parse_content_ops_from_bytes decodes leading inline filters before DCT" {
-  let jpeg_data = try! @pdflite.pdf_bytes_of_int_array([
+  let jpeg_data = try! @core.pdf_bytes_of_int_array([
     0xFF, 0xD8, 65, 32, 69, 73, 32, 66, 0xFF, 0xD9,
   ])
   let encoded = @codec.pdf_ascii85_encode(jpeg_data)
@@ -797,7 +797,7 @@ test "pdf_parse_content_ops_from_bytes decodes leading inline filters before CCI
         (content_inline_name_for_test("/BPC"), PdfInteger(1)),
       ]),
       None,
-      try! @pdflite.pdf_bytes_of_int_array([0xF0]),
+      try! @core.pdf_bytes_of_int_array([0xF0]),
     ),
     Op_Q,
   ])
@@ -865,7 +865,7 @@ test "pdf_parse_content_ops_from_bytes recovers junk before inline image end" {
     ],
   )
 
-  let jpeg_data = try! @pdflite.pdf_bytes_of_int_array([0xFF, 0xD8, 0xFF, 0xD9])
+  let jpeg_data = try! @core.pdf_bytes_of_int_array([0xFF, 0xD8, 0xFF, 0xD9])
   let dct_data = content_inline_concat_for_test([
     content_inline_bytes_for_test("BI /W 1 /H 1 /F /DCT ID "),
     jpeg_data,
@@ -893,38 +893,38 @@ test "pdf_parse_content_ops_from_bytes reports unterminated inline images" {
   let result : Result[Array[@content.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
     content_inline_bytes_for_test("BI /W 1 ID abc"),
   )
-  guard result is Err(@pdflite.PdfError::ParseEndStreamExpected) else {
-    fail("expected @pdflite.PdfError::ParseEndStreamExpected")
+  guard result is Err(@core.PdfError::ParseEndStreamExpected) else {
+    fail("expected @core.PdfError::ParseEndStreamExpected")
   }
   let sized_result : Result[Array[@content.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
     content_inline_bytes_for_test("BI /W 1 /H 1 /CS /G /BPC 8 ID A"),
   )
-  guard sized_result is Err(@pdflite.PdfError::ParseEndStreamExpected) else {
-    fail("expected sized @pdflite.PdfError::ParseEndStreamExpected")
+  guard sized_result is Err(@core.PdfError::ParseEndStreamExpected) else {
+    fail("expected sized @core.PdfError::ParseEndStreamExpected")
   }
   let run_length_data = content_inline_concat_for_test([
     content_inline_bytes_for_test("BI /W 1 /H 1 /CS /G /BPC 8 /F /RL ID "),
-    try! @pdflite.pdf_bytes_of_int_array([0, 65]),
+    try! @core.pdf_bytes_of_int_array([0, 65]),
     content_inline_bytes_for_test(" EI"),
   ])
   let run_length_result : Result[Array[@content.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
     run_length_data,
   )
-  guard run_length_result is Err(@pdflite.PdfError::ParseEndStreamExpected) else {
-    fail("expected RunLength @pdflite.PdfError::ParseEndStreamExpected")
+  guard run_length_result is Err(@core.PdfError::ParseEndStreamExpected) else {
+    fail("expected RunLength @core.PdfError::ParseEndStreamExpected")
   }
   let ascii85_result : Result[Array[@content.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
     content_inline_bytes_for_test(
       "BI /W 1 /H 1 /CS /G /BPC 8 /F /A85 ID !!!! EI",
     ),
   )
-  guard ascii85_result is Err(@pdflite.PdfError::ParseEndStreamExpected) else {
-    fail("expected ASCII85 @pdflite.PdfError::ParseEndStreamExpected")
+  guard ascii85_result is Err(@core.PdfError::ParseEndStreamExpected) else {
+    fail("expected ASCII85 @core.PdfError::ParseEndStreamExpected")
   }
   let ascii_hex_result : Result[Array[@content.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
     content_inline_bytes_for_test("BI /W 1 /H 1 /CS /G /BPC 8 /F /AHx ID 41 EI"),
   )
-  guard ascii_hex_result is Err(@pdflite.PdfError::ParseEndStreamExpected) else {
-    fail("expected ASCIIHex @pdflite.PdfError::ParseEndStreamExpected")
+  guard ascii_hex_result is Err(@core.PdfError::ParseEndStreamExpected) else {
+    fail("expected ASCIIHex @core.PdfError::ParseEndStreamExpected")
   }
 }

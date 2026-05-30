@@ -113,7 +113,7 @@ pub fn pdf_addtext_url_annotation_geometry(
 fn pdf_addtext_url_annotation_prefix(
   text : String,
   position : Int,
-) -> String raise PdfError {
+) -> String raise @core.PdfError {
   let bytes = @utf8.encode(text)
   if position < 0 || position > bytes.length() {
     raise SoftError("bad add-text URL byte offset")
@@ -127,8 +127,8 @@ fn pdf_addtext_url_annotation_prefix(
 fn pdf_addtext_url_annotation_widths_with_measure(
   text : String,
   url : @addtext.PdfAddTextUrl,
-  measure : (String) -> Double raise PdfError,
-) -> (Double, Double) raise PdfError {
+  measure : (String) -> Double raise @core.PdfError,
+) -> (Double, Double) raise @core.PdfError {
   (
     measure(pdf_addtext_url_annotation_prefix(text, url.start)),
     measure(pdf_addtext_url_annotation_prefix(text, url.end)),
@@ -141,7 +141,7 @@ pub fn pdf_addtext_url_annotation_widths(
   text : String,
   url : @addtext.PdfAddTextUrl,
   measure : (String) -> Double,
-) -> (Double, Double) raise PdfError {
+) -> (Double, Double) raise @core.PdfError {
   pdf_addtext_url_annotation_widths_with_measure(text, url, fn(prefix) {
     measure(prefix)
   })
@@ -157,7 +157,7 @@ pub fn PdfDocument::addtext_url_annotation_references(
   self : PdfDocument,
   text : String,
   urls : ArrayView[@addtext.PdfAddTextUrl],
-  measure : (String) -> Double raise PdfError,
+  measure : (String) -> Double raise @core.PdfError,
   origin : @geometry.Point2,
   horizontal_offset : Double,
   vertical_offset : Double,
@@ -169,7 +169,7 @@ pub fn PdfDocument::addtext_url_annotation_references(
   fontname : String,
   font_size : Double,
   url_border : Bool,
-) -> Array[@syntax.PdfObject] raise PdfError {
+) -> Array[@syntax.PdfObject] raise @core.PdfError {
   let height = pdf_addtext_url_annotation_height(font, fontname, font_size)
   let annotations : Array[@syntax.PdfObject] = Array::new(
     capacity=urls.length(),
@@ -204,7 +204,7 @@ pub fn pdf_addtext_url_annotation_references(
   document : PdfDocument,
   text : String,
   urls : ArrayView[@addtext.PdfAddTextUrl],
-  measure : (String) -> Double raise PdfError,
+  measure : (String) -> Double raise @core.PdfError,
   origin : @geometry.Point2,
   horizontal_offset : Double,
   vertical_offset : Double,
@@ -216,7 +216,7 @@ pub fn pdf_addtext_url_annotation_references(
   fontname : String,
   font_size : Double,
   url_border : Bool,
-) -> Array[@syntax.PdfObject] raise PdfError {
+) -> Array[@syntax.PdfObject] raise @core.PdfError {
   document.addtext_url_annotation_references(
     text, urls, measure, origin, horizontal_offset, vertical_offset, justification_offset,
     rotation, rotation_offset, page_rotation, font, fontname, font_size, url_border,
@@ -233,7 +233,7 @@ pub fn PdfDocument::addtext_page_rest_with_annotations(
   self : PdfDocument,
   rest : @syntax.PdfObject,
   annotations : ArrayView[@syntax.PdfObject],
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   if annotations.length() == 0 {
     rest
   } else {
@@ -257,6 +257,6 @@ pub fn pdf_addtext_page_rest_with_annotations(
   document : PdfDocument,
   rest : @syntax.PdfObject,
   annotations : ArrayView[@syntax.PdfObject],
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   document.addtext_page_rest_with_annotations(rest, annotations)
 }

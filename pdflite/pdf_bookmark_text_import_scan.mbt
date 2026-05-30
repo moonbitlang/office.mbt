@@ -1,6 +1,6 @@
 ///|
 fn pdf_bookmark_import_is_whitespace(value : Int) -> Bool {
-  pdf_is_whitespace_byte(value)
+  @core.pdf_is_whitespace_byte(value)
 }
 
 ///|

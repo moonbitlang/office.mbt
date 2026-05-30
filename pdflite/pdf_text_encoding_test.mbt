@@ -1,11 +1,11 @@
 ///|
-fn text_encoding_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn text_encoding_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
-fn text_encoding_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
-  try! @pdflite.pdf_bytes_of_int_array(values)
+fn text_encoding_bytes_for_test(values : ArrayView[Int]) -> @core.PdfBytes {
+  try! @core.pdf_bytes_of_int_array(values)
 }
 
 ///|
@@ -18,9 +18,9 @@ fn text_encoding_difference_for_test(
 
 ///|
 fn text_encoding_table_lookup_helper_for_test(
-  table : ArrayView[(Int, @pdflite.PdfName)],
+  table : ArrayView[(Int, @core.PdfName)],
   code : Int,
-) -> @pdflite.PdfName? {
+) -> @core.PdfName? {
   for entry in table {
     if entry.0 == code {
       break Some(entry.1)
@@ -32,8 +32,8 @@ fn text_encoding_table_lookup_helper_for_test(
 
 ///|
 fn text_encoding_reverse_table_lookup_for_test(
-  table : ArrayView[(@pdflite.PdfName, Int)],
-  name : @pdflite.PdfName,
+  table : ArrayView[(@core.PdfName, Int)],
+  name : @core.PdfName,
 ) -> Int? {
   for entry in table {
     if entry.0 == name {
@@ -92,7 +92,7 @@ test "PdfEncoding debug names preserve CamlPDF forms" {
 
 ///|
 test "PdfEncoding converts predefined encoding names" {
-  let encodings : Array[(@pdflite.PdfEncoding, @pdflite.PdfName)] = [
+  let encodings : Array[(@pdflite.PdfEncoding, @core.PdfName)] = [
     (PdfStandardEncoding, text_encoding_name_for_test("/StandardEncoding")),
     (PdfMacRomanEncoding, text_encoding_name_for_test("/MacRomanEncoding")),
     (PdfWinAnsiEncoding, text_encoding_name_for_test("/WinAnsiEncoding")),
@@ -346,7 +346,7 @@ test "PdfDocument read_encoding rejects malformed encoding dictionaries" {
   ])
   let differences_result = try? doc.read_encoding(bad_differences)
   guard differences_result is Err(EncodingDifferencesMalformed) else {
-    fail("expected @pdflite.PdfError::EncodingDifferencesMalformed")
+    fail("expected @core.PdfError::EncodingDifferencesMalformed")
   }
   let bad_base = @syntax.pdf_dictionary([
     (
@@ -362,7 +362,7 @@ test "PdfDocument read_encoding rejects malformed encoding dictionaries" {
   ])
   let base_result = try? doc.read_encoding(bad_base)
   guard base_result is Err(EncodingExpected) else {
-    fail("expected @pdflite.PdfError::EncodingExpected")
+    fail("expected @core.PdfError::EncodingExpected")
   }
   let unknown_base = @syntax.pdf_dictionary([
     (
@@ -381,7 +381,7 @@ test "PdfDocument read_encoding rejects malformed encoding dictionaries" {
   ])
   let unknown_base_result = try? doc.read_encoding(unknown_base)
   guard unknown_base_result is Err(EncodingExpected) else {
-    fail("expected @pdflite.PdfError::EncodingExpected for unknown base")
+    fail("expected @core.PdfError::EncodingExpected for unknown base")
   }
   let bad_difference_object = @syntax.pdf_dictionary([
     (
@@ -403,7 +403,7 @@ test "PdfDocument read_encoding rejects malformed encoding dictionaries" {
   )
   guard bad_difference_object_result is Err(EncodingDifferencesMalformed) else {
     fail(
-      "expected @pdflite.PdfError::EncodingDifferencesMalformed for bad difference object",
+      "expected @core.PdfError::EncodingDifferencesMalformed for bad difference object",
     )
   }
   let non_array_differences = @syntax.pdf_dictionary([
@@ -421,7 +421,7 @@ test "PdfDocument read_encoding rejects malformed encoding dictionaries" {
   let non_array_result = try? doc.read_encoding(non_array_differences)
   guard non_array_result is Err(EncodingDifferencesMalformed) else {
     fail(
-      "expected @pdflite.PdfError::EncodingDifferencesMalformed for non-array differences",
+      "expected @core.PdfError::EncodingDifferencesMalformed for non-array differences",
     )
   }
   let missing_flags = @syntax.pdf_dictionary([
@@ -434,13 +434,13 @@ test "PdfDocument read_encoding rejects malformed encoding dictionaries" {
   ])
   let missing_flags_result = try? doc.read_encoding(missing_flags)
   guard missing_flags_result is Err(FontFlagsExpected) else {
-    fail("expected @pdflite.PdfError::FontFlagsExpected")
+    fail("expected @core.PdfError::FontFlagsExpected")
   }
   let bad_subtype = @syntax.pdf_dictionary([
     (text_encoding_name_for_test("/Encoding"), @syntax.pdf_dictionary([])),
   ])
   let subtype_result = try? doc.read_encoding(bad_subtype)
   guard subtype_result is Err(FontSubtypeExpected) else {
-    fail("expected @pdflite.PdfError::FontSubtypeExpected")
+    fail("expected @core.PdfError::FontSubtypeExpected")
   }
 }

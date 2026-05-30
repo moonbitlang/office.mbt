@@ -8,7 +8,9 @@ fn pdf_metadata_bool_string(value : Bool) -> String {
 }
 
 ///|
-fn pdf_metadata_ascii_codepoints(bytes : BytesView) -> PdfBytes raise PdfError {
+fn pdf_metadata_ascii_codepoints(
+  bytes : BytesView,
+) -> @core.PdfBytes raise @core.PdfError {
   let codepoints = pdf_codepoints_of_pdfdocstring(bytes)
   let mut output_length = 0
   for codepoint in codepoints {
@@ -20,7 +22,7 @@ fn pdf_metadata_ascii_codepoints(bytes : BytesView) -> PdfBytes raise PdfError {
   let mut position = 0
   for codepoint in codepoints {
     if codepoint <= 127 {
-      output[position] = pdf_byte_of_int(codepoint)
+      output[position] = @core.pdf_byte_of_int(codepoint)
       position += 1
     }
   }
@@ -32,7 +34,7 @@ fn pdf_metadata_ascii_codepoints(bytes : BytesView) -> PdfBytes raise PdfError {
 pub fn pdf_metadata_encode_output(
   encoding : @metadata.PdfMetadataEncoding,
   bytes : BytesView,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   match encoding {
     PdfMetadataRaw => bytes.to_owned()
     PdfMetadataUTF8 => pdf_utf8_of_pdfdocstring(bytes)
@@ -45,7 +47,7 @@ pub fn pdf_metadata_encode_output(
 pub fn pdf_encode_output(
   encoding : @metadata.PdfMetadataEncoding,
   bytes : BytesView,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_metadata_encode_output(encoding, bytes)
 }
 
@@ -64,7 +66,7 @@ fn PdfDocument::pdf_metadata_bump_minor(
 fn PdfDocument::pdf_metadata_replace_catalog(
   self : PdfDocument,
   catalog : @syntax.PdfObject,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let root_number = self.add_object(catalog)
   self.set_root(root_number)
   self.set_trailer_dict(
@@ -77,14 +79,16 @@ fn PdfDocument::pdf_metadata_replace_catalog(
 ///|
 fn PdfDocument::pdf_metadata_update_catalog(
   self : PdfDocument,
-  update : (@syntax.PdfObject) -> @syntax.PdfObject raise PdfError,
-) -> Unit raise PdfError {
+  update : (@syntax.PdfObject) -> @syntax.PdfObject raise @core.PdfError,
+) -> Unit raise @core.PdfError {
   let catalog = self.catalog()
   self.pdf_metadata_replace_catalog(update(catalog))
 }
 
 ///|
-fn pdf_metadata_name_string(name : PdfName) -> String raise PdfError {
+fn pdf_metadata_name_string(
+  name : @core.PdfName,
+) -> String raise @core.PdfError {
   let bytes = name.bytes()
   let start = if bytes.length() > 0 && bytes[0].to_int() == 47 { 1 } else { 0 }
   @ascii.decode(bytes[start:]) catch {
@@ -97,7 +101,7 @@ fn pdf_metadata_known_name(
   value : String,
   allowed : ArrayView[String],
   error_prefix : String,
-) -> PdfName raise PdfError {
+) -> @core.PdfName raise @core.PdfError {
   for allowed_value in allowed {
     if value == allowed_value {
       break pdf_metadata_name("/" + value)

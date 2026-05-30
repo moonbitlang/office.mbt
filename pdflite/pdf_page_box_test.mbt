@@ -1,6 +1,6 @@
 ///|
-fn page_box_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn page_box_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -108,9 +108,7 @@ test "PdfDocument hard_box handles missing boxes like cpdf" {
   )
   guard missing
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
-        "hard_box: box /TrimBox not found"
-      )
+      @core.PdfError::BadPageSpecification("hard_box: box /TrimBox not found")
     ) else {
     fail("expected hard_box to reject a missing selected box")
   }
@@ -147,7 +145,7 @@ test "PdfDocument has_page_box mirrors cpdf hasbox" {
 
   let bad_page : Result[Bool, Error] = try? document.has_page_box(3, key_crop)
   guard bad_page
-    is Err(@pdflite.PdfError::BadPageSpecification("hasbox: bad page")) else {
+    is Err(@core.PdfError::BadPageSpecification("hasbox: bad page")) else {
     fail("expected hasbox to reject an invalid page")
   }
 }
@@ -239,7 +237,7 @@ test "PdfDocument copy_page_box handles missing sources like cpdf" {
   )
   guard bad_page
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "copy_page_box: range contains pages not present in pdf"
       )
     ) else {
@@ -404,7 +402,7 @@ test "PdfDocument set_mediaboxes validates page range and box count" {
   )
   guard bad_count
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "set_mediaboxes: box count must match page count"
       )
     ) else {
@@ -417,7 +415,7 @@ test "PdfDocument set_mediaboxes validates page range and box count" {
   )
   guard bad_page
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "set_mediaboxes: range contains pages not present in pdf"
       )
     ) else {
@@ -479,7 +477,7 @@ test "PdfDocument crop_pages validates page range and box count" {
   )
   guard bad_count
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "crop_pages: box count must match page count"
       )
     ) else {
@@ -492,7 +490,7 @@ test "PdfDocument crop_pages validates page range and box count" {
   )
   guard bad_page
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "crop_pages: range contains pages not present in pdf"
       )
     ) else {
@@ -558,7 +556,7 @@ test "PdfDocument set_page_box validates selected pages" {
   )
   guard bad_page
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "set_page_box: range contains pages not present in pdf"
       )
     ) else {
@@ -629,7 +627,7 @@ test "PdfDocument shift_boxes validates selected pages and offset count" {
   )
   guard bad_count
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "shift_boxes: offset count must match page count"
       )
     ) else {
@@ -642,7 +640,7 @@ test "PdfDocument shift_boxes validates selected pages and offset count" {
   )
   guard bad_page
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "shift_boxes: range contains pages not present in pdf"
       )
     ) else {

@@ -34,7 +34,7 @@ fn PdfDocument::pdf_ua_struct_tree_referenced_numbers(
 ///|
 fn PdfDocument::pdf_ua_extract_struct_tree_inner(
   self : PdfDocument,
-) -> Json raise PdfError {
+) -> Json raise @core.PdfError {
   let catalog = self.catalog() catch {
     _ => raise SoftError("extract_struct_tree: no root")
   }
@@ -61,7 +61,7 @@ fn PdfDocument::pdf_ua_extract_struct_tree_inner(
 }
 
 ///|
-fn pdf_ua_struct_tree_json_item_number(json : Json) -> Int raise PdfError {
+fn pdf_ua_struct_tree_json_item_number(json : Json) -> Int raise @core.PdfError {
   match json {
     Number(value, repr=_) => pdf_util_json_integral_number(value)
     _ => raise SoftError("structure 1")
@@ -71,7 +71,7 @@ fn pdf_ua_struct_tree_json_item_number(json : Json) -> Int raise PdfError {
 ///|
 fn pdf_ua_read_struct_tree_json_row(
   json : Json,
-) -> (Int, @syntax.PdfObject) raise PdfError {
+) -> (Int, @syntax.PdfObject) raise @core.PdfError {
   match json {
     Array([number_json, object_json]) =>
       (
@@ -101,7 +101,7 @@ fn pdf_ua_rewrite_struct_tree_indirects(
       PdfArray(output)
     }
     PdfDictionary(entries) => {
-      let output : Array[(PdfName, @syntax.PdfObject)] = []
+      let output : Array[(@core.PdfName, @syntax.PdfObject)] = []
       for entry in entries {
         output.push(
           (entry.0, pdf_ua_rewrite_struct_tree_indirects(entry.1, replacements)),
@@ -125,7 +125,7 @@ fn pdf_ua_rewrite_struct_tree_indirects(
 fn PdfDocument::pdf_ua_replace_struct_tree_inner(
   self : PdfDocument,
   json : Json,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let rows = match json {
     Array([header, .. rows]) => {
       let (number, _) = pdf_ua_read_struct_tree_json_row(header)
@@ -172,7 +172,7 @@ fn PdfDocument::pdf_ua_replace_struct_tree_inner(
 /// Extract the PDF/UA structure-tree object graph as cpdf-style CPDFJSON.
 pub fn PdfDocument::extract_struct_tree(
   self : PdfDocument,
-) -> Json raise PdfError {
+) -> Json raise @core.PdfError {
   self.pdf_ua_extract_struct_tree_inner()
 }
 
@@ -180,7 +180,7 @@ pub fn PdfDocument::extract_struct_tree(
 /// Extract the PDF/UA structure-tree JSON as UTF-8 bytes.
 pub fn PdfDocument::struct_tree_json_blob(
   self : PdfDocument,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   @utf8.encode(self.extract_struct_tree().stringify())
 }
 
@@ -189,7 +189,7 @@ pub fn PdfDocument::struct_tree_json_blob(
 pub fn PdfDocument::replace_struct_tree(
   self : PdfDocument,
   json : Json,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   self.pdf_ua_replace_struct_tree_inner(json) catch {
     _ => raise SoftError("replace_struct_tree")
   }

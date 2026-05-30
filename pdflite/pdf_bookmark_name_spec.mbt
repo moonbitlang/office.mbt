@@ -13,7 +13,7 @@ pub fn PdfDocument::bookmark_name_of_spec(
   filename : String,
   start_page : Int,
   end_page : Int,
-) -> String raise PdfError {
+) -> String raise @core.PdfError {
   let _ = encoding
   self.pdf_bookmark_name_spec_process_at_fields(
     bookmarks,
@@ -38,7 +38,7 @@ pub fn pdf_bookmark_name_of_spec(
   filename : String,
   start_page : Int,
   end_page : Int,
-) -> String raise PdfError {
+) -> String raise @core.PdfError {
   document.bookmark_name_of_spec(
     encoding, bookmarks, split_level, spec, sequence, filename, start_page, end_page,
   )
@@ -56,7 +56,7 @@ pub fn pdf_name_of_spec(
   filename : String,
   start_page : Int,
   end_page : Int,
-) -> String raise PdfError {
+) -> String raise @core.PdfError {
   document.bookmark_name_of_spec(
     encoding, bookmarks, split_level, spec, sequence, filename, start_page, end_page,
   )

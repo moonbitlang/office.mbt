@@ -1,7 +1,7 @@
 ///|
 fn pdf_ua_matterhorn_push_unique_name(
-  names : Array[PdfName],
-  name : PdfName,
+  names : Array[@core.PdfName],
+  name : @core.PdfName,
 ) -> Unit {
   if !names.contains(name) {
     names.push(name)
@@ -12,7 +12,7 @@ fn pdf_ua_matterhorn_push_unique_name(
 fn PdfDocument::pdf_ua_matterhorn_read_single_attribute(
   self : PdfDocument,
   object : @syntax.PdfObject,
-) -> Array[PdfName] raise PdfError {
+) -> Array[@core.PdfName] raise @core.PdfError {
   match self.direct(object) {
     PdfDictionary(entries) => [ for entry in entries => entry.0 ]
     PdfStreamObject(stream) =>
@@ -25,12 +25,12 @@ fn PdfDocument::pdf_ua_matterhorn_read_single_attribute(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_read_attribute_entry(
   self : PdfDocument,
-  key : PdfName,
+  key : @core.PdfName,
   node : @syntax.PdfObject,
-) -> Array[PdfName] raise PdfError {
+) -> Array[@core.PdfName] raise @core.PdfError {
   match self.lookup_direct(key, node) {
     Some(PdfArray(items)) => {
-      let attrs : Array[PdfName] = []
+      let attrs : Array[@core.PdfName] = []
       for item in items {
         match item {
           PdfInteger(_) => ()
@@ -53,8 +53,8 @@ fn PdfDocument::pdf_ua_matterhorn_read_attribute_entry(
 fn PdfDocument::pdf_ua_matterhorn_read_struct_attributes(
   self : PdfDocument,
   node : @syntax.PdfObject,
-) -> Array[PdfName] raise PdfError {
-  let attrs : Array[PdfName] = []
+) -> Array[@core.PdfName] raise @core.PdfError {
+  let attrs : Array[@core.PdfName] = []
   for
     attr in self.pdf_ua_matterhorn_read_attribute_entry(
       pdf_ua_matterhorn_a_key(),
@@ -100,7 +100,7 @@ fn PdfDocument::pdf_ua_matterhorn_read_struct_tree_inner(
   node : @syntax.PdfObject,
   rolemap : PdfUAStructTreeRoleMap,
   depth : Int,
-) -> PdfUAMatterhornStructNode raise PdfError {
+) -> PdfUAMatterhornStructNode raise @core.PdfError {
   if depth > 10000 {
     raise SoftError("malformed st node")
   }
@@ -135,7 +135,7 @@ fn PdfDocument::pdf_ua_matterhorn_read_struct_tree_inner(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_read_struct_tree(
   self : PdfDocument,
-) -> PdfUAMatterhornStructNode raise PdfError {
+) -> PdfUAMatterhornStructNode raise @core.PdfError {
   let rolemap = self.pdf_ua_matterhorn_rolemap()
   let root_name = rolemap.rewrite_name(pdf_ua_struct_tree_root_key())
   let catalog = self.catalog() catch { _ => raise SoftError("read_st no root") }
@@ -153,7 +153,7 @@ fn PdfDocument::pdf_ua_matterhorn_read_struct_tree(
 ///|
 fn PdfUAMatterhornStructNode::has_attr(
   self : PdfUAMatterhornStructNode,
-  attr : PdfName,
+  attr : @core.PdfName,
 ) -> Bool {
   self.attrs.contains(attr)
 }
@@ -161,7 +161,7 @@ fn PdfUAMatterhornStructNode::has_attr(
 ///|
 fn PdfUAMatterhornStructNode::contains_name(
   self : PdfUAMatterhornStructNode,
-  predicate : (PdfName) -> Bool,
+  predicate : (@core.PdfName) -> Bool,
 ) -> Bool {
   if predicate(self.name) {
     true

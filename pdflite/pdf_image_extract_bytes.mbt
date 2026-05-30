@@ -16,8 +16,8 @@ fn pdf_image_copy_view(
 fn pdf_image_pnm_24bpp_bytes(
   width : Int,
   height : Int,
-  data : PdfBytes,
-) -> PdfBytes {
+  data : @core.PdfBytes,
+) -> @core.PdfBytes {
   let width_bytes = @ascii.encode(width.to_string())
   let height_bytes = @ascii.encode(height.to_string())
   let output = Array::make(

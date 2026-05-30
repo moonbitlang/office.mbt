@@ -19,8 +19,8 @@ fn PdfDocument::pdf_page_resource_entry_count(
 fn PdfDocument::pdf_page_renumber_resource_changes(
   self : PdfDocument,
   pages : ArrayView[@page.PdfPage],
-) -> Array[(PdfName, Int, PdfName, PdfName)] {
-  let changes : Array[(PdfName, Int, PdfName, PdfName)] = Array::new(
+) -> Array[(@core.PdfName, Int, @core.PdfName, @core.PdfName)] {
+  let changes : Array[(@core.PdfName, Int, @core.PdfName, @core.PdfName)] = Array::new(
     capacity=self.pdf_page_resource_entry_count(pages),
   )
   let mut serial = 1
@@ -49,11 +49,11 @@ fn PdfDocument::pdf_page_renumber_resource_changes(
 
 ///|
 fn pdf_page_renumber_lookup_optional(
-  changes : ArrayView[(PdfName, Int, PdfName, PdfName)],
-  resource_key : PdfName,
+  changes : ArrayView[(@core.PdfName, Int, @core.PdfName, @core.PdfName)],
+  resource_key : @core.PdfName,
   page_number : Int,
-  old_name : PdfName,
-) -> PdfName? {
+  old_name : @core.PdfName,
+) -> @core.PdfName? {
   for change in changes {
     let (change_key, change_page, change_old_name, new_name) = change
     if change_key == resource_key &&
@@ -68,11 +68,11 @@ fn pdf_page_renumber_lookup_optional(
 
 ///|
 fn pdf_page_renumber_lookup(
-  changes : ArrayView[(PdfName, Int, PdfName, PdfName)],
-  resource_key : PdfName,
+  changes : ArrayView[(@core.PdfName, Int, @core.PdfName, @core.PdfName)],
+  resource_key : @core.PdfName,
   page_number : Int,
-  old_name : PdfName,
-) -> PdfName raise PdfError {
+  old_name : @core.PdfName,
+) -> @core.PdfName raise @core.PdfError {
   match
     pdf_page_renumber_lookup_optional(
       changes, resource_key, page_number, old_name,

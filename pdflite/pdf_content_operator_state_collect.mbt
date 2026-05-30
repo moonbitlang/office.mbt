@@ -5,7 +5,7 @@ pub fn PdfDocument::content_entries_of_ops(
   mediabox : @geometry.PdfRectangle,
   resources : @syntax.PdfObject,
   ops : ArrayView[@content.PdfContentOp],
-) -> Array[PdfContentJsonEntry] raise PdfError {
+) -> Array[PdfContentJsonEntry] raise @core.PdfError {
   let mut state = pdf_content_initial_operator_state(
     mediabox.min_x,
     mediabox.min_y,
@@ -28,7 +28,7 @@ pub fn pdf_content_entries_of_ops(
   mediabox : @geometry.PdfRectangle,
   resources : @syntax.PdfObject,
   ops : ArrayView[@content.PdfContentOp],
-) -> Array[PdfContentJsonEntry] raise PdfError {
+) -> Array[PdfContentJsonEntry] raise @core.PdfError {
   document.content_entries_of_ops(mediabox, resources, ops)
 }
 
@@ -44,8 +44,8 @@ fn PdfDocument::content_entries_of_xobject_recursive(
   self : PdfDocument,
   state : PdfContentOperatorState,
   resources : @syntax.PdfObject,
-  name : PdfName,
-) -> Array[PdfContentJsonEntry] raise PdfError {
+  name : @core.PdfName,
+) -> Array[PdfContentJsonEntry] raise @core.PdfError {
   let xobject = self.content_xobject_from_resources(resources, name)
   match self.lookup_direct(pdf_xobject_subtype_key(), xobject) {
     Some(PdfNameObject(subtype)) if subtype == pdf_image_image_name() =>
@@ -74,7 +74,7 @@ fn PdfDocument::content_entries_of_ops_recursive_from_state(
   initial : PdfContentOperatorState,
   resources : @syntax.PdfObject,
   ops : ArrayView[@content.PdfContentOp],
-) -> PdfContentOperatorResourceResult raise PdfError {
+) -> PdfContentOperatorResourceResult raise @core.PdfError {
   let mut state = initial
   let entries : Array[PdfContentJsonEntry] = Array::new(capacity=ops.length())
   for op in ops {
@@ -100,7 +100,7 @@ pub fn PdfDocument::content_entries_of_ops_recursive(
   mediabox : @geometry.PdfRectangle,
   resources : @syntax.PdfObject,
   ops : ArrayView[@content.PdfContentOp],
-) -> Array[PdfContentJsonEntry] raise PdfError {
+) -> Array[PdfContentJsonEntry] raise @core.PdfError {
   let state = pdf_content_initial_operator_state(
     mediabox.min_x,
     mediabox.min_y,
@@ -117,6 +117,6 @@ pub fn pdf_content_entries_of_ops_recursive(
   mediabox : @geometry.PdfRectangle,
   resources : @syntax.PdfObject,
   ops : ArrayView[@content.PdfContentOp],
-) -> Array[PdfContentJsonEntry] raise PdfError {
+) -> Array[PdfContentJsonEntry] raise @core.PdfError {
   document.content_entries_of_ops_recursive(mediabox, resources, ops)
 }

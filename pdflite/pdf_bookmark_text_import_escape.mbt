@@ -27,7 +27,7 @@ fn pdf_bookmark_import_fixup_text_length(text : BytesView) -> Int {
 }
 
 ///|
-fn pdf_bookmark_import_fixup_text(text : BytesView) -> PdfBytes {
+fn pdf_bookmark_import_fixup_text(text : BytesView) -> @core.PdfBytes {
   let output = Array::make(pdf_bookmark_import_fixup_text_length(text), b'\x00')
   let mut position = 0
   let mut index = 0

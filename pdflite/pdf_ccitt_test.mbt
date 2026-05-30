@@ -1,13 +1,11 @@
 ///|
-fn ccitt_public_bytes_for_test(
-  values : ArrayView[Int],
-) -> @pdflite.PdfBytes raise {
-  @pdflite.pdf_bytes_of_int_array(values)
+fn ccitt_public_bytes_for_test(values : ArrayView[Int]) -> @core.PdfBytes raise {
+  @core.pdf_bytes_of_int_array(values)
 }
 
 ///|
-fn ccitt_public_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn ccitt_public_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -15,25 +13,25 @@ fn ccitt_public_wrap_view_for_test(
   prefix : ArrayView[Int],
   data : BytesView,
   suffix : ArrayView[Int],
-) -> @pdflite.PdfBytes raise {
+) -> @core.PdfBytes raise {
   let output : Array[Byte] = []
   for value in prefix {
-    output.push(@pdflite.pdf_byte_of_int(value))
+    output.push(@core.pdf_byte_of_int(value))
   }
   for byte in data {
     output.push(byte)
   }
   for value in suffix {
-    output.push(@pdflite.pdf_byte_of_int(value))
+    output.push(@core.pdf_byte_of_int(value))
   }
   Bytes::from_array(output)
 }
 
 ///|
 fn ccitt_public_decode_stream_for_test(
-  encoded : @pdflite.PdfBytes,
-  decodeparms_entries : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
-) -> @pdflite.PdfBytes raise {
+  encoded : @core.PdfBytes,
+  decodeparms_entries : ArrayView[(@core.PdfName, @syntax.PdfObject)],
+) -> @core.PdfBytes raise {
   let stream = @syntax.pdf_stream(
     @syntax.pdf_dictionary([
       (ccitt_public_name_for_test("/Length"), PdfInteger(encoded.length())),

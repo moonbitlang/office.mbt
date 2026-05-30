@@ -2,7 +2,7 @@
 fn PdfDocument::pdf_image_jbig2_global_data(
   self : PdfDocument,
   object_number : Int,
-) -> PdfBytes? raise PdfError {
+) -> @core.PdfBytes? raise @core.PdfError {
   match self.pdf_decode_stream_until_unknown(PdfIndirect(object_number)) {
     PdfStreamObject(stream) => Some(@syntax.pdf_stream_data_bytes(stream.data))
     _ => None
@@ -16,7 +16,7 @@ fn PdfDocument::pdf_image_extracted_files_of_image(
   name : String,
   image : @syntax.PdfObject,
   state : PdfImageExtractionState,
-) -> Array[PdfExtractedImageFile] raise PdfError {
+) -> Array[PdfExtractedImageFile] raise @core.PdfError {
   pdf_check_injectible(name)
   match self.get_image_24bpp(resources, image) {
     PdfJPEG(data, _) => [{ path: name + ".jpg", data }]

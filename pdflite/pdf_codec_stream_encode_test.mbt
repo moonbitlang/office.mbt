@@ -1,18 +1,18 @@
 ///|
 fn codec_stream_encode_bytes_for_test(
   values : ArrayView[Int],
-) -> @pdflite.PdfBytes {
-  try! @pdflite.pdf_bytes_of_int_array(values)
+) -> @core.PdfBytes {
+  try! @core.pdf_bytes_of_int_array(values)
 }
 
 ///|
-fn codec_stream_encode_ascii_for_test(text : String) -> @pdflite.PdfBytes {
+fn codec_stream_encode_ascii_for_test(text : String) -> @core.PdfBytes {
   @ascii.encode(text)
 }
 
 ///|
-fn codec_stream_encode_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn codec_stream_encode_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -539,11 +539,11 @@ test "pdf stream encoding reports malformed objects and materializes deferred da
     codec_stream_encode_name_for_test("/ASCIIHexDecode"),
     PdfNull,
   )
-  guard result is Err(@pdflite.PdfError::ParseStreamExpected) else {
-    fail("expected @pdflite.PdfError::ParseStreamExpected")
+  guard result is Err(@core.PdfError::ParseStreamExpected) else {
+    fail("expected @core.PdfError::ParseStreamExpected")
   }
   let deferred = @syntax.stream_to_get(
-    @pdflite.byte_cursor_of_bytes(codec_stream_encode_ascii_for_test("Hi")),
+    @core.byte_cursor_of_bytes(codec_stream_encode_ascii_for_test("Hi")),
     0,
     2,
   )
@@ -571,8 +571,8 @@ test "pdf stream encoding reports malformed objects and materializes deferred da
     codec_stream_encode_name_for_test("/ASCIIHexDecode"),
     stream,
   )
-  guard result is Err(@pdflite.PdfError::FilterExpected) else {
-    fail("expected @pdflite.PdfError::FilterExpected")
+  guard result is Err(@core.PdfError::FilterExpected) else {
+    fail("expected @core.PdfError::FilterExpected")
   }
   let decodeparms = codec_stream_encode_name_for_test("/DecodeParms")
   let stream = @syntax.pdf_stream(
@@ -590,8 +590,8 @@ test "pdf stream encoding reports malformed objects and materializes deferred da
     2,
     stream,
   )
-  guard result is Err(@pdflite.PdfError::PredictorExpected) else {
-    fail("expected @pdflite.PdfError::PredictorExpected")
+  guard result is Err(@core.PdfError::PredictorExpected) else {
+    fail("expected @core.PdfError::PredictorExpected")
   }
   let result : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_encode_stream_with_filter_and_predictor(
     codec_stream_encode_name_for_test("/ASCIIHexDecode"),
@@ -601,8 +601,8 @@ test "pdf stream encoding reports malformed objects and materializes deferred da
     2,
     PdfNull,
   )
-  guard result is Err(@pdflite.PdfError::ParseStreamExpected) else {
-    fail("expected @pdflite.PdfError::ParseStreamExpected")
+  guard result is Err(@core.PdfError::ParseStreamExpected) else {
+    fail("expected @core.PdfError::ParseStreamExpected")
   }
   let stream = @syntax.pdf_stream(
     @syntax.pdf_dictionary([(length, PdfInteger(2))]),

@@ -85,11 +85,11 @@ round-trip matrix, the large fixture rewrite smoke test, and `moon package`.
 
 ## Pedantic Boundaries
 
-- PDF byte data stays byte-oriented. `PdfBytes` is `Bytes`; `PdfName` and
+- PDF byte data stays byte-oriented. `@core.PdfBytes` is `Bytes`; `@core.PdfName` and
   `PdfString` store raw bytes until an explicit text-decoding API is used.
 - Object numbers are one-based in normal document allocation. Missing or
   deferred objects are represented explicitly instead of being guessed.
-- Public parsing and writing APIs raise `PdfError` for typed failure classes.
+- Public parsing and writing APIs raise `@core.PdfError` for typed failure classes.
   Tests should assert concrete errors where the input class is stable.
 - Methods that mutate a document mutate the in-memory object table directly.
   Functional wrapper APIs, when present, copy before mutation.
@@ -119,13 +119,12 @@ Write byte-preserving PDF names. Names are bytes, not MoonBit Unicode strings:
 ```moonbit check
 ///|
 test "name writer escapes delimiter bytes" {
-  let name = @pdflite.pdf_name_of_bytes(
-    try! @pdflite.pdf_bytes_of_int_array([47, 65, 32, 66]),
+  let name = @core.pdf_name_of_bytes(
+    try! @core.pdf_bytes_of_int_array([47, 65, 32, 66]),
   )
-  @test.assert_eq(
-    @pdflite.pdf_int_array_of_bytes(@pdflite.pdf_write_name(name)),
-    [47, 65, 35, 50, 48, 66],
-  )
+  @test.assert_eq(@core.pdf_int_array_of_bytes(@pdflite.pdf_write_name(name)), [
+    47, 65, 35, 50, 48, 66,
+  ])
 }
 ```
 
@@ -135,7 +134,7 @@ test "name writer escapes delimiter bytes" {
   encryption state, and revision metadata.
 - `@syntax.PdfObject` values preserve PDF syntax-level objects, including byte strings,
   names, dictionaries, streams, and indirect references.
-- Read APIs raise `PdfError` for malformed input rather than silently repairing
+- Read APIs raise `@core.PdfError` for malformed input rather than silently repairing
   data. Reconstruction helpers are explicit APIs.
 - Writer APIs can emit classic xref tables, xref streams, compressed xref
   streams, generated trailer IDs, incremental updates, and encrypted output.

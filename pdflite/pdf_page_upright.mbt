@@ -12,7 +12,7 @@ fn pdf_page_upright_near_zero(value : Double) -> Bool {
 fn PdfDocument::pdf_page_upright_is_upright(
   self : PdfDocument,
   page : @page.PdfPage,
-) -> Bool raise PdfError {
+) -> Bool raise @core.PdfError {
   let bounds = self.parse_rectangle(page.mediabox)
   page.rotate == Rotate0 &&
   pdf_page_upright_near_zero(bounds.min_x) &&
@@ -24,7 +24,7 @@ fn PdfDocument::pdf_page_upright_all_upright(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
   pages : ArrayView[@page.PdfPage],
-) -> Bool raise PdfError {
+) -> Bool raise @core.PdfError {
   for page_number in page_numbers {
     if !self.pdf_page_upright_is_upright(pages[page_number - 1]) {
       break false
@@ -42,7 +42,7 @@ fn PdfDocument::pdf_page_upright_all_upright(
 pub fn PdfDocument::all_pages_upright(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> Bool raise PdfError {
+) -> Bool raise @core.PdfError {
   let pages = self.pages_of_pagetree()
   for page_number in page_numbers {
     if page_number >= 1 && page_number <= pages.length() {
@@ -60,7 +60,7 @@ pub fn PdfDocument::all_pages_upright(
 pub fn pdf_allupright(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> Bool raise PdfError {
+) -> Bool raise @core.PdfError {
   document.all_pages_upright(page_numbers)
 }
 
@@ -69,7 +69,7 @@ pub fn pdf_allupright(
 pub fn pdf_allupright_cpdf_order(
   page_numbers : ArrayView[Int],
   document : PdfDocument,
-) -> Bool raise PdfError {
+) -> Bool raise @core.PdfError {
   document.all_pages_upright(page_numbers)
 }
 
@@ -81,7 +81,7 @@ pub fn pdf_allupright_cpdf_order(
 pub fn PdfDocument::all_pages_upright_only(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> Bool raise PdfError {
+) -> Bool raise @core.PdfError {
   let pages = self.pages_of_pagetree()
   for page_number in page_numbers {
     if page_number >= 1 && page_number <= pages.length() {
@@ -99,7 +99,7 @@ pub fn PdfDocument::all_pages_upright_only(
 pub fn pdf_alluprightonly(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> Bool raise PdfError {
+) -> Bool raise @core.PdfError {
   document.all_pages_upright_only(page_numbers)
 }
 
@@ -108,7 +108,7 @@ pub fn pdf_alluprightonly(
 pub fn pdf_alluprightonly_cpdf_order(
   page_numbers : ArrayView[Int],
   document : PdfDocument,
-) -> Bool raise PdfError {
+) -> Bool raise @core.PdfError {
   document.all_pages_upright_only(page_numbers)
 }
 
@@ -116,7 +116,7 @@ pub fn pdf_alluprightonly_cpdf_order(
 fn PdfDocument::pdf_page_upright_rotation_matrix(
   self : PdfDocument,
   page : @page.PdfPage,
-) -> @geometry.TransformMatrix raise PdfError {
+) -> @geometry.TransformMatrix raise @core.PdfError {
   let bounds = self.parse_rectangle(page.mediabox)
   let center = @geometry.point2(
     (bounds.min_x + bounds.max_x) / 2.0,
@@ -129,7 +129,7 @@ fn PdfDocument::pdf_page_upright_rotation_matrix(
 }
 
 ///|
-fn pdf_page_upright_box_names() -> Array[PdfName] {
+fn pdf_page_upright_box_names() -> Array[@core.PdfName] {
   [
     pdf_page_trimbox_key(),
     pdf_page_artbox_key(),
@@ -143,7 +143,7 @@ fn PdfDocument::pdf_page_upright_transform_boxes(
   self : PdfDocument,
   page : @page.PdfPage,
   matrix : @geometry.TransformMatrix,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   let mut rest = page.rest
   for name in pdf_page_upright_box_names() {
     match self.lookup_direct(name, page.rest) {
@@ -161,7 +161,7 @@ fn PdfDocument::pdf_page_upright_transform_content(
   page : @page.PdfPage,
   matrix : @geometry.TransformMatrix,
   fast : Bool,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   if matrix == @geometry.transform_identity_matrix {
     page
   } else {
@@ -176,7 +176,7 @@ fn PdfDocument::pdf_page_upright_rectify(
   self : PdfDocument,
   page : @page.PdfPage,
   fast : Bool,
-) -> (@page.PdfPage, @geometry.TransformMatrix) raise PdfError {
+) -> (@page.PdfPage, @geometry.TransformMatrix) raise @core.PdfError {
   let bounds = self.parse_rectangle(page.mediabox)
   if pdf_page_upright_near_zero(bounds.min_x) &&
     pdf_page_upright_near_zero(bounds.min_y) {
@@ -194,7 +194,7 @@ fn PdfDocument::pdf_page_upright_page(
   self : PdfDocument,
   page : @page.PdfPage,
   fast : Bool,
-) -> (@page.PdfPage, @geometry.TransformMatrix) raise PdfError {
+) -> (@page.PdfPage, @geometry.TransformMatrix) raise @core.PdfError {
   if self.pdf_page_upright_is_upright(page) {
     (page, @geometry.transform_identity_matrix)
   } else {
@@ -223,7 +223,7 @@ pub fn PdfDocument::upright_pages(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   pdf_page_box_validate_page_numbers(
     page_numbers,
     self.endpage(),
@@ -258,7 +258,7 @@ pub fn pdf_upright_pages(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.upright_pages(page_numbers, fast~)
 }
 
@@ -268,7 +268,7 @@ pub fn PdfDocument::upright(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   self.upright_pages(page_numbers, fast~)
 }
 
@@ -278,6 +278,6 @@ pub fn pdf_upright(
   page_numbers : ArrayView[Int],
   document : PdfDocument,
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.upright_pages(page_numbers, fast~)
 }

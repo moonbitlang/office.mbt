@@ -2,19 +2,19 @@
 fn pdf_draw_control_image_file_spec_for_async_io(
   spec : StringView,
   command : String,
-) -> (String, String) raise @pdflite.PdfError {
+) -> (String, String) raise @core.PdfError {
   let text = spec.to_owned()
   let mut separator = -1
   for index in 0..<text.length() {
     if text.at(index).to_int() == 61 {
       if separator >= 0 {
-        @pdflite.pdf_error(command + ": bad file specification")
+        @core.pdf_error(command + ": bad file specification")
       }
       separator = index
     }
   }
   if separator < 0 {
-    @pdflite.pdf_error(command + ": bad file specification")
+    @core.pdf_error(command + ": bad file specification")
   }
   (text[:separator].to_owned(), text[separator + 1:].to_owned())
 }

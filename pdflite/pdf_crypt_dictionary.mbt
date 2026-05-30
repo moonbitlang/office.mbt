@@ -14,7 +14,7 @@ fn pdf_crypt_arc4_v4_length(
 fn pdf_crypt_type_from_encrypt_dictionary(
   pdf : PdfDocument,
   encrypt_dictionary : @syntax.PdfObject,
-) -> PdfCryptType? {
+) -> @core.PdfCryptType? {
   let standard = pdf_crypt_standard_name
   let filter = pdf_crypt_lookup_name(
     pdf, pdf_crypt_filter_name, encrypt_dictionary,
@@ -70,10 +70,10 @@ fn pdf_crypt_type_from_encrypt_dictionary(
 /// The returned value contains the normalized security-handler parameters
 /// needed for authentication and object crypt. Missing encryption dictionaries,
 /// unsupported handlers, malformed `/O` or `/U` entries, and missing trailer
-/// `/ID` values raise `PdfError`.
+/// `/ID` values raise `@core.PdfError`.
 fn PdfDocument::encryption_values(
   self : PdfDocument,
-) -> PdfEncryptionValues raise PdfError {
+) -> PdfEncryptionValues raise @core.PdfError {
   let encrypt_key = pdf_crypt_encrypt_name
   let encrypt_dictionary = match
     self.lookup_direct(encrypt_key, self.trailer_dict()) {
@@ -146,7 +146,7 @@ pub fn PdfDocument::is_encrypted(self : PdfDocument) -> Bool {
 /// the dictionary has been parsed.
 pub fn PdfDocument::what_encryption(
   self : PdfDocument,
-) -> @crypt_core.PdfEncryptionMethod? raise PdfError {
+) -> @crypt_core.PdfEncryptionMethod? raise @core.PdfError {
   if self.is_encrypted() {
     let values = self.encryption_values()
     match values.crypt_type {
@@ -170,7 +170,7 @@ pub fn PdfDocument::what_encryption(
 /// `/Encrypt` and may raise if the encryption dictionary is malformed.
 pub fn PdfDocument::permissions(
   self : PdfDocument,
-) -> Array[@crypt_core.PdfPermission] raise PdfError {
+) -> Array[@crypt_core.PdfPermission] raise @core.PdfError {
   if self.is_encrypted() {
     @crypt_core.pdf_permissions_of_p(self.encryption_values().permissions)
   } else {

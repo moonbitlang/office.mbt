@@ -7,8 +7,10 @@
 /// their supplied encoded data and decode parameters.
 pub fn pdf_content_bytes_of_ops(
   ops : ArrayView[@content.PdfContentOp],
-) -> PdfBytes raise PdfError {
-  let rendered : Array[(PdfBytes, Bool)] = Array::new(capacity=ops.length())
+) -> @core.PdfBytes raise @core.PdfError {
+  let rendered : Array[(@core.PdfBytes, Bool)] = Array::new(
+    capacity=ops.length(),
+  )
   let mut length = 0
   for op in ops {
     let bytes = pdf_content_op_bytes(op)
@@ -35,7 +37,7 @@ pub fn pdf_content_bytes_of_ops(
 /// Serialize one content operator to PDF content-stream bytes.
 pub fn pdf_content_bytes_of_op(
   op : @content.PdfContentOp,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_content_bytes_of_ops([op])
 }
 
@@ -43,10 +45,10 @@ pub fn pdf_content_bytes_of_op(
 /// Compatibility wrapper for `pdf_content_bytes_of_ops`.
 ///
 /// The name follows CamlPDF, where strings were byte sequences; this function
-/// returns `PdfBytes`.
+/// returns `@core.PdfBytes`.
 pub fn pdf_string_of_content_ops(
   ops : ArrayView[@content.PdfContentOp],
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_content_bytes_of_ops(ops)
 }
 
@@ -54,10 +56,10 @@ pub fn pdf_string_of_content_ops(
 /// Compatibility wrapper for `pdf_content_bytes_of_op`.
 ///
 /// The name follows CamlPDF, where strings were byte sequences; this function
-/// returns `PdfBytes`.
+/// returns `@core.PdfBytes`.
 pub fn pdf_string_of_content_op(
   op : @content.PdfContentOp,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_content_bytes_of_op(op)
 }
 
@@ -68,7 +70,7 @@ pub fn pdf_string_of_content_op(
 /// length and no outer stream filter.
 pub fn pdf_content_stream_of_ops(
   ops : ArrayView[@content.PdfContentOp],
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   let data = pdf_content_bytes_of_ops(ops)
   @syntax.pdf_stream(
     PdfDictionary([(pdf_content_length_name(), PdfInteger(data.length()))]),

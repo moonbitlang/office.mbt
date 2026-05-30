@@ -34,20 +34,6 @@ import {
 }
 
 // Values
-pub fn bit_writer_new() -> @core.BitWriter
-
-pub fn bitstream_of_bytes(Bytes, source? : String) -> @core.BitStream
-
-pub fn bitstream_of_cursor(@core.ByteCursor) -> @core.BitStream
-
-pub fn bitstream_of_view(BytesView, source? : String) -> @core.BitStream
-
-pub fn byte_cursor_of_bytes(Bytes, source? : String) -> @core.ByteCursor
-
-pub fn byte_cursor_of_view(BytesView, source? : String) -> @core.ByteCursor
-
-pub fn byte_output_new(initial_size? : Int) -> @core.ByteOutput raise @core.PdfError
-
 pub fn decompress_pdf(PdfDocument) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_add_annotation(PdfDocument, @page.PdfPage, @annotation.PdfAnnotation) -> @page.PdfPage raise @core.PdfError
@@ -306,33 +292,7 @@ pub fn pdf_bookmarks_open_to_level(Int, PdfDocument) -> PdfDocument raise @core.
 
 pub fn pdf_build_name_tree(Bool, PdfDocument, ArrayView[(Bytes, @syntax.PdfObject)]) -> @syntax.PdfObject raise @core.PdfError
 
-pub fn pdf_byte_of_int(Int) -> Byte raise @core.PdfError
-
-pub fn pdf_bytes_concat_views(ArrayView[BytesView]) -> Bytes
-
-pub fn pdf_bytes_copy(BytesView) -> Bytes
-
-pub fn pdf_bytes_get(Bytes, Int) -> Byte?
-
-pub fn pdf_bytes_length(Bytes) -> Int
-
-pub fn pdf_bytes_make(Int, value? : Int) -> Bytes raise @core.PdfError
-
-pub fn pdf_bytes_map_int(BytesView, (Int) -> Int) -> Bytes raise @core.PdfError
-
-pub fn pdf_bytes_of_array_view(ArrayView[Byte]) -> Bytes
-
-pub fn pdf_bytes_of_int_array(ArrayView[Int]) -> Bytes raise @core.PdfError
-
-pub fn pdf_bytes_of_int_arrays(ArrayView[ArrayView[Int]]) -> Bytes raise @core.PdfError
-
-pub fn pdf_bytes_of_view(BytesView) -> Bytes
-
 pub fn pdf_bytes_of_xmltree(@metadata.PdfMetadataXmlDocument) -> Bytes
-
-pub fn pdf_bytes_to_array(Bytes) -> Array[Byte]
-
-pub fn pdf_bytes_to_fixed_array(Bytes) -> FixedArray[Byte]
 
 pub fn pdf_ccitt_encode(Int, Int, Bytes) -> Bytes raise @core.PdfError
 
@@ -582,8 +542,6 @@ pub fn pdf_copy_id(Bool, PdfDocument, PdfDocument) -> PdfDocument raise @core.Pd
 
 pub fn pdf_copy_page_box(PdfDocument, ArrayView[Int], @core.PdfName, @core.PdfName, mediabox_if_missing? : Bool) -> PdfDocument raise @core.PdfError
 
-pub fn pdf_count_whitespace_tokens(BytesView) -> Int
-
 pub fn pdf_create_metadata(PdfDocument) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_crop_pdf(PdfDocument, ArrayView[Int], ArrayView[(Double, Double, Double, Double)], box_name? : @core.PdfName) -> PdfDocument raise @core.PdfError
@@ -706,10 +664,6 @@ pub fn pdf_endtag(PdfDrawControl) -> Unit raise @core.PdfError
 
 pub fn pdf_endxobj(PdfDrawControl) -> Unit raise @core.PdfError
 
-pub fn pdf_error(String) -> Unit raise @core.PdfError
-
-pub fn pdf_error_summary(@core.PdfError) -> String
-
 pub fn pdf_eval_function(PdfFunction, ArrayView[Double]) -> Array[Double] raise @core.PdfError
 
 pub fn pdf_expand_date(String) -> String
@@ -719,10 +673,6 @@ pub fn pdf_extract_fontfile_bytes(PdfDocument, Int, String) -> Bytes? raise @cor
 pub fn pdf_fill(PdfDrawControl) -> Unit raise @core.PdfError
 
 pub fn pdf_fillevenodd(PdfDrawControl) -> Unit raise @core.PdfError
-
-pub fn pdf_find_ascii_from(BytesView, Int, ArrayView[Int]) -> Int
-
-pub fn pdf_find_last_ascii(BytesView, ArrayView[Int]) -> Int
 
 pub fn pdf_find_obj(PdfDocument, String) -> @syntax.PdfObject raise @core.PdfError
 
@@ -814,8 +764,6 @@ pub fn pdf_hard_box(PdfDocument, ArrayView[Int], @core.PdfName, mediabox_if_miss
 
 pub fn pdf_hard_box_string(PdfDocument, ArrayView[Int], String, mediabox_if_missing? : Bool, fast? : Bool) -> PdfDocument raise @core.PdfError
 
-pub fn pdf_hard_error(String) -> Unit raise @core.PdfError
-
 pub fn pdf_hasbox(PdfDocument, Int, @core.PdfName) -> Bool raise @core.PdfError
 
 pub fn pdf_hasbox_string(PdfDocument, Int, String) -> Bool raise @core.PdfError
@@ -876,25 +824,11 @@ pub fn pdf_images(Bool, PdfDocument, ArrayView[Int]) -> Json raise @core.PdfErro
 
 pub fn pdf_impose(PdfDocument, Double, Double, fit? : Bool, columns? : Bool, rtl? : Bool, btt? : Bool, center? : Bool, margin? : Double, spacing? : Double, line_width? : Double, fast? : Bool, process_struct_tree? : Bool) -> PdfDocument raise @core.PdfError
 
-pub fn pdf_int_array_of_bytes(BytesView) -> Array[Int]
-
-pub fn pdf_is_delimiter_byte(Int) -> Bool
-
-pub fn pdf_is_digit_byte(Int) -> Bool
-
 pub fn pdf_is_identity_h(PdfFont) -> Bool
 
 pub fn pdf_is_linearized(BytesView) -> Bool
 
-pub fn pdf_is_newline_byte(Int) -> Bool
-
-pub fn pdf_is_not_whitespace_byte(Int) -> Bool
-
 pub fn pdf_is_unicode_string(BytesView) -> Bool
-
-pub fn pdf_is_whitespace_byte(Int) -> Bool
-
-pub fn pdf_is_whitespace_or_delimiter_byte(Int) -> Bool
 
 pub fn pdf_is_xfa(PdfDocument) -> Bool
 
@@ -980,15 +914,9 @@ pub fn pdf_missing_fonts_return(PdfDocument, ArrayView[Int]) -> Array[(Int, Stri
 
 pub fn pdf_missing_fonts_text(PdfDocument, ArrayView[Int]) -> Bytes raise @core.PdfError
 
-pub fn pdf_name_of_bytes(Bytes) -> @core.PdfName
-
 pub fn pdf_name_of_colour_space(PdfColourSpace) -> @core.PdfName?
 
 pub fn pdf_name_of_spec(@metadata.PdfMetadataEncoding, ArrayView[@bookmark.PdfBookmark], PdfDocument, Int, String, Int, String, Int, Int) -> String raise @core.PdfError
-
-pub fn pdf_name_of_view(BytesView) -> @core.PdfName
-
-pub let pdf_no_more : Int
 
 pub fn pdf_nullpoly() -> PdfClipPolygon
 
@@ -1089,8 +1017,6 @@ pub fn pdf_page_reference_numbers(PdfDocument) -> Array[Int] raise @core.PdfErro
 pub fn pdf_pagenumber_of_target(PdfDocument, @destination.PdfDestination) -> Int raise @core.PdfError
 
 pub fn pdf_pages_of_pagetree(PdfDocument) -> Array[@page.PdfPage] raise @core.PdfError
-
-pub fn pdf_parse_ascii_int_view(BytesView) -> Int raise @core.PdfError
 
 pub fn pdf_parse_bookmark_file(Bool, PdfDocument, BytesView) -> Array[@bookmark.PdfBookmark] raise @core.PdfError
 
@@ -1486,10 +1412,6 @@ pub fn pdf_simplify_utf16be(BytesView) -> Bytes raise @core.PdfError
 
 pub fn pdf_size_attached_files(PdfDocument) -> Int raise @core.PdfError
 
-pub fn pdf_soft_error(String) -> Unit raise @core.PdfError
-
-pub fn pdf_split_whitespace_tokens(BytesView) -> Array[BytesView]
-
 pub fn pdf_squeeze(PdfDocument, page_data? : Bool) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_stamp(PdfDocument, ArrayView[Int], PdfDocument, relative_to_box? : @core.PdfName, position? : @geometry.PdfPosition, topline? : Bool, midline? : Bool, fast? : Bool, scale_to_fit? : Bool, is_over? : Bool, process_struct_tree? : Bool) -> PdfDocument raise @core.PdfError
@@ -1522,8 +1444,6 @@ pub fn pdf_standard_font_substitute_font_name(PdfStandardFont) -> String
 
 pub fn pdf_startxobj(PdfDrawControl, String) -> Unit
 
-pub fn pdf_startxref_search_view(BytesView) -> BytesView
-
 pub fn pdf_stretch(ArrayView[(Double, Double)], PdfDocument, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_stretch_pages(PdfDocument, ArrayView[Int], ArrayView[(Double, Double)], fast? : Bool) -> PdfDocument raise @core.PdfError
@@ -1545,10 +1465,6 @@ pub fn pdf_string_of_drawops(ArrayView[PdfDrawOp]) -> String
 pub fn pdf_string_of_font(PdfFont) -> String
 
 pub fn pdf_string_of_function(PdfFunction) -> String
-
-pub fn pdf_string_of_int_array(ArrayView[Int]) -> Bytes raise @core.PdfError
-
-pub fn pdf_string_of_int_arrays(ArrayView[ArrayView[Int]]) -> Bytes raise @core.PdfError
 
 pub fn pdf_string_of_pagespec(PdfDocument, ArrayView[Int]) -> String raise @core.PdfError
 
@@ -1751,10 +1667,6 @@ pub fn pdf_utf8_of_codepoints(ArrayView[Int]) -> Bytes raise @core.PdfError
 pub fn pdf_utf8_of_pdfdocstring(BytesView) -> Bytes raise @core.PdfError
 
 pub fn pdf_vflip_pdf(PdfDocument, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
-
-pub fn pdf_view_equals_ascii(BytesView, ArrayView[Int]) -> Bool
-
-pub fn pdf_view_matches_ascii_at(BytesView, Int, ArrayView[Int]) -> Bool
 
 pub fn pdf_write_colour_space(PdfDocument, PdfColourSpace) -> @syntax.PdfObject
 
@@ -3285,22 +3197,5 @@ pub(all) enum PdfUASubformat {
 } derive(Eq, ToJson, @debug.Debug)
 
 // Type aliases
-pub using @core {type BitStream}
-
-pub using @core {type BitStreamPosition}
-
-pub using @core {type BitWriter}
-
-pub using @core {type ByteCursor}
-
-pub using @core {type ByteOutput}
-
-pub type PdfBytes = Bytes
-
-pub using @core {type PdfCryptType}
-
-pub using @core {type PdfError}
-
-pub using @core {type PdfName}
 
 // Traits

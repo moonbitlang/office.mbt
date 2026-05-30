@@ -22,7 +22,7 @@ fn pdf_truetype_required_subset_table(tag : String) -> Bool {
 pub fn pdf_truetype_subset_cmap_table(
   data : BytesView,
   subset_codepoints : ArrayView[Int],
-) -> @truetype.PdfTrueTypeSubsetTable raise PdfError {
+) -> @truetype.PdfTrueTypeSubsetTable raise @core.PdfError {
   let cmap_entries = pdf_truetype_cmap_glyphs(data)
   let glyph_indices : Array[Int] = []
   for codepoint in subset_codepoints {
@@ -103,7 +103,7 @@ fn pdf_truetype_subset_original_table_span(
   data : BytesView,
   sorted_tables : ArrayView[@truetype.PdfTrueTypeTableRecord],
   tag : String,
-) -> (Int, Int) raise PdfError {
+) -> (Int, Int) raise @core.PdfError {
   for index in 0..<sorted_tables.length() {
     let table = sorted_tables[index]
     if table.tag == tag {
@@ -128,7 +128,7 @@ fn pdf_truetype_subset_original_table(
   sorted_tables : ArrayView[@truetype.PdfTrueTypeTableRecord],
   tag : String,
   directory_length : Int,
-) -> @truetype.PdfTrueTypeSubsetTable raise PdfError {
+) -> @truetype.PdfTrueTypeSubsetTable raise @core.PdfError {
   let (offset, length) = pdf_truetype_subset_original_table_span(
     data, sorted_tables, tag,
   )
@@ -142,7 +142,7 @@ fn pdf_truetype_subset_font_table_payload(
   record : @truetype.PdfTrueTypeTableRecord,
   subset_codepoints : ArrayView[Int],
   rewrite_cmap : Bool,
-) -> @truetype.PdfTrueTypeSubsetTable raise PdfError {
+) -> @truetype.PdfTrueTypeSubsetTable raise @core.PdfError {
   if record.tag == "loca" {
     {
       length: record.length,
@@ -171,7 +171,7 @@ fn pdf_truetype_subset_font_directory(
 ) -> (
   Array[@truetype.PdfTrueTypeTableRecord],
   Array[@truetype.PdfTrueTypeSubsetTable],
-) raise PdfError {
+) raise @core.PdfError {
   let kept = pdf_truetype_subset_font_kept_tables(sorted_tables)
   let header_size_reduction = 16 * (sorted_tables.length() - kept.length())
   let records : Array[@truetype.PdfTrueTypeTableRecord] = []
@@ -228,7 +228,7 @@ pub fn pdf_truetype_subset_font(
   data : BytesView,
   subset_codepoints : ArrayView[Int],
   rewrite_cmap? : Bool = false,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let major = pdf_truetype_required_u16(data, 0, "font header")
   let minor = pdf_truetype_required_u16(data, 2, "font header")
   let sorted_tables = pdf_truetype_sorted_tables(pdf_truetype_tables(data))

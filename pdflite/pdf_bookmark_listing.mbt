@@ -9,7 +9,7 @@ pub fn PdfDocument::list_bookmarks(
   encoding? : @metadata.PdfMetadataEncoding = PdfMetadataUTF8,
   json? : Bool = false,
   json_preserve_actions? : Bool = false,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let bookmarks = self.pdf_bookmark_listing_bookmarks(
     page_numbers,
     json && json_preserve_actions,
@@ -40,7 +40,7 @@ pub fn PdfDocument::list_bookmarks(
 pub fn PdfDocument::bookmarks_json(
   self : PdfDocument,
   json_preserve_actions? : Bool = false,
-) -> Json raise PdfError {
+) -> Json raise @core.PdfError {
   let end_page = self.endpage()
   let page_numbers = Array::make(end_page, 0)
   for index in 0..<end_page {
@@ -57,7 +57,7 @@ pub fn PdfDocument::bookmarks_json(
 pub fn PdfDocument::bookmarks_json_blob(
   self : PdfDocument,
   json_preserve_actions? : Bool = false,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   @utf8.encode(self.bookmarks_json(json_preserve_actions~).stringify())
 }
 
@@ -69,7 +69,7 @@ pub fn pdf_list_bookmarks(
   encoding : @metadata.PdfMetadataEncoding,
   page_numbers : ArrayView[Int],
   document : PdfDocument,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   document.list_bookmarks(
     page_numbers,
     encoding~,
@@ -83,6 +83,6 @@ pub fn pdf_list_bookmarks(
 pub fn pdf_get_bookmarks_json(
   json_preserve_actions : Bool,
   document : PdfDocument,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   document.bookmarks_json_blob(json_preserve_actions~)
 }

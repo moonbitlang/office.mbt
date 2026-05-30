@@ -4,7 +4,7 @@ fn PdfDocument::pdf_page_stretch_matrix(
   page : @page.PdfPage,
   target_width : Double,
   target_height : Double,
-) -> @geometry.TransformMatrix raise PdfError {
+) -> @geometry.TransformMatrix raise @core.PdfError {
   let bounds = self.pdf_page_scale_bounds(page)
   let source_width = bounds.max_x - bounds.min_x
   let source_height = bounds.max_y - bounds.min_y
@@ -30,7 +30,7 @@ pub fn PdfDocument::stretch_pages(
   page_numbers : ArrayView[Int],
   sizes : ArrayView[(Double, Double)],
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   pdf_page_box_validate_page_numbers(
     page_numbers,
     self.endpage(),
@@ -71,7 +71,7 @@ pub fn pdf_stretch_pages(
   page_numbers : ArrayView[Int],
   sizes : ArrayView[(Double, Double)],
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.stretch_pages(page_numbers, sizes, fast~)
 }
 
@@ -82,7 +82,7 @@ pub fn PdfDocument::stretch(
   page_numbers : ArrayView[Int],
   sizes : ArrayView[(Double, Double)],
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let pages = self.pages_of_pagetree()
   pdf_page_box_validate_page_numbers(page_numbers, pages.length(), "stretch")
   pdf_page_scale_validate_page_indexed_pairs(
@@ -105,6 +105,6 @@ pub fn pdf_stretch(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.stretch(page_numbers, sizes, fast~)
 }

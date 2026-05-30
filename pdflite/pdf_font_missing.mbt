@@ -32,9 +32,9 @@ pub fn PdfDocument::is_missing_font(
 fn PdfDocument::pdf_missing_font_entry(
   self : PdfDocument,
   page : Int,
-  name : PdfName,
+  name : @core.PdfName,
   font : @syntax.PdfObject,
-) -> @font.PdfMissingFontEntry raise PdfError {
+) -> @font.PdfMissingFontEntry raise @core.PdfError {
   let encoding = match
     self.pdf_font_name_field(font, pdf_text_encoding_key_name) {
     "" => "Built-in"
@@ -52,9 +52,9 @@ fn PdfDocument::pdf_missing_font_entry(
 ///|
 fn PdfDocument::pdf_missing_font_candidates(
   self : PdfDocument,
-  name : PdfName,
+  name : @core.PdfName,
   font : @syntax.PdfObject,
-) -> Array[(PdfName, @syntax.PdfObject)] {
+) -> Array[(@core.PdfName, @syntax.PdfObject)] {
   match self.lookup_direct(pdf_text_descendant_fonts_key_name, font) {
     Some(PdfArray(descendants)) =>
       [
@@ -69,7 +69,7 @@ fn PdfDocument::pdf_missing_fonts_on_page(
   self : PdfDocument,
   page : Int,
   resources : @syntax.PdfObject,
-) -> Array[@font.PdfMissingFontEntry] raise PdfError {
+) -> Array[@font.PdfMissingFontEntry] raise @core.PdfError {
   match self.lookup_direct(pdf_page_font_resource_name, resources) {
     Some(PdfDictionary(fonts)) => {
       let output : Array[@font.PdfMissingFontEntry] = Array::new(
@@ -103,7 +103,7 @@ fn PdfDocument::pdf_missing_fonts_on_page(
 pub fn PdfDocument::missing_fonts(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> Array[@font.PdfMissingFontEntry] raise PdfError {
+) -> Array[@font.PdfMissingFontEntry] raise @core.PdfError {
   let pages = self.pages_of_pagetree()
   pdf_page_box_validate_page_numbers(
     page_numbers,
@@ -128,7 +128,7 @@ pub fn PdfDocument::missing_fonts(
 pub fn pdf_missing_fonts(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> Array[@font.PdfMissingFontEntry] raise PdfError {
+) -> Array[@font.PdfMissingFontEntry] raise @core.PdfError {
   document.missing_fonts(page_numbers)
 }
 
@@ -144,7 +144,7 @@ fn pdf_missing_font_entry_tuple(
 pub fn PdfDocument::missing_fonts_return(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> Array[(Int, String, String, String, String)] raise PdfError {
+) -> Array[(Int, String, String, String, String)] raise @core.PdfError {
   [
     for entry in self.missing_fonts(page_numbers) => {
       pdf_missing_font_entry_tuple(entry)
@@ -157,7 +157,7 @@ pub fn PdfDocument::missing_fonts_return(
 pub fn pdf_missing_fonts_return(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> Array[(Int, String, String, String, String)] raise PdfError {
+) -> Array[(Int, String, String, String, String)] raise @core.PdfError {
   document.missing_fonts_return(page_numbers)
 }
 
@@ -210,7 +210,7 @@ fn pdf_missing_fonts_text_length(
 pub fn PdfDocument::missing_fonts_text(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let entries = self.missing_fonts(page_numbers)
   let output = Array::make(pdf_missing_fonts_text_length(entries), b'\x00')
   let mut position = 0
@@ -225,6 +225,6 @@ pub fn PdfDocument::missing_fonts_text(
 pub fn pdf_missing_fonts_text(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   document.missing_fonts_text(page_numbers)
 }

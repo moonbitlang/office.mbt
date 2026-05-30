@@ -1,8 +1,8 @@
 ///|
 fn pdf_add_filter_to_dictionary(
   dictionary : @syntax.PdfObject,
-  filter : PdfName,
-) -> @syntax.PdfObject raise PdfError {
+  filter : @core.PdfName,
+) -> @syntax.PdfObject raise @core.PdfError {
   let filter_object = @syntax.PdfNameObject(filter)
   match dictionary.lookup_immediate(pdf_filter_key()) {
     None => dictionary.add_dict_entry(pdf_filter_key(), filter_object)
@@ -27,11 +27,11 @@ fn pdf_add_filter_to_dictionary(
 /// When `only_if_smaller` is true, the original stream is returned if encoded
 /// data is not smaller than the original stream data.
 pub fn pdf_encode_stream_with_filter(
-  filter : PdfName,
+  filter : @core.PdfName,
   object : @syntax.PdfObject,
   only_if_smaller? : Bool = false,
   flate_level? : Int? = None,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   match object {
     PdfStreamObject(stream) => {
       let data = @syntax.pdf_stream_data_bytes(stream.data)
@@ -55,7 +55,10 @@ pub fn pdf_encode_stream_with_filter(
 }
 
 ///|
-fn pdf_encoded_stream_is_smaller(encoded : PdfBytes, data : PdfBytes) -> Bool {
+fn pdf_encoded_stream_is_smaller(
+  encoded : @core.PdfBytes,
+  data : @core.PdfBytes,
+) -> Bool {
   encoded.length() + 20 < data.length()
 }
 
@@ -91,7 +94,7 @@ fn pdf_ccitt_encoding_decodeparms(
 fn pdf_add_decodeparms_to_dictionary(
   dictionary : @syntax.PdfObject,
   decodeparms : @syntax.PdfObject,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   match dictionary.lookup_immediate(pdf_decodeparms_key()) {
     None => dictionary.add_dict_entry(pdf_decodeparms_key(), decodeparms)
     Some(PdfDictionary(_) as existing) =>
@@ -115,7 +118,7 @@ fn pdf_encode_stream_with_ccitt(
   k : Int,
   object : @syntax.PdfObject,
   only_if_smaller : Bool,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   match object {
     PdfStreamObject(stream) => {
       let data = @syntax.pdf_stream_data_bytes(stream.data)
@@ -151,7 +154,7 @@ fn pdf_encode_stream_with_ccitt(
 /// `/Length` is refreshed. `only_if_smaller` compares encoded data against the
 /// original stream data.
 pub fn pdf_encode_stream_with_filter_and_predictor(
-  filter : PdfName,
+  filter : @core.PdfName,
   predictor : Int,
   colors : Int,
   bits_per_component : Int,
@@ -159,7 +162,7 @@ pub fn pdf_encode_stream_with_filter_and_predictor(
   object : @syntax.PdfObject,
   only_if_smaller? : Bool = false,
   flate_level? : Int? = None,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   match object {
     PdfStreamObject(stream) => {
       let data = @syntax.pdf_stream_data_bytes(stream.data)
@@ -205,7 +208,7 @@ pub fn pdf_encode_stream_with_encoding(
   predictor? : PdfStreamPredictor? = None,
   predictor_columns? : Int = 1,
   flate_level? : Int? = None,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   let filter = encoding.filter_name()
   match encoding {
     PdfStreamCCITT(columns, rows) =>

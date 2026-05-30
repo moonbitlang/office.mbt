@@ -9,16 +9,16 @@ pub(all) enum PdfDrawJustification {
 ///|
 /// External graphics-state resource allocated while rendering draw operations.
 pub(all) struct PdfDrawExtGStateResource {
-  kind : PdfName
+  kind : @core.PdfName
   value : Double
-  name : PdfName
+  name : @core.PdfName
 } derive(Debug, Eq, ToJson)
 
 ///|
 /// XObject resource tracked while rendering draw operations.
 pub(all) struct PdfDrawXObjectResource {
   source_name : String
-  resource_name : PdfName
+  resource_name : @core.PdfName
   object_number : Int
 } derive(Debug, Eq, ToJson)
 
@@ -27,7 +27,7 @@ pub(all) struct PdfDrawXObjectResource {
 pub(all) struct PdfDrawFontResource {
   identifier : String
   font_index : Int
-  resource_name : PdfName
+  resource_name : @core.PdfName
   object_number : Int
 } derive(Debug, Eq, ToJson)
 
@@ -77,7 +77,7 @@ pub(all) struct PdfDrawRenderState {
   mut auto_tag : Bool
   mut structure_page_number : Int
   structure_data : Array[PdfDrawStructureData]
-  page_names : Array[PdfName]
+  page_names : Array[@core.PdfName]
 } derive(Debug, Eq, ToJson)
 
 ///|
@@ -120,7 +120,7 @@ pub fn PdfDocument::draw_special_text_context(
   bates? : Int = 1,
   bates_pad? : Int? = None,
   time? : @date.PdfStrftimeTime? = None,
-) -> PdfDrawSpecialTextContext raise PdfError {
+) -> PdfDrawSpecialTextContext raise @core.PdfError {
   let resolved_time = match time {
     Some(value) => value
     None => @date.pdf_strftime_dummy_time()
@@ -146,7 +146,7 @@ pub fn pdf_draw_special_text_context_for_document(
   bates? : Int = 1,
   bates_pad? : Int? = None,
   time? : @date.PdfStrftimeTime? = None,
-) -> PdfDrawSpecialTextContext raise PdfError {
+) -> PdfDrawSpecialTextContext raise @core.PdfError {
   document.draw_special_text_context(
     page_number,
     filename~,

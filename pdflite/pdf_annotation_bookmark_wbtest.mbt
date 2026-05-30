@@ -6,13 +6,13 @@ test "private annotation and bookmark guards report malformed roots" {
   let annotation_rest : Result[@syntax.PdfObject, Error] = try? pdf_annotation_rest(
     PdfInteger(1),
   )
-  guard annotation_rest is Err(PdfError::DictionaryExpected) else {
-    fail("expected PdfError::DictionaryExpected")
+  guard annotation_rest is Err(@core.PdfError::DictionaryExpected) else {
+    fail("expected @core.PdfError::DictionaryExpected")
   }
   let doc = pdf_document_empty()
   let outlines : Result[Bool, Error] = try? doc.pdf_bookmark_has_outlines()
-  guard outlines is Err(PdfError::RootExpected) else {
-    fail("expected PdfError::RootExpected")
+  guard outlines is Err(@core.PdfError::RootExpected) else {
+    fail("expected @core.PdfError::RootExpected")
   }
   let output : Array[@bookmark.PdfBookmark] = []
   let recursion : Result[Unit, Error] = try? doc.pdf_bookmark_traverse_siblings(
@@ -22,7 +22,7 @@ test "private annotation and bookmark guards report malformed roots" {
     output,
     10001,
   )
-  guard recursion is Err(PdfError::PageTreeExpected) else {
-    fail("expected PdfError::PageTreeExpected")
+  guard recursion is Err(@core.PdfError::PageTreeExpected) else {
+    fail("expected @core.PdfError::PageTreeExpected")
   }
 }

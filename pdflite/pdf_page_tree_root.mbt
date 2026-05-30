@@ -1,11 +1,11 @@
 ///|
 fn pdf_page_root_entries_without_catalog_keys(
   object : @syntax.PdfObject,
-) -> Array[(PdfName, @syntax.PdfObject)] raise PdfError {
+) -> Array[(@core.PdfName, @syntax.PdfObject)] raise @core.PdfError {
   match object {
     PdfNull => []
     PdfDictionary(entries) => {
-      let output : Array[(PdfName, @syntax.PdfObject)] = Array::new(
+      let output : Array[(@core.PdfName, @syntax.PdfObject)] = Array::new(
         capacity=entries.length(),
       )
       for entry in entries {
@@ -29,8 +29,8 @@ fn pdf_page_root_entries_without_catalog_keys(
 pub fn PdfDocument::add_root(
   self : PdfDocument,
   page_root_number : Int,
-  extras : ArrayView[(PdfName, @syntax.PdfObject)],
-) -> Int raise PdfError {
+  extras : ArrayView[(@core.PdfName, @syntax.PdfObject)],
+) -> Int raise @core.PdfError {
   let mut root = @syntax.PdfDictionary([
     (pdf_page_type_key(), PdfNameObject(pdf_page_type_catalog())),
     (pdf_page_pages_key(), PdfIndirect(page_root_number)),
@@ -63,9 +63,9 @@ pub fn PdfDocument::add_root(
 /// Copy a document, add a catalog root, and return the copy.
 pub fn pdf_add_root(
   page_root_number : Int,
-  extras : ArrayView[(PdfName, @syntax.PdfObject)],
+  extras : ArrayView[(@core.PdfName, @syntax.PdfObject)],
   document : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let pdf = document.copy()
   ignore(pdf.add_root(page_root_number, extras))
   pdf
@@ -73,7 +73,7 @@ pub fn pdf_add_root(
 
 ///|
 /// Build the smallest useful PDF document: one blank A4 page and a catalog.
-pub fn pdf_minimum_valid_pdf() -> PdfDocument raise PdfError {
+pub fn pdf_minimum_valid_pdf() -> PdfDocument raise @core.PdfError {
   let document = pdf_document_empty()
   let page_root_number = document.add_pagetree([
     @page.pdf_page_blank(@geometry.paper_a4),

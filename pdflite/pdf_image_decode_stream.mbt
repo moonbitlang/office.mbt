@@ -11,7 +11,7 @@ fn PdfDocument::pdf_image_decode_stream_stages(
   self : PdfDocument,
   current : @syntax.PdfStream,
   stages : Int,
-) -> PdfImageDecodedStream raise PdfError {
+) -> PdfImageDecodedStream raise @core.PdfError {
   match self.pdf_stream_first_filter_direct(current.dictionary) {
     Some(filter) if filter == pdf_image_dctdecode_name() ||
       filter == pdf_image_dct_name() => PdfImageDctStream(current)
@@ -36,7 +36,7 @@ fn PdfDocument::pdf_image_decode_stream_stages(
 fn PdfDocument::pdf_image_decode_to_image(
   self : PdfDocument,
   image : @syntax.PdfObject,
-) -> PdfImageDecodedStream raise PdfError {
+) -> PdfImageDecodedStream raise @core.PdfError {
   let current = match self.direct(image) {
     PdfStreamObject(stream) => stream
     _ => raise ParseStreamExpected

@@ -1,10 +1,10 @@
 ///|
-fn writer_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
-  try! @pdflite.pdf_bytes_of_int_array(values)
+fn writer_bytes_for_test(values : ArrayView[Int]) -> @core.PdfBytes {
+  try! @core.pdf_bytes_of_int_array(values)
 }
 
 ///|
-fn writer_ascii_for_test(text : String) -> @pdflite.PdfBytes {
+fn writer_ascii_for_test(text : String) -> @core.PdfBytes {
   @ascii.encode(text)
 }
 
@@ -30,7 +30,7 @@ fn writer_secret_object_for_test(text : String) -> @syntax.PdfObject {
 ///|
 fn writer_secret_document_for_test(
   text : String,
-) -> @pdflite.PdfDocument raise @pdflite.PdfError {
+) -> @pdflite.PdfDocument raise @core.PdfError {
   let document = @pdflite.pdf_minimum_valid_pdf()
   document.add_object_given_number(40, writer_secret_object_for_test(text))
   document
@@ -48,7 +48,7 @@ fn writer_unwrap_decryption_for_test(
 
 ///|
 fn writer_assert_encrypted_secret_for_test(
-  rendered : @pdflite.PdfBytes,
+  rendered : @core.PdfBytes,
   owner_password : String,
   denied : Array[@crypt_core.PdfPermission],
   text : String,
@@ -69,8 +69,8 @@ fn writer_assert_encrypted_secret_for_test(
 
 ///|
 fn writer_concat_bytes_for_test(
-  parts : ArrayView[@pdflite.PdfBytes],
-) -> @pdflite.PdfBytes {
+  parts : ArrayView[@core.PdfBytes],
+) -> @core.PdfBytes {
   let output : Array[Byte] = []
   for part in parts {
     for byte in part {
@@ -81,14 +81,14 @@ fn writer_concat_bytes_for_test(
 }
 
 ///|
-fn writer_name_for_test(values : ArrayView[Int]) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(writer_bytes_for_test(values))
+fn writer_name_for_test(values : ArrayView[Int]) -> @core.PdfName {
+  @core.pdf_name_of_bytes(writer_bytes_for_test(values))
 }
 
 ///|
 fn writer_bytes_start_with_at(
-  haystack : @pdflite.PdfBytes,
-  needle : @pdflite.PdfBytes,
+  haystack : @core.PdfBytes,
+  needle : @core.PdfBytes,
   start : Int,
 ) -> Bool {
   for i in 0..<needle.length() {
@@ -101,10 +101,7 @@ fn writer_bytes_start_with_at(
 }
 
 ///|
-fn writer_find_bytes(
-  haystack : @pdflite.PdfBytes,
-  needle : @pdflite.PdfBytes,
-) -> Int {
+fn writer_find_bytes(haystack : @core.PdfBytes, needle : @core.PdfBytes) -> Int {
   if needle.length() == 0 {
     0
   } else if haystack.length() < needle.length() {
@@ -123,8 +120,8 @@ fn writer_find_bytes(
 
 ///|
 fn writer_find_bytes_from(
-  haystack : @pdflite.PdfBytes,
-  needle : @pdflite.PdfBytes,
+  haystack : @core.PdfBytes,
+  needle : @core.PdfBytes,
   start_at : Int,
 ) -> Int {
   if needle.length() == 0 {
@@ -396,7 +393,7 @@ test "pdf_write_indirect_object adds owned stream length" {
 
 ///|
 test "pdf_write_object materializes deferred stream data" {
-  let cursor = @pdflite.byte_cursor_of_bytes(
+  let cursor = @core.byte_cursor_of_bytes(
     writer_bytes_for_test([65, 72, 105, 90]),
   )
   let object = @syntax.pdf_stream(
@@ -586,12 +583,12 @@ test "pdf_write_document_incremental_update writes only changed classic objects"
 ///|
 test "pdf_write_document_incremental_update rejects originals without startxref" {
   let document = @pdflite.pdf_document_empty()
-  let result : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_write_document_incremental_update(
+  let result : Result[@core.PdfBytes, Error] = try? @pdflite.pdf_write_document_incremental_update(
     writer_ascii_for_test("%PDF-1.4\n%%EOF\n"),
     document,
   )
-  guard result is Err(@pdflite.PdfError::StartXRefExpected) else {
-    fail("expected @pdflite.PdfError::StartXRefExpected")
+  guard result is Err(@core.PdfError::StartXRefExpected) else {
+    fail("expected @core.PdfError::StartXRefExpected")
   }
 }
 
@@ -1151,7 +1148,7 @@ test "pdf_write_document_options dispatches encryption methods" {
 test "pdf_write_document_options reports missing AES providers" {
   let user = writer_ascii_for_test("user")
   let owner = writer_ascii_for_test("owner")
-  let aesv2_missing_iv : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_write_document_options(
+  let aesv2_missing_iv : Result[@core.PdfBytes, Error] = try? @pdflite.pdf_write_document_options(
     try! writer_secret_document_for_test("options-missing-iv"),
     encryption=Some(
       @writer.pdf_write_encryption(PdfEncryptionAES128(true), user, owner, []),
@@ -1161,7 +1158,7 @@ test "pdf_write_document_options reports missing AES providers" {
     fail("expected missing AES IV provider to raise")
   }
 
-  let aesv3_missing_random : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_write_document_options(
+  let aesv3_missing_random : Result[@core.PdfBytes, Error] = try? @pdflite.pdf_write_document_options(
     try! writer_secret_document_for_test("options-missing-random"),
     encryption=Some(
       @writer.pdf_write_encryption(PdfEncryptionAES256(true), user, owner, []),

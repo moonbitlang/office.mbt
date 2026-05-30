@@ -1,10 +1,10 @@
 ///|
 /// Append an incremental update using the selected xref representation.
 pub fn pdf_write_document_incremental_update_with_mode(
-  original : PdfBytes,
+  original : @core.PdfBytes,
   document : PdfDocument,
   mode : @writer.PdfWriteMode,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   match mode {
     PdfWriteClassic => pdf_write_document_incremental_update(original, document)
     PdfWriteXRefStream =>
@@ -22,11 +22,11 @@ pub fn pdf_write_document_incremental_update_with_mode(
 /// The generated ID is based on `path` and current document state and is
 /// applied to a copy of the document before writing.
 pub fn pdf_write_document_incremental_update_with_generated_id(
-  original : PdfBytes,
+  original : @core.PdfBytes,
   document : PdfDocument,
   path : String,
   mode? : @writer.PdfWriteMode = PdfWriteClassic,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_write_document_incremental_update_with_mode(
     original,
     document.copy_with_current_id(path),
@@ -39,7 +39,7 @@ pub fn pdf_write_document_incremental_update_with_generated_id(
 pub fn pdf_write_document_with_mode(
   document : PdfDocument,
   mode : @writer.PdfWriteMode,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   match mode {
     PdfWriteClassic => pdf_write_document(document)
     PdfWriteXRefStream => pdf_write_document_with_xref_stream(document)
@@ -56,6 +56,6 @@ pub fn pdf_write_document_with_generated_id(
   document : PdfDocument,
   path : String,
   mode? : @writer.PdfWriteMode = PdfWriteClassic,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_write_document_with_mode(document.copy_with_current_id(path), mode)
 }

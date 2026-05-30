@@ -1,6 +1,6 @@
 ///|
 #warnings("-unused_value")
-fn reader_classic_pdf_with_prev_xref() -> @pdflite.PdfBytes {
+fn reader_classic_pdf_with_prev_xref() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   let original_offset = output.length()
@@ -29,7 +29,7 @@ fn reader_classic_pdf_with_prev_xref() -> @pdflite.PdfBytes {
 
 ///|
 #warnings("-unused_value")
-fn reader_classic_pdf_with_prev_deleted_object() -> @pdflite.PdfBytes {
+fn reader_classic_pdf_with_prev_deleted_object() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   let original_offset = output.length()
@@ -53,7 +53,7 @@ fn reader_classic_pdf_with_prev_deleted_object() -> @pdflite.PdfBytes {
 
 ///|
 #warnings("-unused_value")
-fn reader_classic_catalog_pdf_with_prev_xref_bad_startxref() -> @pdflite.PdfBytes {
+fn reader_classic_catalog_pdf_with_prev_xref_bad_startxref() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   let original_offset = reader_push_indirect_object(

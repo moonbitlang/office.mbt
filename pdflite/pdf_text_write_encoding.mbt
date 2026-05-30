@@ -3,11 +3,11 @@
 ///
 /// Currently this supports `/Differences` over an implicit base encoding, which
 /// is the form needed by the font writer. Unsupported encodings raise
-/// `PdfError::EncodingWriteUnsupported`.
+/// `@core.PdfError::EncodingWriteUnsupported`.
 pub fn PdfDocument::write_encoding(
   self : PdfDocument,
   encoding : PdfEncoding,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   match encoding {
     PdfCustomEncoding(PdfImplicitInFontFile, differences) => {
       let values : Array[@syntax.PdfObject] = Array::new(
@@ -32,11 +32,11 @@ pub fn PdfDocument::write_encoding(
 /// Build a simple Type 1 font dictionary for a base font and named encoding.
 ///
 /// Only encodings with a direct PDF name can be written this way; custom or
-/// implicit encodings raise `PdfError::EncodingWriteUnsupported`.
+/// implicit encodings raise `@core.PdfError::EncodingWriteUnsupported`.
 pub fn pdf_make_font(
-  fontname : PdfName,
+  fontname : @core.PdfName,
   encoding : PdfEncoding,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   match encoding.pdf_name() {
     Some(encoding_name) =>
       PdfDictionary([

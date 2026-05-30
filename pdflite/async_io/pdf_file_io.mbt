@@ -62,10 +62,10 @@ pub async fn pdf_ocg_replace(
   document : @pdflite.PdfDocument,
 ) -> @pdflite.PdfDocument {
   let text = @utf8.decode(@fs.read_file(filename).binary()) catch {
-    _ => raise @pdflite.PdfError::SoftError("ocg_replace: malformed JSON")
+    _ => raise @core.PdfError::SoftError("ocg_replace: malformed JSON")
   }
   let json = @json.parse(text) catch {
-    _ => raise @pdflite.PdfError::SoftError("ocg_replace: malformed JSON")
+    _ => raise @core.PdfError::SoftError("ocg_replace: malformed JSON")
   }
   @pdflite.pdf_ocg_replace_json(json, document)
 }

@@ -1,7 +1,7 @@
 ///|
 fn pdf_content_op_section(
   op : @content.PdfContentOp,
-) -> (Array[@syntax.PdfObject], PdfBytes) {
+) -> (Array[@syntax.PdfObject], @core.PdfBytes) {
   match op {
     Op_w(width) => ([pdf_content_number_object(width)], pdf_content_ascii("w"))
     Op_J(cap) => ([PdfInteger(cap)], pdf_content_ascii("J"))

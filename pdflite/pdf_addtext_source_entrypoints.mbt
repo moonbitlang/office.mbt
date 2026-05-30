@@ -1,7 +1,7 @@
 ///|
 fn pdf_addtext_resolve_font_source(
   source : PdfAddTextFontSource,
-) -> (PdfFont?, PdfFontPack?) raise PdfError {
+) -> (PdfFont?, PdfFontPack?) raise @core.PdfError {
   match source {
     PdfAddTextPreMadeFontPack(pack) =>
       if pack.fonts.length() == 0 {
@@ -22,7 +22,7 @@ pub fn PdfDocument::addtexts_with_source(
   time : @date.PdfStrftimeTime,
   bookmarks : ArrayView[@bookmark.PdfBookmark],
   font_source : PdfAddTextFontSource,
-  fontname : PdfName,
+  fontname : @core.PdfName,
   font_size : Double,
   line_spacing : Double,
   colour : @colour.PdfContentColour,
@@ -30,7 +30,7 @@ pub fn PdfDocument::addtexts_with_source(
   filename? : String = "",
   bates? : Int = 1,
   bates_pad? : Int? = None,
-  relative_to_box? : PdfName = pdf_page_mediabox_key(),
+  relative_to_box? : @core.PdfName = pdf_page_mediabox_key(),
   shift? : String = "0 0",
   opacity? : Double = 1.0,
   justification? : @addtext.PdfAddTextJustification = PdfAddTextLeftJustify,
@@ -43,7 +43,7 @@ pub fn PdfDocument::addtexts_with_source(
   fast? : Bool = false,
   raw? : Bool = false,
   url_border? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   if page_numbers.length() == 0 {
     self
   } else {
@@ -103,7 +103,7 @@ pub fn pdf_addtexts_with_source(
   time : @date.PdfStrftimeTime,
   bookmarks : ArrayView[@bookmark.PdfBookmark],
   font_source : PdfAddTextFontSource,
-  fontname : PdfName,
+  fontname : @core.PdfName,
   font_size : Double,
   line_spacing : Double,
   colour : @colour.PdfContentColour,
@@ -111,7 +111,7 @@ pub fn pdf_addtexts_with_source(
   filename? : String = "",
   bates? : Int = 1,
   bates_pad? : Int? = None,
-  relative_to_box? : PdfName = pdf_page_mediabox_key(),
+  relative_to_box? : @core.PdfName = pdf_page_mediabox_key(),
   shift? : String = "0 0",
   opacity? : Double = 1.0,
   justification? : @addtext.PdfAddTextJustification = PdfAddTextLeftJustify,
@@ -124,7 +124,7 @@ pub fn pdf_addtexts_with_source(
   fast? : Bool = false,
   raw? : Bool = false,
   url_border? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.addtexts_with_source(
     page_numbers,
     text,

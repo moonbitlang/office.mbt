@@ -1,6 +1,6 @@
 ///|
 fn pdf_text_tounicode_has_charcode(
-  entries : ArrayView[(Int, PdfBytes)],
+  entries : ArrayView[(Int, @core.PdfBytes)],
   code : Int,
 ) -> Bool {
   for entry in entries {
@@ -14,10 +14,10 @@ fn pdf_text_tounicode_has_charcode(
 
 ///|
 fn pdf_text_compose_tounicode_entries(
-  current : ArrayView[(Int, PdfBytes)],
-  inherited : ArrayView[(Int, PdfBytes)],
-) -> Array[(Int, PdfBytes)] {
-  let output : Array[(Int, PdfBytes)] = Array::new(
+  current : ArrayView[(Int, @core.PdfBytes)],
+  inherited : ArrayView[(Int, @core.PdfBytes)],
+) -> Array[(Int, @core.PdfBytes)] {
+  let output : Array[(Int, @core.PdfBytes)] = Array::new(
     capacity=current.length() + inherited.length(),
   )
   let seen : @hashmap.HashMap[Int, Bool] = HashMap([])

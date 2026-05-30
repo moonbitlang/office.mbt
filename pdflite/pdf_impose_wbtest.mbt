@@ -4,8 +4,8 @@ fn impose_box_for_test(width : Double, height : Double) -> @syntax.PdfObject {
 }
 
 ///|
-fn impose_name_for_test(text : String) -> PdfName {
-  pdf_name_of_bytes(@ascii.encode(text))
+fn impose_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -76,7 +76,7 @@ fn impose_transforms_for_test(
   fit_extra_hspace? : Double = 0.0,
   fit_extra_vspace? : Double = 0.0,
   count? : Int = 3,
-) -> Array[@geometry.TransformMatrix] raise PdfError {
+) -> Array[@geometry.TransformMatrix] raise @core.PdfError {
   pdf_document_empty().pdf_impose_transforms(
     fit,
     x,
@@ -97,7 +97,7 @@ fn impose_transforms_for_test(
 ///|
 fn impose_content_stream_for_test(
   ops : ArrayView[@content.PdfContentOp],
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   pdf_content_stream_of_ops(ops)
 }
 
@@ -105,7 +105,7 @@ fn impose_content_stream_for_test(
 fn impose_content_ops_for_test(
   document : PdfDocument,
   content : ArrayView[@syntax.PdfObject],
-) -> Array[@content.PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise @core.PdfError {
   document.parse_content_ops_with_resources(PdfDictionary([]), content)
 }
 
@@ -117,7 +117,7 @@ fn impose_page_for_test(
   rotate? : @page.PdfPageRotation = Rotate0,
   width? : Double = 100.0,
   height? : Double = 100.0,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   {
     content: [pdf_content_stream_of_ops(ops)],
     mediabox: impose_box_for_test(width, height),
@@ -130,7 +130,7 @@ fn impose_page_for_test(
 ///|
 fn impose_document_for_test(
   pages : ArrayView[@page.PdfPage],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   pdf_blank_document(100.0, 100.0, pages.length()).change_pages(pages)
 }
 
@@ -138,7 +138,7 @@ fn impose_document_for_test(
 fn impose_page_content_ops_for_test(
   document : PdfDocument,
   page : @page.PdfPage,
-) -> Array[@content.PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise @core.PdfError {
   document.parse_content_ops_with_resources(page.resources, page.content)
 }
 
@@ -263,7 +263,9 @@ test "pdf_impose_layout calculates fit sheets and spacing" {
   )
   guard too_small
     is Err(
-      PdfError::BadNumberArgument("impose: not even a single page would fit")
+      @core.PdfError::BadNumberArgument(
+        "impose: not even a single page would fit"
+      )
     ) else {
     fail("expected fit layout to reject too-small output")
   }
@@ -320,7 +322,9 @@ test "pdf_impose_layout calculates non-fit stacks and output boxes" {
   )
   guard bad_zero
     is Err(
-      PdfError::BadNumberArgument("impose-xy: both dimensions cannot be zero")
+      @core.PdfError::BadNumberArgument(
+        "impose-xy: both dimensions cannot be zero"
+      )
     ) else {
     fail("expected non-fit layout to reject zero dimensions")
   }
@@ -526,7 +530,7 @@ test "PdfDocument impose rejects empty input" {
   let document = try! pdf_blank_document(10.0, 10.0, 0)
   let result : Result[PdfDocument, Error] = try? document.impose(1.0, 1.0)
   guard result
-    is Err(PdfError::BadNumberArgument("impose: pages must not be empty")) else {
+    is Err(@core.PdfError::BadNumberArgument("impose: pages must not be empty")) else {
     fail("expected impose to reject empty documents")
   }
 }
@@ -608,7 +612,9 @@ test "pdf_impose_transforms rejects invalid grids and margins" {
     x=0,
   )
   guard bad_grid
-    is Err(PdfError::BadNumberArgument("impose: x and y must be positive")) else {
+    is Err(
+      @core.PdfError::BadNumberArgument("impose: x and y must be positive")
+    ) else {
     fail("expected BadNumberArgument for non-positive imposition grid")
   }
 
@@ -622,7 +628,9 @@ test "pdf_impose_transforms rejects invalid grids and margins" {
     count=1,
   )
   guard bad_margin
-    is Err(PdfError::BadNumberArgument("impose: margin would fill whole page")) else {
+    is Err(
+      @core.PdfError::BadNumberArgument("impose: margin would fill whole page")
+    ) else {
     fail("expected BadNumberArgument for over-large imposition margin")
   }
 }
@@ -976,7 +984,7 @@ test "pdf_impose_pages_core rejects empty page sets" {
     0.0,
   )
   guard result
-    is Err(PdfError::BadNumberArgument("impose: pages must not be empty")) else {
+    is Err(@core.PdfError::BadNumberArgument("impose: pages must not be empty")) else {
     fail("expected BadNumberArgument for empty imposition page set")
   }
 }

@@ -79,13 +79,13 @@ test "PdfDocument copy preserves parser-private object states" {
 
 ///|
 test "PdfDocument stream decompression preserves already-decrypted state" {
-  let length = pdf_name_of_bytes(@ascii.encode("/Length"))
-  let filter = pdf_name_of_bytes(@ascii.encode("/Filter"))
+  let length = @core.pdf_name_of_bytes(@ascii.encode("/Length"))
+  let filter = @core.pdf_name_of_bytes(@ascii.encode("/Filter"))
   let encoded = @codec.pdf_ascii_hex_encode(@ascii.encode("Hi"))
   let stream = @syntax.pdf_stream(
     @syntax.pdf_dictionary([
       (length, PdfInteger(encoded.length())),
-      (filter, PdfNameObject(pdf_name_of_bytes(@ascii.encode("/AHx")))),
+      (filter, PdfNameObject(@core.pdf_name_of_bytes(@ascii.encode("/AHx")))),
     ]),
     StreamGot(encoded),
   )
@@ -126,7 +126,7 @@ test "PdfDocument renumbering preserves parser object-stream hints" {
 
 ///|
 test "PdfDocument ARC4 crypt preserves parser-private object states" {
-  let key = try! pdf_bytes_of_int_array([1, 2, 3, 4, 5])
+  let key = try! @core.pdf_bytes_of_int_array([1, 2, 3, 4, 5])
   let doc = pdf_document_empty()
   doc.objects.set_entry(
     1,

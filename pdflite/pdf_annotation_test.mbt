@@ -1,6 +1,6 @@
 ///|
-fn annotation_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn annotation_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -180,12 +180,12 @@ test "PdfDocument list_annotations renders selected non-empty old-style lines" {
     try! document.list_annotations([2], encoding=PdfMetadataRaw),
     @ascii.encode("Page 2: second\n"),
   )
-  let bad_page : Result[@pdflite.PdfBytes, Error] = try? document.list_annotations(
+  let bad_page : Result[@core.PdfBytes, Error] = try? document.list_annotations(
     [3],
     encoding=PdfMetadataRaw,
   )
-  guard bad_page is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
-    fail("expected @pdflite.PdfError::BadPageSpecification")
+  guard bad_page is Err(@core.PdfError::BadPageSpecification(_)) else {
+    fail("expected @core.PdfError::BadPageSpecification")
   }
 }
 
@@ -258,8 +258,8 @@ test "PdfDocument annotations_json exports cpdf annotation rows" {
     Json::array([annotation_json_header_for_test()]),
   )
   let bad_page : Result[Json, Error] = try? document.annotations_json([3])
-  guard bad_page is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
-    fail("expected @pdflite.PdfError::BadPageSpecification")
+  guard bad_page is Err(@core.PdfError::BadPageSpecification(_)) else {
+    fail("expected @core.PdfError::BadPageSpecification")
   }
 }
 
@@ -361,14 +361,14 @@ test "PdfDocument set_annotations_json reports malformed annotation JSON" {
   let bad_top_level : Result[@pdflite.PdfDocument, Error] = try? target.set_annotations_json(
     Json::object(Map([])),
   )
-  guard bad_top_level is Err(@pdflite.PdfError::SoftError(_)) else {
-    fail("expected @pdflite.PdfError::SoftError for annotation JSON top level")
+  guard bad_top_level is Err(@core.PdfError::SoftError(_)) else {
+    fail("expected @core.PdfError::SoftError for annotation JSON top level")
   }
   let malformed_row : Result[@pdflite.PdfDocument, Error] = try? target.set_annotations_json(
     Json::array([Json::array([Json::string("bad")])]),
   )
-  guard malformed_row is Err(@pdflite.PdfError::SoftError(_)) else {
-    fail("expected @pdflite.PdfError::SoftError for annotation JSON row")
+  guard malformed_row is Err(@core.PdfError::SoftError(_)) else {
+    fail("expected @core.PdfError::SoftError for annotation JSON row")
   }
 }
 
@@ -399,8 +399,8 @@ test "PdfDocument remove_annotations removes selected page arrays" {
       3,
     ],
   )
-  guard bad_page is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
-    fail("expected @pdflite.PdfError::BadPageSpecification")
+  guard bad_page is Err(@core.PdfError::BadPageSpecification(_)) else {
+    fail("expected @core.PdfError::BadPageSpecification")
   }
 }
 
@@ -576,8 +576,8 @@ test "PdfDocument annotation APIs report malformed annotation dictionaries" {
   let missing_rect : Result[@annotation.PdfAnnotation, Error] = try? doc.read_annotation(
     PdfDictionary([]),
   )
-  guard missing_rect is Err(@pdflite.PdfError::RectangleExpected) else {
-    fail("expected @pdflite.PdfError::RectangleExpected")
+  guard missing_rect is Err(@core.PdfError::RectangleExpected) else {
+    fail("expected @core.PdfError::RectangleExpected")
   }
   let bad_rest = {
     ..@annotation.pdf_annotation_make(AnnotationText),
@@ -587,8 +587,8 @@ test "PdfDocument annotation APIs report malformed annotation dictionaries" {
     @page.pdf_page_blank(@geometry.paper_a4),
     bad_rest,
   )
-  guard bad_rest_result is Err(@pdflite.PdfError::DictionaryExpected) else {
-    fail("expected @pdflite.PdfError::DictionaryExpected")
+  guard bad_rest_result is Err(@core.PdfError::DictionaryExpected) else {
+    fail("expected @core.PdfError::DictionaryExpected")
   }
   let bad_annots_result : Result[@page.PdfPage, Error] = try? doc.add_annotation(
     {
@@ -597,8 +597,8 @@ test "PdfDocument annotation APIs report malformed annotation dictionaries" {
     },
     @annotation.pdf_annotation_make(AnnotationText),
   )
-  guard bad_annots_result is Err(@pdflite.PdfError::DictionaryExpected) else {
-    fail("expected @pdflite.PdfError::DictionaryExpected")
+  guard bad_annots_result is Err(@core.PdfError::DictionaryExpected) else {
+    fail("expected @core.PdfError::DictionaryExpected")
   }
 }
 
@@ -608,7 +608,7 @@ test "PdfDocument add_annotation writes subtype names for annotation variants" {
   let key_subtype = annotation_name_for_test("/Subtype")
   let custom_name = annotation_name_for_test("/Custom")
   let popup_parent = @annotation.pdf_annotation_make(AnnotationText)
-  let cases : Array[(@annotation.PdfAnnotationSubtype, @pdflite.PdfName)] = [
+  let cases : Array[(@annotation.PdfAnnotationSubtype, @core.PdfName)] = [
     (AnnotationText, annotation_name_for_test("/Text")),
     (AnnotationLink, annotation_name_for_test("/Link")),
     (AnnotationFreeText, annotation_name_for_test("/FreeText")),
@@ -668,9 +668,7 @@ test "PdfDocument read_annotation maps subtype names and border styles" {
     PdfInteger(1),
     PdfInteger(1),
   ])
-  let subtype_cases : Array[
-    (@pdflite.PdfName, @annotation.PdfAnnotationSubtype),
-  ] = [
+  let subtype_cases : Array[(@core.PdfName, @annotation.PdfAnnotationSubtype)] = [
     (annotation_name_for_test("/Text"), AnnotationText),
     (annotation_name_for_test("/FreeText"), AnnotationFreeText),
     (annotation_name_for_test("/Stamp"), AnnotationStamp),
@@ -728,7 +726,7 @@ test "PdfDocument read_annotation maps subtype names and border styles" {
     )).subtype,
     AnnotationUnknown(annotation_name_for_test("")),
   )
-  let style_cases : Array[(@pdflite.PdfName, @annotation.PdfAnnotationStyle)] = [
+  let style_cases : Array[(@core.PdfName, @annotation.PdfAnnotationStyle)] = [
     (annotation_name_for_test("/S"), AnnotationSolid),
     (annotation_name_for_test("/D"), AnnotationDashed),
     (annotation_name_for_test("/B"), AnnotationBeveled),

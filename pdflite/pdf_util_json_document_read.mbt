@@ -1,8 +1,8 @@
 ///|
 fn pdf_util_cpdfjson_integer_field(
   object : @syntax.PdfObject,
-  key : PdfName,
-) -> Int raise PdfError {
+  key : @core.PdfName,
+) -> Int raise @core.PdfError {
   match object.lookup_immediate(key) {
     Some(PdfInteger(value)) => value
     _ => raise BadText
@@ -12,7 +12,7 @@ fn pdf_util_cpdfjson_integer_field(
 ///|
 fn pdf_util_cpdfjson_check_stream_data(
   params : @syntax.PdfObject,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   match params.lookup_immediate(pdf_util_cpdfjson_stream_data_included_key()) {
     Some(PdfBoolean(false)) => raise BadText
     _ => ()
@@ -22,7 +22,7 @@ fn pdf_util_cpdfjson_check_stream_data(
 ///|
 fn pdf_util_cpdfjson_root_number(
   trailer : @syntax.PdfObject,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   match trailer {
     PdfDictionary(_) =>
       match trailer.lookup_immediate(pdf_util_cpdfjson_root_key()) {
@@ -34,7 +34,7 @@ fn pdf_util_cpdfjson_root_number(
 }
 
 ///|
-fn pdf_util_cpdfjson_item_number(json : Json) -> Int raise PdfError {
+fn pdf_util_cpdfjson_item_number(json : Json) -> Int raise @core.PdfError {
   match json {
     Number(value, repr=_) => pdf_util_json_integral_number(value)
     _ => raise BadText
@@ -47,7 +47,7 @@ fn pdf_util_cpdfjson_read_item(
   params : Ref[@syntax.PdfObject],
   trailer : Ref[@syntax.PdfObject],
   objects : Array[(Int, @syntax.PdfObject)],
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   match json {
     Array([number_json, object_json]) => {
       let number = pdf_util_cpdfjson_item_number(number_json)
@@ -70,7 +70,7 @@ fn pdf_util_cpdfjson_read_item(
 /// object numbers populate the document object table, and other negative
 /// object numbers are ignored. `/CPDFJSONstreamdataincluded false` is rejected
 /// because the stream bytes needed for reconstruction are not present.
-pub fn pdf_document_of_json(json : Json) -> PdfDocument raise PdfError {
+pub fn pdf_document_of_json(json : Json) -> PdfDocument raise @core.PdfError {
   let items = match json {
     Array(values) => values
     _ => raise BadText
@@ -110,7 +110,7 @@ pub fn pdf_document_of_json(json : Json) -> PdfDocument raise PdfError {
 /// `Cpdfjson.of_input`.
 pub fn pdf_document_of_json_blob(
   data : BytesView,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let text = @utf8.decode(data) catch { _ => raise BadText }
   let json = @json.parse(text) catch { _ => raise BadText }
   pdf_document_of_json(json)

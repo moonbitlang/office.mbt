@@ -1,10 +1,10 @@
 ///|
-fn ocg_wb_name(text : String) -> PdfName {
-  pdf_name_of_bytes(@ascii.encode(text))
+fn ocg_wb_name(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
-fn ocg_wb_text(text : String) -> PdfBytes {
+fn ocg_wb_text(text : String) -> @core.PdfBytes {
   @ascii.encode(text)
 }
 
@@ -93,7 +93,7 @@ test "private OCG usage reader covers partial dictionaries" {
       ]),
     ),
     {
-      creator_info: Some((ocg_wb_text("tool"), pdf_name_of_bytes([]))),
+      creator_info: Some((ocg_wb_text("tool"), @core.pdf_name_of_bytes([]))),
       language: None,
       export_state: None,
       zoom_min: None,
@@ -126,7 +126,7 @@ test "private OCG individual and public reader guard malformed roots" {
   let missing_name : Result[@ocg.PdfOcg, Error] = try? doc.pdf_ocg_read_individual(
     PdfDictionary([]),
   )
-  guard missing_name is Err(PdfError::DictionaryKeyNotFound(_)) else {
+  guard missing_name is Err(@core.PdfError::DictionaryKeyNotFound(_)) else {
     fail("expected missing name")
   }
   @test.assert_eq(
@@ -148,7 +148,7 @@ test "private OCG individual and public reader guard malformed roots" {
     ]),
   )
   let missing_default : Result[@ocg.PdfOptionalContent?, Error] = try? root_doc.read_optional_content_groups()
-  guard missing_default is Err(PdfError::DictionaryKeyNotFound(_)) else {
+  guard missing_default is Err(@core.PdfError::DictionaryKeyNotFound(_)) else {
     fail("expected missing default config")
   }
 }

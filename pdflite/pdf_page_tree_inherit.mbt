@@ -14,7 +14,7 @@ fn PdfDocument::pdf_page_inherited_rotation(
   self : PdfDocument,
   node : @syntax.PdfObject,
   inherited : @page.PdfPageRotation,
-) -> @page.PdfPageRotation raise PdfError {
+) -> @page.PdfPageRotation raise @core.PdfError {
   match self.lookup_direct(pdf_page_rotate_key(), node) {
     Some(PdfInteger(value)) => @page.pdf_page_rotation_of_int(value)
     _ => inherited
@@ -25,9 +25,9 @@ fn PdfDocument::pdf_page_inherited_rotation(
 fn PdfDocument::pdf_page_find_inherited_attribute(
   self : PdfDocument,
   object : @syntax.PdfObject,
-  key : PdfName,
+  key : @core.PdfName,
   depth : Int,
-) -> @syntax.PdfObject? raise PdfError {
+) -> @syntax.PdfObject? raise @core.PdfError {
   if depth > 10000 {
     raise PageTreeExpected
   }
@@ -50,8 +50,8 @@ fn PdfDocument::pdf_page_find_inherited_attribute(
 fn PdfDocument::pdf_page_replace_inherited_key(
   self : PdfDocument,
   object : @syntax.PdfObject,
-  key : PdfName,
-) -> @syntax.PdfObject? raise PdfError {
+  key : @core.PdfName,
+) -> @syntax.PdfObject? raise @core.PdfError {
   match self.pdf_page_find_inherited_attribute(object, key, 0) {
     Some(value) => Some(object.add_dict_entry(key, value))
     None => None
@@ -67,7 +67,7 @@ fn PdfDocument::pdf_page_replace_inherited_key(
 pub fn PdfDocument::replace_inherit(
   self : PdfDocument,
   object_numbers : ArrayView[Int],
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let keys = [
     pdf_page_mediabox_key(),
     pdf_page_cropbox_key(),

@@ -25,7 +25,7 @@ fn pdf_async_io_join_directory_file(
 pub async fn pdf_load_standard_font_substitute_file(
   directory : StringView,
   font : @pdflite.PdfStandardFont,
-) -> (@pdflite.PdfBytes, String) {
+) -> (@core.PdfBytes, String) {
   let filename = @pdflite.pdf_standard_font_substitute_filenames(font)[0]
   (
     @fs.read_file(pdf_async_io_join_directory_file(directory, filename)).binary(),
@@ -38,7 +38,7 @@ pub async fn pdf_load_standard_font_substitute_file(
 pub async fn pdf_load_substitute(
   directory : StringView,
   font : @pdflite.PdfStandardFont,
-) -> (@pdflite.PdfBytes, String) {
+) -> (@core.PdfBytes, String) {
   pdf_load_standard_font_substitute_file(directory, font)
 }
 
@@ -57,7 +57,7 @@ pub async fn pdf_extract_fontfile_to_file(
 ) -> Unit {
   match document.extract_fontfile_bytes(page_number, font_name) {
     Some(data) => @fs.write_file(path, data, create=permission)
-    None => @pdflite.pdf_error("extract_fontfile: unsupported or unfound font")
+    None => @core.pdf_error("extract_fontfile: unsupported or unfound font")
   }
 }
 

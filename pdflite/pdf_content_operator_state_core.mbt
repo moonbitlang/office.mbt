@@ -102,7 +102,7 @@ pub fn PdfDocument::content_apply_resource_op(
   state : PdfContentOperatorState,
   resources : @syntax.PdfObject,
   op : @content.PdfContentOp,
-) -> PdfContentOperatorResourceResult raise PdfError {
+) -> PdfContentOperatorResourceResult raise @core.PdfError {
   match op {
     Op_BT
     | Op_ET
@@ -164,6 +164,6 @@ pub fn pdf_content_apply_resource_op(
   state : PdfContentOperatorState,
   resources : @syntax.PdfObject,
   op : @content.PdfContentOp,
-) -> PdfContentOperatorResourceResult raise PdfError {
+) -> PdfContentOperatorResourceResult raise @core.PdfError {
   document.content_apply_resource_op(state, resources, op)
 }

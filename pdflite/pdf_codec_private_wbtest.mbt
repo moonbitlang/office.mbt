@@ -10,8 +10,8 @@ test "private codec dictionary and predictor guards report malformed inputs" {
     bad_filter,
     pdf_filter_key(),
   )
-  guard bad_filter_result is Err(PdfError::FilterExpected) else {
-    fail("expected PdfError::FilterExpected")
+  guard bad_filter_result is Err(@core.PdfError::FilterExpected) else {
+    fail("expected @core.PdfError::FilterExpected")
   }
   let bad_decodeparms = @syntax.PdfDictionary([
     (pdf_decodeparms_key(), PdfInteger(1)),
@@ -20,12 +20,12 @@ test "private codec dictionary and predictor guards report malformed inputs" {
     bad_decodeparms,
     pdf_decodeparms_key(),
   )
-  guard bad_decodeparms_result is Err(PdfError::FilterExpected) else {
-    fail("expected PdfError::FilterExpected")
+  guard bad_decodeparms_result is Err(@core.PdfError::FilterExpected) else {
+    fail("expected @core.PdfError::FilterExpected")
   }
   let bad_bpp : Result[Int, Error] = try? pdf_predictor_bytes_per_pixel(0, 8)
-  guard bad_bpp is Err(PdfError::PredictorExpected) else {
-    fail("expected PdfError::PredictorExpected")
+  guard bad_bpp is Err(@core.PdfError::PredictorExpected) else {
+    fail("expected @core.PdfError::PredictorExpected")
   }
   let bad_png_predictor : Result[Int, Error] = try? pdf_encode_png_predictor_value(
     5,
@@ -35,7 +35,7 @@ test "private codec dictionary and predictor guards report malformed inputs" {
     1,
     1,
   )
-  guard bad_png_predictor is Err(PdfError::PredictorNotSupported(5)) else {
-    fail("expected PdfError::PredictorNotSupported")
+  guard bad_png_predictor is Err(@core.PdfError::PredictorNotSupported(5)) else {
+    fail("expected @core.PdfError::PredictorNotSupported")
   }
 }

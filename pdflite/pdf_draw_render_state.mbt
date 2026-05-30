@@ -2,7 +2,7 @@
 fn PdfDrawRenderState::fresh_name(
   self : PdfDrawRenderState,
   prefix : String,
-) -> PdfName {
+) -> @core.PdfName {
   self.resource_number += 1
   pdf_draw_name(prefix + self.resource_number.to_string())
 }

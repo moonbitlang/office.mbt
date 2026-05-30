@@ -3,7 +3,7 @@
 pub fn PdfDrawControl::add_leading(
   self : PdfDrawControl,
   leading : Double,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.add_op(PdfDrawLeading(leading))
 }
 
@@ -12,7 +12,7 @@ pub fn PdfDrawControl::add_leading(
 pub fn PdfDrawControl::add_char_space(
   self : PdfDrawControl,
   spacing : Double,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.add_op(PdfDrawCharSpace(spacing))
 }
 
@@ -21,7 +21,7 @@ pub fn PdfDrawControl::add_char_space(
 pub fn PdfDrawControl::add_word_space(
   self : PdfDrawControl,
   spacing : Double,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.add_op(PdfDrawWordSpace(spacing))
 }
 
@@ -30,7 +30,7 @@ pub fn PdfDrawControl::add_word_space(
 pub fn PdfDrawControl::add_text_scale(
   self : PdfDrawControl,
   scale : Double,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.add_op(PdfDrawTextScale(scale))
 }
 
@@ -39,7 +39,7 @@ pub fn PdfDrawControl::add_text_scale(
 pub fn PdfDrawControl::add_render_mode(
   self : PdfDrawControl,
   mode : Int,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.add_op(PdfDrawRenderMode(mode))
 }
 
@@ -48,7 +48,7 @@ pub fn PdfDrawControl::add_render_mode(
 pub fn PdfDrawControl::add_rise(
   self : PdfDrawControl,
   rise : Double,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.add_op(PdfDrawRise(rise))
 }
 
@@ -56,7 +56,7 @@ pub fn PdfDrawControl::add_rise(
 /// Append a text-newline operation.
 pub fn PdfDrawControl::add_newline(
   self : PdfDrawControl,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.add_op(PdfDrawNewline)
 }
 
@@ -148,7 +148,7 @@ pub fn PdfDrawControl::paragraph_indent(self : PdfDrawControl) -> Double? {
 fn PdfDrawControl::ensure_text_section(
   self : PdfDrawControl,
   message : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   if self.depth() < 2 {
     raise SoftError(message)
   }
@@ -162,7 +162,7 @@ fn PdfDrawControl::ensure_text_section(
 pub fn PdfDrawControl::add_default_fontpack(
   self : PdfDrawControl,
   font_name : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   if !self.fontpack_initialized {
     match self.fontpack {
       Some(fontpack) => self.add_op(PdfDrawFontPack(font_name, fontpack, []))
@@ -175,7 +175,7 @@ pub fn PdfDrawControl::add_default_fontpack(
 ///|
 fn PdfDrawControl::add_current_font(
   self : PdfDrawControl,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.add_op(PdfDrawFont(self.font_name, self.font_size))
 }
 
@@ -184,7 +184,7 @@ fn PdfDrawControl::add_current_font(
 pub fn PdfDrawControl::add_text(
   self : PdfDrawControl,
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.ensure_text_section("-text must be in a -bt / -et section")
   self.add_default_fontpack(self.font_name)
   self.add_current_font()
@@ -196,7 +196,7 @@ pub fn PdfDrawControl::add_text(
 pub fn PdfDrawControl::add_special_text(
   self : PdfDrawControl,
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.ensure_text_section("-stext must be in a -bt / -et section")
   self.add_default_fontpack(self.font_name)
   self.add_current_font()
@@ -214,7 +214,7 @@ fn pdf_draw_control_utf8_string(bytes : BytesView) -> String {
 fn pdf_draw_control_parse_para_spec(
   document : PdfDocument,
   spec : String,
-) -> (PdfDrawJustification, Double, String) raise PdfError {
+) -> (PdfDrawJustification, Double, String) raise @core.PdfError {
   let bytes = @utf8.encode(spec)
   if bytes.length() == 0 {
     raise SoftError("Unknown justification specification")
@@ -273,7 +273,7 @@ pub fn PdfDrawControl::add_para(
   self : PdfDrawControl,
   document : PdfDocument,
   spec : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.ensure_text_section("-para must be in a -bt / -et section")
   self.add_default_fontpack(self.font_name)
   self.add_current_font()
@@ -289,7 +289,7 @@ pub fn PdfDrawControl::add_paras(
   self : PdfDrawControl,
   document : PdfDocument,
   spec : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.ensure_text_section("-paras must be in a -bt / -et section")
   self.add_default_fontpack(self.font_name)
   self.add_current_font()
@@ -316,7 +316,7 @@ pub fn PdfDrawControl::begin_text_section(self : PdfDrawControl) -> Unit {
 /// Finish the current text-section frame and append a `PdfDrawTextSection` op.
 pub fn PdfDrawControl::end_text_section(
   self : PdfDrawControl,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   match self.frames.pop() {
     Some(frame) if frame.name == pdf_draw_control_text_frame =>
       self.add_op(PdfDrawTextSection(pdf_draw_control_copy_ops(frame.ops)))

@@ -125,7 +125,7 @@ fn PdfDocument::pdf_util_json_of_parsed_content_stream(
   utf8 : Bool,
   clean_strings : Bool,
   no_stream_data : Bool,
-) -> Json raise PdfError {
+) -> Json raise @core.PdfError {
   match object {
     PdfStreamObject(stream) => {
       let decoded = self.pdf_decode_stream_until_unknown_value_direct(stream)

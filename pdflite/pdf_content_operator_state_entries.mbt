@@ -84,7 +84,7 @@ fn PdfContentOperatorState::content_unbounded_shading_bounding_box(
 /// Return the cpdfcontent JSON entry for a shading, when its bbox is valid.
 pub fn PdfContentOperatorState::content_shading_entry(
   self : PdfContentOperatorState,
-  name : PdfName,
+  name : @core.PdfName,
   shading_bbox : @geometry.PdfRectangle?,
 ) -> PdfContentJsonEntry? {
   let bounding_box = match shading_bbox {
@@ -106,7 +106,7 @@ pub fn PdfContentOperatorState::content_shading_entry(
 /// Compatibility wrapper for `PdfContentOperatorState::content_shading_entry`.
 pub fn pdf_content_shading_entry(
   state : PdfContentOperatorState,
-  name : PdfName,
+  name : @core.PdfName,
   shading_bbox : @geometry.PdfRectangle?,
 ) -> PdfContentJsonEntry? {
   state.content_shading_entry(name, shading_bbox)
@@ -118,7 +118,7 @@ pub fn PdfDocument::content_shading_entry_from_resources(
   self : PdfDocument,
   state : PdfContentOperatorState,
   resources : @syntax.PdfObject,
-  name : PdfName,
+  name : @core.PdfName,
 ) -> PdfContentJsonEntry? {
   match self.lookup_direct(pdf_content_shading_shading_name, resources) {
     Some(shading_dictionary) =>
@@ -157,7 +157,7 @@ pub fn pdf_content_shading_entry_from_resources(
   document : PdfDocument,
   state : PdfContentOperatorState,
   resources : @syntax.PdfObject,
-  name : PdfName,
+  name : @core.PdfName,
 ) -> PdfContentJsonEntry? {
   document.content_shading_entry_from_resources(state, resources, name)
 }
@@ -199,7 +199,7 @@ pub fn PdfContentOperatorState::content_inline_image_entry(
 /// Return the cpdfcontent JSON entry for an image XObject at the current CTM.
 pub fn PdfContentOperatorState::content_image_entry(
   self : PdfContentOperatorState,
-  name : PdfName,
+  name : @core.PdfName,
 ) -> PdfContentJsonEntry {
   {
     object: PdfContentImageObject(pdf_content_state_name_text(name)),
@@ -220,7 +220,7 @@ pub fn pdf_content_inline_image_entry(
 /// Compatibility wrapper for `PdfContentOperatorState::content_image_entry`.
 pub fn pdf_content_image_entry(
   state : PdfContentOperatorState,
-  name : PdfName,
+  name : @core.PdfName,
 ) -> PdfContentJsonEntry {
   state.content_image_entry(name)
 }
@@ -229,8 +229,8 @@ pub fn pdf_content_image_entry(
 fn PdfDocument::content_xobject_from_resources(
   self : PdfDocument,
   resources : @syntax.PdfObject,
-  name : PdfName,
-) -> @syntax.PdfObject raise PdfError {
+  name : @core.PdfName,
+) -> @syntax.PdfObject raise @core.PdfError {
   match self.lookup_direct(pdf_xobject_xobject(), resources) {
     Some(xobjects) =>
       match self.lookup_direct(name, xobjects) {
@@ -247,8 +247,8 @@ pub fn PdfDocument::content_image_entry_from_resources(
   self : PdfDocument,
   state : PdfContentOperatorState,
   resources : @syntax.PdfObject,
-  name : PdfName,
-) -> PdfContentJsonEntry? raise PdfError {
+  name : @core.PdfName,
+) -> PdfContentJsonEntry? raise @core.PdfError {
   let xobject = self.content_xobject_from_resources(resources, name)
   match self.lookup_direct(pdf_xobject_subtype_key(), xobject) {
     Some(PdfNameObject(subtype)) if subtype == pdf_image_image_name() =>
@@ -264,7 +264,7 @@ pub fn pdf_content_image_entry_from_resources(
   document : PdfDocument,
   state : PdfContentOperatorState,
   resources : @syntax.PdfObject,
-  name : PdfName,
-) -> PdfContentJsonEntry? raise PdfError {
+  name : @core.PdfName,
+) -> PdfContentJsonEntry? raise @core.PdfError {
   document.content_image_entry_from_resources(state, resources, name)
 }

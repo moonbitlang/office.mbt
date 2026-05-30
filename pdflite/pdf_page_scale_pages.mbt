@@ -9,7 +9,7 @@ pub fn PdfDocument::scale_pages(
   page_numbers : ArrayView[Int],
   scales : ArrayView[(Double, Double)],
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   pdf_page_box_validate_page_numbers(
     page_numbers,
     self.endpage(),
@@ -50,7 +50,7 @@ pub fn pdf_scale_pages(
   page_numbers : ArrayView[Int],
   scales : ArrayView[(Double, Double)],
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.scale_pages(page_numbers, scales, fast~)
 }
 
@@ -64,7 +64,7 @@ pub fn PdfDocument::scale_pdf(
   page_numbers : ArrayView[Int],
   scales : ArrayView[(Double, Double)],
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let pages = self.pages_of_pagetree()
   pdf_page_box_validate_page_numbers(page_numbers, pages.length(), "scale_pdf")
   pdf_page_scale_validate_page_indexed_pairs(
@@ -87,6 +87,6 @@ pub fn pdf_scale_pdf(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.scale_pdf(page_numbers, scales, fast~)
 }

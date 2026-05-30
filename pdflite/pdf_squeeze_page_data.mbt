@@ -2,7 +2,7 @@
 fn pdf_squeeze_stream_dictionary(
   dictionary : @syntax.PdfObject,
   length : Int,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   dictionary
   .remove_dict_entry(pdf_filter_key())
   .remove_dict_entry(pdf_short_filter_key())
@@ -78,7 +78,7 @@ fn PdfDocument::pdf_squeeze_replace_page_contents(
   page_object : @syntax.PdfObject,
   resources : @syntax.PdfObject,
   contents : ArrayView[@syntax.PdfObject],
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   if contents.length() > 0 {
     let ops = self.parse_content_ops_with_resources(resources, contents)
     let stream_number = self.add_object(pdf_content_stream_of_ops(ops))
@@ -97,7 +97,7 @@ fn PdfDocument::pdf_squeeze_form_xobject(
   self : PdfDocument,
   object_number : Int,
   done : @hashmap.HashMap[Int, Bool],
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   if !done.contains(object_number) {
     done[object_number] = true
     let object = self.lookup_object_or_null(object_number)
@@ -136,7 +136,7 @@ fn PdfDocument::pdf_squeeze_form_xobjects_in_resources(
   self : PdfDocument,
   resources : @syntax.PdfObject,
   done : @hashmap.HashMap[Int, Bool],
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   match self.lookup_direct(pdf_page_xobject_key(), resources) {
     Some(PdfDictionary(entries)) =>
       for entry in entries {
@@ -153,7 +153,7 @@ fn PdfDocument::pdf_squeeze_form_xobjects_in_resources(
 ///|
 fn PdfDocument::pdf_squeeze_page_data(
   self : PdfDocument,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let page_reference_numbers = self.page_reference_numbers()
   let all_content_numbers = self.pdf_squeeze_all_page_content_numbers(
     page_reference_numbers,

@@ -1,5 +1,5 @@
 ///|
-fn pdf_merge_catalog_extra_key(key : PdfName) -> Bool {
+fn pdf_merge_catalog_extra_key(key : @core.PdfName) -> Bool {
   !(key == pdf_merge_type_key() ||
   key == pdf_merge_pages_key() ||
   key == pdf_merge_page_labels_key() ||
@@ -15,8 +15,8 @@ fn pdf_merge_catalog_extra_key(key : PdfName) -> Bool {
 ///|
 fn pdf_merge_catalog_extra_entries(
   documents : ArrayView[PdfDocument],
-) -> Array[(PdfName, @syntax.PdfObject)] raise PdfError {
-  let entries : Array[(PdfName, @syntax.PdfObject)] = []
+) -> Array[(@core.PdfName, @syntax.PdfObject)] raise @core.PdfError {
+  let entries : Array[(@core.PdfName, @syntax.PdfObject)] = []
   let seen = pdf_merge_name_set()
   for document in documents {
     match document.pdf_merge_catalog() {
@@ -37,17 +37,17 @@ fn pdf_merge_catalog_extra_entries(
 ///|
 fn PdfDocument::pdf_merge_catalog_entry(
   self : PdfDocument,
-  key : PdfName,
-) -> @syntax.PdfObject? raise PdfError {
+  key : @core.PdfName,
+) -> @syntax.PdfObject? raise @core.PdfError {
   self.lookup_direct(key, self.pdf_merge_catalog())
 }
 
 ///|
 fn PdfDocument::pdf_merge_add_catalog_entry(
   self : PdfDocument,
-  key : PdfName,
+  key : @core.PdfName,
   value : @syntax.PdfObject,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let root = self.pdf_merge_catalog()
   let new_root = self.add_object(root.add_dict_entry(key, value))
   self.set_root(new_root)

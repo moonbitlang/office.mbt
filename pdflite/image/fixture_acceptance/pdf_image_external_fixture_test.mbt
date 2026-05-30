@@ -7,8 +7,8 @@ fn image_external_fixture_path_for_test(path : String) -> String {
 }
 
 ///|
-fn image_external_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn image_external_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -556,7 +556,7 @@ fn image_external_content_ops_contain_sequence_for_test(
 ///|
 fn image_external_content_ops_contain_do_for_test(
   ops : ArrayView[@content.PdfContentOp],
-  name : @pdflite.PdfName,
+  name : @core.PdfName,
 ) -> Bool {
   for op in ops {
     match op {
@@ -790,8 +790,8 @@ fn image_external_assert_cpdf_source_inline_image_for_test(
 }
 
 ///|
-fn image_external_cpdf_source_nested_image_data_for_test() -> @pdflite.PdfBytes raise {
-  @flate.pdf_flate_encode(@pdflite.pdf_bytes_of_int_array([0, 64, 128, 255]))
+fn image_external_cpdf_source_nested_image_data_for_test() -> @core.PdfBytes raise {
+  @flate.pdf_flate_encode(@core.pdf_bytes_of_int_array([0, 64, 128, 255]))
 }
 
 ///|

@@ -1,8 +1,8 @@
 ///|
 fn crypt_encrypt_model_bytes_for_test(
   values : ArrayView[Int],
-) -> @pdflite.PdfBytes {
-  try! @pdflite.pdf_bytes_of_int_array(values)
+) -> @core.PdfBytes {
+  try! @core.pdf_bytes_of_int_array(values)
 }
 
 ///|
@@ -10,7 +10,7 @@ fn crypt_encrypt_aes_document_iv_for_test(
   object_number : Int,
   generation : Int,
   index : Int,
-) -> @pdflite.PdfBytes {
+) -> @core.PdfBytes {
   crypt_encrypt_model_bytes_for_test(
     [
       for offset in 0..<16 => {
@@ -21,12 +21,12 @@ fn crypt_encrypt_aes_document_iv_for_test(
 }
 
 ///|
-fn crypt_encrypt_aesv3_r5_file_key_for_test() -> @pdflite.PdfBytes {
+fn crypt_encrypt_aesv3_r5_file_key_for_test() -> @core.PdfBytes {
   crypt_encrypt_model_bytes_for_test([ for value in 0..<32 => value ])
 }
 
 ///|
-fn crypt_encrypt_aesv3_r5_user_encryption_key_for_test() -> @pdflite.PdfBytes {
+fn crypt_encrypt_aesv3_r5_user_encryption_key_for_test() -> @core.PdfBytes {
   crypt_encrypt_model_bytes_for_test([
     0xe4, 0x35, 0xfd, 0x1c, 0x68, 0x70, 0xfc, 0x3b, 0x50, 0x7f, 0x7c, 0x3d, 0x30,
     0xd0, 0x2e, 0x06, 0xb7, 0x60, 0x68, 0x50, 0x81, 0x95, 0xc1, 0x29, 0x87, 0x9c,
@@ -35,7 +35,7 @@ fn crypt_encrypt_aesv3_r5_user_encryption_key_for_test() -> @pdflite.PdfBytes {
 }
 
 ///|
-fn crypt_encrypt_aesv3_r5_owner_encryption_key_for_test() -> @pdflite.PdfBytes {
+fn crypt_encrypt_aesv3_r5_owner_encryption_key_for_test() -> @core.PdfBytes {
   crypt_encrypt_model_bytes_for_test([
     0x93, 0x8a, 0x69, 0x29, 0xac, 0xa0, 0x6a, 0x79, 0x47, 0xde, 0x9d, 0xc4, 0x68,
     0x29, 0x04, 0xca, 0xda, 0x26, 0xbf, 0x1b, 0xb2, 0x8e, 0xc9, 0xc8, 0x2b, 0x83,
@@ -44,7 +44,7 @@ fn crypt_encrypt_aesv3_r5_owner_encryption_key_for_test() -> @pdflite.PdfBytes {
 }
 
 ///|
-fn crypt_encrypt_aesv3_r5_permissions_for_test() -> @pdflite.PdfBytes {
+fn crypt_encrypt_aesv3_r5_permissions_for_test() -> @core.PdfBytes {
   crypt_encrypt_model_bytes_for_test([
     0xc1, 0x3b, 0x0f, 0x6a, 0xb2, 0xc5, 0x1a, 0x9e, 0x81, 0x15, 0xa5, 0xc3, 0xa3,
     0x96, 0xd7, 0x26,
@@ -56,7 +56,7 @@ fn crypt_encrypt_aesv3_r5_permissions_for_test() -> @pdflite.PdfBytes {
 fn crypt_encrypt_aesv3_r5_random_for_test(
   field : @crypt_core.PdfAesV3RandomField,
   _length : Int,
-) -> @pdflite.PdfBytes raise @pdflite.PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   match field {
     PdfAesV3FileKey => crypt_encrypt_aesv3_r5_file_key_for_test()
     PdfAesV3UserValidationSalt =>
@@ -80,8 +80,8 @@ fn crypt_encrypt_aesv3_r5_random_for_test(
 }
 
 ///|
-fn crypt_encrypt_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn crypt_encrypt_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -117,8 +117,8 @@ fn crypt_encrypt_minimal_catalog_document_for_test(
 
 ///|
 fn crypt_encrypt_stream_for_test(
-  entries : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
-  data : @pdflite.PdfBytes,
+  entries : ArrayView[(@core.PdfName, @syntax.PdfObject)],
+  data : @core.PdfBytes,
 ) -> @syntax.PdfObject {
   PdfStreamObject({
     dictionary: PdfDictionary([ for entry in entries => entry ]),
@@ -129,7 +129,7 @@ fn crypt_encrypt_stream_for_test(
 ///|
 fn crypt_encrypt_stream_object_bytes_for_test(
   stream : @syntax.PdfStream,
-) -> @pdflite.PdfBytes raise {
+) -> @core.PdfBytes raise {
   @syntax.pdf_stream(stream.dictionary, stream.data).stream_bytes()
 }
 
@@ -603,7 +603,7 @@ test "PdfDocument encrypt_256bit_aesv3_with_providers writes AESV3 revision 5 en
   let bad_random = fn(
     field : @crypt_core.PdfAesV3RandomField,
     length : Int,
-  ) -> @pdflite.PdfBytes raise @pdflite.PdfError {
+  ) -> @core.PdfBytes raise @core.PdfError {
     match field {
       PdfAesV3UserKeySalt => Bytes::new(7)
       _ => crypt_encrypt_aesv3_r5_random_for_test(field, length)
@@ -620,7 +620,7 @@ test "PdfDocument encrypt_256bit_aesv3_with_providers writes AESV3 revision 5 en
     file_id=@ascii.encode("doc-id"),
   )
   guard bad_provider
-    is Err(@pdflite.PdfError::EncryptionDictionaryEntryTooShort(name)) &&
+    is Err(@core.PdfError::EncryptionDictionaryEntryTooShort(name)) &&
     name == crypt_encrypt_name_for_test("/UserKeySalt") else {
     fail("expected short AESV3 random field")
   }

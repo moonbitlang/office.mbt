@@ -38,7 +38,7 @@ fn pdf_bookmark_name_spec_process_at_fields_length(
   filename : String,
   start_page : Int,
   end_page : Int,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   let mut output_length = 0
   let mut index = 0
   while index < bytes.length() {
@@ -116,7 +116,7 @@ fn PdfDocument::pdf_bookmark_name_spec_process_at_fields(
   filename : String,
   start_page : Int,
   end_page : Int,
-) -> String raise PdfError {
+) -> String raise @core.PdfError {
   let bytes = @utf8.encode(spec)
   let bookmark_name = self.pdf_bookmark_name_for_page(
     bookmarks, split_level, start_page,

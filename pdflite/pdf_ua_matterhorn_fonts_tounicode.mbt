@@ -13,7 +13,7 @@ fn pdf_ua_matterhorn_font_uses_known_encoding(
 }
 
 ///|
-fn pdf_ua_matterhorn_supported_cid_ordering(name : PdfName) -> Bool {
+fn pdf_ua_matterhorn_supported_cid_ordering(name : @core.PdfName) -> Bool {
   name == pdf_ua_matterhorn_gb1_name ||
   name == pdf_ua_matterhorn_cns1_name ||
   name == pdf_ua_matterhorn_japan1_name ||
@@ -52,7 +52,7 @@ fn PdfDocument::pdf_ua_matterhorn_type0_uses_supported_cid_collection(
 
 ///|
 fn pdf_ua_matterhorn_source_silences_missing_tounicode(
-  subtype : PdfName,
+  subtype : @core.PdfName,
 ) -> Bool {
   subtype == pdf_text_type0_name ||
   subtype == pdf_ua_matterhorn_cid_font_type0() ||
@@ -61,7 +61,7 @@ fn pdf_ua_matterhorn_source_silences_missing_tounicode(
 
 ///|
 fn pdf_ua_matterhorn_missing_tounicode_source_unimplemented(
-  subtype : PdfName,
+  subtype : @core.PdfName,
 ) -> Bool {
   subtype == pdf_text_type1_name ||
   subtype == pdf_text_mmtype1_name ||
@@ -113,9 +113,9 @@ fn PdfDocument::pdf_ua_matterhorn_tounicode_numbers(
 
 ///|
 fn pdf_ua_matterhorn_tounicode_has_codepoint(
-  map : ArrayView[(Int, PdfBytes)],
+  map : ArrayView[(Int, @core.PdfBytes)],
   codepoint : Int,
-) -> Bool raise PdfError {
+) -> Bool raise @core.PdfError {
   for entry in map {
     for parsed_codepoint in pdf_codepoints_of_utf16be(entry.1) {
       if parsed_codepoint == codepoint {
@@ -129,7 +129,7 @@ fn pdf_ua_matterhorn_tounicode_has_codepoint(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_31_028(
   self : PdfDocument,
-) -> Json? raise PdfError {
+) -> Json? raise @core.PdfError {
   for number in self.pdf_ua_matterhorn_tounicode_numbers() {
     let parsed = self.parse_cmap(PdfIndirect(number))
     if pdf_ua_matterhorn_tounicode_has_codepoint(parsed.map, 0) {
@@ -142,7 +142,7 @@ fn PdfDocument::pdf_ua_matterhorn_check_31_028(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_31_029(
   self : PdfDocument,
-) -> Json? raise PdfError {
+) -> Json? raise @core.PdfError {
   for number in self.pdf_ua_matterhorn_tounicode_numbers() {
     let parsed = self.parse_cmap(PdfIndirect(number))
     if pdf_ua_matterhorn_tounicode_has_codepoint(parsed.map, 0xFEFF) ||

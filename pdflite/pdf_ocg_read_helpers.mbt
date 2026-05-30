@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::pdf_ocg_root(
   self : PdfDocument,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   self.catalog()
 }
 
@@ -9,11 +9,11 @@ fn PdfDocument::pdf_ocg_root(
 fn PdfDocument::pdf_ocg_name_array(
   self : PdfDocument,
   object : @syntax.PdfObject,
-) -> Array[PdfName] {
+) -> Array[@core.PdfName] {
   match self.direct(object) {
     PdfNameObject(name) => [name]
     PdfArray(values) => {
-      let names : Array[PdfName] = []
+      let names : Array[@core.PdfName] = []
       for value in values {
         match self.direct(value) {
           PdfNameObject(name) => names.push(name)
@@ -50,11 +50,11 @@ fn PdfDocument::pdf_ocg_indirect_numbers(
 fn PdfDocument::pdf_ocg_string_array(
   self : PdfDocument,
   object : @syntax.PdfObject,
-) -> Array[PdfBytes] {
+) -> Array[@core.PdfBytes] {
   match self.direct(object) {
     PdfString(text) => [text]
     PdfArray(values) => {
-      let strings : Array[PdfBytes] = []
+      let strings : Array[@core.PdfBytes] = []
       for value in values {
         match self.direct(value) {
           PdfString(text) => strings.push(text)

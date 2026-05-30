@@ -35,7 +35,7 @@ fn pdf_writer_xref_stream_data(
   size : Int,
   xref_stream_number : Int,
   xref_stream_offset : Int,
-) -> PdfBytes {
+) -> @core.PdfBytes {
   let output : Array[Byte] = Array::new(capacity=size * 7)
   let mut xref_index = 0
   for number in 0..<size {
@@ -77,7 +77,7 @@ fn pdf_writer_xref_stream_data_for_numbers(
   entry_numbers : ArrayView[Int],
   xref_stream_number : Int,
   xref_stream_offset : Int,
-) -> PdfBytes {
+) -> @core.PdfBytes {
   let output : Array[Byte] = Array::new(capacity=entry_numbers.length() * 7)
   let mut xref_index = 0
   for number in entry_numbers {
@@ -145,7 +145,7 @@ fn pdf_writer_xref_stream_trailer(
   document : PdfDocument,
   size : Int,
   previous_xref : Int?,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   let trailer = pdf_writer_trailer_dictionary(document)
     .add_dict_entry(
       pdf_writer_type_name(),
@@ -166,8 +166,8 @@ fn pdf_writer_xref_stream_trailer(
 ///|
 fn pdf_write_document_with_xref_stream_filter(
   document : PdfDocument,
-  filter : PdfName?,
-) -> PdfBytes raise PdfError {
+  filter : @core.PdfName?,
+) -> @core.PdfBytes raise @core.PdfError {
   let output : Array[Byte] = []
   let (major, minor) = document.version()
   if major > 1 || (major == 1 && minor >= 5) {
@@ -214,16 +214,16 @@ fn pdf_write_document_with_xref_stream_filter(
 /// version.
 pub fn pdf_write_document_with_xref_stream(
   document : PdfDocument,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_write_document_with_xref_stream_filter(document, None)
 }
 
 ///|
 fn pdf_write_document_incremental_update_with_xref_stream_filter(
-  original : PdfBytes,
+  original : @core.PdfBytes,
   document : PdfDocument,
-  filter : PdfName?,
-) -> PdfBytes raise PdfError {
+  filter : @core.PdfName?,
+) -> @core.PdfBytes raise @core.PdfError {
   let previous_xref = @reader.pdf_read_startxref_position(original)
   let output : Array[Byte] = Array::new(capacity=original.length() + 1)
   for byte in original {
@@ -273,9 +273,9 @@ fn pdf_write_document_incremental_update_with_xref_stream_filter(
 ///|
 /// Append an incremental update using an uncompressed xref stream.
 pub fn pdf_write_document_incremental_update_with_xref_stream(
-  original : PdfBytes,
+  original : @core.PdfBytes,
   document : PdfDocument,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_write_document_incremental_update_with_xref_stream_filter(
     original,
     document,
@@ -287,7 +287,7 @@ pub fn pdf_write_document_incremental_update_with_xref_stream(
 /// Serialize a complete document with a Flate-compressed xref stream.
 pub fn pdf_write_document_with_compressed_xref_stream(
   document : PdfDocument,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_write_document_with_xref_stream_filter(
     document,
     Some(pdf_writer_flate_decode_name()),
@@ -297,9 +297,9 @@ pub fn pdf_write_document_with_compressed_xref_stream(
 ///|
 /// Append an incremental update using a Flate-compressed xref stream.
 pub fn pdf_write_document_incremental_update_with_compressed_xref_stream(
-  original : PdfBytes,
+  original : @core.PdfBytes,
   document : PdfDocument,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_write_document_incremental_update_with_xref_stream_filter(
     original,
     document,

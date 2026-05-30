@@ -1,6 +1,6 @@
 ///|
-fn page_marks_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn page_marks_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -250,7 +250,7 @@ test "PdfDocument page mark overlays validate selected pages" {
   )
   guard bad_show
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "show_page_boxes: range contains pages not present in pdf"
       )
     ) else {
@@ -263,7 +263,7 @@ test "PdfDocument page mark overlays validate selected pages" {
   )
   guard bad_trim
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "trim_marks: range contains pages not present in pdf"
       )
     ) else {

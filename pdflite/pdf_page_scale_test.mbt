@@ -1,6 +1,6 @@
 ///|
-fn page_scale_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn page_scale_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -212,7 +212,7 @@ test "PdfDocument scale_contents validates page range" {
   )
   guard bad_page
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "scale_contents: range contains pages not present in pdf"
       )
     ) else {
@@ -330,7 +330,7 @@ test "PdfDocument scale_pages validates scale counts and page range" {
   )
   guard mismatch
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "scale_pages: scale count must match page count"
       )
     ) else {
@@ -342,7 +342,7 @@ test "PdfDocument scale_pages validates scale counts and page range" {
   )
   guard bad_page
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "scale_pages: range contains pages not present in pdf"
       )
     ) else {
@@ -356,7 +356,7 @@ test "PdfDocument scale_pages validates scale counts and page range" {
   )
   guard cpdf_mismatch
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "scale_pdf: scale count must match page count"
       )
     ) else {
@@ -473,7 +473,7 @@ test "PdfDocument stretch_pages validates size counts page range and zero boxes"
   )
   guard mismatch
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "stretch_pages: size count must match page count"
       )
     ) else {
@@ -485,7 +485,7 @@ test "PdfDocument stretch_pages validates size counts page range and zero boxes"
   )
   guard bad_page
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "stretch_pages: range contains pages not present in pdf"
       )
     ) else {
@@ -500,7 +500,7 @@ test "PdfDocument stretch_pages validates size counts page range and zero boxes"
   )
   guard bad_size
     is Err(
-      @pdflite.PdfError::BadNumberArgument(
+      @core.PdfError::BadNumberArgument(
         "stretch_pages: zero-sized pages are invalid"
       )
     ) else {
@@ -514,7 +514,7 @@ test "PdfDocument stretch_pages validates size counts page range and zero boxes"
   )
   guard cpdf_mismatch
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "stretch: size count must match page count"
       )
     ) else {
@@ -610,7 +610,7 @@ test "PdfDocument scale_to_fit_pages validates size counts and zero boxes" {
   )
   guard mismatch
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "scale_to_fit_pages: size count must match page count"
       )
     ) else {
@@ -625,7 +625,7 @@ test "PdfDocument scale_to_fit_pages validates size counts and zero boxes" {
   )
   guard bad_size
     is Err(
-      @pdflite.PdfError::BadNumberArgument(
+      @core.PdfError::BadNumberArgument(
         "scale_to_fit_pages: zero-sized pages are invalid"
       )
     ) else {
@@ -642,7 +642,7 @@ test "PdfDocument scale_to_fit_pages validates size counts and zero boxes" {
   )
   guard cpdf_mismatch
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "scale_to_fit_pdf: size count must match page count"
       )
     ) else {
@@ -736,7 +736,7 @@ test "PdfDocument scale_to_fit_rotate_pages validates page range and size count"
   )
   guard mismatch
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "scale_to_fit_rotate_pages: size count must match page count"
       )
     ) else {
@@ -750,7 +750,7 @@ test "PdfDocument scale_to_fit_rotate_pages validates page range and size count"
   )
   guard bad_page
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "scale_to_fit_rotate_pages: range contains pages not present in pdf"
       )
     ) else {
@@ -765,7 +765,7 @@ test "PdfDocument scale_to_fit_rotate_pages validates page range and size count"
   )
   guard cpdf_mismatch
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "scale_to_fit_rotate: size count must match page count"
       )
     ) else {
@@ -864,7 +864,7 @@ test "PdfDocument center_to_fit_pages validates page range and size count" {
   )
   guard mismatch
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "center_to_fit_pages: size count must match page count"
       )
     ) else {
@@ -877,7 +877,7 @@ test "PdfDocument center_to_fit_pages validates page range and size count" {
   )
   guard bad_page
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "center_to_fit_pages: range contains pages not present in pdf"
       )
     ) else {

@@ -1,8 +1,8 @@
 ///|
 fn pdf_read_reconstructed_after_stream_parse_error(
   data : BytesView,
-  error : PdfError,
-) -> PdfDocument raise PdfError {
+  error : @core.PdfError,
+) -> PdfDocument raise @core.PdfError {
   if pdf_reader_startxref_has_xref_stream_prefix_or_false(data) {
     pdf_read_reconstructed_or_raise(
       data,
@@ -17,7 +17,7 @@ fn pdf_read_reconstructed_after_stream_parse_error(
 ///|
 fn pdf_read_reconstructed_after_xref_entry_error(
   data : BytesView,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   if pdf_reader_xref_entry_error_from_metadata(data) {
     pdf_read_reconstructed_or_raise(
       data,
@@ -42,7 +42,7 @@ fn pdf_read_reconstructed_after_xref_entry_error(
 ///|
 fn pdf_read_reconstructed_after_root_error(
   data : BytesView,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   if pdf_reader_startxref_uses_xref_stream_or_false(data) {
     pdf_read_reconstructed_or_raise(
       data,
@@ -57,7 +57,7 @@ fn pdf_read_reconstructed_after_root_error(
 ///|
 fn pdf_read_reconstructed_after_stream_data_error(
   data : BytesView,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   if pdf_reader_startxref_root_uses_object_stream_or_false(data) {
     pdf_read_reconstructed_or_raise(
       data,
@@ -72,8 +72,8 @@ fn pdf_read_reconstructed_after_stream_data_error(
 ///|
 fn pdf_read_reconstructed_after_metadata_decode_error(
   data : BytesView,
-  error : PdfError,
-) -> PdfDocument raise PdfError {
+  error : @core.PdfError,
+) -> PdfDocument raise @core.PdfError {
   if pdf_reader_xref_metadata_error_allows_reconstruction(data, error) ||
     pdf_reader_object_stream_error_allows_reconstruction(data) {
     pdf_read_reconstructed_or_raise(

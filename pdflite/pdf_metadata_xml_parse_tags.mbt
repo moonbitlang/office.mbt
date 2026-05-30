@@ -2,7 +2,7 @@
 fn pdf_metadata_xml_find_tag_end(
   data : BytesView,
   start : Int,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   let mut index = start
   let mut quote = 0
   while index < data.length() {
@@ -35,7 +35,7 @@ fn pdf_metadata_xml_parse_start_tag(
   data : BytesView,
   start : Int,
   context : ArrayView[(String, String)],
-) -> (String, @metadata.PdfMetadataXmlTag, Array[(String, String)], Bool, Int) raise PdfError {
+) -> (String, @metadata.PdfMetadataXmlTag, Array[(String, String)], Bool, Int) raise @core.PdfError {
   guard start < data.length() && data[start].to_int() == 60 else {
     raise BadText
   }
@@ -72,7 +72,7 @@ fn pdf_metadata_xml_parse_start_tag(
 fn pdf_metadata_xml_parse_close_tag(
   data : BytesView,
   start : Int,
-) -> (String, Int) raise PdfError {
+) -> (String, Int) raise @core.PdfError {
   guard start + 1 < data.length() &&
     data[start].to_int() == 60 &&
     data[start + 1].to_int() == 47 else {

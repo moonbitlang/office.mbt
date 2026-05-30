@@ -3,7 +3,7 @@
 fn reader_classic_pdf_with_xref_body(
   xref_body : String,
   trailer_body : String,
-) -> @pdflite.PdfBytes {
+) -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   let xref_offset = output.length()
@@ -19,7 +19,7 @@ fn reader_classic_pdf_with_xref_body(
 
 ///|
 #warnings("-unused_value")
-fn reader_classic_pdf_with_fixed_width_xref_separators() -> @pdflite.PdfBytes {
+fn reader_classic_pdf_with_fixed_width_xref_separators() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   let catalog_offset = reader_push_indirect_object(
@@ -37,7 +37,7 @@ fn reader_classic_pdf_with_fixed_width_xref_separators() -> @pdflite.PdfBytes {
 
 ///|
 #warnings("-unused_value")
-fn reader_classic_pdf_with_unpadded_xref_entry() -> @pdflite.PdfBytes {
+fn reader_classic_pdf_with_unpadded_xref_entry() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   let catalog_offset = reader_push_indirect_object(
@@ -53,7 +53,7 @@ fn reader_classic_pdf_with_unpadded_xref_entry() -> @pdflite.PdfBytes {
 
 ///|
 #warnings("-unused_value")
-fn reader_classic_pdf_with_inline_xref_section_header() -> @pdflite.PdfBytes {
+fn reader_classic_pdf_with_inline_xref_section_header() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   let catalog_offset = reader_push_indirect_object(
@@ -68,7 +68,7 @@ fn reader_classic_pdf_with_inline_xref_section_header() -> @pdflite.PdfBytes {
 
 ///|
 #warnings("-unused_value")
-fn reader_classic_pdf_with_glued_trailer_dictionary() -> @pdflite.PdfBytes {
+fn reader_classic_pdf_with_glued_trailer_dictionary() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   let catalog_offset = reader_push_indirect_object(
@@ -85,7 +85,7 @@ fn reader_classic_pdf_with_glued_trailer_dictionary() -> @pdflite.PdfBytes {
 
 ///|
 #warnings("-unused_value")
-fn reader_classic_pdf_with_missing_endobj_catalog() -> @pdflite.PdfBytes {
+fn reader_classic_pdf_with_missing_endobj_catalog() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   let catalog_offset = output.length()
@@ -99,7 +99,7 @@ fn reader_classic_pdf_with_missing_endobj_catalog() -> @pdflite.PdfBytes {
 
 ///|
 #warnings("-unused_value")
-fn reader_classic_pdf_with_trailing_startxref_junk() -> @pdflite.PdfBytes {
+fn reader_classic_pdf_with_trailing_startxref_junk() -> @core.PdfBytes {
   let output : Array[Byte] = []
   for
     byte in reader_classic_pdf_with_xref_body(
@@ -113,7 +113,7 @@ fn reader_classic_pdf_with_trailing_startxref_junk() -> @pdflite.PdfBytes {
 
 ///|
 #warnings("-unused_value")
-fn reader_classic_pdf_with_prefixed_startxref_pointer() -> @pdflite.PdfBytes {
+fn reader_classic_pdf_with_prefixed_startxref_pointer() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   let catalog_offset = reader_push_indirect_object(
@@ -131,7 +131,7 @@ fn reader_classic_pdf_with_prefixed_startxref_pointer() -> @pdflite.PdfBytes {
 
 ///|
 #warnings("-unused_value")
-fn reader_classic_pdf_with_inline_startxref_pointer() -> @pdflite.PdfBytes {
+fn reader_classic_pdf_with_inline_startxref_pointer() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   let catalog_offset = reader_push_indirect_object(
@@ -149,7 +149,7 @@ fn reader_classic_pdf_with_inline_startxref_pointer() -> @pdflite.PdfBytes {
 
 ///|
 #warnings("-unused_value")
-fn reader_classic_pdf_without_trailer_after_xref() -> @pdflite.PdfBytes {
+fn reader_classic_pdf_without_trailer_after_xref() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   reader_push_ascii(output, "startxref\n")
@@ -166,7 +166,7 @@ fn reader_classic_pdf_without_trailer_after_xref() -> @pdflite.PdfBytes {
 
 ///|
 #warnings("-unused_value")
-fn reader_classic_pdf_with_self_prev_xref() -> @pdflite.PdfBytes {
+fn reader_classic_pdf_with_self_prev_xref() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   let xref_offset = output.length()
@@ -181,7 +181,7 @@ fn reader_classic_pdf_with_self_prev_xref() -> @pdflite.PdfBytes {
 
 ///|
 #warnings("-unused_value")
-fn reader_classic_pdf_with_missing_indirect_stream_length() -> @pdflite.PdfBytes {
+fn reader_classic_pdf_with_missing_indirect_stream_length() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   let stream_offset = reader_push_indirect_object(
@@ -196,7 +196,7 @@ fn reader_classic_pdf_with_missing_indirect_stream_length() -> @pdflite.PdfBytes
 
 ///|
 #warnings("-unused_value")
-fn reader_classic_pdf_with_non_integer_stream_length() -> @pdflite.PdfBytes {
+fn reader_classic_pdf_with_non_integer_stream_length() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   let stream_offset = reader_push_indirect_object(
@@ -213,7 +213,7 @@ fn reader_classic_pdf_with_non_integer_stream_length() -> @pdflite.PdfBytes {
 
 ///|
 #warnings("-unused_value")
-fn reader_classic_pdf_with_unparseable_stream_length() -> @pdflite.PdfBytes {
+fn reader_classic_pdf_with_unparseable_stream_length() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   let stream_offset = reader_push_indirect_object(
@@ -236,7 +236,7 @@ fn reader_classic_pdf_with_unparseable_stream_length() -> @pdflite.PdfBytes {
 
 ///|
 #warnings("-unused_value")
-fn reader_classic_pdf_with_mismatched_stream_length_xref() -> @pdflite.PdfBytes {
+fn reader_classic_pdf_with_mismatched_stream_length_xref() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   let stream_offset = reader_push_indirect_object(
@@ -253,7 +253,7 @@ fn reader_classic_pdf_with_mismatched_stream_length_xref() -> @pdflite.PdfBytes 
 
 ///|
 #warnings("-unused_value")
-fn reader_classic_pdf_with_stream_length_stream_object() -> @pdflite.PdfBytes {
+fn reader_classic_pdf_with_stream_length_stream_object() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   let stream_offset = reader_push_indirect_object(
@@ -272,7 +272,7 @@ fn reader_classic_pdf_with_stream_length_stream_object() -> @pdflite.PdfBytes {
 
 ///|
 #warnings("-unused_value")
-fn reader_classic_pdf_with_negative_stream_length() -> @pdflite.PdfBytes {
+fn reader_classic_pdf_with_negative_stream_length() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   let stream_offset = reader_push_indirect_object(
@@ -287,7 +287,7 @@ fn reader_classic_pdf_with_negative_stream_length() -> @pdflite.PdfBytes {
 
 ///|
 #warnings("-unused_value")
-fn reader_classic_pdf_with_mismatched_object_xref() -> @pdflite.PdfBytes {
+fn reader_classic_pdf_with_mismatched_object_xref() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   let object_offset = reader_push_indirect_object(output, 2, 0, "2")
@@ -300,7 +300,7 @@ fn reader_classic_pdf_with_mismatched_object_xref() -> @pdflite.PdfBytes {
 
 ///|
 #warnings("-unused_value")
-fn reader_classic_pdf_with_unparseable_xref_object() -> @pdflite.PdfBytes {
+fn reader_classic_pdf_with_unparseable_xref_object() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   let object_offset = output.length()
@@ -314,7 +314,7 @@ fn reader_classic_pdf_with_unparseable_xref_object() -> @pdflite.PdfBytes {
 
 ///|
 #warnings("-unused_value")
-fn reader_classic_pdf_with_indirect_stream_length() -> @pdflite.PdfBytes {
+fn reader_classic_pdf_with_indirect_stream_length() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   let stream_offset = output.length()
@@ -335,7 +335,7 @@ fn reader_classic_pdf_with_indirect_stream_length() -> @pdflite.PdfBytes {
 
 ///|
 #warnings("-unused_value")
-fn reader_classic_pdf_with_comment_stream_indirect_length() -> @pdflite.PdfBytes {
+fn reader_classic_pdf_with_comment_stream_indirect_length() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   let stream_offset = reader_push_indirect_object(

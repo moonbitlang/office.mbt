@@ -22,15 +22,15 @@ pub fn pdf_content_apply_type3_metrics_op(
 }
 
 ///|
-fn pdf_content_text_string_of_glyph_bytes(bytes : PdfBytes) -> String {
+fn pdf_content_text_string_of_glyph_bytes(bytes : @core.PdfBytes) -> String {
   @ascii.decode_lossy(bytes)
 }
 
 ///|
 fn pdf_content_extracted_text_of_glyph_bytes(
   font : PdfFont,
-  bytes : PdfBytes,
-) -> String raise PdfError {
+  bytes : @core.PdfBytes,
+) -> String raise @core.PdfError {
   let utf8 = pdf_utf8_of_codepoints(
     font.text_extractor().codepoints_of_text(bytes),
   )
@@ -45,7 +45,7 @@ pub fn PdfContentOperatorState::content_text_glyph_entry(
   self : PdfContentOperatorState,
   font : PdfFont,
   glyph : PdfContentTextGlyphPlacement,
-) -> PdfContentJsonEntry raise PdfError {
+) -> PdfContentJsonEntry raise @core.PdfError {
   let bytes = font.content_bytes_of_charcode(glyph.charcode)
   {
     object: PdfContentGlyphObject(
@@ -66,7 +66,7 @@ pub fn pdf_content_text_glyph_entry(
   state : PdfContentOperatorState,
   font : PdfFont,
   glyph : PdfContentTextGlyphPlacement,
-) -> PdfContentJsonEntry raise PdfError {
+) -> PdfContentJsonEntry raise @core.PdfError {
   state.content_text_glyph_entry(font, glyph)
 }
 
@@ -76,7 +76,7 @@ pub fn PdfContentOperatorState::content_apply_text_show_op(
   self : PdfContentOperatorState,
   font : PdfFont,
   op : @content.PdfContentOp,
-) -> PdfContentOperatorTextResult raise PdfError {
+) -> PdfContentOperatorTextResult raise @core.PdfError {
   let text_result = self.text_state.content_apply_text_op(font, self.ctm, op)
   let state = { ..self, text_state: text_result.text_state }
   let entries : Array[PdfContentJsonEntry] = Array::new(
@@ -94,7 +94,7 @@ pub fn pdf_content_apply_text_show_op(
   state : PdfContentOperatorState,
   font : PdfFont,
   op : @content.PdfContentOp,
-) -> PdfContentOperatorTextResult raise PdfError {
+) -> PdfContentOperatorTextResult raise @core.PdfError {
   state.content_apply_text_show_op(font, op)
 }
 
@@ -105,7 +105,7 @@ pub fn PdfDocument::content_apply_text_resource_op(
   state : PdfContentOperatorState,
   resources : @syntax.PdfObject,
   op : @content.PdfContentOp,
-) -> PdfContentOperatorTextResult raise PdfError {
+) -> PdfContentOperatorTextResult raise @core.PdfError {
   match op {
     Op_Tf(font_name, font_size) =>
       {
@@ -134,6 +134,6 @@ pub fn pdf_content_apply_text_resource_op(
   state : PdfContentOperatorState,
   resources : @syntax.PdfObject,
   op : @content.PdfContentOp,
-) -> PdfContentOperatorTextResult raise PdfError {
+) -> PdfContentOperatorTextResult raise @core.PdfError {
   document.content_apply_text_resource_op(state, resources, op)
 }

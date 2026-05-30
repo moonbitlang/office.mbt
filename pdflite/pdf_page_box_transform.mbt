@@ -7,7 +7,7 @@ pub fn PdfDocument::shift_boxes(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
   offsets : ArrayView[(Double, Double)],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let pages = self.pages_of_pagetree()
   pdf_page_box_validate_page_numbers(
     page_numbers,
@@ -47,7 +47,7 @@ pub fn PdfDocument::rectify_boxes(
   self : PdfDocument,
   page : @page.PdfPage,
   fast? : Bool = false,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   let bounds = self.parse_rectangle(page.mediabox)
   let page = self.change_boxes(page, (min_x, min_y, max_x, max_y) => {
     (
@@ -74,7 +74,7 @@ pub fn pdf_rectify_boxes(
   document : PdfDocument,
   page : @page.PdfPage,
   fast? : Bool = false,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   document.rectify_boxes(page, fast~)
 }
 
@@ -84,7 +84,7 @@ pub fn pdf_shift_boxes(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
   offsets : ArrayView[(Double, Double)],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.shift_boxes(page_numbers, offsets)
 }
 
@@ -94,6 +94,6 @@ pub fn pdf_shift_boxes_cpdf_order(
   offsets : ArrayView[(Double, Double)],
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.shift_boxes(page_numbers, offsets)
 }

@@ -3,7 +3,7 @@
 pub fn PdfDrawControl::set_stroke(
   self : PdfDrawControl,
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.add_op(PdfDrawSetStroke(@colour.pdf_draw_colour_of_string(text)))
 }
 
@@ -12,7 +12,7 @@ pub fn PdfDrawControl::set_stroke(
 pub fn PdfDrawControl::set_fill(
   self : PdfDrawControl,
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.add_op(PdfDrawSetFill(@colour.pdf_draw_colour_of_string(text)))
 }
 
@@ -21,7 +21,7 @@ pub fn PdfDrawControl::set_fill(
 pub fn PdfDrawControl::set_line_thickness(
   self : PdfDrawControl,
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let values = pdf_draw_control_expect_floats(
     text, 1, "Thickness must be a number", "Thickness must be a number",
   )
@@ -33,7 +33,7 @@ pub fn PdfDrawControl::set_line_thickness(
 pub fn PdfDrawControl::set_line_cap(
   self : PdfDrawControl,
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let value = match text {
     "butt" => 0
     "round" => 1
@@ -48,7 +48,7 @@ pub fn PdfDrawControl::set_line_cap(
 pub fn PdfDrawControl::set_line_join(
   self : PdfDrawControl,
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let value = match text {
     "miter" => 0
     "round" => 1
@@ -63,7 +63,7 @@ pub fn PdfDrawControl::set_line_join(
 pub fn PdfDrawControl::set_miter_limit(
   self : PdfDrawControl,
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let values = pdf_draw_control_expect_floats(
     text, 1, "Miter limit must be a number", "Miter limit must be a number",
   )
@@ -75,7 +75,7 @@ pub fn PdfDrawControl::set_miter_limit(
 pub fn PdfDrawControl::set_dash_pattern(
   self : PdfDrawControl,
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let values = pdf_draw_control_read_floats(
     text, "Dash pattern elements must one or more numbers",
   )
@@ -93,7 +93,7 @@ pub fn PdfDrawControl::set_dash_pattern(
 pub fn PdfDrawControl::set_matrix(
   self : PdfDrawControl,
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let values = pdf_draw_control_expect_floats(
     text, 6, "Matrix must have six numbers", "Matrix elements must be numbers",
   )
@@ -114,7 +114,7 @@ pub fn PdfDrawControl::set_matrix(
 pub fn PdfDrawControl::matrix_translate(
   self : PdfDrawControl,
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let values = pdf_draw_control_expect_floats(
     text, 2, "-mtrans takes two numbers", "-mtrans takes two numbers",
   )
@@ -128,7 +128,7 @@ pub fn PdfDrawControl::matrix_translate(
 pub fn PdfDrawControl::matrix_rotate(
   self : PdfDrawControl,
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let values = pdf_draw_control_expect_floats(
     text, 3, "-mrot takes three numbers", "-mrot takes three numbers",
   )
@@ -147,7 +147,7 @@ pub fn PdfDrawControl::matrix_rotate(
 pub fn PdfDrawControl::matrix_scale(
   self : PdfDrawControl,
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let values = pdf_draw_control_expect_floats(
     text, 4, "-mscale takes four numbers", "-mscale takes four numbers",
   )
@@ -167,7 +167,7 @@ pub fn PdfDrawControl::matrix_scale(
 pub fn PdfDrawControl::matrix_shear_x(
   self : PdfDrawControl,
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let values = pdf_draw_control_expect_floats(
     text, 3, "-mshearx takes three numbers", "-mshearx takes three numbers",
   )
@@ -186,7 +186,7 @@ pub fn PdfDrawControl::matrix_shear_x(
 pub fn PdfDrawControl::matrix_shear_y(
   self : PdfDrawControl,
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let values = pdf_draw_control_expect_floats(
     text, 3, "-msheary takes three numbers", "-msheary takes three numbers",
   )
@@ -204,7 +204,7 @@ pub fn PdfDrawControl::matrix_shear_y(
 /// Append a new-page operation to the current frame.
 pub fn PdfDrawControl::add_new_page(
   self : PdfDrawControl,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.add_op(PdfDrawNewPage)
 }
 
@@ -213,7 +213,7 @@ pub fn PdfDrawControl::add_new_page(
 pub fn PdfDrawControl::add_opacity(
   self : PdfDrawControl,
   opacity : Double,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.add_op(PdfDrawOpacity(opacity))
 }
 
@@ -222,7 +222,7 @@ pub fn PdfDrawControl::add_opacity(
 pub fn PdfDrawControl::add_stroke_opacity(
   self : PdfDrawControl,
   opacity : Double,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.add_op(PdfDrawSOpacity(opacity))
 }
 
@@ -234,7 +234,9 @@ pub fn PdfDrawControl::push_group(self : PdfDrawControl) -> Unit {
 
 ///|
 /// Finish the current pushed graphics-state frame and append a `PdfDrawQq` op.
-pub fn PdfDrawControl::pop_group(self : PdfDrawControl) -> Unit raise PdfError {
+pub fn PdfDrawControl::pop_group(
+  self : PdfDrawControl,
+) -> Unit raise @core.PdfError {
   match self.frames.pop() {
     Some(frame) if frame.name == pdf_draw_control_push_frame =>
       self.add_op(PdfDrawQq(pdf_draw_control_copy_ops(frame.ops)))

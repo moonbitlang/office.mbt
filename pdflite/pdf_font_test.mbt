@@ -1,6 +1,6 @@
 ///|
-fn font_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn font_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -71,7 +71,7 @@ fn font_font_object_for_test(
   basefont : String,
   encoding : String?,
 ) -> @syntax.PdfObject {
-  let entries : Array[(@pdflite.PdfName, @syntax.PdfObject)] = [
+  let entries : Array[(@core.PdfName, @syntax.PdfObject)] = [
     (font_name_for_test("/Type"), PdfNameObject(font_name_for_test("/Font"))),
     (font_name_for_test("/Subtype"), PdfNameObject(font_name_for_test(subtype))),
     (
@@ -538,7 +538,7 @@ test "PdfDocument list_fonts walks page and XObject resources" {
       3,
     ],
   )
-  guard bad_page is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+  guard bad_page is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail("expected BadPageSpecification")
   }
 }
@@ -652,7 +652,7 @@ test "PdfDocument missing_fonts reports page and descendant fonts" {
       3,
     ],
   )
-  guard bad_page is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+  guard bad_page is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail("expected BadPageSpecification")
   }
 }
@@ -688,7 +688,7 @@ test "PdfDocument font_from_name resolves page and XObject paths" {
   let bad_page : Result[@syntax.PdfObject, Error] = try? doc.font_from_name(
     "/F1", 2,
   )
-  guard bad_page is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+  guard bad_page is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail("expected BadPageSpecification")
   }
 }
@@ -724,7 +724,7 @@ test "PdfDocument font_table renders Helvetica encoding rows" {
   let bad_page : Result[Array[@font.PdfFontTableEntry], Error] = try? doc.font_table(
     "/F1", 3,
   )
-  guard bad_page is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+  guard bad_page is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail("expected BadPageSpecification")
   }
 }
@@ -800,7 +800,7 @@ test "PdfDocument copy_font_from adds source font to selected target pages" {
     1,
     [3],
   )
-  guard bad_page is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+  guard bad_page is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail("expected BadPageSpecification")
   }
 }

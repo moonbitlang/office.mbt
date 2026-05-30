@@ -1,6 +1,8 @@
 ///|
 /// Return cpdf-style XMP metadata report fields as JSON.
-pub fn PdfDocument::xmp_info_json(self : PdfDocument) -> Json raise PdfError {
+pub fn PdfDocument::xmp_info_json(
+  self : PdfDocument,
+) -> Json raise @core.PdfError {
   let output : Map[String, Json] = Map([])
   output.set(
     "Subformats",
@@ -25,7 +27,7 @@ pub fn PdfDocument::xmp_info_json(self : PdfDocument) -> Json raise PdfError {
 /// Return cpdf-style XMP metadata report fields as UTF-8 JSON bytes.
 pub fn PdfDocument::xmp_info_json_blob(
   self : PdfDocument,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   @utf8.encode(self.xmp_info_json().stringify())
 }
 
@@ -33,7 +35,7 @@ pub fn PdfDocument::xmp_info_json_blob(
 /// Return cpdf-style XMP metadata report fields as stdout-style UTF-8 bytes.
 pub fn PdfDocument::xmp_info_blob(
   self : PdfDocument,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let output : Array[String] = []
   output.push("Subformats: ")
   output.push(pdf_metadata_combine_with_commas(self.determine_subformats()))

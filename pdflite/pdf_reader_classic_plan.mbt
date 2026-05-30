@@ -6,7 +6,9 @@ priv struct PdfClassicReadPlan {
 }
 
 ///|
-fn pdf_read_reader_revision_target(revision : Int?) -> Int? raise PdfError {
+fn pdf_read_reader_revision_target(
+  revision : Int?,
+) -> Int? raise @core.PdfError {
   match revision {
     Some(value) if value < 1 => raise BadRevision
     _ => revision
@@ -38,10 +40,10 @@ fn pdf_reader_revision_selects_trailer(
 
 ///|
 fn pdf_reader_classic_read_plan(
-  cursor : ByteCursor,
+  cursor : @core.ByteCursor,
   xref_position : Int,
   revision : Int?,
-) -> PdfClassicReadPlan raise PdfError {
+) -> PdfClassicReadPlan raise @core.PdfError {
   let xrefs : Array[@reader.PdfClassicXRefEntry] = []
   let xref_seen = @core.pdf_number_set([])
   let mut trailer = @syntax.PdfDictionary([])

@@ -4,7 +4,7 @@ pub fn PdfDocument::content_apply_extgstate_font_op(
   self : PdfDocument,
   state : PdfContentOperatorState,
   extgstate : @syntax.PdfObject,
-) -> PdfContentOperatorState raise PdfError {
+) -> PdfContentOperatorState raise @core.PdfError {
   match self.lookup_direct(pdf_content_extgstate_font_name, extgstate) {
     Some(PdfArray([PdfIndirect(font_number), size])) => {
       let font = self.read_font(PdfIndirect(font_number))
@@ -32,7 +32,7 @@ pub fn pdf_content_apply_extgstate_font_op(
   document : PdfDocument,
   state : PdfContentOperatorState,
   extgstate : @syntax.PdfObject,
-) -> PdfContentOperatorState raise PdfError {
+) -> PdfContentOperatorState raise @core.PdfError {
   document.content_apply_extgstate_font_op(state, extgstate)
 }
 
@@ -40,8 +40,8 @@ pub fn pdf_content_apply_extgstate_font_op(
 fn PdfDocument::content_font_resource(
   self : PdfDocument,
   resources : @syntax.PdfObject,
-  name : PdfName,
-) -> PdfFont? raise PdfError {
+  name : @core.PdfName,
+) -> PdfFont? raise @core.PdfError {
   match self.lookup_direct(pdf_page_font_resource_name, resources) {
     Some(font_dictionary) =>
       match self.lookup_direct(name, font_dictionary) {
@@ -58,9 +58,9 @@ pub fn PdfDocument::content_apply_font_resource_op(
   self : PdfDocument,
   state : PdfContentOperatorState,
   resources : @syntax.PdfObject,
-  font_name : PdfName,
+  font_name : @core.PdfName,
   font_size : Double,
-) -> PdfContentOperatorState raise PdfError {
+) -> PdfContentOperatorState raise @core.PdfError {
   let name_text = pdf_content_state_name_text(font_name)
   let text_state = state.text_state.content_apply_text_state_op(
     Op_Tf(font_name, font_size),
@@ -85,9 +85,9 @@ pub fn pdf_content_apply_font_resource_op(
   document : PdfDocument,
   state : PdfContentOperatorState,
   resources : @syntax.PdfObject,
-  font_name : PdfName,
+  font_name : @core.PdfName,
   font_size : Double,
-) -> PdfContentOperatorState raise PdfError {
+) -> PdfContentOperatorState raise @core.PdfError {
   document.content_apply_font_resource_op(
     state, resources, font_name, font_size,
   )

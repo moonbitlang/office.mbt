@@ -4,11 +4,11 @@
 /// Widths are returned in user units for the requested font size. This ports the
 /// standalone `cpdftype.ml` `font_widths` behavior for standard fonts and simple
 /// fonts with explicit metrics. CID fonts and simple fonts without metrics raise
-/// `PdfError::FontWidthExpected`.
+/// `@core.PdfError::FontWidthExpected`.
 pub fn pdf_type_font_widths(
   font : PdfFont,
   font_size : Double,
-) -> Array[Double] raise PdfError {
+) -> Array[Double] raise @core.PdfError {
   match font {
     PdfFontStandard(data) =>
       [
@@ -32,11 +32,11 @@ pub fn pdf_type_font_widths(
 /// Sum a cpdftype width table for byte-encoded text.
 ///
 /// Each input byte is used directly as a charcode index. A width table shorter
-/// than the largest charcode raises `PdfError::FontWidthExpected`.
+/// than the largest charcode raises `@core.PdfError::FontWidthExpected`.
 pub fn pdf_type_width_of_bytes(
   widths : ArrayView[Double],
   text : BytesView,
-) -> Double raise PdfError {
+) -> Double raise @core.PdfError {
   let mut width = 0.0
   for byte in text {
     let code = byte.to_int()
@@ -53,7 +53,7 @@ pub fn pdf_type_width_of_bytes(
 pub fn pdf_type_width_of_string(
   widths : ArrayView[Double],
   text : BytesView,
-) -> Double raise PdfError {
+) -> Double raise @core.PdfError {
   pdf_type_width_of_bytes(widths, text)
 }
 

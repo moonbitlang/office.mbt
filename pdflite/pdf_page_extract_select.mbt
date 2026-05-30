@@ -2,7 +2,7 @@
 fn pdf_page_select_pages(
   pages : ArrayView[@page.PdfPage],
   page_numbers : ArrayView[Int],
-) -> Array[@page.PdfPage] raise PdfError {
+) -> Array[@page.PdfPage] raise @core.PdfError {
   if page_numbers.length() == 0 {
     raise PageTreeExpected
   }
@@ -22,7 +22,7 @@ fn pdf_page_select_pages(
 fn pdf_page_select_numbers(
   numbers : ArrayView[Int],
   page_numbers : ArrayView[Int],
-) -> Array[Int] raise PdfError {
+) -> Array[Int] raise @core.PdfError {
   if page_numbers.length() == 0 {
     raise PageTreeExpected
   }

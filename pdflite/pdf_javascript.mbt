@@ -1,60 +1,62 @@
 ///|
-fn pdf_javascript_name(text : String) -> PdfName {
-  pdf_name_of_bytes(@ascii.encode(text))
+fn pdf_javascript_name(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
-let pdf_javascript_js_key_name : PdfName = pdf_javascript_name("/JS")
+let pdf_javascript_js_key_name : @core.PdfName = pdf_javascript_name("/JS")
 
 ///|
-fn pdf_javascript_js_key() -> PdfName {
+fn pdf_javascript_js_key() -> @core.PdfName {
   pdf_javascript_js_key_name
 }
 
 ///|
-let pdf_javascript_uri_key_name : PdfName = pdf_javascript_name("/URI")
+let pdf_javascript_uri_key_name : @core.PdfName = pdf_javascript_name("/URI")
 
 ///|
-fn pdf_javascript_uri_key() -> PdfName {
+fn pdf_javascript_uri_key() -> @core.PdfName {
   pdf_javascript_uri_key_name
 }
 
 ///|
-let pdf_javascript_s_key_name : PdfName = pdf_javascript_name("/S")
+let pdf_javascript_s_key_name : @core.PdfName = pdf_javascript_name("/S")
 
 ///|
-fn pdf_javascript_s_key() -> PdfName {
+fn pdf_javascript_s_key() -> @core.PdfName {
   pdf_javascript_s_key_name
 }
 
 ///|
-let pdf_javascript_root_key_name : PdfName = pdf_javascript_name("/Root")
+let pdf_javascript_root_key_name : @core.PdfName = pdf_javascript_name("/Root")
 
 ///|
-fn pdf_javascript_root_key() -> PdfName {
+fn pdf_javascript_root_key() -> @core.PdfName {
   pdf_javascript_root_key_name
 }
 
 ///|
-let pdf_javascript_names_key_name : PdfName = pdf_javascript_name("/Names")
+let pdf_javascript_names_key_name : @core.PdfName = pdf_javascript_name(
+  "/Names",
+)
 
 ///|
-fn pdf_javascript_names_key() -> PdfName {
+fn pdf_javascript_names_key() -> @core.PdfName {
   pdf_javascript_names_key_name
 }
 
 ///|
-let pdf_javascript_javascript_key_name : PdfName = pdf_javascript_name(
+let pdf_javascript_javascript_key_name : @core.PdfName = pdf_javascript_name(
   "/JavaScript",
 )
 
 ///|
-fn pdf_javascript_javascript_key() -> PdfName {
+fn pdf_javascript_javascript_key() -> @core.PdfName {
   pdf_javascript_javascript_key_name
 }
 
 ///|
-let pdf_javascript_empty_bytes : PdfBytes = @ascii.encode("")
+let pdf_javascript_empty_bytes : @core.PdfBytes = @ascii.encode("")
 
 ///|
 fn pdf_javascript_empty_string() -> @syntax.PdfObject {
@@ -62,10 +64,12 @@ fn pdf_javascript_empty_string() -> @syntax.PdfObject {
 }
 
 ///|
-let pdf_javascript_action_bytes : PdfBytes = @ascii.encode("/JavaScript")
+let pdf_javascript_action_bytes : @core.PdfBytes = @ascii.encode("/JavaScript")
 
 ///|
-let pdf_javascript_uri_prefix_bytes : PdfBytes = @ascii.encode("javascript:")
+let pdf_javascript_uri_prefix_bytes : @core.PdfBytes = @ascii.encode(
+  "javascript:",
+)
 
 ///|
 fn pdf_javascript_bytes_equal(left : BytesView, right : BytesView) -> Bool {
@@ -257,7 +261,7 @@ pub fn PdfDocument::contains_javascript(self : PdfDocument) -> Bool {
 /// the `/Root /Names /JavaScript` chain.
 pub fn PdfDocument::remove_javascript(
   self : PdfDocument,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.map_objects_in_place(fn(object) {
     self.pdf_javascript_remove_from_object(object)
   })
@@ -278,6 +282,8 @@ pub fn pdf_contains_javascript(document : PdfDocument) -> Bool {
 
 ///|
 /// Compatibility wrapper for `PdfDocument::remove_javascript`.
-pub fn pdf_remove_javascript(document : PdfDocument) -> Unit raise PdfError {
+pub fn pdf_remove_javascript(
+  document : PdfDocument,
+) -> Unit raise @core.PdfError {
   document.remove_javascript()
 }

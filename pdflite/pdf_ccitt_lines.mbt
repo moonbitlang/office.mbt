@@ -11,7 +11,7 @@ fn pdf_ccitt_output_span(
   column : Int,
   length : Int,
   value : Int,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   if length < 0 || column < 0 || column + length > line.length() {
     raise InvalidCCITTData
   }
@@ -23,9 +23,9 @@ fn pdf_ccitt_output_span(
 
 ///|
 fn pdf_ccitt_output_line(
-  output : BitWriter,
+  output : @core.BitWriter,
   line : ArrayView[Int],
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   for bit in line {
     output.put_bit(bit)
   }

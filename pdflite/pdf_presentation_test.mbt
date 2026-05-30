@@ -1,12 +1,12 @@
 ///|
-fn presentation_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn presentation_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
 fn presentation_lookup_for_test(
   object : @syntax.PdfObject,
-  key : @pdflite.PdfName,
+  key : @core.PdfName,
 ) -> @syntax.PdfObject? {
   object.lookup_immediate(key)
 }
@@ -323,7 +323,7 @@ test "PdfDocument presentation rejects unknown transition names" {
     0,
     1.0,
   )
-  guard result is Err(@pdflite.PdfError::SoftError("Unknown presentation type")) else {
+  guard result is Err(@core.PdfError::SoftError("Unknown presentation type")) else {
     fail("expected Unknown presentation type SoftError")
   }
 }

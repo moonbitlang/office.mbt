@@ -3,7 +3,7 @@
 pub fn PdfDrawControl::add_tag(
   self : PdfDrawControl,
   tag : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.add_op(PdfDrawTag(tag))
 }
 
@@ -12,13 +12,15 @@ pub fn PdfDrawControl::add_tag(
 pub fn PdfDrawControl::add_structure_tag(
   self : PdfDrawControl,
   tag : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.add_op(PdfDrawSTag(tag))
 }
 
 ///|
 /// Append a marked-content tag end operation to the current frame.
-pub fn PdfDrawControl::end_tag(self : PdfDrawControl) -> Unit raise PdfError {
+pub fn PdfDrawControl::end_tag(
+  self : PdfDrawControl,
+) -> Unit raise @core.PdfError {
   self.add_op(PdfDrawEndTag)
 }
 
@@ -26,7 +28,7 @@ pub fn PdfDrawControl::end_tag(self : PdfDrawControl) -> Unit raise PdfError {
 /// Append a structure-tag end operation to the current frame.
 pub fn PdfDrawControl::end_structure_tag(
   self : PdfDrawControl,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.add_op(PdfDrawEndSTag)
 }
 
@@ -35,7 +37,7 @@ pub fn PdfDrawControl::end_structure_tag(
 pub fn PdfDrawControl::set_auto_tag(
   self : PdfDrawControl,
   enabled : Bool,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.add_op(PdfDrawAutoTag(enabled))
 }
 
@@ -43,7 +45,7 @@ pub fn PdfDrawControl::set_auto_tag(
 /// Append an artifact begin operation for structured PDF output.
 pub fn PdfDrawControl::begin_artifact(
   self : PdfDrawControl,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.add_op(PdfDrawBeginArtifact)
 }
 
@@ -51,7 +53,7 @@ pub fn PdfDrawControl::begin_artifact(
 /// Append an artifact end operation for structured PDF output.
 pub fn PdfDrawControl::end_artifact(
   self : PdfDrawControl,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.add_op(PdfDrawEndArtifact)
 }
 
@@ -60,7 +62,7 @@ pub fn PdfDrawControl::end_artifact(
 pub fn PdfDrawControl::add_namespace(
   self : PdfDrawControl,
   namespace_name : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.add_op(PdfDrawNamespace(namespace_name))
 }
 
@@ -70,7 +72,7 @@ pub fn PdfDrawControl::add_element_info(
   self : PdfDrawControl,
   key : String,
   value : @syntax.PdfObject,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.add_op(PdfDrawEltInfo(key, value))
 }
 
@@ -79,7 +81,7 @@ pub fn PdfDrawControl::add_element_info(
 pub fn PdfDrawControl::end_element_info(
   self : PdfDrawControl,
   key : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.add_op(PdfDrawEndEltInfo(key))
 }
 

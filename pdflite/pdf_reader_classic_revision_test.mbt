@@ -9,7 +9,7 @@ test "pdf_read_classic_document_from_bytes resolves indirect stream length" {
   }
   @test.assert_eq(
     stream.dictionary.lookup_immediate(
-      @pdflite.pdf_name_of_bytes(
+      @core.pdf_name_of_bytes(
         reader_bytes_for_test([47, 76, 101, 110, 103, 116, 104]),
       ),
     ),
@@ -33,7 +33,7 @@ test "pdf_read_classic_document_from_bytes resolves commented indirect stream le
   }
   @test.assert_eq(
     stream.dictionary.lookup_immediate(
-      @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Length")),
+      @core.pdf_name_of_bytes(reader_pdf_ascii("/Length")),
     ),
     Some(PdfIndirect(2)),
   )
@@ -55,7 +55,7 @@ test "pdf_read_classic_document_from_bytes follows trailer Prev xrefs" {
   @test.assert_eq(
     parsed
     .trailer_dict()
-    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Prev"))),
+    .lookup_immediate(@core.pdf_name_of_bytes(reader_pdf_ascii("/Prev"))),
     None,
   )
 }
@@ -145,15 +145,15 @@ test "pdf_read_classic_document_revision_from_bytes reports bad revisions" {
     reader_classic_pdf_with_prev_xref(),
     0,
   )
-  guard invalid is Err(@pdflite.PdfError::BadRevision) else {
-    fail("expected @pdflite.PdfError::BadRevision")
+  guard invalid is Err(@core.PdfError::BadRevision) else {
+    fail("expected @core.PdfError::BadRevision")
   }
 
   let missing : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_revision_from_bytes(
     reader_classic_pdf_with_prev_xref(),
     3,
   )
-  guard missing is Err(@pdflite.PdfError::BadRevision) else {
-    fail("expected @pdflite.PdfError::BadRevision")
+  guard missing is Err(@core.PdfError::BadRevision) else {
+    fail("expected @core.PdfError::BadRevision")
   }
 }

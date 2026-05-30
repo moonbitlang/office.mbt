@@ -1,5 +1,5 @@
 ///|
-fn pdf_attach_embedded_file_stream(data : PdfBytes) -> @syntax.PdfObject {
+fn pdf_attach_embedded_file_stream(data : @core.PdfBytes) -> @syntax.PdfObject {
   @syntax.pdf_stream(
     PdfDictionary([
       (pdf_attach_length_key(), PdfInteger(data.length())),
@@ -26,11 +26,11 @@ fn PdfDocument::pdf_attach_file_spec(
   data : BytesView,
   relationship : String?,
   description : String?,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   let payload = data.to_owned()
   let stream_number = self.add_object(pdf_attach_embedded_file_stream(payload))
   let basename_bytes = pdf_attach_pdfdoc_string(basename)
-  let entries : Array[(PdfName, @syntax.PdfObject)] = [
+  let entries : Array[(@core.PdfName, @syntax.PdfObject)] = [
     (
       pdf_attach_ef_key(),
       PdfDictionary([(pdf_attach_f_key(), PdfIndirect(stream_number))]),
@@ -62,7 +62,7 @@ fn PdfDocument::pdf_attach_file_spec(
 ///|
 fn PdfDocument::pdf_attach_existing_document_entries(
   self : PdfDocument,
-) -> Array[(PdfBytes, @syntax.PdfObject)] raise PdfError {
+) -> Array[(@core.PdfBytes, @syntax.PdfObject)] raise @core.PdfError {
   let catalog = self.catalog()
   match self.lookup_direct(pdf_attach_names_key(), catalog) {
     Some(names) =>
@@ -77,9 +77,9 @@ fn PdfDocument::pdf_attach_existing_document_entries(
 ///|
 fn PdfDocument::pdf_attach_add_document_file(
   self : PdfDocument,
-  basename_bytes : PdfBytes,
+  basename_bytes : @core.PdfBytes,
   file_spec_number : Int,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let entries = self.pdf_attach_existing_document_entries()
   entries.push((basename_bytes, PdfIndirect(file_spec_number)))
   let tree_number = self.add_object(self.build_name_tree(entries))
@@ -109,9 +109,9 @@ fn pdf_attach_annotation_rect(
 fn PdfDocument::pdf_attach_add_page_file(
   self : PdfDocument,
   page_number : Int,
-  basename_bytes : PdfBytes,
+  basename_bytes : @core.PdfBytes,
   file_spec_number : Int,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let pages = self.pages_of_pagetree()
   if page_number < 1 || page_number > pages.length() {
     raise BadPageSpecification("attach_file: Page not found")
@@ -165,7 +165,7 @@ pub fn PdfDocument::attach_file(
   page_number? : Int? = None,
   relationship? : String? = None,
   description? : String? = None,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   ignore(self.catalog())
   let document = self.copy()
   let basename = pdf_attach_basename(filename)
@@ -197,7 +197,7 @@ pub fn pdf_attach_file(
   page_number? : Int? = None,
   relationship? : String? = None,
   description? : String? = None,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.attach_file(
     filename,
     data,
@@ -221,7 +221,7 @@ pub fn pdf_attach_file_cpdf_order(
   description : String?,
   filename : String,
   data : BytesView,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.attach_file(
     filename,
     data,

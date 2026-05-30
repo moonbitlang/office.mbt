@@ -2,8 +2,8 @@
 fn PdfDocument::pdf_object_stream_required_int(
   self : PdfDocument,
   dictionary : @syntax.PdfObject,
-  key : PdfName,
-) -> Int raise PdfError {
+  key : @core.PdfName,
+) -> Int raise @core.PdfError {
   match self.lookup_direct(key, dictionary) {
     Some(PdfInteger(value)) if value >= 0 => value
     _ => raise XRefEntryExpected
@@ -12,7 +12,7 @@ fn PdfDocument::pdf_object_stream_required_int(
 
 ///|
 priv struct PdfObjectStreamContext {
-  data : PdfBytes
+  data : @core.PdfBytes
   first : Int
   pairs : Array[(Int, Int)]
   end_offsets : Array[Int]
@@ -22,7 +22,7 @@ priv struct PdfObjectStreamContext {
 fn PdfDocument::read_object_stream_context_from_object(
   self : PdfDocument,
   object_stream_object : @syntax.PdfObject,
-) -> PdfObjectStreamContext raise PdfError {
+) -> PdfObjectStreamContext raise @core.PdfError {
   match object_stream_object {
     PdfStreamObject(stream) => {
       match stream.dictionary.lookup_immediate(@reader.pdf_reader_type_name()) {
@@ -57,7 +57,7 @@ fn PdfDocument::read_object_stream_context_from_object(
 fn PdfObjectStreamContext::read_reference(
   self : PdfObjectStreamContext,
   reference : @reader.ObjectStreamReference,
-) -> (Int, @syntax.PdfObject) raise PdfError {
+) -> (Int, @syntax.PdfObject) raise @core.PdfError {
   if reference.index < 0 || reference.index >= self.pairs.length() {
     raise XRefEntryExpected
   }
@@ -78,7 +78,7 @@ fn PdfObjectStreamContext::read_reference(
 fn PdfDocument::read_object_stream_context(
   self : PdfDocument,
   object_stream_number : Int,
-) -> PdfObjectStreamContext raise PdfError {
+) -> PdfObjectStreamContext raise @core.PdfError {
   self.read_object_stream_context_from_object(
     self.lookup_object_or_null(object_stream_number),
   )
@@ -90,7 +90,7 @@ fn PdfDocument::read_object_stream_context_with_passwords(
   object_stream_number : Int,
   user_password : BytesView?,
   owner_password : BytesView?,
-) -> (PdfObjectStreamContext, Bool) raise PdfError {
+) -> (PdfObjectStreamContext, Bool) raise @core.PdfError {
   if !self.is_encrypted() {
     (self.read_object_stream_context(object_stream_number), false)
   } else {
@@ -123,7 +123,7 @@ fn PdfDocument::load_embedded_objects_from_context(
   object_stream_number : Int,
   context : PdfObjectStreamContext,
   already_decrypted : Bool,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   for entry in xrefs {
     let xref = entry.0
     let reference = entry.1

@@ -2,7 +2,7 @@
 fn PdfDocument::pdf_ua_matterhorn_run_test(
   self : PdfDocument,
   check : PdfUAMatterhornTest,
-) -> PdfUAMatterhornFailure? raise PdfError {
+) -> PdfUAMatterhornFailure? raise @core.PdfError {
   let result = match check.name {
     "01-003" => self.pdf_ua_matterhorn_check_01_003()
     "01-004" => self.pdf_ua_matterhorn_check_01_004()
@@ -110,7 +110,7 @@ fn PdfDocument::pdf_ua_matterhorn_circular_rolemap_failure(
 ///|
 fn pdf_ua_matterhorn_tests_for_name(
   test_name : String,
-) -> Array[PdfUAMatterhornTest] raise PdfError {
+) -> Array[PdfUAMatterhornTest] raise @core.PdfError {
   let tests = pdf_ua_matterhorn_implemented_tests()
   if test_name == "" {
     tests
@@ -128,7 +128,7 @@ fn pdf_ua_matterhorn_tests_for_name(
 fn PdfDocument::pdf_ua_matterhorn_failures(
   self : PdfDocument,
   test_name : String,
-) -> Array[PdfUAMatterhornFailure] raise PdfError {
+) -> Array[PdfUAMatterhornFailure] raise @core.PdfError {
   let checks = pdf_ua_matterhorn_tests_for_name(test_name)
   match self.pdf_ua_matterhorn_circular_rolemap_failure() {
     Some(failure) => return [failure]
@@ -179,7 +179,7 @@ fn PdfDocument::pdf_ua_matterhorn_failures(
 pub fn PdfDocument::test_matterhorn_json(
   self : PdfDocument,
   test_name : String,
-) -> Json raise PdfError {
+) -> Json raise @core.PdfError {
   Json::array(
     [
       for failure in self.pdf_ua_matterhorn_failures(test_name) => {
@@ -250,7 +250,7 @@ fn pdf_ua_matterhorn_text_length(
 pub fn PdfDocument::test_matterhorn_text(
   self : PdfDocument,
   test_name : String,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let failures = self.pdf_ua_matterhorn_failures(test_name)
   let output = Array::make(pdf_ua_matterhorn_text_length(failures), b'\x00')
   let mut position = 0
@@ -265,7 +265,7 @@ pub fn PdfDocument::test_matterhorn_text(
 pub fn pdf_ua_test_matterhorn_json(
   document : PdfDocument,
   test_name : String,
-) -> Json raise PdfError {
+) -> Json raise @core.PdfError {
   document.test_matterhorn_json(test_name)
 }
 
@@ -274,6 +274,6 @@ pub fn pdf_ua_test_matterhorn_json(
 pub fn pdf_ua_test_matterhorn_print(
   document : PdfDocument,
   test_name : String,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   document.test_matterhorn_text(test_name)
 }

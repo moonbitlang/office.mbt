@@ -29,7 +29,7 @@ fn pdf_fun_calculator_number_of_token(text : String) -> PdfCalculatorOp? {
 ///|
 fn pdf_fun_calculator_op_of_token(
   text : String,
-) -> PdfCalculatorOp raise PdfError {
+) -> PdfCalculatorOp raise @core.PdfError {
   match text {
     "abs" => PdfCalculatorAbs
     "add" => PdfCalculatorAdd
@@ -93,7 +93,7 @@ fn pdf_fun_calculator_op_of_token(
 ///|
 fn pdf_fun_calculator_text_token(
   token : ArrayView[Byte],
-) -> PdfCalculatorToken? raise PdfError {
+) -> PdfCalculatorToken? raise @core.PdfError {
   if token.length() > 0 {
     let text = @ascii.decode(Bytes::from_array(token)) catch {
       _ => raise FunctionExpected
@@ -108,7 +108,7 @@ fn pdf_fun_calculator_text_token(
 fn pdf_fun_calculator_push_text_token(
   tokens : Array[PdfCalculatorToken],
   token : ArrayView[Byte],
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   match pdf_fun_calculator_text_token(token) {
     Some(text) => tokens.push(text)
     None => ()
@@ -117,15 +117,15 @@ fn pdf_fun_calculator_push_text_token(
 
 ///|
 fn pdf_fun_calculator_tokens(
-  data : PdfBytes,
-) -> Array[PdfCalculatorToken] raise PdfError {
+  data : @core.PdfBytes,
+) -> Array[PdfCalculatorToken] raise @core.PdfError {
   let tokens : Array[PdfCalculatorToken] = []
   let mut token : Array[Byte] = []
   let mut index = 0
   while index < data.length() {
     let byte = data[index]
     let value = byte.to_int()
-    if pdf_is_whitespace_byte(value) {
+    if @core.pdf_is_whitespace_byte(value) {
       pdf_fun_calculator_push_text_token(tokens, token)
       token = []
       index += 1
@@ -160,7 +160,7 @@ fn pdf_fun_calculator_tokens(
 ///|
 fn pdf_fun_calculator_pop_procedure(
   items : Array[PdfCalculatorItem],
-) -> Array[PdfCalculatorOp] raise PdfError {
+) -> Array[PdfCalculatorOp] raise @core.PdfError {
   match items.pop() {
     Some(PdfCalculatorItemProcedure(operations)) => operations
     _ => raise FunctionExpected
@@ -170,7 +170,7 @@ fn pdf_fun_calculator_pop_procedure(
 ///|
 fn pdf_fun_calculator_items_to_operations(
   items : ArrayView[PdfCalculatorItem],
-) -> Array[PdfCalculatorOp] raise PdfError {
+) -> Array[PdfCalculatorOp] raise @core.PdfError {
   let operations : Array[PdfCalculatorOp] = []
   for item in items {
     match item {
@@ -185,7 +185,7 @@ fn pdf_fun_calculator_items_to_operations(
 fn pdf_fun_calculator_push_operator(
   items : Array[PdfCalculatorItem],
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   match text {
     "if" => {
       let then_branch = pdf_fun_calculator_pop_procedure(items)
@@ -207,7 +207,7 @@ fn pdf_fun_calculator_parse_items(
   tokens : ArrayView[PdfCalculatorToken],
   start : Int,
   stop_at_close~ : Bool,
-) -> (Array[PdfCalculatorItem], Int) raise PdfError {
+) -> (Array[PdfCalculatorItem], Int) raise @core.PdfError {
   let items : Array[PdfCalculatorItem] = []
   let mut index = start
   let mut closed = false
@@ -246,7 +246,7 @@ fn pdf_fun_calculator_parse_operations(
   tokens : ArrayView[PdfCalculatorToken],
   start : Int,
   stop_at_close~ : Bool,
-) -> (Array[PdfCalculatorOp], Int) raise PdfError {
+) -> (Array[PdfCalculatorOp], Int) raise @core.PdfError {
   let (items, next_index) = pdf_fun_calculator_parse_items(
     tokens,
     start,
@@ -257,8 +257,8 @@ fn pdf_fun_calculator_parse_operations(
 
 ///|
 fn pdf_fun_parse_calculator(
-  data : PdfBytes,
-) -> PdfCalculatorFunction raise PdfError {
+  data : @core.PdfBytes,
+) -> PdfCalculatorFunction raise @core.PdfError {
   let tokens = pdf_fun_calculator_tokens(data)
   let (operations, next_index) = match tokens.get(0) {
     Some(PdfCalculatorTokenOpen) =>

@@ -90,129 +90,157 @@ pub(all) struct PdfContentMarkedContent {
 } derive(Debug, Eq, ToJson)
 
 ///|
-fn pdf_content_extgstate_name(text : String) -> PdfName {
-  pdf_name_of_bytes(@ascii.encode(text))
+fn pdf_content_extgstate_name(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
-let pdf_content_extgstate_lw_name : PdfName = pdf_content_extgstate_name("/LW")
+let pdf_content_extgstate_lw_name : @core.PdfName = pdf_content_extgstate_name(
+  "/LW",
+)
 
 ///|
-let pdf_content_extgstate_lc_name : PdfName = pdf_content_extgstate_name("/LC")
+let pdf_content_extgstate_lc_name : @core.PdfName = pdf_content_extgstate_name(
+  "/LC",
+)
 
 ///|
-let pdf_content_extgstate_lj_name : PdfName = pdf_content_extgstate_name("/LJ")
+let pdf_content_extgstate_lj_name : @core.PdfName = pdf_content_extgstate_name(
+  "/LJ",
+)
 
 ///|
-let pdf_content_extgstate_ml_name : PdfName = pdf_content_extgstate_name("/ML")
+let pdf_content_extgstate_ml_name : @core.PdfName = pdf_content_extgstate_name(
+  "/ML",
+)
 
 ///|
-let pdf_content_extgstate_d_name : PdfName = pdf_content_extgstate_name("/D")
+let pdf_content_extgstate_d_name : @core.PdfName = pdf_content_extgstate_name(
+  "/D",
+)
 
 ///|
-let pdf_content_extgstate_ri_name : PdfName = pdf_content_extgstate_name("/RI")
+let pdf_content_extgstate_ri_name : @core.PdfName = pdf_content_extgstate_name(
+  "/RI",
+)
 
 ///|
-let pdf_content_extgstate_resource_name : PdfName = pdf_content_extgstate_name(
+let pdf_content_extgstate_resource_name : @core.PdfName = pdf_content_extgstate_name(
   "/ExtGState",
 )
 
 ///|
-let pdf_content_extgstate_font_name : PdfName = pdf_content_extgstate_name(
+let pdf_content_extgstate_font_name : @core.PdfName = pdf_content_extgstate_name(
   "/Font",
 )
 
 ///|
-let pdf_content_extgstate_op_stroke_name : PdfName = pdf_content_extgstate_name(
+let pdf_content_extgstate_op_stroke_name : @core.PdfName = pdf_content_extgstate_name(
   "/OP",
 )
 
 ///|
-let pdf_content_extgstate_op_non_stroke_name : PdfName = pdf_content_extgstate_name(
+let pdf_content_extgstate_op_non_stroke_name : @core.PdfName = pdf_content_extgstate_name(
   "/op",
 )
 
 ///|
-let pdf_content_extgstate_bg_name : PdfName = pdf_content_extgstate_name("/BG")
+let pdf_content_extgstate_bg_name : @core.PdfName = pdf_content_extgstate_name(
+  "/BG",
+)
 
 ///|
-let pdf_content_extgstate_bg2_name : PdfName = pdf_content_extgstate_name(
+let pdf_content_extgstate_bg2_name : @core.PdfName = pdf_content_extgstate_name(
   "/BG2",
 )
 
 ///|
-let pdf_content_extgstate_ucr_name : PdfName = pdf_content_extgstate_name(
+let pdf_content_extgstate_ucr_name : @core.PdfName = pdf_content_extgstate_name(
   "/UCR",
 )
 
 ///|
-let pdf_content_extgstate_ucr2_name : PdfName = pdf_content_extgstate_name(
+let pdf_content_extgstate_ucr2_name : @core.PdfName = pdf_content_extgstate_name(
   "/UCR2",
 )
 
 ///|
-let pdf_content_extgstate_tr_name : PdfName = pdf_content_extgstate_name("/TR")
+let pdf_content_extgstate_tr_name : @core.PdfName = pdf_content_extgstate_name(
+  "/TR",
+)
 
 ///|
-let pdf_content_extgstate_tr2_name : PdfName = pdf_content_extgstate_name(
+let pdf_content_extgstate_tr2_name : @core.PdfName = pdf_content_extgstate_name(
   "/TR2",
 )
 
 ///|
-let pdf_content_extgstate_ht_name : PdfName = pdf_content_extgstate_name("/HT")
+let pdf_content_extgstate_ht_name : @core.PdfName = pdf_content_extgstate_name(
+  "/HT",
+)
 
 ///|
-let pdf_content_extgstate_smask_name : PdfName = pdf_content_extgstate_name(
+let pdf_content_extgstate_smask_name : @core.PdfName = pdf_content_extgstate_name(
   "/SMask",
 )
 
 ///|
-let pdf_content_extgstate_hto_name : PdfName = pdf_content_extgstate_name(
+let pdf_content_extgstate_hto_name : @core.PdfName = pdf_content_extgstate_name(
   "/HTO",
 )
 
 ///|
-let pdf_content_extgstate_bm_name : PdfName = pdf_content_extgstate_name("/BM")
+let pdf_content_extgstate_bm_name : @core.PdfName = pdf_content_extgstate_name(
+  "/BM",
+)
 
 ///|
-let pdf_content_extgstate_use_black_pt_comp_name : PdfName = pdf_content_extgstate_name(
+let pdf_content_extgstate_use_black_pt_comp_name : @core.PdfName = pdf_content_extgstate_name(
   "/UseBlackPtComp",
 )
 
 ///|
-let pdf_content_extgstate_normal_name : PdfName = pdf_content_extgstate_name(
+let pdf_content_extgstate_normal_name : @core.PdfName = pdf_content_extgstate_name(
   "/Normal",
 )
 
 ///|
-let pdf_content_extgstate_fl_name : PdfName = pdf_content_extgstate_name("/FL")
+let pdf_content_extgstate_fl_name : @core.PdfName = pdf_content_extgstate_name(
+  "/FL",
+)
 
 ///|
-let pdf_content_extgstate_sm_name : PdfName = pdf_content_extgstate_name("/SM")
+let pdf_content_extgstate_sm_name : @core.PdfName = pdf_content_extgstate_name(
+  "/SM",
+)
 
 ///|
-let pdf_content_extgstate_sa_name : PdfName = pdf_content_extgstate_name("/SA")
+let pdf_content_extgstate_sa_name : @core.PdfName = pdf_content_extgstate_name(
+  "/SA",
+)
 
 ///|
-let pdf_content_extgstate_ca_stroke_name : PdfName = pdf_content_extgstate_name(
+let pdf_content_extgstate_ca_stroke_name : @core.PdfName = pdf_content_extgstate_name(
   "/CA",
 )
 
 ///|
-let pdf_content_extgstate_ca_non_stroke_name : PdfName = pdf_content_extgstate_name(
+let pdf_content_extgstate_ca_non_stroke_name : @core.PdfName = pdf_content_extgstate_name(
   "/ca",
 )
 
 ///|
-let pdf_content_extgstate_ais_name : PdfName = pdf_content_extgstate_name(
+let pdf_content_extgstate_ais_name : @core.PdfName = pdf_content_extgstate_name(
   "/AIS",
 )
 
 ///|
-let pdf_content_extgstate_tk_name : PdfName = pdf_content_extgstate_name("/TK")
+let pdf_content_extgstate_tk_name : @core.PdfName = pdf_content_extgstate_name(
+  "/TK",
+)
 
 ///|
-fn pdf_content_extgstate_tk_key() -> PdfName {
+fn pdf_content_extgstate_tk_key() -> @core.PdfName {
   pdf_content_extgstate_tk_name
 }
 

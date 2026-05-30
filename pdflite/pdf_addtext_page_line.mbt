@@ -1,5 +1,5 @@
 ///|
-fn pdf_addtext_height_font_name(fontname : PdfName) -> String {
+fn pdf_addtext_height_font_name(fontname : @core.PdfName) -> String {
   let text = @ascii.decode_lossy(fontname.bytes())
   if text.has_prefix("/") {
     text[1:].to_owned()
@@ -14,8 +14,8 @@ fn PdfDocument::pdf_addtext_effective_fontname(
   page : @page.PdfPage,
   font : PdfFont?,
   fontpack : PdfFontPack?,
-  fontname : PdfName,
-) -> PdfName raise PdfError {
+  fontname : @core.PdfName,
+) -> @core.PdfName raise @core.PdfError {
   match (font, fontpack) {
     (None, None) => {
       let (resource_name, _) = self.addtext_existing_font_resource(
@@ -41,14 +41,14 @@ pub fn PdfDocument::addtext_line_page(
   replacements : ArrayView[(String, () -> String)],
   font : PdfFont?,
   fontpack : PdfFontPack?,
-  fontname : PdfName,
+  fontname : @core.PdfName,
   font_object : @syntax.PdfObject?,
   fontpack_font_objects : ArrayView[Int],
   font_size : Double,
   text : String,
   colour : @colour.PdfContentColour,
   position : @geometry.PdfPosition,
-  relative_to_box? : PdfName = pdf_page_mediabox_key(),
+  relative_to_box? : @core.PdfName = pdf_page_mediabox_key(),
   horizontal_offset? : Double = 0.0,
   vertical_offset? : Double = 0.0,
   shift_x? : Double = 0.0,
@@ -62,7 +62,7 @@ pub fn PdfDocument::addtext_line_page(
   fast? : Bool = false,
   raw? : Bool = false,
   url_border? : Bool = false,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   let effective_fontname = self.pdf_addtext_effective_fontname(
     page, font, fontpack, fontname,
   )
@@ -111,7 +111,7 @@ pub fn PdfDocument::addtext_line_page(
   let annotations = self.addtext_url_annotation_references(
     prepared.text,
     prepared.urls,
-    fn(prefix) raise PdfError {
+    fn(prefix) raise @core.PdfError {
       let bytes = self.pdf_addtext_measurement_bytes_for_page(
         page, font, fontpack, effective_fontname, raw, prefix,
       )
@@ -153,14 +153,14 @@ pub fn pdf_addtext_line_page(
   replacements : ArrayView[(String, () -> String)],
   font : PdfFont?,
   fontpack : PdfFontPack?,
-  fontname : PdfName,
+  fontname : @core.PdfName,
   font_object : @syntax.PdfObject?,
   fontpack_font_objects : ArrayView[Int],
   font_size : Double,
   text : String,
   colour : @colour.PdfContentColour,
   position : @geometry.PdfPosition,
-  relative_to_box? : PdfName = pdf_page_mediabox_key(),
+  relative_to_box? : @core.PdfName = pdf_page_mediabox_key(),
   horizontal_offset? : Double = 0.0,
   vertical_offset? : Double = 0.0,
   shift_x? : Double = 0.0,
@@ -174,7 +174,7 @@ pub fn pdf_addtext_line_page(
   fast? : Bool = false,
   raw? : Bool = false,
   url_border? : Bool = false,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   document.addtext_line_page(
     page,
     time,

@@ -3,7 +3,7 @@ fn PdfDocument::pdf_ocg_write_config(
   self : PdfDocument,
   config : @ocg.PdfOcgConfig,
 ) -> Int {
-  let entries : Array[(PdfName, @syntax.PdfObject)] = []
+  let entries : Array[(@core.PdfName, @syntax.PdfObject)] = []
   match config.name {
     Some(name) => entries.push((pdf_ocg_name_key(), PdfString(name)))
     None => ()
@@ -107,7 +107,7 @@ fn PdfDocument::pdf_ocg_write_ocg(
   self : PdfDocument,
   ocg : @ocg.PdfOcg,
 ) -> @syntax.PdfObject {
-  let entries : Array[(PdfName, @syntax.PdfObject)] = [
+  let entries : Array[(@core.PdfName, @syntax.PdfObject)] = [
     (pdf_ocg_type_key(), PdfNameObject(pdf_ocg_ocg_name())),
     (pdf_ocg_name_key(), PdfString(ocg.name)),
     (pdf_ocg_intent_key(), pdf_ocg_name_array_object(ocg.intent)),

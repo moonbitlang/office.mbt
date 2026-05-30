@@ -1,5 +1,5 @@
 ///|
-fn pdf_ua_matterhorn_is_hnum(name : PdfName) -> Bool {
+fn pdf_ua_matterhorn_is_hnum(name : @core.PdfName) -> Bool {
   let text = pdf_ua_matterhorn_name_text(name)
   if text == "/H" || !text.has_prefix("/H") {
     false
@@ -12,7 +12,7 @@ fn pdf_ua_matterhorn_is_hnum(name : PdfName) -> Bool {
 }
 
 ///|
-fn pdf_ua_matterhorn_hnum(name : PdfName) -> Int {
+fn pdf_ua_matterhorn_hnum(name : @core.PdfName) -> Int {
   let text = pdf_ua_matterhorn_name_text(name)
   @strconv.from_str(text[2:].to_owned()) catch {
     _ => 0
@@ -22,8 +22,8 @@ fn pdf_ua_matterhorn_hnum(name : PdfName) -> Int {
 ///|
 fn pdf_ua_matterhorn_heading_names(
   node : PdfUAMatterhornStructNode,
-) -> Array[PdfName] {
-  let headings : Array[PdfName] = []
+) -> Array[@core.PdfName] {
+  let headings : Array[@core.PdfName] = []
   if pdf_ua_matterhorn_is_hnum(node.name) {
     headings.push(node.name)
   }
@@ -137,7 +137,7 @@ fn pdf_ua_matterhorn_check_table_node(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_09_004(
   self : PdfDocument,
-) -> Json? raise PdfError {
+) -> Json? raise @core.PdfError {
   pdf_ua_matterhorn_check_table_node(self.pdf_ua_matterhorn_read_struct_tree())
 }
 
@@ -221,7 +221,7 @@ fn pdf_ua_matterhorn_check_list_node(node : PdfUAMatterhornStructNode) -> Json? 
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_09_005(
   self : PdfDocument,
-) -> Json? raise PdfError {
+) -> Json? raise @core.PdfError {
   pdf_ua_matterhorn_check_list_node(self.pdf_ua_matterhorn_read_struct_tree())
 }
 
@@ -285,7 +285,7 @@ fn pdf_ua_matterhorn_check_toc_children(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_09_006(
   self : PdfDocument,
-) -> Json? raise PdfError {
+) -> Json? raise @core.PdfError {
   let tree = self.pdf_ua_matterhorn_read_struct_tree()
   let seen_toc : Ref[Bool] = { val: false }
   match pdf_ua_matterhorn_check_toci_position(tree, seen_toc) {
@@ -321,7 +321,7 @@ fn pdf_ua_matterhorn_check_ruby_node(node : PdfUAMatterhornStructNode) -> Json? 
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_09_007(
   self : PdfDocument,
-) -> Json? raise PdfError {
+) -> Json? raise @core.PdfError {
   pdf_ua_matterhorn_check_ruby_node(self.pdf_ua_matterhorn_read_struct_tree())
 }
 
@@ -353,7 +353,7 @@ fn pdf_ua_matterhorn_check_warichu_node(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_09_008(
   self : PdfDocument,
-) -> Json? raise PdfError {
+) -> Json? raise @core.PdfError {
   pdf_ua_matterhorn_check_warichu_node(
     self.pdf_ua_matterhorn_read_struct_tree(),
   )

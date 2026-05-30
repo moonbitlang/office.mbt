@@ -4,7 +4,7 @@ fn pdf_tweak_replace_array_entry(
   index : Int,
   value : @syntax.PdfObject,
   source : String,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   if index < 0 || index >= values.length() {
     raise BadPageSpecification(source)
   }
@@ -16,7 +16,7 @@ fn pdf_tweak_replace_array_entry(
 }
 
 ///|
-fn pdf_tweak_chain_array_index(name : PdfName) -> Int? {
+fn pdf_tweak_chain_array_index(name : @core.PdfName) -> Int? {
   let bytes = name.bytes()
   guard bytes.length() >= 3 &&
     bytes[0].to_int() == 47 &&
@@ -37,11 +37,11 @@ fn pdf_tweak_chain_array_index(name : PdfName) -> Int? {
 fn PdfDocument::pdf_tweak_replace_existing_chain(
   self : PdfDocument,
   object : @syntax.PdfObject,
-  chain : ArrayView[PdfName],
+  chain : ArrayView[@core.PdfName],
   chain_index : Int,
   value : @syntax.PdfObject,
   source : String,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   let key = chain[chain_index]
   let final_key = chain_index + 1 == chain.length()
   match object {
@@ -118,10 +118,10 @@ fn PdfDocument::pdf_tweak_replace_existing_chain(
 fn PdfDocument::pdf_tweak_replace_numbered_object(
   self : PdfDocument,
   number : Int,
-  chain : ArrayView[PdfName],
+  chain : ArrayView[@core.PdfName],
   value : @syntax.PdfObject,
   source : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   if chain.length() == 0 {
     if number == 0 {
       self.set_trailer_dict(value)

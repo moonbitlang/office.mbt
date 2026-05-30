@@ -1,11 +1,11 @@
 ///|
-fn content_text_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn content_text_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
-fn content_text_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
-  try! @pdflite.pdf_bytes_of_int_array(values)
+fn content_text_bytes_for_test(values : ArrayView[Int]) -> @core.PdfBytes {
+  try! @core.pdf_bytes_of_int_array(values)
 }
 
 ///|
@@ -358,33 +358,31 @@ test "cpdfcontent charcode bytes mirror glyph JSON byte construction" {
     encoding: PdfWinAnsiEncoding,
   })
   @test.assert_eq(
-    @pdflite.pdf_int_array_of_bytes(
-      try! standard.content_bytes_of_charcode(255),
-    ),
+    @core.pdf_int_array_of_bytes(try! standard.content_bytes_of_charcode(255)),
     [255],
   )
   @test.assert_eq(
-    @pdflite.pdf_int_array_of_bytes(
+    @core.pdf_int_array_of_bytes(
       try! @pdflite.pdf_content_bytes_of_charcode(standard, 65),
     ),
     [65],
   )
   let cid = content_text_cid_font_for_test()
   @test.assert_eq(
-    @pdflite.pdf_int_array_of_bytes(try! cid.content_bytes_of_charcode(0x20AC)),
+    @core.pdf_int_array_of_bytes(try! cid.content_bytes_of_charcode(0x20AC)),
     [0x20, 0xAC],
   )
-  let one_byte_overflow : Result[@pdflite.PdfBytes, Error] = try? standard.content_bytes_of_charcode(
+  let one_byte_overflow : Result[@core.PdfBytes, Error] = try? standard.content_bytes_of_charcode(
     256,
   )
-  guard one_byte_overflow is Err(@pdflite.PdfError::InvalidByte(256)) else {
-    fail("expected @pdflite.PdfError::InvalidByte for one-byte charcode")
+  guard one_byte_overflow is Err(@core.PdfError::InvalidByte(256)) else {
+    fail("expected @core.PdfError::InvalidByte for one-byte charcode")
   }
-  let cid_overflow : Result[@pdflite.PdfBytes, Error] = try? cid.content_bytes_of_charcode(
+  let cid_overflow : Result[@core.PdfBytes, Error] = try? cid.content_bytes_of_charcode(
     0x10000,
   )
-  guard cid_overflow is Err(@pdflite.PdfError::InvalidByte(256)) else {
-    fail("expected @pdflite.PdfError::InvalidByte for CID high byte")
+  guard cid_overflow is Err(@core.PdfError::InvalidByte(256)) else {
+    fail("expected @core.PdfError::InvalidByte for CID high byte")
   }
 }
 

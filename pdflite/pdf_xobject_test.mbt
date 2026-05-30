@@ -1,6 +1,6 @@
 ///|
-fn xobject_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn xobject_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -208,7 +208,7 @@ test "pdf_stamp_as_xobject_string returns source string resource name" {
 
 ///|
 test "PdfDocument stamp_as_xobject rejects empty overlay documents" {
-  let result : Result[(@pdflite.PdfDocument, @pdflite.PdfName), Error] = try? xobject_base_document_for_test().stamp_as_xobject(
+  let result : Result[(@pdflite.PdfDocument, @core.PdfName), Error] = try? xobject_base_document_for_test().stamp_as_xobject(
     [1],
     @pdflite.pdf_document_empty(),
   )

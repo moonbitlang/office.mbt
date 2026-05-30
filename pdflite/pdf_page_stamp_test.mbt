@@ -1,6 +1,6 @@
 ///|
-fn stamp_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn stamp_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -291,7 +291,7 @@ test "PdfDocument stamp_pages rejects invalid page ranges and empty overlays" {
   )
   guard bad_page
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "stamp_pages: range contains pages not present in pdf"
       )
     ) else {

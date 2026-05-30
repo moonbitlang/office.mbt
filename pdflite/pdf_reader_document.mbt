@@ -6,23 +6,23 @@
 pub fn pdf_read_document_revision_from_view(
   data : BytesView,
   revision : Int,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   pdf_read_classic_document_revision_from_view(data, revision)
 }
 
 ///|
 /// Read one document revision from owned PDF bytes.
 pub fn pdf_read_document_revision_from_bytes(
-  data : PdfBytes,
+  data : @core.PdfBytes,
   revision : Int,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   pdf_read_document_revision_from_view(data, revision)
 }
 
 ///|
 /// Read a PDF document from owned PDF bytes.
 pub fn pdf_read_document_from_bytes(
-  data : PdfBytes,
-) -> PdfDocument raise PdfError {
+  data : @core.PdfBytes,
+) -> PdfDocument raise @core.PdfError {
   pdf_read_document_from_view(data)
 }

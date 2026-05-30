@@ -1,8 +1,8 @@
 ///|
 fn pdf_tree_sort_name_entries(
-  entries : ArrayView[(PdfBytes, @syntax.PdfObject)],
-) -> Array[(PdfBytes, @syntax.PdfObject)] {
-  let sorted : Array[(PdfBytes, @syntax.PdfObject)] = Array::new(
+  entries : ArrayView[(@core.PdfBytes, @syntax.PdfObject)],
+) -> Array[(@core.PdfBytes, @syntax.PdfObject)] {
+  let sorted : Array[(@core.PdfBytes, @syntax.PdfObject)] = Array::new(
     capacity=entries.length(),
   )
   for entry in entries {
@@ -28,9 +28,9 @@ fn pdf_tree_sort_number_entries(
 
 ///|
 fn pdf_tree_dedup_name_entries(
-  entries : ArrayView[(PdfBytes, @syntax.PdfObject)],
-) -> Array[(PdfBytes, @syntax.PdfObject)] {
-  let output : Array[(PdfBytes, @syntax.PdfObject)] = Array::new(
+  entries : ArrayView[(@core.PdfBytes, @syntax.PdfObject)],
+) -> Array[(@core.PdfBytes, @syntax.PdfObject)] {
+  let output : Array[(@core.PdfBytes, @syntax.PdfObject)] = Array::new(
     capacity=entries.length(),
   )
   for entry in entries {
@@ -62,12 +62,12 @@ fn pdf_tree_dedup_number_entries(
 }
 
 ///|
-fn pdf_tree_number_key_bytes(number : Int) -> PdfBytes {
+fn pdf_tree_number_key_bytes(number : Int) -> @core.PdfBytes {
   @ascii.encode(number.to_string())
 }
 
 ///|
-fn pdf_tree_number_key_of_bytes(key : BytesView) -> Int raise PdfError {
+fn pdf_tree_number_key_of_bytes(key : BytesView) -> Int raise @core.PdfError {
   if key.length() == 0 {
     raise NumberExpected
   }

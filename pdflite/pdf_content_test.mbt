@@ -1,17 +1,15 @@
 ///|
-fn content_bytes_for_test(text : String) -> @pdflite.PdfBytes {
+fn content_bytes_for_test(text : String) -> @core.PdfBytes {
   @ascii.encode(text)
 }
 
 ///|
-fn content_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn content_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
-fn content_concat_for_test(
-  parts : ArrayView[@pdflite.PdfBytes],
-) -> @pdflite.PdfBytes {
+fn content_concat_for_test(parts : ArrayView[@core.PdfBytes]) -> @core.PdfBytes {
   let output : Array[Byte] = []
   for part in parts {
     for byte in part {
@@ -643,7 +641,7 @@ test "PdfDocument parse_content_ops_with_resources reports missing inline image 
     @syntax.pdf_dictionary([]),
     [content_stream_for_test("BI /W 1 /H 1 /BPC 8 /CS /Missing ID abc EI")],
   )
-  guard result is Err(@pdflite.PdfError::DictionaryKeyNotFound(name)) &&
+  guard result is Err(@core.PdfError::DictionaryKeyNotFound(name)) &&
     name == content_name_for_test("/ColorSpace") else {
     fail("expected missing ColorSpace resource dictionary")
   }
@@ -714,7 +712,7 @@ test "pdf_string_of_content_op exposes CamlPDF byte-oriented debug strings" {
     try! @pdflite.pdf_string_of_content_ops([
       Op_q,
       Op_Tf(content_name_for_test("/F1"), 12.0),
-      Op_Tj(try! @pdflite.pdf_bytes_of_int_array([65, 0xFF])),
+      Op_Tj(try! @core.pdf_bytes_of_int_array([65, 0xFF])),
       Op_Q,
     ]),
     content_bytes_for_test("q /F1 12 Tf (A\\377) Tj Q"),
@@ -729,8 +727,8 @@ test "PdfDocument parse_content_ops reports non-stream content objects" {
       PdfIndirect(10),
     ],
   )
-  guard result is Err(@pdflite.PdfError::ParseStreamExpected) else {
-    fail("expected @pdflite.PdfError::ParseStreamExpected")
+  guard result is Err(@core.PdfError::ParseStreamExpected) else {
+    fail("expected @core.PdfError::ParseStreamExpected")
   }
 }
 
@@ -828,8 +826,8 @@ test "pdf_parse_content_ops_from_bytes reports trailing operands" {
   let result : Result[Array[@content.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
     content_bytes_for_test("1 2"),
   )
-  guard result is Err(@pdflite.PdfError::ContentOperatorExpected) else {
-    fail("expected @pdflite.PdfError::ContentOperatorExpected")
+  guard result is Err(@core.PdfError::ContentOperatorExpected) else {
+    fail("expected @core.PdfError::ContentOperatorExpected")
   }
 }
 
@@ -838,27 +836,26 @@ test "pdf content parser reports malformed complex and inline-image operands" {
   let malformed_dash : Result[Array[@content.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
     content_bytes_for_test("[/Bad] 0 d"),
   )
-  guard malformed_dash is Err(@pdflite.PdfError::NumberExpected) else {
-    fail("expected @pdflite.PdfError::NumberExpected")
+  guard malformed_dash is Err(@core.PdfError::NumberExpected) else {
+    fail("expected @core.PdfError::NumberExpected")
   }
   let malformed_array : Result[Array[@content.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
     content_bytes_for_test("[(A) 1 TJ"),
   )
-  guard malformed_array is Err(@pdflite.PdfError::ParseObjectExpected) else {
-    fail("expected @pdflite.PdfError::ParseObjectExpected")
+  guard malformed_array is Err(@core.PdfError::ParseObjectExpected) else {
+    fail("expected @core.PdfError::ParseObjectExpected")
   }
   let malformed_inline_image : Result[Array[@content.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
     content_bytes_for_test("BI /W ID abc EI"),
   )
-  guard malformed_inline_image is Err(@pdflite.PdfError::ContentOperandExpected) else {
-    fail("expected @pdflite.PdfError::ContentOperandExpected")
+  guard malformed_inline_image is Err(@core.PdfError::ContentOperandExpected) else {
+    fail("expected @core.PdfError::ContentOperandExpected")
   }
-  let malformed_inline_dictionary : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_content_bytes_of_ops([
+  let malformed_inline_dictionary : Result[@core.PdfBytes, Error] = try? @pdflite.pdf_content_bytes_of_ops([
       Op_InlineImage(PdfInteger(1), None, content_bytes_for_test("abc")),
     ],
   )
-  guard malformed_inline_dictionary
-    is Err(@pdflite.PdfError::DictionaryExpected) else {
-    fail("expected @pdflite.PdfError::DictionaryExpected")
+  guard malformed_inline_dictionary is Err(@core.PdfError::DictionaryExpected) else {
+    fail("expected @core.PdfError::DictionaryExpected")
   }
 }

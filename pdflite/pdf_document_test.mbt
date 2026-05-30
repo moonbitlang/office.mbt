@@ -127,11 +127,11 @@ test "PdfObjects stream_entries returns sorted parsed stream objects" {
   let objects = @pdflite.pdf_objects_empty()
   let first_stream = @syntax.pdf_stream(
     @syntax.pdf_dictionary([]),
-    StreamGot(try! @pdflite.pdf_bytes_of_int_array([65])),
+    StreamGot(try! @core.pdf_bytes_of_int_array([65])),
   )
   let second_stream = @syntax.pdf_stream(
     @syntax.pdf_dictionary([]),
-    StreamGot(try! @pdflite.pdf_bytes_of_int_array([66])),
+    StreamGot(try! @core.pdf_bytes_of_int_array([66])),
   )
   objects.set_entry(
     3,
@@ -175,8 +175,8 @@ test "PdfDocument empty document mirrors CamlPDF defaults" {
   doc.set_trailer_dict(
     @syntax.pdf_dictionary([
       (
-        @pdflite.pdf_name_of_bytes(
-          try! @pdflite.pdf_bytes_of_int_array([47, 82, 111, 111, 116]),
+        @core.pdf_name_of_bytes(
+          try! @core.pdf_bytes_of_int_array([47, 82, 111, 111, 116]),
         ),
         PdfIndirect(4),
       ),
@@ -192,28 +192,28 @@ test "PdfDocument empty document mirrors CamlPDF defaults" {
 }
 
 ///|
-test "PdfDocument catalog reads the root object or reports @pdflite.PdfError::RootExpected" {
+test "PdfDocument catalog reads the root object or reports @core.PdfError::RootExpected" {
   let doc = @pdflite.pdf_document_empty()
   let missing : Result[@syntax.PdfObject, Error] = try? doc.catalog()
-  guard missing is Err(@pdflite.PdfError::RootExpected) else {
-    fail("expected @pdflite.PdfError::RootExpected for missing catalog")
+  guard missing is Err(@core.PdfError::RootExpected) else {
+    fail("expected @core.PdfError::RootExpected for missing catalog")
   }
   doc.set_root(4)
   doc.add_object_given_number(4, @syntax.pdf_dictionary([]))
   @test.assert_eq(try! doc.catalog(), @syntax.pdf_dictionary([]))
   doc.add_object_given_number(4, PdfNull)
   let null_root : Result[@syntax.PdfObject, Error] = try? doc.catalog()
-  guard null_root is Err(@pdflite.PdfError::RootExpected) else {
-    fail("expected @pdflite.PdfError::RootExpected for null catalog")
+  guard null_root is Err(@core.PdfError::RootExpected) else {
+    fail("expected @core.PdfError::RootExpected for null catalog")
   }
 }
 
 ///|
 test "PdfDocument catalog prefers trailer Root over stale root number" {
-  let key_root = @pdflite.pdf_name_of_bytes(@ascii.encode("/Root"))
-  let key_type = @pdflite.pdf_name_of_bytes(@ascii.encode("/Type"))
-  let key_catalog = @pdflite.pdf_name_of_bytes(@ascii.encode("/Catalog"))
-  let key_lang = @pdflite.pdf_name_of_bytes(@ascii.encode("/Lang"))
+  let key_root = @core.pdf_name_of_bytes(@ascii.encode("/Root"))
+  let key_type = @core.pdf_name_of_bytes(@ascii.encode("/Type"))
+  let key_catalog = @core.pdf_name_of_bytes(@ascii.encode("/Catalog"))
+  let key_lang = @core.pdf_name_of_bytes(@ascii.encode("/Lang"))
   let doc = @pdflite.pdf_document_empty()
   doc.set_root(1)
   doc.add_object_given_number(
@@ -236,8 +236,8 @@ test "PdfDocument catalog prefers trailer Root over stale root number" {
 
   doc.set_trailer_dict(@syntax.pdf_dictionary([(key_root, PdfIndirect(99))]))
   let missing : Result[@syntax.PdfObject, Error] = try? doc.catalog()
-  guard missing is Err(@pdflite.PdfError::RootExpected) else {
-    fail("expected @pdflite.PdfError::RootExpected for unresolved trailer root")
+  guard missing is Err(@core.PdfError::RootExpected) else {
+    fail("expected @core.PdfError::RootExpected for unresolved trailer root")
   }
 }
 
@@ -263,7 +263,7 @@ test "PdfDocument select_object_numbers filters sorted parsed objects" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(
     3,
-    PdfString(try! @pdflite.pdf_bytes_of_int_array([65])),
+    PdfString(try! @core.pdf_bytes_of_int_array([65])),
   )
   doc.add_object_given_number(1, PdfInteger(10))
   doc.add_object_given_number(2, PdfNull)
@@ -329,7 +329,7 @@ test "PdfDocument stream_object_entries delegates stream entries" {
   let doc = @pdflite.pdf_document_empty()
   let stream_object = @syntax.pdf_stream(
     @syntax.pdf_dictionary([]),
-    StreamGot(try! @pdflite.pdf_bytes_of_int_array([65])),
+    StreamGot(try! @core.pdf_bytes_of_int_array([65])),
   )
   doc.add_object_given_number(7, stream_object, generation=2)
   doc.add_object_given_number(1, PdfInteger(10))
@@ -344,11 +344,11 @@ test "PdfDocument iter_stream visits stream objects with raising callback" {
   let doc = @pdflite.pdf_document_empty()
   let first = @syntax.pdf_stream(
     @syntax.pdf_dictionary([]),
-    StreamGot(try! @pdflite.pdf_bytes_of_int_array([65])),
+    StreamGot(try! @core.pdf_bytes_of_int_array([65])),
   )
   let second = @syntax.pdf_stream(
     @syntax.pdf_dictionary([]),
-    StreamGot(try! @pdflite.pdf_bytes_of_int_array([66])),
+    StreamGot(try! @core.pdf_bytes_of_int_array([66])),
   )
   doc.add_object_given_number(5, first)
   doc.add_object_given_number(2, second)
@@ -373,7 +373,7 @@ test "PdfDocument copy preserves metadata and separates object map state" {
   doc.add_object_given_number(4, PdfDictionary([]), generation=2)
   doc.set_trailer_dict(
     PdfDictionary([
-      (@pdflite.pdf_name_of_bytes(@ascii.encode("/Root")), PdfIndirect(4)),
+      (@core.pdf_name_of_bytes(@ascii.encode("/Root")), PdfIndirect(4)),
     ]),
   )
   let copied = doc.copy()
@@ -392,14 +392,14 @@ test "PdfDocument copy preserves metadata and separates object map state" {
 
 ///|
 test "PdfDocument copy deep-copies mutable object containers and streams" {
-  let key_root = @pdflite.pdf_name_of_bytes(@ascii.encode("/Root"))
-  let key_length = @pdflite.pdf_name_of_bytes(@ascii.encode("/Length"))
-  let key_initial = @pdflite.pdf_name_of_bytes(@ascii.encode("/Initial"))
-  let key_added = @pdflite.pdf_name_of_bytes(@ascii.encode("/Added"))
+  let key_root = @core.pdf_name_of_bytes(@ascii.encode("/Root"))
+  let key_length = @core.pdf_name_of_bytes(@ascii.encode("/Length"))
+  let key_initial = @core.pdf_name_of_bytes(@ascii.encode("/Initial"))
+  let key_added = @core.pdf_name_of_bytes(@ascii.encode("/Added"))
   let doc = @pdflite.pdf_document_empty()
   let stream_object : @syntax.PdfObject = @syntax.pdf_stream(
     PdfDictionary([(key_length, PdfInteger(1))]),
-    StreamGot(try! @pdflite.pdf_bytes_of_int_array([65])),
+    StreamGot(try! @core.pdf_bytes_of_int_array([65])),
   )
   doc.add_object_given_number(
     1,
@@ -411,8 +411,8 @@ test "PdfDocument copy deep-copies mutable object containers and streams" {
       PdfDictionary([]),
       StreamToGet(
         @syntax.stream_to_get(
-          @pdflite.byte_cursor_of_bytes(
-            try! @pdflite.pdf_bytes_of_int_array([65, 66, 67]),
+          @core.byte_cursor_of_bytes(
+            try! @core.pdf_bytes_of_int_array([65, 66, 67]),
           ),
           1,
           2,
@@ -444,15 +444,15 @@ test "PdfDocument copy deep-copies mutable object containers and streams" {
   @test.assert_eq(doc.trailer_dict().lookup_immediate(key_added), None)
   @test.assert_eq(
     try! copied.lookup_object_or_null(2).stream_bytes(),
-    try! @pdflite.pdf_bytes_of_int_array([66, 67]),
+    try! @core.pdf_bytes_of_int_array([66, 67]),
   )
 }
 
 ///|
 test "PdfDocument renumber_objects_by_offset moves objects and rewrites references" {
-  let key_root = @pdflite.pdf_name_of_bytes(@ascii.encode("/Root"))
-  let key_pages = @pdflite.pdf_name_of_bytes(@ascii.encode("/Pages"))
-  let key_parent = @pdflite.pdf_name_of_bytes(@ascii.encode("/Parent"))
+  let key_root = @core.pdf_name_of_bytes(@ascii.encode("/Root"))
+  let key_pages = @core.pdf_name_of_bytes(@ascii.encode("/Pages"))
+  let key_parent = @core.pdf_name_of_bytes(@ascii.encode("/Parent"))
   let doc = @pdflite.pdf_document_empty()
   doc.set_root(1)
   doc.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(1))]))
@@ -479,9 +479,9 @@ test "PdfDocument renumber_objects_by_offset moves objects and rewrites referenc
 
 ///|
 test "PdfDocument renumber_objects_compact packs sparse object numbers" {
-  let key_root = @pdflite.pdf_name_of_bytes(@ascii.encode("/Root"))
-  let key_pages = @pdflite.pdf_name_of_bytes(@ascii.encode("/Pages"))
-  let key_parent = @pdflite.pdf_name_of_bytes(@ascii.encode("/Parent"))
+  let key_root = @core.pdf_name_of_bytes(@ascii.encode("/Root"))
+  let key_pages = @core.pdf_name_of_bytes(@ascii.encode("/Pages"))
+  let key_parent = @core.pdf_name_of_bytes(@ascii.encode("/Parent"))
   let doc = @pdflite.pdf_document_empty()
   doc.set_root(10)
   doc.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(10))]))
@@ -512,8 +512,8 @@ test "PdfDocument renumber_objects_compact packs sparse object numbers" {
 
 ///|
 test "PdfDocument renumber_objects applies explicit change table" {
-  let key_root = @pdflite.pdf_name_of_bytes(@ascii.encode("/Root"))
-  let key_next = @pdflite.pdf_name_of_bytes(@ascii.encode("/Next"))
+  let key_root = @core.pdf_name_of_bytes(@ascii.encode("/Root"))
+  let key_next = @core.pdf_name_of_bytes(@ascii.encode("/Next"))
   let doc = @pdflite.pdf_document_empty()
   doc.set_root(10)
   doc.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(10))]))
@@ -535,15 +535,15 @@ test "PdfDocument renumber_objects applies explicit change table" {
       (20, 5),
     ],
   )
-  guard duplicate is Err(@pdflite.PdfError::InvalidObjectNumber(5)) else {
+  guard duplicate is Err(@core.PdfError::InvalidObjectNumber(5)) else {
     fail("expected duplicate target to be rejected")
   }
 }
 
 ///|
 test "pdf_renumber_documents gives documents disjoint compact ranges" {
-  let key_root = @pdflite.pdf_name_of_bytes(@ascii.encode("/Root"))
-  let key_peer = @pdflite.pdf_name_of_bytes(@ascii.encode("/Peer"))
+  let key_root = @core.pdf_name_of_bytes(@ascii.encode("/Root"))
+  let key_peer = @core.pdf_name_of_bytes(@ascii.encode("/Peer"))
   let first = @pdflite.pdf_document_empty()
   first.set_root(10)
   first.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(10))]))
@@ -584,7 +584,7 @@ test "PdfDocument renumber_objects_by_offset rejects negative offsets" {
   let result : Result[@pdflite.PdfDocument, Error] = try? doc.renumber_objects_by_offset(
     -1,
   )
-  guard result is Err(@pdflite.PdfError::InvalidObjectNumber(-1)) else {
-    fail("expected @pdflite.PdfError::InvalidObjectNumber")
+  guard result is Err(@core.PdfError::InvalidObjectNumber(-1)) else {
+    fail("expected @core.PdfError::InvalidObjectNumber")
   }
 }

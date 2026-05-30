@@ -1,26 +1,28 @@
 ///|
-fn pdf_debug_name(text : String) -> PdfName {
-  pdf_name_of_bytes(@ascii.encode(text))
+fn pdf_debug_name(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
-let pdf_debug_root_key_name : PdfName = pdf_debug_name("/Root")
+let pdf_debug_root_key_name : @core.PdfName = pdf_debug_name("/Root")
 
 ///|
-fn pdf_debug_root_key() -> PdfName {
+fn pdf_debug_root_key() -> @core.PdfName {
   pdf_debug_root_key_name
 }
 
 ///|
-let pdf_debug_pages_key_name : PdfName = pdf_debug_name("/Pages")
+let pdf_debug_pages_key_name : @core.PdfName = pdf_debug_name("/Pages")
 
 ///|
-fn pdf_debug_pages_key() -> PdfName {
+fn pdf_debug_pages_key() -> @core.PdfName {
   pdf_debug_pages_key_name
 }
 
 ///|
-fn pdf_debug_concat_chunks(chunks : ArrayView[PdfBytes]) -> PdfBytes {
+fn pdf_debug_concat_chunks(
+  chunks : ArrayView[@core.PdfBytes],
+) -> @core.PdfBytes {
   let mut output_length = 0
   for chunk in chunks {
     output_length += chunk.length()
@@ -40,8 +42,8 @@ fn pdf_debug_concat_chunks(chunks : ArrayView[PdfBytes]) -> PdfBytes {
 fn pdf_debug_object_line(
   prefix : String,
   object : @syntax.PdfObject,
-) -> PdfBytes raise PdfError {
-  pdf_bytes_concat_views([
+) -> @core.PdfBytes raise @core.PdfError {
+  @core.pdf_bytes_concat_views([
     @ascii.encode(prefix),
     pdf_string_of_pdf(object),
     @ascii.encode("\n"),
@@ -56,9 +58,9 @@ fn pdf_debug_object_line(
 /// tests exact without relying on stdout capture.
 pub fn PdfDocument::debug_objects(
   self : PdfDocument,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let object_entries = self.parsed_object_entries()
-  let chunks : Array[PdfBytes] = Array::new(
+  let chunks : Array[@core.PdfBytes] = Array::new(
     capacity=object_entries.length() * 3 + 4,
   )
   chunks.push(pdf_debug_object_line("Trailerdict: ", self.trailer_dict()))
@@ -84,12 +86,16 @@ pub fn PdfDocument::debug_objects(
 
 ///|
 /// Compatibility wrapper for `PdfDocument::debug_objects`.
-pub fn pdf_debug_objects(document : PdfDocument) -> PdfBytes raise PdfError {
+pub fn pdf_debug_objects(
+  document : PdfDocument,
+) -> @core.PdfBytes raise @core.PdfError {
   document.debug_objects()
 }
 
 ///|
 /// Source-spelled compatibility wrapper for cpdfdebug's printed object dump.
-pub fn pdf_print_pdf_objs(document : PdfDocument) -> PdfBytes raise PdfError {
+pub fn pdf_print_pdf_objs(
+  document : PdfDocument,
+) -> @core.PdfBytes raise @core.PdfError {
   document.debug_objects()
 }

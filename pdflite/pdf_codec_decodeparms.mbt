@@ -9,7 +9,7 @@ fn pdf_decodeparms_value(dictionary : @syntax.PdfObject) -> @syntax.PdfObject? {
 ///|
 fn pdf_first_decodeparms(
   dictionary : @syntax.PdfObject,
-) -> @syntax.PdfObject? raise PdfError {
+) -> @syntax.PdfObject? raise @core.PdfError {
   match pdf_decodeparms_value(dictionary) {
     None | Some(PdfNull) | Some(PdfArray([])) => None
     Some(PdfDictionary(_) as value) => Some(value)
@@ -34,7 +34,7 @@ fn PdfDocument::pdf_decodeparms_value_direct(
 fn PdfDocument::pdf_decodeparms_entry_direct(
   self : PdfDocument,
   dictionary : @syntax.PdfObject,
-) -> (PdfName, @syntax.PdfObject)? {
+) -> (@core.PdfName, @syntax.PdfObject)? {
   match self.lookup_direct(pdf_decodeparms_key(), dictionary) {
     Some(value) => Some((pdf_decodeparms_key(), value))
     None =>
@@ -49,7 +49,7 @@ fn PdfDocument::pdf_decodeparms_entry_direct(
 fn PdfDocument::pdf_first_decodeparms_direct(
   self : PdfDocument,
   dictionary : @syntax.PdfObject,
-) -> @syntax.PdfObject? raise PdfError {
+) -> @syntax.PdfObject? raise @core.PdfError {
   match self.pdf_decodeparms_value_direct(dictionary) {
     None | Some(PdfNull) | Some(PdfArray([])) => None
     Some(PdfDictionary(_) as value) => Some(value)
@@ -66,9 +66,9 @@ fn PdfDocument::pdf_first_decodeparms_direct(
 ///|
 fn pdf_decodeparms_int(
   dictionary : @syntax.PdfObject,
-  key : PdfName,
+  key : @core.PdfName,
   default : Int,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   match dictionary.lookup_immediate(key) {
     None => default
     Some(PdfInteger(value)) => value
@@ -80,9 +80,9 @@ fn pdf_decodeparms_int(
 fn PdfDocument::pdf_decodeparms_int_direct(
   self : PdfDocument,
   dictionary : @syntax.PdfObject,
-  key : PdfName,
+  key : @core.PdfName,
   default : Int,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   match self.lookup_direct(key, dictionary) {
     None => default
     Some(PdfInteger(value)) => value

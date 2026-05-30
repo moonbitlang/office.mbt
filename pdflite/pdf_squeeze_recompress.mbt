@@ -29,7 +29,7 @@ fn PdfDocument::pdf_squeeze_should_recompress_stream(
 fn PdfDocument::pdf_squeeze_recompress_stream(
   self : PdfDocument,
   stream : @syntax.PdfObject,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   if !self.pdf_squeeze_should_recompress_stream(stream) {
     stream
   } else {
@@ -49,8 +49,8 @@ fn PdfDocument::pdf_squeeze_recompress_stream(
 ///|
 fn PdfDocument::pdf_squeeze_update_stream_objects(
   self : PdfDocument,
-  transform : (@syntax.PdfObject) -> @syntax.PdfObject raise PdfError,
-) -> Unit raise PdfError {
+  transform : (@syntax.PdfObject) -> @syntax.PdfObject raise @core.PdfError,
+) -> Unit raise @core.PdfError {
   for number in self.objects.object_numbers() {
     let entry = self.objects.get_entry(number).unwrap()
     let replacement = match entry.data {

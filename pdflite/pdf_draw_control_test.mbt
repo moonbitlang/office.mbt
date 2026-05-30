@@ -1,13 +1,13 @@
 ///|
-fn draw_control_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn draw_control_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
-fn draw_control_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
+fn draw_control_bytes_for_test(values : ArrayView[Int]) -> @core.PdfBytes {
   let output : Array[Byte] = []
   for value in values {
-    output.push(try! @pdflite.pdf_byte_of_int(value))
+    output.push(try! @core.pdf_byte_of_int(value))
   }
   Bytes::from_array(output)
 }
@@ -24,21 +24,21 @@ fn draw_control_append_bytes_for_test(
 
 ///|
 fn draw_control_push_u32_for_test(output : Array[Byte], value : Int) -> Unit {
-  output.push(try! @pdflite.pdf_byte_of_int((value >> 24) & 0xFF))
-  output.push(try! @pdflite.pdf_byte_of_int((value >> 16) & 0xFF))
-  output.push(try! @pdflite.pdf_byte_of_int((value >> 8) & 0xFF))
-  output.push(try! @pdflite.pdf_byte_of_int(value & 0xFF))
+  output.push(try! @core.pdf_byte_of_int((value >> 24) & 0xFF))
+  output.push(try! @core.pdf_byte_of_int((value >> 16) & 0xFF))
+  output.push(try! @core.pdf_byte_of_int((value >> 8) & 0xFF))
+  output.push(try! @core.pdf_byte_of_int(value & 0xFF))
 }
 
 ///|
 fn draw_control_png_chunk_for_test(
   chunk_type : ArrayView[Int],
   data : BytesView,
-) -> @pdflite.PdfBytes {
+) -> @core.PdfBytes {
   let output : Array[Byte] = []
   draw_control_push_u32_for_test(output, data.length())
   for value in chunk_type {
-    output.push(try! @pdflite.pdf_byte_of_int(value))
+    output.push(try! @core.pdf_byte_of_int(value))
   }
   draw_control_append_bytes_for_test(output, data)
   draw_control_push_u32_for_test(output, 0)
@@ -46,7 +46,7 @@ fn draw_control_png_chunk_for_test(
 }
 
 ///|
-fn draw_control_png_rgb_for_test() -> (@pdflite.PdfBytes, @pdflite.PdfBytes) {
+fn draw_control_png_rgb_for_test() -> (@core.PdfBytes, @core.PdfBytes) {
   let header = draw_control_bytes_for_test([
     0, 0, 0, 2, 0, 0, 0, 1, 8, 2, 0, 0, 0,
   ])
@@ -55,7 +55,7 @@ fn draw_control_png_rgb_for_test() -> (@pdflite.PdfBytes, @pdflite.PdfBytes) {
   )
   let output : Array[Byte] = []
   for value in [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A] {
-    output.push(try! @pdflite.pdf_byte_of_int(value))
+    output.push(try! @core.pdf_byte_of_int(value))
   }
   draw_control_append_bytes_for_test(
     output,
@@ -73,7 +73,7 @@ fn draw_control_png_rgb_for_test() -> (@pdflite.PdfBytes, @pdflite.PdfBytes) {
 }
 
 ///|
-fn draw_control_jpeg_for_test() -> @pdflite.PdfBytes {
+fn draw_control_jpeg_for_test() -> @core.PdfBytes {
   draw_control_bytes_for_test([
     0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x09, 0x4A, 0x46, 0x49, 0x46, 0x00, 0xAA, 0xBB,
     0xFF, 0xC0, 0x00, 0x0B, 0x08, 0x01, 0x2C, 0x01, 0x90, 0x03, 0x01, 0xFF, 0xD9,
@@ -81,7 +81,7 @@ fn draw_control_jpeg_for_test() -> @pdflite.PdfBytes {
 }
 
 ///|
-fn draw_control_jpeg2000_for_test() -> @pdflite.PdfBytes {
+fn draw_control_jpeg2000_for_test() -> @core.PdfBytes {
   draw_control_bytes_for_test([
     0x00, 0x00, 0x00, 0x0C, 0x6A, 0x50, 0x20, 0x20, 0x0D, 0x0A, 0x87, 0x0A, 0x69,
     0x68, 0x64, 0x72, 0x00, 0x00, 0x01, 0x2C, 0x00, 0x00, 0x01, 0x90,
@@ -157,7 +157,7 @@ test "pdf draw control reports mismatched section closures" {
   let text = @pdflite.pdf_draw_control_new()
   let text_result : Result[Unit, Error] = try? text.end_text_section()
   guard text_result
-    is Err(@pdflite.PdfError::SoftError("not in a text section at -et")) else {
+    is Err(@core.PdfError::SoftError("not in a text section at -et")) else {
     fail("expected text-section close error")
   }
   @test.assert_eq(text.depth(), 1)
@@ -165,7 +165,7 @@ test "pdf draw control reports mismatched section closures" {
   let group = @pdflite.pdf_draw_control_new()
   let group_result : Result[Unit, Error] = try? group.pop_group()
   guard group_result
-    is Err(@pdflite.PdfError::SoftError("not in a pushed section at -pop")) else {
+    is Err(@core.PdfError::SoftError("not in a pushed section at -pop")) else {
     fail("expected pushed-section close error")
   }
   @test.assert_eq(group.depth(), 1)
@@ -187,7 +187,7 @@ test "pdf draw control parses XObject bbox strings" {
   let bad : Result[Unit, Error] = try? control.set_xobject_bbox_from_string(
     document, "1 2 3",
   )
-  guard bad is Err(@pdflite.PdfError::BadRectangleSpecification("1 2 3")) else {
+  guard bad is Err(@core.PdfError::BadRectangleSpecification("1 2 3")) else {
     fail("expected BadRectangleSpecification")
   }
 }
@@ -416,7 +416,7 @@ test "pdf draw control image data helpers propagate parser errors" {
     "Bad",
     draw_control_bytes_for_test([0xFF, 0xD8, 0xFF, 0xDB]),
   )
-  guard bad_jpeg is Err(@pdflite.PdfError::BadJPEGHeader) else {
+  guard bad_jpeg is Err(@core.PdfError::BadJPEGHeader) else {
     fail("expected BadJPEGHeader")
   }
   let bad_png : Result[Unit, Error] = try? control.add_png_data(
@@ -424,14 +424,14 @@ test "pdf draw control image data helpers propagate parser errors" {
     "Bad",
     draw_control_bytes_for_test([0x89, 0x50]),
   )
-  guard bad_png is Err(@pdflite.PdfError::BadPNG(_)) else {
+  guard bad_png is Err(@core.PdfError::BadPNG(_)) else {
     fail("expected BadPNG")
   }
   let bad_jp2 : Result[Unit, Error] = try? control.add_jpeg2000_data(
     "Bad",
     draw_control_bytes_for_test([0x00, 0x00, 0x00, 0x0C, 0x6A]),
   )
-  guard bad_jp2 is Err(@pdflite.PdfError::BadJPEG2000Header) else {
+  guard bad_jp2 is Err(@core.PdfError::BadJPEG2000Header) else {
     fail("expected BadJPEG2000Header")
   }
 
@@ -441,7 +441,7 @@ test "pdf draw control image data helpers propagate parser errors" {
     "Bad",
     draw_control_bytes_for_test([0xFF, 0xD8, 0xFF, 0xDB]),
   )
-  guard bad_alias_jpeg is Err(@pdflite.PdfError::BadJPEGHeader) else {
+  guard bad_alias_jpeg is Err(@core.PdfError::BadJPEGHeader) else {
     fail("expected BadJPEGHeader through addjpeg wrapper")
   }
   let bad_alias_png : Result[Unit, Error] = try? @pdflite.pdf_addpng(
@@ -450,7 +450,7 @@ test "pdf draw control image data helpers propagate parser errors" {
     "Bad",
     draw_control_bytes_for_test([0x89, 0x50]),
   )
-  guard bad_alias_png is Err(@pdflite.PdfError::BadPNG(_)) else {
+  guard bad_alias_png is Err(@core.PdfError::BadPNG(_)) else {
     fail("expected BadPNG through addpng wrapper")
   }
   let bad_alias_jp2 : Result[Unit, Error] = try? @pdflite.pdf_addjpeg2000(
@@ -458,7 +458,7 @@ test "pdf draw control image data helpers propagate parser errors" {
     "Bad",
     draw_control_bytes_for_test([0x00, 0x00, 0x00, 0x0C, 0x6A]),
   )
-  guard bad_alias_jp2 is Err(@pdflite.PdfError::BadJPEG2000Header) else {
+  guard bad_alias_jp2 is Err(@core.PdfError::BadJPEG2000Header) else {
     fail("expected BadJPEG2000Header through addjpeg2000 wrapper")
   }
 }
@@ -598,7 +598,7 @@ fn draw_control_assert_soft_error_for_test(
   result : Result[Unit, Error],
   expected : String,
 ) -> Unit raise Error {
-  guard result is Err(@pdflite.PdfError::SoftError(message)) else {
+  guard result is Err(@core.PdfError::SoftError(message)) else {
     fail("expected draw-control SoftError")
   }
   @test.assert_eq(message, expected)

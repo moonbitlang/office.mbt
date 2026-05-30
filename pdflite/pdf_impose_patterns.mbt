@@ -1,10 +1,10 @@
 ///|
-let pdf_impose_matrix_key_name : PdfName = pdf_page_name("/Matrix")
+let pdf_impose_matrix_key_name : @core.PdfName = pdf_page_name("/Matrix")
 
 ///|
 fn pdf_impose_pattern_name_used(
-  used_names : ArrayView[PdfName],
-  name : PdfName,
+  used_names : ArrayView[@core.PdfName],
+  name : @core.PdfName,
 ) -> Bool {
   for used_name in used_names {
     if used_name == name {
@@ -17,8 +17,8 @@ fn pdf_impose_pattern_name_used(
 
 ///|
 fn pdf_impose_pattern_add_used(
-  used_names : Array[PdfName],
-  name : PdfName,
+  used_names : Array[@core.PdfName],
+  name : @core.PdfName,
 ) -> Unit {
   if !pdf_impose_pattern_name_used(used_names, name) {
     used_names.push(name)
@@ -30,8 +30,8 @@ fn PdfDocument::pdf_impose_patterns_used_with_scn(
   self : PdfDocument,
   content : ArrayView[@syntax.PdfObject],
   resources : @syntax.PdfObject,
-) -> Array[PdfName] raise PdfError {
-  let used_names : Array[PdfName] = []
+) -> Array[@core.PdfName] raise @core.PdfError {
+  let used_names : Array[@core.PdfName] = []
   match self.lookup_direct(pdf_page_pattern_resource_name, resources) {
     Some(_) => {
       let ops = self.parse_content_ops_with_resources(resources, content)
@@ -64,7 +64,7 @@ fn PdfDocument::pdf_impose_change_pattern_object(
   self : PdfDocument,
   matrix : @geometry.TransformMatrix,
   pattern : @syntax.PdfObject,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   let old_pattern = self.direct(pattern)
   let existing = self.parse_matrix(pdf_impose_matrix_key_name, old_pattern)
   let new_matrix = @geometry.transform_matrix_compose(matrix, existing)
@@ -83,9 +83,9 @@ fn PdfDocument::pdf_impose_change_pattern_matrices_resources(
   self : PdfDocument,
   matrix : @geometry.TransformMatrix,
   resources : @syntax.PdfObject,
-  names_used_with_scn : ArrayView[PdfName],
+  names_used_with_scn : ArrayView[@core.PdfName],
   xobjects_done : Array[Int],
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   match self.lookup_direct(pdf_page_xobject_key(), resources) {
     Some(PdfDictionary(entries)) =>
       for entry in entries {
@@ -104,7 +104,7 @@ fn PdfDocument::pdf_impose_change_pattern_matrices_resources(
   }
   match self.lookup_direct(pdf_page_pattern_resource_name, resources) {
     Some(PdfDictionary(patterns)) => {
-      let entries : Array[(PdfName, @syntax.PdfObject)] = []
+      let entries : Array[(@core.PdfName, @syntax.PdfObject)] = []
       for entry in patterns {
         let (name, pattern) = entry
         if pdf_impose_pattern_name_used(names_used_with_scn, name) {
@@ -131,7 +131,7 @@ fn PdfDocument::pdf_impose_change_pattern_matrices_xobject(
   xobject : @syntax.PdfObject,
   xobject_number : Int,
   xobjects_done : Array[Int],
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   if pdf_impose_xobject_done(xobjects_done, xobject_number) {
     ()
   } else {
@@ -174,7 +174,7 @@ fn PdfDocument::pdf_impose_change_pattern_matrices_page(
   self : PdfDocument,
   matrix : @geometry.TransformMatrix,
   page : @page.PdfPage,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   let used = self.pdf_impose_patterns_used_with_scn(
     page.content,
     page.resources,
@@ -197,7 +197,7 @@ pub fn PdfDocument::change_pattern_matrices_page(
   self : PdfDocument,
   matrix : @geometry.TransformMatrix,
   page : @page.PdfPage,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   self.pdf_impose_change_pattern_matrices_page(matrix, page)
 }
 
@@ -207,6 +207,6 @@ pub fn pdf_change_pattern_matrices_page(
   document : PdfDocument,
   matrix : @geometry.TransformMatrix,
   page : @page.PdfPage,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   document.change_pattern_matrices_page(matrix, page)
 }

@@ -67,8 +67,8 @@ fn pdf_page_stamp_shift_of_position(
 fn PdfDocument::pdf_page_stamp_box(
   self : PdfDocument,
   page : @page.PdfPage,
-  box_name : PdfName,
-) -> @geometry.PdfRectangle raise PdfError {
+  box_name : @core.PdfName,
+) -> @geometry.PdfRectangle raise @core.PdfError {
   self.parse_rectangle(
     if box_name == pdf_page_mediabox_key() {
       page.mediabox
@@ -109,8 +109,8 @@ fn pdf_page_stamp_scale_to_fit_factor(
 fn pdf_page_stamp_scale_to_fit_matrix(
   stamp_box : @geometry.PdfRectangle,
   target_box : @geometry.PdfRectangle,
-  relative_to_box : PdfName,
-) -> @geometry.TransformMatrix raise PdfError {
+  relative_to_box : @core.PdfName,
+) -> @geometry.TransformMatrix raise @core.PdfError {
   let stamp_width = stamp_box.max_x - stamp_box.min_x
   let stamp_height = stamp_box.max_y - stamp_box.min_y
   let target_width = target_box.max_x - target_box.min_x
@@ -138,7 +138,7 @@ fn pdf_page_stamp_scale_to_fit_matrix(
 fn pdf_page_stamp_position_matrix(
   stamp_box : @geometry.PdfRectangle,
   target_box : @geometry.PdfRectangle,
-  relative_to_box : PdfName,
+  relative_to_box : @core.PdfName,
   position : @geometry.PdfPosition,
   topline : Bool,
   midline : Bool,

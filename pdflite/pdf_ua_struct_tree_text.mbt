@@ -1,11 +1,11 @@
 ///|
 priv struct PdfUAStructTreeRoleMap {
-  entries : Array[(PdfName, PdfName)]
+  entries : Array[(@core.PdfName, @core.PdfName)]
 }
 
 ///|
 priv struct PdfUAStructTreeTextNode {
-  name : PdfName
+  name : @core.PdfName
   page_ref : Int?
   children : Array[PdfUAStructTreeTextNode]
 }
@@ -13,8 +13,8 @@ priv struct PdfUAStructTreeTextNode {
 ///|
 fn PdfUAStructTreeRoleMap::mapped(
   self : PdfUAStructTreeRoleMap,
-  name : PdfName,
-) -> PdfName? {
+  name : @core.PdfName,
+) -> @core.PdfName? {
   for entry in self.entries {
     if entry.0 == name {
       return Some(entry.1)
@@ -26,8 +26,8 @@ fn PdfUAStructTreeRoleMap::mapped(
 ///|
 fn PdfUAStructTreeRoleMap::rewrite_name(
   self : PdfUAStructTreeRoleMap,
-  name : PdfName,
-) -> PdfName {
+  name : @core.PdfName,
+) -> @core.PdfName {
   let mut current = name
   let mut remaining = self.entries.length() + 1
   let mut keep_going = true
@@ -47,7 +47,7 @@ fn PdfUAStructTreeRoleMap::rewrite_name(
 fn PdfDocument::pdf_ua_struct_tree_rolemap(
   self : PdfDocument,
 ) -> PdfUAStructTreeRoleMap {
-  let entries : Array[(PdfName, PdfName)] = []
+  let entries : Array[(@core.PdfName, @core.PdfName)] = []
   let catalog = self.catalog() catch { _ => return { entries, } }
   match catalog.lookup_immediate(pdf_ua_struct_tree_root_key()) {
     Some(struct_tree_root) =>
@@ -83,7 +83,7 @@ fn PdfDocument::pdf_ua_read_struct_tree_text_inner(
   node : @syntax.PdfObject,
   rolemap : PdfUAStructTreeRoleMap,
   depth : Int,
-) -> PdfUAStructTreeTextNode raise PdfError {
+) -> PdfUAStructTreeTextNode raise @core.PdfError {
   if depth > 10000 {
     raise SoftError("malformed st node")
   }
@@ -115,7 +115,7 @@ fn PdfDocument::pdf_ua_read_struct_tree_text_inner(
 fn PdfDocument::pdf_ua_read_struct_tree_text(
   self : PdfDocument,
   rolemap : PdfUAStructTreeRoleMap,
-) -> PdfUAStructTreeTextNode raise PdfError {
+) -> PdfUAStructTreeTextNode raise @core.PdfError {
   let catalog = self.catalog() catch {
     _ => raise SoftError("struct_tree_text: no root")
   }
@@ -282,7 +282,7 @@ fn pdf_ua_page_lookup(
 /// Render cpdf's printed PDF/UA structure tree as UTF-8 bytes.
 pub fn PdfDocument::struct_tree_text(
   self : PdfDocument,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let rolemap = self.pdf_ua_struct_tree_rolemap()
   let tree = self.pdf_ua_read_struct_tree_text(rolemap)
   if tree.name == pdf_ua_struct_tree_root_key() && tree.children.length() == 0 {

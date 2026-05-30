@@ -18,8 +18,8 @@ flowchart LR
 
 ```moonbit check
 ///|
-fn readme_name(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn readme_name(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|

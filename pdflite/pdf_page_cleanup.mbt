@@ -32,7 +32,7 @@ fn pdf_page_nullify_references(
       PdfArray(output)
     }
     PdfDictionary(entries) => {
-      let output : Array[(PdfName, @syntax.PdfObject)] = Array::new(
+      let output : Array[(@core.PdfName, @syntax.PdfObject)] = Array::new(
         capacity=entries.length(),
       )
       for entry in entries {
@@ -78,7 +78,7 @@ fn pdf_page_nullify_entry(
 ///|
 fn PdfDocument::pdf_page_nullify_deleted_page_references(
   self : PdfDocument,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let page_numbers = self.pdf_page_object_numbers_in_map()
   let active_page_numbers = self.page_reference_numbers()
   if page_numbers.length() != active_page_numbers.length() {
@@ -133,7 +133,7 @@ fn PdfDocument::pdf_referenced_from_object(
 /// The document is mutated in place.
 pub fn PdfDocument::remove_unreferenced(
   self : PdfDocument,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.pdf_page_nullify_deleted_page_references()
   let found : @hashmap.HashMap[Int, Bool] = HashMap([])
   if self.trailer_dict().lookup_immediate(pdf_page_root_key()) is None &&

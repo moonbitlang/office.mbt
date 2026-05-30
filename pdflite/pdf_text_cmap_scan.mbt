@@ -17,13 +17,13 @@ fn pdf_text_parse_hex_bytes(
   line : BytesView,
   start : Int,
   stop : Int,
-) -> PdfBytes? {
+) -> @core.PdfBytes? {
   guard stop >= start else { return None }
   let mut digit_count = 0
   let mut scan = start
   while scan < stop {
     let value = line[scan].to_int()
-    if pdf_is_whitespace_byte(value) {
+    if @core.pdf_is_whitespace_byte(value) {
       ()
     } else {
       match pdf_text_hex_digit_value(line[scan]) {
@@ -39,7 +39,7 @@ fn pdf_text_parse_hex_bytes(
   let mut index = start
   while index < stop {
     let value = line[index].to_int()
-    if pdf_is_whitespace_byte(value) {
+    if @core.pdf_is_whitespace_byte(value) {
       ()
     } else {
       match pdf_text_hex_digit_value(line[index]) {
@@ -66,7 +66,8 @@ fn pdf_text_parse_hex_bytes(
 ///|
 fn pdf_text_skip_cmap_whitespace(line : BytesView, start : Int) -> Int {
   let mut index = start
-  while index < line.length() && pdf_is_whitespace_byte(line[index].to_int()) {
+  while index < line.length() &&
+        @core.pdf_is_whitespace_byte(line[index].to_int()) {
     index += 1
   }
   index
@@ -210,7 +211,7 @@ fn pdf_text_cmap_comment_start(line : BytesView) -> Int {
 }
 
 ///|
-fn pdf_text_cmap_line_without_comment(line : BytesView) -> PdfBytes {
+fn pdf_text_cmap_line_without_comment(line : BytesView) -> @core.PdfBytes {
   let stop = pdf_text_cmap_comment_start(line)
   let output = Array::make(stop, b'\x00')
   for index in 0..<stop {
@@ -220,8 +221,8 @@ fn pdf_text_cmap_line_without_comment(line : BytesView) -> PdfBytes {
 }
 
 ///|
-fn pdf_text_parse_cmap_hex_groups(line : BytesView) -> Array[PdfBytes]? {
-  let groups : Array[PdfBytes] = Array::new(capacity=line.length() / 2)
+fn pdf_text_parse_cmap_hex_groups(line : BytesView) -> Array[@core.PdfBytes]? {
+  let groups : Array[@core.PdfBytes] = Array::new(capacity=line.length() / 2)
   let mut index = 0
   while index < line.length() {
     index = pdf_text_skip_cmap_whitespace(line, index)
@@ -254,7 +255,7 @@ fn pdf_text_parse_cmap_hex_groups(line : BytesView) -> Array[PdfBytes]? {
 fn pdf_text_parse_cmap_hex_group_at(
   line : BytesView,
   start : Int,
-) -> (PdfBytes, Int)? {
+) -> (@core.PdfBytes, Int)? {
   let index = pdf_text_skip_cmap_whitespace(line, start)
   guard index < line.length() && line[index].to_int() == 60 else { return None }
   let body_start = index + 1
@@ -300,7 +301,7 @@ fn pdf_text_parse_cmap_ascii_int_at(
     }
   }
   guard stop > digit_start else { return None }
-  try pdf_parse_ascii_int_view(line[index:stop]) catch {
+  try @core.pdf_parse_ascii_int_view(line[index:stop]) catch {
     _ => None
   } noraise {
     value => Some((value, stop))
@@ -323,7 +324,7 @@ fn pdf_text_index_of_byte(line : BytesView, target : Int, start : Int) -> Int? {
 ///|
 fn pdf_text_cmap_contains_whitespace(data : BytesView) -> Bool {
   for byte in data {
-    if pdf_is_whitespace_byte(byte.to_int()) {
+    if @core.pdf_is_whitespace_byte(byte.to_int()) {
       break true
     }
   } nobreak {
@@ -332,17 +333,17 @@ fn pdf_text_cmap_contains_whitespace(data : BytesView) -> Bool {
 }
 
 ///|
-fn pdf_text_cmap_without_whitespace(data : BytesView) -> PdfBytes {
+fn pdf_text_cmap_without_whitespace(data : BytesView) -> @core.PdfBytes {
   let mut length = 0
   for byte in data {
-    if !pdf_is_whitespace_byte(byte.to_int()) {
+    if !@core.pdf_is_whitespace_byte(byte.to_int()) {
       length += 1
     }
   }
   let output = Array::make(length, b'\x00')
   let mut position = 0
   for byte in data {
-    if !pdf_is_whitespace_byte(byte.to_int()) {
+    if !@core.pdf_is_whitespace_byte(byte.to_int()) {
       output[position] = byte
       position += 1
     }
@@ -351,13 +352,13 @@ fn pdf_text_cmap_without_whitespace(data : BytesView) -> PdfBytes {
 }
 
 ///|
-let pdf_text_cmap_split_begin_marker : PdfBytes = b"begin"
+let pdf_text_cmap_split_begin_marker : @core.PdfBytes = b"begin"
 
 ///|
-let pdf_text_cmap_split_end_marker : PdfBytes = b"end"
+let pdf_text_cmap_split_end_marker : @core.PdfBytes = b"end"
 
 ///|
-let pdf_text_cmap_split_suffixes : ReadOnlyArray[PdfBytes] = [
+let pdf_text_cmap_split_suffixes : ReadOnlyArray[@core.PdfBytes] = [
   b"bfchar", b"bfrange", b"cidchar", b"cidrange", b"notdefchar", b"notdefrange",
   b"codespacerange",
 ]
@@ -391,7 +392,7 @@ fn pdf_text_cmap_has_split_marker_at(
   let whitespace_start = start + prefix.length()
   let mut suffix_start = whitespace_start
   while suffix_start < data.length() &&
-        pdf_is_whitespace_byte(data[suffix_start].to_int()) {
+        @core.pdf_is_whitespace_byte(data[suffix_start].to_int()) {
     suffix_start += 1
   }
   guard suffix_start > whitespace_start else { return false }

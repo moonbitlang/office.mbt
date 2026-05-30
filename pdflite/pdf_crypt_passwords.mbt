@@ -9,7 +9,7 @@ fn PdfEncryptionValues::effective_no_encrypt_metadata(
 ///|
 fn PdfEncryptionValues::password_settings(
   self : PdfEncryptionValues,
-) -> (Int, Int) raise PdfError {
+) -> (Int, Int) raise @core.PdfError {
   match self.crypt_type {
     PdfCryptARC4(key_length_bits, revision) => (revision, key_length_bits)
     PdfCryptAESV2 => (4, 128)
@@ -27,7 +27,7 @@ fn PdfEncryptionValues::password_settings(
 fn PdfEncryptionValues::authenticate_user_password(
   self : PdfEncryptionValues,
   password : BytesView,
-) -> Bool raise PdfError {
+) -> Bool raise @core.PdfError {
   let no_encrypt_metadata = self.effective_no_encrypt_metadata(false)
   match self.crypt_type {
     PdfCryptAESV3(iso) =>
@@ -52,12 +52,12 @@ fn PdfEncryptionValues::authenticate_user_password(
 /// Return the file key for a valid user password.
 ///
 /// A wrong password returns `None`; malformed encryption values or corrupt
-/// AESV3 permission entries raise `PdfError`.
+/// AESV3 permission entries raise `@core.PdfError`.
 fn PdfEncryptionValues::file_key_for_user_password(
   self : PdfEncryptionValues,
   password : BytesView,
   no_encrypt_metadata? : Bool = false,
-) -> PdfBytes? raise PdfError {
+) -> @core.PdfBytes? raise @core.PdfError {
   let no_encrypt_metadata = self.effective_no_encrypt_metadata(
     no_encrypt_metadata,
   )
@@ -115,7 +115,7 @@ fn PdfEncryptionValues::file_key_for_user_password(
 fn PdfEncryptionValues::authenticate_owner_password(
   self : PdfEncryptionValues,
   password : BytesView,
-) -> Bool raise PdfError {
+) -> Bool raise @core.PdfError {
   let no_encrypt_metadata = self.effective_no_encrypt_metadata(false)
   match self.crypt_type {
     PdfCryptAESV3(iso) =>
@@ -145,12 +145,12 @@ fn PdfEncryptionValues::authenticate_owner_password(
 /// Return the file key for a valid owner password.
 ///
 /// A wrong password returns `None`; malformed encryption values or corrupt
-/// AESV3 permission entries raise `PdfError`.
+/// AESV3 permission entries raise `@core.PdfError`.
 fn PdfEncryptionValues::file_key_for_owner_password(
   self : PdfEncryptionValues,
   password : BytesView,
   no_encrypt_metadata? : Bool = false,
-) -> PdfBytes? raise PdfError {
+) -> @core.PdfBytes? raise @core.PdfError {
   let no_encrypt_metadata = self.effective_no_encrypt_metadata(
     no_encrypt_metadata,
   )

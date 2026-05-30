@@ -54,7 +54,7 @@ fn PdfDocument::pdf_draw_apply_chunk(
   bates_pad : Int?,
   time : @date.PdfStrftimeTime?,
   add_artifacts : Bool,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   state.set_structure_tree_enabled(struct_tree)
   let selected_pages = @core.pdf_number_set(page_numbers)
   state.set_minimum_resource_number(
@@ -96,7 +96,7 @@ fn PdfDocument::pdf_draw_apply_chunk(
 fn pdf_draw_next_range(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> (PdfDocument, Array[Int]) raise PdfError {
+) -> (PdfDocument, Array[Int]) raise @core.PdfError {
   let end_page = document.endpage()
   match page_numbers {
     [page_number] if end_page > page_number => (document, [page_number + 1])

@@ -13,7 +13,7 @@ pub fn PdfDocument::pdf_type_typeset(
   bmargin : Double,
   paper : @geometry.PaperSize,
   elements : ArrayView[PdfTypeElement],
-) -> PdfTypeTypesetResult raise PdfError {
+) -> PdfTypeTypesetResult raise @core.PdfError {
   let numbered = pdf_type_number_tags(elements)
   let laid_out = pdf_type_layout(lmargin, rmargin, paper, numbered)
   let paginated = pdf_type_paginate(tmargin, bmargin, paper, laid_out)
@@ -39,7 +39,7 @@ pub fn pdf_type_typeset(
   bmargin : Double,
   paper : @geometry.PaperSize,
   elements : ArrayView[PdfTypeElement],
-) -> PdfTypeTypesetResult raise PdfError {
+) -> PdfTypeTypesetResult raise @core.PdfError {
   document.pdf_type_typeset(
     process_struct_tree, lmargin, rmargin, tmargin, bmargin, paper, elements,
   )
@@ -56,7 +56,7 @@ pub fn pdf_type_typeset_cpdf_order(
   paper : @geometry.PaperSize,
   document : PdfDocument,
   elements : ArrayView[PdfTypeElement],
-) -> PdfTypeTypesetResult raise PdfError {
+) -> PdfTypeTypesetResult raise @core.PdfError {
   document.pdf_type_typeset(
     process_struct_tree, lmargin, rmargin, tmargin, bmargin, paper, elements,
   )

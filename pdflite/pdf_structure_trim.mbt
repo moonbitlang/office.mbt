@@ -2,7 +2,7 @@
 fn PdfDocument::pdf_structure_indirect_number(
   self : PdfDocument,
   object_number : Int,
-  key : PdfName,
+  key : @core.PdfName,
 ) -> Int? {
   match self.direct(PdfIndirect(object_number)).lookup_immediate(key) {
     Some(PdfIndirect(number)) => Some(number)
@@ -119,7 +119,7 @@ fn pdf_structure_k_object(
 fn PdfDocument::pdf_structure_trim_deleted_pages(
   self : PdfDocument,
   deleted_page_numbers : ArrayView[Int],
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   if deleted_page_numbers.length() > 0 {
     let deleted_pages = @core.pdf_number_set(deleted_page_numbers)
     let mut changed = true
@@ -193,7 +193,7 @@ fn PdfDocument::pdf_structure_trim_deleted_pages(
 pub fn PdfDocument::trim_structure_tree(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let all_page_numbers = self.page_reference_numbers()
   let kept_page_numbers = pdf_page_select_numbers(
     all_page_numbers, page_numbers,
@@ -208,6 +208,6 @@ pub fn PdfDocument::trim_structure_tree(
 pub fn pdf_trim_structure_tree(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   document.trim_structure_tree(page_numbers)
 }

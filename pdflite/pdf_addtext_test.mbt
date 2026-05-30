@@ -45,8 +45,8 @@ fn addtext_process_time_for_test() -> @date.PdfStrftimeTime {
 }
 
 ///|
-fn addtext_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn addtext_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -218,7 +218,7 @@ test "pdf_addtext_opacity_resources preserves opaque resources" {
 ///|
 test "pdf_addtext_charcodes_of_utf8 emits font charcode bytes" {
   @test.assert_eq(
-    @pdflite.pdf_int_array_of_bytes(
+    @core.pdf_int_array_of_bytes(
       try! @pdflite.pdf_addtext_charcodes_of_utf8(
         addtext_standard_font_for_test(),
         "AéB",
@@ -231,7 +231,7 @@ test "pdf_addtext_charcodes_of_utf8 emits font charcode bytes" {
 ///|
 test "pdf_addtext_charcodes_of_utf8 skips missing font codepoints" {
   @test.assert_eq(
-    @pdflite.pdf_int_array_of_bytes(
+    @core.pdf_int_array_of_bytes(
       try! @pdflite.pdf_addtext_charcodes_of_utf8(
         addtext_standard_font_for_test(),
         "A☃B",
@@ -340,7 +340,7 @@ test "pdf_addtext_text_ops builds simple font text stamps" {
       Op_RG(0.1, 0.2, 0.3),
       Op_gs(gs),
       Op_Tf(font_name, 12.0),
-      Op_Tj(try! @pdflite.pdf_bytes_of_int_array([65, 233])),
+      Op_Tj(try! @core.pdf_bytes_of_int_array([65, 233])),
       Op_ET,
       Op_EMC,
       Op_Q,
@@ -396,11 +396,11 @@ test "pdf_addtext_text_ops switches fontpack runs" {
       Op_g(0.25),
       Op_G(0.25),
       Op_Tf(regular_name, 10.0),
-      Op_Tj(try! @pdflite.pdf_bytes_of_int_array([1])),
+      Op_Tj(try! @core.pdf_bytes_of_int_array([1])),
       Op_Tf(bold_name, 10.0),
-      Op_Tj(try! @pdflite.pdf_bytes_of_int_array([2, 3])),
+      Op_Tj(try! @core.pdf_bytes_of_int_array([2, 3])),
       Op_Tf(regular_name, 10.0),
-      Op_Tj(try! @pdflite.pdf_bytes_of_int_array([4])),
+      Op_Tj(try! @core.pdf_bytes_of_int_array([4])),
       Op_ET,
       Op_EMC,
       Op_Q,
@@ -1228,7 +1228,7 @@ test "pdf_addtext_pages_with_font wrapper validates selected pages" {
   )
   guard result
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "addtext_pages_with_font: range contains pages not present in pdf"
       )
     ) else {
@@ -1450,8 +1450,7 @@ test "pdf_addtexts_with_source rejects empty premade fontpacks" {
     PdfContentGrey(0.0),
     PdfPositionBottomLeft(1.0, 2.0),
   )
-  guard result
-    is Err(@pdflite.PdfError::SoftError("addtexts: fontpack is empty")) else {
+  guard result is Err(@core.PdfError::SoftError("addtexts: fontpack is empty")) else {
     fail("expected empty premade fontpack diagnostic")
   }
 }
@@ -1511,12 +1510,12 @@ test "PdfDocument addtext_existing_font_resource falls back to BaseFont names" {
 test "PdfDocument addtext_existing_font_resource reports missing fonts" {
   let document = @pdflite.pdf_document_empty()
   let basefont = addtext_name_for_test("/Helvetica")
-  let missing_dictionary : Result[(@pdflite.PdfName, @syntax.PdfObject), Error] = try? document.addtext_existing_font_resource(
+  let missing_dictionary : Result[(@core.PdfName, @syntax.PdfObject), Error] = try? document.addtext_existing_font_resource(
     @page.pdf_page_blank(@geometry.paper_a4),
     basefont,
   )
   guard missing_dictionary
-    is Err(@pdflite.PdfError::SoftError("addtext: font dictionary not present")) else {
+    is Err(@core.PdfError::SoftError("addtext: font dictionary not present")) else {
     fail("expected missing font dictionary error")
   }
   let page = {
@@ -1525,11 +1524,11 @@ test "PdfDocument addtext_existing_font_resource reports missing fonts" {
       (addtext_name_for_test("/Font"), PdfDictionary([])),
     ]),
   }
-  let missing_font : Result[(@pdflite.PdfName, @syntax.PdfObject), Error] = try? document.addtext_existing_font_resource(
+  let missing_font : Result[(@core.PdfName, @syntax.PdfObject), Error] = try? document.addtext_existing_font_resource(
     page, basefont,
   )
   guard missing_font
-    is Err(@pdflite.PdfError::SoftError("addtext: font /Helvetica not found")) else {
+    is Err(@core.PdfError::SoftError("addtext: font /Helvetica not found")) else {
     fail("expected missing font error")
   }
 }

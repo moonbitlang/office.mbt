@@ -1,5 +1,5 @@
 ///|
-fn pdf_type_ascii(text : String) -> PdfBytes {
+fn pdf_type_ascii(text : String) -> @core.PdfBytes {
   @ascii.encode(text)
 }
 
@@ -23,7 +23,7 @@ fn pdf_type_ocaml_string_of_float(value : Double) -> String {
 
 ///|
 /// Render one cpdftype element using the CamlPDF debug spelling.
-pub fn pdf_string_of_type_element(element : PdfTypeElement) -> PdfBytes {
+pub fn pdf_string_of_type_element(element : PdfTypeElement) -> @core.PdfBytes {
   match element {
     PdfTypeText(text) => text
     PdfTypeHGlue(length) =>
@@ -43,7 +43,9 @@ pub fn pdf_string_of_type_element(element : PdfTypeElement) -> PdfBytes {
 
 ///|
 /// Render a cpdftype element stream using CamlPDF's leading-newline format.
-pub fn pdf_string_of_type(elements : ArrayView[PdfTypeElement]) -> PdfBytes {
+pub fn pdf_string_of_type(
+  elements : ArrayView[PdfTypeElement],
+) -> @core.PdfBytes {
   let rendered = Array::make(elements.length(), pdf_type_ascii(""))
   let mut output_length = 0
   for i in 0..<elements.length() {
@@ -66,6 +68,8 @@ pub fn pdf_string_of_type(elements : ArrayView[PdfTypeElement]) -> PdfBytes {
 
 ///|
 /// Source-spelled compatibility alias for cpdftype's `to_string`.
-pub fn pdf_type_to_string(elements : ArrayView[PdfTypeElement]) -> PdfBytes {
+pub fn pdf_type_to_string(
+  elements : ArrayView[PdfTypeElement],
+) -> @core.PdfBytes {
   pdf_string_of_type(elements)
 }

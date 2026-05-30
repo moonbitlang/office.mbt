@@ -6,7 +6,7 @@ fn PdfDocument::pdf_image_collect_inline_images(
   content : ArrayView[@syntax.PdfObject],
   entries : Array[PdfImageListEntry],
   form_numbers : @hashmap.HashMap[Int, Bool],
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let ops = self.parse_content_ops_with_resources(resources, content)
   for op in ops {
     match op {
@@ -39,12 +39,12 @@ fn PdfDocument::pdf_image_collect_xobject(
   self : PdfDocument,
   resources : @syntax.PdfObject,
   page_number : Int,
-  name : PdfName,
+  name : @core.PdfName,
   xobject : @syntax.PdfObject,
   inline : Bool,
   entries : Array[PdfImageListEntry],
   form_numbers : @hashmap.HashMap[Int, Bool],
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   match self.lookup_direct(pdf_image_subtype_key(), xobject) {
     Some(PdfNameObject(subtype)) if subtype == pdf_image_image_name() => {
       let object_number = match xobject {
@@ -106,7 +106,7 @@ fn PdfDocument::pdf_image_collect_page_images(
   inline : Bool,
   entries : Array[PdfImageListEntry],
   form_numbers : @hashmap.HashMap[Int, Bool],
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   if inline {
     self.pdf_image_collect_inline_images(
       page.resources,

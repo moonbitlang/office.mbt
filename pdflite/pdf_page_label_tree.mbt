@@ -40,7 +40,7 @@ fn pdf_page_label_style_object(
 fn PdfDocument::pdf_page_label_raw_entries(
   self : PdfDocument,
   tree : @syntax.PdfObject,
-) -> Array[(@syntax.PdfObject, @syntax.PdfObject)] raise PdfError {
+) -> Array[(@syntax.PdfObject, @syntax.PdfObject)] raise @core.PdfError {
   let direct = self.lookup_direct_or_else(
     pdf_tree_names_key(),
     pdf_tree_nums_key(),
@@ -105,7 +105,9 @@ fn PdfDocument::pdf_page_label_of_range(
 
 ///|
 fn pdf_page_label_object(label : @label.PdfPageLabel) -> @syntax.PdfObject {
-  let entries : Array[(PdfName, @syntax.PdfObject)] = Array::new(capacity=3)
+  let entries : Array[(@core.PdfName, @syntax.PdfObject)] = Array::new(
+    capacity=3,
+  )
   match pdf_page_label_style_object(label.label_style) {
     Some(style) => entries.push((pdf_page_label_style_key(), style))
     None => ()
@@ -126,7 +128,7 @@ fn pdf_page_label_object(label : @label.PdfPageLabel) -> @syntax.PdfObject {
 ///|
 fn PdfDocument::pdf_page_label_catalog(
   self : PdfDocument,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   self.catalog()
 }
 
@@ -138,7 +140,7 @@ fn PdfDocument::pdf_page_label_catalog(
 /// without page labels return an empty array.
 pub fn PdfDocument::read_page_labels(
   self : PdfDocument,
-) -> Array[@label.PdfPageLabel] raise PdfError {
+) -> Array[@label.PdfPageLabel] raise @core.PdfError {
   let root = self.pdf_page_label_catalog()
   match self.lookup_direct(pdf_page_label_page_labels_key(), root) {
     Some(label_tree) => {
@@ -159,14 +161,14 @@ pub fn PdfDocument::read_page_labels(
 /// Compatibility wrapper for `PdfDocument::read_page_labels`.
 pub fn pdf_read_page_labels(
   document : PdfDocument,
-) -> Array[@label.PdfPageLabel] raise PdfError {
+) -> Array[@label.PdfPageLabel] raise @core.PdfError {
   document.read_page_labels()
 }
 
 ///|
 fn PdfDocument::pdf_page_label_has_labels(
   self : PdfDocument,
-) -> Bool raise PdfError {
+) -> Bool raise @core.PdfError {
   let root = self.pdf_page_label_catalog()
   self.lookup_direct(pdf_page_label_page_labels_key(), root) is Some(_)
 }
@@ -178,7 +180,7 @@ fn PdfDocument::pdf_page_label_has_labels(
 /// object and trailer root reference.
 pub fn PdfDocument::remove_page_labels(
   self : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let root = self.pdf_page_label_catalog()
   let pdf = self.copy()
   let root_without_labels = root.remove_dict_entry(
@@ -198,7 +200,7 @@ pub fn PdfDocument::remove_page_labels(
 /// Compatibility wrapper for `PdfDocument::remove_page_labels`.
 pub fn pdf_remove_page_labels(
   document : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.remove_page_labels()
 }
 
@@ -210,7 +212,7 @@ pub fn pdf_remove_page_labels(
 pub fn PdfDocument::write_page_labels(
   self : PdfDocument,
   labels : ArrayView[@label.PdfPageLabel],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   if labels.length() == 0 {
     self.remove_page_labels()
   } else {
@@ -243,6 +245,6 @@ pub fn PdfDocument::write_page_labels(
 pub fn pdf_write_page_labels(
   document : PdfDocument,
   labels : ArrayView[@label.PdfPageLabel],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.write_page_labels(labels)
 }

@@ -2,9 +2,9 @@
 fn PdfDocument::pdf_page_box_object(
   self : PdfDocument,
   page : @page.PdfPage,
-  box_name : PdfName,
+  box_name : @core.PdfName,
   mediabox_if_missing : Bool,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   if box_name == pdf_page_mediabox_key() {
     page.mediabox
   } else {
@@ -26,10 +26,10 @@ fn PdfDocument::pdf_page_box_object(
 fn PdfDocument::pdf_page_hard_box_page(
   self : PdfDocument,
   page : @page.PdfPage,
-  box_name : PdfName,
+  box_name : @core.PdfName,
   mediabox_if_missing : Bool,
   fast : Bool,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   let bounds = self.parse_rectangle(
     self.pdf_page_box_object(page, box_name, mediabox_if_missing),
   )
@@ -53,8 +53,8 @@ fn PdfDocument::pdf_page_hard_box_page(
 fn PdfDocument::pdf_page_remove_box_page(
   self : PdfDocument,
   page : @page.PdfPage,
-  box_name : PdfName,
-) -> @page.PdfPage raise PdfError {
+  box_name : @core.PdfName,
+) -> @page.PdfPage raise @core.PdfError {
   ignore(self)
   { ..page, rest: page.rest.remove_dict_entry(box_name) }
 }
@@ -63,7 +63,7 @@ fn PdfDocument::pdf_page_remove_box_page(
 fn PdfDocument::pdf_page_copy_box_source(
   self : PdfDocument,
   page : @page.PdfPage,
-  from_box : PdfName,
+  from_box : @core.PdfName,
   mediabox_if_missing : Bool,
 ) -> @syntax.PdfObject? {
   if from_box == pdf_page_mediabox_key() {
@@ -80,10 +80,10 @@ fn PdfDocument::pdf_page_copy_box_source(
 fn PdfDocument::pdf_page_copy_box_page(
   self : PdfDocument,
   page : @page.PdfPage,
-  from_box : PdfName,
-  to_box : PdfName,
+  from_box : @core.PdfName,
+  to_box : @core.PdfName,
   mediabox_if_missing : Bool,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   match self.pdf_page_copy_box_source(page, from_box, mediabox_if_missing) {
     Some(value) =>
       if to_box == pdf_page_mediabox_key() {
@@ -112,8 +112,8 @@ fn PdfDocument::pdf_page_crop_page(
   page_number : Int,
   page : @page.PdfPage,
   boxes : ArrayView[(Double, Double, Double, Double)],
-  box_name : PdfName,
-) -> @page.PdfPage raise PdfError {
+  box_name : @core.PdfName,
+) -> @page.PdfPage raise @core.PdfError {
   ignore(self)
   {
     ..page,
@@ -128,12 +128,12 @@ fn PdfDocument::pdf_page_crop_page(
 fn PdfDocument::pdf_page_set_box_page(
   self : PdfDocument,
   page : @page.PdfPage,
-  box_name : PdfName,
+  box_name : @core.PdfName,
   min_x : Double,
   max_x : Double,
   min_y : Double,
   max_y : Double,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   ignore(self)
   {
     ..page,
@@ -154,7 +154,7 @@ fn PdfDocument::pdf_page_change_box_object(
     Double,
     Double,
   ),
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   let bounds = self.parse_rectangle(object)
   pdf_page_box_bounds_object(
     transform(bounds.min_x, bounds.min_y, bounds.max_x, bounds.max_y),

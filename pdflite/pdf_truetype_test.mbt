@@ -1,5 +1,5 @@
 ///|
-fn truetype_bytes_for_test(values : Array[Int]) -> @pdflite.PdfBytes {
+fn truetype_bytes_for_test(values : Array[Int]) -> @core.PdfBytes {
   let output : Array[Byte] = []
   for value in values {
     output.push(value.to_byte())
@@ -51,7 +51,7 @@ fn truetype_append_for_test(
 ///|
 fn truetype_table_font_for_test(
   tables : ArrayView[(String, Array[Int])],
-) -> @pdflite.PdfBytes {
+) -> @core.PdfBytes {
   let table_data_offset = 12 + tables.length() * 16
   let output : Array[Int] = []
   truetype_push_u32_for_test(output, 0x00010000)
@@ -78,7 +78,7 @@ fn truetype_table_font_for_test(
 ///|
 fn truetype_cmap_font_for_test(
   subtables : ArrayView[(Int, Int, Array[Int])],
-) -> @pdflite.PdfBytes {
+) -> @core.PdfBytes {
   let cmap = truetype_cmap_table_for_test(subtables)
   let cmap_offset = 28
 
@@ -335,7 +335,7 @@ fn truetype_glyf_table_for_test(
 }
 
 ///|
-fn truetype_subset_font_fixture_for_test() -> @pdflite.PdfBytes {
+fn truetype_subset_font_fixture_for_test() -> @core.PdfBytes {
   let (glyf, offsets) = truetype_glyf_table_for_test([
     truetype_simple_glyph_for_test(),
     truetype_simple_glyph_for_test(),
@@ -356,7 +356,7 @@ fn truetype_subset_font_fixture_for_test() -> @pdflite.PdfBytes {
 }
 
 ///|
-fn truetype_width_font_for_test() -> @pdflite.PdfBytes {
+fn truetype_width_font_for_test() -> @core.PdfBytes {
   truetype_table_font_for_test([
     ("head", truetype_head_table_for_test(2000, 0, 0, 1000, 1000, 1)),
     ("maxp", truetype_maxp_table_for_test(6)),
@@ -372,7 +372,7 @@ fn truetype_width_font_for_test() -> @pdflite.PdfBytes {
 }
 
 ///|
-fn truetype_parse_font_for_test() -> @pdflite.PdfBytes {
+fn truetype_parse_font_for_test() -> @core.PdfBytes {
   let (glyf, offsets) = truetype_glyf_table_for_test([
     truetype_simple_glyph_for_test(),
     truetype_simple_glyph_for_test(),
@@ -486,7 +486,7 @@ test "pdf_truetype_metrics reads cpdftruetype table prerequisites" {
     ]),
   )
   guard missing_hmtx
-    is Err(@pdflite.PdfError::SoftError("No hmtx table found in TrueType font")) else {
+    is Err(@core.PdfError::SoftError("No hmtx table found in TrueType font")) else {
     fail("expected missing hmtx table to fail")
   }
 }
@@ -534,7 +534,7 @@ test "pdf_truetype_widths maps encoding codes through cmap and hmtx" {
     67,
     [68],
   )
-  guard reversed is Err(@pdflite.PdfError::SoftError("lastchar < firstchar")) else {
+  guard reversed is Err(@core.PdfError::SoftError("lastchar < firstchar")) else {
     fail("expected reversed character range to fail")
   }
 }
@@ -641,7 +641,7 @@ test "pdf_truetype_parse refuses subsets with no main encoding characters" {
   )
   guard parsed
     is Err(
-      @pdflite.PdfError::SoftError(
+      @core.PdfError::SoftError(
         "Cpdftruetype: Refusing to create font with no characters"
       )
     ) else {
@@ -691,7 +691,7 @@ test "pdf_truetype_descriptor_metrics requires OS2 like source parser" {
     ]),
   )
   guard missing_os2
-    is Err(@pdflite.PdfError::SoftError("No os/2 table found in truetype font")) else {
+    is Err(@core.PdfError::SoftError("No os/2 table found in truetype font")) else {
     fail("expected missing OS/2 table to fail")
   }
 }
@@ -726,9 +726,7 @@ test "pdf_truetype_loca_offsets reports source errors" {
   )
   guard unknown_format
     is Err(
-      @pdflite.PdfError::SoftError(
-        "Unknown indexToLocFormat in read_loca_table"
-      )
+      @core.PdfError::SoftError("Unknown indexToLocFormat in read_loca_table")
     ) else {
     fail("expected unknown indexToLocFormat to fail")
   }
@@ -740,7 +738,7 @@ test "pdf_truetype_loca_offsets reports source errors" {
     ]),
   )
   guard missing_loca
-    is Err(@pdflite.PdfError::SoftError("No loca table found in TrueType font")) else {
+    is Err(@core.PdfError::SoftError("No loca table found in TrueType font")) else {
     fail("expected missing loca table to fail")
   }
 }
@@ -799,7 +797,7 @@ test "pdf_truetype_expand_composite_glyphs sorts and validates glyph indices" {
     [3],
   )
   guard invalid
-    is Err(@pdflite.PdfError::SoftError("Invalid TrueType glyph index")) else {
+    is Err(@core.PdfError::SoftError("Invalid TrueType glyph index")) else {
     fail("expected invalid glyph index to fail")
   }
 }
@@ -815,7 +813,7 @@ test "pdf_truetype_expand_composite_glyphs requires glyf table" {
     [0],
   )
   guard missing_glyf
-    is Err(@pdflite.PdfError::SoftError("No glyf table found in TrueType font")) else {
+    is Err(@core.PdfError::SoftError("No glyf table found in TrueType font")) else {
     fail("expected missing glyf table to fail")
   }
 }
@@ -853,7 +851,7 @@ test "pdf_truetype_subset_glyf_table copies notdef subset glyphs and composites"
   truetype_append_for_test(expected, glyph2)
   truetype_append_for_test(expected, [0, 0, 0])
   @test.assert_eq(table.length, 37)
-  @test.assert_eq(@pdflite.pdf_int_array_of_bytes(table.bytes), expected)
+  @test.assert_eq(@core.pdf_int_array_of_bytes(table.bytes), expected)
 }
 
 ///|
@@ -882,7 +880,7 @@ test "pdf_truetype_subset_loca_table rewrites gaps and short entries" {
     ("glyf", long_glyf),
   ])
   @test.assert_eq(
-    @pdflite.pdf_int_array_of_bytes(
+    @core.pdf_int_array_of_bytes(
       try! @pdflite.pdf_truetype_subset_loca_table(long_font, [65]),
     ),
     [
@@ -911,7 +909,7 @@ test "pdf_truetype_subset_loca_table rewrites gaps and short entries" {
     ("glyf", short_glyf),
   ])
   @test.assert_eq(
-    @pdflite.pdf_int_array_of_bytes(
+    @core.pdf_int_array_of_bytes(
       try! @pdflite.pdf_truetype_subset_loca_table(short_font, [65]),
     ),
     [
@@ -930,7 +928,7 @@ test "pdf_truetype_subset_cmap_table writes source format 6 table" {
   ])
   let table = try! @pdflite.pdf_truetype_subset_cmap_table(font, [65, 70])
   @test.assert_eq(table.length, 26)
-  @test.assert_eq(@pdflite.pdf_int_array_of_bytes(table.bytes), [
+  @test.assert_eq(@core.pdf_int_array_of_bytes(table.bytes), [
     0, 0, // table version
      0, 1, // one encoding table
      0, 1, // platform ID
@@ -953,7 +951,7 @@ test "pdf_truetype_subset_font assembles source table directory" {
     truetype_subset_font_fixture_for_test(),
     [65],
   )
-  @test.assert_eq(@pdflite.pdf_int_array_of_bytes(subset[0:12]), [
+  @test.assert_eq(@core.pdf_int_array_of_bytes(subset[0:12]), [
     0, 1, 0, 0, // scaler type
      0, 5, // numTables
      0, 64, // searchRange = 16 * pow2lt 5

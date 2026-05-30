@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::pdf_bookmark_has_outlines(
   self : PdfDocument,
-) -> Bool raise PdfError {
+) -> Bool raise @core.PdfError {
   let root = self.pdf_bookmark_catalog()
   self.lookup_direct(pdf_bookmark_outlines_key(), root) is Some(_)
 }
@@ -27,7 +27,7 @@ fn pdf_bookmark_mark_ancestors(
 fn PdfDocument::pdf_bookmarks_for_pages(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> Array[@bookmark.PdfBookmark] raise PdfError {
+) -> Array[@bookmark.PdfBookmark] raise @core.PdfError {
   let bookmarks = self.read_bookmarks(preserve_actions=true)
   let page_reference_numbers = self.page_reference_numbers()
   let page_number_lookup = pdf_page_number_lookup(page_reference_numbers)

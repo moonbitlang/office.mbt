@@ -44,7 +44,7 @@ fn pdf_content_afm_header_number(
 ) -> Double {
   match pdf_content_afm_header_value(data, key) {
     Some(value) => {
-      let tokens = pdf_split_whitespace_tokens(value)
+      let tokens = @core.pdf_split_whitespace_tokens(value)
       if tokens.length() == 1 {
         let parsed : Result[Double, Error] = try? @strconv.from_str(
           @ascii.decode_lossy(tokens[0]),
@@ -67,7 +67,7 @@ fn pdf_content_standard_font_bbox_metrics(
 ) -> (Double, Double) {
   match pdf_content_afm_header_value(data, "FontBBox") {
     Some(value) => {
-      let tokens = pdf_split_whitespace_tokens(value)
+      let tokens = @core.pdf_split_whitespace_tokens(value)
       if tokens.length() == 4 {
         match
           (

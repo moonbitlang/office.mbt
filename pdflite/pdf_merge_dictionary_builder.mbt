@@ -1,6 +1,6 @@
 ///|
 priv struct PdfMergeDictionaryBuilder {
-  entries : Array[(PdfName, @syntax.PdfObject)]
+  entries : Array[(@core.PdfName, @syntax.PdfObject)]
   indexes : @hashmap.HashMap[Bytes, Int]
 }
 
@@ -12,7 +12,7 @@ fn pdf_merge_dictionary_builder() -> PdfMergeDictionaryBuilder {
 ///|
 fn PdfMergeDictionaryBuilder::add_entry(
   self : PdfMergeDictionaryBuilder,
-  key : PdfName,
+  key : @core.PdfName,
   value : @syntax.PdfObject,
 ) -> Unit {
   let index_key = key.bytes()

@@ -47,7 +47,7 @@ fn PdfDocument::load_reconstructed_plain_xref_objects(
   skip_object_stream_entries : Bool,
 ) -> Unit {
   let xref_index = @reader.pdf_classic_xref_index(xrefs)
-  let cursor = byte_cursor_of_view(data)
+  let cursor = @core.byte_cursor_of_view(data)
   for xref in xrefs {
     let should_load = pdf_reconstructed_plain_xref_should_load(
       xref, xref_stream_ref_set, skip_object_stream_entries,
@@ -91,7 +91,7 @@ fn PdfDocument::load_reconstructed_object_xrefs(
   xrefs : ArrayView[@reader.PdfClassicXRefEntry],
   xref_coverage : @reader.PdfReconstructedXRefCoverage,
 ) -> Unit {
-  let cursor = byte_cursor_of_view(data)
+  let cursor = @core.byte_cursor_of_view(data)
   for xref in xrefs {
     let parsed_result : Result[@syntax.PdfParsedIndirectObject, Error] = try? pdf_cursor_read_reconstructed_object_at(
       cursor,

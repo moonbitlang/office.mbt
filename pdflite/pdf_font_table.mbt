@@ -3,7 +3,7 @@ fn PdfDocument::pdf_font_table_target_font(
   self : PdfDocument,
   font_name : String,
   page_number : Int,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   let font = self.font_from_name(font_name, page_number)
   let mut selected = font
   match font {
@@ -21,7 +21,7 @@ fn PdfDocument::pdf_font_table_target_font(
 }
 
 ///|
-fn pdf_font_table_charset(font : PdfFont) -> Array[PdfName]? {
+fn pdf_font_table_charset(font : PdfFont) -> Array[@core.PdfName]? {
   match font {
     PdfFontSimple({ fontdescriptor: Some({ charset: Some(charset), .. }), .. }) =>
       Some(charset)
@@ -33,16 +33,16 @@ fn pdf_font_table_charset(font : PdfFont) -> Array[PdfName]? {
 fn pdf_font_table_text_bytes(
   font : PdfFont,
   code : Int,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   if font.uses_two_byte_codes() {
-    Bytes::from_array([pdf_byte_of_int(0), pdf_byte_of_int(code)])
+    Bytes::from_array([@core.pdf_byte_of_int(0), @core.pdf_byte_of_int(code)])
   } else {
-    Bytes::from_array([pdf_byte_of_int(code)])
+    Bytes::from_array([@core.pdf_byte_of_int(code)])
   }
 }
 
 ///|
-fn pdf_font_table_strip_name_slash(name : PdfName) -> String {
+fn pdf_font_table_strip_name_slash(name : @core.PdfName) -> String {
   let text = pdf_util_string_from_name(name) catch {
     _ => @ascii.decode_lossy(name.bytes())
   }
@@ -54,7 +54,9 @@ fn pdf_font_table_strip_name_slash(name : PdfName) -> String {
 }
 
 ///|
-fn pdf_font_table_glyphnames_text(glyphnames : ArrayView[PdfName]) -> String {
+fn pdf_font_table_glyphnames_text(
+  glyphnames : ArrayView[@core.PdfName],
+) -> String {
   let mut text = ""
   for glyphname in glyphnames {
     text = text + pdf_font_table_strip_name_slash(glyphname)
@@ -65,7 +67,7 @@ fn pdf_font_table_glyphnames_text(glyphnames : ArrayView[PdfName]) -> String {
 ///|
 fn pdf_font_table_in_charset(
   glyphnames : String,
-  charset : ArrayView[PdfName],
+  charset : ArrayView[@core.PdfName],
 ) -> Bool {
   for name in charset {
     if pdf_font_table_strip_name_slash(name) == glyphnames {
@@ -78,7 +80,7 @@ fn pdf_font_table_in_charset(
 ///|
 fn pdf_font_table_utf8_text(
   codepoints : ArrayView[Int],
-) -> String raise PdfError {
+) -> String raise @core.PdfError {
   let bytes = pdf_utf8_of_codepoints(codepoints)
   @utf8.decode(bytes) catch {
     _ => ""
@@ -88,7 +90,7 @@ fn pdf_font_table_utf8_text(
 ///|
 fn pdf_font_table_unicode_fields(
   codepoints : ArrayView[Int],
-) -> (String, String, String) raise PdfError {
+) -> (String, String, String) raise @core.PdfError {
   match codepoints {
     [codepoint] => {
       let data = pdf_unicode_data_lookup(codepoint)
@@ -120,7 +122,7 @@ fn pdf_font_table_entry(
   font : PdfFont,
   extractor : PdfTextExtractor,
   code : Int,
-) -> @font.PdfFontTableEntry? raise PdfError {
+) -> @font.PdfFontTableEntry? raise @core.PdfError {
   let text = pdf_font_table_text_bytes(font, code)
   let glyphnames = extractor.glyphnames_of_text(text)
   let glyphnames_text = pdf_font_table_glyphnames_text(glyphnames)
@@ -150,7 +152,7 @@ pub fn PdfDocument::font_table(
   self : PdfDocument,
   font_name : String,
   page_number : Int,
-) -> Array[@font.PdfFontTableEntry] raise PdfError {
+) -> Array[@font.PdfFontTableEntry] raise @core.PdfError {
   let font_object = self.pdf_font_table_target_font(font_name, page_number)
   let font = self.read_font(font_object)
   let extractor = font.text_extractor()
@@ -170,7 +172,7 @@ pub fn pdf_font_table(
   document : PdfDocument,
   font_name : String,
   page_number : Int,
-) -> Array[@font.PdfFontTableEntry] raise PdfError {
+) -> Array[@font.PdfFontTableEntry] raise @core.PdfError {
   document.font_table(font_name, page_number)
 }
 
@@ -224,7 +226,7 @@ pub fn PdfDocument::font_table_text(
   self : PdfDocument,
   font_name : String,
   page_number : Int,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let entries = self.font_table(font_name, page_number)
   let output = Array::make(pdf_font_table_text_length(entries), b'\x00')
   let mut position = 0
@@ -240,7 +242,7 @@ pub fn pdf_font_table_text(
   document : PdfDocument,
   font_name : String,
   page_number : Int,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   document.font_table_text(font_name, page_number)
 }
 
@@ -250,7 +252,7 @@ pub fn PdfDocument::print_font_table(
   self : PdfDocument,
   font_name : String,
   page_number : Int,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   self.font_table_text(font_name, page_number)
 }
 
@@ -260,6 +262,6 @@ pub fn pdf_print_font_table(
   document : PdfDocument,
   font_name : String,
   page_number : Int,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   document.print_font_table(font_name, page_number)
 }

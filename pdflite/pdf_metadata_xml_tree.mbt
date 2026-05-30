@@ -229,7 +229,7 @@ fn pdf_metadata_xmltree_push_bytes(
 /// Like cpdfmetadata's `bytes_of_xmltree`, this omits an XML declaration.
 pub fn pdf_metadata_bytes_of_xmltree(
   document : @metadata.PdfMetadataXmlDocument,
-) -> PdfBytes {
+) -> @core.PdfBytes {
   let output : Array[String] = []
   match document.dtd {
     Some(dtd) if dtd != "" => output.push(dtd)
@@ -243,6 +243,6 @@ pub fn pdf_metadata_bytes_of_xmltree(
 /// Source-spelled compatibility alias for cpdfmetadata's `bytes_of_xmltree`.
 pub fn pdf_bytes_of_xmltree(
   document : @metadata.PdfMetadataXmlDocument,
-) -> PdfBytes {
+) -> @core.PdfBytes {
   pdf_metadata_bytes_of_xmltree(document)
 }

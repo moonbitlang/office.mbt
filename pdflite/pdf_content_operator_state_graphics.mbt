@@ -55,7 +55,7 @@ fn pdf_content_operator_copy_marked_content(
 
 ///|
 fn pdf_content_operator_marked_content(
-  tag : PdfName,
+  tag : @core.PdfName,
   properties : @syntax.PdfObject?,
 ) -> PdfContentMarkedContent {
   { tag: pdf_content_state_name_text(tag), properties }

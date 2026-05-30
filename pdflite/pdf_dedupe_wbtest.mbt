@@ -1,6 +1,6 @@
 ///|
-fn dedupe_name_for_test(text : String) -> PdfName {
-  pdf_name_of_bytes(@ascii.encode(text))
+fn dedupe_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|

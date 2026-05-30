@@ -1,6 +1,6 @@
 ///|
-fn chop_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn chop_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -178,9 +178,7 @@ test "PdfDocument chop validates grid and page range" {
     [1],
   )
   guard bad_grid
-    is Err(
-      @pdflite.PdfError::BadNumberArgument("chop: x and y must be positive")
-    ) else {
+    is Err(@core.PdfError::BadNumberArgument("chop: x and y must be positive")) else {
     fail("expected bad chop grid")
   }
   let bad_page : Result[@pdflite.PdfDocument, Error] = try? document.chop_hv(
@@ -191,7 +189,7 @@ test "PdfDocument chop validates grid and page range" {
   )
   guard bad_page
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "chop_v: range contains pages not present in pdf"
       )
     ) else {

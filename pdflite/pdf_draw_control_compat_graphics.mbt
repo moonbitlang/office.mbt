@@ -3,7 +3,7 @@
 pub fn pdf_setthickness(
   control : PdfDrawControl,
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   control.set_line_thickness(text)
 }
 
@@ -12,7 +12,7 @@ pub fn pdf_setthickness(
 pub fn pdf_setcap(
   control : PdfDrawControl,
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   control.set_line_cap(text)
 }
 
@@ -21,7 +21,7 @@ pub fn pdf_setcap(
 pub fn pdf_setjoin(
   control : PdfDrawControl,
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   control.set_line_join(text)
 }
 
@@ -30,7 +30,7 @@ pub fn pdf_setjoin(
 pub fn pdf_setmiter(
   control : PdfDrawControl,
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   control.set_miter_limit(text)
 }
 
@@ -39,7 +39,7 @@ pub fn pdf_setmiter(
 pub fn pdf_setdash(
   control : PdfDrawControl,
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   control.set_dash_pattern(text)
 }
 
@@ -51,7 +51,7 @@ pub fn pdf_push(control : PdfDrawControl) -> Unit {
 
 ///|
 /// Source-spelled cpdfdrawcontrol `pop` over explicit draw state.
-pub fn pdf_pop(control : PdfDrawControl) -> Unit raise PdfError {
+pub fn pdf_pop(control : PdfDrawControl) -> Unit raise @core.PdfError {
   control.pop_group()
 }
 
@@ -60,7 +60,7 @@ pub fn pdf_pop(control : PdfDrawControl) -> Unit raise PdfError {
 pub fn pdf_setmatrix(
   control : PdfDrawControl,
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   control.set_matrix(text)
 }
 
@@ -69,7 +69,7 @@ pub fn pdf_setmatrix(
 pub fn pdf_setmtranslate(
   control : PdfDrawControl,
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   control.matrix_translate(text)
 }
 
@@ -78,7 +78,7 @@ pub fn pdf_setmtranslate(
 pub fn pdf_setmrotate(
   control : PdfDrawControl,
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   control.matrix_rotate(text)
 }
 
@@ -87,7 +87,7 @@ pub fn pdf_setmrotate(
 pub fn pdf_setmscale(
   control : PdfDrawControl,
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   control.matrix_scale(text)
 }
 
@@ -96,7 +96,7 @@ pub fn pdf_setmscale(
 pub fn pdf_setmshearx(
   control : PdfDrawControl,
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   control.matrix_shear_x(text)
 }
 
@@ -105,6 +105,6 @@ pub fn pdf_setmshearx(
 pub fn pdf_setmsheary(
   control : PdfDrawControl,
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   control.matrix_shear_y(text)
 }

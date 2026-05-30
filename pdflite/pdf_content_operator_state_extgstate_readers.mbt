@@ -19,7 +19,7 @@ fn pdf_content_extgstate_integer(object : @syntax.PdfObject) -> Int? {
 fn PdfDocument::content_extgstate_number(
   self : PdfDocument,
   extgstate : @syntax.PdfObject,
-  key : PdfName,
+  key : @core.PdfName,
 ) -> Double? {
   match self.lookup_direct(key, extgstate) {
     Some(value) => pdf_content_extgstate_number(value)
@@ -31,7 +31,7 @@ fn PdfDocument::content_extgstate_number(
 fn PdfDocument::content_extgstate_integer(
   self : PdfDocument,
   extgstate : @syntax.PdfObject,
-  key : PdfName,
+  key : @core.PdfName,
 ) -> Int? {
   match self.lookup_direct(key, extgstate) {
     Some(value) => pdf_content_extgstate_integer(value)
@@ -43,8 +43,8 @@ fn PdfDocument::content_extgstate_integer(
 fn PdfDocument::content_extgstate_name_value(
   self : PdfDocument,
   extgstate : @syntax.PdfObject,
-  key : PdfName,
-) -> PdfName? {
+  key : @core.PdfName,
+) -> @core.PdfName? {
   match self.lookup_direct(key, extgstate) {
     Some(PdfNameObject(value)) => Some(value)
     _ => None
@@ -55,7 +55,7 @@ fn PdfDocument::content_extgstate_name_value(
 fn PdfDocument::content_extgstate_boolean(
   self : PdfDocument,
   extgstate : @syntax.PdfObject,
-  key : PdfName,
+  key : @core.PdfName,
 ) -> Bool? {
   match self.lookup_direct(key, extgstate) {
     Some(PdfBoolean(value)) => Some(value)

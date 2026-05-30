@@ -7,7 +7,7 @@ fn pdf_bookmark_colour_is_black(colour : @bookmark.PdfBookmarkColour) -> Bool {
 fn pdf_bookmark_node_object(
   bookmark : @bookmark.PdfBookmark,
 ) -> @syntax.PdfObject {
-  let entries : Array[(PdfName, @syntax.PdfObject)] = [
+  let entries : Array[(@core.PdfName, @syntax.PdfObject)] = [
     (pdf_bookmark_title_key(), PdfString(bookmark.text)),
   ]
   let destination = pdf_object_of_destination(bookmark.target)
@@ -111,7 +111,7 @@ fn pdf_bookmark_add_count(
   object : @syntax.PdfObject,
   children : ArrayView[PdfBookmarkNode],
   is_open : Bool,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   if children.length() == 0 {
     object
   } else {
@@ -127,7 +127,7 @@ fn pdf_bookmark_add_count(
 fn pdf_bookmark_finalize_nodes(
   nodes : ArrayView[PdfBookmarkNode],
   parent_number : Int,
-) -> Array[PdfBookmarkNode] raise PdfError {
+) -> Array[PdfBookmarkNode] raise @core.PdfError {
   let output : Array[PdfBookmarkNode] = []
   for index in 0..<nodes.length() {
     let node = nodes[index]
@@ -180,7 +180,7 @@ fn pdf_bookmark_flatten_nodes(
 fn pdf_bookmark_outline_root_object(
   nodes : ArrayView[PdfBookmarkNode],
 ) -> @syntax.PdfObject {
-  let entries : Array[(PdfName, @syntax.PdfObject)] = [
+  let entries : Array[(@core.PdfName, @syntax.PdfObject)] = [
     (pdf_bookmark_first_key(), PdfIndirect(nodes[0].number)),
     (pdf_bookmark_last_key(), PdfIndirect(nodes[nodes.length() - 1].number)),
   ]
@@ -199,7 +199,7 @@ fn pdf_bookmark_outline_root_object(
 /// object and trailer root reference.
 pub fn PdfDocument::remove_bookmarks(
   self : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let root = self.pdf_bookmark_catalog()
   let pdf = self.copy()
   let root_without_outlines = root.remove_dict_entry(
@@ -219,7 +219,7 @@ pub fn PdfDocument::remove_bookmarks(
 /// Compatibility wrapper for `PdfDocument::remove_bookmarks`.
 pub fn pdf_remove_bookmarks(
   document : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.remove_bookmarks()
 }
 
@@ -232,7 +232,7 @@ pub fn pdf_remove_bookmarks(
 pub fn PdfDocument::add_bookmarks(
   self : PdfDocument,
   bookmarks : ArrayView[@bookmark.PdfBookmark],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   if bookmarks.length() == 0 {
     self.remove_bookmarks()
   } else {
@@ -280,6 +280,6 @@ pub fn PdfDocument::add_bookmarks(
 pub fn pdf_add_bookmarks(
   bookmarks : ArrayView[@bookmark.PdfBookmark],
   document : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.add_bookmarks(bookmarks)
 }

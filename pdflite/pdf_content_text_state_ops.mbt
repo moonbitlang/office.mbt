@@ -1,5 +1,5 @@
 ///|
-fn pdf_content_text_state_name_text(name : PdfName) -> String {
+fn pdf_content_text_state_name_text(name : @core.PdfName) -> String {
   @ascii.decode_lossy(name.bytes())
 }
 

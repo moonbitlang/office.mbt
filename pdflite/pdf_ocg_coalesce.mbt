@@ -1,7 +1,7 @@
 ///|
 fn pdf_ocg_representative_number(
-  representatives : ArrayView[(PdfBytes, Int)],
-  name : PdfBytes,
+  representatives : ArrayView[(@core.PdfBytes, Int)],
+  name : @core.PdfBytes,
 ) -> Int? {
   for representative in representatives {
     if representative.0 == name {
@@ -45,9 +45,9 @@ fn pdf_ocg_coalesce_numbers(
 ///|
 fn pdf_ocg_coalesce_order(
   changes : ArrayView[(Int, Int)],
-  order : ArrayView[(PdfBytes?, Array[Int])],
-) -> Array[(PdfBytes?, Array[Int])] {
-  let output : Array[(PdfBytes?, Array[Int])] = []
+  order : ArrayView[(@core.PdfBytes?, Array[Int])],
+) -> Array[(@core.PdfBytes?, Array[Int])] {
+  let output : Array[(@core.PdfBytes?, Array[Int])] = []
   let seen : Array[Int] = []
   for item in order {
     let numbers : Array[Int] = []
@@ -108,7 +108,7 @@ fn pdf_ocg_coalesce_config(
 fn pdf_ocg_coalesce_content(
   content : @ocg.PdfOptionalContent,
 ) -> (@ocg.PdfOptionalContent, Array[(Int, Int)]) {
-  let representatives : Array[(PdfBytes, Int)] = []
+  let representatives : Array[(@core.PdfBytes, Int)] = []
   let ocgs : Array[(Int, @ocg.PdfOcg)] = []
   let changes : Array[(Int, Int)] = []
   for entry in content.ocgs {
@@ -146,7 +146,7 @@ fn pdf_ocg_coalesce_content(
 /// kept object number, and duplicate OCG objects are removed.
 pub fn PdfDocument::ocg_coalesce(
   self : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   match self.read_optional_content_groups() {
     None => self.copy()
     Some(content) => {
@@ -167,6 +167,8 @@ pub fn PdfDocument::ocg_coalesce(
 
 ///|
 /// Compatibility wrapper for `PdfDocument::ocg_coalesce`.
-pub fn pdf_ocg_coalesce(document : PdfDocument) -> PdfDocument raise PdfError {
+pub fn pdf_ocg_coalesce(
+  document : PdfDocument,
+) -> PdfDocument raise @core.PdfError {
   document.ocg_coalesce()
 }

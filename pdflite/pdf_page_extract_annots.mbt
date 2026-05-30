@@ -27,10 +27,10 @@ fn PdfDocument::pdf_page_annotation_numbers(
 ///|
 fn pdf_page_fixup_annotation_link(
   object : @syntax.PdfObject,
-  key : PdfName,
+  key : @core.PdfName,
   old_numbers : ArrayView[Int],
   new_numbers : ArrayView[Int],
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   match object.lookup_immediate(key) {
     Some(PdfIndirect(old_number)) =>
       match pdf_page_number_index(old_numbers, old_number) {
@@ -47,7 +47,7 @@ fn PdfDocument::pdf_page_fixup_annotation_links(
   self : PdfDocument,
   old_numbers : ArrayView[Int],
   new_numbers : ArrayView[Int],
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   for number in new_numbers {
     let object = self.lookup_object_or_null(number)
     let with_popup = pdf_page_fixup_annotation_link(
@@ -71,7 +71,7 @@ fn PdfDocument::pdf_page_fixup_annotation_links(
 ///|
 fn PdfDocument::pdf_page_fixup_duplicate_annots(
   self : PdfDocument,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let page_numbers = self.page_reference_numbers()
   let existing_annots : Array[Array[Int]] = Array::new(
     capacity=page_numbers.length(),

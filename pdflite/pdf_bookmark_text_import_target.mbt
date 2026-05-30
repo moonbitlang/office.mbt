@@ -3,7 +3,7 @@ fn PdfDocument::pdf_bookmark_import_target_object(
   self : PdfDocument,
   page_number : Int,
   object : @syntax.PdfObject,
-) -> @destination.PdfDestination raise PdfError {
+) -> @destination.PdfDestination raise @core.PdfError {
   match object {
     PdfArray([PdfInteger(_), .. rest]) =>
       match self.page_object_number(page_number) {
@@ -23,8 +23,8 @@ fn PdfDocument::pdf_bookmark_import_target_object(
 fn PdfDocument::pdf_bookmark_import_target(
   self : PdfDocument,
   page_number : Int,
-  destination : PdfBytes?,
-) -> @destination.PdfDestination raise PdfError {
+  destination : @core.PdfBytes?,
+) -> @destination.PdfDestination raise @core.PdfError {
   match destination {
     Some(data) =>
       self.pdf_bookmark_import_target_object(
@@ -42,8 +42,8 @@ fn PdfDocument::pdf_bookmark_import_bookmark(
   title : BytesView,
   page_number : Int,
   is_open : Bool,
-  destination : PdfBytes?,
-) -> @bookmark.PdfBookmark raise PdfError {
+  destination : @core.PdfBytes?,
+) -> @bookmark.PdfBookmark raise @core.PdfError {
   {
     level,
     text: pdf_pdfdocstring_of_utf8(pdf_bookmark_import_fixup_text(title)),

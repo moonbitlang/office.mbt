@@ -2,7 +2,7 @@
 fn pdf_content_parse_section(
   operands : ArrayView[@syntax.PdfObject],
   operator : BytesView,
-) -> @content.PdfContentOp raise PdfError {
+) -> @content.PdfContentOp raise @core.PdfError {
   match @content.pdf_content_parse_known_section(operands, operator) {
     Some(op) => op
     None => pdf_content_section_unknown(operands, operator)
@@ -13,7 +13,7 @@ fn pdf_content_parse_section(
 fn pdf_content_section_unknown(
   operands : ArrayView[@syntax.PdfObject],
   operator : BytesView,
-) -> @content.PdfContentOp raise PdfError {
+) -> @content.PdfContentOp raise @core.PdfError {
   Op_Unknown(pdf_content_section_bytes(operands, operator))
 }
 
@@ -24,8 +24,8 @@ fn pdf_content_section_unknown(
 /// from explicit length or filter markers. Use the document methods when stream
 /// decoding or resource-based inline-image sizing is required.
 pub fn pdf_parse_content_ops_from_bytes(
-  data : PdfBytes,
-) -> Array[@content.PdfContentOp] raise PdfError {
+  data : @core.PdfBytes,
+) -> Array[@content.PdfContentOp] raise @core.PdfError {
   pdf_parse_content_ops_from_view(data)
 }
 
@@ -33,7 +33,7 @@ pub fn pdf_parse_content_ops_from_bytes(
 /// Parse a standalone content byte view without document or resource context.
 pub fn pdf_parse_content_ops_from_view(
   data : BytesView,
-) -> Array[@content.PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise @core.PdfError {
   pdf_parse_content_ops_from_view_with_context(
     data,
     pdf_content_parse_context(None),
@@ -44,8 +44,8 @@ pub fn pdf_parse_content_ops_from_view(
 fn pdf_parse_content_ops_from_view_with_context(
   data : BytesView,
   context : PdfContentParseContext,
-) -> Array[@content.PdfContentOp] raise PdfError {
-  let cursor = byte_cursor_of_view(data)
+) -> Array[@content.PdfContentOp] raise @core.PdfError {
+  let cursor = @core.byte_cursor_of_view(data)
   let op_capacity = pdf_content_parse_ops_capacity(data)
   let ops : Array[@content.PdfContentOp] = Array::new(capacity=op_capacity)
   let operands : Array[@syntax.PdfObject] = Array::new(capacity=8)

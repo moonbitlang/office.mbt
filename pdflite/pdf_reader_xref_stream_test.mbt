@@ -10,15 +10,15 @@ test "pdf_read_document_from_bytes reads default-index xref streams" {
     parsed.lookup_object_or_null(1),
     PdfDictionary([
       (
-        @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Type")),
-        PdfNameObject(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Catalog"))),
+        @core.pdf_name_of_bytes(reader_pdf_ascii("/Type")),
+        PdfNameObject(@core.pdf_name_of_bytes(reader_pdf_ascii("/Catalog"))),
       ),
     ]),
   )
   @test.assert_eq(
     parsed
     .trailer_dict()
-    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/W"))),
+    .lookup_immediate(@core.pdf_name_of_bytes(reader_pdf_ascii("/W"))),
     None,
   )
 }
@@ -28,8 +28,8 @@ test "pdf_read_document_from_bytes reconstructs xref streams with malformed stre
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     reader_xref_stream_pdf_with_malformed_stream_marker(),
   )
-  guard strict is Err(@pdflite.PdfError::ParseStreamExpected) else {
-    fail("expected strict @pdflite.PdfError::ParseStreamExpected")
+  guard strict is Err(@core.PdfError::ParseStreamExpected) else {
+    fail("expected strict @core.PdfError::ParseStreamExpected")
   }
 
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
@@ -42,7 +42,7 @@ test "pdf_read_document_from_bytes reconstructs xref streams with malformed stre
   @test.assert_eq(
     parsed
     .trailer_dict()
-    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/W"))),
+    .lookup_immediate(@core.pdf_name_of_bytes(reader_pdf_ascii("/W"))),
     None,
   )
 }
@@ -52,8 +52,8 @@ test "pdf_read_document_from_bytes reconstructs xref streams with malformed ends
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     reader_xref_stream_pdf_with_malformed_endstream_marker(),
   )
-  guard strict is Err(@pdflite.PdfError::ParseEndStreamExpected) else {
-    fail("expected strict @pdflite.PdfError::ParseEndStreamExpected")
+  guard strict is Err(@core.PdfError::ParseEndStreamExpected) else {
+    fail("expected strict @core.PdfError::ParseEndStreamExpected")
   }
 
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
@@ -66,7 +66,7 @@ test "pdf_read_document_from_bytes reconstructs xref streams with malformed ends
   @test.assert_eq(
     parsed
     .trailer_dict()
-    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/W"))),
+    .lookup_immediate(@core.pdf_name_of_bytes(reader_pdf_ascii("/W"))),
     None,
   )
 }
@@ -76,8 +76,8 @@ test "pdf_read_document_from_bytes reconstructs xref streams with malformed endo
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     reader_xref_stream_pdf_with_malformed_endobj_marker(),
   )
-  guard strict is Err(@pdflite.PdfError::ParseEndObjectExpected) else {
-    fail("expected strict @pdflite.PdfError::ParseEndObjectExpected")
+  guard strict is Err(@core.PdfError::ParseEndObjectExpected) else {
+    fail("expected strict @core.PdfError::ParseEndObjectExpected")
   }
 
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
@@ -90,7 +90,7 @@ test "pdf_read_document_from_bytes reconstructs xref streams with malformed endo
   @test.assert_eq(
     parsed
     .trailer_dict()
-    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/W"))),
+    .lookup_immediate(@core.pdf_name_of_bytes(reader_pdf_ascii("/W"))),
     None,
   )
 }
@@ -107,15 +107,15 @@ test "pdf_read_document_from_bytes accepts xref streams without Type" {
     parsed.lookup_object_or_null(1),
     PdfDictionary([
       (
-        @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Type")),
-        PdfNameObject(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Catalog"))),
+        @core.pdf_name_of_bytes(reader_pdf_ascii("/Type")),
+        PdfNameObject(@core.pdf_name_of_bytes(reader_pdf_ascii("/Catalog"))),
       ),
     ]),
   )
   @test.assert_eq(
     parsed
     .trailer_dict()
-    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Type"))),
+    .lookup_immediate(@core.pdf_name_of_bytes(reader_pdf_ascii("/Type"))),
     None,
   )
 }
@@ -134,8 +134,8 @@ test "pdf_read_document_from_bytes reconstructs xref stream Index ranges" {
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     reader_xref_stream_pdf_with_index_bad_startxref(),
   )
-  guard strict is Err(@pdflite.PdfError::XRefExpected) else {
-    fail("expected strict @pdflite.PdfError::XRefExpected")
+  guard strict is Err(@core.PdfError::XRefExpected) else {
+    fail("expected strict @core.PdfError::XRefExpected")
   }
 
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
@@ -147,7 +147,7 @@ test "pdf_read_document_from_bytes reconstructs xref stream Index ranges" {
   @test.assert_eq(
     parsed
     .trailer_dict()
-    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Index"))),
+    .lookup_immediate(@core.pdf_name_of_bytes(reader_pdf_ascii("/Index"))),
     None,
   )
 }
@@ -162,7 +162,7 @@ test "pdf_read_document_from_bytes reads xref streams with omitted type fields" 
   @test.assert_eq(
     parsed
     .trailer_dict()
-    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/W"))),
+    .lookup_immediate(@core.pdf_name_of_bytes(reader_pdf_ascii("/W"))),
     None,
   )
 }
@@ -172,8 +172,8 @@ test "pdf_read_document_from_bytes reconstructs xref streams with omitted type f
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     reader_xref_stream_pdf_with_default_in_use_width_bad_startxref(),
   )
-  guard strict is Err(@pdflite.PdfError::XRefExpected) else {
-    fail("expected strict @pdflite.PdfError::XRefExpected")
+  guard strict is Err(@core.PdfError::XRefExpected) else {
+    fail("expected strict @core.PdfError::XRefExpected")
   }
 
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
@@ -199,8 +199,8 @@ test "pdf_read_document_from_bytes reconstructs unknown xref stream entry types"
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     reader_xref_stream_pdf_with_unknown_entry_type_bad_startxref(),
   )
-  guard strict is Err(@pdflite.PdfError::XRefExpected) else {
-    fail("expected strict @pdflite.PdfError::XRefExpected")
+  guard strict is Err(@core.PdfError::XRefExpected) else {
+    fail("expected strict @core.PdfError::XRefExpected")
   }
 
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
@@ -231,7 +231,7 @@ test "pdf_read_document_from_bytes decodes filtered xref streams" {
   @test.assert_eq(
     parsed
     .trailer_dict()
-    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Filter"))),
+    .lookup_immediate(@core.pdf_name_of_bytes(reader_pdf_ascii("/Filter"))),
     None,
   )
 }
@@ -241,8 +241,8 @@ test "pdf_read_document_from_bytes reconstructs filtered xref streams" {
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     reader_xref_stream_pdf_with_ascii_hex_filter_bad_startxref(),
   )
-  guard strict is Err(@pdflite.PdfError::XRefExpected) else {
-    fail("expected strict @pdflite.PdfError::XRefExpected")
+  guard strict is Err(@core.PdfError::XRefExpected) else {
+    fail("expected strict @core.PdfError::XRefExpected")
   }
 
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
@@ -253,7 +253,7 @@ test "pdf_read_document_from_bytes reconstructs filtered xref streams" {
   @test.assert_eq(
     parsed
     .trailer_dict()
-    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Filter"))),
+    .lookup_immediate(@core.pdf_name_of_bytes(reader_pdf_ascii("/Filter"))),
     None,
   )
 }
@@ -268,7 +268,7 @@ test "pdf_read_document_from_bytes decodes Flate xref streams" {
   @test.assert_eq(
     parsed
     .trailer_dict()
-    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Filter"))),
+    .lookup_immediate(@core.pdf_name_of_bytes(reader_pdf_ascii("/Filter"))),
     None,
   )
 }
@@ -278,8 +278,8 @@ test "pdf_read_document_from_bytes reconstructs Flate xref streams" {
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     reader_xref_stream_pdf_with_flate_filter_bad_startxref(),
   )
-  guard strict is Err(@pdflite.PdfError::XRefExpected) else {
-    fail("expected strict @pdflite.PdfError::XRefExpected")
+  guard strict is Err(@core.PdfError::XRefExpected) else {
+    fail("expected strict @core.PdfError::XRefExpected")
   }
 
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
@@ -291,7 +291,7 @@ test "pdf_read_document_from_bytes reconstructs Flate xref streams" {
   @test.assert_eq(
     parsed
     .trailer_dict()
-    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Filter"))),
+    .lookup_immediate(@core.pdf_name_of_bytes(reader_pdf_ascii("/Filter"))),
     None,
   )
 }
@@ -306,9 +306,7 @@ test "pdf_read_document_from_bytes decodes Flate predictor xref streams" {
   @test.assert_eq(
     parsed
     .trailer_dict()
-    .lookup_immediate(
-      @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/DecodeParms")),
-    ),
+    .lookup_immediate(@core.pdf_name_of_bytes(reader_pdf_ascii("/DecodeParms"))),
     None,
   )
 }
@@ -318,8 +316,8 @@ test "pdf_read_document_from_bytes reconstructs Flate predictor xref streams" {
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     reader_xref_stream_pdf_with_flate_predictor_bad_startxref(),
   )
-  guard strict is Err(@pdflite.PdfError::XRefExpected) else {
-    fail("expected strict @pdflite.PdfError::XRefExpected")
+  guard strict is Err(@core.PdfError::XRefExpected) else {
+    fail("expected strict @core.PdfError::XRefExpected")
   }
 
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
@@ -331,9 +329,7 @@ test "pdf_read_document_from_bytes reconstructs Flate predictor xref streams" {
   @test.assert_eq(
     parsed
     .trailer_dict()
-    .lookup_immediate(
-      @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/DecodeParms")),
-    ),
+    .lookup_immediate(@core.pdf_name_of_bytes(reader_pdf_ascii("/DecodeParms"))),
     None,
   )
 }
@@ -348,7 +344,7 @@ test "pdf_read_document_from_bytes decodes short-name Flate predictor xref strea
   @test.assert_eq(
     parsed
     .trailer_dict()
-    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/DP"))),
+    .lookup_immediate(@core.pdf_name_of_bytes(reader_pdf_ascii("/DP"))),
     None,
   )
 }
@@ -358,8 +354,8 @@ test "pdf_read_document_from_bytes reconstructs short-name Flate predictor xref 
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     reader_xref_stream_pdf_with_short_flate_predictor_bad_startxref(),
   )
-  guard strict is Err(@pdflite.PdfError::XRefExpected) else {
-    fail("expected strict @pdflite.PdfError::XRefExpected")
+  guard strict is Err(@core.PdfError::XRefExpected) else {
+    fail("expected strict @core.PdfError::XRefExpected")
   }
 
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
@@ -371,7 +367,7 @@ test "pdf_read_document_from_bytes reconstructs short-name Flate predictor xref 
   @test.assert_eq(
     parsed
     .trailer_dict()
-    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/DP"))),
+    .lookup_immediate(@core.pdf_name_of_bytes(reader_pdf_ascii("/DP"))),
     None,
   )
 }
@@ -386,7 +382,7 @@ test "pdf_read_document_from_bytes decodes xref stream filter arrays" {
   @test.assert_eq(
     parsed
     .trailer_dict()
-    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Filter"))),
+    .lookup_immediate(@core.pdf_name_of_bytes(reader_pdf_ascii("/Filter"))),
     None,
   )
 }
@@ -396,8 +392,8 @@ test "pdf_read_document_from_bytes reconstructs xref stream filter arrays" {
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     reader_xref_stream_pdf_with_filter_array_bad_startxref(),
   )
-  guard strict is Err(@pdflite.PdfError::XRefExpected) else {
-    fail("expected strict @pdflite.PdfError::XRefExpected")
+  guard strict is Err(@core.PdfError::XRefExpected) else {
+    fail("expected strict @core.PdfError::XRefExpected")
   }
 
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
@@ -409,7 +405,7 @@ test "pdf_read_document_from_bytes reconstructs xref stream filter arrays" {
   @test.assert_eq(
     parsed
     .trailer_dict()
-    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Filter"))),
+    .lookup_immediate(@core.pdf_name_of_bytes(reader_pdf_ascii("/Filter"))),
     None,
   )
 }
@@ -424,9 +420,7 @@ test "pdf_read_document_from_bytes decodes xref stream filter arrays with predic
   @test.assert_eq(
     parsed
     .trailer_dict()
-    .lookup_immediate(
-      @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/DecodeParms")),
-    ),
+    .lookup_immediate(@core.pdf_name_of_bytes(reader_pdf_ascii("/DecodeParms"))),
     None,
   )
 }
@@ -436,8 +430,8 @@ test "pdf_read_document_from_bytes reconstructs xref stream filter arrays with p
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     reader_xref_stream_pdf_with_filter_array_predictor_bad_startxref(),
   )
-  guard strict is Err(@pdflite.PdfError::XRefExpected) else {
-    fail("expected strict @pdflite.PdfError::XRefExpected")
+  guard strict is Err(@core.PdfError::XRefExpected) else {
+    fail("expected strict @core.PdfError::XRefExpected")
   }
 
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
@@ -449,9 +443,7 @@ test "pdf_read_document_from_bytes reconstructs xref stream filter arrays with p
   @test.assert_eq(
     parsed
     .trailer_dict()
-    .lookup_immediate(
-      @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/DecodeParms")),
-    ),
+    .lookup_immediate(@core.pdf_name_of_bytes(reader_pdf_ascii("/DecodeParms"))),
     None,
   )
 }
@@ -466,13 +458,13 @@ test "pdf_read_document_from_bytes follows classic trailer XRefStm" {
   @test.assert_eq(
     parsed
     .trailer_dict()
-    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/XRefStm"))),
+    .lookup_immediate(@core.pdf_name_of_bytes(reader_pdf_ascii("/XRefStm"))),
     None,
   )
   @test.assert_eq(
     parsed
     .trailer_dict()
-    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Size"))),
+    .lookup_immediate(@core.pdf_name_of_bytes(reader_pdf_ascii("/Size"))),
     Some(PdfInteger(3)),
   )
 }
@@ -496,13 +488,13 @@ test "pdf_read_document_from_bytes reconstructs hybrid XRefStm with bad startxre
   @test.assert_eq(
     parsed
     .trailer_dict()
-    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/XRefStm"))),
+    .lookup_immediate(@core.pdf_name_of_bytes(reader_pdf_ascii("/XRefStm"))),
     None,
   )
   @test.assert_eq(
     parsed
     .trailer_dict()
-    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Size"))),
+    .lookup_immediate(@core.pdf_name_of_bytes(reader_pdf_ascii("/Size"))),
     Some(PdfInteger(3)),
   )
 }
@@ -517,15 +509,13 @@ test "pdf_read_document_from_bytes follows compressed classic trailer XRefStm" {
   @test.assert_eq(
     parsed
     .trailer_dict()
-    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/XRefStm"))),
+    .lookup_immediate(@core.pdf_name_of_bytes(reader_pdf_ascii("/XRefStm"))),
     None,
   )
   @test.assert_eq(
     parsed
     .trailer_dict()
-    .lookup_immediate(
-      @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/DecodeParms")),
-    ),
+    .lookup_immediate(@core.pdf_name_of_bytes(reader_pdf_ascii("/DecodeParms"))),
     None,
   )
 }
@@ -549,7 +539,7 @@ test "pdf_read_document_from_bytes reconstructs compressed hybrid XRefStm with b
   @test.assert_eq(
     parsed
     .trailer_dict()
-    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/XRefStm"))),
+    .lookup_immediate(@core.pdf_name_of_bytes(reader_pdf_ascii("/XRefStm"))),
     None,
   )
 }

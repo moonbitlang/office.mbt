@@ -3,7 +3,7 @@ fn pdf_text_push_two_byte_charcode(
   output : Array[Int],
   text : BytesView,
   index : Int,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   guard index + 1 < text.length() else { raise BadText }
   output.push((text[index].to_int() << 8) | text[index + 1].to_int())
   index + 2
@@ -14,7 +14,7 @@ fn pdf_text_push_three_byte_charcode(
   output : Array[Int],
   text : BytesView,
   index : Int,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   guard index + 2 < text.length() else { raise BadText }
   output.push(
     (((text[index].to_int() << 8) | text[index + 1].to_int()) << 8) |
@@ -28,7 +28,7 @@ fn pdf_text_push_four_byte_charcode(
   output : Array[Int],
   text : BytesView,
   index : Int,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   guard index + 3 < text.length() else { raise BadText }
   output.push(
     (
@@ -48,7 +48,7 @@ fn pdf_text_push_utf8_charcode(
   output : Array[Int],
   text : BytesView,
   index : Int,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   let first = text[index].to_int()
   let (length, code) = if first >> 7 == 0 {
     (1, first)
@@ -84,7 +84,7 @@ fn pdf_text_push_utf16_charcode(
   output : Array[Int],
   text : BytesView,
   index : Int,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   let first = pdf_text_pack_two_bytes(
     text[index].to_int(),
     text[index + 1].to_int(),
@@ -118,7 +118,7 @@ fn pdf_text_push_utf32_charcode(
   output : Array[Int],
   text : BytesView,
   index : Int,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   guard index + 3 < text.length() else { raise BadText }
   let code = pdf_text_pack_four_bytes(
     text[index].to_int(),
@@ -145,9 +145,9 @@ fn pdf_text_gbk2k_four_byte_prefix(first : Int, second : Int) -> Bool {
 
 ///|
 fn pdf_text_predefined_mixed_byte_charcodes(
-  name : PdfName,
+  name : @core.PdfName,
   text : BytesView,
-) -> Array[Int] raise PdfError {
+) -> Array[Int] raise @core.PdfError {
   let output : Array[Int] = Array::new(capacity=text.length())
   let shift_jis = pdf_text_predefined_cmap_uses_shift_jis_charcodes(name)
   let b5pc = pdf_text_predefined_cmap_uses_b5pc_charcodes(name)
@@ -215,9 +215,9 @@ fn pdf_text_predefined_mixed_byte_charcodes(
 
 ///|
 fn pdf_text_predefined_cmap_charcodes_of_text(
-  name : PdfName,
+  name : @core.PdfName,
   text : BytesView,
-) -> Array[Int] raise PdfError {
+) -> Array[Int] raise @core.PdfError {
   if pdf_text_predefined_cmap_uses_utf8_charcodes(name) {
     let output : Array[Int] = Array::new(capacity=text.length())
     let mut index = 0
@@ -266,7 +266,7 @@ fn pdf_text_predefined_cmap_charcodes_of_text(
 fn PdfFont::pdf_text_charcodes_of_text(
   self : PdfFont,
   text : BytesView,
-) -> Array[Int] raise PdfError {
+) -> Array[Int] raise @core.PdfError {
   match self {
     PdfFontCIDKeyed(font) =>
       match font.encoding {
@@ -284,7 +284,7 @@ fn PdfFont::pdf_text_charcodes_of_text(
 fn PdfFont::pdf_text_fixed_or_single_byte_charcodes_of_text(
   self : PdfFont,
   text : BytesView,
-) -> Array[Int] raise PdfError {
+) -> Array[Int] raise @core.PdfError {
   let output : Array[Int] = Array::new(capacity=text.length())
   if self.uses_two_byte_codes() {
     guard text.length() % 2 == 0 else { raise BadText }

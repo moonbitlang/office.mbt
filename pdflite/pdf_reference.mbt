@@ -1,7 +1,7 @@
 ///|
 fn pdf_reference_key_is_excluded(
-  key : PdfName,
-  no_follow_entries : ArrayView[PdfName],
+  key : @core.PdfName,
+  no_follow_entries : ArrayView[@core.PdfName],
 ) -> Bool {
   for excluded in no_follow_entries {
     if excluded == key {
@@ -14,8 +14,8 @@ fn pdf_reference_key_is_excluded(
 
 ///|
 fn pdf_reference_dictionary_contains(
-  entries : ArrayView[(PdfName, @syntax.PdfObject)],
-  marker : (PdfName, @syntax.PdfObject),
+  entries : ArrayView[(@core.PdfName, @syntax.PdfObject)],
+  marker : (@core.PdfName, @syntax.PdfObject),
 ) -> Bool {
   for entry in entries {
     if entry == marker {
@@ -28,8 +28,8 @@ fn pdf_reference_dictionary_contains(
 
 ///|
 fn pdf_reference_should_follow_dictionary(
-  entries : ArrayView[(PdfName, @syntax.PdfObject)],
-  no_follow_contains : ArrayView[(PdfName, @syntax.PdfObject)],
+  entries : ArrayView[(@core.PdfName, @syntax.PdfObject)],
+  no_follow_contains : ArrayView[(@core.PdfName, @syntax.PdfObject)],
 ) -> Bool {
   for marker in no_follow_contains {
     if pdf_reference_dictionary_contains(entries, marker) {
@@ -45,8 +45,8 @@ fn PdfDocument::collect_referenced_object_numbers(
   self : PdfDocument,
   found : @hashmap.HashMap[Int, Bool],
   object : @syntax.PdfObject,
-  no_follow_entries : ArrayView[PdfName],
-  no_follow_contains : ArrayView[(PdfName, @syntax.PdfObject)],
+  no_follow_entries : ArrayView[@core.PdfName],
+  no_follow_contains : ArrayView[(@core.PdfName, @syntax.PdfObject)],
 ) -> Unit {
   match object {
     PdfIndirect(number) =>
@@ -107,8 +107,8 @@ fn PdfDocument::collect_referenced_object_numbers(
 pub fn PdfDocument::referenced_object_numbers(
   self : PdfDocument,
   object : @syntax.PdfObject,
-  no_follow_entries? : ArrayView[PdfName] = [],
-  no_follow_contains? : ArrayView[(PdfName, @syntax.PdfObject)] = [],
+  no_follow_entries? : ArrayView[@core.PdfName] = [],
+  no_follow_contains? : ArrayView[(@core.PdfName, @syntax.PdfObject)] = [],
 ) -> Array[Int] {
   let found : @hashmap.HashMap[Int, Bool] = HashMap([])
   self.collect_referenced_object_numbers(

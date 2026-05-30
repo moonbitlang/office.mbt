@@ -1137,7 +1137,7 @@ fn fixture_acceptance_assert_xref_header_reconstructs_for_test(
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     corrupted,
   )
-  guard strict is Err(@pdflite.PdfError::XRefExpected) else {
+  guard strict is Err(@core.PdfError::XRefExpected) else {
     fail("expected malformed xref header to require reconstruction")
   }
   let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
@@ -1158,7 +1158,7 @@ fn fixture_acceptance_assert_trailer_keyword_reconstructs_for_test(
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     corrupted,
   )
-  guard strict is Err(@pdflite.PdfError::XRefEntryExpected) else {
+  guard strict is Err(@core.PdfError::XRefEntryExpected) else {
     match strict {
       Err(error) => fail(error.to_json().stringify())
       Ok(_) =>
@@ -1310,7 +1310,7 @@ fn fixture_acceptance_assert_xref_stream_widths_reconstructs_for_test(
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     corrupted,
   )
-  guard strict is Err(@pdflite.PdfError::XRefEntryExpected) else {
+  guard strict is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected malformed xref stream widths to require reconstruction")
   }
   let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
@@ -1331,7 +1331,7 @@ fn fixture_acceptance_assert_bare_xref_stream_widths_reconstructs_for_test(
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     corrupted,
   )
-  guard strict is Err(@pdflite.PdfError::XRefEntryExpected) else {
+  guard strict is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected malformed bare xref stream widths to require reconstruction")
   }
   let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
@@ -1353,7 +1353,7 @@ fn fixture_acceptance_assert_xref_stream_index_entry_reconstructs_for_test(
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     corrupted,
   )
-  guard strict is Err(@pdflite.PdfError::XRefEntryExpected) else {
+  guard strict is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected malformed xref stream index to require reconstruction")
   }
   let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
@@ -1407,7 +1407,7 @@ fn fixture_acceptance_assert_xref_stream_index_and_size_reconstructs_for_test(
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     corrupted,
   )
-  guard strict is Err(@pdflite.PdfError::XRefEntryExpected) else {
+  guard strict is Err(@core.PdfError::XRefEntryExpected) else {
     fail(
       "expected malformed xref stream index and size to require reconstruction",
     )
@@ -1430,7 +1430,7 @@ fn fixture_acceptance_assert_xref_stream_type_reconstructs_for_test(
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     corrupted,
   )
-  guard strict is Err(@pdflite.PdfError::XRefExpected) else {
+  guard strict is Err(@core.PdfError::XRefExpected) else {
     fail("expected malformed xref stream type to require reconstruction")
   }
   let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
@@ -1451,7 +1451,7 @@ fn fixture_acceptance_assert_xref_stream_marker_reconstructs_for_test(
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     corrupted,
   )
-  guard strict is Err(@pdflite.PdfError::ParseStreamExpected) else {
+  guard strict is Err(@core.PdfError::ParseStreamExpected) else {
     fail("expected malformed xref stream marker to require reconstruction")
   }
   let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
@@ -1472,7 +1472,7 @@ fn fixture_acceptance_assert_xref_stream_endstream_reconstructs_for_test(
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     corrupted,
   )
-  guard strict is Err(@pdflite.PdfError::ParseEndStreamExpected) else {
+  guard strict is Err(@core.PdfError::ParseEndStreamExpected) else {
     fail("expected malformed xref stream endstream to require reconstruction")
   }
   let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
@@ -1493,7 +1493,7 @@ fn fixture_acceptance_assert_xref_stream_endobj_reconstructs_for_test(
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     corrupted,
   )
-  guard strict is Err(@pdflite.PdfError::ParseEndObjectExpected) else {
+  guard strict is Err(@core.PdfError::ParseEndObjectExpected) else {
     fail("expected malformed xref stream endobj to require reconstruction")
   }
   let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
@@ -1515,7 +1515,7 @@ fn fixture_acceptance_assert_xref_stream_root_entry_reconstructs_for_test(
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     corrupted,
   )
-  guard strict is Err(@pdflite.PdfError::RootExpected) else {
+  guard strict is Err(@core.PdfError::RootExpected) else {
     match strict {
       Err(error) => fail(error.to_json().stringify())
       Ok(_) =>
@@ -1540,7 +1540,7 @@ fn fixture_acceptance_assert_object_stream_count_reconstructs_for_test(
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     corrupted,
   )
-  guard strict is Err(@pdflite.PdfError::XRefEntryExpected) else {
+  guard strict is Err(@core.PdfError::XRefEntryExpected) else {
     match strict {
       Err(error) => fail(error.to_json().stringify())
       Ok(_) =>
@@ -1565,7 +1565,7 @@ fn fixture_acceptance_assert_object_stream_first_reconstructs_for_test(
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     corrupted,
   )
-  guard strict is Err(@pdflite.PdfError::XRefEntryExpected) else {
+  guard strict is Err(@core.PdfError::XRefEntryExpected) else {
     match strict {
       Err(error) => fail(error.to_json().stringify())
       Ok(_) =>
@@ -1605,7 +1605,7 @@ fn fixture_acceptance_assert_object_stream_filter_reconstructs_for_test(
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     corrupted,
   )
-  guard strict is Err(@pdflite.PdfError::FilterNotSupported(_)) else {
+  guard strict is Err(@core.PdfError::FilterNotSupported(_)) else {
     match strict {
       Err(error) => fail(error.to_json().stringify())
       Ok(_) =>
@@ -1632,7 +1632,7 @@ fn fixture_acceptance_assert_object_stream_decodeparms_reconstructs_for_test(
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     corrupted,
   )
-  guard strict is Err(@pdflite.PdfError::PredictorExpected) else {
+  guard strict is Err(@core.PdfError::PredictorExpected) else {
     match strict {
       Err(error) => fail(error.to_json().stringify())
       Ok(_) =>
@@ -1659,7 +1659,7 @@ fn fixture_acceptance_assert_object_stream_decodeparms_predictor_reconstructs_fo
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     corrupted,
   )
-  guard strict is Err(@pdflite.PdfError::PredictorNotSupported(predictor)) else {
+  guard strict is Err(@core.PdfError::PredictorNotSupported(predictor)) else {
     match strict {
       Err(error) => fail(error.to_json().stringify())
       Ok(_) =>
@@ -1687,7 +1687,7 @@ fn fixture_acceptance_assert_object_stream_marker_reconstructs_for_test(
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     corrupted,
   )
-  guard strict is Err(@pdflite.PdfError::ParseStreamExpected) else {
+  guard strict is Err(@core.PdfError::ParseStreamExpected) else {
     match strict {
       Err(error) => fail(error.to_json().stringify())
       Ok(_) =>
@@ -1728,7 +1728,7 @@ fn fixture_acceptance_assert_object_stream_endobj_reconstructs_for_test(
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     corrupted,
   )
-  guard strict is Err(@pdflite.PdfError::ParseEndObjectExpected) else {
+  guard strict is Err(@core.PdfError::ParseEndObjectExpected) else {
     match strict {
       Err(error) => fail(error.to_json().stringify())
       Ok(_) =>
@@ -1786,7 +1786,7 @@ fn fixture_acceptance_assert_xref_stream_decodeparms_entry_reconstructs_for_test
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     corrupted,
   )
-  guard strict is Err(@pdflite.PdfError::PredictorExpected) else {
+  guard strict is Err(@core.PdfError::PredictorExpected) else {
     fail("expected malformed xref stream DecodeParms to require reconstruction")
   }
   let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
@@ -1822,7 +1822,7 @@ fn fixture_acceptance_assert_xref_stream_decodeparms_predictor_entry_reconstruct
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     corrupted,
   )
-  guard strict is Err(@pdflite.PdfError::PredictorNotSupported(predictor)) else {
+  guard strict is Err(@core.PdfError::PredictorNotSupported(predictor)) else {
     fail("expected unsupported xref stream DecodeParms predictor")
   }
   @test.assert_eq(predictor, 9)
@@ -1842,7 +1842,7 @@ fn fixture_acceptance_assert_xref_stream_filter_reconstructs_for_test(
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     corrupted,
   )
-  guard strict is Err(@pdflite.PdfError::FilterNotSupported(_)) else {
+  guard strict is Err(@core.PdfError::FilterNotSupported(_)) else {
     fail("expected malformed xref stream filter to require reconstruction")
   }
   let recovered = @pdflite.pdf_read_document_from_bytes(corrupted)
@@ -2334,7 +2334,7 @@ fn fixture_acceptance_assert_cpdf_source_prefixed_logo_resource_object_for_test(
 fn fixture_acceptance_form_xobject_for_test(
   document : @pdflite.PdfDocument,
   page : @page.PdfPage,
-  name : @pdflite.PdfName,
+  name : @core.PdfName,
 ) -> @syntax.PdfStream raise {
   guard document.lookup_direct(
       fixture_acceptance_pdf_name_for_test("/XObject"),
@@ -2357,7 +2357,7 @@ fn fixture_acceptance_assert_cpdf_source_stamp_as_xobject_for_test(
   original : @pdflite.PdfDocument,
   overlay : @pdflite.PdfDocument,
   stamped : @pdflite.PdfDocument,
-  name : @pdflite.PdfName,
+  name : @core.PdfName,
 ) -> Unit raise {
   @test.assert_eq(original.endpage(), 1)
   @test.assert_eq(overlay.endpage(), 1)
@@ -2557,7 +2557,7 @@ fn fixture_acceptance_assert_cpdf_source_combine_for_test(
 ///|
 fn fixture_acceptance_content_ops_contain_gs_for_test(
   ops : ArrayView[@content.PdfContentOp],
-  name : @pdflite.PdfName,
+  name : @core.PdfName,
 ) -> Bool {
   for op in ops {
     match op {
@@ -4900,8 +4900,8 @@ fn fixture_acceptance_raw_control_count_for_test(text : String) -> Int {
 }
 
 ///|
-fn fixture_acceptance_pdf_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn fixture_acceptance_pdf_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -6053,8 +6053,8 @@ fn fixture_acceptance_assert_cpdf_source_inline_image_for_test(
 }
 
 ///|
-fn fixture_acceptance_cpdf_source_nested_image_data_for_test() -> @pdflite.PdfBytes raise {
-  @flate.pdf_flate_encode(@pdflite.pdf_bytes_of_int_array([0, 64, 128, 255]))
+fn fixture_acceptance_cpdf_source_nested_image_data_for_test() -> @core.PdfBytes raise {
+  @flate.pdf_flate_encode(@core.pdf_bytes_of_int_array([0, 64, 128, 255]))
 }
 
 ///|
@@ -6368,8 +6368,8 @@ fn fixture_acceptance_cpdf_source_type3_inline_dictionary_for_test() -> @syntax.
 }
 
 ///|
-fn fixture_acceptance_cpdf_source_type3_inline_data_for_test() -> @pdflite.PdfBytes raise {
-  @pdflite.pdf_bytes_of_int_array([0x80])
+fn fixture_acceptance_cpdf_source_type3_inline_data_for_test() -> @core.PdfBytes raise {
+  @core.pdf_bytes_of_int_array([0x80])
 }
 
 ///|
@@ -6549,7 +6549,7 @@ fn fixture_acceptance_cpdf_source_hello_with_type3_for_test(
     [
       Op_BT,
       Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceT3"), 24.0),
-      Op_Tj(@pdflite.pdf_bytes_of_int_array([65, 66, 67])),
+      Op_Tj(@core.pdf_bytes_of_int_array([65, 66, 67])),
       Op_ET,
     ],
     fast=true,
@@ -6694,9 +6694,9 @@ fn fixture_acceptance_assert_cpdf_source_type3_for_test(
   @test.assert_eq(
     descriptor.tounicode,
     Some([
-      (65, @pdflite.pdf_bytes_of_int_array([0, 0x5A])),
-      (66, @pdflite.pdf_bytes_of_int_array([0, 0x59])),
-      (67, @pdflite.pdf_bytes_of_int_array([0x26, 0x03])),
+      (65, @core.pdf_bytes_of_int_array([0, 0x5A])),
+      (66, @core.pdf_bytes_of_int_array([0, 0x59])),
+      (67, @core.pdf_bytes_of_int_array([0x26, 0x03])),
     ]),
   )
   let table = document.font_table("/SourceT3", 1)
@@ -6705,7 +6705,7 @@ fn fixture_acceptance_assert_cpdf_source_type3_for_test(
   )
   @test.assert_eq(
     row_a.glyphnames,
-    @utf8.decode_lossy(@pdflite.pdf_bytes_of_int_array([0, 0x5A])),
+    @utf8.decode_lossy(@core.pdf_bytes_of_int_array([0, 0x5A])),
   )
   @test.assert_eq(row_a.unicode, "005A")
   @test.assert_eq(row_a.utf8, "Z")
@@ -6715,7 +6715,7 @@ fn fixture_acceptance_assert_cpdf_source_type3_for_test(
   )
   @test.assert_eq(
     row_b.glyphnames,
-    @utf8.decode_lossy(@pdflite.pdf_bytes_of_int_array([0, 0x59])),
+    @utf8.decode_lossy(@core.pdf_bytes_of_int_array([0, 0x59])),
   )
   @test.assert_eq(row_b.unicode, "0059")
   @test.assert_eq(row_b.utf8, "Y")
@@ -6809,12 +6809,12 @@ fn fixture_acceptance_cpdf_source_hello_with_variation_tounicode_for_test(
     [
       Op_BT,
       Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceVar"), 12.0),
-      Op_Tj(@pdflite.pdf_bytes_of_int_array([65, 66, 67])),
+      Op_Tj(@core.pdf_bytes_of_int_array([65, 66, 67])),
       Op_TJ(
         PdfArray([
-          PdfString(@pdflite.pdf_bytes_of_int_array([68])),
+          PdfString(@core.pdf_bytes_of_int_array([68])),
           PdfInteger(-20),
-          PdfString(@pdflite.pdf_bytes_of_int_array([69, 70, 71])),
+          PdfString(@core.pdf_bytes_of_int_array([69, 70, 71])),
         ]),
       ),
       Op_ET,
@@ -6850,18 +6850,18 @@ fn fixture_acceptance_assert_cpdf_source_variation_tounicode_for_test(
   @test.assert_eq(
     descriptor.tounicode,
     Some([
-      (65, @pdflite.pdf_bytes_of_int_array([0xD8, 0x34, 0xDD, 0x1E])),
-      (66, @pdflite.pdf_bytes_of_int_array([0x00, 0x61])),
-      (67, @pdflite.pdf_bytes_of_int_array([0x00, 0x62, 0x00, 0x63])),
-      (68, @pdflite.pdf_bytes_of_int_array([0xD8, 0x3D, 0xDE, 0x00])),
-      (69, @pdflite.pdf_bytes_of_int_array([0x00, 0x64])),
-      (70, @pdflite.pdf_bytes_of_int_array([0x00, 0x65])),
+      (65, @core.pdf_bytes_of_int_array([0xD8, 0x34, 0xDD, 0x1E])),
+      (66, @core.pdf_bytes_of_int_array([0x00, 0x61])),
+      (67, @core.pdf_bytes_of_int_array([0x00, 0x62, 0x00, 0x63])),
+      (68, @core.pdf_bytes_of_int_array([0xD8, 0x3D, 0xDE, 0x00])),
+      (69, @core.pdf_bytes_of_int_array([0x00, 0x64])),
+      (70, @core.pdf_bytes_of_int_array([0x00, 0x65])),
     ]),
   )
   let extractor = document.text_extractor_of_font(source_font.font)
   @test.assert_eq(
     extractor.codepoints_of_text(
-      @pdflite.pdf_bytes_of_int_array([65, 66, 67, 68, 69, 70, 71]),
+      @core.pdf_bytes_of_int_array([65, 66, 67, 68, 69, 70, 71]),
     ),
     expected_codepoints,
   )
@@ -6941,8 +6941,8 @@ fn fixture_acceptance_cpdf_source_parser_corner_font_for_test(
 }
 
 ///|
-fn fixture_acceptance_cpdf_source_parser_corner_text_for_test() -> @pdflite.PdfBytes raise {
-  @pdflite.pdf_bytes_of_int_array([
+fn fixture_acceptance_cpdf_source_parser_corner_text_for_test() -> @core.PdfBytes raise {
+  @core.pdf_bytes_of_int_array([
     0x41, 0x40, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4A, 0x4B,
   ])
 }
@@ -7024,16 +7024,16 @@ fn fixture_acceptance_assert_cpdf_source_parser_corner_tounicode_for_test(
   @test.assert_eq(
     descriptor.tounicode,
     Some([
-      (0x41, @pdflite.pdf_bytes_of_int_array([0x00, 0x5A])),
-      (0x40, @pdflite.pdf_bytes_of_int_array([0x00, 0x60])),
-      (0x43, @pdflite.pdf_bytes_of_int_array([0x00, 0x61])),
-      (0x44, @pdflite.pdf_bytes_of_int_array([0x00, 0x62, 0x00, 0x63])),
-      (0x45, @pdflite.pdf_bytes_of_int_array([0xD8, 0x34, 0xDD, 0x1E])),
-      (0x46, @pdflite.pdf_bytes_of_int_array([0x00, 0x64])),
-      (0x47, @pdflite.pdf_bytes_of_int_array([0x00, 0x65])),
-      (0x48, @pdflite.pdf_bytes_of_int_array([0x00, 0x66])),
-      (0x49, @pdflite.pdf_bytes_of_int_array([0x00, 0x67])),
-      (0x4A, @pdflite.pdf_bytes_of_int_array([0x03, 0xA9])),
+      (0x41, @core.pdf_bytes_of_int_array([0x00, 0x5A])),
+      (0x40, @core.pdf_bytes_of_int_array([0x00, 0x60])),
+      (0x43, @core.pdf_bytes_of_int_array([0x00, 0x61])),
+      (0x44, @core.pdf_bytes_of_int_array([0x00, 0x62, 0x00, 0x63])),
+      (0x45, @core.pdf_bytes_of_int_array([0xD8, 0x34, 0xDD, 0x1E])),
+      (0x46, @core.pdf_bytes_of_int_array([0x00, 0x64])),
+      (0x47, @core.pdf_bytes_of_int_array([0x00, 0x65])),
+      (0x48, @core.pdf_bytes_of_int_array([0x00, 0x66])),
+      (0x49, @core.pdf_bytes_of_int_array([0x00, 0x67])),
+      (0x4A, @core.pdf_bytes_of_int_array([0x03, 0xA9])),
     ]),
   )
   let extractor = document.text_extractor_of_font(source_font.font)
@@ -7070,7 +7070,7 @@ fn fixture_acceptance_assert_cpdf_source_parser_corner_tounicode_for_test(
 
 ///|
 fn fixture_acceptance_cpdf_source_usecmap_stream_for_test(
-  data : @pdflite.PdfBytes,
+  data : @core.PdfBytes,
   usecmap : Int?,
   compressed : Bool,
 ) -> @syntax.PdfObject raise {
@@ -7150,20 +7150,20 @@ fn fixture_acceptance_cpdf_source_usecmap_child_cmap_for_test(
 
 ///|
 fn fixture_acceptance_cpdf_source_usecmap_tounicode_for_test() -> Array[
-  (Int, @pdflite.PdfBytes),
+  (Int, @core.PdfBytes),
 ] raise {
   [
-    (0x42, @pdflite.pdf_bytes_of_int_array([0x00, 0x59])),
-    (0x43, @pdflite.pdf_bytes_of_int_array([0x00, 0x5A])),
-    (0x44, @pdflite.pdf_bytes_of_int_array([0x00, 0x52])),
-    (0x41, @pdflite.pdf_bytes_of_int_array([0x00, 0x51])),
-    (0x45, @pdflite.pdf_bytes_of_int_array([0x00, 0x45])),
+    (0x42, @core.pdf_bytes_of_int_array([0x00, 0x59])),
+    (0x43, @core.pdf_bytes_of_int_array([0x00, 0x5A])),
+    (0x44, @core.pdf_bytes_of_int_array([0x00, 0x52])),
+    (0x41, @core.pdf_bytes_of_int_array([0x00, 0x51])),
+    (0x45, @core.pdf_bytes_of_int_array([0x00, 0x45])),
   ]
 }
 
 ///|
-fn fixture_acceptance_cpdf_source_usecmap_text_for_test() -> @pdflite.PdfBytes raise {
-  @pdflite.pdf_bytes_of_int_array([0x41, 0x42, 0x43, 0x44, 0x45, 0x46])
+fn fixture_acceptance_cpdf_source_usecmap_text_for_test() -> @core.PdfBytes raise {
+  @core.pdf_bytes_of_int_array([0x41, 0x42, 0x43, 0x44, 0x45, 0x46])
 }
 
 ///|
@@ -7350,20 +7350,20 @@ fn fixture_acceptance_cpdf_source_usecmap_variation_child_cmap_for_test(
 
 ///|
 fn fixture_acceptance_cpdf_source_usecmap_variation_tounicode_for_test() -> Array[
-  (Int, @pdflite.PdfBytes),
+  (Int, @core.PdfBytes),
 ] raise {
   [
-    (0x42, @pdflite.pdf_bytes_of_int_array([0x00, 0x59])),
-    (0x44, @pdflite.pdf_bytes_of_int_array([0x03, 0xA9])),
-    (0x45, @pdflite.pdf_bytes_of_int_array([0x00, 0x5A])),
-    (0x41, @pdflite.pdf_bytes_of_int_array([0xD8, 0x34, 0xDD, 0x1E])),
-    (0x43, @pdflite.pdf_bytes_of_int_array([0x00, 0x62, 0x00, 0x63])),
+    (0x42, @core.pdf_bytes_of_int_array([0x00, 0x59])),
+    (0x44, @core.pdf_bytes_of_int_array([0x03, 0xA9])),
+    (0x45, @core.pdf_bytes_of_int_array([0x00, 0x5A])),
+    (0x41, @core.pdf_bytes_of_int_array([0xD8, 0x34, 0xDD, 0x1E])),
+    (0x43, @core.pdf_bytes_of_int_array([0x00, 0x62, 0x00, 0x63])),
   ]
 }
 
 ///|
-fn fixture_acceptance_cpdf_source_usecmap_variation_text_for_test() -> @pdflite.PdfBytes raise {
-  @pdflite.pdf_bytes_of_int_array([0x41, 0x42, 0x43, 0x44, 0x45, 0x46])
+fn fixture_acceptance_cpdf_source_usecmap_variation_text_for_test() -> @core.PdfBytes raise {
+  @core.pdf_bytes_of_int_array([0x41, 0x42, 0x43, 0x44, 0x45, 0x46])
 }
 
 ///|
@@ -7591,13 +7591,13 @@ fn fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
 }
 
 ///|
-fn fixture_acceptance_cpdf_source_identity_h_text_for_test() -> @pdflite.PdfBytes raise {
-  @pdflite.pdf_bytes_of_int_array([0x00, 0x41, 0x20, 0xAC, 0x4E, 0x00])
+fn fixture_acceptance_cpdf_source_identity_h_text_for_test() -> @core.PdfBytes raise {
+  @core.pdf_bytes_of_int_array([0x00, 0x41, 0x20, 0xAC, 0x4E, 0x00])
 }
 
 ///|
-fn fixture_acceptance_cpdf_source_identity_v_text_for_test() -> @pdflite.PdfBytes raise {
-  @pdflite.pdf_bytes_of_int_array([0x00, 0x42, 0x4E, 0x8C])
+fn fixture_acceptance_cpdf_source_identity_v_text_for_test() -> @core.PdfBytes raise {
+  @core.pdf_bytes_of_int_array([0x00, 0x42, 0x4E, 0x8C])
 }
 
 ///|
@@ -7665,7 +7665,7 @@ fn fixture_acceptance_assert_cpdf_source_identity_font_for_test(
   name : String,
   basefont : String,
   encoding : String,
-  text : @pdflite.PdfBytes,
+  text : @core.PdfBytes,
   expected_codepoints : Array[Int],
   vertical : Bool,
 ) -> Unit raise {
@@ -7874,7 +7874,7 @@ fn fixture_acceptance_cpdf_source_hello_with_unijis_unicode_cmaps_for_test(
   for case in cases {
     if case.7 {
       ops.push(Op_Tf(fixture_acceptance_pdf_name_for_test(case.0), 12.0))
-      ops.push(Op_Tj(@pdflite.pdf_bytes_of_int_array(case.3)))
+      ops.push(Op_Tj(@core.pdf_bytes_of_int_array(case.3)))
     }
   }
   ops.push(Op_ET)
@@ -7898,7 +7898,7 @@ fn fixture_acceptance_cpdf_source_hello_with_unijis_unicode_boundary_text_for_te
     [
       Op_BT,
       Op_Tf(fixture_acceptance_pdf_name_for_test(font_name), 12.0),
-      Op_Tj(@pdflite.pdf_bytes_of_int_array(text)),
+      Op_Tj(@core.pdf_bytes_of_int_array(text)),
       Op_ET,
     ],
     fast=true,
@@ -7920,7 +7920,7 @@ fn fixture_acceptance_cpdf_source_postpend_boundary_text_for_test(
     [
       Op_BT,
       Op_Tf(fixture_acceptance_pdf_name_for_test(font_name), 12.0),
-      Op_Tj(@pdflite.pdf_bytes_of_int_array(text)),
+      Op_Tj(@core.pdf_bytes_of_int_array(text)),
       Op_ET,
     ],
     fast=true,
@@ -7970,7 +7970,7 @@ fn fixture_acceptance_assert_cpdf_source_unijis_unicode_font_for_test(
   )
   let extractor = document.text_extractor_of_font(source_font.font)
   @test.assert_eq(
-    extractor.codepoints_of_text(@pdflite.pdf_bytes_of_int_array(text)),
+    extractor.codepoints_of_text(@core.pdf_bytes_of_int_array(text)),
     expected_codepoints,
   )
   @test.assert_eq(
@@ -7993,7 +7993,7 @@ fn fixture_acceptance_assert_cpdf_source_unijis_utf8_cpdfcontent_boundary_for_te
   )
   fixture_acceptance_assert_content_op_for_test(
     ops,
-    Op_Tj(@pdflite.pdf_bytes_of_int_array(text)),
+    Op_Tj(@core.pdf_bytes_of_int_array(text)),
   )
   fixture_acceptance_assert_cpdf_source_unijis_unicode_font_for_test(
     document,
@@ -8032,7 +8032,7 @@ fn fixture_acceptance_assert_cpdf_source_unijis_utf16_cpdfcontent_boundary_for_t
   )
   fixture_acceptance_assert_content_op_for_test(
     ops,
-    Op_Tj(@pdflite.pdf_bytes_of_int_array(text)),
+    Op_Tj(@core.pdf_bytes_of_int_array(text)),
   )
   fixture_acceptance_assert_cpdf_source_unijis_unicode_font_for_test(
     document,
@@ -8080,7 +8080,7 @@ fn fixture_acceptance_assert_cpdf_source_unijis_unicode_cmaps_for_test(
       )
       fixture_acceptance_assert_content_op_for_test(
         ops,
-        Op_Tj(@pdflite.pdf_bytes_of_int_array(case.3)),
+        Op_Tj(@core.pdf_bytes_of_int_array(case.3)),
       )
     }
     fixture_acceptance_assert_cpdf_source_unijis_unicode_font_for_test(
@@ -8161,7 +8161,7 @@ fn fixture_acceptance_cpdf_source_hello_with_uniakr_predefined_cmaps_for_test(
     [
       Op_BT,
       Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceAKR16"), 12.0),
-      Op_Tj(@pdflite.pdf_bytes_of_int_array([0xAC, 0x00, 0xB0, 0x98])),
+      Op_Tj(@core.pdf_bytes_of_int_array([0xAC, 0x00, 0xB0, 0x98])),
       Op_ET,
     ],
     fast=true,
@@ -8175,7 +8175,7 @@ fn fixture_acceptance_assert_cpdf_source_uniakr_predefined_font_for_test(
   name : String,
   basefont : String,
   encoding : String,
-  text : @pdflite.PdfBytes,
+  text : @core.PdfBytes,
   first_charcode : Int,
   second_charcode : Int,
   uses_two_byte_codes : Bool,
@@ -8224,7 +8224,7 @@ fn fixture_acceptance_assert_cpdf_source_uniakr_predefined_cmaps_for_test(
     "/SourceAKR8",
     "/SourceUniAKRUTF8Top",
     "/UniAKR-UTF8-H",
-    @pdflite.pdf_bytes_of_int_array([0xEA, 0xB0, 0x80, 0xEB, 0x82, 0x98]),
+    @core.pdf_bytes_of_int_array([0xEA, 0xB0, 0x80, 0xEB, 0x82, 0x98]),
     0xEAB080,
     0xEB8298,
     false,
@@ -8234,7 +8234,7 @@ fn fixture_acceptance_assert_cpdf_source_uniakr_predefined_cmaps_for_test(
     "/SourceAKR16",
     "/SourceUniAKRUTF16Top",
     "/UniAKR-UTF16-H",
-    @pdflite.pdf_bytes_of_int_array([0xAC, 0x00, 0xB0, 0x98]),
+    @core.pdf_bytes_of_int_array([0xAC, 0x00, 0xB0, 0x98]),
     0xAC00,
     0xB098,
     true,
@@ -8244,7 +8244,7 @@ fn fixture_acceptance_assert_cpdf_source_uniakr_predefined_cmaps_for_test(
     "/SourceAKR32",
     "/SourceUniAKRUTF32Top",
     "/UniAKR-UTF32-H",
-    @pdflite.pdf_bytes_of_int_array([
+    @core.pdf_bytes_of_int_array([
       0x00, 0x00, 0xAC, 0x00, 0x00, 0x00, 0xB0, 0x98,
     ]),
     0xAC00,
@@ -8265,14 +8265,14 @@ fn fixture_acceptance_assert_cpdf_source_uniakr_utf8_cpdfcontent_boundary_for_te
   )
   fixture_acceptance_assert_content_op_for_test(
     ops,
-    Op_Tj(@pdflite.pdf_bytes_of_int_array(text)),
+    Op_Tj(@core.pdf_bytes_of_int_array(text)),
   )
   fixture_acceptance_assert_cpdf_source_uniakr_predefined_font_for_test(
     document,
     "/SourceAKR8",
     "/SourceUniAKRUTF8Top",
     "/UniAKR-UTF8-H",
-    @pdflite.pdf_bytes_of_int_array(text),
+    @core.pdf_bytes_of_int_array(text),
     0xEAB080,
     0xEB8298,
     false,
@@ -8303,14 +8303,14 @@ fn fixture_acceptance_assert_cpdf_source_uniakr_utf32_cpdfcontent_boundary_for_t
   )
   fixture_acceptance_assert_content_op_for_test(
     ops,
-    Op_Tj(@pdflite.pdf_bytes_of_int_array(text)),
+    Op_Tj(@core.pdf_bytes_of_int_array(text)),
   )
   fixture_acceptance_assert_cpdf_source_uniakr_predefined_font_for_test(
     document,
     "/SourceAKR32",
     "/SourceUniAKRUTF32Top",
     "/UniAKR-UTF32-H",
-    @pdflite.pdf_bytes_of_int_array(text),
+    @core.pdf_bytes_of_int_array(text),
     0xAC00,
     0xB098,
     false,
@@ -8376,9 +8376,9 @@ fn fixture_acceptance_cpdf_source_hello_with_uniks_predefined_cmaps_for_test(
     [
       Op_BT,
       Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceKSUCS2H"), 12.0),
-      Op_Tj(@pdflite.pdf_bytes_of_int_array([0xAC, 0x00, 0xB0, 0x98])),
+      Op_Tj(@core.pdf_bytes_of_int_array([0xAC, 0x00, 0xB0, 0x98])),
       Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceKSUCS2V"), 12.0),
-      Op_Tj(@pdflite.pdf_bytes_of_int_array([0xAC, 0x00, 0xB0, 0x98])),
+      Op_Tj(@core.pdf_bytes_of_int_array([0xAC, 0x00, 0xB0, 0x98])),
       Op_ET,
     ],
     fast=true,
@@ -8416,7 +8416,7 @@ fn fixture_acceptance_assert_cpdf_source_uniks_predefined_font_for_test(
   let extractor = document.text_extractor_of_font(source_font.font)
   @test.assert_eq(
     extractor.codepoints_of_text(
-      @pdflite.pdf_bytes_of_int_array([0xAC, 0x00, 0xB0, 0x98]),
+      @core.pdf_bytes_of_int_array([0xAC, 0x00, 0xB0, 0x98]),
     ),
     [0xAC00, 0xB098],
   )
@@ -8515,7 +8515,7 @@ fn fixture_acceptance_cpdf_source_hello_with_korea1_horizontal_cmaps_for_test(
     font_resources,
   )
   let page = { ..pages[0], resources, }
-  let horizontal_text = @pdflite.pdf_bytes_of_int_array([0xB0, 0xA1, 0xC7, 0xD1])
+  let horizontal_text = @core.pdf_bytes_of_int_array([0xB0, 0xA1, 0xC7, 0xD1])
   let updated_page = output.postpend_operators(
     page,
     [
@@ -8527,7 +8527,7 @@ fn fixture_acceptance_cpdf_source_hello_with_korea1_horizontal_cmaps_for_test(
       Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceUHCH"), 12.0),
       Op_Tj(horizontal_text),
       Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceUHCHWH"), 12.0),
-      Op_Tj(@pdflite.pdf_bytes_of_int_array([0xB0, 0xA1, 0xA4, 0xD4])),
+      Op_Tj(@core.pdf_bytes_of_int_array([0xB0, 0xA1, 0xA4, 0xD4])),
       Op_ET,
     ],
     fast=true,
@@ -8551,7 +8551,7 @@ fn fixture_acceptance_assert_cpdf_source_korea1_horizontal_cmaps_for_test(
     "/SourceHorizontalKSCEUCTop",
     "/KSC-EUC-H",
     "Korea1",
-    @pdflite.pdf_bytes_of_int_array([
+    @core.pdf_bytes_of_int_array([
       0x41, 0x7E, 0xA1, 0xA1, 0xB0, 0xA1, 0xC7, 0xD1, 0x80,
     ]),
     [0x41, 0x203E, 0x3000, 0xAC00, 0xD55C, 0x80],
@@ -8570,7 +8570,7 @@ fn fixture_acceptance_assert_cpdf_source_korea1_horizontal_cmaps_for_test(
     "/SourceHorizontalKSCpcEUCTop",
     "/KSCpc-EUC-H",
     "Korea1",
-    @pdflite.pdf_bytes_of_int_array([
+    @core.pdf_bytes_of_int_array([
       0x41, 0x80, 0x81, 0x84, 0x9F, 0xFE, 0xFF, 0xA1, 0x41, 0xA1, 0x51, 0xA2, 0xE6,
       0xA2, 0xEF, 0xB0, 0xA1, 0xC7, 0xD1,
     ]),
@@ -8594,7 +8594,7 @@ fn fixture_acceptance_assert_cpdf_source_korea1_horizontal_cmaps_for_test(
     "/SourceHorizontalKSCmsUHCTop",
     "/KSCms-UHC-H",
     "Korea1",
-    @pdflite.pdf_bytes_of_int_array([
+    @core.pdf_bytes_of_int_array([
       0x41, 0xB0, 0xA1, 0xC7, 0xD1, 0xB1, 0xDB, 0x81, 0x41, 0xA4, 0xD4,
     ]),
     [0x41, 0xAC00, 0xD55C, 0xAE00, 0xAC02, 0x3164],
@@ -8606,7 +8606,7 @@ fn fixture_acceptance_assert_cpdf_source_korea1_horizontal_cmaps_for_test(
     document, "/SourceUHCH",
   )
   @test.assert_eq(
-    uhc.codepoints_of_text(@pdflite.pdf_bytes_of_int_array([0x81, 0x40])),
+    uhc.codepoints_of_text(@core.pdf_bytes_of_int_array([0x81, 0x40])),
     [0x8140],
   )
   @test.assert_eq(uhc.charcode_of_codepoint(0x3164), Some(0xA4D4))
@@ -8617,7 +8617,7 @@ fn fixture_acceptance_assert_cpdf_source_korea1_horizontal_cmaps_for_test(
     "/SourceHorizontalKSCmsUHCHWTop",
     "/KSCms-UHC-HW-H",
     "Korea1",
-    @pdflite.pdf_bytes_of_int_array([0xB0, 0xA1, 0xA4, 0xD4]),
+    @core.pdf_bytes_of_int_array([0xB0, 0xA1, 0xA4, 0xD4]),
     [0xAC00, 0x3164],
     0x3164,
     0xA4D4,
@@ -8697,7 +8697,7 @@ fn fixture_acceptance_cpdf_source_hello_with_korea1_vertical_cmaps_for_test(
     font_resources,
   )
   let page = { ..pages[0], resources, }
-  let vertical_text = @pdflite.pdf_bytes_of_int_array([0xA1, 0xA6])
+  let vertical_text = @core.pdf_bytes_of_int_array([0xA1, 0xA6])
   let updated_page = output.postpend_operators(
     page,
     [
@@ -8746,7 +8746,7 @@ fn fixture_acceptance_assert_cpdf_source_korea1_vertical_font_for_test(
   )
   let extractor = document.text_extractor_of_font(source_font.font)
   @test.assert_eq(
-    extractor.codepoints_of_text(@pdflite.pdf_bytes_of_int_array([0xA1, 0xA6])),
+    extractor.codepoints_of_text(@core.pdf_bytes_of_int_array([0xA1, 0xA6])),
     [0x22EF],
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x22EF), Some(0xA1A6))
@@ -8840,7 +8840,7 @@ fn fixture_acceptance_cpdf_source_hello_with_japan1_predefined_cmaps_for_test(
     [
       Op_BT,
       Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceJ90mspV"), 12.0),
-      Op_Tj(@pdflite.pdf_bytes_of_int_array([0x82, 0x9F])),
+      Op_Tj(@core.pdf_bytes_of_int_array([0x82, 0x9F])),
       Op_ET,
     ],
     fast=true,
@@ -8854,7 +8854,7 @@ fn fixture_acceptance_assert_cpdf_source_japan1_predefined_font_for_test(
   name : String,
   basefont : String,
   encoding : String,
-  text : @pdflite.PdfBytes,
+  text : @core.PdfBytes,
   expected_codepoints : Array[Int],
   reverse_codepoint : Int,
   reverse_charcode : Int,
@@ -8904,7 +8904,7 @@ fn fixture_acceptance_assert_cpdf_source_japan1_predefined_cmaps_for_test(
     "/SourceJ90mspH",
     "/Source90mspTop",
     "/90msp-RKSJ-H",
-    @pdflite.pdf_bytes_of_int_array([0x41, 0x5C, 0xA6, 0x81, 0x40, 0x93, 0xF1]),
+    @core.pdf_bytes_of_int_array([0x41, 0x5C, 0xA6, 0x81, 0x40, 0x93, 0xF1]),
     [0x41, 0x00A5, 0xFF66, 0x3000, 0x4E8C],
     0x00A5,
     0x5C,
@@ -8915,7 +8915,7 @@ fn fixture_acceptance_assert_cpdf_source_japan1_predefined_cmaps_for_test(
     "/SourceJ90mspV",
     "/Source90mspVerticalTop",
     "/90msp-RKSJ-V",
-    @pdflite.pdf_bytes_of_int_array([
+    @core.pdf_bytes_of_int_array([
       0x41, 0x5C, 0xA6, 0x81, 0x40, 0x82, 0x9F, 0x93, 0xF1,
     ]),
     [0x41, 0x00A5, 0xFF66, 0x3000, 0x3041, 0x4E8C],
@@ -8928,7 +8928,7 @@ fn fixture_acceptance_assert_cpdf_source_japan1_predefined_cmaps_for_test(
     "/SourceJHojoEUCV",
     "/SourceHojoEUCVerticalTop",
     "/Hojo-EUC-V",
-    @pdflite.pdf_bytes_of_int_array([0x8F, 0xB4, 0xAE]),
+    @core.pdf_bytes_of_int_array([0x8F, 0xB4, 0xAE]),
     [0x4EDD],
     0x4EDD,
     0x8FB4AE,
@@ -9027,9 +9027,7 @@ fn fixture_acceptance_cpdf_source_hello_with_japan1_base_cmaps_for_test(
     [
       Op_BT,
       Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceJ90msH"), 12.0),
-      Op_Tj(
-        @pdflite.pdf_bytes_of_int_array([0x41, 0xA6, 0x81, 0x40, 0x93, 0xF1]),
-      ),
+      Op_Tj(@core.pdf_bytes_of_int_array([0x41, 0xA6, 0x81, 0x40, 0x93, 0xF1])),
       Op_ET,
     ],
     fast=true,
@@ -9064,7 +9062,7 @@ fn fixture_acceptance_assert_cpdf_source_japan1_base_cmaps_for_test(
     "/SourceJ90msH",
     "/Source90msTop",
     "/90ms-RKSJ-H",
-    @pdflite.pdf_bytes_of_int_array([0x41, 0xA6, 0x81, 0x40, 0x93, 0xF1]),
+    @core.pdf_bytes_of_int_array([0x41, 0xA6, 0x81, 0x40, 0x93, 0xF1]),
     [0x41, 0xFF66, 0x3000, 0x4E8C],
     0x4E8C,
     0x93F1,
@@ -9079,7 +9077,7 @@ fn fixture_acceptance_assert_cpdf_source_japan1_base_cmaps_for_test(
     "/SourceJ90pvH",
     "/Source90pvTop",
     "/90pv-RKSJ-H",
-    @pdflite.pdf_bytes_of_int_array([0x5C, 0x80, 0xA0, 0x81, 0x7C, 0x85, 0x91]),
+    @core.pdf_bytes_of_int_array([0x5C, 0x80, 0xA0, 0x81, 0x7C, 0x85, 0x91]),
     [0x00A5, 0x005C, 0x00A0, 0x2212, 0xF860, 0x0030, 0x002E],
     0x2212,
     0x817C,
@@ -9094,7 +9092,7 @@ fn fixture_acceptance_assert_cpdf_source_japan1_base_cmaps_for_test(
     "/SourceJH",
     "/SourceJISTop",
     "/H",
-    @pdflite.pdf_bytes_of_int_array([0x21, 0x21, 0x24, 0x22]),
+    @core.pdf_bytes_of_int_array([0x21, 0x21, 0x24, 0x22]),
     [0x3000, 0x3042],
     0x3042,
     0x2422,
@@ -9105,7 +9103,7 @@ fn fixture_acceptance_assert_cpdf_source_japan1_base_cmaps_for_test(
     "/SourceJEUCH",
     "/SourceJapanEUCTop",
     "/EUC-H",
-    @pdflite.pdf_bytes_of_int_array([0xA1, 0xA1, 0xA4, 0xA2]),
+    @core.pdf_bytes_of_int_array([0xA1, 0xA1, 0xA4, 0xA2]),
     [0x3000, 0x3042],
     0x3042,
     0xA4A2,
@@ -9116,7 +9114,7 @@ fn fixture_acceptance_assert_cpdf_source_japan1_base_cmaps_for_test(
     "/SourceJHojoEUCH",
     "/SourceHojoEUCHTop",
     "/Hojo-EUC-H",
-    @pdflite.pdf_bytes_of_int_array([0x8F, 0xB4, 0xAE]),
+    @core.pdf_bytes_of_int_array([0x8F, 0xB4, 0xAE]),
     [0x4EDD],
     0x4EDD,
     0x8FB4AE,
@@ -9252,7 +9250,7 @@ fn fixture_acceptance_cpdf_source_hello_with_rare_japan1_cmaps_for_test(
       PdfIndirect(font),
     )
     ops.push(Op_Tf(fixture_acceptance_pdf_name_for_test(case.0), 12.0))
-    ops.push(Op_Tj(@pdflite.pdf_bytes_of_int_array(case.4)))
+    ops.push(Op_Tj(@core.pdf_bytes_of_int_array(case.4)))
   }
   ops.push(Op_ET)
   let resources = pages[0].resources.add_dict_entry(
@@ -9281,7 +9279,7 @@ fn fixture_acceptance_assert_cpdf_source_rare_japan1_cmaps_for_test(
       case.0,
       case.1,
       case.2,
-      @pdflite.pdf_bytes_of_int_array(case.4),
+      @core.pdf_bytes_of_int_array(case.4),
       case.5,
       case.6,
       case.7,
@@ -9589,7 +9587,7 @@ fn fixture_acceptance_cpdf_source_hello_with_supplemental_japan1_cmaps_for_test(
       PdfIndirect(font),
     )
     ops.push(Op_Tf(fixture_acceptance_pdf_name_for_test(case.0), 12.0))
-    ops.push(Op_Tj(@pdflite.pdf_bytes_of_int_array(case.4)))
+    ops.push(Op_Tj(@core.pdf_bytes_of_int_array(case.4)))
   }
   ops.push(Op_ET)
   let resources = pages[0].resources.add_dict_entry(
@@ -9618,7 +9616,7 @@ fn fixture_acceptance_assert_cpdf_source_supplemental_japan1_cmaps_for_test(
       case.0,
       case.1,
       case.2,
-      @pdflite.pdf_bytes_of_int_array(case.6),
+      @core.pdf_bytes_of_int_array(case.6),
       case.7,
       case.8,
       case.9,
@@ -9760,9 +9758,9 @@ fn fixture_acceptance_cpdf_source_hello_with_gb_cns_predefined_cmaps_for_test(
     [
       Op_BT,
       Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceGB16H"), 12.0),
-      Op_Tj(@pdflite.pdf_bytes_of_int_array([0x4E, 0x00, 0x56, 0xFD])),
+      Op_Tj(@core.pdf_bytes_of_int_array([0x4E, 0x00, 0x56, 0xFD])),
       Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceCNS16H"), 12.0),
-      Op_Tj(@pdflite.pdf_bytes_of_int_array([0x4E, 0x00, 0x4E, 0x8C])),
+      Op_Tj(@core.pdf_bytes_of_int_array([0x4E, 0x00, 0x4E, 0x8C])),
       Op_ET,
     ],
     fast=true,
@@ -9777,7 +9775,7 @@ fn fixture_acceptance_assert_cpdf_source_gb_cns_predefined_font_for_test(
   basefont : String,
   encoding : String,
   ordering : String,
-  text : @pdflite.PdfBytes,
+  text : @core.PdfBytes,
   expected_codepoints : Array[Int],
   reverse_codepoint : Int,
   reverse_charcode : Int,
@@ -9831,7 +9829,7 @@ fn fixture_acceptance_assert_cpdf_source_gb_cns_predefined_cmaps_for_test(
     "/SourceUniGBUTF16Top",
     "/UniGB-UTF16-H",
     "GB1",
-    @pdflite.pdf_bytes_of_int_array([0x4E, 0x00, 0x56, 0xFD]),
+    @core.pdf_bytes_of_int_array([0x4E, 0x00, 0x56, 0xFD]),
     [0x4E00, 0x56FD],
     0x56FD,
     0x56FD,
@@ -9843,7 +9841,7 @@ fn fixture_acceptance_assert_cpdf_source_gb_cns_predefined_cmaps_for_test(
     "/SourceUniGBUTF16VerticalTop",
     "/UniGB-UTF16-V",
     "GB1",
-    @pdflite.pdf_bytes_of_int_array([0x4E, 0x00, 0x56, 0xFD]),
+    @core.pdf_bytes_of_int_array([0x4E, 0x00, 0x56, 0xFD]),
     [0x4E00, 0x56FD],
     0x4E00,
     0x4E00,
@@ -9855,7 +9853,7 @@ fn fixture_acceptance_assert_cpdf_source_gb_cns_predefined_cmaps_for_test(
     "/SourceUniGBUCS32Top",
     "/UniGB-UCS32-H",
     "GB1",
-    @pdflite.pdf_bytes_of_int_array([
+    @core.pdf_bytes_of_int_array([
       0x00, 0x00, 0x4E, 0x00, 0x00, 0x00, 0x56, 0xFD,
     ]),
     [0x4E00, 0x56FD],
@@ -9869,7 +9867,7 @@ fn fixture_acceptance_assert_cpdf_source_gb_cns_predefined_cmaps_for_test(
     "/SourceUniGBUCS32VerticalTop",
     "/UniGB-UCS32-V",
     "GB1",
-    @pdflite.pdf_bytes_of_int_array([
+    @core.pdf_bytes_of_int_array([
       0x00, 0x00, 0x4E, 0x00, 0x00, 0x00, 0x56, 0xFD,
     ]),
     [0x4E00, 0x56FD],
@@ -9883,7 +9881,7 @@ fn fixture_acceptance_assert_cpdf_source_gb_cns_predefined_cmaps_for_test(
     "/SourceUniCNSUCS2Top",
     "/UniCNS-UCS2-H",
     "CNS1",
-    @pdflite.pdf_bytes_of_int_array([0x4E, 0x00, 0x4E, 0x8C]),
+    @core.pdf_bytes_of_int_array([0x4E, 0x00, 0x4E, 0x8C]),
     [0x4E00, 0x4E8C],
     0x4E00,
     0x4E00,
@@ -9895,7 +9893,7 @@ fn fixture_acceptance_assert_cpdf_source_gb_cns_predefined_cmaps_for_test(
     "/SourceUniCNSUCS2VerticalTop",
     "/UniCNS-UCS2-V",
     "CNS1",
-    @pdflite.pdf_bytes_of_int_array([0x00, 0x42, 0x4E, 0x8C]),
+    @core.pdf_bytes_of_int_array([0x00, 0x42, 0x4E, 0x8C]),
     [0x42, 0x4E8C],
     0x4E8C,
     0x4E8C,
@@ -9907,7 +9905,7 @@ fn fixture_acceptance_assert_cpdf_source_gb_cns_predefined_cmaps_for_test(
     "/SourceUniCNSUTF16Top",
     "/UniCNS-UTF16-H",
     "CNS1",
-    @pdflite.pdf_bytes_of_int_array([0x4E, 0x00, 0xD8, 0x34, 0xDD, 0x1E]),
+    @core.pdf_bytes_of_int_array([0x4E, 0x00, 0xD8, 0x34, 0xDD, 0x1E]),
     [0x4E00, 0x1D11E],
     0x1D11E,
     0xD834DD1E,
@@ -9919,7 +9917,7 @@ fn fixture_acceptance_assert_cpdf_source_gb_cns_predefined_cmaps_for_test(
     "/SourceUniCNSUTF16VerticalTop",
     "/UniCNS-UTF16-V",
     "CNS1",
-    @pdflite.pdf_bytes_of_int_array([0x4E, 0x00, 0x4E, 0x8C]),
+    @core.pdf_bytes_of_int_array([0x4E, 0x00, 0x4E, 0x8C]),
     [0x4E00, 0x4E8C],
     0x4E8C,
     0x4E8C,
@@ -9941,7 +9939,7 @@ fn fixture_acceptance_assert_cpdf_source_gb_ucs32_cpdfcontent_boundary_for_test(
   )
   fixture_acceptance_assert_content_op_for_test(
     ops,
-    Op_Tj(@pdflite.pdf_bytes_of_int_array(text)),
+    Op_Tj(@core.pdf_bytes_of_int_array(text)),
   )
   fixture_acceptance_assert_cpdf_source_gb_cns_predefined_font_for_test(
     document,
@@ -9949,7 +9947,7 @@ fn fixture_acceptance_assert_cpdf_source_gb_ucs32_cpdfcontent_boundary_for_test(
     "/SourceUniGBUCS32Top",
     "/UniGB-UCS32-H",
     "GB1",
-    @pdflite.pdf_bytes_of_int_array(text),
+    @core.pdf_bytes_of_int_array(text),
     [0x4E00, 0x56FD],
     0x4E00,
     0x4E00,
@@ -10059,7 +10057,7 @@ fn fixture_acceptance_cpdf_source_hello_with_gb1_legacy_cmaps_for_test(
       Op_BT,
       Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceGBEUC"), 12.0),
       Op_Tj(
-        @pdflite.pdf_bytes_of_int_array([
+        @core.pdf_bytes_of_int_array([
           0x41, 0xC4, 0xE3, 0xBA, 0xC3, 0xA1, 0xA1, 0xA3, 0xC1,
         ]),
       ),
@@ -10083,7 +10081,7 @@ fn fixture_acceptance_assert_cpdf_source_gb1_legacy_cmaps_for_test(
   fixture_acceptance_assert_content_op_for_test(
     ops,
     Op_Tj(
-      @pdflite.pdf_bytes_of_int_array([
+      @core.pdf_bytes_of_int_array([
         0x41, 0xC4, 0xE3, 0xBA, 0xC3, 0xA1, 0xA1, 0xA3, 0xC1,
       ]),
     ),
@@ -10094,7 +10092,7 @@ fn fixture_acceptance_assert_cpdf_source_gb1_legacy_cmaps_for_test(
     "/SourceGBEUCTop",
     "/GB-EUC-H",
     "GB1",
-    @pdflite.pdf_bytes_of_int_array([
+    @core.pdf_bytes_of_int_array([
       0x41, 0xC4, 0xE3, 0xBA, 0xC3, 0xA1, 0xA1, 0xA3, 0xC1,
     ]),
     [0x41, 0x4F60, 0x597D, 0x3000, 0xFF21],
@@ -10112,7 +10110,7 @@ fn fixture_acceptance_assert_cpdf_source_gb1_legacy_cmaps_for_test(
     "/SourceGBpcEUCTop",
     "/GBpc-EUC-H",
     "GB1",
-    @pdflite.pdf_bytes_of_int_array([
+    @core.pdf_bytes_of_int_array([
       0x41, 0x80, 0x83, 0xA0, 0xFD, 0xFE, 0xFF, 0xA1, 0xA1, 0xA1, 0xAB, 0xA8, 0xBF,
       0xC4, 0xE3, 0xBA, 0xC3,
     ]),
@@ -10135,7 +10133,7 @@ fn fixture_acceptance_assert_cpdf_source_gb1_legacy_cmaps_for_test(
     "/SourceGBKTop",
     "/GBK-EUC-H",
     "GB1",
-    @pdflite.pdf_bytes_of_int_array([
+    @core.pdf_bytes_of_int_array([
       0x41, 0x80, 0x81, 0x40, 0xC4, 0xE3, 0xBA, 0xC3, 0xA1, 0xA1, 0xA3, 0xC1, 0xA1,
       0x40, 0xA8, 0xBC, 0xFE, 0xFE, 0xFF, 0x81, 0x39,
     ]),
@@ -10158,7 +10156,7 @@ fn fixture_acceptance_assert_cpdf_source_gb1_legacy_cmaps_for_test(
     "/SourceGBKpTop",
     "/GBKp-EUC-H",
     "GB1",
-    @pdflite.pdf_bytes_of_int_array([
+    @core.pdf_bytes_of_int_array([
       0x41, 0x80, 0x81, 0x40, 0xC4, 0xE3, 0xBA, 0xC3, 0xA1, 0xA1, 0xA3, 0xC1, 0xA1,
       0x40, 0xA8, 0xBC, 0xFE, 0xFE, 0xFF, 0x81, 0x39,
     ]),
@@ -10181,7 +10179,7 @@ fn fixture_acceptance_assert_cpdf_source_gb1_legacy_cmaps_for_test(
     "/SourceGBK2KTop",
     "/GBK2K-H",
     "GB1",
-    @pdflite.pdf_bytes_of_int_array([
+    @core.pdf_bytes_of_int_array([
       0x41, 0x81, 0x40, 0xC4, 0xE3, 0xBA, 0xC3, 0xFE, 0x51, 0x81, 0x30, 0x84, 0x36,
       0x82, 0x36, 0x94, 0x35,
     ]),
@@ -10374,7 +10372,7 @@ fn fixture_acceptance_cpdf_source_hello_with_cns1_legacy_cmaps_for_test(
       Op_BT,
       Op_Tf(fixture_acceptance_pdf_name_for_test("/SourceETenB5"), 12.0),
       Op_Tj(
-        @pdflite.pdf_bytes_of_int_array([
+        @core.pdf_bytes_of_int_array([
           0x41, 0xA7, 0x41, 0xA6, 0x6E, 0xA4, 0x40, 0xA4, 0xA4, 0xA1, 0x40,
         ]),
       ),
@@ -10402,7 +10400,7 @@ fn fixture_acceptance_assert_cpdf_source_cns1_legacy_font_for_test(
     basefont,
     encoding,
     "CNS1",
-    @pdflite.pdf_bytes_of_int_array(text),
+    @core.pdf_bytes_of_int_array(text),
     expected_codepoints,
     reverse_codepoint,
     reverse_charcode,
@@ -10424,7 +10422,7 @@ fn fixture_acceptance_assert_cpdf_source_cns1_legacy_cmaps_for_test(
   fixture_acceptance_assert_content_op_for_test(
     ops,
     Op_Tj(
-      @pdflite.pdf_bytes_of_int_array([
+      @core.pdf_bytes_of_int_array([
         0x41, 0xA7, 0x41, 0xA6, 0x6E, 0xA4, 0x40, 0xA4, 0xA4, 0xA1, 0x40,
       ]),
     ),
@@ -10790,7 +10788,7 @@ fn fixture_acceptance_cpdf_source_hello_with_vertical_cmaps_for_test(
     [
       Op_BT,
       Op_Tf(fixture_acceptance_pdf_name_for_test(first.0), 12.0),
-      Op_Tj(@pdflite.pdf_bytes_of_int_array(first.5)),
+      Op_Tj(@core.pdf_bytes_of_int_array(first.5)),
       Op_ET,
     ],
     fast=true,
@@ -10812,7 +10810,7 @@ fn fixture_acceptance_assert_cpdf_source_vertical_cmaps_for_test(
   )
   fixture_acceptance_assert_content_op_for_test(
     ops,
-    Op_Tj(@pdflite.pdf_bytes_of_int_array(first.5)),
+    Op_Tj(@core.pdf_bytes_of_int_array(first.5)),
   )
   for case in cases {
     fixture_acceptance_assert_cpdf_source_gb_cns_predefined_font_for_test(
@@ -10821,7 +10819,7 @@ fn fixture_acceptance_assert_cpdf_source_vertical_cmaps_for_test(
       case.1,
       case.2,
       case.4,
-      @pdflite.pdf_bytes_of_int_array(case.5),
+      @core.pdf_bytes_of_int_array(case.5),
       case.6,
       case.7,
       case.8,
@@ -11037,7 +11035,7 @@ fn fixture_acceptance_content_ops_contain_sequence_for_test(
 ///|
 fn fixture_acceptance_content_ops_contain_do_for_test(
   ops : ArrayView[@content.PdfContentOp],
-  name : @pdflite.PdfName,
+  name : @core.PdfName,
 ) -> Bool {
   for op in ops {
     match op {

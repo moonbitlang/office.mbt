@@ -7,7 +7,7 @@ pub fn PdfDocument::copy_id_from(
   self : PdfDocument,
   source : PdfDocument,
   keep_version? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let document = self.copy()
   match source.lookup_direct(pdf_metadata_id(), source.trailer_dict()) {
     Some(id) => {
@@ -25,13 +25,13 @@ pub fn PdfDocument::copy_id_from(
 /// Set or replace one `/Info` dictionary entry.
 pub fn PdfDocument::set_info_entry(
   self : PdfDocument,
-  key : PdfName,
+  key : @core.PdfName,
   value : @syntax.PdfObject,
   version : Int,
   keep_version? : Bool = false,
   xmp_also? : Bool = false,
   xmp_just_set? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let document = if xmp_just_set {
     self
   } else {
@@ -81,7 +81,7 @@ pub fn PdfDocument::set_info_entry_string(
   keep_version? : Bool = false,
   xmp_also? : Bool = false,
   xmp_just_set? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   self.set_info_entry(
     pdf_metadata_source_key_name(entry.0),
     entry.1,
@@ -94,7 +94,10 @@ pub fn PdfDocument::set_info_entry_string(
 
 ///|
 /// Return one `/Info` dictionary entry as a UTF-8 string.
-pub fn PdfDocument::info_utf8(self : PdfDocument, key : PdfName) -> String {
+pub fn PdfDocument::info_utf8(
+  self : PdfDocument,
+  key : @core.PdfName,
+) -> String {
   let info = match
     self.lookup_direct(pdf_metadata_info(), self.trailer_dict()) {
     Some(dictionary) => dictionary

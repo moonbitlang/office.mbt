@@ -9,7 +9,7 @@ fn PdfDocument::encrypt_arc4_standard(
   key_length_bits : Int,
   write_length : Bool,
   file_id : BytesView,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let (document, id) = self.with_file_id(file_id~)
   let permissions = @crypt_core.pdf_p_of_permissions(denied_permissions)
   let owner_entry = @crypt_core.pdf_make_owner_password_entry(
@@ -24,7 +24,7 @@ fn PdfDocument::encrypt_arc4_standard(
   let encrypted = document.arc4_crypt_parsed_objects(
     file_key, key_length_bits, false, 0,
   )
-  let entries : Array[(PdfName, @syntax.PdfObject)] = [
+  let entries : Array[(@core.PdfName, @syntax.PdfObject)] = [
     (pdf_crypt_filter_name, PdfNameObject(pdf_crypt_standard_name)),
     (pdf_crypt_v_name, PdfInteger(version)),
     (pdf_crypt_r_name, PdfInteger(revision)),

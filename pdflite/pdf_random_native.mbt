@@ -9,7 +9,7 @@ extern "C" fn pdf_secure_random_bytes_ffi(
 fn pdf_secure_random_bytes_with_provider(
   length : Int,
   fill : (FixedArray[Byte], Int) -> Int,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   if length < 0 {
     raise InvalidReadLength(length)
   }
@@ -25,8 +25,10 @@ fn pdf_secure_random_bytes_with_provider(
 ///
 /// The native stub uses the platform RNG (`BCryptGenRandom` on Windows and
 /// `/dev/urandom` on Unix-like systems). Negative lengths raise
-/// `PdfError::InvalidReadLength`; RNG failures raise `PdfError::RandomBytesUnavailable`.
-pub fn pdf_secure_random_bytes(length : Int) -> PdfBytes raise PdfError {
+/// `@core.PdfError::InvalidReadLength`; RNG failures raise `@core.PdfError::RandomBytesUnavailable`.
+pub fn pdf_secure_random_bytes(
+  length : Int,
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_secure_random_bytes_with_provider(length, pdf_secure_random_bytes_ffi)
 }
 
@@ -35,7 +37,7 @@ fn pdf_secure_aes_iv_provider(
   _object_number : Int,
   _generation : Int,
   _index : Int,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_secure_random_bytes(16)
 }
 
@@ -43,7 +45,7 @@ fn pdf_secure_aes_iv_provider(
 fn pdf_secure_aesv3_random_provider(
   _field : @crypt_core.PdfAesV3RandomField,
   length : Int,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_secure_random_bytes(length)
 }
 
@@ -60,7 +62,7 @@ pub fn PdfDocument::encrypt_128bit_aesv2(
   denied_permissions : ArrayView[@crypt_core.PdfPermission],
   encrypt_metadata? : Bool = true,
   file_id? : BytesView = [],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let resolved_file_id = if file_id.length() > 0 {
     file_id.to_owned()
   } else {
@@ -84,7 +86,7 @@ pub fn PdfDocument::encrypt_128bit_aesv2(
 pub fn PdfDocument::recrypt_with_password_aesv2(
   self : PdfDocument,
   password : BytesView,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   self.recrypt_with_password_aesv2_with_iv_provider(
     password, pdf_secure_aes_iv_provider,
   )
@@ -103,7 +105,7 @@ pub fn PdfDocument::encrypt_256bit_aesv3(
   iso? : Bool = false,
   encrypt_metadata? : Bool = true,
   file_id? : BytesView = [],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   self.encrypt_256bit_aesv3_with_providers(
     user_password,
     owner_password,
@@ -128,7 +130,7 @@ pub fn PdfDocument::encrypt_256bit_aesv3_iso(
   denied_permissions : ArrayView[@crypt_core.PdfPermission],
   encrypt_metadata? : Bool = true,
   file_id? : BytesView = [],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   self.encrypt_256bit_aesv3(
     user_password,
     owner_password,
@@ -147,7 +149,7 @@ pub fn PdfDocument::encrypt_256bit_aesv3_iso(
 pub fn PdfDocument::recrypt_with_password_aesv3(
   self : PdfDocument,
   password : BytesView,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   self.recrypt_with_password_aesv3_with_iv_provider(
     password, pdf_secure_aes_iv_provider,
   )
@@ -166,7 +168,7 @@ pub fn pdf_write_encrypted_aesv2_document(
   encrypt_metadata? : Bool = true,
   mode? : @writer.PdfWriteMode = PdfWriteClassic,
   file_id? : BytesView = [],
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_write_document_with_mode(
     document.encrypt_128bit_aesv2(
       user_password,
@@ -193,7 +195,7 @@ pub fn pdf_write_encrypted_aesv3_document(
   encrypt_metadata? : Bool = true,
   mode? : @writer.PdfWriteMode = PdfWriteClassic,
   file_id? : BytesView = [],
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_write_document_with_mode(
     document.encrypt_256bit_aesv3(
       user_password,
@@ -217,7 +219,7 @@ pub fn pdf_write_encrypted_aesv3_iso_document(
   encrypt_metadata? : Bool = true,
   mode? : @writer.PdfWriteMode = PdfWriteClassic,
   file_id? : BytesView = [],
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_write_encrypted_aesv3_document(
     document,
     user_password,

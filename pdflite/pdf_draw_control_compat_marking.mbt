@@ -3,7 +3,7 @@
 pub fn pdf_setstroke(
   control : PdfDrawControl,
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   control.set_stroke(text)
 }
 
@@ -12,7 +12,7 @@ pub fn pdf_setstroke(
 pub fn pdf_setfill(
   control : PdfDrawControl,
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   control.set_fill(text)
 }
 
@@ -21,7 +21,7 @@ pub fn pdf_setfill(
 pub fn pdf_addtag(
   control : PdfDrawControl,
   tag : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   control.add_tag(tag)
 }
 
@@ -30,19 +30,19 @@ pub fn pdf_addtag(
 pub fn pdf_addstag(
   control : PdfDrawControl,
   tag : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   control.add_structure_tag(tag)
 }
 
 ///|
 /// Source-spelled cpdfdrawcontrol `endtag` over explicit draw state.
-pub fn pdf_endtag(control : PdfDrawControl) -> Unit raise PdfError {
+pub fn pdf_endtag(control : PdfDrawControl) -> Unit raise @core.PdfError {
   control.end_tag()
 }
 
 ///|
 /// Source-spelled cpdfdrawcontrol `endstag` over explicit draw state.
-pub fn pdf_endstag(control : PdfDrawControl) -> Unit raise PdfError {
+pub fn pdf_endstag(control : PdfDrawControl) -> Unit raise @core.PdfError {
   control.end_structure_tag()
 }
 
@@ -51,7 +51,7 @@ pub fn pdf_endstag(control : PdfDrawControl) -> Unit raise PdfError {
 pub fn pdf_autotags(
   control : PdfDrawControl,
   enabled : Bool,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   control.set_auto_tag(enabled)
 }
 
@@ -61,7 +61,7 @@ pub fn pdf_eltinfo(
   control : PdfDrawControl,
   key : String,
   value : @syntax.PdfObject,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   control.add_element_info(key, value)
 }
 
@@ -70,7 +70,7 @@ pub fn pdf_eltinfo(
 pub fn pdf_endeltinfo(
   control : PdfDrawControl,
   key : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   control.end_element_info(key)
 }
 
@@ -79,7 +79,7 @@ pub fn pdf_endeltinfo(
 pub fn pdf_addnamespace(
   control : PdfDrawControl,
   namespace_name : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   control.add_namespace(namespace_name)
 }
 
@@ -91,13 +91,13 @@ pub fn pdf_setrolemap(control : PdfDrawControl, role_map : String) -> Unit {
 
 ///|
 /// Source-spelled cpdfdrawcontrol `artifact` over explicit draw state.
-pub fn pdf_artifact(control : PdfDrawControl) -> Unit raise PdfError {
+pub fn pdf_artifact(control : PdfDrawControl) -> Unit raise @core.PdfError {
   control.begin_artifact()
 }
 
 ///|
 /// Source-spelled cpdfdrawcontrol `endartifact` over explicit draw state.
-pub fn pdf_endartifact(control : PdfDrawControl) -> Unit raise PdfError {
+pub fn pdf_endartifact(control : PdfDrawControl) -> Unit raise @core.PdfError {
   control.end_artifact()
 }
 

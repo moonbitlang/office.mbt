@@ -1,7 +1,7 @@
 ///|
 fn pdf_fun_calculator_copy(
   stack : Array[PdfCalculatorValue],
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let count = pdf_fun_calculator_pop_int(stack)
   if count < 0 || count > stack.length() {
     raise BadFunctionEvaluation("calculator copy operand out of range")
@@ -16,7 +16,7 @@ fn pdf_fun_calculator_copy(
 ///|
 fn pdf_fun_calculator_index(
   stack : Array[PdfCalculatorValue],
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let index = pdf_fun_calculator_pop_int(stack)
   if index < 0 || index >= stack.length() {
     raise BadFunctionEvaluation("calculator index operand out of range")
@@ -27,7 +27,7 @@ fn pdf_fun_calculator_index(
 ///|
 fn pdf_fun_calculator_roll(
   stack : Array[PdfCalculatorValue],
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let distance = pdf_fun_calculator_pop_int(stack)
   let count = pdf_fun_calculator_pop_int(stack)
   if count < 1 || count > stack.length() {

@@ -1,10 +1,10 @@
 ///|
-fn squeeze_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn squeeze_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
-fn squeeze_data_for_test() -> @pdflite.PdfBytes {
+fn squeeze_data_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   for _ in 0..<128 {
     for byte in @ascii.encode("stream data repeats well\n")[:] {
@@ -16,11 +16,11 @@ fn squeeze_data_for_test() -> @pdflite.PdfBytes {
 
 ///|
 fn squeeze_stream_for_test(
-  entries : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
-  data : @pdflite.PdfBytes,
+  entries : ArrayView[(@core.PdfName, @syntax.PdfObject)],
+  data : @core.PdfBytes,
 ) -> @syntax.PdfObject {
   let length = squeeze_name_for_test("/Length")
-  let dictionary_entries : Array[(@pdflite.PdfName, @syntax.PdfObject)] = [
+  let dictionary_entries : Array[(@core.PdfName, @syntax.PdfObject)] = [
     (length, PdfInteger(data.length())),
   ]
   for entry in entries {
@@ -30,9 +30,7 @@ fn squeeze_stream_for_test(
 }
 
 ///|
-fn squeeze_direct_stream_for_test(
-  data : @pdflite.PdfBytes,
-) -> @syntax.PdfObject {
+fn squeeze_direct_stream_for_test(data : @core.PdfBytes) -> @syntax.PdfObject {
   squeeze_stream_for_test([], data)
 }
 
@@ -62,7 +60,7 @@ fn squeeze_filter_is_flate_for_test(value : @syntax.PdfObject?) -> Bool {
 fn squeeze_stream_bytes_for_test(
   document : @pdflite.PdfDocument,
   object_number : Int,
-) -> @pdflite.PdfBytes? {
+) -> @core.PdfBytes? {
   match document.lookup_object_or_null(object_number) {
     PdfStreamObject(stream) =>
       Some(
@@ -670,7 +668,7 @@ test "squeeze reports malformed xobject resource entries" {
 
   let result : Result[@pdflite.PdfDocument, Error] = try? document.squeeze()
 
-  guard result is Err(@pdflite.PdfError::DictionaryExpected) else {
+  guard result is Err(@core.PdfError::DictionaryExpected) else {
     fail("expected malformed XObject resource entry")
   }
 }
@@ -696,7 +694,7 @@ test "squeeze reports non-stream form xobjects" {
 
   let result : Result[@pdflite.PdfDocument, Error] = try? document.squeeze()
 
-  guard result is Err(@pdflite.PdfError::ParseStreamExpected) else {
+  guard result is Err(@core.PdfError::ParseStreamExpected) else {
     fail("expected non-stream form XObject failure")
   }
 }

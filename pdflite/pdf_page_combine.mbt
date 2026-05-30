@@ -27,7 +27,7 @@ fn pdf_page_combine_with_blank_pages(
 fn pdf_page_combine_equalize_overlay(
   overlay : PdfDocument,
   under_length : Int,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let overlay_pages = overlay.pages_of_pagetree()
   let overlay_length = overlay_pages.length()
   if overlay_length > under_length {
@@ -113,7 +113,7 @@ pub fn PdfDocument::combine_pages(
   scale_to_fit? : Bool = false,
   overlay_is_under? : Bool = false,
   process_struct_tree? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let overlay = if process_struct_tree {
     overlay.remove_struct_tree().mark_all_as_artifact()
   } else {
@@ -194,7 +194,7 @@ pub fn pdf_combine_pages(
   scale_to_fit? : Bool = false,
   overlay_is_under? : Bool = false,
   process_struct_tree? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   under.combine_pages(
     overlay,
     fast~,
@@ -213,7 +213,7 @@ pub fn pdf_combine_pages_cpdf_order(
   overlay : PdfDocument,
   scale_to_fit : Bool,
   overlay_is_under : Bool,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   under.combine_pages(
     overlay,
     fast~,

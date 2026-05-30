@@ -1,12 +1,14 @@
 ///|
-fn pdf_page_label_json_integral_number(value : Double) -> Int raise PdfError {
+fn pdf_page_label_json_integral_number(
+  value : Double,
+) -> Int raise @core.PdfError {
   let integer = value.to_int()
   guard integer.to_double() == value else { raise NumberExpected }
   integer
 }
 
 ///|
-fn pdf_page_label_json_int(value : Json?) -> Int raise PdfError {
+fn pdf_page_label_json_int(value : Json?) -> Int raise @core.PdfError {
   match value {
     Some(Number(number, repr=_)) => pdf_page_label_json_integral_number(number)
     _ => raise BadText
@@ -14,7 +16,7 @@ fn pdf_page_label_json_int(value : Json?) -> Int raise PdfError {
 }
 
 ///|
-fn pdf_page_label_json_string(value : Json?) -> String raise PdfError {
+fn pdf_page_label_json_string(value : Json?) -> String raise @core.PdfError {
   match value {
     Some(String(text)) => text
     _ => raise BadText
@@ -22,7 +24,9 @@ fn pdf_page_label_json_string(value : Json?) -> String raise PdfError {
 }
 
 ///|
-fn pdf_page_label_json_prefix(value : Json?) -> PdfBytes? raise PdfError {
+fn pdf_page_label_json_prefix(
+  value : Json?,
+) -> @core.PdfBytes? raise @core.PdfError {
   match value {
     Some(Null) => None
     Some(String(text)) => Some(pdf_pdfdocstring_of_utf8(@utf8.encode(text)))
@@ -31,7 +35,9 @@ fn pdf_page_label_json_prefix(value : Json?) -> PdfBytes? raise PdfError {
 }
 
 ///|
-fn pdf_page_label_of_json(json : Json) -> @label.PdfPageLabel raise PdfError {
+fn pdf_page_label_of_json(
+  json : Json,
+) -> @label.PdfPageLabel raise @core.PdfError {
   match json {
     Object(entries) => {
       let style = @label.pdf_page_label_style_of_string(
@@ -57,7 +63,7 @@ fn pdf_page_label_of_json(json : Json) -> @label.PdfPageLabel raise PdfError {
 pub fn PdfDocument::add_page_labels_json(
   self : PdfDocument,
   json : Json,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   match json {
     Array(items) => {
       let labels : Array[@label.PdfPageLabel] = []
@@ -75,6 +81,6 @@ pub fn PdfDocument::add_page_labels_json(
 pub fn pdf_add_page_labels_json(
   document : PdfDocument,
   json : Json,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.add_page_labels_json(json)
 }

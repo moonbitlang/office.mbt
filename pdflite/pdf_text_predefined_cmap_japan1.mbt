@@ -1,6 +1,6 @@
 ///|
 fn pdf_text_predefined_japan1_direct_codepoint_ranges(
-  name : PdfName,
+  name : @core.PdfName,
 ) -> Array[(Int, Int, Int)]? {
   let text = pdf_text_string_of_name(name)
   if text == "/90ms-RKSJ-H" {
@@ -14,7 +14,7 @@ fn pdf_text_predefined_japan1_direct_codepoint_ranges(
 
 ///|
 fn pdf_text_predefined_japan1_direct_codepoint_sequence_table(
-  name : PdfName,
+  name : @core.PdfName,
 ) -> Array[(Int, Array[Int])] {
   let text = pdf_text_string_of_name(name)
   if text == "/90pv-RKSJ-H" {
@@ -26,7 +26,7 @@ fn pdf_text_predefined_japan1_direct_codepoint_sequence_table(
 
 ///|
 fn pdf_text_predefined_japan1_direct_charcode_ranges(
-  name : PdfName,
+  name : @core.PdfName,
 ) -> Array[(Int, Int, Int)]? {
   let text = pdf_text_string_of_name(name)
   if text == "/90ms-RKSJ-H" {
@@ -40,7 +40,7 @@ fn pdf_text_predefined_japan1_direct_charcode_ranges(
 
 ///|
 fn pdf_text_predefined_japan1_cid_ranges(
-  name : PdfName,
+  name : @core.PdfName,
 ) -> Array[(Int, Int, Int)]? {
   let text = pdf_text_string_of_name(name)
   guard pdf_text_predefined_cmap_has_text_orientation(text) else { return None }
@@ -163,7 +163,7 @@ fn pdf_text_predefined_japan1_charcode(
 
 ///|
 fn pdf_text_predefined_japan1_builtin_codepoints(
-  name : PdfName,
+  name : @core.PdfName,
   code : Int,
 ) -> Array[Int]? {
   match pdf_text_predefined_japan1_direct_codepoint_ranges(name) {
@@ -186,7 +186,7 @@ fn pdf_text_predefined_japan1_builtin_codepoints(
 
 ///|
 fn pdf_text_predefined_japan1_builtin_charcode(
-  name : PdfName,
+  name : @core.PdfName,
   codepoint : Int,
 ) -> Int? {
   match pdf_text_predefined_japan1_direct_charcode_ranges(name) {

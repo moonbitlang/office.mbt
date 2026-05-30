@@ -30,7 +30,7 @@ fn pdf_fontpack_empty() -> PdfFontPack {
 /// resolving to the last character code inserted by the 0..255 scan.
 pub fn pdf_fontpack_of_standard_font(
   font : PdfFont,
-) -> PdfFontPack raise PdfError {
+) -> PdfFontPack raise @core.PdfError {
   let extractor = font.text_extractor()
   let entries : Array[PdfFontPackEntry] = Array::new(capacity=256)
   for code in 0..<256 {
@@ -46,7 +46,7 @@ pub fn pdf_fontpack_of_standard_font(
 /// Compatibility wrapper matching cpdfembed's `fontpack_of_standardfont`.
 pub fn pdf_fontpack_of_standardfont(
   font : PdfFont,
-) -> PdfFontPack raise PdfError {
+) -> PdfFontPack raise @core.PdfError {
   pdf_fontpack_of_standard_font(font)
 }
 

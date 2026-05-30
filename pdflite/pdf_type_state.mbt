@@ -35,7 +35,7 @@ fn PdfTypeTypesetState::write_page(
   document : PdfDocument,
   process_struct_tree : Bool,
   paper : @geometry.PaperSize,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let ops = if process_struct_tree {
     @content.pdf_content_add_artifacts(self.ops)
   } else {
@@ -95,7 +95,7 @@ fn PdfTypeTypesetState::write_font(
   id : String,
   font : PdfFont,
   font_size : Double,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let object_number = match pdf_type_lookup_font_object(self.fonts, id) {
     Some(number) => number
     None => {
@@ -115,9 +115,9 @@ fn PdfTypeTypesetState::write_font(
 ///|
 fn PdfTypeTypesetState::write_text(
   self : PdfTypeTypesetState,
-  text : PdfBytes,
+  text : @core.PdfBytes,
   page_height : Double,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let text_width = pdf_type_width_of_bytes(self.width_table, text)
   self.ops.push(Op_q)
   self.ops.push(
@@ -150,7 +150,7 @@ fn PdfTypeTypesetState::new_page(
   lmargin : Double,
   tmargin : Double,
   paper : @geometry.PaperSize,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.write_page(document, process_struct_tree, paper)
   self.page_font_numbers = []
   self.page_annotations = []
@@ -175,7 +175,7 @@ fn PdfTypeTypesetState::write_element(
   paper : @geometry.PaperSize,
   page_height : Double,
   element : PdfTypeElement,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   match element {
     PdfTypeText(text) => self.write_text(text, page_height)
     PdfTypeFont(id, font, font_size) =>

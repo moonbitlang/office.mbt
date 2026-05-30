@@ -1,6 +1,6 @@
 ///|
-fn space_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn space_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -343,7 +343,7 @@ test "PdfDocument colour_space_components counts direct and resource spaces" {
     @syntax.pdf_dictionary([]),
     PdfNameObject(space_name_for_test("/CSMissingDict")),
   )
-  guard missing_resource is Err(@pdflite.PdfError::DictionaryKeyNotFound(name)) &&
+  guard missing_resource is Err(@core.PdfError::DictionaryKeyNotFound(name)) &&
     name == space_name_for_test("/ColorSpace") else {
     fail("expected missing ColorSpace resource dictionary")
   }
@@ -351,7 +351,7 @@ test "PdfDocument colour_space_components counts direct and resource spaces" {
     resources,
     PdfNameObject(space_name_for_test("/CSMissing")),
   )
-  guard missing_space is Err(@pdflite.PdfError::DictionaryKeyNotFound(name)) &&
+  guard missing_space is Err(@core.PdfError::DictionaryKeyNotFound(name)) &&
     name == space_name_for_test("/CSMissing") else {
     fail("expected missing named color space")
   }
@@ -488,8 +488,8 @@ test "PdfDocument colour_space_components rejects malformed spaces" {
     resources,
     PdfNameObject(space_name_for_test("/Pattern")),
   )
-  guard pattern is Err(@pdflite.PdfError::ColourSpaceExpected) else {
-    fail("expected @pdflite.PdfError::ColourSpaceExpected for pattern")
+  guard pattern is Err(@core.PdfError::ColourSpaceExpected) else {
+    fail("expected @core.PdfError::ColourSpaceExpected for pattern")
   }
   let bad_icc : Result[Int, Error] = try? doc.colour_space_components(
     resources,
@@ -501,16 +501,16 @@ test "PdfDocument colour_space_components rejects malformed spaces" {
       ),
     ]),
   )
-  guard bad_icc is Err(@pdflite.PdfError::ColourSpaceExpected) else {
-    fail("expected @pdflite.PdfError::ColourSpaceExpected for bad ICCBased")
+  guard bad_icc is Err(@core.PdfError::ColourSpaceExpected) else {
+    fail("expected @core.PdfError::ColourSpaceExpected for bad ICCBased")
   }
   let malformed : Result[Int, Error] = try? doc.colour_space_components(
     resources,
     PdfArray([PdfInteger(1), PdfInteger(2)]),
   )
-  guard malformed is Err(@pdflite.PdfError::ColourSpaceExpected) else {
+  guard malformed is Err(@core.PdfError::ColourSpaceExpected) else {
     fail(
-      "expected @pdflite.PdfError::ColourSpaceExpected for malformed color space",
+      "expected @core.PdfError::ColourSpaceExpected for malformed color space",
     )
   }
 }
@@ -624,7 +624,7 @@ test "PdfDocument read_colour_space reports malformed calibrated numbers" {
       ]),
     ]),
   )
-  guard result is Err(@pdflite.PdfError::NumberExpected) else {
+  guard result is Err(@core.PdfError::NumberExpected) else {
     fail("expected malformed calibrated number")
   }
 }
@@ -779,7 +779,7 @@ test "PdfDocument read_colour_space reports malformed ICCBased range numbers" {
       malformed_range_stream,
     ]),
   )
-  guard result is Err(@pdflite.PdfError::NumberExpected) else {
+  guard result is Err(@core.PdfError::NumberExpected) else {
     fail("expected malformed ICCBased range number")
   }
 }
@@ -931,8 +931,8 @@ test "PdfDocument read_colour_space reports malformed Indexed data" {
       PdfString(space_bytes_for_test([1, 2, 3])),
     ]),
   )
-  guard bad_hival is Err(@pdflite.PdfError::NumberExpected) else {
-    fail("expected @pdflite.PdfError::NumberExpected for Indexed hival")
+  guard bad_hival is Err(@core.PdfError::NumberExpected) else {
+    fail("expected @core.PdfError::NumberExpected for Indexed hival")
   }
   let short_table : Result[@pdflite.PdfColourSpace?, Error] = try? doc.read_colour_space(
     @syntax.pdf_dictionary([]),
@@ -943,8 +943,8 @@ test "PdfDocument read_colour_space reports malformed Indexed data" {
       PdfString(space_bytes_for_test([1, 2, 3])),
     ]),
   )
-  guard short_table is Err(@pdflite.PdfError::EndOfInput) else {
-    fail("expected @pdflite.PdfError::EndOfInput for short Indexed table")
+  guard short_table is Err(@core.PdfError::EndOfInput) else {
+    fail("expected @core.PdfError::EndOfInput for short Indexed table")
   }
   let negative_hival : Result[@pdflite.PdfColourSpace?, Error] = try? doc.read_colour_space(
     @syntax.pdf_dictionary([]),
@@ -955,9 +955,9 @@ test "PdfDocument read_colour_space reports malformed Indexed data" {
       PdfString(space_bytes_for_test([1, 2, 3])),
     ]),
   )
-  guard negative_hival is Err(@pdflite.PdfError::InvalidReadLength(-1)) else {
+  guard negative_hival is Err(@core.PdfError::InvalidReadLength(-1)) else {
     fail(
-      "expected @pdflite.PdfError::InvalidReadLength for negative Indexed hival",
+      "expected @core.PdfError::InvalidReadLength for negative Indexed hival",
     )
   }
 }

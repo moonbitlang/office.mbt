@@ -9,7 +9,7 @@ pub fn pdf_addtext_measurement_bytes(
   fontpack : PdfFontPack?,
   raw : Bool,
   text : String,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   if raw || fontpack is Some(_) {
     @utf8.encode(text)
   } else {
@@ -26,10 +26,10 @@ fn PdfDocument::pdf_addtext_measurement_bytes_for_page(
   page : @page.PdfPage,
   font : PdfFont?,
   fontpack : PdfFontPack?,
-  fontname : PdfName,
+  fontname : @core.PdfName,
   raw : Bool,
   text : String,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   if raw || fontpack is Some(_) {
     @utf8.encode(text)
   } else {
@@ -59,17 +59,17 @@ pub fn PdfDocument::addtext_prepare_line(
   replacements : ArrayView[(String, () -> String)],
   font : PdfFont?,
   fontpack : PdfFontPack?,
-  fontname : PdfName,
+  fontname : @core.PdfName,
   font_size : Double,
   text : String,
   position : @geometry.PdfPosition,
-  relative_to_box? : PdfName = pdf_page_mediabox_key(),
+  relative_to_box? : @core.PdfName = pdf_page_mediabox_key(),
   horizontal_offset? : Double = 0.0,
   vertical_offset? : Double = 0.0,
   justification? : @addtext.PdfAddTextJustification = PdfAddTextLeftJustify,
   rotation? : @addtext.PdfAddTextRotation = PdfAddTextRot0,
   raw? : Bool = false,
-) -> @addtext.PdfAddTextPreparedLine raise PdfError {
+) -> @addtext.PdfAddTextPreparedLine raise @core.PdfError {
   let processed = pdf_addtext_process_text_with_time(time, text, replacements)
   let parsed = @addtext.pdf_addtext_get_urls_line(processed)
   let expanded_lines = pdf_addtext_expand_lines_with_time(
@@ -83,7 +83,7 @@ pub fn PdfDocument::addtext_prepare_line(
     raw,
     parsed.text,
   )
-  let expanded_line_bytes : Array[PdfBytes] = Array::new(
+  let expanded_line_bytes : Array[@core.PdfBytes] = Array::new(
     capacity=expanded_lines.length(),
   )
   for line in expanded_lines {
@@ -128,17 +128,17 @@ pub fn pdf_addtext_prepare_line(
   replacements : ArrayView[(String, () -> String)],
   font : PdfFont?,
   fontpack : PdfFontPack?,
-  fontname : PdfName,
+  fontname : @core.PdfName,
   font_size : Double,
   text : String,
   position : @geometry.PdfPosition,
-  relative_to_box? : PdfName = pdf_page_mediabox_key(),
+  relative_to_box? : @core.PdfName = pdf_page_mediabox_key(),
   horizontal_offset? : Double = 0.0,
   vertical_offset? : Double = 0.0,
   justification? : @addtext.PdfAddTextJustification = PdfAddTextLeftJustify,
   rotation? : @addtext.PdfAddTextRotation = PdfAddTextRot0,
   raw? : Bool = false,
-) -> @addtext.PdfAddTextPreparedLine raise PdfError {
+) -> @addtext.PdfAddTextPreparedLine raise @core.PdfError {
   document.addtext_prepare_line(
     page,
     time,

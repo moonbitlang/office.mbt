@@ -25,13 +25,13 @@ fn merge_bookmarked_doc_for_test(label : String) -> @pdflite.PdfDocument {
 }
 
 ///|
-fn merge_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn merge_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
-fn merge_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
-  try! @pdflite.pdf_bytes_of_int_array(values)
+fn merge_bytes_for_test(values : ArrayView[Int]) -> @core.PdfBytes {
+  try! @core.pdf_bytes_of_int_array(values)
 }
 
 ///|
@@ -45,7 +45,7 @@ fn merge_restore_env_for_test(previous : String?) -> Unit {
 ///|
 fn merge_add_catalog_entry_for_test(
   doc : @pdflite.PdfDocument,
-  key : @pdflite.PdfName,
+  key : @core.PdfName,
   value : @syntax.PdfObject,
 ) -> @pdflite.PdfDocument {
   let root = doc.lookup_object_or_null(doc.root())
@@ -216,7 +216,7 @@ fn merge_external_dest_callsite_doc_for_test(
 ///|
 fn merge_destination_name_entries_for_test(
   doc : @pdflite.PdfDocument,
-) -> Array[(@pdflite.PdfBytes, @syntax.PdfObject)] {
+) -> Array[(@core.PdfBytes, @syntax.PdfObject)] {
   match
     doc.lookup_chain(doc.lookup_object_or_null(doc.root()), [
       merge_name_for_test("/Names"),
@@ -248,7 +248,7 @@ fn merge_first_annotation_dest_for_test(
 ///|
 fn merge_catalog_destination_for_test(
   doc : @pdflite.PdfDocument,
-  name : @pdflite.PdfName,
+  name : @core.PdfName,
 ) -> @syntax.PdfObject? {
   match
     doc
@@ -269,7 +269,7 @@ fn merge_catalog_destination_for_test(
 
 ///|
 fn merge_name_dictionary_doc_for_test(
-  tree_key : @pdflite.PdfName,
+  tree_key : @core.PdfName,
   name : String,
   value : String,
 ) -> @pdflite.PdfDocument {
@@ -299,7 +299,7 @@ fn merge_info_doc_for_test(title : String) -> @pdflite.PdfDocument {
 fn merge_acroform_doc_with_entries_for_test(
   field_number : Int,
   label : String,
-  extra_entries : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
+  extra_entries : ArrayView[(@core.PdfName, @syntax.PdfObject)],
 ) -> @pdflite.PdfDocument {
   let key_acroform = merge_name_for_test("/AcroForm")
   let key_fields = merge_name_for_test("/Fields")
@@ -309,7 +309,7 @@ fn merge_acroform_doc_with_entries_for_test(
     field_number,
     PdfDictionary([(key_t, PdfString(@ascii.encode(label)))]),
   )
-  let form_entries : Array[(@pdflite.PdfName, @syntax.PdfObject)] = [
+  let form_entries : Array[(@core.PdfName, @syntax.PdfObject)] = [
     (key_fields, PdfArray([PdfIndirect(field_number)])),
   ]
   for entry in extra_entries {
@@ -1221,14 +1221,14 @@ test "pdf_merge_documents rejects empty and mismatched inputs" {
     [],
     [],
   )
-  guard empty is Err(@pdflite.PdfError::PageTreeExpected) else {
-    fail("expected @pdflite.PdfError::PageTreeExpected for empty merge")
+  guard empty is Err(@core.PdfError::PageTreeExpected) else {
+    fail("expected @core.PdfError::PageTreeExpected for empty merge")
   }
   let mismatched : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_merge_documents(
     [doc],
     [],
   )
-  guard mismatched is Err(@pdflite.PdfError::PageTreeExpected) else {
-    fail("expected @pdflite.PdfError::PageTreeExpected for mismatched merge")
+  guard mismatched is Err(@core.PdfError::PageTreeExpected) else {
+    fail("expected @core.PdfError::PageTreeExpected for mismatched merge")
   }
 }

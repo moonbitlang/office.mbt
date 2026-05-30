@@ -33,7 +33,7 @@ pub fn pdf_merge_structure_trees(
   document : PdfDocument,
   documents : ArrayView[PdfDocument],
   add_toplevel_document? : Bool = false,
-) -> Int? raise PdfError {
+) -> Int? raise @core.PdfError {
   let structure_tree_roots = pdf_merge_structure_tree_roots(documents)
   let has_multiple_structure_roots = structure_tree_roots.length() > 1
   let parent_tree_entries : Array[(Int, @syntax.PdfObject)] = if has_multiple_structure_roots {

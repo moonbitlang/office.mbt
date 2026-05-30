@@ -19,7 +19,7 @@ fn pdf_page_scale_position_offset(
 fn PdfDocument::pdf_page_scale_bounds(
   self : PdfDocument,
   page : @page.PdfPage,
-) -> @geometry.PdfRectangle raise PdfError {
+) -> @geometry.PdfRectangle raise @core.PdfError {
   self.parse_rectangle(
     match self.lookup_direct(pdf_page_cropbox_key(), page.rest) {
       Some(cropbox) => cropbox
@@ -34,7 +34,7 @@ fn PdfDocument::pdf_page_scale_matrix(
   page : @page.PdfPage,
   position : @geometry.PdfPosition,
   scale : Double,
-) -> @geometry.TransformMatrix raise PdfError {
+) -> @geometry.TransformMatrix raise @core.PdfError {
   let bounds = self.pdf_page_scale_bounds(page)
   let origin = @geometry.pdf_calculate_position(true, 0.0, bounds, position)
   let offset = pdf_page_scale_position_offset(position)
@@ -54,7 +54,7 @@ fn PdfDocument::pdf_page_scale_page(
   page : @page.PdfPage,
   matrix : @geometry.TransformMatrix,
   fast : Bool,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   let page = self.pdf_impose_change_pattern_matrices_page(matrix, page)
   self.transform_annotations(matrix, page.rest)
   self.prepend_operators(page, [Op_cm(matrix)], fast~)
@@ -77,7 +77,7 @@ fn pdf_page_scale_pair_index_map(
 fn pdf_page_scale_validate_pairs(
   page_numbers : ArrayView[Int],
   scales : ArrayView[(Double, Double)],
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   if page_numbers.length() != scales.length() {
     raise BadPageSpecification("scale_pages: scale count must match page count")
   }
@@ -89,7 +89,7 @@ fn pdf_page_scale_validate_page_indexed_pairs(
   label : String,
   page_count : Int,
   values : ArrayView[(Double, Double)],
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   if values.length() != page_count {
     raise BadPageSpecification(
       context + ": " + label + " count must match page count",
@@ -117,7 +117,7 @@ fn PdfDocument::pdf_page_scale_page_data(
   page : @page.PdfPage,
   matrix : @geometry.TransformMatrix,
   fast : Bool,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   let page = self.pdf_page_upright_transform_boxes(page, matrix)
   let page = self.pdf_impose_change_pattern_matrices_page(matrix, page)
   self.transform_annotations(matrix, page.rest)

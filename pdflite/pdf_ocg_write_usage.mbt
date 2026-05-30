@@ -3,7 +3,7 @@ fn PdfDocument::pdf_ocg_write_usage(
   self : PdfDocument,
   usage : @ocg.PdfOcgUsage,
 ) -> Int {
-  let entries : Array[(PdfName, @syntax.PdfObject)] = []
+  let entries : Array[(@core.PdfName, @syntax.PdfObject)] = []
   match usage.creator_info {
     Some((creator, subtype)) =>
       entries.push(

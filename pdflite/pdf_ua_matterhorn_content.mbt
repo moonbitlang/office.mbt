@@ -24,7 +24,7 @@ fn PdfDocument::pdf_ua_matterhorn_stream_resources(
 fn PdfDocument::pdf_ua_matterhorn_all_ops(
   self : PdfDocument,
   xobjects? : Bool = true,
-) -> Array[Array[@content.PdfContentOp]] raise PdfError {
+) -> Array[Array[@content.PdfContentOp]] raise @core.PdfError {
   let output : Array[Array[@content.PdfContentOp]] = []
   if xobjects {
     for entry in self.stream_object_entries() {
@@ -144,7 +144,7 @@ fn pdf_ua_matterhorn_path_construction_op(op : @content.PdfContentOp) -> Bool {
 
 ///|
 fn pdf_ua_matterhorn_bdc_context(
-  tag : PdfName,
+  tag : @core.PdfName,
   properties : @syntax.PdfObject,
 ) -> PdfUAMatterhornContext {
   match properties {
@@ -162,7 +162,7 @@ fn pdf_ua_matterhorn_bdc_context(
 }
 
 ///|
-fn pdf_ua_matterhorn_bmc_context(tag : PdfName) -> PdfUAMatterhornContext {
+fn pdf_ua_matterhorn_bmc_context(tag : @core.PdfName) -> PdfUAMatterhornContext {
   if tag == pdf_ua_matterhorn_span() || tag == pdf_ua_matterhorn_artifact() {
     PdfUAMatterhornArtifact
   } else {
@@ -239,7 +239,7 @@ fn pdf_ua_matterhorn_unfiltered_real_op(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_01_003(
   self : PdfDocument,
-) -> Json? raise PdfError {
+) -> Json? raise @core.PdfError {
   for ops in self.pdf_ua_matterhorn_all_ops() {
     if pdf_ua_matterhorn_artifact_in_content_ops(ops) {
       return Some(Json::null())
@@ -251,7 +251,7 @@ fn PdfDocument::pdf_ua_matterhorn_check_01_003(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_01_004(
   self : PdfDocument,
-) -> Json? raise PdfError {
+) -> Json? raise @core.PdfError {
   for ops in self.pdf_ua_matterhorn_all_ops() {
     if pdf_ua_matterhorn_content_in_artifact_ops(ops) {
       return Some(Json::null())
@@ -263,7 +263,7 @@ fn PdfDocument::pdf_ua_matterhorn_check_01_004(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_01_005(
   self : PdfDocument,
-) -> Json? raise PdfError {
+) -> Json? raise @core.PdfError {
   for ops in self.pdf_ua_matterhorn_all_ops(xobjects=false) {
     let (naked, error) = pdf_ua_matterhorn_naked_ops(ops)
     match error {

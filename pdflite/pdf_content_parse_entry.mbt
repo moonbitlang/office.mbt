@@ -8,7 +8,7 @@
 pub fn PdfDocument::parse_content_ops(
   self : PdfDocument,
   streams : ArrayView[@syntax.PdfObject],
-) -> Array[@content.PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise @core.PdfError {
   let raw_streams = self.pdf_content_raw_streams(streams)
   pdf_parse_content_ops_from_view(pdf_content_concat_streams(raw_streams))
 }
@@ -22,12 +22,12 @@ pub fn PdfDocument::parse_content_ops_with_resources(
   self : PdfDocument,
   resources : @syntax.PdfObject,
   streams : ArrayView[@syntax.PdfObject],
-) -> Array[@content.PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise @core.PdfError {
   let raw_streams = self.pdf_content_raw_streams(streams)
   pdf_parse_content_ops_from_view_with_context(
     pdf_content_concat_streams(raw_streams),
     pdf_content_parse_context(
-      Some(fn(colour_space) raise PdfError {
+      Some(fn(colour_space) raise @core.PdfError {
         self.colour_space_components(resources, colour_space)
       }),
     ),
@@ -41,8 +41,8 @@ pub fn PdfDocument::parse_content_ops_with_resources(
 pub fn PdfDocument::parse_content_bytes_with_resources(
   self : PdfDocument,
   resources : @syntax.PdfObject,
-  data : PdfBytes,
-) -> Array[@content.PdfContentOp] raise PdfError {
+  data : @core.PdfBytes,
+) -> Array[@content.PdfContentOp] raise @core.PdfError {
   self.parse_content_view_with_resources(resources, data)
 }
 
@@ -55,11 +55,11 @@ pub fn PdfDocument::parse_content_view_with_resources(
   self : PdfDocument,
   resources : @syntax.PdfObject,
   data : BytesView,
-) -> Array[@content.PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise @core.PdfError {
   pdf_parse_content_ops_from_view_with_context(
     data,
     pdf_content_parse_context(
-      Some(fn(colour_space) raise PdfError {
+      Some(fn(colour_space) raise @core.PdfError {
         self.colour_space_components(resources, colour_space)
       }),
     ),
@@ -70,8 +70,10 @@ pub fn PdfDocument::parse_content_view_with_resources(
 fn PdfDocument::pdf_content_raw_streams(
   self : PdfDocument,
   streams : ArrayView[@syntax.PdfObject],
-) -> Array[PdfBytes] raise PdfError {
-  let raw_streams : Array[PdfBytes] = Array::new(capacity=streams.length())
+) -> Array[@core.PdfBytes] raise @core.PdfError {
+  let raw_streams : Array[@core.PdfBytes] = Array::new(
+    capacity=streams.length(),
+  )
   for stream_ref in streams {
     match self.direct(stream_ref) {
       PdfStreamObject(stream) =>
@@ -88,9 +90,9 @@ fn PdfDocument::pdf_content_raw_streams(
 
 ///|
 fn pdf_content_read_complex_object(
-  cursor : ByteCursor,
+  cursor : @core.ByteCursor,
   first : @syntax.PdfLexeme,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   let lexemes : Array[@syntax.PdfLexeme] = [first]
   let mut array_depth = 0
   let mut dict_depth = 0
@@ -116,8 +118,8 @@ fn pdf_content_read_complex_object(
 
 ///|
 fn pdf_content_read_object(
-  cursor : ByteCursor,
-) -> @syntax.PdfObject raise PdfError {
+  cursor : @core.ByteCursor,
+) -> @syntax.PdfObject raise @core.PdfError {
   let token = @syntax.pdf_cursor_lex_token(cursor)
   match token {
     StopLexing | LexNone => raise ParseObjectExpected
@@ -138,11 +140,13 @@ fn pdf_content_operator_or_literal(view : BytesView) -> PdfContentLexeme {
 }
 
 ///|
-fn pdf_content_lex_next(cursor : ByteCursor) -> PdfContentLexeme raise PdfError {
+fn pdf_content_lex_next(
+  cursor : @core.ByteCursor,
+) -> PdfContentLexeme raise @core.PdfError {
   @syntax.pdf_cursor_drop_whitespace(cursor)
   let value = cursor.peek_byte()
   match value {
-    value if value == pdf_no_more => ContentEnd
+    value if value == @core.pdf_no_more => ContentEnd
     37 => {
       ignore(@syntax.pdf_cursor_lex_comment(cursor))
       ContentComment

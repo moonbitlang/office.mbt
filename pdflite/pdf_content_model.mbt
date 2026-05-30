@@ -13,10 +13,10 @@ enum PdfContentInlineTextFilter {
 } derive(Debug, Eq)
 
 ///|
-type PdfContentColourSpaceComponents = (@syntax.PdfObject) -> Int raise PdfError
+type PdfContentColourSpaceComponents = (@syntax.PdfObject) -> Int raise @core.PdfError
 
 ///|
-type PdfContentStreamDecoder = (@syntax.PdfStream) -> @syntax.PdfStream raise PdfError
+type PdfContentStreamDecoder = (@syntax.PdfStream) -> @syntax.PdfStream raise @core.PdfError
 
 ///|
 priv struct PdfContentParseContext {
@@ -25,33 +25,37 @@ priv struct PdfContentParseContext {
 }
 
 ///|
-fn pdf_content_ascii(text : String) -> PdfBytes {
+fn pdf_content_ascii(text : String) -> @core.PdfBytes {
   @ascii.encode(text)
 }
 
 ///|
-fn pdf_content_name(text : String) -> PdfName {
-  pdf_name_of_bytes(pdf_content_ascii(text))
+fn pdf_content_name(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(pdf_content_ascii(text))
 }
 
 ///|
-let pdf_content_length_key_name : PdfName = pdf_content_name("/Length")
+let pdf_content_length_key_name : @core.PdfName = pdf_content_name("/Length")
 
 ///|
-let pdf_content_inline_l_key_name : PdfName = pdf_content_name("/L")
+let pdf_content_inline_l_key_name : @core.PdfName = pdf_content_name("/L")
 
 ///|
-let pdf_content_inline_image_begin_operator : PdfBytes = pdf_content_ascii("BI")
+let pdf_content_inline_image_begin_operator : @core.PdfBytes = pdf_content_ascii(
+  "BI",
+)
 
 ///|
-let pdf_content_inline_image_data_operator : PdfBytes = pdf_content_ascii("ID")
+let pdf_content_inline_image_data_operator : @core.PdfBytes = pdf_content_ascii(
+  "ID",
+)
 
 ///|
-fn pdf_content_length_name() -> PdfName {
+fn pdf_content_length_name() -> @core.PdfName {
   pdf_content_length_key_name
 }
 
 ///|
-fn pdf_content_inline_l_name() -> PdfName {
+fn pdf_content_inline_l_name() -> @core.PdfName {
   pdf_content_inline_l_key_name
 }

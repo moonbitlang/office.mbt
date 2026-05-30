@@ -1,13 +1,13 @@
 ///|
-fn pdf_document_name(text : String) -> PdfName {
-  pdf_name_of_bytes(@ascii.encode(text))
+fn pdf_document_name(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
-let pdf_document_root_key_name : PdfName = pdf_document_name("/Root")
+let pdf_document_root_key_name : @core.PdfName = pdf_document_name("/Root")
 
 ///|
-fn pdf_document_root_key() -> PdfName {
+fn pdf_document_root_key() -> @core.PdfName {
   pdf_document_root_key_name
 }
 
@@ -77,10 +77,10 @@ pub fn PdfDocument::root(self : PdfDocument) -> Int {
 ///
 /// A `/Root` entry in the trailer dictionary is preferred over the stored root
 /// number. The selected reference is resolved through `direct`; if it resolves
-/// to `PdfNull`, this raises `PdfError::RootExpected`.
+/// to `PdfNull`, this raises `@core.PdfError::RootExpected`.
 pub fn PdfDocument::catalog(
   self : PdfDocument,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   let object = match
     self.trailer_dict.lookup_immediate(pdf_document_root_key()) {
     Some(root) => self.direct(root)

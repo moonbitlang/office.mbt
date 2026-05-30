@@ -2,9 +2,9 @@
 fn PdfDocument::pdf_page_rotate_rewrite(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
-  rotate : (@page.PdfPage) -> @page.PdfPageRotation raise PdfError,
+  rotate : (@page.PdfPage) -> @page.PdfPageRotation raise @core.PdfError,
   label : String,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   pdf_page_box_validate_page_numbers(page_numbers, self.endpage(), label)
   let pages = self.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(page_numbers)
@@ -31,7 +31,7 @@ fn PdfDocument::pdf_page_rotate_contents_matrix(
   self : PdfDocument,
   page : @page.PdfPage,
   rotation : Double,
-) -> @geometry.TransformMatrix raise PdfError {
+) -> @geometry.TransformMatrix raise @core.PdfError {
   let bounds = self.parse_rectangle(page.mediabox)
   let origin = @geometry.point2(
     (bounds.min_x + bounds.max_x) / 2.0,
@@ -49,7 +49,7 @@ fn PdfDocument::pdf_page_rotate_contents_page(
   page : @page.PdfPage,
   matrix : @geometry.TransformMatrix,
   fast : Bool,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   let page = self.pdf_impose_change_pattern_matrices_page(matrix, page)
   self.transform_annotations(matrix, page.rest)
   self.prepend_operators(page, [Op_cm(matrix)], fast~)
@@ -61,7 +61,7 @@ pub fn PdfDocument::rotate_pages(
   self : PdfDocument,
   rotation : Int,
   page_numbers : ArrayView[Int],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let normalized = @page.pdf_page_rotation_of_int(rotation)
   self.pdf_page_rotate_rewrite(
     page_numbers,
@@ -76,7 +76,7 @@ pub fn PdfDocument::rotate_pdf(
   self : PdfDocument,
   rotation : Int,
   page_numbers : ArrayView[Int],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   self.rotate_pages(rotation, page_numbers)
 }
 
@@ -86,10 +86,10 @@ pub fn PdfDocument::rotate_pages_by(
   self : PdfDocument,
   rotation : Int,
   page_numbers : ArrayView[Int],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   self.pdf_page_rotate_rewrite(
     page_numbers,
-    fn(page) raise PdfError {
+    fn(page) raise @core.PdfError {
       @page.pdf_page_rotation_of_int(
         @page.pdf_page_int_of_rotation(page.rotate) + rotation,
       )
@@ -104,7 +104,7 @@ pub fn PdfDocument::rotate_pdf_by(
   self : PdfDocument,
   rotation : Int,
   page_numbers : ArrayView[Int],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   self.rotate_pages_by(rotation, page_numbers)
 }
 
@@ -119,7 +119,7 @@ pub fn PdfDocument::rotate_contents(
   rotation : Double,
   page_numbers : ArrayView[Int],
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   pdf_page_box_validate_page_numbers(
     page_numbers,
     self.endpage(),
@@ -152,7 +152,7 @@ pub fn pdf_rotate_pages(
   document : PdfDocument,
   rotation : Int,
   page_numbers : ArrayView[Int],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.rotate_pages(rotation, page_numbers)
 }
 
@@ -162,7 +162,7 @@ pub fn pdf_rotate_pdf(
   rotation : Int,
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.rotate_pdf(rotation, page_numbers)
 }
 
@@ -172,7 +172,7 @@ pub fn pdf_rotate_pages_by(
   document : PdfDocument,
   rotation : Int,
   page_numbers : ArrayView[Int],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.rotate_pages_by(rotation, page_numbers)
 }
 
@@ -182,7 +182,7 @@ pub fn pdf_rotate_pdf_by(
   rotation : Int,
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.rotate_pdf_by(rotation, page_numbers)
 }
 
@@ -193,7 +193,7 @@ pub fn pdf_rotate_contents(
   rotation : Double,
   page_numbers : ArrayView[Int],
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.rotate_contents(rotation, page_numbers, fast~)
 }
 
@@ -205,6 +205,6 @@ pub fn pdf_rotate_contents_cpdf_order(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.rotate_contents(rotation, page_numbers, fast~)
 }

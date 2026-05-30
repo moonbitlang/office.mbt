@@ -7,7 +7,7 @@ fn pdf_arc4_crypt_pdf_object_with_stream_policy(
   object : @syntax.PdfObject,
   no_encrypt_metadata : Bool,
   defer_stream_decryption : Bool,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   match object {
     PdfString(bytes) =>
       PdfString(
@@ -28,7 +28,7 @@ fn pdf_arc4_crypt_pdf_object_with_stream_policy(
       PdfArray(output)
     }
     PdfDictionary(entries) => {
-      let output : Array[(PdfName, @syntax.PdfObject)] = []
+      let output : Array[(@core.PdfName, @syntax.PdfObject)] = []
       for entry in entries {
         let (name, value) = entry
         output.push(
@@ -105,7 +105,7 @@ fn pdf_arc4_crypt_pdf_object(
   key_length_bits : Int,
   object : @syntax.PdfObject,
   no_encrypt_metadata : Bool,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   pdf_arc4_crypt_pdf_object_with_stream_policy(
     object_number, generation, file_key, key_length_bits, object, no_encrypt_metadata,
     false,

@@ -78,7 +78,7 @@ test "pdf_parse_unicode_data rejects malformed rows" {
   let missing_fields : Result[Array[@unicodedata.PdfUnicodeDataEntry], Error] = try? @pdflite.pdf_parse_unicode_data(
     @ascii.encode("0041;LATIN CAPITAL LETTER A;Lu\n"),
   )
-  guard missing_fields is Err(@pdflite.PdfError::SoftError(_)) else {
+  guard missing_fields is Err(@core.PdfError::SoftError(_)) else {
     fail("expected SoftError for missing UnicodeData fields")
   }
 }

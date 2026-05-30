@@ -1,6 +1,6 @@
 ///|
-fn page_upright_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn page_upright_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -241,7 +241,7 @@ test "PdfDocument upright_pages validates page range" {
   )
   guard bad_page
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "upright_pages: range contains pages not present in pdf"
       )
     ) else {

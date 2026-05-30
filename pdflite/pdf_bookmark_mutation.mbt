@@ -38,7 +38,7 @@ pub fn PdfDocument::add_bookmark_title(
   self : PdfDocument,
   filename : String,
   use_title : Bool,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let title = if use_title {
     self.pdf_bookmark_document_title()
   } else {
@@ -71,7 +71,7 @@ pub fn pdf_add_bookmark_title(
   filename : String,
   use_title : Bool,
   document : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.add_bookmark_title(filename, use_title)
 }
 
@@ -80,7 +80,7 @@ pub fn pdf_add_bookmark_title(
 pub fn PdfDocument::bookmarks_open_to_level(
   self : PdfDocument,
   level : Int,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let bookmarks = self.read_bookmarks(preserve_actions=true)
   let updated : Array[@bookmark.PdfBookmark] = []
   for bookmark in bookmarks {
@@ -94,7 +94,7 @@ pub fn PdfDocument::bookmarks_open_to_level(
 pub fn pdf_bookmarks_open_to_level(
   level : Int,
   document : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.bookmarks_open_to_level(level)
 }
 
@@ -201,7 +201,7 @@ pub fn PdfDocument::transform_bookmark(
   self : PdfDocument,
   matrix : @geometry.TransformMatrix,
   bookmark : @bookmark.PdfBookmark,
-) -> @bookmark.PdfBookmark raise PdfError {
+) -> @bookmark.PdfBookmark raise @core.PdfError {
   { ..bookmark, target: self.transform_destination(matrix, bookmark.target) }
 }
 
@@ -211,6 +211,6 @@ pub fn pdf_transform_bookmark(
   document : PdfDocument,
   matrix : @geometry.TransformMatrix,
   bookmark : @bookmark.PdfBookmark,
-) -> @bookmark.PdfBookmark raise PdfError {
+) -> @bookmark.PdfBookmark raise @core.PdfError {
   document.transform_bookmark(matrix, bookmark)
 }

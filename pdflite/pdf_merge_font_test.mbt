@@ -9,14 +9,14 @@ fn merge_font_one_page_doc_for_test(
 }
 
 ///|
-fn merge_font_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn merge_font_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
 fn merge_font_add_catalog_entry_for_test(
   doc : @pdflite.PdfDocument,
-  key : @pdflite.PdfName,
+  key : @core.PdfName,
   value : @syntax.PdfObject,
 ) -> @pdflite.PdfDocument {
   let root = doc.lookup_object_or_null(doc.root())
@@ -40,7 +40,7 @@ fn merge_font_duplicate_stream_for_test() -> @syntax.PdfObject {
 
 ///|
 fn merge_font_catalog_stream_doc_for_test(
-  key : @pdflite.PdfName,
+  key : @core.PdfName,
   stream_number : Int,
 ) -> @pdflite.PdfDocument {
   let doc = merge_font_one_page_doc_for_test(1, 4)
@@ -76,7 +76,7 @@ test "PdfDocument remove_duplicate_fonts coalesces identical streams" {
 ///|
 test "PdfDocument remove_duplicate_fonts coalesces deferred stream data" {
   let doc = @pdflite.pdf_document_empty()
-  let input = @pdflite.byte_cursor_of_bytes(@ascii.encode("xxHiyyHi"))
+  let input = @core.byte_cursor_of_bytes(@ascii.encode("xxHiyyHi"))
   let dictionary : @syntax.PdfObject = PdfDictionary([
     (merge_font_name_for_test("/Length"), PdfInteger(2)),
   ])

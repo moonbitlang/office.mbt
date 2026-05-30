@@ -6,6 +6,6 @@
 /// named font resource.
 pub(all) enum PdfEmbedFontSource {
   PdfEmbedPreMadeFontPack(PdfFontPack)
-  PdfEmbedInfo(PdfBytes, String, PdfEncoding)
+  PdfEmbedInfo(@core.PdfBytes, String, PdfEncoding)
   PdfEmbedExistingNamedFont
 } derive(Debug, Eq, ToJson)

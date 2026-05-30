@@ -6,7 +6,7 @@ fn pdf_metadata_push_view(output : Array[Byte], bytes : BytesView) -> Unit {
 }
 
 ///|
-fn pdf_metadata_xml_text(value : String) -> PdfBytes {
+fn pdf_metadata_xml_text(value : String) -> @core.PdfBytes {
   @utf8.encode(
     value
     .replace(old="&", new="&amp;")
@@ -21,7 +21,7 @@ fn pdf_metadata_rewrite_xmp_element_prefix(
   prefix : String,
   field : String,
   replacement : String,
-) -> (PdfBytes, Bool) {
+) -> (@core.PdfBytes, Bool) {
   let open_pattern = @ascii.encode("<" + prefix + ":" + field)
   let close_pattern = @ascii.encode("</" + prefix + ":" + field + ">")
   let replacement_bytes = pdf_metadata_xml_text(replacement)
@@ -91,7 +91,7 @@ fn pdf_metadata_rewrite_xmp_field(
   fallback_prefix : String,
   field : String,
   replacement : String,
-) -> PdfBytes {
+) -> @core.PdfBytes {
   let mut output = data.to_owned()
   let prefixes = pdf_metadata_namespace_prefixes(data, xml_uri, fallback_prefix)
   for prefix in prefixes {

@@ -36,7 +36,7 @@ fn PdfDocument::pdf_ua_matterhorn_ops_contain_mcid(
 fn PdfDocument::pdf_ua_matterhorn_form_xobject_contains_mcid(
   self : PdfDocument,
   object_number : Int,
-) -> Bool raise PdfError {
+) -> Bool raise @core.PdfError {
   let object = self.lookup_object_or_null(object_number)
   let resources = self.pdf_ua_matterhorn_stream_resources(object)
   let ops = self.parse_content_ops_with_resources(resources, [object])
@@ -88,7 +88,7 @@ fn PdfDocument::pdf_ua_matterhorn_referenced_mcid_xobjects(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_30_002(
   self : PdfDocument,
-) -> Json? raise PdfError {
+) -> Json? raise @core.PdfError {
   let page_numbers = self.page_reference_numbers()
   self.replace_inherit(page_numbers)
   let form_xobject_numbers = self.pdf_ua_matterhorn_form_xobject_numbers()

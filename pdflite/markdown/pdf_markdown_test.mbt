@@ -1,16 +1,16 @@
 ///|
-fn markdown_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn markdown_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
-fn markdown_ascii_for_test(text : String) -> @pdflite.PdfBytes {
+fn markdown_ascii_for_test(text : String) -> @core.PdfBytes {
   @ascii.encode(text)
 }
 
 ///|
-fn markdown_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes raise {
-  @pdflite.pdf_bytes_of_int_array(values)
+fn markdown_bytes_for_test(values : ArrayView[Int]) -> @core.PdfBytes raise {
+  @core.pdf_bytes_of_int_array(values)
 }
 
 ///|

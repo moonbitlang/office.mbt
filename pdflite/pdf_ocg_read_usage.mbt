@@ -15,7 +15,7 @@ fn PdfDocument::pdf_ocg_read_usage(
   }
   let creator_info = match (creator, creator_subtype) {
     (Some(creator), Some(subtype)) => Some((creator, subtype))
-    (Some(creator), None) => Some((creator, pdf_name_of_bytes([])))
+    (Some(creator), None) => Some((creator, @core.pdf_name_of_bytes([])))
     (None, Some(subtype)) => Some(([], subtype))
     _ => None
   }
@@ -107,7 +107,7 @@ fn PdfDocument::pdf_ocg_read_usage(
 fn PdfDocument::pdf_ocg_read_individual(
   self : PdfDocument,
   ocg : @syntax.PdfObject,
-) -> @ocg.PdfOcg raise PdfError {
+) -> @ocg.PdfOcg raise @core.PdfError {
   let name = match self.lookup_direct(pdf_ocg_name_key(), ocg) {
     Some(PdfString(name)) => name
     _ => raise DictionaryKeyNotFound(pdf_ocg_name_key())

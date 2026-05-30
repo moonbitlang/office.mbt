@@ -28,9 +28,9 @@ fn pdf_page_info_unit_number(
 fn PdfDocument::pdf_page_info_box_numbers(
   self : PdfDocument,
   page : @page.PdfPage,
-  box_name : PdfName,
+  box_name : @core.PdfName,
   unit : @geometry.PdfUnit,
-) -> Array[Double]? raise PdfError {
+) -> Array[Double]? raise @core.PdfError {
   let object = if box_name == pdf_page_mediabox_key() {
     Some(page.mediabox)
   } else {
@@ -63,7 +63,7 @@ fn PdfDocument::pdf_page_info_annotation_count(
 fn pdf_page_info_label_text(
   page_number : Int,
   labels : ArrayView[@label.PdfPageLabel],
-) -> String raise PdfError {
+) -> String raise @core.PdfError {
   match @label.pdf_page_label_text_of_page_number(page_number, labels) {
     Some(bytes) => pdf_util_string_from_utf8(pdf_utf8_of_pdfdocstring(bytes))
     None => ""
@@ -77,7 +77,7 @@ fn PdfDocument::pdf_page_info_entry(
   page : @page.PdfPage,
   labels : ArrayView[@label.PdfPageLabel],
   unit : @geometry.PdfUnit,
-) -> PdfPageInfoEntry raise PdfError {
+) -> PdfPageInfoEntry raise @core.PdfError {
   {
     page_number,
     label: pdf_page_info_label_text(page_number, labels),
@@ -104,7 +104,7 @@ fn PdfDocument::pdf_page_info_entries(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
   unit : @geometry.PdfUnit,
-) -> Array[PdfPageInfoEntry] raise PdfError {
+) -> Array[PdfPageInfoEntry] raise @core.PdfError {
   let pages = self.pages_of_pagetree()
   pdf_page_box_validate_page_numbers(page_numbers, pages.length(), "page_info")
   let labels = self.read_page_labels()

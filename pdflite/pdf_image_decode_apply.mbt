@@ -2,7 +2,7 @@
 fn pdf_image_require_size(
   data : BytesView,
   required : Int,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   if data.length() < required {
     raise EndOfInput
   }
@@ -11,7 +11,7 @@ fn pdf_image_require_size(
 ///|
 fn pdf_image_decode_is_identity(
   values : ArrayView[Double],
-) -> Bool raise PdfError {
+) -> Bool raise @core.PdfError {
   if values.length() == 0 {
     true
   } else if values.length() % 2 != 0 {
@@ -46,7 +46,7 @@ fn pdf_image_decode_interpolate(
 }
 
 ///|
-fn pdf_image_apply_1bpp_decode(data : BytesView) -> PdfBytes {
+fn pdf_image_apply_1bpp_decode(data : BytesView) -> @core.PdfBytes {
   let output = Array::make(data.length(), b'\x00')
   for index, value in data {
     output[index] = (value.to_int() ^ 0xFF).to_byte()
@@ -58,12 +58,12 @@ fn pdf_image_apply_1bpp_decode(data : BytesView) -> PdfBytes {
 fn pdf_image_apply_8bpp_decode(
   data : BytesView,
   values : ArrayView[Double],
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let components = values.length() / 2
   let output = Array::make(data.length(), b'\x00')
   for index in 0..<data.length() {
     let component = index % components
-    output[index] = pdf_byte_of_int(
+    output[index] = @core.pdf_byte_of_int(
       pdf_image_decode_interpolate(
         values[component * 2],
         values[component * 2 + 1],
@@ -80,7 +80,7 @@ fn pdf_image_apply_decode_borrowed(
   data : BytesView,
   bpc : Int?,
   decode_values : Array[Double]?,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   match decode_values {
     None => data.to_owned()
     Some(values) =>
@@ -99,10 +99,10 @@ fn pdf_image_apply_decode_borrowed(
 
 ///|
 fn pdf_image_apply_decode(
-  data : PdfBytes,
+  data : @core.PdfBytes,
   bpc : Int?,
   decode_values : Array[Double]?,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   match decode_values {
     None => data
     Some(values) =>

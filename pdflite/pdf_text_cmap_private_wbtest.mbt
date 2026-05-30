@@ -2,13 +2,13 @@
 // Public text behavior belongs in `_test.mbt` files.
 
 ///|
-fn cmap_wbtest_text_bytes(values : ArrayView[Int]) -> PdfBytes {
-  try! pdf_bytes_of_int_array(values)
+fn cmap_wbtest_text_bytes(values : ArrayView[Int]) -> @core.PdfBytes {
+  try! @core.pdf_bytes_of_int_array(values)
 }
 
 ///|
-fn cmap_wbtest_text_name(text : String) -> PdfName {
-  pdf_name_of_bytes(@ascii.encode(text))
+fn cmap_wbtest_text_name(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -48,7 +48,7 @@ test "private text ToUnicode CMap helpers reject malformed ranges" {
     pdf_text_tounicode_bfrange_array_entries(1, 2, [cmap_wbtest_text_bytes([0])]),
     None,
   )
-  let bfchar_entries : Array[(Int, PdfBytes)] = []
+  let bfchar_entries : Array[(Int, @core.PdfBytes)] = []
   pdf_text_push_tounicode_bfchar_entry(
     bfchar_entries,
     Bytes::new(0),
@@ -56,7 +56,7 @@ test "private text ToUnicode CMap helpers reject malformed ranges" {
   )
   @test.assert_eq(bfchar_entries, [])
 
-  let invalid_bfrange_entries : Array[(Int, PdfBytes)] = []
+  let invalid_bfrange_entries : Array[(Int, @core.PdfBytes)] = []
   guard pdf_text_append_tounicode_bfrange_line(
       invalid_bfrange_entries,
       @ascii.encode("<02><01>["),
@@ -87,7 +87,7 @@ test "private text ToUnicode CMap helpers reject malformed ranges" {
   }
   @test.assert_eq(invalid_bfrange_entries, [])
   let pending : PdfTextCMapBFRangeArray = { first: 1, last: 2, unicodes: [] }
-  let pending_entries : Array[(Int, PdfBytes)] = []
+  let pending_entries : Array[(Int, @core.PdfBytes)] = []
   let append_result = pdf_text_append_pending_bfrange_array(
     pending_entries,
     pending,
@@ -584,7 +584,11 @@ test "private text stream helpers treat malformed ToUnicode streams as absent" {
   let bad_deferred = @syntax.pdf_stream(
     PdfDictionary([]),
     StreamToGet(
-      @syntax.stream_to_get(byte_cursor_of_bytes(@ascii.encode("abc")), -1, 1),
+      @syntax.stream_to_get(
+        @core.byte_cursor_of_bytes(@ascii.encode("abc")),
+        -1,
+        1,
+      ),
     ),
   )
   let bad_deferred_result : Result[PdfParsedCMap, Error] = try? helper_doc.parse_cmap(

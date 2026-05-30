@@ -53,7 +53,7 @@ pub fn pdf_content_apply_extgstate_graphics_parameter_op(
 fn PdfDocument::content_extgstate_dash_array(
   self : PdfDocument,
   object : @syntax.PdfObject,
-) -> Array[Double] raise PdfError {
+) -> Array[Double] raise @core.PdfError {
   match self.direct(object) {
     PdfArray(values) => {
       let output : Array[Double] = Array::new(capacity=values.length())
@@ -72,7 +72,7 @@ pub fn PdfDocument::content_apply_extgstate_dash_op(
   self : PdfDocument,
   state : PdfContentOperatorState,
   extgstate : @syntax.PdfObject,
-) -> PdfContentOperatorState raise PdfError {
+) -> PdfContentOperatorState raise @core.PdfError {
   match self.lookup_direct(pdf_content_extgstate_d_name, extgstate) {
     Some(PdfArray([array, phase])) => {
       let dashes = self.content_extgstate_dash_array(array)
@@ -88,6 +88,6 @@ pub fn pdf_content_apply_extgstate_dash_op(
   document : PdfDocument,
   state : PdfContentOperatorState,
   extgstate : @syntax.PdfObject,
-) -> PdfContentOperatorState raise PdfError {
+) -> PdfContentOperatorState raise @core.PdfError {
   document.content_apply_extgstate_dash_op(state, extgstate)
 }

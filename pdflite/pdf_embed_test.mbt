@@ -9,12 +9,12 @@ fn embed_bold_font_for_test() -> @pdflite.PdfFont {
 }
 
 ///|
-fn embed_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn embed_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
-fn embed_bytes_for_test(values : Array[Int]) -> @pdflite.PdfBytes {
+fn embed_bytes_for_test(values : Array[Int]) -> @core.PdfBytes {
   let output : Array[Byte] = []
   for value in values {
     output.push(value.to_byte())
@@ -63,7 +63,7 @@ fn embed_append_for_test(output : Array[Int], values : ArrayView[Int]) -> Unit {
 ///|
 fn embed_table_font_for_test(
   tables : ArrayView[(String, Array[Int])],
-) -> @pdflite.PdfBytes {
+) -> @core.PdfBytes {
   let table_data_offset = 12 + tables.length() * 16
   let output : Array[Int] = []
   embed_push_u32_for_test(output, 0x00010000)
@@ -252,7 +252,7 @@ fn embed_cmap_for_test() -> Array[Int] {
 }
 
 ///|
-fn embed_truetype_font_for_test() -> @pdflite.PdfBytes {
+fn embed_truetype_font_for_test() -> @core.PdfBytes {
   let (glyf, offsets) = embed_glyf_table_for_test([
     embed_simple_glyph_for_test(),
     embed_simple_glyph_for_test(),

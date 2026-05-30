@@ -1,5 +1,5 @@
 ///|
-fn pdf_coord_box_key(kind : String) -> PdfName? {
+fn pdf_coord_box_key(kind : String) -> @core.PdfName? {
   match kind {
     "C" => Some(pdf_coord_name("/CropBox"))
     "A" => Some(pdf_coord_name("/ArtBox"))
@@ -30,7 +30,7 @@ fn pdf_coord_box_rectangle(
   document : PdfDocument,
   page : @page.PdfPage,
   kind : String,
-) -> @geometry.PdfRectangle raise PdfError {
+) -> @geometry.PdfRectangle raise @core.PdfError {
   document.parse_rectangle(pdf_coord_box_object(document, page, kind))
 }
 
@@ -39,7 +39,7 @@ fn pdf_coord_page_characteristic(
   document : PdfDocument,
   page : @page.PdfPage,
   name : String,
-) -> Double? raise PdfError {
+) -> Double? raise @core.PdfError {
   if name.length() < 2 {
     None
   } else {
@@ -64,7 +64,7 @@ fn pdf_coord_token_number(
   page : @page.PdfPage,
   token : PdfCoordToken,
   unit : String,
-) -> Double? raise PdfError {
+) -> Double? raise @core.PdfError {
   match token {
     CoordNumber(value) => pdf_coord_apply_unit(value, unit)
     CoordWord(name) =>

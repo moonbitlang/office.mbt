@@ -9,12 +9,12 @@ pub fn PdfDocument::encrypt_256bit_aesv3_with_providers(
   user_password : BytesView,
   owner_password : BytesView,
   denied_permissions : ArrayView[@crypt_core.PdfPermission],
-  random_provider : (@crypt_core.PdfAesV3RandomField, Int) -> PdfBytes raise PdfError,
-  iv_provider : (Int, Int, Int) -> PdfBytes raise PdfError,
+  random_provider : (@crypt_core.PdfAesV3RandomField, Int) -> @core.PdfBytes raise @core.PdfError,
+  iv_provider : (Int, Int, Int) -> @core.PdfBytes raise @core.PdfError,
   iso? : Bool = false,
   encrypt_metadata? : Bool = true,
   file_id? : BytesView = [],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let no_encrypt_metadata = !encrypt_metadata
   let (document, id) = self.with_file_id(file_id~)
   let permissions = @crypt_core.pdf_p_of_permissions(denied_permissions)
@@ -100,11 +100,11 @@ pub fn PdfDocument::encrypt_256bit_aesv3_iso_with_providers(
   user_password : BytesView,
   owner_password : BytesView,
   denied_permissions : ArrayView[@crypt_core.PdfPermission],
-  random_provider : (@crypt_core.PdfAesV3RandomField, Int) -> PdfBytes raise PdfError,
-  iv_provider : (Int, Int, Int) -> PdfBytes raise PdfError,
+  random_provider : (@crypt_core.PdfAesV3RandomField, Int) -> @core.PdfBytes raise @core.PdfError,
+  iv_provider : (Int, Int, Int) -> @core.PdfBytes raise @core.PdfError,
   encrypt_metadata? : Bool = true,
   file_id? : BytesView = [],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   self.encrypt_256bit_aesv3_with_providers(
     user_password,
     owner_password,

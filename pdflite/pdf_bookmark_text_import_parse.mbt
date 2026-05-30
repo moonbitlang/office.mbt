@@ -3,7 +3,7 @@ fn PdfDocument::pdf_bookmark_import_parse_line(
   self : PdfDocument,
   line : BytesView,
   line_number : Int,
-) -> @bookmark.PdfBookmark? raise PdfError {
+) -> @bookmark.PdfBookmark? raise @core.PdfError {
   let line = pdf_bookmark_import_trim_line_end(line)
   let index : Ref[Int] = { val: 0 }
   pdf_bookmark_import_skip_whitespace(line, index)
@@ -39,7 +39,7 @@ fn PdfDocument::pdf_bookmark_import_parse_line(
 fn PdfDocument::pdf_bookmark_import_verify(
   self : PdfDocument,
   bookmarks : ArrayView[@bookmark.PdfBookmark],
-) -> Bool raise PdfError {
+) -> Bool raise @core.PdfError {
   if bookmarks.length() == 0 {
     true
   } else if bookmarks[0].level != 0 {

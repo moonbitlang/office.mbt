@@ -44,7 +44,7 @@ fn PdfDocument::pdf_annotation_json_rewrite_destinations(
   self : PdfDocument,
   page_numbers : PdfPageNumberLookup,
   annotation : @syntax.PdfObject,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   let mut rewritten = annotation
   match self.indirect_number(pdf_annotation_p_key(), rewritten) {
     Some(number) =>
@@ -85,7 +85,7 @@ fn PdfDocument::pdf_annotation_json_rewrite_destinations(
 ///|
 fn pdf_annotation_json_extra_root(
   object : @syntax.PdfObject,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   match object.dictionary_view() {
     Some(_) =>
       object
@@ -100,7 +100,7 @@ fn PdfDocument::pdf_annotation_json_extra_numbers(
   self : PdfDocument,
   roots : ArrayView[@syntax.PdfObject],
   annotation_numbers : ArrayView[Int],
-) -> Array[Int] raise PdfError {
+) -> Array[Int] raise @core.PdfError {
   let found : @hashmap.HashMap[Int, Bool] = HashMap([])
   for root in roots {
     let searchable = pdf_annotation_json_extra_root(root)
@@ -123,7 +123,7 @@ fn PdfDocument::pdf_annotation_json_page(
   page_number : Int,
   extra_roots : Array[@syntax.PdfObject],
   annotation_numbers : Array[Int],
-) -> Array[Json] raise PdfError {
+) -> Array[Json] raise @core.PdfError {
   match self.lookup_direct(pdf_annotation_annots_key(), page.rest) {
     Some(PdfArray(annotations)) => {
       let output : Array[Json] = Array::new(capacity=annotations.length())
@@ -179,7 +179,7 @@ fn pdf_annotation_json_format_header() -> Json {
 pub fn PdfDocument::annotations_json(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> Json raise PdfError {
+) -> Json raise @core.PdfError {
   let pages = self.pages_of_pagetree()
   pdf_page_box_validate_page_numbers(
     page_numbers,
@@ -230,7 +230,7 @@ pub fn PdfDocument::annotations_json(
 pub fn PdfDocument::annotations_json_blob(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   @utf8.encode(self.annotations_json(page_numbers).stringify())
 }
 
@@ -239,7 +239,7 @@ pub fn PdfDocument::annotations_json_blob(
 pub fn pdf_get_annotations_json(
   page_numbers : ArrayView[Int],
   document : PdfDocument,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   document.annotations_json_blob(page_numbers)
 }
 
@@ -248,6 +248,6 @@ pub fn pdf_get_annotations_json(
 pub fn pdf_get_annotations_json_cpdf_order(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   document.annotations_json_blob(page_numbers)
 }

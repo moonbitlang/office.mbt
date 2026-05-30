@@ -1,15 +1,19 @@
 ///|
-let pdf_embed_length_key_name : PdfName = pdf_name_of_bytes(b"/Length")
+let pdf_embed_length_key_name : @core.PdfName = @core.pdf_name_of_bytes(
+  b"/Length",
+)
 
 ///|
-let pdf_embed_length1_key_name : PdfName = pdf_name_of_bytes(b"/Length1")
+let pdf_embed_length1_key_name : @core.PdfName = @core.pdf_name_of_bytes(
+  b"/Length1",
+)
 
 ///|
 let pdf_embed_font_number : Ref[Int] = { val: 0 }
 
 ///|
-fn pdf_embed_name(text : String) -> PdfName {
-  pdf_name_of_bytes(@ascii.encode(text))
+fn pdf_embed_name(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -22,7 +26,7 @@ fn pdf_embed_basename() -> String {
 ///|
 fn PdfDocument::pdf_embed_add_truetype_fontfile(
   self : PdfDocument,
-  fontfile : PdfBytes,
+  fontfile : @core.PdfBytes,
 ) -> Int {
   let length = fontfile.length()
   self.add_object(
@@ -144,7 +148,7 @@ pub fn PdfDocument::embed_truetype(
   fontname : String,
   codepoints : ArrayView[Int],
   encoding : PdfEncoding,
-) -> PdfFontPack raise PdfError {
+) -> PdfFontPack raise @core.PdfError {
   if codepoints.length() == 0 {
     pdf_fontpack_empty()
   } else {
@@ -174,6 +178,6 @@ pub fn pdf_embed_truetype(
   fontname : String,
   codepoints : ArrayView[Int],
   encoding : PdfEncoding,
-) -> PdfFontPack raise PdfError {
+) -> PdfFontPack raise @core.PdfError {
   document.embed_truetype(fontfile, fontname, codepoints, encoding)
 }

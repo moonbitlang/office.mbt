@@ -3,7 +3,7 @@ fn pdf_impose_validate_transform_inputs(
   x : Int,
   y : Int,
   count : Int,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   if x <= 0 || y <= 0 {
     raise BadNumberArgument("impose: x and y must be positive")
   }
@@ -87,7 +87,7 @@ fn PdfDocument::pdf_impose_make_margin(
   output_mediabox : @syntax.PdfObject,
   margin : Double,
   matrix : @geometry.TransformMatrix,
-) -> @geometry.TransformMatrix raise PdfError {
+) -> @geometry.TransformMatrix raise @core.PdfError {
   if margin == 0.0 {
     matrix
   } else {
@@ -133,7 +133,7 @@ fn PdfDocument::pdf_impose_transform_for_slot(
   col : Int,
   px : Double,
   py : Double,
-) -> @geometry.TransformMatrix raise PdfError {
+) -> @geometry.TransformMatrix raise @core.PdfError {
   let matrix = pdf_impose_translate(
     x, rtl, btt, cent_extra_x, cent_extra_y, fit_extra_hspace, fit_extra_vspace,
     row, col, px, py,
@@ -168,7 +168,7 @@ fn PdfDocument::pdf_impose_fit_layout(
   y : Double,
   page_width : Double,
   page_height : Double,
-) -> PdfImposeLayout raise PdfError {
+) -> PdfImposeLayout raise @core.PdfError {
   ignore(self)
   let across = @math.floor(x / page_width + 0.001).to_int()
   let down = @math.floor(y / page_height + 0.001).to_int()
@@ -196,7 +196,7 @@ fn PdfDocument::pdf_impose_xy_layout(
   page_count : Int,
   page_width : Double,
   page_height : Double,
-) -> PdfImposeLayout raise PdfError {
+) -> PdfImposeLayout raise @core.PdfError {
   ignore(self)
   let ix = x.to_int()
   let iy = y.to_int()
@@ -244,7 +244,7 @@ fn PdfDocument::pdf_impose_layout(
   margin : Double,
   page_count : Int,
   mediabox : @syntax.PdfObject,
-) -> PdfImposeLayout raise PdfError {
+) -> PdfImposeLayout raise @core.PdfError {
   let bounds = self.parse_rectangle(mediabox)
   let page_width = bounds.max_x - bounds.min_x
   let page_height = bounds.max_y - bounds.min_y
@@ -272,7 +272,7 @@ fn PdfDocument::pdf_impose_transforms(
   fit_extra_hspace : Double,
   fit_extra_vspace : Double,
   count : Int,
-) -> Array[@geometry.TransformMatrix] raise PdfError {
+) -> Array[@geometry.TransformMatrix] raise @core.PdfError {
   pdf_impose_validate_transform_inputs(x, y, count)
   let page_box = self.parse_rectangle(mediabox)
   let width = page_box.max_x - page_box.min_x

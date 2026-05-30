@@ -6,7 +6,7 @@
 /// numbers so callers can preserve or renumber references before writing.
 pub fn PdfDocument::read_optional_content_groups(
   self : PdfDocument,
-) -> @ocg.PdfOptionalContent? raise PdfError {
+) -> @ocg.PdfOptionalContent? raise @core.PdfError {
   let root = self.pdf_ocg_root()
   match self.lookup_direct(pdf_ocg_ocproperties_key(), root) {
     None => None
@@ -47,7 +47,7 @@ pub fn PdfDocument::read_optional_content_groups(
 /// Compatibility wrapper for `PdfDocument::read_optional_content_groups`.
 pub fn pdf_read_ocg(
   document : PdfDocument,
-) -> @ocg.PdfOptionalContent? raise PdfError {
+) -> @ocg.PdfOptionalContent? raise @core.PdfError {
   document.read_optional_content_groups()
 }
 
@@ -58,14 +58,14 @@ pub fn pdf_read_ocg(
 /// an empty list, and malformed individual group entries are skipped.
 pub fn PdfDocument::ocg_get_list(
   self : PdfDocument,
-) -> Array[PdfBytes] raise PdfError {
+) -> Array[@core.PdfBytes] raise @core.PdfError {
   let root = self.pdf_ocg_root()
   match self.lookup_direct(pdf_ocg_ocproperties_key(), root) {
     None => []
     Some(ocproperties) =>
       match self.lookup_direct(pdf_ocg_ocgs_key(), ocproperties) {
         Some(PdfArray(indirects)) => {
-          let names : Array[PdfBytes] = []
+          let names : Array[@core.PdfBytes] = []
           for indirect in indirects {
             match indirect {
               PdfIndirect(_) =>
@@ -87,6 +87,6 @@ pub fn PdfDocument::ocg_get_list(
 /// Compatibility wrapper for `PdfDocument::ocg_get_list`.
 pub fn pdf_ocg_get_list(
   document : PdfDocument,
-) -> Array[PdfBytes] raise PdfError {
+) -> Array[@core.PdfBytes] raise @core.PdfError {
   document.ocg_get_list()
 }

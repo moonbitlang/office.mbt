@@ -12,7 +12,7 @@ pub fn PdfDocument::chop(
   btt : Bool,
   rtl : Bool,
   page_numbers : ArrayView[Int],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   pdf_chop_validate_grid(x, y)
   self.pdf_chop_inner(0.0, x, y, columns, btt, rtl, page_numbers, "chop")
 }
@@ -25,7 +25,7 @@ pub fn PdfDocument::chop_hv(
   line : Double,
   columns : Bool,
   page_numbers : ArrayView[Int],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   self.pdf_chop_inner(
     line,
     if is_h {
@@ -60,7 +60,7 @@ pub fn pdf_chop(
   btt : Bool,
   rtl : Bool,
   page_numbers : ArrayView[Int],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.chop(x, y, columns, btt, rtl, page_numbers)
 }
 
@@ -74,7 +74,7 @@ pub fn pdf_chop_cpdf_order(
   rtl : Bool,
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.chop(x, y, columns, btt, rtl, page_numbers)
 }
 
@@ -86,7 +86,7 @@ pub fn pdf_chop_hv(
   line : Double,
   columns : Bool,
   page_numbers : ArrayView[Int],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.chop_hv(is_h, line, columns, page_numbers)
 }
 
@@ -98,6 +98,6 @@ pub fn pdf_chop_hv_cpdf_order(
   columns : Bool,
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.chop_hv(is_h, line, columns, page_numbers)
 }

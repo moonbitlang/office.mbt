@@ -1,10 +1,10 @@
 ///|
-fn toc_bytes_for_test(text : String) -> @pdflite.PdfBytes {
+fn toc_bytes_for_test(text : String) -> @core.PdfBytes {
   @ascii.encode(text)
 }
 
 ///|
-fn toc_raw_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
+fn toc_raw_bytes_for_test(values : ArrayView[Int]) -> @core.PdfBytes {
   let output : Array[Byte] = []
   for value in values {
     output.push(value.to_byte())
@@ -13,8 +13,8 @@ fn toc_raw_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
 }
 
 ///|
-fn toc_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn toc_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -53,7 +53,7 @@ fn toc_append_elements_for_test(
 }
 
 ///|
-fn toc_pdfdoc_for_test(text : String) -> @pdflite.PdfBytes {
+fn toc_pdfdoc_for_test(text : String) -> @core.PdfBytes {
   try! @pdflite.pdf_pdfdocstring_of_utf8(@utf8.encode(text))
 }
 
@@ -138,7 +138,7 @@ test "pdf_toc_width_of_runs sums alternating font text runs" {
   let malformed : Result[Double, Error] = try? @pdflite.pdf_toc_width_of_runs([
     PdfTypeText(toc_bytes_for_test("A")),
   ])
-  guard malformed is Err(@pdflite.PdfError::SoftError("width_of_runs")) else {
+  guard malformed is Err(@core.PdfError::SoftError("width_of_runs")) else {
     fail("expected width_of_runs SoftError")
   }
 }
@@ -696,7 +696,7 @@ test "PdfDocument toc_with_source handles cpdftoc font-source dispatch" {
   )
   guard rejected
     is Err(
-      @pdflite.PdfError::SoftError(
+      @core.PdfError::SoftError(
         "Cannot use existing font with -table-of-contents"
       )
     ) else {
@@ -763,7 +763,7 @@ test "pdf_typeset_table_of_contents preserves cpdftoc argument order" {
   )
   guard structured
     is Err(
-      @pdflite.PdfError::SoftError(
+      @core.PdfError::SoftError(
         "typeset_table_of_contents: structured TOC output is not implemented"
       )
     ) else {
@@ -781,7 +781,7 @@ test "pdf_typeset_table_of_contents preserves cpdftoc argument order" {
   )
   guard pdfua
     is Err(
-      @pdflite.PdfError::SoftError(
+      @core.PdfError::SoftError(
         "typeset_table_of_contents: structured TOC output is not implemented"
       )
     ) else {

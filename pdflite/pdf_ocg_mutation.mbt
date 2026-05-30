@@ -3,8 +3,8 @@
 /// replaced.
 pub fn PdfDocument::ocg_rename(
   self : PdfDocument,
-  old_name : PdfBytes,
-  new_name : PdfBytes,
+  old_name : @core.PdfBytes,
+  new_name : @core.PdfBytes,
 ) -> PdfDocument {
   let pdf = self.copy()
   pdf.map_objects_in_place(fn(object) {
@@ -38,8 +38,8 @@ pub fn PdfDocument::ocg_rename(
 ///|
 /// Compatibility wrapper for `PdfDocument::ocg_rename`.
 pub fn pdf_ocg_rename(
-  old_name : PdfBytes,
-  new_name : PdfBytes,
+  old_name : @core.PdfBytes,
+  new_name : @core.PdfBytes,
   document : PdfDocument,
 ) -> PdfDocument {
   document.ocg_rename(old_name, new_name)
@@ -52,7 +52,7 @@ pub fn pdf_ocg_rename(
 /// default `/D` dictionary are returned unchanged.
 pub fn PdfDocument::ocg_order_all(
   self : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let root = self.pdf_ocg_root()
   match self.lookup_direct(pdf_ocg_ocproperties_key(), root) {
     None => self.copy()
@@ -94,6 +94,8 @@ pub fn PdfDocument::ocg_order_all(
 
 ///|
 /// Compatibility wrapper for `PdfDocument::ocg_order_all`.
-pub fn pdf_ocg_order_all(document : PdfDocument) -> PdfDocument raise PdfError {
+pub fn pdf_ocg_order_all(
+  document : PdfDocument,
+) -> PdfDocument raise @core.PdfError {
   document.ocg_order_all()
 }

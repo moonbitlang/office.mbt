@@ -1,8 +1,8 @@
 ///|
 fn pdf_reader_validate_xref_metadata_for_reconstruction(
   data : BytesView,
-) -> Unit raise PdfError {
-  let cursor = byte_cursor_of_view(data)
+) -> Unit raise @core.PdfError {
+  let cursor = @core.byte_cursor_of_view(data)
   ignore(@reader.pdf_read_header_from_cursor(cursor))
   let mut current_xref = @reader.pdf_read_startxref_position(cursor.view())
   let mut done = false
@@ -36,20 +36,20 @@ fn pdf_reader_xref_entry_error_from_metadata(data : BytesView) -> Bool {
 ///|
 fn pdf_reader_xref_metadata_error_allows_reconstruction(
   data : BytesView,
-  error : PdfError,
+  error : @core.PdfError,
 ) -> Bool {
   let result : Result[Unit, Error] = try? pdf_reader_validate_xref_metadata_for_reconstruction(
     data,
   )
   match (result, error) {
-    (Err(PdfError::XRefEntryExpected), XRefEntryExpected) => true
+    (Err(@core.PdfError::XRefEntryExpected), XRefEntryExpected) => true
     (
-      Err(PdfError::FilterNotSupported(metadata_filter)),
+      Err(@core.PdfError::FilterNotSupported(metadata_filter)),
       FilterNotSupported(filter),
     ) => metadata_filter == filter
-    (Err(PdfError::PredictorExpected), PredictorExpected) => true
+    (Err(@core.PdfError::PredictorExpected), PredictorExpected) => true
     (
-      Err(PdfError::PredictorNotSupported(metadata_predictor)),
+      Err(@core.PdfError::PredictorNotSupported(metadata_predictor)),
       PredictorNotSupported(predictor),
     ) => metadata_predictor == predictor
     _ => false

@@ -55,7 +55,9 @@ fn pdf_text_parsed_cmap_has_identity_base(parsed : PdfParsedCMap) -> Bool {
 }
 
 ///|
-fn pdf_text_parsed_cmap_predefined_base(parsed : PdfParsedCMap) -> PdfName? {
+fn pdf_text_parsed_cmap_predefined_base(
+  parsed : PdfParsedCMap,
+) -> @core.PdfName? {
   match parsed.usecmap {
     Some(name) if !pdf_text_parsed_cmap_has_identity_base(parsed) => Some(name)
     _ => None
@@ -84,7 +86,7 @@ fn pdf_text_parsed_cmap_identity_charcode(
 fn pdf_text_parsed_cmap_charcodes_of_text(
   parsed : PdfParsedCMap,
   text : BytesView,
-) -> Array[Int] raise PdfError {
+) -> Array[Int] raise @core.PdfError {
   guard parsed.codespaces.length() > 0 ||
     pdf_text_parsed_cmap_has_identity_base(parsed) else {
     match pdf_text_parsed_cmap_predefined_base(parsed) {

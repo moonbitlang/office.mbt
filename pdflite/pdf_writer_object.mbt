@@ -1,10 +1,10 @@
 ///|
-let pdf_writer_length_key_name : PdfName = pdf_name_of_bytes(
+let pdf_writer_length_key_name : @core.PdfName = @core.pdf_name_of_bytes(
   Bytes::from_array([47, 76, 101, 110, 103, 116, 104]),
 )
 
 ///|
-fn pdf_writer_length_name() -> PdfName {
+fn pdf_writer_length_name() -> @core.PdfName {
   pdf_writer_length_key_name
 }
 
@@ -12,7 +12,7 @@ fn pdf_writer_length_name() -> PdfName {
 fn pdf_write_stream_dictionary(
   stream : @syntax.PdfStream,
   length : Int,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   stream.dictionary.add_dict_entry(pdf_writer_length_name(), PdfInteger(length))
 }
 
@@ -20,7 +20,7 @@ fn pdf_write_stream_dictionary(
 fn pdf_write_object_to(
   output : Array[Byte],
   object : @syntax.PdfObject,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   match object {
     PdfNull => pdf_writer_push_ascii(output, "null")
     PdfBoolean(true) => pdf_writer_push_ascii(output, "true")
@@ -71,7 +71,9 @@ fn pdf_write_object_to(
 /// Serialize a direct PDF object.
 ///
 /// Stream lengths are refreshed from the current stream data while writing.
-pub fn pdf_write_object(object : @syntax.PdfObject) -> PdfBytes raise PdfError {
+pub fn pdf_write_object(
+  object : @syntax.PdfObject,
+) -> @core.PdfBytes raise @core.PdfError {
   let output : Array[Byte] = []
   pdf_write_object_to(output, object)
   Bytes::from_array(output)
@@ -79,7 +81,9 @@ pub fn pdf_write_object(object : @syntax.PdfObject) -> PdfBytes raise PdfError {
 
 ///|
 /// Compatibility alias for `pdf_write_object`.
-pub fn pdf_string_of_pdf(object : @syntax.PdfObject) -> PdfBytes raise PdfError {
+pub fn pdf_string_of_pdf(
+  object : @syntax.PdfObject,
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_write_object(object)
 }
 
@@ -90,7 +94,7 @@ pub fn pdf_string_of_pdf(object : @syntax.PdfObject) -> PdfBytes raise PdfError 
 /// stream dictionary, `stream` marker, bytes, and `endstream` marker.
 pub fn pdf_string_of_pdf_including_data(
   object : @syntax.PdfObject,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_write_object(object)
 }
 
@@ -98,7 +102,7 @@ pub fn pdf_string_of_pdf_including_data(
 /// Serialize one indirect object including `obj` and `endobj` wrappers.
 pub fn pdf_write_indirect_object(
   object : @syntax.PdfParsedIndirectObject,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let output : Array[Byte] = []
   pdf_writer_push_ascii(output, object.number.to_string())
   pdf_writer_push_byte(output, 32)

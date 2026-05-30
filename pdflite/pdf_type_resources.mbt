@@ -12,12 +12,12 @@ fn pdf_type_unique_sorted_numbers(numbers : ArrayView[Int]) -> Array[Int] {
 }
 
 ///|
-fn pdf_type_name(text : String) -> PdfName {
-  pdf_name_of_bytes(pdf_type_ascii(text))
+fn pdf_type_name(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(pdf_type_ascii(text))
 }
 
 ///|
-fn pdf_type_font_resource_name(number : Int) -> PdfName {
+fn pdf_type_font_resource_name(number : Int) -> @core.PdfName {
   pdf_type_name("/F" + number.to_string())
 }
 
@@ -43,7 +43,7 @@ fn pdf_type_annotation_object(
   contents : String?,
   rectangle : (Double, Double, Double, Double),
 ) -> @syntax.PdfObject {
-  let entries : Array[(PdfName, @syntax.PdfObject)] = []
+  let entries : Array[(@core.PdfName, @syntax.PdfObject)] = []
   match contents {
     Some(text) =>
       entries.push(

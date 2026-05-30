@@ -16,7 +16,7 @@ fn pdf_ua_remove_xml_element_prefix(
   data : BytesView,
   prefix : String,
   field : String,
-) -> (PdfBytes, Bool) {
+) -> (@core.PdfBytes, Bool) {
   let open_pattern = @ascii.encode("<" + prefix + ":" + field)
   let close_pattern = @ascii.encode("</" + prefix + ":" + field + ">")
   let removals : Array[(Int, Int)] = []
@@ -79,7 +79,7 @@ fn pdf_ua_remove_xml_element_prefix(
 }
 
 ///|
-fn pdf_ua_remove_marker_elements(data : BytesView) -> PdfBytes {
+fn pdf_ua_remove_marker_elements(data : BytesView) -> @core.PdfBytes {
   let prefixes = pdf_metadata_namespace_prefixes(
     data, @metadata.pdf_metadata_pdfuaid_namespace, "pdfuaid",
   )
@@ -128,7 +128,7 @@ fn pdf_ua_insert_marker_description(
   data : BytesView,
   part : String,
   revision : Int?,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   match pdf_ua_find_rdf_open_tag(data) {
     Some((insert_at, rdf_prefix)) => {
       let marker = pdf_ua_marker_description_bytes(rdf_prefix, part, revision)
@@ -150,7 +150,7 @@ fn PdfDocument::pdf_ua_mark_inner(
   self : PdfDocument,
   part : String,
   revision : Int?,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let document = match self.metadata() {
     Some(_) => self
     None => self.create_metadata()

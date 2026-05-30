@@ -1,6 +1,6 @@
 ///|
-fn page_shift_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn page_shift_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -267,7 +267,7 @@ test "PdfDocument shift_pages rejects invalid offset lists" {
   )
   guard mismatch
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "shift_pages: offset count must match page count"
       )
     ) else {
@@ -279,7 +279,7 @@ test "PdfDocument shift_pages rejects invalid offset lists" {
   )
   guard bad_page
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "shift_pages: range contains pages not present in pdf"
       )
     ) else {
@@ -293,7 +293,7 @@ test "PdfDocument shift_pages rejects invalid offset lists" {
   )
   guard cpdf_mismatch
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "shift_pdf: offset count must match page count"
       )
     ) else {

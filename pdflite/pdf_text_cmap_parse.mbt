@@ -36,11 +36,11 @@ pub fn pdf_parse_cmap_data(data : BytesView) -> PdfParsedCMap {
 ///
 /// The stream is decoded through its first filter, stream-dictionary metadata
 /// is merged with parsed metadata, and indirect `/UseCMap` bases are composed
-/// with cycle protection. Malformed or non-stream inputs raise `PdfError`.
+/// with cycle protection. Malformed or non-stream inputs raise `@core.PdfError`.
 pub fn PdfDocument::parse_cmap(
   self : PdfDocument,
   cmap : @syntax.PdfObject,
-) -> PdfParsedCMap raise PdfError {
+) -> PdfParsedCMap raise @core.PdfError {
   self.parse_cmap_with_seen(cmap, HashMap([]))
 }
 
@@ -49,6 +49,6 @@ pub fn PdfDocument::parse_cmap(
 pub fn pdf_parse_cmap(
   document : PdfDocument,
   cmap : @syntax.PdfObject,
-) -> PdfParsedCMap raise PdfError {
+) -> PdfParsedCMap raise @core.PdfError {
   document.parse_cmap(cmap)
 }

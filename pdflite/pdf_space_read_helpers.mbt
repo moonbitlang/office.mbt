@@ -1,74 +1,80 @@
 ///|
-fn pdf_space_whitepoint_key() -> PdfName {
+fn pdf_space_whitepoint_key() -> @core.PdfName {
   pdf_space_whitepoint_key_name
 }
 
 ///|
-let pdf_space_whitepoint_key_name : PdfName = pdf_space_name("/WhitePoint")
+let pdf_space_whitepoint_key_name : @core.PdfName = pdf_space_name(
+  "/WhitePoint",
+)
 
 ///|
-fn pdf_space_blackpoint_key() -> PdfName {
+fn pdf_space_blackpoint_key() -> @core.PdfName {
   pdf_space_blackpoint_key_name
 }
 
 ///|
-let pdf_space_blackpoint_key_name : PdfName = pdf_space_name("/BlackPoint")
+let pdf_space_blackpoint_key_name : @core.PdfName = pdf_space_name(
+  "/BlackPoint",
+)
 
 ///|
-fn pdf_space_gamma_key() -> PdfName {
+fn pdf_space_gamma_key() -> @core.PdfName {
   pdf_space_gamma_key_name
 }
 
 ///|
-let pdf_space_gamma_key_name : PdfName = pdf_space_name("/Gamma")
+let pdf_space_gamma_key_name : @core.PdfName = pdf_space_name("/Gamma")
 
 ///|
-fn pdf_space_matrix_key() -> PdfName {
+fn pdf_space_matrix_key() -> @core.PdfName {
   pdf_space_matrix_key_name
 }
 
 ///|
-let pdf_space_matrix_key_name : PdfName = pdf_space_name("/Matrix")
+let pdf_space_matrix_key_name : @core.PdfName = pdf_space_name("/Matrix")
 
 ///|
-fn pdf_space_range_key() -> PdfName {
+fn pdf_space_range_key() -> @core.PdfName {
   pdf_space_range_key_name
 }
 
 ///|
-let pdf_space_range_key_name : PdfName = pdf_space_name("/Range")
+let pdf_space_range_key_name : @core.PdfName = pdf_space_name("/Range")
 
 ///|
-fn pdf_space_colorspace_key() -> PdfName {
+fn pdf_space_colorspace_key() -> @core.PdfName {
   pdf_space_colorspace_key_name
 }
 
 ///|
-let pdf_space_colorspace_key_name : PdfName = pdf_space_name("/ColorSpace")
+let pdf_space_colorspace_key_name : @core.PdfName = pdf_space_name(
+  "/ColorSpace",
+)
 
 ///|
-fn pdf_space_n_key() -> PdfName {
+fn pdf_space_n_key() -> @core.PdfName {
   pdf_space_n_key_name
 }
 
 ///|
-let pdf_space_n_key_name : PdfName = pdf_space_name("/N")
+let pdf_space_n_key_name : @core.PdfName = pdf_space_name("/N")
 
 ///|
-fn pdf_space_alternate_key() -> PdfName {
+fn pdf_space_alternate_key() -> @core.PdfName {
   pdf_space_alternate_key_name
 }
 
 ///|
-let pdf_space_alternate_key_name : PdfName = pdf_space_name("/Alternate")
+let pdf_space_alternate_key_name : @core.PdfName = pdf_space_name("/Alternate")
 
 ///|
-fn pdf_space_metadata_key() -> PdfName {
+fn pdf_space_metadata_key() -> @core.PdfName {
   pdf_space_metadata_key_name
 }
 
 ///|
-let pdf_space_metadata_key_name : PdfName = pdf_space_name("/Metadata")
+let pdf_space_metadata_key_name : @core.PdfName = pdf_space_name("/Metadata")
 
 ///|
 fn pdf_space_empty_point() -> PdfTristimulusPoint {
@@ -79,8 +85,8 @@ fn pdf_space_empty_point() -> PdfTristimulusPoint {
 fn PdfDocument::pdf_space_read_point(
   self : PdfDocument,
   dictionary : @syntax.PdfObject,
-  key : PdfName,
-) -> PdfTristimulusPoint raise PdfError {
+  key : @core.PdfName,
+) -> PdfTristimulusPoint raise @core.PdfError {
   match self.lookup_direct(key, dictionary) {
     Some(PdfArray([x, y, z])) =>
       { x: self.get_number(x), y: self.get_number(y), z: self.get_number(z) }
@@ -92,10 +98,10 @@ fn PdfDocument::pdf_space_read_point(
 fn PdfDocument::pdf_space_read_number_array(
   self : PdfDocument,
   dictionary : @syntax.PdfObject,
-  key : PdfName,
+  key : @core.PdfName,
   length : Int,
   default : ArrayView[Double],
-) -> Array[Double] raise PdfError {
+) -> Array[Double] raise @core.PdfError {
   match self.lookup_direct(key, dictionary) {
     Some(PdfArray(values)) if values.length() == length => {
       let output : Array[Double] = []
@@ -112,9 +118,9 @@ fn PdfDocument::pdf_space_read_number_array(
 fn PdfDocument::pdf_space_read_number(
   self : PdfDocument,
   dictionary : @syntax.PdfObject,
-  key : PdfName,
+  key : @core.PdfName,
   default : Double,
-) -> Double raise PdfError {
+) -> Double raise @core.PdfError {
   match self.lookup_direct(key, dictionary) {
     Some(value) => self.get_number(value)
     None => default

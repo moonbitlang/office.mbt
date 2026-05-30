@@ -1,8 +1,8 @@
 ///|
 fn pdf_ccitt_read_run_code(
-  input : BitStream,
+  input : @core.BitStream,
   table : ArrayView[PdfCCITTCode],
-) -> PdfCCITTRun raise PdfError {
+) -> PdfCCITTRun raise @core.PdfError {
   let mut bits = 0
   for width in 1..<=13 {
     bits = (bits << 1) | input.get_bit_int()
@@ -16,7 +16,10 @@ fn pdf_ccitt_read_run_code(
 }
 
 ///|
-fn pdf_ccitt_read_run(input : BitStream, white : Bool) -> Int raise PdfError {
+fn pdf_ccitt_read_run(
+  input : @core.BitStream,
+  white : Bool,
+) -> Int raise @core.PdfError {
   let table = if white {
     pdf_ccitt_white_codes[:]
   } else {
@@ -37,7 +40,9 @@ fn pdf_ccitt_read_run(input : BitStream, white : Bool) -> Int raise PdfError {
 }
 
 ///|
-fn pdf_ccitt_read_mode(input : BitStream) -> PdfCCITTModeKind raise PdfError {
+fn pdf_ccitt_read_mode(
+  input : @core.BitStream,
+) -> PdfCCITTModeKind raise @core.PdfError {
   let mut bits = 0
   for width in 1..<=24 {
     bits = (bits << 1) | input.get_bit_int()
@@ -52,11 +57,11 @@ fn pdf_ccitt_read_mode(input : BitStream) -> PdfCCITTModeKind raise PdfError {
 
 ///|
 fn pdf_ccitt_write_code(
-  output : BitWriter,
+  output : @core.BitWriter,
   table : ArrayView[PdfCCITTCode],
   run : Int,
   makeup : Bool,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   for code in table {
     if code.run == run && code.makeup == makeup {
       output.put_value_int(code.width, code.bits)
@@ -67,15 +72,15 @@ fn pdf_ccitt_write_code(
 }
 
 ///|
-fn pdf_ccitt_write_eol(output : BitWriter) -> Unit raise PdfError {
+fn pdf_ccitt_write_eol(output : @core.BitWriter) -> Unit raise @core.PdfError {
   pdf_ccitt_write_code(output, pdf_ccitt_white_codes, -1, false)
 }
 
 ///|
 fn pdf_ccitt_write_mode(
-  output : BitWriter,
+  output : @core.BitWriter,
   mode : PdfCCITTModeKind,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   match mode {
     CCITTPass => output.put_value_int(4, 0b0001)
     CCITTHorizontal => output.put_value_int(3, 0b001)
@@ -94,10 +99,10 @@ fn pdf_ccitt_write_mode(
 
 ///|
 fn pdf_ccitt_write_run(
-  output : BitWriter,
+  output : @core.BitWriter,
   white : Bool,
   length : Int,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   if length < 0 {
     raise InvalidCCITTData
   }

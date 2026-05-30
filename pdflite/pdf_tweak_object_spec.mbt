@@ -7,7 +7,7 @@
 pub fn PdfDocument::find_object_by_spec(
   self : PdfDocument,
   spec : String,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   let bytes = @ascii.encode(spec)
   if bytes.length() == 0 {
     self.trailer_dict()
@@ -36,7 +36,7 @@ pub fn PdfDocument::find_object_by_spec(
 pub fn pdf_find_object(
   document : PdfDocument,
   spec : String,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   document.find_object_by_spec(spec)
 }
 
@@ -45,7 +45,7 @@ pub fn pdf_find_object(
 pub fn pdf_find_obj(
   document : PdfDocument,
   spec : String,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   document.find_object_by_spec(spec)
 }
 
@@ -55,7 +55,7 @@ pub fn PdfDocument::replace_object_by_spec(
   self : PdfDocument,
   spec : String,
   value : @syntax.PdfObject,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let bytes = @ascii.encode(spec)
   if bytes.length() == 0 {
     self.set_trailer_dict(value)
@@ -90,7 +90,7 @@ pub fn pdf_replace_object_by_spec(
   document : PdfDocument,
   spec : String,
   value : @syntax.PdfObject,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   document.replace_object_by_spec(spec, value)
 }
 
@@ -100,7 +100,7 @@ pub fn pdf_replace_obj(
   document : PdfDocument,
   spec : String,
   value : @syntax.PdfObject,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   document.replace_object_by_spec(spec, value)
 }
 
@@ -109,7 +109,7 @@ pub fn pdf_replace_obj(
 pub fn PdfDocument::remove_object_by_spec(
   self : PdfDocument,
   spec : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.remove_object(pdf_tweak_number_spec(spec))
 }
 
@@ -118,7 +118,7 @@ pub fn PdfDocument::remove_object_by_spec(
 pub fn pdf_remove_object_by_spec(
   document : PdfDocument,
   spec : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   document.remove_object_by_spec(spec)
 }
 
@@ -127,7 +127,7 @@ pub fn pdf_remove_object_by_spec(
 pub fn pdf_remove_obj(
   document : PdfDocument,
   spec : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   document.remove_object_by_spec(spec)
 }
 
@@ -137,7 +137,7 @@ pub fn PdfDocument::replace_stream_by_spec(
   self : PdfDocument,
   spec : String,
   data : BytesView,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   match self.find_object_by_spec(spec) {
     PdfStreamObject(stream) => {
       let data = data.to_owned()
@@ -160,6 +160,6 @@ pub fn pdf_replace_stream_by_spec(
   document : PdfDocument,
   spec : String,
   data : BytesView,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   document.replace_stream_by_spec(spec, data)
 }

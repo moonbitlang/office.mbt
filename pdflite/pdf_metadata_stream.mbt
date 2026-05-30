@@ -16,10 +16,10 @@ pub fn PdfDocument::set_metadata_from_bytes(
   self : PdfDocument,
   data : BytesView,
   keep_version? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let document = self.copy()
   let metadata_number = document.add_object(pdf_metadata_stream(data))
-  document.pdf_metadata_update_catalog(fn(catalog) raise PdfError {
+  document.pdf_metadata_update_catalog(fn(catalog) raise @core.PdfError {
     catalog.add_dict_entry(
       pdf_metadata_metadata(),
       PdfIndirect(metadata_number),
@@ -34,7 +34,7 @@ pub fn PdfDocument::set_metadata_from_bytes(
 pub fn PdfDocument::set_metadata_date(
   self : PdfDocument,
   date : String,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   match self.metadata() {
     None => self
     Some(metadata) => {
@@ -55,7 +55,7 @@ pub fn PdfDocument::set_metadata_date(
 /// Create a fresh XMP metadata stream from the document `/Info` dictionary.
 pub fn PdfDocument::create_metadata(
   self : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let mut xmp = pdf_metadata_xmp_template
   for replacement in self.pdf_metadata_template_replacements() {
     xmp = pdf_metadata_replace_all(xmp, replacement.0, replacement.1)
@@ -65,7 +65,9 @@ pub fn PdfDocument::create_metadata(
 
 ///|
 /// Extract the catalog metadata XML stream, decoding supported stream filters.
-pub fn PdfDocument::metadata(self : PdfDocument) -> PdfBytes? raise PdfError {
+pub fn PdfDocument::metadata(
+  self : PdfDocument,
+) -> @core.PdfBytes? raise @core.PdfError {
   match
     self.lookup_chain(self.trailer_dict(), [
       pdf_metadata_root(),
@@ -83,9 +85,9 @@ pub fn PdfDocument::metadata(self : PdfDocument) -> PdfBytes? raise PdfError {
 /// Remove the catalog `/Metadata` entry.
 pub fn PdfDocument::remove_metadata(
   self : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let document = self.copy()
-  document.pdf_metadata_update_catalog(fn(catalog) raise PdfError {
+  document.pdf_metadata_update_catalog(fn(catalog) raise @core.PdfError {
     catalog.remove_dict_entry(pdf_metadata_metadata())
   })
   document
@@ -96,7 +98,7 @@ pub fn PdfDocument::remove_metadata(
 /// `/Metadata`.
 pub fn PdfDocument::remove_all_metadata(
   self : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let document = self.remove_metadata()
   let to_remove : Array[Int] = []
   for entry in document.parsed_object_entries() {

@@ -2,7 +2,7 @@
 fn PdfDrawRenderState::text_ops(
   self : PdfDrawRenderState,
   text : String,
-) -> Array[@content.PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise @core.PdfError {
   let width_cache = pdf_draw_font_width_cache_new(self.font_size)
   let (ops, _) = self.text_ops_and_width_with_cache(text, width_cache)
   ops
@@ -24,7 +24,7 @@ fn PdfDrawFontWidthCache::widths(
   self : PdfDrawFontWidthCache,
   font_index : Int,
   font : PdfFont,
-) -> Array[Double] raise PdfError {
+) -> Array[Double] raise @core.PdfError {
   for entry in self.entries {
     if entry.0 == font_index {
       return entry.1
@@ -40,7 +40,7 @@ fn PdfDrawRenderState::text_ops_and_width_with_cache(
   self : PdfDrawRenderState,
   text : String,
   width_cache : PdfDrawFontWidthCache,
-) -> (Array[@content.PdfContentOp], Double) raise PdfError {
+) -> (Array[@content.PdfContentOp], Double) raise @core.PdfError {
   if self.current_fontpack_identifier == "" {
     raise SoftError("FontPack not selected")
   }
@@ -74,7 +74,7 @@ fn PdfDrawRenderState::text_ops_and_width_with_cache(
     )
     let bytes = Array::make(run.length(), b'\x00')
     for index, triple in run {
-      bytes[index] = pdf_byte_of_int(triple.0)
+      bytes[index] = @core.pdf_byte_of_int(triple.0)
     }
     output.push(Op_Tf(resource_name, self.font_size))
     output.push(Op_Tj(Bytes::from_array(bytes)))
@@ -115,7 +115,7 @@ fn pdf_draw_remove_duplicate_tfs(
   ops : ArrayView[@content.PdfContentOp],
 ) -> Array[@content.PdfContentOp] {
   let output : Array[@content.PdfContentOp] = Array::new(capacity=ops.length())
-  let mut previous : PdfName? = None
+  let mut previous : @core.PdfName? = None
   for op in ops {
     match op {
       Op_Tf(font, _) =>
@@ -226,7 +226,7 @@ fn PdfDrawRenderState::format_paragraph(
   justification : PdfDrawJustification,
   width : Double,
   text : String,
-) -> Array[@content.PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise @core.PdfError {
   let width_cache = pdf_draw_font_width_cache_new(self.font_size)
   let split_words = pdf_draw_split_on_space(text)
   let words : Array[(Array[@content.PdfContentOp], Double)] = Array::new(
@@ -291,7 +291,7 @@ fn PdfDrawRenderState::paragraph_ops(
   justification : PdfDrawJustification,
   width : Double,
   paragraphs : ArrayView[String],
-) -> Array[@content.PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise @core.PdfError {
   let output : Array[@content.PdfContentOp] = Array::new(
     capacity=paragraphs.length(),
   )

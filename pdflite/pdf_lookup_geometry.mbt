@@ -18,11 +18,11 @@ fn double_max(a : Double, b : Double) -> Double {
 
 ///|
 /// The object is resolved first. PDF real numbers are returned directly and PDF
-/// integers are widened to `Double`; any other object raises `PdfError::NumberExpected`.
+/// integers are widened to `Double`; any other object raises `@core.PdfError::NumberExpected`.
 pub fn PdfDocument::get_number(
   self : PdfDocument,
   object : @syntax.PdfObject,
-) -> Double raise PdfError {
+) -> Double raise @core.PdfError {
   match self.direct(object) {
     PdfReal(value) => value
     PdfInteger(value) => value.to_double()
@@ -35,12 +35,12 @@ pub fn PdfDocument::get_number(
 ///
 /// The input must resolve to an array of four numeric objects. Coordinates are
 /// normalized so the result always has lower bounds in `min_x`/`min_y` and
-/// upper bounds in `max_x`/`max_y`. Non-array inputs raise `PdfError::RectangleExpected`;
-/// malformed numeric entries raise `PdfError::BadRectangle`.
+/// upper bounds in `max_x`/`max_y`. Non-array inputs raise `@core.PdfError::RectangleExpected`;
+/// malformed numeric entries raise `@core.PdfError::BadRectangle`.
 pub fn PdfDocument::parse_rectangle(
   self : PdfDocument,
   object : @syntax.PdfObject,
-) -> @geometry.PdfRectangle raise PdfError {
+) -> @geometry.PdfRectangle raise @core.PdfError {
   match self.direct(object) {
     PdfArray(values) if values.length() == 4 => {
       let x0 = try? self.get_number(values[0])
@@ -71,7 +71,7 @@ pub fn PdfDocument::transform_rect(
   self : PdfDocument,
   matrix : @geometry.TransformMatrix,
   object : @syntax.PdfObject,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   let rectangle = self.parse_rectangle(object)
   let p0 = matrix.apply(@geometry.point2(rectangle.min_x, rectangle.min_y))
   let p1 = matrix.apply(@geometry.point2(rectangle.max_x, rectangle.max_y))
@@ -168,12 +168,12 @@ pub fn PdfDocument::transform_quadpoints(
 ///
 /// If `key` is absent, the identity matrix is returned. Present values must be
 /// arrays of six numbers in PDF matrix order `[a b c d e f]`; malformed arrays
-/// raise `PdfError::MatrixMalformed`, and non-numeric entries raise `PdfError::NumberExpected`.
+/// raise `@core.PdfError::MatrixMalformed`, and non-numeric entries raise `@core.PdfError::NumberExpected`.
 pub fn PdfDocument::parse_matrix(
   self : PdfDocument,
-  key : PdfName,
+  key : @core.PdfName,
   object : @syntax.PdfObject,
-) -> @geometry.TransformMatrix raise PdfError {
+) -> @geometry.TransformMatrix raise @core.PdfError {
   match self.lookup_direct(key, object) {
     None => @geometry.transform_identity_matrix
     Some(PdfArray(values)) if values.length() == 6 =>

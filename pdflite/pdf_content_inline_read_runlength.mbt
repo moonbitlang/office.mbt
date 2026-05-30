@@ -17,10 +17,10 @@ fn pdf_content_run_length_encoded_length(data : BytesView) -> Int? {
 
 ///|
 fn pdf_content_read_run_length_inline_image_data(
-  cursor : ByteCursor,
-) -> PdfBytes raise PdfError {
+  cursor : @core.ByteCursor,
+) -> @core.PdfBytes raise @core.PdfError {
   match cursor.peek_byte() {
-    value if pdf_is_whitespace_byte(value) => cursor.nudge()
+    value if @core.pdf_is_whitespace_byte(value) => cursor.nudge()
     _ => ()
   }
   match pdf_content_run_length_encoded_length(cursor.remaining_view()) {
@@ -36,7 +36,7 @@ fn pdf_content_read_run_length_inline_image_data(
 ///|
 fn pdf_content_run_length_decode_view_prefix(
   data : BytesView,
-) -> (PdfBytes, Int) raise PdfError {
+) -> (@core.PdfBytes, Int) raise @core.PdfError {
   let (output_length, consumed) = pdf_content_run_length_decoded_prefix_length(
     data,
   )
@@ -68,7 +68,7 @@ fn pdf_content_run_length_decode_view_prefix(
 ///|
 fn pdf_content_run_length_decoded_prefix_length(
   data : BytesView,
-) -> (Int, Int) raise PdfError {
+) -> (Int, Int) raise @core.PdfError {
   let mut output_length = 0
   let mut index = 0
   while index < data.length() {
@@ -96,10 +96,10 @@ fn pdf_content_run_length_decoded_prefix_length(
 
 ///|
 fn pdf_content_read_run_length_inline_image_decoded(
-  cursor : ByteCursor,
-) -> PdfBytes raise PdfError {
+  cursor : @core.ByteCursor,
+) -> @core.PdfBytes raise @core.PdfError {
   match cursor.peek_byte() {
-    value if pdf_is_whitespace_byte(value) => cursor.nudge()
+    value if @core.pdf_is_whitespace_byte(value) => cursor.nudge()
     _ => ()
   }
   let (decoded, length) = pdf_content_run_length_decode_view_prefix(

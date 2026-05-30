@@ -4,10 +4,10 @@ fn pdf_read_classic_document_from_view_at_revision(
   revision? : Int? = None,
   user_password? : BytesView? = None,
   owner_password? : BytesView? = None,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let revision = pdf_read_reader_revision_target(revision)
   let was_linearized = pdf_read_was_linearized(data)
-  let cursor = byte_cursor_of_view(data)
+  let cursor = @core.byte_cursor_of_view(data)
   let version = @reader.pdf_read_header_from_cursor(cursor)
   let xref_position = @reader.pdf_read_startxref_position(cursor.view())
   let plan = pdf_reader_classic_read_plan(cursor, xref_position, revision)
@@ -38,15 +38,15 @@ fn pdf_read_classic_document_from_view_at_revision(
 /// document metadata. It does not use reconstruction fallback.
 pub fn pdf_read_classic_document_from_view(
   data : BytesView,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   pdf_read_classic_document_from_view_at_revision(data)
 }
 
 ///|
 /// Read a classic-xref PDF from owned bytes.
 pub fn pdf_read_classic_document_from_bytes(
-  data : PdfBytes,
-) -> PdfDocument raise PdfError {
+  data : @core.PdfBytes,
+) -> PdfDocument raise @core.PdfError {
   pdf_read_classic_document_from_view(data)
 }
 
@@ -55,19 +55,19 @@ pub fn pdf_read_classic_document_from_bytes(
 ///
 /// Revision `1` is the newest revision; larger revision numbers select older
 /// revisions by following trailer `/Prev` links. Invalid or unavailable
-/// revisions raise `PdfError::BadRevision`.
+/// revisions raise `@core.PdfError::BadRevision`.
 pub fn pdf_read_classic_document_revision_from_view(
   data : BytesView,
   revision : Int,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   pdf_read_classic_document_from_view_at_revision(data, revision=Some(revision))
 }
 
 ///|
 /// Read one classic-xref document revision from owned bytes.
 pub fn pdf_read_classic_document_revision_from_bytes(
-  data : PdfBytes,
+  data : @core.PdfBytes,
   revision : Int,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   pdf_read_classic_document_revision_from_view(data, revision)
 }

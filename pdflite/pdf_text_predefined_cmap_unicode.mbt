@@ -151,7 +151,7 @@ fn pdf_text_predefined_utf32_charcode(codepoint : Int) -> Int? {
 
 ///|
 fn pdf_text_predefined_direct_unicode_codepoints(
-  name : PdfName,
+  name : @core.PdfName,
   code : Int,
 ) -> Array[Int]? {
   if pdf_text_predefined_cmap_uses_utf8_charcodes(name) {
@@ -169,7 +169,7 @@ fn pdf_text_predefined_direct_unicode_codepoints(
 
 ///|
 fn pdf_text_predefined_direct_unicode_charcode(
-  name : PdfName,
+  name : @core.PdfName,
   codepoint : Int,
 ) -> Int? {
   if pdf_text_predefined_cmap_uses_utf8_charcodes(name) {

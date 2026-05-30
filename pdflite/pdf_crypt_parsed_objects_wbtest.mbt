@@ -1,17 +1,17 @@
 ///|
-fn crypt_parsed_bytes_for_test(values : ArrayView[Int]) -> PdfBytes {
-  try! pdf_bytes_of_int_array(values)
+fn crypt_parsed_bytes_for_test(values : ArrayView[Int]) -> @core.PdfBytes {
+  try! @core.pdf_bytes_of_int_array(values)
 }
 
 ///|
-fn crypt_parsed_name_for_test(text : String) -> PdfName {
-  pdf_name_of_bytes(@ascii.encode(text))
+fn crypt_parsed_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
 fn crypt_parsed_stream_for_test(
-  entries : ArrayView[(PdfName, @syntax.PdfObject)],
-  data : PdfBytes,
+  entries : ArrayView[(@core.PdfName, @syntax.PdfObject)],
+  data : @core.PdfBytes,
 ) -> @syntax.PdfObject {
   PdfStreamObject({
     dictionary: PdfDictionary([ for entry in entries => entry ]),
@@ -37,7 +37,7 @@ fn crypt_parsed_arc4_crypt_object_for_test(
 }
 
 ///|
-fn crypt_parsed_aes_iv_for_test(index : Int) -> PdfBytes {
+fn crypt_parsed_aes_iv_for_test(index : Int) -> @core.PdfBytes {
   crypt_parsed_bytes_for_test(
     [
       for offset in 0..<16 => 0x40 + index * 16 + offset
@@ -53,14 +53,14 @@ fn crypt_parsed_aesv2_encrypt_data_for_test(
   key_length_bits : Int,
   data : BytesView,
   iv : BytesView,
-) -> PdfBytes raise {
+) -> @core.PdfBytes raise {
   @crypt_core.pdf_aesv2_encrypt_object_data(
     object_number, generation, file_key, key_length_bits, data, iv,
   )
 }
 
 ///|
-fn crypt_parsed_aesv3_r5_file_key_for_test() -> PdfBytes {
+fn crypt_parsed_aesv3_r5_file_key_for_test() -> @core.PdfBytes {
   crypt_parsed_bytes_for_test([ for value in 0..<32 => value ])
 }
 
@@ -69,7 +69,7 @@ fn crypt_parsed_aesv3_encrypt_data_for_test(
   file_key : BytesView,
   data : BytesView,
   iv : BytesView,
-) -> PdfBytes raise {
+) -> @core.PdfBytes raise {
   @crypt_core.pdf_aesv3_encrypt_object_data(file_key, data, iv)
 }
 
@@ -79,9 +79,9 @@ test "PdfDocument ARC4 parsed-object crypt recurses through dictionaries" {
   let encrypted_hello = crypt_parsed_bytes_for_test([
     0x7d, 0x1c, 0x38, 0x4c, 0xca,
   ])
-  let key_s = pdf_name_of_bytes(@ascii.encode("/S"))
-  let key_a = pdf_name_of_bytes(@ascii.encode("/A"))
-  let key_n = pdf_name_of_bytes(@ascii.encode("/N"))
+  let key_s = @core.pdf_name_of_bytes(@ascii.encode("/S"))
+  let key_a = @core.pdf_name_of_bytes(@ascii.encode("/A"))
+  let key_n = @core.pdf_name_of_bytes(@ascii.encode("/N"))
   let object : @syntax.PdfObject = PdfDictionary([
     (key_s, PdfString(@ascii.encode("hello"))),
     (
@@ -122,8 +122,8 @@ test "PdfDocument ARC4 parsed-object crypt encrypts stream dictionaries and data
   let encrypted_hello = crypt_parsed_bytes_for_test([
     0x7d, 0x1c, 0x38, 0x4c, 0xca,
   ])
-  let key_length = pdf_name_of_bytes(@ascii.encode("/Length"))
-  let key_title = pdf_name_of_bytes(@ascii.encode("/Title"))
+  let key_length = @core.pdf_name_of_bytes(@ascii.encode("/Length"))
+  let key_title = @core.pdf_name_of_bytes(@ascii.encode("/Title"))
   let object : @syntax.PdfObject = PdfStreamObject({
     dictionary: PdfDictionary([
       (key_length, PdfInteger(5)),
@@ -472,9 +472,9 @@ test "PdfDocument AESV2 parsed-object decrypt recurses through object data" {
     0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c,
     0x1d, 0x1e, 0x1f,
   ])
-  let key_s = pdf_name_of_bytes(@ascii.encode("/S"))
-  let key_a = pdf_name_of_bytes(@ascii.encode("/A"))
-  let key_n = pdf_name_of_bytes(@ascii.encode("/N"))
+  let key_s = @core.pdf_name_of_bytes(@ascii.encode("/S"))
+  let key_a = @core.pdf_name_of_bytes(@ascii.encode("/A"))
+  let key_n = @core.pdf_name_of_bytes(@ascii.encode("/N"))
   let encrypted_hello = try! crypt_parsed_aesv2_encrypt_data_for_test(
     12,
     0,
@@ -510,8 +510,8 @@ test "PdfDocument AESV2 parsed-object decrypt recurses through object data" {
   let decrypted = try! doc.aesv2_decrypt_parsed_objects(file_key, 128, false, 0)
   @test.assert_eq(decrypted.lookup_object_or_null(12), object)
 
-  let key_length = pdf_name_of_bytes(@ascii.encode("/Length"))
-  let key_title = pdf_name_of_bytes(@ascii.encode("/Title"))
+  let key_length = @core.pdf_name_of_bytes(@ascii.encode("/Length"))
+  let key_title = @core.pdf_name_of_bytes(@ascii.encode("/Title"))
   let encrypted_stream : @syntax.PdfObject = PdfStreamObject({
     dictionary: PdfDictionary([
       (key_length, PdfInteger(encrypted_hello.length())),
@@ -603,9 +603,9 @@ test "PdfDocument AESV3 parsed-object decrypt recurses through object data" {
     0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c,
     0x2d, 0x2e, 0x2f,
   ])
-  let key_s = pdf_name_of_bytes(@ascii.encode("/S"))
-  let key_a = pdf_name_of_bytes(@ascii.encode("/A"))
-  let key_n = pdf_name_of_bytes(@ascii.encode("/N"))
+  let key_s = @core.pdf_name_of_bytes(@ascii.encode("/S"))
+  let key_a = @core.pdf_name_of_bytes(@ascii.encode("/A"))
+  let key_n = @core.pdf_name_of_bytes(@ascii.encode("/N"))
   let encrypted_hello = try! crypt_parsed_aesv3_encrypt_data_for_test(
     file_key,
     @ascii.encode("hello"),
@@ -638,8 +638,8 @@ test "PdfDocument AESV3 parsed-object decrypt recurses through object data" {
   let decrypted = try! doc.aesv3_decrypt_parsed_objects(file_key, false, 0)
   @test.assert_eq(decrypted.lookup_object_or_null(12), object)
 
-  let key_length = pdf_name_of_bytes(@ascii.encode("/Length"))
-  let key_title = pdf_name_of_bytes(@ascii.encode("/Title"))
+  let key_length = @core.pdf_name_of_bytes(@ascii.encode("/Length"))
+  let key_title = @core.pdf_name_of_bytes(@ascii.encode("/Title"))
   let encrypted_stream : @syntax.PdfObject = PdfStreamObject({
     dictionary: PdfDictionary([
       (key_length, PdfInteger(encrypted_hello.length())),

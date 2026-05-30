@@ -4,7 +4,7 @@ fn pdf_toc_title_elements(
   font_size : Double,
   title : BytesView,
   process_struct_tree : Bool,
-) -> Array[PdfTypeElement] raise PdfError {
+) -> Array[PdfTypeElement] raise @core.PdfError {
   let output : Array[PdfTypeElement] = []
   pdf_toc_append_optional_elements(output, process_struct_tree, [
     PdfTypeTag("P", 0),
@@ -24,7 +24,7 @@ fn pdf_toc_title_elements(
 ///|
 fn pdf_toc_first_font(
   elements : ArrayView[PdfTypeElement],
-) -> PdfTypeElement raise PdfError {
+) -> PdfTypeElement raise @core.PdfError {
   for element in elements {
     match element {
       PdfTypeFont(_, _, _) => return element
@@ -50,7 +50,7 @@ fn pdf_toc_rectangle_object(
 fn pdf_toc_cropbox_page(
   page : @page.PdfPage,
   cropbox : @syntax.PdfObject?,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   match cropbox {
     Some(cropbox) =>
       {
@@ -65,7 +65,7 @@ fn pdf_toc_cropbox_page(
 fn pdf_toc_cropbox_pages(
   pages : ArrayView[@page.PdfPage],
   cropbox : @syntax.PdfObject?,
-) -> Array[@page.PdfPage] raise PdfError {
+) -> Array[@page.PdfPage] raise @core.PdfError {
   let output : Array[@page.PdfPage] = []
   for page in pages {
     output.push(pdf_toc_cropbox_page(page, cropbox))
@@ -78,28 +78,28 @@ fn pdf_toc_cropbox_pages(
 ///
 /// This mirrors `cpdftoc.ml`'s `split_toc_title`, which splits before UTF-8
 /// conversion and preserves leading, trailing, and adjacent empty title lines.
-pub fn pdf_toc_split_title(title : BytesView) -> Array[PdfBytes] {
-  let lines : Array[PdfBytes] = []
+pub fn pdf_toc_split_title(title : BytesView) -> Array[@core.PdfBytes] {
+  let lines : Array[@core.PdfBytes] = []
   let mut line_start = 0
   let mut index = 0
   while index < title.length() {
     if title[index] == b'\\' &&
       index + 1 < title.length() &&
       title[index + 1] == b'n' {
-      lines.push(pdf_bytes_of_view(title[line_start:index]))
+      lines.push(@core.pdf_bytes_of_view(title[line_start:index]))
       index += 2
       line_start = index
     } else {
       index += 1
     }
   }
-  lines.push(pdf_bytes_of_view(title[line_start:]))
+  lines.push(@core.pdf_bytes_of_view(title[line_start:]))
   lines
 }
 
 ///|
 /// Replace literal `\n` byte pairs in a TOC title with real line-feed bytes.
-pub fn pdf_toc_title_real_newlines(title : BytesView) -> PdfBytes {
+pub fn pdf_toc_title_real_newlines(title : BytesView) -> @core.PdfBytes {
   let mut length = 0
   let mut index = 0
   while index < title.length() {

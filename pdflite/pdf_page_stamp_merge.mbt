@@ -4,7 +4,7 @@ fn PdfDocument::pdf_page_stamp_protect_content(
   resources : @syntax.PdfObject,
   content : ArrayView[@syntax.PdfObject],
   fast : Bool,
-) -> Array[@syntax.PdfObject] raise PdfError {
+) -> Array[@syntax.PdfObject] raise @core.PdfError {
   let deficit = if fast {
     0
   } else {
@@ -59,14 +59,14 @@ fn PdfDocument::pdf_page_stamp_pair(
   self : PdfDocument,
   overlay_page : @page.PdfPage,
   under_page : @page.PdfPage,
-  relative_to_box : PdfName,
+  relative_to_box : @core.PdfName,
   position : @geometry.PdfPosition,
   topline : Bool,
   midline : Bool,
   scale_to_fit : Bool,
   is_over : Bool,
   fast : Bool,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   let overlay_page = self.pdf_page_stamp_transform_overlay(
     overlay_page, under_page, relative_to_box, position, topline, midline, scale_to_fit,
     fast,

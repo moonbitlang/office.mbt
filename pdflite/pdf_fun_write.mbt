@@ -24,7 +24,7 @@ pub fn PdfDocument::pdf_object_of_function(
   self : PdfDocument,
   function : PdfFunction,
 ) -> @syntax.PdfObject {
-  let entries : Array[(PdfName, @syntax.PdfObject)] = [
+  let entries : Array[(@core.PdfName, @syntax.PdfObject)] = [
     (pdf_fun_function_type_key(), PdfInteger(function.pdf_fun_function_type())),
     (pdf_fun_domain_key(), pdf_fun_number_array_object(function.domain)),
   ]

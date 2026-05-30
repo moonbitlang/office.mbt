@@ -3,7 +3,7 @@ fn pdf_space_read_indexed_table(
   data : BytesView,
   hival : Int,
   components : Int,
-) -> Array[(Int, Array[Int])] raise PdfError {
+) -> Array[(Int, Array[Int])] raise @core.PdfError {
   if hival < 0 {
     raise InvalidReadLength(hival)
   }
@@ -28,7 +28,7 @@ fn pdf_space_read_indexed_table(
 fn PdfDocument::pdf_space_indexed_lookup_data(
   self : PdfDocument,
   lookup_data : @syntax.PdfObject,
-) -> BytesView? raise PdfError {
+) -> BytesView? raise @core.PdfError {
   match self.direct(lookup_data) {
     PdfString(data) => Some(data)
     PdfStreamObject(stream) =>
@@ -46,7 +46,7 @@ fn PdfDocument::pdf_space_read_icc_based(
   self : PdfDocument,
   resources : @syntax.PdfObject,
   stream_object : @syntax.PdfObject,
-) -> PdfColourSpace? raise PdfError {
+) -> PdfColourSpace? raise @core.PdfError {
   match self.direct(stream_object) {
     PdfStreamObject(stream) =>
       match self.lookup_direct(pdf_space_n_key(), stream.dictionary) {
@@ -97,7 +97,7 @@ fn PdfDocument::pdf_space_read_indexed(
   base_object : @syntax.PdfObject,
   hival_object : @syntax.PdfObject,
   lookup_data : @syntax.PdfObject,
-) -> PdfColourSpace? raise PdfError {
+) -> PdfColourSpace? raise @core.PdfError {
   let hival = match hival_object {
     PdfInteger(hival) => hival
     _ => raise NumberExpected
@@ -125,8 +125,8 @@ fn PdfDocument::pdf_space_read_indexed(
 ///|
 fn pdf_space_read_names(
   values : ArrayView[@syntax.PdfObject],
-) -> Array[PdfName]? {
-  let names : Array[PdfName] = []
+) -> Array[@core.PdfName]? {
+  let names : Array[@core.PdfName] = []
   let mut valid = true
   for value in values {
     match value {
@@ -149,7 +149,7 @@ fn PdfDocument::pdf_space_read_device_n(
   alternate : @syntax.PdfObject,
   tint : @syntax.PdfObject,
   attributes? : @syntax.PdfObject = @syntax.pdf_dictionary([]),
-) -> PdfColourSpace? raise PdfError {
+) -> PdfColourSpace? raise @core.PdfError {
   match
     (pdf_space_read_names(names), self.read_colour_space(resources, alternate)) {
     (Some(names), Some(alternate)) =>
@@ -165,12 +165,12 @@ fn PdfDocument::pdf_space_read_device_n(
 /// pattern spaces with a base space, calibrated Gray/RGB/Lab spaces, ICCBased
 /// spaces, Indexed spaces, Separation spaces, and DeviceN spaces. Unsupported
 /// or malformed colour spaces return `None`; malformed numeric fields may raise
-/// `PdfError`.
+/// `@core.PdfError`.
 pub fn PdfDocument::read_colour_space(
   self : PdfDocument,
   resources : @syntax.PdfObject,
   object : @syntax.PdfObject,
-) -> PdfColourSpace? raise PdfError {
+) -> PdfColourSpace? raise @core.PdfError {
   match self.direct(object) {
     PdfNameObject(name) =>
       match pdf_colour_space_of_device_name(name) {
@@ -268,6 +268,6 @@ pub fn pdf_read_colour_space(
   document : PdfDocument,
   resources : @syntax.PdfObject,
   object : @syntax.PdfObject,
-) -> PdfColourSpace? raise PdfError {
+) -> PdfColourSpace? raise @core.PdfError {
   document.read_colour_space(resources, object)
 }

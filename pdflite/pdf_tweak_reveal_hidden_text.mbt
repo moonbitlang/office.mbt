@@ -17,7 +17,7 @@ pub fn pdf_reveal_hidden_text_ops(
 fn PdfDocument::pdf_tweak_reveal_hidden_text_page(
   self : PdfDocument,
   page : @page.PdfPage,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   let ops = self.pdf_page_parse_content_ops(page.resources, page.content)
   {
     ..page,
@@ -30,7 +30,7 @@ fn pdf_tweak_reveal_hidden_text_xobject(
   document : PdfDocument,
   resources : @syntax.PdfObject,
   streams : ArrayView[@syntax.PdfObject],
-) -> Array[@syntax.PdfObject] raise PdfError {
+) -> Array[@syntax.PdfObject] raise @core.PdfError {
   let ops = document.pdf_page_parse_content_ops(resources, streams)
   [pdf_content_stream_of_ops(pdf_reveal_hidden_text_ops(ops))]
 }
@@ -43,7 +43,7 @@ fn pdf_tweak_reveal_hidden_text_xobject(
 pub fn PdfDocument::reveal_hidden_text(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let document = self.copy()
   let pages = document.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(page_numbers)
@@ -66,7 +66,7 @@ pub fn PdfDocument::reveal_hidden_text(
 pub fn pdf_reveal_hidden_text(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.reveal_hidden_text(page_numbers)
 }
 
@@ -75,6 +75,6 @@ pub fn pdf_reveal_hidden_text(
 pub fn pdf_reveal_hidden_text_cpdf_order(
   page_numbers : ArrayView[Int],
   document : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.reveal_hidden_text(page_numbers)
 }

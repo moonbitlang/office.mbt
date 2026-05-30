@@ -28,8 +28,8 @@ pub fn pdf_document_of_parsed_indirect_objects(
 /// does not interpret trailer/xref metadata or decrypt the document.
 pub fn pdf_read_primitive_document_from_view(
   data : BytesView,
-) -> PdfDocument raise PdfError {
-  let cursor = byte_cursor_of_view(data)
+) -> PdfDocument raise @core.PdfError {
+  let cursor = @core.byte_cursor_of_view(data)
   let version = @reader.pdf_read_header_from_cursor(cursor)
   let document = pdf_document_empty()
   document.set_version(version.major, version.minor)
@@ -71,7 +71,7 @@ pub fn pdf_read_primitive_document_from_view(
 ///|
 /// Parse a primitive document from owned PDF bytes.
 pub fn pdf_read_primitive_document_from_bytes(
-  data : PdfBytes,
-) -> PdfDocument raise PdfError {
+  data : @core.PdfBytes,
+) -> PdfDocument raise @core.PdfError {
   pdf_read_primitive_document_from_view(data)
 }

@@ -13,7 +13,7 @@ fn pdf_texttopdf_process_codepoints(
   current_font : Ref[Int],
   output : Array[PdfTypeElement],
   codepoints : ArrayView[Int],
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let mut current_text : Array[Byte] = []
   for codepoint in codepoints {
     match fontpack.get_char(codepoint) {
@@ -46,7 +46,7 @@ pub fn pdf_texttopdf_of_utf8_with_newlines(
   fontpack : PdfFontPack,
   font_size : Double,
   text : BytesView,
-) -> Array[PdfTypeElement] raise PdfError {
+) -> Array[PdfTypeElement] raise @core.PdfError {
   let output : Array[PdfTypeElement] = []
   let current_font : Ref[Int] = { val: -1 }
   let codepoints = pdf_codepoints_of_utf8(text)

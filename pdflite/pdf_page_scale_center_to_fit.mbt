@@ -16,7 +16,7 @@ fn PdfDocument::pdf_page_scale_center_offsets(
   self : PdfDocument,
   target_width : Double,
   target_height : Double,
-) -> Array[(Double, Double)] raise PdfError {
+) -> Array[(Double, Double)] raise @core.PdfError {
   let pages = self.pages_of_pagetree()
   let offsets : Array[(Double, Double)] = Array::new(capacity=pages.length())
   for page in pages {
@@ -41,7 +41,7 @@ pub fn PdfDocument::center_to_fit_pages(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
   sizes : ArrayView[(Double, Double)],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let pages = self.pages_of_pagetree()
   pdf_page_box_validate_page_numbers(
     page_numbers,
@@ -71,7 +71,7 @@ pub fn pdf_center_to_fit_pages(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
   sizes : ArrayView[(Double, Double)],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.center_to_fit_pages(page_numbers, sizes)
 }
 
@@ -81,7 +81,7 @@ pub fn PdfDocument::center_to_fit(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
   sizes : ArrayView[(Double, Double)],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   self.center_to_fit_pages(page_numbers, sizes)
 }
 
@@ -91,6 +91,6 @@ pub fn pdf_center_to_fit(
   sizes : ArrayView[(Double, Double)],
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.center_to_fit(page_numbers, sizes)
 }

@@ -21,7 +21,7 @@ pub fn PdfDocument::json_of_document(
   clean_strings? : Bool = false,
   no_stream_data? : Bool = false,
   decompress_streams? : Bool = false,
-) -> Json raise PdfError {
+) -> Json raise @core.PdfError {
   let document = if parse_content {
     self.pdf_util_precombine_page_content()
   } else {
@@ -87,7 +87,7 @@ pub fn PdfDocument::json_of_document_blob(
   clean_strings? : Bool = false,
   no_stream_data? : Bool = false,
   decompress_streams? : Bool = false,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let json = self.json_of_document(
     utf8~,
     parse_content~,
@@ -110,7 +110,7 @@ pub fn PdfDocument::json_to_output(
   no_stream_data? : Bool = false,
   decompress_streams? : Bool = false,
   clean_strings? : Bool = false,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   self.json_of_document_blob(
     utf8~,
     parse_content~,
@@ -129,7 +129,7 @@ pub fn pdf_json_of_document(
   clean_strings? : Bool = false,
   no_stream_data? : Bool = false,
   decompress_streams? : Bool = false,
-) -> Json raise PdfError {
+) -> Json raise @core.PdfError {
   document.json_of_document(
     utf8~,
     parse_content~,
@@ -148,7 +148,7 @@ pub fn pdf_json_of_document_blob(
   clean_strings? : Bool = false,
   no_stream_data? : Bool = false,
   decompress_streams? : Bool = false,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   document.json_of_document_blob(
     utf8~,
     parse_content~,
@@ -167,7 +167,7 @@ pub fn pdf_json_to_output(
   no_stream_data? : Bool = false,
   decompress_streams? : Bool = false,
   clean_strings? : Bool = false,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   document.json_to_output(
     utf8~,
     parse_content~,

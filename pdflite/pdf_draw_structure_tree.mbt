@@ -89,7 +89,7 @@ fn pdf_draw_make_structure_tree_items(
   context : PdfDrawStructureBuildContext,
   page_object_numbers : ArrayView[Int],
   expect_end_tree : Bool,
-) -> Array[PdfDrawStructureNode] raise PdfError {
+) -> Array[PdfDrawStructureNode] raise @core.PdfError {
   let output : Array[PdfDrawStructureNode] = Array::new(
     capacity=data.length() - index.val,
   )
@@ -158,7 +158,7 @@ fn pdf_draw_make_structure_tree_items(
 fn PdfDocument::pdf_draw_make_structure_tree(
   self : PdfDocument,
   data : ArrayView[PdfDrawStructureData],
-) -> Array[PdfDrawStructureNode] raise PdfError {
+) -> Array[PdfDrawStructureNode] raise @core.PdfError {
   let index : Ref[Int] = { val: 0 }
   pdf_draw_make_structure_tree_items(
     data,
@@ -249,7 +249,7 @@ fn PdfDocument::pdf_draw_write_structure_node(
   namespaces : PdfDrawNamespaceMap,
   parent_map : PdfDrawParentMap,
   node : PdfDrawStructureNode,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   match node {
     PdfDrawStructureNodeMCID(mcid) => PdfInteger(mcid)
     PdfDrawStructureNodeItem(item) => {
@@ -259,7 +259,7 @@ fn PdfDocument::pdf_draw_write_structure_node(
           parent_map.add(page_object_number, object_number)
         None => ()
       }
-      let entries : Array[(PdfName, @syntax.PdfObject)] = Array::new(
+      let entries : Array[(@core.PdfName, @syntax.PdfObject)] = Array::new(
         capacity=item.alt.length() + 4,
       )
       for entry in item.alt {
@@ -301,7 +301,7 @@ fn PdfDocument::pdf_draw_write_structure_tree(
   self : PdfDocument,
   data : ArrayView[PdfDrawStructureData],
   role_map : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let tree = self.pdf_draw_make_structure_tree(data)
   let namespaces = pdf_draw_namespace_map_new()
   let parent_map = pdf_draw_parent_map_new()
@@ -327,7 +327,7 @@ fn PdfDocument::pdf_draw_write_structure_tree(
   let parent_tree_number = self.add_object(
     self.build_number_tree(parent_map.number_tree_entries()),
   )
-  let root_entries : Array[(PdfName, @syntax.PdfObject)] = [
+  let root_entries : Array[(@core.PdfName, @syntax.PdfObject)] = [
     (pdf_draw_type_key(), PdfNameObject(pdf_draw_struct_tree_root_key())),
     (pdf_draw_parent_tree_key(), PdfIndirect(parent_tree_number)),
     (pdf_draw_k_key(), PdfArray(children)),

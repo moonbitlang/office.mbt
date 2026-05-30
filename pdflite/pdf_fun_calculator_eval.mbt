@@ -8,7 +8,7 @@ priv enum PdfCalculatorValue {
 ///|
 fn pdf_fun_calculator_pop_value(
   stack : Array[PdfCalculatorValue],
-) -> PdfCalculatorValue raise PdfError {
+) -> PdfCalculatorValue raise @core.PdfError {
   match stack.pop() {
     Some(value) => value
     None => raise BadFunctionEvaluation("calculator stack underflow")
@@ -18,7 +18,7 @@ fn pdf_fun_calculator_pop_value(
 ///|
 fn pdf_fun_calculator_pop_number(
   stack : Array[PdfCalculatorValue],
-) -> Double raise PdfError {
+) -> Double raise @core.PdfError {
   match pdf_fun_calculator_pop_value(stack) {
     PdfCalculatorInt(value) => value.to_double()
     PdfCalculatorFloat(value) => value
@@ -30,7 +30,7 @@ fn pdf_fun_calculator_pop_number(
 ///|
 fn pdf_fun_calculator_pop_int(
   stack : Array[PdfCalculatorValue],
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   match pdf_fun_calculator_pop_value(stack) {
     PdfCalculatorInt(value) => value
     _ => raise BadFunctionEvaluation("calculator integer operand expected")
@@ -40,7 +40,7 @@ fn pdf_fun_calculator_pop_int(
 ///|
 fn pdf_fun_calculator_pop_bool(
   stack : Array[PdfCalculatorValue],
-) -> Bool raise PdfError {
+) -> Bool raise @core.PdfError {
   match pdf_fun_calculator_pop_value(stack) {
     PdfCalculatorBoolean(value) => value
     PdfCalculatorInt(_) | PdfCalculatorFloat(_) =>
@@ -52,7 +52,7 @@ fn pdf_fun_calculator_pop_bool(
 fn pdf_fun_calculator_eval_operations(
   operations : ArrayView[PdfCalculatorOp],
   stack : Array[PdfCalculatorValue],
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   for operation in operations {
     match operation {
       PdfCalculatorInt(value) => stack.push(PdfCalculatorInt(value))
@@ -307,7 +307,7 @@ fn pdf_fun_calculator_eval_operations(
 fn PdfCalculatorFunction::eval_calculator(
   self : PdfCalculatorFunction,
   clamped_inputs : ArrayView[Double],
-) -> Array[Double] raise PdfError {
+) -> Array[Double] raise @core.PdfError {
   let stack : Array[PdfCalculatorValue] = []
   for input in clamped_inputs {
     stack.push(PdfCalculatorFloat(input))

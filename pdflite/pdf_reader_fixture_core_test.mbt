@@ -1,14 +1,14 @@
 ///|
 #warnings("-unused_value")
-fn reader_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
-  try! @pdflite.pdf_bytes_of_int_array(values)
+fn reader_bytes_for_test(values : ArrayView[Int]) -> @core.PdfBytes {
+  try! @core.pdf_bytes_of_int_array(values)
 }
 
 ///|
 #warnings("-unused_value")
 fn reader_stream_bytes_for_test(
   stream : @syntax.PdfStream,
-) -> @pdflite.PdfBytes raise {
+) -> @core.PdfBytes raise {
   @syntax.pdf_stream(stream.dictionary, stream.data).stream_bytes()
 }
 
@@ -16,7 +16,7 @@ fn reader_stream_bytes_for_test(
 #warnings("-unused_value")
 fn reader_assert_deferred_stream_data_for_test(
   stream : @syntax.PdfStream,
-  expected : @pdflite.PdfBytes,
+  expected : @core.PdfBytes,
 ) -> Unit raise {
   guard stream.data is StreamToGet(_) else {
     fail("expected deferred stream data")
@@ -103,7 +103,7 @@ fn reader_push_xref_stream_default_in_use_entry(
 fn reader_png_none_predictor_rows_for_test(
   data : ArrayView[Byte],
   columns : Int,
-) -> @pdflite.PdfBytes {
+) -> @core.PdfBytes {
   let output : Array[Byte] = []
   let row_count = (data.length() + columns - 1) / columns
   for row in 0..<row_count {
@@ -136,15 +136,13 @@ fn reader_push_xref_entry(
 
 ///|
 #warnings("-unused_value")
-fn reader_pdf_ascii(text : String) -> @pdflite.PdfBytes {
+fn reader_pdf_ascii(text : String) -> @core.PdfBytes {
   @ascii.encode(text)
 }
 
 ///|
 #warnings("-unused_value")
-fn reader_cr_line_endings_for_test(
-  bytes : @pdflite.PdfBytes,
-) -> @pdflite.PdfBytes {
+fn reader_cr_line_endings_for_test(bytes : @core.PdfBytes) -> @core.PdfBytes {
   let output : Array[Byte] = []
   for byte in bytes {
     let replacement = if byte.to_int() == 10 { (13).to_byte() } else { byte }
@@ -159,7 +157,7 @@ fn reader_wrap_view_for_test(
   prefix : String,
   data : BytesView,
   suffix : String,
-) -> @pdflite.PdfBytes {
+) -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, prefix)
   for byte in data {

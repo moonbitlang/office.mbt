@@ -29,7 +29,7 @@ pub fn PdfDocument::page_info_json(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
   unit? : @geometry.PdfUnit = PdfPoint,
-) -> Json raise PdfError {
+) -> Json raise @core.PdfError {
   Json::array(
     [
       for entry in self.pdf_page_info_entries(page_numbers, unit) => {
@@ -45,6 +45,6 @@ pub fn PdfDocument::page_info_json_blob(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
   unit? : @geometry.PdfUnit = PdfPoint,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   @utf8.encode(self.page_info_json(page_numbers, unit~).stringify())
 }

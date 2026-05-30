@@ -1,37 +1,37 @@
 ///|
-fn pdf_tree_name(text : String) -> PdfName {
-  pdf_name_of_bytes(@ascii.encode(text))
+fn pdf_tree_name(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
-let pdf_tree_names_key_name : PdfName = pdf_tree_name("/Names")
+let pdf_tree_names_key_name : @core.PdfName = pdf_tree_name("/Names")
 
 ///|
-fn pdf_tree_names_key() -> PdfName {
+fn pdf_tree_names_key() -> @core.PdfName {
   pdf_tree_names_key_name
 }
 
 ///|
-let pdf_tree_nums_key_name : PdfName = pdf_tree_name("/Nums")
+let pdf_tree_nums_key_name : @core.PdfName = pdf_tree_name("/Nums")
 
 ///|
-fn pdf_tree_nums_key() -> PdfName {
+fn pdf_tree_nums_key() -> @core.PdfName {
   pdf_tree_nums_key_name
 }
 
 ///|
-let pdf_tree_kids_key_name : PdfName = pdf_tree_name("/Kids")
+let pdf_tree_kids_key_name : @core.PdfName = pdf_tree_name("/Kids")
 
 ///|
-fn pdf_tree_kids_key() -> PdfName {
+fn pdf_tree_kids_key() -> @core.PdfName {
   pdf_tree_kids_key_name
 }
 
 ///|
-let pdf_tree_limits_key_name : PdfName = pdf_tree_name("/Limits")
+let pdf_tree_limits_key_name : @core.PdfName = pdf_tree_name("/Limits")
 
 ///|
-fn pdf_tree_limits_key() -> PdfName {
+fn pdf_tree_limits_key() -> @core.PdfName {
   pdf_tree_limits_key_name
 }
 

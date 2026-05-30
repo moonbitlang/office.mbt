@@ -3,7 +3,7 @@ fn pdf_metadata_xml_parse_element(
   data : BytesView,
   start : Int,
   context : ArrayView[(String, String)],
-) -> (@metadata.PdfMetadataXmlTree, Int) raise PdfError {
+) -> (@metadata.PdfMetadataXmlTree, Int) raise @core.PdfError {
   let (qualified_name, tag, child_context, self_closing, after_tag) = pdf_metadata_xml_parse_start_tag(
     data, start, context,
   )

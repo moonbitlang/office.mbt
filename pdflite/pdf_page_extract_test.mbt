@@ -1,6 +1,6 @@
 ///|
-fn page_extract_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn page_extract_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -42,7 +42,7 @@ fn page_extract_annotation_numbers_for_test(
 ///|
 fn page_extract_destination_entries_for_test(
   doc : @pdflite.PdfDocument,
-) -> Array[(@pdflite.PdfBytes, @syntax.PdfObject)] {
+) -> Array[(@core.PdfBytes, @syntax.PdfObject)] {
   match
     doc.lookup_chain(doc.lookup_object_or_null(doc.root()), [
       page_extract_name_for_test("/Names"),
@@ -711,15 +711,15 @@ test "PdfDocument pdf_of_pages rejects empty and invalid ranges" {
   let empty_result : Result[@pdflite.PdfDocument, Error] = try? doc.pdf_of_pages(
     empty_page_numbers,
   )
-  guard empty_result is Err(@pdflite.PdfError::PageTreeExpected) else {
-    fail("expected @pdflite.PdfError::PageTreeExpected for empty range")
+  guard empty_result is Err(@core.PdfError::PageTreeExpected) else {
+    fail("expected @core.PdfError::PageTreeExpected for empty range")
   }
   let invalid_result : Result[@pdflite.PdfDocument, Error] = try? doc.pdf_of_pages([
       2,
     ],
   )
-  guard invalid_result is Err(@pdflite.PdfError::PageTreeExpected) else {
-    fail("expected @pdflite.PdfError::PageTreeExpected for invalid range")
+  guard invalid_result is Err(@core.PdfError::PageTreeExpected) else {
+    fail("expected @core.PdfError::PageTreeExpected for invalid range")
   }
 }
 
@@ -882,7 +882,7 @@ test "PdfDocument page_reference_numbers reports missing catalog object" {
   let doc = @pdflite.pdf_document_empty()
   doc.set_root(99)
   let result : Result[Array[Int], Error] = try? doc.page_reference_numbers()
-  guard result is Err(@pdflite.PdfError::RootExpected) else {
-    fail("expected @pdflite.PdfError::RootExpected")
+  guard result is Err(@core.PdfError::RootExpected) else {
+    fail("expected @core.PdfError::RootExpected")
   }
 }

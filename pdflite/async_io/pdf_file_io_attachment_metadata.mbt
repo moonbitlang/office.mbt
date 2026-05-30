@@ -1,6 +1,6 @@
 ///|
-fn pdf_async_io_name(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn pdf_async_io_name(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -16,7 +16,7 @@ fn pdf_async_io_join_path(directory : StringView, filename : String) -> String {
 ///|
 fn pdf_async_io_attachment_data(
   attachment : @attachment.PdfAttachment,
-) -> @pdflite.PdfBytes raise @pdflite.PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   match attachment.data {
     Some(data) => data
     None => raise DictionaryKeyNotFound(pdf_async_io_name("/EF"))
@@ -51,7 +51,7 @@ pub async fn pdf_attach_file_from_path(
 ///|
 fn pdf_async_io_catalog_metadata_number(
   document : @pdflite.PdfDocument,
-) -> Int? raise @pdflite.PdfError {
+) -> Int? raise @core.PdfError {
   let root = match
     document.lookup_direct(pdf_async_io_name("/Root"), document.trailer_dict()) {
     Some(root) => root
@@ -75,7 +75,7 @@ fn pdf_async_io_is_metadata_object(
 fn pdf_async_io_metadata_stream_bytes(
   document : @pdflite.PdfDocument,
   object : @syntax.PdfObject,
-) -> @pdflite.PdfBytes raise @pdflite.PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   document.pdf_decode_stream(object).stream_bytes()
 }
 

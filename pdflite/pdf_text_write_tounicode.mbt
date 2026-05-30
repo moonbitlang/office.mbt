@@ -26,8 +26,8 @@ fn pdf_text_tounicode_postamble() -> String {
 
 ///|
 fn pdf_text_tounicode_sorted(
-  entries : ArrayView[(Int, PdfBytes)],
-) -> Array[(Int, PdfBytes)] {
+  entries : ArrayView[(Int, @core.PdfBytes)],
+) -> Array[(Int, @core.PdfBytes)] {
   let sorted = [ for entry in entries => entry ]
   sorted.sort_by(fn(left, right) { left.0.compare(right.0) })
   sorted
@@ -114,7 +114,9 @@ fn pdf_text_write_tounicode_bfrange(
 }
 
 ///|
-fn pdf_text_tounicode_bytes(sorted : ArrayView[(Int, PdfBytes)]) -> PdfBytes {
+fn pdf_text_tounicode_bytes(
+  sorted : ArrayView[(Int, @core.PdfBytes)],
+) -> @core.PdfBytes {
   let count_text = sorted.length().to_string()
   let mut length = pdf_text_ascii_length(pdf_text_tounicode_preamble()) +
     pdf_text_ascii_length(count_text) +
@@ -151,7 +153,7 @@ fn pdf_text_tounicode_bytes(sorted : ArrayView[(Int, PdfBytes)]) -> PdfBytes {
 ///|
 fn PdfDocument::pdf_text_write_tounicode(
   self : PdfDocument,
-  entries : ArrayView[(Int, PdfBytes)],
+  entries : ArrayView[(Int, @core.PdfBytes)],
 ) -> Int {
   let sorted = pdf_text_tounicode_sorted(entries)
   let bytes = pdf_text_tounicode_bytes(sorted)

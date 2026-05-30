@@ -5,7 +5,7 @@ fn PdfDocument::pdf_image_separation_cmyk_8bpp_as_rgb24(
   height : Int,
   tint : @syntax.PdfObject,
   data : BytesView,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let pixels = width * height
   pdf_image_require_size(data, pixels)
   let tint_function = self.parse_function(tint)
@@ -21,9 +21,9 @@ fn PdfDocument::pdf_image_separation_cmyk_8bpp_as_rgb24(
     let y = (values[1] * 255.0).to_int()
     let k = (values[3] * 255.0).to_int()
     let (red, green, blue) = pdf_image_rgb_of_cmyk(c, m, y, k)
-    output[position] = pdf_byte_of_int(red)
-    output[position + 1] = pdf_byte_of_int(green)
-    output[position + 2] = pdf_byte_of_int(blue)
+    output[position] = @core.pdf_byte_of_int(red)
+    output[position + 1] = @core.pdf_byte_of_int(green)
+    output[position + 2] = @core.pdf_byte_of_int(blue)
     position += 3
   }
   Bytes::from_array(output)
@@ -37,7 +37,7 @@ fn PdfDocument::pdf_image_raw_colour_space_as_rgb24(
   colour_space : PdfColourSpace,
   bpc : Int?,
   data : BytesView,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   match (colour_space, bpc) {
     (PdfDeviceRGB | PdfCalRGB(_, _, _, _), Some(8)) => {
       let required = width * height * 3
@@ -116,8 +116,8 @@ fn PdfDocument::pdf_image_raw_colour_space_as_rgb24_owned(
   height : Int,
   colour_space : PdfColourSpace,
   bpc : Int?,
-  data : PdfBytes,
-) -> PdfBytes raise PdfError {
+  data : @core.PdfBytes,
+) -> @core.PdfBytes raise @core.PdfError {
   match (colour_space, bpc) {
     (PdfDeviceRGB | PdfCalRGB(_, _, _, _), Some(8)) => {
       let required = width * height * 3
@@ -142,8 +142,8 @@ fn PdfDocument::pdf_image_raw_8bpp_as_rgb24_owned(
   width : Int,
   height : Int,
   dictionary : @syntax.PdfObject,
-  data : PdfBytes,
-) -> PdfBytes raise PdfError {
+  data : @core.PdfBytes,
+) -> @core.PdfBytes raise @core.PdfError {
   self.pdf_image_raw_colour_space_as_rgb24_owned(
     width,
     height,

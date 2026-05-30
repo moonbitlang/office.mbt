@@ -1,6 +1,6 @@
 ///|
-fn reference_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn reference_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -17,7 +17,7 @@ test "PdfDocument referenced_object_numbers follows arrays dictionaries and stre
     2,
     @syntax.pdf_stream(
       @syntax.pdf_dictionary([(key_stream_child, PdfIndirect(3))]),
-      StreamGot(try! @pdflite.pdf_bytes_of_int_array([65])),
+      StreamGot(try! @core.pdf_bytes_of_int_array([65])),
     ),
   )
   doc.add_object_given_number(3, PdfInteger(30))

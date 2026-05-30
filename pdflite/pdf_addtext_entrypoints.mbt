@@ -21,7 +21,7 @@ fn PdfDocument::pdf_addtext_used_codepoints_for_pages(
   filename : String,
   bates : Int,
   bates_pad : Int?,
-) -> Array[Int] raise PdfError {
+) -> Array[Int] raise @core.PdfError {
   let used : Array[Int] = Array::new(
     capacity=page_numbers.length() * lines.length(),
   )
@@ -50,7 +50,7 @@ fn PdfDocument::pdf_addtext_used_codepoints_for_pages(
 fn PdfDocument::pdf_addtext_write_fontpack_objects(
   self : PdfDocument,
   fontpack : PdfFontPack?,
-) -> Array[Int] raise PdfError {
+) -> Array[Int] raise @core.PdfError {
   let objects : Array[Int] = match fontpack {
     Some(pack) => Array::new(capacity=pack.fonts.length())
     None => []
@@ -81,7 +81,7 @@ pub fn PdfDocument::addtexts_with_font(
   bookmarks : ArrayView[@bookmark.PdfBookmark],
   font : PdfFont?,
   fontpack : PdfFontPack?,
-  fontname : PdfName,
+  fontname : @core.PdfName,
   font_size : Double,
   line_spacing : Double,
   colour : @colour.PdfContentColour,
@@ -89,7 +89,7 @@ pub fn PdfDocument::addtexts_with_font(
   filename? : String = "",
   bates? : Int = 1,
   bates_pad? : Int? = None,
-  relative_to_box? : PdfName = pdf_page_mediabox_key(),
+  relative_to_box? : @core.PdfName = pdf_page_mediabox_key(),
   shift? : String = "0 0",
   opacity? : Double = 1.0,
   justification? : @addtext.PdfAddTextJustification = PdfAddTextLeftJustify,
@@ -102,7 +102,7 @@ pub fn PdfDocument::addtexts_with_font(
   fast? : Bool = false,
   raw? : Bool = false,
   url_border? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   if page_numbers.length() == 0 {
     self
   } else {
@@ -171,7 +171,7 @@ pub fn pdf_addtexts_with_font(
   bookmarks : ArrayView[@bookmark.PdfBookmark],
   font : PdfFont?,
   fontpack : PdfFontPack?,
-  fontname : PdfName,
+  fontname : @core.PdfName,
   font_size : Double,
   line_spacing : Double,
   colour : @colour.PdfContentColour,
@@ -179,7 +179,7 @@ pub fn pdf_addtexts_with_font(
   filename? : String = "",
   bates? : Int = 1,
   bates_pad? : Int? = None,
-  relative_to_box? : PdfName = pdf_page_mediabox_key(),
+  relative_to_box? : @core.PdfName = pdf_page_mediabox_key(),
   shift? : String = "0 0",
   opacity? : Double = 1.0,
   justification? : @addtext.PdfAddTextJustification = PdfAddTextLeftJustify,
@@ -192,7 +192,7 @@ pub fn pdf_addtexts_with_font(
   fast? : Bool = false,
   raw? : Bool = false,
   url_border? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.addtexts_with_font(
     page_numbers,
     text,

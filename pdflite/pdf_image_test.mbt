@@ -1,11 +1,11 @@
 ///|
-fn image_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn image_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
-fn image_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
-  try! @pdflite.pdf_bytes_of_int_array(values)
+fn image_bytes_for_test(values : ArrayView[Int]) -> @core.PdfBytes {
+  try! @core.pdf_bytes_of_int_array(values)
 }
 
 ///|
@@ -119,7 +119,7 @@ fn image_lookup_indirect_object_for_test(
 }
 
 ///|
-fn image_jpeg_for_document_test() -> @pdflite.PdfBytes {
+fn image_jpeg_for_document_test() -> @core.PdfBytes {
   image_bytes_for_test([
     0xFF, 0xD8, 0xFF, 0xE0,
     // APP0 length = 9, followed by "JFIF\0" and padding.
@@ -130,7 +130,7 @@ fn image_jpeg_for_document_test() -> @pdflite.PdfBytes {
 }
 
 ///|
-fn image_jpeg2000_for_document_test() -> @pdflite.PdfBytes {
+fn image_jpeg2000_for_document_test() -> @core.PdfBytes {
   image_bytes_for_test([
     0x00, 0x00, 0x00, 0x0C, 0x6A, 0x50, 0x20, 0x20, 0x0D, 0x0A, 0x87, 0x0A,
     // ihdr, height 300, width 400
@@ -139,7 +139,7 @@ fn image_jpeg2000_for_document_test() -> @pdflite.PdfBytes {
 }
 
 ///|
-fn image_jbig2_for_document_test() -> @pdflite.PdfBytes {
+fn image_jbig2_for_document_test() -> @core.PdfBytes {
   image_bytes_for_test([
     0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A,
     // Width 640, height 480 at the cpdf JBIG2 dimension offsets.
@@ -149,7 +149,7 @@ fn image_jbig2_for_document_test() -> @pdflite.PdfBytes {
 
 ///|
 fn image_push_byte_for_test(output : Array[Byte], value : Int) -> Unit {
-  output.push(try! @pdflite.pdf_byte_of_int(value))
+  output.push(try! @core.pdf_byte_of_int(value))
 }
 
 ///|
@@ -171,7 +171,7 @@ fn image_append_bytes_for_test(output : Array[Byte], bytes : BytesView) -> Unit 
 fn image_png_chunk_for_test(
   chunk_type : ArrayView[Int],
   data : BytesView,
-) -> @pdflite.PdfBytes {
+) -> @core.PdfBytes {
   let output : Array[Byte] = []
   image_push_u32_for_test(output, data.length())
   for value in chunk_type {
@@ -189,7 +189,7 @@ fn image_png_header_for_test(
   bit_depth : Int,
   color_type : Int,
   interlace : Int,
-) -> @pdflite.PdfBytes {
+) -> @core.PdfBytes {
   let output : Array[Byte] = []
   image_push_u32_for_test(output, width)
   image_push_u32_for_test(output, height)
@@ -208,8 +208,8 @@ fn image_png_for_test(
   bit_depth : Int,
   color_type : Int,
   interlace : Int,
-  idat_chunks : ArrayView[@pdflite.PdfBytes],
-) -> @pdflite.PdfBytes {
+  idat_chunks : ArrayView[@core.PdfBytes],
+) -> @core.PdfBytes {
   let output : Array[Byte] = []
   for value in [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A] {
     image_push_byte_for_test(output, value)
@@ -236,21 +236,21 @@ fn image_png_for_test(
 
 ///|
 fn image_png_split_idat_for_test(
-  idat : @pdflite.PdfBytes,
-) -> Array[@pdflite.PdfBytes] {
+  idat : @core.PdfBytes,
+) -> Array[@core.PdfBytes] {
   let split = idat.length() / 2
   [idat[:split].to_owned(), idat[split:].to_owned()]
 }
 
 ///|
-fn image_png_rgb_for_test() -> (@pdflite.PdfBytes, @pdflite.PdfBytes) {
+fn image_png_rgb_for_test() -> (@core.PdfBytes, @core.PdfBytes) {
   let raw = image_bytes_for_test([0, 10, 20, 30, 40, 50, 60])
   let idat = @flate.pdf_flate_encode(raw)
   (image_png_for_test(2, 1, 8, 2, 0, image_png_split_idat_for_test(idat)), idat)
 }
 
 ///|
-fn image_png_rgba_for_test() -> @pdflite.PdfBytes {
+fn image_png_rgba_for_test() -> @core.PdfBytes {
   let raw = image_bytes_for_test([0, 10, 20, 30, 40, 50, 60, 70, 80])
   image_png_for_test(
     2,
@@ -390,7 +390,7 @@ test "PdfDocument images_json lists image xobjects and soft masks" {
     @utf8.encode(expected.stringify()),
   )
   let bad_page : Result[Json, Error] = try? doc.images_json([2])
-  guard bad_page is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+  guard bad_page is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail("expected images_json invalid page to raise BadPageSpecification")
   }
 }
@@ -765,13 +765,13 @@ test "pdf_read_png rejects unsupported palette and interlaced inputs" {
   let palette : Result[@pdflite.PdfPNG, Error] = try? @pdflite.pdf_read_png(
     image_png_for_test(1, 1, 8, 3, 0, []),
   )
-  guard palette is Err(@pdflite.PdfError::BadPNG(_)) else {
+  guard palette is Err(@core.PdfError::BadPNG(_)) else {
     fail("expected palette PNG to raise BadPNG")
   }
   let interlaced : Result[@pdflite.PdfPNG, Error] = try? @pdflite.pdf_read_png(
     image_png_for_test(1, 1, 8, 2, 1, []),
   )
-  guard interlaced is Err(@pdflite.PdfError::BadPNG(_)) else {
+  guard interlaced is Err(@core.PdfError::BadPNG(_)) else {
     fail("expected interlaced PNG to raise BadPNG")
   }
 }
@@ -966,7 +966,7 @@ test "pdf_image_object_of_png_data rejects 16-bit alpha PNGs" {
     document,
     image_png_for_test(1, 1, 16, 6, 0, []),
   )
-  guard result is Err(@pdflite.PdfError::BadPNG(_)) else {
+  guard result is Err(@core.PdfError::BadPNG(_)) else {
     fail("expected 16-bit alpha PNG to raise BadPNG")
   }
 }
@@ -1115,7 +1115,7 @@ test "pdf_image_object_of_jbig2_data reports short data" {
   ] = try? @pdflite.pdf_image_object_of_jbig2_data(
     image_bytes_for_test([0, 1, 2]),
   )
-  guard result is Err(@pdflite.PdfError::EndOfInput) else {
+  guard result is Err(@core.PdfError::EndOfInput) else {
     fail("expected short JBIG2 data to raise EndOfInput")
   }
 }
@@ -1200,7 +1200,7 @@ test "pdf_image_document_of_jpeg_data creates structured image page" {
 test "pdf_image_of_input builds document through cpdf object callback" {
   let document = try! @pdflite.pdf_image_of_input(
     image_jpeg_for_document_test(),
-    fn(_, data) raise @pdflite.PdfError {
+    fn(_, data) raise @core.PdfError {
       @pdflite.pdf_image_obj_of_jpeg_data(data)
     },
     process_struct_tree=true,
@@ -1324,7 +1324,7 @@ test "pdf_image_document_of_jpeg_data requires title for PDF/UA subformat" {
     image_jpeg_for_document_test(),
     subformat=Some(PdfUA1),
   )
-  guard result is Err(@pdflite.PdfError::TitleExpected) else {
+  guard result is Err(@core.PdfError::TitleExpected) else {
     fail("expected missing PDF/UA image title to raise TitleExpected")
   }
 }

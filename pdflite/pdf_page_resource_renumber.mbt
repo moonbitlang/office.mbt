@@ -1,10 +1,10 @@
 ///|
 fn PdfDocument::pdf_page_renumber_inline_image_dictionary(
   self : PdfDocument,
-  changes : ArrayView[(PdfName, Int, PdfName, PdfName)],
+  changes : ArrayView[(@core.PdfName, Int, @core.PdfName, @core.PdfName)],
   page_number : Int,
   dictionary : @syntax.PdfObject,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   match
     self.lookup_direct_or_else(
       pdf_page_cs_key_name, pdf_page_colorspace_resource_name, dictionary,
@@ -31,10 +31,10 @@ fn PdfDocument::pdf_page_renumber_inline_image_dictionary(
 ///|
 fn PdfDocument::pdf_page_renumber_content_op(
   self : PdfDocument,
-  changes : ArrayView[(PdfName, Int, PdfName, PdfName)],
+  changes : ArrayView[(@core.PdfName, Int, @core.PdfName, @core.PdfName)],
   page_number : Int,
   op : @content.PdfContentOp,
-) -> @content.PdfContentOp raise PdfError {
+) -> @content.PdfContentOp raise @core.PdfError {
   match op {
     Op_Tf(font, size) =>
       Op_Tf(
@@ -131,10 +131,10 @@ fn PdfDocument::pdf_page_renumber_content_op(
 ///|
 fn PdfDocument::pdf_page_renumber_content_ops(
   self : PdfDocument,
-  changes : ArrayView[(PdfName, Int, PdfName, PdfName)],
+  changes : ArrayView[(@core.PdfName, Int, @core.PdfName, @core.PdfName)],
   page_number : Int,
   ops : ArrayView[@content.PdfContentOp],
-) -> Array[@content.PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise @core.PdfError {
   let output : Array[@content.PdfContentOp] = Array::new(capacity=ops.length())
   for op in ops {
     output.push(self.pdf_page_renumber_content_op(changes, page_number, op))
@@ -145,15 +145,15 @@ fn PdfDocument::pdf_page_renumber_content_ops(
 ///|
 fn PdfDocument::pdf_page_renumber_resource_dictionary(
   self : PdfDocument,
-  changes : ArrayView[(PdfName, Int, PdfName, PdfName)],
+  changes : ArrayView[(@core.PdfName, Int, @core.PdfName, @core.PdfName)],
   page_number : Int,
   resources : @syntax.PdfObject,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   let mut output = resources
   for resource_key in pdf_page_resource_keys() {
     match self.lookup_direct(resource_key, resources) {
       Some(PdfDictionary(entries)) => {
-        let new_entries : Array[(PdfName, @syntax.PdfObject)] = Array::new(
+        let new_entries : Array[(@core.PdfName, @syntax.PdfObject)] = Array::new(
           capacity=entries.length(),
         )
         for entry in entries {
@@ -184,7 +184,7 @@ fn PdfDocument::pdf_page_renumber_resource_dictionary(
 pub fn PdfDocument::renumber_pages(
   self : PdfDocument,
   pages : ArrayView[@page.PdfPage],
-) -> Array[@page.PdfPage] raise PdfError {
+) -> Array[@page.PdfPage] raise @core.PdfError {
   if pages.length() == 0 {
     []
   } else {
@@ -216,6 +216,6 @@ pub fn PdfDocument::renumber_pages(
 pub fn pdf_renumber_pages(
   document : PdfDocument,
   pages : ArrayView[@page.PdfPage],
-) -> Array[@page.PdfPage] raise PdfError {
+) -> Array[@page.PdfPage] raise @core.PdfError {
   document.renumber_pages(pages)
 }

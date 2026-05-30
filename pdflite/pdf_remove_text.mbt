@@ -1,13 +1,15 @@
 ///|
-fn pdf_remove_text_name(text : String) -> PdfName {
-  pdf_name_of_bytes(@ascii.encode(text))
+fn pdf_remove_text_name(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
-let pdf_remove_text_stamp_name : PdfName = pdf_remove_text_name("/CPDFSTAMP")
+let pdf_remove_text_stamp_name : @core.PdfName = pdf_remove_text_name(
+  "/CPDFSTAMP",
+)
 
 ///|
-fn pdf_remove_text_stamp() -> PdfName {
+fn pdf_remove_text_stamp() -> @core.PdfName {
   pdf_remove_text_stamp_name
 }
 
@@ -98,7 +100,7 @@ fn PdfDocument::pdf_remove_text_page(
   self : PdfDocument,
   page : @page.PdfPage,
   transform : (ArrayView[@content.PdfContentOp]) -> Array[@content.PdfContentOp],
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   let ops = self.pdf_page_parse_content_ops(page.resources, page.content)
   { ..page, content: [pdf_content_stream_of_ops(transform(ops))] }
 }
@@ -108,7 +110,7 @@ fn pdf_remove_text_all_text_xobject(
   document : PdfDocument,
   resources : @syntax.PdfObject,
   streams : ArrayView[@syntax.PdfObject],
-) -> Array[@syntax.PdfObject] raise PdfError {
+) -> Array[@syntax.PdfObject] raise @core.PdfError {
   let ops = document.pdf_page_parse_content_ops(resources, streams)
   [pdf_content_stream_of_ops(pdf_remove_all_text_ops(ops))]
 }
@@ -118,7 +120,7 @@ fn pdf_remove_text_all_text_xobject(
 pub fn PdfDocument::remove_added_text(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let pages = self.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(page_numbers)
   let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
@@ -139,7 +141,7 @@ pub fn PdfDocument::remove_added_text(
 pub fn pdf_remove_added_text(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.remove_added_text(page_numbers)
 }
 
@@ -148,7 +150,7 @@ pub fn pdf_remove_added_text(
 pub fn pdf_removetext(
   page_numbers : ArrayView[Int],
   document : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.remove_added_text(page_numbers)
 }
 
@@ -158,7 +160,7 @@ pub fn pdf_removetext(
 pub fn PdfDocument::remove_all_text(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let document = self.copy()
   let pages = document.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(page_numbers)
@@ -183,7 +185,7 @@ pub fn PdfDocument::remove_all_text(
 pub fn pdf_remove_all_text(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.remove_all_text(page_numbers)
 }
 
@@ -192,6 +194,6 @@ pub fn pdf_remove_all_text(
 pub fn pdf_remove_all_text_cpdf_order(
   page_numbers : ArrayView[Int],
   document : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.remove_all_text(page_numbers)
 }

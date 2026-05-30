@@ -16,7 +16,7 @@ fn pdf_fun_calculator_numeric_binary(
   stack : Array[PdfCalculatorValue],
   int_op : (Int, Int) -> Int,
   float_op : (Double, Double) -> Double,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let right = pdf_fun_calculator_pop_value(stack)
   let left = pdf_fun_calculator_pop_value(stack)
   match (left, right) {
@@ -37,7 +37,7 @@ fn pdf_fun_calculator_boolean_or_integer_binary(
   stack : Array[PdfCalculatorValue],
   bool_op : (Bool, Bool) -> Bool,
   int_op : (Int, Int) -> Int,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let right = pdf_fun_calculator_pop_value(stack)
   let left = pdf_fun_calculator_pop_value(stack)
   match (left, right) {
@@ -52,7 +52,7 @@ fn pdf_fun_calculator_boolean_or_integer_binary(
 ///|
 fn pdf_fun_calculator_not(
   stack : Array[PdfCalculatorValue],
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   match pdf_fun_calculator_pop_value(stack) {
     PdfCalculatorBoolean(value) => stack.push(PdfCalculatorBoolean(!value))
     PdfCalculatorInt(value) => stack.push(PdfCalculatorInt(Int::lnot(value)))

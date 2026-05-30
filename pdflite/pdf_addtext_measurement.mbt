@@ -6,7 +6,7 @@
 pub fn pdf_addtext_charcodes_of_utf8(
   font : PdfFont,
   text : String,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let extractor = pdf_charcode_extractor_of_font_real(font)
   let codepoints = pdf_codepoints_of_utf8(@utf8.encode(text))
   let mut length = 0
@@ -21,7 +21,7 @@ pub fn pdf_addtext_charcodes_of_utf8(
   for codepoint in codepoints {
     match extractor(codepoint) {
       Some(charcode) => {
-        output[position] = pdf_byte_of_int(charcode)
+        output[position] = @core.pdf_byte_of_int(charcode)
         position += 1
       }
       None => ()
@@ -74,7 +74,7 @@ pub fn pdf_addtext_width_of_fontpack(
   fontpack : PdfFontPack,
   font_size : Double,
   text : String,
-) -> Double raise PdfError {
+) -> Double raise @core.PdfError {
   let width_tables : Array[Array[Double]] = Array::new(
     capacity=fontpack.fonts.length(),
   )
@@ -98,7 +98,7 @@ pub fn pdf_addtext_width_of_fontpack(
 }
 
 ///|
-fn pdf_addtext_utf8_string(bytes : BytesView) -> String raise PdfError {
+fn pdf_addtext_utf8_string(bytes : BytesView) -> String raise @core.PdfError {
   @utf8.decode(bytes) catch {
     _ => raise InvalidUTF8
   }
@@ -116,10 +116,10 @@ pub fn PdfDocument::addtext_calc_textwidth(
   page : @page.PdfPage,
   font : PdfFont?,
   fontpack : PdfFontPack?,
-  fontname : PdfName,
+  fontname : @core.PdfName,
   font_size : Double,
   text : BytesView,
-) -> Double raise PdfError {
+) -> Double raise @core.PdfError {
   match fontpack {
     Some(fontpack) =>
       pdf_addtext_width_of_fontpack(
@@ -147,10 +147,10 @@ pub fn pdf_addtext_calc_textwidth(
   page : @page.PdfPage,
   font : PdfFont?,
   fontpack : PdfFontPack?,
-  fontname : PdfName,
+  fontname : @core.PdfName,
   font_size : Double,
   text : BytesView,
-) -> Double raise PdfError {
+) -> Double raise @core.PdfError {
   document.addtext_calc_textwidth(
     page, font, fontpack, fontname, font_size, text,
   )
@@ -166,11 +166,11 @@ pub fn PdfDocument::addtext_line_widths(
   page : @page.PdfPage,
   font : PdfFont?,
   fontpack : PdfFontPack?,
-  fontname : PdfName,
+  fontname : @core.PdfName,
   font_size : Double,
   text : BytesView,
   expanded_lines : ArrayView[Bytes],
-) -> @addtext.PdfAddTextLineWidths raise PdfError {
+) -> @addtext.PdfAddTextLineWidths raise @core.PdfError {
   let text_width = self.addtext_calc_textwidth(
     page, font, fontpack, fontname, font_size, text,
   )
@@ -192,11 +192,11 @@ pub fn pdf_addtext_line_widths(
   page : @page.PdfPage,
   font : PdfFont?,
   fontpack : PdfFontPack?,
-  fontname : PdfName,
+  fontname : @core.PdfName,
   font_size : Double,
   text : BytesView,
   expanded_lines : ArrayView[Bytes],
-) -> @addtext.PdfAddTextLineWidths raise PdfError {
+) -> @addtext.PdfAddTextLineWidths raise @core.PdfError {
   document.addtext_line_widths(
     page, font, fontpack, fontname, font_size, text, expanded_lines,
   )
@@ -206,7 +206,7 @@ pub fn pdf_addtext_line_widths(
 /// Return the widest add-text line width.
 pub fn pdf_addtext_longest_width(
   widths : ArrayView[Double],
-) -> Double raise PdfError {
+) -> Double raise @core.PdfError {
   if widths.length() == 0 {
     raise SoftError("empty add-text width list")
   }

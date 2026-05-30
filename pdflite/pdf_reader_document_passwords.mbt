@@ -9,7 +9,7 @@ pub fn pdf_read_document_revision_from_view_with_passwords(
   revision : Int,
   user_password? : BytesView? = None,
   owner_password? : BytesView? = None,
-) -> PdfDecryptionResult? raise PdfError {
+) -> PdfDecryptionResult? raise @core.PdfError {
   let document = pdf_read_classic_document_from_view_at_revision(
     data,
     revision=Some(revision),
@@ -22,11 +22,11 @@ pub fn pdf_read_document_revision_from_view_with_passwords(
 ///|
 /// Read and decrypt one PDF revision from owned bytes.
 pub fn pdf_read_document_revision_from_bytes_with_passwords(
-  data : PdfBytes,
+  data : @core.PdfBytes,
   revision : Int,
   user_password? : BytesView? = None,
   owner_password? : BytesView? = None,
-) -> PdfDecryptionResult? raise PdfError {
+) -> PdfDecryptionResult? raise @core.PdfError {
   pdf_read_document_revision_from_view_with_passwords(
     data,
     revision,
@@ -46,7 +46,7 @@ pub fn pdf_read_document_from_view_with_passwords(
   data : BytesView,
   user_password? : BytesView? = None,
   owner_password? : BytesView? = None,
-) -> PdfDecryptionResult? raise PdfError {
+) -> PdfDecryptionResult? raise @core.PdfError {
   let document = pdf_read_probe_page_tree_or_reconstruct(
     data,
     pdf_read_classic_document_from_view_at_revision(
@@ -75,10 +75,10 @@ pub fn pdf_read_document_from_view_with_passwords(
 ///|
 /// Read and decrypt a PDF document from owned PDF bytes.
 pub fn pdf_read_document_from_bytes_with_passwords(
-  data : PdfBytes,
+  data : @core.PdfBytes,
   user_password? : BytesView? = None,
   owner_password? : BytesView? = None,
-) -> PdfDecryptionResult? raise PdfError {
+) -> PdfDecryptionResult? raise @core.PdfError {
   pdf_read_document_from_view_with_passwords(
     data,
     user_password~,

@@ -18,9 +18,9 @@ fn PdfDocument::pdf_page_destination_was_nulled(
 fn PdfDocument::pdf_page_live_destinations(
   self : PdfDocument,
   dests_tree : @syntax.PdfObject,
-) -> Array[(PdfBytes, @syntax.PdfObject)] {
+) -> Array[(@core.PdfBytes, @syntax.PdfObject)] {
   let entries = self.read_name_tree(dests_tree)
-  let output : Array[(PdfBytes, @syntax.PdfObject)] = Array::new(
+  let output : Array[(@core.PdfBytes, @syntax.PdfObject)] = Array::new(
     capacity=entries.length(),
   )
   for entry in entries {
@@ -39,7 +39,7 @@ fn PdfDocument::pdf_page_live_catalog_destinations(
 ) -> @syntax.PdfObject {
   match dests {
     PdfDictionary(entries) => {
-      let output : Array[(PdfName, @syntax.PdfObject)] = Array::new(
+      let output : Array[(@core.PdfName, @syntax.PdfObject)] = Array::new(
         capacity=entries.length(),
       )
       for entry in entries {
@@ -57,7 +57,7 @@ fn PdfDocument::pdf_page_live_catalog_destinations(
 ///|
 fn PdfDocument::pdf_page_fixup_catalog_destinations(
   self : PdfDocument,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   match self.pdf_page_active_catalog() {
     Some((root_object, uses_trailer_root)) =>
       match root_object.lookup_immediate(pdf_page_dests_key()) {
@@ -84,7 +84,7 @@ fn PdfDocument::pdf_page_fixup_catalog_destinations(
 ///|
 fn PdfDocument::pdf_page_fixup_destination_name_tree(
   self : PdfDocument,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   match self.pdf_page_active_catalog() {
     Some((root_object, uses_trailer_root)) =>
       match root_object.lookup_immediate(pdf_page_names_key()) {

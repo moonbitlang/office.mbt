@@ -22,7 +22,7 @@ fn pdf_metadata_pad4(value : Int) -> String {
 }
 
 ///|
-fn pdf_metadata_xmp_date(date : String) -> String raise PdfError {
+fn pdf_metadata_xmp_date(date : String) -> String raise @core.PdfError {
   if !date.has_prefix("D:") {
     "0000-01-01T00:00:00Z"
   } else {

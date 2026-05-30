@@ -14,7 +14,7 @@ fn pdf_writer_exponent_marker(text : BytesView) -> Int {
 fn pdf_writer_parse_signed_int(
   text : BytesView,
   start : Int,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   let mut index = start
   let mut sign = 1
   if index < text.length() {
@@ -33,7 +33,7 @@ fn pdf_writer_parse_signed_int(
   let mut value = 0
   while index < text.length() {
     let digit = text[index].to_int()
-    if !pdf_is_digit_byte(digit) {
+    if !@core.pdf_is_digit_byte(digit) {
       raise NumberExpected
     }
     value = value * 10 + digit - 48
@@ -141,7 +141,7 @@ fn pdf_writer_push_scientific_real(
   output : Array[Byte],
   text : BytesView,
   exponent_at : Int,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let mut mantissa_start = 0
   if exponent_at > 0 {
     match text[0].to_int() {
@@ -161,7 +161,7 @@ fn pdf_writer_push_scientific_real(
     let value = text[i].to_int()
     if value == 46 {
       seen_decimal = true
-    } else if pdf_is_digit_byte(value) {
+    } else if @core.pdf_is_digit_byte(value) {
       digits.push(text[i])
       if seen_decimal {
         fractional_digits += 1
@@ -182,7 +182,7 @@ fn pdf_writer_push_scientific_real(
 fn pdf_writer_push_plain_significant_real(
   output : Array[Byte],
   text : BytesView,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let mut index = 0
   let mut negative = false
   if text.length() > 0 {
@@ -204,7 +204,7 @@ fn pdf_writer_push_plain_significant_real(
         raise NumberExpected
       }
       decimal_position = digits.length()
-    } else if pdf_is_digit_byte(value) {
+    } else if @core.pdf_is_digit_byte(value) {
       digits.push(value - 48)
     } else {
       raise NumberExpected
@@ -294,7 +294,7 @@ fn pdf_writer_push_fixed_six_real(output : Array[Byte], value : Double) -> Unit 
 fn pdf_writer_push_real(
   output : Array[Byte],
   value : Double,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   if value.trunc() != value && value < 0.0001 && value > -0.0001 {
     pdf_writer_push_fixed_six_real(output, value)
   } else {
@@ -310,8 +310,8 @@ fn pdf_writer_push_real(
 /// Format a PDF real number as bytes.
 ///
 /// Scientific notation is expanded to PDF-compatible decimal form where
-/// possible. Non-finite or unparsable numeric text raises `PdfError`.
-pub fn pdf_write_real(value : Double) -> PdfBytes raise PdfError {
+/// possible. Non-finite or unparsable numeric text raises `@core.PdfError`.
+pub fn pdf_write_real(value : Double) -> @core.PdfBytes raise @core.PdfError {
   let output : Array[Byte] = []
   pdf_writer_push_real(output, value)
   Bytes::from_array(output)
@@ -319,6 +319,6 @@ pub fn pdf_write_real(value : Double) -> PdfBytes raise PdfError {
 
 ///|
 /// Compatibility alias for `pdf_write_real`.
-pub fn pdf_format_real(value : Double) -> PdfBytes raise PdfError {
+pub fn pdf_format_real(value : Double) -> @core.PdfBytes raise @core.PdfError {
   pdf_write_real(value)
 }

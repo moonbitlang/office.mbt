@@ -1,7 +1,7 @@
 ///|
 fn pdf_draw_content_unsupported(
   op : PdfDrawOp,
-) -> Array[@content.PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise @core.PdfError {
   raise SoftError("Cpdfdraw: unsupported draw operation " + op.debug_name())
 }
 
@@ -10,7 +10,7 @@ fn pdf_draw_form_xobject_stream(
   bbox : (Double, Double, Double, Double),
   resources : @syntax.PdfObject,
   ops : ArrayView[@content.PdfContentOp],
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   let data = pdf_content_bytes_of_ops(ops)
   let (a, b, c, d) = bbox
   @syntax.pdf_stream(

@@ -8,11 +8,13 @@ priv enum PdfTextToUnicodeSection {
 ///|
 fn pdf_text_parse_tounicode_sections(
   data : BytesView,
-) -> Array[(Int, PdfBytes)]? {
-  let cursor = byte_cursor_of_view(data)
-  let entries : Array[(Int, PdfBytes)] = Array::new(capacity=data.length() / 4)
+) -> Array[(Int, @core.PdfBytes)]? {
+  let cursor = @core.byte_cursor_of_view(data)
+  let entries : Array[(Int, @core.PdfBytes)] = Array::new(
+    capacity=data.length() / 4,
+  )
   let mut section = PdfTextToUnicodeNone
-  let mut pending_bfchar_source : PdfBytes? = None
+  let mut pending_bfchar_source : @core.PdfBytes? = None
   let mut pending_bfrange_array : PdfTextCMapBFRangeArray? = None
   for raw_line in cursor.read_line_views() {
     let uncommented = pdf_text_cmap_line_without_comment(raw_line)
@@ -74,7 +76,7 @@ fn pdf_text_parse_tounicode_sections(
 }
 
 ///|
-fn pdf_text_parse_tounicode(data : BytesView) -> Array[(Int, PdfBytes)]? {
+fn pdf_text_parse_tounicode(data : BytesView) -> Array[(Int, @core.PdfBytes)]? {
   if pdf_text_cmap_contains_whitespace(data) {
     let parsed = pdf_text_parse_tounicode_sections(data)
     if pdf_text_cmap_has_split_marker(data) {

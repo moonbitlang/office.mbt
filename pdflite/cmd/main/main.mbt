@@ -154,10 +154,7 @@ async fn pdflite_cmd_read_document(
   let document = @pdflite.pdf_read_document_from_bytes(bytes) catch {
     err =>
       return Err(
-        "cannot parse PDF '" +
-        input_path +
-        "': " +
-        @pdflite.pdf_error_summary(err),
+        "cannot parse PDF '" + input_path + "': " + @core.pdf_error_summary(err),
       )
   }
   Ok(document)
@@ -174,7 +171,7 @@ fn pdflite_cmd_info_report(
         "cannot read page tree for '" +
         input_path +
         "': " +
-        @pdflite.pdf_error_summary(err),
+        @core.pdf_error_summary(err),
       )
   }
   let (major, minor) = document.version()
@@ -252,7 +249,7 @@ fn pdflite_cmd_write_document_bytes(
         "cannot rewrite PDF '" +
         source_path +
         "': " +
-        @pdflite.pdf_error_summary(err),
+        @core.pdf_error_summary(err),
       )
   }
   Ok(output)
@@ -269,7 +266,7 @@ fn pdflite_cmd_verify_rewritten_bytes(
         "rewritten PDF from '" +
         source_path +
         "' does not parse: " +
-        @pdflite.pdf_error_summary(err),
+        @core.pdf_error_summary(err),
       )
   }
   let _ = rewritten.endpage() catch {
@@ -278,7 +275,7 @@ fn pdflite_cmd_verify_rewritten_bytes(
         "rewritten PDF from '" +
         source_path +
         "' has an unreadable page tree: " +
-        @pdflite.pdf_error_summary(err),
+        @core.pdf_error_summary(err),
       )
   }
   Ok(())

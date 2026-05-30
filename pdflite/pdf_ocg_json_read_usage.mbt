@@ -1,5 +1,7 @@
 ///|
-fn pdf_ocg_read_json_usage(json : Json) -> @ocg.PdfOcgUsage? raise PdfError {
+fn pdf_ocg_read_json_usage(
+  json : Json,
+) -> @ocg.PdfOcgUsage? raise @core.PdfError {
   match json {
     Null => None
     Object(entries) if entries.length() == 13 => {

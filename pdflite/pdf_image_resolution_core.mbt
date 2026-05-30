@@ -10,7 +10,7 @@ priv enum PdfImageResolutionObject {
 
 ///|
 priv struct PdfImageResolutionCandidate {
-  name : PdfName
+  name : @core.PdfName
   object : PdfImageResolutionObject
   object_number : Int
 }
@@ -111,12 +111,12 @@ fn pdf_image_resolution_inches(
 fn pdf_image_resolution_push_entry(
   entries : Array[PdfImageResolutionEntry],
   page_number : Int,
-  name : PdfName,
+  name : @core.PdfName,
   width : Int,
   height : Int,
   object_number : Int,
   matrix : @geometry.TransformMatrix,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let (x_inches, y_inches) = pdf_image_resolution_inches(matrix)
   entries.push({
     page_number,

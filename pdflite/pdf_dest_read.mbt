@@ -13,7 +13,7 @@ fn pdf_dest_read_target_page(
 fn PdfDocument::pdf_dest_optional_number(
   self : PdfDocument,
   object : @syntax.PdfObject,
-) -> Double? raise PdfError {
+) -> Double? raise @core.PdfError {
   match object {
     PdfNull => None
     _ => Some(self.get_number(object))
@@ -21,7 +21,7 @@ fn PdfDocument::pdf_dest_optional_number(
 }
 
 ///|
-fn pdf_dest_bytes_equal(left : PdfBytes, right : PdfBytes) -> Bool {
+fn pdf_dest_bytes_equal(left : @core.PdfBytes, right : @core.PdfBytes) -> Bool {
   if left.length() != right.length() {
     false
   } else {
@@ -38,15 +38,15 @@ fn pdf_dest_bytes_equal(left : PdfBytes, right : PdfBytes) -> Bool {
 ///|
 fn PdfDocument::pdf_dest_catalog(
   self : PdfDocument,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   self.catalog()
 }
 
 ///|
 fn PdfDocument::pdf_dest_lookup_string_destination(
   self : PdfDocument,
-  key : PdfBytes,
-) -> @syntax.PdfObject? raise PdfError {
+  key : @core.PdfBytes,
+) -> @syntax.PdfObject? raise @core.PdfError {
   let catalog = self.pdf_dest_catalog()
   match self.lookup_direct(pdf_dest_names_key(), catalog) {
     Some(names_dict) =>
@@ -76,7 +76,7 @@ pub fn PdfDocument::read_destination(
   self : PdfDocument,
   object : @syntax.PdfObject,
   shallow? : Bool = false,
-) -> @destination.PdfDestination raise PdfError {
+) -> @destination.PdfDestination raise @core.PdfError {
   match self.direct(object) {
     PdfDictionary(_) as dictionary =>
       match self.lookup_direct(pdf_dest_d_key(), dictionary) {
@@ -191,6 +191,6 @@ pub fn pdf_read_destination(
   document : PdfDocument,
   object : @syntax.PdfObject,
   shallow? : Bool = false,
-) -> @destination.PdfDestination raise PdfError {
+) -> @destination.PdfDestination raise @core.PdfError {
   document.read_destination(object, shallow~)
 }

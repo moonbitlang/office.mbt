@@ -1,8 +1,8 @@
 ///|
 fn pdf_apply_first_predictor(
   dictionary : @syntax.PdfObject,
-  data : PdfBytes,
-) -> PdfBytes raise PdfError {
+  data : @core.PdfBytes,
+) -> @core.PdfBytes raise @core.PdfError {
   match pdf_first_decodeparms(dictionary) {
     None => data
     Some(decodeparms) => {
@@ -26,8 +26,8 @@ fn pdf_apply_first_predictor(
 fn PdfDocument::pdf_apply_first_predictor_direct(
   self : PdfDocument,
   dictionary : @syntax.PdfObject,
-  data : PdfBytes,
-) -> PdfBytes raise PdfError {
+  data : @core.PdfBytes,
+) -> @core.PdfBytes raise @core.PdfError {
   match self.pdf_first_decodeparms_direct(dictionary) {
     None => data
     Some(decodeparms) => {

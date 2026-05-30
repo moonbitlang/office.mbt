@@ -8,10 +8,10 @@
 pub fn PdfDocument::hard_box(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
-  box_name : PdfName,
+  box_name : @core.PdfName,
   mediabox_if_missing? : Bool = false,
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   self.pdf_page_box_rewrite_pages(page_numbers, "hard_box", (_, _, page) => {
     self.pdf_page_hard_box_page(page, box_name, mediabox_if_missing, fast)
   })
@@ -22,10 +22,10 @@ pub fn PdfDocument::hard_box(
 pub fn pdf_hard_box(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-  box_name : PdfName,
+  box_name : @core.PdfName,
   mediabox_if_missing? : Bool = false,
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.hard_box(page_numbers, box_name, mediabox_if_missing~, fast~)
 }
 
@@ -37,7 +37,7 @@ pub fn PdfDocument::hard_box_string(
   box_name : String,
   mediabox_if_missing? : Bool = false,
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   self.hard_box(
     page_numbers,
     pdf_page_box_name_of_string(box_name),
@@ -54,7 +54,7 @@ pub fn pdf_hard_box_string(
   box_name : String,
   mediabox_if_missing? : Bool = false,
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.hard_box_string(page_numbers, box_name, mediabox_if_missing~, fast~)
 }
 
@@ -67,8 +67,8 @@ pub fn pdf_hard_box_string(
 pub fn PdfDocument::has_page_box(
   self : PdfDocument,
   page_number : Int,
-  box_name : PdfName,
-) -> Bool raise PdfError {
+  box_name : @core.PdfName,
+) -> Bool raise @core.PdfError {
   let pages = self.pages_of_pagetree()
   if page_number < 1 || page_number > pages.length() {
     raise BadPageSpecification("hasbox: bad page")
@@ -84,8 +84,8 @@ pub fn PdfDocument::has_page_box(
 pub fn pdf_hasbox(
   document : PdfDocument,
   page_number : Int,
-  box_name : PdfName,
-) -> Bool raise PdfError {
+  box_name : @core.PdfName,
+) -> Bool raise @core.PdfError {
   document.has_page_box(page_number, box_name)
 }
 
@@ -95,7 +95,7 @@ pub fn PdfDocument::hasbox_string(
   self : PdfDocument,
   page_number : Int,
   box_name : String,
-) -> Bool raise PdfError {
+) -> Bool raise @core.PdfError {
   self.has_page_box(page_number, pdf_page_box_name_of_string(box_name))
 }
 
@@ -105,7 +105,7 @@ pub fn pdf_hasbox_string(
   document : PdfDocument,
   page_number : Int,
   box_name : String,
-) -> Bool raise PdfError {
+) -> Bool raise @core.PdfError {
   document.hasbox_string(page_number, box_name)
 }
 
@@ -117,10 +117,10 @@ pub fn pdf_hasbox_string(
 pub fn PdfDocument::copy_page_box(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
-  from_box : PdfName,
-  to_box : PdfName,
+  from_box : @core.PdfName,
+  to_box : @core.PdfName,
   mediabox_if_missing? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   self.pdf_page_box_rewrite_pages(page_numbers, "copy_page_box", (_, _, page) => {
     self.pdf_page_copy_box_page(page, from_box, to_box, mediabox_if_missing)
   })
@@ -131,10 +131,10 @@ pub fn PdfDocument::copy_page_box(
 pub fn pdf_copy_page_box(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-  from_box : PdfName,
-  to_box : PdfName,
+  from_box : @core.PdfName,
+  to_box : @core.PdfName,
   mediabox_if_missing? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.copy_page_box(page_numbers, from_box, to_box, mediabox_if_missing~)
 }
 
@@ -146,7 +146,7 @@ pub fn PdfDocument::copy_box(
   from_box : String,
   to_box : String,
   mediabox_if_missing? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   self.copy_page_box(
     page_numbers,
     pdf_page_box_name_of_string(from_box),
@@ -163,6 +163,6 @@ pub fn pdf_copy_box(
   mediabox_if_missing : Bool,
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.copy_box(page_numbers, from_box, to_box, mediabox_if_missing~)
 }

@@ -5,7 +5,7 @@
 /// one-based page numbers. The retain flags control whether numbering,
 /// bookmarks, optional-content data, AcroForms, named destinations, name
 /// dictionary entries, structure trees, info dictionaries, and catalog entries
-/// are copied into the output. Raises `PdfError::PageTreeExpected` when the
+/// are copied into the output. Raises `@core.PdfError::PageTreeExpected` when the
 /// document and range lists do not align.
 pub fn pdf_merge_documents(
   documents : ArrayView[PdfDocument],
@@ -21,7 +21,7 @@ pub fn pdf_merge_documents(
   retain_info? : Bool = true,
   retain_catalog_entries? : Bool = true,
   remove_duplicate_fonts? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   if documents.length() == 0 || documents.length() != ranges.length() {
     raise PageTreeExpected
   }
@@ -117,8 +117,8 @@ pub fn pdf_merge_documents(
   let pages : Array[@page.PdfPage] = []
   let old_page_numbers : Array[Int] = []
   let bookmarks : Array[@bookmark.PdfBookmark] = []
-  let oldstyle_destinations : Array[(PdfName, @syntax.PdfObject)] = []
-  let nametree_destinations : Array[(PdfBytes, @syntax.PdfObject)] = []
+  let oldstyle_destinations : Array[(@core.PdfName, @syntax.PdfObject)] = []
+  let nametree_destinations : Array[(@core.PdfBytes, @syntax.PdfObject)] = []
   for document in staged {
     merged.pdf_merge_copy_objects_from(document)
     let old_page_numbers_for_document = document.page_reference_numbers()
@@ -258,7 +258,7 @@ pub fn pdf_merge_pdfs(
   ranges : ArrayView[Array[Int]],
   process_struct_trees? : Bool = true,
   add_toplevel_document? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   if names.length() != documents.length() {
     raise PageTreeExpected
   }

@@ -17,8 +17,8 @@ fn pdf_font_name_segments(font_name : String) -> Array[String] {
 }
 
 ///|
-fn pdf_font_segment_name(segment : String) -> PdfName {
-  pdf_name_of_bytes(@ascii.encode("/" + segment))
+fn pdf_font_segment_name(segment : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode("/" + segment))
 }
 
 ///|
@@ -31,7 +31,7 @@ pub fn PdfDocument::font_from_name(
   self : PdfDocument,
   font_name : String,
   page_number : Int,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   let pages = self.pages_of_pagetree()
   pdf_page_box_validate_page_numbers(
     [page_number],
@@ -87,6 +87,6 @@ pub fn pdf_font_from_name(
   document : PdfDocument,
   font_name : String,
   page_number : Int,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   document.font_from_name(font_name, page_number)
 }

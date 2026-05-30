@@ -1,7 +1,7 @@
 ///|
 fn pdf_texttopdf_struct_parent_pages(
   pages : ArrayView[@page.PdfPage],
-) -> Array[@page.PdfPage] raise PdfError {
+) -> Array[@page.PdfPage] raise @core.PdfError {
   let output : Array[@page.PdfPage] = []
   for index, page in pages {
     output.push({
@@ -54,7 +54,7 @@ fn pdf_texttopdf_group_tag_triples(
 fn pdf_texttopdf_page_reference(
   page_references : ArrayView[Int],
   page_index : Int,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   guard page_index >= 0 && page_index < page_references.length() else {
     raise BadPageSpecification("texttopdf: page reference not found")
   }
@@ -67,7 +67,7 @@ fn pdf_texttopdf_structure_elements(
   parent_number : Int,
   page_references : ArrayView[Int],
   nodes : ArrayView[Array[(Int, Int, Int)]],
-) -> Array[@syntax.PdfObject] raise PdfError {
+) -> Array[@syntax.PdfObject] raise @core.PdfError {
   let output : Array[@syntax.PdfObject] = []
   for parts in nodes {
     let kids : Array[@syntax.PdfObject] = []
@@ -103,7 +103,7 @@ fn pdf_texttopdf_structure_elements(
 fn pdf_texttopdf_structure_element_for_tag(
   structure_elements : ArrayView[@syntax.PdfObject],
   tag_number : Int,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   guard tag_number >= 0 && tag_number < structure_elements.length() else {
     raise BadPageSpecification("texttopdf: structure tag not found")
   }
@@ -115,7 +115,7 @@ fn pdf_texttopdf_parent_tree_entries(
   page_count : Int,
   triples : ArrayView[(Int, Int, Int)],
   structure_elements : ArrayView[@syntax.PdfObject],
-) -> Array[(Int, @syntax.PdfObject)] raise PdfError {
+) -> Array[(Int, @syntax.PdfObject)] raise @core.PdfError {
   let output : Array[(Int, @syntax.PdfObject)] = []
   for page_index in 0..<page_count {
     let entries : Array[@syntax.PdfObject] = []
@@ -139,7 +139,7 @@ fn PdfDocument::pdf_texttopdf_add_structure_tree(
   self : PdfDocument,
   tags : ArrayView[Array[(String, Int)]],
   subformat : PdfUASubformat?,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let triples = pdf_texttopdf_tag_triples(tags)
   let nodes = pdf_texttopdf_group_tag_triples(triples)
   let structure_root_number = self.add_object(PdfNull)
@@ -180,7 +180,7 @@ fn PdfDocument::pdf_texttopdf_add_structure_tree(
       ),
     ),
   )
-  let root_entries : Array[(PdfName, @syntax.PdfObject)] = [
+  let root_entries : Array[(@core.PdfName, @syntax.PdfObject)] = [
     (pdf_texttopdf_type_key(), PdfNameObject(pdf_texttopdf_struct_tree_root())),
     (pdf_structure_parent_tree_key(), PdfIndirect(parent_tree)),
   ]

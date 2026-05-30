@@ -46,7 +46,7 @@ fn PdfDrawRenderState::register_font_resource(
   identifier : String,
   font_index : Int,
   object_number : Int,
-) -> PdfName {
+) -> @core.PdfName {
   let resource_name = self.fresh_name("/F")
   self.fonts.push({ identifier, font_index, resource_name, object_number })
   resource_name
@@ -58,7 +58,7 @@ fn PdfDrawRenderState::register_fontpack_resources(
   identifier : String,
   fontpack : PdfFontPack,
   document : PdfDocument,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let stored = self.ensure_fontpack(identifier, fontpack)
   for index in 0..<stored.fonts.length() {
     let resource = match self.stored_font_resource(identifier, index) {
@@ -80,7 +80,7 @@ fn PdfDrawRenderState::set_current_font(
   self : PdfDrawRenderState,
   identifier : String,
   size : Double,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   match self.stored_fontpack(identifier) {
     Some(fontpack) => {
       self.current_fontpack_identifier = identifier

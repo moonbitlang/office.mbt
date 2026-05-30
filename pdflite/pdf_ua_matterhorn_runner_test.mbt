@@ -4,7 +4,7 @@ test "PdfDocument test_matterhorn_json rejects unsupported individual checks" {
   let result : Result[Json, Error] = try? document.test_matterhorn_json(
     "99-999",
   )
-  guard result is Err(@pdflite.PdfError::SoftError(_)) else {
+  guard result is Err(@core.PdfError::SoftError(_)) else {
     fail("expected unsupported Matterhorn test to raise SoftError")
   }
 }

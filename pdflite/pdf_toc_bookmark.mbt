@@ -3,7 +3,9 @@
 ///
 /// Literal `\n` byte pairs are converted to line-feed bytes before PDFDocString
 /// encoding, matching cpdftoc's `real_newline` helper.
-pub fn pdf_toc_bookmark_text(title : BytesView) -> PdfBytes raise PdfError {
+pub fn pdf_toc_bookmark_text(
+  title : BytesView,
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_pdfdocstring_of_utf8(pdf_toc_title_real_newlines(title))
 }
 
@@ -16,7 +18,7 @@ pub fn pdf_toc_bookmark_text(title : BytesView) -> PdfBytes raise PdfError {
 pub fn PdfDocument::toc_add_bookmark(
   self : PdfDocument,
   title : BytesView,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let page_refs = self.page_reference_numbers()
   guard page_refs.length() > 0 else {
     raise SoftError("toc_add_bookmark: no pages")
@@ -43,6 +45,6 @@ pub fn PdfDocument::toc_add_bookmark(
 pub fn pdf_toc_add_bookmark(
   document : PdfDocument,
   title : BytesView,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.toc_add_bookmark(title)
 }

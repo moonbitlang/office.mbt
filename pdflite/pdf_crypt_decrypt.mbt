@@ -2,7 +2,7 @@
 fn PdfDocument::finish_decrypted_copy(
   self : PdfDocument,
   values : PdfEncryptionValues,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.set_trailer_dict(
     self.trailer_dict().remove_dict_entry(pdf_crypt_encrypt_name),
   )
@@ -13,9 +13,9 @@ fn PdfDocument::finish_decrypted_copy(
 fn PdfDocument::decrypt_with_file_key(
   self : PdfDocument,
   values : PdfEncryptionValues,
-  file_key : PdfBytes,
+  file_key : @core.PdfBytes,
   no_encrypt_metadata : Bool,
-) -> PdfDecryptionResult raise PdfError {
+) -> PdfDecryptionResult raise @core.PdfError {
   let no_encrypt_metadata = values.effective_no_encrypt_metadata(
     no_encrypt_metadata,
   )
@@ -67,7 +67,7 @@ fn PdfEncryptionValues::file_key_for_available_password(
   user_password : BytesView?,
   owner_password : BytesView?,
   no_encrypt_metadata : Bool,
-) -> PdfBytes? raise PdfError {
+) -> @core.PdfBytes? raise @core.PdfError {
   match user_password {
     Some(password) =>
       match self.file_key_for_user_password(password, no_encrypt_metadata~) {
@@ -96,7 +96,7 @@ fn PdfEncryptionValues::decrypt_single_stream_with_file_key(
   stream : @syntax.PdfObject,
   file_key : BytesView,
   no_encrypt_metadata : Bool,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   let no_encrypt_metadata = self.effective_no_encrypt_metadata(
     no_encrypt_metadata,
   )
@@ -128,7 +128,7 @@ pub fn PdfDocument::decrypt_single_stream(
   user_password? : BytesView? = None,
   owner_password? : BytesView? = None,
   no_encrypt_metadata? : Bool = false,
-) -> @syntax.PdfObject? raise PdfError {
+) -> @syntax.PdfObject? raise @core.PdfError {
   if !self.is_encrypted() {
     Some(stream)
   } else {
@@ -153,13 +153,13 @@ pub fn PdfDocument::decrypt_single_stream(
 ///
 /// If the document is not encrypted, a copied document and empty permissions
 /// list are returned. If it is encrypted and no password works, the result is
-/// `None`; malformed encryption data still raises `PdfError`.
+/// `None`; malformed encryption data still raises `@core.PdfError`.
 pub fn PdfDocument::decrypt_with_passwords(
   self : PdfDocument,
   user_password? : BytesView? = None,
   owner_password? : BytesView? = None,
   no_encrypt_metadata? : Bool = false,
-) -> PdfDecryptionResult? raise PdfError {
+) -> PdfDecryptionResult? raise @core.PdfError {
   if !self.is_encrypted() {
     Some({ document: self.copy(), denied_permissions: [] })
   } else {

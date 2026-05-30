@@ -1,8 +1,8 @@
 ///|
 fn PdfDocument::pdf_image_resolution_lookup_inline_int(
   self : PdfDocument,
-  first_key : PdfName,
-  second_key : PdfName,
+  first_key : @core.PdfName,
+  second_key : @core.PdfName,
   image : @syntax.PdfObject,
 ) -> Int? {
   match self.lookup_direct_or_else(first_key, second_key, image) {
@@ -14,7 +14,7 @@ fn PdfDocument::pdf_image_resolution_lookup_inline_int(
 ///|
 fn pdf_image_resolution_find_candidate(
   candidates : ArrayView[PdfImageResolutionCandidate],
-  name : PdfName,
+  name : @core.PdfName,
 ) -> PdfImageResolutionCandidate? {
   for candidate in candidates {
     if candidate.name == name {
@@ -29,7 +29,7 @@ fn pdf_image_resolution_find_candidate(
 fn PdfDocument::pdf_image_resolution_candidates(
   self : PdfDocument,
   resources : @syntax.PdfObject,
-) -> Array[PdfImageResolutionCandidate] raise PdfError {
+) -> Array[PdfImageResolutionCandidate] raise @core.PdfError {
   match self.lookup_direct(pdf_image_xobject_key(), resources) {
     Some(PdfDictionary(xobjects)) => {
       let candidates : Array[PdfImageResolutionCandidate] = Array::new(
@@ -97,7 +97,7 @@ fn PdfDocument::pdf_image_resolution_process_content(
   initial_matrix : @geometry.TransformMatrix,
   depth : Int,
   results : Array[PdfImageResolutionEntry],
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   if depth > 64 {
     return
   }

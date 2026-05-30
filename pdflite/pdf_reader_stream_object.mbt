@@ -1,8 +1,8 @@
 ///|
 fn pdf_cursor_finish_stream_object(
-  cursor : ByteCursor,
+  cursor : @core.ByteCursor,
   prefix : @syntax.PdfParsedIndirectObject,
-) -> @syntax.PdfParsedIndirectObject raise PdfError {
+) -> @syntax.PdfParsedIndirectObject raise @core.PdfError {
   let length_result : Result[Int, Error] = try? pdf_stream_length(prefix.object)
   match length_result {
     Ok(length) =>
@@ -13,11 +13,11 @@ fn pdf_cursor_finish_stream_object(
 
 ///|
 fn pdf_cursor_finish_stream_object_with_length(
-  cursor : ByteCursor,
+  cursor : @core.ByteCursor,
   prefix : @syntax.PdfParsedIndirectObject,
   length : Int,
   defer_stream_data? : Bool = false,
-) -> @syntax.PdfParsedIndirectObject raise PdfError {
+) -> @syntax.PdfParsedIndirectObject raise @core.PdfError {
   let stream_keyword_position = cursor.absolute_position()
   @reader.pdf_cursor_consume_ascii(
     cursor,
@@ -64,9 +64,9 @@ fn pdf_cursor_finish_stream_object_with_length(
 
 ///|
 fn pdf_cursor_finish_malformed_stream_object(
-  cursor : ByteCursor,
+  cursor : @core.ByteCursor,
   prefix : @syntax.PdfParsedIndirectObject,
-) -> @syntax.PdfParsedIndirectObject raise PdfError {
+) -> @syntax.PdfParsedIndirectObject raise @core.PdfError {
   @reader.pdf_cursor_consume_ascii(
     cursor,
     [115, 116, 114, 101, 97, 109],
@@ -74,7 +74,7 @@ fn pdf_cursor_finish_malformed_stream_object(
   )
   pdf_cursor_consume_stream_start_line_break(cursor)
   let data_start = cursor.absolute_position()
-  let endstream = pdf_find_ascii_from(cursor.view(), data_start, [
+  let endstream = @core.pdf_find_ascii_from(cursor.view(), data_start, [
     101, 110, 100, 115, 116, 114, 101, 97, 109,
   ])
   if endstream < 0 {
@@ -113,8 +113,8 @@ fn pdf_cursor_finish_malformed_stream_object(
 /// The input should contain one indirect-object header, a stream dictionary,
 /// stream data, `endstream`, and `endobj`.
 pub fn pdf_parse_stream_object_from_bytes(
-  data : PdfBytes,
-) -> @syntax.PdfParsedIndirectObject raise PdfError {
+  data : @core.PdfBytes,
+) -> @syntax.PdfParsedIndirectObject raise @core.PdfError {
   pdf_parse_stream_object_from_view(data)
 }
 
@@ -125,8 +125,8 @@ pub fn pdf_parse_stream_object_from_bytes(
 /// possible, matching the stream recovery used by the primitive reader.
 pub fn pdf_parse_stream_object_from_view(
   data : BytesView,
-) -> @syntax.PdfParsedIndirectObject raise PdfError {
-  let cursor = byte_cursor_of_view(data)
+) -> @syntax.PdfParsedIndirectObject raise @core.PdfError {
+  let cursor = @core.byte_cursor_of_view(data)
   let prefix = @syntax.pdf_parse_indirect_object_prefix_lexemes(
     @syntax.pdf_cursor_lex_tokens(cursor),
   )

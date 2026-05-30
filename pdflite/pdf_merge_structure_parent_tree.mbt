@@ -27,7 +27,7 @@ fn pdf_merge_renumber_struct_parent_object(
 ) -> @syntax.PdfObject {
   match object {
     PdfDictionary(entries) => {
-      let output : Array[(PdfName, @syntax.PdfObject)] = []
+      let output : Array[(@core.PdfName, @syntax.PdfObject)] = []
       for entry in entries {
         let (key, value) = entry
         if key == pdf_merge_struct_parent_key() ||
@@ -115,7 +115,7 @@ fn PdfDocument::pdf_merge_renumber_struct_parent_entries(
 ///|
 fn pdf_merge_renumber_parent_trees(
   documents : ArrayView[PdfDocument],
-) -> Array[(Int, @syntax.PdfObject)] raise PdfError {
+) -> Array[(Int, @syntax.PdfObject)] raise @core.PdfError {
   let merged_entries : Array[(Int, @syntax.PdfObject)] = []
   let mut next_key = 0
   for document in documents {

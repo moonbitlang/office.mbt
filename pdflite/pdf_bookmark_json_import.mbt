@@ -1,5 +1,5 @@
 ///|
-fn pdf_bookmark_json_number(value : Json?) -> Double raise PdfError {
+fn pdf_bookmark_json_number(value : Json?) -> Double raise @core.PdfError {
   match value {
     Some(Number(number, repr=_)) => number
     _ => raise SoftError("malformed mark in mark_of_json")
@@ -7,7 +7,7 @@ fn pdf_bookmark_json_number(value : Json?) -> Double raise PdfError {
 }
 
 ///|
-fn pdf_bookmark_json_bool(value : Json?) -> Bool raise PdfError {
+fn pdf_bookmark_json_bool(value : Json?) -> Bool raise @core.PdfError {
   match value {
     Some(True) => true
     Some(False) => false
@@ -16,7 +16,7 @@ fn pdf_bookmark_json_bool(value : Json?) -> Bool raise PdfError {
 }
 
 ///|
-fn pdf_bookmark_json_string(value : Json?) -> String raise PdfError {
+fn pdf_bookmark_json_string(value : Json?) -> String raise @core.PdfError {
   match value {
     Some(String(text)) => text
     _ => raise SoftError("malformed mark in mark_of_json")
@@ -26,7 +26,7 @@ fn pdf_bookmark_json_string(value : Json?) -> String raise PdfError {
 ///|
 fn pdf_bookmark_json_colour(
   value : Json?,
-) -> @bookmark.PdfBookmarkColour raise PdfError {
+) -> @bookmark.PdfBookmarkColour raise @core.PdfError {
   match value {
     Some(
       Array([Number(red, repr=_), Number(green, repr=_), Number(blue, repr=_)])
@@ -39,7 +39,7 @@ fn pdf_bookmark_json_colour(
 fn PdfDocument::pdf_bookmark_import_json_mark(
   self : PdfDocument,
   json : Json,
-) -> @bookmark.PdfBookmark raise PdfError {
+) -> @bookmark.PdfBookmark raise @core.PdfError {
   match json {
     Object(entries) if entries.length() == 8 => {
       let level = pdf_util_json_truncated_number(
@@ -79,7 +79,7 @@ pub fn PdfDocument::parse_bookmark_json(
   self : PdfDocument,
   json : Json,
   verify? : Bool = true,
-) -> Array[@bookmark.PdfBookmark] raise PdfError {
+) -> Array[@bookmark.PdfBookmark] raise @core.PdfError {
   let items = match json {
     Array(items) => items
     _ => raise SoftError("top level of JSON boomark file not a list")
@@ -102,7 +102,7 @@ pub fn PdfDocument::add_bookmarks_from_json(
   self : PdfDocument,
   json : Json,
   verify? : Bool = true,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   self.add_bookmarks(self.parse_bookmark_json(json, verify~))
 }
 
@@ -112,7 +112,7 @@ pub fn pdf_parse_bookmark_json(
   verify : Bool,
   json : Json,
   document : PdfDocument,
-) -> Array[@bookmark.PdfBookmark] raise PdfError {
+) -> Array[@bookmark.PdfBookmark] raise @core.PdfError {
   document.parse_bookmark_json(json, verify~)
 }
 
@@ -122,6 +122,6 @@ pub fn pdf_add_bookmarks_from_json(
   verify : Bool,
   json : Json,
   document : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.add_bookmarks_from_json(json, verify~)
 }

@@ -12,10 +12,10 @@ fn pdf_classic_plain_xref_should_load(
 ///|
 fn PdfDocument::load_classic_plain_xref_objects(
   self : PdfDocument,
-  cursor : ByteCursor,
+  cursor : @core.ByteCursor,
   xrefs : ArrayView[@reader.PdfClassicXRefEntry],
   xref_stream_refs : ArrayView[(Int, Int)],
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let xref_stream_ref_set = @reader.pdf_reader_xref_stream_ref_set(
     xref_stream_refs,
   )
@@ -47,7 +47,7 @@ fn PdfDocument::load_classic_object_stream_entries(
   xrefs : ArrayView[@reader.PdfClassicXRefEntry],
   user_password : BytesView?,
   owner_password : BytesView?,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   for group in @reader.pdf_reader_object_stream_groups(xrefs) {
     let object_stream_number = group.0
     let (context, already_decrypted) = self.read_object_stream_context_with_passwords(
@@ -65,12 +65,12 @@ fn PdfDocument::load_classic_object_stream_entries(
 ///|
 fn PdfDocument::load_classic_xrefs(
   self : PdfDocument,
-  cursor : ByteCursor,
+  cursor : @core.ByteCursor,
   xrefs : ArrayView[@reader.PdfClassicXRefEntry],
   xref_stream_refs : ArrayView[(Int, Int)],
   user_password : BytesView?,
   owner_password : BytesView?,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.load_classic_plain_xref_objects(cursor, xrefs, xref_stream_refs)
   self.load_classic_object_stream_entries(xrefs, user_password, owner_password)
   self.sanitize_reader_trailer()

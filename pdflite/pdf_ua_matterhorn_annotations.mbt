@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_28_006(
   self : PdfDocument,
-) -> Json? raise PdfError {
+) -> Json? raise @core.PdfError {
   for page in self.pages_of_pagetree() {
     for annotation in self.annotations_of_page(page) {
       if annotation.subtype is AnnotationUnknown(_) {
@@ -15,7 +15,7 @@ fn PdfDocument::pdf_ua_matterhorn_check_28_006(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_28_007(
   self : PdfDocument,
-) -> Json? raise PdfError {
+) -> Json? raise @core.PdfError {
   for page in self.pages_of_pagetree() {
     for annotation in self.annotations_of_page(page) {
       if annotation.subtype is AnnotationTrapNet {
@@ -30,14 +30,14 @@ fn PdfDocument::pdf_ua_matterhorn_check_28_007(
 fn PdfDocument::pdf_ua_matterhorn_page_annotation_count(
   self : PdfDocument,
   page : @page.PdfPage,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   self.annotations_of_page(page).length()
 }
 
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_28_008(
   self : PdfDocument,
-) -> Json? raise PdfError {
+) -> Json? raise @core.PdfError {
   for page in self.pages_of_pagetree() {
     if self.pdf_ua_matterhorn_page_annotation_count(page) > 0 &&
       self.lookup_direct(pdf_ua_matterhorn_tabs_key(), page.rest) is None {
@@ -50,7 +50,7 @@ fn PdfDocument::pdf_ua_matterhorn_check_28_008(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_28_009(
   self : PdfDocument,
-) -> Json? raise PdfError {
+) -> Json? raise @core.PdfError {
   for page in self.pages_of_pagetree() {
     if self.pdf_ua_matterhorn_page_annotation_count(page) > 0 {
       match self.lookup_direct(pdf_ua_matterhorn_tabs_key(), page.rest) {
@@ -64,7 +64,7 @@ fn PdfDocument::pdf_ua_matterhorn_check_28_009(
 }
 
 ///|
-let pdf_ua_matterhorn_28_002_subtypes : Array[PdfName] = [
+let pdf_ua_matterhorn_28_002_subtypes : Array[@core.PdfName] = [
   pdf_annotation_stamp_name,
   pdf_annotation_line_name,
   pdf_ua_name("Square"),
@@ -87,13 +87,15 @@ let pdf_ua_matterhorn_28_002_subtypes : Array[PdfName] = [
 ]
 
 ///|
-fn pdf_ua_matterhorn_28_002_subtype_requires_annot(subtype : PdfName) -> Bool {
+fn pdf_ua_matterhorn_28_002_subtype_requires_annot(
+  subtype : @core.PdfName,
+) -> Bool {
   pdf_ua_matterhorn_28_002_subtypes.contains(subtype)
 }
 
 ///|
 fn pdf_ua_matterhorn_28_004_subtype_requires_contents_or_alt(
-  subtype : PdfName,
+  subtype : @core.PdfName,
 ) -> Bool {
   pdf_ua_matterhorn_28_002_subtype_requires_annot(subtype) ||
   subtype == pdf_annotation_link_name ||
@@ -198,7 +200,7 @@ fn PdfDocument::pdf_ua_matterhorn_struct_parent_check(
   self : PdfDocument,
   object : @syntax.PdfObject,
   parent_tree : ArrayView[(Int, @syntax.PdfObject)],
-  expected_type : PdfName,
+  expected_type : @core.PdfName,
   wrong_type_extra : String,
   missing_struct_parent_extra : String?,
 ) -> Json? {
@@ -269,7 +271,7 @@ fn PdfDocument::pdf_ua_matterhorn_check_28_011(self : PdfDocument) -> Json? {
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_28_012(
   self : PdfDocument,
-) -> Json? raise PdfError {
+) -> Json? raise @core.PdfError {
   for page in self.pages_of_pagetree() {
     for annotation in self.annotations_of_page(page) {
       if annotation.subtype is AnnotationLink && annotation.contents is None {
@@ -373,7 +375,7 @@ fn PdfDocument::pdf_ua_matterhorn_normal_appearance_streams(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_28_018(
   self : PdfDocument,
-) -> Json? raise PdfError {
+) -> Json? raise @core.PdfError {
   for entry in self.parsed_object_entries() {
     if self.pdf_ua_matterhorn_is_printer_mark(entry.2) {
       for stream in self.pdf_ua_matterhorn_normal_appearance_streams(entry.2) {

@@ -1,10 +1,10 @@
 ///|
-fn ocg_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn ocg_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
-fn ocg_bytes_for_test(text : String) -> @pdflite.PdfBytes {
+fn ocg_bytes_for_test(text : String) -> @core.PdfBytes {
   @ascii.encode(text)
 }
 
@@ -54,7 +54,7 @@ fn ocg_conflicting_root_document_for_test(
       (key_lang, PdfString(ocg_bytes_for_test("stale"))),
     ]),
   )
-  let active_entries : Array[(@pdflite.PdfName, @syntax.PdfObject)] = [
+  let active_entries : Array[(@core.PdfName, @syntax.PdfObject)] = [
     (key_type, PdfNameObject(type_catalog)),
     (key_page_mode, ocg_name_object_for_test("/UseOC")),
   ]
@@ -491,8 +491,8 @@ test "pdf_ocg_read_json rejects malformed optional content JSON" {
   let top_level : Result[@ocg.PdfOptionalContent?, Error] = try? @pdflite.pdf_ocg_read_json(
     Json::array([]),
   )
-  guard top_level is Err(@pdflite.PdfError::SoftError(_)) else {
-    fail("expected @pdflite.PdfError::SoftError for top-level array")
+  guard top_level is Err(@core.PdfError::SoftError(_)) else {
+    fail("expected @core.PdfError::SoftError for top-level array")
   }
   let bad_default : Result[@ocg.PdfOptionalContent?, Error] = try? @pdflite.pdf_ocg_read_json(
     Json::object(
@@ -503,8 +503,8 @@ test "pdf_ocg_read_json rejects malformed optional content JSON" {
       ]),
     ),
   )
-  guard bad_default is Err(@pdflite.PdfError::SoftError(_)) else {
-    fail("expected @pdflite.PdfError::SoftError for malformed config")
+  guard bad_default is Err(@core.PdfError::SoftError(_)) else {
+    fail("expected @core.PdfError::SoftError for malformed config")
   }
 }
 
@@ -650,8 +650,8 @@ test "PdfDocument read_optional_content_groups rejects unresolved trailer root" 
     PdfDictionary([(key_type, PdfNameObject(type_catalog))]),
   )
   let result : Result[@ocg.PdfOptionalContent?, Error] = try? doc.read_optional_content_groups()
-  guard result is Err(@pdflite.PdfError::RootExpected) else {
-    fail("expected @pdflite.PdfError::RootExpected")
+  guard result is Err(@core.PdfError::RootExpected) else {
+    fail("expected @core.PdfError::RootExpected")
   }
 }
 
@@ -869,17 +869,17 @@ test "PdfDocument optional content helpers require a root catalog" {
     configs: [],
   }
   let read_result : Result[@ocg.PdfOptionalContent?, Error] = try? doc.read_optional_content_groups()
-  guard read_result is Err(@pdflite.PdfError::RootExpected) else {
-    fail("expected @pdflite.PdfError::RootExpected")
+  guard read_result is Err(@core.PdfError::RootExpected) else {
+    fail("expected @core.PdfError::RootExpected")
   }
   let write_result : Result[@pdflite.PdfDocument, Error] = try? doc.write_optional_content_groups(
     content,
   )
-  guard write_result is Err(@pdflite.PdfError::RootExpected) else {
-    fail("expected @pdflite.PdfError::RootExpected")
+  guard write_result is Err(@core.PdfError::RootExpected) else {
+    fail("expected @core.PdfError::RootExpected")
   }
   let remove_result : Result[@pdflite.PdfDocument, Error] = try? doc.remove_optional_content_groups()
-  guard remove_result is Err(@pdflite.PdfError::RootExpected) else {
-    fail("expected @pdflite.PdfError::RootExpected")
+  guard remove_result is Err(@core.PdfError::RootExpected) else {
+    fail("expected @core.PdfError::RootExpected")
   }
 }

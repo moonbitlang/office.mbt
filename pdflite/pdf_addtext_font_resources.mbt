@@ -39,10 +39,10 @@ pub fn pdf_addtext_page_font_dictionary(
 pub fn pdf_addtext_allocate_font_names(
   fontdict : @syntax.PdfObject,
   fontpack : PdfFontPack?,
-) -> (PdfName, @syntax.PdfObject, Array[PdfName]) raise PdfError {
+) -> (@core.PdfName, @syntax.PdfObject, Array[@core.PdfName]) raise @core.PdfError {
   let unique_fontname = fontdict.unique_key("F")
   let mut updated = fontdict
-  let unique_fontnames : Array[PdfName] = match fontpack {
+  let unique_fontnames : Array[@core.PdfName] = match fontpack {
     Some(pack) => Array::new(capacity=pack.fonts.length())
     None => []
   }
@@ -62,9 +62,9 @@ pub fn pdf_addtext_allocate_font_names(
 /// Replace cpdf add-text fontpack placeholders with embedded font references.
 pub fn pdf_addtext_fontpack_resource_dictionary(
   fontdict : @syntax.PdfObject,
-  unique_fontnames : ArrayView[PdfName],
+  unique_fontnames : ArrayView[@core.PdfName],
   font_objects : ArrayView[Int],
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   if font_objects.length() != unique_fontnames.length() {
     raise SoftError("bad add-text fontpack resource list")
   }
@@ -83,9 +83,9 @@ pub fn pdf_addtext_fontpack_resource_dictionary(
 pub fn pdf_addtext_install_font_resource(
   resources : @syntax.PdfObject,
   fontdict : @syntax.PdfObject,
-  unique_fontname : PdfName,
+  unique_fontname : @core.PdfName,
   font_object : @syntax.PdfObject?,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   match font_object {
     Some(font_object) =>
       resources.add_dict_entry(
@@ -101,9 +101,9 @@ pub fn pdf_addtext_install_font_resource(
 pub fn pdf_addtext_install_fontpack_resources(
   resources : @syntax.PdfObject,
   fontdict : @syntax.PdfObject,
-  unique_fontnames : ArrayView[PdfName],
+  unique_fontnames : ArrayView[@core.PdfName],
   font_objects : ArrayView[Int],
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   resources.add_dict_entry(
     pdf_addtext_font_key(),
     pdf_addtext_fontpack_resource_dictionary(
@@ -120,7 +120,7 @@ pub fn pdf_addtext_install_fontpack_resources(
 pub fn PdfDocument::addtext_selected_font_object(
   self : PdfDocument,
   font : PdfFont?,
-) -> @syntax.PdfObject? raise PdfError {
+) -> @syntax.PdfObject? raise @core.PdfError {
   match font {
     Some(font) => Some(PdfIndirect(self.write_font(font)))
     None => None
@@ -132,7 +132,7 @@ pub fn PdfDocument::addtext_selected_font_object(
 pub fn pdf_addtext_selected_font_object(
   document : PdfDocument,
   font : PdfFont?,
-) -> @syntax.PdfObject? raise PdfError {
+) -> @syntax.PdfObject? raise @core.PdfError {
   document.addtext_selected_font_object(font)
 }
 
@@ -148,11 +148,11 @@ pub fn PdfDocument::addtext_resource_setup(
   page : @page.PdfPage,
   font : PdfFont?,
   fontpack : PdfFontPack?,
-  fontname : PdfName,
+  fontname : @core.PdfName,
   font_object : @syntax.PdfObject?,
   fontpack_font_objects : ArrayView[Int],
   opacity : Double,
-) -> @addtext.PdfAddTextResourceSetup raise PdfError {
+) -> @addtext.PdfAddTextResourceSetup raise @core.PdfError {
   let fontdict = self.addtext_page_font_dictionary(page)
   match (font, fontpack) {
     (None, None) =>
@@ -211,11 +211,11 @@ pub fn pdf_addtext_resource_setup(
   page : @page.PdfPage,
   font : PdfFont?,
   fontpack : PdfFontPack?,
-  fontname : PdfName,
+  fontname : @core.PdfName,
   font_object : @syntax.PdfObject?,
   fontpack_font_objects : ArrayView[Int],
   opacity : Double,
-) -> @addtext.PdfAddTextResourceSetup raise PdfError {
+) -> @addtext.PdfAddTextResourceSetup raise @core.PdfError {
   document.addtext_resource_setup(
     page, font, fontpack, fontname, font_object, fontpack_font_objects, opacity,
   )

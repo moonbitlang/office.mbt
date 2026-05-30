@@ -13,7 +13,7 @@ fn PdfDocument::pdf_text_cmap_stream_dictionary_wmode(
 fn PdfDocument::pdf_text_cmap_stream_dictionary_cmap_name(
   self : PdfDocument,
   stream_object : @syntax.PdfObject,
-) -> PdfName? {
+) -> @core.PdfName? {
   match self.lookup_direct(pdf_text_cmap_name_key_name, stream_object) {
     Some(PdfNameObject(name)) => Some(name)
     _ => None
@@ -35,7 +35,7 @@ fn PdfDocument::pdf_text_cmap_stream_dictionary_cmap_type(
 fn PdfDocument::pdf_text_cmap_stream_dictionary_usecmap_name(
   self : PdfDocument,
   stream_object : @syntax.PdfObject,
-) -> PdfName? {
+) -> @core.PdfName? {
   match self.lookup_direct(pdf_text_usecmap_key_name, stream_object) {
     Some(PdfNameObject(name)) => Some(name)
     _ => None
@@ -94,7 +94,7 @@ fn PdfDocument::pdf_text_apply_cmap_stream_dictionary_metadata(
 fn PdfDocument::pdf_text_decoded_cmap_stream_data_direct(
   self : PdfDocument,
   object : @syntax.PdfObject,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   match self.direct(object) {
     PdfStreamObject(stream) => {
       let decoded = match
@@ -113,7 +113,7 @@ fn PdfDocument::parse_cmap_with_seen(
   self : PdfDocument,
   cmap : @syntax.PdfObject,
   seen : @hashmap.HashMap[Int, Bool],
-) -> PdfParsedCMap raise PdfError {
+) -> PdfParsedCMap raise @core.PdfError {
   match cmap {
     PdfIndirect(number) => {
       guard !seen.contains(number) else { raise CMapEncodingExpected }

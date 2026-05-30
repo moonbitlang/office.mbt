@@ -28,7 +28,7 @@ fn pdf_metadata_namespace_prefixes(
             !pdf_metadata_is_xml_separator(data[attribute_start - 1]) {
         attribute_start -= 1
       }
-      if pdf_view_matches_ascii_at(data, attribute_start, xmlns) {
+      if @core.pdf_view_matches_ascii_at(data, attribute_start, xmlns) {
         let prefix_start = attribute_start + xmlns.length()
         let mut prefix_end = prefix_start
         while prefix_end < namespace_start &&

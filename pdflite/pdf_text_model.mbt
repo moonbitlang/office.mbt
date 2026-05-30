@@ -43,8 +43,8 @@ pub(all) struct PdfFontDescriptor {
   xheight : Double
   stemv : Double
   fontfile : PdfFontFile?
-  charset : Array[PdfName]?
-  tounicode : Array[(Int, PdfBytes)]?
+  charset : Array[@core.PdfName]?
+  tounicode : Array[(Int, @core.PdfBytes)]?
 } derive(Debug, Eq, ToJson)
 
 ///|
@@ -56,7 +56,7 @@ pub(all) struct PdfFontDescriptor {
 pub(all) struct PdfType3Glyphs {
   fontbbox : @geometry.PdfRectangle
   fontmatrix : @geometry.TransformMatrix
-  charprocs : Array[(PdfName, @syntax.PdfObject)]
+  charprocs : Array[(@core.PdfName, @syntax.PdfObject)]
   resources : @syntax.PdfObject
 } derive(Debug, Eq, ToJson)
 
@@ -79,7 +79,7 @@ pub(all) enum PdfSimpleFontType {
 /// metrics are resolved from standard-font fallback data where possible.
 pub(all) struct PdfSimpleFont {
   fonttype : PdfSimpleFontType
-  basefont : PdfName?
+  basefont : @core.PdfName?
   firstchar : Int
   lastchar : Int
   widths : Array[Int]
@@ -94,8 +94,8 @@ pub(all) struct PdfSimpleFont {
 /// `registry` and `ordering` are stored as PDF bytes because PDF strings are
 /// byte sequences, not MoonBit `String` values.
 pub(all) struct PdfCIDSystemInfo {
-  registry : PdfBytes
-  ordering : PdfBytes
+  registry : @core.PdfBytes
+  ordering : @core.PdfBytes
   supplement : Int
 } derive(Debug, Eq, ToJson)
 
@@ -117,7 +117,7 @@ pub(all) struct PdfCIDVerticalWidth {
 /// preserving the PDF default horizontal and vertical widths.
 pub(all) struct PdfCompositeCIDFont {
   cid_system_info : PdfCIDSystemInfo
-  cid_basefont : PdfName
+  cid_basefont : @core.PdfName
   cid_fontdescriptor : PdfFontDescriptor
   cid_widths : Array[(Int, Double)]
   cid_widths2 : Array[(Int, PdfCIDVerticalWidth)]
@@ -131,7 +131,7 @@ pub(all) struct PdfCompositeCIDFont {
 /// A CMap may be predefined by name, referenced as an external stream object,
 /// or parsed from that external stream together with its mapping tables.
 pub(all) enum PdfCMapEncoding {
-  PdfPredefinedCMap(PdfName)
+  PdfPredefinedCMap(@core.PdfName)
   PdfCMap(Int)
   PdfExternalCMap(Int, PdfParsedCMap)
 } derive(Debug, Eq, ToJson)
@@ -155,13 +155,13 @@ pub(all) struct PdfCMapCodeSpace {
 /// notdef fallback CIDs. Optional metadata is taken from the stream body or
 /// stream dictionary when available.
 pub(all) struct PdfParsedCMap {
-  map : Array[(Int, PdfBytes)]
+  map : Array[(Int, @core.PdfBytes)]
   cid_map : Array[(Int, Int)]
   notdef_map : Array[(Int, Int)]
   codespaces : Array[PdfCMapCodeSpace]
-  usecmap : PdfName?
+  usecmap : @core.PdfName?
   wmode : Int?
-  cmap_name : PdfName?
+  cmap_name : @core.PdfName?
   cmap_type : Int?
   cid_system_info : PdfCIDSystemInfo?
 } derive(Debug, Eq, ToJson)
@@ -169,7 +169,7 @@ pub(all) struct PdfParsedCMap {
 ///|
 /// Parsed Type 0 font with descendant CIDFont and CMap encoding.
 pub(all) struct PdfCIDKeyedFont {
-  basefont : PdfName
+  basefont : @core.PdfName
   composite : PdfCompositeCIDFont
   encoding : PdfCMapEncoding
 } derive(Debug, Eq, ToJson)

@@ -2,7 +2,7 @@
 fn PdfDocument::pdf_attach_stream_data(
   self : PdfDocument,
   stream : @syntax.PdfObject,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   self.pdf_decode_stream(stream).stream_bytes()
 }
 
@@ -10,7 +10,7 @@ fn PdfDocument::pdf_attach_stream_data(
 fn PdfDocument::pdf_attach_raw_stream_size(
   self : PdfDocument,
   stream : @syntax.PdfObject,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   self.direct(stream).stream_bytes().length()
 }
 
@@ -18,7 +18,7 @@ fn PdfDocument::pdf_attach_raw_stream_size(
 fn PdfDocument::pdf_attach_file_spec_data(
   self : PdfDocument,
   file_spec : @syntax.PdfObject,
-) -> PdfBytes? raise PdfError {
+) -> @core.PdfBytes? raise @core.PdfError {
   match self.lookup_direct(pdf_attach_ef_key(), file_spec) {
     Some(ef) =>
       match self.lookup_direct(pdf_attach_f_key(), ef) {
@@ -33,7 +33,7 @@ fn PdfDocument::pdf_attach_file_spec_data(
 fn PdfDocument::pdf_attach_file_spec_raw_size(
   self : PdfDocument,
   file_spec : @syntax.PdfObject,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   match self.lookup_direct(pdf_attach_ef_key(), file_spec) {
     Some(ef) =>
       match self.lookup_direct(pdf_attach_f_key(), ef) {
@@ -48,7 +48,7 @@ fn PdfDocument::pdf_attach_file_spec_raw_size(
 fn PdfDocument::pdf_attach_file_spec_description(
   self : PdfDocument,
   file_spec : @syntax.PdfObject,
-) -> String? raise PdfError {
+) -> String? raise @core.PdfError {
   match self.lookup_direct(pdf_attach_desc_key(), file_spec) {
     Some(PdfString(bytes)) => Some(pdf_attach_string_of_pdfdoc_string(bytes))
     _ => None
@@ -69,7 +69,7 @@ fn PdfDocument::pdf_attach_file_spec_relationship(
 ///|
 fn PdfDocument::pdf_attach_document_attachments(
   self : PdfDocument,
-) -> Array[@attachment.PdfAttachment] raise PdfError {
+) -> Array[@attachment.PdfAttachment] raise @core.PdfError {
   let catalog = self.catalog()
   match self.lookup_direct(pdf_attach_names_key(), catalog) {
     Some(names) =>
@@ -115,7 +115,7 @@ fn PdfDocument::pdf_attach_is_file_attachment_annotation(
 ///|
 fn PdfDocument::pdf_attach_page_attachments(
   self : PdfDocument,
-) -> Array[@attachment.PdfAttachment] raise PdfError {
+) -> Array[@attachment.PdfAttachment] raise @core.PdfError {
   let pages = self.pages_of_pagetree()
   let output : Array[@attachment.PdfAttachment] = Array::new(
     capacity=pages.length(),
@@ -156,7 +156,7 @@ fn PdfDocument::pdf_attach_page_attachments(
 /// List document-level and page-level file attachments.
 pub fn PdfDocument::list_attached_files(
   self : PdfDocument,
-) -> Array[@attachment.PdfAttachment] raise PdfError {
+) -> Array[@attachment.PdfAttachment] raise @core.PdfError {
   [
     ..self.pdf_attach_document_attachments(),
     ..self.pdf_attach_page_attachments(),
@@ -167,6 +167,6 @@ pub fn PdfDocument::list_attached_files(
 /// Compatibility wrapper for `PdfDocument::list_attached_files`.
 pub fn pdf_list_attached_files(
   document : PdfDocument,
-) -> Array[@attachment.PdfAttachment] raise PdfError {
+) -> Array[@attachment.PdfAttachment] raise @core.PdfError {
   document.list_attached_files()
 }

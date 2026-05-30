@@ -18,12 +18,12 @@ fn PdfDocument::pdf_text_add_font_object(
 ///
 /// Standard fonts, Type 3 fonts with descriptors, and TrueType fonts with
 /// descriptors are supported. `objnum` can force the destination object number
-/// for rewrite workflows. Unsupported font shapes raise `PdfError::FontWriteUnsupported`.
+/// for rewrite workflows. Unsupported font shapes raise `@core.PdfError::FontWriteUnsupported`.
 pub fn PdfDocument::write_font(
   self : PdfDocument,
   font : PdfFont,
   objnum? : Int? = None,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   match font {
     PdfFontStandard({ font, encoding }) =>
       self.pdf_text_add_font_object(
@@ -79,6 +79,6 @@ pub fn pdf_write_font(
   document : PdfDocument,
   font : PdfFont,
   objnum? : Int? = None,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   document.write_font(font, objnum~)
 }

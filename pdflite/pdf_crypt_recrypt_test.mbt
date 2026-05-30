@@ -1,14 +1,14 @@
 ///|
 fn crypt_recrypt_model_bytes_for_test(
   values : ArrayView[Int],
-) -> @pdflite.PdfBytes {
-  try! @pdflite.pdf_bytes_of_int_array(values)
+) -> @core.PdfBytes {
+  try! @core.pdf_bytes_of_int_array(values)
 }
 
 ///|
 fn crypt_recrypt_bytes_start_with_at(
-  haystack : @pdflite.PdfBytes,
-  needle : @pdflite.PdfBytes,
+  haystack : @core.PdfBytes,
+  needle : @core.PdfBytes,
   start : Int,
 ) -> Bool {
   if start < 0 || start + needle.length() > haystack.length() {
@@ -26,8 +26,8 @@ fn crypt_recrypt_bytes_start_with_at(
 
 ///|
 fn crypt_recrypt_bytes_contain_for_test(
-  haystack : @pdflite.PdfBytes,
-  needle : @pdflite.PdfBytes,
+  haystack : @core.PdfBytes,
+  needle : @core.PdfBytes,
 ) -> Bool {
   if needle.length() == 0 {
     true
@@ -49,7 +49,7 @@ fn crypt_recrypt_aes_document_iv_for_test(
   object_number : Int,
   generation : Int,
   index : Int,
-) -> @pdflite.PdfBytes {
+) -> @core.PdfBytes {
   crypt_recrypt_model_bytes_for_test(
     [
       for offset in 0..<16 => {
@@ -60,7 +60,7 @@ fn crypt_recrypt_aes_document_iv_for_test(
 }
 
 ///|
-fn crypt_recrypt_aesv3_r5_file_key_for_test() -> @pdflite.PdfBytes {
+fn crypt_recrypt_aesv3_r5_file_key_for_test() -> @core.PdfBytes {
   crypt_recrypt_model_bytes_for_test([ for value in 0..<32 => value ])
 }
 
@@ -69,7 +69,7 @@ fn crypt_recrypt_aesv3_r5_file_key_for_test() -> @pdflite.PdfBytes {
 fn crypt_recrypt_aesv3_r5_random_for_test(
   field : @crypt_core.PdfAesV3RandomField,
   _length : Int,
-) -> @pdflite.PdfBytes raise @pdflite.PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   match field {
     PdfAesV3FileKey => crypt_recrypt_aesv3_r5_file_key_for_test()
     PdfAesV3UserValidationSalt =>
@@ -154,8 +154,8 @@ fn crypt_recrypt_aesv3_r6_document_with_object_for_test(
 }
 
 ///|
-fn crypt_recrypt_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn crypt_recrypt_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -191,8 +191,8 @@ fn crypt_recrypt_minimal_catalog_document_for_test(
 
 ///|
 fn crypt_recrypt_stream_for_test(
-  entries : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
-  data : @pdflite.PdfBytes,
+  entries : ArrayView[(@core.PdfName, @syntax.PdfObject)],
+  data : @core.PdfBytes,
 ) -> @syntax.PdfObject {
   PdfStreamObject({
     dictionary: PdfDictionary([ for entry in entries => entry ]),
@@ -203,7 +203,7 @@ fn crypt_recrypt_stream_for_test(
 ///|
 fn crypt_recrypt_stream_object_bytes_for_test(
   stream : @syntax.PdfStream,
-) -> @pdflite.PdfBytes raise {
+) -> @core.PdfBytes raise {
   @syntax.pdf_stream(stream.dictionary, stream.data).stream_bytes()
 }
 
@@ -212,7 +212,7 @@ fn crypt_recrypt_document_with_stream_for_test(
   major : Int,
   minor : Int,
   object_number : Int,
-  data : @pdflite.PdfBytes,
+  data : @core.PdfBytes,
 ) -> @pdflite.PdfDocument {
   let doc = crypt_recrypt_minimal_catalog_document_for_test(major, minor)
   doc.add_object_given_number(
@@ -229,7 +229,7 @@ fn crypt_recrypt_document_with_stream_for_test(
 fn crypt_recrypt_assert_deferred_stream_for_test(
   object : @syntax.PdfObject,
   expected_crypt : (@syntax.PdfStreamDataCrypt) -> Bool,
-  expected_data : @pdflite.PdfBytes,
+  expected_data : @core.PdfBytes,
 ) -> Unit raise {
   guard object is PdfStreamObject(stream) else {
     fail("expected stream object")
@@ -324,7 +324,7 @@ test "PdfDocument recrypt_with_password restores saved ARC4 encryption" {
   let repeated_recrypt : Result[@pdflite.PdfDocument, Error] = try? recrypted.recrypt_with_password(
     @ascii.encode("owner"),
   )
-  guard repeated_recrypt is Err(@pdflite.PdfError::EncryptionSavedStateExpected) else {
+  guard repeated_recrypt is Err(@core.PdfError::EncryptionSavedStateExpected) else {
     fail("expected consumed ARC4 saved encryption")
   }
   @test.assert_eq(try! recrypted.what_encryption(), Some(PdfEncryption128Bit))
@@ -338,14 +338,14 @@ test "PdfDocument recrypt_with_password restores saved ARC4 encryption" {
   let bad_password : Result[@pdflite.PdfDocument, Error] = try? decrypted.document.recrypt_with_password(
     @ascii.encode("bad"),
   )
-  guard bad_password is Err(@pdflite.PdfError::EncryptionRecryptFailed) else {
+  guard bad_password is Err(@core.PdfError::EncryptionRecryptFailed) else {
     fail("expected failed recrypt")
   }
 
   let no_saved : Result[@pdflite.PdfDocument, Error] = try? doc.recrypt_with_password(
     @ascii.encode("user"),
   )
-  guard no_saved is Err(@pdflite.PdfError::EncryptionSavedStateExpected) else {
+  guard no_saved is Err(@core.PdfError::EncryptionSavedStateExpected) else {
     fail("expected missing saved encryption")
   }
 
@@ -364,7 +364,7 @@ test "PdfDocument recrypt_with_password restores saved ARC4 encryption" {
   let unsupported : Result[@pdflite.PdfDocument, Error] = try? aes_decrypted.document.recrypt_with_password(
     @ascii.encode("user"),
   )
-  guard unsupported is Err(@pdflite.PdfError::EncryptionRecryptUnsupported(_)) else {
+  guard unsupported is Err(@core.PdfError::EncryptionRecryptUnsupported(_)) else {
     fail("expected unsupported AES recrypt")
   }
 
@@ -470,7 +470,7 @@ test "PdfDocument recrypt_with_password_aesv2_with_iv_provider restores saved AE
       )
     },
   )
-  guard repeated_recrypt is Err(@pdflite.PdfError::EncryptionSavedStateExpected) else {
+  guard repeated_recrypt is Err(@core.PdfError::EncryptionSavedStateExpected) else {
     fail("expected consumed AESV2 saved encryption")
   }
   @test.assert_eq(
@@ -509,7 +509,7 @@ test "PdfDocument recrypt_with_password_aesv2_with_iv_provider restores saved AE
       crypt_recrypt_aes_document_iv_for_test(object_number, generation, index)
     },
   )
-  guard bad_password is Err(@pdflite.PdfError::EncryptionRecryptFailed) else {
+  guard bad_password is Err(@core.PdfError::EncryptionRecryptFailed) else {
     fail("expected failed AESV2 recrypt")
   }
 
@@ -519,7 +519,7 @@ test "PdfDocument recrypt_with_password_aesv2_with_iv_provider restores saved AE
       crypt_recrypt_aes_document_iv_for_test(object_number, generation, index)
     },
   )
-  guard no_saved is Err(@pdflite.PdfError::EncryptionSavedStateExpected) else {
+  guard no_saved is Err(@core.PdfError::EncryptionSavedStateExpected) else {
     fail("expected missing saved encryption")
   }
 
@@ -538,7 +538,7 @@ test "PdfDocument recrypt_with_password_aesv2_with_iv_provider restores saved AE
       crypt_recrypt_aes_document_iv_for_test(object_number, generation, index)
     },
   )
-  guard unsupported is Err(@pdflite.PdfError::EncryptionRecryptUnsupported(_)) else {
+  guard unsupported is Err(@core.PdfError::EncryptionRecryptUnsupported(_)) else {
     fail("expected unsupported non-AESV2 recrypt")
   }
 }
@@ -599,7 +599,7 @@ test "PdfDocument recrypt_with_password_aesv3_with_iv_provider restores saved AE
       )
     },
   )
-  guard repeated_recrypt is Err(@pdflite.PdfError::EncryptionSavedStateExpected) else {
+  guard repeated_recrypt is Err(@core.PdfError::EncryptionSavedStateExpected) else {
     fail("expected consumed AESV3 saved encryption")
   }
   @test.assert_eq(
@@ -641,7 +641,7 @@ test "PdfDocument recrypt_with_password_aesv3_with_iv_provider restores saved AE
       crypt_recrypt_aes_document_iv_for_test(object_number, generation, index)
     },
   )
-  guard bad_password is Err(@pdflite.PdfError::EncryptionRecryptFailed) else {
+  guard bad_password is Err(@core.PdfError::EncryptionRecryptFailed) else {
     fail("expected failed AESV3 recrypt")
   }
 
@@ -654,7 +654,7 @@ test "PdfDocument recrypt_with_password_aesv3_with_iv_provider restores saved AE
   ) {
     crypt_recrypt_aes_document_iv_for_test(object_number, generation, index)
   })
-  guard no_saved is Err(@pdflite.PdfError::EncryptionSavedStateExpected) else {
+  guard no_saved is Err(@core.PdfError::EncryptionSavedStateExpected) else {
     fail("expected missing AESV3 saved encryption")
   }
 
@@ -677,7 +677,7 @@ test "PdfDocument recrypt_with_password_aesv3_with_iv_provider restores saved AE
       crypt_recrypt_aes_document_iv_for_test(object_number, generation, index)
     },
   )
-  guard wrong_method is Err(@pdflite.PdfError::EncryptionRecryptUnsupported(_)) else {
+  guard wrong_method is Err(@core.PdfError::EncryptionRecryptUnsupported(_)) else {
     fail("expected non-AESV3 saved encryption rejection")
   }
 }

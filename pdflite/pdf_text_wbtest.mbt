@@ -1,11 +1,11 @@
 ///|
-fn text_wbtest_name(text : String) -> PdfName {
-  pdf_name_of_bytes(@ascii.encode(text))
+fn text_wbtest_name(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
 fn text_wbtest_descriptor(
-  tounicode : Array[(Int, PdfBytes)]?,
+  tounicode : Array[(Int, @core.PdfBytes)]?,
 ) -> PdfFontDescriptor {
   {
     ascent: 0.0,
@@ -26,7 +26,7 @@ fn text_wbtest_descriptor(
 
 ///|
 fn text_wbtest_simple_font(
-  basefont : PdfName?,
+  basefont : @core.PdfName?,
   fontmetrics : Array[Double]?,
   descriptor : PdfFontDescriptor?,
 ) -> PdfSimpleFont {

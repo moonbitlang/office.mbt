@@ -1,11 +1,11 @@
 ///|
-fn text_core_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn text_core_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
-fn text_core_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
-  try! @pdflite.pdf_bytes_of_int_array(values)
+fn text_core_bytes_for_test(values : ArrayView[Int]) -> @core.PdfBytes {
+  try! @core.pdf_bytes_of_int_array(values)
 }
 
 ///|
@@ -145,7 +145,7 @@ test "PdfDocument write_font rejects unsupported font variants" {
     }),
   )
   guard unsupported is Err(FontWriteUnsupported) else {
-    fail("expected @pdflite.PdfError::FontWriteUnsupported")
+    fail("expected @core.PdfError::FontWriteUnsupported")
   }
   let unsupported_type3 = try? doc.write_font(
     PdfFontSimple({
@@ -165,7 +165,7 @@ test "PdfDocument write_font rejects unsupported font variants" {
     }),
   )
   guard unsupported_type3 is Err(FontWriteUnsupported) else {
-    fail("expected @pdflite.PdfError::FontWriteUnsupported")
+    fail("expected @core.PdfError::FontWriteUnsupported")
   }
   let unsupported_encoding = try? doc.write_font(
     PdfFontSimple({
@@ -185,7 +185,7 @@ test "PdfDocument write_font rejects unsupported font variants" {
     }),
   )
   guard unsupported_encoding is Err(EncodingWriteUnsupported) else {
-    fail("expected @pdflite.PdfError::EncodingWriteUnsupported")
+    fail("expected @core.PdfError::EncodingWriteUnsupported")
   }
   let unsupported_truetype = try? doc.write_font(
     PdfFontSimple({
@@ -200,7 +200,7 @@ test "PdfDocument write_font rejects unsupported font variants" {
     }),
   )
   guard unsupported_truetype is Err(FontWriteUnsupported) else {
-    fail("expected @pdflite.PdfError::FontWriteUnsupported")
+    fail("expected @core.PdfError::FontWriteUnsupported")
   }
   let unsupported_truetype_encoding = try? doc.write_font(
     PdfFontSimple({
@@ -218,6 +218,6 @@ test "PdfDocument write_font rejects unsupported font variants" {
     }),
   )
   guard unsupported_truetype_encoding is Err(EncodingWriteUnsupported) else {
-    fail("expected @pdflite.PdfError::EncodingWriteUnsupported")
+    fail("expected @core.PdfError::EncodingWriteUnsupported")
   }
 }

@@ -3,7 +3,7 @@
 ///
 /// `code` is the one-byte character code that maps to `name`.
 pub(all) struct PdfEncodingDifference {
-  name : PdfName
+  name : @core.PdfName
   code : Int
 } derive(Debug, Eq, ToJson)
 
@@ -46,6 +46,6 @@ pub(all) struct PdfTextExtractor {
 /// `glyphname` is the resolved PDF glyph name and `codepoints` is the Unicode
 /// scalar sequence inferred from ToUnicode, CMap, or Adobe glyph-list data.
 pub(all) struct PdfTextGlyph {
-  glyphname : PdfName
+  glyphname : @core.PdfName
   codepoints : Array[Int]
 } derive(Debug, Eq, ToJson)

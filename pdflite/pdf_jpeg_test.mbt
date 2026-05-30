@@ -1,16 +1,16 @@
 ///|
-fn jpeg_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
-  try! @pdflite.pdf_bytes_of_int_array(values)
+fn jpeg_bytes_for_test(values : ArrayView[Int]) -> @core.PdfBytes {
+  try! @core.pdf_bytes_of_int_array(values)
 }
 
 ///|
-fn jpeg_bytes_to_ints_for_test(bytes : @pdflite.PdfBytes) -> Array[Int] {
-  @pdflite.pdf_bytes_to_array(bytes).map(byte => byte.to_int())
+fn jpeg_bytes_to_ints_for_test(bytes : @core.PdfBytes) -> Array[Int] {
+  @core.pdf_bytes_to_array(bytes).map(byte => byte.to_int())
 }
 
 ///|
 test "@codec.pdf_cursor_read_jpeg_data consumes through JPEG EOI marker" {
-  let cursor = @pdflite.byte_cursor_of_bytes(
+  let cursor = @core.byte_cursor_of_bytes(
     jpeg_bytes_for_test([0xFF, 0xD8, 1, 2, 0xFF, 0xD9, 65, 66]),
   )
   @test.assert_eq(
@@ -19,7 +19,7 @@ test "@codec.pdf_cursor_read_jpeg_data consumes through JPEG EOI marker" {
   )
   @test.assert_eq(cursor.position(), 6)
   @test.assert_eq(cursor.read_byte(), Some(65))
-  let function_cursor = @pdflite.byte_cursor_of_bytes(
+  let function_cursor = @core.byte_cursor_of_bytes(
     jpeg_bytes_for_test([0xFF, 0xD8, 0xFF, 0xD9, 0]),
   )
   @test.assert_eq(
@@ -31,7 +31,7 @@ test "@codec.pdf_cursor_read_jpeg_data consumes through JPEG EOI marker" {
 
 ///|
 test "@codec.pdf_cursor_read_jpeg_data ignores stuffed and bare D9 bytes" {
-  let cursor = @pdflite.byte_cursor_of_bytes(
+  let cursor = @core.byte_cursor_of_bytes(
     jpeg_bytes_for_test([0xFF, 0xD8, 0xFF, 0x00, 0xD9, 0xFF, 0xD9, 7]),
   )
   @test.assert_eq(
@@ -43,20 +43,20 @@ test "@codec.pdf_cursor_read_jpeg_data ignores stuffed and bare D9 bytes" {
 
 ///|
 test "@codec.pdf_cursor_read_jpeg_data reports missing JPEG EOI marker" {
-  let cursor = @pdflite.byte_cursor_of_bytes(
+  let cursor = @core.byte_cursor_of_bytes(
     jpeg_bytes_for_test([0xFF, 0xD8, 1, 2, 0xFF]),
   )
-  let result : Result[@pdflite.PdfBytes, Error] = try? @codec.pdf_cursor_read_jpeg_data(
+  let result : Result[@core.PdfBytes, Error] = try? @codec.pdf_cursor_read_jpeg_data(
     cursor,
   )
-  guard result is Err(@pdflite.PdfError::EndOfInput) else {
-    fail("expected @pdflite.PdfError::EndOfInput for missing JPEG EOI marker")
+  guard result is Err(@core.PdfError::EndOfInput) else {
+    fail("expected @core.PdfError::EndOfInput for missing JPEG EOI marker")
   }
   @test.assert_eq(cursor.position(), cursor.length())
 }
 
 ///|
-fn jpeg_jfif_for_test(marker : Int) -> @pdflite.PdfBytes {
+fn jpeg_jfif_for_test(marker : Int) -> @core.PdfBytes {
   jpeg_bytes_for_test([
     0xFF, 0xD8, 0xFF, 0xE0,
     // APP0 length = 9, followed by "JFIF\0" and two padding bytes.
@@ -67,7 +67,7 @@ fn jpeg_jfif_for_test(marker : Int) -> @pdflite.PdfBytes {
 }
 
 ///|
-fn jpeg_exif_for_test() -> @pdflite.PdfBytes {
+fn jpeg_exif_for_test() -> @core.PdfBytes {
   jpeg_bytes_for_test([
     0xFF, 0xD8, 0xFF, 0xE1,
     // APP1 length = 10, followed by "Exif\0" and three padding bytes.
@@ -78,7 +78,7 @@ fn jpeg_exif_for_test() -> @pdflite.PdfBytes {
 }
 
 ///|
-fn jpeg_jfif_with_intermediate_block_for_test() -> @pdflite.PdfBytes {
+fn jpeg_jfif_with_intermediate_block_for_test() -> @core.PdfBytes {
   jpeg_bytes_for_test([
     0xFF, 0xD8, 0xFF, 0xE0,
     // APP0 length = 9, followed by "JFIF\0" and two padding bytes.
@@ -91,7 +91,7 @@ fn jpeg_jfif_with_intermediate_block_for_test() -> @pdflite.PdfBytes {
 }
 
 ///|
-fn jpeg_progressive_without_app_header_for_test() -> @pdflite.PdfBytes {
+fn jpeg_progressive_without_app_header_for_test() -> @core.PdfBytes {
   jpeg_bytes_for_test([
     0xFF, 0xD8,
     // DQT-like non-SOF segment with length 4 and two payload bytes.
@@ -128,7 +128,7 @@ test "@codec.pdf_jpeg_dimensions rejects progressive or missing SOF0 dimensions"
   let progressive : Result[(Int, Int), Error] = try? @codec.pdf_jpeg_dimensions(
     jpeg_jfif_for_test(0xC2),
   )
-  guard progressive is Err(@pdflite.PdfError::JPEGDimensionsExpected) else {
+  guard progressive is Err(@core.PdfError::JPEGDimensionsExpected) else {
     fail("expected JPEGDimensionsExpected for progressive JPEG")
   }
 }
@@ -152,7 +152,7 @@ test "@codec.pdf_jpeg_dimensions reports malformed JPEG inputs" {
   let bad_header : Result[(Int, Int), Error] = try? @codec.pdf_jpeg_dimensions(
     jpeg_bytes_for_test([0xFF, 0xD8, 0xFF, 0xDB]),
   )
-  guard bad_header is Err(@pdflite.PdfError::BadJPEGHeader) else {
+  guard bad_header is Err(@core.PdfError::BadJPEGHeader) else {
     fail("expected BadJPEGHeader")
   }
   let bad_string : Result[(Int, Int), Error] = try? @codec.pdf_jpeg_dimensions(
@@ -160,7 +160,7 @@ test "@codec.pdf_jpeg_dimensions reports malformed JPEG inputs" {
       0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x09, 0x4E, 0x4F, 0x50, 0x45, 0x00,
     ]),
   )
-  guard bad_string is Err(@pdflite.PdfError::BadJPEGString) else {
+  guard bad_string is Err(@core.PdfError::BadJPEGString) else {
     fail("expected BadJPEGString")
   }
   let bad_block : Result[(Int, Int), Error] = try? @codec.pdf_jpeg_dimensions(
@@ -169,7 +169,7 @@ test "@codec.pdf_jpeg_dimensions reports malformed JPEG inputs" {
       0x00, 0xC0,
     ]),
   )
-  guard bad_block is Err(@pdflite.PdfError::InvalidJPEGBlock) else {
+  guard bad_block is Err(@core.PdfError::InvalidJPEGBlock) else {
     fail("expected InvalidJPEGBlock")
   }
   let truncated : Result[(Int, Int), Error] = try? @codec.pdf_jpeg_dimensions(
@@ -177,7 +177,7 @@ test "@codec.pdf_jpeg_dimensions reports malformed JPEG inputs" {
       0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x09, 0x4A, 0x46, 0x49, 0x46, 0x00, 0xAA,
     ]),
   )
-  guard truncated is Err(@pdflite.PdfError::JPEGDimensionsExpected) else {
+  guard truncated is Err(@core.PdfError::JPEGDimensionsExpected) else {
     fail("expected JPEGDimensionsExpected for truncated JPEG")
   }
 }
@@ -187,19 +187,19 @@ test "@codec.pdf_jpeg_backup_dimensions reports malformed SOF scanning inputs" {
   let bad_header : Result[(Int, Int), Error] = try? @codec.pdf_jpeg_backup_dimensions(
     jpeg_bytes_for_test([0x00, 0xD8]),
   )
-  guard bad_header is Err(@pdflite.PdfError::BadJPEGHeader) else {
+  guard bad_header is Err(@core.PdfError::BadJPEGHeader) else {
     fail("expected BadJPEGHeader")
   }
   let bad_block : Result[(Int, Int), Error] = try? @codec.pdf_jpeg_backup_dimensions(
     jpeg_bytes_for_test([0xFF, 0xD8, 0xFF, 0xDB, 0x00, 0x01]),
   )
-  guard bad_block is Err(@pdflite.PdfError::InvalidJPEGBlock) else {
+  guard bad_block is Err(@core.PdfError::InvalidJPEGBlock) else {
     fail("expected InvalidJPEGBlock")
   }
   let no_dimensions : Result[(Int, Int), Error] = try? @codec.pdf_jpeg_backup_dimensions(
     jpeg_bytes_for_test([0xFF, 0xD8, 0xFF, 0xD9]),
   )
-  guard no_dimensions is Err(@pdflite.PdfError::JPEGDimensionsExpected) else {
+  guard no_dimensions is Err(@core.PdfError::JPEGDimensionsExpected) else {
     fail("expected JPEGDimensionsExpected")
   }
 }

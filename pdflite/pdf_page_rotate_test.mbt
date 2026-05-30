@@ -8,13 +8,13 @@ fn rotate_page_for_test(
 ///|
 fn rotate_document_for_test(
   pages : ArrayView[@page.PdfPage],
-) -> @pdflite.PdfDocument raise @pdflite.PdfError {
+) -> @pdflite.PdfDocument raise @core.PdfError {
   @pdflite.pdf_blank_document(100.0, 100.0, pages.length()).change_pages(pages)
 }
 
 ///|
-fn rotate_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn rotate_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -104,7 +104,7 @@ test "PdfDocument rotate_pages validates rotation and page range" {
     45,
     [1],
   )
-  guard bad_rotation is Err(@pdflite.PdfError::PageRotationExpected(45)) else {
+  guard bad_rotation is Err(@core.PdfError::PageRotationExpected(45)) else {
     fail("expected PageRotationExpected for non-right-angle rotation")
   }
   let bad_page : Result[@pdflite.PdfDocument, Error] = try? document.rotate_pages_by(
@@ -113,7 +113,7 @@ test "PdfDocument rotate_pages validates rotation and page range" {
   )
   guard bad_page
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "rotate_pages_by: range contains pages not present in pdf"
       )
     ) else {
@@ -268,7 +268,7 @@ test "PdfDocument rotate_contents validates selected pages" {
   )
   guard bad_page
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "rotate_contents: range contains pages not present in pdf"
       )
     ) else {

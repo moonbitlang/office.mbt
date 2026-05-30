@@ -17,7 +17,7 @@ fn PdfDocumentPageSpecContext::read_page_label_reference(
   self : PdfDocumentPageSpecContext,
   spec : BytesView,
   open_index : Int,
-) -> (Bytes, Int) raise PdfError {
+) -> (Bytes, Int) raise @core.PdfError {
   let mut index = open_index + 1
   let mut label_length = 0
   let mut closed = false
@@ -69,7 +69,7 @@ fn PdfDocumentPageSpecContext::page_number_bytes_for_label(
   self : PdfDocumentPageSpecContext,
   label : BytesView,
   labels : ArrayView[@label.PdfPageLabel],
-) -> Bytes raise PdfError {
+) -> Bytes raise @core.PdfError {
   let mut found = false
   let mut output = Bytes::new(0)
   for page_number in 1..<=self.end_page {
@@ -96,7 +96,7 @@ fn PdfDocumentPageSpecContext::resolved_page_labels_length(
   self : PdfDocumentPageSpecContext,
   spec : BytesView,
   labels : ArrayView[@label.PdfPageLabel],
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   let mut length = 0
   let mut index = 0
   while index < spec.length() {
@@ -125,7 +125,7 @@ fn PdfDocumentPageSpecContext::resolved_page_labels_length(
 fn PdfDocumentPageSpecContext::resolve_page_labels(
   self : PdfDocumentPageSpecContext,
   spec : BytesView,
-) -> Bytes raise PdfError {
+) -> Bytes raise @core.PdfError {
   let labels = self.document.read_page_labels()
   let output = Array::make(
     self.resolved_page_labels_length(spec, labels),

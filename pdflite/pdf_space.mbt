@@ -1,55 +1,55 @@
 ///|
-fn pdf_space_name(text : String) -> PdfName {
-  pdf_name_of_bytes(@ascii.encode(text))
+fn pdf_space_name(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
-let pdf_space_device_gray_name : PdfName = pdf_space_name("/DeviceGray")
+let pdf_space_device_gray_name : @core.PdfName = pdf_space_name("/DeviceGray")
 
 ///|
-let pdf_space_g_name : PdfName = pdf_space_name("/G")
+let pdf_space_g_name : @core.PdfName = pdf_space_name("/G")
 
 ///|
-let pdf_space_device_rgb_name : PdfName = pdf_space_name("/DeviceRGB")
+let pdf_space_device_rgb_name : @core.PdfName = pdf_space_name("/DeviceRGB")
 
 ///|
-let pdf_space_rgb_name : PdfName = pdf_space_name("/RGB")
+let pdf_space_rgb_name : @core.PdfName = pdf_space_name("/RGB")
 
 ///|
-let pdf_space_device_cmyk_name : PdfName = pdf_space_name("/DeviceCMYK")
+let pdf_space_device_cmyk_name : @core.PdfName = pdf_space_name("/DeviceCMYK")
 
 ///|
-let pdf_space_cmyk_name : PdfName = pdf_space_name("/CMYK")
+let pdf_space_cmyk_name : @core.PdfName = pdf_space_name("/CMYK")
 
 ///|
-let pdf_space_pattern_name : PdfName = pdf_space_name("/Pattern")
+let pdf_space_pattern_name : @core.PdfName = pdf_space_name("/Pattern")
 
 ///|
-let pdf_space_calgray_name : PdfName = pdf_space_name("/CalGray")
+let pdf_space_calgray_name : @core.PdfName = pdf_space_name("/CalGray")
 
 ///|
-let pdf_space_calrgb_name : PdfName = pdf_space_name("/CalRGB")
+let pdf_space_calrgb_name : @core.PdfName = pdf_space_name("/CalRGB")
 
 ///|
-let pdf_space_calcmyk_name : PdfName = pdf_space_name("/CalCMYK")
+let pdf_space_calcmyk_name : @core.PdfName = pdf_space_name("/CalCMYK")
 
 ///|
-let pdf_space_lab_name : PdfName = pdf_space_name("/Lab")
+let pdf_space_lab_name : @core.PdfName = pdf_space_name("/Lab")
 
 ///|
-let pdf_space_iccbased_name : PdfName = pdf_space_name("/ICCBased")
+let pdf_space_iccbased_name : @core.PdfName = pdf_space_name("/ICCBased")
 
 ///|
-let pdf_space_separation_name : PdfName = pdf_space_name("/Separation")
+let pdf_space_separation_name : @core.PdfName = pdf_space_name("/Separation")
 
 ///|
-let pdf_space_indexed_name : PdfName = pdf_space_name("/Indexed")
+let pdf_space_indexed_name : @core.PdfName = pdf_space_name("/Indexed")
 
 ///|
-let pdf_space_i_name : PdfName = pdf_space_name("/I")
+let pdf_space_i_name : @core.PdfName = pdf_space_name("/I")
 
 ///|
-let pdf_space_device_n_name : PdfName = pdf_space_name("/DeviceN")
+let pdf_space_device_n_name : @core.PdfName = pdf_space_name("/DeviceN")
 
 ///|
 /// A CIE tristimulus point used by calibrated PDF colour spaces.
@@ -91,9 +91,9 @@ pub(all) enum PdfColourSpace {
   PdfIndexed(PdfColourSpace, Array[(Int, Array[Int])])
   PdfPattern
   PdfPatternWithBaseColourSpace(PdfColourSpace)
-  PdfSeparation(PdfName, PdfColourSpace, @syntax.PdfObject)
+  PdfSeparation(@core.PdfName, PdfColourSpace, @syntax.PdfObject)
   PdfDeviceN(
-    Array[PdfName],
+    Array[@core.PdfName],
     PdfColourSpace,
     @syntax.PdfObject,
     @syntax.PdfObject
@@ -131,7 +131,7 @@ pub fn PdfColourSpace::debug_name(self : PdfColourSpace) -> String {
 ///
 /// Only `PdfSeparation` has a single associated colourant name in this API.
 /// Other colour spaces, including `PdfDeviceN`, return `None`.
-pub fn PdfColourSpace::name(self : PdfColourSpace) -> PdfName? {
+pub fn PdfColourSpace::name(self : PdfColourSpace) -> @core.PdfName? {
   match self {
     PdfSeparation(name, _, _) => Some(name)
     _ => None
@@ -146,7 +146,7 @@ pub fn pdf_string_of_colour_space(space : PdfColourSpace) -> String {
 
 ///|
 /// Compatibility wrapper for `PdfColourSpace::name`.
-pub fn pdf_name_of_colour_space(space : PdfColourSpace) -> PdfName? {
+pub fn pdf_name_of_colour_space(space : PdfColourSpace) -> @core.PdfName? {
   space.name()
 }
 
@@ -156,7 +156,7 @@ pub fn pdf_name_of_colour_space(space : PdfColourSpace) -> PdfName? {
 /// Accepts the standard names `/DeviceGray`, `/DeviceRGB`, `/DeviceCMYK`, and
 /// `/Pattern`, together with the abbreviated resource names `/G`, `/RGB`, and
 /// `/CMYK`.
-pub fn pdf_colour_space_of_device_name(name : PdfName) -> PdfColourSpace? {
+pub fn pdf_colour_space_of_device_name(name : @core.PdfName) -> PdfColourSpace? {
   if name == pdf_space_device_gray_name || name == pdf_space_g_name {
     Some(PdfDeviceGray)
   } else if name == pdf_space_device_rgb_name || name == pdf_space_rgb_name {

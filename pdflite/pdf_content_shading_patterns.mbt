@@ -11,7 +11,7 @@ pub fn pdf_content_read_tiling_pattern(
 pub fn PdfDocument::content_read_shading_pattern(
   self : PdfDocument,
   pattern : @syntax.PdfObject,
-) -> PdfContentPattern raise PdfError {
+) -> PdfContentPattern raise @core.PdfError {
   let matrix = self.parse_matrix(pdf_content_shading_matrix_name, pattern)
   let extgstate = match
     self.lookup_direct(pdf_content_shading_extgstate_name, pattern) {
@@ -32,8 +32,8 @@ pub fn PdfDocument::content_read_shading_pattern(
 pub fn PdfDocument::content_read_pattern(
   self : PdfDocument,
   resources : @syntax.PdfObject,
-  name : PdfName,
-) -> PdfContentPattern? raise PdfError {
+  name : @core.PdfName,
+) -> PdfContentPattern? raise @core.PdfError {
   match self.lookup_direct(pdf_content_shading_pattern_name, resources) {
     Some(pattern_dictionary) =>
       match self.lookup_direct(name, pattern_dictionary) {
@@ -57,7 +57,7 @@ pub fn PdfDocument::content_read_pattern(
 pub fn pdf_content_read_pattern(
   document : PdfDocument,
   resources : @syntax.PdfObject,
-  name : PdfName,
-) -> PdfContentPattern? raise PdfError {
+  name : @core.PdfName,
+) -> PdfContentPattern? raise @core.PdfError {
   document.content_read_pattern(resources, name)
 }

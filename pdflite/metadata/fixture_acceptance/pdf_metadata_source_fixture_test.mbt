@@ -123,8 +123,8 @@ fn metadata_fixture_assert_contains_for_test(
 }
 
 ///|
-fn metadata_fixture_pdf_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn metadata_fixture_pdf_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|

@@ -6,7 +6,7 @@ fn PdfDocument::load_reconstructed_plan(
   include_xref_stream_trailers : Bool,
   user_password : BytesView?,
   owner_password : BytesView?,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.load_reconstructed_classic_xref_plain_objects(data, plan.classic_xrefs)
   self.load_reconstructed_object_xrefs(
     data,

@@ -63,7 +63,7 @@ fn pdf_bookmark_listing_stripped_codepoints_length(
 ///|
 fn pdf_bookmark_listing_stripped_codepoints(
   codepoints : ArrayView[Int],
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let output = Array::make(
     pdf_bookmark_listing_stripped_codepoints_length(codepoints),
     b'\x00',
@@ -71,7 +71,7 @@ fn pdf_bookmark_listing_stripped_codepoints(
   let mut position = 0
   for codepoint in codepoints {
     if codepoint <= 127 {
-      output[position] = pdf_byte_of_int(codepoint)
+      output[position] = @core.pdf_byte_of_int(codepoint)
       position += 1
     }
   }
@@ -82,7 +82,7 @@ fn pdf_bookmark_listing_stripped_codepoints(
 fn pdf_bookmark_listing_process_text(
   encoding : @metadata.PdfMetadataEncoding,
   text : BytesView,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   match encoding {
     PdfMetadataRaw => text.to_owned()
     PdfMetadataUTF8 => {
@@ -102,10 +102,10 @@ fn pdf_bookmark_listing_process_text(
 
 ///|
 priv struct PdfBookmarkListingTextLine {
-  level : PdfBytes
-  text : PdfBytes
-  page : PdfBytes
-  target : PdfBytes
+  level : @core.PdfBytes
+  text : @core.PdfBytes
+  page : @core.PdfBytes
+  target : @core.PdfBytes
   is_open : Bool
 }
 
@@ -169,7 +169,7 @@ fn PdfDocument::pdf_bookmark_listing_text_line(
   self : PdfDocument,
   bookmark : @bookmark.PdfBookmark,
   encoding : @metadata.PdfMetadataEncoding,
-) -> PdfBookmarkListingTextLine raise PdfError {
+) -> PdfBookmarkListingTextLine raise @core.PdfError {
   let page_number = self.page_number_of_target(bookmark.target)
   {
     level: @ascii.encode(bookmark.level.to_string()),

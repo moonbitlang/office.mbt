@@ -59,7 +59,7 @@ fn pdf_structure_apply_parent_tree_changes(
 fn PdfDocument::pdf_structure_replace_parent_tree(
   self : PdfDocument,
   parent_tree : @syntax.PdfObject,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   match self.trailer_dict().lookup_immediate(pdf_structure_root_key()) {
     Some(root) =>
       if self.direct(root) != PdfNull {
@@ -104,7 +104,7 @@ fn PdfDocument::pdf_structure_replace_parent_tree(
 /// document are updated to match the rebuilt number trees.
 pub fn pdf_renumber_parent_trees(
   documents : ArrayView[PdfDocument],
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   if documents.length() > 1 {
     let all_changes : Array[Array[(Int, Int)]] = Array::new(
       capacity=documents.length(),

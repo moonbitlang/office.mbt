@@ -1,13 +1,13 @@
 ///|
-fn text_cmap_predefined_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn text_cmap_predefined_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
 fn text_cmap_predefined_bytes_for_test(
   values : ArrayView[Int],
-) -> @pdflite.PdfBytes {
-  try! @pdflite.pdf_bytes_of_int_array(values)
+) -> @core.PdfBytes {
+  try! @core.pdf_bytes_of_int_array(values)
 }
 
 ///|
@@ -69,7 +69,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   let odd = try? extractor.codepoints_of_text(
     text_cmap_predefined_bytes_for_test([0x00]),
   )
-  guard odd is Err(BadText) else { fail("expected @pdflite.PdfError::BadText") }
+  guard odd is Err(BadText) else { fail("expected @core.PdfError::BadText") }
   let cid_font_v_data : @pdflite.PdfCIDKeyedFont = {
     basefont: text_cmap_predefined_name_for_test("/TopVertical"),
     composite,
@@ -100,7 +100,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     text_cmap_predefined_bytes_for_test([0x4E]),
   )
   guard vertical_odd is Err(BadText) else {
-    fail("expected @pdflite.PdfError::BadText")
+    fail("expected @core.PdfError::BadText")
   }
   let ucs2_cmap_font_h : @pdflite.PdfFont = PdfFontCIDKeyed({
     basefont: text_cmap_predefined_name_for_test("/TopUCS2"),
@@ -362,7 +362,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     .text_extractor()
     .codepoints_of_text(text_cmap_predefined_bytes_for_test([0x81]))
   guard gb_euc_truncated is Err(BadText) else {
-    fail("expected @pdflite.PdfError::BadText for truncated GB-EUC charcode")
+    fail("expected @core.PdfError::BadText for truncated GB-EUC charcode")
   }
   let gb_euc_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
     basefont: text_cmap_predefined_name_for_test("/TopGBEUCBuiltin"),
@@ -465,7 +465,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     text_cmap_predefined_bytes_for_test([0xA1]),
   )
   guard gbpc_euc_truncated is Err(BadText) else {
-    fail("expected @pdflite.PdfError::BadText for truncated GBpc-EUC charcode")
+    fail("expected @core.PdfError::BadText for truncated GBpc-EUC charcode")
   }
   let big5_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
     basefont: text_cmap_predefined_name_for_test("/TopBig5Builtin"),
@@ -510,7 +510,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     text_cmap_predefined_bytes_for_test([0xA7]),
   )
   guard big5_truncated is Err(BadText) else {
-    fail("expected @pdflite.PdfError::BadText for truncated Big5 charcode")
+    fail("expected @core.PdfError::BadText for truncated Big5 charcode")
   }
   let b5pc_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
     basefont: text_cmap_predefined_name_for_test("/TopB5pcBuiltin"),
@@ -573,7 +573,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     text_cmap_predefined_bytes_for_test([0xA1]),
   )
   guard b5pc_truncated is Err(BadText) else {
-    fail("expected @pdflite.PdfError::BadText for truncated B5pc charcode")
+    fail("expected @core.PdfError::BadText for truncated B5pc charcode")
   }
   let hkscs_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
     basefont: text_cmap_predefined_name_for_test("/TopHKscsBuiltin"),
@@ -641,7 +641,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     text_cmap_predefined_bytes_for_test([0x87]),
   )
   guard hkscs_truncated is Err(BadText) else {
-    fail("expected @pdflite.PdfError::BadText for truncated HKSCS charcode")
+    fail("expected @core.PdfError::BadText for truncated HKSCS charcode")
   }
   let etenms_b5_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
     basefont: text_cmap_predefined_name_for_test("/TopETenmsBuiltin"),
@@ -685,7 +685,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     text_cmap_predefined_bytes_for_test([0xA1]),
   )
   guard etenms_b5_truncated is Err(BadText) else {
-    fail("expected @pdflite.PdfError::BadText for truncated ETenms-B5 charcode")
+    fail("expected @core.PdfError::BadText for truncated ETenms-B5 charcode")
   }
   let hk_b5_cases : Array[(String, Array[Int], Array[Int], Int, Int)] = [
     (
@@ -761,7 +761,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     text_cmap_predefined_bytes_for_test([0x8A]),
   )
   guard hkgccs_b5_truncated is Err(BadText) else {
-    fail("expected @pdflite.PdfError::BadText for truncated HKgccs-B5 charcode")
+    fail("expected @core.PdfError::BadText for truncated HKgccs-B5 charcode")
   }
   let cns_euc_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
     basefont: text_cmap_predefined_name_for_test("/TopCNSEUCBuiltin"),
@@ -821,7 +821,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     text_cmap_predefined_bytes_for_test([0x8E, 0xA1, 0xA1]),
   )
   guard cns_euc_truncated is Err(BadText) else {
-    fail("expected @pdflite.PdfError::BadText for truncated CNS-EUC charcode")
+    fail("expected @core.PdfError::BadText for truncated CNS-EUC charcode")
   }
   let uhc_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
     basefont: text_cmap_predefined_name_for_test("/TopUHCBuiltin"),
@@ -867,7 +867,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     text_cmap_predefined_bytes_for_test([0x81]),
   )
   guard uhc_truncated is Err(BadText) else {
-    fail("expected @pdflite.PdfError::BadText for truncated UHC charcode")
+    fail("expected @core.PdfError::BadText for truncated UHC charcode")
   }
   let uhc_hw_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
     basefont: text_cmap_predefined_name_for_test("/TopUHCHWBuiltin"),
@@ -952,7 +952,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     text_cmap_predefined_bytes_for_test([0x81]),
   )
   guard gbk_truncated is Err(BadText) else {
-    fail("expected @pdflite.PdfError::BadText for truncated GBK charcode")
+    fail("expected @core.PdfError::BadText for truncated GBK charcode")
   }
   let gbkp_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
     basefont: text_cmap_predefined_name_for_test("/TopGBKpBuiltin"),
@@ -987,7 +987,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     text_cmap_predefined_bytes_for_test([0x81]),
   )
   guard gbkp_truncated is Err(BadText) else {
-    fail("expected @pdflite.PdfError::BadText for truncated GBKp charcode")
+    fail("expected @core.PdfError::BadText for truncated GBKp charcode")
   }
   let gbk2k_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
     basefont: text_cmap_predefined_name_for_test("/TopGBK2KBuiltin"),
@@ -1049,7 +1049,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     text_cmap_predefined_bytes_for_test([0x81, 0x30, 0x81]),
   )
   guard gbk2k_truncated is Err(BadText) else {
-    fail("expected @pdflite.PdfError::BadText for truncated GBK2K charcode")
+    fail("expected @core.PdfError::BadText for truncated GBK2K charcode")
   }
   let ksc_euc_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
     basefont: text_cmap_predefined_name_for_test("/TopKSCEUCBuiltin"),
@@ -1102,7 +1102,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     text_cmap_predefined_bytes_for_test([0xA1]),
   )
   guard ksc_euc_truncated is Err(BadText) else {
-    fail("expected @pdflite.PdfError::BadText for truncated KSC-EUC charcode")
+    fail("expected @core.PdfError::BadText for truncated KSC-EUC charcode")
   }
   let kscpc_euc_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
     basefont: text_cmap_predefined_name_for_test("/TopKSCpcEUCBuiltin"),
@@ -1166,7 +1166,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     text_cmap_predefined_bytes_for_test([0xA1]),
   )
   guard kscpc_euc_truncated is Err(BadText) else {
-    fail("expected @pdflite.PdfError::BadText for truncated KSCpc-EUC charcode")
+    fail("expected @core.PdfError::BadText for truncated KSCpc-EUC charcode")
   }
   let vertical_builtin_cases : Array[(String, Array[Int], Array[Int], Int, Int)] = [
     ("/GB-EUC-V", [0xA1, 0xA2], [0x3001], 0x3001, 0xA1A2),
@@ -1317,7 +1317,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     text_cmap_predefined_bytes_for_test([0x21]),
   )
   guard jis_truncated is Err(BadText) else {
-    fail("expected @pdflite.PdfError::BadText for truncated JIS charcode")
+    fail("expected @core.PdfError::BadText for truncated JIS charcode")
   }
   let japan_euc_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
     basefont: text_cmap_predefined_name_for_test("/TopJapanEUCBuiltin"),
@@ -1357,7 +1357,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     text_cmap_predefined_bytes_for_test([0x8F, 0xB4]),
   )
   guard hojo_euc_truncated is Err(BadText) else {
-    fail("expected @pdflite.PdfError::BadText for truncated Hojo-EUC charcode")
+    fail("expected @core.PdfError::BadText for truncated Hojo-EUC charcode")
   }
   let rare_japan1_predefined_cases = [
     ("/78-H", [0x21, 0x21, 0x24, 0x22], [0x3000, 0x3042], 0x3042, 0x2422, true),

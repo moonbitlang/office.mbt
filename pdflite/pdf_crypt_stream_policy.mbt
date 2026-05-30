@@ -1,37 +1,37 @@
 ///|
-let pdf_crypt_stream_length_key_name : PdfName = pdf_name_of_bytes(
+let pdf_crypt_stream_length_key_name : @core.PdfName = @core.pdf_name_of_bytes(
   @ascii.encode("/Length"),
 )
 
 ///|
-fn pdf_crypt_stream_length_key() -> PdfName {
+fn pdf_crypt_stream_length_key() -> @core.PdfName {
   pdf_crypt_stream_length_key_name
 }
 
 ///|
-fn pdf_crypt_stream_filter_key() -> PdfName {
+fn pdf_crypt_stream_filter_key() -> @core.PdfName {
   pdf_crypt_filter_name
 }
 
 ///|
-fn pdf_crypt_stream_decodeparms_key() -> PdfName {
+fn pdf_crypt_stream_decodeparms_key() -> @core.PdfName {
   pdf_crypt_decodeparms_name
 }
 
 ///|
-fn pdf_crypt_stream_name_key() -> PdfName {
+fn pdf_crypt_stream_name_key() -> @core.PdfName {
   pdf_crypt_name_key_name
 }
 
 ///|
-fn pdf_crypt_stream_type_key() -> PdfName {
+fn pdf_crypt_stream_type_key() -> @core.PdfName {
   pdf_crypt_type_name
 }
 
 ///|
 fn pdf_crypt_object_is_name(
   object : @syntax.PdfObject?,
-  expected : PdfName,
+  expected : @core.PdfName,
 ) -> Bool {
   match object {
     Some(PdfNameObject(name)) => name == expected

@@ -1,9 +1,9 @@
 ///|
 fn pdf_content_read_inline_image(
-  cursor : ByteCursor,
+  cursor : @core.ByteCursor,
   context : PdfContentParseContext,
-) -> @content.PdfContentOp raise PdfError {
-  let entries : Array[(PdfName, @syntax.PdfObject)] = []
+) -> @content.PdfContentOp raise @core.PdfError {
+  let entries : Array[(@core.PdfName, @syntax.PdfObject)] = []
   let mut decode_parms : @syntax.PdfObject? = None
   let mut done = false
   while !done {

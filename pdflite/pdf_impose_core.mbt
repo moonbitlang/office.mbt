@@ -6,7 +6,7 @@ fn PdfDocument::pdf_impose_transform_content(
   matrix : @geometry.TransformMatrix,
   content : ArrayView[@syntax.PdfObject],
   fast : Bool,
-) -> Array[@syntax.PdfObject] raise PdfError {
+) -> Array[@syntax.PdfObject] raise @core.PdfError {
   if fast {
     let output : Array[@syntax.PdfObject] = [
       pdf_content_stream_of_ops([Op_q, Op_cm(matrix)]),
@@ -72,7 +72,7 @@ fn PdfDocument::pdf_impose_pages_core(
   fast : Bool,
   fit_extra_hspace : Double,
   fit_extra_vspace : Double,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   if pages.length() == 0 {
     raise BadNumberArgument("impose: pages must not be empty")
   }

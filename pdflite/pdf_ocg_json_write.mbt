@@ -9,18 +9,20 @@ fn pdf_ocg_json_ints(values : ArrayView[Int]) -> Json {
 }
 
 ///|
-fn pdf_ocg_json_string(bytes : BytesView) -> Json raise PdfError {
+fn pdf_ocg_json_string(bytes : BytesView) -> Json raise @core.PdfError {
   let utf8 = pdf_utf8_of_pdfdocstring(bytes)
   Json::string(pdf_util_string_from_utf8(utf8))
 }
 
 ///|
-fn pdf_ocg_json_name(name : PdfName) -> Json raise PdfError {
+fn pdf_ocg_json_name(name : @core.PdfName) -> Json raise @core.PdfError {
   Json::string(pdf_util_string_from_name(name))
 }
 
 ///|
-fn pdf_ocg_json_optional_string(bytes : PdfBytes?) -> Json raise PdfError {
+fn pdf_ocg_json_optional_string(
+  bytes : @core.PdfBytes?,
+) -> Json raise @core.PdfError {
   match bytes {
     Some(bytes) => pdf_ocg_json_string(bytes)
     None => Json::null()
@@ -28,7 +30,9 @@ fn pdf_ocg_json_optional_string(bytes : PdfBytes?) -> Json raise PdfError {
 }
 
 ///|
-fn pdf_ocg_json_optional_name(name : PdfName?) -> Json raise PdfError {
+fn pdf_ocg_json_optional_name(
+  name : @core.PdfName?,
+) -> Json raise @core.PdfError {
   match name {
     Some(name) => pdf_ocg_json_name(name)
     None => Json::null()
@@ -44,7 +48,9 @@ fn pdf_ocg_json_optional_float(value : Double?) -> Json {
 }
 
 ///|
-fn pdf_ocg_json_names(names : ArrayView[PdfName]) -> Json raise PdfError {
+fn pdf_ocg_json_names(
+  names : ArrayView[@core.PdfName],
+) -> Json raise @core.PdfError {
   let output : Array[Json] = []
   for name in names {
     output.push(pdf_ocg_json_name(name))
@@ -53,7 +59,9 @@ fn pdf_ocg_json_names(names : ArrayView[PdfName]) -> Json raise PdfError {
 }
 
 ///|
-fn pdf_ocg_json_strings(strings : ArrayView[PdfBytes]) -> Json raise PdfError {
+fn pdf_ocg_json_strings(
+  strings : ArrayView[@core.PdfBytes],
+) -> Json raise @core.PdfError {
   let output : Array[Json] = []
   for text in strings {
     output.push(pdf_ocg_json_string(text))
@@ -95,8 +103,8 @@ fn pdf_ocg_json_event(event : @ocg.PdfOcgEvent) -> Json {
 
 ///|
 fn pdf_ocg_json_order(
-  order : ArrayView[(PdfBytes?, Array[Int])],
-) -> Json raise PdfError {
+  order : ArrayView[(@core.PdfBytes?, Array[Int])],
+) -> Json raise @core.PdfError {
   let output : Array[Json] = []
   for item in order {
     let (name, ocgs) = item
@@ -114,8 +122,8 @@ fn pdf_ocg_json_order(
 
 ///|
 fn pdf_ocg_json_optional_order(
-  order : Array[(PdfBytes?, Array[Int])]?,
-) -> Json raise PdfError {
+  order : Array[(@core.PdfBytes?, Array[Int])]?,
+) -> Json raise @core.PdfError {
   match order {
     Some(order) => pdf_ocg_json_order(order)
     None => Json::null()
@@ -132,7 +140,9 @@ fn pdf_ocg_json_radio_groups(groups : Array[Array[Int]]?) -> Json {
 }
 
 ///|
-fn pdf_ocg_json_appdict(appdict : @ocg.PdfOcgAppDict) -> Json raise PdfError {
+fn pdf_ocg_json_appdict(
+  appdict : @ocg.PdfOcgAppDict,
+) -> Json raise @core.PdfError {
   Json::object(
     Map([
       ("Event", pdf_ocg_json_event(appdict.event)),
@@ -145,7 +155,7 @@ fn pdf_ocg_json_appdict(appdict : @ocg.PdfOcgAppDict) -> Json raise PdfError {
 ///|
 fn pdf_ocg_json_appdicts(
   appdicts : ArrayView[@ocg.PdfOcgAppDict],
-) -> Json raise PdfError {
+) -> Json raise @core.PdfError {
   let output : Array[Json] = []
   for appdict in appdicts {
     output.push(pdf_ocg_json_appdict(appdict))
@@ -154,7 +164,7 @@ fn pdf_ocg_json_appdicts(
 }
 
 ///|
-fn pdf_ocg_json_config(config : @ocg.PdfOcgConfig) -> Json raise PdfError {
+fn pdf_ocg_json_config(config : @ocg.PdfOcgConfig) -> Json raise @core.PdfError {
   Json::object(
     Map([
       ("Name", pdf_ocg_json_optional_string(config.name)),
@@ -173,7 +183,7 @@ fn pdf_ocg_json_config(config : @ocg.PdfOcgConfig) -> Json raise PdfError {
 }
 
 ///|
-fn pdf_ocg_json_usage(usage : @ocg.PdfOcgUsage) -> Json raise PdfError {
+fn pdf_ocg_json_usage(usage : @ocg.PdfOcgUsage) -> Json raise @core.PdfError {
   Json::object(
     Map([
       (
@@ -235,7 +245,7 @@ fn pdf_ocg_json_usage(usage : @ocg.PdfOcgUsage) -> Json raise PdfError {
 ///|
 fn pdf_ocg_json_optional_usage(
   usage : @ocg.PdfOcgUsage?,
-) -> Json raise PdfError {
+) -> Json raise @core.PdfError {
   match usage {
     Some(usage) => pdf_ocg_json_usage(usage)
     None => Json::null()
@@ -243,7 +253,7 @@ fn pdf_ocg_json_optional_usage(
 }
 
 ///|
-fn pdf_ocg_json_ocg(ocg : @ocg.PdfOcg) -> Json raise PdfError {
+fn pdf_ocg_json_ocg(ocg : @ocg.PdfOcg) -> Json raise @core.PdfError {
   Json::object(
     Map([
       ("Name", pdf_ocg_json_string(ocg.name)),
@@ -256,7 +266,7 @@ fn pdf_ocg_json_ocg(ocg : @ocg.PdfOcg) -> Json raise PdfError {
 ///|
 fn pdf_ocg_json_ocgs(
   ocgs : ArrayView[(Int, @ocg.PdfOcg)],
-) -> Json raise PdfError {
+) -> Json raise @core.PdfError {
   let entries : Map[String, Json] = Map([])
   for item in ocgs {
     let (number, ocg) = item
@@ -268,7 +278,7 @@ fn pdf_ocg_json_ocgs(
 ///|
 fn pdf_ocg_json_configs(
   configs : ArrayView[@ocg.PdfOcgConfig],
-) -> Json raise PdfError {
+) -> Json raise @core.PdfError {
   let output : Array[Json] = []
   for config in configs {
     output.push(pdf_ocg_json_config(config))
@@ -278,7 +288,9 @@ fn pdf_ocg_json_configs(
 
 ///|
 /// Return cpdf's optional-content group JSON listing.
-pub fn PdfDocument::ocg_list_json(self : PdfDocument) -> Json raise PdfError {
+pub fn PdfDocument::ocg_list_json(
+  self : PdfDocument,
+) -> Json raise @core.PdfError {
   match self.read_optional_content_groups() {
     None => Json::null()
     Some(content) =>
@@ -296,13 +308,13 @@ pub fn PdfDocument::ocg_list_json(self : PdfDocument) -> Json raise PdfError {
 /// Return cpdf's optional-content group JSON listing as UTF-8 JSON bytes.
 pub fn PdfDocument::ocg_list_json_blob(
   self : PdfDocument,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   @utf8.encode(self.ocg_list_json().stringify())
 }
 
 ///|
 /// Compatibility wrapper for `PdfDocument::ocg_list_json`.
-pub fn pdf_ocg_list_json(document : PdfDocument) -> Json raise PdfError {
+pub fn pdf_ocg_list_json(document : PdfDocument) -> Json raise @core.PdfError {
   document.ocg_list_json()
 }
 
@@ -310,7 +322,7 @@ pub fn pdf_ocg_list_json(document : PdfDocument) -> Json raise PdfError {
 /// Compatibility wrapper for `PdfDocument::ocg_list_json_blob`.
 pub fn pdf_ocg_list_json_blob(
   document : PdfDocument,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   document.ocg_list_json_blob()
 }
 
@@ -319,11 +331,11 @@ pub fn pdf_ocg_list_json_blob(
 pub fn PdfDocument::ocg_list(
   self : PdfDocument,
   json : Bool,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   if json {
     self.ocg_list_json_blob()
   } else {
-    let names : Array[PdfBytes] = []
+    let names : Array[@core.PdfBytes] = []
     let mut output_length = 0
     for name in self.ocg_get_list() {
       let text = pdf_utf8_of_pdfdocstring(name)
@@ -348,6 +360,6 @@ pub fn PdfDocument::ocg_list(
 pub fn pdf_ocg_list(
   json : Bool,
   document : PdfDocument,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   document.ocg_list(json)
 }

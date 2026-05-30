@@ -25,7 +25,7 @@ fn PdfDocument::pdf_ua_matterhorn_type0_indirect_encoding(
 fn PdfDocument::pdf_ua_matterhorn_cid_system_entry(
   self : PdfDocument,
   object : @syntax.PdfObject,
-  key : PdfName,
+  key : @core.PdfName,
 ) -> @syntax.PdfObject? {
   match self.lookup_direct(pdf_ua_matterhorn_cid_system_info_key(), object) {
     Some(info) => self.lookup_direct(key, info)
@@ -37,7 +37,7 @@ fn PdfDocument::pdf_ua_matterhorn_cid_system_entry(
 fn PdfDocument::pdf_ua_matterhorn_descendant_cid_system_entry(
   self : PdfDocument,
   type0_font : @syntax.PdfObject,
-  key : PdfName,
+  key : @core.PdfName,
 ) -> @syntax.PdfObject? {
   match
     self.lookup_direct(pdf_ua_matterhorn_descendant_fonts_key(), type0_font) {
@@ -50,7 +50,7 @@ fn PdfDocument::pdf_ua_matterhorn_descendant_cid_system_entry(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_type0_cid_system_entry(
   self : PdfDocument,
-  key : PdfName,
+  key : @core.PdfName,
 ) -> Json? {
   for entry in self.parsed_object_entries() {
     match self.pdf_ua_matterhorn_type0_indirect_encoding(entry.2) {
@@ -124,7 +124,7 @@ fn pdf_ua_matterhorn_object_string_extra(object : @syntax.PdfObject) -> Json {
 }
 
 ///|
-fn pdf_ua_matterhorn_name_extra(name : PdfName) -> Json {
+fn pdf_ua_matterhorn_name_extra(name : @core.PdfName) -> Json {
   Json::string(@ascii.decode_lossy(name.bytes()))
 }
 
@@ -176,7 +176,7 @@ fn PdfDocument::pdf_ua_matterhorn_check_31_006(self : PdfDocument) -> Json? {
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_31_007(
   self : PdfDocument,
-) -> Json? raise PdfError {
+) -> Json? raise @core.PdfError {
   for entry in self.parsed_object_entries() {
     match self.lookup_direct(pdf_ua_matterhorn_wmode_key(), entry.2) {
       Some(PdfInteger(from_dictionary)) => {
@@ -227,7 +227,7 @@ fn pdf_ua_matterhorn_missing_font_extra(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_31_009(
   self : PdfDocument,
-) -> Json? raise PdfError {
+) -> Json? raise @core.PdfError {
   let page_count = self.pages_of_pagetree().length()
   let missing = self.missing_fonts(
     [

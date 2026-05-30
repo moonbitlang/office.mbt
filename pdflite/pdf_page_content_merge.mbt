@@ -4,7 +4,7 @@ fn PdfDocument::pdf_page_prefix_content_streams(
   prefix : String,
   page_object : @syntax.PdfObject,
   fixed_streams : @hashmap.HashMap[Int, Bool],
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let resources = match
     self.lookup_direct(pdf_page_resources_key(), page_object) {
     Some(resources) => resources
@@ -35,7 +35,7 @@ fn PdfDocument::pdf_page_prefix_object(
   self : PdfDocument,
   prefix : String,
   object : @syntax.PdfObject,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   match self.lookup_direct(pdf_page_resources_key(), object) {
     Some(resources) =>
       object.add_dict_entry(
@@ -50,8 +50,10 @@ fn PdfDocument::pdf_page_prefix_object(
 fn PdfDocument::pdf_page_merged_content_stream(
   self : PdfDocument,
   contents : ArrayView[@syntax.PdfObject],
-) -> @syntax.PdfObject raise PdfError {
-  let decoded_streams : Array[PdfBytes] = Array::new(capacity=contents.length())
+) -> @syntax.PdfObject raise @core.PdfError {
+  let decoded_streams : Array[@core.PdfBytes] = Array::new(
+    capacity=contents.length(),
+  )
   for content in contents {
     match self.direct(content) {
       PdfStreamObject(stream) =>
@@ -74,7 +76,7 @@ fn PdfDocument::pdf_page_merged_content_stream(
 fn PdfDocument::pdf_page_merge_content_object(
   self : PdfDocument,
   object : @syntax.PdfObject,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   match object.lookup_immediate(pdf_page_contents_key()) {
     Some(PdfArray(contents)) if contents.length() != 1 => {
       let stream_number = self.add_object(
@@ -93,7 +95,7 @@ fn PdfDocument::pdf_page_merge_content_object(
 /// mutated in place and stream filters are decoded before concatenation.
 pub fn PdfDocument::merge_content_streams(
   self : PdfDocument,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   for number in self.object_numbers() {
     let object = self.lookup_object_or_null(number)
     if self.pdf_page_object_uses_page_resources(object) {
@@ -163,7 +165,7 @@ fn PdfDocument::pdf_page_needs_content_merge(self : PdfDocument) -> Bool {
 fn PdfDocument::pdf_page_add_prefix(
   self : PdfDocument,
   prefix : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let fixed_streams : @hashmap.HashMap[Int, Bool] = HashMap([])
   for number in self.object_numbers() {
     let object = self.lookup_object_or_null(number)
@@ -186,7 +188,7 @@ fn PdfDocument::pdf_page_add_prefix(
 pub fn PdfDocument::add_prefix(
   self : PdfDocument,
   prefix : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   if self.pdf_page_needs_content_merge() {
     self.merge_content_streams()
   }
@@ -198,6 +200,6 @@ pub fn PdfDocument::add_prefix(
 pub fn pdf_add_prefix(
   document : PdfDocument,
   prefix : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   document.add_prefix(prefix)
 }

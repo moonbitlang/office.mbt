@@ -19,7 +19,7 @@ fn pdf_coord_rectangle(
 pub fn PdfDocument::parse_coordinate_rectangle(
   self : PdfDocument,
   text : String,
-) -> @geometry.PdfCoordRectangle raise PdfError {
+) -> @geometry.PdfCoordRectangle raise @core.PdfError {
   let (source, absolute) = if text.has_prefix("?") {
     (text.unsafe_substring(start=1, end=text.length()), true)
   } else {
@@ -42,7 +42,7 @@ pub fn PdfDocument::parse_coordinate_rectangle(
 pub fn pdf_parse_coordinate_rectangle(
   document : PdfDocument,
   text : String,
-) -> @geometry.PdfCoordRectangle raise PdfError {
+) -> @geometry.PdfCoordRectangle raise @core.PdfError {
   document.parse_coordinate_rectangle(text)
 }
 
@@ -58,7 +58,7 @@ fn pdf_coord_rectangle_tuple(
 pub fn pdf_parse_rectangle(
   document : PdfDocument,
   text : String,
-) -> (Double, Double, Double, Double) raise PdfError {
+) -> (Double, Double, Double, Double) raise @core.PdfError {
   pdf_coord_rectangle_tuple(document.parse_coordinate_rectangle(text))
 }
 
@@ -67,7 +67,7 @@ pub fn pdf_parse_rectangle(
 pub fn PdfDocument::parse_coordinate_rectangles(
   self : PdfDocument,
   text : String,
-) -> Array[@geometry.PdfCoordRectangle] raise PdfError {
+) -> Array[@geometry.PdfCoordRectangle] raise @core.PdfError {
   let (source, absolute) = if text.has_prefix("?") {
     (text.unsafe_substring(start=1, end=text.length()), true)
   } else {
@@ -97,7 +97,7 @@ pub fn PdfDocument::parse_coordinate_rectangles(
 pub fn pdf_parse_coordinate_rectangles(
   document : PdfDocument,
   text : String,
-) -> Array[@geometry.PdfCoordRectangle] raise PdfError {
+) -> Array[@geometry.PdfCoordRectangle] raise @core.PdfError {
   document.parse_coordinate_rectangles(text)
 }
 
@@ -106,7 +106,7 @@ pub fn pdf_parse_coordinate_rectangles(
 pub fn pdf_parse_rectangles(
   document : PdfDocument,
   text : String,
-) -> Array[(Double, Double, Double, Double)] raise PdfError {
+) -> Array[(Double, Double, Double, Double)] raise @core.PdfError {
   [
     for rectangle in document.parse_coordinate_rectangles(text) => {
       pdf_coord_rectangle_tuple(rectangle)

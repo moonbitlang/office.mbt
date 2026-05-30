@@ -53,7 +53,7 @@ fn PdfDocument::pdf_page_parse_content_ops(
   self : PdfDocument,
   resources : @syntax.PdfObject,
   content : ArrayView[@syntax.PdfObject],
-) -> Array[@content.PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise @core.PdfError {
   self.parse_content_ops_with_resources(resources, content) catch {
     DictionaryKeyNotFound(_) | ColourSpaceExpected =>
       self.parse_content_ops(content)
@@ -72,7 +72,7 @@ pub fn PdfDocument::prepend_operators(
   page : @page.PdfPage,
   ops : ArrayView[@content.PdfContentOp],
   fast? : Bool = false,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   if fast {
     { ..page, content: [pdf_content_stream_of_ops(ops), ..page.content] }
   } else {
@@ -91,7 +91,7 @@ pub fn pdf_prepend_operators(
   operators : ArrayView[@content.PdfContentOp],
   page : @page.PdfPage,
   fast? : Bool = false,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   document.prepend_operators(page, operators, fast~)
 }
 
@@ -106,7 +106,7 @@ pub fn PdfDocument::postpend_operators(
   page : @page.PdfPage,
   ops : ArrayView[@content.PdfContentOp],
   fast? : Bool = false,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   if fast {
     {
       ..page,
@@ -148,6 +148,6 @@ pub fn pdf_postpend_operators(
   operators : ArrayView[@content.PdfContentOp],
   page : @page.PdfPage,
   fast? : Bool = false,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   document.postpend_operators(page, operators, fast~)
 }

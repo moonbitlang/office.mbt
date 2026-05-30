@@ -1,17 +1,17 @@
 ///|
-fn text_cmap_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn text_cmap_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
-fn text_cmap_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
-  try! @pdflite.pdf_bytes_of_int_array(values)
+fn text_cmap_bytes_for_test(values : ArrayView[Int]) -> @core.PdfBytes {
+  try! @core.pdf_bytes_of_int_array(values)
 }
 
 ///|
 fn text_cmap_concat_for_test(
-  parts : ArrayView[@pdflite.PdfBytes],
-) -> @pdflite.PdfBytes {
+  parts : ArrayView[@core.PdfBytes],
+) -> @core.PdfBytes {
   let output : Array[Byte] = []
   for part in parts {
     for byte in part {
@@ -57,9 +57,9 @@ fn text_cmap_cid_system_info_object_for_test() -> @syntax.PdfObject {
 
 ///|
 fn text_cmap_valid_cid_descendant_for_test(
-  extra : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
+  extra : ArrayView[(@core.PdfName, @syntax.PdfObject)],
 ) -> @syntax.PdfObject {
-  let entries : Array[(@pdflite.PdfName, @syntax.PdfObject)] = [
+  let entries : Array[(@core.PdfName, @syntax.PdfObject)] = [
     (
       text_cmap_name_for_test("/CIDSystemInfo"),
       text_cmap_cid_system_info_object_for_test(),
@@ -240,8 +240,8 @@ test "pdf_parse_cmap decodes stream objects" {
     doc,
     PdfInteger(1),
   )
-  guard non_stream is Err(@pdflite.PdfError::CMapEncodingExpected) else {
-    fail("expected @pdflite.PdfError::CMapEncodingExpected")
+  guard non_stream is Err(@core.PdfError::CMapEncodingExpected) else {
+    fail("expected @core.PdfError::CMapEncodingExpected")
   }
 }
 

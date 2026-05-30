@@ -1,6 +1,6 @@
 ///|
-fn page_info_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn page_info_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -16,12 +16,12 @@ fn page_info_box_for_test(values : ArrayView[Double]) -> Json {
 ///|
 fn page_info_pdfdoc_for_test(
   text : String,
-) -> @pdflite.PdfBytes raise @pdflite.PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   @pdflite.pdf_pdfdocstring_of_utf8(@utf8.encode(text))
 }
 
 ///|
-fn page_info_document_for_test() -> @pdflite.PdfDocument raise @pdflite.PdfError {
+fn page_info_document_for_test() -> @pdflite.PdfDocument raise @core.PdfError {
   let document = try! @pdflite.pdf_blank_document(72.0, 144.0, 2)
   let pages = try! document.pages_of_pagetree()
   let cropbox = page_info_name_for_test("/CropBox")
@@ -144,11 +144,11 @@ test "PdfDocument page_info handles empty and invalid ranges" {
   @test.assert_eq(try! document.page_info_json([]), Json::array([]))
   @test.assert_eq(try! document.page_info_text([]), b"")
   let bad_json : Result[Json, Error] = try? document.page_info_json([3])
-  guard bad_json is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+  guard bad_json is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail("expected BadPageSpecification for page info JSON")
   }
   let bad_text : Result[Bytes, Error] = try? document.page_info_text([3])
-  guard bad_text is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+  guard bad_text is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail("expected BadPageSpecification for page info text")
   }
 }

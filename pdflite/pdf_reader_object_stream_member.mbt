@@ -1,9 +1,9 @@
 ///|
 fn pdf_cursor_finish_object_stream_member_with_length(
-  cursor : ByteCursor,
+  cursor : @core.ByteCursor,
   prefix : @syntax.PdfParsedIndirectObject,
   length : Int,
-) -> @syntax.PdfParsedIndirectObject raise PdfError {
+) -> @syntax.PdfParsedIndirectObject raise @core.PdfError {
   let stream_keyword_position = cursor.absolute_position()
   @reader.pdf_cursor_consume_ascii(
     cursor,
@@ -36,9 +36,9 @@ fn pdf_cursor_finish_object_stream_member_with_length(
 
 ///|
 fn pdf_cursor_finish_malformed_object_stream_member(
-  cursor : ByteCursor,
+  cursor : @core.ByteCursor,
   prefix : @syntax.PdfParsedIndirectObject,
-) -> @syntax.PdfParsedIndirectObject raise PdfError {
+) -> @syntax.PdfParsedIndirectObject raise @core.PdfError {
   @reader.pdf_cursor_consume_ascii(
     cursor,
     [115, 116, 114, 101, 97, 109],
@@ -46,7 +46,7 @@ fn pdf_cursor_finish_malformed_object_stream_member(
   )
   pdf_cursor_consume_stream_start_line_break(cursor)
   let data_start = cursor.absolute_position()
-  let endstream = pdf_find_ascii_from(cursor.view(), data_start, [
+  let endstream = @core.pdf_find_ascii_from(cursor.view(), data_start, [
     101, 110, 100, 115, 116, 114, 101, 97, 109,
   ])
   if endstream < 0 {
@@ -75,9 +75,9 @@ fn pdf_cursor_finish_malformed_object_stream_member(
 
 ///|
 fn pdf_cursor_finish_object_stream_member(
-  cursor : ByteCursor,
+  cursor : @core.ByteCursor,
   prefix : @syntax.PdfParsedIndirectObject,
-) -> @syntax.PdfParsedIndirectObject raise PdfError {
+) -> @syntax.PdfParsedIndirectObject raise @core.PdfError {
   let stream_position = cursor.absolute_position()
   let length_result : Result[Int, Error] = try? pdf_stream_length(prefix.object)
   match length_result {
@@ -95,8 +95,8 @@ fn pdf_cursor_finish_object_stream_member(
 ///|
 fn pdf_parse_object_stream_member_from_view(
   data : BytesView,
-) -> @syntax.PdfObject raise PdfError {
-  let cursor = byte_cursor_of_view(data)
+) -> @syntax.PdfObject raise @core.PdfError {
+  let cursor = @core.byte_cursor_of_view(data)
   let object = @syntax.pdf_parse_single_lexeme_object(
     @syntax.pdf_cursor_lex_tokens(cursor),
   )

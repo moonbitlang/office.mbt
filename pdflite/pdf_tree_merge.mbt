@@ -8,7 +8,7 @@ pub fn PdfDocument::merge_name_trees_no_clash(
   self : PdfDocument,
   trees : ArrayView[@syntax.PdfObject],
 ) -> @syntax.PdfObject {
-  let entries : Array[(PdfBytes, @syntax.PdfObject)] = Array::new(
+  let entries : Array[(@core.PdfBytes, @syntax.PdfObject)] = Array::new(
     capacity=trees.length(),
   )
   for tree in trees {

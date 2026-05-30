@@ -4,7 +4,7 @@ fn PdfDocument::pdf_page_transform_matrix_destinations(
   matrices : ArrayView[(Int, @geometry.TransformMatrix)],
   page_reference_numbers : ArrayView[Int],
   transform_bookmarks : Bool,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let pdf = if transform_bookmarks {
     self.pdf_page_transform_bookmarks_for_matrices(
       matrices, page_reference_numbers,

@@ -1,11 +1,11 @@
 ///|
-fn random_native_ascii_for_test(text : String) -> @pdflite.PdfBytes {
+fn random_native_ascii_for_test(text : String) -> @core.PdfBytes {
   @ascii.encode(text)
 }
 
 ///|
-fn random_native_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(random_native_ascii_for_test(text))
+fn random_native_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(random_native_ascii_for_test(text))
 }
 
 ///|
@@ -21,7 +21,7 @@ fn random_native_secret_for_test(text : String) -> @syntax.PdfObject {
 ///|
 fn random_native_document_for_test(
   text : String,
-) -> @pdflite.PdfDocument raise @pdflite.PdfError {
+) -> @pdflite.PdfDocument raise @core.PdfError {
   let document = @pdflite.pdf_minimum_valid_pdf()
   document.add_object_given_number(50, random_native_secret_for_test(text))
   document
@@ -39,8 +39,8 @@ fn random_native_unwrap_decryption_for_test(
 
 ///|
 fn random_native_decrypt_owner_for_test(
-  rendered : @pdflite.PdfBytes,
-  owner_password : @pdflite.PdfBytes,
+  rendered : @core.PdfBytes,
+  owner_password : @core.PdfBytes,
 ) -> @pdflite.PdfDecryptionResult raise {
   random_native_unwrap_decryption_for_test(
     @pdflite.pdf_read_document_from_bytes_with_passwords(

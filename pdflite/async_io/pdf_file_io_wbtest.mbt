@@ -54,10 +54,10 @@ fn pdf_async_io_basename_for_test(path : String) -> String {
 }
 
 ///|
-fn pdf_async_io_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
+fn pdf_async_io_bytes_for_test(values : ArrayView[Int]) -> @core.PdfBytes {
   let output : Array[Byte] = []
   for value in values {
-    output.push(try! @pdflite.pdf_byte_of_int(value))
+    output.push(try! @core.pdf_byte_of_int(value))
   }
   Bytes::from_array(output)
 }
@@ -74,21 +74,21 @@ fn pdf_async_io_append_bytes_for_test(
 
 ///|
 fn pdf_async_io_push_u32_for_test(output : Array[Byte], value : Int) -> Unit {
-  output.push(try! @pdflite.pdf_byte_of_int((value >> 24) & 0xFF))
-  output.push(try! @pdflite.pdf_byte_of_int((value >> 16) & 0xFF))
-  output.push(try! @pdflite.pdf_byte_of_int((value >> 8) & 0xFF))
-  output.push(try! @pdflite.pdf_byte_of_int(value & 0xFF))
+  output.push(try! @core.pdf_byte_of_int((value >> 24) & 0xFF))
+  output.push(try! @core.pdf_byte_of_int((value >> 16) & 0xFF))
+  output.push(try! @core.pdf_byte_of_int((value >> 8) & 0xFF))
+  output.push(try! @core.pdf_byte_of_int(value & 0xFF))
 }
 
 ///|
 fn pdf_async_io_png_chunk_for_test(
   chunk_type : ArrayView[Int],
   data : BytesView,
-) -> @pdflite.PdfBytes {
+) -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_u32_for_test(output, data.length())
   for value in chunk_type {
-    output.push(try! @pdflite.pdf_byte_of_int(value))
+    output.push(try! @core.pdf_byte_of_int(value))
   }
   pdf_async_io_append_bytes_for_test(output, data)
   pdf_async_io_push_u32_for_test(output, 0)
@@ -96,7 +96,7 @@ fn pdf_async_io_png_chunk_for_test(
 }
 
 ///|
-fn pdf_async_io_png_rgb_for_test() -> (@pdflite.PdfBytes, @pdflite.PdfBytes) {
+fn pdf_async_io_png_rgb_for_test() -> (@core.PdfBytes, @core.PdfBytes) {
   let header = pdf_async_io_bytes_for_test([
     0, 0, 0, 2, 0, 0, 0, 1, 8, 2, 0, 0, 0,
   ])
@@ -105,7 +105,7 @@ fn pdf_async_io_png_rgb_for_test() -> (@pdflite.PdfBytes, @pdflite.PdfBytes) {
   )
   let output : Array[Byte] = []
   for value in [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A] {
-    output.push(try! @pdflite.pdf_byte_of_int(value))
+    output.push(try! @core.pdf_byte_of_int(value))
   }
   pdf_async_io_append_bytes_for_test(
     output,
@@ -123,7 +123,7 @@ fn pdf_async_io_png_rgb_for_test() -> (@pdflite.PdfBytes, @pdflite.PdfBytes) {
 }
 
 ///|
-fn pdf_async_io_jpeg_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_jpeg_for_test() -> @core.PdfBytes {
   pdf_async_io_bytes_for_test([
     0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x09, 0x4A, 0x46, 0x49, 0x46, 0x00, 0xAA, 0xBB,
     0xFF, 0xC0, 0x00, 0x09, 0x08, 0x01, 0x2C, 0x01, 0x90, 0x03, 0x01, 0xFF, 0xD9,
@@ -131,7 +131,7 @@ fn pdf_async_io_jpeg_for_test() -> @pdflite.PdfBytes {
 }
 
 ///|
-fn pdf_async_io_progressive_jpeg_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_progressive_jpeg_for_test() -> @core.PdfBytes {
   pdf_async_io_bytes_for_test([
     0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x09, 0x4A, 0x46, 0x49, 0x46, 0x00, 0xAA, 0xBB,
     0xFF, 0xC2, 0x00, 0x09, 0x08, 0x00, 0xF0, 0x01, 0x40, 0x03, 0x01, 0xFF, 0xD9,
@@ -139,7 +139,7 @@ fn pdf_async_io_progressive_jpeg_for_test() -> @pdflite.PdfBytes {
 }
 
 ///|
-fn pdf_async_io_jpeg2000_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_jpeg2000_for_test() -> @core.PdfBytes {
   pdf_async_io_bytes_for_test([
     0x00, 0x00, 0x00, 0x0C, 0x6A, 0x50, 0x20, 0x20, 0x0D, 0x0A, 0x87, 0x0A, 0x69,
     0x68, 0x64, 0x72, 0x00, 0x00, 0x01, 0x2C, 0x00, 0x00, 0x01, 0x90,
@@ -240,9 +240,9 @@ fn pdf_async_io_is_pdf_whitespace_for_test(byte : Byte) -> Bool {
 
 ///|
 fn pdf_async_io_corrupt_startxref_pointer_at_for_test(
-  bytes : @pdflite.PdfBytes,
+  bytes : @core.PdfBytes,
   marker_position : Int,
-) -> @pdflite.PdfBytes raise {
+) -> @core.PdfBytes raise {
   let marker = @ascii.encode("startxref")
   if marker_position < 0 {
     fail("expected startxref marker")
@@ -270,8 +270,8 @@ fn pdf_async_io_corrupt_startxref_pointer_at_for_test(
 
 ///|
 fn pdf_async_io_corrupt_first_in_use_xref_offset_for_test(
-  bytes : @pdflite.PdfBytes,
-) -> @pdflite.PdfBytes raise {
+  bytes : @core.PdfBytes,
+) -> @core.PdfBytes raise {
   let free_row = @ascii.encode("0000000000 65535 f \n")
   let free_row_position = pdf_async_io_find_bytes_for_test(bytes, free_row)
   if free_row_position < 0 {
@@ -293,8 +293,8 @@ fn pdf_async_io_corrupt_first_in_use_xref_offset_for_test(
 
 ///|
 fn pdf_async_io_corrupt_first_in_use_xref_marker_for_test(
-  bytes : @pdflite.PdfBytes,
-) -> @pdflite.PdfBytes raise {
+  bytes : @core.PdfBytes,
+) -> @core.PdfBytes raise {
   let free_row = @ascii.encode("0000000000 65535 f \n")
   let free_row_position = pdf_async_io_find_bytes_for_test(bytes, free_row)
   if free_row_position < 0 {
@@ -314,9 +314,9 @@ fn pdf_async_io_corrupt_first_in_use_xref_marker_for_test(
 
 ///|
 fn pdf_async_io_mark_classic_xref_entry_free_for_test(
-  bytes : @pdflite.PdfBytes,
+  bytes : @core.PdfBytes,
   object_number : Int,
-) -> @pdflite.PdfBytes raise {
+) -> @core.PdfBytes raise {
   if object_number < 0 {
     fail("expected non-negative classic xref object number")
   }
@@ -364,9 +364,9 @@ fn pdf_async_io_parse_positive_decimal_for_test(
 
 ///|
 fn pdf_async_io_keep_catalog_and_encrypt_xref_entries_for_test(
-  bytes : @pdflite.PdfBytes,
+  bytes : @core.PdfBytes,
   encrypt_object_number : Int,
-) -> @pdflite.PdfBytes raise {
+) -> @core.PdfBytes raise {
   let header = @ascii.encode("xref\n0 ")
   let header_position = pdf_async_io_find_bytes_for_test(bytes, header)
   if header_position < 0 {
@@ -414,8 +414,8 @@ fn pdf_async_io_keep_catalog_and_encrypt_xref_entries_for_test(
 
 ///|
 fn pdf_async_io_corrupt_first_xref_subsection_count_for_test(
-  bytes : @pdflite.PdfBytes,
-) -> @pdflite.PdfBytes raise {
+  bytes : @core.PdfBytes,
+) -> @core.PdfBytes raise {
   let header = @ascii.encode("xref\n0 ")
   let header_position = pdf_async_io_find_bytes_for_test(bytes, header)
   if header_position < 0 {
@@ -443,8 +443,8 @@ fn pdf_async_io_corrupt_first_xref_subsection_count_for_test(
 
 ///|
 fn pdf_async_io_corrupt_startxref_pointer_for_test(
-  bytes : @pdflite.PdfBytes,
-) -> @pdflite.PdfBytes raise {
+  bytes : @core.PdfBytes,
+) -> @core.PdfBytes raise {
   let marker = @ascii.encode("startxref")
   pdf_async_io_corrupt_startxref_pointer_at_for_test(
     bytes,
@@ -454,8 +454,8 @@ fn pdf_async_io_corrupt_startxref_pointer_for_test(
 
 ///|
 fn pdf_async_io_corrupt_final_startxref_pointer_for_test(
-  bytes : @pdflite.PdfBytes,
-) -> @pdflite.PdfBytes raise {
+  bytes : @core.PdfBytes,
+) -> @core.PdfBytes raise {
   let marker = @ascii.encode("startxref")
   pdf_async_io_corrupt_startxref_pointer_at_for_test(
     bytes,
@@ -465,10 +465,10 @@ fn pdf_async_io_corrupt_final_startxref_pointer_for_test(
 
 ///|
 fn pdf_async_io_insert_ascii_before_last_marker_for_test(
-  bytes : @pdflite.PdfBytes,
+  bytes : @core.PdfBytes,
   marker : BytesView,
   insertion : String,
-) -> @pdflite.PdfBytes raise {
+) -> @core.PdfBytes raise {
   let marker_position = pdf_async_io_find_last_bytes_for_test(bytes, marker)
   if marker_position < 0 {
     fail("expected insertion marker")
@@ -485,8 +485,8 @@ fn pdf_async_io_insert_ascii_before_last_marker_for_test(
 }
 
 ///|
-fn pdf_async_io_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn pdf_async_io_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -570,7 +570,7 @@ fn pdf_async_io_font_for_test(
   basefont : String,
   descriptor : @syntax.PdfObject?,
 ) -> @syntax.PdfObject {
-  let entries : Array[(@pdflite.PdfName, @syntax.PdfObject)] = [
+  let entries : Array[(@core.PdfName, @syntax.PdfObject)] = [
     (
       pdf_async_io_name_for_test("/Type"),
       PdfNameObject(pdf_async_io_name_for_test("/Font")),
@@ -669,7 +669,7 @@ fn pdf_async_io_codepoints_contain_for_test(
 fn pdf_async_io_font_resource_for_test(
   doc : @pdflite.PdfDocument,
   resources : @syntax.PdfObject,
-  font_name : @pdflite.PdfName,
+  font_name : @core.PdfName,
 ) -> @syntax.PdfObject? {
   match doc.lookup_direct(pdf_async_io_name_for_test("/Font"), resources) {
     Some(fonts) => doc.lookup_direct(font_name, fonts)
@@ -681,7 +681,7 @@ fn pdf_async_io_font_resource_for_test(
 fn pdf_async_io_push_text_codepoints_for_test(
   output : Array[Int],
   extractor : @pdflite.PdfTextExtractor,
-  text : @pdflite.PdfBytes,
+  text : @core.PdfBytes,
 ) -> Unit raise {
   for codepoint in extractor.codepoints_of_text(text) {
     output.push(codepoint)
@@ -830,7 +830,7 @@ fn pdf_async_io_push_xref_stream_entry_for_test(
 fn pdf_async_io_png_none_predictor_rows_for_test(
   data : ArrayView[Byte],
   columns : Int,
-) -> @pdflite.PdfBytes {
+) -> @core.PdfBytes {
   let output : Array[Byte] = []
   let row_count = (data.length() + columns - 1) / columns
   for row in 0..<row_count {
@@ -929,9 +929,7 @@ fn pdf_async_io_write_catalog_object_for_test(output : Array[Byte]) -> Int {
 }
 
 ///|
-fn pdf_async_io_startxref_object_pdf_for_test(
-  body : String,
-) -> @pdflite.PdfBytes {
+fn pdf_async_io_startxref_object_pdf_for_test(body : String) -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
   let offset = output.length()
@@ -946,7 +944,7 @@ fn pdf_async_io_startxref_object_pdf_for_test(
 ///|
 fn pdf_async_io_linearized_classic_pdf_for_test(
   value : String,
-) -> @pdflite.PdfBytes {
+) -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
   let linearized_offset = pdf_async_io_push_raw_indirect_object_for_test(
@@ -971,7 +969,7 @@ fn pdf_async_io_linearized_classic_pdf_for_test(
 }
 
 ///|
-fn pdf_async_io_linearized_classic_pdf_with_prev_xref_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_linearized_classic_pdf_with_prev_xref_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
   let linearized_offset = pdf_async_io_push_raw_indirect_object_for_test(
@@ -1008,7 +1006,7 @@ fn pdf_async_io_linearized_classic_pdf_with_prev_xref_for_test() -> @pdflite.Pdf
 ///|
 fn pdf_async_io_xref_stream_with_type_for_test(
   type_entry : String,
-) -> @pdflite.PdfBytes {
+) -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
   let catalog_offset = output.length()
@@ -1048,7 +1046,7 @@ fn pdf_async_io_xref_stream_with_type_for_test(
 fn pdf_async_io_hybrid_xref_stream_pdf_for_test(
   startxref_override : Int?,
   compressed : Bool,
-) -> @pdflite.PdfBytes {
+) -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
   let catalog_offset = pdf_async_io_push_raw_indirect_object_for_test(
@@ -1105,7 +1103,7 @@ fn pdf_async_io_hybrid_xref_stream_pdf_for_test(
 }
 
 ///|
-fn pdf_async_io_xref_stream_pdf_with_short_entry_data_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_xref_stream_pdf_with_short_entry_data_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
   let xref_offset = output.length()
@@ -1121,7 +1119,7 @@ fn pdf_async_io_xref_stream_pdf_with_short_entry_data_for_test() -> @pdflite.Pdf
 }
 
 ///|
-fn pdf_async_io_malformed_pdf_without_startxref_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_malformed_pdf_without_startxref_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   pdf_async_io_write_indirect_object_for_test(
@@ -1147,7 +1145,7 @@ fn pdf_async_io_malformed_pdf_without_startxref_for_test() -> @pdflite.PdfBytes 
 }
 
 ///|
-fn pdf_async_io_malformed_pdf_with_endobj_text_in_string_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_malformed_pdf_with_endobj_text_in_string_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   ignore(
@@ -1162,7 +1160,7 @@ fn pdf_async_io_malformed_pdf_with_endobj_text_in_string_for_test() -> @pdflite.
 }
 
 ///|
-fn pdf_async_io_malformed_pdf_with_glued_reconstruction_trailers_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_malformed_pdf_with_glued_reconstruction_trailers_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   ignore(pdf_async_io_write_catalog_object_for_test(output))
@@ -1172,7 +1170,7 @@ fn pdf_async_io_malformed_pdf_with_glued_reconstruction_trailers_for_test() -> @
 }
 
 ///|
-fn pdf_async_io_classic_pdf_with_page_tree_missing_from_xref_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_classic_pdf_with_page_tree_missing_from_xref_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   let catalog_offset = pdf_async_io_push_raw_indirect_object_for_test(
@@ -1200,7 +1198,7 @@ fn pdf_async_io_classic_pdf_with_page_tree_missing_from_xref_for_test() -> @pdfl
 }
 
 ///|
-fn pdf_async_io_classic_pdf_with_catalog_missing_from_xref_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_classic_pdf_with_catalog_missing_from_xref_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   ignore(
@@ -1232,7 +1230,7 @@ fn pdf_async_io_classic_pdf_with_catalog_missing_from_xref_for_test() -> @pdflit
 fn pdf_async_io_classic_pdf_with_xref_body_for_test(
   xref_body : String,
   trailer_body : String,
-) -> @pdflite.PdfBytes {
+) -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   let xref_offset = output.length()
@@ -1261,8 +1259,8 @@ fn pdf_async_io_push_classic_trailer_for_test(
 
 ///|
 fn pdf_async_io_cr_line_endings_for_test(
-  bytes : @pdflite.PdfBytes,
-) -> @pdflite.PdfBytes {
+  bytes : @core.PdfBytes,
+) -> @core.PdfBytes {
   let output : Array[Byte] = []
   for byte in bytes {
     let replacement = if byte.to_int() == 10 { (13).to_byte() } else { byte }
@@ -1272,7 +1270,7 @@ fn pdf_async_io_cr_line_endings_for_test(
 }
 
 ///|
-fn pdf_async_io_classic_pdf_with_fixed_width_xref_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_classic_pdf_with_fixed_width_xref_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   let catalog_offset = pdf_async_io_write_catalog_object_for_test(output)
@@ -1287,7 +1285,7 @@ fn pdf_async_io_classic_pdf_with_fixed_width_xref_for_test() -> @pdflite.PdfByte
 }
 
 ///|
-fn pdf_async_io_classic_pdf_with_unpadded_xref_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_classic_pdf_with_unpadded_xref_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   let catalog_offset = pdf_async_io_write_catalog_object_for_test(output)
@@ -1300,7 +1298,7 @@ fn pdf_async_io_classic_pdf_with_unpadded_xref_for_test() -> @pdflite.PdfBytes {
 }
 
 ///|
-fn pdf_async_io_classic_pdf_with_inline_xref_header_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_classic_pdf_with_inline_xref_header_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   let catalog_offset = pdf_async_io_write_catalog_object_for_test(output)
@@ -1312,7 +1310,7 @@ fn pdf_async_io_classic_pdf_with_inline_xref_header_for_test() -> @pdflite.PdfBy
 }
 
 ///|
-fn pdf_async_io_classic_pdf_with_glued_trailer_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_classic_pdf_with_glued_trailer_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   let catalog_offset = pdf_async_io_write_catalog_object_for_test(output)
@@ -1328,7 +1326,7 @@ fn pdf_async_io_classic_pdf_with_glued_trailer_for_test() -> @pdflite.PdfBytes {
 }
 
 ///|
-fn pdf_async_io_classic_pdf_with_catalog_xref_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_classic_pdf_with_catalog_xref_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   let catalog_offset = pdf_async_io_write_catalog_object_for_test(output)
@@ -1340,7 +1338,7 @@ fn pdf_async_io_classic_pdf_with_catalog_xref_for_test() -> @pdflite.PdfBytes {
 }
 
 ///|
-fn pdf_async_io_classic_pdf_with_trailing_startxref_junk_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_classic_pdf_with_trailing_startxref_junk_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   for byte in pdf_async_io_classic_pdf_with_catalog_xref_for_test()[:] {
     output.push(byte)
@@ -1350,7 +1348,7 @@ fn pdf_async_io_classic_pdf_with_trailing_startxref_junk_for_test() -> @pdflite.
 }
 
 ///|
-fn pdf_async_io_classic_pdf_with_prefixed_startxref_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_classic_pdf_with_prefixed_startxref_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   let catalog_offset = pdf_async_io_write_catalog_object_for_test(output)
@@ -1367,7 +1365,7 @@ fn pdf_async_io_classic_pdf_with_prefixed_startxref_for_test() -> @pdflite.PdfBy
 }
 
 ///|
-fn pdf_async_io_classic_pdf_with_inline_startxref_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_classic_pdf_with_inline_startxref_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   let catalog_offset = pdf_async_io_write_catalog_object_for_test(output)
@@ -1384,7 +1382,7 @@ fn pdf_async_io_classic_pdf_with_inline_startxref_for_test() -> @pdflite.PdfByte
 }
 
 ///|
-fn pdf_async_io_classic_pdf_with_missing_endobj_catalog_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_classic_pdf_with_missing_endobj_catalog_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   let catalog_offset = output.length()
@@ -1397,7 +1395,7 @@ fn pdf_async_io_classic_pdf_with_missing_endobj_catalog_for_test() -> @pdflite.P
 }
 
 ///|
-fn pdf_async_io_classic_pdf_with_missing_endobj_before_object_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_classic_pdf_with_missing_endobj_before_object_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   let catalog_offset = output.length()
@@ -1415,7 +1413,7 @@ fn pdf_async_io_classic_pdf_with_missing_endobj_before_object_for_test() -> @pdf
 }
 
 ///|
-fn pdf_async_io_classic_pdf_with_direct_stream_before_object_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_classic_pdf_with_direct_stream_before_object_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   let catalog_offset = pdf_async_io_push_raw_indirect_object_for_test(
@@ -1438,8 +1436,8 @@ fn pdf_async_io_classic_pdf_with_direct_stream_before_object_for_test() -> @pdfl
 
 ///|
 fn pdf_async_io_classic_pdf_with_stream_body_for_test(
-  stream_body : @pdflite.PdfBytes,
-) -> @pdflite.PdfBytes {
+  stream_body : @core.PdfBytes,
+) -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   let catalog_offset = pdf_async_io_push_raw_indirect_object_for_test(
@@ -1463,7 +1461,7 @@ fn pdf_async_io_classic_pdf_with_stream_body_for_test(
 fn pdf_async_io_padded_stream_body_for_test(
   payload : String,
   line_break : Bool,
-) -> @pdflite.PdfBytes {
+) -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "<< /Length 5 >>\nstream")
   output.push(b' ')
@@ -1479,7 +1477,7 @@ fn pdf_async_io_padded_stream_body_for_test(
 }
 
 ///|
-fn pdf_async_io_malformed_pdf_with_out_of_range_startxref_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_malformed_pdf_with_out_of_range_startxref_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   ignore(pdf_async_io_write_catalog_object_for_test(output))
@@ -1491,7 +1489,7 @@ fn pdf_async_io_malformed_pdf_with_out_of_range_startxref_for_test() -> @pdflite
 }
 
 ///|
-fn pdf_async_io_malformed_pdf_with_bad_startxref_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_malformed_pdf_with_bad_startxref_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   ignore(pdf_async_io_write_catalog_object_for_test(output))
@@ -1505,7 +1503,7 @@ fn pdf_async_io_malformed_pdf_with_bad_startxref_for_test() -> @pdflite.PdfBytes
 ///|
 fn pdf_async_io_malformed_pdf_with_startxref_number_for_test(
   number : String,
-) -> @pdflite.PdfBytes {
+) -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   ignore(pdf_async_io_write_catalog_object_for_test(output))
@@ -1520,7 +1518,7 @@ fn pdf_async_io_malformed_pdf_with_startxref_number_for_test(
 ///|
 fn pdf_async_io_classic_xref_deleted_payload_bad_startxref_for_test(
   later_update : Bool,
-) -> @pdflite.PdfBytes {
+) -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   let catalog_offset = output.length()
@@ -1543,7 +1541,7 @@ fn pdf_async_io_classic_xref_deleted_payload_bad_startxref_for_test(
 }
 
 ///|
-fn pdf_async_io_classic_catalog_pdf_with_prev_xref_bad_startxref_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_classic_catalog_pdf_with_prev_xref_bad_startxref_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   let original_offset = output.length()
@@ -1588,7 +1586,7 @@ fn pdf_async_io_classic_catalog_pdf_with_prev_xref_bad_startxref_for_test() -> @
 }
 
 ///|
-fn pdf_async_io_malformed_pdf_with_bad_xref_entry_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_malformed_pdf_with_bad_xref_entry_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   ignore(pdf_async_io_write_catalog_object_for_test(output))
@@ -1603,7 +1601,7 @@ fn pdf_async_io_malformed_pdf_with_bad_xref_entry_for_test() -> @pdflite.PdfByte
 ///|
 fn pdf_async_io_classic_pdf_with_malformed_xref_row_for_test(
   xref_body : String,
-) -> @pdflite.PdfBytes {
+) -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   ignore(pdf_async_io_write_catalog_object_for_test(output))
@@ -1619,7 +1617,7 @@ fn pdf_async_io_classic_pdf_with_malformed_xref_row_for_test(
 }
 
 ///|
-fn pdf_async_io_malformed_pdf_with_bad_xref_count_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_malformed_pdf_with_bad_xref_count_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   ignore(pdf_async_io_write_catalog_object_for_test(output))
@@ -1632,7 +1630,7 @@ fn pdf_async_io_malformed_pdf_with_bad_xref_count_for_test() -> @pdflite.PdfByte
 }
 
 ///|
-fn pdf_async_io_malformed_pdf_with_bad_trailer_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_malformed_pdf_with_bad_trailer_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   let catalog_offset = pdf_async_io_write_catalog_object_for_test(output)
@@ -1645,7 +1643,7 @@ fn pdf_async_io_malformed_pdf_with_bad_trailer_for_test() -> @pdflite.PdfBytes {
 }
 
 ///|
-fn pdf_async_io_malformed_pdf_with_missing_root_trailer_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_malformed_pdf_with_missing_root_trailer_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   let catalog_offset = pdf_async_io_write_catalog_object_for_test(output)
@@ -1660,7 +1658,7 @@ fn pdf_async_io_malformed_pdf_with_missing_root_trailer_for_test() -> @pdflite.P
 ///|
 fn pdf_async_io_malformed_pdf_with_bad_prev_trailer_for_test(
   prev : String,
-) -> @pdflite.PdfBytes {
+) -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   let catalog_offset = pdf_async_io_write_catalog_object_for_test(output)
@@ -1678,7 +1676,7 @@ fn pdf_async_io_malformed_pdf_with_bad_prev_trailer_for_test(
 }
 
 ///|
-fn pdf_async_io_malformed_pdf_with_bad_object_offset_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_malformed_pdf_with_bad_object_offset_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   let junk_offset = output.length()
@@ -1692,7 +1690,7 @@ fn pdf_async_io_malformed_pdf_with_bad_object_offset_for_test() -> @pdflite.PdfB
 }
 
 ///|
-fn pdf_async_io_classic_pdf_without_trailer_after_xref_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_classic_pdf_without_trailer_after_xref_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   pdf_async_io_push_ascii_for_test(output, "startxref\n")
@@ -1708,7 +1706,7 @@ fn pdf_async_io_classic_pdf_without_trailer_after_xref_for_test() -> @pdflite.Pd
 }
 
 ///|
-fn pdf_async_io_classic_pdf_with_missing_indirect_stream_length_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_classic_pdf_with_missing_indirect_stream_length_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   let stream_offset = pdf_async_io_push_raw_indirect_object_for_test(
@@ -1722,7 +1720,7 @@ fn pdf_async_io_classic_pdf_with_missing_indirect_stream_length_for_test() -> @p
 }
 
 ///|
-fn pdf_async_io_classic_pdf_with_mismatched_object_xref_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_classic_pdf_with_mismatched_object_xref_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   let object_offset = pdf_async_io_push_raw_indirect_object_for_test(
@@ -1736,7 +1734,7 @@ fn pdf_async_io_classic_pdf_with_mismatched_object_xref_for_test() -> @pdflite.P
 }
 
 ///|
-fn pdf_async_io_classic_pdf_with_unparseable_xref_object_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_classic_pdf_with_unparseable_xref_object_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   let object_offset = output.length()
@@ -1749,7 +1747,7 @@ fn pdf_async_io_classic_pdf_with_unparseable_xref_object_for_test() -> @pdflite.
 }
 
 ///|
-fn pdf_async_io_classic_pdf_with_commented_indirect_stream_length_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_classic_pdf_with_commented_indirect_stream_length_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   let stream_offset = pdf_async_io_push_raw_indirect_object_for_test(
@@ -1767,7 +1765,7 @@ fn pdf_async_io_classic_pdf_with_commented_indirect_stream_length_for_test() -> 
 }
 
 ///|
-fn pdf_async_io_classic_pdf_with_non_integer_stream_length_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_classic_pdf_with_non_integer_stream_length_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   let stream_offset = pdf_async_io_push_raw_indirect_object_for_test(
@@ -1785,7 +1783,7 @@ fn pdf_async_io_classic_pdf_with_non_integer_stream_length_for_test() -> @pdflit
 }
 
 ///|
-fn pdf_async_io_classic_pdf_with_stream_length_object_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_classic_pdf_with_stream_length_object_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   let stream_offset = pdf_async_io_push_raw_indirect_object_for_test(
@@ -1803,7 +1801,7 @@ fn pdf_async_io_classic_pdf_with_stream_length_object_for_test() -> @pdflite.Pdf
 }
 
 ///|
-fn pdf_async_io_classic_pdf_with_negative_stream_length_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_classic_pdf_with_negative_stream_length_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   let stream_offset = pdf_async_io_push_raw_indirect_object_for_test(
@@ -1817,7 +1815,7 @@ fn pdf_async_io_classic_pdf_with_negative_stream_length_for_test() -> @pdflite.P
 }
 
 ///|
-fn pdf_async_io_classic_pdf_with_unparseable_stream_length_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_classic_pdf_with_unparseable_stream_length_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   let stream_offset = pdf_async_io_push_raw_indirect_object_for_test(
@@ -1843,7 +1841,7 @@ fn pdf_async_io_classic_pdf_with_unparseable_stream_length_for_test() -> @pdflit
 }
 
 ///|
-fn pdf_async_io_malformed_pdf_with_indirect_stream_length_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_malformed_pdf_with_indirect_stream_length_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   ignore(
@@ -1885,7 +1883,7 @@ fn pdf_async_io_assert_recovered_hello_stream_for_test(
 ///|
 fn pdf_async_io_classic_pdf_with_malformed_stream_for_test(
   stream_body : String,
-) -> @pdflite.PdfBytes {
+) -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   let stream_offset = pdf_async_io_push_raw_indirect_object_for_test(
@@ -1907,7 +1905,7 @@ fn pdf_async_io_classic_pdf_with_malformed_stream_for_test(
 }
 
 ///|
-fn pdf_async_io_classic_pdf_with_truncated_stream_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_classic_pdf_with_truncated_stream_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   let catalog_offset = pdf_async_io_push_raw_indirect_object_for_test(
@@ -1928,7 +1926,7 @@ fn pdf_async_io_classic_pdf_with_truncated_stream_for_test() -> @pdflite.PdfByte
 }
 
 ///|
-fn pdf_async_io_malformed_pdf_with_object_header_inside_stream_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_malformed_pdf_with_object_header_inside_stream_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   ignore(
@@ -1950,7 +1948,7 @@ fn pdf_async_io_malformed_pdf_with_object_header_inside_stream_for_test() -> @pd
 }
 
 ///|
-fn pdf_async_io_malformed_pdf_with_nested_object_header_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_malformed_pdf_with_nested_object_header_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   pdf_async_io_push_ascii_for_test(output, "1 0 obj\n]\n")
@@ -1969,7 +1967,7 @@ fn pdf_async_io_malformed_pdf_with_nested_object_header_for_test() -> @pdflite.P
 ///|
 fn pdf_async_io_classic_pdf_with_malformed_object_for_test(
   bad_body : String,
-) -> @pdflite.PdfBytes {
+) -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   let catalog_offset = pdf_async_io_push_raw_indirect_object_for_test(
@@ -1989,7 +1987,7 @@ fn pdf_async_io_classic_pdf_with_malformed_object_for_test(
 }
 
 ///|
-fn pdf_async_io_xref_stream_pdf_with_prev_update_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_xref_stream_pdf_with_prev_update_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
   let original_offset = pdf_async_io_push_raw_indirect_object_for_test(
@@ -2027,7 +2025,7 @@ fn pdf_async_io_xref_stream_pdf_with_prev_update_for_test() -> @pdflite.PdfBytes
 }
 
 ///|
-fn pdf_async_io_xref_stream_pdf_with_prev_deleted_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_xref_stream_pdf_with_prev_deleted_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
   let original_offset = pdf_async_io_push_raw_indirect_object_for_test(
@@ -2062,7 +2060,7 @@ fn pdf_async_io_xref_stream_pdf_with_prev_deleted_for_test() -> @pdflite.PdfByte
 ///|
 fn pdf_async_io_compressed_xref_stream_pdf_with_prev_update_startxref_for_test(
   startxref_override : Int?,
-) -> @pdflite.PdfBytes {
+) -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
   let original_offset = pdf_async_io_push_raw_indirect_object_for_test(
@@ -2122,21 +2120,21 @@ fn pdf_async_io_compressed_xref_stream_pdf_with_prev_update_startxref_for_test(
 }
 
 ///|
-fn pdf_async_io_compressed_xref_stream_pdf_with_prev_update_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_compressed_xref_stream_pdf_with_prev_update_for_test() -> @core.PdfBytes {
   pdf_async_io_compressed_xref_stream_pdf_with_prev_update_startxref_for_test(
     None,
   )
 }
 
 ///|
-fn pdf_async_io_compressed_xref_stream_pdf_with_prev_update_bad_startxref_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_compressed_xref_stream_pdf_with_prev_update_bad_startxref_for_test() -> @core.PdfBytes {
   pdf_async_io_compressed_xref_stream_pdf_with_prev_update_startxref_for_test(
     Some(0),
   )
 }
 
 ///|
-fn pdf_async_io_classic_pdf_with_self_prev_xref_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_classic_pdf_with_self_prev_xref_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   let xref_offset = output.length()
@@ -2152,7 +2150,7 @@ fn pdf_async_io_classic_pdf_with_self_prev_xref_for_test() -> @pdflite.PdfBytes 
 }
 
 ///|
-fn pdf_async_io_classic_pdf_with_prev_xref_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_classic_pdf_with_prev_xref_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.4\n")
   let original_offset = output.length()
@@ -2185,7 +2183,7 @@ fn pdf_async_io_classic_pdf_with_prev_xref_for_test() -> @pdflite.PdfBytes {
 }
 
 ///|
-fn pdf_async_io_bad_first_object_stream_physical_page_tree_pdf_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_bad_first_object_stream_physical_page_tree_pdf_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
   let pages_offset = output.length()
@@ -2283,7 +2281,7 @@ fn pdf_async_io_bad_first_object_stream_physical_page_tree_pdf_for_test() -> @pd
 }
 
 ///|
-fn pdf_async_io_mismatched_object_stream_root_physical_catalog_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_mismatched_object_stream_root_physical_catalog_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
   let object_stream_data : Array[Byte] = []
@@ -2349,7 +2347,7 @@ fn pdf_async_io_mismatched_object_stream_root_physical_catalog_for_test() -> @pd
 }
 
 ///|
-fn pdf_async_io_xref_stream_pdf_with_two_object_stream_entries_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_xref_stream_pdf_with_two_object_stream_entries_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
   let catalog_offset = output.length()
@@ -2429,7 +2427,7 @@ fn pdf_async_io_xref_stream_pdf_with_two_object_stream_entries_for_test() -> @pd
 }
 
 ///|
-fn pdf_async_io_xref_stream_pdf_with_stream_object_in_object_stream_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_xref_stream_pdf_with_stream_object_in_object_stream_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
   let catalog_offset = output.length()
@@ -2492,7 +2490,7 @@ fn pdf_async_io_xref_stream_pdf_with_stream_object_in_object_stream_for_test() -
 }
 
 ///|
-fn pdf_async_io_xref_stream_prev_update_with_object_stream_root_bad_startxref_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_xref_stream_prev_update_with_object_stream_root_bad_startxref_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
   let old_catalog_offset = output.length()
@@ -2597,7 +2595,7 @@ fn pdf_async_io_xref_stream_prev_update_with_object_stream_root_bad_startxref_fo
 }
 
 ///|
-fn pdf_async_io_xref_stream_pdf_with_bad_filtered_object_stream_root_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_xref_stream_pdf_with_bad_filtered_object_stream_root_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
   let object_stream_data : Array[Byte] = []
@@ -2655,7 +2653,7 @@ fn pdf_async_io_xref_stream_pdf_with_bad_filtered_object_stream_root_for_test() 
 ///|
 fn pdf_async_io_xref_stream_pdf_with_decodeparms_object_stream_root_for_test(
   decodeparms : String,
-) -> @pdflite.PdfBytes {
+) -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
   let object_stream_data : Array[Byte] = []
@@ -2716,21 +2714,21 @@ fn pdf_async_io_xref_stream_pdf_with_decodeparms_object_stream_root_for_test(
 }
 
 ///|
-fn pdf_async_io_xref_stream_pdf_with_bad_decodeparms_object_stream_root_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_xref_stream_pdf_with_bad_decodeparms_object_stream_root_for_test() -> @core.PdfBytes {
   pdf_async_io_xref_stream_pdf_with_decodeparms_object_stream_root_for_test(
     "/Bad",
   )
 }
 
 ///|
-fn pdf_async_io_xref_stream_pdf_with_unsupported_predictor_object_stream_root_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_xref_stream_pdf_with_unsupported_predictor_object_stream_root_for_test() -> @core.PdfBytes {
   pdf_async_io_xref_stream_pdf_with_decodeparms_object_stream_root_for_test(
     "<< /Predictor 9 >>",
   )
 }
 
 ///|
-fn pdf_async_io_bad_first_object_stream_payload_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_bad_first_object_stream_payload_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
   let catalog_offset = output.length()
@@ -2796,7 +2794,7 @@ fn pdf_async_io_bad_first_object_stream_payload_for_test() -> @pdflite.PdfBytes 
 }
 
 ///|
-fn pdf_async_io_indirect_object_stream_bounds_bad_startxref_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_indirect_object_stream_bounds_bad_startxref_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
   let catalog_offset = output.length()
@@ -2866,7 +2864,7 @@ fn pdf_async_io_indirect_object_stream_bounds_bad_startxref_for_test() -> @pdfli
 }
 
 ///|
-fn pdf_async_io_indirect_object_stream_filter_bad_startxref_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_indirect_object_stream_filter_bad_startxref_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
   let catalog_offset = output.length()
@@ -2943,7 +2941,7 @@ fn pdf_async_io_encrypted_object_stream_pdf_for_test(
   user_password : BytesView,
   owner_password : BytesView,
   denied : ArrayView[@crypt_core.PdfPermission],
-) -> @pdflite.PdfBytes raise {
+) -> @core.PdfBytes raise {
   let secret = pdf_async_io_secret_object_for_test(
     "async encrypted object stream",
   )
@@ -3082,7 +3080,7 @@ fn pdf_async_io_encrypted_object_stream_pdf_for_test(
 }
 
 ///|
-fn pdf_async_io_encrypted_xref_stream_missing_object_stream_for_test() -> @pdflite.PdfBytes {
+fn pdf_async_io_encrypted_xref_stream_missing_object_stream_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(output, "%PDF-1.5\n")
   let catalog_offset = output.length()
@@ -3131,7 +3129,7 @@ fn pdf_async_io_assert_decrypted_object_stream_for_test(
 ///|
 fn pdf_async_io_secret_document_for_test(
   text : String,
-) -> @pdflite.PdfDocument raise @pdflite.PdfError {
+) -> @pdflite.PdfDocument raise @core.PdfError {
   let document = @pdflite.pdf_minimum_valid_pdf()
   document.add_object_given_number(
     41,

@@ -1,7 +1,7 @@
 ///|
 fn pdf_reader_password_error_allows_reconstruction(
   data : BytesView,
-  error : PdfError,
+  error : @core.PdfError,
 ) -> Bool {
   match error {
     StartXRefExpected

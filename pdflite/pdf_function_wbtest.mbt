@@ -8,14 +8,14 @@ test "private function helpers cover parser and evaluator guards" {
   let bad_number_array : Result[Array[Double], Error] = try? doc.pdf_fun_number_array(
     PdfInteger(1),
   )
-  guard bad_number_array is Err(PdfError::NumberExpected) else {
+  guard bad_number_array is Err(@core.PdfError::NumberExpected) else {
     fail("expected number-array object")
   }
   let missing_int_array : Result[Array[Int], Error] = try? doc.pdf_fun_lookup_required_int_array(
     PdfDictionary([]),
     pdf_fun_size_key(),
   )
-  guard missing_int_array is Err(PdfError::DictionaryKeyNotFound(name)) &&
+  guard missing_int_array is Err(@core.PdfError::DictionaryKeyNotFound(name)) &&
     name == pdf_fun_size_key() else {
     fail("expected missing required int array")
   }
@@ -23,7 +23,7 @@ test "private function helpers cover parser and evaluator guards" {
     PdfDictionary([]),
     pdf_fun_bits_per_sample_key(),
   )
-  guard missing_int is Err(PdfError::DictionaryKeyNotFound(name)) &&
+  guard missing_int is Err(@core.PdfError::DictionaryKeyNotFound(name)) &&
     name == pdf_fun_bits_per_sample_key() else {
     fail("expected missing required int")
   }
@@ -32,19 +32,20 @@ test "private function helpers cover parser and evaluator guards" {
     pdf_fun_order_key(),
     1,
   )
-  guard bad_optional_int is Err(PdfError::NumberExpected) else {
+  guard bad_optional_int is Err(@core.PdfError::NumberExpected) else {
     fail("expected malformed optional int")
   }
-  let bad_stream : Result[PdfBytes, Error] = try? doc.pdf_fun_stream_data(
+  let bad_stream : Result[@core.PdfBytes, Error] = try? doc.pdf_fun_stream_data(
     PdfInteger(1),
   )
-  guard bad_stream is Err(PdfError::ParseStreamExpected) else {
+  guard bad_stream is Err(@core.PdfError::ParseStreamExpected) else {
     fail("expected function stream")
   }
   let missing_function_type : Result[PdfFunction, Error] = try? doc.parse_function(
     PdfDictionary([(pdf_fun_domain_key(), PdfArray([]))]),
   )
-  guard missing_function_type is Err(PdfError::DictionaryKeyNotFound(name)) &&
+  guard missing_function_type
+    is Err(@core.PdfError::DictionaryKeyNotFound(name)) &&
     name == pdf_fun_function_type_key() else {
     fail("expected missing function type")
   }
@@ -54,7 +55,7 @@ test "private function helpers cover parser and evaluator guards" {
     [1.0],
     [0.0],
   )
-  guard bad_clamp_range is Err(PdfError::BadFunctionEvaluation(_)) else {
+  guard bad_clamp_range is Err(@core.PdfError::BadFunctionEvaluation(_)) else {
     fail("expected clamp range arity failure")
   }
 
@@ -75,21 +76,21 @@ test "private function helpers cover parser and evaluator guards" {
     sampled_function,
     [],
   )
-  guard bad_sampled_input is Err(PdfError::BadFunctionEvaluation(_)) else {
+  guard bad_sampled_input is Err(@core.PdfError::BadFunctionEvaluation(_)) else {
     fail("expected sampled input arity failure")
   }
   let bad_table_arity : Result[Array[Double], Error] = try? sampled.read_table(
     [],
     1,
   )
-  guard bad_table_arity is Err(PdfError::BadFunctionEvaluation(_)) else {
+  guard bad_table_arity is Err(@core.PdfError::BadFunctionEvaluation(_)) else {
     fail("expected sampled table arity failure")
   }
   let bad_table_index : Result[Array[Double], Error] = try? sampled.read_table(
     [2],
     1,
   )
-  guard bad_table_index is Err(PdfError::BadFunctionEvaluation(_)) else {
+  guard bad_table_index is Err(@core.PdfError::BadFunctionEvaluation(_)) else {
     fail("expected sampled table index failure")
   }
   let missing_sampled_range : PdfFunction = {
@@ -101,7 +102,7 @@ test "private function helpers cover parser and evaluator guards" {
     missing_sampled_range,
     [0.0],
   )
-  guard missing_range is Err(PdfError::BadFunctionEvaluation(_)) else {
+  guard missing_range is Err(@core.PdfError::BadFunctionEvaluation(_)) else {
     fail("expected sampled range")
   }
   let bad_decode_sampled : PdfSampledFunction = {
@@ -116,7 +117,7 @@ test "private function helpers cover parser and evaluator guards" {
     sampled_function,
     [0.0],
   )
-  guard bad_decode is Err(PdfError::BadFunctionEvaluation(_)) else {
+  guard bad_decode is Err(@core.PdfError::BadFunctionEvaluation(_)) else {
     fail("expected sampled output arity failure")
   }
 
@@ -139,21 +140,21 @@ test "private function helpers cover parser and evaluator guards" {
     stitching_function,
     [],
   )
-  guard stitching_arity is Err(PdfError::BadFunctionEvaluation(_)) else {
+  guard stitching_arity is Err(@core.PdfError::BadFunctionEvaluation(_)) else {
     fail("expected stitching arity failure")
   }
   let stitching_bounds : Result[Array[Double], Error] = try? stitching.eval_stitching(
     stitching_function,
     [2.0],
   )
-  guard stitching_bounds is Err(PdfError::BadFunctionEvaluation(_)) else {
+  guard stitching_bounds is Err(@core.PdfError::BadFunctionEvaluation(_)) else {
     fail("expected stitching bounds failure")
   }
 
   let bool_number : Result[Double, Error] = try? pdf_fun_calculator_pop_number([
     PdfCalculatorBoolean(true),
   ])
-  guard bool_number is Err(PdfError::BadFunctionEvaluation(_)) else {
+  guard bool_number is Err(@core.PdfError::BadFunctionEvaluation(_)) else {
     fail("expected calculator number")
   }
   @test.assert_eq(

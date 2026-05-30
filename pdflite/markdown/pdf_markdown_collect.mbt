@@ -89,7 +89,7 @@ fn pdf_markdown_add_positioned_text_run(
   text_matrix : @geometry.TransformMatrix,
   font_size : Double,
   extractor : @pdflite.PdfTextExtractor?,
-  text : @pdflite.PdfBytes,
+  text : @core.PdfBytes,
 ) -> Unit raise {
   pdf_markdown_push_text_chunk(
     chunks,

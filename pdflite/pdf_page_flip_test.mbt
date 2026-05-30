@@ -1,6 +1,6 @@
 ///|
-fn page_flip_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn page_flip_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -213,7 +213,7 @@ test "PdfDocument flip pages validate selected pages" {
   )
   guard bad_vertical
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "flip_pages_vertically: range contains pages not present in pdf"
       )
     ) else {
@@ -226,7 +226,7 @@ test "PdfDocument flip pages validate selected pages" {
   )
   guard bad_horizontal
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "flip_pages_horizontally: range contains pages not present in pdf"
       )
     ) else {

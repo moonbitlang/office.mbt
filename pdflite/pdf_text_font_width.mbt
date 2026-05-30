@@ -59,11 +59,11 @@ fn pdf_text_cid_font_charcode_width(
 /// Measure PDF text bytes in glyph-space units for this extractor's font.
 ///
 /// Text bytes are segmented according to the font encoding. Malformed byte
-/// sequences raise `PdfError`, and missing metrics contribute width `0`.
+/// sequences raise `@core.PdfError`, and missing metrics contribute width `0`.
 pub fn PdfTextExtractor::text_width(
   self : PdfTextExtractor,
   text : BytesView,
-) -> Double raise PdfError {
+) -> Double raise @core.PdfError {
   match self.font {
     PdfFontStandard(font) => font.text_width(text).to_double()
     PdfFontSimple(font) => {

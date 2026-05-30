@@ -16,14 +16,16 @@ fn pdf_attach_basename(path : String) -> String {
 }
 
 ///|
-fn pdf_attach_pdfdoc_string(text : String) -> PdfBytes raise PdfError {
+fn pdf_attach_pdfdoc_string(
+  text : String,
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_pdfdocstring_of_utf8(@utf8.encode(text))
 }
 
 ///|
 fn pdf_attach_string_of_pdfdoc_string(
   bytes : BytesView,
-) -> String raise PdfError {
+) -> String raise @core.PdfError {
   let utf8_bytes = pdf_utf8_of_pdfdocstring(bytes)
   @utf8.decode(utf8_bytes) catch {
     _ => raise InvalidUTF8
@@ -31,7 +33,7 @@ fn pdf_attach_string_of_pdfdoc_string(
 }
 
 ///|
-fn pdf_attach_relationship_name(relationship : String) -> PdfName {
+fn pdf_attach_relationship_name(relationship : String) -> @core.PdfName {
   if relationship.has_prefix("/") {
     pdf_attach_name(relationship)
   } else {
@@ -40,7 +42,7 @@ fn pdf_attach_relationship_name(relationship : String) -> PdfName {
 }
 
 ///|
-fn pdf_attach_relationship_text(name : PdfName) -> String? {
+fn pdf_attach_relationship_text(name : @core.PdfName) -> String? {
   let decoded : Result[String, Error] = try? @ascii.decode(name.view())
   match decoded {
     Ok(text) => Some(text)
@@ -73,7 +75,7 @@ fn pdf_attach_is_unsafe_filename_codepoint(codepoint : Int) -> Bool {
 /// intentionally preserves a leading dot, matching the source behavior.
 pub fn pdf_attachment_remove_unsafe_characters(
   text : String,
-) -> String raise PdfError {
+) -> String raise @core.PdfError {
   let codepoints = pdf_codepoints_of_utf8(@utf8.encode(text))
   let output : Array[Int] = Array::new(capacity=codepoints.length())
   for codepoint in codepoints {
@@ -88,6 +90,8 @@ pub fn pdf_attachment_remove_unsafe_characters(
 
 ///|
 /// Source-spelled compatibility alias for cpdfattach's filename sanitizer.
-pub fn pdf_remove_unsafe_characters(text : String) -> String raise PdfError {
+pub fn pdf_remove_unsafe_characters(
+  text : String,
+) -> String raise @core.PdfError {
   pdf_attachment_remove_unsafe_characters(text)
 }

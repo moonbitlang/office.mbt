@@ -4,7 +4,7 @@ pub fn PdfDocument::info_blob(
   self : PdfDocument,
   encoding? : @metadata.PdfMetadataEncoding = PdfMetadataUTF8,
   unit? : @geometry.PdfUnit = PdfPoint,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let output : Array[String] = []
   let (major, minor) = self.version()
   let pages = self.pages_of_pagetree()
@@ -14,7 +14,7 @@ pub fn PdfDocument::info_blob(
     major.to_string() + "." + minor.to_string(),
   )
   pdf_metadata_push_text_line(output, "Pages", pages.length().to_string())
-  let info_fields : Array[(String, PdfName)] = [
+  let info_fields : Array[(String, @core.PdfName)] = [
     ("Title", pdf_metadata_name("/Title")),
     ("Author", pdf_metadata_name("/Author")),
     ("Subject", pdf_metadata_name("/Subject")),
@@ -43,7 +43,7 @@ pub fn PdfDocument::info_blob(
     self.catalog_item(pdf_metadata_page_layout()),
   )
   pdf_metadata_push_text_line(output, "OpenAction", self.open_action_string())
-  let viewer_fields : Array[(String, PdfName)] = [
+  let viewer_fields : Array[(String, @core.PdfName)] = [
     ("HideToolbar", pdf_metadata_name("/HideToolbar")),
     ("HideMenubar", pdf_metadata_name("/HideMenubar")),
     ("HideWindowUI", pdf_metadata_name("/HideWindowUI")),

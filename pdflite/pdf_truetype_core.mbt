@@ -102,12 +102,12 @@ fn pdf_truetype_write_u16_at(
   output : Array[Byte],
   position : Int,
   value : Int,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   if value < 0 || value > 0xFFFF {
     raise SoftError("TrueType unsigned 16-bit value out of range")
   }
-  output[position] = pdf_byte_of_int((value >> 8) & 0xFF)
-  output[position + 1] = pdf_byte_of_int(value & 0xFF)
+  output[position] = @core.pdf_byte_of_int((value >> 8) & 0xFF)
+  output[position + 1] = @core.pdf_byte_of_int(value & 0xFF)
   position + 2
 }
 
@@ -116,14 +116,14 @@ fn pdf_truetype_write_u32_at(
   output : Array[Byte],
   position : Int,
   value : Int,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   if value < 0 {
     raise SoftError("TrueType unsigned 32-bit value out of range")
   }
-  output[position] = pdf_byte_of_int((value >> 24) & 0xFF)
-  output[position + 1] = pdf_byte_of_int((value >> 16) & 0xFF)
-  output[position + 2] = pdf_byte_of_int((value >> 8) & 0xFF)
-  output[position + 3] = pdf_byte_of_int(value & 0xFF)
+  output[position] = @core.pdf_byte_of_int((value >> 24) & 0xFF)
+  output[position + 1] = @core.pdf_byte_of_int((value >> 16) & 0xFF)
+  output[position + 2] = @core.pdf_byte_of_int((value >> 8) & 0xFF)
+  output[position + 3] = @core.pdf_byte_of_int(value & 0xFF)
   position + 4
 }
 
@@ -132,15 +132,17 @@ fn pdf_truetype_write_u32_uint_at(
   output : Array[Byte],
   position : Int,
   value : UInt,
-) -> Int raise PdfError {
-  output[position] = pdf_byte_of_int((value >> 24).reinterpret_as_int())
-  output[position + 1] = pdf_byte_of_int(
+) -> Int raise @core.PdfError {
+  output[position] = @core.pdf_byte_of_int((value >> 24).reinterpret_as_int())
+  output[position + 1] = @core.pdf_byte_of_int(
     ((value >> 16) & 0xFFU).reinterpret_as_int(),
   )
-  output[position + 2] = pdf_byte_of_int(
+  output[position + 2] = @core.pdf_byte_of_int(
     ((value >> 8) & 0xFFU).reinterpret_as_int(),
   )
-  output[position + 3] = pdf_byte_of_int((value & 0xFFU).reinterpret_as_int())
+  output[position + 3] = @core.pdf_byte_of_int(
+    (value & 0xFFU).reinterpret_as_int(),
+  )
   position + 4
 }
 
@@ -149,10 +151,10 @@ fn pdf_truetype_write_tag_at(
   output : Array[Byte],
   position : Int,
   tag : String,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   let bytes = @ascii.encode(tag)
   for index in 0..<4 {
-    output[position + index] = pdf_byte_of_int(
+    output[position + index] = @core.pdf_byte_of_int(
       if index < bytes.length() {
         bytes[index].to_int()
       } else {

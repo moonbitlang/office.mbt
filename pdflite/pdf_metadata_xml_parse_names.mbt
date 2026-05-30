@@ -5,7 +5,9 @@ let pdf_metadata_xml_uri : String = "http://www.w3.org/XML/1998/namespace"
 let pdf_metadata_xmlns_uri : String = "http://www.w3.org/2000/xmlns/"
 
 ///|
-fn pdf_metadata_xml_decode_name(value : BytesView) -> String raise PdfError {
+fn pdf_metadata_xml_decode_name(
+  value : BytesView,
+) -> String raise @core.PdfError {
   @utf8.decode(value) catch {
     _ => raise InvalidUTF8
   }
@@ -36,7 +38,7 @@ fn pdf_metadata_xml_skip_space(data : BytesView, start : Int) -> Int {
 fn pdf_metadata_xml_read_name(
   data : BytesView,
   start : Int,
-) -> (Bytes, Int) raise PdfError {
+) -> (Bytes, Int) raise @core.PdfError {
   let mut index = start
   while index < data.length() && !pdf_metadata_xml_is_name_boundary(data[index]) {
     index += 1
@@ -65,7 +67,7 @@ fn pdf_metadata_xml_resolve_name(
   qname : BytesView,
   is_attribute : Bool,
   context : ArrayView[(String, String)],
-) -> @metadata.PdfMetadataXmlName raise PdfError {
+) -> @metadata.PdfMetadataXmlName raise @core.PdfError {
   let colon = pdf_metadata_find_byte(qname, 0, 58)
   if colon >= 0 {
     let prefix = pdf_metadata_xml_decode_name(qname[:colon])
@@ -103,7 +105,7 @@ fn pdf_metadata_xml_resolve_name(
 fn pdf_metadata_xml_parse_raw_attributes(
   data : BytesView,
   start : Int,
-) -> Array[(Bytes, String)] raise PdfError {
+) -> Array[(Bytes, String)] raise @core.PdfError {
   let attributes : Array[(Bytes, String)] = []
   let mut index = start
   while index < data.length() {
@@ -140,7 +142,7 @@ fn pdf_metadata_xml_parse_raw_attributes(
 fn pdf_metadata_xml_context_with_attributes(
   context : ArrayView[(String, String)],
   attributes : ArrayView[(Bytes, String)],
-) -> Array[(String, String)] raise PdfError {
+) -> Array[(String, String)] raise @core.PdfError {
   let output = context.to_owned()
   for attribute in attributes {
     let name = attribute.0[:]
@@ -159,7 +161,7 @@ fn pdf_metadata_xml_tag_from_raw(
   name : BytesView,
   attributes : ArrayView[(Bytes, String)],
   context : ArrayView[(String, String)],
-) -> @metadata.PdfMetadataXmlTag raise PdfError {
+) -> @metadata.PdfMetadataXmlTag raise @core.PdfError {
   let resolved_attributes : Array[@metadata.PdfMetadataXmlAttribute] = []
   for attribute in attributes {
     resolved_attributes.push({

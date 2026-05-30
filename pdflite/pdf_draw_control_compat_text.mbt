@@ -6,13 +6,13 @@ pub fn pdf_addbt(control : PdfDrawControl) -> Unit {
 
 ///|
 /// Source-spelled cpdfdrawcontrol `addet` over explicit draw state.
-pub fn pdf_addet(control : PdfDrawControl) -> Unit raise PdfError {
+pub fn pdf_addet(control : PdfDrawControl) -> Unit raise @core.PdfError {
   control.end_text_section()
 }
 
 ///|
 /// Source-spelled cpdfdrawcontrol `addnewpage` over explicit draw state.
-pub fn pdf_addnewpage(control : PdfDrawControl) -> Unit raise PdfError {
+pub fn pdf_addnewpage(control : PdfDrawControl) -> Unit raise @core.PdfError {
   control.add_new_page()
 }
 
@@ -21,7 +21,7 @@ pub fn pdf_addnewpage(control : PdfDrawControl) -> Unit raise PdfError {
 pub fn pdf_addleading(
   control : PdfDrawControl,
   leading : Double,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   control.add_leading(leading)
 }
 
@@ -30,7 +30,7 @@ pub fn pdf_addleading(
 pub fn pdf_addcharspace(
   control : PdfDrawControl,
   spacing : Double,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   control.add_char_space(spacing)
 }
 
@@ -39,7 +39,7 @@ pub fn pdf_addcharspace(
 pub fn pdf_addwordspace(
   control : PdfDrawControl,
   spacing : Double,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   control.add_word_space(spacing)
 }
 
@@ -48,7 +48,7 @@ pub fn pdf_addwordspace(
 pub fn pdf_addtextscale(
   control : PdfDrawControl,
   scale : Double,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   control.add_text_scale(scale)
 }
 
@@ -57,7 +57,7 @@ pub fn pdf_addtextscale(
 pub fn pdf_addrendermode(
   control : PdfDrawControl,
   mode : Int,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   control.add_render_mode(mode)
 }
 
@@ -66,13 +66,13 @@ pub fn pdf_addrendermode(
 pub fn pdf_addrise(
   control : PdfDrawControl,
   rise : Double,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   control.add_rise(rise)
 }
 
 ///|
 /// Source-spelled cpdfdrawcontrol `addnewline` over explicit draw state.
-pub fn pdf_addnewline(control : PdfDrawControl) -> Unit raise PdfError {
+pub fn pdf_addnewline(control : PdfDrawControl) -> Unit raise @core.PdfError {
   control.add_newline()
 }
 
@@ -111,7 +111,7 @@ pub fn pdf_getindent(control : PdfDrawControl) -> Double? {
 pub fn pdf_add_default_fontpack(
   control : PdfDrawControl,
   font_name : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   control.add_default_fontpack(font_name)
 }
 
@@ -120,7 +120,7 @@ pub fn pdf_add_default_fontpack(
 pub fn pdf_addtext(
   control : PdfDrawControl,
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   control.add_text(text)
 }
 
@@ -129,7 +129,7 @@ pub fn pdf_addtext(
 pub fn pdf_addspecialtext(
   control : PdfDrawControl,
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   control.add_special_text(text)
 }
 
@@ -139,7 +139,7 @@ pub fn pdf_addpara(
   control : PdfDrawControl,
   document : PdfDocument,
   spec : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   control.add_para(document, spec)
 }
 
@@ -149,6 +149,6 @@ pub fn pdf_addparas(
   control : PdfDrawControl,
   document : PdfDocument,
   spec : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   control.add_paras(document, spec)
 }

@@ -47,7 +47,7 @@ fn PdfDocument::pdf_page_matrix_for_destination_with_lookup(
   self : PdfDocument,
   destination : @destination.PdfDestination,
   lookup : PdfPageMatrixLookup,
-) -> @geometry.TransformMatrix? raise PdfError {
+) -> @geometry.TransformMatrix? raise @core.PdfError {
   let page_number = self.pdf_page_matrix_page_number_for_destination_with_lookup(
     destination, lookup,
   )
@@ -63,7 +63,7 @@ fn PdfDocument::pdf_page_matrix_page_number_for_destination_with_lookup(
   self : PdfDocument,
   destination : @destination.PdfDestination,
   lookup : PdfPageMatrixLookup,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   match destination {
     DestNamed(_) | DestString(_) => {
       let resolved = self.read_destination(
@@ -106,7 +106,7 @@ fn PdfDocument::pdf_page_transform_destination_object_with_lookup(
   self : PdfDocument,
   raw_destination : @syntax.PdfObject,
   lookup : PdfPageMatrixLookup,
-) -> @syntax.PdfObject? raise PdfError {
+) -> @syntax.PdfObject? raise @core.PdfError {
   match
     self.pdf_page_transform_destination_object_with_shallow_lookup(
       raw_destination, lookup, false,
@@ -122,7 +122,7 @@ fn PdfDocument::pdf_page_transform_destination_object_with_shallow_lookup(
   raw_destination : @syntax.PdfObject,
   lookup : PdfPageMatrixLookup,
   shallow : Bool,
-) -> @syntax.PdfObject? raise PdfError {
+) -> @syntax.PdfObject? raise @core.PdfError {
   let destination = self.read_destination(raw_destination, shallow~)
   match self.pdf_page_matrix_for_destination_with_lookup(destination, lookup) {
     Some(matrix) if matrix != @geometry.transform_identity_matrix =>

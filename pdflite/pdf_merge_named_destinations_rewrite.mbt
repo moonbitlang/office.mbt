@@ -3,7 +3,7 @@ fn pdf_merge_rewrite_destination_callsite_object(
   object : @syntax.PdfObject,
   name_lookup : PdfMergeDestinationNameLookup,
   catalog_name_lookup : PdfMergeCatalogDestinationNameLookup,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   match object {
     PdfArray(items) => {
       let output : Array[@syntax.PdfObject] = []
@@ -17,7 +17,7 @@ fn pdf_merge_rewrite_destination_callsite_object(
       PdfArray(output)
     }
     PdfDictionary(entries) => {
-      let output : Array[(PdfName, @syntax.PdfObject)] = []
+      let output : Array[(@core.PdfName, @syntax.PdfObject)] = []
       for entry in entries {
         let (key, value) = entry
         output.push(
@@ -79,11 +79,11 @@ fn pdf_merge_rewrite_destination_callsite_object(
 ///|
 fn PdfDocument::pdf_merge_rewrite_destination_callsite_names(
   self : PdfDocument,
-  name_changes : ArrayView[(PdfBytes, PdfBytes)],
-  all_name_changes : ArrayView[(PdfBytes, PdfBytes)],
-  catalog_name_changes : ArrayView[(PdfName, PdfName)],
-  all_catalog_name_changes : ArrayView[(PdfName, PdfName)],
-) -> Unit raise PdfError {
+  name_changes : ArrayView[(@core.PdfBytes, @core.PdfBytes)],
+  all_name_changes : ArrayView[(@core.PdfBytes, @core.PdfBytes)],
+  catalog_name_changes : ArrayView[(@core.PdfName, @core.PdfName)],
+  all_catalog_name_changes : ArrayView[(@core.PdfName, @core.PdfName)],
+) -> Unit raise @core.PdfError {
   if name_changes.length() > 0 ||
     all_name_changes.length() > 0 ||
     catalog_name_changes.length() > 0 ||

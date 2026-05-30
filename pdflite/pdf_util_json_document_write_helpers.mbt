@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::pdf_util_precombine_page_content(
   self : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let pages = self.pages_of_pagetree()
   let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
   let mut changed = false
@@ -27,7 +27,7 @@ fn PdfDocument::pdf_util_document_params_json(
   utf8 : Bool,
   parse_content : Bool,
   no_stream_data : Bool,
-) -> Json raise PdfError {
+) -> Json raise @core.PdfError {
   let (major, minor) = self.version()
   self.pdf_util_json_of_object(
     PdfDictionary([

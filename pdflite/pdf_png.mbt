@@ -17,11 +17,14 @@ pub(all) struct PdfPNG {
   height : Int
   bit_depth : Int
   color_type : Int
-  idat : PdfBytes
+  idat : @core.PdfBytes
 } derive(Debug, Eq, ToJson)
 
 ///|
-fn pdf_png_u32_to_int(value : UInt, context : String) -> Int raise PdfError {
+fn pdf_png_u32_to_int(
+  value : UInt,
+  context : String,
+) -> Int raise @core.PdfError {
   let wide = value.to_int64()
   if wide > pdf_png_max_int64 {
     raise BadPNG(context)
@@ -30,7 +33,9 @@ fn pdf_png_u32_to_int(value : UInt, context : String) -> Int raise PdfError {
 }
 
 ///|
-fn pdf_png_read_chunk(cursor : ByteCursor) -> (UInt, PdfBytes) raise PdfError {
+fn pdf_png_read_chunk(
+  cursor : @core.ByteCursor,
+) -> (UInt, @core.PdfBytes) raise @core.PdfError {
   let length = pdf_png_u32_to_int(
     byte_cursor_read_u32_be(cursor),
     "read_png: chunk too large",
@@ -42,7 +47,7 @@ fn pdf_png_read_chunk(cursor : ByteCursor) -> (UInt, PdfBytes) raise PdfError {
 }
 
 ///|
-fn pdf_png_concat(chunks : ArrayView[PdfBytes]) -> PdfBytes {
+fn pdf_png_concat(chunks : ArrayView[@core.PdfBytes]) -> @core.PdfBytes {
   let mut length = 0
   for chunk in chunks {
     length += chunk.length()
@@ -59,14 +64,14 @@ fn pdf_png_concat(chunks : ArrayView[PdfBytes]) -> PdfBytes {
 }
 
 ///|
-fn pdf_read_png_view_inner(data : BytesView) -> PdfPNG raise PdfError {
-  let cursor = byte_cursor_of_view(data, source="png")
+fn pdf_read_png_view_inner(data : BytesView) -> PdfPNG raise @core.PdfError {
+  let cursor = @core.byte_cursor_of_view(data, source="png")
   try! cursor.seek(8)
   let (first_chunk_type, first_chunk_data) = pdf_png_read_chunk(cursor)
   if first_chunk_type != pdf_png_ihdr_chunk_type {
     raise BadPNG("read_png: first table not IHDR")
   }
-  let header = byte_cursor_of_view(first_chunk_data, source="png IHDR")
+  let header = @core.byte_cursor_of_view(first_chunk_data, source="png IHDR")
   let width = pdf_png_u32_to_int(
     byte_cursor_read_u32_be(header),
     "read_png: width too large",
@@ -101,7 +106,7 @@ fn pdf_read_png_view_inner(data : BytesView) -> PdfPNG raise PdfError {
   if interlace_method != 0 {
     raise BadPNG("read_png: interlaced PNGs not supported")
   }
-  let idat_chunks : Array[PdfBytes] = []
+  let idat_chunks : Array[@core.PdfBytes] = []
   let mut done = false
   while !done {
     try pdf_png_read_chunk(cursor) catch {
@@ -118,7 +123,7 @@ fn pdf_read_png_view_inner(data : BytesView) -> PdfPNG raise PdfError {
 
 ///|
 /// Read a non-palette, non-interlaced PNG from a byte view.
-pub fn pdf_read_png_view(data : BytesView) -> PdfPNG raise PdfError {
+pub fn pdf_read_png_view(data : BytesView) -> PdfPNG raise @core.PdfError {
   pdf_read_png_view_inner(data) catch {
     BadPNG(message) => raise BadPNG(message)
     EndOfInput => raise BadPNG("read_png: truncated input")
@@ -130,6 +135,6 @@ pub fn pdf_read_png_view(data : BytesView) -> PdfPNG raise PdfError {
 
 ///|
 /// Read a non-palette, non-interlaced PNG from owned bytes.
-pub fn pdf_read_png(data : PdfBytes) -> PdfPNG raise PdfError {
+pub fn pdf_read_png(data : @core.PdfBytes) -> PdfPNG raise @core.PdfError {
   pdf_read_png_view(data)
 }

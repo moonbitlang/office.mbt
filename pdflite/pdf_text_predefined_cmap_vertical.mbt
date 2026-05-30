@@ -1,6 +1,6 @@
 ///|
 fn pdf_text_predefined_gb1_vertical_codepoint_table(
-  name : PdfName,
+  name : @core.PdfName,
 ) -> Array[(Int, Int)]? {
   guard pdf_text_predefined_cmap_is_vertical(name) else { return None }
   let text = pdf_text_string_of_name(name)
@@ -21,7 +21,7 @@ fn pdf_text_predefined_gb1_vertical_codepoint_table(
 
 ///|
 fn pdf_text_predefined_gb1_vertical_charcode_table(
-  name : PdfName,
+  name : @core.PdfName,
 ) -> Array[(Int, Int)]? {
   guard pdf_text_predefined_cmap_is_vertical(name) else { return None }
   let text = pdf_text_string_of_name(name)
@@ -42,7 +42,7 @@ fn pdf_text_predefined_gb1_vertical_charcode_table(
 
 ///|
 fn pdf_text_predefined_cns1_vertical_codepoint_table(
-  name : PdfName,
+  name : @core.PdfName,
 ) -> Array[(Int, Int)]? {
   guard pdf_text_predefined_cmap_is_vertical(name) else { return None }
   let text = pdf_text_string_of_name(name)
@@ -73,7 +73,7 @@ fn pdf_text_predefined_cns1_vertical_codepoint_table(
 
 ///|
 fn pdf_text_predefined_cns1_vertical_charcode_table(
-  name : PdfName,
+  name : @core.PdfName,
 ) -> Array[(Int, Int)]? {
   guard pdf_text_predefined_cmap_is_vertical(name) else { return None }
   let text = pdf_text_string_of_name(name)
@@ -104,7 +104,7 @@ fn pdf_text_predefined_cns1_vertical_charcode_table(
 
 ///|
 fn pdf_text_predefined_korea1_vertical_codepoint_table(
-  name : PdfName,
+  name : @core.PdfName,
 ) -> Array[(Int, Int)]? {
   guard pdf_text_predefined_cmap_is_vertical(name) else { return None }
   let text = pdf_text_string_of_name(name)
@@ -121,7 +121,7 @@ fn pdf_text_predefined_korea1_vertical_codepoint_table(
 
 ///|
 fn pdf_text_predefined_korea1_vertical_charcode_table(
-  name : PdfName,
+  name : @core.PdfName,
 ) -> Array[(Int, Int)]? {
   guard pdf_text_predefined_cmap_is_vertical(name) else { return None }
   let text = pdf_text_string_of_name(name)

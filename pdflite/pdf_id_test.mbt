@@ -1,6 +1,6 @@
 ///|
-fn id_name_for_test() -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode("/ID"))
+fn id_name_for_test() -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode("/ID"))
 }
 
 ///|
@@ -12,8 +12,8 @@ fn id_restore_env_for_test(previous : String?) -> Unit {
 }
 
 ///|
-fn id_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
-  try! @pdflite.pdf_bytes_of_int_array(values)
+fn id_bytes_for_test(values : ArrayView[Int]) -> @core.PdfBytes {
+  try! @core.pdf_bytes_of_int_array(values)
 }
 
 ///|
@@ -89,7 +89,7 @@ test "PdfDocument change_id installs trailer ID" {
   let previous = @env.get_env_var("CAMLPDF_REPRODUCIBLE_IDS")
   @env.unset_env_var("CAMLPDF_REPRODUCIBLE_IDS")
   let key_id = id_name_for_test()
-  let key_info = @pdflite.pdf_name_of_bytes(@ascii.encode("/Info"))
+  let key_info = @core.pdf_name_of_bytes(@ascii.encode("/Info"))
   let doc = @pdflite.pdf_document_empty()
   doc.set_trailer_dict(
     PdfDictionary([(key_id, PdfInteger(1)), (key_info, PdfIndirect(7))]),
@@ -105,7 +105,7 @@ test "PdfDocument change_id installs trailer ID" {
     Some(id_expected_for_test("out.pdf2.")),
   )
   @test.assert_eq(updated.lookup_immediate(key_info), Some(PdfIndirect(7)))
-  guard bad_result is Err(@pdflite.PdfError::DictionaryExpected) else {
-    fail("expected @pdflite.PdfError::DictionaryExpected")
+  guard bad_result is Err(@core.PdfError::DictionaryExpected) else {
+    fail("expected @core.PdfError::DictionaryExpected")
   }
 }

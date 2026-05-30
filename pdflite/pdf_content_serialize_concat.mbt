@@ -2,7 +2,7 @@
 /// Concatenate already-decoded content stream views with a single space between them.
 pub fn pdf_content_concat_stream_views(
   streams : ArrayView[BytesView],
-) -> PdfBytes {
+) -> @core.PdfBytes {
   let mut length = 0
   let mut has_output = false
   for stream in streams {
@@ -38,7 +38,9 @@ pub fn pdf_content_concat_stream_views(
 
 ///|
 /// Concatenate already-decoded content streams with a single space between them.
-pub fn pdf_content_concat_streams(streams : ArrayView[PdfBytes]) -> PdfBytes {
+pub fn pdf_content_concat_streams(
+  streams : ArrayView[@core.PdfBytes],
+) -> @core.PdfBytes {
   let mut length = 0
   let mut has_output = false
   for stream in streams {

@@ -2,7 +2,7 @@
 fn pdf_bookmark_name_spec_padded_number(
   width : Int,
   value : Int,
-) -> String raise PdfError {
+) -> String raise @core.PdfError {
   if width > 8 {
     raise SoftError("width of field too broad")
   }
@@ -78,7 +78,7 @@ fn pdf_bookmark_name_spec_decimal(
   bytes : BytesView,
   start : Int,
   end : Int,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   if start == end {
     raise SoftError("Bad @b spec")
   }

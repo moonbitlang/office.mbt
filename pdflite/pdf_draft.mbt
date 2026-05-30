@@ -1,77 +1,79 @@
 ///|
-fn pdf_draft_name(text : String) -> PdfName {
-  pdf_name_of_bytes(@ascii.encode(text))
+fn pdf_draft_name(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
-let pdf_draft_subtype_key_name : PdfName = pdf_draft_name("/Subtype")
+let pdf_draft_subtype_key_name : @core.PdfName = pdf_draft_name("/Subtype")
 
 ///|
-fn pdf_draft_subtype_key() -> PdfName {
+fn pdf_draft_subtype_key() -> @core.PdfName {
   pdf_draft_subtype_key_name
 }
 
 ///|
-let pdf_draft_image_name : PdfName = pdf_draft_name("/Image")
+let pdf_draft_image_name : @core.PdfName = pdf_draft_name("/Image")
 
 ///|
-fn pdf_draft_image() -> PdfName {
+fn pdf_draft_image() -> @core.PdfName {
   pdf_draft_image_name
 }
 
 ///|
-let pdf_draft_form_name : PdfName = pdf_draft_name("/Form")
+let pdf_draft_form_name : @core.PdfName = pdf_draft_name("/Form")
 
 ///|
-fn pdf_draft_form() -> PdfName {
+fn pdf_draft_form() -> @core.PdfName {
   pdf_draft_form_name
 }
 
 ///|
-let pdf_draft_xobject_key_name : PdfName = pdf_draft_name("/XObject")
+let pdf_draft_xobject_key_name : @core.PdfName = pdf_draft_name("/XObject")
 
 ///|
-fn pdf_draft_xobject_key() -> PdfName {
+fn pdf_draft_xobject_key() -> @core.PdfName {
   pdf_draft_xobject_key_name
 }
 
 ///|
-let pdf_draft_resources_key_name : PdfName = pdf_draft_name("/Resources")
+let pdf_draft_resources_key_name : @core.PdfName = pdf_draft_name("/Resources")
 
 ///|
-fn pdf_draft_resources_key() -> PdfName {
+fn pdf_draft_resources_key() -> @core.PdfName {
   pdf_draft_resources_key_name
 }
 
 ///|
-let pdf_draft_length_key_name : PdfName = pdf_draft_name("/Length")
+let pdf_draft_length_key_name : @core.PdfName = pdf_draft_name("/Length")
 
 ///|
-fn pdf_draft_length_key() -> PdfName {
+fn pdf_draft_length_key() -> @core.PdfName {
   pdf_draft_length_key_name
 }
 
 ///|
-let pdf_draft_filter_key_name : PdfName = pdf_draft_name("/Filter")
+let pdf_draft_filter_key_name : @core.PdfName = pdf_draft_name("/Filter")
 
 ///|
-fn pdf_draft_filter_key() -> PdfName {
+fn pdf_draft_filter_key() -> @core.PdfName {
   pdf_draft_filter_key_name
 }
 
 ///|
-let pdf_draft_decode_parms_key_name : PdfName = pdf_draft_name("/DecodeParms")
+let pdf_draft_decode_parms_key_name : @core.PdfName = pdf_draft_name(
+  "/DecodeParms",
+)
 
 ///|
-fn pdf_draft_decode_parms_key() -> PdfName {
+fn pdf_draft_decode_parms_key() -> @core.PdfName {
   pdf_draft_decode_parms_key_name
 }
 
 ///|
-let pdf_draft_flate_decode_name : PdfName = pdf_draft_name("/FlateDecode")
+let pdf_draft_flate_decode_name : @core.PdfName = pdf_draft_name("/FlateDecode")
 
 ///|
-fn pdf_draft_flate_decode() -> PdfName {
+fn pdf_draft_flate_decode() -> @core.PdfName {
   pdf_draft_flate_decode_name
 }
 
@@ -96,7 +98,10 @@ fn pdf_draft_substitute_ops(boxes : Bool) -> Array[@content.PdfContentOp] {
 }
 
 ///|
-fn pdf_draft_name_matches(target : PdfName?, name : PdfName) -> Bool {
+fn pdf_draft_name_matches(
+  target : @core.PdfName?,
+  name : @core.PdfName,
+) -> Bool {
   match target {
     Some(only_remove) => only_remove == name
     None => true
@@ -107,7 +112,7 @@ fn pdf_draft_name_matches(target : PdfName?, name : PdfName) -> Bool {
 fn PdfDocument::pdf_draft_xobject_has_subtype(
   self : PdfDocument,
   object : @syntax.PdfObject,
-  subtype : PdfName,
+  subtype : @core.PdfName,
 ) -> Bool {
   match self.lookup_direct(pdf_draft_subtype_key(), object) {
     Some(PdfNameObject(found)) => found == subtype
@@ -119,7 +124,7 @@ fn PdfDocument::pdf_draft_xobject_has_subtype(
 fn PdfDocument::pdf_draft_xobject_is_image(
   self : PdfDocument,
   resources : @syntax.PdfObject,
-  name : PdfName,
+  name : @core.PdfName,
 ) -> Bool {
   match self.lookup_direct(pdf_draft_xobject_key(), resources) {
     Some(xobjects) =>
@@ -137,7 +142,7 @@ fn PdfDocument::pdf_draft_rewrite_ops(
   self : PdfDocument,
   resources : @syntax.PdfObject,
   ops : ArrayView[@content.PdfContentOp],
-  only_remove : PdfName?,
+  only_remove : @core.PdfName?,
   boxes : Bool,
 ) -> Array[@content.PdfContentOp] {
   let output : Array[@content.PdfContentOp] = []
@@ -164,7 +169,7 @@ fn pdf_draft_stream_dictionary(
   original : @syntax.PdfObject,
   resources : @syntax.PdfObject,
   length : Int,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   original
   .remove_dict_entry(pdf_draft_filter_key())
   .remove_dict_entry(pdf_draft_decode_parms_key())
@@ -176,9 +181,9 @@ fn pdf_draft_stream_dictionary(
 fn PdfDocument::pdf_draft_form_xobject(
   self : PdfDocument,
   object : @syntax.PdfObject,
-  only_remove : PdfName?,
+  only_remove : @core.PdfName?,
   boxes : Bool,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   let direct = self.direct(object)
   match direct {
     PdfStreamObject(original_stream) => {
@@ -216,11 +221,11 @@ fn PdfDocument::pdf_draft_form_xobject(
 ///|
 fn PdfDocument::pdf_draft_rewrite_xobject_entry(
   self : PdfDocument,
-  name : PdfName,
+  name : @core.PdfName,
   object : @syntax.PdfObject,
-  only_remove : PdfName?,
+  only_remove : @core.PdfName?,
   boxes : Bool,
-) -> (PdfName, @syntax.PdfObject)? raise PdfError {
+) -> (@core.PdfName, @syntax.PdfObject)? raise @core.PdfError {
   let direct = self.direct(object)
   if self.pdf_draft_xobject_has_subtype(direct, pdf_draft_image()) {
     if pdf_draft_name_matches(only_remove, name) {
@@ -240,12 +245,12 @@ fn PdfDocument::pdf_draft_rewrite_xobject_entry(
 fn PdfDocument::pdf_draft_rewrite_xobjects(
   self : PdfDocument,
   xobjects : @syntax.PdfObject,
-  only_remove : PdfName?,
+  only_remove : @core.PdfName?,
   boxes : Bool,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   match self.direct(xobjects) {
     PdfDictionary(entries) => {
-      let output : Array[(PdfName, @syntax.PdfObject)] = []
+      let output : Array[(@core.PdfName, @syntax.PdfObject)] = []
       for entry in entries {
         let (name, object) = entry
         match
@@ -264,12 +269,12 @@ fn PdfDocument::pdf_draft_rewrite_xobjects(
 fn PdfDocument::pdf_draft_rewrite_resources(
   self : PdfDocument,
   resources : @syntax.PdfObject,
-  only_remove : PdfName?,
+  only_remove : @core.PdfName?,
   boxes : Bool,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   match resources {
     PdfDictionary(entries) => {
-      let output : Array[(PdfName, @syntax.PdfObject)] = []
+      let output : Array[(@core.PdfName, @syntax.PdfObject)] = []
       for entry in entries {
         let (key, value) = entry
         if key == pdf_draft_xobject_key() {
@@ -291,9 +296,9 @@ fn PdfDocument::pdf_draft_rewrite_resources(
 fn PdfDocument::pdf_draft_page(
   self : PdfDocument,
   page : @page.PdfPage,
-  only_remove : PdfName?,
+  only_remove : @core.PdfName?,
   boxes : Bool,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   let rewritten_resources = self.pdf_draft_rewrite_resources(
     page.resources,
     only_remove,
@@ -315,7 +320,7 @@ fn PdfDocument::pdf_draft_page(
 fn pdf_draft_validate_page_numbers(
   page_numbers : ArrayView[Int],
   end_page : Int,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   for page_number in page_numbers {
     if page_number < 1 || page_number > end_page {
       raise BadPageSpecification(
@@ -333,10 +338,10 @@ fn pdf_draft_validate_page_numbers(
 /// are replaced by a crossed unit box, matching cpdf's draft mode.
 pub fn PdfDocument::draft(
   self : PdfDocument,
-  only_remove : PdfName?,
+  only_remove : @core.PdfName?,
   boxes : Bool,
   page_numbers : ArrayView[Int],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let end_page = self.endpage()
   pdf_draft_validate_page_numbers(page_numbers, end_page)
   let document = self.copy()
@@ -359,11 +364,11 @@ pub fn PdfDocument::draft(
 ///|
 /// Compatibility wrapper for `PdfDocument::draft`.
 pub fn pdf_draft(
-  only_remove : PdfName?,
+  only_remove : @core.PdfName?,
   boxes : Bool,
   page_numbers : ArrayView[Int],
   document : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.draft(only_remove, boxes, page_numbers)
 }
 
@@ -374,7 +379,7 @@ pub fn pdf_draft_string(
   boxes : Bool,
   page_numbers : ArrayView[Int],
   document : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let only_remove_name = match only_remove {
     Some(name) => Some(pdf_draft_name(name))
     None => None

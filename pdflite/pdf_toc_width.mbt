@@ -2,7 +2,7 @@
 /// Return the total width of cpdftoc's alternating `Font`/`Text` run list.
 pub fn pdf_toc_width_of_runs(
   runs : ArrayView[PdfTypeElement],
-) -> Double raise PdfError {
+) -> Double raise @core.PdfError {
   let mut width = 0.0
   let mut index = 0
   while index < runs.length() {
@@ -28,7 +28,7 @@ pub fn pdf_toc_shorten_text(
   font_size : Double,
   max_width : Double,
   runs : ArrayView[PdfTypeElement],
-) -> Array[PdfTypeElement] raise PdfError {
+) -> Array[PdfTypeElement] raise @core.PdfError {
   let output = runs.to_owned()
   let mut shortened = false
   let mut done = false
@@ -56,7 +56,7 @@ pub fn pdf_toc_make_dots(
   space : Double,
   fontpack : PdfFontPack,
   font_size : Double,
-) -> Array[PdfTypeElement] raise PdfError {
+) -> Array[PdfTypeElement] raise @core.PdfError {
   let dot_runs = pdf_toc_dot_run(fontpack, font_size)
   let dot_width = pdf_toc_width_of_runs(dot_runs)
   let raw_count = (space / dot_width).floor().to_int()

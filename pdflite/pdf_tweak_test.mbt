@@ -1,6 +1,6 @@
 ///|
-fn tweak_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn tweak_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -694,7 +694,7 @@ test "PdfDocument append_page_content_multiple applies one payload per page" {
       tweak_bytes_for_test("BT ET"),
     ],
   )
-  guard mismatch is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+  guard mismatch is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail(
       "expected BadPageSpecification for append_page_content_multiple mismatch",
     )
@@ -734,7 +734,7 @@ test "PdfDocument append_page_content_multiple_ops applies one op list per page"
     base,
     [[Op_BT, Op_ET]],
   )
-  guard mismatch is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+  guard mismatch is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail(
       "expected BadPageSpecification for append_page_content_multiple_ops mismatch",
     )
@@ -805,25 +805,25 @@ test "PdfDocument find_object_by_spec reports malformed specs and missing chains
   let bad_object : Result[@syntax.PdfObject, Error] = try? doc.find_object_by_spec(
     "abc",
   )
-  guard bad_object is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+  guard bad_object is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail("expected BadPageSpecification for malformed object spec")
   }
   let missing_chain : Result[@syntax.PdfObject, Error] = try? doc.find_object_by_spec(
     "/Missing",
   )
-  guard missing_chain is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+  guard missing_chain is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail("expected BadPageSpecification for missing object chain")
   }
   let missing_page : Result[@syntax.PdfObject, Error] = try? doc.find_object_by_spec(
     "P1",
   )
-  guard missing_page is Err(@pdflite.PdfError::RootExpected) else {
+  guard missing_page is Err(@core.PdfError::RootExpected) else {
     fail("expected RootExpected while resolving page object refs")
   }
   let out_of_range_page : Result[@syntax.PdfObject, Error] = try? page_doc.find_object_by_spec(
     "P2",
   )
-  guard out_of_range_page is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+  guard out_of_range_page is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail("expected BadPageSpecification for out-of-range page object spec")
   }
 }
@@ -908,21 +908,21 @@ test "PdfDocument replace_object_by_spec updates chains objects and page specs" 
     "/Root/Missing",
     PdfInteger(0),
   )
-  guard missing is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+  guard missing is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail("expected BadPageSpecification for missing replace chain")
   }
   let missing_intermediate : Result[Unit, Error] = try? doc.replace_object_by_spec(
     "2/Missing/Value",
     PdfInteger(0),
   )
-  guard missing_intermediate is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+  guard missing_intermediate is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail("expected BadPageSpecification for missing intermediate replace chain")
   }
   let missing_array_index : Result[Unit, Error] = try? doc.replace_object_by_spec(
     "2/Items/[9/Value",
     PdfInteger(0),
   )
-  guard missing_array_index is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+  guard missing_array_index is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail("expected BadPageSpecification for missing array index")
   }
   let missing_direct_array_index : Result[Unit, Error] = try? doc.replace_object_by_spec(
@@ -930,35 +930,35 @@ test "PdfDocument replace_object_by_spec updates chains objects and page specs" 
     PdfInteger(0),
   )
   guard missing_direct_array_index
-    is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+    is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail("expected BadPageSpecification for direct missing array index")
   }
   let non_array_key : Result[Unit, Error] = try? doc.replace_object_by_spec(
     "2/Items/Value",
     PdfInteger(0),
   )
-  guard non_array_key is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+  guard non_array_key is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail("expected BadPageSpecification for non-array key inside array")
   }
   let bad_array_key : Result[Unit, Error] = try? doc.replace_object_by_spec(
     "2/Items/[x/Value",
     PdfInteger(0),
   )
-  guard bad_array_key is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+  guard bad_array_key is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail("expected BadPageSpecification for malformed array pseudo-key")
   }
   let non_container : Result[Unit, Error] = try? doc.replace_object_by_spec(
     "2/Items/[2/Value",
     PdfInteger(0),
   )
-  guard non_container is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+  guard non_container is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail("expected BadPageSpecification for non-container replace chain")
   }
   let out_of_range_page : Result[Unit, Error] = try? page_doc.replace_object_by_spec(
     "P2/Type",
     PdfInteger(0),
   )
-  guard out_of_range_page is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+  guard out_of_range_page is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail("expected BadPageSpecification for out-of-range page replace spec")
   }
 }
@@ -975,11 +975,11 @@ test "PdfDocument remove_object_by_spec removes decimal object numbers" {
   @test.assert_eq(doc.lookup_object_or_null(10), PdfNull)
 
   let bad_spec : Result[Unit, Error] = try? doc.remove_object_by_spec("9/A")
-  guard bad_spec is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+  guard bad_spec is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail("expected BadPageSpecification for non-decimal remove object spec")
   }
   let empty_spec : Result[Unit, Error] = try? doc.remove_object_by_spec("")
-  guard empty_spec is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+  guard empty_spec is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail("expected BadPageSpecification for empty remove object spec")
   }
 }
@@ -1026,7 +1026,7 @@ test "PdfDocument replace_stream_by_spec updates bytes and Length" {
     "3",
     tweak_bytes_for_test("x"),
   )
-  guard non_stream is Err(@pdflite.PdfError::ParseStreamExpected) else {
+  guard non_stream is Err(@core.PdfError::ParseStreamExpected) else {
     fail("expected ParseStreamExpected for non-stream replacement target")
   }
 }
@@ -1191,7 +1191,7 @@ test "pdf_thin_lines_ops rejects CTM operations after unbalanced restore" {
     [Op_Q, Op_cm(scale_two)],
     2.0,
   )
-  guard result is Err(@pdflite.PdfError::MatrixMalformed) else {
+  guard result is Err(@core.PdfError::MatrixMalformed) else {
     fail("expected MatrixMalformed for CTM update after unbalanced Q")
   }
   let double_restore : Result[Array[@content.PdfContentOp], Error] = try? @pdflite.pdf_thin_lines_ops(
@@ -1200,7 +1200,7 @@ test "pdf_thin_lines_ops rejects CTM operations after unbalanced restore" {
     [Op_Q, Op_Q],
     2.0,
   )
-  guard double_restore is Err(@pdflite.PdfError::MatrixMalformed) else {
+  guard double_restore is Err(@core.PdfError::MatrixMalformed) else {
     fail("expected MatrixMalformed for double unbalanced Q")
   }
   let restore_then_save : Result[Array[@content.PdfContentOp], Error] = try? @pdflite.pdf_thin_lines_ops(
@@ -1209,7 +1209,7 @@ test "pdf_thin_lines_ops rejects CTM operations after unbalanced restore" {
     [Op_Q, Op_q],
     2.0,
   )
-  guard restore_then_save is Err(@pdflite.PdfError::MatrixMalformed) else {
+  guard restore_then_save is Err(@core.PdfError::MatrixMalformed) else {
     fail("expected MatrixMalformed for q after unbalanced Q")
   }
 }

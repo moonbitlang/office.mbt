@@ -1,18 +1,18 @@
 ///|
-fn page_label_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn page_label_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
-fn page_label_bytes_for_test(text : String) -> @pdflite.PdfBytes {
+fn page_label_bytes_for_test(text : String) -> @core.PdfBytes {
   @ascii.encode(text)
 }
 
 ///|
 fn page_label_bytes_from_ints_for_test(
   values : ArrayView[Int],
-) -> @pdflite.PdfBytes {
-  try! @pdflite.pdf_bytes_of_int_array(values)
+) -> @core.PdfBytes {
+  try! @core.pdf_bytes_of_int_array(values)
 }
 
 ///|
@@ -50,8 +50,8 @@ test "@label.PdfPageLabelStyle converts to and from CamlPDF names" {
   let result : Result[@label.PdfPageLabelStyle, Error] = try? @label.pdf_page_label_style_of_string(
     "Missing",
   )
-  guard result is Err(@pdflite.PdfError::PageLabelStyleExpected("Missing")) else {
-    fail("expected @pdflite.PdfError::PageLabelStyleExpected")
+  guard result is Err(@core.PdfError::PageLabelStyleExpected("Missing")) else {
+    fail("expected @core.PdfError::PageLabelStyleExpected")
   }
 }
 
@@ -342,8 +342,8 @@ test "PdfDocument read_page_labels keeps CamlPDF malformed range defaults" {
     .add_dict_entry(key_page_labels, PdfDictionary([])),
   )
   let empty_result : Result[Array[@label.PdfPageLabel], Error] = try? empty_doc.read_page_labels()
-  guard empty_result is Err(@pdflite.PdfError::PageTreeExpected) else {
-    fail("expected @pdflite.PdfError::PageTreeExpected")
+  guard empty_result is Err(@core.PdfError::PageTreeExpected) else {
+    fail("expected @core.PdfError::PageTreeExpected")
   }
 }
 
@@ -440,28 +440,26 @@ test "PdfDocument page label APIs require a root catalog" {
   let doc = @pdflite.pdf_document_empty()
   let labels : Array[@label.PdfPageLabel] = [@label.pdf_page_label_basic]
   let read_result : Result[Array[@label.PdfPageLabel], Error] = try? doc.read_page_labels()
-  guard read_result is Err(@pdflite.PdfError::RootExpected) else {
-    fail("expected @pdflite.PdfError::RootExpected from read_page_labels")
+  guard read_result is Err(@core.PdfError::RootExpected) else {
+    fail("expected @core.PdfError::RootExpected from read_page_labels")
   }
   let write_result : Result[@pdflite.PdfDocument, Error] = try? doc.write_page_labels(
     labels,
   )
-  guard write_result is Err(@pdflite.PdfError::RootExpected) else {
-    fail("expected @pdflite.PdfError::RootExpected from write_page_labels")
+  guard write_result is Err(@core.PdfError::RootExpected) else {
+    fail("expected @core.PdfError::RootExpected from write_page_labels")
   }
   let remove_result : Result[@pdflite.PdfDocument, Error] = try? doc.remove_page_labels()
-  guard remove_result is Err(@pdflite.PdfError::RootExpected) else {
-    fail("expected @pdflite.PdfError::RootExpected from remove_page_labels")
+  guard remove_result is Err(@core.PdfError::RootExpected) else {
+    fail("expected @core.PdfError::RootExpected from remove_page_labels")
   }
 
   let key_root = page_label_name_for_test("/Root")
   let unresolved = page_label_catalog_document_for_test()
   unresolved.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(99))]))
   let unresolved_read : Result[Array[@label.PdfPageLabel], Error] = try? unresolved.read_page_labels()
-  guard unresolved_read is Err(@pdflite.PdfError::RootExpected) else {
-    fail(
-      "expected @pdflite.PdfError::RootExpected from unresolved trailer root",
-    )
+  guard unresolved_read is Err(@core.PdfError::RootExpected) else {
+    fail("expected @core.PdfError::RootExpected from unresolved trailer root")
   }
 }
 
@@ -807,8 +805,8 @@ test "pdf_page_label_merge rejects mismatched inputs" {
     [doc],
     [],
   )
-  guard result is Err(@pdflite.PdfError::PageTreeExpected) else {
-    fail("expected @pdflite.PdfError::PageTreeExpected")
+  guard result is Err(@core.PdfError::PageTreeExpected) else {
+    fail("expected @core.PdfError::PageTreeExpected")
   }
 }
 
@@ -922,7 +920,7 @@ test "PdfDocument add_page_labels_json rejects malformed JSON" {
   let malformed : Result[@pdflite.PdfDocument, Error] = try? document.add_page_labels_json(
     not_list,
   )
-  guard malformed is Err(@pdflite.PdfError::BadText) else {
+  guard malformed is Err(@core.PdfError::BadText) else {
     fail("expected BadText for non-list page-label JSON")
   }
 
@@ -932,7 +930,7 @@ test "PdfDocument add_page_labels_json rejects malformed JSON" {
   let missing_result : Result[@pdflite.PdfDocument, Error] = try? document.add_page_labels_json(
     missing_field,
   )
-  guard missing_result is Err(@pdflite.PdfError::BadText) else {
+  guard missing_result is Err(@core.PdfError::BadText) else {
     fail("expected BadText for missing page-label JSON field")
   }
 
@@ -947,8 +945,7 @@ test "PdfDocument add_page_labels_json rejects malformed JSON" {
   let style_result : Result[@pdflite.PdfDocument, Error] = try? document.add_page_labels_json(
     bad_style,
   )
-  guard style_result
-    is Err(@pdflite.PdfError::PageLabelStyleExpected("Missing")) else {
+  guard style_result is Err(@core.PdfError::PageLabelStyleExpected("Missing")) else {
     fail("expected PageLabelStyleExpected for bad page-label style")
   }
 }
@@ -994,7 +991,7 @@ test "PdfDocument add_page_labels rejects empty page ranges" {
     [],
   )
   guard result
-    is Err(@pdflite.PdfError::BadPageSpecification("empty page label range")) else {
+    is Err(@core.PdfError::BadPageSpecification("empty page label range")) else {
     fail("expected empty page-label range error")
   }
 }

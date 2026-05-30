@@ -5,9 +5,9 @@
 /// it is intended for debugging rather than PDF serialization.
 pub fn pdf_string_of_bookmark(
   bookmark : @bookmark.PdfBookmark,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let space = @ascii.encode(" ")
-  pdf_bytes_concat_views([
+  @core.pdf_bytes_concat_views([
     @ascii.encode(bookmark.level.to_string()),
     space,
     bookmark.text,

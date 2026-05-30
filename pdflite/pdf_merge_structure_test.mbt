@@ -9,14 +9,14 @@ fn merge_structure_one_page_doc_for_test(
 }
 
 ///|
-fn merge_structure_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn merge_structure_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
 fn merge_structure_add_catalog_entry_for_test(
   doc : @pdflite.PdfDocument,
-  key : @pdflite.PdfName,
+  key : @core.PdfName,
   value : @syntax.PdfObject,
 ) -> @pdflite.PdfDocument {
   let root = doc.lookup_object_or_null(doc.root())
@@ -35,7 +35,7 @@ fn merge_structure_add_catalog_entry_for_test(
 
 ///|
 fn merge_structure_page_reference_catalog_doc_for_test(
-  key : @pdflite.PdfName,
+  key : @core.PdfName,
 ) -> @pdflite.PdfDocument {
   let doc = merge_structure_one_page_doc_for_test(1, 4)
   let page_refs = try! doc.page_reference_numbers()
@@ -122,7 +122,7 @@ fn merge_structure_parent_tree_doc_for_test() -> @pdflite.PdfDocument {
 fn merge_structure_add_object_entry_for_test(
   doc : @pdflite.PdfDocument,
   number : Int,
-  key : @pdflite.PdfName,
+  key : @core.PdfName,
   value : @syntax.PdfObject,
 ) -> @pdflite.PdfDocument {
   doc.add_object_given_number(

@@ -1,6 +1,6 @@
 ///|
 fn pdf_annotation_style_of_name(
-  name : PdfName,
+  name : @core.PdfName,
 ) -> @annotation.PdfAnnotationStyle {
   if name == pdf_annotation_style_key() {
     AnnotationSolid
@@ -20,7 +20,7 @@ fn pdf_annotation_style_of_name(
 ///|
 fn pdf_annotation_subtype_name(
   subtype : @annotation.PdfAnnotationSubtype,
-) -> PdfName {
+) -> @core.PdfName {
   match subtype {
     AnnotationText => pdf_annotation_text_name
     AnnotationLink => pdf_annotation_link_name

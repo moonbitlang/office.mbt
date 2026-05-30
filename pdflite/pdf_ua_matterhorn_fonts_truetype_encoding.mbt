@@ -63,7 +63,7 @@ fn PdfDocument::pdf_ua_matterhorn_check_31_020(self : PdfDocument) -> Json? {
 }
 
 ///|
-fn pdf_ua_matterhorn_is_mac_roman_or_win_ansi(name : PdfName) -> Bool {
+fn pdf_ua_matterhorn_is_mac_roman_or_win_ansi(name : @core.PdfName) -> Bool {
   name == pdf_text_mac_roman_encoding_name ||
   name == pdf_text_win_ansi_encoding_name
 }
@@ -94,7 +94,7 @@ fn PdfDocument::pdf_ua_matterhorn_check_31_021(self : PdfDocument) -> Json? {
 }
 
 ///|
-fn pdf_ua_matterhorn_agl_glyph_name(name : PdfName) -> Bool {
+fn pdf_ua_matterhorn_agl_glyph_name(name : @core.PdfName) -> Bool {
   match pdf_text_codepoints_of_agl_sequence_glyphname(name) {
     Some(_) => true
     None => pdf_text_codepoint_of_agl_base_glyphname(name) is Some(_)

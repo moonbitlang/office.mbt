@@ -1,66 +1,72 @@
 ///|
-fn pdf_presentation_name(text : String) -> PdfName {
-  pdf_name_of_bytes(@ascii.encode(text))
+fn pdf_presentation_name(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
-let pdf_presentation_trans_key_name : PdfName = pdf_presentation_name("/Trans")
+let pdf_presentation_trans_key_name : @core.PdfName = pdf_presentation_name(
+  "/Trans",
+)
 
 ///|
-fn pdf_presentation_trans_key() -> PdfName {
+fn pdf_presentation_trans_key() -> @core.PdfName {
   pdf_presentation_trans_key_name
 }
 
 ///|
-let pdf_presentation_duration_key_name : PdfName = pdf_presentation_name("/Dur")
+let pdf_presentation_duration_key_name : @core.PdfName = pdf_presentation_name(
+  "/Dur",
+)
 
 ///|
-fn pdf_presentation_duration_key() -> PdfName {
+fn pdf_presentation_duration_key() -> @core.PdfName {
   pdf_presentation_duration_key_name
 }
 
 ///|
-let pdf_presentation_s_key_name : PdfName = pdf_presentation_name("/S")
+let pdf_presentation_s_key_name : @core.PdfName = pdf_presentation_name("/S")
 
 ///|
-fn pdf_presentation_s_key() -> PdfName {
+fn pdf_presentation_s_key() -> @core.PdfName {
   pdf_presentation_s_key_name
 }
 
 ///|
-let pdf_presentation_d_key_name : PdfName = pdf_presentation_name("/D")
+let pdf_presentation_d_key_name : @core.PdfName = pdf_presentation_name("/D")
 
 ///|
-fn pdf_presentation_d_key() -> PdfName {
+fn pdf_presentation_d_key() -> @core.PdfName {
   pdf_presentation_d_key_name
 }
 
 ///|
-let pdf_presentation_dm_key_name : PdfName = pdf_presentation_name("/Dm")
+let pdf_presentation_dm_key_name : @core.PdfName = pdf_presentation_name("/Dm")
 
 ///|
-fn pdf_presentation_dm_key() -> PdfName {
+fn pdf_presentation_dm_key() -> @core.PdfName {
   pdf_presentation_dm_key_name
 }
 
 ///|
-let pdf_presentation_m_key_name : PdfName = pdf_presentation_name("/M")
+let pdf_presentation_m_key_name : @core.PdfName = pdf_presentation_name("/M")
 
 ///|
-fn pdf_presentation_m_key() -> PdfName {
+fn pdf_presentation_m_key() -> @core.PdfName {
   pdf_presentation_m_key_name
 }
 
 ///|
-let pdf_presentation_di_key_name : PdfName = pdf_presentation_name("/Di")
+let pdf_presentation_di_key_name : @core.PdfName = pdf_presentation_name("/Di")
 
 ///|
-fn pdf_presentation_di_key() -> PdfName {
+fn pdf_presentation_di_key() -> @core.PdfName {
   pdf_presentation_di_key_name
 }
 
 ///|
-fn pdf_presentation_effect_name(effect : String) -> PdfName raise PdfError {
+fn pdf_presentation_effect_name(
+  effect : String,
+) -> @core.PdfName raise @core.PdfError {
   match effect {
     "Split" | "Blinds" | "Box" | "Wipe" | "Dissolve" | "Glitter" =>
       pdf_presentation_name("/" + effect)
@@ -69,7 +75,7 @@ fn pdf_presentation_effect_name(effect : String) -> PdfName raise PdfError {
 }
 
 ///|
-fn pdf_presentation_direction_name(horizontal : Bool) -> PdfName {
+fn pdf_presentation_direction_name(horizontal : Bool) -> @core.PdfName {
   if horizontal {
     pdf_presentation_name("/H")
   } else {
@@ -78,7 +84,7 @@ fn pdf_presentation_direction_name(horizontal : Bool) -> PdfName {
 }
 
 ///|
-fn pdf_presentation_motion_name(inward : Bool) -> PdfName {
+fn pdf_presentation_motion_name(inward : Bool) -> @core.PdfName {
   if inward {
     pdf_presentation_name("/I")
   } else {
@@ -95,7 +101,7 @@ fn @page.PdfPage::change_presentation_effect(
   inward : Bool,
   direction : Int,
   effect_duration : Double,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   let mut transdict = match transition {
     None => @syntax.PdfDictionary([])
     Some(name) =>
@@ -151,7 +157,7 @@ fn @page.PdfPage::change_presentation_effect(
 ///
 /// The accepted transition names match cpdf: `Split`, `Blinds`, `Box`, `Wipe`,
 /// `Dissolve`, and `Glitter`. Unknown names raise
-/// `PdfError::SoftError("Unknown presentation type")`.
+/// `@core.PdfError::SoftError("Unknown presentation type")`.
 pub fn PdfDocument::presentation(
   self : PdfDocument,
   range : ArrayView[Int],
@@ -161,7 +167,7 @@ pub fn PdfDocument::presentation(
   inward : Bool,
   direction : Int,
   effect_duration : Double,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let pages = self.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(range)
   let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
@@ -192,7 +198,7 @@ pub fn pdf_presentation(
   direction : Int,
   effect_duration : Double,
   document : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.presentation(
     range, transition, delay, horizontal, inward, direction, effect_duration,
   )

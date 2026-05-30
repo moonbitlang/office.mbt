@@ -3,7 +3,7 @@ fn PdfDocument::pdf_image_add_structure_tree(
   self : PdfDocument,
   subformat : PdfUASubformat?,
   title : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let structure_root_number = self.add_object(PdfNull)
   let figure_number = self.add_object(PdfNull)
   let parent_tree_number = self.add_object(PdfNull)
@@ -83,7 +83,7 @@ fn PdfDocument::pdf_image_add_structure_tree(
 fn pdf_image_title_for_subformat(
   subformat : PdfUASubformat?,
   title : String?,
-) -> String raise PdfError {
+) -> String raise @core.PdfError {
   match (subformat, title) {
     (Some(_), Some(title)) => title
     (Some(_), None) => raise TitleExpected
@@ -130,7 +130,7 @@ fn PdfDocument::pdf_image_add_image_page(
   process_struct_tree : Bool,
   subformat : PdfUASubformat?,
   title : String?,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let title = pdf_image_title_for_subformat(subformat, title)
   let structinfo = process_struct_tree || subformat != None
   let width = self.pdf_image_lookup_int_or_else(
@@ -187,7 +187,7 @@ pub fn pdf_image_document_of_object(
   process_struct_tree? : Bool = false,
   subformat? : PdfUASubformat? = None,
   title? : String? = None,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let document = pdf_document_empty()
   document.pdf_image_add_image_page(
     image, process_struct_tree, subformat, title,
@@ -206,11 +206,11 @@ pub fn pdf_image_of_input(
   object_of_data : (PdfDocument, BytesView) -> (
     @syntax.PdfObject,
     Array[(Int, @syntax.PdfObject)],
-  ) raise PdfError,
+  ) raise @core.PdfError,
   process_struct_tree? : Bool = false,
   subformat? : PdfUASubformat? = None,
   title? : String? = None,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let document = pdf_document_empty()
   let (image, extra_objects) = object_of_data(document, data)
   for extra in extra_objects {
@@ -229,7 +229,7 @@ pub fn pdf_image_document_of_jpeg_data(
   process_struct_tree? : Bool = false,
   subformat? : PdfUASubformat? = None,
   title? : String? = None,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   pdf_image_document_of_object(
     pdf_image_object_of_jpeg_data(data),
     process_struct_tree~,
@@ -245,7 +245,7 @@ pub fn pdf_image_document_of_jpeg2000_data(
   process_struct_tree? : Bool = false,
   subformat? : PdfUASubformat? = None,
   title? : String? = None,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   pdf_image_document_of_object(
     pdf_image_object_of_jpeg2000_data(data),
     process_struct_tree~,
@@ -261,7 +261,7 @@ pub fn pdf_image_document_of_png_data(
   process_struct_tree? : Bool = false,
   subformat? : PdfUASubformat? = None,
   title? : String? = None,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let document = pdf_document_empty()
   let image = document.pdf_image_object_of_png_data(data)
   document.pdf_image_add_image_page(
@@ -278,7 +278,7 @@ pub fn pdf_image_document_of_jbig2_data(
   process_struct_tree? : Bool = false,
   subformat? : PdfUASubformat? = None,
   title? : String? = None,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let document = pdf_document_empty()
   let (image, extra_objects) = pdf_image_object_of_jbig2_data(data, global~)
   for extra in extra_objects {

@@ -1,18 +1,18 @@
 ///|
-fn artifact_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn artifact_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
 fn artifact_stream_for_test(
   ops : ArrayView[@content.PdfContentOp],
-) -> @syntax.PdfObject raise @pdflite.PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   @pdflite.pdf_content_stream_of_ops(ops)
 }
 
 ///|
 fn artifact_resources_for_test(
-  xobjects : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
+  xobjects : ArrayView[(@core.PdfName, @syntax.PdfObject)],
 ) -> @syntax.PdfObject {
   if xobjects.length() == 0 {
     @syntax.pdf_dictionary([])
@@ -28,7 +28,7 @@ fn artifact_page_for_test(
   ops : ArrayView[@content.PdfContentOp],
   resources? : @syntax.PdfObject = @syntax.pdf_dictionary([]),
   rest? : @syntax.PdfObject = @syntax.pdf_dictionary([]),
-) -> @page.PdfPage raise @pdflite.PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   {
     ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [artifact_stream_for_test(ops)],
@@ -40,7 +40,7 @@ fn artifact_page_for_test(
 ///|
 fn artifact_document_for_test(
   pages : ArrayView[@page.PdfPage],
-) -> @pdflite.PdfDocument raise @pdflite.PdfError {
+) -> @pdflite.PdfDocument raise @core.PdfError {
   @pdflite.pdf_blank_document(100.0, 100.0, pages.length()).change_pages(pages)
 }
 
@@ -48,7 +48,7 @@ fn artifact_document_for_test(
 fn artifact_page_ops_for_test(
   document : @pdflite.PdfDocument,
   page : @page.PdfPage,
-) -> Array[@content.PdfContentOp] raise @pdflite.PdfError {
+) -> Array[@content.PdfContentOp] raise @core.PdfError {
   document.parse_content_ops_with_resources(page.resources, page.content)
 }
 

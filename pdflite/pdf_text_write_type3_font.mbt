@@ -12,7 +12,7 @@ fn pdf_text_rectangle_object(
 
 ///|
 fn pdf_text_type3_charprocs_object(
-  charprocs : ArrayView[(PdfName, @syntax.PdfObject)],
+  charprocs : ArrayView[(@core.PdfName, @syntax.PdfObject)],
 ) -> @syntax.PdfObject {
   PdfDictionary([ for entry in charprocs => entry ])
 }
@@ -20,7 +20,7 @@ fn pdf_text_type3_charprocs_object(
 ///|
 fn pdf_text_type3_resources_entries(
   resources : @syntax.PdfObject,
-) -> Array[(PdfName, @syntax.PdfObject)] {
+) -> Array[(@core.PdfName, @syntax.PdfObject)] {
   match resources {
     PdfDictionary(entries) if entries.length() == 0 => []
     _ => [(pdf_text_resources_key_name, resources)]
@@ -32,7 +32,7 @@ fn pdf_text_type3_metrics_entries(
   firstchar : Int,
   lastchar : Int,
   widths : ArrayView[Int],
-) -> Array[(PdfName, @syntax.PdfObject)] {
+) -> Array[(@core.PdfName, @syntax.PdfObject)] {
   if widths.length() == 0 {
     [
       (pdf_text_first_char_key_name, PdfInteger(0)),
@@ -55,7 +55,7 @@ fn pdf_text_type3_metrics_entries(
 fn PdfDocument::pdf_text_type3_encoding_entries(
   self : PdfDocument,
   encoding : PdfEncoding,
-) -> Array[(PdfName, @syntax.PdfObject)] raise PdfError {
+) -> Array[(@core.PdfName, @syntax.PdfObject)] raise @core.PdfError {
   match encoding {
     PdfImplicitInFontFile => []
     _ =>
@@ -71,7 +71,7 @@ fn PdfDocument::pdf_text_make_type3_font(
   lastchar : Int,
   widths : ArrayView[Int],
   encoding : PdfEncoding,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   PdfDictionary(
     [
       (pdf_text_type_key_name, PdfNameObject(pdf_text_font_name)),

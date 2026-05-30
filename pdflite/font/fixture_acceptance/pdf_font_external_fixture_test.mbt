@@ -7,12 +7,12 @@ fn font_external_fixture_path_for_test(path : String) -> String {
 }
 
 ///|
-fn font_external_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn font_external_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
-fn font_external_ascii_for_test(text : String) -> @pdflite.PdfBytes {
+fn font_external_ascii_for_test(text : String) -> @core.PdfBytes {
   @ascii.encode(text)
 }
 
@@ -86,10 +86,10 @@ fn font_external_first_page_font_for_test(
 ///|
 fn font_external_tj_texts_for_test(
   document : @pdflite.PdfDocument,
-) -> Array[@pdflite.PdfBytes] raise {
+) -> Array[@core.PdfBytes] raise {
   let pages = document.pages_of_pagetree()
   @test.assert_eq(pages.length(), 1)
-  let texts : Array[@pdflite.PdfBytes] = []
+  let texts : Array[@core.PdfBytes] = []
   for op in document.parse_content_ops(pages[0].content) {
     match op {
       Op_Tj(text) => texts.push(text)

@@ -3,11 +3,11 @@
 ///
 /// This lower-level extractor exposes both sides of the mapping. The input is
 /// a PDF text byte sequence, not a MoonBit `String`, and malformed byte
-/// segmentation raises `PdfError`.
+/// segmentation raises `@core.PdfError`.
 pub fn PdfTextExtractor::glyphnames_and_codepoints_of_text(
   self : PdfTextExtractor,
   text : BytesView,
-) -> Array[PdfTextGlyph] raise PdfError {
+) -> Array[PdfTextGlyph] raise @core.PdfError {
   [
     for code in self.font.pdf_text_charcodes_of_text(text) => {
       self.pdf_text_glyph_of_charcode(code)
@@ -21,7 +21,7 @@ fn PdfTextExtractor::pdf_text_external_cmap_codepoints_of_text(
   font : PdfCIDKeyedFont,
   parsed : PdfParsedCMap,
   text : BytesView,
-) -> Array[Int] raise PdfError {
+) -> Array[Int] raise @core.PdfError {
   let lookup = pdf_text_external_cmap_lookup(parsed)
   let output : Array[Int] = Array::new(capacity=text.length())
   for code in pdf_text_parsed_cmap_charcodes_of_text(parsed, text) {
@@ -40,9 +40,9 @@ fn PdfTextExtractor::pdf_text_external_cmap_codepoints_of_text(
 ///|
 fn PdfTextExtractor::pdf_text_tounicode_codepoints_of_text(
   self : PdfTextExtractor,
-  tounicode : ArrayView[(Int, PdfBytes)],
+  tounicode : ArrayView[(Int, @core.PdfBytes)],
   text : BytesView,
-) -> Array[Int] raise PdfError {
+) -> Array[Int] raise @core.PdfError {
   let lookup = pdf_text_tounicode_codepoints_lookup_map(tounicode)
   let output : Array[Int] = Array::new(capacity=text.length())
   for code in self.font.pdf_text_charcodes_of_text(text) {
@@ -61,7 +61,7 @@ fn PdfTextExtractor::pdf_text_tounicode_codepoints_of_text(
 fn PdfTextExtractor::pdf_text_regular_codepoints_of_text(
   self : PdfTextExtractor,
   text : BytesView,
-) -> Array[Int] raise PdfError {
+) -> Array[Int] raise @core.PdfError {
   let output : Array[Int] = Array::new(capacity=text.length())
   for code in self.font.pdf_text_charcodes_of_text(text) {
     for codepoint in self.pdf_text_glyph_of_charcode(code).codepoints {
@@ -81,7 +81,7 @@ fn PdfTextExtractor::pdf_text_regular_codepoints_of_text(
 pub fn PdfTextExtractor::codepoints_of_text(
   self : PdfTextExtractor,
   text : BytesView,
-) -> Array[Int] raise PdfError {
+) -> Array[Int] raise @core.PdfError {
   match self.font.pdf_text_tounicode() {
     Some(tounicode) =>
       self.pdf_text_tounicode_codepoints_of_text(tounicode, text)
@@ -106,7 +106,7 @@ pub fn PdfTextExtractor::codepoints_of_text(
 pub fn PdfTextExtractor::glyphnames_of_text(
   self : PdfTextExtractor,
   text : BytesView,
-) -> Array[PdfName] raise PdfError {
+) -> Array[@core.PdfName] raise @core.PdfError {
   [
     for code in self.font.pdf_text_charcodes_of_text(text) => {
       self.pdf_text_glyph_of_charcode(code).glyphname
@@ -119,7 +119,7 @@ pub fn PdfTextExtractor::glyphnames_of_text(
 pub fn pdf_codepoints_of_text(
   extractor : PdfTextExtractor,
   text : BytesView,
-) -> Array[Int] raise PdfError {
+) -> Array[Int] raise @core.PdfError {
   extractor.codepoints_of_text(text)
 }
 
@@ -128,7 +128,7 @@ pub fn pdf_codepoints_of_text(
 pub fn pdf_glyphnames_of_text(
   extractor : PdfTextExtractor,
   text : BytesView,
-) -> Array[PdfName] raise PdfError {
+) -> Array[@core.PdfName] raise @core.PdfError {
   extractor.glyphnames_of_text(text)
 }
 
@@ -188,6 +188,6 @@ pub fn pdf_charcode_extractor_of_font(
   document : PdfDocument,
   font : @syntax.PdfObject,
   debug? : Bool = false,
-) -> ((Int) -> Int?) raise PdfError {
+) -> ((Int) -> Int?) raise @core.PdfError {
   pdf_charcode_extractor_of_font_real(document.read_font(font), debug~)
 }

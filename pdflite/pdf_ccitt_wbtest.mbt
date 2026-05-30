@@ -1,11 +1,11 @@
 ///|
-fn ccitt_wb_bytes(values : ArrayView[Int]) -> PdfBytes {
-  try! pdf_bytes_of_int_array(values)
+fn ccitt_wb_bytes(values : ArrayView[Int]) -> @core.PdfBytes {
+  try! @core.pdf_bytes_of_int_array(values)
 }
 
 ///|
-fn ccitt_wb_bits(bits : ArrayView[Int]) -> PdfBytes {
-  let writer = bit_writer_new()
+fn ccitt_wb_bits(bits : ArrayView[Int]) -> @core.PdfBytes {
+  let writer = @core.bit_writer_new()
   for bit in bits {
     try! writer.put_bit(bit)
   }
@@ -13,22 +13,22 @@ fn ccitt_wb_bits(bits : ArrayView[Int]) -> PdfBytes {
 }
 
 ///|
-fn ccitt_wb_name(text : String) -> PdfName {
-  pdf_name_of_bytes(@ascii.encode(text))
+fn ccitt_wb_name(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
 fn assert_ccitt_decodeparms_expected(
   result : Result[PdfCCITTParams, Error],
 ) -> Unit raise {
-  guard result is Err(PdfError::CCITTDecodeParmsExpected) else {
-    fail("expected PdfError::CCITTDecodeParmsExpected")
+  guard result is Err(@core.PdfError::CCITTDecodeParmsExpected) else {
+    fail("expected @core.PdfError::CCITTDecodeParmsExpected")
   }
 }
 
 ///|
 test "CCITT private helpers handle EOL spans and reference lookups" {
-  let eol = bitstream_of_bytes(ccitt_wb_bytes([0x00, 0x10]))
+  let eol = @core.bitstream_of_bytes(ccitt_wb_bytes([0x00, 0x10]))
   @test.assert_eq(pdf_ccitt_read_run(eol, true), -1)
 
   let bad_span : Result[Int, Error] = try? pdf_ccitt_output_span(
@@ -37,7 +37,7 @@ test "CCITT private helpers handle EOL spans and reference lookups" {
     2,
     0,
   )
-  guard bad_span is Err(PdfError::InvalidCCITTData) else {
+  guard bad_span is Err(@core.PdfError::InvalidCCITTData) else {
     fail("expected invalid CCITT span")
   }
 
@@ -69,25 +69,25 @@ test "CCITT Group 3 covers alignment EOL padding EOF and invalid params" {
   })
   @test.assert_eq(eof, ccitt_wb_bytes([]))
 
-  let invalid : Result[PdfBytes, Error] = try? pdf_ccitt_decode_view(
+  let invalid : Result[@core.PdfBytes, Error] = try? pdf_ccitt_decode_view(
     ccitt_wb_bytes([]),
     { ..pdf_ccitt_default_params(), columns: 0 },
   )
-  guard invalid is Err(PdfError::InvalidCCITTData) else {
+  guard invalid is Err(@core.PdfError::InvalidCCITTData) else {
     fail("expected invalid CCITT params")
   }
 
-  let bad_run : Result[PdfBytes, Error] = try? pdf_ccitt_decode_view(
+  let bad_run : Result[@core.PdfBytes, Error] = try? pdf_ccitt_decode_view(
     ccitt_wb_bits([1, 1, 0, 0]),
     { ..pdf_ccitt_default_params(), columns: 4, rows: 1 },
   )
-  guard bad_run is Err(PdfError::InvalidCCITTData) else {
+  guard bad_run is Err(@core.PdfError::InvalidCCITTData) else {
     fail("expected invalid CCITT run")
   }
 
   let bad_output = try? pdf_ccitt_decode_g3_1d(
-    bitstream_of_bytes(ccitt_wb_bits([1, 0, 1, 1])),
-    bit_writer_new(),
+    @core.bitstream_of_bytes(ccitt_wb_bits([1, 0, 1, 1])),
+    @core.bit_writer_new(),
     { ..pdf_ccitt_default_params(), columns: 4, rows: 1 },
     2,
     0,
@@ -127,14 +127,14 @@ test "CCITT Group 3 encoder covers white black long runs and malformed input" {
   let empty = pdf_ccitt_encode_g3_1d_view(ccitt_wb_bytes([]), 8, 0)
   @test.assert_eq(empty, ccitt_wb_bytes([0x00, 0x10, 0x01]))
 
-  let short : Result[PdfBytes, Error] = try? pdf_ccitt_encode_g3_1d_view(
+  let short : Result[@core.PdfBytes, Error] = try? pdf_ccitt_encode_g3_1d_view(
     ccitt_wb_bytes([]),
     8,
     1,
   )
   guard short is Err(_) else { fail("expected not enough CCITT source data") }
 
-  let invalid : Result[PdfBytes, Error] = try? pdf_ccitt_encode_g3_1d_view(
+  let invalid : Result[@core.PdfBytes, Error] = try? pdf_ccitt_encode_g3_1d_view(
     ccitt_wb_bytes([]),
     0,
     1,
@@ -142,7 +142,7 @@ test "CCITT Group 3 encoder covers white black long runs and malformed input" {
   guard invalid is Err(_) else { fail("expected invalid CCITT encode params") }
 
   let bad_write : Result[Unit, Error] = try? pdf_ccitt_write_run(
-    bit_writer_new(),
+    @core.bit_writer_new(),
     true,
     -1,
   )
@@ -151,7 +151,7 @@ test "CCITT Group 3 encoder covers white black long runs and malformed input" {
   }
 
   let bad_read : Result[(Bool, Int), Error] = try? pdf_ccitt_encode_read_run(
-    bitstream_of_bytes(ccitt_wb_bytes([0xFF])),
+    @core.bitstream_of_bytes(ccitt_wb_bytes([0xFF])),
     0,
   )
   guard bad_read is Err(_) else {
@@ -233,25 +233,25 @@ test "CCITT Group 4 covers pass vertical horizontal black EOFB and unsupported m
   })
   @test.assert_eq(eof, ccitt_wb_bytes([]))
 
-  let unsupported : Result[PdfBytes, Error] = try? pdf_ccitt_decode_view(
+  let unsupported : Result[@core.PdfBytes, Error] = try? pdf_ccitt_decode_view(
     ccitt_wb_bytes([0x00, 0xF0]),
     { ..pdf_ccitt_default_params(), k: -1, columns: 4 },
   )
-  guard unsupported is Err(PdfError::CCITTNotSupported(_)) else {
+  guard unsupported is Err(@core.PdfError::CCITTNotSupported(_)) else {
     fail("expected unsupported CCITT uncompressed mode")
   }
 
-  let invalid : Result[PdfBytes, Error] = try? pdf_ccitt_decode_view(
+  let invalid : Result[@core.PdfBytes, Error] = try? pdf_ccitt_decode_view(
     ccitt_wb_bits([0, 1, 1]),
     { ..pdf_ccitt_default_params(), k: -1, columns: 4, rows: 1 },
   )
-  guard invalid is Err(PdfError::InvalidCCITTData) else {
+  guard invalid is Err(@core.PdfError::InvalidCCITTData) else {
     fail("expected invalid CCITT Group 4 span")
   }
 
   let bad_output = try? pdf_ccitt_decode_g4(
-    bitstream_of_bytes(ccitt_wb_bits([1])),
-    bit_writer_new(),
+    @core.bitstream_of_bytes(ccitt_wb_bits([1])),
+    @core.bit_writer_new(),
     { ..pdf_ccitt_default_params(), k: -1, columns: 4, rows: 1 },
     2,
     0,
@@ -308,7 +308,7 @@ test "CCITT Group 4 encoder roundtrips mixed rows and malformed input" {
     ccitt_wb_bytes([]),
   )
 
-  let short : Result[PdfBytes, Error] = try? pdf_ccitt_encode_g4_view(
+  let short : Result[@core.PdfBytes, Error] = try? pdf_ccitt_encode_g4_view(
     ccitt_wb_bytes([]),
     4,
     1,
@@ -317,7 +317,7 @@ test "CCITT Group 4 encoder roundtrips mixed rows and malformed input" {
     fail("expected not enough CCITT Group 4 source data")
   }
 
-  let invalid : Result[PdfBytes, Error] = try? pdf_ccitt_encode_g4_view(
+  let invalid : Result[@core.PdfBytes, Error] = try? pdf_ccitt_encode_g4_view(
     ccitt_wb_bytes([]),
     0,
     1,
@@ -326,18 +326,18 @@ test "CCITT Group 4 encoder roundtrips mixed rows and malformed input" {
     fail("expected invalid CCITT Group 4 encode params")
   }
 
-  let modes = bit_writer_new()
+  let modes = @core.bit_writer_new()
   pdf_ccitt_write_mode(modes, CCITTPass)
   pdf_ccitt_write_mode(modes, CCITTVertical(-1))
   pdf_ccitt_write_mode(modes, CCITTVertical(-3))
   @test.assert_eq(modes.to_bytes(), ccitt_wb_bytes([0x16, 0x0C]))
 
-  let right_three = bit_writer_new()
+  let right_three = @core.bit_writer_new()
   pdf_ccitt_write_mode(right_three, CCITTVertical(3))
   @test.assert_eq(right_three.to_bytes(), ccitt_wb_bytes([0x04]))
 
   let unsupported_mode : Result[Unit, Error] = try? pdf_ccitt_write_mode(
-    bit_writer_new(),
+    @core.bit_writer_new(),
     CCITTUncompressed,
   )
   guard unsupported_mode is Err(_) else {
@@ -345,7 +345,7 @@ test "CCITT Group 4 encoder roundtrips mixed rows and malformed input" {
   }
 
   let invalid_mode : Result[Unit, Error] = try? pdf_ccitt_write_mode(
-    bit_writer_new(),
+    @core.bit_writer_new(),
     CCITTVertical(4),
   )
   guard invalid_mode is Err(_) else {

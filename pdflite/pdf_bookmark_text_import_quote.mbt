@@ -49,7 +49,7 @@ fn pdf_bookmark_import_copy_quoted(
 fn pdf_bookmark_import_parse_quoted(
   line : BytesView,
   index : Ref[Int],
-) -> PdfBytes? raise PdfError {
+) -> @core.PdfBytes? raise @core.PdfError {
   pdf_bookmark_import_skip_whitespace(line, index)
   if index.val >= line.length() || line[index.val].to_int() != 34 {
     None
@@ -91,7 +91,7 @@ fn pdf_bookmark_import_take_open(line : BytesView, index : Ref[Int]) -> Bool {
 fn pdf_bookmark_import_optional_destination(
   line : BytesView,
   index : Ref[Int],
-) -> PdfBytes? raise PdfError {
+) -> @core.PdfBytes? raise @core.PdfError {
   pdf_bookmark_import_skip_whitespace(line, index)
   if index.val >= line.length() || line[index.val].to_int() != 34 {
     None

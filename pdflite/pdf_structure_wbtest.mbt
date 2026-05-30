@@ -1,6 +1,6 @@
 ///|
-fn structure_wb_name(text : String) -> PdfName {
-  pdf_name_of_bytes(@ascii.encode(text))
+fn structure_wb_name(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|

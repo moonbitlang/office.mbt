@@ -1,8 +1,8 @@
 ///|
 fn pdf_content_inline_image_entry_bytes(
-  key : PdfName,
+  key : @core.PdfName,
   value : @syntax.PdfObject,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let key_bytes = pdf_write_object(PdfNameObject(key))
   let value_bytes = pdf_write_object(value)
   let output = Array::make(
@@ -20,8 +20,8 @@ fn pdf_content_inline_image_entry_bytes(
 fn pdf_content_inline_image_bytes(
   dictionary : @syntax.PdfObject,
   decode_parms : @syntax.PdfObject?,
-  data : PdfBytes,
-) -> PdfBytes raise PdfError {
+  data : @core.PdfBytes,
+) -> @core.PdfBytes raise @core.PdfError {
   let compress_inline_image = pdf_content_inline_filter_is_empty(dictionary)
   let (render_data, render_decode_parms, render_extra_entries) = if compress_inline_image {
     let encoded = @flate.pdf_flate_encode(data)
@@ -46,7 +46,7 @@ fn pdf_content_inline_image_bytes(
       } else {
         0
       }
-      let rendered_entries : Array[PdfBytes] = Array::new(
+      let rendered_entries : Array[@core.PdfBytes] = Array::new(
         capacity=entries.length() +
           render_extra_entries.length() +
           decode_parms_entry_count,
@@ -107,7 +107,9 @@ fn pdf_content_inline_image_bytes(
 }
 
 ///|
-fn pdf_content_op_bytes(op : @content.PdfContentOp) -> PdfBytes raise PdfError {
+fn pdf_content_op_bytes(
+  op : @content.PdfContentOp,
+) -> @core.PdfBytes raise @core.PdfError {
   match op {
     Op_InlineImage(dictionary, decode_parms, data) =>
       pdf_content_inline_image_bytes(dictionary, decode_parms, data)

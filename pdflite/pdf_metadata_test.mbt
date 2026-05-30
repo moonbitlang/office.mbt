@@ -1,6 +1,6 @@
 ///|
-fn metadata_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn metadata_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -204,7 +204,7 @@ test "PdfDocument viewer preferences and catalog items use cpdf strings" {
   let invalid : Result[@pdflite.PdfDocument, Error] = try? doc.set_page_layout(
     "Rows",
   )
-  guard invalid is Err(@pdflite.PdfError::BadNumberArgument(_)) else {
+  guard invalid is Err(@core.PdfError::BadNumberArgument(_)) else {
     fail("expected bad page layout")
   }
 }
@@ -335,13 +335,13 @@ test "PdfDocument set_open_action writes fit xyz and custom destinations" {
     1,
     destination=Some("/Fit"),
   )
-  guard bad_destination is Err(@pdflite.PdfError::BadNumberArgument(_)) else {
+  guard bad_destination is Err(@core.PdfError::BadNumberArgument(_)) else {
     fail("expected bad open-action destination syntax")
   }
   let invalid : Result[@pdflite.PdfDocument, Error] = try? doc.set_open_action(
     3,
   )
-  guard invalid is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
+  guard invalid is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail("expected bad open-action page")
   }
 }
@@ -1321,7 +1321,7 @@ test "PdfDocument set_info_entry can synchronize XMP metadata" {
     4,
     xmp_also=true,
   )
-  guard bad is Err(@pdflite.PdfError::BadNumberArgument(_)) else {
+  guard bad is Err(@core.PdfError::BadNumberArgument(_)) else {
     fail("expected bad XMP info value")
   }
 }

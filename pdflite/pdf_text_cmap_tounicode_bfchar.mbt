@@ -1,8 +1,8 @@
 ///|
 fn pdf_text_push_tounicode_bfchar_entry(
-  entries : Array[(Int, PdfBytes)],
-  source : PdfBytes,
-  unicode : PdfBytes,
+  entries : Array[(Int, @core.PdfBytes)],
+  source : @core.PdfBytes,
+  unicode : @core.PdfBytes,
 ) -> Unit {
   match pdf_text_bytes_to_int(source) {
     Some(code) => entries.push((code, unicode))
@@ -12,10 +12,10 @@ fn pdf_text_push_tounicode_bfchar_entry(
 
 ///|
 fn pdf_text_append_tounicode_bfchar_entries(
-  entries : Array[(Int, PdfBytes)],
-  pending_source : PdfBytes?,
+  entries : Array[(Int, @core.PdfBytes)],
+  pending_source : @core.PdfBytes?,
   line : BytesView,
-) -> PdfBytes? {
+) -> @core.PdfBytes? {
   let mut pending = pending_source
   match pdf_text_parse_cmap_hex_groups(line) {
     Some(groups) => {

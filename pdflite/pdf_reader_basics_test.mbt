@@ -1,6 +1,6 @@
 ///|
 test "@reader.pdf_read_header_from_cursor finds header and sets input offset" {
-  let cursor = @pdflite.byte_cursor_of_bytes(
+  let cursor = @core.byte_cursor_of_bytes(
     reader_bytes_for_test([0, 1, 2, 37, 80, 68, 70, 45, 49, 46, 55, 10, 65]),
   )
   @test.assert_eq(try! @reader.pdf_read_header_from_cursor(cursor), {
@@ -141,7 +141,7 @@ test "pdf_parse_stream_object_from_bytes parses direct-length stream objects" {
   }
   @test.assert_eq(
     stream.dictionary.lookup_immediate(
-      @pdflite.pdf_name_of_bytes(
+      @core.pdf_name_of_bytes(
         reader_bytes_for_test([47, 76, 101, 110, 103, 116, 104]),
       ),
     ),
@@ -165,7 +165,7 @@ test "pdf_parse_stream_object_from_bytes recovers CamlPDF mismatched stream leng
   }
   @test.assert_eq(
     too_short_stream.dictionary.lookup_immediate(
-      @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Length")),
+      @core.pdf_name_of_bytes(reader_pdf_ascii("/Length")),
     ),
     Some(PdfInteger(6)),
   )
@@ -179,7 +179,7 @@ test "pdf_parse_stream_object_from_bytes recovers CamlPDF mismatched stream leng
   }
   @test.assert_eq(
     too_long_stream.dictionary.lookup_immediate(
-      @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Length")),
+      @core.pdf_name_of_bytes(reader_pdf_ascii("/Length")),
     ),
     Some(PdfInteger(2)),
   )
@@ -269,7 +269,7 @@ test "pdf_parse_stream_object_from_bytes recovers missing stream length" {
   }
   @test.assert_eq(
     stream.dictionary.lookup_immediate(
-      @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Length")),
+      @core.pdf_name_of_bytes(reader_pdf_ascii("/Length")),
     ),
     Some(PdfInteger(5)),
   )
@@ -283,8 +283,8 @@ test "pdf_parse_stream_object_from_bytes reports malformed stream keyword" {
       "7 0 obj\n<< /Length 5 >>\nstram\nHello\nendstream\nendobj",
     ),
   )
-  guard result is Err(@pdflite.PdfError::ParseStreamExpected) else {
-    fail("expected @pdflite.PdfError::ParseStreamExpected")
+  guard result is Err(@core.PdfError::ParseStreamExpected) else {
+    fail("expected @core.PdfError::ParseStreamExpected")
   }
 }
 
@@ -316,14 +316,14 @@ test "pdf_read_classic_document_from_bytes uses xref and trailer root" {
   let document = @pdflite.pdf_document_empty()
   document.set_version(1, 4)
   document.set_root(1)
-  let type_name = @pdflite.pdf_name_of_bytes(
+  let type_name = @core.pdf_name_of_bytes(
     reader_bytes_for_test([47, 84, 121, 112, 101]),
   )
   let catalog = @syntax.pdf_dictionary([
     (
       type_name,
       PdfNameObject(
-        @pdflite.pdf_name_of_bytes(
+        @core.pdf_name_of_bytes(
           reader_bytes_for_test([47, 67, 97, 116, 97, 108, 111, 103]),
         ),
       ),
@@ -341,7 +341,7 @@ test "pdf_read_classic_document_from_bytes uses xref and trailer root" {
     parsed
     .trailer_dict()
     .lookup_immediate(
-      @pdflite.pdf_name_of_bytes(reader_bytes_for_test([47, 82, 111, 111, 116])),
+      @core.pdf_name_of_bytes(reader_bytes_for_test([47, 82, 111, 111, 116])),
     ),
     Some(PdfIndirect(1)),
   )
@@ -401,7 +401,7 @@ test "pdf_read_classic_document_from_bytes reads stream objects by xref" {
   }
   @test.assert_eq(
     parsed_stream.dictionary.lookup_immediate(
-      @pdflite.pdf_name_of_bytes(
+      @core.pdf_name_of_bytes(
         reader_bytes_for_test([47, 76, 101, 110, 103, 116, 104]),
       ),
     ),

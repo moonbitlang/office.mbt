@@ -16,7 +16,7 @@ fn pdf_crypt_file_id_object(file_id : BytesView) -> @syntax.PdfObject {
 fn PdfDocument::with_file_id(
   self : PdfDocument,
   file_id? : BytesView = [],
-) -> (PdfDocument, PdfBytes) raise PdfError {
+) -> (PdfDocument, @core.PdfBytes) raise @core.PdfError {
   match self.lookup_direct(pdf_crypt_id_name, self.trailer_dict()) {
     Some(PdfArray([PdfString(existing), _])) => (self.copy(), existing)
     _ => {
@@ -40,7 +40,7 @@ fn PdfDocument::with_file_id(
 fn pdf_crypt_deterministic_seed32(
   seed : BytesView,
   purpose : BytesView,
-) -> PdfBytes {
+) -> @core.PdfBytes {
   @crypt_core.pdf_sha256_digest(
     pdf_crypt_concat_bytes([
       @ascii.encode("pdflite-deterministic-aes-provider"),
@@ -55,7 +55,7 @@ fn pdf_crypt_deterministic_bytes(
   seed : BytesView,
   purpose : BytesView,
   length : Int,
-) -> PdfBytes {
+) -> @core.PdfBytes {
   if length <= 0 {
     Bytes::new(0)
   } else {
@@ -73,7 +73,7 @@ fn pdf_deterministic_aes_iv_for_seed(
   object_number : Int,
   generation : Int,
   index : Int,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let purpose = @ascii.encode(
     "aes-iv:" +
     object_number.to_string() +
@@ -94,9 +94,9 @@ fn pdf_deterministic_aes_iv_for_seed(
 /// random provider.
 pub fn pdf_deterministic_aes_iv_provider_from_seed(
   seed : BytesView,
-) -> (Int, Int, Int) -> PdfBytes raise PdfError {
+) -> (Int, Int, Int) -> @core.PdfBytes raise @core.PdfError {
   let owned_seed = seed.to_owned()
-  fn(object_number, generation, index) raise PdfError {
+  fn(object_number, generation, index) raise @core.PdfError {
     pdf_deterministic_aes_iv_for_seed(
       owned_seed, object_number, generation, index,
     )
@@ -109,7 +109,7 @@ fn pdf_deterministic_aesv3_random_for_seed(
   seed : BytesView,
   field : @crypt_core.PdfAesV3RandomField,
   length : Int,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_crypt_deterministic_bytes(
     seed,
     pdf_aesv3_random_field_key(field).view(),
@@ -125,9 +125,9 @@ fn pdf_deterministic_aesv3_random_for_seed(
 /// production encryption.
 pub fn pdf_deterministic_aesv3_random_provider_from_seed(
   seed : BytesView,
-) -> (@crypt_core.PdfAesV3RandomField, Int) -> PdfBytes raise PdfError {
+) -> (@crypt_core.PdfAesV3RandomField, Int) -> @core.PdfBytes raise @core.PdfError {
   let owned_seed = seed.to_owned()
-  fn(field, length) raise PdfError {
+  fn(field, length) raise @core.PdfError {
     pdf_deterministic_aesv3_random_for_seed(owned_seed, field, length)
   }
 }

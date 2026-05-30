@@ -9,7 +9,7 @@ fn PdfDocument::arc4_crypt_parsed_objects(
   key_length_bits : Int,
   no_encrypt_metadata : Bool,
   skip_object_number : Int,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let output = self.copy()
   for number in output.object_numbers() {
     if number != skip_object_number {
@@ -47,9 +47,9 @@ fn PdfDocument::aesv2_encrypt_parsed_objects_with_iv_provider(
   self : PdfDocument,
   file_key : BytesView,
   key_length_bits : Int,
-  iv_provider : (Int, Int, Int) -> PdfBytes raise PdfError,
+  iv_provider : (Int, Int, Int) -> @core.PdfBytes raise @core.PdfError,
   no_encrypt_metadata : Bool,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let output = self.copy()
   for number in output.object_numbers() {
     let entry = output.objects.get_entry(number).unwrap()
@@ -63,7 +63,7 @@ fn PdfDocument::aesv2_encrypt_parsed_objects_with_iv_provider(
               file_key,
               key_length_bits,
               object,
-              fn(index) raise PdfError {
+              fn(index) raise @core.PdfError {
                 iv_provider(number, entry.generation, index)
               },
               no_encrypt_metadata,
@@ -91,7 +91,7 @@ fn PdfDocument::aesv2_decrypt_parsed_objects(
   key_length_bits : Int,
   no_encrypt_metadata : Bool,
   skip_object_number : Int,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let output = self.copy()
   for number in output.object_numbers() {
     if number != skip_object_number {
@@ -127,9 +127,9 @@ fn PdfDocument::aesv2_decrypt_parsed_objects(
 fn PdfDocument::aesv3_encrypt_parsed_objects_with_iv_provider(
   self : PdfDocument,
   file_key : BytesView,
-  iv_provider : (Int, Int, Int) -> PdfBytes raise PdfError,
+  iv_provider : (Int, Int, Int) -> @core.PdfBytes raise @core.PdfError,
   no_encrypt_metadata : Bool,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let output = self.copy()
   for number in output.object_numbers() {
     let entry = output.objects.get_entry(number).unwrap()
@@ -140,7 +140,7 @@ fn PdfDocument::aesv3_encrypt_parsed_objects_with_iv_provider(
             pdf_aesv3_encrypt_pdf_object_with_iv_provider(
               file_key,
               object,
-              fn(index) raise PdfError {
+              fn(index) raise @core.PdfError {
                 iv_provider(number, entry.generation, index)
               },
               no_encrypt_metadata,
@@ -167,7 +167,7 @@ fn PdfDocument::aesv3_decrypt_parsed_objects(
   file_key : BytesView,
   no_encrypt_metadata : Bool,
   skip_object_number : Int,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let output = self.copy()
   for number in output.object_numbers() {
     if number != skip_object_number {

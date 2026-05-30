@@ -9,7 +9,7 @@ pub fn PdfDocument::get_image_24bpp(
   self : PdfDocument,
   resources : @syntax.PdfObject,
   image : @syntax.PdfObject,
-) -> PdfImage raise PdfError {
+) -> PdfImage raise @core.PdfError {
   let decoded = self.pdf_image_decode_to_image(image)
   let decoded_stream = match decoded {
     PdfImageRawStream(stream)
@@ -85,6 +85,6 @@ pub fn pdf_get_image_24bpp(
   document : PdfDocument,
   resources : @syntax.PdfObject,
   image : @syntax.PdfObject,
-) -> PdfImage raise PdfError {
+) -> PdfImage raise @core.PdfError {
   document.get_image_24bpp(resources, image)
 }

@@ -44,19 +44,19 @@ pub fn pdf_content_charcodes_of_bytes(
 /// Convert a cpdfcontent glyph character code back to raw PDF string bytes.
 ///
 /// CID-keyed fonts write the code as two big-endian bytes. Standard and simple
-/// fonts write a single byte. Out-of-range bytes raise `PdfError::InvalidByte`,
+/// fonts write a single byte. Out-of-range bytes raise `@core.PdfError::InvalidByte`,
 /// matching the source helper's `char_of_int` failure cases.
 pub fn PdfFont::content_bytes_of_charcode(
   self : PdfFont,
   charcode : Int,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   match self {
     PdfFontCIDKeyed(_) =>
       Bytes::from_array([
-        pdf_byte_of_int(charcode >> 8),
-        pdf_byte_of_int(charcode & 0xFF),
+        @core.pdf_byte_of_int(charcode >> 8),
+        @core.pdf_byte_of_int(charcode & 0xFF),
       ])
-    _ => Bytes::from_array([pdf_byte_of_int(charcode)])
+    _ => Bytes::from_array([@core.pdf_byte_of_int(charcode)])
   }
 }
 
@@ -65,6 +65,6 @@ pub fn PdfFont::content_bytes_of_charcode(
 pub fn pdf_content_bytes_of_charcode(
   font : PdfFont,
   charcode : Int,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   font.content_bytes_of_charcode(charcode)
 }

@@ -36,7 +36,7 @@ pub fn pdf_page_label_coalesce(
 pub fn pdf_page_label_merge(
   pdfs : ArrayView[PdfDocument],
   ranges : ArrayView[Array[Int]],
-) -> Array[@label.PdfPageLabel] raise PdfError {
+) -> Array[@label.PdfPageLabel] raise @core.PdfError {
   if pdfs.length() != ranges.length() {
     raise PageTreeExpected
   }

@@ -13,7 +13,7 @@ priv struct PdfAnnotationJsonImportData {
 }
 
 ///|
-fn pdf_annotation_json_import_number(json : Json) -> Int raise PdfError {
+fn pdf_annotation_json_import_number(json : Json) -> Int raise @core.PdfError {
   match json {
     Number(value, repr=_) => pdf_util_json_integral_number(value)
     _ => raise SoftError("Bad annots entry")
@@ -23,7 +23,7 @@ fn pdf_annotation_json_import_number(json : Json) -> Int raise PdfError {
 ///|
 fn pdf_annotation_json_import_data(
   json : Json,
-) -> PdfAnnotationJsonImportData raise PdfError {
+) -> PdfAnnotationJsonImportData raise @core.PdfError {
   let entries = match json {
     Array(values) => values
     _ => raise SoftError("Bad Annotations JSON file")
@@ -71,7 +71,7 @@ fn pdf_annotation_json_import_data(
 fn PdfDocument::pdf_annotation_json_import_renumbered(
   self : PdfDocument,
   max_object_number : Int,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   if max_object_number <= 0 {
     self.copy()
   } else {
@@ -134,7 +134,7 @@ fn PdfDocument::pdf_annotation_json_import_destinations(
   self : PdfDocument,
   page_reference_numbers : ArrayView[Int],
   annotation : @syntax.PdfObject,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   let mut rewritten = annotation
   match self.lookup_direct(pdf_annotation_p_key(), rewritten) {
     Some(PdfInteger(page_number)) =>
@@ -184,7 +184,7 @@ fn PdfDocument::pdf_annotation_json_import_rows_for_page(
   page_reference_numbers : ArrayView[Int],
   rows : ArrayView[PdfAnnotationJsonImportRow],
   page_number : Int,
-) -> Array[@syntax.PdfObject] raise PdfError {
+) -> Array[@syntax.PdfObject] raise @core.PdfError {
   let imported : Array[@syntax.PdfObject] = Array::new(capacity=rows.length())
   for row in rows {
     if row.page_number == page_number {
@@ -205,7 +205,7 @@ fn PdfDocument::pdf_annotation_json_import_rows_for_page(
 fn PdfDocument::pdf_annotation_json_import_pages(
   self : PdfDocument,
   rows : ArrayView[PdfAnnotationJsonImportRow],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   if rows.length() == 0 {
     self.copy()
   } else {
@@ -248,7 +248,7 @@ fn PdfDocument::pdf_annotation_json_import_pages(
 pub fn PdfDocument::set_annotations_json(
   self : PdfDocument,
   json : Json,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let data = pdf_annotation_json_import_data(json)
   let document = self.pdf_annotation_json_import_renumbered(
     data.max_object_number,
@@ -264,7 +264,7 @@ pub fn PdfDocument::set_annotations_json(
 pub fn pdf_set_annotations_json(
   json : Json,
   document : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.set_annotations_json(json)
 }
 
@@ -273,7 +273,7 @@ pub fn pdf_set_annotations_json(
 pub fn pdf_set_annotations_json_cpdf_order(
   document : PdfDocument,
   json : Json,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.set_annotations_json(json)
 }
 
@@ -283,7 +283,7 @@ pub fn PdfDocument::copy_annotations_from(
   self : PdfDocument,
   source : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   self.set_annotations_json(source.annotations_json(page_numbers))
 }
 
@@ -293,7 +293,7 @@ pub fn pdf_copy_annotations(
   page_numbers : ArrayView[Int],
   source : PdfDocument,
   target : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   target.copy_annotations_from(source, page_numbers)
 }
 
@@ -302,7 +302,7 @@ pub fn pdf_copy_annotations(
 pub fn PdfDocument::remove_annotations(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let pages = self.pages_of_pagetree()
   pdf_page_box_validate_page_numbers(
     page_numbers,
@@ -330,6 +330,6 @@ pub fn PdfDocument::remove_annotations(
 pub fn pdf_remove_annotations(
   page_numbers : ArrayView[Int],
   document : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.remove_annotations(page_numbers)
 }

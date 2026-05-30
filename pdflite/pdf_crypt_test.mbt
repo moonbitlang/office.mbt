@@ -1,6 +1,6 @@
 ///|
-fn crypt_model_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
-  try! @pdflite.pdf_bytes_of_int_array(values)
+fn crypt_model_bytes_for_test(values : ArrayView[Int]) -> @core.PdfBytes {
+  try! @core.pdf_bytes_of_int_array(values)
 }
 
 ///|
@@ -12,7 +12,7 @@ fn crypt_restore_env_for_test(previous : String?) -> Unit {
 }
 
 ///|
-fn crypt_aesv3_r5_user_entry_for_test() -> @pdflite.PdfBytes {
+fn crypt_aesv3_r5_user_entry_for_test() -> @core.PdfBytes {
   crypt_model_bytes_for_test([
     0xad, 0x7c, 0x98, 0xe2, 0x51, 0xcb, 0x1c, 0x7b, 0x3e, 0x28, 0x30, 0xb6, 0xf0,
     0xbe, 0xcb, 0xd8, 0x35, 0x2a, 0x6a, 0xb7, 0x12, 0x23, 0x2d, 0x6e, 0x82, 0xf2,
@@ -22,7 +22,7 @@ fn crypt_aesv3_r5_user_entry_for_test() -> @pdflite.PdfBytes {
 }
 
 ///|
-fn crypt_aesv3_r5_owner_entry_for_test() -> @pdflite.PdfBytes {
+fn crypt_aesv3_r5_owner_entry_for_test() -> @core.PdfBytes {
   crypt_model_bytes_for_test([
     0xf9, 0x90, 0x4f, 0x90, 0x02, 0x10, 0x0b, 0x3e, 0xba, 0x57, 0x69, 0x0b, 0x67,
     0x32, 0x30, 0xde, 0xfc, 0xcd, 0x12, 0x39, 0x9f, 0x8d, 0xa1, 0xa8, 0x73, 0x41,
@@ -32,7 +32,7 @@ fn crypt_aesv3_r5_owner_entry_for_test() -> @pdflite.PdfBytes {
 }
 
 ///|
-fn crypt_aesv3_r5_user_encryption_key_for_test() -> @pdflite.PdfBytes {
+fn crypt_aesv3_r5_user_encryption_key_for_test() -> @core.PdfBytes {
   crypt_model_bytes_for_test([
     0xe4, 0x35, 0xfd, 0x1c, 0x68, 0x70, 0xfc, 0x3b, 0x50, 0x7f, 0x7c, 0x3d, 0x30,
     0xd0, 0x2e, 0x06, 0xb7, 0x60, 0x68, 0x50, 0x81, 0x95, 0xc1, 0x29, 0x87, 0x9c,
@@ -41,7 +41,7 @@ fn crypt_aesv3_r5_user_encryption_key_for_test() -> @pdflite.PdfBytes {
 }
 
 ///|
-fn crypt_aesv3_r5_owner_encryption_key_for_test() -> @pdflite.PdfBytes {
+fn crypt_aesv3_r5_owner_encryption_key_for_test() -> @core.PdfBytes {
   crypt_model_bytes_for_test([
     0x93, 0x8a, 0x69, 0x29, 0xac, 0xa0, 0x6a, 0x79, 0x47, 0xde, 0x9d, 0xc4, 0x68,
     0x29, 0x04, 0xca, 0xda, 0x26, 0xbf, 0x1b, 0xb2, 0x8e, 0xc9, 0xc8, 0x2b, 0x83,
@@ -52,7 +52,7 @@ fn crypt_aesv3_r5_owner_encryption_key_for_test() -> @pdflite.PdfBytes {
 ///|
 fn crypt_aesv3_r5_permissions_for_test(
   permissions? : Int = -3904,
-) -> @pdflite.PdfBytes {
+) -> @core.PdfBytes {
   match permissions {
     -3904 =>
       crypt_model_bytes_for_test([
@@ -105,14 +105,14 @@ test "deterministic AES providers derive stable bytes from seed and callsite" {
 }
 
 ///|
-fn crypt_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn crypt_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
 fn crypt_stream_for_test(
-  entries : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
-  data : @pdflite.PdfBytes,
+  entries : ArrayView[(@core.PdfName, @syntax.PdfObject)],
+  data : @core.PdfBytes,
 ) -> @syntax.PdfObject {
   PdfStreamObject({
     dictionary: PdfDictionary([ for entry in entries => entry ]),
@@ -121,16 +121,13 @@ fn crypt_stream_for_test(
 }
 
 ///|
-fn crypt_repeated_bytes_for_test(
-  value : Int,
-  length : Int,
-) -> @pdflite.PdfBytes {
+fn crypt_repeated_bytes_for_test(value : Int, length : Int) -> @core.PdfBytes {
   crypt_model_bytes_for_test([ for _ in 0..<length => value ])
 }
 
 ///|
 fn crypt_standard_encrypt_dictionary_for_test(
-  entries : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
+  entries : ArrayView[(@core.PdfName, @syntax.PdfObject)],
   owner_length? : Int = 40,
   user_length? : Int = 40,
 ) -> @syntax.PdfObject {
@@ -144,12 +141,12 @@ fn crypt_standard_encrypt_dictionary_for_test(
 
 ///|
 fn crypt_standard_encrypt_dictionary_values_for_test(
-  entries : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
-  owner_entry : @pdflite.PdfBytes,
-  user_entry : @pdflite.PdfBytes,
+  entries : ArrayView[(@core.PdfName, @syntax.PdfObject)],
+  owner_entry : @core.PdfBytes,
+  user_entry : @core.PdfBytes,
   permissions : Int,
 ) -> @syntax.PdfObject {
-  let output : Array[(@pdflite.PdfName, @syntax.PdfObject)] = [
+  let output : Array[(@core.PdfName, @syntax.PdfObject)] = [
     (
       crypt_name_for_test("/Filter"),
       PdfNameObject(crypt_name_for_test("/Standard")),
@@ -187,7 +184,7 @@ fn crypt_doc_with_encrypt_for_test(
 ///|
 fn crypt_first_file_id_for_test(
   doc : @pdflite.PdfDocument,
-) -> @pdflite.PdfBytes raise {
+) -> @core.PdfBytes raise {
   match doc.trailer_dict().lookup_immediate(crypt_name_for_test("/ID")) {
     Some(PdfArray([PdfString(file_id), _])) => file_id
     _ => fail("expected first trailer file ID")
@@ -504,7 +501,7 @@ test "PdfDocument decrypt_with_password authenticates AESV3 revision 5 passwords
     @ascii.encode("user"),
   )
   guard missing_perms_result
-    is Err(@pdflite.PdfError::EncryptionDictionaryEntryExpected(name)) &&
+    is Err(@core.PdfError::EncryptionDictionaryEntryExpected(name)) &&
     name == crypt_name_for_test("/Perms") else {
     fail("expected missing AESV3 /Perms")
   }
@@ -547,7 +544,7 @@ test "PdfDocument decrypt_with_password authenticates AESV3 revision 5 passwords
     @ascii.encode("user"),
   )
   guard short_perms_result
-    is Err(@pdflite.PdfError::EncryptionDictionaryEntryTooShort(name)) &&
+    is Err(@core.PdfError::EncryptionDictionaryEntryTooShort(name)) &&
     name == crypt_name_for_test("/Perms") else {
     fail("expected short AESV3 /Perms")
   }
@@ -590,7 +587,7 @@ test "PdfDocument decrypt_with_password authenticates AESV3 revision 5 passwords
     @ascii.encode("user"),
   )
   guard corrupt_perms_result
-    is Err(@pdflite.PdfError::EncryptionPermissionsCorrupt) else {
+    is Err(@core.PdfError::EncryptionPermissionsCorrupt) else {
     fail("expected corrupt AESV3 /Perms")
   }
 
@@ -635,7 +632,7 @@ test "PdfDocument decrypt_with_password authenticates AESV3 revision 5 passwords
     @ascii.encode("owner"),
   )
   guard mismatched_perms_result
-    is Err(@pdflite.PdfError::EncryptionPermissionsMismatch(-4, -3904)) else {
+    is Err(@core.PdfError::EncryptionPermissionsMismatch(-4, -3904)) else {
     fail("expected mismatched AESV3 /Perms")
   }
 
@@ -672,7 +669,7 @@ test "PdfDocument decrypt_with_password authenticates AESV3 revision 5 passwords
     @ascii.encode("user"),
   )
   guard missing_ue_result
-    is Err(@pdflite.PdfError::EncryptionDictionaryEntryExpected(name)) &&
+    is Err(@core.PdfError::EncryptionDictionaryEntryExpected(name)) &&
     name == crypt_name_for_test("/UE") else {
     fail("expected missing AESV3 /UE")
   }
@@ -714,7 +711,7 @@ test "PdfDocument decrypt_with_password authenticates AESV3 revision 5 passwords
     @ascii.encode("owner"),
   )
   guard short_oe_result
-    is Err(@pdflite.PdfError::EncryptionDictionaryEntryTooShort(name)) &&
+    is Err(@core.PdfError::EncryptionDictionaryEntryTooShort(name)) &&
     name == crypt_name_for_test("/OE") else {
     fail("expected short AESV3 /OE")
   }

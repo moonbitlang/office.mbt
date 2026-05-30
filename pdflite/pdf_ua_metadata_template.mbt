@@ -26,7 +26,7 @@ fn pdf_ua_metadata_length(subformat : PdfUASubformat, title : String) -> Int {
 fn pdf_ua_metadata_bytes(
   subformat : PdfUASubformat,
   title : String,
-) -> PdfBytes {
+) -> @core.PdfBytes {
   let output = Array::make(pdf_ua_metadata_length(subformat, title), b'\x00')
   let mut position = pdf_ua_write_ascii(
     output, 0, "<?xpacket begin=\"\" id=\"W5M0MpCehiHzreSzNTczkc9d\"?>\n",

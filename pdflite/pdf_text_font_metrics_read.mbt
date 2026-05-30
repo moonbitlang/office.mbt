@@ -13,9 +13,9 @@ fn PdfDocument::pdf_text_font_metrics_descriptor(
 fn PdfDocument::pdf_text_font_char_bound(
   self : PdfDocument,
   font : @syntax.PdfObject,
-  key : PdfName,
-  error : PdfError,
-) -> Int raise PdfError {
+  key : @core.PdfName,
+  error : @core.PdfError,
+) -> Int raise @core.PdfError {
   match self.lookup_direct(key, font) {
     Some(PdfInteger(value)) if value >= 0 && value <= 255 => value
     _ => raise error
@@ -26,7 +26,7 @@ fn PdfDocument::pdf_text_font_char_bound(
 fn PdfDocument::pdf_text_font_missing_width(
   self : PdfDocument,
   descriptor : @syntax.PdfObject,
-) -> Double raise PdfError {
+) -> Double raise @core.PdfError {
   match self.lookup_direct(pdf_text_missing_width_key_name, descriptor) {
     Some(value) => self.get_number(value)
     None => 0.0
@@ -37,7 +37,7 @@ fn PdfDocument::pdf_text_font_missing_width(
 fn PdfDocument::pdf_text_font_widths_array(
   self : PdfDocument,
   font : @syntax.PdfObject,
-) -> Array[@syntax.PdfObject] raise PdfError {
+) -> Array[@syntax.PdfObject] raise @core.PdfError {
   match self.lookup_direct(pdf_text_widths_key_name, font) {
     Some(PdfArray(values)) => values
     _ => raise FontWidthsExpected
@@ -53,7 +53,7 @@ fn PdfDocument::pdf_text_font_widths_array(
 pub fn PdfDocument::read_font_metrics(
   self : PdfDocument,
   font : @syntax.PdfObject,
-) -> Array[Double]? raise PdfError {
+) -> Array[Double]? raise @core.PdfError {
   match self.pdf_text_font_metrics_descriptor(font) {
     None => None
     Some(descriptor) => {

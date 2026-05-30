@@ -93,7 +93,7 @@ fn PdfDocument::pdf_ua_matterhorn_file_spec_has_f_and_uf(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_21_001(
   self : PdfDocument,
-) -> Json? raise PdfError {
+) -> Json? raise @core.PdfError {
   match
     self.lookup_chain(self.trailer_dict(), [
       pdf_ua_root_key(),
@@ -132,7 +132,7 @@ fn PdfDocument::pdf_ua_matterhorn_check_21_001(
 fn pdf_ua_matterhorn_xfa_config_key(object : @syntax.PdfObject) -> Bool {
   match object {
     PdfString(value) =>
-      pdf_view_equals_ascii(value, [99, 111, 110, 102, 105, 103])
+      @core.pdf_view_equals_ascii(value, [99, 111, 110, 102, 105, 103])
     _ => false
   }
 }
@@ -141,7 +141,7 @@ fn pdf_ua_matterhorn_xfa_config_key(object : @syntax.PdfObject) -> Bool {
 fn PdfDocument::pdf_ua_matterhorn_xfa_config_stream_data(
   self : PdfDocument,
   config : @syntax.PdfObject,
-) -> PdfBytes? raise PdfError {
+) -> @core.PdfBytes? raise @core.PdfError {
   match self.direct(config) {
     PdfStreamObject(stream) => {
       let decoded = match
@@ -202,7 +202,7 @@ fn pdf_ua_matterhorn_xml_dynamic_render_tag(
   match
     pdf_ua_matterhorn_xml_tag_local_name(data, tag_start, tag_end, closing) {
     Some(local_name) =>
-      pdf_view_equals_ascii(local_name, [
+      @core.pdf_view_equals_ascii(local_name, [
         100, 121, 110, 97, 109, 105, 99, 82, 101, 110, 100, 101, 114,
       ])
     None => false
@@ -257,7 +257,7 @@ fn pdf_ua_matterhorn_has_required_dynamic_render(data : BytesView) -> Bool {
             data, value_start,
           )
           if value_end >= 0 &&
-            pdf_view_equals_ascii(data[value_start:value_end], [
+            @core.pdf_view_equals_ascii(data[value_start:value_end], [
               114, 101, 113, 117, 105, 114, 101, 100,
             ]) {
             return true
@@ -273,7 +273,7 @@ fn pdf_ua_matterhorn_has_required_dynamic_render(data : BytesView) -> Bool {
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_25_001(
   self : PdfDocument,
-) -> Json? raise PdfError {
+) -> Json? raise @core.PdfError {
   match
     self.lookup_chain(self.trailer_dict(), [
       pdf_ua_root_key(),

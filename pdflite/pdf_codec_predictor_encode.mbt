@@ -10,7 +10,7 @@ pub fn pdf_encode_predictor_view(
   bits_per_component : Int,
   columns : Int,
   data : BytesView,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   match predictor {
     1 => data.to_owned()
     2 => pdf_encode_tiff_predictor(colors, bits_per_component, columns, data)
@@ -46,8 +46,8 @@ pub fn pdf_encode_predictor(
   colors : Int,
   bits_per_component : Int,
   columns : Int,
-  data : PdfBytes,
-) -> PdfBytes raise PdfError {
+  data : @core.PdfBytes,
+) -> @core.PdfBytes raise @core.PdfError {
   if predictor == 1 {
     data
   } else {

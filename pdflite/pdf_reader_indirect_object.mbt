@@ -1,7 +1,7 @@
 ///|
 fn pdf_cursor_lex_first_indirect_object_tokens(
-  cursor : ByteCursor,
-) -> Array[@syntax.PdfLexeme] raise PdfError {
+  cursor : @core.ByteCursor,
+) -> Array[@syntax.PdfLexeme] raise @core.PdfError {
   let tokens : Array[@syntax.PdfLexeme] = []
   let mut done = false
   while !done {
@@ -19,8 +19,8 @@ fn pdf_cursor_lex_first_indirect_object_tokens(
 
 ///|
 fn pdf_cursor_read_plain_indirect_object_at_current(
-  cursor : ByteCursor,
-) -> @syntax.PdfParsedIndirectObject raise PdfError {
+  cursor : @core.ByteCursor,
+) -> @syntax.PdfParsedIndirectObject raise @core.PdfError {
   let (objects, prefix) = @syntax.pdf_parse_indirect_object_segments(
     pdf_cursor_lex_first_indirect_object_tokens(cursor),
   )
@@ -40,7 +40,7 @@ fn pdf_cursor_read_plain_indirect_object_at_current(
 }
 
 ///|
-fn pdf_cursor_stopped_at_stream_candidate(cursor : ByteCursor) -> Bool {
+fn pdf_cursor_stopped_at_stream_candidate(cursor : @core.ByteCursor) -> Bool {
   let position = cursor.absolute_position()
   @syntax.pdf_cursor_matches_ascii_at(cursor, position, [115]) &&
   !@syntax.pdf_cursor_matches_ascii_at(cursor, position, [
@@ -50,8 +50,8 @@ fn pdf_cursor_stopped_at_stream_candidate(cursor : ByteCursor) -> Bool {
 
 ///|
 fn pdf_cursor_read_first_indirect_object_segment_at_current(
-  cursor : ByteCursor,
-) -> (@syntax.PdfParsedIndirectObject, Bool) raise PdfError {
+  cursor : @core.ByteCursor,
+) -> (@syntax.PdfParsedIndirectObject, Bool) raise @core.PdfError {
   let (object, _, complete) = @syntax.pdf_parse_indirect_object_segment_at(
     pdf_cursor_lex_first_indirect_object_tokens(cursor),
     0,
@@ -61,11 +61,11 @@ fn pdf_cursor_read_first_indirect_object_segment_at_current(
 
 ///|
 fn pdf_cursor_resolve_classic_stream_length(
-  cursor : ByteCursor,
+  cursor : @core.ByteCursor,
   object : @syntax.PdfObject,
   xrefs : ArrayView[@reader.PdfClassicXRefEntry],
   xref_index : @reader.PdfClassicXRefIndex?,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   match object.lookup_immediate(@reader.pdf_length_name()) {
     Some(PdfInteger(length)) if length >= 0 => length
     Some(PdfIndirect(number)) => {
@@ -108,10 +108,10 @@ fn pdf_cursor_resolve_classic_stream_length(
 
 ///|
 fn pdf_cursor_read_first_indirect_object_at_current(
-  cursor : ByteCursor,
+  cursor : @core.ByteCursor,
   xrefs : ArrayView[@reader.PdfClassicXRefEntry],
   xref_index? : @reader.PdfClassicXRefIndex? = None,
-) -> @syntax.PdfParsedIndirectObject raise PdfError {
+) -> @syntax.PdfParsedIndirectObject raise @core.PdfError {
   let (object, _, complete) = @syntax.pdf_parse_indirect_object_segment_at(
     pdf_cursor_lex_first_indirect_object_tokens(cursor),
     0,

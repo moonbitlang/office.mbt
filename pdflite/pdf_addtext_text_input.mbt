@@ -41,7 +41,7 @@ fn pdf_addtext_replace_all_lazy(
     text
   } else {
     let text_bytes = @utf8.encode(text)
-    let replacements : Array[(Int, Int, PdfBytes)] = Array::new(
+    let replacements : Array[(Int, Int, @core.PdfBytes)] = Array::new(
       capacity=text_bytes.length() / search_bytes.length(),
     )
     let mut index = 0
@@ -154,7 +154,7 @@ fn pdf_addtext_octal_value(a : Byte, b : Byte, c : Byte) -> Int {
 }
 
 ///|
-fn pdf_addtext_unescaped_length(bytes : BytesView) -> Int raise PdfError {
+fn pdf_addtext_unescaped_length(bytes : BytesView) -> Int raise @core.PdfError {
   let mut index = 0
   let mut length = 0
   while index < bytes.length() {
@@ -196,7 +196,9 @@ fn pdf_addtext_unescaped_length(bytes : BytesView) -> Int raise PdfError {
 ///
 /// Three-digit octal escapes emit one byte, doubled backslashes emit one
 /// backslash, and other non-newline escapes drop the backslash.
-pub fn pdf_addtext_unescape_string(text : String) -> String raise PdfError {
+pub fn pdf_addtext_unescape_string(
+  text : String,
+) -> String raise @core.PdfError {
   let bytes = @utf8.encode(text)
   let output = Array::make(pdf_addtext_unescaped_length(bytes), b'\x00')
   let mut index = 0
@@ -245,7 +247,7 @@ pub fn pdf_addtext_unescape_string(text : String) -> String raise PdfError {
 pub fn pdf_addtext_lines_for_rotation(
   text : String,
   rotation : @addtext.PdfAddTextRotation,
-) -> Array[String] raise PdfError {
+) -> Array[String] raise @core.PdfError {
   let lines = pdf_addtext_split_at_newline(text).map(line => {
     pdf_addtext_unescape_string(line)
   })

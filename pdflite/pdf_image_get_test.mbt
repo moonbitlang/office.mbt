@@ -1,11 +1,11 @@
 ///|
-fn image_get_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn image_get_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
-fn image_get_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
-  try! @pdflite.pdf_bytes_of_int_array(values)
+fn image_get_bytes_for_test(values : ArrayView[Int]) -> @core.PdfBytes {
+  try! @core.pdf_bytes_of_int_array(values)
 }
 
 ///|
@@ -521,12 +521,10 @@ test "PdfDocument get_image_24bpp handles filter arrays and deferred image data"
   let malformed : Result[@pdflite.PdfImage, Error] = try? doc.get_image_24bpp(
     empty_resources, malformed_filter,
   )
-  guard malformed is Err(@pdflite.PdfError::FilterExpected) else {
+  guard malformed is Err(@core.PdfError::FilterExpected) else {
     fail("expected malformed filter")
   }
-  let cursor = @pdflite.byte_cursor_of_bytes(
-    image_get_bytes_for_test([1, 2, 3]),
-  )
+  let cursor = @core.byte_cursor_of_bytes(image_get_bytes_for_test([1, 2, 3]))
   let deferred_raw = @syntax.pdf_stream(
     @syntax.pdf_dictionary([
       (image_get_name_for_test("/Width"), PdfInteger(1)),
@@ -575,7 +573,7 @@ test "PdfDocument image_colour_space reports missing colour spaces" {
     @syntax.pdf_dictionary([]),
     @syntax.pdf_dictionary([]),
   )
-  guard missing is Err(@pdflite.PdfError::DictionaryKeyNotFound(name)) &&
+  guard missing is Err(@core.PdfError::DictionaryKeyNotFound(name)) &&
     name == image_get_name_for_test("/ColorSpace") else {
     fail("expected missing image colour space")
   }
@@ -588,7 +586,7 @@ test "PdfDocument image_colour_space reports missing colour spaces" {
     ]),
     @syntax.pdf_dictionary([]),
   )
-  guard unknown is Err(@pdflite.PdfError::DictionaryKeyNotFound(name)) &&
+  guard unknown is Err(@core.PdfError::DictionaryKeyNotFound(name)) &&
     name == image_get_name_for_test("/ColorSpace") else {
     fail("expected unknown image colour space")
   }

@@ -1,5 +1,5 @@
 ///|
-fn pdf_text_glyphname_base_bytes(name : PdfName) -> BytesView {
+fn pdf_text_glyphname_base_bytes(name : @core.PdfName) -> BytesView {
   let bytes = name.bytes()
   let mut end = bytes.length()
   let mut index = 0
@@ -168,10 +168,13 @@ fn pdf_text_truetype_glyphname_codepoints(base : BytesView) -> Array[Int]? {
 }
 
 ///|
-fn pdf_text_glyphname_base_name(name : PdfName, base : BytesView) -> PdfName {
+fn pdf_text_glyphname_base_name(
+  name : @core.PdfName,
+  base : BytesView,
+) -> @core.PdfName {
   if base.length() == name.byte_length() {
     name
   } else {
-    pdf_name_of_bytes(base.to_owned())
+    @core.pdf_name_of_bytes(base.to_owned())
   }
 }

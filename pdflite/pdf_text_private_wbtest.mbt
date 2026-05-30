@@ -2,13 +2,13 @@
 // Public text behavior belongs in `_test.mbt` files.
 
 ///|
-fn wbtest_text_bytes(values : ArrayView[Int]) -> PdfBytes {
-  try! pdf_bytes_of_int_array(values)
+fn wbtest_text_bytes(values : ArrayView[Int]) -> @core.PdfBytes {
+  try! @core.pdf_bytes_of_int_array(values)
 }
 
 ///|
-fn wbtest_text_name(text : String) -> PdfName {
-  pdf_name_of_bytes(@ascii.encode(text))
+fn wbtest_text_name(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|

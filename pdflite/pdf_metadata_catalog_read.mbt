@@ -1,6 +1,9 @@
 ///|
 /// Return a catalog item in cpdf's text-reporting form.
-pub fn PdfDocument::catalog_item(self : PdfDocument, key : PdfName) -> String {
+pub fn PdfDocument::catalog_item(
+  self : PdfDocument,
+  key : @core.PdfName,
+) -> String {
   try self.catalog() catch {
     _ => ""
   } noraise {
@@ -29,7 +32,7 @@ pub fn PdfDocument::catalog_item_string(
 /// Return a viewer-preference item in cpdf's text-reporting form.
 pub fn PdfDocument::viewer_preference_item(
   self : PdfDocument,
-  key : PdfName,
+  key : @core.PdfName,
 ) -> String {
   try self.catalog() catch {
     _ => ""
@@ -61,7 +64,10 @@ pub fn PdfDocument::viewer_preference_item_string(
 
 ///|
 /// Return a `/MarkInfo` boolean item, or false when absent/malformed.
-pub fn PdfDocument::mark_info_item(self : PdfDocument, key : PdfName) -> Bool {
+pub fn PdfDocument::mark_info_item(
+  self : PdfDocument,
+  key : @core.PdfName,
+) -> Bool {
   try self.catalog() catch {
     _ => false
   } noraise {
@@ -92,7 +98,7 @@ pub fn PdfDocument::is_xfa(self : PdfDocument) -> Bool {
 fn PdfDocument::pdf_metadata_page_number_for_reference(
   self : PdfDocument,
   reference : Int,
-) -> Int? raise PdfError {
+) -> Int? raise @core.PdfError {
   let page_numbers = self.page_reference_numbers()
   for index in 0..<page_numbers.length() {
     if page_numbers[index] == reference {
@@ -107,7 +113,7 @@ fn PdfDocument::pdf_metadata_page_number_for_reference(
 fn PdfDocument::pdf_metadata_rewrite_open_action_page(
   self : PdfDocument,
   action : @syntax.PdfObject,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   match action {
     PdfArray([PdfIndirect(reference), .. rest]) =>
       match self.pdf_metadata_page_number_for_reference(reference) {
@@ -126,7 +132,7 @@ fn PdfDocument::pdf_metadata_rewrite_open_action_page(
 /// destination is returned; other action objects are returned unchanged.
 pub fn PdfDocument::open_action(
   self : PdfDocument,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   match
     self.lookup_chain(self.trailer_dict(), [
       pdf_metadata_root(),
@@ -149,7 +155,7 @@ pub fn PdfDocument::open_action(
 /// Return the catalog `/OpenAction` as cpdf-style JSON bytes.
 pub fn PdfDocument::open_action_json_blob(
   self : PdfDocument,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   @utf8.encode(
     self
     .pdf_util_json_of_object(
@@ -168,7 +174,7 @@ pub fn PdfDocument::open_action_json_blob(
 /// Return the catalog `/OpenAction` as cpdf-style PDF syntax.
 pub fn PdfDocument::open_action_string(
   self : PdfDocument,
-) -> String raise PdfError {
+) -> String raise @core.PdfError {
   match self.open_action() {
     PdfNull => ""
     action =>

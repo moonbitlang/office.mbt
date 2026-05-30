@@ -64,13 +64,15 @@ fn pdf_metadata_namespace_fallback_prefix(xml_uri : String) -> String {
 }
 
 ///|
-fn pdf_metadata_name_with_slash(name : PdfName) -> String? {
+fn pdf_metadata_name_with_slash(name : @core.PdfName) -> String? {
   let text = @ascii.decode(name.bytes()) catch { _ => return None }
   Some(text)
 }
 
 ///|
-fn pdf_metadata_xmp_info_fields(key : PdfName) -> Array[(String, String)]? {
+fn pdf_metadata_xmp_info_fields(
+  key : @core.PdfName,
+) -> Array[(String, String)]? {
   match pdf_metadata_name_with_slash(key) {
     Some("/Title") =>
       Some([
@@ -112,7 +114,7 @@ fn pdf_metadata_xmp_info_fields(key : PdfName) -> Array[(String, String)]? {
 
 ///|
 /// Return XMP metadata corresponding to a legacy `/Info` key.
-pub fn PdfDocument::xmp_info(self : PdfDocument, key : PdfName) -> String {
+pub fn PdfDocument::xmp_info(self : PdfDocument, key : @core.PdfName) -> String {
   let fields = match pdf_metadata_xmp_info_fields(key) {
     Some(fields) => fields
     None => return ""
@@ -152,7 +154,7 @@ pub fn PdfDocument::xmp_info_string(self : PdfDocument, key : String) -> String 
 /// element and attribute forms and falls back to `/Info /GTS_PDFXVersion`.
 pub fn PdfDocument::determine_subformats(
   self : PdfDocument,
-) -> Array[String] raise PdfError {
+) -> Array[String] raise @core.PdfError {
   let formats : Array[String] = []
   match self.metadata() {
     None =>

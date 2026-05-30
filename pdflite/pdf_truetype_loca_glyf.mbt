@@ -3,7 +3,9 @@
 ///
 /// This ports `read_loca_table`: short offsets are doubled, long offsets are
 /// read directly, and unknown `indexToLocFormat` values raise the source error.
-pub fn pdf_truetype_loca_offsets(data : BytesView) -> Array[Int] raise PdfError {
+pub fn pdf_truetype_loca_offsets(
+  data : BytesView,
+) -> Array[Int] raise @core.PdfError {
   let head = pdf_truetype_required_table(data, "head")
   let maxp = pdf_truetype_required_table(data, "maxp")
   let loca = pdf_truetype_required_table(data, "loca")
@@ -42,7 +44,9 @@ pub fn pdf_truetype_loca_offsets(data : BytesView) -> Array[Int] raise PdfError 
 }
 
 ///|
-fn pdf_truetype_index_to_loc_format(data : BytesView) -> Int raise PdfError {
+fn pdf_truetype_index_to_loc_format(
+  data : BytesView,
+) -> Int raise @core.PdfError {
   let head = pdf_truetype_required_table(data, "head")
   pdf_truetype_required_i16(data, head.offset + 50, "head table")
 }
@@ -51,7 +55,7 @@ fn pdf_truetype_index_to_loc_format(data : BytesView) -> Int raise PdfError {
 fn pdf_truetype_validate_glyph_index(
   loca_offsets : ArrayView[Int],
   glyph_index : Int,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   if glyph_index < 0 || glyph_index + 1 >= loca_offsets.length() {
     raise SoftError("Invalid TrueType glyph index")
   }
@@ -61,7 +65,7 @@ fn pdf_truetype_validate_glyph_index(
 fn pdf_truetype_validate_loca_range(
   loca_offsets : ArrayView[Int],
   glyph_index : Int,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   pdf_truetype_validate_glyph_index(loca_offsets, glyph_index)
   if loca_offsets[glyph_index + 1] < loca_offsets[glyph_index] {
     raise SoftError("Invalid TrueType loca offsets")
@@ -72,7 +76,7 @@ fn pdf_truetype_validate_loca_range(
 fn pdf_truetype_composite_component_glyphs(
   data : BytesView,
   component_offset : Int,
-) -> Array[Int] raise PdfError {
+) -> Array[Int] raise @core.PdfError {
   let components : Array[Int] = []
   let mut offset = component_offset
   let mut more_components = true
@@ -100,7 +104,7 @@ fn pdf_truetype_expand_composite_glyphs_one(
   glyf : @truetype.PdfTrueTypeTableRecord,
   loca_offsets : ArrayView[Int],
   glyph_indices : ArrayView[Int],
-) -> Array[Int] raise PdfError {
+) -> Array[Int] raise @core.PdfError {
   let expanded : Array[Int] = []
   for glyph_index in glyph_indices {
     pdf_truetype_validate_glyph_index(loca_offsets, glyph_index)
@@ -131,7 +135,7 @@ fn pdf_truetype_expand_composite_glyphs_one(
 pub fn pdf_truetype_expand_composite_glyphs(
   data : BytesView,
   glyph_indices : ArrayView[Int],
-) -> Array[Int] raise PdfError {
+) -> Array[Int] raise @core.PdfError {
   let glyf = pdf_truetype_required_table(data, "glyf")
   let loca_offsets = pdf_truetype_loca_offsets(data)
   let mut current = pdf_truetype_sorted_unique(glyph_indices)
@@ -157,7 +161,7 @@ pub fn pdf_truetype_expand_composite_glyphs(
 pub fn pdf_truetype_glyph_byte_ranges(
   data : BytesView,
   glyph_indices : ArrayView[Int],
-) -> Array[@truetype.PdfTrueTypeGlyphByteRange] raise PdfError {
+) -> Array[@truetype.PdfTrueTypeGlyphByteRange] raise @core.PdfError {
   let loca_offsets = pdf_truetype_loca_offsets(data)
   let expanded = pdf_truetype_expand_composite_glyphs(data, glyph_indices)
   let ranges : Array[@truetype.PdfTrueTypeGlyphByteRange] = []
@@ -198,7 +202,7 @@ fn pdf_truetype_base_subset_glyph_indices(
 pub fn pdf_truetype_subset_glyph_indices(
   data : BytesView,
   subset_codepoints : ArrayView[Int],
-) -> Array[Int] raise PdfError {
+) -> Array[Int] raise @core.PdfError {
   pdf_truetype_expand_composite_glyphs(
     data,
     pdf_truetype_base_subset_glyph_indices(data, subset_codepoints),
@@ -211,7 +215,7 @@ fn pdf_truetype_subset_loca_write_entry(
   output_position : Int,
   index_to_loc_format : Int,
   position : Int,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   match index_to_loc_format {
     0 => pdf_truetype_write_u16_at(output, output_position, position / 2)
     1 => pdf_truetype_write_u32_at(output, output_position, position)
@@ -222,7 +226,7 @@ fn pdf_truetype_subset_loca_write_entry(
 ///|
 fn pdf_truetype_subset_loca_entry_width(
   index_to_loc_format : Int,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   match index_to_loc_format {
     0 => 2
     1 => 4
@@ -239,7 +243,7 @@ fn pdf_truetype_subset_loca_entry_width(
 pub fn pdf_truetype_subset_loca_table(
   data : BytesView,
   subset_codepoints : ArrayView[Int],
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let index_to_loc_format = pdf_truetype_index_to_loc_format(data)
   let loca_offsets = pdf_truetype_loca_offsets(data)
   let glyph_indices = pdf_truetype_subset_glyph_indices(data, subset_codepoints)
@@ -288,7 +292,7 @@ pub fn pdf_truetype_subset_loca_table(
 pub fn pdf_truetype_subset_glyf_table(
   data : BytesView,
   subset_codepoints : ArrayView[Int],
-) -> @truetype.PdfTrueTypeSubsetTable raise PdfError {
+) -> @truetype.PdfTrueTypeSubsetTable raise @core.PdfError {
   let glyf = pdf_truetype_required_table(data, "glyf")
   let ranges = pdf_truetype_glyph_byte_ranges(
     data,

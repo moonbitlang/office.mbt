@@ -1,5 +1,5 @@
 ///|
-fn pdf_toc_ascii(text : String) -> PdfBytes {
+fn pdf_toc_ascii(text : String) -> @core.PdfBytes {
   @ascii.encode(text)
 }
 
@@ -32,7 +32,7 @@ pub fn PdfDocument::toc_with_fontpack(
   title : BytesView,
   bookmark? : Bool = false,
   dotleader? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let source_bookmarks = self.read_bookmarks(preserve_actions=true)
   if source_bookmarks.length() == 0 {
     self
@@ -60,14 +60,14 @@ pub fn pdf_toc_with_fontpack(
   title : BytesView,
   bookmark? : Bool = false,
   dotleader? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.toc_with_fontpack(fontpack, font_size, title, bookmark~, dotleader~)
 }
 
 ///|
 fn pdf_toc_fontpack_of_source(
   source : PdfTocFontSource,
-) -> PdfFontPack raise PdfError {
+) -> PdfFontPack raise @core.PdfError {
   match source {
     PdfTocPreMadeFontPack(pack) => pack
     PdfTocExistingNamedFont =>
@@ -87,7 +87,7 @@ pub fn PdfDocument::toc_with_source(
   title : BytesView,
   bookmark? : Bool = false,
   dotleader? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   self.toc_with_fontpack(
     pdf_toc_fontpack_of_source(source),
     font_size,
@@ -106,7 +106,7 @@ pub fn pdf_toc_with_source(
   title : BytesView,
   bookmark? : Bool = false,
   dotleader? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.toc_with_source(source, font_size, title, bookmark~, dotleader~)
 }
 
@@ -125,7 +125,7 @@ pub fn PdfDocument::typeset_table_of_contents(
   dotleader : Bool,
   process_struct_tree : Bool,
   subformat? : PdfUASubformat? = None,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   if process_struct_tree || subformat != None {
     raise SoftError(
       "typeset_table_of_contents: structured TOC output is not implemented",
@@ -145,7 +145,7 @@ pub fn pdf_typeset_table_of_contents(
   process_struct_tree : Bool,
   document : PdfDocument,
   subformat? : PdfUASubformat? = None,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.typeset_table_of_contents(
     source,
     font_size,

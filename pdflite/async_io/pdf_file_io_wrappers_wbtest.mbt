@@ -157,9 +157,7 @@ async test "async file wrappers extract embedded font files" {
   )
   guard missing
     is Err(
-      @pdflite.PdfError::SoftError(
-        "extract_fontfile: unsupported or unfound font"
-      )
+      @core.PdfError::SoftError("extract_fontfile: unsupported or unfound font")
     ) else {
     fail("expected unsupported or unfound font")
   }
@@ -255,9 +253,7 @@ async test "async file wrappers extract single image files" {
   )
   guard merge
     is Err(
-      @pdflite.PdfError::SoftError(
-        "combine_image_and_mask: imagemagick not found"
-      )
+      @core.PdfError::SoftError("combine_image_and_mask: imagemagick not found")
     ) else {
     fail("expected ImageMagick merge error")
   }
@@ -384,9 +380,7 @@ async test "async file wrappers extract page image files" {
   )
   guard merge
     is Err(
-      @pdflite.PdfError::SoftError(
-        "combine_image_and_mask: imagemagick not found"
-      )
+      @core.PdfError::SoftError("combine_image_and_mask: imagemagick not found")
     ) else {
     fail("expected ImageMagick merge error")
   }
@@ -409,21 +403,21 @@ async test "async draw control image file wrappers reject malformed specs" {
     control, "bad",
   )
   guard bad_jpeg
-    is Err(@pdflite.PdfError::SoftError("addjpeg: bad file specification")) else {
+    is Err(@core.PdfError::SoftError("addjpeg: bad file specification")) else {
     fail("expected bad JPEG file spec")
   }
   let bad_png : Result[Unit, Error] = try? pdf_draw_control_add_png_file(
     control, document, "name=one=two",
   )
   guard bad_png
-    is Err(@pdflite.PdfError::SoftError("addpng: bad file specification")) else {
+    is Err(@core.PdfError::SoftError("addpng: bad file specification")) else {
     fail("expected bad PNG file spec")
   }
   let bad_jpeg2000 : Result[Unit, Error] = try? pdf_draw_control_add_jpeg2000_file(
     control, "bad",
   )
   guard bad_jpeg2000
-    is Err(@pdflite.PdfError::SoftError("addjpeg2000: bad file specification")) else {
+    is Err(@core.PdfError::SoftError("addjpeg2000: bad file specification")) else {
     fail("expected bad JPEG2000 file spec")
   }
 }
@@ -527,7 +521,7 @@ async test "async file wrappers attach files from paths" {
 ///|
 fn pdf_async_io_assert_cpdf_source_attachment_for_test(
   document : @pdflite.PdfDocument,
-  payload : @pdflite.PdfBytes,
+  payload : @core.PdfBytes,
   version : (Int, Int),
 ) -> Unit raise {
   @test.assert_eq(document.endpage(), 1)
@@ -549,8 +543,8 @@ fn pdf_async_io_assert_cpdf_source_portfolio_entry_for_test(
   document : @pdflite.PdfDocument,
   file_spec : @syntax.PdfObject,
   basename : String,
-  payload : @pdflite.PdfBytes,
-  mod_date : @pdflite.PdfBytes,
+  payload : @core.PdfBytes,
+  mod_date : @core.PdfBytes,
 ) -> Unit raise {
   @test.assert_eq(
     document.lookup_direct(pdf_async_io_name_for_test("/F"), file_spec),
@@ -593,10 +587,10 @@ fn pdf_async_io_assert_cpdf_source_portfolio_entry_for_test(
 fn pdf_async_io_assert_cpdf_source_portfolio_for_test(
   document : @pdflite.PdfDocument,
   readme_path : String,
-  readme_payload : @pdflite.PdfBytes,
+  readme_payload : @core.PdfBytes,
   changes_path : String,
-  changes_payload : @pdflite.PdfBytes,
-  mod_date : @pdflite.PdfBytes,
+  changes_payload : @core.PdfBytes,
+  mod_date : @core.PdfBytes,
 ) -> Unit raise {
   @test.assert_eq(document.endpage(), 1)
   let catalog = document.catalog()
@@ -952,7 +946,7 @@ async test "async file wrappers fail dumping malformed attachment data" {
     document,
     pdf_async_io_build_dir_for_test(),
   )
-  guard result is Err(@pdflite.PdfError::DictionaryKeyNotFound(_)) else {
+  guard result is Err(@core.PdfError::DictionaryKeyNotFound(_)) else {
     fail("expected malformed attachment data to fail dumping")
   }
 }
@@ -1287,7 +1281,7 @@ async test "async file wrappers reconstruct physical page trees when object-stre
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     @fs.read_file(malformed_path).binary(),
   )
-  guard strict is Err(@pdflite.PdfError::StreamDataExpected) else {
+  guard strict is Err(@core.PdfError::StreamDataExpected) else {
     fail("expected malformed object-stream bounds to require reconstruction")
   }
   let recovered = pdf_read_document_from_file(malformed_path)
@@ -1313,14 +1307,14 @@ async test "async file wrappers do not reconstruct mismatched object-stream root
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     @fs.read_file(path).binary(),
   )
-  guard strict is Err(@pdflite.PdfError::XRefEntryExpected) else {
+  guard strict is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected strict object-stream mismatch failure")
   }
   let public : Result[@pdflite.PdfDocument, Error] = try? pdf_read_document_from_file(
     path,
   )
   pdf_async_io_remove_if_exists_for_test(path)
-  guard public is Err(@pdflite.PdfError::XRefEntryExpected) else {
+  guard public is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected object-stream mismatch to remain unrecoverable")
   }
 }
@@ -1339,7 +1333,7 @@ async test "async file wrappers reject invalid object-stream data slices" {
     path,
   )
   pdf_async_io_remove_if_exists_for_test(path)
-  guard result is Err(@pdflite.PdfError::StreamDataExpected) else {
+  guard result is Err(@core.PdfError::StreamDataExpected) else {
     fail("expected invalid object-stream slice to remain unrecoverable")
   }
 }
@@ -1401,16 +1395,16 @@ async test "async file wrappers reject non-xref startxref objects" {
   pdf_async_io_remove_if_exists_for_test(explicit_wrong_type_path)
   pdf_async_io_remove_if_exists_for_test(non_name_type_path)
 
-  guard non_stream is Err(@pdflite.PdfError::XRefExpected) else {
+  guard non_stream is Err(@core.PdfError::XRefExpected) else {
     fail("expected non-stream startxref object rejection")
   }
-  guard wrong_stream_type is Err(@pdflite.PdfError::XRefExpected) else {
+  guard wrong_stream_type is Err(@core.PdfError::XRefExpected) else {
     fail("expected non-xref stream startxref object rejection")
   }
-  guard explicit_wrong_type is Err(@pdflite.PdfError::XRefExpected) else {
+  guard explicit_wrong_type is Err(@core.PdfError::XRefExpected) else {
     fail("expected explicit non-xref stream type rejection")
   }
-  guard non_name_type is Err(@pdflite.PdfError::XRefExpected) else {
+  guard non_name_type is Err(@core.PdfError::XRefExpected) else {
     fail("expected non-name xref stream type rejection")
   }
 }
@@ -1569,7 +1563,7 @@ async test "async file wrappers reject truncated xref stream data" {
     path,
   )
   pdf_async_io_remove_if_exists_for_test(path)
-  guard result is Err(@pdflite.PdfError::XRefEntryExpected) else {
+  guard result is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected truncated xref stream data rejection")
   }
 }
@@ -1591,7 +1585,7 @@ async test "async file wrappers reconstruct missing startxref PDFs" {
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     @fs.read_file(path).binary(),
   )
-  guard strict is Err(@pdflite.PdfError::StartXRefExpected) else {
+  guard strict is Err(@core.PdfError::StartXRefExpected) else {
     fail("expected strict missing-startxref failure")
   }
   let recovered = pdf_read_document_from_file(path)
@@ -1644,7 +1638,7 @@ async test "async file wrappers reconstruct literal endobj text in strings" {
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     @fs.read_file(path).binary(),
   )
-  guard strict is Err(@pdflite.PdfError::StartXRefExpected) else {
+  guard strict is Err(@core.PdfError::StartXRefExpected) else {
     fail("expected strict literal-endobj missing-startxref failure")
   }
   let recovered = pdf_read_document_from_file(path)
@@ -1672,7 +1666,7 @@ async test "async file wrappers reconstruct glued trailer markers" {
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     @fs.read_file(path).binary(),
   )
-  guard strict is Err(@pdflite.PdfError::StartXRefExpected) else {
+  guard strict is Err(@core.PdfError::StartXRefExpected) else {
     fail("expected strict glued-trailer missing-startxref failure")
   }
   let recovered = pdf_read_document_from_file(path)
@@ -1710,7 +1704,7 @@ async test "async file wrappers reconstruct classic objects missing from xref" {
   @test.assert_eq(strict_pages.root(), 1)
   @test.assert_eq(strict_pages.object_numbers(), [1])
   let strict_page_count : Result[Int, Error] = try? strict_pages.endpage()
-  guard strict_page_count is Err(@pdflite.PdfError::PageTreeExpected) else {
+  guard strict_page_count is Err(@core.PdfError::PageTreeExpected) else {
     fail("expected strict missing page tree to fail")
   }
   let strict_catalog = @pdflite.pdf_read_classic_document_from_bytes(
@@ -1719,7 +1713,7 @@ async test "async file wrappers reconstruct classic objects missing from xref" {
   @test.assert_eq(strict_catalog.root(), 1)
   @test.assert_eq(strict_catalog.object_numbers(), [])
   let strict_catalog_object : Result[@syntax.PdfObject, Error] = try? strict_catalog.catalog()
-  guard strict_catalog_object is Err(@pdflite.PdfError::RootExpected) else {
+  guard strict_catalog_object is Err(@core.PdfError::RootExpected) else {
     fail("expected strict missing catalog to fail")
   }
   let pages = pdf_read_document_from_file(pages_path)
@@ -1780,13 +1774,13 @@ async test "async file wrappers report malformed revision metadata" {
   pdf_async_io_remove_if_exists_for_test(malformed_prev_path)
   pdf_async_io_remove_if_exists_for_test(cyclic_prev_path)
 
-  guard missing_startxref is Err(@pdflite.PdfError::StartXRefExpected) else {
+  guard missing_startxref is Err(@core.PdfError::StartXRefExpected) else {
     fail("expected missing-startxref revision metadata failure")
   }
-  guard malformed_prev is Err(@pdflite.PdfError::TrailerExpected) else {
+  guard malformed_prev is Err(@core.PdfError::TrailerExpected) else {
     fail("expected malformed Prev revision metadata failure")
   }
-  guard cyclic_prev is Err(@pdflite.PdfError::XRefExpected) else {
+  guard cyclic_prev is Err(@core.PdfError::XRefExpected) else {
     fail("expected cyclic Prev revision metadata failure")
   }
 }
@@ -1805,7 +1799,7 @@ async test "async file wrappers stop cyclic Prev chains" {
     path,
   )
   pdf_async_io_remove_if_exists_for_test(path)
-  guard result is Err(@pdflite.PdfError::XRefExpected) else {
+  guard result is Err(@core.PdfError::XRefExpected) else {
     fail("expected cyclic Prev document read failure")
   }
 }
@@ -1925,7 +1919,7 @@ async test "async file wrappers read compressed xref stream Prev revisions" {
   let strict_bad_startxref : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     @fs.read_file(bad_startxref_path).binary(),
   )
-  guard strict_bad_startxref is Err(@pdflite.PdfError::XRefExpected) else {
+  guard strict_bad_startxref is Err(@core.PdfError::XRefExpected) else {
     fail("expected strict compressed xref-stream Prev failure")
   }
   let recovered = pdf_read_document_from_file(bad_startxref_path)
@@ -1984,16 +1978,16 @@ async test "async file wrappers report bad revision numbers" {
     path, 3,
   )
   pdf_async_io_remove_if_exists_for_test(path)
-  guard invalid is Err(@pdflite.PdfError::BadRevision) else {
+  guard invalid is Err(@core.PdfError::BadRevision) else {
     fail("expected invalid revision failure")
   }
-  guard missing is Err(@pdflite.PdfError::BadRevision) else {
+  guard missing is Err(@core.PdfError::BadRevision) else {
     fail("expected missing revision failure")
   }
-  guard invalid_password is Err(@pdflite.PdfError::BadRevision) else {
+  guard invalid_password is Err(@core.PdfError::BadRevision) else {
     fail("expected invalid password-wrapper revision failure")
   }
-  guard missing_password is Err(@pdflite.PdfError::BadRevision) else {
+  guard missing_password is Err(@core.PdfError::BadRevision) else {
     fail("expected missing password-wrapper revision failure")
   }
 }
@@ -2427,7 +2421,7 @@ async test "async file wrappers reconstruct out-of-range startxref PDFs" {
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     @fs.read_file(path).binary(),
   )
-  guard strict is Err(@pdflite.PdfError::InvalidCursorPosition(999999)) else {
+  guard strict is Err(@core.PdfError::InvalidCursorPosition(999999)) else {
     fail("expected strict out-of-range startxref failure")
   }
   let recovered = pdf_read_document_from_file(path)
@@ -2454,7 +2448,7 @@ async test "async file wrappers reconstruct in-range bad startxref PDFs" {
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     @fs.read_file(path).binary(),
   )
-  guard strict is Err(@pdflite.PdfError::XRefExpected) else {
+  guard strict is Err(@core.PdfError::XRefExpected) else {
     fail("expected strict in-range bad-startxref failure")
   }
   let recovered = pdf_read_document_from_file(path)
@@ -2494,10 +2488,10 @@ async test "async file wrappers reconstruct malformed startxref numbers" {
   let strict_overflow : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     @fs.read_file(overflow_path).binary(),
   )
-  guard strict_malformed is Err(@pdflite.PdfError::NumberExpected) else {
+  guard strict_malformed is Err(@core.PdfError::NumberExpected) else {
     fail("expected malformed startxref number failure")
   }
-  guard strict_overflow is Err(@pdflite.PdfError::NumberExpected) else {
+  guard strict_overflow is Err(@core.PdfError::NumberExpected) else {
     fail("expected overflow startxref number failure")
   }
   let malformed = pdf_read_document_from_file(malformed_path)
@@ -2664,19 +2658,19 @@ async test "async file wrappers reconstruct malformed classic xref metadata" {
   pdf_async_io_remove_if_exists_for_test(bad_trailer_path)
   pdf_async_io_remove_if_exists_for_test(missing_root_path)
   pdf_async_io_remove_if_exists_for_test(bad_offset_path)
-  guard strict_bad_entry is Err(@pdflite.PdfError::XRefEntryExpected) else {
+  guard strict_bad_entry is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected strict malformed xref-entry failure")
   }
-  guard strict_bad_count is Err(@pdflite.PdfError::NumberExpected) else {
+  guard strict_bad_count is Err(@core.PdfError::NumberExpected) else {
     fail("expected strict malformed xref-count failure")
   }
-  guard strict_bad_trailer is Err(@pdflite.PdfError::TrailerExpected) else {
+  guard strict_bad_trailer is Err(@core.PdfError::TrailerExpected) else {
     fail("expected strict malformed trailer failure")
   }
-  guard strict_missing_root is Err(@pdflite.PdfError::RootExpected) else {
+  guard strict_missing_root is Err(@core.PdfError::RootExpected) else {
     fail("expected strict missing-root trailer failure")
   }
-  guard strict_bad_offset is Err(@pdflite.PdfError::ParseIndirectObjectExpected) else {
+  guard strict_bad_offset is Err(@core.PdfError::ParseIndirectObjectExpected) else {
     fail("expected strict bad-object-offset failure")
   }
   for parsed in [bad_entry, bad_count, bad_trailer, missing_root, bad_offset] {
@@ -2716,10 +2710,10 @@ async test "async file wrappers preserve strict malformed Prev trailer errors" {
   let named = pdf_read_document_from_file(named_path)
   pdf_async_io_remove_if_exists_for_test(negative_path)
   pdf_async_io_remove_if_exists_for_test(named_path)
-  guard negative_strict is Err(@pdflite.PdfError::TrailerExpected) else {
+  guard negative_strict is Err(@core.PdfError::TrailerExpected) else {
     fail("expected strict negative Prev trailer failure")
   }
-  guard named_strict is Err(@pdflite.PdfError::TrailerExpected) else {
+  guard named_strict is Err(@core.PdfError::TrailerExpected) else {
     fail("expected strict named Prev trailer failure")
   }
   for parsed in [negative, named] {
@@ -2795,16 +2789,16 @@ async test "async file wrappers preserve strict malformed xref row variants" {
   pdf_async_io_remove_if_exists_for_test(short_row_path)
   pdf_async_io_remove_if_exists_for_test(bad_digit_path)
   pdf_async_io_remove_if_exists_for_test(bad_marker_path)
-  guard bad_token is Err(@pdflite.PdfError::XRefEntryExpected) else {
+  guard bad_token is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected malformed xref row-token failure")
   }
-  guard short_row is Err(@pdflite.PdfError::XRefEntryExpected) else {
+  guard short_row is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected malformed xref short-row failure")
   }
-  guard bad_digit is Err(@pdflite.PdfError::XRefEntryExpected) else {
+  guard bad_digit is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected malformed xref fixed-digit failure")
   }
-  guard bad_marker is Err(@pdflite.PdfError::XRefEntryExpected) else {
+  guard bad_marker is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected malformed xref fixed-marker failure")
   }
   for
@@ -2849,10 +2843,10 @@ async test "async file wrappers preserve strict xref object mismatch errors" {
   )
   pdf_async_io_remove_if_exists_for_test(mismatched_path)
   pdf_async_io_remove_if_exists_for_test(unparseable_path)
-  guard mismatched is Err(@pdflite.PdfError::XRefEntryExpected) else {
+  guard mismatched is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected strict mismatched xref object failure")
   }
-  guard unparseable is Err(@pdflite.PdfError::ParseIndirectObjectExpected) else {
+  guard unparseable is Err(@core.PdfError::ParseIndirectObjectExpected) else {
     fail("expected strict unparseable xref object failure")
   }
 }
@@ -2885,10 +2879,10 @@ async test "async file wrappers preserve strict missing xref and trailer errors"
   )
   pdf_async_io_remove_if_exists_for_test(missing_xref_path)
   pdf_async_io_remove_if_exists_for_test(trailerless_path)
-  guard missing_xref is Err(@pdflite.PdfError::XRefExpected) else {
+  guard missing_xref is Err(@core.PdfError::XRefExpected) else {
     fail("expected strict missing xref marker failure")
   }
-  guard trailerless is Err(@pdflite.PdfError::TrailerExpected) else {
+  guard trailerless is Err(@core.PdfError::TrailerExpected) else {
     fail("expected strict trailerless xref failure")
   }
 }
@@ -3011,7 +3005,7 @@ async test "async file wrappers reconstruct indirect stream lengths" {
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     @fs.read_file(path).binary(),
   )
-  guard strict is Err(@pdflite.PdfError::StartXRefExpected) else {
+  guard strict is Err(@core.PdfError::StartXRefExpected) else {
     fail("expected strict indirect-stream-length missing-startxref failure")
   }
   let recovered = pdf_read_document_from_file(path)
@@ -3105,16 +3099,16 @@ async test "async file wrappers reconstruct malformed stream markers" {
   pdf_async_io_remove_if_exists_for_test(bad_endstream_path)
   pdf_async_io_remove_if_exists_for_test(bad_endobj_path)
   pdf_async_io_remove_if_exists_for_test(truncated_path)
-  guard strict_bad_stream is Err(@pdflite.PdfError::ParseStreamExpected) else {
+  guard strict_bad_stream is Err(@core.PdfError::ParseStreamExpected) else {
     fail("expected strict malformed stream keyword failure")
   }
-  guard strict_bad_endstream is Err(@pdflite.PdfError::ParseEndStreamExpected) else {
+  guard strict_bad_endstream is Err(@core.PdfError::ParseEndStreamExpected) else {
     fail("expected strict malformed endstream failure")
   }
-  guard strict_bad_endobj is Err(@pdflite.PdfError::ParseEndObjectExpected) else {
+  guard strict_bad_endobj is Err(@core.PdfError::ParseEndObjectExpected) else {
     fail("expected strict malformed endobj failure")
   }
-  guard strict_truncated is Err(@pdflite.PdfError::EndOfInput) else {
+  guard strict_truncated is Err(@core.PdfError::EndOfInput) else {
     fail("expected strict truncated stream failure")
   }
   for parsed in [bad_stream, bad_endstream, bad_endobj] {
@@ -3183,10 +3177,10 @@ async test "async file wrappers reconstruct malformed objects" {
   pdf_async_io_remove_if_exists_for_test(nested_object_path)
   pdf_async_io_remove_if_exists_for_test(bad_object_path)
   pdf_async_io_remove_if_exists_for_test(bad_name_path)
-  guard strict_bad_object is Err(@pdflite.PdfError::ParseObjectExpected) else {
+  guard strict_bad_object is Err(@core.PdfError::ParseObjectExpected) else {
     fail("expected strict malformed object failure")
   }
-  guard strict_bad_name is Err(@pdflite.PdfError::InvalidHexEscape) else {
+  guard strict_bad_name is Err(@core.PdfError::InvalidHexEscape) else {
     fail("expected strict malformed name failure")
   }
   @test.assert_eq(object_in_stream.first_xref(), 0)
@@ -3252,10 +3246,10 @@ async test "async file wrappers preserve unreconstructable malformed read errors
   )
   pdf_async_io_remove_if_exists_for_test(rootless_path)
   pdf_async_io_remove_if_exists_for_test(malformed_startxref_path)
-  guard rootless is Err(@pdflite.PdfError::RootExpected) else {
+  guard rootless is Err(@core.PdfError::RootExpected) else {
     fail("expected unreconstructable rootless PDF to stay RootExpected")
   }
-  guard malformed_startxref is Err(@pdflite.PdfError::NumberExpected) else {
+  guard malformed_startxref is Err(@core.PdfError::NumberExpected) else {
     fail(
       "expected unreconstructable malformed startxref to stay NumberExpected",
     )
@@ -3391,7 +3385,7 @@ async test "async file wrappers reconstruct multi-revision object-stream roots" 
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     @fs.read_file(path).binary(),
   )
-  guard strict is Err(@pdflite.PdfError::XRefExpected) else {
+  guard strict is Err(@core.PdfError::XRefExpected) else {
     fail("expected strict object-stream root reconstruction failure")
   }
   let recovered = pdf_read_document_from_file(path)
@@ -3486,15 +3480,15 @@ async test "async file wrappers do not reconstruct object-stream decode failures
   pdf_async_io_remove_if_exists_for_test(decodeparms_path)
   pdf_async_io_remove_if_exists_for_test(predictor_path)
 
-  guard filter_result is Err(@pdflite.PdfError::FilterNotSupported(filter)) else {
+  guard filter_result is Err(@core.PdfError::FilterNotSupported(filter)) else {
     fail("expected unsupported object-stream filter")
   }
   @test.assert_eq(filter, pdf_async_io_name_for_test("/BadObjectStreamFilter"))
-  guard decodeparms_result is Err(@pdflite.PdfError::PredictorExpected) else {
+  guard decodeparms_result is Err(@core.PdfError::PredictorExpected) else {
     fail("expected malformed object-stream DecodeParms")
   }
   guard predictor_result
-    is Err(@pdflite.PdfError::PredictorNotSupported(predictor)) else {
+    is Err(@core.PdfError::PredictorNotSupported(predictor)) else {
     fail("expected unsupported object-stream predictor")
   }
   @test.assert_eq(predictor, 9)
@@ -3517,7 +3511,7 @@ async test "async file wrappers reconstruct indirect object-stream bounds" {
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     @fs.read_file(path).binary(),
   )
-  guard strict is Err(@pdflite.PdfError::XRefExpected) else {
+  guard strict is Err(@core.PdfError::XRefExpected) else {
     fail("expected strict XRefExpected")
   }
   let recovered = pdf_read_document_from_file(path)
@@ -3557,7 +3551,7 @@ async test "async file wrappers reconstruct object streams with indirect filters
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     @fs.read_file(path).binary(),
   )
-  guard strict is Err(@pdflite.PdfError::XRefExpected) else {
+  guard strict is Err(@core.PdfError::XRefExpected) else {
     fail("expected strict XRefExpected")
   }
   let recovered = pdf_read_document_from_file(path)
@@ -3661,7 +3655,7 @@ async test "async file wrappers reject encrypted xref streams with missing objec
     path,
   )
   pdf_async_io_remove_if_exists_for_test(path)
-  guard result is Err(@pdflite.PdfError::XRefEntryExpected) else {
+  guard result is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected missing encrypted object stream to remain unrecoverable")
   }
 }
@@ -4324,7 +4318,7 @@ async test "async file wrappers reconstruct encrypted malformed classic xref mar
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     @fs.read_file(malformed_path).binary(),
   )
-  guard strict is Err(@pdflite.PdfError::XRefEntryExpected) else {
+  guard strict is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected malformed classic xref marker to require reconstruction")
   }
   let recovered = pdf_async_io_decryption_result_for_test(
@@ -4422,7 +4416,7 @@ async test "async file wrappers reconstruct encrypted malformed classic xref sub
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     @fs.read_file(malformed_path).binary(),
   )
-  guard strict is Err(@pdflite.PdfError::NumberExpected) else {
+  guard strict is Err(@core.PdfError::NumberExpected) else {
     fail("expected malformed classic xref subsection to require reconstruction")
   }
   let recovered = pdf_async_io_decryption_result_for_test(
@@ -4522,7 +4516,7 @@ async test "async file wrappers reconstruct encrypted malformed classic trailers
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     @fs.read_file(malformed_path).binary(),
   )
-  guard strict is Err(@pdflite.PdfError::TrailerExpected) else {
+  guard strict is Err(@core.PdfError::TrailerExpected) else {
     fail("expected malformed classic trailer to require reconstruction")
   }
   let recovered = pdf_async_io_decryption_result_for_test(
@@ -4622,7 +4616,7 @@ async test "async file wrappers reconstruct encrypted missing-root classic trail
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     @fs.read_file(malformed_path).binary(),
   )
-  guard strict is Err(@pdflite.PdfError::RootExpected) else {
+  guard strict is Err(@core.PdfError::RootExpected) else {
     fail("expected missing-root classic trailer to require reconstruction")
   }
   let recovered = pdf_async_io_decryption_result_for_test(
@@ -4724,7 +4718,7 @@ async test "async file wrappers reconstruct encrypted catalogs missing from clas
   )
   @test.assert_eq(strict.root(), root_number)
   let strict_catalog : Result[@syntax.PdfObject, Error] = try? strict.catalog()
-  guard strict_catalog is Err(@pdflite.PdfError::RootExpected) else {
+  guard strict_catalog is Err(@core.PdfError::RootExpected) else {
     fail("expected missing root object to require reconstruction")
   }
   @test.assert_eq(
@@ -4879,7 +4873,7 @@ async test "async file wrappers reconstruct encrypted page trees missing from cl
   @test.assert_eq(strict.root(), 1)
   @test.assert_eq(strict.object_numbers(), [1, encrypt_object_number])
   let strict_pages : Result[Int, Error] = try? strict.endpage()
-  guard strict_pages is Err(@pdflite.PdfError::PageTreeExpected) else {
+  guard strict_pages is Err(@core.PdfError::PageTreeExpected) else {
     fail("expected missing page tree to require reconstruction")
   }
   @test.assert_eq(
@@ -4981,7 +4975,7 @@ async test "async file wrappers reconstruct encrypted malformed xref-stream meta
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     @fs.read_file(malformed_path).binary(),
   )
-  guard strict is Err(@pdflite.PdfError::XRefEntryExpected) else {
+  guard strict is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected malformed xref stream metadata to require reconstruction")
   }
   let recovered = pdf_async_io_decryption_result_for_test(
@@ -5072,7 +5066,7 @@ async test "async file wrappers reconstruct encrypted malformed xref-stream widt
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     @fs.read_file(malformed_path).binary(),
   )
-  guard strict is Err(@pdflite.PdfError::XRefEntryExpected) else {
+  guard strict is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected malformed xref stream widths to require reconstruction")
   }
   let recovered = pdf_async_io_decryption_result_for_test(
@@ -5163,7 +5157,7 @@ async test "async file wrappers reconstruct encrypted malformed xref-stream size
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     @fs.read_file(malformed_path).binary(),
   )
-  guard strict is Err(@pdflite.PdfError::XRefEntryExpected) else {
+  guard strict is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected malformed xref stream size to require reconstruction")
   }
   let recovered = pdf_async_io_decryption_result_for_test(
@@ -5254,7 +5248,7 @@ async test "async file wrappers reconstruct encrypted malformed xref-stream filt
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     @fs.read_file(malformed_path).binary(),
   )
-  guard strict is Err(@pdflite.PdfError::FilterNotSupported(filter)) else {
+  guard strict is Err(@core.PdfError::FilterNotSupported(filter)) else {
     fail("expected malformed xref stream filter to require reconstruction")
   }
   @test.assert_eq(filter, pdf_async_io_name_for_test("/BadXRefFilter"))
@@ -5346,7 +5340,7 @@ async test "async file wrappers reconstruct encrypted malformed xref-stream deco
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     @fs.read_file(malformed_path).binary(),
   )
-  guard strict is Err(@pdflite.PdfError::PredictorExpected) else {
+  guard strict is Err(@core.PdfError::PredictorExpected) else {
     fail("expected malformed xref stream DecodeParms to require reconstruction")
   }
   let recovered = pdf_async_io_decryption_result_for_test(

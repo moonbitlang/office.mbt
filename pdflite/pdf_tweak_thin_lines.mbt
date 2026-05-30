@@ -20,7 +20,7 @@ fn pdf_tweak_ctm_scale(stack : ArrayView[@geometry.TransformMatrix]) -> Double {
 fn pdf_tweak_extgstate_line_width(
   document : PdfDocument,
   resources : @syntax.PdfObject,
-  name : PdfName,
+  name : @core.PdfName,
 ) -> Double? {
   match document.lookup_direct(pdf_tweak_extgstate_key(), resources) {
     Some(extgstate) =>
@@ -46,7 +46,7 @@ pub fn pdf_thin_lines_ops(
   resources : @syntax.PdfObject,
   ops : ArrayView[@content.PdfContentOp],
   width : Double,
-) -> Array[@content.PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise @core.PdfError {
   let limit = if width < 0.0 { -width } else { width }
   let is_minimum = width >= 0.0
   let ctm_stack : Array[@geometry.TransformMatrix] = [
@@ -114,7 +114,7 @@ fn PdfDocument::pdf_tweak_thin_lines_page(
   self : PdfDocument,
   page : @page.PdfPage,
   width : Double,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   let ops = self.pdf_page_parse_content_ops(page.resources, page.content)
   {
     ..page,
@@ -135,7 +135,7 @@ pub fn PdfDocument::thin_lines(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
   width : Double,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let document = self.copy()
   let pages = document.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(page_numbers)
@@ -158,7 +158,7 @@ pub fn pdf_thin_lines(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
   width : Double,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.thin_lines(page_numbers, width)
 }
 
@@ -168,6 +168,6 @@ pub fn pdf_thinlines(
   page_numbers : ArrayView[Int],
   width : Double,
   document : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.thin_lines(page_numbers, width)
 }

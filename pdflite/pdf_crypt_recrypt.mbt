@@ -2,7 +2,7 @@
 fn PdfEncryptionValues::file_key_for_recrypt_password(
   self : PdfEncryptionValues,
   password : BytesView,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   match self.file_key_for_user_password(password) {
     Some(key) => key
     None =>
@@ -36,7 +36,7 @@ fn PdfDocument::recrypt_arc4_with_file_key(
   file_key : BytesView,
   key_length_bits : Int,
   revision : Int,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let (document, _) = self.with_file_id(file_id=values.file_id)
   document.pdf_crypt_prepare_plaintext_for_recrypt()
   document.set_saved_encryption(None)
@@ -64,8 +64,8 @@ fn PdfDocument::recrypt_aesv2_with_file_key(
   self : PdfDocument,
   values : PdfEncryptionValues,
   file_key : BytesView,
-  iv_provider : (Int, Int, Int) -> PdfBytes raise PdfError,
-) -> PdfDocument raise PdfError {
+  iv_provider : (Int, Int, Int) -> @core.PdfBytes raise @core.PdfError,
+) -> PdfDocument raise @core.PdfError {
   let (document, _) = self.with_file_id(file_id=values.file_id)
   document.pdf_crypt_prepare_plaintext_for_recrypt()
   document.set_saved_encryption(None)
@@ -91,8 +91,8 @@ fn PdfDocument::recrypt_aesv3_with_file_key(
   self : PdfDocument,
   values : PdfEncryptionValues,
   file_key : BytesView,
-  iv_provider : (Int, Int, Int) -> PdfBytes raise PdfError,
-) -> PdfDocument raise PdfError {
+  iv_provider : (Int, Int, Int) -> @core.PdfBytes raise @core.PdfError,
+) -> PdfDocument raise @core.PdfError {
   let (document, _) = self.with_file_id(file_id=values.file_id)
   document.pdf_crypt_prepare_plaintext_for_recrypt()
   document.set_saved_encryption(None)
@@ -121,7 +121,7 @@ fn PdfDocument::recrypt_aesv3_with_file_key(
 pub fn PdfDocument::recrypt_with_password(
   self : PdfDocument,
   password : BytesView,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let saved = match self.saved_encryption() {
     Some(saved) => saved
     None => raise EncryptionSavedStateExpected
@@ -149,8 +149,8 @@ pub fn PdfDocument::recrypt_with_password(
 pub fn PdfDocument::recrypt_with_password_aesv2_with_iv_provider(
   self : PdfDocument,
   password : BytesView,
-  iv_provider : (Int, Int, Int) -> PdfBytes raise PdfError,
-) -> PdfDocument raise PdfError {
+  iv_provider : (Int, Int, Int) -> @core.PdfBytes raise @core.PdfError,
+) -> PdfDocument raise @core.PdfError {
   let saved = match self.saved_encryption() {
     Some(saved) => saved
     None => raise EncryptionSavedStateExpected
@@ -174,8 +174,8 @@ pub fn PdfDocument::recrypt_with_password_aesv2_with_iv_provider(
 pub fn PdfDocument::recrypt_with_password_aesv3_with_iv_provider(
   self : PdfDocument,
   password : BytesView,
-  iv_provider : (Int, Int, Int) -> PdfBytes raise PdfError,
-) -> PdfDocument raise PdfError {
+  iv_provider : (Int, Int, Int) -> @core.PdfBytes raise @core.PdfError,
+) -> PdfDocument raise @core.PdfError {
   let saved = match self.saved_encryption() {
     Some(saved) => saved
     None => raise EncryptionSavedStateExpected

@@ -8,7 +8,7 @@ test "pdf_read_document_from_bytes follows xref stream Prev chains" {
   @test.assert_eq(
     updated
     .trailer_dict()
-    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Prev"))),
+    .lookup_immediate(@core.pdf_name_of_bytes(reader_pdf_ascii("/Prev"))),
     None,
   )
 
@@ -30,15 +30,13 @@ test "pdf_read_document_from_bytes follows compressed xref stream Prev chains" {
   @test.assert_eq(
     updated
     .trailer_dict()
-    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Prev"))),
+    .lookup_immediate(@core.pdf_name_of_bytes(reader_pdf_ascii("/Prev"))),
     None,
   )
   @test.assert_eq(
     updated
     .trailer_dict()
-    .lookup_immediate(
-      @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/DecodeParms")),
-    ),
+    .lookup_immediate(@core.pdf_name_of_bytes(reader_pdf_ascii("/DecodeParms"))),
     None,
   )
 }
@@ -48,8 +46,8 @@ test "pdf_read_document_from_bytes reconstructs compressed xref stream Prev chai
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     reader_xref_stream_pdf_with_compressed_prev_update_bad_startxref(),
   )
-  guard strict is Err(@pdflite.PdfError::XRefExpected) else {
-    fail("expected strict @pdflite.PdfError::XRefExpected")
+  guard strict is Err(@core.PdfError::XRefExpected) else {
+    fail("expected strict @core.PdfError::XRefExpected")
   }
 
   let updated = try! @pdflite.pdf_read_document_from_bytes(
@@ -62,7 +60,7 @@ test "pdf_read_document_from_bytes reconstructs compressed xref stream Prev chai
   @test.assert_eq(
     updated
     .trailer_dict()
-    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Prev"))),
+    .lookup_immediate(@core.pdf_name_of_bytes(reader_pdf_ascii("/Prev"))),
     None,
   )
 }
@@ -107,7 +105,7 @@ test "pdf_read_document_from_bytes extracts xref object-stream entries" {
   @test.assert_eq(
     parsed.lookup_object_or_null(2),
     PdfDictionary([
-      (@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Answer")), PdfInteger(42)),
+      (@core.pdf_name_of_bytes(reader_pdf_ascii("/Answer")), PdfInteger(42)),
     ]),
   )
   guard parsed.lookup_object_or_null(3) is PdfStreamObject(object_stream) else {
@@ -115,9 +113,9 @@ test "pdf_read_document_from_bytes extracts xref object-stream entries" {
   }
   @test.assert_eq(
     object_stream.dictionary.lookup_immediate(
-      @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Type")),
+      @core.pdf_name_of_bytes(reader_pdf_ascii("/Type")),
     ),
-    Some(PdfNameObject(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/ObjStm")))),
+    Some(PdfNameObject(@core.pdf_name_of_bytes(reader_pdf_ascii("/ObjStm")))),
   )
 }
 
@@ -130,7 +128,7 @@ test "pdf_read_document_from_bytes loads multiple entries from one object stream
   @test.assert_eq(
     parsed.lookup_object_or_null(2),
     PdfDictionary([
-      (@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Answer")), PdfInteger(42)),
+      (@core.pdf_name_of_bytes(reader_pdf_ascii("/Answer")), PdfInteger(42)),
     ]),
   )
   @test.assert_eq(
@@ -150,7 +148,7 @@ test "pdf_read_document_from_bytes tolerates stream objects inside object stream
   }
   @test.assert_eq(
     stream.dictionary.lookup_immediate(
-      @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Length")),
+      @core.pdf_name_of_bytes(reader_pdf_ascii("/Length")),
     ),
     Some(PdfInteger(2)),
   )
@@ -166,7 +164,7 @@ test "pdf_read_document_from_bytes decodes object streams with indirect filters"
   @test.assert_eq(
     parsed.lookup_object_or_null(5),
     PdfDictionary([
-      (@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Answer")), PdfInteger(42)),
+      (@core.pdf_name_of_bytes(reader_pdf_ascii("/Answer")), PdfInteger(42)),
     ]),
   )
   guard parsed.lookup_object_or_null(3) is PdfStreamObject(object_stream) else {
@@ -174,7 +172,7 @@ test "pdf_read_document_from_bytes decodes object streams with indirect filters"
   }
   @test.assert_eq(
     object_stream.dictionary.lookup_immediate(
-      @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Filter")),
+      @core.pdf_name_of_bytes(reader_pdf_ascii("/Filter")),
     ),
     Some(PdfIndirect(2)),
   )
@@ -185,8 +183,8 @@ test "pdf_read_document_from_bytes reconstructs object streams with indirect fil
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     reader_xref_stream_pdf_with_indirect_object_stream_filter_bad_startxref(),
   )
-  guard strict is Err(@pdflite.PdfError::XRefExpected) else {
-    fail("expected strict @pdflite.PdfError::XRefExpected")
+  guard strict is Err(@core.PdfError::XRefExpected) else {
+    fail("expected strict @core.PdfError::XRefExpected")
   }
 
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
@@ -197,7 +195,7 @@ test "pdf_read_document_from_bytes reconstructs object streams with indirect fil
   @test.assert_eq(
     parsed.lookup_object_or_null(5),
     PdfDictionary([
-      (@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Answer")), PdfInteger(42)),
+      (@core.pdf_name_of_bytes(reader_pdf_ascii("/Answer")), PdfInteger(42)),
     ]),
   )
   guard parsed.lookup_object_or_null(3) is PdfStreamObject(object_stream) else {
@@ -205,7 +203,7 @@ test "pdf_read_document_from_bytes reconstructs object streams with indirect fil
   }
   @test.assert_eq(
     object_stream.dictionary.lookup_immediate(
-      @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Filter")),
+      @core.pdf_name_of_bytes(reader_pdf_ascii("/Filter")),
     ),
     Some(PdfIndirect(2)),
   )
@@ -216,7 +214,7 @@ test "pdf_read_document_from_bytes reconstructs physical page trees when object-
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     reader_xref_stream_pdf_with_bad_first_object_stream_root_and_physical_page_tree(),
   )
-  guard strict is Err(@pdflite.PdfError::StreamDataExpected) else {
+  guard strict is Err(@core.PdfError::StreamDataExpected) else {
     fail("expected strict object-stream bounds failure")
   }
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
@@ -230,10 +228,10 @@ test "pdf_read_document_from_bytes reconstructs physical page trees when object-
     parsed.lookup_object_or_null(1),
     PdfDictionary([
       (
-        @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Type")),
-        PdfNameObject(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Catalog"))),
+        @core.pdf_name_of_bytes(reader_pdf_ascii("/Type")),
+        PdfNameObject(@core.pdf_name_of_bytes(reader_pdf_ascii("/Catalog"))),
       ),
-      (@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Pages")), PdfIndirect(2)),
+      (@core.pdf_name_of_bytes(reader_pdf_ascii("/Pages")), PdfIndirect(2)),
     ]),
   )
 }
@@ -243,14 +241,14 @@ test "pdf_read_document_from_bytes does not reconstruct mismatched object-stream
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     reader_xref_stream_pdf_with_mismatched_object_stream_root_and_physical_catalog(),
   )
-  guard strict is Err(@pdflite.PdfError::XRefEntryExpected) else {
+  guard strict is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected strict object-stream mismatch failure")
   }
 
   let public : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_document_from_bytes(
     reader_xref_stream_pdf_with_mismatched_object_stream_root_and_physical_catalog(),
   )
-  guard public is Err(@pdflite.PdfError::XRefEntryExpected) else {
+  guard public is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected public object-stream mismatch failure")
   }
 }
@@ -260,8 +258,8 @@ test "pdf_read_document_from_bytes_with_passwords rejects missing encrypted obje
   let result : Result[@pdflite.PdfDecryptionResult?, Error] = try? @pdflite.pdf_read_document_from_bytes_with_passwords(
     reader_encrypted_xref_stream_pdf_with_missing_object_stream_for_test(),
   )
-  guard result is Err(@pdflite.PdfError::XRefEntryExpected) else {
-    fail("expected @pdflite.PdfError::XRefEntryExpected")
+  guard result is Err(@core.PdfError::XRefEntryExpected) else {
+    fail("expected @core.PdfError::XRefEntryExpected")
   }
 }
 
@@ -274,7 +272,7 @@ test "pdf_read_document_from_bytes resolves indirect object-stream bounds" {
   @test.assert_eq(
     parsed.lookup_object_or_null(7),
     PdfDictionary([
-      (@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Answer")), PdfInteger(42)),
+      (@core.pdf_name_of_bytes(reader_pdf_ascii("/Answer")), PdfInteger(42)),
     ]),
   )
 }
@@ -284,8 +282,8 @@ test "pdf_read_document_from_bytes reconstructs indirect object-stream bounds" {
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     reader_xref_stream_pdf_with_indirect_object_stream_bounds_bad_startxref(),
   )
-  guard strict is Err(@pdflite.PdfError::XRefExpected) else {
-    fail("expected strict @pdflite.PdfError::XRefExpected")
+  guard strict is Err(@core.PdfError::XRefExpected) else {
+    fail("expected strict @core.PdfError::XRefExpected")
   }
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
     reader_xref_stream_pdf_with_indirect_object_stream_bounds_bad_startxref(),
@@ -295,7 +293,7 @@ test "pdf_read_document_from_bytes reconstructs indirect object-stream bounds" {
   @test.assert_eq(
     parsed.lookup_object_or_null(7),
     PdfDictionary([
-      (@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Answer")), PdfInteger(42)),
+      (@core.pdf_name_of_bytes(reader_pdf_ascii("/Answer")), PdfInteger(42)),
     ]),
   )
 }
@@ -305,8 +303,8 @@ test "pdf_read_document_from_bytes rejects mismatched object-stream entries" {
   let result : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_document_from_bytes(
     reader_xref_stream_pdf_with_mismatched_object_stream(),
   )
-  guard result is Err(@pdflite.PdfError::XRefEntryExpected) else {
-    fail("expected @pdflite.PdfError::XRefEntryExpected")
+  guard result is Err(@core.PdfError::XRefEntryExpected) else {
+    fail("expected @core.PdfError::XRefEntryExpected")
   }
 }
 
@@ -315,8 +313,8 @@ test "pdf_read_document_from_bytes rejects invalid object-stream data slices" {
   let result : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_document_from_bytes(
     reader_xref_stream_pdf_with_object_stream_bad_first(),
   )
-  guard result is Err(@pdflite.PdfError::StreamDataExpected) else {
-    fail("expected @pdflite.PdfError::StreamDataExpected")
+  guard result is Err(@core.PdfError::StreamDataExpected) else {
+    fail("expected @core.PdfError::StreamDataExpected")
   }
 }
 
@@ -325,28 +323,28 @@ test "pdf_read_document_from_bytes rejects non-xref startxref objects" {
   let non_stream : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_document_from_bytes(
     reader_startxref_object_pdf("7"),
   )
-  guard non_stream is Err(@pdflite.PdfError::XRefExpected) else {
-    fail("expected @pdflite.PdfError::XRefExpected")
+  guard non_stream is Err(@core.PdfError::XRefExpected) else {
+    fail("expected @core.PdfError::XRefExpected")
   }
 
   let wrong_stream_type : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_document_from_bytes(
     reader_startxref_object_pdf("<< /Length 0 >>\nstream\n\nendstream"),
   )
-  guard wrong_stream_type is Err(@pdflite.PdfError::XRefExpected) else {
-    fail("expected @pdflite.PdfError::XRefExpected")
+  guard wrong_stream_type is Err(@core.PdfError::XRefExpected) else {
+    fail("expected @core.PdfError::XRefExpected")
   }
 
   let explicit_wrong_type : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     reader_xref_stream_pdf_with_wrong_type(),
   )
-  guard explicit_wrong_type is Err(@pdflite.PdfError::XRefExpected) else {
+  guard explicit_wrong_type is Err(@core.PdfError::XRefExpected) else {
     fail("expected explicit xref stream type rejection")
   }
 
   let non_name_type : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     reader_xref_stream_pdf_with_non_name_type(),
   )
-  guard non_name_type is Err(@pdflite.PdfError::XRefExpected) else {
+  guard non_name_type is Err(@core.PdfError::XRefExpected) else {
     fail("expected non-name xref stream type rejection")
   }
 }

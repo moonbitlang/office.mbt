@@ -1,5 +1,5 @@
 ///|
-fn pdf_draw_resource_name_number(name : PdfName) -> Int? {
+fn pdf_draw_resource_name_number(name : @core.PdfName) -> Int? {
   let bytes = name.bytes()
   let mut start = bytes.length()
   while start > 0 {
@@ -51,7 +51,7 @@ fn PdfDocument::pdf_draw_page_resource_numbers(
 fn PdfDocument::pdf_draw_minimum_resource_number(
   self : PdfDocument,
   selected_pages : @core.PdfNumberSet,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   let pages = self.pages_of_pagetree()
   let mut maximum = -1
   for index in 0..<pages.length() {

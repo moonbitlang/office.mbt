@@ -1,5 +1,5 @@
 ///|
-let pdf_impose_cpdf_stamp_name : PdfName = pdf_page_name("/CPDFSTAMP")
+let pdf_impose_cpdf_stamp_name : @core.PdfName = pdf_page_name("/CPDFSTAMP")
 
 ///|
 fn pdf_impose_border_ops(
@@ -30,7 +30,7 @@ fn PdfDocument::pdf_impose_add_border(
   self : PdfDocument,
   line_width : Double,
   fast : Bool,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let end_page = self.endpage()
   if line_width == 0.0 || end_page == 0 {
     self

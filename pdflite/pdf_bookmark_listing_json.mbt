@@ -1,5 +1,5 @@
 ///|
-fn pdf_bookmark_json_text(text : BytesView) -> String raise PdfError {
+fn pdf_bookmark_json_text(text : BytesView) -> String raise @core.PdfError {
   let simplified = pdf_simplify_utf16be(text)
   let utf8 = pdf_utf8_of_pdfdocstring(simplified)
   @utf8.decode(utf8) catch {
@@ -11,7 +11,7 @@ fn pdf_bookmark_json_text(text : BytesView) -> String raise PdfError {
 fn PdfDocument::pdf_bookmark_json_mark(
   self : PdfDocument,
   bookmark : @bookmark.PdfBookmark,
-) -> Json raise PdfError {
+) -> Json raise @core.PdfError {
   let page_number = self.page_number_of_target(bookmark.target)
   Json::object(
     Map([
@@ -43,7 +43,7 @@ fn PdfDocument::pdf_bookmark_json_mark(
 fn PdfDocument::pdf_bookmark_listing_json(
   self : PdfDocument,
   bookmarks : ArrayView[@bookmark.PdfBookmark],
-) -> Json raise PdfError {
+) -> Json raise @core.PdfError {
   let output : Array[Json] = Array::new(capacity=bookmarks.length())
   for bookmark in bookmarks {
     output.push(self.pdf_bookmark_json_mark(bookmark))

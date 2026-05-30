@@ -2,7 +2,7 @@
 fn PdfDocument::pdf_image_indirect_mask_number(
   self : PdfDocument,
   image : @syntax.PdfObject,
-  key : PdfName,
+  key : @core.PdfName,
 ) -> Int? {
   match self.direct(image) {
     PdfDictionary(entries)
@@ -30,7 +30,7 @@ fn PdfDocument::pdf_image_list_mask(
   inline : Bool,
   entries : Array[PdfImageListEntry],
   form_numbers : @hashmap.HashMap[Int, Bool],
-) -> (String, Int?) raise PdfError {
+) -> (String, Int?) raise @core.PdfError {
   match
     self.lookup_direct_or_else(
       pdf_image_image_mask_key(),

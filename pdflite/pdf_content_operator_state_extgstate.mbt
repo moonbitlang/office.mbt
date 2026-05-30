@@ -4,8 +4,8 @@ pub fn PdfDocument::content_apply_extgstate_resource_op(
   self : PdfDocument,
   state : PdfContentOperatorState,
   resources : @syntax.PdfObject,
-  _name : PdfName,
-) -> PdfContentOperatorState raise PdfError {
+  _name : @core.PdfName,
+) -> PdfContentOperatorState raise @core.PdfError {
   let extgstate = match
     self.lookup_direct(pdf_content_extgstate_resource_name, resources) {
     Some(PdfDictionary(_) as dictionary) => dictionary
@@ -31,7 +31,7 @@ pub fn pdf_content_apply_extgstate_resource_op(
   document : PdfDocument,
   state : PdfContentOperatorState,
   resources : @syntax.PdfObject,
-  name : PdfName,
-) -> PdfContentOperatorState raise PdfError {
+  name : @core.PdfName,
+) -> PdfContentOperatorState raise @core.PdfError {
   document.content_apply_extgstate_resource_op(state, resources, name)
 }

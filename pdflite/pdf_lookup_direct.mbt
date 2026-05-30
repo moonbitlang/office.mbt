@@ -42,7 +42,7 @@ pub fn PdfDocument::direct(
 /// returns `None`.
 pub fn PdfDocument::lookup_direct(
   self : PdfDocument,
-  key : PdfName,
+  key : @core.PdfName,
   object : @syntax.PdfObject,
 ) -> @syntax.PdfObject? {
   match self.direct(object).dictionary_view() {
@@ -68,10 +68,10 @@ pub fn PdfDocument::lookup_direct(
 /// key is absent, or when the resolved value is `PdfNull`.
 pub fn PdfDocument::lookup_required(
   self : PdfDocument,
-  key : PdfName,
+  key : @core.PdfName,
   object : @syntax.PdfObject,
-  error : PdfError,
-) -> @syntax.PdfObject raise PdfError {
+  error : @core.PdfError,
+) -> @syntax.PdfObject raise @core.PdfError {
   match self.direct(object).dictionary_view() {
     Some(entries) =>
       for entry in entries {
@@ -93,8 +93,8 @@ pub fn PdfDocument::lookup_required(
 /// is absent or resolves to `PdfNull`.
 pub fn PdfDocument::lookup_direct_or_else(
   self : PdfDocument,
-  first_key : PdfName,
-  second_key : PdfName,
+  first_key : @core.PdfName,
+  second_key : @core.PdfName,
   object : @syntax.PdfObject,
 ) -> @syntax.PdfObject? {
   match self.lookup_direct(first_key, object) {
@@ -104,7 +104,7 @@ pub fn PdfDocument::lookup_direct_or_else(
 }
 
 ///|
-fn pdf_lookup_array_index_name(name : PdfName) -> Int? {
+fn pdf_lookup_array_index_name(name : @core.PdfName) -> Int? {
   let bytes = name.bytes()
   guard bytes.length() >= 3 &&
     bytes[0].to_int() == 47 &&
@@ -134,7 +134,7 @@ fn pdf_lookup_array_index_name(name : PdfName) -> Int? {
 /// `lookup_direct`. The returned value is resolved through `direct`.
 pub fn PdfDocument::lookup_direct_or_array(
   self : PdfDocument,
-  name : PdfName,
+  name : @core.PdfName,
   object : @syntax.PdfObject,
 ) -> @syntax.PdfObject? {
   match pdf_lookup_array_index_name(name) {
@@ -159,7 +159,7 @@ pub fn PdfDocument::lookup_direct_or_array(
 /// immediate entry value is `PdfIndirect(number)`.
 pub fn PdfDocument::indirect_number(
   self : PdfDocument,
-  key : PdfName,
+  key : @core.PdfName,
   object : @syntax.PdfObject,
 ) -> Int? {
   match self.direct(object).dictionary_view() {

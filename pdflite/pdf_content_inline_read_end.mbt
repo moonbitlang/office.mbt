@@ -1,14 +1,14 @@
 ///|
-fn pdf_content_skip_whitespace(cursor : ByteCursor) -> Unit {
-  while pdf_is_whitespace_byte(cursor.peek_byte()) {
+fn pdf_content_skip_whitespace(cursor : @core.ByteCursor) -> Unit {
+  while @core.pdf_is_whitespace_byte(cursor.peek_byte()) {
     cursor.nudge()
   }
 }
 
 ///|
 fn pdf_content_consume_next_inline_image_end(
-  cursor : ByteCursor,
-) -> Bool raise PdfError {
+  cursor : @core.ByteCursor,
+) -> Bool raise @core.PdfError {
   let remaining = cursor.remaining_view()
   if remaining.length() < 2 {
     false
@@ -26,8 +26,8 @@ fn pdf_content_consume_next_inline_image_end(
 
 ///|
 fn pdf_content_read_inline_image_end(
-  cursor : ByteCursor,
-) -> Unit raise PdfError {
+  cursor : @core.ByteCursor,
+) -> Unit raise @core.PdfError {
   pdf_content_skip_whitespace(cursor)
   let marker_start = cursor.position()
   match (cursor.read_byte(), cursor.read_byte()) {

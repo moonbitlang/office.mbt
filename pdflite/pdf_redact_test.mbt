@@ -1,6 +1,6 @@
 ///|
-fn redact_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn redact_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -146,8 +146,8 @@ test "PdfDocument redact_path preserves content and validates selected pages" {
     path,
     [3],
   )
-  guard bad_page is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
-    fail("expected @pdflite.PdfError::BadPageSpecification")
+  guard bad_page is Err(@core.PdfError::BadPageSpecification(_)) else {
+    fail("expected @core.PdfError::BadPageSpecification")
   }
 }
 

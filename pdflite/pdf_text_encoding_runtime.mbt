@@ -30,7 +30,7 @@ pub fn PdfEncoding::debug_name(self : PdfEncoding) -> String {
 ///
 /// Custom, implicit, and fallback encodings do not have a direct PDF name and
 /// return `None`.
-pub fn PdfEncoding::pdf_name(self : PdfEncoding) -> PdfName? {
+pub fn PdfEncoding::pdf_name(self : PdfEncoding) -> @core.PdfName? {
   match self {
     PdfStandardEncoding => Some(pdf_text_standard_encoding_name)
     PdfMacRomanEncoding => Some(pdf_text_mac_roman_encoding_name)
@@ -42,7 +42,7 @@ pub fn PdfEncoding::pdf_name(self : PdfEncoding) -> PdfName? {
 
 ///|
 /// Recognize a built-in simple-font encoding name.
-pub fn pdf_encoding_of_name(name : PdfName) -> PdfEncoding? {
+pub fn pdf_encoding_of_name(name : @core.PdfName) -> PdfEncoding? {
   match name {
     name if name == pdf_text_standard_encoding_name => Some(PdfStandardEncoding)
     name if name == pdf_text_mac_roman_encoding_name =>

@@ -25,8 +25,8 @@ async fn draw_fixture_bytes_for_test(path : String) -> Bytes? {
 }
 
 ///|
-fn draw_fixture_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn draw_fixture_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|

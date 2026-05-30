@@ -4,7 +4,7 @@ pub fn pdf_stamp(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
   overlay : PdfDocument,
-  relative_to_box? : PdfName = pdf_page_mediabox_key(),
+  relative_to_box? : @core.PdfName = pdf_page_mediabox_key(),
   position? : @geometry.PdfPosition = PdfPositionBottomLeft(0.0, 0.0),
   topline? : Bool = false,
   midline? : Bool = false,
@@ -12,7 +12,7 @@ pub fn pdf_stamp(
   scale_to_fit? : Bool = false,
   is_over? : Bool = true,
   process_struct_tree? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.stamp_pages(
     page_numbers,
     overlay,
@@ -41,7 +41,7 @@ pub fn PdfDocument::stamp_pages_string(
   scale_to_fit? : Bool = false,
   is_over? : Bool = true,
   process_struct_tree? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   self.stamp_pages(
     page_numbers,
     overlay,
@@ -70,7 +70,7 @@ pub fn pdf_stamp_cpdf_order(
   page_numbers : ArrayView[Int],
   overlay : PdfDocument,
   document : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.stamp_pages_string(
     page_numbers,
     overlay,

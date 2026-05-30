@@ -58,7 +58,7 @@ pub fn PdfDocument::toc_insert_pages(
   self : PdfDocument,
   toc_pages : ArrayView[@page.PdfPage],
   labels : ArrayView[@label.PdfPageLabel],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let original_pages = self.pages_of_pagetree()
   let toc_page_count = toc_pages.length()
   let pages = pdf_toc_prepend_pages(toc_pages, original_pages)
@@ -79,6 +79,6 @@ pub fn pdf_toc_insert_pages(
   document : PdfDocument,
   toc_pages : ArrayView[@page.PdfPage],
   labels : ArrayView[@label.PdfPageLabel],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.toc_insert_pages(toc_pages, labels)
 }

@@ -2,7 +2,7 @@
 fn PdfDocument::pdf_text_read_type3_glyphs(
   self : PdfDocument,
   font : @syntax.PdfObject,
-) -> PdfType3Glyphs raise PdfError {
+) -> PdfType3Glyphs raise @core.PdfError {
   let fontbbox = match self.lookup_direct(pdf_text_font_bbox_key_name, font) {
     Some(value) =>
       self.parse_rectangle(value) catch {
@@ -30,8 +30,8 @@ fn PdfDocument::pdf_text_read_type3_glyphs(
 fn PdfDocument::pdf_text_simple_font_type_of_name(
   self : PdfDocument,
   font : @syntax.PdfObject,
-  subtype : PdfName,
-) -> PdfSimpleFontType? raise PdfError {
+  subtype : @core.PdfName,
+) -> PdfSimpleFontType? raise @core.PdfError {
   if subtype == pdf_text_type1_name {
     Some(PdfType1)
   } else if subtype == pdf_text_mmtype1_name {
@@ -49,7 +49,7 @@ fn PdfDocument::pdf_text_simple_font_type_of_name(
 fn PdfDocument::pdf_text_read_basefont(
   self : PdfDocument,
   font : @syntax.PdfObject,
-) -> PdfName? {
+) -> @core.PdfName? {
   match self.lookup_direct(pdf_text_base_font_key_name, font) {
     Some(PdfNameObject(name)) => Some(name)
     _ => None
@@ -65,7 +65,7 @@ fn PdfDocument::pdf_text_read_basefont(
 pub fn PdfDocument::read_simple_font(
   self : PdfDocument,
   font : @syntax.PdfObject,
-) -> PdfSimpleFont raise PdfError {
+) -> PdfSimpleFont raise @core.PdfError {
   match self.lookup_direct(pdf_text_subtype_key_name, font) {
     Some(PdfNameObject(subtype)) =>
       match self.pdf_text_simple_font_type_of_name(font, subtype) {

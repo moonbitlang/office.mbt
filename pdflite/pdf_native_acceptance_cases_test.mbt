@@ -523,7 +523,7 @@ test "native acceptance suite reconstructs indirect-filter object-stream page tr
   let strict_malformed : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     malformed,
   )
-  guard strict_malformed is Err(@pdflite.PdfError::XRefExpected) else {
+  guard strict_malformed is Err(@core.PdfError::XRefExpected) else {
     fail("expected malformed startxref to require object-stream reconstruction")
   }
   let recovered = @pdflite.pdf_read_document_from_bytes(malformed)
@@ -548,7 +548,7 @@ test "native acceptance suite reconstructs prev-chain object-stream page trees" 
   let strict_malformed : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     malformed,
   )
-  guard strict_malformed is Err(@pdflite.PdfError::XRefExpected) else {
+  guard strict_malformed is Err(@core.PdfError::XRefExpected) else {
     fail("expected bad final startxref to require /Prev-chain reconstruction")
   }
   let recovered = @pdflite.pdf_read_document_from_bytes(malformed)
@@ -568,7 +568,7 @@ test "native acceptance suite reconstructs physical page trees when object-strea
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     bytes,
   )
-  guard strict is Err(@pdflite.PdfError::StreamDataExpected) else {
+  guard strict is Err(@core.PdfError::StreamDataExpected) else {
     fail("expected malformed object-stream bounds to require reconstruction")
   }
   let recovered = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -591,13 +591,13 @@ test "native acceptance suite rejects mismatched object-stream root recovery" {
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     bytes,
   )
-  guard strict is Err(@pdflite.PdfError::XRefEntryExpected) else {
+  guard strict is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected strict object-stream root mismatch failure")
   }
   let public : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_document_from_bytes(
     bytes,
   )
-  guard public is Err(@pdflite.PdfError::XRefEntryExpected) else {
+  guard public is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected public reader to reject physical fallback after mismatch")
   }
 }
@@ -610,7 +610,7 @@ test "native acceptance suite rejects unsupported object-stream filters" {
     ),
   )
   let filter = match bad_filter {
-    Err(@pdflite.PdfError::FilterNotSupported(filter)) => filter
+    Err(@core.PdfError::FilterNotSupported(filter)) => filter
     Err(_) => fail("expected unsupported object-stream filter")
     Ok(_) => fail("expected unsupported object-stream filter failure")
   }
@@ -621,7 +621,7 @@ test "native acceptance suite rejects unsupported object-stream filters" {
       " /Filter /FlateDecode /DecodeParms /Bad", true,
     ),
   )
-  guard bad_decodeparms is Err(@pdflite.PdfError::PredictorExpected) else {
+  guard bad_decodeparms is Err(@core.PdfError::PredictorExpected) else {
     fail("expected malformed object-stream DecodeParms failure")
   }
 
@@ -630,8 +630,7 @@ test "native acceptance suite rejects unsupported object-stream filters" {
       " /Filter /FlateDecode /DecodeParms << /Predictor 9 >>", true,
     ),
   )
-  guard bad_predictor
-    is Err(@pdflite.PdfError::PredictorNotSupported(predictor)) else {
+  guard bad_predictor is Err(@core.PdfError::PredictorNotSupported(predictor)) else {
     fail("expected unsupported object-stream predictor failure")
   }
   @test.assert_eq(predictor, 9)
@@ -643,13 +642,13 @@ test "native acceptance suite rejects invalid object-stream data slices" {
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     bytes,
   )
-  guard strict is Err(@pdflite.PdfError::StreamDataExpected) else {
+  guard strict is Err(@core.PdfError::StreamDataExpected) else {
     fail("expected strict invalid object-stream slice failure")
   }
   let public : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_document_from_bytes(
     bytes,
   )
-  guard public is Err(@pdflite.PdfError::StreamDataExpected) else {
+  guard public is Err(@core.PdfError::StreamDataExpected) else {
     fail("expected public invalid object-stream slice failure")
   }
 }
@@ -659,7 +658,7 @@ test "native acceptance suite rejects non-xref startxref targets" {
   let non_stream : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_document_from_bytes(
     acceptance_startxref_object_pdf_for_test("7"),
   )
-  guard non_stream is Err(@pdflite.PdfError::XRefExpected) else {
+  guard non_stream is Err(@core.PdfError::XRefExpected) else {
     fail("expected non-stream startxref target rejection")
   }
 
@@ -668,21 +667,21 @@ test "native acceptance suite rejects non-xref startxref targets" {
       "<< /Length 0 >>\nstream\n\nendstream",
     ),
   )
-  guard wrong_stream_type is Err(@pdflite.PdfError::XRefExpected) else {
+  guard wrong_stream_type is Err(@core.PdfError::XRefExpected) else {
     fail("expected stream without xref type rejection")
   }
 
   let explicit_wrong_type : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     acceptance_xref_stream_pdf_with_type_for_test("/Type /Catalog"),
   )
-  guard explicit_wrong_type is Err(@pdflite.PdfError::XRefExpected) else {
+  guard explicit_wrong_type is Err(@core.PdfError::XRefExpected) else {
     fail("expected explicit wrong xref stream type rejection")
   }
 
   let non_name_type : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     acceptance_xref_stream_pdf_with_type_for_test("/Type 99"),
   )
-  guard non_name_type is Err(@pdflite.PdfError::XRefExpected) else {
+  guard non_name_type is Err(@core.PdfError::XRefExpected) else {
     fail("expected non-name xref stream type rejection")
   }
 }
@@ -1437,7 +1436,7 @@ test "native acceptance suite decrypts reconstructed encrypted malformed trailer
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     malformed,
   )
-  guard strict is Err(@pdflite.PdfError::TrailerExpected) else {
+  guard strict is Err(@core.PdfError::TrailerExpected) else {
     fail("expected malformed trailer to require reconstruction")
   }
   let decrypted = acceptance_unwrap_decryption_for_test(
@@ -1514,7 +1513,7 @@ test "native acceptance suite decrypts reconstructed encrypted missing-root trai
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     malformed,
   )
-  guard strict is Err(@pdflite.PdfError::RootExpected) else {
+  guard strict is Err(@core.PdfError::RootExpected) else {
     fail("expected missing-root trailer to require reconstruction")
   }
   let decrypted = acceptance_unwrap_decryption_for_test(
@@ -1590,7 +1589,7 @@ test "native acceptance suite decrypts reconstructed encrypted catalogs missing 
   let strict = @pdflite.pdf_read_classic_document_from_bytes(malformed)
   @test.assert_eq(strict.root(), root_number)
   let strict_catalog : Result[@syntax.PdfObject, Error] = try? strict.catalog()
-  guard strict_catalog is Err(@pdflite.PdfError::RootExpected) else {
+  guard strict_catalog is Err(@core.PdfError::RootExpected) else {
     fail("expected missing root object to require reconstruction")
   }
   @test.assert_eq(
@@ -1720,7 +1719,7 @@ test "native acceptance suite decrypts reconstructed encrypted page trees missin
   @test.assert_eq(strict.root(), 1)
   @test.assert_eq(strict.object_numbers(), [1, encrypt_object_number])
   let strict_pages : Result[Int, Error] = try? strict.endpage()
-  guard strict_pages is Err(@pdflite.PdfError::PageTreeExpected) else {
+  guard strict_pages is Err(@core.PdfError::PageTreeExpected) else {
     fail("expected missing page tree to require reconstruction")
   }
   @test.assert_eq(
@@ -1841,7 +1840,7 @@ test "native acceptance suite decrypts reconstructed encrypted malformed xref ma
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     corrupted,
   )
-  guard strict is Err(@pdflite.PdfError::XRefEntryExpected) else {
+  guard strict is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected malformed xref marker to require reconstruction")
   }
   let decrypted = acceptance_unwrap_decryption_for_test(
@@ -1885,7 +1884,7 @@ test "native acceptance suite decrypts reconstructed encrypted malformed xref su
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     corrupted,
   )
-  guard strict is Err(@pdflite.PdfError::NumberExpected) else {
+  guard strict is Err(@core.PdfError::NumberExpected) else {
     fail("expected malformed xref subsection to require reconstruction")
   }
   let decrypted = acceptance_unwrap_decryption_for_test(
@@ -1962,7 +1961,7 @@ test "native acceptance suite decrypts reconstructed encrypted malformed xref-st
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     malformed,
   )
-  guard strict is Err(@pdflite.PdfError::XRefEntryExpected) else {
+  guard strict is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected malformed xref stream metadata to require reconstruction")
   }
   let decrypted = acceptance_unwrap_decryption_for_test(
@@ -2041,7 +2040,7 @@ test "native acceptance suite decrypts reconstructed encrypted malformed xref-st
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     malformed,
   )
-  guard strict is Err(@pdflite.PdfError::XRefEntryExpected) else {
+  guard strict is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected malformed xref stream widths to require reconstruction")
   }
   let decrypted = acceptance_unwrap_decryption_for_test(
@@ -2120,7 +2119,7 @@ test "native acceptance suite decrypts reconstructed encrypted malformed xref-st
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     malformed,
   )
-  guard strict is Err(@pdflite.PdfError::XRefEntryExpected) else {
+  guard strict is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected malformed xref stream size to require reconstruction")
   }
   let decrypted = acceptance_unwrap_decryption_for_test(
@@ -2182,7 +2181,7 @@ test "native acceptance suite reconstructs malformed xref-stream filters" {
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     malformed,
   )
-  guard strict is Err(@pdflite.PdfError::FilterNotSupported(filter)) else {
+  guard strict is Err(@core.PdfError::FilterNotSupported(filter)) else {
     fail("expected malformed xref stream filter to require reconstruction")
   }
   @test.assert_eq(filter, acceptance_name_for_test("/BadXRefFilter"))
@@ -2231,7 +2230,7 @@ test "native acceptance suite decrypts reconstructed encrypted malformed xref-st
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     malformed,
   )
-  guard strict is Err(@pdflite.PdfError::FilterNotSupported(filter)) else {
+  guard strict is Err(@core.PdfError::FilterNotSupported(filter)) else {
     fail("expected malformed xref stream filter to require reconstruction")
   }
   @test.assert_eq(filter, acceptance_name_for_test("/BadXRefFilter"))
@@ -2296,7 +2295,7 @@ test "native acceptance suite reconstructs malformed xref-stream decodeparms" {
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     malformed,
   )
-  guard strict is Err(@pdflite.PdfError::PredictorExpected) else {
+  guard strict is Err(@core.PdfError::PredictorExpected) else {
     fail("expected malformed xref stream DecodeParms to require reconstruction")
   }
   let recovered = @pdflite.pdf_read_document_from_bytes(malformed)
@@ -2327,7 +2326,7 @@ test "native acceptance suite reconstructs xref-stream unsupported predictor dec
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     malformed,
   )
-  guard strict is Err(@pdflite.PdfError::PredictorNotSupported(predictor)) else {
+  guard strict is Err(@core.PdfError::PredictorNotSupported(predictor)) else {
     fail("expected unsupported xref stream DecodeParms predictor")
   }
   @test.assert_eq(predictor, 9)
@@ -2374,7 +2373,7 @@ test "native acceptance suite decrypts reconstructed encrypted malformed xref-st
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     malformed,
   )
-  guard strict is Err(@pdflite.PdfError::PredictorExpected) else {
+  guard strict is Err(@core.PdfError::PredictorExpected) else {
     fail("expected malformed xref stream DecodeParms to require reconstruction")
   }
   let decrypted = acceptance_unwrap_decryption_for_test(
@@ -2453,7 +2452,7 @@ test "native acceptance suite decrypts reconstructed encrypted xref-stream unsup
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     malformed,
   )
-  guard strict is Err(@pdflite.PdfError::PredictorNotSupported(predictor)) else {
+  guard strict is Err(@core.PdfError::PredictorNotSupported(predictor)) else {
     fail("expected unsupported encrypted xref stream DecodeParms predictor")
   }
   @test.assert_eq(predictor, 9)

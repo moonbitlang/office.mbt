@@ -23,7 +23,7 @@ pub fn PdfDocument::image_colour_space(
   self : PdfDocument,
   image : @syntax.PdfObject,
   resources : @syntax.PdfObject,
-) -> PdfColourSpace raise PdfError {
+) -> PdfColourSpace raise @core.PdfError {
   if self.pdf_image_is_mask(image) {
     PdfDeviceGray
   } else {
@@ -49,7 +49,7 @@ pub fn PdfDocument::colspace(
   self : PdfDocument,
   image : @syntax.PdfObject,
   resources : @syntax.PdfObject,
-) -> PdfColourSpace raise PdfError {
+) -> PdfColourSpace raise @core.PdfError {
   self.image_colour_space(image, resources)
 }
 
@@ -59,7 +59,7 @@ pub fn pdf_image_colspace(
   document : PdfDocument,
   image : @syntax.PdfObject,
   resources : @syntax.PdfObject,
-) -> PdfColourSpace raise PdfError {
+) -> PdfColourSpace raise @core.PdfError {
   document.colspace(image, resources)
 }
 

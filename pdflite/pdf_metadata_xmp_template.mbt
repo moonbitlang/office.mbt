@@ -65,7 +65,7 @@ fn pdf_metadata_replace_all(
 ///|
 fn PdfDocument::pdf_metadata_template_replacements(
   self : PdfDocument,
-) -> Array[(String, String)] raise PdfError {
+) -> Array[(String, String)] raise @core.PdfError {
   let info = fn(name : String) -> String {
     self.info_utf8(pdf_metadata_name(name))
   }

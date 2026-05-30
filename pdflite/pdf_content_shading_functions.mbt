@@ -23,7 +23,7 @@ fn PdfDocument::pdf_content_shading_function_or_default(
 fn PdfDocument::pdf_content_shading_functions(
   self : PdfDocument,
   shading : @syntax.PdfObject,
-) -> Array[PdfFunction] raise PdfError {
+) -> Array[PdfFunction] raise @core.PdfError {
   match self.lookup_direct(pdf_content_shading_function_name, shading) {
     Some(PdfArray(functions)) => {
       let parsed : Array[PdfFunction] = []

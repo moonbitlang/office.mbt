@@ -23,12 +23,15 @@ fn pdf_merge_name_set() -> PdfMergeNameSet {
 }
 
 ///|
-fn PdfMergeNameSet::contains(self : PdfMergeNameSet, name : PdfName) -> Bool {
+fn PdfMergeNameSet::contains(
+  self : PdfMergeNameSet,
+  name : @core.PdfName,
+) -> Bool {
   self.values.contains(name.bytes())
 }
 
 ///|
-fn PdfMergeNameSet::add(self : PdfMergeNameSet, name : PdfName) -> Unit {
+fn PdfMergeNameSet::add(self : PdfMergeNameSet, name : @core.PdfName) -> Unit {
   self.values[name.bytes()] = true
 }
 
@@ -45,12 +48,15 @@ fn pdf_merge_bytes_set() -> PdfMergeBytesSet {
 ///|
 fn PdfMergeBytesSet::contains(
   self : PdfMergeBytesSet,
-  bytes : PdfBytes,
+  bytes : @core.PdfBytes,
 ) -> Bool {
   self.values.contains(bytes)
 }
 
 ///|
-fn PdfMergeBytesSet::add(self : PdfMergeBytesSet, bytes : PdfBytes) -> Unit {
+fn PdfMergeBytesSet::add(
+  self : PdfMergeBytesSet,
+  bytes : @core.PdfBytes,
+) -> Unit {
   self.values[bytes] = true
 }

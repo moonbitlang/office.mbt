@@ -7,7 +7,7 @@
 /// pdflite editing APIs.
 pub fn PdfDocument::recompress(
   self : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let document = self.copy()
   if !document.is_encrypted() {
     document.pdf_squeeze_update_stream_objects(stream => {
@@ -19,13 +19,17 @@ pub fn PdfDocument::recompress(
 
 ///|
 /// Compatibility wrapper for `PdfDocument::recompress`.
-pub fn recompress_pdf(document : PdfDocument) -> PdfDocument raise PdfError {
+pub fn recompress_pdf(
+  document : PdfDocument,
+) -> PdfDocument raise @core.PdfError {
   document.recompress()
 }
 
 ///|
 /// `pdf_`-prefixed compatibility alias for cpdfsqueeze's `recompress_pdf`.
-pub fn pdf_recompress_pdf(document : PdfDocument) -> PdfDocument raise PdfError {
+pub fn pdf_recompress_pdf(
+  document : PdfDocument,
+) -> PdfDocument raise @core.PdfError {
   recompress_pdf(document)
 }
 
@@ -36,7 +40,7 @@ pub fn pdf_recompress_pdf(document : PdfDocument) -> PdfDocument raise PdfError 
 /// with their remaining encoded bytes, matching `pdf_decode_stream_until_unknown`.
 pub fn PdfDocument::decompress(
   self : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let document = self.copy()
   if !document.is_encrypted() {
     document.pdf_decode_streams_until_unknown()
@@ -46,13 +50,17 @@ pub fn PdfDocument::decompress(
 
 ///|
 /// Compatibility wrapper for `PdfDocument::decompress`.
-pub fn decompress_pdf(document : PdfDocument) -> PdfDocument raise PdfError {
+pub fn decompress_pdf(
+  document : PdfDocument,
+) -> PdfDocument raise @core.PdfError {
   document.decompress()
 }
 
 ///|
 /// `pdf_`-prefixed compatibility alias for cpdfsqueeze's `decompress_pdf`.
-pub fn pdf_decompress_pdf(document : PdfDocument) -> PdfDocument raise PdfError {
+pub fn pdf_decompress_pdf(
+  document : PdfDocument,
+) -> PdfDocument raise @core.PdfError {
   decompress_pdf(document)
 }
 
@@ -66,7 +74,7 @@ pub fn pdf_decompress_pdf(document : PdfDocument) -> PdfDocument raise PdfError 
 pub fn PdfDocument::squeeze(
   self : PdfDocument,
   page_data? : Bool = true,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let document = self.copy()
   let mut previous_count = -1
   while previous_count != document.object_count() {
@@ -84,7 +92,7 @@ pub fn PdfDocument::squeeze(
 pub fn squeeze(
   document : PdfDocument,
   page_data? : Bool = true,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.squeeze(page_data~)
 }
 
@@ -93,6 +101,6 @@ pub fn squeeze(
 pub fn pdf_squeeze(
   document : PdfDocument,
   page_data? : Bool = true,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   squeeze(document, page_data~)
 }

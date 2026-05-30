@@ -6,7 +6,7 @@
 /// back to reconstruction by scanning indirect objects.
 pub fn pdf_read_document_from_view(
   data : BytesView,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   pdf_read_probe_page_tree_or_reconstruct(
     data,
     pdf_read_classic_document_from_view(data),

@@ -2,7 +2,7 @@
 fn PdfDocument::pdf_font_remove_descriptor_files(
   self : PdfDocument,
   object : @syntax.PdfObject,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   match object {
     PdfDictionary(_) =>
       match self.lookup_direct(pdf_text_type_key_name, object) {
@@ -35,7 +35,7 @@ fn PdfDocument::pdf_font_remove_descriptor_files(
 /// descriptor objects are left untouched.
 pub fn PdfDocument::remove_embedded_fonts(
   self : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let pdf = self.copy()
   let entries = pdf.parsed_object_entries()
   for entry in entries {
@@ -50,6 +50,8 @@ pub fn PdfDocument::remove_embedded_fonts(
 
 ///|
 /// Compatibility wrapper for `PdfDocument::remove_embedded_fonts`.
-pub fn pdf_remove_fonts(document : PdfDocument) -> PdfDocument raise PdfError {
+pub fn pdf_remove_fonts(
+  document : PdfDocument,
+) -> PdfDocument raise @core.PdfError {
   document.remove_embedded_fonts()
 }

@@ -4,7 +4,7 @@ pub fn PdfDrawControl::add_rect(
   self : PdfDrawControl,
   document : PdfDocument,
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let rect = document.parse_coordinate_rectangle(text)
   self.add_op(PdfDrawRect(rect.x, rect.y, rect.width, rect.height))
 }
@@ -15,7 +15,7 @@ pub fn PdfDrawControl::add_to(
   self : PdfDrawControl,
   document : PdfDocument,
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let point = document.parse_coordinate(text)
   self.add_op(PdfDrawTo(point.x, point.y))
 }
@@ -26,7 +26,7 @@ pub fn PdfDrawControl::add_line(
   self : PdfDrawControl,
   document : PdfDocument,
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let point = document.parse_coordinate(text)
   self.add_op(PdfDrawLine(point.x, point.y))
 }
@@ -36,7 +36,7 @@ pub fn PdfDrawControl::add_line(
 pub fn PdfDrawControl::add_bezier(
   self : PdfDrawControl,
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let values = pdf_draw_control_expect_floats(
     text, 6, "-bez requires six numbers", "malformed -bez",
   )
@@ -57,7 +57,7 @@ pub fn PdfDrawControl::add_bezier(
 pub fn PdfDrawControl::add_bezier23(
   self : PdfDrawControl,
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let values = pdf_draw_control_expect_floats(
     text, 4, "-bez23 requires four numbers", "malformed -bez23",
   )
@@ -69,7 +69,7 @@ pub fn PdfDrawControl::add_bezier23(
 pub fn PdfDrawControl::add_bezier13(
   self : PdfDrawControl,
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let values = pdf_draw_control_expect_floats(
     text, 4, "-bez13 requires four numbers", "malformed -bez13",
   )
@@ -81,7 +81,7 @@ pub fn PdfDrawControl::add_bezier13(
 pub fn PdfDrawControl::add_circle(
   self : PdfDrawControl,
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let values = pdf_draw_control_expect_floats(
     text, 3, "-circle requires three numbers", "malformed -circle",
   )
@@ -112,13 +112,15 @@ pub fn PdfDrawControl::add_circle(
 
 ///|
 /// Append a stroke operation for the current path.
-pub fn PdfDrawControl::stroke(self : PdfDrawControl) -> Unit raise PdfError {
+pub fn PdfDrawControl::stroke(
+  self : PdfDrawControl,
+) -> Unit raise @core.PdfError {
   self.add_op(PdfDrawStroke)
 }
 
 ///|
 /// Append a fill operation for the current path.
-pub fn PdfDrawControl::fill(self : PdfDrawControl) -> Unit raise PdfError {
+pub fn PdfDrawControl::fill(self : PdfDrawControl) -> Unit raise @core.PdfError {
   self.add_op(PdfDrawFill)
 }
 
@@ -126,7 +128,7 @@ pub fn PdfDrawControl::fill(self : PdfDrawControl) -> Unit raise PdfError {
 /// Append an even-odd fill operation for the current path.
 pub fn PdfDrawControl::fill_even_odd(
   self : PdfDrawControl,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.add_op(PdfDrawFillEvenOdd)
 }
 
@@ -134,7 +136,7 @@ pub fn PdfDrawControl::fill_even_odd(
 /// Append a fill-and-stroke operation for the current path.
 pub fn PdfDrawControl::stroke_fill(
   self : PdfDrawControl,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.add_op(PdfDrawFillStroke)
 }
 
@@ -142,13 +144,13 @@ pub fn PdfDrawControl::stroke_fill(
 /// Append an even-odd fill-and-stroke operation for the current path.
 pub fn PdfDrawControl::stroke_fill_even_odd(
   self : PdfDrawControl,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.add_op(PdfDrawFillStrokeEvenOdd)
 }
 
 ///|
 /// Append a clip operation using the current path.
-pub fn PdfDrawControl::clip(self : PdfDrawControl) -> Unit raise PdfError {
+pub fn PdfDrawControl::clip(self : PdfDrawControl) -> Unit raise @core.PdfError {
   self.add_op(PdfDrawClip)
 }
 
@@ -156,12 +158,14 @@ pub fn PdfDrawControl::clip(self : PdfDrawControl) -> Unit raise PdfError {
 /// Append an even-odd clip operation using the current path.
 pub fn PdfDrawControl::clip_even_odd(
   self : PdfDrawControl,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.add_op(PdfDrawClipEvenOdd)
 }
 
 ///|
 /// Append a close-path operation.
-pub fn PdfDrawControl::close_path(self : PdfDrawControl) -> Unit raise PdfError {
+pub fn PdfDrawControl::close_path(
+  self : PdfDrawControl,
+) -> Unit raise @core.PdfError {
   self.add_op(PdfDrawClosePath)
 }

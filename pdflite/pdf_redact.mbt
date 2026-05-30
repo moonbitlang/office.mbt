@@ -8,7 +8,7 @@ pub fn PdfDocument::redact_path(
   self : PdfDocument,
   path : ArrayView[(Double, Double)],
   page_numbers : ArrayView[Int],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   ignore(path)
   let pages = self.pages_of_pagetree()
   pdf_page_box_validate_page_numbers(page_numbers, pages.length(), "redact")
@@ -21,7 +21,7 @@ pub fn pdf_redact(
   document : PdfDocument,
   path : ArrayView[(Double, Double)],
   page_numbers : ArrayView[Int],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.redact_path(path, page_numbers)
 }
 
@@ -233,7 +233,7 @@ fn PdfDocument::pdf_redact_page_content_box_ops(
   page : @page.PdfPage,
   shape : @geometry.PdfRectangle?,
   light : Bool,
-) -> Array[@content.PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise @core.PdfError {
   let output : Array[@content.PdfContentOp] = []
   for entry in self.content_entries_of_page(page) {
     if pdf_redact_content_box_selected(shape, entry) {
@@ -254,7 +254,7 @@ pub fn PdfDocument::show_annotation_bounding_boxes(
   page_numbers : ArrayView[Int],
   light? : Bool = false,
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let pages = self.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(page_numbers)
   let op_lists : Array[Array[@content.PdfContentOp]] = Array::new(
@@ -283,7 +283,7 @@ pub fn pdf_show_annotation_bounding_boxes(
   page_numbers : ArrayView[Int],
   light? : Bool = false,
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.show_annotation_bounding_boxes(page_numbers, light~, fast~)
 }
 
@@ -295,7 +295,7 @@ pub fn PdfDocument::show_bounding_boxes(
   shape? : @geometry.PdfRectangle? = None,
   light? : Bool = false,
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let document = self.show_annotation_bounding_boxes(
     page_numbers,
     light~,
@@ -327,7 +327,7 @@ pub fn pdf_show_bounding_boxes(
   shape? : @geometry.PdfRectangle? = None,
   light? : Bool = false,
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.show_bounding_boxes(page_numbers, shape~, light~, fast~)
 }
 
@@ -339,6 +339,6 @@ pub fn pdf_show_bounding_boxes_cpdf_order(
   light : Bool,
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.show_bounding_boxes(page_numbers, shape~, light~, fast~)
 }

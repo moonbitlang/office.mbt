@@ -1,6 +1,6 @@
 ///|
 fn pdf_lookup_wrap_chain(
-  keys : ArrayView[PdfName],
+  keys : ArrayView[@core.PdfName],
   index : Int,
   value : @syntax.PdfObject,
 ) -> @syntax.PdfObject {
@@ -18,8 +18,8 @@ fn pdf_lookup_replace_array_entry(
   values : ArrayView[@syntax.PdfObject],
   index : Int,
   value : @syntax.PdfObject,
-  key : PdfName,
-) -> @syntax.PdfObject raise PdfError {
+  key : @core.PdfName,
+) -> @syntax.PdfObject raise @core.PdfError {
   if index < 0 || index >= values.length() {
     raise DictionaryKeyNotFound(key)
   } else {
@@ -41,10 +41,10 @@ fn pdf_lookup_replace_array_entry(
 fn PdfDocument::replace_chain_in_object(
   self : PdfDocument,
   object : @syntax.PdfObject,
-  chain : ArrayView[PdfName],
+  chain : ArrayView[@core.PdfName],
   chain_index : Int,
   value : @syntax.PdfObject,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   let key = chain[chain_index]
   let final_key = chain_index + 1 == chain.length()
   match object {
@@ -114,9 +114,9 @@ fn PdfDocument::replace_chain_in_object(
 /// or invalid array position is encountered.
 pub fn PdfDocument::replace_chain(
   self : PdfDocument,
-  chain : ArrayView[PdfName],
+  chain : ArrayView[@core.PdfName],
   value : @syntax.PdfObject,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   if chain.length() == 0 {
     raise DictionaryExpected
   }

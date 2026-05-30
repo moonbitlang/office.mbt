@@ -1,5 +1,5 @@
 ///|
-fn pdf_page_name_text_without_slash(name : PdfName) -> String {
+fn pdf_page_name_text_without_slash(name : @core.PdfName) -> String {
   let bytes = name.bytes()
   let view = if bytes.length() > 0 && bytes[0].to_int() == 47 {
     bytes[1:]
@@ -78,7 +78,7 @@ fn PdfDocument::pdf_page_resource_names(
 }
 
 ///|
-fn pdf_page_is_resource_key(key : PdfName) -> Bool {
+fn pdf_page_is_resource_key(key : @core.PdfName) -> Bool {
   for resource_key in pdf_page_resource_keys() {
     if key == resource_key {
       break true
@@ -91,8 +91,8 @@ fn pdf_page_is_resource_key(key : PdfName) -> Bool {
 ///|
 fn pdf_page_unknown_resource_entries(
   resources : @syntax.PdfObject,
-) -> Array[(PdfName, @syntax.PdfObject)] {
-  let output : Array[(PdfName, @syntax.PdfObject)] = []
+) -> Array[(@core.PdfName, @syntax.PdfObject)] {
+  let output : Array[(@core.PdfName, @syntax.PdfObject)] = []
   match resources {
     PdfDictionary(entries) =>
       for entry in entries {
@@ -110,8 +110,8 @@ fn pdf_page_unknown_resource_entries(
 fn PdfDocument::pdf_page_resource_entries(
   self : PdfDocument,
   resources : @syntax.PdfObject,
-  key : PdfName,
-) -> Array[(PdfName, @syntax.PdfObject)] {
+  key : @core.PdfName,
+) -> Array[(@core.PdfName, @syntax.PdfObject)] {
   match self.lookup_direct(key, resources) {
     Some(PdfDictionary(entries)) => [ for entry in entries => entry ]
     _ => []
@@ -119,15 +119,15 @@ fn PdfDocument::pdf_page_resource_entries(
 }
 
 ///|
-fn pdf_page_is_rest_combined_key(key : PdfName) -> Bool {
+fn pdf_page_is_rest_combined_key(key : @core.PdfName) -> Bool {
   key == pdf_page_annots_key()
 }
 
 ///|
 fn pdf_page_unknown_rest_entries(
   rest : @syntax.PdfObject,
-) -> Array[(PdfName, @syntax.PdfObject)] {
-  let output : Array[(PdfName, @syntax.PdfObject)] = []
+) -> Array[(@core.PdfName, @syntax.PdfObject)] {
+  let output : Array[(@core.PdfName, @syntax.PdfObject)] = []
   match rest {
     PdfDictionary(entries) =>
       for entry in entries {
@@ -145,7 +145,7 @@ fn pdf_page_unknown_rest_entries(
 fn PdfDocument::pdf_page_rest_array_values(
   self : PdfDocument,
   rest : @syntax.PdfObject,
-  key : PdfName,
+  key : @core.PdfName,
 ) -> Array[@syntax.PdfObject] {
   match self.lookup_direct(key, rest) {
     Some(PdfArray(values)) => [ for value in values => value ]
@@ -164,7 +164,7 @@ pub fn PdfDocument::combine_pdf_rests(
   first : @syntax.PdfObject,
   second : @syntax.PdfObject,
 ) -> @syntax.PdfObject {
-  let output : Array[(PdfName, @syntax.PdfObject)] = []
+  let output : Array[(@core.PdfName, @syntax.PdfObject)] = []
   for entry in pdf_page_unknown_rest_entries(first) {
     output.push(entry)
   }
@@ -192,7 +192,7 @@ pub fn PdfDocument::combine_pdf_resources(
   first : @syntax.PdfObject,
   second : @syntax.PdfObject,
 ) -> @syntax.PdfObject {
-  let output : Array[(PdfName, @syntax.PdfObject)] = []
+  let output : Array[(@core.PdfName, @syntax.PdfObject)] = []
   for entry in pdf_page_unknown_resource_entries(first) {
     output.push(entry)
   }
@@ -227,7 +227,7 @@ fn PdfDocument::pdf_page_object_uses_page_resources(
 fn pdf_page_merge_dictionary_objects(
   first : @syntax.PdfObject,
   second : @syntax.PdfObject,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   let mut output = first
   match second {
     PdfDictionary(entries) =>
@@ -247,8 +247,8 @@ fn PdfDocument::pdf_page_process_form_xobject(
   object_number : Int,
   process : (PdfDocument, @syntax.PdfObject, ArrayView[@syntax.PdfObject]) -> Array[
     @syntax.PdfObject,
-  ] raise PdfError,
-) -> Unit raise PdfError {
+  ] raise @core.PdfError,
+) -> Unit raise @core.PdfError {
   let xobject = self.lookup_object_or_null(object_number)
   match self.lookup_direct(pdf_page_subtype_key(), xobject) {
     Some(PdfNameObject(name)) if name == pdf_page_type_form() =>
@@ -304,8 +304,8 @@ pub fn PdfDocument::process_xobjects(
   page : @page.PdfPage,
   process : (PdfDocument, @syntax.PdfObject, ArrayView[@syntax.PdfObject]) -> Array[
     @syntax.PdfObject,
-  ] raise PdfError,
-) -> Unit raise PdfError {
+  ] raise @core.PdfError,
+) -> Unit raise @core.PdfError {
   match self.lookup_direct(pdf_page_xobject_key(), page.resources) {
     Some(PdfDictionary(entries)) =>
       for entry in entries {

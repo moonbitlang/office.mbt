@@ -1,7 +1,7 @@
 ///|
 fn pdf_stream_dictionary_length(
   dictionary : @syntax.PdfObject,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   match dictionary.lookup_immediate(pdf_codec_length_key()) {
     Some(PdfInteger(_)) => ()
     _ => raise StreamLengthExpected
@@ -21,7 +21,7 @@ fn pdf_stream_filter_value(
 ///|
 fn pdf_stream_first_filter(
   dictionary : @syntax.PdfObject,
-) -> PdfName? raise PdfError {
+) -> @core.PdfName? raise @core.PdfError {
   match pdf_stream_filter_value(dictionary) {
     None => None
     Some(PdfNameObject(name)) => Some(name)
@@ -35,7 +35,7 @@ fn pdf_stream_first_filter(
 fn PdfDocument::pdf_stream_filter_entry_direct(
   self : PdfDocument,
   dictionary : @syntax.PdfObject,
-) -> (PdfName, @syntax.PdfObject)? {
+) -> (@core.PdfName, @syntax.PdfObject)? {
   match self.lookup_direct(pdf_filter_key(), dictionary) {
     Some(value) => Some((pdf_filter_key(), value))
     None =>
@@ -50,7 +50,7 @@ fn PdfDocument::pdf_stream_filter_entry_direct(
 fn PdfDocument::pdf_stream_first_filter_direct(
   self : PdfDocument,
   dictionary : @syntax.PdfObject,
-) -> PdfName? raise PdfError {
+) -> @core.PdfName? raise @core.PdfError {
   match self.pdf_stream_first_filter_entry_direct(dictionary) {
     Some((_, _, name)) => Some(name)
     None => None
@@ -61,7 +61,7 @@ fn PdfDocument::pdf_stream_first_filter_direct(
 fn PdfDocument::pdf_stream_first_filter_entry_direct(
   self : PdfDocument,
   dictionary : @syntax.PdfObject,
-) -> (PdfName, @syntax.PdfObject, PdfName)? raise PdfError {
+) -> (@core.PdfName, @syntax.PdfObject, @core.PdfName)? raise @core.PdfError {
   match self.pdf_stream_filter_entry_direct(dictionary) {
     None => None
     Some((key, PdfNameObject(name) as value)) => Some((key, value, name))

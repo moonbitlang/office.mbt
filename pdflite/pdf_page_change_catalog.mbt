@@ -8,7 +8,7 @@ fn PdfDocument::pdf_page_transform_catalog_destinations_object(
   let lookup = pdf_page_matrix_lookup(matrices, page_reference_numbers)
   match dests {
     PdfDictionary(entries) => {
-      let output : Array[(PdfName, @syntax.PdfObject)] = Array::new(
+      let output : Array[(@core.PdfName, @syntax.PdfObject)] = Array::new(
         capacity=entries.length(),
       )
       let mut changed = false
@@ -55,11 +55,11 @@ fn PdfDocument::pdf_page_active_catalog(
 ///|
 fn PdfDocument::pdf_page_replace_active_catalog_entry(
   self : PdfDocument,
-  key : PdfName,
+  key : @core.PdfName,
   value : @syntax.PdfObject,
   catalog : @syntax.PdfObject,
   uses_trailer_root : Bool,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   if uses_trailer_root {
     self.replace_chain([pdf_page_root_key(), key], value)
   } else {
@@ -75,7 +75,7 @@ fn PdfDocument::pdf_page_transform_catalog_destinations_for_matrices(
   self : PdfDocument,
   matrices : ArrayView[(Int, @geometry.TransformMatrix)],
   page_reference_numbers : ArrayView[Int],
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   match self.pdf_page_active_catalog() {
     Some((root_object, uses_trailer_root)) =>
       match root_object.lookup_immediate(pdf_page_dests_key()) {

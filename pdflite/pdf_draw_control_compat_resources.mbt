@@ -4,7 +4,7 @@ pub fn pdf_xobjbbox(
   control : PdfDrawControl,
   document : PdfDocument,
   text : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   control.set_xobject_bbox_from_string(document, text)
 }
 
@@ -16,7 +16,7 @@ pub fn pdf_startxobj(control : PdfDrawControl, name : String) -> Unit {
 
 ///|
 /// Source-spelled cpdfdrawcontrol `endxobj` over explicit draw state.
-pub fn pdf_endxobj(control : PdfDrawControl) -> Unit raise PdfError {
+pub fn pdf_endxobj(control : PdfDrawControl) -> Unit raise @core.PdfError {
   control.end_xobject()
 }
 
@@ -25,7 +25,7 @@ pub fn pdf_endxobj(control : PdfDrawControl) -> Unit raise PdfError {
 pub fn pdf_usexobj(
   control : PdfDrawControl,
   name : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   control.use_xobject(name)
 }
 
@@ -34,7 +34,7 @@ pub fn pdf_usexobj(
 pub fn pdf_addimage(
   control : PdfDrawControl,
   name : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   control.add_image(name)
 }
 
@@ -43,7 +43,7 @@ pub fn pdf_addimage(
 pub fn pdf_addopacity(
   control : PdfDrawControl,
   opacity : Double,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   control.add_opacity(opacity)
 }
 
@@ -52,6 +52,6 @@ pub fn pdf_addopacity(
 pub fn pdf_addsopacity(
   control : PdfDrawControl,
   opacity : Double,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   control.add_stroke_opacity(opacity)
 }

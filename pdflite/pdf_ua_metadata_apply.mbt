@@ -19,7 +19,7 @@ fn PdfDocument::pdf_ua_apply_subformat_metadata(
   self : PdfDocument,
   subformat : PdfUASubformat,
   title : String,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   match subformat {
     PdfUA1 => self.set_version(1, 7)
     PdfUA2 => self.set_version(2, 0)

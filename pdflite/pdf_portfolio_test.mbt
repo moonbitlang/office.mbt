@@ -1,6 +1,6 @@
 ///|
-fn portfolio_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn portfolio_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -59,8 +59,8 @@ fn portfolio_assert_file_spec_for_test(
   basename : String,
   description : String,
   relationship : String,
-  payload : @pdflite.PdfBytes,
-  mod_date : @pdflite.PdfBytes,
+  payload : @core.PdfBytes,
+  mod_date : @core.PdfBytes,
 ) -> Unit raise {
   let file_spec = document.direct(object)
   @test.assert_eq(

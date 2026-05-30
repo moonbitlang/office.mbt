@@ -8,7 +8,7 @@ pub fn pdf_addtext_rectangle_ops(
   colour : @colour.PdfContentColour,
   outline : Bool,
   line_width : Double,
-  extgstate_name : PdfName?,
+  extgstate_name : @core.PdfName?,
 ) -> Array[@content.PdfContentOp] {
   let ops = [
     @content.pdf_content_begin_artifact(),
@@ -35,10 +35,10 @@ pub fn pdf_addtext_rectangle_ops(
 ///|
 fn pdf_addtext_fontpack_text_ops(
   fontpack : PdfFontPack,
-  unique_fontnames : ArrayView[PdfName],
+  unique_fontnames : ArrayView[@core.PdfName],
   font_size : Double,
   text : String,
-) -> Array[@content.PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise @core.PdfError {
   let codepoints = pdf_codepoints_of_utf8(@utf8.encode(text))
   let triples : Array[(Int, Int, PdfFont)] = Array::new(
     capacity=codepoints.length(),
@@ -60,7 +60,7 @@ fn pdf_addtext_fontpack_text_ops(
     }
     let bytes = Array::make(run.length(), b'\x00')
     for index, triple in run {
-      bytes[index] = pdf_byte_of_int(triple.0)
+      bytes[index] = @core.pdf_byte_of_int(triple.0)
     }
     ops.push(Op_Tf(unique_fontnames[font_index], font_size))
     ops.push(Op_Tj(Bytes::from_array(bytes)))
@@ -71,12 +71,12 @@ fn pdf_addtext_fontpack_text_ops(
 ///|
 fn pdf_addtext_font_text_ops_with_bytes(
   fontpack : PdfFontPack?,
-  unique_fontname : PdfName,
-  unique_fontnames : ArrayView[PdfName],
+  unique_fontname : @core.PdfName,
+  unique_fontnames : ArrayView[@core.PdfName],
   font_size : Double,
   text : String,
-  text_bytes : PdfBytes,
-) -> Array[@content.PdfContentOp] raise PdfError {
+  text_bytes : @core.PdfBytes,
+) -> Array[@content.PdfContentOp] raise @core.PdfError {
   match fontpack {
     Some(fontpack) =>
       pdf_addtext_fontpack_text_ops(fontpack, unique_fontnames, font_size, text)
@@ -114,17 +114,17 @@ fn pdf_addtext_text_ops_with_bytes(
   vertical_offset : Double,
   outline : Bool,
   line_width : Double,
-  unique_fontname : PdfName,
-  unique_fontnames : ArrayView[PdfName],
-  extgstate_name : PdfName?,
+  unique_fontname : @core.PdfName,
+  unique_fontnames : ArrayView[@core.PdfName],
+  extgstate_name : @core.PdfName?,
   colour : @colour.PdfContentColour,
   font_size : Double,
   text : String,
-  text_bytes : PdfBytes,
+  text_bytes : @core.PdfBytes,
   text_rotation : Double,
   rotation_h_offset : Double,
   rotation_v_offset : Double,
-) -> Array[@content.PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise @core.PdfError {
   let textops = pdf_addtext_font_text_ops_with_bytes(
     fontpack, unique_fontname, unique_fontnames, font_size, text, text_bytes,
   )
@@ -179,16 +179,16 @@ pub fn pdf_addtext_text_ops(
   vertical_offset : Double,
   outline : Bool,
   line_width : Double,
-  unique_fontname : PdfName,
-  unique_fontnames : ArrayView[PdfName],
-  extgstate_name : PdfName?,
+  unique_fontname : @core.PdfName,
+  unique_fontnames : ArrayView[@core.PdfName],
+  extgstate_name : @core.PdfName?,
   colour : @colour.PdfContentColour,
   font_size : Double,
   text : String,
   text_rotation : Double,
   rotation_h_offset : Double,
   rotation_v_offset : Double,
-) -> Array[@content.PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise @core.PdfError {
   let text_bytes = match font {
     Some(font) => pdf_addtext_charcodes_of_utf8(font, text)
     None => @utf8.encode(text)

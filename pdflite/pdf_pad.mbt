@@ -1,13 +1,13 @@
 ///|
-fn pdf_pad_name(text : String) -> PdfName {
-  pdf_name_of_bytes(@ascii.encode(text))
+fn pdf_pad_name(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
-let pdf_pad_annots_key_name : PdfName = pdf_pad_name("/Annots")
+let pdf_pad_annots_key_name : @core.PdfName = pdf_pad_name("/Annots")
 
 ///|
-fn pdf_pad_annots_key() -> PdfName {
+fn pdf_pad_annots_key() -> @core.PdfName {
   pdf_pad_annots_key_name
 }
 
@@ -16,7 +16,7 @@ fn pdf_pad_sorted_page_numbers(
   page_numbers : ArrayView[Int],
   end_page : Int,
   context : String,
-) -> Array[Int] raise PdfError {
+) -> Array[Int] raise @core.PdfError {
   let sorted : Array[Int] = Array::new(capacity=page_numbers.length())
   for page_number in page_numbers {
     sorted.push(page_number)
@@ -37,7 +37,7 @@ fn pdf_pad_unique_sorted_page_numbers(
   page_numbers : ArrayView[Int],
   end_page : Int,
   context : String,
-) -> Array[Int] raise PdfError {
+) -> Array[Int] raise @core.PdfError {
   let sorted = pdf_pad_sorted_page_numbers(page_numbers, end_page, context)
   let unique : Array[Int] = Array::new(capacity=sorted.length())
   for page_number in sorted {
@@ -61,7 +61,9 @@ fn pdf_pad_insert_positions(
 }
 
 ///|
-fn pdf_pad_blank_page(page : @page.PdfPage) -> @page.PdfPage raise PdfError {
+fn pdf_pad_blank_page(
+  page : @page.PdfPage,
+) -> @page.PdfPage raise @core.PdfError {
   {
     content: [],
     mediabox: page.mediabox,
@@ -76,7 +78,7 @@ fn pdf_pad_blank_pages(
   pages : ArrayView[@page.PdfPage],
   positions : ArrayView[Int],
   before : Bool,
-) -> Array[@page.PdfPage] raise PdfError {
+) -> Array[@page.PdfPage] raise @core.PdfError {
   let output : Array[@page.PdfPage] = Array::new(capacity=positions.length())
   for position in positions {
     let page_index = if before { position } else { position - 1 }
@@ -158,7 +160,7 @@ fn PdfDocument::pdf_pad_with_blank_pages(
   page_numbers : ArrayView[Int],
   before : Bool,
   context : String,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let end_page = self.endpage()
   let sorted = pdf_pad_sorted_page_numbers(page_numbers, end_page, context)
   let positions = pdf_pad_insert_positions(sorted, before)
@@ -186,7 +188,7 @@ fn PdfDocument::pdf_pad_with_document(
   before : Bool,
   pad_document : PdfDocument,
   context : String,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let end_page = self.endpage()
   let sorted = pdf_pad_unique_sorted_page_numbers(
     page_numbers, end_page, context,
@@ -227,7 +229,7 @@ fn PdfDocument::pdf_pad_pages(
   before : Bool,
   pad_with : PdfDocument?,
   context : String,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   match pad_with {
     Some(pad_document) =>
       self.pdf_pad_with_document(page_numbers, before, pad_document, context)
@@ -241,7 +243,7 @@ pub fn PdfDocument::pad_after(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
   pad_with? : PdfDocument? = None,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   self.pdf_pad_pages(page_numbers, false, pad_with, "padafter")
 }
 
@@ -251,7 +253,7 @@ pub fn pdf_pad_after(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
   pad_with? : PdfDocument? = None,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.pad_after(page_numbers, pad_with~)
 }
 
@@ -261,7 +263,7 @@ pub fn pdf_padafter(
   page_numbers : ArrayView[Int],
   document : PdfDocument,
   pad_with? : PdfDocument? = None,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.pad_after(page_numbers, pad_with~)
 }
 
@@ -271,7 +273,7 @@ pub fn PdfDocument::pad_before(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
   pad_with? : PdfDocument? = None,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   self.pdf_pad_pages(page_numbers, true, pad_with, "padbefore")
 }
 
@@ -281,7 +283,7 @@ pub fn pdf_pad_before(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
   pad_with? : PdfDocument? = None,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.pad_before(page_numbers, pad_with~)
 }
 
@@ -291,7 +293,7 @@ pub fn pdf_padbefore(
   page_numbers : ArrayView[Int],
   document : PdfDocument,
   pad_with? : PdfDocument? = None,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.pad_before(page_numbers, pad_with~)
 }
 
@@ -314,7 +316,7 @@ fn pdf_pad_multiple_blank_page(page : @page.PdfPage) -> @page.PdfPage {
 pub fn PdfDocument::pad_to_multiple(
   self : PdfDocument,
   multiple : Int,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   if multiple == 0 {
     raise BadNumberArgument("pad_to_multiple: zero multiple")
   }
@@ -372,7 +374,7 @@ pub fn PdfDocument::pad_to_multiple(
 pub fn pdf_pad_to_multiple(
   document : PdfDocument,
   multiple : Int,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.pad_to_multiple(multiple)
 }
 
@@ -381,6 +383,6 @@ pub fn pdf_pad_to_multiple(
 pub fn pdf_padmultiple(
   multiple : Int,
   document : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.pad_to_multiple(multiple)
 }

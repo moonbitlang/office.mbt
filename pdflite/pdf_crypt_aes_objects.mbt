@@ -1,8 +1,8 @@
 ///|
 fn pdf_aes_next_iv(
-  iv_provider : (Int) -> PdfBytes raise PdfError,
+  iv_provider : (Int) -> @core.PdfBytes raise @core.PdfError,
   iv_index : Ref[Int],
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let iv = iv_provider(iv_index.val)
   iv_index.val += 1
   iv
@@ -11,11 +11,11 @@ fn pdf_aes_next_iv(
 ///|
 fn pdf_aes_encrypt_pdf_object_with_data_encryptor(
   object : @syntax.PdfObject,
-  iv_provider : (Int) -> PdfBytes raise PdfError,
+  iv_provider : (Int) -> @core.PdfBytes raise @core.PdfError,
   iv_index : Ref[Int],
-  encrypt_data : (BytesView, BytesView) -> PdfBytes raise PdfError,
+  encrypt_data : (BytesView, BytesView) -> @core.PdfBytes raise @core.PdfError,
   no_encrypt_metadata : Bool,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   match object {
     PdfString(bytes) => {
       let iv = pdf_aes_next_iv(iv_provider, iv_index)
@@ -33,7 +33,7 @@ fn pdf_aes_encrypt_pdf_object_with_data_encryptor(
       PdfArray(output)
     }
     PdfDictionary(entries) => {
-      let output : Array[(PdfName, @syntax.PdfObject)] = []
+      let output : Array[(@core.PdfName, @syntax.PdfObject)] = []
       for entry in entries {
         let (name, value) = entry
         output.push(
@@ -84,15 +84,15 @@ fn pdf_aesv2_encrypt_pdf_object_with_iv_provider(
   file_key : BytesView,
   key_length_bits : Int,
   object : @syntax.PdfObject,
-  iv_provider : (Int) -> PdfBytes raise PdfError,
+  iv_provider : (Int) -> @core.PdfBytes raise @core.PdfError,
   no_encrypt_metadata : Bool,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   let iv_index : Ref[Int] = { val: 0 }
   pdf_aes_encrypt_pdf_object_with_data_encryptor(
     object,
     iv_provider,
     iv_index,
-    fn(data, iv) raise PdfError {
+    fn(data, iv) raise @core.PdfError {
       @crypt_core.pdf_aesv2_encrypt_object_data(
         object_number, generation, file_key, key_length_bits, data, iv,
       )
@@ -109,15 +109,15 @@ fn pdf_aesv2_encrypt_pdf_object_with_iv_provider(
 fn pdf_aesv3_encrypt_pdf_object_with_iv_provider(
   file_key : BytesView,
   object : @syntax.PdfObject,
-  iv_provider : (Int) -> PdfBytes raise PdfError,
+  iv_provider : (Int) -> @core.PdfBytes raise @core.PdfError,
   no_encrypt_metadata : Bool,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   let iv_index : Ref[Int] = { val: 0 }
   pdf_aes_encrypt_pdf_object_with_data_encryptor(
     object,
     iv_provider,
     iv_index,
-    fn(data, iv) raise PdfError {
+    fn(data, iv) raise @core.PdfError {
       @crypt_core.pdf_aesv3_encrypt_object_data(file_key, data, iv)
     },
     no_encrypt_metadata,
@@ -130,7 +130,7 @@ fn pdf_aes_decrypt_pdf_object_with_key(
   object : @syntax.PdfObject,
   no_encrypt_metadata : Bool,
   deferred_stream_crypt : @syntax.PdfStreamDataCrypt,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   match object {
     PdfString(bytes) => PdfString(@crypt_core.pdf_aes_cbc_decrypt(key, bytes))
     PdfArray(values) => {
@@ -145,7 +145,7 @@ fn pdf_aes_decrypt_pdf_object_with_key(
       PdfArray(output)
     }
     PdfDictionary(entries) => {
-      let output : Array[(PdfName, @syntax.PdfObject)] = []
+      let output : Array[(@core.PdfName, @syntax.PdfObject)] = []
       for entry in entries {
         let (name, value) = entry
         output.push(
@@ -210,7 +210,7 @@ fn pdf_aesv2_decrypt_pdf_object(
   key_length_bits : Int,
   object : @syntax.PdfObject,
   no_encrypt_metadata : Bool,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   let object_key = @crypt_core.pdf_encryption_object_key(
     PdfCryptAESV2,
     object_number,
@@ -240,7 +240,7 @@ fn pdf_aesv3_decrypt_pdf_object(
   file_key : BytesView,
   object : @syntax.PdfObject,
   no_encrypt_metadata : Bool,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   pdf_aes_decrypt_pdf_object_with_key(
     file_key,
     object,

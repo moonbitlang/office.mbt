@@ -1,5 +1,5 @@
 ///|
-fn page_wb_text(text : String) -> PdfBytes {
+fn page_wb_text(text : String) -> @core.PdfBytes {
   @ascii.encode(text)
 }
 
@@ -48,7 +48,7 @@ fn page_wb_assert_indirect_object_for_test(
 fn page_wb_catalog_destination(
   doc : PdfDocument,
   catalog_number : Int,
-  name : PdfName,
+  name : @core.PdfName,
 ) -> @syntax.PdfObject? {
   match
     doc
@@ -71,7 +71,7 @@ fn page_wb_catalog_destination(
 fn page_wb_name_tree_entries_from_catalog(
   doc : PdfDocument,
   catalog_number : Int,
-) -> Array[(PdfBytes, @syntax.PdfObject)] {
+) -> Array[(@core.PdfBytes, @syntax.PdfObject)] {
   match
     doc.lookup_chain(doc.lookup_object_or_null(catalog_number), [
       pdf_page_names_key(),
@@ -90,8 +90,8 @@ test "page-label private helpers preserve non-uppercase bytes and root guards" {
   )
   let doc = pdf_document_empty()
   let result : Result[Bool, Error] = try? doc.pdf_page_label_has_labels()
-  guard result is Err(PdfError::RootExpected) else {
-    fail("expected PdfError::RootExpected")
+  guard result is Err(@core.PdfError::RootExpected) else {
+    fail("expected @core.PdfError::RootExpected")
   }
 }
 
@@ -100,22 +100,22 @@ test "private page tree readers cover guard branches" {
   let doc = pdf_document_empty()
   @test.assert_eq(@page.pdf_page_int_of_rotation(Rotate180), 180)
   @test.assert_eq(@page.pdf_page_int_of_rotation(Rotate270), 270)
-  let bad_entries : Result[Array[(PdfName, @syntax.PdfObject)], Error] = try? pdf_page_rest_entries(
+  let bad_entries : Result[Array[(@core.PdfName, @syntax.PdfObject)], Error] = try? pdf_page_rest_entries(
     PdfInteger(1),
   )
-  guard bad_entries is Err(PdfError::DictionaryExpected) else {
+  guard bad_entries is Err(@core.PdfError::DictionaryExpected) else {
     fail("expected rest dictionary")
   }
   let bad_rest : Result[@syntax.PdfObject, Error] = try? pdf_page_rest_object_from_page(
     PdfInteger(1),
   )
-  guard bad_rest is Err(PdfError::DictionaryExpected) else {
+  guard bad_rest is Err(@core.PdfError::DictionaryExpected) else {
     fail("expected page dictionary")
   }
-  let bad_root : Result[Array[(PdfName, @syntax.PdfObject)], Error] = try? pdf_page_root_entries_without_catalog_keys(
+  let bad_root : Result[Array[(@core.PdfName, @syntax.PdfObject)], Error] = try? pdf_page_root_entries_without_catalog_keys(
     PdfInteger(1),
   )
-  guard bad_root is Err(PdfError::DictionaryExpected) else {
+  guard bad_root is Err(@core.PdfError::DictionaryExpected) else {
     fail("expected root dictionary")
   }
 
@@ -126,13 +126,13 @@ test "private page tree readers cover guard branches" {
   let missing_child : Result[@syntax.PdfObject, Error] = try? doc.pdf_page_direct_child(
     PdfIndirect(99),
   )
-  guard missing_child is Err(PdfError::PageTreeExpected) else {
+  guard missing_child is Err(@core.PdfError::PageTreeExpected) else {
     fail("expected missing child")
   }
   let malformed_child : Result[@syntax.PdfObject, Error] = try? doc.pdf_page_direct_child(
     PdfInteger(1),
   )
-  guard malformed_child is Err(PdfError::PageTreeExpected) else {
+  guard malformed_child is Err(@core.PdfError::PageTreeExpected) else {
     fail("expected malformed child")
   }
   let missing_kids : Result[Array[@page.PdfPage], Error] = try? doc.pdf_pages_of_branch(
@@ -144,7 +144,7 @@ test "private page tree readers cover guard branches" {
     { val: pdf_page_default_mediabox() },
     0,
   )
-  guard missing_kids is Err(PdfError::PageTreeExpected) else {
+  guard missing_kids is Err(@core.PdfError::PageTreeExpected) else {
     fail("expected missing kids")
   }
   let too_deep : Result[Array[@page.PdfPage], Error] = try? doc.pdf_pages_of_node(
@@ -156,7 +156,7 @@ test "private page tree readers cover guard branches" {
     { val: pdf_page_default_mediabox() },
     10001,
   )
-  guard too_deep is Err(PdfError::PageTreeExpected) else {
+  guard too_deep is Err(@core.PdfError::PageTreeExpected) else {
     fail("expected page tree depth guard")
   }
   let inherited_too_deep : Result[@syntax.PdfObject?, Error] = try? doc.pdf_page_find_inherited_attribute(
@@ -164,7 +164,7 @@ test "private page tree readers cover guard branches" {
     pdf_page_mediabox_key(),
     10001,
   )
-  guard inherited_too_deep is Err(PdfError::PageTreeExpected) else {
+  guard inherited_too_deep is Err(@core.PdfError::PageTreeExpected) else {
     fail("expected inherited attribute depth guard")
   }
   @test.assert_eq(try! doc.pdf_pages_of_pagetree_quick_node(PdfNull, 0), 0)
@@ -172,21 +172,21 @@ test "private page tree readers cover guard branches" {
     PdfDictionary([]),
     10001,
   )
-  guard quick_too_deep is Err(PdfError::PageTreeExpected) else {
+  guard quick_too_deep is Err(@core.PdfError::PageTreeExpected) else {
     fail("expected quick page tree depth guard")
   }
   let quick_missing_kid : Result[Int, Error] = try? doc.pdf_pages_of_pagetree_quick_node(
     PdfDictionary([(pdf_page_kids_key(), PdfArray([PdfIndirect(99)]))]),
     0,
   )
-  guard quick_missing_kid is Err(PdfError::PageTreeExpected) else {
+  guard quick_missing_kid is Err(@core.PdfError::PageTreeExpected) else {
     fail("expected quick missing kid")
   }
   let quick_missing_kids : Result[Int, Error] = try? doc.pdf_pages_of_pagetree_quick_node(
     PdfDictionary([]),
     0,
   )
-  guard quick_missing_kids is Err(PdfError::PageTreeExpected) else {
+  guard quick_missing_kids is Err(@core.PdfError::PageTreeExpected) else {
     fail("expected quick missing kids")
   }
 
@@ -384,7 +384,7 @@ test "private page destination transforms cover unchanged branches" {
   )
   @test.assert_eq(
     try! doc.pdf_page_matrix_for_destination_with_lookup(
-      DestNamed(pdf_name_of_bytes(page_wb_text("/Missing"))),
+      DestNamed(@core.pdf_name_of_bytes(page_wb_text("/Missing"))),
       translation_lookup,
     ),
     None,
@@ -700,21 +700,21 @@ test "private page selection annotation and destination helpers cover fallbacks"
     [1],
     [],
   )
-  guard empty_numbers is Err(PdfError::PageTreeExpected) else {
+  guard empty_numbers is Err(@core.PdfError::PageTreeExpected) else {
     fail("expected empty selection rejection")
   }
   let bad_number : Result[Array[Int], Error] = try? pdf_page_select_numbers(
     [1],
     [2],
   )
-  guard bad_number is Err(PdfError::PageTreeExpected) else {
+  guard bad_number is Err(@core.PdfError::PageTreeExpected) else {
     fail("expected invalid selection rejection")
   }
   let bad_reference_changes : Result[Array[(Int, Int)], Error] = try? pdf_page_reference_changes(
     [1, 2],
     [3],
   )
-  guard bad_reference_changes is Err(PdfError::PageTreeExpected) else {
+  guard bad_reference_changes is Err(@core.PdfError::PageTreeExpected) else {
     fail("expected reference change length rejection")
   }
   @test.assert_eq(pdf_page_number_index([1, 2], 9), None)
@@ -1325,13 +1325,15 @@ test "private page active catalog covers fallback and absent roots" {
 ///|
 test "private page prefix helpers cover direct and fallback operators" {
   @test.assert_eq(
-    pdf_page_name_text_without_slash(pdf_name_of_bytes(page_wb_text("Plain"))),
+    pdf_page_name_text_without_slash(
+      @core.pdf_name_of_bytes(page_wb_text("Plain")),
+    ),
     "Plain",
   )
   let invalid_name_bytes : Array[Byte] = [255]
   @test.assert_eq(
     pdf_page_name_text_without_slash(
-      pdf_name_of_bytes(Bytes::from_array(invalid_name_bytes)),
+      @core.pdf_name_of_bytes(Bytes::from_array(invalid_name_bytes)),
     ),
     "",
   )
@@ -1364,15 +1366,15 @@ test "private page selection reports empty and invalid ranges" {
     [page],
     [],
   )
-  guard empty_result is Err(PdfError::PageTreeExpected) else {
-    fail("expected PdfError::PageTreeExpected for empty page selection")
+  guard empty_result is Err(@core.PdfError::PageTreeExpected) else {
+    fail("expected @core.PdfError::PageTreeExpected for empty page selection")
   }
   let invalid_result : Result[Array[@page.PdfPage], Error] = try? pdf_page_select_pages(
     [page],
     [2],
   )
-  guard invalid_result is Err(PdfError::PageTreeExpected) else {
-    fail("expected PdfError::PageTreeExpected for invalid page selection")
+  guard invalid_result is Err(@core.PdfError::PageTreeExpected) else {
+    fail("expected @core.PdfError::PageTreeExpected for invalid page selection")
   }
 }
 
@@ -1407,7 +1409,9 @@ test "private materialized page inheritance keeps partial attributes" {
 test "private page resource renumber helpers cover optional misses" {
   let color_space = pdf_page_name("/ColorSpace")
   let properties = pdf_page_name("/Properties")
-  let changes : ReadOnlyArray[(PdfName, Int, PdfName, PdfName)] = [
+  let changes : ReadOnlyArray[
+    (@core.PdfName, Int, @core.PdfName, @core.PdfName),
+  ] = [
     (color_space, 1, pdf_page_name("/CS1"), pdf_page_name("/r1")),
     (properties, 1, pdf_page_name("/Prop1"), pdf_page_name("/r2")),
   ]
@@ -1420,13 +1424,13 @@ test "private page resource renumber helpers cover optional misses" {
     ),
     None,
   )
-  let missing : Result[PdfName, Error] = try? pdf_page_renumber_lookup(
+  let missing : Result[@core.PdfName, Error] = try? pdf_page_renumber_lookup(
     changes,
     pdf_page_name("/Font"),
     1,
     pdf_page_name("/Missing"),
   )
-  guard missing is Err(PdfError::DictionaryKeyNotFound(_)) else {
+  guard missing is Err(@core.PdfError::DictionaryKeyNotFound(_)) else {
     fail("expected missing resource name")
   }
 
@@ -1496,7 +1500,7 @@ test "private page reference collection covers malformed nodes" {
     1,
     10001,
   )
-  guard too_deep is Err(PdfError::PageTreeExpected) else {
+  guard too_deep is Err(@core.PdfError::PageTreeExpected) else {
     fail("expected reference depth guard")
   }
   @test.assert_eq(
@@ -1697,7 +1701,7 @@ test "private page tree repair helpers report malformed roots and depth" {
   let missing_pages : Result[Int, Error] = try? pdf_page_root_pages_number(
     missing_root,
   )
-  guard missing_pages is Err(PdfError::RootExpected) else {
+  guard missing_pages is Err(@core.PdfError::RootExpected) else {
     fail("expected missing root")
   }
 
@@ -1710,7 +1714,7 @@ test "private page tree repair helpers report malformed roots and depth" {
   let bad_pages : Result[Int, Error] = try? pdf_page_root_pages_number(
     direct_pages,
   )
-  guard bad_pages is Err(PdfError::PageTreeExpected) else {
+  guard bad_pages is Err(@core.PdfError::PageTreeExpected) else {
     fail("expected indirect pages root")
   }
 
@@ -1720,7 +1724,7 @@ test "private page tree repair helpers report malformed roots and depth" {
     2,
     10001,
   )
-  guard node_depth is Err(PdfError::PageTreeExpected) else {
+  guard node_depth is Err(@core.PdfError::PageTreeExpected) else {
     fail("expected node depth guard")
   }
   @test.assert_eq(
@@ -1732,7 +1736,7 @@ test "private page tree repair helpers report malformed roots and depth" {
     2,
     10001,
   )
-  guard unordered_depth is Err(PdfError::PageTreeExpected) else {
+  guard unordered_depth is Err(@core.PdfError::PageTreeExpected) else {
     fail("expected unordered depth guard")
   }
   @test.assert_eq(
@@ -1742,14 +1746,14 @@ test "private page tree repair helpers report malformed roots and depth" {
   let parent_depth : Result[Unit, Error] = try? doc.pdf_page_fixup_parents_inner(
     0, 2, 10001,
   )
-  guard parent_depth is Err(PdfError::PageTreeExpected) else {
+  guard parent_depth is Err(@core.PdfError::PageTreeExpected) else {
     fail("expected parent depth guard")
   }
   let rewrite_missing : Result[Unit, Error] = try? doc.pdf_page_rewrite_page_tree_first(
     [],
     3,
   )
-  guard rewrite_missing is Err(PdfError::PageTreeExpected) else {
+  guard rewrite_missing is Err(@core.PdfError::PageTreeExpected) else {
     fail("expected rewrite failure")
   }
   @test.assert_eq(doc.lookup_object_or_null(4), PdfNull)

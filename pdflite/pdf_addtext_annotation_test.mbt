@@ -18,8 +18,8 @@ fn addtext_annot_assert_point_close_for_test(
 }
 
 ///|
-fn addtext_annot_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn addtext_annot_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -244,7 +244,7 @@ test "pdf_addtext_url_annotation_widths uses UTF-8 byte offsets" {
     { url: "u", start: 1, end: 2 },
     fn(prefix) { prefix.length().to_double() },
   )
-  guard bad is Err(@pdflite.PdfError::SoftError("bad add-text URL byte offset")) else {
+  guard bad is Err(@core.PdfError::SoftError("bad add-text URL byte offset")) else {
     fail("expected invalid UTF-8 span offset to raise SoftError")
   }
 }
@@ -321,7 +321,7 @@ test "pdf_addtext_url_annotation_references wrapper propagates measure errors" {
     document,
     "ab",
     urls,
-    fn(prefix) raise @pdflite.PdfError {
+    fn(prefix) raise @core.PdfError {
       if prefix.length() == 2 {
         raise SoftError("measure failed")
       }
@@ -339,7 +339,7 @@ test "pdf_addtext_url_annotation_references wrapper propagates measure errors" {
     10.0,
     false,
   )
-  guard result is Err(@pdflite.PdfError::SoftError("measure failed")) else {
+  guard result is Err(@core.PdfError::SoftError("measure failed")) else {
     fail("expected measure error")
   }
 }
@@ -575,8 +575,7 @@ test "PdfDocument addtext_rectangle reports bad coordinate specifications" {
     PdfContentGrey(0.0),
     PdfPositionBottomLeft(0.0, 0.0),
   )
-  guard result
-    is Err(@pdflite.PdfError::SoftError("bad coordinate specification")) else {
+  guard result is Err(@core.PdfError::SoftError("bad coordinate specification")) else {
     fail("expected SoftError for addtext rectangle coordinate arity")
   }
 }
@@ -592,7 +591,7 @@ test "PdfDocument addtext_rectangle validates selected pages" {
   )
   guard result
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "addtext_rectangle: range contains pages not present in pdf"
       )
     ) else {

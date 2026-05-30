@@ -1,11 +1,11 @@
 ///|
-fn text_font_write_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn text_font_write_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
-fn text_font_write_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
-  try! @pdflite.pdf_bytes_of_int_array(values)
+fn text_font_write_bytes_for_test(values : ArrayView[Int]) -> @core.PdfBytes {
+  try! @core.pdf_bytes_of_int_array(values)
 }
 
 ///|
@@ -85,7 +85,7 @@ test "PdfDocument write_encoding writes custom differences" {
   )
   let unsupported = try? doc.write_encoding(PdfWinAnsiEncoding)
   guard unsupported is Err(EncodingWriteUnsupported) else {
-    fail("expected @pdflite.PdfError::EncodingWriteUnsupported")
+    fail("expected @core.PdfError::EncodingWriteUnsupported")
   }
 }
 
@@ -120,7 +120,7 @@ test "pdf_make_font builds Type1 font dictionaries" {
     PdfCustomEncoding(PdfImplicitInFontFile, []),
   )
   guard custom is Err(EncodingWriteUnsupported) else {
-    fail("expected @pdflite.PdfError::EncodingWriteUnsupported")
+    fail("expected @core.PdfError::EncodingWriteUnsupported")
   }
 }
 
@@ -580,13 +580,13 @@ test "PdfDocument write_font writes TrueType ToUnicode CMaps" {
     ),
     [
       {
-        glyphname: @pdflite.pdf_name_of_bytes(
+        glyphname: @core.pdf_name_of_bytes(
           text_font_write_bytes_for_test([47, 0x00, 0x41]),
         ),
         codepoints: [0x41],
       },
       {
-        glyphname: @pdflite.pdf_name_of_bytes(
+        glyphname: @core.pdf_name_of_bytes(
           text_font_write_bytes_for_test([47, 0x00, 0x42]),
         ),
         codepoints: [0x42],
@@ -597,9 +597,7 @@ test "PdfDocument write_font writes TrueType ToUnicode CMaps" {
   @test.assert_eq(
     try! extractor.glyphnames_of_text(text_font_write_bytes_for_test([33, 35])),
     [
-      @pdflite.pdf_name_of_bytes(
-        text_font_write_bytes_for_test([47, 0x00, 0x41]),
-      ),
+      @core.pdf_name_of_bytes(text_font_write_bytes_for_test([47, 0x00, 0x41])),
       text_font_write_name_for_test(".notdef"),
     ],
   )

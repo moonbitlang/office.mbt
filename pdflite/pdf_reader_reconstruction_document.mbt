@@ -4,8 +4,8 @@ fn pdf_read_reconstructed_document_from_view(
   include_xref_stream_trailers? : Bool = true,
   user_password? : BytesView? = None,
   owner_password? : BytesView? = None,
-) -> PdfDocument raise PdfError {
-  let cursor = byte_cursor_of_view(data)
+) -> PdfDocument raise @core.PdfError {
+  let cursor = @core.byte_cursor_of_view(data)
   let version = @reader.pdf_read_header_from_cursor(cursor)
   let document = pdf_document_empty()
   document.set_version(version.major, version.minor)
@@ -25,9 +25,9 @@ fn pdf_read_reconstructed_document_from_view(
 ///|
 fn pdf_read_reconstructed_or_raise(
   data : BytesView,
-  original_error : PdfError,
+  original_error : @core.PdfError,
   include_xref_stream_trailers? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   pdf_read_reconstructed_document_from_view(data, include_xref_stream_trailers~) catch {
     _ => raise original_error
   }
@@ -39,7 +39,7 @@ fn pdf_read_probe_page_tree_or_reconstruct(
   document : PdfDocument,
   user_password? : BytesView? = None,
   owner_password? : BytesView? = None,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let catalog = Some(document.catalog()) catch { _ => None }
   match catalog {
     Some(catalog) if catalog.lookup_immediate(pdf_page_pages_key()) is Some(_) =>

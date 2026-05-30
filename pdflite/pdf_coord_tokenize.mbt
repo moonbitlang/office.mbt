@@ -1,6 +1,6 @@
 ///|
-fn pdf_coord_name(text : String) -> PdfName {
-  pdf_name_of_bytes(@ascii.encode(text))
+fn pdf_coord_name(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -15,7 +15,7 @@ fn pdf_coord_is_number_start(value : Int) -> Bool {
 
 ///|
 fn pdf_coord_is_word_boundary(value : Int) -> Bool {
-  pdf_is_whitespace_byte(value)
+  @core.pdf_is_whitespace_byte(value)
 }
 
 ///|
@@ -112,7 +112,7 @@ fn pdf_coord_tokenize(text : String) -> Array[PdfCoordToken] {
   let mut index = 0
   while index < bytes.length() {
     let value = bytes[index].to_int()
-    if pdf_is_whitespace_byte(value) {
+    if @core.pdf_is_whitespace_byte(value) {
       index += 1
     } else if pdf_coord_is_number_start(value) {
       let end = pdf_coord_number_end(bytes, index)

@@ -6,7 +6,7 @@ fn pdf_util_json_op_matrix(
   d : Json,
   e : Json,
   f : Json,
-) -> @geometry.TransformMatrix raise PdfError {
+) -> @geometry.TransformMatrix raise @core.PdfError {
   {
     a: pdf_util_json_op_float(a),
     b: pdf_util_json_op_float(b),
@@ -20,7 +20,7 @@ fn pdf_util_json_op_matrix(
 ///|
 fn pdf_util_content_op_of_json(
   json : Json,
-) -> @content.PdfContentOp raise PdfError {
+) -> @content.PdfContentOp raise @core.PdfError {
   match json {
     Array(items) =>
       match items {

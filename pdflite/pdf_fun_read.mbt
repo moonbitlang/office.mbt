@@ -2,7 +2,7 @@
 fn PdfDocument::pdf_fun_number_array(
   self : PdfDocument,
   object : @syntax.PdfObject,
-) -> Array[Double] raise PdfError {
+) -> Array[Double] raise @core.PdfError {
   match self.direct(object) {
     PdfArray(values) => {
       let output : Array[Double] = []
@@ -19,9 +19,9 @@ fn PdfDocument::pdf_fun_number_array(
 fn PdfDocument::pdf_fun_lookup_number_array_or(
   self : PdfDocument,
   dictionary : @syntax.PdfObject,
-  key : PdfName,
+  key : @core.PdfName,
   default : ArrayView[Double],
-) -> Array[Double] raise PdfError {
+) -> Array[Double] raise @core.PdfError {
   match self.lookup_direct(key, dictionary) {
     Some(value) => self.pdf_fun_number_array(value)
     None => [ for value in default => value ]
@@ -32,8 +32,8 @@ fn PdfDocument::pdf_fun_lookup_number_array_or(
 fn PdfDocument::pdf_fun_lookup_required_number_array(
   self : PdfDocument,
   dictionary : @syntax.PdfObject,
-  key : PdfName,
-) -> Array[Double] raise PdfError {
+  key : @core.PdfName,
+) -> Array[Double] raise @core.PdfError {
   match self.lookup_direct(key, dictionary) {
     Some(value) => self.pdf_fun_number_array(value)
     None => raise DictionaryKeyNotFound(key)
@@ -44,8 +44,8 @@ fn PdfDocument::pdf_fun_lookup_required_number_array(
 fn PdfDocument::pdf_fun_lookup_required_number(
   self : PdfDocument,
   dictionary : @syntax.PdfObject,
-  key : PdfName,
-) -> Double raise PdfError {
+  key : @core.PdfName,
+) -> Double raise @core.PdfError {
   match self.lookup_direct(key, dictionary) {
     Some(value) => self.get_number(value)
     None => raise DictionaryKeyNotFound(key)
@@ -56,7 +56,7 @@ fn PdfDocument::pdf_fun_lookup_required_number(
 fn PdfDocument::pdf_fun_int_array(
   self : PdfDocument,
   object : @syntax.PdfObject,
-) -> Array[Int] raise PdfError {
+) -> Array[Int] raise @core.PdfError {
   match self.direct(object) {
     PdfArray(values) => {
       let output : Array[Int] = []
@@ -76,7 +76,7 @@ fn PdfDocument::pdf_fun_int_array(
 fn PdfDocument::pdf_fun_object_array(
   self : PdfDocument,
   object : @syntax.PdfObject,
-) -> Array[@syntax.PdfObject] raise PdfError {
+) -> Array[@syntax.PdfObject] raise @core.PdfError {
   match self.direct(object) {
     PdfArray(values) => [ for value in values => value ]
     _ => raise FunctionExpected
@@ -87,8 +87,8 @@ fn PdfDocument::pdf_fun_object_array(
 fn PdfDocument::pdf_fun_lookup_required_object_array(
   self : PdfDocument,
   dictionary : @syntax.PdfObject,
-  key : PdfName,
-) -> Array[@syntax.PdfObject] raise PdfError {
+  key : @core.PdfName,
+) -> Array[@syntax.PdfObject] raise @core.PdfError {
   match self.lookup_direct(key, dictionary) {
     Some(value) => self.pdf_fun_object_array(value)
     None => raise DictionaryKeyNotFound(key)
@@ -99,8 +99,8 @@ fn PdfDocument::pdf_fun_lookup_required_object_array(
 fn PdfDocument::pdf_fun_lookup_required_int_array(
   self : PdfDocument,
   dictionary : @syntax.PdfObject,
-  key : PdfName,
-) -> Array[Int] raise PdfError {
+  key : @core.PdfName,
+) -> Array[Int] raise @core.PdfError {
   match self.lookup_direct(key, dictionary) {
     Some(value) => self.pdf_fun_int_array(value)
     None => raise DictionaryKeyNotFound(key)
@@ -111,8 +111,8 @@ fn PdfDocument::pdf_fun_lookup_required_int_array(
 fn PdfDocument::pdf_fun_lookup_required_int(
   self : PdfDocument,
   dictionary : @syntax.PdfObject,
-  key : PdfName,
-) -> Int raise PdfError {
+  key : @core.PdfName,
+) -> Int raise @core.PdfError {
   match self.lookup_direct(key, dictionary) {
     Some(PdfInteger(value)) => value
     Some(_) => raise NumberExpected
@@ -124,9 +124,9 @@ fn PdfDocument::pdf_fun_lookup_required_int(
 fn PdfDocument::pdf_fun_lookup_int_or(
   self : PdfDocument,
   dictionary : @syntax.PdfObject,
-  key : PdfName,
+  key : @core.PdfName,
   default : Int,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   match self.lookup_direct(key, dictionary) {
     Some(PdfInteger(value)) => value
     Some(_) => raise NumberExpected
@@ -149,7 +149,7 @@ fn PdfDocument::pdf_fun_lookup_encode(
   self : PdfDocument,
   dictionary : @syntax.PdfObject,
   size : ArrayView[Int],
-) -> Array[Double] raise PdfError {
+) -> Array[Double] raise @core.PdfError {
   match self.lookup_direct(pdf_fun_encode_key(), dictionary) {
     Some(value) => {
       let encode = self.pdf_fun_number_array(value)
@@ -168,7 +168,7 @@ fn PdfDocument::pdf_fun_lookup_decode(
   self : PdfDocument,
   dictionary : @syntax.PdfObject,
   range : Array[Double]?,
-) -> Array[Double] raise PdfError {
+) -> Array[Double] raise @core.PdfError {
   match self.lookup_direct(pdf_fun_decode_key(), dictionary) {
     Some(value) => self.pdf_fun_number_array(value)
     None =>
@@ -192,7 +192,7 @@ fn pdf_fun_product(values : ArrayView[Int]) -> Int {
 fn PdfDocument::pdf_fun_stream_data(
   self : PdfDocument,
   object : @syntax.PdfObject,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   match self.direct(object) {
     PdfStreamObject(stream) =>
       @syntax.pdf_stream_data_bytes(
@@ -208,7 +208,7 @@ fn PdfDocument::pdf_fun_read_sampled(
   function_object : @syntax.PdfObject,
   dictionary : @syntax.PdfObject,
   range : Array[Double]?,
-) -> PdfSampledFunction raise PdfError {
+) -> PdfSampledFunction raise @core.PdfError {
   let size = self.pdf_fun_lookup_required_int_array(
     dictionary,
     pdf_fun_size_key(),
@@ -224,7 +224,9 @@ fn PdfDocument::pdf_fun_read_sampled(
     pdf_fun_bits_per_sample_key(),
   )
   let sample_count = pdf_fun_product(size) * (decode.length() / 2)
-  let bitstream = bitstream_of_bytes(self.pdf_fun_stream_data(function_object))
+  let bitstream = @core.bitstream_of_bytes(
+    self.pdf_fun_stream_data(function_object),
+  )
   let samples : Array[Int] = []
   for _ in 0..<sample_count {
     samples.push(bitstream.get_value_int(bits_per_sample))
@@ -236,7 +238,7 @@ fn PdfDocument::pdf_fun_read_sampled(
 fn PdfDocument::pdf_fun_read_stitching(
   self : PdfDocument,
   dictionary : @syntax.PdfObject,
-) -> PdfStitchingFunction raise PdfError {
+) -> PdfStitchingFunction raise @core.PdfError {
   let function_objects = self.pdf_fun_lookup_required_object_array(
     dictionary,
     pdf_fun_functions_key(),
@@ -271,7 +273,7 @@ fn PdfDocument::pdf_fun_read_stitching(
 pub fn PdfDocument::parse_function(
   self : PdfDocument,
   function_object : @syntax.PdfObject,
-) -> PdfFunction raise PdfError {
+) -> PdfFunction raise @core.PdfError {
   let function_dictionary = self.direct(function_object)
   let domain = self.pdf_fun_lookup_required_number_array(
     function_dictionary,
@@ -349,6 +351,6 @@ pub fn PdfDocument::parse_function(
 pub fn pdf_parse_function(
   document : PdfDocument,
   function_object : @syntax.PdfObject,
-) -> PdfFunction raise PdfError {
+) -> PdfFunction raise @core.PdfError {
   document.parse_function(function_object)
 }

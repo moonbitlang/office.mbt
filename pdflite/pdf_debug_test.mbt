@@ -1,11 +1,11 @@
 ///|
-fn debug_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn debug_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
 fn debug_dictionary_for_test(
-  entries : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
+  entries : ArrayView[(@core.PdfName, @syntax.PdfObject)],
 ) -> @syntax.PdfObject {
   @syntax.pdf_dictionary(entries)
 }

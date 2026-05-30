@@ -49,7 +49,7 @@ fn pdf_write_literal_escape_byte(
 ///
 /// Delimiters, backslashes, common controls, and non-printable bytes are
 /// escaped according to PDF literal-string syntax.
-pub fn pdf_write_literal_string(bytes : BytesView) -> PdfBytes {
+pub fn pdf_write_literal_string(bytes : BytesView) -> @core.PdfBytes {
   let output = Array::make(pdf_write_literal_string_length(bytes), b')')
   output[0] = b'('
   let mut position = 1
@@ -82,13 +82,13 @@ pub fn pdf_write_literal_string(bytes : BytesView) -> PdfBytes {
 
 ///|
 /// Compatibility alias for `pdf_write_literal_string`.
-pub fn pdf_make_pdf_string(bytes : BytesView) -> PdfBytes {
+pub fn pdf_make_pdf_string(bytes : BytesView) -> @core.PdfBytes {
   pdf_write_literal_string(bytes)
 }
 
 ///|
 /// Serialize bytes as a lowercase hexadecimal PDF string.
-pub fn pdf_write_hex_string(bytes : BytesView) -> PdfBytes {
+pub fn pdf_write_hex_string(bytes : BytesView) -> @core.PdfBytes {
   let output = Array::make(bytes.length() * 2 + 2, b'>')
   output[0] = b'<'
   let mut position = 1
@@ -103,6 +103,6 @@ pub fn pdf_write_hex_string(bytes : BytesView) -> PdfBytes {
 
 ///|
 /// Compatibility alias for `pdf_write_hex_string`.
-pub fn pdf_make_hex_pdf_string(bytes : BytesView) -> PdfBytes {
+pub fn pdf_make_hex_pdf_string(bytes : BytesView) -> @core.PdfBytes {
   pdf_write_hex_string(bytes)
 }

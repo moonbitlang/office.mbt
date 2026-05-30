@@ -19,7 +19,7 @@ pub fn PdfDocument::impose(
   line_width? : Double = 0.0,
   fast? : Bool = false,
   process_struct_tree? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let source = if process_struct_tree {
     self.mark_all_as_artifact()
   } else {
@@ -95,7 +95,7 @@ pub fn pdf_impose(
   line_width? : Double = 0.0,
   fast? : Bool = false,
   process_struct_tree? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.impose(
     x,
     y,
@@ -121,7 +121,7 @@ pub fn PdfDocument::twoup_stack(
   self : PdfDocument,
   fast? : Bool = false,
   process_struct_tree? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let imposed = self.impose(2.0, 1.0, fast~, process_struct_tree~)
   let all_pages = pdf_impose_all_pages(imposed.endpage())
   imposed.rotate_pages(-90, all_pages).upright_pages(all_pages, fast~)
@@ -133,7 +133,7 @@ pub fn pdf_twoup_stack(
   document : PdfDocument,
   fast? : Bool = false,
   process_struct_tree? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.twoup_stack(fast~, process_struct_tree~)
 }
 
@@ -147,7 +147,7 @@ pub fn PdfDocument::twoup(
   self : PdfDocument,
   fast? : Bool = false,
   process_struct_tree? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let pages = self.pages_of_pagetree()
   if pages.length() == 0 {
     raise BadNumberArgument("twoup: pages must not be empty")
@@ -205,6 +205,6 @@ pub fn pdf_twoup(
   document : PdfDocument,
   fast? : Bool = false,
   process_struct_tree? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.twoup(fast~, process_struct_tree~)
 }

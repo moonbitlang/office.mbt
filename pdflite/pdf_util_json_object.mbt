@@ -1,12 +1,12 @@
 ///|
-fn pdf_util_string_from_utf8(bytes : BytesView) -> String raise PdfError {
+fn pdf_util_string_from_utf8(bytes : BytesView) -> String raise @core.PdfError {
   @utf8.decode(bytes) catch {
     _ => raise InvalidUTF8
   }
 }
 
 ///|
-fn pdf_util_string_from_bytes(bytes : BytesView) -> String raise PdfError {
+fn pdf_util_string_from_bytes(bytes : BytesView) -> String raise @core.PdfError {
   @utf8.decode(bytes) catch {
     _ =>
       @ascii.decode(pdf_write_hex_string(bytes)) catch {
@@ -16,7 +16,9 @@ fn pdf_util_string_from_bytes(bytes : BytesView) -> String raise PdfError {
 }
 
 ///|
-fn pdf_util_string_from_name(name : PdfName) -> String raise PdfError {
+fn pdf_util_string_from_name(
+  name : @core.PdfName,
+) -> String raise @core.PdfError {
   @ascii.decode(name.bytes()) catch {
     _ =>
       @ascii.decode(pdf_write_object(PdfNameObject(name))) catch {
@@ -31,7 +33,7 @@ fn pdf_util_json_number(value : Int) -> Json {
 }
 
 ///|
-fn pdf_util_json_integral_number(value : Double) -> Int raise PdfError {
+fn pdf_util_json_integral_number(value : Double) -> Int raise @core.PdfError {
   let integer = value.to_int()
   guard integer.to_double() == value else { raise NumberExpected }
   integer
@@ -51,7 +53,7 @@ fn PdfDocument::pdf_util_json_of_object(
   no_stream_data : Bool,
   decompress_streams : Bool,
   parse_content : Bool,
-) -> Json raise PdfError {
+) -> Json raise @core.PdfError {
   match object {
     PdfNull => Json::null()
     PdfBoolean(value) => Json::boolean(value)
@@ -160,34 +162,34 @@ pub fn PdfDocument::json_of_object(
   clean_strings? : Bool = false,
   no_stream_data? : Bool = false,
   parse_content? : Bool = false,
-) -> Json raise PdfError {
+) -> Json raise @core.PdfError {
   self.pdf_util_json_of_object(
     object, utf8, clean_strings, no_stream_data, false, parse_content,
   )
 }
 
 ///|
-fn pdf_util_pdf_string_from_json_text(text : String) -> PdfBytes {
+fn pdf_util_pdf_string_from_json_text(text : String) -> @core.PdfBytes {
   @utf8.encode(text)
 }
 
 ///|
-fn pdf_util_utf8_pdf_string_from_json_text(text : String) -> PdfBytes {
+fn pdf_util_utf8_pdf_string_from_json_text(text : String) -> @core.PdfBytes {
   pdf_pdfdocstring_of_utf8(@utf8.encode(text)) catch {
     _ => @utf8.encode(text)
   }
 }
 
 ///|
-fn pdf_util_name_from_json_text(text : String) -> PdfName {
-  pdf_name_of_bytes(@utf8.encode(text))
+fn pdf_util_name_from_json_text(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@utf8.encode(text))
 }
 
 ///|
 fn pdf_util_stream_of_json_data(
   dictionary_json : Json,
   data : String,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   let stream_data = pdf_util_pdf_string_from_json_text(data)
   let dictionary = pdf_object_of_json(dictionary_json).add_dict_entry(
     @syntax.pdf_object_length_name(),
@@ -199,7 +201,7 @@ fn pdf_util_stream_of_json_data(
 ///|
 fn pdf_util_object_of_json_object(
   entries : Map[String, Json],
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   if entries.length() == 1 {
     match entries.get("U") {
       Some(String(text)) =>
@@ -228,7 +230,7 @@ fn pdf_util_object_of_json_object(
       _ => ()
     }
   }
-  let output : Array[(PdfName, @syntax.PdfObject)] = Array::new(
+  let output : Array[(@core.PdfName, @syntax.PdfObject)] = Array::new(
     capacity=entries.length(),
   )
   for entry in entries {
@@ -246,7 +248,9 @@ fn pdf_util_object_of_json_object(
 /// JSON values, CPDFJSON integer/real/name/string wrappers, dictionaries,
 /// arrays, indirect references, streams with embedded string data, and streams
 /// with parsed content-operation arrays are supported.
-pub fn pdf_object_of_json(json : Json) -> @syntax.PdfObject raise PdfError {
+pub fn pdf_object_of_json(
+  json : Json,
+) -> @syntax.PdfObject raise @core.PdfError {
   match json {
     Null => PdfNull
     True => PdfBoolean(true)
@@ -275,7 +279,7 @@ pub fn pdf_json_of_object(
   clean_strings? : Bool = false,
   no_stream_data? : Bool = false,
   parse_content? : Bool = false,
-) -> Json raise PdfError {
+) -> Json raise @core.PdfError {
   document.json_of_object(
     object,
     utf8~,

@@ -36,9 +36,9 @@ pub fn pdf_string_of_standard_font(font : PdfStandardFont) -> String {
 ///|
 /// Return the canonical PDF name object for this standard font.
 ///
-/// The returned name includes the leading slash in the underlying `PdfName`
+/// The returned name includes the leading slash in the underlying `@core.PdfName`
 /// bytes and is suitable for `/BaseFont` dictionary entries.
-pub fn PdfStandardFont::pdf_name(self : PdfStandardFont) -> PdfName {
+pub fn PdfStandardFont::pdf_name(self : PdfStandardFont) -> @core.PdfName {
   match self {
     PdfTimesRoman => pdf_text_times_roman_name
     PdfTimesBold => pdf_text_times_bold_name
@@ -76,7 +76,7 @@ pub fn pdf_standard_font_of_name(name : String) -> PdfStandardFont? {
 /// This is the allocation-light variant used while parsing font dictionaries.
 /// It accepts the canonical PDF names and the same common aliases as
 /// `pdf_standard_font_of_name`.
-pub fn pdf_standard_font_of_pdf_name(name : PdfName) -> PdfStandardFont? {
+pub fn pdf_standard_font_of_pdf_name(name : @core.PdfName) -> PdfStandardFont? {
   match name {
     name if name == pdf_text_times_roman_name ||
       name == pdf_text_times_new_roman_name => Some(PdfTimesRoman)

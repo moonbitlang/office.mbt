@@ -4,7 +4,7 @@ fn pdf_writer_push_classic_xref_and_trailer(
   document : PdfDocument,
   xrefs : ArrayView[(Int, Int, Int)],
   xref_start : Int,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   let size = document.objects.max_object_number() + 1
   pdf_writer_push_ascii(output, "xref\n0 ")
   pdf_writer_push_ascii(output, size.to_string())
@@ -65,7 +65,7 @@ fn pdf_writer_write_document_objects_for_numbers(
   output : Array[Byte],
   document : PdfDocument,
   numbers : ArrayView[Int],
-) -> Array[(Int, Int, Int)] raise PdfError {
+) -> Array[(Int, Int, Int)] raise @core.PdfError {
   let xrefs : Array[(Int, Int, Int)] = Array::new(capacity=numbers.length())
   for number in numbers {
     if number > 0 {
@@ -136,7 +136,7 @@ fn pdf_writer_push_classic_sparse_xref_and_trailer(
   entry_numbers : ArrayView[Int],
   xref_start : Int,
   previous_xref : Int,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   pdf_writer_push_ascii(output, "xref\n")
   let xref_index : Ref[Int] = { val: 0 }
   let mut run_start = -1
@@ -173,7 +173,9 @@ fn pdf_writer_push_classic_sparse_xref_and_trailer(
 
 ///|
 /// Serialize a complete document with a classic xref table.
-pub fn pdf_write_document(document : PdfDocument) -> PdfBytes raise PdfError {
+pub fn pdf_write_document(
+  document : PdfDocument,
+) -> @core.PdfBytes raise @core.PdfError {
   let output : Array[Byte] = []
   let (major, minor) = document.version()
   pdf_writer_push_header(output, major, minor)
@@ -189,9 +191,9 @@ pub fn pdf_write_document(document : PdfDocument) -> PdfBytes raise PdfError {
 /// Only objects marked as changed in `document` are written. The previous
 /// `startxref` position is read from `original` and emitted as `/Prev`.
 pub fn pdf_write_document_incremental_update(
-  original : PdfBytes,
+  original : @core.PdfBytes,
   document : PdfDocument,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let previous_xref = @reader.pdf_read_startxref_position(original)
   let output : Array[Byte] = Array::new(capacity=original.length() + 1)
   for byte in original {

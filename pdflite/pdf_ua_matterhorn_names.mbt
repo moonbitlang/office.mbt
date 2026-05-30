@@ -1,117 +1,121 @@
 ///|
-let pdf_ua_matterhorn_artifact_name : PdfName = pdf_ua_name("/Artifact")
+let pdf_ua_matterhorn_artifact_name : @core.PdfName = pdf_ua_name("/Artifact")
 
 ///|
-fn pdf_ua_matterhorn_artifact() -> PdfName {
+fn pdf_ua_matterhorn_artifact() -> @core.PdfName {
   pdf_ua_matterhorn_artifact_name
 }
 
 ///|
-let pdf_ua_matterhorn_span_name : PdfName = pdf_ua_name("/Span")
+let pdf_ua_matterhorn_span_name : @core.PdfName = pdf_ua_name("/Span")
 
 ///|
-fn pdf_ua_matterhorn_span() -> PdfName {
+fn pdf_ua_matterhorn_span() -> @core.PdfName {
   pdf_ua_matterhorn_span_name
 }
 
 ///|
-let pdf_ua_matterhorn_annot_name : PdfName = pdf_ua_name("/Annot")
+let pdf_ua_matterhorn_annot_name : @core.PdfName = pdf_ua_name("/Annot")
 
 ///|
-fn pdf_ua_matterhorn_annot() -> PdfName {
+fn pdf_ua_matterhorn_annot() -> @core.PdfName {
   pdf_ua_matterhorn_annot_name
 }
 
 ///|
-let pdf_ua_matterhorn_form_name : PdfName = pdf_ua_name("/Form")
+let pdf_ua_matterhorn_form_name : @core.PdfName = pdf_ua_name("/Form")
 
 ///|
-fn pdf_ua_matterhorn_form() -> PdfName {
+fn pdf_ua_matterhorn_form() -> @core.PdfName {
   pdf_ua_matterhorn_form_name
 }
 
 ///|
-let pdf_ua_matterhorn_type0_name : PdfName = pdf_ua_name("/Type0")
+let pdf_ua_matterhorn_type0_name : @core.PdfName = pdf_ua_name("/Type0")
 
 ///|
-fn pdf_ua_matterhorn_type0() -> PdfName {
+fn pdf_ua_matterhorn_type0() -> @core.PdfName {
   pdf_ua_matterhorn_type0_name
 }
 
 ///|
-let pdf_ua_matterhorn_cid_font_type2_name : PdfName = pdf_ua_name(
+let pdf_ua_matterhorn_cid_font_type2_name : @core.PdfName = pdf_ua_name(
   "/CIDFontType2",
 )
 
 ///|
-fn pdf_ua_matterhorn_cid_font_type2() -> PdfName {
+fn pdf_ua_matterhorn_cid_font_type2() -> @core.PdfName {
   pdf_ua_matterhorn_cid_font_type2_name
 }
 
 ///|
-let pdf_ua_matterhorn_cid_font_type0_name : PdfName = pdf_ua_name(
+let pdf_ua_matterhorn_cid_font_type0_name : @core.PdfName = pdf_ua_name(
   "/CIDFontType0",
 )
 
 ///|
-fn pdf_ua_matterhorn_cid_font_type0() -> PdfName {
+fn pdf_ua_matterhorn_cid_font_type0() -> @core.PdfName {
   pdf_ua_matterhorn_cid_font_type0_name
 }
 
 ///|
-let pdf_ua_matterhorn_identity_name : PdfName = pdf_ua_name("/Identity")
+let pdf_ua_matterhorn_identity_name : @core.PdfName = pdf_ua_name("/Identity")
 
 ///|
-fn pdf_ua_matterhorn_identity() -> PdfName {
+fn pdf_ua_matterhorn_identity() -> @core.PdfName {
   pdf_ua_matterhorn_identity_name
 }
 
 ///|
-let pdf_ua_matterhorn_identity_h_name : PdfName = pdf_ua_name("/Identity-H")
+let pdf_ua_matterhorn_identity_h_name : @core.PdfName = pdf_ua_name(
+  "/Identity-H",
+)
 
 ///|
-fn pdf_ua_matterhorn_identity_h() -> PdfName {
+fn pdf_ua_matterhorn_identity_h() -> @core.PdfName {
   pdf_ua_matterhorn_identity_h_name
 }
 
 ///|
-let pdf_ua_matterhorn_identity_v_name : PdfName = pdf_ua_name("/Identity-V")
+let pdf_ua_matterhorn_identity_v_name : @core.PdfName = pdf_ua_name(
+  "/Identity-V",
+)
 
 ///|
-fn pdf_ua_matterhorn_identity_v() -> PdfName {
+fn pdf_ua_matterhorn_identity_v() -> @core.PdfName {
   pdf_ua_matterhorn_identity_v_name
 }
 
 ///|
-let pdf_ua_matterhorn_tabs_key_name : PdfName = pdf_ua_name("/Tabs")
+let pdf_ua_matterhorn_tabs_key_name : @core.PdfName = pdf_ua_name("/Tabs")
 
 ///|
-fn pdf_ua_matterhorn_tabs_key() -> PdfName {
+fn pdf_ua_matterhorn_tabs_key() -> @core.PdfName {
   pdf_ua_matterhorn_tabs_key_name
 }
 
 ///|
-let pdf_ua_matterhorn_adobe_name : PdfName = pdf_ua_name("/Adobe")
+let pdf_ua_matterhorn_adobe_name : @core.PdfName = pdf_ua_name("/Adobe")
 
 ///|
-fn pdf_ua_matterhorn_adobe() -> PdfName {
+fn pdf_ua_matterhorn_adobe() -> @core.PdfName {
   pdf_ua_matterhorn_adobe_name
 }
 
 ///|
-let pdf_ua_matterhorn_gb1_name : PdfName = pdf_ua_name("/GB1")
+let pdf_ua_matterhorn_gb1_name : @core.PdfName = pdf_ua_name("/GB1")
 
 ///|
-let pdf_ua_matterhorn_cns1_name : PdfName = pdf_ua_name("/CNS1")
+let pdf_ua_matterhorn_cns1_name : @core.PdfName = pdf_ua_name("/CNS1")
 
 ///|
-let pdf_ua_matterhorn_japan1_name : PdfName = pdf_ua_name("/Japan1")
+let pdf_ua_matterhorn_japan1_name : @core.PdfName = pdf_ua_name("/Japan1")
 
 ///|
-let pdf_ua_matterhorn_korea1_name : PdfName = pdf_ua_name("/Korea1")
+let pdf_ua_matterhorn_korea1_name : @core.PdfName = pdf_ua_name("/Korea1")
 
 ///|
-let pdf_ua_matterhorn_cmap_names : Array[PdfName] = [
+let pdf_ua_matterhorn_cmap_names : Array[@core.PdfName] = [
   pdf_ua_name("/GB-EUC-H"),
   pdf_ua_name("/GB-EUC-V"),
   pdf_ua_name("/GBpc-EUC-H"),
@@ -175,224 +179,238 @@ let pdf_ua_matterhorn_cmap_names : Array[PdfName] = [
 ]
 
 ///|
-fn pdf_ua_matterhorn_cmap_name_is_listed(name : PdfName) -> Bool {
+fn pdf_ua_matterhorn_cmap_name_is_listed(name : @core.PdfName) -> Bool {
   pdf_ua_matterhorn_cmap_names.contains(name)
 }
 
 ///|
-let pdf_ua_matterhorn_resources_key_name : PdfName = pdf_ua_name("/Resources")
+let pdf_ua_matterhorn_resources_key_name : @core.PdfName = pdf_ua_name(
+  "/Resources",
+)
 
 ///|
-fn pdf_ua_matterhorn_resources_key() -> PdfName {
+fn pdf_ua_matterhorn_resources_key() -> @core.PdfName {
   pdf_ua_matterhorn_resources_key_name
 }
 
 ///|
-let pdf_ua_matterhorn_xobject_key_name : PdfName = pdf_ua_name("/XObject")
+let pdf_ua_matterhorn_xobject_key_name : @core.PdfName = pdf_ua_name("/XObject")
 
 ///|
-fn pdf_ua_matterhorn_xobject_key() -> PdfName {
+fn pdf_ua_matterhorn_xobject_key() -> @core.PdfName {
   pdf_ua_matterhorn_xobject_key_name
 }
 
 ///|
-let pdf_ua_matterhorn_ap_key_name : PdfName = pdf_ua_name("/AP")
+let pdf_ua_matterhorn_ap_key_name : @core.PdfName = pdf_ua_name("/AP")
 
 ///|
-fn pdf_ua_matterhorn_ap_key() -> PdfName {
+fn pdf_ua_matterhorn_ap_key() -> @core.PdfName {
   pdf_ua_matterhorn_ap_key_name
 }
 
 ///|
-let pdf_ua_matterhorn_n_key_name : PdfName = pdf_ua_name("/N")
+let pdf_ua_matterhorn_n_key_name : @core.PdfName = pdf_ua_name("/N")
 
 ///|
-fn pdf_ua_matterhorn_n_key() -> PdfName {
+fn pdf_ua_matterhorn_n_key() -> @core.PdfName {
   pdf_ua_matterhorn_n_key_name
 }
 
 ///|
-let pdf_ua_matterhorn_mcid_key_name : PdfName = pdf_ua_name("/MCID")
+let pdf_ua_matterhorn_mcid_key_name : @core.PdfName = pdf_ua_name("/MCID")
 
 ///|
-fn pdf_ua_matterhorn_mcid_key() -> PdfName {
+fn pdf_ua_matterhorn_mcid_key() -> @core.PdfName {
   pdf_ua_matterhorn_mcid_key_name
 }
 
 ///|
-let pdf_ua_matterhorn_suspects_key_name : PdfName = pdf_ua_name("/Suspects")
+let pdf_ua_matterhorn_suspects_key_name : @core.PdfName = pdf_ua_name(
+  "/Suspects",
+)
 
 ///|
-fn pdf_ua_matterhorn_suspects_key() -> PdfName {
+fn pdf_ua_matterhorn_suspects_key() -> @core.PdfName {
   pdf_ua_matterhorn_suspects_key_name
 }
 
 ///|
-let pdf_ua_matterhorn_ref_key_name : PdfName = pdf_ua_name("/Ref")
+let pdf_ua_matterhorn_ref_key_name : @core.PdfName = pdf_ua_name("/Ref")
 
 ///|
-fn pdf_ua_matterhorn_ref_key() -> PdfName {
+fn pdf_ua_matterhorn_ref_key() -> @core.PdfName {
   pdf_ua_matterhorn_ref_key_name
 }
 
 ///|
-let pdf_ua_matterhorn_ct_key_name : PdfName = pdf_ua_name("/CT")
+let pdf_ua_matterhorn_ct_key_name : @core.PdfName = pdf_ua_name("/CT")
 
 ///|
-fn pdf_ua_matterhorn_ct_key() -> PdfName {
+fn pdf_ua_matterhorn_ct_key() -> @core.PdfName {
   pdf_ua_matterhorn_ct_key_name
 }
 
 ///|
-let pdf_ua_matterhorn_alt_key_name : PdfName = pdf_ua_name("/Alt")
+let pdf_ua_matterhorn_alt_key_name : @core.PdfName = pdf_ua_name("/Alt")
 
 ///|
-fn pdf_ua_matterhorn_alt_key() -> PdfName {
+fn pdf_ua_matterhorn_alt_key() -> @core.PdfName {
   pdf_ua_matterhorn_alt_key_name
 }
 
 ///|
-let pdf_ua_matterhorn_actual_text_key_name : PdfName = pdf_ua_name(
+let pdf_ua_matterhorn_actual_text_key_name : @core.PdfName = pdf_ua_name(
   "/ActualText",
 )
 
 ///|
-fn pdf_ua_matterhorn_actual_text_key() -> PdfName {
+fn pdf_ua_matterhorn_actual_text_key() -> @core.PdfName {
   pdf_ua_matterhorn_actual_text_key_name
 }
 
 ///|
-let pdf_ua_matterhorn_id_key_name : PdfName = pdf_ua_name("/ID")
+let pdf_ua_matterhorn_id_key_name : @core.PdfName = pdf_ua_name("/ID")
 
 ///|
-fn pdf_ua_matterhorn_id_key() -> PdfName {
+fn pdf_ua_matterhorn_id_key() -> @core.PdfName {
   pdf_ua_matterhorn_id_key_name
 }
 
 ///|
-let pdf_ua_matterhorn_a_key_name : PdfName = pdf_ua_name("/A")
+let pdf_ua_matterhorn_a_key_name : @core.PdfName = pdf_ua_name("/A")
 
 ///|
-fn pdf_ua_matterhorn_a_key() -> PdfName {
+fn pdf_ua_matterhorn_a_key() -> @core.PdfName {
   pdf_ua_matterhorn_a_key_name
 }
 
 ///|
-let pdf_ua_matterhorn_c_key_name : PdfName = pdf_ua_name("/C")
+let pdf_ua_matterhorn_c_key_name : @core.PdfName = pdf_ua_name("/C")
 
 ///|
-fn pdf_ua_matterhorn_c_key() -> PdfName {
+fn pdf_ua_matterhorn_c_key() -> @core.PdfName {
   pdf_ua_matterhorn_c_key_name
 }
 
 ///|
-let pdf_ua_matterhorn_scope_name : PdfName = pdf_ua_name("/Scope")
+let pdf_ua_matterhorn_scope_name : @core.PdfName = pdf_ua_name("/Scope")
 
 ///|
-fn pdf_ua_matterhorn_scope() -> PdfName {
+fn pdf_ua_matterhorn_scope() -> @core.PdfName {
   pdf_ua_matterhorn_scope_name
 }
 
 ///|
-let pdf_ua_matterhorn_encoding_key_name : PdfName = pdf_ua_name("/Encoding")
+let pdf_ua_matterhorn_encoding_key_name : @core.PdfName = pdf_ua_name(
+  "/Encoding",
+)
 
 ///|
-fn pdf_ua_matterhorn_encoding_key() -> PdfName {
+fn pdf_ua_matterhorn_encoding_key() -> @core.PdfName {
   pdf_ua_matterhorn_encoding_key_name
 }
 
 ///|
-let pdf_ua_matterhorn_cid_to_gid_map_key_name : PdfName = pdf_ua_name(
+let pdf_ua_matterhorn_cid_to_gid_map_key_name : @core.PdfName = pdf_ua_name(
   "/CIDToGIDMap",
 )
 
 ///|
-fn pdf_ua_matterhorn_cid_to_gid_map_key() -> PdfName {
+fn pdf_ua_matterhorn_cid_to_gid_map_key() -> @core.PdfName {
   pdf_ua_matterhorn_cid_to_gid_map_key_name
 }
 
 ///|
-let pdf_ua_matterhorn_usecmap_key_name : PdfName = pdf_ua_name("/UseCMap")
+let pdf_ua_matterhorn_usecmap_key_name : @core.PdfName = pdf_ua_name("/UseCMap")
 
 ///|
-fn pdf_ua_matterhorn_usecmap_key() -> PdfName {
+fn pdf_ua_matterhorn_usecmap_key() -> @core.PdfName {
   pdf_ua_matterhorn_usecmap_key_name
 }
 
 ///|
-let pdf_ua_matterhorn_wmode_key_name : PdfName = pdf_ua_name("/WMode")
+let pdf_ua_matterhorn_wmode_key_name : @core.PdfName = pdf_ua_name("/WMode")
 
 ///|
-fn pdf_ua_matterhorn_wmode_key() -> PdfName {
+fn pdf_ua_matterhorn_wmode_key() -> @core.PdfName {
   pdf_ua_matterhorn_wmode_key_name
 }
 
 ///|
-let pdf_ua_matterhorn_descendant_fonts_key_name : PdfName = pdf_ua_name(
+let pdf_ua_matterhorn_descendant_fonts_key_name : @core.PdfName = pdf_ua_name(
   "/DescendantFonts",
 )
 
 ///|
-fn pdf_ua_matterhorn_descendant_fonts_key() -> PdfName {
+fn pdf_ua_matterhorn_descendant_fonts_key() -> @core.PdfName {
   pdf_ua_matterhorn_descendant_fonts_key_name
 }
 
 ///|
-let pdf_ua_matterhorn_cid_system_info_key_name : PdfName = pdf_ua_name(
+let pdf_ua_matterhorn_cid_system_info_key_name : @core.PdfName = pdf_ua_name(
   "/CIDSystemInfo",
 )
 
 ///|
-fn pdf_ua_matterhorn_cid_system_info_key() -> PdfName {
+fn pdf_ua_matterhorn_cid_system_info_key() -> @core.PdfName {
   pdf_ua_matterhorn_cid_system_info_key_name
 }
 
 ///|
-let pdf_ua_matterhorn_registry_key_name : PdfName = pdf_ua_name("/Registry")
+let pdf_ua_matterhorn_registry_key_name : @core.PdfName = pdf_ua_name(
+  "/Registry",
+)
 
 ///|
-fn pdf_ua_matterhorn_registry_key() -> PdfName {
+fn pdf_ua_matterhorn_registry_key() -> @core.PdfName {
   pdf_ua_matterhorn_registry_key_name
 }
 
 ///|
-let pdf_ua_matterhorn_ordering_key_name : PdfName = pdf_ua_name("/Ordering")
+let pdf_ua_matterhorn_ordering_key_name : @core.PdfName = pdf_ua_name(
+  "/Ordering",
+)
 
 ///|
-fn pdf_ua_matterhorn_ordering_key() -> PdfName {
+fn pdf_ua_matterhorn_ordering_key() -> @core.PdfName {
   pdf_ua_matterhorn_ordering_key_name
 }
 
 ///|
-let pdf_ua_matterhorn_struct_parent_key_name : PdfName = pdf_ua_name(
+let pdf_ua_matterhorn_struct_parent_key_name : @core.PdfName = pdf_ua_name(
   "/StructParent",
 )
 
 ///|
-fn pdf_ua_matterhorn_struct_parent_key() -> PdfName {
+fn pdf_ua_matterhorn_struct_parent_key() -> @core.PdfName {
   pdf_ua_matterhorn_struct_parent_key_name
 }
 
 ///|
-let pdf_ua_matterhorn_media_clip_name : PdfName = pdf_ua_name("/MediaClip")
+let pdf_ua_matterhorn_media_clip_name : @core.PdfName = pdf_ua_name(
+  "/MediaClip",
+)
 
 ///|
-fn pdf_ua_matterhorn_media_clip() -> PdfName {
+fn pdf_ua_matterhorn_media_clip() -> @core.PdfName {
   pdf_ua_matterhorn_media_clip_name
 }
 
 ///|
-let pdf_ua_matterhorn_mcd_name : PdfName = pdf_ua_name("/MCD")
+let pdf_ua_matterhorn_mcd_name : @core.PdfName = pdf_ua_name("/MCD")
 
 ///|
-fn pdf_ua_matterhorn_mcd() -> PdfName {
+fn pdf_ua_matterhorn_mcd() -> @core.PdfName {
   pdf_ua_matterhorn_mcd_name
 }
 
 ///|
-let pdf_ua_matterhorn_printer_mark_name : PdfName = pdf_ua_name("/PrinterMark")
+let pdf_ua_matterhorn_printer_mark_name : @core.PdfName = pdf_ua_name(
+  "/PrinterMark",
+)
 
 ///|
-fn pdf_ua_matterhorn_printer_mark() -> PdfName {
+fn pdf_ua_matterhorn_printer_mark() -> @core.PdfName {
   pdf_ua_matterhorn_printer_mark_name
 }

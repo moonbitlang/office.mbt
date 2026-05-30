@@ -1,6 +1,6 @@
 ///|
-fn page_change_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn page_change_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -66,7 +66,7 @@ fn page_change_indexed_blank_for_test(index : Int) -> @page.PdfPage {
 
 ///|
 fn page_change_xobject_resources_for_test(
-  entries : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
+  entries : ArrayView[(@core.PdfName, @syntax.PdfObject)],
 ) -> @syntax.PdfObject {
   @syntax.pdf_dictionary([
     (page_change_name_for_test("/XObject"), @syntax.pdf_dictionary(entries)),
@@ -93,7 +93,7 @@ fn page_change_draft_substitute_ops_for_test() -> Array[@content.PdfContentOp] {
 fn page_change_draft_xobject_is_image_for_test(
   doc : @pdflite.PdfDocument,
   resources : @syntax.PdfObject,
-  name : @pdflite.PdfName,
+  name : @core.PdfName,
 ) -> Bool {
   match doc.lookup_direct(page_change_name_for_test("/XObject"), resources) {
     Some(xobjects) =>
@@ -119,13 +119,13 @@ fn page_change_draft_remove_image_xobjects_for_test(
   let key_xobject = page_change_name_for_test("/XObject")
   match resources {
     PdfDictionary(entries) => {
-      let retained : Array[(@pdflite.PdfName, @syntax.PdfObject)] = []
+      let retained : Array[(@core.PdfName, @syntax.PdfObject)] = []
       for entry in entries {
         let (key, value) = entry
         if key == key_xobject {
           match doc.direct(value) {
             PdfDictionary(xobjects) => {
-              let kept : Array[(@pdflite.PdfName, @syntax.PdfObject)] = []
+              let kept : Array[(@core.PdfName, @syntax.PdfObject)] = []
               for xobject_entry in xobjects {
                 let (name, _) = xobject_entry
                 if !page_change_draft_xobject_is_image_for_test(
@@ -214,7 +214,7 @@ fn page_change_draft_document_for_test(
 ///|
 fn page_change_destination_entries_for_test(
   doc : @pdflite.PdfDocument,
-) -> Array[(@pdflite.PdfBytes, @syntax.PdfObject)] {
+) -> Array[(@core.PdfBytes, @syntax.PdfObject)] {
   match
     doc.lookup_chain(doc.lookup_object_or_null(doc.root()), [
       page_change_name_for_test("/Names"),
@@ -1341,16 +1341,16 @@ test "PdfDocument change_pages accepts explicit serial reference changes" {
     change_references=true,
     changes=[(3, 1)],
   )
-  guard bad_old is Err(@pdflite.PdfError::PageTreeExpected) else {
-    fail("expected @pdflite.PdfError::PageTreeExpected for bad old serial")
+  guard bad_old is Err(@core.PdfError::PageTreeExpected) else {
+    fail("expected @core.PdfError::PageTreeExpected for bad old serial")
   }
   let bad_new : Result[@pdflite.PdfDocument, Error] = try? doc.change_pages(
     [page_change_indexed_blank_for_test(9)],
     change_references=true,
     changes=[(1, 2)],
   )
-  guard bad_new is Err(@pdflite.PdfError::PageTreeExpected) else {
-    fail("expected @pdflite.PdfError::PageTreeExpected for bad new serial")
+  guard bad_new is Err(@core.PdfError::PageTreeExpected) else {
+    fail("expected @core.PdfError::PageTreeExpected for bad new serial")
   }
 }
 

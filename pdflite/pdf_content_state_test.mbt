@@ -4,8 +4,8 @@ fn content_state_json_int_for_test(value : Int) -> Json {
 }
 
 ///|
-fn content_state_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn content_state_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|

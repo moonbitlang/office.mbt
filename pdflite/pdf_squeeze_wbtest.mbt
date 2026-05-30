@@ -1,10 +1,10 @@
 ///|
-fn squeeze_wbtest_name(text : String) -> PdfName {
-  pdf_name_of_bytes(@ascii.encode(text))
+fn squeeze_wbtest_name(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
-fn squeeze_wbtest_data() -> PdfBytes {
+fn squeeze_wbtest_data() -> @core.PdfBytes {
   let output : Array[Byte] = []
   for _ in 0..<96 {
     for byte in @ascii.encode("already decrypted squeeze data\n")[:] {
@@ -16,10 +16,10 @@ fn squeeze_wbtest_data() -> PdfBytes {
 
 ///|
 fn squeeze_wbtest_stream(
-  entries : ArrayView[(PdfName, @syntax.PdfObject)],
-  data : PdfBytes,
+  entries : ArrayView[(@core.PdfName, @syntax.PdfObject)],
+  data : @core.PdfBytes,
 ) -> @syntax.PdfObject {
-  let dictionary_entries : Array[(PdfName, @syntax.PdfObject)] = [
+  let dictionary_entries : Array[(@core.PdfName, @syntax.PdfObject)] = [
     (squeeze_wbtest_name("/Length"), PdfInteger(data.length())),
   ]
   for entry in entries {

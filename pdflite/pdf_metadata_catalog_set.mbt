@@ -2,13 +2,13 @@
 /// Set or replace one `/ViewerPreferences` dictionary entry.
 pub fn PdfDocument::set_viewer_preference(
   self : PdfDocument,
-  key : PdfName,
+  key : @core.PdfName,
   value : @syntax.PdfObject,
   version : Int,
   keep_version? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let document = self.copy()
-  document.pdf_metadata_update_catalog(fn(catalog) raise PdfError {
+  document.pdf_metadata_update_catalog(fn(catalog) raise @core.PdfError {
     let preferences = match
       document.lookup_direct(pdf_metadata_viewer_preferences(), catalog) {
       Some(dictionary) => dictionary
@@ -28,7 +28,7 @@ pub fn PdfDocument::set_viewer_preference(
 pub fn PdfDocument::set_viewer_preference_string(
   self : PdfDocument,
   entry : (String, @syntax.PdfObject, Int),
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   self.set_viewer_preference(
     pdf_metadata_source_key_name(entry.0),
     entry.1,
@@ -41,7 +41,7 @@ pub fn PdfDocument::set_viewer_preference_string(
 pub fn PdfDocument::set_page_layout(
   self : PdfDocument,
   layout : String,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let name = pdf_metadata_known_name(
     layout,
     [
@@ -51,7 +51,7 @@ pub fn PdfDocument::set_page_layout(
     "Unknown page layout: ",
   )
   let document = self.copy()
-  document.pdf_metadata_update_catalog(fn(catalog) raise PdfError {
+  document.pdf_metadata_update_catalog(fn(catalog) raise @core.PdfError {
     catalog.add_dict_entry(pdf_metadata_page_layout(), PdfNameObject(name))
   })
   document
@@ -62,7 +62,7 @@ pub fn PdfDocument::set_page_layout(
 pub fn PdfDocument::set_page_mode(
   self : PdfDocument,
   mode : String,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let name = pdf_metadata_known_name(
     mode,
     [
@@ -71,7 +71,7 @@ pub fn PdfDocument::set_page_mode(
     "Unknown page mode: ",
   )
   let document = self.copy()
-  document.pdf_metadata_update_catalog(fn(catalog) raise PdfError {
+  document.pdf_metadata_update_catalog(fn(catalog) raise @core.PdfError {
     catalog.add_dict_entry(pdf_metadata_page_mode(), PdfNameObject(name))
   })
   document
@@ -82,7 +82,7 @@ pub fn PdfDocument::set_page_mode(
 pub fn PdfDocument::set_non_full_screen_page_mode(
   self : PdfDocument,
   mode : String,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let name = pdf_metadata_known_name(
     mode,
     ["UseNone", "UseOutlines", "UseThumbs", "UseOC", "UseAttachments"],
@@ -99,7 +99,7 @@ pub fn PdfDocument::set_non_full_screen_page_mode(
 fn PdfDocument::pdf_metadata_rewrite_destination_page(
   self : PdfDocument,
   destination : @syntax.PdfObject,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   match destination {
     PdfArray(values) =>
       match values {
@@ -119,7 +119,7 @@ fn PdfDocument::pdf_metadata_rewrite_destination_page(
 ///|
 fn pdf_metadata_parse_open_action_destination(
   destination : String,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   let parsed : Result[@syntax.PdfObject, Error] = try? @syntax.pdf_parse_object_from_bytes(
     @ascii.encode(destination),
   )
@@ -144,7 +144,7 @@ pub fn PdfDocument::set_open_action(
   page_number : Int,
   fit? : Bool = true,
   destination? : @syntax.PdfObject? = None,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let page_numbers = self.page_reference_numbers()
   if page_number < 1 || page_number > page_numbers.length() {
     raise BadPageSpecification(page_number.to_string())
@@ -172,7 +172,7 @@ pub fn PdfDocument::set_open_action(
     (pdf_metadata_s(), PdfNameObject(pdf_metadata_goto())),
   ])
   let document = self.copy()
-  document.pdf_metadata_update_catalog(fn(catalog) raise PdfError {
+  document.pdf_metadata_update_catalog(fn(catalog) raise @core.PdfError {
     catalog.add_dict_entry(pdf_metadata_open_action(), open_action)
   })
   document
@@ -185,7 +185,7 @@ pub fn PdfDocument::set_open_action_string_destination(
   page_number : Int,
   fit? : Bool = true,
   destination? : String? = None,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let destination_object = match destination {
     Some(value) => Some(pdf_metadata_parse_open_action_destination(value))
     None => None

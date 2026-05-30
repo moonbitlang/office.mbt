@@ -1,7 +1,7 @@
 ///|
 fn pdf_text_dictionary_has_key(
   object : @syntax.PdfObject,
-  key : PdfName,
+  key : @core.PdfName,
 ) -> Bool {
   match object.dictionary_view() {
     Some(entries) =>
@@ -20,7 +20,7 @@ fn pdf_text_dictionary_has_key(
 ///|
 fn pdf_text_find_immediate_indirect(
   object : @syntax.PdfObject,
-  key : PdfName,
+  key : @core.PdfName,
 ) -> Int? {
   match object.dictionary_view() {
     Some(entries) =>
@@ -91,9 +91,9 @@ fn pdf_text_empty_font_descriptor() -> PdfFontDescriptor {
 ///|
 fn PdfDocument::pdf_text_optional_number(
   self : PdfDocument,
-  key : PdfName,
+  key : @core.PdfName,
   object : @syntax.PdfObject,
-) -> Double raise PdfError {
+) -> Double raise @core.PdfError {
   match self.lookup_direct(key, object) {
     Some(value) => self.get_number(value)
     None => 0.0
@@ -103,9 +103,9 @@ fn PdfDocument::pdf_text_optional_number(
 ///|
 fn PdfDocument::pdf_text_optional_integer(
   self : PdfDocument,
-  key : PdfName,
+  key : @core.PdfName,
   object : @syntax.PdfObject,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   match self.lookup_direct(key, object) {
     Some(value) => self.get_number(value).to_int()
     None => 0
@@ -113,9 +113,11 @@ fn PdfDocument::pdf_text_optional_integer(
 }
 
 ///|
-fn pdf_text_parse_charset(bytes : BytesView) -> Array[PdfName] raise PdfError {
-  let cursor = byte_cursor_of_view(bytes)
-  let names : Array[PdfName] = Array::new(capacity=bytes.length())
+fn pdf_text_parse_charset(
+  bytes : BytesView,
+) -> Array[@core.PdfName] raise @core.PdfError {
+  let cursor = @core.byte_cursor_of_view(bytes)
+  let names : Array[@core.PdfName] = Array::new(capacity=bytes.length())
   let mut done = false
   while !done {
     @syntax.pdf_cursor_drop_whitespace(cursor)
@@ -136,7 +138,7 @@ fn pdf_text_parse_charset(bytes : BytesView) -> Array[PdfName] raise PdfError {
 fn PdfDocument::pdf_text_font_charset(
   self : PdfDocument,
   descriptor : @syntax.PdfObject,
-) -> Array[PdfName]? raise PdfError {
+) -> Array[@core.PdfName]? raise @core.PdfError {
   match self.lookup_direct(pdf_text_charset_key_name, descriptor) {
     Some(PdfString(bytes)) => Some(pdf_text_parse_charset(bytes))
     _ => None
@@ -153,7 +155,7 @@ fn PdfDocument::pdf_text_font_charset(
 pub fn PdfDocument::read_font_descriptor(
   self : PdfDocument,
   font : @syntax.PdfObject,
-) -> PdfFontDescriptor? raise PdfError {
+) -> PdfFontDescriptor? raise @core.PdfError {
   match self.lookup_direct(pdf_text_font_descriptor_key_name, font) {
     None => None
     Some(descriptor) => {

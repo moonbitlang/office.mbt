@@ -2,7 +2,7 @@
 fn PdfDocument::pdf_page_vertical_flip_matrix(
   self : PdfDocument,
   page : @page.PdfPage,
-) -> @geometry.TransformMatrix raise PdfError {
+) -> @geometry.TransformMatrix raise @core.PdfError {
   let bounds = self.parse_rectangle(page.mediabox)
   @geometry.transform_scale(
     @geometry.point2(0.0, (bounds.min_y + bounds.max_y) / 2.0),
@@ -15,7 +15,7 @@ fn PdfDocument::pdf_page_vertical_flip_matrix(
 fn PdfDocument::pdf_page_horizontal_flip_matrix(
   self : PdfDocument,
   page : @page.PdfPage,
-) -> @geometry.TransformMatrix raise PdfError {
+) -> @geometry.TransformMatrix raise @core.PdfError {
   let bounds = self.parse_rectangle(page.mediabox)
   @geometry.transform_scale(
     @geometry.point2((bounds.min_x + bounds.max_x) / 2.0, 0.0),
@@ -30,8 +30,8 @@ fn PdfDocument::pdf_page_flip_pages(
   page_numbers : ArrayView[Int],
   context : String,
   fast : Bool,
-  matrix_of_page : (@page.PdfPage) -> @geometry.TransformMatrix raise PdfError,
-) -> PdfDocument raise PdfError {
+  matrix_of_page : (@page.PdfPage) -> @geometry.TransformMatrix raise @core.PdfError,
+) -> PdfDocument raise @core.PdfError {
   pdf_page_box_validate_page_numbers(page_numbers, self.endpage(), context)
   let pages = self.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(page_numbers)
@@ -63,7 +63,7 @@ pub fn PdfDocument::flip_pages_vertically(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   self.pdf_page_flip_pages(page_numbers, "flip_pages_vertically", fast, page => {
     self.pdf_page_vertical_flip_matrix(page)
   })
@@ -75,7 +75,7 @@ pub fn PdfDocument::vflip_pdf(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   self.flip_pages_vertically(page_numbers, fast~)
 }
 
@@ -85,7 +85,7 @@ pub fn pdf_vflip_pdf(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.vflip_pdf(page_numbers, fast~)
 }
 
@@ -100,7 +100,7 @@ pub fn PdfDocument::flip_pages_horizontally(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   self.pdf_page_flip_pages(page_numbers, "flip_pages_horizontally", fast, page => {
     self.pdf_page_horizontal_flip_matrix(page)
   })
@@ -112,7 +112,7 @@ pub fn PdfDocument::hflip_pdf(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   self.flip_pages_horizontally(page_numbers, fast~)
 }
 
@@ -122,6 +122,6 @@ pub fn pdf_hflip_pdf(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.hflip_pdf(page_numbers, fast~)
 }

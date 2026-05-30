@@ -1,14 +1,14 @@
 ///|
 fn pdf_text_parse_cmap_int_after_token(data : BytesView, key : String) -> Int? {
-  let cursor = byte_cursor_of_view(data)
+  let cursor = @core.byte_cursor_of_view(data)
   let mut expect_value = false
   for line in cursor.read_line_views() {
     let uncommented = pdf_text_cmap_line_without_comment(line)
-    let tokens = pdf_split_whitespace_tokens(uncommented)
+    let tokens = @core.pdf_split_whitespace_tokens(uncommented)
     for token in tokens {
       if expect_value {
         expect_value = false
-        let parsed = try pdf_parse_ascii_int_view(token) catch {
+        let parsed = try @core.pdf_parse_ascii_int_view(token) catch {
           _ => None
         } noraise {
           value => Some(value)
@@ -33,7 +33,7 @@ fn pdf_text_parse_cmap_wmode(data : BytesView) -> Int? {
 }
 
 ///|
-fn pdf_text_parse_cmap_name_token(token : BytesView) -> PdfName? {
+fn pdf_text_parse_cmap_name_token(token : BytesView) -> @core.PdfName? {
   guard token.length() > 1 && token[0].to_int() == 47 else { return None }
   let bytes : Array[Byte] = [47]
   let mut index = 1
@@ -57,19 +57,19 @@ fn pdf_text_parse_cmap_name_token(token : BytesView) -> PdfName? {
       index += 1
     }
   }
-  Some(pdf_name_of_bytes(Bytes::from_array(bytes)))
+  Some(@core.pdf_name_of_bytes(Bytes::from_array(bytes)))
 }
 
 ///|
 fn pdf_text_parse_cmap_name_after_token(
   data : BytesView,
   key : String,
-) -> PdfName? {
-  let cursor = byte_cursor_of_view(data)
+) -> @core.PdfName? {
+  let cursor = @core.byte_cursor_of_view(data)
   let mut expect_value = false
   for line in cursor.read_line_views() {
     let uncommented = pdf_text_cmap_line_without_comment(line)
-    let tokens = pdf_split_whitespace_tokens(uncommented)
+    let tokens = @core.pdf_split_whitespace_tokens(uncommented)
     for token in tokens {
       if expect_value {
         expect_value = false
@@ -107,8 +107,8 @@ priv enum PdfTextCMapCIDSystemInfoKey {
 fn pdf_text_parse_cmap_cid_system_value(
   key : PdfTextCMapCIDSystemInfoKey,
   token : BytesView,
-  registry : Array[PdfBytes],
-  ordering : Array[PdfBytes],
+  registry : Array[@core.PdfBytes],
+  ordering : Array[@core.PdfBytes],
   supplement : Array[Int],
 ) -> Unit {
   match (key, pdf_text_parse_cmap_object_token(token)) {
@@ -124,15 +124,15 @@ fn pdf_text_parse_cmap_cid_system_value(
 
 ///|
 fn pdf_text_parse_cmap_cid_system_info(data : BytesView) -> PdfCIDSystemInfo? {
-  let cursor = byte_cursor_of_view(data)
-  let registries : Array[PdfBytes] = Array::new(capacity=1)
-  let orderings : Array[PdfBytes] = Array::new(capacity=1)
+  let cursor = @core.byte_cursor_of_view(data)
+  let registries : Array[@core.PdfBytes] = Array::new(capacity=1)
+  let orderings : Array[@core.PdfBytes] = Array::new(capacity=1)
   let supplements : Array[Int] = Array::new(capacity=1)
   let mut seen_cid_system_info = false
   let mut expect_value : PdfTextCMapCIDSystemInfoKey? = None
   for line in cursor.read_line_views() {
     let uncommented = pdf_text_cmap_line_without_comment(line)
-    let tokens = pdf_split_whitespace_tokens(uncommented)
+    let tokens = @core.pdf_split_whitespace_tokens(uncommented)
     for token in tokens {
       if !seen_cid_system_info {
         if pdf_text_view_equals_ascii(token, "/CIDSystemInfo") {
@@ -172,12 +172,12 @@ fn pdf_text_parse_cmap_cid_system_info(data : BytesView) -> PdfCIDSystemInfo? {
 }
 
 ///|
-fn pdf_text_parse_cmap_usecmap(data : BytesView) -> PdfName? {
-  let cursor = byte_cursor_of_view(data)
-  let mut previous_name : PdfName? = None
+fn pdf_text_parse_cmap_usecmap(data : BytesView) -> @core.PdfName? {
+  let cursor = @core.byte_cursor_of_view(data)
+  let mut previous_name : @core.PdfName? = None
   for line in cursor.read_line_views() {
     let uncommented = pdf_text_cmap_line_without_comment(line)
-    let tokens = pdf_split_whitespace_tokens(uncommented)
+    let tokens = @core.pdf_split_whitespace_tokens(uncommented)
     for token in tokens {
       if pdf_text_view_equals_ascii(token, "usecmap") {
         match previous_name {

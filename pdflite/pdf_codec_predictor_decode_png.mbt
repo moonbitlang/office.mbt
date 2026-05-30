@@ -40,7 +40,7 @@ fn pdf_decode_png_push_scanline(
   row_start : Int,
   available : Int,
   bytes_per_pixel : Int,
-) -> Int raise PdfError {
+) -> Int raise @core.PdfError {
   let scanline_width = decoded.length()
   let mut output_position = position
   match predictor {
@@ -103,7 +103,7 @@ fn pdf_decode_png_predictor(
   bits_per_component : Int,
   columns : Int,
   data : BytesView,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let scanline_width = pdf_predictor_scanline_width(
     colors, bits_per_component, columns,
   )

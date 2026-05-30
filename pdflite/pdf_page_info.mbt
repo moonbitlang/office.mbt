@@ -4,7 +4,7 @@ pub fn pdf_page_info_json(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
   unit? : @geometry.PdfUnit = PdfPoint,
-) -> Json raise PdfError {
+) -> Json raise @core.PdfError {
   document.page_info_json(page_numbers, unit~)
 }
 
@@ -14,7 +14,7 @@ pub fn pdf_json_page_info(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
   unit : @geometry.PdfUnit,
-) -> Json raise PdfError {
+) -> Json raise @core.PdfError {
   document.page_info_json(page_numbers, unit~)
 }
 
@@ -24,7 +24,7 @@ pub fn pdf_output_page_info_json_blob(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
   unit? : @geometry.PdfUnit = PdfPoint,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   document.page_info_json_blob(page_numbers, unit~)
 }
 
@@ -40,7 +40,7 @@ pub fn PdfDocument::output_page_info(
   unit? : @geometry.PdfUnit = PdfPoint,
   json? : Bool = false,
   raisejson? : Bool = false,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   ignore(raisejson)
   if json {
     self.page_info_json_blob(page_numbers, unit~)
@@ -57,7 +57,7 @@ pub fn pdf_output_page_info(
   page_numbers : ArrayView[Int],
   json? : Bool = false,
   raisejson? : Bool = false,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   document.output_page_info(page_numbers, unit~, json~, raisejson~)
 }
 
@@ -67,6 +67,6 @@ pub fn pdf_output_page_info_text(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
   unit? : @geometry.PdfUnit = PdfPoint,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   document.page_info_text(page_numbers, unit~)
 }

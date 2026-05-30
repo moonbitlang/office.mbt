@@ -12,7 +12,7 @@ fn pdf_ua_matterhorn_xmp_field_exists(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_06_001(
   self : PdfDocument,
-) -> Json? raise PdfError {
+) -> Json? raise @core.PdfError {
   match self.metadata() {
     Some(_) => None
     None => Some(Json::null())
@@ -22,7 +22,7 @@ fn PdfDocument::pdf_ua_matterhorn_check_06_001(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_06_002(
   self : PdfDocument,
-) -> Json? raise PdfError {
+) -> Json? raise @core.PdfError {
   match self.metadata() {
     Some(metadata) =>
       if pdf_ua_matterhorn_xmp_field_exists(
@@ -39,7 +39,7 @@ fn PdfDocument::pdf_ua_matterhorn_check_06_002(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_06_003(
   self : PdfDocument,
-) -> Json? raise PdfError {
+) -> Json? raise @core.PdfError {
   match self.metadata() {
     Some(metadata) =>
       if pdf_ua_matterhorn_xmp_field_exists(

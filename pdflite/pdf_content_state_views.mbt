@@ -65,6 +65,6 @@ fn pdf_content_state_copy_doubles(values : ArrayView[Double]) -> Array[Double] {
 }
 
 ///|
-fn pdf_content_state_name_text(name : PdfName) -> String {
+fn pdf_content_state_name_text(name : @core.PdfName) -> String {
   @ascii.decode_lossy(name.bytes())
 }

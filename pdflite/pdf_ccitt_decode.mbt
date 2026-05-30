@@ -1,11 +1,11 @@
 ///|
 fn pdf_ccitt_decode_g3_1d(
-  input : BitStream,
-  output : BitWriter,
+  input : @core.BitStream,
+  output : @core.BitWriter,
   params : PdfCCITTParams,
   whiteval : Int,
   blackval : Int,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let mut row = 0
   let mut column = 0
   let mut line = pdf_ccitt_blank_line(params.columns, whiteval)
@@ -61,12 +61,12 @@ fn pdf_ccitt_decode_g3_1d(
 
 ///|
 fn pdf_ccitt_decode_g4(
-  input : BitStream,
-  output : BitWriter,
+  input : @core.BitStream,
+  output : @core.BitWriter,
   params : PdfCCITTParams,
   whiteval : Int,
   blackval : Int,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   let mut row = 0
   let mut column = 0
   let mut reference = pdf_ccitt_blank_line(params.columns, whiteval)
@@ -147,7 +147,7 @@ fn pdf_ccitt_decode_g4(
           }
           CCITTEOFB => finished = true
           CCITTUncompressed =>
-            raise PdfError::CCITTNotSupported("CCITT Uncompressed")
+            raise @core.PdfError::CCITTNotSupported("CCITT Uncompressed")
         }
       }
     }
@@ -164,7 +164,7 @@ fn pdf_ccitt_decode_g4(
 fn pdf_ccitt_decode_view(
   data : BytesView,
   params : PdfCCITTParams,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   if params.columns <= 0 ||
     params.rows < 0 ||
     params.damaged_rows_before_error < 0 {
@@ -174,8 +174,8 @@ fn pdf_ccitt_decode_view(
   ignore(params.end_of_block)
   let whiteval = if params.black_is_1 { 0 } else { 1 }
   let blackval = if params.black_is_1 { 1 } else { 0 }
-  let input = bitstream_of_view(data)
-  let output = bit_writer_new()
+  let input = @core.bitstream_of_view(data)
+  let output = @core.bit_writer_new()
   if params.k > 0 {
     raise CCITTNotSupported("CCITTFax K > 0")
   } else if params.k < 0 {

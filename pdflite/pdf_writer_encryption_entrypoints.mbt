@@ -1,7 +1,7 @@
 ///|
 fn pdf_write_required_aes_iv_provider(
-  provider : ((Int, Int, Int) -> PdfBytes raise PdfError)?,
-) -> ((Int, Int, Int) -> PdfBytes raise PdfError) raise PdfError {
+  provider : ((Int, Int, Int) -> @core.PdfBytes raise @core.PdfError)?,
+) -> ((Int, Int, Int) -> @core.PdfBytes raise @core.PdfError) raise @core.PdfError {
   match provider {
     Some(provider) => provider
     None => raise RandomBytesUnavailable
@@ -10,8 +10,8 @@ fn pdf_write_required_aes_iv_provider(
 
 ///|
 fn pdf_write_required_aesv3_random_provider(
-  provider : ((@crypt_core.PdfAesV3RandomField, Int) -> PdfBytes raise PdfError)?,
-) -> ((@crypt_core.PdfAesV3RandomField, Int) -> PdfBytes raise PdfError) raise PdfError {
+  provider : ((@crypt_core.PdfAesV3RandomField, Int) -> @core.PdfBytes raise @core.PdfError)?,
+) -> ((@crypt_core.PdfAesV3RandomField, Int) -> @core.PdfBytes raise @core.PdfError) raise @core.PdfError {
   match provider {
     Some(provider) => provider
     None => raise RandomBytesUnavailable
@@ -23,9 +23,9 @@ fn pdf_write_apply_options_encryption(
   document : PdfDocument,
   encryption : @writer.PdfWriteEncryption,
   file_id : BytesView,
-  aes_iv_provider : ((Int, Int, Int) -> PdfBytes raise PdfError)?,
-  aesv3_random_provider : ((@crypt_core.PdfAesV3RandomField, Int) -> PdfBytes raise PdfError)?,
-) -> PdfDocument raise PdfError {
+  aes_iv_provider : ((Int, Int, Int) -> @core.PdfBytes raise @core.PdfError)?,
+  aesv3_random_provider : ((@crypt_core.PdfAesV3RandomField, Int) -> @core.PdfBytes raise @core.PdfError)?,
+) -> PdfDocument raise @core.PdfError {
   match encryption.encryption_method {
     PdfEncryption40Bit =>
       document.encrypt_40bit(
@@ -97,14 +97,14 @@ fn pdf_write_apply_options_encryption(
 pub fn pdf_write_document_options(
   document : PdfDocument,
   encryption? : @writer.PdfWriteEncryption? = None,
-  update_from? : PdfBytes? = None,
+  update_from? : @core.PdfBytes? = None,
   make_id? : Bool = true,
   id_path? : String = "",
   mode? : @writer.PdfWriteMode = PdfWriteClassic,
   file_id? : BytesView = [],
-  aes_iv_provider? : ((Int, Int, Int) -> PdfBytes raise PdfError)? = None,
-  aesv3_random_provider? : ((@crypt_core.PdfAesV3RandomField, Int) -> PdfBytes raise PdfError)? = None,
-) -> PdfBytes raise PdfError {
+  aes_iv_provider? : ((Int, Int, Int) -> @core.PdfBytes raise @core.PdfError)? = None,
+  aesv3_random_provider? : ((@crypt_core.PdfAesV3RandomField, Int) -> @core.PdfBytes raise @core.PdfError)? = None,
+) -> @core.PdfBytes raise @core.PdfError {
   let prepared = match encryption {
     Some(encryption) =>
       pdf_write_apply_options_encryption(
@@ -133,7 +133,7 @@ pub fn pdf_write_encrypted_40bit_document(
   denied_permissions : ArrayView[@crypt_core.PdfPermission],
   mode? : @writer.PdfWriteMode = PdfWriteClassic,
   file_id? : BytesView = [],
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_write_document_with_mode(
     document.encrypt_40bit(
       user_password,
@@ -154,7 +154,7 @@ pub fn pdf_write_encrypted_128bit_document(
   denied_permissions : ArrayView[@crypt_core.PdfPermission],
   mode? : @writer.PdfWriteMode = PdfWriteClassic,
   file_id? : BytesView = [],
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_write_document_with_mode(
     document.encrypt_128bit(
       user_password,
@@ -178,7 +178,7 @@ pub fn pdf_write_encrypted_128bit_r4_document(
   encrypt_metadata? : Bool = true,
   mode? : @writer.PdfWriteMode = PdfWriteClassic,
   file_id? : BytesView = [],
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_write_document_with_mode(
     document.encrypt_128bit_r4(
       user_password,
@@ -201,11 +201,11 @@ pub fn pdf_write_encrypted_aesv2_document_with_iv_provider(
   user_password : BytesView,
   owner_password : BytesView,
   denied_permissions : ArrayView[@crypt_core.PdfPermission],
-  iv_provider : (Int, Int, Int) -> PdfBytes raise PdfError,
+  iv_provider : (Int, Int, Int) -> @core.PdfBytes raise @core.PdfError,
   encrypt_metadata? : Bool = true,
   mode? : @writer.PdfWriteMode = PdfWriteClassic,
   file_id? : BytesView = [],
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_write_document_with_mode(
     document.encrypt_128bit_aesv2_with_iv_provider(
       user_password,
@@ -230,13 +230,13 @@ pub fn pdf_write_encrypted_aesv3_document_with_providers(
   user_password : BytesView,
   owner_password : BytesView,
   denied_permissions : ArrayView[@crypt_core.PdfPermission],
-  random_provider : (@crypt_core.PdfAesV3RandomField, Int) -> PdfBytes raise PdfError,
-  iv_provider : (Int, Int, Int) -> PdfBytes raise PdfError,
+  random_provider : (@crypt_core.PdfAesV3RandomField, Int) -> @core.PdfBytes raise @core.PdfError,
+  iv_provider : (Int, Int, Int) -> @core.PdfBytes raise @core.PdfError,
   iso? : Bool = false,
   encrypt_metadata? : Bool = true,
   mode? : @writer.PdfWriteMode = PdfWriteClassic,
   file_id? : BytesView = [],
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_write_document_with_mode(
     document.encrypt_256bit_aesv3_with_providers(
       user_password,
@@ -259,12 +259,12 @@ pub fn pdf_write_encrypted_aesv3_iso_document_with_providers(
   user_password : BytesView,
   owner_password : BytesView,
   denied_permissions : ArrayView[@crypt_core.PdfPermission],
-  random_provider : (@crypt_core.PdfAesV3RandomField, Int) -> PdfBytes raise PdfError,
-  iv_provider : (Int, Int, Int) -> PdfBytes raise PdfError,
+  random_provider : (@crypt_core.PdfAesV3RandomField, Int) -> @core.PdfBytes raise @core.PdfError,
+  iv_provider : (Int, Int, Int) -> @core.PdfBytes raise @core.PdfError,
   encrypt_metadata? : Bool = true,
   mode? : @writer.PdfWriteMode = PdfWriteClassic,
   file_id? : BytesView = [],
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_write_encrypted_aesv3_document_with_providers(
     document,
     user_password,

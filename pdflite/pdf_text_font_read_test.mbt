@@ -1,11 +1,11 @@
 ///|
-fn text_font_read_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn text_font_read_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
-fn text_font_read_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
-  try! @pdflite.pdf_bytes_of_int_array(values)
+fn text_font_read_bytes_for_test(values : ArrayView[Int]) -> @core.PdfBytes {
+  try! @core.pdf_bytes_of_int_array(values)
 }
 
 ///|
@@ -46,9 +46,9 @@ fn text_font_read_cid_system_info_object_for_test() -> @syntax.PdfObject {
 
 ///|
 fn text_font_read_valid_cid_descendant_for_test(
-  extra : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
+  extra : ArrayView[(@core.PdfName, @syntax.PdfObject)],
 ) -> @syntax.PdfObject {
-  let entries : Array[(@pdflite.PdfName, @syntax.PdfObject)] = [
+  let entries : Array[(@core.PdfName, @syntax.PdfObject)] = [
     (
       text_font_read_name_for_test("/CIDSystemInfo"),
       text_font_read_cid_system_info_object_for_test(),
@@ -262,7 +262,7 @@ test "PdfDocument read_font_metrics handles Type3 fonts and malformed widths" {
   ])
   let malformed_result = try? doc.read_font_metrics(malformed)
   guard malformed_result is Err(FontWidthsExpected) else {
-    fail("expected @pdflite.PdfError::FontWidthsExpected")
+    fail("expected @core.PdfError::FontWidthsExpected")
   }
 
   let bad_width = @syntax.pdf_dictionary([
@@ -279,7 +279,7 @@ test "PdfDocument read_font_metrics handles Type3 fonts and malformed widths" {
   ])
   let bad_width_result = try? doc.read_font_metrics(bad_width)
   guard bad_width_result is Err(FontWidthExpected) else {
-    fail("expected @pdflite.PdfError::FontWidthExpected")
+    fail("expected @core.PdfError::FontWidthExpected")
   }
 
   let bad_firstchar = @syntax.pdf_dictionary([
@@ -293,7 +293,7 @@ test "PdfDocument read_font_metrics handles Type3 fonts and malformed widths" {
   ])
   let bad_firstchar_result = try? doc.read_font_metrics(bad_firstchar)
   guard bad_firstchar_result is Err(FontFirstCharExpected) else {
-    fail("expected @pdflite.PdfError::FontFirstCharExpected")
+    fail("expected @core.PdfError::FontFirstCharExpected")
   }
 
   let missing_widths = @syntax.pdf_dictionary([
@@ -306,7 +306,7 @@ test "PdfDocument read_font_metrics handles Type3 fonts and malformed widths" {
   ])
   let missing_widths_result = try? doc.read_font_metrics(missing_widths)
   guard missing_widths_result is Err(FontWidthsExpected) else {
-    fail("expected @pdflite.PdfError::FontWidthsExpected for missing widths")
+    fail("expected @core.PdfError::FontWidthsExpected for missing widths")
   }
 
   let inverted_bounds = @syntax.pdf_dictionary([
@@ -320,7 +320,7 @@ test "PdfDocument read_font_metrics handles Type3 fonts and malformed widths" {
   ])
   let inverted_bounds_result = try? doc.read_font_metrics(inverted_bounds)
   guard inverted_bounds_result is Err(FontWidthsExpected) else {
-    fail("expected @pdflite.PdfError::FontWidthsExpected for inverted bounds")
+    fail("expected @core.PdfError::FontWidthsExpected for inverted bounds")
   }
 }
 
@@ -555,7 +555,7 @@ test "PdfDocument read_simple_font rejects malformed simple fonts" {
   let doc = @pdflite.pdf_document_empty()
   let missing_subtype = try? doc.read_simple_font(@syntax.pdf_dictionary([]))
   guard missing_subtype is Err(FontSubtypeExpected) else {
-    fail("expected @pdflite.PdfError::FontSubtypeExpected for missing subtype")
+    fail("expected @core.PdfError::FontSubtypeExpected for missing subtype")
   }
   let unknown_subtype = try? doc.read_simple_font(
     @syntax.pdf_dictionary([
@@ -566,7 +566,7 @@ test "PdfDocument read_simple_font rejects malformed simple fonts" {
     ]),
   )
   guard unknown_subtype is Err(FontSubtypeExpected) else {
-    fail("expected @pdflite.PdfError::FontSubtypeExpected for unknown subtype")
+    fail("expected @core.PdfError::FontSubtypeExpected for unknown subtype")
   }
   let missing_charprocs = try? doc.read_simple_font(
     @syntax.pdf_dictionary([
@@ -577,7 +577,7 @@ test "PdfDocument read_simple_font rejects malformed simple fonts" {
     ]),
   )
   guard missing_charprocs is Err(FontCharProcsExpected) else {
-    fail("expected @pdflite.PdfError::FontCharProcsExpected")
+    fail("expected @core.PdfError::FontCharProcsExpected")
   }
 }
 
@@ -666,11 +666,11 @@ test "PdfDocument read_standard14_font rejects bad base fonts" {
   ])
   let unknown_result = try? doc.read_standard14_font(unknown)
   guard unknown_result is Err(StandardFontExpected) else {
-    fail("expected @pdflite.PdfError::StandardFontExpected")
+    fail("expected @core.PdfError::StandardFontExpected")
   }
   let missing_result = try? doc.read_standard14_font(@syntax.pdf_dictionary([]))
   guard missing_result is Err(BaseFontExpected) else {
-    fail("expected @pdflite.PdfError::BaseFontExpected")
+    fail("expected @core.PdfError::BaseFontExpected")
   }
 }
 
@@ -749,7 +749,7 @@ test "PdfDocument read_font rejects unknown fonts" {
   ])
   let unknown_result = try? doc.read_font(unknown)
   guard unknown_result is Err(FontTypeExpected) else {
-    fail("expected @pdflite.PdfError::FontTypeExpected")
+    fail("expected @core.PdfError::FontTypeExpected")
   }
 }
 
@@ -1043,7 +1043,7 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
   let doc = @pdflite.pdf_document_empty()
   let missing_basefont = try? doc.read_cidkeyed_font(@syntax.pdf_dictionary([]))
   guard missing_basefont is Err(BaseFontExpected) else {
-    fail("expected @pdflite.PdfError::BaseFontExpected")
+    fail("expected @core.PdfError::BaseFontExpected")
   }
   let missing_descendant = try? doc.read_cidkeyed_font(
     @syntax.pdf_dictionary([
@@ -1054,7 +1054,7 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
     ]),
   )
   guard missing_descendant is Err(DescendantFontExpected) else {
-    fail("expected @pdflite.PdfError::DescendantFontExpected")
+    fail("expected @core.PdfError::DescendantFontExpected")
   }
 
   let bad_supplement = try? doc.read_cid_system_info(
@@ -1070,7 +1070,7 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
     ]),
   )
   guard bad_supplement is Err(CIDSupplementExpected) else {
-    fail("expected @pdflite.PdfError::CIDSupplementExpected")
+    fail("expected @core.PdfError::CIDSupplementExpected")
   }
 
   let bad_system_info = @syntax.pdf_dictionary([
@@ -1110,7 +1110,7 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
   ])
   let system_result = try? doc.read_cidkeyed_font(bad_system_font)
   guard system_result is Err(CIDRegistryExpected) else {
-    fail("expected @pdflite.PdfError::CIDRegistryExpected")
+    fail("expected @core.PdfError::CIDRegistryExpected")
   }
 
   doc.add_object_given_number(
@@ -1133,7 +1133,7 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
     ),
   )
   guard missing_system_result is Err(CIDSystemInfoExpected) else {
-    fail("expected @pdflite.PdfError::CIDSystemInfoExpected")
+    fail("expected @core.PdfError::CIDSystemInfoExpected")
   }
 
   doc.add_object_given_number(
@@ -1156,7 +1156,7 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
     ),
   )
   guard missing_cid_basefont_result is Err(CIDBaseFontExpected) else {
-    fail("expected @pdflite.PdfError::CIDBaseFontExpected")
+    fail("expected @core.PdfError::CIDBaseFontExpected")
   }
 
   doc.add_object_given_number(
@@ -1179,7 +1179,7 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
     ),
   )
   guard missing_descriptor_result is Err(CIDFontDescriptorExpected) else {
-    fail("expected @pdflite.PdfError::CIDFontDescriptorExpected")
+    fail("expected @core.PdfError::CIDFontDescriptorExpected")
   }
 
   let bad_widths = @syntax.pdf_dictionary([
@@ -1227,7 +1227,7 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
   ])
   let widths_result = try? doc.read_cidkeyed_font(bad_widths_font)
   guard widths_result is Err(CIDWidthsExpected) else {
-    fail("expected @pdflite.PdfError::CIDWidthsExpected")
+    fail("expected @core.PdfError::CIDWidthsExpected")
   }
 
   let malformed_widths : Array[@syntax.PdfObject] = [
@@ -1265,7 +1265,7 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
       ),
     )
     guard result is Err(CIDWidthsExpected) else {
-      fail("expected @pdflite.PdfError::CIDWidthsExpected for malformed widths")
+      fail("expected @core.PdfError::CIDWidthsExpected for malformed widths")
     }
   }
 
@@ -1314,7 +1314,7 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
   ])
   let widths2_result = try? doc.read_cidkeyed_font(bad_widths2_font)
   guard widths2_result is Err(CIDWidths2Expected) else {
-    fail("expected @pdflite.PdfError::CIDWidths2Expected")
+    fail("expected @core.PdfError::CIDWidths2Expected")
   }
 
   let malformed_widths2 : Array[@syntax.PdfObject] = [
@@ -1356,7 +1356,7 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
     )
     guard result is Err(CIDWidths2Expected) else {
       fail(
-        "expected @pdflite.PdfError::CIDWidths2Expected for malformed vertical widths",
+        "expected @core.PdfError::CIDWidths2Expected for malformed vertical widths",
       )
     }
   }
@@ -1402,14 +1402,12 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
   ])
   let direct_cmap_result = try? doc.read_cidkeyed_font(direct_cmap)
   guard direct_cmap_result is Err(CMapEncodingExpected) else {
-    fail("expected @pdflite.PdfError::CMapEncodingExpected")
+    fail("expected @core.PdfError::CMapEncodingExpected")
   }
   let bad_cmap = try? doc.read_cidkeyed_font(
     text_font_read_cid_top_font_for_test(9, PdfInteger(1)),
   )
   guard bad_cmap is Err(CMapEncodingExpected) else {
-    fail(
-      "expected @pdflite.PdfError::CMapEncodingExpected for non-name encoding",
-    )
+    fail("expected @core.PdfError::CMapEncodingExpected for non-name encoding")
   }
 }

@@ -3,7 +3,7 @@ fn pdf_truetype_hmtx_widths(
   data : BytesView,
   hmtx : @truetype.PdfTrueTypeTableRecord,
   count : Int,
-) -> Array[Int] raise PdfError {
+) -> Array[Int] raise @core.PdfError {
   let widths : Array[Int] = []
   for index in 0..<count {
     let offset = hmtx.offset + index * 4
@@ -43,7 +43,7 @@ fn pdf_truetype_flags(symbolic : Bool, italic_angle : Int) -> Int {
 /// value when available, and derives both symbolic and non-symbolic font flags.
 pub fn pdf_truetype_descriptor_metrics(
   data : BytesView,
-) -> @truetype.PdfTrueTypeDescriptorMetrics raise PdfError {
+) -> @truetype.PdfTrueTypeDescriptorMetrics raise @core.PdfError {
   let head = pdf_truetype_required_table(data, "head")
   let units_per_em = pdf_truetype_required_u16(
     data,
@@ -112,7 +112,7 @@ pub fn pdf_truetype_descriptor_metrics(
 /// `/hmtx` provides the raw advance widths used for cpdf's width calculations.
 pub fn pdf_truetype_metrics(
   data : BytesView,
-) -> @truetype.PdfTrueTypeMetrics raise PdfError {
+) -> @truetype.PdfTrueTypeMetrics raise @core.PdfError {
   let head = pdf_truetype_required_table(data, "head")
   let maxp = pdf_truetype_required_table(data, "maxp")
   let hmtx = pdf_truetype_required_table(data, "hmtx")

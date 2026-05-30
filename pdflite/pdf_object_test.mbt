@@ -1,12 +1,12 @@
 ///|
-fn object_name_for_test(values : ArrayView[Int]) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(try! @pdflite.pdf_bytes_of_int_array(values))
+fn object_name_for_test(values : ArrayView[Int]) -> @core.PdfName {
+  @core.pdf_name_of_bytes(try! @core.pdf_bytes_of_int_array(values))
 }
 
 ///|
 fn object_dictionary_keys_for_test(
   object : @syntax.PdfObject,
-) -> Array[@pdflite.PdfName] {
+) -> Array[@core.PdfName] {
   match object.dictionary_view() {
     Some(entries) => [ for entry in entries => entry.0 ]
     None => []
@@ -26,7 +26,7 @@ fn object_bump_integer_for_test(
 ///|
 test "@syntax.PdfObject stores byte strings names arrays and dictionaries" {
   let name_type = object_name_for_test([47, 84, 121, 112, 101])
-  let string_bytes = try! @pdflite.pdf_bytes_of_int_array([0, 255])
+  let string_bytes = try! @core.pdf_bytes_of_int_array([0, 255])
   let object = @syntax.pdf_dictionary([
     (name_type, PdfNameObject(name_type)),
     (object_name_for_test([47, 83]), PdfString(string_bytes)),
@@ -39,8 +39,8 @@ test "@syntax.PdfObject stores byte strings names arrays and dictionaries" {
     object.lookup_immediate(name_type),
     Some(PdfNameObject(name_type)),
   )
-  let cursor = @pdflite.byte_cursor_of_bytes(
-    try! @pdflite.pdf_bytes_of_int_array([65, 66, 67]),
+  let cursor = @core.byte_cursor_of_bytes(
+    try! @core.pdf_bytes_of_int_array([65, 66, 67]),
     source="object stream",
   )
   let deferred = @syntax.stream_to_get(cursor, 1, 2)
@@ -64,7 +64,7 @@ test "@syntax.pdf_recurse_array and @syntax.pdf_recurse_dict map one container l
     ]),
     PdfArray([PdfInteger(2), PdfBoolean(false)]),
   )
-  let entries : Array[(@pdflite.PdfName, @syntax.PdfObject)] = [
+  let entries : Array[(@core.PdfName, @syntax.PdfObject)] = [
     (name_a, PdfInteger(1)),
     (name_b, PdfBoolean(false)),
     (name_c, PdfInteger(3)),
@@ -123,26 +123,26 @@ test "@syntax.PdfObject find_indirect reads immediate dictionary references" {
   @test.assert_eq(try! dict.find_indirect(name_c), None)
   let stream = @syntax.pdf_stream(
     @syntax.pdf_dictionary([(name_a, PdfIndirect(9))]),
-    StreamGot(try! @pdflite.pdf_bytes_of_int_array([65])),
+    StreamGot(try! @core.pdf_bytes_of_int_array([65])),
   )
   let stream_result : Result[Int?, Error] = try? stream.find_indirect(name_a)
-  guard stream_result is Err(@pdflite.PdfError::DictionaryExpected) else {
+  guard stream_result is Err(@core.PdfError::DictionaryExpected) else {
     fail(
-      "expected @pdflite.PdfError::DictionaryExpected for non-dictionary object",
+      "expected @core.PdfError::DictionaryExpected for non-dictionary object",
     )
   }
 }
 
 ///|
 test "@syntax.PdfObject stream_bytes materializes owned and deferred stream data" {
-  let owned = try! @pdflite.pdf_bytes_of_int_array([65, 66])
+  let owned = try! @core.pdf_bytes_of_int_array([65, 66])
   let owned_stream = @syntax.pdf_stream(
     @syntax.pdf_dictionary([]),
     StreamGot(owned),
   )
   @test.assert_eq(try! owned_stream.stream_bytes(), owned)
-  let cursor = @pdflite.byte_cursor_of_bytes(
-    try! @pdflite.pdf_bytes_of_int_array([70, 71, 72, 73]),
+  let cursor = @core.byte_cursor_of_bytes(
+    try! @core.pdf_bytes_of_int_array([70, 71, 72, 73]),
   )
   let deferred_stream = @syntax.pdf_stream(
     @syntax.pdf_dictionary([]),
@@ -150,11 +150,11 @@ test "@syntax.PdfObject stream_bytes materializes owned and deferred stream data
   )
   @test.assert_eq(
     try! deferred_stream.stream_bytes(),
-    try! @pdflite.pdf_bytes_of_int_array([71, 72]),
+    try! @core.pdf_bytes_of_int_array([71, 72]),
   )
-  let non_stream : Result[@pdflite.PdfBytes, Error] = try? @syntax.PdfInteger(1).stream_bytes()
-  guard non_stream is Err(@pdflite.PdfError::ParseStreamExpected) else {
-    fail("expected @pdflite.PdfError::ParseStreamExpected")
+  let non_stream : Result[@core.PdfBytes, Error] = try? @syntax.PdfInteger(1).stream_bytes()
+  guard non_stream is Err(@core.PdfError::ParseStreamExpected) else {
+    fail("expected @core.PdfError::ParseStreamExpected")
   }
 }
 
@@ -165,8 +165,8 @@ test "@syntax.PdfObject get_stream materializes deferred streams and corrects le
     @syntax.pdf_dictionary([(key_length, PdfInteger(99))]),
     StreamToGet(
       @syntax.stream_to_get(
-        @pdflite.byte_cursor_of_bytes(
-          try! @pdflite.pdf_bytes_of_int_array([65, 66, 67]),
+        @core.byte_cursor_of_bytes(
+          try! @core.pdf_bytes_of_int_array([65, 66, 67]),
         ),
         1,
         2,
@@ -179,7 +179,7 @@ test "@syntax.PdfObject get_stream materializes deferred streams and corrects le
   }
   @test.assert_eq(
     stream.data,
-    StreamGot(try! @pdflite.pdf_bytes_of_int_array([66, 67])),
+    StreamGot(try! @core.pdf_bytes_of_int_array([66, 67])),
   )
   @test.assert_eq(
     stream.dictionary.lookup_immediate(key_length),
@@ -188,15 +188,13 @@ test "@syntax.PdfObject get_stream materializes deferred streams and corrects le
   try! deferred_stream.get_stream()
   @test.assert_eq(
     stream.data,
-    StreamGot(try! @pdflite.pdf_bytes_of_int_array([66, 67])),
+    StreamGot(try! @core.pdf_bytes_of_int_array([66, 67])),
   )
   let non_dictionary_stream = @syntax.pdf_stream(
     PdfNull,
     StreamToGet(
       @syntax.stream_to_get(
-        @pdflite.byte_cursor_of_bytes(
-          try! @pdflite.pdf_bytes_of_int_array([68]),
-        ),
+        @core.byte_cursor_of_bytes(try! @core.pdf_bytes_of_int_array([68])),
         0,
         1,
       ),
@@ -205,12 +203,12 @@ test "@syntax.PdfObject get_stream materializes deferred streams and corrects le
   try! non_dictionary_stream.get_stream()
   @test.assert_eq(
     try! non_dictionary_stream.stream_bytes(),
-    try! @pdflite.pdf_bytes_of_int_array([68]),
+    try! @core.pdf_bytes_of_int_array([68]),
   )
   let non_stream_object : @syntax.PdfObject = PdfInteger(1)
   let non_stream : Result[Unit, Error] = try? non_stream_object.get_stream()
-  guard non_stream is Err(@pdflite.PdfError::ParseStreamExpected) else {
-    fail("expected @pdflite.PdfError::ParseStreamExpected")
+  guard non_stream is Err(@core.PdfError::ParseStreamExpected) else {
+    fail("expected @core.PdfError::ParseStreamExpected")
   }
 }
 
@@ -242,18 +240,18 @@ test "@syntax.PdfObject unique_key reads stream dictionaries" {
   let name_im1 = object_name_for_test([47, 73, 109, 49])
   let stream = @syntax.pdf_stream(
     @syntax.pdf_dictionary([(name_im0, PdfInteger(1))]),
-    StreamGot(try! @pdflite.pdf_bytes_of_int_array([65])),
+    StreamGot(try! @core.pdf_bytes_of_int_array([65])),
   )
   @test.assert_eq(try! stream.unique_key("Im"), name_im1)
 }
 
 ///|
 test "@syntax.PdfObject unique_key reports non-dictionary objects" {
-  let result : Result[@pdflite.PdfName, Error] = try? @syntax.PdfInteger(1).unique_key(
+  let result : Result[@core.PdfName, Error] = try? @syntax.PdfInteger(1).unique_key(
     "gs",
   )
-  guard result is Err(@pdflite.PdfError::DictionaryExpected) else {
-    fail("expected @pdflite.PdfError::DictionaryExpected")
+  guard result is Err(@core.PdfError::DictionaryExpected) else {
+    fail("expected @core.PdfError::DictionaryExpected")
   }
 }
 
@@ -268,31 +266,31 @@ test "@syntax.PdfObject dictionary replace and remove report checked errors" {
     name_b,
     PdfInteger(2),
   )
-  guard missing is Err(@pdflite.PdfError::DictionaryKeyNotFound(missing_key)) &&
+  guard missing is Err(@core.PdfError::DictionaryKeyNotFound(missing_key)) &&
     missing_key == name_b else {
-    fail("expected @pdflite.PdfError::DictionaryKeyNotFound")
+    fail("expected @core.PdfError::DictionaryKeyNotFound")
   }
   let not_dict_replace : Result[@syntax.PdfObject, Error] = try? @syntax.PdfInteger(
     1,
   ).replace_dict_entry(name_a, PdfInteger(2))
   guard not_dict_replace
-    is Err(@pdflite.PdfError::DictionaryKeyNotFound(missing_key)) &&
+    is Err(@core.PdfError::DictionaryKeyNotFound(missing_key)) &&
     missing_key == name_a else {
-    fail("expected @pdflite.PdfError::DictionaryKeyNotFound")
+    fail("expected @core.PdfError::DictionaryKeyNotFound")
   }
   let removed = try! dict.remove_dict_entry(name_a)
   @test.assert_eq(removed.lookup_immediate(name_a), None)
   let not_dict_add : Result[@syntax.PdfObject, Error] = try? @syntax.PdfInteger(
     1,
   ).add_dict_entry(name_a, PdfInteger(2))
-  guard not_dict_add is Err(@pdflite.PdfError::DictionaryExpected) else {
-    fail("expected @pdflite.PdfError::DictionaryExpected")
+  guard not_dict_add is Err(@core.PdfError::DictionaryExpected) else {
+    fail("expected @core.PdfError::DictionaryExpected")
   }
   let not_dict : Result[@syntax.PdfObject, Error] = try? @syntax.PdfInteger(1).remove_dict_entry(
     name_a,
   )
-  guard not_dict is Err(@pdflite.PdfError::DictionaryExpected) else {
-    fail("expected @pdflite.PdfError::DictionaryExpected")
+  guard not_dict is Err(@core.PdfError::DictionaryExpected) else {
+    fail("expected @core.PdfError::DictionaryExpected")
   }
 }
 
@@ -300,7 +298,7 @@ test "@syntax.PdfObject dictionary replace and remove report checked errors" {
 test "@syntax.PdfObject stream dictionary helpers mutate stream dictionaries" {
   let name_length = object_name_for_test([47, 76, 101, 110, 103, 116, 104])
   let stream_data = @syntax.StreamGot(
-    try! @pdflite.pdf_bytes_of_int_array([65, 66]),
+    try! @core.pdf_bytes_of_int_array([65, 66]),
   )
   let stream = @syntax.pdf_stream(PdfNull, stream_data)
   let updated = try! stream.add_dict_entry(name_length, PdfInteger(2))

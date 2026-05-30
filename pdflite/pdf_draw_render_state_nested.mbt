@@ -38,8 +38,10 @@ fn pdf_draw_copy_fontpacks(
 }
 
 ///|
-fn pdf_draw_copy_page_names(names : ArrayView[PdfName]) -> Array[PdfName] {
-  let output : Array[PdfName] = Array::new(capacity=names.length())
+fn pdf_draw_copy_page_names(
+  names : ArrayView[@core.PdfName],
+) -> Array[@core.PdfName] {
+  let output : Array[@core.PdfName] = Array::new(capacity=names.length())
   for name in names {
     output.push(name)
   }

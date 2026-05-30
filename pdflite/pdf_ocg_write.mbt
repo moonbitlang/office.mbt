@@ -5,7 +5,7 @@
 /// root object and trailer root reference.
 pub fn PdfDocument::remove_optional_content_groups(
   self : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let root = self.pdf_ocg_root()
   let pdf = self.copy()
   let root_without_ocproperties = root.remove_dict_entry(
@@ -21,7 +21,9 @@ pub fn PdfDocument::remove_optional_content_groups(
 
 ///|
 /// Compatibility wrapper for `PdfDocument::remove_optional_content_groups`.
-pub fn pdf_remove_ocg(document : PdfDocument) -> PdfDocument raise PdfError {
+pub fn pdf_remove_ocg(
+  document : PdfDocument,
+) -> PdfDocument raise @core.PdfError {
   document.remove_optional_content_groups()
 }
 
@@ -34,7 +36,7 @@ pub fn pdf_remove_ocg(document : PdfDocument) -> PdfDocument raise PdfError {
 pub fn PdfDocument::write_optional_content_groups(
   self : PdfDocument,
   optional_content : @ocg.PdfOptionalContent,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let root = self.pdf_ocg_root()
   let pdf = self.copy()
   let original_max_object_number = pdf.objects.max_object_number()
@@ -55,7 +57,7 @@ pub fn PdfDocument::write_optional_content_groups(
     PdfArray([ for entry in optional_content.ocgs => PdfIndirect(entry.0) ]),
   )
   let default_number = pdf.pdf_ocg_write_config(optional_content.default_config)
-  let entries : Array[(PdfName, @syntax.PdfObject)] = [
+  let entries : Array[(@core.PdfName, @syntax.PdfObject)] = [
     (pdf_ocg_ocgs_key(), PdfIndirect(ocg_array_number)),
     (pdf_ocg_d_key(), PdfIndirect(default_number)),
   ]
@@ -90,6 +92,6 @@ pub fn PdfDocument::write_optional_content_groups(
 pub fn pdf_write_ocg(
   document : PdfDocument,
   optional_content : @ocg.PdfOptionalContent,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.write_optional_content_groups(optional_content)
 }

@@ -3,7 +3,7 @@ fn pdf_ocg_read_json_field(
   entries : Map[String, Json],
   key : String,
   message : String,
-) -> Json raise PdfError {
+) -> Json raise @core.PdfError {
   match entries.get(key) {
     Some(value) => value
     None => raise SoftError(message)
@@ -14,7 +14,7 @@ fn pdf_ocg_read_json_field(
 fn pdf_ocg_read_json_pdf_string(
   json : Json,
   message : String,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   match json {
     String(text) => pdf_pdfdocstring_of_utf8(@utf8.encode(text))
     _ => raise SoftError(message)
@@ -25,7 +25,7 @@ fn pdf_ocg_read_json_pdf_string(
 fn pdf_ocg_read_json_optional_pdf_string(
   json : Json,
   message : String,
-) -> PdfBytes? raise PdfError {
+) -> @core.PdfBytes? raise @core.PdfError {
   match json {
     Null => None
     String(text) => Some(pdf_pdfdocstring_of_utf8(@utf8.encode(text)))
@@ -34,15 +34,15 @@ fn pdf_ocg_read_json_optional_pdf_string(
 }
 
 ///|
-fn pdf_ocg_read_json_name_text(text : String) -> PdfName {
-  pdf_name_of_bytes(@utf8.encode(text))
+fn pdf_ocg_read_json_name_text(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@utf8.encode(text))
 }
 
 ///|
 fn pdf_ocg_read_json_name(
   json : Json,
   message : String,
-) -> PdfName raise PdfError {
+) -> @core.PdfName raise @core.PdfError {
   match json {
     String(text) => pdf_ocg_read_json_name_text(text)
     _ => raise SoftError(message)
@@ -53,7 +53,7 @@ fn pdf_ocg_read_json_name(
 fn pdf_ocg_read_json_optional_name(
   json : Json,
   message : String,
-) -> PdfName? raise PdfError {
+) -> @core.PdfName? raise @core.PdfError {
   match json {
     Null => None
     String(text) => Some(pdf_ocg_read_json_name_text(text))
@@ -65,7 +65,7 @@ fn pdf_ocg_read_json_optional_name(
 fn pdf_ocg_read_json_optional_number(
   json : Json,
   message : String,
-) -> Double? raise PdfError {
+) -> Double? raise @core.PdfError {
   match json {
     Null => None
     Number(value, repr=_) => Some(value)
@@ -74,7 +74,10 @@ fn pdf_ocg_read_json_optional_number(
 }
 
 ///|
-fn pdf_ocg_read_json_int(json : Json, message : String) -> Int raise PdfError {
+fn pdf_ocg_read_json_int(
+  json : Json,
+  message : String,
+) -> Int raise @core.PdfError {
   match json {
     Number(value, repr=_) => pdf_util_json_truncated_number(value)
     _ => raise SoftError(message)
@@ -85,7 +88,7 @@ fn pdf_ocg_read_json_int(json : Json, message : String) -> Int raise PdfError {
 fn pdf_ocg_read_json_ints(
   json : Json,
   message : String,
-) -> Array[Int] raise PdfError {
+) -> Array[Int] raise @core.PdfError {
   match json {
     Array(values) => {
       let output : Array[Int] = []
@@ -102,10 +105,10 @@ fn pdf_ocg_read_json_ints(
 fn pdf_ocg_read_json_names(
   json : Json,
   message : String,
-) -> Array[PdfName] raise PdfError {
+) -> Array[@core.PdfName] raise @core.PdfError {
   match json {
     Array(values) => {
-      let output : Array[PdfName] = []
+      let output : Array[@core.PdfName] = []
       for value in values {
         output.push(pdf_ocg_read_json_name(value, message))
       }
@@ -119,10 +122,10 @@ fn pdf_ocg_read_json_names(
 fn pdf_ocg_read_json_pdf_strings(
   json : Json,
   message : String,
-) -> Array[PdfBytes] raise PdfError {
+) -> Array[@core.PdfBytes] raise @core.PdfError {
   match json {
     Array(values) => {
-      let output : Array[PdfBytes] = []
+      let output : Array[@core.PdfBytes] = []
       for value in values {
         output.push(pdf_ocg_read_json_pdf_string(value, message))
       }
@@ -136,7 +139,7 @@ fn pdf_ocg_read_json_pdf_strings(
 fn pdf_ocg_read_json_state(
   json : Json,
   message : String,
-) -> @ocg.PdfOcgState raise PdfError {
+) -> @ocg.PdfOcgState raise @core.PdfError {
   match json {
     String("/ON") => OcgOn
     String("/OFF") => OcgOff
@@ -149,7 +152,7 @@ fn pdf_ocg_read_json_state(
 fn pdf_ocg_read_json_list_mode(
   json : Json,
   message : String,
-) -> @ocg.PdfOcgListMode raise PdfError {
+) -> @ocg.PdfOcgListMode raise @core.PdfError {
   match json {
     String("/AllPages") => OcgAllPages
     String("/VisiblePages") => OcgVisiblePages
@@ -161,7 +164,7 @@ fn pdf_ocg_read_json_list_mode(
 fn pdf_ocg_read_json_event(
   json : Json,
   message : String,
-) -> @ocg.PdfOcgEvent raise PdfError {
+) -> @ocg.PdfOcgEvent raise @core.PdfError {
   match json {
     String("/View") => OcgView
     String("/Print") => OcgPrint

@@ -2,7 +2,7 @@
 fn PdfDocument::select_reconstructed_trailer(
   self : PdfDocument,
   trailers : ArrayView[@syntax.PdfObject],
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   for offset in 0..<trailers.length() {
     let index = trailers.length() - 1 - offset
     let trailer = trailers[index]
@@ -50,7 +50,7 @@ fn PdfDocument::infer_reconstructed_catalog_trailer(
 fn PdfDocument::set_trailer_and_root(
   self : PdfDocument,
   trailer : @syntax.PdfObject,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.set_trailer_dict(trailer)
   match trailer.lookup_immediate(@reader.pdf_reader_root_name()) {
     Some(PdfIndirect(root)) => self.set_root(root)

@@ -1,6 +1,6 @@
 ///|
-fn pdf_id_name() -> PdfName {
-  pdf_name_of_bytes(@ascii.encode("/ID"))
+fn pdf_id_name() -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode("/ID"))
 }
 
 ///|
@@ -39,18 +39,18 @@ fn pdf_id_seed(path : String, time_text : () -> String) -> String {
 fn pdf_generate_id_bytes_from_text(
   path : String,
   time_text : () -> String,
-) -> PdfBytes {
+) -> @core.PdfBytes {
   let seed = pdf_id_seed(path, time_text)
   @crypt_core.pdf_md5_digest(@ascii.encode(seed))
 }
 
 ///|
-fn pdf_generate_current_id_bytes(path : String) -> PdfBytes {
+fn pdf_generate_current_id_bytes(path : String) -> @core.PdfBytes {
   pdf_generate_id_bytes_from_text(path, fn() { @env.now().to_string() })
 }
 
 ///|
-fn pdf_id_object(digest : PdfBytes) -> @syntax.PdfObject {
+fn pdf_id_object(digest : @core.PdfBytes) -> @syntax.PdfObject {
   PdfArray([PdfString(digest), PdfString(digest)])
 }
 
@@ -79,12 +79,12 @@ pub fn pdf_generate_id(
 ///|
 /// Replaces this document's trailer `/ID` entry.
 ///
-/// Raises `PdfError::DictionaryExpected` if the trailer is not a dictionary.
+/// Raises `@core.PdfError::DictionaryExpected` if the trailer is not a dictionary.
 pub fn PdfDocument::change_id(
   self : PdfDocument,
   path : String,
   get_time : () -> Double,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   match self.trailer_dict() {
     PdfDictionary(_) =>
       self.set_trailer_dict(
@@ -100,7 +100,7 @@ pub fn PdfDocument::change_id(
 fn PdfDocument::copy_with_current_id(
   self : PdfDocument,
   path : String,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let output = self.copy()
   match output.trailer_dict() {
     PdfDictionary(_) => {

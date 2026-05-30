@@ -33,7 +33,7 @@ fn pdf_ua_marker_description_bytes(
   rdf_prefix : String,
   part : String,
   revision : Int?,
-) -> PdfBytes {
+) -> @core.PdfBytes {
   let rdf_description = pdf_ua_qualified_name(rdf_prefix, "Description")
   let rdf_about = pdf_ua_qualified_name(rdf_prefix, "about")
   let output = Array::make(

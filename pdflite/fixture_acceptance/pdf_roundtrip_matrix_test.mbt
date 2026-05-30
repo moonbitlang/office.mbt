@@ -20,7 +20,7 @@ fn FixtureAcceptanceRoundTripMode::name(
 fn FixtureAcceptanceRoundTripMode::write(
   self : FixtureAcceptanceRoundTripMode,
   document : @pdflite.PdfDocument,
-) -> Bytes raise @pdflite.PdfError {
+) -> Bytes raise @core.PdfError {
   match self {
     RoundTripClassic => @pdflite.pdf_write_document(document)
     RoundTripXrefStream =>

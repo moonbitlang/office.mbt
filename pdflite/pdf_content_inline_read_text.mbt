@@ -33,11 +33,11 @@ fn pdf_content_text_encoded_inline_image_length(
 
 ///|
 fn pdf_content_read_text_encoded_inline_image_data(
-  cursor : ByteCursor,
+  cursor : @core.ByteCursor,
   filter : PdfContentInlineTextFilter,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   match cursor.peek_byte() {
-    value if pdf_is_whitespace_byte(value) => cursor.nudge()
+    value if @core.pdf_is_whitespace_byte(value) => cursor.nudge()
     _ => ()
   }
   match
@@ -56,11 +56,11 @@ fn pdf_content_read_text_encoded_inline_image_data(
 
 ///|
 fn pdf_content_read_text_encoded_inline_image_decoded(
-  cursor : ByteCursor,
+  cursor : @core.ByteCursor,
   filter : PdfContentInlineTextFilter,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   match cursor.peek_byte() {
-    value if pdf_is_whitespace_byte(value) => cursor.nudge()
+    value if @core.pdf_is_whitespace_byte(value) => cursor.nudge()
     _ => ()
   }
   match

@@ -3,7 +3,7 @@ fn PdfDocument::pdf_util_json_of_content_op(
   self : PdfDocument,
   op : @content.PdfContentOp,
   utf8 : Bool,
-) -> Json raise PdfError {
+) -> Json raise @core.PdfError {
   match op {
     Op_S => Json::array([Json::string("S")])
     Op_s => Json::array([Json::string("s")])

@@ -58,7 +58,7 @@ fn PdfDocument::pdf_image_extraction_name(
   page_number : Int,
   image : @syntax.PdfObject,
   state : PdfImageExtractionRunState,
-) -> String raise PdfError {
+) -> String raise @core.PdfError {
   let object_number = match image {
     PdfIndirect(number) => number
     _ => 0

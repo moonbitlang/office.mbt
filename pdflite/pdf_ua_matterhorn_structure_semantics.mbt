@@ -1,10 +1,10 @@
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_13_004(
   self : PdfDocument,
-) -> Json? raise PdfError {
+) -> Json? raise @core.PdfError {
   let figure = pdf_ua_name("/Figure")
   let tree = self.pdf_ua_matterhorn_read_struct_tree()
-  fn check(node : PdfUAMatterhornStructNode, figure : PdfName) -> Bool {
+  fn check(node : PdfUAMatterhornStructNode, figure : @core.PdfName) -> Bool {
     if node.name == figure &&
       !node.has_attr(pdf_ua_matterhorn_alt_key()) &&
       !node.has_attr(pdf_ua_matterhorn_actual_text_key()) {
@@ -28,7 +28,7 @@ fn PdfDocument::pdf_ua_matterhorn_check_13_004(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_14_002(
   self : PdfDocument,
-) -> Json? raise PdfError {
+) -> Json? raise @core.PdfError {
   let headings = pdf_ua_matterhorn_heading_names(
     self.pdf_ua_matterhorn_read_struct_tree(),
   )
@@ -46,7 +46,7 @@ fn PdfDocument::pdf_ua_matterhorn_check_14_002(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_14_003(
   self : PdfDocument,
-) -> Json? raise PdfError {
+) -> Json? raise @core.PdfError {
   let headings = pdf_ua_matterhorn_heading_names(
     self.pdf_ua_matterhorn_read_struct_tree(),
   )
@@ -66,9 +66,9 @@ fn PdfDocument::pdf_ua_matterhorn_check_14_003(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_14_006(
   self : PdfDocument,
-) -> Json? raise PdfError {
+) -> Json? raise @core.PdfError {
   let h = pdf_ua_name("/H")
-  fn check(node : PdfUAMatterhornStructNode, h : PdfName) -> Bool {
+  fn check(node : PdfUAMatterhornStructNode, h : @core.PdfName) -> Bool {
     let mut count = 0
     for child in node.children {
       if child.name == h {
@@ -96,7 +96,7 @@ fn PdfDocument::pdf_ua_matterhorn_check_14_006(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_14_007(
   self : PdfDocument,
-) -> Json? raise PdfError {
+) -> Json? raise @core.PdfError {
   let tree = self.pdf_ua_matterhorn_read_struct_tree()
   let h = pdf_ua_name("/H")
   if tree.contains_name(fn(name) { name == h }) &&
@@ -110,10 +110,10 @@ fn PdfDocument::pdf_ua_matterhorn_check_14_007(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_15_003(
   self : PdfDocument,
-) -> Json? raise PdfError {
+) -> Json? raise @core.PdfError {
   let th = pdf_ua_name("/TH")
   let tree = self.pdf_ua_matterhorn_read_struct_tree()
-  fn check(node : PdfUAMatterhornStructNode, th : PdfName) -> Bool {
+  fn check(node : PdfUAMatterhornStructNode, th : @core.PdfName) -> Bool {
     if node.name == th && !node.has_attr(pdf_ua_matterhorn_scope()) {
       true
     } else {
@@ -135,10 +135,10 @@ fn PdfDocument::pdf_ua_matterhorn_check_15_003(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_17_002(
   self : PdfDocument,
-) -> Json? raise PdfError {
+) -> Json? raise @core.PdfError {
   let formula = pdf_ua_name("/Formula")
   let tree = self.pdf_ua_matterhorn_read_struct_tree()
-  fn check(node : PdfUAMatterhornStructNode, formula : PdfName) -> Bool {
+  fn check(node : PdfUAMatterhornStructNode, formula : @core.PdfName) -> Bool {
     if node.name == formula && !node.has_attr(pdf_ua_matterhorn_alt_key()) {
       true
     } else {
@@ -165,10 +165,10 @@ fn pdf_ua_matterhorn_check_source_noop() -> Json? {
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_19_003(
   self : PdfDocument,
-) -> Json? raise PdfError {
+) -> Json? raise @core.PdfError {
   let note = pdf_ua_name("/Note")
   let tree = self.pdf_ua_matterhorn_read_struct_tree()
-  fn check(node : PdfUAMatterhornStructNode, note : PdfName) -> Bool {
+  fn check(node : PdfUAMatterhornStructNode, note : @core.PdfName) -> Bool {
     if node.name == note && !node.has_attr(pdf_ua_matterhorn_id_key()) {
       true
     } else {
@@ -190,7 +190,7 @@ fn PdfDocument::pdf_ua_matterhorn_check_19_003(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_19_004(self : PdfDocument) -> Json? {
   let note = pdf_ua_name("/Note")
-  let ids : Array[PdfBytes] = []
+  let ids : Array[@core.PdfBytes] = []
   for entry in self.parsed_object_entries() {
     match
       (

@@ -58,7 +58,7 @@ fn pdf_text_predefined_cns1_charcode(
 
 ///|
 fn pdf_text_predefined_cns1_builtin_codepoints(
-  name : PdfName,
+  name : @core.PdfName,
   code : Int,
 ) -> Array[Int]? {
   match
@@ -110,7 +110,7 @@ fn pdf_text_predefined_cns1_builtin_codepoints(
 
 ///|
 fn pdf_text_predefined_cns1_builtin_charcode(
-  name : PdfName,
+  name : @core.PdfName,
   codepoint : Int,
 ) -> Int? {
   match

@@ -1,18 +1,18 @@
 ///|
-fn composition_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn composition_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
 fn composition_dictionary_for_test(
-  entries : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
+  entries : ArrayView[(@core.PdfName, @syntax.PdfObject)],
 ) -> @syntax.PdfObject {
   @syntax.pdf_dictionary(entries)
 }
 
 ///|
 fn composition_stream_for_test(
-  dictionary_entries : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
+  dictionary_entries : ArrayView[(@core.PdfName, @syntax.PdfObject)],
   data : String,
 ) -> @syntax.PdfObject {
   @syntax.pdf_stream(
@@ -261,7 +261,7 @@ test "PdfDocument composition rejects non-positive file sizes" {
   let result : Result[Array[@composition.PdfCompositionEntry], Error] = try? doc.composition(
     0,
   )
-  guard result is Err(@pdflite.PdfError::BadNumberArgument(_)) else {
+  guard result is Err(@core.PdfError::BadNumberArgument(_)) else {
     fail("expected BadNumberArgument for zero file size")
   }
 }

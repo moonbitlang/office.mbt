@@ -1,6 +1,6 @@
 ///|
-fn writer_wb_bytes_for_test(values : ArrayView[Int]) -> PdfBytes {
-  try! pdf_bytes_of_int_array(values)
+fn writer_wb_bytes_for_test(values : ArrayView[Int]) -> @core.PdfBytes {
+  try! @core.pdf_bytes_of_int_array(values)
 }
 
 ///|
@@ -75,15 +75,15 @@ test "writer parses signed integer fragments for scientific reals" {
     @ascii.encode("+"),
     0,
   )
-  guard missing is Err(PdfError::NumberExpected) else {
-    fail("expected PdfError::NumberExpected")
+  guard missing is Err(@core.PdfError::NumberExpected) else {
+    fail("expected @core.PdfError::NumberExpected")
   }
   let malformed : Result[Int, Error] = try? pdf_writer_parse_signed_int(
     @ascii.encode("12a"),
     0,
   )
-  guard malformed is Err(PdfError::NumberExpected) else {
-    fail("expected PdfError::NumberExpected")
+  guard malformed is Err(@core.PdfError::NumberExpected) else {
+    fail("expected @core.PdfError::NumberExpected")
   }
 }
 
@@ -188,8 +188,8 @@ test "writer expands scientific real edge forms" {
     @ascii.encode("1Ae1"),
     2,
   )
-  guard malformed is Err(PdfError::NumberExpected) else {
-    fail("expected PdfError::NumberExpected")
+  guard malformed is Err(@core.PdfError::NumberExpected) else {
+    fail("expected @core.PdfError::NumberExpected")
   }
 }
 
@@ -233,16 +233,16 @@ test "writer rounds plain significant real helper edge forms" {
     [],
     @ascii.encode("1.2.3"),
   )
-  guard double_dot is Err(PdfError::NumberExpected) else {
-    fail("expected PdfError::NumberExpected")
+  guard double_dot is Err(@core.PdfError::NumberExpected) else {
+    fail("expected @core.PdfError::NumberExpected")
   }
 
   let bad_digit : Result[Unit, Error] = try? pdf_writer_push_plain_significant_real(
     [],
     @ascii.encode("1a"),
   )
-  guard bad_digit is Err(PdfError::NumberExpected) else {
-    fail("expected PdfError::NumberExpected")
+  guard bad_digit is Err(@core.PdfError::NumberExpected) else {
+    fail("expected @core.PdfError::NumberExpected")
   }
 }
 
@@ -257,11 +257,11 @@ test "incremental writer rejects changed deferred objects" {
   let changed = try! pdf_read_document_from_bytes(original)
   changed.objects.set_entry(1, pdf_object_entry(ObjectToParse))
   changed.objects.log.push((1, ObjectAltered))
-  let result : Result[PdfBytes, Error] = try? pdf_write_document_incremental_update(
+  let result : Result[@core.PdfBytes, Error] = try? pdf_write_document_incremental_update(
     original, changed,
   )
-  guard result is Err(PdfError::ParsedObjectExpected) else {
-    fail("expected PdfError::ParsedObjectExpected")
+  guard result is Err(@core.PdfError::ParsedObjectExpected) else {
+    fail("expected @core.PdfError::ParsedObjectExpected")
   }
 }
 
@@ -269,15 +269,15 @@ test "incremental writer rejects changed deferred objects" {
 test "pdf_write_document rejects deferred object states" {
   let doc = pdf_document_empty()
   doc.objects.set_entry(1, pdf_object_entry(ObjectToParse))
-  let result : Result[PdfBytes, Error] = try? pdf_write_document(doc)
-  guard result is Err(PdfError::ParsedObjectExpected) else {
-    fail("expected PdfError::ParsedObjectExpected")
+  let result : Result[@core.PdfBytes, Error] = try? pdf_write_document(doc)
+  guard result is Err(@core.PdfError::ParsedObjectExpected) else {
+    fail("expected @core.PdfError::ParsedObjectExpected")
   }
 }
 
 ///|
 test "private writer stream dictionary uses materialized deferred length" {
-  let cursor = byte_cursor_of_bytes(@ascii.encode("abc"))
+  let cursor = @core.byte_cursor_of_bytes(@ascii.encode("abc"))
   let stream = @syntax.pdf_stream(
     PdfDictionary([]),
     StreamToGet(@syntax.stream_to_get(cursor, 0, 1)),
@@ -290,6 +290,8 @@ test "private writer stream dictionary uses materialized deferred length" {
       stream_value,
       @syntax.pdf_stream_data_view(stream_value.data).length(),
     ),
-    PdfDictionary([(pdf_name_of_bytes(@ascii.encode("/Length")), PdfInteger(1))]),
+    PdfDictionary([
+      (@core.pdf_name_of_bytes(@ascii.encode("/Length")), PdfInteger(1)),
+    ]),
   )
 }

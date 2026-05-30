@@ -1,11 +1,11 @@
 ///|
-fn image_raw_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn image_raw_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
-fn image_raw_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
-  try! @pdflite.pdf_bytes_of_int_array(values)
+fn image_raw_bytes_for_test(values : ArrayView[Int]) -> @core.PdfBytes {
+  try! @core.pdf_bytes_of_int_array(values)
 }
 
 ///|
@@ -29,7 +29,7 @@ test "PdfDocument get_image_24bpp validates malformed image dictionary values" {
   let width_result : Result[@pdflite.PdfImage, Error] = try? doc.get_image_24bpp(
     empty_resources, bad_width,
   )
-  guard width_result is Err(@pdflite.PdfError::NumberExpected) else {
+  guard width_result is Err(@core.PdfError::NumberExpected) else {
     fail("expected malformed width")
   }
   let bad_bpc = @syntax.pdf_stream(
@@ -50,7 +50,7 @@ test "PdfDocument get_image_24bpp validates malformed image dictionary values" {
   let bpc_result : Result[@pdflite.PdfImage, Error] = try? doc.get_image_24bpp(
     empty_resources, bad_bpc,
   )
-  guard bpc_result is Err(@pdflite.PdfError::NumberExpected) else {
+  guard bpc_result is Err(@core.PdfError::NumberExpected) else {
     fail("expected malformed bits per component")
   }
   let bad_decode = @syntax.pdf_stream(
@@ -71,7 +71,7 @@ test "PdfDocument get_image_24bpp validates malformed image dictionary values" {
   let decode_result : Result[@pdflite.PdfImage, Error] = try? doc.get_image_24bpp(
     empty_resources, bad_decode,
   )
-  guard decode_result is Err(@pdflite.PdfError::NumberExpected) else {
+  guard decode_result is Err(@core.PdfError::NumberExpected) else {
     fail("expected malformed decode")
   }
   let missing_width = @syntax.pdf_stream(
@@ -87,8 +87,7 @@ test "PdfDocument get_image_24bpp validates malformed image dictionary values" {
   let missing_width_result : Result[@pdflite.PdfImage, Error] = try? doc.get_image_24bpp(
     empty_resources, missing_width,
   )
-  guard missing_width_result
-    is Err(@pdflite.PdfError::DictionaryKeyNotFound(name)) &&
+  guard missing_width_result is Err(@core.PdfError::DictionaryKeyNotFound(name)) &&
     name == image_raw_name_for_test("/Width") else {
     fail("expected missing width")
   }
@@ -106,14 +105,14 @@ test "PdfDocument get_image_24bpp validates malformed image dictionary values" {
   let missing_bpc_result : Result[@pdflite.PdfImage, Error] = try? doc.get_image_24bpp(
     empty_resources, missing_bpc,
   )
-  guard missing_bpc_result is Err(@pdflite.PdfError::FilterExpected) else {
+  guard missing_bpc_result is Err(@core.PdfError::FilterExpected) else {
     fail("expected missing bits per component")
   }
   let not_stream : Result[@pdflite.PdfImage, Error] = try? doc.get_image_24bpp(
     empty_resources,
     PdfInteger(1),
   )
-  guard not_stream is Err(@pdflite.PdfError::ParseStreamExpected) else {
+  guard not_stream is Err(@core.PdfError::ParseStreamExpected) else {
     fail("expected image stream")
   }
 }
@@ -746,7 +745,7 @@ test "PdfDocument get_image_24bpp applies raw image Decode arrays" {
     @syntax.pdf_dictionary([]),
     malformed_decode,
   )
-  guard malformed_result is Err(@pdflite.PdfError::FilterExpected) else {
+  guard malformed_result is Err(@core.PdfError::FilterExpected) else {
     fail("expected malformed decode array")
   }
   let decoded_gray4 = @syntax.pdf_stream(
@@ -837,7 +836,7 @@ test "PdfDocument get_image_24bpp rejects unsupported raw image spaces" {
     @syntax.pdf_dictionary([]),
     unsupported_rgb16,
   )
-  guard unsupported is Err(@pdflite.PdfError::FilterExpected) else {
+  guard unsupported is Err(@core.PdfError::FilterExpected) else {
     fail("expected unsupported raw image")
   }
   let short_tint = @syntax.pdf_dictionary([
@@ -869,7 +868,7 @@ test "PdfDocument get_image_24bpp rejects unsupported raw image spaces" {
     @syntax.pdf_dictionary([]),
     bad_separation,
   )
-  guard bad_tint is Err(@pdflite.PdfError::FilterExpected) else {
+  guard bad_tint is Err(@core.PdfError::FilterExpected) else {
     fail("expected malformed separation tint output")
   }
 }
@@ -1138,7 +1137,7 @@ test "PdfDocument get_image_24bpp reads indexed image tables" {
   let missing_result : Result[@pdflite.PdfImage, Error] = try? doc.get_image_24bpp(
     empty_resources, missing_index,
   )
-  guard missing_result is Err(@pdflite.PdfError::EndOfInput) else {
+  guard missing_result is Err(@core.PdfError::EndOfInput) else {
     fail("expected indexed table lookup failure")
   }
 }
@@ -1264,7 +1263,7 @@ test "PdfDocument get_image_24bpp reports malformed raw images" {
     @syntax.pdf_dictionary([]),
     short_rgb,
   )
-  guard result is Err(@pdflite.PdfError::EndOfInput) else {
-    fail("expected @pdflite.PdfError::EndOfInput for short raw image")
+  guard result is Err(@core.PdfError::EndOfInput) else {
+    fail("expected @core.PdfError::EndOfInput for short raw image")
   }
 }

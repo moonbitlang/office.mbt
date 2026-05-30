@@ -1,12 +1,14 @@
 // Whitebox tests for private encryption guards.
 
 ///|
-fn crypt_wb_bytes_for_test(values : ArrayView[Int]) -> PdfBytes {
-  try! pdf_bytes_of_int_array(values)
+fn crypt_wb_bytes_for_test(values : ArrayView[Int]) -> @core.PdfBytes {
+  try! @core.pdf_bytes_of_int_array(values)
 }
 
 ///|
-fn crypt_wb_concat_bytes_for_test(parts : ArrayView[BytesView]) -> PdfBytes {
+fn crypt_wb_concat_bytes_for_test(
+  parts : ArrayView[BytesView],
+) -> @core.PdfBytes {
   let output : Array[Byte] = []
   for part in parts {
     for byte in part {
@@ -17,18 +19,21 @@ fn crypt_wb_concat_bytes_for_test(parts : ArrayView[BytesView]) -> PdfBytes {
 }
 
 ///|
-fn crypt_wb_repeated_bytes_for_test(value : Int, length : Int) -> PdfBytes {
+fn crypt_wb_repeated_bytes_for_test(
+  value : Int,
+  length : Int,
+) -> @core.PdfBytes {
   crypt_wb_bytes_for_test([ for _ in 0..<length => value ])
 }
 
 ///|
-fn crypt_wb_name_for_test(text : String) -> PdfName {
-  pdf_name_of_bytes(@ascii.encode(text))
+fn crypt_wb_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
 fn crypt_wb_standard_encrypt_dictionary_for_test(
-  entries : ArrayView[(PdfName, @syntax.PdfObject)],
+  entries : ArrayView[(@core.PdfName, @syntax.PdfObject)],
   owner_length? : Int = 40,
   user_length? : Int = 40,
 ) -> @syntax.PdfObject {
@@ -42,12 +47,12 @@ fn crypt_wb_standard_encrypt_dictionary_for_test(
 
 ///|
 fn crypt_wb_standard_encrypt_dictionary_values_for_test(
-  entries : ArrayView[(PdfName, @syntax.PdfObject)],
-  owner_entry : PdfBytes,
-  user_entry : PdfBytes,
+  entries : ArrayView[(@core.PdfName, @syntax.PdfObject)],
+  owner_entry : @core.PdfBytes,
+  user_entry : @core.PdfBytes,
   permissions : Int,
 ) -> @syntax.PdfObject {
-  let output : Array[(PdfName, @syntax.PdfObject)] = [
+  let output : Array[(@core.PdfName, @syntax.PdfObject)] = [
     (
       crypt_wb_name_for_test("/Filter"),
       PdfNameObject(crypt_wb_name_for_test("/Standard")),
@@ -88,13 +93,13 @@ fn crypt_wb_expect_encryption_method_error_for_test(
 ) -> Unit raise {
   let doc = crypt_wb_doc_with_encrypt_for_test(encrypt_dictionary)
   let result : Result[PdfEncryptionValues, Error] = try? doc.encryption_values()
-  guard result is Err(PdfError::EncryptionMethodExpected) else {
-    fail("expected PdfError::EncryptionMethodExpected")
+  guard result is Err(@core.PdfError::EncryptionMethodExpected) else {
+    fail("expected @core.PdfError::EncryptionMethodExpected")
   }
 }
 
 ///|
-fn crypt_wb_iv_for_test(index : Int) -> PdfBytes {
+fn crypt_wb_iv_for_test(index : Int) -> @core.PdfBytes {
   crypt_wb_bytes_for_test(
     [
       for offset in 0..<16 => 0x30 + index * 16 + offset
@@ -103,7 +108,7 @@ fn crypt_wb_iv_for_test(index : Int) -> PdfBytes {
 }
 
 ///|
-fn crypt_wb_aesv3_r5_user_entry_for_test() -> PdfBytes {
+fn crypt_wb_aesv3_r5_user_entry_for_test() -> @core.PdfBytes {
   crypt_wb_bytes_for_test([
     0xad, 0x7c, 0x98, 0xe2, 0x51, 0xcb, 0x1c, 0x7b, 0x3e, 0x28, 0x30, 0xb6, 0xf0,
     0xbe, 0xcb, 0xd8, 0x35, 0x2a, 0x6a, 0xb7, 0x12, 0x23, 0x2d, 0x6e, 0x82, 0xf2,
@@ -113,7 +118,7 @@ fn crypt_wb_aesv3_r5_user_entry_for_test() -> PdfBytes {
 }
 
 ///|
-fn crypt_wb_aesv3_r5_owner_entry_for_test() -> PdfBytes {
+fn crypt_wb_aesv3_r5_owner_entry_for_test() -> @core.PdfBytes {
   crypt_wb_bytes_for_test([
     0xf9, 0x90, 0x4f, 0x90, 0x02, 0x10, 0x0b, 0x3e, 0xba, 0x57, 0x69, 0x0b, 0x67,
     0x32, 0x30, 0xde, 0xfc, 0xcd, 0x12, 0x39, 0x9f, 0x8d, 0xa1, 0xa8, 0x73, 0x41,
@@ -123,12 +128,12 @@ fn crypt_wb_aesv3_r5_owner_entry_for_test() -> PdfBytes {
 }
 
 ///|
-fn crypt_wb_aesv3_r5_file_key_for_test() -> PdfBytes {
+fn crypt_wb_aesv3_r5_file_key_for_test() -> @core.PdfBytes {
   crypt_wb_bytes_for_test([ for value in 0..<32 => value ])
 }
 
 ///|
-fn crypt_wb_aesv3_r5_user_encryption_key_for_test() -> PdfBytes {
+fn crypt_wb_aesv3_r5_user_encryption_key_for_test() -> @core.PdfBytes {
   crypt_wb_bytes_for_test([
     0xe4, 0x35, 0xfd, 0x1c, 0x68, 0x70, 0xfc, 0x3b, 0x50, 0x7f, 0x7c, 0x3d, 0x30,
     0xd0, 0x2e, 0x06, 0xb7, 0x60, 0x68, 0x50, 0x81, 0x95, 0xc1, 0x29, 0x87, 0x9c,
@@ -137,7 +142,7 @@ fn crypt_wb_aesv3_r5_user_encryption_key_for_test() -> PdfBytes {
 }
 
 ///|
-fn crypt_wb_aesv3_r5_owner_encryption_key_for_test() -> PdfBytes {
+fn crypt_wb_aesv3_r5_owner_encryption_key_for_test() -> @core.PdfBytes {
   crypt_wb_bytes_for_test([
     0x93, 0x8a, 0x69, 0x29, 0xac, 0xa0, 0x6a, 0x79, 0x47, 0xde, 0x9d, 0xc4, 0x68,
     0x29, 0x04, 0xca, 0xda, 0x26, 0xbf, 0x1b, 0xb2, 0x8e, 0xc9, 0xc8, 0x2b, 0x83,
@@ -146,7 +151,7 @@ fn crypt_wb_aesv3_r5_owner_encryption_key_for_test() -> PdfBytes {
 }
 
 ///|
-fn crypt_wb_aesv3_r5_permissions_for_test() -> PdfBytes {
+fn crypt_wb_aesv3_r5_permissions_for_test() -> @core.PdfBytes {
   crypt_wb_bytes_for_test([
     0x61, 0x58, 0xb9, 0xdd, 0xf6, 0x26, 0xa8, 0xfa, 0x36, 0x68, 0x20, 0xad, 0x7e,
     0xd7, 0xde, 0x4d,
@@ -193,7 +198,7 @@ fn crypt_wb_aesv3_r5_values_for_test() -> PdfEncryptionValues {
 fn crypt_wb_aesv3_r5_random_for_test(
   field : @crypt_core.PdfAesV3RandomField,
   _length : Int,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   match field {
     PdfAesV3FileKey => crypt_wb_aesv3_r5_file_key_for_test()
     PdfAesV3UserValidationSalt =>
@@ -223,7 +228,9 @@ test "private encryption password settings reject AESV3" {
   }
   let result : Result[(Int, Int), Error] = try? values.password_settings()
   guard result
-    is Err(PdfError::EncryptionAuthenticationUnsupported(PdfCryptAESV3(false))) else {
+    is Err(
+      @core.PdfError::EncryptionAuthenticationUnsupported(PdfCryptAESV3(false))
+    ) else {
     fail("expected unsupported AESV3 password settings")
   }
 }
@@ -429,8 +436,8 @@ test "private encryption values parse crypt filter methods" {
 ///|
 test "private encryption values report malformed encryption dictionaries" {
   let no_encrypt : Result[PdfEncryptionValues, Error] = try? pdf_document_empty().encryption_values()
-  guard no_encrypt is Err(PdfError::EncryptionExpected) else {
-    fail("expected PdfError::EncryptionExpected")
+  guard no_encrypt is Err(@core.PdfError::EncryptionExpected) else {
+    fail("expected @core.PdfError::EncryptionExpected")
   }
 
   crypt_wb_expect_encryption_method_error_for_test(
@@ -531,7 +538,7 @@ test "private encryption values report malformed encryption dictionaries" {
   )
   let missing_o_result : Result[PdfEncryptionValues, Error] = try? missing_o.encryption_values()
   guard missing_o_result
-    is Err(PdfError::EncryptionDictionaryEntryExpected(name)) &&
+    is Err(@core.PdfError::EncryptionDictionaryEntryExpected(name)) &&
     name == crypt_wb_name_for_test("/O") else {
     fail("expected missing /O")
   }
@@ -556,7 +563,7 @@ test "private encryption values report malformed encryption dictionaries" {
   )
   let missing_p_result : Result[PdfEncryptionValues, Error] = try? missing_p.encryption_values()
   guard missing_p_result
-    is Err(PdfError::EncryptionDictionaryEntryExpected(name)) &&
+    is Err(@core.PdfError::EncryptionDictionaryEntryExpected(name)) &&
     name == crypt_wb_name_for_test("/P") else {
     fail("expected missing /P")
   }
@@ -571,7 +578,8 @@ test "private encryption values report malformed encryption dictionaries" {
     ),
   )
   let short_u_result : Result[PdfEncryptionValues, Error] = try? short_u.encryption_values()
-  guard short_u_result is Err(PdfError::EncryptionDictionaryEntryTooShort(name)) &&
+  guard short_u_result
+    is Err(@core.PdfError::EncryptionDictionaryEntryTooShort(name)) &&
     name == crypt_wb_name_for_test("/U") else {
     fail("expected short /U")
   }
@@ -589,8 +597,8 @@ test "private encryption values report malformed encryption dictionaries" {
     ]),
   )
   let bad_id_result : Result[PdfEncryptionValues, Error] = try? bad_id.encryption_values()
-  guard bad_id_result is Err(PdfError::EncryptionIDExpected) else {
-    fail("expected PdfError::EncryptionIDExpected")
+  guard bad_id_result is Err(@core.PdfError::EncryptionIDExpected) else {
+    fail("expected @core.PdfError::EncryptionIDExpected")
   }
 }
 
@@ -747,7 +755,7 @@ test "private AESV3 password authentication validates R5 SHA-256 entries" {
     @ascii.encode("user"),
   )
   guard short_user_result
-    is Err(PdfError::EncryptionDictionaryEntryTooShort(name)) &&
+    is Err(@core.PdfError::EncryptionDictionaryEntryTooShort(name)) &&
     name == crypt_wb_name_for_test("/U") else {
     fail("expected short AESV3 /U")
   }
@@ -760,7 +768,7 @@ test "private AESV3 password authentication validates R5 SHA-256 entries" {
     @ascii.encode("owner"),
   )
   guard short_owner_result
-    is Err(PdfError::EncryptionDictionaryEntryTooShort(name)) &&
+    is Err(@core.PdfError::EncryptionDictionaryEntryTooShort(name)) &&
     name == crypt_wb_name_for_test("/O") else {
     fail("expected short AESV3 /O")
   }
@@ -772,7 +780,7 @@ test "private AESV3 password authentication validates R5 SHA-256 entries" {
     @ascii.encode("owner"),
   )
   guard short_owner_user_result
-    is Err(PdfError::EncryptionDictionaryEntryTooShort(name)) &&
+    is Err(@core.PdfError::EncryptionDictionaryEntryTooShort(name)) &&
     name == crypt_wb_name_for_test("/U") else {
     fail("expected short AESV3 owner /U")
   }
@@ -960,7 +968,7 @@ test "private AESV3 saved dictionary requires permissions entry" {
     values,
   )
   match result {
-    Err(PdfError::EncryptionDictionaryEntryExpected(key)) =>
+    Err(@core.PdfError::EncryptionDictionaryEntryExpected(key)) =>
       @test.assert_eq(key, pdf_aesv3_permissions_key())
     _ => fail("expected missing AESV3 permissions entry")
   }
@@ -969,11 +977,11 @@ test "private AESV3 saved dictionary requires permissions entry" {
 ///|
 test "private AESV3 CBC no-padding encryption rejects partial blocks" {
   let key = crypt_wb_bytes_for_test([ for value in 0..<32 => value ])
-  let result : Result[PdfBytes, Error] = try? pdf_aesv3_cbc_encrypt_no_padding(
+  let result : Result[@core.PdfBytes, Error] = try? pdf_aesv3_cbc_encrypt_no_padding(
     key,
     @ascii.encode("x"),
   )
-  guard result is Err(PdfError::InvalidCryptoDataLength(1)) else {
+  guard result is Err(@core.PdfError::InvalidCryptoDataLength(1)) else {
     fail("expected invalid AESV3 CBC data length")
   }
 }

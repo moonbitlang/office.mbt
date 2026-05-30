@@ -13,7 +13,7 @@ fn pdf_truetype_subset_contains(
 }
 
 ///|
-fn pdf_truetype_first_glyph_codepoint(name : PdfName) -> Int {
+fn pdf_truetype_first_glyph_codepoint(name : @core.PdfName) -> Int {
   match pdf_text_codepoints_of_glyphname(name) {
     Some(codepoints) if codepoints.length() > 0 => codepoints[0]
     _ => 0
@@ -22,7 +22,7 @@ fn pdf_truetype_first_glyph_codepoint(name : PdfName) -> Int {
 
 ///|
 fn pdf_truetype_codepoint_of_pdf_code(
-  encoding_table : ArrayView[(Int, PdfName)],
+  encoding_table : ArrayView[(Int, @core.PdfName)],
   pdf_code : Int,
 ) -> Int {
   for entry in encoding_table {
@@ -36,7 +36,7 @@ fn pdf_truetype_codepoint_of_pdf_code(
 
 ///|
 fn pdf_truetype_encoding_code_defined(
-  encoding_table : ArrayView[(Int, PdfName)],
+  encoding_table : ArrayView[(Int, @core.PdfName)],
   codepoint : Int,
 ) -> Bool {
   for entry in encoding_table {
@@ -137,7 +137,7 @@ pub fn pdf_truetype_widths(
   firstchar : Int,
   lastchar : Int,
   subset_codepoints : ArrayView[Int],
-) -> Array[Int] raise PdfError {
+) -> Array[Int] raise @core.PdfError {
   if lastchar < firstchar {
     raise SoftError("lastchar < firstchar")
   }
@@ -181,7 +181,7 @@ pub fn pdf_truetype_widths_higher(
   firstchar : Int,
   lastchar : Int,
   subset_codepoints : ArrayView[Int],
-) -> Array[Int] raise PdfError {
+) -> Array[Int] raise @core.PdfError {
   if lastchar < firstchar {
     raise SoftError("lastchar < firstchar")
   }
@@ -212,7 +212,9 @@ pub fn pdf_truetype_widths_higher(
 }
 
 ///|
-fn pdf_truetype_utf16be_without_bom(codepoint : Int) -> PdfBytes raise PdfError {
+fn pdf_truetype_utf16be_without_bom(
+  codepoint : Int,
+) -> @core.PdfBytes raise @core.PdfError {
   let bytes = pdf_utf16be_of_codepoints([codepoint])
   bytes[2:].to_owned()
 }
@@ -226,11 +228,11 @@ fn pdf_truetype_utf16be_without_bom(codepoint : Int) -> PdfBytes raise PdfError 
 /// `Cpdftruetype.seconds_tounicodes`.
 pub fn pdf_truetype_higher_tounicode(
   subset_codepoints : ArrayView[Int],
-) -> Array[(Int, PdfBytes)]? raise PdfError {
+) -> Array[(Int, @core.PdfBytes)]? raise @core.PdfError {
   if subset_codepoints.length() == 0 {
     None
   } else {
-    let entries : Array[(Int, PdfBytes)] = []
+    let entries : Array[(Int, @core.PdfBytes)] = []
     for index in 0..<subset_codepoints.length() {
       entries.push(
         (33 + index, pdf_truetype_utf16be_without_bom(subset_codepoints[index])),

@@ -1,15 +1,15 @@
 ///|
-fn pdf_text_notdef_name() -> PdfName {
+fn pdf_text_notdef_name() -> @core.PdfName {
   pdf_text_name(".notdef")
 }
 
 ///|
-fn pdf_text_tounicode_glyphname(bytes : PdfBytes) -> PdfName {
+fn pdf_text_tounicode_glyphname(bytes : @core.PdfBytes) -> @core.PdfName {
   let output : Array[Byte] = [47]
   for byte in bytes {
     output.push(byte)
   }
-  pdf_name_of_bytes(Bytes::from_array(output))
+  @core.pdf_name_of_bytes(Bytes::from_array(output))
 }
 
 ///|

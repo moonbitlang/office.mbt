@@ -24,7 +24,7 @@ fn pdf_text_fontfile2_number(fontfile : PdfFontFile?) -> Int? {
 }
 
 ///|
-fn pdf_text_true_type_encoding_name(encoding : PdfEncoding) -> PdfName? {
+fn pdf_text_true_type_encoding_name(encoding : PdfEncoding) -> @core.PdfName? {
   match encoding {
     PdfFillUndefinedWithStandard(base) => base.pdf_name()
     _ => encoding.pdf_name()
@@ -34,13 +34,13 @@ fn pdf_text_true_type_encoding_name(encoding : PdfEncoding) -> PdfName? {
 ///|
 fn PdfDocument::pdf_text_make_true_type_font(
   self : PdfDocument,
-  basefont : PdfName,
+  basefont : @core.PdfName,
   firstchar : Int,
   lastchar : Int,
   widths : Array[Int],
   descriptor : PdfFontDescriptor,
   encoding : PdfEncoding,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   let ttf = match pdf_text_fontfile2_number(descriptor.fontfile) {
     Some(number) => number
     None => raise FontWriteUnsupported

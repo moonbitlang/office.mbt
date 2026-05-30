@@ -1,6 +1,6 @@
 ///|
-fn pad_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn pad_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -124,7 +124,7 @@ test "PdfDocument pad_before rejects missing pages" {
   ])
   guard result
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "padbefore: range contains pages not present in pdf"
       )
     ) else {
@@ -153,9 +153,7 @@ test "pdf_pad_to_multiple rejects zero" {
     document, 0,
   )
   guard result
-    is Err(
-      @pdflite.PdfError::BadNumberArgument("pad_to_multiple: zero multiple")
-    ) else {
+    is Err(@core.PdfError::BadNumberArgument("pad_to_multiple: zero multiple")) else {
     fail("expected zero multiple error")
   }
 }

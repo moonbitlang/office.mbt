@@ -13,7 +13,7 @@ fn pdf_content_filter_is_inline_dct(filter : @syntax.PdfObject) -> Bool {
 
 ///|
 fn pdf_content_filter_name_inline_text_filter(
-  name : PdfName,
+  name : @core.PdfName,
 ) -> PdfContentInlineTextFilter? {
   if name == pdf_content_inline_ascii_hexdecode_name() ||
     name == pdf_content_inline_ahx_name() {
@@ -51,7 +51,7 @@ fn pdf_content_filter_single_inline_text_filter(
 }
 
 ///|
-fn pdf_content_filter_name_is_inline_run_length(name : PdfName) -> Bool {
+fn pdf_content_filter_name_is_inline_run_length(name : @core.PdfName) -> Bool {
   name == pdf_content_inline_runlengthdecode_name() ||
   name == pdf_content_inline_rl_name()
 }
@@ -79,7 +79,7 @@ fn pdf_content_filter_is_single_inline_run_length(
 }
 
 ///|
-fn pdf_content_filter_name_is_inline_flate(name : PdfName) -> Bool {
+fn pdf_content_filter_name_is_inline_flate(name : @core.PdfName) -> Bool {
   name == pdf_content_inline_flatedecode_name() ||
   name == pdf_content_inline_fl_name()
 }
@@ -107,7 +107,7 @@ fn pdf_content_filter_is_single_inline_flate(
 }
 
 ///|
-fn pdf_content_filter_name_is_inline_lzw(name : PdfName) -> Bool {
+fn pdf_content_filter_name_is_inline_lzw(name : @core.PdfName) -> Bool {
   name == pdf_content_inline_lzwdecode_name() ||
   name == pdf_content_inline_lzw_name()
 }

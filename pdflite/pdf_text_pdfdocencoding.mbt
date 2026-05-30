@@ -54,8 +54,10 @@ fn pdf_codepoint_of_pdfdocencoding_byte_option(value : Int) -> Int? {
 ///|
 /// Decode one PDFDocEncoding byte to a Unicode codepoint.
 ///
-/// Undefined byte values raise `PdfError::InvalidPDFDocEncoding`.
-pub fn pdf_codepoint_of_pdfdocencoding_byte(value : Int) -> Int raise PdfError {
+/// Undefined byte values raise `@core.PdfError::InvalidPDFDocEncoding`.
+pub fn pdf_codepoint_of_pdfdocencoding_byte(
+  value : Int,
+) -> Int raise @core.PdfError {
   match pdf_codepoint_of_pdfdocencoding_byte_option(value) {
     Some(codepoint) => codepoint
     None => raise InvalidPDFDocEncoding(value)
@@ -66,7 +68,7 @@ pub fn pdf_codepoint_of_pdfdocencoding_byte(value : Int) -> Int raise PdfError {
 /// Decode a PDFDocEncoding byte string to Unicode codepoints.
 pub fn pdf_codepoints_of_pdfdocencoding(
   bytes : BytesView,
-) -> Array[Int] raise PdfError {
+) -> Array[Int] raise @core.PdfError {
   let codepoints : Array[Int] = Array::new(capacity=bytes.length())
   for byte in bytes {
     codepoints.push(pdf_codepoint_of_pdfdocencoding_byte(byte.to_int()))
@@ -101,7 +103,7 @@ pub fn pdf_pdfdocencoding_byte_of_codepoint(codepoint : Int) -> Byte? {
 /// `pdf_pdfdocstring_of_codepoints` for the PDF string policy fallback.
 pub fn pdf_pdfdocencoding_of_codepoints(
   codepoints : ArrayView[Int],
-) -> PdfBytes? {
+) -> @core.PdfBytes? {
   let output = Array::make(codepoints.length(), b'\x00')
   for index in 0..<codepoints.length() {
     match pdf_pdfdocencoding_byte_of_codepoint(codepoints[index]) {

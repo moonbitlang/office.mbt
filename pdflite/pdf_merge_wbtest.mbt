@@ -1,8 +1,8 @@
 ///|
 test "private merge helpers cover guards and membership branches" {
   let empty_version : Result[(Int, Int), Error] = try? pdf_merge_max_version([])
-  guard empty_version is Err(PdfError::PageTreeExpected) else {
-    fail("expected PdfError::PageTreeExpected")
+  guard empty_version is Err(@core.PdfError::PageTreeExpected) else {
+    fail("expected @core.PdfError::PageTreeExpected")
   }
 
   let key = pdf_merge_name("/ViewerPreferences")
@@ -120,7 +120,9 @@ test "private merge destination-name lookup preserves local and global precedenc
 test "private merge destination-name rewrite covers action and stream callsites" {
   let old_name = @ascii.encode("shared")
   let new_name = @ascii.encode("shared-f0")
-  let changes : ReadOnlyArray[(PdfBytes, PdfBytes)] = [(old_name, new_name)]
+  let changes : ReadOnlyArray[(@core.PdfBytes, @core.PdfBytes)] = [
+    (old_name, new_name),
+  ]
   let name_lookup = pdf_merge_destination_name_lookup(changes, changes)
   let empty_name_lookup = pdf_merge_destination_name_lookup([], [])
   let empty_catalog_lookup = pdf_merge_catalog_destination_name_lookup([], [])
@@ -154,7 +156,7 @@ test "private merge destination-name rewrite covers action and stream callsites"
   )
   let old_catalog_name = pdf_merge_name("/Shared")
   let new_catalog_name = pdf_merge_name("/Shared-f0")
-  let catalog_changes : ReadOnlyArray[(PdfName, PdfName)] = [
+  let catalog_changes : ReadOnlyArray[(@core.PdfName, @core.PdfName)] = [
     (old_catalog_name, new_catalog_name),
   ]
   let catalog_lookup = pdf_merge_catalog_destination_name_lookup(
@@ -289,15 +291,15 @@ test "private merge catalog and AcroForm helpers cover malformed roots" {
   let read_missing_root : Result[@syntax.PdfObject?, Error] = try? empty.pdf_merge_catalog_entry(
     key,
   )
-  guard read_missing_root is Err(PdfError::RootExpected) else {
-    fail("expected PdfError::RootExpected")
+  guard read_missing_root is Err(@core.PdfError::RootExpected) else {
+    fail("expected @core.PdfError::RootExpected")
   }
   let add_missing_root : Result[PdfDocument, Error] = try? empty.pdf_merge_add_catalog_entry(
     key,
     PdfInteger(1),
   )
-  guard add_missing_root is Err(PdfError::RootExpected) else {
-    fail("expected PdfError::RootExpected")
+  guard add_missing_root is Err(@core.PdfError::RootExpected) else {
+    fail("expected @core.PdfError::RootExpected")
   }
 
   let conflict = pdf_document_empty()
@@ -361,7 +363,7 @@ test "private merge catalog and AcroForm helpers cover malformed roots" {
   let unresolved_result : Result[@syntax.PdfObject?, Error] = try? unresolved.pdf_merge_catalog_entry(
     key,
   )
-  guard unresolved_result is Err(PdfError::RootExpected) else {
+  guard unresolved_result is Err(@core.PdfError::RootExpected) else {
     fail("expected unresolved trailer root")
   }
 

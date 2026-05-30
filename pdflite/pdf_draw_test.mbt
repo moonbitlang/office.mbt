@@ -1,13 +1,13 @@
 ///|
-fn draw_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn draw_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
-fn draw_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
+fn draw_bytes_for_test(values : ArrayView[Int]) -> @core.PdfBytes {
   let output : Array[Byte] = []
   for value in values {
-    output.push(try! @pdflite.pdf_byte_of_int(value))
+    output.push(try! @core.pdf_byte_of_int(value))
   }
   Bytes::from_array(output)
 }
@@ -531,7 +531,7 @@ test "pdf draw font selection reports missing fontpack" {
     state,
     PdfDrawFont("Missing", 12.0),
   )
-  guard result is Err(@pdflite.PdfError::SoftError(message)) else {
+  guard result is Err(@core.PdfError::SoftError(message)) else {
     fail("expected SoftError for missing fontpack")
   }
   @test.assert_eq(message, "FontPack not found: Missing")
@@ -544,7 +544,7 @@ test "pdf draw text reports missing selected fontpack" {
     state,
     PdfDrawText("hello"),
   )
-  guard result is Err(@pdflite.PdfError::SoftError(message)) else {
+  guard result is Err(@core.PdfError::SoftError(message)) else {
     fail("expected SoftError for unselected fontpack")
   }
   @test.assert_eq(message, "FontPack not selected")
@@ -557,7 +557,7 @@ test "pdf draw special text requires replacement context" {
     state,
     PdfDrawSpecialText("%Page"),
   )
-  guard result is Err(@pdflite.PdfError::SoftError(message)) else {
+  guard result is Err(@core.PdfError::SoftError(message)) else {
     fail("expected SoftError for missing special-text context")
   }
   @test.assert_eq(message, "Cpdfdraw: unsupported draw operation SpecialText")
@@ -670,7 +670,7 @@ test "pdf draw image use reports missing image name" {
     state,
     PdfDrawImage("missing"),
   )
-  guard result is Err(@pdflite.PdfError::SoftError(message)) else {
+  guard result is Err(@core.PdfError::SoftError(message)) else {
     fail("expected SoftError for missing image")
   }
   @test.assert_eq(message, "Image not found: missing")
@@ -786,7 +786,7 @@ test "pdf draw form use reports missing form name" {
     state,
     PdfDrawUse("missing"),
   )
-  guard result is Err(@pdflite.PdfError::SoftError(message)) else {
+  guard result is Err(@core.PdfError::SoftError(message)) else {
     fail("expected SoftError for missing form XObject")
   }
   @test.assert_eq(message, "Form XObject not found: missing")
@@ -1224,7 +1224,7 @@ test "pdf draw unsupported content op returns cpdf-style soft error" {
   let result : Result[Array[@content.PdfContentOp], Error] = try? @pdflite.pdf_drawop_to_content_ops(
     PdfDrawText("hello"),
   )
-  guard result is Err(@pdflite.PdfError::SoftError(message)) else {
+  guard result is Err(@core.PdfError::SoftError(message)) else {
     fail("expected SoftError for unsupported draw text rendering")
   }
   @test.assert_eq(message, "Cpdfdraw: unsupported draw operation Text")

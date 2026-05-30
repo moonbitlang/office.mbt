@@ -16,8 +16,8 @@ fn texttopdf_standard_pack_for_test() -> @pdflite.PdfFontPack {
 }
 
 ///|
-fn texttopdf_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn texttopdf_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -129,7 +129,7 @@ test "pdf_texttopdf_of_utf8_with_newlines rejects invalid charcodes" {
     10.0,
     @ascii.encode("A"),
   )
-  guard result is Err(@pdflite.PdfError::BadText) else {
+  guard result is Err(@core.PdfError::BadText) else {
     fail("expected invalid charcode to raise BadText")
   }
 }
@@ -312,7 +312,7 @@ test "pdf_ua_subformat_of_string parses CamlPDF PDF/UA names" {
   let unknown : Result[@pdflite.PdfUASubformat, Error] = try? @pdflite.pdf_ua_subformat_of_string(
     "PDF/A-1",
   )
-  guard unknown is Err(@pdflite.PdfError::BadText) else {
+  guard unknown is Err(@core.PdfError::BadText) else {
     fail("expected unknown PDF/UA subformat to raise BadText")
   }
 }
@@ -327,7 +327,7 @@ test "pdf_texttopdf_typeset requires title when subformat is requested" {
     @ascii.encode("Hi"),
     subformat=Some(PdfUA1),
   )
-  guard result is Err(@pdflite.PdfError::TitleExpected) else {
+  guard result is Err(@core.PdfError::TitleExpected) else {
     fail("expected PDF/UA text-to-PDF without title to raise TitleExpected")
   }
 }

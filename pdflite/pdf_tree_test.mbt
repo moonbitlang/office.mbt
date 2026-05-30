@@ -1,10 +1,10 @@
 ///|
-fn tree_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn tree_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
-fn tree_bytes_for_test(text : String) -> @pdflite.PdfBytes {
+fn tree_bytes_for_test(text : String) -> @core.PdfBytes {
   @ascii.encode(text)
 }
 
@@ -84,7 +84,7 @@ test "PdfDocument read trees reject malformed key types" {
 ///|
 test "PdfDocument build_name_tree creates readable child nodes" {
   let doc = @pdflite.pdf_document_empty()
-  let entries : Array[(@pdflite.PdfBytes, @syntax.PdfObject)] = [
+  let entries : Array[(@core.PdfBytes, @syntax.PdfObject)] = [
     for i in 0..<12 => (tree_bytes_for_test("k" + i.to_string()), PdfInteger(i))
   ]
   let tree = doc.build_name_tree(entries)
@@ -102,7 +102,7 @@ test "PdfDocument build_name_tree creates readable child nodes" {
 ///|
 test "PdfDocument build_name_tree creates nested child limits for large trees" {
   let doc = @pdflite.pdf_document_empty()
-  let entries : Array[(@pdflite.PdfBytes, @syntax.PdfObject)] = [
+  let entries : Array[(@core.PdfBytes, @syntax.PdfObject)] = [
     for i in 0..<101 => {
       (tree_bytes_for_test("k" + i.to_string()), PdfInteger(i))
     }
@@ -127,7 +127,7 @@ test "PdfDocument build_name_tree creates nested child limits for large trees" {
 ///|
 test "PdfDocument name_tree_lookup finds nested name entries by limits" {
   let doc = @pdflite.pdf_document_empty()
-  let entries : Array[(@pdflite.PdfBytes, @syntax.PdfObject)] = [
+  let entries : Array[(@core.PdfBytes, @syntax.PdfObject)] = [
     for i in 0..<12 => (tree_bytes_for_test("k" + i.to_string()), PdfInteger(i))
   ]
   let tree = doc.build_name_tree(entries)

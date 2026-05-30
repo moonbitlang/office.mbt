@@ -31,8 +31,8 @@ fn pdf_ocg_copy_ocg(ocg : @ocg.PdfOcg) -> @ocg.PdfOcg {
 
 ///|
 fn pdf_ocg_copy_order(
-  order : ArrayView[(PdfBytes?, Array[Int])],
-) -> Array[(PdfBytes?, Array[Int])] {
+  order : ArrayView[(@core.PdfBytes?, Array[Int])],
+) -> Array[(@core.PdfBytes?, Array[Int])] {
   [
     for item in order => (item.0, item.1.copy())
   ]

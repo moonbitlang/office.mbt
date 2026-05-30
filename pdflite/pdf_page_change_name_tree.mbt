@@ -4,10 +4,10 @@ fn PdfDocument::pdf_page_transform_name_tree_destination_entries(
   dests_tree : @syntax.PdfObject,
   matrices : ArrayView[(Int, @geometry.TransformMatrix)],
   page_reference_numbers : ArrayView[Int],
-) -> Array[(PdfBytes, @syntax.PdfObject)]? {
+) -> Array[(@core.PdfBytes, @syntax.PdfObject)]? {
   let lookup = pdf_page_matrix_lookup(matrices, page_reference_numbers)
   let entries = self.read_name_tree(dests_tree)
-  let output : Array[(PdfBytes, @syntax.PdfObject)] = Array::new(
+  let output : Array[(@core.PdfBytes, @syntax.PdfObject)] = Array::new(
     capacity=entries.length(),
   )
   let mut changed = false
@@ -40,7 +40,7 @@ fn PdfDocument::pdf_page_transform_destination_name_tree_for_matrices(
   self : PdfDocument,
   matrices : ArrayView[(Int, @geometry.TransformMatrix)],
   page_reference_numbers : ArrayView[Int],
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   match self.pdf_page_active_catalog() {
     Some((root_object, uses_trailer_root)) =>
       match root_object.lookup_immediate(pdf_page_names_key()) {

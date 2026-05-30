@@ -3,7 +3,7 @@ fn pdf_toc_push_font_text_runs(
   output : Array[PdfTypeElement],
   runs : ArrayView[(Int, Int, PdfFont)],
   font_size : Double,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   for run in pdf_fontpack_collate_runs(runs) {
     if run.length() > 0 {
       let (_, font_index, font) = run[0]
@@ -26,7 +26,7 @@ fn pdf_toc_width_of_font_text(
   font : PdfFont,
   font_size : Double,
   text : BytesView,
-) -> Double raise PdfError {
+) -> Double raise @core.PdfError {
   pdf_type_width_of_bytes(pdf_type_font_widths(font, font_size), text)
 }
 
@@ -34,7 +34,7 @@ fn pdf_toc_width_of_font_text(
 fn pdf_toc_dot_run(
   fontpack : PdfFontPack,
   font_size : Double,
-) -> Array[PdfTypeElement] raise PdfError {
+) -> Array[PdfTypeElement] raise @core.PdfError {
   pdf_toc_of_utf8(fontpack, font_size, pdf_toc_ascii("."))
 }
 
@@ -42,7 +42,7 @@ fn pdf_toc_dot_run(
 fn pdf_toc_ellipsis_run(
   fontpack : PdfFontPack,
   font_size : Double,
-) -> Array[PdfTypeElement] raise PdfError {
+) -> Array[PdfTypeElement] raise @core.PdfError {
   match fontpack.get_char(46) {
     Some((charcode, font_index, font)) => {
       guard charcode >= 0 && charcode < 256 else { raise BadText }
@@ -59,7 +59,7 @@ fn pdf_toc_ellipsis_run(
 ///|
 fn pdf_toc_last_text_width(
   elements : ArrayView[PdfTypeElement],
-) -> (Int, PdfTypeElement, Double)? raise PdfError {
+) -> (Int, PdfTypeElement, Double)? raise @core.PdfError {
   if elements.length() < 2 {
     None
   } else {
@@ -116,7 +116,9 @@ fn pdf_toc_append_optional_elements(
 }
 
 ///|
-fn pdf_toc_destination_contents(text : BytesView) -> String raise PdfError {
+fn pdf_toc_destination_contents(
+  text : BytesView,
+) -> String raise @core.PdfError {
   @utf8.decode(pdf_utf8_of_pdfdocstring(text)) catch {
     _ => raise BadText
   }
@@ -129,7 +131,7 @@ fn PdfDocument::pdf_toc_bookmark_label_runs(
   font_size : Double,
   labels : ArrayView[@label.PdfPageLabel],
   bookmark : @bookmark.PdfBookmark,
-) -> Array[PdfTypeElement] raise PdfError {
+) -> Array[PdfTypeElement] raise @core.PdfError {
   if bookmark.target == DestNull {
     []
   } else {
@@ -153,7 +155,7 @@ fn PdfDocument::pdf_toc_bookmark_elements(
   dotleader : Bool,
   process_struct_tree : Bool,
   bookmark : @bookmark.PdfBookmark,
-) -> Array[PdfTypeElement] raise PdfError {
+) -> Array[PdfTypeElement] raise @core.PdfError {
   let indent = bookmark.level.to_double() * font_size * 2.0
   let textruns = pdf_toc_of_pdfdocencoding(fontpack, font_size, bookmark.text)
   let labelruns = self.pdf_toc_bookmark_label_runs(

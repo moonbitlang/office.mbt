@@ -132,11 +132,11 @@ pub fn pdf_gpc_polygon_of_box(
 ///|
 /// Build a cpdf/GPC polygon from parallel hole flags and vertex arrays.
 ///
-/// Raises `PdfError::BadNumberArgument` when the inputs have different lengths.
+/// Raises `@core.PdfError::BadNumberArgument` when the inputs have different lengths.
 pub fn pdf_clip_make_polygon(
   holes : ArrayView[Bool],
   vertex_arrays : ArrayView[Array[PdfClipVertex]],
-) -> PdfClipPolygon raise PdfError {
+) -> PdfClipPolygon raise @core.PdfError {
   if holes.length() != vertex_arrays.length() {
     raise BadNumberArgument("pdf_clip_make_polygon: unequal length inputs")
   }
@@ -152,7 +152,7 @@ pub fn pdf_clip_make_polygon(
 pub fn pdf_make_gpcpolygon(
   holes : ArrayView[Bool],
   vertex_arrays : ArrayView[Array[PdfClipVertex]],
-) -> PdfClipPolygon raise PdfError {
+) -> PdfClipPolygon raise @core.PdfError {
   pdf_clip_make_polygon(holes, vertex_arrays)
 }
 
@@ -271,7 +271,7 @@ fn pdf_gpcml_polygon_text_length(polygon : PdfClipPolygon) -> Int {
 
 ///|
 /// Return the text cpdfclip's debug polygon printer writes to stdout.
-pub fn pdf_gpcml_printpolygon(polygon : PdfClipPolygon) -> PdfBytes {
+pub fn pdf_gpcml_printpolygon(polygon : PdfClipPolygon) -> @core.PdfBytes {
   let output = Array::make(pdf_gpcml_polygon_text_length(polygon), b'\x00')
   let mut position = pdf_gpcml_write_ascii(output, 0, "Contours: ")
   position = pdf_gpcml_write_ascii(

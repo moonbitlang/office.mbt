@@ -5,8 +5,8 @@ let pdf_page_marks_allowance : Double = 9.0
 fn PdfDocument::pdf_page_marks_rectangle(
   self : PdfDocument,
   page : @page.PdfPage,
-  box_name : PdfName,
-) -> @geometry.PdfRectangle? raise PdfError {
+  box_name : @core.PdfName,
+) -> @geometry.PdfRectangle? raise @core.PdfError {
   let object = if box_name == pdf_page_mediabox_key() {
     Some(page.mediabox)
   } else {
@@ -26,8 +26,8 @@ fn PdfDocument::pdf_page_show_box_ops(
   colour : (Double, Double, Double),
   dash_on : Double,
   dash_off : Double,
-  box_name : PdfName,
-) -> Array[@content.PdfContentOp] raise PdfError {
+  box_name : @core.PdfName,
+) -> Array[@content.PdfContentOp] raise @core.PdfError {
   match self.pdf_page_marks_rectangle(page, box_name) {
     Some(bounds) => {
       let dash = if dash_on == 0.0 && dash_off == 0.0 {
@@ -58,7 +58,7 @@ fn PdfDocument::pdf_page_show_box_ops(
 fn PdfDocument::pdf_page_show_boxes_ops(
   self : PdfDocument,
   page : @page.PdfPage,
-) -> Array[@content.PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise @core.PdfError {
   let ops : Array[@content.PdfContentOp] = [
     @content.pdf_content_begin_artifact(),
   ]
@@ -206,7 +206,7 @@ fn PdfDocument::pdf_page_trim_marks_page(
   self : PdfDocument,
   page : @page.PdfPage,
   fast : Bool,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   match
     (
       self.pdf_page_marks_rectangle(page, pdf_page_trimbox_key()),
@@ -228,7 +228,7 @@ pub fn PdfDocument::show_page_boxes(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   self.pdf_page_box_rewrite_pages(page_numbers, "show_page_boxes", (_, _, page) => {
     self.postpend_operators(page, self.pdf_page_show_boxes_ops(page), fast~)
   })
@@ -240,7 +240,7 @@ pub fn pdf_show_boxes(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.show_page_boxes(page_numbers, fast~)
 }
 
@@ -253,7 +253,7 @@ pub fn PdfDocument::trim_marks(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   self.pdf_page_box_rewrite_pages(page_numbers, "trim_marks", (_, _, page) => {
     self.pdf_page_trim_marks_page(page, fast)
   })
@@ -265,6 +265,6 @@ pub fn pdf_trim_marks(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
   fast? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.trim_marks(page_numbers, fast~)
 }

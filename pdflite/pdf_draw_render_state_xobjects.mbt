@@ -4,7 +4,7 @@ fn PdfDrawRenderState::register_xobject(
   source_name : String,
   prefix : String,
   object_number : Int,
-) -> PdfName {
+) -> @core.PdfName {
   let resource_name = self.fresh_name(prefix)
   for index in 0..<self.xobjects.length() {
     if self.xobjects[index].source_name == source_name {
@@ -21,7 +21,7 @@ fn PdfDrawRenderState::register_form_xobject(
   self : PdfDrawRenderState,
   source_name : String,
   object_number : Int,
-) -> PdfName {
+) -> @core.PdfName {
   let resource_name = self.fresh_name("/X")
   for index in 0..<self.form_xobjects.length() {
     if self.form_xobjects[index].source_name == source_name {

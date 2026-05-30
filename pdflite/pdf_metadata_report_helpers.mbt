@@ -51,7 +51,7 @@ fn pdf_metadata_bool_json(value : String) -> Json {
 ///|
 fn PdfDocument::pdf_metadata_info_encoded(
   self : PdfDocument,
-  key : PdfName,
+  key : @core.PdfName,
   encoding : @metadata.PdfMetadataEncoding,
 ) -> String {
   let info = match

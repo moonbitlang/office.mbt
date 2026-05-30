@@ -6,7 +6,7 @@
 /// documents before merging when object numbers may collide.
 pub fn pdf_optional_content_merge(
   documents : ArrayView[PdfDocument],
-) -> @ocg.PdfOptionalContent? raise PdfError {
+) -> @ocg.PdfOptionalContent? raise @core.PdfError {
   let contents : Array[@ocg.PdfOptionalContent] = []
   for document in documents {
     match document.read_optional_content_groups() {
@@ -21,14 +21,14 @@ pub fn pdf_optional_content_merge(
     let configs : Array[@ocg.PdfOcgConfig] = []
     let on : Array[Int] = []
     let off : Array[Int] = []
-    let order : Array[(PdfBytes?, Array[Int])] = []
+    let order : Array[(@core.PdfBytes?, Array[Int])] = []
     let radio_button_groups : Array[Array[Int]] = []
     let mut has_order = false
     let mut has_radio_button_groups = false
-    let mut name : PdfBytes? = None
-    let mut creator : PdfBytes? = None
+    let mut name : @core.PdfBytes? = None
+    let mut creator : @core.PdfBytes? = None
     let mut base_state : @ocg.PdfOcgState = OcgOn
-    let mut intent : Array[PdfName] = []
+    let mut intent : Array[@core.PdfName] = []
     let mut usage_applications : Array[@ocg.PdfOcgAppDict] = []
     let mut list_mode : @ocg.PdfOcgListMode = OcgAllPages
     let mut locked : Array[Int] = []

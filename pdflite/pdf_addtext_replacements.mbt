@@ -83,7 +83,7 @@ pub fn pdf_addtext_replacement_pairs(
 ///|
 fn pdf_addtext_pdfdocstring_to_string(
   bytes : BytesView,
-) -> String raise PdfError {
+) -> String raise @core.PdfError {
   @utf8.decode(pdf_utf8_of_pdfdocstring(bytes)) catch {
     _ => raise InvalidUTF8
   }
@@ -92,7 +92,7 @@ fn pdf_addtext_pdfdocstring_to_string(
 ///|
 fn pdf_addtext_page_label_prefix(
   label : @label.PdfPageLabel,
-) -> String raise PdfError {
+) -> String raise @core.PdfError {
   match label.label_prefix {
     Some(prefix) => pdf_addtext_pdfdocstring_to_string(prefix)
     None => ""
@@ -113,7 +113,7 @@ fn pdf_addtext_page_label_number(label : @label.PdfPageLabel) -> String {
 pub fn PdfDocument::addtext_page_label(
   self : PdfDocument,
   page_number : Int,
-) -> String raise PdfError {
+) -> String raise @core.PdfError {
   let labels = @label.pdf_page_label_complete(self.read_page_labels())
   match @label.pdf_page_label_of_page_number(page_number, labels) {
     Some(label) =>
@@ -128,14 +128,14 @@ pub fn PdfDocument::addtext_page_label(
 pub fn pdf_addtext_page_label(
   document : PdfDocument,
   page_number : Int,
-) -> String raise PdfError {
+) -> String raise @core.PdfError {
   document.addtext_page_label(page_number)
 }
 
 ///|
 fn pdf_addtext_bookmark_text(
   bookmark : @bookmark.PdfBookmark,
-) -> String raise PdfError {
+) -> String raise @core.PdfError {
   pdf_addtext_pdfdocstring_to_string(bookmark.text)
 }
 
@@ -149,7 +149,7 @@ pub fn PdfDocument::addtext_bookmark_for_page(
   bookmarks : ArrayView[@bookmark.PdfBookmark],
   level : Int,
   page_number : Int,
-) -> String raise PdfError {
+) -> String raise @core.PdfError {
   let before : Array[@bookmark.PdfBookmark] = Array::new(
     capacity=bookmarks.length(),
   )
@@ -204,7 +204,7 @@ pub fn pdf_addtext_bookmark_for_page(
   bookmarks : ArrayView[@bookmark.PdfBookmark],
   level : Int,
   page_number : Int,
-) -> String raise PdfError {
+) -> String raise @core.PdfError {
   document.addtext_bookmark_for_page(bookmarks, level, page_number)
 }
 
@@ -218,7 +218,7 @@ pub fn PdfDocument::addtext_replacement_values(
   filename : String,
   bates : Int,
   bates_pad : Int?,
-) -> @addtext.PdfAddTextReplacementValues raise PdfError {
+) -> @addtext.PdfAddTextReplacementValues raise @core.PdfError {
   let bookmark_values : Array[String] = Array::new(capacity=5)
   for level in 0..<5 {
     bookmark_values.push(
@@ -247,7 +247,7 @@ pub fn pdf_addtext_replacement_values(
   filename : String,
   bates : Int,
   bates_pad : Int?,
-) -> @addtext.PdfAddTextReplacementValues raise PdfError {
+) -> @addtext.PdfAddTextReplacementValues raise @core.PdfError {
   document.addtext_replacement_values(
     bookmarks, page_number, end_page, filename, bates, bates_pad,
   )
@@ -266,7 +266,7 @@ pub fn pdf_replace_pairs(
   bates : Int,
   bates_pad : Int?,
   page_number : Int,
-) -> Array[(String, () -> String)] raise PdfError {
+) -> Array[(String, () -> String)] raise @core.PdfError {
   let values = document.addtext_replacement_values(
     bookmarks, page_number, end_page, filename, bates, bates_pad,
   )

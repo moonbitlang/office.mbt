@@ -8,7 +8,7 @@ pub fn pdf_type_split_text(
   space_left : Double,
   widths : ArrayView[Double],
   text : BytesView,
-) -> (PdfBytes, Bool, PdfBytes) raise PdfError {
+) -> (@core.PdfBytes, Bool, @core.PdfBytes) raise @core.PdfError {
   let output = Array::make(text.length(), b'\x00')
   let mut output_position = 0
   let mut position = 0
@@ -61,7 +61,7 @@ pub fn pdf_type_layout(
   rmargin : Double,
   paper : @geometry.PaperSize,
   elements : ArrayView[PdfTypeElement],
-) -> Array[PdfTypeElement] raise PdfError {
+) -> Array[PdfTypeElement] raise @core.PdfError {
   ignore(rmargin)
   let xpos_max = @geometry.unit_points(paper.width(), paper.unit()) - lmargin
   let mut xpos = lmargin

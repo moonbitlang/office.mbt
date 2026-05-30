@@ -3,8 +3,8 @@ fn pdf_content_decode_inline_image_data(
   context : PdfContentParseContext,
   dictionary : @syntax.PdfObject,
   decode_parms : @syntax.PdfObject?,
-  encoded : PdfBytes,
-) -> (@syntax.PdfObject, PdfBytes) raise PdfError {
+  encoded : @core.PdfBytes,
+) -> (@syntax.PdfObject, @core.PdfBytes) raise @core.PdfError {
   let with_decode_parms = match decode_parms {
     Some(value) =>
       dictionary.add_dict_entry(pdf_content_inline_dp_name(), value)
@@ -34,7 +34,7 @@ fn pdf_content_decode_inline_image_data(
 ///|
 fn pdf_content_remove_inline_image_filter_metadata(
   dictionary : @syntax.PdfObject,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   dictionary
   .remove_dict_entry(pdf_content_inline_filter_name())
   .remove_dict_entry(pdf_content_inline_f_name())
@@ -46,11 +46,11 @@ fn pdf_content_remove_inline_image_filter_metadata(
 
 ///|
 fn pdf_content_read_sized_inline_image_data(
-  cursor : ByteCursor,
+  cursor : @core.ByteCursor,
   length : Int,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   match cursor.peek_byte() {
-    value if pdf_is_whitespace_byte(value) => cursor.nudge()
+    value if @core.pdf_is_whitespace_byte(value) => cursor.nudge()
     _ => ()
   }
   let data = cursor.read_view(length).to_owned() catch {

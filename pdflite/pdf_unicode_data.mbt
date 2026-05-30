@@ -20,7 +20,7 @@ fn pdf_unicode_data_field(
   source : BytesView,
   start : Int,
   end : Int,
-) -> String raise PdfError {
+) -> String raise @core.PdfError {
   @ascii.decode(source[start:end]) catch {
     _ => raise SoftError("malformed UnicodeData.txt row")
   }
@@ -31,7 +31,7 @@ fn pdf_unicode_data_parse_row(
   source : BytesView,
   start : Int,
   end : Int,
-) -> @unicodedata.PdfUnicodeDataEntry raise PdfError {
+) -> @unicodedata.PdfUnicodeDataEntry raise @core.PdfError {
   let fields : Array[String] = []
   let mut field_start = start
   let mut index = start
@@ -69,7 +69,7 @@ fn pdf_unicode_data_parse_row(
 /// Parse UnicodeData.txt bytes into cpdf-compatible rows.
 pub fn pdf_parse_unicode_data(
   source : BytesView,
-) -> Array[@unicodedata.PdfUnicodeDataEntry] raise PdfError {
+) -> Array[@unicodedata.PdfUnicodeDataEntry] raise @core.PdfError {
   let entries : Array[@unicodedata.PdfUnicodeDataEntry] = []
   let mut index = 0
   while index < source.length() {
@@ -93,13 +93,13 @@ pub fn pdf_parse_unicode_data(
 /// Decode cpdf's flate-compressed UnicodeData source bytes, then parse rows.
 pub fn pdf_parse_flate_unicode_data(
   source : BytesView,
-) -> Array[@unicodedata.PdfUnicodeDataEntry] raise PdfError {
+) -> Array[@unicodedata.PdfUnicodeDataEntry] raise @core.PdfError {
   pdf_parse_unicode_data(@flate.pdf_flate_decode_view(source))
 }
 
 ///|
 /// Return cpdf's parsed UnicodeData table, decoded and parsed on demand.
-pub fn pdf_unicode_data() -> Array[@unicodedata.PdfUnicodeDataEntry] raise PdfError {
+pub fn pdf_unicode_data() -> Array[@unicodedata.PdfUnicodeDataEntry] raise @core.PdfError {
   match pdf_unicode_data_cache.val {
     Some(entries) => entries
     None => {
@@ -112,7 +112,7 @@ pub fn pdf_unicode_data() -> Array[@unicodedata.PdfUnicodeDataEntry] raise PdfEr
 
 ///|
 /// Source-spelled compatibility wrapper for cpdfunicodedata's `unicodedata`.
-pub fn pdf_unicodedata() -> Array[@unicodedata.PdfUnicodeDataEntry] raise PdfError {
+pub fn pdf_unicodedata() -> Array[@unicodedata.PdfUnicodeDataEntry] raise @core.PdfError {
   pdf_unicode_data()
 }
 
@@ -144,7 +144,7 @@ fn pdf_unicode_data_codepoint(text : String) -> Int? {
 fn pdf_unicode_data_lookup_table() -> @hashmap.HashMap[
   Int,
   PdfUnicodeDataLookup,
-] raise PdfError {
+] raise @core.PdfError {
   match pdf_unicode_data_lookup_cache.val {
     Some(table) => table
     None => {
@@ -169,6 +169,6 @@ fn pdf_unicode_data_lookup_table() -> @hashmap.HashMap[
 ///|
 fn pdf_unicode_data_lookup(
   codepoint : Int,
-) -> PdfUnicodeDataLookup? raise PdfError {
+) -> PdfUnicodeDataLookup? raise @core.PdfError {
   pdf_unicode_data_lookup_table().get(codepoint)
 }

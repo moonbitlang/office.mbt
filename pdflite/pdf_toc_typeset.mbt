@@ -15,7 +15,7 @@ pub fn PdfDocument::toc_type_elements(
   bookmarks : ArrayView[@bookmark.PdfBookmark],
   page_width : Double,
   margin : Double,
-) -> Array[PdfTypeElement] raise PdfError {
+) -> Array[PdfTypeElement] raise @core.PdfError {
   let title_elements = pdf_toc_title_elements(
     fontpack, font_size, title, process_struct_tree,
   )
@@ -51,7 +51,7 @@ pub fn pdf_toc_type_elements(
   bookmarks : ArrayView[@bookmark.PdfBookmark],
   page_width : Double,
   margin : Double,
-) -> Array[PdfTypeElement] raise PdfError {
+) -> Array[PdfTypeElement] raise @core.PdfError {
   document.toc_type_elements(
     fontpack, font_size, title, dotleader, process_struct_tree, labels, bookmarks,
     page_width, margin,
@@ -74,7 +74,7 @@ pub fn PdfDocument::toc_typeset_pages(
   process_struct_tree : Bool,
   labels : ArrayView[@label.PdfPageLabel],
   bookmarks : ArrayView[@bookmark.PdfBookmark],
-) -> PdfTypeTypesetResult raise PdfError {
+) -> PdfTypeTypesetResult raise @core.PdfError {
   let source_pages = self.pages_of_pagetree()
   guard source_pages.length() > 0 else {
     raise SoftError("toc_typeset_pages: no pages")
@@ -130,7 +130,7 @@ pub fn pdf_toc_typeset_pages(
   process_struct_tree : Bool,
   labels : ArrayView[@label.PdfPageLabel],
   bookmarks : ArrayView[@bookmark.PdfBookmark],
-) -> PdfTypeTypesetResult raise PdfError {
+) -> PdfTypeTypesetResult raise @core.PdfError {
   document.toc_typeset_pages(
     fontpack, font_size, title, dotleader, process_struct_tree, labels, bookmarks,
   )

@@ -2,8 +2,8 @@
 // Public text behavior belongs in `_test.mbt` files.
 
 ///|
-fn glyph_codepoint_wbtest_name(text : String) -> PdfName {
-  pdf_name_of_bytes(@ascii.encode(text))
+fn glyph_codepoint_wbtest_name(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|

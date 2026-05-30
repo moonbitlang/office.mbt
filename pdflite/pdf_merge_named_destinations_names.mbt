@@ -1,5 +1,8 @@
 ///|
-fn pdf_merge_append_ascii_suffix(name : PdfBytes, suffix : String) -> PdfBytes {
+fn pdf_merge_append_ascii_suffix(
+  name : @core.PdfBytes,
+  suffix : String,
+) -> @core.PdfBytes {
   let suffix_bytes = @ascii.encode(suffix)
   let output = Array::make(name.length() + suffix_bytes.length(), b'\x00')
   let mut position = 0
@@ -15,20 +18,23 @@ fn pdf_merge_append_ascii_suffix(name : PdfBytes, suffix : String) -> PdfBytes {
 }
 
 ///|
-fn pdf_merge_append_name_suffix(name : PdfName, suffix : String) -> PdfName {
-  pdf_name_of_bytes(pdf_merge_append_ascii_suffix(name.bytes(), suffix))
+fn pdf_merge_append_name_suffix(
+  name : @core.PdfName,
+  suffix : String,
+) -> @core.PdfName {
+  @core.pdf_name_of_bytes(pdf_merge_append_ascii_suffix(name.bytes(), suffix))
 }
 
 ///|
 priv struct PdfMergeDestinationNameMap {
-  values : @hashmap.HashMap[Bytes, PdfBytes]
+  values : @hashmap.HashMap[Bytes, @core.PdfBytes]
 }
 
 ///|
 fn pdf_merge_destination_name_map(
-  changes : ArrayView[(PdfBytes, PdfBytes)],
+  changes : ArrayView[(@core.PdfBytes, @core.PdfBytes)],
 ) -> PdfMergeDestinationNameMap {
-  let values : @hashmap.HashMap[Bytes, PdfBytes] = HashMap([])
+  let values : @hashmap.HashMap[Bytes, @core.PdfBytes] = HashMap([])
   for change in changes {
     let (old_name, new_name) = change
     if !values.contains(old_name) {
@@ -41,8 +47,8 @@ fn pdf_merge_destination_name_map(
 ///|
 fn PdfMergeDestinationNameMap::changed(
   self : PdfMergeDestinationNameMap,
-  name : PdfBytes,
-) -> PdfBytes {
+  name : @core.PdfBytes,
+) -> @core.PdfBytes {
   match self.values.get(name) {
     Some(new_name) => new_name
     None => name
@@ -57,8 +63,8 @@ priv struct PdfMergeDestinationNameLookup {
 
 ///|
 fn pdf_merge_destination_name_lookup(
-  changes : ArrayView[(PdfBytes, PdfBytes)],
-  all_changes : ArrayView[(PdfBytes, PdfBytes)],
+  changes : ArrayView[(@core.PdfBytes, @core.PdfBytes)],
+  all_changes : ArrayView[(@core.PdfBytes, @core.PdfBytes)],
 ) -> PdfMergeDestinationNameLookup {
   {
     local_names: pdf_merge_destination_name_map(changes),
@@ -69,8 +75,8 @@ fn pdf_merge_destination_name_lookup(
 ///|
 fn PdfMergeDestinationNameLookup::changed(
   self : PdfMergeDestinationNameLookup,
-  name : PdfBytes,
-) -> PdfBytes {
+  name : @core.PdfBytes,
+) -> @core.PdfBytes {
   let changed = self.local_names.changed(name)
   if changed == name {
     self.global_names.changed(name)
@@ -81,14 +87,14 @@ fn PdfMergeDestinationNameLookup::changed(
 
 ///|
 priv struct PdfMergeCatalogDestinationNameMap {
-  values : @hashmap.HashMap[Bytes, PdfName]
+  values : @hashmap.HashMap[Bytes, @core.PdfName]
 }
 
 ///|
 fn pdf_merge_catalog_destination_name_map(
-  changes : ArrayView[(PdfName, PdfName)],
+  changes : ArrayView[(@core.PdfName, @core.PdfName)],
 ) -> PdfMergeCatalogDestinationNameMap {
-  let values : @hashmap.HashMap[Bytes, PdfName] = HashMap([])
+  let values : @hashmap.HashMap[Bytes, @core.PdfName] = HashMap([])
   for change in changes {
     let (old_name, new_name) = change
     let key = old_name.bytes()
@@ -102,8 +108,8 @@ fn pdf_merge_catalog_destination_name_map(
 ///|
 fn PdfMergeCatalogDestinationNameMap::changed(
   self : PdfMergeCatalogDestinationNameMap,
-  name : PdfName,
-) -> PdfName {
+  name : @core.PdfName,
+) -> @core.PdfName {
   match self.values.get(name.bytes()) {
     Some(new_name) => new_name
     None => name
@@ -118,8 +124,8 @@ priv struct PdfMergeCatalogDestinationNameLookup {
 
 ///|
 fn pdf_merge_catalog_destination_name_lookup(
-  changes : ArrayView[(PdfName, PdfName)],
-  all_changes : ArrayView[(PdfName, PdfName)],
+  changes : ArrayView[(@core.PdfName, @core.PdfName)],
+  all_changes : ArrayView[(@core.PdfName, @core.PdfName)],
 ) -> PdfMergeCatalogDestinationNameLookup {
   {
     local_names: pdf_merge_catalog_destination_name_map(changes),
@@ -130,8 +136,8 @@ fn pdf_merge_catalog_destination_name_lookup(
 ///|
 fn PdfMergeCatalogDestinationNameLookup::changed(
   self : PdfMergeCatalogDestinationNameLookup,
-  name : PdfName,
-) -> PdfName {
+  name : @core.PdfName,
+) -> @core.PdfName {
   let changed = self.local_names.changed(name)
   if changed == name {
     self.global_names.changed(name)
@@ -142,7 +148,7 @@ fn PdfMergeCatalogDestinationNameLookup::changed(
 
 ///|
 fn pdf_merge_destination_name_changes_are_unique(
-  changes_by_document : ArrayView[Array[(PdfBytes, PdfBytes)]],
+  changes_by_document : ArrayView[Array[(@core.PdfBytes, @core.PdfBytes)]],
 ) -> Bool {
   let seen = pdf_merge_bytes_set()
   for changes in changes_by_document {
@@ -159,7 +165,7 @@ fn pdf_merge_destination_name_changes_are_unique(
 
 ///|
 fn pdf_merge_catalog_destination_name_changes_are_unique(
-  changes_by_document : ArrayView[Array[(PdfName, PdfName)]],
+  changes_by_document : ArrayView[Array[(@core.PdfName, @core.PdfName)]],
 ) -> Bool {
   let seen = pdf_merge_name_set()
   for changes in changes_by_document {
@@ -177,8 +183,8 @@ fn pdf_merge_catalog_destination_name_changes_are_unique(
 ///|
 fn pdf_merge_destination_name_lists(
   documents : ArrayView[PdfDocument],
-) -> Array[Array[PdfBytes]] raise PdfError {
-  let output : Array[Array[PdfBytes]] = []
+) -> Array[Array[@core.PdfBytes]] raise @core.PdfError {
+  let output : Array[Array[@core.PdfBytes]] = []
   for document in documents {
     output.push(
       [
@@ -194,7 +200,7 @@ fn pdf_merge_destination_name_lists(
 ///|
 fn PdfDocument::pdf_merge_catalog_destination_name_entries(
   self : PdfDocument,
-) -> Array[PdfName] raise PdfError {
+) -> Array[@core.PdfName] raise @core.PdfError {
   match self.pdf_merge_catalog_entry(pdf_merge_dests_key()) {
     Some(PdfDictionary(entries)) => [ for entry in entries => entry.0 ]
     _ => []
@@ -204,8 +210,8 @@ fn PdfDocument::pdf_merge_catalog_destination_name_entries(
 ///|
 fn pdf_merge_catalog_destination_name_lists(
   documents : ArrayView[PdfDocument],
-) -> Array[Array[PdfName]] raise PdfError {
-  let output : Array[Array[PdfName]] = []
+) -> Array[Array[@core.PdfName]] raise @core.PdfError {
+  let output : Array[Array[@core.PdfName]] = []
   for document in documents {
     output.push(document.pdf_merge_catalog_destination_name_entries())
   }
@@ -215,9 +221,9 @@ fn pdf_merge_catalog_destination_name_lists(
 ///|
 fn pdf_merge_destination_name_changes(
   documents : ArrayView[PdfDocument],
-) -> Array[Array[(PdfBytes, PdfBytes)]] raise PdfError {
+) -> Array[Array[(@core.PdfBytes, @core.PdfBytes)]] raise @core.PdfError {
   let names_by_document = pdf_merge_destination_name_lists(documents)
-  let identity : Array[Array[(PdfBytes, PdfBytes)]] = [
+  let identity : Array[Array[(@core.PdfBytes, @core.PdfBytes)]] = [
     for names in names_by_document => [ for name in names => (name, name) ]
   ]
   if pdf_merge_destination_name_changes_are_unique(identity) {
@@ -226,11 +232,11 @@ fn pdf_merge_destination_name_changes(
     ]
   } else {
     let mut suffix_start = 0
-    let mut changes : Array[Array[(PdfBytes, PdfBytes)]] = identity
+    let mut changes : Array[Array[(@core.PdfBytes, @core.PdfBytes)]] = identity
     while !pdf_merge_destination_name_changes_are_unique(changes) {
       changes = []
       for i in 0..<names_by_document.length() {
-        let document_changes : Array[(PdfBytes, PdfBytes)] = []
+        let document_changes : Array[(@core.PdfBytes, @core.PdfBytes)] = []
         for name in names_by_document[i] {
           document_changes.push(
             (
@@ -253,9 +259,9 @@ fn pdf_merge_destination_name_changes(
 ///|
 fn pdf_merge_catalog_destination_name_changes(
   documents : ArrayView[PdfDocument],
-) -> Array[Array[(PdfName, PdfName)]] raise PdfError {
+) -> Array[Array[(@core.PdfName, @core.PdfName)]] raise @core.PdfError {
   let names_by_document = pdf_merge_catalog_destination_name_lists(documents)
-  let identity : Array[Array[(PdfName, PdfName)]] = [
+  let identity : Array[Array[(@core.PdfName, @core.PdfName)]] = [
     for names in names_by_document => [ for name in names => (name, name) ]
   ]
   if pdf_merge_catalog_destination_name_changes_are_unique(identity) {
@@ -264,11 +270,11 @@ fn pdf_merge_catalog_destination_name_changes(
     ]
   } else {
     let mut suffix_start = 0
-    let mut changes : Array[Array[(PdfName, PdfName)]] = identity
+    let mut changes : Array[Array[(@core.PdfName, @core.PdfName)]] = identity
     while !pdf_merge_catalog_destination_name_changes_are_unique(changes) {
       changes = []
       for i in 0..<names_by_document.length() {
-        let document_changes : Array[(PdfName, PdfName)] = []
+        let document_changes : Array[(@core.PdfName, @core.PdfName)] = []
         for name in names_by_document[i] {
           document_changes.push(
             (
@@ -290,9 +296,9 @@ fn pdf_merge_catalog_destination_name_changes(
 
 ///|
 fn pdf_merge_all_destination_name_changes(
-  changes : ArrayView[Array[(PdfBytes, PdfBytes)]],
-) -> Array[(PdfBytes, PdfBytes)] {
-  let output : Array[(PdfBytes, PdfBytes)] = []
+  changes : ArrayView[Array[(@core.PdfBytes, @core.PdfBytes)]],
+) -> Array[(@core.PdfBytes, @core.PdfBytes)] {
+  let output : Array[(@core.PdfBytes, @core.PdfBytes)] = []
   for document_changes in changes {
     for change in document_changes {
       output.push(change)
@@ -303,9 +309,9 @@ fn pdf_merge_all_destination_name_changes(
 
 ///|
 fn pdf_merge_all_catalog_destination_name_changes(
-  changes : ArrayView[Array[(PdfName, PdfName)]],
-) -> Array[(PdfName, PdfName)] {
-  let output : Array[(PdfName, PdfName)] = []
+  changes : ArrayView[Array[(@core.PdfName, @core.PdfName)]],
+) -> Array[(@core.PdfName, @core.PdfName)] {
+  let output : Array[(@core.PdfName, @core.PdfName)] = []
   for document_changes in changes {
     for change in document_changes {
       output.push(change)

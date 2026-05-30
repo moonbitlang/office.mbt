@@ -16,7 +16,7 @@ fn PdfDocument::pdf_text_font_is_embedded(
 fn PdfDocument::pdf_text_font_is_symbolic(
   self : PdfDocument,
   font : @syntax.PdfObject,
-) -> Bool raise PdfError {
+) -> Bool raise @core.PdfError {
   match self.lookup_direct(pdf_text_font_descriptor_key_name, font) {
     Some(descriptor) =>
       match self.lookup_direct(pdf_text_flags_key_name, descriptor) {
@@ -31,7 +31,7 @@ fn PdfDocument::pdf_text_font_is_symbolic(
 fn PdfDocument::pdf_text_default_base_encoding(
   self : PdfDocument,
   font : @syntax.PdfObject,
-) -> PdfEncoding raise PdfError {
+) -> PdfEncoding raise @core.PdfError {
   if self.pdf_text_font_is_embedded(font) ||
     self.pdf_text_font_is_symbolic(font) {
     PdfImplicitInFontFile
@@ -45,7 +45,7 @@ fn PdfDocument::read_encoding_base(
   self : PdfDocument,
   encoding_dictionary : @syntax.PdfObject,
   font : @syntax.PdfObject,
-) -> PdfEncoding raise PdfError {
+) -> PdfEncoding raise @core.PdfError {
   match
     self.lookup_direct(pdf_text_base_encoding_key_name, encoding_dictionary) {
     Some(PdfNameObject(name)) =>
@@ -62,7 +62,7 @@ fn PdfDocument::read_encoding_base(
 fn PdfDocument::read_encoding_differences(
   self : PdfDocument,
   differences : @syntax.PdfObject,
-) -> Array[PdfEncodingDifference] raise PdfError {
+) -> Array[PdfEncodingDifference] raise @core.PdfError {
   match self.direct(differences) {
     PdfArray(values) => {
       let output : Array[PdfEncodingDifference] = Array::new(
@@ -90,12 +90,12 @@ fn PdfDocument::read_encoding_differences(
 }
 
 ///|
-fn pdf_text_is_true_type_name(name : PdfName) -> Bool {
+fn pdf_text_is_true_type_name(name : @core.PdfName) -> Bool {
   name == pdf_text_true_type_name_value
 }
 
 ///|
-fn pdf_text_is_simple_font_subtype_name(name : PdfName) -> Bool {
+fn pdf_text_is_simple_font_subtype_name(name : @core.PdfName) -> Bool {
   name == pdf_text_type1_name ||
   name == pdf_text_mmtype1_name ||
   name == pdf_text_type3_name ||
@@ -103,7 +103,7 @@ fn pdf_text_is_simple_font_subtype_name(name : PdfName) -> Bool {
 }
 
 ///|
-fn pdf_text_is_standard14_subtype_name(name : PdfName) -> Bool {
+fn pdf_text_is_standard14_subtype_name(name : @core.PdfName) -> Bool {
   name == pdf_text_type1_name || name == pdf_text_true_type_name_value
 }
 
@@ -117,7 +117,7 @@ fn pdf_text_is_standard14_subtype_name(name : PdfName) -> Bool {
 pub fn PdfDocument::read_encoding(
   self : PdfDocument,
   font : @syntax.PdfObject,
-) -> PdfEncoding raise PdfError {
+) -> PdfEncoding raise @core.PdfError {
   match self.lookup_direct(pdf_text_encoding_key_name, font) {
     Some(PdfNameObject(name)) =>
       match pdf_encoding_of_name(name) {

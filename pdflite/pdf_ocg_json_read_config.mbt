@@ -1,7 +1,7 @@
 ///|
 fn pdf_ocg_read_json_order_item(
   json : Json,
-) -> (PdfBytes?, Array[Int]) raise PdfError {
+) -> (@core.PdfBytes?, Array[Int]) raise @core.PdfError {
   match json {
     Object(entries) if entries.length() == 2 => {
       let name = pdf_ocg_read_json_optional_pdf_string(
@@ -25,11 +25,11 @@ fn pdf_ocg_read_json_order_item(
 ///|
 fn pdf_ocg_read_json_order(
   json : Json,
-) -> Array[(PdfBytes?, Array[Int])]? raise PdfError {
+) -> Array[(@core.PdfBytes?, Array[Int])]? raise @core.PdfError {
   match json {
     Null => None
     Array(values) => {
-      let output : Array[(PdfBytes?, Array[Int])] = []
+      let output : Array[(@core.PdfBytes?, Array[Int])] = []
       for value in values {
         output.push(pdf_ocg_read_json_order_item(value))
       }
@@ -42,7 +42,7 @@ fn pdf_ocg_read_json_order(
 ///|
 fn pdf_ocg_read_json_radio_groups(
   json : Json,
-) -> Array[Array[Int]]? raise PdfError {
+) -> Array[Array[Int]]? raise @core.PdfError {
   match json {
     Null => None
     Array(values) => {
@@ -59,7 +59,9 @@ fn pdf_ocg_read_json_radio_groups(
 }
 
 ///|
-fn pdf_ocg_read_json_appdict(json : Json) -> @ocg.PdfOcgAppDict? raise PdfError {
+fn pdf_ocg_read_json_appdict(
+  json : Json,
+) -> @ocg.PdfOcgAppDict? raise @core.PdfError {
   match json {
     Null => None
     Object(entries) if entries.length() == 3 => {
@@ -86,7 +88,7 @@ fn pdf_ocg_read_json_appdict(json : Json) -> @ocg.PdfOcgAppDict? raise PdfError 
 ///|
 fn pdf_ocg_read_json_appdicts(
   json : Json,
-) -> Array[@ocg.PdfOcgAppDict] raise PdfError {
+) -> Array[@ocg.PdfOcgAppDict] raise @core.PdfError {
   match json {
     Array(values) => {
       let output : Array[@ocg.PdfOcgAppDict] = []
@@ -106,7 +108,9 @@ fn pdf_ocg_read_json_appdicts(
 }
 
 ///|
-fn pdf_ocg_read_json_config(json : Json) -> @ocg.PdfOcgConfig raise PdfError {
+fn pdf_ocg_read_json_config(
+  json : Json,
+) -> @ocg.PdfOcgConfig raise @core.PdfError {
   match json {
     Object(entries) if entries.length() == 11 => {
       let n = pdf_ocg_read_json_field(

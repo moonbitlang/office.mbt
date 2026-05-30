@@ -1,6 +1,6 @@
 ///|
-fn content_operator_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn content_operator_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -328,7 +328,7 @@ test "cpdfcontent operator state applies resource font lookup and cache" {
     content_operator_name_for_test("/Bad"),
     12.0,
   )
-  guard bad_font is Err(@pdflite.PdfError::FontTypeExpected) else {
+  guard bad_font is Err(@core.PdfError::FontTypeExpected) else {
     fail("expected FontTypeExpected for malformed resource font")
   }
 }
@@ -975,8 +975,7 @@ test "cpdfcontent operator state reads image entries from XObject resources" {
     @syntax.pdf_dictionary([]),
     image_name,
   )
-  guard missing_resources
-    is Err(@pdflite.PdfError::SoftError("xobject not found")) else {
+  guard missing_resources is Err(@core.PdfError::SoftError("xobject not found")) else {
     fail("expected missing /XObject resource error")
   }
   let missing_name : Result[@pdflite.PdfContentJsonEntry?, Error] = try? doc.content_image_entry_from_resources(
@@ -984,21 +983,21 @@ test "cpdfcontent operator state reads image entries from XObject resources" {
     resources,
     content_operator_name_for_test("/Missing"),
   )
-  guard missing_name is Err(@pdflite.PdfError::SoftError("Unknown xobject")) else {
+  guard missing_name is Err(@core.PdfError::SoftError("Unknown xobject")) else {
     fail("expected missing named XObject error")
   }
   let unknown_kind : Result[@pdflite.PdfContentJsonEntry?, Error] = try? doc.content_image_entry_from_resources(
     state, resources, unknown_name,
   )
   guard unknown_kind
-    is Err(@pdflite.PdfError::SoftError("Unknown kind of xobject")) else {
+    is Err(@core.PdfError::SoftError("Unknown kind of xobject")) else {
     fail("expected unknown XObject kind error")
   }
   let missing_subtype : Result[@pdflite.PdfContentJsonEntry?, Error] = try? doc.content_image_entry_from_resources(
     state, resources, no_subtype_name,
   )
   guard missing_subtype
-    is Err(@pdflite.PdfError::SoftError("Unknown kind of xobject")) else {
+    is Err(@core.PdfError::SoftError("Unknown kind of xobject")) else {
     fail("expected missing XObject subtype error")
   }
 }
@@ -1150,7 +1149,7 @@ test "cpdfcontent operator state prepares Form XObject resources" {
   let bad_matrix_result : Result[@pdflite.PdfContentOperatorState?, Error] = try? doc.content_form_xobject_enter_state(
     state, resources, bad_matrix_name,
   )
-  guard bad_matrix_result is Err(@pdflite.PdfError::MatrixMalformed) else {
+  guard bad_matrix_result is Err(@core.PdfError::MatrixMalformed) else {
     fail("expected malformed Form Matrix error")
   }
 }

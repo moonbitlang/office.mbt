@@ -1,11 +1,11 @@
 ///|
-fn parser_name_for_test(values : ArrayView[Int]) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(try! @pdflite.pdf_bytes_of_int_array(values))
+fn parser_name_for_test(values : ArrayView[Int]) -> @core.PdfName {
+  @core.pdf_name_of_bytes(try! @core.pdf_bytes_of_int_array(values))
 }
 
 ///|
-fn parser_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
-  try! @pdflite.pdf_bytes_of_int_array(values)
+fn parser_bytes_for_test(values : ArrayView[Int]) -> @core.PdfBytes {
+  try! @core.pdf_bytes_of_int_array(values)
 }
 
 ///|
@@ -112,15 +112,15 @@ test "@syntax.pdf_parse_single_lexeme_object reports non-single and malformed in
       LexInt(2),
     ],
   )
-  guard many is Err(@pdflite.PdfError::ParseSingleObjectExpected) else {
-    fail("expected @pdflite.PdfError::ParseSingleObjectExpected")
+  guard many is Err(@core.PdfError::ParseSingleObjectExpected) else {
+    fail("expected @core.PdfError::ParseSingleObjectExpected")
   }
   let bad : Result[Array[@syntax.PdfObject], Error] = try? @syntax.pdf_parse_lexemes([
       LexRightSquare,
     ],
   )
-  guard bad is Err(@pdflite.PdfError::ParseObjectExpected) else {
-    fail("expected @pdflite.PdfError::ParseObjectExpected")
+  guard bad is Err(@core.PdfError::ParseObjectExpected) else {
+    fail("expected @core.PdfError::ParseObjectExpected")
   }
 }
 
@@ -204,8 +204,8 @@ test "@syntax.pdf_parse_indirect_object_lexemes reports malformed indirect objec
       LexInt(0),
     ],
   )
-  guard too_short is Err(@pdflite.PdfError::ParseIndirectObjectExpected) else {
-    fail("expected @pdflite.PdfError::ParseIndirectObjectExpected")
+  guard too_short is Err(@core.PdfError::ParseIndirectObjectExpected) else {
+    fail("expected @core.PdfError::ParseIndirectObjectExpected")
   }
   let missing_header : Result[@syntax.PdfParsedIndirectObject, Error] = try? @syntax.pdf_parse_indirect_object_lexemes([
       LexInt(7),
@@ -213,8 +213,8 @@ test "@syntax.pdf_parse_indirect_object_lexemes reports malformed indirect objec
       LexNull,
     ],
   )
-  guard missing_header is Err(@pdflite.PdfError::ParseIndirectObjectExpected) else {
-    fail("expected @pdflite.PdfError::ParseIndirectObjectExpected")
+  guard missing_header is Err(@core.PdfError::ParseIndirectObjectExpected) else {
+    fail("expected @core.PdfError::ParseIndirectObjectExpected")
   }
   @test.assert_eq(
     try! @syntax.pdf_parse_indirect_object_lexemes([
@@ -232,8 +232,8 @@ test "@syntax.pdf_parse_indirect_object_lexemes reports malformed indirect objec
       LexComment(parser_bytes_for_test([37])),
     ],
   )
-  guard missing_object is Err(@pdflite.PdfError::ParseObjectExpected) else {
-    fail("expected @pdflite.PdfError::ParseObjectExpected")
+  guard missing_object is Err(@core.PdfError::ParseObjectExpected) else {
+    fail("expected @core.PdfError::ParseObjectExpected")
   }
 }
 

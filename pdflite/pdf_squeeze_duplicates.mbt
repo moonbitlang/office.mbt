@@ -7,7 +7,7 @@ priv struct PdfSqueezeDuplicateCandidate {
 ///|
 fn pdf_squeeze_materialized_object(
   object : @syntax.PdfObject,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   match object {
     PdfStreamObject(stream) =>
       PdfStreamObject({
@@ -22,7 +22,7 @@ fn pdf_squeeze_materialized_object(
 fn pdf_squeeze_duplicate_candidate(
   number : Int,
   object : @syntax.PdfObject,
-) -> PdfSqueezeDuplicateCandidate raise PdfError {
+) -> PdfSqueezeDuplicateCandidate raise @core.PdfError {
   { number, object: pdf_squeeze_materialized_object(object) }
 }
 
@@ -44,7 +44,7 @@ fn PdfDocument::pdf_squeeze_skip_duplicate_candidate(
 ///|
 fn PdfDocument::pdf_squeeze_duplicate_object_changes(
   self : PdfDocument,
-) -> Array[(Int, Int)] raise PdfError {
+) -> Array[(Int, Int)] raise @core.PdfError {
   let entries = self.parsed_object_entries()
   let unique : Array[PdfSqueezeDuplicateCandidate] = Array::new(
     capacity=entries.length(),
@@ -91,7 +91,7 @@ fn PdfDocument::pdf_squeeze_apply_duplicate_changes(
 ///|
 fn PdfDocument::pdf_squeeze_prune_duplicate_objects_once(
   self : PdfDocument,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.pdf_squeeze_apply_duplicate_changes(
     self.pdf_squeeze_duplicate_object_changes(),
   )

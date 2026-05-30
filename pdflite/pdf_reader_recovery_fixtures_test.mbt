@@ -1,6 +1,6 @@
 ///|
 #warnings("-unused_value")
-fn reader_linearized_classic_pdf(value : String) -> @pdflite.PdfBytes {
+fn reader_linearized_classic_pdf(value : String) -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.5\n")
   let linearized_offset = reader_push_indirect_object(
@@ -24,7 +24,7 @@ fn reader_linearized_classic_pdf(value : String) -> @pdflite.PdfBytes {
 
 ///|
 #warnings("-unused_value")
-fn reader_linearized_classic_pdf_with_prev_xref() -> @pdflite.PdfBytes {
+fn reader_linearized_classic_pdf_with_prev_xref() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.5\n")
   let linearized_offset = reader_push_indirect_object(
@@ -55,7 +55,7 @@ fn reader_linearized_classic_pdf_with_prev_xref() -> @pdflite.PdfBytes {
 
 ///|
 #warnings("-unused_value")
-fn reader_classic_pdf_with_leading_junk() -> @pdflite.PdfBytes {
+fn reader_classic_pdf_with_leading_junk() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\nnotobject\n")
   let catalog_offset = reader_push_indirect_object(
@@ -70,7 +70,7 @@ fn reader_classic_pdf_with_leading_junk() -> @pdflite.PdfBytes {
 
 ///|
 #warnings("-unused_value")
-fn reader_classic_pdf_with_page_tree_objects_missing_from_xref() -> @pdflite.PdfBytes {
+fn reader_classic_pdf_with_page_tree_objects_missing_from_xref() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   let catalog_offset = reader_push_indirect_object(
@@ -97,7 +97,7 @@ fn reader_classic_pdf_with_page_tree_objects_missing_from_xref() -> @pdflite.Pdf
 
 ///|
 #warnings("-unused_value")
-fn reader_classic_pdf_with_catalog_missing_from_xref() -> @pdflite.PdfBytes {
+fn reader_classic_pdf_with_catalog_missing_from_xref() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   ignore(
@@ -125,7 +125,7 @@ fn reader_classic_pdf_with_catalog_missing_from_xref() -> @pdflite.PdfBytes {
 
 ///|
 #warnings("-unused_value")
-fn reader_malformed_pdf_without_startxref() -> @pdflite.PdfBytes {
+fn reader_malformed_pdf_without_startxref() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   ignore(reader_push_indirect_object(output, 1, 0, "<< /Type /Catalog >>"))
@@ -139,7 +139,7 @@ fn reader_malformed_pdf_without_startxref() -> @pdflite.PdfBytes {
 
 ///|
 #warnings("-unused_value")
-fn reader_malformed_pdf_with_glued_reconstruction_trailers() -> @pdflite.PdfBytes {
+fn reader_malformed_pdf_with_glued_reconstruction_trailers() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   ignore(reader_push_indirect_object(output, 1, 0, "<< /Type /Catalog >>"))
@@ -150,7 +150,7 @@ fn reader_malformed_pdf_with_glued_reconstruction_trailers() -> @pdflite.PdfByte
 
 ///|
 #warnings("-unused_value")
-fn reader_malformed_pdf_with_endobj_text_in_catalog_string() -> @pdflite.PdfBytes {
+fn reader_malformed_pdf_with_endobj_text_in_catalog_string() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   ignore(
@@ -164,7 +164,7 @@ fn reader_malformed_pdf_with_endobj_text_in_catalog_string() -> @pdflite.PdfByte
 
 ///|
 #warnings("-unused_value")
-fn reader_malformed_pdf_with_bad_startxref() -> @pdflite.PdfBytes {
+fn reader_malformed_pdf_with_bad_startxref() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   ignore(reader_push_indirect_object(output, 1, 0, "<< /Type /Catalog >>"))
@@ -175,7 +175,7 @@ fn reader_malformed_pdf_with_bad_startxref() -> @pdflite.PdfBytes {
 
 ///|
 #warnings("-unused_value")
-fn reader_classic_xref_deleted_payload_bad_startxref() -> @pdflite.PdfBytes {
+fn reader_classic_xref_deleted_payload_bad_startxref() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   let catalog_offset = reader_push_indirect_object(
@@ -192,7 +192,7 @@ fn reader_classic_xref_deleted_payload_bad_startxref() -> @pdflite.PdfBytes {
 
 ///|
 #warnings("-unused_value")
-fn reader_classic_xref_deleted_payload_with_later_update_bad_startxref() -> @pdflite.PdfBytes {
+fn reader_classic_xref_deleted_payload_with_later_update_bad_startxref() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   let catalog_offset = reader_push_indirect_object(
@@ -210,7 +210,7 @@ fn reader_classic_xref_deleted_payload_with_later_update_bad_startxref() -> @pdf
 
 ///|
 #warnings("-unused_value")
-fn reader_malformed_pdf_with_malformed_startxref_number() -> @pdflite.PdfBytes {
+fn reader_malformed_pdf_with_malformed_startxref_number() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   ignore(reader_push_indirect_object(output, 1, 0, "<< /Type /Catalog >>"))
@@ -221,7 +221,7 @@ fn reader_malformed_pdf_with_malformed_startxref_number() -> @pdflite.PdfBytes {
 
 ///|
 #warnings("-unused_value")
-fn reader_malformed_pdf_with_overflow_startxref_number() -> @pdflite.PdfBytes {
+fn reader_malformed_pdf_with_overflow_startxref_number() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   ignore(reader_push_indirect_object(output, 1, 0, "<< /Type /Catalog >>"))
@@ -232,7 +232,7 @@ fn reader_malformed_pdf_with_overflow_startxref_number() -> @pdflite.PdfBytes {
 
 ///|
 #warnings("-unused_value")
-fn reader_malformed_pdf_with_out_of_range_startxref() -> @pdflite.PdfBytes {
+fn reader_malformed_pdf_with_out_of_range_startxref() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   ignore(reader_push_indirect_object(output, 1, 0, "<< /Type /Catalog >>"))
@@ -243,7 +243,7 @@ fn reader_malformed_pdf_with_out_of_range_startxref() -> @pdflite.PdfBytes {
 
 ///|
 #warnings("-unused_value")
-fn reader_malformed_pdf_with_bad_xref_entry() -> @pdflite.PdfBytes {
+fn reader_malformed_pdf_with_bad_xref_entry() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   ignore(reader_push_indirect_object(output, 1, 0, "<< /Type /Catalog >>"))
@@ -257,7 +257,7 @@ fn reader_malformed_pdf_with_bad_xref_entry() -> @pdflite.PdfBytes {
 
 ///|
 #warnings("-unused_value")
-fn reader_malformed_pdf_with_bad_xref_subsection_count() -> @pdflite.PdfBytes {
+fn reader_malformed_pdf_with_bad_xref_subsection_count() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   ignore(reader_push_indirect_object(output, 1, 0, "<< /Type /Catalog >>"))
@@ -271,7 +271,7 @@ fn reader_malformed_pdf_with_bad_xref_subsection_count() -> @pdflite.PdfBytes {
 
 ///|
 #warnings("-unused_value")
-fn reader_malformed_pdf_with_bad_trailer_object() -> @pdflite.PdfBytes {
+fn reader_malformed_pdf_with_bad_trailer_object() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   let catalog_offset = reader_push_indirect_object(
@@ -289,7 +289,7 @@ fn reader_malformed_pdf_with_bad_trailer_object() -> @pdflite.PdfBytes {
 
 ///|
 #warnings("-unused_value")
-fn reader_malformed_pdf_with_missing_root_trailer() -> @pdflite.PdfBytes {
+fn reader_malformed_pdf_with_missing_root_trailer() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   let catalog_offset = reader_push_indirect_object(
@@ -307,7 +307,7 @@ fn reader_malformed_pdf_with_missing_root_trailer() -> @pdflite.PdfBytes {
 
 ///|
 #warnings("-unused_value")
-fn reader_malformed_pdf_with_bad_object_offset() -> @pdflite.PdfBytes {
+fn reader_malformed_pdf_with_bad_object_offset() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   let junk_offset = output.length()
@@ -324,7 +324,7 @@ fn reader_malformed_pdf_with_bad_object_offset() -> @pdflite.PdfBytes {
 
 ///|
 #warnings("-unused_value")
-fn reader_malformed_pdf_with_indirect_stream_length() -> @pdflite.PdfBytes {
+fn reader_malformed_pdf_with_indirect_stream_length() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   ignore(
@@ -349,7 +349,7 @@ fn reader_malformed_pdf_with_indirect_stream_length() -> @pdflite.PdfBytes {
 
 ///|
 #warnings("-unused_value")
-fn reader_malformed_pdf_with_object_header_inside_stream() -> @pdflite.PdfBytes {
+fn reader_malformed_pdf_with_object_header_inside_stream() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   ignore(
@@ -366,7 +366,7 @@ fn reader_malformed_pdf_with_object_header_inside_stream() -> @pdflite.PdfBytes 
 
 ///|
 #warnings("-unused_value")
-fn reader_malformed_pdf_with_nested_object_header_in_bad_object() -> @pdflite.PdfBytes {
+fn reader_malformed_pdf_with_nested_object_header_in_bad_object() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   reader_push_ascii(output, "1 0 obj\n]\n")
@@ -378,7 +378,7 @@ fn reader_malformed_pdf_with_nested_object_header_in_bad_object() -> @pdflite.Pd
 
 ///|
 #warnings("-unused_value")
-fn reader_classic_pdf_with_unreadable_stream_and_catalog() -> @pdflite.PdfBytes {
+fn reader_classic_pdf_with_unreadable_stream_and_catalog() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   let stream_offset = reader_push_indirect_object(
@@ -401,7 +401,7 @@ fn reader_classic_pdf_with_unreadable_stream_and_catalog() -> @pdflite.PdfBytes 
 #warnings("-unused_value")
 fn reader_classic_pdf_with_malformed_stream_and_catalog(
   stream_body : String,
-) -> @pdflite.PdfBytes {
+) -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   let stream_offset = reader_push_indirect_object(output, 1, 0, stream_body)
@@ -420,7 +420,7 @@ fn reader_classic_pdf_with_malformed_stream_and_catalog(
 
 ///|
 #warnings("-unused_value")
-fn reader_classic_pdf_with_truncated_stream_before_catalog() -> @pdflite.PdfBytes {
+fn reader_classic_pdf_with_truncated_stream_before_catalog() -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   let catalog_offset = reader_push_indirect_object(
@@ -444,7 +444,7 @@ fn reader_classic_pdf_with_truncated_stream_before_catalog() -> @pdflite.PdfByte
 #warnings("-unused_value")
 fn reader_classic_pdf_with_malformed_object_before_catalog(
   bad_body : String,
-) -> @pdflite.PdfBytes {
+) -> @core.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
   let catalog_offset = reader_push_indirect_object(

@@ -1,7 +1,7 @@
 ///|
 fn pdf_cursor_read_xref_section(
-  cursor : ByteCursor,
-) -> @reader.PdfXRefSection raise PdfError {
+  cursor : @core.ByteCursor,
+) -> @reader.PdfXRefSection raise @core.PdfError {
   let position = cursor.absolute_position()
   if @syntax.pdf_cursor_matches_ascii_at(cursor, position, [120, 114, 101, 102]) {
     let entries = @reader.pdf_cursor_read_classic_xref_entries(cursor)

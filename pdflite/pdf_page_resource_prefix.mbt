@@ -1,5 +1,8 @@
 ///|
-fn pdf_page_prefixed_name(prefix : String, name : PdfName) -> PdfName {
+fn pdf_page_prefixed_name(
+  prefix : String,
+  name : @core.PdfName,
+) -> @core.PdfName {
   let prefix_bytes = @ascii.encode(prefix)
   let bytes = name.bytes()
   let start = if bytes.length() > 0 && bytes[0].to_int() == 47 { 1 } else { 0 }
@@ -17,11 +20,14 @@ fn pdf_page_prefixed_name(prefix : String, name : PdfName) -> PdfName {
     output[position] = bytes[i]
     position += 1
   }
-  pdf_name_of_bytes(Bytes::from_array(output))
+  @core.pdf_name_of_bytes(Bytes::from_array(output))
 }
 
 ///|
-fn pdf_page_name_member(names : ArrayView[PdfName], name : PdfName) -> Bool {
+fn pdf_page_name_member(
+  names : ArrayView[@core.PdfName],
+  name : @core.PdfName,
+) -> Bool {
   for candidate in names {
     if candidate == name {
       break true
@@ -32,7 +38,7 @@ fn pdf_page_name_member(names : ArrayView[PdfName], name : PdfName) -> Bool {
 }
 
 ///|
-fn pdf_page_direct_color_names() -> Array[PdfName] {
+fn pdf_page_direct_color_names() -> Array[@core.PdfName] {
   [
     pdf_page_device_gray_name, pdf_page_device_rgb_name, pdf_page_device_cmyk_name,
     pdf_page_pattern_resource_name,
@@ -40,7 +46,7 @@ fn pdf_page_direct_color_names() -> Array[PdfName] {
 }
 
 ///|
-fn pdf_page_direct_inline_color_names() -> Array[PdfName] {
+fn pdf_page_direct_inline_color_names() -> Array[@core.PdfName] {
   [
     pdf_page_device_gray_name, pdf_page_device_rgb_name, pdf_page_device_cmyk_name,
     pdf_page_g_name, pdf_page_rgb_name, pdf_page_cmyk_name,
@@ -52,7 +58,7 @@ fn PdfDocument::pdf_page_prefix_inline_image_dictionary(
   self : PdfDocument,
   prefix : String,
   dictionary : @syntax.PdfObject,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   match
     self.lookup_direct_or_else(
       pdf_page_cs_key_name, pdf_page_colorspace_resource_name, dictionary,
@@ -77,7 +83,7 @@ fn PdfDocument::pdf_page_prefix_content_op(
   self : PdfDocument,
   prefix : String,
   op : @content.PdfContentOp,
-) -> @content.PdfContentOp raise PdfError {
+) -> @content.PdfContentOp raise @core.PdfError {
   match op {
     Op_Tf(font, size) => Op_Tf(pdf_page_prefixed_name(prefix, font), size)
     Op_gs(name) => Op_gs(pdf_page_prefixed_name(prefix, name))
@@ -118,7 +124,7 @@ fn PdfDocument::pdf_page_prefix_content_ops(
   self : PdfDocument,
   prefix : String,
   ops : ArrayView[@content.PdfContentOp],
-) -> Array[@content.PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise @core.PdfError {
   let output : Array[@content.PdfContentOp] = Array::new(capacity=ops.length())
   for op in ops {
     output.push(self.pdf_page_prefix_content_op(prefix, op))
@@ -131,12 +137,12 @@ fn PdfDocument::pdf_page_prefix_resource_dictionary(
   self : PdfDocument,
   prefix : String,
   resources : @syntax.PdfObject,
-) -> @syntax.PdfObject raise PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   let mut output = resources
   for resource_key in pdf_page_resource_keys() {
     match self.lookup_direct(resource_key, resources) {
       Some(PdfDictionary(entries)) => {
-        let new_entries : Array[(PdfName, @syntax.PdfObject)] = Array::new(
+        let new_entries : Array[(@core.PdfName, @syntax.PdfObject)] = Array::new(
           capacity=entries.length(),
         )
         for entry in entries {

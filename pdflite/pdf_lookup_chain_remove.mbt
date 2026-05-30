@@ -2,9 +2,9 @@
 fn PdfDocument::remove_chain_from_object(
   self : PdfDocument,
   object : @syntax.PdfObject,
-  chain : ArrayView[PdfName],
+  chain : ArrayView[@core.PdfName],
   chain_index : Int,
-) -> (@syntax.PdfObject, Bool) raise PdfError {
+) -> (@syntax.PdfObject, Bool) raise @core.PdfError {
   let key = chain[chain_index]
   let final_key = chain_index + 1 == chain.length()
   match object {
@@ -88,13 +88,13 @@ fn PdfDocument::remove_chain_from_object(
 /// Remove a nested value along a path rooted at the trailer dictionary.
 ///
 /// Returns `true` when an entry was removed and `false` when the path is
-/// absent. Empty chains raise `PdfError::DictionaryExpected`. A single-key chain is
+/// absent. Empty chains raise `@core.PdfError::DictionaryExpected`. A single-key chain is
 /// treated as an invalid request when the key exists, preserving the trailer
 /// root rather than removing one of its direct entries.
 pub fn PdfDocument::remove_chain(
   self : PdfDocument,
-  chain : ArrayView[PdfName],
-) -> Bool raise PdfError {
+  chain : ArrayView[@core.PdfName],
+) -> Bool raise @core.PdfError {
   if chain.length() == 0 {
     raise DictionaryExpected
   }

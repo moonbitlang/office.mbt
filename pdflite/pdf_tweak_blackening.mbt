@@ -4,7 +4,7 @@ pub fn PdfDocument::black_text(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
   colour : @colour.PdfContentColour,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let document = self.copy()
   let pages = document.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(page_numbers)
@@ -17,7 +17,7 @@ pub fn PdfDocument::black_text(
         doc,
         resources,
         streams,
-      ) raise PdfError {
+      ) raise @core.PdfError {
         pdf_tweak_black_text_xobject(colour, doc, resources, streams)
       })
       rewritten.push(document.pdf_tweak_black_text_page(page, colour))
@@ -34,7 +34,7 @@ pub fn pdf_black_text(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
   colour : @colour.PdfContentColour,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.black_text(page_numbers, colour)
 }
 
@@ -44,7 +44,7 @@ pub fn pdf_blacktext(
   colour : @colour.PdfContentColour,
   page_numbers : ArrayView[Int],
   document : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.black_text(page_numbers, colour)
 }
 
@@ -54,7 +54,7 @@ pub fn PdfDocument::black_lines(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
   colour : @colour.PdfContentColour,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let document = self.copy()
   let pages = document.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(page_numbers)
@@ -67,7 +67,7 @@ pub fn PdfDocument::black_lines(
         doc,
         resources,
         streams,
-      ) raise PdfError {
+      ) raise @core.PdfError {
         pdf_tweak_black_lines_xobject(colour, doc, resources, streams)
       })
       rewritten.push(document.pdf_tweak_black_lines_page(page, colour))
@@ -84,7 +84,7 @@ pub fn pdf_black_lines(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
   colour : @colour.PdfContentColour,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.black_lines(page_numbers, colour)
 }
 
@@ -94,7 +94,7 @@ pub fn pdf_blacklines(
   colour : @colour.PdfContentColour,
   page_numbers : ArrayView[Int],
   document : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.black_lines(page_numbers, colour)
 }
 
@@ -104,7 +104,7 @@ pub fn PdfDocument::black_fills(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
   colour : @colour.PdfContentColour,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let document = self.copy()
   let pages = document.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(page_numbers)
@@ -117,7 +117,7 @@ pub fn PdfDocument::black_fills(
         doc,
         resources,
         streams,
-      ) raise PdfError {
+      ) raise @core.PdfError {
         pdf_tweak_black_fills_xobject(colour, doc, resources, streams)
       })
       rewritten.push(document.pdf_tweak_black_fills_page(page, colour))
@@ -134,7 +134,7 @@ pub fn pdf_black_fills(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
   colour : @colour.PdfContentColour,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.black_fills(page_numbers, colour)
 }
 
@@ -144,6 +144,6 @@ pub fn pdf_blackfills(
   colour : @colour.PdfContentColour,
   page_numbers : ArrayView[Int],
   document : PdfDocument,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.black_fills(page_numbers, colour)
 }

@@ -12,7 +12,7 @@ pub fn PdfDocument::change_boxes(
     Double,
     Double,
   ),
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   let mut rest = page.rest
   for name in pdf_page_upright_box_names() {
     match self.lookup_direct(name, page.rest) {
@@ -42,7 +42,7 @@ pub fn pdf_change_boxes(
     Double,
     Double,
   ),
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   document.change_boxes(page, transform)
 }
 
@@ -57,7 +57,7 @@ pub fn pdf_change_boxes_cpdf_order(
   ),
   document : PdfDocument,
   page : @page.PdfPage,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   document.change_boxes(page, transform)
 }
 
@@ -72,7 +72,7 @@ pub fn PdfDocument::set_mediaboxes(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
   boxes : ArrayView[(Double, Double, Double, Double)],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let pages = self.pages_of_pagetree()
   pdf_page_box_validate_page_numbers(
     page_numbers,
@@ -101,7 +101,7 @@ pub fn PdfDocument::set_mediabox(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
   boxes : ArrayView[(Double, Double, Double, Double)],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   self.set_mediaboxes(page_numbers, boxes)
 }
 
@@ -111,7 +111,7 @@ pub fn pdf_set_mediaboxes(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
   boxes : ArrayView[(Double, Double, Double, Double)],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.set_mediaboxes(page_numbers, boxes)
 }
 
@@ -121,7 +121,7 @@ pub fn pdf_set_mediabox(
   boxes : ArrayView[(Double, Double, Double, Double)],
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.set_mediaboxes(page_numbers, boxes)
 }
 
@@ -136,8 +136,8 @@ pub fn PdfDocument::crop_pages(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
   boxes : ArrayView[(Double, Double, Double, Double)],
-  box_name? : PdfName = pdf_page_cropbox_key(),
-) -> PdfDocument raise PdfError {
+  box_name? : @core.PdfName = pdf_page_cropbox_key(),
+) -> PdfDocument raise @core.PdfError {
   let pages = self.pages_of_pagetree()
   pdf_page_box_validate_page_numbers(page_numbers, pages.length(), "crop_pages")
   pdf_page_box_validate_xywh_boxes_with_context(
@@ -166,8 +166,8 @@ pub fn pdf_crop_pdf(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
   boxes : ArrayView[(Double, Double, Double, Double)],
-  box_name? : PdfName = pdf_page_cropbox_key(),
-) -> PdfDocument raise PdfError {
+  box_name? : @core.PdfName = pdf_page_cropbox_key(),
+) -> PdfDocument raise @core.PdfError {
   document.crop_pages(page_numbers, boxes, box_name~)
 }
 
@@ -178,7 +178,7 @@ pub fn PdfDocument::crop_pdf_string(
   page_numbers : ArrayView[Int],
   boxes : ArrayView[(Double, Double, Double, Double)],
   box_name? : String = "/CropBox",
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   self.crop_pages(
     page_numbers,
     boxes,
@@ -193,7 +193,7 @@ pub fn pdf_crop_pdf_string(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
   box_name? : String = "/CropBox",
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.crop_pdf_string(page_numbers, boxes, box_name~)
 }
 
@@ -205,12 +205,12 @@ pub fn pdf_crop_pdf_string(
 pub fn PdfDocument::set_page_box(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
-  box_name : PdfName,
+  box_name : @core.PdfName,
   min_x : Double,
   max_x : Double,
   min_y : Double,
   max_y : Double,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   self.pdf_page_box_rewrite_pages(page_numbers, "set_page_box", (_, _, page) => {
     self.pdf_page_set_box_page(page, box_name, min_x, max_x, min_y, max_y)
   })
@@ -221,12 +221,12 @@ pub fn PdfDocument::set_page_box(
 pub fn pdf_set_box(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-  box_name : PdfName,
+  box_name : @core.PdfName,
   min_x : Double,
   max_x : Double,
   min_y : Double,
   max_y : Double,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.set_page_box(page_numbers, box_name, min_x, max_x, min_y, max_y)
 }
 
@@ -240,7 +240,7 @@ pub fn PdfDocument::set_box_string(
   max_x : Double,
   min_y : Double,
   max_y : Double,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   self.set_page_box(
     page_numbers,
     pdf_page_box_name_of_string(box_name),
@@ -261,6 +261,6 @@ pub fn pdf_set_box_string(
   max_y : Double,
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.set_box_string(page_numbers, box_name, min_x, max_x, min_y, max_y)
 }

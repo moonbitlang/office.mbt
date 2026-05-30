@@ -12,14 +12,14 @@ pub fn PdfDocument::addtext_page_lines(
   replacements : ArrayView[(String, () -> String)],
   font : PdfFont?,
   fontpack : PdfFontPack?,
-  fontname : PdfName,
+  fontname : @core.PdfName,
   font_object : @syntax.PdfObject?,
   fontpack_font_objects : ArrayView[Int],
   font_size : Double,
   line_spacing : Double,
   colour : @colour.PdfContentColour,
   position : @geometry.PdfPosition,
-  relative_to_box? : PdfName = pdf_page_mediabox_key(),
+  relative_to_box? : @core.PdfName = pdf_page_mediabox_key(),
   opacity? : Double = 1.0,
   justification? : @addtext.PdfAddTextJustification = PdfAddTextLeftJustify,
   rotation? : @addtext.PdfAddTextRotation = PdfAddTextRot0,
@@ -33,7 +33,7 @@ pub fn PdfDocument::addtext_page_lines(
   fast? : Bool = false,
   raw? : Bool = false,
   url_border? : Bool = false,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   let (initial_h_offset, initial_v_offset) = @addtext.pdf_addtext_initial_line_offsets(
     position,
     lines.length(),
@@ -95,14 +95,14 @@ pub fn pdf_addtext_page_lines(
   replacements : ArrayView[(String, () -> String)],
   font : PdfFont?,
   fontpack : PdfFontPack?,
-  fontname : PdfName,
+  fontname : @core.PdfName,
   font_object : @syntax.PdfObject?,
   fontpack_font_objects : ArrayView[Int],
   font_size : Double,
   line_spacing : Double,
   colour : @colour.PdfContentColour,
   position : @geometry.PdfPosition,
-  relative_to_box? : PdfName = pdf_page_mediabox_key(),
+  relative_to_box? : @core.PdfName = pdf_page_mediabox_key(),
   opacity? : Double = 1.0,
   justification? : @addtext.PdfAddTextJustification = PdfAddTextLeftJustify,
   rotation? : @addtext.PdfAddTextRotation = PdfAddTextRot0,
@@ -116,7 +116,7 @@ pub fn pdf_addtext_page_lines(
   fast? : Bool = false,
   raw? : Bool = false,
   url_border? : Bool = false,
-) -> @page.PdfPage raise PdfError {
+) -> @page.PdfPage raise @core.PdfError {
   document.addtext_page_lines(
     page,
     time,

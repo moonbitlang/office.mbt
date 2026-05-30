@@ -1,10 +1,10 @@
 ///|
-fn dest_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn dest_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
-fn dest_bytes_for_test(text : String) -> @pdflite.PdfBytes {
+fn dest_bytes_for_test(text : String) -> @core.PdfBytes {
   @ascii.encode(text)
 }
 
@@ -373,8 +373,8 @@ test "PdfDocument read_destination resolves named catalog destinations" {
   let result : Result[@destination.PdfDestination, Error] = try? no_root.read_destination(
     PdfNameObject(name_chapter),
   )
-  guard result is Err(@pdflite.PdfError::RootExpected) else {
-    fail("expected @pdflite.PdfError::RootExpected")
+  guard result is Err(@core.PdfError::RootExpected) else {
+    fail("expected @core.PdfError::RootExpected")
   }
 }
 
@@ -481,8 +481,8 @@ test "PdfDocument read_destination rejects unresolved trailer root for named des
   let result : Result[@destination.PdfDestination, Error] = try? doc.read_destination(
     PdfNameObject(name_chapter),
   )
-  guard result is Err(@pdflite.PdfError::RootExpected) else {
-    fail("expected @pdflite.PdfError::RootExpected")
+  guard result is Err(@core.PdfError::RootExpected) else {
+    fail("expected @core.PdfError::RootExpected")
   }
 }
 
@@ -606,8 +606,8 @@ test "PdfDocument read_destination rejects unresolved trailer root for string de
   let result : Result[@destination.PdfDestination, Error] = try? doc.read_destination(
     PdfString(dest_bytes_for_test("intro")),
   )
-  guard result is Err(@pdflite.PdfError::RootExpected) else {
-    fail("expected @pdflite.PdfError::RootExpected")
+  guard result is Err(@core.PdfError::RootExpected) else {
+    fail("expected @core.PdfError::RootExpected")
   }
 }
 

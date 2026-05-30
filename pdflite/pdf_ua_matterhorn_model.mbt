@@ -22,8 +22,8 @@ priv struct PdfUAMatterhornFailure {
 
 ///|
 priv struct PdfUAMatterhornStructNode {
-  name : PdfName
-  attrs : Array[PdfName]
+  name : @core.PdfName
+  attrs : Array[@core.PdfName]
   children : Array[PdfUAMatterhornStructNode]
 }
 

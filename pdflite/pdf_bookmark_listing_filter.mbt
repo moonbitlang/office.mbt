@@ -43,7 +43,7 @@ fn PdfDocument::pdf_bookmark_listing_in_range(
   bookmark : @bookmark.PdfBookmark,
   selected_pages : @core.PdfNumberSet,
   range_is_all : Bool,
-) -> Bool raise PdfError {
+) -> Bool raise @core.PdfError {
   if range_is_all || bookmark.target == DestNull {
     true
   } else {
@@ -59,7 +59,7 @@ fn PdfDocument::pdf_bookmark_listing_bookmarks(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
   preserve_actions : Bool,
-) -> Array[@bookmark.PdfBookmark] raise PdfError {
+) -> Array[@bookmark.PdfBookmark] raise @core.PdfError {
   let end_page = self.endpage()
   pdf_page_box_validate_page_numbers(page_numbers, end_page, "list_bookmarks")
   let range_is_all = pdf_bookmark_listing_is_all_pages(page_numbers, end_page)

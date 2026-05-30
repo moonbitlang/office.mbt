@@ -1,5 +1,5 @@
 ///|
-fn pdf_ocg_read_json_ocg(json : Json) -> @ocg.PdfOcg raise PdfError {
+fn pdf_ocg_read_json_ocg(json : Json) -> @ocg.PdfOcg raise @core.PdfError {
   match json {
     Object(entries) if entries.length() == 3 => {
       let intent = pdf_ocg_read_json_field(
@@ -26,7 +26,7 @@ fn pdf_ocg_read_json_ocg(json : Json) -> @ocg.PdfOcg raise PdfError {
 ///|
 fn pdf_ocg_read_json_ocgs(
   json : Json,
-) -> Array[(Int, @ocg.PdfOcg)] raise PdfError {
+) -> Array[(Int, @ocg.PdfOcg)] raise @core.PdfError {
   match json {
     Object(entries) => {
       let output : Array[(Int, @ocg.PdfOcg)] = []
@@ -48,7 +48,7 @@ fn pdf_ocg_read_json_ocgs(
 ///|
 fn pdf_ocg_read_json_configs(
   json : Json,
-) -> Array[@ocg.PdfOcgConfig] raise PdfError {
+) -> Array[@ocg.PdfOcgConfig] raise @core.PdfError {
   match json {
     Array(values) => {
       let output : Array[@ocg.PdfOcgConfig] = []

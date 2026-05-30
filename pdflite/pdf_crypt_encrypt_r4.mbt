@@ -10,7 +10,7 @@ pub fn PdfDocument::encrypt_128bit_r4(
   denied_permissions : ArrayView[@crypt_core.PdfPermission],
   encrypt_metadata? : Bool = true,
   file_id? : BytesView = [],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let no_encrypt_metadata = !encrypt_metadata
   let (document, id) = self.with_file_id(file_id~)
   let permissions = @crypt_core.pdf_p_of_permissions(denied_permissions)
@@ -72,10 +72,10 @@ pub fn PdfDocument::encrypt_128bit_aesv2_with_iv_provider(
   user_password : BytesView,
   owner_password : BytesView,
   denied_permissions : ArrayView[@crypt_core.PdfPermission],
-  iv_provider : (Int, Int, Int) -> PdfBytes raise PdfError,
+  iv_provider : (Int, Int, Int) -> @core.PdfBytes raise @core.PdfError,
   encrypt_metadata? : Bool = true,
   file_id? : BytesView = [],
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let no_encrypt_metadata = !encrypt_metadata
   let (document, id) = self.with_file_id(file_id~)
   let permissions = @crypt_core.pdf_p_of_permissions(denied_permissions)

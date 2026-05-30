@@ -1,6 +1,6 @@
 ///|
-fn page_redact_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn page_redact_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -163,7 +163,7 @@ test "PdfDocument redact_pages validates selected pages" {
   let bad : Result[@pdflite.PdfDocument, Error] = try? document.redact_pages([2])
   guard bad
     is Err(
-      @pdflite.PdfError::BadPageSpecification(
+      @core.PdfError::BadPageSpecification(
         "redact_pages: range contains pages not present in pdf"
       )
     ) else {

@@ -57,7 +57,7 @@ pub fn pdf_draw_control_new() -> PdfDrawControl {
 ///|
 fn PdfDrawControl::current_frame(
   self : PdfDrawControl,
-) -> PdfDrawControlFrame raise PdfError {
+) -> PdfDrawControlFrame raise @core.PdfError {
   if self.frames.length() == 0 {
     raise SoftError("no drawops")
   }
@@ -75,7 +75,7 @@ fn pdf_draw_control_copy_ops(ops : ArrayView[PdfDrawOp]) -> Array[PdfDrawOp] {
 /// Return the current frame name.
 pub fn PdfDrawControl::current_frame_name(
   self : PdfDrawControl,
-) -> String raise PdfError {
+) -> String raise @core.PdfError {
   self.current_frame().name
 }
 
@@ -89,7 +89,7 @@ pub fn PdfDrawControl::depth(self : PdfDrawControl) -> Int {
 /// Return a copy of the operations collected in the current frame.
 pub fn PdfDrawControl::current_ops(
   self : PdfDrawControl,
-) -> Array[PdfDrawOp] raise PdfError {
+) -> Array[PdfDrawOp] raise @core.PdfError {
   pdf_draw_control_copy_ops(self.current_frame().ops)
 }
 
@@ -108,7 +108,7 @@ pub fn PdfDrawControl::ops(self : PdfDrawControl) -> Array[PdfDrawOp] {
 pub fn PdfDrawControl::add_op(
   self : PdfDrawControl,
   op : PdfDrawOp,
-) -> Unit raise PdfError {
+) -> Unit raise @core.PdfError {
   self.current_frame().ops.push(op)
 }
 
@@ -131,7 +131,7 @@ fn pdf_draw_control_split_on_spaces(text : String) -> Array[String] {
 fn pdf_draw_control_read_floats(
   text : String,
   message : String,
-) -> Array[Double] raise PdfError {
+) -> Array[Double] raise @core.PdfError {
   let parts = pdf_draw_control_split_on_spaces(text)
   let output : Array[Double] = Array::new(capacity=parts.length())
   for part in parts {
@@ -150,7 +150,7 @@ fn pdf_draw_control_expect_floats(
   count : Int,
   count_message : String,
   parse_message : String,
-) -> Array[Double] raise PdfError {
+) -> Array[Double] raise @core.PdfError {
   let values = pdf_draw_control_read_floats(text, parse_message)
   if values.length() != count {
     raise SoftError(count_message)

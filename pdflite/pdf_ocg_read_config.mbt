@@ -24,10 +24,10 @@ fn PdfDocument::pdf_ocg_read_appdict(
 fn PdfDocument::pdf_ocg_read_order(
   self : PdfDocument,
   order : @syntax.PdfObject,
-) -> Array[(PdfBytes?, Array[Int])] {
+) -> Array[(@core.PdfBytes?, Array[Int])] {
   match self.direct(order) {
     PdfArray(items) => {
-      let output : Array[(PdfBytes?, Array[Int])] = []
+      let output : Array[(@core.PdfBytes?, Array[Int])] = []
       for item in items {
         match item {
           PdfIndirect(number) => output.push((None, [number]))

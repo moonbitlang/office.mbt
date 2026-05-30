@@ -8,7 +8,7 @@ pub fn PdfDocument::pdf_of_pages(
   page_numbers : ArrayView[Int],
   retain_numbering? : Bool = false,
   process_struct_tree? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   let source = self.copy()
   let all_page_numbers = source.page_reference_numbers()
   let old_page_numbers = pdf_page_select_numbers(all_page_numbers, page_numbers)
@@ -79,7 +79,7 @@ pub fn pdf_of_pages(
   page_numbers : ArrayView[Int],
   retain_numbering? : Bool = false,
   process_struct_tree? : Bool = false,
-) -> PdfDocument raise PdfError {
+) -> PdfDocument raise @core.PdfError {
   document.pdf_of_pages(page_numbers, retain_numbering~, process_struct_tree~)
 }
 

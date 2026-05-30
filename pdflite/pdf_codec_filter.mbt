@@ -1,52 +1,56 @@
 ///|
-fn pdf_filter_name(text : String) -> PdfName {
-  pdf_name_of_bytes(@ascii.encode(text))
+fn pdf_filter_name(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
-let pdf_filter_crypt_name : PdfName = pdf_filter_name("/Crypt")
+let pdf_filter_crypt_name : @core.PdfName = pdf_filter_name("/Crypt")
 
 ///|
-let pdf_filter_ascii_hex_decode_name : PdfName = pdf_filter_name(
+let pdf_filter_ascii_hex_decode_name : @core.PdfName = pdf_filter_name(
   "/ASCIIHexDecode",
 )
 
 ///|
-let pdf_filter_ascii_hex_short_name : PdfName = pdf_filter_name("/AHx")
+let pdf_filter_ascii_hex_short_name : @core.PdfName = pdf_filter_name("/AHx")
 
 ///|
-let pdf_filter_ascii85_decode_name : PdfName = pdf_filter_name("/ASCII85Decode")
+let pdf_filter_ascii85_decode_name : @core.PdfName = pdf_filter_name(
+  "/ASCII85Decode",
+)
 
 ///|
-let pdf_filter_ascii85_short_name : PdfName = pdf_filter_name("/A85")
+let pdf_filter_ascii85_short_name : @core.PdfName = pdf_filter_name("/A85")
 
 ///|
-let pdf_filter_run_length_decode_name : PdfName = pdf_filter_name(
+let pdf_filter_run_length_decode_name : @core.PdfName = pdf_filter_name(
   "/RunLengthDecode",
 )
 
 ///|
-let pdf_filter_run_length_short_name : PdfName = pdf_filter_name("/RL")
+let pdf_filter_run_length_short_name : @core.PdfName = pdf_filter_name("/RL")
 
 ///|
-let pdf_filter_flate_decode_name : PdfName = pdf_filter_name("/FlateDecode")
+let pdf_filter_flate_decode_name : @core.PdfName = pdf_filter_name(
+  "/FlateDecode",
+)
 
 ///|
-let pdf_filter_flate_short_name : PdfName = pdf_filter_name("/Fl")
+let pdf_filter_flate_short_name : @core.PdfName = pdf_filter_name("/Fl")
 
 ///|
-let pdf_filter_lzw_decode_name : PdfName = pdf_filter_name("/LZWDecode")
+let pdf_filter_lzw_decode_name : @core.PdfName = pdf_filter_name("/LZWDecode")
 
 ///|
-let pdf_filter_lzw_short_name : PdfName = pdf_filter_name("/LZW")
+let pdf_filter_lzw_short_name : @core.PdfName = pdf_filter_name("/LZW")
 
 ///|
-let pdf_filter_ccitt_fax_decode_name : PdfName = pdf_filter_name(
+let pdf_filter_ccitt_fax_decode_name : @core.PdfName = pdf_filter_name(
   "/CCITTFaxDecode",
 )
 
 ///|
-let pdf_filter_ccitt_fax_short_name : PdfName = pdf_filter_name("/CCF")
+let pdf_filter_ccitt_fax_short_name : @core.PdfName = pdf_filter_name("/CCF")
 
 ///|
 /// Stream encoding requested by high-level stream encode helpers.
@@ -78,7 +82,9 @@ pub(all) enum PdfStreamPredictor {
 
 ///|
 /// Return the PDF filter name for this stream encoding.
-pub fn PdfStreamEncoding::filter_name(self : PdfStreamEncoding) -> PdfName {
+pub fn PdfStreamEncoding::filter_name(
+  self : PdfStreamEncoding,
+) -> @core.PdfName {
   match self {
     PdfStreamASCIIHex => pdf_filter_ascii_hex_decode_name
     PdfStreamASCII85 => pdf_filter_ascii85_decode_name
@@ -109,7 +115,7 @@ pub fn pdf_ccitt_encode_view(
   columns : Int,
   rows : Int,
   data : BytesView,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_ccitt_encode_g3_1d_view(data, columns, rows)
 }
 
@@ -118,8 +124,8 @@ pub fn pdf_ccitt_encode_view(
 pub fn pdf_ccitt_encode(
   columns : Int,
   rows : Int,
-  data : PdfBytes,
-) -> PdfBytes raise PdfError {
+  data : @core.PdfBytes,
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_ccitt_encode_view(columns, rows, data)
 }
 
@@ -129,7 +135,7 @@ pub fn pdf_ccitt_g4_encode_view(
   columns : Int,
   rows : Int,
   data : BytesView,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_ccitt_encode_g4_view(data, columns, rows)
 }
 
@@ -138,21 +144,21 @@ pub fn pdf_ccitt_g4_encode_view(
 pub fn pdf_ccitt_g4_encode(
   columns : Int,
   rows : Int,
-  data : PdfBytes,
-) -> PdfBytes raise PdfError {
+  data : @core.PdfBytes,
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_ccitt_g4_encode_view(columns, rows, data)
 }
 
 ///|
-fn pdf_filter_is_name(filter : PdfName, name : PdfName) -> Bool {
+fn pdf_filter_is_name(filter : @core.PdfName, name : @core.PdfName) -> Bool {
   filter == name
 }
 
 ///|
 fn pdf_filter_is_one_of(
-  filter : PdfName,
-  first : PdfName,
-  second : PdfName,
+  filter : @core.PdfName,
+  first : @core.PdfName,
+  second : @core.PdfName,
 ) -> Bool {
   pdf_filter_is_name(filter, first) || pdf_filter_is_name(filter, second)
 }
@@ -162,11 +168,11 @@ fn pdf_filter_is_one_of(
 ///
 /// Recognizes long and abbreviated filter names. `/Crypt` is treated as an
 /// identity filter at this byte-dispatch layer; unsupported filters raise
-/// `PdfError::FilterNotSupported`.
+/// `@core.PdfError::FilterNotSupported`.
 pub fn pdf_decode_filter_view(
-  filter : PdfName,
+  filter : @core.PdfName,
   data : BytesView,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   if pdf_filter_is_name(filter, pdf_filter_crypt_name) {
     data.to_owned()
   } else if pdf_filter_is_one_of(
@@ -203,9 +209,9 @@ pub fn pdf_decode_filter_view(
 ///
 /// Identity and Flate paths avoid an extra copy where possible.
 pub fn pdf_decode_filter_bytes(
-  filter : PdfName,
-  data : PdfBytes,
-) -> PdfBytes raise PdfError {
+  filter : @core.PdfName,
+  data : @core.PdfBytes,
+) -> @core.PdfBytes raise @core.PdfError {
   if pdf_filter_is_name(filter, pdf_filter_crypt_name) {
     data
   } else if pdf_filter_is_one_of(
@@ -220,9 +226,9 @@ pub fn pdf_decode_filter_bytes(
 ///|
 /// Encode bytes with a single PDF filter name.
 pub fn pdf_encode_filter_view(
-  filter : PdfName,
+  filter : @core.PdfName,
   data : BytesView,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_encode_filter_view_with_optional_flate_level(filter, data, None)
 }
 
@@ -231,10 +237,10 @@ pub fn pdf_encode_filter_view(
 ///
 /// `flate_level` follows the zlib range accepted by the Flate encoder.
 pub fn pdf_encode_filter_view_with_flate_level(
-  filter : PdfName,
+  filter : @core.PdfName,
   data : BytesView,
   flate_level : Int,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_encode_filter_view_with_optional_flate_level(
     filter,
     data,
@@ -244,10 +250,10 @@ pub fn pdf_encode_filter_view_with_flate_level(
 
 ///|
 fn pdf_encode_filter_view_with_optional_flate_level(
-  filter : PdfName,
+  filter : @core.PdfName,
   data : BytesView,
   flate_level : Int?,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   if pdf_filter_is_name(filter, pdf_filter_crypt_name) {
     data.to_owned()
   } else if pdf_filter_is_one_of(
@@ -277,19 +283,19 @@ fn pdf_encode_filter_view_with_optional_flate_level(
 ///|
 /// Encode owned bytes with a single PDF filter name.
 pub fn pdf_encode_filter_bytes(
-  filter : PdfName,
-  data : PdfBytes,
-) -> PdfBytes raise PdfError {
+  filter : @core.PdfName,
+  data : @core.PdfBytes,
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_encode_filter_bytes_with_optional_flate_level(filter, data, None)
 }
 
 ///|
 /// Encode owned bytes with a single PDF filter name and explicit Flate level.
 pub fn pdf_encode_filter_bytes_with_flate_level(
-  filter : PdfName,
-  data : PdfBytes,
+  filter : @core.PdfName,
+  data : @core.PdfBytes,
   flate_level : Int,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   pdf_encode_filter_bytes_with_optional_flate_level(
     filter,
     data,
@@ -299,10 +305,10 @@ pub fn pdf_encode_filter_bytes_with_flate_level(
 
 ///|
 fn pdf_encode_filter_bytes_with_optional_flate_level(
-  filter : PdfName,
-  data : PdfBytes,
+  filter : @core.PdfName,
+  data : @core.PdfBytes,
   flate_level : Int?,
-) -> PdfBytes raise PdfError {
+) -> @core.PdfBytes raise @core.PdfError {
   if pdf_filter_is_name(filter, pdf_filter_crypt_name) {
     data
   } else if pdf_filter_is_one_of(

@@ -1,6 +1,6 @@
 ///|
-fn text_fixture_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn text_fixture_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
@@ -84,7 +84,7 @@ fn text_fixture_source_font_table_entry_for_test(
 
 ///|
 fn text_fixture_usecmap_stream_for_test(
-  data : @pdflite.PdfBytes,
+  data : @core.PdfBytes,
   usecmap : Int?,
   compressed : Bool,
 ) -> @syntax.PdfObject raise {
@@ -160,19 +160,19 @@ fn text_fixture_usecmap_child_cmap_for_test(
 }
 
 ///|
-fn text_fixture_usecmap_tounicode_for_test() -> Array[(Int, @pdflite.PdfBytes)] raise {
+fn text_fixture_usecmap_tounicode_for_test() -> Array[(Int, @core.PdfBytes)] raise {
   [
-    (0x42, @pdflite.pdf_bytes_of_int_array([0x00, 0x59])),
-    (0x43, @pdflite.pdf_bytes_of_int_array([0x00, 0x5A])),
-    (0x44, @pdflite.pdf_bytes_of_int_array([0x00, 0x52])),
-    (0x41, @pdflite.pdf_bytes_of_int_array([0x00, 0x51])),
-    (0x45, @pdflite.pdf_bytes_of_int_array([0x00, 0x45])),
+    (0x42, @core.pdf_bytes_of_int_array([0x00, 0x59])),
+    (0x43, @core.pdf_bytes_of_int_array([0x00, 0x5A])),
+    (0x44, @core.pdf_bytes_of_int_array([0x00, 0x52])),
+    (0x41, @core.pdf_bytes_of_int_array([0x00, 0x51])),
+    (0x45, @core.pdf_bytes_of_int_array([0x00, 0x45])),
   ]
 }
 
 ///|
-fn text_fixture_usecmap_text_for_test() -> @pdflite.PdfBytes raise {
-  @pdflite.pdf_bytes_of_int_array([0x41, 0x42, 0x43, 0x44, 0x45, 0x46])
+fn text_fixture_usecmap_text_for_test() -> @core.PdfBytes raise {
+  @core.pdf_bytes_of_int_array([0x41, 0x42, 0x43, 0x44, 0x45, 0x46])
 }
 
 ///|
@@ -381,20 +381,20 @@ fn text_fixture_usecmap_variation_child_cmap_for_test(
 
 ///|
 fn text_fixture_usecmap_variation_tounicode_for_test() -> Array[
-  (Int, @pdflite.PdfBytes),
+  (Int, @core.PdfBytes),
 ] raise {
   [
-    (0x42, @pdflite.pdf_bytes_of_int_array([0x00, 0x59])),
-    (0x44, @pdflite.pdf_bytes_of_int_array([0x03, 0xA9])),
-    (0x45, @pdflite.pdf_bytes_of_int_array([0x00, 0x5A])),
-    (0x41, @pdflite.pdf_bytes_of_int_array([0xD8, 0x34, 0xDD, 0x1E])),
-    (0x43, @pdflite.pdf_bytes_of_int_array([0x00, 0x62, 0x00, 0x63])),
+    (0x42, @core.pdf_bytes_of_int_array([0x00, 0x59])),
+    (0x44, @core.pdf_bytes_of_int_array([0x03, 0xA9])),
+    (0x45, @core.pdf_bytes_of_int_array([0x00, 0x5A])),
+    (0x41, @core.pdf_bytes_of_int_array([0xD8, 0x34, 0xDD, 0x1E])),
+    (0x43, @core.pdf_bytes_of_int_array([0x00, 0x62, 0x00, 0x63])),
   ]
 }
 
 ///|
-fn text_fixture_usecmap_variation_text_for_test() -> @pdflite.PdfBytes raise {
-  @pdflite.pdf_bytes_of_int_array([0x41, 0x42, 0x43, 0x44, 0x45, 0x46])
+fn text_fixture_usecmap_variation_text_for_test() -> @core.PdfBytes raise {
+  @core.pdf_bytes_of_int_array([0x41, 0x42, 0x43, 0x44, 0x45, 0x46])
 }
 
 ///|
@@ -580,7 +580,7 @@ async test "cpdf source hello fixture composes ToUnicode UseCMap variation chain
 }
 
 ///|
-fn text_fixture_parser_corner_cmap_data_for_test() -> @pdflite.PdfBytes {
+fn text_fixture_parser_corner_cmap_data_for_test() -> @core.PdfBytes {
   @ascii.encode(
     "% /Identity-H usecmap\n" +
     "/WMode 1 def % /WMode 0 def\n" +
@@ -638,27 +638,27 @@ fn text_fixture_parser_corner_font_for_test(
 }
 
 ///|
-fn text_fixture_parser_corner_text_for_test() -> @pdflite.PdfBytes raise {
-  @pdflite.pdf_bytes_of_int_array([
+fn text_fixture_parser_corner_text_for_test() -> @core.PdfBytes raise {
+  @core.pdf_bytes_of_int_array([
     0x41, 0x40, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4A, 0x4B,
   ])
 }
 
 ///|
 fn text_fixture_parser_corner_tounicode_for_test() -> Array[
-  (Int, @pdflite.PdfBytes),
+  (Int, @core.PdfBytes),
 ] raise {
   [
-    (0x41, @pdflite.pdf_bytes_of_int_array([0x00, 0x5A])),
-    (0x40, @pdflite.pdf_bytes_of_int_array([0x00, 0x60])),
-    (0x43, @pdflite.pdf_bytes_of_int_array([0x00, 0x61])),
-    (0x44, @pdflite.pdf_bytes_of_int_array([0x00, 0x62, 0x00, 0x63])),
-    (0x45, @pdflite.pdf_bytes_of_int_array([0xD8, 0x34, 0xDD, 0x1E])),
-    (0x46, @pdflite.pdf_bytes_of_int_array([0x00, 0x64])),
-    (0x47, @pdflite.pdf_bytes_of_int_array([0x00, 0x65])),
-    (0x48, @pdflite.pdf_bytes_of_int_array([0x00, 0x66])),
-    (0x49, @pdflite.pdf_bytes_of_int_array([0x00, 0x67])),
-    (0x4A, @pdflite.pdf_bytes_of_int_array([0x03, 0xA9])),
+    (0x41, @core.pdf_bytes_of_int_array([0x00, 0x5A])),
+    (0x40, @core.pdf_bytes_of_int_array([0x00, 0x60])),
+    (0x43, @core.pdf_bytes_of_int_array([0x00, 0x61])),
+    (0x44, @core.pdf_bytes_of_int_array([0x00, 0x62, 0x00, 0x63])),
+    (0x45, @core.pdf_bytes_of_int_array([0xD8, 0x34, 0xDD, 0x1E])),
+    (0x46, @core.pdf_bytes_of_int_array([0x00, 0x64])),
+    (0x47, @core.pdf_bytes_of_int_array([0x00, 0x65])),
+    (0x48, @core.pdf_bytes_of_int_array([0x00, 0x66])),
+    (0x49, @core.pdf_bytes_of_int_array([0x00, 0x67])),
+    (0x4A, @core.pdf_bytes_of_int_array([0x03, 0xA9])),
   ]
 }
 

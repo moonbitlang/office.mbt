@@ -1,15 +1,15 @@
 ///|
-fn fun_name_for_test(text : String) -> @pdflite.PdfName {
-  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+fn fun_name_for_test(text : String) -> @core.PdfName {
+  @core.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
-fn fun_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
-  try! @pdflite.pdf_bytes_of_int_array(values)
+fn fun_bytes_for_test(values : ArrayView[Int]) -> @core.PdfBytes {
+  try! @core.pdf_bytes_of_int_array(values)
 }
 
 ///|
-fn fun_type4_for_test(calculator : @pdflite.PdfBytes) -> @syntax.PdfObject {
+fn fun_type4_for_test(calculator : @core.PdfBytes) -> @syntax.PdfObject {
   @syntax.pdf_stream(
     @syntax.pdf_dictionary([
       (fun_name_for_test("/Length"), PdfInteger(calculator.length())),
@@ -673,9 +673,9 @@ test "PdfDocument parse_function rejects float operands for integer operators" {
   )
   let function = try! doc.parse_function(function_object)
   let result : Result[Array[Double], Error] = try? function.eval([])
-  guard result is Err(@pdflite.PdfError::BadFunctionEvaluation(_)) else {
+  guard result is Err(@core.PdfError::BadFunctionEvaluation(_)) else {
     fail(
-      "expected @pdflite.PdfError::BadFunctionEvaluation for float bitwise operand",
+      "expected @core.PdfError::BadFunctionEvaluation for float bitwise operand",
     )
   }
 }
@@ -720,8 +720,8 @@ test "PdfDocument parse_function reports unsupported or malformed functions" {
       (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
     ]),
   )
-  guard unsupported is Err(@pdflite.PdfError::FunctionNotSupported(5)) else {
-    fail("expected @pdflite.PdfError::FunctionNotSupported")
+  guard unsupported is Err(@core.PdfError::FunctionNotSupported(5)) else {
+    fail("expected @core.PdfError::FunctionNotSupported")
   }
   let missing_domain : Result[@pdflite.PdfFunction, Error] = try? doc.parse_function(
     @syntax.pdf_dictionary([
@@ -729,7 +729,7 @@ test "PdfDocument parse_function reports unsupported or malformed functions" {
       (fun_name_for_test("/N"), PdfInteger(1)),
     ]),
   )
-  guard missing_domain is Err(@pdflite.PdfError::DictionaryKeyNotFound(name)) &&
+  guard missing_domain is Err(@core.PdfError::DictionaryKeyNotFound(name)) &&
     name == fun_name_for_test("/Domain") else {
     fail("expected missing /Domain")
   }
@@ -795,7 +795,7 @@ test "PdfDocument parse_function covers sampled function options and errors" {
       StreamGot(samples),
     ),
   )
-  guard bad_size_item is Err(@pdflite.PdfError::NumberExpected) else {
+  guard bad_size_item is Err(@core.PdfError::NumberExpected) else {
     fail("expected malformed sampled size item")
   }
 
@@ -812,7 +812,7 @@ test "PdfDocument parse_function covers sampled function options and errors" {
       StreamGot(samples),
     ),
   )
-  guard bad_size_array is Err(@pdflite.PdfError::NumberExpected) else {
+  guard bad_size_array is Err(@core.PdfError::NumberExpected) else {
     fail("expected malformed sampled size array")
   }
 
@@ -828,7 +828,7 @@ test "PdfDocument parse_function covers sampled function options and errors" {
       StreamGot(samples),
     ),
   )
-  guard missing_range is Err(@pdflite.PdfError::DictionaryKeyNotFound(name)) &&
+  guard missing_range is Err(@core.PdfError::DictionaryKeyNotFound(name)) &&
     name == fun_name_for_test("/Range") else {
     fail("expected sampled range or decode")
   }
@@ -846,7 +846,7 @@ test "PdfDocument parse_function covers sampled function options and errors" {
       StreamGot(samples),
     ),
   )
-  guard odd_decode is Err(@pdflite.PdfError::FunctionExpected) else {
+  guard odd_decode is Err(@core.PdfError::FunctionExpected) else {
     fail("expected malformed sampled decode")
   }
 
@@ -866,7 +866,7 @@ test "PdfDocument parse_function covers sampled function options and errors" {
       StreamGot(samples),
     ),
   )
-  guard bad_bits is Err(@pdflite.PdfError::NumberExpected) else {
+  guard bad_bits is Err(@core.PdfError::NumberExpected) else {
     fail("expected malformed bits per sample")
   }
 }
@@ -892,7 +892,7 @@ test "PdfDocument parse_function rejects malformed interpolation and stitching d
       (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
     ]),
   )
-  guard bad_function_type is Err(@pdflite.PdfError::NumberExpected) else {
+  guard bad_function_type is Err(@core.PdfError::NumberExpected) else {
     fail("expected malformed function type")
   }
 
@@ -902,7 +902,7 @@ test "PdfDocument parse_function rejects malformed interpolation and stitching d
       (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
     ]),
   )
-  guard missing_n is Err(@pdflite.PdfError::DictionaryKeyNotFound(name)) &&
+  guard missing_n is Err(@core.PdfError::DictionaryKeyNotFound(name)) &&
     name == fun_name_for_test("/N") else {
     fail("expected missing interpolation exponent")
   }
@@ -916,7 +916,7 @@ test "PdfDocument parse_function rejects malformed interpolation and stitching d
       (fun_name_for_test("/N"), PdfInteger(1)),
     ]),
   )
-  guard mismatched_c_arrays is Err(@pdflite.PdfError::FunctionExpected) else {
+  guard mismatched_c_arrays is Err(@core.PdfError::FunctionExpected) else {
     fail("expected mismatched interpolation arrays")
   }
 
@@ -934,7 +934,7 @@ test "PdfDocument parse_function rejects malformed interpolation and stitching d
       (fun_name_for_test("/Encode"), PdfArray([PdfInteger(0), PdfInteger(1)])),
     ]),
   )
-  guard malformed_functions is Err(@pdflite.PdfError::FunctionExpected) else {
+  guard malformed_functions is Err(@core.PdfError::FunctionExpected) else {
     fail("expected malformed stitching function array")
   }
 
@@ -946,7 +946,7 @@ test "PdfDocument parse_function rejects malformed interpolation and stitching d
       (fun_name_for_test("/Encode"), PdfArray([PdfInteger(0), PdfInteger(1)])),
     ]),
   )
-  guard missing_functions is Err(@pdflite.PdfError::DictionaryKeyNotFound(name)) &&
+  guard missing_functions is Err(@core.PdfError::DictionaryKeyNotFound(name)) &&
     name == fun_name_for_test("/Functions") else {
     fail("expected missing stitching functions")
   }
@@ -959,7 +959,7 @@ test "PdfDocument parse_function rejects malformed interpolation and stitching d
       (fun_name_for_test("/Encode"), PdfArray([PdfInteger(0), PdfInteger(1)])),
     ]),
   )
-  guard missing_bounds is Err(@pdflite.PdfError::DictionaryKeyNotFound(name)) &&
+  guard missing_bounds is Err(@core.PdfError::DictionaryKeyNotFound(name)) &&
     name == fun_name_for_test("/Bounds") else {
     fail("expected missing stitching bounds")
   }
@@ -973,7 +973,7 @@ test "PdfDocument parse_function rejects malformed interpolation and stitching d
       (fun_name_for_test("/Encode"), PdfArray([PdfInteger(0), PdfInteger(1)])),
     ]),
   )
-  guard inconsistent_stitching is Err(@pdflite.PdfError::FunctionExpected) else {
+  guard inconsistent_stitching is Err(@core.PdfError::FunctionExpected) else {
     fail("expected inconsistent stitching arrays")
   }
 }
@@ -1000,7 +1000,7 @@ test "PdfDocument parse_function rejects malformed calculator syntax" {
     let parsed : Result[@pdflite.PdfFunction, Error] = try? doc.parse_function(
       fun_type4_for_test(calculator),
     )
-    guard parsed is Err(@pdflite.PdfError::FunctionExpected) else {
+    guard parsed is Err(@core.PdfError::FunctionExpected) else {
       fail("expected malformed calculator syntax")
     }
   }
@@ -1068,7 +1068,7 @@ test "PdfFunction calculator evaluator reports stack and type errors" {
   for calculator in bad_cases {
     let function = try! doc.parse_function(fun_type4_for_test(calculator))
     let result : Result[Array[Double], Error] = try? function.eval([])
-    guard result is Err(@pdflite.PdfError::BadFunctionEvaluation(_)) else {
+    guard result is Err(@core.PdfError::BadFunctionEvaluation(_)) else {
       fail("expected calculator evaluation failure")
     }
   }
@@ -1084,7 +1084,7 @@ test "PdfFunction calculator evaluator reports stack and type errors" {
     ),
   )
   let arity : Result[Array[Double], Error] = try? domain_function.eval([])
-  guard arity is Err(@pdflite.PdfError::BadFunctionEvaluation(_)) else {
+  guard arity is Err(@core.PdfError::BadFunctionEvaluation(_)) else {
     fail("expected domain arity failure")
   }
 }
