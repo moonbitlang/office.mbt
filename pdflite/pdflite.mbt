@@ -351,6 +351,13 @@ pub using @metadata {
 pub using @afm {type PdfAfmData, pdf_read_afm}
 
 ///|
+pub using @font {
+  type PdfFontListEntry,
+  type PdfFontTableEntry,
+  type PdfMissingFontEntry,
+}
+
+///|
 pub using @reader {
   type PdfVersion,
   type ObjectStreamReference,

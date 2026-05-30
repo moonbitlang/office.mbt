@@ -11,6 +11,7 @@ import {
   "bobzhang/pdflite/crypt_core",
   "bobzhang/pdflite/date",
   "bobzhang/pdflite/destination",
+  "bobzhang/pdflite/font",
   "bobzhang/pdflite/font/afm",
   "bobzhang/pdflite/geometry",
   "bobzhang/pdflite/metadata",
@@ -889,7 +890,7 @@ pub fn pdf_flate_encode_with_level(Bytes, Int) -> Bytes raise @core.PdfError
 
 pub fn pdf_font_from_name(PdfDocument, String, Int) -> @syntax.PdfObject raise @core.PdfError
 
-pub fn pdf_font_table(PdfDocument, String, Int) -> Array[PdfFontTableEntry] raise @core.PdfError
+pub fn pdf_font_table(PdfDocument, String, Int) -> Array[@font.PdfFontTableEntry] raise @core.PdfError
 
 pub fn pdf_font_table_text(PdfDocument, String, Int) -> Bytes raise @core.PdfError
 
@@ -1111,7 +1112,7 @@ pub fn pdf_list_attached_files(PdfDocument) -> Array[@attachment.PdfAttachment] 
 
 pub fn pdf_list_bookmarks(Bool, Bool, @metadata.PdfMetadataEncoding, ArrayView[Int], PdfDocument) -> Bytes raise @core.PdfError
 
-pub fn pdf_list_fonts(PdfDocument, ArrayView[Int]) -> Array[PdfFontListEntry] raise @core.PdfError
+pub fn pdf_list_fonts(PdfDocument, ArrayView[Int]) -> Array[@font.PdfFontListEntry] raise @core.PdfError
 
 pub fn pdf_list_fonts_text(PdfDocument, ArrayView[Int]) -> Bytes raise @core.PdfError
 
@@ -1199,7 +1200,7 @@ pub let pdf_metadata_xmp_namespace : String
 
 pub fn pdf_minimum_valid_pdf() -> PdfDocument raise @core.PdfError
 
-pub fn pdf_missing_fonts(PdfDocument, ArrayView[Int]) -> Array[PdfMissingFontEntry] raise @core.PdfError
+pub fn pdf_missing_fonts(PdfDocument, ArrayView[Int]) -> Array[@font.PdfMissingFontEntry] raise @core.PdfError
 
 pub fn pdf_missing_fonts_return(PdfDocument, ArrayView[Int]) -> Array[(Int, String, String, String, String)] raise @core.PdfError
 
@@ -2940,7 +2941,7 @@ pub fn PdfDocument::first_xref(Self) -> Int
 pub fn PdfDocument::flip_pages_horizontally(Self, ArrayView[Int], fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::flip_pages_vertically(Self, ArrayView[Int], fast? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::font_from_name(Self, String, Int) -> @syntax.PdfObject raise @core.PdfError
-pub fn PdfDocument::font_table(Self, String, Int) -> Array[PdfFontTableEntry] raise @core.PdfError
+pub fn PdfDocument::font_table(Self, String, Int) -> Array[@font.PdfFontTableEntry] raise @core.PdfError
 pub fn PdfDocument::font_table_text(Self, String, Int) -> Bytes raise @core.PdfError
 pub fn PdfDocument::fonts_json(Self, ArrayView[Int]) -> Json raise @core.PdfError
 pub fn PdfDocument::fonts_json_blob(Self, ArrayView[Int]) -> Bytes raise @core.PdfError
@@ -2986,7 +2987,7 @@ pub fn PdfDocument::language_string(Self) -> String?
 pub fn PdfDocument::list_annotations(Self, ArrayView[Int], encoding? : @metadata.PdfMetadataEncoding) -> Bytes raise @core.PdfError
 pub fn PdfDocument::list_attached_files(Self) -> Array[@attachment.PdfAttachment] raise @core.PdfError
 pub fn PdfDocument::list_bookmarks(Self, ArrayView[Int], encoding? : @metadata.PdfMetadataEncoding, json? : Bool, json_preserve_actions? : Bool) -> Bytes raise @core.PdfError
-pub fn PdfDocument::list_fonts(Self, ArrayView[Int]) -> Array[PdfFontListEntry] raise @core.PdfError
+pub fn PdfDocument::list_fonts(Self, ArrayView[Int]) -> Array[@font.PdfFontListEntry] raise @core.PdfError
 pub fn PdfDocument::list_fonts_text(Self, ArrayView[Int]) -> Bytes raise @core.PdfError
 pub fn PdfDocument::list_spot_colours(Self) -> Array[@core.PdfName]
 pub fn PdfDocument::list_spot_colours_blob(Self) -> Bytes
@@ -3006,7 +3007,7 @@ pub fn PdfDocument::merge_content_streams(Self) -> Unit raise @core.PdfError
 pub fn PdfDocument::merge_name_trees_no_clash(Self, ArrayView[@syntax.PdfObject]) -> @syntax.PdfObject
 pub fn PdfDocument::merge_number_trees_no_clash(Self, ArrayView[@syntax.PdfObject]) -> @syntax.PdfObject
 pub fn PdfDocument::metadata(Self) -> Bytes? raise @core.PdfError
-pub fn PdfDocument::missing_fonts(Self, ArrayView[Int]) -> Array[PdfMissingFontEntry] raise @core.PdfError
+pub fn PdfDocument::missing_fonts(Self, ArrayView[Int]) -> Array[@font.PdfMissingFontEntry] raise @core.PdfError
 pub fn PdfDocument::missing_fonts_return(Self, ArrayView[Int]) -> Array[(Int, String, String, String, String)] raise @core.PdfError
 pub fn PdfDocument::missing_fonts_text(Self, ArrayView[Int]) -> Bytes raise @core.PdfError
 pub fn PdfDocument::name_tree_lookup(Self, BytesView, @syntax.PdfObject) -> @syntax.PdfObject?
@@ -3543,15 +3544,6 @@ pub(all) enum PdfFontFile {
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfFontFile::object_number(Self) -> Int
 
-pub(all) struct PdfFontListEntry {
-  page : Int
-  name : String
-  subtype : String
-  basefont : String
-  encoding : String
-  font : @syntax.PdfObject
-} derive(Eq, ToJson, @debug.Debug)
-
 pub(all) struct PdfFontPack {
   fonts : Array[PdfFont]
   entries : Array[PdfFontPackEntry]
@@ -3562,14 +3554,6 @@ pub(all) struct PdfFontPackEntry {
   codepoint : Int
   font_index : Int
   charcode : Int
-} derive(Eq, ToJson, @debug.Debug)
-
-pub(all) struct PdfFontTableEntry {
-  code : Int
-  unicode : String
-  utf8 : String
-  unicode_name : String
-  glyphnames : String
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfFunction {
@@ -3598,14 +3582,6 @@ pub(all) struct PdfInterpolationFunction {
   c0 : Array[Double]
   c1 : Array[Double]
   n : Double
-} derive(Eq, ToJson, @debug.Debug)
-
-pub(all) struct PdfMissingFontEntry {
-  page : Int
-  name : String
-  subtype : String
-  basefont : String
-  encoding : String
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) enum PdfObjectData {
@@ -4016,6 +3992,10 @@ pub using @crypt_core {type PdfEncryptionMethod}
 
 pub using @core {type PdfError}
 
+pub using @font {type PdfFontListEntry}
+
+pub using @font {type PdfFontTableEntry}
+
 pub using @syntax {type PdfLexeme}
 
 pub using @metadata {type PdfMetadataEncoding}
@@ -4029,6 +4009,8 @@ pub using @metadata {type PdfMetadataXmlName}
 pub using @metadata {type PdfMetadataXmlTag}
 
 pub using @metadata {type PdfMetadataXmlTree}
+
+pub using @font {type PdfMissingFontEntry}
 
 pub using @core {type PdfName}
 

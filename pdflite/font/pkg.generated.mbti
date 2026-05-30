@@ -1,0 +1,41 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pdflite/font"
+
+import {
+  "bobzhang/pdflite/syntax",
+  "moonbitlang/core/debug",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub(all) struct PdfFontListEntry {
+  page : Int
+  name : String
+  subtype : String
+  basefont : String
+  encoding : String
+  font : @syntax.PdfObject
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfFontTableEntry {
+  code : Int
+  unicode : String
+  utf8 : String
+  unicode_name : String
+  glyphnames : String
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfMissingFontEntry {
+  page : Int
+  name : String
+  subtype : String
+  basefont : String
+  encoding : String
+} derive(Eq, ToJson, @debug.Debug)
+
+// Type aliases
+
+// Traits

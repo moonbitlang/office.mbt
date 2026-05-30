@@ -10,6 +10,7 @@ import {
   "bobzhang/pdflite/date",
   "bobzhang/pdflite/destination",
   "bobzhang/pdflite/flate",
+  "bobzhang/pdflite/font",
   "bobzhang/pdflite/font/afm",
   "bobzhang/pdflite/font/standard14",
   "bobzhang/pdflite/geometry",
