@@ -13,6 +13,12 @@ import {
 // Errors
 
 // Types and methods
+pub(all) enum PdfAddTextJustification {
+  PdfAddTextLeftJustify
+  PdfAddTextCentreJustify
+  PdfAddTextRightJustify
+} derive(Eq, ToJson, @debug.Debug)
+
 pub(all) struct PdfAddTextLinePlacement {
   origin : @geometry.Point2
   base_rotation : Double
@@ -56,6 +62,13 @@ pub(all) struct PdfAddTextResourceSetup {
   unique_fontname : @core.PdfName
   unique_fontnames : Array[@core.PdfName]
   extgstate_name : @core.PdfName?
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfAddTextRotation {
+  PdfAddTextRot0
+  PdfAddTextRot90
+  PdfAddTextRot180
+  PdfAddTextRot270
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfAddTextUrl {
