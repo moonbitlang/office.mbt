@@ -120,7 +120,7 @@ fn pdf_font_table_entry(
   font : PdfFont,
   extractor : PdfTextExtractor,
   code : Int,
-) -> PdfFontTableEntry? raise PdfError {
+) -> @font.PdfFontTableEntry? raise PdfError {
   let text = pdf_font_table_text_bytes(font, code)
   let glyphnames = extractor.glyphnames_of_text(text)
   let glyphnames_text = pdf_font_table_glyphnames_text(glyphnames)
@@ -150,11 +150,11 @@ pub fn PdfDocument::font_table(
   self : PdfDocument,
   font_name : String,
   page_number : Int,
-) -> Array[PdfFontTableEntry] raise PdfError {
+) -> Array[@font.PdfFontTableEntry] raise PdfError {
   let font_object = self.pdf_font_table_target_font(font_name, page_number)
   let font = self.read_font(font_object)
   let extractor = font.text_extractor()
-  let output : Array[PdfFontTableEntry] = []
+  let output : Array[@font.PdfFontTableEntry] = []
   for code in 0..<256 {
     match pdf_font_table_entry(font, extractor, code) {
       Some(entry) => output.push(entry)
@@ -170,7 +170,7 @@ pub fn pdf_font_table(
   document : PdfDocument,
   font_name : String,
   page_number : Int,
-) -> Array[PdfFontTableEntry] raise PdfError {
+) -> Array[@font.PdfFontTableEntry] raise PdfError {
   document.font_table(font_name, page_number)
 }
 
@@ -178,7 +178,7 @@ pub fn pdf_font_table(
 fn pdf_font_write_table_line(
   output : Array[Byte],
   position : Int,
-  entry : PdfFontTableEntry,
+  entry : @font.PdfFontTableEntry,
 ) -> Int {
   let mut current = pdf_font_write_utf8(
     output,
@@ -198,7 +198,7 @@ fn pdf_font_write_table_line(
 }
 
 ///|
-fn pdf_font_table_line_length(entry : PdfFontTableEntry) -> Int {
+fn pdf_font_table_line_length(entry : @font.PdfFontTableEntry) -> Int {
   pdf_font_utf8_length(entry.code.to_string()) +
   pdf_font_utf8_length(entry.unicode) +
   pdf_font_utf8_length(entry.utf8) +
@@ -208,7 +208,9 @@ fn pdf_font_table_line_length(entry : PdfFontTableEntry) -> Int {
 }
 
 ///|
-fn pdf_font_table_text_length(entries : ArrayView[PdfFontTableEntry]) -> Int {
+fn pdf_font_table_text_length(
+  entries : ArrayView[@font.PdfFontTableEntry],
+) -> Int {
   let mut length = 0
   for entry in entries {
     length += pdf_font_table_line_length(entry)

@@ -3757,10 +3757,6 @@ pub using @crypt_core {type PdfEncryptionMethod}
 
 pub using @core {type PdfError}
 
-pub using @font {type PdfFontListEntry}
-
-pub using @font {type PdfFontTableEntry}
-
 pub using @syntax {type PdfLexeme}
 
 pub using @metadata {type PdfMetadataEncoding}
@@ -3774,8 +3770,6 @@ pub using @metadata {type PdfMetadataXmlName}
 pub using @metadata {type PdfMetadataXmlTag}
 
 pub using @metadata {type PdfMetadataXmlTree}
-
-pub using @font {type PdfMissingFontEntry}
 
 pub using @core {type PdfName}
 

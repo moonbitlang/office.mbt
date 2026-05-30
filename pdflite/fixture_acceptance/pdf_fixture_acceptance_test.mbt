@@ -6559,9 +6559,9 @@ fn fixture_acceptance_cpdf_source_hello_with_type3_for_test(
 
 ///|
 fn fixture_acceptance_cpdf_source_font_entry_for_test(
-  entries : ArrayView[@pdflite.PdfFontListEntry],
+  entries : ArrayView[@font.PdfFontListEntry],
   name : String,
-) -> @pdflite.PdfFontListEntry raise {
+) -> @font.PdfFontListEntry raise {
   for entry in entries {
     if entry.name == name {
       break entry
@@ -6573,9 +6573,9 @@ fn fixture_acceptance_cpdf_source_font_entry_for_test(
 
 ///|
 fn fixture_acceptance_cpdf_source_font_table_entry_for_test(
-  entries : ArrayView[@pdflite.PdfFontTableEntry],
+  entries : ArrayView[@font.PdfFontTableEntry],
   code : Int,
-) -> @pdflite.PdfFontTableEntry raise {
+) -> @font.PdfFontTableEntry raise {
   for entry in entries {
     if entry.code == code {
       break entry
@@ -11159,9 +11159,9 @@ fn fixture_acceptance_assert_cpdf_sheet_png_pixels_for_test(
 
 ///|
 fn fixture_acceptance_cpdf_font_entry_for_test(
-  entries : ArrayView[@pdflite.PdfFontListEntry],
+  entries : ArrayView[@font.PdfFontListEntry],
   basefont_fragment : String,
-) -> @pdflite.PdfFontListEntry raise {
+) -> @font.PdfFontListEntry raise {
   for entry in entries {
     if entry.basefont.contains(basefont_fragment) {
       break entry
@@ -11174,7 +11174,7 @@ fn fixture_acceptance_cpdf_font_entry_for_test(
 ///|
 fn fixture_acceptance_assert_cpdf_font_table_has_unicode_for_test(
   document : @pdflite.PdfDocument,
-  font : @pdflite.PdfFontListEntry,
+  font : @font.PdfFontListEntry,
 ) -> Unit raise {
   let table = document.font_table(font.name, font.page)
   @test.assert_eq(table.length() > 0, true)
@@ -11190,7 +11190,7 @@ fn fixture_acceptance_assert_cpdf_font_table_has_unicode_for_test(
 ///|
 fn fixture_acceptance_assert_cpdf_embedded_font_for_test(
   document : @pdflite.PdfDocument,
-  fonts : ArrayView[@pdflite.PdfFontListEntry],
+  fonts : ArrayView[@font.PdfFontListEntry],
   basefont_fragment : String,
 ) -> Unit raise {
   let font = fixture_acceptance_cpdf_font_entry_for_test(
@@ -11206,9 +11206,9 @@ fn fixture_acceptance_assert_cpdf_embedded_font_for_test(
 
 ///|
 fn fixture_acceptance_cpdf_missing_font_entry_for_test(
-  entries : ArrayView[@pdflite.PdfMissingFontEntry],
+  entries : ArrayView[@font.PdfMissingFontEntry],
   basefont_fragment : String,
-) -> @pdflite.PdfMissingFontEntry raise {
+) -> @font.PdfMissingFontEntry raise {
   for entry in entries {
     if entry.basefont.contains(basefont_fragment) {
       break entry
@@ -11220,7 +11220,7 @@ fn fixture_acceptance_cpdf_missing_font_entry_for_test(
 
 ///|
 fn fixture_acceptance_assert_cpdf_no_missing_font_for_test(
-  entries : ArrayView[@pdflite.PdfMissingFontEntry],
+  entries : ArrayView[@font.PdfMissingFontEntry],
   basefont_fragment : String,
 ) -> Unit raise {
   for entry in entries {
@@ -11233,8 +11233,8 @@ fn fixture_acceptance_assert_cpdf_no_missing_font_for_test(
 ///|
 fn fixture_acceptance_assert_cpdf_removed_embedded_font_for_test(
   document : @pdflite.PdfDocument,
-  fonts : ArrayView[@pdflite.PdfFontListEntry],
-  missing : ArrayView[@pdflite.PdfMissingFontEntry],
+  fonts : ArrayView[@font.PdfFontListEntry],
+  missing : ArrayView[@font.PdfMissingFontEntry],
   basefont_fragment : String,
 ) -> Unit raise {
   let font = fixture_acceptance_cpdf_font_entry_for_test(

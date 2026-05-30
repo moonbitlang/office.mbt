@@ -56,9 +56,9 @@ fn text_fixture_source_page_fonts_for_test(
 
 ///|
 fn text_fixture_source_font_entry_for_test(
-  entries : ArrayView[@pdflite.PdfFontListEntry],
+  entries : ArrayView[@font.PdfFontListEntry],
   name : String,
-) -> @pdflite.PdfFontListEntry raise {
+) -> @font.PdfFontListEntry raise {
   for entry in entries {
     if entry.name == name {
       break entry
@@ -70,9 +70,9 @@ fn text_fixture_source_font_entry_for_test(
 
 ///|
 fn text_fixture_source_font_table_entry_for_test(
-  entries : ArrayView[@pdflite.PdfFontTableEntry],
+  entries : ArrayView[@font.PdfFontTableEntry],
   code : Int,
-) -> @pdflite.PdfFontTableEntry raise {
+) -> @font.PdfFontTableEntry raise {
   for entry in entries {
     if entry.code == code {
       break entry

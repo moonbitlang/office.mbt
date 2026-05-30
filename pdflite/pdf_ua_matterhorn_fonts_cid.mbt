@@ -208,7 +208,9 @@ fn PdfDocument::pdf_ua_matterhorn_check_31_008(self : PdfDocument) -> Json? {
 }
 
 ///|
-fn pdf_ua_matterhorn_missing_font_extra(entry : PdfMissingFontEntry) -> Json {
+fn pdf_ua_matterhorn_missing_font_extra(
+  entry : @font.PdfMissingFontEntry,
+) -> Json {
   Json::string(
     entry.page.to_string() +
     " " +

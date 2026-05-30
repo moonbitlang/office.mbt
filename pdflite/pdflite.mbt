@@ -383,13 +383,6 @@ pub using @metadata {
 }
 
 ///|
-pub using @font {
-  type PdfFontListEntry,
-  type PdfFontTableEntry,
-  type PdfMissingFontEntry,
-}
-
-///|
 pub using @reader {
   type PdfVersion,
   type ObjectStreamReference,

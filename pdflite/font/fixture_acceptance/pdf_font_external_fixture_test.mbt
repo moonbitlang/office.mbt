@@ -641,9 +641,9 @@ fn font_external_assert_contains_for_test(
 
 ///|
 fn font_external_cpdf_font_entry_for_test(
-  fonts : ArrayView[@pdflite.PdfFontListEntry],
+  fonts : ArrayView[@font.PdfFontListEntry],
   basefont_fragment : String,
-) -> @pdflite.PdfFontListEntry raise {
+) -> @font.PdfFontListEntry raise {
   for entry in fonts {
     if entry.basefont.contains(basefont_fragment) {
       break entry
@@ -656,7 +656,7 @@ fn font_external_cpdf_font_entry_for_test(
 ///|
 fn font_external_assert_font_table_has_unicode_for_test(
   document : @pdflite.PdfDocument,
-  font : @pdflite.PdfFontListEntry,
+  font : @font.PdfFontListEntry,
 ) -> Unit raise {
   let table = document.font_table(font.name, font.page)
   @test.assert_eq(table.length() > 0, true)
@@ -672,7 +672,7 @@ fn font_external_assert_font_table_has_unicode_for_test(
 ///|
 fn font_external_assert_embedded_font_for_test(
   document : @pdflite.PdfDocument,
-  fonts : ArrayView[@pdflite.PdfFontListEntry],
+  fonts : ArrayView[@font.PdfFontListEntry],
   basefont_fragment : String,
 ) -> Unit raise {
   let font = font_external_cpdf_font_entry_for_test(fonts, basefont_fragment)
@@ -686,9 +686,9 @@ fn font_external_assert_embedded_font_for_test(
 
 ///|
 fn font_external_missing_font_entry_for_test(
-  entries : ArrayView[@pdflite.PdfMissingFontEntry],
+  entries : ArrayView[@font.PdfMissingFontEntry],
   basefont_fragment : String,
-) -> @pdflite.PdfMissingFontEntry raise {
+) -> @font.PdfMissingFontEntry raise {
   for entry in entries {
     if entry.basefont.contains(basefont_fragment) {
       break entry
@@ -700,7 +700,7 @@ fn font_external_missing_font_entry_for_test(
 
 ///|
 fn font_external_assert_no_missing_font_for_test(
-  entries : ArrayView[@pdflite.PdfMissingFontEntry],
+  entries : ArrayView[@font.PdfMissingFontEntry],
   basefont_fragment : String,
 ) -> Unit raise {
   for entry in entries {
@@ -713,8 +713,8 @@ fn font_external_assert_no_missing_font_for_test(
 ///|
 fn font_external_assert_removed_embedded_font_for_test(
   document : @pdflite.PdfDocument,
-  fonts : ArrayView[@pdflite.PdfFontListEntry],
-  missing : ArrayView[@pdflite.PdfMissingFontEntry],
+  fonts : ArrayView[@font.PdfFontListEntry],
+  missing : ArrayView[@font.PdfMissingFontEntry],
   basefont_fragment : String,
 ) -> Unit raise {
   let font = font_external_cpdf_font_entry_for_test(fonts, basefont_fragment)

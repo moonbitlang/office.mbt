@@ -4,7 +4,7 @@ fn PdfDocument::pdf_font_list_entry(
   page : Int,
   name : String,
   font : PdfObject,
-) -> PdfFontListEntry raise PdfError {
+) -> @font.PdfFontListEntry raise PdfError {
   let direct_font = self.direct(font)
   {
     page,
@@ -22,8 +22,10 @@ fn PdfDocument::pdf_font_list_fonts_dictionary(
   page : Int,
   prefix : String,
   fonts : ArrayView[(PdfName, PdfObject)],
-) -> Array[PdfFontListEntry] raise PdfError {
-  let output : Array[PdfFontListEntry] = Array::new(capacity=fonts.length())
+) -> Array[@font.PdfFontListEntry] raise PdfError {
+  let output : Array[@font.PdfFontListEntry] = Array::new(
+    capacity=fonts.length(),
+  )
   for entry in fonts {
     output.push(
       self.pdf_font_list_entry(
@@ -43,8 +45,10 @@ fn PdfDocument::pdf_font_list_xobjects(
   prefix : String,
   xobjects : ArrayView[(PdfName, PdfObject)],
   seen : Array[Int],
-) -> Array[PdfFontListEntry] raise PdfError {
-  let output : Array[PdfFontListEntry] = Array::new(capacity=xobjects.length())
+) -> Array[@font.PdfFontListEntry] raise PdfError {
+  let output : Array[@font.PdfFontListEntry] = Array::new(
+    capacity=xobjects.length(),
+  )
   for entry in xobjects {
     match entry.1 {
       PdfIndirect(number) =>
@@ -69,8 +73,8 @@ fn PdfDocument::pdf_font_list_resources(
   prefix : String,
   resources : PdfObject,
   seen : Array[Int],
-) -> Array[PdfFontListEntry] raise PdfError {
-  let output : Array[PdfFontListEntry] = []
+) -> Array[@font.PdfFontListEntry] raise PdfError {
+  let output : Array[@font.PdfFontListEntry] = []
   match self.lookup_direct(pdf_page_font_resource_name, resources) {
     Some(PdfDictionary(fonts)) =>
       output.append(self.pdf_font_list_fonts_dictionary(page, prefix, fonts))
@@ -91,7 +95,7 @@ fn PdfDocument::pdf_font_list_xobject(
   prefix : String,
   xobject_number : Int,
   seen : Array[Int],
-) -> Array[PdfFontListEntry] raise PdfError {
+) -> Array[@font.PdfFontListEntry] raise PdfError {
   if seen.contains(xobject_number) {
     []
   } else {
@@ -114,11 +118,11 @@ fn PdfDocument::pdf_font_list_xobject(
 pub fn PdfDocument::list_fonts(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> Array[PdfFontListEntry] raise PdfError {
+) -> Array[@font.PdfFontListEntry] raise PdfError {
   let pages = self.pages_of_pagetree()
   pdf_page_box_validate_page_numbers(page_numbers, pages.length(), "list_fonts")
   let selected_pages = @core.pdf_number_set(page_numbers)
-  let output : Array[PdfFontListEntry] = Array::new(
+  let output : Array[@font.PdfFontListEntry] = Array::new(
     capacity=page_numbers.length(),
   )
   let seen_xobjects : Array[Int] = Array::new(capacity=page_numbers.length())
@@ -143,7 +147,7 @@ pub fn PdfDocument::list_fonts(
 pub fn pdf_list_fonts(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> Array[PdfFontListEntry] raise PdfError {
+) -> Array[@font.PdfFontListEntry] raise PdfError {
   document.list_fonts(page_numbers)
 }
 
@@ -151,7 +155,7 @@ pub fn pdf_list_fonts(
 fn pdf_font_write_listing_line(
   output : Array[Byte],
   position : Int,
-  entry : PdfFontListEntry,
+  entry : @font.PdfFontListEntry,
 ) -> Int {
   let mut current = pdf_font_write_utf8(
     output,
@@ -175,7 +179,7 @@ fn pdf_font_write_listing_line(
 }
 
 ///|
-fn pdf_font_listing_line_length(entry : PdfFontListEntry) -> Int {
+fn pdf_font_listing_line_length(entry : @font.PdfFontListEntry) -> Int {
   pdf_font_utf8_length(entry.page.to_string()) +
   pdf_font_utf8_length(entry.name) +
   pdf_font_utf8_length(entry.subtype) +
@@ -185,7 +189,9 @@ fn pdf_font_listing_line_length(entry : PdfFontListEntry) -> Int {
 }
 
 ///|
-fn pdf_font_listing_text_length(entries : ArrayView[PdfFontListEntry]) -> Int {
+fn pdf_font_listing_text_length(
+  entries : ArrayView[@font.PdfFontListEntry],
+) -> Int {
   let mut length = 0
   for entry in entries {
     length += pdf_font_listing_line_length(entry)
@@ -251,7 +257,7 @@ fn pdf_font_json_nullable_name(value : String) -> Json {
 }
 
 ///|
-fn pdf_font_entry_json(entry : PdfFontListEntry) -> Json {
+fn pdf_font_entry_json(entry : @font.PdfFontListEntry) -> Json {
   Json::object(
     Map([
       ("page", pdf_util_json_number(entry.page)),

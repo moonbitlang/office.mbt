@@ -34,7 +34,7 @@ fn PdfDocument::pdf_missing_font_entry(
   page : Int,
   name : PdfName,
   font : PdfObject,
-) -> PdfMissingFontEntry raise PdfError {
+) -> @font.PdfMissingFontEntry raise PdfError {
   let encoding = match
     self.pdf_font_name_field(font, pdf_text_encoding_key_name) {
     "" => "Built-in"
@@ -69,10 +69,10 @@ fn PdfDocument::pdf_missing_fonts_on_page(
   self : PdfDocument,
   page : Int,
   resources : PdfObject,
-) -> Array[PdfMissingFontEntry] raise PdfError {
+) -> Array[@font.PdfMissingFontEntry] raise PdfError {
   match self.lookup_direct(pdf_page_font_resource_name, resources) {
     Some(PdfDictionary(fonts)) => {
-      let output : Array[PdfMissingFontEntry] = Array::new(
+      let output : Array[@font.PdfMissingFontEntry] = Array::new(
         capacity=fonts.length(),
       )
       for font_entry in fonts {
@@ -103,7 +103,7 @@ fn PdfDocument::pdf_missing_fonts_on_page(
 pub fn PdfDocument::missing_fonts(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> Array[PdfMissingFontEntry] raise PdfError {
+) -> Array[@font.PdfMissingFontEntry] raise PdfError {
   let pages = self.pages_of_pagetree()
   pdf_page_box_validate_page_numbers(
     page_numbers,
@@ -111,7 +111,7 @@ pub fn PdfDocument::missing_fonts(
     "missing_fonts",
   )
   let selected_pages = @core.pdf_number_set(page_numbers)
-  let output : Array[PdfMissingFontEntry] = Array::new(
+  let output : Array[@font.PdfMissingFontEntry] = Array::new(
     capacity=page_numbers.length(),
   )
   for index, page in pages {
@@ -128,13 +128,13 @@ pub fn PdfDocument::missing_fonts(
 pub fn pdf_missing_fonts(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> Array[PdfMissingFontEntry] raise PdfError {
+) -> Array[@font.PdfMissingFontEntry] raise PdfError {
   document.missing_fonts(page_numbers)
 }
 
 ///|
 fn pdf_missing_font_entry_tuple(
-  entry : PdfMissingFontEntry,
+  entry : @font.PdfMissingFontEntry,
 ) -> (Int, String, String, String, String) {
   (entry.page, entry.name, entry.subtype, entry.basefont, entry.encoding)
 }
@@ -165,7 +165,7 @@ pub fn pdf_missing_fonts_return(
 fn pdf_missing_font_write_text(
   output : Array[Byte],
   position : Int,
-  entry : PdfMissingFontEntry,
+  entry : @font.PdfMissingFontEntry,
 ) -> Int {
   let mut current = pdf_font_write_utf8(
     output,
@@ -185,7 +185,7 @@ fn pdf_missing_font_write_text(
 }
 
 ///|
-fn pdf_missing_font_text_length(entry : PdfMissingFontEntry) -> Int {
+fn pdf_missing_font_text_length(entry : @font.PdfMissingFontEntry) -> Int {
   pdf_font_utf8_length(entry.page.to_string()) +
   pdf_font_utf8_length(entry.name) +
   pdf_font_utf8_length(entry.subtype) +
@@ -196,7 +196,7 @@ fn pdf_missing_font_text_length(entry : PdfMissingFontEntry) -> Int {
 
 ///|
 fn pdf_missing_fonts_text_length(
-  entries : ArrayView[PdfMissingFontEntry],
+  entries : ArrayView[@font.PdfMissingFontEntry],
 ) -> Int {
   let mut length = 0
   for entry in entries {
