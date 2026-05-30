@@ -272,10 +272,6 @@ pub fn pdf_alluprightonly(PdfDocument, ArrayView[Int]) -> Bool raise @core.PdfEr
 
 pub fn pdf_alluprightonly_cpdf_order(ArrayView[Int], PdfDocument) -> Bool raise @core.PdfError
 
-pub fn pdf_annotation_make(@annotation.PdfAnnotationSubtype, contents? : Bytes?, border? : @annotation.PdfAnnotationBorder, rectangle? : @geometry.PdfRectangle, colour? : @annotation.PdfAnnotationColour?, subject? : Bytes?) -> @annotation.PdfAnnotation
-
-pub fn pdf_annotation_make_border(Double, vertical_radius? : Double, horizontal_radius? : Double, style? : @annotation.PdfAnnotationStyle, dash_array? : ArrayView[Int]) -> @annotation.PdfAnnotationBorder
-
 pub fn pdf_annotations_of_page(PdfDocument, @page.PdfPage) -> Array[@annotation.PdfAnnotation] raise @core.PdfError
 
 pub fn pdf_append_page_content(PdfDocument, ArrayView[Int], BytesView, before? : Bool, fast? : Bool) -> PdfDocument raise @core.PdfError
@@ -3598,16 +3594,6 @@ pub using @reader {type ObjectStreamReference}
 pub using @geometry {type PaperSize}
 
 pub using @crypt_core {type PdfAesV3RandomField}
-
-pub using @annotation {type PdfAnnotation}
-
-pub using @annotation {type PdfAnnotationBorder}
-
-pub using @annotation {type PdfAnnotationColour}
-
-pub using @annotation {type PdfAnnotationStyle}
-
-pub using @annotation {type PdfAnnotationSubtype}
 
 pub type PdfBytes = Bytes
 

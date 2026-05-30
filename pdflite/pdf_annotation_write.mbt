@@ -9,7 +9,9 @@ fn pdf_annotation_rectangle_object(rectangle : PdfRectangle) -> PdfObject {
 }
 
 ///|
-fn pdf_annotation_border_object(border : PdfAnnotationBorder) -> PdfObject {
+fn pdf_annotation_border_object(
+  border : @annotation.PdfAnnotationBorder,
+) -> PdfObject {
   let base : Array[PdfObject] = [
     PdfReal(border.horizontal_radius),
     PdfReal(border.vertical_radius),
@@ -34,7 +36,7 @@ fn pdf_annotation_rest_entries(
 
 ///|
 fn pdf_object_of_annotation(
-  annotation : PdfAnnotation,
+  annotation : @annotation.PdfAnnotation,
 ) -> PdfObject raise PdfError {
   let entries : Array[(PdfName, PdfObject)] = [
     (
@@ -90,7 +92,7 @@ fn pdf_object_of_annotation(
 pub fn PdfDocument::add_annotation(
   self : PdfDocument,
   page : PdfPage,
-  annotation : PdfAnnotation,
+  annotation : @annotation.PdfAnnotation,
 ) -> PdfPage raise PdfError {
   let object = pdf_object_of_annotation(annotation)
   let annotations = match
@@ -113,7 +115,7 @@ pub fn PdfDocument::add_annotation(
 pub fn pdf_add_annotation(
   document : PdfDocument,
   page : PdfPage,
-  annotation : PdfAnnotation,
+  annotation : @annotation.PdfAnnotation,
 ) -> PdfPage raise PdfError {
   document.add_annotation(page, annotation)
 }

@@ -111,7 +111,7 @@ fn pdf_redact_annotation_box_ops(
 
 ///|
 fn pdf_redact_annotation_page_box_ops(
-  annotations : ArrayView[PdfAnnotation],
+  annotations : ArrayView[@annotation.PdfAnnotation],
   light : Bool,
 ) -> Array[PdfContentOp] {
   let output : Array[PdfContentOp] = []

@@ -504,10 +504,10 @@ test "PdfDocument add_annotation writes annotation objects into page rest" {
   let key_colour = annotation_name_for_test("/C")
   let key_subject = annotation_name_for_test("/Subj")
   let doc = @pdflite.pdf_document_empty()
-  let annotation = @pdflite.pdf_annotation_make(
+  let annotation = @annotation.pdf_annotation_make(
     AnnotationLink,
     contents=Some(@ascii.encode("jump")),
-    border=@pdflite.pdf_annotation_make_border(
+    border=@annotation.pdf_annotation_make_border(
       2.0,
       vertical_radius=1.0,
       horizontal_radius=3.0,
@@ -573,14 +573,14 @@ test "PdfDocument annotation APIs report malformed annotation dictionaries" {
     try! doc.annotations_of_page(@pdflite.pdf_page_blank(@pdflite.paper_a4)),
     [],
   )
-  let missing_rect : Result[@pdflite.PdfAnnotation, Error] = try? doc.read_annotation(
+  let missing_rect : Result[@annotation.PdfAnnotation, Error] = try? doc.read_annotation(
     PdfDictionary([]),
   )
   guard missing_rect is Err(@pdflite.PdfError::RectangleExpected) else {
     fail("expected @pdflite.PdfError::RectangleExpected")
   }
   let bad_rest = {
-    ..@pdflite.pdf_annotation_make(AnnotationText),
+    ..@annotation.pdf_annotation_make(AnnotationText),
     rest: PdfInteger(1),
   }
   let bad_rest_result : Result[@pdflite.PdfPage, Error] = try? doc.add_annotation(
@@ -595,7 +595,7 @@ test "PdfDocument annotation APIs report malformed annotation dictionaries" {
       ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
       rest: PdfDictionary([(key_annots, PdfInteger(1))]),
     },
-    @pdflite.pdf_annotation_make(AnnotationText),
+    @annotation.pdf_annotation_make(AnnotationText),
   )
   guard bad_annots_result is Err(@pdflite.PdfError::DictionaryExpected) else {
     fail("expected @pdflite.PdfError::DictionaryExpected")
@@ -607,8 +607,8 @@ test "PdfDocument add_annotation writes subtype names for annotation variants" {
   let key_annots = annotation_name_for_test("/Annots")
   let key_subtype = annotation_name_for_test("/Subtype")
   let custom_name = annotation_name_for_test("/Custom")
-  let popup_parent = @pdflite.pdf_annotation_make(AnnotationText)
-  let cases : Array[(@pdflite.PdfAnnotationSubtype, @pdflite.PdfName)] = [
+  let popup_parent = @annotation.pdf_annotation_make(AnnotationText)
+  let cases : Array[(@annotation.PdfAnnotationSubtype, @pdflite.PdfName)] = [
     (AnnotationText, annotation_name_for_test("/Text")),
     (AnnotationLink, annotation_name_for_test("/Link")),
     (AnnotationFreeText, annotation_name_for_test("/FreeText")),
@@ -640,7 +640,7 @@ test "PdfDocument add_annotation writes subtype names for annotation variants" {
   for case in cases {
     let page = try! doc.add_annotation(
       @pdflite.pdf_page_blank(@pdflite.paper_a4),
-      @pdflite.pdf_annotation_make(case.0),
+      @annotation.pdf_annotation_make(case.0),
     )
     guard page.rest.lookup_immediate(key_annots)
       is Some(PdfArray([PdfDictionary(_) as annotation])) else {
@@ -668,7 +668,9 @@ test "PdfDocument read_annotation maps subtype names and border styles" {
     PdfInteger(1),
     PdfInteger(1),
   ])
-  let subtype_cases : Array[(@pdflite.PdfName, @pdflite.PdfAnnotationSubtype)] = [
+  let subtype_cases : Array[
+    (@pdflite.PdfName, @annotation.PdfAnnotationSubtype),
+  ] = [
     (annotation_name_for_test("/Text"), AnnotationText),
     (annotation_name_for_test("/FreeText"), AnnotationFreeText),
     (annotation_name_for_test("/Stamp"), AnnotationStamp),
@@ -726,7 +728,7 @@ test "PdfDocument read_annotation maps subtype names and border styles" {
     )).subtype,
     AnnotationUnknown(annotation_name_for_test("")),
   )
-  let style_cases : Array[(@pdflite.PdfName, @pdflite.PdfAnnotationStyle)] = [
+  let style_cases : Array[(@pdflite.PdfName, @annotation.PdfAnnotationStyle)] = [
     (annotation_name_for_test("/S"), AnnotationSolid),
     (annotation_name_for_test("/D"), AnnotationDashed),
     (annotation_name_for_test("/B"), AnnotationBeveled),
@@ -806,7 +808,7 @@ test "PdfDocument add_annotation prepends to existing annotations and keeps rest
   let key_nm = annotation_name_for_test("/NM")
   let doc = @pdflite.pdf_document_empty()
   let annotation = {
-    ..@pdflite.pdf_annotation_make(AnnotationText),
+    ..@annotation.pdf_annotation_make(AnnotationText),
     rest: PdfDictionary([(key_nm, PdfString(@ascii.encode("a1")))]),
   }
   let page = try! doc.add_annotation(
