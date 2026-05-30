@@ -19,12 +19,6 @@ pub let pdf_metadata_rdf_namespace : String = "http://www.w3.org/1999/02/22-rdf-
 pub let pdf_metadata_pdfaid_namespace : String = "http://www.aiim.org/pdfa/ns/id/"
 
 ///|
-let pdf_metadata_pdfaid_wrong_iso_namespace : String = "http://www.aiim.org/pdfa/ns/id"
-
-///|
-let pdf_metadata_pdfaid_wrong_acrobat_namespace : String = "http://www.aiim.org/pdfa/ns/id.html"
-
-///|
 /// PDF/X identification namespace URI.
 pub let pdf_metadata_pdfxid_namespace : String = "http://www.npes.org/pdfx/ns/id/"
 

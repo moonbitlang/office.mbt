@@ -6,6 +6,59 @@ import {
 }
 
 // Values
+pub let pdf_adobe : String
+
+pub let pdf_dc : String
+
+pub let pdf_metadata_adobe : String
+
+pub let pdf_metadata_adobe_namespace : String
+
+pub let pdf_metadata_dc : String
+
+pub let pdf_metadata_dc_namespace : String
+
+pub let pdf_metadata_pdfaid : String
+
+pub let pdf_metadata_pdfaid_namespace : String
+
+pub let pdf_metadata_pdfe : String
+
+pub let pdf_metadata_pdfe_namespace : String
+
+pub let pdf_metadata_pdfuaid : String
+
+pub let pdf_metadata_pdfuaid_namespace : String
+
+pub let pdf_metadata_pdfvtid : String
+
+pub let pdf_metadata_pdfvtid_namespace : String
+
+pub let pdf_metadata_pdfxid : String
+
+pub let pdf_metadata_pdfxid_namespace : String
+
+pub let pdf_metadata_rdf : String
+
+pub let pdf_metadata_rdf_namespace : String
+
+pub let pdf_metadata_xmp : String
+
+pub let pdf_metadata_xmp_namespace : String
+
+pub let pdf_pdfaid : String
+
+pub let pdf_pdfe : String
+
+pub let pdf_pdfuaid : String
+
+pub let pdf_pdfvtid : String
+
+pub let pdf_pdfxid : String
+
+pub let pdf_rdf : String
+
+pub let pdf_xmp : String
 
 // Errors
 

@@ -1,4 +1,10 @@
 ///|
+let pdf_metadata_pdfaid_wrong_iso_namespace : String = "http://www.aiim.org/pdfa/ns/id"
+
+///|
+let pdf_metadata_pdfaid_wrong_acrobat_namespace : String = "http://www.aiim.org/pdfa/ns/id.html"
+
+///|
 fn pdf_metadata_decode_pdf_string(value : BytesView) -> String? {
   let text = @utf8.decode(value) catch { _ => return None }
   Some(text)
