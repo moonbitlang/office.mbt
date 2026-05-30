@@ -211,6 +211,14 @@ pub using @spec {
 
 ///|
 pub using @addtext {
+  pdf_addtext_apply_justification_offset,
+  pdf_addtext_diagonal_offsets,
+  pdf_addtext_initial_line_offsets,
+  pdf_addtext_justification_offset,
+  pdf_addtext_line_advance,
+  pdf_addtext_line_placement,
+  pdf_addtext_rotation_offsets,
+  pdf_addtext_rotation_radians,
   type PdfAddTextJustification,
   type PdfAddTextLinePlacement,
   type PdfAddTextLineWidths,

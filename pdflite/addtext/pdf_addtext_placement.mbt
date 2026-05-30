@@ -45,7 +45,7 @@ fn pdf_addtext_horizontal_justification(
 ///|
 fn pdf_addtext_vertical_justification_offset(
   delta : Double,
-  position : PdfPosition,
+  position : @geometry.PdfPosition,
   justification : PdfAddTextJustification,
 ) -> Double {
   match justification {
@@ -106,7 +106,7 @@ fn pdf_addtext_vertical_justification_offset(
 ///|
 fn pdf_addtext_horizontal_justification_offset(
   delta : Double,
-  position : PdfPosition,
+  position : @geometry.PdfPosition,
   justification : PdfAddTextJustification,
 ) -> Double {
   match justification {
@@ -173,7 +173,7 @@ pub fn pdf_addtext_justification_offset(
   rotation : PdfAddTextRotation,
   longest_width : Double,
   width : Double,
-  position : PdfPosition,
+  position : @geometry.PdfPosition,
   justification : PdfAddTextJustification,
 ) -> Double {
   let delta = longest_width - width
@@ -216,8 +216,8 @@ pub fn pdf_addtext_apply_justification_offset(
 /// justification offset application, explicit text rotation, and
 /// rotation-origin offset selection.
 pub fn pdf_addtext_line_placement(
-  bounds : PdfRectangle,
-  position : PdfPosition,
+  bounds : @geometry.PdfRectangle,
+  position : @geometry.PdfPosition,
   rotation : PdfAddTextRotation,
   text_width : Double,
   longest_width : Double,
@@ -225,7 +225,9 @@ pub fn pdf_addtext_line_placement(
   vertical_offset : Double,
   justification : PdfAddTextJustification,
 ) -> PdfAddTextLinePlacement {
-  let placed = pdf_calculate_position(false, text_width, bounds, position)
+  let placed = @geometry.pdf_calculate_position(
+    false, text_width, bounds, position,
+  )
   let justification_offset = pdf_addtext_justification_offset(
     rotation, longest_width, text_width, position, justification,
   )
@@ -245,10 +247,10 @@ pub fn pdf_addtext_line_placement(
     position, rotation, text_width,
   )
   {
-    origin: point2(placed.x, placed.y),
+    origin: @geometry.point2(placed.x, placed.y),
     base_rotation: placed.rotation,
     text_rotation: pdf_addtext_rotation_radians(rotation),
-    rotation_offset: point2(rotation_h_offset, rotation_v_offset),
+    rotation_offset: @geometry.point2(rotation_h_offset, rotation_v_offset),
     horizontal_offset: final_h_offset,
     vertical_offset: final_v_offset,
     justification_offset,

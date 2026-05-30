@@ -3,4 +3,5 @@ import {
   "bobzhang/pdflite/geometry",
   "bobzhang/pdflite/syntax",
   "moonbitlang/core/json",
+  "moonbitlang/core/math",
 }
