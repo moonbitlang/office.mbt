@@ -34,7 +34,7 @@ fn PdfDocument::pdf_impose_transform_content(
 ///|
 fn PdfDocument::pdf_impose_combine_page_resources(
   self : PdfDocument,
-  pages : ArrayView[PdfPage],
+  pages : ArrayView[@page.PdfPage],
 ) -> PdfObject {
   let mut resources = pages[0].resources
   for index in 1..<pages.length() {
@@ -46,7 +46,7 @@ fn PdfDocument::pdf_impose_combine_page_resources(
 ///|
 fn PdfDocument::pdf_impose_combine_page_rests(
   self : PdfDocument,
-  pages : ArrayView[PdfPage],
+  pages : ArrayView[@page.PdfPage],
 ) -> PdfObject {
   let mut rest = pages[0].rest
   for index in 1..<pages.length() {
@@ -59,7 +59,7 @@ fn PdfDocument::pdf_impose_combine_page_rests(
 #warnings("-unused_value")
 fn PdfDocument::pdf_impose_pages_core(
   self : PdfDocument,
-  pages : ArrayView[PdfPage],
+  pages : ArrayView[@page.PdfPage],
   fit : Bool,
   x : Int,
   y : Int,
@@ -72,7 +72,7 @@ fn PdfDocument::pdf_impose_pages_core(
   fast : Bool,
   fit_extra_hspace : Double,
   fit_extra_vspace : Double,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   if pages.length() == 0 {
     raise BadNumberArgument("impose: pages must not be empty")
   }
@@ -95,7 +95,7 @@ fn PdfDocument::pdf_impose_pages_core(
   for index in 0..<pages.length() {
     self.transform_annotations(transforms[index], pages[index].rest)
   }
-  let transformed_pages : Array[PdfPage] = []
+  let transformed_pages : Array[@page.PdfPage] = []
   for index in 0..<pages.length() {
     transformed_pages.push(
       self.pdf_impose_change_pattern_matrices_page(

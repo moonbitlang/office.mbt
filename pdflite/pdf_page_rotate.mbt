@@ -2,13 +2,13 @@
 fn PdfDocument::pdf_page_rotate_rewrite(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
-  rotate : (PdfPage) -> PdfPageRotation raise PdfError,
+  rotate : (@page.PdfPage) -> @page.PdfPageRotation raise PdfError,
   label : String,
 ) -> PdfDocument raise PdfError {
   pdf_page_box_validate_page_numbers(page_numbers, self.endpage(), label)
   let pages = self.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(page_numbers)
-  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
+  let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
     let page = pages[index]
@@ -29,7 +29,7 @@ fn pdf_page_rotate_degrees_to_radians(rotation : Double) -> Double {
 ///|
 fn PdfDocument::pdf_page_rotate_contents_matrix(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   rotation : Double,
 ) -> TransformMatrix raise PdfError {
   let bounds = self.parse_rectangle(page.mediabox)
@@ -43,10 +43,10 @@ fn PdfDocument::pdf_page_rotate_contents_matrix(
 ///|
 fn PdfDocument::pdf_page_rotate_contents_page(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   matrix : TransformMatrix,
   fast : Bool,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   let page = self.pdf_impose_change_pattern_matrices_page(matrix, page)
   self.transform_annotations(matrix, page.rest)
   self.prepend_operators(page, [Op_cm(matrix)], fast~)
@@ -59,7 +59,7 @@ pub fn PdfDocument::rotate_pages(
   rotation : Int,
   page_numbers : ArrayView[Int],
 ) -> PdfDocument raise PdfError {
-  let normalized = pdf_page_rotation_of_int(rotation)
+  let normalized = @page.pdf_page_rotation_of_int(rotation)
   self.pdf_page_rotate_rewrite(
     page_numbers,
     fn(_) { normalized },
@@ -87,7 +87,9 @@ pub fn PdfDocument::rotate_pages_by(
   self.pdf_page_rotate_rewrite(
     page_numbers,
     fn(page) raise PdfError {
-      pdf_page_rotation_of_int(pdf_page_int_of_rotation(page.rotate) + rotation)
+      @page.pdf_page_rotation_of_int(
+        @page.pdf_page_int_of_rotation(page.rotate) + rotation,
+      )
     },
     "rotate_pages_by",
   )
@@ -122,7 +124,7 @@ pub fn PdfDocument::rotate_contents(
   )
   let pages = self.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(page_numbers)
-  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
+  let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
   let matrices : Array[(Int, TransformMatrix)] = Array::new(
     capacity=page_numbers.length(),
   )

@@ -114,7 +114,7 @@ pub fn pdf_merge_documents(
   let merged = pdf_document_empty()
   let (major, minor) = pdf_merge_max_version(staged)
   merged.set_version(major, minor)
-  let pages : Array[PdfPage] = []
+  let pages : Array[@page.PdfPage] = []
   let old_page_numbers : Array[Int] = []
   let bookmarks : Array[@bookmark.PdfBookmark] = []
   let oldstyle_destinations : Array[(PdfName, PdfObject)] = []

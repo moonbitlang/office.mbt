@@ -15,8 +15,8 @@ fn page_redact_page_for_test(
   ops : ArrayView[@pdflite.PdfContentOp],
   rest? : @pdflite.PdfObject = PdfDictionary([]),
   resources? : @pdflite.PdfObject = PdfDictionary([]),
-  rotate? : @pdflite.PdfPageRotation = Rotate0,
-) -> @pdflite.PdfPage {
+  rotate? : @page.PdfPageRotation = Rotate0,
+) -> @page.PdfPage {
   {
     content: [page_redact_stream_for_test(ops)],
     mediabox: PdfArray([
@@ -33,7 +33,7 @@ fn page_redact_page_for_test(
 
 ///|
 fn page_redact_document_for_test(
-  pages : ArrayView[@pdflite.PdfPage],
+  pages : ArrayView[@page.PdfPage],
 ) -> @pdflite.PdfDocument {
   try! (try! @pdflite.pdf_blank_document(100.0, 100.0, pages.length())).change_pages(
     pages,
@@ -43,7 +43,7 @@ fn page_redact_document_for_test(
 ///|
 fn page_redact_ops_for_test(
   document : @pdflite.PdfDocument,
-  page : @pdflite.PdfPage,
+  page : @page.PdfPage,
 ) -> Array[@pdflite.PdfContentOp] {
   try! document.parse_content_ops_with_resources(page.resources, page.content)
 }

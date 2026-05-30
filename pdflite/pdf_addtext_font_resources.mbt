@@ -16,7 +16,7 @@ pub fn pdf_addtext_effective_encoding(font : PdfFont?) -> PdfEncoding {
 /// `Pdf.lookup_direct` setup before unique font-name allocation.
 pub fn PdfDocument::addtext_page_font_dictionary(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
 ) -> PdfObject {
   match self.lookup_direct(pdf_addtext_font_key(), page.resources) {
     Some(fontdict) => fontdict
@@ -28,7 +28,7 @@ pub fn PdfDocument::addtext_page_font_dictionary(
 /// Compatibility wrapper for `PdfDocument::addtext_page_font_dictionary`.
 pub fn pdf_addtext_page_font_dictionary(
   document : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
 ) -> PdfObject {
   document.addtext_page_font_dictionary(page)
 }
@@ -145,7 +145,7 @@ pub fn pdf_addtext_selected_font_object(
 /// `font = None` branch.
 pub fn PdfDocument::addtext_resource_setup(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   font : PdfFont?,
   fontpack : PdfFontPack?,
   fontname : PdfName,
@@ -208,7 +208,7 @@ pub fn PdfDocument::addtext_resource_setup(
 /// Compatibility wrapper for `PdfDocument::addtext_resource_setup`.
 pub fn pdf_addtext_resource_setup(
   document : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   font : PdfFont?,
   fontpack : PdfFontPack?,
   fontname : PdfName,

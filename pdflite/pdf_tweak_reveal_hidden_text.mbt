@@ -16,8 +16,8 @@ pub fn pdf_reveal_hidden_text_ops(
 ///|
 fn PdfDocument::pdf_tweak_reveal_hidden_text_page(
   self : PdfDocument,
-  page : PdfPage,
-) -> PdfPage raise PdfError {
+  page : @page.PdfPage,
+) -> @page.PdfPage raise PdfError {
   let ops = self.pdf_page_parse_content_ops(page.resources, page.content)
   {
     ..page,
@@ -47,7 +47,7 @@ pub fn PdfDocument::reveal_hidden_text(
   let document = self.copy()
   let pages = document.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(page_numbers)
-  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
+  let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
     let page = pages[index]

@@ -113,7 +113,7 @@ fn pdf_addtext_utf8_string(bytes : BytesView) -> String raise PdfError {
 /// measure.
 pub fn PdfDocument::addtext_calc_textwidth(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   font : PdfFont?,
   fontpack : PdfFontPack?,
   fontname : PdfName,
@@ -144,7 +144,7 @@ pub fn PdfDocument::addtext_calc_textwidth(
 /// Compatibility wrapper for `PdfDocument::addtext_calc_textwidth`.
 pub fn pdf_addtext_calc_textwidth(
   document : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   font : PdfFont?,
   fontpack : PdfFontPack?,
   fontname : PdfName,
@@ -163,7 +163,7 @@ pub fn pdf_addtext_calc_textwidth(
 /// `cpdfaddtext.ml` after replacement expansion and URL stripping.
 pub fn PdfDocument::addtext_line_widths(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   font : PdfFont?,
   fontpack : PdfFontPack?,
   fontname : PdfName,
@@ -189,7 +189,7 @@ pub fn PdfDocument::addtext_line_widths(
 /// Compatibility wrapper for `PdfDocument::addtext_line_widths`.
 pub fn pdf_addtext_line_widths(
   document : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   font : PdfFont?,
   fontpack : PdfFontPack?,
   fontname : PdfName,

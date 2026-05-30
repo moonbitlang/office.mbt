@@ -87,15 +87,15 @@ fn pdf_presentation_motion_name(inward : Bool) -> PdfName {
 }
 
 ///|
-fn PdfPage::change_presentation_effect(
-  self : PdfPage,
+fn @page.PdfPage::change_presentation_effect(
+  self : @page.PdfPage,
   transition : String?,
   delay : Double?,
   horizontal : Bool,
   inward : Bool,
   direction : Int,
   effect_duration : Double,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   let mut transdict = match transition {
     None => @syntax.PdfDictionary([])
     Some(name) =>
@@ -164,7 +164,7 @@ pub fn PdfDocument::presentation(
 ) -> PdfDocument raise PdfError {
   let pages = self.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(range)
-  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
+  let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
     let page = pages[index]

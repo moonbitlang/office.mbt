@@ -290,10 +290,10 @@ fn PdfDocument::pdf_draft_rewrite_resources(
 ///|
 fn PdfDocument::pdf_draft_page(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   only_remove : PdfName?,
   boxes : Bool,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   let rewritten_resources = self.pdf_draft_rewrite_resources(
     page.resources,
     only_remove,
@@ -342,7 +342,7 @@ pub fn PdfDocument::draft(
   let document = self.copy()
   let pages = document.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(page_numbers)
-  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
+  let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
     if selected_pages.contains(page_number) {

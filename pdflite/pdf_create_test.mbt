@@ -296,7 +296,7 @@ test "pdf_blank_document_paper creates pages from named paper size" {
   @test.assert_eq(pages.length(), 1)
   @test.assert_eq(
     pages[0].mediabox,
-    @pdflite.pdf_page_blank(@pdflite.paper_a4).mediabox,
+    @page.pdf_page_blank(@pdflite.paper_a4).mediabox,
   )
   guard create_trailer_id_for_test(document) is Some((first_id, second_id)) else {
     fail("expected trailer /ID array")

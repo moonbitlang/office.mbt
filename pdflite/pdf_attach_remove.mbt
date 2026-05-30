@@ -1,8 +1,8 @@
 ///|
 fn PdfDocument::pdf_attach_remove_from_page(
   self : PdfDocument,
-  page : PdfPage,
-) -> PdfPage raise PdfError {
+  page : @page.PdfPage,
+) -> @page.PdfPage raise PdfError {
   let kept = match self.lookup_direct(pdf_attach_annots_key(), page.rest) {
     Some(PdfArray(annotations)) => {
       let kept : Array[PdfObject] = Array::new(capacity=annotations.length())
@@ -31,7 +31,7 @@ pub fn PdfDocument::remove_attached_files(
 ) -> PdfDocument raise PdfError {
   let document = self.copy()
   let pages = document.pages_of_pagetree()
-  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
+  let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
   for page in pages {
     rewritten.push(document.pdf_attach_remove_from_page(page))
   }

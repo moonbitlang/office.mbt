@@ -75,7 +75,7 @@ pub fn pdf_add_root(
 /// Build the smallest useful PDF document: one blank A4 page and a catalog.
 pub fn pdf_minimum_valid_pdf() -> PdfDocument raise PdfError {
   let document = pdf_document_empty()
-  let page_root_number = document.add_pagetree([pdf_page_blank(paper_a4)])
+  let page_root_number = document.add_pagetree([@page.pdf_page_blank(paper_a4)])
   ignore(document.add_root(page_root_number, []))
   document
 }

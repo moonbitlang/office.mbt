@@ -96,9 +96,9 @@ fn page_index_mediabox_for_test(index : Int) -> @pdflite.PdfObject {
 }
 
 ///|
-fn page_indexed_blank_for_test(index : Int) -> @pdflite.PdfPage {
+fn page_indexed_blank_for_test(index : Int) -> @page.PdfPage {
   {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     mediabox: page_index_mediabox_for_test(index),
   }
 }
@@ -122,7 +122,7 @@ fn page_prefix_document_for_test(
 ) -> @pdflite.PdfDocument {
   let doc = @pdflite.pdf_document_empty()
   let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     resources: page_prefix_resources_for_test(names),
   }
   let page_root = try! doc.add_pagetree([page])
@@ -297,7 +297,7 @@ test "standalone page lifecycle helpers delegate to document methods" {
     try! @pdflite.pdf_target_of_pagenumber(doc, 2),
     try! doc.target_of_page_number(2),
   )
-  let blank = @pdflite.pdf_page_blank(@pdflite.paper_a4)
+  let blank = @page.pdf_page_blank(@pdflite.paper_a4)
   let built = try! @pdflite.pdf_add_pagetree(
     [blank],
     @pdflite.pdf_document_empty(),
@@ -460,8 +460,8 @@ test "PdfDocument page_reference_numbers reports missing page root" {
 }
 
 ///|
-test "pdf_page_blank creates an A4 page rectangle in PDF points" {
-  let page = @pdflite.pdf_page_blank(@pdflite.paper_a4)
+test "@page.pdf_page_blank creates an A4 page rectangle in PDF points" {
+  let page = @page.pdf_page_blank(@pdflite.paper_a4)
   @test.assert_eq(page.content, [])
   @test.assert_eq(page.resources, PdfDictionary([]))
   @test.assert_eq(page.rotate, Rotate0)
@@ -477,12 +477,12 @@ test "pdf_page_blank creates an A4 page rectangle in PDF points" {
 }
 
 ///|
-test "pdf_page_rotation_of_int preserves CamlPDF rotation cases" {
-  @test.assert_eq(try! @pdflite.pdf_page_rotation_of_int(0), Rotate0)
-  @test.assert_eq(try! @pdflite.pdf_page_rotation_of_int(90), Rotate90)
-  @test.assert_eq(try! @pdflite.pdf_page_rotation_of_int(-180), Rotate180)
-  @test.assert_eq(try! @pdflite.pdf_page_rotation_of_int(-90), Rotate270)
-  let result : Result[@pdflite.PdfPageRotation, Error] = try? @pdflite.pdf_page_rotation_of_int(
+test "@page.pdf_page_rotation_of_int preserves CamlPDF rotation cases" {
+  @test.assert_eq(try! @page.pdf_page_rotation_of_int(0), Rotate0)
+  @test.assert_eq(try! @page.pdf_page_rotation_of_int(90), Rotate90)
+  @test.assert_eq(try! @page.pdf_page_rotation_of_int(-180), Rotate180)
+  @test.assert_eq(try! @page.pdf_page_rotation_of_int(-90), Rotate270)
+  let result : Result[@page.PdfPageRotation, Error] = try? @page.pdf_page_rotation_of_int(
     45,
   )
   guard result is Err(@pdflite.PdfError::PageRotationExpected(45)) else {
@@ -494,7 +494,7 @@ test "pdf_page_rotation_of_int preserves CamlPDF rotation cases" {
 test "PdfDocument add_pagetree and add_root build a writable page document" {
   let doc = @pdflite.pdf_document_empty()
   let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     content: [
       try! @pdflite.pdf_content_stream_of_ops(page_hello_ops_for_test()),
     ],
@@ -532,7 +532,7 @@ test "PdfDocument add_pagetree and add_root build a writable page document" {
 test "pdfhello-style standard font document roundtrips" {
   let doc = @pdflite.pdf_document_empty()
   let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     content: [
       try! @pdflite.pdf_content_stream_of_ops(page_hello_ops_for_test()),
     ],
@@ -621,7 +621,7 @@ test "pdf_minimum_valid_pdf creates a writable one-page document" {
   @test.assert_eq(try! doc.endpage(), 1)
   let pages = try! doc.pages_of_pagetree()
   @test.assert_eq(pages.length(), 1)
-  @test.assert_eq(pages[0], @pdflite.pdf_page_blank(@pdflite.paper_a4))
+  @test.assert_eq(pages[0], @page.pdf_page_blank(@pdflite.paper_a4))
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
     try! @pdflite.pdf_write_document(doc),
   )
@@ -853,8 +853,8 @@ test "PdfDocument process_pages rewrites selected pages and carries matrices" {
   let type_xyz = page_name_for_test("/XYZ")
   let document = @pdflite.pdf_document_empty()
   let page_root = try! document.add_pagetree([
-    @pdflite.pdf_page_blank(@pdflite.paper_a4),
-    @pdflite.pdf_page_blank(@pdflite.paper_a4),
+    @page.pdf_page_blank(@pdflite.paper_a4),
+    @page.pdf_page_blank(@pdflite.paper_a4),
   ])
   ignore(try! document.add_root(page_root, []))
   let old_numbers = try! document.page_reference_numbers()
@@ -960,19 +960,19 @@ test "PdfDocument iter_pages and map_pages follow document order" {
   @test.assert_eq(source_order_iterated, [2, 3])
 
   let mapped = try! document.map_pages([3, 1, 9], (page_number, page) => {
-    page_number * 100 + @pdflite.pdf_page_int_of_rotation(page.rotate)
+    page_number * 100 + @page.pdf_page_int_of_rotation(page.rotate)
   })
   @test.assert_eq(mapped, [100, 300])
   @test.assert_eq(
     try! @pdflite.pdf_map_pages(document, [2], (page_number, page) => {
-      page_number + @pdflite.pdf_page_int_of_rotation(page.rotate)
+      page_number + @page.pdf_page_int_of_rotation(page.rotate)
     }),
     [2],
   )
   @test.assert_eq(
     try! @pdflite.pdf_map_pages_cpdf_order(
       (page_number, page) => {
-        page_number * 10 + @pdflite.pdf_page_int_of_rotation(page.rotate)
+        page_number * 10 + @page.pdf_page_int_of_rotation(page.rotate)
       },
       document,
       [2, 1],
@@ -1002,7 +1002,7 @@ test "PdfDocument process_xobjects rewrites form xobject streams" {
     ),
   )
   let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     resources: page_xobject_resources_for_test([
       (page_name_for_test("/Fm1"), PdfIndirect(20)),
     ]),
@@ -1067,7 +1067,7 @@ test "PdfDocument process_xobjects materializes deferred form streams" {
     ),
   )
   let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     resources: page_xobject_resources_for_test([
       (page_name_for_test("/Fm1"), PdfIndirect(20)),
     ]),
@@ -1113,7 +1113,7 @@ test "PdfDocument process_xobjects skips non-form xobjects" {
     ),
   )
   let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     resources: page_xobject_resources_for_test([
       (page_name_for_test("/Im1"), PdfIndirect(21)),
     ]),
@@ -1143,7 +1143,7 @@ test "PdfDocument process_xobjects validates xobject resources" {
   let key_subtype = page_name_for_test("/Subtype")
   let doc = @pdflite.pdf_document_empty()
   let non_indirect_page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     resources: page_xobject_resources_for_test([
       (page_name_for_test("/Inline"), PdfDictionary([])),
     ]),
@@ -1162,7 +1162,7 @@ test "PdfDocument process_xobjects validates xobject resources" {
   }
   doc.add_object_given_number(22, @pdflite.pdf_dictionary([]))
   let missing_subtype_page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     resources: page_xobject_resources_for_test([
       (page_name_for_test("/MissingSubtype"), PdfIndirect(22)),
     ]),
@@ -1189,7 +1189,7 @@ test "PdfDocument process_xobjects validates xobject resources" {
     ),
   )
   let bad_result_page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     resources: page_xobject_resources_for_test([
       (page_name_for_test("/Bad"), PdfIndirect(23)),
     ]),
@@ -1241,7 +1241,7 @@ test "PdfDocument process_xobjects validates xobject resources" {
     ]),
   )
   let non_stream_page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     resources: page_xobject_resources_for_test([
       (page_name_for_test("/NonStream"), PdfIndirect(24)),
     ]),
@@ -1259,7 +1259,7 @@ test "PdfDocument process_xobjects validates xobject resources" {
     fail("expected @pdflite.PdfError::ParseStreamExpected for non-stream form")
   }
   let calls : Ref[Int] = { val: 0 }
-  try! doc.process_xobjects(@pdflite.pdf_page_blank(@pdflite.paper_a4), fn(
+  try! doc.process_xobjects(@page.pdf_page_blank(@pdflite.paper_a4), fn(
     _,
     _,
     streams,
@@ -1449,7 +1449,7 @@ test "pdf_page_protect balances unmatched graphics saves" {
 test "PdfDocument prepend_operators merges content in non-fast mode" {
   let doc = @pdflite.pdf_document_empty()
   let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     content: [try! @pdflite.pdf_content_stream_of_ops([Op_BT, Op_ET])],
   }
   let updated = try! doc.prepend_operators(page, [Op_q, Op_Q])
@@ -1475,7 +1475,7 @@ test "PdfDocument prepend_operators parses inline image resource color spaces" {
   ])
   let data = @ascii.encode("BI /W 2 /H 1 /BPC 8 /CS /CS1 ID A EI B EI Q")
   let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     resources,
     content: [
       @pdflite.pdf_stream(
@@ -1511,7 +1511,7 @@ test "PdfDocument prepend_operators falls back for missing inline image resource
   let doc = @pdflite.pdf_document_empty()
   let data = @ascii.encode("BI /W 1 /H 1 /BPC 8 /CS /Missing ID abc EI")
   let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     content: [
       @pdflite.pdf_stream(
         @pdflite.pdf_dictionary([
@@ -1545,7 +1545,7 @@ test "PdfDocument prepend_operators propagates non-colour parse errors" {
   let doc = @pdflite.pdf_document_empty()
   let data = @ascii.encode("1 2")
   let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     content: [
       @pdflite.pdf_stream(
         @pdflite.pdf_dictionary([
@@ -1555,10 +1555,9 @@ test "PdfDocument prepend_operators propagates non-colour parse errors" {
       ),
     ],
   }
-  let result : Result[@pdflite.PdfPage, Error] = try? doc.prepend_operators(
-    page,
-    [Op_q],
-  )
+  let result : Result[@page.PdfPage, Error] = try? doc.prepend_operators(page, [
+    Op_q,
+  ])
   guard result is Err(@pdflite.PdfError::ContentOperatorExpected) else {
     fail("expected @pdflite.PdfError::ContentOperatorExpected")
   }
@@ -1568,7 +1567,7 @@ test "PdfDocument prepend_operators propagates non-colour parse errors" {
 test "PdfDocument prepend_operators preserves split streams in fast mode" {
   let doc = @pdflite.pdf_document_empty()
   let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     content: [try! @pdflite.pdf_content_stream_of_ops([Op_BT, Op_ET])],
   }
   let updated = try! doc.prepend_operators(page, [Op_q, Op_Q], fast=true)
@@ -1585,7 +1584,7 @@ test "PdfDocument prepend_operators preserves split streams in fast mode" {
 test "PdfDocument postpend_operators protects existing content in non-fast mode" {
   let doc = @pdflite.pdf_document_empty()
   let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     content: [try! @pdflite.pdf_content_stream_of_ops([Op_q, Op_BT, Op_ET])],
   }
   let updated = try! doc.postpend_operators(page, [Op_g(0.5)])
@@ -1604,7 +1603,7 @@ test "PdfDocument postpend_operators protects existing content in non-fast mode"
 ///|
 test "PdfDocument postpend_operators avoids protection for empty content" {
   let doc = @pdflite.pdf_document_empty()
-  let page = @pdflite.pdf_page_blank(@pdflite.paper_a4)
+  let page = @page.pdf_page_blank(@pdflite.paper_a4)
   let updated = try! doc.postpend_operators(page, [Op_BT, Op_ET])
   @test.assert_eq(updated.content.length(), 1)
   @test.assert_eq(try! doc.parse_content_ops(updated.content), [Op_BT, Op_ET])

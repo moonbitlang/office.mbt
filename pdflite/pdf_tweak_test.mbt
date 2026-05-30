@@ -18,7 +18,7 @@ fn tweak_stream_for_test(
 ///|
 fn tweak_content_ops_for_test(
   document : @pdflite.PdfDocument,
-  page : @pdflite.PdfPage,
+  page : @page.PdfPage,
 ) -> Array[@pdflite.PdfContentOp] {
   try! document.parse_content_ops_with_resources(page.resources, page.content)
 }

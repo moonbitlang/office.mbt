@@ -83,7 +83,7 @@ fn draft_form_object_for_test(
 ///|
 fn draft_document_for_test(
   doc : @pdflite.PdfDocument,
-  pages : ArrayView[@pdflite.PdfPage],
+  pages : ArrayView[@page.PdfPage],
 ) -> @pdflite.PdfDocument {
   let page_root = try! doc.add_pagetree(pages)
   ignore(try! doc.add_root(page_root, []))
@@ -124,7 +124,7 @@ test "PdfDocument draft removes image xobjects and inline images" {
     draft_form_object_for_test([Op_q, Op_Q], PdfDictionary([])),
   )
   let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     resources: draft_resources_for_test([
       (image_name, PdfIndirect(7)),
       (form_name, PdfIndirect(8)),
@@ -180,7 +180,7 @@ test "PdfDocument draft only_remove keeps other images and inline images" {
   doc.add_object_given_number(8, draft_image_object_for_test())
   let inline = draft_inline_image_for_test()
   let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     resources: draft_resources_for_test([
       (first_name, PdfIndirect(7)),
       (second_name, PdfIndirect(8)),
@@ -227,7 +227,7 @@ test "PdfDocument draft recurses into form xobjects" {
     ),
   )
   let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     resources: draft_resources_for_test([(form_name, PdfIndirect(8))]),
     content: [try! @pdflite.pdf_content_stream_of_ops([Op_Do(form_name)])],
   }
@@ -260,7 +260,7 @@ test "PdfDocument draft can remove without replacement boxes" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(7, draft_image_object_for_test())
   let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     resources: draft_resources_for_test([(image_name, PdfIndirect(7))]),
     content: [
       try! @pdflite.pdf_content_stream_of_ops([
@@ -285,7 +285,7 @@ test "pdf_draft wrapper leaves unselected pages unchanged" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(7, draft_image_object_for_test())
   let selected = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     resources: draft_resources_for_test([(image_name, PdfIndirect(7))]),
     content: [
       try! @pdflite.pdf_content_stream_of_ops([
@@ -295,7 +295,7 @@ test "pdf_draft wrapper leaves unselected pages unchanged" {
     ],
   }
   let unselected = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     resources: @pdflite.pdf_dictionary([
       (draft_name_for_test("/ProcSet"), PdfArray([])),
     ]),
@@ -327,7 +327,7 @@ test "pdf_draft_string accepts source string image names" {
   let second_name = draft_name_for_test("/Im2")
   let inline = draft_inline_image_for_test()
   let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     resources: draft_resources_for_test([
       (first_name, PdfIndirect(7)),
       (second_name, PdfIndirect(8)),
@@ -380,7 +380,7 @@ test "PdfDocument draft keeps missing and non-image xobject draws" {
   let missing_name = draft_name_for_test("/Missing")
   let doc = @pdflite.pdf_document_empty()
   let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     resources: draft_resources_for_test([
       (plain_name, @pdflite.pdf_dictionary([])),
     ]),
@@ -408,7 +408,7 @@ test "PdfDocument draft keeps selected pages without xobject resources" {
   let missing_name = draft_name_for_test("/Missing")
   let doc = @pdflite.pdf_document_empty()
   let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     resources: @pdflite.pdf_dictionary([
       (draft_name_for_test("/ProcSet"), PdfArray([])),
     ]),
@@ -428,10 +428,7 @@ test "PdfDocument draft keeps selected pages without xobject resources" {
 ///|
 test "PdfDocument draft handles null resources on empty selected pages" {
   let doc = @pdflite.pdf_document_empty()
-  let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
-    resources: PdfNull,
-  }
+  let page = { ..@page.pdf_page_blank(@pdflite.paper_a4), resources: PdfNull }
   let drafted = try! draft_document_for_test(doc, [page]).draft(None, true, [1])
   let pages = try! drafted.pages_of_pagetree()
   @test.assert_eq(try! drafted.parse_content_ops(pages[0].content), [])
@@ -450,7 +447,7 @@ test "PdfDocument draft rewrites forms without resources" {
   )
   doc.add_object_given_number(8, form)
   let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     resources: draft_resources_for_test([(form_name, PdfIndirect(8))]),
     content: [try! @pdflite.pdf_content_stream_of_ops([Op_Do(form_name)])],
   }
@@ -481,7 +478,7 @@ test "PdfDocument draft rejects malformed xobject resources" {
   let image_name = draft_name_for_test("/Im1")
   let doc = @pdflite.pdf_document_empty()
   let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     resources: @pdflite.pdf_dictionary([
       (draft_name_for_test("/XObject"), PdfInteger(1)),
     ]),
@@ -505,7 +502,7 @@ test "PdfDocument draft rejects non-stream form xobjects" {
     draft_subtyped_dictionary_for_test(draft_name_for_test("/Form")),
   )
   let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     resources: draft_resources_for_test([(form_name, PdfIndirect(8))]),
     content: [try! @pdflite.pdf_content_stream_of_ops([Op_Do(form_name)])],
   }

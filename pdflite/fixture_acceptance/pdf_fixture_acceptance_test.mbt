@@ -2333,7 +2333,7 @@ fn fixture_acceptance_assert_cpdf_source_prefixed_logo_resource_object_for_test(
 ///|
 fn fixture_acceptance_form_xobject_for_test(
   document : @pdflite.PdfDocument,
-  page : @pdflite.PdfPage,
+  page : @page.PdfPage,
   name : @pdflite.PdfName,
 ) -> @pdflite.PdfStream raise {
   guard document.lookup_direct(
@@ -5296,7 +5296,7 @@ fn fixture_acceptance_tj_fragment_count_for_test(
 ///|
 fn fixture_acceptance_page_has_uri_annotation_for_test(
   document : @pdflite.PdfDocument,
-  page : @pdflite.PdfPage,
+  page : @page.PdfPage,
   uri : String,
 ) -> Bool {
   match
@@ -5338,7 +5338,7 @@ fn fixture_acceptance_page_has_uri_annotation_for_test(
 ///|
 fn fixture_acceptance_page_has_addtext_opacity_for_test(
   document : @pdflite.PdfDocument,
-  page : @pdflite.PdfPage,
+  page : @page.PdfPage,
 ) -> Bool {
   match
     document.lookup_direct(

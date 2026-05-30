@@ -25,7 +25,7 @@ fn page_shift_page_for_test(
   ops : ArrayView[@pdflite.PdfContentOp],
   resources? : @pdflite.PdfObject = PdfDictionary([]),
   rest? : @pdflite.PdfObject = PdfDictionary([]),
-) -> @pdflite.PdfPage {
+) -> @page.PdfPage {
   {
     content: [page_shift_stream_for_test(ops)],
     mediabox: page_shift_rect_for_test(0.0, 0.0, 100.0, 100.0),
@@ -37,7 +37,7 @@ fn page_shift_page_for_test(
 
 ///|
 fn page_shift_document_for_test(
-  pages : ArrayView[@pdflite.PdfPage],
+  pages : ArrayView[@page.PdfPage],
 ) -> @pdflite.PdfDocument {
   try! (try! @pdflite.pdf_blank_document(100.0, 100.0, pages.length())).change_pages(
     pages,
@@ -47,7 +47,7 @@ fn page_shift_document_for_test(
 ///|
 fn page_shift_ops_for_test(
   document : @pdflite.PdfDocument,
-  page : @pdflite.PdfPage,
+  page : @page.PdfPage,
 ) -> Array[@pdflite.PdfContentOp] {
   try! document.parse_content_ops_with_resources(page.resources, page.content)
 }

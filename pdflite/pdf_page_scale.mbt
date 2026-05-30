@@ -16,7 +16,7 @@ fn pdf_page_scale_position_offset(position : PdfPosition) -> (Double, Double) {
 ///|
 fn PdfDocument::pdf_page_scale_bounds(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
 ) -> PdfRectangle raise PdfError {
   self.parse_rectangle(
     match self.lookup_direct(pdf_page_cropbox_key(), page.rest) {
@@ -29,7 +29,7 @@ fn PdfDocument::pdf_page_scale_bounds(
 ///|
 fn PdfDocument::pdf_page_scale_matrix(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   position : PdfPosition,
   scale : Double,
 ) -> TransformMatrix raise PdfError {
@@ -45,10 +45,10 @@ fn PdfDocument::pdf_page_scale_matrix(
 ///|
 fn PdfDocument::pdf_page_scale_page(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   matrix : TransformMatrix,
   fast : Bool,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   let page = self.pdf_impose_change_pattern_matrices_page(matrix, page)
   self.transform_annotations(matrix, page.rest)
   self.prepend_operators(page, [Op_cm(matrix)], fast~)
@@ -108,10 +108,10 @@ fn pdf_page_scale_select_page_indexed_pairs(
 ///|
 fn PdfDocument::pdf_page_scale_page_data(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   matrix : TransformMatrix,
   fast : Bool,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   let page = self.pdf_page_upright_transform_boxes(page, matrix)
   let page = self.pdf_impose_change_pattern_matrices_page(matrix, page)
   self.transform_annotations(matrix, page.rest)

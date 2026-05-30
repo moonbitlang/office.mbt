@@ -14,11 +14,11 @@ fn pdf_page_scale_to_fit_rotate_should_rotate(
 ///|
 fn PdfDocument::pdf_page_scale_to_fit_rotate_page(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   target_width : Double,
   target_height : Double,
   rotation : Int,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   if pdf_page_scale_to_fit_rotate_should_rotate(
       self.pdf_page_scale_bounds(page),
       target_width,
@@ -26,8 +26,8 @@ fn PdfDocument::pdf_page_scale_to_fit_rotate_page(
     ) {
     {
       ..page,
-      rotate: pdf_page_rotation_of_int(
-        pdf_page_int_of_rotation(page.rotate) + rotation,
+      rotate: @page.pdf_page_rotation_of_int(
+        @page.pdf_page_int_of_rotation(page.rotate) + rotation,
       ),
     }
   } else {
@@ -61,7 +61,7 @@ pub fn PdfDocument::scale_to_fit_rotate_pages(
   }
   let pages = self.pages_of_pagetree()
   let page_indexes = pdf_page_scale_pair_index_map(page_numbers)
-  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
+  let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
     match page_indexes.get(page_number) {

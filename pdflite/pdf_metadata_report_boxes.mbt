@@ -46,7 +46,7 @@ fn PdfDocument::pdf_metadata_info_box_text(
 ///|
 fn PdfDocument::pdf_metadata_info_json_boxes(
   self : PdfDocument,
-  pages : ArrayView[PdfPage],
+  pages : ArrayView[@page.PdfPage],
   unit : PdfUnit,
   output : Map[String, Json],
 ) -> Unit {

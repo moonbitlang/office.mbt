@@ -19,7 +19,7 @@ pub fn pdf_addtext_rectangle_origin(
 ///|
 fn PdfDocument::pdf_addtext_rectangle_bounds(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   relative_to_box : PdfName,
 ) -> PdfRectangle raise PdfError {
   if relative_to_box == pdf_page_mediabox_key() {
@@ -35,7 +35,7 @@ fn PdfDocument::pdf_addtext_rectangle_bounds(
 ///|
 fn PdfDocument::pdf_addtext_rectangle_dimensions(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   coord : String,
 ) -> (Double, Double) raise PdfError {
   match self.parse_units_string(page, coord) {
@@ -47,7 +47,7 @@ fn PdfDocument::pdf_addtext_rectangle_dimensions(
 ///|
 fn PdfDocument::pdf_addtext_rectangle_page(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   coord : String,
   colour : @colour.PdfContentColour,
   position : PdfPosition,
@@ -57,7 +57,7 @@ fn PdfDocument::pdf_addtext_rectangle_page(
   opacity : Double,
   underneath : Bool,
   fast : Bool,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   let (resources, extgstate_name) = self.pdf_addtext_opacity_resources(
     page.resources,
     opacity,
@@ -102,7 +102,7 @@ pub fn PdfDocument::addtext_rectangle(
     "addtext_rectangle",
   )
   let selected_pages = @core.pdf_number_set(page_numbers)
-  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
+  let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
     let page = pages[index]

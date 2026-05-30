@@ -222,7 +222,7 @@ test "pdf_addtext_width_of_fontpack sums mapped codepoint widths" {
 ///|
 test "PdfDocument addtext_calc_textwidth measures selected fonts" {
   let document = @pdflite.pdf_document_empty()
-  let page = @pdflite.pdf_page_blank(@pdflite.paper_a4)
+  let page = @page.pdf_page_blank(@pdflite.paper_a4)
   addtext_layout_assert_close_for_test(
     try! document.addtext_calc_textwidth(
       page,
@@ -239,7 +239,7 @@ test "PdfDocument addtext_calc_textwidth measures selected fonts" {
 ///|
 test "PdfDocument addtext_calc_textwidth measures fontpacks from UTF-8" {
   let document = @pdflite.pdf_document_empty()
-  let page = @pdflite.pdf_page_blank(@pdflite.paper_a4)
+  let page = @page.pdf_page_blank(@pdflite.paper_a4)
   let metrics : Array[Double] = [ for _ in 0..<256 => 0.0 ]
   metrics[66] = 610.0
   let pack : @pdflite.PdfFontPack = {
@@ -290,7 +290,7 @@ test "PdfDocument addtext_calc_textwidth measures existing page fonts" {
     (addtext_layout_name_for_test("/BaseFont"), PdfNameObject(basefont)),
   ])
   let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     resources: PdfDictionary([
       (
         addtext_layout_name_for_test("/Font"),
@@ -320,7 +320,7 @@ test "PdfDocument addtext_calc_textwidth measures existing page fonts" {
 ///|
 test "PdfDocument addtext_line_widths measures selected font paragraphs" {
   let document = @pdflite.pdf_document_empty()
-  let page = @pdflite.pdf_page_blank(@pdflite.paper_a4)
+  let page = @page.pdf_page_blank(@pdflite.paper_a4)
   let widths = try! document.addtext_line_widths(
     page,
     Some(addtext_layout_standard_font_for_test()),
@@ -340,7 +340,7 @@ test "PdfDocument addtext_line_widths measures selected font paragraphs" {
 ///|
 test "pdf_addtext_line_widths wrapper handles fontpacks" {
   let document = @pdflite.pdf_document_empty()
-  let page = @pdflite.pdf_page_blank(@pdflite.paper_a4)
+  let page = @page.pdf_page_blank(@pdflite.paper_a4)
   let metrics : Array[Double] = [ for _ in 0..<256 => 0.0 ]
   metrics[66] = 610.0
   let pack : @pdflite.PdfFontPack = {
@@ -372,7 +372,7 @@ test "pdf_addtext_line_widths wrapper handles fontpacks" {
 ///|
 test "PdfDocument addtext_line_widths reports empty expanded lines" {
   let document = @pdflite.pdf_document_empty()
-  let page = @pdflite.pdf_page_blank(@pdflite.paper_a4)
+  let page = @page.pdf_page_blank(@pdflite.paper_a4)
   let result : Result[@addtext.PdfAddTextLineWidths, Error] = try? document.addtext_line_widths(
     page,
     Some(addtext_layout_standard_font_for_test()),

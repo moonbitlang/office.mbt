@@ -4,7 +4,7 @@ let pdf_page_marks_allowance : Double = 9.0
 ///|
 fn PdfDocument::pdf_page_marks_rectangle(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   box_name : PdfName,
 ) -> PdfRectangle? raise PdfError {
   let object = if box_name == pdf_page_mediabox_key() {
@@ -22,7 +22,7 @@ fn PdfDocument::pdf_page_marks_rectangle(
 ///|
 fn PdfDocument::pdf_page_show_box_ops(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   colour : (Double, Double, Double),
   dash_on : Double,
   dash_off : Double,
@@ -57,7 +57,7 @@ fn PdfDocument::pdf_page_show_box_ops(
 ///|
 fn PdfDocument::pdf_page_show_boxes_ops(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
 ) -> Array[PdfContentOp] raise PdfError {
   let ops : Array[PdfContentOp] = [pdf_content_begin_artifact()]
   for
@@ -202,9 +202,9 @@ fn pdf_page_trim_marks_ops(
 ///|
 fn PdfDocument::pdf_page_trim_marks_page(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   fast : Bool,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   match
     (
       self.pdf_page_marks_rectangle(page, pdf_page_trimbox_key()),

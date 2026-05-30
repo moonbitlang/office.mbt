@@ -46,9 +46,9 @@ fn pdf_toc_rectangle_object(rectangle : PdfRectangle) -> PdfObject {
 
 ///|
 fn pdf_toc_cropbox_page(
-  page : PdfPage,
+  page : @page.PdfPage,
   cropbox : PdfObject?,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   match cropbox {
     Some(cropbox) =>
       {
@@ -61,10 +61,10 @@ fn pdf_toc_cropbox_page(
 
 ///|
 fn pdf_toc_cropbox_pages(
-  pages : ArrayView[PdfPage],
+  pages : ArrayView[@page.PdfPage],
   cropbox : PdfObject?,
-) -> Array[PdfPage] raise PdfError {
-  let output : Array[PdfPage] = []
+) -> Array[@page.PdfPage] raise PdfError {
+  let output : Array[@page.PdfPage] = []
   for page in pages {
     output.push(pdf_toc_cropbox_page(page, cropbox))
   }

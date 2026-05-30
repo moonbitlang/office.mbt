@@ -1,12 +1,12 @@
 ///|
 fn pdf_impose_split_pages(
-  pages : ArrayView[PdfPage],
+  pages : ArrayView[@page.PdfPage],
   chunk_size : Int,
-) -> Array[Array[PdfPage]] {
-  let chunks : Array[Array[PdfPage]] = []
+) -> Array[Array[@page.PdfPage]] {
+  let chunks : Array[Array[@page.PdfPage]] = []
   let mut index = 0
   while index < pages.length() {
-    let chunk : Array[PdfPage] = []
+    let chunk : Array[@page.PdfPage] = []
     let stop = if index + chunk_size < pages.length() {
       index + chunk_size
     } else {

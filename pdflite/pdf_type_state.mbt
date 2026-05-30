@@ -49,7 +49,7 @@ fn PdfTypeTypesetState::write_page(
     } else {
       [pdf_content_stream_of_ops(ops)]
     },
-    mediabox: pdf_page_rectangle_of_paper(paper),
+    mediabox: @page.pdf_page_rectangle_of_paper(paper),
     resources: pdf_type_make_resources(self.page_font_numbers),
     rotate: Rotate0,
     rest: pdf_type_make_annotations(document, self.page_annotations),

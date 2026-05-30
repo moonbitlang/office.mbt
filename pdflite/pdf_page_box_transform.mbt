@@ -16,7 +16,7 @@ pub fn PdfDocument::shift_boxes(
   )
   pdf_page_box_validate_offsets(offsets, pages.length())
   let selected_pages = @core.pdf_number_set(page_numbers)
-  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
+  let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
     if selected_pages.contains(page_number) {
@@ -45,9 +45,9 @@ pub fn PdfDocument::shift_boxes(
 /// annotations, and pattern matrices receive the compensating translation.
 pub fn PdfDocument::rectify_boxes(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   fast? : Bool = false,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   let bounds = self.parse_rectangle(page.mediabox)
   let page = self.change_boxes(page, (min_x, min_y, max_x, max_y) => {
     (
@@ -72,9 +72,9 @@ pub fn PdfDocument::rectify_boxes(
 /// Compatibility wrapper for `PdfDocument::rectify_boxes`.
 pub fn pdf_rectify_boxes(
   document : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   fast? : Bool = false,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   document.rectify_boxes(page, fast~)
 }
 

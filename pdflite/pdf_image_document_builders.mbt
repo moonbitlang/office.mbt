@@ -144,7 +144,7 @@ fn PdfDocument::pdf_image_add_image_page(
     image,
   )
   let image_number = self.add_object(image)
-  let page : PdfPage = {
+  let page : @page.PdfPage = {
     content: [
       pdf_content_stream_of_ops(
         pdf_image_content_ops(structinfo, width, height),

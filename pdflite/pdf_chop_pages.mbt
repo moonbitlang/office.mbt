@@ -11,7 +11,7 @@ fn pdf_chop_rectangle_object(
 ///|
 fn pdf_chop_box(
   document : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
 ) -> PdfRectangle raise PdfError {
   match document.lookup_direct(pdf_chop_cropbox_key(), page.rest) {
     Some(cropbox) => document.parse_rectangle(cropbox)
@@ -31,12 +31,12 @@ fn pdf_chop_erase_boxes(rest : PdfObject) -> PdfObject raise PdfError {
 
 ///|
 fn pdf_chop_page_with_box(
-  page : PdfPage,
+  page : @page.PdfPage,
   min_x : Double,
   min_y : Double,
   max_x : Double,
   max_y : Double,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   {
     ..page,
     mediabox: pdf_chop_rectangle_object(min_x, min_y, max_x, max_y),
@@ -55,17 +55,17 @@ fn pdf_chop_index_order(count : Int, reverse : Bool) -> Array[Int] {
 
 ///|
 fn pdf_chop_grid_pages(
-  page : PdfPage,
+  page : @page.PdfPage,
   bounds : PdfRectangle,
   x : Int,
   y : Int,
   columns : Bool,
   btt : Bool,
   rtl : Bool,
-) -> Array[PdfPage] raise PdfError {
+) -> Array[@page.PdfPage] raise PdfError {
   let width = (bounds.max_x - bounds.min_x) / x.to_double()
   let height = (bounds.max_y - bounds.min_y) / y.to_double()
-  let pages : Array[PdfPage] = Array::new(capacity=x * y)
+  let pages : Array[@page.PdfPage] = Array::new(capacity=x * y)
   let x_order = pdf_chop_index_order(x, rtl)
   let y_order = pdf_chop_index_order(y, !btt)
   if columns {
@@ -106,11 +106,11 @@ fn pdf_chop_grid_pages(
 
 ///|
 fn pdf_chop_pair_pages(
-  first : PdfPage,
-  second : PdfPage,
+  first : @page.PdfPage,
+  second : @page.PdfPage,
   columns : Bool,
-) -> Array[PdfPage] {
-  let pages : Array[PdfPage] = Array::new(capacity=2)
+) -> Array[@page.PdfPage] {
+  let pages : Array[@page.PdfPage] = Array::new(capacity=2)
   if columns {
     pages.push(second)
     pages.push(first)
@@ -124,14 +124,14 @@ fn pdf_chop_pair_pages(
 ///|
 fn pdf_chop_page_boxes(
   document : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   line : Double,
   x : Int,
   y : Int,
   columns : Bool,
   btt : Bool,
   rtl : Bool,
-) -> Array[PdfPage] raise PdfError {
+) -> Array[@page.PdfPage] raise PdfError {
   let bounds = pdf_chop_box(document, page)
   if x == 0 {
     let top = pdf_chop_page_with_box(
@@ -252,7 +252,7 @@ fn PdfDocument::pdf_chop_inner(
     pages.length(),
     selected_pages,
   )
-  let output : Array[PdfPage] = Array::new(
+  let output : Array[@page.PdfPage] = Array::new(
     capacity=pages.length() + selected_count * (pieces - 1),
   )
   for index in 0..<pages.length() {

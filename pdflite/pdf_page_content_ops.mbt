@@ -67,10 +67,10 @@ fn PdfDocument::pdf_page_parse_content_ops(
 /// without parsing the old streams.
 pub fn PdfDocument::prepend_operators(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   ops : ArrayView[PdfContentOp],
   fast? : Bool = false,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   if fast {
     { ..page, content: [pdf_content_stream_of_ops(ops), ..page.content] }
   } else {
@@ -87,9 +87,9 @@ pub fn PdfDocument::prepend_operators(
 pub fn pdf_prepend_operators(
   document : PdfDocument,
   operators : ArrayView[PdfContentOp],
-  page : PdfPage,
+  page : @page.PdfPage,
   fast? : Bool = false,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   document.prepend_operators(page, operators, fast~)
 }
 
@@ -101,10 +101,10 @@ pub fn pdf_prepend_operators(
 /// stream without parsing existing content.
 pub fn PdfDocument::postpend_operators(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   ops : ArrayView[PdfContentOp],
   fast? : Bool = false,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   if fast {
     {
       ..page,
@@ -144,8 +144,8 @@ pub fn PdfDocument::postpend_operators(
 pub fn pdf_postpend_operators(
   document : PdfDocument,
   operators : ArrayView[PdfContentOp],
-  page : PdfPage,
+  page : @page.PdfPage,
   fast? : Bool = false,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   document.postpend_operators(page, operators, fast~)
 }

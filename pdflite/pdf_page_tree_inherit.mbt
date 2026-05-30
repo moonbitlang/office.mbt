@@ -13,10 +13,10 @@ fn pdf_page_inherited_object(
 fn PdfDocument::pdf_page_inherited_rotation(
   self : PdfDocument,
   node : PdfObject,
-  inherited : PdfPageRotation,
-) -> PdfPageRotation raise PdfError {
+  inherited : @page.PdfPageRotation,
+) -> @page.PdfPageRotation raise PdfError {
   match self.lookup_direct(pdf_page_rotate_key(), node) {
-    Some(PdfInteger(value)) => pdf_page_rotation_of_int(value)
+    Some(PdfInteger(value)) => @page.pdf_page_rotation_of_int(value)
     _ => inherited
   }
 }

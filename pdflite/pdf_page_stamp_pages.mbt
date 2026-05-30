@@ -6,7 +6,9 @@ fn pdf_page_stamp_identity_changes(count : Int) -> Array[(Int, Int)] {
 }
 
 ///|
-fn pdf_page_stamp_all_but_last(pages : ArrayView[PdfPage]) -> Array[PdfPage] {
+fn pdf_page_stamp_all_but_last(
+  pages : ArrayView[@page.PdfPage],
+) -> Array[@page.PdfPage] {
   [
     for index in 0..<(pages.length() - 1) => pages[index]
   ]
@@ -67,13 +69,15 @@ pub fn PdfDocument::stamp_pages(
   let overlay_page = merged_pages[merged_pages.length() - 1]
   let under_pages = pdf_page_stamp_all_but_last(merged_pages)
   let selected_pages = @core.pdf_number_set(page_numbers)
-  let new_pages : Array[PdfPage] = Array::new(capacity=under_pages.length())
+  let new_pages : Array[@page.PdfPage] = Array::new(
+    capacity=under_pages.length(),
+  )
   for index in 0..<under_pages.length() {
     let page_number = index + 1
     let stamp_page = if selected_pages.contains(page_number) {
       overlay_page
     } else {
-      pdf_page_blank(paper_a4)
+      @page.pdf_page_blank(paper_a4)
     }
     new_pages.push(
       merged.pdf_page_stamp_pair(

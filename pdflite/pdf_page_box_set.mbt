@@ -5,14 +5,14 @@
 /// bounds. This ports cpdf's single-page `change_boxes` helper.
 pub fn PdfDocument::change_boxes(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   transform : (Double, Double, Double, Double) -> (
     Double,
     Double,
     Double,
     Double,
   ),
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   let mut rest = page.rest
   for name in pdf_page_upright_box_names() {
     match self.lookup_direct(name, page.rest) {
@@ -35,14 +35,14 @@ pub fn PdfDocument::change_boxes(
 /// Compatibility wrapper for `PdfDocument::change_boxes`.
 pub fn pdf_change_boxes(
   document : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   transform : (Double, Double, Double, Double) -> (
     Double,
     Double,
     Double,
     Double,
   ),
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   document.change_boxes(page, transform)
 }
 
@@ -56,8 +56,8 @@ pub fn pdf_change_boxes_cpdf_order(
     Double,
   ),
   document : PdfDocument,
-  page : PdfPage,
-) -> PdfPage raise PdfError {
+  page : @page.PdfPage,
+) -> @page.PdfPage raise PdfError {
   document.change_boxes(page, transform)
 }
 
@@ -81,7 +81,7 @@ pub fn PdfDocument::set_mediaboxes(
   )
   pdf_page_box_validate_xywh_boxes(boxes, pages.length())
   let selected_pages = @core.pdf_number_set(page_numbers)
-  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
+  let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
     if selected_pages.contains(page_number) {
@@ -146,7 +146,7 @@ pub fn PdfDocument::crop_pages(
     "crop_pages",
   )
   let selected_pages = @core.pdf_number_set(page_numbers)
-  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
+  let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
     if selected_pages.contains(page_number) {

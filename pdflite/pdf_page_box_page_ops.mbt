@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::pdf_page_box_object(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   box_name : PdfName,
   mediabox_if_missing : Bool,
 ) -> PdfObject raise PdfError {
@@ -25,11 +25,11 @@ fn PdfDocument::pdf_page_box_object(
 ///|
 fn PdfDocument::pdf_page_hard_box_page(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   box_name : PdfName,
   mediabox_if_missing : Bool,
   fast : Bool,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   let bounds = self.parse_rectangle(
     self.pdf_page_box_object(page, box_name, mediabox_if_missing),
   )
@@ -52,9 +52,9 @@ fn PdfDocument::pdf_page_hard_box_page(
 ///|
 fn PdfDocument::pdf_page_remove_box_page(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   box_name : PdfName,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   ignore(self)
   { ..page, rest: page.rest.remove_dict_entry(box_name) }
 }
@@ -62,7 +62,7 @@ fn PdfDocument::pdf_page_remove_box_page(
 ///|
 fn PdfDocument::pdf_page_copy_box_source(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   from_box : PdfName,
   mediabox_if_missing : Bool,
 ) -> PdfObject? {
@@ -79,11 +79,11 @@ fn PdfDocument::pdf_page_copy_box_source(
 ///|
 fn PdfDocument::pdf_page_copy_box_page(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   from_box : PdfName,
   to_box : PdfName,
   mediabox_if_missing : Bool,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   match self.pdf_page_copy_box_source(page, from_box, mediabox_if_missing) {
     Some(value) =>
       if to_box == pdf_page_mediabox_key() {
@@ -99,9 +99,9 @@ fn PdfDocument::pdf_page_copy_box_page(
 fn PdfDocument::pdf_page_set_mediabox_page(
   self : PdfDocument,
   page_number : Int,
-  page : PdfPage,
+  page : @page.PdfPage,
   boxes : ArrayView[(Double, Double, Double, Double)],
-) -> PdfPage {
+) -> @page.PdfPage {
   ignore(self)
   { ..page, mediabox: pdf_page_box_xywh_object(boxes[page_number - 1]) }
 }
@@ -110,10 +110,10 @@ fn PdfDocument::pdf_page_set_mediabox_page(
 fn PdfDocument::pdf_page_crop_page(
   self : PdfDocument,
   page_number : Int,
-  page : PdfPage,
+  page : @page.PdfPage,
   boxes : ArrayView[(Double, Double, Double, Double)],
   box_name : PdfName,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   ignore(self)
   {
     ..page,
@@ -127,13 +127,13 @@ fn PdfDocument::pdf_page_crop_page(
 ///|
 fn PdfDocument::pdf_page_set_box_page(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   box_name : PdfName,
   min_x : Double,
   max_x : Double,
   min_y : Double,
   max_y : Double,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   ignore(self)
   {
     ..page,

@@ -9,8 +9,8 @@ fn pad_rect_for_test(width : Double) -> @pdflite.PdfObject {
 }
 
 ///|
-fn pad_page_for_test(width : Double) -> @pdflite.PdfPage {
-  @pdflite.pdf_page_custom(pad_rect_for_test(width))
+fn pad_page_for_test(width : Double) -> @page.PdfPage {
+  @page.pdf_page_custom(pad_rect_for_test(width))
 }
 
 ///|

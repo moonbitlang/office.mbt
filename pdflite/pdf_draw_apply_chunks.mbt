@@ -65,7 +65,7 @@ fn PdfDocument::pdf_draw_apply_chunk(
   )
   let draw_resources = state.resources()
   let pages = self.pages_of_pagetree()
-  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
+  let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
     let page = pages[index]

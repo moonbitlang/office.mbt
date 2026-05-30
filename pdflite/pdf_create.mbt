@@ -2,11 +2,11 @@
 fn pdf_create_blank_pages(
   paper : PaperSize,
   page_count : Int,
-) -> Array[PdfPage] {
-  let pages : Array[PdfPage] = []
+) -> Array[@page.PdfPage] {
+  let pages : Array[@page.PdfPage] = []
   if page_count > 0 {
     for _ in 0..<page_count {
-      pages.push(pdf_page_blank(paper))
+      pages.push(@page.pdf_page_blank(paper))
     }
   }
   pages

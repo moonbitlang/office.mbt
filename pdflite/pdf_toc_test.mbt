@@ -512,7 +512,7 @@ test "PdfDocument toc_insert_pages prepends pages and shifts labels" {
       start_value: 5,
     },
   ]
-  let toc_page = @pdflite.pdf_page_blank(
+  let toc_page = @page.pdf_page_blank(
     @pdflite.paper_size_make(PdfPoint, 50.0, 50.0),
   )
   let expected_labels : Array[@label.PdfPageLabel] = [

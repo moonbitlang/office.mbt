@@ -6,7 +6,7 @@
 /// line emission, and rotation-dependent line advancement.
 pub fn PdfDocument::addtext_page_lines(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   time : @date.PdfStrftimeTime,
   lines : ArrayView[String],
   replacements : ArrayView[(String, () -> String)],
@@ -33,7 +33,7 @@ pub fn PdfDocument::addtext_page_lines(
   fast? : Bool = false,
   raw? : Bool = false,
   url_border? : Bool = false,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   let (initial_h_offset, initial_v_offset) = @addtext.pdf_addtext_initial_line_offsets(
     position,
     lines.length(),
@@ -89,7 +89,7 @@ pub fn PdfDocument::addtext_page_lines(
 /// Compatibility wrapper for `PdfDocument::addtext_page_lines`.
 pub fn pdf_addtext_page_lines(
   document : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   time : @date.PdfStrftimeTime,
   lines : ArrayView[String],
   replacements : ArrayView[(String, () -> String)],
@@ -116,7 +116,7 @@ pub fn pdf_addtext_page_lines(
   fast? : Bool = false,
   raw? : Bool = false,
   url_border? : Bool = false,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   document.addtext_page_lines(
     page,
     time,

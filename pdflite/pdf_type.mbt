@@ -20,7 +20,7 @@ pub(all) enum PdfTypeElement {
 ///|
 /// Pages and per-page structure tags produced by the cpdftype typesetter.
 pub(all) struct PdfTypeTypesetResult {
-  pages : Array[PdfPage]
+  pages : Array[@page.PdfPage]
   tags : Array[Array[(String, Int)]]
 } derive(Debug, Eq, ToJson)
 
@@ -39,7 +39,7 @@ priv struct PdfTypeTypesetState {
   mut page_font_numbers : Array[Int]
   mut page_annotations : Array[PdfObject]
   mut dest_rectangles : Array[(Double, Double, Double, Double)]
-  pages : Array[PdfPage]
+  pages : Array[@page.PdfPage]
   mut tags : Array[(String, Int)]
   tags_out : Array[Array[(String, Int)]]
 }

@@ -37,7 +37,7 @@ fn pdf_markdown_chunks_to_codepoints(
 ///|
 fn pdf_markdown_positioned_text_codepoints_of_page(
   document : @pdflite.PdfDocument,
-  page : @pdflite.PdfPage,
+  page : @page.PdfPage,
   font_cache : PdfMarkdownFontCache,
 ) -> Array[Int]? raise {
   let chunks : Array[PdfMarkdownTextChunk] = []
@@ -119,7 +119,7 @@ fn pdf_markdown_push_text_codepoints_of_streams(
 ///|
 fn pdf_markdown_text_codepoints_of_page(
   document : @pdflite.PdfDocument,
-  page : @pdflite.PdfPage,
+  page : @page.PdfPage,
   font_cache : PdfMarkdownFontCache,
 ) -> Array[Int] raise {
   match

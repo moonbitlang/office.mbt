@@ -1142,15 +1142,9 @@ pub fn pdf_padbefore(ArrayView[Int], PdfDocument, pad_with? : PdfDocument?) -> P
 
 pub fn pdf_padmultiple(Int, PdfDocument) -> PdfDocument raise @core.PdfError
 
-pub fn pdf_page_blank(@geometry.PaperSize) -> @page.PdfPage
-
 pub fn pdf_page_content_json(PdfDocument, ArrayView[Int]) -> Json raise @core.PdfError
 
-pub fn pdf_page_custom(@syntax.PdfObject) -> @page.PdfPage
-
 pub fn pdf_page_info_json(PdfDocument, ArrayView[Int], unit? : @geometry.PdfUnit) -> Json raise @core.PdfError
-
-pub fn pdf_page_int_of_rotation(@page.PdfPageRotation) -> Int
 
 pub fn pdf_page_label_add_label(Int, ArrayView[@label.PdfPageLabel], @label.PdfPageLabel, Int) -> Array[@label.PdfPageLabel]
 
@@ -1164,11 +1158,7 @@ pub fn[A, B, C] pdf_page_process_stub((A, B) -> C raise, A, B) -> (C, A, @geomet
 
 pub fn pdf_page_protect(ArrayView[@content.PdfContentOp]) -> Array[@content.PdfContentOp]
 
-pub fn pdf_page_rectangle_of_paper(@geometry.PaperSize) -> @syntax.PdfObject
-
 pub fn pdf_page_reference_numbers(PdfDocument) -> Array[Int] raise @core.PdfError
-
-pub fn pdf_page_rotation_of_int(Int) -> @page.PdfPageRotation raise @core.PdfError
 
 pub fn pdf_pagenumber_of_target(PdfDocument, @destination.PdfDestination) -> Int raise @core.PdfError
 
@@ -3484,10 +3474,6 @@ pub using @syntax {type PdfLexeme}
 pub using @core {type PdfName}
 
 pub using @syntax {type PdfObject}
-
-pub using @page {type PdfPage}
-
-pub using @page {type PdfPageRotation}
 
 pub using @syntax {type PdfParsedIndirectObject}
 

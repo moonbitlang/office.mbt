@@ -28,9 +28,9 @@ fn artifact_page_for_test(
   ops : ArrayView[@pdflite.PdfContentOp],
   resources? : @pdflite.PdfObject = @pdflite.pdf_dictionary([]),
   rest? : @pdflite.PdfObject = @pdflite.pdf_dictionary([]),
-) -> @pdflite.PdfPage raise @pdflite.PdfError {
+) -> @page.PdfPage raise @pdflite.PdfError {
   {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     content: [artifact_stream_for_test(ops)],
     resources,
     rest,
@@ -39,7 +39,7 @@ fn artifact_page_for_test(
 
 ///|
 fn artifact_document_for_test(
-  pages : ArrayView[@pdflite.PdfPage],
+  pages : ArrayView[@page.PdfPage],
 ) -> @pdflite.PdfDocument raise @pdflite.PdfError {
   @pdflite.pdf_blank_document(100.0, 100.0, pages.length()).change_pages(pages)
 }
@@ -47,7 +47,7 @@ fn artifact_document_for_test(
 ///|
 fn artifact_page_ops_for_test(
   document : @pdflite.PdfDocument,
-  page : @pdflite.PdfPage,
+  page : @page.PdfPage,
 ) -> Array[@pdflite.PdfContentOp] raise @pdflite.PdfError {
   document.parse_content_ops_with_resources(page.resources, page.content)
 }

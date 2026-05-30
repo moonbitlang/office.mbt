@@ -57,8 +57,8 @@ fn pdf_page_stamp_concat_content(
 ///|
 fn PdfDocument::pdf_page_stamp_pair(
   self : PdfDocument,
-  overlay_page : PdfPage,
-  under_page : PdfPage,
+  overlay_page : @page.PdfPage,
+  under_page : @page.PdfPage,
   relative_to_box : PdfName,
   position : PdfPosition,
   topline : Bool,
@@ -66,7 +66,7 @@ fn PdfDocument::pdf_page_stamp_pair(
   scale_to_fit : Bool,
   is_over : Bool,
   fast : Bool,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   let overlay_page = self.pdf_page_stamp_transform_overlay(
     overlay_page, under_page, relative_to_box, position, topline, midline, scale_to_fit,
     fast,

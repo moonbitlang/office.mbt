@@ -22,7 +22,7 @@ fn pdf_coord_update_last(
 ///|
 fn pdf_coord_parse_units_tokens(
   document : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   source : String,
   tokens : ArrayView[PdfCoordToken],
 ) -> Array[Double] raise PdfError {
@@ -110,7 +110,7 @@ fn pdf_coord_parse_units_tokens(
 /// supplied page.
 pub fn PdfDocument::parse_units_string(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   text : String,
 ) -> Array[Double] raise PdfError {
   pdf_coord_parse_units_tokens(self, page, text, pdf_coord_tokenize(text))
@@ -120,7 +120,7 @@ pub fn PdfDocument::parse_units_string(
 /// Function wrapper for `PdfDocument::parse_units_string`.
 pub fn pdf_parse_units_string(
   document : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   text : String,
 ) -> Array[Double] raise PdfError {
   document.parse_units_string(page, text)

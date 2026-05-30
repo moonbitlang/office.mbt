@@ -24,7 +24,7 @@ fn type_lookup_for_test(
 
 ///|
 fn type_page_ops_for_test(
-  page : @pdflite.PdfPage,
+  page : @page.PdfPage,
 ) -> Array[@pdflite.PdfContentOp] raise {
   guard page.content.length() == 1 else {
     fail("expected exactly one content stream")

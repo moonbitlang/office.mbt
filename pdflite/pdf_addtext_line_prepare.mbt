@@ -23,7 +23,7 @@ pub fn pdf_addtext_measurement_bytes(
 ///|
 fn PdfDocument::pdf_addtext_measurement_bytes_for_page(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   font : PdfFont?,
   fontpack : PdfFontPack?,
   fontname : PdfName,
@@ -53,7 +53,7 @@ fn PdfDocument::pdf_addtext_measurement_bytes_for_page(
 /// line widths, and resolves the final cpdf placement offsets.
 pub fn PdfDocument::addtext_prepare_line(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   time : @date.PdfStrftimeTime,
   lines : ArrayView[String],
   replacements : ArrayView[(String, () -> String)],
@@ -122,7 +122,7 @@ pub fn PdfDocument::addtext_prepare_line(
 /// Compatibility wrapper for `PdfDocument::addtext_prepare_line`.
 pub fn pdf_addtext_prepare_line(
   document : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   time : @date.PdfStrftimeTime,
   lines : ArrayView[String],
   replacements : ArrayView[(String, () -> String)],

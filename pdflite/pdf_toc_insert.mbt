@@ -12,10 +12,10 @@ fn pdf_toc_original_page_changes(
 
 ///|
 fn pdf_toc_prepend_pages(
-  toc_pages : ArrayView[PdfPage],
-  original_pages : ArrayView[PdfPage],
-) -> Array[PdfPage] {
-  let output : Array[PdfPage] = []
+  toc_pages : ArrayView[@page.PdfPage],
+  original_pages : ArrayView[@page.PdfPage],
+) -> Array[@page.PdfPage] {
+  let output : Array[@page.PdfPage] = []
   for page in toc_pages {
     output.push(page)
   }
@@ -56,7 +56,7 @@ pub fn pdf_toc_shift_page_labels(
 /// after the inserted TOC pages.
 pub fn PdfDocument::toc_insert_pages(
   self : PdfDocument,
-  toc_pages : ArrayView[PdfPage],
+  toc_pages : ArrayView[@page.PdfPage],
   labels : ArrayView[@label.PdfPageLabel],
 ) -> PdfDocument raise PdfError {
   let original_pages = self.pages_of_pagetree()
@@ -77,7 +77,7 @@ pub fn PdfDocument::toc_insert_pages(
 /// Compatibility wrapper for `PdfDocument::toc_insert_pages`.
 pub fn pdf_toc_insert_pages(
   document : PdfDocument,
-  toc_pages : ArrayView[PdfPage],
+  toc_pages : ArrayView[@page.PdfPage],
   labels : ArrayView[@label.PdfPageLabel],
 ) -> PdfDocument raise PdfError {
   document.toc_insert_pages(toc_pages, labels)

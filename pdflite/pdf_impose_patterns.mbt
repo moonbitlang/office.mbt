@@ -173,8 +173,8 @@ fn PdfDocument::pdf_impose_change_pattern_matrices_xobject(
 fn PdfDocument::pdf_impose_change_pattern_matrices_page(
   self : PdfDocument,
   matrix : TransformMatrix,
-  page : PdfPage,
-) -> PdfPage raise PdfError {
+  page : @page.PdfPage,
+) -> @page.PdfPage raise PdfError {
   let used = self.pdf_impose_patterns_used_with_scn(
     page.content,
     page.resources,
@@ -196,8 +196,8 @@ fn PdfDocument::pdf_impose_change_pattern_matrices_page(
 pub fn PdfDocument::change_pattern_matrices_page(
   self : PdfDocument,
   matrix : TransformMatrix,
-  page : PdfPage,
-) -> PdfPage raise PdfError {
+  page : @page.PdfPage,
+) -> @page.PdfPage raise PdfError {
   self.pdf_impose_change_pattern_matrices_page(matrix, page)
 }
 
@@ -206,7 +206,7 @@ pub fn PdfDocument::change_pattern_matrices_page(
 pub fn pdf_change_pattern_matrices_page(
   document : PdfDocument,
   matrix : TransformMatrix,
-  page : PdfPage,
-) -> PdfPage raise PdfError {
+  page : @page.PdfPage,
+) -> @page.PdfPage raise PdfError {
   document.change_pattern_matrices_page(matrix, page)
 }

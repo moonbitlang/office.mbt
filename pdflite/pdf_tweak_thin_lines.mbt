@@ -107,9 +107,9 @@ pub fn pdf_thin_lines_ops(
 ///|
 fn PdfDocument::pdf_tweak_thin_lines_page(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   width : Double,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   let ops = self.pdf_page_parse_content_ops(page.resources, page.content)
   {
     ..page,
@@ -134,7 +134,7 @@ pub fn PdfDocument::thin_lines(
   let document = self.copy()
   let pages = document.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(page_numbers)
-  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
+  let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
     let page = pages[index]

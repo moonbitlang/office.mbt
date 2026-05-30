@@ -1,8 +1,8 @@
 ///|
 fn pdf_page_combine_take_pages(
-  pages : ArrayView[PdfPage],
+  pages : ArrayView[@page.PdfPage],
   count : Int,
-) -> Array[PdfPage] {
+) -> Array[@page.PdfPage] {
   [
     for index in 0..<count => pages[index]
   ]
@@ -10,15 +10,15 @@ fn pdf_page_combine_take_pages(
 
 ///|
 fn pdf_page_combine_with_blank_pages(
-  pages : ArrayView[PdfPage],
+  pages : ArrayView[@page.PdfPage],
   count : Int,
-) -> Array[PdfPage] {
-  let output : Array[PdfPage] = []
+) -> Array[@page.PdfPage] {
+  let output : Array[@page.PdfPage] = []
   for page in pages {
     output.push(page)
   }
   for _ in 0..<count {
-    output.push(pdf_page_blank(paper_a4))
+    output.push(@page.pdf_page_blank(paper_a4))
   }
   output
 }
@@ -147,7 +147,7 @@ pub fn PdfDocument::combine_pages(
   if merged_pages.length() != under_length * 2 {
     raise PageTreeExpected
   }
-  let new_pages : Array[PdfPage] = []
+  let new_pages : Array[@page.PdfPage] = []
   for index in 0..<under_length {
     new_pages.push(
       merged.pdf_page_stamp_pair(

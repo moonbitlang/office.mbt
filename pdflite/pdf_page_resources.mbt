@@ -299,7 +299,7 @@ pub fn[A, B, C] pdf_page_process_stub(
 /// processed stream, which replaces the original form stream data.
 pub fn PdfDocument::process_xobjects(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   process : (PdfDocument, PdfObject, ArrayView[PdfObject]) -> Array[PdfObject] raise PdfError,
 ) -> Unit raise PdfError {
   match self.lookup_direct(pdf_page_xobject_key(), page.resources) {

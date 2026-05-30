@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::pdf_page_resource_entry_count(
   self : PdfDocument,
-  pages : ArrayView[PdfPage],
+  pages : ArrayView[@page.PdfPage],
 ) -> Int {
   let mut count = 0
   for resource_key in pdf_page_resource_keys() {
@@ -18,7 +18,7 @@ fn PdfDocument::pdf_page_resource_entry_count(
 ///|
 fn PdfDocument::pdf_page_renumber_resource_changes(
   self : PdfDocument,
-  pages : ArrayView[PdfPage],
+  pages : ArrayView[@page.PdfPage],
 ) -> Array[(PdfName, Int, PdfName, PdfName)] {
   let changes : Array[(PdfName, Int, PdfName, PdfName)] = Array::new(
     capacity=self.pdf_page_resource_entry_count(pages),

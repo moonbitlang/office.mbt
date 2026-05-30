@@ -93,7 +93,9 @@ fn pdf_xobject_identity_changes(count : Int) -> Array[(Int, Int)] {
 }
 
 ///|
-fn pdf_xobject_all_but_last_page(pages : ArrayView[PdfPage]) -> Array[PdfPage] {
+fn pdf_xobject_all_but_last_page(
+  pages : ArrayView[@page.PdfPage],
+) -> Array[@page.PdfPage] {
   [
     for index in 0..<(pages.length() - 1) => pages[index]
   ]
@@ -102,7 +104,7 @@ fn pdf_xobject_all_but_last_page(pages : ArrayView[PdfPage]) -> Array[PdfPage] {
 ///|
 fn PdfDocument::pdf_xobject_form_object_of_page(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
 ) -> PdfObject raise PdfError {
   let ops = self.parse_content_ops_with_resources(page.resources, page.content)
   let data = pdf_content_bytes_of_ops(ops)
@@ -121,10 +123,10 @@ fn PdfDocument::pdf_xobject_form_object_of_page(
 ///|
 fn PdfDocument::pdf_xobject_add_to_page(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   name : PdfName,
   object_number : Int,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   let xobjects = match
     self.lookup_direct(pdf_xobject_xobject(), page.resources) {
     Some(value) => value
@@ -141,14 +143,14 @@ fn PdfDocument::pdf_xobject_add_to_page(
 fn PdfDocument::pdf_xobject_add_page_as_xobject(
   self : PdfDocument,
   range : ArrayView[Int],
-  page : PdfPage,
+  page : @page.PdfPage,
   name : PdfName,
 ) -> PdfDocument raise PdfError {
   let pdf = self.copy()
   let xobject_number = pdf.add_object(pdf.pdf_xobject_form_object_of_page(page))
   let pages = pdf.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(range)
-  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
+  let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
     if selected_pages.contains(page_number) {

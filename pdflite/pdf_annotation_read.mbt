@@ -238,7 +238,7 @@ fn PdfDocument::pdf_annotation_popup_parent(
 /// skipped and represented through `AnnotationPopup`.
 pub fn PdfDocument::annotations_of_page(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
 ) -> Array[@annotation.PdfAnnotation] raise PdfError {
   match self.lookup_direct(pdf_annotation_annots_key(), page.rest) {
     Some(PdfArray(annotations)) => {
@@ -269,7 +269,7 @@ pub fn PdfDocument::annotations_of_page(
 /// Compatibility wrapper for `PdfDocument::annotations_of_page`.
 pub fn pdf_annotations_of_page(
   document : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
 ) -> Array[@annotation.PdfAnnotation] raise PdfError {
   document.annotations_of_page(page)
 }

@@ -36,7 +36,7 @@ fn combine_page_for_test(
   resources? : @pdflite.PdfObject = PdfDictionary([]),
   width? : Double = 100.0,
   height? : Double = 100.0,
-) -> @pdflite.PdfPage {
+) -> @page.PdfPage {
   {
     content: [combine_stream_for_test(ops)],
     mediabox: combine_rect_for_test(0.0, 0.0, width, height),
@@ -48,7 +48,7 @@ fn combine_page_for_test(
 
 ///|
 fn combine_document_for_test(
-  pages : ArrayView[@pdflite.PdfPage],
+  pages : ArrayView[@page.PdfPage],
 ) -> @pdflite.PdfDocument {
   try! (try! @pdflite.pdf_blank_document(100.0, 100.0, pages.length())).change_pages(
     pages,
@@ -58,7 +58,7 @@ fn combine_document_for_test(
 ///|
 fn combine_content_ops_for_test(
   document : @pdflite.PdfDocument,
-  page : @pdflite.PdfPage,
+  page : @page.PdfPage,
 ) -> Array[@pdflite.PdfContentOp] {
   try! document.parse_content_ops_with_resources(page.resources, page.content)
 }

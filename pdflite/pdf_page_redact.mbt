@@ -1,8 +1,8 @@
 ///|
 fn PdfDocument::pdf_page_redact_page(
   self : PdfDocument,
-  page : PdfPage,
-) -> PdfPage raise PdfError {
+  page : @page.PdfPage,
+) -> @page.PdfPage raise PdfError {
   ignore(self)
   {
     ..page,
@@ -31,7 +31,7 @@ pub fn PdfDocument::redact_pages(
     "redact_pages",
   )
   let selected_pages = @core.pdf_number_set(page_numbers)
-  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
+  let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
   for index, page in pages {
     let page_number = index + 1
     if selected_pages.contains(page_number) {

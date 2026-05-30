@@ -41,7 +41,7 @@ test "extract text from an in-memory PDF" {
     PdfWinAnsiEncoding,
   )
   let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     content: [
       try! @pdflite.pdf_content_stream_of_ops([
         Op_BT,

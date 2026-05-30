@@ -51,7 +51,7 @@ fn texttopdf_lookup_indirect_object_for_test(
 ///|
 fn texttopdf_page_ops_for_test(
   document : @pdflite.PdfDocument,
-  page : @pdflite.PdfPage,
+  page : @page.PdfPage,
 ) -> Array[@pdflite.PdfContentOp] raise {
   document.parse_content_ops(page.content)
 }

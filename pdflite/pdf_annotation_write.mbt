@@ -91,9 +91,9 @@ fn pdf_object_of_annotation(
 /// are preserved after the new entry; a non-array `/Annots` value raises.
 pub fn PdfDocument::add_annotation(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   annotation : @annotation.PdfAnnotation,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   let object = pdf_object_of_annotation(annotation)
   let annotations = match
     self.lookup_direct(pdf_annotation_annots_key(), page.rest) {
@@ -114,9 +114,9 @@ pub fn PdfDocument::add_annotation(
 /// Compatibility wrapper for `PdfDocument::add_annotation`.
 pub fn pdf_add_annotation(
   document : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   annotation : @annotation.PdfAnnotation,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   document.add_annotation(page, annotation)
 }
 

@@ -29,7 +29,7 @@ fn PdfDocument::pdf_ua_matterhorn_check_28_007(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_page_annotation_count(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
 ) -> Int raise PdfError {
   self.annotations_of_page(page).length()
 }

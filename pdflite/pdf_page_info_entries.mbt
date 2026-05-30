@@ -24,7 +24,7 @@ fn pdf_page_info_unit_number(value : Double, unit : PdfUnit) -> Double {
 ///|
 fn PdfDocument::pdf_page_info_box_numbers(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   box_name : PdfName,
   unit : PdfUnit,
 ) -> Array[Double]? raise PdfError {
@@ -48,7 +48,7 @@ fn PdfDocument::pdf_page_info_box_numbers(
 ///|
 fn PdfDocument::pdf_page_info_annotation_count(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
 ) -> Int {
   match self.lookup_direct(pdf_page_annots_key(), page.rest) {
     Some(PdfArray(annotations)) => annotations.length()
@@ -71,7 +71,7 @@ fn pdf_page_info_label_text(
 fn PdfDocument::pdf_page_info_entry(
   self : PdfDocument,
   page_number : Int,
-  page : PdfPage,
+  page : @page.PdfPage,
   labels : ArrayView[@label.PdfPageLabel],
   unit : PdfUnit,
 ) -> PdfPageInfoEntry raise PdfError {
@@ -91,7 +91,7 @@ fn PdfDocument::pdf_page_info_entry(
     ),
     trimbox: self.pdf_page_info_box_numbers(page, pdf_page_trimbox_key(), unit),
     artbox: self.pdf_page_info_box_numbers(page, pdf_page_artbox_key(), unit),
-    rotation: pdf_page_int_of_rotation(page.rotate),
+    rotation: @page.pdf_page_int_of_rotation(page.rotate),
     annotations: self.pdf_page_info_annotation_count(page),
   }
 }

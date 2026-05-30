@@ -23,8 +23,8 @@ pub fn pdf_remove_clipping_ops(
 ///|
 fn PdfDocument::pdf_tweak_remove_clipping_page(
   self : PdfDocument,
-  page : PdfPage,
-) -> PdfPage raise PdfError {
+  page : @page.PdfPage,
+) -> @page.PdfPage raise PdfError {
   let ops = self.pdf_page_parse_content_ops(page.resources, page.content)
   { ..page, content: [pdf_content_stream_of_ops(pdf_remove_clipping_ops(ops))] }
 }
@@ -48,7 +48,7 @@ pub fn PdfDocument::remove_clipping(
   let document = self.copy()
   let pages = document.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(page_numbers)
-  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
+  let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
     let page = pages[index]

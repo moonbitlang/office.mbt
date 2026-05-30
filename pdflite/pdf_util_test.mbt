@@ -1286,7 +1286,7 @@ test "PdfDocument json_of_document precombines split content before parsing" {
     ),
   )
   let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     content: [PdfIndirect(2), PdfIndirect(3)],
   }
   let page_root = try! document.add_pagetree([page])

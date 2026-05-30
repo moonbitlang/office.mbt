@@ -13,7 +13,7 @@ fn pdf_addtext_append_unique_codepoints(
 ///|
 fn PdfDocument::pdf_addtext_used_codepoints_for_pages(
   self : PdfDocument,
-  pages : ArrayView[PdfPage],
+  pages : ArrayView[@page.PdfPage],
   page_numbers : ArrayView[Int],
   lines : ArrayView[String],
   time : @date.PdfStrftimeTime,

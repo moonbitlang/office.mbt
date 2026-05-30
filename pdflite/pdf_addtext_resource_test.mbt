@@ -90,7 +90,7 @@ test "pdf_addtext_effective_encoding follows selected add-text font" {
 ///|
 test "PdfDocument addtext_page_font_dictionary uses empty fallback" {
   let document = @pdflite.pdf_document_empty()
-  let page = @pdflite.pdf_page_blank(@pdflite.paper_a4)
+  let page = @page.pdf_page_blank(@pdflite.paper_a4)
   @test.assert_eq(
     document.addtext_page_font_dictionary(page),
     PdfDictionary([]),
@@ -105,7 +105,7 @@ test "PdfDocument addtext_page_font_dictionary resolves indirect fonts" {
   ])
   let number = document.add_object(fonts)
   let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     resources: PdfDictionary([
       (addtext_resource_name_for_test("/Font"), PdfIndirect(number)),
     ]),
@@ -120,7 +120,7 @@ test "PdfDocument addtext_page_font_dictionary resolves indirect fonts" {
 test "PdfDocument addtext_page_font_dictionary preserves malformed values" {
   let document = @pdflite.pdf_document_empty()
   let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     resources: PdfDictionary([
       (addtext_resource_name_for_test("/Font"), PdfInteger(7)),
     ]),
@@ -290,7 +290,7 @@ test "PdfDocument addtext_resource_setup installs selected font and opacity" {
   let ca = addtext_resource_name_for_test("/ca")
   let ca_stroke = addtext_resource_name_for_test("/CA")
   let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     resources: PdfDictionary([(font_key, PdfDictionary([(f0, PdfInteger(1))]))]),
   }
   let setup = try! document.addtext_resource_setup(
@@ -328,7 +328,7 @@ test "pdf_addtext_resource_setup installs fontpack resources" {
   let f1 = addtext_resource_name_for_test("/F1")
   let f2 = addtext_resource_name_for_test("/F2")
   let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     resources: PdfDictionary([(font_key, PdfDictionary([(f0, PdfInteger(1))]))]),
   }
   let pack : @pdflite.PdfFontPack = {
@@ -369,7 +369,7 @@ test "PdfDocument addtext_resource_setup preserves existing-font resources" {
     (resource_name, PdfIndirect(10)),
   ])
   let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     resources: PdfDictionary([(font_key, fontdict)]),
   }
   let setup = try! document.addtext_resource_setup(

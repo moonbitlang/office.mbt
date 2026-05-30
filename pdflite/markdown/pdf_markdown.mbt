@@ -1,7 +1,7 @@
 ///|
 fn pdf_markdown_page_text(
   document : @pdflite.PdfDocument,
-  page : @pdflite.PdfPage,
+  page : @page.PdfPage,
   font_cache : PdfMarkdownFontCache,
 ) -> String raise {
   pdf_markdown_string_of_codepoints(

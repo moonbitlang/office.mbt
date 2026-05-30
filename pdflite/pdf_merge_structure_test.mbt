@@ -53,8 +53,8 @@ fn merge_structure_tree_doc_for_test() -> @pdflite.PdfDocument {
   let key_pg = merge_structure_name_for_test("/Pg")
   let doc = @pdflite.pdf_document_empty()
   let page_root = try! doc.add_pagetree([
-    @pdflite.pdf_page_blank(@pdflite.paper_a4),
-    @pdflite.pdf_page_blank(@pdflite.paper_a4),
+    @page.pdf_page_blank(@pdflite.paper_a4),
+    @page.pdf_page_blank(@pdflite.paper_a4),
   ])
   ignore(try! doc.add_root(page_root, []))
   let page_refs = try! doc.page_reference_numbers()
@@ -88,7 +88,7 @@ fn merge_structure_parent_tree_doc_for_test() -> @pdflite.PdfDocument {
   let key_pg = merge_structure_name_for_test("/Pg")
   let doc = @pdflite.pdf_document_empty()
   let page_root = try! doc.add_pagetree([
-    @pdflite.pdf_page_blank(@pdflite.paper_a4),
+    @page.pdf_page_blank(@pdflite.paper_a4),
   ])
   ignore(try! doc.add_root(page_root, []))
   let page_refs = try! doc.page_reference_numbers()

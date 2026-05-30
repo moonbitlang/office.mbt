@@ -101,7 +101,7 @@ fn PdfDocument::pdf_image_collect_xobject(
 ///|
 fn PdfDocument::pdf_image_collect_page_images(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   page_number : Int,
   inline : Bool,
   entries : Array[PdfImageListEntry],

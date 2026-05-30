@@ -56,8 +56,8 @@ fn PdfDocument::pdf_page_remove_struct_tree_streams(
 ///|
 fn PdfDocument::pdf_page_remove_struct_tree_page(
   self : PdfDocument,
-  page : PdfPage,
-) -> PdfPage raise PdfError {
+  page : @page.PdfPage,
+) -> @page.PdfPage raise PdfError {
   let content = self.pdf_page_remove_struct_tree_streams(
     page.resources,
     page.content,
@@ -71,8 +71,8 @@ fn PdfDocument::pdf_page_remove_struct_tree_page(
 ///|
 fn PdfDocument::pdf_page_mark_all_as_artifact_page(
   self : PdfDocument,
-  page : PdfPage,
-) -> PdfPage raise PdfError {
+  page : @page.PdfPage,
+) -> @page.PdfPage raise PdfError {
   let content = self.pdf_page_mark_all_as_artifact_streams(
     page.resources,
     page.content,
@@ -98,7 +98,7 @@ pub fn PdfDocument::remove_struct_tree(
   document.remove_dict_entry_everywhere(pdf_page_struct_parent_key())
   document.remove_dict_entry_everywhere(pdf_page_struct_parents_key())
   let pages = document.pages_of_pagetree()
-  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
+  let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
   for page in pages {
     rewritten.push(document.pdf_page_remove_struct_tree_page(page))
   }
@@ -120,7 +120,7 @@ pub fn PdfDocument::mark_all_as_artifact(
 ) -> PdfDocument raise PdfError {
   let document = self.copy()
   let pages = document.pages_of_pagetree()
-  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
+  let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
   for page in pages {
     rewritten.push(document.pdf_page_mark_all_as_artifact_page(page))
   }

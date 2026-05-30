@@ -112,7 +112,7 @@ pub fn pdf_page_reference_numbers(
 }
 
 ///|
-/// Count pages by walking the page tree without materializing `PdfPage` records.
+/// Count pages by walking the page tree without materializing `@page.PdfPage` records.
 pub fn PdfDocument::pages_of_pagetree_quick(
   self : PdfDocument,
 ) -> Int raise PdfError {

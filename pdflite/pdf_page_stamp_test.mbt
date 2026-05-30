@@ -27,7 +27,7 @@ fn stamp_page_for_test(
   rest? : @pdflite.PdfObject = PdfDictionary([]),
   width? : Double = 100.0,
   height? : Double = 100.0,
-) -> @pdflite.PdfPage {
+) -> @page.PdfPage {
   {
     content: [stamp_stream_for_test(ops)],
     mediabox: stamp_rect_for_test(0.0, 0.0, width, height),
@@ -39,7 +39,7 @@ fn stamp_page_for_test(
 
 ///|
 fn stamp_document_for_test(
-  pages : ArrayView[@pdflite.PdfPage],
+  pages : ArrayView[@page.PdfPage],
 ) -> @pdflite.PdfDocument {
   try! (try! @pdflite.pdf_blank_document(100.0, 100.0, pages.length())).change_pages(
     pages,
@@ -49,7 +49,7 @@ fn stamp_document_for_test(
 ///|
 fn stamp_content_ops_for_test(
   document : @pdflite.PdfDocument,
-  page : @pdflite.PdfPage,
+  page : @page.PdfPage,
 ) -> Array[@pdflite.PdfContentOp] {
   try! document.parse_content_ops_with_resources(page.resources, page.content)
 }

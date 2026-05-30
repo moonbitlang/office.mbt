@@ -61,7 +61,7 @@ fn pdf_page_scale_to_fit_matrix_from_bounds(
 ///|
 fn PdfDocument::pdf_page_scale_to_fit_matrix(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   target_width : Double,
   target_height : Double,
   position : PdfPosition,
@@ -84,10 +84,10 @@ fn pdf_page_scale_target_box(width : Double, height : Double) -> PdfObject {
 ///|
 fn PdfDocument::pdf_page_scale_to_fit_boxes(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   target_width : Double,
   target_height : Double,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   let target = pdf_page_scale_target_box(target_width, target_height)
   let mut rest = page.rest
   for name in pdf_page_upright_box_names() {
@@ -102,12 +102,12 @@ fn PdfDocument::pdf_page_scale_to_fit_boxes(
 ///|
 fn PdfDocument::pdf_page_scale_to_fit_page(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   target_width : Double,
   target_height : Double,
   matrix : TransformMatrix,
   fast : Bool,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   let page = self.pdf_page_scale_to_fit_boxes(page, target_width, target_height)
   let page = self.pdf_impose_change_pattern_matrices_page(matrix, page)
   self.transform_annotations(matrix, page.rest)
@@ -136,7 +136,7 @@ pub fn PdfDocument::scale_to_fit_pages(
   }
   let pages = self.pages_of_pagetree()
   let page_indexes = pdf_page_scale_pair_index_map(page_numbers)
-  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
+  let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
   let matrices : Array[(Int, TransformMatrix)] = Array::new(
     capacity=page_numbers.length(),
   )

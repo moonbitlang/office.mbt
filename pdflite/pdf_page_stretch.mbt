@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::pdf_page_stretch_matrix(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   target_width : Double,
   target_height : Double,
 ) -> TransformMatrix raise PdfError {
@@ -43,7 +43,7 @@ pub fn PdfDocument::stretch_pages(
   }
   let pages = self.pages_of_pagetree()
   let page_indexes = pdf_page_scale_pair_index_map(page_numbers)
-  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
+  let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
   let matrices : Array[(Int, TransformMatrix)] = Array::new(
     capacity=page_numbers.length(),
   )

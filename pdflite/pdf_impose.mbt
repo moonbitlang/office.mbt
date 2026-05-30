@@ -39,7 +39,7 @@ pub fn PdfDocument::impose(
     original_page_count,
     prepared_pages[0].mediabox,
   )
-  let imposed_pages : Array[PdfPage] = []
+  let imposed_pages : Array[@page.PdfPage] = []
   for page_set in pdf_impose_split_pages(prepared_pages, layout.pages_per_sheet) {
     imposed_pages.push(
       prepared.pdf_impose_pages_core(

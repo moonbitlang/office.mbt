@@ -96,9 +96,9 @@ pub fn pdf_remove_all_text_ops(
 ///|
 fn PdfDocument::pdf_remove_text_page(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   transform : (ArrayView[PdfContentOp]) -> Array[PdfContentOp],
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   let ops = self.pdf_page_parse_content_ops(page.resources, page.content)
   { ..page, content: [pdf_content_stream_of_ops(transform(ops))] }
 }
@@ -121,7 +121,7 @@ pub fn PdfDocument::remove_added_text(
 ) -> PdfDocument raise PdfError {
   let pages = self.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(page_numbers)
-  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
+  let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
     let page = pages[index]
@@ -162,7 +162,7 @@ pub fn PdfDocument::remove_all_text(
   let document = self.copy()
   let pages = document.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(page_numbers)
-  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
+  let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
     let page = pages[index]

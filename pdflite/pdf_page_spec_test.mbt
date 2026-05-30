@@ -16,10 +16,8 @@ fn page_spec_page_for_test(
   width : Int,
   height : Int,
   annotated? : Bool = false,
-) -> @pdflite.PdfPage {
-  let page = @pdflite.pdf_page_custom(
-    page_spec_rectangle_for_test(width, height),
-  )
+) -> @page.PdfPage {
+  let page = @page.pdf_page_custom(page_spec_rectangle_for_test(width, height))
   if annotated {
     {
       ..page,
@@ -34,7 +32,7 @@ fn page_spec_page_for_test(
 
 ///|
 fn page_spec_document_for_test(
-  pages : ArrayView[@pdflite.PdfPage],
+  pages : ArrayView[@page.PdfPage],
 ) -> @pdflite.PdfDocument raise {
   let document = @pdflite.pdf_document_empty()
   let page_root = document.add_pagetree(pages)

@@ -1,6 +1,6 @@
 ///|
-fn pdf_coord_default_page() -> PdfPage {
-  pdf_page_blank(paper_a4)
+fn pdf_coord_default_page() -> @page.PdfPage {
+  @page.pdf_page_blank(paper_a4)
 }
 
 ///|

@@ -121,10 +121,10 @@ fn PdfDocument::pdf_font_resource_dictionary_or_empty(
 ///|
 fn PdfDocument::pdf_font_add_to_page_resources(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   resource_name : PdfName,
   font : PdfObject,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   let fonts = self.pdf_font_resource_dictionary_or_empty(page.resources)
   let updated_fonts = fonts.add_dict_entry(resource_name, font)
   {
@@ -162,7 +162,7 @@ pub fn PdfDocument::copy_font_from(
   let pages = target_pdf.pages_of_pagetree()
   pdf_page_box_validate_page_numbers(page_numbers, pages.length(), "copy_font")
   let selected_pages = @core.pdf_number_set(page_numbers)
-  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
+  let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
   for index, page in pages {
     let page_number = index + 1
     if selected_pages.contains(page_number) {

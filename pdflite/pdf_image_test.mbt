@@ -344,7 +344,7 @@ test "PdfDocument images_json lists image xobjects and soft masks" {
     ),
   )
   let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     resources: @pdflite.pdf_dictionary([
       (
         image_name_for_test("/XObject"),
@@ -420,7 +420,7 @@ test "PdfDocument images_json optionally includes form inline images" {
     )
   doc.add_object_given_number(30, form)
   let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     resources: @pdflite.pdf_dictionary([
       (
         image_name_for_test("/XObject"),
@@ -474,7 +474,7 @@ test "PdfDocument image_resolution reports selected image xobject DPI" {
   )
   let placement = { ..@pdflite.transform_identity_matrix, a: 400.0, d: 300.0 }
   let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     resources: @pdflite.pdf_dictionary([
       (
         image_name_for_test("/XObject"),
@@ -525,7 +525,7 @@ test "PdfDocument image_resolution optionally includes inline images" {
   ])
   let placement = { ..@pdflite.transform_identity_matrix, a: 144.0, d: 72.0 }
   let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     content: [
       try! @pdflite.pdf_content_stream_of_ops([
         Op_cm(placement),
@@ -591,7 +591,7 @@ test "PdfDocument image_resolution descends into form xobjects" {
   doc.add_object_given_number(30, form)
   let page_scale = { ..@pdflite.transform_identity_matrix, a: 2.0, d: 2.0 }
   let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     resources: @pdflite.pdf_dictionary([
       (
         image_name_for_test("/XObject"),

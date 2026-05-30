@@ -18,8 +18,8 @@ fn coord_page_for_test(
   width : Int,
   height : Int,
   cropbox? : @pdflite.PdfObject? = None,
-) -> @pdflite.PdfPage {
-  let page = @pdflite.pdf_page_custom(
+) -> @page.PdfPage {
+  let page = @page.pdf_page_custom(
     coord_rect_object_for_test(0, 0, width, height),
   )
   match cropbox {
@@ -33,7 +33,7 @@ fn coord_page_for_test(
 }
 
 ///|
-fn coord_page_with_boxes_for_test() -> @pdflite.PdfPage {
+fn coord_page_with_boxes_for_test() -> @page.PdfPage {
   {
     ..coord_page_for_test(200, 100),
     rest: PdfDictionary([
@@ -52,7 +52,7 @@ fn coord_page_with_boxes_for_test() -> @pdflite.PdfPage {
 
 ///|
 fn coord_document_for_test(
-  pages : ArrayView[@pdflite.PdfPage],
+  pages : ArrayView[@page.PdfPage],
 ) -> @pdflite.PdfDocument raise {
   let document = @pdflite.pdf_document_empty()
   let page_root = document.add_pagetree(pages)
@@ -122,7 +122,7 @@ test "cpdf coord parses unit numbers and paper sizes" {
   assert_close_for_coord_test(try! document.parse_single_number("1in"), 72.0)
   assert_close_for_coord_test(try! document.parse_single_number("12pt"), 12.0)
   let values = try! document.parse_units_string(
-    @pdflite.pdf_page_blank(@pdflite.paper_a4),
+    @page.pdf_page_blank(@pdflite.paper_a4),
     "a4portrait",
   )
   @test.assert_eq(values.length(), 2)

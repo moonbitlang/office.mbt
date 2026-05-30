@@ -12,7 +12,7 @@ fn pdf_coord_box_key(kind : String) -> PdfName? {
 ///|
 fn pdf_coord_box_object(
   document : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   kind : String,
 ) -> PdfObject {
   match pdf_coord_box_key(kind) {
@@ -28,7 +28,7 @@ fn pdf_coord_box_object(
 ///|
 fn pdf_coord_box_rectangle(
   document : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   kind : String,
 ) -> PdfRectangle raise PdfError {
   document.parse_rectangle(pdf_coord_box_object(document, page, kind))
@@ -37,7 +37,7 @@ fn pdf_coord_box_rectangle(
 ///|
 fn pdf_coord_page_characteristic(
   document : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   name : String,
 ) -> Double? raise PdfError {
   if name.length() < 2 {
@@ -61,7 +61,7 @@ fn pdf_coord_page_characteristic(
 ///|
 fn pdf_coord_token_number(
   document : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   token : PdfCoordToken,
   unit : String,
 ) -> Double? raise PdfError {

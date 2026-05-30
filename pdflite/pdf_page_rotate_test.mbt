@@ -1,13 +1,13 @@
 ///|
 fn rotate_page_for_test(
-  rotate? : @pdflite.PdfPageRotation = Rotate0,
-) -> @pdflite.PdfPage {
-  { ..@pdflite.pdf_page_blank(@pdflite.paper_a4), rotate, }
+  rotate? : @page.PdfPageRotation = Rotate0,
+) -> @page.PdfPage {
+  { ..@page.pdf_page_blank(@pdflite.paper_a4), rotate, }
 }
 
 ///|
 fn rotate_document_for_test(
-  pages : ArrayView[@pdflite.PdfPage],
+  pages : ArrayView[@page.PdfPage],
 ) -> @pdflite.PdfDocument raise @pdflite.PdfError {
   @pdflite.pdf_blank_document(100.0, 100.0, pages.length()).change_pages(pages)
 }
@@ -39,7 +39,7 @@ fn rotate_content_page_for_test(
   ops : ArrayView[@pdflite.PdfContentOp],
   rest? : @pdflite.PdfObject = PdfDictionary([]),
   resources? : @pdflite.PdfObject = PdfDictionary([]),
-) -> @pdflite.PdfPage {
+) -> @page.PdfPage {
   {
     content: [rotate_stream_for_test(ops)],
     mediabox: rotate_rect_for_test(0.0, 0.0, 100.0, 100.0),
@@ -52,7 +52,7 @@ fn rotate_content_page_for_test(
 ///|
 fn rotate_content_ops_for_test(
   document : @pdflite.PdfDocument,
-  page : @pdflite.PdfPage,
+  page : @page.PdfPage,
 ) -> Array[@pdflite.PdfContentOp] {
   try! document.parse_content_ops_with_resources(page.resources, page.content)
 }

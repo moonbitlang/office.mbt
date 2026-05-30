@@ -1,15 +1,15 @@
 ///|
 fn PdfDocument::pdf_page_stamp_transform_overlay(
   self : PdfDocument,
-  overlay_page : PdfPage,
-  under_page : PdfPage,
+  overlay_page : @page.PdfPage,
+  under_page : @page.PdfPage,
   relative_to_box : PdfName,
   position : PdfPosition,
   topline : Bool,
   midline : Bool,
   scale_to_fit : Bool,
   fast : Bool,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   let stamp_box = self.pdf_page_stamp_box(overlay_page, relative_to_box)
   let target_box = self.pdf_page_stamp_box(under_page, relative_to_box)
   let matrix = if scale_to_fit {

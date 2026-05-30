@@ -28,7 +28,7 @@ fn annotation_cpdf_helper_document_for_test() -> @pdflite.PdfDocument raise {
     PdfDictionary([(key_contents, annotation_contents_for_test("second"))]),
   )
   let first_page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     rest: PdfDictionary([
       (
         key_annots,
@@ -39,7 +39,7 @@ fn annotation_cpdf_helper_document_for_test() -> @pdflite.PdfDocument raise {
     ]),
   }
   let second_page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     rest: PdfDictionary([
       (key_annots, PdfArray([PdfIndirect(30), PdfDictionary([])])),
     ]),
@@ -458,7 +458,7 @@ test "PdfDocument annotations_of_page reads popup annotations" {
     ]),
   )
   let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     rest: PdfDictionary([
       (key_annots, PdfArray([PdfIndirect(10), PdfIndirect(11)])),
     ]),
@@ -518,12 +518,12 @@ test "PdfDocument add_annotation writes annotation objects into page rest" {
     subject=Some(@ascii.encode("subject")),
   )
   let page = try! doc.add_annotation(
-    @pdflite.pdf_page_blank(@pdflite.paper_a4),
+    @page.pdf_page_blank(@pdflite.paper_a4),
     annotation,
   )
   let page_from_function = try! @pdflite.pdf_add_annotation(
     doc,
-    @pdflite.pdf_page_blank(@pdflite.paper_a4),
+    @page.pdf_page_blank(@pdflite.paper_a4),
     annotation,
   )
   @test.assert_eq(page_from_function.rest, page.rest)
@@ -570,7 +570,7 @@ test "PdfDocument annotation APIs report malformed annotation dictionaries" {
   let key_annots = annotation_name_for_test("/Annots")
   let doc = @pdflite.pdf_document_empty()
   @test.assert_eq(
-    try! doc.annotations_of_page(@pdflite.pdf_page_blank(@pdflite.paper_a4)),
+    try! doc.annotations_of_page(@page.pdf_page_blank(@pdflite.paper_a4)),
     [],
   )
   let missing_rect : Result[@annotation.PdfAnnotation, Error] = try? doc.read_annotation(
@@ -583,16 +583,16 @@ test "PdfDocument annotation APIs report malformed annotation dictionaries" {
     ..@annotation.pdf_annotation_make(AnnotationText),
     rest: PdfInteger(1),
   }
-  let bad_rest_result : Result[@pdflite.PdfPage, Error] = try? doc.add_annotation(
-    @pdflite.pdf_page_blank(@pdflite.paper_a4),
+  let bad_rest_result : Result[@page.PdfPage, Error] = try? doc.add_annotation(
+    @page.pdf_page_blank(@pdflite.paper_a4),
     bad_rest,
   )
   guard bad_rest_result is Err(@pdflite.PdfError::DictionaryExpected) else {
     fail("expected @pdflite.PdfError::DictionaryExpected")
   }
-  let bad_annots_result : Result[@pdflite.PdfPage, Error] = try? doc.add_annotation(
+  let bad_annots_result : Result[@page.PdfPage, Error] = try? doc.add_annotation(
     {
-      ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+      ..@page.pdf_page_blank(@pdflite.paper_a4),
       rest: PdfDictionary([(key_annots, PdfInteger(1))]),
     },
     @annotation.pdf_annotation_make(AnnotationText),
@@ -639,7 +639,7 @@ test "PdfDocument add_annotation writes subtype names for annotation variants" {
   let doc = @pdflite.pdf_document_empty()
   for case in cases {
     let page = try! doc.add_annotation(
-      @pdflite.pdf_page_blank(@pdflite.paper_a4),
+      @page.pdf_page_blank(@pdflite.paper_a4),
       @annotation.pdf_annotation_make(case.0),
     )
     guard page.rest.lookup_immediate(key_annots)
@@ -813,7 +813,7 @@ test "PdfDocument add_annotation prepends to existing annotations and keeps rest
   }
   let page = try! doc.add_annotation(
     {
-      ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+      ..@page.pdf_page_blank(@pdflite.paper_a4),
       rest: PdfDictionary([(key_annots, PdfArray([PdfIndirect(99)]))]),
     },
     annotation,

@@ -183,13 +183,13 @@ fn PdfDocument::pdf_page_renumber_resource_dictionary(
 /// records; the source document object table is not rewritten.
 pub fn PdfDocument::renumber_pages(
   self : PdfDocument,
-  pages : ArrayView[PdfPage],
-) -> Array[PdfPage] raise PdfError {
+  pages : ArrayView[@page.PdfPage],
+) -> Array[@page.PdfPage] raise PdfError {
   if pages.length() == 0 {
     []
   } else {
     let changes = self.pdf_page_renumber_resource_changes(pages)
-    let output : Array[PdfPage] = Array::new(capacity=pages.length())
+    let output : Array[@page.PdfPage] = Array::new(capacity=pages.length())
     for page_index in 0..<pages.length() {
       let page = pages[page_index]
       let page_number = page_index + 1
@@ -215,7 +215,7 @@ pub fn PdfDocument::renumber_pages(
 /// Compatibility wrapper for `PdfDocument::renumber_pages`.
 pub fn pdf_renumber_pages(
   document : PdfDocument,
-  pages : ArrayView[PdfPage],
-) -> Array[PdfPage] raise PdfError {
+  pages : ArrayView[@page.PdfPage],
+) -> Array[@page.PdfPage] raise PdfError {
   document.renumber_pages(pages)
 }

@@ -11,7 +11,7 @@ fn pdf_addtext_height_font_name(fontname : PdfName) -> String {
 ///|
 fn PdfDocument::pdf_addtext_effective_fontname(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   font : PdfFont?,
   fontpack : PdfFontPack?,
   fontname : PdfName,
@@ -35,7 +35,7 @@ fn PdfDocument::pdf_addtext_effective_fontname(
 /// operators, creates URL annotations, and appends or prepends the content.
 pub fn PdfDocument::addtext_line_page(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   time : @date.PdfStrftimeTime,
   lines : ArrayView[String],
   replacements : ArrayView[(String, () -> String)],
@@ -62,7 +62,7 @@ pub fn PdfDocument::addtext_line_page(
   fast? : Bool = false,
   raw? : Bool = false,
   url_border? : Bool = false,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   let effective_fontname = self.pdf_addtext_effective_fontname(
     page, font, fontpack, fontname,
   )
@@ -147,7 +147,7 @@ pub fn PdfDocument::addtext_line_page(
 /// Compatibility wrapper for `PdfDocument::addtext_line_page`.
 pub fn pdf_addtext_line_page(
   document : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   time : @date.PdfStrftimeTime,
   lines : ArrayView[String],
   replacements : ArrayView[(String, () -> String)],
@@ -174,7 +174,7 @@ pub fn pdf_addtext_line_page(
   fast? : Bool = false,
   raw? : Bool = false,
   url_border? : Bool = false,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   document.addtext_line_page(
     page,
     time,

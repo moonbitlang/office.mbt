@@ -3,7 +3,7 @@ fn PdfDocument::pdf_util_precombine_page_content(
   self : PdfDocument,
 ) -> PdfDocument raise PdfError {
   let pages = self.pages_of_pagetree()
-  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
+  let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
   let mut changed = false
   for page in pages {
     if page.content.length() <= 1 {

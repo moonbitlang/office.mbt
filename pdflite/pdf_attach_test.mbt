@@ -24,13 +24,13 @@ fn attach_page_for_test(
   min_y : Double,
   max_x : Double,
   max_y : Double,
-) -> @pdflite.PdfPage {
-  @pdflite.pdf_page_custom(attach_rect_for_test(min_x, min_y, max_x, max_y))
+) -> @page.PdfPage {
+  @page.pdf_page_custom(attach_rect_for_test(min_x, min_y, max_x, max_y))
 }
 
 ///|
 fn attach_document_for_test(
-  pages : ArrayView[@pdflite.PdfPage],
+  pages : ArrayView[@page.PdfPage],
 ) -> @pdflite.PdfDocument {
   let document = @pdflite.pdf_document_empty()
   let page_root = try! document.add_pagetree(pages)

@@ -228,7 +228,7 @@ fn pdf_redact_content_box_selected(
 ///|
 fn PdfDocument::pdf_redact_page_content_box_ops(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   shape : PdfRectangle?,
   light : Bool,
 ) -> Array[PdfContentOp] raise PdfError {

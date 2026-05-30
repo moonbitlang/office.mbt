@@ -66,7 +66,7 @@ fn pdf_page_stamp_shift_of_position(
 ///|
 fn PdfDocument::pdf_page_stamp_box(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   box_name : PdfName,
 ) -> PdfRectangle raise PdfError {
   self.parse_rectangle(

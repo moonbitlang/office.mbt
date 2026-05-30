@@ -14,9 +14,9 @@ fn page_extract_index_mediabox_for_test(index : Int) -> @pdflite.PdfObject {
 }
 
 ///|
-fn page_extract_indexed_blank_for_test(index : Int) -> @pdflite.PdfPage {
+fn page_extract_indexed_blank_for_test(index : Int) -> @page.PdfPage {
   {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     mediabox: page_extract_index_mediabox_for_test(index),
   }
 }
@@ -850,8 +850,8 @@ test "PdfDocument remove_unreferenced nullifies deleted page references" {
   let type_fit = page_extract_name_for_test("/Fit")
   let doc = @pdflite.pdf_document_empty()
   let page_root = try! doc.add_pagetree([
-    @pdflite.pdf_page_blank(@pdflite.paper_a4),
-    { ..@pdflite.pdf_page_blank(@pdflite.paper_a4), rotate: Rotate90 },
+    @page.pdf_page_blank(@pdflite.paper_a4),
+    { ..@page.pdf_page_blank(@pdflite.paper_a4), rotate: Rotate90 },
   ])
   ignore(try! doc.add_root(page_root, []))
   let old_numbers = try! doc.page_reference_numbers()

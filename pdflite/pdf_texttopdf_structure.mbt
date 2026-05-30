@@ -1,8 +1,8 @@
 ///|
 fn pdf_texttopdf_struct_parent_pages(
-  pages : ArrayView[PdfPage],
-) -> Array[PdfPage] raise PdfError {
-  let output : Array[PdfPage] = []
+  pages : ArrayView[@page.PdfPage],
+) -> Array[@page.PdfPage] raise PdfError {
+  let output : Array[@page.PdfPage] = []
   for index, page in pages {
     output.push({
       ..page,

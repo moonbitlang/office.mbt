@@ -16,10 +16,10 @@ fn presentation_document_for_test() -> @pdflite.PdfDocument {
   let key_dur = presentation_name_for_test("/Dur")
   let key_old = presentation_name_for_test("/Old")
   let first = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     rest: PdfDictionary([(key_dur, PdfReal(99.0)), (key_old, PdfInteger(1))]),
   }
-  let second = @pdflite.pdf_page_blank(@pdflite.paper_a4)
+  let second = @page.pdf_page_blank(@pdflite.paper_a4)
   let document = @pdflite.pdf_document_empty()
   let root = try! document.add_pagetree([first, second])
   ignore(try! document.add_root(root, []))
@@ -28,7 +28,7 @@ fn presentation_document_for_test() -> @pdflite.PdfDocument {
 
 ///|
 fn presentation_transition_for_test(
-  page : @pdflite.PdfPage,
+  page : @page.PdfPage,
 ) -> @pdflite.PdfObject? {
   presentation_lookup_for_test(page.rest, presentation_name_for_test("/Trans"))
 }

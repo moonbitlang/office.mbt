@@ -1,9 +1,9 @@
 ///|
 fn PdfDocument::pdf_tweak_black_text_page(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   colour : @colour.PdfContentColour,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   let ops = self.pdf_page_parse_content_ops(page.resources, page.content)
   {
     ..page,
@@ -25,9 +25,9 @@ fn pdf_tweak_black_text_xobject(
 ///|
 fn PdfDocument::pdf_tweak_black_lines_page(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   colour : @colour.PdfContentColour,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   let ops = self.pdf_page_parse_content_ops(page.resources, page.content)
   {
     ..page,
@@ -49,9 +49,9 @@ fn pdf_tweak_black_lines_xobject(
 ///|
 fn PdfDocument::pdf_tweak_black_fills_page(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   colour : @colour.PdfContentColour,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   let ops = self.pdf_page_parse_content_ops(page.resources, page.content)
   {
     ..page,

@@ -48,7 +48,7 @@ fn metadata_rect_for_test(
 
 ///|
 fn metadata_document_with_pages_for_test(
-  pages : ArrayView[@pdflite.PdfPage],
+  pages : ArrayView[@page.PdfPage],
 ) -> @pdflite.PdfDocument {
   let document = @pdflite.pdf_document_empty()
   let page_root = try! document.add_pagetree(pages)
@@ -429,7 +429,7 @@ test "PdfDocument info_json reports document fields and page boxes" {
   let media = metadata_rect_for_test(0.0, 0.0, 72.0, 144.0)
   let trim = metadata_rect_for_test(0.0, 0.0, 36.0, 72.0)
   let page1 = {
-    ..@pdflite.pdf_page_custom(media),
+    ..@page.pdf_page_custom(media),
     rest: PdfDictionary([
       (
         metadata_name_for_test("/CropBox"),
@@ -443,7 +443,7 @@ test "PdfDocument info_json reports document fields and page boxes" {
     ]),
   }
   let page2 = {
-    ..@pdflite.pdf_page_custom(media),
+    ..@page.pdf_page_custom(media),
     rest: PdfDictionary([
       (
         metadata_name_for_test("/CropBox"),

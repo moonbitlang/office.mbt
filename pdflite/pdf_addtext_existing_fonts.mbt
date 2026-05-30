@@ -14,7 +14,7 @@ fn pdf_addtext_font_not_found(fontname : PdfName) -> PdfError {
 /// use in emitted text operators.
 pub fn PdfDocument::addtext_existing_font_resource(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   fontname : PdfName,
 ) -> (PdfName, PdfObject) raise PdfError {
   let fontdict = match
@@ -45,7 +45,7 @@ pub fn PdfDocument::addtext_existing_font_resource(
 /// Compatibility wrapper for `PdfDocument::addtext_existing_font_resource`.
 pub fn pdf_addtext_existing_font_resource(
   document : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   fontname : PdfName,
 ) -> (PdfName, PdfObject) raise PdfError {
   document.addtext_existing_font_resource(page, fontname)
@@ -55,7 +55,7 @@ pub fn pdf_addtext_existing_font_resource(
 /// Measure add-text bytes using an existing page font resource.
 pub fn PdfDocument::addtext_width_of_existing_font_resource(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   fontname : PdfName,
   font_size : Double,
   text : BytesView,
@@ -71,7 +71,7 @@ pub fn PdfDocument::addtext_width_of_existing_font_resource(
 /// Compatibility wrapper for `PdfDocument::addtext_width_of_existing_font_resource`.
 pub fn pdf_addtext_width_of_existing_font_resource(
   document : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   fontname : PdfName,
   font_size : Double,
   text : BytesView,

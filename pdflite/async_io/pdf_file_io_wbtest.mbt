@@ -616,7 +616,7 @@ fn pdf_async_io_font_extraction_document_for_test() -> @pdflite.PdfDocument {
     pdf_async_io_font_for_test("/Type1", "/NoEmbeddedFile", None),
   )
   let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@pdflite.paper_a4),
     resources: PdfDictionary([
       (
         pdf_async_io_name_for_test("/Font"),

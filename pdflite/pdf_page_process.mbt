@@ -7,11 +7,11 @@
 pub fn PdfDocument::process_pages(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
-  process : (Int, PdfPage) -> (PdfPage, Int, TransformMatrix) raise PdfError,
+  process : (Int, @page.PdfPage) -> (@page.PdfPage, Int, TransformMatrix) raise PdfError,
 ) -> PdfDocument raise PdfError {
   let pages = self.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(page_numbers)
-  let rewritten : Array[PdfPage] = Array::new(capacity=pages.length())
+  let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
   let matrices : Array[(Int, TransformMatrix)] = Array::new(
     capacity=pages.length(),
   )
@@ -37,7 +37,7 @@ pub fn PdfDocument::process_pages(
 pub fn pdf_process_pages(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-  process : (Int, PdfPage) -> (PdfPage, Int, TransformMatrix) raise PdfError,
+  process : (Int, @page.PdfPage) -> (@page.PdfPage, Int, TransformMatrix) raise PdfError,
 ) -> PdfDocument raise PdfError {
   document.process_pages(page_numbers, process)
 }
@@ -45,7 +45,7 @@ pub fn pdf_process_pages(
 ///|
 /// Compatibility wrapper matching cpdfpage's `process_pages` argument order.
 pub fn pdf_process_pages_cpdf_order(
-  process : (Int, PdfPage) -> (PdfPage, Int, TransformMatrix) raise PdfError,
+  process : (Int, @page.PdfPage) -> (@page.PdfPage, Int, TransformMatrix) raise PdfError,
   document : PdfDocument,
   page_numbers : ArrayView[Int],
 ) -> PdfDocument raise PdfError {
@@ -59,7 +59,7 @@ pub fn pdf_process_pages_cpdf_order(
 pub fn PdfDocument::iter_pages(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
-  process : (Int, PdfPage) -> Unit raise PdfError,
+  process : (Int, @page.PdfPage) -> Unit raise PdfError,
 ) -> Unit raise PdfError {
   let pages = self.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(page_numbers)
@@ -76,7 +76,7 @@ pub fn PdfDocument::iter_pages(
 pub fn pdf_iter_pages(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-  process : (Int, PdfPage) -> Unit raise PdfError,
+  process : (Int, @page.PdfPage) -> Unit raise PdfError,
 ) -> Unit raise PdfError {
   document.iter_pages(page_numbers, process)
 }
@@ -84,7 +84,7 @@ pub fn pdf_iter_pages(
 ///|
 /// Compatibility wrapper matching cpdfpage's `iter_pages` argument order.
 pub fn pdf_iter_pages_cpdf_order(
-  process : (Int, PdfPage) -> Unit raise PdfError,
+  process : (Int, @page.PdfPage) -> Unit raise PdfError,
   document : PdfDocument,
   page_numbers : ArrayView[Int],
 ) -> Unit raise PdfError {
@@ -98,7 +98,7 @@ pub fn pdf_iter_pages_cpdf_order(
 pub fn[T] PdfDocument::map_pages(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
-  process : (Int, PdfPage) -> T raise PdfError,
+  process : (Int, @page.PdfPage) -> T raise PdfError,
 ) -> Array[T] raise PdfError {
   let pages = self.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(page_numbers)
@@ -117,7 +117,7 @@ pub fn[T] PdfDocument::map_pages(
 pub fn[T] pdf_map_pages(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-  process : (Int, PdfPage) -> T raise PdfError,
+  process : (Int, @page.PdfPage) -> T raise PdfError,
 ) -> Array[T] raise PdfError {
   document.map_pages(page_numbers, process)
 }
@@ -125,7 +125,7 @@ pub fn[T] pdf_map_pages(
 ///|
 /// Compatibility wrapper matching cpdfpage's `map_pages` argument order.
 pub fn[T] pdf_map_pages_cpdf_order(
-  process : (Int, PdfPage) -> T raise PdfError,
+  process : (Int, @page.PdfPage) -> T raise PdfError,
   document : PdfDocument,
   page_numbers : ArrayView[Int],
 ) -> Array[T] raise PdfError {

@@ -114,10 +114,10 @@ fn impose_page_for_test(
   ops : ArrayView[PdfContentOp],
   resources? : PdfObject = PdfDictionary([]),
   rest? : PdfObject = PdfDictionary([]),
-  rotate? : PdfPageRotation = Rotate0,
+  rotate? : @page.PdfPageRotation = Rotate0,
   width? : Double = 100.0,
   height? : Double = 100.0,
-) -> PdfPage raise PdfError {
+) -> @page.PdfPage raise PdfError {
   {
     content: [pdf_content_stream_of_ops(ops)],
     mediabox: impose_box_for_test(width, height),
@@ -129,7 +129,7 @@ fn impose_page_for_test(
 
 ///|
 fn impose_document_for_test(
-  pages : ArrayView[PdfPage],
+  pages : ArrayView[@page.PdfPage],
 ) -> PdfDocument raise PdfError {
   pdf_blank_document(100.0, 100.0, pages.length()).change_pages(pages)
 }
@@ -137,7 +137,7 @@ fn impose_document_for_test(
 ///|
 fn impose_page_content_ops_for_test(
   document : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
 ) -> Array[PdfContentOp] raise PdfError {
   document.parse_content_ops_with_resources(page.resources, page.content)
 }
@@ -945,7 +945,7 @@ test "pdf_impose pattern matrix rewrite descends into form xobjects" {
 
 ///|
 test "pdf_impose_pages_core rejects empty page sets" {
-  let result : Result[PdfPage, Error] = try? pdf_document_empty().pdf_impose_pages_core(
+  let result : Result[@page.PdfPage, Error] = try? pdf_document_empty().pdf_impose_pages_core(
     [],
     false,
     1,

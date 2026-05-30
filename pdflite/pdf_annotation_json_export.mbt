@@ -119,7 +119,7 @@ fn PdfDocument::pdf_annotation_json_extra_numbers(
 fn PdfDocument::pdf_annotation_json_page(
   self : PdfDocument,
   page_numbers : PdfPageNumberLookup,
-  page : PdfPage,
+  page : @page.PdfPage,
   page_number : Int,
   extra_roots : Array[PdfObject],
   annotation_numbers : Array[Int],

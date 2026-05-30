@@ -16,7 +16,7 @@ fn PdfDocument::pdf_page_content_references(
 ///|
 fn PdfDocument::pdf_page_object(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
   parent : Int,
 ) -> PdfObject raise PdfError {
   let rest_entries = pdf_page_rest_entries(page.rest)
@@ -27,7 +27,7 @@ fn PdfDocument::pdf_page_object(
   entries.push((pdf_page_parent_key(), PdfIndirect(parent)))
   entries.push((pdf_page_resources_key(), page.resources))
   entries.push((pdf_page_mediabox_key(), page.mediabox))
-  match pdf_page_int_of_rotation(page.rotate) {
+  match @page.pdf_page_int_of_rotation(page.rotate) {
     0 => ()
     value => entries.push((pdf_page_rotate_key(), PdfInteger(value)))
   }
@@ -43,11 +43,11 @@ fn PdfDocument::pdf_page_object(
 
 ///|
 fn pdf_page_slice(
-  pages : ArrayView[PdfPage],
+  pages : ArrayView[@page.PdfPage],
   start : Int,
   stop : Int,
-) -> Array[PdfPage] {
-  let output : Array[PdfPage] = Array::new(capacity=stop - start)
+) -> Array[@page.PdfPage] {
+  let output : Array[@page.PdfPage] = Array::new(capacity=stop - start)
   for i in start..<stop {
     output.push(pages[i])
   }
@@ -79,7 +79,7 @@ fn pdf_page_pages_node_object(
 ///|
 fn PdfDocument::pdf_page_add_pagetree_node(
   self : PdfDocument,
-  pages : ArrayView[PdfPage],
+  pages : ArrayView[@page.PdfPage],
   parent : Int,
   node_number : Int,
 ) -> Unit raise PdfError {
@@ -132,7 +132,7 @@ fn PdfDocument::pdf_page_add_pagetree_node(
 /// document. The document is mutated in place.
 pub fn PdfDocument::add_pagetree(
   self : PdfDocument,
-  pages : ArrayView[PdfPage],
+  pages : ArrayView[@page.PdfPage],
 ) -> Int raise PdfError {
   let page_root_number = self.add_object(PdfNull)
   self.pdf_page_add_pagetree_node(pages, 0, page_root_number)
@@ -142,7 +142,7 @@ pub fn PdfDocument::add_pagetree(
 ///|
 /// Copy a document, add a page tree, and return the copy with the tree root.
 pub fn pdf_add_pagetree(
-  pages : ArrayView[PdfPage],
+  pages : ArrayView[@page.PdfPage],
   document : PdfDocument,
 ) -> (PdfDocument, Int) raise PdfError {
   let pdf = document.copy()

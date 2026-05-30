@@ -21,7 +21,7 @@ fn page_box_stream_for_test(
 }
 
 ///|
-fn page_box_page_for_test(rest : @pdflite.PdfObject) -> @pdflite.PdfPage {
+fn page_box_page_for_test(rest : @pdflite.PdfObject) -> @page.PdfPage {
   {
     content: [page_box_stream_for_test([Op_S])],
     mediabox: page_box_rect_for_test(0.0, 0.0, 100.0, 200.0),
@@ -52,7 +52,7 @@ fn page_box_document_for_test() -> @pdflite.PdfDocument {
 ///|
 fn page_box_ops_for_test(
   document : @pdflite.PdfDocument,
-  page : @pdflite.PdfPage,
+  page : @page.PdfPage,
 ) -> Array[@pdflite.PdfContentOp] {
   try! document.parse_content_ops_with_resources(page.resources, page.content)
 }

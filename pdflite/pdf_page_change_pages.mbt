@@ -8,7 +8,7 @@
 /// serials when page counts differ.
 pub fn PdfDocument::change_pages(
   self : PdfDocument,
-  pages : ArrayView[PdfPage],
+  pages : ArrayView[@page.PdfPage],
   change_references? : Bool = false,
   matrices? : ArrayView[(Int, TransformMatrix)] = [],
   changes? : ArrayView[(Int, Int)] = [],
@@ -48,7 +48,7 @@ pub fn PdfDocument::change_pages(
 pub fn pdf_change_pages(
   change_references : Bool,
   document : PdfDocument,
-  pages : ArrayView[PdfPage],
+  pages : ArrayView[@page.PdfPage],
   matrices? : ArrayView[(Int, TransformMatrix)] = [],
   changes? : ArrayView[(Int, Int)] = [],
 ) -> PdfDocument raise PdfError {

@@ -7,7 +7,7 @@ fn pdf_content_page_number_json(page_number : Int) -> Json {
 /// Collect recursive cpdfcontent JSON entries for one page.
 pub fn PdfDocument::content_entries_of_page(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
 ) -> Array[PdfContentJsonEntry] raise PdfError {
   let mediabox = self.parse_rectangle(page.mediabox)
   let ops = self.parse_content_ops_with_resources(page.resources, page.content)
@@ -18,7 +18,7 @@ pub fn PdfDocument::content_entries_of_page(
 /// Compatibility wrapper for `PdfDocument::content_entries_of_page`.
 pub fn pdf_content_entries_of_page(
   document : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
 ) -> Array[PdfContentJsonEntry] raise PdfError {
   document.content_entries_of_page(page)
 }
@@ -167,7 +167,7 @@ pub fn pdf_test_extract_text(
 /// Serialize recursive cpdfcontent entries for one page.
 pub fn PdfDocument::content_json_of_page(
   self : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
 ) -> Json raise PdfError {
   pdf_content_json_entries_content_json(self.content_entries_of_page(page))
 }
@@ -176,7 +176,7 @@ pub fn PdfDocument::content_json_of_page(
 /// Compatibility wrapper for `PdfDocument::content_json_of_page`.
 pub fn pdf_content_json_of_page(
   document : PdfDocument,
-  page : PdfPage,
+  page : @page.PdfPage,
 ) -> Json raise PdfError {
   document.content_json_of_page(page)
 }

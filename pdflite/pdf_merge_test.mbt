@@ -325,7 +325,7 @@ fn merge_pdfmergeexample_workflow_for_test(
 ) -> @pdflite.PdfDocument {
   let renumbered = try! @pdflite.pdf_renumber_documents(documents)
   let merged = @pdflite.pdf_document_empty()
-  let pages : Array[@pdflite.PdfPage] = []
+  let pages : Array[@page.PdfPage] = []
   let mut max_minor = 0
   for document in renumbered {
     let (_, minor) = document.version()
