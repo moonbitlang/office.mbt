@@ -4,7 +4,7 @@ fn addtext_layout_offset_for_test(
   position : @pdflite.PdfPosition,
   justification : @pdflite.PdfAddTextJustification,
 ) -> Double {
-  @pdflite.pdf_addtext_justification_offset(
+  @addtext.pdf_addtext_justification_offset(
     rotation, 100.0, 60.0, position, justification,
   )
 }
@@ -585,7 +585,7 @@ test "pdf_addtext_justification_offset handles horizontal rotations" {
 ///|
 test "pdf_addtext_apply_justification_offset follows cpdf rotation branch" {
   @test.assert_eq(
-    @pdflite.pdf_addtext_apply_justification_offset(
+    @addtext.pdf_addtext_apply_justification_offset(
       PdfAddTextRot0,
       5.0,
       10.0,
@@ -594,7 +594,7 @@ test "pdf_addtext_apply_justification_offset follows cpdf rotation branch" {
     (7.0, 10.0),
   )
   @test.assert_eq(
-    @pdflite.pdf_addtext_apply_justification_offset(
+    @addtext.pdf_addtext_apply_justification_offset(
       PdfAddTextRot180,
       5.0,
       10.0,
@@ -603,7 +603,7 @@ test "pdf_addtext_apply_justification_offset follows cpdf rotation branch" {
     (7.0, 10.0),
   )
   @test.assert_eq(
-    @pdflite.pdf_addtext_apply_justification_offset(
+    @addtext.pdf_addtext_apply_justification_offset(
       PdfAddTextRot90,
       5.0,
       10.0,
@@ -612,7 +612,7 @@ test "pdf_addtext_apply_justification_offset follows cpdf rotation branch" {
     (5.0, 8.0),
   )
   @test.assert_eq(
-    @pdflite.pdf_addtext_apply_justification_offset(
+    @addtext.pdf_addtext_apply_justification_offset(
       PdfAddTextRot270,
       5.0,
       10.0,
@@ -624,7 +624,7 @@ test "pdf_addtext_apply_justification_offset follows cpdf rotation branch" {
 
 ///|
 test "pdf_addtext_line_placement combines horizontal placement values" {
-  let placement = @pdflite.pdf_addtext_line_placement(
+  let placement = @addtext.pdf_addtext_line_placement(
     addtext_layout_bounds_for_test(),
     PdfPositionTopRight(5.0, 6.0),
     PdfAddTextRot0,
@@ -645,7 +645,7 @@ test "pdf_addtext_line_placement combines horizontal placement values" {
 
 ///|
 test "pdf_addtext_line_placement combines vertical rotation values" {
-  let placement = @pdflite.pdf_addtext_line_placement(
+  let placement = @addtext.pdf_addtext_line_placement(
     addtext_layout_bounds_for_test(),
     PdfPositionTop(4.0),
     PdfAddTextRot90,
@@ -781,7 +781,7 @@ test "pdf_addtext_justification_offset leaves diagonal positions unshifted" {
 
 ///|
 test "pdf_addtext_get_urls_line strips one URL marker" {
-  let parsed = try! @pdflite.pdf_addtext_get_urls_line(
+  let parsed = try! @addtext.pdf_addtext_get_urls_line(
     "pre %URL[label|https://example.test] post",
   )
   @test.assert_eq(parsed.text, "pre label post")
@@ -792,7 +792,7 @@ test "pdf_addtext_get_urls_line strips one URL marker" {
 
 ///|
 test "pdf_addtext_get_urls_line preserves URL order and visible offsets" {
-  let parsed = try! @pdflite.pdf_addtext_get_urls_line(
+  let parsed = try! @addtext.pdf_addtext_get_urls_line(
     "A%URL[B|u1]C%URL[DE|u2]",
   )
   @test.assert_eq(parsed.text, "ABCDE")
@@ -804,21 +804,21 @@ test "pdf_addtext_get_urls_line preserves URL order and visible offsets" {
 
 ///|
 test "pdf_addtext_get_urls_line uses byte offsets for UTF-8 text" {
-  let parsed = try! @pdflite.pdf_addtext_get_urls_line("é%URL[ß|u]")
+  let parsed = try! @addtext.pdf_addtext_get_urls_line("é%URL[ß|u]")
   @test.assert_eq(parsed.text, "éß")
   @test.assert_eq(parsed.urls, [{ url: "u", start: 2, end: 4 }])
 }
 
 ///|
 test "pdf_addtext_get_urls_line reports malformed URL markers" {
-  let missing_pipe : Result[@pdflite.PdfAddTextUrlLine, Error] = try? @pdflite.pdf_addtext_get_urls_line(
+  let missing_pipe : Result[@pdflite.PdfAddTextUrlLine, Error] = try? @addtext.pdf_addtext_get_urls_line(
     "%URL[text]",
   )
   guard missing_pipe
     is Err(@pdflite.PdfError::SoftError("bad URL syntax in text")) else {
     fail("expected SoftError for URL marker without pipe")
   }
-  let missing_close : Result[@pdflite.PdfAddTextUrlLine, Error] = try? @pdflite.pdf_addtext_get_urls_line(
+  let missing_close : Result[@pdflite.PdfAddTextUrlLine, Error] = try? @addtext.pdf_addtext_get_urls_line(
     "%URL[text|https://example.test",
   )
   guard missing_close

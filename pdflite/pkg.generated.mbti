@@ -158,8 +158,6 @@ pub fn pdf_addtext(PdfDrawControl, String) -> Unit raise @core.PdfError
 
 pub fn pdf_addtext_allocate_font_names(@syntax.PdfObject, PdfFontPack?) -> (@core.PdfName, @syntax.PdfObject, Array[@core.PdfName]) raise @core.PdfError
 
-pub fn pdf_addtext_apply_justification_offset(@addtext.PdfAddTextRotation, Double, Double, Double) -> (Double, Double)
-
 pub fn pdf_addtext_baseline_offsets(PdfFont?, Double, @geometry.PdfPosition, @addtext.PdfAddTextRotation, Bool, Bool) -> (Double, Double)
 
 pub fn pdf_addtext_bates_number(Int, Int, Int?) -> String
@@ -176,8 +174,6 @@ pub fn pdf_addtext_colour_op(@colour.PdfContentColour) -> @content.PdfContentOp
 
 pub fn pdf_addtext_colour_op_stroke(@colour.PdfContentColour) -> @content.PdfContentOp
 
-pub fn pdf_addtext_diagonal_offsets(@geometry.PdfRectangle, @geometry.PdfPosition, @addtext.PdfAddTextRotation, Double, Double, Double, Double) -> (Double, Double)
-
 pub fn pdf_addtext_effective_encoding(PdfFont?) -> PdfEncoding
 
 pub fn pdf_addtext_existing_font_resource(PdfDocument, @page.PdfPage, @core.PdfName) -> (@core.PdfName, @syntax.PdfObject) raise @core.PdfError
@@ -186,21 +182,11 @@ pub fn pdf_addtext_expand_lines_with_time(@date.PdfStrftimeTime, ArrayView[Strin
 
 pub fn pdf_addtext_fontpack_resource_dictionary(@syntax.PdfObject, ArrayView[@core.PdfName], ArrayView[Int]) -> @syntax.PdfObject raise @core.PdfError
 
-pub fn pdf_addtext_get_urls_line(String) -> @addtext.PdfAddTextUrlLine raise @core.PdfError
-
-pub fn pdf_addtext_initial_line_offsets(@geometry.PdfPosition, Int, Double, Double) -> (Double, Double)
-
 pub fn pdf_addtext_install_font_resource(@syntax.PdfObject, @syntax.PdfObject, @core.PdfName, @syntax.PdfObject?) -> @syntax.PdfObject raise @core.PdfError
 
 pub fn pdf_addtext_install_fontpack_resources(@syntax.PdfObject, @syntax.PdfObject, ArrayView[@core.PdfName], ArrayView[Int]) -> @syntax.PdfObject raise @core.PdfError
 
-pub fn pdf_addtext_justification_offset(@addtext.PdfAddTextRotation, Double, Double, @geometry.PdfPosition, @addtext.PdfAddTextJustification) -> Double
-
-pub fn pdf_addtext_line_advance(@addtext.PdfAddTextRotation, Double, Double) -> (Double, Double)
-
 pub fn pdf_addtext_line_page(PdfDocument, @page.PdfPage, @date.PdfStrftimeTime, ArrayView[String], ArrayView[(String, () -> String)], PdfFont?, PdfFontPack?, @core.PdfName, @syntax.PdfObject?, ArrayView[Int], Double, String, @colour.PdfContentColour, @geometry.PdfPosition, relative_to_box? : @core.PdfName, horizontal_offset? : Double, vertical_offset? : Double, shift_x? : Double, shift_y? : Double, opacity? : Double, justification? : @addtext.PdfAddTextJustification, rotation? : @addtext.PdfAddTextRotation, outline? : Bool, line_width? : Double, underneath? : Bool, fast? : Bool, raw? : Bool, url_border? : Bool) -> @page.PdfPage raise @core.PdfError
-
-pub fn pdf_addtext_line_placement(@geometry.PdfRectangle, @geometry.PdfPosition, @addtext.PdfAddTextRotation, Double, Double, Double, Double, @addtext.PdfAddTextJustification) -> @addtext.PdfAddTextLinePlacement
 
 pub fn pdf_addtext_line_widths(PdfDocument, @page.PdfPage, PdfFont?, PdfFontPack?, @core.PdfName, Double, BytesView, ArrayView[Bytes]) -> @addtext.PdfAddTextLineWidths raise @core.PdfError
 
@@ -237,10 +223,6 @@ pub fn pdf_addtext_replacement_pairs(@addtext.PdfAddTextReplacementValues) -> Ar
 pub fn pdf_addtext_replacement_values(PdfDocument, ArrayView[@bookmark.PdfBookmark], Int, Int, String, Int, Int?) -> @addtext.PdfAddTextReplacementValues raise @core.PdfError
 
 pub fn pdf_addtext_resource_setup(PdfDocument, @page.PdfPage, PdfFont?, PdfFontPack?, @core.PdfName, @syntax.PdfObject?, ArrayView[Int], Double) -> @addtext.PdfAddTextResourceSetup raise @core.PdfError
-
-pub fn pdf_addtext_rotation_offsets(@geometry.PdfPosition, @addtext.PdfAddTextRotation, Double) -> (Double, Double)
-
-pub fn pdf_addtext_rotation_radians(@addtext.PdfAddTextRotation) -> Double
 
 pub fn pdf_addtext_selected_font_object(PdfDocument, PdfFont?) -> @syntax.PdfObject? raise @core.PdfError
 

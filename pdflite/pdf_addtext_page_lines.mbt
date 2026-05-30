@@ -34,7 +34,7 @@ pub fn PdfDocument::addtext_page_lines(
   raw? : Bool = false,
   url_border? : Bool = false,
 ) -> PdfPage raise PdfError {
-  let (initial_h_offset, initial_v_offset) = pdf_addtext_initial_line_offsets(
+  let (initial_h_offset, initial_v_offset) = @addtext.pdf_addtext_initial_line_offsets(
     position,
     lines.length(),
     line_spacing,
@@ -43,7 +43,9 @@ pub fn PdfDocument::addtext_page_lines(
   let (baseline_h_offset, baseline_v_offset) = pdf_addtext_baseline_offsets(
     font, font_size, position, rotation, midline, topline,
   )
-  let advance = pdf_addtext_line_advance(rotation, line_spacing, font_size)
+  let advance = @addtext.pdf_addtext_line_advance(
+    rotation, line_spacing, font_size,
+  )
   let mut horizontal_offset = initial_h_offset + baseline_h_offset
   let mut vertical_offset = initial_v_offset + baseline_v_offset
   let mut output = page

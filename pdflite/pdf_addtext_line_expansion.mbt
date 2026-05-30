@@ -11,7 +11,7 @@ pub fn pdf_addtext_expand_lines_with_time(
   let output : Array[String] = Array::new(capacity=lines.length())
   for line in lines {
     let processed = pdf_addtext_process_text_with_time(time, line, replacements)
-    output.push(pdf_addtext_get_urls_line(processed).text)
+    output.push(@addtext.pdf_addtext_get_urls_line(processed).text)
   }
   output
 }

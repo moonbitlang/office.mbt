@@ -71,7 +71,7 @@ pub fn PdfDocument::addtext_prepare_line(
   raw? : Bool = false,
 ) -> PdfAddTextPreparedLine raise PdfError {
   let processed = pdf_addtext_process_text_with_time(time, text, replacements)
-  let parsed = pdf_addtext_get_urls_line(processed)
+  let parsed = @addtext.pdf_addtext_get_urls_line(processed)
   let expanded_lines = pdf_addtext_expand_lines_with_time(
     time, lines, replacements,
   )
@@ -97,7 +97,7 @@ pub fn PdfDocument::addtext_prepare_line(
     page, font, fontpack, fontname, font_size, text_bytes, expanded_line_bytes,
   )
   let bounds = self.pdf_addtext_rectangle_bounds(page, relative_to_box)
-  let placement = pdf_addtext_line_placement(
+  let placement = @addtext.pdf_addtext_line_placement(
     bounds,
     position,
     rotation,

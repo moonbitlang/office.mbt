@@ -24,7 +24,7 @@ fn addtext_assert_rotation_offset_for_test(
   expected : (Double, Double),
 ) -> Unit raise {
   addtext_assert_pair_close_for_test(
-    @pdflite.pdf_addtext_rotation_offsets(position, rotation, 40.0),
+    @addtext.pdf_addtext_rotation_offsets(position, rotation, 40.0),
     expected,
   )
 }
@@ -412,19 +412,19 @@ test "pdf_addtext_text_ops switches fontpack runs" {
 ///|
 test "pdf_addtext_rotation_radians mirrors cpdf addtext rotation mapping" {
   addtext_assert_close_for_test(
-    @pdflite.pdf_addtext_rotation_radians(PdfAddTextRot0),
+    @addtext.pdf_addtext_rotation_radians(PdfAddTextRot0),
     0.0,
   )
   addtext_assert_close_for_test(
-    @pdflite.pdf_addtext_rotation_radians(PdfAddTextRot90),
+    @addtext.pdf_addtext_rotation_radians(PdfAddTextRot90),
     @math.PI * 1.5,
   )
   addtext_assert_close_for_test(
-    @pdflite.pdf_addtext_rotation_radians(PdfAddTextRot180),
+    @addtext.pdf_addtext_rotation_radians(PdfAddTextRot180),
     @math.PI,
   )
   addtext_assert_close_for_test(
-    @pdflite.pdf_addtext_rotation_radians(PdfAddTextRot270),
+    @addtext.pdf_addtext_rotation_radians(PdfAddTextRot270),
     @math.PI / 2.0,
   )
 }
@@ -483,7 +483,7 @@ test "pdf_addtext_rotation_offsets follows cpdf position table" {
 test "pdf_addtext_diagonal_offsets mirrors diagonal and reverse diagonal math" {
   let bounds = addtext_bounds_for_test()
   addtext_assert_pair_close_for_test(
-    @pdflite.pdf_addtext_diagonal_offsets(
+    @addtext.pdf_addtext_diagonal_offsets(
       bounds,
       PdfPositionDiagonal,
       PdfAddTextRot0,
@@ -500,7 +500,7 @@ test "pdf_addtext_diagonal_offsets mirrors diagonal and reverse diagonal math" {
   let dx = @math.cos(angle) * 20.0
   let dy = @math.sin(angle) * 20.0
   addtext_assert_pair_close_for_test(
-    @pdflite.pdf_addtext_diagonal_offsets(
+    @addtext.pdf_addtext_diagonal_offsets(
       bounds,
       PdfPositionDiagonal,
       PdfAddTextRot180,
@@ -512,7 +512,7 @@ test "pdf_addtext_diagonal_offsets mirrors diagonal and reverse diagonal math" {
     (-dx, -10.0 - dy),
   )
   addtext_assert_pair_close_for_test(
-    @pdflite.pdf_addtext_diagonal_offsets(
+    @addtext.pdf_addtext_diagonal_offsets(
       bounds,
       PdfPositionReverseDiagonal,
       PdfAddTextRot180,
@@ -524,7 +524,7 @@ test "pdf_addtext_diagonal_offsets mirrors diagonal and reverse diagonal math" {
     (-dx, -10.0 + dy),
   )
   @test.assert_eq(
-    @pdflite.pdf_addtext_diagonal_offsets(
+    @addtext.pdf_addtext_diagonal_offsets(
       bounds,
       PdfPositionTop(0.0),
       PdfAddTextRot180,
@@ -540,7 +540,7 @@ test "pdf_addtext_diagonal_offsets mirrors diagonal and reverse diagonal math" {
 ///|
 test "pdf_addtext_initial_line_offsets matches cpdf multiline alignment" {
   addtext_assert_pair_close_for_test(
-    @pdflite.pdf_addtext_initial_line_offsets(
+    @addtext.pdf_addtext_initial_line_offsets(
       PdfPositionBottom(0.0),
       3,
       1.2,
@@ -549,7 +549,7 @@ test "pdf_addtext_initial_line_offsets matches cpdf multiline alignment" {
     (0.0, -24.0),
   )
   addtext_assert_pair_close_for_test(
-    @pdflite.pdf_addtext_initial_line_offsets(
+    @addtext.pdf_addtext_initial_line_offsets(
       PdfPositionBottomLeft(0.0, 0.0),
       3,
       1.2,
@@ -558,7 +558,7 @@ test "pdf_addtext_initial_line_offsets matches cpdf multiline alignment" {
     (0.0, -24.0),
   )
   addtext_assert_pair_close_for_test(
-    @pdflite.pdf_addtext_initial_line_offsets(
+    @addtext.pdf_addtext_initial_line_offsets(
       PdfPositionBottomRight(0.0, 0.0),
       3,
       1.2,
@@ -567,7 +567,7 @@ test "pdf_addtext_initial_line_offsets matches cpdf multiline alignment" {
     (0.0, -24.0),
   )
   addtext_assert_pair_close_for_test(
-    @pdflite.pdf_addtext_initial_line_offsets(
+    @addtext.pdf_addtext_initial_line_offsets(
       PdfPositionLeft(0.0),
       3,
       1.2,
@@ -576,7 +576,7 @@ test "pdf_addtext_initial_line_offsets matches cpdf multiline alignment" {
     (0.0, -12.0),
   )
   addtext_assert_pair_close_for_test(
-    @pdflite.pdf_addtext_initial_line_offsets(
+    @addtext.pdf_addtext_initial_line_offsets(
       PdfPositionRight(0.0),
       3,
       1.2,
@@ -585,11 +585,11 @@ test "pdf_addtext_initial_line_offsets matches cpdf multiline alignment" {
     (0.0, -12.0),
   )
   addtext_assert_pair_close_for_test(
-    @pdflite.pdf_addtext_initial_line_offsets(PdfPositionDiagonal, 3, 1.2, 10.0),
+    @addtext.pdf_addtext_initial_line_offsets(PdfPositionDiagonal, 3, 1.2, 10.0),
     (0.0, -12.0),
   )
   addtext_assert_pair_close_for_test(
-    @pdflite.pdf_addtext_initial_line_offsets(
+    @addtext.pdf_addtext_initial_line_offsets(
       PdfPositionReverseDiagonal,
       3,
       1.2,
@@ -598,11 +598,11 @@ test "pdf_addtext_initial_line_offsets matches cpdf multiline alignment" {
     (0.0, -12.0),
   )
   addtext_assert_pair_close_for_test(
-    @pdflite.pdf_addtext_initial_line_offsets(PdfPositionTop(0.0), 3, 1.2, 10.0),
+    @addtext.pdf_addtext_initial_line_offsets(PdfPositionTop(0.0), 3, 1.2, 10.0),
     (0.0, 0.0),
   )
   addtext_assert_pair_close_for_test(
-    @pdflite.pdf_addtext_initial_line_offsets(PdfPositionCentre, 3, 1.2, 10.0),
+    @addtext.pdf_addtext_initial_line_offsets(PdfPositionCentre, 3, 1.2, 10.0),
     (0.0, 0.0),
   )
 }
@@ -610,19 +610,19 @@ test "pdf_addtext_initial_line_offsets matches cpdf multiline alignment" {
 ///|
 test "pdf_addtext_line_advance follows text rotation" {
   addtext_assert_pair_close_for_test(
-    @pdflite.pdf_addtext_line_advance(PdfAddTextRot0, 1.2, 10.0),
+    @addtext.pdf_addtext_line_advance(PdfAddTextRot0, 1.2, 10.0),
     (0.0, 12.0),
   )
   addtext_assert_pair_close_for_test(
-    @pdflite.pdf_addtext_line_advance(PdfAddTextRot180, 1.2, 10.0),
+    @addtext.pdf_addtext_line_advance(PdfAddTextRot180, 1.2, 10.0),
     (0.0, 12.0),
   )
   addtext_assert_pair_close_for_test(
-    @pdflite.pdf_addtext_line_advance(PdfAddTextRot90, 1.2, 10.0),
+    @addtext.pdf_addtext_line_advance(PdfAddTextRot90, 1.2, 10.0),
     (12.0, 0.0),
   )
   addtext_assert_pair_close_for_test(
-    @pdflite.pdf_addtext_line_advance(PdfAddTextRot270, 1.2, 10.0),
+    @addtext.pdf_addtext_line_advance(PdfAddTextRot270, 1.2, 10.0),
     (12.0, 0.0),
   )
 }
