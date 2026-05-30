@@ -7,7 +7,7 @@
 pub fn PdfDocument::addtext_page_lines(
   self : PdfDocument,
   page : PdfPage,
-  time : PdfStrftimeTime,
+  time : @date.PdfStrftimeTime,
   lines : ArrayView[String],
   replacements : ArrayView[(String, () -> String)],
   font : PdfFont?,
@@ -90,7 +90,7 @@ pub fn PdfDocument::addtext_page_lines(
 pub fn pdf_addtext_page_lines(
   document : PdfDocument,
   page : PdfPage,
-  time : PdfStrftimeTime,
+  time : @date.PdfStrftimeTime,
   lines : ArrayView[String],
   replacements : ArrayView[(String, () -> String)],
   font : PdfFont?,

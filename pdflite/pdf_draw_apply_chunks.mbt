@@ -52,7 +52,7 @@ fn PdfDocument::pdf_draw_apply_chunk(
   filename : String,
   bates : Int,
   bates_pad : Int?,
-  time : PdfStrftimeTime?,
+  time : @date.PdfStrftimeTime?,
   add_artifacts : Bool,
 ) -> PdfDocument raise PdfError {
   state.set_structure_tree_enabled(struct_tree)

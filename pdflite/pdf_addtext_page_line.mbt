@@ -36,7 +36,7 @@ fn PdfDocument::pdf_addtext_effective_fontname(
 pub fn PdfDocument::addtext_line_page(
   self : PdfDocument,
   page : PdfPage,
-  time : PdfStrftimeTime,
+  time : @date.PdfStrftimeTime,
   lines : ArrayView[String],
   replacements : ArrayView[(String, () -> String)],
   font : PdfFont?,
@@ -148,7 +148,7 @@ pub fn PdfDocument::addtext_line_page(
 pub fn pdf_addtext_line_page(
   document : PdfDocument,
   page : PdfPage,
-  time : PdfStrftimeTime,
+  time : @date.PdfStrftimeTime,
   lines : ArrayView[String],
   replacements : ArrayView[(String, () -> String)],
   font : PdfFont?,

@@ -52,7 +52,7 @@ pub(all) enum PdfDrawStructureData {
 ///|
 /// Page-local context used to render `PdfDrawSpecialText`.
 pub(all) struct PdfDrawSpecialTextContext {
-  time : PdfStrftimeTime
+  time : @date.PdfStrftimeTime
   replacement_values : @addtext.PdfAddTextReplacementValues
 } derive(Debug, Eq, ToJson)
 
@@ -105,7 +105,7 @@ pub fn pdf_draw_render_state_new() -> PdfDrawRenderState {
 ///|
 /// Build a special-text context from explicit replacement values.
 pub fn pdf_draw_special_text_context(
-  time : PdfStrftimeTime,
+  time : @date.PdfStrftimeTime,
   replacement_values : @addtext.PdfAddTextReplacementValues,
 ) -> PdfDrawSpecialTextContext {
   { time, replacement_values }
@@ -119,11 +119,11 @@ pub fn PdfDocument::draw_special_text_context(
   filename? : String = "",
   bates? : Int = 1,
   bates_pad? : Int? = None,
-  time? : PdfStrftimeTime? = None,
+  time? : @date.PdfStrftimeTime? = None,
 ) -> PdfDrawSpecialTextContext raise PdfError {
   let resolved_time = match time {
     Some(value) => value
-    None => pdf_strftime_dummy_time()
+    None => @date.pdf_strftime_dummy_time()
   }
   let bookmarks = self.read_bookmarks(preserve_actions=false)
   let values = self.addtext_replacement_values(
@@ -145,7 +145,7 @@ pub fn pdf_draw_special_text_context_for_document(
   filename? : String = "",
   bates? : Int = 1,
   bates_pad? : Int? = None,
-  time? : PdfStrftimeTime? = None,
+  time? : @date.PdfStrftimeTime? = None,
 ) -> PdfDrawSpecialTextContext raise PdfError {
   document.draw_special_text_context(
     page_number,

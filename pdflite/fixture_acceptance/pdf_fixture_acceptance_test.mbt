@@ -5057,7 +5057,7 @@ fn fixture_acceptance_assert_cpdf_manual_page_labels_for_test(
   @test.assert_eq(replacement_values.end_label, "157")
   @test.assert_eq(
     @pdflite.pdf_addtext_process_text_with_time(
-      @pdflite.pdf_strftime_dummy_time(),
+      @date.pdf_strftime_dummy_time(),
       "%Label|%EndLabel|%Page|%EndPage|%filename|%Bates",
       @pdflite.pdf_addtext_replacement_pairs(replacement_values),
     ),
@@ -5220,7 +5220,7 @@ fn fixture_acceptance_cpdf_manual_stamped_for_test(
   document.addtexts_with_source(
     [1, 19, 175],
     fixture_acceptance_cpdf_manual_addtext_text_for_test(),
-    @pdflite.pdf_strftime_dummy_time(),
+    @date.pdf_strftime_dummy_time(),
     document.read_bookmarks(preserve_actions=true),
     PdfAddTextPreMadeFontPack(
       fixture_acceptance_cpdf_manual_addtext_fontpack_for_test(),

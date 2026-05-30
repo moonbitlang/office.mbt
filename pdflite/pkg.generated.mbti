@@ -376,8 +376,6 @@ pub fn pdf_bytes_map_int(BytesView, (Int) -> Int) -> Bytes raise @core.PdfError
 
 pub fn pdf_bytes_of_array_view(ArrayView[Byte]) -> Bytes
 
-pub fn pdf_bytes_of_date(@date.PdfDate) -> Bytes raise @core.PdfError
-
 pub fn pdf_bytes_of_int_array(ArrayView[Int]) -> Bytes raise @core.PdfError
 
 pub fn pdf_bytes_of_int_arrays(ArrayView[ArrayView[Int]]) -> Bytes raise @core.PdfError
@@ -708,13 +706,7 @@ pub fn pdf_cursor_read_regular_token_view(@core.ByteCursor) -> BytesView
 
 pub fn pdf_cursor_read_until_whitespace_or_delimiter(@core.ByteCursor) -> BytesView
 
-pub fn pdf_date_of_bytes(Bytes) -> @date.PdfDate raise @core.PdfError
-
 pub fn pdf_date_of_object(@syntax.PdfObject) -> @date.PdfDate raise @core.PdfError
-
-pub fn pdf_date_of_string(String) -> @date.PdfDate raise @core.PdfError
-
-pub fn pdf_date_of_view(BytesView) -> @date.PdfDate raise @core.PdfError
 
 pub let pdf_dc : String
 
@@ -795,8 +787,6 @@ pub fn pdf_drawops_to_content_ops_with_document(PdfDrawRenderState, PdfDocument,
 pub fn pdf_drawops_to_content_ops_with_document_context(PdfDrawRenderState, PdfDocument, PdfDrawSpecialTextContext, ArrayView[PdfDrawOp]) -> Array[@content.PdfContentOp] raise @core.PdfError
 
 pub fn pdf_drawops_to_content_ops_with_state(PdfDrawRenderState, ArrayView[PdfDrawOp]) -> Array[@content.PdfContentOp] raise @core.PdfError
-
-pub let pdf_dummy : @date.PdfStrftimeTime
 
 pub fn pdf_eltinfo(PdfDrawControl, String, @syntax.PdfObject) -> Unit raise @core.PdfError
 
@@ -1854,10 +1844,6 @@ pub fn pdf_stretch(ArrayView[(Double, Double)], PdfDocument, ArrayView[Int], fas
 
 pub fn pdf_stretch_pages(PdfDocument, ArrayView[Int], ArrayView[(Double, Double)], fast? : Bool) -> PdfDocument raise @core.PdfError
 
-pub fn pdf_strftime_dummy_time() -> @date.PdfStrftimeTime
-
-pub fn pdf_strftime_with_time(@date.PdfStrftimeTime, String) -> String
-
 pub fn pdf_string_of_bookmark(@bookmark.PdfBookmark) -> Bytes raise @core.PdfError
 
 pub fn pdf_string_of_calculator(ArrayView[PdfCalculatorOp]) -> String
@@ -1867,8 +1853,6 @@ pub fn pdf_string_of_colour_space(PdfColourSpace) -> String
 pub fn pdf_string_of_content_op(@content.PdfContentOp) -> Bytes raise @core.PdfError
 
 pub fn pdf_string_of_content_ops(ArrayView[@content.PdfContentOp]) -> Bytes raise @core.PdfError
-
-pub fn pdf_string_of_date(@date.PdfDate) -> String raise @core.PdfError
 
 pub fn pdf_string_of_drawop(PdfDrawOp) -> String
 
@@ -3743,8 +3727,6 @@ pub using @geometry {type PdfCoordRectangle}
 
 pub using @core {type PdfCryptType}
 
-pub using @date {type PdfDate}
-
 pub using @destination {type PdfDestination}
 
 pub using @colour {type PdfDrawColour}
@@ -3822,8 +3804,6 @@ pub using @syntax {type PdfStream}
 pub using @syntax {type PdfStreamData}
 
 pub using @syntax {type PdfStreamDataCrypt}
-
-pub using @date {type PdfStrftimeTime}
 
 pub using @destination {type PdfTargetPage}
 

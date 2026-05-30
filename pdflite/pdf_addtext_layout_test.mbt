@@ -20,7 +20,7 @@ fn addtext_layout_assert_close_for_test(
 }
 
 ///|
-fn addtext_layout_process_time_for_test() -> @pdflite.PdfStrftimeTime {
+fn addtext_layout_process_time_for_test() -> @date.PdfStrftimeTime {
   {
     tm_sec: 5,
     tm_min: 4,

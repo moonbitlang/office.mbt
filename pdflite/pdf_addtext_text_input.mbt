@@ -82,7 +82,7 @@ fn pdf_addtext_replace_all_lazy(
 /// Replacement callbacks are only evaluated for markers that occur in `text`,
 /// matching cpdf's `string_replace_all_lazy` helper.
 pub fn pdf_addtext_process_text_with_time(
-  time : PdfStrftimeTime,
+  time : @date.PdfStrftimeTime,
   text : String,
   replacements : ArrayView[(String, () -> String)],
 ) -> String {
@@ -90,13 +90,13 @@ pub fn pdf_addtext_process_text_with_time(
   for replacement in replacements {
     output = pdf_addtext_replace_all_lazy(output, replacement.0, replacement.1)
   }
-  pdf_strftime_with_time(time, output)
+  @date.pdf_strftime_with_time(time, output)
 }
 
 ///|
 /// Compatibility wrapper matching cpdfaddtext's `process_text`.
 pub fn pdf_process_text(
-  time : PdfStrftimeTime,
+  time : @date.PdfStrftimeTime,
   text : String,
   replacements : ArrayView[(String, () -> String)],
 ) -> String {

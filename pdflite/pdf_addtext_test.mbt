@@ -30,7 +30,7 @@ fn addtext_assert_rotation_offset_for_test(
 }
 
 ///|
-fn addtext_process_time_for_test() -> @pdflite.PdfStrftimeTime {
+fn addtext_process_time_for_test() -> @date.PdfStrftimeTime {
   {
     tm_sec: 5,
     tm_min: 4,

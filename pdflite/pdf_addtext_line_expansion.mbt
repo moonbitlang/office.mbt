@@ -4,7 +4,7 @@
 /// This mirrors cpdf's `expand_lines` behavior after callers have supplied the
 /// document-specific replacement callbacks.
 pub fn pdf_addtext_expand_lines_with_time(
-  time : PdfStrftimeTime,
+  time : @date.PdfStrftimeTime,
   lines : ArrayView[String],
   replacements : ArrayView[(String, () -> String)],
 ) -> Array[String] raise PdfError {

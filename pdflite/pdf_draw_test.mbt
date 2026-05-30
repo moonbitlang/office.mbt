@@ -20,7 +20,7 @@ fn draw_standard_font_for_test(
 }
 
 ///|
-fn draw_time_for_test() -> @pdflite.PdfStrftimeTime {
+fn draw_time_for_test() -> @date.PdfStrftimeTime {
   {
     tm_sec: 5,
     tm_min: 4,

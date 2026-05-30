@@ -21,7 +21,7 @@ pub fn PdfDocument::draw(
   filename? : String = "",
   bates? : Int = 1,
   bates_pad? : Int? = None,
-  time? : PdfStrftimeTime? = None,
+  time? : @date.PdfStrftimeTime? = None,
   add_artifacts? : Bool = false,
   role_map? : String = "",
 ) -> PdfDocument raise PdfError {
@@ -83,7 +83,7 @@ pub fn pdf_draw(
   filename? : String = "",
   bates? : Int = 1,
   bates_pad? : Int? = None,
-  time? : PdfStrftimeTime? = None,
+  time? : @date.PdfStrftimeTime? = None,
   add_artifacts? : Bool = false,
   role_map? : String = "",
 ) -> PdfDocument raise PdfError {

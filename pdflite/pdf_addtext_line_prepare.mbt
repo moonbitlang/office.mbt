@@ -54,7 +54,7 @@ fn PdfDocument::pdf_addtext_measurement_bytes_for_page(
 pub fn PdfDocument::addtext_prepare_line(
   self : PdfDocument,
   page : PdfPage,
-  time : PdfStrftimeTime,
+  time : @date.PdfStrftimeTime,
   lines : ArrayView[String],
   replacements : ArrayView[(String, () -> String)],
   font : PdfFont?,
@@ -123,7 +123,7 @@ pub fn PdfDocument::addtext_prepare_line(
 pub fn pdf_addtext_prepare_line(
   document : PdfDocument,
   page : PdfPage,
-  time : PdfStrftimeTime,
+  time : @date.PdfStrftimeTime,
   lines : ArrayView[String],
   replacements : ArrayView[(String, () -> String)],
   font : PdfFont?,

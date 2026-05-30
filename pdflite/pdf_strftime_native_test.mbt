@@ -12,7 +12,7 @@ test "pdf_current_time returns native local time fields in tm ranges" {
 
 ///|
 test "pdf_strftime uses explicit time or native current time" {
-  let time : @pdflite.PdfStrftimeTime = {
+  let time : @date.PdfStrftimeTime = {
     tm_sec: 59,
     tm_min: 58,
     tm_hour: 23,

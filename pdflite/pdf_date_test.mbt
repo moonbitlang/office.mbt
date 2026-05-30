@@ -1,6 +1,6 @@
 ///|
 test "pdf_date_of_string parses full PDF dates" {
-  @test.assert_eq(try! @pdflite.pdf_date_of_string("D:20240203040506+08'30'"), {
+  @test.assert_eq(try! @date.pdf_date_of_string("D:20240203040506+08'30'"), {
     year: 2024,
     month: 2,
     day: 3,
@@ -10,7 +10,7 @@ test "pdf_date_of_string parses full PDF dates" {
     hour_offset: 8,
     minute_offset: 30,
   })
-  @test.assert_eq(try! @pdflite.pdf_date_of_string("20240203040506-07'15'"), {
+  @test.assert_eq(try! @date.pdf_date_of_string("20240203040506-07'15'"), {
     year: 2024,
     month: 2,
     day: 3,
@@ -26,7 +26,7 @@ test "pdf_date_of_string parses full PDF dates" {
 test "pdf_date byte APIs parse borrowed PDF date slices" {
   let wrapped = @ascii.encode("xxD:20240203040506+08'30'yy")
   let view = wrapped[2:wrapped.length() - 2]
-  let expected : @pdflite.PdfDate = {
+  let expected : @date.PdfDate = {
     year: 2024,
     month: 2,
     day: 3,
@@ -36,10 +36,10 @@ test "pdf_date byte APIs parse borrowed PDF date slices" {
     hour_offset: 8,
     minute_offset: 30,
   }
-  @test.assert_eq(try! @pdflite.pdf_date_of_view(view), expected)
-  @test.assert_eq(try! @pdflite.pdf_date_of_bytes(view.to_owned()), expected)
+  @test.assert_eq(try! @date.pdf_date_of_view(view), expected)
+  @test.assert_eq(try! @date.pdf_date_of_bytes(view.to_owned()), expected)
   @test.assert_eq(
-    try! @pdflite.pdf_bytes_of_date(expected),
+    try! @date.pdf_bytes_of_date(expected),
     @ascii.encode("D:20240203040506+08'30'"),
   )
 }
@@ -49,7 +49,7 @@ test "pdf_date object APIs bridge PDF strings and typed dates" {
   let object : @pdflite.PdfObject = PdfString(
     @ascii.encode("D:20240203040506+08'30'"),
   )
-  let expected : @pdflite.PdfDate = {
+  let expected : @date.PdfDate = {
     year: 2024,
     month: 2,
     day: 3,
@@ -64,7 +64,7 @@ test "pdf_date object APIs bridge PDF strings and typed dates" {
     try! @pdflite.pdf_object_of_date(expected),
     PdfString(@ascii.encode("D:20240203040506+08'30'")),
   )
-  let non_string : Result[@pdflite.PdfDate, Error] = try? @pdflite.pdf_date_of_object(
+  let non_string : Result[@date.PdfDate, Error] = try? @pdflite.pdf_date_of_object(
     PdfNameObject(@pdflite.pdf_name_of_bytes(@ascii.encode("/Date"))),
   )
   guard non_string is Err(@pdflite.PdfError::BadDate) else {
@@ -74,7 +74,7 @@ test "pdf_date object APIs bridge PDF strings and typed dates" {
 
 ///|
 test "pdf_date_of_string applies CamlPDF defaults and Y2K recovery" {
-  @test.assert_eq(try! @pdflite.pdf_date_of_string("D:2024"), {
+  @test.assert_eq(try! @date.pdf_date_of_string("D:2024"), {
     year: 2024,
     month: 1,
     day: 1,
@@ -84,7 +84,7 @@ test "pdf_date_of_string applies CamlPDF defaults and Y2K recovery" {
     hour_offset: 0,
     minute_offset: 0,
   })
-  @test.assert_eq(try! @pdflite.pdf_date_of_string("D:2024Z"), {
+  @test.assert_eq(try! @date.pdf_date_of_string("D:2024Z"), {
     year: 2024,
     month: 1,
     day: 1,
@@ -94,7 +94,7 @@ test "pdf_date_of_string applies CamlPDF defaults and Y2K recovery" {
     hour_offset: 0,
     minute_offset: 0,
   })
-  @test.assert_eq(try! @pdflite.pdf_date_of_string("D:20241"), {
+  @test.assert_eq(try! @date.pdf_date_of_string("D:20241"), {
     year: 2024,
     month: 1,
     day: 1,
@@ -104,7 +104,7 @@ test "pdf_date_of_string applies CamlPDF defaults and Y2K recovery" {
     hour_offset: 0,
     minute_offset: 0,
   })
-  @test.assert_eq(try! @pdflite.pdf_date_of_string("D:20240102030405X"), {
+  @test.assert_eq(try! @date.pdf_date_of_string("D:20240102030405X"), {
     year: 2024,
     month: 1,
     day: 2,
@@ -114,12 +114,12 @@ test "pdf_date_of_string applies CamlPDF defaults and Y2K recovery" {
     hour_offset: 0,
     minute_offset: 0,
   })
-  @test.assert_eq((try! @pdflite.pdf_date_of_string("D:19100")).year, 2000)
+  @test.assert_eq((try! @date.pdf_date_of_string("D:19100")).year, 2000)
 }
 
 ///|
 test "pdf_date_of_string preserves CamlPDF local-time quirks" {
-  @test.assert_eq(try! @pdflite.pdf_date_of_string("D:20240102030405+0830"), {
+  @test.assert_eq(try! @date.pdf_date_of_string("D:20240102030405+0830"), {
     year: 2024,
     month: 1,
     day: 2,
@@ -129,7 +129,7 @@ test "pdf_date_of_string preserves CamlPDF local-time quirks" {
     hour_offset: 8,
     minute_offset: 0,
   })
-  @test.assert_eq(try! @pdflite.pdf_date_of_string("D:20240102030405+08x30"), {
+  @test.assert_eq(try! @date.pdf_date_of_string("D:20240102030405+08x30"), {
     year: 2024,
     month: 1,
     day: 2,
@@ -139,7 +139,7 @@ test "pdf_date_of_string preserves CamlPDF local-time quirks" {
     hour_offset: 8,
     minute_offset: 30,
   })
-  @test.assert_eq(try! @pdflite.pdf_date_of_string("D:20240102030405+08"), {
+  @test.assert_eq(try! @date.pdf_date_of_string("D:20240102030405+08"), {
     year: 2024,
     month: 1,
     day: 2,
@@ -154,7 +154,7 @@ test "pdf_date_of_string preserves CamlPDF local-time quirks" {
 ///|
 test "pdf_string_of_date renders checked PDF date syntax" {
   @test.assert_eq(
-    try! @pdflite.pdf_string_of_date({
+    try! @date.pdf_string_of_date({
       year: 7,
       month: 1,
       day: 2,
@@ -167,7 +167,7 @@ test "pdf_string_of_date renders checked PDF date syntax" {
     "D:00070102030405+06'07'",
   )
   @test.assert_eq(
-    try! @pdflite.pdf_string_of_date({
+    try! @date.pdf_string_of_date({
       year: 42,
       month: 1,
       day: 2,
@@ -180,7 +180,7 @@ test "pdf_string_of_date renders checked PDF date syntax" {
     "D:00420102030405Z",
   )
   @test.assert_eq(
-    try! @pdflite.pdf_string_of_date({
+    try! @date.pdf_string_of_date({
       year: 999,
       month: 1,
       day: 2,
@@ -193,7 +193,7 @@ test "pdf_string_of_date renders checked PDF date syntax" {
     "D:09990102030405Z",
   )
   @test.assert_eq(
-    try! @pdflite.pdf_string_of_date({
+    try! @date.pdf_string_of_date({
       year: 2024,
       month: 2,
       day: 3,
@@ -206,7 +206,7 @@ test "pdf_string_of_date renders checked PDF date syntax" {
     "D:20240203040506Z",
   )
   @test.assert_eq(
-    try! @pdflite.pdf_string_of_date({
+    try! @date.pdf_string_of_date({
       year: 2024,
       month: 2,
       day: 3,
@@ -222,25 +222,25 @@ test "pdf_string_of_date renders checked PDF date syntax" {
 
 ///|
 test "pdf_date_of_string rejects malformed dates" {
-  let bad_month : Result[@pdflite.PdfDate, Error] = try? @pdflite.pdf_date_of_string(
+  let bad_month : Result[@date.PdfDate, Error] = try? @date.pdf_date_of_string(
     "D:20241301",
   )
   guard bad_month is Err(@pdflite.PdfError::BadDate) else {
     fail("expected @pdflite.PdfError::BadDate for month")
   }
-  let short : Result[@pdflite.PdfDate, Error] = try? @pdflite.pdf_date_of_string(
+  let short : Result[@date.PdfDate, Error] = try? @date.pdf_date_of_string(
     "D:20",
   )
   guard short is Err(@pdflite.PdfError::BadDate) else {
     fail("expected @pdflite.PdfError::BadDate for short date")
   }
-  let bad_year_digit : Result[@pdflite.PdfDate, Error] = try? @pdflite.pdf_date_of_string(
+  let bad_year_digit : Result[@date.PdfDate, Error] = try? @date.pdf_date_of_string(
     "D:20A4",
   )
   guard bad_year_digit is Err(@pdflite.PdfError::BadDate) else {
     fail("expected @pdflite.PdfError::BadDate for year")
   }
-  let bad_month_digit : Result[@pdflite.PdfDate, Error] = try? @pdflite.pdf_date_of_string(
+  let bad_month_digit : Result[@date.PdfDate, Error] = try? @date.pdf_date_of_string(
     "D:2024AA",
   )
   guard bad_month_digit is Err(@pdflite.PdfError::BadDate) else {

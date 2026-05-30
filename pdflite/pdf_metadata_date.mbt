@@ -26,7 +26,7 @@ fn pdf_metadata_xmp_date(date : String) -> String raise PdfError {
   if !date.has_prefix("D:") {
     "0000-01-01T00:00:00Z"
   } else {
-    let parsed = pdf_date_of_string(date)
+    let parsed = @date.pdf_date_of_string(date)
     let tzd = if parsed.hour_offset == 0 && parsed.minute_offset == 0 {
       "Z"
     } else {
@@ -105,7 +105,10 @@ fn pdf_metadata_expand_date(date : String) -> String {
   if date == "now" {
     match @env.get_env_var("CPDF_REPRODUCIBLE_DATES") {
       Some("true") =>
-        pdf_strftime_with_time(pdf_strftime_dummy_time(), "D:%Y%m%d%H%M%S")
+        @date.pdf_strftime_with_time(
+          @date.pdf_strftime_dummy_time(),
+          "D:%Y%m%d%H%M%S",
+        )
       _ => pdf_metadata_pdf_date_from_unix_millis(@env.now())
     }
   } else {

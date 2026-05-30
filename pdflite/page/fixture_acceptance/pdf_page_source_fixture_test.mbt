@@ -237,7 +237,7 @@ fn page_fixture_assert_cpdf_manual_page_labels_for_test(
   @test.assert_eq(replacement_values.end_label, "157")
   @test.assert_eq(
     @pdflite.pdf_addtext_process_text_with_time(
-      @pdflite.pdf_strftime_dummy_time(),
+      @date.pdf_strftime_dummy_time(),
       "%Label|%EndLabel|%Page|%EndPage|%filename|%Bates",
       @pdflite.pdf_addtext_replacement_pairs(replacement_values),
     ),

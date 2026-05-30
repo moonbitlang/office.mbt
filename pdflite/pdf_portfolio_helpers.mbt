@@ -105,7 +105,10 @@ fn pdf_portfolio_date_text_from_unix_millis(milliseconds : UInt64) -> String {
 fn pdf_portfolio_current_mod_date() -> PdfBytes {
   let text = match @env.get_env_var("CPDF_REPRODUCIBLE_DATES") {
     Some("true") =>
-      pdf_strftime_with_time(pdf_strftime_dummy_time(), "D:%Y%m%d%H%M%S")
+      @date.pdf_strftime_with_time(
+        @date.pdf_strftime_dummy_time(),
+        "D:%Y%m%d%H%M%S",
+      )
     _ => pdf_portfolio_date_text_from_unix_millis(@env.now())
   }
   @ascii.encode(text)

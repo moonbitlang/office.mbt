@@ -29,7 +29,7 @@ fn pdf_draw_single_page_ops(
   filename : String,
   bates : Int,
   bates_pad : Int?,
-  time : PdfStrftimeTime?,
+  time : @date.PdfStrftimeTime?,
 ) -> Array[PdfContentOp] raise PdfError {
   let context = document.draw_special_text_context(
     page_number,
@@ -52,7 +52,7 @@ fn PdfDocument::pdf_draw_render_page_ops(
   filename : String,
   bates : Int,
   bates_pad : Int?,
-  time : PdfStrftimeTime?,
+  time : @date.PdfStrftimeTime?,
 ) -> Array[Array[PdfContentOp]] raise PdfError {
   let pages = self.pages_of_pagetree()
   let per_page : Array[Array[PdfContentOp]] = [ for _ in pages => [] ]
