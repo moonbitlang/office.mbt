@@ -1,18 +1,18 @@
 # MarkItDown Repository Fixture Comparison
 
-Initial run: 2026-05-07 after cloning MarkItDown to `.repos/markitdown`:
+Initial run: 2026-05-07 after cloning MarkItDown to a temporary local checkout:
 
 ```sh
-git clone --depth 1 https://github.com/microsoft/markitdown.git .repos/markitdown
+git clone --depth 1 https://github.com/microsoft/markitdown.git /tmp/markitdown
 ./markdown/tools/compare_markitdown.py \
   --markitdown-cmd /tmp/pdflite-markitdown-venv/bin/markitdown \
   --output-dir markdown/reports/markitdown_repo_fixtures \
-  .repos/markitdown/packages/markitdown/tests/test_files/*.pdf
+  /tmp/markitdown/packages/markitdown/tests/test_files/*.pdf
 ```
 
-The generated per-file outputs and diffs are ignored because `.repos` is a
-reference checkout only. This checked-in summary records the quality gaps that
-the upstream fixtures expose.
+The generated per-file outputs and diffs are ignored because the MarkItDown
+checkout is reference data only. This checked-in summary records the quality
+gaps that the upstream fixtures expose.
 
 ## Result
 

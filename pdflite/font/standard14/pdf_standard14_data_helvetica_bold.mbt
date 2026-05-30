@@ -1,4 +1,4 @@
-// Generated from .repos/pdfafmdata.ml and CamlPDF AFM parsing rules.
+// Generated from CamlPDF pdfafmdata.ml and AFM parsing rules.
 // This file constitutes a modification of Adobe's AFM data files. This file
 // also constitutes a modification of Adobe's license file.
 //

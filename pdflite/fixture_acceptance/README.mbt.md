@@ -58,7 +58,7 @@ async test "checked-in PDF fixtures are present" {
   linearization, xref streams, object streams, trailer chains, page-tree shape,
   or compressed rewrite boundaries.
 - Source-corpus tests must use tracked files under `fixtures/cpdf-source` rather
-  than the local reference checkout under `.repos`.
+  than any local reference checkout.
 - Keep synthetic parser edge cases in root `*_test.mbt` files where the bytes
   can be built inline and reviewed precisely.
 - Do not add production helpers here. If a helper becomes generally useful,
