@@ -285,6 +285,13 @@ pub using @path {
 pub using @destination {type PdfDestination, type PdfTargetPage}
 
 ///|
+pub using @bookmark {
+  type PdfBookmark,
+  type PdfBookmarkColour,
+  pdf_bookmark_black,
+}
+
+///|
 pub using @portfolio {type PdfPortfolioEntry, pdf_portfolio_entry}
 
 ///|
