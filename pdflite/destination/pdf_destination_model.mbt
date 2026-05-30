@@ -14,10 +14,10 @@ pub(all) enum PdfTargetPage {
 /// The variants cover action dictionaries, named/string destinations, null
 /// destinations, and all standard page-view destination array forms.
 pub(all) enum PdfDestination {
-  DestAction(PdfObject)
+  DestAction(@syntax.PdfObject)
   DestNull
-  DestNamed(PdfName)
-  DestString(PdfBytes)
+  DestNamed(@core.PdfName)
+  DestString(@core.PdfBytes)
   DestXYZ(PdfTargetPage, Double?, Double?, Double?)
   DestFit(PdfTargetPage)
   DestFitH(PdfTargetPage, Double?)

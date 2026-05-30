@@ -282,6 +282,9 @@ pub using @path {
 }
 
 ///|
+pub using @destination {type PdfDestination, type PdfTargetPage}
+
+///|
 pub using @portfolio {type PdfPortfolioEntry, pdf_portfolio_entry}
 
 ///|

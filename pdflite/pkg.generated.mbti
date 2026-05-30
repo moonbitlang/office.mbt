@@ -8,6 +8,7 @@ import {
   "bobzhang/pdflite/core",
   "bobzhang/pdflite/crypt_core",
   "bobzhang/pdflite/date",
+  "bobzhang/pdflite/destination",
   "bobzhang/pdflite/font/afm",
   "bobzhang/pdflite/geometry",
   "bobzhang/pdflite/metadata",
@@ -1230,7 +1231,7 @@ pub fn pdf_object_of_colour_space(PdfColourSpace) -> @syntax.PdfObject?
 
 pub fn pdf_object_of_date(@date.PdfDate) -> @syntax.PdfObject raise @core.PdfError
 
-pub fn pdf_object_of_destination(PdfDestination) -> @syntax.PdfObject
+pub fn pdf_object_of_destination(@destination.PdfDestination) -> @syntax.PdfObject
 
 pub fn pdf_object_of_function(PdfDocument, PdfFunction) -> @syntax.PdfObject
 
@@ -1336,7 +1337,7 @@ pub fn pdf_page_reference_numbers(PdfDocument) -> Array[Int] raise @core.PdfErro
 
 pub fn pdf_page_rotation_of_int(Int) -> @page.PdfPageRotation raise @core.PdfError
 
-pub fn pdf_pagenumber_of_target(PdfDocument, PdfDestination) -> Int raise @core.PdfError
+pub fn pdf_pagenumber_of_target(PdfDocument, @destination.PdfDestination) -> Int raise @core.PdfError
 
 pub fn pdf_pages_of_pagetree(PdfDocument) -> Array[@page.PdfPage] raise @core.PdfError
 
@@ -1522,7 +1523,7 @@ pub fn pdf_read_classic_document_revision_from_view(BytesView, Int) -> PdfDocume
 
 pub fn pdf_read_colour_space(PdfDocument, @syntax.PdfObject, @syntax.PdfObject) -> PdfColourSpace? raise @core.PdfError
 
-pub fn pdf_read_destination(PdfDocument, @syntax.PdfObject, shallow? : Bool) -> PdfDestination raise @core.PdfError
+pub fn pdf_read_destination(PdfDocument, @syntax.PdfObject, shallow? : Bool) -> @destination.PdfDestination raise @core.PdfError
 
 pub fn pdf_read_document_from_bytes(Bytes) -> PdfDocument raise @core.PdfError
 
@@ -1928,7 +1929,7 @@ pub fn pdf_subformat_of_string(String) -> PdfUASubformat raise @core.PdfError
 
 pub fn pdf_table_of_encoding(PdfEncoding) -> Array[(Int, @core.PdfName)]
 
-pub fn pdf_target_of_pagenumber(PdfDocument, Int) -> PdfDestination raise @core.PdfError
+pub fn pdf_target_of_pagenumber(PdfDocument, Int) -> @destination.PdfDestination raise @core.PdfError
 
 pub fn pdf_test_extract_text(PdfDocument, ArrayView[Int]) -> Bytes raise @core.PdfError
 
@@ -1986,7 +1987,7 @@ pub fn pdf_transform_annotations(PdfDocument, @geometry.TransformMatrix, @syntax
 
 pub fn pdf_transform_bookmark(PdfDocument, @geometry.TransformMatrix, PdfBookmark) -> PdfBookmark raise @core.PdfError
 
-pub fn pdf_transform_destination(PdfDocument, @geometry.TransformMatrix, PdfDestination) -> PdfDestination raise @core.PdfError
+pub fn pdf_transform_destination(PdfDocument, @geometry.TransformMatrix, @destination.PdfDestination) -> @destination.PdfDestination raise @core.PdfError
 
 pub fn pdf_trim_marks(PdfDocument, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
 
@@ -2332,7 +2333,7 @@ pub(all) struct PdfAttachment {
 pub(all) struct PdfBookmark {
   level : Int
   text : Bytes
-  target : PdfDestination
+  target : @destination.PdfDestination
   is_open : Bool
   colour : PdfBookmarkColour
   flags : Int
@@ -2798,21 +2799,6 @@ pub(all) struct PdfDecryptionResult {
   denied_permissions : Array[@crypt_core.PdfPermission]
 } derive(Eq, ToJson, @debug.Debug)
 
-pub(all) enum PdfDestination {
-  DestAction(@syntax.PdfObject)
-  DestNull
-  DestNamed(@core.PdfName)
-  DestString(Bytes)
-  DestXYZ(PdfTargetPage, Double?, Double?, Double?)
-  DestFit(PdfTargetPage)
-  DestFitH(PdfTargetPage, Double?)
-  DestFitV(PdfTargetPage, Double?)
-  DestFitR(PdfTargetPage, Double, Double, Double, Double)
-  DestFitB(PdfTargetPage)
-  DestFitBH(PdfTargetPage, Double?)
-  DestFitBV(PdfTargetPage, Double?)
-} derive(Eq, ToJson, @debug.Debug)
-
 pub struct PdfDocument {
   mut major : Int
   mut minor : Int
@@ -3068,7 +3054,7 @@ pub fn PdfDocument::page_content_json(Self, ArrayView[Int]) -> Json raise @core.
 pub fn PdfDocument::page_info_json(Self, ArrayView[Int], unit? : @geometry.PdfUnit) -> Json raise @core.PdfError
 pub fn PdfDocument::page_info_json_blob(Self, ArrayView[Int], unit? : @geometry.PdfUnit) -> Bytes raise @core.PdfError
 pub fn PdfDocument::page_info_text(Self, ArrayView[Int], unit? : @geometry.PdfUnit) -> Bytes raise @core.PdfError
-pub fn PdfDocument::page_number_of_target(Self, PdfDestination) -> Int raise @core.PdfError
+pub fn PdfDocument::page_number_of_target(Self, @destination.PdfDestination) -> Int raise @core.PdfError
 pub fn PdfDocument::page_object_number(Self, Int) -> Int? raise @core.PdfError
 pub fn PdfDocument::page_reference_numbers(Self) -> Array[Int] raise @core.PdfError
 pub fn PdfDocument::pages_of_pagetree(Self) -> Array[@page.PdfPage] raise @core.PdfError
@@ -3114,7 +3100,7 @@ pub fn PdfDocument::read_bookmarks(Self, preserve_actions? : Bool) -> Array[PdfB
 pub fn PdfDocument::read_cid_system_info(Self, @syntax.PdfObject) -> PdfCIDSystemInfo raise @core.PdfError
 pub fn PdfDocument::read_cidkeyed_font(Self, @syntax.PdfObject) -> PdfCIDKeyedFont raise @core.PdfError
 pub fn PdfDocument::read_colour_space(Self, @syntax.PdfObject, @syntax.PdfObject) -> PdfColourSpace? raise @core.PdfError
-pub fn PdfDocument::read_destination(Self, @syntax.PdfObject, shallow? : Bool) -> PdfDestination raise @core.PdfError
+pub fn PdfDocument::read_destination(Self, @syntax.PdfObject, shallow? : Bool) -> @destination.PdfDestination raise @core.PdfError
 pub fn PdfDocument::read_encoding(Self, @syntax.PdfObject) -> PdfEncoding raise @core.PdfError
 pub fn PdfDocument::read_font(Self, @syntax.PdfObject) -> PdfFont raise @core.PdfError
 pub fn PdfDocument::read_font_descriptor(Self, @syntax.PdfObject) -> PdfFontDescriptor? raise @core.PdfError
@@ -3228,7 +3214,7 @@ pub fn PdfDocument::stretch_pages(Self, ArrayView[Int], ArrayView[(Double, Doubl
 pub fn PdfDocument::string_of_pagespec(Self, ArrayView[Int]) -> String raise @core.PdfError
 pub fn PdfDocument::struct_tree_json_blob(Self) -> Bytes raise @core.PdfError
 pub fn PdfDocument::struct_tree_text(Self) -> Bytes raise @core.PdfError
-pub fn PdfDocument::target_of_page_number(Self, Int) -> PdfDestination raise @core.PdfError
+pub fn PdfDocument::target_of_page_number(Self, Int) -> @destination.PdfDestination raise @core.PdfError
 pub fn PdfDocument::test_extract_text(Self, ArrayView[Int]) -> Bytes raise @core.PdfError
 pub fn PdfDocument::test_matterhorn_json(Self, String) -> Json raise @core.PdfError
 pub fn PdfDocument::test_matterhorn_text(Self, String) -> Bytes raise @core.PdfError
@@ -3244,7 +3230,7 @@ pub fn PdfDocument::toc_with_source(Self, PdfTocFontSource, Double, BytesView, b
 pub fn PdfDocument::trailer_dict(Self) -> @syntax.PdfObject
 pub fn PdfDocument::transform_annotations(Self, @geometry.TransformMatrix, @syntax.PdfObject) -> Unit raise @core.PdfError
 pub fn PdfDocument::transform_bookmark(Self, @geometry.TransformMatrix, PdfBookmark) -> PdfBookmark raise @core.PdfError
-pub fn PdfDocument::transform_destination(Self, @geometry.TransformMatrix, PdfDestination) -> PdfDestination raise @core.PdfError
+pub fn PdfDocument::transform_destination(Self, @geometry.TransformMatrix, @destination.PdfDestination) -> @destination.PdfDestination raise @core.PdfError
 pub fn PdfDocument::transform_quadpoints(Self, @geometry.TransformMatrix, @syntax.PdfObject) -> @syntax.PdfObject
 pub fn PdfDocument::transform_rect(Self, @geometry.TransformMatrix, @syntax.PdfObject) -> @syntax.PdfObject raise @core.PdfError
 pub fn PdfDocument::trim_marks(Self, ArrayView[Int], fast? : Bool) -> Self raise @core.PdfError
@@ -3836,11 +3822,6 @@ pub(all) struct PdfStrftimeTime {
   tm_isdst : Bool
 } derive(Eq, ToJson, @debug.Debug)
 
-pub(all) enum PdfTargetPage {
-  TargetPageObject(Int)
-  TargetOtherDocPageNumber(Int)
-} derive(Eq, ToJson, @debug.Debug)
-
 pub(all) struct PdfTextExtractor {
   font : PdfFont
 } derive(Eq, ToJson, @debug.Debug)
@@ -3954,7 +3935,7 @@ pub(all) enum PdfTypeElement {
   PdfTypeNewLine
   PdfTypeNewPage
   PdfTypeFont(String, PdfFont, Double)
-  PdfTypeBeginDest(PdfDestination, String?)
+  PdfTypeBeginDest(@destination.PdfDestination, String?)
   PdfTypeEndDest
   PdfTypeBeginDocument
   PdfTypeTag(String, Int)
@@ -4042,6 +4023,8 @@ pub using @core {type PdfCryptType}
 
 pub using @date {type PdfDate}
 
+pub using @destination {type PdfDestination}
+
 pub using @shape {type PdfDrawnPath}
 
 pub using @crypt_core {type PdfEncryptionMethod}
@@ -4113,6 +4096,8 @@ pub using @syntax {type PdfStream}
 pub using @syntax {type PdfStreamData}
 
 pub using @syntax {type PdfStreamDataCrypt}
+
+pub using @destination {type PdfTargetPage}
 
 pub using @geometry {type PdfUnit}
 
