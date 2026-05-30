@@ -1,5 +1,6 @@
 import {
   "bobzhang/pdflite/annotation",
+  "bobzhang/pdflite/attachment",
   "bobzhang/pdflite/bookmark",
   "bobzhang/pdflite/codec",
   "bobzhang/pdflite/content",

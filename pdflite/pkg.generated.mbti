@@ -3,6 +3,7 @@ package "bobzhang/pdflite"
 
 import {
   "bobzhang/pdflite/annotation",
+  "bobzhang/pdflite/attachment",
   "bobzhang/pdflite/bookmark",
   "bobzhang/pdflite/content",
   "bobzhang/pdflite/content/path",
@@ -1106,7 +1107,7 @@ pub fn pdf_lexeme_debug_name(@syntax.PdfLexeme) -> String
 
 pub fn pdf_list_annotations(ArrayView[Int], @metadata.PdfMetadataEncoding, PdfDocument) -> Bytes raise @core.PdfError
 
-pub fn pdf_list_attached_files(PdfDocument) -> Array[PdfAttachment] raise @core.PdfError
+pub fn pdf_list_attached_files(PdfDocument) -> Array[@attachment.PdfAttachment] raise @core.PdfError
 
 pub fn pdf_list_bookmarks(Bool, Bool, @metadata.PdfMetadataEncoding, ArrayView[Int], PdfDocument) -> Bytes raise @core.PdfError
 
@@ -2323,14 +2324,6 @@ pub(all) struct PdfAddTextUrlLine {
   urls : Array[PdfAddTextUrl]
 } derive(Eq, ToJson, @debug.Debug)
 
-pub(all) struct PdfAttachment {
-  name : String
-  pagenumber : Int
-  data : Bytes?
-  description : String?
-  relationship : String?
-} derive(Eq, ToJson, @debug.Debug)
-
 type PdfBookmarkNode derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfCIDKeyedFont {
@@ -2991,7 +2984,7 @@ pub fn PdfDocument::json_to_output(Self, utf8? : Bool, parse_content? : Bool, no
 pub fn PdfDocument::language(Self) -> Bytes?
 pub fn PdfDocument::language_string(Self) -> String?
 pub fn PdfDocument::list_annotations(Self, ArrayView[Int], encoding? : @metadata.PdfMetadataEncoding) -> Bytes raise @core.PdfError
-pub fn PdfDocument::list_attached_files(Self) -> Array[PdfAttachment] raise @core.PdfError
+pub fn PdfDocument::list_attached_files(Self) -> Array[@attachment.PdfAttachment] raise @core.PdfError
 pub fn PdfDocument::list_bookmarks(Self, ArrayView[Int], encoding? : @metadata.PdfMetadataEncoding, json? : Bool, json_preserve_actions? : Bool) -> Bytes raise @core.PdfError
 pub fn PdfDocument::list_fonts(Self, ArrayView[Int]) -> Array[PdfFontListEntry] raise @core.PdfError
 pub fn PdfDocument::list_fonts_text(Self, ArrayView[Int]) -> Bytes raise @core.PdfError
@@ -3984,6 +3977,8 @@ pub using @annotation {type PdfAnnotationColour}
 pub using @annotation {type PdfAnnotationStyle}
 
 pub using @annotation {type PdfAnnotationSubtype}
+
+pub using @attachment {type PdfAttachment}
 
 pub using @bookmark {type PdfBookmark}
 

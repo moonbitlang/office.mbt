@@ -7,7 +7,7 @@
 pub(all) struct PdfAttachment {
   name : String
   pagenumber : Int
-  data : PdfBytes?
+  data : @core.PdfBytes?
   description : String?
   relationship : String?
 } derive(Debug, Eq, ToJson)
