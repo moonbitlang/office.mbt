@@ -1,4 +1,5 @@
 import {
+  "bobzhang/pdflite/addtext",
   "bobzhang/pdflite/annotation",
   "bobzhang/pdflite/attachment",
   "bobzhang/pdflite/bookmark",

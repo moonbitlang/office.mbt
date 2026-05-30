@@ -173,6 +173,18 @@ pub using @page {
 }
 
 ///|
+pub using @addtext {
+  type PdfAddTextLinePlacement,
+  type PdfAddTextLineWidths,
+  type PdfAddTextPreparedLine,
+  type PdfAddTextReplacementValues,
+  type PdfAddTextResourceSetup,
+  type PdfAddTextUrl,
+  type PdfAddTextUrlAnnotationGeometry,
+  type PdfAddTextUrlLine,
+}
+
+///|
 pub using @annotation {
   type PdfAnnotation,
   type PdfAnnotationBorder,
