@@ -938,8 +938,8 @@ async test "optional cpdf source attachments preserve real source payloads" {
 
 ///|
 fn fixture_acceptance_assert_unicode_data_row_matches_for_test(
-  actual : @pdflite.PdfUnicodeDataEntry,
-  expected : @pdflite.PdfUnicodeDataEntry,
+  actual : @unicodedata.PdfUnicodeDataEntry,
+  expected : @unicodedata.PdfUnicodeDataEntry,
   index : Int,
 ) -> Unit raise {
   guard actual == expected else {

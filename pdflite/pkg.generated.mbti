@@ -3855,8 +3855,6 @@ pub using @truetype {type PdfTrueTypeSubsetTable}
 
 pub using @truetype {type PdfTrueTypeTableRecord}
 
-pub using @unicodedata {type PdfUnicodeDataEntry}
-
 pub using @geometry {type PdfUnit}
 
 pub using @reader {type PdfVersion}

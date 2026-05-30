@@ -6,7 +6,9 @@ priv struct PdfUnicodeDataLookup {
 }
 
 ///|
-let pdf_unicode_data_cache : Ref[Array[PdfUnicodeDataEntry]?] = { val: None }
+let pdf_unicode_data_cache : Ref[Array[@unicodedata.PdfUnicodeDataEntry]?] = {
+  val: None,
+}
 
 ///|
 let pdf_unicode_data_lookup_cache : Ref[
@@ -29,7 +31,7 @@ fn pdf_unicode_data_parse_row(
   source : BytesView,
   start : Int,
   end : Int,
-) -> PdfUnicodeDataEntry raise PdfError {
+) -> @unicodedata.PdfUnicodeDataEntry raise PdfError {
   let fields : Array[String] = []
   let mut field_start = start
   let mut index = start
@@ -67,8 +69,8 @@ fn pdf_unicode_data_parse_row(
 /// Parse UnicodeData.txt bytes into cpdf-compatible rows.
 pub fn pdf_parse_unicode_data(
   source : BytesView,
-) -> Array[PdfUnicodeDataEntry] raise PdfError {
-  let entries : Array[PdfUnicodeDataEntry] = []
+) -> Array[@unicodedata.PdfUnicodeDataEntry] raise PdfError {
+  let entries : Array[@unicodedata.PdfUnicodeDataEntry] = []
   let mut index = 0
   while index < source.length() {
     let row_start = index
@@ -91,13 +93,13 @@ pub fn pdf_parse_unicode_data(
 /// Decode cpdf's flate-compressed UnicodeData source bytes, then parse rows.
 pub fn pdf_parse_flate_unicode_data(
   source : BytesView,
-) -> Array[PdfUnicodeDataEntry] raise PdfError {
+) -> Array[@unicodedata.PdfUnicodeDataEntry] raise PdfError {
   pdf_parse_unicode_data(pdf_flate_decode_view(source))
 }
 
 ///|
 /// Return cpdf's parsed UnicodeData table, decoded and parsed on demand.
-pub fn pdf_unicode_data() -> Array[PdfUnicodeDataEntry] raise PdfError {
+pub fn pdf_unicode_data() -> Array[@unicodedata.PdfUnicodeDataEntry] raise PdfError {
   match pdf_unicode_data_cache.val {
     Some(entries) => entries
     None => {
@@ -110,7 +112,7 @@ pub fn pdf_unicode_data() -> Array[PdfUnicodeDataEntry] raise PdfError {
 
 ///|
 /// Source-spelled compatibility wrapper for cpdfunicodedata's `unicodedata`.
-pub fn pdf_unicodedata() -> Array[PdfUnicodeDataEntry] raise PdfError {
+pub fn pdf_unicodedata() -> Array[@unicodedata.PdfUnicodeDataEntry] raise PdfError {
   pdf_unicode_data()
 }
 

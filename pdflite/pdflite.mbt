@@ -405,9 +405,6 @@ pub using @truetype {
 }
 
 ///|
-pub using @unicodedata {type PdfUnicodeDataEntry}
-
-///|
 pub using @reader {
   type PdfVersion,
   type ObjectStreamReference,
