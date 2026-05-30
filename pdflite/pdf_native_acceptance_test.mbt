@@ -7236,7 +7236,7 @@ fn acceptance_composition_source_document_for_test() -> @pdflite.PdfDocument {
 
 ///|
 fn acceptance_composition_entry_bytes_for_test(
-  entries : ArrayView[@pdflite.PdfCompositionEntry],
+  entries : ArrayView[@composition.PdfCompositionEntry],
   label : String,
 ) -> Int raise {
   for entry in entries {

@@ -142,7 +142,7 @@ fn composition_object_size_for_test(
 
 ///|
 fn composition_entry_bytes_for_test(
-  entries : ArrayView[@pdflite.PdfCompositionEntry],
+  entries : ArrayView[@composition.PdfCompositionEntry],
   label : String,
 ) -> Int raise {
   for entry in entries {
@@ -258,7 +258,7 @@ test "PdfDocument composition_json_blob uses cpdf row shape" {
 ///|
 test "PdfDocument composition rejects non-positive file sizes" {
   let doc = composition_minimal_document_for_test()
-  let result : Result[Array[@pdflite.PdfCompositionEntry], Error] = try? doc.composition(
+  let result : Result[Array[@composition.PdfCompositionEntry], Error] = try? doc.composition(
     0,
   )
   guard result is Err(@pdflite.PdfError::BadNumberArgument(_)) else {

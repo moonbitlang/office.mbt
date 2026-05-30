@@ -129,7 +129,7 @@ fn metadata_fixture_pdf_name_for_test(text : String) -> @pdflite.PdfName {
 
 ///|
 fn metadata_fixture_composition_entry_bytes_for_test(
-  entries : ArrayView[@pdflite.PdfCompositionEntry],
+  entries : ArrayView[@composition.PdfCompositionEntry],
   label : String,
 ) -> Int raise {
   for entry in entries {

@@ -6,7 +6,7 @@
 pub fn PdfDocument::composition(
   self : PdfDocument,
   file_size : Int,
-) -> Array[PdfCompositionEntry] raise PdfError {
+) -> Array[@composition.PdfCompositionEntry] raise PdfError {
   if file_size <= 0 {
     raise BadNumberArgument("file_size must be positive")
   }
@@ -90,7 +90,7 @@ pub fn PdfDocument::composition_text(
 pub fn pdf_composition(
   document : PdfDocument,
   file_size : Int,
-) -> Array[PdfCompositionEntry] raise PdfError {
+) -> Array[@composition.PdfCompositionEntry] raise PdfError {
   document.composition(file_size)
 }
 

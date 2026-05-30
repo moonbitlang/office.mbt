@@ -31,7 +31,7 @@ fn pdf_composition_wb_minimal_document() -> PdfDocument {
 
 ///|
 fn pdf_composition_wb_entry_bytes(
-  entries : ArrayView[PdfCompositionEntry],
+  entries : ArrayView[@composition.PdfCompositionEntry],
   label : String,
 ) -> Int raise {
   for entry in entries {

@@ -3737,8 +3737,6 @@ pub using @reader {type PdfClassicXRefEntry}
 
 pub using @reader {type PdfClassicXRefIndex}
 
-pub using @composition {type PdfCompositionEntry}
-
 pub using @path {type PdfContentClippingOpResult}
 
 pub using @colour {type PdfContentColour}
