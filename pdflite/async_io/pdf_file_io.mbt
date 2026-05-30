@@ -32,11 +32,9 @@ pub async fn pdf_revisions_from_file(path : StringView) -> Int {
 ///|
 /// Read only the PDF header version from a file.
 ///
-/// The same header-probe rules as `pdf_read_header_from_bytes` apply.
-pub async fn pdf_read_header_from_file(
-  path : StringView,
-) -> @pdflite.PdfVersion {
-  @pdflite.pdf_read_header_from_bytes(@fs.read_file(path).binary())
+/// The same header-probe rules as `@reader.pdf_read_header_from_bytes` apply.
+pub async fn pdf_read_header_from_file(path : StringView) -> @reader.PdfVersion {
+  @reader.pdf_read_header_from_bytes(@fs.read_file(path).binary())
 }
 
 ///|

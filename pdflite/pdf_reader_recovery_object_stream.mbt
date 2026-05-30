@@ -3,8 +3,8 @@ fn pdf_reader_startxref_root_uses_object_stream(
   data : BytesView,
 ) -> Bool raise PdfError {
   let cursor = byte_cursor_of_view(data)
-  ignore(pdf_read_header_from_cursor(cursor))
-  cursor.seek_absolute(pdf_read_startxref_position(cursor.view()))
+  ignore(@reader.pdf_read_header_from_cursor(cursor))
+  cursor.seek_absolute(@reader.pdf_read_startxref_position(cursor.view()))
   let section = pdf_cursor_read_xref_section(cursor)
   let root = match
     section.trailer.lookup_immediate(@reader.pdf_reader_root_name()) {
@@ -39,17 +39,17 @@ fn pdf_reader_startxref_object_stream_root_unusable(
   data : BytesView,
 ) -> Bool raise PdfError {
   let cursor = byte_cursor_of_view(data)
-  ignore(pdf_read_header_from_cursor(cursor))
-  cursor.seek_absolute(pdf_read_startxref_position(cursor.view()))
+  ignore(@reader.pdf_read_header_from_cursor(cursor))
+  cursor.seek_absolute(@reader.pdf_read_startxref_position(cursor.view()))
   let section = pdf_cursor_read_xref_section(cursor)
   match section.trailer.lookup_immediate(@reader.pdf_reader_root_name()) {
     Some(PdfIndirect(root)) =>
-      match pdf_classic_xref_lookup(section.entries, root) {
+      match @reader.pdf_classic_xref_lookup(section.entries, root) {
         Some(entry) =>
           match entry.object_stream {
             Some(root_reference) =>
               match
-                pdf_classic_xref_lookup(
+                @reader.pdf_classic_xref_lookup(
                   section.entries,
                   root_reference.object_stream_number,
                 ) {
@@ -58,7 +58,9 @@ fn pdf_reader_startxref_object_stream_root_unusable(
                     Some(_) => true
                     None => {
                       let object_stream_xref = entry
-                      let xref_index = pdf_classic_xref_index(section.entries)
+                      let xref_index = @reader.pdf_classic_xref_index(
+                        section.entries,
+                      )
                       cursor.seek_absolute(object_stream_xref.offset)
                       let parsed = pdf_cursor_read_first_indirect_object_at_current(
                         cursor,

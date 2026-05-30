@@ -1,6 +1,6 @@
 ///|
 fn pdf_reconstructed_plain_xref_should_load(
-  xref : PdfClassicXRefEntry,
+  xref : @reader.PdfClassicXRefEntry,
   xref_stream_ref_set : @reader.PdfReaderXRefStreamRefSet?,
   skip_object_stream_entries : Bool,
 ) -> Bool {
@@ -21,8 +21,8 @@ fn pdf_reconstructed_plain_xref_should_load(
 fn PdfDocument::load_reconstructed_xref_stream_plain_objects(
   self : PdfDocument,
   data : BytesView,
-  sections : ArrayView[PdfXRefSection],
-  xrefs : ArrayView[PdfClassicXRefEntry],
+  sections : ArrayView[@reader.PdfXRefSection],
+  xrefs : ArrayView[@reader.PdfClassicXRefEntry],
 ) -> Unit {
   let xref_stream_refs = @reader.pdf_reader_reconstruction_xref_stream_refs(
     sections,
@@ -42,11 +42,11 @@ fn PdfDocument::load_reconstructed_xref_stream_plain_objects(
 fn PdfDocument::load_reconstructed_plain_xref_objects(
   self : PdfDocument,
   data : BytesView,
-  xrefs : ArrayView[PdfClassicXRefEntry],
+  xrefs : ArrayView[@reader.PdfClassicXRefEntry],
   xref_stream_ref_set : @reader.PdfReaderXRefStreamRefSet?,
   skip_object_stream_entries : Bool,
 ) -> Unit {
-  let xref_index = pdf_classic_xref_index(xrefs)
+  let xref_index = @reader.pdf_classic_xref_index(xrefs)
   let cursor = byte_cursor_of_view(data)
   for xref in xrefs {
     let should_load = pdf_reconstructed_plain_xref_should_load(
@@ -79,7 +79,7 @@ fn PdfDocument::load_reconstructed_plain_xref_objects(
 fn PdfDocument::load_reconstructed_classic_xref_plain_objects(
   self : PdfDocument,
   data : BytesView,
-  xrefs : ArrayView[PdfClassicXRefEntry],
+  xrefs : ArrayView[@reader.PdfClassicXRefEntry],
 ) -> Unit {
   self.load_reconstructed_plain_xref_objects(data, xrefs, None, false)
 }
@@ -88,7 +88,7 @@ fn PdfDocument::load_reconstructed_classic_xref_plain_objects(
 fn PdfDocument::load_reconstructed_object_xrefs(
   self : PdfDocument,
   data : BytesView,
-  xrefs : ArrayView[PdfClassicXRefEntry],
+  xrefs : ArrayView[@reader.PdfClassicXRefEntry],
   xref_coverage : @reader.PdfReconstructedXRefCoverage,
 ) -> Unit {
   let cursor = byte_cursor_of_view(data)

@@ -1,6 +1,6 @@
 ///|
 priv struct PdfClassicReadPlan {
-  xrefs : Array[PdfClassicXRefEntry]
+  xrefs : Array[@reader.PdfClassicXRefEntry]
   xref_stream_refs : Array[(Int, Int)]
   trailer : PdfObject
 }
@@ -42,7 +42,7 @@ fn pdf_reader_classic_read_plan(
   xref_position : Int,
   revision : Int?,
 ) -> PdfClassicReadPlan raise PdfError {
-  let xrefs : Array[PdfClassicXRefEntry] = []
+  let xrefs : Array[@reader.PdfClassicXRefEntry] = []
   let xref_seen = @core.pdf_number_set([])
   let mut trailer = @syntax.PdfDictionary([])
   let xref_stream_refs : Array[(Int, Int)] = []
@@ -60,7 +60,7 @@ fn pdf_reader_classic_read_plan(
       revision, current_revision,
     )
     if read_section {
-      pdf_classic_xrefs_add_newer_first_with_seen(
+      @reader.pdf_classic_xrefs_add_newer_first_with_seen(
         xrefs,
         xref_seen,
         section.entries,
@@ -79,7 +79,7 @@ fn pdf_reader_classic_read_plan(
         Some(xref_stream_position) => {
           cursor.seek_absolute(xref_stream_position)
           let stream_section = pdf_cursor_read_xref_stream_section(cursor)
-          pdf_classic_xrefs_add_newer_first_with_seen(
+          @reader.pdf_classic_xrefs_add_newer_first_with_seen(
             xrefs,
             xref_seen,
             stream_section.entries,

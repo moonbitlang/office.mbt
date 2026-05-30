@@ -3,8 +3,8 @@ fn pdf_reader_validate_xref_metadata_for_reconstruction(
   data : BytesView,
 ) -> Unit raise PdfError {
   let cursor = byte_cursor_of_view(data)
-  ignore(pdf_read_header_from_cursor(cursor))
-  let mut current_xref = pdf_read_startxref_position(cursor.view())
+  ignore(@reader.pdf_read_header_from_cursor(cursor))
+  let mut current_xref = @reader.pdf_read_startxref_position(cursor.view())
   let mut done = false
   let mut depth = 0
   while !done {

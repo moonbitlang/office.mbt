@@ -1,9 +1,9 @@
 ///|
-test "pdf_read_header_from_cursor finds header and sets input offset" {
+test "@reader.pdf_read_header_from_cursor finds header and sets input offset" {
   let cursor = @pdflite.byte_cursor_of_bytes(
     reader_bytes_for_test([0, 1, 2, 37, 80, 68, 70, 45, 49, 46, 55, 10, 65]),
   )
-  @test.assert_eq(try! @pdflite.pdf_read_header_from_cursor(cursor), {
+  @test.assert_eq(try! @reader.pdf_read_header_from_cursor(cursor), {
     major: 1,
     minor: 7,
   })
@@ -13,26 +13,26 @@ test "pdf_read_header_from_cursor finds header and sets input offset" {
 }
 
 ///|
-test "pdf_read_header_from_bytes defaults to PDF 2.0 when no header is found" {
+test "@reader.pdf_read_header_from_bytes defaults to PDF 2.0 when no header is found" {
   @test.assert_eq(
-    try! @pdflite.pdf_read_header_from_bytes(reader_bytes_for_test([65, 66])),
-    @pdflite.pdf_default_version,
+    try! @reader.pdf_read_header_from_bytes(reader_bytes_for_test([65, 66])),
+    @reader.pdf_default_version,
   )
 }
 
 ///|
-test "pdf_read_header_from_bytes ignores malformed header digits" {
+test "@reader.pdf_read_header_from_bytes ignores malformed header digits" {
   @test.assert_eq(
-    try! @pdflite.pdf_read_header_from_bytes(reader_pdf_ascii("%PDF-A.B\n")),
-    @pdflite.pdf_default_version,
+    try! @reader.pdf_read_header_from_bytes(reader_pdf_ascii("%PDF-A.B\n")),
+    @reader.pdf_default_version,
   )
 }
 
 ///|
-test "pdf_read_header_from_view reads borrowed slices" {
+test "@reader.pdf_read_header_from_view reads borrowed slices" {
   let wrapped = reader_pdf_ascii("xx%PDF-1.6\nzz")
   @test.assert_eq(
-    try! @pdflite.pdf_read_header_from_view(wrapped[2:wrapped.length() - 2]),
+    try! @reader.pdf_read_header_from_view(wrapped[2:wrapped.length() - 2]),
     { major: 1, minor: 6 },
   )
 }

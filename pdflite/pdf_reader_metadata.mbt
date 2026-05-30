@@ -1,6 +1,6 @@
 ///|
 fn pdf_read_linearized_marker(cursor : ByteCursor) -> Bool raise PdfError {
-  ignore(pdf_read_header_from_cursor(cursor))
+  ignore(@reader.pdf_read_header_from_cursor(cursor))
   let parsed = pdf_cursor_read_plain_indirect_object_at_current(cursor)
   match parsed.object.lookup_immediate(@reader.pdf_reader_linearized_name()) {
     Some(PdfInteger(_)) | Some(PdfReal(_)) => true
@@ -36,8 +36,8 @@ pub fn pdf_is_linearized(data : BytesView) -> Bool {
 /// excluded from the returned count.
 pub fn pdf_revisions_from_view(data : BytesView) -> Int raise PdfError {
   let cursor = byte_cursor_of_view(data)
-  ignore(pdf_read_header_from_cursor(cursor))
-  let mut current_xref = pdf_read_startxref_position(data)
+  ignore(@reader.pdf_read_header_from_cursor(cursor))
+  let mut current_xref = @reader.pdf_read_startxref_position(data)
   let mut revisions = 0
   let mut done = false
   while !done {

@@ -222,7 +222,7 @@ fn pdf_write_document_incremental_update_with_xref_stream_filter(
   document : PdfDocument,
   filter : PdfName?,
 ) -> PdfBytes raise PdfError {
-  let previous_xref = pdf_read_startxref_position(original)
+  let previous_xref = @reader.pdf_read_startxref_position(original)
   let output : Array[Byte] = Array::new(capacity=original.length() + 1)
   for byte in original {
     output.push(byte)

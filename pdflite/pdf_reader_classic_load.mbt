@@ -1,6 +1,6 @@
 ///|
 fn pdf_classic_plain_xref_should_load(
-  xref : PdfClassicXRefEntry,
+  xref : @reader.PdfClassicXRefEntry,
   xref_stream_ref_set : @reader.PdfReaderXRefStreamRefSet,
 ) -> Bool {
   xref.in_use &&
@@ -13,13 +13,13 @@ fn pdf_classic_plain_xref_should_load(
 fn PdfDocument::load_classic_plain_xref_objects(
   self : PdfDocument,
   cursor : ByteCursor,
-  xrefs : ArrayView[PdfClassicXRefEntry],
+  xrefs : ArrayView[@reader.PdfClassicXRefEntry],
   xref_stream_refs : ArrayView[(Int, Int)],
 ) -> Unit raise PdfError {
   let xref_stream_ref_set = @reader.pdf_reader_xref_stream_ref_set(
     xref_stream_refs,
   )
-  let xref_index = pdf_classic_xref_index(xrefs)
+  let xref_index = @reader.pdf_classic_xref_index(xrefs)
   for xref in xrefs {
     if pdf_classic_plain_xref_should_load(xref, xref_stream_ref_set) {
       cursor.seek_absolute(xref.offset)
@@ -44,7 +44,7 @@ fn PdfDocument::load_classic_plain_xref_objects(
 ///|
 fn PdfDocument::load_classic_object_stream_entries(
   self : PdfDocument,
-  xrefs : ArrayView[PdfClassicXRefEntry],
+  xrefs : ArrayView[@reader.PdfClassicXRefEntry],
   user_password : BytesView?,
   owner_password : BytesView?,
 ) -> Unit raise PdfError {
@@ -66,7 +66,7 @@ fn PdfDocument::load_classic_object_stream_entries(
 fn PdfDocument::load_classic_xrefs(
   self : PdfDocument,
   cursor : ByteCursor,
-  xrefs : ArrayView[PdfClassicXRefEntry],
+  xrefs : ArrayView[@reader.PdfClassicXRefEntry],
   xref_stream_refs : ArrayView[(Int, Int)],
   user_password : BytesView?,
   owner_password : BytesView?,

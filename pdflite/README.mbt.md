@@ -105,7 +105,7 @@ Create a minimum valid document, serialize it, and read it back:
 test "minimum document round trip" {
   let document = try! @pdflite.pdf_minimum_valid_pdf()
   let bytes = try! @pdflite.pdf_write_document(document)
-  let version = try! @pdflite.pdf_read_header_from_bytes(bytes)
+  let version = try! @reader.pdf_read_header_from_bytes(bytes)
   if version.major != 1 || version.minor != 0 {
     fail("expected a PDF 1.0 header")
   }

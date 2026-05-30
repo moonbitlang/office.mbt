@@ -3,10 +3,10 @@
 ///
 /// Objects are loaded at their existing object numbers and generations without
 /// recording mutation events. The document version defaults to
-/// `pdf_default_version`.
+/// `@reader.pdf_default_version`.
 pub fn pdf_document_of_parsed_indirect_objects(
   objects : ArrayView[PdfParsedIndirectObject],
-  version? : @reader.PdfVersion = pdf_default_version,
+  version? : @reader.PdfVersion = @reader.pdf_default_version,
 ) -> PdfDocument {
   let document = pdf_document_empty()
   document.set_version(version.major, version.minor)
@@ -30,7 +30,7 @@ pub fn pdf_read_primitive_document_from_view(
   data : BytesView,
 ) -> PdfDocument raise PdfError {
   let cursor = byte_cursor_of_view(data)
-  let version = pdf_read_header_from_cursor(cursor)
+  let version = @reader.pdf_read_header_from_cursor(cursor)
   let document = pdf_document_empty()
   document.set_version(version.major, version.minor)
   let mut done = false

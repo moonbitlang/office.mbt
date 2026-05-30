@@ -149,7 +149,7 @@ test "private reconstructed classic xref reader rejects xref streams" {
       "7 0 obj\n<< /Type /XRef /Size 1 /W [1 4 2] /Length 7 >>\nstream\n\\u{0}\\u{0}\\u{0}\\u{0}\\u{0}\\u{255}\\u{255}\nendstream\nendobj",
     ),
   )
-  let result : Result[(PdfXRefSection, Int), Error] = try? pdf_cursor_read_reconstructed_classic_xref_section_at(
+  let result : Result[(@reader.PdfXRefSection, Int), Error] = try? pdf_cursor_read_reconstructed_classic_xref_section_at(
     cursor, 0,
   )
   guard result is Err(PdfError::XRefExpected) else {
@@ -345,7 +345,7 @@ test "private object stream helpers cover malformed object streams" {
   }
   let recovered_doc = pdf_document_empty()
   recovered_doc.add_object_given_number(7, valid_stream)
-  let recovered_xrefs : ReadOnlyArray[PdfClassicXRefEntry] = [
+  let recovered_xrefs : ReadOnlyArray[@reader.PdfClassicXRefEntry] = [
     {
       object_number: 2,
       offset: 0,
@@ -419,7 +419,7 @@ test "private object stream helpers cover malformed object streams" {
     PdfBoolean(true),
   )
 
-  let bad_embedded_xrefs : ReadOnlyArray[PdfClassicXRefEntry] = [
+  let bad_embedded_xrefs : ReadOnlyArray[@reader.PdfClassicXRefEntry] = [
     {
       object_number: 4,
       offset: 0,
@@ -519,22 +519,22 @@ test "private object stream helpers cover malformed object streams" {
 
 ///|
 test "private reader xref helpers report malformed inputs" {
-  let empty_token : Result[Bool, Error] = try? pdf_xref_token_in_use(
+  let empty_token : Result[Bool, Error] = try? @reader.pdf_xref_token_in_use(
     Bytes::new(0),
   )
   guard empty_token is Err(PdfError::XRefEntryExpected) else {
     fail("expected PdfError::XRefEntryExpected")
   }
-  let bad_token : Result[Bool, Error] = try? pdf_xref_token_in_use(
+  let bad_token : Result[Bool, Error] = try? @reader.pdf_xref_token_in_use(
     @ascii.encode("q"),
   )
   guard bad_token is Err(PdfError::XRefEntryExpected) else {
     fail("expected PdfError::XRefEntryExpected")
   }
 
-  let empty_xrefs : Array[PdfClassicXRefEntry] = []
-  @test.assert_eq(pdf_classic_xref_lookup(empty_xrefs, 1), None)
-  let xref_target : Array[PdfClassicXRefEntry] = [
+  let empty_xrefs : Array[@reader.PdfClassicXRefEntry] = []
+  @test.assert_eq(@reader.pdf_classic_xref_lookup(empty_xrefs, 1), None)
+  let xref_target : Array[@reader.PdfClassicXRefEntry] = [
     {
       object_number: 2,
       offset: 20,
@@ -544,7 +544,7 @@ test "private reader xref helpers report malformed inputs" {
     },
   ]
   let seen_xrefs = @core.pdf_number_set([2])
-  pdf_classic_xrefs_add_newer_first_with_seen(xref_target, seen_xrefs, [
+  @reader.pdf_classic_xrefs_add_newer_first_with_seen(xref_target, seen_xrefs, [
     {
       object_number: 2,
       offset: 99,
@@ -747,7 +747,7 @@ test "private reader xref helpers report malformed inputs" {
   }
 
   let mismatch = byte_cursor_of_bytes(@ascii.encode("abc"))
-  let mismatch_result : Result[Unit, Error] = try? pdf_cursor_consume_ascii(
+  let mismatch_result : Result[Unit, Error] = try? @reader.pdf_cursor_consume_ascii(
     mismatch,
     [120],
     XRefExpected,

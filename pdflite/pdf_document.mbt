@@ -9,7 +9,7 @@ pub(all) enum PdfObjectData {
   ObjectParsed(PdfObject)
   ObjectParsedAlreadyDecrypted(PdfObject)
   ObjectToParse
-  ObjectToParseFromObjectStream(ObjectStreamReference)
+  ObjectToParseFromObjectStream(@reader.ObjectStreamReference)
 } derive(Debug, Eq, ToJson)
 
 ///|

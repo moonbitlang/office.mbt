@@ -6,7 +6,7 @@ fn pdf_read_reconstructed_document_from_view(
   owner_password? : BytesView? = None,
 ) -> PdfDocument raise PdfError {
   let cursor = byte_cursor_of_view(data)
-  let version = pdf_read_header_from_cursor(cursor)
+  let version = @reader.pdf_read_header_from_cursor(cursor)
   let document = pdf_document_empty()
   document.set_version(version.major, version.minor)
   document.set_first_xref(0)

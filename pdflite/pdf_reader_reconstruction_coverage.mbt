@@ -1,9 +1,9 @@
 ///|
 fn pdf_reconstructed_classic_xref_entry_is_verified(
   data : BytesView,
-  entries : ArrayView[PdfClassicXRefEntry],
-  xref_index : PdfClassicXRefIndex,
-  xref : PdfClassicXRefEntry,
+  entries : ArrayView[@reader.PdfClassicXRefEntry],
+  xref_index : @reader.PdfClassicXRefIndex,
+  xref : @reader.PdfClassicXRefEntry,
 ) -> Bool {
   if !xref.in_use {
     true

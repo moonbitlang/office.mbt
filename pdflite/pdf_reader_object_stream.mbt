@@ -56,7 +56,7 @@ fn PdfDocument::read_object_stream_context_from_object(
 ///|
 fn PdfObjectStreamContext::read_reference(
   self : PdfObjectStreamContext,
-  reference : ObjectStreamReference,
+  reference : @reader.ObjectStreamReference,
 ) -> (Int, PdfObject) raise PdfError {
   if reference.index < 0 || reference.index >= self.pairs.length() {
     raise XRefEntryExpected
@@ -117,7 +117,9 @@ fn PdfDocument::read_object_stream_context_with_passwords(
 ///|
 fn PdfDocument::load_embedded_objects_from_context(
   self : PdfDocument,
-  xrefs : ArrayView[(PdfClassicXRefEntry, ObjectStreamReference)],
+  xrefs : ArrayView[
+    (@reader.PdfClassicXRefEntry, @reader.ObjectStreamReference),
+  ],
   object_stream_number : Int,
   context : PdfObjectStreamContext,
   already_decrypted : Bool,

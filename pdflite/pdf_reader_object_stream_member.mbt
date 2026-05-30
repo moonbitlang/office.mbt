@@ -5,7 +5,7 @@ fn pdf_cursor_finish_object_stream_member_with_length(
   length : Int,
 ) -> PdfParsedIndirectObject raise PdfError {
   let stream_keyword_position = cursor.absolute_position()
-  pdf_cursor_consume_ascii(
+  @reader.pdf_cursor_consume_ascii(
     cursor,
     [115, 116, 114, 101, 97, 109],
     ParseStreamExpected,
@@ -21,7 +21,7 @@ fn pdf_cursor_finish_object_stream_member_with_length(
   } else {
     pdf_cursor_consume_stream_line_break(cursor)
     pdf_cursor_drop_whitespace(cursor)
-    pdf_cursor_consume_ascii(
+    @reader.pdf_cursor_consume_ascii(
       cursor,
       [101, 110, 100, 115, 116, 114, 101, 97, 109],
       ParseEndStreamExpected,
@@ -39,7 +39,7 @@ fn pdf_cursor_finish_malformed_object_stream_member(
   cursor : ByteCursor,
   prefix : PdfParsedIndirectObject,
 ) -> PdfParsedIndirectObject raise PdfError {
-  pdf_cursor_consume_ascii(
+  @reader.pdf_cursor_consume_ascii(
     cursor,
     [115, 116, 114, 101, 97, 109],
     ParseStreamExpected,

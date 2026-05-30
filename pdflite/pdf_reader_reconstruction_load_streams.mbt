@@ -1,7 +1,9 @@
 ///|
 fn PdfDocument::load_reconstructed_object_stream_entries_from_context(
   self : PdfDocument,
-  entries : ArrayView[(PdfClassicXRefEntry, ObjectStreamReference)],
+  entries : ArrayView[
+    (@reader.PdfClassicXRefEntry, @reader.ObjectStreamReference),
+  ],
   object_stream_number : Int,
   context : PdfObjectStreamContext,
   already_decrypted : Bool,
@@ -34,7 +36,7 @@ fn PdfDocument::load_reconstructed_object_stream_entries_from_context(
 ///|
 fn PdfDocument::load_reconstructed_xref_stream_embedded_objects(
   self : PdfDocument,
-  xrefs : ArrayView[PdfClassicXRefEntry],
+  xrefs : ArrayView[@reader.PdfClassicXRefEntry],
 ) -> Unit {
   for group in @reader.pdf_reader_object_stream_groups(xrefs) {
     let object_stream_number = group.0
@@ -86,7 +88,7 @@ fn PdfDocument::load_reconstructed_physical_object_stream_members(
 ///|
 fn PdfDocument::load_reconstructed_xref_stream_embedded_objects_with_passwords(
   self : PdfDocument,
-  xrefs : ArrayView[PdfClassicXRefEntry],
+  xrefs : ArrayView[@reader.PdfClassicXRefEntry],
   user_password : BytesView?,
   owner_password : BytesView?,
 ) -> Unit {
@@ -112,7 +114,7 @@ fn PdfDocument::load_reconstructed_xref_stream_embedded_objects_with_passwords(
 fn PdfDocument::load_reconstructed_xref_stream_objects(
   self : PdfDocument,
   data : BytesView,
-  sections : ArrayView[PdfXRefSection],
+  sections : ArrayView[@reader.PdfXRefSection],
 ) -> Unit {
   let xrefs = @reader.pdf_reader_reconstruction_xref_stream_entries(sections)
   self.load_reconstructed_xref_stream_plain_objects(data, sections, xrefs)

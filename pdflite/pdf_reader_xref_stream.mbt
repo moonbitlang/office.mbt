@@ -1,7 +1,7 @@
 ///|
 fn pdf_cursor_read_xref_stream_section(
   cursor : ByteCursor,
-) -> PdfXRefSection raise PdfError {
+) -> @reader.PdfXRefSection raise PdfError {
   let stream_object_offset = cursor.absolute_position()
   if !pdf_is_digit_byte(cursor.peek_byte()) {
     raise XRefExpected

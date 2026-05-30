@@ -63,15 +63,15 @@ fn pdf_cursor_read_first_indirect_object_segment_at_current(
 fn pdf_cursor_resolve_classic_stream_length(
   cursor : ByteCursor,
   object : PdfObject,
-  xrefs : ArrayView[PdfClassicXRefEntry],
-  xref_index : PdfClassicXRefIndex?,
+  xrefs : ArrayView[@reader.PdfClassicXRefEntry],
+  xref_index : @reader.PdfClassicXRefIndex?,
 ) -> Int raise PdfError {
   match object.lookup_immediate(@reader.pdf_length_name()) {
     Some(PdfInteger(length)) if length >= 0 => length
     Some(PdfIndirect(number)) => {
       let xref = match xref_index {
         Some(index) => index.lookup(number)
-        None => pdf_classic_xref_lookup(xrefs, number)
+        None => @reader.pdf_classic_xref_lookup(xrefs, number)
       }
       match xref {
         Some(xref) => {
@@ -106,8 +106,8 @@ fn pdf_cursor_resolve_classic_stream_length(
 ///|
 fn pdf_cursor_read_first_indirect_object_at_current(
   cursor : ByteCursor,
-  xrefs : ArrayView[PdfClassicXRefEntry],
-  xref_index? : PdfClassicXRefIndex? = None,
+  xrefs : ArrayView[@reader.PdfClassicXRefEntry],
+  xref_index? : @reader.PdfClassicXRefIndex? = None,
 ) -> PdfParsedIndirectObject raise PdfError {
   let (object, _, complete) = @syntax.pdf_parse_indirect_object_segment_at(
     pdf_cursor_lex_first_indirect_object_tokens(cursor),

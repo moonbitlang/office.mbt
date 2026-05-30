@@ -264,23 +264,3 @@ pub using @metadata {
   type PdfMetadataXmlTag,
   type PdfMetadataXmlTree,
 }
-
-///|
-pub using @reader {
-  type PdfVersion,
-  type ObjectStreamReference,
-  type PdfClassicXRefEntry,
-  type PdfClassicXRefIndex,
-  type PdfXRefSection,
-  pdf_default_version,
-  pdf_read_header_from_cursor,
-  pdf_read_header_from_view,
-  pdf_read_header_from_bytes,
-  pdf_classic_xref_lookup,
-  pdf_classic_xref_index,
-  pdf_classic_xrefs_add_newer_first_with_seen,
-  pdf_cursor_consume_ascii,
-  pdf_read_startxref_position,
-  pdf_xref_token_in_use,
-  pdf_cursor_read_classic_xref_entries,
-}
