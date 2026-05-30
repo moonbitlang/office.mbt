@@ -791,7 +791,7 @@ fn image_external_assert_cpdf_source_inline_image_for_test(
 
 ///|
 fn image_external_cpdf_source_nested_image_data_for_test() -> @pdflite.PdfBytes raise {
-  @pdflite.pdf_flate_encode(@pdflite.pdf_bytes_of_int_array([0, 64, 128, 255]))
+  @flate.pdf_flate_encode(@pdflite.pdf_bytes_of_int_array([0, 64, 128, 255]))
 }
 
 ///|

@@ -1,6 +1,7 @@
 import {
   "bobzhang/pdflite",
   "bobzhang/pdflite/content",
+  "bobzhang/pdflite/flate",
   "bobzhang/pdflite/font",
   "bobzhang/pdflite/syntax",
   "moonbitlang/async",

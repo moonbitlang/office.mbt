@@ -678,7 +678,7 @@ test "PdfDocument metadata stream set get remove and remove_all" {
   @test.assert_eq(try! removed.metadata(), None)
   @test.assert_eq(try! updated.metadata(), Some(data))
   let compressed = doc.copy()
-  let encoded = @pdflite.pdf_flate_encode(data)
+  let encoded = @flate.pdf_flate_encode(data)
   let metadata_number = compressed.add_object(
     @pdflite.pdf_stream(
       @pdflite.pdf_dictionary([

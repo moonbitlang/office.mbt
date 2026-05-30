@@ -94,7 +94,7 @@ pub fn pdf_parse_unicode_data(
 pub fn pdf_parse_flate_unicode_data(
   source : BytesView,
 ) -> Array[@unicodedata.PdfUnicodeDataEntry] raise PdfError {
-  pdf_parse_unicode_data(pdf_flate_decode_view(source))
+  pdf_parse_unicode_data(@flate.pdf_flate_decode_view(source))
 }
 
 ///|

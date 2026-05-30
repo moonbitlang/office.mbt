@@ -49,7 +49,7 @@ fn PdfDocument::pdf_composition_compressed_size(
         }
       }
     }
-    stream_total + pdf_flate_encode(Bytes::from_array(combined)).length()
+    stream_total + @flate.pdf_flate_encode(Bytes::from_array(combined)).length()
   }
 }
 

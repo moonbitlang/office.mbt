@@ -89,7 +89,7 @@ fn text_fixture_usecmap_stream_for_test(
   compressed : Bool,
 ) -> @pdflite.PdfObject raise {
   let stream_data = if compressed {
-    @pdflite.pdf_flate_encode(data)
+    @flate.pdf_flate_encode(data)
   } else {
     data
   }
@@ -605,7 +605,7 @@ fn text_fixture_parser_corner_cmap_data_for_test() -> @pdflite.PdfBytes {
 
 ///|
 fn text_fixture_parser_corner_cmap_for_test() -> @pdflite.PdfObject {
-  let encoded = @pdflite.pdf_flate_encode(
+  let encoded = @flate.pdf_flate_encode(
     text_fixture_parser_corner_cmap_data_for_test(),
   )
   @pdflite.pdf_stream(

@@ -847,7 +847,7 @@ async test "async metadata file wrappers set write and extract XML metadata" {
   @test.assert_eq(@fs.read_file(output_path).binary(), payload)
 
   let with_stray = document.copy()
-  let encoded = @pdflite.pdf_flate_encode(stray_payload)
+  let encoded = @flate.pdf_flate_encode(stray_payload)
   let stray_number = with_stray.add_object(
     @pdflite.pdf_stream(
       @pdflite.pdf_dictionary([

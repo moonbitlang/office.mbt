@@ -26,7 +26,7 @@ fn content_inline_compressed_render_for_test(
   prefix : @pdflite.PdfBytes,
   data : @pdflite.PdfBytes,
 ) -> @pdflite.PdfBytes {
-  let encoded = @pdflite.pdf_flate_encode(data)
+  let encoded = @flate.pdf_flate_encode(data)
   content_inline_concat_for_test([
     prefix,
     content_inline_bytes_for_test(" /F /Fl /L "),
@@ -395,9 +395,7 @@ test "pdf_parse_content_ops_from_bytes decodes RunLength inline images" {
 
 ///|
 test "pdf_parse_content_ops_from_bytes decodes Flate inline images through zlib end" {
-  let encoded = @pdflite.pdf_flate_encode(
-    content_inline_bytes_for_test("A EI B"),
-  )
+  let encoded = @flate.pdf_flate_encode(content_inline_bytes_for_test("A EI B"))
   let data = content_inline_concat_for_test([
     content_inline_bytes_for_test("BI /W 6 /H 1 /CS /G /BPC 8 /F /Fl ID "),
     encoded,
@@ -420,7 +418,7 @@ test "pdf_parse_content_ops_from_bytes decodes Flate inline images through zlib 
     Op_Q,
   ])
 
-  let array_encoded = @pdflite.pdf_flate_encode(
+  let array_encoded = @flate.pdf_flate_encode(
     content_inline_bytes_for_test("xyz"),
   )
   let array_data = content_inline_concat_for_test([
@@ -450,7 +448,7 @@ test "pdf_parse_content_ops_from_bytes decodes Flate inline images through zlib 
 ///|
 test "pdf_parse_content_ops_from_bytes decodes multi-filter inline images" {
   let ascii85_flate_encoded = @pdflite.pdf_ascii85_encode(
-    @pdflite.pdf_flate_encode(content_inline_bytes_for_test("abc")),
+    @flate.pdf_flate_encode(content_inline_bytes_for_test("abc")),
   )
   let ascii85_flate_data = content_inline_concat_for_test([
     content_inline_bytes_for_test(

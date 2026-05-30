@@ -330,7 +330,7 @@ test "PdfDocument get_image_24bpp returns encoded JPX and JBIG2 images" {
 test "PdfDocument get_image_24bpp decodes filter stages before image extraction" {
   let doc = @pdflite.pdf_document_empty()
   let raw_data = image_get_bytes_for_test([1, 2, 3, 4, 5, 6])
-  let flate_raw_data = @pdflite.pdf_flate_encode(raw_data)
+  let flate_raw_data = @flate.pdf_flate_encode(raw_data)
   let flate_raw = @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
       (image_get_name_for_test("/Length"), PdfInteger(flate_raw_data.length())),
@@ -352,7 +352,7 @@ test "PdfDocument get_image_24bpp decodes filter stages before image extraction"
     try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), flate_raw),
     PdfRawImage(2, 1, PdfBPP24, raw_data),
   )
-  let flate_jpeg_data = @pdflite.pdf_flate_encode(@ascii.encode("jpg"))
+  let flate_jpeg_data = @flate.pdf_flate_encode(@ascii.encode("jpg"))
   let encoded_jpeg = @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
       (image_get_name_for_test("/Length"), PdfInteger(flate_jpeg_data.length())),
@@ -372,7 +372,7 @@ test "PdfDocument get_image_24bpp decodes filter stages before image extraction"
     try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), encoded_jpeg),
     PdfJPEG(@ascii.encode("jpg"), None),
   )
-  let flate_jbig2_data = @pdflite.pdf_flate_encode(@ascii.encode("jbig-stage"))
+  let flate_jbig2_data = @flate.pdf_flate_encode(@ascii.encode("jbig-stage"))
   let encoded_jbig2 = @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
       (
@@ -412,7 +412,7 @@ test "PdfDocument get_image_24bpp extracts image XObjects after PDF roundtrip" {
   doc.set_version(1, 4)
   let image_name = image_get_name_for_test("/Im0")
   let raw_data = image_get_bytes_for_test([1, 2, 3, 4, 5, 6])
-  let flate_data = @pdflite.pdf_flate_encode(raw_data)
+  let flate_data = @flate.pdf_flate_encode(raw_data)
   let image_number = doc.add_object(
     @pdflite.pdf_stream(
       @pdflite.pdf_dictionary([

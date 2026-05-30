@@ -335,9 +335,9 @@ test "pdf_lzw_decode reports malformed input codes" {
 }
 
 ///|
-test "pdf_flate_decode expands zlib stored and dynamic blocks" {
+test "@flate.pdf_flate_decode expands zlib stored and dynamic blocks" {
   @test.assert_eq(
-    try! @pdflite.pdf_flate_decode(
+    try! @flate.pdf_flate_decode(
       codec_bytes_for_test([
         120, 1, 1, 11, 0, 244, 255, 104, 101, 108, 108, 111, 32, 119, 111, 114, 108,
         100, 26, 11, 4, 93,
@@ -346,13 +346,13 @@ test "pdf_flate_decode expands zlib stored and dynamic blocks" {
     codec_ascii_for_test("hello world"),
   )
   @test.assert_eq(
-    try! @pdflite.pdf_flate_decode(
+    try! @flate.pdf_flate_decode(
       codec_bytes_for_test([120, 1, 115, 4, 0, 0, 66, 0, 66]),
     ),
     codec_ascii_for_test("A"),
   )
   @test.assert_eq(
-    try! @pdflite.pdf_flate_decode(
+    try! @flate.pdf_flate_decode(
       codec_bytes_for_test([
         120, 156, 237, 196, 57, 1, 0, 0, 8, 4, 160, 172, 231, 211, 191, 130, 41,
         220, 96, 32, 213, 179, 145, 36, 73, 146, 36, 73, 146, 244, 217, 1, 198, 122,
@@ -364,40 +364,40 @@ test "pdf_flate_decode expands zlib stored and dynamic blocks" {
 }
 
 ///|
-test "pdf_flate_encode roundtrips an empty payload" {
+test "@flate.pdf_flate_encode roundtrips an empty payload" {
   let empty = codec_bytes_for_test([])
-  let encoded = @pdflite.pdf_flate_encode(empty)
-  @test.assert_eq(try! @pdflite.pdf_flate_decode(encoded), empty)
+  let encoded = @flate.pdf_flate_encode(empty)
+  @test.assert_eq(try! @flate.pdf_flate_decode(encoded), empty)
 }
 
 ///|
-test "pdf_flate_decode reports malformed zlib data" {
-  @test.assert_eq(try! @pdflite.pdf_flate_decode(codec_bytes_for_test([])), [])
-  let short_data : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_flate_decode(
+test "@flate.pdf_flate_decode reports malformed zlib data" {
+  @test.assert_eq(try! @flate.pdf_flate_decode(codec_bytes_for_test([])), [])
+  let short_data : Result[@pdflite.PdfBytes, Error] = try? @flate.pdf_flate_decode(
     codec_bytes_for_test([120, 1, 0]),
   )
   guard short_data is Err(@pdflite.PdfError::InvalidFlateData) else {
     fail("expected @pdflite.PdfError::InvalidFlateData")
   }
-  let bad_header : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_flate_decode(
+  let bad_header : Result[@pdflite.PdfBytes, Error] = try? @flate.pdf_flate_decode(
     codec_bytes_for_test([120, 2, 1, 0, 0, 255, 255, 0, 0, 0, 1]),
   )
   guard bad_header is Err(@pdflite.PdfError::InvalidFlateData) else {
     fail("expected @pdflite.PdfError::InvalidFlateData")
   }
-  let bad_stored_length : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_flate_decode(
+  let bad_stored_length : Result[@pdflite.PdfBytes, Error] = try? @flate.pdf_flate_decode(
     codec_bytes_for_test([120, 1, 1, 1, 0, 0, 0, 65, 0, 66, 0, 66]),
   )
   guard bad_stored_length is Err(@pdflite.PdfError::InvalidFlateData) else {
     fail("expected @pdflite.PdfError::InvalidFlateData")
   }
-  let bad_block_type : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_flate_decode(
+  let bad_block_type : Result[@pdflite.PdfBytes, Error] = try? @flate.pdf_flate_decode(
     codec_bytes_for_test([120, 1, 7, 0, 1, 0, 0]),
   )
   guard bad_block_type is Err(@pdflite.PdfError::InvalidFlateData) else {
     fail("expected @pdflite.PdfError::InvalidFlateData")
   }
-  let bad_checksum : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_flate_decode(
+  let bad_checksum : Result[@pdflite.PdfBytes, Error] = try? @flate.pdf_flate_decode(
     codec_bytes_for_test([120, 1, 1, 1, 0, 254, 255, 65, 0, 0, 0, 0]),
   )
   guard bad_checksum is Err(@pdflite.PdfError::InvalidFlateData) else {
@@ -406,17 +406,17 @@ test "pdf_flate_decode reports malformed zlib data" {
 }
 
 ///|
-test "pdf_flate_encode chooses compact zlib blocks" {
+test "@flate.pdf_flate_encode chooses compact zlib blocks" {
   @test.assert_eq(
-    try! @pdflite.pdf_flate_decode(
-      @pdflite.pdf_flate_encode(codec_bytes_for_test([])),
+    try! @flate.pdf_flate_decode(
+      @flate.pdf_flate_encode(codec_bytes_for_test([])),
     ),
     codec_bytes_for_test([]),
   )
-  let encoded = @pdflite.pdf_flate_encode(codec_ascii_for_test("Hi"))
+  let encoded = @flate.pdf_flate_encode(codec_ascii_for_test("Hi"))
   @test.assert_eq(encoded[0].to_int(), 120)
   @test.assert_eq(
-    try! @pdflite.pdf_flate_decode(encoded),
+    try! @flate.pdf_flate_decode(encoded),
     codec_ascii_for_test("Hi"),
   )
   let high_bytes = try! @pdflite.pdf_bytes_of_int_array(
@@ -424,30 +424,27 @@ test "pdf_flate_encode chooses compact zlib blocks" {
       for _ in 0..<32 => 255
     ],
   )
-  let repeated = @pdflite.pdf_flate_encode(high_bytes)
+  let repeated = @flate.pdf_flate_encode(high_bytes)
   @test.assert_eq(repeated.length() < 20, true)
-  @test.assert_eq(try! @pdflite.pdf_flate_decode(repeated), high_bytes)
+  @test.assert_eq(try! @flate.pdf_flate_decode(repeated), high_bytes)
   let long_run = @ascii.encode("A".repeat(300))
-  let encoded_run = @pdflite.pdf_flate_encode(long_run)
+  let encoded_run = @flate.pdf_flate_encode(long_run)
   @test.assert_eq(encoded_run.length() < long_run.length(), true)
-  @test.assert_eq(try! @pdflite.pdf_flate_decode(encoded_run), long_run)
+  @test.assert_eq(try! @flate.pdf_flate_decode(encoded_run), long_run)
   let repeated_phrase = codec_ascii_for_test("ABCABCABCABCABCABC")
-  let encoded_phrase = @pdflite.pdf_flate_encode(repeated_phrase)
+  let encoded_phrase = @flate.pdf_flate_encode(repeated_phrase)
   @test.assert_eq(encoded_phrase.length() < 20, true)
-  @test.assert_eq(
-    try! @pdflite.pdf_flate_decode(encoded_phrase),
-    repeated_phrase,
-  )
+  @test.assert_eq(try! @flate.pdf_flate_decode(encoded_phrase), repeated_phrase)
   let shadowed_match = codec_ascii_for_test(
     "ABCDEFGHIJABCXABCDEFGHIJABCDEFGHIJ",
   )
-  let encoded_shadowed_match = @pdflite.pdf_flate_encode(shadowed_match)
+  let encoded_shadowed_match = @flate.pdf_flate_encode(shadowed_match)
   @test.assert_eq(
     encoded_shadowed_match.length() < shadowed_match.length(),
     true,
   )
   @test.assert_eq(
-    try! @pdflite.pdf_flate_decode(encoded_shadowed_match),
+    try! @flate.pdf_flate_decode(encoded_shadowed_match),
     shadowed_match,
   )
   let alternating_high = try! @pdflite.pdf_bytes_of_int_array(
@@ -455,10 +452,10 @@ test "pdf_flate_encode chooses compact zlib blocks" {
       for i in 0..<40 => if i % 2 == 0 { 255 } else { 254 }
     ],
   )
-  let encoded_alternating_high = @pdflite.pdf_flate_encode(alternating_high)
+  let encoded_alternating_high = @flate.pdf_flate_encode(alternating_high)
   @test.assert_eq(encoded_alternating_high.length() < 20, true)
   @test.assert_eq(
-    try! @pdflite.pdf_flate_decode(encoded_alternating_high),
+    try! @flate.pdf_flate_decode(encoded_alternating_high),
     alternating_high,
   )
   let non_repeating_high = try! @pdflite.pdf_bytes_of_int_array(
@@ -466,10 +463,10 @@ test "pdf_flate_encode chooses compact zlib blocks" {
       for i in 0..<40 => 216 + i
     ],
   )
-  let compact_non_repeating = @pdflite.pdf_flate_encode(non_repeating_high)
+  let compact_non_repeating = @flate.pdf_flate_encode(non_repeating_high)
   @test.assert_eq(compact_non_repeating.length() <= 51, true)
   @test.assert_eq(
-    try! @pdflite.pdf_flate_decode(compact_non_repeating),
+    try! @flate.pdf_flate_decode(compact_non_repeating),
     non_repeating_high,
   )
   let skewed_literals = try! @pdflite.pdf_bytes_of_int_array(
@@ -486,83 +483,83 @@ test "pdf_flate_encode chooses compact zlib blocks" {
       }
     ],
   )
-  let dynamic = @pdflite.pdf_flate_encode(skewed_literals)
+  let dynamic = @flate.pdf_flate_encode(skewed_literals)
   @test.assert_eq(dynamic.length() < skewed_literals.length() / 3, true)
-  @test.assert_eq(try! @pdflite.pdf_flate_decode(dynamic), skewed_literals)
+  @test.assert_eq(try! @flate.pdf_flate_decode(dynamic), skewed_literals)
 }
 
 ///|
-test "pdf_flate_encode_with_level exposes zlib level choices" {
+test "@flate.pdf_flate_encode_with_level exposes zlib level choices" {
   let repeated = @ascii.encode("ABC".repeat(80))
-  let stored = @pdflite.pdf_flate_encode_with_level(repeated, 0)
+  let stored = @flate.pdf_flate_encode_with_level(repeated, 0)
   @test.assert_eq(stored[0].to_int(), 120)
   @test.assert_eq(stored[1].to_int(), 1)
   @test.assert_eq(stored[2].to_int() & 0x07, 1)
-  @test.assert_eq(@pdflite.pdf_flate_decode(stored), repeated)
+  @test.assert_eq(@flate.pdf_flate_decode(stored), repeated)
 
-  let fast = @pdflite.pdf_flate_encode_with_level(repeated, 1)
+  let fast = @flate.pdf_flate_encode_with_level(repeated, 1)
   @test.assert_eq(fast[1].to_int(), 1)
   @test.assert_eq(fast.length() < stored.length(), true)
-  @test.assert_eq(@pdflite.pdf_flate_decode(fast), repeated)
+  @test.assert_eq(@flate.pdf_flate_decode(fast), repeated)
 
   let fast_incompressible = try! @pdflite.pdf_bytes_of_int_array(
     [
       for i in 0..<100 => 144 + i
     ],
   )
-  let fast_incompressible_encoded = @pdflite.pdf_flate_encode_with_level(
+  let fast_incompressible_encoded = @flate.pdf_flate_encode_with_level(
     fast_incompressible, 1,
   )
   @test.assert_eq(fast_incompressible_encoded[2].to_int() & 0x07, 1)
   @test.assert_eq(
-    @pdflite.pdf_flate_decode(fast_incompressible_encoded),
+    @flate.pdf_flate_decode(fast_incompressible_encoded),
     fast_incompressible,
   )
 
-  let default_level = @pdflite.pdf_flate_encode_with_level(repeated, 6)
+  let default_level = @flate.pdf_flate_encode_with_level(repeated, 6)
   @test.assert_eq(default_level[1].to_int(), 156)
-  @test.assert_eq(@pdflite.pdf_flate_decode(default_level), repeated)
+  @test.assert_eq(@flate.pdf_flate_decode(default_level), repeated)
 
-  let balanced = @pdflite.pdf_flate_encode_with_level(repeated, 4)
+  let balanced = @flate.pdf_flate_encode_with_level(repeated, 4)
   @test.assert_eq(balanced[1].to_int(), 94)
-  @test.assert_eq(@pdflite.pdf_flate_decode(balanced), repeated)
+  @test.assert_eq(@flate.pdf_flate_decode(balanced), repeated)
 
-  let best = @pdflite.pdf_flate_encode_view_with_level(repeated, 9)
+  let best = @flate.pdf_flate_encode_view_with_level(repeated, 9)
   @test.assert_eq(best[1].to_int(), 218)
-  @test.assert_eq(@pdflite.pdf_flate_decode(best), repeated)
+  @test.assert_eq(@flate.pdf_flate_decode(best), repeated)
 
-  let invalid : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_flate_encode_with_level(
+  let invalid : Result[@pdflite.PdfBytes, Error] = try? @flate.pdf_flate_encode_with_level(
     repeated, 10,
   )
   guard invalid is Err(_) else { fail("expected invalid Flate level to raise") }
 }
 
 ///|
-test "pdf_flate_encode_with_level uses deeper match search at high levels" {
+test "@flate.pdf_flate_encode_with_level uses deeper match search at high levels" {
   let data = codec_deep_flate_match_data_for_test()
-  let fast = @pdflite.pdf_flate_encode_with_level(data, 1)
-  let default_level = @pdflite.pdf_flate_encode_with_level(data, 6)
-  let best = @pdflite.pdf_flate_encode_with_level(data, 9)
+  let fast = @flate.pdf_flate_encode_with_level(data, 1)
+  let default_level = @flate.pdf_flate_encode_with_level(data, 6)
+  let best = @flate.pdf_flate_encode_with_level(data, 9)
 
-  @test.assert_eq(@pdflite.pdf_flate_decode(fast), data)
-  @test.assert_eq(@pdflite.pdf_flate_decode(default_level), data)
-  @test.assert_eq(@pdflite.pdf_flate_decode(best), data)
+  @test.assert_eq(@flate.pdf_flate_decode(fast), data)
+  @test.assert_eq(@flate.pdf_flate_decode(default_level), data)
+  @test.assert_eq(@flate.pdf_flate_decode(best), data)
   @test.assert_eq(best.length() <= fast.length(), true)
 }
 
 ///|
 #cfg(target="native")
-test "pdf_flate_encode uses native miniz default level on native target" {
+test "@flate.pdf_flate_encode uses native miniz default level on native target" {
   let data = codec_ascii_for_test("Hi")
-  let encoded = @pdflite.pdf_flate_encode(data)
+  let encoded = @flate.pdf_flate_encode(data)
   @test.assert_eq(encoded[0].to_int(), 120)
   @test.assert_eq(encoded[1].to_int(), 156)
-  @test.assert_eq(@pdflite.pdf_flate_decode(encoded), data)
+  @test.assert_eq(@flate.pdf_flate_decode(encoded), data)
 }
 
 ///|
 #cfg(target="native")
-test "pdf_flate_encode_with_level matches native miniz byte output" {
+test "@flate.pdf_flate_encode_with_level matches native miniz byte output" {
   let small = codec_ascii_for_test("Hi")
   let small_cases : Array[(Int, Array[Int])] = [
     (0, [120, 1, 1, 2, 0, 253, 255, 72, 105, 0, 251, 0, 178]),
@@ -573,7 +570,7 @@ test "pdf_flate_encode_with_level matches native miniz byte output" {
   for case in small_cases {
     let (level, expected) = case
     @test.assert_eq(
-      @pdflite.pdf_flate_encode_with_level(small, level),
+      @flate.pdf_flate_encode_with_level(small, level),
       codec_bytes_for_test(expected),
     )
   }
@@ -590,7 +587,7 @@ test "pdf_flate_encode_with_level matches native miniz byte output" {
   for case in compressed_cases {
     let (level, expected) = case
     @test.assert_eq(
-      @pdflite.pdf_flate_encode_with_level(repeated, level),
+      @flate.pdf_flate_encode_with_level(repeated, level),
       codec_bytes_for_test(expected),
     )
   }
@@ -610,9 +607,9 @@ test "pdf_flate_encode_with_level matches native miniz byte output" {
   ]
   for case in mixed_stored_cases {
     let (level, expected) = case
-    let encoded = @pdflite.pdf_flate_encode_with_level(mixed_stored, level)
+    let encoded = @flate.pdf_flate_encode_with_level(mixed_stored, level)
     @test.assert_eq(encoded, codec_bytes_for_test(expected))
-    @test.assert_eq(@pdflite.pdf_flate_decode(encoded), mixed_stored)
+    @test.assert_eq(@flate.pdf_flate_decode(encoded), mixed_stored)
   }
 }
 
@@ -620,13 +617,13 @@ test "pdf_flate_encode_with_level matches native miniz byte output" {
 test "pdf_flate view codecs read borrowed slices" {
   let plain = codec_ascii_for_test("Hi")
   let wrapped_plain = codec_wrap_view_for_test("xx", plain, "yy")
-  let encoded = @pdflite.pdf_flate_encode_view(
+  let encoded = @flate.pdf_flate_encode_view(
     wrapped_plain[2:wrapped_plain.length() - 2],
   )
   @test.assert_eq(encoded[0].to_int(), 120)
   let wrapped_encoded = codec_wrap_view_for_test("xx", encoded, "yy")
   @test.assert_eq(
-    try! @pdflite.pdf_flate_decode_view(
+    try! @flate.pdf_flate_decode_view(
       wrapped_encoded[2:wrapped_encoded.length() - 2],
     ),
     plain,
@@ -704,7 +701,7 @@ test "pdf filter dispatch view APIs read borrowed slices" {
     @pdflite.pdf_ascii85_encode(codec_ascii_for_test("Hi ")),
   )
   let flate = codec_name_for_test("/FlateDecode")
-  let encoded_flate = @pdflite.pdf_flate_encode(codec_ascii_for_test("Hi"))
+  let encoded_flate = @flate.pdf_flate_encode(codec_ascii_for_test("Hi"))
   let wrapped_flate = codec_wrap_view_for_test("xx", encoded_flate, "yy")
   @test.assert_eq(
     @pdflite.pdf_decode_filter_view(
@@ -718,7 +715,7 @@ test "pdf filter dispatch view APIs read borrowed slices" {
     raw[2:raw.length() - 2],
   )
   @test.assert_eq(
-    @pdflite.pdf_flate_decode(encoded_flate_view),
+    @flate.pdf_flate_decode(encoded_flate_view),
     codec_ascii_for_test("Hi "),
   )
   let encoded_flate_best_view = @pdflite.pdf_encode_filter_view_with_flate_level(
@@ -728,7 +725,7 @@ test "pdf filter dispatch view APIs read borrowed slices" {
   )
   @test.assert_eq(encoded_flate_best_view[1].to_int(), 218)
   @test.assert_eq(
-    @pdflite.pdf_flate_decode(encoded_flate_best_view),
+    @flate.pdf_flate_decode(encoded_flate_best_view),
     codec_ascii_for_test("Hi "),
   )
   let crypt_raw = codec_ascii_for_test("xxrawyy")

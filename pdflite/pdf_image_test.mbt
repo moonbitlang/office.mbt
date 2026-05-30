@@ -245,7 +245,7 @@ fn image_png_split_idat_for_test(
 ///|
 fn image_png_rgb_for_test() -> (@pdflite.PdfBytes, @pdflite.PdfBytes) {
   let raw = image_bytes_for_test([0, 10, 20, 30, 40, 50, 60])
-  let idat = @pdflite.pdf_flate_encode(raw)
+  let idat = @flate.pdf_flate_encode(raw)
   (image_png_for_test(2, 1, 8, 2, 0, image_png_split_idat_for_test(idat)), idat)
 }
 
@@ -258,7 +258,7 @@ fn image_png_rgba_for_test() -> @pdflite.PdfBytes {
     8,
     6,
     0,
-    image_png_split_idat_for_test(@pdflite.pdf_flate_encode(raw)),
+    image_png_split_idat_for_test(@flate.pdf_flate_encode(raw)),
   )
 }
 
@@ -755,7 +755,7 @@ test "pdf_read_png reads IHDR and concatenated IDAT chunks" {
   @test.assert_eq(png.color_type, 2)
   @test.assert_eq(png.idat, idat)
   @test.assert_eq(
-    try! @pdflite.pdf_flate_decode(png.idat),
+    try! @flate.pdf_flate_decode(png.idat),
     image_bytes_for_test([0, 10, 20, 30, 40, 50, 60]),
   )
 }
@@ -897,7 +897,7 @@ test "pdf_image_object_of_png_data splits alpha into SMask" {
     fail("expected materialized color image data")
   }
   @test.assert_eq(
-    try! @pdflite.pdf_flate_decode(image_data),
+    try! @flate.pdf_flate_decode(image_data),
     image_bytes_for_test([10, 20, 30, 50, 60, 70]),
   )
   let smask = document.lookup_object_or_null(smask_number)
@@ -918,7 +918,7 @@ test "pdf_image_object_of_png_data splits alpha into SMask" {
     fail("expected materialized mask data")
   }
   @test.assert_eq(
-    try! @pdflite.pdf_flate_decode(mask_data),
+    try! @flate.pdf_flate_decode(mask_data),
     image_bytes_for_test([40, 80]),
   )
 }

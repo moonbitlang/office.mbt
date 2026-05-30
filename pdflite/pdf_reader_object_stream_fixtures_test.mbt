@@ -89,7 +89,7 @@ fn reader_xref_stream_pdf_with_compressed_prev_update_startxref(
   reader_push_xref_stream_entry(stream_data, 1, catalog_offset, 0)
   reader_push_xref_stream_entry(stream_data, 1, xref_stream_offset, 0)
   let predicted = reader_png_none_predictor_rows_for_test(stream_data, 7)
-  let encoded = @pdflite.pdf_flate_encode(predicted)
+  let encoded = @flate.pdf_flate_encode(predicted)
   reader_push_ascii(output, "3 0 obj\n")
   reader_push_ascii(output, "<< /Type /XRef /Length ")
   reader_push_ascii(output, encoded.length().to_string())
@@ -448,7 +448,7 @@ fn reader_xref_stream_pdf_with_decodeparms_object_stream_root(
   reader_push_ascii(object_stream_data, "1 0 ")
   let first = object_stream_data.length()
   reader_push_ascii(object_stream_data, "<< /Type /Catalog >>")
-  let encoded_object_stream = @pdflite.pdf_flate_encode(
+  let encoded_object_stream = @flate.pdf_flate_encode(
     Bytes::from_array(object_stream_data),
   )
   let object_stream_offset = output.length()

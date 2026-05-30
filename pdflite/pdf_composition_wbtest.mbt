@@ -48,7 +48,7 @@ fn pdf_composition_wb_entry_bytes(
 test "PdfDocument composition accounts xref object streams" {
   let doc = pdf_composition_wb_minimal_document()
   doc.objects.object_stream_ids[2] = 9
-  let expected_xref = pdf_flate_encode(
+  let expected_xref = @flate.pdf_flate_encode(
     try! pdf_write_object(doc.lookup_object_or_null(2)),
   ).length()
   let entries = try! doc.composition(1000)

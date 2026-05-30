@@ -42,7 +42,7 @@ test "pdf_parse_flate_unicode_data mirrors cpdf compressed source path" {
     "00B2;SUPERSCRIPT TWO;No;0;EN;<super> 0032;;;2;N;SUPERSCRIPT DIGIT TWO;;;;",
   )
   let rows = try! @pdflite.pdf_parse_flate_unicode_data(
-    @pdflite.pdf_flate_encode(source),
+    @flate.pdf_flate_encode(source),
   )
   @test.assert_eq(rows.length(), 2)
   @test.assert_eq(rows[0].character_name, "SPACE")

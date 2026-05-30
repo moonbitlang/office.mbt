@@ -730,7 +730,7 @@ fn acceptance_tounicode_variation_cmap_for_test() -> @pdflite.PdfObject {
     "<45><46><0064>\n" +
     "endbfrange\n",
   )
-  let encoded = @pdflite.pdf_flate_encode(cmap)
+  let encoded = @flate.pdf_flate_encode(cmap)
   @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
       (acceptance_name_for_test("/Length"), PdfInteger(encoded.length())),
@@ -856,7 +856,7 @@ fn acceptance_tounicode_parser_corner_cmap_for_test() -> @pdflite.PdfObject {
     "endbfrange\n" +
     "1 beginbfchar <4A><03A9> endbfchar\n",
   )
-  let encoded = @pdflite.pdf_flate_encode(cmap)
+  let encoded = @flate.pdf_flate_encode(cmap)
   @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
       (acceptance_name_for_test("/Length"), PdfInteger(encoded.length())),
@@ -993,7 +993,7 @@ fn acceptance_tounicode_sequence_cmap_for_test() -> @pdflite.PdfObject {
     "end\n" +
     "end\n",
   )
-  let encoded = @pdflite.pdf_flate_encode(cmap)
+  let encoded = @flate.pdf_flate_encode(cmap)
   @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
       (acceptance_name_for_test("/Length"), PdfInteger(encoded.length())),
@@ -1132,7 +1132,7 @@ fn acceptance_type3_tounicode_stream_for_test() -> @pdflite.PdfObject {
     "<42><03A9>\n" +
     "endbfchar\n",
   )
-  let encoded = @pdflite.pdf_flate_encode(cmap)
+  let encoded = @flate.pdf_flate_encode(cmap)
   @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
       (acceptance_name_for_test("/Length"), PdfInteger(encoded.length())),
@@ -3289,7 +3289,7 @@ fn acceptance_unicode_predefined_tounicode_cmap_for_test() -> @pdflite.PdfObject
     "<F09D849E><03A9>\n" +
     "endbfchar\n",
   )
-  let encoded = @pdflite.pdf_flate_encode(cmap)
+  let encoded = @flate.pdf_flate_encode(cmap)
   @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
       (acceptance_name_for_test("/Length"), PdfInteger(encoded.length())),
@@ -5824,7 +5824,7 @@ fn acceptance_expected_ccitt_rgb24_for_test() -> @pdflite.PdfBytes raise {
 
 ///|
 fn acceptance_image_indexed_xobject_for_test() -> @pdflite.PdfObject raise {
-  let encoded = @pdflite.pdf_flate_encode(
+  let encoded = @flate.pdf_flate_encode(
     acceptance_indexed_image_sample_for_test(),
   )
   @pdflite.pdf_stream(
@@ -5907,7 +5907,7 @@ fn acceptance_jpeg_payload_for_test() -> @pdflite.PdfBytes raise {
 
 ///|
 fn acceptance_image_jpeg_xobject_for_test() -> @pdflite.PdfObject raise {
-  let encoded = @pdflite.pdf_flate_encode(acceptance_jpeg_payload_for_test())
+  let encoded = @flate.pdf_flate_encode(acceptance_jpeg_payload_for_test())
   @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
       (
@@ -5983,9 +5983,7 @@ fn acceptance_image_jbig2_globals_for_test() -> @pdflite.PdfObject {
 
 ///|
 fn acceptance_image_jbig2_xobject_for_test() -> @pdflite.PdfObject {
-  let encoded = @pdflite.pdf_flate_encode(
-    acceptance_ascii_for_test("jbig2-data"),
-  )
+  let encoded = @flate.pdf_flate_encode(acceptance_ascii_for_test("jbig2-data"))
   @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
       (
@@ -6354,7 +6352,7 @@ fn acceptance_named_image_rgb_sample_for_test() -> @pdflite.PdfBytes raise {
 
 ///|
 fn acceptance_named_image_rgb_xobject_for_test() -> @pdflite.PdfObject raise {
-  let encoded = @pdflite.pdf_flate_encode(
+  let encoded = @flate.pdf_flate_encode(
     acceptance_named_image_rgb_sample_for_test(),
   )
   @pdflite.pdf_stream(
@@ -6391,7 +6389,7 @@ fn acceptance_named_image_gray_sample_for_test() -> @pdflite.PdfBytes raise {
 
 ///|
 fn acceptance_named_image_gray_xobject_for_test() -> @pdflite.PdfObject raise {
-  let encoded = @pdflite.pdf_flate_encode(
+  let encoded = @flate.pdf_flate_encode(
     acceptance_named_image_gray_sample_for_test(),
   )
   @pdflite.pdf_stream(
@@ -6427,9 +6425,7 @@ fn acceptance_named_image_gray_xobject_for_test() -> @pdflite.PdfObject raise {
 
 ///|
 fn acceptance_named_image_mask_xobject_for_test() -> @pdflite.PdfObject raise {
-  let encoded = @pdflite.pdf_flate_encode(
-    acceptance_text_bytes_for_test([0x80]),
-  )
+  let encoded = @flate.pdf_flate_encode(acceptance_text_bytes_for_test([0x80]))
   @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
       (
@@ -6469,7 +6465,7 @@ fn acceptance_named_image_indexed_sample_for_test() -> @pdflite.PdfBytes raise {
 
 ///|
 fn acceptance_named_image_indexed_xobject_for_test() -> @pdflite.PdfObject raise {
-  let encoded = @pdflite.pdf_flate_encode(
+  let encoded = @flate.pdf_flate_encode(
     acceptance_named_image_indexed_sample_for_test(),
   )
   @pdflite.pdf_stream(
@@ -6594,9 +6590,7 @@ fn acceptance_expected_cmyk_rgb24_for_test() -> @pdflite.PdfBytes raise {
 
 ///|
 fn acceptance_cmyk_image_xobject_for_test() -> @pdflite.PdfObject raise {
-  let encoded = @pdflite.pdf_flate_encode(
-    acceptance_cmyk_image_sample_for_test(),
-  )
+  let encoded = @flate.pdf_flate_encode(acceptance_cmyk_image_sample_for_test())
   @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
       (
@@ -6626,7 +6620,7 @@ fn acceptance_cmyk_image_xobject_for_test() -> @pdflite.PdfObject raise {
 
 ///|
 fn acceptance_cmyk_decoded_xobject_for_test() -> @pdflite.PdfObject raise {
-  let encoded = @pdflite.pdf_flate_encode(
+  let encoded = @flate.pdf_flate_encode(
     acceptance_text_bytes_for_test([0, 0, 0, 0]),
   )
   @pdflite.pdf_stream(
@@ -6676,7 +6670,7 @@ fn acceptance_indexed_cmyk_image_sample_for_test() -> @pdflite.PdfBytes raise {
 
 ///|
 fn acceptance_indexed_cmyk_image_xobject_for_test() -> @pdflite.PdfObject raise {
-  let encoded = @pdflite.pdf_flate_encode(
+  let encoded = @flate.pdf_flate_encode(
     acceptance_indexed_cmyk_image_sample_for_test(),
   )
   @pdflite.pdf_stream(
@@ -6791,7 +6785,7 @@ fn acceptance_alt_image_icc_gray_sample_for_test() -> @pdflite.PdfBytes raise {
 
 ///|
 fn acceptance_alt_image_icc_gray_xobject_for_test() -> @pdflite.PdfObject raise {
-  let encoded = @pdflite.pdf_flate_encode(
+  let encoded = @flate.pdf_flate_encode(
     acceptance_alt_image_icc_gray_sample_for_test(),
   )
   @pdflite.pdf_stream(
@@ -6843,7 +6837,7 @@ fn acceptance_alt_image_separation_tint_for_test() -> @pdflite.PdfObject {
 
 ///|
 fn acceptance_alt_image_separation_xobject_for_test() -> @pdflite.PdfObject raise {
-  let encoded = @pdflite.pdf_flate_encode(acceptance_text_bytes_for_test([255]))
+  let encoded = @flate.pdf_flate_encode(acceptance_text_bytes_for_test([255]))
   @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
       (
@@ -6878,9 +6872,7 @@ fn acceptance_alt_image_device_n_palette_for_test() -> @pdflite.PdfBytes raise {
 
 ///|
 fn acceptance_alt_image_device_n_xobject_for_test() -> @pdflite.PdfObject raise {
-  let encoded = @pdflite.pdf_flate_encode(
-    acceptance_text_bytes_for_test([0, 1]),
-  )
+  let encoded = @flate.pdf_flate_encode(acceptance_text_bytes_for_test([0, 1]))
   @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
       (
@@ -6917,7 +6909,7 @@ fn acceptance_alt_image_lab_palette_for_test() -> @pdflite.PdfBytes raise {
 
 ///|
 fn acceptance_alt_image_lab_xobject_for_test() -> @pdflite.PdfObject raise {
-  let encoded = @pdflite.pdf_flate_encode(
+  let encoded = @flate.pdf_flate_encode(
     acceptance_text_bytes_for_test([0, 1, 2, 3]),
   )
   @pdflite.pdf_stream(
@@ -8531,7 +8523,7 @@ fn acceptance_filtered_object_stream_root_pdf_for_test(
   let first = object_stream_data.length()
   acceptance_push_ascii_for_test(object_stream_data, "<< /Type /Catalog >>")
   let payload = if flate_encoded {
-    @pdflite.pdf_flate_encode(Bytes::from_array(object_stream_data))
+    @flate.pdf_flate_encode(Bytes::from_array(object_stream_data))
   } else {
     Bytes::from_array(object_stream_data)
   }

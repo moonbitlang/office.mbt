@@ -852,18 +852,6 @@ pub fn pdf_find_obj(PdfDocument, String) -> @syntax.PdfObject raise @core.PdfErr
 
 pub fn pdf_find_object(PdfDocument, String) -> @syntax.PdfObject raise @core.PdfError
 
-pub fn pdf_flate_decode(Bytes) -> Bytes raise @core.PdfError
-
-pub fn pdf_flate_decode_view(BytesView) -> Bytes raise @core.PdfError
-
-pub fn pdf_flate_encode(Bytes) -> Bytes
-
-pub fn pdf_flate_encode_view(BytesView) -> Bytes
-
-pub fn pdf_flate_encode_view_with_level(BytesView, Int) -> Bytes raise @core.PdfError
-
-pub fn pdf_flate_encode_with_level(Bytes, Int) -> Bytes raise @core.PdfError
-
 pub fn pdf_font_from_name(PdfDocument, String, Int) -> @syntax.PdfObject raise @core.PdfError
 
 pub fn pdf_font_table(PdfDocument, String, Int) -> Array[@font.PdfFontTableEntry] raise @core.PdfError

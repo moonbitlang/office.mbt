@@ -328,7 +328,7 @@ test "private content helpers cover malformed operand fallbacks" {
     ),
     false,
   )
-  let flate_inline = pdf_flate_encode(@ascii.encode("AB"))
+  let flate_inline = @flate.pdf_flate_encode(@ascii.encode("AB"))
   @test.assert_eq(
     try! pdf_content_read_flate_inline_image_data(
       byte_cursor_of_bytes(

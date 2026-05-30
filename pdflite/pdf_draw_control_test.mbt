@@ -50,7 +50,7 @@ fn draw_control_png_rgb_for_test() -> (@pdflite.PdfBytes, @pdflite.PdfBytes) {
   let header = draw_control_bytes_for_test([
     0, 0, 0, 2, 0, 0, 0, 1, 8, 2, 0, 0, 0,
   ])
-  let idat = @pdflite.pdf_flate_encode(
+  let idat = @flate.pdf_flate_encode(
     draw_control_bytes_for_test([0, 10, 20, 30, 40, 50, 60]),
   )
   let output : Array[Byte] = []

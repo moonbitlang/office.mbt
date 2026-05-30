@@ -6054,7 +6054,7 @@ fn fixture_acceptance_assert_cpdf_source_inline_image_for_test(
 
 ///|
 fn fixture_acceptance_cpdf_source_nested_image_data_for_test() -> @pdflite.PdfBytes raise {
-  @pdflite.pdf_flate_encode(@pdflite.pdf_bytes_of_int_array([0, 64, 128, 255]))
+  @flate.pdf_flate_encode(@pdflite.pdf_bytes_of_int_array([0, 64, 128, 255]))
 }
 
 ///|
@@ -6746,7 +6746,7 @@ fn fixture_acceptance_cpdf_source_variation_cmap_for_test() -> @pdflite.PdfObjec
     "<45><46><0064>\n" +
     "endbfrange\n",
   )
-  let encoded = @pdflite.pdf_flate_encode(cmap)
+  let encoded = @flate.pdf_flate_encode(cmap)
   @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
       (
@@ -6907,7 +6907,7 @@ fn fixture_acceptance_cpdf_source_parser_corner_cmap_for_test() -> @pdflite.PdfO
     "endbfrange\n" +
     "1 beginbfchar <4A><03A9> endbfchar\n",
   )
-  let encoded = @pdflite.pdf_flate_encode(cmap)
+  let encoded = @flate.pdf_flate_encode(cmap)
   @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
       (
@@ -7075,7 +7075,7 @@ fn fixture_acceptance_cpdf_source_usecmap_stream_for_test(
   compressed : Bool,
 ) -> @pdflite.PdfObject raise {
   let stream_data = if compressed {
-    @pdflite.pdf_flate_encode(data)
+    @flate.pdf_flate_encode(data)
   } else {
     data
   }
@@ -11139,7 +11139,7 @@ fn fixture_acceptance_decode_cpdf_sheet_png_pixels_for_test(
     3,
     8,
     400,
-    @pdflite.pdf_flate_decode(png.idat),
+    @flate.pdf_flate_decode(png.idat),
   )
 }
 

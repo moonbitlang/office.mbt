@@ -100,7 +100,7 @@ fn pdf_async_io_png_rgb_for_test() -> (@pdflite.PdfBytes, @pdflite.PdfBytes) {
   let header = pdf_async_io_bytes_for_test([
     0, 0, 0, 2, 0, 0, 0, 1, 8, 2, 0, 0, 0,
   ])
-  let idat = @pdflite.pdf_flate_encode(
+  let idat = @flate.pdf_flate_encode(
     pdf_async_io_bytes_for_test([0, 10, 20, 30, 40, 50, 60]),
   )
   let output : Array[Byte] = []
@@ -1065,7 +1065,7 @@ fn pdf_async_io_hybrid_xref_stream_pdf_for_test(
     stream_data, 1, xref_stream_offset, 0,
   )
   let data = if compressed {
-    @pdflite.pdf_flate_encode(
+    @flate.pdf_flate_encode(
       pdf_async_io_png_none_predictor_rows_for_test(stream_data, 7),
     )
   } else {
@@ -2099,7 +2099,7 @@ fn pdf_async_io_compressed_xref_stream_pdf_with_prev_update_startxref_for_test(
     stream_data, 1, xref_stream_offset, 0,
   )
   let predicted = pdf_async_io_png_none_predictor_rows_for_test(stream_data, 7)
-  let encoded = @pdflite.pdf_flate_encode(predicted)
+  let encoded = @flate.pdf_flate_encode(predicted)
   pdf_async_io_push_ascii_for_test(output, "3 0 obj\n")
   pdf_async_io_push_ascii_for_test(output, "<< /Type /XRef /Length ")
   pdf_async_io_push_ascii_for_test(output, encoded.length().to_string())
@@ -2662,7 +2662,7 @@ fn pdf_async_io_xref_stream_pdf_with_decodeparms_object_stream_root_for_test(
   pdf_async_io_push_ascii_for_test(object_stream_data, "1 0 ")
   let first = object_stream_data.length()
   pdf_async_io_push_ascii_for_test(object_stream_data, "<< /Type /Catalog >>")
-  let encoded_object_stream = @pdflite.pdf_flate_encode(
+  let encoded_object_stream = @flate.pdf_flate_encode(
     Bytes::from_array(object_stream_data),
   )
   let object_stream_offset = output.length()

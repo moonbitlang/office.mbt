@@ -15,6 +15,7 @@ import {
 import {
   "bobzhang/pdflite",
   "bobzhang/pdflite/content",
+  "bobzhang/pdflite/flate",
   "bobzhang/pdflite/metadata",
   "bobzhang/pdflite/ocg",
   "bobzhang/pdflite/portfolio",

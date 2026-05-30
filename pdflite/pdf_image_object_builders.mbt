@@ -165,7 +165,7 @@ fn PdfPNG::pdf_image_split_alpha(
     components + 1,
     self.bit_depth,
     self.width,
-    pdf_flate_decode(self.idat),
+    @flate.pdf_flate_decode(self.idat),
   )
   let stride = components + 1
   if decoded.length() % stride != 0 {
@@ -186,8 +186,8 @@ fn PdfPNG::pdf_image_split_alpha(
     mask_position += 1
   }
   (
-    pdf_flate_encode(Bytes::from_array(colors)),
-    pdf_flate_encode(Bytes::from_array(mask)),
+    @flate.pdf_flate_encode(Bytes::from_array(colors)),
+    @flate.pdf_flate_encode(Bytes::from_array(mask)),
   )
 }
 

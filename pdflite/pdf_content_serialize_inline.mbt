@@ -24,7 +24,7 @@ fn pdf_content_inline_image_bytes(
 ) -> PdfBytes raise PdfError {
   let compress_inline_image = pdf_content_inline_filter_is_empty(dictionary)
   let (render_data, render_decode_parms, render_extra_entries) = if compress_inline_image {
-    let encoded = pdf_flate_encode(data)
+    let encoded = @flate.pdf_flate_encode(data)
     (
       encoded,
       None,

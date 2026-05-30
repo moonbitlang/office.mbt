@@ -206,7 +206,7 @@ test "pdf_parse_cmap decodes stream objects" {
   let cmap_data = @ascii.encode(
     "/WMode 0 def\n" + "1 beginbfrange\n" + "<30><31><0061>\n" + "endbfrange\n",
   )
-  let encoded_cmap = @pdflite.pdf_flate_encode(cmap_data)
+  let encoded_cmap = @flate.pdf_flate_encode(cmap_data)
   let stream = @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
       (text_cmap_name_for_test("/Length"), PdfInteger(encoded_cmap.length())),

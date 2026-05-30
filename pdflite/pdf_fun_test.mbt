@@ -187,7 +187,7 @@ test "PdfDocument parse_function reads and evaluates Type 0 sampled functions" {
 ///|
 test "PdfDocument parse_function decodes filtered sampled function streams" {
   let doc = @pdflite.pdf_document_empty()
-  let encoded = @pdflite.pdf_flate_encode(fun_bytes_for_test([0xF0]))
+  let encoded = @flate.pdf_flate_encode(fun_bytes_for_test([0xF0]))
   let function_object = @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
       (fun_name_for_test("/Length"), PdfInteger(encoded.length())),

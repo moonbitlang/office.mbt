@@ -184,7 +184,7 @@ pub fn pdf_decode_filter_view(
   } else if pdf_filter_is_one_of(
       filter, pdf_filter_flate_decode_name, pdf_filter_flate_short_name,
     ) {
-    pdf_flate_decode_view(data)
+    @flate.pdf_flate_decode_view(data)
   } else if pdf_filter_is_one_of(
       filter, pdf_filter_lzw_decode_name, pdf_filter_lzw_short_name,
     ) {
@@ -211,7 +211,7 @@ pub fn pdf_decode_filter_bytes(
   } else if pdf_filter_is_one_of(
       filter, pdf_filter_flate_decode_name, pdf_filter_flate_short_name,
     ) {
-    pdf_flate_decode(data)
+    @flate.pdf_flate_decode(data)
   } else {
     pdf_decode_filter_view(filter, data)
   }
@@ -266,8 +266,8 @@ fn pdf_encode_filter_view_with_optional_flate_level(
       filter, pdf_filter_flate_decode_name, pdf_filter_flate_short_name,
     ) {
     match flate_level {
-      Some(level) => pdf_flate_encode_view_with_level(data, level)
-      None => pdf_flate_encode_view(data)
+      Some(level) => @flate.pdf_flate_encode_view_with_level(data, level)
+      None => @flate.pdf_flate_encode_view(data)
     }
   } else {
     raise FilterNotSupported(filter)
@@ -309,8 +309,8 @@ fn pdf_encode_filter_bytes_with_optional_flate_level(
       filter, pdf_filter_flate_decode_name, pdf_filter_flate_short_name,
     ) {
     match flate_level {
-      Some(level) => pdf_flate_encode_with_level(data, level)
-      None => pdf_flate_encode(data)
+      Some(level) => @flate.pdf_flate_encode_with_level(data, level)
+      None => @flate.pdf_flate_encode(data)
     }
   } else {
     pdf_encode_filter_view_with_optional_flate_level(filter, data, flate_level)
