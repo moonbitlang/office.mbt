@@ -43,7 +43,7 @@ fn pdf_content_read_lzw_inline_image_data(
       dictionary.add_dict_entry(pdf_content_inline_dp_name(), value)
     None => dictionary
   }
-  let (_, length) = pdf_lzw_decode_view_prefix(
+  let (_, length) = @codec.pdf_lzw_decode_view_prefix(
     cursor.remaining_view(),
     early_change=pdf_lzw_early_change(with_decode_parms),
   )
@@ -60,7 +60,9 @@ fn pdf_content_read_lzw_inline_image_decoded(
     value if pdf_is_whitespace_byte(value) => cursor.nudge()
     _ => ()
   }
-  let (decoded, length) = pdf_lzw_decode_view_prefix(cursor.remaining_view())
+  let (decoded, length) = @codec.pdf_lzw_decode_view_prefix(
+    cursor.remaining_view(),
+  )
   ignore(cursor.read_view(length))
   pdf_content_read_inline_image_end(cursor)
   decoded

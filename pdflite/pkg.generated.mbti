@@ -304,22 +304,6 @@ pub fn pdf_array(ArrayView[@syntax.PdfObject]) -> @syntax.PdfObject
 
 pub fn pdf_artifact(PdfDrawControl) -> Unit raise @core.PdfError
 
-pub fn pdf_ascii85_decode(Bytes) -> Bytes raise @core.PdfError
-
-pub fn pdf_ascii85_decode_view(BytesView) -> Bytes raise @core.PdfError
-
-pub fn pdf_ascii85_encode(Bytes) -> Bytes
-
-pub fn pdf_ascii85_encode_view(BytesView) -> Bytes
-
-pub fn pdf_ascii_hex_decode(Bytes) -> Bytes raise @core.PdfError
-
-pub fn pdf_ascii_hex_decode_view(BytesView) -> Bytes raise @core.PdfError
-
-pub fn pdf_ascii_hex_encode(Bytes) -> Bytes
-
-pub fn pdf_ascii_hex_encode_view(BytesView) -> Bytes
-
 pub fn pdf_attach_file(PdfDocument, String, BytesView, keep_version? : Bool, page_number? : Int?, relationship? : String?, description? : String?) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_attach_file_cpdf_order(Bool, Int?, PdfDocument, String?, String?, String, BytesView) -> PdfDocument raise @core.PdfError
@@ -698,8 +682,6 @@ pub fn pdf_cursor_lex_tokens(@core.ByteCursor) -> Array[@syntax.PdfLexeme] raise
 
 pub fn pdf_cursor_read_classic_xref_entries(@core.ByteCursor) -> Array[@reader.PdfClassicXRefEntry] raise @core.PdfError
 
-pub fn pdf_cursor_read_jpeg_data(@core.ByteCursor) -> Bytes raise @core.PdfError
-
 pub fn pdf_cursor_read_regular_token_view(@core.ByteCursor) -> BytesView
 
 pub fn pdf_cursor_read_until_whitespace_or_delimiter(@core.ByteCursor) -> BytesView
@@ -902,8 +884,6 @@ pub fn pdf_get_info_utf8(PdfDocument, @core.PdfName) -> String
 
 pub fn pdf_get_info_utf8_string(PdfDocument, String) -> String
 
-pub fn pdf_get_jpeg_data(@core.ByteCursor) -> Bytes raise @core.PdfError
-
 pub fn pdf_get_mark_info_item(@core.PdfName, PdfDocument) -> Bool
 
 pub fn pdf_get_metadata(PdfDocument) -> Bytes? raise @core.PdfError
@@ -1032,14 +1012,6 @@ pub fn pdf_jpeg2000_dimensions(Bytes) -> (Int, Int) raise @core.PdfError
 
 pub fn pdf_jpeg2000_dimensions_view(BytesView) -> (Int, Int) raise @core.PdfError
 
-pub fn pdf_jpeg_backup_dimensions(Bytes) -> (Int, Int) raise @core.PdfError
-
-pub fn pdf_jpeg_backup_dimensions_view(BytesView) -> (Int, Int) raise @core.PdfError
-
-pub fn pdf_jpeg_dimensions(Bytes) -> (Int, Int) raise @core.PdfError
-
-pub fn pdf_jpeg_dimensions_view(BytesView) -> (Int, Int) raise @core.PdfError
-
 pub fn pdf_json_fonts(PdfDocument, ArrayView[Int]) -> Json raise @core.PdfError
 
 pub fn pdf_json_of_document(PdfDocument, utf8? : Bool, parse_content? : Bool, clean_strings? : Bool, no_stream_data? : Bool, decompress_streams? : Bool) -> Json raise @core.PdfError
@@ -1079,12 +1051,6 @@ pub fn pdf_list_fonts_text(PdfDocument, ArrayView[Int]) -> Bytes raise @core.Pdf
 pub fn pdf_list_spot_colours(PdfDocument) -> Array[@core.PdfName]
 
 pub fn pdf_list_spot_colours_blob(PdfDocument) -> Bytes
-
-pub fn pdf_lzw_decode(Bytes, early_change? : Int) -> Bytes raise @core.PdfError
-
-pub fn pdf_lzw_decode_view(BytesView, early_change? : Int) -> Bytes raise @core.PdfError
-
-pub fn pdf_lzw_decode_view_prefix(BytesView, early_change? : Int) -> (Bytes, Int) raise @core.PdfError
 
 pub fn pdf_make_font(@core.PdfName, PdfEncoding) -> @syntax.PdfObject raise @core.PdfError
 
@@ -1623,14 +1589,6 @@ pub fn pdf_rotate_pages_by(PdfDocument, Int, ArrayView[Int]) -> PdfDocument rais
 pub fn pdf_rotate_pdf(Int, PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_rotate_pdf_by(Int, PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
-
-pub fn pdf_run_length_decode(Bytes) -> Bytes
-
-pub fn pdf_run_length_decode_view(BytesView) -> Bytes
-
-pub fn pdf_run_length_encode(Bytes) -> Bytes
-
-pub fn pdf_run_length_encode_view(BytesView) -> Bytes
 
 pub fn pdf_scale_contents(PdfDocument, ArrayView[Int], @geometry.PdfPosition, Double, fast? : Bool) -> PdfDocument raise @core.PdfError
 

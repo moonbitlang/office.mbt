@@ -89,7 +89,7 @@ test "pdf_decode_stream_onestage applies first DecodeParms predictor" {
   let decodeparms = codec_stream_name_for_test("/DecodeParms")
   let predictor = codec_stream_name_for_test("/Predictor")
   let columns = codec_stream_name_for_test("/Columns")
-  let encoded = @pdflite.pdf_ascii_hex_encode(
+  let encoded = @codec.pdf_ascii_hex_encode(
     codec_stream_bytes_for_test([1, 10, 10, 10]),
   )
   let stream = @pdflite.pdf_stream(
@@ -137,7 +137,7 @@ test "PdfDocument pdf_decode_stream resolves indirect filters and DecodeParms" {
       (columns, PdfInteger(3)),
     ]),
   )
-  let encoded = @pdflite.pdf_ascii_hex_encode(
+  let encoded = @codec.pdf_ascii_hex_encode(
     codec_stream_bytes_for_test([1, 10, 10, 10]),
   )
   let stream = @pdflite.pdf_stream(
@@ -170,10 +170,10 @@ test "PdfDocument pdf_decode_stream decodes array filters with indirect entries"
     8,
     PdfNameObject(codec_stream_name_for_test("/ASCIIHexDecode")),
   )
-  let ascii85 = @pdflite.pdf_ascii85_encode(
+  let ascii85 = @codec.pdf_ascii85_encode(
     codec_stream_bytes_for_test([77, 97, 110]),
   )
-  let encoded = @pdflite.pdf_ascii_hex_encode(ascii85)
+  let encoded = @codec.pdf_ascii_hex_encode(ascii85)
   let stream = @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
       (length, PdfInteger(encoded.length())),
@@ -213,7 +213,7 @@ test "PdfDocument pdf_decode_stream handles short filter keys and DP arrays" {
   let retained_decodeparms = @pdflite.pdf_dictionary([
     (predictor, PdfInteger(1)),
   ])
-  let encoded = @pdflite.pdf_ascii_hex_encode(codec_stream_ascii_for_test("Hi"))
+  let encoded = @codec.pdf_ascii_hex_encode(codec_stream_ascii_for_test("Hi"))
   let stream = @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
       (length, PdfInteger(encoded.length())),
@@ -251,7 +251,7 @@ test "PdfDocument pdf_decode_stream accepts indirect DecodeParms arrays" {
     9,
     @pdflite.pdf_dictionary([(predictor, PdfInteger(1))]),
   )
-  let encoded = @pdflite.pdf_ascii_hex_encode(codec_stream_ascii_for_test("Hi"))
+  let encoded = @codec.pdf_ascii_hex_encode(codec_stream_ascii_for_test("Hi"))
   let stream = @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
       (length, PdfInteger(encoded.length())),
@@ -672,7 +672,7 @@ test "PdfDocument pdf_decode_stream_until_unknown stops at unsupported filters" 
     9,
     @pdflite.pdf_dictionary([(predictor, PdfInteger(1))]),
   )
-  let encoded = @pdflite.pdf_ascii_hex_encode(codec_stream_ascii_for_test("Hi"))
+  let encoded = @codec.pdf_ascii_hex_encode(codec_stream_ascii_for_test("Hi"))
   let unsupported : @pdflite.PdfObject = PdfNameObject(
     codec_stream_name_for_test("/NoSuchFilter"),
   )
@@ -721,7 +721,7 @@ test "PdfDocument pdf_decode_streams_until_unknown mutates document streams" {
     9,
     @pdflite.pdf_dictionary([(predictor, PdfInteger(1))]),
   )
-  let encoded = @pdflite.pdf_ascii_hex_encode(codec_stream_ascii_for_test("Hi"))
+  let encoded = @codec.pdf_ascii_hex_encode(codec_stream_ascii_for_test("Hi"))
   let unsupported : @pdflite.PdfObject = PdfNameObject(
     codec_stream_name_for_test("/NoSuchFilter"),
   )
@@ -793,7 +793,7 @@ test "pdfdecomp-style stream decompression survives writer reader round trip" {
       (type_name, PdfNameObject(codec_stream_name_for_test("/Catalog"))),
     ]),
   )
-  let encoded = @pdflite.pdf_ascii_hex_encode(codec_stream_ascii_for_test("Hi"))
+  let encoded = @codec.pdf_ascii_hex_encode(codec_stream_ascii_for_test("Hi"))
   let unsupported : @pdflite.PdfObject = PdfNameObject(
     codec_stream_name_for_test("/NoSuchFilter"),
   )
@@ -926,7 +926,7 @@ test "pdf_decode_stream_onestage accepts DecodeParms arrays" {
   let filter = codec_stream_name_for_test("/Filter")
   let decodeparms = codec_stream_name_for_test("/DecodeParms")
   let predictor = codec_stream_name_for_test("/Predictor")
-  let encoded = @pdflite.pdf_ascii_hex_encode(codec_stream_ascii_for_test("Hi"))
+  let encoded = @codec.pdf_ascii_hex_encode(codec_stream_ascii_for_test("Hi"))
   let stream = @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
       (length, PdfInteger(encoded.length())),
@@ -990,7 +990,7 @@ test "pdf_decode_stream_onestage handles short filters and null decodeparms" {
   let short_filter = codec_stream_name_for_test("/F")
   let short_decodeparms = codec_stream_name_for_test("/DP")
   let predictor = codec_stream_name_for_test("/Predictor")
-  let encoded = @pdflite.pdf_ascii_hex_encode(codec_stream_ascii_for_test("Hi"))
+  let encoded = @codec.pdf_ascii_hex_encode(codec_stream_ascii_for_test("Hi"))
   let retained_decodeparms = @pdflite.pdf_dictionary([
     (predictor, PdfInteger(1)),
   ])
@@ -1024,7 +1024,7 @@ test "pdf_decode_stream_onestage handles short filters and null decodeparms" {
 test "pdf_decode_stream_onestage removes only first array filter" {
   let length = codec_stream_name_for_test("/Length")
   let filter = codec_stream_name_for_test("/Filter")
-  let encoded_once = @pdflite.pdf_ascii_hex_encode(
+  let encoded_once = @codec.pdf_ascii_hex_encode(
     codec_stream_ascii_for_test("9jqo~>"),
   )
   let stream = @pdflite.pdf_stream(
@@ -1102,10 +1102,10 @@ test "pdf_decode_stream_onestage uses default lzw EarlyChange" {
 test "pdf_decode_stream decodes all supported filter stages" {
   let length = codec_stream_name_for_test("/Length")
   let filter = codec_stream_name_for_test("/Filter")
-  let ascii85 = @pdflite.pdf_ascii85_encode(
+  let ascii85 = @codec.pdf_ascii85_encode(
     codec_stream_bytes_for_test([77, 97, 110]),
   )
-  let encoded = @pdflite.pdf_ascii_hex_encode(ascii85)
+  let encoded = @codec.pdf_ascii_hex_encode(ascii85)
   let stream = @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
       (length, PdfInteger(encoded.length())),

@@ -172,15 +172,15 @@ pub fn pdf_decode_filter_view(
   } else if pdf_filter_is_one_of(
       filter, pdf_filter_ascii_hex_decode_name, pdf_filter_ascii_hex_short_name,
     ) {
-    pdf_ascii_hex_decode_view(data)
+    @codec.pdf_ascii_hex_decode_view(data)
   } else if pdf_filter_is_one_of(
       filter, pdf_filter_ascii85_decode_name, pdf_filter_ascii85_short_name,
     ) {
-    pdf_ascii85_decode_view(data)
+    @codec.pdf_ascii85_decode_view(data)
   } else if pdf_filter_is_one_of(
       filter, pdf_filter_run_length_decode_name, pdf_filter_run_length_short_name,
     ) {
-    pdf_run_length_decode_view(data)
+    @codec.pdf_run_length_decode_view(data)
   } else if pdf_filter_is_one_of(
       filter, pdf_filter_flate_decode_name, pdf_filter_flate_short_name,
     ) {
@@ -188,7 +188,7 @@ pub fn pdf_decode_filter_view(
   } else if pdf_filter_is_one_of(
       filter, pdf_filter_lzw_decode_name, pdf_filter_lzw_short_name,
     ) {
-    pdf_lzw_decode_view(data)
+    @codec.pdf_lzw_decode_view(data)
   } else if pdf_filter_is_one_of(
       filter, pdf_filter_ccitt_fax_decode_name, pdf_filter_ccitt_fax_short_name,
     ) {
@@ -253,15 +253,15 @@ fn pdf_encode_filter_view_with_optional_flate_level(
   } else if pdf_filter_is_one_of(
       filter, pdf_filter_ascii_hex_decode_name, pdf_filter_ascii_hex_short_name,
     ) {
-    pdf_ascii_hex_encode_view(data)
+    @codec.pdf_ascii_hex_encode_view(data)
   } else if pdf_filter_is_one_of(
       filter, pdf_filter_ascii85_decode_name, pdf_filter_ascii85_short_name,
     ) {
-    pdf_ascii85_encode_view(data)
+    @codec.pdf_ascii85_encode_view(data)
   } else if pdf_filter_is_one_of(
       filter, pdf_filter_run_length_decode_name, pdf_filter_run_length_short_name,
     ) {
-    pdf_run_length_encode_view(data)
+    @codec.pdf_run_length_encode_view(data)
   } else if pdf_filter_is_one_of(
       filter, pdf_filter_flate_decode_name, pdf_filter_flate_short_name,
     ) {

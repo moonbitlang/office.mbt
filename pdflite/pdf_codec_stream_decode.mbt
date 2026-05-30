@@ -7,7 +7,7 @@ fn pdf_decode_stream_filter_bytes(
   if pdf_filter_is_one_of(
       filter, pdf_filter_lzw_decode_name, pdf_filter_lzw_short_name,
     ) {
-    pdf_lzw_decode(data, early_change=pdf_lzw_early_change(dictionary))
+    @codec.pdf_lzw_decode(data, early_change=pdf_lzw_early_change(dictionary))
   } else if pdf_filter_is_one_of(
       filter, pdf_filter_ccitt_fax_decode_name, pdf_filter_ccitt_fax_short_name,
     ) {
@@ -27,7 +27,7 @@ fn PdfDocument::pdf_decode_stream_filter_bytes_direct(
   if pdf_filter_is_one_of(
       filter, pdf_filter_lzw_decode_name, pdf_filter_lzw_short_name,
     ) {
-    pdf_lzw_decode(
+    @codec.pdf_lzw_decode(
       data,
       early_change=self.pdf_lzw_early_change_direct(dictionary),
     )

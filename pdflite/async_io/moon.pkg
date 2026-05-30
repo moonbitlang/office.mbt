@@ -1,6 +1,7 @@
 import {
   "bobzhang/pdflite",
   "bobzhang/pdflite/attachment",
+  "bobzhang/pdflite/codec",
   "bobzhang/pdflite/metadata",
   "bobzhang/pdflite/portfolio",
   "bobzhang/pdflite/syntax",
@@ -14,6 +15,7 @@ import {
 
 import {
   "bobzhang/pdflite",
+  "bobzhang/pdflite/codec",
   "bobzhang/pdflite/content",
   "bobzhang/pdflite/flate",
   "bobzhang/pdflite/metadata",

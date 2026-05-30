@@ -354,7 +354,7 @@ test "pdf_encode_stream_with_filter can skip non-smaller encodings" {
   }
   @test.assert_eq(
     encoded_stream.data,
-    StreamGot(@pdflite.pdf_run_length_encode(repeated)),
+    StreamGot(@codec.pdf_run_length_encode(repeated)),
   )
   @test.assert_eq(
     encoded_stream.dictionary.lookup_immediate(filter),

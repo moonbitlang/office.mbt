@@ -71,8 +71,8 @@ fn pdf_content_read_text_encoded_inline_image_decoded(
     Some(length) => {
       let encoded = cursor.read_view(length)
       let decoded = match filter {
-        PdfContentInlineAsciiHex => pdf_ascii_hex_decode_view(encoded)
-        PdfContentInlineAscii85 => pdf_ascii85_decode_view(encoded)
+        PdfContentInlineAsciiHex => @codec.pdf_ascii_hex_decode_view(encoded)
+        PdfContentInlineAscii85 => @codec.pdf_ascii85_decode_view(encoded)
       }
       pdf_content_read_inline_image_end(cursor)
       decoded

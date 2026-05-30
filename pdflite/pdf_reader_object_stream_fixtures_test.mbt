@@ -649,7 +649,7 @@ fn reader_xref_stream_pdf_with_indirect_object_stream_filter_startxref(
   reader_push_ascii(object_stream_data, "5 0 ")
   let first = object_stream_data.length()
   reader_push_ascii(object_stream_data, "<< /Answer 42 >>")
-  let encoded_object_stream = @pdflite.pdf_ascii_hex_encode(
+  let encoded_object_stream = @codec.pdf_ascii_hex_encode(
     Bytes::from_array(object_stream_data),
   )
   let object_stream_offset = output.length()

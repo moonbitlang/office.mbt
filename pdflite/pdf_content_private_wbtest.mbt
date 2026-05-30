@@ -223,7 +223,7 @@ test "private content helpers cover malformed operand fallbacks" {
     @ascii.encode("abc"),
   )
   @test.assert_eq(decoded_hex_cursor.remaining_view(), @ascii.encode(" next"))
-  let ascii85_inline = pdf_ascii85_encode(@ascii.encode("abc"))
+  let ascii85_inline = @codec.pdf_ascii85_encode(@ascii.encode("abc"))
   let decoded_ascii85_cursor = byte_cursor_of_bytes(
     pdf_bytes_concat_views([ascii85_inline, @ascii.encode(" EI next")]),
   )

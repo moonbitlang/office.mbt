@@ -32,7 +32,7 @@ pub(all) struct PdfExtractedImageFile {
 pub fn pdf_image_object_of_jpeg_data(
   data : BytesView,
 ) -> PdfObject raise PdfError {
-  let (width, height) = pdf_jpeg_dimensions_view(data)
+  let (width, height) = @codec.pdf_jpeg_dimensions_view(data)
   let payload = data.to_owned()
   pdf_stream(
     PdfDictionary([

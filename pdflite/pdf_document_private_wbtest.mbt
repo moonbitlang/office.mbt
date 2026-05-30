@@ -78,7 +78,7 @@ test "PdfDocument copy preserves parser-private object states" {
 test "PdfDocument stream decompression preserves already-decrypted state" {
   let length = pdf_name_of_bytes(@ascii.encode("/Length"))
   let filter = pdf_name_of_bytes(@ascii.encode("/Filter"))
-  let encoded = pdf_ascii_hex_encode(@ascii.encode("Hi"))
+  let encoded = @codec.pdf_ascii_hex_encode(@ascii.encode("Hi"))
   let stream = pdf_stream(
     pdf_dictionary([
       (length, PdfInteger(encoded.length())),

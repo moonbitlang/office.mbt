@@ -44,7 +44,7 @@ pub async fn pdf_backup_jpeg_dimensions(
   path_to_im? : String = "",
 ) -> (Int, Int) {
   ignore(path_to_im)
-  @pdflite.pdf_jpeg_backup_dimensions_view(@fs.read_file(filename).binary())
+  @codec.pdf_jpeg_backup_dimensions_view(@fs.read_file(filename).binary())
 }
 
 ///|

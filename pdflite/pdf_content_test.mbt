@@ -482,7 +482,7 @@ test "PdfDocument parse_content_ops reads indirect owned content streams" {
     8,
     PdfNameObject(content_name_for_test("/ASCIIHexDecode")),
   )
-  let encoded = @pdflite.pdf_ascii_hex_encode(content_bytes_for_test("q Q"))
+  let encoded = @codec.pdf_ascii_hex_encode(content_bytes_for_test("q Q"))
   doc.add_object_given_number(
     9,
     @pdflite.pdf_stream(

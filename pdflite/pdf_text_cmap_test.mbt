@@ -1453,7 +1453,7 @@ test "pdf_parse_cmap_data ignores PDF comments in CMap programs" {
 test "PdfDocument decodes filtered ToUnicode CMap streams" {
   let doc = @pdflite.pdf_document_empty()
   let cmap = @ascii.encode("1 beginbfchar\n<41><005A>\nendbfchar\n")
-  let encoded = @pdflite.pdf_ascii_hex_encode(cmap)
+  let encoded = @codec.pdf_ascii_hex_encode(cmap)
   let tounicode = @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
       (text_cmap_name_for_test("/Length"), PdfInteger(encoded.length())),

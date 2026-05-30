@@ -97,25 +97,25 @@ fn codec_lzw_codes_for_test(
 }
 
 ///|
-test "pdf_ascii_hex_encode renders uppercase hex with terminator" {
+test "@codec.pdf_ascii_hex_encode renders uppercase hex with terminator" {
   @test.assert_eq(
-    @pdflite.pdf_ascii_hex_encode(codec_bytes_for_test([0, 15, 160, 255])),
+    @codec.pdf_ascii_hex_encode(codec_bytes_for_test([0, 15, 160, 255])),
     codec_ascii_for_test("000FA0FF>"),
   )
   @test.assert_eq(
-    @pdflite.pdf_ascii_hex_encode(Bytes::new(0)),
+    @codec.pdf_ascii_hex_encode(Bytes::new(0)),
     codec_ascii_for_test(">"),
   )
 }
 
 ///|
-test "pdf_ascii_hex_decode ignores whitespace and accepts lowercase" {
+test "@codec.pdf_ascii_hex_decode ignores whitespace and accepts lowercase" {
   @test.assert_eq(
-    try! @pdflite.pdf_ascii_hex_decode(codec_ascii_for_test("  61 62\n63>")),
+    try! @codec.pdf_ascii_hex_decode(codec_ascii_for_test("  61 62\n63>")),
     codec_ascii_for_test("abc"),
   )
   @test.assert_eq(
-    try! @pdflite.pdf_ascii_hex_decode(codec_ascii_for_test("af>")),
+    try! @codec.pdf_ascii_hex_decode(codec_ascii_for_test("af>")),
     codec_bytes_for_test([175]),
   )
 }
@@ -125,33 +125,33 @@ test "pdf_ascii_hex view codecs read borrowed slices" {
   let plain = codec_ascii_for_test("abc")
   let wrapped_plain = codec_wrap_view_for_test("xx", plain, "yy")
   @test.assert_eq(
-    @pdflite.pdf_ascii_hex_encode_view(
+    @codec.pdf_ascii_hex_encode_view(
       wrapped_plain[2:wrapped_plain.length() - 2],
     ),
     codec_ascii_for_test("616263>"),
   )
   let encoded = codec_ascii_for_test("xx61 62 63>yy")
   @test.assert_eq(
-    try! @pdflite.pdf_ascii_hex_decode_view(encoded[2:encoded.length() - 2]),
+    try! @codec.pdf_ascii_hex_decode_view(encoded[2:encoded.length() - 2]),
     plain,
   )
 }
 
 ///|
-test "pdf_ascii_hex_decode pads odd final nibble before terminator" {
+test "@codec.pdf_ascii_hex_decode pads odd final nibble before terminator" {
   @test.assert_eq(
-    try! @pdflite.pdf_ascii_hex_decode(codec_ascii_for_test("6>")),
+    try! @codec.pdf_ascii_hex_decode(codec_ascii_for_test("6>")),
     codec_bytes_for_test([96]),
   )
   @test.assert_eq(
-    try! @pdflite.pdf_ascii_hex_decode(codec_ascii_for_test(">")),
+    try! @codec.pdf_ascii_hex_decode(codec_ascii_for_test(">")),
     codec_bytes_for_test([]),
   )
 }
 
 ///|
-test "pdf_ascii_hex_decode reports invalid hex data" {
-  let result : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_ascii_hex_decode(
+test "@codec.pdf_ascii_hex_decode reports invalid hex data" {
+  let result : Result[@pdflite.PdfBytes, Error] = try? @codec.pdf_ascii_hex_decode(
     codec_ascii_for_test("6Z>"),
   )
   guard result is Err(@pdflite.PdfError::InvalidHexEscape) else {
@@ -160,49 +160,49 @@ test "pdf_ascii_hex_decode reports invalid hex data" {
 }
 
 ///|
-test "pdf_ascii85_encode renders full partial and zero chunks" {
+test "@codec.pdf_ascii85_encode renders full partial and zero chunks" {
   @test.assert_eq(
-    @pdflite.pdf_ascii85_encode(codec_bytes_for_test([77, 97, 110, 32])),
+    @codec.pdf_ascii85_encode(codec_bytes_for_test([77, 97, 110, 32])),
     codec_ascii_for_test("9jqo^~>"),
   )
   @test.assert_eq(
-    @pdflite.pdf_ascii85_encode(codec_bytes_for_test([77, 97, 110])),
+    @codec.pdf_ascii85_encode(codec_bytes_for_test([77, 97, 110])),
     codec_ascii_for_test("9jqo~>"),
   )
   @test.assert_eq(
-    @pdflite.pdf_ascii85_encode(codec_bytes_for_test([0, 0, 0, 0])),
+    @codec.pdf_ascii85_encode(codec_bytes_for_test([0, 0, 0, 0])),
     codec_ascii_for_test("z~>"),
   )
   @test.assert_eq(
-    @pdflite.pdf_ascii85_encode(Bytes::new(0)),
+    @codec.pdf_ascii85_encode(Bytes::new(0)),
     codec_ascii_for_test("~>"),
   )
 }
 
 ///|
-test "pdf_ascii85_decode expands zero and partial chunks" {
+test "@codec.pdf_ascii85_decode expands zero and partial chunks" {
   @test.assert_eq(
-    try! @pdflite.pdf_ascii85_decode(codec_ascii_for_test("9jqo^~>")),
+    try! @codec.pdf_ascii85_decode(codec_ascii_for_test("9jqo^~>")),
     codec_bytes_for_test([77, 97, 110, 32]),
   )
   @test.assert_eq(
-    try! @pdflite.pdf_ascii85_decode(codec_ascii_for_test("9jqo~>")),
+    try! @codec.pdf_ascii85_decode(codec_ascii_for_test("9jqo~>")),
     codec_bytes_for_test([77, 97, 110]),
   )
   @test.assert_eq(
-    try! @pdflite.pdf_ascii85_decode(codec_ascii_for_test("z~>")),
+    try! @codec.pdf_ascii85_decode(codec_ascii_for_test("z~>")),
     codec_bytes_for_test([0, 0, 0, 0]),
   )
   @test.assert_eq(
-    try! @pdflite.pdf_ascii85_decode(codec_ascii_for_test("~>")),
+    try! @codec.pdf_ascii85_decode(codec_ascii_for_test("~>")),
     codec_bytes_for_test([]),
   )
 }
 
 ///|
-test "pdf_ascii85_decode skips whitespace" {
+test "@codec.pdf_ascii85_decode skips whitespace" {
   @test.assert_eq(
-    try! @pdflite.pdf_ascii85_decode(codec_ascii_for_test("  9j\nqo^ ~>")),
+    try! @codec.pdf_ascii85_decode(codec_ascii_for_test("  9j\nqo^ ~>")),
     codec_bytes_for_test([77, 97, 110, 32]),
   )
 }
@@ -212,45 +212,43 @@ test "pdf_ascii85 view codecs read borrowed slices" {
   let plain = codec_bytes_for_test([77, 97, 110])
   let wrapped_plain = codec_wrap_view_for_test("xx", plain, "yy")
   @test.assert_eq(
-    @pdflite.pdf_ascii85_encode_view(
-      wrapped_plain[2:wrapped_plain.length() - 2],
-    ),
+    @codec.pdf_ascii85_encode_view(wrapped_plain[2:wrapped_plain.length() - 2]),
     codec_ascii_for_test("9jqo~>"),
   )
   let encoded = codec_ascii_for_test("xx9jqo~>yy")
   @test.assert_eq(
-    try! @pdflite.pdf_ascii85_decode_view(encoded[2:encoded.length() - 2]),
+    try! @codec.pdf_ascii85_decode_view(encoded[2:encoded.length() - 2]),
     plain,
   )
 }
 
 ///|
-test "pdf_ascii85_decode reports malformed data" {
-  let bad_char : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_ascii85_decode(
+test "@codec.pdf_ascii85_decode reports malformed data" {
+  let bad_char : Result[@pdflite.PdfBytes, Error] = try? @codec.pdf_ascii85_decode(
     codec_ascii_for_test("9jqo{~>"),
   )
   guard bad_char is Err(@pdflite.PdfError::InvalidASCII85Data) else {
     fail("expected @pdflite.PdfError::InvalidASCII85Data")
   }
-  let bad_zero : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_ascii85_decode(
+  let bad_zero : Result[@pdflite.PdfBytes, Error] = try? @codec.pdf_ascii85_decode(
     codec_ascii_for_test("!z~>"),
   )
   guard bad_zero is Err(@pdflite.PdfError::InvalidASCII85Data) else {
     fail("expected @pdflite.PdfError::InvalidASCII85Data")
   }
-  let one_digit : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_ascii85_decode(
+  let one_digit : Result[@pdflite.PdfBytes, Error] = try? @codec.pdf_ascii85_decode(
     codec_ascii_for_test("!~>"),
   )
   guard one_digit is Err(@pdflite.PdfError::InvalidASCII85Data) else {
     fail("expected @pdflite.PdfError::InvalidASCII85Data")
   }
-  let overflowing_group : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_ascii85_decode(
+  let overflowing_group : Result[@pdflite.PdfBytes, Error] = try? @codec.pdf_ascii85_decode(
     codec_ascii_for_test("uuuuu~>"),
   )
   guard overflowing_group is Err(@pdflite.PdfError::InvalidASCII85Data) else {
     fail("expected @pdflite.PdfError::InvalidASCII85Data")
   }
-  let unterminated : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_ascii85_decode(
+  let unterminated : Result[@pdflite.PdfBytes, Error] = try? @codec.pdf_ascii85_decode(
     codec_ascii_for_test("9jqo"),
   )
   guard unterminated is Err(@pdflite.PdfError::InvalidASCII85Data) else {
@@ -259,74 +257,74 @@ test "pdf_ascii85_decode reports malformed data" {
 }
 
 ///|
-test "pdf_lzw_decode expands clear literal dictionary and eod codes" {
+test "@codec.pdf_lzw_decode expands clear literal dictionary and eod codes" {
   @test.assert_eq(
-    try! @pdflite.pdf_lzw_decode(codec_bytes_for_test([128, 16, 96, 32])),
+    try! @codec.pdf_lzw_decode(codec_bytes_for_test([128, 16, 96, 32])),
     codec_ascii_for_test("A"),
   )
   @test.assert_eq(
-    try! @pdflite.pdf_lzw_decode(codec_bytes_for_test([128, 16, 72, 80, 40, 8])),
+    try! @codec.pdf_lzw_decode(codec_bytes_for_test([128, 16, 72, 80, 40, 8])),
     codec_ascii_for_test("ABAB"),
   )
 }
 
 ///|
-test "pdf_lzw_decode handles eof and reset boundaries" {
+test "@codec.pdf_lzw_decode handles eof and reset boundaries" {
   @test.assert_eq(
-    try! @pdflite.pdf_lzw_decode(codec_bytes_for_test([])),
+    try! @codec.pdf_lzw_decode(codec_bytes_for_test([])),
     codec_bytes_for_test([]),
   )
   @test.assert_eq(
-    try! @pdflite.pdf_lzw_decode(codec_lzw_codes_for_test([257], 1)),
+    try! @codec.pdf_lzw_decode(codec_lzw_codes_for_test([257], 1)),
     codec_bytes_for_test([]),
   )
   @test.assert_eq(
-    try! @pdflite.pdf_lzw_decode(codec_lzw_codes_for_test([256], 1)),
+    try! @codec.pdf_lzw_decode(codec_lzw_codes_for_test([256], 1)),
     codec_bytes_for_test([]),
   )
   @test.assert_eq(
-    try! @pdflite.pdf_lzw_decode(
+    try! @codec.pdf_lzw_decode(
       codec_lzw_codes_for_test([65, 66, 256, 67, 257], 1),
     ),
     codec_ascii_for_test("ABC"),
   )
   @test.assert_eq(
-    try! @pdflite.pdf_lzw_decode(codec_lzw_codes_for_test([65], 1)),
+    try! @codec.pdf_lzw_decode(codec_lzw_codes_for_test([65], 1)),
     codec_ascii_for_test("A"),
   )
   @test.assert_eq(
-    try! @pdflite.pdf_lzw_decode(codec_lzw_codes_for_test([65, 256], 1)),
+    try! @codec.pdf_lzw_decode(codec_lzw_codes_for_test([65, 256], 1)),
     codec_ascii_for_test("A"),
   )
 }
 
 ///|
-test "pdf_lzw_decode handles the repeated previous-code case" {
+test "@codec.pdf_lzw_decode handles the repeated previous-code case" {
   @test.assert_eq(
-    try! @pdflite.pdf_lzw_decode(codec_bytes_for_test([128, 16, 96, 80, 16])),
+    try! @codec.pdf_lzw_decode(codec_bytes_for_test([128, 16, 96, 80, 16])),
     codec_ascii_for_test("AAA"),
   )
 }
 
 ///|
-test "pdf_lzw_decode_view reads borrowed compressed slices" {
+test "@codec.pdf_lzw_decode_view reads borrowed compressed slices" {
   let encoded = codec_bytes_for_test([128, 16, 96, 32])
   let wrapped = codec_wrap_view_for_test("xx", encoded, "yy")
   @test.assert_eq(
-    try! @pdflite.pdf_lzw_decode_view(wrapped[2:wrapped.length() - 2]),
+    try! @codec.pdf_lzw_decode_view(wrapped[2:wrapped.length() - 2]),
     codec_ascii_for_test("A"),
   )
 }
 
 ///|
-test "pdf_lzw_decode reports malformed input codes" {
-  let result : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_lzw_decode(
+test "@codec.pdf_lzw_decode reports malformed input codes" {
+  let result : Result[@pdflite.PdfBytes, Error] = try? @codec.pdf_lzw_decode(
     codec_bytes_for_test([128, 75, 32, 32]),
   )
   guard result is Err(@pdflite.PdfError::InvalidLZWData) else {
     fail("expected @pdflite.PdfError::InvalidLZWData")
   }
-  let result : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_lzw_decode(
+  let result : Result[@pdflite.PdfBytes, Error] = try? @codec.pdf_lzw_decode(
     codec_lzw_codes_for_test([65, 300], 1),
   )
   guard result is Err(@pdflite.PdfError::InvalidLZWData) else {
@@ -698,7 +696,7 @@ test "pdf filter dispatch view APIs read borrowed slices" {
       codec_name_for_test("/A85"),
       raw[2:raw.length() - 2],
     ),
-    @pdflite.pdf_ascii85_encode(codec_ascii_for_test("Hi ")),
+    @codec.pdf_ascii85_encode(codec_ascii_for_test("Hi ")),
   )
   let flate = codec_name_for_test("/FlateDecode")
   let encoded_flate = @flate.pdf_flate_encode(codec_ascii_for_test("Hi"))
@@ -1211,27 +1209,27 @@ test "pdf_encode_predictor normalizes negative byte deltas" {
 }
 
 ///|
-test "pdf_run_length_decode expands literal and repeat chunks" {
+test "@codec.pdf_run_length_decode expands literal and repeat chunks" {
   @test.assert_eq(
-    @pdflite.pdf_run_length_decode(
+    @codec.pdf_run_length_decode(
       codec_bytes_for_test([2, 65, 66, 67, 253, 90, 128]),
     ),
     codec_ascii_for_test("ABCZZZZ"),
   )
   @test.assert_eq(
-    @pdflite.pdf_run_length_decode(codec_bytes_for_test([128])),
+    @codec.pdf_run_length_decode(codec_bytes_for_test([128])),
     codec_bytes_for_test([]),
   )
 }
 
 ///|
-test "pdf_run_length_encode emits literal repeat and eod chunks" {
+test "@codec.pdf_run_length_encode emits literal repeat and eod chunks" {
   @test.assert_eq(
-    @pdflite.pdf_run_length_encode(codec_ascii_for_test("ABCZZZZ")),
+    @codec.pdf_run_length_encode(codec_ascii_for_test("ABCZZZZ")),
     codec_bytes_for_test([2, 65, 66, 67, 253, 90, 128]),
   )
   @test.assert_eq(
-    @pdflite.pdf_run_length_encode(codec_bytes_for_test([])),
+    @codec.pdf_run_length_encode(codec_bytes_for_test([])),
     codec_bytes_for_test([128]),
   )
 }
@@ -1241,7 +1239,7 @@ test "pdf_run_length view codecs read borrowed slices" {
   let plain = codec_ascii_for_test("ABCZZZZ")
   let wrapped_plain = codec_wrap_view_for_test("xx", plain, "yy")
   @test.assert_eq(
-    @pdflite.pdf_run_length_encode_view(
+    @codec.pdf_run_length_encode_view(
       wrapped_plain[2:wrapped_plain.length() - 2],
     ),
     codec_bytes_for_test([2, 65, 66, 67, 253, 90, 128]),
@@ -1249,7 +1247,7 @@ test "pdf_run_length view codecs read borrowed slices" {
   let encoded = codec_bytes_for_test([2, 65, 66, 67, 253, 90, 128])
   let wrapped_encoded = codec_wrap_view_for_test("xx", encoded, "yy")
   @test.assert_eq(
-    @pdflite.pdf_run_length_decode_view(
+    @codec.pdf_run_length_decode_view(
       wrapped_encoded[2:wrapped_encoded.length() - 2],
     ),
     plain,
@@ -1257,32 +1255,32 @@ test "pdf_run_length view codecs read borrowed slices" {
 }
 
 ///|
-test "pdf_run_length_decode tolerates missing eod marker" {
+test "@codec.pdf_run_length_decode tolerates missing eod marker" {
   @test.assert_eq(
-    @pdflite.pdf_run_length_decode(codec_bytes_for_test([0, 65])),
+    @codec.pdf_run_length_decode(codec_bytes_for_test([0, 65])),
     codec_ascii_for_test("A"),
   )
   @test.assert_eq(
-    @pdflite.pdf_run_length_decode(codec_bytes_for_test([2, 65])),
+    @codec.pdf_run_length_decode(codec_bytes_for_test([2, 65])),
     codec_ascii_for_test("A"),
   )
   @test.assert_eq(
-    @pdflite.pdf_run_length_decode(codec_bytes_for_test([253])),
+    @codec.pdf_run_length_decode(codec_bytes_for_test([253])),
     codec_bytes_for_test([]),
   )
 }
 
 ///|
-test "pdf_run_length_encode flushes long literal chunks" {
+test "@codec.pdf_run_length_encode flushes long literal chunks" {
   let input = codec_bytes_for_test(
     [
       for i in 0..<129 => if i % 2 == 0 { 65 } else { 66 }
     ],
   )
-  let encoded = @pdflite.pdf_run_length_encode(input)
+  let encoded = @codec.pdf_run_length_encode(input)
   @test.assert_eq(encoded.length(), 132)
   @test.assert_eq(encoded[0].to_int(), 127)
   @test.assert_eq(encoded[129].to_int(), 0)
   @test.assert_eq(encoded[131].to_int(), 128)
-  @test.assert_eq(@pdflite.pdf_run_length_decode(encoded), input)
+  @test.assert_eq(@codec.pdf_run_length_decode(encoded), input)
 }

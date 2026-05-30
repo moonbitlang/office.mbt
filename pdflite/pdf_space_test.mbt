@@ -820,7 +820,7 @@ test "PdfDocument read_colour_space parses Indexed string and stream tables" {
     8,
     PdfNameObject(space_name_for_test("/ASCIIHexDecode")),
   )
-  let encoded_lookup = @pdflite.pdf_ascii_hex_encode(
+  let encoded_lookup = @codec.pdf_ascii_hex_encode(
     space_bytes_for_test([1, 2, 3, 4]),
   )
   let lookup_stream = @pdflite.pdf_stream(

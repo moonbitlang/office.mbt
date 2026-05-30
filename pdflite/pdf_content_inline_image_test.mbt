@@ -287,9 +287,7 @@ test "pdf_parse_content_ops_from_bytes decodes ASCIIHex inline images" {
 
 ///|
 test "pdf_parse_content_ops_from_bytes decodes ASCII85 inline image arrays" {
-  let encoded = @pdflite.pdf_ascii85_encode(
-    content_inline_bytes_for_test("abc"),
-  )
+  let encoded = @codec.pdf_ascii85_encode(content_inline_bytes_for_test("abc"))
   let data = content_inline_concat_for_test([
     content_inline_bytes_for_test(
       "BI /W 1 /H 1 /CS /RGB /BPC 8 /Filter [ /A85 ] ID ",
@@ -341,7 +339,7 @@ test "pdf_parse_content_ops_from_bytes reads ASCII85 inline images through termi
 
 ///|
 test "pdf_parse_content_ops_from_bytes decodes RunLength inline images" {
-  let encoded = @pdflite.pdf_run_length_encode(
+  let encoded = @codec.pdf_run_length_encode(
     content_inline_bytes_for_test("A EI B"),
   )
   let data = content_inline_concat_for_test([
@@ -366,7 +364,7 @@ test "pdf_parse_content_ops_from_bytes decodes RunLength inline images" {
     Op_Q,
   ])
 
-  let array_encoded = @pdflite.pdf_run_length_encode(
+  let array_encoded = @codec.pdf_run_length_encode(
     content_inline_bytes_for_test("ABCZZZZ"),
   )
   let array_data = content_inline_concat_for_test([
@@ -447,7 +445,7 @@ test "pdf_parse_content_ops_from_bytes decodes Flate inline images through zlib 
 
 ///|
 test "pdf_parse_content_ops_from_bytes decodes multi-filter inline images" {
-  let ascii85_flate_encoded = @pdflite.pdf_ascii85_encode(
+  let ascii85_flate_encoded = @codec.pdf_ascii85_encode(
     @flate.pdf_flate_encode(content_inline_bytes_for_test("abc")),
   )
   let ascii85_flate_data = content_inline_concat_for_test([
@@ -476,8 +474,8 @@ test "pdf_parse_content_ops_from_bytes decodes multi-filter inline images" {
     ],
   )
 
-  let run_length_hex_encoded = @pdflite.pdf_run_length_encode(
-    @pdflite.pdf_ascii_hex_encode(content_inline_bytes_for_test("xyz")),
+  let run_length_hex_encoded = @codec.pdf_run_length_encode(
+    @codec.pdf_ascii_hex_encode(content_inline_bytes_for_test("xyz")),
   )
   let run_length_hex_data = content_inline_concat_for_test([
     content_inline_bytes_for_test(
@@ -755,7 +753,7 @@ test "pdf_parse_content_ops_from_bytes decodes leading inline filters before DCT
   let jpeg_data = try! @pdflite.pdf_bytes_of_int_array([
     0xFF, 0xD8, 65, 32, 69, 73, 32, 66, 0xFF, 0xD9,
   ])
-  let encoded = @pdflite.pdf_ascii85_encode(jpeg_data)
+  let encoded = @codec.pdf_ascii85_encode(jpeg_data)
   let data = content_inline_concat_for_test([
     content_inline_bytes_for_test("BI /W 1 /H 1 /Filter [ /A85 /DCT ] ID "),
     encoded,
@@ -807,7 +805,7 @@ test "pdf_parse_content_ops_from_bytes decodes leading inline filters before CCI
 
 ///|
 test "pdf_parse_content_ops_from_bytes preserves unsupported deferred inline filters after leading decode" {
-  let encoded = @pdflite.pdf_ascii_hex_encode(
+  let encoded = @codec.pdf_ascii_hex_encode(
     content_inline_bytes_for_test("abc"),
   )
   let data = content_inline_concat_for_test([

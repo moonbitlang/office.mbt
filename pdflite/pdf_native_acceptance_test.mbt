@@ -442,7 +442,7 @@ fn acceptance_one_page_resources_for_test() -> @pdflite.PdfObject {
 
 ///|
 fn acceptance_partial_filter_stream_for_test() -> @pdflite.PdfObject {
-  let encoded = @pdflite.pdf_ascii_hex_encode(acceptance_ascii_for_test("Hi"))
+  let encoded = @codec.pdf_ascii_hex_encode(acceptance_ascii_for_test("Hi"))
   let unsupported : @pdflite.PdfObject = PdfNameObject(
     acceptance_name_for_test("/NoSuchFilter"),
   )
@@ -598,7 +598,7 @@ fn acceptance_tounicode_text_document_for_test() -> @pdflite.PdfDocument raise {
     "<43><44><0061>\n" +
     "endbfrange\n",
   )
-  let encoded = @pdflite.pdf_ascii_hex_encode(cmap)
+  let encoded = @codec.pdf_ascii_hex_encode(cmap)
   let doc = @pdflite.pdf_document_empty()
   doc.set_version(1, 4)
   doc.add_object_given_number(
@@ -2407,7 +2407,7 @@ fn acceptance_identity_h_tounicode_cmap_for_test() -> @pdflite.PdfObject {
     "<0042><0043><0061>\n" +
     "endbfrange\n",
   )
-  let encoded = @pdflite.pdf_ascii_hex_encode(cmap)
+  let encoded = @codec.pdf_ascii_hex_encode(cmap)
   @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
       (acceptance_name_for_test("/Length"), PdfInteger(encoded.length())),
@@ -8213,7 +8213,7 @@ fn acceptance_indirect_filtered_object_stream_pdf_for_test(
   )
   let count_offset = acceptance_push_indirect_object_for_test(output, 2, 0, "2")
   let object_stream_data = acceptance_indirect_filtered_object_stream_payload_for_test()
-  let encoded_object_stream = @pdflite.pdf_ascii_hex_encode(object_stream_data)
+  let encoded_object_stream = @codec.pdf_ascii_hex_encode(object_stream_data)
   let object_stream_offset = output.length()
   acceptance_push_ascii_for_test(output, "3 0 obj\n")
   acceptance_push_ascii_for_test(
@@ -8750,12 +8750,12 @@ fn acceptance_assert_indirect_filtered_object_stream_for_test(
   )
   @test.assert_eq(
     @pdflite.pdf_stream(object_stream.dictionary, object_stream.data).stream_bytes(),
-    @pdflite.pdf_ascii_hex_encode(
+    @codec.pdf_ascii_hex_encode(
       acceptance_indirect_filtered_object_stream_payload_for_test(),
     ),
   )
   @test.assert_eq(
-    @pdflite.pdf_ascii_hex_decode(
+    @codec.pdf_ascii_hex_decode(
       @pdflite.pdf_stream(object_stream.dictionary, object_stream.data).stream_bytes(),
     ),
     acceptance_indirect_filtered_object_stream_payload_for_test(),

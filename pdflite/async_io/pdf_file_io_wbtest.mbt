@@ -2890,7 +2890,7 @@ fn pdf_async_io_indirect_object_stream_filter_bad_startxref_for_test() -> @pdfli
   pdf_async_io_push_ascii_for_test(object_stream_data, "5 0 ")
   let first = object_stream_data.length()
   pdf_async_io_push_ascii_for_test(object_stream_data, "<< /Answer 42 >>")
-  let encoded_object_stream = @pdflite.pdf_ascii_hex_encode(
+  let encoded_object_stream = @codec.pdf_ascii_hex_encode(
     Bytes::from_array(object_stream_data),
   )
   let object_stream_offset = output.length()

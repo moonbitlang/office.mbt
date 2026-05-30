@@ -232,31 +232,6 @@ pub using @crypt_core {
 }
 
 ///|
-pub using @codec {
-  pdf_ascii_hex_encode_view,
-  pdf_ascii_hex_encode,
-  pdf_ascii_hex_decode_view,
-  pdf_ascii_hex_decode,
-  pdf_ascii85_encode_view,
-  pdf_ascii85_encode,
-  pdf_ascii85_decode_view,
-  pdf_ascii85_decode,
-  pdf_lzw_decode_view_prefix,
-  pdf_lzw_decode_view,
-  pdf_lzw_decode,
-  pdf_cursor_read_jpeg_data,
-  pdf_get_jpeg_data,
-  pdf_jpeg_dimensions_view,
-  pdf_jpeg_dimensions,
-  pdf_jpeg_backup_dimensions_view,
-  pdf_jpeg_backup_dimensions,
-  pdf_run_length_encode_view,
-  pdf_run_length_encode,
-  pdf_run_length_decode_view,
-  pdf_run_length_decode,
-}
-
-///|
 pub using @content {
   type PdfContentOp,
   pdf_content_begin_artifact,
