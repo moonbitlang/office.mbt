@@ -109,7 +109,7 @@ fn pdf_truetype_split_subsets(
 pub fn pdf_truetype_partition_subsets(
   encoding : PdfEncoding,
   subset_codepoints : ArrayView[Int],
-) -> PdfTrueTypeSubsetPartition {
+) -> @truetype.PdfTrueTypeSubsetPartition {
   let encoding_table = encoding.table()
   let main_subset : Array[Int] = []
   let rest : Array[Int] = []

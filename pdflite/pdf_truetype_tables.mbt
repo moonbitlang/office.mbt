@@ -3,8 +3,10 @@
 ///
 /// This is the first structural pass in `Cpdftruetype.parse`: it reads
 /// `numTables`, then each `(tag, checksum, offset, length)` table record.
-pub fn pdf_truetype_tables(data : BytesView) -> Array[PdfTrueTypeTableRecord] {
-  let records : Array[PdfTrueTypeTableRecord] = []
+pub fn pdf_truetype_tables(
+  data : BytesView,
+) -> Array[@truetype.PdfTrueTypeTableRecord] {
+  let records : Array[@truetype.PdfTrueTypeTableRecord] = []
   match pdf_truetype_read_u16(data, 4) {
     Some(table_count) =>
       for index in 0..<table_count {
@@ -31,7 +33,7 @@ pub fn pdf_truetype_tables(data : BytesView) -> Array[PdfTrueTypeTableRecord] {
 pub fn pdf_truetype_table(
   data : BytesView,
   tag : String,
-) -> PdfTrueTypeTableRecord? {
+) -> @truetype.PdfTrueTypeTableRecord? {
   for record in pdf_truetype_tables(data) {
     if record.tag == tag {
       break Some(record)
@@ -45,7 +47,7 @@ pub fn pdf_truetype_table(
 fn pdf_truetype_required_table(
   data : BytesView,
   tag : String,
-) -> PdfTrueTypeTableRecord raise PdfError {
+) -> @truetype.PdfTrueTypeTableRecord raise PdfError {
   match pdf_truetype_table(data, tag) {
     Some(record) => record
     None => raise SoftError("No " + tag + " table found in TrueType font")

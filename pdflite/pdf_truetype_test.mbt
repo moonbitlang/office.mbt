@@ -478,7 +478,7 @@ test "pdf_truetype_metrics reads cpdftruetype table prerequisites" {
     advance_widths: [500, 750, 1000],
     max_width: 488,
   })
-  let missing_hmtx : Result[@pdflite.PdfTrueTypeMetrics, Error] = try? @pdflite.pdf_truetype_metrics(
+  let missing_hmtx : Result[@truetype.PdfTrueTypeMetrics, Error] = try? @pdflite.pdf_truetype_metrics(
     truetype_table_font_for_test([
       ("head", truetype_head_table_for_test(1000, 0, 0, 10, 10, 0)),
       ("maxp", truetype_maxp_table_for_test(1)),
@@ -634,7 +634,7 @@ test "pdf_truetype_parse builds main and higher subset records" {
 
 ///|
 test "pdf_truetype_parse refuses subsets with no main encoding characters" {
-  let parsed : Result[Array[@pdflite.PdfTrueTypeParsedSubset], Error] = try? @pdflite.pdf_truetype_parse(
+  let parsed : Result[Array[@truetype.PdfTrueTypeParsedSubset], Error] = try? @pdflite.pdf_truetype_parse(
     truetype_parse_font_for_test(),
     PdfImplicitInFontFile,
     [0x0100],
@@ -685,7 +685,7 @@ test "pdf_truetype_descriptor_metrics reads OS2 and post tables" {
 
 ///|
 test "pdf_truetype_descriptor_metrics requires OS2 like source parser" {
-  let missing_os2 : Result[@pdflite.PdfTrueTypeDescriptorMetrics, Error] = try? @pdflite.pdf_truetype_descriptor_metrics(
+  let missing_os2 : Result[@truetype.PdfTrueTypeDescriptorMetrics, Error] = try? @pdflite.pdf_truetype_descriptor_metrics(
     truetype_table_font_for_test([
       ("head", truetype_head_table_for_test(1000, 0, 0, 1000, 1000, 0)),
     ]),

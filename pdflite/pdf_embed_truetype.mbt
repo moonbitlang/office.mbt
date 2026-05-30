@@ -38,7 +38,7 @@ fn PdfDocument::pdf_embed_add_truetype_fontfile(
 
 ///|
 fn pdf_embed_truetype_fontmetrics(
-  parsed : PdfTrueTypeParsedSubset,
+  parsed : @truetype.PdfTrueTypeParsedSubset,
 ) -> Array[Double] {
   let metrics = Array::make(256, 0.0)
   for code in parsed.firstchar..<=parsed.lastchar {
@@ -55,7 +55,7 @@ fn pdf_embed_truetype_fontmetrics(
 
 ///|
 fn pdf_embed_truetype_descriptor(
-  parsed : PdfTrueTypeParsedSubset,
+  parsed : @truetype.PdfTrueTypeParsedSubset,
   fontfile_number : Int,
 ) -> PdfFontDescriptor {
   {
@@ -83,7 +83,7 @@ fn pdf_embed_truetype_descriptor(
 ///|
 fn PdfDocument::pdf_embed_make_single_truetype_font(
   self : PdfDocument,
-  parsed : PdfTrueTypeParsedSubset,
+  parsed : @truetype.PdfTrueTypeParsedSubset,
   fontname : String,
   encoding : PdfEncoding,
 ) -> (Array[Int], PdfFont) {

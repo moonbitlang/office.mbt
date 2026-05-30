@@ -97,7 +97,7 @@ fn pdf_truetype_composite_component_glyphs(
 ///|
 fn pdf_truetype_expand_composite_glyphs_one(
   data : BytesView,
-  glyf : PdfTrueTypeTableRecord,
+  glyf : @truetype.PdfTrueTypeTableRecord,
   loca_offsets : ArrayView[Int],
   glyph_indices : ArrayView[Int],
 ) -> Array[Int] raise PdfError {
@@ -157,10 +157,10 @@ pub fn pdf_truetype_expand_composite_glyphs(
 pub fn pdf_truetype_glyph_byte_ranges(
   data : BytesView,
   glyph_indices : ArrayView[Int],
-) -> Array[PdfTrueTypeGlyphByteRange] raise PdfError {
+) -> Array[@truetype.PdfTrueTypeGlyphByteRange] raise PdfError {
   let loca_offsets = pdf_truetype_loca_offsets(data)
   let expanded = pdf_truetype_expand_composite_glyphs(data, glyph_indices)
-  let ranges : Array[PdfTrueTypeGlyphByteRange] = []
+  let ranges : Array[@truetype.PdfTrueTypeGlyphByteRange] = []
   for glyph_index in expanded {
     pdf_truetype_validate_loca_range(loca_offsets, glyph_index)
     ranges.push({
@@ -288,7 +288,7 @@ pub fn pdf_truetype_subset_loca_table(
 pub fn pdf_truetype_subset_glyf_table(
   data : BytesView,
   subset_codepoints : ArrayView[Int],
-) -> PdfTrueTypeSubsetTable raise PdfError {
+) -> @truetype.PdfTrueTypeSubsetTable raise PdfError {
   let glyf = pdf_truetype_required_table(data, "glyf")
   let ranges = pdf_truetype_glyph_byte_ranges(
     data,

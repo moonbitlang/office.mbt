@@ -390,18 +390,6 @@ pub using @font {
 }
 
 ///|
-pub using @truetype {
-  type PdfTrueTypeCMapGlyph,
-  type PdfTrueTypeDescriptorMetrics,
-  type PdfTrueTypeGlyphByteRange,
-  type PdfTrueTypeMetrics,
-  type PdfTrueTypeParsedSubset,
-  type PdfTrueTypeSubsetPartition,
-  type PdfTrueTypeSubsetTable,
-  type PdfTrueTypeTableRecord,
-}
-
-///|
 pub using @reader {
   type PdfVersion,
   type ObjectStreamReference,

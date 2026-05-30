@@ -22,7 +22,7 @@ fn pdf_truetype_required_subset_table(tag : String) -> Bool {
 pub fn pdf_truetype_subset_cmap_table(
   data : BytesView,
   subset_codepoints : ArrayView[Int],
-) -> PdfTrueTypeSubsetTable raise PdfError {
+) -> @truetype.PdfTrueTypeSubsetTable raise PdfError {
   let cmap_entries = pdf_truetype_cmap_glyphs(data)
   let glyph_indices : Array[Int] = []
   for codepoint in subset_codepoints {
@@ -61,9 +61,9 @@ pub fn pdf_truetype_subset_cmap_table(
 
 ///|
 fn pdf_truetype_sorted_tables(
-  tables : ArrayView[PdfTrueTypeTableRecord],
-) -> Array[PdfTrueTypeTableRecord] {
-  let sorted : Array[PdfTrueTypeTableRecord] = []
+  tables : ArrayView[@truetype.PdfTrueTypeTableRecord],
+) -> Array[@truetype.PdfTrueTypeTableRecord] {
+  let sorted : Array[@truetype.PdfTrueTypeTableRecord] = []
   for table in tables {
     sorted.push(table)
   }
@@ -73,9 +73,9 @@ fn pdf_truetype_sorted_tables(
 
 ///|
 fn pdf_truetype_subset_font_kept_tables(
-  sorted_tables : ArrayView[PdfTrueTypeTableRecord],
-) -> Array[PdfTrueTypeTableRecord] {
-  let kept : Array[PdfTrueTypeTableRecord] = []
+  sorted_tables : ArrayView[@truetype.PdfTrueTypeTableRecord],
+) -> Array[@truetype.PdfTrueTypeTableRecord] {
+  let kept : Array[@truetype.PdfTrueTypeTableRecord] = []
   let mut removed_data_before = 0
   for index in 0..<sorted_tables.length() {
     let table = sorted_tables[index]
@@ -101,7 +101,7 @@ fn pdf_truetype_table_padded_length(length : Int) -> Int {
 ///|
 fn pdf_truetype_subset_original_table_span(
   data : BytesView,
-  sorted_tables : ArrayView[PdfTrueTypeTableRecord],
+  sorted_tables : ArrayView[@truetype.PdfTrueTypeTableRecord],
   tag : String,
 ) -> (Int, Int) raise PdfError {
   for index in 0..<sorted_tables.length() {
@@ -125,10 +125,10 @@ fn pdf_truetype_subset_original_table_span(
 ///|
 fn pdf_truetype_subset_original_table(
   data : BytesView,
-  sorted_tables : ArrayView[PdfTrueTypeTableRecord],
+  sorted_tables : ArrayView[@truetype.PdfTrueTypeTableRecord],
   tag : String,
   directory_length : Int,
-) -> PdfTrueTypeSubsetTable raise PdfError {
+) -> @truetype.PdfTrueTypeSubsetTable raise PdfError {
   let (offset, length) = pdf_truetype_subset_original_table_span(
     data, sorted_tables, tag,
   )
@@ -138,11 +138,11 @@ fn pdf_truetype_subset_original_table(
 ///|
 fn pdf_truetype_subset_font_table_payload(
   data : BytesView,
-  sorted_tables : ArrayView[PdfTrueTypeTableRecord],
-  record : PdfTrueTypeTableRecord,
+  sorted_tables : ArrayView[@truetype.PdfTrueTypeTableRecord],
+  record : @truetype.PdfTrueTypeTableRecord,
   subset_codepoints : ArrayView[Int],
   rewrite_cmap : Bool,
-) -> PdfTrueTypeSubsetTable raise PdfError {
+) -> @truetype.PdfTrueTypeSubsetTable raise PdfError {
   if record.tag == "loca" {
     {
       length: record.length,
@@ -165,14 +165,17 @@ fn pdf_truetype_subset_font_table_payload(
 ///|
 fn pdf_truetype_subset_font_directory(
   data : BytesView,
-  sorted_tables : ArrayView[PdfTrueTypeTableRecord],
+  sorted_tables : ArrayView[@truetype.PdfTrueTypeTableRecord],
   subset_codepoints : ArrayView[Int],
   rewrite_cmap : Bool,
-) -> (Array[PdfTrueTypeTableRecord], Array[PdfTrueTypeSubsetTable]) raise PdfError {
+) -> (
+  Array[@truetype.PdfTrueTypeTableRecord],
+  Array[@truetype.PdfTrueTypeSubsetTable],
+) raise PdfError {
   let kept = pdf_truetype_subset_font_kept_tables(sorted_tables)
   let header_size_reduction = 16 * (sorted_tables.length() - kept.length())
-  let records : Array[PdfTrueTypeTableRecord] = []
-  let payloads : Array[PdfTrueTypeSubsetTable] = []
+  let records : Array[@truetype.PdfTrueTypeTableRecord] = []
+  let payloads : Array[@truetype.PdfTrueTypeSubsetTable] = []
   let mut glyf_table_size_reduction = 0
   let mut cmap_table_size_reduction = 0
   for kept_record in kept {

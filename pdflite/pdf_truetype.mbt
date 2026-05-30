@@ -21,15 +21,15 @@ fn pdf_truetype_subset_extremes(
 ///|
 fn pdf_truetype_parsed_subset(
   flags : Int,
-  metrics : PdfTrueTypeMetrics,
-  descriptor : PdfTrueTypeDescriptorMetrics,
+  metrics : @truetype.PdfTrueTypeMetrics,
+  descriptor : @truetype.PdfTrueTypeDescriptorMetrics,
   firstchar : Int,
   lastchar : Int,
   widths : Array[Int],
   subset_fontfile : PdfBytes,
   subset : Array[Int],
   tounicode : Array[(Int, PdfBytes)]?,
-) -> PdfTrueTypeParsedSubset {
+) -> @truetype.PdfTrueTypeParsedSubset {
   {
     flags,
     minx: metrics.minx,
@@ -65,14 +65,14 @@ pub fn pdf_truetype_parse(
   data : BytesView,
   encoding : PdfEncoding,
   subset_codepoints : ArrayView[Int],
-) -> Array[PdfTrueTypeParsedSubset] raise PdfError {
+) -> Array[@truetype.PdfTrueTypeParsedSubset] raise PdfError {
   let partition = pdf_truetype_partition_subsets(encoding, subset_codepoints)
   let (firstchar, lastchar) = pdf_truetype_subset_extremes(
     partition.main_subset,
   )
   let metrics = pdf_truetype_metrics(data)
   let descriptor = pdf_truetype_descriptor_metrics(data)
-  let parsed : Array[PdfTrueTypeParsedSubset] = [
+  let parsed : Array[@truetype.PdfTrueTypeParsedSubset] = [
     pdf_truetype_parsed_subset(
       descriptor.nonsymbolic_flags,
       metrics,

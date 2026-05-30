@@ -3835,22 +3835,6 @@ pub using @date {type PdfStrftimeTime}
 
 pub using @destination {type PdfTargetPage}
 
-pub using @truetype {type PdfTrueTypeCMapGlyph}
-
-pub using @truetype {type PdfTrueTypeDescriptorMetrics}
-
-pub using @truetype {type PdfTrueTypeGlyphByteRange}
-
-pub using @truetype {type PdfTrueTypeMetrics}
-
-pub using @truetype {type PdfTrueTypeParsedSubset}
-
-pub using @truetype {type PdfTrueTypeSubsetPartition}
-
-pub using @truetype {type PdfTrueTypeSubsetTable}
-
-pub using @truetype {type PdfTrueTypeTableRecord}
-
 pub using @geometry {type PdfUnit}
 
 pub using @reader {type PdfVersion}

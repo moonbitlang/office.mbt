@@ -40,7 +40,7 @@ fn pdf_truetype_collect_cmap_records(
 
 ///|
 fn pdf_truetype_cmap_glyph_from_entries(
-  entries : ArrayView[PdfTrueTypeCMapGlyph],
+  entries : ArrayView[@truetype.PdfTrueTypeCMapGlyph],
   codepoint : Int,
 ) -> Int? {
   for entry in entries {
@@ -54,7 +54,7 @@ fn pdf_truetype_cmap_glyph_from_entries(
 
 ///|
 fn pdf_truetype_push_cmap_glyph(
-  entries : Array[PdfTrueTypeCMapGlyph],
+  entries : Array[@truetype.PdfTrueTypeCMapGlyph],
   codepoint : Int,
   glyph_index : Int,
 ) -> Unit {
@@ -76,7 +76,7 @@ fn pdf_truetype_push_cmap_glyph(
 fn pdf_truetype_cmap_format0_glyphs(
   data : BytesView,
   subtable_offset : Int,
-  entries : Array[PdfTrueTypeCMapGlyph],
+  entries : Array[@truetype.PdfTrueTypeCMapGlyph],
 ) -> Unit {
   for codepoint in 0..<256 {
     let offset = subtable_offset + 6 + codepoint
@@ -91,7 +91,7 @@ fn pdf_truetype_cmap_format0_glyphs(
 fn pdf_truetype_cmap_format6_glyphs(
   data : BytesView,
   subtable_offset : Int,
-  entries : Array[PdfTrueTypeCMapGlyph],
+  entries : Array[@truetype.PdfTrueTypeCMapGlyph],
 ) -> Unit {
   match
     (
@@ -118,7 +118,7 @@ fn pdf_truetype_cmap_format6_glyphs(
 fn pdf_truetype_cmap_format4_glyphs(
   data : BytesView,
   subtable_offset : Int,
-  entries : Array[PdfTrueTypeCMapGlyph],
+  entries : Array[@truetype.PdfTrueTypeCMapGlyph],
 ) -> Unit {
   match pdf_truetype_read_u16(data, subtable_offset + 6) {
     Some(seg_count_x2) => {
@@ -183,7 +183,7 @@ fn pdf_truetype_cmap_format4_glyphs(
 fn pdf_truetype_cmap_subtable_glyphs(
   data : BytesView,
   subtable_offset : Int,
-  entries : Array[PdfTrueTypeCMapGlyph],
+  entries : Array[@truetype.PdfTrueTypeCMapGlyph],
 ) -> Unit {
   match pdf_truetype_read_u16(data, subtable_offset) {
     Some(0) => pdf_truetype_cmap_format0_glyphs(data, subtable_offset, entries)
@@ -194,7 +194,7 @@ fn pdf_truetype_cmap_subtable_glyphs(
 }
 
 ///|
-fn pdf_truetype_identity_cmap_glyphs() -> Array[PdfTrueTypeCMapGlyph] {
+fn pdf_truetype_identity_cmap_glyphs() -> Array[@truetype.PdfTrueTypeCMapGlyph] {
   [
     for codepoint in 0..<256 => { codepoint, glyph_index: codepoint }
   ]
@@ -211,8 +211,8 @@ fn pdf_truetype_identity_cmap_glyphs() -> Array[PdfTrueTypeCMapGlyph] {
 /// same glyph index.
 pub fn pdf_truetype_cmap_glyphs(
   data : BytesView,
-) -> Array[PdfTrueTypeCMapGlyph] {
-  let entries : Array[PdfTrueTypeCMapGlyph] = []
+) -> Array[@truetype.PdfTrueTypeCMapGlyph] {
+  let entries : Array[@truetype.PdfTrueTypeCMapGlyph] = []
   match pdf_truetype_read_u16(data, 4) {
     Some(table_count) => {
       let mut cmap_offset = -1
