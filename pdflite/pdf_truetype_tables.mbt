@@ -1,13 +1,4 @@
 ///|
-/// TrueType table-directory record.
-pub(all) struct PdfTrueTypeTableRecord {
-  tag : String
-  checksum : UInt
-  offset : Int
-  length : Int
-} derive(Debug, Eq, ToJson)
-
-///|
 /// Return complete table-directory records from a TrueType font.
 ///
 /// This is the first structural pass in `Cpdftruetype.parse`: it reads

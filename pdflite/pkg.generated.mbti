@@ -13,6 +13,7 @@ import {
   "bobzhang/pdflite/destination",
   "bobzhang/pdflite/font",
   "bobzhang/pdflite/font/afm",
+  "bobzhang/pdflite/font/truetype",
   "bobzhang/pdflite/geometry",
   "bobzhang/pdflite/metadata",
   "bobzhang/pdflite/ocg",
@@ -2002,7 +2003,7 @@ pub fn pdf_truetype_cmap_glyphs(BytesView) -> Array[PdfTrueTypeCMapGlyph]
 
 pub fn pdf_truetype_cmaps(BytesView) -> Array[(Int, Int)]
 
-pub fn pdf_truetype_descriptor_metrics(BytesView) -> PdfTrueTypeDescriptorMetrics raise @core.PdfError
+pub fn pdf_truetype_descriptor_metrics(BytesView) -> @truetype.PdfTrueTypeDescriptorMetrics raise @core.PdfError
 
 pub fn pdf_truetype_expand_composite_glyphs(BytesView, ArrayView[Int]) -> Array[Int] raise @core.PdfError
 
@@ -2012,7 +2013,7 @@ pub fn pdf_truetype_higher_tounicode(ArrayView[Int]) -> Array[(Int, Bytes)]? rai
 
 pub fn pdf_truetype_loca_offsets(BytesView) -> Array[Int] raise @core.PdfError
 
-pub fn pdf_truetype_metrics(BytesView) -> PdfTrueTypeMetrics raise @core.PdfError
+pub fn pdf_truetype_metrics(BytesView) -> @truetype.PdfTrueTypeMetrics raise @core.PdfError
 
 pub fn pdf_truetype_parse(BytesView, PdfEncoding, ArrayView[Int]) -> Array[PdfTrueTypeParsedSubset] raise @core.PdfError
 
@@ -2028,9 +2029,9 @@ pub fn pdf_truetype_subset_glyph_indices(BytesView, ArrayView[Int]) -> Array[Int
 
 pub fn pdf_truetype_subset_loca_table(BytesView, ArrayView[Int]) -> Bytes raise @core.PdfError
 
-pub fn pdf_truetype_table(BytesView, String) -> PdfTrueTypeTableRecord?
+pub fn pdf_truetype_table(BytesView, String) -> @truetype.PdfTrueTypeTableRecord?
 
-pub fn pdf_truetype_tables(BytesView) -> Array[PdfTrueTypeTableRecord]
+pub fn pdf_truetype_tables(BytesView) -> Array[@truetype.PdfTrueTypeTableRecord]
 
 pub fn pdf_truetype_widths(BytesView, PdfEncoding, Int, Int, ArrayView[Int]) -> Array[Int] raise @core.PdfError
 
@@ -3807,34 +3808,10 @@ pub(all) struct PdfTrueTypeCMapGlyph {
   glyph_index : Int
 } derive(Eq, ToJson, @debug.Debug)
 
-pub(all) struct PdfTrueTypeDescriptorMetrics {
-  ascent : Int
-  descent : Int
-  capheight : Int
-  xheight : Int
-  avgwidth : Int
-  italicangle : Int
-  nonsymbolic_flags : Int
-  symbolic_flags : Int
-} derive(Eq, ToJson, @debug.Debug)
-
 pub(all) struct PdfTrueTypeGlyphByteRange {
   glyph_index : Int
   start_offset : Int
   end_offset : Int
-} derive(Eq, ToJson, @debug.Debug)
-
-pub(all) struct PdfTrueTypeMetrics {
-  units_per_em : Int
-  minx : Int
-  miny : Int
-  maxx : Int
-  maxy : Int
-  index_to_loc_format : Int
-  num_glyphs : Int
-  num_of_long_hor_metrics : Int
-  advance_widths : Array[Int]
-  max_width : Int
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfTrueTypeParsedSubset {
@@ -3868,13 +3845,6 @@ pub(all) struct PdfTrueTypeSubsetTable {
   length : Int
   bytes : Bytes
 } derive(Eq, @debug.Debug)
-
-pub(all) struct PdfTrueTypeTableRecord {
-  tag : String
-  checksum : UInt
-  offset : Int
-  length : Int
-} derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfType3Glyphs {
   fontbbox : @geometry.PdfRectangle
@@ -4065,6 +4035,12 @@ pub using @syntax {type PdfStreamData}
 pub using @syntax {type PdfStreamDataCrypt}
 
 pub using @destination {type PdfTargetPage}
+
+pub using @truetype {type PdfTrueTypeDescriptorMetrics}
+
+pub using @truetype {type PdfTrueTypeMetrics}
+
+pub using @truetype {type PdfTrueTypeTableRecord}
 
 pub using @geometry {type PdfUnit}
 

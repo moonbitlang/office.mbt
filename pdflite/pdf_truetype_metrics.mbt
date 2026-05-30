@@ -1,19 +1,4 @@
 ///|
-/// Core metrics extracted from TrueType `head`, `hhea`, `hmtx`, and `maxp`.
-pub(all) struct PdfTrueTypeMetrics {
-  units_per_em : Int
-  minx : Int
-  miny : Int
-  maxx : Int
-  maxy : Int
-  index_to_loc_format : Int
-  num_glyphs : Int
-  num_of_long_hor_metrics : Int
-  advance_widths : Array[Int]
-  max_width : Int
-} derive(Debug, Eq, ToJson)
-
-///|
 fn pdf_truetype_hmtx_widths(
   data : BytesView,
   hmtx : PdfTrueTypeTableRecord,
@@ -48,19 +33,6 @@ fn pdf_truetype_flags(symbolic : Bool, italic_angle : Int) -> Int {
   let nonsymbolic_bit = if symbolic { 0 } else { 1 }
   (italic << 6) | (symbolic_bit << 2) | (nonsymbolic_bit << 5)
 }
-
-///|
-/// Font descriptor metrics derived from TrueType tables.
-pub(all) struct PdfTrueTypeDescriptorMetrics {
-  ascent : Int
-  descent : Int
-  capheight : Int
-  xheight : Int
-  avgwidth : Int
-  italicangle : Int
-  nonsymbolic_flags : Int
-  symbolic_flags : Int
-} derive(Debug, Eq, ToJson)
 
 ///|
 /// Return the descriptor metrics read from the TrueType `OS/2` and `post`

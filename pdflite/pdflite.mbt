@@ -358,6 +358,13 @@ pub using @font {
 }
 
 ///|
+pub using @truetype {
+  type PdfTrueTypeDescriptorMetrics,
+  type PdfTrueTypeMetrics,
+  type PdfTrueTypeTableRecord,
+}
+
+///|
 pub using @reader {
   type PdfVersion,
   type ObjectStreamReference,
