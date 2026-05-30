@@ -7,13 +7,13 @@ pub fn PdfDocument::encrypt_128bit_r4(
   self : PdfDocument,
   user_password : BytesView,
   owner_password : BytesView,
-  denied_permissions : ArrayView[PdfPermission],
+  denied_permissions : ArrayView[@crypt_core.PdfPermission],
   encrypt_metadata? : Bool = true,
   file_id? : BytesView = [],
 ) -> PdfDocument raise PdfError {
   let no_encrypt_metadata = !encrypt_metadata
   let (document, id) = self.with_file_id(file_id~)
-  let permissions = pdf_p_of_permissions(denied_permissions)
+  let permissions = @crypt_core.pdf_p_of_permissions(denied_permissions)
   let owner_entry = @crypt_core.pdf_make_owner_password_entry(
     4, owner_password, user_password, 128,
   )
@@ -71,14 +71,14 @@ pub fn PdfDocument::encrypt_128bit_aesv2_with_iv_provider(
   self : PdfDocument,
   user_password : BytesView,
   owner_password : BytesView,
-  denied_permissions : ArrayView[PdfPermission],
+  denied_permissions : ArrayView[@crypt_core.PdfPermission],
   iv_provider : (Int, Int, Int) -> PdfBytes raise PdfError,
   encrypt_metadata? : Bool = true,
   file_id? : BytesView = [],
 ) -> PdfDocument raise PdfError {
   let no_encrypt_metadata = !encrypt_metadata
   let (document, id) = self.with_file_id(file_id~)
-  let permissions = pdf_p_of_permissions(denied_permissions)
+  let permissions = @crypt_core.pdf_p_of_permissions(denied_permissions)
   let owner_entry = @crypt_core.pdf_make_owner_password_entry(
     4, owner_password, user_password, 128,
   )

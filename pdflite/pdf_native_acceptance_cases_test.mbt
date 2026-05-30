@@ -1247,7 +1247,7 @@ test "native acceptance suite reads encrypted AES128 documents through public wr
   let doc = try! acceptance_one_page_document_for_test()
   let secret = acceptance_secret_object_for_test("native-acceptance-secret")
   doc.add_object_given_number(60, secret)
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoEdit, PdfNoPrint]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoEdit, PdfNoPrint]
   let encrypted = try! doc.encrypt_128bit_aesv2_with_iv_provider(
     acceptance_ascii_for_test("user"),
     acceptance_ascii_for_test("owner"),
@@ -1292,7 +1292,7 @@ test "native acceptance suite preserves unencrypted metadata through AES recrypt
   let input = acceptance_metadata_encryption_document_for_test(metadata, secret)
   let user_password = acceptance_ascii_for_test("user")
   let owner_password = acceptance_ascii_for_test("owner")
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoExtract, PdfNoCopy]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoExtract, PdfNoCopy]
   let rendered = @pdflite.pdf_write_encrypted_aesv2_document_with_iv_provider(
     input,
     user_password,
@@ -1363,7 +1363,7 @@ test "native acceptance suite runs pdfencrypt owner-password workflow" {
   let input = acceptance_one_page_document_for_test()
   let user_password = acceptance_ascii_for_test("")
   let owner_password = acceptance_ascii_for_test("owner-password")
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoEdit, PdfNoPrint]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoEdit, PdfNoPrint]
   let encrypted = @pdflite.pdf_write_encrypted_aesv2_document_with_iv_provider(
     input,
     user_password,
@@ -1417,7 +1417,7 @@ test "native acceptance suite decrypts reconstructed encrypted malformed trailer
   doc.add_object_given_number(60, secret)
   let user_password = acceptance_ascii_for_test("user")
   let owner_password = acceptance_ascii_for_test("owner")
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoCopy]
   let encrypted = doc.encrypt_128bit_aesv2_with_iv_provider(
     user_password,
     owner_password,
@@ -1492,7 +1492,7 @@ test "native acceptance suite decrypts reconstructed encrypted missing-root trai
   doc.add_object_given_number(60, secret)
   let user_password = acceptance_ascii_for_test("user")
   let owner_password = acceptance_ascii_for_test("owner")
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoCopy]
   let encrypted = doc.encrypt_128bit_aesv2_with_iv_provider(
     user_password,
     owner_password,
@@ -1569,7 +1569,7 @@ test "native acceptance suite decrypts reconstructed encrypted catalogs missing 
   doc.add_object_given_number(60, secret)
   let user_password = acceptance_ascii_for_test("user")
   let owner_password = acceptance_ascii_for_test("owner")
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoCopy]
   let encrypted = doc.encrypt_128bit_aesv2_with_iv_provider(
     user_password,
     owner_password,
@@ -1694,7 +1694,7 @@ test "native acceptance suite decrypts reconstructed encrypted page trees missin
   doc.add_object_given_number(60, secret)
   let user_password = acceptance_ascii_for_test("user")
   let owner_password = acceptance_ascii_for_test("owner")
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoCopy]
   let encrypted = doc.encrypt_128bit_aesv2_with_iv_provider(
     user_password,
     owner_password,
@@ -1786,7 +1786,7 @@ test "native acceptance suite decrypts reconstructed malformed xref documents" {
     "native-acceptance-reconstructed-secret",
   )
   doc.add_object_given_number(60, secret)
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoCopy]
   let encrypted = try! doc.encrypt_128bit_aesv2_with_iv_provider(
     acceptance_ascii_for_test("user"),
     acceptance_ascii_for_test("owner"),
@@ -1826,7 +1826,7 @@ test "native acceptance suite decrypts reconstructed encrypted malformed xref ma
     "native-acceptance-xref-marker-secret",
   )
   doc.add_object_given_number(60, secret)
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoCopy]
   let user_password = acceptance_ascii_for_test("user")
   let encrypted = doc.encrypt_128bit_aesv2_with_iv_provider(
     user_password,
@@ -1867,7 +1867,7 @@ test "native acceptance suite decrypts reconstructed encrypted malformed xref su
   doc.add_object_given_number(60, secret)
   let user_password = acceptance_ascii_for_test("user")
   let owner_password = acceptance_ascii_for_test("owner")
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoCopy]
   let encrypted = doc.encrypt_128bit_aesv2_with_iv_provider(
     user_password,
     owner_password,
@@ -1942,7 +1942,7 @@ test "native acceptance suite decrypts reconstructed encrypted malformed xref-st
   doc.add_object_given_number(60, secret)
   let user_password = acceptance_ascii_for_test("user")
   let owner_password = acceptance_ascii_for_test("owner")
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoCopy]
   let encrypted = doc.encrypt_128bit_aesv2_with_iv_provider(
     user_password,
     owner_password,
@@ -2019,7 +2019,7 @@ test "native acceptance suite decrypts reconstructed encrypted malformed xref-st
   doc.add_object_given_number(60, secret)
   let user_password = acceptance_ascii_for_test("user")
   let owner_password = acceptance_ascii_for_test("owner")
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoCopy]
   let encrypted = doc.encrypt_128bit_aesv2_with_iv_provider(
     user_password,
     owner_password,
@@ -2098,7 +2098,7 @@ test "native acceptance suite decrypts reconstructed encrypted malformed xref-st
   doc.add_object_given_number(60, secret)
   let user_password = acceptance_ascii_for_test("user")
   let owner_password = acceptance_ascii_for_test("owner")
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoCopy]
   let encrypted = doc.encrypt_128bit_aesv2_with_iv_provider(
     user_password,
     owner_password,
@@ -2209,7 +2209,7 @@ test "native acceptance suite decrypts reconstructed encrypted malformed xref-st
   doc.add_object_given_number(60, secret)
   let user_password = acceptance_ascii_for_test("user")
   let owner_password = acceptance_ascii_for_test("owner")
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoCopy]
   let encrypted = doc.encrypt_128bit_aesv2_with_iv_provider(
     user_password,
     owner_password,
@@ -2354,7 +2354,7 @@ test "native acceptance suite decrypts reconstructed encrypted malformed xref-st
   doc.add_object_given_number(60, secret)
   let user_password = acceptance_ascii_for_test("user")
   let owner_password = acceptance_ascii_for_test("owner")
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoCopy]
   let encrypted = doc.encrypt_128bit_aesv2_with_iv_provider(
     user_password,
     owner_password,
@@ -2433,7 +2433,7 @@ test "native acceptance suite decrypts reconstructed encrypted xref-stream unsup
   doc.add_object_given_number(60, secret)
   let user_password = acceptance_ascii_for_test("user")
   let owner_password = acceptance_ascii_for_test("owner")
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoCopy]
   let encrypted = doc.encrypt_128bit_aesv2_with_iv_provider(
     user_password,
     owner_password,
@@ -2513,7 +2513,7 @@ test "native acceptance suite recrypts reconstructed bad-startxref encrypted doc
   doc.add_object_given_number(60, secret)
   let user_password = acceptance_ascii_for_test("user")
   let owner_password = acceptance_ascii_for_test("owner")
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoPrint]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoPrint]
   let encrypted = doc.encrypt_128bit_aesv2_with_iv_provider(
     user_password,
     owner_password,
@@ -2584,7 +2584,7 @@ test "native acceptance suite reconstructs compressed encrypted documents with b
   doc.add_object_given_number(60, secret)
   let user_password = acceptance_ascii_for_test("user")
   let owner_password = acceptance_ascii_for_test("owner")
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy, PdfNoPrint]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoCopy, PdfNoPrint]
   let rendered = @pdflite.pdf_write_encrypted_aesv2_document_with_iv_provider(
     doc,
     user_password,
@@ -2668,7 +2668,7 @@ test "native acceptance suite recrypts encrypted incremental revisions" {
   )
   let doc = try! acceptance_one_page_document_for_test()
   doc.add_object_given_number(60, original_secret)
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoEdit, PdfNoPrint]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoEdit, PdfNoPrint]
   let encrypted = try! doc.encrypt_128bit_aesv2_with_iv_provider(
     acceptance_ascii_for_test("user"),
     acceptance_ascii_for_test("owner"),
@@ -2731,7 +2731,7 @@ test "native acceptance suite reconstructs encrypted incremental revisions with 
   let owner_password = acceptance_ascii_for_test("owner")
   let doc = acceptance_one_page_document_for_test()
   doc.add_object_given_number(60, original_secret)
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy, PdfNoEdit]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoCopy, PdfNoEdit]
   let encrypted = doc.encrypt_128bit_aesv2_with_iv_provider(
     user_password,
     owner_password,

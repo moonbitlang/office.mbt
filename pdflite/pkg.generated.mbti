@@ -1170,8 +1170,6 @@ pub fn pdf_output_xmp_info(PdfDocument, encoding? : @metadata.PdfMetadataEncodin
 
 pub fn pdf_output_xmp_info_json_blob(PdfDocument) -> Bytes raise @core.PdfError
 
-pub fn pdf_p_of_permissions(ArrayView[@crypt_core.PdfPermission]) -> Int
-
 pub fn pdf_pad_after(PdfDocument, ArrayView[Int], pad_with? : PdfDocument?) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_pad_before(PdfDocument, ArrayView[Int], pad_with? : PdfDocument?) -> PdfDocument raise @core.PdfError
@@ -1299,8 +1297,6 @@ pub let pdf_pdfuaid : String
 pub let pdf_pdfvtid : String
 
 pub let pdf_pdfxid : String
-
-pub fn pdf_permissions_of_p(Int) -> Array[@crypt_core.PdfPermission]
 
 pub fn pdf_pop(PdfDrawControl) -> Unit raise @core.PdfError
 
@@ -3525,8 +3521,6 @@ pub using @core {type ByteOutput}
 
 pub using @geometry {type PaperSize}
 
-pub using @crypt_core {type PdfAesV3RandomField}
-
 pub type PdfBytes = Bytes
 
 pub using @geometry {type PdfCalculatedPosition}
@@ -3536,8 +3530,6 @@ pub using @content {type PdfContentOp}
 pub using @geometry {type PdfCoordRectangle}
 
 pub using @core {type PdfCryptType}
-
-pub using @crypt_core {type PdfEncryptionMethod}
 
 pub using @core {type PdfError}
 
@@ -3564,8 +3556,6 @@ pub using @page {type PdfPage}
 pub using @page {type PdfPageRotation}
 
 pub using @syntax {type PdfParsedIndirectObject}
-
-pub using @crypt_core {type PdfPermission}
 
 pub using @geometry {type PdfPosition}
 

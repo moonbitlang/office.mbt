@@ -30,7 +30,7 @@ fn PdfDocument::decrypt_with_file_key(
       output.finish_decrypted_copy(values)
       {
         document: output,
-        denied_permissions: pdf_permissions_of_p(values.permissions),
+        denied_permissions: @crypt_core.pdf_permissions_of_p(values.permissions),
       }
     }
     PdfCryptAESV2 => {
@@ -43,7 +43,7 @@ fn PdfDocument::decrypt_with_file_key(
       output.finish_decrypted_copy(values)
       {
         document: output,
-        denied_permissions: pdf_permissions_of_p(values.permissions),
+        denied_permissions: @crypt_core.pdf_permissions_of_p(values.permissions),
       }
     }
     PdfCryptAESV3(_) => {
@@ -55,7 +55,7 @@ fn PdfDocument::decrypt_with_file_key(
       output.finish_decrypted_copy(values)
       {
         document: output,
-        denied_permissions: pdf_permissions_of_p(values.permissions),
+        denied_permissions: @crypt_core.pdf_permissions_of_p(values.permissions),
       }
     }
   }

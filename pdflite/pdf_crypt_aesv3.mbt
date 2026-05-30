@@ -111,7 +111,9 @@ fn pdf_aesv3_password_hash(
 }
 
 ///|
-fn pdf_aesv3_random_field_key(field : PdfAesV3RandomField) -> PdfName {
+fn pdf_aesv3_random_field_key(
+  field : @crypt_core.PdfAesV3RandomField,
+) -> PdfName {
   match field {
     PdfAesV3FileKey => pdf_crypt_file_key_name
     PdfAesV3UserValidationSalt => pdf_crypt_user_validation_salt_name
@@ -124,8 +126,8 @@ fn pdf_aesv3_random_field_key(field : PdfAesV3RandomField) -> PdfName {
 
 ///|
 fn pdf_aesv3_random_bytes(
-  random_provider : (PdfAesV3RandomField, Int) -> PdfBytes raise PdfError,
-  field : PdfAesV3RandomField,
+  random_provider : (@crypt_core.PdfAesV3RandomField, Int) -> PdfBytes raise PdfError,
+  field : @crypt_core.PdfAesV3RandomField,
   length : Int,
 ) -> PdfBytes raise PdfError {
   pdf_crypt_chop_string(

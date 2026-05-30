@@ -67,7 +67,7 @@ fn crypt_recrypt_aesv3_r5_file_key_for_test() -> @pdflite.PdfBytes {
 ///|
 #warnings("-unused_error_type")
 fn crypt_recrypt_aesv3_r5_random_for_test(
-  field : @pdflite.PdfAesV3RandomField,
+  field : @crypt_core.PdfAesV3RandomField,
   _length : Int,
 ) -> @pdflite.PdfBytes raise @pdflite.PdfError {
   match field {
@@ -105,7 +105,7 @@ fn crypt_recrypt_aesv3_r5_document_with_object_for_test(
   let encrypted = try! doc.encrypt_256bit_aesv3_with_providers(
     @ascii.encode("user"),
     @ascii.encode("owner"),
-    @pdflite.pdf_permissions_of_p(-3904),
+    @crypt_core.pdf_permissions_of_p(-3904),
     crypt_recrypt_aesv3_r5_random_for_test,
     fn(encrypted_object_number, generation, index) {
       crypt_recrypt_aes_document_iv_for_test(
@@ -143,7 +143,7 @@ fn crypt_recrypt_aesv3_r6_document_with_object_for_test(
   doc.encrypt_256bit_aesv3_with_providers(
     @ascii.encode("user"),
     @ascii.encode("owner"),
-    @pdflite.pdf_permissions_of_p(-3904),
+    @crypt_core.pdf_permissions_of_p(-3904),
     crypt_recrypt_aesv3_r5_random_for_test,
     fn(object_number, generation, index) {
       crypt_recrypt_aes_document_iv_for_test(object_number, generation, index)
@@ -614,7 +614,7 @@ test "PdfDocument recrypt_with_password_aesv3_with_iv_provider restores saved AE
   @test.assert_eq(roundtrip.document.lookup_object_or_null(7), added_object)
   @test.assert_eq(
     roundtrip.denied_permissions,
-    @pdflite.pdf_permissions_of_p(-3904),
+    @crypt_core.pdf_permissions_of_p(-3904),
   )
 
   let rendered = try! @pdflite.pdf_write_document(recrypted)
@@ -696,7 +696,7 @@ test "PdfDocument recrypt_with_password_aesv3_with_iv_provider supports AESV3 re
   let encrypted = try! doc.encrypt_256bit_aesv3_with_providers(
     @ascii.encode("user"),
     @ascii.encode("owner"),
-    @pdflite.pdf_permissions_of_p(-3904),
+    @crypt_core.pdf_permissions_of_p(-3904),
     crypt_recrypt_aesv3_r5_random_for_test,
     fn(object_number, generation, index) {
       crypt_recrypt_aes_document_iv_for_test(object_number, generation, index)
@@ -751,7 +751,7 @@ test "PdfDocument encrypt_256bit_aesv3_iso_with_providers mirrors ISO AESV3 opti
     (key_title, PdfString(@ascii.encode("aes3-iso-secret"))),
   ])
   doc.add_object_given_number(5, secret_object)
-  let denied_permissions = @pdflite.pdf_permissions_of_p(-3904)
+  let denied_permissions = @crypt_core.pdf_permissions_of_p(-3904)
   let encrypted = try! doc.encrypt_256bit_aesv3_iso_with_providers(
     @ascii.encode("user"),
     @ascii.encode("owner"),
@@ -1040,7 +1040,7 @@ test "PdfDocument AESV3 recrypt supports xref stream incremental updates" {
   @test.assert_eq(roundtrip.document.lookup_object_or_null(8), added_object)
   @test.assert_eq(
     roundtrip.denied_permissions,
-    @pdflite.pdf_permissions_of_p(-3904),
+    @crypt_core.pdf_permissions_of_p(-3904),
   )
 
   let compressed = try! @pdflite.pdf_write_document_incremental_update_with_compressed_xref_stream(
@@ -1066,7 +1066,7 @@ test "PdfDocument AESV3 recrypt supports xref stream incremental updates" {
   )
   @test.assert_eq(
     compressed_roundtrip.denied_permissions,
-    @pdflite.pdf_permissions_of_p(-3904),
+    @crypt_core.pdf_permissions_of_p(-3904),
   )
 }
 
@@ -1123,7 +1123,7 @@ test "PdfDocument AESV3 recrypt supports classic incremental update" {
   @test.assert_eq(roundtrip.document.lookup_object_or_null(8), added_object)
   @test.assert_eq(
     roundtrip.denied_permissions,
-    @pdflite.pdf_permissions_of_p(-3904),
+    @crypt_core.pdf_permissions_of_p(-3904),
   )
 }
 

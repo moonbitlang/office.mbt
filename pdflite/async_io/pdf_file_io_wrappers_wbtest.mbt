@@ -3599,7 +3599,7 @@ async test "async file wrappers read encrypted object streams and recover bad st
   pdf_async_io_remove_if_exists_for_test(encrypted_path)
   pdf_async_io_remove_if_exists_for_test(corrupted_path)
   pdf_async_io_remove_if_exists_for_test(blank_path)
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoCopy]
   let encrypted = try! pdf_async_io_encrypted_object_stream_pdf_for_test(
     @ascii.encode("user"),
     @ascii.encode("owner"),
@@ -3674,7 +3674,7 @@ async test "async file wrappers recrypt encrypted object-stream payloads" {
   )
   pdf_async_io_remove_if_exists_for_test(source_path)
   pdf_async_io_remove_if_exists_for_test(roundtrip_path)
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoCopy]
   let user_password = @ascii.encode("user")
   let owner_password = @ascii.encode("owner")
   let encrypted = try! pdf_async_io_encrypted_object_stream_pdf_for_test(
@@ -3751,7 +3751,7 @@ async test "async file wrappers write mode-dispatched encrypted documents" {
   pdf_async_io_remove_if_exists_for_test(aesv3_iso_default_path)
   let user = @ascii.encode("user")
   let owner = @ascii.encode("owner")
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoEdit, PdfNoPrint]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoEdit, PdfNoPrint]
   pdf_write_document_to_file_with_mode(
     try! @pdflite.pdf_minimum_valid_pdf(),
     mode_path,
@@ -3935,7 +3935,7 @@ async test "async file wrappers reconstruct compressed ARC4 encrypted documents 
   doc.add_object_given_number(30, secret)
   let user = @ascii.encode("user")
   let owner = @ascii.encode("owner")
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoPrint]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoPrint]
   pdf_write_encrypted_128bit_r4_document_to_file(
     doc,
     encrypted_path,
@@ -3994,7 +3994,7 @@ async test "async file wrappers reconstruct compressed ARC4 encrypted documents 
 async fn pdf_async_io_assert_legacy_arc4_recovery_for_test(
   label : String,
   key_length_bits : Int,
-  expected_encryption : @pdflite.PdfEncryptionMethod,
+  expected_encryption : @crypt_core.PdfEncryptionMethod,
 ) -> Unit {
   let encrypted_path = pdf_async_io_test_path_for_test(
     "compressed_arc4_" + label + "_bad_startxref",
@@ -4014,7 +4014,7 @@ async fn pdf_async_io_assert_legacy_arc4_recovery_for_test(
   doc.add_object_given_number(30, secret)
   let user = @ascii.encode("user")
   let owner = @ascii.encode("owner")
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoPrint]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoPrint]
   if key_length_bits == 40 {
     pdf_write_encrypted_40bit_document_to_file(
       doc,
@@ -4115,7 +4115,7 @@ async test "async file wrappers reconstruct compressed encrypted documents with 
   doc.add_object_given_number(30, secret)
   let user = @ascii.encode("user")
   let owner = @ascii.encode("owner")
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy, PdfNoPrint]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoCopy, PdfNoPrint]
   pdf_write_encrypted_aesv2_document_to_file_with_iv_provider(
     doc,
     encrypted_path,
@@ -4198,7 +4198,7 @@ async test "async file wrappers reconstruct encrypted malformed classic xref off
   doc.add_object_given_number(30, secret)
   let user = @ascii.encode("user")
   let owner = @ascii.encode("owner")
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoCopy]
   pdf_write_encrypted_aesv2_document_to_file_with_iv_provider(
     doc,
     encrypted_path,
@@ -4296,7 +4296,7 @@ async test "async file wrappers reconstruct encrypted malformed classic xref mar
   doc.add_object_given_number(30, secret)
   let user = @ascii.encode("user")
   let owner = @ascii.encode("owner")
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoCopy]
   pdf_write_encrypted_aesv2_document_to_file_with_iv_provider(
     doc,
     encrypted_path,
@@ -4394,7 +4394,7 @@ async test "async file wrappers reconstruct encrypted malformed classic xref sub
   doc.add_object_given_number(30, secret)
   let user = @ascii.encode("user")
   let owner = @ascii.encode("owner")
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoCopy]
   pdf_write_encrypted_aesv2_document_to_file_with_iv_provider(
     doc,
     encrypted_path,
@@ -4492,7 +4492,7 @@ async test "async file wrappers reconstruct encrypted malformed classic trailers
   doc.add_object_given_number(30, secret)
   let user = @ascii.encode("user")
   let owner = @ascii.encode("owner")
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoCopy]
   pdf_write_encrypted_aesv2_document_to_file_with_iv_provider(
     doc,
     encrypted_path,
@@ -4592,7 +4592,7 @@ async test "async file wrappers reconstruct encrypted missing-root classic trail
   doc.add_object_given_number(30, secret)
   let user = @ascii.encode("user")
   let owner = @ascii.encode("owner")
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoCopy]
   pdf_write_encrypted_aesv2_document_to_file_with_iv_provider(
     doc,
     encrypted_path,
@@ -4693,7 +4693,7 @@ async test "async file wrappers reconstruct encrypted catalogs missing from clas
   doc.add_object_given_number(30, secret)
   let user = @ascii.encode("user")
   let owner = @ascii.encode("owner")
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoCopy]
   pdf_write_encrypted_aesv2_document_to_file_with_iv_provider(
     doc,
     encrypted_path,
@@ -4841,7 +4841,7 @@ async test "async file wrappers reconstruct encrypted page trees missing from cl
   doc.add_object_given_number(60, secret)
   let user = @ascii.encode("user")
   let owner = @ascii.encode("owner")
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoCopy]
   let encrypted = try! doc.encrypt_128bit_aesv2_with_iv_provider(
     user,
     owner,
@@ -4958,7 +4958,7 @@ async test "async file wrappers reconstruct encrypted malformed xref-stream meta
   doc.add_object_given_number(30, secret)
   let user = @ascii.encode("user")
   let owner = @ascii.encode("owner")
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoCopy]
   pdf_write_encrypted_aesv2_document_to_file_with_iv_provider(
     doc,
     encrypted_path,
@@ -5049,7 +5049,7 @@ async test "async file wrappers reconstruct encrypted malformed xref-stream widt
   doc.add_object_given_number(30, secret)
   let user = @ascii.encode("user")
   let owner = @ascii.encode("owner")
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoCopy]
   pdf_write_encrypted_aesv2_document_to_file_with_iv_provider(
     doc,
     encrypted_path,
@@ -5140,7 +5140,7 @@ async test "async file wrappers reconstruct encrypted malformed xref-stream size
   doc.add_object_given_number(30, secret)
   let user = @ascii.encode("user")
   let owner = @ascii.encode("owner")
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoCopy]
   pdf_write_encrypted_aesv2_document_to_file_with_iv_provider(
     doc,
     encrypted_path,
@@ -5231,7 +5231,7 @@ async test "async file wrappers reconstruct encrypted malformed xref-stream filt
   doc.add_object_given_number(30, secret)
   let user = @ascii.encode("user")
   let owner = @ascii.encode("owner")
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoCopy]
   pdf_write_encrypted_aesv2_document_to_file_with_iv_provider(
     doc,
     encrypted_path,
@@ -5323,7 +5323,7 @@ async test "async file wrappers reconstruct encrypted malformed xref-stream deco
   doc.add_object_given_number(30, secret)
   let user = @ascii.encode("user")
   let owner = @ascii.encode("owner")
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoCopy]
   pdf_write_encrypted_aesv2_document_to_file_with_iv_provider(
     doc,
     encrypted_path,
@@ -5414,7 +5414,7 @@ async test "async file wrappers reconstruct compressed AESV3 encrypted documents
   doc.add_object_given_number(30, secret)
   let user = @ascii.encode("user")
   let owner = @ascii.encode("owner")
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoAssemble, PdfNoExtract]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoAssemble, PdfNoExtract]
   pdf_write_encrypted_aesv3_document_to_file_with_providers(
     doc,
     encrypted_path,
@@ -5500,7 +5500,7 @@ async test "async file wrappers reconstruct compressed AESV3 ISO encrypted docum
   doc.add_object_given_number(30, secret)
   let user = @ascii.encode("user")
   let owner = @ascii.encode("owner")
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoAssemble]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoAssemble]
   pdf_write_encrypted_aesv3_iso_document_to_file_with_providers(
     doc,
     encrypted_path,
@@ -5691,7 +5691,7 @@ async test "async file wrappers read encrypted incremental revisions" {
   )
   let doc = try! @pdflite.pdf_minimum_valid_pdf()
   doc.add_object_given_number(30, original_secret)
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoCopy]
   let encrypted = try! doc.encrypt_128bit_aesv2_with_iv_provider(
     @ascii.encode("user"),
     @ascii.encode("owner"),
@@ -5769,7 +5769,7 @@ async test "async file wrappers reconstruct encrypted incremental revisions with
   )
   let doc = try! @pdflite.pdf_minimum_valid_pdf()
   doc.add_object_given_number(30, original_secret)
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy, PdfNoEdit]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoCopy, PdfNoEdit]
   let encrypted = try! doc.encrypt_128bit_aesv2_with_iv_provider(
     @ascii.encode("user"),
     @ascii.encode("owner"),

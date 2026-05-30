@@ -7963,7 +7963,7 @@ fn acceptance_assert_metadata_encryption_for_test(
 fn acceptance_encrypted_object_stream_pdf_with_passwords_for_test(
   user_password : @pdflite.PdfBytes,
   owner_password : @pdflite.PdfBytes,
-  denied_permissions : ArrayView[@pdflite.PdfPermission],
+  denied_permissions : ArrayView[@crypt_core.PdfPermission],
 ) -> @pdflite.PdfBytes raise {
   let secret = acceptance_secret_object_for_test("encrypted object stream")
   let object_stream_data : Array[Byte] = []
@@ -10794,7 +10794,7 @@ fn acceptance_unwrap_decryption_for_test(
 ///|
 fn acceptance_assert_decrypted_object_stream_payload_for_test(
   decrypted : @pdflite.PdfDecryptionResult,
-  denied_permissions : Array[@pdflite.PdfPermission],
+  denied_permissions : Array[@crypt_core.PdfPermission],
 ) -> Unit raise {
   @test.assert_eq(decrypted.denied_permissions, denied_permissions)
   @test.assert_eq(

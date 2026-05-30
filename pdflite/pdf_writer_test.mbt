@@ -50,7 +50,7 @@ fn writer_unwrap_decryption_for_test(
 fn writer_assert_encrypted_secret_for_test(
   rendered : @pdflite.PdfBytes,
   owner_password : String,
-  denied : Array[@pdflite.PdfPermission],
+  denied : Array[@crypt_core.PdfPermission],
   text : String,
 ) -> Unit raise {
   let decrypted = writer_unwrap_decryption_for_test(
@@ -1026,7 +1026,7 @@ test "pdf_write_document_options covers id generation and incremental update" {
 
 ///|
 test "pdf_write_document_options dispatches encryption methods" {
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoEdit]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoEdit]
   let user = writer_ascii_for_test("user")
   let owner = writer_ascii_for_test("owner")
   let arc4_40 = @pdflite.pdf_write_document_options(
@@ -1199,7 +1199,7 @@ test "pdf_write_document_incremental_update_with_generated_id appends trailer ID
 
 ///|
 test "encrypted writer wrappers cover CamlPDF-style write workflows" {
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoEdit, PdfNoPrint]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoEdit, PdfNoPrint]
   let user = writer_ascii_for_test("user")
   let owner = writer_ascii_for_test("owner")
   let arc4_40 = try! @pdflite.pdf_write_encrypted_40bit_document(

@@ -173,15 +173,6 @@ pub using @page {
 }
 
 ///|
-pub using @crypt_core {
-  type PdfPermission,
-  type PdfEncryptionMethod,
-  type PdfAesV3RandomField,
-  pdf_p_of_permissions,
-  pdf_permissions_of_p,
-}
-
-///|
 pub using @content {
   type PdfContentOp,
   pdf_content_begin_artifact,

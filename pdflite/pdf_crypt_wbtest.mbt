@@ -191,7 +191,7 @@ fn crypt_wb_aesv3_r5_values_for_test() -> PdfEncryptionValues {
 ///|
 #warnings("-unused_error_type")
 fn crypt_wb_aesv3_r5_random_for_test(
-  field : PdfAesV3RandomField,
+  field : @crypt_core.PdfAesV3RandomField,
   _length : Int,
 ) -> PdfBytes raise PdfError {
   match field {
@@ -599,7 +599,7 @@ test "private encryption values derive raw file keys for authenticated passwords
   let arc4_doc = try! pdf_document_empty().encrypt_128bit(
     @ascii.encode("user"),
     @ascii.encode("owner"),
-    pdf_permissions_of_p(-3904),
+    @crypt_core.pdf_permissions_of_p(-3904),
     file_id=@ascii.encode("doc-id"),
   )
   let arc4_values = try! arc4_doc.encryption_values()
@@ -623,7 +623,7 @@ test "private encryption values derive raw file keys for authenticated passwords
   let aesv2_doc = try! pdf_document_empty().encrypt_128bit_aesv2_with_iv_provider(
     @ascii.encode("user"),
     @ascii.encode("owner"),
-    pdf_permissions_of_p(-3904),
+    @crypt_core.pdf_permissions_of_p(-3904),
     fn(_, _, _) { Bytes::new(16) },
     file_id=@ascii.encode("doc-id"),
   )
@@ -681,7 +681,7 @@ test "private encryption values authenticate R2 and R3 user entries" {
   let r3_values = try! (try! pdf_document_empty().encrypt_128bit(
     Bytes::new(0),
     @ascii.encode("owner"),
-    pdf_permissions_of_p(-3904),
+    @crypt_core.pdf_permissions_of_p(-3904),
     file_id=@ascii.encode("doc-id"),
   )).encryption_values()
   let r3_entry = r3_values.user_entry
@@ -782,7 +782,7 @@ test "private AESV3 password authentication validates R5 SHA-256 entries" {
   let iso_encrypted = try! iso_doc.encrypt_256bit_aesv3_with_providers(
     @ascii.encode("user"),
     @ascii.encode("owner"),
-    pdf_permissions_of_p(-3904),
+    @crypt_core.pdf_permissions_of_p(-3904),
     crypt_wb_aesv3_r5_random_for_test,
     fn(_, _, _) { Bytes::new(16) },
     iso=true,
@@ -820,7 +820,7 @@ test "private encryption values authenticate owner through recovered user passwo
   let values = try! (try! pdf_document_empty().encrypt_128bit(
     Bytes::new(0),
     @ascii.encode("owner"),
-    pdf_permissions_of_p(-3904),
+    @crypt_core.pdf_permissions_of_p(-3904),
     file_id=@ascii.encode("doc-id"),
   )).encryption_values()
   @test.assert_eq(

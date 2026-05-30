@@ -8,7 +8,7 @@ pub fn PdfDocument::encrypt_40bit(
   self : PdfDocument,
   user_password : BytesView,
   owner_password : BytesView,
-  denied_permissions : ArrayView[PdfPermission],
+  denied_permissions : ArrayView[@crypt_core.PdfPermission],
   file_id? : BytesView = [],
 ) -> PdfDocument raise PdfError {
   self.encrypt_arc4_standard(
@@ -26,7 +26,7 @@ pub fn PdfDocument::encrypt_128bit(
   self : PdfDocument,
   user_password : BytesView,
   owner_password : BytesView,
-  denied_permissions : ArrayView[PdfPermission],
+  denied_permissions : ArrayView[@crypt_core.PdfPermission],
   file_id? : BytesView = [],
 ) -> PdfDocument raise PdfError {
   self.encrypt_arc4_standard(

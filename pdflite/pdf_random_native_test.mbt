@@ -58,7 +58,7 @@ test "native secure random AESV2 writer decrypts and varies output" {
   @test.assert_eq(second_random.length(), 16)
   @test.assert_eq(first_random == second_random, false)
 
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoPrint]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoPrint]
   let user_password = random_native_ascii_for_test("user")
   let owner_password = random_native_ascii_for_test("owner")
   let file_id = random_native_ascii_for_test("native-random-aes-id")
@@ -98,7 +98,7 @@ test "native secure random AESV3 writers decrypt and recrypt" {
   let user_password = random_native_ascii_for_test("user")
   let owner_password = random_native_ascii_for_test("owner")
   let file_id = random_native_ascii_for_test("native-random-aesv3-id")
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoExtract]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoExtract]
   let first = @pdflite.pdf_write_encrypted_aesv3_document(
     random_native_document_for_test("native random aesv3"),
     user_password,
@@ -160,7 +160,7 @@ test "native secure random AESV3 writers decrypt and recrypt" {
 test "native AES encrypt methods use secure random" {
   let user_password = random_native_ascii_for_test("user")
   let owner_password = random_native_ascii_for_test("owner")
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoForms]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoForms]
   let aesv2 = random_native_document_for_test("native wrapper aesv2").encrypt_128bit_aesv2(
     user_password,
     owner_password,

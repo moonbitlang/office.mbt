@@ -2942,7 +2942,7 @@ fn pdf_async_io_indirect_object_stream_filter_bad_startxref_for_test() -> @pdfli
 fn pdf_async_io_encrypted_object_stream_pdf_for_test(
   user_password : BytesView,
   owner_password : BytesView,
-  denied : ArrayView[@pdflite.PdfPermission],
+  denied : ArrayView[@crypt_core.PdfPermission],
 ) -> @pdflite.PdfBytes raise {
   let secret = pdf_async_io_secret_object_for_test(
     "async encrypted object stream",
@@ -3113,7 +3113,7 @@ fn pdf_async_io_encrypted_xref_stream_missing_object_stream_for_test() -> @pdfli
 ///|
 fn pdf_async_io_assert_decrypted_object_stream_for_test(
   decrypted : @pdflite.PdfDecryptionResult,
-  denied : Array[@pdflite.PdfPermission],
+  denied : Array[@crypt_core.PdfPermission],
 ) -> Unit raise {
   @test.assert_eq(decrypted.denied_permissions, denied)
   @test.assert_eq(
@@ -3154,7 +3154,7 @@ fn pdf_async_io_decryption_result_for_test(
 async fn pdf_async_io_assert_encrypted_file_secret_for_test(
   path : String,
   owner_password : String,
-  denied : Array[@pdflite.PdfPermission],
+  denied : Array[@crypt_core.PdfPermission],
   text : String,
 ) -> Unit {
   let decrypted = pdf_async_io_decryption_result_for_test(

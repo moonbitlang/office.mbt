@@ -33,7 +33,7 @@ struct PdfSavedEncryption {
 /// original `/P` permission mask.
 pub(all) struct PdfDecryptionResult {
   document : PdfDocument
-  denied_permissions : Array[PdfPermission]
+  denied_permissions : Array[@crypt_core.PdfPermission]
 } derive(Debug, Eq, ToJson)
 
 ///|

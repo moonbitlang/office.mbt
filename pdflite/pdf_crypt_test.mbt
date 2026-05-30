@@ -238,8 +238,8 @@ test "PdfDocument reports encryption method and permissions" {
   @test.assert_eq(try! plain_doc.what_encryption(), None)
   @test.assert_eq(try! plain_doc.permissions(), [])
 
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoPrint, PdfNoCopy]
-  let permissions = @pdflite.pdf_p_of_permissions(denied)
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoPrint, PdfNoCopy]
+  let permissions = @crypt_core.pdf_p_of_permissions(denied)
   let arc4_40 = crypt_doc_with_encrypt_for_test(
     crypt_standard_encrypt_dictionary_values_for_test(
       [
@@ -374,7 +374,7 @@ test "PdfDocument decrypt_with_password authenticates user and owner passwords" 
   let doc = try! @pdflite.pdf_document_empty().encrypt_128bit(
     @ascii.encode("user"),
     @ascii.encode("owner"),
-    @pdflite.pdf_permissions_of_p(-3904),
+    @crypt_core.pdf_permissions_of_p(-3904),
     file_id=@ascii.encode("doc-id"),
   )
   guard (try! doc.decrypt_with_user_password(@ascii.encode("user"))) is Some(_) else {
@@ -399,7 +399,7 @@ test "PdfDocument AESV2 passwords use revision 4 keys" {
   let doc = try! @pdflite.pdf_document_empty().encrypt_128bit_aesv2_with_iv_provider(
     @ascii.encode("user"),
     @ascii.encode("owner"),
-    @pdflite.pdf_permissions_of_p(-3904),
+    @crypt_core.pdf_permissions_of_p(-3904),
     fn(_, _, _) { Bytes::new(16) },
     file_id=@ascii.encode("doc-id"),
   )
@@ -730,7 +730,7 @@ test "PdfDocument decrypt_with_password authenticates AESV3 revision 5 passwords
   )
   @test.assert_eq(
     decrypted.denied_permissions,
-    @pdflite.pdf_permissions_of_p(-3904),
+    @crypt_core.pdf_permissions_of_p(-3904),
   )
   let owner_decrypted = crypt_unwrap_decryption_result_for_test(
     try! doc.decrypt_with_owner_password(@ascii.encode("owner")),
@@ -776,7 +776,7 @@ test "PdfDocument encrypt_40bit encrypts parsed objects and installs dictionary"
     @ascii.encode("owner"),
     [PdfNoPrint],
   )
-  let permissions = @pdflite.pdf_p_of_permissions([PdfNoPrint])
+  let permissions = @crypt_core.pdf_p_of_permissions([PdfNoPrint])
   guard encrypted.lookup_object_or_null(1).lookup_immediate(key_title)
     is Some(PdfString(encrypted_title)) else {
     fail("expected encrypted title")
@@ -903,7 +903,7 @@ test "PdfDocument crypt methods cover standalone workflows" {
   @test.assert_eq(plain_doc.what_encryption(), None)
   @test.assert_eq(plain_doc.permissions(), [])
 
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoPrint]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoPrint]
   let encrypted_40 = plain_doc.encrypt_40bit(
     @ascii.encode("user"),
     @ascii.encode("owner"),
@@ -1009,7 +1009,7 @@ test "PdfDocument provider methods cover AES encrypt and recrypt" {
   ])
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(1, original_object)
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoCopy]
   let no_saved : Result[@pdflite.PdfDocument, Error] = try? doc.recrypt_with_password_aesv2_with_iv_provider(
     @ascii.encode("user"),
     @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
@@ -1119,10 +1119,10 @@ test "PdfDocument provider methods cover AES encrypt and recrypt" {
 }
 
 ///|
-test "pdf_permissions_of_p parses CamlPDF denied permission bits" {
-  @test.assert_eq(@pdflite.pdf_permissions_of_p(-4), [])
-  @test.assert_eq(@pdflite.pdf_permissions_of_p(-8), [PdfNoPrint])
-  @test.assert_eq(@pdflite.pdf_permissions_of_p(-3904), [
+test "@crypt_core.pdf_permissions_of_p parses CamlPDF denied permission bits" {
+  @test.assert_eq(@crypt_core.pdf_permissions_of_p(-4), [])
+  @test.assert_eq(@crypt_core.pdf_permissions_of_p(-8), [PdfNoPrint])
+  @test.assert_eq(@crypt_core.pdf_permissions_of_p(-3904), [
     PdfNoHqPrint,
     PdfNoAssemble,
     PdfNoExtract,
@@ -1135,11 +1135,11 @@ test "pdf_permissions_of_p parses CamlPDF denied permission bits" {
 }
 
 ///|
-test "pdf_p_of_permissions writes signed CamlPDF permission masks" {
-  @test.assert_eq(@pdflite.pdf_p_of_permissions([]), -4)
-  @test.assert_eq(@pdflite.pdf_p_of_permissions([PdfNoPrint]), -8)
+test "@crypt_core.pdf_p_of_permissions writes signed CamlPDF permission masks" {
+  @test.assert_eq(@crypt_core.pdf_p_of_permissions([]), -4)
+  @test.assert_eq(@crypt_core.pdf_p_of_permissions([PdfNoPrint]), -8)
   @test.assert_eq(
-    @pdflite.pdf_p_of_permissions([
+    @crypt_core.pdf_p_of_permissions([
       PdfNoEdit,
       PdfNoPrint,
       PdfNoCopy,
@@ -1155,13 +1155,13 @@ test "pdf_p_of_permissions writes signed CamlPDF permission masks" {
 
 ///|
 test "permission masks roundtrip denied permissions" {
-  let denied : Array[@pdflite.PdfPermission] = [
+  let denied : Array[@crypt_core.PdfPermission] = [
     PdfNoCopy,
     PdfNoExtract,
     PdfNoHqPrint,
   ]
   @test.assert_eq(
-    @pdflite.pdf_permissions_of_p(@pdflite.pdf_p_of_permissions(denied)),
+    @crypt_core.pdf_permissions_of_p(@crypt_core.pdf_p_of_permissions(denied)),
     [PdfNoHqPrint, PdfNoExtract, PdfNoCopy],
   )
 }

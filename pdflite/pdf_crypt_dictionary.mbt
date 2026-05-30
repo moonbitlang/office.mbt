@@ -146,7 +146,7 @@ pub fn PdfDocument::is_encrypted(self : PdfDocument) -> Bool {
 /// the dictionary has been parsed.
 pub fn PdfDocument::what_encryption(
   self : PdfDocument,
-) -> PdfEncryptionMethod? raise PdfError {
+) -> @crypt_core.PdfEncryptionMethod? raise PdfError {
   if self.is_encrypted() {
     let values = self.encryption_values()
     match values.crypt_type {
@@ -170,9 +170,9 @@ pub fn PdfDocument::what_encryption(
 /// `/Encrypt` and may raise if the encryption dictionary is malformed.
 pub fn PdfDocument::permissions(
   self : PdfDocument,
-) -> Array[PdfPermission] raise PdfError {
+) -> Array[@crypt_core.PdfPermission] raise PdfError {
   if self.is_encrypted() {
-    pdf_permissions_of_p(self.encryption_values().permissions)
+    @crypt_core.pdf_permissions_of_p(self.encryption_values().permissions)
   } else {
     []
   }

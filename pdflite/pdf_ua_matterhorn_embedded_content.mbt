@@ -310,7 +310,7 @@ fn PdfDocument::pdf_ua_matterhorn_check_26_001(_self : PdfDocument) -> Json? {
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_26_002(self : PdfDocument) -> Json? {
   match self.saved_encryption() {
-    Some(saved) if pdf_permissions_of_p(saved.values.permissions).contains(
+    Some(saved) if @crypt_core.pdf_permissions_of_p(saved.values.permissions).contains(
         PdfNoExtract,
       ) => Some(Json::null())
     _ => None

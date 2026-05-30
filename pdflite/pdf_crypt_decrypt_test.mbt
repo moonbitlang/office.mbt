@@ -84,7 +84,7 @@ fn crypt_decrypt_aesv3_r5_permissions_for_test() -> @pdflite.PdfBytes {
 ///|
 #warnings("-unused_error_type")
 fn crypt_decrypt_aesv3_r5_random_for_test(
-  field : @pdflite.PdfAesV3RandomField,
+  field : @crypt_core.PdfAesV3RandomField,
   _length : Int,
 ) -> @pdflite.PdfBytes raise @pdflite.PdfError {
   match field {
@@ -180,7 +180,7 @@ test "PdfDocument decrypt_with_user_password decrypts parsed ARC4 objects in a c
   let template = try! source.encrypt_128bit(
     @ascii.encode("user"),
     @ascii.encode("owner"),
-    @pdflite.pdf_permissions_of_p(-3904),
+    @crypt_core.pdf_permissions_of_p(-3904),
     file_id~,
   )
   let encrypt_dictionary = try! crypt_decrypt_encrypt_dictionary_from_doc_for_test(
@@ -219,7 +219,7 @@ test "PdfDocument decrypt_with_user_password decrypts parsed ARC4 objects in a c
   )
   @test.assert_eq(
     decrypted.denied_permissions,
-    @pdflite.pdf_permissions_of_p(-3904),
+    @crypt_core.pdf_permissions_of_p(-3904),
   )
   @test.assert_eq(doc.lookup_object_or_null(1), encrypted_object)
   @test.assert_eq(
@@ -282,7 +282,7 @@ test "PdfDocument decrypt_with_owner_password decrypts parsed ARC4 objects in a 
   let template = try! source.encrypt_128bit(
     @ascii.encode("user"),
     @ascii.encode("owner"),
-    @pdflite.pdf_permissions_of_p(-3904),
+    @crypt_core.pdf_permissions_of_p(-3904),
     file_id~,
   )
   let encrypt_dictionary = try! crypt_decrypt_encrypt_dictionary_from_doc_for_test(
@@ -321,7 +321,7 @@ test "PdfDocument decrypt_with_owner_password decrypts parsed ARC4 objects in a 
   )
   @test.assert_eq(
     decrypted.denied_permissions,
-    @pdflite.pdf_permissions_of_p(-3904),
+    @crypt_core.pdf_permissions_of_p(-3904),
   )
   @test.assert_eq(doc.lookup_object_or_null(1), encrypted_object)
   @test.assert_eq(
@@ -501,7 +501,7 @@ test "PdfDocument decrypt_single_stream handles AESV2 and AESV3 streams" {
   let aesv2_doc = try! aesv2_source.encrypt_128bit_aesv2_with_iv_provider(
     @ascii.encode("user"),
     @ascii.encode("owner"),
-    @pdflite.pdf_permissions_of_p(-3904),
+    @crypt_core.pdf_permissions_of_p(-3904),
     fn(_, _, _) { aesv2_iv },
     file_id=aesv2_file_id,
   )
@@ -616,7 +616,7 @@ test "PdfDocument decrypt_with_user_password decrypts parsed AESV2 objects in a 
   let template = try! source.encrypt_128bit_aesv2_with_iv_provider(
     @ascii.encode("user"),
     @ascii.encode("owner"),
-    @pdflite.pdf_permissions_of_p(-3904),
+    @crypt_core.pdf_permissions_of_p(-3904),
     fn(_, _, _) { iv },
     file_id~,
   )
@@ -656,7 +656,7 @@ test "PdfDocument decrypt_with_user_password decrypts parsed AESV2 objects in a 
   )
   @test.assert_eq(
     decrypted.denied_permissions,
-    @pdflite.pdf_permissions_of_p(-3904),
+    @crypt_core.pdf_permissions_of_p(-3904),
   )
   let owner_decrypted = crypt_decrypt_unwrap_decryption_result_for_test(
     try! doc.decrypt_with_owner_password(@ascii.encode("owner")),
@@ -709,7 +709,7 @@ test "PdfDocument decrypt_with_user_password honors EncryptMetadata false" {
   let template = try! source.encrypt_128bit_aesv2_with_iv_provider(
     @ascii.encode("user"),
     @ascii.encode("owner"),
-    @pdflite.pdf_permissions_of_p(-3904),
+    @crypt_core.pdf_permissions_of_p(-3904),
     fn(_, _, _) { iv },
     encrypt_metadata=false,
     file_id~,
@@ -880,7 +880,7 @@ test "PdfDocument decrypt_with_user_password decrypts parsed AESV3 revision 5 ob
   )
   @test.assert_eq(
     decrypted.denied_permissions,
-    @pdflite.pdf_permissions_of_p(-3904),
+    @crypt_core.pdf_permissions_of_p(-3904),
   )
   let owner_decrypted = crypt_decrypt_unwrap_decryption_result_for_test(
     try! doc.decrypt_with_owner_password(@ascii.encode("owner")),

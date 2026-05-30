@@ -3,7 +3,7 @@ fn PdfDocument::encrypt_arc4_standard(
   self : PdfDocument,
   user_password : BytesView,
   owner_password : BytesView,
-  denied_permissions : ArrayView[PdfPermission],
+  denied_permissions : ArrayView[@crypt_core.PdfPermission],
   version : Int,
   revision : Int,
   key_length_bits : Int,
@@ -11,7 +11,7 @@ fn PdfDocument::encrypt_arc4_standard(
   file_id : BytesView,
 ) -> PdfDocument raise PdfError {
   let (document, id) = self.with_file_id(file_id~)
-  let permissions = pdf_p_of_permissions(denied_permissions)
+  let permissions = @crypt_core.pdf_p_of_permissions(denied_permissions)
   let owner_entry = @crypt_core.pdf_make_owner_password_entry(
     revision, owner_password, user_password, key_length_bits,
   )

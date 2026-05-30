@@ -54,7 +54,7 @@ fn crypt_encrypt_aesv3_r5_permissions_for_test() -> @pdflite.PdfBytes {
 ///|
 #warnings("-unused_error_type")
 fn crypt_encrypt_aesv3_r5_random_for_test(
-  field : @pdflite.PdfAesV3RandomField,
+  field : @crypt_core.PdfAesV3RandomField,
   _length : Int,
 ) -> @pdflite.PdfBytes raise @pdflite.PdfError {
   match field {
@@ -179,7 +179,7 @@ test "PdfDocument encrypt_128bit encrypts parsed objects and writes length" {
     [PdfNoPrint, PdfNoCopy],
     file_id=@ascii.encode("doc-id"),
   )
-  let permissions = @pdflite.pdf_p_of_permissions([PdfNoPrint, PdfNoCopy])
+  let permissions = @crypt_core.pdf_p_of_permissions([PdfNoPrint, PdfNoCopy])
   guard encrypted.lookup_object_or_null(1).lookup_immediate(key_title)
     is Some(PdfString(encrypted_title)) else {
     fail("expected encrypted title")
@@ -263,7 +263,7 @@ test "PdfDocument encrypt_128bit_r4 writes crypt filter and honors metadata flag
     encrypt_metadata=false,
     file_id=@ascii.encode("doc-id"),
   )
-  let permissions = @pdflite.pdf_p_of_permissions([PdfNoExtract])
+  let permissions = @crypt_core.pdf_p_of_permissions([PdfNoExtract])
   guard encrypted.lookup_object_or_null(1).lookup_immediate(key_title)
     is Some(PdfString(encrypted_title)) else {
     fail("expected encrypted title")
@@ -333,7 +333,7 @@ test "PdfDocument encrypt_128bit_r4 writes crypt filter and honors metadata flag
   @test.assert_eq(decrypted.document.lookup_object_or_null(3), metadata_stream)
   @test.assert_eq(
     decrypted.denied_permissions,
-    @pdflite.pdf_permissions_of_p(permissions),
+    @crypt_core.pdf_permissions_of_p(permissions),
   )
   let owner_decrypted = crypt_encrypt_unwrap_decryption_result_for_test(
     try! encrypted.decrypt_with_owner_password(@ascii.encode("owner")),
@@ -462,7 +462,7 @@ test "pdfencrypt-style AES128 blank-user owner-password output roundtrips" {
     (key_title, PdfString(@ascii.encode("pdfencrypt-secret"))),
   ])
   doc.add_object_given_number(5, secret_object)
-  let denied : Array[@pdflite.PdfPermission] = [PdfNoEdit, PdfNoPrint]
+  let denied : Array[@crypt_core.PdfPermission] = [PdfNoEdit, PdfNoPrint]
   let encrypted = try! doc.encrypt_128bit_aesv2_with_iv_provider(
     @ascii.encode(""),
     @ascii.encode("owner-password"),
@@ -524,7 +524,7 @@ test "PdfDocument encrypt_256bit_aesv3_with_providers writes AESV3 revision 5 en
   )
   doc.add_object_given_number(5, secret_object)
   doc.add_object_given_number(6, metadata_stream)
-  let denied_permissions = @pdflite.pdf_permissions_of_p(-3904)
+  let denied_permissions = @crypt_core.pdf_permissions_of_p(-3904)
   let encrypted = try! doc.encrypt_256bit_aesv3_with_providers(
     @ascii.encode("user"),
     @ascii.encode("owner"),
@@ -601,7 +601,7 @@ test "PdfDocument encrypt_256bit_aesv3_with_providers writes AESV3 revision 5 en
   )
 
   let bad_random = fn(
-    field : @pdflite.PdfAesV3RandomField,
+    field : @crypt_core.PdfAesV3RandomField,
     length : Int,
   ) -> @pdflite.PdfBytes raise @pdflite.PdfError {
     match field {
@@ -646,7 +646,7 @@ test "PdfDocument encrypted AESV3 output round trips through xref stream writers
   )
   doc.add_object_given_number(5, secret_object)
   doc.add_object_given_number(6, metadata_stream)
-  let denied_permissions = @pdflite.pdf_permissions_of_p(-3904)
+  let denied_permissions = @crypt_core.pdf_permissions_of_p(-3904)
   let encrypted = try! doc.encrypt_256bit_aesv3_with_providers(
     @ascii.encode("user"),
     @ascii.encode("owner"),
